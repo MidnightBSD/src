@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_l2cap_misc.c,v 1.5 2003/09/08 19:11:45 max Exp $
- * $FreeBSD: stable/9/sys/netgraph/bluetooth/l2cap/ng_l2cap_misc.c 184205 2008-10-23 15:53:51Z des $
+ * $FreeBSD: release/10.0.0/sys/netgraph/bluetooth/l2cap/ng_l2cap_misc.c 243882 2012-12-05 08:04:20Z glebius $
  */
 
 #include <sys/param.h>
@@ -558,7 +558,7 @@ ng_l2cap_command_untimeout(ng_l2cap_cmd_p cmd)
 struct mbuf *
 ng_l2cap_prepend(struct mbuf *m, int size)
 {
-	M_PREPEND(m, size, M_DONTWAIT);
+	M_PREPEND(m, size, M_NOWAIT);
 	if (m == NULL || (m->m_len < size && (m = m_pullup(m, size)) == NULL))
 		return (NULL);
 

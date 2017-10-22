@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!DOCTYPE catalog PUBLIC "-//OASIS//DTD Entity Resolution XML Catalog V1.0//EN"
+        "http://www.oasis-open.org/committees/entity/release/1.0/catalog.dtd">
+
+<!-- $FreeBSD: release/10.0.0/release/doc/en_US.ISO8859-1/share/xml/catalog.xml 260657 2014-01-14 23:58:50Z hrs $ -->
+
+<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
+  <rewriteSystem systemIdStartString="http://www.FreeBSD.org/release/XML/lang/"
+                 rewritePrefix="../../"/>
+  <rewriteURI uriStartString="http://www.FreeBSD.org/release/XML/lang/"
+              rewritePrefix="../../"/>
+</catalog>

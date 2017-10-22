@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/libkern/ucmpdi2.c 128019 2004-04-07 20:46:16Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/ucmpdi2.c 245840 2013-01-23 09:18:18Z andrew $");
 
 #include <libkern/quad.h>
 
@@ -51,3 +51,15 @@ __ucmpdi2(a, b)
 	return (aa.ul[H] < bb.ul[H] ? 0 : aa.ul[H] > bb.ul[H] ? 2 :
 	    aa.ul[L] < bb.ul[L] ? 0 : aa.ul[L] > bb.ul[L] ? 2 : 1);
 }
+
+#ifdef __ARM_EABI__
+/*
+ * Return -1, 0 or 1 as a <, =, > b respectively.
+ */
+int
+__aeabi_ulcmp(unsigned long long a, unsigned long long b)
+{
+	return __ucmpdi2(a, b) - 1;
+}
+#endif
+

@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  * 
  * $DragonFly: src/sys/dev/netif/bwi/if_bwivar.h,v 1.14 2008/02/15 11:15:38 sephe Exp $
- * $FreeBSD: stable/9/sys/dev/bwi/if_bwivar.h 206358 2010-04-07 15:29:13Z rpaulo $
+ * $FreeBSD: release/10.0.0/sys/dev/bwi/if_bwivar.h 206358 2010-04-07 15:29:13Z rpaulo $
  */
 
 #ifndef _IF_BWIVAR_H

@@ -31,7 +31,7 @@
  *	@(#)kernfs_vnops.c	8.15 (Berkeley) 5/21/95
  * From: FreeBSD: src/sys/miscfs/kernfs/kernfs_vnops.c 1.43
  *
- * $FreeBSD: stable/9/sys/fs/devfs/devfs_vnops.c 247076 2013-02-21 05:38:11Z kib $
+ * $FreeBSD: release/10.0.0/sys/fs/devfs/devfs_vnops.c 257122 2013-10-25 16:33:24Z kib $
  */
 
 /*
@@ -1168,9 +1168,9 @@ devfs_print(struct vop_print_args *ap)
 	return (0);
 }
 
-/* ARGSUSED */
 static int
-devfs_read_f(struct file *fp, struct uio *uio, struct ucred *cred, int flags, struct thread *td)
+devfs_read_f(struct file *fp, struct uio *uio, struct ucred *cred,
+    int flags, struct thread *td)
 {
 	struct cdev *dev;
 	int ioflag, error, ref;
@@ -1178,6 +1178,8 @@ devfs_read_f(struct file *fp, struct uio *uio, struct ucred *cred, int flags, st
 	struct cdevsw *dsw;
 	struct file *fpop;
 
+	if (uio->uio_resid > DEVFS_IOSIZE_MAX)
+		return (EINVAL);
 	fpop = td->td_fpop;
 	error = devfs_fp_check(fp, &dev, &dsw, &ref);
 	if (error)
@@ -1643,9 +1645,9 @@ devfs_truncate_f(struct file *fp, off_t length, struct ucred *cred, struct threa
 	return (vnops.fo_truncate(fp, length, cred, td));
 }
 
-/* ARGSUSED */
 static int
-devfs_write_f(struct file *fp, struct uio *uio, struct ucred *cred, int flags, struct thread *td)
+devfs_write_f(struct file *fp, struct uio *uio, struct ucred *cred,
+    int flags, struct thread *td)
 {
 	struct cdev *dev;
 	int error, ioflag, ref;
@@ -1653,6 +1655,8 @@ devfs_write_f(struct file *fp, struct uio *uio, struct ucred *cred, int flags, s
 	struct cdevsw *dsw;
 	struct file *fpop;
 
+	if (uio->uio_resid > DEVFS_IOSIZE_MAX)
+		return (EINVAL);
 	fpop = td->td_fpop;
 	error = devfs_fp_check(fp, &dev, &dsw, &ref);
 	if (error)
@@ -1696,6 +1700,8 @@ static struct fileops devfs_ops_f = {
 	.fo_close =	devfs_close_f,
 	.fo_chmod =	vn_chmod,
 	.fo_chown =	vn_chown,
+	.fo_sendfile =	vn_sendfile,
+	.fo_seek =	vn_seek,
 	.fo_flags =	DFLAG_PASSABLE | DFLAG_SEEKABLE
 };
 

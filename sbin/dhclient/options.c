@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/dhclient/options.c 230597 2012-01-26 19:46:13Z dumbbell $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/dhclient/options.c 229778 2012-01-07 16:09:33Z uqs $");
 
 #include <ctype.h>
 
@@ -284,8 +284,8 @@ find_search_domain_name_len(struct option_data *option, int *offset)
 			    option->data[i + 1];
 			if (pointer >= *offset) {
 				/*
-				 * The pointer must indicates a prior
-				 * occurance.
+				 * The pointer must indicate a prior
+				 * occurrence.
 				 */
 				warning("Invalid forward pointer in DHCP "
 				    "Domain Search option compression.");

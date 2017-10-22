@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/i2c/i2c.c 229217 2012-01-01 22:08:52Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/i2c/i2c.c 230356 2012-01-20 01:38:44Z eadler $");
 
 #include <err.h>
 #include <errno.h>
@@ -464,7 +464,7 @@ main(int argc, char** argv)
 {
 	struct iiccmd cmd;
 	struct options i2c_opt;
-	char *dev, *skip_addr, *err_msg, *i2c_buf;
+	char *dev, *skip_addr, *i2c_buf;
 	int error, chunk_size, i, j, ch;
 
 	errno = 0;
@@ -474,7 +474,6 @@ main(int argc, char** argv)
 	chunk_size = 16;
 
 	dev = I2C_DEV;
-	err_msg = NULL;
 
 	/* Default values */
 	i2c_opt.addr_set = 0;

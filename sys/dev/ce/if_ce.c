@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ce/if_ce.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ce/if_ce.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 
@@ -145,7 +145,7 @@ static	device_method_t ce_methods[] = {
 	DEVMETHOD(device_attach,	ce_attach),
 	DEVMETHOD(device_detach,	ce_detach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 typedef struct _ce_dma_mem_t {

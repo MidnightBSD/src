@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/digi/digi_isa.c 129879 2004-05-30 20:08:47Z phk $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/digi/digi_isa.c 246128 2013-01-30 18:01:20Z sbz $");
 
 /*-
  * TODO:
@@ -462,7 +462,8 @@ static device_method_t digi_isa_methods[] = {
 	DEVMETHOD(device_attach, digi_isa_attach),
 	DEVMETHOD(device_detach, digi_detach),
 	DEVMETHOD(device_shutdown, digi_shutdown),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t digi_isa_drv = {

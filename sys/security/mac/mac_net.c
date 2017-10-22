@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/security/mac/mac_net.c 247629 2013-03-02 15:11:20Z melifaro $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/security/mac/mac_net.c 233937 2012-04-06 06:53:58Z melifaro $");
 
 #include "opt_kdtrace.h"
 #include "opt_mac.h"

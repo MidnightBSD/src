@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/mii/Makefile 233485 2012-03-26 02:40:54Z yongari $
+# $FreeBSD: release/10.0.0/sys/modules/mii/Makefile 239275 2012-08-15 04:03:55Z gonzo $
 
 .PATH: ${.CURDIR}/../../dev/mii
 
@@ -8,7 +8,8 @@ SRCS+=	ciphy.c device_if.h
 SRCS+=	e1000phy.c gentbi.c icsphy.c ip1000phy.c jmphy.c lxtphy.c
 SRCS+=	miibus_if.c miibus_if.h mii.c miidevs.h mii_bitbang.c mii_physubr.c
 SRCS+=	mlphy.c nsgphy.c nsphy.c nsphyter.c pci_if.h pnaphy.c qsphy.c
-SRCS+=	rdcphy.c rgephy.c rlphy.c smcphy.c tdkphy.c tlphy.c truephy.c
+SRCS+=	rdcphy.c rgephy.c rlphy.c smcphy.c
+SRCS+=	smscphy.c tdkphy.c tlphy.c truephy.c
 SRCS+=	ukphy.c ukphy_subr.c
 SRCS+=	xmphy.c
 

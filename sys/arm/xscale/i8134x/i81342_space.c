@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/i8134x/i81342_space.c 171626 2007-07-27 14:50:57Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/i8134x/i81342_space.c 254025 2013-08-07 06:21:20Z jeff $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -260,7 +260,7 @@ i81342_io_bs_alloc(void *t, bus_addr_t rstart, bus_addr_t rend,
 	panic("i81342_io_bs_alloc(): not implemented");
 }
 
-void    
+void
 i81342_io_bs_free(void *t, bus_space_handle_t bsh, bus_size_t size)
 {
 
@@ -324,7 +324,7 @@ i81342_mem_bs_unmap(void *t, bus_space_handle_t h, bus_size_t size)
 	endva = va + round_page(size);
 
 	/* Free the kernel virtual mapping. */
-	kmem_free(kernel_map, va, endva - va);
+	kva_free(va, endva - va);
 #endif
 }
 
@@ -337,7 +337,7 @@ i81342_mem_bs_alloc(void *t, bus_addr_t rstart, bus_addr_t rend,
 	panic("i81342_mem_bs_alloc(): not implemented");
 }
 
-void    
+void
 i81342_mem_bs_free(void *t, bus_space_handle_t bsh, bus_size_t size)
 {
 

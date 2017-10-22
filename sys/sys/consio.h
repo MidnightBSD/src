@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1991-1996 Søren Schmidt
+ * Copyright (c) 1991-1996 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/consio.h 162711 2006-09-27 19:57:02Z ru $
+ * $FreeBSD: release/10.0.0/sys/sys/consio.h 230132 2012-01-15 13:23:18Z uqs $
  */
 
 #ifndef	_SYS_CONSIO_H_

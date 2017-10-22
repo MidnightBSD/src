@@ -30,7 +30,7 @@
 
 #ifndef RPC_HDR
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: stable/9/include/rpcsvc/nis.x 114629 2003-05-04 02:51:42Z obrien $");
+%__FBSDID("$FreeBSD: release/10.0.0/include/rpcsvc/nis.x 229781 2012-01-07 16:10:15Z uqs $");
 #endif
 
 /* 
@@ -192,8 +192,8 @@ struct ping_args {
  * note that modifications will appear as two entries, for names, they have
  * an "OLD" entry followed by a "NEW" entry. For entries in tables, there
  * is a remove followed by an add. It is done this way so that we can read
- * the log backwards to back out transactions and forwards to propogate
- * updated.
+ * the log backwards to back out transactions and forwards to propagate
+ * updates.
  */
 enum log_entry_t {
 	LOG_NOP = 0,

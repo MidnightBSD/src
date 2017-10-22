@@ -82,7 +82,7 @@
 #include "opt_ktrace.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/trap.c 229373 2012-01-03 09:40:31Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/trap.c 253142 2013-07-10 10:15:38Z ray $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -128,7 +128,7 @@ void undefinedinstruction(trapframe_t *);
 
 #include <machine/disassem.h>
 #include <machine/machdep.h>
- 
+
 extern char fusubailout[];
 
 #ifdef DEBUG
@@ -160,7 +160,11 @@ static const struct data_abort data_aborts[] = {
 	{dab_align,	"Alignment Fault 3"},
 	{dab_buserr,	"External Linefetch Abort (S)"},
 	{NULL,		"Translation Fault (S)"},
+#if (ARM_MMU_V6 + ARM_MMU_V7) != 0
+	{NULL,		"Translation Flag Fault"},
+#else
 	{dab_buserr,	"External Linefetch Abort (P)"},
+#endif
 	{NULL,		"Translation Fault (P)"},
 	{dab_buserr,	"External Non-Linefetch Abort (S)"},
 	{NULL,		"Domain Fault (S)"},
@@ -234,14 +238,14 @@ data_abort_handler(trapframe_t *tf)
 	int error = 0;
 	struct ksig ksig;
 	struct proc *p;
-	
+
 
 	/* Grab FAR/FSR before enabling interrupts */
 	far = cpu_faultaddress();
 	fsr = cpu_faultstatus();
 #if 0
-	printf("data abort: %p (from %p %p)\n", (void*)far, (void*)tf->tf_pc,
-	    (void*)tf->tf_svc_lr);
+	printf("data abort: fault address=%p (from pc=%p lr=%p)\n",
+	       (void*)far, (void*)tf->tf_pc, (void*)tf->tf_svc_lr);
 #endif
 
 	/* Update vmmeter statistics */
@@ -258,10 +262,10 @@ data_abort_handler(trapframe_t *tf)
 
 	if (user) {
 		td->td_pticks = 0;
-		td->td_frame = tf;		
+		td->td_frame = tf;
 		if (td->td_ucred != td->td_proc->p_ucred)
 			cred_update_thread(td);
-		
+
 	}
 	/* Grab the current pcb */
 	pcb = td->td_pcb;
@@ -272,7 +276,7 @@ data_abort_handler(trapframe_t *tf)
 		if (__predict_true(tf->tf_spsr & F32_bit) == 0)
 			enable_interrupts(F32_bit);
 	}
-		
+
 
 	/* Invoke the appropriate handler, if necessary */
 	if (__predict_false(data_aborts[fsr & FAULT_TYPE_MASK].func != NULL)) {
@@ -387,22 +391,21 @@ data_abort_handler(trapframe_t *tf)
 	 * Otherwise we need to disassemble the instruction
 	 * responsible to determine if it was a write.
 	 */
-	if (IS_PERMISSION_FAULT(fsr)) {
-		ftype = VM_PROT_WRITE; 
-	} else {
+	if (IS_PERMISSION_FAULT(fsr))
+		ftype = VM_PROT_WRITE;
+	else {
 		u_int insn = ReadWord(tf->tf_pc);
 
 		if (((insn & 0x0c100000) == 0x04000000) ||	/* STR/STRB */
 		    ((insn & 0x0e1000b0) == 0x000000b0) ||	/* STRH/STRD */
-		    ((insn & 0x0a100000) == 0x08000000))	/* STM/CDT */
-		{
-			ftype = VM_PROT_WRITE; 
-	}
-		else
-		if ((insn & 0x0fb00ff0) == 0x01000090)		/* SWP */
-			ftype = VM_PROT_READ | VM_PROT_WRITE; 
-		else
-			ftype = VM_PROT_READ; 
+		    ((insn & 0x0a100000) == 0x08000000)) {	/* STM/CDT */
+			ftype = VM_PROT_WRITE;
+		} else {
+			if ((insn & 0x0fb00ff0) == 0x01000090)	/* SWP */
+				ftype = VM_PROT_READ | VM_PROT_WRITE;
+			else
+				ftype = VM_PROT_READ;
+		}
 	}
 
 	/*
@@ -717,7 +720,7 @@ prefetch_abort_handler(trapframe_t *tf)
 	printf("prefetch abort handler: %p %p\n", (void*)tf->tf_pc,
 	    (void*)tf->tf_usr_lr);
 #endif
-	
+
  	td = curthread;
 	p = td->td_proc;
 	PCPU_INC(cnt.v_trap);
@@ -734,9 +737,7 @@ prefetch_abort_handler(trapframe_t *tf)
 		if (__predict_true(tf->tf_spsr & F32_bit) == 0)
 			enable_interrupts(F32_bit);
 	}
-	 
 
-		       
 	/* See if the cpu state needs to be fixed up */
 	switch (prefetch_abort_fixup(tf, &ksig)) {
 	case ABORT_FIXUP_RETURN:
@@ -868,7 +869,11 @@ cpu_fetch_syscall_args(struct thread *td, struct syscall_args *sa)
 	register_t *ap;
 	int error;
 
+#ifdef __ARM_EABI__
+	sa->code = td->td_frame->tf_r7;
+#else
 	sa->code = sa->insn & 0x000fffff;
+#endif
 	ap = &td->td_frame->tf_r0;
 	if (sa->code == SYS_syscall) {
 		sa->code = *ap++;
@@ -902,22 +907,23 @@ cpu_fetch_syscall_args(struct thread *td, struct syscall_args *sa)
 #include "../../kern/subr_syscall.c"
 
 static void
-syscall(struct thread *td, trapframe_t *frame, u_int32_t insn)
+syscall(struct thread *td, trapframe_t *frame)
 {
 	struct syscall_args sa;
 	int error;
 
-	td->td_frame = frame;
-	sa.insn = insn;
-	switch (insn & SWI_OS_MASK) {
+#ifndef __ARM_EABI__
+	sa.insn = *(uint32_t *)(frame->tf_pc - INSN_SIZE);
+	switch (sa.insn & SWI_OS_MASK) {
 	case 0: /* XXX: we need our own one. */
-		sa.nap = 4;
 		break;
 	default:
 		call_trapsignal(td, SIGILL, 0);
 		userret(td, frame);
 		return;
 	}
+#endif
+	sa.nap = 4;
 
 	error = syscallenter(td, &sa);
 	KASSERT(error != 0 || td->td_ar == NULL,
@@ -929,10 +935,9 @@ void
 swi_handler(trapframe_t *frame)
 {
 	struct thread *td = curthread;
-	uint32_t insn;
 
 	td->td_frame = frame;
-	
+
 	td->td_pticks = 0;
 	/*
       	 * Make sure the program counter is correctly aligned so we
@@ -943,19 +948,18 @@ swi_handler(trapframe_t *frame)
 		userret(td, frame);
 		return;
 	}
-	insn = *(u_int32_t *)(frame->tf_pc - INSN_SIZE);
 	/*
 	 * Enable interrupts if they were enabled before the exception.
 	 * Since all syscalls *should* come from user mode it will always
-	 * be safe to enable them, but check anyway. 
-	 */       
+	 * be safe to enable them, but check anyway.
+	 */
 	if (td->td_md.md_spinlock_count == 0) {
 		if (__predict_true(frame->tf_spsr & I32_bit) == 0)
 			enable_interrupts(I32_bit);
 		if (__predict_true(frame->tf_spsr & F32_bit) == 0)
 			enable_interrupts(F32_bit);
 	}
-	 
-	syscall(td, frame, insn);
+
+	syscall(td, frame);
 }
 

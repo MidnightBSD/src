@@ -96,7 +96,7 @@
   */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/makefs/cd9660.c 248293 2013-03-14 22:57:27Z brooks $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/makefs/cd9660.c 253707 2013-07-27 15:28:31Z marius $");
 
 #include <string.h>
 #include <ctype.h>
@@ -230,7 +230,7 @@ cd9660_set_defaults(void)
 	memset(diskStructure.primaryDescriptor.abstract_file_id, 0x20,37);
 	memset(diskStructure.primaryDescriptor.bibliographic_file_id, 0x20,37);
 
-	strcpy(diskStructure.primaryDescriptor.system_id,"NetBSD");
+	strcpy(diskStructure.primaryDescriptor.system_id, "FreeBSD");
 
 	cd9660_defaults_set = 1;
 
@@ -681,7 +681,8 @@ cd9660_finalize_PVD(void)
 	cd9660_set_date(diskStructure.primaryDescriptor.expiration_date, now);
 	*/
 
-	memset(diskStructure.primaryDescriptor.expiration_date, '0' ,17);
+	memset(diskStructure.primaryDescriptor.expiration_date, '0', 16);
+	diskStructure.primaryDescriptor.expiration_date[16] = 0;
 	cd9660_time_8426(
 	    (unsigned char *)diskStructure.primaryDescriptor.effective_date,
 	    tim);

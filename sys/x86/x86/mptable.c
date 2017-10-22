@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/x86/x86/mptable.c 224096 2011-07-16 14:05:34Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/x86/x86/mptable.c 224096 2011-07-16 14:05:34Z jhb $");
 
 #include "opt_mptable_force_htt.h"
 #include <sys/param.h>

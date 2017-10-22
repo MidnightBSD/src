@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1991-1997 Søren Schmidt
+ * Copyright (c) 1991-1997 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libvgl/main.c 130245 2004-06-08 12:24:47Z stefanf $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libvgl/main.c 229784 2012-01-07 16:13:56Z uqs $");
 
 #include <stdio.h>
 #include <sys/types.h>

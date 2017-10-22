@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/gdb/gdb/Makefile 141911 2005-02-14 12:10:14Z obrien $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/gdb/gdb/Makefile 251512 2013-06-07 21:40:02Z emaste $
 
 PROG=	gdb${GDB_SUFFIX}
 SRCS=	gdb.c
@@ -15,3 +15,4 @@ DPADD=	${GDBLIBS} ${BULIBS} ${LIBM} ${LIBREADLINE} ${LIBTERMCAP} ${LIBGNUREGEX}
 LDADD=	${GDBLIBS} ${BULIBS} -lm -lreadline -ltermcap -lgnuregex
 
 .include <bsd.prog.mk>
+CFLAGS+=	-DDEBUGDIR=\"${DEBUGDIR}\"

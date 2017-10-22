@@ -9,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/sysctlbyname.c 204172 2010-02-21 14:58:01Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/sysctlbyname.c 244153 2012-12-12 15:27:33Z pjd $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -19,13 +19,10 @@ sysctlbyname(const char *name, void *oldp, size_t *oldlenp,
     const void *newp, size_t newlen)
 {
 	int real_oid[CTL_MAXNAME+2];
-	int error;
 	size_t oidlen;
 
 	oidlen = sizeof(real_oid) / sizeof(int);
-	error = sysctlnametomib(name, real_oid, &oidlen);
-	if (error < 0) 
-		return (error);
-	error = sysctl(real_oid, oidlen, oldp, oldlenp, newp, newlen);
-	return (error);
+	if (sysctlnametomib(name, real_oid, &oidlen) < 0)
+		return (-1);
+	return (sysctl(real_oid, oidlen, oldp, oldlenp, newp, newlen));
 }

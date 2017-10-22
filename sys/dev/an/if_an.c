@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/an/if_an.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/an/if_an.c 243857 2012-12-04 09:32:43Z glebius $");
 
 /*
  * The Aironet 4500/4800 series cards come in PCMCIA, ISA and PCI form.
@@ -761,7 +761,6 @@ an_attach(struct an_softc *sc, int flags)
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(sc->an_dev),
 	    device_get_unit(sc->an_dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = an_ioctl;
 	ifp->if_start = an_start;

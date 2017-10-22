@@ -57,7 +57,7 @@
  *	from: @(#)isa.c	7.2 (Berkeley) 5/13/91
  *	form: src/sys/i386/isa/intr_machdep.c,v 1.57 2001/07/20
  *
- * $FreeBSD: stable/9/sys/powerpc/powerpc/intr_machdep.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: release/10.0.0/sys/powerpc/powerpc/intr_machdep.c 255419 2013-09-09 12:52:34Z nwhitehorn $
  */
 
 #include "opt_isa.h"
@@ -176,7 +176,7 @@ intrcnt_add(const char *name, u_long **countp)
 static struct powerpc_intr *
 intr_lookup(u_int irq)
 {
-	char intrname[8];
+	char intrname[16];
 	struct powerpc_intr *i, *iscan;
 	int vector;
 

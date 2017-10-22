@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/tools/tools/kttcp/sys/kttcp.c 138822 2004-12-13 20:40:16Z gallatin $	*/
+/*	$FreeBSD: release/10.0.0/tools/tools/kttcp/sys/kttcp.c 241394 2012-10-10 08:36:38Z kevlo $	*/
 /*	$NetBSD: kttcp.c,v 1.3 2002/07/03 19:36:52 thorpej Exp $	*/
 
 /*

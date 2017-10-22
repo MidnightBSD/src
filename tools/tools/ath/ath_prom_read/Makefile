@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/tools/ath/ath_prom_read/Makefile 217739 2011-01-22 23:44:56Z adrian $
+# $FreeBSD: release/10.0.0/tools/tools/ath/ath_prom_read/Makefile 239161 2012-08-09 23:04:20Z adrian $
 
 PROG=	ath_prom_read
 
@@ -20,3 +20,4 @@ ah_osdep.h:
 	echo 'typedef void *HAL_SOFTC;' >ah_osdep.h
 	echo 'typedef int HAL_BUS_TAG;' >>ah_osdep.h
 	echo 'typedef void *HAL_BUS_HANDLE;' >>ah_osdep.h
+	echo 'typedef uint32_t HAL_DMA_ADDR;' >>ah_osdep.h

@@ -1,5 +1,5 @@
 # $NetBSD: rc.subr,v 1.67 2006/10/07 11:25:15 elad Exp $
-# $FreeBSD: stable/9/etc/rc.subr 243754 2012-12-01 15:46:27Z crees $
+# $FreeBSD: release/10.0.0/etc/rc.subr 256256 2013-10-10 09:32:27Z hrs $
 #
 # Copyright (c) 1997-2004 The NetBSD Foundation, Inc.
 # All rights reserved.
@@ -53,47 +53,6 @@ JID=`$PS -p $$ -o jid=`
 #
 #	functions
 #	---------
-
-# set_rcvar [var] [defval] [desc]
-#
-#	Echo or define a rc.conf(5) variable name.  Global variable
-#	$rcvars is used.
-#
-#	If no argument is specified, echo "${name}_enable".
-#
-#	If only a var is specified, echo "${var}_enable".
-#
-#	If var and defval are specified, the ${var} is defined as
-#	rc.conf(5) variable and the default value is ${defvar}.  An
-#	optional argument $desc can also be specified to add a
-#	description for that.
-#
-set_rcvar()
-{
-	case $# in
-	0)
-		echo ${name}_enable
-		;;
-	1)
-		echo ${1}_enable
-		;;
-	*)
-		debug "rcvar_define: \$$1=$2 is added" \
-		    " as a rc.conf(5) variable."
-
-		local _var
-		_var=$1
-		rcvars="${rcvars# } $_var"
-		eval ${_var}_defval=\"$2\"
-		shift 2
-		# encode multiple lines of _desc
-		for l in "$@"; do
-			eval ${_var}_desc=\"\${${_var}_desc#^^}^^$l\"
-		done
-		eval ${_var}_desc=\"\${${_var}_desc#^^}\"
-		;;
-	esac
-}
 
 # set_rcvar_obsolete oldvar [newvar] [msg]
 #	Define obsolete variable.
@@ -331,7 +290,7 @@ _find_processes()
 		_interpbn=${1##*/}
 		_fp_args='_argv'
 		_fp_match='case "$_argv" in
-		    ${_interp}|"${_interp} "*|"${_interpbn}: ${_procname}"*)'
+		    ${_interp}|"${_interp} "*|"[${_interpbn}]"|"${_interpbn}: ${_procname}"*)'
 	else					# a normal daemon
 		_procnamebn=${_procname##*/}
 		_fp_args='_arg0 _argv'
@@ -503,6 +462,8 @@ check_startmsgs()
 #				NOTE:	$flags from the parent environment
 #					can be used to override this.
 #
+#	${name}_fib	n	Routing table number to run ${command} with.
+#
 #	${name}_nice	n	Nice level to run ${command} at.
 #
 #	${name}_user	n	User to run ${command} as, using su(1) if not
@@ -585,6 +546,8 @@ check_startmsgs()
 #
 #	rcvar		Display what rc.conf variable is used (if any).
 #
+#	enabled		Return true if the service is enabled.
+#
 #	Variables available to methods, and after run_rc_command() has
 #	completed:
 #
@@ -653,7 +616,7 @@ run_rc_command()
 	eval _override_command=\$${name}_program
 	command=${_override_command:-$command}
 
-	_keywords="start stop restart rcvar $extra_commands"
+	_keywords="start stop restart rcvar enabled $extra_commands"
 	rc_pid=
 	_pidcmd=
 	_procname=${procname:-${command}}
@@ -674,6 +637,11 @@ run_rc_command()
 		rc_usage $_keywords
 	fi
 
+	if [ "$rc_arg" = "enabled" ] ; then
+		checkyesno ${rcvar}
+		return $?
+	fi
+
 	if [ -n "$flags" ]; then	# allow override from environment
 		rc_flags=$flags
 	else
@@ -681,7 +649,8 @@ run_rc_command()
 	fi
 	eval _chdir=\$${name}_chdir	_chroot=\$${name}_chroot \
 	    _nice=\$${name}_nice	_user=\$${name}_user \
-	    _group=\$${name}_group	_groups=\$${name}_groups
+	    _group=\$${name}_group	_groups=\$${name}_groups \
+	    _fib=\$${name}_fib
 
 	if [ -n "$_user" ]; then	# unset $_user if running as that user
 		if [ "$_user" = "$(eval $IDCMD)" ]; then
@@ -742,7 +711,10 @@ run_rc_command()
 
 		start)
 			if [ -z "$rc_fast" -a -n "$rc_pid" ]; then
-				echo 1>&2 "${name} already running? (pid=$rc_pid)."
+				if [ -z "$rc_quiet" ]; then
+					echo 1>&2 "${name} already running? " \
+					    "(pid=$rc_pid)."
+				fi
 				return 1
 			fi
 
@@ -762,11 +734,13 @@ run_rc_command()
 			if [ -n "$_chroot" ]; then
 				_doit="\
 ${_nice:+nice -n $_nice }\
+${_fib:+setfib -F $_fib }\
 chroot ${_user:+-u $_user }${_group:+-g $_group }${_groups:+-G $_groups }\
 $_chroot $command $rc_flags $command_args"
 			else
 				_doit="\
 ${_chdir:+cd $_chdir && }\
+${_fib:+setfib -F $_fib }\
 $command $rc_flags $command_args"
 				if [ -n "$_user" ]; then
 				    _doit="su -m $_user -c 'sh -c \"$_doit\"'"
@@ -863,8 +837,8 @@ $command $rc_flags $command_args"
 				echo ""
 			fi
 			echo "#"
-			# Get unique vars in $rcvar $rcvars
-			for _v in $rcvar $rcvars; do
+			# Get unique vars in $rcvar
+			for _v in $rcvar; do
 				case $v in
 				$_v\ *|\ *$_v|*\ $_v\ *) ;;
 				*)	v="${v# } $_v" ;;
@@ -1010,7 +984,7 @@ run_rc_script()
 
 	unset	name command command_args command_interpreter \
 		extra_commands pidfile procname \
-		rcvar rcvars rcvars_obsolete required_dirs required_files \
+		rcvar rcvars_obsolete required_dirs required_files \
 		required_vars
 	eval unset ${_arg}_cmd ${_arg}_precmd ${_arg}_postcmd
 
@@ -1042,7 +1016,7 @@ run_rc_script()
 #
 load_rc_config()
 {
-	local _name _var _defval _v _msg _new
+	local _name _rcvar_val _var _defval _v _msg _new
 	_name=$1
 	if [ -z "$_name" ]; then
 		err 3 'USAGE: load_rc_config name'
@@ -1067,7 +1041,7 @@ load_rc_config()
 	fi
 
 	# Set defaults if defined.
-	for _var in $rcvar $rcvars; do
+	for _var in $rcvar; do
 		eval _defval=\$${_var}_defval
 		if [ -n "$_defval" ]; then
 			eval : \${$_var:=\$${_var}_defval}
@@ -1286,7 +1260,7 @@ backup_file()
 #	Make a symbolic link 'link' to src from basedir. If the
 #	directory in which link is to be created does not exist
 #	a warning will be displayed and an error will be returned.
-#	Returns 0 on sucess, 1 otherwise.
+#	Returns 0 on success, 1 otherwise.
 #
 make_symlink()
 {
@@ -1318,7 +1292,7 @@ make_symlink()
 #
 devfs_rulesets_from_file()
 {
-	local file _err _me
+	local file _err _me _opts
 	file="$1"
 	_me="devfs_rulesets_from_file"
 	_err=0
@@ -1331,6 +1305,11 @@ devfs_rulesets_from_file()
 		debug "$_me: no such file ($file)"
 		return 0
 	fi
+
+	# Disable globbing so that the rule patterns are not expanded
+	# by accident with matching filesystem entries.
+	_opts=$-; set -f
+
 	debug "reading rulesets from file ($file)"
 	{ while read line
 	do
@@ -1377,6 +1356,7 @@ devfs_rulesets_from_file()
 			break
 		fi
 	done } < $file
+	case $_opts in *f*) ;; *) set +f ;; esac
 	return $_err
 }
 
@@ -1479,28 +1459,6 @@ devfs_domount()
 		devfs_init_rulesets
 		devfs_set_ruleset $rs $devdir
 		devfs -m $devdir rule applyset
-	fi
-	return 0
-}
-
-# devfs_mount_jail dir [ruleset]
-#	Mounts a devfs file system appropriate for jails
-#	on the directory dir. If ruleset is specified, the ruleset
-#	it names will be used instead.  If present, ruleset must
-#	be the name of a ruleset as defined in a devfs.rules(5) file.
-#	This function returns non-zero if an error occurs.
-#
-devfs_mount_jail()
-{
-	local jdev rs _me
-	jdev="$1"
-	[ -n "$2" ] && rs=$2 || rs="devfsrules_jail"
-	_me="devfs_mount_jail"
-
-	devfs_init_rulesets
-	if ! devfs_domount "$jdev" $rs; then
-		warn "$_me: devfs was not mounted on $jdev"
-		return 1
 	fi
 	return 0
 }
@@ -1634,7 +1592,7 @@ geli_make_list()
 
 # Find scripts in local_startup directories that use the old syntax
 #
-find_local_scripts_old () {
+find_local_scripts_old() {
 	zlist=''
 	slist=''
 	for dir in ${local_startup}; do
@@ -1644,7 +1602,7 @@ find_local_scripts_old () {
 				    continue
 				zlist="$zlist $file"
 			done
-			for file in ${dir}/[^0-9]*.sh; do
+			for file in ${dir}/[!0-9]*.sh; do
 				grep '^# PROVIDE:' $file >/dev/null 2>&1 &&
 				    continue
 				slist="$slist $file"
@@ -1653,7 +1611,7 @@ find_local_scripts_old () {
 	done
 }
 
-find_local_scripts_new () {
+find_local_scripts_new() {
 	local_rc=''
 	for dir in ${local_startup}; do
 		if [ -d "${dir}" ]; then
@@ -1758,6 +1716,23 @@ check_kern_features()
 		eval _rc_cache_kern_features_$1=1
 		return 1
 	fi
+}
+
+# check_namevarlist var
+#	Return "0" if ${name}_var is reserved in rc.subr.
+
+_rc_namevarlist="program chroot chdir flags fib nice user group groups"
+check_namevarlist()
+{
+	local _v
+
+	for _v in $_rc_namevarlist; do
+	case $1 in
+	$_v)	return 0 ;;
+	esac
+	done
+
+	return 1
 }
 
 # _echoonce var msg mode

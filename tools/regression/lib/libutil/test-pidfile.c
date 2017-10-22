@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libutil/test-pidfile.c 199213 2009-11-12 01:37:02Z des $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/libutil/test-pidfile.c 199213 2009-11-12 01:37:02Z des $");
 
 #include <sys/param.h>
 #include <sys/wait.h>

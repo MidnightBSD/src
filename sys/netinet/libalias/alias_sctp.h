@@ -45,7 +45,7 @@
  *
  */
 
-/* $FreeBSD: stable/9/sys/netinet/libalias/alias_sctp.h 222809 2011-06-07 06:57:22Z ae $ */
+/* $FreeBSD: release/10.0.0/sys/netinet/libalias/alias_sctp.h 235644 2012-05-19 05:14:24Z marcel $ */
 
 #ifndef _ALIAS_SCTP_H_
 #define _ALIAS_SCTP_H_
@@ -92,7 +92,6 @@
 #ifndef _KERNEL
 #include <stdlib.h>
 #include <stdio.h>
-#include <curses.h>
 #endif //#ifdef _KERNEL
 
 

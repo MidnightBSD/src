@@ -25,7 +25,7 @@ SOFTWARE.
 
 /*
  * Generalized hash table ADT
- * $FreeBSD: stable/9/libexec/bootpd/hash.h 97417 2002-05-28 18:36:43Z alfred $
+ * $FreeBSD: release/10.0.0/libexec/bootpd/hash.h 229780 2012-01-07 16:09:54Z uqs $
  *
  * Provides multiple, dynamically-allocated, variable-sized hash tables on
  * various data and keys.
@@ -81,7 +81,7 @@ SOFTWARE.
  *
  *	    A generalized hash function, hash_HashFunction(), is included
  *	    with this package to make things a little easier.  It is not
- *	    guarenteed to use the best hash algorithm in existence. . . .
+ *	    guaranteed to use the best hash algorithm in existence. . . .
  */
 
 

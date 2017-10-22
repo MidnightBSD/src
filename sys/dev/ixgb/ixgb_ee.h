@@ -31,7 +31,7 @@
 
 *******************************************************************************/
 
-/*$FreeBSD: stable/9/sys/dev/ixgb/ixgb_ee.h 129794 2004-05-28 00:23:00Z tackerman $*/
+/*$FreeBSD: release/10.0.0/sys/dev/ixgb/ixgb_ee.h 129794 2004-05-28 00:23:00Z tackerman $*/
 #ifndef _IXGB_EE_H_
 #define _IXGB_EE_H_
 

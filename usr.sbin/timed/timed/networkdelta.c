@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)networkdelta.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/timed/timed/networkdelta.c 229247 2012-01-01 23:49:11Z dim $";
+  "$FreeBSD: release/10.0.0/usr.sbin/timed/timed/networkdelta.c 246209 2013-02-01 14:26:54Z charnier $";
 #endif /* not lint */
 
 #include "globals.h"
@@ -62,7 +62,7 @@ static long median(float, float *, long *, long *, unsigned int);
  *	bad values.
  */
 long
-networkdelta()
+networkdelta(void)
 {
 	struct hosttbl *htp;
 	long med;

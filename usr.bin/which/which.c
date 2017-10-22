@@ -26,7 +26,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/which/which.c 141656 2005-02-10 16:04:22Z ru $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/which/which.c 227245 2011-11-06 18:50:26Z ed $");
 
 #include <sys/stat.h>
 #include <sys/param.h>
@@ -40,8 +40,8 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/which/which.c 141656 2005-02-10 16:04:22Z r
 static void	 usage(void);
 static int	 print_matches(char *, char *);
 	
-int 	silent;
-int 	allpaths;
+static int 	 silent;
+static int 	 allpaths;
 
 int
 main(int argc, char **argv)

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)DEFS.h	5.1 (Berkeley) 4/23/90
- * $FreeBSD: stable/9/sys/amd64/include/asm.h 171914 2007-08-22 04:26:07Z jkoshy $
+ * $FreeBSD: release/10.0.0/sys/amd64/include/asm.h 254463 2013-08-17 19:24:58Z jilles $
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -43,7 +43,6 @@
 #define	PIC_GOT(x)	x@GOTPCREL(%rip)
 #else
 #define	PIC_PLT(x)	x
-#define	PIC_GOT(x)	x
 #endif
 
 /*

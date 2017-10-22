@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/tools/regression/priv/Makefile 204585 2010-03-02 16:58:04Z uqs $
+# $FreeBSD: release/10.0.0/tools/regression/priv/Makefile 253385 2013-07-16 09:38:51Z kevlo $
 #
 
 .include <bsd.own.mk>
@@ -45,7 +45,7 @@ SRCS=	main.c				\
 	priv_vm_mlock.c			\
 	priv_vm_munlock.c
 
-NO_MAN=
+MAN=
 WARNS?=	3
 
 DPADD+= ${LIBIPSEC}

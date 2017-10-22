@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/include/rpc/auth_kerb.h 166431 2007-02-02 18:11:18Z schweikh $ */
+/*	$FreeBSD: release/10.0.0/include/rpc/auth_kerb.h 166431 2007-02-02 18:11:18Z schweikh $ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape

@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)syslogd.c	8.3 (Berkeley) 4/4/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/syslogd/syslogd.c 244881 2012-12-31 03:34:52Z markj $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/syslogd/syslogd.c 249983 2013-04-27 13:26:35Z jilles $");
 
 /*
  *  syslogd -- log system messages
@@ -312,7 +312,7 @@ static void	cfline(const char *, struct filed *,
 static const char *cvthname(struct sockaddr *);
 static void	deadq_enter(pid_t, const char *);
 static int	deadq_remove(pid_t);
-static int	decode(const char *, CODE *);
+static int	decode(const char *, const CODE *);
 static void	die(int);
 static void	dodie(int);
 static void	dofsync(void);
@@ -1123,7 +1123,7 @@ fprintlog(struct filed *f, int flags, const char *msg)
 		char p_n[5];	/* Hollow laugh */
 
 		if (LogFacPri > 1) {
-		  CODE *c;
+		  const CODE *c;
 
 		  for (c = facilitynames; c->c_name; c++) {
 		    if (c->c_val == fac) {
@@ -2031,9 +2031,9 @@ cfline(const char *line, struct filed *f, const char *prog, const char *host)
  *  Decode a symbolic name to a numeric value
  */
 static int
-decode(const char *name, CODE *codetab)
+decode(const char *name, const CODE *codetab)
 {
-	CODE *c;
+	const CODE *c;
 	char *p, buf[40];
 
 	if (isdigit(*name))
@@ -2476,7 +2476,7 @@ validate(struct sockaddr *sa, const char *hname)
 static int
 p_open(const char *prog, pid_t *rpid)
 {
-	int pfd[2], nulldesc, i;
+	int pfd[2], nulldesc;
 	pid_t pid;
 	sigset_t omask, mask;
 	char *argv[4]; /* sh -c cmd NULL */
@@ -2526,8 +2526,7 @@ p_open(const char *prog, pid_t *rpid)
 		dup2(pfd[0], STDIN_FILENO);
 		dup2(nulldesc, STDOUT_FILENO);
 		dup2(nulldesc, STDERR_FILENO);
-		for (i = getdtablesize(); i > 2; i--)
-			(void)close(i);
+		closefrom(3);
 
 		(void)execvp(_PATH_BSHELL, argv);
 		_exit(255);

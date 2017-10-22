@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/sound/macio/snapper.c 193694 2009-06-08 08:10:52Z ariff $
+ * $FreeBSD: release/10.0.0/sys/dev/sound/macio/snapper.c 239245 2012-08-14 05:16:35Z andreast $
  */
 /*-
  * Copyright (c) 2002, 2003 Tsubai Masanari.  All rights reserved.
@@ -174,7 +174,7 @@ MIXER_DECLARE(snapper_mixer);
 #define  SNAPPER_MCR1_W_16	0x00	/*  16 bit */
 #define  SNAPPER_MCR1_W_18	0x01	/*  18 bit */
 #define  SNAPPER_MCR1_W_20	0x02	/*  20 bit */
-#define  SNAPPER_MCR1_W_24	0x03	/*  20 bit */
+#define  SNAPPER_MCR1_W_24	0x03	/*  24 bit */
 #define SNAPPER_MCR2_DL	0x80	/* Download */
 #define SNAPPER_MCR2_AP	0x02	/* All pass mode */
 #define SNAPPER_ACR_ADM	0x80	/* ADC output mode */

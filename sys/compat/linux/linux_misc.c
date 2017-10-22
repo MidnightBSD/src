@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2002 Doug Rabson
- * Copyright (c) 1994-1995 Søren Schmidt
+ * Copyright (c) 1994-1995 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/compat/linux/linux_misc.c 246290 2013-02-03 18:14:37Z dchagin $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/compat/linux/linux_misc.c 255426 2013-09-09 18:11:59Z jhb $");
 
 #include "opt_compat.h"
 #include "opt_kdtrace.h"
@@ -246,7 +246,7 @@ linux_uselib(struct thread *td, struct linux_uselib_args *args)
 	unsigned long bss_size;
 	char *library;
 	ssize_t aresid;
-	int error, locked, vfslocked, writecount;
+	int error, locked, writecount;
 
 	LCONVPATHEXIST(td, args->library, &library);
 
@@ -256,11 +256,10 @@ linux_uselib(struct thread *td, struct linux_uselib_args *args)
 #endif
 
 	a_out = NULL;
-	vfslocked = 0;
 	locked = 0;
 	vp = NULL;
 
-	NDINIT(&ni, LOOKUP, ISOPEN | FOLLOW | LOCKLEAF | MPSAFE | AUDITVNODE1,
+	NDINIT(&ni, LOOKUP, ISOPEN | FOLLOW | LOCKLEAF | AUDITVNODE1,
 	    UIO_SYSSPACE, library, td);
 	error = namei(&ni);
 	LFREEPATH(library);
@@ -268,7 +267,6 @@ linux_uselib(struct thread *td, struct linux_uselib_args *args)
 		goto cleanup;
 
 	vp = ni.ni_vp;
-	vfslocked = NDHASGIANT(&ni);
 	NDFREE(&ni, NDF_ONLY_PNBUF);
 
 	/*
@@ -395,7 +393,6 @@ linux_uselib(struct thread *td, struct linux_uselib_args *args)
 	 */
 	locked = 0;
 	VOP_UNLOCK(vp, 0);
-	VFS_UNLOCK_GIANT(vfslocked);
 
 	/*
 	 * Check if file_offset page aligned. Currently we cannot handle
@@ -413,8 +410,8 @@ linux_uselib(struct thread *td, struct linux_uselib_args *args)
 
 		/* get anon user mapping, read+write+execute */
 		error = vm_map_find(&td->td_proc->p_vmspace->vm_map, NULL, 0,
-		    &vmaddr, a_out->a_text + a_out->a_data, FALSE, VM_PROT_ALL,
-		    VM_PROT_ALL, 0);
+		    &vmaddr, a_out->a_text + a_out->a_data, 0, VMFS_NO_SPACE,
+		    VM_PROT_ALL, VM_PROT_ALL, 0);
 		if (error)
 			goto cleanup;
 
@@ -458,21 +455,20 @@ linux_uselib(struct thread *td, struct linux_uselib_args *args)
 
 		/* allocate some 'anon' space */
 		error = vm_map_find(&td->td_proc->p_vmspace->vm_map, NULL, 0,
-		    &vmaddr, bss_size, FALSE, VM_PROT_ALL, VM_PROT_ALL, 0);
+		    &vmaddr, bss_size, 0, VMFS_NO_SPACE, VM_PROT_ALL,
+		    VM_PROT_ALL, 0);
 		if (error)
 			goto cleanup;
 	}
 
 cleanup:
 	/* Unlock vnode if needed */
-	if (locked) {
+	if (locked)
 		VOP_UNLOCK(vp, 0);
-		VFS_UNLOCK_GIANT(vfslocked);
-	}
 
 	/* Release the temporary mapping. */
 	if (a_out)
-		kmem_free_wakeup(exec_map, (vm_offset_t)a_out, PAGE_SIZE);
+		kmap_free_wakeup(exec_map, (vm_offset_t)a_out, PAGE_SIZE);
 
 	return (error);
 }

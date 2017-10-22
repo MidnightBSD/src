@@ -23,11 +23,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/csu/i386-elf/crt1_c.c 245777 2013-01-22 07:32:26Z kib $
+ * $FreeBSD: release/10.0.0/lib/csu/i386-elf/crt1_c.c 245133 2013-01-07 17:58:27Z kib $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/csu/i386-elf/crt1_c.c 245777 2013-01-22 07:32:26Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/csu/i386-elf/crt1_c.c 245133 2013-01-07 17:58:27Z kib $");
 
 #ifndef lint
 #ifndef __GNUC__
@@ -39,15 +39,10 @@ __FBSDID("$FreeBSD: stable/9/lib/csu/i386-elf/crt1_c.c 245777 2013-01-22 07:32:2
 
 #include "libc_private.h"
 #include "crtbrand.c"
-
-extern int _DYNAMIC;
-#pragma weak _DYNAMIC
+#include "ignore_init.c"
 
 typedef void (*fptr)(void);
 
-extern void _fini(void);
-extern void _init(void);
-extern int main(int, char **, char **);
 extern void _start(char *, ...);
 
 #ifdef GCRT
@@ -57,9 +52,6 @@ extern int eprol;
 extern int etext;
 #endif
 
-char **environ;
-const char *__progname = "";
-
 void _start1(fptr, int, char *[]) __dead2;
 
 /* The entry function, C part. */
@@ -67,18 +59,9 @@ void
 _start1(fptr cleanup, int argc, char *argv[])
 {
 	char **env;
-	const char *s;
 
 	env = argv + argc + 1;
-	if (environ == NULL)
-		environ = env;
-	if (argc > 0 && argv[0] != NULL) {
-		__progname = argv[0];
-		for (s = __progname; *s != '\0'; s++)
-			if (*s == '/')
-				__progname = s + 1;
-	}
-
+	handle_argv(argc, argv, env);
 	if (&_DYNAMIC != NULL)
 		atexit(cleanup);
 	else
@@ -86,14 +69,12 @@ _start1(fptr cleanup, int argc, char *argv[])
 
 #ifdef GCRT
 	atexit(_mcleanup);
-#endif
-	atexit(_fini);
-#ifdef GCRT
 	monstartup(&eprol, &etext);
 __asm__("eprol:");
 #endif
-	_init();
-	exit( main(argc, argv, env) );
+
+	handle_static_init(argc, argv, env);
+	exit(main(argc, argv, env));
 }
 
 __asm(".hidden	_start1");

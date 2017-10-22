@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/9/sys/dev/e1000/e1000_mbx.h 209616 2010-06-30 21:05:51Z jfv $*/
+/*$FreeBSD: release/10.0.0/sys/dev/e1000/e1000_mbx.h 209616 2010-06-30 21:05:51Z jfv $*/
 
 #ifndef _E1000_MBX_H_
 #define _E1000_MBX_H_

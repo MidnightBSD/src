@@ -40,14 +40,14 @@
  *
  * Machine dependant functions for kernel setup
  *
- * This file needs a lot of work. 
+ * This file needs a lot of work.
  *
  * Created      : 17/09/94
  */
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/sa11x0/assabet_machdep.c 223562 2011-06-26 10:07:48Z kevlo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/sa11x0/assabet_machdep.c 247313 2013-02-26 07:41:34Z alc $");
 
 #include "opt_md.h"
 
@@ -79,9 +79,7 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/sa11x0/assabet_machdep.c 223562 2011-06-26 
 #include <vm/pmap.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
-#include <vm/vm_pager.h>
 #include <vm/vm_map.h>
-#include <machine/pmap.h>
 #include <machine/vmparam.h>
 #include <machine/pcb.h>
 #include <machine/undefined.h>
@@ -105,11 +103,6 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/sa11x0/assabet_machdep.c 223562 2011-06-26 
 #define	KERNEL_PT_VMDATA_NUM	7	/* start with 16MB of KVM */
 #define	NUM_KERNEL_PTS		(KERNEL_PT_VMDATA + KERNEL_PT_VMDATA_NUM)
 
-/* Define various stack sizes in pages */
-#define IRQ_STACK_SIZE	1
-#define ABT_STACK_SIZE	1
-#define UND_STACK_SIZE	1
-
 #define	KERNEL_VM_BASE		(KERNBASE + 0x00100000)
 #define	KERNEL_VM_SIZE		0x05000000
 
@@ -119,16 +112,9 @@ extern u_int undefined_handler_address;
 
 struct pv_addr kernel_pt_table[NUM_KERNEL_PTS];
 
-extern void *_end;
-
 extern vm_offset_t sa1110_uart_vaddr;
 
 extern vm_offset_t sa1_cache_clean_addr;
-
-extern int *end;
-
-struct pcpu __pcpu;
-struct pcpu *pcpup = &__pcpu;
 
 #ifndef MD_ROOT_SIZE
 #define MD_ROOT_SIZE 65535
@@ -140,14 +126,12 @@ vm_paddr_t dump_avail[4];
 vm_paddr_t physical_start;
 vm_paddr_t physical_end;
 vm_paddr_t physical_freestart;
-vm_offset_t physical_pages;
 
 struct pv_addr systempage;
 struct pv_addr irqstack;
 struct pv_addr undstack;
 struct pv_addr abtstack;
 struct pv_addr kernelstack;
-static struct trapframe proc0_tf;
 
 /* Static device mappings. */
 static const struct pmap_devmap assabet_devmap[] = {
@@ -201,9 +185,8 @@ cpu_reset()
 #define CPU_SA110_CACHE_CLEAN_SIZE (0x4000 * 2)
 
 void *
-initarm(void *arg, void *arg2)
+initarm(struct arm_boot_params *abp)
 {
-	struct pcpu *pc;
 	struct pv_addr  kernel_l1pt;
 	struct pv_addr	md_addr;
 	struct pv_addr	md_bla;
@@ -216,14 +199,12 @@ initarm(void *arg, void *arg2)
 	uint32_t memsize = 32 * 1024 * 1024;
 	sa1110_uart_vaddr = SACOM1_VBASE;
 
-	boothowto = RB_VERBOSE | RB_SINGLE;
+	boothowto = RB_VERBOSE | RB_SINGLE;     /* Default value */
+	lastaddr = parse_boot_param(abp);
 	cninit();
 	set_cpufuncs();
-	lastaddr = fake_preload_metadata();
 	physmem = memsize / PAGE_SIZE;
-	pc = &__pcpu;
-	pcpu_init(pc, 0, sizeof(struct pcpu));
-	PCPU_SET(curthread, &thread0);
+	pcpu0_init();
 
 	/* Do basic tuning, hz etc */
 	init_param1();
@@ -258,7 +239,7 @@ initarm(void *arg, void *arg2)
 			kernel_pt_table[loop].pv_pa = freemempos +
 			    (loop % (PAGE_SIZE / L2_TABLE_SIZE_REAL)) *
 			    L2_TABLE_SIZE_REAL;
-			kernel_pt_table[loop].pv_va = 
+			kernel_pt_table[loop].pv_va =
 			    kernel_pt_table[loop].pv_pa;
 		}
 	}
@@ -344,7 +325,7 @@ initarm(void *arg, void *arg2)
 	    VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
 	/* Map the statically mapped devices. */
 	pmap_devmap_bootstrap(l1pagetable, assabet_devmap);
-	pmap_map_chunk(l1pagetable, sa1_cache_clean_addr, 0xf0000000, 
+	pmap_map_chunk(l1pagetable, sa1_cache_clean_addr, 0xf0000000,
 	    CPU_SA110_CACHE_CLEAN_SIZE, VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
 
 	data_abort_handler_address = (u_int)data_abort_handler;
@@ -364,12 +345,7 @@ initarm(void *arg, void *arg2)
 	 * Since the ARM stacks use STMFD etc. we must set r13 to the top end
 	 * of the stack memory.
 	 */
-	set_stackptr(PSR_IRQ32_MODE,
-	    irqstack.pv_va + IRQ_STACK_SIZE * PAGE_SIZE);
-	set_stackptr(PSR_ABT32_MODE,
-	    abtstack.pv_va + ABT_STACK_SIZE * PAGE_SIZE);
-	set_stackptr(PSR_UND32_MODE,
-	    undstack.pv_va + UND_STACK_SIZE * PAGE_SIZE);
+	set_stackptrs(0);
 
 	/*
 	 * We must now clean the cache again....
@@ -387,12 +363,7 @@ initarm(void *arg, void *arg2)
 
 	/* Set stack for exception handlers */
 	
-	proc_linkup0(&proc0, &thread0);
-	thread0.td_kstack = kernelstack.pv_va;
-	thread0.td_pcb = (struct pcb *)
-		(thread0.td_kstack + KSTACK_PAGES * PAGE_SIZE) - 1;
-	thread0.td_pcb->pcb_flags = 0;
-	thread0.td_frame = &proc0_tf;
+	init_proc0(kernelstack.pv_va);
 	
 	
 	/* Enable MMU, I-cache, D-cache, write buffer. */
@@ -408,7 +379,8 @@ initarm(void *arg, void *arg2)
 	dump_avail[3] = phys_avail[3] = 0;
 					
 	mutex_init();
-	pmap_bootstrap(freemempos, 0xd0000000, &kernel_l1pt);
+	vm_max_kernel_address = 0xd0000000;
+	pmap_bootstrap(freemempos, &kernel_l1pt);
 
 	init_param2(physmem);
 	kdb_init();

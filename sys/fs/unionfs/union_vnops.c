@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)union_vnops.c	8.32 (Berkeley) 6/23/95
- * $FreeBSD: stable/9/sys/fs/unionfs/union_vnops.c 235902 2012-05-24 11:50:14Z trasz $
+ * $FreeBSD: release/10.0.0/sys/fs/unionfs/union_vnops.c 242833 2012-11-09 18:02:25Z attilio $
  *
  */
 
@@ -1721,7 +1721,7 @@ static int
 unionfs_inactive(struct vop_inactive_args *ap)
 {
 	ap->a_vp->v_object = NULL;
-	vrecycle(ap->a_vp, ap->a_td);
+	vrecycle(ap->a_vp);
 	return (0);
 }
 
@@ -1867,8 +1867,7 @@ unionfs_lock(struct vop_lock1_args *ap)
 	if ((revlock = unionfs_get_llt_revlock(vp, flags)) == 0)
 		panic("unknown lock type: 0x%x", flags & LK_TYPE_MASK);
 
-	if ((mp->mnt_kern_flag & MNTK_MPSAFE) != 0 &&
-	    (vp->v_iflag & VI_OWEINACT) != 0)
+	if ((vp->v_iflag & VI_OWEINACT) != 0)
 		flags |= LK_NOWAIT;
 
 	/*

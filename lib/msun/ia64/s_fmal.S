@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/ia64/s_fmal.S 192760 2009-05-25 14:37:10Z attilio $")
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/ia64/s_fmal.S 192760 2009-05-25 14:37:10Z attilio $")
 
 ENTRY(fmal, 3)
 {

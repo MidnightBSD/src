@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: stable/9/sys/i386/include/bus.h 216592 2010-12-20 16:39:43Z tijl $ */
+/* $FreeBSD: release/10.0.0/sys/i386/include/bus.h 244191 2012-12-13 21:27:20Z jimharris $ */
 
 #include <x86/bus.h>

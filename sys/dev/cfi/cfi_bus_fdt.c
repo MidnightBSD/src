@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/cfi/cfi_bus_fdt.c 209908 2010-07-11 21:08:29Z raj $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cfi/cfi_bus_fdt.c 250114 2013-04-30 18:33:29Z brooks $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,7 +51,7 @@ static device_method_t cfi_fdt_methods[] = {
 	DEVMETHOD(device_attach,	cfi_attach),
 	DEVMETHOD(device_detach,	cfi_detach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t cfi_fdt_driver = {
@@ -61,6 +61,7 @@ static driver_t cfi_fdt_driver = {
 };
 
 DRIVER_MODULE (cfi, lbc, cfi_fdt_driver, cfi_devclass, 0, 0);
+DRIVER_MODULE (cfi, simplebus, cfi_fdt_driver, cfi_devclass, 0, 0);
 
 static int
 cfi_fdt_probe(device_t dev)

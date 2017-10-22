@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpi_support/acpi_ibm.c 242914 2012-11-12 14:04:57Z bapt $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpi_support/acpi_ibm.c 246128 2013-01-30 18:01:20Z sbz $");
 
 /*
  * Driver for extra ACPI-controlled gadgets found on IBM ThinkPad laptops.
@@ -303,7 +303,7 @@ static device_method_t acpi_ibm_methods[] = {
 	DEVMETHOD(device_detach, acpi_ibm_detach),
 	DEVMETHOD(device_resume, acpi_ibm_resume),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t	acpi_ibm_driver = {

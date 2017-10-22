@@ -41,12 +41,14 @@
  * allocate and release resources.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/fs/tmpfs/tmpfs_vfsops.c 242368 2012-10-30 17:24:26Z alfred $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/fs/tmpfs/tmpfs_vfsops.c 254741 2013-08-23 22:52:20Z delphij $");
 
 #include <sys/param.h>
 #include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include <sys/proc.h>
+#include <sys/jail.h>
 #include <sys/kernel.h>
 #include <sys/stat.h>
 #include <sys/systm.h>
@@ -79,7 +81,7 @@ static int	tmpfs_statfs(struct mount *, struct statfs *);
 
 static const char *tmpfs_opts[] = {
 	"from", "size", "maxfilesize", "inodes", "uid", "gid", "mode", "export",
-	NULL
+	"union", NULL
 };
 
 static const char *tmpfs_updateopts[] = {
@@ -87,49 +89,6 @@ static const char *tmpfs_updateopts[] = {
 };
 
 /* --------------------------------------------------------------------- */
-
-static int
-tmpfs_getopt_size(struct vfsoptlist *opts, const char *name, off_t *value)
-{
-	char *opt_value, *vtp;
-	quad_t iv;
-	int error, opt_len;
-
-	error = vfs_getopt(opts, name, (void **)&opt_value, &opt_len);
-	if (error != 0)
-		return (error);
-	if (opt_len == 0 || opt_value == NULL)
-		return (EINVAL);
-	if (opt_value[0] == '\0' || opt_value[opt_len - 1] != '\0')
-		return (EINVAL);
-	iv = strtoq(opt_value, &vtp, 0);
-	if (vtp == opt_value || (vtp[0] != '\0' && vtp[1] != '\0'))
-		return (EINVAL);
-	if (iv < 0)
-		return (EINVAL);
-	switch (vtp[0]) {
-	case 't':
-	case 'T':
-		iv *= 1024;
-	case 'g':
-	case 'G':
-		iv *= 1024;
-	case 'm':
-	case 'M':
-		iv *= 1024;
-	case 'k':
-	case 'K':
-		iv *= 1024;
-	case '\0':
-		break;
-	default:
-		return (EINVAL);
-	}
-	*value = iv;
-
-	return (0);
-}
-
 
 static int
 tmpfs_node_ctor(void *mem, int size, void *arg, int flags)
@@ -181,6 +140,7 @@ tmpfs_mount(struct mount *mp)
 	    sizeof(struct tmpfs_dirent) + sizeof(struct tmpfs_node));
 	struct tmpfs_mount *tmp;
 	struct tmpfs_node *root;
+	struct thread *td = curthread;
 	int error;
 	/* Size counters. */
 	u_quad_t pages;
@@ -192,6 +152,9 @@ tmpfs_mount(struct mount *mp)
 	mode_t root_mode;
 
 	struct vattr va;
+
+	if (!prison_allow(td->td_ucred, PR_ALLOW_MOUNT_TMPFS))
+		return (EPERM);
 
 	if (vfs_filteropt(mp->mnt_optnew, tmpfs_opts))
 		return (EINVAL);
@@ -221,11 +184,11 @@ tmpfs_mount(struct mount *mp)
 	if (mp->mnt_cred->cr_ruid != 0 ||
 	    vfs_scanopt(mp->mnt_optnew, "mode", "%ho", &root_mode) != 1)
 		root_mode = va.va_mode;
-	if (tmpfs_getopt_size(mp->mnt_optnew, "inodes", &nodes_max) != 0)
+	if (vfs_getopt_size(mp->mnt_optnew, "inodes", &nodes_max) != 0)
 		nodes_max = 0;
-	if (tmpfs_getopt_size(mp->mnt_optnew, "size", &size_max) != 0)
+	if (vfs_getopt_size(mp->mnt_optnew, "size", &size_max) != 0)
 		size_max = 0;
-	if (tmpfs_getopt_size(mp->mnt_optnew, "maxfilesize", &maxfilesize) != 0)
+	if (vfs_getopt_size(mp->mnt_optnew, "maxfilesize", &maxfilesize) != 0)
 		maxfilesize = 0;
 
 	/* Do not allow mounts if we do not have enough memory to preserve
@@ -290,12 +253,12 @@ tmpfs_mount(struct mount *mp)
 	    free(tmp, M_TMPFSMNT);
 	    return error;
 	}
-	KASSERT(root->tn_id == 2, ("tmpfs root with invalid ino: %d", root->tn_id));
+	KASSERT(root->tn_id == 2,
+	    ("tmpfs root with invalid ino: %ju", (uintmax_t)root->tn_id));
 	tmp->tm_root = root;
 
 	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
-	mp->mnt_kern_flag |= MNTK_MPSAFE;
 	MNT_IUNLOCK(mp);
 
 	mp->mnt_data = tmp;
@@ -337,19 +300,8 @@ tmpfs_unmount(struct mount *mp, int mntflags)
 	while (node != NULL) {
 		struct tmpfs_node *next;
 
-		if (node->tn_type == VDIR) {
-			struct tmpfs_dirent *de;
-
-			de = TAILQ_FIRST(&node->tn_dir.tn_dirhead);
-			while (de != NULL) {
-				struct tmpfs_dirent *nde;
-
-				nde = TAILQ_NEXT(de, td_entries);
-				tmpfs_free_dirent(tmp, de, FALSE);
-				de = nde;
-				node->tn_size -= sizeof(struct tmpfs_dirent);
-			}
-		}
+		if (node->tn_type == VDIR)
+			tmpfs_dir_destroy(tmp, node);
 
 		next = LIST_NEXT(node, tn_entries);
 		tmpfs_free_node(tmp, node);
@@ -474,4 +426,4 @@ struct vfsops tmpfs_vfsops = {
 	.vfs_statfs =			tmpfs_statfs,
 	.vfs_fhtovp =			tmpfs_fhtovp,
 };
-VFS_SET(tmpfs_vfsops, tmpfs, 0);
+VFS_SET(tmpfs_vfsops, tmpfs, VFCF_JAIL);

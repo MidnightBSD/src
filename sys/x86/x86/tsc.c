@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/x86/x86/tsc.c 246760 2013-02-13 13:55:54Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/x86/x86/tsc.c 249625 2013-04-18 17:07:04Z mav $");
 
 #include "opt_compat.h"
 #include "opt_clock.h"
@@ -61,10 +61,15 @@ SYSCTL_INT(_kern_timecounter, OID_AUTO, invariant_tsc, CTLFLAG_RDTUN,
 TUNABLE_INT("kern.timecounter.invariant_tsc", &tsc_is_invariant);
 
 #ifdef SMP
-static int	smp_tsc;
+int	smp_tsc;
 SYSCTL_INT(_kern_timecounter, OID_AUTO, smp_tsc, CTLFLAG_RDTUN, &smp_tsc, 0,
     "Indicates whether the TSC is safe to use in SMP mode");
 TUNABLE_INT("kern.timecounter.smp_tsc", &smp_tsc);
+
+int	smp_tsc_adjust = 0;
+SYSCTL_INT(_kern_timecounter, OID_AUTO, smp_tsc_adjust, CTLFLAG_RDTUN,
+    &smp_tsc_adjust, 0, "Try to adjust TSC on APs to match BSP");
+TUNABLE_INT("kern.timecounter.smp_tsc_adjust", &smp_tsc_adjust);
 #endif
 
 static int	tsc_shift = 1;
@@ -368,11 +373,11 @@ init_TSC(void)
 static void								\
 tsc_read_##x(void *arg)							\
 {									\
-	uint32_t *tsc = arg;						\
+	uint64_t *tsc = arg;						\
 	u_int cpu = PCPU_GET(cpuid);					\
 									\
 	__asm __volatile("cpuid" : : : "eax", "ebx", "ecx", "edx");	\
-	tsc[cpu * 3 + x] = rdtsc32();					\
+	tsc[cpu * 3 + x] = rdtsc();					\
 }
 TSC_READ(0)
 TSC_READ(1)
@@ -384,8 +389,8 @@ TSC_READ(2)
 static void
 comp_smp_tsc(void *arg)
 {
-	uint32_t *tsc;
-	int32_t d1, d2;
+	uint64_t *tsc;
+	int64_t d1, d2;
 	u_int cpu = PCPU_GET(cpuid);
 	u_int i, j, size;
 
@@ -403,25 +408,77 @@ comp_smp_tsc(void *arg)
 		}
 }
 
+static void
+adj_smp_tsc(void *arg)
+{
+	uint64_t *tsc;
+	int64_t d, min, max;
+	u_int cpu = PCPU_GET(cpuid);
+	u_int first, i, size;
+
+	first = CPU_FIRST();
+	if (cpu == first)
+		return;
+	min = INT64_MIN;
+	max = INT64_MAX;
+	size = (mp_maxid + 1) * 3;
+	for (i = 0, tsc = arg; i < N; i++, tsc += size) {
+		d = tsc[first * 3] - tsc[cpu * 3 + 1];
+		if (d > min)
+			min = d;
+		d = tsc[first * 3 + 1] - tsc[cpu * 3 + 2];
+		if (d > min)
+			min = d;
+		d = tsc[first * 3 + 1] - tsc[cpu * 3];
+		if (d < max)
+			max = d;
+		d = tsc[first * 3 + 2] - tsc[cpu * 3 + 1];
+		if (d < max)
+			max = d;
+	}
+	if (min > max)
+		return;
+	d = min / 2 + max / 2;
+	__asm __volatile (
+		"movl $0x10, %%ecx\n\t"
+		"rdmsr\n\t"
+		"addl %%edi, %%eax\n\t"
+		"adcl %%esi, %%edx\n\t"
+		"wrmsr\n"
+		: /* No output */
+		: "D" ((uint32_t)d), "S" ((uint32_t)(d >> 32))
+		: "ax", "cx", "dx", "cc"
+	);
+}
+
 static int
 test_tsc(void)
 {
-	uint32_t *data, *tsc;
-	u_int i, size;
+	uint64_t *data, *tsc;
+	u_int i, size, adj;
 
 	if ((!smp_tsc && !tsc_is_invariant) || vm_guest)
 		return (-100);
 	size = (mp_maxid + 1) * 3;
 	data = malloc(sizeof(*data) * size * N, M_TEMP, M_WAITOK);
+	adj = 0;
+retry:
 	for (i = 0, tsc = data; i < N; i++, tsc += size)
 		smp_rendezvous(tsc_read_0, tsc_read_1, tsc_read_2, tsc);
 	smp_tsc = 1;	/* XXX */
 	smp_rendezvous(smp_no_rendevous_barrier, comp_smp_tsc,
 	    smp_no_rendevous_barrier, data);
+	if (!smp_tsc && adj < smp_tsc_adjust) {
+		adj++;
+		smp_rendezvous(smp_no_rendevous_barrier, adj_smp_tsc,
+		    smp_no_rendevous_barrier, data);
+		goto retry;
+	}
 	free(data, M_TEMP);
 	if (bootverbose)
-		printf("SMP: %sed TSC synchronization test\n",
-		    smp_tsc ? "pass" : "fail");
+		printf("SMP: %sed TSC synchronization test%s\n",
+		    smp_tsc ? "pass" : "fail", 
+		    adj > 0 ? " after adjustment" : "");
 	if (smp_tsc && tsc_is_invariant) {
 		switch (cpu_vendor_id) {
 		case CPU_VENDOR_AMD:

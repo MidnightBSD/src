@@ -33,7 +33,7 @@
  *
  *	From: @(#)ansi.h	8.2 (Berkeley) 1/4/94
  *	From: @(#)types.h	8.3 (Berkeley) 1/5/94
- * $FreeBSD: stable/9/sys/arm/include/_types.h 222813 2011-06-07 08:46:13Z attilio $
+ * $FreeBSD: release/10.0.0/sys/arm/include/_types.h 237517 2012-06-24 04:15:58Z andrew $
  */
 
 #ifndef _MACHINE__TYPES_H_
@@ -46,7 +46,7 @@
 /*
  * Basic types upon which most other types are built.
  */
-typedef	__signed char		__int8_t;
+typedef	signed char		__int8_t;
 typedef	unsigned char		__uint8_t;
 typedef	short			__int16_t;
 typedef	unsigned short		__uint16_t;
@@ -69,7 +69,7 @@ typedef	unsigned long long	__uint64_t;
 typedef	__uint32_t	__clock_t;		/* clock()... */
 typedef	__int32_t	__critical_t;
 typedef	double		__double_t;
-typedef	double		__float_t;
+typedef	float		__float_t;
 typedef	__int32_t	__intfptr_t;
 typedef	__int64_t	__intmax_t;
 typedef	__int32_t	__intptr_t;
@@ -104,6 +104,16 @@ typedef	__int64_t	__vm_ooffset_t;
 typedef	__uint32_t	__vm_paddr_t;
 typedef	__uint64_t	__vm_pindex_t;
 typedef	__uint32_t	__vm_size_t;
+
+#ifdef __ARM_EABI__
+typedef	unsigned int	__wchar_t;
+#define	__WCHAR_MIN	0		/* min value for a wchar_t */
+#define	__WCHAR_MAX	__UINT_MAX	/* max value for a wchar_t */
+#else
+typedef	int		__wchar_t;
+#define	__WCHAR_MIN	__INT_MIN	/* min value for a wchar_t */
+#define	__WCHAR_MAX	__INT_MAX	/* max value for a wchar_t */
+#endif
 
 /*
  * Unusual type definitions.

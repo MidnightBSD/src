@@ -36,7 +36,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: xlint.c,v 1.27 2002/01/31 19:09:33 tv Exp $");
 #endif
-__FBSDID("$FreeBSD: stable/9/usr.bin/xlint/xlint/xlint.c 230381 2012-01-20 15:43:08Z jilles $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/xlint/xlint/xlint.c 228992 2011-12-30 11:02:40Z uqs $");
 
 #include <sys/param.h>
 #include <sys/wait.h>
@@ -80,7 +80,7 @@ static	char	*p2out;
 /* flags always passed to cc(1) */
 static	char	**cflags;
 
-/* flags for cc(1), controled by sflag/tflag */
+/* flags for cc(1), controlled by sflag/tflag */
 static	char	**lcflags;
 
 /* flags for lint1 */

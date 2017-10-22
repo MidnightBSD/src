@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/wbwd/wbwd.c 246610 2013-02-10 07:36:23Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/wbwd/wbwd.c 245297 2013-01-11 10:22:09Z delphij $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -250,9 +250,8 @@ sysctl_wb_debug(SYSCTL_HANDLER_ARGS)
 	sbuf_printf(&sb, "LDN8 (GPIO2, Watchdog): ");
 	sbuf_printf(&sb, "CRF5 0x%02x ", sc->reg_1);
 	sbuf_printf(&sb, "CRF6 0x%02x ", sc->reg_timeout);
-	sbuf_printf(&sb, "CRF7 0x%02x ", sc->reg_2);
+	sbuf_printf(&sb, "CRF7 0x%02x", sc->reg_2);
 
-	sbuf_trim(&sb);
 	error = sbuf_finish(&sb);
 	sbuf_delete(&sb);
 	return (error);

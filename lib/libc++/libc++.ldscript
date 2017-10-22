@@ -1,0 +1,2 @@
+/* $FreeBSD: release/10.0.0/lib/libc++/libc++.ldscript 253917 2013-08-03 16:23:43Z dim $ */
+GROUP ( @@SHLIB@@ @@LIBDIR@@/libcxxrt.so )

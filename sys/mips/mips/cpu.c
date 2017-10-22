@@ -25,9 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/mips/cpu.c 224115 2011-07-16 20:31:29Z jchandra $");
-
-#include "opt_cputype.h"
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/cpu.c 257528 2013-11-01 21:17:45Z brooks $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -96,22 +94,34 @@ mips_get_identity(struct mips_cpuinfo *cpuinfo)
 	cpuinfo->icache_virtual = cfg0 & MIPS_CONFIG0_VI;
 
 	/* If config register selection 1 does not exist, exit. */
-	if (!(cfg0 & MIPS3_CONFIG_CM))
+	if (!(cfg0 & MIPS_CONFIG_CM))
 		return;
 
 	/* Learn TLB size and L1 cache geometry. */
 	cfg1 = mips_rd_config1();
-#ifndef CPU_NLM
-	cpuinfo->tlb_nentries = 
-	    ((cfg1 & MIPS_CONFIG1_TLBSZ_MASK) >> MIPS_CONFIG1_TLBSZ_SHIFT) + 1;
-#else
+
+#if defined(CPU_NLM)
 	/* Account for Extended TLB entries in XLP */
 	tmp = mips_rd_config6();
 	cpuinfo->tlb_nentries = ((tmp >> 16) & 0xffff) + 1;
+#elif defined(BERI_LARGE_TLB)
+	/* Check if we support extended TLB entries and if so activate. */
+	tmp = mips_rd_config5();
+#define	BERI_CP5_LTLB_SUPPORTED	0x1
+	if (tmp & BERI_CP5_LTLB_SUPPORTED) {
+		/* See how many extra TLB entries we have. */
+		tmp = mips_rd_config6();
+		cpuinfo->tlb_nentries = (tmp >> 16) + 1;
+		/* Activate the extended entries. */
+		mips_wr_config6(tmp|0x4);
+	} else
 #endif
-
-	/* Add extended TLB size information from config4.  */
+#if !defined(CPU_NLM)
+	cpuinfo->tlb_nentries = 
+	    ((cfg1 & MIPS_CONFIG1_TLBSZ_MASK) >> MIPS_CONFIG1_TLBSZ_SHIFT) + 1;
+#endif
 #if defined(CPU_CNMIPS)
+	/* Add extended TLB size information from config4.  */
 	cfg4 = mips_rd_config4();
 	if ((cfg4 & MIPS_CONFIG4_MMUEXTDEF) == MIPS_CONFIG4_MMUEXTDEF_MMUSIZEEXT)
 		cpuinfo->tlb_nentries += (cfg4 & MIPS_CONFIG4_MMUSIZEEXT) * 0x40;
@@ -126,8 +136,8 @@ mips_get_identity(struct mips_cpuinfo *cpuinfo)
 	    		1 << (((cfg1 & MIPS_CONFIG1_IS_MASK) >> MIPS_CONFIG1_IS_SHIFT) + 6);
 	}
 
-#ifndef CPU_CNMIPS
 	/* L1 data cache. */
+#ifndef CPU_CNMIPS
 	tmp = (cfg1 & MIPS_CONFIG1_DL_MASK) >> MIPS_CONFIG1_DL_SHIFT;
 	if (tmp != 0) {
 		cpuinfo->l1.dc_linesize = 1 << (tmp + 1);
@@ -274,7 +284,7 @@ cpu_identify(void)
 
 	cfg0 = mips_rd_config();
 	/* If config register selection 1 does not exist, exit. */
-	if (!(cfg0 & MIPS3_CONFIG_CM))
+	if (!(cfg0 & MIPS_CONFIG_CM))
 		return;
 
 	cfg1 = mips_rd_config1();
@@ -282,7 +292,7 @@ cpu_identify(void)
 	    "\20\7COP2\6MDMX\5PerfCount\4WatchRegs\3MIPS16\2EJTAG\1FPU");
 
 	/* If config register selection 2 does not exist, exit. */
-	if (!(cfg1 & MIPS3_CONFIG_CM))
+	if (!(cfg1 & MIPS_CONFIG_CM))
 		return;
 	cfg2 = mips_rd_config2();
 	/* 
@@ -291,7 +301,7 @@ cpu_identify(void)
 	 */
 
 	/* If config register selection 3 does not exist, exit. */
-	if (!(cfg2 & MIPS3_CONFIG_CM))
+	if (!(cfg2 & MIPS_CONFIG_CM))
 		return;
 	cfg3 = mips_rd_config3();
 

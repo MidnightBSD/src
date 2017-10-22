@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/ppp/tcpmss.h 69303 2000-11-28 13:18:35Z brian $
+ * $FreeBSD: release/10.0.0/usr.sbin/ppp/tcpmss.h 69303 2000-11-28 13:18:35Z brian $
  */
 
 extern struct layer tcpmsslayer;

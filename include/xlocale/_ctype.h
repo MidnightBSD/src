@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/include/xlocale/_ctype.h 243331 2012-11-20 11:47:22Z demon $
+ * $FreeBSD: release/10.0.0/include/xlocale/_ctype.h 243032 2012-11-14 17:44:37Z demon $
  */
 
 

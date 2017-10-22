@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/arch/arm/include/pthread_md.h 237397 2012-06-21 13:53:28Z marius $
+ * $FreeBSD: release/10.0.0/lib/libthr/arch/arm/include/pthread_md.h 239270 2012-08-15 03:08:29Z gonzo $
  */
 
 /*
@@ -57,7 +57,11 @@ void		_tcb_dtor(struct tcb *);
 static __inline void
 _tcb_set(struct tcb *tcb)
 {
-	*((struct tcb **)ARM_TP_ADDRESS) = tcb;
+#ifdef ARM_TP_ADDRESS
+	*((struct tcb **)ARM_TP_ADDRESS) = tcb;	/* avoids a system call */
+#else
+	sysarch(ARM_SET_TP, tcb);
+#endif
 }
 
 /*
@@ -66,7 +70,15 @@ _tcb_set(struct tcb *tcb)
 static __inline struct tcb *
 _tcb_get(void)
 {
+#ifdef ARM_TP_ADDRESS
 	return (*((struct tcb **)ARM_TP_ADDRESS));
+#else
+	struct tcb *tcb;
+
+	__asm __volatile("mrc  p15, 0, %0, c13, c0, 3"		\
+	   		 : "=r" (tcb));
+	return (tcb);
+#endif
 }
 
 extern struct pthread *_thr_initial;

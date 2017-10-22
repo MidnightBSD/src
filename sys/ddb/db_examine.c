@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ddb/db_examine.c 176914 2008-03-07 18:09:07Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ddb/db_examine.c 176914 2008-03-07 18:09:07Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

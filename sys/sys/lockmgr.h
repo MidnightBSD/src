@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/lockmgr.h 211531 2010-08-20 19:46:50Z jhb $
+ * $FreeBSD: release/10.0.0/sys/sys/lockmgr.h 255940 2013-09-29 18:02:23Z kib $
  */
 
 #ifndef	_SYS_LOCKMGR_H_
@@ -69,7 +69,7 @@ struct thread;
 int	 __lockmgr_args(struct lock *lk, u_int flags, struct lock_object *ilk,
 	    const char *wmesg, int prio, int timo, const char *file, int line);
 #if defined(INVARIANTS) || defined(INVARIANT_SUPPORT)
-void	 _lockmgr_assert(struct lock *lk, int what, const char *file, int line);
+void	 _lockmgr_assert(const struct lock *lk, int what, const char *file, int line);
 #endif
 void	 _lockmgr_disown(struct lock *lk, const char *file, int line);
 
@@ -82,8 +82,8 @@ void	 lockinit(struct lock *lk, int prio, const char *wmesg, int timo,
 #ifdef DDB
 int	 lockmgr_chain(struct thread *td, struct thread **ownerp);
 #endif
-void	 lockmgr_printinfo(struct lock *lk);
-int	 lockstatus(struct lock *lk);
+void	 lockmgr_printinfo(const struct lock *lk);
+int	 lockstatus(const struct lock *lk);
 
 /*
  * As far as the ilk can be a static NULL pointer these functions need a
@@ -146,6 +146,7 @@ _lockmgr_args_rw(struct lock *lk, u_int flags, struct rwlock *ilk,
 #define	LK_NOWITNESS	0x000010
 #define	LK_QUIET	0x000020
 #define	LK_ADAPTIVE	0x000040
+#define	LK_IS_VNODE	0x000080	/* Tell WITNESS about a VNODE lock */
 
 /*
  * Additional attributes to be used in lockmgr().
@@ -168,6 +169,7 @@ _lockmgr_args_rw(struct lock *lk, u_int flags, struct rwlock *ilk,
 #define	LK_RELEASE	0x100000
 #define	LK_SHARED	0x200000
 #define	LK_UPGRADE	0x400000
+#define	LK_TRYUPGRADE	0x800000
 
 #define	LK_TOTAL_MASK	(LK_INIT_MASK | LK_EATTR_MASK | LK_TYPE_MASK)
 

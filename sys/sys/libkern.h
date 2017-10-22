@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)libkern.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/9/sys/sys/libkern.h 235407 2012-05-13 17:10:38Z avg $
+ * $FreeBSD: release/10.0.0/sys/sys/libkern.h 253719 2013-07-27 20:47:01Z alfred $
  */
 
 #ifndef _SYS_LIBKERN_H_
@@ -70,6 +70,11 @@ static __inline int abs(int a) { return (a < 0 ? -a : a); }
 static __inline long labs(long a) { return (a < 0 ? -a : a); }
 static __inline quad_t qabs(quad_t a) { return (a < 0 ? -a : a); }
 
+#define	ARC4_ENTR_NONE	0	/* Don't have entropy yet. */
+#define	ARC4_ENTR_HAVE	1	/* Have entropy. */
+#define	ARC4_ENTR_SEED	2	/* Reseeding. */
+extern int arc4rand_iniseed_state;
+
 /* Prototypes for non-quad routines. */
 struct malloc_type;
 uint32_t arc4random(void);
@@ -89,22 +94,25 @@ int	 fls(int);
 #ifndef	HAVE_INLINE_FLSL
 int	 flsl(long);
 #endif
+#ifndef	HAVE_INLINE_FLSLL
+int	 flsll(long long);
+#endif
+
 int	 fnmatch(const char *, const char *, int);
 int	 locc(int, char *, u_int);
 void	*memchr(const void *s, int c, size_t n);
+void	*memcchr(const void *s, int c, size_t n);
 int	 memcmp(const void *b1, const void *b2, size_t len);
 void	 qsort(void *base, size_t nmemb, size_t size,
 	    int (*compar)(const void *, const void *));
 void	 qsort_r(void *base, size_t nmemb, size_t size, void *thunk,
 	    int (*compar)(void *, const void *, const void *));
 u_long	 random(void);
-char	*index(const char *, int);
-char	*rindex(const char *, int);
 int	 scanc(u_int, const u_char *, const u_char *, int);
-int	 skpc(int, int, char *);
 void	 srandom(u_long);
 int	 strcasecmp(const char *, const char *);
 char	*strcat(char * __restrict, const char * __restrict);
+char	*strchr(const char *, int);
 int	 strcmp(const char *, const char *);
 char	*strcpy(char * __restrict, const char * __restrict);
 size_t	 strcspn(const char * __restrict, const char * __restrict) __pure;
@@ -116,12 +124,13 @@ int	 strncasecmp(const char *, const char *, size_t);
 int	 strncmp(const char *, const char *, size_t);
 char	*strncpy(char * __restrict, const char * __restrict, size_t);
 size_t	 strnlen(const char *, size_t);
+char	*strrchr(const char *, int);
 char	*strsep(char **, const char *delim);
 size_t	 strspn(const char *, const char *);
 char	*strstr(const char *, const char *);
 int	 strvalid(const char *, size_t);
 
-extern uint32_t crc32_tab[];
+extern const uint32_t crc32_tab[];
 
 static __inline uint32_t
 crc32_raw(const void *buf, size_t size, uint32_t crc)
@@ -143,8 +152,8 @@ crc32(const void *buf, size_t size)
 }
 
 uint32_t
-calculate_crc32c(uint32_t crc32c, const unsigned char *buffer, 
-        unsigned int length);
+calculate_crc32c(uint32_t crc32c, const unsigned char *buffer,
+    unsigned int length);
 
 
 LIBKERN_INLINE void *memset(void *, int, size_t);
@@ -164,15 +173,17 @@ memset(void *b, int c, size_t len)
 #endif
 
 static __inline char *
-strchr(const char *p, int ch)
+index(const char *p, int ch)
 {
-	return (index(p, ch));
+
+	return (strchr(p, ch));
 }
 
 static __inline char *
-strrchr(const char *p, int ch)
+rindex(const char *p, int ch)
 {
-	return (rindex(p, ch));
+
+	return (strrchr(p, ch));
 }
 
 /* fnmatch() return values. */

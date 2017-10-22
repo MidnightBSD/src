@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/posix4.h 225617 2011-09-16 13:58:51Z kmacy $
+ * $FreeBSD: release/10.0.0/sys/sys/posix4.h 225617 2011-09-16 13:58:51Z kmacy $
  */
 
 #include <sys/param.h>

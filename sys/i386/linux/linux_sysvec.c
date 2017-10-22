@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1994-1996 Søren Schmidt
+ * Copyright (c) 1994-1996 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/linux/linux_sysvec.c 232451 2012-03-03 10:11:18Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/linux/linux_sysvec.c 258559 2013-11-25 15:58:48Z emaste $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -66,6 +66,7 @@ __FBSDID("$FreeBSD: stable/9/sys/i386/linux/linux_sysvec.c 232451 2012-03-03 10:
 #include <i386/linux/linux_proto.h>
 #include <compat/linux/linux_emul.h>
 #include <compat/linux/linux_futex.h>
+#include <compat/linux/linux_ioctl.h>
 #include <compat/linux/linux_mib.h>
 #include <compat/linux/linux_misc.h>
 #include <compat/linux/linux_signal.h>
@@ -683,17 +684,7 @@ linux_sigreturn(struct thread *td, struct linux_sigreturn_args *args)
 	 */
 #define	EFLAGS_SECURE(ef, oef)	((((ef) ^ (oef)) & ~PSL_USERCHANGE) == 0)
 	eflags = frame.sf_sc.sc_eflags;
-	/*
-	 * XXX do allow users to change the privileged flag PSL_RF.  The
-	 * cpu sets PSL_RF in tf_eflags for faults.  Debuggers should
-	 * sometimes set it there too.  tf_eflags is kept in the signal
-	 * context during signal handling and there is no other place
-	 * to remember it, so the PSL_RF bit may be corrupted by the
-	 * signal handler without us knowing.  Corruption of the PSL_RF
-	 * bit at worst causes one more or one less debugger trap, so
-	 * allowing it is fairly harmless.
-	 */
-	if (!EFLAGS_SECURE(eflags & ~PSL_RF, regs->tf_eflags & ~PSL_RF))
+	if (!EFLAGS_SECURE(eflags, regs->tf_eflags))
 		return(EINVAL);
 
 	/*
@@ -784,17 +775,7 @@ linux_rt_sigreturn(struct thread *td, struct linux_rt_sigreturn_args *args)
 	 */
 #define	EFLAGS_SECURE(ef, oef)	((((ef) ^ (oef)) & ~PSL_USERCHANGE) == 0)
 	eflags = context->sc_eflags;
-	/*
-	 * XXX do allow users to change the privileged flag PSL_RF.  The
-	 * cpu sets PSL_RF in tf_eflags for faults.  Debuggers should
-	 * sometimes set it there too.  tf_eflags is kept in the signal
-	 * context during signal handling and there is no other place
-	 * to remember it, so the PSL_RF bit may be corrupted by the
-	 * signal handler without us knowing.  Corruption of the PSL_RF
-	 * bit at worst causes one more or one less debugger trap, so
-	 * allowing it is fairly harmless.
-	 */
-	if (!EFLAGS_SECURE(eflags & ~PSL_RF, regs->tf_eflags & ~PSL_RF))
+	if (!EFLAGS_SECURE(eflags, regs->tf_eflags))
 		return(EINVAL);
 
 	/*

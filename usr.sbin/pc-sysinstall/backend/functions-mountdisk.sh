@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/backend/functions-mountdisk.sh 240315 2012-09-10 14:10:10Z jpaetzel $
+# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend/functions-mountdisk.sh 247735 2013-03-03 23:07:27Z jpaetzel $
 
 # Functions related mounting the newly formatted disk partitions
 
@@ -149,12 +149,12 @@ mount_all_filesystems()
   for PART in `ls ${PARTDIR}`
   do
     PARTDEV=`echo $PART | sed 's|-|/|g'` 
-    if [ ! -e "${PARTDEV}" ]
+    PARTFS="`cat ${PARTDIR}/${PART} | cut -d '#' -f 1`"
+    if [ ! -e "${PARTDEV}" -a "${PARTFS}" != "ZFS" ]
     then
       exit_err "ERROR: The partition ${PARTDEV} does not exist. Failure in bsdlabel?"
     fi 
 
-    PARTFS="`cat ${PARTDIR}/${PART} | cut -d '#' -f 1`"
     PARTMNT="`cat ${PARTDIR}/${PART} | cut -d '#' -f 2`"
     PARTENC="`cat ${PARTDIR}/${PART} | cut -d '#' -f 3`"
 
@@ -186,12 +186,12 @@ mount_all_filesystems()
   for PART in `ls ${PARTDIR}`
   do
     PARTDEV=`echo $PART | sed 's|-|/|g'`
-    if [ ! -e "${PARTDEV}" ]
+    PARTFS="`cat ${PARTDIR}/${PART} | cut -d '#' -f 1`"
+    if [ ! -e "${PARTDEV}" -a "${PARTFS}" != "ZFS" ]
     then
       exit_err "ERROR: The partition ${PARTDEV} does not exist. Failure in bsdlabel?"
     fi 
      
-    PARTFS="`cat ${PARTDIR}/${PART} | cut -d '#' -f 1`"
     PARTMNT="`cat ${PARTDIR}/${PART} | cut -d '#' -f 2`"
     PARTENC="`cat ${PARTDIR}/${PART} | cut -d '#' -f 3`"
 

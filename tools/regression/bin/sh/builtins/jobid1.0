@@ -1,0 +1,7 @@
+# $FreeBSD: release/10.0.0/tools/regression/bin/sh/builtins/jobid1.0 254412 2013-08-16 13:48:11Z jilles $
+# Non-standard builtin.
+
+: &
+p1=$!
+p2=$(jobid)
+[ "${p1:?}" = "${p2:?}" ]

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/sys/dev/ex/if_exvar.h 182088 2008-08-24 00:22:42Z imp $
+ *	$FreeBSD: release/10.0.0/sys/dev/ex/if_exvar.h 182088 2008-08-24 00:22:42Z imp $
  */
 
 struct ex_softc {

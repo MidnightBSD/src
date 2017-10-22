@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/usb/controller/xhcireg.h 242774 2012-11-08 16:04:32Z hselasky $ */
+/* $FreeBSD: release/10.0.0/sys/dev/usb/controller/xhcireg.h 251252 2013-06-02 12:00:16Z hselasky $ */
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
@@ -166,7 +166,7 @@
 #define	XHCI_IMOD_IVAL_SET(x)	(((x) & 0xFFFF) << 0)	/* 250ns unit */
 #define	XHCI_IMOD_ICNT_GET(x)	(((x) >> 16) & 0xFFFF)	/* 250ns unit */
 #define	XHCI_IMOD_ICNT_SET(x)	(((x) & 0xFFFF) << 16)	/* 250ns unit */
-#define	XHCI_IMOD_DEFAULT	0x000001F4U	/* 8000 IRQ/second */
+#define	XHCI_IMOD_DEFAULT	0x000003E8U	/* 8000 IRQ/second */
 #define	XHCI_ERSTSZ(n)		(0x0028 + (0x20 * (n)))	/* XHCI event ring segment table size */
 #define	XHCI_ERSTS_GET(x)	((x) & 0xFFFF)
 #define	XHCI_ERSTS_SET(x)	((x) & 0xFFFF)

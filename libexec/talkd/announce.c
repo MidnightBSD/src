@@ -36,7 +36,7 @@
 static char sccsid[] = "@(#)announce.c	8.3 (Berkeley) 4/28/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/libexec/talkd/announce.c 211056 2010-08-08 02:45:48Z ed $";
+  "$FreeBSD: release/10.0.0/libexec/talkd/announce.c 241777 2012-10-20 10:33:15Z ed $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -59,8 +59,6 @@ static const char rcsid[] =
 
 #include "ttymsg.h"
 #include "extern.h"
-
-extern char hostname[];
 
 /*
  * Announce an invitation to talk.

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/isa/npx.c 239996 2012-09-01 15:59:09Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/isa/npx.c 255040 2013-08-29 19:52:18Z gibbs $");
 
 #include "opt_cpu.h"
 #include "opt_isa.h"
@@ -69,7 +69,7 @@ __FBSDID("$FreeBSD: stable/9/sys/i386/isa/npx.c 239996 2012-09-01 15:59:09Z kib 
 
 #include <machine/intr_machdep.h>
 #ifdef XEN
-#include <machine/xen/xen-os.h>
+#include <xen/xen-os.h>
 #include <xen/hypervisor.h>
 #endif
 

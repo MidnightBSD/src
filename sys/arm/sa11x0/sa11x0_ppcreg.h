@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/sa11x0/sa11x0_ppcreg.h 203974 2010-02-16 21:59:17Z imp $
+ * $FreeBSD: release/10.0.0/sys/arm/sa11x0/sa11x0_ppcreg.h 203974 2010-02-16 21:59:17Z imp $
  *
  */
 

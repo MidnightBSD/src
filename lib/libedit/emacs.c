@@ -36,7 +36,7 @@
 static char sccsid[] = "@(#)emacs.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libedit/emacs.c 167457 2007-03-11 18:30:22Z stefanf $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libedit/emacs.c 167457 2007-03-11 18:30:22Z stefanf $");
 
 /*
  * emacs.c: Emacs functions

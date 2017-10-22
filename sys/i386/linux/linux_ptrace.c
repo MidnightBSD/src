@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/linux/linux_ptrace.c 208833 2010-06-05 15:59:59Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/linux/linux_ptrace.c 246085 2013-01-29 18:41:30Z jhb $");
 
 #include "opt_cpu.h"
 
@@ -45,6 +45,7 @@ __FBSDID("$FreeBSD: stable/9/sys/i386/linux/linux_ptrace.c 208833 2010-06-05 15:
 
 #include <i386/linux/linux.h>
 #include <i386/linux/linux_proto.h>
+#include <compat/linux/linux_signal.h>
 
 #if !defined(CPU_DISABLE_SSE) && defined(I686_CPU)
 #define CPU_ENABLE_SSE

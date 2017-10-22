@@ -23,10 +23,10 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/sys/arm/at91/at91_rstreg.h 213496 2010-10-06 22:25:21Z cognet $ */
+/* $FreeBSD: release/10.0.0/sys/arm/at91/at91_rstreg.h 238369 2012-07-11 17:11:07Z imp $ */
 
-#ifndef ARM_AT91_AT91RSTREG_H
-#define ARM_AT91_AT91RSTREG_H
+#ifndef ARM_AT91_AT91_RSTREG_H
+#define ARM_AT91_AT91_RSTREG_H
 
 #define	RST_CR		0x0	/* Control Register */
 #define	RST_SR		0x4	/* Status Register */
@@ -56,4 +56,8 @@
 #define	RST_MR_ERSTL(x)		((x)<<8) /* External reset length */	
 #define	RST_MR_KEY		(0xa5<<24)
 
-#endif /* ARM_AT91_AT91RSTREG_H */
+#ifndef __ASSEMBLER__
+void at91_rst_cpu_reset(void);
+#endif
+
+#endif /* ARM_AT91_AT91_RSTREG_H */

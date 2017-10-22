@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/iir/Makefile 89580 2002-01-20 08:51:08Z msmith $
+# $FreeBSD: release/10.0.0/sys/modules/iir/Makefile 89580 2002-01-20 08:51:08Z msmith $
 
 KMOD		=  iir
 .PATH:		${.CURDIR}/../../dev/${KMOD}

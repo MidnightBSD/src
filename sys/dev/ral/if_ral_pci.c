@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sys/dev/ral/if_ral_pci.c 236004 2012-05-25 16:07:39Z bschmidt $	*/
+/*	$FreeBSD: release/10.0.0/sys/dev/ral/if_ral_pci.c 235233 2012-05-10 17:41:16Z bschmidt $	*/
 
 /*-
  * Copyright (c) 2005, 2006
@@ -18,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ral/if_ral_pci.c 236004 2012-05-25 16:07:39Z bschmidt $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ral/if_ral_pci.c 235233 2012-05-10 17:41:16Z bschmidt $");
 
 /*
  * PCI/Cardbus front-end for the Ralink RT2560/RT2561/RT2561S/RT2661 driver.

@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/mii/miivar.h 230711 2012-01-29 01:01:32Z marius $
+ * $FreeBSD: release/10.0.0/sys/dev/mii/miivar.h 227688 2011-11-18 22:58:13Z marius $
  */
 
 #ifndef _DEV_MII_MIIVAR_H_

@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/lib/libc/gen/Symbol.map 245439 2013-01-14 22:00:43Z brooks $
+ * $FreeBSD: release/10.0.0/lib/libc/gen/Symbol.map 254499 2013-08-18 20:11:34Z pjd $
  */
 
 FBSD_1.0 {
@@ -213,6 +213,7 @@ FBSD_1.0 {
 	ldexp;
 	lockf;
 	lrand48;
+	modf;
 	mrand48;
 	nftw;
 	nice;
@@ -380,7 +381,11 @@ FBSD_1.2 {
 };
 
 FBSD_1.3 {
-	 fdlopen;
+	clock_getcpuclockid;
+	dirfd;
+	dup3;
+	fdclosedir;
+	fdlopen;
 	__FreeBSD_libc_enter_restricted_mode;
 	getcontextx;
 	gid_from_group;
@@ -388,10 +393,12 @@ FBSD_1.3 {
 	pwcache_userdb;
 	pwcache_groupdb;
 	snvis;
+	strenvisx;
 	strnunvis;
 	strnunvisx;
 	strnvis;
 	strnvisx;
+	strsenvisx;
 	strsnvis;
 	strsnvisx;
 	strsvis;
@@ -524,5 +531,6 @@ FBSDprivate_1.0 {
 	__elf_aux_vector;
 	__pthread_map_stacks_exec;
 	__fillcontextx;
+	__fillcontextx2;
 	__getcontextx_size;
 };

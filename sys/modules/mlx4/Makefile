@@ -1,13 +1,13 @@
-# $FreeBSD: stable/9/sys/modules/mlx4/Makefile 239748 2012-08-27 19:37:02Z jhb $
+# $FreeBSD: release/10.0.0/sys/modules/mlx4/Makefile 255932 2013-09-29 00:35:03Z alfred $
 .PATH:  ${.CURDIR}/../../ofed/drivers/net/mlx4
 
 .include <bsd.own.mk>
 
+.PATH:  ${.CURDIR}/../../ofed/include/linux
 KMOD    = mlx4
 SRCS    = device_if.h bus_if.h pci_if.h vnode_if.h
-SRCS+=	alloc.c catas.c cmd.c cq.c eq.c fw.c icm.c intf.c main.c mcg.c mr.c
-SRCS+=	pd.c port.c profile.c qp.c reset.c sense.c srq.c xrcd.c
-SRCS+=	opt_inet.h opt_inet6.h
+SRCS+= alloc.c catas.c cmd.c cq.c eq.c fw.c icm.c intf.c main.c mcg.c mr.c linux_compat.c linux_radix.c	linux_idr.c
+SRCS+=	pd.c port.c profile.c qp.c reset.c sense.c srq.c resource_tracker.c sys_tune.c
 
 CFLAGS+= -I${.CURDIR}/../../ofed/drivers/net/mlx4
 CFLAGS+= -I${.CURDIR}/../../ofed/include/

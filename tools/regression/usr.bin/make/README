@@ -1,4 +1,4 @@
-$FreeBSD: stable/9/tools/regression/usr.bin/make/README 146855 2005-06-01 11:25:38Z harti $
+$FreeBSD: release/10.0.0/tools/regression/usr.bin/make/README 228975 2011-12-30 00:04:11Z uqs $
 
 This directory contains regression tests for make(1).
 
@@ -8,7 +8,7 @@ output for '^not ok'.
 
 ----------------------------------------------------------------------------
 
-The rest of this file is intented for developers.
+The rest of this file is intended for developers.
 
 The tests are invoked via the test.sh script or prove(1) from p5-Test-Harness.
 Tests are normally executed in a special test directory that is built under

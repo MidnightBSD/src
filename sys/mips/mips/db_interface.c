@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/mips/db_interface.c 209935 2010-07-12 10:22:58Z jchandra $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/db_interface.c 250138 2013-05-01 06:57:46Z imp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -55,8 +55,6 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/mips/db_interface.c 209935 2010-07-12 10:2
 #include <machine/mips_opcode.h>
 #include <machine/vmparam.h>
 #include <machine/md_var.h>
-#define	NO_REG_DEFS	1	/* Prevent asm.h from including regdef.h */
-#include <machine/asm.h>
 #include <machine/setjmp.h>
 
 #include <ddb/ddb.h>
@@ -77,6 +75,16 @@ struct db_variable db_regs[] = {
 	{ "a1",  DB_OFFSET(a1),		db_frame },
 	{ "a2",  DB_OFFSET(a2),		db_frame },
 	{ "a3",  DB_OFFSET(a3),		db_frame },
+#if defined(__mips_n32) || defined(__mips_n64)
+	{ "a4",  DB_OFFSET(a4),		db_frame },
+	{ "a5",  DB_OFFSET(a5),		db_frame },
+	{ "a6",  DB_OFFSET(a6),		db_frame },
+	{ "a7",  DB_OFFSET(a7),		db_frame },
+	{ "t0",  DB_OFFSET(t0),		db_frame },
+	{ "t1",  DB_OFFSET(t1),		db_frame },
+	{ "t2",  DB_OFFSET(t2),		db_frame },
+	{ "t3",  DB_OFFSET(t3),		db_frame },
+#else
 	{ "t0",  DB_OFFSET(t0),		db_frame },
 	{ "t1",  DB_OFFSET(t1),		db_frame },
 	{ "t2",  DB_OFFSET(t2),		db_frame },
@@ -85,6 +93,7 @@ struct db_variable db_regs[] = {
 	{ "t5",  DB_OFFSET(t5),		db_frame },
 	{ "t6",  DB_OFFSET(t6),		db_frame },
 	{ "t7",  DB_OFFSET(t7),		db_frame },
+#endif
 	{ "s0",  DB_OFFSET(s0),		db_frame },
 	{ "s1",  DB_OFFSET(s1),		db_frame },
 	{ "s2",  DB_OFFSET(s2),		db_frame },

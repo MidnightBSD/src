@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/arm/mv/kirkwood/std.kirkwood 196533 2009-08-25 09:39:11Z raj $
+# $FreeBSD: release/10.0.0/sys/arm/mv/kirkwood/std.kirkwood 196533 2009-08-25 09:39:11Z raj $
 
 # kernel gets loaded at 0x00900000 by the loader, but runs at virtual address
 # 0xc0900000.  RAM starts at 0.  We put the pagetable at a reasonable place

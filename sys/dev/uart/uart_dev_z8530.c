@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/uart/uart_dev_z8530.c 168281 2007-04-02 22:00:22Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_dev_z8530.c 248965 2013-04-01 00:44:20Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -332,9 +332,6 @@ z8530_bus_attach(struct uart_softc *sc)
 	}
 	z8530->txidle = 1;	/* Report SER_INT_TXIDLE. */
 
-	sc->sc_rxfifosz = 3;
-	sc->sc_txfifosz = 1;
-
 	(void)z8530_bus_getsig(sc);
 
 	uart_setmreg(bas, WR_IC, IC_BRK | IC_CTS | IC_DCD);
@@ -514,6 +511,9 @@ z8530_bus_probe(struct uart_softc *sc)
 	error = z8530_probe(&sc->sc_bas);
 	if (error)
 		return (error);
+
+	sc->sc_rxfifosz = 3;
+	sc->sc_txfifosz = 1;
 
 	ch = sc->sc_bas.chan - 1 + 'A';
 

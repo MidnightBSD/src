@@ -27,7 +27,7 @@
 -- NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 -- EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --
--- $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_netgraph/BEGEMOT-NETGRAPH.txt 122758 2003-11-15 15:26:35Z harti $
+-- $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_netgraph/BEGEMOT-NETGRAPH.txt 122758 2003-11-15 15:26:35Z harti $
 --
 -- Private MIB for netgraph part of Begemot SNMP daemon.
 --

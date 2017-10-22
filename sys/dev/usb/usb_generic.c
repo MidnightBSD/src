@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_generic.c 248085 2013-03-09 02:36:32Z marius $ */
+/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_generic.c 257375 2013-10-30 08:05:39Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -24,6 +24,9 @@
  * SUCH DAMAGE.
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -67,6 +70,7 @@
 
 #include <dev/usb/usb_controller.h>
 #include <dev/usb/usb_bus.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 #if USB_HAVE_UGEN
 
@@ -252,6 +256,7 @@ ugen_open_pipe_write(struct usb_fifo *f)
 
 	usb_config[0].type = ed->bmAttributes & UE_XFERTYPE;
 	usb_config[0].endpoint = ed->bEndpointAddress & UE_ADDR;
+	usb_config[0].stream_id = 0;	/* XXX support more stream ID's */
 	usb_config[0].direction = UE_DIR_TX;
 	usb_config[0].interval = USB_DEFAULT_INTERVAL;
 	usb_config[0].flags.proxy_buffer = 1;
@@ -320,6 +325,7 @@ ugen_open_pipe_read(struct usb_fifo *f)
 
 	usb_config[0].type = ed->bmAttributes & UE_XFERTYPE;
 	usb_config[0].endpoint = ed->bEndpointAddress & UE_ADDR;
+	usb_config[0].stream_id = 0;	/* XXX support more stream ID's */
 	usb_config[0].direction = UE_DIR_RX;
 	usb_config[0].interval = USB_DEFAULT_INTERVAL;
 	usb_config[0].flags.proxy_buffer = 1;
@@ -682,18 +688,21 @@ ugen_get_cdesc(struct usb_fifo *f, struct usb_gen_descriptor *ugd)
 	if ((ugd->ugd_config_index == USB_UNCONFIG_INDEX) ||
 	    (ugd->ugd_config_index == udev->curr_config_index)) {
 		cdesc = usbd_get_config_descriptor(udev);
-		if (cdesc == NULL) {
+		if (cdesc == NULL)
 			return (ENXIO);
-		}
 		free_data = 0;
 
 	} else {
+#if (USB_HAVE_FIXED_CONFIG == 0)
 		if (usbd_req_get_config_desc_full(udev,
-		    NULL, &cdesc, M_USBDEV,
-		    ugd->ugd_config_index)) {
+		    NULL, &cdesc, ugd->ugd_config_index)) {
 			return (ENXIO);
 		}
 		free_data = 1;
+#else
+		/* configuration descriptor data is shared */
+		return (EINVAL);
+#endif
 	}
 
 	len = UGETW(cdesc->wTotalLength);
@@ -707,9 +716,9 @@ ugen_get_cdesc(struct usb_fifo *f, struct usb_gen_descriptor *ugd)
 
 	error = copyout(cdesc, ugd->ugd_data, len);
 
-	if (free_data) {
-		free(cdesc, M_USBDEV);
-	}
+	if (free_data)
+		usbd_free_config_desc(udev, cdesc);
+
 	return (error);
 }
 
@@ -1397,6 +1406,7 @@ ugen_ioctl(struct usb_fifo *f, u_long cmd, void *addr, int fflags)
 		struct usb_fs_start *pstart;
 		struct usb_fs_stop *pstop;
 		struct usb_fs_open *popen;
+		struct usb_fs_open_stream *popen_stream;
 		struct usb_fs_close *pclose;
 		struct usb_fs_clear_stall_sync *pstall;
 		void   *addr;
@@ -1461,6 +1471,7 @@ ugen_ioctl(struct usb_fifo *f, u_long cmd, void *addr, int fflags)
 		break;
 
 	case USB_FS_OPEN:
+	case USB_FS_OPEN_STREAM:
 		if (u.popen->ep_index >= f->fs_ep_max) {
 			error = EINVAL;
 			break;
@@ -1512,6 +1523,8 @@ ugen_ioctl(struct usb_fifo *f, u_long cmd, void *addr, int fflags)
 		usb_config[0].frames = u.popen->max_frames;
 		usb_config[0].bufsize = u.popen->max_bufsize;
 		usb_config[0].usb_mode = USB_MODE_DUAL;	/* both modes */
+		if (cmd == USB_FS_OPEN_STREAM)
+			usb_config[0].stream_id = u.popen_stream->stream_id;
 
 		if (usb_config[0].type == UE_CONTROL) {
 			if (f->udev->flags.usb_mode != USB_MODE_HOST) {
@@ -1749,16 +1762,11 @@ ugen_set_power_mode(struct usb_fifo *f, int mode)
 
 	switch (mode) {
 	case USB_POWER_MODE_OFF:
-		/* get the device unconfigured */
-		err = ugen_set_config(f, USB_UNCONFIG_INDEX);
-		if (err) {
-			DPRINTFN(0, "Could not unconfigure "
-			    "device (ignored)\n");
+		if (udev->flags.usb_mode == USB_MODE_HOST &&
+		    udev->re_enumerate_wait == USB_RE_ENUM_DONE) {
+			udev->re_enumerate_wait = USB_RE_ENUM_PWR_OFF;
 		}
-
-		/* clear port enable */
-		err = usbd_req_clear_port_feature(udev->parent_hub,
-		    NULL, udev->port_no, UHF_PORT_ENABLE);
+		/* set power mode will wake up the explore thread */
 		break;
 
 	case USB_POWER_MODE_ON:
@@ -1806,9 +1814,9 @@ ugen_set_power_mode(struct usb_fifo *f, int mode)
 
 	/* if we are powered off we need to re-enumerate first */
 	if (old_mode == USB_POWER_MODE_OFF) {
-		if (udev->flags.usb_mode == USB_MODE_HOST) {
-			if (udev->re_enumerate_wait == 0)
-				udev->re_enumerate_wait = 1;
+		if (udev->flags.usb_mode == USB_MODE_HOST &&
+		    udev->re_enumerate_wait == USB_RE_ENUM_DONE) {
+			udev->re_enumerate_wait = USB_RE_ENUM_START;
 		}
 		/* set power mode will wake up the explore thread */
 	}
@@ -1828,6 +1836,46 @@ ugen_get_power_mode(struct usb_fifo *f)
 		return (USB_POWER_MODE_ON);
 
 	return (udev->power_mode);
+}
+
+static int
+ugen_get_port_path(struct usb_fifo *f, struct usb_device_port_path *dpp)
+{
+	struct usb_device *udev = f->udev;
+	struct usb_device *next;
+	unsigned int nlevel = 0;
+
+	if (udev == NULL)
+		goto error;
+
+	dpp->udp_bus = device_get_unit(udev->bus->bdev);
+	dpp->udp_index = udev->device_index;
+
+	/* count port levels */
+	next = udev;
+	while (next->parent_hub != NULL) {
+		nlevel++;
+		next = next->parent_hub;
+	}
+
+	/* check if too many levels */
+	if (nlevel > USB_DEVICE_PORT_PATH_MAX)
+		goto error;
+
+	/* store port index array */
+	next = udev;
+	while (next->parent_hub != NULL) {
+		nlevel--;
+
+		dpp->udp_port_no[nlevel] = next->port_no;
+		dpp->udp_port_level = nlevel;
+
+		next = next->parent_hub;
+	}
+	return (0);	/* success */
+
+error:
+	return (EINVAL);	/* failure */
 }
 
 static int
@@ -2031,6 +2079,7 @@ ugen_ioctl_post(struct usb_fifo *f, u_long cmd, void *addr, int fflags)
 		struct usb_device_stats *stat;
 		struct usb_fs_init *pinit;
 		struct usb_fs_uninit *puninit;
+		struct usb_device_port_path *dpp;
 		uint32_t *ptime;
 		void   *addr;
 		int    *pint;
@@ -2201,6 +2250,10 @@ ugen_ioctl_post(struct usb_fifo *f, u_long cmd, void *addr, int fflags)
 
 	case USB_GET_POWER_MODE:
 		*u.pint = ugen_get_power_mode(f);
+		break;
+
+	case USB_GET_DEV_PORT_PATH:
+		error = ugen_get_port_path(f, u.dpp);
 		break;
 
 	case USB_GET_POWER_USAGE:

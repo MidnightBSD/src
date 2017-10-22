@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/vfs_init.c 247486 2013-02-28 18:46:56Z jamie $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/vfs_init.c 252368 2013-06-29 05:05:57Z peter $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -170,7 +170,7 @@ vfs_register(struct vfsconf *vfc)
 		return (EINVAL);
 	}
 	if (vfs_byname(vfc->vfc_name) != NULL)
-		return EEXIST;
+		return (EEXIST);
 
 	if (vfs_typenumhash != 0) {
 		/*

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/pc98/libpc98/biossmap.c 164115 2006-11-09 08:28:02Z nyan $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/pc98/libpc98/biossmap.c 164115 2006-11-09 08:28:02Z nyan $");
 
 #include <stand.h>
 #include <sys/param.h>

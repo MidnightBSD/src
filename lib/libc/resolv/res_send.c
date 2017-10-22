@@ -69,7 +69,7 @@ static const char sccsid[] = "@(#)res_send.c	8.1 (Berkeley) 6/4/93";
 static const char rcsid[] = "$Id: res_send.c,v 1.9.18.10 2008/01/27 02:06:26 marka Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/resolv/res_send.c 229077 2011-12-31 12:45:43Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/resolv/res_send.c 255336 2013-09-06 23:49:54Z jilles $");
 
 /*! \file
  * \brief
@@ -660,7 +660,8 @@ send_vc(res_state statp,
 		if (statp->_vcsock >= 0)
 			res_nclose(statp);
 
-		statp->_vcsock = _socket(nsap->sa_family, SOCK_STREAM, 0);
+		statp->_vcsock = _socket(nsap->sa_family, SOCK_STREAM |
+		    SOCK_CLOEXEC, 0);
 #if !defined(USE_POLL) && !defined(USE_KQUEUE)
 		if (statp->_vcsock > highestFD) {
 			res_nclose(statp);
@@ -851,7 +852,7 @@ send_dg(res_state statp,
 	nsaplen = get_salen(nsap);
 	if (EXT(statp).nssocks[ns] == -1) {
 		EXT(statp).nssocks[ns] = _socket(nsap->sa_family,
-		    SOCK_DGRAM, 0);
+		    SOCK_DGRAM | SOCK_CLOEXEC, 0);
 #if !defined(USE_POLL) && !defined(USE_KQUEUE)
 		if (EXT(statp).nssocks[ns] > highestFD) {
 			res_nclose(statp);

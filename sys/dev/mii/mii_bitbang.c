@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/mii/mii_bitbang.c 227277 2011-11-06 21:09:10Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mii/mii_bitbang.c 226995 2011-11-01 16:13:59Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

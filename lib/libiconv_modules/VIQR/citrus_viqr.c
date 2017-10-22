@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libiconv_modules/VIQR/citrus_viqr.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libiconv_modules/VIQR/citrus_viqr.c 252583 2013-07-03 18:27:45Z peter $ */
 /* $NetBSD: citrus_viqr.c,v 1.4 2008/06/14 16:01:08 tnozaki Exp $ */
 
 /*-
@@ -250,11 +250,11 @@ _citrus_VIQR_unpack_state(_VIQREncodingInfo * __restrict ei __unused,
 
 static int
 _citrus_VIQR_mbrtowc_priv(_VIQREncodingInfo * __restrict ei,
-    wchar_t * __restrict pwc, char ** __restrict s, size_t n,
+    wchar_t * __restrict pwc, const char ** __restrict s, size_t n,
     _VIQRState * __restrict psenc, size_t * __restrict nresult)
 {
 	mnemonic_t *m, *m0;
-	char *s0;
+	const char *s0;
 	wchar_t wc;
 	ssize_t i;
 	int ch, escape;

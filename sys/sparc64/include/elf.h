@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sparc64/include/elf.h 237753 2012-06-29 09:41:09Z kib $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/elf.h 237430 2012-06-22 06:38:31Z kib $
  */
 
 #ifndef	_MACHINE_ELF_H_

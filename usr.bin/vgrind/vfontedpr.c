@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/vgrind/vfontedpr.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/vgrind/vfontedpr.c 228992 2011-12-30 11:02:40Z uqs $");
 
 #ifndef lint
 static const char copyright[] =
@@ -110,7 +110,7 @@ static char	pstack[PSMAX][PNAMELEN+1];	/* the procedure name stack */
 
 char	*l_acmbeg;		/* string introducing a comment */
 char	*l_acmend;		/* string ending a comment */
-char	*l_blkbeg;		/* string begining of a block */
+char	*l_blkbeg;		/* string beginning of a block */
 char	*l_blkend;		/* string ending a block */
 char    *l_chrbeg;		/* delimiter for character constant */
 char    *l_chrend;		/* delimiter for character constant */

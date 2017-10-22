@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/net/ieee8023ad_lacp.h 177289 2008-03-17 01:26:44Z thompsa $
+ * $FreeBSD: release/10.0.0/sys/net/ieee8023ad_lacp.h 253687 2013-07-26 19:41:13Z adrian $
  */
 
 /*
@@ -245,6 +245,11 @@ struct lacp_softc {
 	struct lacp_portmap	lsc_pmap[2];
 	volatile u_int		lsc_activemap;
 	u_int32_t		lsc_hashkey;
+	struct {
+		u_int32_t	lsc_rx_test;
+		u_int32_t	lsc_tx_test;
+	} lsc_debug;
+	u_int32_t		lsc_strict_mode;
 };
 
 #define	LACP_TYPE_ACTORINFO	1

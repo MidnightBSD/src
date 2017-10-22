@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/rusers/rusers.c 146466 2005-05-21 09:55:10Z ru $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/rusers/rusers.c 227179 2011-11-06 08:16:47Z ed $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -56,10 +56,10 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/rusers/rusers.c 146466 2005-05-21 09:55:10Z
 #define HOST_WIDTH	20
 #define LINE_WIDTH	15
 
-int longopt;
-int allopt;
+static int longopt;
+static int allopt;
 
-struct host_list {
+static struct host_list {
 	struct	host_list *next;
 	struct	in_addr addr;
 } *hosts;

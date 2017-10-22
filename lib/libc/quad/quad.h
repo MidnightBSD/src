@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)quad.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: stable/9/lib/libc/quad/quad.h 165903 2007-01-09 00:28:16Z imp $
+ * $FreeBSD: release/10.0.0/lib/libc/quad/quad.h 165903 2007-01-09 00:28:16Z imp $
  */
 
 /*

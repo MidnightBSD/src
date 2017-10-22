@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libutil/login_auth.c 116344 2003-06-14 18:42:37Z markm $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libutil/login_auth.c 255007 2013-08-28 21:10:37Z jilles $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -98,7 +98,7 @@ auth_cat(const char *file)
   int fd, count;
   char buf[BUFSIZ];
 
-  if ((fd = open(file, O_RDONLY)) < 0)
+  if ((fd = open(file, O_RDONLY | O_CLOEXEC)) < 0)
     return 0;
   while ((count = read(fd, buf, sizeof(buf))) > 0)
     (void)write(fileno(stdout), buf, count);

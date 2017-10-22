@@ -25,11 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/x86/bios/smbios.c 247481 2013-02-28 18:22:41Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/x86/bios/smbios.c 241073 2012-09-30 15:42:20Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
 #include <sys/socket.h>
 
 #include <sys/module.h>
@@ -204,6 +205,7 @@ smbios_modevent (mod, what, arg)
 		for (i = 0; i < count; i++) {
 			device_delete_child(device_get_parent(devs[i]), devs[i]);
 		}
+		free(devs, M_TEMP);
 		break;
 	default:
 		break;

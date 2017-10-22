@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/ep/Makefile 147959 2005-07-13 14:53:59Z imp $
+# $FreeBSD: release/10.0.0/sys/modules/ep/Makefile 147959 2005-07-13 14:53:59Z imp $
 
 .PATH: ${.CURDIR}/../../dev/ep
 

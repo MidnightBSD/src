@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/splash/Makefile 229994 2012-01-12 00:02:14Z eadler $
+# $FreeBSD: release/10.0.0/sys/modules/splash/Makefile 228445 2011-12-12 21:12:07Z eadler $
 
 SUBDIR=	bmp pcx txt
 

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/usr.sbin/acpi/acpidump/acpidump.h 211196 2010-08-11 23:21:25Z takawata $
+ *	$FreeBSD: release/10.0.0/usr.sbin/acpi/acpidump/acpidump.h 211196 2010-08-11 23:21:25Z takawata $
  */
 
 #ifndef _ACPIDUMP_H_

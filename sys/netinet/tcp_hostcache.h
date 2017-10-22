@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netinet/tcp_hostcache.h 185420 2008-11-28 23:39:25Z zec $
+ * $FreeBSD: release/10.0.0/sys/netinet/tcp_hostcache.h 185420 2008-11-28 23:39:25Z zec $
  */
 
 /*

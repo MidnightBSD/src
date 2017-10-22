@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/examples/pf/faq-example1 173536 2007-11-11 01:16:51Z mlaier $
+# $FreeBSD: release/10.0.0/share/examples/pf/faq-example1 237681 2012-06-28 03:30:17Z rpaulo $
 # $OpenBSD: faq-example1,v 1.5 2006/10/07 04:48:01 mcbride Exp $
 
 #
@@ -26,7 +26,7 @@ set skip on lo
 scrub in
 
 # nat/rdr
-nat on $ext_if from !($ext_if) -> ($ext_if:0)
+nat on $ext_if inet from !($ext_if) -> ($ext_if:0)
 nat-anchor "ftp-proxy/*"
 rdr-anchor "ftp-proxy/*"
 

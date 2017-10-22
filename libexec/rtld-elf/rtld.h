@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/libexec/rtld-elf/rtld.h 240308 2012-09-10 11:50:42Z kib $
+ * $FreeBSD: release/10.0.0/libexec/rtld-elf/rtld.h 256101 2013-10-07 08:19:30Z kib $
  */
 
 #ifndef RTLD_H /* { */
@@ -259,6 +259,7 @@ typedef struct Struct_Obj_Entry {
     bool z_nodelete : 1;	/* Do not unload the object and dependencies */
     bool z_noopen : 1;		/* Do not load on dlopen */
     bool z_loadfltr : 1;	/* Immediately load filtees */
+    bool z_interpose : 1;	/* Interpose all objects but main */
     bool z_nodeflib : 1;	/* Don't search default library path */
     bool ref_nodel : 1;		/* Refcount increased to prevent dlclose */
     bool init_scanned: 1;	/* Object is already on init list. */
@@ -276,7 +277,7 @@ typedef struct Struct_Obj_Entry {
     Objlist dagmembers;		/* DAG has these members (%) */
     dev_t dev;			/* Object's filesystem's device */
     ino_t ino;			/* Object's inode number */
-    void *priv;			/* Platform-dependant */
+    void *priv;			/* Platform-dependent */
 } Obj_Entry;
 
 #define RTLD_MAGIC	0xd550b87a

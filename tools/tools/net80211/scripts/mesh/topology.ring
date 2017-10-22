@@ -6,7 +6,7 @@
 #    ^                               |
 #     \-------------------------------
 #
-# $FreeBSD: stable/9/tools/tools/net80211/scripts/mesh/topology.ring 195618 2009-07-11 15:02:45Z rpaulo $
+# $FreeBSD: release/10.0.0/tools/tools/net80211/scripts/mesh/topology.ring 195618 2009-07-11 15:02:45Z rpaulo $
 #
 PATH=../:.:$PATH
 . config

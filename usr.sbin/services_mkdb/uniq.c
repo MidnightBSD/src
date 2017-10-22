@@ -29,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/services_mkdb/uniq.c 206156 2010-04-04 08:38:14Z ume $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/services_mkdb/uniq.c 241778 2012-10-20 10:34:55Z ed $");
 
 #include <stdio.h>
 #include <string.h>
@@ -40,9 +40,8 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/services_mkdb/uniq.c 206156 2010-04-04 08:
 #include <ctype.h>
 #include <fcntl.h>
 
-extern const HASHINFO hinfo;
+#include "extern.h"
 
-void uniq(const char *);
 static int comp(const char *, char **, size_t *);
 
 /*

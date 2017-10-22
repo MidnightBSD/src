@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/dtio_kdtrace.c 243989 2012-12-07 19:06:40Z gnn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/dtio_kdtrace.c 240924 2012-09-25 19:16:28Z gnn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

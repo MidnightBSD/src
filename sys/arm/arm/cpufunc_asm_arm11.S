@@ -33,9 +33,9 @@
  * XXX We make no attempt at present to take advantage of the v6 memroy
  * architecture or physically tagged cache.
  */
- 
+
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/cpufunc_asm_arm11.S 172738 2007-10-18 05:33:06Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/cpufunc_asm_arm11.S 248361 2013-03-16 02:48:49Z andrew $");
 
 /*
  * Functions to set the MMU Translation Table Base register
@@ -44,15 +44,18 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/arm/cpufunc_asm_arm11.S 172738 2007-10-18 0
  * addresses that are about to change.
  */
 ENTRY(arm11_setttb)
+#ifdef	PMAP_CACHE_VIVT
 	stmfd	sp!, {r0, lr}
 	bl	_C_LABEL(armv5_idcache_wbinv_all)
 	ldmfd	sp!, {r0, lr}
+#endif
 
 	mcr	p15, 0, r0, c2, c0, 0	/* load new TTB */
 
 	mcr	p15, 0, r0, c8, c7, 0	/* invalidate I+D TLBs */
 	mcr	p15, 0, r0, c7, c10, 4	/* drain write buffer */
 	RET
+END(arm11_setttb)
 
 /*
  * TLB functions
@@ -62,12 +65,13 @@ ENTRY(arm11_tlb_flushID_SE)
 	mcr	p15, 0, r0, c8, c5, 1	/* flush I tlb single entry */
 	mcr	p15, 0, r0, c7, c10, 4	/* drain write buffer */
 	RET
+END(arm11_tlb_flushID_SE)
 
 ENTRY(arm11_tlb_flushI_SE)
 	mcr	p15, 0, r0, c8, c5, 1	/* flush I tlb single entry */
 	mcr	p15, 0, r0, c7, c10, 4	/* drain write buffer */
 	RET
-	
+END(arm11_tlb_flushI_SE)
 
 /*
  * Context switch.
@@ -92,6 +96,7 @@ ENTRY(arm11_context_switch)
 	nop
 	nop
 	RET
+END(arm11_context_switch)
 
 /*
  * TLB functions
@@ -100,21 +105,25 @@ ENTRY(arm11_tlb_flushID)
 	mcr	p15, 0, r0, c8, c7, 0	/* flush I+D tlb */
 	mcr	p15, 0, r0, c7, c10, 4	/* drain write buffer */
 	mov	pc, lr
+END(arm11_tlb_flushID)
 
 ENTRY(arm11_tlb_flushI)
 	mcr	p15, 0, r0, c8, c5, 0	/* flush I tlb */
 	mcr	p15, 0, r0, c7, c10, 4	/* drain write buffer */
 	mov	pc, lr
+END(arm11_tlb_flushI)
 
 ENTRY(arm11_tlb_flushD)
 	mcr	p15, 0, r0, c8, c6, 0	/* flush D tlb */
 	mcr	p15, 0, r0, c7, c10, 4	/* drain write buffer */
 	mov	pc, lr
+END(arm11_tlb_flushD)
 
 ENTRY(arm11_tlb_flushD_SE)
 	mcr	p15, 0, r0, c8, c6, 1	/* flush D tlb single entry */
 	mcr	p15, 0, r0, c7, c10, 4	/* drain write buffer */
 	mov	pc, lr
+END(arm11_tlb_flushD_SE)
 
 /*
  * Other functions
@@ -122,3 +131,11 @@ ENTRY(arm11_tlb_flushD_SE)
 ENTRY(arm11_drain_writebuf)
 	mcr	p15, 0, r0, c7, c10, 4	/* drain write buffer */
 	mov	pc, lr
+END(arm11_drain_writebuf)
+
+ENTRY_NP(arm11_sleep)
+	mov	r0, #0
+	mcr	p15, 0, r0, c7, c0, 4   /* wait for interrupt */
+	RET
+END(arm11_sleep)
+

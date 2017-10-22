@@ -31,7 +31,7 @@
  *	@(#)kernfs_vfsops.c	8.10 (Berkeley) 5/14/95
  * From: FreeBSD: src/sys/miscfs/kernfs/kernfs_vfsops.c 1.36
  *
- * $FreeBSD: stable/9/sys/fs/devfs/devfs_vfsops.c 232728 2012-03-09 16:17:46Z mm $
+ * $FreeBSD: release/10.0.0/sys/fs/devfs/devfs_vfsops.c 242833 2012-11-09 18:02:25Z attilio $
  */
 
 #include <sys/param.h>
@@ -131,8 +131,7 @@ devfs_mount(struct mount *mp)
 
 	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
-	mp->mnt_kern_flag |= MNTK_MPSAFE | MNTK_LOOKUP_SHARED |
-	    MNTK_EXTENDED_SHARED;
+	mp->mnt_kern_flag |= MNTK_LOOKUP_SHARED | MNTK_EXTENDED_SHARED;
 #ifdef MAC
 	mp->mnt_flag |= MNT_MULTILABEL;
 #endif

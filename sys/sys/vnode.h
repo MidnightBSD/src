@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vnode.h	8.7 (Berkeley) 2/4/94
- * $FreeBSD: stable/9/sys/sys/vnode.h 248879 2013-03-29 13:17:34Z kib $
+ * $FreeBSD: release/10.0.0/sys/sys/vnode.h 253106 2013-07-09 20:49:32Z kib $
  */
 
 #ifndef _SYS_VNODE_H_
@@ -99,7 +99,6 @@ struct vnode {
 	 * Fields which define the identity of the vnode.  These fields are
 	 * owned by the filesystem (XXX: and vgone() ?)
 	 */
-	enum	vtype v_type;			/* u vnode type */
 	const char *v_tag;			/* u type of underlying data */
 	struct	vop_vector *v_op;		/* u vnode operations vector */
 	void	*v_data;			/* u private data for fs */
@@ -122,10 +121,10 @@ struct vnode {
 	} v_un;
 
 	/*
-	 * vfs_hash:  (mount + inode) -> vnode hash.
+	 * vfs_hash: (mount + inode) -> vnode hash.  The hash value
+	 * itself is grouped with other int fields, to avoid padding.
 	 */
 	LIST_ENTRY(vnode)	v_hashlist;
-	u_int			v_hash;
 
 	/*
 	 * VFS_namecache stuff
@@ -135,24 +134,11 @@ struct vnode {
 	struct namecache *v_cache_dd;		/* c Cache entry for .. vnode */
 
 	/*
-	 * clustering stuff
-	 */
-	daddr_t	v_cstart;			/* v start block of cluster */
-	daddr_t	v_lasta;			/* v last allocation  */
-	daddr_t	v_lastw;			/* v last write  */
-	int	v_clen;				/* v length of cur. cluster */
-
-	/*
 	 * Locking
 	 */
 	struct	lock v_lock;			/* u (if fs don't have one) */
 	struct	mtx v_interlock;		/* lock for "i" things */
 	struct	lock *v_vnlock;			/* u pointer to vnode lock */
-	int	v_holdcnt;			/* i prevents recycling. */
-	int	v_usecount;			/* i ref count of users */
-	u_long	v_iflag;			/* i vnode flags (see below) */
-	u_long	v_vflag;			/* v vnode flags */
-	int	v_writecount;			/* v ref count of writers */
 
 	/*
 	 * The machinery of being a vnode
@@ -167,6 +153,22 @@ struct vnode {
 	struct label *v_label;			/* MAC label for vnode */
 	struct lockf *v_lockf;		/* Byte-level advisory lock list */
 	struct rangelock v_rl;			/* Byte-range lock */
+
+	/*
+	 * clustering stuff
+	 */
+	daddr_t	v_cstart;			/* v start block of cluster */
+	daddr_t	v_lasta;			/* v last allocation  */
+	daddr_t	v_lastw;			/* v last write  */
+	int	v_clen;				/* v length of cur. cluster */
+
+	int	v_holdcnt;			/* i prevents recycling. */
+	int	v_usecount;			/* i ref count of users */
+	u_int	v_iflag;			/* i vnode flags (see below) */
+	u_int	v_vflag;			/* v vnode flags */
+	int	v_writecount;			/* v ref count of writers */
+	u_int	v_hash;
+	enum	vtype v_type;			/* u vnode type */
 };
 
 #endif /* defined(_KERNEL) || defined(_KVM_VNODE) */
@@ -396,6 +398,9 @@ extern int		vttoif_tab[];
 #define	VR_START_WRITE	0x0001	/* vfs_write_resume: start write atomically */
 #define	VR_NO_SUSPCLR	0x0002	/* vfs_write_resume: do not clear suspension */
 
+#define	VS_SKIP_UNMOUNT	0x0001	/* vfs_write_suspend: fail if the
+				   filesystem is being unmounted */
+
 #define	VREF(vp)	vref(vp)
 
 #ifdef DIAGNOSTIC
@@ -569,6 +574,7 @@ vn_canvmio(struct vnode *vp)
 
 /* vn_open_flags */
 #define	VN_OPEN_NOAUDIT		0x00000001
+#define	VN_OPEN_NOCAPCHECK	0x00000002
 
 /*
  * Public vnode manipulation functions.
@@ -593,9 +599,7 @@ struct vnode;
 void	cache_enter_time(struct vnode *dvp, struct vnode *vp,
 	    struct componentname *cnp, struct timespec *tsp,
 	    struct timespec *dtsp);
-#define	cache_lookup(dvp, vpp, cnp)					\
-	cache_lookup_times(dvp, vpp, cnp, NULL, NULL)
-int	cache_lookup_times(struct vnode *dvp, struct vnode **vpp,
+int	cache_lookup(struct vnode *dvp, struct vnode **vpp,
 	    struct componentname *cnp, struct timespec *tsp, int *ticksp);
 void	cache_purge(struct vnode *vp);
 void	cache_purge_negative(struct vnode *vp);
@@ -621,6 +625,8 @@ int	vn_fullpath(struct thread *td, struct vnode *vn,
 	    char **retbuf, char **freebuf);
 int	vn_fullpath_global(struct thread *td, struct vnode *vn,
 	    char **retbuf, char **freebuf);
+struct vnode *
+	vn_dir_dd_ino(struct vnode *vp);
 int	vn_commname(struct vnode *vn, char *buf, u_int buflen);
 int	vn_path_to_global_path(struct thread *td, struct vnode *vp,
 	    char *path, u_int pathlen);
@@ -644,12 +650,12 @@ void	vhold(struct vnode *);
 void	vholdl(struct vnode *);
 void	vinactive(struct vnode *, struct thread *);
 int	vinvalbuf(struct vnode *vp, int save, int slpflag, int slptimeo);
-int	vtruncbuf(struct vnode *vp, struct ucred *cred, struct thread *td,
-	    off_t length, int blksize);
+int	vtruncbuf(struct vnode *vp, struct ucred *cred, off_t length,
+	    int blksize);
 void	vunref(struct vnode *);
 void	vn_printf(struct vnode *vp, const char *fmt, ...) __printflike(2,3);
 #define vprint(label, vp) vn_printf((vp), "%s\n", (label))
-int	vrecycle(struct vnode *vp, struct thread *td);
+int	vrecycle(struct vnode *vp);
 int	vn_bmap_seekhole(struct vnode *vp, u_long cmd, off_t *off,
 	    struct ucred *cred);
 int	vn_close(struct vnode *vp,
@@ -662,6 +668,8 @@ int	_vn_lock(struct vnode *vp, int flags, char *file, int line);
 int	vn_open(struct nameidata *ndp, int *flagp, int cmode, struct file *fp);
 int	vn_open_cred(struct nameidata *ndp, int *flagp, int cmode,
 	    u_int vn_open_flags, struct ucred *cred, struct file *fp);
+int	vn_open_vnode(struct vnode *vp, int fmode, struct ucred *cred,
+	    struct thread *td, struct file *fp);
 void	vn_pages_remove(struct vnode *vp, vm_pindex_t start, vm_pindex_t end);
 int	vn_pollrecord(struct vnode *vp, struct thread *p, int events);
 int	vn_rdwr(enum uio_rw rw, struct vnode *vp, void *base,
@@ -705,9 +713,8 @@ int	vn_io_fault_pgmove(vm_page_t ma[], vm_offset_t offset, int xfersize,
 
 int	vfs_cache_lookup(struct vop_lookup_args *ap);
 void	vfs_timestamp(struct timespec *);
-void	vfs_write_resume(struct mount *mp);
-void	vfs_write_resume_flags(struct mount *mp, int flags);
-int	vfs_write_suspend(struct mount *mp);
+void	vfs_write_resume(struct mount *mp, int flags);
+int	vfs_write_suspend(struct mount *mp, int flags);
 int	vop_stdbmap(struct vop_bmap_args *);
 int	vop_stdfsync(struct vop_fsync_args *);
 int	vop_stdgetwritemount(struct vop_getwritemount_args *);
@@ -807,6 +814,9 @@ extern struct vop_vector default_vnodeops;
 #define VOP_EINVAL	((void*)(uintptr_t)vop_einval)
 #define VOP_ENOENT	((void*)(uintptr_t)vop_enoent)
 #define VOP_EOPNOTSUPP	((void*)(uintptr_t)vop_eopnotsupp)
+
+/* fifo_vnops.c */
+int	fifo_printinfo(struct vnode *);
 
 /* vfs_hash.c */
 typedef int vfs_hash_cmp_t(struct vnode *vp, void *arg);

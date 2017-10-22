@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)pat_rep.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/pax/pat_rep.c 222177 2011-05-22 14:03:38Z uqs $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/pax/pat_rep.c 222177 2011-05-22 14:03:38Z uqs $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

@@ -33,7 +33,7 @@
  *	from tahoe:	in_cksum.c	1.2	86/01/05
  *	from:		@(#)in_cksum.c	1.3 (Berkeley) 1/19/91
  *	from: Id: in_cksum.c,v 1.8 1995/12/03 18:35:19 bde Exp
- * $FreeBSD: stable/9/sys/arm/include/in_cksum.h 238228 2012-07-08 10:46:55Z bz $
+ * $FreeBSD: release/10.0.0/sys/arm/include/in_cksum.h 236992 2012-06-13 05:02:51Z imp $
  */
 
 #ifndef _MACHINE_IN_CKSUM_H_
@@ -56,7 +56,7 @@ in_pseudo(u_int sum, u_int b, u_int c)
 	__asm __volatile("adds %0, %0, %1\n"
 	    		"adcs %0, %0, %2\n"
 			"adc %0, %0, #0\n"
-			: "+r" (sum) 
+			: "+r" (sum)
 			: "r" (b), "r" (c));
 	sum = (sum & 0xffff) + (sum >> 16);
 	if (sum > 0xffff)

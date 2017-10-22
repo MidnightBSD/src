@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/waitid.c 244175 2012-12-13 06:24:54Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/waitid.c 242960 2012-11-13 12:55:52Z kib $");
 
 #include "namespace.h"
 #include <sys/types.h>

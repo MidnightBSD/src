@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/compat/freebsd32/freebsd32_ioctl.c 225617 2011-09-16 13:58:51Z kmacy $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/compat/freebsd32/freebsd32_ioctl.c 255219 2013-09-05 00:09:56Z pjd $");
 
 #include "opt_compat.h"
 
@@ -353,9 +353,11 @@ freebsd32_ioctl(struct thread *td, struct freebsd32_ioctl_args *uap)
 		caddr_t	data;
 	}*/ ;
 	struct file *fp;
+	cap_rights_t rights;
 	int error;
 
-	if ((error = fget(td, uap->fd, CAP_IOCTL, &fp)) != 0)
+	error = fget(td, uap->fd, cap_rights_init(&rights, CAP_IOCTL), &fp);
+	if (error != 0)
 		return (error);
 	if ((fp->f_flag & (FREAD | FWRITE)) == 0) {
 		fdrop(fp, td);

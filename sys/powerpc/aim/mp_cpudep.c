@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/aim/mp_cpudep.c 223485 2011-06-23 22:21:28Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/aim/mp_cpudep.c 227628 2011-11-17 15:49:42Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -88,7 +88,12 @@ cpudep_ap_bootstrap(void)
 	msr = PSL_KERNSET & ~PSL_EE;
 	mtmsr(msr);
 
-	curthread_reg = pcpup->pc_curthread = pcpup->pc_idlethread;
+	pcpup->pc_curthread = pcpup->pc_idlethread;
+#ifdef __powerpc64__
+	__asm __volatile("mr 13,%0" :: "r"(pcpup->pc_curthread));
+#else
+	__asm __volatile("mr 2,%0" :: "r"(pcpup->pc_curthread));
+#endif
 	pcpup->pc_curpcb = pcpup->pc_curthread->td_pcb;
 	sp = pcpup->pc_curpcb->pcb_sp;
 

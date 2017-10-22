@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/cam/cam.c 219028 2011-02-25 10:11:01Z netchild $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/cam/cam.c 248922 2013-03-29 22:58:15Z smh $");
 
 #include <sys/param.h>
 #ifdef _KERNEL
@@ -110,6 +110,15 @@ const int num_cam_status_entries =
 
 #ifdef _KERNEL
 SYSCTL_NODE(_kern, OID_AUTO, cam, CTLFLAG_RD, 0, "CAM Subsystem");
+
+#ifndef CAM_DEFAULT_SORT_IO_QUEUES
+#define CAM_DEFAULT_SORT_IO_QUEUES 1
+#endif
+
+int cam_sort_io_queues = CAM_DEFAULT_SORT_IO_QUEUES;
+TUNABLE_INT("kern.cam.sort_io_queues", &cam_sort_io_queues);
+SYSCTL_INT(_kern_cam, OID_AUTO, sort_io_queues, CTLFLAG_RWTUN,
+    &cam_sort_io_queues, 0, "Sort IO queues to try and optimise disk access patterns");
 #endif
 
 void

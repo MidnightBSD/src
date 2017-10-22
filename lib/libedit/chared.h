@@ -31,7 +31,7 @@
  *
  *	@(#)chared.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: chared.h,v 1.18 2009/02/15 21:55:23 christos Exp $
- * $FreeBSD: stable/9/lib/libedit/chared.h 239589 2012-08-22 20:06:59Z pfg $
+ * $FreeBSD: release/10.0.0/lib/libedit/chared.h 238178 2012-07-06 19:30:50Z pfg $
  */
 
 /*

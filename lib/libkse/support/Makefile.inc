@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libkse/support/Makefile.inc 209118 2010-06-13 01:27:29Z imp $
+# $FreeBSD: release/10.0.0/lib/libkse/support/Makefile.inc 209118 2010-06-13 01:27:29Z imp $
 
 .PATH: ${.CURDIR}/support ${.CURDIR}/../libc/gen ${.CURDIR}/../libc/string
 .PATH: ${.CURDIR}/../libc/${MACHINE_CPUARCH}/sys

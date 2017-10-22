@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sbin/hastd/Makefile 229509 2012-01-04 17:22:10Z trociny $
+# $FreeBSD: release/10.0.0/sbin/hastd/Makefile 250503 2013-05-11 09:51:44Z trociny $
 
 .include <bsd.own.mk>
 
@@ -21,6 +21,7 @@ MAN=	hastd.8 hast.conf.5
 
 NO_WFORMAT=
 NO_WCAST_ALIGN=
+NO_WMISSING_VARIABLE_DECLARATIONS=
 CFLAGS+=-I${.CURDIR}
 CFLAGS+=-DHAVE_CAPSICUM
 CFLAGS+=-DPROTO_TCP_DEFAULT_PORT=8457
@@ -30,7 +31,7 @@ CFLAGS+=-DINET6
 .endif
 
 DPADD=	${LIBGEOM} ${LIBBSDXML} ${LIBSBUF} ${LIBL} ${LIBPTHREAD} ${LIBUTIL}
-LDADD=	-lgeom -lbsdxml -lsbuf -ll -lpthread -lutil
+LDADD=	-lgeom -lbsdxml -lsbuf -lpthread -lutil
 .if ${MK_OPENSSL} != "no"
 DPADD+=	${LIBCRYPTO}
 LDADD+=	-lcrypto

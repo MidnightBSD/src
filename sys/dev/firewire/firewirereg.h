@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: stable/9/sys/dev/firewire/firewirereg.h 171513 2007-07-20 03:42:57Z simokawa $
+ * $FreeBSD: release/10.0.0/sys/dev/firewire/firewirereg.h 171513 2007-07-20 03:42:57Z simokawa $
  *
  */
 

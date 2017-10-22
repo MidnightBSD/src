@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/watchdogd/Makefile 243820 2012-12-03 18:30:12Z delphij $
+# $FreeBSD: release/10.0.0/usr.sbin/watchdogd/Makefile 242519 2012-11-03 18:38:28Z delphij $
 
 PROG=	watchdogd
 LINKS=	${BINDIR}/watchdogd ${BINDIR}/watchdog

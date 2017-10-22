@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/ia64/string/memcpy.S 134739 2004-09-04 00:04:58Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/ia64/string/memcpy.S 134739 2004-09-04 00:04:58Z marcel $");
 
 ENTRY(memcpy,3)
 	mov	r8 = in0

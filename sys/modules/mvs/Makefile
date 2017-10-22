@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/mvs/Makefile 208183 2010-05-17 03:51:57Z mav $
+# $FreeBSD: release/10.0.0/sys/modules/mvs/Makefile 208183 2010-05-17 03:51:57Z mav $
 
 .PATH: ${.CURDIR}/../../dev/mvs
 

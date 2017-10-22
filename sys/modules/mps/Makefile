@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/mps/Makefile 245431 2013-01-14 19:51:26Z dim $
+# $FreeBSD: release/10.0.0/sys/modules/mps/Makefile 239462 2012-08-20 18:33:03Z dim $
 
 .PATH: ${.CURDIR}/../../dev/mps
 
@@ -9,7 +9,6 @@ SRCS+=	opt_cam.h opt_compat.h
 SRCS+=	device_if.h bus_if.h pci_if.h
 
 #CFLAGS += -DMPS_DEBUG
-DEBUG_FLAGS += -g
 
 .include <bsd.kmod.mk>
 

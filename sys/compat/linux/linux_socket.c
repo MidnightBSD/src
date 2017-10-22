@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1995 Søren Schmidt
+ * Copyright (c) 1995 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/compat/linux/linux_socket.c 247558 2013-03-01 18:39:46Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/compat/linux/linux_socket.c 255219 2013-09-05 00:09:56Z pjd $");
 
 /* XXX we use functions that might not exist. */
 #include "opt_compat.h"
@@ -748,6 +748,7 @@ int linux_connect(struct thread *, struct linux_connect_args *);
 int
 linux_connect(struct thread *td, struct linux_connect_args *args)
 {
+	cap_rights_t rights;
 	struct socket *so;
 	struct sockaddr *sa;
 	u_int fflag;
@@ -772,7 +773,8 @@ linux_connect(struct thread *td, struct linux_connect_args *args)
 	 * socket and use the file descriptor reference instead of
 	 * creating a new one.
 	 */
-	error = fgetsock(td, args->s, CAP_CONNECT, &so, &fflag);
+	error = fgetsock(td, args->s, cap_rights_init(&rights, CAP_CONNECT),
+	    &so, &fflag);
 	if (error == 0) {
 		error = EISCONN;
 		if (fflag & FNONBLOCK) {
@@ -1195,7 +1197,7 @@ linux_sendmsg(struct thread *td, struct linux_sendmsg_args *args)
 
 		error = ENOBUFS;
 		cmsg = malloc(CMSG_HDRSZ, M_TEMP, M_WAITOK | M_ZERO);
-		control = m_get(M_WAIT, MT_CONTROL);
+		control = m_get(M_WAITOK, MT_CONTROL);
 		if (control == NULL)
 			goto bad;
 
@@ -1443,10 +1445,8 @@ out:
 
 bad:
 	free(iov, M_IOV);
-	if (control != NULL)
-		m_freem(control);
-	if (linux_cmsg != NULL)
-		free(linux_cmsg, M_TEMP);
+	m_freem(control);
+	free(linux_cmsg, M_TEMP);
 
 	return (error);
 }

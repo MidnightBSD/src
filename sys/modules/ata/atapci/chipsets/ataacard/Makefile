@@ -1,10 +1,9 @@
-# $FreeBSD: stable/9/sys/modules/ata/atapci/chipsets/ataacard/Makefile 183724 2008-10-09 12:56:57Z sos $
+# $FreeBSD: release/10.0.0/sys/modules/ata/atapci/chipsets/ataacard/Makefile 249213 2013-04-06 19:12:49Z marius $
 
 .PATH: ${.CURDIR}/../../../../../dev/ata/chipsets
 
 KMOD=	ataacard
 SRCS=	ata-acard.c
-SRCS+=  opt_ata.h ata_if.h device_if.h bus_if.h pci_if.h
+SRCS+=	ata_if.h bus_if.h device_if.h pci_if.h
 
 .include <bsd.kmod.mk>
-

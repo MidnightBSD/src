@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/amd64/amd64/ptrace_machdep.c 239947 2012-08-31 12:04:29Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/amd64/ptrace_machdep.c 238669 2012-07-21 13:06:37Z kib $");
 
 #include "opt_compat.h"
 

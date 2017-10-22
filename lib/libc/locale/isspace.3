@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)isspace.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/9/lib/libc/locale/isspace.3 239833 2012-08-29 13:28:25Z issyl0 $
+.\" $FreeBSD: release/10.0.0/lib/libc/locale/isspace.3 238919 2012-07-30 20:56:19Z issyl0 $
 .\"
 .Dd July 30, 2012
 .Dt ISSPACE 3
@@ -51,9 +51,8 @@ The
 .Fn isspace
 function tests for white-space characters.
 For any locale, this includes the following standard characters:
-.Pp
 .Bl -column \&`\et''___ \&``\et''___ \&``\et''___ \&``\et''___ \&``\et''___ \&``\et''___
-.It "\&``\et''\t``\en''\t``\ev''\t``\ef''\t``\er''\t`` ''"
+.It "\&``\et''" Ta "``\en''" Ta "``\ev''" Ta "``\ef''" Ta "``\er''" Ta "`` ''"
 .El
 .Pp
 In the "C" locale,

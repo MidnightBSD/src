@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)rpc_main.c 1.30 89/03/30 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/rpcgen/rpc_main.c 231612 2012-02-13 20:59:20Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/rpcgen/rpc_main.c 241737 2012-10-19 14:49:42Z ed $");
 
 /*
  * rpc_main.c, Top level of the RPC protocol compiler.
@@ -63,10 +63,6 @@ static void t_output(const char *, const char *, int, const char *);
 static void clnt_output(const char *, const char *, int, const char * );
 static char *generate_guard(const char *);
 static void c_initialize(void);
-
-#if !defined(__FreeBSD__) && !defined(__NetBSD__)
-char * rindex();
-#endif
 
 static void usage(void);
 static void options_usage(void);
@@ -228,7 +224,7 @@ extendfile(const char *path, const char *ext)
 	const char *p;
 	const char *file;
 
-	if ((file = rindex(path, '/')) == NULL)
+	if ((file = strrchr(path, '/')) == NULL)
 		file = path;
 	else
 		file++;
@@ -439,7 +435,7 @@ c_initialize(void)
 
 }
 
-const char rpcgen_table_dcl[] = "struct rpcgen_table {\n\
+static const char rpcgen_table_dcl[] = "struct rpcgen_table {\n\
 	char	*(*proc)(); \n\
 	xdrproc_t	xdr_arg; \n\
 	unsigned	len_arg; \n\
@@ -819,7 +815,7 @@ static void mkfile_output(struct commandline *cmd)
 	if (allfiles){
 		mkftemp = xmalloc(strlen("makefile.") +
 		                     strlen(cmd->infile) + 1);
-		temp = (char *)rindex(cmd->infile, '.');
+		temp = strrchr(cmd->infile, '.');
 		strcpy(mkftemp, "makefile.");
 		(void) strncat(mkftemp, cmd->infile,
 			(temp - cmd->infile));

@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)chkey.c 1.7 91/03/11 Copyr 1986 Sun Micro";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/chkey/chkey.c 215519 2010-11-19 10:18:58Z kevlo $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/chkey/chkey.c 231994 2012-02-22 06:27:20Z kevlo $");
 
 /*
  * Copyright (C) 1986, Sun Microsystems, Inc.
@@ -94,6 +94,9 @@ main(int argc, char **argv)
 #ifdef YP
 	char *master;
 #endif
+#ifdef YPPASSWD
+	char *cryptpw;
+#endif
 
 	while ((ch = getopt(argc, argv, "f")) != -1)
 		switch(ch) {
@@ -149,7 +152,8 @@ main(int argc, char **argv)
 	pass = getpass("Password:");
 #ifdef YPPASSWD
 	if (!force) {
-		if (strcmp(crypt(pass, pw->pw_passwd), pw->pw_passwd) != 0)
+		cryptpw = crypt(pass, pw->pw_passwd);
+		if (cryptpw == NULL || strcmp(cryptpw, pw->pw_passwd) != 0)
 			errx(1, "invalid password");
 	}
 #else

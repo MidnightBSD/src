@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/mtest/Makefile 191651 2009-04-29 09:50:04Z bms $
+# $FreeBSD: release/10.0.0/usr.sbin/mtest/Makefile 191651 2009-04-29 09:50:04Z bms $
 
 .include <bsd.own.mk>
 

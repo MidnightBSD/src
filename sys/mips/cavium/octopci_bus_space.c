@@ -69,10 +69,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: src/sys/alpha/include/bus.h,v 1.5 1999/08/28 00:38:40 peter
- * $FreeBSD: stable/9/sys/mips/cavium/octopci_bus_space.c 210311 2010-07-20 19:25:11Z jmallett $
+ * $FreeBSD: release/10.0.0/sys/mips/cavium/octopci_bus_space.c 232410 2012-03-02 21:46:31Z jmallett $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octopci_bus_space.c 210311 2010-07-20 19:25:11Z jmallett $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octopci_bus_space.c 232410 2012-03-02 21:46:31Z jmallett $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -230,13 +230,12 @@ octopci_bs_unmap(void *t __unused, bus_space_handle_t bh __unused,
 }
 
 int
-octopci_bs_subregion(void *t __unused, bus_space_handle_t handle __unused,
-	      bus_size_t offset __unused, bus_size_t size __unused,
-	      bus_space_handle_t *nhandle __unused)
+octopci_bs_subregion(void *t __unused, bus_space_handle_t handle,
+	      bus_size_t offset, bus_size_t size __unused,
+	      bus_space_handle_t *bshp)
 {
 
-	printf("SUBREGION?!?!?!\n");
-	/* Do nothing */
+	*bshp = handle + offset;
 	return (0);
 }
 

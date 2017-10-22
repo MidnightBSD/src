@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/examples/ses/Makefile 151327 2005-10-14 15:45:38Z ru $
+# $FreeBSD: release/10.0.0/share/examples/ses/Makefile 151327 2005-10-14 15:45:38Z ru $
 #
 # Copyright (c) 2000 by Matthew Jacob
 # All rights reserved.

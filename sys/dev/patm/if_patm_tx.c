@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/patm/if_patm_tx.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/patm/if_patm_tx.c 254804 2013-08-24 19:51:18Z andre $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -373,7 +373,7 @@ patm_start(struct ifnet *ifp)
 		}
 
 		/* save data */
-		m->m_pkthdr.header = vcc;
+		m->m_pkthdr.PH_loc.ptr = vcc;
 
 		/* try to put it on the channels queue */
 		if (_IF_QFULL(&vcc->scd->q)) {
@@ -473,7 +473,7 @@ patm_launch(struct patm_softc *sc, struct patm_scd *scd)
 		if (m == NULL)
 			break;
 
-		a.vcc = m->m_pkthdr.header;
+		a.vcc = m->m_pkthdr.PH_loc.ptr;
 
 		/* we must know the number of segments beforehand - count
 		 * this may actually give a wrong number of segments for
@@ -499,7 +499,7 @@ patm_launch(struct patm_softc *sc, struct patm_scd *scd)
 		}
 
 		/* load the map */
-		m->m_pkthdr.header = map;
+		m->m_pkthdr.PH_loc.ptr = map;
 		a.mbuf = m;
 
 		/* handle AAL_RAW */
@@ -690,7 +690,7 @@ patm_tx(struct patm_softc *sc, u_int stamp, u_int status)
 		scd->on_card[last] = NULL;
 		patm_debug(sc, TX, "ok tag=%x", last);
 
-		map = m->m_pkthdr.header;
+		map = m->m_pkthdr.PH_loc.ptr;
 		scd->space += m->m_pkthdr.csum_data;
 
 		bus_dmamap_sync(sc->tx_tag, map->map,

@@ -1,7 +1,7 @@
 /*
  * Prototypes for the OSTA functions
  *
- * $FreeBSD: stable/9/sys/fs/udf/osta.h 162255 2006-09-12 19:02:34Z imp $
+ * $FreeBSD: release/10.0.0/sys/fs/udf/osta.h 162255 2006-09-12 19:02:34Z imp $
  */
 
 /*-

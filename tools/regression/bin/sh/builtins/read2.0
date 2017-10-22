@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/bin/sh/builtins/read2.0 212187 2010-09-03 21:17:33Z jilles $
+# $FreeBSD: release/10.0.0/tools/regression/bin/sh/builtins/read2.0 212187 2010-09-03 21:17:33Z jilles $
 
 set -e
 {

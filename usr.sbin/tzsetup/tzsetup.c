@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/tzsetup/tzsetup.c 247781 2013-03-04 11:40:52Z dteske $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/tzsetup/tzsetup.c 247780 2013-03-04 11:34:31Z dteske $");
 
 #include <err.h>
 #include <errno.h>

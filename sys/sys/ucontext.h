@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/ucontext.h 235539 2012-05-17 10:25:34Z dim $
+ * $FreeBSD: release/10.0.0/sys/sys/ucontext.h 251047 2013-05-28 04:54:16Z kib $
  */
 
 #ifndef _SYS_UCONTEXT_H_
@@ -80,7 +80,8 @@ int	swapcontext(ucontext_t *, const ucontext_t *);
 
 #if __BSD_VISIBLE
 int __getcontextx_size(void);
-int __fillcontextx(char *ctx);
+int __fillcontextx(char *ctx) __returns_twice;
+int __fillcontextx2(char *ctx);
 #endif
 
 __END_DECLS

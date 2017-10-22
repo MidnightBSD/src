@@ -1,4 +1,6 @@
-# $FreeBSD: stable/9/lib/libsmb/Makefile 195767 2009-07-19 17:25:24Z kensmith $
+# $FreeBSD: release/10.0.0/lib/libsmb/Makefile 258125 2013-11-14 09:25:29Z glebius $
+
+.include <bsd.own.mk>
 
 CONTRIBDIR=	${.CURDIR}/../../contrib/smbfs
 .PATH: ${CONTRIBDIR}/lib/smb
@@ -15,5 +17,9 @@ SRCS=	rcfile.c ctx.c cfopt.c subr.c nls.c rap.c mbuf.c rq.c file.c \
 
 WARNS?=	1
 CFLAGS+= -DSMB_CFG_FILE=\"/etc/nsmb.conf\" -I${CONTRIBDIR}/include
+
+.if ${MK_ICONV} != "no"
+CFLAGS+= -DHAVE_ICONV=1
+.endif
 
 .include <bsd.lib.mk>

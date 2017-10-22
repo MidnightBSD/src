@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/9/tools/tools/net80211/wlanstats/wlanstats.h 174244 2007-12-04 05:52:01Z sam $
+ * $FreeBSD: release/10.0.0/tools/tools/net80211/wlanstats/wlanstats.h 174244 2007-12-04 05:52:01Z sam $
  */
 
 #ifndef _WLANSTATS_H_

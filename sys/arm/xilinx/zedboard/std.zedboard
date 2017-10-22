@@ -1,0 +1,8 @@
+#
+# std.zedboard
+#
+# $FreeBSD: release/10.0.0/sys/arm/xilinx/zedboard/std.zedboard 249997 2013-04-27 22:38:29Z wkoszek $
+
+include "../xilinx/std.zynq7"
+files	"../xilinx/zedboard/files.zedboard"
+

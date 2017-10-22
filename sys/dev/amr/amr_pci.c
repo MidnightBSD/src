@@ -55,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/amr/amr_pci.c 233024 2012-03-16 08:46:58Z scottl $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/amr/amr_pci.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -184,7 +184,6 @@ amr_pci_attach(device_t dev)
     struct amr_softc	*sc;
     struct amr_ident	*id;
     int			rid, rtype, error;
-    u_int32_t		command;
 
     debug_called(1);
 
@@ -204,24 +203,8 @@ amr_pci_attach(device_t dev)
     if ((id = amr_find_ident(dev)) == NULL)
 	return (ENXIO);
 
-    command = pci_read_config(dev, PCIR_COMMAND, 1);
     if (id->flags & AMR_ID_QUARTZ) {
-	/*
-	 * Make sure we are going to be able to talk to this board.
-	 */
-	if ((command & PCIM_CMD_MEMEN) == 0) {
-	    device_printf(dev, "memory window not available\n");
-	    return (ENXIO);
-	}
 	sc->amr_type |= AMR_TYPE_QUARTZ;
-    } else {
-	/*
-	 * Make sure we are going to be able to talk to this board.
-	 */
-	if ((command & PCIM_CMD_PORTEN) == 0) {
-	    device_printf(dev, "I/O window not available\n");
-	    return (ENXIO);
-	}
     }
 
     if ((amr_force_sg32 == 0) && (id->flags & AMR_ID_DO_SG64) &&
@@ -231,11 +214,7 @@ amr_pci_attach(device_t dev)
     }
 
     /* force the busmaster enable bit on */
-    if (!(command & PCIM_CMD_BUSMASTEREN)) {
-	device_printf(dev, "busmaster bit not set, enabling\n");
-	command |= PCIM_CMD_BUSMASTEREN;
-	pci_write_config(dev, PCIR_COMMAND, command, 2);
-    }
+    pci_enable_busmaster(dev);
 
     /*
      * Allocate the PCI register window.
@@ -339,11 +318,11 @@ amr_pci_attach(device_t dev)
     /*
      * Build the scatter/gather buffers.
      */
-    if (amr_sglist_map(sc))
+    if ((error = amr_sglist_map(sc)) != 0)
 	goto out;
     debug(2, "s/g list mapped");
 
-    if (amr_ccb_map(sc))
+    if ((error = amr_ccb_map(sc)) != 0)
 	goto out;
     debug(2, "ccb mapped");
 

@@ -31,7 +31,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/s3c2xx0/s3c2xx0var.h 210396 2010-07-22 23:12:19Z andrew $
+ * $FreeBSD: release/10.0.0/sys/arm/s3c2xx0/s3c2xx0var.h 210396 2010-07-22 23:12:19Z andrew $
  */
 
 #ifndef _ARM_S3C2XX0VAR_H_

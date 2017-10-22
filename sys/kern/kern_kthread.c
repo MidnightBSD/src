@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_kthread.c 233814 2012-04-02 20:34:15Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_kthread.c 254457 2013-08-17 17:02:43Z bryanv $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -257,21 +257,19 @@ kthread_add(void (*func)(void *), void *arg, struct proc *p,
 		panic("kthread_add called too soon");
 
 	/* If no process supplied, put it on proc0 */
-	if (p == NULL) {
+	if (p == NULL)
 		p = &proc0;
-		oldtd = &thread0;
-	} else {
-		oldtd = FIRST_THREAD_IN_PROC(p);
-	}
 
 	/* Initialize our new td  */
 	newtd = thread_alloc(pages);
 	if (newtd == NULL)
 		return (ENOMEM);
 
+	PROC_LOCK(p);
+	oldtd = FIRST_THREAD_IN_PROC(p);
+
 	bzero(&newtd->td_startzero,
 	    __rangeof(struct thread, td_startzero, td_endzero));
-/* XXX check if we should zero. */
 	bcopy(&oldtd->td_startcopy, &newtd->td_startcopy,
 	    __rangeof(struct thread, td_startcopy, td_endcopy));
 
@@ -293,9 +291,7 @@ kthread_add(void (*func)(void *), void *arg, struct proc *p,
 	newtd->td_ucred = crhold(p->p_ucred);
 
 	/* this code almost the same as create_thread() in kern_thr.c */
-	PROC_LOCK(p);
 	p->p_flag |= P_HADTHREADS;
-	newtd->td_sigmask = oldtd->td_sigmask; /* XXX dubious */
 	thread_link(newtd, p);
 	thread_lock(oldtd);
 	/* let the scheduler know about these things. */

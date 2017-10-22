@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/sockets/sigpipe/sigpipe.c 143413 2005-03-11 13:05:18Z rwatson $
+ * $FreeBSD: release/10.0.0/tools/regression/sockets/sigpipe/sigpipe.c 243312 2012-11-19 22:46:17Z emaste $
  */
 
 #include <sys/types.h>
@@ -97,7 +97,7 @@ test_send(const char *testname, int sock)
 			return;
 		err(-1, "%s: send", testname);
 	}
-	errx(-1, "%s: send: returned %d", testname, len);
+	errx(-1, "%s: send: returned %zd", testname, len);
 }
 
 static void
@@ -113,7 +113,7 @@ test_write(const char *testname, int sock)
 			return;
 		err(-1, "%s: write", testname);
 	}
-	errx(-1, "%s: write: returned %d", testname, len);
+	errx(-1, "%s: write: returned %zd", testname, len);
 }
 
 static void

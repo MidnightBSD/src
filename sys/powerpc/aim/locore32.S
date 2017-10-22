@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/powerpc/aim/locore32.S 224400 2011-07-25 20:10:01Z andreast $ */
+/* $FreeBSD: release/10.0.0/sys/powerpc/aim/locore32.S 243370 2012-11-21 08:04:21Z adrian $ */
 /* $NetBSD: locore.S,v 1.24 2000/05/31 05:09:17 thorpej Exp $ */
 
 /*-
@@ -64,6 +64,9 @@
 #include <machine/param.h>
 #include <machine/spr.h>
 #include <machine/asm.h>
+#include "opt_platform.h"
+
+#include "opt_kdtrace.h"
 
 /* Locate the per-CPU data structure */
 #define GET_CPUINFO(r)  \
@@ -127,7 +130,20 @@ __start:
 	bdnz	1b
 	sync
 	isync
-
+#ifdef WII
+#include <powerpc/wii/locore.S>
+#endif
+	/* Zero bss, in case we were started by something unhelpful */
+	li	0,0
+	lis	8,_edata@ha
+	addi	8,8,_edata@l
+	lis	9,_end@ha
+	addi	9,9,_end@l
+2:	stw     0,0(8)
+	addi	8,8,4
+	cmplw	8,9
+	blt	2b
+	
 	/* Save the argument pointer and length */
 	mr	20,6
 	mr	21,7
@@ -153,12 +169,13 @@ __start:
 	
 	bl	OF_initial_setup
 
-	lis	4,end@ha
-	addi	4,4,end@l
-	mr	5,4
-
 	lis	3,kernel_text@ha
 	addi	3,3,kernel_text@l
+
+	lis	4,end@ha
+	addi	4,4,end@l
+	add	4,4,3
+	mr	5,4
 
 	/* Restore the argument pointer and length */
 	mr	6,20

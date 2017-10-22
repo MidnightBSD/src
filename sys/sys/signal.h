@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)signal.h	8.4 (Berkeley) 5/4/95
- * $FreeBSD: stable/9/sys/sys/signal.h 232290 2012-02-29 06:19:00Z davidxu $
+ * $FreeBSD: release/10.0.0/sys/sys/signal.h 233519 2012-03-26 19:12:09Z rmh $
  */
 
 #ifndef _SYS_SIGNAL_H_
@@ -111,6 +111,7 @@
 #if __BSD_VISIBLE
 #define	SIGTHR		32	/* reserved by thread library. */
 #define	SIGLWP		SIGTHR
+#define	SIGLIBRT	33	/* reserved by real-time library. */
 #endif
 
 #define	SIGRTMIN	65

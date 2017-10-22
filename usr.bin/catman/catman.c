@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/catman/catman.c 224657 2011-08-05 15:07:28Z uqs $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/catman/catman.c 227155 2011-11-06 08:14:09Z ed $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -94,7 +94,7 @@ enum Ziptype {NONE, BZIP, GZIP};
 static uid_t uid;
 static int starting_dir;
 static char tmp_file[MAXPATHLEN];
-struct stat test_st;
+static struct stat test_st;
 
 /*
  * A hashtable is an array of chains composed of this entry structure.

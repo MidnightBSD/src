@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_uio.h 244524 2012-12-21 00:41:52Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/sctp_uio.h 255160 2013-09-02 22:48:41Z tuexen $");
 
 #ifndef _NETINET_SCTP_UIO_H_
 #define _NETINET_SCTP_UIO_H_
@@ -662,10 +662,6 @@ struct sctp_hmacalgo {
 #define SCTP_AUTH_HMAC_ID_RSVD		0x0000
 #define SCTP_AUTH_HMAC_ID_SHA1		0x0001	/* default, mandatory */
 #define SCTP_AUTH_HMAC_ID_SHA256	0x0003
-#define SCTP_AUTH_HMAC_ID_SHA224	0x0004
-#define SCTP_AUTH_HMAC_ID_SHA384	0x0005
-#define SCTP_AUTH_HMAC_ID_SHA512	0x0006
-
 
 /* SCTP_AUTH_ACTIVE_KEY / SCTP_AUTH_DELETE_KEY */
 struct sctp_authkeyid {
@@ -1149,7 +1145,7 @@ union sctp_sockstore {
 struct xsctp_inpcb {
 	uint32_t last;
 	uint32_t flags;
-	uint32_t features;
+	uint64_t features;
 	uint32_t total_sends;
 	uint32_t total_recvs;
 	uint32_t total_nospaces;
@@ -1157,7 +1153,7 @@ struct xsctp_inpcb {
 	uint16_t local_port;
 	uint16_t qlen;
 	uint16_t maxqlen;
-	uint32_t extra_padding[32];	/* future */
+	uint32_t extra_padding[31];	/* future */
 };
 
 struct xsctp_tcb {
@@ -1278,33 +1274,39 @@ void sctp_freeladdrs(struct sockaddr *);
 int sctp_opt_info(int, sctp_assoc_t, int, void *, socklen_t *);
 
 /* deprecated */
-ssize_t sctp_sendmsg 
-(int, const void *, size_t, const struct sockaddr *,
+ssize_t 
+sctp_sendmsg(int, const void *, size_t, const struct sockaddr *,
     socklen_t, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t);
 
 /* deprecated */
-	ssize_t sctp_send(int, const void *, size_t,
-              const struct sctp_sndrcvinfo *, int);
+ssize_t 
+sctp_send(int, const void *, size_t,
+    const struct sctp_sndrcvinfo *, int);
 
 /* deprecated */
-	ssize_t sctp_sendx(int, const void *, size_t, struct sockaddr *,
-               int, struct sctp_sndrcvinfo *, int);
+ssize_t 
+sctp_sendx(int, const void *, size_t, struct sockaddr *,
+    int, struct sctp_sndrcvinfo *, int);
 
 /* deprecated */
-	ssize_t sctp_sendmsgx(int sd, const void *, size_t, struct sockaddr *,
-                  int, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t);
+ssize_t 
+sctp_sendmsgx(int sd, const void *, size_t, struct sockaddr *,
+    int, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t);
 
-	sctp_assoc_t sctp_getassocid(int, struct sockaddr *);
+sctp_assoc_t sctp_getassocid(int, struct sockaddr *);
 
 /* deprecated */
-	ssize_t sctp_recvmsg(int, void *, size_t, struct sockaddr *, socklen_t *,
-                 struct sctp_sndrcvinfo *, int *);
+ssize_t 
+sctp_recvmsg(int, void *, size_t, struct sockaddr *, socklen_t *,
+    struct sctp_sndrcvinfo *, int *);
 
-	ssize_t sctp_sendv(int, const struct iovec *, int, struct sockaddr *,
-               int, void *, socklen_t, unsigned int, int);
+ssize_t 
+sctp_sendv(int, const struct iovec *, int, struct sockaddr *,
+    int, void *, socklen_t, unsigned int, int);
 
-	ssize_t sctp_recvv(int, const struct iovec *, int, struct sockaddr *,
-               socklen_t *, void *, socklen_t *, unsigned int *, int *);
+ssize_t 
+sctp_recvv(int, const struct iovec *, int, struct sockaddr *,
+    socklen_t *, void *, socklen_t *, unsigned int *, int *);
 
 __END_DECLS
 

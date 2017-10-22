@@ -1,5 +1,5 @@
 #	from: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
-# $FreeBSD: stable/9/share/mk/bsd.prog.mk 248339 2013-03-15 19:50:21Z brooks $
+# $FreeBSD: release/10.0.0/share/mk/bsd.prog.mk 255431 2013-09-09 21:18:16Z des $
 
 .include <bsd.init.mk>
 
@@ -24,8 +24,24 @@ CTFFLAGS+= -g
 .endif
 .endif
 
+.if defined(PROG_CXX)
+PROG=	${PROG_CXX}
+.endif
+
+.if defined(PROG) && target(${PROG})
+MK_DEBUG_FILES=	no
+.elif !empty(LDFLAGS:M-Wl,*--oformat,*) || !empty(LDFLAGS:M-static)
+MK_DEBUG_FILES=	no
+.endif
+
 .if defined(CRUNCH_CFLAGS)
 CFLAGS+=${CRUNCH_CFLAGS}
+.else
+.if ${MK_DEBUG_FILES} != "no" && empty(DEBUG_FLAGS:M-g) && \
+    empty(DEBUG_FLAGS:M-gdwarf-*)
+CFLAGS+= -g
+CTFFLAGS+= -g
+.endif
 .endif
 
 .if !defined(DEBUG_FLAGS)
@@ -36,20 +52,40 @@ STRIP?=	-s
 LDFLAGS+= -static
 .endif
 
-.if defined(PROG_CXX)
-PROG=	${PROG_CXX}
+.if defined(USEPRIVATELIB)
+LDFLAGS+= -L${_SHLIBDIRPREFIX}${LIBPRIVATEDIR} -rpath ${LIBPRIVATEDIR}
+.endif
+
+.if ${MK_DEBUG_FILES} != "no"
+PROG_FULL=${PROG}.full
+# Use ${DEBUGDIR} for base system debug files, else .debug subdirectory
+.if defined(BINDIR) && (\
+    ${BINDIR} == "/bin" ||\
+    ${BINDIR} == "/libexec" ||\
+    ${BINDIR} == "/sbin" ||\
+    ${BINDIR:C%/usr/(bin|bsdinstall|games|libexec|lpr|sendmail|sm.bin|sbin)(/.*)?%/usr/bin%} == "/usr/bin"\
+     )
+DEBUGFILEDIR=	${DEBUGDIR}${BINDIR}
+.else
+DEBUGFILEDIR?=	${BINDIR}/.debug
+DEBUGMKDIR=
+.endif
+.else
+PROG_FULL=	${PROG}
 .endif
 
 .if defined(PROG)
+PROGNAME?=	${PROG}
+
 .if defined(SRCS)
 
 OBJS+=  ${SRCS:N*.h:R:S/$/.o/g}
 
 .if target(beforelinking)
-${PROG}: ${OBJS} beforelinking
-.else
-${PROG}: ${OBJS}
+beforelinking: ${OBJS}
+${PROG_FULL}: beforelinking
 .endif
+${PROG_FULL}: ${OBJS}
 .if defined(PROG_CXX)
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
 .else
@@ -73,13 +109,13 @@ SRCS=	${PROG}.c
 # - the name of the object gets put into the executable symbol table instead of
 #   the name of a variable temporary object.
 # - it's useful to keep objects around for crunching.
-OBJS=	${PROG}.o
+OBJS+=	${PROG}.o
 
 .if target(beforelinking)
-${PROG}: ${OBJS} beforelinking
-.else
-${PROG}: ${OBJS}
+beforelinking: ${OBJS}
+${PROG_FULL}: beforelinking
 .endif
+${PROG_FULL}: ${OBJS}
 .if defined(PROG_CXX)
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
 .else
@@ -88,8 +124,17 @@ ${PROG}: ${OBJS}
 .if ${MK_CTF} != "no"
 	${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS}
 .endif
-.endif
+.endif # !target(${PROG})
 
+.endif # !defined(SRCS)
+
+.if ${MK_DEBUG_FILES} != "no"
+${PROG}: ${PROG_FULL} ${PROGNAME}.debug
+	${OBJCOPY} --strip-debug --add-gnu-debuglink=${PROGNAME}.debug \
+	    ${PROG_FULL} ${.TARGET}
+
+${PROGNAME}.debug: ${PROG_FULL}
+	${OBJCOPY} --only-keep-debug ${PROG_FULL} ${.TARGET}
 .endif
 
 .if	${MK_MAN} != "no" && !defined(MAN) && \
@@ -99,7 +144,7 @@ ${PROG}: ${OBJS}
 MAN=	${PROG}.1
 MAN1=	${MAN}
 .endif
-.endif
+.endif # defined(PROG)
 
 all: objwarn ${PROG} ${SCRIPTS}
 .if ${MK_MAN} != "no"
@@ -108,6 +153,9 @@ all: _manpages
 
 .if defined(PROG)
 CLEANFILES+= ${PROG}
+.if ${MK_DEBUG_FILES} != "no"
+CLEANFILES+=	${PROG_FULL} ${PROGNAME}.debug
+.endif
 .endif
 
 .if defined(OBJS)
@@ -125,7 +173,7 @@ _EXTRADEPEND:
 .else
 	echo ${PROG}: ${LIBC} ${DPADD} >> ${DEPENDFILE}
 .if defined(PROG_CXX)
-.if !empty(CXXFLAGS:M-stdlib=libc++)
+.if ${MK_CLANG_IS_CC} != "no" && empty(CXXFLAGS:M-stdlib=libstdc++)
 	echo ${PROG}: ${LIBCPLUSPLUS} >> ${DEPENDFILE}
 .else
 	echo ${PROG}: ${LIBSTDCPLUSPLUS} >> ${DEPENDFILE}
@@ -153,12 +201,14 @@ realinstall: _proginstall
 .ORDER: beforeinstall _proginstall
 _proginstall:
 .if defined(PROG)
-.if defined(PROGNAME)
 	${INSTALL} ${STRIP} -o ${BINOWN} -g ${BINGRP} -m ${BINMODE} \
 	    ${_INSTALLFLAGS} ${PROG} ${DESTDIR}${BINDIR}/${PROGNAME}
-.else
-	${INSTALL} ${STRIP} -o ${BINOWN} -g ${BINGRP} -m ${BINMODE} \
-	    ${_INSTALLFLAGS} ${PROG} ${DESTDIR}${BINDIR}
+.if ${MK_DEBUG_FILES} != "no"
+.if defined(DEBUGMKDIR)
+	${INSTALL} -T debug -d ${DESTDIR}${DEBUGFILEDIR}
+.endif
+	${INSTALL} -T debug -o ${BINOWN} -g ${BINGRP} -m ${DEBUGMODE} \
+	    ${PROGNAME}.debug ${DESTDIR}${DEBUGFILEDIR}/${PROGNAME}.debug
 .endif
 .endif
 .endif	# !target(realinstall)

@@ -55,7 +55,7 @@
  *	from: Id: in_cksum.c,v 1.8 1995/12/03 18:35:19 bde Exp
  *	from: FreeBSD: src/sys/alpha/include/in_cksum.h,v 1.5 2000/05/06
  *
- * $FreeBSD: stable/9/sys/sparc64/include/in_cksum.h 238228 2012-07-08 10:46:55Z bz $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/in_cksum.h 235941 2012-05-24 22:00:48Z bz $
  */
 
 #ifndef _MACHINE_IN_CKSUM_H_

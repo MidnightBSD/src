@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/ia64/include/intrcnt.h 205234 2010-03-17 00:37:15Z marcel $ */
+/* $FreeBSD: release/10.0.0/sys/ia64/include/intrcnt.h 205234 2010-03-17 00:37:15Z marcel $ */
 /* $NetBSD: intrcnt.h,v 1.17 1998/11/19 01:48:04 ross Exp $ */
 
 /*-

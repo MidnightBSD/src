@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sys/net80211/ieee80211_rssadapt.c 209092 2010-06-12 07:02:43Z ed $	*/
+/*	$FreeBSD: release/10.0.0/sys/net80211/ieee80211_rssadapt.c 209092 2010-06-12 07:02:43Z ed $	*/
 /* $NetBSD: ieee80211_rssadapt.c,v 1.9 2005/02/26 22:45:09 perry Exp $ */
 /*-
  * Copyright (c) 2010 Rui Paulo <rpaulo@FreeBSD.org>

@@ -34,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/locate/locate/fastfind.c 195839 2009-07-24 13:40:25Z jhb $
+ * $FreeBSD: release/10.0.0/usr.bin/locate/locate/fastfind.c 229403 2012-01-03 18:51:58Z ed $
  */
 
 
@@ -167,7 +167,7 @@ fastfind
 
 	/* find optimal (last) char for searching */
 	for (p = pathpart; *p != '\0'; p++)
-		if (index(LOCATE_REG, *p) != NULL)
+		if (strchr(LOCATE_REG, *p) != NULL)
 			break;
 
 	if (*p == '\0')

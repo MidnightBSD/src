@@ -23,13 +23,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/lib/libc/mips/gen/_set_tp.c 178580 2008-04-26 12:08:02Z imp $
+ *	$FreeBSD: release/10.0.0/lib/libc/mips/gen/_set_tp.c 232581 2012-03-06 03:30:09Z gonzo $
  */
 
 #include <string.h>
 #include <stdint.h>
 
+#include <machine/sysarch.h>
+
 void
 _set_tp(void *tp)
 {
+
+	sysarch(MIPS_SET_TLS, tp);
 }

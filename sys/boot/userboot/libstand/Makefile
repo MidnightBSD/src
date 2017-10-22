@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/userboot/libstand/Makefile 237691 2012-06-28 07:08:48Z delphij $
+# $FreeBSD: release/10.0.0/sys/boot/userboot/libstand/Makefile 255944 2013-09-29 20:20:17Z bdrewery $
 # Originally from	$NetBSD: Makefile,v 1.21 1997/10/26 22:08:38 lukem Exp $
 #
 # Notes:
@@ -6,10 +6,10 @@
 #   quite large.
 #
 
-WITHOUT_SSP=
 NO_MAN=
 
 .include <bsd.own.mk>
+MK_SSP=		no
 
 S=		${.CURDIR}/../../../../lib/libstand
 
@@ -60,10 +60,10 @@ SRCS+= ntoh.c
 .if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "powerpc" || \
 	${MACHINE_CPUARCH} == "sparc64" || ${MACHINE_CPUARCH} == "amd64" || \
 	${MACHINE_CPUARCH} == "arm"
-SRCS+=	bcmp.c bcopy.c bzero.c ffs.c index.c memccpy.c memchr.c memcmp.c \
-        memcpy.c memmove.c memset.c qdivrem.c rindex.c strcat.c strchr.c \
-        strcmp.c strcpy.c strcspn.c strlen.c strncat.c strncmp.c strncpy.c \
-	strpbrk.c strrchr.c strsep.c strspn.c strstr.c strtok.c swab.c
+SRCS+=	bcmp.c bcopy.c bzero.c ffs.c memccpy.c memchr.c memcmp.c memcpy.c \
+	memmove.c memset.c qdivrem.c strcat.c strchr.c strcmp.c strcpy.c \
+	strcspn.c strlen.c strncat.c strncmp.c strncpy.c strpbrk.c \
+	strrchr.c strsep.c strspn.c strstr.c strtok.c swab.c
 .endif
 .if ${MACHINE_CPUARCH} == "arm"
 .PATH: ${LIBC}/arm/gen
@@ -94,7 +94,7 @@ SRCS+= uuid_equal.c uuid_is_nil.c
 
 # _setjmp/_longjmp
 .if ${MACHINE_CPUARCH} == "amd64"
-.PATH: ${.CURDIR}/amd64
+.PATH: ${S}/amd64
 .elif ${MACHINE_ARCH} == "powerpc64"
 .PATH: ${S}/powerpc
 .else

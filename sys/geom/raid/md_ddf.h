@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/geom/raid/md_ddf.h 235874 2012-05-24 02:34:03Z mav $
+ * $FreeBSD: release/10.0.0/sys/geom/raid/md_ddf.h 234848 2012-04-30 17:53:02Z mav $
  */
 
 #ifndef MD_DDF_H

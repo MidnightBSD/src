@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libc/Versions.def 228843 2011-12-23 15:00:37Z cperciva $
+# $FreeBSD: release/10.0.0/lib/libc/Versions.def 226217 2011-10-10 15:42:33Z das $
 
 #
 # Note: Whenever bumping the FBSD version, always make

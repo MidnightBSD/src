@@ -21,7 +21,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/boot/arm/ixp425/boot2/arm_init.S 186352 2008-12-20 03:26:09Z sam $
+ * $FreeBSD: release/10.0.0/sys/boot/arm/ixp425/boot2/arm_init.S 186352 2008-12-20 03:26:09Z sam $
  */
 
 #include <machine/asm.h>

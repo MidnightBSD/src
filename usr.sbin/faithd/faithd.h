@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/faithd/faithd.h 173412 2007-11-07 10:53:41Z kevlo $
+ * $FreeBSD: release/10.0.0/usr.sbin/faithd/faithd.h 173412 2007-11-07 10:53:41Z kevlo $
  */
 
 extern char logname[];

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/tsb.c 237627 2012-06-27 05:38:39Z alc $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/tsb.c 247297 2013-02-26 01:00:11Z attilio $");
 
 #include "opt_ddb.h"
 #include "opt_pmap.h"
@@ -53,7 +53,6 @@ __FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/tsb.c 237627 2012-06-27 05:38:3
 #include <vm/vm_object.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_pageout.h>
-#include <vm/vm_pager.h>
 
 #include <machine/cpufunc.h>
 #include <machine/frame.h>

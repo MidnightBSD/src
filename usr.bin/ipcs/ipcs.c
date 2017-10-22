@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/ipcs/ipcs.c 224016 2011-07-14 14:18:14Z bz $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/ipcs/ipcs.c 224016 2011-07-14 14:18:14Z bz $");
 
 #include <sys/param.h>
 #include <sys/proc.h>

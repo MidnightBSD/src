@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/fs/msdosfs/msdosfs_vfsops.c 247685 2013-03-03 07:09:25Z kib $ */
+/* $FreeBSD: release/10.0.0/sys/fs/msdosfs/msdosfs_vfsops.c 246921 2013-02-17 20:35:54Z kib $ */
 /*	$NetBSD: msdosfs_vfsops.c,v 1.51 1997/11/17 15:36:58 ws Exp $	*/
 
 /*-
@@ -759,7 +759,6 @@ mountmsdosfs(struct vnode *devvp, struct mount *mp)
 	mp->mnt_stat.f_fsid.val[1] = mp->mnt_vfc->vfc_typenum;
 	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
-	mp->mnt_kern_flag |= MNTK_MPSAFE;
 	MNT_IUNLOCK(mp);
 
 	if (pmp->pm_flags & MSDOSFS_LARGEFS)

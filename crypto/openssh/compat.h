@@ -1,5 +1,5 @@
 /* $OpenBSD: compat.h,v 1.43 2011/09/23 07:45:05 markus Exp $ */
-/* $FreeBSD: stable/9/crypto/openssh/compat.h 247485 2013-02-28 18:43:50Z des $ */
+/* $FreeBSD: release/10.0.0/crypto/openssh/compat.h 250595 2013-05-13 11:32:20Z bdrewery $ */
 
 /*
  * Copyright (c) 1999, 2000, 2001 Markus Friedl.  All rights reserved.
@@ -60,7 +60,7 @@
 #define SSH_BUG_RFWD_ADDR	0x02000000
 #define SSH_NEW_OPENSSH		0x04000000
 #define SSH_BUG_DYNAMIC_RPORT	0x08000000
-#define SSH_BUG_LARGEWINDOW	0x08000000
+#define SSH_BUG_LARGEWINDOW	0x10000000
 
 void     enable_compat13(void);
 void     enable_compat20(void);

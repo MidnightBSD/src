@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/cddl/usr.bin/zinject/Makefile 240959 2012-09-26 12:36:09Z mm $
+# $FreeBSD: release/10.0.0/cddl/usr.bin/zinject/Makefile 248571 2013-03-21 08:38:03Z mm $
 
 .PATH: ${.CURDIR}/../../contrib/opensolaris/cmd/zinject
 
@@ -20,7 +20,7 @@ CFLAGS+= -I${.CURDIR}/../../contrib/opensolaris/head
 CFLAGS+= -I${.CURDIR}/../../lib/libumem
 
 DPADD=	${LIBGEOM} ${LIBM} ${LIBNVPAIR} ${LIBUMEM} ${LIBUUTIL} \
-	${LIBZFS} ${LIBZPOOL}
-LDADD=	-lgeom -lm -lnvpair -lumem -luutil -lzfs -lzpool
+	${LIBZFS_CORE} ${LIBZFS} ${LIBZPOOL}
+LDADD=	-lgeom -lm -lnvpair -lumem -luutil -lzfs_core -lzfs -lzpool
 
 .include <bsd.prog.mk>

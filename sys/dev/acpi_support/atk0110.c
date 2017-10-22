@@ -18,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpi_support/atk0110.c 217566 2011-01-19 00:57:58Z mdf $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpi_support/atk0110.c 252276 2013-06-26 23:52:10Z jkim $");
 
 #include <machine/_inttypes.h>
 #include <sys/param.h>
@@ -97,7 +97,7 @@ static driver_t aibs_driver = {
 static devclass_t aibs_devclass;
 
 DRIVER_MODULE(aibs, acpi, aibs_driver, aibs_devclass, NULL, NULL);
-
+MODULE_DEPEND(aibs, acpi, 1, 1, 1);
 
 static char* aibs_hids[] = {
 	"ATK0110",
@@ -253,8 +253,8 @@ aibs_attach_sif(struct aibs_softc *sc, enum aibs_type st)
 		    "0x%08"PRIx64" %20s %5"PRIi64" / %5"PRIi64"  "
 		    "0x%"PRIx64"\n",
 		    name[0], i,
-		    as[i].i, desc, (int64_t)as[i].l, (int64_t)as[i].h,
-		    oi[4].Integer.Value);
+		    (uint64_t)as[i].i, desc, (int64_t)as[i].l,
+		    (int64_t)as[i].h, (uint64_t)oi[4].Integer.Value);
 #endif
 		snprintf(si, sizeof(si), "%i", i);
 		SYSCTL_ADD_PROC(device_get_sysctl_ctx(sc->sc_dev),

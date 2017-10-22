@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_open_failure.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_open_failure.c 248616 2013-03-22 13:36:03Z mm $");
 
 #define MAGIC 123456789
 struct my_data {
@@ -42,6 +42,8 @@ static ssize_t
 my_read(struct archive *a, void *_private, const void **buff)
 {
 	struct my_data *private = (struct my_data *)_private;
+	(void)a; /* UNUSED */
+	(void)buff; /* UNUSED */
 	assertEqualInt(MAGIC, private->magic);
 	++private->read_called;
 	return (private->read_return);
@@ -51,6 +53,9 @@ static ssize_t
 my_write(struct archive *a, void *_private, const void *buff, size_t s)
 {
 	struct my_data *private = (struct my_data *)_private;
+	(void)a; /* UNUSED */
+	(void)buff; /* UNUSED */
+	(void)s; /* UNUSED */
 	assertEqualInt(MAGIC, private->magic);
 	++private->write_called;
 	return (private->write_return);
@@ -60,6 +65,7 @@ static int
 my_open(struct archive *a, void *_private)
 {
 	struct my_data *private = (struct my_data *)_private;
+	(void)a; /* UNUSED */
 	assertEqualInt(MAGIC, private->magic);
 	++private->open_called;
 	return (private->open_return);
@@ -69,6 +75,7 @@ static int
 my_close(struct archive *a, void *_private)
 {
 	struct my_data *private = (struct my_data *)_private;
+	(void)a; /* UNUSED */
 	assertEqualInt(MAGIC, private->magic);
 	++private->close_called;
 	return (private->close_return);
@@ -90,7 +97,7 @@ DEFINE_TEST(test_open_failure)
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.read_called);
 	assertEqualInt(1, private.close_called);
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.read_called);
 	assertEqualInt(1, private.close_called);
@@ -105,7 +112,7 @@ DEFINE_TEST(test_open_failure)
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.read_called);
 	assertEqualInt(1, private.close_called);
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.read_called);
 	assertEqualInt(1, private.close_called);
@@ -120,7 +127,7 @@ DEFINE_TEST(test_open_failure)
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.read_called);
 	assertEqualInt(1, private.close_called);
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.read_called);
 	assertEqualInt(1, private.close_called);
@@ -132,14 +139,14 @@ DEFINE_TEST(test_open_failure)
 	a = archive_read_new();
 	assert(a != NULL);
 	assertEqualInt(ARCHIVE_OK,
-	    archive_read_support_compression_compress(a));
+	    archive_read_support_filter_compress(a));
 	assertEqualInt(ARCHIVE_OK, archive_read_support_format_tar(a));
 	assertEqualInt(ARCHIVE_FATAL,
 	    archive_read_open(a, &private, my_open, my_read, my_close));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(1, private.read_called);
 	assertEqualInt(1, private.close_called);
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(1, private.read_called);
 	assertEqualInt(1, private.close_called);
@@ -153,9 +160,8 @@ DEFINE_TEST(test_open_failure)
 	    archive_write_open(a, &private, my_open, my_write, my_close));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
-	// Broken in 2.8, fixed in 3.0
-	//assertEqualInt(1, private.close_called);
-	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
+	assertEqualInt(1, private.close_called);
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
 	assertEqualInt(1, private.close_called);
@@ -165,15 +171,30 @@ DEFINE_TEST(test_open_failure)
 	private.open_return = ARCHIVE_FATAL;
 	a = archive_write_new();
 	assert(a != NULL);
-	archive_write_set_compression_compress(a);
+	archive_write_add_filter_compress(a);
+	archive_write_set_format_ustar(a);
+	assertEqualInt(ARCHIVE_FATAL,
+	    archive_write_open(a, &private, my_open, my_write, my_close));
+	assertEqualInt(1, private.open_called);
+	assertEqualInt(0, private.write_called);
+	assertEqualInt(1, private.close_called);
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualInt(1, private.open_called);
+	assertEqualInt(0, private.write_called);
+	assertEqualInt(1, private.close_called);
+
+	memset(&private, 0, sizeof(private));
+	private.magic = MAGIC;
+	private.open_return = ARCHIVE_FATAL;
+	a = archive_write_new();
+	assert(a != NULL);
 	archive_write_set_format_zip(a);
 	assertEqualInt(ARCHIVE_FATAL,
 	    archive_write_open(a, &private, my_open, my_write, my_close));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
-	// Broken in 2.8, fixed in 3.0
-	//assertEqualInt(1, private.close_called);
-	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
+	assertEqualInt(1, private.close_called);
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
 	assertEqualInt(1, private.close_called);
@@ -183,14 +204,13 @@ DEFINE_TEST(test_open_failure)
 	private.open_return = ARCHIVE_FATAL;
 	a = archive_write_new();
 	assert(a != NULL);
-	archive_write_set_compression_gzip(a);
+	archive_write_add_filter_gzip(a);
 	assertEqualInt(ARCHIVE_FATAL,
 	    archive_write_open(a, &private, my_open, my_write, my_close));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
-	// Broken in 2.8, fixed in 3.0
-	//assertEqualInt(1, private.close_called);
-	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
+	assertEqualInt(1, private.close_called);
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
 	assertEqualInt(1, private.close_called);

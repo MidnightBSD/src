@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: stable/9/sys/pc98/include/ptrace.h 144513 2005-04-01 23:19:43Z imp $ */
+/* $FreeBSD: release/10.0.0/sys/pc98/include/ptrace.h 232520 2012-03-04 20:24:28Z tijl $ */
 
-#include <i386/ptrace.h>
+#include <x86/ptrace.h>

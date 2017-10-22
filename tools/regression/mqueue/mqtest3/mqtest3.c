@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/tools/regression/mqueue/mqtest3/mqtest3.c 205225 2010-03-16 20:42:54Z kib $ */
+/* $FreeBSD: release/10.0.0/tools/regression/mqueue/mqtest3/mqtest3.c 205225 2010-03-16 20:42:54Z kib $ */
 
 #include <sys/types.h>
 #include <sys/select.h>

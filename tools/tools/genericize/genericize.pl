@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #-
-# Copyright (c) 2004 Dag-Erling Coïdan Smørgrav
+# Copyright (c) 2004 Dag-Erling CoÃ¯dan SmÃ¸rgrav
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/tools/tools/genericize/genericize.pl 155041 2006-01-30 10:46:01Z des $
+# $FreeBSD: release/10.0.0/tools/tools/genericize/genericize.pl 228953 2011-12-29 12:33:27Z uqs $
 #
 
 use strict;

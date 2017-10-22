@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)popen.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/mail/popen.c 236984 2012-06-13 03:40:59Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/mail/popen.c 252679 2013-07-04 03:24:58Z kevlo $");
 
 #include "rcv.h"
 #include <sys/wait.h>
@@ -316,7 +316,7 @@ sigchild(int signo __unused)
 	int status;
 	struct child *cp;
 
-	while ((pid = waitpid((pid_t)-1, &status, WNOHANG)) > 0) {
+	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
 		cp = findchild(pid);
 		if (cp->free)
 			delchild(cp);

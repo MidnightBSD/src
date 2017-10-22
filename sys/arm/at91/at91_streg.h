@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/sys/arm/at91/at91_streg.h 185265 2008-11-25 00:13:26Z imp $ */
+/* $FreeBSD: release/10.0.0/sys/arm/at91/at91_streg.h 238376 2012-07-11 20:17:14Z imp $ */
 
 #ifndef ARM_AT91_AT91STREG_H
 #define ARM_AT91_AT91STREG_H
@@ -54,5 +54,8 @@
 
 /* ST_CRTR */
 #define ST_CRTR_MASK	0xfffff /* 20-bit counter */
+
+void at91_st_delay(int n);
+void at91_st_cpu_reset(void);
 
 #endif /* ARM_AT91_AT91STREG_H */

@@ -1,4 +1,4 @@
-$FreeBSD: stable/9/tools/tools/sysbuild/README 187372 2009-01-17 21:31:47Z phk $
+$FreeBSD: release/10.0.0/tools/tools/sysbuild/README 228975 2011-12-30 00:04:11Z uqs $
 
 About sysbuild.sh
 =================
@@ -22,7 +22,7 @@ If you know how nanobsd works, you will find a lot of similarity.
 HOWTO
 =====
 
-In all likelyhood, it is easier if we imagine you start with a blank
+In all likelihood, it is easier if we imagine you start with a blank
 computer.
 
 Grab a FreeBSD install ISO and boot it.

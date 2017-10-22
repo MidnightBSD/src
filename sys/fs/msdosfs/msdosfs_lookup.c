@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/fs/msdosfs/msdosfs_lookup.c 232283 2012-02-29 01:36:00Z kib $ */
+/* $FreeBSD: release/10.0.0/sys/fs/msdosfs/msdosfs_lookup.c 238697 2012-07-22 15:40:31Z kevlo $ */
 /*	$NetBSD: msdosfs_lookup.c,v 1.37 1997/11/17 15:36:54 ws Exp $	*/
 
 /*-
@@ -108,7 +108,7 @@ msdosfs_lookup_(struct vnode *vdp, struct vnode **vpp,
 	struct denode *dp;
 	struct denode *tdp;
 	struct msdosfsmount *pmp;
-	struct buf *bp = 0;
+	struct buf *bp = NULL;
 	struct direntry *dep = NULL;
 	u_char dosfilename[12];
 	int flags = cnp->cn_flags;
@@ -649,7 +649,7 @@ createde(dep, ddep, depp, cnp)
 		dirclust = de_clcount(pmp, diroffset);
 		error = extendfile(ddep, dirclust, 0, 0, DE_CLEAR);
 		if (error) {
-			(void)detrunc(ddep, ddep->de_FileSize, 0, NOCRED, NULL);
+			(void)detrunc(ddep, ddep->de_FileSize, 0, NOCRED);
 			return error;
 		}
 

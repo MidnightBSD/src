@@ -1,17 +1,17 @@
-/*	$FreeBSD: stable/9/contrib/ipfilter/lib/optvalue.c 170268 2007-06-04 02:54:36Z darrenr $	*/
+/*	$FreeBSD: release/10.0.0/contrib/ipfilter/lib/optvalue.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2001-2002 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: optvalue.c,v 1.2.4.1 2006/06/16 17:21:08 darrenr Exp $
+ * $Id$
  */
 #include "ipf.h"
 
 
 u_32_t getoptbyname(optname)
-char *optname;
+	char *optname;
 {
 	struct ipopt_names *io;
 
@@ -23,7 +23,7 @@ char *optname;
 
 
 u_32_t getoptbyvalue(optval)
-int optval;
+	int optval;
 {
 	struct ipopt_names *io;
 

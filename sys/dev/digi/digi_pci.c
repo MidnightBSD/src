@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/digi/digi_pci.c 143161 2005-03-05 18:30:12Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/digi/digi_pci.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 
@@ -219,7 +219,8 @@ static device_method_t digi_pci_methods[] = {
 	DEVMETHOD(device_attach, digi_pci_attach),
 	DEVMETHOD(device_detach, digi_detach),
 	DEVMETHOD(device_shutdown, digi_shutdown),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t digi_pci_drv = {

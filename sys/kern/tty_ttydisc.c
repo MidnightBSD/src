@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/tty_ttydisc.c 242892 2012-11-11 12:12:44Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/tty_ttydisc.c 242078 2012-10-25 09:05:21Z ed $");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -676,7 +676,6 @@ ttydisc_echo(struct tty *tp, char c, int quote)
 
 	return ttydisc_echo_force(tp, c, quote);
 }
-
 
 static void
 ttydisc_reprint_char(void *d, char c, int quote)

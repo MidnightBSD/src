@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/bin/setfacl/setfacl.h 204819 2010-03-07 07:59:05Z joel $
+ * $FreeBSD: release/10.0.0/bin/setfacl/setfacl.h 241720 2012-10-19 05:43:38Z ed $
  */
 
 #ifndef _SETFACL_H
@@ -32,30 +32,6 @@
 #include <sys/types.h>
 #include <sys/acl.h>
 #include <sys/queue.h>
-
-/* file operations */
-#define	OP_MERGE_ACL		0x00	/* merge acl's (-mM) */
-#define	OP_REMOVE_DEF		0x01	/* remove default acl's (-k) */
-#define	OP_REMOVE_EXT		0x02	/* remove extended acl's (-b) */
-#define	OP_REMOVE_ACL		0x03	/* remove acl's (-xX) */
-#define OP_REMOVE_BY_NUMBER	0x04	/* remove acl's (-xX) by acl entry number */
-#define OP_ADD_ACL		0x05	/* add acls entries at a given position */
-
-/* TAILQ entry for acl operations */
-struct sf_entry {
-	uint	op;
-	acl_t	acl;
-	uint	entry_number;
-	TAILQ_ENTRY(sf_entry) next;
-};
-TAILQ_HEAD(, sf_entry) entrylist;
-
-/* TAILQ entry for files */
-struct sf_file {
-	const char *filename;
-	TAILQ_ENTRY(sf_file) next;
-};
-TAILQ_HEAD(, sf_file) filelist;
 
 /* files.c */
 acl_t  get_acl_from_file(const char *filename);
@@ -74,9 +50,9 @@ void  *zmalloc(size_t size);
 const char *brand_name(int brand);
 int    branding_mismatch(int brand1, int brand2);
 
-uint       have_mask;
-uint       need_mask;
-uint       have_stdin;
-uint       n_flag;
+extern uint have_mask;
+extern uint need_mask;
+extern uint have_stdin;
+extern uint n_flag;
 
 #endif /* _SETFACL_H */

@@ -27,13 +27,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * P4: //depot/projects/trustedbsd/openbsm/sys/bsm/audit_record.h#10
- * $FreeBSD: stable/9/sys/bsm/audit_record.h 244391 2012-12-18 10:23:58Z rwatson $
+ * $FreeBSD: release/10.0.0/sys/bsm/audit_record.h 255219 2013-09-05 00:09:56Z pjd $
  */
 
 #ifndef _BSM_AUDIT_RECORD_H_
 #define _BSM_AUDIT_RECORD_H_
 
 #include <sys/time.h>			/* struct timeval */
+#include <sys/caprights.h>		/* cap_rights_t */
 
 /*
  * Token type identifiers.
@@ -125,6 +126,8 @@
 #define	AUT_SOCKINET32		0x80		/* XXX */
 #define	AUT_SOCKINET128		0x81		/* XXX */
 #define	AUT_SOCKUNIX		0x82		/* XXX */
+
+#define	AUT_RIGHTS		0x83
 
 /* print values for the arbitrary token */
 #define AUP_BINARY      0
@@ -248,6 +251,7 @@ token_t	*au_to_process32_ex(au_id_t auid, uid_t euid, gid_t egid,
 	    au_tid_addr_t *tid);
 token_t	*au_to_process64_ex(au_id_t auid, uid_t euid, gid_t egid, uid_t ruid,
 	    gid_t rgid, pid_t pid, au_asid_t sid, au_tid_addr_t *tid);
+token_t	*au_to_rights(cap_rights_t *rightsp);
 token_t	*au_to_return(char status, uint32_t ret);
 token_t	*au_to_return32(char status, uint32_t ret);
 token_t	*au_to_return64(char status, uint64_t ret);

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/csup/misc.h 230743 2012-01-29 14:55:20Z marius $
+ * $FreeBSD: release/10.0.0/usr.bin/csup/misc.h 228857 2011-12-24 12:16:38Z marius $
  */
 #ifndef _MISC_H_
 #define _MISC_H_

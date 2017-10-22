@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/talk/init_disp.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/talk/init_disp.c 227185 2011-11-06 08:17:23Z ed $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)init_disp.c	8.2 (Berkeley) 2/16/94";
@@ -49,8 +49,6 @@ static const char sccsid[] = "@(#)init_disp.c	8.2 (Berkeley) 2/16/94";
 #include <termios.h>
 
 #include "talk.h"
-
-extern volatile sig_atomic_t gotwinch;
 
 /*
  * Make sure the callee can write to the screen

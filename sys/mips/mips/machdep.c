@@ -40,9 +40,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/mips/machdep.c 224115 2011-07-16 20:31:29Z jchandra $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/machdep.c 248084 2013-03-09 02:32:23Z attilio $");
 
-#include "opt_cputype.h"
 #include "opt_ddb.h"
 #include "opt_md.h"
 
@@ -59,6 +58,7 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/mips/machdep.c 224115 2011-07-16 20:31:29Z
 #include <sys/mbuf.h>
 #include <sys/msgbuf.h>
 #include <sys/reboot.h>
+#include <sys/rwlock.h>
 #include <sys/sched.h>
 #include <sys/sysctl.h>
 #include <sys/sysproto.h>
@@ -162,6 +162,9 @@ extern char MipsTLBMiss[], MipsTLBMissEnd[];
 
 /* Cache error handler */
 extern char MipsCache[], MipsCacheEnd[];
+
+/* MIPS wait skip region */
+extern char MipsWaitStart[], MipsWaitEnd[];
 
 extern char edata[], end[];
 #ifdef DDB
@@ -327,6 +330,12 @@ void
 mips_vector_init(void)
 {
 	/*
+	 * Make sure that the Wait region logic is not been 
+	 * changed
+	 */
+	if (MipsWaitEnd - MipsWaitStart != 16)
+		panic("startup: MIPS wait region not correct");
+	/*
 	 * Copy down exception vector code.
 	 */
 	if (MipsTLBMissEnd - MipsTLBMiss > 0x80)
@@ -338,16 +347,20 @@ mips_vector_init(void)
 	bcopy(MipsTLBMiss, (void *)MIPS_UTLB_MISS_EXC_VEC,
 	      MipsTLBMissEnd - MipsTLBMiss);
 
-#if defined(CPU_CNMIPS) || defined(CPU_RMI) || defined(CPU_NLM)
+	/*
+	 * XXXRW: Why don't we install the XTLB handler for all 64-bit
+	 * architectures?
+	 */
+#if defined(__mips_n64) || defined(CPU_RMI) || defined(CPU_NLM) || defined (CPU_BERI)
 /* Fake, but sufficient, for the 32-bit with 64-bit hardware addresses  */
-	bcopy(MipsTLBMiss, (void *)MIPS3_XTLB_MISS_EXC_VEC,
+	bcopy(MipsTLBMiss, (void *)MIPS_XTLB_MISS_EXC_VEC,
 	      MipsTLBMissEnd - MipsTLBMiss);
 #endif
 
-	bcopy(MipsException, (void *)MIPS3_GEN_EXC_VEC,
+	bcopy(MipsException, (void *)MIPS_GEN_EXC_VEC,
 	      MipsExceptionEnd - MipsException);
 
-	bcopy(MipsCache, (void *)MIPS3_CACHE_ERR_EXC_VEC,
+	bcopy(MipsCache, (void *)MIPS_CACHE_ERR_EXC_VEC,
 	      MipsCacheEnd - MipsCache);
 
 	/*
@@ -373,6 +386,51 @@ mips_vector_init(void)
 void
 mips_postboot_fixup(void)
 {
+	static char fake_preload[256];
+	caddr_t preload_ptr = (caddr_t)&fake_preload[0];
+	size_t size = 0;
+
+#define PRELOAD_PUSH_VALUE(type, value) do {		\
+	*(type *)(preload_ptr + size) = (value);	\
+	size += sizeof(type);				\
+} while (0);
+
+	/*
+	 * Provide kernel module file information
+	 */
+	PRELOAD_PUSH_VALUE(uint32_t, MODINFO_NAME);
+	PRELOAD_PUSH_VALUE(uint32_t, strlen("kernel") + 1);
+	strcpy((char*)(preload_ptr + size), "kernel");
+	size += strlen("kernel") + 1;
+	size = roundup(size, sizeof(u_long));
+
+	PRELOAD_PUSH_VALUE(uint32_t, MODINFO_TYPE);
+	PRELOAD_PUSH_VALUE(uint32_t, strlen("elf kernel") + 1);
+	strcpy((char*)(preload_ptr + size), "elf kernel");
+	size += strlen("elf kernel") + 1;
+	size = roundup(size, sizeof(u_long));
+
+	PRELOAD_PUSH_VALUE(uint32_t, MODINFO_ADDR);
+	PRELOAD_PUSH_VALUE(uint32_t, sizeof(vm_offset_t));
+	PRELOAD_PUSH_VALUE(vm_offset_t, KERNLOADADDR);
+	size = roundup(size, sizeof(u_long));
+
+	PRELOAD_PUSH_VALUE(uint32_t, MODINFO_SIZE);
+	PRELOAD_PUSH_VALUE(uint32_t, sizeof(size_t));
+	PRELOAD_PUSH_VALUE(size_t, (size_t)&end - KERNLOADADDR);
+	size = roundup(size, sizeof(u_long));
+
+	/* End marker */
+	PRELOAD_PUSH_VALUE(uint32_t, 0);
+	PRELOAD_PUSH_VALUE(uint32_t, 0);
+
+#undef	PRELOAD_PUSH_VALUE
+
+	KASSERT((size < sizeof(fake_preload)),
+		("fake preload size is more thenallocated"));
+
+	preload_metadata = (void *)fake_preload;
+
 #ifdef DDB
 	Elf_Size *trampoline_data = (Elf_Size*)kernel_kseg0_end;
 	Elf_Size symtabsize = 0;
@@ -387,17 +445,6 @@ mips_postboot_fixup(void)
 		ksym_end = kernel_kseg0_end;
 	}
 #endif
-}
-
-/*
- * Many SoCs have a means to reset the core itself.  Others do not, or
- * the method is unknown to us.  For those cases, we jump to the mips
- * reset vector and hope for the best.  This works well in practice.
- */
-void
-mips_generic_reset()
-{
-	((void(*)(void))(intptr_t)MIPS_VEC_RESET)();
 }
 
 #ifdef SMP
@@ -497,7 +544,7 @@ cpu_idle(int busy)
 		critical_enter();
 		cpu_idleclock();
 	}
-	__asm __volatile ("wait");
+	mips_wait();
 	if (!busy) {
 		cpu_activeclock();
 		critical_exit();

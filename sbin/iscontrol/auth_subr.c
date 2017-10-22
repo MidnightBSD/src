@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/iscontrol/auth_subr.c 211095 2010-08-09 12:36:36Z des $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/iscontrol/auth_subr.c 254657 2013-08-22 14:02:34Z trasz $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -40,9 +40,6 @@ __FBSDID("$FreeBSD: stable/9/sbin/iscontrol/auth_subr.c 211095 2010-08-09 12:36:
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
-#if __FreeBSD_version < 500000
-#include <sys/time.h>
-#endif
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -52,7 +49,7 @@ __FBSDID("$FreeBSD: stable/9/sbin/iscontrol/auth_subr.c 211095 2010-08-09 12:36:
 #include <md5.h>
 #include <sha.h>
 
-#include <dev/iscsi/initiator/iscsi.h>
+#include <dev/iscsi_initiator/iscsi.h>
 #include "iscontrol.h"
 
 static int

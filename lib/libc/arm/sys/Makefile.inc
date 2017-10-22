@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libc/arm/sys/Makefile.inc 246775 2013-02-13 23:25:11Z kib $
+# $FreeBSD: release/10.0.0/lib/libc/arm/sys/Makefile.inc 246117 2013-01-30 12:48:16Z kib $
 
 SRCS+=	__vdso_gettc.c
 

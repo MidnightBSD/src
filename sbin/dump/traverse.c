@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)traverse.c	8.7 (Berkeley) 6/15/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/dump/traverse.c 179267 2008-05-23 23:13:14Z mckusick $";
+  "$FreeBSD: release/10.0.0/sbin/dump/traverse.c 241013 2012-09-27 23:31:06Z mdf $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -197,8 +197,8 @@ mapfiles(ino_t maxino, long *tapesize)
 			    (mode & IFMT) == 0)
 				continue;
 			if (ino >= maxino) {
-				msg("Skipping inode %d >= maxino %d\n",
-				    ino, maxino);
+				msg("Skipping inode %ju >= maxino %ju\n",
+				    (uintmax_t)ino, (uintmax_t)maxino);
 				continue;
 			}
 			/*
@@ -400,15 +400,16 @@ searchdir(
 	for (loc = 0; loc < size; ) {
 		dp = (struct direct *)(dblk + loc);
 		if (dp->d_reclen == 0) {
-			msg("corrupted directory, inumber %d\n", ino);
+			msg("corrupted directory, inumber %ju\n",
+			    (uintmax_t)ino);
 			break;
 		}
 		loc += dp->d_reclen;
 		if (dp->d_ino == 0)
 			continue;
 		if (dp->d_ino >= maxino) {
-			msg("corrupted directory entry, d_ino %d >= %d\n",
-			    dp->d_ino, maxino);
+			msg("corrupted directory entry, d_ino %ju >= %ju\n",
+			    (uintmax_t)dp->d_ino, (uintmax_t)maxino);
 			break;
 		}
 		if (dp->d_name[0] == '.') {

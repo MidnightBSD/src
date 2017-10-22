@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)pcb.h	5.10 (Berkeley) 5/12/91
- * $FreeBSD: stable/9/sys/i386/include/pcb.h 235796 2012-05-22 17:44:01Z iwasaki $
+ * $FreeBSD: release/10.0.0/sys/i386/include/pcb.h 237027 2012-06-13 21:03:01Z jkim $
  */
 
 #ifndef _I386_PCB_H_
@@ -96,9 +96,8 @@ struct pcb {
 struct trapframe;
 
 void	makectx(struct trapframe *, struct pcb *);
-void	savectx(struct pcb *) __returns_twice;
-int	suspendctx(struct pcb *) __returns_twice;
-void	resumectx(struct pcb *);
+int	savectx(struct pcb *) __returns_twice;
+void	resumectx(struct pcb *) __fastcall;
 #endif
 
 #endif /* _I386_PCB_H_ */

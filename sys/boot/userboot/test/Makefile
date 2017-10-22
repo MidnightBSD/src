@@ -1,10 +1,10 @@
-# $FreeBSD: stable/9/sys/boot/userboot/test/Makefile 223695 2011-06-30 16:08:56Z dfr $
+# $FreeBSD: release/10.0.0/sys/boot/userboot/test/Makefile 255944 2013-09-29 20:20:17Z bdrewery $
 
 
 NO_MAN=
-WITHOUT_SSP=
 
 .include <bsd.own.mk>
+MK_SSP=		no
 
 PROG=		test
 INTERNALPROG=

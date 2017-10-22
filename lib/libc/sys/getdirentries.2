@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)getdirentries.2	8.2 (Berkeley) 5/3/95
-.\" $FreeBSD: stable/9/lib/libc/sys/getdirentries.2 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD: release/10.0.0/lib/libc/sys/getdirentries.2 231564 2012-02-12 18:29:56Z ed $
 .\"
 .Dd May 3, 1995
 .Dt GETDIRENTRIES 2
@@ -71,10 +71,10 @@ The data in the buffer is a series of
 .Vt dirent
 structures each containing the following entries:
 .Bd -literal -offset indent
-u_int32_t d_fileno;
-u_int16_t d_reclen;
-u_int8_t  d_type;
-u_int8_t  d_namlen;
+uint32_t d_fileno;
+uint16_t d_reclen;
+uint8_t  d_type;
+uint8_t  d_namlen;
 char	d_name[MAXNAMELEN + 1];	/* see below */
 .Ed
 .Pp

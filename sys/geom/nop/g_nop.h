@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/geom/nop/g_nop.h 162834 2006-09-30 08:16:49Z pjd $
+ * $FreeBSD: release/10.0.0/sys/geom/nop/g_nop.h 249440 2013-04-13 19:02:58Z jmg $
  */
 
 #ifndef	_G_NOP_H_
@@ -44,9 +44,10 @@
 		printf("\n");						\
 	}								\
 } while (0)
-#define	G_NOP_LOGREQ(bp, ...)	do {					\
-	if (g_nop_debug >= 2) {						\
-		printf("GEOM_NOP[2]: ");				\
+#define	G_NOP_LOGREQ(bp, ...)	G_NOP_LOGREQLVL(2, bp, __VA_ARGS__)
+#define G_NOP_LOGREQLVL(lvl, bp, ...) do {				\
+	if (g_nop_debug >= (lvl)) {					\
+		printf("GEOM_NOP[%d]: ", (lvl));			\
 		printf(__VA_ARGS__);					\
 		printf(" ");						\
 		g_print_bio(bp);					\
@@ -57,6 +58,7 @@
 struct g_nop_softc {
 	int		sc_error;
 	off_t		sc_offset;
+	off_t		sc_explicitsize;
 	u_int		sc_rfailprob;
 	u_int		sc_wfailprob;
 	uintmax_t	sc_reads;

@@ -1,5 +1,5 @@
-# $FreeBSD: stable/9/kerberos5/usr.sbin/Makefile 112049 2003-03-09 21:56:55Z markm $
+# $FreeBSD: release/10.0.0/kerberos5/usr.sbin/Makefile 233294 2012-03-22 08:48:42Z stas $
 
-SUBDIR=	kstash ktutil
+SUBDIR=	iprop-log kstash ktutil
 
 .include <bsd.subdir.mk>

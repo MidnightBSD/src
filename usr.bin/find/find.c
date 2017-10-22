@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)find.c	8.5 (Berkeley) 8/5/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/find/find.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/find/find.c 238780 2012-07-25 21:59:10Z jilles $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -197,8 +197,12 @@ find_execute(PLAN *plan, char *paths[])
 				continue;
 			break;
 		case FTS_DNR:
-		case FTS_ERR:
 		case FTS_NS:
+			if (ignore_readdir_race &&
+			    entry->fts_errno == ENOENT && entry->fts_level > 0)
+				continue;
+			/* FALLTHROUGH */
+		case FTS_ERR:
 			(void)fflush(stdout);
 			warnx("%s: %s",
 			    entry->fts_path, strerror(entry->fts_errno));
@@ -228,7 +232,7 @@ find_execute(PLAN *plan, char *paths[])
 		for (p = plan; p && (p->execute)(p, entry); p = p->next);
 	}
 	finish_execplus();
-	if (errno)
+	if (errno && (!ignore_readdir_race || errno != ENOENT))
 		err(1, "fts_read");
 	return (rval);
 }

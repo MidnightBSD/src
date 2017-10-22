@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/ichwd/Makefile 199015 2009-11-07 11:41:23Z avg $
+# $FreeBSD: release/10.0.0/sys/modules/ichwd/Makefile 199015 2009-11-07 11:41:23Z avg $
 
 .PATH: ${.CURDIR}/../../dev/ichwd
 

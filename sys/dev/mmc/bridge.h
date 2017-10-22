@@ -48,7 +48,7 @@
  * or the SD Card Association to disclose or distribute any technical
  * information, know-how or other confidential information to any third party.
  *
- * $FreeBSD: stable/9/sys/dev/mmc/bridge.h 183704 2008-10-08 17:35:41Z mav $
+ * $FreeBSD: release/10.0.0/sys/dev/mmc/bridge.h 183704 2008-10-08 17:35:41Z mav $
  */
 
 #ifndef DEV_MMC_BRIDGE_H

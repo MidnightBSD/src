@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/ppp/vjcomp.h 50479 1999-08-28 01:35:59Z peter $
+ * $FreeBSD: release/10.0.0/usr.sbin/ppp/vjcomp.h 50479 1999-08-28 01:35:59Z peter $
  */
 
 struct mbuf;

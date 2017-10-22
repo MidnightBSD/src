@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/x86/acpica/OsdEnvironment.c 217265 2011-01-11 13:59:06Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/x86/acpica/OsdEnvironment.c 217265 2011-01-11 13:59:06Z jhb $");
 
 #include <sys/types.h>
 #include <sys/bus.h>

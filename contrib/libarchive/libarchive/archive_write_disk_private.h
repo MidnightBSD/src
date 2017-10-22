@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/contrib/libarchive/libarchive/archive_write_disk_private.h 229592 2012-01-05 12:06:54Z mm $
+ * $FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_write_disk_private.h 238909 2012-07-30 14:47:35Z mm $
  */
 
 #ifndef __LIBARCHIVE_BUILD
@@ -33,6 +33,11 @@
 #ifndef ARCHIVE_WRITE_DISK_PRIVATE_H_INCLUDED
 #define ARCHIVE_WRITE_DISK_PRIVATE_H_INCLUDED
 
+#include "archive_acl_private.h"
+
 struct archive_write_disk;
+
+int
+archive_write_disk_set_acls(struct archive *, int /* fd */, const char * /* pathname */, struct archive_acl *);
 
 #endif

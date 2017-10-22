@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $FreeBSD: stable/9/tools/regression/usr.sbin/newsyslog/regress.sh 220927 2011-04-21 16:40:34Z simon $
+# $FreeBSD: release/10.0.0/tools/regression/usr.sbin/newsyslog/regress.sh 228975 2011-12-30 00:04:11Z uqs $
 
 COUNT=0
 TMPDIR=`mktemp -d -t regress_newsyslog`
@@ -70,8 +70,8 @@ cknt()
 	fi
 }
 
-# Check if a file is there, depending of if it's suposed to or not -
-# basically how many log files we are suposed to keep vs. how many we
+# Check if a file is there, depending of if it's supposed to or not -
+# basically how many log files we are supposed to keep vs. how many we
 # actually keep.
 ckntfe()
 {

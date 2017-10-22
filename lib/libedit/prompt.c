@@ -36,7 +36,7 @@
 static char sccsid[] = "@(#)prompt.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libedit/prompt.c 237738 2012-06-29 03:01:38Z pfg $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libedit/prompt.c 237448 2012-06-22 18:01:22Z pfg $");
 
 /*
  * prompt.c: Prompt printing functions

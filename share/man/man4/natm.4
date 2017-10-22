@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/9/share/man/man4/natm.4 208027 2010-05-13 12:07:55Z uqs $
+.\" $FreeBSD: release/10.0.0/share/man/man4/natm.4 231564 2012-02-12 18:29:56Z ed $
 .\"
 .Dd December 29, 1997
 .Dt NATM 4
@@ -23,11 +23,11 @@ The NATM layer uses a
 to specify a virtual circuit:
 .Bd -literal -offset indent
 struct sockaddr_natm {
-  u_int8_t      snatm_len;              /* length */
-  u_int8_t      snatm_family;           /* AF_NATM */
+  uint8_t       snatm_len;              /* length */
+  uint8_t       snatm_family;           /* AF_NATM */
   char          snatm_if[IFNAMSIZ];     /* interface name */
-  u_int16_t     snatm_vci;              /* vci */
-  u_int8_t      snatm_vpi;              /* vpi */
+  uint16_t      snatm_vci;              /* vci */
+  uint8_t       snatm_vpi;              /* vpi */
 };
 .Ed
 .Pp

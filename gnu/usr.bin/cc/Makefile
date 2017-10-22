@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/cc/Makefile 220755 2011-04-17 21:03:23Z dim $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/cc/Makefile 255321 2013-09-06 20:08:03Z theraven $
 
 .include <bsd.own.mk>
 
@@ -12,7 +12,12 @@ SUBDIR+= cpp
 .endif
 
 .if ${MK_CXX} != "no"
-SUBDIR+= cc1plus c++ c++filt
+.if ${MK_GNUCXX} != "no"
+SUBDIR+= cc1plus c++ 
+.endif
+# This should be moved into the above block once c++filt from elftoolchain or
+# similar is provided.
+SUBDIR+= c++filt
 .endif
 
 .if ${MK_GCOV} != "no"

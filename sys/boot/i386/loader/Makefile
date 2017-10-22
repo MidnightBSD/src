@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/i386/loader/Makefile 243243 2012-11-18 17:09:29Z ae $
+# $FreeBSD: release/10.0.0/sys/boot/i386/loader/Makefile 242688 2012-11-07 02:14:03Z dteske $
 
 .include <bsd.own.mk>
 MK_SSP=		no
@@ -50,8 +50,11 @@ CFLAGS+=	-DLOADER_BZIP2_SUPPORT
 .if !defined(LOADER_NO_GZIP_SUPPORT)
 CFLAGS+=	-DLOADER_GZIP_SUPPORT
 .endif
+.if defined(LOADER_NANDFS_SUPPORT)
+CFLAGS+=	-DLOADER_NANDFS_SUPPORT
+.endif
 
-# Always add MI sources 
+# Always add MI sources
 .PATH:		${.CURDIR}/../../common
 .include	"${.CURDIR}/../../common/Makefile.inc"
 CFLAGS+=	-I${.CURDIR}/../../common
@@ -96,11 +99,11 @@ FILES=	${LOADER}
 FILESMODE_${LOADER}= ${BINMODE} -b
 
 .if !defined(LOADER_ONLY)
-.PATH: ${.CURDIR}/../../forth 
+.PATH: ${.CURDIR}/../../forth
 FILES+=	loader.help loader.4th support.4th loader.conf
 FILES+= screen.4th frames.4th beastie.4th
 FILES+= brand.4th check-password.4th color.4th delay.4th
-FILES+= menu.4th menu-commands.4th shortcuts.4th version.4th
+FILES+= menu.4th menu-commands.4th menusets.4th shortcuts.4th version.4th
 FILESDIR_loader.conf=	/boot/defaults
 
 .if !exists(${DESTDIR}/boot/loader.rc)
@@ -112,7 +115,7 @@ FILES+= menu.rc
 .endif
 
 # XXX crt0.o needs to be first for pxeboot(8) to work
-OBJS=	${BTXCRT} 
+OBJS=	${BTXCRT}
 
 DPADD=	${LIBFICL} ${LIBFIREWIRE} ${LIBZFSBOOT} ${LIBI386} ${LIBSTAND}
 LDADD=	${LIBFICL} ${LIBFIREWIRE} ${LIBZFSBOOT} ${LIBI386} ${LIBSTAND}

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_util.c 247090 2013-02-21 07:48:07Z hselasky $ */
+/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_util.c 246616 2013-02-10 10:56:13Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -24,6 +24,9 @@
  * SUCH DAMAGE.
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -56,6 +59,7 @@
 
 #include <dev/usb/usb_controller.h>
 #include <dev/usb/usb_bus.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 /*------------------------------------------------------------------------*
  *	device_set_usb_desc

@@ -25,7 +25,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/fstat/fuser.c 223271 2011-06-18 21:53:36Z jilles $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/fstat/fuser.c 227239 2011-11-06 18:49:36Z ed $");
 
 #include <sys/queue.h>
 #include <sys/stat.h>
@@ -52,7 +52,7 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/fstat/fuser.c 223271 2011-06-18 21:53:36Z j
 /*
  * File access mode flags table.
  */
-struct {
+static const struct {
 	int	flag;
 	char	ch;
 } fflags[] = {
@@ -67,7 +67,7 @@ struct {
 /*
  * Usage flags translation table.
  */
-struct {
+static const struct {
 	int	flag;
 	char	ch;
 } uflags[] = {

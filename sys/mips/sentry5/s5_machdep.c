@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/sentry5/s5_machdep.c 223562 2011-06-26 10:07:48Z kevlo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/sentry5/s5_machdep.c 247297 2013-02-26 01:00:11Z attilio $");
 
 #include "opt_ddb.h"
 
@@ -53,7 +53,6 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/sentry5/s5_machdep.c 223562 2011-06-26 10:
 #include <vm/vm.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
-#include <vm/vm_pager.h>
 
 #include <machine/cache.h>
 #include <machine/clock.h>
@@ -144,19 +143,6 @@ mips_init(void)
 }
 
 void
-platform_halt(void)
-{
-
-}
-
-
-void
-platform_identify(void)
-{
-
-}
-
-void
 platform_reset(void)
 {
 
@@ -165,18 +151,6 @@ platform_reset(void)
 #else
 	*((volatile uint8_t *)MIPS_PHYS_TO_KSEG1(SENTRY5_EXTIFADR)) = 0x80;
 #endif
-}
-
-void
-platform_trap_enter(void)
-{
-
-}
-
-void
-platform_trap_exit(void)
-{
-
 }
 
 void

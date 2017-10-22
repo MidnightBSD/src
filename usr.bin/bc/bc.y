@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/bc/bc.y 243211 2012-11-18 06:25:37Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/bc/bc.y 243075 2012-11-15 15:06:00Z eadler $");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -69,7 +69,6 @@ struct tree {
 	ssize_t			index;
 };
 
-int			 yyparse(void);
 int			 yywrap(void);
 
 int			 fileindex;

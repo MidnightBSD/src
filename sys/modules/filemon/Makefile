@@ -1,9 +1,9 @@
-# $FreeBSD: stable/9/sys/modules/filemon/Makefile 242112 2012-10-26 00:44:32Z eadler $
+# $FreeBSD: release/10.0.0/sys/modules/filemon/Makefile 251368 2013-06-04 06:38:01Z obrien $
 
 .PATH: ${.CURDIR}/../../dev/filemon
 
 KMOD=	filemon
 SRCS=	${KMOD}.c
-SRCS+=	vnode_if.h opt_compat.h opt_capsicum.h
+SRCS+=	opt_compat.h
 
 .include <bsd.kmod.mk>

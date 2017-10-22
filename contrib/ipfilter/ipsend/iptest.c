@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/contrib/ipfilter/ipsend/iptest.c 153881 2005-12-30 11:52:26Z guido $	*/
+/*	$FreeBSD: release/10.0.0/contrib/ipfilter/ipsend/iptest.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
  * ipsend.c (C) 1995-1998 Darren Reed
@@ -8,7 +8,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "%W% %G% (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id: iptest.c,v 2.6 2004/01/08 13:34:31 darrenr Exp $";
+static const char rcsid[] = "@(#)$Id$";
 #endif
 #include <sys/param.h>
 #include <sys/types.h>
@@ -63,7 +63,7 @@ int	main __P((int, char **));
 
 
 static void usage(prog)
-char *prog;
+	char *prog;
 {
 	fprintf(stderr, "Usage: %s [options] dest\n\
 \toptions:\n\
@@ -85,8 +85,8 @@ char *prog;
 
 
 int main(argc, argv)
-int argc;
-char **argv;
+	int argc;
+	char **argv;
 {
 	struct	tcpiphdr *ti;
 	struct	in_addr	gwip;

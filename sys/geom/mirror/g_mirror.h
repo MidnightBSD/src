@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/geom/mirror/g_mirror.h 238500 2012-07-15 19:52:23Z glebius $
+ * $FreeBSD: release/10.0.0/sys/geom/mirror/g_mirror.h 237930 2012-07-01 15:43:52Z glebius $
  */
 
 #ifndef	_G_MIRROR_H_

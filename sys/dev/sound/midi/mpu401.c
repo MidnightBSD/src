@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/sound/midi/mpu401.c 193979 2009-06-11 09:06:09Z ariff $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/sound/midi/mpu401.c 193979 2009-06-11 09:06:09Z ariff $");
 
 #include <sys/param.h>
 #include <sys/types.h>

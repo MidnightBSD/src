@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)function.c	8.10 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/find/function.c 248681 2013-03-24 12:35:12Z jilles $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/find/function.c 253886 2013-08-02 14:14:23Z jilles $");
 
 #include <sys/param.h>
 #include <sys/ucred.h>
@@ -442,7 +442,8 @@ f_delete(PLAN *plan __unused, FTSENT *entry)
 		errx(1, "-delete: forbidden when symlinks are followed");
 
 	/* Potentially unsafe - do not accept relative paths whatsoever */
-	if (strchr(entry->fts_accpath, '/') != NULL)
+	if (entry->fts_level > FTS_ROOTLEVEL &&
+	    strchr(entry->fts_accpath, '/') != NULL)
 		errx(1, "-delete: %s: relative path potentially not safe",
 			entry->fts_accpath);
 
@@ -473,6 +474,14 @@ c_delete(OPTION *option, char ***argvp __unused)
 	ftsoptions &= ~FTS_NOSTAT;	/* no optimise */
 	isoutput = 1;			/* possible output */
 	isdepth = 1;			/* -depth implied */
+
+	/*
+	 * Try to avoid the confusing error message about relative paths
+	 * being potentially not safe.
+	 */
+	if (ftsoptions & FTS_NOCHDIR)
+		errx(1, "%s: forbidden when the current directory cannot be opened",
+		    "-delete");
 
 	return palloc(option);
 }
@@ -646,7 +655,8 @@ doexec:	if ((plan->flags & F_NEEDOK) && !queryuser(plan->e_argv))
 		/* NOTREACHED */
 	case 0:
 		/* change dir back from where we started */
-		if (!(plan->flags & F_EXECDIR) && fchdir(dotfd)) {
+		if (!(plan->flags & F_EXECDIR) &&
+		    !(ftsoptions & FTS_NOCHDIR) && fchdir(dotfd)) {
 			warn("chdir");
 			_exit(1);
 		}
@@ -678,6 +688,11 @@ c_exec(OPTION *option, char ***argvp)
 	long argmax;
 	int cnt, i;
 	char **argv, **ap, **ep, *p;
+
+	/* This would defeat -execdir's intended security. */
+	if (option->flags & F_EXECDIR && ftsoptions & FTS_NOCHDIR)
+		errx(1, "%s: forbidden when the current directory cannot be opened",
+		    "-execdir");
 
 	/* XXX - was in c_execdir, but seems unnecessary!?
 	ftsoptions &= ~FTS_NOSTAT;
@@ -713,7 +728,13 @@ c_exec(OPTION *option, char ***argvp)
 		for (ep = environ; *ep != NULL; ep++)
 			argmax -= strlen(*ep) + 1 + sizeof(*ep);
 		argmax -= 1 + sizeof(*ep);
-		new->e_pnummax = argmax / 16;
+		/*
+		 * Ensure that -execdir ... {} + does not mix files
+		 * from different directories in one invocation.
+		 * Files from the same directory should be handled
+		 * in one invocation but there is no code for it.
+		 */
+		new->e_pnummax = new->flags & F_EXECDIR ? 1 : argmax / 16;
 		argmax -= sizeof(char *) * new->e_pnummax;
 		if (argmax <= 0)
 			errx(1, "no space for arguments");
@@ -974,6 +995,25 @@ c_group(OPTION *option, char ***argvp)
 
 	new->g_data = gid;
 	return new;
+}
+
+/*
+ * -ignore_readdir_race functions --
+ *
+ *	Always true. Ignore errors which occur if a file or a directory
+ *	in a starting point gets deleted between reading the name and calling
+ *	stat on it while find is traversing the starting point.
+ */
+
+PLAN *
+c_ignore_readdir_race(OPTION *option, char ***argvp __unused)
+{
+	if (strcmp(option->name, "-ignore_readdir_race") == 0)
+		ignore_readdir_race = 1;
+	else
+		ignore_readdir_race = 0;
+
+	return palloc(option);
 }
 
 /*
@@ -1464,6 +1504,29 @@ c_size(OPTION *option, char ***argvp)
 		new->o_data *= scale;
 	}
 	return new;
+}
+
+/*
+ * -sparse functions --
+ *
+ *      Check if a file is sparse by finding if it occupies fewer blocks
+ *      than we expect based on its size.
+ */
+int
+f_sparse(PLAN *plan __unused, FTSENT *entry)
+{
+	off_t expected_blocks;
+
+	expected_blocks = (entry->fts_statp->st_size + 511) / 512;
+	return entry->fts_statp->st_blocks < expected_blocks;
+}
+
+PLAN *
+c_sparse(OPTION *option, char ***argvp __unused)
+{
+	ftsoptions &= ~FTS_NOSTAT;
+
+	return palloc(option);
 }
 
 /*

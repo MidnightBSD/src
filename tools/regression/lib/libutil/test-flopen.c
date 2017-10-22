@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libutil/test-flopen.c 199212 2009-11-12 01:34:55Z des $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/libutil/test-flopen.c 199212 2009-11-12 01:34:55Z des $");
 
 #include <sys/types.h>
 #include <sys/fcntl.h>

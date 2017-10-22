@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sys/dev/iwi/if_iwireg.h 170530 2007-06-11 03:36:55Z sam $	*/
+/*	$FreeBSD: release/10.0.0/sys/dev/iwi/if_iwireg.h 170530 2007-06-11 03:36:55Z sam $	*/
 
 /*-
  * Copyright (c) 2004, 2005

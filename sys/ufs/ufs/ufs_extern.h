@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufs_extern.h	8.10 (Berkeley) 5/14/95
- * $FreeBSD: stable/9/sys/ufs/ufs/ufs_extern.h 222167 2011-05-22 01:07:54Z rmacklem $
+ * $FreeBSD: release/10.0.0/sys/ufs/ufs/ufs_extern.h 248521 2013-03-19 15:08:15Z kib $
  */
 
 #ifndef _UFS_UFS_EXTERN_H_
@@ -121,6 +121,7 @@ void	softdep_revert_rmdir(struct inode *, struct inode *);
  */
 #define BA_CLRBUF	0x00010000	/* Clear invalid areas of buffer. */
 #define BA_METAONLY	0x00020000	/* Return indirect block buffer. */
+#define	BA_UNMAPPED	0x00040000	/* Do not mmap resulted buffer. */
 #define BA_SEQMASK	0x7F000000	/* Bits holding seq heuristic. */
 #define BA_SEQSHIFT	24
 #define BA_SEQMAX	0x7F

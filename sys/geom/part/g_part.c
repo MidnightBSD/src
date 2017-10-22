@@ -25,11 +25,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/part/g_part.c 249152 2013-04-05 11:41:56Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/part/g_part.c 253938 2013-08-04 21:00:22Z marcel $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
-#include <sys/diskmbr.h>
 #include <sys/endian.h>
 #include <sys/kernel.h>
 #include <sys/kobj.h>
@@ -80,6 +79,7 @@ struct g_part_alias_list {
 	{ "bios-boot", G_PART_ALIAS_BIOS_BOOT },
 	{ "ebr", G_PART_ALIAS_EBR },
 	{ "efi", G_PART_ALIAS_EFI },
+	{ "fat16", G_PART_ALIAS_MS_FAT16 },
 	{ "fat32", G_PART_ALIAS_MS_FAT32 },
 	{ "freebsd", G_PART_ALIAS_FREEBSD },
 	{ "freebsd-boot", G_PART_ALIAS_FREEBSD_BOOT },
@@ -423,11 +423,11 @@ g_part_new_provider(struct g_geom *gp, struct g_part_table *table,
 	    pp->sectorsize;
 	entry->gpe_pp->mediasize -= entry->gpe_offset - offset;
 	entry->gpe_pp->sectorsize = pp->sectorsize;
-	entry->gpe_pp->flags = pp->flags & G_PF_CANDELETE;
 	entry->gpe_pp->stripesize = pp->stripesize;
 	entry->gpe_pp->stripeoffset = pp->stripeoffset + entry->gpe_offset;
 	if (pp->stripesize > 0)
 		entry->gpe_pp->stripeoffset %= pp->stripesize;
+	entry->gpe_pp->flags |= pp->flags & G_PF_ACCEPT_UNMAPPED;
 	g_error_provider(entry->gpe_pp, 0);
 }
 
@@ -1257,6 +1257,7 @@ g_part_ctl_resize(struct gctl_req *req, struct g_part_parms *gpp)
 	struct sbuf *sb;
 	quad_t end;
 	int error;
+	off_t mediasize;
 
 	gp = gpp->gpp_geom;
 	G_PART_TRACE((G_T_TOPOLOGY, "%s(%s)", __func__, gp->name));
@@ -1301,8 +1302,11 @@ g_part_ctl_resize(struct gctl_req *req, struct g_part_parms *gpp)
 	pp = entry->gpe_pp;
 	if ((g_debugflags & 16) == 0 &&
 	    (pp->acr > 0 || pp->acw > 0 || pp->ace > 0)) {
-		gctl_error(req, "%d", EBUSY);
-		return (EBUSY);
+		if (entry->gpe_end - entry->gpe_start + 1 > gpp->gpp_size) {
+			/* Deny shrinking of an opened partition. */
+			gctl_error(req, "%d", EBUSY);
+			return (EBUSY);
+		} 
 	}
 
 	error = G_PART_RESIZE(table, entry, gpp);
@@ -1315,8 +1319,9 @@ g_part_ctl_resize(struct gctl_req *req, struct g_part_parms *gpp)
 		entry->gpe_modified = 1;
 
 	/* update mediasize of changed provider */
-	pp->mediasize = (entry->gpe_end - entry->gpe_start + 1) *
+	mediasize = (entry->gpe_end - entry->gpe_start + 1) *
 		pp->sectorsize;
+	g_resize_provider(pp, mediasize);
 
 	/* Provide feedback if so requested. */
 	if (gpp->gpp_parms & G_PART_PARM_OUTPUT) {
@@ -1346,16 +1351,20 @@ g_part_ctl_setunset(struct gctl_req *req, struct g_part_parms *gpp,
 
 	table = gp->softc;
 
-	LIST_FOREACH(entry, &table->gpt_entry, gpe_entry) {
-		if (entry->gpe_deleted || entry->gpe_internal)
-			continue;
-		if (entry->gpe_index == gpp->gpp_index)
-			break;
-	}
-	if (entry == NULL) {
-		gctl_error(req, "%d index '%d'", ENOENT, gpp->gpp_index);
-		return (ENOENT);
-	}
+	if (gpp->gpp_parms & G_PART_PARM_INDEX) {
+		LIST_FOREACH(entry, &table->gpt_entry, gpe_entry) {
+			if (entry->gpe_deleted || entry->gpe_internal)
+				continue;
+			if (entry->gpe_index == gpp->gpp_index)
+				break;
+		}
+		if (entry == NULL) {
+			gctl_error(req, "%d index '%d'", ENOENT,
+			    gpp->gpp_index);
+			return (ENOENT);
+		}
+	} else
+		entry = NULL;
 
 	error = G_PART_SETUNSET(table, entry, gpp->gpp_attrib, set);
 	if (error) {
@@ -1368,8 +1377,11 @@ g_part_ctl_setunset(struct gctl_req *req, struct g_part_parms *gpp,
 		sb = sbuf_new_auto();
 		sbuf_printf(sb, "%s %sset on ", gpp->gpp_attrib,
 		    (set) ? "" : "un");
-		G_PART_FULLNAME(table, entry, sb, gp->name);
-		sbuf_printf(sb, "\n");
+		if (entry)
+			G_PART_FULLNAME(table, entry, sb, gp->name);
+		else
+			sbuf_cat(sb, gp->name);
+		sbuf_cat(sb, "\n");
 		sbuf_finish(sb);
 		gctl_set_param(req, "output", sbuf_data(sb), sbuf_len(sb) + 1);
 		sbuf_delete(sb);
@@ -1575,8 +1587,8 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 	case 's':
 		if (!strcmp(verb, "set")) {
 			ctlreq = G_PART_CTL_SET;
-			mparms |= G_PART_PARM_ATTRIB | G_PART_PARM_GEOM |
-			    G_PART_PARM_INDEX;
+			mparms |= G_PART_PARM_ATTRIB | G_PART_PARM_GEOM;
+			oparms |= G_PART_PARM_INDEX;
 		}
 		break;
 	case 'u':
@@ -1586,8 +1598,8 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 			modifies = 0;
 		} else if (!strcmp(verb, "unset")) {
 			ctlreq = G_PART_CTL_UNSET;
-			mparms |= G_PART_PARM_ATTRIB | G_PART_PARM_GEOM |
-			    G_PART_PARM_INDEX;
+			mparms |= G_PART_PARM_ATTRIB | G_PART_PARM_GEOM;
+			oparms |= G_PART_PARM_INDEX;
 		}
 		break;
 	}

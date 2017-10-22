@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pmcstat/pmcpl_annotate.c 203790 2010-02-11 22:51:44Z fabient $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pmcstat/pmcpl_annotate.c 203790 2010-02-11 22:51:44Z fabient $");
 
 #include <sys/param.h>
 #include <sys/endian.h>

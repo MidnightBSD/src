@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/src/s_fmal.c 229839 2012-01-09 04:55:52Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_fmal.c 252170 2013-06-24 19:12:17Z eadler $");
 
 #include <fenv.h>
 #include <float.h>
@@ -113,7 +113,7 @@ add_and_denormalize(long double a, long double b, int scale)
 	if (sum.lo != 0) {
 		u.e = sum.hi;
 		bits_lost = -u.bits.exp - scale + 1;
-		if (bits_lost != 1 ^ (int)(u.bits.manl & 1))
+		if ((bits_lost != 1) ^ (int)(u.bits.manl & 1))
 			sum.hi = nextafterl(sum.hi, INFINITY * sum.lo);
 	}
 	return (ldexp(sum.hi, scale));
@@ -226,6 +226,8 @@ fmal(long double x, long double y, long double z)
 		zs = copysignl(LDBL_MIN, zs);
 
 	fesetround(FE_TONEAREST);
+	/* work around clang bug 8100 */
+	volatile long double vxs = xs;
 
 	/*
 	 * Basic approach for round-to-nearest:
@@ -235,7 +237,7 @@ fmal(long double x, long double y, long double z)
 	 *     adj = xy.lo + r.lo		(inexact; low bit is sticky)
 	 *     result = r.hi + adj		(correctly rounded)
 	 */
-	xy = dd_mul(xs, ys);
+	xy = dd_mul(vxs, ys);
 	r = dd_add(xy.hi, zs);
 
 	spread = ex + ey;
@@ -256,7 +258,9 @@ fmal(long double x, long double y, long double z)
 		 * rounding modes.
 		 */
 		fesetround(oround);
-		adj = r.lo + xy.lo;
+		/* work around clang bug 8100 */
+		volatile long double vrlo = r.lo;
+		adj = vrlo + xy.lo;
 		return (ldexpl(r.hi + adj, spread));
 	}
 

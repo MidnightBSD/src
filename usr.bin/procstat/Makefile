@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.bin/procstat/Makefile 230918 2012-02-02 18:22:25Z trociny $
+# $FreeBSD: release/10.0.0/usr.bin/procstat/Makefile 235642 2012-05-19 05:07:03Z marcel $
 
 PROG=	procstat
 MAN=	procstat.1
@@ -16,6 +16,6 @@ SRCS=	procstat.c		\
 	procstat_vm.c
 
 LDADD+=	-lutil -lprocstat -lkvm
-DPADD+=	${LIBUTIL}
+DPADD+=	${LIBUTIL} ${LIBPROCSTAT} ${LIBKVM}
 
 .include <bsd.prog.mk>

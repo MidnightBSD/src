@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/ia64/sys/getcontext.S 118332 2003-08-02 00:49:36Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/ia64/sys/getcontext.S 118332 2003-08-02 00:49:36Z marcel $");
 
 #include "SYS.h"
 

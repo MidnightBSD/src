@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libkse/thread/thr_priority_queue.c 174112 2007-11-30 17:20:29Z deischen $
+ * $FreeBSD: release/10.0.0/lib/libkse/thread/thr_priority_queue.c 174112 2007-11-30 17:20:29Z deischen $
  */
 
 #include "namespace.h"

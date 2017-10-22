@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/ofw/ofw_bus_subr.h 209298 2010-06-18 14:06:27Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/dev/ofw/ofw_bus_subr.h 239366 2012-08-18 11:25:07Z hrs $
  */
 
 #ifndef	_DEV_OFW_OFW_BUS_SUBR_H_
@@ -73,5 +73,8 @@ void	ofw_bus_find_iparent(phandle_t);
 /* Helper routine for checking compat prop */
 int ofw_bus_is_compatible(device_t, const char *);
 int ofw_bus_is_compatible_strict(device_t, const char *);
+
+/* Helper routine for checking existence of a prop */
+int ofw_bus_has_prop(device_t, const char *);
 
 #endif /* !_DEV_OFW_OFW_BUS_SUBR_H_ */

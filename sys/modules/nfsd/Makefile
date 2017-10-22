@@ -1,8 +1,10 @@
-# $FreeBSD: stable/9/sys/modules/nfsd/Makefile 192991 2009-05-28 19:45:11Z rmacklem $
+# $FreeBSD: release/10.0.0/sys/modules/nfsd/Makefile 249596 2013-04-17 22:42:43Z ken $
 
-.PATH: ${.CURDIR}/../../fs/nfsserver
+.PATH: ${.CURDIR}/../../fs/nfsserver ${.CURDIR}/../../nfs
 KMOD=	nfsd
 SRCS=	vnode_if.h \
+	nfs_fha.c \
+	nfs_fha_new.c \
 	nfs_nfsdserv.c \
 	nfs_nfsdcache.c \
 	nfs_nfsdkrpc.c \

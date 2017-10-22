@@ -1,7 +1,7 @@
-/* $FreeBSD: stable/9/usr.sbin/pkg_install/delete/delete.h 131285 2004-06-29 19:06:42Z eik $ */
+/* $FreeBSD: release/10.0.0/usr.sbin/pkg_install/delete/delete.h 228990 2011-12-30 10:58:14Z uqs $ */
 
 /*
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without

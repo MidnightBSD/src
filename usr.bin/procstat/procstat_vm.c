@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/procstat/procstat_vm.c 238852 2012-07-27 19:56:36Z trociny $
+ * $FreeBSD: release/10.0.0/usr.bin/procstat/procstat_vm.c 249669 2013-04-20 07:52:23Z trociny $
  */
 
 #include <sys/param.h>
@@ -41,7 +41,7 @@
 #include "procstat.h"
 
 void
-procstat_vm(struct kinfo_proc *kipp)
+procstat_vm(struct procstat *procstat, struct kinfo_proc *kipp)
 {
 	struct kinfo_vmentry *freep, *kve;
 	int ptrwidth;
@@ -54,7 +54,7 @@ procstat_vm(struct kinfo_proc *kipp)
 		    "PID", ptrwidth, "START", ptrwidth, "END", "PRT", "RES",
 		    "PRES", "REF", "SHD", "FL", "TP", "PATH");
 
-	freep = kinfo_getvmmap(kipp->ki_pid, &cnt);
+	freep = procstat_getvmmap(procstat, kipp, &cnt);
 	if (freep == NULL)
 		return;
 	for (i = 0; i < cnt; i++) {

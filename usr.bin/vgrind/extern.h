@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *      @(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/9/usr.bin/vgrind/extern.h 216370 2010-12-11 08:32:16Z joel $
+ * $FreeBSD: release/10.0.0/usr.bin/vgrind/extern.h 228992 2011-12-30 11:02:40Z uqs $
  */
 
 typedef int boolean;
@@ -37,7 +37,7 @@ extern boolean	 _escaped;             /* if last character was an escape */
 extern char    *s_start;               /* start of the current string */
 extern char    *l_acmbeg;              /* string introducing a comment */
 extern char    *l_acmend;              /* string ending a comment */
-extern char    *l_blkbeg;              /* string begining of a block */
+extern char    *l_blkbeg;              /* string beginning of a block */
 extern char    *l_blkend;              /* string ending a block */
 extern char    *l_chrbeg;              /* delimiter for character constant */
 extern char    *l_chrend;              /* delimiter for character constant */

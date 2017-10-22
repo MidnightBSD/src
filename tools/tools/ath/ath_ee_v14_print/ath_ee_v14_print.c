@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/tools/ath/ath_ee_v14_print/ath_ee_v14_print.c 219901 2011-03-23 11:16:06Z adrian $
+ * $FreeBSD: release/10.0.0/tools/tools/ath/ath_ee_v14_print/ath_ee_v14_print.c 232807 2012-03-11 02:00:59Z adrian $
  */
 
 #include <stdio.h>
@@ -91,8 +91,10 @@ eeprom_v14_base_print(uint16_t *buf)
 
 	printf("| Version: 0x%.4x   | Length: 0x%.4x | Checksum: 0x%.4x ",
 	    eh->version, eh->length, eh->checksum);
-	printf("| CapFlags: 0x%.2x  | eepMisc: 0x%.2x | RegDomain: 0x%.4x 0x%.4x | \n",
-	    eh->opCapFlags, eh->eepMisc, eh->regDmn[0], eh->regDmn[1]);
+	printf("| CapFlags: 0x%.2x\n", eh->opCapFlags);
+
+	printf("| eepMisc: 0x%.2x | RegDomain: 0x%.4x 0x%.4x | \n",
+	    eh->eepMisc, eh->regDmn[0], eh->regDmn[1]);
 	printf("| MAC: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x ",
 	    eh->macAddr[0], eh->macAddr[1], eh->macAddr[2],
 	    eh->macAddr[3], eh->macAddr[4], eh->macAddr[5]);
@@ -105,7 +107,7 @@ eeprom_v14_base_print(uint16_t *buf)
 	    (int) eh->pwdclkind, (int) eh->fastClk5g, (int) eh->divChain,
 	    (int) eh->rxGainType);
 
-	printf("| dacHiPwrMode_5G: 0x%.2x | openLoopPwrCntl: 0x%.2x | dacLpMode: 0x%.2x ",
+	printf("| dacHiPwrMode_5G: 0x%.2x | openLoopPwrCntl: 0x%.2x | dacLpMode: 0x%.2x\n",
 	    (int) eh->dacHiPwrMode_5G, (int) eh->openLoopPwrCntl, (int) eh->dacLpMode);
 	printf("| txGainType: 0x%.2x | rcChainMask: 0x%.2x |\n",
 	    (int) eh->txGainType, (int) eh->rcChainMask);

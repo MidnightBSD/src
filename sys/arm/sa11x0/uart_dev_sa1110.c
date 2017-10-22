@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/sa11x0/uart_dev_sa1110.c 172152 2007-09-12 18:28:09Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/sa11x0/uart_dev_sa1110.c 248965 2013-04-01 00:44:20Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -156,6 +156,8 @@ static kobj_method_t sa1110_methods[] = {
 int
 sa1110_bus_probe(struct uart_softc *sc)
 {
+	sc->sc_txfifosz = 3;
+	sc->sc_rxfifosz = 1;
 	return (0);
 }
 
@@ -164,8 +166,6 @@ sa1110_bus_attach(struct uart_softc *sc)
 {
 	 bcopy(&sc->sc_sysdev->bas, &sc->sc_bas, sizeof(sc->sc_bas));
 
-	 sc->sc_txfifosz = 3;
-	 sc->sc_rxfifosz = 1;
 	 sc->sc_hwiflow = 0;
 	 uart_setreg(&sc->sc_bas, SACOM_CR3, CR3_RXE | CR3_TXE | CR3_RIE | CR3_TIE);
 	return (0);
@@ -179,12 +179,12 @@ sa1110_bus_transmit(struct uart_softc *sc)
 
 	while (!(uart_getreg(&sc->sc_bas, SACOM_CR3) & CR3_TIE))
 		uart_setreg(&sc->sc_bas, SACOM_CR3,
-		    uart_getreg(&sc->sc_bas, SACOM_CR3) | CR3_TIE);    
+		    uart_getreg(&sc->sc_bas, SACOM_CR3) | CR3_TIE);
 #endif
 
 	sc->sc_txbusy = 1;
 	uart_setreg(&sc->sc_bas, SACOM_CR3, uart_getreg(&sc->sc_bas, SACOM_CR3)
-	    | CR3_TIE);    
+	    | CR3_TIE);
 	for (i = 0; i < sc->sc_txdatasz; i++) {
 		while (!(uart_getreg(&sc->sc_bas, SACOM_SR1) & SR1_TNF));
 
@@ -252,7 +252,7 @@ sa1110_bus_ipend(struct uart_softc *sc)
 			ipend |= SER_INT_RXREADY;
 		mask &= ~CR3_RIE;
 	}
-	uart_setreg(&sc->sc_bas, SACOM_CR3, CR3_RXE | mask); 
+	uart_setreg(&sc->sc_bas, SACOM_CR3, CR3_RXE | mask);
 	return (ipend);
 }
 static int

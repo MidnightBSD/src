@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libc/stdio/test-printfloat.c 187963 2009-01-31 18:32:39Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/libc/stdio/test-printfloat.c 230114 2012-01-14 21:09:54Z das $");
 
 #include <assert.h>
 #include <err.h>
@@ -266,9 +266,9 @@ main(int argc, char *argv[])
 	testfmt("0x1p-16494", "%La", 0x1p-16494L);
 	testfmt("0x1.2345p-16384", "%La", 0x1.2345p-16384L);
 #else
-	testfmt("0xc.90fdaa22168cp-2", "%La", 0x3.243f6a8885a31p0L);
-	testfmt("0x8p-1077", "%La", 0x1p-1074L);
-	testfmt("0x9.8765p-1024", "%La", 0x9.8765p-1024L);
+	testfmt("0x1.921fb54442d18p+1", "%La", 0x3.243f6a8885a31p0L);
+	testfmt("0x1p-1074", "%La", 0x1p-1074L);
+	testfmt("0x1.30ecap-1021", "%La", 0x9.8765p-1024L);
 #endif
 
 	printf("ok 10 - printfloat\n");

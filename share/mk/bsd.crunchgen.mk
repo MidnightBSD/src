@@ -22,8 +22,10 @@
 # Specific links can be suppressed by setting
 # CRUNCH_SUPPRESS_LINK_$(NAME) to 1.
 #
+# If CRUNCH_GENERATE_LINKS is set to no, no links will be generated.
+#
 
-# $FreeBSD: stable/9/share/mk/bsd.crunchgen.mk 247112 2013-02-21 18:41:35Z pfg $
+# $FreeBSD: release/10.0.0/share/mk/bsd.crunchgen.mk 251512 2013-06-07 21:40:02Z emaste $
 
 ##################################################################
 #  The following is pretty nearly a generic crunchgen-handling makefile
@@ -36,11 +38,17 @@ OUTPUTS=$(OUTMK) $(OUTC) $(PROG).cache
 CRUNCHOBJS= ${.OBJDIR}
 .if defined(MAKEOBJDIRPREFIX)
 CANONICALOBJDIR:= ${MAKEOBJDIRPREFIX}${.CURDIR}
+.elif defined(MAKEOBJDIR) && ${MAKEOBJDIR:M/*} != ""
+CANONICALOBJDIR:=${MAKEOBJDIR}
 .else
 CANONICALOBJDIR:= /usr/obj${.CURDIR}
 .endif
+CRUNCH_GENERATE_LINKS?=	yes
 
 CLEANFILES+= $(CONF) *.o *.lo *.c *.mk *.cache *.a *.h
+
+# Don't try to extract debug info from ${PROG}.
+NO_DEBUG_FILES=
 
 # Program names and their aliases contribute hardlinks to 'rescue' executable,
 # except for those that get suppressed.
@@ -51,6 +59,7 @@ $(OUTPUTS): $(CRUNCH_SRCDIR_${P})/Makefile
 .else
 $(OUTPUTS): $(.CURDIR)/../../$(D)/$(P)/Makefile
 .endif
+.if ${CRUNCH_GENERATE_LINKS} == "yes"
 .ifndef CRUNCH_SUPPRESS_LINK_${P}
 LINKS+= $(BINDIR)/$(PROG) $(BINDIR)/$(P)
 .endif
@@ -59,6 +68,7 @@ LINKS+= $(BINDIR)/$(PROG) $(BINDIR)/$(P)
 LINKS+= $(BINDIR)/$(PROG) $(BINDIR)/$(A)
 .endif
 .endfor
+.endif
 .endfor
 .endfor
 

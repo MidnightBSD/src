@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/gssd/Makefile 245089 2013-01-06 01:41:14Z rmacklem $
+# $FreeBSD: release/10.0.0/usr.sbin/gssd/Makefile 245014 2013-01-03 22:24:39Z rmacklem $
 
 .include <bsd.own.mk>
 

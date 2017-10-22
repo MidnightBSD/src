@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_read_disk.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_disk.c 248616 2013-03-22 13:36:03Z mm $");
 
 static void
 gname_cleanup(void *d)
@@ -34,7 +34,7 @@ gname_cleanup(void *d)
 }
 
 static const char *
-gname_lookup(void *d, gid_t g)
+gname_lookup(void *d, int64_t g)
 {
 	int *mp = d;
 	assertEqualInt(*mp, 0x13579);
@@ -52,7 +52,7 @@ uname_cleanup(void *d)
 }
 
 static const char *
-uname_lookup(void *d, uid_t u)
+uname_lookup(void *d, int64_t u)
 {
 	int *mp = d;
 	assertEqualInt(*mp, 0x1234);
@@ -126,7 +126,8 @@ DEFINE_TEST(test_read_disk)
 
 		/* Get the group name for group 0 and see if it makes sense. */
 		p = archive_read_disk_gname(a, 0);
-		if (assert(p != NULL)) {
+		assert(p != NULL);
+		if (p != NULL) {
 			i = 0;
 			while (i < sizeof(zero_groups)/sizeof(zero_groups[0])) {
 				if (strcmp(zero_groups[i], p) == 0)
@@ -164,7 +165,7 @@ DEFINE_TEST(test_read_disk)
 			   &umagic, &uname_lookup, &uname_cleanup));
 
 	/* Destroy the archive. */
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 
 	/* Verify our cleanup functions got called. */
 	assertEqualInt(gmagic, 0x2468);

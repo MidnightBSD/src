@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/9/usr.sbin/mtree/Makefile 245462 2013-01-15 16:46:51Z brooks $
+# $FreeBSD: release/10.0.0/usr.sbin/mtree/Makefile 245241 2013-01-09 21:07:08Z brooks $
 
 .include <bsd.own.mk>
 

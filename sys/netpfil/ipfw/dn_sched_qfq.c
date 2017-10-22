@@ -25,7 +25,7 @@
  */
 
 /*
- * $FreeBSD: stable/9/sys/netpfil/ipfw/dn_sched_qfq.c 243401 2012-11-22 12:11:32Z glebius $
+ * $FreeBSD: release/10.0.0/sys/netpfil/ipfw/dn_sched_qfq.c 240494 2012-09-14 11:51:49Z glebius $
  */
 
 #ifdef _KERNEL
@@ -608,7 +608,7 @@ static inline void
 qfq_update_start(struct qfq_sched *q, struct qfq_class *cl)
 {
 	unsigned long mask;
-	uint32_t limit, roundedF;
+	uint64_t limit, roundedF;
 	int slot_shift = cl->grp->slot_shift;
 
 	roundedF = qfq_round_down(cl->F, slot_shift);

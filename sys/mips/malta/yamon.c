@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/malta/yamon.c 202175 2010-01-12 21:36:08Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/malta/yamon.c 254944 2013-08-27 01:08:55Z gonzo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -56,6 +56,7 @@ yamon_getcpufreq(void)
 	uint32_t freq;
 	int ret;
 
+	freq = 0;
 	ret = YAMON_SYSCON_READ(SYSCON_BOARD_CPU_CLOCK_FREQ_ID, &freq,
 	    sizeof(freq));
 	if (ret != 0)

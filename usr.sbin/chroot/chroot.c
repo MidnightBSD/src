@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)chroot.c	8.1 (Berkeley) 6/9/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/chroot/chroot.c 201387 2010-01-02 11:05:34Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/chroot/chroot.c 227223 2011-11-06 16:40:17Z ed $");
 
 #include <sys/types.h>
 
@@ -56,16 +56,12 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/chroot/chroot.c 201387 2010-01-02 11:05:34
 
 static void usage(void);
 
-char	*user;		/* user to switch to before running program */
-char	*group;		/* group to switch to ... */
-char	*grouplist;	/* group list to switch to ... */
-
 int
 main(int argc, char *argv[])
 {
 	struct group	*gp;
 	struct passwd	*pw;
-	char		*endp, *p;
+	char		*endp, *p, *user, *group, *grouplist;
 	const char	*shell;
 	gid_t		gid, *gidlist;
 	uid_t		uid;
@@ -74,6 +70,7 @@ main(int argc, char *argv[])
 
 	gid = 0;
 	uid = 0;
+	user = group = grouplist = NULL;
 	while ((ch = getopt(argc, argv, "G:g:u:")) != -1) {
 		switch(ch) {
 		case 'u':

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/cddl/usr.sbin/Makefile 243674 2012-11-29 14:05:04Z mm $
+# $FreeBSD: release/10.0.0/cddl/usr.sbin/Makefile 242723 2012-11-07 23:45:09Z jhibbits $
 
 .include <bsd.own.mk>
 
@@ -16,6 +16,16 @@ _zhack=	zhack
 .endif
 
 .if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
+_dtrace=	dtrace
+_dtruss=	dtruss
+_lockstat=	lockstat
+.endif
+
+.if ${MACHINE_CPUARCH} == "mips"
+_dtrace=	dtrace
+.endif
+
+.if ${MACHINE_CPUARCH} == "powerpc"
 _dtrace=	dtrace
 _dtruss=	dtruss
 _lockstat=	lockstat

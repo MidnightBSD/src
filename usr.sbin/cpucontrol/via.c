@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/cpucontrol/via.c 246281 2013-02-03 03:46:16Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/cpucontrol/via.c 245491 2013-01-16 05:00:51Z eadler $");
 
 #include <assert.h>
 #include <stdio.h>
@@ -83,7 +83,7 @@ via_update(const char *dev, const char *path)
 	unsigned int i;
 	size_t payload_size;
 	via_fw_header_t *fw_header;
-	uint32_t signature, flags;
+	uint32_t signature;
 	int32_t revision;
 	void *fw_data;
 	size_t data_size, total_size;
@@ -122,7 +122,6 @@ via_update(const char *dev, const char *path)
 	/*
 	 * MSR_IA32_PLATFORM_ID contains flag in BCD in bits 52-50.
 	 */
-	flags = 1 << ((msrargs.data >> 50) & 7);
 	msrargs.msr = MSR_BIOS_SIGN;
 	error = ioctl(devfd, CPUCTL_RDMSR, &msrargs);
 	if (error < 0) {

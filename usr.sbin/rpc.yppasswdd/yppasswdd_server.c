@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/rpc.yppasswdd/yppasswdd_server.c 188766 2009-02-18 22:27:46Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/rpc.yppasswdd/yppasswdd_server.c 231994 2012-02-22 06:27:20Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -460,6 +460,7 @@ yppasswdproc_update_1_svc(yppasswd *argp, struct svc_req *rqstp)
 	int passwd_changed = 0;
 	int shell_changed = 0;
 	int gecos_changed = 0;
+	char *cryptpw;
 	char *oldshell = NULL;
 	char *oldgecos = NULL;
 	char *passfile_hold;
@@ -537,8 +538,8 @@ yppasswdproc_update_1_svc(yppasswd *argp, struct svc_req *rqstp)
 
 	/* Step 2: check that the supplied oldpass is valid. */
 
-	if (strcmp(crypt(argp->oldpass, yp_password.pw_passwd),
-					yp_password.pw_passwd)) {
+	cryptpw = crypt(argp->oldpass, yp_password.pw_passwd);
+	if (cryptpw == NULL || strcmp(cryptpw, yp_password.pw_passwd)) {
 		yp_error("rejected change attempt -- bad password");
 		yp_error("client address: %s username: %s",
 			  inet_ntoa(rqhost->sin_addr),

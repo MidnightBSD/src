@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/contrib/libarchive/libarchive/archive_endian.h 229592 2012-01-05 12:06:54Z mm $
+ * $FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_endian.h 238856 2012-07-28 06:38:44Z mm $
  *
  * Borrowed from FreeBSD's <sys/endian.h>
  */
@@ -126,8 +126,8 @@ archive_be64enc(void *pp, uint64_t u)
 {
 	unsigned char *p = (unsigned char *)pp;
 
-	archive_be32enc(p, u >> 32);
-	archive_be32enc(p + 4, u & 0xffffffff);
+	archive_be32enc(p, (uint32_t)(u >> 32));
+	archive_be32enc(p + 4, (uint32_t)(u & 0xffffffff));
 }
 
 static inline void
@@ -155,8 +155,8 @@ archive_le64enc(void *pp, uint64_t u)
 {
 	unsigned char *p = (unsigned char *)pp;
 
-	archive_le32enc(p, u & 0xffffffff);
-	archive_le32enc(p + 4, u >> 32);
+	archive_le32enc(p, (uint32_t)(u & 0xffffffff));
+	archive_le32enc(p + 4, (uint32_t)(u >> 32));
 }
 
 #endif

@@ -1,9 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/rc.d/securelevel 220153 2011-03-30 01:19:00Z emaste $
+# $FreeBSD: release/10.0.0/etc/rc.d/securelevel 239568 2012-08-22 18:35:17Z obrien $
 #
 
 # PROVIDE: securelevel
+# REQUIRE: adjkerntz ipfw ipfilter pf
 
 . /etc/rc.subr
 

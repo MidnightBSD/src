@@ -18,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/dc/dc.c 247677 2013-03-03 00:37:34Z gjb $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/dc/dc.c 247441 2013-02-28 01:22:14Z gjb $");
 
 #include <sys/stat.h>
 
@@ -39,9 +39,9 @@ static void		 usage(void);
 
 extern char		*__progname;
 
-struct source		 src;
+static struct source	 src;
 
-struct option long_options[] =
+static const struct option long_options[] =
 {
 	{"expression",		required_argument,	NULL,	'e'},
 	{"file",		required_argument,	NULL,	'f'},

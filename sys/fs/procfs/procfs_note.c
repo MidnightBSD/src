@@ -32,7 +32,7 @@
  *
  *	@(#)procfs_note.c	8.2 (Berkeley) 1/21/94
  *
- * $FreeBSD: stable/9/sys/fs/procfs/procfs_note.c 128019 2004-04-07 20:46:16Z imp $
+ * $FreeBSD: release/10.0.0/sys/fs/procfs/procfs_note.c 128019 2004-04-07 20:46:16Z imp $
  */
 
 #include <sys/param.h>

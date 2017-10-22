@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_gre.c 204522 2010-03-01 17:05:46Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/ip_gre.c 250523 2013-05-11 19:05:38Z hrs $");
 
 #include "opt_inet.h"
 #include "opt_atalk.h"
@@ -70,7 +70,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/ip_gre.c 204522 2010-03-01 17:05:46Z jo
 #include <netinet/ip_gre.h>
 #include <machine/in_cksum.h>
 #else
-#error ip_gre input without IP?
+#error "ip_gre requires INET"
 #endif
 
 #ifdef NETATALK
@@ -205,6 +205,11 @@ gre_input2(struct mbuf *m ,int hlen, u_char proto)
 		bpf_mtap2(GRE2IFP(sc)->if_bpf, &af, sizeof(af), m);
 	}
 
+	if ((GRE2IFP(sc)->if_flags & IFF_MONITOR) != 0) {
+		m_freem(m);
+		return(NULL);
+	}
+
 	m->m_pkthdr.rcvif = GRE2IFP(sc);
 
 	netisr_queue(isr, m);
@@ -274,12 +279,10 @@ gre_mobile_input(struct mbuf *m, int hlen)
 
 	/*
 	 * On FreeBSD, rip_input() supplies us with ip->ip_len
-	 * already converted into host byteorder and also decreases
-	 * it by the lengh of IP header, however, ip_input() expects
-	 * that this field is in the original format (network byteorder
-	 * and full size of IP packet), so that adjust accordingly.
+	 * decreased by the lengh of IP header, however, ip_input()
+	 * expects it to be full size of IP packet, so adjust accordingly.
 	 */
-	ip->ip_len = htons(ip->ip_len + sizeof(struct ip) - msiz);
+	ip->ip_len = htons(ntohs(ip->ip_len) + sizeof(struct ip) - msiz);
 
 	ip->ip_sum = 0;
 	ip->ip_sum = in_cksum(m, (ip->ip_hl << 2));
@@ -287,6 +290,11 @@ gre_mobile_input(struct mbuf *m, int hlen)
 	if (bpf_peers_present(GRE2IFP(sc)->if_bpf)) {
 		u_int32_t af = AF_INET;
 		bpf_mtap2(GRE2IFP(sc)->if_bpf, &af, sizeof(af), m);
+	}
+
+	if ((GRE2IFP(sc)->if_flags & IFF_MONITOR) != 0) {
+		m_freem(m);
+		return;
 	}
 
 	m->m_pkthdr.rcvif = GRE2IFP(sc);

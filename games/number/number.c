@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)number.c	8.3 (Berkeley) 5/4/95";
 #endif
 static const char rcsid[] =
- "$FreeBSD: stable/9/games/number/number.c 203932 2010-02-15 18:46:02Z imp $";
+ "$FreeBSD: release/10.0.0/games/number/number.c 227101 2011-11-05 07:18:53Z ed $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -74,14 +74,13 @@ static const char	*name1[] = {
 	"novemdecillion",		"vigintillion",
 };
 
-void	convert(char *);
-int	number(char *, int);
-void	pfract(int);
-void	toobig(void);
-int	unit(int, char *);
-void	usage(void);
+static void	convert(char *);
+static int	number(char *, int);
+static void	pfract(int);
+static int	unit(int, char *);
+static void	usage(void);
 
-int lflag;
+static int lflag;
 
 int
 main(int argc, char *argv[])
@@ -120,7 +119,7 @@ main(int argc, char *argv[])
 	exit(0);
 }
 
-void
+static void
 convert(char *line)
 {
 	int flen, len, rval;
@@ -188,7 +187,7 @@ badnum:			errx(1, "illegal number: %s", line);
 		(void)printf("\n");
 }
 
-int
+static int
 unit(int len, char *p)
 {
 	int off, rval;
@@ -222,7 +221,7 @@ unit(int len, char *p)
 	return (rval);
 }
 
-int
+static int
 number(char *p, int len)
 {
 	int val, rval;
@@ -260,7 +259,7 @@ number(char *p, int len)
 	return (rval);
 }
 
-void
+static void
 pfract(int len)
 {
 	static char const * const pref[] = { "", "ten-", "hundred-" };
@@ -278,7 +277,7 @@ pfract(int len)
 	}
 }
 
-void
+static void
 usage(void)
 {
 	(void)fprintf(stderr, "usage: number [-l] [# ...]\n");

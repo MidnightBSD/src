@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/libexec/ulog-helper/Makefile 223367 2011-06-21 17:59:51Z ed $
+# $FreeBSD: release/10.0.0/libexec/ulog-helper/Makefile 223367 2011-06-21 17:59:51Z ed $
 
 PROG=	ulog-helper
 BINOWN=	root

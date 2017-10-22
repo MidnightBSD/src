@@ -1,7 +1,7 @@
 /*-
  * Cronyx-Sigma adapter driver for FreeBSD.
  * Supports PPP/HDLC and Cisco/HDLC protocol in synchronous mode,
- * and asyncronous channels with full modem control.
+ * and asynchronous channels with full modem control.
  * Keepalive protocol implemented in both Cisco and PPP modes.
  *
  * Copyright (C) 1994-2002 Cronyx Engineering.
@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/cx/if_cx.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cx/if_cx.c 250460 2013-05-10 16:41:26Z eadler $");
 
 #include <sys/param.h>
 
@@ -113,7 +113,8 @@ static device_method_t cx_isa_methods [] = {
 	DEVMETHOD(device_probe,		cx_probe),
 	DEVMETHOD(device_attach,	cx_attach),
 	DEVMETHOD(device_detach,	cx_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 typedef struct _cx_dma_mem_t {

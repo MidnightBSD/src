@@ -1,13 +1,12 @@
 #
-# $FreeBSD: stable/9/sys/mips/conf/SWARM 216475 2010-12-16 05:13:41Z gonzo $
+# $FreeBSD: release/10.0.0/sys/mips/conf/SWARM 233644 2012-03-29 02:54:35Z jmallett $
 #
 
 include		"std.SWARM"
 
 ident		SWARM
 
-machine		mips mipseb
-options		ISA_MIPS32
+machine		mips mips
 
 makeoptions	ARCH_FLAGS="-mabi=32 -march=mips32"
 makeoptions	LDSCRIPT_NAME=	ldscript.mips.cfe

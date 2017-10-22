@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2000-2004 Mark R V Murray
+ * Copyright (c) 2000-2013 Mark R V Murray
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/random/harvest.c 172836 2007-10-20 23:23:23Z julian $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/random/harvest.c 256381 2013-10-12 15:31:36Z markm $");
 
 #include <sys/param.h>
 #include <sys/kthread.h>
@@ -37,6 +37,7 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/random/harvest.c 172836 2007-10-20 23:23:23
 #include <sys/queue.h>
 #include <sys/random.h>
 #include <sys/selinfo.h>
+#include <sys/syslog.h>
 #include <sys/systm.h>
 #include <sys/sysctl.h>
 
@@ -47,19 +48,20 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/random/harvest.c 172836 2007-10-20 23:23:23
 static int read_random_phony(void *, int);
 
 /* Structure holding the desired entropy sources */
-struct harvest_select harvest = { 1, 1, 1, 0 };
+struct harvest_select harvest = { 1, 1, 1, 1 };
+static int warned = 0;
 
 /* hold the address of the routine which is actually called if
  * the randomdev is loaded
  */
-static void (*reap_func)(u_int64_t, const void *, u_int, u_int, u_int,
+static void (*reap_func)(u_int64_t, const void *, u_int, u_int,
     enum esource) = NULL;
 static int (*read_func)(void *, int) = read_random_phony;
 
 /* Initialise the harvester at load time */
 void
-random_yarrow_init_harvester(void (*reaper)(u_int64_t, const void *, u_int,
-    u_int, u_int, enum esource), int (*reader)(void *, int))
+randomdev_init_harvester(void (*reaper)(u_int64_t, const void *, u_int,
+    u_int, enum esource), int (*reader)(void *, int))
 {
 	reap_func = reaper;
 	read_func = reader;
@@ -67,10 +69,11 @@ random_yarrow_init_harvester(void (*reaper)(u_int64_t, const void *, u_int,
 
 /* Deinitialise the harvester at unload time */
 void
-random_yarrow_deinit_harvester(void)
+randomdev_deinit_harvester(void)
 {
 	reap_func = NULL;
 	read_func = read_random_phony;
+	warned = 0;
 }
 
 /* Entropy harvesting routine. This is supposed to be fast; do
@@ -83,12 +86,10 @@ random_yarrow_deinit_harvester(void)
  * read which can be quite expensive.
  */
 void
-random_harvest(void *entropy, u_int count, u_int bits, u_int frac,
-    enum esource origin)
+random_harvest(void *entropy, u_int count, u_int bits, enum esource origin)
 {
 	if (reap_func)
-		(*reap_func)(get_cyclecount(), entropy, count, bits, frac,
-		    origin);
+		(*reap_func)(get_cyclecount(), entropy, count, bits, origin);
 }
 
 /* Userland-visible version of read_random */
@@ -107,6 +108,11 @@ read_random_phony(void *buf, int count)
 {
 	u_long randval;
 	int size, i;
+
+	if (!warned) {
+		log(LOG_WARNING, "random device not loaded; using insecure entropy\n");
+		warned = 1;
+	}
 
 	/* srandom() is called in kern/init_main.c:proc0_post() */
 

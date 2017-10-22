@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/pci/intpm.c 234677 2012-04-25 07:13:16Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/pci/intpm.c 234338 2012-04-16 10:33:46Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

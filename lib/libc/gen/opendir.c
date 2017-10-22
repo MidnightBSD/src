@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)opendir.c	8.8 (Berkeley) 5/1/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/opendir.c 249401 2013-04-12 11:37:24Z jilles $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/opendir.c 247236 2013-02-24 20:53:32Z jilles $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -46,9 +46,10 @@ __FBSDID("$FreeBSD: stable/9/lib/libc/gen/opendir.c 249401 2013-04-12 11:37:24Z 
 #include <unistd.h>
 #include "un-namespace.h"
 
+#include "gen-private.h"
 #include "telldir.h"
 
-static DIR * __opendir_common(int, const char *, int);
+static DIR * __opendir_common(int, int);
 
 /*
  * Open a directory.
@@ -77,19 +78,27 @@ fdopendir(int fd)
 	}
 	if (_fcntl(fd, F_SETFD, FD_CLOEXEC) == -1)
 		return (NULL);
-	return (__opendir_common(fd, NULL, DTF_HIDEW|DTF_NODUP));
+	return (__opendir_common(fd, DTF_HIDEW|DTF_NODUP));
 }
 
 DIR *
 __opendir2(const char *name, int flags)
 {
 	int fd;
+	DIR *dir;
+	int saved_errno;
 
 	if ((fd = _open(name,
 	    O_RDONLY | O_NONBLOCK | O_DIRECTORY | O_CLOEXEC)) == -1)
 		return (NULL);
 
-	return __opendir_common(fd, name, flags);
+	dir = __opendir_common(fd, flags);
+	if (dir == NULL) {
+		saved_errno = errno;
+		_close(fd);
+		errno = saved_errno;
+	}
+	return (dir);
 }
 
 static int
@@ -104,12 +113,15 @@ opendir_compar(const void *p1, const void *p2)
  * Common routine for opendir(3), __opendir2(3) and fdopendir(3).
  */
 static DIR *
-__opendir_common(int fd, const char *name, int flags)
+__opendir_common(int fd, int flags)
 {
 	DIR *dirp;
 	int incr;
 	int saved_errno;
 	int unionstack;
+	int fd2;
+
+	fd2 = -1;
 
 	if ((dirp = malloc(sizeof(DIR) + sizeof(struct _telldir))) == NULL)
 		return (NULL);
@@ -155,7 +167,22 @@ __opendir_common(int fd, const char *name, int flags)
 		 * entries into a buffer, sort the buffer, and
 		 * remove duplicate entries by setting the inode
 		 * number to zero.
+		 *
+		 * We reopen the directory because _getdirentries()
+		 * on a MNT_UNION mount modifies the open directory,
+		 * making it refer to the lower directory after the
+		 * upper directory's entries are exhausted.
+		 * This would otherwise break software that uses
+		 * the directory descriptor for fchdir or *at
+		 * functions, such as fts.c.
 		 */
+		if ((fd2 = _openat(fd, ".", O_RDONLY | O_CLOEXEC)) == -1) {
+			saved_errno = errno;
+			free(buf);
+			free(dirp);
+			errno = saved_errno;
+			return (NULL);
+		}
 
 		do {
 			/*
@@ -171,7 +198,7 @@ __opendir_common(int fd, const char *name, int flags)
 				ddptr = buf + (len - space);
 			}
 
-			n = _getdirentries(fd, ddptr, space, &dirp->dd_seek);
+			n = _getdirentries(fd2, ddptr, space, &dirp->dd_seek);
 			if (n > 0) {
 				ddptr += n;
 				space -= n;
@@ -181,23 +208,8 @@ __opendir_common(int fd, const char *name, int flags)
 		ddeptr = ddptr;
 		flags |= __DTF_READALL;
 
-		/*
-		 * Re-open the directory.
-		 * This has the effect of rewinding back to the
-		 * top of the union stack and is needed by
-		 * programs which plan to fchdir to a descriptor
-		 * which has also been read -- see fts.c.
-		 */
-		if (flags & DTF_REWIND) {
-			(void)_close(fd);
-			if ((fd = _open(name, O_RDONLY | O_DIRECTORY)) == -1) {
-				saved_errno = errno;
-				free(buf);
-				free(dirp);
-				errno = saved_errno;
-				return (NULL);
-			}
-		}
+		_close(fd2);
+		fd2 = -1;
 
 		/*
 		 * There is now a buffer full of (possibly) duplicate
@@ -281,7 +293,6 @@ __opendir_common(int fd, const char *name, int flags)
 		if (dirp->dd_buf == NULL)
 			goto fail;
 		dirp->dd_seek = 0;
-		flags &= ~DTF_REWIND;
 	}
 
 	dirp->dd_loc = 0;
@@ -298,8 +309,9 @@ __opendir_common(int fd, const char *name, int flags)
 
 fail:
 	saved_errno = errno;
+	if (fd2 != -1)
+		_close(fd2);
 	free(dirp);
-	(void)_close(fd);
 	errno = saved_errno;
 	return (NULL);
 }

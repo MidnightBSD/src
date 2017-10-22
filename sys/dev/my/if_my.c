@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/my/if_my.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/my/if_my.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -153,7 +153,7 @@ static device_method_t my_methods[] = {
 	DEVMETHOD(device_detach, my_detach),
 	DEVMETHOD(device_shutdown, my_shutdown),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t my_driver = {
@@ -895,7 +895,6 @@ my_attach(device_t dev)
 	}
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = my_ioctl;
 	ifp->if_start = my_start;

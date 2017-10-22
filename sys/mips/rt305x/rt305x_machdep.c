@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/rt305x/rt305x_machdep.c 220297 2011-04-03 14:39:55Z adrian $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/rt305x/rt305x_machdep.c 247297 2013-02-26 01:00:11Z attilio $");
 
 #include "opt_ddb.h"
 
@@ -54,7 +54,6 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/rt305x/rt305x_machdep.c 220297 2011-04-03 
 #include <vm/vm.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
-#include <vm/vm_pager.h>
 
 #include <machine/cache.h>
 #include <machine/clock.h>
@@ -118,36 +117,11 @@ mips_init(void)
 }
 
 void
-platform_halt(void)
-{
-
-}
-
-
-void
-platform_identify(void)
-{
-
-}
-
-void
 platform_reset(void)
 {
 
 	__asm __volatile("li	$25, 0xbf000000");
 	__asm __volatile("j	$25");
-}
-
-void
-platform_trap_enter(void)
-{
-
-}
-
-void
-platform_trap_exit(void)
-{
-
 }
 
 void

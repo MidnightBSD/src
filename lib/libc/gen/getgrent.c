@@ -31,7 +31,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/getgrent.c 174547 2007-12-12 10:08:03Z bushman $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/getgrent.c 244092 2012-12-10 17:56:51Z jilles $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -810,7 +810,7 @@ files_setgrent(void *retval, void *mdata, va_list ap)
 		if (st->fp != NULL)
 			rewind(st->fp);
 		else if (stayopen)
-			st->fp = fopen(_PATH_GROUP, "r");
+			st->fp = fopen(_PATH_GROUP, "re");
 		break;
 	case ENDGRENT:
 		if (st->fp != NULL) {
@@ -861,7 +861,7 @@ files_group(void *retval, void *mdata, va_list ap)
 	if (*errnop != 0)
 		return (NS_UNAVAIL);
 	if (st->fp == NULL &&
-	    ((st->fp = fopen(_PATH_GROUP, "r")) == NULL)) {
+	    ((st->fp = fopen(_PATH_GROUP, "re")) == NULL)) {
 		*errnop = errno;
 		return (NS_UNAVAIL);
 	}
@@ -1251,7 +1251,7 @@ compat_setgrent(void *retval, void *mdata, va_list ap)
 		if (st->fp != NULL)
 			rewind(st->fp);
 		else if (stayopen)
-			st->fp = fopen(_PATH_GROUP, "r");
+			st->fp = fopen(_PATH_GROUP, "re");
 		set_setent(dtab, mdata);
 		(void)_nsdispatch(NULL, dtab, NSDB_GROUP_COMPAT, "setgrent",
 		    compatsrc, 0);
@@ -1335,7 +1335,7 @@ compat_group(void *retval, void *mdata, va_list ap)
 	if (*errnop != 0)
 		return (NS_UNAVAIL);
 	if (st->fp == NULL &&
-	    ((st->fp = fopen(_PATH_GROUP, "r")) == NULL)) {
+	    ((st->fp = fopen(_PATH_GROUP, "re")) == NULL)) {
 		*errnop = errno;
 		rv = NS_UNAVAIL;
 		goto fin;

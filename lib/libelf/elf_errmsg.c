@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libelf/elf_errmsg.c 165032 2006-12-09 16:27:15Z jkoshy $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libelf/elf_errmsg.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include <libelf.h>
 #include <string.h>
@@ -36,7 +36,7 @@ __FBSDID("$FreeBSD: stable/9/lib/libelf/elf_errmsg.c 165032 2006-12-09 16:27:15Z
  * Retrieve a human readable translation for an error message.
  */
 
-const char *_libelf_errors[] = {
+static const char *_libelf_errors[] = {
 #define	DEFINE_ERROR(N,S)	[ELF_E_##N] = S
 	DEFINE_ERROR(NONE,	"No Error"),
 	DEFINE_ERROR(ARCHIVE,	"Malformed ar(1) archive"),

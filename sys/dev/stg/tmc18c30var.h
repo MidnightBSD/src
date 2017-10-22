@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sys/dev/stg/tmc18c30var.h 139749 2005-01-06 01:43:34Z imp $	*/
+/*	$FreeBSD: release/10.0.0/sys/dev/stg/tmc18c30var.h 240325 2012-09-10 18:49:49Z jhb $	*/
 /*	$NecBSD: tmc18c30var.h,v 1.12.18.2 2001/06/13 05:51:23 honda Exp $	*/
 /*	$NetBSD$	*/
 
@@ -44,15 +44,6 @@
 struct stg_softc {
 	struct scsi_low_softc sc_sclow;	/* generic data */
 
-#ifdef	__NetBSD__
-	bus_space_tag_t sc_iot;
-	bus_space_tag_t sc_memt;
-	bus_space_handle_t sc_ioh;
-
-	void *sc_ih;
-#endif	/* __NetBSD__ */
-
-#ifdef	__FreeBSD__
 	bus_space_tag_t sc_iot;
 	bus_space_tag_t sc_memt;
 	bus_space_handle_t sc_ioh;
@@ -65,7 +56,6 @@ struct stg_softc {
 	struct resource *mem_res;
 
 	void *stg_intrhand;
-#endif	/* __FreeBSD__ */
 
 	int sc_tmaxcnt;
 	u_int sc_chip;			/* chip type */
@@ -100,12 +90,6 @@ struct stg_targ_info {
  *****************************************************************/
 int stgprobesubr(bus_space_tag_t, bus_space_handle_t, u_int);
 void stgattachsubr(struct stg_softc *);
-int stgprint(void *, const char *);
 int stgintr(void *);
 
-#if	defined(__i386__) && 0
-#define	SOFT_INTR_REQUIRED(slp)	(softintr((slp)->sl_irq))
-#else	/* !__i386__ */
-#define	SOFT_INTR_REQUIRED(slp)
-#endif	/* !__i386__ */
 #endif	/* !_TMC18C30VAR_H_ */

@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: stable/9/usr.sbin/IPXrouted/Makefile 125430 2004-02-04 10:18:05Z ru $
+# $FreeBSD: release/10.0.0/usr.sbin/IPXrouted/Makefile 125430 2004-02-04 10:18:05Z ru $
 
 PROG=	IPXrouted
 MAN=	IPXrouted.8

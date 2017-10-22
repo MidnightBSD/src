@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/clang/libllvmasmprinter/Makefile 246637 2013-02-10 21:24:47Z dim $
+# $FreeBSD: release/10.0.0/lib/clang/libllvmasmprinter/Makefile 249423 2013-04-12 17:57:40Z dim $
 
 .include <bsd.own.mk>
 
@@ -15,7 +15,10 @@ SRCS=	ARMException.cpp \
 	DwarfCompileUnit.cpp \
 	DwarfDebug.cpp \
 	DwarfException.cpp \
+	ErlangGCPrinter.cpp \
 	OcamlGCPrinter.cpp \
 	Win64Exception.cpp
+
+TGHDRS=	Intrinsics
 
 .include "../clang.lib.mk"

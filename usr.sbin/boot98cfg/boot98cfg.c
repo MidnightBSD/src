@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/boot98cfg/boot98cfg.c 174764 2007-12-19 03:31:44Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/boot98cfg/boot98cfg.c 254015 2013-08-07 00:00:48Z marcel $");
 
 #include <sys/param.h>
 #include <sys/diskpc98.h>
@@ -271,7 +271,7 @@ write_boot(const char *disk, u_char *boot)
 	warnx("%s: %s", disk, q);
 	gctl_free(grq);
 
-	for (i = 0; i < NDOSPART; i++) {
+	for (i = 0; i < PC98_NPARTS; i++) {
 		snprintf(buf, sizeof(buf), "%ss%d", disk, i + 1);
 		fd = open(buf, O_RDONLY);
 		if (fd < 0)

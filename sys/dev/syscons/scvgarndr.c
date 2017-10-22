@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/syscons/scvgarndr.c 212806 2010-09-17 23:09:31Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/syscons/scvgarndr.c 251961 2013-06-18 20:19:09Z kib $");
 
 #include "opt_syscons.h"
 #include "opt_vga.h"
@@ -395,6 +395,8 @@ vga_txtblink(scr_stat *scp, int at, int flip)
 {
 }
 
+int sc_txtmouse_no_retrace_wait;
+
 #ifndef SC_NO_CUTPASTE
 
 static void
@@ -445,7 +447,9 @@ draw_txtmouse(scr_stat *scp, int x, int y)
 #if 1
 	/* wait for vertical retrace to avoid jitter on some videocards */
 	crtc_addr = scp->sc->adp->va_crtc_addr;
-	while (!(inb(crtc_addr + 6) & 0x08)) /* idle */ ;
+	while (!sc_txtmouse_no_retrace_wait &&
+	    !(inb(crtc_addr + 6) & 0x08))
+		/* idle */ ;
 #endif
 	c = scp->sc->mouse_char;
 	vidd_load_font(scp->sc->adp, 0, 32, 8, font_buf, c, 4); 

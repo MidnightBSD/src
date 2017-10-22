@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/gpio/gpiobus.c 229118 2011-12-31 15:31:34Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/gpio/gpiobus.c 255254 2013-09-05 16:38:26Z sbruno $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -131,7 +131,7 @@ gpiobus_parse_pins(struct gpiobus_softc *sc, device_t child, int mask)
 	}
 
 	if (npins == 0) {
-		device_printf(child, "empty pin mask");
+		device_printf(child, "empty pin mask\n");
 		return (EINVAL);
 	}
 
@@ -151,6 +151,7 @@ gpiobus_parse_pins(struct gpiobus_softc *sc, device_t child, int mask)
 		if (i >= sc->sc_npins) {
 			device_printf(child, 
 			    "invalid pin %d, max: %d\n", i, sc->sc_npins - 1);
+			free(devi->pins, M_DEVBUF);
 			return (EINVAL);
 		}
 
@@ -161,6 +162,7 @@ gpiobus_parse_pins(struct gpiobus_softc *sc, device_t child, int mask)
 		if (sc->sc_pins_mapped[i]) {
 			device_printf(child, 
 			    "warning: pin %d is already mapped\n", i);
+			free(devi->pins, M_DEVBUF);
 			return (EINVAL);
 		}
 		sc->sc_pins_mapped[i] = 1;
@@ -218,9 +220,12 @@ gpiobus_attach(device_t dev)
 static int
 gpiobus_detach(device_t dev)
 {
-	struct gpiobus_softc *sc = GPIOBUS_SOFTC(dev);
-	int err;
+	struct gpiobus_softc *sc;
+	struct gpiobus_ivar *devi;
+	device_t *devlist;
+	int i, err, ndevs;
 
+	sc = GPIOBUS_SOFTC(dev);
 	KASSERT(mtx_initialized(&sc->sc_mtx),
 	    ("gpiobus mutex not initialized"));
 	GPIOBUS_LOCK_DESTROY(sc);
@@ -228,8 +233,17 @@ gpiobus_detach(device_t dev)
 	if ((err = bus_generic_detach(dev)) != 0)
 		return (err);
 
-	/* detach and delete all children */
-	device_delete_children(dev);
+	if ((err = device_get_children(dev, &devlist, &ndevs)) != 0)
+		return (err);
+	for (i = 0; i < ndevs; i++) {
+		device_delete_child(dev, devlist[i]);
+		devi = GPIOBUS_IVAR(devlist[i]);
+		if (devi->pins) {
+			free(devi->pins, M_DEVBUF);
+			devi->pins = NULL;
+		}
+	}
+	free(devlist, M_TEMP);
 
 	if (sc->sc_pins_mapped) {
 		free(sc->sc_pins_mapped, M_DEVBUF);
@@ -271,7 +285,6 @@ static int
 gpiobus_child_location_str(device_t bus, device_t child, char *buf,
     size_t buflen)
 {
-	// struct gpiobus_ivar *devi = GPIOBUS_IVAR(child);
 
 	snprintf(buf, buflen, "pins=?");
 	return (0);
@@ -349,7 +362,7 @@ gpiobus_acquire_bus(device_t busdev, device_t child)
 	GPIOBUS_ASSERT_LOCKED(sc);
 
 	if (sc->sc_owner)
-		panic("rb_cpldbus: cannot serialize the access to device.");
+		panic("gpiobus: cannot serialize the access to device.");
 	sc->sc_owner = child;
 }
 
@@ -362,9 +375,9 @@ gpiobus_release_bus(device_t busdev, device_t child)
 	GPIOBUS_ASSERT_LOCKED(sc);
 
 	if (!sc->sc_owner)
-		panic("rb_cpldbus: releasing unowned bus.");
+		panic("gpiobus: releasing unowned bus.");
 	if (sc->sc_owner != child)
-		panic("rb_cpldbus: you don't own the bus. game over.");
+		panic("gpiobus: you don't own the bus. game over.");
 
 	sc->sc_owner = NULL;
 }

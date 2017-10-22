@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/usb/net/usb_ethernet.h 229105 2011-12-31 14:45:43Z hselasky $ */
+/* $FreeBSD: release/10.0.0/sys/dev/usb/net/usb_ethernet.h 226709 2011-10-24 23:38:11Z yongari $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/usb/net/usb_ethernet.h 229105 2011-12-31 14:45:43Z hselasky $
+ * $FreeBSD: release/10.0.0/sys/dev/usb/net/usb_ethernet.h 226709 2011-10-24 23:38:11Z yongari $
  */
 
 #ifndef _USB_ETHERNET_H_

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/pc98/pc98boot/Makefile 218595 2011-02-12 06:22:23Z nyan $
+# $FreeBSD: release/10.0.0/sys/boot/pc98/pc98boot/Makefile 218595 2011-02-12 06:22:23Z nyan $
 
 FILES=	${BOOT}
 CLEANFILES= ${BOOT} ${BOOT}.part

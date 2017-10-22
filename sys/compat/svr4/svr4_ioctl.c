@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/compat/svr4/svr4_ioctl.c 224778 2011-08-11 12:30:23Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/compat/svr4/svr4_ioctl.c 255219 2013-09-05 00:09:56Z pjd $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -84,6 +84,7 @@ svr4_sys_ioctl(td, uap)
 	struct svr4_sys_ioctl_args *uap;
 {
 	int             *retval;
+	cap_rights_t	 rights;
 	struct file	*fp;
 	u_long		 cmd;
 	int (*fun)(struct file *, struct thread *, register_t *,
@@ -103,7 +104,8 @@ svr4_sys_ioctl(td, uap)
 	retval = td->td_retval;
 	cmd = uap->com;
 
-	if ((error = fget(td, uap->fd, CAP_IOCTL, &fp)) != 0)
+	error = fget(td, uap->fd, cap_rights_init(&rights, CAP_IOCTL), &fp);
+	if (error != 0)
 		return (error);
 
 	if ((fp->f_flag & (FREAD | FWRITE)) == 0) {

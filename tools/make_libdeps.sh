@@ -24,10 +24,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/tools/make_libdeps.sh 225811 2011-09-27 18:40:13Z stas $
+# $FreeBSD: release/10.0.0/tools/make_libdeps.sh 256998 2013-10-23 18:07:07Z bdrewery $
 
 export PATH=/bin:/usr/bin
 
+LC_ALL=C			# make sort deterministic
 FS=': '				# internal field separator
 LIBDEPENDS=./_libdeps		# intermediate output file
 USRSRC=${1:-/usr/src}		# source root
@@ -52,7 +53,7 @@ sed -E
     -e's;-l(ncurses|termcap)!;lib/ncurses/ncurses;g'
     -e's;-l(gcc)!;gnu/lib/lib\1;g'
     -e's;-lssp_nonshared!;gnu/lib/libssp/libssp_nonshared;g'
-    -e's;-l(asn1|hdb|heimntlm|hx509|krb5|roken)!;kerberos5/lib/lib\1;g'
+    -e's;-l(asn1|hdb|kdc|heimbase|heimntlm|heimsqlite|hx509|krb5|roken|wind)!;kerberos5/lib/lib\1;g'
     -e's;-l(crypto|ssh|ssl)!;secure/lib/lib\1;g'
     -e's;-l([^!]+)!;lib/lib\1;g'
 "
@@ -63,7 +64,7 @@ genlibdepends()
 {
 	(
 		cd ${USRSRC}
-		find ${LIBS} -mindepth 1 -name Makefile |
+		find -s ${LIBS} -mindepth 1 -name Makefile |
 		xargs grep -l 'bsd\.lib\.mk' |
 		while read makefile; do
 			libdir=$(dirname ${makefile})

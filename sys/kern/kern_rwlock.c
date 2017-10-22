@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_rwlock.c 236238 2012-05-29 14:50:21Z fabient $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_rwlock.c 255788 2013-09-22 14:09:07Z davide $");
 
 #include "opt_ddb.h"
 #include "opt_hwpmc_hooks.h"
@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/kern_rwlock.c 236238 2012-05-29 14:50:21Z 
 #include "opt_no_adaptive_rwlocks.h"
 
 #include <sys/param.h>
+#include <sys/kdb.h>
 #include <sys/ktr.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
@@ -61,22 +62,32 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/kern_rwlock.c 236238 2012-05-29 14:50:21Z 
 PMC_SOFT_DECLARE( , , lock, failed);
 #endif
 
+/*
+ * Return the rwlock address when the lock cookie address is provided.
+ * This functionality assumes that struct rwlock* have a member named rw_lock.
+ */
+#define	rwlock2rw(c)	(__containerof(c, struct rwlock, rw_lock))
+
 #ifdef ADAPTIVE_RWLOCKS
-#define	ROWNER_RETRIES	10
-#define	ROWNER_LOOPS	10000
+static int rowner_retries = 10;
+static int rowner_loops = 10000;
+static SYSCTL_NODE(_debug, OID_AUTO, rwlock, CTLFLAG_RD, NULL,
+    "rwlock debugging");
+SYSCTL_INT(_debug_rwlock, OID_AUTO, retry, CTLFLAG_RW, &rowner_retries, 0, "");
+SYSCTL_INT(_debug_rwlock, OID_AUTO, loops, CTLFLAG_RW, &rowner_loops, 0, "");
 #endif
 
 #ifdef DDB
 #include <ddb/ddb.h>
 
-static void	db_show_rwlock(struct lock_object *lock);
+static void	db_show_rwlock(const struct lock_object *lock);
 #endif
-static void	assert_rw(struct lock_object *lock, int what);
-static void	lock_rw(struct lock_object *lock, int how);
+static void	assert_rw(const struct lock_object *lock, int what);
+static void	lock_rw(struct lock_object *lock, uintptr_t how);
 #ifdef KDTRACE_HOOKS
-static int	owner_rw(struct lock_object *lock, struct thread **owner);
+static int	owner_rw(const struct lock_object *lock, struct thread **owner);
 #endif
-static int	unlock_rw(struct lock_object *lock);
+static uintptr_t unlock_rw(struct lock_object *lock);
 
 struct lock_class lock_class_rw = {
 	.lc_name = "rw",
@@ -119,29 +130,29 @@ struct lock_class lock_class_rw = {
 #define	rw_owner(rw)		rw_wowner(rw)
 
 #ifndef INVARIANTS
-#define	_rw_assert(rw, what, file, line)
+#define	__rw_assert(c, what, file, line)
 #endif
 
 void
-assert_rw(struct lock_object *lock, int what)
+assert_rw(const struct lock_object *lock, int what)
 {
 
-	rw_assert((struct rwlock *)lock, what);
+	rw_assert((const struct rwlock *)lock, what);
 }
 
 void
-lock_rw(struct lock_object *lock, int how)
+lock_rw(struct lock_object *lock, uintptr_t how)
 {
 	struct rwlock *rw;
 
 	rw = (struct rwlock *)lock;
 	if (how)
-		rw_wlock(rw);
-	else
 		rw_rlock(rw);
+	else
+		rw_wlock(rw);
 }
 
-int
+uintptr_t
 unlock_rw(struct lock_object *lock)
 {
 	struct rwlock *rw;
@@ -150,18 +161,18 @@ unlock_rw(struct lock_object *lock)
 	rw_assert(rw, RA_LOCKED | LA_NOTRECURSED);
 	if (rw->rw_lock & RW_LOCK_READ) {
 		rw_runlock(rw);
-		return (0);
+		return (1);
 	} else {
 		rw_wunlock(rw);
-		return (1);
+		return (0);
 	}
 }
 
 #ifdef KDTRACE_HOOKS
 int
-owner_rw(struct lock_object *lock, struct thread **owner)
+owner_rw(const struct lock_object *lock, struct thread **owner)
 {
-	struct rwlock *rw = (struct rwlock *)lock;
+	const struct rwlock *rw = (const struct rwlock *)lock;
 	uintptr_t x = rw->rw_lock;
 
 	*owner = rw_wowner(rw);
@@ -171,9 +182,12 @@ owner_rw(struct lock_object *lock, struct thread **owner)
 #endif
 
 void
-rw_init_flags(struct rwlock *rw, const char *name, int opts)
+_rw_init_flags(volatile uintptr_t *c, const char *name, int opts)
 {
+	struct rwlock *rw;
 	int flags;
+
+	rw = rwlock2rw(c);
 
 	MPASS((opts & ~(RW_DUPOK | RW_NOPROFILE | RW_NOWITNESS | RW_QUIET |
 	    RW_RECURSE)) == 0);
@@ -193,14 +207,17 @@ rw_init_flags(struct rwlock *rw, const char *name, int opts)
 	if (opts & RW_QUIET)
 		flags |= LO_QUIET;
 
+	lock_init(&rw->lock_object, &lock_class_rw, name, NULL, flags);
 	rw->rw_lock = RW_UNLOCKED;
 	rw->rw_recurse = 0;
-	lock_init(&rw->lock_object, &lock_class_rw, name, NULL, flags);
 }
 
 void
-rw_destroy(struct rwlock *rw)
+_rw_destroy(volatile uintptr_t *c)
 {
+	struct rwlock *rw;
+
+	rw = rwlock2rw(c);
 
 	KASSERT(rw->rw_lock == RW_UNLOCKED, ("rw lock %p not unlocked", rw));
 	KASSERT(rw->rw_recurse == 0, ("rw lock %p still recursed", rw));
@@ -213,7 +230,7 @@ rw_sysinit(void *arg)
 {
 	struct rw_args *args = arg;
 
-	rw_init(args->ra_rw, args->ra_desc);
+	rw_init((struct rwlock *)args->ra_rw, args->ra_desc);
 }
 
 void
@@ -221,23 +238,30 @@ rw_sysinit_flags(void *arg)
 {
 	struct rw_args_flags *args = arg;
 
-	rw_init_flags(args->ra_rw, args->ra_desc, args->ra_flags);
+	rw_init_flags((struct rwlock *)args->ra_rw, args->ra_desc,
+	    args->ra_flags);
 }
 
 int
-rw_wowned(struct rwlock *rw)
+_rw_wowned(const volatile uintptr_t *c)
 {
 
-	return (rw_wowner(rw) == curthread);
+	return (rw_wowner(rwlock2rw(c)) == curthread);
 }
 
 void
-_rw_wlock(struct rwlock *rw, const char *file, int line)
+_rw_wlock_cookie(volatile uintptr_t *c, const char *file, int line)
 {
+	struct rwlock *rw;
 
 	if (SCHEDULER_STOPPED())
 		return;
-	MPASS(curthread != NULL);
+
+	rw = rwlock2rw(c);
+
+	KASSERT(kdb_active != 0 || !TD_IS_IDLETHREAD(curthread),
+	    ("rw_wlock() by idle thread %p on rwlock %s @ %s:%d",
+	    curthread, rw->lock_object.lo_name, file, line));
 	KASSERT(rw->rw_lock != RW_DESTROYED,
 	    ("rw_wlock() of destroyed rwlock @ %s:%d", file, line));
 	WITNESS_CHECKORDER(&rw->lock_object, LOP_NEWORDER | LOP_EXCLUSIVE, file,
@@ -249,13 +273,19 @@ _rw_wlock(struct rwlock *rw, const char *file, int line)
 }
 
 int
-_rw_try_wlock(struct rwlock *rw, const char *file, int line)
+__rw_try_wlock(volatile uintptr_t *c, const char *file, int line)
 {
+	struct rwlock *rw;
 	int rval;
 
 	if (SCHEDULER_STOPPED())
 		return (1);
 
+	rw = rwlock2rw(c);
+
+	KASSERT(kdb_active != 0 || !TD_IS_IDLETHREAD(curthread),
+	    ("rw_try_wlock() by idle thread %p on rwlock %s @ %s:%d",
+	    curthread, rw->lock_object.lo_name, file, line));
 	KASSERT(rw->rw_lock != RW_DESTROYED,
 	    ("rw_try_wlock() of destroyed rwlock @ %s:%d", file, line));
 
@@ -277,22 +307,25 @@ _rw_try_wlock(struct rwlock *rw, const char *file, int line)
 }
 
 void
-_rw_wunlock(struct rwlock *rw, const char *file, int line)
+_rw_wunlock_cookie(volatile uintptr_t *c, const char *file, int line)
 {
+	struct rwlock *rw;
 
 	if (SCHEDULER_STOPPED())
 		return;
-	MPASS(curthread != NULL);
+
+	rw = rwlock2rw(c);
+
 	KASSERT(rw->rw_lock != RW_DESTROYED,
 	    ("rw_wunlock() of destroyed rwlock @ %s:%d", file, line));
-	_rw_assert(rw, RA_WLOCKED, file, line);
-	curthread->td_locks--;
+	__rw_assert(c, RA_WLOCKED, file, line);
 	WITNESS_UNLOCK(&rw->lock_object, LOP_EXCLUSIVE, file, line);
 	LOCK_LOG_LOCK("WUNLOCK", &rw->lock_object, 0, rw->rw_recurse, file,
 	    line);
 	if (!rw_recursed(rw))
 		LOCKSTAT_PROFILE_RELEASE_LOCK(LS_RW_WUNLOCK_RELEASE, rw);
 	__rw_wunlock(rw, curthread, file, line);
+	curthread->td_locks--;
 }
 /*
  * Determines whether a new reader can acquire a lock.  Succeeds if the
@@ -307,8 +340,9 @@ _rw_wunlock(struct rwlock *rw, const char *file, int line)
     RW_LOCK_READ)
 
 void
-_rw_rlock(struct rwlock *rw, const char *file, int line)
+__rw_rlock(volatile uintptr_t *c, const char *file, int line)
 {
+	struct rwlock *rw;
 	struct turnstile *ts;
 #ifdef ADAPTIVE_RWLOCKS
 	volatile struct thread *owner;
@@ -329,10 +363,15 @@ _rw_rlock(struct rwlock *rw, const char *file, int line)
 	if (SCHEDULER_STOPPED())
 		return;
 
+	rw = rwlock2rw(c);
+
+	KASSERT(kdb_active != 0 || !TD_IS_IDLETHREAD(curthread),
+	    ("rw_rlock() by idle thread %p on rwlock %s @ %s:%d",
+	    curthread, rw->lock_object.lo_name, file, line));
 	KASSERT(rw->rw_lock != RW_DESTROYED,
 	    ("rw_rlock() of destroyed rwlock @ %s:%d", file, line));
 	KASSERT(rw_wowner(rw) != curthread,
-	    ("%s (%s): wlock already held @ %s:%d", __func__,
+	    ("rw_rlock: wlock already held for %s @ %s:%d",
 	    rw->lock_object.lo_name, file, line));
 	WITNESS_CHECKORDER(&rw->lock_object, LOP_NEWORDER, file, line, NULL);
 
@@ -396,15 +435,15 @@ _rw_rlock(struct rwlock *rw, const char *file, int line)
 				}
 				continue;
 			}
-		} else if (spintries < ROWNER_RETRIES) {
+		} else if (spintries < rowner_retries) {
 			spintries++;
-			for (i = 0; i < ROWNER_LOOPS; i++) {
+			for (i = 0; i < rowner_loops; i++) {
 				v = rw->rw_lock;
 				if ((v & RW_LOCK_READ) == 0 || RW_CAN_READ(v))
 					break;
 				cpu_spinwait();
 			}
-			if (i != ROWNER_LOOPS)
+			if (i != rowner_loops)
 				continue;
 		}
 #endif
@@ -510,12 +549,19 @@ _rw_rlock(struct rwlock *rw, const char *file, int line)
 }
 
 int
-_rw_try_rlock(struct rwlock *rw, const char *file, int line)
+__rw_try_rlock(volatile uintptr_t *c, const char *file, int line)
 {
+	struct rwlock *rw;
 	uintptr_t x;
 
 	if (SCHEDULER_STOPPED())
 		return (1);
+
+	rw = rwlock2rw(c);
+
+	KASSERT(kdb_active != 0 || !TD_IS_IDLETHREAD(curthread),
+	    ("rw_try_rlock() by idle thread %p on rwlock %s @ %s:%d",
+	    curthread, rw->lock_object.lo_name, file, line));
 
 	for (;;) {
 		x = rw->rw_lock;
@@ -538,19 +584,20 @@ _rw_try_rlock(struct rwlock *rw, const char *file, int line)
 }
 
 void
-_rw_runlock(struct rwlock *rw, const char *file, int line)
+_rw_runlock_cookie(volatile uintptr_t *c, const char *file, int line)
 {
+	struct rwlock *rw;
 	struct turnstile *ts;
 	uintptr_t x, v, queue;
 
 	if (SCHEDULER_STOPPED())
 		return;
 
+	rw = rwlock2rw(c);
+
 	KASSERT(rw->rw_lock != RW_DESTROYED,
 	    ("rw_runlock() of destroyed rwlock @ %s:%d", file, line));
-	_rw_assert(rw, RA_RLOCKED, file, line);
-	curthread->td_locks--;
-	curthread->td_rw_rlocks--;
+	__rw_assert(c, RA_RLOCKED, file, line);
 	WITNESS_UNLOCK(&rw->lock_object, 0, file, line);
 	LOCK_LOG_LOCK("RUNLOCK", &rw->lock_object, 0, 0, file, line);
 
@@ -644,6 +691,8 @@ _rw_runlock(struct rwlock *rw, const char *file, int line)
 		break;
 	}
 	LOCKSTAT_PROFILE_RELEASE_LOCK(LS_RW_RUNLOCK_RELEASE, rw);
+	curthread->td_locks--;
+	curthread->td_rw_rlocks--;
 }
 
 /*
@@ -652,8 +701,10 @@ _rw_runlock(struct rwlock *rw, const char *file, int line)
  * read or write lock.
  */
 void
-_rw_wlock_hard(struct rwlock *rw, uintptr_t tid, const char *file, int line)
+__rw_wlock_hard(volatile uintptr_t *c, uintptr_t tid, const char *file,
+    int line)
 {
+	struct rwlock *rw;
 	struct turnstile *ts;
 #ifdef ADAPTIVE_RWLOCKS
 	volatile struct thread *owner;
@@ -673,6 +724,8 @@ _rw_wlock_hard(struct rwlock *rw, uintptr_t tid, const char *file, int line)
 
 	if (SCHEDULER_STOPPED())
 		return;
+
+	rw = rwlock2rw(c);
 
 	if (rw_wlocked(rw)) {
 		KASSERT(rw->lock_object.lo_flags & LO_RECURSABLE,
@@ -719,7 +772,7 @@ _rw_wlock_hard(struct rwlock *rw, uintptr_t tid, const char *file, int line)
 			continue;
 		}
 		if ((v & RW_LOCK_READ) && RW_READERS(v) &&
-		    spintries < ROWNER_RETRIES) {
+		    spintries < rowner_retries) {
 			if (!(v & RW_LOCK_WRITE_SPINNER)) {
 				if (!atomic_cmpset_ptr(&rw->rw_lock, v,
 				    v | RW_LOCK_WRITE_SPINNER)) {
@@ -727,15 +780,15 @@ _rw_wlock_hard(struct rwlock *rw, uintptr_t tid, const char *file, int line)
 				}
 			}
 			spintries++;
-			for (i = 0; i < ROWNER_LOOPS; i++) {
+			for (i = 0; i < rowner_loops; i++) {
 				if ((rw->rw_lock & RW_LOCK_WRITE_SPINNER) == 0)
 					break;
 				cpu_spinwait();
 			}
 #ifdef KDTRACE_HOOKS
-			spin_cnt += ROWNER_LOOPS - i;
+			spin_cnt += rowner_loops - i;
 #endif
-			if (i != ROWNER_LOOPS)
+			if (i != rowner_loops)
 				continue;
 		}
 #endif
@@ -835,14 +888,18 @@ _rw_wlock_hard(struct rwlock *rw, uintptr_t tid, const char *file, int line)
  * least one thread is waiting on this lock.
  */
 void
-_rw_wunlock_hard(struct rwlock *rw, uintptr_t tid, const char *file, int line)
+__rw_wunlock_hard(volatile uintptr_t *c, uintptr_t tid, const char *file,
+    int line)
 {
+	struct rwlock *rw;
 	struct turnstile *ts;
 	uintptr_t v;
 	int queue;
 
 	if (SCHEDULER_STOPPED())
 		return;
+
+	rw = rwlock2rw(c);
 
 	if (rw_wlocked(rw) && rw_recursed(rw)) {
 		rw->rw_recurse--;
@@ -900,8 +957,9 @@ _rw_wunlock_hard(struct rwlock *rw, uintptr_t tid, const char *file, int line)
  * lock.  Returns true if the upgrade succeeded and false otherwise.
  */
 int
-_rw_try_upgrade(struct rwlock *rw, const char *file, int line)
+__rw_try_upgrade(volatile uintptr_t *c, const char *file, int line)
 {
+	struct rwlock *rw;
 	uintptr_t v, x, tid;
 	struct turnstile *ts;
 	int success;
@@ -909,9 +967,11 @@ _rw_try_upgrade(struct rwlock *rw, const char *file, int line)
 	if (SCHEDULER_STOPPED())
 		return (1);
 
+	rw = rwlock2rw(c);
+
 	KASSERT(rw->rw_lock != RW_DESTROYED,
 	    ("rw_try_upgrade() of destroyed rwlock @ %s:%d", file, line));
-	_rw_assert(rw, RA_RLOCKED, file, line);
+	__rw_assert(c, RA_RLOCKED, file, line);
 
 	/*
 	 * Attempt to switch from one reader to a writer.  If there
@@ -973,8 +1033,9 @@ _rw_try_upgrade(struct rwlock *rw, const char *file, int line)
  * Downgrade a write lock into a single read lock.
  */
 void
-_rw_downgrade(struct rwlock *rw, const char *file, int line)
+__rw_downgrade(volatile uintptr_t *c, const char *file, int line)
 {
+	struct rwlock *rw;
 	struct turnstile *ts;
 	uintptr_t tid, v;
 	int rwait, wwait;
@@ -982,9 +1043,11 @@ _rw_downgrade(struct rwlock *rw, const char *file, int line)
 	if (SCHEDULER_STOPPED())
 		return;
 
+	rw = rwlock2rw(c);
+
 	KASSERT(rw->rw_lock != RW_DESTROYED,
 	    ("rw_downgrade() of destroyed rwlock @ %s:%d", file, line));
-	_rw_assert(rw, RA_WLOCKED | RA_NOTRECURSED, file, line);
+	__rw_assert(c, RA_WLOCKED | RA_NOTRECURSED, file, line);
 #ifndef INVARIANTS
 	if (rw_recursed(rw))
 		panic("downgrade of a recursed lock");
@@ -1038,7 +1101,7 @@ out:
 
 #ifdef INVARIANT_SUPPORT
 #ifndef INVARIANTS
-#undef _rw_assert
+#undef __rw_assert
 #endif
 
 /*
@@ -1047,16 +1110,22 @@ out:
  * thread owns an rlock.
  */
 void
-_rw_assert(struct rwlock *rw, int what, const char *file, int line)
+__rw_assert(const volatile uintptr_t *c, int what, const char *file, int line)
 {
+	const struct rwlock *rw;
 
 	if (panicstr != NULL)
 		return;
+
+	rw = rwlock2rw(c);
+
 	switch (what) {
 	case RA_LOCKED:
 	case RA_LOCKED | RA_RECURSED:
 	case RA_LOCKED | RA_NOTRECURSED:
 	case RA_RLOCKED:
+	case RA_RLOCKED | RA_RECURSED:
+	case RA_RLOCKED | RA_NOTRECURSED:
 #ifdef WITNESS
 		witness_assert(&rw->lock_object, what, file, line);
 #else
@@ -1066,13 +1135,13 @@ _rw_assert(struct rwlock *rw, int what, const char *file, int line)
 		 * has a lock at all, fail.
 		 */
 		if (rw->rw_lock == RW_UNLOCKED ||
-		    (!(rw->rw_lock & RW_LOCK_READ) && (what == RA_RLOCKED ||
+		    (!(rw->rw_lock & RW_LOCK_READ) && (what & RA_RLOCKED ||
 		    rw_wowner(rw) != curthread)))
 			panic("Lock %s not %slocked @ %s:%d\n",
-			    rw->lock_object.lo_name, (what == RA_RLOCKED) ?
+			    rw->lock_object.lo_name, (what & RA_RLOCKED) ?
 			    "read " : "", file, line);
 
-		if (!(rw->rw_lock & RW_LOCK_READ)) {
+		if (!(rw->rw_lock & RW_LOCK_READ) && !(what & RA_RLOCKED)) {
 			if (rw_recursed(rw)) {
 				if (what & RA_NOTRECURSED)
 					panic("Lock %s recursed @ %s:%d\n",
@@ -1120,12 +1189,12 @@ _rw_assert(struct rwlock *rw, int what, const char *file, int line)
 
 #ifdef DDB
 void
-db_show_rwlock(struct lock_object *lock)
+db_show_rwlock(const struct lock_object *lock)
 {
-	struct rwlock *rw;
+	const struct rwlock *rw;
 	struct thread *td;
 
-	rw = (struct rwlock *)lock;
+	rw = (const struct rwlock *)lock;
 
 	db_printf(" state: ");
 	if (rw->rw_lock == RW_UNLOCKED)

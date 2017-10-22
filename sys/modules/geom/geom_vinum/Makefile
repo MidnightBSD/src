@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/geom/geom_vinum/Makefile 190507 2009-03-28 17:20:08Z lulf $
+# $FreeBSD: release/10.0.0/sys/modules/geom/geom_vinum/Makefile 190507 2009-03-28 17:20:08Z lulf $
 
 .PATH: ${.CURDIR}/../../../geom/vinum
 

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/sx.h 230799 2012-01-31 01:45:20Z attilio $
+ * $FreeBSD: release/10.0.0/sys/sys/sx.h 247787 2013-03-04 12:48:41Z davide $
  */
 
 #ifndef	_SYS_SX_H_
@@ -94,14 +94,14 @@ void	sx_sysinit(void *arg);
 #define	sx_init(sx, desc)	sx_init_flags((sx), (desc), 0)
 void	sx_init_flags(struct sx *sx, const char *description, int opts);
 void	sx_destroy(struct sx *sx);
+int	sx_try_slock_(struct sx *sx, const char *file, int line);
+int	sx_try_xlock_(struct sx *sx, const char *file, int line);
+int	sx_try_upgrade_(struct sx *sx, const char *file, int line);
+void	sx_downgrade_(struct sx *sx, const char *file, int line);
 int	_sx_slock(struct sx *sx, int opts, const char *file, int line);
 int	_sx_xlock(struct sx *sx, int opts, const char *file, int line);
-int	_sx_try_slock(struct sx *sx, const char *file, int line);
-int	_sx_try_xlock(struct sx *sx, const char *file, int line);
 void	_sx_sunlock(struct sx *sx, const char *file, int line);
 void	_sx_xunlock(struct sx *sx, const char *file, int line);
-int	_sx_try_upgrade(struct sx *sx, const char *file, int line);
-void	_sx_downgrade(struct sx *sx, const char *file, int line);
 int	_sx_xlock_hard(struct sx *sx, uintptr_t tid, int opts,
 	    const char *file, int line);
 int	_sx_slock_hard(struct sx *sx, int opts, const char *file, int line);
@@ -109,20 +109,11 @@ void	_sx_xunlock_hard(struct sx *sx, uintptr_t tid, const char *file, int
 	    line);
 void	_sx_sunlock_hard(struct sx *sx, const char *file, int line);
 #if defined(INVARIANTS) || defined(INVARIANT_SUPPORT)
-void	_sx_assert(struct sx *sx, int what, const char *file, int line);
+void	_sx_assert(const struct sx *sx, int what, const char *file, int line);
 #endif
 #ifdef DDB
 int	sx_chain(struct thread *td, struct thread **ownerp);
 #endif
-
-#define	sx_downgrade_(sx, file, line)					\
-	_sx_downgrade((sx), (file), (line))
-#define	sx_try_slock_(sx, file, line)					\
-	_sx_try_slock((sx), (file), (line))
-#define	sx_try_xlock_(sx, file, line)					\
-	_sx_try_xlock((sx), (file), (line))
-#define	sx_try_upgrade_(sx, file, line)					\
-	_sx_try_upgrade((sx), (file), (line))
 
 struct sx_args {
 	struct sx 	*sa_sx;
@@ -284,7 +275,8 @@ __sx_sunlock(struct sx *sx, const char *file, int line)
 #define	sx_unlock(sx)	sx_unlock_((sx), LOCK_FILE, LOCK_LINE)
 
 #define	sx_sleep(chan, sx, pri, wmesg, timo)				\
-	_sleep((chan), &(sx)->lock_object, (pri), (wmesg), (timo))
+	_sleep((chan), &(sx)->lock_object, (pri), (wmesg),		\
+	    tick_sbt * (timo), 0,  C_HARDCLOCK)
 
 /*
  * Options passed to sx_init_flags().

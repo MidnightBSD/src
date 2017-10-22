@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/buslogic/bt_mca.c 165102 2006-12-11 18:28:31Z mjacob $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/buslogic/bt_mca.c 241592 2012-10-15 16:13:55Z jhb $");
 
 /*
  * Written using the bt_isa/bt_pci code as a reference.
@@ -196,7 +196,7 @@ bt_mca_probe (device_t dev)
 	} else {	       
 		mca_add_drq(dev, drq);
 		mca_add_irq(dev, irq);
-		result = 0;    
+		result = BUS_PROBE_DEFAULT;    
 	}	       
 	bt_mca_release_resources(dev);
 
@@ -229,8 +229,8 @@ bt_mca_attach (device_t dev)
 				/* nsegments	*/ ~0,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_32BIT,
 				/* flags	*/ 0,
-				/* lockfunc	*/ busdma_lock_mutex,
-				/* lockarg	*/ &Giant,
+				/* lockfunc	*/ NULL,
+				/* lockarg	*/ NULL,
 				&bt->parent_dmat) != 0) {
 		bt_mca_release_resources(dev);
 		return (ENOMEM);
@@ -254,8 +254,8 @@ bt_mca_attach (device_t dev)
 				/* nsegments	*/ 1,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_32BIT,
 				/* flags	*/ 0,
-				/* lockfunc	*/ busdma_lock_mutex,
-				/* lockarg	*/ &Giant,
+				/* lockfunc	*/ NULL,
+				/* lockarg	*/ NULL,
 				&bt->sense_dmat) != 0) {
 		bt_mca_release_resources(dev);
 		return (ENOMEM);

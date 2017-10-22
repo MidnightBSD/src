@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/s3c2xx0/uart_dev_s3c2410.c 205354 2010-03-20 03:39:35Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/s3c2xx0/uart_dev_s3c2410.c 248965 2013-04-01 00:44:20Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -233,14 +233,6 @@ static kobj_method_t s3c2410_methods[] = {
 int
 s3c2410_bus_probe(struct uart_softc *sc)
 {
-	return (0);
-}
-
-static int
-s3c2410_bus_attach(struct uart_softc *sc)
-{
-	uintptr_t irq;
-
 	switch(s3c2xx0_softc->sc_cpu) {
 	case CPU_S3C2410:
 		sc->sc_txfifosz = 16;
@@ -253,7 +245,15 @@ s3c2410_bus_attach(struct uart_softc *sc)
 	default:
 		return (ENXIO);
 	}
-		
+
+	return (0);
+}
+
+static int
+s3c2410_bus_attach(struct uart_softc *sc)
+{
+	uintptr_t irq;
+
 	sc->sc_hwiflow = 0;
 	sc->sc_hwoflow = 0;
 

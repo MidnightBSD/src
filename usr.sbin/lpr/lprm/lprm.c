@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)lprm.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: stable/9/usr.sbin/lpr/lprm/lprm.c 216372 2010-12-11 09:38:12Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/lpr/lprm/lprm.c 241852 2012-10-22 03:31:22Z eadler $");
 
 /*
  * lprm - remove the current user's spool entry
@@ -58,6 +58,7 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/lpr/lprm/lprm.c 216372 2010-12-11 09:38:12
 
 #include <syslog.h>
 #include <dirent.h>
+#include <err.h>
 #include <pwd.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -93,7 +94,7 @@ main(int argc, char *argv[])
 	printer = NULL;
 	uid = getuid();
 	euid = geteuid();
-	seteuid(uid);	/* be safe */
+	PRIV_END	/* be safe */
 	progname = argv[0];
 	gethostname(local_host, sizeof(local_host));
 	openlog("lpd", 0, LOG_LPR);

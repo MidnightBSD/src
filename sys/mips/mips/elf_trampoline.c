@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/mips/elf_trampoline.c 224105 2011-07-16 17:22:01Z jchandra $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/elf_trampoline.c 256171 2013-10-09 00:22:21Z adrian $");
 #include <machine/asm.h>
 #include <sys/param.h>
 
@@ -32,16 +32,17 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/mips/elf_trampoline.c 224105 2011-07-16 17
 #else
 #include <sys/elf32.h>
 #endif
-#include <sys/inflate.h>
-#include <machine/elf.h>
-#include <machine/cpufunc.h>
-#include <machine/stdarg.h>
 
 /*
  * Since we are compiled outside of the normal kernel build process, we
  * need to include opt_global.h manually.
  */
 #include "opt_global.h"
+
+#include <sys/inflate.h>
+#include <machine/elf.h>
+#include <machine/cpufunc.h>
+#include <machine/stdarg.h>
 
 #ifndef KERNNAME
 #error Kernel name not provided

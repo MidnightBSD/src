@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/frag6.c 238479 2012-07-15 11:27:15Z bz $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet6/frag6.c 255792 2013-09-22 14:53:07Z bz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -215,20 +215,19 @@ frag6_input(struct mbuf **mp, int *offp, int proto)
 		return IPPROTO_DONE;
 	}
 
-	V_ip6stat.ip6s_fragments++;
+	IP6STAT_INC(ip6s_fragments);
 	in6_ifstat_inc(dstifp, ifs6_reass_reqd);
 
 	/* offset now points to data portion */
 	offset += sizeof(struct ip6_frag);
 
 	/*
-	 * XXX-BZ RFC XXXX (draft-gont-6man-ipv6-atomic-fragments)
-	 * Handle "atomic" fragments (offset and m bit set to 0) upfront,
-	 * unrelated to any reassembly.  Just skip the fragment header.
+	 * RFC 6946: Handle "atomic" fragments (offset and m bit set to 0)
+	 * upfront, unrelated to any reassembly.  Just skip the fragment header.
 	 */
 	if ((ip6f->ip6f_offlg & ~IP6F_RESERVED_MASK) == 0) {
 		/* XXX-BZ we want dedicated counters for this. */
-		V_ip6stat.ip6s_reassembled++;
+		IP6STAT_INC(ip6s_reassembled);
 		in6_ifstat_inc(dstifp, ifs6_reass_ok);
 		*offp = offset;
 		return (ip6f->ip6f_nxt);
@@ -565,7 +564,7 @@ insert:
 		m->m_len -= sizeof(struct ip6_frag);
 	} else {
 		/* this comes with no copy if the boundary is on cluster */
-		if ((t = m_split(m, offset, M_DONTWAIT)) == NULL) {
+		if ((t = m_split(m, offset, M_NOWAIT)) == NULL) {
 			frag6_remque(q6);
 			V_frag6_nfrags -= q6->ip6q_nfrag;
 #ifdef MAC
@@ -603,7 +602,7 @@ insert:
 		m->m_pkthdr.len = plen;
 	}
 
-	V_ip6stat.ip6s_reassembled++;
+	IP6STAT_INC(ip6s_reassembled);
 	in6_ifstat_inc(dstifp, ifs6_reass_ok);
 
 	/*
@@ -619,7 +618,7 @@ insert:
  dropfrag:
 	IP6Q_UNLOCK();
 	in6_ifstat_inc(dstifp, ifs6_reass_fail);
-	V_ip6stat.ip6s_fragdropped++;
+	IP6STAT_INC(ip6s_fragdropped);
 	m_freem(m);
 	return IPPROTO_DONE;
 }
@@ -743,7 +742,7 @@ frag6_slowtimo(void)
 				--q6->ip6q_ttl;
 				q6 = q6->ip6q_next;
 				if (q6->ip6q_prev->ip6q_ttl == 0) {
-					V_ip6stat.ip6s_fragtimeout++;
+					IP6STAT_INC(ip6s_fragtimeout);
 					/* XXX in6_ifstat_inc(ifp, ifs6_reass_fail) */
 					frag6_freef(q6->ip6q_prev);
 				}
@@ -755,7 +754,7 @@ frag6_slowtimo(void)
 		 */
 		while (V_frag6_nfragpackets > (u_int)V_ip6_maxfragpackets &&
 		    V_ip6q.ip6q_prev) {
-			V_ip6stat.ip6s_fragoverflow++;
+			IP6STAT_INC(ip6s_fragoverflow);
 			/* XXX in6_ifstat_inc(ifp, ifs6_reass_fail) */
 			frag6_freef(V_ip6q.ip6q_prev);
 		}
@@ -781,7 +780,7 @@ frag6_drain(void)
 	VNET_FOREACH(vnet_iter) {
 		CURVNET_SET(vnet_iter);
 		while (V_ip6q.ip6q_next != &V_ip6q) {
-			V_ip6stat.ip6s_fragdropped++;
+			IP6STAT_INC(ip6s_fragdropped);
 			/* XXX in6_ifstat_inc(ifp, ifs6_reass_fail) */
 			frag6_freef(V_ip6q.ip6q_next);
 		}

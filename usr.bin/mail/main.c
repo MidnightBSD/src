@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)main.c	8.2 (Berkeley) 4/20/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/mail/main.c 229202 2012-01-01 20:51:51Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/mail/main.c 229655 2012-01-05 21:36:45Z uqs $");
 
 #include "rcv.h"
 #include <fcntl.h>
@@ -259,7 +259,7 @@ Usage: %s [-dEiInv] [-s subject] [-c cc-addr] [-b bcc-addr] [-F] to-addr ...\n\
 		if (ef == NULL)
 			ef = "%";
 		if (setfile(ef) <= 0)
-			/* Either an error has occured, or no mail */
+			/* Either an error has occurred, or no mail */
 			exit(1);
 		else
 			exit(0);

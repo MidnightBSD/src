@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/ppp/timer.c 192798 2009-05-26 07:32:08Z brian $
+ * $FreeBSD: release/10.0.0/usr.sbin/ppp/timer.c 192798 2009-05-26 07:32:08Z brian $
  */
 
 #include <errno.h>

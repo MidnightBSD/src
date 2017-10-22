@@ -29,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/sys/libkern/arm/ffs.S 172615 2007-10-13 12:05:36Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/arm/ffs.S 248367 2013-03-16 04:08:01Z andrew $");
 
 
 /*
@@ -82,3 +82,5 @@ ENTRY(ffs)
 	rsbne	r0, r0, #32
 	RET
 #endif
+END(ffs)
+

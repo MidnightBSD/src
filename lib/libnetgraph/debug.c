@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libnetgraph/debug.c 201124 2009-12-28 12:29:13Z luigi $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libnetgraph/debug.c 201124 2009-12-28 12:29:13Z luigi $");
 
 #include <sys/types.h>
 #include <sys/time.h>

@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/rc.d/rpcbind 231653 2012-02-14 10:16:56Z dougb $
+# $FreeBSD: release/10.0.0/etc/rc.d/rpcbind 258121 2013-11-14 09:14:33Z glebius $
 #
 
 # PROVIDE: rpcbind
-# REQUIRE: NETWORKING ntpdate syslogd named
+# REQUIRE: NETWORKING ntpdate syslogd
 # KEYWORD: shutdown
 
 . /etc/rc.subr

@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)truncate.c	8.1 (Berkeley) 6/17/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/sys/truncate.c 171219 2007-07-04 23:27:38Z peter $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/sys/truncate.c 171219 2007-07-04 23:27:38Z peter $");
 
 #include <sys/types.h>
 #include <sys/syscall.h>

@@ -1,6 +1,7 @@
 #!/bin/sh
 #-
 # Copyright (c) 2011 Nathan Whitehorn
+# Copyright (c) 2013 Devin Teske
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,7 +25,14 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/usr.sbin/bsdinstall/scripts/wlanconfig 248240 2013-03-13 13:50:50Z nwhitehorn $
+# $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/scripts/wlanconfig 258421 2013-11-21 03:40:52Z dteske $
+#
+############################################################ INCLUDES
+
+BSDCFG_SHARE="/usr/share/bsdconfig"
+. $BSDCFG_SHARE/common.subr || exit 1
+
+############################################################ MAIN
 
 echo -n > $BSDINSTALL_TMPETC/wpa_supplicant.conf
 chmod 0600 $BSDINSTALL_TMPETC/wpa_supplicant.conf
@@ -50,7 +58,8 @@ if [ $? -ne 0 -a -z $BSDINSTALL_CONFIGCURRENT ]; then
 	exit 1
 fi
 
-wpa_cli scan >>$BSDINSTALL_LOG
+output=$( wpa_cli scan 2>&1 )
+f_dprintf "%s" "$output"
 dialog --backtitle "FreeBSD Installer" --title "Scanning" --ok-label "Skip" \
 	--pause "Waiting 5 seconds to scan for wireless networks..." \
 	9 40 5 || exit 1
@@ -132,6 +141,13 @@ echo "network={
 }" >> $BSDINSTALL_TMPETC/wpa_supplicant.conf
 
 # Bring up new network
-test ! -z $BSDINSTALL_CONFIGCURRENT && wpa_cli reconfigure >>$BSDINSTALL_LOG
+if [ "$BSDINSTALL_CONFIGCURRENT" ]; then
+	output=$( wpa_cli reconfigure 2>&1 )
+	f_dprintf "%s" "$output"
+fi
 
 exit 0
+
+################################################################################
+# END
+################################################################################

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1995-1998 Søren Schmidt
+ * Copyright (c) 1995-1998 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/syscons/blank/blank_saver.c 174985 2007-12-29 23:26:59Z wkoszek $
+ * $FreeBSD: release/10.0.0/sys/dev/syscons/blank/blank_saver.c 230132 2012-01-15 13:23:18Z uqs $
  */
 
 #include <sys/param.h>

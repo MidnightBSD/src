@@ -1,11 +1,11 @@
-# $FreeBSD: stable/9/sys/modules/bwi/Makefile 191762 2009-05-03 04:01:43Z imp $
+# $FreeBSD: release/10.0.0/sys/modules/bwi/Makefile 235775 2012-05-22 06:33:08Z uqs $
 
 .PATH: ${.CURDIR}/../../dev/bwi
 
 KMOD	= if_bwi
 
 SRCS	= if_bwi.c if_bwi_pci.c bwimac.c bwiphy.c bwirf.c
-SRCS	+= device_if.h bus_if.h pci_if.h opt_inet.h opt_bwi.h
+SRCS	+= device_if.h bus_if.h pci_if.h opt_inet.h opt_bwi.h opt_wlan.h
 
 opt_bwi.h:
 	echo '#define BWI_DEBUG 1' > opt_bwi.h

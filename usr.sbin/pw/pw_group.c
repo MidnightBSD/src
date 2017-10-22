@@ -26,7 +26,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/pw/pw_group.c 244459 2012-12-20 00:28:52Z eadler $";
+  "$FreeBSD: release/10.0.0/usr.sbin/pw/pw_group.c 244738 2012-12-27 14:44:13Z bapt $";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -34,6 +34,8 @@ static const char rcsid[] =
 #include <termios.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <grp.h>
+#include <libutil.h>
 
 #include "pw.h"
 #include "bitmap.h"
@@ -402,11 +404,10 @@ static int
 print_group(struct group * grp, int pretty)
 {
 	if (!pretty) {
-		int		buflen = 0;
 		char           *buf = NULL;
 
-		fmtgrent(&buf, &buflen, grp);
-		fputs(buf, stdout);
+		buf = gr_make(grp);
+		printf("%s\n", buf);
 		free(buf);
 	} else {
 		int             i;

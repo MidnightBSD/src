@@ -1,4 +1,4 @@
-#	$FreeBSD: stable/9/usr.sbin/nmtree/Makefile 245241 2013-01-09 21:07:08Z brooks $
+#	$FreeBSD: release/10.0.0/usr.sbin/nmtree/Makefile 249293 2013-04-09 06:50:11Z ed $
 
 .include <bsd.own.mk>
 
@@ -7,7 +7,7 @@
 PROG=		nmtree
 MAN=		nmtree.8
 SRCS=		compare.c crc.c create.c excludes.c getid.c misc.c mtree.c \
-		spec.c specspec.c verify.c
+		only.c spec.c specspec.c verify.c
 LDADD+=		-lmd -lutil
 
 CFLAGS+=	-I${.CURDIR}/../../contrib/mknod

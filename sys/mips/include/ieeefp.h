@@ -5,11 +5,13 @@
  * Public domain.
  *
  *	JNPR: ieeefp.h,v 1.1 2006/08/07 05:38:57 katta
- * $FreeBSD: stable/9/sys/mips/include/ieeefp.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD: release/10.0.0/sys/mips/include/ieeefp.h 226607 2011-10-21 06:41:46Z das $
  */
 
 #ifndef _MACHINE_IEEEFP_H_
 #define	_MACHINE_IEEEFP_H_
+
+/* Deprecated historical FPU control interface */
 
 typedef int fp_except;
 typedef int fp_except_t;

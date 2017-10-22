@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/rip6query/rip6query.c 201387 2010-01-02 11:05:34Z ed $
+ * $FreeBSD: release/10.0.0/usr.sbin/rip6query/rip6query.c 227258 2011-11-06 19:02:31Z ed $
  */
 
 #include <stdio.h>
@@ -56,9 +56,9 @@
 
 #include "route6d.h"
 
-int	s;
-struct sockaddr_in6 sin6;
-struct rip6	*ripbuf;
+static int	s;
+static struct sockaddr_in6 sin6;
+static struct rip6	*ripbuf;
 
 #define	RIPSIZE(n)	(sizeof(struct rip6) + (n-1) * sizeof(struct netinfo6))
 

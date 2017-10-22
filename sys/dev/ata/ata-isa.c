@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2008 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,9 +25,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ata/ata-isa.c 229293 2012-01-02 17:27:07Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/ata-isa.c 249213 2013-04-06 19:12:49Z marius $");
 
-#include "opt_ata.h"
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/ata.h>
@@ -195,7 +194,7 @@ static device_method_t ata_isa_methods[] = {
     DEVMETHOD(device_suspend,   ata_isa_suspend),
     DEVMETHOD(device_resume,    ata_isa_resume),
 
-    { 0, 0 }
+    DEVMETHOD_END
 };
 
 static driver_t ata_isa_driver = {
@@ -204,5 +203,5 @@ static driver_t ata_isa_driver = {
     sizeof(struct ata_channel),
 };
 
-DRIVER_MODULE(ata, isa, ata_isa_driver, ata_devclass, 0, 0);
+DRIVER_MODULE(ata, isa, ata_isa_driver, ata_devclass, NULL, NULL);
 MODULE_DEPEND(ata, ata, 1, 1, 1);

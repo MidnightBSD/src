@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sbin/mca/Makefile 237047 2012-06-14 06:26:58Z eadler $
+# $FreeBSD: release/10.0.0/sbin/mca/Makefile 236355 2012-05-31 08:22:02Z eadler $
 PROG=	mca
 MAN=	mca.8
 

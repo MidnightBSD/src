@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)whois.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/whois/whois.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/whois/whois.c 227246 2011-11-06 18:50:33Z ed $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -81,9 +81,9 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/whois/whois.c 216370 2010-12-11 08:32:16Z j
 
 #define ishost(h) (isalnum((unsigned char)h) || h == '.' || h == '-')
 
-const char *ip_whois[] = { LNICHOST, RNICHOST, PNICHOST, BNICHOST,
-			   FNICHOST, NULL };
-const char *port = DEFAULT_PORT;
+static const char *ip_whois[] = { LNICHOST, RNICHOST, PNICHOST, BNICHOST,
+				  FNICHOST, NULL };
+static const char *port = DEFAULT_PORT;
 
 static char *choose_server(char *);
 static struct addrinfo *gethostinfo(char const *host, int exit_on_error);

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/common/Makefile.inc 243243 2012-11-18 17:09:29Z ae $
+# $FreeBSD: release/10.0.0/sys/boot/common/Makefile.inc 242688 2012-11-07 02:14:03Z dteske $
 
 SRCS+=	boot.c commands.c console.c devopen.c interp.c 
 SRCS+=	interp_backslash.c interp_parse.c ls.c misc.c 
@@ -64,6 +64,7 @@ MAN+=	../forth/delay.4th.8
 MAN+=	../forth/loader.conf.5
 MAN+=	../forth/loader.4th.8
 MAN+=	../forth/menu.4th.8
+MAN+=	../forth/menusets.4th.8
 MAN+=	../forth/version.4th.8
 .endif
 

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/amd64/include/md_var.h 243139 2012-11-16 07:07:00Z kib $
+ * $FreeBSD: release/10.0.0/sys/amd64/include/md_var.h 253747 2013-07-28 17:54:42Z avg $
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -58,6 +58,9 @@ extern	u_int	cpu_procinfo;
 extern	u_int	cpu_procinfo2;
 extern	char	cpu_vendor[];
 extern	u_int	cpu_vendor_id;
+extern	u_int	cpu_mon_mwait_flags;
+extern	u_int	cpu_mon_min_size;
+extern	u_int	cpu_mon_max_size;
 extern	char	ctx_switch_xsave[];
 extern	char	kstack[];
 extern	char	sigcode[];
@@ -117,5 +120,6 @@ void	minidumpsys(struct dumperinfo *);
 struct savefpu *get_pcb_user_save_td(struct thread *td);
 struct savefpu *get_pcb_user_save_pcb(struct pcb *pcb);
 struct pcb *get_pcb_td(struct thread *td);
+void	amd64_db_resume_dbreg(void);
 
 #endif /* !_MACHINE_MD_VAR_H_ */

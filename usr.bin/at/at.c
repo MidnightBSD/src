@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/at/at.c 215518 2010-11-19 10:15:29Z kevlo $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/at/at.c 249406 2013-04-12 14:32:16Z gahr $");
 
 #define _USE_BSD 1
 
@@ -90,20 +90,18 @@ enum { ATQ, ATRM, AT, BATCH, CAT };	/* what program we want to run */
 
 /* File scope variables */
 
-const char *no_export[] =
-{
+static const char *no_export[] = {
     "TERM", "TERMCAP", "DISPLAY", "_"
-} ;
+};
 static int send_mail = 0;
+static char *atinput = NULL;	/* where to get input from */
+static char atqueue = 0;	/* which queue to examine for jobs (atq) */
 
 /* External variables */
 
 extern char **environ;
 int fcreated;
 char atfile[] = ATJOB_DIR "12345678901234";
-
-char *atinput = (char*)0;	/* where to get input from */
-char atqueue = 0;		/* which queue to examine for jobs (atq) */
 char atverify = 0;		/* verify time instead of queuing job */
 char *namep;
 
@@ -533,12 +531,19 @@ process_jobs(int argc, char **argv, int what)
     /* Delete every argument (job - ID) given
      */
     int i;
+    int rc;
+    int nofJobs;
+    int nofDone;
+    int statErrno;
     struct stat buf;
     DIR *spool;
     struct dirent *dirent;
     unsigned long ctm;
     char queue;
     long jobno;
+
+    nofJobs = argc - optind;
+    nofDone = 0;
 
     PRIV_START
 
@@ -555,9 +560,20 @@ process_jobs(int argc, char **argv, int what)
     while((dirent = readdir(spool)) != NULL) {
 
 	PRIV_START
-	if (stat(dirent->d_name, &buf) != 0)
-	    perr("cannot stat in " ATJOB_DIR);
+	rc = stat(dirent->d_name, &buf);
+	statErrno = errno;
 	PRIV_END
+	/* There's a race condition between readdir above and stat here:
+	 * another atrm process could have removed the file from the spool
+	 * directory under our nose. If this happens, stat will set errno to
+	 * ENOENT, which we shouldn't treat as fatal.
+	 */
+	if (rc != 0) {
+	    if (statErrno == ENOENT)
+		continue;
+	    else
+		perr("cannot stat in " ATJOB_DIR);
+	}
 
 	if(sscanf(dirent->d_name, "%c%5lx%8lx", &queue, &jobno, &ctm)!=3)
 	    continue;
@@ -603,9 +619,15 @@ process_jobs(int argc, char **argv, int what)
 		    errx(EXIT_FAILURE, "internal error, process_jobs = %d",
 			what);
 	        }
+
+		/* All arguments have been processed
+		 */
+		if (++nofDone == nofJobs)
+		    goto end;
 	    }
 	}
     }
+end:
     closedir(spool);
 } /* delete_jobs */
 

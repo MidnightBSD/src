@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/sound/usb/uaudio_pcm.c 196219 2009-08-14 20:03:53Z jhb $ */
+/* $FreeBSD: release/10.0.0/sys/dev/sound/usb/uaudio_pcm.c 246128 2013-01-30 18:01:20Z sbz $ */
 
 /*-
  * Copyright (c) 2000-2002 Hiroyuki Aizu <aizu@navi.org>
@@ -227,7 +227,7 @@ static device_method_t ua_pcm_methods[] = {
 	DEVMETHOD(device_attach, ua_attach),
 	DEVMETHOD(device_detach, ua_detach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t ua_pcm_driver = {

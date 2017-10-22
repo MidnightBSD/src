@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netipx/ipx_cksum.c 169463 2007-05-11 10:38:34Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netipx/ipx_cksum.c 169463 2007-05-11 10:38:34Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>

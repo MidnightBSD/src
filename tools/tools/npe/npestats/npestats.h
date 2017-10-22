@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/9/tools/tools/npe/npestats/npestats.h 192661 2009-05-23 19:16:34Z sam $
+ * $FreeBSD: release/10.0.0/tools/tools/npe/npestats/npestats.h 192661 2009-05-23 19:16:34Z sam $
  */
 
 #ifndef _NPESTATS_H_

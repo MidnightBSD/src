@@ -26,15 +26,21 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/arm/gen/__aeabi_read_tp.S 237491 2012-06-23 18:39:35Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/arm/gen/__aeabi_read_tp.S 239271 2012-08-15 03:09:00Z gonzo $");
 
 #include <machine/sysarch.h>
 
 ENTRY(__aeabi_read_tp)
+#ifdef ARM_TP_ADDRESS
 	ldr	r0, .Larm_tp_address
 	ldr	r0, [r0]
+#else
+	mrc	p15, 0, r0, c13, c0, 3
+#endif
 	RET
 
+#ifdef ARM_TP_ADDRESS
 .Larm_tp_address:
 	.word ARM_TP_ADDRESS
+#endif
 

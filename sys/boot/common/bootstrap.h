@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/boot/common/bootstrap.h 242557 2012-11-04 13:32:16Z avg $
+ * $FreeBSD: release/10.0.0/sys/boot/common/bootstrap.h 247250 2013-02-25 01:50:04Z kientzle $
  */
 
 #ifndef _BOOTSTRAP_H_

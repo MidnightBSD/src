@@ -66,7 +66,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/makefs/ffs.c 248293 2013-03-14 22:57:27Z brooks $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/makefs/ffs.c 239562 2012-08-22 06:37:30Z hrs $");
 
 #include <sys/param.h>
 

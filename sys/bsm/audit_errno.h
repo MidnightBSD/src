@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE. 
  *
  * P4: //depot/projects/trustedbsd/openbsm/sys/bsm/audit_errno.h#7
- * $FreeBSD: stable/9/sys/bsm/audit_errno.h 244391 2012-12-18 10:23:58Z rwatson $
+ * $FreeBSD: release/10.0.0/sys/bsm/audit_errno.h 243751 2012-12-01 13:46:37Z rwatson $
  */
 
 #ifndef _BSM_AUDIT_ERRNO_H_

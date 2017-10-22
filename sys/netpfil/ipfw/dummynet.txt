@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/sys/netpfil/ipfw/dummynet.txt 229461 2012-01-04 03:37:41Z eadler $
+# $FreeBSD: release/10.0.0/sys/netpfil/ipfw/dummynet.txt 239124 2012-08-07 07:52:25Z luigi $
 #
 
 Notes on the internal structure of dummynet (2010 version)
@@ -839,7 +839,7 @@ scheduler functions.
 
 The struct scheduler represent the scheduler descriptor that is passed to
 dummynet when a scheduler module is loaded.
-This struct contains the type of scheduler, the lenght of all structs and
+This struct contains the type of scheduler, the length of all structs and
 all function pointers.
 If a function is not implemented should be initialize to NULL. Some functions
 are mandatory, other are mandatory if some memory should be freed.

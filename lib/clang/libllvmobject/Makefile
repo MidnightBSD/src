@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/clang/libllvmobject/Makefile 246637 2013-02-10 21:24:47Z dim $
+# $FreeBSD: release/10.0.0/lib/clang/libllvmobject/Makefile 251662 2013-06-12 18:48:53Z dim $
 
 .include <bsd.own.mk>
 
@@ -10,7 +10,6 @@ SRCS=	Archive.cpp \
 	COFFObjectFile.cpp \
 	ELFObjectFile.cpp \
 	Error.cpp \
-	MachOObject.cpp \
 	MachOObjectFile.cpp \
 	Object.cpp \
 	ObjectFile.cpp

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/etc/devd/Makefile 230751 2012-01-29 18:54:25Z jhibbits $
+# $FreeBSD: release/10.0.0/etc/devd/Makefile 226449 2011-10-16 21:01:42Z nwhitehorn $
 
 FILES=	uath.conf usb.conf
 

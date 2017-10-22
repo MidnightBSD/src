@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libthread_db/libpthread_db.c 209689 2010-07-04 12:08:04Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libthread_db/libpthread_db.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -1107,7 +1107,7 @@ pt_thr_tls_get_addr(const td_thrhandle_t *th, psaddr_t _linkmap, size_t offset,
 	return (TD_OK);
 }
 
-struct ta_ops libpthread_db_ops = {
+static struct ta_ops libpthread_db_ops = {
 	.to_init		= pt_init,
 	.to_ta_clear_event	= pt_ta_clear_event,
 	.to_ta_delete		= pt_ta_delete,

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)dirent.h	8.2 (Berkeley) 7/28/94
- * $FreeBSD: stable/9/include/dirent.h 203964 2010-02-16 19:39:50Z imp $
+ * $FreeBSD: release/10.0.0/include/dirent.h 254499 2013-08-18 20:11:34Z pjd $
  */
 
 #ifndef _DIRENT_H_
@@ -55,24 +55,8 @@
 /* definitions for library routines operating on directories. */
 #define	DIRBLKSIZ	1024
 
-struct _telldir;		/* see telldir.h */
-struct pthread_mutex;
-
-/* structure describing an open directory. */
-typedef struct _dirdesc {
-	int	dd_fd;		/* file descriptor associated with directory */
-	long	dd_loc;		/* offset in current buffer */
-	long	dd_size;	/* amount of data returned by getdirentries */
-	char	*dd_buf;	/* data buffer */
-	int	dd_len;		/* size of data buffer */
-	long	dd_seek;	/* magic cookie returned by getdirentries */
-	long	dd_rewind;	/* magic cookie for rewinding */
-	int	dd_flags;	/* flags for readdir */
-	struct pthread_mutex	*dd_lock;	/* lock */
-	struct _telldir *dd_td;	/* telldir position recording */
-} DIR;
-
-#define	dirfd(dirp)	((dirp)->dd_fd)
+struct _dirdesc;
+typedef struct _dirdesc DIR;
 
 /* flags for opendir2 */
 #define DTF_HIDEW	0x0001	/* hide whiteout entries */
@@ -91,9 +75,11 @@ typedef	void *	DIR;
 __BEGIN_DECLS
 #if __POSIX_VISIBLE >= 200809 || __XSI_VISIBLE >= 700
 int	 alphasort(const struct dirent **, const struct dirent **);
+int	 dirfd(DIR *);
 #endif
 #if __BSD_VISIBLE
 DIR	*__opendir2(const char *, int);
+int	 fdclosedir(DIR *);
 int	 getdents(int, char *, int);
 int	 getdirentries(int, char *, int, long *);
 #endif

@@ -1,0 +1,3 @@
+# $FreeBSD: release/10.0.0/sys/arm/ti/omap4/pandaboard/files.pandaboard 239281 2012-08-15 06:31:32Z gonzo $
+
+arm/ti/omap4/pandaboard/pandaboard.c		standard

@@ -1,7 +1,7 @@
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
- * Copyright (c) 2007-2009 Jung-uk Kim <jkim@FreeBSD.org>
+ * Copyright (c) 2007-2012 Jung-uk Kim <jkim@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/Osd/OsdSchedule.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/Osd/OsdSchedule.c 246042 2013-01-28 21:10:35Z jkim $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -181,12 +181,13 @@ ACPI_STATUS
 AcpiOsExecute(ACPI_EXECUTE_TYPE Type, ACPI_OSD_EXEC_CALLBACK Function,
     void *Context)
 {
+    ACPI_STATUS status;
     int pri;
 
     ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
 
     if (Function == NULL)
-	return_ACPI_STATUS (AE_BAD_PARAMETER);
+	return_ACPI_STATUS(AE_BAD_PARAMETER);
 
     switch (Type) {
     case OSL_GPE_HANDLER:
@@ -208,10 +209,25 @@ AcpiOsExecute(ACPI_EXECUTE_TYPE Type, ACPI_OSD_EXEC_CALLBACK Function,
 	pri = 0;
 	break;
     default:
-	return_ACPI_STATUS (AE_BAD_PARAMETER);
+	return_ACPI_STATUS(AE_BAD_PARAMETER);
     }
 
-    return_ACPI_STATUS (acpi_task_enqueue(pri, Function, Context));
+    status = acpi_task_enqueue(pri, Function, Context);
+    return_ACPI_STATUS(status);
+}
+
+void
+AcpiOsWaitEventsComplete(void)
+{
+	int i;
+
+	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
+
+	for (i = 0; i < acpi_max_tasks; i++)
+		if ((atomic_load_acq_int(&acpi_tasks[i].at_flag) &
+		    ACPI_TASK_ENQUEUED) != 0)
+			taskqueue_drain(acpi_taskq, &acpi_tasks[i].at_task);
+	return_VOID;
 }
 
 void
@@ -248,8 +264,8 @@ AcpiOsGetTimer(void)
     KASSERT(cold == 0, ("acpi: timer op not yet supported during boot"));
 
     binuptime(&bt);
-    t = ((UINT64)10000000 * (uint32_t)(bt.frac >> 32)) >> 32;
-    t += bt.sec * 10000000;
+    t = (uint64_t)bt.sec * 10000000;
+    t += ((uint64_t)10000000 * (uint32_t)(bt.frac >> 32)) >> 32;
 
     return (t);
 }

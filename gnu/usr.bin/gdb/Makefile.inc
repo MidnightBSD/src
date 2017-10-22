@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/gdb/Makefile.inc 241193 2012-10-04 09:53:59Z fjoe $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/gdb/Makefile.inc 251512 2013-06-07 21:40:02Z emaste $
 
 VERSION= "6.1.1 [FreeBSD]"
 VENDOR= marcel
@@ -20,7 +20,7 @@ OBJ_GDB= ${OBJ_ROOT}/gdb
 # MACHINE_CPUARCH, but there's no easy way to export make functions...
 
 .if defined(TARGET_ARCH)
-TARGET_CPUARCH=${TARGET_ARCH:C/mips.*e[bl]/mips/:C/armeb/arm/:C/powerpc64/powerpc/}
+TARGET_CPUARCH=${TARGET_ARCH:C/mips(n32|64)?(el)?/mips/:C/arm(v6)?(eb)?/arm/:C/powerpc64/powerpc/}
 .else
 TARGET_CPUARCH=${MACHINE_CPUARCH}
 .endif
@@ -37,6 +37,7 @@ GDB_CROSS_DEBUGGER=
 	${CNTRB_GDB}/gdb/signals ${CNTRB_GDB}/gdb/tui ${TARGET_SUBDIR}
 
 CFLAGS+= -DHAVE_CONFIG_H -DRL_NO_COMPAT -DMI_OUT=1 -DTUI=1
+CFLAGS+= -DDEBUGDIR=\"${DEBUGDIR}\"
 CFLAGS+= -I.
 CFLAGS+= -I${TARGET_SUBDIR}
 CFLAGS+= -I${BMAKE_BU}/libbfd -I${BMAKE_BU}/libbfd/${TARGET_CPUARCH}

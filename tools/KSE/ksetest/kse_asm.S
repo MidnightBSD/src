@@ -24,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/KSE/ksetest/kse_asm.S 192760 2009-05-25 14:37:10Z attilio $
+ * $FreeBSD: release/10.0.0/tools/KSE/ksetest/kse_asm.S 192760 2009-05-25 14:37:10Z attilio $
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/tools/KSE/ksetest/kse_asm.S 192760 2009-05-25 14:37:10Z attilio $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/KSE/ksetest/kse_asm.S 192760 2009-05-25 14:37:10Z attilio $");
 
 /*
  * Where do we define these?

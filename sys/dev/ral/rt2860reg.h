@@ -15,7 +15,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  * $OpenBSD: rt2860reg.h,v 1.30 2010/05/10 18:17:10 damien Exp $
- * $FreeBSD: stable/9/sys/dev/ral/rt2860reg.h 236004 2012-05-25 16:07:39Z bschmidt $
+ * $FreeBSD: release/10.0.0/sys/dev/ral/rt2860reg.h 235233 2012-05-10 17:41:16Z bschmidt $
  */
 
 #define RT2860_NOISE_FLOOR		-95

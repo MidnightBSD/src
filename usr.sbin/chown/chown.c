@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)chown.c	8.8 (Berkeley) 4/4/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/chown/chown.c 208815 2010-06-05 08:11:11Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/chown/chown.c 227251 2011-11-06 19:01:41Z ed $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -57,16 +57,16 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/chown/chown.c 208815 2010-06-05 08:11:11Z 
 #include <string.h>
 #include <unistd.h>
 
-void	a_gid(const char *);
-void	a_uid(const char *);
-void	chownerr(const char *);
-uid_t	id(const char *, const char *);
-void	usage(void);
+static void	a_gid(const char *);
+static void	a_uid(const char *);
+static void	chownerr(const char *);
+static uid_t	id(const char *, const char *);
+static void	usage(void);
 
-uid_t uid;
-gid_t gid;
-int ischown;
-const char *gname;
+static uid_t uid;
+static gid_t gid;
+static int ischown;
+static const char *gname;
 
 int
 main(int argc, char **argv)
@@ -229,7 +229,7 @@ main(int argc, char **argv)
 	exit(rval);
 }
 
-void
+static void
 a_gid(const char *s)
 {
 	struct group *gr;
@@ -240,7 +240,7 @@ a_gid(const char *s)
 	gid = ((gr = getgrnam(s)) != NULL) ? gr->gr_gid : id(s, "group");
 }
 
-void
+static void
 a_uid(const char *s)
 {
 	struct passwd *pw;
@@ -250,7 +250,7 @@ a_uid(const char *s)
 	uid = ((pw = getpwnam(s)) != NULL) ? pw->pw_uid : id(s, "user");
 }
 
-uid_t
+static uid_t
 id(const char *name, const char *type)
 {
 	uid_t val;
@@ -267,7 +267,7 @@ id(const char *name, const char *type)
 	return (val);
 }
 
-void
+static void
 chownerr(const char *file)
 {
 	static uid_t euid = -1;
@@ -299,7 +299,7 @@ chownerr(const char *file)
 	warn("%s", file);
 }
 
-void
+static void
 usage(void)
 {
 

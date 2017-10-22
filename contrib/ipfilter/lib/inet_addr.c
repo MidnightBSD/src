@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/contrib/ipfilter/lib/inet_addr.c 153881 2005-12-30 11:52:26Z guido $	*/
+/*	$FreeBSD: release/10.0.0/contrib/ipfilter/lib/inet_addr.c 153881 2005-12-30 11:52:26Z guido $	*/
 
 /*
  * ++Copyright++ 1983, 1990, 1993

@@ -1,0 +1,3 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_CROSS_COMPILER 250659 2013-05-15 14:30:03Z brooks $
+Set to not build a cross compiler in the cross-tools stage of
+buildworld, buildkernel, etc.

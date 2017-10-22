@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/syscons/keymaps/Makefile 242339 2012-10-30 03:30:01Z eadler $
+# $FreeBSD: release/10.0.0/share/syscons/keymaps/Makefile 243935 2012-12-06 01:44:19Z eadler $
 
 FILES=	INDEX.keymaps \
 	be.iso.kbd be.iso.acc.kbd \
@@ -47,8 +47,8 @@ FILES=	INDEX.keymaps \
 	ua.koi8-u.kbd ua.koi8-u.shift.alt.kbd ua.iso5.kbd \
 	uk.iso.kbd uk.iso-ctrl.kbd uk.cp850.kbd uk.cp850-ctrl.kbd \
 	uk.dvorak.kbd \
-	us.iso.kbd us.dvorak.kbd us.dvorakl.kbd us.dvorakr.kbd us.dvorakx.kbd \
-	us.emacs.kbd us.pc-ctrl.kbd us.unix.kbd us.iso.acc.kbd
+	us.iso.kbd us.dvorak.kbd us.dvorakl.kbd us.dvorakr.kbd us.dvorakp.kbd \
+	us.dvorakx.kbd us.emacs.kbd us.pc-ctrl.kbd us.unix.kbd us.iso.acc.kbd
 
 FILESDIR= ${SHAREDIR}/syscons/keymaps
 

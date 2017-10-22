@@ -27,49 +27,44 @@
  * SUCH DAMAGE.
  *
  *	$NetBSD: SYS.h,v 1.8 2002/01/14 00:55:56 thorpej Exp $
- * $FreeBSD: stable/9/lib/libc/powerpc/SYS.h 109499 2003-01-18 23:26:04Z obrien $
+ * $FreeBSD: release/10.0.0/lib/libc/powerpc/SYS.h 231044 2012-02-05 20:04:43Z andreast $
  */
 
 #include <sys/syscall.h>
 #include <machine/asm.h>
 
-#define _SYSCALL(x)						\
+#define	_SYSCALL(name)						\
 	.text;							\
 	.align 2;						\
-	li	0,(__CONCAT(SYS_,x));				\
+	li	0,(__CONCAT(SYS_, name));			\
 	sc
 
-#define	SYSCALL(x)						\
+#define	SYSCALL(name)						\
 	.text;							\
 	.align 2;						\
 2:	b	PIC_PLT(CNAME(HIDENAME(cerror)));		\
-ENTRY(__CONCAT(__sys_,x));					\
-	.weak	CNAME(x);					\
-	.set	CNAME(x),CNAME(__CONCAT(__sys_,x));		\
-	.weak	CNAME(__CONCAT(_,x));				\
-	.set	CNAME(__CONCAT(_,x)),CNAME(__CONCAT(__sys_,x));	\
-	_SYSCALL(x);						\
+ENTRY(__CONCAT(__sys_, name));				\
+	WEAK_REFERENCE(__CONCAT(__sys_, name), name);		\
+	WEAK_REFERENCE(__CONCAT(__sys_, name), __CONCAT(_, name));\
+	_SYSCALL(name);						\
 	bso	2b
 
-#define	PSEUDO(x)						\
+#define	PSEUDO(name)						\
 	.text;							\
 	.align 2;						\
-ENTRY(__CONCAT(__sys_,x));					\
-	.weak	CNAME(__CONCAT(_,x));				\
-	.set	CNAME(__CONCAT(_,x)),CNAME(__CONCAT(__sys_,x));	\
-	_SYSCALL(x);						\
+ENTRY(__CONCAT(__sys_, name));				\
+	WEAK_REFERENCE(__CONCAT(__sys_, name), __CONCAT(_, name));\
+	_SYSCALL(name);						\
 	bnslr;							\
 	b	PIC_PLT(CNAME(HIDENAME(cerror)))
 
-#define	RSYSCALL(x)						\
+#define	RSYSCALL(name)						\
 	.text;							\
 	.align 2;						\
 2:	b	PIC_PLT(CNAME(HIDENAME(cerror)));		\
-ENTRY(__CONCAT(__sys_,x));					\
-	.weak	CNAME(x);					\
-	.set	CNAME(x),CNAME(__CONCAT(__sys_,x));		\
-	.weak	CNAME(__CONCAT(_,x));				\
-	.set	CNAME(__CONCAT(_,x)),CNAME(__CONCAT(__sys_,x));	\
-	_SYSCALL(x);						\
+ENTRY(__CONCAT(__sys_, name));				\
+	WEAK_REFERENCE(__CONCAT(__sys_, name), name);		\
+	WEAK_REFERENCE(__CONCAT(__sys_, name), __CONCAT(_, name));\
+	_SYSCALL(name);						\
 	bnslr;							\
 	b	PIC_PLT(CNAME(HIDENAME(cerror)))

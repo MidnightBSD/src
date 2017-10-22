@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/powerpc/gen/flt_rounds.c 176530 2008-02-24 19:22:53Z raj $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/powerpc/gen/flt_rounds.c 176530 2008-02-24 19:22:53Z raj $");
 
 #include <sys/types.h>
 #include <machine/float.h>

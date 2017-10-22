@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/sys/arm/at91/at91_piovar.h 236080 2012-05-26 09:03:14Z marius $ */
+/* $FreeBSD: release/10.0.0/sys/arm/at91/at91_piovar.h 249232 2013-04-07 13:03:57Z hselasky $ */
 
 #ifndef ARM_AT91_AT91_PIOVAR_H
 #define	ARM_AT91_AT91_PIOVAR_H
@@ -36,9 +36,10 @@ void at91_pio_use_gpio(uint32_t pio, uint32_t gpio_mask);
 void at91_pio_gpio_input(uint32_t pio, uint32_t input_enable_mask);
 void at91_pio_gpio_output(uint32_t pio, uint32_t output_enable_mask,
     int use_pullup);
+void at91_pio_gpio_high_z(uint32_t pio, uint32_t high_z_mask, int enable);
 void at91_pio_gpio_set(uint32_t pio, uint32_t data_mask);
 void at91_pio_gpio_clear(uint32_t pio, uint32_t data_mask);
-uint8_t at91_pio_gpio_get(uint32_t pio, uint32_t data_mask);
+uint32_t at91_pio_gpio_get(uint32_t pio, uint32_t data_mask);
 void at91_pio_gpio_set_deglitch(uint32_t pio, uint32_t data_mask,
     int use_deglitch);
 void at91_pio_gpio_set_interrupt(uint32_t pio, uint32_t data_mask,

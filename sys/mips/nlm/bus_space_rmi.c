@@ -28,7 +28,7 @@
  * NETLOGIC_BSD */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/nlm/bus_space_rmi.c 225394 2011-09-05 10:45:29Z jchandra $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/nlm/bus_space_rmi.c 239487 2012-08-21 09:37:23Z jchandra $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -366,7 +366,7 @@ rmi_bus_space_map(void *t __unused, bus_addr_t addr,
     bus_space_handle_t *bshp)
 {
 
-	*bshp = addr;
+	*bshp = MIPS_PHYS_TO_DIRECT_UNCACHED(addr);
 	return (0);
 }
 
@@ -686,3 +686,87 @@ rmi_bus_space_barrier(void *tag __unused, bus_space_handle_t bsh __unused,
     bus_size_t offset __unused, bus_size_t len __unused, int flags)
 {
 }
+
+/*
+ * need a special bus space for this, because the Netlogic SoC
+ * UART allows only 32 bit access to its registers
+ */
+
+static u_int8_t
+rmi_uart_bus_space_read_1(void *tag, bus_space_handle_t handle,
+    bus_size_t offset)
+{
+	return (u_int8_t)(*(volatile u_int32_t *)(handle + offset));
+}
+
+static void
+rmi_uart_bus_space_write_1(void *tag, bus_space_handle_t handle,
+    bus_size_t offset, u_int8_t value)
+{
+	*(volatile u_int32_t *)(handle + offset) =  value;
+}
+
+static struct bus_space local_rmi_uart_bus_space = {
+	/* cookie */
+	(void *)0,
+
+	/* mapping/unmapping */
+	rmi_bus_space_map,
+	rmi_bus_space_unmap,
+	rmi_bus_space_subregion,
+
+	/* allocation/deallocation */
+	NULL,
+	NULL,
+
+	/* barrier */
+	rmi_bus_space_barrier,
+
+	/* read (single) */
+	rmi_uart_bus_space_read_1, NULL, NULL, NULL,
+
+	/* read multiple */
+	NULL, NULL, NULL, NULL,
+
+	/* read region */
+	NULL, NULL, NULL, NULL,
+
+	/* write (single) */
+	rmi_uart_bus_space_write_1, NULL, NULL, NULL,
+
+	/* write multiple */
+	NULL, NULL, NULL, NULL,
+
+	/* write region */
+	NULL, NULL, NULL, NULL,
+
+	/* set multiple */
+	NULL, NULL, NULL, NULL,
+
+	/* set region */
+	NULL, NULL, NULL, NULL,
+
+	/* copy */
+	NULL, NULL, NULL, NULL,
+
+	/* read (single) stream */
+	NULL, NULL, NULL, NULL,
+
+	/* read multiple stream */
+	NULL, NULL, NULL, NULL,
+
+	/* read region stream */
+	NULL, NULL, NULL, NULL,
+
+	/* write (single) stream */
+	NULL, NULL, NULL, NULL,
+
+	/* write multiple stream */
+	NULL, NULL, NULL, NULL,
+
+	/* write region stream */
+	NULL, NULL, NULL, NULL,
+};
+
+/* generic bus_space tag */
+bus_space_tag_t rmi_uart_bus_space = &local_rmi_uart_bus_space;

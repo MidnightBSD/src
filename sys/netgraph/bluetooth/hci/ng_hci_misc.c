@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_hci_misc.c,v 1.5 2003/09/08 18:57:51 max Exp $
- * $FreeBSD: stable/9/sys/netgraph/bluetooth/hci/ng_hci_misc.c 184205 2008-10-23 15:53:51Z des $
+ * $FreeBSD: release/10.0.0/sys/netgraph/bluetooth/hci/ng_hci_misc.c 243882 2012-12-05 08:04:20Z glebius $
  */
 
 #include <sys/param.h>
@@ -65,7 +65,7 @@ ng_hci_mtap(ng_hci_unit_p unit, struct mbuf *m0)
 	int		 error = 0;
 
 	if (unit->raw != NULL && NG_HOOK_IS_VALID(unit->raw)) {
-		m = m_dup(m0, M_DONTWAIT);
+		m = m_dup(m0, M_NOWAIT);
 		if (m != NULL)
 			NG_SEND_DATA_ONLY(error, unit->raw, m);
 

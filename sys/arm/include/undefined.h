@@ -42,7 +42,7 @@
  *
  * Created      : 08/02/95
  *
- * $FreeBSD: stable/9/sys/arm/include/undefined.h 167752 2007-03-21 03:28:16Z kevlo $
+ * $FreeBSD: release/10.0.0/sys/arm/include/undefined.h 167752 2007-03-21 03:28:16Z kevlo $
  */
 
 

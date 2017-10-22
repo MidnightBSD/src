@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/pw/pw.h 219408 2011-03-08 20:13:29Z jkim $
+ * $FreeBSD: release/10.0.0/usr.sbin/pw/pw.h 242349 2012-10-30 08:00:53Z bapt $
  */
 
 #include <stdio.h>
@@ -109,18 +109,9 @@ int pw_user(struct userconf * cnf, int mode, struct cargs * _args);
 int pw_group(struct userconf * cnf, int mode, struct cargs * _args);
 char    *pw_checkname(u_char *name, int gecos);
 
-int addpwent(struct passwd * pwd);
-int delpwent(struct passwd * pwd);
-int chgpwent(char const * login, struct passwd * pwd);
-int fmtpwent(char *buf, struct passwd * pwd);
-
 int addnispwent(const char *path, struct passwd *pwd);
 int delnispwent(const char *path, const char *login);
 int chgnispwent(const char *path, const char *login, struct passwd *pwd);
-
-int addgrent(struct group * grp);
-int delgrent(struct group * grp);
-int chggrent(char const * login, struct group * grp);
 
 int boolean_val(char const * str, int dflt);
 char const *boolean_str(int val);

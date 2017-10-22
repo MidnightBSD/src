@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_exit.c 247349 2013-02-26 21:04:58Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_exit.c 254350 2013-08-15 04:08:55Z markj $");
 
 #include "opt_compat.h"
 #include "opt_kdtrace.h"
@@ -94,8 +94,7 @@ dtrace_execexit_func_t	dtrace_fasttrap_exit;
 #endif
 
 SDT_PROVIDER_DECLARE(proc);
-SDT_PROBE_DEFINE(proc, kernel, , exit, exit);
-SDT_PROBE_ARGTYPE(proc, kernel, , exit, 0, "int");
+SDT_PROBE_DEFINE1(proc, kernel, , exit, exit, "int");
 
 /* Hook for NFS teardown procedure. */
 void (*nlminfo_release_p)(struct proc *p);
@@ -135,7 +134,6 @@ exit1(struct thread *td, int rv)
 	struct vnode *vtmp;
 	struct vnode *ttyvp = NULL;
 	struct plimit *plim;
-	int locked;
 
 	mtx_assert(&Giant, MA_NOTOWNED);
 
@@ -157,8 +155,8 @@ exit1(struct thread *td, int rv)
 	PROC_LOCK(p);
 	while (p->p_flag & P_HADTHREADS) {
 		/*
-		 * First check if some other thread got here before us..
-		 * if so, act apropriatly, (exit or suspend);
+		 * First check if some other thread got here before us.
+		 * If so, act appropriately: exit or suspend.
 		 */
 		thread_suspend_check(0);
 
@@ -179,7 +177,7 @@ exit1(struct thread *td, int rv)
 		 * re-check all suspension request, the thread should
 		 * either be suspended there or exit.
 		 */
-		if (! thread_single(SINGLE_EXIT))
+		if (!thread_single(SINGLE_EXIT))
 			break;
 
 		/*
@@ -298,7 +296,7 @@ exit1(struct thread *td, int rv)
 	 * Close open files and release open-file table.
 	 * This may block!
 	 */
-	fdfree(td);
+	fdescfree(td);
 
 	/*
 	 * If this thread tickled GEOM, we need to wait for the giggling to
@@ -383,9 +381,7 @@ exit1(struct thread *td, int rv)
 	 */
 	if ((vtmp = p->p_textvp) != NULL) {
 		p->p_textvp = NULL;
-		locked = VFS_LOCK_GIANT(vtmp->v_mount);
 		vrele(vtmp);
-		VFS_UNLOCK_GIANT(locked);
 	}
 
 	/*
@@ -921,8 +917,7 @@ proc_to_reap(struct thread *td, struct proc *p, idtype_t idtype, id_t id,
 		}
 		break;
 	case P_JAILID:
-		if (p->p_ucred->cr_prison == NULL ||
-		    (p->p_ucred->cr_prison->pr_id != (int)id)) {
+		if (p->p_ucred->cr_prison->pr_id != (int)id) {
 			PROC_UNLOCK(p);
 			return (0);
 		}

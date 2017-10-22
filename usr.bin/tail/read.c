@@ -32,7 +32,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/tail/read.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tail/read.c 245184 2013-01-08 22:14:45Z delphij $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)read.c	8.1 (Berkeley) 6/6/93";
@@ -143,9 +143,8 @@ lines(FILE *fp, const char *fn, off_t off)
 	char *p, *sp;
 	int blen, cnt, recno, wrap;
 
-	if ((llines = malloc(off * sizeof(*llines))) == NULL)
-		err(1, "malloc");
-	bzero(llines, off * sizeof(*llines));
+	if ((llines = calloc(off, sizeof(*llines))) == NULL)
+		err(1, "calloc");
 	p = sp = NULL;
 	blen = cnt = recno = wrap = 0;
 	rc = 0;

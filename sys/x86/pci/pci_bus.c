@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/x86/pci/pci_bus.c 234150 2012-04-11 20:50:17Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/x86/pci/pci_bus.c 234153 2012-04-11 21:00:33Z jhb $");
 
 #include "opt_cpu.h"
 
@@ -45,7 +45,7 @@ __FBSDID("$FreeBSD: stable/9/sys/x86/pci/pci_bus.c 234150 2012-04-11 20:50:17Z j
 #ifdef CPU_ELAN
 #include <machine/md_var.h>
 #endif
-#include <machine/legacyvar.h>
+#include <x86/legacyvar.h>
 #include <machine/pci_cfgreg.h>
 #include <machine/resource.h>
 
@@ -133,7 +133,6 @@ legacy_pcib_map_msi(device_t pcib, device_t dev, int irq, uint64_t *addr,
 	    slot, func));
 	pci_ht_map_msi(hostb, *addr);
 	return (0);
-	
 }
 
 static const char *

@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/src/e_hypotl.c 177793 2008-03-31 13:11:45Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/e_hypotl.c 226412 2011-10-16 05:36:39Z das $");
 
 /* long double version of hypot().  See e_hypot.c for most comments. */
 
@@ -21,27 +21,12 @@ __FBSDID("$FreeBSD: stable/9/lib/msun/src/e_hypotl.c 177793 2008-03-31 13:11:45Z
 #include "math.h"
 #include "math_private.h"
 
-#define	GET_LDBL_EXPSIGN(i, v) do {	\
-	union IEEEl2bits uv;		\
-					\
-	uv.e = v;			\
-	i = uv.xbits.expsign;		\
-} while (0)
-
 #define	GET_LDBL_MAN(h, l, v) do {	\
 	union IEEEl2bits uv;		\
 					\
 	uv.e = v;			\
 	h = uv.bits.manh;		\
 	l = uv.bits.manl;		\
-} while (0)
-
-#define	SET_LDBL_EXPSIGN(v, i) do {	\
-	union IEEEl2bits uv;		\
-					\
-	uv.e = v;			\
-	uv.xbits.expsign = i;		\
-	v = uv.e;			\
 } while (0)
 
 #undef GET_HIGH_WORD

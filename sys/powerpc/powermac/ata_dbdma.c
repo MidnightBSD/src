@@ -23,16 +23,16 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/9/sys/powerpc/powermac/ata_dbdma.c 216083 2010-11-30 20:54:14Z marius $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("* $FreeBSD: release/10.0.0/sys/powerpc/powermac/ata_dbdma.c 249213 2013-04-06 19:12:49Z marius $");
 
 /*
  * Common routines for the DMA engine on both the Apple Kauai and MacIO
  * ATA controllers.
  */
 
-#include "opt_ata.h"
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>

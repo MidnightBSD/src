@@ -42,7 +42,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)talkd.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/libexec/talkd/talkd.c 130496 2004-06-14 22:44:13Z bms $";
+  "$FreeBSD: release/10.0.0/libexec/talkd/talkd.c 241777 2012-10-20 10:33:15Z ed $";
 #endif /* not lint */
 
 /*
@@ -69,13 +69,13 @@ static const char rcsid[] =
 
 #include "extern.h"
 
-CTL_MSG		request;
-CTL_RESPONSE	response;
+static CTL_MSG		request;
+static CTL_RESPONSE	response;
 
-int	debug = 0;
-long	lastmsgtime;
+int			debug = 0;
+static long		lastmsgtime;
 
-char	hostname[MAXHOSTNAMELEN];
+char			hostname[MAXHOSTNAMELEN];
 
 #define TIMEOUT 30
 #define MAXIDLE 120

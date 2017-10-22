@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/2/94
- * $FreeBSD: stable/9/bin/dd/extern.h 133762 2004-08-15 19:10:05Z rwatson $
+ * $FreeBSD: release/10.0.0/bin/dd/extern.h 250469 2013-05-10 18:43:36Z eadler $
  */
 
 void block(void);
@@ -43,7 +43,7 @@ void jcl(char **);
 void pos_in(void);
 void pos_out(void);
 void summary(void);
-void summaryx(int);
+void siginfo_handler(int);
 void terminate(int);
 void unblock(void);
 void unblock_close(void);
@@ -61,3 +61,4 @@ extern const u_char e2a_32V[], e2a_POSIX[];
 extern const u_char a2ibm_32V[], a2ibm_POSIX[];
 extern u_char casetab[];
 extern char fill_char;
+extern volatile sig_atomic_t need_summary;

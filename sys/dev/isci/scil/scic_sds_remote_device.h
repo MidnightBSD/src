@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/isci/scil/scic_sds_remote_device.h 240577 2012-09-17 00:32:36Z eadler $
+ * $FreeBSD: release/10.0.0/sys/dev/isci/scil/scic_sds_remote_device.h 240521 2012-09-14 22:00:03Z eadler $
  */
 #ifndef _SCIC_SDS_REMOTE_DEVICE_H_
 #define _SCIC_SDS_REMOTE_DEVICE_H_

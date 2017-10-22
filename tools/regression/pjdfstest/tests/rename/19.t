@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/rename/19.t 185227 2008-11-23 20:07:00Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/rename/19.t 185227 2008-11-23 20:07:00Z pjd $
 
 desc="rename returns EINVAL/EBUSY when an attempt is made to rename '.' or '..'"
 

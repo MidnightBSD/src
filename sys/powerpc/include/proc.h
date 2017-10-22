@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: proc.h,v 1.2 1997/04/16 22:57:48 thorpej Exp $
- * $FreeBSD: stable/9/sys/powerpc/include/proc.h 229376 2012-01-03 09:43:26Z kib $
+ * $FreeBSD: release/10.0.0/sys/powerpc/include/proc.h 256007 2013-10-02 20:40:21Z nwhitehorn $
  */
 
 #ifndef _MACHINE_PROC_H_
@@ -54,6 +54,18 @@ struct mdproc {
 #endif
 
 #ifdef _KERNEL
+
+#include <machine/pcb.h>
+
+/* Get the current kernel thread stack usage. */
+#define	GET_STACK_USAGE(total, used) do {				\
+	struct thread *td = curthread;					\
+	(total) = td->td_kstack_pages * PAGE_SIZE - sizeof(struct pcb);	\
+	(used) = (char *)td->td_kstack +				\
+	    td->td_kstack_pages * PAGE_SIZE -				\
+	    (char *)&td;						\
+} while (0)
+
 struct syscall_args {
 	u_int code;
 	struct sysent *callp;

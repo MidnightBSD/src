@@ -24,8 +24,7 @@
  */
 
 /*
- * $FreeBSD: stable/9/sys/dev/netmap/if_re_netmap.h 246355 2013-02-05 09:40:31Z luigi $
- * $Id: if_re_netmap.h 10609 2012-02-22 19:44:58Z luigi $
+ * $FreeBSD: release/10.0.0/sys/dev/netmap/if_re_netmap.h 250184 2013-05-02 16:01:04Z luigi $
  *
  * netmap support for "re"
  * For details on netmap support please see ixgbe_netmap.h
@@ -151,7 +150,7 @@ re_netmap_txsync(struct ifnet *ifp, u_int ring_nr, int do_lock)
 
 	/* update avail to what the kernel knows */
 	ring->avail = kring->nr_hwavail;
-	
+
 	j = kring->nr_hwcur;
 	if (j != k) {	/* we have new packets to send */
 		l = sc->rl_ldata.rl_tx_prodidx;
@@ -170,7 +169,7 @@ re_netmap_txsync(struct ifnet *ifp, u_int ring_nr, int do_lock)
 				// XXX what about prodidx ?
 				return netmap_ring_reinit(kring);
 			}
-			
+
 			if (l == lim)	/* mark end of ring */
 				cmd |= RL_TDESC_CMD_EOR;
 
@@ -335,7 +334,7 @@ re_netmap_rxsync(struct ifnet *ifp, u_int ring_nr, int do_lock)
  */
 static void
 re_netmap_tx_init(struct rl_softc *sc)
-{   
+{
 	struct rl_txdesc *txd;
 	struct rl_desc *desc;
 	int i, n;

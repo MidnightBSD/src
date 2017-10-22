@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sys/dev/ral/rt2661var.h 206358 2010-04-07 15:29:13Z rpaulo $	*/
+/*	$FreeBSD: release/10.0.0/sys/dev/ral/rt2661var.h 206358 2010-04-07 15:29:13Z rpaulo $	*/
 
 /*-
  * Copyright (c) 2005

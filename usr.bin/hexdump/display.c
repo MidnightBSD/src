@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)display.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/hexdump/display.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/hexdump/display.c 229403 2012-01-03 18:51:58Z ed $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -220,7 +220,7 @@ bpad(PR *pr)
 	pr->cchar[0] = 's';
 	pr->cchar[1] = '\0';
 	for (p1 = pr->fmt; *p1 != '%'; ++p1);
-	for (p2 = ++p1; *p1 && index(spec, *p1); ++p1);
+	for (p2 = ++p1; *p1 && strchr(spec, *p1); ++p1);
 	while ((*p2++ = *p1++));
 }
 

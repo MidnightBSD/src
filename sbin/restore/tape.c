@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)tape.c	8.9 (Berkeley) 5/1/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/restore/tape.c 242166 2012-10-27 01:20:48Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/restore/tape.c 241848 2012-10-22 03:07:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -278,7 +278,7 @@ setup(void)
 		done(1);
 	}
 	maxino = (spcl.c_count * TP_BSIZE * NBBY) + 1;
-	dprintf(stdout, "maxino = %d\n", maxino);
+	dprintf(stdout, "maxino = %ju\n", (uintmax_t)maxino);
 	map = calloc((unsigned)1, (unsigned)howmany(maxino, NBBY));
 	if (map == NULL)
 		panic("no memory for active inode map\n");
@@ -1054,8 +1054,9 @@ setupextattr(int extsize)
 	}
 	extbufsize = 0;
 	extbuf = NULL;
-	fprintf(stderr, "Cannot extract %d bytes %s for inode %d, name %s\n",
-	    extsize, "of extended attributes", curfile.ino, curfile.name);
+	fprintf(stderr, "Cannot extract %d bytes %s for inode %ju, name %s\n",
+	    extsize, "of extended attributes", (uintmax_t)curfile.ino,
+	    curfile.name);
 	return (NULL);
 }
 
@@ -1083,8 +1084,8 @@ xtrfile(char *buf, long	size)
 		return;
 	if (write(ofile, buf, (int) size) == -1) {
 		fprintf(stderr,
-		    "write error extracting inode %d, name %s\nwrite: %s\n",
-			curfile.ino, curfile.name, strerror(errno));
+		    "write error extracting inode %ju, name %s\nwrite: %s\n",
+		    (uintmax_t)curfile.ino, curfile.name, strerror(errno));
 	}
 }
 
@@ -1098,8 +1099,8 @@ xtrskip(char *buf, long size)
 
 	if (lseek(ofile, size, SEEK_CUR) == -1) {
 		fprintf(stderr,
-		    "seek error extracting inode %d, name %s\nlseek: %s\n",
-			curfile.ino, curfile.name, strerror(errno));
+		    "seek error extracting inode %ju, name %s\nlseek: %s\n",
+		    (uintmax_t)curfile.ino, curfile.name, strerror(errno));
 		done(1);
 	}
 }
@@ -1247,8 +1248,8 @@ getmore:
 			fprintf(stderr, "restoring %s\n", curfile.name);
 			break;
 		case SKIP:
-			fprintf(stderr, "skipping over inode %d\n",
-				curfile.ino);
+			fprintf(stderr, "skipping over inode %ju\n",
+			    (uintmax_t)curfile.ino);
 			break;
 		}
 		if (!yflag && !reply("continue"))
@@ -1481,10 +1482,11 @@ accthdr(struct s_spcl *header)
 		fprintf(stderr, "Used inodes map header");
 		break;
 	case TS_INODE:
-		fprintf(stderr, "File header, ino %d", previno);
+		fprintf(stderr, "File header, ino %ju", (uintmax_t)previno);
 		break;
 	case TS_ADDR:
-		fprintf(stderr, "File continuation header, ino %d", previno);
+		fprintf(stderr, "File continuation header, ino %ju",
+		    (uintmax_t)previno);
 		break;
 	case TS_END:
 		fprintf(stderr, "End of tape header");
@@ -1635,8 +1637,8 @@ checksum(int *buf)
 	}
 
 	if (i != CHECKSUM) {
-		fprintf(stderr, "Checksum error %o, inode %d file %s\n", i,
-			curfile.ino, curfile.name);
+		fprintf(stderr, "Checksum error %o, inode %ju file %s\n", i,
+		    (uintmax_t)curfile.ino, curfile.name);
 		return(FAIL);
 	}
 	return(GOOD);

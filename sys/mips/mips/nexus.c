@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/mips/nexus.c 221218 2011-04-29 18:41:21Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/nexus.c 234525 2012-04-21 04:17:30Z adrian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -237,11 +237,14 @@ nexus_hinted_child(device_t bus, const char *dname, int dunit)
 	device_t child;
 	long	maddr;
 	int	msize;
+	int	order;
 	int	result;
 	int	irq;
 	int	mem_hints_count;
 
-	child = BUS_ADD_CHILD(bus, 0, dname, dunit);
+	if ((resource_int_value(dname, dunit, "order", &order)) != 0)
+		order = 1000;
+	child = BUS_ADD_CHILD(bus, order, dname, dunit);
 	if (child == NULL)
 		return;
 
@@ -383,11 +386,11 @@ nexus_activate_resource(device_t bus, device_t child, int type, int rid,
     struct resource *r)
 {
 	void *vaddr;
-	u_int32_t paddr, psize;
-	
+	vm_paddr_t paddr;
+	vm_size_t psize;
+
 	/*
-	 * If this is a memory resource, track the direct mapping
-	 * in the uncached MIPS KSEG1 segment.
+	 * If this is a memory resource, use pmap_mapdev to map it.
 	 */
 	if (type == SYS_RES_MEMORY) {
 		paddr = rman_get_start(r);

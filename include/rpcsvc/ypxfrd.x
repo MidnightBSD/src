@@ -66,7 +66,7 @@
 
 #ifndef RPC_HDR
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: stable/9/include/rpcsvc/ypxfrd.x 114629 2003-05-04 02:51:42Z obrien $");
+%__FBSDID("$FreeBSD: release/10.0.0/include/rpcsvc/ypxfrd.x 249583 2013-04-17 11:42:40Z gabor $");
 #endif
 
 /* XXX cribbed from yp.x */
@@ -75,7 +75,7 @@ const _YPMAXDOMAIN = 64;
 const _YPMAXMAP = 64;
 const _YPMAXPEER = 64;
 
-/* Suggested default -- not necesarrily the one used. */
+/* Suggested default -- not necessarily the one used. */
 const YPXFRBLOCK = 32767;
 
 /*

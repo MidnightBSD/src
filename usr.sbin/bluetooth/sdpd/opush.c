@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: opush.c,v 1.6 2004/01/13 19:31:54 max Exp $
- * $FreeBSD: stable/9/usr.sbin/bluetooth/sdpd/opush.c 124758 2004-01-20 20:48:26Z emax $
+ * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/sdpd/opush.c 124758 2004-01-20 20:48:26Z emax $
  */
 
 #include <sys/queue.h>

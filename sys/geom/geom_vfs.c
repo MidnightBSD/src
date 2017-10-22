@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/geom_vfs.c 249147 2013-04-05 10:30:37Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/geom_vfs.c 248508 2013-03-19 14:13:12Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -35,7 +35,7 @@ __FBSDID("$FreeBSD: stable/9/sys/geom/geom_vfs.c 249147 2013-04-05 10:30:37Z mav
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/vnode.h>
-#include <sys/mount.h>	/* XXX Temporary for VFS_LOCK_GIANT */
+#include <sys/mount.h>
 
 #include <geom/geom.h>
 #include <geom/geom_vfs.h>
@@ -94,17 +94,15 @@ g_vfs_done(struct bio *bip)
 	struct g_consumer *cp;
 	struct g_vfs_softc *sc;
 	struct buf *bp;
-	int vfslocked, destroy;
+	int destroy;
 	struct mount *mp;
 	struct vnode *vp;
 	struct cdev *cdevp;
 
-	cp = bip->bio_from;
-	sc = cp->geom->softc;
 	/*
 	 * Collect statistics on synchronous and asynchronous read
 	 * and write counts for disks that have associated filesystems.
-	 * Since this is run by the g_up thread it is single threaded and
+	 * Since this run by the g_up thread it is single threaded and
 	 * we do not need to use atomic increments on the counters.
 	 */
 	bp = bip->bio_caller2;
@@ -140,6 +138,8 @@ g_vfs_done(struct bio *bip)
 		}
 	}
 
+	cp = bip->bio_from;
+	sc = cp->geom->softc;
 	if (bip->bio_error) {
 		printf("g_vfs_done():");
 		g_print_bio(bip);
@@ -158,9 +158,7 @@ g_vfs_done(struct bio *bip)
 	if (destroy)
 		g_post_event(g_vfs_destroy, cp, M_WAITOK, NULL);
 
-	vfslocked = VFS_LOCK_GIANT(((struct mount *)NULL));
 	bufdone(bp);
-	VFS_UNLOCK_GIANT(vfslocked);
 }
 
 void
@@ -169,7 +167,6 @@ g_vfs_strategy(struct bufobj *bo, struct buf *bp)
 	struct g_vfs_softc *sc;
 	struct g_consumer *cp;
 	struct bio *bip;
-	int vfslocked;
 
 	cp = bo->bo_private;
 	sc = cp->geom->softc;
@@ -182,9 +179,7 @@ g_vfs_strategy(struct bufobj *bo, struct buf *bp)
 		mtx_unlock(&sc->sc_mtx);
 		bp->b_error = ENXIO;
 		bp->b_ioflags |= BIO_ERROR;
-		vfslocked = VFS_LOCK_GIANT(((struct mount *)NULL));
 		bufdone(bp);
-		VFS_UNLOCK_GIANT(vfslocked);
 		return;
 	}
 	sc->sc_active++;
@@ -193,14 +188,14 @@ g_vfs_strategy(struct bufobj *bo, struct buf *bp)
 	bip = g_alloc_bio();
 	bip->bio_cmd = bp->b_iocmd;
 	bip->bio_offset = bp->b_iooffset;
-	bip->bio_data = bp->b_data;
-	bip->bio_done = g_vfs_done;
-	bip->bio_caller2 = bp;
 	bip->bio_length = bp->b_bcount;
-	if (bp->b_flags & B_BARRIER) {
+	bdata2bio(bp, bip);
+	if ((bp->b_flags & B_BARRIER) != 0) {
 		bip->bio_flags |= BIO_ORDERED;
 		bp->b_flags &= ~B_BARRIER;
 	}
+	bip->bio_done = g_vfs_done;
+	bip->bio_caller2 = bp;
 	g_io_request(bip, cp);
 }
 
@@ -238,7 +233,6 @@ g_vfs_open(struct vnode *vp, struct g_consumer **cpp, const char *fsname, int wr
 	struct g_consumer *cp;
 	struct g_vfs_softc *sc;
 	struct bufobj *bo;
-	int vfslocked;
 	int error;
 
 	g_topology_assert();
@@ -263,9 +257,7 @@ g_vfs_open(struct vnode *vp, struct g_consumer **cpp, const char *fsname, int wr
 		g_wither_geom(gp, ENXIO);
 		return (error);
 	}
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	vnode_create_vobject(vp, pp->mediasize, curthread);
-	VFS_UNLOCK_GIANT(vfslocked);
 	*cpp = cp;
 	cp->private = vp;
 	bo->bo_ops = g_vfs_bufops;

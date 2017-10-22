@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/share/examples/ses/srcs/sesd.c 246437 2013-02-06 22:07:38Z mav $ */
+/* $FreeBSD: release/10.0.0/share/examples/ses/srcs/sesd.c 242638 2012-11-06 00:22:33Z mav $ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.

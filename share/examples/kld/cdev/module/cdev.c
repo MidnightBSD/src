@@ -65,7 +65,7 @@
  * SUCH DAMAGE.
  *
  *
- * $FreeBSD: stable/9/share/examples/kld/cdev/module/cdev.c 132247 2004-07-16 06:55:34Z tjr $
+ * $FreeBSD: release/10.0.0/share/examples/kld/cdev/module/cdev.c 132247 2004-07-16 06:55:34Z tjr $
  */
 #include <sys/param.h>
 #include <sys/uio.h>

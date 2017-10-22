@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/ispfw/asm_12160.h 160212 2006-07-09 17:50:20Z mjacob $ */
+/* $FreeBSD: release/10.0.0/sys/dev/ispfw/asm_12160.h 160212 2006-07-09 17:50:20Z mjacob $ */
 /*-
  * Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000 Qlogic, Inc.
  * All rights reserved.

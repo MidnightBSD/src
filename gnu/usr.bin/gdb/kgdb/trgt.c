@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/gnu/usr.bin/gdb/kgdb/trgt.c 178713 2008-05-01 20:36:48Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/gnu/usr.bin/gdb/kgdb/trgt.c 246893 2013-02-17 02:15:19Z marcel $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -52,6 +52,8 @@ __FBSDID("$FreeBSD: stable/9/gnu/usr.bin/gdb/kgdb/trgt.c 178713 2008-05-01 20:36
 #include <ui-out.h>
 
 #include "kgdb.h"
+
+static CORE_ADDR stoppcbs;
 
 static void	kgdb_core_cleanup(void *);
 
@@ -351,4 +353,19 @@ initialize_kgdb_target(void)
 	   "Set current process context");
 	add_com ("tid", class_obscure, kgdb_set_tid_cmd,
 	   "Set current thread context");
+}
+
+CORE_ADDR
+kgdb_trgt_stop_pcb(u_int cpuid, u_int pcbsz)
+{
+	static int once = 0;
+
+	if (stoppcbs == 0 && !once) {
+		once = 1;
+		stoppcbs = kgdb_lookup("stoppcbs");
+	}
+	if (stoppcbs == 0)
+		return 0;
+
+	return (stoppcbs + pcbsz * cpuid);
 }

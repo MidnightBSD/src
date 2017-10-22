@@ -40,7 +40,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_scan.l#19 $
  *
- * $FreeBSD: stable/9/sys/dev/aic7xxx/aicasm/aicasm_scan.l 229101 2011-12-31 14:34:07Z dim $
+ * $FreeBSD: release/10.0.0/sys/dev/aic7xxx/aicasm/aicasm_scan.l 228556 2011-12-16 00:04:28Z dim $
  */
 
 #include <sys/types.h>

@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/de/if_de.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/de/if_de.c 243857 2012-12-04 09:32:43Z glebius $");
 
 #define	TULIP_HDR_DATA
 
@@ -1567,7 +1567,7 @@ tulip_null_media_poll(tulip_softc_t * const sc, tulip_mediapoll_event_t event)
 #endif
 }
 
-__inline static void
+static inline void
 tulip_21140_mediainit(tulip_softc_t * const sc, tulip_media_info_t * const mip,
     tulip_media_t const media, unsigned gpdata, unsigned cmdmode)
 {

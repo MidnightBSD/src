@@ -1,7 +1,8 @@
-# $FreeBSD: stable/9/usr.sbin/bsdinstall/distfetch/Makefile 218799 2011-02-18 14:54:34Z nwhitehorn $
+# $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/distfetch/Makefile 250511 2013-05-11 13:46:05Z antoine $
 
 BINDIR= /usr/libexec/bsdinstall
 PROG=	distfetch
+DPADD=	${LIBFETCH} ${LIBNCURSESW} ${LIBDIALOG} ${LIBM}
 LDADD=	-lfetch -lncursesw -ldialog -lm
 
 WARNS?=	6

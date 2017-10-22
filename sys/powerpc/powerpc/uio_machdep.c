@@ -36,14 +36,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/powerpc/uio_machdep.c 218195 2011-02-02 16:35:10Z mdf $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powerpc/uio_machdep.c 253367 2013-07-15 15:40:57Z ae $");
 
 #include <sys/param.h>
+#include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
-#include <sys/systm.h>
 #include <sys/uio.h>
 #include <sys/sf_buf.h>
 

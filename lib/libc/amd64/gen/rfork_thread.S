@@ -26,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/amd64/gen/rfork_thread.S 217106 2011-01-07 16:08:40Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/amd64/gen/rfork_thread.S 240178 2012-09-06 20:59:49Z jilles $");
 
 /*
  * With thanks to John Dyson for the original version of this.
@@ -93,12 +93,7 @@ ENTRY(rfork_thread)
 2:
 	popq	%r12
 	popq	%rbx
-#ifdef PIC
-	movq	PIC_GOT(HIDENAME(cerror)), %rdx
-	jmp	*%rdx
-#else
 	jmp	HIDENAME(cerror)
-#endif
 END(rfork_thread)
 
 	.section .note.GNU-stack,"",%progbits

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/sbin/gbde/test.sh 168420 2007-04-06 11:16:11Z pjd $
+# $FreeBSD: release/10.0.0/sbin/gbde/test.sh 168420 2007-04-06 11:16:11Z pjd $
 
 set -e
 

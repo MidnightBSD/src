@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/if_ndis/if_ndis.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/if_ndis/if_ndis.c 254842 2013-08-25 10:57:09Z andre $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -714,7 +714,6 @@ ndis_attach(dev)
 	ndis_probe_offload(sc);
 
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = ndis_ioctl;
 	ifp->if_start = ndis_start;
@@ -1402,7 +1401,7 @@ ndis_rxeof(adapter, packets, pktcnt)
 			p = packets[i];
 			if (p->np_oob.npo_status == NDIS_STATUS_SUCCESS) {
 				p->np_refcnt++;
-				ndis_return_packet(p, block);
+				(void)ndis_return_packet(NULL ,p, block);
 			}
 		}
 		return;
@@ -1415,7 +1414,7 @@ ndis_rxeof(adapter, packets, pktcnt)
 		if (ndis_ptom(&m0, p)) {
 			device_printf(sc->ndis_dev, "ptom failed\n");
 			if (p->np_oob.npo_status == NDIS_STATUS_SUCCESS)
-				ndis_return_packet(p, block);
+				(void)ndis_return_packet(NULL, p, block);
 		} else {
 #ifdef notdef
 			if (p->np_oob.npo_status == NDIS_STATUS_RESOURCES) {

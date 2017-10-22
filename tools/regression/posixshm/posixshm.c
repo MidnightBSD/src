@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/posixshm/posixshm.c 175383 2008-01-16 15:51:24Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/posixshm/posixshm.c 175383 2008-01-16 15:51:24Z jhb $");
 
 #include <sys/param.h>
 #include <sys/mman.h>

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2008 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,9 +25,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ata/chipsets/ata-promise.c 242908 2012-11-12 07:34:05Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/chipsets/ata-promise.c 253644 2013-07-25 09:12:46Z mav $");
 
-#include "opt_ata.h"
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -288,6 +287,10 @@ ata_promise_chipinit(device_t dev)
 	    /* setup host packet controls */
 	    hpkt = malloc(sizeof(struct ata_promise_sx4),
 			  M_ATAPCI, M_NOWAIT | M_ZERO);
+	    if (hpkt == NULL) {
+		device_printf(dev, "Cannot allocate HPKT\n");
+		goto failnfree;
+	    }
 	    mtx_init(&hpkt->mtx, "ATA promise HPKT lock", NULL, MTX_DEF);
 	    TAILQ_INIT(&hpkt->queue);
 	    hpkt->busy = 0;

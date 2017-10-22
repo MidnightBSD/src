@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/memcontrol/memcontrol.c 242022 2012-10-25 01:20:19Z eadler $
+ * $FreeBSD: release/10.0.0/usr.sbin/memcontrol/memcontrol.c 241829 2012-10-22 02:12:15Z eadler $
  */
 
 #include <sys/types.h>
@@ -39,8 +39,7 @@
 #include <string.h>
 #include <unistd.h>
 
-struct
-{
+static struct {
     const char	*name;
     int		val;
     int		kind;
@@ -67,8 +66,7 @@ static void	clearfunc(int memfd, int argc, char *argv[]);
 static void	helpfunc(int memfd, int argc, char *argv[]);
 static void	help(const char *what);
 
-struct 
-{
+static struct {
     const char	*cmd;
     const char	*desc;
     void	(*func)(int memfd, int argc, char *argv[]);

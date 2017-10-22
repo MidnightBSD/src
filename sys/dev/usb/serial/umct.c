@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/serial/umct.c 240659 2012-09-18 16:28:49Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/serial/umct.c 239299 2012-08-15 15:42:57Z hselasky $");
 
 /*-
  * Copyright (c) 2003 Scott Long

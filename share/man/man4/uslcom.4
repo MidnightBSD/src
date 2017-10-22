@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/uslcom.4 239826 2012-08-29 12:46:53Z gavin $
+.\" $FreeBSD: release/10.0.0/share/man/man4/uslcom.4 239037 2012-08-04 15:11:36Z gavin $
 .\"
 .Dd August 4, 2012
 .Dt USLCOM 4
@@ -27,6 +27,8 @@ To compile this driver into the kernel,
 place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
+.Cd "device usb"
+.Cd "device ucom"
 .Cd "device uslcom"
 .Ed
 .Pp

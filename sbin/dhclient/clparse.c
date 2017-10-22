@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/dhclient/clparse.c 230597 2012-01-26 19:46:13Z dumbbell $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/dhclient/clparse.c 252506 2013-07-02 13:24:37Z bms $");
 
 #include "dhcpd.h"
 #include "dhctoken.h"
@@ -642,6 +642,10 @@ parse_client_lease_declaration(FILE *cfile, struct client_lease *lease,
 	case FILENAME:
 		lease->filename = parse_string(cfile);
 		return;
+	case NEXT_SERVER:
+		if (!parse_ip_addr(cfile, &lease->nextserver))
+			return;
+		break;
 	case SERVER_NAME:
 		lease->server_name = parse_string(cfile);
 		return;

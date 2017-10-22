@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/ps3/mmu_ps3.c 217044 2011-01-06 04:12:29Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ps3/mmu_ps3.c 247297 2013-02-26 01:00:11Z attilio $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -45,7 +45,6 @@ __FBSDID("$FreeBSD: stable/9/sys/powerpc/ps3/mmu_ps3.c 217044 2011-01-06 04:12:2
 #include <vm/vm_object.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_pageout.h>
-#include <vm/vm_pager.h>
 #include <vm/uma.h>
 
 #include <powerpc/aim/mmu_oea64.h>

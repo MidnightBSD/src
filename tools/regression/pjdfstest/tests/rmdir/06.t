@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/rmdir/06.t 211474 2010-08-18 22:06:43Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/rmdir/06.t 211474 2010-08-18 22:06:43Z pjd $
 
 desc="rmdir returns EEXIST or ENOTEMPTY the named directory contains files other than '.' and '..' in it"
 

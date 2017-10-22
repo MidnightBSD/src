@@ -25,7 +25,7 @@
  */
 
 /*
- * $FreeBSD: stable/9/tools/regression/pipe/pipe-ino.c 229240 2012-01-01 23:36:13Z kib $
+ * $FreeBSD: release/10.0.0/tools/regression/pipe/pipe-ino.c 228177 2011-12-01 11:20:25Z kib $
  * Test conformance to stat(2) SUSv4 description:
  *  "For all other file types defined in this volume of POSIX.1-2008, the
  *  structure members st_mode, st_ino, st_dev, st_uid, st_gid, st_atim,

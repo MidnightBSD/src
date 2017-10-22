@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/buslogic/bt_eisa.c 165102 2006-12-11 18:28:31Z mjacob $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/buslogic/bt_eisa.c 241592 2012-10-15 16:13:55Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -140,7 +140,7 @@ bt_eisa_alloc_resources(device_t dev)
 			return (ENOMEM);
 		}
 	} else
-		irq = 0;
+		irq = NULL;
 	bt->irq = irq;
 
 	return (0);
@@ -287,7 +287,7 @@ bt_eisa_probe(device_t dev)
 		result = ENXIO;
 	} else {
 		eisa_add_intr(dev, info.irq, shared);
-		result = 0;
+		result = BUS_PROBE_DEFAULT;
 	}
 	bt_eisa_release_resources(dev);
 
@@ -315,11 +315,11 @@ bt_eisa_attach(device_t dev)
 				/* nsegments	*/ ~0,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_32BIT,
 				/* flags	*/ 0,
-				/* lockfunc	*/ busdma_lock_mutex,
-				/* lockarg,	*/ &Giant,
+				/* lockfunc	*/ NULL,
+				/* lockarg,	*/ NULL,
 				&bt->parent_dmat) != 0) {
 		bt_eisa_release_resources(dev);
-		return -1;
+		return (ENOMEM);
 	}
 
 	/*
@@ -328,7 +328,7 @@ bt_eisa_attach(device_t dev)
 	 */
 	if (bt_probe(dev) || bt_fetch_adapter_info(dev) || bt_init(dev)) {
 		bt_eisa_release_resources(dev);
-		return -1;
+		return (ENXIO);
 	}
 
 	/* Attach sub-devices - always succeeds (sets up intr) */

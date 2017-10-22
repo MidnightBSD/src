@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/powerpc/ps3/metadata.c 217044 2011-01-06 04:12:29Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/powerpc/ps3/metadata.c 217044 2011-01-06 04:12:29Z nwhitehorn $");
 
 #include <stand.h>
 #include <sys/param.h>

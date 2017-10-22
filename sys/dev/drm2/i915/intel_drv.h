@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * $FreeBSD: stable/9/sys/dev/drm2/i915/intel_drv.h 235783 2012-05-22 11:07:44Z kib $
+ * $FreeBSD: release/10.0.0/sys/dev/drm2/i915/intel_drv.h 254797 2013-08-24 16:50:47Z dumbbell $
  */
 
 #ifndef DRM_INTEL_DRV_H
@@ -320,7 +320,7 @@ extern void intel_fixed_panel_mode(struct drm_display_mode *fixed_mode,
 				   struct drm_display_mode *adjusted_mode);
 extern void intel_pch_panel_fitting(struct drm_device *dev,
 				    int fitting_mode,
-				    struct drm_display_mode *mode,
+				    const struct drm_display_mode *mode,
 				    struct drm_display_mode *adjusted_mode);
 extern u32 intel_panel_get_max_backlight(struct drm_device *dev);
 extern u32 intel_panel_get_backlight(struct drm_device *dev);

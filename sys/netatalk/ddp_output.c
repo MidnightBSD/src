@@ -21,7 +21,7 @@
  *	netatalk@itd.umich.edu
  */
 
-/* $FreeBSD: stable/9/sys/netatalk/ddp_output.c 194913 2009-06-24 21:36:09Z rwatson $ */
+/* $FreeBSD: release/10.0.0/sys/netatalk/ddp_output.c 243882 2012-12-05 08:04:20Z glebius $ */
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,7 +54,7 @@ ddp_output(struct mbuf *m, struct socket *so)
 	mac_socket_create_mbuf(so, m);
 #endif
 
-	M_PREPEND(m, sizeof(struct ddpehdr), M_DONTWAIT);
+	M_PREPEND(m, sizeof(struct ddpehdr), M_NOWAIT);
 	if (m == NULL)
 	return (ENOBUFS);
 
@@ -201,7 +201,7 @@ ddp_route(struct mbuf *m, struct route *ro)
 	 * removing mac_mbuf_copy().
 	 */
 	if (!(aa->aa_flags & AFA_PHASE2)) {
-		MGET(m0, M_DONTWAIT, MT_DATA);
+		MGET(m0, M_NOWAIT, MT_DATA);
 		if (m0 == NULL) {
 			ifa_free(&aa->aa_ifa);
 			m_freem(m);

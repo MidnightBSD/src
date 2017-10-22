@@ -26,7 +26,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_switch.c 230175 2012-01-15 22:20:52Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_switch.c 244046 2012-12-09 04:54:22Z attilio $");
 
 #include "opt_sched.h"
 
@@ -176,6 +176,12 @@ retry:
 /*
  * Kernel thread preemption implementation.  Critical sections mark
  * regions of code in which preemptions are not allowed.
+ *
+ * It might seem a good idea to inline critical_enter() but, in order
+ * to prevent instructions reordering by the compiler, a __compiler_membar()
+ * would have to be used here (the same as sched_pin()).  The performance
+ * penalty imposed by the membar could, then, produce slower code than
+ * the function call itself, for most cases.
  */
 void
 critical_enter(void)

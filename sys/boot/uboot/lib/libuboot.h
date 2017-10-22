@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/boot/uboot/lib/libuboot.h 243243 2012-11-18 17:09:29Z ae $
+ * $FreeBSD: release/10.0.0/sys/boot/uboot/lib/libuboot.h 240272 2012-09-09 11:30:45Z ae $
  */
 
 struct uboot_devdesc
@@ -57,6 +57,7 @@ extern int devs_no;
 extern struct netif_driver uboot_net;
 extern struct devsw uboot_storage;
 
+void *uboot_vm_translate(vm_offset_t);
 ssize_t	uboot_copyin(const void *src, vm_offset_t dest, const size_t len);
 ssize_t	uboot_copyout(const vm_offset_t src, void *dest, const size_t len);
 ssize_t	uboot_readin(const int fd, vm_offset_t dest, const size_t len);

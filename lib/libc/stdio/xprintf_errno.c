@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libc/stdio/xprintf_errno.c 154815 2006-01-25 12:45:24Z phk $
+ * $FreeBSD: release/10.0.0/lib/libc/stdio/xprintf_errno.c 255108 2013-08-31 22:32:42Z jilles $
  */
 
 #include <namespace.h>
@@ -34,6 +34,7 @@
 #include <vis.h>
 #include <assert.h>
 #include <sys/time.h>
+#include "errlst.h"
 #include "printf.h"
 
 int
@@ -54,7 +55,7 @@ __printf_render_errno(struct __printf_io *io, const struct printf_info *pi __unu
 
 	ret = 0;
 	error = *((const int *)arg[0]);
-	if (error >= 0 && error < sys_nerr) {
+	if (error >= 0 && error < __hidden_sys_nerr) {
 		p = strerror(error);
 		return (__printf_out(io, pi, p, strlen(p)));
 	}

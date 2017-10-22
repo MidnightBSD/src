@@ -27,12 +27,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/sa11x0/sa11x0_gpioreg.h 203974 2010-02-16 21:59:17Z imp $
+ * $FreeBSD: release/10.0.0/sys/arm/sa11x0/sa11x0_gpioreg.h 236990 2012-06-13 04:59:00Z imp $
  *
  */
 
 /*
- * SA-11x0 GPIO Register 
+ * SA-11x0 GPIO Register
  */
 
 #define SAGPIO_NPORTS	8

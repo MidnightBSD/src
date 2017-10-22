@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ia64/ia32/ia32_trap.c 225474 2011-09-11 16:05:09Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ia64/ia32/ia32_trap.c 240244 2012-09-08 18:27:11Z attilio $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD: stable/9/sys/ia64/ia32/ia32_trap.c 225474 2011-09-11 16:05:0
 #include <machine/fpu.h>
 #include <machine/frame.h>
 #include <machine/md_var.h>
-#include <i386/include/psl.h>
+#include <x86/include/psl.h>
 
 #include <security/audit/audit.h>
 
@@ -278,6 +278,5 @@ ia32_trap(int vector, struct trapframe *tf)
 
 out:
 	userret(td, tf);
-	mtx_assert(&Giant, MA_NOTOWNED);
 	do_ast(tf);
 }

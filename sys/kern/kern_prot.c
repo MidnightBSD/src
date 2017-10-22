@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_prot.c 244204 2012-12-14 08:52:08Z bapt $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_prot.c 243022 2012-11-14 10:33:12Z bapt $");
 
 #include "opt_compat.h"
 #include "opt_inet.h"
@@ -73,7 +73,7 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/kern_prot.c 244204 2012-12-14 08:52:08Z ba
 
 #ifdef REGRESSION
 FEATURE(regression,
-    "Kernel support for interfaces nessesary for regression testing (SECURITY RISK!)");
+    "Kernel support for interfaces necessary for regression testing (SECURITY RISK!)");
 #endif
 
 #if defined(INET) || defined(INET6)

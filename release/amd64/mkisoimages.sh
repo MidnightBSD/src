@@ -4,7 +4,7 @@
 # Author: Jordan K Hubbard
 # Date:   22 June 2001
 #
-# $FreeBSD: stable/9/release/amd64/mkisoimages.sh 221494 2011-05-05 13:55:43Z nwhitehorn $
+# $FreeBSD: release/10.0.0/release/amd64/mkisoimages.sh 246283 2013-02-03 10:26:24Z hrs $
 #
 # This script is used by release/Makefile to build the (optional) ISO images
 # for a FreeBSD release.  It is considered architecture dependent since each
@@ -36,9 +36,10 @@ if [ $# -lt 3 ]; then
 	exit 1
 fi
 
-LABEL=$1; shift
+LABEL=`echo $1 | tr '[:lower:]' '[:upper:]'`; shift
 NAME=$1; shift
 
-echo "/dev/iso9660/`echo $LABEL | tr '[:lower:]' '[:upper:]'` / cd9660 ro 0 0" > $1/etc/fstab
-makefs -t cd9660 $bootable -o rockridge -o label=$LABEL $NAME $*
+publisher="The FreeBSD Project.  http://www.FreeBSD.org/"
+echo "/dev/iso9660/$LABEL / cd9660 ro 0 0" > $1/etc/fstab
+makefs -t cd9660 $bootable -o rockridge -o label=$LABEL -o publisher="$publisher" $NAME $*
 rm $1/etc/fstab

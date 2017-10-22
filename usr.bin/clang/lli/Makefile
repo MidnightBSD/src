@@ -1,4 +1,6 @@
-# $FreeBSD: stable/9/usr.bin/clang/lli/Makefile 245431 2013-01-14 19:51:26Z dim $
+# $FreeBSD: release/10.0.0/usr.bin/clang/lli/Makefile 249423 2013-04-12 17:57:40Z dim $
+
+.include <bsd.own.mk>
 
 PROG_CXX=lli
 
@@ -7,8 +9,9 @@ SRCS=	lli.cpp \
 	RecordingMemoryManager.cpp \
 	RemoteTarget.cpp
 
-LIBDEPS=llvmx86asmparser \
-	llvmx86disassembler \
+LIBDEPS=llvmx86disassembler \
+	llvmx86asmparser \
+	llvmirreader \
 	llvmasmparser \
 	llvmbitreader \
 	llvmx86codegen \
@@ -20,14 +23,15 @@ LIBDEPS=llvmx86asmparser \
 	llvmasmprinter \
 	llvmmcparser \
 	llvminterpreter \
+	llvmmcjit \
 	llvmjit \
 	llvmcodegen \
+	llvmobjcarcopts \
 	llvmscalaropts \
 	llvminstcombine \
 	llvmtransformutils \
 	llvmipa \
 	llvmanalysis \
-	llvmmcjit \
 	llvmruntimedyld \
 	llvmexecutionengine \
 	llvmtarget \

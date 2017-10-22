@@ -23,8 +23,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/kerberos5/lib/libgssapi_ntlm/prefix.c 178828 2008-05-07 13:53:12Z dfr $
+ * $FreeBSD: release/10.0.0/kerberos5/lib/libgssapi_ntlm/prefix.c 233294 2012-03-22 08:48:42Z stas $
  */
+
+#include <gssapi/gssapi.h>
+
+gss_OID_desc __gss_c_nt_user_name_oid_desc =
+    {10, (void *)("\x2a\x86\x48\x86\xf7\x12" "\x01\x02\x01\x01")};
+gss_OID_desc __gss_c_nt_hostbased_service_oid_desc =
+    {10, (void *)("\x2a\x86\x48\x86\xf7\x12" "\x01\x02\x01\x04")};
 
 const char *
 _gss_name_prefix(void)

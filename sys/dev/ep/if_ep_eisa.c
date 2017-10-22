@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ep/if_ep_eisa.c 166901 2007-02-23 12:19:07Z piso $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ep/if_ep_eisa.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -238,7 +238,7 @@ static device_method_t ep_eisa_methods[] = {
 	DEVMETHOD(device_attach, ep_eisa_attach),
 	DEVMETHOD(device_detach, ep_detach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t ep_eisa_driver = {

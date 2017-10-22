@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ia64/ia64/iodev_machdep.c 207329 2010-04-28 15:38:01Z attilio $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ia64/ia64/iodev_machdep.c 207329 2010-04-28 15:38:01Z attilio $");
 
 #include <sys/param.h>
 #include <sys/conf.h>

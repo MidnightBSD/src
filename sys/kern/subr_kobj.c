@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/subr_kobj.c 227711 2011-11-19 12:55:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_kobj.c 227537 2011-11-15 20:11:03Z marius $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -83,7 +83,7 @@ SYSINIT(kobj, SI_SUB_LOCK, SI_ORDER_ANY, kobj_init_mutex, NULL);
  * desc pointer is NULL, it is guaranteed never to match any read
  * descriptors.
  */
-static struct kobj_method null_method = {
+static const struct kobj_method null_method = {
 	0, 0,
 };
 
@@ -224,7 +224,7 @@ kobj_lookup_method(kobj_class_t cls,
 
 	ce = kobj_lookup_method_mi(cls, desc);
 	if (!ce)
-		ce = desc->deflt;
+		ce = &desc->deflt;
 	*cep = ce;
 	return ce;
 }

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/sound/pci/emu10kx-pcm.c 230964 2012-02-03 22:39:04Z pfg $
+ * $FreeBSD: release/10.0.0/sys/dev/sound/pci/emu10kx-pcm.c 246128 2013-01-30 18:01:20Z sbz $
  */
 
 #include <sys/param.h>
@@ -1520,7 +1520,8 @@ static device_method_t emu_pcm_methods[] = {
 	DEVMETHOD(device_probe, emu_pcm_probe),
 	DEVMETHOD(device_attach, emu_pcm_attach),
 	DEVMETHOD(device_detach, emu_pcm_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t emu_pcm_driver = {

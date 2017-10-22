@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/powermac/uninorth.c 233472 2012-03-25 18:43:14Z andreast $
+ * $FreeBSD: release/10.0.0/sys/powerpc/powermac/uninorth.c 233188 2012-03-19 18:03:20Z andreast $
  */
 
 #include <sys/param.h>

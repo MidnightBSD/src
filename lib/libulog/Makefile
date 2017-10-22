@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libulog/Makefile 202215 2010-01-13 18:53:06Z ed $
+# $FreeBSD: release/10.0.0/lib/libulog/Makefile 202215 2010-01-13 18:53:06Z ed $
 
 SHLIBDIR?=/lib
 

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/cs/if_cs.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cs/if_cs.c 243857 2012-12-04 09:32:43Z glebius $");
 
 /*
  *

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/mips/cavium/usb/octusb.h 229096 2011-12-31 14:22:02Z hselasky $ */
+/* $FreeBSD: release/10.0.0/sys/mips/cavium/usb/octusb.h 230405 2012-01-20 23:37:04Z gonzo $ */
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
@@ -29,14 +29,7 @@
 #define	_OCTUSB_H_
 
 #define	OCTUSB_MAX_DEVICES MIN(USB_MAX_DEVICES, 64)
-/*
- * The second port is on a different IRQ and so we disable it for now.
- */
-#if 1
-#define	OCTUSB_MAX_PORTS	1	/* hardcoded */
-#else
 #define	OCTUSB_MAX_PORTS	2	/* hardcoded */
-#endif
 #define	OCTUSB_MAX_FIXUP	4096	/* bytes */
 #define	OCTUSB_INTR_ENDPT	0x01
 
@@ -87,7 +80,7 @@ struct octusb_qh {
 	uint8_t	ep_num;
 	uint8_t	ep_type;
 	uint8_t	ep_toggle_next;
-	uint8_t	port_index;
+	uint8_t	root_port_index;
 	uint8_t	fixup_complete;
 	uint8_t	fixup_pending;
 	uint8_t	hs_hub_addr;
@@ -121,8 +114,8 @@ struct octusb_softc {
 
 	struct usb_device *sc_devices[OCTUSB_MAX_DEVICES];
 
-	struct resource *sc_irq_res;
-	void   *sc_intr_hdl;
+	struct resource *sc_irq_res[OCTUSB_MAX_PORTS];
+	void   *sc_intr_hdl[OCTUSB_MAX_PORTS];
 
 	struct octusb_port sc_port[OCTUSB_MAX_PORTS];
 	device_t sc_dev;

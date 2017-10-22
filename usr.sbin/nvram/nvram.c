@@ -23,7 +23,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/nvram/nvram.c 160892 2006-08-01 22:19:01Z sobomax $
+ * $FreeBSD: release/10.0.0/usr.sbin/nvram/nvram.c 253162 2013-07-10 18:07:01Z rdivacky $
  */
 
 #include <sys/types.h>
@@ -51,12 +51,16 @@ struct deletelist {
 	struct deletelist *last;
 };
 
+static union {
+	uint8_t buf[sizeof(struct chrp_header)];
+	struct chrp_header header;
+} conv;
+
 int
 main(int argc, char **argv)
 {
 	int opt, dump, fd, res, i, size;
 	uint8_t buf[NVRAM_SIZE], *cp, *common;
-	struct chrp_header *header;
 	struct deletelist *dl;
 
 	dump = 0;
@@ -116,9 +120,9 @@ main(int argc, char **argv)
 	/* Locate common block */
 	size = 0;
 	for (cp = buf; cp < buf + sizeof(buf); cp += size) {
-		header = (struct chrp_header *)cp;
-		size = header->length * 0x10;
-		if (strncmp(header->name, "common", 7) == 0)
+		memcpy(conv.buf, cp, sizeof(struct chrp_header));
+		size = conv.header.length * 0x10;
+		if (strncmp(conv.header.name, "common", 7) == 0)
 			break;
 	}
 	if (cp >= buf + sizeof(buf) || size <= (int)sizeof(struct chrp_header))

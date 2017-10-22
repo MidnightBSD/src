@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/tools/net80211/w00t/redir/buddy.c 160996 2006-08-05 05:18:03Z sam $
+ * $FreeBSD: release/10.0.0/tools/tools/net80211/w00t/redir/buddy.c 237546 2012-06-25 05:41:16Z kevlo $
  */
 #include <sys/uio.h>
 #include <sys/types.h>
@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
 	int len;
 	int raw;
 
-	memset(&s_in, 0, sizeof(&s_in));
+	memset(&s_in, 0, sizeof(s_in));
 	s_in.sin_family = PF_INET;
 	s_in.sin_port = htons(666);
 	s_in.sin_addr.s_addr = INADDR_ANY;

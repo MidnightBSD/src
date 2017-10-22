@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/mk/bsd.incs.mk 248531 2013-03-19 20:00:34Z brooks $
+# $FreeBSD: release/10.0.0/share/mk/bsd.incs.mk 245752 2013-01-21 22:40:39Z brooks $
 
 .if !target(__<bsd.init.mk>__)
 .error bsd.incs.mk cannot be included directly.
@@ -73,7 +73,7 @@ installincludes:
 		t=${DESTDIR}$$1; \
 		shift; \
 		${ECHO} $$t -\> $$l; \
-		ln -fs $$l $$t; \
+		${INSTALL_SYMLINK} $$l $$t; \
 	done; true
 .endif
 .endif # !target(installincludes)

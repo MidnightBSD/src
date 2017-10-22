@@ -31,7 +31,7 @@
  *
  *	@(#)strfile.h	8.1 (Berkeley) 5/31/93
  */
-/* $FreeBSD: stable/9/games/fortune/strfile/strfile.h 203926 2010-02-15 15:10:21Z uqs $ */
+/* $FreeBSD: release/10.0.0/games/fortune/strfile/strfile.h 203926 2010-02-15 15:10:21Z uqs $ */
 
 #include <sys/types.h>
 

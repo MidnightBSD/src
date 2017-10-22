@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $FreeBSD: stable/9/usr.sbin/service/service.sh 246609 2013-02-10 07:23:23Z delphij $
+# $FreeBSD: release/10.0.0/usr.sbin/service/service.sh 244132 2012-12-12 01:50:58Z delphij $
 
 #  Copyright (c) 2009 Douglas Barton
 #  All rights reserved.

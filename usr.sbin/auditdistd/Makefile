@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/usr.sbin/auditdistd/Makefile 243752 2012-12-01 15:11:46Z rwatson $
+# $FreeBSD: release/10.0.0/usr.sbin/auditdistd/Makefile 249657 2013-04-19 19:45:00Z ed $
 #
 
 OPENBSMDIR=${.CURDIR}/../../contrib/openbsm
@@ -10,6 +10,7 @@ OPENBSMDIR=${.CURDIR}/../../contrib/openbsm
 CFLAGS+=-I${OPENBSMDIR} -I${OPENBSMDIR}/bin/auditdistd
 
 NO_WFORMAT=
+NO_WMISSING_VARIABLE_DECLARATIONS=
 
 PROG=	auditdistd
 SRCS=	auditdistd.c

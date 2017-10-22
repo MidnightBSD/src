@@ -26,7 +26,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/lib/libedit/editrc.5 237738 2012-06-29 03:01:38Z pfg $
+.\" $FreeBSD: release/10.0.0/lib/libedit/editrc.5 245325 2013-01-12 09:08:37Z joel $
 .\"
 .Dd October 18, 2003
 .Dt EDITRC 5
@@ -473,6 +473,13 @@ Move down one line.
 Editline extended command.
 .El
 .\" End of section automatically generated with makelist
+.Sh FILES
+.Bl -tag -width "~/.editrcXXX"
+.It Pa ~/.editrc
+User configuration file for the
+.Xr editline 3
+library.
+.El
 .Sh SEE ALSO
 .Xr editline 3 ,
 .Xr regex 3 ,

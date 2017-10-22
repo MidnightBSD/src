@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/ofw/common/main.c 214495 2010-10-29 00:37:35Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/ofw/common/main.c 229403 2012-01-03 18:51:58Z ed $");
 
 #include <stand.h>
 #include "openfirm.h"
@@ -133,7 +133,7 @@ main(int (*openfirm)(void *))
 	printf("Memory: %lldKB\n", memsize() / 1024);
 
 	OF_getprop(chosen, "bootpath", bootpath, 64);
-	ch = index(bootpath, ':');
+	ch = strchr(bootpath, ':');
 	*ch = '\0';
 	printf("Booted from: %s\n", bootpath);
 

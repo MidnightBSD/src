@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  *
- * $FreeBSD: stable/9/lib/librtld_db/rtld_db.h 210678 2010-07-31 14:26:10Z rpaulo $
+ * $FreeBSD: release/10.0.0/lib/librtld_db/rtld_db.h 210678 2010-07-31 14:26:10Z rpaulo $
  */ 
 
 #ifndef _RTLD_DB_H_

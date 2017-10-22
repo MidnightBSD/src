@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/nfs/nfs_common.c 247502 2013-02-28 21:57:38Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/nfs/nfs_common.c 248318 2013-03-15 10:21:18Z glebius $");
 
 /*
  * These functions support the macros and help fiddle mbuf chains for
@@ -192,7 +192,7 @@ nfsm_disct(struct mbuf **mdp, caddr_t *dposp, int siz, int left, int how)
 	} else if (siz > MHLEN) {
 		panic("nfs S too big");
 	} else {
-		MGET(mp2, how, MT_DATA);
+		mp2 = m_get(how, MT_DATA);
 		if (mp2 == NULL)
 			return (NULL);
 		mp2->m_len = siz;
@@ -266,7 +266,7 @@ nfsm_build_xx(int s, struct mbuf **mb, caddr_t *bpos)
 	void *ret;
 
 	if (s > M_TRAILINGSPACE(*mb)) {
-		MGET(mb2, M_WAIT, MT_DATA);
+		mb2 = m_get(M_WAITOK, MT_DATA);
 		if (s > MLEN)
 			panic("build > MLEN");
 		(*mb)->m_next = mb2;
@@ -284,14 +284,14 @@ void *
 nfsm_dissect_xx(int s, struct mbuf **md, caddr_t *dpos)
 {
 
-	return (nfsm_dissect_xx_sub(s, md, dpos, M_WAIT));
+	return (nfsm_dissect_xx_sub(s, md, dpos, M_WAITOK));
 }
 
 void *
 nfsm_dissect_xx_nonblock(int s, struct mbuf **md, caddr_t *dpos)
 {
 
-	return (nfsm_dissect_xx_sub(s, md, dpos, M_DONTWAIT));
+	return (nfsm_dissect_xx_sub(s, md, dpos, M_NOWAIT));
 }
 
 static void *

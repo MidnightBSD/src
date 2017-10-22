@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ttycom.h	8.1 (Berkeley) 3/28/94
- * $FreeBSD: stable/9/sys/sys/ttycom.h 196884 2009-09-06 09:39:40Z ed $
+ * $FreeBSD: release/10.0.0/sys/sys/ttycom.h 231095 2012-02-06 18:15:46Z ed $
  */
 
 #ifndef	_SYS_TTYCOM_H_
@@ -105,7 +105,7 @@ struct winsize {
 #define		TIOCM_SR	0020		/* secondary receive */
 #define		TIOCM_CTS	0040		/* clear to send */
 #define		TIOCM_DCD	0100		/* data carrier detect */
-#define		TIOCM_RI 	0200		/* ring indicate */
+#define		TIOCM_RI	0200		/* ring indicate */
 #define		TIOCM_DSR	0400		/* data set ready */
 #define		TIOCM_CD	TIOCM_DCD
 #define		TIOCM_CAR	TIOCM_DCD

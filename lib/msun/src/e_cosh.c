@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/src/e_cosh.c 176451 2008-02-22 02:30:36Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/e_cosh.c 226598 2011-10-21 06:28:47Z das $");
 
 /* __ieee754_cosh(x)
  * Method : 
@@ -45,7 +45,6 @@ __ieee754_cosh(double x)
 {
 	double t,w;
 	int32_t ix;
-	u_int32_t lx;
 
     /* High word of |x|. */
 	GET_HIGH_WORD(ix,x);
@@ -72,13 +71,8 @@ __ieee754_cosh(double x)
 	if (ix < 0x40862E42)  return half*__ieee754_exp(fabs(x));
 
     /* |x| in [log(maxdouble), overflowthresold] */
-	GET_LOW_WORD(lx,x);
-	if (ix<0x408633CE ||
-	      ((ix==0x408633ce)&&(lx<=(u_int32_t)0x8fb9f87d))) {
-	    w = __ieee754_exp(half*fabs(x));
-	    t = half*w;
-	    return t*w;
-	}
+	if (ix<=0x408633CE)
+	    return __ldexp_exp(fabs(x), -1);
 
     /* |x| > overflowthresold, cosh(x) overflow */
 	return huge*huge;

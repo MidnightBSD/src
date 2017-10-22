@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi_perf.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/acpi_perf.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -122,7 +122,8 @@ static device_method_t acpi_perf_methods[] = {
 	DEVMETHOD(cpufreq_drv_get,	acpi_px_get),
 	DEVMETHOD(cpufreq_drv_type,	acpi_px_type),
 	DEVMETHOD(cpufreq_drv_settings,	acpi_px_settings),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t acpi_perf_driver = {

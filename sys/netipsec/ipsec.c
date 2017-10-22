@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sys/netipsec/ipsec.c 214565 2010-10-30 18:52:44Z bz $	*/
+/*	$FreeBSD: release/10.0.0/sys/netipsec/ipsec.c 253088 2013-07-09 10:08:13Z ae $	*/
 /*	$KAME: ipsec.c,v 1.103 2001/05/24 07:14:18 sakane Exp $	*/
 
 /*-
@@ -104,7 +104,13 @@ VNET_DEFINE(int, ipsec_debug) = 0;
 #endif
 
 /* NB: name changed so netstat doesn't use it. */
-VNET_DEFINE(struct ipsecstat, ipsec4stat);
+VNET_PCPUSTAT_DEFINE(struct ipsecstat, ipsec4stat);
+VNET_PCPUSTAT_SYSINIT(ipsec4stat);
+
+#ifdef VIMAGE
+VNET_PCPUSTAT_SYSUNINIT(ipsec4stat);
+#endif /* VIMAGE */
+
 VNET_DEFINE(int, ip4_ah_offsetmask) = 0;	/* maybe IP_DF? */
 /* DF bit on encap. 0: clear 1: set 2: copy */
 VNET_DEFINE(int, ip4_ipsec_dfbit) = 0;
@@ -167,9 +173,8 @@ SYSCTL_VNET_INT(_net_inet_ipsec, IPSECCTL_DEBUG, debug,
 SYSCTL_VNET_INT(_net_inet_ipsec, OID_AUTO, crypto_support,
 	CTLFLAG_RW, &VNET_NAME(crypto_support), 0,
 	"Crypto driver selection.");
-SYSCTL_VNET_STRUCT(_net_inet_ipsec, OID_AUTO, ipsecstats,
-	CTLFLAG_RD, &VNET_NAME(ipsec4stat), ipsecstat,	
-	"IPsec IPv4 statistics.");
+SYSCTL_VNET_PCPUSTAT(_net_inet_ipsec, OID_AUTO, ipsecstats, struct ipsecstat,
+    ipsec4stat, "IPsec IPv4 statistics.");
 
 #ifdef REGRESSION
 /*
@@ -191,7 +196,13 @@ SYSCTL_VNET_INT(_net_inet_ipsec, OID_AUTO, test_integrity,
 #endif
 
 #ifdef INET6 
-VNET_DEFINE(struct ipsecstat, ipsec6stat);
+VNET_PCPUSTAT_DEFINE(struct ipsecstat, ipsec6stat);
+VNET_PCPUSTAT_SYSINIT(ipsec6stat);
+
+#ifdef VIMAGE
+VNET_PCPUSTAT_SYSUNINIT(ipsec6stat);
+#endif /* VIMAGE */
+
 VNET_DEFINE(int, ip6_esp_trans_deflev) = IPSEC_LEVEL_USE;
 VNET_DEFINE(int, ip6_esp_net_deflev) = IPSEC_LEVEL_USE;
 VNET_DEFINE(int, ip6_ah_trans_deflev) = IPSEC_LEVEL_USE;
@@ -201,10 +212,6 @@ VNET_DEFINE(int, ip6_ipsec_ecn) = 0;	/* ECN ignore(-1)/forbidden(0)/allowed(1) *
 SYSCTL_DECL(_net_inet6_ipsec6);
 
 /* net.inet6.ipsec6 */
-#ifdef COMPAT_KAME
-SYSCTL_OID(_net_inet6_ipsec6, IPSECCTL_STATS, stats, CTLFLAG_RD,
-    0, 0, compat_ipsecstats_sysctl, "S", "IPsec IPv6 statistics.");
-#endif /* COMPAT_KAME */
 SYSCTL_VNET_INT(_net_inet6_ipsec6, IPSECCTL_DEF_POLICY, def_policy, CTLFLAG_RW,
 	&VNET_NAME(ip4_def_policy).policy, 0,
 	"IPsec default policy.");
@@ -226,9 +233,8 @@ SYSCTL_VNET_INT(_net_inet6_ipsec6, IPSECCTL_ECN,
 SYSCTL_VNET_INT(_net_inet6_ipsec6, IPSECCTL_DEBUG, debug, CTLFLAG_RW,
 	&VNET_NAME(ipsec_debug), 0,
 	"Enable IPsec debugging output when set.");
-SYSCTL_VNET_STRUCT(_net_inet6_ipsec6, IPSECCTL_STATS,
-	ipsecstats, CTLFLAG_RD, &VNET_NAME(ipsec6stat), ipsecstat,
-	"IPsec IPv6 statistics.");
+SYSCTL_VNET_PCPUSTAT(_net_inet6_ipsec6, IPSECCTL_STATS, ipsecstats,
+    struct ipsecstat, ipsec6stat, "IPsec IPv6 statistics.");
 #endif /* INET6 */
 
 static int ipsec_setspidx_inpcb __P((struct mbuf *, struct inpcb *));
@@ -454,7 +460,7 @@ ipsec4_checkpolicy(struct mbuf *m, u_int dir, u_int flag, int *error,
 		sp = ipsec_getpolicybysock(m, dir, inp, error);
 	if (sp == NULL) {
 		IPSEC_ASSERT(*error != 0, ("getpolicy failed w/o error"));
-		V_ipsec4stat.ips_out_inval++;
+		IPSECSTAT_INC(ips_out_inval);
 		return (NULL);
 	}
 	IPSEC_ASSERT(*error == 0, ("sp w/ error set to %u", *error));
@@ -464,7 +470,7 @@ ipsec4_checkpolicy(struct mbuf *m, u_int dir, u_int flag, int *error,
 		printf("%s: invalid policy %u\n", __func__, sp->policy);
 		/* FALLTHROUGH */
 	case IPSEC_POLICY_DISCARD:
-		V_ipsec4stat.ips_out_polvio++;
+		IPSECSTAT_INC(ips_out_polvio);
 		*error = -EINVAL;	/* Packet is discarded by caller. */
 		break;
 	case IPSEC_POLICY_BYPASS:
@@ -597,10 +603,9 @@ ipsec4_get_ulp(struct mbuf *m, struct secpolicyindex *spidx, int needport)
 	IPSEC_ASSERT(m != NULL, ("null mbuf"));
 	IPSEC_ASSERT(m->m_pkthdr.len >= sizeof(struct ip),("packet too short"));
 
-	/* NB: ip_input() flips it into host endian. XXX Need more checking. */
 	if (m->m_len >= sizeof (struct ip)) {
 		struct ip *ip = mtod(m, struct ip *);
-		if (ip->ip_off & (IP_MF | IP_OFFMASK))
+		if (ip->ip_off & htons(IP_MF | IP_OFFMASK))
 			goto done;
 #ifdef _IP_VHL
 		off = _IP_VHL_HL(ip->ip_vhl) << 2;
@@ -612,7 +617,7 @@ ipsec4_get_ulp(struct mbuf *m, struct secpolicyindex *spidx, int needport)
 		struct ip ih;
 
 		m_copydata(m, 0, sizeof (struct ip), (caddr_t) &ih);
-		if (ih.ip_off & (IP_MF | IP_OFFMASK))
+		if (ih.ip_off & htons(IP_MF | IP_OFFMASK))
 			goto done;
 #ifdef _IP_VHL
 		off = _IP_VHL_HL(ih.ip_vhl) << 2;
@@ -1315,7 +1320,7 @@ ipsec4_in_reject(struct mbuf *m, struct inpcb *inp)
 
 	result = ipsec46_in_reject(m, inp);
 	if (result)
-		V_ipsec4stat.ips_in_polvio++;
+		IPSECSTAT_INC(ips_in_polvio);
 
 	return (result);
 }
@@ -1333,7 +1338,7 @@ ipsec6_in_reject(struct mbuf *m, struct inpcb *inp)
 
 	result = ipsec46_in_reject(m, inp);
 	if (result)
-		V_ipsec6stat.ips_in_polvio++;
+		IPSEC6STAT_INC(ips_in_polvio);
 
 	return (result);
 }

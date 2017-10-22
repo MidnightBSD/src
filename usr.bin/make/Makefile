@@ -1,6 +1,6 @@
 #	@(#)Makefile	5.2 (Berkeley) 12/28/90
 #	$Id: Makefile,v 1.6 1994/06/30 05:33:39 cgd Exp $
-# $FreeBSD: stable/9/usr.bin/make/Makefile 241928 2012-10-23 12:37:02Z jhb $
+# $FreeBSD: release/10.0.0/usr.bin/make/Makefile 250719 2013-05-16 21:26:46Z sjg $
 
 .include <bsd.own.mk>
 
@@ -15,7 +15,7 @@ NO_SHARED?=	YES
 .endif
 
 # Version has the RYYYYMMDDX format, where R is from RELENG_<R>
-CFLAGS+=-DMAKE_VERSION=\"9201210220\"
+CFLAGS+=-DMAKE_VERSION=\"10201205300\"
 
 # There is no obvious performance improvement currently.
 # CFLAGS+=-DUSE_KQUEUE
@@ -109,6 +109,13 @@ MAKE_SHELL?=	sh
 CFLAGS+=	-DDEFSHELLNAME=\"${MAKE_SHELL}\"
 .else
 .error "MAKE_SHELL must be set to one of \"csh\", \"sh\" or \"ksh\"."
+.endif
+
+.if defined(MK_BMAKE) && ${MK_BMAKE} != "no"
+# if we are here we don't want this called 'make'
+PROG=	fmake
+fmake.1: make.1
+	cp ${.ALLSRC} ${.TARGET}
 .endif
 
 .include <bsd.prog.mk>

@@ -1,3 +1,4 @@
+/* $FreeBSD: release/10.0.0/sys/dev/usb/controller/uhci.c 251065 2013-05-28 18:51:30Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
@@ -25,9 +26,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/uhci.c 248085 2013-03-09 02:36:32Z marius $");
-
 /*
  * USB Universal Host Controller driver.
  * Handles e.g. PIIX3 and PIIX4.
@@ -38,6 +36,9 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/uhci.c 248085 2013-03-09 02:
  *             ftp://download.intel.com/design/intarch/datashts/29056201.pdf
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -73,6 +74,8 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/uhci.c 248085 2013-03-09 02:
 
 #include <dev/usb/usb_controller.h>
 #include <dev/usb/usb_bus.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
+
 #include <dev/usb/controller/uhci.h>
 #include <dev/usb/controller/uhcireg.h>
 
@@ -3029,10 +3032,6 @@ uhci_ep_init(struct usb_device *udev, struct usb_endpoint_descriptor *edesc,
 	    edesc->bEndpointAddress, udev->flags.usb_mode,
 	    sc->sc_addr);
 
-	if (udev->flags.usb_mode != USB_MODE_HOST) {
-		/* not supported */
-		return;
-	}
 	if (udev->device_index != sc->sc_addr) {
 		switch (edesc->bmAttributes & UE_XFERTYPE) {
 		case UE_CONTROL:

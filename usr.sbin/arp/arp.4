@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)arp4.4	6.5 (Berkeley) 4/18/94
-.\" $FreeBSD: stable/9/usr.sbin/arp/arp.4 241992 2012-10-24 09:53:34Z glebius $
+.\" $FreeBSD: release/10.0.0/usr.sbin/arp/arp.4 250504 2013-05-11 10:51:32Z glebius $
 .\"
-.Dd September 3, 2012
+.Dd May 11, 2013
 .Dt ARP 4
 .Os
 .Sh NAME
@@ -113,7 +113,7 @@ MIB variable
 .Va net.link.ether.inet.proxyall
 to 1.
 .Sh MIB Variables
-The ARP protocol implements a number of configrable variables in
+The ARP protocol implements a number of configurable variables in
 .Va net.link.ether.inet
 branch
 of the
@@ -148,6 +148,10 @@ See
 .Sx DIAGNOSTICS
 below.
 Turned on by default.
+.It Va max_log_per_second
+Limit number of remotely triggered logging events to a configured value
+per second.
+Default is 1 log message per second.
 .It Va max_age
 How long an ARP entry is held in the cache until it needs to be refreshed.
 Default is 1200 seconds.
@@ -230,6 +234,6 @@ to a positive value.
 .Rs
 .%A Leffler, S.J.
 .%A Karels, M.J.
-.%B "Trailer Encapsulations
+.%B "Trailer Encapsulations"
 .%T RFC893
 .Re

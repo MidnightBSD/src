@@ -42,7 +42,7 @@
  *
  * Created      : 30/09/94
  *
- * $FreeBSD: stable/9/sys/arm/include/frame.h 153666 2005-12-22 22:16:09Z jhb $
+ * $FreeBSD: release/10.0.0/sys/arm/include/frame.h 253968 2013-08-05 19:06:28Z andrew $
  *
  */
 
@@ -62,7 +62,7 @@
 typedef struct trapframe {
 	register_t tf_spsr; /* Zero on arm26 */
 	register_t tf_r0;
- 	register_t tf_r1;
+	register_t tf_r1;
 	register_t tf_r2;
 	register_t tf_r3;
 	register_t tf_r4;
@@ -78,7 +78,8 @@ typedef struct trapframe {
 	register_t tf_usr_lr;
 	register_t tf_svc_sp; /* Not used on arm26 */
 	register_t tf_svc_lr; /* Not used on arm26 */
-        register_t tf_pc;
+	register_t tf_pc;
+	register_t tf_pad;
 } trapframe_t;
 
 /* Register numbers */
@@ -138,17 +139,21 @@ typedef struct irqframe {
 } irqframe_t;
 
 /*
- * Switch frame
+ * Switch frame.
+ *
+ * It is important this is a multiple of 8 bytes so the stack is correctly
+ * aligned when we create new threads.
  */
 
 struct switchframe {
+	u_int	pad;	/* Used to pad the struct to a multiple of 8-bytes */
 	u_int	sf_r4;
 	u_int	sf_r5;
 	u_int	sf_r6;
 	u_int	sf_r7;
 	u_int	sf_pc;
 };
- 
+
 /*
  * Stack frame. Used during stack traces (db_trace.c)
  */
@@ -162,5 +167,3 @@ struct frame {
 #endif /* !_LOCORE */
 
 #endif /* _MACHINE_FRAME_H_ */
-  
-/* End of frame.h */

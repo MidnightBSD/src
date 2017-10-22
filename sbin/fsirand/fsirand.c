@@ -32,7 +32,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/fsirand/fsirand.c 231812 2012-02-16 05:01:09Z eadler $";
+  "$FreeBSD: release/10.0.0/sbin/fsirand/fsirand.c 241013 2012-09-27 23:31:06Z mdf $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -60,7 +60,7 @@ int fsirand(char *);
  */
 static int sblock_try[] = SBLOCKSEARCH;
 
-int printonly = 0, force = 0, ignorelabel = 0;
+static int printonly = 0, force = 0, ignorelabel = 0;
 
 int
 main(int argc, char *argv[])
@@ -274,8 +274,8 @@ fsirand(char *device)
 				dp2 = &((struct ufs2_dinode *)inodebuf)[n];
 			if (inumber >= ROOTINO) {
 				if (printonly)
-					(void)printf("ino %d gen %08x\n",
-					    inumber,
+					(void)printf("ino %ju gen %08x\n",
+					    (uintmax_t)inumber,
 					    sblock->fs_magic == FS_UFS1_MAGIC ?
 					    dp1->di_gen : dp2->di_gen);
 				else if (sblock->fs_magic == FS_UFS1_MAGIC) 

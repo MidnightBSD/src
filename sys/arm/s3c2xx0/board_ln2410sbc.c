@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/s3c2xx0/board_ln2410sbc.c 205354 2010-03-20 03:39:35Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/s3c2xx0/board_ln2410sbc.c 205354 2010-03-20 03:39:35Z imp $");
 #include <sys/param.h>
 #include <sys/systm.h>
 

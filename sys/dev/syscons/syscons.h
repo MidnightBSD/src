@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1995-1998 Søren Schmidt
+ * Copyright (c) 1995-1998 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/syscons/syscons.h 235408 2012-05-13 17:11:49Z avg $
+ * $FreeBSD: release/10.0.0/sys/dev/syscons/syscons.h 247792 2013-03-04 14:00:58Z davide $
  */
 
 #ifndef _DEV_SYSCONS_SYSCONS_H_
@@ -269,6 +269,8 @@ typedef struct sc_softc {
 #ifdef KDB
 	int		sc_altbrk;
 #endif
+	struct callout	ctimeout;
+	struct callout	cblink;
 } sc_softc_t;
 
 /* virtual screen */

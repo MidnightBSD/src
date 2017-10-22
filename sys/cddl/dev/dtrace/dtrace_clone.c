@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: stable/9/sys/cddl/dev/dtrace/dtrace_clone.c 183381 2008-09-26 14:19:52Z ed $
+ * $FreeBSD: release/10.0.0/sys/cddl/dev/dtrace/dtrace_clone.c 255359 2013-09-07 13:45:44Z davide $
  *
  */
 
@@ -52,10 +52,6 @@ dtrace_clone(void *arg, struct ucred *cred, char *name, int namelen, struct cdev
 	/* Clone the device to the new minor number. */
 	if (clone_create(&dtrace_clones, &dtrace_cdevsw, &u, dev, 0) != 0)
 		/* Create the /dev/dtrace/dtraceNN entry. */
-		*dev = make_dev_cred(&dtrace_cdevsw, u, cred,
+		*dev = make_dev_credf(MAKEDEV_REF, &dtrace_cdevsw, u, cred,
 		     UID_ROOT, GID_WHEEL, 0600, "dtrace/dtrace%d", u);
-	if (*dev != NULL) {
-		dev_ref(*dev);
-		(*dev)->si_flags |= SI_CHEAPCLONE;
-	}
 }

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/cc/Makefile.inc 217128 2011-01-07 22:57:31Z tijl $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/cc/Makefile.inc 245539 2013-01-17 05:56:28Z andrew $
 
 .include "../Makefile.inc"
 
@@ -26,8 +26,15 @@ CSTD?=	gnu89
 CFLAGS+=	-DCROSS_COMPILE
 .endif
 
-.if ${TARGET_ARCH} == "armeb"
+.if ${TARGET_CPUARCH} == "arm" && ${MK_ARM_EABI} != "no"
+CFLAGS+=	-DTARGET_ARM_EABI
+.endif
+
+.if ${TARGET_ARCH} == "armeb" || ${TARGET_ARCH} == "armv6eb"
 CFLAGS += -DTARGET_ENDIAN_DEFAULT=MASK_BIG_END
+.endif
+.if ${TARGET_ARCH} == "armv6" || ${TARGET_ARCH} == "armv6eb"
+CFLAGS += -DFREEBSD_ARCH_armv6
 .endif
 
 .if ${TARGET_CPUARCH} == "mips"

@@ -23,12 +23,12 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/sys/arm/at91/at91_pmcvar.h 213496 2010-10-06 22:25:21Z cognet $ */
+/* $FreeBSD: release/10.0.0/sys/arm/at91/at91_pmcvar.h 239190 2012-08-11 05:45:19Z imp $ */
 
 #ifndef ARM_AT91_AT91_PMCVAR_H
 #define ARM_AT91_AT91_PMCVAR_H
 
-struct at91_pmc_clock 
+struct at91_pmc_clock
 {
 	char		*name;
 	uint32_t	hz;
@@ -55,11 +55,13 @@ struct at91_pmc_clock
 	uint32_t	(*set_outb)(int);
 };
 
-struct at91_pmc_clock * at91_pmc_clock_add(const char *name, uint32_t irq,
+struct at91_pmc_clock *at91_pmc_clock_add(const char *name, uint32_t irq,
     struct at91_pmc_clock *parent);
 struct at91_pmc_clock *at91_pmc_clock_ref(const char *name);
 void at91_pmc_clock_deref(struct at91_pmc_clock *);
 void at91_pmc_clock_enable(struct at91_pmc_clock *);
 void at91_pmc_clock_disable(struct at91_pmc_clock *);
 
+uint32_t at91_pmc_800mhz_plla_outb(int freq);
+uint32_t at91_pmc_800mhz_pllb_outb(int freq);
 #endif /* ARM_AT91_AT91_PMCVAR_H */

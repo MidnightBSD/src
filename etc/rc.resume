@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/etc/rc.resume 232083 2012-02-23 22:10:49Z jkim $
+# $FreeBSD: release/10.0.0/etc/rc.resume 252686 2013-07-04 07:32:40Z rpaulo $
 #
 
 # sample run command file for APM Resume Event
@@ -51,10 +51,6 @@ fi
 # If a device driver has problems resuming, try unloading it before
 # suspend and reloading it on resume.  Example:
 # kldload usb
-
-# wpa_supplicant(8) doesn't seem to reassociate during resume.  Uncomment
-# the following to signal it to reassociate.
-# /usr/sbin/wpa_cli reassociate
 
 /usr/bin/logger -t $subsystem resumed at `/bin/date +'%Y%m%d %H:%M:%S'`
 /bin/sync && /bin/sync && /bin/sync

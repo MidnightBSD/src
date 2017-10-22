@@ -1,12 +1,12 @@
-/*	$FreeBSD: stable/9/contrib/ipfilter/iplang/iplang_l.l 153881 2005-12-30 11:52:26Z guido $	*/
+/*	$FreeBSD: release/10.0.0/contrib/ipfilter/iplang/iplang_l.l 255332 2013-09-06 23:11:19Z cy $	*/
 
 %{
 /*
- * Copyright (C) 1997-1998 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: iplang_l.l,v 2.8 2003/07/28 01:15:31 darrenr Exp $
+ * $Id$
  */
 #include <stdio.h>
 #include <string.h>

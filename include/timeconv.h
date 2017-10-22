@@ -35,7 +35,7 @@
  */
 
 /*
- * $FreeBSD: stable/9/include/timeconv.h 203964 2010-02-16 19:39:50Z imp $
+ * $FreeBSD: release/10.0.0/include/timeconv.h 203964 2010-02-16 19:39:50Z imp $
  */
 
 #ifndef _TIMECONV_H_

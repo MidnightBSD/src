@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/mpt/Makefile 178814 2008-05-06 20:49:53Z jhb $
+# $FreeBSD: release/10.0.0/sys/modules/mpt/Makefile 178814 2008-05-06 20:49:53Z jhb $
 
 .PATH: ${.CURDIR}/../../dev/mpt
 

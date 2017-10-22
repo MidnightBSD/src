@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/misc/udbp.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/misc/udbp.c 249039 2013-04-03 06:45:21Z hselasky $");
 
 /* Driver for arbitrary double bulk pipe devices.
  * The driver assumes that there will be the same driver on the other side.
@@ -248,7 +248,8 @@ static device_method_t udbp_methods[] = {
 	DEVMETHOD(device_probe, udbp_probe),
 	DEVMETHOD(device_attach, udbp_attach),
 	DEVMETHOD(device_detach, udbp_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t udbp_driver = {
@@ -290,6 +291,7 @@ udbp_modload(module_t mod, int event, void *data)
 
 static const STRUCT_USB_HOST_ID udbp_devs[] = {
 	{USB_VPI(USB_VENDOR_NETCHIP, USB_PRODUCT_NETCHIP_TURBOCONNECT, 0)},
+	{USB_VPI(USB_VENDOR_NETCHIP, USB_PRODUCT_NETCHIP_GADGETZERO, 0)},
 	{USB_VPI(USB_VENDOR_PROLIFIC, USB_PRODUCT_PROLIFIC_PL2301, 0)},
 	{USB_VPI(USB_VENDOR_PROLIFIC, USB_PRODUCT_PROLIFIC_PL2302, 0)},
 	{USB_VPI(USB_VENDOR_ANCHOR, USB_PRODUCT_ANCHOR_EZLINK, 0)},

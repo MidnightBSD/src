@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/contrib/ipfilter/samples/relay.c 153881 2005-12-30 11:52:26Z guido $	*/
+/*	$FreeBSD: release/10.0.0/contrib/ipfilter/samples/relay.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
  * Sample program to be used as a transparent proxy.
@@ -29,7 +29,7 @@ char	ibuff[RELAY_BUFSZ];
 char	obuff[RELAY_BUFSZ];
 
 int relay(ifd, ofd, rfd)
-int ifd, ofd, rfd;
+	int ifd, ofd, rfd;
 {
 	fd_set	rfds, wfds;
 	char	*irh, *irt, *rrh, *rrt;
@@ -103,8 +103,8 @@ int ifd, ofd, rfd;
 }
 
 main(argc, argv)
-int argc;
-char *argv[];
+	int argc;
+	char *argv[];
 {
 	struct	sockaddr_in	sin;
 	ipfobj_t	obj;

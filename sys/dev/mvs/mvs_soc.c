@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/mvs/mvs_soc.c 237378 2012-06-21 10:28:59Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mvs/mvs_soc.c 249622 2013-04-18 12:43:06Z mav $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -63,6 +63,7 @@ static struct {
 } mvs_ids[] = {
 	{MV_DEV_88F5182, 0x00,   "Marvell 88F5182",	2, MVS_Q_GENIIE|MVS_Q_SOC},
 	{MV_DEV_88F6281, 0x00,   "Marvell 88F6281",	2, MVS_Q_GENIIE|MVS_Q_SOC},
+	{MV_DEV_88F6282, 0x00,   "Marvell 88F6282",	2, MVS_Q_GENIIE|MVS_Q_SOC},
 	{MV_DEV_MV78100, 0x00,   "Marvell MV78100",	2, MVS_Q_GENIIE|MVS_Q_SOC},
 	{MV_DEV_MV78100_Z0, 0x00,"Marvell MV78100",	2, MVS_Q_GENIIE|MVS_Q_SOC},
 	{0,              0x00,   NULL,			0, 0}
@@ -429,6 +430,13 @@ mvs_child_location_str(device_t dev, device_t child, char *buf,
 	return (0);
 }
 
+static bus_dma_tag_t
+mvs_get_dma_tag(device_t bus, device_t child)
+{
+
+	return (bus_get_dma_tag(bus));
+}
+
 static device_method_t mvs_methods[] = {
 	DEVMETHOD(device_probe,     mvs_probe),
 	DEVMETHOD(device_attach,    mvs_attach),
@@ -440,8 +448,9 @@ static device_method_t mvs_methods[] = {
 	DEVMETHOD(bus_release_resource,     mvs_release_resource),
 	DEVMETHOD(bus_setup_intr,   mvs_setup_intr),
 	DEVMETHOD(bus_teardown_intr,mvs_teardown_intr),
-	DEVMETHOD(mvs_edma,         mvs_edma),
 	DEVMETHOD(bus_child_location_str, mvs_child_location_str),
+	DEVMETHOD(bus_get_dma_tag,  mvs_get_dma_tag),
+	DEVMETHOD(mvs_edma,         mvs_edma),
 	{ 0, 0 }
 };
 static driver_t mvs_driver = {

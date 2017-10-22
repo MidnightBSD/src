@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/cddl/compat/opensolaris/kern/opensolaris_kmem.c 219089 2011-02-27 19:41:40Z pjd $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/kern/opensolaris_kmem.c 254025 2013-08-07 06:21:20Z jeff $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -61,6 +61,8 @@ static LIST_HEAD(, kmem_item) kmem_items;
 static struct mtx kmem_items_mtx;
 MTX_SYSINIT(kmem_items_mtx, &kmem_items_mtx, "kmem_items", MTX_DEF);
 #endif	/* KMEM_DEBUG */
+
+#include <sys/vmem.h>
 
 void *
 zfs_kmem_alloc(size_t size, int kmflags)
@@ -135,7 +137,7 @@ uint64_t
 kmem_used(void)
 {
 
-	return (kmem_map->size);
+	return (vmem_size(kmem_arena, VMEM_ALLOC));
 }
 
 static int

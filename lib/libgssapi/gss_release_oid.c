@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2006 Kungliga Tekniska Högskolan
+ * Copyright (c) 2006 Kungliga Tekniska HÃ¶gskolan
  * (Royal Institute of Technology, Stockholm, Sweden). 
  * All rights reserved. 
  *
@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  */
-/* $FreeBSD: stable/9/lib/libgssapi/gss_release_oid.c 178828 2008-05-07 13:53:12Z dfr $ */
+/* $FreeBSD: release/10.0.0/lib/libgssapi/gss_release_oid.c 229784 2012-01-07 16:13:56Z uqs $ */
 
 #include <gssapi/gssapi.h>
 #include <stdlib.h>

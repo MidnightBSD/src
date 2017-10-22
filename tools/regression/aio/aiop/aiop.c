@@ -37,8 +37,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/aio/aiop/aiop.c 179017 2008-05-15 16:10:55Z adrian $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/aio/aiop/aiop.c 253447 2013-07-18 06:32:19Z kevlo $");
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -186,7 +187,7 @@ main(int argc, char *argv[])
 		perror("unknown file type\n");
 		exit(1);
 	}
-	printf("File: %s; File size %qd bytes\n", fn, file_size);
+	printf("File: %s; File size %jd bytes\n", fn, (intmax_t)file_size);
 
 	aio = calloc(aio_len, sizeof(struct aiocb));
 	abuf = calloc(aio_len, sizeof(char *));

@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mount.8	8.8 (Berkeley) 6/16/94
-.\" $FreeBSD: stable/9/sbin/mount/mount.8 241671 2012-10-18 01:14:22Z eadler $
+.\" $FreeBSD: release/10.0.0/sbin/mount/mount.8 253372 2013-07-15 21:57:21Z rmh $
 .\"
-.Dd July 12, 2012
+.Dd June 6, 2011
 .Dt MOUNT 8
 .Os
 .Sh NAME
@@ -106,11 +106,21 @@ a file system mount status from read-write to read-only.
 Also
 forces the R/W mount of an unclean file system (dangerous; use with
 caution).
+.It Fl L
+When used in conjunction with the
+.Fl a
+option, mount
+.Em only
+those file systems which are marked as
+.Dq Li late .
 .It Fl l
 When used in conjunction with the
 .Fl a
 option, also mount those file systems which are marked as
 .Dq Li late .
+.It Fl n
+For compatibility with some other implementations, this flag is
+currently a no-op.
 .It Fl o
 Options are specified with a
 .Fl o
@@ -145,11 +155,6 @@ When used with the
 .Fl u
 flag, this is the same as specifying the options currently in effect for
 the mounted file system.
-.It Cm failok
-If this option is specified,
-.Nm
-will return 0 even if an error occurs
-during the mount of the filesystem.
 .It Cm force
 The same as
 .Fl f ;
@@ -446,11 +451,8 @@ However, for the following file system types:
 .Cm mfs ,
 .Cm msdosfs ,
 .Cm nfs ,
-.Cm ntfs ,
-.Cm nwfs ,
 .Cm nullfs ,
 .Cm oldnfs ,
-.Cm portalfs ,
 .Cm smbfs ,
 .Cm udf ,
 and
@@ -545,10 +547,7 @@ support for a particular file system might be provided either on a static
 .Xr mount_cd9660 8 ,
 .Xr mount_msdosfs 8 ,
 .Xr mount_nfs 8 ,
-.Xr mount_ntfs 8 ,
 .Xr mount_nullfs 8 ,
-.Xr mount_nwfs 8 ,
-.Xr mount_portalfs 8 ,
 .Xr mount_smbfs 8 ,
 .Xr mount_udf 8 ,
 .Xr mount_unionfs 8 ,

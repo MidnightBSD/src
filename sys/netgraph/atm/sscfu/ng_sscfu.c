@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netgraph/atm/sscfu/ng_sscfu.c 220768 2011-04-18 09:12:27Z glebius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netgraph/atm/sscfu/ng_sscfu.c 241686 2012-10-18 13:57:24Z andre $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -587,10 +587,8 @@ sscfu_verbose(struct sscfu *sscfu, void *arg, const char *fmt, ...)
 static int
 ng_sscfu_mod_event(module_t mod, int event, void *data)
 {
-	int s;
 	int error = 0;
 
-	s = splnet();
 	switch (event) {
 
 	  case MOD_LOAD:
@@ -603,6 +601,5 @@ ng_sscfu_mod_event(module_t mod, int event, void *data)
 		error = EOPNOTSUPP;
 		break;
 	}
-	splx(s);
 	return (error);
 }

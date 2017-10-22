@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libkse/sys/lock.c 175864 2008-01-31 19:38:26Z deischen $
+ * $FreeBSD: release/10.0.0/lib/libkse/sys/lock.c 175864 2008-01-31 19:38:26Z deischen $
  */
 
 #include <sys/types.h>

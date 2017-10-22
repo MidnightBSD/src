@@ -32,7 +32,7 @@
 **(INCLUDING NEGLIGENCE OR OTHERWISE)ARISING IN ANY WAY OUT OF THE USE OF
 ** THIS SOFTWARE,EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **************************************************************************
-* $FreeBSD: stable/9/sys/dev/arcmsr/arcmsr.h 247827 2013-03-05 06:41:39Z delphij $
+* $FreeBSD: release/10.0.0/sys/dev/arcmsr/arcmsr.h 252857 2013-07-06 01:46:58Z delphij $
 */
 #define ARCMSR_SCSI_INITIATOR_ID			255
 #define ARCMSR_DEV_SECTOR_SIZE				512
@@ -1182,6 +1182,7 @@ struct AdapterControlBlock {
 	u_int32_t					pktReturnCount;
 	u_int32_t					vendor_device_id;
 	u_int32_t					adapter_bus_speed;
+	u_int32_t					maxOutstanding;
 };/* HW_DEVICE_EXTENSION */
 /* acb_flags */
 #define ACB_F_SCSISTOPADAPTER           0x0001

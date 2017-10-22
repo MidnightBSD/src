@@ -27,7 +27,7 @@
  * Author: Hartmut Brandt <harti@freebsd.org>
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/atm/atmconfig/main.c 133565 2004-08-12 12:31:43Z harti $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/atm/atmconfig/main.c 227081 2011-11-04 13:36:02Z ed $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -48,7 +48,7 @@ __FBSDID("$FreeBSD: stable/9/sbin/atm/atmconfig/main.c 133565 2004-08-12 12:31:4
 #include "private.h"
 
 /* verbosity level */
-int verbose;
+static int verbose;
 
 /* notitle option */
 static int notitle;

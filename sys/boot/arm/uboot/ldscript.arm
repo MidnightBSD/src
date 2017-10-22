@@ -1,11 +1,11 @@
-/* $FreeBSD: stable/9/sys/boot/arm/uboot/ldscript.arm 215344 2010-11-15 19:05:09Z imp $ */
+/* $FreeBSD: release/10.0.0/sys/boot/arm/uboot/ldscript.arm 236159 2012-05-27 16:27:04Z kientzle $ */
 
 OUTPUT_ARCH(arm)
 ENTRY(_start)
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
-  . = 0x1000000 + SIZEOF_HEADERS;
+  . = UBLDR_LOADADDR + SIZEOF_HEADERS;
   .interp     : { *(.interp) 	}
   .hash          : { *(.hash)		}
   .dynsym        : { *(.dynsym)		}

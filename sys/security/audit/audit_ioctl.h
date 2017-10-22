@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/security/audit/audit_ioctl.h 169097 2007-04-29 16:20:32Z rwatson $
+ * $FreeBSD: release/10.0.0/sys/security/audit/audit_ioctl.h 169097 2007-04-29 16:20:32Z rwatson $
  */
 
 #ifndef _SECURITY_AUDIT_AUDIT_IOCTL_H_

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/cam/README.quirks 170485 2007-06-10 04:31:55Z mjacob $ */
+/* $FreeBSD: release/10.0.0/sys/cam/README.quirks 170485 2007-06-10 04:31:55Z mjacob $ */
 
                      FreeBSD Quirk Guidelines
 

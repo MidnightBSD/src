@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/make/targ.c 200417 2009-12-11 23:20:02Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/make/targ.c 200417 2009-12-11 23:20:02Z delphij $");
 
 /*
  * Functions for maintaining the Lst allTargets. Target nodes are

@@ -1,6 +1,6 @@
 # Common defines for all of /sys/boot/i386/
 #
-# $FreeBSD: stable/9/sys/boot/i386/Makefile.inc 243219 2012-11-18 12:28:29Z avg $
+# $FreeBSD: release/10.0.0/sys/boot/i386/Makefile.inc 241785 2012-10-20 16:57:23Z avg $
 
 BINDIR?=	/boot
 

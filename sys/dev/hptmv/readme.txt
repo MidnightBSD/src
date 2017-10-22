@@ -1,6 +1,6 @@
 RocketRAID 18xx Driver for FreeBSD
 Copyright (C) 2007-2008 HighPoint Technologies, Inc. All rights reserved.
-$FreeBSD: stable/9/sys/dev/hptmv/readme.txt 190809 2009-04-07 16:38:25Z delphij $
+$FreeBSD: release/10.0.0/sys/dev/hptmv/readme.txt 230133 2012-01-15 13:23:33Z uqs $
 
 #############################################################################
 Revision History:
@@ -184,7 +184,7 @@ Revision History:
         /kernel text=0x24f1db data=0x3007ec+0x2062c -
         
         Hit [Enter] to boot immediagely, or any other key for command prompt.
-        Booting [kernel] in 9 seconds¡­
+        Booting [kernel] in 9 seconds
         
          <-- press SPACE key here 
         Type '?' for a list of commands, 'help' for more detailed help.

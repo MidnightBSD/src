@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netinet/ip_fw.h 234597 2012-04-23 07:15:15Z melifaro $
+ * $FreeBSD: release/10.0.0/sys/netinet/ip_fw.h 248552 2013-03-20 10:35:33Z melifaro $
  */
 
 #ifndef _IPFW2_H
@@ -217,6 +217,9 @@ enum ipfw_opcodes {		/* arguments (4 byte each)	*/
 	O_CALLRETURN,		/* arg1=called rule number */
 
 	O_FORWARD_IP6,		/* fwd sockaddr_in6             */
+
+	O_DSCP,			/* 2 u32 = DSCP mask */
+	O_SETDSCP,		/* arg1=DSCP value */
 
 	O_LAST_OPCODE		/* not an opcode!		*/
 };

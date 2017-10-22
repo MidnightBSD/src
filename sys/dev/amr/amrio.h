@@ -52,7 +52,7 @@
  * SUCH DAMAGE.
  *
  *
- *	$FreeBSD: stable/9/sys/dev/amr/amrio.h 153409 2005-12-14 03:26:49Z scottl $
+ *	$FreeBSD: release/10.0.0/sys/dev/amr/amrio.h 153409 2005-12-14 03:26:49Z scottl $
  */
 
 /*

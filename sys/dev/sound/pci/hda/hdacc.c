@@ -41,7 +41,7 @@
 #include <dev/sound/pci/hda/hda_reg.h>
 #include <dev/sound/pci/hda/hdac.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pci/hda/hdacc.c 246274 2013-02-03 00:02:59Z eadler $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/hda/hdacc.c 247910 2013-03-07 07:54:50Z glebius $");
 
 struct hdacc_fg {
 	device_t	dev;
@@ -460,8 +460,12 @@ hdacc_attach(device_t dev)
 static int
 hdacc_detach(device_t dev)
 {
+	struct hdacc_softc *codec = device_get_softc(dev);
+	int error;
 
-	return (device_delete_children(dev));
+	error = device_delete_children(dev);
+	free(codec->fgs, M_HDACC);
+	return (error);
 }
 
 static int

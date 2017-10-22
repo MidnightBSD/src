@@ -24,7 +24,7 @@
 #
 #       Email: Mike Makonnen <mtm@FreeBSD.Org>
 #
-# $FreeBSD: stable/9/usr.sbin/adduser/adduser.sh 202312 2010-01-14 22:04:08Z joel $
+# $FreeBSD: release/10.0.0/usr.sbin/adduser/adduser.sh 232146 2012-02-25 07:58:59Z deischen $
 #
 
 # err msg
@@ -488,6 +488,7 @@ get_uid() {
 	_prompt=
 
 	if [ -n "$uuid" ]; then
+		uuid=`get_nextuid $uuid`
 		_prompt="Uid [$uuid]: "
 	else
 		_prompt="Uid (Leave empty for default): "
@@ -894,7 +895,7 @@ if [ "$procowner" != "0" ]; then
 	exit 1
 fi
 
-# Overide from our conf file
+# Override from our conf file
 # Quickly go through the commandline line to see if we should read
 # from our configuration file. The actual parsing of the commandline
 # arguments happens after we read in our configuration file (commandline
@@ -914,7 +915,7 @@ if [ -n "$readconfig" ]; then
 	fi
 fi 
 
-# Proccess command-line options
+# Process command-line options
 #
 for _switch ; do
 	case $_switch in

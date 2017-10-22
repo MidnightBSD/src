@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/sys/modules/usb/uvscom/Makefile 188943 2009-02-23 18:32:59Z thompsa $
+# $FreeBSD: release/10.0.0/sys/modules/usb/uvscom/Makefile 188943 2009-02-23 18:32:59Z thompsa $
 #
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #

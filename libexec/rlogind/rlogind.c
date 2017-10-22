@@ -50,7 +50,7 @@ static const char sccsid[] = "@(#)rlogind.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/libexec/rlogind/rlogind.c 216584 2010-12-20 08:44:08Z charnier $");
+__FBSDID("$FreeBSD: release/10.0.0/libexec/rlogind/rlogind.c 229403 2012-01-03 18:51:58Z ed $");
 
 /*
  * remote login server:
@@ -543,16 +543,17 @@ extern	char **environ;
 void
 setup_term(int fd)
 {
-	char *cp = index(term+ENVSIZE, '/');
+	char *cp;
 	char *speed;
 	struct termios tt, def;
 
+	cp = strchr(term + ENVSIZE, '/');
 #ifndef notyet
 	tcgetattr(fd, &tt);
 	if (cp) {
 		*cp++ = '\0';
 		speed = cp;
-		cp = index(speed, '/');
+		cp = strchr(speed, '/');
 		if (cp)
 			*cp++ = '\0';
 		cfsetspeed(&tt, atoi(speed));
@@ -567,7 +568,7 @@ setup_term(int fd)
 	if (cp) {
 		*cp++ = '\0';
 		speed = cp;
-		cp = index(speed, '/');
+		cp = strchr(speed, '/');
 		if (cp)
 			*cp++ = '\0';
 		tcgetattr(fd, &tt);

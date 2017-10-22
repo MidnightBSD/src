@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * 	$FreeBSD: stable/9/sys/netgraph/netflow/netflow_v9.c 243983 2012-12-07 13:03:23Z melifaro $
+ * 	$FreeBSD: release/10.0.0/sys/netgraph/netflow/netflow_v9.c 243882 2012-12-05 08:04:20Z glebius $
  */
 
 static const char rcs_id[] =
-    "@(#) $FreeBSD: stable/9/sys/netgraph/netflow/netflow_v9.c 243983 2012-12-07 13:03:23Z melifaro $";
+    "@(#) $FreeBSD: release/10.0.0/sys/netgraph/netflow/netflow_v9.c 243882 2012-12-05 08:04:20Z glebius $";
 
 #include "opt_inet6.h"
 #include "opt_route.h"
@@ -386,7 +386,7 @@ get_export9_dgram(priv_p priv, fib_export_p fe, struct netflow_v9_packet_opt **t
 		uint16_t mtu = priv->mtu;
 
 		/* Allocate entire packet at once, allowing easy m_append() calls */
-		m = m_getm(NULL, mtu, M_DONTWAIT, MT_DATA);
+		m = m_getm(NULL, mtu, M_NOWAIT, MT_DATA);
 		if (m == NULL)
 			return (NULL);
 

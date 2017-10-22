@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netpfil/ipfw/ip_fw_dynamic.c 248497 2013-03-19 12:42:14Z melifaro $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netpfil/ipfw/ip_fw_dynamic.c 247626 2013-03-02 14:47:10Z melifaro $");
 
 #define        DEB(x)
 #define        DDB(x) x
@@ -594,7 +594,7 @@ add_dyn_rule(struct ipfw_flow_id *id, int i, u_int8_t dyn_type, struct ip_fw *ru
 	r->expire = time_uptime + V_dyn_syn_lifetime;
 	r->rule = rule;
 	r->dyn_type = dyn_type;
-	r->pcnt = r->bcnt = 0;
+	IPFW_ZERO_DYN_COUNTER(r);
 	r->count = 0;
 
 	r->bucket = i;
@@ -696,8 +696,7 @@ ipfw_install_state(struct ip_fw *rule, ipfw_insn_limit *cmd,
 		uint16_t limit_mask = cmd->limit_mask;
 		int pindex;
 
-		conn_limit = (cmd->conn_limit == IP_FW_TABLEARG) ?
-		    tablearg : cmd->conn_limit;
+		conn_limit = IP_FW_ARG_TABLEARG(cmd->conn_limit);
 		  
 		DEB(
 		if (cmd->conn_limit == IP_FW_TABLEARG)
@@ -810,7 +809,7 @@ ipfw_send_pkt(struct mbuf *replyto, struct ipfw_flow_id *id, u_int32_t seq,
 #endif
 	struct tcphdr *th = NULL;
 
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	MGETHDR(m, M_NOWAIT, MT_DATA);
 	if (m == NULL)
 		return (NULL);
 
@@ -919,9 +918,8 @@ ipfw_send_pkt(struct mbuf *replyto, struct ipfw_flow_id *id, u_int32_t seq,
 		h->ip_v = 4;
 		h->ip_hl = sizeof(*h) >> 2;
 		h->ip_tos = IPTOS_LOWDELAY;
-		h->ip_off = 0;
-		/* ip_len must be in host format for ip_output */
-		h->ip_len = len;
+		h->ip_off = htons(0);
+		h->ip_len = htons(len);
 		h->ip_ttl = V_ip_defttl;
 		h->ip_sum = 0;
 		break;

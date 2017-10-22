@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libdwarf/dwarf_errmsg.c 179187 2008-05-22 02:14:23Z jb $
+ * $FreeBSD: release/10.0.0/lib/libdwarf/dwarf_errmsg.c 241720 2012-10-19 05:43:38Z ed $
  */
 
 #include <stdio.h>
 #include "_libdwarf.h"
 
-const char *_libdwarf_errors[] = {
+static const char *_libdwarf_errors[] = {
 #define	DEFINE_ERROR(N,S)		[DWARF_E_##N] = S
 	DEFINE_ERROR(NONE,		"No Error"),
 	DEFINE_ERROR(ERROR,		"An error"),

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 2001 Dag-Erling CoÃ¯dan SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *      $FreeBSD: stable/9/sys/fs/pseudofs/pseudofs.h 232728 2012-03-09 16:17:46Z mm $
+ *      $FreeBSD: release/10.0.0/sys/fs/pseudofs/pseudofs.h 232278 2012-02-29 00:30:18Z mm $
  */
 
 #ifndef _PSEUDOFS_H_INCLUDED

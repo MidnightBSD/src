@@ -42,11 +42,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- * 	This product includes software developed by the University of
- * 	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -88,7 +84,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/net/name6.c 245553 2013-01-17 16:11:38Z ume $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/name6.c 255328 2013-09-06 21:02:06Z jilles $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -239,7 +235,7 @@ getipnodebyname(const char *name, int af, int flags, int *errp)
 	if (flags & AI_ADDRCONFIG) {
 		int s;
 
-		if ((s = _socket(af, SOCK_DGRAM, 0)) < 0)
+		if ((s = _socket(af, SOCK_DGRAM | SOCK_CLOEXEC, 0)) < 0)
 			return NULL;
 		/*
 		 * TODO:
@@ -872,7 +868,8 @@ set_source(struct hp_order *aio, struct policyhead *ph)
 	}
 
 	/* open a socket to get the source address for the given dst */
-	if ((s = _socket(ss.ss_family, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+	if ((s = _socket(ss.ss_family, SOCK_DGRAM | SOCK_CLOEXEC,
+	    IPPROTO_UDP)) < 0)
 		return;		/* give up */
 	if (_connect(s, (struct sockaddr *)&ss, ss.ss_len) < 0)
 		goto cleanup;

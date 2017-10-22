@@ -26,12 +26,12 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/priv/priv_cred.c 172106 2007-09-09 23:08:39Z rwatson $
+ * $FreeBSD: release/10.0.0/tools/regression/priv/priv_cred.c 228975 2011-12-30 00:04:11Z uqs $
  */
 
 /*
  * Confirm that various UID/GID/etc-related system calls require root
- * privilege in the absense of any saved/real/etc variations in the
+ * privilege in the absence of any saved/real/etc variations in the
  * credential.  It would be nice to also check cases where those bits of the
  * credential are more interesting.
  *

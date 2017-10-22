@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/iicbus/iicbus.h 181304 2008-08-04 21:03:06Z jhb $
+ * $FreeBSD: release/10.0.0/sys/dev/iicbus/iicbus.h 228257 2011-12-04 11:55:33Z adrian $
  *
  */
 #ifndef __IICBUS_H
@@ -41,6 +41,8 @@ struct iicbus_softc
 	device_t owner;		/* iicbus owner device structure */
 	u_char started;		/* address of the 'started' slave
 				 * 0 if no start condition succeeded */
+	u_char strict;		/* deny operations that violate the
+				 * I2C protocol */
 	struct mtx lock;
 };
 

@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/usr.sbin/ndp/ndp.c 245555 2013-01-17 16:39:21Z ume $	*/
+/*	$FreeBSD: release/10.0.0/usr.sbin/ndp/ndp.c 253999 2013-08-06 17:10:52Z hrs $	*/
 /*	$KAME: ndp.c,v 1.104 2003/06/27 07:48:39 itojun Exp $	*/
 
 /*
@@ -367,7 +367,8 @@ getsocket()
 struct	sockaddr_in6 so_mask = {sizeof(so_mask), AF_INET6 };
 struct	sockaddr_in6 blank_sin = {sizeof(blank_sin), AF_INET6 }, sin_m;
 struct	sockaddr_dl blank_sdl = {sizeof(blank_sdl), AF_LINK }, sdl_m;
-int	expire_time, flags, found_entry;
+time_t	expire_time;
+int	flags, found_entry;
 struct	{
 	struct	rt_msghdr m_rtm;
 	char	m_space[512];
@@ -404,22 +405,18 @@ set(argc, argv)
 		return 1;
 	}
 	sin->sin6_addr = ((struct sockaddr_in6 *)res->ai_addr)->sin6_addr;
-#ifdef __KAME__
-	if (IN6_IS_ADDR_LINKLOCAL(&sin->sin6_addr)) {
-		*(u_int16_t *)&sin->sin6_addr.s6_addr[2] =
-		    htons(((struct sockaddr_in6 *)res->ai_addr)->sin6_scope_id);
-	}
-#endif
+	sin->sin6_scope_id =
+	    ((struct sockaddr_in6 *)res->ai_addr)->sin6_scope_id;
 	ea = (u_char *)LLADDR(&sdl_m);
 	if (ndp_ether_aton(eaddr, ea) == 0)
 		sdl_m.sdl_alen = 6;
 	flags = expire_time = 0;
 	while (argc-- > 0) {
 		if (strncmp(argv[0], "temp", 4) == 0) {
-			struct timeval time;
+			struct timeval now;
 
-			gettimeofday(&time, 0);
-			expire_time = time.tv_sec + 20 * 60;
+			gettimeofday(&now, 0);
+			expire_time = now.tv_sec + 20 * 60;
 		} else if (strncmp(argv[0], "proxy", 5) == 0)
 			flags |= RTF_ANNOUNCE;
 		argv++;
@@ -440,9 +437,6 @@ set(argc, argv)
 				goto overwrite;
 			}
 		}
-		/*
-		 * IPv4 arp command retries with sin_other = SIN_PROXY here.
-		 */
 		fprintf(stderr, "set: cannot configure a new entry\n");
 		return 1;
 	}
@@ -478,12 +472,6 @@ get(host)
 		return;
 	}
 	sin->sin6_addr = ((struct sockaddr_in6 *)res->ai_addr)->sin6_addr;
-#ifdef __KAME__
-	if (IN6_IS_ADDR_LINKLOCAL(&sin->sin6_addr)) {
-		*(u_int16_t *)&sin->sin6_addr.s6_addr[2] =
-		    htons(((struct sockaddr_in6 *)res->ai_addr)->sin6_scope_id);
-	}
-#endif
 	dump(&sin->sin6_addr, 0);
 	if (found_entry == 0) {
 		getnameinfo((struct sockaddr *)sin, sin->sin6_len, host_buf,
@@ -520,12 +508,8 @@ delete(host)
 		return 1;
 	}
 	sin->sin6_addr = ((struct sockaddr_in6 *)res->ai_addr)->sin6_addr;
-#ifdef __KAME__
-	if (IN6_IS_ADDR_LINKLOCAL(&sin->sin6_addr)) {
-		*(u_int16_t *)&sin->sin6_addr.s6_addr[2] =
-		    htons(((struct sockaddr_in6 *)res->ai_addr)->sin6_scope_id);
-	}
-#endif
+	sin->sin6_scope_id =
+	    ((struct sockaddr_in6 *)res->ai_addr)->sin6_scope_id;
 	if (rtmsg(RTM_GET) < 0) {
 		errx(1, "RTM_GET(%s) failed", host);
 		/* NOTREACHED */
@@ -537,9 +521,6 @@ delete(host)
 		    !(rtm->rtm_flags & RTF_GATEWAY)) {
 			goto delete;
 		}
-		/*
-		 * IPv4 arp command retries with sin_other = SIN_PROXY here.
-		 */
 		fprintf(stderr, "delete: cannot delete non-NDP entry\n");
 		return 1;
 	}
@@ -556,16 +537,8 @@ delete:
 	NEXTADDR(RTA_DST, sin_m);
 	rtm->rtm_flags |= RTF_LLDATA;
 	if (rtmsg(RTM_DELETE) == 0) {
-		struct sockaddr_in6 s6 = *sin; /* XXX: for safety */
-
-#ifdef __KAME__
-		if (IN6_IS_ADDR_LINKLOCAL(&s6.sin6_addr)) {
-			s6.sin6_scope_id = ntohs(*(u_int16_t *)&s6.sin6_addr.s6_addr[2]);
-			*(u_int16_t *)&s6.sin6_addr.s6_addr[2] = 0;
-		}
-#endif
-		getnameinfo((struct sockaddr *)&s6,
-		    s6.sin6_len, host_buf,
+		getnameinfo((struct sockaddr *)sin,
+		    sin->sin6_len, host_buf,
 		    sizeof(host_buf), NULL, 0,
 		    (nflag ? NI_NUMERICHOST : 0));
 		printf("%s (%s) deleted\n", host, host_buf);
@@ -594,7 +567,7 @@ dump(addr, cflag)
 	struct sockaddr_dl *sdl;
 	extern int h_errno;
 	struct in6_nbrinfo *nbi;
-	struct timeval time;
+	struct timeval now;
 	int addrwidth;
 	int llwidth;
 	int ifwidth;
@@ -666,10 +639,6 @@ again:;
 			/* XXX: should scope id be filled in the kernel? */
 			if (sin->sin6_scope_id == 0)
 				sin->sin6_scope_id = sdl->sdl_index;
-#ifdef __KAME__
-			/* KAME specific hack; removed the embedded id */
-			*(u_int16_t *)&sin->sin6_addr.s6_addr[2] = 0;
-#endif
 		}
 		getnameinfo((struct sockaddr *)sin, sin->sin6_len, host_buf,
 		    sizeof(host_buf), NULL, 0, (nflag ? NI_NUMERICHOST : 0));
@@ -685,9 +654,9 @@ again:;
 #endif
 			continue;
 		}
-		gettimeofday(&time, 0);
+		gettimeofday(&now, 0);
 		if (tflag)
-			ts_print(&time);
+			ts_print(&now);
 
 		addrwidth = strlen(host_buf);
 		if (addrwidth < W_ADDR)
@@ -708,9 +677,9 @@ again:;
 		/* Print neighbor discovery specific informations */
 		nbi = getnbrinfo(&sin->sin6_addr, sdl->sdl_index, 1);
 		if (nbi) {
-			if (nbi->expire > time.tv_sec) {
+			if (nbi->expire > now.tv_sec) {
 				printf(" %-9.9s",
-				    sec2str(nbi->expire - time.tv_sec));
+				    sec2str(nbi->expire - now.tv_sec));
 			} else if (nbi->expire == 0)
 				printf(" %-9.9s", "permanent");
 			else
@@ -1008,9 +977,6 @@ ifinfo(ifname, argc, argv)
 #ifdef ND6_IFF_AUTO_LINKLOCAL
 		SETFLAG("auto_linklocal", ND6_IFF_AUTO_LINKLOCAL);
 #endif
-#ifdef ND6_IFF_PREFER_SOURCE
-		SETFLAG("prefer_source", ND6_IFF_PREFER_SOURCE);
-#endif
 #ifdef ND6_IFF_NO_PREFER_IFACE
 		SETFLAG("no_prefer_iface", ND6_IFF_NO_PREFER_IFACE);
 #endif
@@ -1087,10 +1053,6 @@ ifinfo(ifname, argc, argv)
 		if ((ND.flags & ND6_IFF_AUTO_LINKLOCAL))
 			printf("auto_linklocal ");
 #endif
-#ifdef ND6_IFF_PREFER_SOURCE
-		if ((ND.flags & ND6_IFF_PREFER_SOURCE))
-			printf("prefer_source ");
-#endif
 #ifdef ND6_IFF_NO_PREFER_IFACE
 		if ((ND.flags & ND6_IFF_NO_PREFER_IFACE))
 			printf("no_prefer_iface ");
@@ -1114,7 +1076,7 @@ rtrlist()
 	char *buf;
 	struct in6_defrouter *p, *ep;
 	size_t l;
-	struct timeval time;
+	struct timeval now;
 
 	if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), NULL, &l, NULL, 0) < 0) {
 		err(1, "sysctl(ICMPV6CTL_ND6_DRLIST)");
@@ -1149,18 +1111,18 @@ rtrlist()
 		rtpref = ((p->flags & ND_RA_FLAG_RTPREF_MASK) >> 3) & 0xff;
 		printf(", pref=%s", rtpref_str[rtpref]);
 
-		gettimeofday(&time, 0);
+		gettimeofday(&now, 0);
 		if (p->expire == 0)
 			printf(", expire=Never\n");
 		else
 			printf(", expire=%s\n",
-			    sec2str(p->expire - time.tv_sec));
+			    sec2str(p->expire - now.tv_sec));
 	}
 	free(buf);
 #else
 	struct in6_drlist dr;
 	int s, i;
-	struct timeval time;
+	struct timeval now;
 
 	if ((s = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
 		err(1, "socket");
@@ -1189,12 +1151,12 @@ rtrlist()
 		printf(", flags=%s%s",
 		    DR.flags & ND_RA_FLAG_MANAGED ? "M" : "",
 		    DR.flags & ND_RA_FLAG_OTHER   ? "O" : "");
-		gettimeofday(&time, 0);
+		gettimeofday(&now, 0);
 		if (DR.expire == 0)
 			printf(", expire=Never\n");
 		else
 			printf(", expire=%s\n",
-			    sec2str(DR.expire - time.tv_sec));
+			    sec2str(DR.expire - now.tv_sec));
 	}
 #undef DR
 	close(s);
@@ -1210,7 +1172,7 @@ plist()
 	struct in6_prefix *p, *ep, *n;
 	struct sockaddr_in6 *advrtr;
 	size_t l;
-	struct timeval time;
+	struct timeval now;
 	const int niflags = NI_NUMERICHOST;
 	int ninflags = nflag ? NI_NUMERICHOST : 0;
 	char namebuf[NI_MAXHOST];
@@ -1241,7 +1203,7 @@ plist()
 		printf("%s/%d if=%s\n", namebuf, p->prefixlen,
 		    if_indextoname(p->if_index, ifix_buf));
 
-		gettimeofday(&time, 0);
+		gettimeofday(&now, 0);
 		/*
 		 * meaning of fields, especially flags, is very different
 		 * by origin.  notify the difference to the users.
@@ -1267,9 +1229,9 @@ plist()
 			printf(", pltime=%lu", (unsigned long)p->pltime);
 		if (p->expire == 0)
 			printf(", expire=Never");
-		else if (p->expire >= time.tv_sec)
+		else if (p->expire >= now.tv_sec)
 			printf(", expire=%s",
-			    sec2str(p->expire - time.tv_sec));
+			    sec2str(p->expire - now.tv_sec));
 		else
 			printf(", expired");
 		printf(", ref=%d", p->refcnt);
@@ -1317,9 +1279,9 @@ plist()
 #else
 	struct in6_prlist pr;
 	int s, i;
-	struct timeval time;
+	struct timeval now;
 
-	gettimeofday(&time, 0);
+	gettimeofday(&now, 0);
 
 	if ((s = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
 		err(1, "socket");
@@ -1345,22 +1307,6 @@ plist()
 		p6.sin6_len = sizeof(p6);
 		p6.sin6_addr = PR.prefix;
 #endif
-
-		/*
-		 * copy link index to sin6_scope_id field.
-		 * XXX: KAME specific.
-		 */
-		if (IN6_IS_ADDR_LINKLOCAL(&p6.sin6_addr)) {
-			u_int16_t linkid;
-
-			memcpy(&linkid, &p6.sin6_addr.s6_addr[2],
-			    sizeof(linkid));
-			linkid = ntohs(linkid);
-			p6.sin6_scope_id = linkid;
-			p6.sin6_addr.s6_addr[2] = 0;
-			p6.sin6_addr.s6_addr[3] = 0;
-		}
-
 		niflags = NI_NUMERICHOST;
 		if (getnameinfo((struct sockaddr *)&p6,
 		    sizeof(p6), namebuf, sizeof(namebuf),
@@ -1371,7 +1317,7 @@ plist()
 		printf("%s/%d if=%s\n", namebuf, PR.prefixlen,
 		    if_indextoname(PR.if_index, ifix_buf));
 
-		gettimeofday(&time, 0);
+		gettimeofday(&now, 0);
 		/*
 		 * meaning of fields, especially flags, is very different
 		 * by origin.  notify the difference to the users.
@@ -1407,9 +1353,9 @@ plist()
 			printf(", pltime=%lu", PR.pltime);
 		if (PR.expire == 0)
 			printf(", expire=Never");
-		else if (PR.expire >= time.tv_sec)
+		else if (PR.expire >= now.tv_sec)
 			printf(", expire=%s",
-			    sec2str(PR.expire - time.tv_sec));
+			    sec2str(PR.expire - now.tv_sec));
 		else
 			printf(", expired");
 #ifdef NDPRF_ONLINK

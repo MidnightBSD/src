@@ -28,7 +28,7 @@
  *
  *	@(#)socketvar.h	8.3 (Berkeley) 2/19/95
  *
- * $FreeBSD: stable/9/sys/sys/sockbuf.h 225169 2011-08-25 09:20:13Z bz $
+ * $FreeBSD: release/10.0.0/sys/sys/sockbuf.h 256185 2013-10-09 11:57:53Z glebius $
  */
 #ifndef _SYS_SOCKBUF_H_
 #define _SYS_SOCKBUF_H_
@@ -97,7 +97,7 @@ struct	sockbuf {
 	u_int	sb_mbmax;	/* (c/d) max chars of mbufs to use */
 	u_int	sb_ctl;		/* (c/d) non-data chars in buffer */
 	int	sb_lowat;	/* (c/d) low water mark */
-	int	sb_timeo;	/* (c/d) timeout for read/write */
+	sbintime_t	sb_timeo;	/* (c/d) timeout for read/write */
 	short	sb_flags;	/* (c/d) flags, see below */
 	int	(*sb_upcall)(struct socket *, void *, int); /* (c/d) */
 	void	*sb_upcallarg;	/* (c/d) */
@@ -140,6 +140,8 @@ struct mbuf *
 void	sbdestroy(struct sockbuf *sb, struct socket *so);
 void	sbdrop(struct sockbuf *sb, int len);
 void	sbdrop_locked(struct sockbuf *sb, int len);
+struct mbuf *
+	sbcut_locked(struct sockbuf *sb, int len);
 void	sbdroprecord(struct sockbuf *sb);
 void	sbdroprecord_locked(struct sockbuf *sb);
 void	sbflush(struct sockbuf *sb);

@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/sound/pci/ds1-fw.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: release/10.0.0/sys/dev/sound/pci/ds1-fw.h 230133 2012-01-15 13:23:33Z uqs $
  */
 #ifndef _HWMCODE_
 #define _HWMCODE_
@@ -822,9 +822,9 @@ static u_int32_t	CntrlInst[] = {
 	1999/06/21
 	Buf441 slot is Enabled.
    --------------------------------------------
-   04/09Å@creat
+   04/09  @creat
    04/12  stop nise fix
-   06/21Å@WorkingOff timming
+   06/21  @WorkingOff timming
 */
 
 static u_int32_t	CntrlInst1E[] = {

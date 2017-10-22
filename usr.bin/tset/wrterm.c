@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/tset/wrterm.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tset/wrterm.c 229403 2012-01-03 18:51:58Z ed $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)wrterm.c	8.1 (Berkeley) 6/9/93";
@@ -56,7 +56,7 @@ wrtermcap(char *bp)
 	char *t, *sep;
 
 	/* Find the end of the terminal names. */
-	if ((t = index(bp, ':')) == NULL)
+	if ((t = strchr(bp, ':')) == NULL)
 		errx(1, "termcap names not colon terminated");
 	*t++ = '\0';
 

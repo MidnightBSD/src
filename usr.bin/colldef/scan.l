@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/colldef/scan.l 175038 2008-01-01 10:04:10Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/colldef/scan.l 175038 2008-01-01 10:04:10Z imp $");
 
 #include <sys/types.h>
 #include <ctype.h>

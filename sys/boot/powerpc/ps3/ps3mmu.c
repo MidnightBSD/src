@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/powerpc/ps3/ps3mmu.c 217044 2011-01-06 04:12:29Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/powerpc/ps3/ps3mmu.c 230140 2012-01-15 16:58:44Z nwhitehorn $");
 
 #include <stand.h>
 #include <stdint.h>
@@ -113,7 +113,7 @@ ps3mmu_init(int maxmem)
 	    "r"(1 << SLBV_VSID_SHIFT),
 	    "r"((1 << SLBE_ESID_SHIFT) | SLBE_VALID | 1));
 
-	mtmsr(mfmsr() | PSL_IR | PSL_DR | PSL_RI | PSL_ME);
+	mtmsr(PSL_IR | PSL_DR | PSL_RI | PSL_ME);
 
 	return (0);
 }

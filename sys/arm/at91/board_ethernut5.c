@@ -29,16 +29,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/at91/board_ethernut5.c 237386 2012-06-21 11:23:38Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/board_ethernut5.c 238442 2012-07-14 06:00:37Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <machine/board.h>
 #include <arm/at91/at91_pioreg.h>
 #include <arm/at91/at91_piovar.h>
 #include <arm/at91/at91board.h>
 #include <arm/at91/at91sam9260reg.h>
 
-long
+BOARD_INIT long
 board_init(void)
 {
 
@@ -144,3 +145,5 @@ board_init(void)
 
 	return (at91_ramsize());
 }
+
+ARM_BOARD(ETHERNUT5, "Ethernut 5")

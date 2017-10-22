@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/kerberos5/lib/libgssapi_krb5/gss_krb5.c 178828 2008-05-07 13:53:12Z dfr $
+ *	$FreeBSD: release/10.0.0/kerberos5/lib/libgssapi_krb5/gss_krb5.c 233294 2012-03-22 08:48:42Z stas $
  */
 
 #include <gssapi/gssapi.h>
@@ -33,6 +33,7 @@
 
 #include <krb5.h>
 #include <roken.h>
+#include <der.h>
 
 OM_uint32
 gss_krb5_copy_ccache(OM_uint32 *minor_status,

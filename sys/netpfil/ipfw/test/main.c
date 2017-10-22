@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/sys/netpfil/ipfw/test/main.c 204591 2010-03-02 17:40:48Z luigi $
+ * $FreeBSD: release/10.0.0/sys/netpfil/ipfw/test/main.c 204591 2010-03-02 17:40:48Z luigi $
  *
  * Testing program for schedulers
  *

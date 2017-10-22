@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/src/s_csqrtl.c 181402 2008-08-08 00:15:16Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_csqrtl.c 181402 2008-08-08 00:15:16Z das $");
 
 #include <complex.h>
 #include <float.h>

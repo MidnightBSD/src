@@ -28,7 +28,7 @@
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/2/94
  *
- * $FreeBSD: stable/9/usr.bin/cmp/extern.h 216370 2010-12-11 08:32:16Z joel $
+ * $FreeBSD: release/10.0.0/usr.bin/cmp/extern.h 227156 2011-11-06 08:14:16Z ed $
  *
  */
 
@@ -42,4 +42,4 @@ void	c_special(int, const char *, off_t, int, const char *, off_t);
 void	diffmsg(const char *, const char *, off_t, off_t);
 void	eofmsg(const char *);
 
-extern int lflag, sflag, xflag;
+extern int lflag, sflag, xflag, zflag;

@@ -34,22 +34,22 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/i387/s_sin.S 217108 2011-01-07 16:13:12Z kib $")
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/i387/s_sin.S 240566 2012-09-16 16:58:49Z tijl $")
 
 ENTRY(sin)
 	fldl	4(%esp)
 	fsin
 	fnstsw	%ax
-	andw	$0x400,%ax
-	jnz	1f
+	sahf
+	jp	1f
 	ret
 1:	fldpi
 	fadd	%st(0)
 	fxch	%st(1)
-2:	fprem1
+2:	fprem
 	fnstsw	%ax
-	andw	$0x400,%ax
-	jnz	2b
+	sahf
+	jp	2b
 	fstp	%st(1)
 	fsin
 	ret

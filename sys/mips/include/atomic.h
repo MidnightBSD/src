@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  *	from: src/sys/alpha/include/atomic.h,v 1.21.2.3 2005/10/06 18:12:05 jhb
- * $FreeBSD: stable/9/sys/mips/include/atomic.h 222234 2011-05-23 23:35:50Z attilio $
+ * $FreeBSD: release/10.0.0/sys/mips/include/atomic.h 252965 2013-07-07 16:12:22Z imp $
  */
 
 #ifndef _MACHINE_ATOMIC_H_
@@ -44,20 +44,16 @@
  * do not have atomic operations defined for them, but generally shouldn't
  * need atomic operations.
  */
+#ifndef __MIPS_PLATFORM_SYNC_NOPS
+#define __MIPS_PLATFORM_SYNC_NOPS ""
+#endif
 
 static __inline  void
 mips_sync(void)
 {
-	__asm __volatile (".set noreorder\n\t"
-			"sync\n\t"
-			"nop\n\t"
-			"nop\n\t"
-			"nop\n\t"
-			"nop\n\t"
-			"nop\n\t"
-			"nop\n\t"
-			"nop\n\t"
-			"nop\n\t"
+	__asm __volatile (".set noreorder\n"
+			"\tsync\n"
+			__MIPS_PLATFORM_SYNC_NOPS
 			".set reorder\n"
 			: : : "memory");
 }

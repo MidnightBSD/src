@@ -12,7 +12,7 @@
 **  Picked up from CVS and slightly cleaned up by to WARNS=5 level by
 **  Poul-Henning Kamp <phk@FreeBSD.org>
 **
-** $FreeBSD: stable/9/usr.sbin/fifolog/lib/getdate.y 201227 2009-12-29 22:53:27Z ed $
+** $FreeBSD: release/10.0.0/usr.sbin/fifolog/lib/getdate.y 235789 2012-05-22 16:33:10Z bapt $
 */
 
 #include <stdio.h>
@@ -24,11 +24,9 @@
 
 #include "libfifolog.h"
 
-#define yyparse getdate_yyparse
 #define yylex getdate_yylex
 #define yyerror getdate_yyerror
 
-static int yyparse(void);
 static int yylex(void);
 static int yyerror(const char *);
 

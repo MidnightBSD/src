@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/acct/pack.c 217064 2011-01-06 20:05:24Z keramida $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/acct/pack.c 217064 2011-01-06 20:05:24Z keramida $");
 
 #include <sys/types.h>
 

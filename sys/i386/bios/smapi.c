@@ -25,11 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/bios/smapi.c 196403 2009-08-20 19:17:53Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/bios/smapi.c 241073 2012-09-30 15:42:20Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
 
 #include <sys/module.h>
 #include <sys/bus.h>
@@ -292,6 +293,7 @@ smapi_modevent (module_t mod, int what, void *arg)
 		for (i = 0; i < count; i++) {
 			device_delete_child(device_get_parent(devs[i]), devs[i]);
 		}
+		free(devs, M_TEMP);
 		break;
 	default:
 		break;

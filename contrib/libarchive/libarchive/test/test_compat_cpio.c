@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_compat_cpio.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_compat_cpio.c 248616 2013-03-22 13:36:03Z mm $");
 
 /*
  * Verify our ability to read various sample files.
@@ -48,7 +48,7 @@ test_compat_cpio_1(void)
 	struct archive *a;
 
 	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
 	extract_reference_file(name);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_filename(a, name, 17));
@@ -90,11 +90,11 @@ test_compat_cpio_1(void)
 	assertEqualInt(0100644, archive_entry_mode(ae));
 
 	/* Verify that the format detection worked. */
-	assertEqualInt(archive_compression(a), ARCHIVE_COMPRESSION_NONE);
+	assertEqualInt(archive_filter_code(a, 0), ARCHIVE_FILTER_NONE);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_CPIO_SVR4_NOCRC);
 
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 
 

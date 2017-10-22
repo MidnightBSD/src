@@ -23,12 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/mips/include/metadata.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD: release/10.0.0/sys/mips/include/metadata.h 245330 2013-01-12 13:20:21Z rwatson $
  */
 
 #ifndef _MACHINE_METADATA_H_
 #define	_MACHINE_METADATA_H_
 
 #define	MODINFOMD_SMAP		0x1001
+#define	MODINFOMD_DTBP	0x1002
 
 #endif /* !_MACHINE_METADATA_H_ */

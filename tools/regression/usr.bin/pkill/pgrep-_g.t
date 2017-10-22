@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/usr.bin/pkill/pgrep-_g.t 199141 2009-11-10 14:32:09Z jhb $
+# $FreeBSD: release/10.0.0/tools/regression/usr.bin/pkill/pgrep-_g.t 199141 2009-11-10 14:32:09Z jhb $
 
 base=`basename $0`
 

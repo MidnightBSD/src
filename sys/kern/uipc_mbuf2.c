@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/uipc_mbuf2.c 209390 2010-06-21 09:55:56Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/uipc_mbuf2.c 243882 2012-12-05 08:04:20Z glebius $");
 
 /*#define PULLDOWN_DEBUG*/
 
@@ -171,7 +171,7 @@ m_pulldown(struct mbuf *m, int off, int len, int *offp)
 	 * chop the current mbuf into two pieces, set off to 0.
 	 */
 	if (len <= n->m_len - off) {
-		o = m_dup1(n, off, n->m_len - off, M_DONTWAIT);
+		o = m_dup1(n, off, n->m_len - off, M_NOWAIT);
 		if (o == NULL) {
 			m_freem(m);
 			return NULL;	/* ENOBUFS */
@@ -231,9 +231,9 @@ m_pulldown(struct mbuf *m, int off, int len, int *offp)
 	 * on both end.
 	 */
 	if (len > MLEN)
-		o = m_getcl(M_DONTWAIT, m->m_type, 0);
+		o = m_getcl(M_NOWAIT, m->m_type, 0);
 	else
-		o = m_get(M_DONTWAIT, m->m_type);
+		o = m_get(M_NOWAIT, m->m_type);
 	if (!o) {
 		m_freem(m);
 		return NULL;	/* ENOBUFS */

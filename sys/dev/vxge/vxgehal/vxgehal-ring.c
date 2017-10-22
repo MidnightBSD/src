@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: stable/9/sys/dev/vxge/vxgehal/vxgehal-ring.c 229461 2012-01-04 03:37:41Z eadler $*/
+/*$FreeBSD: release/10.0.0/sys/dev/vxge/vxgehal/vxgehal-ring.c 226436 2011-10-16 14:30:28Z eadler $*/
 
 #include <dev/vxge/vxgehal/vxgehal.h>
 

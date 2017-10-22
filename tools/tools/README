@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/tools/README 240907 2012-09-25 01:31:24Z eadler $
+# $FreeBSD: release/10.0.0/tools/tools/README 254852 2013-08-25 12:20:57Z dumbbell $
 
 This directory is for tools.
 
@@ -18,6 +18,7 @@ cxgbetool	A tool for the cxgbe(4) driver.
 cxgbtool	A tool for the cxgb(4) driver.
 diffburst	OBSOLETE: equivalent functionality is available via split -p.
 		For example: "split -p ^diff < patchfile". See split(1).
+drm		Tools specific to the DRM/KMS device drivers.
 editing		Editor modes and the like to help editing FreeBSD code.
 epfe 		Extract printing filter examples from printing.sgml.
 ether_reflect	An Ethernet packet reflector for low level testing.
@@ -46,6 +47,7 @@ mctest		A multicast test program
 mid	 	Create a Message-ID database for mailing lists.
 mwl		Tools specific to the Marvell 88W8363 support
 ncpus		Count the number of processors
+netmap		Test applications for netmap(4)
 notescheck	Check for missing devices and options in NOTES files.
 npe		Tools specific to the Intel IXP4XXX NPE device
 nxge		A diagnostic tool for the nxge(4) driver

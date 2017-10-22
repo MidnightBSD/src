@@ -26,7 +26,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/filemon/filemon.c 236592 2012-06-04 22:54:19Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/filemon/filemon.c 255219 2013-09-05 00:09:56Z pjd $");
+
+#include "opt_compat.h"
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -103,46 +105,10 @@ static struct cv access_cv;
 static struct thread *access_owner = NULL;
 static struct thread *access_requester = NULL;
 
-#if __FreeBSD_version < 701000
-static struct clonedevs *filemon_clones;
-static eventhandler_tag	eh_tag;
-#else
 static struct cdev *filemon_dev;
-#endif
 
 #include "filemon_lock.c"
 #include "filemon_wrapper.c"
-
-#if __FreeBSD_version < 701000
-static void
-filemon_clone(void *arg, struct ucred *cred, char *name, int namelen,
-    struct cdev **dev)
-{
-	int u = -1;
-	size_t len;
-
-	if (*dev != NULL)
-		return;
-
-	len = strlen(name);
-
-	if (len != 7)
-		return;
-
-	if (bcmp(name,"filemon", 7) != 0)
-		return;
-
-	/* Clone the device to the new minor number. */
-	if (clone_create(&filemon_clones, &filemon_cdevsw, &u, dev, 0) != 0)
-		/* Create the /dev/filemonNN entry. */
-		*dev = make_dev_cred(&filemon_cdevsw, u, cred, UID_ROOT,
-		    GID_WHEEL, 0666, "filemon%d", u);
-	if (*dev != NULL) {
-		dev_ref(*dev);
-		(*dev)->si_flags |= SI_CHEAPCLONE;
-	}
-}
-#endif
 
 static void
 filemon_dtr(void *data)
@@ -178,29 +144,34 @@ filemon_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag __unused,
 {
 	int error = 0;
 	struct filemon *filemon;
-
-#if __FreeBSD_version < 701000
-	filemon = dev->si_drv1;
-#else
-	devfs_get_cdevpriv((void **) &filemon);
+	struct proc *p;
+#if __FreeBSD_version >= 900041
+	cap_rights_t rights;
 #endif
+
+	devfs_get_cdevpriv((void **) &filemon);
 
 	switch (cmd) {
 	/* Set the output file descriptor. */
 	case FILEMON_SET_FD:
-#if __FreeBSD_version < 900041
-#define FGET_WRITE(a1, a2, a3) fget_write((a1), (a2), (a3))
-#else
-#define FGET_WRITE(a1, a2, a3) fget_write((a1), (a2), CAP_WRITE | CAP_SEEK, (a3))
+		error = fget_write(td, *(int *)data,
+#if __FreeBSD_version >= 900041
+		    cap_rights_init(&rights, CAP_PWRITE),
 #endif
-		if ((error = FGET_WRITE(td, *(int *)data, &filemon->fp)) == 0)
+		    &filemon->fp);
+		if (error == 0)
 			/* Write the file header. */
 			filemon_comment(filemon);
 		break;
 
 	/* Set the monitored process ID. */
 	case FILEMON_SET_PID:
-		filemon->pid = *((pid_t *) data);
+		error = pget(*((pid_t *)data), PGET_CANDEBUG | PGET_NOTWEXIT,
+		    &p);
+		if (error == 0) {
+			filemon->pid = p->p_pid;
+			PROC_UNLOCK(p);
+		}
 		break;
 
 	default:
@@ -238,11 +209,7 @@ filemon_open(struct cdev *dev, int oflags __unused, int devtype __unused,
 
 	filemon->pid = curproc->p_pid;
 
-#if __FreeBSD_version < 701000
-	dev->si_drv1 = filemon;
-#else
 	devfs_set_cdevpriv(filemon, filemon_dtr);
-#endif
 
 	/* Get exclusive write access. */
 	filemon_lock_write();
@@ -260,14 +227,6 @@ static int
 filemon_close(struct cdev *dev __unused, int flag __unused, int fmt __unused,
     struct thread *td __unused)
 {
-#if __FreeBSD_version < 701000
-	filemon_dtr(dev->si_drv1);
-
-	dev->si_drv1 = NULL;
-
-	/* Schedule this cloned device to be destroyed. */
-	destroy_dev_sched(dev);
-#endif
 
 	return (0);
 }
@@ -281,16 +240,8 @@ filemon_load(void *dummy __unused)
 	/* Install the syscall wrappers. */
 	filemon_wrapper_install();
 
-#if __FreeBSD_version < 701000
-	/* Enable device cloning. */
-	clone_setup(&filemon_clones);
-
-	/* Setup device cloning events. */
-	eh_tag = EVENTHANDLER_REGISTER(dev_clone, filemon_clone, 0, 1000);
-#else
 	filemon_dev = make_dev(&filemon_cdevsw, 0, UID_ROOT, GID_WHEEL, 0666,
 	    "filemon");
-#endif
 }
 
 static int
@@ -305,9 +256,7 @@ filemon_unload(void)
 	if (TAILQ_FIRST(&filemons_inuse) != NULL)
 		error = EBUSY;
 	else {
-#if __FreeBSD_version >= 701000
 		destroy_dev(filemon_dev);
-#endif
 
 		/* Deinstall the syscall wrappers. */
 		filemon_wrapper_deinstall();
@@ -317,19 +266,6 @@ filemon_unload(void)
 	filemon_unlock_write();
 
 	if (error == 0) {
-#if __FreeBSD_version < 701000
-		/*
-		 * Check if there is still an event handler callback registered.
-		*/
-		if (eh_tag != 0) {
-			/* De-register the device cloning event handler. */
-			EVENTHANDLER_DEREGISTER(dev_clone, eh_tag);
-			eh_tag = 0;
-
-			/* Stop device cloning. */
-			clone_cleanup(&filemon_clones);
-		}
-#endif
 		/* free() filemon structs free list. */
 		filemon_lock_write();
 		while ((filemon = TAILQ_FIRST(&filemons_free)) != NULL) {

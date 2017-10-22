@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/subr_dummy_vdso_tc.c 240815 2012-09-22 12:32:00Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_dummy_vdso_tc.c 237433 2012-06-22 07:06:40Z kib $");
 
 #include "opt_compat.h"
 

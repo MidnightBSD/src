@@ -35,7 +35,7 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/ngctl/dot.c 166529 2007-02-06 08:48:28Z kevlo $
+ * $FreeBSD: release/10.0.0/usr.sbin/ngctl/dot.c 166529 2007-02-06 08:48:28Z kevlo $
  */
 
 #include <err.h>

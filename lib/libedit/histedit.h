@@ -31,7 +31,7 @@
  *
  *	@(#)histedit.h	8.2 (Berkeley) 1/3/94
  *	$NetBSD: histedit.h,v 1.32 2007/06/10 20:20:28 christos Exp $
- * $FreeBSD: stable/9/lib/libedit/histedit.h 237738 2012-06-29 03:01:38Z pfg $
+ * $FreeBSD: release/10.0.0/lib/libedit/histedit.h 238810 2012-07-26 15:48:07Z pfg $
  */
 
 /*
@@ -153,13 +153,6 @@ int		el_source(EditLine *, const char *);
  * of the application
  */
 void		 el_resize(EditLine *);
-
-
-/*
- * Set user private data.
- */
-void            el_data_set    __P((EditLine *, void *));
-void *          el_data_get    __P((EditLine *));
 
 /*
  * User-defined function interface.

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/usr.bin/make/archives/fmt_44bsd_mod/Makefile 146822 2005-05-31 14:13:07Z harti $
+# $FreeBSD: release/10.0.0/tools/regression/usr.bin/make/archives/fmt_44bsd_mod/Makefile 146822 2005-05-31 14:13:07Z harti $
 # This test checks the code reading archive files. The archive file
 # is a BSD4.4 file with __.SYMTAB and #1/N long file names.
 #

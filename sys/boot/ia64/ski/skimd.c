@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/ia64/ski/skimd.c 220283 2011-04-03 03:26:12Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/ia64/ski/skimd.c 220283 2011-04-03 03:26:12Z marcel $");
 
 #include <stand.h>
 

@@ -39,7 +39,7 @@
  *
  *	@(#)ieee.h	8.1 (Berkeley) 6/11/93
  *
- * $FreeBSD: stable/9/sys/mips/include/ieee.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD: release/10.0.0/sys/mips/include/ieee.h 202175 2010-01-12 21:36:08Z imp $
  *
  */
 

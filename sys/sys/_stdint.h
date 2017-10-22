@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/_stdint.h 222813 2011-06-07 08:46:13Z attilio $
+ * $FreeBSD: release/10.0.0/sys/sys/_stdint.h 222813 2011-06-07 08:46:13Z attilio $
  */
 
 #ifndef _SYS__STDINT_H_

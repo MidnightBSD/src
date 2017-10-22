@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/econa/if_ece.c 237093 2012-06-14 20:02:53Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/econa/if_ece.c 243882 2012-12-05 08:04:20Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -714,7 +714,7 @@ ece_new_rxbuf(struct ece_softc *sc, struct rx_desc_info* descinfo)
 
 	tag = sc->dmatag_ring_rx;
 
-	new_mbuf = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+	new_mbuf = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 
 	if (new_mbuf == NULL)
 		return (ENOBUFS);

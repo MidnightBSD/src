@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/adm5120/uart_dev_adm5120.c 202175 2010-01-12 21:36:08Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/adm5120/uart_dev_adm5120.c 248965 2013-04-01 00:44:20Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -221,9 +221,6 @@ adm5120_uart_bus_attach(struct uart_softc *sc)
 		/* TODO: set parameters 115200, 8N1 */
 	}
 
-	sc->sc_rxfifosz = 16;
-	sc->sc_txfifosz = 16;
-
 	(void)adm5120_uart_bus_getsig(sc);
 
 #if 1
@@ -366,6 +363,9 @@ adm5120_uart_bus_probe(struct uart_softc *sc)
 	error = adm5120_uart_probe(&sc->sc_bas);
 	if (error)
 		return (error);
+
+	sc->sc_rxfifosz = 16;
+	sc->sc_txfifosz = 16;
 
 	ch = sc->sc_bas.chan + 'A';
 

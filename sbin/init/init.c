@@ -41,7 +41,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)init.c	8.1 (Berkeley) 7/15/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/init/init.c 247004 2013-02-19 17:57:17Z ed $";
+  "$FreeBSD: release/10.0.0/sbin/init/init.c 254288 2013-08-13 18:51:26Z jilles $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -66,7 +66,6 @@ static const char rcsid[] =
 #include <time.h>
 #include <ttyent.h>
 #include <unistd.h>
-#include <utmpx.h>
 #include <sys/reboot.h>
 #include <err.h>
 
@@ -126,14 +125,14 @@ static state_func_t death_single(void);
 
 static state_func_t run_script(const char *);
 
-enum { AUTOBOOT, FASTBOOT } runcom_mode = AUTOBOOT;
+static enum { AUTOBOOT, FASTBOOT } runcom_mode = AUTOBOOT;
 #define FALSE	0
 #define TRUE	1
 
-int Reboot = FALSE;
-int howto = RB_AUTOBOOT;
+static int Reboot = FALSE;
+static int howto = RB_AUTOBOOT;
 
-int devfs;
+static int devfs;
 
 static void transition(state_t);
 static state_t requested_transition;
@@ -180,8 +179,6 @@ static int setupargv(session_t *, struct ttyent *);
 static void setprocresources(const char *);
 #endif
 static int clang;
-
-static void clear_session_logs(session_t *);
 
 static int start_session_db(void);
 static void add_session(session_t *);
@@ -567,20 +564,6 @@ transition(state_t s)
 }
 
 /*
- * Close out the accounting files for a login session.
- * NB: should send a message to the session logger to avoid blocking.
- */
-static void
-clear_session_logs(session_t *sp __unused)
-{
-
-	/*
-	 * XXX: Use getutxline() and call pututxline() for each entry.
-	 * Is this safe to do this here?  Is it really required anyway?
-	 */
-}
-
-/*
  * Start a session and allocate a controlling terminal.
  * Only called by children of init after forking.
  */
@@ -663,8 +646,6 @@ single_user(void)
 	if (Reboot) {
 		/* Instead of going single user, let's reboot the machine */
 		sync();
-		alarm(2);
-		pause();
 		reboot(howto);
 		_exit(0);
 	}
@@ -694,7 +675,8 @@ single_user(void)
 					_exit(0);
 				password = crypt(clear, pp->pw_passwd);
 				bzero(clear, _PASSWORD_LEN);
-				if (strcmp(password, pp->pw_passwd) == 0)
+				if (password == NULL ||
+				    strcmp(password, pp->pw_passwd) == 0)
 					break;
 				warning("single-user login failed\n");
 			}
@@ -800,17 +782,12 @@ single_user(void)
 static state_func_t
 runcom(void)
 {
-	struct utmpx utx;
 	state_func_t next_transition;
 
 	if ((next_transition = run_script(_PATH_RUNCOM)) != 0)
 		return next_transition;
 
 	runcom_mode = AUTOBOOT;		/* the default */
-	/* NB: should send a message to the session logger to avoid blocking. */
-	utx.ut_type = BOOT_TIME;
-	gettimeofday(&utx.ut_tv, NULL);
-	pututxline(&utx);
 	return (state_func_t) read_ttys;
 }
 
@@ -1139,8 +1116,6 @@ read_ttys(void)
 	 * There shouldn't be any, but just in case...
 	 */
 	for (sp = sessions; sp; sp = snext) {
-		if (sp->se_process)
-			clear_session_logs(sp);
 		snext = sp->se_next;
 		free_session(sp);
 	}
@@ -1294,7 +1269,6 @@ collect_child(pid_t pid)
 	if (! (sp = find_session(pid)))
 		return;
 
-	clear_session_logs(sp);
 	del_session(sp);
 	sp->se_process = 0;
 
@@ -1524,13 +1498,7 @@ alrm_handler(int sig)
 static state_func_t
 death(void)
 {
-	struct utmpx utx;
 	session_t *sp;
-
-	/* NB: should send a message to the session logger to avoid blocking. */
-	utx.ut_type = SHUTDOWN_TIME;
-	gettimeofday(&utx.ut_tv, NULL);
-	pututxline(&utx);
 
 	/*
 	 * Also revoke the TTY here.  Because runshutdown() may reopen
@@ -1761,7 +1729,8 @@ setprocresources(const char *cname)
 	login_cap_t *lc;
 	if ((lc = login_getclassbyname(cname, NULL)) != NULL) {
 		setusercontext(lc, (struct passwd*)NULL, 0,
-		    LOGIN_SETPRIORITY | LOGIN_SETRESOURCES);
+		    LOGIN_SETPRIORITY | LOGIN_SETRESOURCES |
+		    LOGIN_SETLOGINCLASS | LOGIN_SETCPUMASK);
 		login_close(lc);
 	}
 }

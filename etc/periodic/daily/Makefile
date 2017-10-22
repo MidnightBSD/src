@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/etc/periodic/daily/Makefile 220049 2011-03-27 03:06:58Z dougb $
+# $FreeBSD: release/10.0.0/etc/periodic/daily/Makefile 255963 2013-10-01 07:19:23Z des $
 
 .include <bsd.own.mk>
 
@@ -6,10 +6,10 @@ FILES=	100.clean-disks \
 	110.clean-tmps \
 	120.clean-preserve \
 	200.backup-passwd \
-	220.backup-pkgdb \
+	210.backup-aliases \
 	330.news \
 	400.status-disks \
-	405.status-ata-raid \
+	401.status-graid \
 	406.status-gmirror \
 	407.status-graid3 \
 	408.status-gstripe \
@@ -22,10 +22,6 @@ FILES=	100.clean-disks \
 
 .if ${MK_ACCT} != "no"
 FILES+=	310.accounting
-.endif
-
-.if ${MK_BIND_NAMED} != "no"
-FILES+=	470.status-named
 .endif
 
 .if ${MK_CALENDAR} != "no"
@@ -41,7 +37,8 @@ FILES+=	480.status-ntpd
 .endif
 
 .if ${MK_PKGTOOLS} != "no"
-FILES+=	490.status-pkg-changes
+FILES+=	220.backup-pkgdb \
+	490.status-pkg-changes
 .endif
 
 .if ${MK_RCMDS} != "no"
@@ -51,7 +48,6 @@ FILES+=	140.clean-rwho \
 
 .if ${MK_SENDMAIL} != "no"
 FILES+=	150.clean-hoststat \
-	210.backup-aliases \
 	440.status-mailq \
 	460.status-mail-rejects \
 	500.queuerun

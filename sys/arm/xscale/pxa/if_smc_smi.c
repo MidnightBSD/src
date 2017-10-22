@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/pxa/if_smc_smi.c 179595 2008-06-06 05:08:09Z benno $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/pxa/if_smc_smi.c 236987 2012-06-13 04:38:09Z imp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -37,7 +37,7 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/xscale/pxa/if_smc_smi.c 179595 2008-06-06 0
 #include <machine/bus.h>
 #include <machine/resource.h>
 
-#include <net/ethernet.h> 
+#include <net/ethernet.h>
 #include <net/if.h>
 #include <net/if_arp.h>
 #include <net/if_media.h>

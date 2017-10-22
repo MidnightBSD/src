@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/sys/powerpc/powerpc/mmu_if.m 248814 2013-03-28 06:31:04Z kib $
+# $FreeBSD: release/10.0.0/sys/powerpc/powerpc/mmu_if.m 255887 2013-09-26 15:36:20Z alc $
 #
 
 #include <sys/param.h>
@@ -133,6 +133,25 @@ CODE {
 
 
 /**
+ * @brief Apply the given advice to the specified range of addresses within
+ * the given pmap.  Depending on the advice, clear the referenced and/or
+ * modified flags in each mapping and set the mapped page's dirty field.
+ *
+ * @param _pmap		physical map
+ * @param _start	virtual range start
+ * @param _end		virtual range end
+ * @param _advice	advice to apply
+ */
+METHOD void advise {
+	mmu_t		_mmu;
+	pmap_t		_pmap;
+	vm_offset_t	_start;
+	vm_offset_t	_end;
+	int		_advice;
+};
+
+
+/**
  * @brief Change the wiring attribute for the page in the given physical
  * map and virtual address.
  *
@@ -154,17 +173,6 @@ METHOD void change_wiring {
  * @param _pg		physical page
  */
 METHOD void clear_modify {
-	mmu_t		_mmu;
-	vm_page_t	_pg;
-};
-
-
-/**
- * @brief Clear the 'referenced' bit on the given physical page
- *
- * @param _pg		physical page
- */
-METHOD void clear_reference {
 	mmu_t		_mmu;
 	vm_page_t	_pg;
 };
@@ -395,7 +403,7 @@ METHOD boolean_t is_referenced {
  *
  * @retval int		count of referenced bits
  */
-METHOD boolean_t ts_referenced {
+METHOD int ts_referenced {
 	mmu_t		_mmu;
 	vm_page_t	_pg;
 };
@@ -769,7 +777,7 @@ METHOD void cpu_bootstrap {
  */
 METHOD void * mapdev {
 	mmu_t		_mmu;
-	vm_offset_t	_pa;
+	vm_paddr_t	_pa;
 	vm_size_t	_size;
 };
 
@@ -826,7 +834,7 @@ METHOD void unmapdev {
  *
  * @retval pa		physical address corresponding to mapping
  */
-METHOD vm_offset_t kextract {
+METHOD vm_paddr_t kextract {
 	mmu_t		_mmu;
 	vm_offset_t	_va;
 };
@@ -841,7 +849,7 @@ METHOD vm_offset_t kextract {
 METHOD void kenter {
 	mmu_t		_mmu;
 	vm_offset_t	_va;
-	vm_offset_t	_pa;
+	vm_paddr_t	_pa;
 };
 
 /**
@@ -868,7 +876,7 @@ METHOD void kenter_attr {
  */
 METHOD boolean_t dev_direct_mapped {
 	mmu_t		_mmu;
-	vm_offset_t	_pa;
+	vm_paddr_t	_pa;
 	vm_size_t	_size;
 };
 

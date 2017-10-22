@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/cam/cam_sim.h 236541 2012-06-04 07:03:56Z mav $
+ * $FreeBSD: release/10.0.0/sys/cam/cam_sim.h 249224 2013-04-07 06:47:44Z mav $
  */
 
 #ifndef _CAM_CAM_SIM_H
@@ -123,8 +123,8 @@ struct cam_sim {
 
 };
 
-#define CAM_SIM_LOCK(sim)	mtx_lock((sim)->mtx);
-#define CAM_SIM_UNLOCK(sim)	mtx_unlock((sim)->mtx);
+#define CAM_SIM_LOCK(sim)	mtx_lock((sim)->mtx)
+#define CAM_SIM_UNLOCK(sim)	mtx_unlock((sim)->mtx)
 
 static __inline u_int32_t
 cam_sim_path(struct cam_sim *sim)

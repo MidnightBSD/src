@@ -35,7 +35,7 @@
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/crypt.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/crypt.c 165903 2007-01-09 00:28:16Z imp $");
 
 #include <stdio.h>
 #include <string.h>

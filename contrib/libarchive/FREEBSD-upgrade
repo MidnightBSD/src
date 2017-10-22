@@ -1,10 +1,10 @@
-$FreeBSD: stable/9/contrib/libarchive/FREEBSD-upgrade 229592 2012-01-05 12:06:54Z mm $
+$FreeBSD: release/10.0.0/contrib/libarchive/FREEBSD-upgrade 238827 2012-07-27 08:28:44Z mm $
 
 libarchive
 
-The source code is pulled with svn:
+The source code is pulled with git:
 
-	svn checkout http://libarchive.googlecode.com/svn/release/2.8
+	git clone -b release git://github.com/libarchive/libarchive.git
 
 For the contrib directory files and directories were pruned by:
 	
@@ -21,4 +21,4 @@ To make local changes to libarchive, simply patch and commit to the trunk
 branch (aka HEAD).  Never make local changes on the vendor branch.
 
 mm@FreeBSD.org
-21-December-2011
+27-July-2012

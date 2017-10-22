@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/pc98/loader/Makefile 232602 2012-03-06 12:54:13Z nyan $
+# $FreeBSD: release/10.0.0/sys/boot/pc98/loader/Makefile 242688 2012-11-07 02:14:03Z dteske $
 
 .include <bsd.own.mk>
 MK_SSP=		no
@@ -88,7 +88,7 @@ FILESMODE_${LOADER}= ${BINMODE} -b
 FILES+=	loader.help loader.4th support.4th loader.conf
 FILES+= screen.4th frames.4th beastie.4th
 FILES+= brand.4th check-password.4th color.4th delay.4th
-FILES+= menu.4th menu-commands.4th shortcuts.4th version.4th
+FILES+= menu.4th menu-commands.4th menusets.4th shortcuts.4th version.4th
 FILESDIR_loader.conf=	/boot/defaults
 
 .if !exists(${DESTDIR}/boot/loader.rc)

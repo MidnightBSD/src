@@ -25,9 +25,9 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 .\" EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/lib/libc/gen/sem_wait.3 177140 2008-03-13 10:25:30Z ru $
+.\" $FreeBSD: release/10.0.0/lib/libc/gen/sem_wait.3 249567 2013-04-16 20:31:15Z joel $
 .\"
-.Dd February 15, 2000
+.Dd April 16, 2013
 .Dt SEM_WAIT 3
 .Os
 .Sh NAME
@@ -74,6 +74,13 @@ argument
 points to an invalid semaphore.
 .El
 .Pp
+Additionally,
+.Fn sem_wait
+will fail if:
+.Bl -tag -width Er
+.It Bq Er EINTR
+A signal interrupted this function.
+.El
 Additionally,
 .Fn sem_trywait
 will fail if:

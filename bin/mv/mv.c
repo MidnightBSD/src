@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)mv.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/mv/mv.c 243557 2012-11-26 05:13:57Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/mv/mv.c 248597 2013-03-21 22:44:33Z pjd $");
 
 #include <sys/types.h>
 #include <sys/acl.h>
@@ -274,40 +274,34 @@ static int
 fastcopy(const char *from, const char *to, struct stat *sbp)
 {
 	struct timeval tval[2];
-	static u_int blen;
-	static char *bp;
+	static u_int blen = MAXPHYS;
+	static char *bp = NULL;
 	mode_t oldmode;
 	int nread, from_fd, to_fd;
 
 	if ((from_fd = open(from, O_RDONLY, 0)) < 0) {
-		warn("%s", from);
+		warn("fastcopy: open() failed (from): %s", from);
 		return (1);
 	}
-	if (blen < sbp->st_blksize) {
-		if (bp != NULL)
-			free(bp);
-		if ((bp = malloc((size_t)sbp->st_blksize)) == NULL) {
-			blen = 0;
-			warnx("malloc failed");
-			return (1);
-		}
-		blen = sbp->st_blksize;
+	if (bp == NULL && (bp = malloc((size_t)blen)) == NULL) {
+		warnx("malloc(%u) failed", blen);
+		return (1);
 	}
 	while ((to_fd =
 	    open(to, O_CREAT | O_EXCL | O_TRUNC | O_WRONLY, 0)) < 0) {
 		if (errno == EEXIST && unlink(to) == 0)
 			continue;
-		warn("%s", to);
+		warn("fastcopy: open() failed (to): %s", to);
 		(void)close(from_fd);
 		return (1);
 	}
 	while ((nread = read(from_fd, bp, (size_t)blen)) > 0)
 		if (write(to_fd, bp, (size_t)nread) != nread) {
-			warn("%s", to);
+			warn("fastcopy: write() failed: %s", to);
 			goto err;
 		}
 	if (nread < 0) {
-		warn("%s", from);
+		warn("fastcopy: read() failed: %s", from);
 err:		if (unlink(to))
 			warn("%s: remove", to);
 		(void)close(from_fd);
@@ -343,7 +337,7 @@ err:		if (unlink(to))
 	 * on a file that we copied, i.e., that we didn't create.)
 	 */
 	errno = 0;
-	if (fchflags(to_fd, (u_long)sbp->st_flags))
+	if (fchflags(to_fd, sbp->st_flags))
 		if (errno != EOPNOTSUPP || sbp->st_flags != 0)
 			warn("%s: set flags (was: 0%07o)", to, sbp->st_flags);
 

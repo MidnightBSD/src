@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/lib/msun/test-logarithm.t 216214 2010-12-05 22:18:35Z das $
+# $FreeBSD: release/10.0.0/tools/regression/lib/msun/test-logarithm.t 216214 2010-12-05 22:18:35Z das $
 
 cd `dirname $0`
 

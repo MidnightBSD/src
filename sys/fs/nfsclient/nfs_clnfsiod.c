@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/fs/nfsclient/nfs_clnfsiod.c 221973 2011-05-15 20:52:43Z rmacklem $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfsclient/nfs_clnfsiod.c 249630 2013-04-18 23:20:16Z rmacklem $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -303,6 +303,14 @@ nfssvc_iod(void *instance)
 				    NULL, 0);
 		}
 		mtx_lock(&ncl_iod_mutex);
+		/*
+		 * Make sure the nmp hasn't been dismounted as soon as
+		 * ncl_doio() completes for the last buffer.
+		 */
+		nmp = ncl_iodmount[myiod];
+		if (nmp == NULL)
+			break;
+
 		/*
 		 * If there are more than one iod on this mount, then defect
 		 * so that the iods can be shared out fairly between the mounts

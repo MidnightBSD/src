@@ -67,7 +67,7 @@
 
 #include <dev/sound/pci/atiixp.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pci/atiixp.c 216518 2010-12-18 14:21:28Z tijl $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/atiixp.c 216518 2010-12-18 14:21:28Z tijl $");
 
 #define ATI_IXP_DMA_RETRY_MAX	100
 

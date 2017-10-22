@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/9/tools/tools/ath/athstats/statfoo.c 188558 2009-02-13 05:42:25Z sam $
+ * $FreeBSD: release/10.0.0/tools/tools/ath/athstats/statfoo.c 231863 2012-02-17 08:24:58Z adrian $
  */
 
 #include <stdio.h>
@@ -60,7 +60,9 @@ statfoo_setfmt(struct statfoo *sf, const char *fmt0)
 		}
 		if (j != 0)
 			sf->fmts[j++] = ' ';
-		sf->fmts[j++] = 0x80 | i;
+		sf->fmts[j++] = FMTS_IS_STAT;
+		sf->fmts[j++] = i & 0xff;
+		sf->fmts[j++] = (i >> 8) & 0xff;
 	}
 	sf->fmts[j] = '\0';
 #undef N
@@ -89,10 +91,14 @@ static void
 statfoo_print_header(struct statfoo *sf, FILE *fd)
 {
 	const unsigned char *cp;
+	int i;
+	const struct fmt *f;
 
 	for (cp = sf->fmts; *cp != '\0'; cp++) {
-		if (*cp & 0x80) {
-			const struct fmt *f = &sf->stats[*cp &~ 0x80];
+		if (*cp == FMTS_IS_STAT) {
+			i = *(++cp);
+			i |= ((int) *(++cp)) << 8;
+			f = &sf->stats[i];
 			fprintf(fd, "%*s", f->width, f->label);
 		} else
 			putc(*cp, fd);
@@ -105,11 +111,15 @@ statfoo_print_current(struct statfoo *sf, FILE *fd)
 {
 	char buf[32];
 	const unsigned char *cp;
+	int i;
+	const struct fmt *f;
 
 	for (cp = sf->fmts; *cp != '\0'; cp++) {
-		if (*cp & 0x80) {
-			const struct fmt *f = &sf->stats[*cp &~ 0x80];
-			if (sf->get_curstat(sf, *cp &~ 0x80, buf, sizeof(buf)))
+		if (*cp == FMTS_IS_STAT) {
+			i = *(++cp);
+			i |= ((int) *(++cp)) << 8;
+			f = &sf->stats[i];
+			if (sf->get_curstat(sf, i, buf, sizeof(buf)))
 				fprintf(fd, "%*s", f->width, buf);
 		} else
 			putc(*cp, fd);
@@ -122,11 +132,15 @@ statfoo_print_total(struct statfoo *sf, FILE *fd)
 {
 	char buf[32];
 	const unsigned char *cp;
+	const struct fmt *f;
+	int i;
 
 	for (cp = sf->fmts; *cp != '\0'; cp++) {
-		if (*cp & 0x80) {
-			const struct fmt *f = &sf->stats[*cp &~ 0x80];
-			if (sf->get_totstat(sf, *cp &~ 0x80, buf, sizeof(buf)))
+		if (*cp == FMTS_IS_STAT) {
+			i = *(++cp);
+			i |= ((int) *(++cp)) << 8;
+			f = &sf->stats[i];
+			if (sf->get_totstat(sf, i, buf, sizeof(buf)))
 				fprintf(fd, "%*s", f->width, buf);
 		} else
 			putc(*cp, fd);

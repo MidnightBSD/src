@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/booke/trap.c 225474 2011-09-11 16:05:09Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/booke/trap.c 240244 2012-09-08 18:27:11Z attilio $");
 
 #include "opt_fpu_emu.h"
 
@@ -143,6 +143,13 @@ trap(struct trapframe *frame)
 	int		sig, type, user;
 	ksiginfo_t	ksi;
 
+#ifdef KDB
+	if (kdb_active) {
+		kdb_reenter();
+		return;
+	}
+#endif
+
 	PCPU_INC(cnt.v_trap);
 
 	td = curthread;
@@ -242,7 +249,6 @@ trap(struct trapframe *frame)
 	}
 
 	userret(td, frame);
-	mtx_assert(&Giant, MA_NOTOWNED);
 }
 
 static void

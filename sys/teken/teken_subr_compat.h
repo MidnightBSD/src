@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/teken/teken_subr_compat.h 214817 2010-11-05 00:56:21Z ed $
+ * $FreeBSD: release/10.0.0/sys/teken/teken_subr_compat.h 214817 2010-11-05 00:56:21Z ed $
  */
 
 static void

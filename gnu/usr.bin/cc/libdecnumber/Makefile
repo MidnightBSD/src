@@ -1,4 +1,6 @@
-# $FreeBSD: stable/9/gnu/usr.bin/cc/libdecnumber/Makefile 169718 2007-05-19 04:25:59Z kan $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/cc/libdecnumber/Makefile 245539 2013-01-17 05:56:28Z andrew $
+
+.include <bsd.own.mk>
 
 # Use our headers in preference to ones from ../cc_tools.
 CFLAGS+=	-I${.CURDIR} -I.

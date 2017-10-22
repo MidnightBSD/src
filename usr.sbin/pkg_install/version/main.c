@@ -1,5 +1,5 @@
 /*
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/version/main.c 222035 2011-05-17 19:11:47Z flz $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg_install/version/main.c 241830 2012-10-22 02:12:20Z eadler $");
 
 
 #include <getopt.h>
@@ -58,6 +58,7 @@ main(int argc, char **argv)
 {
     int ch, cmp = 0;
 
+    warnpkgng();
     if (argc == 4 && !strcmp(argv[1], "-t")) {
 	cmp = version_cmp(argv[2], argv[3]);
 	printf(cmp > 0 ? ">\n" : (cmp < 0 ? "<\n" : "=\n"));

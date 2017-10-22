@@ -32,7 +32,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/getfacl/getfacl.c 196827 2009-09-04 10:22:29Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/getfacl/getfacl.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -48,7 +48,7 @@ __FBSDID("$FreeBSD: stable/9/bin/getfacl/getfacl.c 196827 2009-09-04 10:22:29Z t
 #include <string.h>
 #include <unistd.h>
 
-int	more_than_one = 0;
+static int more_than_one = 0;
 
 static void
 usage(void)

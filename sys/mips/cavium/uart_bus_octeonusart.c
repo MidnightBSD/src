@@ -35,7 +35,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/uart_bus_octeonusart.c 217573 2011-01-19 07:06:28Z jmallett $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/uart_bus_octeonusart.c 237687 2012-06-28 06:49:04Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -61,10 +61,7 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/cavium/uart_bus_octeonusart.c 217573 2011-
 
 extern struct uart_class uart_oct16550_class;
 
-
 static int uart_octeon_probe(device_t dev);
-
-extern struct uart_class octeon_uart_class;
 
 static device_method_t uart_octeon_methods[] = {
 	/* Device interface */

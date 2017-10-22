@@ -52,7 +52,7 @@
 /*%
  *	@(#)inet.h	8.1 (Berkeley) 6/2/93
  *	$Id: inet.h,v 1.2.18.1 2005/04/27 05:00:50 sra Exp $
- * $FreeBSD: stable/9/include/arpa/inet.h 209715 2010-07-06 03:48:46Z maxim $
+ * $FreeBSD: release/10.0.0/include/arpa/inet.h 209715 2010-07-06 03:48:46Z maxim $
  */
 
 #ifndef _ARPA_INET_H_

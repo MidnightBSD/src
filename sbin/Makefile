@@ -1,12 +1,11 @@
 #	@(#)Makefile	8.5 (Berkeley) 3/31/94
-# $FreeBSD: stable/9/sbin/Makefile 219738 2011-03-18 12:18:52Z ume $
+# $FreeBSD: release/10.0.0/sbin/Makefile 249083 2013-04-04 07:12:24Z mav $
 
 .include <bsd.own.mk>
 
 # XXX MISSING:		icheck ncheck
 
 SUBDIR=adjkerntz \
-	atacontrol \
 	badsect \
 	camcontrol \
 	ccdconfig \
@@ -20,6 +19,7 @@ SUBDIR=adjkerntz \
 	dump \
 	dumpfs \
 	dumpon \
+	etherswitchcfg \
 	ffsinfo \
 	fsck \
 	fsck_ffs \
@@ -48,9 +48,9 @@ SUBDIR=adjkerntz \
 	mksnap_ffs \
 	mount \
 	mount_cd9660 \
+	mount_fusefs \
 	mount_msdosfs \
 	mount_nfs \
-	mount_ntfs \
 	mount_nullfs \
 	mount_udf \
 	mount_unionfs \
@@ -89,6 +89,11 @@ SUBDIR+=	ipf
 .if ${MK_IPFW} != "no"
 SUBDIR+=	ipfw
 SUBDIR+=	natd
+.endif
+
+.if ${MK_NAND} != "no"
+SUBDIR+=	nandfs
+SUBDIR+=	newfs_nandfs
 .endif
 
 .if ${MK_PF} != "no"

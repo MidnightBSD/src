@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/ia64/ski/skiload.cmd 135695 2004-09-24 03:51:06Z marcel $
+# $FreeBSD: release/10.0.0/sys/boot/ia64/ski/skiload.cmd 135695 2004-09-24 03:51:06Z marcel $
 iar
 fr
 pa

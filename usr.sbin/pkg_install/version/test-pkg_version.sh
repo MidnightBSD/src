@@ -29,7 +29,7 @@
 # Regression testing for pkg_version
 # Originally from an idea by "Akinori MUSHA" <knu@iDaemons.org>
 #
-# $FreeBSD: stable/9/usr.sbin/pkg_install/version/test-pkg_version.sh 151200 2005-10-10 12:35:31Z krion $
+# $FreeBSD: release/10.0.0/usr.sbin/pkg_install/version/test-pkg_version.sh 151200 2005-10-10 12:35:31Z krion $
 #
 
 ECHO=echo

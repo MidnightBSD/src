@@ -13,7 +13,7 @@
  * bad that happens because of using this software isn't the responsibility
  * of the author.  This software is distributed AS-IS.
  *
- * $FreeBSD: stable/9/sys/sys/aio.h 189822 2009-03-14 19:17:00Z das $
+ * $FreeBSD: release/10.0.0/sys/sys/aio.h 251526 2013-06-08 13:27:57Z glebius $
  */
 
 #ifndef _SYS_AIO_H_
@@ -37,6 +37,7 @@
 #define	LIO_READ		0x2
 #ifdef _KERNEL
 #define	LIO_SYNC		0x3
+#define	LIO_MLOCK		0x4
 #endif
 
 /*
@@ -123,6 +124,11 @@ int	aio_cancel(int, struct aiocb *);
  * Suspend until all specified I/O or timeout is complete.
  */
 int	aio_suspend(const struct aiocb * const[], int, const struct timespec *);
+
+/*
+ * Asynchronous mlock
+ */
+int	aio_mlock(struct aiocb *);
 
 #ifdef __BSD_VISIBLE
 int	aio_waitcomplete(struct aiocb **, struct timespec *);

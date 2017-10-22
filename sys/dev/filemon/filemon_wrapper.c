@@ -26,7 +26,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/filemon/filemon_wrapper.c 242142 2012-10-26 16:07:53Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/filemon/filemon_wrapper.c 253977 2013-08-06 02:14:30Z hrs $");
+
+#include "opt_compat.h"
 
 #if __FreeBSD_version > 800032
 #define FILEMON_HAS_LINKAT
@@ -572,6 +574,7 @@ filemon_wrapper_sys_exit(struct thread *td, struct sys_exit_args *uap)
 			    (uintmax_t)now.tv_sec, (uintmax_t)now.tv_usec);
 
 			filemon_output(filemon, filemon->msgbufr, len);
+			filemon->pid = -1;
 		}
 
 		/* Unlock the found filemon structure. */
@@ -655,12 +658,10 @@ filemon_wrapper_vfork(struct thread *td, struct vfork_args *uap)
 static void
 filemon_wrapper_install(void)
 {
-#if defined(__i386__)
-	struct sysent *sv_table = elf32_freebsd_sysvec.sv_table;
-#elif defined(__amd64__)
+#if defined(__LP64__)
 	struct sysent *sv_table = elf64_freebsd_sysvec.sv_table;
 #else
-#error Machine type not supported
+	struct sysent *sv_table = elf32_freebsd_sysvec.sv_table;
 #endif
 
 	sv_table[SYS_chdir].sy_call = (sy_call_t *) filemon_wrapper_chdir;
@@ -701,12 +702,10 @@ filemon_wrapper_install(void)
 static void
 filemon_wrapper_deinstall(void)
 {
-#if defined(__i386__)
-	struct sysent *sv_table = elf32_freebsd_sysvec.sv_table;
-#elif defined(__amd64__)
+#if defined(__LP64__)
 	struct sysent *sv_table = elf64_freebsd_sysvec.sv_table;
 #else
-#error Machine type not supported
+	struct sysent *sv_table = elf32_freebsd_sysvec.sv_table;
 #endif
 
 	sv_table[SYS_chdir].sy_call = (sy_call_t *)sys_chdir;

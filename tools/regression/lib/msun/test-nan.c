@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/msun/test-nan.c 174685 2007-12-16 21:19:51Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/msun/test-nan.c 174685 2007-12-16 21:19:51Z das $");
 
 #include <assert.h>
 #include <fenv.h>

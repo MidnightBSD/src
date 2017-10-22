@@ -39,7 +39,7 @@
 static const char sccsid[] = "@(#)pw_util.c	8.3 (Berkeley) 4/2/94";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/lib/libutil/pw_util.c 237778 2012-06-29 13:00:28Z bapt $";
+  "$FreeBSD: release/10.0.0/lib/libutil/pw_util.c 244744 2012-12-27 20:24:44Z bapt $";
 #endif /* not lint */
 
 /*
@@ -179,11 +179,8 @@ pw_lock(void)
 	for (;;) {
 		struct stat st;
 
-		lockfd = open(masterpasswd, O_RDONLY, 0);
-		if (lockfd < 0 || fcntl(lockfd, F_SETFD, 1) == -1)
-			err(1, "%s", masterpasswd);
-		/* XXX vulnerable to race conditions */
-		if (flock(lockfd, LOCK_EX|LOCK_NB) == -1) {
+		lockfd = flopen(masterpasswd, O_RDONLY|O_NONBLOCK|O_CLOEXEC, 0);
+		if (lockfd == -1) {
 			if (errno == EWOULDBLOCK) {
 				errx(1, "the password db file is busy");
 			} else {
@@ -347,7 +344,8 @@ pw_edit(int notsetuid)
 	sigprocmask(SIG_SETMASK, &oldsigset, NULL);
 	if (stat(tempname, &st2) == -1)
 		return (-1);
-	return (st1.st_mtime != st2.st_mtime);
+	return (st1.st_mtim.tv_sec != st2.st_mtim.tv_sec ||
+	    st1.st_mtim.tv_nsec != st2.st_mtim.tv_nsec);
 }
 
 /*

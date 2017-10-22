@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/mem/memdev.c 217515 2011-01-17 22:58:28Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mem/memdev.c 252841 2013-07-05 21:31:16Z jamie $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -37,6 +37,7 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/mem/memdev.c 217515 2011-01-17 22:58:28Z jk
 #include <sys/memrange.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/signalvar.h>
 #include <sys/systm.h>
@@ -67,8 +68,14 @@ memopen(struct cdev *dev __unused, int flags, int fmt __unused,
 {
 	int error = 0;
 
-	if (flags & FWRITE)
-		error = securelevel_gt(td->td_ucred, 0);
+	if (flags & FREAD)
+		error = priv_check(td, PRIV_KMEM_READ);
+	if (flags & FWRITE) {
+		if (error == 0)
+			error = priv_check(td, PRIV_KMEM_WRITE);
+		if (error == 0)
+			error = securelevel_gt(td->td_ucred, 0);
+	}
 
 	return (error);
 }

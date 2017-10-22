@@ -13,7 +13,7 @@
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .\" $OpenBSD: strtonum.3,v 1.13 2006/04/25 05:15:42 tedu Exp $
-.\" $FreeBSD: stable/9/lib/libc/stdlib/strtonum.3 214200 2010-10-22 08:51:49Z bcr $
+.\" $FreeBSD: release/10.0.0/lib/libc/stdlib/strtonum.3 254483 2013-08-18 10:33:46Z pjd $
 .\"
 .Dd April 29, 2004
 .Dt STRTONUM 3
@@ -97,7 +97,7 @@ int iterations;
 const char *errstr;
 
 iterations = strtonum(optarg, 1, 64, &errstr);
-if (errstr)
+if (errstr != NULL)
 	errx(1, "number of iterations is %s: %s", errstr, optarg);
 .Ed
 .Pp

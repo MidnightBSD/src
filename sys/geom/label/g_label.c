@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/label/g_label.c 244547 2012-12-21 18:25:05Z jh $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/label/g_label.c 249508 2013-04-15 16:09:24Z ivoras $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -34,8 +34,10 @@ __FBSDID("$FreeBSD: stable/9/sys/geom/label/g_label.c 244547 2012-12-21 18:25:05
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/bio.h>
+#include <sys/ctype.h>
 #include <sys/malloc.h>
 #include <sys/libkern.h>
+#include <sys/sbuf.h>
 #include <sys/sysctl.h>
 #include <geom/geom.h>
 #include <geom/geom_slice.h>
@@ -87,6 +89,7 @@ const struct g_label_desc *g_labels[] = {
 	&g_label_ntfs,
 	&g_label_gpt,
 	&g_label_gpt_uuid,
+	&g_label_disk_ident,
 	NULL
 };
 
@@ -136,6 +139,26 @@ g_label_is_name_ok(const char *label)
 	if ((s = strstr(label, "/..")) != NULL && s[3] == '\0')
 		return (0);
 	return (1);
+}
+
+static void
+g_label_mangle_name(char *label, size_t size)
+{
+	struct sbuf *sb;
+	const u_char *c;
+
+	sb = sbuf_new(NULL, NULL, size, SBUF_FIXEDLEN);
+	for (c = label; *c != '\0'; c++) {
+		if (!isprint(*c) || isspace(*c) || *c =='"' || *c == '%')
+			sbuf_printf(sb, "%%%02X", *c);
+		else
+			sbuf_putc(sb, *c);
+	}
+	if (sbuf_finish(sb) != 0)
+		label[0] = '\0';
+	else
+		strlcpy(label, sbuf_data(sb), size);
+	sbuf_delete(sb);
 }
 
 static struct g_geom *
@@ -317,12 +340,13 @@ g_label_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 		    pp->mediasize - pp->sectorsize);
 	} while (0);
 	for (i = 0; g_labels[i] != NULL; i++) {
-		char label[64];
+		char label[128];
 
 		if (g_labels[i]->ld_enabled == 0)
 			continue;
 		g_topology_unlock();
 		g_labels[i]->ld_taste(cp, label, sizeof(label));
+		g_label_mangle_name(label, sizeof(label));
 		g_topology_lock();
 		if (label[0] == '\0')
 			continue;

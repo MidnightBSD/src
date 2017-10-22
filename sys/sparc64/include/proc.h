@@ -28,7 +28,7 @@
  *
  *      from: @(#)proc.h        7.1 (Berkeley) 5/15/91
  *	from: FreeBSD: src/sys/i386/include/proc.h,v 1.11 2001/06/29
- * $FreeBSD: stable/9/sys/sparc64/include/proc.h 229376 2012-01-03 09:43:26Z kib $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/proc.h 255937 2013-09-29 13:09:25Z marius $
  */
 
 #ifndef	_MACHINE_PROC_H_
@@ -54,6 +54,17 @@ struct mdproc {
 #define	KINFO_PROC_SIZE 1088
 
 #ifdef _KERNEL
+
+#include <machine/pcb.h>
+
+/* Get the current kernel thread stack usage. */
+#define	GET_STACK_USAGE(total, used) do {				\
+	struct thread *td = curthread;					\
+	(total) = td->td_kstack_pages * PAGE_SIZE - sizeof(struct pcb);	\
+	(used) = (char *)td->td_kstack +				\
+	    td->td_kstack_pages * PAGE_SIZE -				\
+	    (char *)&td;						\
+} while (0)
 
 struct syscall_args {
 	u_int code;

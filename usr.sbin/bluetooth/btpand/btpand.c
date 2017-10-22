@@ -25,7 +25,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/usr.sbin/bluetooth/btpand/btpand.c 192308 2009-05-18 16:00:18Z emax $ */
+/* $FreeBSD: release/10.0.0/usr.sbin/bluetooth/btpand/btpand.c 192308 2009-05-18 16:00:18Z emax $ */
 
 #include <sys/cdefs.h>
 __COPYRIGHT("@(#) Copyright (c) 2008 Iain Hibbert. All rights reserved.");

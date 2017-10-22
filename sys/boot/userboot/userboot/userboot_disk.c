@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/userboot/userboot/userboot_disk.c 243243 2012-11-18 17:09:29Z ae $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/userboot/userboot/userboot_disk.c 241809 2012-10-21 12:14:58Z ae $");
 
 /*
  * Userboot disk image handling.

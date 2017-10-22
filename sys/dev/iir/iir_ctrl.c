@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/iir/iir_ctrl.c 200045 2009-12-02 20:24:37Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/iir/iir_ctrl.c 254379 2013-08-15 20:03:22Z jkim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -273,7 +273,7 @@ iir_ioctl(struct cdev *dev, u_long cmd, caddr_t cmdarg, int flags, struct thread
                 return (ENXIO);
             /* only RP controllers */
             p->ext_type = 0x6000 | gdt->sc_device;
-            if (gdt->sc_vendor == INTEL_VENDOR_ID) {
+            if (gdt->sc_vendor == INTEL_VENDOR_ID_IIR) {
                 p->oem_id = OEM_ID_INTEL;
                 p->type = 0xfd;
                 /* new -> subdevice into ext_type */

@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/nvram2env/nvram2env.c 220292 2011-04-03 11:55:48Z adrian $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/nvram2env/nvram2env.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -303,7 +303,8 @@ static device_method_t nvram2env_methods[] = {
 	DEVMETHOD(device_identify, 	nvram2env_identify),
 	DEVMETHOD(device_probe,		nvram2env_probe),
 	DEVMETHOD(device_attach,	nvram2env_attach),
-	{0, 0},
+
+	DEVMETHOD_END
 };
 
 static driver_t nvram2env_driver = {

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpi_support/acpi_toshiba.c 193530 2009-06-05 18:44:36Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpi_support/acpi_toshiba.c 249816 2013-04-23 18:30:33Z jkim $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -172,7 +172,7 @@ static device_method_t acpi_toshiba_methods[] = {
 	DEVMETHOD(device_attach,	acpi_toshiba_attach),
 	DEVMETHOD(device_detach,	acpi_toshiba_detach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t acpi_toshiba_driver = {
@@ -190,7 +190,7 @@ static device_method_t acpi_toshiba_video_methods[] = {
 	DEVMETHOD(device_probe,		acpi_toshiba_video_probe),
 	DEVMETHOD(device_attach,	acpi_toshiba_video_attach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t acpi_toshiba_video_driver = {
@@ -324,7 +324,7 @@ hci_force_fan(ACPI_HANDLE h, int op, UINT32 *state)
 
 	ACPI_SERIAL_ASSERT(toshiba);
 	if (op == HCI_SET) {
-		if (*state < 0 || *state > 1)
+		if (*state > 1)
 			return (EINVAL);
 		*state <<= HCI_FAN_SHIFT;
 	}
@@ -368,7 +368,7 @@ hci_lcd_brightness(ACPI_HANDLE h, int op, UINT32 *brightness)
 
 	ACPI_SERIAL_ASSERT(toshiba);
 	if (op == HCI_SET) {
-		if (*brightness < 0 || *brightness > HCI_LCD_BRIGHTNESS_MAX)
+		if (*brightness > HCI_LCD_BRIGHTNESS_MAX)
 			return (EINVAL);
 		*brightness <<= HCI_LCD_BRIGHTNESS_SHIFT;
 	}
@@ -384,7 +384,7 @@ hci_lcd_backlight(ACPI_HANDLE h, int op, UINT32 *backlight)
 
 	ACPI_SERIAL_ASSERT(toshiba);
 	if (op == HCI_SET) {
-		if (*backlight < 0 || *backlight > 1)
+		if (*backlight > 1)
 			return (EINVAL);
 	}
 	return (hci_call(h, op, HCI_REG_LCD_BACKLIGHT, backlight));
@@ -397,7 +397,7 @@ hci_cpu_speed(ACPI_HANDLE h, int op, UINT32 *speed)
 
 	ACPI_SERIAL_ASSERT(toshiba);
 	if (op == HCI_SET) {
-		if (*speed < 0 || *speed > HCI_CPU_SPEED_MAX)
+		if (*speed > HCI_CPU_SPEED_MAX)
 			return (EINVAL);
 		*speed <<= HCI_CPU_SPEED_SHIFT;
 	}

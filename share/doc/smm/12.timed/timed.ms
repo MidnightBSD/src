@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/9/share/doc/smm/12.timed/timed.ms 216178 2010-12-04 10:11:20Z uqs $
+.\" $FreeBSD: release/10.0.0/share/doc/smm/12.timed/timed.ms 216178 2010-12-04 10:11:20Z uqs $
 .\"
 .\" Copyright (c) 1986, 1993
 .\"	The Regents of the University of California.  All rights reserved.

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/rt305x/rt305x_gpio.c 220297 2011-04-03 14:39:55Z adrian $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/rt305x/rt305x_gpio.c 249449 2013-04-13 21:21:13Z dim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -242,8 +242,8 @@ rt305x_gpio_pin_setflags(device_t dev, uint32_t pin, uint32_t flags)
 	if (i >= sc->gpio_npins)
 		return (EINVAL);
 
-	/* Filter out unwanted flags */
-	if ((flags &= sc->gpio_pins[i].gp_caps) != flags)
+	/* Check for unwanted flags. */
+	if ((flags & sc->gpio_pins[i].gp_caps) != flags)
 		return (EINVAL);
 
 	/* Can't mix input/output together */
@@ -447,8 +447,7 @@ rt305x_gpio_attach(device_t dev)
 	KASSERT((device_get_unit(dev) == 0),
 	    ("rt305x_gpio_gpio: Only one gpio module supported"));
 
-	mtx_init(&sc->gpio_mtx, device_get_nameunit(dev), MTX_NETWORK_LOCK,
-	    MTX_DEF);
+	mtx_init(&sc->gpio_mtx, device_get_nameunit(dev), NULL, MTX_DEF);
 
 	/* Map control/status registers. */
 	sc->gpio_mem_rid = 0;

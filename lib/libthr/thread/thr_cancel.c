@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/thread/thr_cancel.c 213153 2010-09-25 01:57:47Z davidxu $
+ * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_cancel.c 251985 2013-06-19 04:47:41Z kib $
  *
  */
 
@@ -87,7 +87,8 @@ _pthread_setcancelstate(int state, int *oldstate)
 		break;
 	case PTHREAD_CANCEL_ENABLE:
 		curthread->cancel_enable = 1;
-		testcancel(curthread);
+		if (curthread->cancel_async)
+			testcancel(curthread);
 		break;
 	default:
 		return (EINVAL);

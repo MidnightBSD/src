@@ -28,7 +28,7 @@
  * Platform (FreeBSD) dependent common attachment code for Qlogic adapters.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/isp/isp_freebsd.c 240713 2012-09-19 22:24:09Z mjacob $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isp/isp_freebsd.c 254372 2013-08-15 16:41:27Z ken $");
 #include <dev/isp/isp_freebsd.h>
 #include <sys/unistd.h>
 #include <sys/kthread.h>
@@ -4140,8 +4140,6 @@ isp_target_thread(ispsoftc_t *isp, int chan)
 		return;
 	}
 
-	ccb = xpt_alloc_ccb();
-
 	ISP_LOCK(isp);
 	status = cam_periph_alloc(isptargctor, NULL, isptargdtor, isptargstart, "isptarg", CAM_PERIPH_BIO, wpath, NULL, 0, softc);
 	if (status != CAM_REQ_CMP) {
@@ -4556,7 +4554,8 @@ isp_make_here(ispsoftc_t *isp, int chan, int tgt)
 		isp_prt(isp, ISP_LOGWARN, "Chan %d unable to alloc CCB for rescan", chan);
 		return;
 	}
-	if (xpt_create_path(&ccb->ccb_h.path, xpt_periph, cam_sim_path(fc->sim), tgt, CAM_LUN_WILDCARD) != CAM_REQ_CMP) {
+	if (xpt_create_path(&ccb->ccb_h.path, NULL, cam_sim_path(fc->sim),
+	    tgt, CAM_LUN_WILDCARD) != CAM_REQ_CMP) {
 		isp_prt(isp, ISP_LOGWARN, "unable to create path for rescan");
 		xpt_free_ccb(ccb);
 		return;
@@ -5446,11 +5445,16 @@ isp_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->max_target = ISP_MAX_TARGETS(isp) - 1;
 		cpi->max_lun = ISP_MAX_LUNS(isp) - 1;
 		cpi->bus_id = cam_sim_bus(sim);
+		if (isp->isp_osinfo.sixtyfourbit)
+			cpi->maxio = (ISP_NSEG64_MAX - 1) * PAGE_SIZE;
+		else
+			cpi->maxio = (ISP_NSEG_MAX - 1) * PAGE_SIZE;
+
 		bus = cam_sim_bus(xpt_path_sim(cpi->ccb_h.path));
 		if (IS_FC(isp)) {
 			fcparam *fcp = FCPARAM(isp, bus);
 
-			cpi->hba_misc = PIM_NOBUSRESET;
+			cpi->hba_misc = PIM_NOBUSRESET | PIM_UNMAPPED;
 
 			/*
 			 * Because our loop ID can shift from time to time,
@@ -5480,7 +5484,7 @@ isp_action(struct cam_sim *sim, union ccb *ccb)
 		} else {
 			sdparam *sdp = SDPARAM(isp, bus);
 			cpi->hba_inquiry = PI_SDTR_ABLE|PI_TAG_ABLE|PI_WIDE_16;
-			cpi->hba_misc = 0;
+			cpi->hba_misc = PIM_UNMAPPED;
 			cpi->initiator_id = sdp->isp_initiator_id;
 			cpi->base_transfer_speed = 3300;
 			cpi->transport = XPORT_SPI;

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libiconv_modules/HZ/citrus_hz.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libiconv_modules/HZ/citrus_hz.c 252583 2013-07-03 18:27:45Z peter $ */
 /* $NetBSD: citrus_hz.c,v 1.2 2008/06/14 16:01:07 tnozaki Exp $ */
 
 /*-
@@ -173,13 +173,13 @@ _citrus_HZ_unpack_state(_HZEncodingInfo * __restrict ei __unused,
 
 static int
 _citrus_HZ_mbrtowc_priv(_HZEncodingInfo * __restrict ei,
-    wchar_t * __restrict pwc, char ** __restrict s, size_t n,
+    wchar_t * __restrict pwc, const char ** __restrict s, size_t n,
     _HZState * __restrict psenc, size_t * __restrict nresult)
 {
 	escape_t *candidate, *init;
 	graphic_t *graphic;
 	const range_t *range;
-	char *s0;
+	const char *s0;
 	wchar_t wc;
 	int bit, ch, head, len, tail;
 

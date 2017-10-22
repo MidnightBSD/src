@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)rec_open.c	8.10 (Berkeley) 9/1/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/db/recno/rec_open.c 189327 2009-03-04 00:58:04Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/db/recno/rec_open.c 189327 2009-03-04 00:58:04Z delphij $");
 
 #include "namespace.h"
 #include <sys/types.h>

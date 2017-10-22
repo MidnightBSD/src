@@ -36,26 +36,13 @@
  *	from: Utah Hdr: pcb.h 1.13 89/04/23
  *	from: @(#)pcb.h 8.1 (Berkeley) 6/10/93
  *	JNPR: pcb.h,v 1.2 2006/08/07 11:51:17 katta
- * $FreeBSD: stable/9/sys/mips/include/pcb.h 235539 2012-05-17 10:25:34Z dim $
+ * $FreeBSD: release/10.0.0/sys/mips/include/pcb.h 249882 2013-04-25 06:29:23Z imp $
  */
 
 #ifndef _MACHINE_PCB_H_
 #define	_MACHINE_PCB_H_
 
-#include <machine/frame.h>
-
 /*
- * MIPS process control block
- */
-struct pcb
-{
-	struct trapframe pcb_regs;	/* saved CPU and registers */
-	__register_t pcb_context[14];	/* kernel context for resume */
-	void *pcb_onfault;		/* for copyin/copyout faults */
-	register_t pcb_tpc;
-};
-
-/* these match the regnum's in regnum.h
  * used by switch.S
  */
 #define	PCB_REG_S0	0
@@ -73,12 +60,26 @@ struct pcb
 #define	PCB_REG_GP	12
 #define	PCB_REG_PC	13
 
+#ifndef LOCORE
+#include <machine/frame.h>
+
+/*
+ * MIPS process control block
+ */
+struct pcb
+{
+	struct trapframe pcb_regs;	/* saved CPU and registers */
+	__register_t pcb_context[14];	/* kernel context for resume */
+	void *pcb_onfault;		/* for copyin/copyout faults */
+	register_t pcb_tpc;
+};
 
 #ifdef _KERNEL
 extern struct pcb *curpcb;		/* the current running pcb */
 
 void makectx(struct trapframe *, struct pcb *);
 int savectx(struct pcb *) __returns_twice;
+#endif
 #endif
 
 #endif	/* !_MACHINE_PCB_H_ */

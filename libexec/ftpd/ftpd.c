@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)ftpd.c	8.4 (Berkeley) 4/16/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/libexec/ftpd/ftpd.c 228843 2011-12-23 15:00:37Z cperciva $");
+__FBSDID("$FreeBSD: release/10.0.0/libexec/ftpd/ftpd.c 228843 2011-12-23 15:00:37Z cperciva $");
 
 /*
  * FTP server.

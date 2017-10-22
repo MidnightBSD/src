@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/i80321/i80321_space.c 164824 2006-12-02 13:37:29Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/i80321/i80321_space.c 254025 2013-08-07 06:21:20Z jeff $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -279,7 +279,7 @@ i80321_io_bs_alloc(void *t, bus_addr_t rstart, bus_addr_t rend,
 	panic("i80321_io_bs_alloc(): not implemented");
 }
 
-void    
+void
 i80321_io_bs_free(void *t, bus_space_handle_t bsh, bus_size_t size)
 {
 
@@ -299,7 +299,7 @@ i80321_mem_bs_map(void *t, bus_addr_t bpa, bus_size_t size, int flags,
 	endpa = round_page(bpa + size);
 
 	*bshp = (vm_offset_t)pmap_mapdev(pa, endpa - pa);
-		       
+		
 	return (0);
 }
 
@@ -312,7 +312,7 @@ i80321_mem_bs_unmap(void *t, bus_space_handle_t h, bus_size_t size)
 	endva = va + round_page(size);
 
 	/* Free the kernel virtual mapping. */
-	kmem_free(kernel_map, va, endva - va);
+	kva_free(va, endva - va);
 }
 
 int
@@ -324,7 +324,7 @@ i80321_mem_bs_alloc(void *t, bus_addr_t rstart, bus_addr_t rend,
 	panic("i80321_mem_bs_alloc(): not implemented");
 }
 
-void    
+void
 i80321_mem_bs_free(void *t, bus_space_handle_t bsh, bus_size_t size)
 {
 

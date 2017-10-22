@@ -28,7 +28,7 @@
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" Manual page, using -mandoc macros
-.\" $FreeBSD: stable/9/lib/libc/gen/arc4random.3 180688 2008-07-22 11:33:49Z ache $
+.\" $FreeBSD: release/10.0.0/lib/libc/gen/arc4random.3 231564 2012-02-12 18:29:56Z ed $
 .\"
 .Dd April 15, 1997
 .Dt ARC4RANDOM 3
@@ -44,12 +44,12 @@
 .Lb libc
 .Sh SYNOPSIS
 .In stdlib.h
-.Ft u_int32_t
+.Ft uint32_t
 .Fn arc4random "void"
 .Ft void
 .Fn arc4random_buf "void *buf" "size_t nbytes"
-.Ft u_int32_t
-.Fn arc4random_uniform "u_int32_t upper_bound"
+.Ft uint32_t
+.Fn arc4random_uniform "uint32_t upper_bound"
 .Ft void
 .Fn arc4random_stir "void"
 .Ft void

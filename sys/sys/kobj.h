@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/sys/sys/kobj.h 227711 2011-11-19 12:55:32Z marius $
+ *	$FreeBSD: release/10.0.0/sys/sys/kobj.h 227537 2011-11-15 20:11:03Z marius $
  */
 
 #ifndef _SYS_KOBJ_H_
@@ -34,7 +34,7 @@
  */
 typedef struct kobj		*kobj_t;
 typedef struct kobj_class	*kobj_class_t;
-typedef struct kobj_method	kobj_method_t;
+typedef const struct kobj_method kobj_method_t;
 typedef int			(*kobjop_t)(void);
 typedef struct kobj_ops		*kobj_ops_t;
 typedef struct kobjop_desc	*kobjop_desc_t;
@@ -86,7 +86,7 @@ struct kobj_ops {
 
 struct kobjop_desc {
 	unsigned int	id;		/* unique ID */
-	kobj_method_t	*deflt;		/* default implementation */
+	kobj_method_t	deflt;		/* default implementation */
 };
 
 /*

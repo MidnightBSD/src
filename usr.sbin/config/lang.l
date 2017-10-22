@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)lang.l	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/9/usr.sbin/config/lang.l 215676 2010-11-22 14:16:22Z brucec $
+ * $FreeBSD: release/10.0.0/usr.sbin/config/lang.l 250926 2013-05-23 05:42:35Z jkim $
  */
 
 #include <assert.h>
@@ -37,9 +37,6 @@
 #include <string.h>
 #include "y.tab.h"
 #include "config.h"
-
-#define YY_NO_UNPUT
-#define YY_NO_INPUT
 
 /*
  * Data for returning to previous files from include files.
@@ -96,7 +93,12 @@ unsigned int octal(const char *);
 unsigned int hex(const char *);
 int yyerror(const char *);
 
+#define YY_DECL int yylex(void)
 %}
+
+%option nounput
+%option noinput
+
 ID	[A-Za-z_][-A-Za-z_0-9]*
 PATH	[./][-/.%^A-Za-z_0-9]+
 %START TOEOL

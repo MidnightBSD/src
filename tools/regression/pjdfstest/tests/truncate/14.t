@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/truncate/14.t 166065 2007-01-17 01:42:12Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/truncate/14.t 166065 2007-01-17 01:42:12Z pjd $
 
 desc="truncate returns EFAULT if the path argument points outside the process's allocated address space"
 

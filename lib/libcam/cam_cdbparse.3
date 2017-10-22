@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/lib/libcam/cam_cdbparse.3 213573 2010-10-08 12:40:16Z uqs $
+.\" $FreeBSD: release/10.0.0/lib/libcam/cam_cdbparse.3 231564 2012-02-12 18:29:56Z ed $
 .\"
 .\" This man page borrows heavily from the old scsi(3) man page, which had
 .\" the following copyright:
@@ -83,9 +83,9 @@
 .Ft int
 .Fo csio_build
 .Fa "struct ccb_scsiio *csio"
-.Fa "u_int8_t *data_ptr"
-.Fa "u_int32_t dxfer_len"
-.Fa "u_int32_t flags"
+.Fa "uint8_t *data_ptr"
+.Fa "uint32_t dxfer_len"
+.Fa "uint32_t flags"
 .Fa "int retry_count"
 .Fa "int timeout"
 .Fa "const char *cmd_spec"
@@ -94,9 +94,9 @@
 .Ft int
 .Fo csio_build_visit
 .Fa "struct ccb_scsiio *csio"
-.Fa "u_int8_t *data_ptr"
-.Fa "u_int32_t dxfer_len"
-.Fa "u_int32_t flags"
+.Fa "uint8_t *data_ptr"
+.Fa "uint32_t dxfer_len"
+.Fa "uint32_t flags"
 .Fa "int retry_count"
 .Fa "int timeout"
 .Fa "const char *cmd_spec"
@@ -122,14 +122,14 @@
 .Fc
 .Ft int
 .Fo buff_decode
-.Fa "u_int8_t *buff"
+.Fa "uint8_t *buff"
 .Fa "size_t len"
 .Fa "const char *fmt"
 .Fa "..."
 .Fc
 .Ft int
 .Fo buff_decode_visit
-.Fa "u_int8_t *buff"
+.Fa "uint8_t *buff"
 .Fa "size_t len"
 .Fa "const char *fmt"
 .Fa "void (*arg_put)(void *, int, void *, int, char *)"
@@ -150,7 +150,7 @@
 .Fc
 .Ft int
 .Fo buff_encode_visit
-.Fa "u_int8_t *buff"
+.Fa "uint8_t *buff"
 .Fa "size_t len"
 .Fa "const char *fmt"
 .Fa "int (*arg_get)(void *hook, char *field_name)"

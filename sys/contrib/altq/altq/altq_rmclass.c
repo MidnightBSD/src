@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sys/contrib/altq/altq/altq_rmclass.c 219457 2011-03-10 18:49:15Z jkim $	*/
+/*	$FreeBSD: release/10.0.0/sys/contrib/altq/altq/altq_rmclass.c 240784 2012-09-21 19:18:39Z rpaulo $	*/
 /*	$KAME: altq_rmclass.c,v 1.19 2005/04/13 03:44:25 suz Exp $	*/
 
 /*
@@ -35,10 +35,9 @@
  *
  * LBL code modified by speer@eng.sun.com, May 1977.
  * For questions and/or comments, please send mail to cbq@ee.lbl.gov
+ *
+ * @(#)rm_class.c  1.48     97/12/05 SMI
  */
-
-#ident "@(#)rm_class.c  1.48     97/12/05 SMI"
-
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 #include "opt_altq.h"
 #include "opt_inet.h"
@@ -218,19 +217,15 @@ rmc_newclass(int pri, struct rm_ifdat *ifd, u_int nsecPerByte,
 	}
 #endif
 
-	cl = malloc(sizeof(struct rm_class),
-	       M_DEVBUF, M_WAITOK);
+	cl = malloc(sizeof(struct rm_class), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (cl == NULL)
 		return (NULL);
-	bzero(cl, sizeof(struct rm_class));
 	CALLOUT_INIT(&cl->callout_);
-	cl->q_ = malloc(sizeof(class_queue_t),
-	       M_DEVBUF, M_WAITOK);
+	cl->q_ = malloc(sizeof(class_queue_t), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (cl->q_ == NULL) {
 		free(cl, M_DEVBUF);
 		return (NULL);
 	}
-	bzero(cl->q_, sizeof(class_queue_t));
 
 	/*
 	 * Class initialization.

@@ -5,7 +5,7 @@
 #
 # Arguments: 0x00 (AC offline, economy) or 0x01 (AC online, performance)
 #
-# $FreeBSD: stable/9/etc/rc.d/power_profile 241277 2012-10-06 19:06:09Z avg $
+# $FreeBSD: release/10.0.0/etc/rc.d/power_profile 240343 2012-09-11 06:25:10Z avg $
 #
 
 # PROVIDE: power_profile
@@ -27,7 +27,7 @@ LOGGER="logger -t power_profile -p daemon.notice"
 # $highest_value: maximum value for this sysctl, when $value is "HIGH"
 # $lowest_value: minimum value for this sysctl, when $value is "LOW"
 #
-sysctl_set ()
+sysctl_set()
 {
 	# Check if the node exists
 	if [ -z "$(sysctl -n ${node} 2> /dev/null)" ]; then

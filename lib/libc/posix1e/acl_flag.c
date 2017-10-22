@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/posix1e/acl_flag.c 194957 2009-06-25 13:08:02Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/posix1e/acl_flag.c 194957 2009-06-25 13:08:02Z trasz $");
 
 #include <stdio.h>
 #include <errno.h>

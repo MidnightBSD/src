@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/powerpc/mp_machdep.c 223758 2011-07-04 12:04:52Z attilio $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powerpc/mp_machdep.c 255417 2013-09-09 12:49:19Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -34,6 +34,7 @@ __FBSDID("$FreeBSD: stable/9/sys/powerpc/powerpc/mp_machdep.c 223758 2011-07-04 
 #include <sys/bus.h>
 #include <sys/cpuset.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/pcpu.h>
 #include <sys/proc.h>
@@ -89,6 +90,9 @@ machdep_ap_bootstrap(void)
 	mttb(ap_timebase);
 #endif
 	decr_ap_init();
+
+	/* Give platform code a chance to do anything necessary */
+	platform_smp_ap_init();
 
 	/* Serialize console output and AP count increment */
 	mtx_lock_spin(&ap_boot_mtx);
@@ -163,7 +167,8 @@ cpu_mp_start(void)
 			void *dpcpu;
 
 			pc = &__pcpu[cpu.cr_cpuid];
-			dpcpu = (void *)kmem_alloc(kernel_map, DPCPU_SIZE);
+			dpcpu = (void *)kmem_malloc(kernel_arena, DPCPU_SIZE,
+			    M_WAITOK | M_ZERO);
 			pcpu_init(pc, cpu.cr_cpuid, sizeof(*pc));
 			dpcpu_init(dpcpu, cpu.cr_cpuid);
 		} else {

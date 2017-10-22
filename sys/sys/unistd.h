@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)unistd.h	8.2 (Berkeley) 1/7/94
- * $FreeBSD: stable/9/sys/sys/unistd.h 233060 2012-03-17 01:19:36Z kib $
+ * $FreeBSD: release/10.0.0/sys/sys/unistd.h 239347 2012-08-17 02:26:31Z davidxu $
  */
 
 #ifndef _SYS_UNISTD_H_
@@ -53,7 +53,7 @@
 #define	_POSIX_ASYNCHRONOUS_IO		0
 #define	_POSIX_CHOWN_RESTRICTED		1
 #define	_POSIX_CLOCK_SELECTION		(-1)
-#define	_POSIX_CPUTIME			(-1)
+#define	_POSIX_CPUTIME			200112L
 #define	_POSIX_FSYNC			200112L
 #define	_POSIX_IPV6			0
 #define	_POSIX_JOB_CONTROL		1

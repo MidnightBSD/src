@@ -1,8 +1,8 @@
-/* $FreeBSD: stable/9/sys/powerpc/include/trap.h 236511 2012-06-03 11:54:26Z marius $ */
+/* $FreeBSD: release/10.0.0/sys/powerpc/include/trap.h 236141 2012-05-27 10:25:20Z raj $ */
 
 #if defined(AIM)
 #include <machine/trap_aim.h>
-#elif defined(E500)
+#elif defined(BOOKE)
 #include <machine/trap_booke.h>
 #endif
 

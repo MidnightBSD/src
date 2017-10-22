@@ -32,8 +32,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/x86/x86/local_apic.c 247877 2013-03-06 09:22:45Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/x86/x86/local_apic.c 255726 2013-09-20 05:06:03Z gibbs $");
 
+#include "opt_atpic.h"
 #include "opt_hwpmc_hooks.h"
 #include "opt_kdtrace.h"
 
@@ -90,6 +91,7 @@ CTASSERT(IPI_STOP < APIC_SPURIOUS_INT);
 #define	IRQ_TIMER	(NUM_IO_INTS + 1)
 #define	IRQ_SYSCALL	(NUM_IO_INTS + 2)
 #define	IRQ_DTRACE_RET	(NUM_IO_INTS + 3)
+#define	IRQ_EVTCHN	(NUM_IO_INTS + 4)
 
 /*
  * Support for local APICs.  Local APICs manage interrupts on each
@@ -118,6 +120,7 @@ struct lapic {
 	u_long *la_timer_count;
 	u_long la_timer_period;
 	u_int la_timer_mode;
+	uint32_t lvt_timer_cache;
 	/* Include IDT_SYSCALL to make indexing easier. */
 	int la_ioint_irqs[APIC_NUM_IOINTS + 1];
 } static lapics[MAX_APIC_ID + 1];
@@ -158,14 +161,16 @@ static u_long lapic_timer_divisor;
 static struct eventtimer lapic_et;
 
 static void	lapic_enable(void);
-static void	lapic_resume(struct pic *pic);
-static void	lapic_timer_oneshot(u_int count, int enable_int);
-static void	lapic_timer_periodic(u_int count, int enable_int);
-static void	lapic_timer_stop(void);
+static void	lapic_resume(struct pic *pic, bool suspend_cancelled);
+static void	lapic_timer_oneshot(struct lapic *,
+		    u_int count, int enable_int);
+static void	lapic_timer_periodic(struct lapic *,
+		    u_int count, int enable_int);
+static void	lapic_timer_stop(struct lapic *);
 static void	lapic_timer_set_divisor(u_int divisor);
 static uint32_t	lvt_mode(struct lapic *la, u_int pin, uint32_t value);
 static int	lapic_et_start(struct eventtimer *et,
-    struct bintime *first, struct bintime *period);
+    sbintime_t first, sbintime_t period);
 static int	lapic_et_stop(struct eventtimer *et);
 
 struct pic lapic_pic = { .pic_resume = lapic_resume };
@@ -264,10 +269,8 @@ lapic_init(vm_paddr_t addr)
 		}
 		lapic_et.et_frequency = 0;
 		/* We don't know frequency yet, so trying to guess. */
-		lapic_et.et_min_period.sec = 0;
-		lapic_et.et_min_period.frac = 0x00001000LL << 32;
-		lapic_et.et_max_period.sec = 1;
-		lapic_et.et_max_period.frac = 0;
+		lapic_et.et_min_period = 0x00001000LL;
+		lapic_et.et_max_period = SBT_1S;
 		lapic_et.et_start = lapic_et_start;
 		lapic_et.et_stop = lapic_et_stop;
 		lapic_et.et_priv = NULL;
@@ -308,7 +311,11 @@ lapic_create(u_int apic_id, int boot_cpu)
 	lapics[apic_id].la_ioint_irqs[APIC_TIMER_INT - APIC_IO_INTS] =
 	    IRQ_TIMER;
 #ifdef KDTRACE_HOOKS
-	lapics[apic_id].la_ioint_irqs[IDT_DTRACE_RET - APIC_IO_INTS] = IRQ_DTRACE_RET;
+	lapics[apic_id].la_ioint_irqs[IDT_DTRACE_RET - APIC_IO_INTS] =
+	    IRQ_DTRACE_RET;
+#endif
+#ifdef XENHVM
+	lapics[apic_id].la_ioint_irqs[IDT_EVTCHN - APIC_IO_INTS] = IRQ_EVTCHN;
 #endif
 
 
@@ -368,7 +375,8 @@ lapic_setup(int boot)
 		lapic->lvt_pcint = lvt_mode(la, LVT_PMC, lapic->lvt_pcint);
 
 	/* Program timer LVT and setup handler. */
-	lapic->lvt_timer = lvt_mode(la, LVT_TIMER, lapic->lvt_timer);
+	la->lvt_timer_cache = lapic->lvt_timer =
+	    lvt_mode(la, LVT_TIMER, lapic->lvt_timer);
 	if (boot) {
 		snprintf(buf, sizeof(buf), "cpu%d:timer", PCPU_GET(cpuid));
 		intrcnt_add(buf, &la->la_timer_count);
@@ -380,9 +388,9 @@ lapic_setup(int boot)
 		    lapic_id()));
 		lapic_timer_set_divisor(lapic_timer_divisor);
 		if (la->la_timer_mode == 1)
-			lapic_timer_periodic(la->la_timer_period, 1);
+			lapic_timer_periodic(la, la->la_timer_period, 1);
 		else
-			lapic_timer_oneshot(la->la_timer_period, 1);
+			lapic_timer_oneshot(la, la->la_timer_period, 1);
 	}
 
 	/* Program error LVT and clear any existing errors. */
@@ -481,19 +489,19 @@ lapic_disable_pmc(void)
 }
 
 static int
-lapic_et_start(struct eventtimer *et,
-    struct bintime *first, struct bintime *period)
+lapic_et_start(struct eventtimer *et, sbintime_t first, sbintime_t period)
 {
 	struct lapic *la;
 	u_long value;
 
+	la = &lapics[PCPU_GET(apic_id)];
 	if (et->et_frequency == 0) {
 		/* Start off with a divisor of 2 (power on reset default). */
 		lapic_timer_divisor = 2;
 		/* Try to calibrate the local APIC timer. */
 		do {
 			lapic_timer_set_divisor(lapic_timer_divisor);
-			lapic_timer_oneshot(APIC_TIMER_MAX_COUNT, 0);
+			lapic_timer_oneshot(la, APIC_TIMER_MAX_COUNT, 0);
 			DELAY(1000000);
 			value = APIC_TIMER_MAX_COUNT - lapic->ccr_timer;
 			if (value != APIC_TIMER_MAX_COUNT)
@@ -506,29 +514,19 @@ lapic_et_start(struct eventtimer *et,
 			printf("lapic: Divisor %lu, Frequency %lu Hz\n",
 			    lapic_timer_divisor, value);
 		et->et_frequency = value;
-		et->et_min_period.sec = 0;
-		et->et_min_period.frac =
-		    ((0x00000002LLU << 32) / et->et_frequency) << 32;
-		et->et_max_period.sec = 0xfffffffeLLU / et->et_frequency;
-		et->et_max_period.frac =
-		    ((0xfffffffeLLU << 32) / et->et_frequency) << 32;
+		et->et_min_period = (0x00000002LLU << 32) / et->et_frequency;
+		et->et_max_period = (0xfffffffeLLU << 32) / et->et_frequency;
 	}
-	lapic_timer_set_divisor(lapic_timer_divisor);
-	la = &lapics[lapic_id()];
-	if (period != NULL) {
+	if (la->la_timer_mode == 0)
+		lapic_timer_set_divisor(lapic_timer_divisor);
+	if (period != 0) {
 		la->la_timer_mode = 1;
-		la->la_timer_period =
-		    (et->et_frequency * (period->frac >> 32)) >> 32;
-		if (period->sec != 0)
-			la->la_timer_period += et->et_frequency * period->sec;
-		lapic_timer_periodic(la->la_timer_period, 1);
+		la->la_timer_period = ((uint32_t)et->et_frequency * period) >> 32;
+		lapic_timer_periodic(la, la->la_timer_period, 1);
 	} else {
 		la->la_timer_mode = 2;
-		la->la_timer_period =
-		    (et->et_frequency * (first->frac >> 32)) >> 32;
-		if (first->sec != 0)
-			la->la_timer_period += et->et_frequency * first->sec;
-		lapic_timer_oneshot(la->la_timer_period, 1);
+		la->la_timer_period = ((uint32_t)et->et_frequency * first) >> 32;
+		lapic_timer_oneshot(la, la->la_timer_period, 1);
 	}
 	return (0);
 }
@@ -536,10 +534,10 @@ lapic_et_start(struct eventtimer *et,
 static int
 lapic_et_stop(struct eventtimer *et)
 {
-	struct lapic *la = &lapics[lapic_id()];
+	struct lapic *la = &lapics[PCPU_GET(apic_id)];
 
 	la->la_timer_mode = 0;
-	lapic_timer_stop();
+	lapic_timer_stop(la);
 	return (0);
 }
 
@@ -568,7 +566,7 @@ lapic_enable(void)
 
 /* Reset the local APIC on the BSP during resume. */
 static void
-lapic_resume(struct pic *pic)
+lapic_resume(struct pic *pic, bool suspend_cancelled)
 {
 
 	lapic_setup(0);
@@ -795,7 +793,7 @@ lapic_handle_timer(struct trapframe *frame)
 	 * Don't do any accounting for the disabled HTT cores, since it
 	 * will provide misleading numbers for the userland.
 	 *
-	 * No locking is necessary here, since even if we loose the race
+	 * No locking is necessary here, since even if we lose the race
 	 * when hlt_cpus_mask changes it is not a big deal, really.
 	 *
 	 * Don't do that for ULE, since ULE doesn't consider hlt_cpus_mask
@@ -833,11 +831,11 @@ lapic_timer_set_divisor(u_int divisor)
 }
 
 static void
-lapic_timer_oneshot(u_int count, int enable_int)
+lapic_timer_oneshot(struct lapic *la, u_int count, int enable_int)
 {
 	u_int32_t value;
 
-	value = lapic->lvt_timer;
+	value = la->lvt_timer_cache;
 	value &= ~APIC_LVTT_TM;
 	value |= APIC_LVTT_TM_ONE_SHOT;
 	if (enable_int)
@@ -847,11 +845,11 @@ lapic_timer_oneshot(u_int count, int enable_int)
 }
 
 static void
-lapic_timer_periodic(u_int count, int enable_int)
+lapic_timer_periodic(struct lapic *la, u_int count, int enable_int)
 {
 	u_int32_t value;
 
-	value = lapic->lvt_timer;
+	value = la->lvt_timer_cache;
 	value &= ~APIC_LVTT_TM;
 	value |= APIC_LVTT_TM_PERIODIC;
 	if (enable_int)
@@ -861,11 +859,11 @@ lapic_timer_periodic(u_int count, int enable_int)
 }
 
 static void
-lapic_timer_stop(void)
+lapic_timer_stop(struct lapic *la)
 {
 	u_int32_t value;
 
-	value = lapic->lvt_timer;
+	value = la->lvt_timer_cache;
 	value &= ~APIC_LVTT_TM;
 	value |= APIC_LVT_M;
 	lapic->lvt_timer = value;
@@ -890,6 +888,10 @@ lapic_enable_cmc(void)
 {
 	u_int apic_id;
 
+#ifdef DEV_ATPIC
+	if (lapic == NULL)
+		return;
+#endif
 	apic_id = PCPU_GET(apic_id);
 	KASSERT(lapics[apic_id].la_present,
 	    ("%s: missing APIC %u", __func__, apic_id));
@@ -1139,6 +1141,10 @@ DB_SHOW_COMMAND(apic, db_show_apic)
 			if (irq == IRQ_DTRACE_RET)
 				continue;
 #endif
+#ifdef XENHVM
+			if (irq == IRQ_EVTCHN)
+				continue;
+#endif
 			db_printf("vec 0x%2x -> ", i + APIC_IO_INTS);
 			if (irq == IRQ_TIMER)
 				db_printf("lapic timer\n");
@@ -1286,6 +1292,9 @@ apic_init(void *dummy __unused)
 	if (best_enum == NULL) {
 		if (bootverbose)
 			printf("APIC: Could not find any APICs.\n");
+#ifndef DEV_ATPIC
+		panic("running without device atpic requires a local APIC");
+#endif
 		return;
 	}
 

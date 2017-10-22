@@ -1,7 +1,7 @@
 #
 #	@(#)ttys	5.1 (Berkeley) 4/17/89
 #
-# $FreeBSD: stable/9/release/picobsd/floppy.tree/etc/ttys 199251 2009-11-13 11:32:14Z ed $
+# $FreeBSD: release/10.0.0/release/picobsd/floppy.tree/etc/ttys 199251 2009-11-13 11:32:14Z ed $
 #
 # name	getty				type	status		comments
 #

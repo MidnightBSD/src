@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/geom/misc/subr.c 213074 2010-09-23 12:04:12Z pjd $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/misc/subr.c 226718 2011-10-25 07:34:35Z pjd $");
 
 #include <sys/param.h>
 #include <sys/disk.h>
@@ -379,10 +379,15 @@ gctl_error(struct gctl_req *req, const char *error, ...)
 {
 	va_list ap;
 
-	if (req->error != NULL)
+	if (req != NULL && req->error != NULL)
 		return;
 	va_start(ap, error);
-	vasprintf(&req->error, error, ap);
+	if (req != NULL) {
+		vasprintf(&req->error, error, ap);
+	} else {
+		vfprintf(stderr, error, ap);
+		fprintf(stderr, "\n");
+	}
 	va_end(ap);
 }
 

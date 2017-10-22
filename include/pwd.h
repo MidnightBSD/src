@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)pwd.h	8.2 (Berkeley) 1/21/94
- * $FreeBSD: stable/9/include/pwd.h 245267 2013-01-10 22:15:13Z brooks $
+ * $FreeBSD: release/10.0.0/include/pwd.h 241731 2012-10-19 12:44:22Z brooks $
  */
 
 #ifndef _PWD_H_

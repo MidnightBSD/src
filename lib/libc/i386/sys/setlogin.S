@@ -34,23 +34,16 @@
 	.asciz "@(#)setlogin.s	5.2 (Berkeley) 4/12/91"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/i386/sys/setlogin.S 217106 2011-01-07 16:08:40Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/i386/sys/setlogin.S 254463 2013-08-17 19:24:58Z jilles $");
 
 #include "SYS.h"
 
 .globl	CNAME(_logname_valid)		/* in _getlogin() */
 
 SYSCALL(setlogin)
-#ifdef PIC
 	PIC_PROLOGUE
-	pushl	%eax
-	movl	PIC_GOT(CNAME(_logname_valid)),%eax
-	movl	$0,(%eax)
-	popl	%eax
+	movl	$0,PIC_GOTOFF(CNAME(_logname_valid))
 	PIC_EPILOGUE
-#else
-	movl	$0,CNAME(_logname_valid)
-#endif
 	ret				/* setlogin(name) */
 END(__sys_setlogin)
 

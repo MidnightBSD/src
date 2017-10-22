@@ -45,7 +45,7 @@
  * 17 Sep 93    David L. Mills
  *      Created file
  *
- * $FreeBSD: stable/9/sys/sys/timex.h 139825 2005-01-07 02:29:27Z imp $
+ * $FreeBSD: release/10.0.0/sys/sys/timex.h 250889 2013-05-21 21:50:11Z ed $
  */
 /*
  * This header file defines the Network Time Protocol (NTP) interfaces
@@ -97,6 +97,9 @@
 #define _SYS_TIMEX_H_ 1
 #define NTP_API		4	/* NTP API version */
 
+#ifdef __FreeBSD__
+#include <sys/_timespec.h>
+#endif /* __FreeBSD__ */
 #ifndef MSDOS			/* Microsoft specific */
 #include <sys/syscall.h>
 #endif /* MSDOS */

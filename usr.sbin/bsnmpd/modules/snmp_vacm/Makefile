@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_vacm/Makefile 246069 2013-01-29 13:49:08Z pfg $
+# $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_vacm/Makefile 245952 2013-01-26 22:08:21Z pfg $
 #
 # Author: Shteryana Shopova <syrinx@freebsd.org>
 

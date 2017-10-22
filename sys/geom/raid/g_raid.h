@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/geom/raid/g_raid.h 246168 2013-01-31 22:12:25Z mav $
+ * $FreeBSD: release/10.0.0/sys/geom/raid/g_raid.h 254275 2013-08-13 07:56:40Z mav $
  */
 
 #ifndef	_G_RAID_H_
@@ -306,6 +306,7 @@ struct g_raid_volume {
 	int			 v_stopping;	/* Volume is stopping */
 	int			 v_provider_open; /* Number of opens. */
 	int			 v_global_id;	/* Global volume ID (rX). */
+	int			 v_read_only;	/* Volume is read-only. */
 	TAILQ_ENTRY(g_raid_volume)	 v_next; /* List of volumes entry. */
 	LIST_ENTRY(g_raid_volume)	 v_global_next; /* Global list entry. */
 };

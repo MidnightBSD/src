@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/aic7xxx/ahc_isa.c 233024 2012-03-16 08:46:58Z scottl $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/aic7xxx/ahc_isa.c 249574 2013-04-17 02:33:56Z neel $");
 
 #include <dev/aic7xxx/aic7xxx_osm.h>
 
@@ -98,7 +98,7 @@ ahc_isa_identify(driver_t *driver, device_t parent)
 					  RF_ACTIVE);
 		if (regs == NULL) {
 			if (bootverbose)
-				printf("ahc_isa_probe %d: ioport 0x%x "
+				printf("ahc_isa_identify %d: ioport 0x%x "
 				       "alloc failed\n", slot, iobase);
 			continue;
 		}

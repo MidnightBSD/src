@@ -25,7 +25,7 @@
  */
 
 #include "lafe_platform.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive_fe/err.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive_fe/err.c 238856 2012-07-28 06:38:44Z mm $");
 
 #ifdef HAVE_STDARG_H
 #include <stdarg.h>
@@ -39,6 +39,8 @@ __FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive_fe/err.c 229592 2012-
 #endif
 
 #include "err.h"
+
+static void lafe_vwarnc(int, const char *, va_list) __LA_PRINTFLIKE(2, 0);
 
 const char *lafe_progname;
 

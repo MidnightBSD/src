@@ -1,7 +1,7 @@
 /*
  * LOCALE_CTYPE for ISO8859-5 set
  *
- * $FreeBSD: stable/9/share/mklocale/ru_RU.ISO8859-5.src 88313 2001-12-20 20:33:30Z ache $
+ * $FreeBSD: release/10.0.0/share/mklocale/ru_RU.ISO8859-5.src 88313 2001-12-20 20:33:30Z ache $
  */
 
 ENCODING	"NONE"

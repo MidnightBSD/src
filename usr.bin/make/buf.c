@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/make/buf.c 187475 2009-01-20 17:15:12Z rdivacky $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/make/buf.c 228992 2011-12-30 11:02:40Z uqs $");
 
 /*
  * buf.c
@@ -206,7 +206,7 @@ Buf_Destroy(Buffer *buf, Boolean freeData)
 
 /**
  * Replace the last byte in a buffer.  If the buffer was empty
- * intially, then a new byte will be added.
+ * initially, then a new byte will be added.
  */
 void
 Buf_ReplaceLastByte(Buffer *bp, Byte byte)

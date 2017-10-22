@@ -48,7 +48,7 @@ All rights reserved.\n";
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/ffsinfo/ffsinfo.c 175782 2008-01-29 00:20:00Z delphij $";
+  "$FreeBSD: release/10.0.0/sbin/ffsinfo/ffsinfo.c 227081 2011-11-04 13:36:02Z ed $";
 #endif /* not lint */
 
 /* ********************************************************** INCLUDES ***** */
@@ -79,7 +79,7 @@ static const char rcsid[] =
 int	_dbg_lvl_ = (DL_INFO); /* DL_TRC */
 #endif /* FS_DEBUG */
 
-struct uufsd disk;
+static struct uufsd disk;
 
 #define sblock disk.d_fs
 #define acg    disk.d_cg

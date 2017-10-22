@@ -67,7 +67,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_mroute.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/ip_mroute.c 255249 2013-09-05 14:26:37Z jhb $");
 
 #include "opt_inet.h"
 #include "opt_mrouting.h"
@@ -93,6 +93,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/ip_mroute.c 248085 2013-03-09 02:36:32Z
 #include <sys/syslog.h>
 #include <sys/systm.h>
 #include <sys/time.h>
+#include <sys/counter.h>
 
 #include <net/if.h>
 #include <net/netisr.h>
@@ -145,11 +146,11 @@ static struct mtx mrouter_mtx;
 static int ip_mrouter_cnt;	/* # of vnets with active mrouters */
 static int ip_mrouter_unloading; /* Allow no more V_ip_mrouter sockets */
 
-static VNET_DEFINE(struct mrtstat, mrtstat);
-#define	V_mrtstat		VNET(mrtstat)
-SYSCTL_VNET_STRUCT(_net_inet_ip, OID_AUTO, mrtstat, CTLFLAG_RW,
-    &VNET_NAME(mrtstat), mrtstat,
-    "IPv4 Multicast Forwarding Statistics (struct mrtstat, "
+static VNET_PCPUSTAT_DEFINE(struct mrtstat, mrtstat);
+VNET_PCPUSTAT_SYSINIT(mrtstat);
+VNET_PCPUSTAT_SYSUNINIT(mrtstat);
+SYSCTL_VNET_PCPUSTAT(_net_inet_ip, OID_AUTO, mrtstat, struct mrtstat,
+    mrtstat, "IPv4 Multicast Forwarding Statistics (struct mrtstat, "
     "netinet/ip_mroute.h)");
 
 static VNET_DEFINE(u_long, mfchash);
@@ -225,13 +226,13 @@ static VNET_DEFINE(struct callout, bw_upcalls_ch);
 
 #define BW_UPCALLS_PERIOD (hz)		/* periodical flush of bw upcalls */
 
-static VNET_DEFINE(struct pimstat, pimstat);
-#define	V_pimstat		VNET(pimstat)
+static VNET_PCPUSTAT_DEFINE(struct pimstat, pimstat);
+VNET_PCPUSTAT_SYSINIT(pimstat);
+VNET_PCPUSTAT_SYSUNINIT(pimstat);
 
 SYSCTL_NODE(_net_inet, IPPROTO_PIM, pim, CTLFLAG_RW, 0, "PIM");
-SYSCTL_VNET_STRUCT(_net_inet_pim, PIMCTL_STATS, stats, CTLFLAG_RD,
-    &VNET_NAME(pimstat), pimstat,
-    "PIM Statistics (struct pimstat, netinet/pim_var.h)");
+SYSCTL_VNET_PCPUSTAT(_net_inet_pim, PIMCTL_STATS, stats, struct pimstat,
+    pimstat, "PIM Statistics (struct pimstat, netinet/pim_var.h)");
 
 static u_long	pim_squelch_wholepkt = 0;
 SYSCTL_ULONG(_net_inet_pim, OID_AUTO, squelch_wholepkt, CTLFLAG_RW,
@@ -608,7 +609,7 @@ static void
 if_detached_event(void *arg __unused, struct ifnet *ifp)
 {
     vifi_t vifi;
-    int i;
+    u_long i;
 
     MROUTER_LOCK();
 
@@ -633,8 +634,8 @@ if_detached_event(void *arg __unused, struct ifnet *ifp)
 		continue;
 	for (i = 0; i < mfchashsize; i++) {
 		struct mfc *rt, *nrt;
-		for (rt = LIST_FIRST(&V_mfchashtbl[i]); rt; rt = nrt) {
-			nrt = LIST_NEXT(rt, mfc_hash);
+
+		LIST_FOREACH_SAFE(rt, &V_mfchashtbl[i], mfc_hash, nrt) {
 			if (rt->mfc_parent == vifi) {
 				expire_mfc(rt);
 			}
@@ -703,10 +704,9 @@ ip_mrouter_init(struct socket *so, int version)
 static int
 X_ip_mrouter_done(void)
 {
-    vifi_t vifi;
-    int i;
     struct ifnet *ifp;
-    struct ifreq ifr;
+    u_long i;
+    vifi_t vifi;
 
     MROUTER_LOCK();
 
@@ -731,11 +731,6 @@ X_ip_mrouter_done(void)
     for (vifi = 0; vifi < V_numvifs; vifi++) {
 	if (!in_nullhost(V_viftable[vifi].v_lcl_addr) &&
 		!(V_viftable[vifi].v_flags & (VIFF_TUNNEL | VIFF_REGISTER))) {
-	    struct sockaddr_in *so = (struct sockaddr_in *)&(ifr.ifr_addr);
-
-	    so->sin_len = sizeof(struct sockaddr_in);
-	    so->sin_family = AF_INET;
-	    so->sin_addr.s_addr = INADDR_ANY;
 	    ifp = V_viftable[vifi].v_ifp;
 	    if_allmulti(ifp, 0);
 	}
@@ -758,8 +753,8 @@ X_ip_mrouter_done(void)
      */
     for (i = 0; i < mfchashsize; i++) {
 	struct mfc *rt, *nrt;
-	for (rt = LIST_FIRST(&V_mfchashtbl[i]); rt; rt = nrt) {
-		nrt = LIST_NEXT(rt, mfc_hash);
+
+	LIST_FOREACH_SAFE(rt, &V_mfchashtbl[i], mfc_hash, nrt) {
 		expire_mfc(rt);
 	}
     }
@@ -802,7 +797,7 @@ set_assert(int i)
 int
 set_api_config(uint32_t *apival)
 {
-    int i;
+    u_long i;
 
     /*
      * We can set the API capabilities only if it is the first operation
@@ -824,6 +819,7 @@ set_api_config(uint32_t *apival)
 
     for (i = 0; i < mfchashsize; i++) {
 	if (LIST_FIRST(&V_mfchashtbl[i]) != NULL) {
+	    MFC_UNLOCK();
 	    *apival = 0;
 	    return EPERM;
 	}
@@ -1306,7 +1302,7 @@ X_ip_mforward(struct ip *ip, struct ifnet *ifp, struct mbuf *m,
 	    return ENOBUFS;
 	}
 
-	mb0 = m_copypacket(m, M_DONTWAIT);
+	mb0 = m_copypacket(m, M_NOWAIT);
 	if (mb0 && (M_HASCL(mb0) || mb0->m_len < hlen))
 	    mb0 = m_pullup(mb0, hlen);
 	if (mb0 == NULL) {
@@ -1437,7 +1433,7 @@ non_fatal:
 static void
 expire_upcalls(void *arg)
 {
-    int i;
+    u_long i;
 
     CURVNET_SET((struct vnet *) arg);
 
@@ -1449,9 +1445,7 @@ expire_upcalls(void *arg)
 	if (V_nexpire[i] == 0)
 	    continue;
 
-	for (rt = LIST_FIRST(&V_mfchashtbl[i]); rt; rt = nrt) {
-		nrt = LIST_NEXT(rt, mfc_hash);
-
+	LIST_FOREACH_SAFE(rt, &V_mfchashtbl[i], mfc_hash, nrt) {
 		if (TAILQ_EMPTY(&rt->mfc_stall))
 			continue;
 
@@ -1493,7 +1487,7 @@ ip_mdq(struct mbuf *m, struct ifnet *ifp, struct mfc *rt, vifi_t xmt_vif)
 {
     struct ip  *ip = mtod(m, struct ip *);
     vifi_t vifi;
-    int plen = ip->ip_len;
+    int plen = ntohs(ip->ip_len);
 
     VIF_LOCK_ASSERT();
 
@@ -1669,7 +1663,7 @@ phyint_send(struct ip *ip, struct vif *vifp, struct mbuf *m)
      * the IP header is actually copied, not just referenced,
      * so that ip_output() only scribbles on the copy.
      */
-    mb_copy = m_copypacket(m, M_DONTWAIT);
+    mb_copy = m_copypacket(m, M_NOWAIT);
     if (mb_copy && (M_HASCL(mb_copy) || mb_copy->m_len < hlen))
 	mb_copy = m_pullup(mb_copy, hlen);
     if (mb_copy == NULL)
@@ -2083,13 +2077,12 @@ bw_upcalls_send(void)
      * Allocate a new mbuf, initialize it with the header and
      * the payload for the pending calls.
      */
-    MGETHDR(m, M_DONTWAIT, MT_DATA);
+    m = m_gethdr(M_NOWAIT, MT_DATA);
     if (m == NULL) {
 	log(LOG_WARNING, "bw_upcalls_send: cannot allocate mbuf\n");
 	return;
     }
 
-    m->m_len = m->m_pkthdr.len = 0;
     m_copyback(m, 0, sizeof(struct igmpmsg), (caddr_t)&igmpmsg);
     m_copyback(m, sizeof(struct igmpmsg), len, (caddr_t)&V_bw_upcalls[0]);
 
@@ -2384,7 +2377,7 @@ pim_register_prepare(struct ip *ip, struct mbuf *m)
      * Copy the old packet & pullup its IP header into the
      * new mbuf so we can modify it.
      */
-    mb_copy = m_copypacket(m, M_DONTWAIT);
+    mb_copy = m_copypacket(m, M_NOWAIT);
     if (mb_copy == NULL)
 	return NULL;
     mb_copy = m_pullup(mb_copy, ip->ip_hl << 2);
@@ -2398,15 +2391,14 @@ pim_register_prepare(struct ip *ip, struct mbuf *m)
     /* Compute the MTU after the PIM Register encapsulation */
     mtu = 0xffff - sizeof(pim_encap_iphdr) - sizeof(pim_encap_pimhdr);
 
-    if (ip->ip_len <= mtu) {
+    if (ntohs(ip->ip_len) <= mtu) {
 	/* Turn the IP header into a valid one */
-	ip->ip_len = htons(ip->ip_len);
-	ip->ip_off = htons(ip->ip_off);
 	ip->ip_sum = 0;
 	ip->ip_sum = in_cksum(mb_copy, ip->ip_hl << 2);
     } else {
 	/* Fragment the packet */
-	if (ip_fragment(ip, &mb_copy, mtu, 0, CSUM_DELAY_IP) != 0) {
+	mb_copy->m_pkthdr.csum_flags |= CSUM_IP;
+	if (ip_fragment(ip, &mb_copy, mtu, 0) != 0) {
 	    m_freem(mb_copy);
 	    return NULL;
 	}
@@ -2431,7 +2423,7 @@ pim_register_send_upcall(struct ip *ip, struct vif *vifp,
     /*
      * Add a new mbuf with an upcall header
      */
-    MGETHDR(mb_first, M_DONTWAIT, MT_DATA);
+    mb_first = m_gethdr(M_NOWAIT, MT_DATA);
     if (mb_first == NULL) {
 	m_freem(mb_copy);
 	return ENOBUFS;
@@ -2489,7 +2481,7 @@ pim_register_send_rp(struct ip *ip, struct vif *vifp, struct mbuf *mb_copy,
     /*
      * Add a new mbuf with the encapsulating header
      */
-    MGETHDR(mb_first, M_DONTWAIT, MT_DATA);
+    mb_first = m_gethdr(M_NOWAIT, MT_DATA);
     if (mb_first == NULL) {
 	m_freem(mb_copy);
 	return ENOBUFS;
@@ -2506,7 +2498,8 @@ pim_register_send_rp(struct ip *ip, struct vif *vifp, struct mbuf *mb_copy,
     ip_outer = mtod(mb_first, struct ip *);
     *ip_outer = pim_encap_iphdr;
     ip_outer->ip_id = ip_newid();
-    ip_outer->ip_len = len + sizeof(pim_encap_iphdr) + sizeof(pim_encap_pimhdr);
+    ip_outer->ip_len = htons(len + sizeof(pim_encap_iphdr) +
+	sizeof(pim_encap_pimhdr));
     ip_outer->ip_src = V_viftable[vifi].v_lcl_addr;
     ip_outer->ip_dst = rt->mfc_rp;
     /*
@@ -2514,8 +2507,8 @@ pim_register_send_rp(struct ip *ip, struct vif *vifp, struct mbuf *mb_copy,
      * IP_DF bit.
      */
     ip_outer->ip_tos = ip->ip_tos;
-    if (ntohs(ip->ip_off) & IP_DF)
-	ip_outer->ip_off |= IP_DF;
+    if (ip->ip_off & htons(IP_DF))
+	ip_outer->ip_off |= htons(IP_DF);
     pimhdr = (struct pim_encap_pimhdr *)((caddr_t)ip_outer
 					 + sizeof(pim_encap_iphdr));
     *pimhdr = pim_encap_pimhdr;
@@ -2568,7 +2561,7 @@ pim_input(struct mbuf *m, int off)
     struct ip *ip = mtod(m, struct ip *);
     struct pim *pim;
     int minlen;
-    int datalen = ip->ip_len;
+    int datalen = ntohs(ip->ip_len);
     int ip_tos;
     int iphlen = off;
 
@@ -2846,7 +2839,8 @@ ip_mroute_modevent(module_t mod, int type, void *unused)
 	if_detach_event_tag = EVENTHANDLER_REGISTER(ifnet_departure_event, 
 	    if_detached_event, NULL, EVENTHANDLER_PRI_ANY);
 	if (if_detach_event_tag == NULL) {
-		printf("ip_mroute: unable to ifnet_deperture_even handler\n");
+		printf("ip_mroute: unable to register "
+		    "ifnet_departure_event handler\n");
 		MROUTER_LOCK_DESTROY();
 		return (EINVAL);
 	}

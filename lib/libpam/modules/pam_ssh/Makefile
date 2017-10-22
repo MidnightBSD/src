@@ -1,5 +1,5 @@
 # PAM module for SSH
-# $FreeBSD: stable/9/lib/libpam/modules/pam_ssh/Makefile 201381 2010-01-02 09:58:07Z ed $
+# $FreeBSD: release/10.0.0/lib/libpam/modules/pam_ssh/Makefile 255386 2013-09-08 10:04:26Z des $
 
 SSHDIR=	${.CURDIR}/../../../../crypto/openssh
 
@@ -15,6 +15,7 @@ CFLAGS+= -I${SSHDIR} -include ssh_namespace.h
 
 DPADD=	${LIBSSH} ${LIBCRYPTO} ${LIBCRYPT}
 LDADD=	-lssh -lcrypto -lcrypt
+USEPRIVATELIB= ssh
 
 .include <bsd.lib.mk>
 

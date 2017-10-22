@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/lockstat.h 192853 2009-05-26 20:28:22Z sson $
+ * $FreeBSD: release/10.0.0/sys/sys/lockstat.h 228448 2011-12-12 23:29:32Z attilio $
  */
  
 /*

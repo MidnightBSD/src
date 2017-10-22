@@ -1,5 +1,5 @@
 /*	$NetBSD: pmap_svc.c,v 1.2 2000/10/20 11:49:40 fvdl Exp $	*/
-/*	$FreeBSD: stable/9/usr.sbin/rpcbind/pmap_svc.c 173412 2007-11-07 10:53:41Z kevlo $ */
+/*	$FreeBSD: release/10.0.0/usr.sbin/rpcbind/pmap_svc.c 173412 2007-11-07 10:53:41Z kevlo $ */
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for

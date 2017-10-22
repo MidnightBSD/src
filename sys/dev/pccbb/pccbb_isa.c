@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/pccbb/pccbb_isa.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/pccbb/pccbb_isa.c 227843 2011-11-22 21:28:20Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

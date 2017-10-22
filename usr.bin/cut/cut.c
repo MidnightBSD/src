@@ -37,7 +37,7 @@ static const char copyright[] =
 static const char sccsid[] = "@(#)cut.c	8.3 (Berkeley) 5/4/95";
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/cut/cut.c 244303 2012-12-16 17:01:23Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/cut/cut.c 243474 2012-11-24 04:15:25Z andrew $");
 
 #include <ctype.h>
 #include <err.h>

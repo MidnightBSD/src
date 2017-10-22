@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)modes.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/stty/modes.c 182052 2008-08-23 13:28:55Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/stty/modes.c 228406 2011-12-11 09:56:48Z ed $");
 
 #include <sys/types.h>
 #include <stddef.h>
@@ -52,7 +52,7 @@ struct modes {
  * The code in optlist() depends on minus options following regular
  * options, i.e. "foo" must immediately precede "-foo".
  */
-struct modes cmodes[] = {
+static const struct modes cmodes[] = {
 	{ "cs5",	CS5, CSIZE },
 	{ "cs6",	CS6, CSIZE },
 	{ "cs7",	CS7, CSIZE },
@@ -94,7 +94,7 @@ struct modes cmodes[] = {
 	{ NULL,		0, 0 },
 };
 
-struct modes imodes[] = {
+static const struct modes imodes[] = {
 	{ "ignbrk",	IGNBRK, 0 },
 	{ "-ignbrk",	0, IGNBRK },
 	{ "brkint",	BRKINT, 0 },
@@ -130,7 +130,7 @@ struct modes imodes[] = {
 	{ NULL,		0, 0 },
 };
 
-struct modes lmodes[] = {
+static const struct modes lmodes[] = {
 	{ "echo",	ECHO, 0 },
 	{ "-echo",	0, ECHO },
 	{ "echoe",	ECHOE, 0 },
@@ -182,7 +182,7 @@ struct modes lmodes[] = {
 	{ NULL,		0, 0 },
 };
 
-struct modes omodes[] = {
+static const struct modes omodes[] = {
 	{ "opost",	OPOST, 0 },
 	{ "-opost",	0, OPOST },
 	{ "litout",	0, OPOST },
@@ -209,7 +209,7 @@ struct modes omodes[] = {
 int
 msearch(char ***argvp, struct info *ip)
 {
-	struct modes *mp;
+	const struct modes *mp;
 	char *name;
 
 	name = **argvp;

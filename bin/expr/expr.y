@@ -5,7 +5,7 @@
  *
  * Largely rewritten by J.T. Conklin (jtc@wimsey.com)
  *
- * $FreeBSD: stable/9/bin/expr/expr.y 244117 2012-12-11 12:40:54Z glebius $
+ * $FreeBSD: release/10.0.0/bin/expr/expr.y 235771 2012-05-22 03:01:54Z kevlo $
  */
 
 #include <sys/types.h>
@@ -74,7 +74,6 @@ int		to_integer(struct val *);
 void		to_string(struct val *);
 int		yyerror(const char *);
 int		yylex(void);
-int		yyparse(void);
 
 %}
 
@@ -540,7 +539,7 @@ op_colon(struct val *a, struct val *b)
 			v = make_str(a->u.s + rm[1].rm_so);
 
 		} else
-			v = make_integer((intmax_t)(rm[0].rm_eo - rm[0].rm_so));
+			v = make_integer((intmax_t)(rm[0].rm_eo));
 	else
 		if (rp.re_nsub == 0)
 			v = make_integer((intmax_t)0);

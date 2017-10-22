@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libc/gen/test-fnmatch.c 207821 2010-05-09 16:15:40Z jilles $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/libc/gen/test-fnmatch.c 254231 2013-08-11 21:54:20Z jilles $");
 
 #include <errno.h>
 #include <stdio.h>
@@ -135,6 +135,8 @@ struct testcase {
 	"\\[", "\\[", 0, FNM_NOMATCH,
 	"\\(", "\\(", 0, FNM_NOMATCH,
 	"\\a", "\\a", 0, FNM_NOMATCH,
+	"\\", "\\", 0, FNM_NOMATCH,
+	"\\", "", 0, 0,
 	"\\*", "\\*", FNM_NOESCAPE, 0,
 	"\\?", "\\?", FNM_NOESCAPE, 0,
 	"\\", "\\", FNM_NOESCAPE, 0,
@@ -235,6 +237,8 @@ write_sh_tests(const char *progname, int num)
 		t = &testcases[i];
 		if (strchr(t->pattern, '\'') != NULL ||
 		    strchr(t->string, '\'') != NULL)
+			continue;
+		if (t->flags == 0 && strcmp(t->pattern, "\\") == 0)
 			continue;
 		if (num == 1 && t->flags == 0)
 			printf("test%smatch '%s' '%s'\n",

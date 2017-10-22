@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/pc98/include/bus.h 243455 2012-11-23 14:16:55Z nyan $
+ * $FreeBSD: release/10.0.0/sys/pc98/include/bus.h 242866 2012-11-10 13:24:33Z nyan $
  */
 
 /*	$NecBSD: busio.h,v 3.25.4.2.2.1 2000/06/12 03:53:08 honda Exp $	*/
@@ -559,7 +559,7 @@ bus_space_barrier(bus_space_tag_t tag, bus_space_handle_t bsh,
 	if (flags & BUS_SPACE_BARRIER_READ)
 		__asm __volatile("lock; addl $0,0(%%esp)" : : : "memory");
 	else
-		__asm __volatile("" : : : "memory");
+		__compiler_membar();
 }
 
 #ifdef BUS_SPACE_NO_LEGACY

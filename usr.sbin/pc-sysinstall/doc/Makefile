@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/doc/Makefile 209513 2010-06-24 22:21:47Z imp $
+# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/doc/Makefile 209513 2010-06-24 22:21:47Z imp $
 
 FILES=	help-disk-list help-disk-size help-index help-start-autoinstall
 

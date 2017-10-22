@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/make/hash.c 146177 2005-05-13 08:53:00Z harti $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/make/hash.c 146177 2005-05-13 08:53:00Z harti $");
 
 /* hash.c --
  *

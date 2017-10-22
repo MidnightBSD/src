@@ -46,7 +46,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: stable/9/sys/boot/ficl/i386/sysdep.h 96755 2002-05-16 21:28:32Z trhodes $ */
+/* $FreeBSD: release/10.0.0/sys/boot/ficl/i386/sysdep.h 231042 2012-02-05 20:00:39Z rpaulo $ */
 
 #if !defined (__SYSDEP_H__)
 #define __SYSDEP_H__ 
@@ -58,7 +58,7 @@
 #include <assert.h>
 
 #if !defined IGNORE		/* Macro to silence unused param warnings */
-#define IGNORE(x) &x
+#define IGNORE(x) (void)x
 #endif
 
 /*
@@ -405,7 +405,7 @@ void *ficlRealloc(void *p, size_t size);
 #if FICL_MULTITHREAD
 int ficlLockDictionary(short fLock);
 #else
-#define ficlLockDictionary(x) 0 /* ignore */
+#define ficlLockDictionary(x) /* ignore */
 #endif
 
 /*

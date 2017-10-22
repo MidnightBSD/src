@@ -1,7 +1,7 @@
 /*
  * Calibration calendar for calendar(1)
  *
- * $FreeBSD: stable/9/tools/regression/usr.bin/calendar/calendar.calibrate 170448 2007-06-09 06:01:24Z grog $
+ * $FreeBSD: release/10.0.0/tools/regression/usr.bin/calendar/calendar.calibrate 170448 2007-06-09 06:01:24Z grog $
  */
 
 LANG=C

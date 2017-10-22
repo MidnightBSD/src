@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)signal.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/signal.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/signal.c 252429 2013-06-30 20:51:15Z jilles $");
 
 /*
  * Almost backwards compatible signal.
@@ -41,7 +41,7 @@ __FBSDID("$FreeBSD: stable/9/lib/libc/gen/signal.c 165903 2007-01-09 00:28:16Z i
 #include "un-namespace.h"
 #include "libc_private.h"
 
-sigset_t _sigintr;		/* shared with siginterrupt */
+sigset_t _sigintr __hidden;	/* shared with siginterrupt */
 
 sig_t
 signal(s, a)

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/nxge/include/xgehal-mgmt.h 173139 2007-10-29 14:19:32Z rwatson $
+ * $FreeBSD: release/10.0.0/sys/dev/nxge/include/xgehal-mgmt.h 173139 2007-10-29 14:19:32Z rwatson $
  */
 
 #ifndef XGE_HAL_MGMT_H

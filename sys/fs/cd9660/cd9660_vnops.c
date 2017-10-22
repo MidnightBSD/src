@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/fs/cd9660/cd9660_vnops.c 233353 2012-03-23 11:26:54Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/fs/cd9660/cd9660_vnops.c 248282 2013-03-14 20:28:26Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -47,7 +47,6 @@ __FBSDID("$FreeBSD: stable/9/sys/fs/cd9660/cd9660_vnops.c 233353 2012-03-23 11:2
 #include <sys/buf.h>
 #include <sys/mount.h>
 #include <sys/vnode.h>
-#include <fs/fifofs/fifo.h>
 #include <sys/malloc.h>
 #include <sys/dirent.h>
 #include <sys/unistd.h>
@@ -330,7 +329,7 @@ cd9660_read(ap)
 			if (lblktosize(imp, rablock) < ip->i_size)
 				error = cluster_read(vp, (off_t)ip->i_size,
 					 lbn, size, NOCRED, uio->uio_resid,
-					 (ap->a_ioflag >> 16), &bp);
+					 (ap->a_ioflag >> 16), 0, &bp);
 			else
 				error = bread(vp, lbn, size, NOCRED, &bp);
 		} else {

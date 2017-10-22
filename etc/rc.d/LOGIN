@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/rc.d/LOGIN 174438 2007-12-08 07:20:23Z dougb $
+# $FreeBSD: release/10.0.0/etc/rc.d/LOGIN 231549 2012-02-12 07:45:48Z ed $
 #
 
 # PROVIDE: LOGIN
-# REQUIRE: DAEMON
+# REQUIRE: DAEMON utx
 
 #	This is a dummy dependency to ensure user services such as xdm,
 #	inetd, cron and kerberos are started after everything else, in case

@@ -32,7 +32,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/mount_msdosfs/mount_msdosfs.c 201227 2009-12-29 22:53:27Z ed $";
+  "$FreeBSD: release/10.0.0/sbin/mount_msdosfs/mount_msdosfs.c 247856 2013-03-05 22:41:35Z jkim $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -69,7 +69,7 @@ main(int argc, char **argv)
 	struct iovec *iov = NULL;
 	int iovlen = 0;
 	struct stat sb;
-	int c, mntflags, set_gid, set_uid, set_mask, set_dirmask;
+	int c, set_gid, set_uid, set_mask, set_dirmask;
 	char *dev, *dir, mntpath[MAXPATHLEN], *csp;
 	char fstype[] = "msdosfs";
 	char errmsg[255] = {0};
@@ -78,9 +78,8 @@ main(int argc, char **argv)
 	mode_t mask = 0, dirmask = 0;
 	uid_t uid = 0;
 	gid_t gid = 0;
-	getmnt_silent = 1;
 
-	mntflags = set_gid = set_uid = set_mask = set_dirmask = 0;
+	set_gid = set_uid = set_mask = set_dirmask = 0;
 
 	while ((c = getopt(argc, argv, "sl9u:g:m:M:o:L:D:W:")) != -1) {
 		switch (c) {
@@ -193,7 +192,8 @@ main(int argc, char **argv)
 	 * Resolve the mountpoint with realpath(3) and remove unnecessary
 	 * slashes from the devicename if there are any.
 	 */
-	(void)checkpath(dir, mntpath);
+	if (checkpath(dir, mntpath) != 0)
+		err(EX_USAGE, "%s", mntpath);
 	(void)rmslashes(dev, dev);
 
 	if (!set_gid || !set_uid || !set_mask) {
@@ -218,7 +218,7 @@ main(int argc, char **argv)
 	build_iovec_argf(&iov, &iovlen, "mask", "%u", mask);
 	build_iovec_argf(&iov, &iovlen, "dirmask", "%u", dirmask);
 
-	if (nmount(iov, iovlen, mntflags) < 0) {
+	if (nmount(iov, iovlen, 0) < 0) {
 		if (errmsg[0])
 			err(1, "%s: %s", dev, errmsg);
 		else

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/ufs/Makefile 246234 2013-02-02 09:57:34Z trasz $
+# $FreeBSD: release/10.0.0/sys/modules/ufs/Makefile 243339 2012-11-20 15:23:22Z kib $
 
 .PATH:	${.CURDIR}/../../ufs/ufs ${.CURDIR}/../../ufs/ffs
 

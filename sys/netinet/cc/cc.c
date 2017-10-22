@@ -47,7 +47,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/cc/cc.c 220560 2011-04-12 08:13:18Z lstewart $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/cc/cc.c 220560 2011-04-12 08:13:18Z lstewart $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

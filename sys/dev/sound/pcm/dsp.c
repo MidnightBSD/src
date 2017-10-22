@@ -32,6 +32,8 @@
 
 #include <dev/sound/pcm/sound.h>
 #include <sys/ctype.h>
+#include <sys/lock.h>
+#include <sys/rwlock.h>
 #include <sys/sysent.h>
 
 #include <vm/vm.h>
@@ -39,7 +41,7 @@
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pcm/dsp.c 225505 2011-09-12 08:38:21Z avg $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pcm/dsp.c 249585 2013-04-17 11:45:15Z gabor $");
 
 static int dsp_mmap_allow_prot_exec = 0;
 SYSCTL_INT(_hw_snd, OID_AUTO, compat_linux_mmap, CTLFLAG_RW,
@@ -2009,7 +2011,7 @@ dsp_ioctl(struct cdev *i_dev, u_long cmd, caddr_t arg, int mode,
 	 * OSSv4 docs:  "All errors and counters will automatically be
 	 * cleared to zeroes after the call so each call will return only
 	 * the errors that occurred after the previous invocation. ... The
-	 * play_underruns and rec_overrun fields are the only usefull fields
+	 * play_underruns and rec_overrun fields are the only useful fields
 	 * returned by OSS 4.0."
 	 */
 		{

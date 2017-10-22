@@ -28,7 +28,7 @@ AND WITH ALL FAULTS AND CAVIUM  NETWORKS MAKES NO PROMISES, REPRESENTATIONS OR W
 *************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octe/ethernet-mem.c 215974 2010-11-28 05:57:24Z jmallett $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octe/ethernet-mem.c 243882 2012-12-05 08:04:20Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -57,7 +57,7 @@ int cvm_oct_mem_fill_fpa(int pool, int size, int elements)
 	while (freed) {
 		KASSERT(size <= MCLBYTES - 128, ("mbuf clusters are too small"));
 
-		struct mbuf *m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+		struct mbuf *m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 		if (__predict_false(m == NULL)) {
 			printf("Failed to allocate mbuf for hardware pool %d\n", pool);
 			break;

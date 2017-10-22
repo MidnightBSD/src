@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ddb/db_access.c 153072 2005-12-04 02:12:43Z ru $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ddb/db_access.c 153072 2005-12-04 02:12:43Z ru $");
 
 #include <sys/param.h>
 #include <sys/kdb.h>

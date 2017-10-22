@@ -1,5 +1,5 @@
 /*	$NetBSD: if_media.h,v 1.3 1997/03/26 01:19:27 thorpej Exp $	*/
-/* $FreeBSD: stable/9/sys/net/if_media.h 235764 2012-05-22 00:00:17Z jhb $ */
+/* $FreeBSD: release/10.0.0/sys/net/if_media.h 257956 2013-11-11 09:47:51Z ae $ */
 
 /*-
  * Copyright (c) 1997
@@ -153,7 +153,10 @@ uint64_t	ifmedia_baudrate(int);
 #define	IFM_40G_CR4	27		/* 40GBase-CR4 */
 #define	IFM_40G_SR4	28		/* 40GBase-SR4 */
 #define	IFM_40G_LR4	29		/* 40GBase-LR4 */
-
+/*
+ * Please update ieee8023ad_lacp.c:lacp_compose_key()
+ * after adding new Ethernet media types.
+ */
 /* note 31 is the max! */
 
 #define	IFM_ETH_MASTER	0x00000100	/* master mode (1000baseT) */
@@ -250,11 +253,6 @@ uint64_t	ifmedia_baudrate(int);
 #define	IFM_ATM_UNASSIGNED	0x00000400	/* unassigned cells */
 
 /*
- * CARP Common Address Redundancy Protocol
- */
-#define	IFM_CARP	0x000000c0
-
-/*
  * Shared media sub-types
  */
 #define	IFM_AUTO	0		/* Autoselect best media */
@@ -340,7 +338,6 @@ struct ifmedia_description {
 	{ IFM_FDDI,		"FDDI" },				\
 	{ IFM_IEEE80211,	"IEEE 802.11 Wireless Ethernet" },	\
 	{ IFM_ATM,		"ATM" },				\
-	{ IFM_CARP,		"Common Address Redundancy Protocol" }, \
 	{ 0, NULL },							\
 }
 
@@ -727,8 +724,6 @@ struct ifmedia_status_description {
 	    { "no network", "active" } },				\
 	{ IFM_ATM,		IFM_AVALID,	IFM_ACTIVE,		\
 	    { "no network", "active" } },				\
-	{ IFM_CARP,		IFM_AVALID,	IFM_ACTIVE,		\
-	    { "backup", "master" } },					\
 	{ 0,			0,		0,			\
 	    { NULL, NULL } }						\
 }

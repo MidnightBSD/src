@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/include/altivec.h 213456 2010-10-05 18:08:07Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/powerpc/include/altivec.h 213456 2010-10-05 18:08:07Z nwhitehorn $
  */
 
 #ifndef	_MACHINE_ALTIVEC_H_

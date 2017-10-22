@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libc/include/libc_private.h 240819 2012-09-22 12:38:19Z kib $
+ * $FreeBSD: release/10.0.0/lib/libc/include/libc_private.h 254706 2013-08-23 14:23:54Z jilles $
  *
  * Private definitions for libc, libc_r and libpthread.
  *
@@ -83,7 +83,7 @@ void _rtld_error(const char *fmt, ...);
 #define	FUNLOCKFILE(fp)		if (__isthreaded) _funlockfile(fp)
 
 struct _spinlock;
-extern struct _spinlock __stdio_thread_lock;
+extern struct _spinlock __stdio_thread_lock __hidden;
 #define STDIO_THREAD_LOCK()				\
 do {							\
 	if (__isthreaded)				\
@@ -218,7 +218,7 @@ void _malloc_postfork(void);
 /*
  * Function to clean up streams, called from abort() and exit().
  */
-extern void (*__cleanup)(void);
+extern void (*__cleanup)(void) __hidden;
 
 /*
  * Get kern.osreldate to detect ABI revisions.  Explicitly

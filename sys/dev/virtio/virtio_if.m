@@ -1,5 +1,5 @@
 #-
-# Copyright (c) 2011, Bryan Venteicher <bryanv@daemoninthecloset.org>
+# Copyright (c) 2011, Bryan Venteicher <bryanv@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/sys/dev/virtio/virtio_if.m 227652 2011-11-18 05:43:43Z grehan $
+# $FreeBSD: release/10.0.0/sys/dev/virtio/virtio_if.m 255110 2013-09-01 04:20:23Z bryanv $
 
 #include <sys/bus.h>
 
@@ -31,10 +31,21 @@ INTERFACE virtio;
 
 CODE {
 	static int
+	virtio_default_attach_completed(device_t dev)
+	{
+		return (0);
+	}
+};
+
+METHOD int attach_completed {
+	device_t	dev;
+} DEFAULT virtio_default_attach_completed;
+
+CODE {
+	static int
 	virtio_default_config_change(device_t dev)
 	{
-		/* Return that we've handled the change. */
-		return (1);
+		return (0);
 	}
 };
 

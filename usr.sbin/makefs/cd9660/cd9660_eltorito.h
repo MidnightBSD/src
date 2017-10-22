@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/makefs/cd9660/cd9660_eltorito.h 214921 2010-11-07 16:05:04Z cognet $
+ * $FreeBSD: release/10.0.0/usr.sbin/makefs/cd9660/cd9660_eltorito.h 214921 2010-11-07 16:05:04Z cognet $
  */
 
 #ifndef _CD9660_ELTORITO_H_

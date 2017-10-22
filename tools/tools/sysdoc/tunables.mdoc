@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/tools/sysdoc/tunables.mdoc 224528 2011-07-30 20:42:14Z avg $
+# $FreeBSD: release/10.0.0/tools/tools/sysdoc/tunables.mdoc 254147 2013-08-09 15:31:50Z obrien $
 ---
 debug.disablecwd
 bool
@@ -1091,6 +1091,13 @@ line programs.
 ---
 
 kern.quantum
+
+---
+kern.random.adaptors
+str
+
+Displays registered PRNG adaptors.
+This is a read-only variable.
 
 ---
 kern.random.sys.burst
@@ -2257,9 +2264,6 @@ int
 
 Displays the number of swap devices available
 to the system.  This is a read-only variable.
-
----
-vm.pageout_algorithm
 
 ---
 vm.pageout_full_stats_interval

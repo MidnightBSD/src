@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm/drm_sarea.h 182080 2008-08-23 20:59:12Z rnoland $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/drm_sarea.h 182080 2008-08-23 20:59:12Z rnoland $");
 
 #ifndef _DRM_SAREA_H_
 #define _DRM_SAREA_H_

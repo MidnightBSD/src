@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/racct.h 249444 2013-04-13 21:04:06Z trasz $
+ * $FreeBSD: release/10.0.0/sys/sys/racct.h 242139 2012-10-26 16:01:08Z trasz $
  */
 
 /*

@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)sctp.c	0.1 (Berkeley) 4/18/2007";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/netstat/sctp.c 238613 2012-07-19 09:32:59Z tuexen $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/netstat/sctp.c 246988 2013-02-19 13:17:16Z charnier $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -77,7 +77,7 @@ static void sctp_statesprint(uint32_t state);
 #define	NETSTAT_SCTP_STATES_SHUTDOWN_ACK_SENT	0x8
 #define	NETSTAT_SCTP_STATES_SHUTDOWN_PENDING	0x9
 
-char *sctpstates[] = {
+const char *sctpstates[] = {
 	"CLOSED",
 	"BOUND",
 	"LISTEN",
@@ -164,7 +164,7 @@ inet6name(struct in6_addr *in6p)
 	if (first && !numeric_addr) {
 		first = 0;
 		if (gethostname(domain, MAXHOSTNAMELEN) == 0 &&
-		    (cp = index(domain, '.')))
+		    (cp = strchr(domain, '.')))
 			(void) strcpy(domain, cp + 1);
 		else
 			domain[0] = 0;
@@ -173,7 +173,7 @@ inet6name(struct in6_addr *in6p)
 	if (!numeric_addr && !IN6_IS_ADDR_UNSPECIFIED(in6p)) {
 		hp = gethostbyaddr((char *)in6p, sizeof(*in6p), AF_INET6);
 		if (hp) {
-			if ((cp = index(hp->h_name, '.')) &&
+			if ((cp = strchr(hp->h_name, '.')) &&
 			    !strcmp(cp + 1, domain))
 				*cp = 0;
 			cp = hp->h_name;
@@ -213,7 +213,7 @@ sctp_print_address(union sctp_sockstore *address, int port, int num_port)
 		sprintf(line, "%.*s.", Wflag ? 39 : 16, "");
 		break;
 	}
-	cp = index(line, '\0');
+	cp = strchr(line, '\0');
 	if (!num_port && port)
 		sp = getservbyport((int)port, "sctp");
 	if (sp || port == 0)
@@ -393,7 +393,7 @@ sctp_process_inpcb(struct xsctp_inpcb *xinpcb,
 {
 	int indent = 0, xladdr_total = 0, is_listening = 0;
 	static int first = 1;
-	char *tname, *pname;
+	const char *tname, *pname;
 	struct xsctp_tcb *xstcb;
 	struct xsctp_laddr *xladdr;
 	size_t offset_laddr;
@@ -527,7 +527,7 @@ retry:
  */
 void
 sctp_protopr(u_long off __unused,
-    const char *name, int af1, int proto)
+    const char *name __unused, int af1 __unused, int proto)
 {
 	char *buf;
 	const char *mibvar = "net.inet.sctp.assoclist";

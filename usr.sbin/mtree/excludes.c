@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/mtree/excludes.c 121300 2003-10-21 08:27:05Z phk $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/mtree/excludes.c 121300 2003-10-21 08:27:05Z phk $");
 
 #include <sys/types.h>
 #include <sys/time.h>		/* XXX for mtree.h */

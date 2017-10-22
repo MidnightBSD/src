@@ -33,7 +33,7 @@ static char sccsid[] = "from: @(#)rpc.rstatd.c 1.1 86/09/25 Copyr 1984 Sun Micro
 static char sccsid[] = "from: @(#)rstat_proc.c	2.2 88/08/01 4.0 RPCSRC";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/libexec/rpc.rstatd/rstat_proc.c 179710 2008-06-10 18:47:43Z jhb $";
+  "$FreeBSD: release/10.0.0/libexec/rpc.rstatd/rstat_proc.c 239991 2012-09-01 14:45:15Z ed $";
 #endif
 
 /*
@@ -244,7 +244,7 @@ updatestat(void)
 	FETCH_CNT(stats_all.s1.v_pswpout, vm.v_swappgsout);
 	FETCH_CNT(stats_all.s1.v_intr, sys.v_intr);
 	FETCH_CNT(stats_all.s2.v_swtch, sys.v_swtch);
-	gettimeofday(&tm, (struct timezone *) 0);
+	(void)gettimeofday(&tm, NULL);
 	stats_all.s1.v_intr -= hz*(tm.tv_sec - btm.tv_sec) +
 	    hz*(tm.tv_usec - btm.tv_usec)/1000000;
 
@@ -287,8 +287,9 @@ updatestat(void)
 		stats_all.s1.if_oerrors += ifmd.ifmd_data.ifi_oerrors;
 		stats_all.s1.if_collisions += ifmd.ifmd_data.ifi_collisions;
 	}
-	gettimeofday((struct timeval *)&stats_all.s3.curtime,
-		(struct timezone *) 0);
+	(void)gettimeofday(&tm, NULL);
+	stats_all.s3.curtime.tv_sec = tm.tv_sec;
+	stats_all.s3.curtime.tv_usec = tm.tv_usec;
 	alarm(1);
 }
 

@@ -26,7 +26,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libkse/thread/thr_waitpid.c 174689 2007-12-16 23:29:57Z deischen $
+ * $FreeBSD: release/10.0.0/lib/libkse/thread/thr_waitpid.c 174689 2007-12-16 23:29:57Z deischen $
  */
 
 #include <sys/types.h>

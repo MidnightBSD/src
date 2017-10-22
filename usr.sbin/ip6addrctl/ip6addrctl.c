@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/ip6addrctl/ip6addrctl.c 241428 2012-10-10 21:30:26Z eadler $
+ * $FreeBSD: release/10.0.0/usr.sbin/ip6addrctl/ip6addrctl.c 241737 2012-10-19 14:49:42Z ed $
  */
 
 #include <sys/types.h>
@@ -59,7 +59,7 @@ struct policyqueue {
 	struct in6_addrpolicy pc_policy;
 };
 TAILQ_HEAD(policyhead, policyqueue);
-struct policyhead policyhead;
+static struct policyhead policyhead;
 
 static void usage(void);
 static void get_policy(void);

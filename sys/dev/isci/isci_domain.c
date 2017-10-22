@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/isci/isci_domain.c 233784 2012-04-02 16:30:13Z jimharris $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/isci_domain.c 249468 2013-04-14 09:55:48Z mav $");
 
 #include <dev/isci/isci.h>
 
@@ -300,7 +300,7 @@ scif_cb_domain_device_removed(SCI_CONTROLLER_HANDLE_T controller,
 
 	isci_controller->remote_device[isci_remote_device->index] = NULL;
 
-	xpt_create_path(&ccb->ccb_h.path, xpt_periph, path,
+	xpt_create_path(&ccb->ccb_h.path, NULL, path,
 	    isci_remote_device->index, CAM_LUN_WILDCARD);
 
 	xpt_rescan(ccb);

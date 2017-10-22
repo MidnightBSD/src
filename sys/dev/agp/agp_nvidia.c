@@ -25,14 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/agp/agp_nvidia.c 209329 2010-06-19 08:42:29Z brian $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/agp/agp_nvidia.c 243095 2012-11-15 18:49:17Z eadler $");
 
 /*
  * Written using information gleaned from the
  * NVIDIA nForce/nForce2 AGPGART Linux Kernel Patch.
  */
-
-#include "opt_bus.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>

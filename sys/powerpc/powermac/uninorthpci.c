@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/powermac/uninorthpci.c 235060 2012-05-05 16:41:17Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powermac/uninorthpci.c 230993 2012-02-04 19:54:13Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

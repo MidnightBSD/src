@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/mips/rt305x/files.rt305x 220297 2011-04-03 14:39:55Z adrian $
+# $FreeBSD: release/10.0.0/sys/mips/rt305x/files.rt305x 241964 2012-10-23 19:17:43Z imp $
 
 # RT305X on-board devices
 mips/rt305x/rt305x_machdep.c	standard
@@ -11,3 +11,4 @@ mips/rt305x/uart_cpu_rt305x.c	optional uart
 mips/rt305x/uart_dev_rt305x.c	optional uart
 mips/mips/intr_machdep.c        standard
 mips/mips/tick.c		standard
+dev/rt/if_rt.c			optional rt

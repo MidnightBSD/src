@@ -39,13 +39,14 @@ static char sccsid[] = "From: @(#)swapon.c	8.1 (Berkeley) 6/5/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/dumpon/dumpon.c 163852 2006-10-31 22:36:49Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/dumpon/dumpon.c 242486 2012-11-02 17:30:08Z alfred $");
 
 #include <sys/param.h>
 #include <sys/disk.h>
 #include <sys/sysctl.h>
 
 #include <err.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <paths.h>
 #include <stdint.h>
@@ -60,9 +61,10 @@ static int	verbose;
 static void
 usage(void)
 {
-	fprintf(stderr, "%s\n%s\n",
+	fprintf(stderr, "%s\n%s\n%s\n",
 	    "usage: dumpon [-v] special_file",
-	    "       dumpon [-v] off");
+	    "       dumpon [-v] off",
+	    "       dumpon [-v] -l");
 	exit(EX_USAGE);
 }
 
@@ -92,15 +94,45 @@ check_size(int fd, const char *fn)
 	}
 }
 
+static void
+listdumpdev(void)
+{
+	char dumpdev[PATH_MAX];
+	size_t len;
+	const char *sysctlname = "kern.shutdown.dumpdevname";
+
+	len = sizeof(dumpdev);
+	if (sysctlbyname(sysctlname, &dumpdev, &len, NULL, 0) != 0) {
+		if (errno == ENOMEM) {
+			err(EX_OSERR, "Kernel returned too large of a buffer for '%s'\n",
+				sysctlname);
+		} else {
+			err(EX_OSERR, "Sysctl get '%s'\n", sysctlname);
+		}
+	}
+	if (verbose) {
+		printf("kernel dumps on ");
+	}
+	if (strlen(dumpdev) == 0) {
+		printf("%s\n", _PATH_DEVNULL);
+	} else {
+		printf("%s\n", dumpdev);
+	}
+}
+
 int
 main(int argc, char *argv[])
 {
 	int ch;
 	int i, fd;
 	u_int u;
+	int do_listdumpdev = 0;
 
-	while ((ch = getopt(argc, argv, "v")) != -1)
+	while ((ch = getopt(argc, argv, "lv")) != -1)
 		switch((char)ch) {
+		case 'l':
+			do_listdumpdev = 1;
+			break;
 		case 'v':
 			verbose = 1;
 			break;
@@ -110,6 +142,11 @@ main(int argc, char *argv[])
 
 	argc -= optind;
 	argv += optind;
+
+	if (do_listdumpdev) {
+		listdumpdev();
+		exit(EX_OK);
+	}
 
 	if (argc != 1)
 		usage();

@@ -1,0 +1,14 @@
+/*
+ * $FreeBSD: release/10.0.0/lib/libc/capability/Symbol.map 255219 2013-09-05 00:09:56Z pjd $
+ */
+
+FBSD_1.3 {
+	__cap_rights_clear;
+	cap_rights_contains;
+	__cap_rights_init;
+	__cap_rights_is_set;
+	cap_rights_is_valid;
+	cap_rights_merge;
+	cap_rights_remove;
+	__cap_rights_set;
+};

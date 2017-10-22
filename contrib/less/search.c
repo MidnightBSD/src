@@ -1,4 +1,3 @@
-/* $FreeBSD: stable/9/contrib/less/search.c 240121 2012-09-04 23:24:00Z delphij $ */
 /*
  * Copyright (C) 1984-2012  Mark Nudelman
  *
@@ -28,7 +27,6 @@ extern int linenums;
 extern int sc_height;
 extern int jump_sline;
 extern int bs_mode;
-extern int less_is_more;
 extern int ctldisp;
 extern int status_col;
 extern void * constant ml_search;

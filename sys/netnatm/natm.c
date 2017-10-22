@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netnatm/natm.c 192445 2009-05-20 17:00:16Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netnatm/natm.c 255442 2013-09-10 10:05:59Z des $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -292,7 +292,7 @@ natm_usr_send(struct socket *so, int flags, struct mbuf *m,
 	/*
 	 * Send the data.  We must put an atm_pseudohdr on first.
 	 */
-	M_PREPEND(m, sizeof(*aph), M_DONTWAIT);
+	M_PREPEND(m, sizeof(*aph), M_NOWAIT);
 	if (m == NULL) {
 		NATM_UNLOCK();
 		m_freem(control);
@@ -338,6 +338,21 @@ natm_usr_control(struct socket *so, u_long cmd, caddr_t arg,
 
 	npcb = (struct natmpcb *)so->so_pcb;
 	KASSERT(npcb != NULL, ("natm_usr_control: npcb == NULL"));
+
+	switch (cmd) {
+	case SIOCSIFADDR:
+	case SIOCSIFBRDADDR:
+	case SIOCSIFDSTADDR:
+	case SIOCSIFNETMASK:
+		/*
+		 * Although we should pass any non-ATM ioctl requests
+		 * down to driver, we filter some legacy INET requests.
+		 * Drivers trust SIOCSIFADDR et al to come from an already
+		 * privileged layer, and do not perform any credentials
+		 * checks or input validation.
+		 */
+		return (EINVAL);
+	}
 
 	if (ifp == NULL || ifp->if_ioctl == NULL)
 		return (EOPNOTSUPP);

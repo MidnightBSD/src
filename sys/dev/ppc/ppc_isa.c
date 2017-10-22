@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ppc/ppc_isa.c 187576 2009-01-21 23:10:06Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ppc/ppc_isa.c 247065 2013-02-21 00:26:31Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -141,7 +141,7 @@ ppc_isa_write(device_t dev, char *buf, int len, int how)
 {
 	struct ppc_data *ppc = device_get_softc(dev);
 	char ecr, ecr_sav, ctr, ctr_sav;
-	int s, error = 0;
+	int error = 0;
 	int spin;
 
 	PPC_ASSERT_LOCKED(ppc);
@@ -190,12 +190,6 @@ ppc_isa_write(device_t dev, char *buf, int len, int how)
 	w_ecr(ppc, ecr);
 	ecr = r_ecr(ppc);
 
-	/* enter splhigh() not to be preempted
-	 * by the dma interrupt, we may miss
-	 * the wakeup otherwise
-	 */
-	s = splhigh();
-
 	ppc->ppc_dmastat = PPC_DMA_INIT;
 
 	/* enable interrupts */
@@ -220,8 +214,6 @@ ppc_isa_write(device_t dev, char *buf, int len, int how)
 		error = mtx_sleep(ppc, &ppc->ppc_lock, PPBPRI | PCATCH,
 		    "ppcdma", 0);
 	} while (error == EWOULDBLOCK);
-
-	splx(s);
 
 	if (error) {
 #ifdef PPC_DEBUG

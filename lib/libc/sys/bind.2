@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)bind.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/9/lib/libc/sys/bind.2 193214 2009-06-01 09:32:12Z pjd $
+.\" $FreeBSD: release/10.0.0/lib/libc/sys/bind.2 243858 2012-12-04 09:53:09Z kevlo $
 .\"
 .Dd June 4, 1993
 .Dt BIND 2
@@ -94,6 +94,8 @@ is not a socket.
 The specified address is not available from the local machine.
 .It Bq Er EADDRINUSE
 The specified address is already in use.
+.It Bq Er EAFNOSUPPORT
+Addresses in the specified address family cannot be used with this socket.
 .It Bq Er EACCES
 The requested address is protected, and the current user
 has inadequate permission to access it.

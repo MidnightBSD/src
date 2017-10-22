@@ -30,7 +30,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *
- * $FreeBSD: stable/9/sys/i386/include/xen/xenpmap.h 231697 2012-02-14 18:00:37Z ken $
+ * $FreeBSD: release/10.0.0/sys/i386/include/xen/xenpmap.h 230916 2012-02-02 17:54:35Z ken $
  */
 
 #ifndef _XEN_XENPMAP_H_

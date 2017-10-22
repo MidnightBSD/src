@@ -1,0 +1,3 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITH_GPL_DTC 246262 2013-02-02 22:42:46Z dim $
+Set to build the GPL'd version of the device tree compiler from elinux.org,
+instead of the BSD licensed one.

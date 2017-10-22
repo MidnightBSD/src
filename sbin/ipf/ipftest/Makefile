@@ -1,16 +1,23 @@
-#	$FreeBSD: stable/9/sbin/ipf/ipftest/Makefile 204585 2010-03-02 16:58:04Z uqs $
+#	$FreeBSD: release/10.0.0/sbin/ipf/ipftest/Makefile 255332 2013-09-06 23:11:19Z cy $
 
 PROG=		ipftest
 SRCS=		${GENHDRS} ipftest.c fil.c ip_frag.c ip_state.c ip_nat.c \
+		ip_nat6.c \
 		ip_proxy.c ip_auth.c ip_htable.c ip_lookup.c \
 		ip_pool.c ip_scan.c ip_sync.c ip_rules.c \
 		ip_fil.c ip_log.c ippool_y.c ippool_l.c ipf_y.c \
-		ipf_l.c ipnat_y.c ipnat_l.c md5.c radix.c bpf_filter.c
+		ipf_l.c ipnat_y.c ipnat_l.c md5.c radix_ipf.c ip_dstlist.c
 MAN=		ipftest.1
 
 WARNS?=		0
 CFLAGS+=	-DIPFILTER_LOG -DIPFILTER_COMPILED -DIPFILTER_LOOKUP \
-		-DIPFILTER_SCAN -DIPFILTER_SYNC -DIPFILTER_CKSUM -I.
+		-DIPFILTER_SYNC -DIPFILTER_CKSUM -DHAS_SYS_MD5_H -I.
+
+# XXX	The original tarball does not define IPFILTER_SCAN when building this
+# XXX	and other modules. It is believed the reason is it fails to build.
+# XXX	It has been removed for now.
+# XXX CFLAGS+=		-DIPFILTER_SCAN
+
 
 .PATH:		${.CURDIR}/../../../sys/contrib/ipfilter/netinet
 

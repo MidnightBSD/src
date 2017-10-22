@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libiconv_modules/mapper_parallel/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD: release/10.0.0/lib/libiconv_modules/mapper_parallel/Makefile 219019 2011-02-25 00:04:39Z gabor $
 
 .PATH: ${.CURDIR}/../mapper_serial
 

@@ -39,7 +39,7 @@ static const char sccsid[] = "@(#)badsect.c	8.1 (Berkeley) 6/5/93";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/badsect/badsect.c 139648 2005-01-03 19:03:40Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/badsect/badsect.c 227081 2011-11-04 13:36:02Z ed $");
 
 /*
  * badsect
@@ -71,9 +71,9 @@ __FBSDID("$FreeBSD: stable/9/sbin/badsect/badsect.c 139648 2005-01-03 19:03:40Z 
 
 #define sblock	disk.d_fs
 #define	acg	disk.d_cg
-struct	uufsd disk;
-struct	fs *fs = &sblock;
-int	errs;
+static struct	uufsd disk;
+static struct	fs *fs = &sblock;
+static int	errs;
 
 int	chkuse(daddr_t, int);
 

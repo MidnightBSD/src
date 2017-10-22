@@ -1,13 +1,14 @@
 /*-
  * This file is in the public domain.
  *
- * $FreeBSD: stable/9/sys/powerpc/include/pmc_mdep.h 236238 2012-05-29 14:50:21Z fabient $
+ * $FreeBSD: release/10.0.0/sys/powerpc/include/pmc_mdep.h 255164 2013-09-03 00:34:18Z jhibbits $
  */
 
 #ifndef _MACHINE_PMC_MDEP_H_
 #define	_MACHINE_PMC_MDEP_H_
 
-#define PMC_MDEP_CLASS_INDEX_PPC7450	1
+#define PMC_MDEP_CLASS_INDEX_PPC7450	0
+#define PMC_MDEP_CLASS_INDEX_PPC970	0
 
 union pmc_md_op_pmcallocate {
 	uint64_t		__pad[4];

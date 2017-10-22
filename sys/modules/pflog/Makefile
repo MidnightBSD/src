@@ -1,14 +1,12 @@
-# $FreeBSD: stable/9/sys/modules/pflog/Makefile 223637 2011-06-28 11:57:25Z bz $
+# $FreeBSD: release/10.0.0/sys/modules/pflog/Makefile 240494 2012-09-14 11:51:49Z glebius $
 
 .include <bsd.own.mk>
 
-.PATH: ${.CURDIR}/../../contrib/pf/net
+.PATH: ${.CURDIR}/../../netpfil/pf
 
 KMOD=	pflog
 SRCS=	if_pflog.c \
 	opt_pf.h opt_inet.h opt_inet6.h opt_bpf.h
-
-CFLAGS+= -I${.CURDIR}/../../contrib/pf
 SRCS+=	bus_if.h device_if.h
 
 .if defined(KERNBUILDDIR)

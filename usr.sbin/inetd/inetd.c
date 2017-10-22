@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)from: inetd.c	8.4 (Berkeley) 4/13/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/inetd/inetd.c 246402 2013-02-06 13:16:43Z zont $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/inetd/inetd.c 245696 2013-01-20 19:44:33Z zont $");
 
 /*
  * Inetd - Internet super-server
@@ -1764,7 +1764,7 @@ more:
 			sep->se_rpc_lowvers = 0;
 		memcpy(&sep->se_ctrladdr4, bind_sa4,
 		       sizeof(sep->se_ctrladdr4));
-                if ((versp = rindex(sep->se_service, '/'))) {
+                if ((versp = strrchr(sep->se_service, '/'))) {
                         *versp++ = '\0';
                         switch (sscanf(versp, "%u-%u",
                                        &sep->se_rpc_lowvers,
@@ -1936,7 +1936,7 @@ more:
 	} else
 		sep->se_group = NULL;
 	sep->se_server = newstr(sskip(&cp));
-	if ((sep->se_server_name = rindex(sep->se_server, '/')))
+	if ((sep->se_server_name = strrchr(sep->se_server, '/')))
 		sep->se_server_name++;
 	if (strcmp(sep->se_server, "internal") == 0) {
 		struct biltin *bi;

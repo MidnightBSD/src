@@ -46,7 +46,7 @@
 #include "aicasm/aicasm_insformat.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/aic7xxx/aic7xxx.c 237825 2012-06-29 21:33:36Z ken $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/aic7xxx/aic7xxx.c 237601 2012-06-26 14:51:35Z ken $");
 #include <dev/aic7xxx/aic7xxx_osm.h>
 #include <dev/aic7xxx/aic7xxx_inline.h>
 #include <dev/aic7xxx/aicasm/aicasm_insformat.h>

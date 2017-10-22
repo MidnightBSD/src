@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/routed/parms.c 215702 2010-11-22 19:40:27Z brucec $
+ * $FreeBSD: release/10.0.0/sbin/routed/parms.c 230045 2012-01-13 06:56:59Z kevlo $
  */
 
 #include "defs.h"
@@ -36,7 +36,7 @@
 #ifdef __NetBSD__
 __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
-__RCSID("$FreeBSD: stable/9/sbin/routed/parms.c 215702 2010-11-22 19:40:27Z brucec $");
+__RCSID("$FreeBSD: release/10.0.0/sbin/routed/parms.c 230045 2012-01-13 06:56:59Z kevlo $");
 #else
 __RCSID("$Revision: 2.26 $");
 #ident "$Revision: 2.26 $"
@@ -188,7 +188,7 @@ gwkludge(void)
 	}
 
 	for (lnum = 1; ; lnum++) {
-		if (0 == fgets(lbuf, sizeof(lbuf), fp))
+		if (fgets(lbuf, sizeof(lbuf), fp) == NULL)
 			break;
 		lptr = lbuf;
 		while (*lptr == ' ')

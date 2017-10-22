@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/wb/if_wb.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/wb/if_wb.c 254842 2013-08-25 10:57:09Z andre $");
 
 /*
  * Winbond fast ethernet PCI NIC driver
@@ -142,7 +142,7 @@ static int wb_probe(device_t);
 static int wb_attach(device_t);
 static int wb_detach(device_t);
 
-static void wb_bfree(void *addr, void *args);
+static int wb_bfree(struct mbuf *, void *addr, void *args);
 static int wb_newbuf(struct wb_softc *, struct wb_chain_onefrag *,
 		struct mbuf *);
 static int wb_encap(struct wb_softc *, struct wb_chain *, struct mbuf *);
@@ -660,7 +660,6 @@ wb_attach(dev)
 	}
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = wb_ioctl;
 	ifp->if_start = wb_start;
@@ -823,12 +822,11 @@ wb_list_rx_init(sc)
 	return(0);
 }
 
-static void
-wb_bfree(buf, args)
-	void			*buf;
-	void			*args;
+static int
+wb_bfree(struct mbuf *m, void *buf, void *args)
 {
 
+	return (EXT_FREE_OK);
 }
 
 /*

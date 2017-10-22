@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/in_pcb.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/in_pcb.c 253282 2013-07-12 19:08:33Z trociny $");
 
 #include "opt_ddb.h"
 #include "opt_ipsec.h"
@@ -196,7 +196,7 @@ SYSCTL_VNET_INT(_net_inet_ip_portrange, OID_AUTO, randomtime, CTLFLAG_RW,
 	&VNET_NAME(ipport_randomtime), 0,
 	"Minimum time to keep sequental port "
 	"allocation before switching to a random one");
-#endif
+#endif /* INET */
 
 /*
  * in_pcb.c: manage the Protocol Control Blocks.
@@ -236,6 +236,8 @@ in_pcbinfo_init(struct inpcbinfo *pcbinfo, const char *name,
 	    NULL, NULL, inpcbzone_init, inpcbzone_fini, UMA_ALIGN_PTR,
 	    inpcbzone_flags);
 	uma_zone_set_max(pcbinfo->ipi_zone, maxsockets);
+	uma_zone_set_warning(pcbinfo->ipi_zone,
+	    "kern.ipc.maxsockets limit reached");
 }
 
 /*
@@ -332,8 +334,7 @@ in_pcbbind(struct inpcb *inp, struct sockaddr *nam, struct ucred *cred)
 
 	if (inp->inp_lport != 0 || inp->inp_laddr.s_addr != INADDR_ANY)
 		return (EINVAL);
-	anonport = inp->inp_lport == 0 && (nam == NULL ||
-	    ((struct sockaddr_in *)nam)->sin_port == 0);
+	anonport = nam == NULL || ((struct sockaddr_in *)nam)->sin_port == 0;
 	error = in_pcbbind_setup(inp, nam, &inp->inp_laddr.s_addr,
 	    &inp->inp_lport, cred);
 	if (error)
@@ -466,6 +467,23 @@ in_pcb_lport(struct inpcb *inp, struct in_addr *laddrp, u_short *lportp,
 
 	return (0);
 }
+
+/*
+ * Return cached socket options.
+ */
+short
+inp_so_options(const struct inpcb *inp)
+{
+   short so_options;
+
+   so_options = 0;
+
+   if ((inp->inp_flags2 & INP_REUSEPORT) != 0)
+	   so_options |= SO_REUSEPORT;
+   if ((inp->inp_flags2 & INP_REUSEADDR) != 0)
+	   so_options |= SO_REUSEADDR;
+   return (so_options);
+}
 #endif /* INET || INET6 */
 
 #ifdef INET
@@ -536,7 +554,7 @@ in_pcbbind_setup(struct inpcb *inp, struct sockaddr *nam, in_addr_t *laddrp,
 			 * and a multicast address is bound on both
 			 * new and duplicated sockets.
 			 */
-			if (so->so_options & SO_REUSEADDR)
+			if ((so->so_options & (SO_REUSEADDR|SO_REUSEPORT)) != 0)
 				reuseport = SO_REUSEADDR|SO_REUSEPORT;
 		} else if (sin->sin_addr.s_addr != INADDR_ANY) {
 			sin->sin_port = 0;		/* yech... */
@@ -594,8 +612,7 @@ in_pcbbind_setup(struct inpcb *inp, struct sockaddr *nam, in_addr_t *laddrp,
 				if (tw == NULL ||
 				    (reuseport & tw->tw_so_options) == 0)
 					return (EADDRINUSE);
-			} else if (t && (reuseport == 0 ||
-			    (t->inp_flags2 & INP_REUSEPORT) == 0)) {
+			} else if (t && (reuseport & inp_so_options(t)) == 0) {
 #ifdef INET6
 				if (ntohl(sin->sin_addr.s_addr) !=
 				    INADDR_ANY ||
@@ -1038,7 +1055,7 @@ in_pcbdisconnect(struct inpcb *inp)
 	inp->inp_fport = 0;
 	in_pcbrehash(inp);
 }
-#endif
+#endif /* INET */
 
 /*
  * in_pcbdetach() is responsibe for disassociating a socket from an inpcb.
@@ -1178,7 +1195,7 @@ in_pcbfree(struct inpcb *inp)
 #ifdef IPSEC
 	if (inp->inp_sp != NULL)
 		ipsec_delete_pcbpolicy(inp);
-#endif /* IPSEC */
+#endif
 	inp->inp_gencnt = ++pcbinfo->ipi_gencnt;
 	in_pcbremlists(inp);
 #ifdef INET6
@@ -1596,7 +1613,7 @@ in_pcblookup_group(struct inpcbinfo *pcbinfo, struct inpcbgroup *pcbgroup,
 				if (inp->inp_vflag & INP_IPV6PROTO)
 					local_wild_mapped = inp;
 				else
-#endif /* INET6 */
+#endif
 					if (injail)
 						jail_wild = inp;
 					else
@@ -1611,7 +1628,7 @@ in_pcblookup_group(struct inpcbinfo *pcbinfo, struct inpcbgroup *pcbgroup,
 #ifdef INET6
 		if (inp == NULL)
 			inp = local_wild_mapped;
-#endif /* defined(INET6) */
+#endif
 		if (inp != NULL)
 			goto found;
 	} /* if (lookupflags & INPLOOKUP_WILDCARD) */
@@ -1741,7 +1758,7 @@ in_pcblookup_hash_locked(struct inpcbinfo *pcbinfo, struct in_addr faddr,
 				if (inp->inp_vflag & INP_IPV6PROTO)
 					local_wild_mapped = inp;
 				else
-#endif /* INET6 */
+#endif
 					if (injail)
 						jail_wild = inp;
 					else
@@ -1757,7 +1774,7 @@ in_pcblookup_hash_locked(struct inpcbinfo *pcbinfo, struct in_addr faddr,
 #ifdef INET6
 		if (local_wild_mapped != NULL)
 			return (local_wild_mapped);
-#endif /* defined(INET6) */
+#endif
 	} /* if ((lookupflags & INPLOOKUP_WILDCARD) != 0) */
 
 	return (NULL);
@@ -1881,7 +1898,7 @@ in_pcbinshash_internal(struct inpcb *inp, int do_pcbgroup_update)
 	if (inp->inp_vflag & INP_IPV6)
 		hashkey_faddr = inp->in6p_faddr.s6_addr32[3] /* XXX */;
 	else
-#endif /* INET6 */
+#endif
 	hashkey_faddr = inp->inp_faddr.s_addr;
 
 	pcbhash = &pcbinfo->ipi_hashbase[INP_PCBHASH(hashkey_faddr,
@@ -1968,7 +1985,7 @@ in_pcbrehash_mbuf(struct inpcb *inp, struct mbuf *m)
 	if (inp->inp_vflag & INP_IPV6)
 		hashkey_faddr = inp->in6p_faddr.s6_addr32[3] /* XXX */;
 	else
-#endif /* INET6 */
+#endif
 	hashkey_faddr = inp->inp_faddr.s_addr;
 
 	head = &pcbinfo->ipi_hashbase[INP_PCBHASH(hashkey_faddr,
@@ -2236,14 +2253,13 @@ db_print_inconninfo(struct in_conninfo *inc, const char *name, int indent)
 		/* IPv6. */
 		ip6_sprintf(laddr_str, &inc->inc6_laddr);
 		ip6_sprintf(faddr_str, &inc->inc6_faddr);
-	} else {
+	} else
 #endif
+	{
 		/* IPv4. */
 		inet_ntoa_r(inc->inc_laddr, laddr_str);
 		inet_ntoa_r(inc->inc_faddr, faddr_str);
-#ifdef INET6
 	}
-#endif
 	db_print_indent(indent);
 	db_printf("inc_laddr %s   inc_lport %u\n", laddr_str,
 	    ntohs(inc->inc_lport));
@@ -2460,4 +2476,4 @@ DB_SHOW_COMMAND(inpcb, db_show_inpcb)
 
 	db_print_inpcb(inp, "inpcb", 0);
 }
-#endif
+#endif /* DDB */

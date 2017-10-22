@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)sysconf.3	8.3 (Berkeley) 4/19/94
-.\" $FreeBSD: stable/9/lib/libc/gen/sysconf.3 237216 2012-06-18 04:55:07Z eadler $
+.\" $FreeBSD: release/10.0.0/lib/libc/gen/sysconf.3 249956 2013-04-26 21:43:42Z jilles $
 .\"
-.Dd February 13, 2011
+.Dd April 26, 2013
 .Dt SYSCONF 3
 .Os
 .Sh NAME
@@ -82,7 +82,7 @@ The number of processors configured.
 .It Li _SC_NPROCESSORS_ONLN
 The number of processors currently online.
 .It Li _SC_OPEN_MAX
-The maximum number of open files per user id.
+One more than the maximum value the system may assign to a new file descriptor.
 .It Li _SC_PAGESIZE
 The size of a system page in bytes.
 .It Li _SC_PAGE_SIZE

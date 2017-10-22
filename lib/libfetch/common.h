@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libfetch/common.h 236103 2012-05-26 16:34:39Z des $
+ * $FreeBSD: release/10.0.0/lib/libfetch/common.h 253680 2013-07-26 15:53:43Z des $
  */
 
 #ifndef _COMMON_H_INCLUDED
@@ -63,7 +63,7 @@ struct fetchconn {
 	SSL		*ssl;		/* SSL handle */
 	SSL_CTX		*ssl_ctx;	/* SSL context */
 	X509		*ssl_cert;	/* server certificate */
-	SSL_METHOD	*ssl_meth;	/* SSL method */
+	const SSL_METHOD *ssl_meth;	/* SSL method */
 #endif
 	int		 ref;		/* reference count */
 };
@@ -87,7 +87,10 @@ int		 fetch_bind(int, int, const char *);
 conn_t		*fetch_connect(const char *, int, int, int);
 conn_t		*fetch_reopen(int);
 conn_t		*fetch_ref(conn_t *);
-int		 fetch_ssl(conn_t *, int);
+#ifdef WITH_SSL
+int		 fetch_ssl_cb_verify_crt(int, X509_STORE_CTX*);
+#endif
+int		 fetch_ssl(conn_t *, const struct url *, int);
 ssize_t		 fetch_read(conn_t *, char *, size_t);
 int		 fetch_getln(conn_t *);
 ssize_t		 fetch_write(conn_t *, const char *, size_t);

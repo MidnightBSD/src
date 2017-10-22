@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/librt/Makefile 218984 2011-02-23 21:17:38Z dim $
+# $FreeBSD: release/10.0.0/lib/librt/Makefile 218984 2011-02-23 21:17:38Z dim $
 
 LIB=rt
 SHLIB_MAJOR= 1

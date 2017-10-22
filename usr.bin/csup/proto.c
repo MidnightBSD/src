@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/csup/proto.c 229184 2012-01-01 18:42:00Z dim $
+ * $FreeBSD: release/10.0.0/usr.bin/csup/proto.c 241049 2012-09-29 16:19:01Z kevlo $
  */
 
 #include <sys/param.h>
@@ -727,8 +727,10 @@ proto_printf(struct stream *wr, const char *format, ...)
 	while ((cp = strchr(fmt, '%')) != NULL) {
 		if (cp > fmt) {
 			n = stream_write(wr, fmt, cp - fmt);
-			if (n == -1)
+			if (n == -1) {
+				va_end(ap);
 				return (-1);
+			}
 		}
 		if (*++cp == '\0')
 			goto done;
@@ -789,18 +791,24 @@ proto_printf(struct stream *wr, const char *format, ...)
 
 		case '%':
 			n = stream_write(wr, "%", 1);
-			if (n == -1)
+			if (n == -1) {
+				va_end(ap);
 				return (-1);
+			}
 			break;
 		}
-		if (rv == -1)
+		if (rv == -1) {
+			va_end(ap);
 			return (-1);
+		}
 		fmt = cp + 1;
 	}
 	if (*fmt != '\0') {
 		rv = stream_printf(wr, "%s", fmt);
-		if (rv == -1)
+		if (rv == -1) {
+			va_end(ap);
 			return (-1);
+		}
 	}
 done:
 	va_end(ap);

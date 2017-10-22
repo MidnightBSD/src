@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)options.c	8.2 (Berkeley) 4/18/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/pax/options.c 222177 2011-05-22 14:03:38Z uqs $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/pax/options.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -81,6 +81,7 @@ static void cpio_usage(void);
 #define GETLINE_OUT_OF_MEM 2
 static int getline_error;
 
+char *chdname;
 
 #define GZIP_CMD	"gzip"		/* command to run as gzip */
 #define COMPRESS_CMD	"compress"	/* command to run as compress */

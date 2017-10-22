@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/ofw/ofw_pcibus.c 234160 2012-04-12 00:38:34Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ofw/ofw_pcibus.c 255615 2013-09-16 15:10:11Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -101,6 +101,9 @@ DRIVER_MODULE(ofw_pcibus, pcib, ofw_pcibus_driver, pci_devclass, 0, 0);
 MODULE_VERSION(ofw_pcibus, 1);
 MODULE_DEPEND(ofw_pcibus, pci, 1, 1, 1);
 
+static int ofw_devices_only = 0;
+TUNABLE_INT("hw.pci.ofw_devices_only", &ofw_devices_only);
+
 static int
 ofw_pcibus_probe(device_t dev)
 {
@@ -109,7 +112,7 @@ ofw_pcibus_probe(device_t dev)
 		return (ENXIO);
 	device_set_desc(dev, "OFW PCI bus");
 
-	return (0);
+	return (BUS_PROBE_DEFAULT);
 }
 
 static int
@@ -137,7 +140,8 @@ ofw_pcibus_attach(device_t dev)
 	 * functions on multi-function cards.
 	 */
 
-	ofw_pcibus_enum_bus(dev, domain, busno);
+	if (!ofw_devices_only)
+		ofw_pcibus_enum_bus(dev, domain, busno);
 
 	return (bus_generic_attach(dev));
 }
@@ -210,11 +214,12 @@ ofw_pcibus_enum_devtree(device_t dev, u_int domain, u_int busno)
 				icells = 1;
 				OF_getprop(child, "interrupt-parent", &iparent,
 				    sizeof(iparent));
-				OF_getprop(iparent, "#interrupt-cells", &icells,
-				    sizeof(icells));
-
-				if (iparent != 0)
+				if (iparent != 0) {
+					OF_getprop(OF_xref_phandle(iparent),
+					    "#interrupt-cells", &icells,
+					    sizeof(icells));
 					intr[0] = MAP_IRQ(iparent, intr[0]);
+				}
 
 				if (iparent != 0 && icells > 1) {
 					powerpc_config_intr(intr[0],

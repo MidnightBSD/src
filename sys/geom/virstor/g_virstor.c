@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/virstor/g_virstor.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/virstor/g_virstor.c 239021 2012-08-03 20:24:16Z jimharris $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

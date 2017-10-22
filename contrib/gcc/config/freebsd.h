@@ -26,7 +26,7 @@ Boston, MA 02110-1301, USA.  */
    Further work by David O'Brien <obrien@FreeBSD.org> and
    Loren J. Rittle <ljrittle@acm.org>.  */
 
-/* $FreeBSD: stable/9/contrib/gcc/config/freebsd.h 182627 2008-09-01 18:46:03Z obrien $ */
+/* $FreeBSD: release/10.0.0/contrib/gcc/config/freebsd.h 229715 2012-01-06 18:37:49Z andreast $ */
 
 /* In case we need to know.  */
 #define USING_CONFIG_FREEBSD 1
@@ -63,6 +63,7 @@ Boston, MA 02110-1301, USA.  */
 /* All FreeBSD Architectures support the ELF object file format.  */
 #undef  OBJECT_FORMAT_ELF
 #define OBJECT_FORMAT_ELF	1
+#undef  TARGET_ELF
 #define TARGET_ELF		1
 
 /* Don't assume anything about the header files.  */

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libgeom/geom_xml2tree.c 244208 2012-12-14 11:38:15Z jh $
+ * $FreeBSD: release/10.0.0/lib/libgeom/geom_xml2tree.c 253469 2013-07-19 06:42:15Z scottl $
  */
 
 #include <stdio.h>
@@ -282,7 +282,9 @@ EndElement(void *userData, const char *name)
 	}
 
 	if (p != NULL) {
+#if DEBUG_LIBGEOM > 0
 		printf("Unexpected XML: name=%s data=\"%s\"\n", name, p);
+#endif
 		free(p);
 	}
 

@@ -1,4 +1,4 @@
-/* $Id: openbsd-compat.h,v 1.52 2011/09/23 01:16:11 djm Exp $ */
+/* $Id: openbsd-compat.h,v 1.58 2013/06/05 22:30:21 dtucker Exp $ */
 
 /*
  * Copyright (c) 1999-2003 Damien Miller.  All rights reserved.
@@ -111,6 +111,10 @@ char *dirname(const char *path);
 int	fmt_scaled(long long number, char *result);
 #endif
 
+#ifndef HAVE_SCAN_SCALED
+int	scan_scaled(char *, long long *);
+#endif
+
 #if defined(BROKEN_INET_NTOA) || !defined(HAVE_INET_NTOA)
 char *inet_ntoa(struct in_addr in);
 #endif
@@ -139,6 +143,7 @@ int getgrouplist(const char *, gid_t, gid_t *, int *);
 
 #if !defined(HAVE_GETOPT) || !defined(HAVE_GETOPT_OPTRESET)
 int BSDgetopt(int argc, char * const *argv, const char *opts);
+#include "openbsd-compat/getopt.h"
 #endif
 
 #if defined(HAVE_DECL_WRITEV) && HAVE_DECL_WRITEV == 0
@@ -149,6 +154,7 @@ int writev(int, struct iovec *, int);
 
 /* Home grown routines */
 #include "bsd-misc.h"
+#include "bsd-setres_id.h"
 #include "bsd-statvfs.h"
 #include "bsd-waitpid.h"
 #include "bsd-poll.h"
@@ -189,8 +195,21 @@ int snprintf(char *, size_t, SNPRINTF_CONST char *, ...);
 long long strtoll(const char *, char **, int);
 #endif
 
+#ifndef HAVE_STRTOUL
+unsigned long strtoul(const char *, char **, int);
+#endif
+
+#ifndef HAVE_STRTOULL
+unsigned long long strtoull(const char *, char **, int);
+#endif
+
 #ifndef HAVE_STRTONUM
 long long strtonum(const char *, long long, long long, const char **);
+#endif
+
+/* multibyte character support */
+#ifndef HAVE_MBLEN
+# define mblen(x, y)	1
 #endif
 
 #if !defined(HAVE_VASPRINTF) || !defined(HAVE_VSNPRINTF)

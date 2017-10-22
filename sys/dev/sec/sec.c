@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/sec/sec.c 229093 2011-12-31 14:12:12Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/sec/sec.c 235938 2012-05-24 21:24:23Z raj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -225,6 +225,10 @@ sec_probe(device_t dev)
 		break;
 	case SEC_30_ID:
 		device_set_desc(dev, "Freescale Security Engine 3.0");
+		sc->sc_version = 3;
+		break;
+	case SEC_31_ID:
+		device_set_desc(dev, "Freescale Security Engine 3.1");
 		sc->sc_version = 3;
 		break;
 	default:

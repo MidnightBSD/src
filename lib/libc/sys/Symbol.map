@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/lib/libc/sys/Symbol.map 244175 2012-12-13 06:24:54Z kib $
+ * $FreeBSD: release/10.0.0/lib/libc/sys/Symbol.map 255708 2013-09-19 18:53:42Z jhb $
  */
 
 /*
@@ -363,8 +363,6 @@ FBSD_1.1 {
 FBSD_1.2 {
 	cap_enter;
 	cap_getmode;
-	cap_new;
-	cap_getrights;
 	getloginclass;
 	pdfork;
 	pdgetpid;
@@ -379,7 +377,25 @@ FBSD_1.2 {
 };
 
 FBSD_1.3 {
+	accept4;
+	aio_mlock;
+	bindat;
+	cap_fcntls_get;
+	cap_fcntls_limit;
+	cap_ioctls_get;
+	cap_ioctls_limit;
+	__cap_rights_get;
+	cap_rights_limit;
+	cap_sandboxed;
+	chflagsat;
+	clock_getcpuclockid2;
+	connectat;
+	ffclock_getcounter;
+	ffclock_getestimate;
+	ffclock_setestimate;
+	pipe2;
 	posix_fadvise;
+	procctl;
 	wait6;
 };
 
@@ -448,6 +464,8 @@ FBSDprivate_1.0 {
 	__sys_abort2;
 	_accept;
 	__sys_accept;
+	_accept4;
+	__sys_accept4;
 	_access;
 	__sys_access;
 	_acct;
@@ -488,6 +506,8 @@ FBSDprivate_1.0 {
 	__sys_chown;
 	_chroot;
 	__sys_chroot;
+	_clock_getcpuclockid2;
+	__sys_clock_getcpuclockid2;
 	_clock_getres;
 	__sys_clock_getres;
 	_clock_gettime;
@@ -803,6 +823,8 @@ FBSDprivate_1.0 {
 	__sys_poll;
 	_preadv;
 	__sys_preadv;
+	_procctl;
+	__sys_procctl;
 	_profil;
 	__sys_profil;
 	_pselect;

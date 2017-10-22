@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)exports.5	8.3 (Berkeley) 3/29/95
-.\" $FreeBSD: stable/9/usr.sbin/mountd/exports.5 245081 2013-01-06 00:35:10Z rmacklem $
+.\" $FreeBSD: release/10.0.0/usr.sbin/mountd/exports.5 244689 2012-12-25 22:34:43Z rmacklem $
 .\"
 .Dd December 23, 2012
 .Dt EXPORTS 5
@@ -101,7 +101,7 @@ This line does not export any file system, but simply marks where the root
 of the server's directory tree is for NFSv4 clients.
 The exported file systems for NFSv4 are specified via the other lines
 in the
-.Xr exports 5
+.Nm
 file in the same way as for NFSv2 and NFSv3.
 The pathnames must not have any symbolic links in them and should not have
 any

@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/bootconfig.c 139735 2005-01-05 21:58:49Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/bootconfig.c 236991 2012-06-13 04:59:55Z imp $");
 
 #include <sys/param.h>
 
@@ -46,7 +46,7 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/arm/bootconfig.c 139735 2005-01-05 21:58:49
 #include <machine/bootconfig.h>
 
 
-/* 
+/*
  * Function to identify and process different types of boot argument
  */
 

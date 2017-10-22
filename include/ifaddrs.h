@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/include/ifaddrs.h 122687 2003-11-14 18:53:22Z bms $	*/
+/*	$FreeBSD: release/10.0.0/include/ifaddrs.h 250887 2013-05-21 21:20:10Z ed $	*/
 
 /*
  * Copyright (c) 1995, 1999
@@ -31,7 +31,7 @@
 struct ifaddrs {
 	struct ifaddrs  *ifa_next;
 	char		*ifa_name;
-	u_int		 ifa_flags;
+	unsigned int	 ifa_flags;
 	struct sockaddr	*ifa_addr;
 	struct sockaddr	*ifa_netmask;
 	struct sockaddr	*ifa_dstaddr;

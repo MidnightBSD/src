@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/lib/libgcov/Makefile 198471 2009-10-25 15:52:31Z kan $
+# $FreeBSD: release/10.0.0/gnu/lib/libgcov/Makefile 245539 2013-01-17 05:56:28Z andrew $
 
 NO_PROFILE=
 .include <bsd.own.mk>
@@ -15,6 +15,11 @@ CFLAGS+=	-DIN_GCC -DIN_LIBGCC2 -D__GCC_FLOAT_NOT_NEEDED
 CFLAGS+=	-D_PTHREADS -DGTHREAD_USE_WEAK
 CFLAGS+=	-I${.CURDIR}/../../usr.bin/cc/cc_tools \
 		-I${GCCLIB}/include -I${GCCDIR}/config -I${GCCDIR} -I.
+
+.if ${TARGET_CPUARCH} == "arm" && ${MK_ARM_EABI} != "no"
+CFLAGS+=	-DTARGET_ARM_EABI
+.endif
+
 #
 # Library members defined in libgcov.c.
 # Defined in libgcov.c, included only in gcov library

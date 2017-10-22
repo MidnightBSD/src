@@ -24,7 +24,7 @@
 #  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 #  SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/usr.bin/man/man.sh 248339 2013-03-15 19:50:21Z brooks $
+# $FreeBSD: release/10.0.0/usr.bin/man/man.sh 245514 2013-01-16 23:20:24Z brooks $
 
 # Usage: add_to_manpath path
 # Adds a variable to manpath while ensuring we don't have duplicates.
@@ -369,7 +369,7 @@ man_display_page() {
 		while getopts 'egprtv' preproc_arg; do
 			case "${preproc_arg}" in
 			e)	pipeline="$pipeline | $EQN" ;;
-			g)	;; # Ignore for compatability.
+			g)	;; # Ignore for compatibility.
 			p)	pipeline="$pipeline | $PIC" ;;
 			r)	pipeline="$pipeline | $REFER" ;;
 			t)	pipeline="$pipeline | $TBL" ;;

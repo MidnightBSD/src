@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/ia64/include/sigframe.h 105950 2002-10-25 19:10:58Z peter $
+ * $FreeBSD: release/10.0.0/sys/ia64/include/sigframe.h 105950 2002-10-25 19:10:58Z peter $
  */
 
 #ifndef _MACHINE_SIGFRAME_H_

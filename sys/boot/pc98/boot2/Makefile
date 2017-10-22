@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/pc98/boot2/Makefile 243190 2012-11-17 22:40:18Z dim $
+# $FreeBSD: release/10.0.0/sys/boot/pc98/boot2/Makefile 242706 2012-11-07 19:51:53Z dim $
 
 .include <bsd.own.mk>
 

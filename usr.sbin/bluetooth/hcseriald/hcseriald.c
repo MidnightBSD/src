@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: hcseriald.c,v 1.3 2003/05/21 22:40:32 max Exp $
- * $FreeBSD: stable/9/usr.sbin/bluetooth/hcseriald/hcseriald.c 188130 2009-02-04 22:04:06Z emax $
+ * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/hcseriald/hcseriald.c 244040 2012-12-08 22:16:36Z eadler $
  */
 
 #include <sys/types.h>
@@ -257,7 +257,7 @@ usage(void)
 {
 	fprintf(stderr, "Usage: %s -f device -n node_name [-s speed -d -h]\n" \
 			"Where:\n" \
-			"\t-f device    tty device name, ex. /dev/cuad1\n" \
+			"\t-f device    tty device name, ex. /dev/cuau1\n" \
 			"\t-n node_name set Netgraph node name to node_name\n" \
 			"\t-s speed     set tty speed, ex. 115200\n" \
 			"\t-d           run in foreground\n" \

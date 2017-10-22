@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/thread/thr_rtld.c 217191 2011-01-09 12:38:40Z kib $
+ * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_rtld.c 249425 2013-04-12 19:47:32Z jilles $
  *
  */
 
@@ -211,16 +211,5 @@ _thr_rtld_init(void)
 	/* mask signals, also force to resolve __sys_sigprocmask PLT */
 	_thr_signal_block(curthread);
 	_rtld_thread_init(&li);
-	_thr_signal_unblock(curthread);
-}
-
-void
-_thr_rtld_fini(void)
-{
-	struct pthread	*curthread;
-
-	curthread = _get_curthread();
-	_thr_signal_block(curthread);
-	_rtld_thread_init(NULL);
 	_thr_signal_unblock(curthread);
 }

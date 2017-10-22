@@ -1,7 +1,7 @@
 # This file tells config what files go into building a kernel,
 # files marked standard are always included.
 #
-# $FreeBSD: stable/9/sys/conf/files.i386 248544 2013-03-20 05:49:09Z bryanv $
+# $FreeBSD: release/10.0.0/sys/conf/files.i386 259051 2013-12-06 23:40:50Z delphij $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -61,9 +61,15 @@ hpt27xx_lib.o			optional	hpt27xx			\
 	dependency	"$S/dev/hpt27xx/i386-elf.hpt27xx_lib.o.uu"	\
 	compile-with	"uudecode < $S/dev/hpt27xx/i386-elf.hpt27xx_lib.o.uu" \
 	no-implicit-rule
+#
 hptmvraid.o			optional	hptmv			\
 	dependency	"$S/dev/hptmv/i386-elf.raid.o.uu"		\
 	compile-with	"uudecode < $S/dev/hptmv/i386-elf.raid.o.uu"	\
+	no-implicit-rule
+#
+hptnr_lib.o			optional	hptnr			\
+	dependency	"$S/dev/hptnr/i386-elf.hptnr_lib.o.uu"	\
+	compile-with	"uudecode < $S/dev/hptnr/i386-elf.hptnr_lib.o.uu" \
 	no-implicit-rule
 #
 hptrr_lib.o			optional	hptrr			\
@@ -71,6 +77,7 @@ hptrr_lib.o			optional	hptrr			\
 	compile-with	"uudecode < $S/dev/hptrr/i386-elf.hptrr_lib.o.uu" \
 	no-implicit-rule
 #
+cddl/contrib/opensolaris/common/atomic/i386/opensolaris_atomic.S	optional zfs compile-with "${ZFS_S}"
 compat/linprocfs/linprocfs.c	optional linprocfs
 compat/linsysfs/linsysfs.c	optional linsysfs
 compat/linux/linux_emul.c	optional compat_linux
@@ -117,10 +124,13 @@ bf_enc.o			optional crypto | ipsec	\
 	dependency	"$S/crypto/blowfish/arch/i386/bf_enc.S $S/crypto/blowfish/arch/i386/bf_enc_586.S $S/crypto/blowfish/arch/i386/bf_enc_686.S" \
 	compile-with	"${CC} -c -I$S/crypto/blowfish/arch/i386 ${ASM_CFLAGS} ${WERROR} ${.IMPSRC}" \
 	no-implicit-rule
-crypto/aesni/aesencdec_i386.S	optional aesni
 crypto/aesni/aeskeys_i386.S	optional aesni
 crypto/aesni/aesni.c		optional aesni
-crypto/aesni/aesni_wrap.c	optional aesni
+aesni_wrap.o			optional aesni				\
+	dependency	"$S/crypto/aesni/aesni_wrap.c"			\
+	compile-with	"${CC} -c ${CFLAGS:C/^-O2$/-O3/:N-nostdinc} ${WERROR} ${PROF} -mmmx -msse -maes ${.IMPSRC}" \
+	no-implicit-rule						\
+	clean		"aesni_wrap.o"
 crypto/des/arch/i386/des_enc.S	optional crypto | ipsec | netsmb
 crypto/via/padlock.c		optional padlock
 crypto/via/padlock_cipher.c	optional padlock
@@ -146,6 +156,14 @@ dev/atkbdc/atkbdc.c		optional atkbdc
 dev/atkbdc/atkbdc_isa.c		optional atkbdc isa
 dev/atkbdc/atkbdc_subr.c	optional atkbdc
 dev/atkbdc/psm.c		optional psm atkbdc
+dev/bxe/bxe.c                   optional bxe pci
+dev/bxe/bxe_stats.c             optional bxe pci
+dev/bxe/bxe_debug.c             optional bxe pci
+dev/bxe/ecore_sp.c              optional bxe pci
+dev/bxe/bxe_elink.c             optional bxe pci
+dev/bxe/57710_init_values.c     optional bxe pci
+dev/bxe/57711_init_values.c     optional bxe pci
+dev/bxe/57712_init_values.c     optional bxe pci
 dev/ce/ceddk.c			optional ce
 dev/ce/if_ce.c			optional ce
 dev/ce/tau32-ddk.c		optional ce \
@@ -175,18 +193,22 @@ dev/fdc/fdc.c			optional fdc
 dev/fdc/fdc_acpi.c		optional fdc
 dev/fdc/fdc_isa.c		optional fdc isa
 dev/fdc/fdc_pccard.c		optional fdc pccard
+dev/fdt/fdt_x86.c		optional fdt
 dev/fe/if_fe_isa.c		optional fe isa
 dev/glxiic/glxiic.c		optional glxiic
 dev/glxsb/glxsb.c		optional glxsb
 dev/glxsb/glxsb_hash.c		optional glxsb
-dev/hpt27xx/os_bsd.c		optional hpt27xx
-dev/hpt27xx/osm_bsd.c		optional hpt27xx
+dev/hpt27xx/hpt27xx_os_bsd.c	optional hpt27xx
+dev/hpt27xx/hpt27xx_osm_bsd.c	optional hpt27xx
 dev/hpt27xx/hpt27xx_config.c	optional hpt27xx
 dev/hptmv/entry.c		optional hptmv
 dev/hptmv/mv.c			optional hptmv
 dev/hptmv/gui_lib.c		optional hptmv
 dev/hptmv/hptproc.c		optional hptmv
 dev/hptmv/ioctl.c		optional hptmv
+dev/hptnr/hptnr_os_bsd.c	optional hptnr
+dev/hptnr/hptnr_osm_bsd.c	optional hptnr
+dev/hptnr/hptnr_config.c	optional hptnr
 dev/hptrr/hptrr_os_bsd.c	optional hptrr
 dev/hptrr/hptrr_osm_bsd.c	optional hptrr
 dev/hptrr/hptrr_config.c	optional hptrr
@@ -199,6 +221,18 @@ dev/hwpmc/hwpmc_piv.c		optional hwpmc
 dev/hwpmc/hwpmc_ppro.c		optional hwpmc
 dev/hwpmc/hwpmc_tsc.c		optional hwpmc
 dev/hwpmc/hwpmc_x86.c		optional hwpmc
+dev/hyperv/netvsc/hv_net_vsc.c				optional	hyperv
+dev/hyperv/netvsc/hv_netvsc_drv_freebsd.c		optional	hyperv
+dev/hyperv/netvsc/hv_rndis_filter.c			optional	hyperv
+dev/hyperv/stordisengage/hv_ata_pci_disengage.c		optional	hyperv
+dev/hyperv/storvsc/hv_storvsc_drv_freebsd.c		optional	hyperv
+dev/hyperv/utilities/hv_util.c				optional	hyperv
+dev/hyperv/vmbus/hv_channel.c				optional	hyperv
+dev/hyperv/vmbus/hv_channel_mgmt.c			optional	hyperv
+dev/hyperv/vmbus/hv_connection.c			optional	hyperv
+dev/hyperv/vmbus/hv_hv.c				optional	hyperv
+dev/hyperv/vmbus/hv_ring_buffer.c			optional	hyperv
+dev/hyperv/vmbus/hv_vmbus_drv_freebsd.c			optional	hyperv
 dev/ichwd/ichwd.c		optional ichwd
 dev/if_ndis/if_ndis.c		optional ndis
 dev/if_ndis/if_ndis_pccard.c	optional ndis pccard
@@ -222,11 +256,21 @@ dev/lindev/lindev.c		optional lindev
 dev/mse/mse.c			optional mse
 dev/mse/mse_isa.c		optional mse isa
 dev/nfe/if_nfe.c		optional nfe pci
+dev/nvd/nvd.c			optional nvd nvme
 dev/nve/if_nve.c		optional nve pci
+dev/nvme/nvme.c			optional nvme
+dev/nvme/nvme_ctrlr.c		optional nvme
+dev/nvme/nvme_ctrlr_cmd.c	optional nvme
+dev/nvme/nvme_ns.c		optional nvme
+dev/nvme/nvme_ns_cmd.c		optional nvme
+dev/nvme/nvme_qpair.c		optional nvme
+dev/nvme/nvme_sysctl.c		optional nvme
+dev/nvme/nvme_test.c		optional nvme
+dev/nvme/nvme_util.c		optional nvme
 dev/nvram/nvram.c		optional nvram isa
 dev/pcf/pcf_isa.c		optional pcf
-dev/random/ivy.c		optional random rdrand_rng
-dev/random/nehemiah.c		optional random padlock_rng
+dev/random/ivy.c		optional rdrand_rng
+dev/random/nehemiah.c		optional padlock_rng
 dev/sbni/if_sbni.c		optional sbni
 dev/sbni/if_sbni_isa.c		optional sbni isa
 dev/sbni/if_sbni_pci.c		optional sbni pci
@@ -244,8 +288,9 @@ dev/syscons/scvtb.c		optional sc
 dev/tpm/tpm.c			optional tpm
 dev/tpm/tpm_acpi.c		optional tpm acpi
 dev/tpm/tpm_isa.c		optional tpm isa
-dev/uart/uart_cpu_i386.c	optional uart
+dev/uart/uart_cpu_x86.c		optional uart
 dev/viawd/viawd.c		optional viawd
+dev/vmware/vmxnet3/if_vmx.c	optional vmx
 dev/acpica/acpi_if.m		standard
 dev/acpi_support/acpi_wmi_if.m	standard
 dev/wbwd/wbwd.c			optional wbwd
@@ -376,7 +421,7 @@ acpi_wakecode.o			optional acpi				\
 	clean		"acpi_wakecode.o"
 acpi_wakecode.bin		optional acpi				\
 	dependency	"acpi_wakecode.o"				\
-	compile-with	"objcopy -S -O binary acpi_wakecode.o ${.TARGET}" \
+	compile-with	"${OBJCOPY} -S -O binary acpi_wakecode.o ${.TARGET}" \
 	no-obj no-implicit-rule	before-depend				\
 	clean		"acpi_wakecode.bin"
 acpi_wakecode.h			optional acpi				\
@@ -390,7 +435,6 @@ acpi_wakedata.h			optional acpi				\
 	no-obj no-implicit-rule	before-depend				\
 	clean		"acpi_wakedata.h"
 #
-i386/acpica/acpi_wakeup.c	optional acpi
 i386/bios/apm.c			optional apm
 i386/bios/mca_machdep.c		optional mca
 i386/bios/smapi.c		optional smapi
@@ -417,7 +461,6 @@ i386/i386/in_cksum.c		optional inet | inet6
 i386/i386/initcpu.c		standard
 i386/i386/io.c			optional io
 i386/i386/k6_mem.c		optional mem
-i386/i386/legacy.c		optional native
 i386/i386/locore.s		optional native	no-obj
 i386/xen/locore.s		optional xen	no-obj
 i386/i386/longrun.c		optional cpu_enable_longrun
@@ -463,8 +506,6 @@ i386/ibcs2/ibcs2_xenix.c	optional ibcs2
 i386/ibcs2/ibcs2_xenix_sysent.c	optional ibcs2
 i386/ibcs2/imgact_coff.c	optional ibcs2
 i386/xen/clock.c		optional xen
-i386/xen/xen_clock_util.c	optional xen
-i386/xen/xen_rtc.c		optional xen
 i386/isa/elink.c		optional ep | ie
 i386/isa/npx.c			optional npx
 i386/isa/pmtimer.c		optional pmtimer
@@ -481,7 +522,7 @@ i386/linux/linux_support.s	optional compat_linux	\
 i386/linux/linux_sysent.c	optional compat_linux
 i386/linux/linux_sysvec.c	optional compat_linux
 i386/pci/pci_cfgreg.c		optional pci
-i386/pci/pci_pir.c		optional pci 
+i386/pci/pci_pir.c		optional pci
 i386/svr4/svr4_locore.s		optional compat_svr4	\
 	dependency	"svr4_assym.h"	\
 	warning "COMPAT_SVR4 is broken and should be avoided"
@@ -515,6 +556,7 @@ compat/x86bios/x86bios.c	optional x86bios | atkbd | dpms | vesa
 #
 x86/acpica/OsdEnvironment.c	optional acpi
 x86/acpica/acpi_apm.c		optional acpi
+x86/acpica/acpi_wakeup.c	optional acpi
 x86/acpica/madt.c		optional acpi apic
 x86/acpica/srat.c		optional acpi
 x86/bios/smbios.c		optional smbios
@@ -524,7 +566,7 @@ x86/cpufreq/hwpstate.c		optional cpufreq
 x86/cpufreq/p4tcc.c		optional cpufreq
 x86/cpufreq/powernow.c		optional cpufreq
 x86/cpufreq/smist.c		optional cpufreq
-x86/isa/atpic.c			optional atpic	
+x86/isa/atpic.c			optional atpic
 x86/isa/atrtc.c			optional native
 x86/isa/clock.c			optional native
 x86/isa/elcr.c			optional atpic | apic native
@@ -536,8 +578,10 @@ x86/pci/pci_bus.c		optional pci
 x86/pci/qpi.c			optional pci
 x86/x86/busdma_machdep.c	standard
 x86/x86/dump_machdep.c		standard
+x86/x86/fdt_machdep.c		optional fdt
 x86/x86/intr_machdep.c		standard
 x86/x86/io_apic.c		optional apic
+x86/x86/legacy.c		optional native
 x86/x86/local_apic.c		optional apic
 x86/x86/mca.c			standard
 x86/x86/mptable.c		optional apic native
@@ -545,3 +589,5 @@ x86/x86/mptable_pci.c		optional apic native pci
 x86/x86/msi.c			optional apic pci
 x86/x86/nexus.c			standard
 x86/x86/tsc.c			standard
+x86/xen/hvm.c			optional xenhvm
+x86/xen/xen_intr.c		optional xen | xenhvm

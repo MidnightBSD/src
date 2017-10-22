@@ -28,7 +28,7 @@
  *
  *	@(#)timedc.h	8.1 (Berkeley) 6/6/93
  *
- * $FreeBSD: stable/9/usr.sbin/timed/timedc/timedc.h 216372 2010-12-11 09:38:12Z joel $
+ * $FreeBSD: release/10.0.0/usr.sbin/timed/timedc/timedc.h 216372 2010-12-11 09:38:12Z joel $
  */
 
 #include <sys/param.h>

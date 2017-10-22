@@ -37,7 +37,7 @@
  *	from: Utah Hdr: vmparam.h 1.16 91/01/18
  *	@(#)vmparam.h	8.2 (Berkeley) 4/22/94
  *	JNPR: vmparam.h,v 1.3.2.1 2007/09/10 06:01:28 girish
- * $FreeBSD: stable/9/sys/mips/include/vmparam.h 221855 2011-05-13 19:35:01Z mdf $
+ * $FreeBSD: release/10.0.0/sys/mips/include/vmparam.h 250338 2013-05-07 22:46:24Z attilio $
  */
 
 #ifndef _MACHINE_VMPARAM_H_
@@ -96,12 +96,8 @@
  * offset is calculated.
  */
 #define	USRSTACK		(VM_MAXUSER_ADDRESS - PAGE_SIZE)
- 
-/*
- * Only one memory domain.
- */
-#ifndef VM_NDOMAIN
-#define	VM_NDOMAIN		1
+#ifdef __mips_n64
+#define	FREEBSD32_USRSTACK	(((vm_offset_t)0x80000000) - PAGE_SIZE)
 #endif
 
 /*
@@ -127,10 +123,11 @@
 #endif
 
 /*
- * Ceiling on amount of kmem_map kva space.
+ * Ceiling on the amount of kmem_map KVA space: 40% of the entire KVA space.
  */
 #ifndef VM_KMEM_SIZE_MAX
-#define	VM_KMEM_SIZE_MAX	(200 * 1024 * 1024)
+#define	VM_KMEM_SIZE_MAX	((VM_MAX_KERNEL_ADDRESS - \
+    VM_MIN_KERNEL_ADDRESS + 1) * 2 / 5)
 #endif
 
 /* initial pagein size of beginning of executable file */

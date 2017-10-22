@@ -28,7 +28,7 @@
  *
  *	@(#)dump.h	8.2 (Berkeley) 4/28/95
  *
- * $FreeBSD: stable/9/sbin/dump/dump.h 230047 2012-01-13 07:08:21Z mckusick $
+ * $FreeBSD: release/10.0.0/sbin/dump/dump.h 243665 2012-11-29 05:16:50Z eadler $
  */
 
 /*
@@ -121,7 +121,7 @@ void	trewind(void);
 void	writerec(char *dp, int isspcl);
 
 void	Exit(int status) __dead2;
-void	dumpabort(int signo);
+void	dumpabort(int signo) __dead2;
 void	dump_getfstab(void);
 
 char	*rawname(char *cp);

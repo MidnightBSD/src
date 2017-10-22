@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi_pci.c 233393 2012-03-23 20:47:25Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/acpi_pci.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -94,7 +94,7 @@ static device_method_t acpi_pci_methods[] = {
 	/* PCI interface */
 	DEVMETHOD(pci_set_powerstate,	acpi_pci_set_powerstate_method),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static devclass_t pci_devclass;

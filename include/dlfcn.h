@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/include/dlfcn.h 230410 2012-01-21 01:24:06Z kib $
+ * $FreeBSD: release/10.0.0/include/dlfcn.h 229768 2012-01-07 10:33:01Z kib $
  */
 
 #ifndef _DLFCN_H_

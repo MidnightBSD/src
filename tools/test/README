@@ -1,4 +1,4 @@
-$FreeBSD: stable/9/tools/test/README 232566 2012-03-05 19:13:18Z bz $
+$FreeBSD: release/10.0.0/tools/test/README 231858 2012-02-17 04:26:24Z bz $
 
 This directory is for test programs.
 

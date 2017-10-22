@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/tools/regression/kqueue/config.h 223865 2011-07-08 12:16:30Z jonathan $ */
+/* $FreeBSD: release/10.0.0/tools/regression/kqueue/config.h 223865 2011-07-08 12:16:30Z jonathan $ */
 
 #define HAVE_ERR_H 1
 #define HAVE_SYS_EVENT_H 1

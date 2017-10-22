@@ -25,9 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/agp/agp_intel.c 190169 2009-03-20 18:30:20Z rnoland $");
-
-#include "opt_bus.h"
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/agp/agp_intel.c 244926 2013-01-01 18:16:49Z antoine $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -107,7 +105,7 @@ agp_intel_match(device_t dev)
 		return ("Intel 82845G host to AGP bridge");
 	case 0x35808086:
 		return ("Intel 82855GM host to AGP bridge");
-	};
+	}
 
 	return (NULL);
 }

@@ -68,7 +68,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/net/eui64.c 129957 2004-06-01 19:30:13Z brooks $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/eui64.c 254700 2013-08-23 13:59:47Z jilles $");
 
 #include <stdio.h>
 #include <paths.h>
@@ -227,7 +227,7 @@ eui64_ntohost(char *hostname, size_t len, const struct eui64 *id)
 	char eui64_a[24];
 	char *yp_domain;
 #endif
-	if ((fp = fopen(_PATH_EUI64, "r")) == NULL)
+	if ((fp = fopen(_PATH_EUI64, "re")) == NULL)
 		return (1);
 
 	while (fgets(buf,BUFSIZ,fp)) {
@@ -277,7 +277,7 @@ eui64_hostton(const char *hostname, struct eui64 *id)
 	int resultlen;
 	char *yp_domain;
 #endif
-	if ((fp = fopen(_PATH_EUI64, "r")) == NULL)
+	if ((fp = fopen(_PATH_EUI64, "re")) == NULL)
 		return (1);
 
 	while (fgets(buf,BUFSIZ,fp)) {

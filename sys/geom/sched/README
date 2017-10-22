@@ -159,4 +159,4 @@ the requests routed through the scheduler node.
 A removal ("geom sched destroy ad0.sched.") will restore the original
 configuration.
 
-# $FreeBSD: stable/9/sys/geom/sched/README 206497 2010-04-12 16:37:45Z luigi $
+# $FreeBSD: release/10.0.0/sys/geom/sched/README 206497 2010-04-12 16:37:45Z luigi $

@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/lib/libz/Makefile 232930 2012-03-13 18:39:57Z dim $
+# $FreeBSD: head/lib/libz/Makefile 232263 2012-02-28 18:30:18Z dim $
 #
 
 LIB=		z

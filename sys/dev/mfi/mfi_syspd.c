@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/mfi/mfi_syspd.c 243824 2012-12-03 18:37:02Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mfi/mfi_syspd.c 254330 2013-08-14 15:50:34Z sbruno $");
 
 #include "opt_mfi.h"
 
@@ -126,7 +126,8 @@ mfi_syspd_attach(device_t dev)
 		      sectors / (1024 * 1024 / secsize), sectors, sc->pd_id);
 	sc->pd_disk = disk_alloc();
 	sc->pd_disk->d_drv1 = sc;
-	sc->pd_disk->d_maxsize = sc->pd_controller->mfi_max_io * secsize;
+	sc->pd_disk->d_maxsize = min(sc->pd_controller->mfi_max_io * secsize,
+		(sc->pd_controller->mfi_max_sge - 1) * PAGE_SIZE);
 	sc->pd_disk->d_name = "mfisyspd";
 	sc->pd_disk->d_open = mfi_syspd_open;
 	sc->pd_disk->d_close = mfi_syspd_close;

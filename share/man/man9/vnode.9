@@ -24,7 +24,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man9/vnode.9 206622 2010-04-14 19:08:06Z uqs $
+.\" $FreeBSD: release/10.0.0/share/man/man9/vnode.9 256124 2013-10-07 20:30:05Z jhb $
 .\"
 .Dd February 13, 2010
 .Dt VNODE 9
@@ -119,13 +119,13 @@ No type.
 .It Dv VREG
 A regular file; may be with or without VM object backing.
 If you want to make sure this get a backing object, call
-.Xr vfs_object_create 9 .
+.Fn vnode_create_vobject .
 .It Dv VDIR
 A directory.
 .It Dv VBLK
 A block device; may be with or without VM object backing.
 If you want to make sure this get a backing object, call
-.Xr vfs_object_create 9 .
+.Fn vnode_create_vobject .
 .It Dv VCHR
 A character device.
 .It Dv VLNK
@@ -163,7 +163,9 @@ intertwining of VM Objects and Vnodes.
 .Xr malloc 9 ,
 .Xr VOP_ACCESS 9 ,
 .Xr VOP_ACLCHECK 9 ,
+.Xr VOP_ADVISE 9 ,
 .Xr VOP_ADVLOCK 9 ,
+.Xr VOP_ALLOCATE 9 ,
 .Xr VOP_ATTRIB 9 ,
 .Xr VOP_BWRITE 9 ,
 .Xr VOP_CREATE 9 ,

@@ -39,7 +39,7 @@
  * Authors: Archie Cobbs <archie@freebsd.org>
  *	    Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_ether.c 247886 2013-03-06 11:02:44Z avg $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_ether.c 246324 2013-02-04 17:29:13Z avg $
  */
 
 /*
@@ -240,8 +240,6 @@ ng_ether_sanitize_ifname(const char *ifname, char *name)
 /*
  * Handle a packet that has come in on an interface. We get to
  * look at it here before any upper layer protocols do.
- *
- * NOTE: this function will get called at splimp()
  */
 static void
 ng_ether_input(struct ifnet *ifp, struct mbuf **mp)
@@ -259,8 +257,6 @@ ng_ether_input(struct ifnet *ifp, struct mbuf **mp)
 /*
  * Handle a packet that has come in on an interface, and which
  * does not match any of our known protocols (an ``orphan'').
- *
- * NOTE: this function will get called at splimp()
  */
 static void
 ng_ether_input_orphan(struct ifnet *ifp, struct mbuf *m)
@@ -811,9 +807,7 @@ static int
 ng_ether_mod_event(module_t mod, int event, void *data)
 {
 	int error = 0;
-	int s;
 
-	s = splnet();
 	switch (event) {
 	case MOD_LOAD:
 
@@ -860,7 +854,6 @@ ng_ether_mod_event(module_t mod, int event, void *data)
 		error = EOPNOTSUPP;
 		break;
 	}
-	splx(s);
 	return (error);
 }
 

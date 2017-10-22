@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/pci/pci.c 248052 2013-03-08 12:57:58Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/pci/pci.c 257495 2013-11-01 06:33:17Z kib $");
 
 #include "opt_bus.h"
 
@@ -70,25 +70,11 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/pci/pci.c 248052 2013-03-08 12:57:58Z mariu
 #include "pcib_if.h"
 #include "pci_if.h"
 
-/*
- * XXX: Due to a limitation of the bus_dma_tag_create() API, we cannot
- * specify a 4GB boundary on 32-bit targets.  Usually this does not
- * matter as it is ok to use a boundary of 0 on these systems.
- * However, in the case of PAE, DMA addresses can cross a 4GB
- * boundary, so as a workaround use a 2GB boundary.
- */
-#if (BUS_SPACE_MAXADDR > 0xFFFFFFFF)
-#ifdef PAE
-#define	PCI_DMA_BOUNDARY	0x80000000
-#else
-#define	PCI_DMA_BOUNDARY	0x100000000
-#endif
-#endif
-
 #define	PCIR_IS_BIOS(cfg, reg)						\
 	(((cfg)->hdrtype == PCIM_HDRTYPE_NORMAL && reg == PCIR_BIOS) ||	\
 	 ((cfg)->hdrtype == PCIM_HDRTYPE_BRIDGE && reg == PCIR_BIOS_1))
 
+static int		pci_has_quirk(uint32_t devid, int quirk);
 static pci_addr_t	pci_mapbase(uint64_t mapreg);
 static const char	*pci_maptype(uint64_t mapreg);
 static int		pci_mapsize(uint64_t testval);
@@ -110,7 +96,6 @@ static void		pci_load_vendor_data(void);
 static int		pci_describe_parse_line(char **ptr, int *vendor,
 			    int *device, char **desc);
 static char		*pci_describe_device(device_t dev);
-static bus_dma_tag_t	pci_get_dma_tag(device_t bus, device_t dev);
 static int		pci_modevent(module_t mod, int what, void *arg);
 static void		pci_hdrtypedata(device_t pcib, int b, int s, int f,
 			    pcicfgregs *cfg);
@@ -130,6 +115,7 @@ static void		pci_enable_msix(device_t dev, u_int index,
 static void		pci_mask_msix(device_t dev, u_int index);
 static void		pci_unmask_msix(device_t dev, u_int index);
 static int		pci_msi_blacklisted(void);
+static int		pci_msix_blacklisted(void);
 static void		pci_resume_msi(device_t dev);
 static void		pci_resume_msix(device_t dev);
 static int		pci_remap_intr_method(device_t bus, device_t dev,
@@ -160,9 +146,10 @@ static device_method_t pci_methods[] = {
 	DEVMETHOD(bus_delete_resource,	pci_delete_resource),
 	DEVMETHOD(bus_alloc_resource,	pci_alloc_resource),
 	DEVMETHOD(bus_adjust_resource,	bus_generic_adjust_resource),
-	DEVMETHOD(bus_release_resource,	bus_generic_rl_release_resource),
+	DEVMETHOD(bus_release_resource,	pci_release_resource),
 	DEVMETHOD(bus_activate_resource, pci_activate_resource),
 	DEVMETHOD(bus_deactivate_resource, pci_deactivate_resource),
+	DEVMETHOD(bus_child_detached,	pci_child_detached),
 	DEVMETHOD(bus_child_pnpinfo_str, pci_child_pnpinfo_str_method),
 	DEVMETHOD(bus_child_location_str, pci_child_location_str_method),
 	DEVMETHOD(bus_remap_intr,	pci_remap_intr_method),
@@ -179,7 +166,9 @@ static device_method_t pci_methods[] = {
 	DEVMETHOD(pci_get_powerstate,	pci_get_powerstate_method),
 	DEVMETHOD(pci_set_powerstate,	pci_set_powerstate_method),
 	DEVMETHOD(pci_assign_interrupt,	pci_assign_interrupt_method),
+	DEVMETHOD(pci_find_cap,		pci_find_cap_method),
 	DEVMETHOD(pci_find_extcap,	pci_find_extcap_method),
+	DEVMETHOD(pci_find_htcap,	pci_find_htcap_method),
 	DEVMETHOD(pci_alloc_msi,	pci_alloc_msi_method),
 	DEVMETHOD(pci_alloc_msix,	pci_alloc_msix_method),
 	DEVMETHOD(pci_remap_msix,	pci_remap_msix_method),
@@ -193,7 +182,7 @@ static device_method_t pci_methods[] = {
 DEFINE_CLASS_0(pci, pci_driver, pci_methods, sizeof(struct pci_softc));
 
 static devclass_t pci_devclass;
-DRIVER_MODULE(pci, pcib, pci_driver, pci_devclass, pci_modevent, 0);
+DRIVER_MODULE(pci, pcib, pci_driver, pci_devclass, pci_modevent, NULL);
 MODULE_VERSION(pci, 1);
 
 static char	*pci_vendordata;
@@ -203,15 +192,16 @@ struct pci_quirk {
 	uint32_t devid;	/* Vendor/device of the card */
 	int	type;
 #define	PCI_QUIRK_MAP_REG	1 /* PCI map register in weird place */
-#define	PCI_QUIRK_DISABLE_MSI	2 /* MSI/MSI-X doesn't work */
+#define	PCI_QUIRK_DISABLE_MSI	2 /* Neither MSI nor MSI-X work */
 #define	PCI_QUIRK_ENABLE_MSI_VM	3 /* Older chipset in VM where MSI works */
 #define	PCI_QUIRK_UNMAP_REG	4 /* Ignore PCI map register */
+#define	PCI_QUIRK_DISABLE_MSIX	5 /* MSI-X doesn't work */
 	int	arg1;
 	int	arg2;
 };
 
 static const struct pci_quirk pci_quirks[] = {
-	/* The Intel 82371AB and 82443MX has a map register at offset 0x90. */
+	/* The Intel 82371AB and 82443MX have a map register at offset 0x90. */
 	{ 0x71138086, PCI_QUIRK_MAP_REG,	0x90,	 0 },
 	{ 0x719b8086, PCI_QUIRK_MAP_REG,	0x90,	 0 },
 	/* As does the Serverworks OSB4 (the SMBus mapping register) */
@@ -246,8 +236,8 @@ static const struct pci_quirk pci_quirks[] = {
 	 * MSI-X allocation doesn't work properly for devices passed through
 	 * by VMware up to at least ESXi 5.1.
 	 */
-	{ 0x079015ad, PCI_QUIRK_DISABLE_MSI,	0,	0 }, /* PCI/PCI-X */
-	{ 0x07a015ad, PCI_QUIRK_DISABLE_MSI,	0,	0 }, /* PCIe */
+	{ 0x079015ad, PCI_QUIRK_DISABLE_MSIX,	0,	0 }, /* PCI/PCI-X */
+	{ 0x07a015ad, PCI_QUIRK_DISABLE_MSIX,	0,	0 }, /* PCIe */
 
 	/*
 	 * Some virtualization environments emulate an older chipset
@@ -289,6 +279,12 @@ SYSCTL_INT(_hw_pci, OID_AUTO, enable_io_modes, CTLFLAG_RW,
 enable these bits correctly.  We'd like to do this all the time, but there\n\
 are some peripherals that this causes problems with.");
 
+static int pci_do_realloc_bars = 0;
+TUNABLE_INT("hw.pci.realloc_bars", &pci_do_realloc_bars);
+SYSCTL_INT(_hw_pci, OID_AUTO, realloc_bars, CTLFLAG_RW,
+    &pci_do_realloc_bars, 0,
+    "Attempt to allocate a new range for any BARs whose original firmware-assigned ranges fail to allocate during the initial device scan.");
+
 static int pci_do_power_nodriver = 0;
 TUNABLE_INT("hw.pci.do_power_nodriver", &pci_do_power_nodriver);
 SYSCTL_INT(_hw_pci, OID_AUTO, do_power_nodriver, CTLFLAG_RW,
@@ -323,7 +319,7 @@ SYSCTL_INT(_hw_pci, OID_AUTO, enable_msix, CTLFLAG_RW, &pci_do_msix, 1,
 static int pci_honor_msi_blacklist = 1;
 TUNABLE_INT("hw.pci.honor_msi_blacklist", &pci_honor_msi_blacklist);
 SYSCTL_INT(_hw_pci, OID_AUTO, honor_msi_blacklist, CTLFLAG_RD,
-    &pci_honor_msi_blacklist, 1, "Honor chipset blacklist for MSI");
+    &pci_honor_msi_blacklist, 1, "Honor chipset blacklist for MSI/MSI-X");
 
 #if defined(__i386__) || defined(__amd64__)
 static int pci_usb_takeover = 1;
@@ -335,6 +331,18 @@ SYSCTL_INT(_hw_pci, OID_AUTO, usb_early_takeover, CTLFLAG_RDTUN,
     &pci_usb_takeover, 1, "Enable early takeover of USB controllers.\n\
 Disable this if you depend on BIOS emulation of USB devices, that is\n\
 you use USB devices (like keyboard or mouse) but do not load USB drivers");
+
+static int
+pci_has_quirk(uint32_t devid, int quirk)
+{
+	const struct pci_quirk *q;
+
+	for (q = &pci_quirks[0]; q->devid; q++) {
+		if (q->devid == devid && q->type == quirk)
+			return (1);
+	}
+	return (0);
+}
 
 /* Find a device_t by bus/slot/function in domain 0 */
 
@@ -744,6 +752,7 @@ pci_read_cap(device_t pcib, pcicfgregs *cfg)
 			if ((cfg->hdrtype & PCIM_HDRTYPE) ==
 			    PCIM_HDRTYPE_BRIDGE)
 				pcix_chipset = 1;
+			cfg->pcix.pcix_location = ptr;
 			break;
 		case PCIY_EXPRESS:	/* PCI-express */
 			/*
@@ -751,6 +760,9 @@ pci_read_cap(device_t pcib, pcicfgregs *cfg)
 			 * at least one PCI-express device.
 			 */
 			pcie_chipset = 1;
+			cfg->pcie.pcie_location = ptr;
+			val = REG(ptr + PCIER_FLAGS, 2);
+			cfg->pcie.pcie_type = val & PCIEM_FLAGS_TYPE;
 			break;
 		default:
 			break;
@@ -907,10 +919,9 @@ pci_read_vpd(device_t pcib, pcicfgregs *cfg)
 				remain |= byte2 << 8;
 				if (remain > (0x7f*4 - vrs.off)) {
 					state = -1;
-					printf(
-			    "pci%d:%d:%d:%d: invalid VPD data, remain %#x\n",
-					    cfg->domain, cfg->bus, cfg->slot,
-					    cfg->func, remain);
+					pci_printf(cfg,
+					    "invalid VPD data, remain %#x\n",
+					    remain);
 				}
 				name = byte & 0x7f;
 			} else {
@@ -982,10 +993,8 @@ pci_read_vpd(device_t pcib, pcicfgregs *cfg)
 				 * if this happens, we can't trust the rest
 				 * of the VPD.
 				 */
-				printf(
-				    "pci%d:%d:%d:%d: bad keyword length: %d\n",
-				    cfg->domain, cfg->bus, cfg->slot,
-				    cfg->func, dflen);
+				pci_printf(cfg, "bad keyword length: %d\n",
+				    dflen);
 				cksumvalid = 0;
 				state = -1;
 				break;
@@ -1018,10 +1027,8 @@ pci_read_vpd(device_t pcib, pcicfgregs *cfg)
 					cksumvalid = 1;
 				else {
 					if (bootverbose)
-						printf(
-				"pci%d:%d:%d:%d: bad VPD cksum, remain %hhu\n",
-						    cfg->domain, cfg->bus,
-						    cfg->slot, cfg->func,
+						pci_printf(cfg,
+					    "bad VPD cksum, remain %hhu\n",
 						    vrs.cksum);
 					cksumvalid = 0;
 					state = -1;
@@ -1099,9 +1106,7 @@ pci_read_vpd(device_t pcib, pcicfgregs *cfg)
 			break;
 
 		default:
-			printf("pci%d:%d:%d:%d: invalid state: %d\n",
-			    cfg->domain, cfg->bus, cfg->slot, cfg->func,
-			    state);
+			pci_printf(cfg, "invalid state: %d\n", state);
 			state = -1;
 			break;
 		}
@@ -1118,8 +1123,7 @@ pci_read_vpd(device_t pcib, pcicfgregs *cfg)
 	}
 	if (state < -1) {
 		/* I/O error, clean up */
-		printf("pci%d:%d:%d:%d: failed to read VPD data.\n",
-		    cfg->domain, cfg->bus, cfg->slot, cfg->func);
+		pci_printf(cfg, "failed to read VPD data.\n");
 		if (cfg->vpd.vpd_ident != NULL) {
 			free(cfg->vpd.vpd_ident, M_DEVBUF);
 			cfg->vpd.vpd_ident = NULL;
@@ -1176,12 +1180,55 @@ pci_get_vpd_readonly_method(device_t dev, device_t child, const char *kw,
 }
 
 /*
- * Find the requested extended capability and return the offset in
- * configuration space via the pointer provided. The function returns
- * 0 on success and error code otherwise.
+ * Find the requested HyperTransport capability and return the offset
+ * in configuration space via the pointer provided.  The function
+ * returns 0 on success and an error code otherwise.
  */
 int
-pci_find_extcap_method(device_t dev, device_t child, int capability,
+pci_find_htcap_method(device_t dev, device_t child, int capability, int *capreg)
+{
+	int ptr, error;
+	uint16_t val;
+
+	error = pci_find_cap(child, PCIY_HT, &ptr);
+	if (error)
+		return (error);
+
+	/*
+	 * Traverse the capabilities list checking each HT capability
+	 * to see if it matches the requested HT capability.
+	 */
+	while (ptr != 0) {
+		val = pci_read_config(child, ptr + PCIR_HT_COMMAND, 2);
+		if (capability == PCIM_HTCAP_SLAVE ||
+		    capability == PCIM_HTCAP_HOST)
+			val &= 0xe000;
+		else
+			val &= PCIM_HTCMD_CAP_MASK;
+		if (val == capability) {
+			if (capreg != NULL)
+				*capreg = ptr;
+			return (0);
+		}
+
+		/* Skip to the next HT capability. */
+		while (ptr != 0) {
+			ptr = pci_read_config(child, ptr + PCICAP_NEXTPTR, 1);
+			if (pci_read_config(child, ptr + PCICAP_ID, 1) ==
+			    PCIY_HT)
+				break;
+		}
+	}
+	return (ENOENT);
+}
+
+/*
+ * Find the requested capability and return the offset in
+ * configuration space via the pointer provided.  The function returns
+ * 0 on success and an error code otherwise.
+ */
+int
+pci_find_cap_method(device_t dev, device_t child, int capability,
     int *capreg)
 {
 	struct pci_devinfo *dinfo = device_get_ivars(child);
@@ -1223,6 +1270,43 @@ pci_find_extcap_method(device_t dev, device_t child, int capability,
 			return (0);
 		}
 		ptr = pci_read_config(child, ptr + PCICAP_NEXTPTR, 1);
+	}
+
+	return (ENOENT);
+}
+
+/*
+ * Find the requested extended capability and return the offset in
+ * configuration space via the pointer provided.  The function returns
+ * 0 on success and an error code otherwise.
+ */
+int
+pci_find_extcap_method(device_t dev, device_t child, int capability,
+    int *capreg)
+{
+	struct pci_devinfo *dinfo = device_get_ivars(child);
+	pcicfgregs *cfg = &dinfo->cfg;
+	uint32_t ecap;
+	uint16_t ptr;
+
+	/* Only supported for PCI-express devices. */
+	if (cfg->pcie.pcie_location == 0)
+		return (ENXIO);
+
+	ptr = PCIR_EXTCAP;
+	ecap = pci_read_config(child, ptr, 4);
+	if (ecap == 0xffffffff || ecap == 0)
+		return (ENOENT);
+	for (;;) {
+		if (PCI_EXTCAP_ID(ecap) == capability) {
+			if (capreg != NULL)
+				*capreg = ptr;
+			return (0);
+		}
+		ptr = PCI_EXTCAP_NEXTPTR(ecap);
+		if (ptr == 0)
+			break;
+		ecap = pci_read_config(child, ptr, 4);
 	}
 
 	return (ENOENT);
@@ -1352,8 +1436,8 @@ pci_alloc_msix_method(device_t dev, device_t child, int *count)
 	if (cfg->msi.msi_alloc != 0 || cfg->msix.msix_alloc != 0)
 		return (ENXIO);
 
-	/* If MSI is blacklisted for this system, fail. */
-	if (pci_msi_blacklisted())
+	/* If MSI-X is blacklisted for this system, fail. */
+	if (pci_msix_blacklisted())
 		return (ENXIO);
 
 	/* MSI-X capability present? */
@@ -1496,7 +1580,7 @@ pci_alloc_msix_method(device_t dev, device_t child, int *count)
  * 3.  Call the three vectors allocated by pci_alloc_msix() A, B, and
  * C.  After the call to pci_alloc_msix(), the device will be setup to
  * have an MSI-X table of ABC--- (where - means no vector assigned).
- * If the driver ten passes a vector array of { 1, 0, 1, 2, 0, 2 },
+ * If the driver then passes a vector array of { 1, 0, 1, 2, 0, 2 },
  * then the MSI-X table will look like A-AB-B, and the 'C' vector will
  * be freed back to the system.  This device will also have valid
  * SYS_RES_IRQ rids of 1, 3, 4, and 6.
@@ -1718,10 +1802,12 @@ pci_ht_map_msi(device_t dev, uint64_t addr)
 int
 pci_get_max_read_req(device_t dev)
 {
+	struct pci_devinfo *dinfo = device_get_ivars(dev);
 	int cap;
 	uint16_t val;
 
-	if (pci_find_cap(dev, PCIY_EXPRESS, &cap) != 0)
+	cap = dinfo->cfg.pcie.pcie_location;
+	if (cap == 0)
 		return (0);
 	val = pci_read_config(dev, cap + PCIER_DEVICE_CTL, 2);
 	val &= PCIEM_CTL_MAX_READ_REQUEST;
@@ -1732,10 +1818,12 @@ pci_get_max_read_req(device_t dev)
 int
 pci_set_max_read_req(device_t dev, int size)
 {
+	struct pci_devinfo *dinfo = device_get_ivars(dev);
 	int cap;
 	uint16_t val;
 
-	if (pci_find_cap(dev, PCIY_EXPRESS, &cap) != 0)
+	cap = dinfo->cfg.pcie.pcie_location;
+	if (cap == 0)
 		return (0);
 	if (size < 128)
 		size = 128;
@@ -1905,38 +1993,15 @@ pci_remap_intr_method(device_t bus, device_t dev, u_int irq)
 int
 pci_msi_device_blacklisted(device_t dev)
 {
-	const struct pci_quirk *q;
 
 	if (!pci_honor_msi_blacklist)
 		return (0);
 
-	for (q = &pci_quirks[0]; q->devid; q++) {
-		if (q->devid == pci_get_devid(dev) &&
-		    q->type == PCI_QUIRK_DISABLE_MSI)
-			return (1);
-	}
-	return (0);
+	return (pci_has_quirk(pci_get_devid(dev), PCI_QUIRK_DISABLE_MSI));
 }
 
 /*
- * Returns true if a specified chipset supports MSI when it is
- * emulated hardware in a virtual machine.
- */
-static int
-pci_msi_vm_chipset(device_t dev)
-{
-	const struct pci_quirk *q;
-
-	for (q = &pci_quirks[0]; q->devid; q++) {
-		if (q->devid == pci_get_devid(dev) &&
-		    q->type == PCI_QUIRK_ENABLE_MSI_VM)
-			return (1);
-	}
-	return (0);
-}
-
-/*
- * Determine if MSI is blacklisted globally on this sytem.  Currently,
+ * Determine if MSI is blacklisted globally on this system.  Currently,
  * we just check for blacklisted chipsets as represented by the
  * host-PCI bridge at device 0:0:0.  In the future, it may become
  * necessary to check other system attributes, such as the kenv values
@@ -1953,9 +2018,14 @@ pci_msi_blacklisted(void)
 	/* Blacklist all non-PCI-express and non-PCI-X chipsets. */
 	if (!(pcie_chipset || pcix_chipset)) {
 		if (vm_guest != VM_GUEST_NO) {
+			/*
+			 * Whitelist older chipsets in virtual
+			 * machines known to support MSI.
+			 */
 			dev = pci_find_bsf(0, 0, 0);
 			if (dev != NULL)
-				return (pci_msi_vm_chipset(dev) == 0);
+				return (!pci_has_quirk(pci_get_devid(dev),
+					PCI_QUIRK_ENABLE_MSI_VM));
 		}
 		return (1);
 	}
@@ -1964,6 +2034,45 @@ pci_msi_blacklisted(void)
 	if (dev != NULL)
 		return (pci_msi_device_blacklisted(dev));
 	return (0);
+}
+
+/*
+ * Returns true if the specified device is blacklisted because MSI-X
+ * doesn't work.  Note that this assumes that if MSI doesn't work,
+ * MSI-X doesn't either.
+ */
+int
+pci_msix_device_blacklisted(device_t dev)
+{
+
+	if (!pci_honor_msi_blacklist)
+		return (0);
+
+	if (pci_has_quirk(pci_get_devid(dev), PCI_QUIRK_DISABLE_MSIX))
+		return (1);
+
+	return (pci_msi_device_blacklisted(dev));
+}
+
+/*
+ * Determine if MSI-X is blacklisted globally on this system.  If MSI
+ * is blacklisted, assume that MSI-X is as well.  Check for additional
+ * chipsets where MSI works but MSI-X does not.
+ */
+static int
+pci_msix_blacklisted(void)
+{
+	device_t dev;
+
+	if (!pci_honor_msi_blacklist)
+		return (0);
+
+	dev = pci_find_bsf(0, 0, 0);
+	if (dev != NULL && pci_has_quirk(pci_get_devid(dev),
+	    PCI_QUIRK_DISABLE_MSIX))
+		return (1);
+
+	return (pci_msi_blacklisted());
 }
 
 /*
@@ -2745,13 +2854,34 @@ pci_add_map(device_t bus, device_t dev, int reg, struct resource_list *rl,
 	 */
 	res = resource_list_reserve(rl, bus, dev, type, &reg, start, end, count,
 	    prefetch ? RF_PREFETCHABLE : 0);
+	if (pci_do_realloc_bars && res == NULL && (start != 0 || end != ~0ul)) {
+		/*
+		 * If the allocation fails, try to allocate a resource for
+		 * this BAR using any available range.  The firmware felt
+		 * it was important enough to assign a resource, so don't
+		 * disable decoding if we can help it.
+		 */
+		resource_list_delete(rl, type, reg);
+		resource_list_add(rl, type, reg, 0, ~0ul, count);
+		res = resource_list_reserve(rl, bus, dev, type, &reg, 0, ~0ul,
+		    count, prefetch ? RF_PREFETCHABLE : 0);
+	}
 	if (res == NULL) {
 		/*
 		 * If the allocation fails, delete the resource list entry
-		 * to force pci_alloc_resource() to allocate resources
-		 * from the parent.
+		 * and disable decoding for this device.
+		 *
+		 * If the driver requests this resource in the future,
+		 * pci_reserve_map() will try to allocate a fresh
+		 * resource range.
 		 */
 		resource_list_delete(rl, type, reg);
+		pci_disable_io(dev, type);
+		if (bootverbose)
+			device_printf(bus,
+			    "pci%d:%d:%d:%d bar %#x failed to allocate\n",
+			    pci_get_domain(dev), pci_get_bus(dev),
+			    pci_get_slot(dev), pci_get_function(dev), reg);
 	} else {
 		start = rman_get_start(res);
 		pci_write_bar(dev, pm, start);
@@ -3391,7 +3521,7 @@ pci_driver_added(device_t dev, driver_t *driver)
 			pci_printf(&dinfo->cfg, "reprobing on driver added\n");
 		pci_cfg_restore(child, dinfo);
 		if (device_probe_and_attach(child) != 0)
-			pci_cfg_save(child, dinfo, 1);
+			pci_child_detached(dev, child);
 	}
 	free(devlist, M_TEMP);
 }
@@ -3704,6 +3834,34 @@ pci_probe_nomatch(device_t dev, device_t child)
 	printf(" at device %d.%d (no driver attached)\n",
 	    pci_get_slot(child), pci_get_function(child));
 	pci_cfg_save(child, device_get_ivars(child), 1);
+}
+
+void
+pci_child_detached(device_t dev, device_t child)
+{
+	struct pci_devinfo *dinfo;
+	struct resource_list *rl;
+
+	dinfo = device_get_ivars(child);
+	rl = &dinfo->resources;
+
+	/*
+	 * Have to deallocate IRQs before releasing any MSI messages and
+	 * have to release MSI messages before deallocating any memory
+	 * BARs.
+	 */
+	if (resource_list_release_active(rl, dev, child, SYS_RES_IRQ) != 0)
+		pci_printf(&dinfo->cfg, "Device leaked IRQ resources\n");
+	if (dinfo->cfg.msi.msi_alloc != 0 || dinfo->cfg.msix.msix_alloc != 0) {
+		pci_printf(&dinfo->cfg, "Device leaked MSI vectors\n");
+		(void)pci_release_msi(child);
+	}
+	if (resource_list_release_active(rl, dev, child, SYS_RES_MEMORY) != 0)
+		pci_printf(&dinfo->cfg, "Device leaked memory resources\n");
+	if (resource_list_release_active(rl, dev, child, SYS_RES_IOPORT) != 0)
+		pci_printf(&dinfo->cfg, "Device leaked I/O resources\n");
+
+	pci_cfg_save(child, dinfo, 1);
 }
 
 /*
@@ -4109,11 +4267,11 @@ struct resource *
 pci_alloc_resource(device_t dev, device_t child, int type, int *rid,
 		   u_long start, u_long end, u_long count, u_int flags)
 {
-	struct pci_devinfo *dinfo = device_get_ivars(child);
-	struct resource_list *rl = &dinfo->resources;
+	struct pci_devinfo *dinfo;
+	struct resource_list *rl;
 	struct resource_list_entry *rle;
 	struct resource *res;
-	pcicfgregs *cfg = &dinfo->cfg;
+	pcicfgregs *cfg;
 
 	if (device_get_parent(child) != dev)
 		return (BUS_ALLOC_RESOURCE(device_get_parent(dev), child,
@@ -4122,6 +4280,9 @@ pci_alloc_resource(device_t dev, device_t child, int type, int *rid,
 	/*
 	 * Perform lazy resource allocation
 	 */
+	dinfo = device_get_ivars(child);
+	rl = &dinfo->resources;
+	cfg = &dinfo->cfg;
 	switch (type) {
 	case SYS_RES_IRQ:
 		/*
@@ -4174,6 +4335,41 @@ pci_alloc_resource(device_t dev, device_t child, int type, int *rid,
 	}
 	return (resource_list_alloc(rl, dev, child, type, rid,
 	    start, end, count, flags));
+}
+
+int
+pci_release_resource(device_t dev, device_t child, int type, int rid,
+    struct resource *r)
+{
+	struct pci_devinfo *dinfo;
+	struct resource_list *rl;
+	pcicfgregs *cfg;
+
+	if (device_get_parent(child) != dev)
+		return (BUS_RELEASE_RESOURCE(device_get_parent(dev), child,
+		    type, rid, r));
+
+	dinfo = device_get_ivars(child);
+	cfg = &dinfo->cfg;
+#ifdef NEW_PCIB
+	/*
+	 * PCI-PCI bridge I/O window resources are not BARs.  For
+	 * those allocations just pass the request up the tree.
+	 */
+	if (cfg->hdrtype == PCIM_HDRTYPE_BRIDGE &&
+	    (type == SYS_RES_IOPORT || type == SYS_RES_MEMORY)) {
+		switch (rid) {
+		case PCIR_IOBASEL_1:
+		case PCIR_MEMBASE_1:
+		case PCIR_PMBASEL_1:
+			return (bus_generic_release_resource(dev, child, type,
+			    rid, r));
+		}
+	}
+#endif
+
+	rl = &dinfo->resources;
+	return (resource_list_release(rl, dev, child, type, rid, r));
 }
 
 int
@@ -4390,6 +4586,49 @@ pci_modevent(module_t mod, int what, void *arg)
 	return (0);
 }
 
+static void
+pci_cfg_restore_pcie(device_t dev, struct pci_devinfo *dinfo)
+{
+#define	WREG(n, v)	pci_write_config(dev, pos + (n), (v), 2)
+	struct pcicfg_pcie *cfg;
+	int version, pos;
+
+	cfg = &dinfo->cfg.pcie;
+	pos = cfg->pcie_location;
+
+	version = cfg->pcie_flags & PCIEM_FLAGS_VERSION;
+
+	WREG(PCIER_DEVICE_CTL, cfg->pcie_device_ctl);
+
+	if (version > 1 || cfg->pcie_type == PCIEM_TYPE_ROOT_PORT ||
+	    cfg->pcie_type == PCIEM_TYPE_ENDPOINT ||
+	    cfg->pcie_type == PCIEM_TYPE_LEGACY_ENDPOINT)
+		WREG(PCIER_LINK_CTL, cfg->pcie_link_ctl);
+
+	if (version > 1 || (cfg->pcie_type == PCIEM_TYPE_ROOT_PORT ||
+	    (cfg->pcie_type == PCIEM_TYPE_DOWNSTREAM_PORT &&
+	     (cfg->pcie_flags & PCIEM_FLAGS_SLOT))))
+		WREG(PCIER_SLOT_CTL, cfg->pcie_slot_ctl);
+
+	if (version > 1 || cfg->pcie_type == PCIEM_TYPE_ROOT_PORT ||
+	    cfg->pcie_type == PCIEM_TYPE_ROOT_EC)
+		WREG(PCIER_ROOT_CTL, cfg->pcie_root_ctl);
+
+	if (version > 1) {
+		WREG(PCIER_DEVICE_CTL2, cfg->pcie_device_ctl2);
+		WREG(PCIER_LINK_CTL2, cfg->pcie_link_ctl2);
+		WREG(PCIER_SLOT_CTL2, cfg->pcie_slot_ctl2);
+	}
+#undef WREG
+}
+
+static void
+pci_cfg_restore_pcix(device_t dev, struct pci_devinfo *dinfo)
+{
+	pci_write_config(dev, dinfo->cfg.pcix.pcix_location + PCIXR_COMMAND,
+	    dinfo->cfg.pcix.pcix_command,  2);
+}
+
 void
 pci_cfg_restore(device_t dev, struct pci_devinfo *dinfo)
 {
@@ -4425,11 +4664,64 @@ pci_cfg_restore(device_t dev, struct pci_devinfo *dinfo)
 	pci_write_config(dev, PCIR_PROGIF, dinfo->cfg.progif, 1);
 	pci_write_config(dev, PCIR_REVID, dinfo->cfg.revid, 1);
 
+	/*
+	 * Restore extended capabilities for PCI-Express and PCI-X
+	 */
+	if (dinfo->cfg.pcie.pcie_location != 0)
+		pci_cfg_restore_pcie(dev, dinfo);
+	if (dinfo->cfg.pcix.pcix_location != 0)
+		pci_cfg_restore_pcix(dev, dinfo);
+
 	/* Restore MSI and MSI-X configurations if they are present. */
 	if (dinfo->cfg.msi.msi_location != 0)
 		pci_resume_msi(dev);
 	if (dinfo->cfg.msix.msix_location != 0)
 		pci_resume_msix(dev);
+}
+
+static void
+pci_cfg_save_pcie(device_t dev, struct pci_devinfo *dinfo)
+{
+#define	RREG(n)	pci_read_config(dev, pos + (n), 2)
+	struct pcicfg_pcie *cfg;
+	int version, pos;
+
+	cfg = &dinfo->cfg.pcie;
+	pos = cfg->pcie_location;
+
+	cfg->pcie_flags = RREG(PCIER_FLAGS);
+
+	version = cfg->pcie_flags & PCIEM_FLAGS_VERSION;
+
+	cfg->pcie_device_ctl = RREG(PCIER_DEVICE_CTL);
+
+	if (version > 1 || cfg->pcie_type == PCIEM_TYPE_ROOT_PORT ||
+	    cfg->pcie_type == PCIEM_TYPE_ENDPOINT ||
+	    cfg->pcie_type == PCIEM_TYPE_LEGACY_ENDPOINT)
+		cfg->pcie_link_ctl = RREG(PCIER_LINK_CTL);
+
+	if (version > 1 || (cfg->pcie_type == PCIEM_TYPE_ROOT_PORT ||
+	    (cfg->pcie_type == PCIEM_TYPE_DOWNSTREAM_PORT &&
+	     (cfg->pcie_flags & PCIEM_FLAGS_SLOT))))
+		cfg->pcie_slot_ctl = RREG(PCIER_SLOT_CTL);
+
+	if (version > 1 || cfg->pcie_type == PCIEM_TYPE_ROOT_PORT ||
+	    cfg->pcie_type == PCIEM_TYPE_ROOT_EC)
+		cfg->pcie_root_ctl = RREG(PCIER_ROOT_CTL);
+
+	if (version > 1) {
+		cfg->pcie_device_ctl2 = RREG(PCIER_DEVICE_CTL2);
+		cfg->pcie_link_ctl2 = RREG(PCIER_LINK_CTL2);
+		cfg->pcie_slot_ctl2 = RREG(PCIER_SLOT_CTL2);
+	}
+#undef RREG
+}
+
+static void
+pci_cfg_save_pcix(device_t dev, struct pci_devinfo *dinfo)
+{
+	dinfo->cfg.pcix.pcix_command = pci_read_config(dev,
+	    dinfo->cfg.pcix.pcix_location + PCIXR_COMMAND, 2);
 }
 
 void
@@ -4473,6 +4765,12 @@ pci_cfg_save(device_t dev, struct pci_devinfo *dinfo, int setstate)
 	dinfo->cfg.subclass = pci_read_config(dev, PCIR_SUBCLASS, 1);
 	dinfo->cfg.progif = pci_read_config(dev, PCIR_PROGIF, 1);
 	dinfo->cfg.revid = pci_read_config(dev, PCIR_REVID, 1);
+
+	if (dinfo->cfg.pcie.pcie_location != 0)
+		pci_cfg_save_pcie(dev, dinfo);
+
+	if (dinfo->cfg.pcix.pcix_location != 0)
+		pci_cfg_save_pcix(dev, dinfo);
 
 	/*
 	 * don't set the state for display devices, base peripherals and

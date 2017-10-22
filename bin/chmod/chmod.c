@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)chmod.c	8.8 (Berkeley) 4/1/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/chmod/chmod.c 196753 2009-09-02 05:26:59Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/chmod/chmod.c 196753 2009-09-02 05:26:59Z trasz $");
 
 #include <sys/param.h>
 #include <sys/stat.h>

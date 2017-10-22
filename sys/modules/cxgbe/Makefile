@@ -1,13 +1,21 @@
 #
-# $FreeBSD: stable/9/sys/modules/cxgbe/Makefile 237920 2012-07-01 12:00:36Z np $
+# $FreeBSD: release/10.0.0/sys/modules/cxgbe/Makefile 256819 2013-10-21 01:10:37Z np $
 #
 
 SUBDIR = if_cxgbe
-SUBDIR+= firmware
-#SUBDIR+= ${_tom}
+SUBDIR+= t4_firmware
+SUBDIR+= t5_firmware
+SUBDIR+= ${_tom}
+SUBDIR+= ${_iw_cxgbe}
 
-.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
+.if ${MACHINE_CPUARCH} == "amd64"
+_tom=		tom
+_iw_cxgbe=	iw_cxgbe
+.endif
+
+.if ${MACHINE_CPUARCH} == "i386"
 _tom=		tom
 .endif
+
 
 .include <bsd.subdir.mk>

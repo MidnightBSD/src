@@ -43,7 +43,7 @@
 
 #ifdef _KERNEL
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/adlink/adlink.c 217068 2011-01-06 21:02:14Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/adlink/adlink.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -407,7 +407,8 @@ static device_method_t adlink_methods[] = {
 	DEVMETHOD(device_suspend,	bus_generic_suspend),
 	DEVMETHOD(device_resume,	bus_generic_resume),
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	{0, 0}
+
+	DEVMETHOD_END
 };
  
 static driver_t adlink_driver = {

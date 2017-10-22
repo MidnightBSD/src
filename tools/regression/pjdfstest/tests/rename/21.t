@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/rename/21.t 211180 2010-08-11 16:34:44Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/rename/21.t 211180 2010-08-11 16:34:44Z pjd $
 
 desc="write access to subdirectory is required to move it to another directory"
 

@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sys/dev/ncv/ncr53c500hw.h 139749 2005-01-06 01:43:34Z imp $	*/
+/*	$FreeBSD: release/10.0.0/sys/dev/ncv/ncr53c500hw.h 240325 2012-09-10 18:49:49Z jhb $	*/
 /*	$NecBSD: ncr53c500hw.h,v 1.6.18.1 2001/06/08 06:27:44 honda Exp $	*/
 /*	$NetBSD$	*/
 
@@ -35,8 +35,6 @@
 
 #ifndef	__NCR53C500HW_H_
 #define	__NCR53C500HW_H_
-
-#include <compat/netbsd/dvcfg.h>
 
 #define	NCV_HOSTID	7
 #define	NCV_NTARGETS	8

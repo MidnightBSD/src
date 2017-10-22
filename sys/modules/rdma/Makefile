@@ -1,9 +1,5 @@
-# $FreeBSD: stable/9/sys/modules/rdma/Makefile 178794 2008-05-05 20:19:33Z kmacy $
+# $FreeBSD: release/10.0.0/sys/modules/rdma/Makefile 256820 2013-10-21 01:15:05Z np $
 
-SUBDIR=  addr
-SUBDIR+= cma
-SUBDIR+= iwcm
-SUBDIR+= core
 SUBDIR+= krping
 
 .include <bsd.subdir.mk>

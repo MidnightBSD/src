@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/geom/class/label/geom_label.c 212554 2010-09-13 13:48:18Z pjd $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/class/label/geom_label.c 212554 2010-09-13 13:48:18Z pjd $");
 
 #include <sys/param.h>
 #include <errno.h>

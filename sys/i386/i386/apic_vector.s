@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: vector.s, 386BSD 0.1 unknown origin
- * $FreeBSD: stable/9/sys/i386/i386/apic_vector.s 235796 2012-05-22 17:44:01Z iwasaki $
+ * $FreeBSD: release/10.0.0/sys/i386/i386/apic_vector.s 255040 2013-08-29 19:52:18Z gibbs $
  */
 
 /*
@@ -137,6 +137,25 @@ IDTVEC(errorint)
 	call	lapic_handle_error
 	MEXITCOUNT
 	jmp	doreti
+
+#ifdef XENHVM
+/*
+ * Xen event channel upcall interrupt handler.
+ * Only used when the hypervisor supports direct vector callbacks.
+ */
+	.text
+	SUPERALIGN_TEXT
+IDTVEC(xen_intr_upcall)
+	PUSH_FRAME
+	SET_KERNEL_SREGS
+	cld
+	FAKE_MCOUNT(TF_EIP(%esp))
+	pushl	%esp
+	call	xen_intr_handle_upcall
+	add	$4, %esp
+	MEXITCOUNT
+	jmp	doreti
+#endif
 
 #ifdef SMP
 /*

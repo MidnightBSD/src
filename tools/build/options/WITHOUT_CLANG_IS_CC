@@ -1,0 +1,6 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_CLANG_IS_CC 242629 2012-11-05 21:53:23Z brooks $
+Set to install the GCC compiler as
+.Pa /usr/bin/cc ,
+.Pa /usr/bin/c++
+and
+.Pa /usr/bin/cpp .

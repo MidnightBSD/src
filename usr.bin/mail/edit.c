@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)edit.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/mail/edit.c 216564 2010-12-19 16:25:23Z charnier $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/mail/edit.c 230044 2012-01-13 06:51:15Z kevlo $");
 
 #include "rcv.h"
 #include <fcntl.h>
@@ -89,7 +89,7 @@ edit1(int *msgvec, int type)
 			char *p;
 
 			printf("Edit message %d [ynq]? ", msgvec[i]);
-			if (fgets(buf, sizeof(buf), stdin) == 0)
+			if (fgets(buf, sizeof(buf), stdin) == NULL)
 				break;
 			for (p = buf; *p == ' ' || *p == '\t'; p++)
 				;

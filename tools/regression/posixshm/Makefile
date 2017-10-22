@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/posixshm/Makefile 175383 2008-01-16 15:51:24Z jhb $
+# $FreeBSD: release/10.0.0/tools/regression/posixshm/Makefile 175383 2008-01-16 15:51:24Z jhb $
 
 PROG=	posixshm
 SRCS=	posixshm.c test.c

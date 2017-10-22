@@ -91,15 +91,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/aim/mmu_oea64.c 248814 2013-03-28 06:31:04Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/aim/mmu_oea64.c 255724 2013-09-20 04:30:18Z alc $");
 
 /*
  * Manages physical address maps.
- *
- * In addition to hardware address maps, this module is called upon to
- * provide software-use-only maps which may or may not be stored in the
- * same form as hardware maps.  These pseudo-maps are used to store
- * intermediate results from copy operations to and from address spaces.
  *
  * Since the information managed by this module is also stored by the
  * logical address mapping module, this module may throw away valid virtual
@@ -124,6 +119,7 @@ __FBSDID("$FreeBSD: stable/9/sys/powerpc/aim/mmu_oea64.c 248814 2013-03-28 06:31
 #include <sys/ktr.h>
 #include <sys/lock.h>
 #include <sys/msgbuf.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/rwlock.h>
@@ -144,7 +140,6 @@ __FBSDID("$FreeBSD: stable/9/sys/powerpc/aim/mmu_oea64.c 248814 2013-03-28 06:31
 #include <vm/vm_object.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_pageout.h>
-#include <vm/vm_pager.h>
 #include <vm/uma.h>
 
 #include <machine/_inttypes.h>
@@ -223,8 +218,6 @@ u_int		moea64_pteg_mask;
  * PVO data.
  */
 struct	pvo_head *moea64_pvo_table;		/* pvo entries by pteg index */
-struct	pvo_head moea64_pvo_kunmanaged =	/* list of unmanaged pages */
-    LIST_HEAD_INITIALIZER(moea64_pvo_kunmanaged);
 
 uma_zone_t	moea64_upvo_zone; /* zone for pvo entries for unmanaged pages */
 uma_zone_t	moea64_mpvo_zone; /* zone for pvo entries for managed pages */
@@ -270,7 +263,7 @@ uintptr_t	moea64_scratchpage_pte[2];
 struct	mtx	moea64_scratchpage_mtx;
 
 uint64_t 	moea64_large_page_mask = 0;
-int		moea64_large_page_size = 0;
+uint64_t	moea64_large_page_size = 0;
 int		moea64_large_page_shift = 0;
 
 /*
@@ -295,7 +288,6 @@ static void		moea64_syncicache(mmu_t, pmap_t pmap, vm_offset_t va,
  */
 void moea64_change_wiring(mmu_t, pmap_t, vm_offset_t, boolean_t);
 void moea64_clear_modify(mmu_t, vm_page_t);
-void moea64_clear_reference(mmu_t, vm_page_t);
 void moea64_copy_page(mmu_t, vm_page_t, vm_page_t);
 void moea64_copy_pages(mmu_t mmu, vm_page_t *ma, vm_offset_t a_offset,
     vm_page_t *mb, vm_offset_t b_offset, int xfersize);
@@ -309,8 +301,8 @@ void moea64_init(mmu_t);
 boolean_t moea64_is_modified(mmu_t, vm_page_t);
 boolean_t moea64_is_prefaultable(mmu_t, pmap_t, vm_offset_t);
 boolean_t moea64_is_referenced(mmu_t, vm_page_t);
-boolean_t moea64_ts_referenced(mmu_t, vm_page_t);
-vm_offset_t moea64_map(mmu_t, vm_offset_t *, vm_offset_t, vm_offset_t, int);
+int moea64_ts_referenced(mmu_t, vm_page_t);
+vm_offset_t moea64_map(mmu_t, vm_offset_t *, vm_paddr_t, vm_paddr_t, int);
 boolean_t moea64_page_exists_quick(mmu_t, pmap_t, vm_page_t);
 int moea64_page_wired_mappings(mmu_t, vm_page_t);
 void moea64_pinit(mmu_t, pmap_t);
@@ -328,20 +320,19 @@ void moea64_zero_page_area(mmu_t, vm_page_t, int, int);
 void moea64_zero_page_idle(mmu_t, vm_page_t);
 void moea64_activate(mmu_t, struct thread *);
 void moea64_deactivate(mmu_t, struct thread *);
-void *moea64_mapdev(mmu_t, vm_offset_t, vm_size_t);
+void *moea64_mapdev(mmu_t, vm_paddr_t, vm_size_t);
 void *moea64_mapdev_attr(mmu_t, vm_offset_t, vm_size_t, vm_memattr_t);
 void moea64_unmapdev(mmu_t, vm_offset_t, vm_size_t);
-vm_offset_t moea64_kextract(mmu_t, vm_offset_t);
+vm_paddr_t moea64_kextract(mmu_t, vm_offset_t);
 void moea64_page_set_memattr(mmu_t, vm_page_t m, vm_memattr_t ma);
 void moea64_kenter_attr(mmu_t, vm_offset_t, vm_offset_t, vm_memattr_t ma);
-void moea64_kenter(mmu_t, vm_offset_t, vm_offset_t);
-boolean_t moea64_dev_direct_mapped(mmu_t, vm_offset_t, vm_size_t);
+void moea64_kenter(mmu_t, vm_offset_t, vm_paddr_t);
+boolean_t moea64_dev_direct_mapped(mmu_t, vm_paddr_t, vm_size_t);
 static void moea64_sync_icache(mmu_t, pmap_t, vm_offset_t, vm_size_t);
 
 static mmu_method_t moea64_methods[] = {
 	MMUMETHOD(mmu_change_wiring,	moea64_change_wiring),
 	MMUMETHOD(mmu_clear_modify,	moea64_clear_modify),
-	MMUMETHOD(mmu_clear_reference,	moea64_clear_reference),
 	MMUMETHOD(mmu_copy_page,	moea64_copy_page),
 	MMUMETHOD(mmu_copy_pages,	moea64_copy_pages),
 	MMUMETHOD(mmu_enter,		moea64_enter),
@@ -553,12 +544,9 @@ moea64_probe_large_page(void)
 		powerpc_sync(); isync();
 		
 		/* FALLTHROUGH */
-	case IBMCELLBE:
+	default:
 		moea64_large_page_size = 0x1000000; /* 16 MB */
 		moea64_large_page_shift = 24;
-		break;
-	default:
-		moea64_large_page_size = 0;
 	}
 
 	moea64_large_page_mask = moea64_large_page_size - 1;
@@ -625,8 +613,8 @@ moea64_setup_direct_map(mmu_t mmup, vm_offset_t kernelstart,
 				pte_lo |= LPTE_G;
 
 			moea64_pvo_enter(mmup, kernel_pmap, moea64_upvo_zone,
-				    &moea64_pvo_kunmanaged, pa, pa,
-				    pte_lo, PVO_WIRED | PVO_LARGE);
+				    NULL, pa, pa, pte_lo,
+				    PVO_WIRED | PVO_LARGE);
 		  }
 		}
 		PMAP_UNLOCK(kernel_pmap);
@@ -655,6 +643,14 @@ moea64_setup_direct_map(mmu_t mmup, vm_offset_t kernelstart,
 			moea64_kenter(mmup, pa, pa);
 	}
 	ENABLE_TRANS(msr);
+
+	/*
+	 * Allow user to override unmapped_buf_allowed for testing.
+	 * XXXKIB Only direct map implementation was tested.
+	 */
+	if (!TUNABLE_INT_FETCH("vfs.unmapped_buf_allowed",
+	    &unmapped_buf_allowed))
+		unmapped_buf_allowed = hw_direct_map;
 }
 
 void
@@ -823,7 +819,7 @@ moea64_mid_bootstrap(mmu_t mmup, vm_offset_t kernelstart, vm_offset_t kernelend)
 
 	kernel_pmap->pmap_phys = kernel_pmap;
 	CPU_FILL(&kernel_pmap->pm_active);
-	LIST_INIT(&kernel_pmap->pmap_pvo);
+	RB_INIT(&kernel_pmap->pmap_pvo);
 
 	PMAP_LOCK_INIT(kernel_pmap);
 
@@ -1248,7 +1244,7 @@ moea64_enter(mmu_t mmu, pmap_t pmap, vm_offset_t va, vm_page_t m,
 	int		error;
 
 	if (!moea64_initialized) {
-		pvo_head = &moea64_pvo_kunmanaged;
+		pvo_head = NULL;
 		pg = NULL;
 		zone = moea64_upvo_zone;
 		pvo_flags = 0;
@@ -1259,14 +1255,13 @@ moea64_enter(mmu_t mmu, pmap_t pmap, vm_offset_t va, vm_page_t m,
 		pvo_flags = PVO_MANAGED;
 	}
 
-	KASSERT((m->oflags & (VPO_UNMANAGED | VPO_BUSY)) != 0 ||
-	    VM_OBJECT_LOCKED(m->object),
-	    ("moea64_enter: page %p is not busy", m));
+	if ((m->oflags & VPO_UNMANAGED) == 0 && !vm_page_xbusied(m))
+		VM_OBJECT_ASSERT_LOCKED(m->object);
 
 	/* XXX change the pvo head for fake pages */
 	if ((m->oflags & VPO_UNMANAGED) != 0) {
 		pvo_flags &= ~PVO_MANAGED;
-		pvo_head = &moea64_pvo_kunmanaged;
+		pvo_head = NULL;
 		zone = moea64_upvo_zone;
 	}
 
@@ -1360,6 +1355,8 @@ moea64_enter_object(mmu_t mmu, pmap_t pm, vm_offset_t start, vm_offset_t end,
 	vm_page_t m;
 	vm_pindex_t diff, psize;
 
+	VM_OBJECT_ASSERT_LOCKED(m_start->object);
+
 	psize = atop(end - start);
 	m = m_start;
 	while (m != NULL && (diff = m->pindex - m_start->pindex) < psize) {
@@ -1384,7 +1381,6 @@ moea64_extract(mmu_t mmu, pmap_t pm, vm_offset_t va)
 	struct	pvo_entry *pvo;
 	vm_paddr_t pa;
 
-	LOCK_TABLE_RD();
 	PMAP_LOCK(pm);
 	pvo = moea64_pvo_find_va(pm, va);
 	if (pvo == NULL)
@@ -1392,7 +1388,6 @@ moea64_extract(mmu_t mmu, pmap_t pm, vm_offset_t va)
 	else
 		pa = (pvo->pvo_pte.lpte.pte_lo & LPTE_RPGN) |
 		    (va - PVO_VADDR(pvo));
-	UNLOCK_TABLE_RD();
 	PMAP_UNLOCK(pm);
 	return (pa);
 }
@@ -1402,37 +1397,6 @@ moea64_extract(mmu_t mmu, pmap_t pm, vm_offset_t va)
  * pmap and virtual address pair if that mapping permits the given
  * protection.
  */
-
-extern int pa_tryrelock_restart;
-
-static int
-vm_page_pa_tryrelock_moea64(pmap_t pmap, vm_paddr_t pa, vm_paddr_t *locked)
-{
-	/*
-	 * This is a duplicate of vm_page_pa_tryrelock(), but with proper
-	 * handling of the table lock
-	 */
-	vm_paddr_t lockpa;
-
-	lockpa = *locked;
-	*locked = pa;
-	if (lockpa) {
-		PA_LOCK_ASSERT(lockpa, MA_OWNED);
-		if (PA_LOCKPTR(pa) == PA_LOCKPTR(lockpa))
-			return (0);
-		PA_UNLOCK(lockpa);
-	}
-	if (PA_TRYLOCK(pa))
-		return (0);
-	UNLOCK_TABLE_RD();
-	PMAP_UNLOCK(pmap);
-	atomic_add_int(&pa_tryrelock_restart, 1);
-	PA_LOCK(pa);
-	LOCK_TABLE_RD();
-	PMAP_LOCK(pmap);
-	return (EAGAIN);
-}
-
 vm_page_t
 moea64_extract_and_hold(mmu_t mmu, pmap_t pmap, vm_offset_t va, vm_prot_t prot)
 {
@@ -1442,21 +1406,19 @@ moea64_extract_and_hold(mmu_t mmu, pmap_t pmap, vm_offset_t va, vm_prot_t prot)
         
 	m = NULL;
 	pa = 0;
-	LOCK_TABLE_RD();
 	PMAP_LOCK(pmap);
 retry:
 	pvo = moea64_pvo_find_va(pmap, va & ~ADDR_POFF);
 	if (pvo != NULL && (pvo->pvo_pte.lpte.pte_hi & LPTE_VALID) &&
 	    ((pvo->pvo_pte.lpte.pte_lo & LPTE_PP) == LPTE_RW ||
 	     (prot & VM_PROT_WRITE) == 0)) {
-		if (vm_page_pa_tryrelock_moea64(pmap,
+		if (vm_page_pa_tryrelock(pmap,
 			pvo->pvo_pte.lpte.pte_lo & LPTE_RPGN, &pa))
 			goto retry;
 		m = PHYS_TO_VM_PAGE(pvo->pvo_pte.lpte.pte_lo & LPTE_RPGN);
 		vm_page_hold(m);
 	}
 	PA_UNLOCK_COND(pa);
-	UNLOCK_TABLE_RD();
 	PMAP_UNLOCK(pmap);
 	return (m);
 }
@@ -1472,7 +1434,6 @@ moea64_uma_page_alloc(uma_zone_t zone, int bytes, u_int8_t *flags, int wait)
 	 * kmem allocation routines, calling kmem for a new address here
 	 * can lead to multiply locking non-recursive mutexes.
 	 */
-	static vm_pindex_t color;
         vm_offset_t va;
 
         vm_page_t m;
@@ -1480,16 +1441,10 @@ moea64_uma_page_alloc(uma_zone_t zone, int bytes, u_int8_t *flags, int wait)
 
 	*flags = UMA_SLAB_PRIV;
 	needed_lock = !PMAP_LOCKED(kernel_pmap);
-
-        if ((wait & (M_NOWAIT|M_USE_RESERVE)) == M_NOWAIT)
-                pflags = VM_ALLOC_INTERRUPT | VM_ALLOC_WIRED;
-        else
-                pflags = VM_ALLOC_SYSTEM | VM_ALLOC_WIRED;
-        if (wait & M_ZERO)
-                pflags |= VM_ALLOC_ZERO;
+	pflags = malloc2vm_flags(wait) | VM_ALLOC_WIRED;
 
         for (;;) {
-                m = vm_page_alloc(NULL, color++, pflags | VM_ALLOC_NOOBJ);
+                m = vm_page_alloc(NULL, 0, pflags | VM_ALLOC_NOOBJ);
                 if (m == NULL) {
                         if (wait & M_NOWAIT)
                                 return (NULL);
@@ -1505,8 +1460,7 @@ moea64_uma_page_alloc(uma_zone_t zone, int bytes, u_int8_t *flags, int wait)
 		PMAP_LOCK(kernel_pmap);
 
 	moea64_pvo_enter(installed_mmu, kernel_pmap, moea64_upvo_zone,
-	    &moea64_pvo_kunmanaged, va, VM_PAGE_TO_PHYS(m), LPTE_M,
-	    PVO_WIRED | PVO_BOOTSTRAP);
+	    NULL, va, VM_PAGE_TO_PHYS(m), LPTE_M, PVO_WIRED | PVO_BOOTSTRAP);
 
 	if (needed_lock)
 		PMAP_UNLOCK(kernel_pmap);
@@ -1563,13 +1517,12 @@ moea64_is_modified(mmu_t mmu, vm_page_t m)
 	    ("moea64_is_modified: page %p is not managed", m));
 
 	/*
-	 * If the page is not VPO_BUSY, then PGA_WRITEABLE cannot be
+	 * If the page is not exclusive busied, then PGA_WRITEABLE cannot be
 	 * concurrently set while the object is locked.  Thus, if PGA_WRITEABLE
 	 * is clear, no PTEs can have LPTE_CHG set.
 	 */
-	VM_OBJECT_LOCK_ASSERT(m->object, MA_OWNED);
-	if ((m->oflags & VPO_BUSY) == 0 &&
-	    (m->aflags & PGA_WRITEABLE) == 0)
+	VM_OBJECT_ASSERT_LOCKED(m->object);
+	if (!vm_page_xbusied(m) && (m->aflags & PGA_WRITEABLE) == 0)
 		return (FALSE);
 	return (moea64_query_bit(mmu, m, LPTE_CHG));
 }
@@ -1580,22 +1533,11 @@ moea64_is_prefaultable(mmu_t mmu, pmap_t pmap, vm_offset_t va)
 	struct pvo_entry *pvo;
 	boolean_t rv;
 
-	LOCK_TABLE_RD();
 	PMAP_LOCK(pmap);
 	pvo = moea64_pvo_find_va(pmap, va & ~ADDR_POFF);
 	rv = pvo == NULL || (pvo->pvo_pte.lpte.pte_hi & LPTE_VALID) == 0;
 	PMAP_UNLOCK(pmap);
-	UNLOCK_TABLE_RD();
 	return (rv);
-}
-
-void
-moea64_clear_reference(mmu_t mmu, vm_page_t m)
-{
-
-	KASSERT((m->oflags & VPO_UNMANAGED) == 0,
-	    ("moea64_clear_reference: page %p is not managed", m));
-	moea64_clear_bit(mmu, m, LPTE_REF);
 }
 
 void
@@ -1604,14 +1546,14 @@ moea64_clear_modify(mmu_t mmu, vm_page_t m)
 
 	KASSERT((m->oflags & VPO_UNMANAGED) == 0,
 	    ("moea64_clear_modify: page %p is not managed", m));
-	VM_OBJECT_LOCK_ASSERT(m->object, MA_OWNED);
-	KASSERT((m->oflags & VPO_BUSY) == 0,
-	    ("moea64_clear_modify: page %p is busy", m));
+	VM_OBJECT_ASSERT_WLOCKED(m->object);
+	KASSERT(!vm_page_xbusied(m),
+	    ("moea64_clear_modify: page %p is exclusive busied", m));
 
 	/*
 	 * If the page is not PGA_WRITEABLE, then no PTEs can have LPTE_CHG
 	 * set.  If the object containing the page is locked and the page is
-	 * not VPO_BUSY, then PGA_WRITEABLE cannot be concurrently set.
+	 * not exclusive busied, then PGA_WRITEABLE cannot be concurrently set.
 	 */
 	if ((m->aflags & PGA_WRITEABLE) == 0)
 		return;
@@ -1633,13 +1575,12 @@ moea64_remove_write(mmu_t mmu, vm_page_t m)
 	    ("moea64_remove_write: page %p is not managed", m));
 
 	/*
-	 * If the page is not VPO_BUSY, then PGA_WRITEABLE cannot be set by
-	 * another thread while the object is locked.  Thus, if PGA_WRITEABLE
-	 * is clear, no page table entries need updating.
+	 * If the page is not exclusive busied, then PGA_WRITEABLE cannot be
+	 * set by another thread while the object is locked.  Thus,
+	 * if PGA_WRITEABLE is clear, no page table entries need updating.
 	 */
-	VM_OBJECT_LOCK_ASSERT(m->object, MA_OWNED);
-	if ((m->oflags & VPO_BUSY) == 0 &&
-	    (m->aflags & PGA_WRITEABLE) == 0)
+	VM_OBJECT_ASSERT_WLOCKED(m->object);
+	if (!vm_page_xbusied(m) && (m->aflags & PGA_WRITEABLE) == 0)
 		return;
 	powerpc_sync();
 	LOCK_TABLE_RD();
@@ -1680,7 +1621,7 @@ moea64_remove_write(mmu_t mmu, vm_page_t m)
  *	should be tested and standardized at some point in the future for
  *	optimal aging of shared pages.
  */
-boolean_t
+int
 moea64_ts_referenced(mmu_t mmu, vm_page_t m)
 {
 
@@ -1741,7 +1682,7 @@ moea64_kenter_attr(mmu_t mmu, vm_offset_t va, vm_offset_t pa, vm_memattr_t ma)
 	LOCK_TABLE_WR();
 	PMAP_LOCK(kernel_pmap);
 	error = moea64_pvo_enter(mmu, kernel_pmap, moea64_upvo_zone,
-	    &moea64_pvo_kunmanaged, va, pa, pte_lo, PVO_WIRED);
+	    NULL, va, pa, pte_lo, PVO_WIRED);
 	PMAP_UNLOCK(kernel_pmap);
 	UNLOCK_TABLE_WR();
 
@@ -1751,7 +1692,7 @@ moea64_kenter_attr(mmu_t mmu, vm_offset_t va, vm_offset_t pa, vm_memattr_t ma)
 }
 
 void
-moea64_kenter(mmu_t mmu, vm_offset_t va, vm_offset_t pa)
+moea64_kenter(mmu_t mmu, vm_offset_t va, vm_paddr_t pa)
 {
 
 	moea64_kenter_attr(mmu, va, pa, VM_MEMATTR_DEFAULT);
@@ -1761,7 +1702,7 @@ moea64_kenter(mmu_t mmu, vm_offset_t va, vm_offset_t pa)
  * Extract the physical page address associated with the given kernel virtual
  * address.
  */
-vm_offset_t
+vm_paddr_t
 moea64_kextract(mmu_t mmu, vm_offset_t va)
 {
 	struct		pvo_entry *pvo;
@@ -1774,13 +1715,11 @@ moea64_kextract(mmu_t mmu, vm_offset_t va)
 	if (va < VM_MIN_KERNEL_ADDRESS)
 		return (va);
 
-	LOCK_TABLE_RD();
 	PMAP_LOCK(kernel_pmap);
 	pvo = moea64_pvo_find_va(kernel_pmap, va);
 	KASSERT(pvo != NULL, ("moea64_kextract: no addr found for %#" PRIxPTR,
 	    va));
 	pa = (pvo->pvo_pte.lpte.pte_lo & LPTE_RPGN) | (va - PVO_VADDR(pvo));
-	UNLOCK_TABLE_RD();
 	PMAP_UNLOCK(kernel_pmap);
 	return (pa);
 }
@@ -1804,8 +1743,8 @@ moea64_kremove(mmu_t mmu, vm_offset_t va)
  * first usable address after the mapped region.
  */
 vm_offset_t
-moea64_map(mmu_t mmu, vm_offset_t *virt, vm_offset_t pa_start,
-    vm_offset_t pa_end, int prot)
+moea64_map(mmu_t mmu, vm_offset_t *virt, vm_paddr_t pa_start,
+    vm_paddr_t pa_end, int prot)
 {
 	vm_offset_t	sva, va;
 
@@ -1926,8 +1865,8 @@ moea64_get_unique_vsid(void) {
 void
 moea64_pinit(mmu_t mmu, pmap_t pmap)
 {
-	PMAP_LOCK_INIT(pmap);
-	LIST_INIT(&pmap->pmap_pvo);
+
+	RB_INIT(&pmap->pmap_pvo);
 
 	pmap->pm_slb_tree_root = slb_alloc_tree();
 	pmap->pm_slb = slb_alloc_user_cache();
@@ -1940,8 +1879,7 @@ moea64_pinit(mmu_t mmu, pmap_t pmap)
 	int	i;
 	uint32_t hash;
 
-	PMAP_LOCK_INIT(pmap);
-	LIST_INIT(&pmap->pmap_pvo);
+	RB_INIT(&pmap->pmap_pvo);
 
 	if (pmap_bootstrapped)
 		pmap->pmap_phys = (pmap_t)moea64_kextract(mmu,
@@ -1967,6 +1905,8 @@ moea64_pinit(mmu_t mmu, pmap_t pmap)
 void
 moea64_pinit0(mmu_t mmu, pmap_t pm)
 {
+
+	PMAP_LOCK_INIT(pm);
 	moea64_pinit(mmu, pm);
 	bzero(&pm->pm_stats, sizeof(pm->pm_stats));
 }
@@ -2023,7 +1963,7 @@ moea64_pvo_protect(mmu_t mmu,  pmap_t pm, struct pvo_entry *pvo, vm_prot_t prot)
 	 * removed write access.
 	 */
 	if ((pvo->pvo_vaddr & PVO_MANAGED) == PVO_MANAGED && 
-	    (oldlo & LPTE_PP) != LPTE_BR && !(prot && VM_PROT_WRITE)) {
+	    (oldlo & LPTE_PP) != LPTE_BR && !(prot & VM_PROT_WRITE)) {
 		if (pg != NULL) {
 			if (pvo->pvo_pte.lpte.pte_lo & LPTE_CHG)
 				vm_page_dirty(pg);
@@ -2037,7 +1977,7 @@ void
 moea64_protect(mmu_t mmu, pmap_t pm, vm_offset_t sva, vm_offset_t eva,
     vm_prot_t prot)
 {
-	struct	pvo_entry *pvo, *tpvo;
+	struct	pvo_entry *pvo, *tpvo, key;
 
 	CTR4(KTR_PMAP, "moea64_protect: pm=%p sva=%#x eva=%#x prot=%#x", pm,
 	    sva, eva, prot);
@@ -2052,26 +1992,11 @@ moea64_protect(mmu_t mmu, pmap_t pm, vm_offset_t sva, vm_offset_t eva,
 
 	LOCK_TABLE_RD();
 	PMAP_LOCK(pm);
-	if ((eva - sva)/PAGE_SIZE < pm->pm_stats.resident_count) {
-		while (sva < eva) {
-			#ifdef __powerpc64__
-			if (pm != kernel_pmap &&
-			    user_va_to_slb_entry(pm, sva) == NULL) {
-				sva = roundup2(sva + 1, SEGMENT_LENGTH);
-				continue;
-			}
-			#endif
-			pvo = moea64_pvo_find_va(pm, sva);
-			if (pvo != NULL)
-				moea64_pvo_protect(mmu, pm, pvo, prot);
-			sva += PAGE_SIZE;
-		}
-	} else {
-		LIST_FOREACH_SAFE(pvo, &pm->pmap_pvo, pvo_plink, tpvo) {
-			if (PVO_VADDR(pvo) < sva || PVO_VADDR(pvo) >= eva)
-				continue;
-			moea64_pvo_protect(mmu, pm, pvo, prot);
-		}
+	key.pvo_vaddr = sva;
+	for (pvo = RB_NFIND(pvo_tree, &pm->pmap_pvo, &key);
+	    pvo != NULL && PVO_VADDR(pvo) < eva; pvo = tpvo) {
+		tpvo = RB_NEXT(pvo_tree, &pm->pmap_pvo, pvo);
+		moea64_pvo_protect(mmu, pm, pvo, prot);
 	}
 	UNLOCK_TABLE_RD();
 	PMAP_UNLOCK(pm);
@@ -2136,8 +2061,6 @@ moea64_release(mmu_t mmu, pmap_t pmap)
 
 	moea64_release_vsid(VSID_TO_HASH(pmap->pm_sr[0]));
     #endif
-
-	PMAP_LOCK_DESTROY(pmap);
 }
 
 /*
@@ -2150,7 +2073,7 @@ moea64_remove_pages(mmu_t mmu, pmap_t pm)
 
 	LOCK_TABLE_WR();
 	PMAP_LOCK(pm);
-	LIST_FOREACH_SAFE(pvo, &pm->pmap_pvo, pvo_plink, tpvo) {
+	RB_FOREACH_SAFE(pvo, pvo_tree, &pm->pmap_pvo, tpvo) {
 		if (!(pvo->pvo_vaddr & PVO_WIRED))
 			moea64_pvo_remove(mmu, pvo);
 	}
@@ -2164,7 +2087,7 @@ moea64_remove_pages(mmu_t mmu, pmap_t pm)
 void
 moea64_remove(mmu_t mmu, pmap_t pm, vm_offset_t sva, vm_offset_t eva)
 {
-	struct	pvo_entry *pvo, *tpvo;
+	struct	pvo_entry *pvo, *tpvo, key;
 
 	/*
 	 * Perform an unsynchronized read.  This is, however, safe.
@@ -2174,26 +2097,11 @@ moea64_remove(mmu_t mmu, pmap_t pm, vm_offset_t sva, vm_offset_t eva)
 
 	LOCK_TABLE_WR();
 	PMAP_LOCK(pm);
-	if ((eva - sva)/PAGE_SIZE < pm->pm_stats.resident_count) {
-		while (sva < eva) {
-			#ifdef __powerpc64__
-			if (pm != kernel_pmap &&
-			    user_va_to_slb_entry(pm, sva) == NULL) {
-				sva = roundup2(sva + 1, SEGMENT_LENGTH);
-				continue;
-			}
-			#endif
-			pvo = moea64_pvo_find_va(pm, sva);
-			if (pvo != NULL)
-				moea64_pvo_remove(mmu, pvo);
-			sva += PAGE_SIZE;
-		}
-	} else {
-		LIST_FOREACH_SAFE(pvo, &pm->pmap_pvo, pvo_plink, tpvo) {
-			if (PVO_VADDR(pvo) < sva || PVO_VADDR(pvo) >= eva)
-				continue;
-			moea64_pvo_remove(mmu, pvo);
-		}
+	key.pvo_vaddr = sva;
+	for (pvo = RB_NFIND(pvo_tree, &pm->pmap_pvo, &key);
+	    pvo != NULL && PVO_VADDR(pvo) < eva; pvo = tpvo) {
+		tpvo = RB_NEXT(pvo_tree, &pm->pmap_pvo, pvo);
+		moea64_pvo_remove(mmu, pvo);
 	}
 	UNLOCK_TABLE_WR();
 	PMAP_UNLOCK(pm);
@@ -2345,12 +2253,6 @@ moea64_pvo_enter(mmu_t mmu, pmap_t pm, uma_zone_t zone,
 		moea64_bpvo_pool_index++;
 		bootstrap = 1;
 	} else {
-		/*
-		 * Note: drop the table lock around the UMA allocation in
-		 * case the UMA allocator needs to manipulate the page
-		 * table. The mapping we are working with is already
-		 * protected by the PMAP lock.
-		 */
 		pvo = uma_zalloc(zone, M_NOWAIT);
 	}
 
@@ -2367,7 +2269,7 @@ moea64_pvo_enter(mmu_t mmu, pmap_t pm, uma_zone_t zone,
 
 	if (flags & PVO_WIRED)
 		pvo->pvo_vaddr |= PVO_WIRED;
-	if (pvo_head != &moea64_pvo_kunmanaged)
+	if (pvo_head != NULL)
 		pvo->pvo_vaddr |= PVO_MANAGED;
 	if (bootstrap)
 		pvo->pvo_vaddr |= PVO_BOOTSTRAP;
@@ -2380,15 +2282,17 @@ moea64_pvo_enter(mmu_t mmu, pmap_t pm, uma_zone_t zone,
 	/*
 	 * Add to pmap list
 	 */
-	LIST_INSERT_HEAD(&pm->pmap_pvo, pvo, pvo_plink);
+	RB_INSERT(pvo_tree, &pm->pmap_pvo, pvo);
 
 	/*
 	 * Remember if the list was empty and therefore will be the first
 	 * item.
 	 */
-	if (LIST_FIRST(pvo_head) == NULL)
-		first = 1;
-	LIST_INSERT_HEAD(pvo_head, pvo, pvo_vlink);
+	if (pvo_head != NULL) {
+		if (LIST_FIRST(pvo_head) == NULL)
+			first = 1;
+		LIST_INSERT_HEAD(pvo_head, pvo, pvo_vlink);
+	}
 
 	if (pvo->pvo_vaddr & PVO_WIRED) {
 		pvo->pvo_pte.lpte.pte_hi |= LPTE_WIRED;
@@ -2451,10 +2355,9 @@ moea64_pvo_remove(mmu_t mmu, struct pvo_entry *pvo)
 		pvo->pvo_pmap->pm_stats.wired_count--;
 
 	/*
-	 * Remove this PVO from the PV and pmap lists.
+	 * Remove this PVO from the pmap list.
 	 */
-	LIST_REMOVE(pvo, pvo_vlink);
-	LIST_REMOVE(pvo, pvo_plink);
+	RB_REMOVE(pvo_tree, &pvo->pvo_pmap->pmap_pvo, pvo);
 
 	/*
 	 * Remove this from the overflow list and return it to the pool
@@ -2468,6 +2371,7 @@ moea64_pvo_remove(mmu_t mmu, struct pvo_entry *pvo)
 	pg = PHYS_TO_VM_PAGE(pvo->pvo_pte.lpte.pte_lo & LPTE_RPGN);
 
 	if ((pvo->pvo_vaddr & PVO_MANAGED) == PVO_MANAGED && pg != NULL) {
+		LIST_REMOVE(pvo, pvo_vlink);
 		if ((pvo->pvo_pte.lpte.pte_lo & LPTE_PP) != LPTE_BR) {
 			if (pvo->pvo_pte.lpte.pte_lo & LPTE_CHG)
 				vm_page_dirty(pg);
@@ -2491,41 +2395,10 @@ moea64_pvo_remove(mmu_t mmu, struct pvo_entry *pvo)
 static struct pvo_entry *
 moea64_pvo_find_va(pmap_t pm, vm_offset_t va)
 {
-	struct		pvo_entry *pvo;
-	int		ptegidx;
-	uint64_t	vsid;
-	#ifdef __powerpc64__
-	uint64_t	slbv;
+	struct pvo_entry key;
 
-	if (pm == kernel_pmap) {
-		slbv = kernel_va_to_slbv(va);
-	} else {
-		struct slb *slb;
-		slb = user_va_to_slb_entry(pm, va);
-		/* The page is not mapped if the segment isn't */
-		if (slb == NULL)
-			return NULL;
-		slbv = slb->slbv;
-	}
-
-	vsid = (slbv & SLBV_VSID_MASK) >> SLBV_VSID_SHIFT;
-	if (slbv & SLBV_L)
-		va &= ~moea64_large_page_mask;
-	else
-		va &= ~ADDR_POFF;
-	ptegidx = va_to_pteg(vsid, va, slbv & SLBV_L);
-	#else
-	va &= ~ADDR_POFF;
-	vsid = va_to_vsid(pm, va);
-	ptegidx = va_to_pteg(vsid, va, 0);
-	#endif
-
-	LIST_FOREACH(pvo, &moea64_pvo_table[ptegidx], pvo_olink) {
-		if (pvo->pvo_pmap == pm && PVO_VADDR(pvo) == va)
-			break;
-	}
-
-	return (pvo);
+	key.pvo_vaddr = va & ~ADDR_POFF;
+	return (RB_FIND(pvo_tree, &pm->pmap_pvo, &key));
 }
 
 static boolean_t
@@ -2617,23 +2490,23 @@ moea64_clear_bit(mmu_t mmu, vm_page_t m, u_int64_t ptebit)
 }
 
 boolean_t
-moea64_dev_direct_mapped(mmu_t mmu, vm_offset_t pa, vm_size_t size)
+moea64_dev_direct_mapped(mmu_t mmu, vm_paddr_t pa, vm_size_t size)
 {
-	struct pvo_entry *pvo;
+	struct pvo_entry *pvo, key;
 	vm_offset_t ppa;
 	int error = 0;
 
-	LOCK_TABLE_RD();
 	PMAP_LOCK(kernel_pmap);
-	for (ppa = pa & ~ADDR_POFF; ppa < pa + size; ppa += PAGE_SIZE) {
-		pvo = moea64_pvo_find_va(kernel_pmap, ppa);
+	key.pvo_vaddr = ppa = pa & ~ADDR_POFF;
+	for (pvo = RB_FIND(pvo_tree, &kernel_pmap->pmap_pvo, &key);
+	    ppa < pa + size; ppa += PAGE_SIZE,
+	    pvo = RB_NEXT(pvo_tree, &kernel_pmap->pmap_pvo, pvo)) {
 		if (pvo == NULL ||
 		    (pvo->pvo_pte.lpte.pte_lo & LPTE_RPGN) != ppa) {
 			error = EFAULT;
 			break;
 		}
 	}
-	UNLOCK_TABLE_RD();
 	PMAP_UNLOCK(kernel_pmap);
 
 	return (error);
@@ -2654,7 +2527,7 @@ moea64_mapdev_attr(mmu_t mmu, vm_offset_t pa, vm_size_t size, vm_memattr_t ma)
 	offset = pa & PAGE_MASK;
 	size = roundup2(offset + size, PAGE_SIZE);
 
-	va = kmem_alloc_nofault(kernel_map, size);
+	va = kva_alloc(size);
 
 	if (!va)
 		panic("moea64_mapdev: Couldn't alloc kernel virtual memory");
@@ -2670,7 +2543,7 @@ moea64_mapdev_attr(mmu_t mmu, vm_offset_t pa, vm_size_t size, vm_memattr_t ma)
 }
 
 void *
-moea64_mapdev(mmu_t mmu, vm_offset_t pa, vm_size_t size)
+moea64_mapdev(mmu_t mmu, vm_paddr_t pa, vm_size_t size)
 {
 
 	return moea64_mapdev_attr(mmu, pa, size, VM_MEMATTR_DEFAULT);
@@ -2685,7 +2558,7 @@ moea64_unmapdev(mmu_t mmu, vm_offset_t va, vm_size_t size)
 	offset = va & PAGE_MASK;
 	size = roundup2(offset + size, PAGE_SIZE);
 
-	kmem_free(kernel_map, base, size);
+	kva_free(base, size);
 }
 
 void
@@ -2696,7 +2569,6 @@ moea64_sync_icache(mmu_t mmu, pmap_t pm, vm_offset_t va, vm_size_t sz)
 	vm_paddr_t pa;
 	vm_size_t len;
 
-	LOCK_TABLE_RD();
 	PMAP_LOCK(pm);
 	while (sz > 0) {
 		lim = round_page(va);
@@ -2710,6 +2582,5 @@ moea64_sync_icache(mmu_t mmu, pmap_t pm, vm_offset_t va, vm_size_t sz)
 		va += len;
 		sz -= len;
 	}
-	UNLOCK_TABLE_RD();
 	PMAP_UNLOCK(pm);
 }

@@ -14,9 +14,9 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/uark.4 219387 2011-03-07 21:53:15Z hselasky $
+.\" $FreeBSD: release/10.0.0/share/man/man4/uark.4 233648 2012-03-29 05:02:12Z eadler $
 .\"
-.Dd November 15, 2006
+.Dd November 20, 2011
 .Dt UARK 4
 .Os
 .Sh NAME
@@ -27,6 +27,8 @@ To compile this driver into the kernel,
 place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
+.Cd "device usb"
+.Cd "device ucom"
 .Cd "device uark"
 .Ed
 .Pp
@@ -41,7 +43,7 @@ The
 .Nm
 driver supports Arkmicro Technologies ARK3116 based serial adapters.
 .Sh HARDWARE
-The 
+The
 .Nm
 driver supports the following adapters:
 .Pp

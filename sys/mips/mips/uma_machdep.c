@@ -25,10 +25,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/mips/uma_machdep.c 216315 2010-12-09 06:34:28Z jchandra $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/uma_machdep.c 243040 2012-11-14 20:01:40Z kib $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/systm.h>
 #include <vm/vm.h>
@@ -42,21 +43,16 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/mips/uma_machdep.c 216315 2010-12-09 06:34
 void *
 uma_small_alloc(uma_zone_t zone, int bytes, u_int8_t *flags, int wait)
 {
-	static vm_pindex_t color;
 	vm_paddr_t pa;
 	vm_page_t m;
 	int pflags;
 	void *va;
 
 	*flags = UMA_SLAB_PRIV;
-
-	if ((wait & (M_NOWAIT|M_USE_RESERVE)) == M_NOWAIT)
-		pflags = VM_ALLOC_INTERRUPT;
-	else
-		pflags = VM_ALLOC_SYSTEM;
+	pflags = malloc2vm_flags(wait) | VM_ALLOC_WIRED;
 
 	for (;;) {
-		m = pmap_alloc_direct_page(color++, pflags);
+		m = vm_page_alloc_freelist(VM_FREELIST_DIRECT, pflags);
 		if (m == NULL) {
 			if (wait & M_NOWAIT)
 				return (NULL);

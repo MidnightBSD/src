@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)mkdir.c	8.2 (Berkeley) 1/25/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/mkdir/mkdir.c 163213 2006-10-10 20:18:20Z ru $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/mkdir/mkdir.c 249996 2013-04-27 21:59:43Z eadler $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -56,7 +56,7 @@ __FBSDID("$FreeBSD: stable/9/bin/mkdir/mkdir.c 163213 2006-10-10 20:18:20Z ru $"
 static int	build(char *, mode_t);
 static void	usage(void);
 
-int vflag;
+static int	vflag;
 
 int
 main(int argc, char *argv[])
@@ -135,7 +135,7 @@ main(int argc, char *argv[])
  * Returns 1 if a directory has been created,
  * 2 if it already existed, and 0 on failure.
  */
-int
+static int
 build(char *path, mode_t omode)
 {
 	struct stat sb;
@@ -208,7 +208,7 @@ build(char *path, mode_t omode)
 	return (retval);
 }
 
-void
+static void
 usage(void)
 {
 

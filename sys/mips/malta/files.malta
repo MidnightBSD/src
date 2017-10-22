@@ -1,6 +1,7 @@
-# $FreeBSD: stable/9/sys/mips/malta/files.malta 202175 2010-01-12 21:36:08Z imp $
+# $FreeBSD: release/10.0.0/sys/mips/malta/files.malta 255083 2013-08-30 20:28:35Z gonzo $
 mips/malta/gt.c				standard
 mips/malta/gt_pci.c			standard
+mips/malta/gt_pci_bus_space.c			standard
 mips/malta/obio.c			optional uart
 mips/malta/uart_cpu_maltausart.c	optional uart
 mips/malta/uart_bus_maltausart.c	optional uart

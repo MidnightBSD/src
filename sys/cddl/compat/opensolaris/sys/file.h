@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/cddl/compat/opensolaris/sys/file.h 224778 2011-08-11 12:30:23Z rwatson $
+ * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/file.h 255240 2013-09-05 11:58:12Z pjd $
  */
 
 #ifndef _OPENSOLARIS_SYS_FILE_H_
@@ -39,15 +39,11 @@ typedef	struct file	file_t;
 #include <sys/capability.h>
 
 static __inline file_t *
-getf(int fd)
+getf(int fd, cap_rights_t *rightsp)
 {
 	struct file *fp;
 
-	/*
-	 * We wouldn't need all of these rights on every invocation
-	 * if we had more information about intent.
-	 */
-	if (fget(curthread, fd, CAP_READ | CAP_WRITE | CAP_SEEK, &fp) == 0)
+	if (fget(curthread, fd, rightsp, &fp) == 0)
 		return (fp);
 	return (NULL);
 }
@@ -58,7 +54,7 @@ releasef(int fd)
 	struct file *fp;
 
 	/* No CAP_ rights required, as we're only releasing. */
-	if (fget(curthread, fd, 0, &fp) == 0) {
+	if (fget(curthread, fd, NULL, &fp) == 0) {
 		fdrop(fp, curthread);
 		fdrop(fp, curthread);
 	}

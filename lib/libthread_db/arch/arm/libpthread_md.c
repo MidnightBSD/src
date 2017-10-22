@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libthread_db/arch/arm/libpthread_md.c 181341 2008-08-06 03:14:18Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libthread_db/arch/arm/libpthread_md.c 254450 2013-08-17 14:42:40Z andrew $");
 
 #include <sys/types.h>
 #include <string.h>
@@ -90,7 +90,7 @@ pt_fpreg_to_ucontext(const struct fpreg *r __unused, ucontext_t *uc)
 	mcontext_t *mc = &uc->uc_mcontext;
 
 	/* XXX */
-	memset(&mc->__fpu.__fpregs, 0, sizeof(__fpregset_t));
+	memset(&mc->__fpu, 0, sizeof(mc->__fpu));
 }
 
 void

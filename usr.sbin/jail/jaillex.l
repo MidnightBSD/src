@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/jail/jaillex.l 235839 2012-05-23 15:29:34Z jamie $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/jail/jaillex.l 250926 2013-05-23 05:42:35Z jkim $");
 
 #include <err.h>
 #include <stddef.h>
@@ -36,16 +36,18 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/jail/jaillex.l 235839 2012-05-23 15:29:34Z
 #include "jailp.h"
 #include "y.tab.h"
 
-#define YY_NO_INPUT
-#define YY_NO_UNPUT
-
 extern int yynerrs;
 
 static ssize_t text2lval(size_t triml, size_t trimr, int tovar);
 
 static int instr;
 static int lineno = 1;
+
+#define YY_DECL int yylex(void)
 %}
+
+%option noinput
+%option nounput
 
 %start _ DQ
 

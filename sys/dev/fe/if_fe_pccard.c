@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/fe/if_fe_pccard.c 199798 2009-11-25 13:31:17Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/fe/if_fe_pccard.c 199798 2009-11-25 13:31:17Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

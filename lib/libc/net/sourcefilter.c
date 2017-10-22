@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/net/sourcefilter.c 191654 2009-04-29 09:58:31Z bms $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/sourcefilter.c 235640 2012-05-19 02:39:43Z marcel $");
 
 #include "namespace.h"
 
@@ -120,7 +120,7 @@ __inaddr_to_index(in_addr_t ifaddr)
 		psu = (sockunion_t *)ifa->ifa_addr;
 		if (psu && psu->ss.ss_family == AF_LINK &&
 		    strcmp(ifa->ifa_name, ifname) == 0) {
-			ifindex = psu->sdl.sdl_index;
+			ifindex = LLINDEX(&psu->sdl);
 			break;
 		}
 	}

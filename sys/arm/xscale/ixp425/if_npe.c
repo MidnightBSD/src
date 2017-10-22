@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/if_npe.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/if_npe.c 243882 2012-12-05 08:04:20Z glebius $");
 
 /*
  * Intel XScale NPE Ethernet driver.
@@ -89,8 +89,8 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/if_npe.c 248085 2013-03-09 02
 
 #include "miibus_if.h"
 
-/* 
- * XXX: For the main bus dma tag. Can go away if the new method to get the 
+/*
+ * XXX: For the main bus dma tag. Can go away if the new method to get the
  * dma tag from the parent got MFC'd into RELENG_6.
  */
 extern struct ixp425_softc *ixp425_softc;
@@ -302,7 +302,7 @@ npe_probe(device_t dev)
 	int unit = device_get_unit(dev);
 	int npeid;
 
-	if (unit > 2 || 
+	if (unit > 2 ||
 	    (ixp4xx_read_feature_bits() &
 	     (unit == 0 ? EXP_FCTRL_ETH0 : EXP_FCTRL_ETH1)) == 0)
 		return EINVAL;
@@ -496,7 +496,7 @@ npe_dma_setup(struct npe_softc *sc, struct npedma *dma,
 	}
 
 	/* DMA tag and map for the NPE buffers */
-	error = bus_dma_tag_create(ixp425_softc->sc_dmat, sizeof(uint32_t), 0, 
+	error = bus_dma_tag_create(ixp425_softc->sc_dmat, sizeof(uint32_t), 0,
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
 	    nbuf * sizeof(struct npehwbuf), 1,
 	    nbuf * sizeof(struct npehwbuf), 0,
@@ -1064,7 +1064,7 @@ npe_rxbuf_init(struct npe_softc *sc, struct npebuf *npe, struct mbuf *m)
 	int error, nseg;
 
 	if (m == NULL) {
-		m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+		m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 		if (m == NULL)
 			return ENOBUFS;
 	}
@@ -1120,7 +1120,7 @@ npe_rxdone(int qid, void *arg)
 		 * data up the stack and replace it with the newly
 		 * allocated one.
 		 */
-		m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+		m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 		if (m != NULL) {
 			struct mbuf *mrx = npe->ix_m;
 			struct npehwbuf *hw = npe->ix_hw;
@@ -1316,7 +1316,7 @@ npestart_locked(struct ifnet *ifp)
 		error = bus_dmamap_load_mbuf_sg(dma->mtag, npe->ix_map,
 		    m, segs, &nseg, 0);
 		if (error == EFBIG) {
-			n = m_collapse(m, M_DONTWAIT, NPE_MAXSEG);
+			n = m_collapse(m, M_NOWAIT, NPE_MAXSEG);
 			if (n == NULL) {
 				if_printf(ifp, "%s: too many fragments %u\n",
 				    __func__, nseg);
@@ -1445,7 +1445,7 @@ npestop(struct npe_softc *sc)
 
 	/*
 	 * The MAC core rx/tx disable may leave the MAC hardware in an
-	 * unpredictable state. A hw reset is executed before resetting 
+	 * unpredictable state. A hw reset is executed before resetting
 	 * all the MAC parameters to a known value.
 	 */
 	WR4(sc, NPE_MAC_CORE_CNTRL, NPE_CORE_RESET);

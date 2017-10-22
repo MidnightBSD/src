@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/tws/tws_hdm.h 241762 2012-10-20 07:38:42Z delphij $
+ * $FreeBSD: release/10.0.0/sys/dev/tws/tws_hdm.h 241753 2012-10-19 22:07:40Z delphij $
  */
 
 

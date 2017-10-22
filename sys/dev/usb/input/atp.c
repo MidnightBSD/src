@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/input/atp.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/input/atp.c 233774 2012-04-02 10:50:42Z hselasky $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

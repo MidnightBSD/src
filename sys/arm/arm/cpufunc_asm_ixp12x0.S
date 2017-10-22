@@ -37,7 +37,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/cpufunc_asm_ixp12x0.S 139735 2005-01-05 21:58:49Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/cpufunc_asm_ixp12x0.S 248361 2013-03-16 02:48:49Z andrew $");
 
 /*
  * This function is the same as sa110_context_switch for now, the plan
@@ -61,10 +61,12 @@ ENTRY(ixp12x0_context_switch)
 	mov	r0, r0
 	mov	r0, r0
 	RET
+END(ixp12x0_context_switch)
 
 ENTRY(ixp12x0_drain_readbuf)
 	mcr	p15, 0, r0, c9, c0, 0		/* drain read buffer */
 	RET
+END(ixp12x0_drain_readbuf)
 
 /*
  * Information for the IXP12X0 cache clean/purge functions:

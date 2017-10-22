@@ -70,7 +70,7 @@ static char sccsid[] = "@(#)su.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/su/su.c 220055 2011-03-27 12:53:20Z ume $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/su/su.c 254259 2013-08-12 21:01:01Z trasz $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -373,6 +373,8 @@ main(int argc, char *argv[])
 		}
 		lc = login_getclass(class);
 		if (lc == NULL)
+			err(1, "login_getclass");
+		if (lc->lc_class == NULL || strcmp(class, lc->lc_class) != 0)
 			errx(1, "unknown class: %s", class);
 	}
 

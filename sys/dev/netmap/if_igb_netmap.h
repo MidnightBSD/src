@@ -24,8 +24,7 @@
  */
 
 /*
- * $FreeBSD: stable/9/sys/dev/netmap/if_igb_netmap.h 246355 2013-02-05 09:40:31Z luigi $
- * $Id: if_igb_netmap.h 10627 2012-02-23 19:37:15Z luigi $
+ * $FreeBSD: release/10.0.0/sys/dev/netmap/if_igb_netmap.h 256200 2013-10-09 17:32:52Z jfv $
  *
  * Netmap support for igb, partly contributed by Ahmed Kooli
  * For details on netmap support please see ixgbe_netmap.h
@@ -154,7 +153,7 @@ igb_netmap_txsync(struct ifnet *ifp, u_int ring_nr, int do_lock)
 			/* curr is the current slot in the nic ring */
 			union e1000_adv_tx_desc *curr =
 			    (union e1000_adv_tx_desc *)&txr->tx_base[l];
-			struct igb_tx_buffer *txbuf = &txr->tx_buffers[l];
+			struct igb_tx_buf *txbuf = &txr->tx_buffers[l];
 			int flags = ((slot->flags & NS_REPORT) ||
 				j == 0 || j == report_frequency) ?
 					E1000_ADVTXD_DCMD_RS : 0;

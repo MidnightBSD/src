@@ -39,7 +39,7 @@
 
 #include <machine/armreg.h>
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/fiq_subr.S 139735 2005-01-05 21:58:49Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/fiq_subr.S 248361 2013-03-16 02:48:49Z andrew $");
 
 /*
  * MODE_CHANGE_NOP should be inserted between a mode change and a
@@ -74,6 +74,7 @@ ENTRY(fiq_getregs)
 
 	BACK_TO_SVC_MODE
 	RET
+END(fiq_getregs)
 
 /*
  * fiq_setregs:
@@ -88,6 +89,7 @@ ENTRY(fiq_setregs)
 
 	BACK_TO_SVC_MODE
 	RET
+END(fiq_setregs)
 
 /*
  * fiq_nullhandler:

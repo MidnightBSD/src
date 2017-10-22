@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.bin/stat/Makefile 216206 2010-12-05 21:33:05Z dougb $
+# $FreeBSD: release/10.0.0/usr.bin/stat/Makefile 216206 2010-12-05 21:33:05Z dougb $
 
 PROG=	stat
 

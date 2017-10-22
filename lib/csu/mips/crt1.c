@@ -30,11 +30,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/csu/mips/crt1.c 245777 2013-01-22 07:32:26Z kib $
+ * $FreeBSD: release/10.0.0/lib/csu/mips/crt1.c 245133 2013-01-07 17:58:27Z kib $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/csu/mips/crt1.c 245777 2013-01-22 07:32:26Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/csu/mips/crt1.c 245133 2013-01-07 17:58:27Z kib $");
 
 #ifndef __GNUC__
 #error "GCC is needed to compile this file"
@@ -43,18 +43,10 @@ __FBSDID("$FreeBSD: stable/9/lib/csu/mips/crt1.c 245777 2013-01-22 07:32:26Z kib
 #include <stdlib.h>
 #include "libc_private.h"
 #include "crtbrand.c"
+#include "ignore_init.c"
 
 struct Struct_Obj_Entry;
 struct ps_strings;
-
-#ifndef NOSHARED
-extern int _DYNAMIC;
-#pragma weak _DYNAMIC
-#endif
-
-extern void _init(void);
-extern void _fini(void);
-extern int main(int, char **, char **);
 
 #ifdef GCRT
 extern void _mcleanup(void);
@@ -62,9 +54,6 @@ extern void monstartup(void *, void *);
 extern int eprol;
 extern int etext;
 #endif
-
-char **environ;
-const char *__progname = "";
 
 void __start(char **, void (*)(void), struct Struct_Obj_Entry *, struct ps_strings *);
 
@@ -82,31 +71,20 @@ __start(char **ap,
 	argc = * (long *) ap;
 	argv = ap + 1;
 	env  = ap + 2 + argc;
-	if (environ == NULL)
-		environ = env;
-	if (argc > 0 && argv[0] != NULL) {
-		const char *s;
-		__progname = argv[0];
-		for (s = __progname; *s != '\0'; s++)
-			if (*s == '/')
-				__progname = s + 1;
-	}
+	handle_argv(argc, argv, env);
 
-#ifndef NOSHARED
 	if (&_DYNAMIC != NULL)
 		atexit(cleanup);
-#endif
+	else
+		_init_tls();
+
 #ifdef GCRT
 	atexit(_mcleanup);
-#endif
-	atexit(_fini);
-#ifdef GCRT
 	monstartup(&eprol, &etext);
 #endif
-#ifndef NOGPREL
-	_init();
-#endif
-	exit( main(argc, argv, env) );
+
+	handle_static_init(argc, argv, env);
+	exit(main(argc, argv, env));
 }
 
 #ifdef GCRT

@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/9/sys/cddl/dev/dtrace/dtrace_ioctl.c 211608 2010-08-22 10:53:32Z rpaulo $
+ * $FreeBSD: release/10.0.0/sys/cddl/dev/dtrace/dtrace_ioctl.c 252850 2013-07-05 22:42:10Z markj $
  *
  */
 
@@ -39,11 +39,7 @@ dtrace_ioctl_helper(struct cdev *dev, u_long cmd, caddr_t addr, int flags,
 	case DTRACEHIOC_ADDDOF:
 		dhp = (dof_helper_t *)addr;
 		/* XXX all because dofhp_dof is 64 bit */
-#ifdef __i386
-		addr = (caddr_t)(uint32_t)dhp->dofhp_dof;
-#else
-		addr = (caddr_t)dhp->dofhp_dof;
-#endif
+		addr = (caddr_t)(vm_offset_t)dhp->dofhp_dof;
 		/* FALLTHROUGH */
 	case DTRACEHIOC_ADD:
 		dof = dtrace_dof_copyin((intptr_t)addr, &rval);
@@ -219,7 +215,7 @@ dtrace_ioctl(struct cdev *dev, u_long cmd, caddr_t addr,
 		    "DTRACEIOC_AGGSNAP":"DTRACEIOC_BUFSNAP",
 		    curcpu, desc.dtbd_cpu);
 
-		if (desc.dtbd_cpu < 0 || desc.dtbd_cpu >= NCPU)
+		if (desc.dtbd_cpu >= NCPU)
 			return (ENOENT);
 		if (pcpu_find(desc.dtbd_cpu) == NULL)
 			return (ENOENT);
@@ -278,6 +274,7 @@ dtrace_ioctl(struct cdev *dev, u_long cmd, caddr_t addr,
 			desc.dtbd_drops = buf->dtb_drops;
 			desc.dtbd_errors = buf->dtb_errors;
 			desc.dtbd_oldest = buf->dtb_xamot_offset;
+			desc.dtbd_timestamp = dtrace_gethrtime();
 
 			mutex_exit(&dtrace_lock);
 
@@ -332,6 +329,7 @@ dtrace_ioctl(struct cdev *dev, u_long cmd, caddr_t addr,
 		desc.dtbd_drops = buf->dtb_xamot_drops;
 		desc.dtbd_errors = buf->dtb_xamot_errors;
 		desc.dtbd_oldest = 0;
+		desc.dtbd_timestamp = buf->dtb_switched;
 
 		mutex_exit(&dtrace_lock);
 
@@ -582,19 +580,25 @@ dtrace_ioctl(struct cdev *dev, u_long cmd, caddr_t addr,
 			return (EINVAL);
 
 		mutex_enter(&dtrace_provider_lock);
+#if defined(sun)
 		mutex_enter(&mod_lock);
+#endif
 		mutex_enter(&dtrace_lock);
 
 		if (desc->dtargd_id > dtrace_nprobes) {
 			mutex_exit(&dtrace_lock);
+#if defined(sun)
 			mutex_exit(&mod_lock);
+#endif
 			mutex_exit(&dtrace_provider_lock);
 			return (EINVAL);
 		}
 
 		if ((probe = dtrace_probes[desc->dtargd_id - 1]) == NULL) {
 			mutex_exit(&dtrace_lock);
+#if defined(sun)
 			mutex_exit(&mod_lock);
+#endif
 			mutex_exit(&dtrace_provider_lock);
 			return (EINVAL);
 		}
@@ -618,7 +622,9 @@ dtrace_ioctl(struct cdev *dev, u_long cmd, caddr_t addr,
 			    probe->dtpr_id, probe->dtpr_arg, desc);
 		}
 
+#if defined(sun)
 		mutex_exit(&mod_lock);
+#endif
 		mutex_exit(&dtrace_provider_lock);
 
 		return (0);

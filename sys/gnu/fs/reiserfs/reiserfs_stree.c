@@ -2,9 +2,9 @@
  * Copyright 2000 Hans Reiser
  * See README for licensing and copyright details
  * 
- * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
+ * Ported to FreeBSD by Jean-SÃ©bastien PÃ©dron <jspedron@club-internet.fr>
  * 
- * $FreeBSD: stable/9/sys/gnu/fs/reiserfs/reiserfs_stree.c 170491 2007-06-10 04:54:42Z mjacob $
+ * $FreeBSD: release/10.0.0/sys/gnu/fs/reiserfs/reiserfs_stree.c 230132 2012-01-15 13:23:18Z uqs $
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>
@@ -321,7 +321,7 @@ key_in_buffer(
 }
 
 #if 0
-/* XXX Il ne semble pas y avoir de compteur de référence dans struct buf */
+/* XXX Il ne semble pas y avoir de compteur de rÃ©fÃ©rence dans struct buf */
 inline void
 decrement_bcount(struct buf *p_s_bp)
 {

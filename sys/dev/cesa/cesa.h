@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/cesa/cesa.h 227730 2011-11-19 16:30:06Z raj $
+ * $FreeBSD: release/10.0.0/sys/dev/cesa/cesa.h 250291 2013-05-06 13:34:36Z gber $
  */
 
 #ifndef _DEV_CESA_H_
@@ -332,6 +332,11 @@ struct cesa_chain_info {
 #define CESA_TDMA_EMR_DOUBLE_HIT	CESA_TDMA_ECR_DOUBLE_HIT
 #define CESA_TDMA_EMR_BOTH_HIT		CESA_TDMA_ECR_BOTH_HIT
 #define CESA_TDMA_EMR_DATA_ERROR	CESA_TDMA_ECR_DATA_ERROR
+
+/*  CESA TDMA address decoding registers */
+#define MV_WIN_CESA_CTRL(n)		(0x8 * (n) + 0xA04)
+#define MV_WIN_CESA_BASE(n)		(0x8 * (n) + 0xA00)
+#define MV_WIN_CESA_MAX			4
 
 /* CESA SA registers definitions */
 #define CESA_SA_CMD			0xDE00

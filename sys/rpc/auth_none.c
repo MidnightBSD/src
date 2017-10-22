@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)auth_none.c 1.19 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)auth_none.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/rpc/auth_none.c 184588 2008-11-03 10:38:00Z dfr $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/rpc/auth_none.c 184588 2008-11-03 10:38:00Z dfr $");
 
 /*
  * auth_none.c

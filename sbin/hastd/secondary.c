@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/hastd/secondary.c 249236 2013-04-07 17:05:16Z trociny $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/hastd/secondary.c 255717 2013-09-19 20:20:59Z trociny $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -85,14 +85,13 @@ static TAILQ_HEAD(, hio) hio_free_list;
 static pthread_mutex_t hio_free_list_lock;
 static pthread_cond_t hio_free_list_cond;
 /*
- * Disk thread (the one that do I/O requests) takes requests from this list.
+ * Disk thread (the one that does I/O requests) takes requests from this list.
  */
 static TAILQ_HEAD(, hio) hio_disk_list;
 static pthread_mutex_t hio_disk_list_lock;
 static pthread_cond_t hio_disk_list_cond;
 /*
- * There is one recv list for every component, although local components don't
- * use recv lists as local requests are done synchronously.
+ * Thread that sends requests back to primary takes requests from this list.
  */
 static TAILQ_HEAD(, hio) hio_send_list;
 static pthread_mutex_t hio_send_list_lock;
@@ -115,7 +114,7 @@ static void *send_thread(void *arg);
 	TAILQ_INSERT_TAIL(&hio_##name##_list, (hio), hio_next);		\
 	mtx_unlock(&hio_##name##_list_lock);				\
 	if (_wakeup)							\
-		cv_signal(&hio_##name##_list_cond);			\
+		cv_broadcast(&hio_##name##_list_cond);			\
 } while (0)
 #define	QUEUE_TAKE(name, hio)	do {					\
 	mtx_lock(&hio_##name##_list_lock);				\
@@ -582,7 +581,7 @@ requnpack(struct hast_resource *res, struct hio *hio, struct nv *nv)
 			hio->hio_error = EINVAL;
 			goto end;
 		}
-		if (hio->hio_length > MAXPHYS) {
+		if (hio->hio_cmd != HIO_DELETE && hio->hio_length > MAXPHYS) {
 			pjdlog_error("Data length is too large (%ju > %ju).",
 			    (uintmax_t)hio->hio_length, (uintmax_t)MAXPHYS);
 			hio->hio_error = EINVAL;

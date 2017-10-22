@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/ksched.c 222802 2011-06-07 02:50:14Z davidxu $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/ksched.c 239183 2012-08-10 18:19:57Z mav $");
 
 #include "opt_posix.h"
 
@@ -64,7 +64,7 @@ ksched_attach(struct ksched **p)
 	struct ksched *ksched= p31b_malloc(sizeof(*ksched));
 
 	ksched->rr_interval.tv_sec = 0;
-	ksched->rr_interval.tv_nsec = 1000000000L / sched_rr_interval();
+	ksched->rr_interval.tv_nsec = 1000000000L / hz * sched_rr_interval();
 
 	*p = ksched;
 	return 0;

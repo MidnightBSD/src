@@ -46,7 +46,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/if_cdce.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/net/if_cdce.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -237,7 +237,7 @@ static device_method_t cdce_methods[] = {
 	DEVMETHOD(device_suspend, cdce_suspend),
 	DEVMETHOD(device_resume, cdce_resume),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t cdce_driver = {

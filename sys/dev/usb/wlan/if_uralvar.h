@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_uralvar.h 206358 2010-04-07 15:29:13Z rpaulo $	*/
+/*	$FreeBSD: release/10.0.0/sys/dev/usb/wlan/if_uralvar.h 253757 2013-07-29 05:54:13Z hselasky $	*/
 
 /*-
  * Copyright (c) 2005
@@ -34,7 +34,7 @@ struct ural_rx_radiotap_header {
 	int8_t		wr_antsignal;
 	int8_t		wr_antnoise;
 	uint8_t		wr_antenna;
-};
+} __packed __aligned(8);
 
 #define RAL_RX_RADIOTAP_PRESENT						\
 	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
@@ -51,7 +51,7 @@ struct ural_tx_radiotap_header {
 	uint16_t	wt_chan_freq;
 	uint16_t	wt_chan_flags;
 	uint8_t		wt_antenna;
-};
+} __packed __aligned(8);
 
 #define RAL_TX_RADIOTAP_PRESENT						\
 	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
@@ -110,6 +110,7 @@ struct ural_softc {
 	uint32_t			rf_regs[4];
 	uint8_t				txpow[14];
 	uint8_t				sc_bssid[6];
+	uint8_t				sc_detached;
 
 	struct {
 		uint8_t			val;

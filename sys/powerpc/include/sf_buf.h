@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/include/sf_buf.h 190681 2009-04-04 00:22:44Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/powerpc/include/sf_buf.h 255318 2013-09-06 17:44:13Z glebius $
  */
 
 #ifndef _MACHINE_SF_BUF_H_
@@ -44,6 +44,9 @@ struct sf_buf {
 	vm_offset_t	kva;		/* va of mapping */
 	int		ref_count;	/* usage of this mapping */
 };
+
+struct sf_buf * sf_buf_alloc(struct vm_page *m, int flags);
+void sf_buf_free(struct sf_buf *sf);
 
 /*
  * On 32-bit OEA, the only purpose for which sf_buf is used is to implement

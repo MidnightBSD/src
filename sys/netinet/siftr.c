@@ -59,7 +59,7 @@
  ******************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/siftr.c 248144 2013-03-11 06:09:08Z lstewart $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/siftr.c 247906 2013-03-07 04:42:20Z lstewart $");
 
 #include <sys/param.h>
 #include <sys/alq.h>
@@ -952,7 +952,8 @@ siftr_chkpkt(void *arg, struct mbuf **m, struct ifnet *ifp, int dir,
 			 * the mbuf cluster "at" at offset "offset" bytes from
 			 * the beginning of the "at" mbuf's data pointer.
 			 */
-			th->th_sum = in_cksum_skip(*m, ip->ip_len, ip_hl);
+			th->th_sum = in_cksum_skip(*m, ntohs(ip->ip_len),
+			    ip_hl);
 		}
 
 		/*

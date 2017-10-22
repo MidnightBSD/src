@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libufs/cgroup.c 207476 2010-05-01 18:56:45Z emaste $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libufs/cgroup.c 207476 2010-05-01 18:56:45Z emaste $");
 
 #include <sys/param.h>
 #include <sys/mount.h>

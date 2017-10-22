@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-#	$FreeBSD: stable/9/share/man/man5/Makefile 220640 2011-04-14 18:37:27Z trasz $
+#	$FreeBSD: release/10.0.0/share/man/man5/Makefile 256366 2013-10-12 06:08:18Z rpaulo $
 
 .include <bsd.own.mk>
 
@@ -25,7 +25,6 @@ MAN=	acct.5 \
 	fbtab.5 \
 	fdescfs.5 \
 	forward.5 \
-	freebsd-update.conf.5 \
 	fs.5 \
 	fstab.5 \
 	group.5 \
@@ -68,20 +67,33 @@ MAN=	acct.5 \
 	stab.5 \
 	style.Makefile.5 \
 	sysctl.conf.5 \
-	tmpfs.5 \
-	xfs.5
+	tmpfs.5
 
 MLINKS=	dir.5 dirent.5
 MLINKS+=fs.5 inode.5
 MLINKS+=hosts.equiv.5 rhosts.5
 MLINKS+=msdosfs.5 msdos.5
 MLINKS+=passwd.5 master.passwd.5
+MLINKS+=portindex.5 INDEX.5
 MLINKS+=quota.user.5 quota.group.5
 MLINKS+=rc.conf.5 rc.conf.local.5
 MLINKS+=resolver.5 resolv.conf.5
 
+.if ${MK_FREEBSD_UPDATE} != "no"
+MAN+=	freebsd-update.conf.5
+.endif
+
 .if ${MK_HESIOD} != "no"
 MAN+=	hesiod.conf.5 
+.endif
+
+.if ${MK_NAND} != "no"
+MAN+=	nandfs.5
+.endif
+
+.if ${MK_PF} != "no"
+MAN+=	pf.conf.5 \
+	pf.os.5
 .endif
 
 .if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"

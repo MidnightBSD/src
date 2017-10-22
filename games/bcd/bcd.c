@@ -41,7 +41,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)bcd.c	8.2 (Berkeley) 3/20/94";
 #endif
 static const char rcsid[] =
- "$FreeBSD: stable/9/games/bcd/bcd.c 242047 2012-10-25 03:20:00Z eadler $";
+ "$FreeBSD: release/10.0.0/games/bcd/bcd.c 241846 2012-10-22 03:06:53Z eadler $";
 #endif /* not lint */
 
 /*
@@ -82,7 +82,7 @@ static const char rcsid[] =
 #include <string.h>
 #include <unistd.h>
 
-u_short holes[256] = {
+static u_short holes[256] = {
     0x0,	 0x0,	  0x0,	   0x0,	    0x0,     0x0,     0x0,     0x0,
     0x0,	 0x0,	  0x0,	   0x0,	    0x0,     0x0,     0x0,     0x0,
     0x0,	 0x0,	  0x0,	   0x0,	    0x0,     0x0,     0x0,     0x0,
@@ -117,7 +117,7 @@ u_short holes[256] = {
     0x202,	 0x201,	  0x082,   0x806,   0x822,   0x600,   0x282,   0x0
 };
 
-void printcard(char *);
+static void printcard(char *);
 
 /*
  * i'th bit of w.
@@ -145,7 +145,7 @@ main(int argc, char **argv)
 
 #define	COLUMNS	48
 
-void
+static void
 printcard(char *str)
 {
 	static char rowchars[] = "   123456789";

@@ -33,6 +33,7 @@
 #include <sys/stat.h>
 #include <sys/processor.h>
 #include <sys/zfs_context.h>
+#include <sys/rrwlock.h>
 #include <sys/zmod.h>
 #include <sys/utsname.h>
 #include <sys/systeminfo.h>
@@ -348,6 +349,41 @@ top:
 	return (1);
 }
 
+/*ARGSUSED*/
+clock_t
+cv_timedwait_hires(kcondvar_t *cv, kmutex_t *mp, hrtime_t tim, hrtime_t res,
+    int flag)
+{
+	int error;
+	timestruc_t ts;
+	hrtime_t delta;
+
+	ASSERT(flag == 0);
+
+top:
+	delta = tim - gethrtime();
+	if (delta <= 0)
+		return (-1);
+
+	ts.tv_sec = delta / NANOSEC;
+	ts.tv_nsec = delta % NANOSEC;
+
+	ASSERT(mutex_owner(mp) == curthread);
+	mp->m_owner = NULL;
+	error = pthread_cond_timedwait(cv, &mp->m_lock, &ts);
+	mp->m_owner = curthread;
+
+	if (error == ETIMEDOUT)
+		return (-1);
+
+	if (error == EINTR)
+		goto top;
+
+	ASSERT(error == 0);
+
+	return (1);
+}
+
 void
 cv_signal(kcondvar_t *cv)
 {
@@ -588,6 +624,12 @@ dprintf_setup(int *argc, char **argv)
 	 */
 	if (dprintf_find_string("on"))
 		dprintf_print_all = 1;
+}
+
+int
+sysctl_handle_64(SYSCTL_HANDLER_ARGS)
+{
+	return (0);
 }
 
 /*
@@ -885,6 +927,8 @@ umem_out_of_memory(void)
 void
 kernel_init(int mode)
 {
+	extern uint_t rrw_tsd_key;
+
 	umem_nofail_callback(umem_out_of_memory);
 
 	physmem = sysconf(_SC_PHYS_PAGES);
@@ -905,6 +949,8 @@ kernel_init(int mode)
 #endif
 
 	spa_init(mode);
+
+	tsd_create(&rrw_tsd_key, rrw_tsd_destroy);
 }
 
 void
@@ -948,6 +994,12 @@ z_compress_level(void *dst, size_t *dstlen, const void *src, size_t srclen,
 
 uid_t
 crgetuid(cred_t *cr)
+{
+	return (0);
+}
+
+uid_t
+crgetruid(cred_t *cr)
 {
 	return (0);
 }

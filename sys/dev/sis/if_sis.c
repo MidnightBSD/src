@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/sis/if_sis.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/sis/if_sis.c 248456 2013-03-18 04:46:17Z yongari $");
 
 /*
  * SiS 900/SiS 7016 fast ethernet PCI NIC driver. Datasheets are
@@ -625,7 +625,7 @@ sis_miibus_statchg(device_t dev)
 		SIS_CLRBIT(sc, SIS_RX_CFG, SIS_RXCFG_RX_TXPKTS);
 	}
 
-	if (sc->sis_type == SIS_TYPE_83816) {
+	if (sc->sis_type == SIS_TYPE_83815 && sc->sis_srr >= NS_SRR_16A) {
 		/*
 		 * MPII03.D: Half Duplex Excessive Collisions.
 		 * Also page 49 in 83816 manual
@@ -1054,7 +1054,6 @@ sis_attach(device_t dev)
 	}
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = sis_ioctl;
 	ifp->if_start = sis_start;
@@ -1990,7 +1989,7 @@ sis_initl(struct sis_softc *sc)
 		return;
 	}
 
-	if (sc->sis_type == SIS_TYPE_83815 || sc->sis_type == SIS_TYPE_83816) {
+	if (sc->sis_type == SIS_TYPE_83815) {
 		if (sc->sis_manual_pad != 0)
 			sc->sis_flags |= SIS_FLAG_MANUAL_PAD;
 		else

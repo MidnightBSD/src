@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libcam/camlib.c 233755 2012-04-01 08:40:52Z jh $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libcam/camlib.c 251349 2013-06-03 21:52:19Z delphij $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -138,7 +138,7 @@ cam_get_device(const char *path, char *dev_name, int devnamelen, int *unit)
 	 */
 	if (*tmpstr == '/') {
 		tmpstr2 = tmpstr;
-		tmpstr = (char *)rindex(tmpstr2, '/');
+		tmpstr = strrchr(tmpstr2, '/');
 		if ((tmpstr != NULL) && (*tmpstr != '\0'))
 			tmpstr++;
 	}
@@ -633,7 +633,7 @@ cam_real_open_device(const char *path, int flags, struct cam_device *device,
 			 "%s: %s", func_name, func_name, strerror(errno));
 		goto crod_bailout;
 	}
-	if (ccb.cts.protocol == XPORT_SPI) {
+	if (ccb.cts.transport == XPORT_SPI) {
 		struct ccb_trans_settings_spi *spi =
 		    &ccb.cts.xport_specific.spi;
 		device->sync_period = spi->sync_period;

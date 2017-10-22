@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/drm_dp_iic_helper.c 235783 2012-05-22 11:07:44Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/drm_dp_iic_helper.c 254819 2013-08-24 23:54:06Z dumbbell $");
 
 #include <sys/types.h>
 #include <sys/kobj.h>
@@ -146,7 +146,7 @@ iic_dp_aux_xfer(device_t idev, struct iic_msg *msgs, uint32_t num)
 		len = msgs[m].len;
 		buf = msgs[m].buf;
 		reading = (msgs[m].flags & IIC_M_RD) != 0;
-		ret = iic_dp_aux_address(idev, msgs[m].slave, reading);
+		ret = iic_dp_aux_address(idev, msgs[m].slave >> 1, reading);
 		if (ret != 0)
 			break;
 		if (reading) {
@@ -216,22 +216,6 @@ iic_dp_aux_attach(device_t idev)
 	return (0);
 }
 
-static int
-iic_dp_aux_detach(device_t idev)
-{
-	struct iic_dp_aux_data *aux_data;
-	device_t port;
-
-	aux_data = device_get_softc(idev);
-
-	port = aux_data->port;
-	bus_generic_detach(idev);
-	if (port != NULL)
-		device_delete_child(idev, port);
-
-	return (0);
-}
-
 int
 iic_dp_aux_add_bus(device_t dev, const char *name,
     int (*ch)(device_t idev, int mode, uint8_t write_byte, uint8_t *read_byte),
@@ -277,7 +261,7 @@ iic_dp_aux_add_bus(device_t dev, const char *name,
 static device_method_t drm_iic_dp_aux_methods[] = {
 	DEVMETHOD(device_probe,		iic_dp_aux_probe),
 	DEVMETHOD(device_attach,	iic_dp_aux_attach),
-	DEVMETHOD(device_detach,	iic_dp_aux_detach),
+	DEVMETHOD(device_detach,	bus_generic_detach),
 	DEVMETHOD(iicbus_reset,		iic_dp_aux_reset),
 	DEVMETHOD(iicbus_transfer,	iic_dp_aux_xfer),
 	DEVMETHOD_END

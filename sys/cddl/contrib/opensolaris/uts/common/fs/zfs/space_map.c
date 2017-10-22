@@ -32,6 +32,13 @@
 #include <sys/zio.h>
 #include <sys/space_map.h>
 
+SYSCTL_DECL(_vfs_zfs);
+static int space_map_last_hope;
+TUNABLE_INT("vfs.zfs.space_map_last_hope", &space_map_last_hope);
+SYSCTL_INT(_vfs_zfs, OID_AUTO, space_map_last_hope, CTLFLAG_RDTUN,
+    &space_map_last_hope, 0,
+    "If kernel panic in space_map code on pool import, import the pool in readonly mode and backup all your data before trying this option.");
+
 static kmem_cache_t *space_seg_cache;
 
 void
@@ -102,7 +109,7 @@ void
 space_map_add(space_map_t *sm, uint64_t start, uint64_t size)
 {
 	avl_index_t where;
-	space_seg_t ssearch, *ss_before, *ss_after, *ss;
+	space_seg_t *ss_before, *ss_after, *ss;
 	uint64_t end = start + size;
 	int merge_before, merge_after;
 
@@ -114,16 +121,30 @@ space_map_add(space_map_t *sm, uint64_t start, uint64_t size)
 	VERIFY(sm->sm_space + size <= sm->sm_size);
 	VERIFY(P2PHASE(start, 1ULL << sm->sm_shift) == 0);
 	VERIFY(P2PHASE(size, 1ULL << sm->sm_shift) == 0);
-
-	ssearch.ss_start = start;
-	ssearch.ss_end = end;
-	ss = avl_find(&sm->sm_root, &ssearch, &where);
-
-	if (ss != NULL && ss->ss_start <= start && ss->ss_end >= end) {
+again:
+	ss = space_map_find(sm, start, size, &where);
+	if (ss != NULL) {
 		zfs_panic_recover("zfs: allocating allocated segment"
 		    "(offset=%llu size=%llu)\n",
 		    (longlong_t)start, (longlong_t)size);
 		return;
+	}
+	if (ss != NULL && space_map_last_hope) {
+		uint64_t sstart, ssize;
+
+		if (ss->ss_start > start)
+			sstart = ss->ss_start;
+		else
+			sstart = start;
+		if (ss->ss_end > end)
+			ssize = end - sstart;
+		else
+			ssize = ss->ss_end - sstart;
+		ZFS_LOG(0,
+		    "Removing colliding space_map range (start=%ju end=%ju). Good luck!",
+		    (uintmax_t)sstart, (uintmax_t)(sstart + ssize));
+		space_map_remove(sm, sstart, ssize);
+		goto again;
 	}
 
 	/* Make sure we don't overlap with either of our neighbors */
@@ -170,19 +191,19 @@ space_map_add(space_map_t *sm, uint64_t start, uint64_t size)
 void
 space_map_remove(space_map_t *sm, uint64_t start, uint64_t size)
 {
-	space_seg_t ssearch, *ss, *newseg;
+#ifdef illumos
+	avl_index_t where;
+#endif
+	space_seg_t *ss, *newseg;
 	uint64_t end = start + size;
 	int left_over, right_over;
 
-	ASSERT(MUTEX_HELD(sm->sm_lock));
 	VERIFY(!sm->sm_condensing);
-	VERIFY(size != 0);
-	VERIFY(P2PHASE(start, 1ULL << sm->sm_shift) == 0);
-	VERIFY(P2PHASE(size, 1ULL << sm->sm_shift) == 0);
-
-	ssearch.ss_start = start;
-	ssearch.ss_end = end;
-	ss = avl_find(&sm->sm_root, &ssearch, NULL);
+#ifdef illumos
+	ss = space_map_find(sm, start, size, &where);
+#else
+	ss = space_map_find(sm, start, size, NULL);
+#endif
 
 	/* Make sure we completely overlap with someone */
 	if (ss == NULL) {
@@ -225,12 +246,11 @@ space_map_remove(space_map_t *sm, uint64_t start, uint64_t size)
 	sm->sm_space -= size;
 }
 
-boolean_t
-space_map_contains(space_map_t *sm, uint64_t start, uint64_t size)
+space_seg_t *
+space_map_find(space_map_t *sm, uint64_t start, uint64_t size,
+    avl_index_t *wherep)
 {
-	avl_index_t where;
 	space_seg_t ssearch, *ss;
-	uint64_t end = start + size;
 
 	ASSERT(MUTEX_HELD(sm->sm_lock));
 	VERIFY(size != 0);
@@ -238,10 +258,20 @@ space_map_contains(space_map_t *sm, uint64_t start, uint64_t size)
 	VERIFY(P2PHASE(size, 1ULL << sm->sm_shift) == 0);
 
 	ssearch.ss_start = start;
-	ssearch.ss_end = end;
-	ss = avl_find(&sm->sm_root, &ssearch, &where);
+	ssearch.ss_end = start + size;
+	ss = avl_find(&sm->sm_root, &ssearch, wherep);
 
-	return (ss != NULL && ss->ss_start <= start && ss->ss_end >= end);
+	if (ss != NULL && ss->ss_start <= start && ss->ss_end >= start + size)
+		return (ss);
+	return (NULL);
+}
+
+boolean_t
+space_map_contains(space_map_t *sm, uint64_t start, uint64_t size)
+{
+	avl_index_t where;
+
+	return (space_map_find(sm, start, size, &where) != 0);
 }
 
 void

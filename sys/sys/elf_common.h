@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/elf_common.h 237388 2012-06-21 12:10:08Z marius $
+ * $FreeBSD: release/10.0.0/sys/sys/elf_common.h 256100 2013-10-07 08:14:58Z kib $
  */
 
 #ifndef _SYS_ELF_COMMON_H_
@@ -296,6 +296,15 @@ typedef struct {
 #define	SHT_HIOS		0x6fffffff	/* Last of OS specific semantics */
 #define	SHT_LOPROC		0x70000000	/* reserved range for processor */
 #define	SHT_AMD64_UNWIND	0x70000001	/* unwind information */
+#define	SHT_ARM_EXIDX		0x70000001	/* Exception index table. */
+#define	SHT_ARM_PREEMPTMAP	0x70000002	/* BPABI DLL dynamic linking 
+						   pre-emption map. */
+#define	SHT_ARM_ATTRIBUTES	0x70000003	/* Object file compatibility 
+						   attributes. */
+#define	SHT_ARM_DEBUGOVERLAY	0x70000004	/* See DBGOVL for details. */
+#define	SHT_ARM_OVERLAYSECTION	0x70000005	/* See DBGOVL for details. */
+#define	SHT_MIPS_REGINFO	0x70000006
+#define	SHT_MIPS_OPTIONS	0x7000000d
 #define	SHT_MIPS_DWARF		0x7000001e	/* MIPS gcc uses MIPS_DWARF */
 #define	SHT_HIPROC		0x7fffffff	/* specific section header types */
 #define	SHT_LOUSER		0x80000000	/* reserved range for application */
@@ -478,6 +487,7 @@ typedef struct {
 #define	DF_1_LOADFLTR	0x00000010	/* Immediate loading of filtees */
 #define	DF_1_NOOPEN     0x00000040	/* Do not allow loading on dlopen() */
 #define	DF_1_ORIGIN	0x00000080	/* Process $ORIGIN */
+#define	DF_1_INTERPOSE	0x00000400	/* Interpose all objects but main */
 #define	DF_1_NODEFLIB	0x00000800	/* Do not search default paths */
 
 /* Values for n_type.  Used in core files. */
@@ -485,6 +495,15 @@ typedef struct {
 #define	NT_FPREGSET	2	/* Floating point registers. */
 #define	NT_PRPSINFO	3	/* Process state info. */
 #define	NT_THRMISC	7	/* Thread miscellaneous info. */
+#define	NT_PROCSTAT_PROC	8	/* Procstat proc data. */
+#define	NT_PROCSTAT_FILES	9	/* Procstat files data. */
+#define	NT_PROCSTAT_VMMAP	10	/* Procstat vmmap data. */
+#define	NT_PROCSTAT_GROUPS	11	/* Procstat groups data. */
+#define	NT_PROCSTAT_UMASK	12	/* Procstat umask data. */
+#define	NT_PROCSTAT_RLIMIT	13	/* Procstat rlimit data. */
+#define	NT_PROCSTAT_OSREL	14	/* Procstat osreldate data. */
+#define	NT_PROCSTAT_PSSTRINGS	15	/* Procstat ps_strings data. */
+#define	NT_PROCSTAT_AUXV	16	/* Procstat auxv data. */
 
 /* Symbol Binding - ELFNN_ST_BIND - st_info */
 #define	STB_LOCAL	0	/* Local symbol */

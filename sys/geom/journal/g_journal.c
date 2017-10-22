@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/journal/g_journal.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/journal/g_journal.c 253141 2013-07-10 10:11:43Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -341,7 +341,9 @@ g_journal_check_overflow(struct g_journal_softc *sc)
 	    (sc->sc_active.jj_offset > sc->sc_inactive.jj_offset &&
 	     sc->sc_journal_offset >= sc->sc_inactive.jj_offset &&
 	     sc->sc_journal_offset < sc->sc_active.jj_offset)) {
-		panic("Journal overflow (joffset=%jd active=%jd inactive=%jd)",
+		panic("Journal overflow "
+		    "(id = %u joffset=%jd active=%jd inactive=%jd)",
+		    (unsigned)sc->sc_id,
 		    (intmax_t)sc->sc_journal_offset,
 		    (intmax_t)sc->sc_active.jj_offset,
 		    (intmax_t)sc->sc_inactive.jj_offset);
@@ -2870,7 +2872,7 @@ g_journal_do_switch(struct g_class *classp)
 	struct mount *mp;
 	struct bintime bt;
 	char *mountpoint;
-	int error, save, vfslocked;
+	int error, save;
 
 	DROP_GIANT();
 	g_topology_lock();
@@ -2922,11 +2924,8 @@ g_journal_do_switch(struct g_class *classp)
 
 		mountpoint = mp->mnt_stat.f_mntonname;
 
-		vfslocked = VFS_LOCK_GIANT(mp);
-
 		error = vn_start_write(NULL, &mp, V_WAIT);
 		if (error != 0) {
-			VFS_UNLOCK_GIANT(vfslocked);
 			GJ_DEBUG(0, "vn_start_write(%s) failed (error=%d).",
 			    mountpoint, error);
 			goto next;
@@ -2951,10 +2950,8 @@ g_journal_do_switch(struct g_class *classp)
 
 		vn_finished_write(mp);
 
-		if (error != 0) {
-			VFS_UNLOCK_GIANT(vfslocked);
+		if (error != 0)
 			goto next;
-		}
 
 		/*
 		 * Send BIO_FLUSH before freezing the file system, so it can be
@@ -2965,8 +2962,7 @@ g_journal_do_switch(struct g_class *classp)
 		GJ_TIMER_STOP(1, &bt, "BIO_FLUSH time of %s", sc->sc_name);
 
 		GJ_TIMER_START(1, &bt);
-		error = vfs_write_suspend(mp);
-		VFS_UNLOCK_GIANT(vfslocked);
+		error = vfs_write_suspend(mp, VS_SKIP_UNMOUNT);
 		GJ_TIMER_STOP(1, &bt, "Suspend time of %s", mountpoint);
 		if (error != 0) {
 			GJ_DEBUG(0, "Cannot suspend file system %s (error=%d).",
@@ -2982,7 +2978,7 @@ g_journal_do_switch(struct g_class *classp)
 		g_journal_switch_wait(sc);
 		mtx_unlock(&sc->sc_mtx);
 
-		vfs_write_resume(mp);
+		vfs_write_resume(mp, 0);
 next:
 		mtx_lock(&mountlist_mtx);
 		vfs_unbusy(mp);

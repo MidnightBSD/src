@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/kern/kern_ctf.c 233353 2012-03-23 11:26:54Z kib $
+ * $FreeBSD: release/10.0.0/sys/kern/kern_ctf.c 241896 2012-10-22 17:50:54Z kib $
  */
 
 /*
@@ -69,7 +69,6 @@ link_elf_ctf_get(linker_file_t lf, linker_ctf_t *lc)
 	int i;
 	int nbytes;
 	ssize_t resid;
-	int vfslocked;
 	size_t sz;
 	struct nameidata nd;
 	struct thread *td = curthread;
@@ -114,12 +113,11 @@ link_elf_ctf_get(linker_file_t lf, linker_ctf_t *lc)
 	 */
 	ef->ctfcnt = -1;
 
-	NDINIT(&nd, LOOKUP, FOLLOW | MPSAFE, UIO_SYSSPACE, lf->pathname, td);
+	NDINIT(&nd, LOOKUP, FOLLOW, UIO_SYSSPACE, lf->pathname, td);
 	flags = FREAD;
 	error = vn_open(&nd, &flags, 0, NULL);
 	if (error)
 		return (error);
-	vfslocked = NDHASGIANT(&nd);
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 
 	/* Allocate memory for the FLF header. */
@@ -323,7 +321,6 @@ link_elf_ctf_get(linker_file_t lf, linker_ctf_t *lc)
 out:
 	VOP_UNLOCK(nd.ni_vp, 0);
 	vn_close(nd.ni_vp, FREAD, td->td_ucred, td);
-	VFS_UNLOCK_GIANT(vfslocked);
 
 	if (hdr != NULL)
 		free(hdr, M_LINKER);

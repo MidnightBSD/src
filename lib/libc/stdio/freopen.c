@@ -13,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)freopen.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/stdio/freopen.c 216334 2010-12-09 20:28:30Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/freopen.c 249810 2013-04-23 14:36:44Z emaste $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -55,10 +55,8 @@ __FBSDID("$FreeBSD: stable/9/lib/libc/stdio/freopen.c 216334 2010-12-09 20:28:30
  * all possible, no matter what.
  */
 FILE *
-freopen(file, mode, fp)
-	const char * __restrict file;
-	const char * __restrict mode;
-	FILE *fp;
+freopen(const char * __restrict file, const char * __restrict mode,
+    FILE * __restrict fp)
 {
 	int f;
 	int dflags, flags, isopen, oflags, sverrno, wantfd;
@@ -118,6 +116,8 @@ freopen(file, mode, fp)
 			(void) ftruncate(fp->_file, (off_t)0);
 		if (!(oflags & O_APPEND))
 			(void) _sseek(fp, (fpos_t)0, SEEK_SET);
+		if (oflags & O_CLOEXEC)
+			(void) _fcntl(fp->_file, F_SETFD, FD_CLOEXEC);
 		f = fp->_file;
 		isopen = 0;
 		wantfd = -1;
@@ -194,7 +194,8 @@ finish:
 	 * assume stderr is always fd STDERR_FILENO, even if being freopen'd.
 	 */
 	if (wantfd >= 0) {
-		if (_dup2(f, wantfd) >= 0) {
+		if ((oflags & O_CLOEXEC ? _fcntl(f, F_DUP2FD_CLOEXEC, wantfd) :
+		    _dup2(f, wantfd)) >= 0) {
 			(void)_close(f);
 			f = wantfd;
 		} else

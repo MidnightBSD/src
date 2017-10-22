@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/pc98/kgzldr/Makefile 146011 2005-05-08 14:17:28Z nyan $
+# $FreeBSD: release/10.0.0/sys/boot/pc98/kgzldr/Makefile 146011 2005-05-08 14:17:28Z nyan $
 
 PROG=	kgzldr.o
 STRIP=

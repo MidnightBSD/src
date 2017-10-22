@@ -31,7 +31,7 @@
  *
  *	from: @(#)cpu.h 5.4 (Berkeley) 5/9/91
  *	from: FreeBSD: src/sys/i386/include/cpu.h,v 1.62 2001/06/29
- * $FreeBSD: stable/9/sys/sparc64/include/cpu.h 230888 2012-02-01 21:15:24Z marius $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/cpu.h 253750 2013-07-28 18:44:17Z avg $
  */
 
 #ifndef	_MACHINE_CPU_H_

@@ -1,0 +1,2 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITH_GCC 255326 2013-09-06 20:49:48Z zeising $
+Set to build and install gcc and g++.

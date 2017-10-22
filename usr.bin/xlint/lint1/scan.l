@@ -37,7 +37,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: scan.l,v 1.26 2002/01/31 22:30:21 tv Exp $");
 #endif
-__FBSDID("$FreeBSD: stable/9/usr.bin/xlint/lint1/scan.l 223262 2011-06-18 13:56:33Z benl $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/xlint/lint1/scan.l 250227 2013-05-03 23:51:32Z jkim $");
 
 #include <stdlib.h>
 #include <string.h>
@@ -52,7 +52,6 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/xlint/lint1/scan.l 223262 2011-06-18 13:56:
 #include "cgram.h"
 
 #define CHAR_MASK	(~(~0 << CHAR_BIT))
-#define YY_NO_UNPUT
 
 /* Current position (its also updated when an included file is parsed) */
 pos_t	curr_pos = { 1, "", 0 };
@@ -85,6 +84,8 @@ static	int	string(void);
 static	int	wcstrg(void);
 
 %}
+
+%option nounput
 
 L	[_A-Za-z]
 D	[0-9]

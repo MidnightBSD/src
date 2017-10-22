@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/ifconfig/ifieee80211.c 233735 2012-03-31 08:44:27Z bschmidt $
+ * $FreeBSD: release/10.0.0/sbin/ifconfig/ifieee80211.c 246505 2013-02-07 21:23:03Z monthadar $
  */
 
 /*-
@@ -884,7 +884,7 @@ set80211wepkey(const char *val, int d, int s, const struct afswtch *rafp)
 }
 
 /*
- * This function is purely a NetBSD compatability interface.  The NetBSD
+ * This function is purely a NetBSD compatibility interface.  The NetBSD
  * interface is too inflexible, but it's there so we'll support it since
  * it's not all that hard.
  */
@@ -1334,6 +1334,36 @@ static void
 set80211pureg(const char *val, int d, int s, const struct afswtch *rafp)
 {
 	set80211(s, IEEE80211_IOC_PUREG, d, 0, NULL);
+}
+
+static void
+set80211quiet(const char *val, int d, int s, const struct afswtch *rafp)
+{
+	set80211(s, IEEE80211_IOC_QUIET, d, 0, NULL);
+}
+
+static
+DECL_CMD_FUNC(set80211quietperiod, val, d)
+{
+	set80211(s, IEEE80211_IOC_QUIET_PERIOD, atoi(val), 0, NULL);
+}
+
+static
+DECL_CMD_FUNC(set80211quietcount, val, d)
+{
+	set80211(s, IEEE80211_IOC_QUIET_COUNT, atoi(val), 0, NULL);
+}
+
+static
+DECL_CMD_FUNC(set80211quietduration, val, d)
+{
+	set80211(s, IEEE80211_IOC_QUIET_DUR, atoi(val), 0, NULL);
+}
+
+static
+DECL_CMD_FUNC(set80211quietoffset, val, d)
+{
+	set80211(s, IEEE80211_IOC_QUIET_OFFSET, atoi(val), 0, NULL);
 }
 
 static void
@@ -1850,6 +1880,12 @@ static
 DECL_CMD_FUNC(set80211meshforward, val, d)
 {
 	set80211(s, IEEE80211_IOC_MESH_FWRD, d, 0, NULL);
+}
+
+static
+DECL_CMD_FUNC(set80211meshgate, val, d)
+{
+	set80211(s, IEEE80211_IOC_MESH_GATE, d, 0, NULL);
 }
 
 static
@@ -3984,10 +4020,14 @@ list_mesh(int s)
 			ether_ntoa((const struct ether_addr *)rt->imr_nexthop),
 			rt->imr_nhops, rt->imr_metric, rt->imr_lifetime,
 			rt->imr_lastmseq,
+			(rt->imr_flags & IEEE80211_MESHRT_FLAGS_DISCOVER) ?
+			    'D' :
 			(rt->imr_flags & IEEE80211_MESHRT_FLAGS_VALID) ?
 			    'V' : '!',
 			(rt->imr_flags & IEEE80211_MESHRT_FLAGS_PROXY) ?
-			    'P' : ' ');
+			    'P' :
+			(rt->imr_flags & IEEE80211_MESHRT_FLAGS_GATE) ?
+			    'G' :' ');
 	}
 }
 
@@ -4802,6 +4842,12 @@ end:
 			else
 				LINE_CHECK("-meshforward");
 		}
+		if (get80211val(s, IEEE80211_IOC_MESH_GATE, &val) != -1) {
+			if (val)
+				LINE_CHECK("meshgate");
+			else
+				LINE_CHECK("-meshgate");
+		}
 		if (get80211len(s, IEEE80211_IOC_MESH_PR_METRIC, data, 12,
 		    &len) != -1) {
 			data[len] = '\0';
@@ -5158,6 +5204,12 @@ static struct cmd ieee80211_cmds[] = {
 	DEF_CMD_ARG("bgscanidle",	set80211bgscanidle),
 	DEF_CMD_ARG("bgscanintvl",	set80211bgscanintvl),
 	DEF_CMD_ARG("scanvalid",	set80211scanvalid),
+	DEF_CMD("quiet",        1,      set80211quiet),
+	DEF_CMD("-quiet",       0,      set80211quiet),
+	DEF_CMD_ARG("quiet_count",      set80211quietcount),
+	DEF_CMD_ARG("quiet_period",     set80211quietperiod),
+	DEF_CMD_ARG("quiet_dur",        set80211quietduration),
+	DEF_CMD_ARG("quiet_offset",     set80211quietoffset),
 	DEF_CMD_ARG("roam:rssi",	set80211roamrssi),
 	DEF_CMD_ARG("roam:rate",	set80211roamrate),
 	DEF_CMD_ARG("mcastrate",	set80211mcastrate),
@@ -5235,6 +5287,8 @@ static struct cmd ieee80211_cmds[] = {
 	DEF_CMD_ARG("meshttl",		set80211meshttl),
 	DEF_CMD("meshforward",	1,	set80211meshforward),
 	DEF_CMD("-meshforward",	0,	set80211meshforward),
+	DEF_CMD("meshgate",	1,	set80211meshgate),
+	DEF_CMD("-meshgate",	0,	set80211meshgate),
 	DEF_CMD("meshpeering",	1,	set80211meshpeering),
 	DEF_CMD("-meshpeering",	0,	set80211meshpeering),
 	DEF_CMD_ARG("meshmetric",	set80211meshmetric),

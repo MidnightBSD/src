@@ -24,14 +24,15 @@
  */
 
 /* Calao Systems QIL-9G20-Cxx
- * http://www.calao-systems.com 
+ * http://www.calao-systems.com
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/at91/board_qila9g20.c 213498 2010-10-06 22:40:27Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/board_qila9g20.c 238189 2012-07-07 05:02:39Z imp $");
 #include <sys/param.h>
 #include <sys/systm.h>
 
+#include <machine/board.h>
 #include <arm/at91/at91board.h>
 #include <arm/at91/at91reg.h>
 #include <arm/at91/at91var.h>
@@ -44,7 +45,7 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/at91/board_qila9g20.c 213498 2010-10-06 22:
 #define AT91SAM9G20_LED_SIZE AT91SAM9G20_PIO_SIZE
 #define AT91SAM9G20_IRQ_LED AT91SAM9G20_IRQ_PIOA
 
-long
+BOARD_INIT long
 board_init(void)
 {
 
@@ -103,3 +104,5 @@ board_init(void)
 
 	return (at91_ramsize());
 }
+
+ARM_BOARD(QIL_A9G20, "Calico System QIL-9G20-Cxx");

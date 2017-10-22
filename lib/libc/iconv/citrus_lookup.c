@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libc/iconv/citrus_lookup.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libc/iconv/citrus_lookup.c 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: citrus_lookup.c,v 1.6 2009/02/03 04:58:38 lukem Exp $ */
 
 /*-

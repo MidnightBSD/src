@@ -1,0 +1,4 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_LS_COLORS 235660 2012-05-19 20:05:27Z marcel $
+Set to build
+.Xr ls 1
+without support for colors to distinguish file types.

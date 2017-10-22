@@ -32,7 +32,7 @@ up-to-date.  Many thanks.
 ******************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/nls/msgcat.c 204110 2010-02-20 08:19:19Z gabor $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/nls/msgcat.c 244358 2012-12-17 12:57:36Z eadler $");
 
 #define _NLS_PRIVATE
 
@@ -82,6 +82,7 @@ __FBSDID("$FreeBSD: stable/9/lib/libc/nls/msgcat.c 204110 2010-02-20 08:19:19Z g
 				  if (np != NULL) {				\
 				  	np->name = strdup(n);			\
 					np->path = NULL;			\
+					np->catd = NLERR;			\
 					np->lang = (l == NULL) ? NULL :		\
 					    strdup(l);				\
 					np->caterrno = e;			\
@@ -384,7 +385,7 @@ load_msgcat(const char *path, const char *name, const char *lang)
 	}
 	UNLOCK;
 
-	if ((fd = _open(path, O_RDONLY)) == -1) {
+	if ((fd = _open(path, O_RDONLY | O_CLOEXEC)) == -1) {
 		SAVEFAIL(name, lang, errno);
 		NLRETERR(errno);
 	}

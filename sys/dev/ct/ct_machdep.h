@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/ct/ct_machdep.h 243455 2012-11-23 14:16:55Z nyan $ */
+/* $FreeBSD: release/10.0.0/sys/dev/ct/ct_machdep.h 242871 2012-11-10 14:58:06Z nyan $ */
 /*	$NecBSD: ct_machdep.h,v 1.4.12.2 2001/06/20 06:13:34 honda Exp $	*/
 /*	$NetBSD$	*/
 
@@ -193,9 +193,4 @@ ct_cmdp_write_1(struct ct_bus_access_handle *chp, u_int8_t val)
 	CT_BUS_WEIGHT(chp)
 }
 
-#if	defined(__i386__) && 0
-#define	SOFT_INTR_REQUIRED(slp)	(softintr((slp)->sl_irq))
-#else	/* !__i386__ */
-#define	SOFT_INTR_REQUIRED(slp)
-#endif	/* !__i386__ */
 #endif	/* !_CT_MACHDEP_H_ */

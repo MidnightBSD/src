@@ -44,7 +44,7 @@ static char const copyright[] =
 static char const sccsid[] = "@(#)printf.c	8.1 (Berkeley) 7/20/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.bin/printf/printf.c 246277 2013-02-03 01:22:28Z eadler $";
+  "$FreeBSD: release/10.0.0/usr.bin/printf/printf.c 244407 2012-12-18 21:02:38Z eadler $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -64,6 +64,7 @@ static const char rcsid[] =
 #define main printfcmd
 #include "bltin/bltin.h"
 #include "error.h"
+#include "options.h"
 #endif
 
 #define PF(f, func) do {						\
@@ -101,15 +102,19 @@ int
 main(int argc, char *argv[])
 {
 	size_t len;
-	int ch, chopped, end, rval;
+	int chopped, end, rval;
 	char *format, *fmt, *start;
-
 #ifndef SHELL
+	int ch;
+
 	(void) setlocale(LC_ALL, "");
 #endif
+
 #ifdef SHELL
-	optreset = 1; optind = 1; opterr = 0; /* initialize getopt */
-#endif
+	nextopt("");
+	argc -= argptr - argv;
+	argv = argptr;
+#else
 	while ((ch = getopt(argc, argv, "")) != -1)
 		switch (ch) {
 		case '?':
@@ -119,6 +124,7 @@ main(int argc, char *argv[])
 		}
 	argc -= optind;
 	argv += optind;
+#endif
 
 	if (argc < 1) {
 		usage();

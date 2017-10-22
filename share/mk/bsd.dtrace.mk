@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/mk/bsd.dtrace.mk 212461 2010-09-11 10:11:59Z rpaulo $
+# $FreeBSD: release/10.0.0/share/mk/bsd.dtrace.mk 212461 2010-09-11 10:11:59Z rpaulo $
 #
 # Copyright (c) 2010 The FreeBSD Foundation 
 # All rights reserved. 

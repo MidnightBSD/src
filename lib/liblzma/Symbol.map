@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/lib/liblzma/Symbol.map 215515 2010-11-19 09:59:55Z mm $
+ * $FreeBSD: release/10.0.0/lib/liblzma/Symbol.map 215515 2010-11-19 09:59:55Z mm $
  */
 
 XZ_5.0 {

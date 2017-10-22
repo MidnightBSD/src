@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/sys/compat/svr4/svr4_fuser.h 139743 2005-01-05 22:34:37Z imp $
+ * $FreeBSD: release/10.0.0/sys/compat/svr4/svr4_fuser.h 139743 2005-01-05 22:34:37Z imp $
  *	Derived from:
  *	$NetBSD: svr4_fuser.h,v 1.4 1998/09/04 19:54:38 christos Exp $	 */
 

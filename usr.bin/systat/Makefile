@@ -1,11 +1,11 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/9/usr.bin/systat/Makefile 204329 2010-02-25 20:24:19Z ru $
+# $FreeBSD: release/10.0.0/usr.bin/systat/Makefile 253360 2013-07-15 12:15:14Z glebius $
 
 .include <bsd.own.mk>
 
 PROG=	systat
 SRCS=	cmds.c cmdtab.c devs.c fetch.c iostat.c keyboard.c main.c \
-	mbufs.c netcmds.c netstat.c pigs.c swap.c icmp.c \
+	netcmds.c netstat.c pigs.c swap.c icmp.c \
 	mode.c ip.c tcp.c \
 	vmstat.c convtbl.c ifcmds.c ifstat.c
 

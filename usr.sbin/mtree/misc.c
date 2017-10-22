@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)misc.c	8.1 (Berkeley) 6/6/93";
 #endif /*not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/mtree/misc.c 160083 2006-07-03 10:55:22Z maxim $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/mtree/misc.c 160083 2006-07-03 10:55:22Z maxim $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

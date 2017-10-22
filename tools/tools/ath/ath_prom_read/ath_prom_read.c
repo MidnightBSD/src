@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/9/tools/tools/ath/ath_prom_read/ath_prom_read.c 217739 2011-01-22 23:44:56Z adrian $
+ * $FreeBSD: release/10.0.0/tools/tools/ath/ath_prom_read/ath_prom_read.c 244969 2013-01-02 18:33:48Z adrian $
  */
 #include "diag.h"
 
@@ -123,7 +123,7 @@ main(int argc, char *argv[])
 	atd.ad_out_data = (caddr_t) eep;
 	atd.ad_out_size = sizeof(eep);
 	if (ioctl(s, SIOCGATHDIAG, &atd) < 0)
-		err(1, atd.ad_name);
+		err(1, "ioctl: %s", atd.ad_name);
 
 	/* Dump file? Then just write to it */
 	if (dumpname != NULL) {

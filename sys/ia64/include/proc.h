@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/ia64/include/proc.h 229376 2012-01-03 09:43:26Z kib $
+ * $FreeBSD: release/10.0.0/sys/ia64/include/proc.h 246714 2013-02-12 17:24:41Z marcel $
  */
 
 #ifndef _MACHINE_PROC_H_
@@ -44,10 +44,10 @@ struct mdproc {
 #ifdef _KERNEL
 struct syscall_args {
 	u_int code;
+	int narg;
 	struct sysent *callp;
 	register_t *args;
 	register_t args32[8];
-	int narg;
 };
 #endif
 

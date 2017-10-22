@@ -1,6 +1,6 @@
 #! /bin/sh
 #
-# $FreeBSD: stable/9/tools/regression/geom_eli/resize.t 213231 2010-09-27 21:10:37Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/geom_eli/resize.t 226729 2011-10-25 13:41:12Z pjd $
 
 echo 1..27
 
@@ -118,6 +118,7 @@ echo ok $i - "fsck says ${md}a.eli is clean," $(echo $(echo "$out" | wc -l)) \
 i=$((i + 1))
 
 geli detach ${md}a.eli
+gpart destroy -F $md >/dev/null
 
 
 # Verify that the man page example works, changing ada0 to $md,

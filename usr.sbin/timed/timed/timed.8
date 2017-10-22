@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)timed.8	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: stable/9/usr.sbin/timed/timed/timed.8 237216 2012-06-18 04:55:07Z eadler $
+.\" $FreeBSD: release/10.0.0/usr.sbin/timed/timed/timed.8 249771 2013-04-22 18:31:39Z joel $
 .\"
 .Dd February 11, 2008
 .Dt TIMED 8
@@ -44,7 +44,7 @@ The
 .Nm
 utility is a time server daemon
 which is normally invoked at boot time from the
-.Xr rc.network 8
+.Xr rc.conf 5
 file.
 It synchronizes the host's time with the time of other
 machines, which are also running

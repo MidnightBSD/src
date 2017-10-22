@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/rc.d/ipmon 242153 2012-10-26 18:06:49Z obrien $
+# $FreeBSD: release/10.0.0/etc/rc.d/ipmon 255450 2013-09-10 13:48:33Z cy $
 #
 
 # PROVIDE: ipmon
@@ -23,7 +23,7 @@ ipmon_precmd()
 	if ! checkyesno ipfilter_enable && ! checkyesno ipnat_enable ; then
 		err 1  "${name} requires either ipfilter or ipnat enabled"
 	fi
-	if ! sysctl net.inet.ipf.fr_pass >/dev/null 2>&1; then
+	if ! ${ipfilter_program:-/sbin/ipf} -V | grep -q 'Running: yes' >/dev/null 2>&1; then
 		err 1 "ipfilter module is not loaded"
 	fi
 	return 0

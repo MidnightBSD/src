@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/ifconfig/iffib.c 223735 2011-07-03 12:22:02Z bz $
+ * $FreeBSD: release/10.0.0/sbin/ifconfig/iffib.c 223735 2011-07-03 12:22:02Z bz $
  */
 
 #include <sys/param.h>

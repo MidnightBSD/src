@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/chown/00.t 211350 2010-08-15 21:19:42Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/chown/00.t 228975 2011-12-30 00:04:11Z uqs $
 
 desc="chown changes ownership"
 
@@ -296,7 +296,7 @@ for type in regular dir fifo block char socket symlink; do
 	fi
 done
 
-# successfull chown(2) call (except uid and gid equal to -1) updates ctime.
+# successful chown(2) call (except uid and gid equal to -1) updates ctime.
 for type in regular dir fifo block char socket symlink; do
 	if [ "${type}" != "symlink" ]; then
 		create_file ${type} ${n0}

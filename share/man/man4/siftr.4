@@ -28,7 +28,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/siftr.4 235673 2012-05-20 01:40:12Z gjb $
+.\" $FreeBSD: release/10.0.0/share/man/man4/siftr.4 235567 2012-05-17 20:49:44Z gjb $
 .\"
 .Dd November 12, 2010
 .Dt SIFTR 4
@@ -38,14 +38,14 @@
 .Nd Statistical Information For TCP Research
 .Sh SYNOPSIS
 To load
-.Ns Nm
+the driver
 as a module at run-time, run the following command as root:
 .Bd -literal -offset indent
 kldload siftr
 .Ed
 .Pp
 Alternatively, to load
-.Ns Nm
+the driver
 as a module at boot time, add the following line into the
 .Xr loader.conf 5
 file:
@@ -53,13 +53,16 @@ file:
 siftr_load="YES"
 .Ed
 .Sh DESCRIPTION
+The
 .Nm
-.Ns ( Em S Ns tatistical
+.Po
+.Em S Ns tatistical
 .Em I Ns nformation
 .Em F Ns or
 .Em T Ns CP
-.Em R Ns esearch )
-is a kernel module that logs a range of statistics on active TCP connections to
+.Em R Ns esearch
+.Pc
+kernel module logs a range of statistics on active TCP connections to
 a log file.
 It provides the ability to make highly granular measurements of TCP connection
 state, aimed at system administrators, developers and researchers.
@@ -598,11 +601,11 @@ To change the log file location to /tmp/siftr.log, run the following
 command as root:
 sysctl net.inet.siftr.logfile=/tmp/siftr.log
 .Sh SEE ALSO
+.Xr tcpdump 1 ,
+.Xr tcp 4 ,
+.Xr sysctl 8 ,
 .Xr alq 9 ,
 .Xr pfil 9
-.Xr sysctl 8 ,
-.Xr tcp 4 ,
-.Xr tcpdump 1 ,
 .Sh ACKNOWLEDGEMENTS
 Development of this software was made possible in part by grants from the
 Cisco University Research Program Fund at Community Foundation Silicon Valley,

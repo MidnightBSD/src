@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/powermac/openpic_macio.c 242678 2012-11-06 21:54:45Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powermac/openpic_macio.c 242315 2012-10-29 14:27:28Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

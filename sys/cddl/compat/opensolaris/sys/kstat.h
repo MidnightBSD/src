@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/cddl/compat/opensolaris/sys/kstat.h 222950 2011-06-10 20:10:30Z gibbs $
+ * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/kstat.h 244155 2012-12-12 16:14:14Z smh $
  */
 
 #ifndef _OPENSOLARIS_SYS_KSTAT_H_
@@ -53,6 +53,8 @@ typedef struct kstat_named {
 #define	KSTAT_DATA_INT64	3
 #define	KSTAT_DATA_UINT64	4
 	uchar_t	data_type;
+#define	KSTAT_DESCLEN		128
+	char	desc[KSTAT_DESCLEN];
 	union {
 		uint64_t	ui64;
 	} value;

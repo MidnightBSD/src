@@ -27,7 +27,7 @@
  * Author: Hartmut Brandt <harti@freebsd.org>
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/atm/atmconfig/diag.c 229175 2012-01-01 17:27:31Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/atm/atmconfig/diag.c 228611 2011-12-17 00:26:45Z dim $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -57,7 +57,7 @@ static void diag_phy_print(int, char *[]);
 static void diag_phy_stats(int, char *[]);
 static void diag_stats(int, char *[]);
 
-const struct cmdtab diag_phy_tab[] = {
+static const struct cmdtab diag_phy_tab[] = {
 	{ "show",	NULL, 		diag_phy_show },
 	{ "set",	NULL, 		diag_phy_set },
 	{ "stats",	NULL,		diag_phy_stats },

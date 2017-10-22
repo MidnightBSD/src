@@ -38,7 +38,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)vmparam.h	5.9 (Berkeley) 5/12/91
- * $FreeBSD: stable/9/sys/amd64/include/vmparam.h 221855 2011-05-13 19:35:01Z mdf $
+ * $FreeBSD: release/10.0.0/sys/amd64/include/vmparam.h 254466 2013-08-17 19:49:08Z neel $
  */
 
 
@@ -54,7 +54,7 @@
  */
 #define	MAXTSIZ		(128UL*1024*1024)	/* max text size */
 #ifndef DFLDSIZ
-#define	DFLDSIZ		(128UL*1024*1024)	/* initial data size limit */
+#define	DFLDSIZ		(32768UL*1024*1024)	/* initial data size limit */
 #endif
 #ifndef MAXDSIZ
 #define	MAXDSIZ		(32768UL*1024*1024)	/* max data size */
@@ -121,13 +121,6 @@
 #define	VM_NFREEORDER		13
 
 /*
- * Only one memory domain.
- */
-#ifndef VM_NDOMAIN
-#define	VM_NDOMAIN		1
-#endif
-
-/*
  * Enable superpage reservations: 1 level.
  */
 #ifndef	VM_NRESERVLEVEL
@@ -152,18 +145,19 @@
  * 0x0000000000000000 - 0x00007fffffffffff   user map
  * 0x0000800000000000 - 0xffff7fffffffffff   does not exist (hole)
  * 0xffff800000000000 - 0xffff804020100fff   recursive page table (512GB slot)
- * 0xffff804020101000 - 0xfffffdffffffffff   unused
- * 0xfffffe0000000000 - 0xfffffeffffffffff   1TB direct map
- * 0xffffff0000000000 - 0xffffff7fffffffff   unused
- * 0xffffff8000000000 - 0xffffffffffffffff   512GB kernel map
+ * 0xffff804020101000 - 0xfffff7ffffffffff   unused
+ * 0xfffff80000000000 - 0xfffffbffffffffff   4TB direct map
+ * 0xfffffc0000000000 - 0xfffffdffffffffff   unused
+ * 0xfffffe0000000000 - 0xffffffffffffffff   2TB kernel map
  *
  * Within the kernel map:
  *
  * 0xffffffff80000000                        KERNBASE
  */
 
-#define	VM_MAX_KERNEL_ADDRESS	KVADDR(KPML4I, NPDPEPG-1, NPDEPG-1, NPTEPG-1)
-#define	VM_MIN_KERNEL_ADDRESS	KVADDR(KPML4I, NPDPEPG-512, 0, 0)
+#define	VM_MIN_KERNEL_ADDRESS	KVADDR(KPML4BASE, 0, 0, 0)
+#define	VM_MAX_KERNEL_ADDRESS	KVADDR(KPML4BASE + NKPML4E - 1, \
+					NPDPEPG-1, NPDEPG-1, NPTEPG-1)
 
 #define	DMAP_MIN_ADDRESS	KVADDR(DMPML4I, 0, 0, 0)
 #define	DMAP_MAX_ADDRESS	KVADDR(DMPML4I + NDMPML4E, 0, 0, 0)

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/ccdconfig/ccdconfig.c 242166 2012-10-27 01:20:48Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/ccdconfig/ccdconfig.c 241848 2012-10-22 03:07:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -59,7 +59,7 @@ static	int lineno = 0;
 static	int verbose = 0;
 static	const char *ccdconf = _PATH_CCDCONF;
 
-struct	flagval {
+static struct flagval {
 	const char	*fv_flag;
 	int		fv_val;
 } flagvaltab[] = {

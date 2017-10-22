@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/cam/ata/ata_all.c 238793 2012-07-26 09:13:47Z brueffer $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/cam/ata/ata_all.c 257049 2013-10-24 10:33:31Z mav $");
 
 #include <sys/param.h>
 
@@ -297,6 +297,18 @@ ata_print_ident(struct ata_params *ident_data)
 }
 
 void
+ata_print_ident_short(struct ata_params *ident_data)
+{
+	char product[48], revision[16];
+
+	cam_strvis(product, ident_data->model, sizeof(ident_data->model),
+		   sizeof(product));
+	cam_strvis(revision, ident_data->revision, sizeof(ident_data->revision),
+		   sizeof(revision));
+	printf("<%s %s>", product, revision);
+}
+
+void
 semb_print_ident(struct sep_identify_data *ident_data)
 {
 	char vendor[9], product[17], revision[5], fw[5], in[7], ins[5];
@@ -309,6 +321,18 @@ semb_print_ident(struct sep_identify_data *ident_data)
 	cam_strvis(ins, ident_data->interface_rev, 4, sizeof(ins));
 	printf("<%s %s %s %s> SEMB %s %s device\n",
 	    vendor, product, revision, fw, in, ins);
+}
+
+void
+semb_print_ident_short(struct sep_identify_data *ident_data)
+{
+	char vendor[9], product[17], revision[5], fw[5];
+
+	cam_strvis(vendor, ident_data->vendor_id, 8, sizeof(vendor));
+	cam_strvis(product, ident_data->product_id, 16, sizeof(product));
+	cam_strvis(revision, ident_data->product_rev, 4, sizeof(revision));
+	cam_strvis(fw, ident_data->firmware_rev, 4, sizeof(fw));
+	printf("<%s %s %s %s>", vendor, product, revision, fw);
 }
 
 uint32_t
@@ -367,7 +391,7 @@ void
 ata_48bit_cmd(struct ccb_ataio *ataio, uint8_t cmd, uint16_t features,
     uint64_t lba, uint16_t sector_count)
 {
-	bzero(&ataio->cmd, sizeof(ataio->cmd));
+
 	ataio->cmd.flags = CAM_ATAIO_48BIT;
 	if (cmd == ATA_READ_DMA48 ||
 	    cmd == ATA_READ_DMA_QUEUED48 ||
@@ -391,13 +415,14 @@ ata_48bit_cmd(struct ccb_ataio *ataio, uint8_t cmd, uint16_t features,
 	ataio->cmd.features_exp = features >> 8;
 	ataio->cmd.sector_count = sector_count;
 	ataio->cmd.sector_count_exp = sector_count >> 8;
+	ataio->cmd.control = 0;
 }
 
 void
 ata_ncq_cmd(struct ccb_ataio *ataio, uint8_t cmd,
     uint64_t lba, uint16_t sector_count)
 {
-	bzero(&ataio->cmd, sizeof(ataio->cmd));
+
 	ataio->cmd.flags = CAM_ATAIO_48BIT | CAM_ATAIO_FPDMA;
 	ataio->cmd.command = cmd;
 	ataio->cmd.features = sector_count;
@@ -409,6 +434,9 @@ ata_ncq_cmd(struct ccb_ataio *ataio, uint8_t cmd,
 	ataio->cmd.lba_mid_exp = lba >> 32;
 	ataio->cmd.lba_high_exp = lba >> 40;
 	ataio->cmd.features_exp = sector_count >> 8;
+	ataio->cmd.sector_count = 0;
+	ataio->cmd.sector_count_exp = 0;
+	ataio->cmd.control = 0;
 }
 
 void

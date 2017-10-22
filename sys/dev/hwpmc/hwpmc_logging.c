@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/hwpmc/hwpmc_logging.c 236238 2012-05-29 14:50:21Z fabient $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/hwpmc/hwpmc_logging.c 255219 2013-09-05 00:09:56Z pjd $");
 
 #include <sys/param.h>
 #include <sys/capability.h>
@@ -570,6 +570,7 @@ pmclog_configure_log(struct pmc_mdep *md, struct pmc_owner *po, int logfd)
 {
 	int error;
 	struct proc *p;
+	cap_rights_t rights;
 
 	/*
 	 * As long as it is possible to get a LOR between pmc_sx lock and
@@ -593,7 +594,8 @@ pmclog_configure_log(struct pmc_mdep *md, struct pmc_owner *po, int logfd)
 		po->po_file));
 
 	/* get a reference to the file state */
-	error = fget_write(curthread, logfd, CAP_WRITE, &po->po_file);
+	error = fget_write(curthread, logfd,
+	    cap_rights_init(&rights, CAP_WRITE), &po->po_file);
 	if (error)
 		goto error;
 

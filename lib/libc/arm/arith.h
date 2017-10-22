@@ -1,7 +1,7 @@
 /*
  * MD header for contrib/gdtoa
  *
- * $FreeBSD: stable/9/lib/libc/arm/arith.h 186461 2008-12-23 22:20:59Z marcel $
+ * $FreeBSD: release/10.0.0/lib/libc/arm/arith.h 255361 2013-09-07 14:04:10Z andrew $
  */
 
 /*
@@ -11,7 +11,7 @@
  * architecture.  See contrib/gdtoa/gdtoaimp.h for details.
  */
 
-#if !defined(__ARMEB__) && defined(__VFP_FP__)
+#if !defined(__ARMEB__) && (defined(__VFP_FP__) || defined(__ARM_EABI__))
 #define IEEE_8087
 #define Arith_Kind_ASL 1
 #define Sudden_Underflow

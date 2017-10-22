@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/security/audit/audit_syscalls.c 225617 2011-09-16 13:58:51Z kmacy $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/security/audit/audit_syscalls.c 241896 2012-10-22 17:50:54Z kib $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -749,7 +749,7 @@ sys_auditctl(struct thread *td, struct auditctl_args *uap)
 	struct ucred *cred;
 	struct vnode *vp;
 	int error = 0;
-	int flags, vfslocked;
+	int flags;
 
 	if (jailed(td->td_ucred))
 		return (ENOSYS);
@@ -770,20 +770,18 @@ sys_auditctl(struct thread *td, struct auditctl_args *uap)
 	if (uap->path == NULL)
 		return (EINVAL);
 
-	NDINIT(&nd, LOOKUP, FOLLOW | LOCKLEAF | MPSAFE | AUDITVNODE1,
+	NDINIT(&nd, LOOKUP, FOLLOW | LOCKLEAF | AUDITVNODE1,
 	    UIO_USERSPACE, uap->path, td);
 	flags = AUDIT_OPEN_FLAGS;
 	error = vn_open(&nd, &flags, 0, NULL);
 	if (error)
 		return (error);
-	vfslocked = NDHASGIANT(&nd);
 	vp = nd.ni_vp;
 #ifdef MAC
 	error = mac_system_check_auditctl(td->td_ucred, vp);
 	VOP_UNLOCK(vp, 0);
 	if (error) {
 		vn_close(vp, AUDIT_CLOSE_FLAGS, td->td_ucred, td);
-		VFS_UNLOCK_GIANT(vfslocked);
 		return (error);
 	}
 #else
@@ -792,10 +790,8 @@ sys_auditctl(struct thread *td, struct auditctl_args *uap)
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	if (vp->v_type != VREG) {
 		vn_close(vp, AUDIT_CLOSE_FLAGS, td->td_ucred, td);
-		VFS_UNLOCK_GIANT(vfslocked);
 		return (EINVAL);
 	}
-	VFS_UNLOCK_GIANT(vfslocked);
 	cred = td->td_ucred;
 	crhold(cred);
 

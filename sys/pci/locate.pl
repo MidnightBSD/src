@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $FreeBSD: stable/9/sys/pci/locate.pl 62183 2000-06-27 22:41:12Z alfred $
+# $FreeBSD: release/10.0.0/sys/pci/locate.pl 62183 2000-06-27 22:41:12Z alfred $
 
 use strict;
 

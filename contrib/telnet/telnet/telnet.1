@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)telnet.1	8.6 (Berkeley) 6/1/94
-.\" $FreeBSD: stable/9/contrib/telnet/telnet/telnet.1 162826 2006-09-29 22:51:29Z ru $
+.\" $FreeBSD: release/10.0.0/contrib/telnet/telnet/telnet.1 237190 2012-06-17 11:04:38Z joel $
 .\"
 .Dd September 18, 2006
 .Dt TELNET 1
@@ -344,7 +344,6 @@ Only enough of each command to uniquely identify it need be typed
 and
 .Ic display
 commands).
-.Pp
 .Bl -tag -width "mode type"
 .It Ic auth Ar argument ...
 The auth command manipulates the information sent through the
@@ -664,7 +663,6 @@ An end of file (in command mode) will also close a session and exit.
 Sends one or more special character sequences to the remote host.
 The following are the arguments which may be specified
 (more than one argument may be specified at a time):
-.Pp
 .Bl -tag -width escape
 .It Ic abort
 Sends the

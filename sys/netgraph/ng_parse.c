@@ -38,7 +38,7 @@
  * Author: Archie Cobbs <archie@freebsd.org>
  *
  * $Whistle: ng_parse.c,v 1.3 1999/11/29 01:43:48 archie Exp $
- * $FreeBSD: stable/9/sys/netgraph/ng_parse.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_parse.c 246821 2013-02-15 07:58:51Z glebius $
  */
 
 #include <sys/types.h>
@@ -1236,6 +1236,7 @@ ng_parse_composite(const struct ng_parse_type *type, const char *s,
 		   distinguish name from values by seeing if the next
 		   token is an equals sign */
 		if (ctype != CT_STRUCT) {
+			u_long ul;
 			int len2, off2;
 			char *eptr;
 
@@ -1259,11 +1260,12 @@ ng_parse_composite(const struct ng_parse_type *type, const char *s,
 			}
 
 			/* Index was specified explicitly; parse it */
-			index = (u_int)strtoul(s + *off, &eptr, 0);
-			if (index < 0 || eptr - (s + *off) != len) {
+			ul = strtoul(s + *off, &eptr, 0);
+			if (ul == ULONG_MAX || eptr - (s + *off) != len) {
 				error = EINVAL;
 				goto done;
 			}
+			index = (u_int)ul;
 			nextIndex = index + 1;
 			*off += len + len2;
 		} else {			/* a structure field */

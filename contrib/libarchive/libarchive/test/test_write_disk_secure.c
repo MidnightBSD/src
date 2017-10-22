@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_write_disk_secure.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_write_disk_secure.c 232153 2012-02-25 10:58:02Z mm $");
 
 #define UMASK 022
 
@@ -34,9 +34,9 @@ __FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_write_disk_
 
 DEFINE_TEST(test_write_disk_secure)
 {
-#if ARCHIVE_VERSION_NUMBER < 1009000
-	skipping("archive_write_disk interface");
-#elif !defined(_WIN32) || defined(__CYGWIN__)
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	skipping("archive_write_disk security checks not supported on Windows");
+#else
 	struct archive *a;
 	struct archive_entry *ae;
 	struct stat st;
@@ -178,7 +178,7 @@ DEFINE_TEST(test_write_disk_secure)
 	assert(S_ISDIR(st.st_mode));
 	archive_entry_free(ae);
 
-	assert(0 == archive_write_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/* Test the entries on disk. */
 	assert(0 == lstat("dir", &st));

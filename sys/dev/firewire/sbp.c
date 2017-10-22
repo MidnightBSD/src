@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: stable/9/sys/dev/firewire/sbp.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: release/10.0.0/sys/dev/firewire/sbp.c 255871 2013-09-25 17:16:21Z scottl $
  *
  */
 
@@ -177,6 +177,7 @@ struct sbp_ocb {
 	struct sbp_dev	*sdev;
 	int		flags; /* XXX should be removed */
 	bus_dmamap_t	dmamap;
+	struct callout_handle timeout_ch;
 };
 
 #define OCB_ACT_MGM 0
@@ -591,6 +592,7 @@ END_DEBUG
 				/* XXX */
 				goto next;
 			}
+			callout_handle_init(&ocb->timeout_ch);
 			sbp_free_ocb(sdev, ocb);
 		}
 next:
@@ -1086,7 +1088,7 @@ END_DEBUG
 	sbp_xfer_free(xfer);
 
 	if (sdev->path == NULL)
-		xpt_create_path(&sdev->path, xpt_periph,
+		xpt_create_path(&sdev->path, NULL,
 			cam_sim_path(target->sbp->sim),
 			target->target_id, sdev->lun_id);
 
@@ -2039,7 +2041,7 @@ END_DEBUG
 	if (xpt_bus_register(sbp->sim, dev, /*bus*/0) != CAM_SUCCESS)
 		goto fail;
 
-	if (xpt_create_path(&sbp->path, xpt_periph, cam_sim_path(sbp->sim),
+	if (xpt_create_path(&sbp->path, NULL, cam_sim_path(sbp->sim),
 	    CAM_TARGET_WILDCARD, CAM_LUN_WILDCARD) != CAM_REQ_CMP) {
 		xpt_bus_deregister(cam_sim_path(sbp->sim));
 		goto fail;
@@ -2478,11 +2480,6 @@ END_DEBUG
 			ocb->orb[4] |= htonl(ORB_CMD_IN);
 		}
 
-		if (csio->ccb_h.flags & CAM_SCATTER_VALID)
-			printf("sbp: CAM_SCATTER_VALID\n");
-		if (csio->ccb_h.flags & CAM_DATA_PHYS)
-			printf("sbp: CAM_DATA_PHYS\n");
-
 		if (csio->ccb_h.flags & CAM_CDB_POINTER)
 			cdb = (void *)csio->cdb_io.cdb_ptr;
 		else
@@ -2493,17 +2490,14 @@ printf("ORB %08x %08x %08x %08x\n", ntohl(ocb->orb[0]), ntohl(ocb->orb[1]), ntoh
 printf("ORB %08x %08x %08x %08x\n", ntohl(ocb->orb[4]), ntohl(ocb->orb[5]), ntohl(ocb->orb[6]), ntohl(ocb->orb[7]));
 */
 		if (ccb->csio.dxfer_len > 0) {
-			int s, error;
+			int error;
 
-			s = splsoftvm();
-			error = bus_dmamap_load(/*dma tag*/sbp->dmat,
+			error = bus_dmamap_load_ccb(/*dma tag*/sbp->dmat,
 					/*dma map*/ocb->dmamap,
-					ccb->csio.data_ptr,
-					ccb->csio.dxfer_len,
+					ccb,
 					sbp_execute_ocb,
 					ocb,
 					/*flags*/0);
-			splx(s);
 			if (error)
 				printf("sbp: bus_dmamap_load error %d\n", error);
 		} else
@@ -2771,7 +2765,7 @@ END_DEBUG
 			STAILQ_REMOVE(&sdev->ocbs, ocb, sbp_ocb, ocb);
 			if (ocb->ccb != NULL)
 				untimeout(sbp_timeout, (caddr_t)ocb,
-						ocb->ccb->ccb_h.timeout_ch);
+						ocb->timeout_ch);
 			if (ntohl(ocb->orb[4]) & 0xffff) {
 				bus_dmamap_sync(sdev->target->sbp->dmat,
 					ocb->dmamap,
@@ -2844,7 +2838,7 @@ END_DEBUG
 	STAILQ_INSERT_TAIL(&sdev->ocbs, ocb, ocb);
 
 	if (ocb->ccb != NULL)
-		ocb->ccb->ccb_h.timeout_ch = timeout(sbp_timeout, (caddr_t)ocb,
+		ocb->timeout_ch = timeout(sbp_timeout, (caddr_t)ocb,
 					(ocb->ccb->ccb_h.timeout * hz) / 1000);
 
 	if (use_doorbell && prev == NULL)
@@ -2938,7 +2932,7 @@ END_DEBUG
 	}
 	if (ocb->ccb != NULL) {
 		untimeout(sbp_timeout, (caddr_t)ocb,
-					ocb->ccb->ccb_h.timeout_ch);
+					ocb->timeout_ch);
 		ocb->ccb->ccb_h.status = status;
 		SBP_LOCK(sdev->target->sbp);
 		xpt_done(ocb->ccb);

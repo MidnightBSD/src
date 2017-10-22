@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/make/for.c 200417 2009-12-11 23:20:02Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/make/for.c 228992 2011-12-30 11:02:40Z uqs $");
 
 /*-
  * for.c --
@@ -218,7 +218,7 @@ For_Eval(char *line)
 /*-
  *-----------------------------------------------------------------------
  * For_Run --
- *	Run the for loop, immitating the actions of an include file
+ *	Run the for loop, imitating the actions of an include file
  *
  * Results:
  *	None.

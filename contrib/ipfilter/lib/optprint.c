@@ -1,18 +1,18 @@
-/*	$FreeBSD: stable/9/contrib/ipfilter/lib/optprint.c 170268 2007-06-04 02:54:36Z darrenr $	*/
+/*	$FreeBSD: release/10.0.0/contrib/ipfilter/lib/optprint.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2000-2005 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: optprint.c,v 1.6.4.2 2006/06/16 17:21:08 darrenr Exp $
+ * $Id$
  */
 #include "ipf.h"
 
 
 void optprint(sec, optmsk, optbits)
-u_short *sec;
-u_long optmsk, optbits;
+	u_short *sec;
+	u_long optmsk, optbits;
 {
 	u_short secmsk = sec[0], secbits = sec[1];
 	struct ipopt_names *io, *so;

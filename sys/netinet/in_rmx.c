@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/in_rmx.c 242646 2012-11-06 01:18:53Z melifaro $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/in_rmx.c 241502 2012-10-13 09:31:01Z melifaro $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

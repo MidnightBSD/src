@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/tip/tip/cu.c 162124 2006-09-07 19:48:52Z ru $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tip/tip/cu.c 162124 2006-09-07 19:48:52Z ru $");
 
 #ifndef lint
 #if 0

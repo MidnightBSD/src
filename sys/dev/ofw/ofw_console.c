@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ofw/ofw_console.c 235405 2012-05-13 17:04:46Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ofw/ofw_console.c 255424 2013-09-09 16:51:35Z nwhitehorn $");
 
 #include "opt_ofw.h"
 
@@ -88,17 +88,19 @@ cn_drvinit(void *unused)
 
 	if (ofw_consdev.cn_pri != CN_DEAD &&
 	    ofw_consdev.cn_name[0] != '\0') {
-		if ((options = OF_finddevice("/options")) == -1 ||
-		    OF_getprop(options, "output-device", output,
-		    sizeof(output)) == -1)
-			return;
+		tp = tty_alloc(&ofw_ttydevsw, NULL);
+		tty_makedev(tp, NULL, "%s", "ofwcons");
+
 		/*
 		 * XXX: This is a hack and it may result in two /dev/ttya
 		 * XXX: devices on platforms where the sab driver works.
 		 */
-		tp = tty_alloc(&ofw_ttydevsw, NULL);
-		tty_makedev(tp, NULL, "%s", output);
-		tty_makealias(tp, "ofwcons");
+		if ((options = OF_finddevice("/options")) == -1 ||
+		    OF_getprop(options, "output-device", output,
+		    sizeof(output)) == -1)
+			return;
+		if (strlen(output) > 0)
+			tty_makealias(tp, output);
 	}
 }
 

@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ufs/ufs/ufs_lookup.c 246376 2013-02-06 02:51:25Z pfg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ufs/ufs/ufs_lookup.c 248561 2013-03-20 17:57:00Z mckusick $");
 
 #include "opt_ufs.h"
 #include "opt_quota.h"
@@ -770,11 +770,13 @@ ufs_dirbad(ip, offset, how)
 
 	mp = ITOV(ip)->v_mount;
 	if ((mp->mnt_flag & MNT_RDONLY) == 0)
-		panic("ufs_dirbad: %s: bad dir ino %lu at offset %ld: %s",
-		    mp->mnt_stat.f_mntonname, (u_long)ip->i_number, (long)offset, how);
+		panic("ufs_dirbad: %s: bad dir ino %ju at offset %ld: %s",
+		    mp->mnt_stat.f_mntonname, (uintmax_t)ip->i_number,
+		    (long)offset, how);
 	else
-		(void)printf("%s: bad dir ino %lu at offset %ld: %s\n",
-		    mp->mnt_stat.f_mntonname, (u_long)ip->i_number, (long)offset, how);
+		(void)printf("%s: bad dir ino %ju at offset %ld: %s\n",
+		    mp->mnt_stat.f_mntonname, (uintmax_t)ip->i_number,
+		    (long)offset, how);
 }
 
 /*
@@ -1133,7 +1135,7 @@ ufs_direnter(dvp, tvp, dirp, cnp, newdirbp, isrename)
 			ufsdirhash_dirtrunc(dp, dp->i_endoff);
 #endif
 		(void) UFS_TRUNCATE(dvp, (off_t)dp->i_endoff,
-		    IO_NORMAL | IO_SYNC, cr, td);
+		    IO_NORMAL | IO_SYNC, cr);
 		if (tvp != NULL)
 			vn_lock(tvp, LK_EXCLUSIVE | LK_RETRY);
 	}
@@ -1209,8 +1211,8 @@ ufs_dirremove(dvp, ip, flags, isrmdir)
 		ufsdirhash_remove(dp, rep, dp->i_offset);
 #endif
 	if (ip && rep->d_ino != ip->i_number)
-		panic("ufs_dirremove: ip %d does not match dirent ino %d\n",
-		    ip->i_number, rep->d_ino);
+		panic("ufs_dirremove: ip %ju does not match dirent ino %ju\n",
+		    (uintmax_t)ip->i_number, (uintmax_t)rep->d_ino);
 	if (dp->i_count == 0) {
 		/*
 		 * First entry in block: set d_ino to zero.
@@ -1385,13 +1387,29 @@ ufs_dirempty(ip, parentino, cred)
 }
 
 static int
-ufs_dir_dd_ino(struct vnode *vp, struct ucred *cred, ino_t *dd_ino)
+ufs_dir_dd_ino(struct vnode *vp, struct ucred *cred, ino_t *dd_ino,
+    struct vnode **dd_vp)
 {
 	struct dirtemplate dirbuf;
+	struct vnode *ddvp;
 	int error, namlen;
 
+	ASSERT_VOP_LOCKED(vp, "ufs_dir_dd_ino");
 	if (vp->v_type != VDIR)
 		return (ENOTDIR);
+	/*
+	 * First check to see if we have it in the name cache.
+	 */
+	if ((ddvp = vn_dir_dd_ino(vp)) != NULL) {
+		KASSERT(ddvp->v_mount == vp->v_mount,
+		    ("ufs_dir_dd_ino: Unexpected mount point crossing"));
+		*dd_ino = VTOI(ddvp)->i_number;
+		*dd_vp = ddvp;
+		return (0);
+	}
+	/*
+	 * Have to read the directory.
+	 */
 	error = vn_rdwr(UIO_READ, vp, (caddr_t)&dirbuf,
 	    sizeof (struct dirtemplate), (off_t)0, UIO_SYSSPACE,
 	    IO_NODELOCKED | IO_NOMACCHECK, cred, NOCRED, NULL, NULL);
@@ -1409,6 +1427,7 @@ ufs_dir_dd_ino(struct vnode *vp, struct ucred *cred, ino_t *dd_ino)
 	    dirbuf.dotdot_name[1] != '.')
 		return (ENOTDIR);
 	*dd_ino = dirbuf.dotdot_ino;
+	*dd_vp = NULL;
 	return (0);
 }
 
@@ -1433,7 +1452,7 @@ ufs_checkpath(ino_t source_ino, ino_t parent_ino, struct inode *target, struct u
 	if (target->i_number == ROOTINO)
 		return (0);
 	for (;;) {
-		error = ufs_dir_dd_ino(vp, cred, &dd_ino);
+		error = ufs_dir_dd_ino(vp, cred, &dd_ino, &vp1);
 		if (error != 0)
 			break;
 		if (dd_ino == source_ino) {
@@ -1444,22 +1463,16 @@ ufs_checkpath(ino_t source_ino, ino_t parent_ino, struct inode *target, struct u
 			break;
 		if (dd_ino == parent_ino)
 			break;
-		error = VFS_VGET(mp, dd_ino, LK_SHARED | LK_NOWAIT, &vp1);
-		if (error != 0) {
-			*wait_ino = dd_ino;
-			break;
+		if (vp1 == NULL) {
+			error = VFS_VGET(mp, dd_ino, LK_SHARED | LK_NOWAIT,
+			    &vp1);
+			if (error != 0) {
+				*wait_ino = dd_ino;
+				break;
+			}
 		}
-		/* Recheck that ".." still points to vp1 after relock of vp */
-		error = ufs_dir_dd_ino(vp, cred, &dd_ino);
-		if (error != 0) {
-			vput(vp1);
-			break;
-		}
-		/* Redo the check of ".." if directory was reparented */
-		if (dd_ino != VTOI(vp1)->i_number) {
-			vput(vp1);
-			continue;
-		}
+		KASSERT(dd_ino == VTOI(vp1)->i_number,
+		    ("directory %d reparented\n", VTOI(vp1)->i_number));
 		if (vp != tvp)
 			vput(vp);
 		vp = vp1;
@@ -1467,6 +1480,8 @@ ufs_checkpath(ino_t source_ino, ino_t parent_ino, struct inode *target, struct u
 
 	if (error == ENOTDIR)
 		panic("checkpath: .. not a directory\n");
+	if (vp1 != NULL)
+		vput(vp1);
 	if (vp != tvp)
 		vput(vp);
 	return (error);

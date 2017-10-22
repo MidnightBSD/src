@@ -15,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/common/util.c 224722 2011-08-08 20:53:04Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/common/util.c 249139 2013-04-05 09:14:30Z avg $");
 
 #include <sys/param.h>
 
@@ -68,9 +68,9 @@ int
 strncmp(const char *s1, const char *s2, size_t len)
 {
 
-	for (; *s1 == *s2 && *s1 != '\0' && len > 0; len--, s1++, s2++)
+	for (; len > 0 && *s1 == *s2 && *s1 != '\0'; len--, s1++, s2++)
 		;
-	return ((unsigned char)*s1 - (unsigned char)*s2);
+	return (len == 0 ? 0 : (unsigned char)*s1 - (unsigned char)*s2);
 }
 
 void

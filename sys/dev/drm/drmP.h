@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm/drmP.h 215367 2010-11-16 03:43:06Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/drmP.h 248084 2013-03-09 02:32:23Z attilio $");
 
 #ifndef _DRM_P_H_
 #define _DRM_P_H_
@@ -59,6 +59,7 @@ struct drm_file;
 #include <sys/fcntl.h>
 #include <sys/uio.h>
 #include <sys/filio.h>
+#include <sys/rwlock.h>
 #include <sys/sysctl.h>
 #include <sys/bus.h>
 #include <sys/queue.h>
@@ -85,6 +86,11 @@ struct drm_file;
 #endif
 #include <machine/sysarch.h>
 #include <sys/endian.h>
+#if _BYTE_ORDER == _BIG_ENDIAN
+#define __BIG_ENDIAN 1
+#else
+#define __LITTLE_ENDIAN 1
+#endif
 #include <sys/mman.h>
 #include <sys/rman.h>
 #include <sys/memrange.h>

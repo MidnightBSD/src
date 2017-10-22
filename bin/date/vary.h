@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/bin/date/vary.h 50471 1999-08-27 23:15:48Z peter $
+ * $FreeBSD: release/10.0.0/bin/date/vary.h 50471 1999-08-27 23:15:48Z peter $
  */
 
 struct vary {

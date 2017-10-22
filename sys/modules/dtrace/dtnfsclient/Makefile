@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/dtrace/dtnfsclient/Makefile 190419 2009-03-25 17:47:22Z rwatson $
+# $FreeBSD: release/10.0.0/sys/modules/dtrace/dtnfsclient/Makefile 253996 2013-08-06 15:51:56Z avg $
 
 .PATH: ${.CURDIR}/../../../nfsclient
 
@@ -11,3 +11,5 @@ CFLAGS+=	-I${.CURDIR}/../../../cddl/compat/opensolaris \
 		-I${.CURDIR}/../../..
 
 .include <bsd.kmod.mk>
+
+CFLAGS+=	-include ${.CURDIR}/../../../cddl/compat/opensolaris/sys/debug_compat.h

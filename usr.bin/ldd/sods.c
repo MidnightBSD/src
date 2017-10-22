@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/ldd/sods.c 223262 2011-06-18 13:56:33Z benl $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/ldd/sods.c 223262 2011-06-18 13:56:33Z benl $");
 
 #include <sys/types.h>
 #include <sys/mman.h>

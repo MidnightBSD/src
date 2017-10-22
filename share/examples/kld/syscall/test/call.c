@@ -23,13 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/share/examples/kld/syscall/test/call.c 209199 2010-06-15 09:30:36Z kib $
+ * $FreeBSD: release/10.0.0/share/examples/kld/syscall/test/call.c 253421 2013-07-17 13:13:44Z glebius $
  */
 
 #include <sys/types.h>
 #include <sys/module.h>
 #include <sys/syscall.h>
 
+#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -37,11 +38,14 @@
 int
 main(int argc __unused, char **argv __unused)
 {
-	int syscall_num;
+	int modid, syscall_num;
 	struct module_stat stat;
 
 	stat.version = sizeof(stat);
-	modstat(modfind("sys/syscall"), &stat);
+	if ((modid = modfind("sys/syscall")) == -1)
+		err(1, "modfind");
+	if (modstat(modid, &stat) != 0)
+		err(1, "modstat");
 	syscall_num = stat.data.intval;
 	return syscall (syscall_num);
 }

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/dump_machdep.c 221173 2011-04-28 16:02:05Z attilio $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/dump_machdep.c 236991 2012-06-13 04:59:55Z imp $");
 
 #include "opt_watchdog.h"
 
@@ -197,7 +197,7 @@ cb_dumpdata(struct md_pa *mdp, int seqnr, void *arg)
 #ifdef SW_WATCHDOG
 		wdog_kern_pat(WD_LASTVAL);
 #endif
-		error = dump_write(di, 
+		error = dump_write(di,
 		    (void *)(pa - (pa & L1_ADDR_BITS)),0, dumplo, sz);
 		if (error)
 			break;

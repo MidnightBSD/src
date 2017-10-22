@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/uboot/common/metadata.c 234558 2012-04-21 20:10:26Z raj $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/uboot/common/metadata.c 246135 2013-01-30 23:49:36Z ian $");
 
 #include <stand.h>
 #include <sys/param.h>
@@ -42,7 +42,7 @@ __FBSDID("$FreeBSD: stable/9/sys/boot/uboot/common/metadata.c 234558 2012-04-21 
 #include "glue.h"
 
 #if defined(LOADER_FDT_SUPPORT)
-extern int fdt_fixup(void);
+extern int fdt_copy(vm_offset_t);
 #endif
 
 /*
@@ -72,6 +72,7 @@ static int
 md_getboothowto(char *kargs)
 {
 	char	*cp;
+	char	*p;
 	int	howto;
 	int	active;
 	int	i;
@@ -132,10 +133,12 @@ md_getboothowto(char *kargs)
 		if (getenv(howto_names[i].ev) != NULL)
 			howto |= howto_names[i].mask;
 	}
-	if (!strcmp(getenv("console"), "comconsole"))
-		howto |= RB_SERIAL;
-	if (!strcmp(getenv("console"), "nullconsole"))
-		howto |= RB_MUTE;
+	if ((p = getenv("console"))) {
+		if (!strcmp(p, "comconsole"))
+			howto |= RB_SERIAL;
+		if (!strcmp(p, "nullconsole"))
+			howto |= RB_MUTE;
+	}
 
 	return(howto);
 }
@@ -276,7 +279,10 @@ md_load(char *args, vm_offset_t *modulep)
 	vm_offset_t		envp;
 	vm_offset_t		size;
 	vm_offset_t		vaddr;
+#if defined(LOADER_FDT_SUPPORT)
 	vm_offset_t		dtbp;
+	int			dtb_size;
+#endif
 	char			*rootdevname;
 	int			howto;
 	int			i;
@@ -322,6 +328,16 @@ md_load(char *args, vm_offset_t *modulep)
 	/* Pad to a page boundary */
 	addr = roundup(addr, PAGE_SIZE);
 
+#if defined(LOADER_FDT_SUPPORT)
+	/* Handle device tree blob */
+	dtbp = addr;
+	dtb_size = fdt_copy(addr);
+		
+	/* Pad to a page boundary */
+	if (dtb_size)
+		addr += roundup(dtb_size, PAGE_SIZE);
+#endif
+
 	kernend = 0;
 	kfp = file_findfile(NULL, "elf32 kernel");
 	if (kfp == NULL)
@@ -332,9 +348,7 @@ md_load(char *args, vm_offset_t *modulep)
 	file_addmetadata(kfp, MODINFOMD_ENVP, sizeof envp, &envp);
 
 #if defined(LOADER_FDT_SUPPORT)
-	/* Handle device tree blob */
-	dtbp = fdt_fixup();
-	if (dtbp != (vm_offset_t)NULL)
+	if (dtb_size)
 		file_addmetadata(kfp, MODINFOMD_DTBP, sizeof dtbp, &dtbp);
 	else
 		pager_output("WARNING! Trying to fire up the kernel, but no "
@@ -355,12 +369,15 @@ md_load(char *args, vm_offset_t *modulep)
 	/* Convert addresses to the final VA */
 	*modulep -= __elfN(relocation_offset);
 
-	for (i = 0; i < sizeof mdt / sizeof mdt[0]; i++) {
-		md = file_findmetadata(kfp, mdt[i]);
-		if (md) {
-			bcopy(md->md_data, &vaddr, sizeof vaddr);
-			vaddr -= __elfN(relocation_offset);
-			bcopy(&vaddr, md->md_data, sizeof vaddr);
+	/* Do relocation fixup on metadata of each module. */
+	for (xp = file_findfile(NULL, NULL); xp != NULL; xp = xp->f_next) {
+		for (i = 0; i < sizeof mdt / sizeof mdt[0]; i++) {
+			md = file_findmetadata(xp, mdt[i]);
+			if (md) {
+				bcopy(md->md_data, &vaddr, sizeof vaddr);
+				vaddr -= __elfN(relocation_offset);
+				bcopy(&vaddr, md->md_data, sizeof vaddr);
+			}
 		}
 	}
 

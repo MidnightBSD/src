@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/amd64/linux32/linux32_genassym.c 219364 2011-03-07 08:12:07Z dchagin $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/linux32/linux32_genassym.c 219364 2011-03-07 08:12:07Z dchagin $");
 
 #include <sys/param.h>
 #include <sys/assym.h>

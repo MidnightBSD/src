@@ -98,7 +98,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/esp/ncr53c9x.c 241692 2012-10-18 15:20:37Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/esp/ncr53c9x.c 239089 2012-08-06 08:58:54Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -316,7 +316,7 @@ ncr53c9x_attach(struct ncr53c9x_softc *sc)
 	 * The recommended timeout is 250ms.  This register is loaded
 	 * with a value calculated as follows, from the docs:
 	 *
-	 *		(timout period) x (CLK frequency)
+	 *		(timeout period) x (CLK frequency)
 	 *	reg = -------------------------------------
 	 *		 8192 x (Clock Conversion Factor)
 	 *
@@ -1502,7 +1502,7 @@ ncr53c9x_dequeue(struct ncr53c9x_softc *sc, struct ncr53c9x_ecb *ecb)
 	li = TINFO_LUN(ti, lun);
 #ifdef DIAGNOSTIC
 	if (li == NULL || li->lun != lun)
-		panic("%s: lun %qx for ecb %p does not exist", __func__,
+		panic("%s: lun %llx for ecb %p does not exist", __func__,
 		    (long long)lun, ecb);
 #endif
 	if (li->untagged == ecb) {
@@ -1513,7 +1513,7 @@ ncr53c9x_dequeue(struct ncr53c9x_softc *sc, struct ncr53c9x_ecb *ecb)
 #ifdef DIAGNOSTIC
 		if (li->queued[ecb->tag[1]] != NULL &&
 		    (li->queued[ecb->tag[1]] != ecb))
-			panic("%s: slot %d for lun %qx has %p instead of ecb "
+			panic("%s: slot %d for lun %llx has %p instead of ecb "
 			    "%p", __func__, ecb->tag[1], (long long)lun,
 			    li->queued[ecb->tag[1]], ecb);
 #endif

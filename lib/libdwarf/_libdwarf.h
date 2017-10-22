@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libdwarf/_libdwarf.h 221569 2011-05-07 01:05:31Z obrien $
+ * $FreeBSD: release/10.0.0/lib/libdwarf/_libdwarf.h 221569 2011-05-07 01:05:31Z obrien $
  */
 
 #ifndef	__LIBDWARF_H_

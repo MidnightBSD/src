@@ -9,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/ministat/ministat.c 244279 2012-12-15 21:57:34Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/ministat/ministat.c 243079 2012-11-15 15:06:12Z eadler $");
 
 #include <stdio.h>
 #include <math.h>
@@ -23,8 +23,8 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/ministat/ministat.c 244279 2012-12-15 21:57
 
 #define NSTUDENT 100
 #define NCONF 6
-double const studentpct[] = { 80, 90, 95, 98, 99, 99.5 };
-double student [NSTUDENT + 1][NCONF] = {
+static double const studentpct[] = { 80, 90, 95, 98, 99, 99.5 };
+static double student[NSTUDENT + 1][NCONF] = {
 /* inf */	{	1.282,	1.645,	1.960,	2.326,	2.576,	3.090  },
 /* 1. */	{	3.078,	6.314,	12.706,	31.821,	63.657,	318.313  },
 /* 2. */	{	1.886,	2.920,	4.303,	6.965,	9.925,	22.327  },

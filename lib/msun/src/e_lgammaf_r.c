@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/src/e_lgammaf_r.c 176451 2008-02-22 02:30:36Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/e_lgammaf_r.c 226380 2011-10-15 07:00:28Z das $");
 
 #include "math.h"
 #include "math_private.h"
@@ -202,7 +202,6 @@ __ieee754_lgammaf_r(float x, int *signgamp)
 	}
 	else if(ix<0x41000000) { 			/* x < 8.0 */
 	    i = (int)x;
-	    t = zero;
 	    y = x-(float)i;
 	    p = y*(s0+y*(s1+y*(s2+y*(s3+y*(s4+y*(s5+y*s6))))));
 	    q = one+y*(r1+y*(r2+y*(r3+y*(r4+y*(r5+y*r6)))));

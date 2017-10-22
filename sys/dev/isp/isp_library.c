@@ -35,7 +35,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #endif
 #ifdef	__FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/isp/isp_library.c 240015 2012-09-02 15:03:40Z mjacob $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isp/isp_library.c 238869 2012-07-28 20:06:29Z mjacob $");
 #include <dev/isp/isp_freebsd.h>
 #endif
 #ifdef	__OpenBSD__

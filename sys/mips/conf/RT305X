@@ -15,7 +15,7 @@
 # If you are in doubt as to the purpose or necessity of a line, check first 
 # in NOTES.
 #
-# $FreeBSD: stable/9/sys/mips/conf/RT305X 224009 2011-07-14 11:53:23Z ray $
+# $FreeBSD: release/10.0.0/sys/mips/conf/RT305X 253845 2013-07-31 17:21:18Z obrien $
 
 ident		RT305X
 
@@ -86,7 +86,6 @@ options		SCSI_NO_OP_STRINGS
 options		RWLOCK_NOINLINE
 options		SX_NOINLINE
 options		NO_SWAPPING
-options 	ZERO_COPY_SOCKETS
 options         MROUTING                # Multicast routing
 options		IPFIREWALL_DEFAULT_TO_ACCEPT
 
@@ -95,7 +94,6 @@ device		loop
 # RT3050F, RT3052F have only pseudo PHYs, so mii not required
 device		rt
 
-device 		pty			# Pseudo-ttys (telnet etc)
 device		ether
 device 		bpf			# Berkeley packet filter
 device		vlan

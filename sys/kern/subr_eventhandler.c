@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/subr_eventhandler.c 205345 2010-03-19 19:51:03Z bz $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_eventhandler.c 205345 2010-03-19 19:51:03Z bz $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/ed/ax88x90reg.h 190559 2009-03-30 16:15:06Z imp $
+ * $FreeBSD: release/10.0.0/sys/dev/ed/ax88x90reg.h 190559 2009-03-30 16:15:06Z imp $
  */
 
 /* AX88x90 based miibus defines */

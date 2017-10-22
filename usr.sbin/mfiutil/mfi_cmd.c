@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/mfiutil/mfi_cmd.c 237589 2012-06-26 03:05:17Z eadler $
+ * $FreeBSD: release/10.0.0/usr.sbin/mfiutil/mfi_cmd.c 237259 2012-06-19 06:18:37Z eadler $
  */
 
 #include <sys/errno.h>

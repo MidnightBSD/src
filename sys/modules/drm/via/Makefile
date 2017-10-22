@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/drm/via/Makefile 229731 2012-01-06 21:14:54Z dim $
+# $FreeBSD: release/10.0.0/sys/modules/drm/via/Makefile 242203 2012-10-28 02:15:35Z nwhitehorn $
 
 .PATH:	${.CURDIR}/../../../dev/drm
 KMOD	= via
@@ -10,7 +10,8 @@ SRCS	+= device_if.h bus_if.h pci_if.h opt_drm.h
 DRM_DEBUG_OPT= "\#define DRM_DEBUG 1"
 .endif
 
-.if !defined(DRM_NOLINUX)
+.if !defined(DRM_NOLINUX) && \
+     (${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64")
 DRM_LINUX_OPT= "\#define DRM_LINUX 1"
 .endif
 
@@ -21,6 +22,6 @@ opt_drm.h:
 
 .include <bsd.kmod.mk>
 
-CWARNFLAGS.via_dma.c=		${NO_WUNUSED_VALUE}
-CWARNFLAGS.via_dmablit.c=	${NO_WUNUSED_VALUE}
+CWARNFLAGS.via_dma.c=		-Wno-unused-value
+CWARNFLAGS.via_dmablit.c=	-Wno-unused-value
 CWARNFLAGS+=			${CWARNFLAGS.${.IMPSRC:T}}

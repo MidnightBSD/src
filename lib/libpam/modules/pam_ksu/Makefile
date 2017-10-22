@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/lib/libpam/modules/pam_ksu/Makefile 179016 2008-05-15 15:28:18Z dfr $
+# $FreeBSD: release/10.0.0/lib/libpam/modules/pam_ksu/Makefile 233302 2012-03-22 11:18:14Z stas $
 
 LIB=	pam_ksu
 SRCS=	pam_ksu.c

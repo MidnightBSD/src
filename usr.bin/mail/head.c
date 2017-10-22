@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)head.c	8.2 (Berkeley) 4/20/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/mail/head.c 216564 2010-12-19 16:25:23Z charnier $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/mail/head.c 228992 2011-12-30 11:02:40Z uqs $");
 
 #include "rcv.h"
 #include "extern.h"
@@ -47,7 +47,7 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/mail/head.c 216564 2010-12-19 16:25:23Z cha
 /*
  * See if the passed line buffer is a mail header.
  * Return true if yes.  Note the extreme pains to
- * accomodate all funny formats.
+ * accommodate all funny formats.
  */
 int
 ishead(char linebuf[])

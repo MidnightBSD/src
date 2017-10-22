@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libfetch/fetch.c 236103 2012-05-26 16:34:39Z des $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libfetch/fetch.c 252375 2013-06-29 15:51:27Z kientzle $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -376,7 +376,7 @@ fetchParseURL(const char *URL)
 
 		/* password */
 		if (*q == ':')
-			q = fetch_pctdecode(u->pwd, ++q, URL_PWDLEN);
+			q = fetch_pctdecode(u->pwd, q + 1, URL_PWDLEN);
 
 		p++;
 	} else {

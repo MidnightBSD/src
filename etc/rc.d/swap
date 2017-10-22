@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# $FreeBSD: release/10.0.0/etc/rc.d/swap 252310 2013-06-27 18:28:45Z hrs $
+#
+
+# PROVIDE: swap
+# REQUIRE: disks
+# KEYWORD: nojail shutdown
+
+. /etc/rc.subr
+
+name="swap"
+start_cmd='/sbin/swapon -aq'
+stop_cmd=':'
+
+load_rc_config $name
+run_rc_command "$1"

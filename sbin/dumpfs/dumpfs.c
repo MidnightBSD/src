@@ -53,7 +53,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)dumpfs.c	8.5 (Berkeley) 4/29/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/dumpfs/dumpfs.c 246284 2013-02-03 12:17:49Z trasz $";
+  "$FreeBSD: release/10.0.0/sbin/dumpfs/dumpfs.c 250710 2013-05-16 20:07:08Z mckusick $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -77,18 +77,18 @@ static const char rcsid[] =
 #define	afs	disk.d_fs
 #define	acg	disk.d_cg
 
-struct uufsd disk;
+static struct uufsd disk;
 
-int	dumpfs(const char *);
-int	dumpfsid(void);
-int	dumpcg(void);
-int	dumpfreespace(const char *, int);
-void	dumpfreespacecg(int);
-int	marshal(const char *);
-void	pbits(void *, int);
-void	pblklist(void *, int, off_t, int);
-void	ufserr(const char *);
-void	usage(void) __dead2;
+static int	dumpfs(const char *);
+static int	dumpfsid(void);
+static int	dumpcg(void);
+static int	dumpfreespace(const char *, int);
+static void	dumpfreespacecg(int);
+static int	marshal(const char *);
+static void	pbits(void *, int);
+static void	pblklist(void *, int, off_t, int);
+static void	ufserr(const char *);
+static void	usage(void) __dead2;
 
 int
 main(int argc, char *argv[])
@@ -143,7 +143,7 @@ main(int argc, char *argv[])
 	exit(eval);
 }
 
-int
+static int
 dumpfsid(void)
 {
 
@@ -151,7 +151,7 @@ dumpfsid(void)
 	return 0;
 }
 
-int
+static int
 dumpfs(const char *name)
 {
 	time_t fstime;
@@ -197,15 +197,15 @@ dumpfs(const char *name)
 		    "maxbsize", afs.fs_maxbsize, afs.fs_maxbpg,
 		    afs.fs_maxcontig, afs.fs_contigsumsize);
 		printf("nbfree\t%jd\tndir\t%jd\tnifree\t%jd\tnffree\t%jd\n",
-		    (intmax_t)afs.fs_cstotal.cs_nbfree, 
+		    (intmax_t)afs.fs_cstotal.cs_nbfree,
 		    (intmax_t)afs.fs_cstotal.cs_ndir,
-		    (intmax_t)afs.fs_cstotal.cs_nifree, 
+		    (intmax_t)afs.fs_cstotal.cs_nifree,
 		    (intmax_t)afs.fs_cstotal.cs_nffree);
 		printf("bpg\t%d\tfpg\t%d\tipg\t%d\tunrefs\t%jd\n",
 		    afs.fs_fpg / afs.fs_frag, afs.fs_fpg, afs.fs_ipg,
 		    (intmax_t)afs.fs_unrefs);
 		printf("nindir\t%d\tinopb\t%d\tmaxfilesize\t%ju\n",
-		    afs.fs_nindir, afs.fs_inopb, 
+		    afs.fs_nindir, afs.fs_inopb,
 		    (uintmax_t)afs.fs_maxfilesize);
 		printf("sbsize\t%d\tcgsize\t%d\tcsaddr\t%jd\tcssize\t%d\n",
 		    afs.fs_sbsize, afs.fs_cgsize, (intmax_t)afs.fs_csaddr,
@@ -241,8 +241,8 @@ dumpfs(const char *name)
 	    afs.fs_sblkno, afs.fs_cblkno, afs.fs_iblkno, afs.fs_dblkno);
 	printf("cgrotor\t%d\tfmod\t%d\tronly\t%d\tclean\t%d\n",
 	    afs.fs_cgrotor, afs.fs_fmod, afs.fs_ronly, afs.fs_clean);
-	printf("avgfpdir %d\tavgfilesize %d\n",
-	    afs.fs_avgfpdir, afs.fs_avgfilesize);
+	printf("metaspace %jd\tavgfpdir %d\tavgfilesize %d\n",
+	    afs.fs_metaspace, afs.fs_avgfpdir, afs.fs_avgfilesize);
 	printf("flags\t");
 	if (afs.fs_old_flags & FS_FLAGS_UPDATED)
 		fsflags = afs.fs_flags;
@@ -310,7 +310,7 @@ err:	ufserr(name);
 	return (1);
 }
 
-int
+static int
 dumpcg(void)
 {
 	time_t cgtime;
@@ -371,7 +371,7 @@ dumpcg(void)
 	return (0);
 }
 
-int
+static int
 dumpfreespace(const char *name, int fflag)
 {
 	int i;
@@ -387,7 +387,7 @@ err:
 	return (1);
 }
 
-void
+static void
 dumpfreespacecg(int fflag)
 {
 
@@ -395,7 +395,7 @@ dumpfreespacecg(int fflag)
 	    fflag);
 }
 
-int
+static int
 marshal(const char *name)
 {
 	struct fs *fs;
@@ -417,12 +417,15 @@ marshal(const char *name)
 	printf("-f %d ", fs->fs_fsize);
 	printf("-g %d ", fs->fs_avgfilesize);
 	printf("-h %d ", fs->fs_avgfpdir);
-	/* -i is dumb */
+	printf("-i %jd ", fragroundup(fs, lblktosize(fs, fragstoblks(fs,
+	    fs->fs_fpg)) / fs->fs_ipg));
 	if (fs->fs_flags & FS_SUJ)
 		printf("-j ");
 	if (fs->fs_flags & FS_GJOURNAL)
 		printf("-J ");
-	/* -k..l unimplemented */
+	printf("-k %jd ", fs->fs_metaspace);
+	if (fs->fs_flags & FS_MULTILABEL)
+		printf("-l ");
 	printf("-m %d ", fs->fs_minfree);
 	/* -n unimplemented */
 	printf("-o ");
@@ -447,7 +450,7 @@ marshal(const char *name)
 	return 0;
 }
 
-void
+static void
 pbits(void *vp, int max)
 {
 	int i;
@@ -469,7 +472,7 @@ pbits(void *vp, int max)
 	printf("\n");
 }
 
-void
+static void
 pblklist(void *vp, int max, off_t offset, int fflag)
 {
 	int i, j;
@@ -490,7 +493,7 @@ pblklist(void *vp, int max, off_t offset, int fflag)
 	}
 }
 
-void
+static void
 ufserr(const char *name)
 {
 	if (disk.d_error != NULL)
@@ -499,7 +502,7 @@ ufserr(const char *name)
 		warn("%s", name);
 }
 
-void
+static void
 usage(void)
 {
 	(void)fprintf(stderr, "usage: dumpfs [-flm] filesys | device\n");

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/zfs/Makefile 243219 2012-11-18 12:28:29Z avg $
+# $FreeBSD: release/10.0.0/sys/boot/zfs/Makefile 241785 2012-10-20 16:57:23Z avg $
 
 LIB=		zfsboot
 INTERNALLIB=

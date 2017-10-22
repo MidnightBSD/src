@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)shutdown.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/shutdown/shutdown.c 239648 2012-08-24 13:11:30Z des $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/shutdown/shutdown.c 238968 2012-08-01 09:10:21Z des $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -67,7 +67,7 @@ __FBSDID("$FreeBSD: stable/9/sbin/shutdown/shutdown.c 239648 2012-08-24 13:11:30
 #define	M		*60
 #define	S		*1
 #define	NOLOG_TIME	5*60
-struct interval {
+static struct interval {
 	int timeleft, timetowait;
 } tlist[] = {
 	{ 10 H,  5 H },
@@ -123,7 +123,7 @@ main(int argc, char **argv)
 	 * Test for the special case where the utility is called as
 	 * "poweroff", for which it runs 'shutdown -p now'.
 	 */
-	if ((p = rindex(argv[0], '/')) == NULL)
+	if ((p = strrchr(argv[0], '/')) == NULL)
 		p = argv[0];
 	else
 		++p;
@@ -356,7 +356,6 @@ die_you_gravy_sucking_pig_dog(void)
 	syslog(LOG_NOTICE, "%s by %s: %s",
 	    doreboot ? "reboot" : dohalt ? "halt" : dopower ? "power-down" : 
 	    "shutdown", whom, mbuf);
-	(void)sleep(2);
 
 	(void)printf("\r\nSystem shutdown time has arrived\007\007\r\n");
 	if (killflg) {

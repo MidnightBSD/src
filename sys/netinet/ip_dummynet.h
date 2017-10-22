@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netinet/ip_dummynet.h 206845 2010-04-19 16:17:30Z luigi $
+ * $FreeBSD: release/10.0.0/sys/netinet/ip_dummynet.h 239124 2012-08-07 07:52:25Z luigi $
  */
 
 #ifndef _IP_DUMMYNET_H
@@ -171,8 +171,8 @@ struct dn_flow {
 	struct ipfw_flow_id fid;
 	uint64_t	tot_pkts; /* statistics counters  */
 	uint64_t	tot_bytes;
-	uint32_t	length; /* Queue lenght, in packets */
-	uint32_t	len_bytes; /* Queue lenght, in bytes */
+	uint32_t	length; /* Queue length, in packets */
+	uint32_t	len_bytes; /* Queue length, in bytes */
 	uint32_t	drops;
 };
 

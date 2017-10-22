@@ -1,4 +1,4 @@
-#	$FreeBSD: stable/9/sys/contrib/dev/ral/Makefile 236004 2012-05-25 16:07:39Z bschmidt $
+#	$FreeBSD: release/10.0.0/sys/contrib/dev/ral/Makefile 232958 2012-03-14 08:00:33Z bschmidt $
 
 FILES=	rt2561s.fw.uu rt2561.fw.uu rt2661.fw.uu rt2860.fw.uu
 

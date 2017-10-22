@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/uzip/g_uzip.c 249148 2013-04-05 10:35:36Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/uzip/g_uzip.c 239790 2012-08-28 19:28:31Z ed $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -467,7 +467,6 @@ g_uzip_taste(struct g_class *mp, struct g_provider *pp, int flags)
 	pp2 = g_new_providerf(gp, "%s", gp->name);
 	pp2->sectorsize = 512;
 	pp2->mediasize = (off_t)sc->nblocks * sc->blksz;
-        pp2->flags = pp->flags & G_PF_CANDELETE;
         pp2->stripesize = pp->stripesize;
         pp2->stripeoffset = pp->stripeoffset;
 	g_error_provider(pp2, 0);

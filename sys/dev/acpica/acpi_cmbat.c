@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi_cmbat.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/acpi_cmbat.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -99,7 +99,7 @@ static device_method_t acpi_cmbat_methods[] = {
     DEVMETHOD(acpi_batt_get_info, acpi_cmbat_bif),
     DEVMETHOD(acpi_batt_get_status, acpi_cmbat_bst),
 
-    {0, 0}
+    DEVMETHOD_END
 };
 
 static driver_t acpi_cmbat_driver = {

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/ofw/libofw/Makefile 237766 2012-06-29 10:19:15Z avg $
+# $FreeBSD: release/10.0.0/sys/boot/ofw/libofw/Makefile 235364 2012-05-12 20:27:33Z avg $
 
 LIB=		ofw
 INTERNALLIB=

@@ -32,7 +32,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/tail/misc.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tail/misc.c 251565 2013-06-09 08:06:26Z jh $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)misc.c	8.1 (Berkeley) 6/6/93";
@@ -112,4 +112,18 @@ maparound(struct mapinfo *mip, off_t offset)
 		return (1);
 
 	return (0);
+}
+
+/*
+ * Print the file name without stdio buffering.
+ */
+void
+printfn(const char *fn, int print_nl)
+{
+
+	if (print_nl)
+		WR("\n", 1);
+	WR("==> ", 4);
+	WR(fn, strlen(fn));
+	WR(" <==\n", 5);
 }

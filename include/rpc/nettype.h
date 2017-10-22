@@ -1,5 +1,5 @@
 /*	$NetBSD: nettype.h,v 1.2 2000/07/06 03:17:19 christos Exp $	*/
-/*	$FreeBSD: stable/9/include/rpc/nettype.h 93032 2002-03-23 17:24:55Z imp $ */
+/*	$FreeBSD: release/10.0.0/include/rpc/nettype.h 240062 2012-09-02 22:23:23Z pfg $ */
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for

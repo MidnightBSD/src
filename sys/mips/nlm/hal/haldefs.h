@@ -26,11 +26,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: stable/9/sys/mips/nlm/hal/haldefs.h 225394 2011-09-05 10:45:29Z jchandra $
+ * $FreeBSD: release/10.0.0/sys/mips/nlm/hal/haldefs.h 227722 2011-11-19 14:06:15Z jchandra $
  */
 
 #ifndef __NLM_HAL_MMIO_H__
-#define __NLM_HAL_MMIO_H__
+#define	__NLM_HAL_MMIO_H__
 
 /*
  * This file contains platform specific memory mapped IO implementation

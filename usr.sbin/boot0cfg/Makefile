@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/boot0cfg/Makefile 229212 2012-01-01 21:38:58Z dim $
+# $FreeBSD: release/10.0.0/usr.sbin/boot0cfg/Makefile 228656 2011-12-17 19:33:26Z dim $
 
 PROG=	boot0cfg
 MAN=	boot0cfg.8

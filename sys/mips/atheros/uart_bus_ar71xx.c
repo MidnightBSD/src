@@ -25,7 +25,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/atheros/uart_bus_ar71xx.c 211476 2010-08-19 02:03:12Z adrian $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/atheros/uart_bus_ar71xx.c 253509 2013-07-21 03:54:39Z adrian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -70,7 +70,7 @@ uart_ar71xx_probe(device_t dev)
 	struct uart_softc *sc;
 	uint64_t freq;
 
-	freq = ar71xx_ahb_freq();
+	freq = ar71xx_uart_freq();
 
 	sc = device_get_softc(dev);
 	sc->sc_sysdev = SLIST_FIRST(&uart_sysdevs);

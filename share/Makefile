@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: stable/9/share/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD: release/10.0.0/share/Makefile 257572 2013-11-03 13:00:12Z bdrewery $
 
 .include <bsd.own.mk>
 
@@ -8,8 +8,10 @@
 SUBDIR=	${_colldef} \
 	${_dict} \
 	${_doc} \
+	dtrace \
 	${_examples} \
 	${_i18n} \
+	keys \
 	${_man} \
 	${_me} \
 	misc \

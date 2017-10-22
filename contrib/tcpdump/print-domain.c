@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: stable/9/contrib/tcpdump/print-domain.c 214478 2010-10-28 19:06:17Z rpaulo $
+ * $FreeBSD: release/10.0.0/contrib/tcpdump/print-domain.c 251158 2013-05-30 20:51:22Z delphij $
  */
 
 #ifndef lint
@@ -146,7 +146,7 @@ labellen(const u_char *cp)
 		return(i);
 }
 
-static const u_char *
+const u_char *
 ns_nprint(register const u_char *cp, register const u_char *bp)
 {
 	register u_int i, l;

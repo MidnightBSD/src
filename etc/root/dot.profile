@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/etc/root/dot.profile 199243 2009-11-13 05:54:55Z ed $
+# $FreeBSD: release/10.0.0/etc/root/dot.profile 199243 2009-11-13 05:54:55Z ed $
 #
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/games:/usr/local/sbin:/usr/local/bin:~/bin
 export PATH

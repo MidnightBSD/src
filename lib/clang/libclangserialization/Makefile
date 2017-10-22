@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/clang/libclangserialization/Makefile 246637 2013-02-10 21:24:47Z dim $
+# $FreeBSD: release/10.0.0/lib/clang/libclangserialization/Makefile 249423 2013-04-12 17:57:40Z dim $
 
 .include <bsd.own.mk>
 
@@ -13,6 +13,7 @@ SRCS=	ASTCommon.cpp \
 	ASTWriterDecl.cpp \
 	ASTWriterStmt.cpp \
 	GeneratePCH.cpp \
+	GlobalModuleIndex.cpp \
 	Module.cpp \
 	ModuleManager.cpp
 
@@ -21,6 +22,7 @@ TGHDRS=	AttrList \
 	AttrPCHWrite \
 	AttrParsedAttrList \
 	Attrs \
+	CommentCommandList \
 	CommentNodes \
 	DeclNodes \
 	DiagnosticCommonKinds \

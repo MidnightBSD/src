@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/cam/ctl/ctl_error.c 237824 2012-06-29 21:27:37Z ken $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/cam/ctl/ctl_error.c 233963 2012-04-06 22:23:13Z ken $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

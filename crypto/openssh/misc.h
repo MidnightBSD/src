@@ -1,5 +1,5 @@
-/* $OpenBSD: misc.h,v 1.48 2011/03/29 18:54:17 stevesk Exp $ */
-/* $FreeBSD: stable/9/crypto/openssh/misc.h 247485 2013-02-28 18:43:50Z des $ */
+/* $OpenBSD: misc.h,v 1.49 2013/06/01 13:15:52 dtucker Exp $ */
+/* $FreeBSD: release/10.0.0/crypto/openssh/misc.h 255767 2013-09-21 21:36:09Z des $ */
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -36,6 +36,7 @@ char	*tohex(const void *, size_t);
 void	 sanitise_stdfd(void);
 void	 ms_subtract_diff(struct timeval *, int *);
 void	 ms_to_timeval(struct timeval *, int);
+time_t	 monotime(void);
 void	 sock_set_v6only(int);
 void	 sock_get_rcvbuf(int *, int);
 

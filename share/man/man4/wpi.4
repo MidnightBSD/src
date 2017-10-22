@@ -24,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/wpi.4 235578 2012-05-18 00:55:47Z gjb $
+.\" $FreeBSD: release/10.0.0/share/man/man4/wpi.4 235317 2012-05-12 03:25:46Z gjb $
 .\"
 .Dd October 5, 2008
 .Dt WPI 4
@@ -106,14 +106,14 @@ ifconfig wlan0 create wlandev wpi0 wlanmode adhoc ssid my_net \e
 The driver failed to load the firmware image using the
 .Xr firmware 9
 subsystem.
-Verify the 
+Verify the
 .Xr wpifw
 firmware module is installed.
 .It "wpi%d: fatal firmware error"
 An unknown error has occurred in the uploaded firmware, you may have to
 unload/reload the driver to continue.
 .It "wpi%d: Radio transmitter is switched off"
-The hardware switch controlling the radio is currently turned off. 
+The hardware switch controlling the radio is currently turned off.
 Data transmission is not possible in this state.
 .El
 .Sh SEE ALSO
@@ -133,8 +133,8 @@ driver was written for
 .Ox
 by
 .An Damien Bergamini Aq damien.bergamini@free.fr .
-.An Benjamin Close Aq benjsc@FreeBSD.org 
-ported 
+.An Benjamin Close Aq benjsc@FreeBSD.org
+ported
 .Nm
 to
 .Fx .

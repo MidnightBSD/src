@@ -7,7 +7,7 @@
  * For more information, see the README file.
  */
 
-/* $FreeBSD: stable/9/contrib/less/signal.c 240121 2012-09-04 23:24:00Z delphij $ */
+/* $FreeBSD: release/10.0.0/contrib/less/signal.c 238730 2012-07-24 01:09:11Z delphij $ */
 
 /*
  * Routines dealing with signals.

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/compat/linux/linux_uid16.c 246290 2013-02-03 18:14:37Z dchagin $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/compat/linux/linux_uid16.c 255971 2013-10-01 15:40:27Z markj $");
 
 #include "opt_compat.h"
 #include "opt_kdtrace.h"
@@ -87,7 +87,7 @@ LIN_SDT_PROBE_DEFINE1(uid16, linux_setgid16, entry, "l_gid16_t");
 LIN_SDT_PROBE_DEFINE1(uid16, linux_setgid16, return, "int");
 LIN_SDT_PROBE_DEFINE1(uid16, linux_setuid16, entry, "l_uid16_t");
 LIN_SDT_PROBE_DEFINE1(uid16, linux_setuid16, return, "int");
-LIN_SDT_PROBE_DEFINE2(uid16, linux_setregid16, entry, "l_git16_t", "l_git16_t");
+LIN_SDT_PROBE_DEFINE2(uid16, linux_setregid16, entry, "l_gid16_t", "l_gid16_t");
 LIN_SDT_PROBE_DEFINE1(uid16, linux_setregid16, return, "int");
 LIN_SDT_PROBE_DEFINE2(uid16, linux_setreuid16, entry, "l_uid16_t", "l_uid16_t");
 LIN_SDT_PROBE_DEFINE1(uid16, linux_setreuid16, return, "int");

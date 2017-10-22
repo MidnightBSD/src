@@ -24,7 +24,7 @@
 #  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 #  SUCH DAMAGE.
 # -------+---------+---------+-------- + --------+---------+---------+---------+
-# $FreeBSD: stable/9/tools/regression/usr.bin/env/regress-sb.rb 147495 2005-06-20 04:17:12Z gad $
+# $FreeBSD: release/10.0.0/tools/regression/usr.bin/env/regress-sb.rb 228975 2011-12-30 00:04:11Z uqs $
 # -------+---------+---------+-------- + --------+---------+---------+---------+
 #   This script was written to provide a battery of regression-tests for some
 # changes I am making to the `env' command.  I wrote a new script for this
@@ -341,7 +341,7 @@ class RGTestOptions
 	#   for test data.  Format of all recognized values should be:
 	#		[%-object.value-%]
 	#   which is hopefully distinctive-enough that they will never
-	#   conflict with any naturally-occuring string.  Also note that
+	#   conflict with any naturally-occurring string.  Also note that
 	#   we only match the specific values that we recognize, and not
 	#   "just anything" that matches the general pattern.  There are
 	#   no blanks in the recognized values, but I use an x-tended

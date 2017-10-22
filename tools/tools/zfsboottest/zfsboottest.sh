@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/tools/tools/zfsboottest/zfsboottest.sh 236460 2012-06-02 18:26:05Z avg $
+# $FreeBSD: release/10.0.0/tools/tools/zfsboottest/zfsboottest.sh 253068 2013-07-09 08:30:31Z avg $
 
 if [ $# -ne 1 ]; then
 	echo "usage: zfsboottest.sh <pool>" >&2
@@ -54,11 +54,6 @@ bootfs=`zpool get bootfs "${pool}" | tail -1 | awk '{print $3}'`
 if [ "${bootfs}" = "-" ]; then
 	bootfs="${pool}"
 fi
-# Dataset's mountpoint property should be set to 'legacy'.
-if [ "`zfs get -H -o value mountpoint ${bootfs}`" != "legacy" ]; then
-	echo "The \"mountpoint\" property of dataset \"${bootfs}\" should be set to \"legacy\"." >&2
-	exit 1
-fi
 mountpoint=`df -t zfs "${bootfs}" 2>/dev/null | tail -1 | awk '{print $6}'`
 if [ -z "${mountpoint}" ]; then
 	echo "The \"${bootfs}\" dataset is not mounted." >&2
@@ -67,19 +62,6 @@ fi
 if [ ! -d "${mountpoint}${startdir}" ]; then
 	echo "The \"${mountpoint}${startdir}\" directory doesn't exist." >&2
 	exit 1
-fi
-# To be able to mount root ZFS file system we need either /etc/fstab entry
-# or vfs.root.mountfrom variable set in /boot/loader.conf.
-egrep -q '^'"${bootfs}"'[[:space:]]+/[[:space:]]+zfs[[:space:]]+' "${mountpoint}/etc/fstab" 2>/dev/null
-if [ $? -ne 0 ]; then
-	egrep -q 'vfs.root.mountfrom="?'"zfs:${bootfs}"'"?[[:space:]]*$' "${mountpoint}/boot/loader.conf" 2>/dev/null
-	if [ $? -ne 0 ]; then
-		echo "To be able to boot from \"${bootfs}\", you need to declare" >&2
-		echo "\"${bootfs}\" as being root file system in ${mountpoint}/etc/fstab" >&2
-		echo "or add \"vfs.root.mountfrom\" variable set to \"zfs:${bootfs}\" to" >&2
-		echo "${mountpoint}/boot/loader.conf." >&2
-		exit 1
-	fi
 fi
 vdevs=""
 for vdev in `zpool status "${pool}" | grep ONLINE | awk '{print $1}'`; do

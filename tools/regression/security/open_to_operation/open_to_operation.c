@@ -90,7 +90,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/security/open_to_operation/open_to_operation.c 176294 2008-02-14 20:57:38Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/security/open_to_operation/open_to_operation.c 228975 2011-12-30 00:04:11Z uqs $");
 
 #include <sys/param.h>
 #include <sys/mman.h>
@@ -796,7 +796,7 @@ check_write(const char *testname, write_fn fn, const char *path,
 		} else {
 			if (!((mode & O_ACCMODE) == O_WRONLY ||
 			    (mode & O_ACCMODE) == O_RDWR))
-				notok_mode(testname, "write suceeded", mode);
+				notok_mode(testname, "write succeeded", mode);
 			else
 				ok_mode(testname, "write succeeded", mode);
 		}
@@ -880,7 +880,7 @@ check_read(const char *testname, read_fn fn, const char *path,
 		} else {
 			if (!((mode & O_ACCMODE) == O_RDONLY ||
 			    (mode & O_ACCMODE) == O_RDWR))
-				notok_mode(testname, "read suceeded", mode);
+				notok_mode(testname, "read succeeded", mode);
 			else
 				ok_mode(testname, "read succeeded", mode);
 		}

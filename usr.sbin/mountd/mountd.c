@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)mountd.c	8.15 (Berkeley) 5/1/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/mountd/mountd.c 247394 2013-02-27 08:55:26Z pluknet $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/mountd/mountd.c 247034 2013-02-20 12:40:26Z pluknet $");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -649,7 +649,7 @@ create_service(struct netconfig *nconf)
 		 */
 		if ((fd = __rpc_nconf2fd(nconf)) < 0) {
 			int non_fatal = 0;
-	    		if (errno == EPROTONOSUPPORT &&
+	    		if (errno == EAFNOSUPPORT &&
 			    nconf->nc_semantics != NC_TPI_CLTS) 
 				non_fatal = 1;
 				
@@ -1657,9 +1657,8 @@ get_exportlist(void)
 	struct iovec *iov;
 	struct statfs *fsp, *mntbufp;
 	struct xvfsconf vfc;
-	char *dirp;
 	char errmsg[255];
-	int dirplen, num, i;
+	int num, i;
 	int iovlen;
 	int done;
 	struct nfsex_args eargs;
@@ -1669,8 +1668,6 @@ get_exportlist(void)
 	v4root_dirpath[0] = '\0';
 	bzero(&export, sizeof(export));
 	export.ex_flags = MNT_DELEXPORT;
-	dirp = NULL;
-	dirplen = 0;
 	iov = NULL;
 	iovlen = 0;
 	bzero(errmsg, sizeof(errmsg));
@@ -3144,7 +3141,7 @@ checkmask(struct sockaddr *sa)
 /*
  * Compare two sockaddrs according to a specified mask. Return zero if
  * `sa1' matches `sa2' when filtered by the netmask in `samask'.
- * If samask is NULL, perform a full comparision.
+ * If samask is NULL, perform a full comparison.
  */
 int
 sacmp(struct sockaddr *sa1, struct sockaddr *sa2, struct sockaddr *samask)

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/ppp/vjcomp.c 134789 2004-09-05 01:46:52Z brian $
+ * $FreeBSD: release/10.0.0/usr.sbin/ppp/vjcomp.c 228990 2011-12-30 10:58:14Z uqs $
  */
 
 #include <sys/param.h>
@@ -137,7 +137,7 @@ VjUncompressTcp(struct ipcp *ipcp, struct mbuf *bp, u_char type)
   }
 
   /*
-   * Handle compressed packet. 1) Read upto MAX_VJHEADER bytes into work
+   * Handle compressed packet. 1) Read up to MAX_VJHEADER bytes into work
    * space. 2) Try to uncompress it. 3) Compute amount of necessary space. 4)
    * Copy unread data info there.
    */

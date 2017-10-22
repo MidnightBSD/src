@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)ifconfig.c	8.2 (Berkeley) 2/16/94";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/ifconfig/ifconfig.c 238247 2012-07-08 14:21:36Z bz $";
+  "$FreeBSD: release/10.0.0/sbin/ifconfig/ifconfig.c 244538 2012-12-21 15:54:13Z kevlo $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -66,7 +66,9 @@ static const char rcsid[] =
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#ifdef JAIL
 #include <jail.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -255,6 +257,7 @@ main(int argc, char *argv[])
 				ifconfig(argc, argv, 1, NULL);
 				exit(0);
 			}
+#ifdef JAIL
 			/*
 			 * NOTE:  We have to special-case the `-vnet' command
 			 * right here as we would otherwise fail when trying
@@ -268,6 +271,7 @@ main(int argc, char *argv[])
 				ifconfig(argc, argv, 0, NULL);
 				exit(0);
 			}
+#endif
 			errx(1, "interface %s does not exist", ifname);
 		}
 	}
@@ -516,7 +520,7 @@ top:
 		AF_LOCAL : afp->af_af;
 
 	if ((s = socket(ifr.ifr_addr.sa_family, SOCK_DGRAM, 0)) < 0 &&
-	    (uafp != NULL || errno != EPROTONOSUPPORT ||
+	    (uafp != NULL || errno != EAFNOSUPPORT ||
 	     (s = socket(AF_LOCAL, SOCK_DGRAM, 0)) < 0))
 		err(1, "socket(family %u,SOCK_DGRAM", ifr.ifr_addr.sa_family);
 
@@ -688,6 +692,7 @@ deletetunnel(const char *vname, int param, int s, const struct afswtch *afp)
 		err(1, "SIOCDIFPHYADDR");
 }
 
+#ifdef JAIL
 static void
 setifvnet(const char *jname, int dummy __unused, int s,
     const struct afswtch *afp)
@@ -715,6 +720,7 @@ setifrvnet(const char *jname, int dummy __unused, int s,
 	if (ioctl(s, SIOCSIFRVNET, &my_ifr) < 0)
 		err(1, "SIOCSIFRVNET(%d, %s)", my_ifr.ifr_jid, my_ifr.ifr_name);
 }
+#endif
 
 static void
 setifnetmask(const char *addr, int dummy __unused, int s,
@@ -910,7 +916,7 @@ unsetifdescr(const char *val, int value, int s, const struct afswtch *afp)
 #define	IFCAPBITS \
 "\020\1RXCSUM\2TXCSUM\3NETCONS\4VLAN_MTU\5VLAN_HWTAGGING\6JUMBO_MTU\7POLLING" \
 "\10VLAN_HWCSUM\11TSO4\12TSO6\13LRO\14WOL_UCAST\15WOL_MCAST\16WOL_MAGIC" \
-"\21VLAN_HWFILTER\23VLAN_HWTSO\24LINKSTATE\25NETMAP" \
+"\17TOE4\20TOE6\21VLAN_HWFILTER\23VLAN_HWTSO\24LINKSTATE\25NETMAP" \
 "\26RXCSUM_IPV6\27TXCSUM_IPV6"
 
 /*
@@ -1079,6 +1085,21 @@ printb(const char *s, unsigned v, const char *bits)
 }
 
 void
+print_vhid(const struct ifaddrs *ifa, const char *s)
+{
+	struct if_data *ifd;
+
+	if (ifa->ifa_data == NULL)
+		return;
+
+	ifd = ifa->ifa_data;
+	if (ifd->ifi_vhid == 0)
+		return;
+	
+	printf("vhid %d ", ifd->ifi_vhid);
+}
+
+void
 ifmaybeload(const char *name)
 {
 #define MOD_PREFIX_LEN		3	/* "if_" */
@@ -1159,8 +1180,10 @@ static struct cmd basic_cmds[] = {
 	DEF_CMD_ARG2("tunnel",			settunnel),
 	DEF_CMD("-tunnel", 0,			deletetunnel),
 	DEF_CMD("deletetunnel", 0,		deletetunnel),
+#ifdef JAIL
 	DEF_CMD_ARG("vnet",			setifvnet),
 	DEF_CMD_ARG("-vnet",			setifrvnet),
+#endif
 	DEF_CMD("link0",	IFF_LINK0,	setifflags),
 	DEF_CMD("-link0",	-IFF_LINK0,	setifflags),
 	DEF_CMD("link1",	IFF_LINK1,	setifflags),
@@ -1189,6 +1212,8 @@ static struct cmd basic_cmds[] = {
 	DEF_CMD("-tso4",	-IFCAP_TSO4,	setifcap),
 	DEF_CMD("tso",		IFCAP_TSO,	setifcap),
 	DEF_CMD("-tso",		-IFCAP_TSO,	setifcap),
+	DEF_CMD("toe",		IFCAP_TOE,	setifcap),
+	DEF_CMD("-toe",		-IFCAP_TOE,	setifcap),
 	DEF_CMD("lro",		IFCAP_LRO,	setifcap),
 	DEF_CMD("-lro",		-IFCAP_LRO,	setifcap),
 	DEF_CMD("wol",		IFCAP_WOL,	setifcap),

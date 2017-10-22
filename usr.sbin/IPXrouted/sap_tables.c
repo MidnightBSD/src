@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/IPXrouted/sap_tables.c 122760 2003-11-15 17:10:56Z trhodes $
+ * $FreeBSD: release/10.0.0/usr.sbin/IPXrouted/sap_tables.c 228990 2011-12-30 10:58:14Z uqs $
  */
 
 #include "defs.h"
@@ -178,7 +178,7 @@ sap_add(struct sap_info *si, struct sockaddr *from)
 
 /*
  * Change an existing SAP entry. If a clone exist for the old one,
- * check if it is cheaper. If it is change tothe clone, otherwise
+ * check if it is cheaper. If it is change to the clone, otherwise
  * delete all the clones.
  */
 void

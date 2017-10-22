@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_thr.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_thr.c 236117 2012-05-26 20:03:47Z kib $");
 
 #include "opt_compat.h"
 #include "opt_posix.h"
@@ -63,11 +63,11 @@ static SYSCTL_NODE(_kern, OID_AUTO, threads, CTLFLAG_RW, 0,
 
 static int max_threads_per_proc = 1500;
 SYSCTL_INT(_kern_threads, OID_AUTO, max_threads_per_proc, CTLFLAG_RW,
-	&max_threads_per_proc, 0, "Limit on threads per proc");
+    &max_threads_per_proc, 0, "Limit on threads per proc");
 
 static int max_threads_hits;
 SYSCTL_INT(_kern_threads, OID_AUTO, max_threads_hits, CTLFLAG_RD,
-	&max_threads_hits, 0, "");
+    &max_threads_hits, 0, "kern.threads.max_threads_per_proc hit count");
 
 #ifdef COMPAT_FREEBSD32
 
@@ -252,7 +252,6 @@ create_thread(struct thread *td, mcontext_t *ctx,
 
 	PROC_LOCK(td->td_proc);
 	td->td_proc->p_flag |= P_HADTHREADS;
-	newtd->td_sigmask = td->td_sigmask;
 	thread_link(newtd, p); 
 	bcopy(p->p_comm, newtd->td_name, sizeof(newtd->td_name));
 	thread_lock(td);

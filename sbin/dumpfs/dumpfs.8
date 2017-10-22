@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)dumpfs.8	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD: stable/9/sbin/dumpfs/dumpfs.8 224004 2011-07-14 08:06:03Z delphij $
+.\" $FreeBSD: release/10.0.0/sbin/dumpfs/dumpfs.8 250710 2013-05-16 20:07:08Z mckusick $
 .\"
-.Dd Jul 14, 2011
+.Dd May 16, 2013
 .Dt DUMPFS 8
 .Os
 .Sh NAME
@@ -76,6 +76,27 @@ is specified, a
 .Xr newfs 8
 command is printed that can be used to generate a new file system
 with equivalent settings.
+Please note that
+.Xr newfs 8
+options
+.Fl E ,
+.Fl R ,
+.Fl S ,
+and
+.Fl T
+are not handled and
+.Fl p
+is not useful in this case so is omitted.
+.Xr Newfs 8
+options
+.Fl n
+and
+.Fl r
+are neither checked for nor output but should be.
+The
+.Fl r
+flag is needed if the filesystem uses
+.Xr gjournal 8 .
 .Sh SEE ALSO
 .Xr disktab 5 ,
 .Xr fs 5 ,

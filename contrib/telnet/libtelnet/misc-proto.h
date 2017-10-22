@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)misc-proto.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: stable/9/contrib/telnet/libtelnet/misc-proto.h 87155 2001-11-30 22:28:07Z markm $
+ * $FreeBSD: release/10.0.0/contrib/telnet/libtelnet/misc-proto.h 87155 2001-11-30 22:28:07Z markm $
  */
 
 /*

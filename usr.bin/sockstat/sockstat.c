@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 2002 Dag-Erling CoÃ¯dan SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/sockstat/sockstat.c 237850 2012-06-30 18:57:55Z thompsa $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/sockstat/sockstat.c 237674 2012-06-27 23:26:32Z thompsa $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -325,6 +325,7 @@ gather_inet(int proto)
 			}
 			inp = &xtp->xt_inp;
 			so = &xtp->xt_socket;
+			protoname = xtp->xt_tp.t_flags & TF_TOE ? "toe" : "tcp";
 			break;
 		case IPPROTO_UDP:
 		case IPPROTO_DIVERT:

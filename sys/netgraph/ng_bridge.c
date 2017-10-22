@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_bridge.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_bridge.c 243882 2012-12-05 08:04:20Z glebius $
  */
 
 /*
@@ -719,7 +719,7 @@ ng_bridge_rcvdata(hook_p hook, item_p item)
 			 * It's usable link but not the reserved (first) one.
 			 * Copy mbuf info for sending.
 			 */
-			m2 = m_dup(m, M_DONTWAIT);	/* XXX m_copypacket() */
+			m2 = m_dup(m, M_NOWAIT);	/* XXX m_copypacket() */
 			if (m2 == NULL) {
 				link->stats.memoryFailures++;
 				NG_FREE_ITEM(item);

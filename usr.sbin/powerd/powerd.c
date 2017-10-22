@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/powerd/powerd.c 211415 2010-08-17 09:11:38Z brucec $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/powerd/powerd.c 252713 2013-07-04 18:59:58Z wblock $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/powerd/powerd.c 211415 2010-08-17 09:11:38
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sysexits.h>
 #include <unistd.h>
 
 #ifdef __i386__
@@ -71,7 +72,7 @@ typedef enum {
 	SRC_UNKNOWN,
 } power_src_t;
 
-const char *modes[] = {
+static const char *modes[] = {
 	"AC",
 	"battery",
 	"unknown"
@@ -153,7 +154,7 @@ read_usage_times(int *load)
 	error = sysctl(cp_times_mib, 2, cp_times, &cp_times_len, NULL, 0);
 	if (error)
 		return (error);
-		
+
 	if (load) {
 		*load = 0;
 		for (cpu = 0; cpu < ncpus; cpu++) {
@@ -164,7 +165,7 @@ read_usage_times(int *load)
 			}
 			if (total == 0)
 				continue;
-			*load += 100 - (cp_times[cpu * CPUSTATES + CP_IDLE] - 
+			*load += 100 - (cp_times[cpu * CPUSTATES + CP_IDLE] -
 			    cp_times_old[cpu * CPUSTATES + CP_IDLE]) * 100 / total;
 		}
 	}
@@ -235,7 +236,7 @@ get_freq(void)
 {
 	size_t len;
 	int curfreq;
-	
+
 	len = sizeof(curfreq);
 	if (sysctl(freq_mib, 4, &curfreq, &len, NULL, 0) != 0) {
 		if (vflag)
@@ -261,7 +262,7 @@ static int
 get_freq_id(int freq, int *freqs, int numfreqs)
 {
 	int i = 1;
-	
+
 	while (i < numfreqs) {
 		if (freqs[i] < freq)
 			break;
@@ -536,7 +537,7 @@ main(int argc, char * argv[])
 		err(1, "lookup kern.cp_times");
 	len = 4;
 	if (sysctlnametomib("dev.cpu.0.freq", freq_mib, &len))
-		err(1, "lookup freq");
+		err(EX_UNAVAILABLE, "no cpufreq(4) support -- aborting");
 	len = 4;
 	if (sysctlnametomib("dev.cpu.0.freq_levels", levels_mib, &len))
 		err(1, "lookup freq_levels");
@@ -716,7 +717,7 @@ main(int argc, char * argv[])
 				idle = 0;
 				if (set_freq(freq) != 0) {
 					warn("error setting CPU freq %d",
-				    	    freq);
+					    freq);
 					continue;
 				}
 			}
@@ -729,7 +730,7 @@ main(int argc, char * argv[])
 				warn("read_usage_times() failed");
 			continue;
 		}
-		
+
 		if (mode == MODE_ADAPTIVE) {
 			if (load > cpu_running_mark) {
 				if (load > 95 || load > cpu_running_mark * 2)
@@ -740,7 +741,7 @@ main(int argc, char * argv[])
 					freq = freqs[0];
 			} else if (load < cpu_idle_mark &&
 			    curfreq * load < freqs[get_freq_id(
-			    freq * 7 / 8, freqs, numfreqs)] * 
+			    freq * 7 / 8, freqs, numfreqs)] *
 			    cpu_running_mark) {
 				freq = freq * 7 / 8;
 				if (freq < freqs[numfreqs - 1])
@@ -756,7 +757,7 @@ main(int argc, char * argv[])
 					freq = freqs[0] * 2;
 			} else if (load < cpu_idle_mark / 2 &&
 			    curfreq * load < freqs[get_freq_id(
-			    freq * 31 / 32, freqs, numfreqs)] * 
+			    freq * 31 / 32, freqs, numfreqs)] *
 			    cpu_running_mark / 2) {
 				freq = freq * 31 / 32;
 				if (freq < freqs[numfreqs - 1])

@@ -44,7 +44,7 @@
  * from: scsi.c,v 1.17 1998/01/12 07:57:57 charnier Exp $";
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/ctladm/util.c 229997 2012-01-12 00:34:33Z ken $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ctladm/util.c 241737 2012-10-19 14:49:42Z ed $");
 
 #include <sys/stdint.h>
 #include <sys/types.h>
@@ -56,7 +56,7 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/ctladm/util.c 229997 2012-01-12 00:34:33Z 
 #include <camlib.h>
 #include "ctladm.h"
 
-int verbose;
+static int verbose;
 
 /* iget: Integer argument callback
  */

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/fs/msdosfs/msdosfs_denode.c 232283 2012-02-29 01:36:00Z kib $ */
+/* $FreeBSD: release/10.0.0/sys/fs/msdosfs/msdosfs_denode.c 254627 2013-08-21 23:04:48Z ken $ */
 /*	$NetBSD: msdosfs_denode.c,v 1.28 1998/02/10 14:10:00 mrg Exp $	*/
 
 /*-
@@ -142,12 +142,6 @@ deget(pmp, dirclust, diroffset, depp)
 		KASSERT((*depp)->de_diroffset == diroffset, ("wrong diroffset"));
 		return (0);
 	}
-
-	/*
-	 * Do the malloc before the getnewvnode since doing so afterward
-	 * might cause a bogus v_data pointer to get dereferenced
-	 * elsewhere if malloc should block.
-	 */
 	ldep = malloc(sizeof(struct denode), M_MSDOSFSNODE, M_WAITOK | M_ZERO);
 
 	/*
@@ -294,44 +288,57 @@ deupdat(dep, waitfor)
 	struct denode *dep;
 	int waitfor;
 {
-	int error;
+	struct direntry dir;
+	struct timespec ts;
 	struct buf *bp;
 	struct direntry *dirp;
-	struct timespec ts;
+	int error;
 
-	if (DETOV(dep)->v_mount->mnt_flag & MNT_RDONLY)
+	if (DETOV(dep)->v_mount->mnt_flag & MNT_RDONLY) {
+		dep->de_flag &= ~(DE_UPDATE | DE_CREATE | DE_ACCESS |
+		    DE_MODIFIED);
 		return (0);
+	}
 	getnanotime(&ts);
 	DETIMES(dep, &ts, &ts, &ts);
-	if ((dep->de_flag & DE_MODIFIED) == 0)
+	if ((dep->de_flag & DE_MODIFIED) == 0 && waitfor == 0)
 		return (0);
 	dep->de_flag &= ~DE_MODIFIED;
-	if (dep->de_Attributes & ATTR_DIRECTORY)
-		return (0);
+	if (DETOV(dep)->v_vflag & VV_ROOT)
+		return (EINVAL);
 	if (dep->de_refcnt <= 0)
 		return (0);
 	error = readde(dep, &bp, &dirp);
 	if (error)
 		return (error);
-	DE_EXTERNALIZE(dirp, dep);
+	DE_EXTERNALIZE(&dir, dep);
+	if (bcmp(dirp, &dir, sizeof(dir)) == 0) {
+		if (waitfor == 0 || (bp->b_flags & B_DELWRI) == 0) {
+			brelse(bp);
+			return (0);
+		}
+	} else
+		*dirp = dir;
+	if ((DETOV(dep)->v_mount->mnt_flag & MNT_NOCLUSTERW) == 0)
+		bp->b_flags |= B_CLUSTEROK;
 	if (waitfor)
-		return (bwrite(bp));
-	else {
+		error = bwrite(bp);
+	else if (vm_page_count_severe() || buf_dirty_count_severe())
+		bawrite(bp);
+	else
 		bdwrite(bp);
-		return (0);
-	}
+	return (error);
 }
 
 /*
  * Truncate the file described by dep to the length specified by length.
  */
 int
-detrunc(dep, length, flags, cred, td)
+detrunc(dep, length, flags, cred)
 	struct denode *dep;
 	u_long length;
 	int flags;
 	struct ucred *cred;
-	struct thread *td;
 {
 	int error;
 	int allerror;
@@ -426,7 +433,7 @@ detrunc(dep, length, flags, cred, td)
 	dep->de_FileSize = length;
 	if (!isadir)
 		dep->de_flag |= DE_UPDATE | DE_MODIFIED;
-	allerror = vtruncbuf(DETOV(dep), cred, td, length, pmp->pm_bpcluster);
+	allerror = vtruncbuf(DETOV(dep), cred, length, pmp->pm_bpcluster);
 #ifdef MSDOSFS_DEBUG
 	if (allerror)
 		printf("detrunc(): vtruncbuf error %d\n", allerror);
@@ -504,7 +511,7 @@ deextend(dep, length, cred)
 		error = extendfile(dep, count, NULL, NULL, DE_CLEAR);
 		if (error) {
 			/* truncate the added clusters away again */
-			(void) detrunc(dep, dep->de_FileSize, 0, cred, NULL);
+			(void) detrunc(dep, dep->de_FileSize, 0, cred);
 			return (error);
 		}
 	}
@@ -584,7 +591,6 @@ msdosfs_inactive(ap)
 {
 	struct vnode *vp = ap->a_vp;
 	struct denode *dep = VTODE(vp);
-	struct thread *td = ap->a_td;
 	int error = 0;
 
 #ifdef MSDOSFS_DEBUG
@@ -607,7 +613,7 @@ msdosfs_inactive(ap)
 	       dep, dep->de_refcnt, vp->v_mount->mnt_flag, MNT_RDONLY);
 #endif
 	if (dep->de_refcnt <= 0 && (vp->v_mount->mnt_flag & MNT_RDONLY) == 0) {
-		error = detrunc(dep, (u_long) 0, 0, NOCRED, td);
+		error = detrunc(dep, (u_long) 0, 0, NOCRED);
 		dep->de_flag |= DE_UPDATE;
 		dep->de_Name[0] = SLOT_DELETED;
 	}
@@ -623,6 +629,6 @@ out:
 	       vrefcnt(vp), dep->de_Name[0]);
 #endif
 	if (dep->de_Name[0] == SLOT_DELETED || dep->de_Name[0] == SLOT_EMPTY)
-		vrecycle(vp, td);
+		vrecycle(vp);
 	return (error);
 }

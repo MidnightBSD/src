@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/bsdinstall/partedit/partedit.h 248240 2013-03-13 13:50:50Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/partedit/partedit.h 245701 2013-01-20 23:04:21Z nwhitehorn $
  */
 
 #ifndef _PARTEDIT_PARTEDIT_H

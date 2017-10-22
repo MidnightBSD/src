@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/raid/g_raid_ctl.c 242649 2012-11-06 01:53:25Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/raid/g_raid_ctl.c 253706 2013-07-27 15:02:19Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -181,7 +181,7 @@ g_raid_ctl_stop(struct gctl_req *req, struct g_class *mp)
 	sx_xlock(&sc->sc_lock);
 	error = g_raid_destroy(sc, how);
 	if (error != 0)
-		sx_xunlock(&sc->sc_lock);
+		gctl_error(req, "Array is busy.");
 	g_topology_lock();
 }
 

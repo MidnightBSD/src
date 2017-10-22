@@ -53,7 +53,7 @@
 #include "sb_bus_space.h"
 #include "sb_scd.h"
 
-__FBSDID("$FreeBSD: stable/9/sys/mips/sibyte/sb_zbpci.c 218909 2011-02-21 09:01:34Z brucec $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/sibyte/sb_zbpci.c 254025 2013-08-07 06:21:20Z jeff $");
 
 static struct {
 	vm_offset_t vaddr;
@@ -137,7 +137,7 @@ zbpci_attach(device_t dev)
 	/*
 	 * Allocate KVA for accessing PCI config space.
 	 */
-	va = kmem_alloc_nofault(kernel_map, PAGE_SIZE * mp_ncpus);
+	va = kva_alloc(PAGE_SIZE * mp_ncpus);
 	if (va == 0) {
 		device_printf(dev, "Cannot allocate virtual addresses for "
 				   "config space access.\n");

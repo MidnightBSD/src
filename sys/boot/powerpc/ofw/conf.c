@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/powerpc/ofw/conf.c 209920 2010-07-12 00:49:22Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/powerpc/ofw/conf.c 209920 2010-07-12 00:49:22Z nwhitehorn $");
 
 #include <stand.h>
 #include "bootstrap.h"

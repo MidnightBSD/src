@@ -32,11 +32,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libc/locale/test-towctrans.c 137587 2004-11-11 19:47:55Z nik $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/libc/locale/test-towctrans.c 250989 2013-05-25 18:04:24Z ed $");
 
 #include <assert.h>
 #include <locale.h>
 #include <stdio.h>
+#include <string.h>
 #include <wchar.h>
 #include <wctype.h>
 

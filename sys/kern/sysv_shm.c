@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/sysv_shm.c 232117 2012-02-24 17:50:23Z alc $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/sysv_shm.c 255426 2013-09-09 18:11:59Z jhb $");
 
 #include "opt_compat.h"
 #include "opt_sysvipc.h"
@@ -79,6 +79,7 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/sysv_shm.c 232117 2012-02-24 17:50:23Z alc
 #include <sys/mutex.h>
 #include <sys/racct.h>
 #include <sys/resourcevar.h>
+#include <sys/rwlock.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/syscallsubr.h>
@@ -412,8 +413,8 @@ kern_shmat(td, shmid, shmaddr, shmflg)
 
 	vm_object_reference(shmseg->object);
 	rv = vm_map_find(&p->p_vmspace->vm_map, shmseg->object,
-	    0, &attach_va, size, (flags & MAP_FIXED) ? VMFS_NO_SPACE :
-	    VMFS_ANY_SPACE, prot, prot, MAP_INHERIT_SHARE);
+	    0, &attach_va, size, 0, (flags & MAP_FIXED) ? VMFS_NO_SPACE :
+	    VMFS_OPTIMAL_SPACE, prot, prot, MAP_INHERIT_SHARE);
 	if (rv != KERN_SUCCESS) {
 		vm_object_deallocate(shmseg->object);
 		error = ENOMEM;
@@ -707,10 +708,10 @@ shmget_allocate_segment(td, uap, mode)
 #endif
 		return (ENOMEM);
 	}
-	VM_OBJECT_LOCK(shm_object);
+	VM_OBJECT_WLOCK(shm_object);
 	vm_object_clear_flag(shm_object, OBJ_ONEMAPPING);
 	vm_object_set_flag(shm_object, OBJ_NOSPLIT);
-	VM_OBJECT_UNLOCK(shm_object);
+	VM_OBJECT_WUNLOCK(shm_object);
 
 	shmseg->object = shm_object;
 	shmseg->u.shm_perm.cuid = shmseg->u.shm_perm.uid = cred->cr_uid;
@@ -889,14 +890,14 @@ shminit()
 		printf("kern.ipc.shmmaxpgs is now called kern.ipc.shmall!\n");
 #endif
 	TUNABLE_ULONG_FETCH("kern.ipc.shmall", &shminfo.shmall);
-
-	/* Initialize shmmax dealing with possible overflow. */
-	for (i = PAGE_SIZE; i > 0; i--) {
-		shminfo.shmmax = shminfo.shmall * i;
-		if (shminfo.shmmax >= shminfo.shmall)
-			break;
+	if (!TUNABLE_ULONG_FETCH("kern.ipc.shmmax", &shminfo.shmmax)) {
+		/* Initialize shmmax dealing with possible overflow. */
+		for (i = PAGE_SIZE; i > 0; i--) {
+			shminfo.shmmax = shminfo.shmall * i;
+			if (shminfo.shmmax >= shminfo.shmall)
+				break;
+		}
 	}
-
 	TUNABLE_ULONG_FETCH("kern.ipc.shmmin", &shminfo.shmmin);
 	TUNABLE_ULONG_FETCH("kern.ipc.shmmni", &shminfo.shmmni);
 	TUNABLE_ULONG_FETCH("kern.ipc.shmseg", &shminfo.shmseg);

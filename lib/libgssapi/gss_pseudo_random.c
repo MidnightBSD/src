@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2007 Kungliga Tekniska Högskolan
+/*-
+ * Copyright (c) 2007 Kungliga Tekniska HÃ¶gskolan
  * (Royal Institute of Technology, Stockholm, Sweden). 
  * All rights reserved. 
  *
@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  */
-/* $FreeBSD: stable/9/lib/libgssapi/gss_pseudo_random.c 178828 2008-05-07 13:53:12Z dfr $ */
+/* $FreeBSD: release/10.0.0/lib/libgssapi/gss_pseudo_random.c 229784 2012-01-07 16:13:56Z uqs $ */
 /* $Id: gss_pseudo_random.c 20053 2007-01-24 01:31:35Z lha $ */
 
 #include <gssapi/gssapi.h>

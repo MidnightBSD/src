@@ -1,5 +1,5 @@
-/* $OpenBSD: kex.h,v 1.52 2010/09/22 05:01:29 djm Exp $ */
-/* $FreeBSD: stable/9/crypto/openssh/kex.h 224640 2011-08-03 20:00:36Z brooks $ */
+/* $OpenBSD: kex.h,v 1.56 2013/07/19 07:37:48 markus Exp $ */
+/* $FreeBSD: release/10.0.0/crypto/openssh/kex.h 255767 2013-09-21 21:36:09Z des $ */
 
 /*
  * Copyright (c) 2000, 2001 Markus Friedl.  All rights reserved.
@@ -41,8 +41,9 @@
 #define	KEX_DHGEX_SHA1		"diffie-hellman-group-exchange-sha1"
 #define	KEX_DHGEX_SHA256	"diffie-hellman-group-exchange-sha256"
 #define	KEX_RESUME		"resume@appgate.com"
-/* The following represents the family of ECDH methods */
-#define	KEX_ECDH_SHA2_STEM	"ecdh-sha2-"
+#define	KEX_ECDH_SHA2_NISTP256	"ecdh-sha2-nistp256"
+#define	KEX_ECDH_SHA2_NISTP384	"ecdh-sha2-nistp384"
+#define	KEX_ECDH_SHA2_NISTP521	"ecdh-sha2-nistp521"
 
 #define COMP_NONE	0
 #define COMP_ZLIB	1
@@ -87,9 +88,10 @@ typedef struct Newkeys Newkeys;
 
 struct Enc {
 	char	*name;
-	Cipher	*cipher;
+	const Cipher *cipher;
 	int	enabled;
 	u_int	key_len;
+	u_int	iv_len;
 	u_int	block_size;
 	u_char	*key;
 	u_char	*iv;
@@ -101,6 +103,7 @@ struct Mac {
 	u_char	*key;
 	u_int	key_len;
 	int	type;
+	int	etm;		/* Encrypt-then-MAC */
 	const EVP_MD	*evp_md;
 	HMAC_CTX	evp_ctx;
 	struct umac_ctx *umac_ctx;
@@ -130,16 +133,19 @@ struct Kex {
 	sig_atomic_t done;
 	int	flags;
 	const EVP_MD *evp_md;
+	int	ec_nid;
 	char	*client_version_string;
 	char	*server_version_string;
 	int	(*verify_host_key)(Key *);
 	Key	*(*load_host_public_key)(int);
 	Key	*(*load_host_private_key)(int);
 	int	(*host_key_index)(Key *);
+	void    (*sign)(Key *, Key *, u_char **, u_int *, u_char *, u_int);
 	void	(*kex[KEX_MAX])(Kex *);
 };
 
 int	 kex_names_valid(const char *);
+char	*kex_alg_list(void);
 
 #ifdef	NONE_CIPHER_ENABLED
 void	 kex_prop2buf(Buffer *, char *[PROPOSAL_MAX]);
@@ -173,11 +179,6 @@ void
 kex_ecdh_hash(const EVP_MD *, const EC_GROUP *, char *, char *, char *, int,
     char *, int, u_char *, int, const EC_POINT *, const EC_POINT *,
     const BIGNUM *, u_char **, u_int *);
-int	kex_ecdh_name_to_nid(const char *);
-const EVP_MD *kex_ecdh_name_to_evpmd(const char *);
-#else
-# define kex_ecdh_name_to_nid(x) (-1)
-# define kex_ecdh_name_to_evpmd(x) (NULL)
 #endif
 
 void

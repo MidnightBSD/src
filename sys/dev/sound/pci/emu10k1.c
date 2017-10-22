@@ -41,7 +41,7 @@
 #include <dev/sound/midi/mpu401.h>
 #include "mpufoi_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pci/emu10k1.c 230962 2012-02-03 22:06:27Z pfg $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/emu10k1.c 254263 2013-08-12 23:30:01Z scottl $");
 
 /* -------------------------------------------------------------------- */
 
@@ -2067,7 +2067,6 @@ emu_pci_attach(device_t dev)
 {
 	struct ac97_info *codec = NULL;
 	struct sc_info *sc;
-	u_int32_t data;
 	int i, gotmic;
 	char status[SND_STATUSLEN];
 
@@ -2081,10 +2080,7 @@ emu_pci_attach(device_t dev)
 	sc->nchans = sc->audigy ? 8 : 4;
 	sc->addrmask = sc->audigy ? EMU_A_PTR_ADDR_MASK : EMU_PTR_ADDR_MASK;
 
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= (PCIM_CMD_PORTEN | PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
+	pci_enable_busmaster(dev);
 
 	i = PCIR_BAR(0);
 	sc->reg = bus_alloc_resource_any(dev, SYS_RES_IOPORT, &i, RF_ACTIVE);

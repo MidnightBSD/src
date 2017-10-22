@@ -28,7 +28,7 @@
  *
  *	@(#)radix.c	8.4 (Berkeley) 11/2/94
  *
- * $FreeBSD: stable/9/sbin/routed/radix.c 190718 2009-04-05 17:33:07Z phk $
+ * $FreeBSD: release/10.0.0/sbin/routed/radix.c 229778 2012-01-07 16:09:33Z uqs $
  */
 
 /*
@@ -40,7 +40,7 @@
 #ifdef __NetBSD__
 __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
-__RCSID("$FreeBSD: stable/9/sbin/routed/radix.c 190718 2009-04-05 17:33:07Z phk $");
+__RCSID("$FreeBSD: release/10.0.0/sbin/routed/radix.c 229778 2012-01-07 16:09:33Z uqs $");
 #else
 __RCSID("$Revision: 2.23 $");
 #ident "$Revision: 2.23 $"
@@ -97,7 +97,7 @@ static struct radix_node *rn_match(void *v_arg, struct radix_node_head *head);
  * node as high in the tree as we can go.
  *
  * The present version of the code makes use of normal routes in short-
- * circuiting an explict mask and compare operation when testing whether
+ * circuiting an explicit mask and compare operation when testing whether
  * a key satisfies a normal route, and also in remembering the unique leaf
  * that governs a subtree.
  */
@@ -247,7 +247,7 @@ rn_match(void *v_arg,
 	 *
 	 * In this case, we have a complete match of the key.  Unless
 	 * the node is one of the roots, we are finished.
-	 * If it is the zeros root, then take what we have, prefering
+	 * If it is the zeros root, then take what we have, preferring
 	 * any real data.
 	 * If it is the ones root, then pretend the target key was followed
 	 * by a byte of zeros.

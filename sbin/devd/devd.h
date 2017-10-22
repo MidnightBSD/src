@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/devd/devd.h 147874 2005-07-10 03:37:15Z imp $
+ * $FreeBSD: release/10.0.0/sbin/devd/devd.h 249951 2013-04-26 19:49:37Z asomers $
  */
 
 #ifndef DEVD_H
@@ -53,6 +53,6 @@ int  yyparse(void);
 __END_DECLS
 
 #define PATH_DEVCTL	"/dev/devctl"
-#define DEVCTL_MAXBUF	1025
+#define DEVCTL_MAXBUF	8192
 
 #endif /* DEVD_H */

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/cddl/usr.bin/sgsmsg/Makefile 204597 2010-03-02 19:04:07Z uqs $
+# $FreeBSD: release/10.0.0/cddl/usr.bin/sgsmsg/Makefile 204597 2010-03-02 19:04:07Z uqs $
 
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/cmd/sgs/tools/common
 .PATH: ${.CURDIR}/../../../sys/cddl/contrib/opensolaris/common/avl

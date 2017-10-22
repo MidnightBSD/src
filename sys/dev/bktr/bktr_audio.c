@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/bktr/bktr_audio.c 146734 2005-05-29 04:42:30Z nyan $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/bktr/bktr_audio.c 242692 2012-11-07 07:00:59Z kevlo $");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -498,7 +498,7 @@ void msp_autodetect( bktr_ptr_t bktr ) {
   }
 
 
-  /* MSP3415D SPECIAL CASE Use the Tuner's Mono audio ouput for the MSP */
+  /* MSP3415D SPECIAL CASE Use the Tuner's Mono audio output for the MSP */
   /* (for Hauppauge 44xxx card with Tuner Type 0x2a) */
   else if (  ( (strncmp("3415D", bktr->msp_version_string, 5) == 0)
                &&(bktr->msp_use_mono_source == 1)

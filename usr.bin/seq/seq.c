@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/seq/seq.c 215034 2010-11-09 10:59:09Z brucec $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/seq/seq.c 227182 2011-11-06 08:17:05Z ed $");
 
 #include <ctype.h>
 #include <err.h>
@@ -51,20 +51,19 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/seq/seq.c 215034 2010-11-09 10:59:09Z bruce
 
 /* Globals */
 
-const char *decimal_point = ".";	/* default */
-char default_format[] = { "%g" };	/* default */
+static const char *decimal_point = ".";	/* default */
+static char default_format[] = { "%g" };	/* default */
 
 /* Prototypes */
 
-double e_atof(const char *);
+static double e_atof(const char *);
 
-int decimal_places(const char *);
-int main(int, char *[]);
-int numeric(const char *);
-int valid_format(const char *);
+static int decimal_places(const char *);
+static int numeric(const char *);
+static int valid_format(const char *);
 
-char *generate_format(double, double, double, int, char);
-char *unescape(char *);
+static char *generate_format(double, double, double, int, char);
+static char *unescape(char *);
 
 /*
  * The seq command will print out a numeric sequence from 1, the default,
@@ -186,7 +185,7 @@ main(int argc, char *argv[])
 /*
  * numeric - verify that string is numeric
  */
-int
+static int
 numeric(const char *s)
 {
 	int seen_decimal_pt, decimal_pt_len;
@@ -223,7 +222,7 @@ numeric(const char *s)
 /*
  * valid_format - validate user specified format string
  */
-int
+static int
 valid_format(const char *fmt)
 {
 	int conversions = 0;
@@ -268,7 +267,7 @@ valid_format(const char *fmt)
 /*
  * unescape - handle C escapes in a string
  */
-char *
+static char *
 unescape(char *orig)
 {
 	char c, *cp, *new = orig;
@@ -358,7 +357,7 @@ unescape(char *orig)
  *	exit if string is not a valid double, or if converted value would
  *	cause overflow or underflow
  */
-double
+static double
 e_atof(const char *num)
 {
 	char *endp;
@@ -383,7 +382,7 @@ e_atof(const char *num)
 /*
  * decimal_places - count decimal places in a number (string)
  */
-int
+static int
 decimal_places(const char *number)
 {
 	int places = 0;
@@ -405,7 +404,7 @@ decimal_places(const char *number)
  * XXX to be bug for bug compatible with Plan9 and GNU return "%g"
  * when "%g" prints as "%e" (this way no width adjustments are made)
  */
-char *
+static char *
 generate_format(double first, double incr, double last, int equalize, char pad)
 {
 	static char buf[256];

@@ -1,5 +1,5 @@
 /*
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/create/pl.c 222035 2011-05-17 19:11:47Z flz $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg_install/create/pl.c 252363 2013-06-29 00:37:49Z obrien $");
 
 #include "lib.h"
 #include "create.h"
@@ -140,7 +140,8 @@ copy_plist(const char *home, Package *plist)
     const char *there = NULL, *mythere;
     char *where_args, *prefix = NULL;
     const char *last_chdir, *root = "/";
-    int maxargs, where_count = 0, add_count;
+    long maxargs;
+    int where_count = 0, add_count;
     struct stat stb;
     dev_t curdir;
 

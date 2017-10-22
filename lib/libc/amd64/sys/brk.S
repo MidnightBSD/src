@@ -34,7 +34,7 @@
 	.asciz "@(#)brk.s	5.2 (Berkeley) 12/17/90"
 #endif /* SYSLIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/amd64/sys/brk.S 217106 2011-01-07 16:08:40Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/amd64/sys/brk.S 240178 2012-09-06 20:59:49Z jilles $");
 
 #include "SYS.h"
 
@@ -76,12 +76,7 @@ ok:
 	ret
 err:
 	addq	$8, %rsp
-#ifdef PIC
-	movq	PIC_GOT(HIDENAME(cerror)),%rdx
-	jmp	*%rdx
-#else
 	jmp	HIDENAME(cerror)
-#endif
 END(brk)
 
 	.section .note.GNU-stack,"",%progbits

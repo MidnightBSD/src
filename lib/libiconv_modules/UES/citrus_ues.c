@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libiconv_modules/UES/citrus_ues.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libiconv_modules/UES/citrus_ues.c 252583 2013-07-03 18:27:45Z peter $ */
 /* $NetBSD: citrus_ues.c,v 1.1 2006/11/13 15:16:31 tnozaki Exp $ */
 
 /*-
@@ -183,10 +183,10 @@ is_basic(wchar_t wc)
 
 static int
 _citrus_UES_mbrtowc_priv(_UESEncodingInfo * __restrict ei,
-    wchar_t * __restrict pwc, char ** __restrict s, size_t n,
+    wchar_t * __restrict pwc, const char ** __restrict s, size_t n,
     _UESState * __restrict psenc, size_t * __restrict nresult)
 {
-	char *s0;
+	const char *s0;
 	int ch, head, num, tail;
 	wchar_t hi, wc;
 

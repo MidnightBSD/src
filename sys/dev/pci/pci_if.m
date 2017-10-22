@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/sys/dev/pci/pci_if.m 169221 2007-05-02 17:50:36Z jhb $
+# $FreeBSD: release/10.0.0/sys/dev/pci/pci_if.m 232472 2012-03-03 18:08:57Z jhb $
 #
 
 #include <sys/bus.h>
@@ -105,7 +105,21 @@ METHOD int assign_interrupt {
 	device_t	child;
 };
 
+METHOD int find_cap {
+	device_t	dev;
+	device_t	child;
+	int		capability;
+	int		*capreg;
+};
+
 METHOD int find_extcap {
+	device_t	dev;
+	device_t	child;
+	int		capability;
+	int		*capreg;
+};
+
+METHOD int find_htcap {
 	device_t	dev;
 	device_t	child;
 	int		capability;

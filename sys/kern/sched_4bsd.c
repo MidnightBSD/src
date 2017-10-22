@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/sched_4bsd.c 249444 2013-04-13 21:04:06Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/sched_4bsd.c 253604 2013-07-24 09:45:31Z avg $");
 
 #include "opt_hwpmc_hooks.h"
 #include "opt_sched.h"
@@ -143,7 +143,7 @@ static struct kproc_desc sched_kp = {
         schedcpu_thread,
         NULL
 };
-SYSINIT(schedcpu, SI_SUB_RUN_SCHEDULER, SI_ORDER_FIRST, kproc_start,
+SYSINIT(schedcpu, SI_SUB_LAST, SI_ORDER_FIRST, kproc_start,
     &sched_kp);
 SYSINIT(sched_setup, SI_SUB_RUN_QUEUE, SI_ORDER_FIRST, sched_setup, NULL);
 
@@ -1632,6 +1632,7 @@ sched_idletd(void *dummy)
 {
 	struct pcpuidlestat *stat;
 
+	THREAD_NO_SLEEPING();
 	stat = DPCPU_PTR(idlestat);
 	for (;;) {
 		mtx_assert(&Giant, MA_NOTOWNED);

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/crunch/examples/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD: release/10.0.0/usr.sbin/crunch/examples/Makefile 241298 2012-10-06 20:01:05Z marcel $
 
 CRUNCHED=	fixit
 
@@ -19,14 +19,14 @@ all: $(CRUNCHED)
 exe: $(CRUNCHED)
 
 $(OUTPUTS): $(CONF)
-	crunchgen ${.CURDIR}/$(CONF)
+	MAKE=${MAKE} crunchgen ${.CURDIR}/$(CONF)
 
 $(CRUNCHED): $(OUTPUTS) submake
 
 submake:
-	make -f $(OUTMK)
+	${MAKE} -f $(OUTMK)
 objs:
-	make -f $(OUTMK) objs
+	${MAKE} -f $(OUTMK) objs
 cleandir:
 	rm -f $(CLEANDIRFILES)
 

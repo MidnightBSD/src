@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/libexec/tftpd/tftp-utils.c 247638 2013-03-02 16:38:58Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/libexec/tftpd/tftp-utils.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include <sys/socket.h>
 #include <sys/stat.h>

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/sound/midi/sequencer.c 194990 2009-06-25 18:46:30Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/sound/midi/sequencer.c 194990 2009-06-25 18:46:30Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

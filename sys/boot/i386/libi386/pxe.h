@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/boot/i386/libi386/pxe.h 103870 2002-09-23 18:54:32Z alfred $
+ * $FreeBSD: release/10.0.0/sys/boot/i386/libi386/pxe.h 240421 2012-09-12 21:00:37Z mav $
  */
 
 /*
@@ -51,15 +51,6 @@
 #define	PACKED		__packed
 
 #define	S_SIZE(s)	s, sizeof(s) - 1
-
-#define	IP_STR		"%d.%d.%d.%d"
-#define	IP_ARGS(ip)					\
-	(int)(ip >> 24) & 0xff, (int)(ip >> 16) & 0xff, \
-	(int)(ip >> 8) & 0xff, (int)ip & 0xff
-
-#define	MAC_STR		"%02x:%02x:%02x:%02x:%02x:%02x"
-#define	MAC_ARGS(mac)					\
-	mac[0], mac[1], mac[2], mac[3], mac[4], mac[5] 
 
 #define	PXENFSROOTPATH	"/pxeroot"
 

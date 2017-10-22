@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/i80321/i80321_timer.c 197733 2009-10-03 13:59:15Z rpaulo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/i80321/i80321_timer.c 236987 2012-06-13 04:38:09Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -62,7 +62,7 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/xscale/i80321/i80321_timer.c 197733 2009-10
 #include <arm/xscale/i80321/i80321var.h>
 
 #ifdef CPU_XSCALE_81342
-#define ICU_INT_TIMER0	(8) /* XXX: Can't include i81342reg.h because 
+#define ICU_INT_TIMER0	(8) /* XXX: Can't include i81342reg.h because
 			       definitions overrides the ones from i80321reg.h
 			       */
 #endif
@@ -79,7 +79,7 @@ static unsigned i80321_timer_get_timecount(struct timecounter *tc);
 
 static uint32_t counts_per_hz;
 
-#if defined(XSCALE_DISABLE_CCNT) || defined(CPU_XSCALE_81342) 
+#if defined(XSCALE_DISABLE_CCNT) || defined(CPU_XSCALE_81342)
 static uint32_t offset;
 static uint32_t last = -1;
 #endif
@@ -383,17 +383,17 @@ cpu_initclocks(void)
 
 	oldirqstate = disable_interrupts(I32_bit);
 
-	irq = bus_alloc_resource(dev, SYS_RES_IRQ, &rid, 
+	irq = bus_alloc_resource(dev, SYS_RES_IRQ, &rid,
 #ifdef CPU_XSCALE_81342
 	    ICU_INT_TIMER0, ICU_INT_TIMER0,
 #else
-	    ICU_INT_TMR0, ICU_INT_TMR0, 
+	    ICU_INT_TMR0, ICU_INT_TMR0,
 #endif
 	    1, RF_ACTIVE);
 	if (!irq)
 		panic("Unable to setup the clock irq handler.\n");
 	else
-		bus_setup_intr(dev, irq, INTR_TYPE_CLK, clockhandler, NULL, 
+		bus_setup_intr(dev, irq, INTR_TYPE_CLK, clockhandler, NULL,
 		    NULL, &ihl);
 	tmr0_write(0);			/* stop timer */
 	tisr_write(TISR_TMR0);		/* clear interrupt */

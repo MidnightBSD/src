@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: stable/9/contrib/tcpdump/print-nfs.c 214478 2010-10-28 19:06:17Z rpaulo $
+ * $FreeBSD: release/10.0.0/contrib/tcpdump/print-nfs.c 214478 2010-10-28 19:06:17Z rpaulo $
  */
 
 #ifndef lint

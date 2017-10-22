@@ -36,12 +36,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/udp_usrreq.c 243586 2012-11-27 01:59:51Z ae $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/udp_usrreq.c 254893 2013-08-26 00:28:57Z markj $");
 
 #include "opt_ipfw.h"
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ipsec.h"
+#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/domain.h>
@@ -54,6 +55,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/udp_usrreq.c 243586 2012-11-27 01:59:51
 #include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/protosw.h>
+#include <sys/sdt.h>
 #include <sys/signalvar.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
@@ -68,6 +70,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/udp_usrreq.c 243586 2012-11-27 01:59:51
 #include <net/route.h>
 
 #include <netinet/in.h>
+#include <netinet/in_kdtrace.h>
 #include <netinet/in_pcb.h>
 #include <netinet/in_systm.h>
 #include <netinet/in_var.h>
@@ -143,11 +146,14 @@ static VNET_DEFINE(uma_zone_t, udpcb_zone);
 #define	UDBHASHSIZE	128
 #endif
 
-VNET_DEFINE(struct udpstat, udpstat);		/* from udp_var.h */
-SYSCTL_VNET_STRUCT(_net_inet_udp, UDPCTL_STATS, stats, CTLFLAG_RW,
-    &VNET_NAME(udpstat), udpstat,
-    "UDP statistics (struct udpstat, netinet/udp_var.h)");
+VNET_PCPUSTAT_DEFINE(struct udpstat, udpstat);		/* from udp_var.h */
+VNET_PCPUSTAT_SYSINIT(udpstat);
+SYSCTL_VNET_PCPUSTAT(_net_inet_udp, UDPCTL_STATS, stats, struct udpstat,
+    udpstat, "UDP statistics (struct udpstat, netinet/udp_var.h)");
 
+#ifdef VIMAGE
+VNET_PCPUSTAT_SYSUNINIT(udpstat);
+#endif /* VIMAGE */
 #ifdef INET
 static void	udp_detach(struct socket *so);
 static int	udp_output(struct inpcb *, struct mbuf *, struct sockaddr *,
@@ -191,6 +197,7 @@ udp_init(void)
 	V_udpcb_zone = uma_zcreate("udpcb", sizeof(struct udpcb),
 	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, UMA_ZONE_NOFREE);
 	uma_zone_set_max(V_udpcb_zone, maxsockets);
+	uma_zone_set_warning(V_udpcb_zone, "kern.ipc.maxsockets limit reached");
 	EVENTHANDLER_REGISTER(maxsockets_change, udp_zone_change, NULL,
 	    EVENTHANDLER_PRI_ANY);
 }
@@ -206,7 +213,7 @@ void
 kmod_udpstat_inc(int statnum)
 {
 
-	(*((u_long *)&V_udpstat + statnum))++;
+	counter_u64_add(VNET(udpstat)[statnum], 1);
 }
 
 int
@@ -278,7 +285,7 @@ udp_append(struct inpcb *inp, struct ip *ip, struct mbuf *n, int off,
 	/* Check AH/ESP integrity. */
 	if (ipsec4_in_reject(n, inp)) {
 		m_freem(n);
-		V_ipsec4stat.in_polvio++;
+		IPSECSTAT_INC(ips_in_polvio);
 		return;
 	}
 #ifdef IPSEC_NAT_T
@@ -338,7 +345,7 @@ udp_input(struct mbuf *m, int off)
 	struct udphdr *uh;
 	struct ifnet *ifp;
 	struct inpcb *inp;
-	int len;
+	uint16_t len, ip_len;
 	struct ip save_ip;
 	struct sockaddr_in udp_in;
 	struct m_tag *fwd_tag;
@@ -352,7 +359,7 @@ udp_input(struct mbuf *m, int off)
 	 * check the checksum with options still present.
 	 */
 	if (iphlen > sizeof (struct ip)) {
-		ip_stripoptions(m, (struct mbuf *)0);
+		ip_stripoptions(m);
 		iphlen = sizeof(struct ip);
 	}
 
@@ -390,13 +397,13 @@ udp_input(struct mbuf *m, int off)
 	 * reflect UDP length, drop.
 	 */
 	len = ntohs((u_short)uh->uh_ulen);
-	if (ip->ip_len != len) {
-		if (len > ip->ip_len || len < sizeof(struct udphdr)) {
+	ip_len = ntohs(ip->ip_len) - iphlen;
+	if (ip_len != len) {
+		if (len > ip_len || len < sizeof(struct udphdr)) {
 			UDPSTAT_INC(udps_badlen);
 			goto badunlocked;
 		}
-		m_adj(m, len - ip->ip_len);
-		/* ip->ip_len = len; */
+		m_adj(m, len - ip_len);
 	}
 
 	/*
@@ -599,7 +606,6 @@ udp_input(struct mbuf *m, int off)
 		if (badport_bandlim(BANDLIM_ICMP_UNREACH) < 0)
 			goto badunlocked;
 		*ip = save_ip;
-		ip->ip_len += iphlen;
 		icmp_error(m, ICMP_UNREACH, ICMP_UNREACH_PORT, 0, 0);
 		return;
 	}
@@ -613,6 +619,8 @@ udp_input(struct mbuf *m, int off)
 		m_freem(m);
 		return;
 	}
+
+	UDP_PROBE(receive, NULL, inp, ip, inp, uh);
 	udp_append(inp, ip, m, iphlen, &udp_in);
 	INP_RUNLOCK(inp);
 	return;
@@ -1175,7 +1183,7 @@ udp_output(struct inpcb *inp, struct mbuf *m, struct sockaddr *addr,
 	 * link-layer headers.  Immediate slide the data pointer back forward
 	 * since we won't use that space at this layer.
 	 */
-	M_PREPEND(m, sizeof(struct udpiphdr) + max_linkhdr, M_DONTWAIT);
+	M_PREPEND(m, sizeof(struct udpiphdr) + max_linkhdr, M_NOWAIT);
 	if (m == NULL) {
 		error = ENOBUFS;
 		goto release;
@@ -1190,6 +1198,7 @@ udp_output(struct inpcb *inp, struct mbuf *m, struct sockaddr *addr,
 	 */
 	ui = mtod(m, struct udpiphdr *);
 	bzero(ui->ui_x1, sizeof(ui->ui_x1));	/* XXX still needed? */
+	ui->ui_v = IPVERSION << 4;
 	ui->ui_pr = IPPROTO_UDP;
 	ui->ui_src = laddr;
 	ui->ui_dst = faddr;
@@ -1204,7 +1213,7 @@ udp_output(struct inpcb *inp, struct mbuf *m, struct sockaddr *addr,
 		struct ip *ip;
 
 		ip = (struct ip *)&ui->ui_i;
-		ip->ip_off |= IP_DF;
+		ip->ip_off |= htons(IP_DF);
 	}
 
 	ipflags = 0;
@@ -1231,7 +1240,7 @@ udp_output(struct inpcb *inp, struct mbuf *m, struct sockaddr *addr,
 		m->m_pkthdr.csum_data = offsetof(struct udphdr, uh_sum);
 	} else
 		ui->ui_sum = 0;
-	((struct ip *)ui)->ip_len = sizeof (struct udpiphdr) + len;
+	((struct ip *)ui)->ip_len = htons(sizeof(struct udpiphdr) + len);
 	((struct ip *)ui)->ip_ttl = inp->inp_ip_ttl;	/* XXX */
 	((struct ip *)ui)->ip_tos = tos;		/* XXX */
 	UDPSTAT_INC(udps_opackets);
@@ -1240,6 +1249,7 @@ udp_output(struct inpcb *inp, struct mbuf *m, struct sockaddr *addr,
 		INP_HASH_WUNLOCK(&V_udbinfo);
 	else if (unlock_udbinfo == UH_RLOCKED)
 		INP_HASH_RUNLOCK(&V_udbinfo);
+	UDP_PROBE(send, NULL, inp, &ui->ui_i, inp, &ui->ui_u);
 	error = ip_output(m, inp->inp_options, NULL, ipflags,
 	    inp->inp_moptions, inp);
 	if (unlock_udbinfo == UH_WLOCKED)
@@ -1291,7 +1301,7 @@ udp4_espdecap(struct inpcb *inp, struct mbuf *m, int off)
 	if (minlen > m->m_pkthdr.len)
 		minlen = m->m_pkthdr.len;
 	if ((m = m_pullup(m, minlen)) == NULL) {
-		V_ipsec4stat.in_inval++;
+		IPSECSTAT_INC(ips_in_inval);
 		return (NULL);		/* Bypass caller processing. */
 	}
 	data = mtod(m, caddr_t);	/* Points to ip header. */
@@ -1331,7 +1341,7 @@ udp4_espdecap(struct inpcb *inp, struct mbuf *m, int off)
 		uint32_t spi;
 
 		if (payload <= sizeof(struct esp)) {
-			V_ipsec4stat.in_inval++;
+			IPSECSTAT_INC(ips_in_inval);
 			m_freem(m);
 			return (NULL);	/* Discard. */
 		}
@@ -1352,7 +1362,7 @@ udp4_espdecap(struct inpcb *inp, struct mbuf *m, int off)
 	tag = m_tag_get(PACKET_TAG_IPSEC_NAT_T_PORTS,
 		2 * sizeof(uint16_t), M_NOWAIT);
 	if (tag == NULL) {
-		V_ipsec4stat.in_nomem++;
+		IPSECSTAT_INC(ips_in_nomem);
 		m_freem(m);
 		return (NULL);		/* Discard. */
 	}
@@ -1381,7 +1391,7 @@ udp4_espdecap(struct inpcb *inp, struct mbuf *m, int off)
 	m_adj(m, skip);
 
 	ip = mtod(m, struct ip *);
-	ip->ip_len -= skip;
+	ip->ip_len = htons(ntohs(ip->ip_len) - skip);
 	ip->ip_p = IPPROTO_ESP;
 
 	/*

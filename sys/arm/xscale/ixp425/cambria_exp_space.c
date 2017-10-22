@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/cambria_exp_space.c 194753 2009-06-23 19:29:23Z sam $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/cambria_exp_space.c 236987 2012-06-13 04:38:09Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -249,7 +249,7 @@ cambria_exp_bus_init(struct ixp425_softc *sc)
 	cs3 = EXP_BUS_READ_4(sc, EXP_TIMING_CS3_OFFSET);
 	/* XXX force slowest possible timings and byte mode */
 	EXP_BUS_WRITE_4(sc, EXP_TIMING_CS3_OFFSET,
-	    cs3 | (EXP_T1|EXP_T2|EXP_T3|EXP_T4|EXP_T5) | 
+	    cs3 | (EXP_T1|EXP_T2|EXP_T3|EXP_T4|EXP_T5) |
 	        EXP_BYTE_EN | EXP_WR_EN | EXP_BYTE_RD16 | EXP_CS_EN);
 
 	/* XXX force GPIO 3+4 for GPS+RS485 uarts */

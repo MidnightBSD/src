@@ -1,9 +1,9 @@
-# $FreeBSD: stable/9/sys/boot/userboot/userboot/Makefile 243243 2012-11-18 17:09:29Z ae $
+# $FreeBSD: release/10.0.0/sys/boot/userboot/userboot/Makefile 255944 2013-09-29 20:20:17Z bdrewery $
 
 NO_MAN=
-WITHOUT_SSP=
 
 .include <bsd.own.mk>
+MK_SSP=		no
 
 SHLIB_NAME=	userboot.so
 NO_CTF=		yes
@@ -45,6 +45,7 @@ CLEANFILES=	vers.c
 .if ${MK_FORTH} != "no"
 BOOT_FORTH=	yes
 CFLAGS+=        -DBOOT_FORTH -I${.CURDIR}/../../ficl -I${.CURDIR}/../../ficl/i386
+CFLAGS+=	-DBF_DICTSIZE=15000
 LIBFICL=	${.OBJDIR}/../ficl/libficl.a
 LIBSTAND=	${.OBJDIR}/../libstand/libstand.a
 .endif

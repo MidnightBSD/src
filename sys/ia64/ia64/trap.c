@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ia64/ia64/trap.c 225474 2011-09-11 16:05:09Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ia64/ia64/trap.c 240244 2012-09-08 18:27:11Z attilio $");
 
 #include "opt_ddb.h"
 
@@ -841,7 +841,6 @@ trap(int vector, struct trapframe *tf)
 out:
 	if (user) {
 		userret(td, tf);
-		mtx_assert(&Giant, MA_NOTOWNED);
 		do_ast(tf);
 	}
 	return;

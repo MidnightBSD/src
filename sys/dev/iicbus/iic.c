@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/iicbus/iic.c 226667 2011-10-23 18:20:51Z brueffer $
+ * $FreeBSD: release/10.0.0/sys/dev/iicbus/iic.c 242947 2012-11-13 05:58:52Z kevlo $
  *
  */
 #include <sys/param.h>
@@ -221,7 +221,11 @@ iicwrite(struct cdev *dev, struct uio * uio, int ioflag)
 	}
 
 	count = min(uio->uio_resid, BUFSIZE);
-	uiomove(sc->sc_buffer, count, uio);
+	error = uiomove(sc->sc_buffer, count, uio);
+	if (error) {
+		IIC_UNLOCK(sc);
+		return (error);
+	}
 
 	error = iicbus_block_write(device_get_parent(iicdev), sc->sc_addr,
 					sc->sc_buffer, count, &sent);

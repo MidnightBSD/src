@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/kbdmap/kbdmap.c 237421 2012-06-22 05:40:14Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/kbdmap/kbdmap.c 237257 2012-06-19 06:10:31Z eadler $");
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -544,7 +544,7 @@ check_file(const char *keym)
 }
 
 /*
- * Read options from the relevent configuration file, then
+ * Read options from the relevant configuration file, then
  *  present to user.
  */
 static void

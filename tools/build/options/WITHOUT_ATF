@@ -1,0 +1,2 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_ATF 241823 2012-10-22 01:18:41Z marcel $
+Set to not build programs and libraries related to the ATF testing framework.

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *      $FreeBSD: stable/9/sys/sys/sbuf.h 221993 2011-05-16 16:18:40Z phk $
+ *      $FreeBSD: release/10.0.0/sys/sys/sbuf.h 249377 2013-04-11 19:49:18Z trociny $
  */
 
 #ifndef _SYS_SBUF_H_
@@ -52,7 +52,9 @@ struct sbuf {
 #define	SBUF_DYNAMIC	0x00010000	/* s_buf must be freed */
 #define	SBUF_FINISHED	0x00020000	/* set by sbuf_finish() */
 #define	SBUF_DYNSTRUCT	0x00080000	/* sbuf must be freed */
+#define	SBUF_INSECTION	0x00100000	/* set by sbuf_start_section() */
 	int		 s_flags;	/* flags */
+	ssize_t		 s_sect_len;	/* current length of section */
 };
 
 __BEGIN_DECLS
@@ -81,6 +83,8 @@ char		*sbuf_data(struct sbuf *);
 ssize_t		 sbuf_len(struct sbuf *);
 int		 sbuf_done(const struct sbuf *);
 void		 sbuf_delete(struct sbuf *);
+void		 sbuf_start_section(struct sbuf *, ssize_t *);
+ssize_t		 sbuf_end_section(struct sbuf *, ssize_t, size_t, int);
 
 #ifdef _KERNEL
 struct uio;

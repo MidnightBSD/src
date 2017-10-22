@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)exec.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: stable/9/sys/sys/imgact_aout.h 204552 2010-03-02 06:58:58Z alfred $
+ * $FreeBSD: release/10.0.0/sys/sys/imgact_aout.h 237695 2012-06-28 07:37:46Z imp $
  */
 
 #ifndef	_IMGACT_AOUT_H_
@@ -119,7 +119,7 @@ struct exec {
      uint32_t	a_trsize;	/* text relocation size */
      uint32_t	a_drsize;	/* data relocation size */
 };
-#define a_magic a_midmag /* XXX Hack to work with imgact_{aout,gzip}.c */
+#define a_magic a_midmag	/* Hack for emulators */
 
 /* a_magic */
 #define	OMAGIC		0407	/* old impure format */

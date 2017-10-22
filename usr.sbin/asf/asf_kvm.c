@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/asf/asf_kvm.c 159720 2006-06-18 11:14:40Z yar $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/asf/asf_kvm.c 159720 2006-06-18 11:14:40Z yar $");
 
 #include <sys/types.h>
 #include <sys/param.h>

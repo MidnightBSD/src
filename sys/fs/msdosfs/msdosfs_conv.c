@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/fs/msdosfs/msdosfs_conv.c 230196 2012-01-16 05:15:13Z kevlo $ */
+/* $FreeBSD: release/10.0.0/sys/fs/msdosfs/msdosfs_conv.c 249588 2013-04-17 11:56:11Z gabor $ */
 /*	$NetBSD: msdosfs_conv.c,v 1.25 1997/11/17 15:36:40 ws Exp $	*/
 
 /*-
@@ -774,7 +774,7 @@ winSlotCnt(un, unlen, pmp)
 }
 
 /*
- * Determine the number of bytes neccesary for Win95 names
+ * Determine the number of bytes neccessary for Win95 names
  */
 size_t
 winLenFixup(un, unlen)
@@ -788,7 +788,7 @@ winLenFixup(un, unlen)
 }
 
 /*
- * Store an area with multi byte string instr, and reterns left
+ * Store an area with multi byte string instr, and returns left
  * byte of instr and moves pointer forward. The area's size is
  * inlen or outlen.
  */

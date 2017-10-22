@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/locale/wcstold.c 235785 2012-05-22 14:40:39Z theraven $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/locale/wcstold.c 227753 2011-11-20 14:45:42Z theraven $");
 
 #include <stdlib.h>
 #include <wchar.h>

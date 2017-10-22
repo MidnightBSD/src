@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/isci/scil/scic_sds_stp_request.c 231689 2012-02-14 15:58:49Z jimharris $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/scic_sds_stp_request.c 231137 2012-02-07 17:45:11Z jimharris $");
 
 #include <dev/isci/scil/intel_sat.h>
 #include <dev/isci/scil/intel_sata.h>

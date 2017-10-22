@@ -30,7 +30,7 @@
  *
  *	from: @(#)rpc_msg.h 1.7 86/07/16 SMI
  *	from: @(#)rpc_msg.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: stable/9/sys/rpc/rpc_msg.h 184588 2008-11-03 10:38:00Z dfr $
+ * $FreeBSD: release/10.0.0/sys/rpc/rpc_msg.h 184588 2008-11-03 10:38:00Z dfr $
  */
 
 /*

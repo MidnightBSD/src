@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/amd64/amd64/machdep.c 239945 2012-08-31 11:48:04Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/amd64/machdep.c 258996 2013-12-05 18:08:05Z royger $");
 
 #include "opt_atalk.h"
 #include "opt_atpic.h"
@@ -53,6 +53,7 @@ __FBSDID("$FreeBSD: stable/9/sys/amd64/amd64/machdep.c 239945 2012-08-31 11:48:0
 #include "opt_maxmem.h"
 #include "opt_mp_watchdog.h"
 #include "opt_perfmon.h"
+#include "opt_platform.h"
 #include "opt_sched.h"
 #include "opt_kdtrace.h"
 
@@ -80,6 +81,7 @@ __FBSDID("$FreeBSD: stable/9/sys/amd64/amd64/machdep.c 239945 2012-08-31 11:48:0
 #include <sys/pcpu.h>
 #include <sys/ptrace.h>
 #include <sys/reboot.h>
+#include <sys/rwlock.h>
 #include <sys/sched.h>
 #include <sys/signalvar.h>
 #ifdef SMP
@@ -131,6 +133,9 @@ __FBSDID("$FreeBSD: stable/9/sys/amd64/amd64/machdep.c 239945 2012-08-31 11:48:0
 #include <machine/tss.h>
 #ifdef SMP
 #include <machine/smp.h>
+#endif
+#ifdef FDT
+#include <x86/fdt.h>
 #endif
 
 #ifdef DEV_ATPIC
@@ -251,7 +256,6 @@ cpu_startup(dummy)
 #ifdef PERFMON
 	perfmon_init();
 #endif
-	realmem = Maxmem;
 
 	/*
 	 * Display physical memory if SMBIOS reports reasonable amount.
@@ -265,6 +269,7 @@ cpu_startup(dummy)
 	if (memsize < ptoa((uintmax_t)cnt.v_free_count))
 		memsize = ptoa((uintmax_t)Maxmem);
 	printf("real memory  = %ju (%ju MB)\n", memsize, memsize >> 20);
+	realmem = atop(memsize);
 
 	/*
 	 * Display any holes after the first chunk of extended memory.
@@ -298,11 +303,6 @@ cpu_startup(dummy)
 	vm_pager_bufferinit();
 
 	cpu_setregs();
-
-	/*
-	 * Add BSP as an interrupt target.
-	 */
-	intr_add_cpu(0);
 }
 
 /*
@@ -486,17 +486,7 @@ sys_sigreturn(td, uap)
 	/*
 	 * Don't allow users to change privileged or reserved flags.
 	 */
-	/*
-	 * XXX do allow users to change the privileged flag PSL_RF.
-	 * The cpu sets PSL_RF in tf_rflags for faults.  Debuggers
-	 * should sometimes set it there too.  tf_rflags is kept in
-	 * the signal context during signal handling and there is no
-	 * other place to remember it, so the PSL_RF bit may be
-	 * corrupted by the signal handler without us knowing.
-	 * Corruption of the PSL_RF bit at worst causes one more or
-	 * one less debugger trap, so allowing it is fairly harmless.
-	 */
-	if (!EFL_SECURE(rflags & ~PSL_RF, regs->tf_rflags & ~PSL_RF)) {
+	if (!EFL_SECURE(rflags, regs->tf_rflags)) {
 		uprintf("pid %d (%s): sigreturn rflags = 0x%lx\n", p->p_pid,
 		    td->td_name, rflags);
 		return (EINVAL);
@@ -660,10 +650,10 @@ void
 cpu_halt(void)
 {
 	for (;;)
-		__asm__ ("hlt");
+		halt();
 }
 
-void (*cpu_idle_hook)(void) = NULL;	/* ACPI idle hook. */
+void (*cpu_idle_hook)(sbintime_t) = NULL;	/* ACPI idle hook. */
 static int	cpu_ident_amdc1e = 0;	/* AMD C1E supported. */
 static int	idle_mwait = 1;		/* Use MONITOR/MWAIT for short idle. */
 TUNABLE_INT("machdep.idle_mwait", &idle_mwait);
@@ -675,32 +665,47 @@ SYSCTL_INT(_machdep, OID_AUTO, idle_mwait, CTLFLAG_RW, &idle_mwait,
 #define	STATE_SLEEPING	0x2
 
 static void
-cpu_idle_acpi(int busy)
+cpu_idle_acpi(sbintime_t sbt)
 {
 	int *state;
 
 	state = (int *)PCPU_PTR(monitorbuf);
 	*state = STATE_SLEEPING;
+
+	/* See comments in cpu_idle_hlt(). */
 	disable_intr();
 	if (sched_runnable())
 		enable_intr();
 	else if (cpu_idle_hook)
-		cpu_idle_hook();
+		cpu_idle_hook(sbt);
 	else
 		__asm __volatile("sti; hlt");
 	*state = STATE_RUNNING;
 }
 
 static void
-cpu_idle_hlt(int busy)
+cpu_idle_hlt(sbintime_t sbt)
 {
 	int *state;
 
 	state = (int *)PCPU_PTR(monitorbuf);
 	*state = STATE_SLEEPING;
+
 	/*
-	 * We must absolutely guarentee that hlt is the next instruction
-	 * after sti or we introduce a timing window.
+	 * Since we may be in a critical section from cpu_idle(), if
+	 * an interrupt fires during that critical section we may have
+	 * a pending preemption.  If the CPU halts, then that thread
+	 * may not execute until a later interrupt awakens the CPU.
+	 * To handle this race, check for a runnable thread after
+	 * disabling interrupts and immediately return if one is
+	 * found.  Also, we must absolutely guarentee that hlt is
+	 * the next instruction after sti.  This ensures that any
+	 * interrupt that fires after the call to disable_intr() will
+	 * immediately awaken the CPU from hlt.  Finally, please note
+	 * that on x86 this works fine because of interrupts enabled only
+	 * after the instruction following sti takes place, while IF is set
+	 * to 1 immediately, allowing hlt instruction to acknowledge the
+	 * interrupt.
 	 */
 	disable_intr();
 	if (sched_runnable())
@@ -720,28 +725,42 @@ cpu_idle_hlt(int busy)
 #define	MWAIT_C4	0x30
 
 static void
-cpu_idle_mwait(int busy)
+cpu_idle_mwait(sbintime_t sbt)
 {
 	int *state;
 
 	state = (int *)PCPU_PTR(monitorbuf);
 	*state = STATE_MWAIT;
-	if (!sched_runnable()) {
-		cpu_monitor(state, 0, 0);
-		if (*state == STATE_MWAIT)
-			cpu_mwait(0, MWAIT_C1);
+
+	/* See comments in cpu_idle_hlt(). */
+	disable_intr();
+	if (sched_runnable()) {
+		enable_intr();
+		*state = STATE_RUNNING;
+		return;
 	}
+	cpu_monitor(state, 0, 0);
+	if (*state == STATE_MWAIT)
+		__asm __volatile("sti; mwait" : : "a" (MWAIT_C1), "c" (0));
+	else
+		enable_intr();
 	*state = STATE_RUNNING;
 }
 
 static void
-cpu_idle_spin(int busy)
+cpu_idle_spin(sbintime_t sbt)
 {
 	int *state;
 	int i;
 
 	state = (int *)PCPU_PTR(monitorbuf);
 	*state = STATE_RUNNING;
+
+	/*
+	 * The sched_runnable() call is racy but as long as there is
+	 * a loop missing it one time will have just a little impact if any
+	 * (and it is much better than missing the check at all).
+	 */
 	for (i = 0; i < 1000; i++) {
 		if (sched_runnable())
 			return;
@@ -778,12 +797,13 @@ cpu_probe_amdc1e(void)
 	}
 }
 
-void (*cpu_idle_fn)(int) = cpu_idle_acpi;
+void (*cpu_idle_fn)(sbintime_t) = cpu_idle_acpi;
 
 void
 cpu_idle(int busy)
 {
 	uint64_t msr;
+	sbintime_t sbt = -1;
 
 	CTR2(KTR_SPARE2, "cpu_idle(%d) at %d",
 	    busy, curcpu);
@@ -801,7 +821,7 @@ cpu_idle(int busy)
 	/* If we have time - switch timers into idle mode. */
 	if (!busy) {
 		critical_enter();
-		cpu_idleclock();
+		sbt = cpu_idleclock();
 	}
 
 	/* Apply AMD APIC timer C1E workaround. */
@@ -812,7 +832,7 @@ cpu_idle(int busy)
 	}
 
 	/* Call main idle method. */
-	cpu_idle_fn(busy);
+	cpu_idle_fn(sbt);
 
 	/* Switch timers mack into active mode. */
 	if (!busy) {
@@ -938,7 +958,7 @@ exec_setregs(struct thread *td, struct image_params *imgp, u_long stack)
 	
 	pcb->pcb_fsbase = 0;
 	pcb->pcb_gsbase = 0;
-	clear_pcb_flags(pcb, PCB_32BIT | PCB_GS32BIT);
+	clear_pcb_flags(pcb, PCB_32BIT);
 	pcb->pcb_initial_fpucw = __INITIAL_FPUCW__;
 	set_pcb_flags(pcb, PCB_FULL_IRET);
 
@@ -1174,6 +1194,9 @@ extern inthand_t
 #ifdef KDTRACE_HOOKS
 	IDTVEC(dtrace_ret),
 #endif
+#ifdef XENHVM
+	IDTVEC(xen_intr_upcall),
+#endif
 	IDTVEC(fast_syscall), IDTVEC(fast_syscall32);
 
 #ifdef DDB
@@ -1197,6 +1220,36 @@ DB_SHOW_COMMAND(idt, db_show_idt)
 		}
 		ip++;
 	}
+}
+
+/* Show privileged registers. */
+DB_SHOW_COMMAND(sysregs, db_show_sysregs)
+{
+	struct {
+		uint16_t limit;
+		uint64_t base;
+	} __packed idtr, gdtr;
+	uint16_t ldt, tr;
+
+	__asm __volatile("sidt %0" : "=m" (idtr));
+	db_printf("idtr\t0x%016lx/%04x\n",
+	    (u_long)idtr.base, (u_int)idtr.limit);
+	__asm __volatile("sgdt %0" : "=m" (gdtr));
+	db_printf("gdtr\t0x%016lx/%04x\n",
+	    (u_long)gdtr.base, (u_int)gdtr.limit);
+	__asm __volatile("sldt %0" : "=r" (ldt));
+	db_printf("ldtr\t0x%04x\n", ldt);
+	__asm __volatile("str %0" : "=r" (tr));
+	db_printf("tr\t0x%04x\n", tr);
+	db_printf("cr0\t0x%016lx\n", rcr0());
+	db_printf("cr2\t0x%016lx\n", rcr2());
+	db_printf("cr3\t0x%016lx\n", rcr3());
+	db_printf("cr4\t0x%016lx\n", rcr4());
+	db_printf("EFER\t%016lx\n", rdmsr(MSR_EFER));
+	db_printf("FEATURES_CTL\t%016lx\n", rdmsr(MSR_IA32_FEATURE_CONTROL));
+	db_printf("DEBUG_CTL\t%016lx\n", rdmsr(MSR_DEBUGCTLMSR));
+	db_printf("PAT\t%016lx\n", rdmsr(MSR_PAT));
+	db_printf("GSBASE\t%016lx\n", rdmsr(MSR_GSBASE));
 }
 #endif
 
@@ -1511,7 +1564,7 @@ getmemsize(caddr_t kmdp, u_int64_t first)
 			/*
 			 * map page into kernel: valid, read/write,non-cacheable
 			 */
-			*pte = pa | PG_V | PG_RW | PG_N;
+			*pte = pa | PG_V | PG_RW | PG_NC_PWT | PG_NC_PCD;
 			invltlb();
 
 			tmp = *(int *)ptr;
@@ -1727,6 +1780,9 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 #ifdef KDTRACE_HOOKS
 	setidt(IDT_DTRACE_RET, &IDTVEC(dtrace_ret), SDT_SYSIGT, SEL_UPL, 0);
 #endif
+#ifdef XENHVM
+	setidt(IDT_EVTCHN, &IDTVEC(xen_intr_upcall), SDT_SYSIGT, SEL_UPL, 0);
+#endif
 
 	r_idt.rd_limit = sizeof(idt0) - 1;
 	r_idt.rd_base = (long) idt;
@@ -1843,22 +1899,18 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 
 	/* setup proc 0's pcb */
 	thread0.td_pcb->pcb_flags = 0;
-	thread0.td_pcb->pcb_cr3 = KPML4phys;
+	thread0.td_pcb->pcb_cr3 = KPML4phys; /* PCID 0 is reserved for kernel */
 	thread0.td_frame = &proc0_tf;
 
         env = getenv("kernelname");
 	if (env != NULL)
 		strlcpy(kernelname, env, sizeof(kernelname));
 
-#ifdef XENHVM
-	if (inw(0x10) == 0x49d2) {
-		if (bootverbose)
-			printf("Xen detected: disabling emulated block and network devices\n");
-		outw(0x10, 3);
-	}
-#endif
-
 	cpu_probe_amdc1e();
+
+#ifdef FDT
+	x86_init_fdt();
+#endif
 
 	/* Location of kernel stack for locore */
 	return ((u_int64_t)thread0.td_pcb);
@@ -2244,7 +2296,7 @@ get_fpcontext(struct thread *td, mcontext_t *mcp, char *xfpusave,
 	size_t max_len, len;
 
 	mcp->mc_ownedfp = fpugetregs(td);
-	bcopy(get_pcb_user_save_td(td), &mcp->mc_fpstate,
+	bcopy(get_pcb_user_save_td(td), &mcp->mc_fpstate[0],
 	    sizeof(mcp->mc_fpstate));
 	mcp->mc_fpformat = fpuformat();
 	if (!use_xsave || xfpusave_len == 0)

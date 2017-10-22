@@ -25,14 +25,14 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/lib/libc/locale/querylocale.3 237974 2012-07-02 07:39:33Z obrien $
+.\" $FreeBSD: release/10.0.0/lib/libc/locale/querylocale.3 250209 2013-05-03 12:42:43Z pluknet $
 .\"
-.Dd September 17 2011
+.Dd May 3, 2013
 .Dt QUERYLOCALE 3
 .Os
 .Sh NAME
 .Nm querylocale
-.Nd Look up the locale name for a specified category.
+.Nd Look up the locale name for a specified category
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
@@ -41,7 +41,7 @@
 .Fn querylocale "int mask" "locale_t locale"
 .Sh DESCRIPTION
 Returns the name of the locale for the category specified by
-.Fa mask.
+.Fa mask .
 This possible values for the mask are the same as those in
 .Xr newlocale 3 .
 If more than one bit in the mask is set, the returned value is undefined.
@@ -52,6 +52,3 @@ If more than one bit in the mask is set, the returned value is undefined.
 .Xr newlocale 3 ,
 .Xr uselocale 3 ,
 .Xr xlocale 3
-.Sh STANDARDS
-This function, conforms to
-.St -p1003.1-2008

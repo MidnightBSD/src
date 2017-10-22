@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/cam/scsi/scsi_enc_internal.h 247115 2013-02-21 19:02:29Z mav $
+ * $FreeBSD: release/10.0.0/sys/cam/scsi/scsi_enc_internal.h 244014 2012-12-08 04:03:04Z ken $
  */
 
 /*

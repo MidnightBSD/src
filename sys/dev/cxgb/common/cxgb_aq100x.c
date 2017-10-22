@@ -28,7 +28,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/cxgb/common/cxgb_aq100x.c 231104 2012-02-07 02:21:17Z np $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cxgb/common/cxgb_aq100x.c 228825 2011-12-23 01:39:10Z np $");
 
 #include <cxgb_include.h>
 

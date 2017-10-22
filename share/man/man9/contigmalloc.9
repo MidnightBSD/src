@@ -23,7 +23,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man9/contigmalloc.9 171503 2007-07-19 17:23:20Z alc $
+.\" $FreeBSD: release/10.0.0/share/man/man9/contigmalloc.9 232359 2012-03-01 20:19:21Z jhb $
 .\"
 .Dd July 19, 2007
 .Dt CONTIGMALLOC 9
@@ -42,7 +42,7 @@
 .Fa "vm_paddr_t low"
 .Fa "vm_paddr_t high"
 .Fa "unsigned long alignment"
-.Fa "unsigned long boundary"
+.Fa "vm_paddr_t boundary"
 .Fc
 .Ft void
 .Fo contigfree

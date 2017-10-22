@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpi_support/acpi_fujitsu.c 216376 2010-12-11 10:55:18Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpi_support/acpi_fujitsu.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -154,7 +154,8 @@ static device_method_t acpi_fujitsu_methods[] = {
 	DEVMETHOD(device_detach,	acpi_fujitsu_detach),
 	DEVMETHOD(device_suspend,	acpi_fujitsu_suspend),
 	DEVMETHOD(device_resume,	acpi_fujitsu_resume),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t acpi_fujitsu_driver = {

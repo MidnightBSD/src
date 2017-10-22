@@ -1,5 +1,5 @@
 /*
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/lib/msg.c 93520 2002-04-01 09:39:07Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg_install/lib/msg.c 236213 2012-05-29 01:48:06Z kevlo $");
 
 #include "lib.h"
 #include <err.h>
@@ -71,5 +71,6 @@ y_or_n(Boolean def, const char *msg, ...)
 	    ch = (def) ? 'Y' : 'N';
     }
     fclose(tty) ;
+    va_end(args);
     return (ch == 'Y') ? TRUE : FALSE;
 }

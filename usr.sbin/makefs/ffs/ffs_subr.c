@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/makefs/ffs/ffs_subr.c 248293 2013-03-14 22:57:27Z brooks $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/makefs/ffs/ffs_subr.c 228990 2011-12-30 10:58:14Z uqs $");
 
 #include <sys/param.h>
 

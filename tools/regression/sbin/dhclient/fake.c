@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/tools/regression/sbin/dhclient/fake.c 230597 2012-01-26 19:46:13Z dumbbell $ */
+/* $FreeBSD: release/10.0.0/tools/regression/sbin/dhclient/fake.c 229001 2011-12-30 14:41:47Z dumbbell $ */
 
 #include <setjmp.h>
 #include <stdarg.h>

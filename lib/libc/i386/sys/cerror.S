@@ -34,7 +34,7 @@
 	.asciz "@(#)cerror.s	5.1 (Berkeley) 4/23/90"
 #endif /* SYSLIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/i386/sys/cerror.S 217106 2011-01-07 16:08:40Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/i386/sys/cerror.S 240152 2012-09-05 21:41:05Z jilles $");
 
 #include "SYS.h"
 
@@ -48,13 +48,14 @@ __FBSDID("$FreeBSD: stable/9/lib/libc/i386/sys/cerror.S 217106 2011-01-07 16:08:
 	.globl	CNAME(__error)
 	.type	CNAME(__error),@function
 HIDENAME(cerror):
-	pushl	%eax
 #ifdef PIC
-	/* The caller must execute the PIC prologue before jumping to cerror. */
+	PIC_PROLOGUE
+	pushl	%eax
 	call	PIC_PLT(CNAME(__error))
 	popl	%ecx
 	PIC_EPILOGUE
 #else
+	pushl	%eax
 	call	CNAME(__error)
 	popl	%ecx
 #endif

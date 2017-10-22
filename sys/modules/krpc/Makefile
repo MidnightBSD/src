@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/krpc/Makefile 213103 2010-09-24 15:01:45Z attilio $
+# $FreeBSD: release/10.0.0/sys/modules/krpc/Makefile 213103 2010-09-24 15:01:45Z attilio $
 
 .PATH: ${.CURDIR}/../../rpc ${.CURDIR}/../../xdr
 KMOD=	krpc

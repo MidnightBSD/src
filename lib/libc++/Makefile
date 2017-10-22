@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libc++/Makefile 242600 2012-11-05 07:44:00Z dim $
+# $FreeBSD: release/10.0.0/lib/libc++/Makefile 255206 2013-09-04 15:02:14Z theraven $
 
 LIBCXXRTDIR=	${.CURDIR}/../../contrib/libcxxrt
 HDRDIR=		${.CURDIR}/../../contrib/libc++/include
@@ -9,6 +9,7 @@ CXXINCLUDEDIR=	${INCLUDEDIR}/c++/v${SHLIB_MAJOR}
 
 LIB=		c++
 SHLIB_MAJOR=	1
+SHLIB_LDSCRIPT=	libc++.ldscript
 
 SRCS+=		algorithm.cpp\
 		bind.cpp\
@@ -164,6 +165,7 @@ RT_HEADERS=	cxxabi.h\
 
 .for hdr in ${STD_HEADERS}
 STD+=		${HDRDIR}/${hdr}
+INCSLINKS+=	${CXXINCLUDEDIR}/${hdr} ${CXXINCLUDEDIR}/tr1/${hdr}
 .endfor
 .for hdr in ${RT_HEADERS}
 STD+=		${LIBCXXRTDIR}/${hdr}

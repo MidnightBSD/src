@@ -37,7 +37,7 @@ static const char rcsid[] =
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/systat/tcp.c 241213 2012-10-04 22:56:15Z melifaro $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/systat/tcp.c 240605 2012-09-17 13:36:47Z melifaro $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -324,4 +324,3 @@ fetchtcp(void)
 	if (sysctl(name, 4, &curstat, &len, 0, 0) < 0)
 		return;
 }
-

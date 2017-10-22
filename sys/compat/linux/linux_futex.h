@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/compat/linux/linux_futex.h 218118 2011-01-31 06:06:23Z dchagin $
+ * $FreeBSD: release/10.0.0/sys/compat/linux/linux_futex.h 218118 2011-01-31 06:06:23Z dchagin $
  */
 
 #ifndef _LINUX_FUTEX_H

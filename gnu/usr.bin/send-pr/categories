@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/send-pr/categories 221869 2011-05-14 01:53:38Z attilio $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/send-pr/categories 221869 2011-05-14 01:53:38Z attilio $
 advocacy
 alpha
 amd64

@@ -1,16 +1,24 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: stable/9/share/doc/Makefile 225949 2011-10-03 20:27:51Z dim $
+# $FreeBSD: release/10.0.0/share/doc/Makefile 255949 2013-09-30 17:23:45Z des $
 
 .include <bsd.own.mk>
 
-SUBDIR=	${_bind9} IPv6 legal ${_llvm} ${_roffdocs}
+SUBDIR=	${_IPv6} \
+	${_atf} \
+	legal \
+	${_llvm} \
+	${_roffdocs}
 
-.if ${MK_BIND} != "no"
-_bind9=	bind9
+.if ${MK_ATF} != "no"
+_atf= atf
 .endif
 
 .if ${MK_CLANG} != "no"
 _llvm=	llvm
+.endif
+
+.if ${MK_INET6} != "no"
+_IPv6=	IPv6
 .endif
 
 # FIXME this is not a real solution ...

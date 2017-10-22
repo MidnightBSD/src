@@ -1,5 +1,5 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
-# $FreeBSD: stable/9/etc/Makefile 248531 2013-03-19 20:00:34Z brooks $
+# $FreeBSD: release/10.0.0/etc/Makefile 257572 2013-11-03 13:00:12Z bdrewery $
 
 .include <bsd.own.mk>
 
@@ -22,6 +22,7 @@ BIN1=	crontab \
 	hosts.equiv \
 	inetd.conf \
 	libalias.conf \
+	libmap.conf \
 	login.access \
 	login.conf \
 	mac.conf \
@@ -48,6 +49,10 @@ BIN1=	crontab \
 	sysctl.conf \
 	syslog.conf \
 	termcap.small
+
+.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "powerpc64"
+BIN1+=	libmap32.conf
+.endif
 
 .if exists(${.CURDIR}/etc.${MACHINE}/ttys)
 BIN1+=	etc.${MACHINE}/ttys
@@ -137,11 +142,8 @@ MTREE=	BSD.include.dist BSD.root.dist BSD.usr.dist BSD.var.dist
 .if ${MK_SENDMAIL} != "no"
 MTREE+=	BSD.sendmail.dist
 .endif
-.if ${MK_BIND} != "no"
-MTREE+=	BIND.chroot.dist
-.if ${MK_BIND_LIBS} != "no"
-MTREE+=	BIND.include.dist
-.endif
+.if ${MK_DEBUG_FILES} != "no"
+MTREE+=	BSD.debug.dist
 .endif
 
 PPPCNF=	ppp.conf
@@ -155,6 +157,9 @@ ETCMAIL=Makefile README mailer.conf access.sample virtusertable.sample \
 
 # Special top level files for FreeBSD
 FREEBSD=COPYRIGHT
+
+# Sanitize DESTDIR
+DESTDIR:=	${DESTDIR:C://*:/:g}
 
 afterinstall:
 .if ${MK_MAN} != "no"
@@ -175,6 +180,10 @@ PWD_MKDB_ENDIAN?= -B
 .else
 CAP_MKDB_ENDIAN?=
 PWD_MKDB_ENDIAN?=
+.endif
+
+.if defined(NO_ROOT)
+METALOG.add?=	cat -l >> ${METALOG}
 .endif
 
 distribution:
@@ -198,6 +207,14 @@ distribution:
 .endif
 	pwd_mkdb ${PWD_MKDB_ENDIAN} -i -p -d ${DESTDIR}/etc \
 	    ${DESTDIR}/etc/master.passwd
+.if defined(NO_ROOT)
+	( \
+		echo "./etc/login.conf.db type=file mode=0644 uname=root gname=wheel"; \
+		echo "./etc/passwd type=file mode=0644 uname=root gname=wheel"; \
+		echo "./etc/pwd.db type=file mode=0644 uname=root gname=wheel"; \
+		echo "./etc/spwd.db type=file mode=0600 uname=root gname=wheel"; \
+	) | ${METALOG.add}
+.endif
 .if ${MK_BLUETOOTH} != "no"
 	${_+_}cd ${.CURDIR}/bluetooth; ${MAKE} install
 .endif
@@ -205,6 +222,9 @@ distribution:
 	${_+_}cd ${.CURDIR}/devd; ${MAKE} install
 	${_+_}cd ${.CURDIR}/gss; ${MAKE} install
 	${_+_}cd ${.CURDIR}/periodic; ${MAKE} install
+.if ${MK_PKGBOOTSTRAP} != "no"
+	${_+_}cd ${.CURDIR}/pkg; ${MAKE} install
+.endif
 	${_+_}cd ${.CURDIR}/rc.d; ${MAKE} install
 	${_+_}cd ${.CURDIR}/../gnu/usr.bin/send-pr; ${MAKE} etc-gnats-freefall
 	${_+_}cd ${.CURDIR}/../share/termcap; ${MAKE} etc-termcap
@@ -216,13 +236,10 @@ distribution:
 	    ${BSM_ETC_RESTRICTED_FILES} ${BSM_ETC_DIR}
 	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 0500 \
 	    ${BSM_ETC_EXEC_FILES} ${BSM_ETC_DIR}
-.if ${MK_BIND_MTREE} != "no"
-	if [ ! -e ${DESTDIR}/etc/namedb ]; then \
-		ln -s ../var/named/etc/namedb ${DESTDIR}/etc/namedb; \
+.if ${MK_UNBOUND} != "no"
+	if [ ! -e ${DESTDIR}/etc/unbound ]; then \
+		${INSTALL_SYMLINK} ../var/unbound ${DESTDIR}/etc/unbound; \
 	fi
-.endif
-.if ${MK_BIND_ETC} != "no"
-	${_+_}cd ${.CURDIR}/namedb; ${MAKE} install
 .endif
 .if ${MK_SENDMAIL} != "no"
 	${_+_}cd ${.CURDIR}/sendmail; ${MAKE} distribution
@@ -294,11 +311,8 @@ MTREES=		mtree/BSD.root.dist		/		\
 		mtree/BSD.var.dist		/var		\
 		mtree/BSD.usr.dist		/usr		\
 		mtree/BSD.include.dist		/usr/include
-.if ${MK_BIND_LIBS} != "no"
-MTREES+=	mtree/BIND.include.dist		/usr/include
-.endif
-.if ${MK_BIND_MTREE} != "no"
-MTREES+=	mtree/BIND.chroot.dist		/var/named
+.if ${MK_DEBUG_FILES} != "no"
+MTREES+=	mtree/BSD.debug.dist		/usr/lib
 .endif
 .if ${MK_GROFF} != "no"
 MTREES+=	mtree/BSD.groff.dist		/usr
@@ -310,7 +324,7 @@ MTREES+=	mtree/BSD.sendmail.dist		/
 MTREES+=	../${mtree}			/
 .endfor
 
-distrib-dirs:
+distrib-dirs: ${MTREES:N/*}
 	@set ${MTREES}; \
 	while test $$# -ge 2; do \
 		m=${.CURDIR}/$$1; \
@@ -321,26 +335,44 @@ distrib-dirs:
 		    -f $$m -p $$d; \
 		${MTREE_CMD} -deU ${MTREE_FOLLOWS_SYMLINKS} -f $$m -p $$d; \
 	done; true
-	ln -sfh usr/src/sys ${DESTDIR}/sys
+.if defined(NO_ROOT)
+	@set ${MTREES}; \
+	while test $$# -ge 2; do \
+		m=${.CURDIR}/$$1; \
+		shift; \
+		d=$$1; \
+		test "$$d" == "/" && d=""; \
+		d=${DISTBASE}$$d; \
+		shift; \
+		${ECHO} "${MTREE_CMD:N-W} -C -f $$m -K uname,gname | " \
+		    "sed s#^\.#.$$d# | ${METALOG.add}" ; \
+		${MTREE_CMD:N-W} -C -f $$m -K uname,gname | sed s#^\.#.$$d# | \
+		    ${METALOG.add} ; \
+	done; true
+.endif
+	${INSTALL_SYMLINK} usr/src/sys ${DESTDIR}/sys
 	cd ${DESTDIR}/usr/share/man; \
 	for mandir in man*; do \
-		ln -sfh ../$$mandir ${DESTDIR}/usr/share/man/en.ISO8859-1/; \
-		ln -sfh ../$$mandir ${DESTDIR}/usr/share/man/en.UTF-8/; \
+		${INSTALL_SYMLINK} ../$$mandir \
+		    ${DESTDIR}/usr/share/man/en.ISO8859-1/; \
+		${INSTALL_SYMLINK} ../$$mandir \
+		    ${DESTDIR}/usr/share/man/en.UTF-8/; \
 	done
 	cd ${DESTDIR}/usr/share/openssl/man; \
 	for mandir in man*; do \
-		ln -sfh ../$$mandir \
+		${INSTALL_SYMLINK} ../$$mandir \
 		    ${DESTDIR}/usr/share/openssl/man/en.ISO8859-1/; \
 	done
 	set - `grep "^[a-zA-Z]" ${.CURDIR}/man.alias`; \
 	while [ $$# -gt 0 ] ; do \
-		ln -sfh "$$2" "${DESTDIR}/usr/share/man/$$1"; \
-		ln -sfh "$$2" "${DESTDIR}/usr/share/openssl/man/$$1"; \
+		${INSTALL_SYMLINK} "$$2" "${DESTDIR}/usr/share/man/$$1"; \
+		${INSTALL_SYMLINK} "$$2" \
+		    "${DESTDIR}/usr/share/openssl/man/$$1"; \
 		shift; shift; \
 	done
 	set - `grep "^[a-zA-Z]" ${.CURDIR}/nls.alias`; \
 	while [ $$# -gt 0 ] ; do \
-		ln -sfh "$$2" "${DESTDIR}/usr/share/nls/$$1"; \
+		${INSTALL_SYMLINK} "$$2" "${DESTDIR}/usr/share/nls/$$1"; \
 		shift; shift; \
 	done
 

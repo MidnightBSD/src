@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/ae/if_aereg.h 183567 2008-10-03 10:31:31Z stas $
+ * $FreeBSD: release/10.0.0/sys/dev/ae/if_aereg.h 253406 2013-07-17 01:34:25Z yongari $
  */
 
 /*
@@ -104,6 +104,8 @@
 #define	AE_RXD_COUNT_MIN	16
 #define	AE_RXD_COUNT_MAX	512
 #define	AE_RXD_COUNT_DEFAULT	64
+/* Padding to align frames on a 128-byte boundary. */
+#define	AE_RXD_PADDING		120
 
 #define	AE_TXD_BUFSIZE_MIN	4096
 #define	AE_TXD_BUFSIZE_MAX	65536

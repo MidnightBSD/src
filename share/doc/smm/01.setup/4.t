@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)4.t	8.1 (Berkeley) 7/29/93
-.\" $FreeBSD: stable/9/share/doc/smm/01.setup/4.t 215334 2010-11-15 05:25:51Z dougb $
+.\" $FreeBSD: release/10.0.0/share/doc/smm/01.setup/4.t 241606 2012-10-16 09:59:10Z attilio $
 .\"
 .ds LH "Installing/Operating \*(4B
 .ds CF \*(Dy
@@ -89,7 +89,6 @@ miscfs		miscellaneous filesystems broken down as follows
 	kernfs	filesystem access to kernel data structures
 	lofs	loopback filesystem
 	nullfs	another loopback filesystem
-	portal	associate processes with filesystem locations
 	specfs	device special files
 	umapfs	provide alternate uid/gid mappings
 dev		generic device drivers (SCSI, vnode, concatenated disk)

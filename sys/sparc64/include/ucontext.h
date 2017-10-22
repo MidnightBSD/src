@@ -6,7 +6,7 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer 
+ *    notice, this list of conditions and the following disclaimer
  *    in this position and unchanged.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/alpha/include/ucontext.h,v 1.3 1999/10/08
- * $FreeBSD: stable/9/sys/sparc64/include/ucontext.h 109036 2003-01-10 00:04:56Z jake $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/ucontext.h 253266 2013-07-12 14:24:52Z marius $
  */
 
 #ifndef _MACHINE_UCONTEXT_H_
@@ -42,16 +42,16 @@ struct __mcontext {
 
 typedef struct __mcontext mcontext_t;
 
-#define	mc_flags	mc_global[0]
-#define	mc_sp           mc_out[6]
-#define	mc_fprs         mc_local[0]
-#define	mc_fsr		mc_local[1]
-#define	mc_gsr		mc_local[2]
-#define	mc_tnpc         mc_in[0]
-#define	mc_tpc          mc_in[1]
-#define	mc_tstate       mc_in[2]
-#define	mc_y            mc_in[4]
-#define	mc_wstate	mc_in[5]
+#define	_mc_flags	mc_global[0]
+#define	_mc_sp		mc_out[6]
+#define	_mc_fprs	mc_local[0]
+#define	_mc_fsr		mc_local[1]
+#define	_mc_gsr		mc_local[2]
+#define	_mc_tnpc	mc_in[0]
+#define	_mc_tpc		mc_in[1]
+#define	_mc_tstate	mc_in[2]
+#define	_mc_y		mc_in[4]
+#define	_mc_wstate	mc_in[5]
 
 #define	_MC_VERSION_SHIFT	0
 #define	_MC_VERSION_BITS	32

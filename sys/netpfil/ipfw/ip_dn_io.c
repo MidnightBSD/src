@@ -28,7 +28,7 @@
  * Dummynet portions related to packet handling.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netpfil/ipfw/ip_dn_io.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netpfil/ipfw/ip_dn_io.c 241913 2012-10-22 21:09:03Z glebius $");
 
 #include "opt_inet6.h"
 
@@ -97,17 +97,11 @@ extern	void (*bridge_dn_p)(struct mbuf *, struct ifnet *);
 
 #ifdef SYSCTL_NODE
 
-SYSBEGIN(f4)
-
-SYSCTL_DECL(_net_inet);
-SYSCTL_DECL(_net_inet_ip);
-static SYSCTL_NODE(_net_inet_ip, OID_AUTO, dummynet, CTLFLAG_RW, 0, "Dummynet");
-
-/* wrapper to pass dn_cfg fields to SYSCTL_* */
-//#define DC(x)	(&(VNET_NAME(_base_dn_cfg).x))
-#define DC(x)	(&(dn_cfg.x))
-/* parameters */
-
+/*
+ * Because of the way the SYSBEGIN/SYSEND macros work on other
+ * platforms, there should not be functions between them.
+ * So keep the handlers outside the block.
+ */
 static int
 sysctl_hash_size(SYSCTL_HANDLER_ARGS)
 {
@@ -122,10 +116,6 @@ sysctl_hash_size(SYSCTL_HANDLER_ARGS)
 	dn_cfg.hash_size = value;
 	return (0);
 }
-
-SYSCTL_PROC(_net_inet_ip_dummynet, OID_AUTO, hash_size,
-    CTLTYPE_INT | CTLFLAG_RW, 0, 0, sysctl_hash_size,
-    "I", "Default hash table size");
 
 static int
 sysctl_limits(SYSCTL_HANDLER_ARGS)
@@ -152,6 +142,23 @@ sysctl_limits(SYSCTL_HANDLER_ARGS)
 	}
 	return (0);
 }
+
+SYSBEGIN(f4)
+
+SYSCTL_DECL(_net_inet);
+SYSCTL_DECL(_net_inet_ip);
+static SYSCTL_NODE(_net_inet_ip, OID_AUTO, dummynet, CTLFLAG_RW, 0, "Dummynet");
+
+/* wrapper to pass dn_cfg fields to SYSCTL_* */
+//#define DC(x)	(&(VNET_NAME(_base_dn_cfg).x))
+#define DC(x)	(&(dn_cfg.x))
+/* parameters */
+
+
+SYSCTL_PROC(_net_inet_ip_dummynet, OID_AUTO, hash_size,
+    CTLTYPE_INT | CTLFLAG_RW, 0, 0, sysctl_hash_size,
+    "I", "Default hash table size");
+
 
 SYSCTL_PROC(_net_inet_ip_dummynet, OID_AUTO, pipe_slot_limit,
     CTLTYPE_LONG | CTLFLAG_RW, 0, 1, sysctl_limits,
@@ -651,13 +658,10 @@ dummynet_send(struct mbuf *m)
 
 		switch (dst) {
 		case DIR_OUT:
-			SET_HOST_IPLEN(mtod(m, struct ip *));
 			ip_output(m, NULL, NULL, IP_FORWARDING, NULL, NULL);
 			break ;
 
 		case DIR_IN :
-			/* put header in network format for ip_input() */
-			//SET_NET_IPLEN(mtod(m, struct ip *));
 			netisr_dispatch(NETISR_IP, m);
 			break;
 

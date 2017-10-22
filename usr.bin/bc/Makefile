@@ -1,4 +1,4 @@
-#	$FreeBSD: stable/9/usr.bin/bc/Makefile 203498 2010-02-04 18:43:05Z delphij $
+#	$FreeBSD: release/10.0.0/usr.bin/bc/Makefile 249657 2013-04-19 19:45:00Z ed $
 #	$OpenBSD: Makefile,v 1.4 2006/06/30 19:02:28 otto Exp $
 
 PROG=	bc
@@ -7,6 +7,8 @@ CFLAGS+= -I. -I${.CURDIR}
 
 DPADD=	${LIBEDIT} ${LIBTERMCAP}
 LDADD=	-ledit -ltermcap
+
+NO_WMISSING_VARIABLE_DECLARATIONS=
 
 FILES+=	bc.library
 FILESDIR=${SHAREDIR}/misc

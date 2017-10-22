@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/lib/libthr/pthread.map 218414 2011-02-07 21:26:46Z jkim $
+ * $FreeBSD: release/10.0.0/lib/libthr/pthread.map 250154 2013-05-01 20:10:21Z jilles $
  */
 
 /*
@@ -181,6 +181,7 @@ FBSDprivate_1.0 {
 	___wait;
 	___waitpid;
 	__accept;
+	__accept4;
 	__aio_suspend;
 	__close;
 	__connect;
@@ -407,4 +408,8 @@ FBSD_1.2 {
 	pthread_getthreadid_np;
 	setcontext;
 	swapcontext;
+};
+
+FBSD_1.3 {
+	accept4;
 };

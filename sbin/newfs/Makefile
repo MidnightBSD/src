@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 3/27/94
-# $FreeBSD: stable/9/sbin/newfs/Makefile 204654 2010-03-03 19:25:28Z sobomax $
+# $FreeBSD: release/10.0.0/sbin/newfs/Makefile 204654 2010-03-03 19:25:28Z sobomax $
 
 .PATH: ${.CURDIR}/../../sys/geom
 

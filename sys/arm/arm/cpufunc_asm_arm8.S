@@ -35,9 +35,9 @@
  * ARM8 assembly functions for CPU / MMU / TLB specific operations
  *
  */
- 
+
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/cpufunc_asm_arm8.S 139735 2005-01-05 21:58:49Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/cpufunc_asm_arm8.S 248361 2013-03-16 02:48:49Z andrew $");
 
 ENTRY(arm8_clock_config)
 	mrc	p15, 0, r3, c15, c0, 0	/* Read the clock register */
@@ -58,6 +58,7 @@ ENTRY(arm8_clock_config)
 	mcr	p15, 0, r2, c15, c0, 0 	/* Write clock register */
 	mov	r0, r3			/* Return old value */
 	RET
+END(arm8_clock_config)
 
 /*
  * Functions to set the MMU Translation Table Base register
@@ -90,6 +91,7 @@ ENTRY(arm8_setttb)
 	msr	cpsr_all, r3
 
 	RET
+END(arm8_setttb)
 
 /*
  * TLB functions
@@ -97,10 +99,12 @@ ENTRY(arm8_setttb)
 ENTRY(arm8_tlb_flushID)
 	mcr	p15, 0, r0, c8, c7, 0	/* flush I+D tlb */
 	RET
+END(arm8_tlb_flushID)
 
 ENTRY(arm8_tlb_flushID_SE)
 	mcr	p15, 0, r0, c8, c7, 1	/* flush I+D tlb single entry */
 	RET
+END(arm8_tlb_flushID_SE)
 
 /*
  * Cache functions
@@ -108,10 +112,12 @@ ENTRY(arm8_tlb_flushID_SE)
 ENTRY(arm8_cache_flushID)
 	mcr	p15, 0, r0, c7, c7, 0	/* flush I+D cache */
 	RET
+END(arm8_cache_flushID)
 
 ENTRY(arm8_cache_flushID_E)
 	mcr	p15, 0, r0, c7, c7, 1	/* flush I+D single entry */
 	RET
+END(arm8_cache_flushID_E)
 
 ENTRY(arm8_cache_cleanID)
 	mov	r0, #0x00000000
@@ -153,10 +159,12 @@ ENTRY(arm8_cache_cleanID)
 	bne	1b
 
 	RET
+END(arm8_cache_cleanID)
 
 ENTRY(arm8_cache_cleanID_E)
 	mcr	p15, 0, r0, c7, c11, 1	/* clean I+D single entry */
 	RET
+END(arm8_cache_cleanID_E)
 
 ENTRY(arm8_cache_purgeID)
 	/*
@@ -232,6 +240,7 @@ ENTRY(arm8_cache_purgeID)
 
 	msr	cpsr_all, r3
 	RET
+END(arm8_cache_purgeID)
 
 ENTRY(arm8_cache_purgeID_E)
 	/*
@@ -253,6 +262,7 @@ ENTRY(arm8_cache_purgeID_E)
 	mcr	p15, 0, r0, c7, c7, 1	/* flush I+D single entry */
 	msr	cpsr_all, r3
 	RET
+END(arm8_cache_purgeID_E)
 
 /*
  * Context switch.
@@ -282,3 +292,5 @@ ENTRY(arm8_context_switch)
 	mov	r0, r0
 	mov	r0, r0
 	RET
+END(arm8_context_switch)
+

@@ -24,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man9/lock.9 245694 2013-01-20 16:23:37Z avg $
+.\" $FreeBSD: release/10.0.0/share/man/man9/lock.9 256089 2013-10-06 15:59:06Z kib $
 .\"
-.Dd June 16, 2009
+.Dd October 6, 2013
 .Dt LOCK 9
 .Os
 .Sh NAME
@@ -60,20 +60,20 @@
 .Ft void
 .Fn lockmgr_disown "struct lock *lkp"
 .Ft void
-.Fn lockmgr_printinfo "struct lock *lkp"
+.Fn lockmgr_printinfo "const struct lock *lkp"
 .Ft int
-.Fn lockmgr_recursed "struct lock *lkp"
+.Fn lockmgr_recursed "const struct lock *lkp"
 .Ft int
 .Fn lockmgr_rw "struct lock *lkp" "u_int flags" "struct rwlock *ilk"
 .Ft int
-.Fn lockmgr_waiters "struct lock *lkp"
+.Fn lockmgr_waiters "const struct lock *lkp"
 .Ft int
-.Fn lockstatus "struct lock *lkp"
+.Fn lockstatus "const struct lock *lkp"
 .Pp
 .Cd "options INVARIANTS"
 .Cd "options INVARIANT_SUPPORT"
 .Ft void
-.Fn lockmgr_assert "struct lock *lkp" "int what"
+.Fn lockmgr_assert "const struct lock *lkp" "int what"
 .Sh DESCRIPTION
 The
 .Fn lockinit
@@ -164,11 +164,17 @@ If an exclusive lock has been recursed, the system will
 .Xr panic 9 .
 .It Dv LK_UPGRADE
 Upgrade a shared lock to an exclusive lock.
-If this call fails, the shared lock is lost.
+If this call fails, the shared lock is lost, even if the
+.Dv LK_NOWAIT
+flag is specified.
 During the upgrade, the shared lock could
 be temporarily dropped.
 Attempts to upgrade an exclusive lock will cause a
 .Xr panic 9 .
+.It Dv LK_TRYUPGRADE
+Try to upgrade a shared lock to an exclusive lock.
+The failure to upgrade does not result in the dropping
+of the shared lock ownership.
 .It Dv LK_RELEASE
 Release the lock.
 Releasing a lock that is not held can cause a
@@ -302,7 +308,6 @@ Assert that the current thread has a recursed lock on
 Assert that the current thread does not have a recursed lock on
 .Fa lkp .
 .El
-.Pp
 .Sh RETURN VALUES
 The
 .Fn lockmgr
@@ -334,7 +339,9 @@ fail if:
 was requested and another thread had already requested a lock upgrade.
 .It Bq Er EBUSY
 .Dv LK_NOWAIT
-was set, and a sleep would have been required.
+was set, and a sleep would have been required, or
+.Dv LK_TRYUPGRADE
+operation was not able to upgrade the lock.
 .It Bq Er ENOLCK
 .Dv LK_SLEEPFAIL
 was set and

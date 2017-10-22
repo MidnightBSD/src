@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/sibyte/sb_machdep.c 223562 2011-06-26 10:07:48Z kevlo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/sibyte/sb_machdep.c 247297 2013-02-26 01:00:11Z attilio $");
 
 #include "opt_ddb.h"
 #include "opt_kdb.h"
@@ -55,7 +55,6 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/sibyte/sb_machdep.c 223562 2011-06-26 10:0
 #include <vm/vm.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
-#include <vm/vm_pager.h>
 
 #include <machine/cache.h>
 #include <machine/clock.h>
@@ -253,7 +252,7 @@ mips_init(void)
 	 * code to the XTLB exception vector.
 	 */
 	{
-		bcopy(MipsTLBMiss, (void *)MIPS3_XTLB_MISS_EXC_VEC,
+		bcopy(MipsTLBMiss, (void *)MIPS_XTLB_MISS_EXC_VEC,
 		      MipsTLBMissEnd - MipsTLBMiss);
 
 		mips_icache_sync_all();
@@ -272,19 +271,6 @@ mips_init(void)
 }
 
 void
-platform_halt(void)
-{
-
-}
-
-
-void
-platform_identify(void)
-{
-
-}
-
-void
 platform_reset(void)
 {
 	
@@ -295,18 +281,6 @@ platform_reset(void)
 	sb_system_reset();
 }
 
-void
-platform_trap_enter(void)
-{
-
-}
-
-void
-platform_trap_exit(void)
-{
-
-}
-
 static void
 kseg0_map_coherent(void)
 {
@@ -314,7 +288,7 @@ kseg0_map_coherent(void)
 	const int CFG_K0_COHERENT = 5;
 
 	config = mips_rd_config();
-	config &= ~MIPS3_CONFIG_K0_MASK;
+	config &= ~MIPS_CONFIG_K0_MASK;
 	config |= CFG_K0_COHERENT;
 	mips_wr_config(config);
 }

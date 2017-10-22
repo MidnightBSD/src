@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man9/rwlock.9 177846 2008-04-01 20:56:45Z attilio $
+.\" $FreeBSD: release/10.0.0/share/man/man9/rwlock.9 252037 2013-06-20 17:26:25Z jhb $
 .\"
-.Dd April 1, 2008
+.Dd June 20, 2013
 .Dt RWLOCK 9
 .Os
 .Sh NAME
@@ -78,14 +78,14 @@
 .Ft int
 .Fn rw_sleep "void *chan" "struct rwlock *rw" "int priority" "const char *wmesg" "int timo"
 .Ft int
-.Fn rw_initialized "struct rwlock *rw"
+.Fn rw_initialized "const struct rwlock *rw"
 .Ft int
-.Fn rw_wowned "struct rwlock *rw"
+.Fn rw_wowned "const struct rwlock *rw"
 .Pp
 .Cd "options INVARIANTS"
 .Cd "options INVARIANT_SUPPORT"
 .Ft void
-.Fn rw_assert "struct rwlock *rw" "int what"
+.Fn rw_assert "const struct rwlock *rw" "int what"
 .In sys/kernel.h
 .Fn RW_SYSINIT "name" "struct rwlock *rw" "const char *desc"
 .Sh DESCRIPTION
@@ -114,12 +114,10 @@ cannot be held while sleeping.
 The
 .Nm
 locks have priority propagation like mutexes, but priority
-can be propagated only to an exclusive holder.
-This limitation comes from the fact that shared owners
+can be propagated only to writers.
+This limitation comes from the fact that readers
 are anonymous.
-Another important property is that shared holders of
-.Nm
-can recurse,
+Another important property is that readers can always recurse,
 and exclusive locks can be made recursive selectively.
 .Ss Macros and Functions
 .Bl -tag -width indent
@@ -231,7 +229,7 @@ while waiting for an event.
 For more details on the parameters to this function,
 see
 .Xr sleep 9 .
-.It Fn rw_initialized "struct rwlock *rw"
+.It Fn rw_initialized "const struct rwlock *rw"
 This function returns non-zero if
 .Fa rw
 has been initialized, and zero otherwise.
@@ -241,11 +239,11 @@ This functions destroys a lock previously initialized with
 The
 .Fa rw
 lock must be unlocked.
-.It Fn rw_wowned "struct rwlock *rw"
+.It Fn rw_wowned "const struct rwlock *rw"
 This function returns a non-zero value if the current thread owns an
 exclusive lock on
 .Fa rw .
-.It Fn rw_assert "struct rwlock *rw" "int what"
+.It Fn rw_assert "const struct rwlock *rw" "int what"
 This function allows assertions specified in
 .Fa what
 to be made about
@@ -256,7 +254,7 @@ with
 and
 .Cd "options INVARIANT_SUPPORT" ,
 the kernel will panic.
-Currently the following assertions are supported:
+Currently the following base assertions are supported:
 .Bl -tag -width ".Dv RA_UNLOCKED"
 .It Dv RA_LOCKED
 Assert that current thread holds either a shared or exclusive lock
@@ -270,6 +268,20 @@ Assert that current thread holds an exclusive lock of
 .Fa rw .
 .It Dv RA_UNLOCKED
 Assert that current thread holds neither a shared nor exclusive lock of
+.Fa rw .
+.El
+.Pp
+In addition, one of the following optional flags may be specified with
+.Dv RA_LOCKED ,
+.Dv RA_RLOCKED ,
+or
+.Dv RA_WLOCKED :
+.Bl -tag -width ".Dv RA_NOTRECURSED"
+.It Dv RA_RECURSED
+Assert that the current thread holds a recursive lock of
+.Fa rw .
+.It Dv RA_NOTRECURSED
+Assert that the current thread does not hold a recursive lock of
 .Fa rw .
 .El
 .El

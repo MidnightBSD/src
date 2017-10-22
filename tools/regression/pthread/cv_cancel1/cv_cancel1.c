@@ -23,11 +23,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/pthread/cv_cancel1/cv_cancel1.c 164928 2006-12-06 00:03:42Z davidxu $
+ * $FreeBSD: release/10.0.0/tools/regression/pthread/cv_cancel1/cv_cancel1.c 253384 2013-07-16 09:22:50Z kevlo $
  *
  */
 #include <pthread.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #define NLOOPS	10
 

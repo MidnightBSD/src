@@ -1,7 +1,7 @@
 #
 # DEFAULTS -- Default kernel configuration file for FreeBSD/mips
 #
-# $FreeBSD: stable/9/sys/mips/conf/DEFAULTS 215270 2010-11-13 22:34:12Z imp $
+# $FreeBSD: release/10.0.0/sys/mips/conf/DEFAULTS 232619 2012-03-06 20:01:25Z attilio $
 
 device		mem
 

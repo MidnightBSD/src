@@ -25,7 +25,7 @@
  *
  * This file merely redirects to the file in <dev/ieee488/ugpib.h>
  *
- * $FreeBSD: stable/9/lib/libgpib/gpib.h 141768 2005-02-12 21:07:09Z phk $
+ * $FreeBSD: release/10.0.0/lib/libgpib/gpib.h 141768 2005-02-12 21:07:09Z phk $
  */
 
 #include <dev/ieee488/ugpib.h>

@@ -5,7 +5,7 @@
  * XXX GENERAL: I DON'T CHECK FOR PACKET LENGTHS AND STUFF LIKE THAT and buffer
  * overflows.  this whole thing is experimental n e way.
  *
- * $FreeBSD: stable/9/tools/tools/net80211/wesside/wesside/wesside.c 195848 2009-07-24 15:31:22Z sam $
+ * $FreeBSD: release/10.0.0/tools/tools/net80211/wesside/wesside/wesside.c 229436 2012-01-03 22:52:29Z pjd $
  */
 
 #include <sys/types.h>
@@ -2091,7 +2091,7 @@ void save_key(unsigned char *key, int len)
 			strcat(k, ":");
 	}
 
-	fd = open(KEY_FILE, O_WRONLY | O_CREAT | 0644);
+	fd = open(KEY_FILE, O_WRONLY | O_CREAT, 0644);
 	if (fd == -1)
 		err(1, "open()");
 

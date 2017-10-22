@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/lagg.4 236065 2012-05-26 08:21:11Z thompsa $
+.\" $FreeBSD: release/10.0.0/share/man/man4/lagg.4 243091 2012-11-15 16:54:14Z joel $
 .\"
 .Dd February 23, 2012
 .Dt LAGG 4
@@ -92,8 +92,8 @@ This is an alias for
 .Ic loadbalance
 mode.
 .It Ic lacp
-Supports the IEEE 802.3ad Link Aggregation Control Protocol (LACP) and the
-Marker Protocol.
+Supports the IEEE 802.1AX (formerly 802.3ad) Link Aggregation Control Protocol
+(LACP) and the Marker Protocol.
 LACP will negotiate a set of aggregable links with the peer in to one or more
 Link Aggregated Groups.
 Each LAG is composed of ports of the same speed, set to full-duplex operation.
@@ -150,7 +150,7 @@ The default for new interfaces is set via the
 .Va net.link.lagg.default_use_flowid
 .Xr sysctl 8 .
 .Sh EXAMPLES
-Create a 802.3ad link aggregation using LACP with two
+Create a link aggregation using LACP with two
 .Xr bge 4
 Gigabit Ethernet interfaces:
 .Bd -literal -offset indent

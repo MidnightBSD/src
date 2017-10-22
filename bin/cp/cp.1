@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)cp.1	8.3 (Berkeley) 4/18/94
-.\" $FreeBSD: stable/9/bin/cp/cp.1 241188 2012-10-04 08:49:04Z trasz $
+.\" $FreeBSD: release/10.0.0/bin/cp/cp.1 248342 2013-03-15 20:12:54Z joel $
 .\"
-.Dd September 4, 2012
+.Dd March 15, 2013
 .Dt CP 1
 .Os
 .Sh NAME
@@ -251,6 +251,27 @@ signal, the current input and output file and the percentage complete
 will be written to the standard output.
 .Sh EXIT STATUS
 .Ex -std
+.Sh EXAMPLES
+Make a copy of file
+.Pa foo
+named
+.Pa bar :
+.Pp
+.Dl $ cp foo bar
+.Pp
+Copy a group of files to the
+.Pa /tmp
+directory:
+.Pp
+.Dl $ cp *.txt /tmp
+.Pp
+Copy the directory
+.Pa junk
+and all of its contents (including any subdirectories) to the
+.Pa /tmp
+directory:
+.Pp
+.Dl $ cp -R junk /tmp
 .Sh COMPATIBILITY
 Historic versions of the
 .Nm

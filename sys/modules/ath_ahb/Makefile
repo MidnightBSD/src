@@ -26,7 +26,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD: stable/9/sys/modules/ath_ahb/Makefile 220185 2011-03-31 08:07:13Z adrian $
+# $FreeBSD: release/10.0.0/sys/modules/ath_ahb/Makefile 227413 2011-11-09 23:53:13Z adrian $
 #
 
 .PATH:	${.CURDIR}/../../dev/ath
@@ -34,7 +34,7 @@
 
 KMOD=	if_ath_ahb
 SRCS=	if_ath_ahb.c
-SRCS+=	device_if.h bus_if.h
+SRCS+=	device_if.h bus_if.h opt_wlan.h opt_ath.h opt_ah.h
 
 CFLAGS+=  -I. -I${.CURDIR}/../../dev/ath -I${.CURDIR}/../../dev/ath/ath_hal
 

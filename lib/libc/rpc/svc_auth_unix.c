@@ -32,7 +32,7 @@ static char *sccsid2 = "@(#)svc_auth_unix.c 1.28 88/02/08 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)svc_auth_unix.c	2.3 88/08/01 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/svc_auth_unix.c 241309 2012-10-07 05:11:29Z pfg $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/rpc/svc_auth_unix.c 241181 2012-10-04 04:15:18Z pfg $");
 
 /*
  * svc_auth_unix.c

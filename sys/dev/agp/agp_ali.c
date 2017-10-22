@@ -25,9 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/agp/agp_ali.c 194017 2009-06-11 17:06:07Z avg $");
-
-#include "opt_bus.h"
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/agp/agp_ali.c 244926 2013-01-01 18:16:49Z antoine $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -71,7 +69,7 @@ agp_ali_match(device_t dev)
 		return ("Ali M1541 host to AGP bridge");
 	case 0x162110b9:
 		return ("Ali M1621 host to AGP bridge");
-	};
+	}
 
 	return NULL;
 }

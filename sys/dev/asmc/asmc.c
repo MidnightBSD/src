@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/asmc/asmc.c 197202 2009-09-14 21:33:00Z rpaulo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/asmc/asmc.c 242826 2012-11-09 14:58:26Z rdivacky $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -839,7 +839,7 @@ out:
 			strlcat(buf, buf2, sizeof(buf));
 		}
 		strlcat(buf, " \n", sizeof(buf));
-		device_printf(dev, buf);
+		device_printf(dev, "%s", buf);
 	}
 
 	return (error);

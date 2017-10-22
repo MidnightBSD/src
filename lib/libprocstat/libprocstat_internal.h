@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libprocstat/libprocstat_internal.h 221807 2011-05-12 10:11:39Z stas $
+ * $FreeBSD: release/10.0.0/lib/libprocstat/libprocstat_internal.h 249679 2013-04-20 08:07:04Z trociny $
  */
 
 #ifndef _LIBPROCSTAT_INTERNAL_H_
@@ -34,6 +34,9 @@ struct procstat {
 	kvm_t	*kd;
 	void	*vmentries;
 	void	*files;
+	void	*argv;
+	void	*envv;
+	struct procstat_core *core;
 };
 
 #endif	/* !_LIBPROCSTAT_INTERNAL_H_ */

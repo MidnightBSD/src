@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/eli/g_eli.c 235407 2012-05-13 17:10:38Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/eli/g_eli.c 255144 2013-09-02 10:44:54Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -444,16 +444,15 @@ g_eli_worker(void *arg)
 	sc = wr->w_softc;
 #ifdef SMP
 	/* Before sched_bind() to a CPU, wait for all CPUs to go on-line. */
-	if (mp_ncpus > 1 && sc->sc_crypto == G_ELI_CRYPTO_SW &&
-	    g_eli_threads == 0) {
+	if (sc->sc_cpubind) {
 		while (!smp_started)
 			tsleep(wr, 0, "geli:smp", hz / 4);
 	}
 #endif
 	thread_lock(curthread);
 	sched_prio(curthread, PUSER);
-	if (sc->sc_crypto == G_ELI_CRYPTO_SW && g_eli_threads == 0)
-		sched_bind(curthread, wr->w_number);
+	if (sc->sc_cpubind)
+		sched_bind(curthread, wr->w_number % mp_ncpus);
 	thread_unlock(curthread);
 
 	G_ELI_DEBUG(1, "Thread %s started.", curthread->td_proc->p_comm);
@@ -476,7 +475,8 @@ again:
 			}
 			while (sc->sc_flags & G_ELI_FLAG_SUSPEND) {
 				if (sc->sc_inflight > 0) {
-					G_ELI_DEBUG(0, "inflight=%d", sc->sc_inflight);
+					G_ELI_DEBUG(0, "inflight=%d",
+					    sc->sc_inflight);
 					/*
 					 * We still have inflight BIOs, so
 					 * sleep and retry.
@@ -621,21 +621,19 @@ end:
  * to close it when this situation occur.
  */
 static void
-g_eli_last_close(struct g_eli_softc *sc)
+g_eli_last_close(void *arg, int flags __unused)
 {
 	struct g_geom *gp;
-	struct g_provider *pp;
-	char ppname[64];
+	char gpname[64];
 	int error;
 
 	g_topology_assert();
-	gp = sc->sc_geom;
-	pp = LIST_FIRST(&gp->provider);
-	strlcpy(ppname, pp->name, sizeof(ppname));
-	error = g_eli_destroy(sc, TRUE);
+	gp = arg;
+	strlcpy(gpname, gp->name, sizeof(gpname));
+	error = g_eli_destroy(gp->softc, TRUE);
 	KASSERT(error == 0, ("Cannot detach %s on last close (error=%d).",
-	    ppname, error));
-	G_ELI_DEBUG(0, "Detached %s on last close.", ppname);
+	    gpname, error));
+	G_ELI_DEBUG(0, "Detached %s on last close.", gpname);
 }
 
 int
@@ -665,7 +663,7 @@ g_eli_access(struct g_provider *pp, int dr, int dw, int de)
 	 */
 	if ((sc->sc_flags & G_ELI_FLAG_RW_DETACH) ||
 	    (sc->sc_flags & G_ELI_FLAG_WOPEN)) {
-		g_eli_last_close(sc);
+		g_post_event(g_eli_last_close, gp, M_WAITOK, NULL);
 	}
 	return (0);
 }
@@ -713,16 +711,21 @@ g_eli_create(struct gctl_req *req, struct g_class *mp, struct g_provider *bpp,
 	else
 		gp->access = g_std_access;
 
+	sc->sc_version = md->md_version;
 	sc->sc_inflight = 0;
 	sc->sc_crypto = G_ELI_CRYPTO_UNKNOWN;
 	sc->sc_flags = md->md_flags;
 	/* Backward compatibility. */
-	if (md->md_version < 4)
+	if (md->md_version < G_ELI_VERSION_04)
 		sc->sc_flags |= G_ELI_FLAG_NATIVE_BYTE_ORDER;
-	if (md->md_version < 5)
+	if (md->md_version < G_ELI_VERSION_05)
 		sc->sc_flags |= G_ELI_FLAG_SINGLE_KEY;
-	if (md->md_version < 6 && (sc->sc_flags & G_ELI_FLAG_AUTH) != 0)
+	if (md->md_version < G_ELI_VERSION_06 &&
+	    (sc->sc_flags & G_ELI_FLAG_AUTH) != 0) {
 		sc->sc_flags |= G_ELI_FLAG_FIRST_KEY;
+	}
+	if (md->md_version < G_ELI_VERSION_07)
+		sc->sc_flags |= G_ELI_FLAG_ENC_IVKEY;
 	sc->sc_ealgo = md->md_ealgo;
 	sc->sc_nkey = nkey;
 
@@ -810,11 +813,7 @@ g_eli_create(struct gctl_req *req, struct g_class *mp, struct g_provider *bpp,
 	threads = g_eli_threads;
 	if (threads == 0)
 		threads = mp_ncpus;
-	else if (threads > mp_ncpus) {
-		/* There is really no need for too many worker threads. */
-		threads = mp_ncpus;
-		G_ELI_DEBUG(0, "Reducing number of threads to %u.", threads);
-	}
+	sc->sc_cpubind = (mp_ncpus > 1 && threads == mp_ncpus);
 	for (i = 0; i < threads; i++) {
 		if (g_eli_cpu_is_disabled(i)) {
 			G_ELI_DEBUG(1, "%s: CPU %u disabled, skipping.",
@@ -854,9 +853,6 @@ g_eli_create(struct gctl_req *req, struct g_class *mp, struct g_provider *bpp,
 			goto failed;
 		}
 		LIST_INSERT_HEAD(&sc->sc_workers, wr, w_next);
-		/* If we have hardware support, one thread is enough. */
-		if (sc->sc_crypto == G_ELI_CRYPTO_HW)
-			break;
 	}
 
 	/*
@@ -918,6 +914,10 @@ g_eli_destroy(struct g_eli_softc *sc, boolean_t force)
 		if (force) {
 			G_ELI_DEBUG(1, "Device %s is still open, so it "
 			    "cannot be definitely removed.", pp->name);
+			sc->sc_flags |= G_ELI_FLAG_RW_DETACH;
+			gp->access = g_eli_access;
+			g_wither_provider(pp, ENXIO);
+			return (EBUSY);
 		} else {
 			G_ELI_DEBUG(1,
 			    "Device %s is still open (r%dw%de%d).", pp->name,
@@ -1133,7 +1133,8 @@ g_eli_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 			/* Try again. */
 			continue;
 		} else if (error > 0) {
-			G_ELI_DEBUG(0, "Cannot decrypt Master Key for %s (error=%d).",
+			G_ELI_DEBUG(0,
+			    "Cannot decrypt Master Key for %s (error=%d).",
 			    pp->name, error);
 			g_eli_keyfiles_clear(pp->name);
 			return (NULL);
@@ -1207,6 +1208,7 @@ g_eli_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 		sbuf_printf(sb, "%s<UsedKey>%u</UsedKey>\n", indent,
 		    sc->sc_nkey);
 	}
+	sbuf_printf(sb, "%s<Version>%u</Version>\n", indent, sc->sc_version);
 	sbuf_printf(sb, "%s<Crypto>", indent);
 	switch (sc->sc_crypto) {
 	case G_ELI_CRYPTO_HW:
@@ -1227,8 +1229,8 @@ g_eli_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 	}
 	sbuf_printf(sb, "%s<KeyLength>%u</KeyLength>\n", indent,
 	    sc->sc_ekeylen);
-	sbuf_printf(sb, "%s<EncryptionAlgorithm>%s</EncryptionAlgorithm>\n", indent,
-	    g_eli_algo2str(sc->sc_ealgo));
+	sbuf_printf(sb, "%s<EncryptionAlgorithm>%s</EncryptionAlgorithm>\n",
+	    indent, g_eli_algo2str(sc->sc_ealgo));
 	sbuf_printf(sb, "%s<State>%s</State>\n", indent,
 	    (sc->sc_flags & G_ELI_FLAG_SUSPEND) ? "SUSPENDED" : "ACTIVE");
 }

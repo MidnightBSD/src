@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/mem.c 221869 2011-05-14 01:53:38Z attilio $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/mem.c 254025 2013-08-07 06:21:20Z jeff $");
 
 /*
  * Memory special file
@@ -137,8 +137,11 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 				if (ova == 0) {
 					if (dcache_color_ignore == 0)
 						colors = DCACHE_COLORS;
-					ova = kmem_alloc_wait(kernel_map,
-					    PAGE_SIZE * colors);
+					ova = kva_alloc(PAGE_SIZE * colors);
+					if (ova == 0) {
+						error = ENOMEM;
+						break;
+					}
 				}
 				if (colors != 1 && m->md.color != -1)
 					va = ova + m->md.color * PAGE_SIZE;
@@ -179,6 +182,6 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 		/* else panic! */
 	}
 	if (ova != 0)
-		kmem_free_wakeup(kernel_map, ova, PAGE_SIZE * colors);
+		kva_free(ova, PAGE_SIZE * colors);
 	return (error);
 }

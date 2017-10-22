@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/libkern/iconv_ucs.c 230196 2012-01-16 05:15:13Z kevlo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/iconv_ucs.c 235713 2012-05-21 02:45:47Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -457,8 +457,6 @@ utf8_to_ucs4(const char *src, size_t *utf8width, size_t srclen)
 		/* out of utf-16 range or having illegal bits */
 		return (0);
 	}
-	if (w == 0)
-		return (0);
 
 	if (srclen < w)
 		return (0);

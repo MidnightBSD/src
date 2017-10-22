@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/sys_socket.c 224914 2011-08-16 20:07:47Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/sys_socket.c 254356 2013-08-15 07:54:31Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -66,6 +66,7 @@ struct fileops	socketops = {
 	.fo_close = soo_close,
 	.fo_chmod = invfo_chmod,
 	.fo_chown = invfo_chown,
+	.fo_sendfile = invfo_sendfile,
 	.fo_flags = DFLAG_PASSABLE
 };
 

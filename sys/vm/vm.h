@@ -55,7 +55,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/9/sys/vm/vm.h 245416 2013-01-14 10:58:55Z zont $
+ * $FreeBSD: release/10.0.0/sys/vm/vm.h 253604 2013-07-24 09:45:31Z avg $
  */
 
 #ifndef VM_H
@@ -134,8 +134,6 @@ struct kva_md_info {
 	vm_offset_t	buffer_eva;
 	vm_offset_t	clean_sva;
 	vm_offset_t	clean_eva;
-	vm_offset_t	pager_sva;
-	vm_offset_t	pager_eva;
 };
 
 extern struct kva_md_info	kmi;
@@ -149,6 +147,7 @@ int swap_reserve_by_cred(vm_ooffset_t incr, struct ucred *cred);
 void swap_reserve_force(vm_ooffset_t incr);
 void swap_release(vm_ooffset_t decr);
 void swap_release_by_cred(vm_ooffset_t decr, struct ucred *cred);
+void swapper(void);
 
 #endif				/* VM_H */
 

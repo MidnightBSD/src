@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# $FreeBSD: release/10.0.0/etc/rc.d/utx 240336 2012-09-11 05:04:59Z obrien $
+#
+
+# PROVIDE: utx
+# REQUIRE: DAEMON FILESYSTEMS
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="utx"
+start_cmd="utx boot"
+stop_cmd="utx shutdown"
+
+load_rc_config $name
+run_rc_command "$1"

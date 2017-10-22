@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/ofw_machdep.c 230886 2012-02-01 21:14:04Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/ofw_machdep.c 230632 2012-01-27 22:35:53Z marius $");
 
 /*
  * Some Open Firmware helper functions that are likely machine dependent.
@@ -53,7 +53,7 @@ OF_getetheraddr(device_t dev, u_char *addr)
 	phandle_t node;
 	struct idprom idp;
 
-	if ((node = OF_finddevice("/options")) > 0 &&
+	if ((node = OF_finddevice("/options")) != -1 &&
 	    OF_getprop(node, "local-mac-address?", buf, sizeof(buf)) > 0) {
 		buf[sizeof(buf) - 1] = '\0';
 		if (strcmp(buf, "true") == 0 &&

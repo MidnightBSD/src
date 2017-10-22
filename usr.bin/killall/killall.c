@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/killall/killall.c 238061 2012-07-03 08:23:22Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/killall/killall.c 252428 2013-06-30 20:27:31Z mjg $");
 
 #include <sys/param.h>
 #include <sys/jail.h>
@@ -53,7 +53,7 @@ static void __dead2
 usage(void)
 {
 
-	fprintf(stderr, "usage: killall [-delmsvz] [-help] [-j jail]\n");
+	fprintf(stderr, "usage: killall [-delmsqvz] [-help] [-I] [-j jail]\n");
 	fprintf(stderr,
 	    "               [-u user] [-t tty] [-c cmd] [-SIGNAL] [cmd]...\n");
 	fprintf(stderr, "At least one option or argument to specify processes must be given.\n");
@@ -95,15 +95,18 @@ main(int ac, char **av)
 	struct passwd	*pw;
 	regex_t		rgx;
 	regmatch_t	pmatch;
-	int		i, j;
+	int		i, j, ch;
 	char		buf[256];
+	char		first;
 	char		*user = NULL;
 	char		*tty = NULL;
 	char		*cmd = NULL;
+	int		qflag = 0;
 	int		vflag = 0;
 	int		sflag = 0;
 	int		dflag = 0;
 	int		eflag = 0;
+	int		Iflag = 0;
 	int		jflag = 0;
 	int		mflag = 0;
 	int		zflag = 0;
@@ -141,6 +144,9 @@ main(int ac, char **av)
 		if (**av == '-') {
 			++*av;
 			switch (**av) {
+			case 'I':
+				Iflag = 1;
+				break;
 			case 'j':
 				++*av;
 				if (**av == '\0') {
@@ -185,6 +191,9 @@ main(int ac, char **av)
 				if (*av == NULL)
 				    	errx(1, "must specify procname");
 				cmd = *av;
+				break;
+			case 'q':
+				qflag++;
 				break;
 			case 'v':
 				vflag++;
@@ -383,6 +392,16 @@ main(int ac, char **av)
 			if (matched)
 				break;
 		}
+		if (matched != 0 && Iflag) {
+			printf("Send signal %d to %s (pid %d uid %d)? ",
+				sig, thiscmd, thispid, thisuid);
+			fflush(stdout);
+			first = ch = getchar();
+			while (ch != '\n' && ch != EOF)
+				ch = getchar();
+			if (first != 'y' && first != 'Y')
+				matched = 0;
+		}
 		if (matched == 0)
 			continue;
 		if (dflag)
@@ -402,8 +421,9 @@ main(int ac, char **av)
 		}
 	}
 	if (killed == 0) {
-		fprintf(stderr, "No matching processes %swere found\n",
-		    getuid() != 0 ? "belonging to you " : "");
+		if (!qflag)
+			fprintf(stderr, "No matching processes %swere found\n",
+			    getuid() != 0 ? "belonging to you " : "");
 		errors = 1;
 	}
 	exit(errors);

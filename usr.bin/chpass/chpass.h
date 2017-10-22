@@ -38,7 +38,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)chpass.h	8.4 (Berkeley) 4/2/94
- * $FreeBSD: stable/9/usr.bin/chpass/chpass.h 124692 2004-01-18 21:46:39Z charnier $
+ * $FreeBSD: release/10.0.0/usr.bin/chpass/chpass.h 227228 2011-11-06 17:20:44Z ed $
  */
 
 struct passwd;
@@ -48,7 +48,7 @@ typedef struct _entry {
 	int (*func)(char *, struct passwd *, struct _entry *);
 	int restricted;
 	size_t len;
-	char *except, *save;
+	const char *except, *save;
 } ENTRY;
 
 /* Field numbers. */

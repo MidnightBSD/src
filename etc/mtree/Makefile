@@ -1,20 +1,16 @@
-# $FreeBSD: stable/9/etc/mtree/Makefile 218941 2011-02-22 08:13:49Z uqs $
+# $FreeBSD: release/10.0.0/etc/mtree/Makefile 256013 2013-10-03 01:18:06Z mdf $
 
 .include <bsd.own.mk>
 
-FILES=	${_BIND.chroot.dist} \
-	${_BIND.include.dist} \
+FILES=	${_BSD.debug.dist} \
 	BSD.include.dist \
 	BSD.root.dist \
 	${_BSD.sendmail.dist} \
 	BSD.usr.dist \
 	BSD.var.dist
 
-.if ${MK_BIND} != "no"
-_BIND.chroot.dist=	BIND.chroot.dist
-.if ${MK_BIND_LIBS} != "no"
-_BIND.include.dist=	BIND.include.dist
-.endif
+.if ${MK_DEBUG_FILES} != "no"
+_BSD.debug.dist=	BSD.debug.dist
 .endif
 .if ${MK_GROFF} != "no"
 _BSD.groff.dist=	BSD.groff.dist

@@ -1,4 +1,4 @@
-/*	$NetBSD: sigsetjmp.S,v 1.3 2002/08/17 19:54:30 thorpej Exp $	*/
+/*	$NetBSD: sigsetjmp.S,v 1.6 2013/04/19 16:50:22 matt Exp $	*/
 
 /*
  * Copyright (c) 1997 Mark Brinicombe
@@ -33,7 +33,9 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/arm/gen/sigsetjmp.S 137461 2004-11-09 16:44:57Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/arm/gen/sigsetjmp.S 253518 2013-07-21 12:47:33Z andrew $");
+
+#include <machine/setjmp.h>
 
 /*
  * C library -- sigsetjmp, siglongjmp
@@ -55,8 +57,10 @@ ENTRY(sigsetjmp)
 WEAK_ALIAS(__siglongjmp, siglongjmp)
 
 ENTRY(siglongjmp)
-	ldr	r2, .L_setjmp_magic
-	ldr	r3, [r0]
-	teq	r2, r3
+	ldr	r2, .L_setjmp_magic		/* load magic */
+	ldr	r3, [r0]			/* get magic from jmp_buf */
+	bic	r3, r3, #(_JB_MAGIC__SETJMP ^ _JB_MAGIC__SETJMP_VFP)
+						/* ignore VFP-ness of magic */
+	teq	r2, r3				/* magic correct? */
 	beq	PIC_SYM(_C_LABEL(_longjmp), PLT)
 	b	PIC_SYM(_C_LABEL(longjmp), PLT)

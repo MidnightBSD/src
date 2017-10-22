@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netpfil/ipfw/ip_fw_table.c 243401 2012-11-22 12:11:32Z glebius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netpfil/ipfw/ip_fw_table.c 240494 2012-09-14 11:51:49Z glebius $");
 
 /*
  * Lookup table support for ipfw
@@ -69,7 +69,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netpfil/ipfw/ip_fw_table.c 243401 2012-11-22 12
 #include <security/mac/mac_framework.h>
 #endif
 
-MALLOC_DEFINE(M_IPFW_TBL, "ipfw_tbl", "IpFw tables");
+static MALLOC_DEFINE(M_IPFW_TBL, "ipfw_tbl", "IpFw tables");
 
 struct table_entry {
 	struct radix_node	rn[2];

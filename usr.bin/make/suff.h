@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/make/suff.h 144020 2005-03-23 12:56:15Z harti $
+ * $FreeBSD: release/10.0.0/usr.bin/make/suff.h 144020 2005-03-23 12:56:15Z harti $
  */
 
 #ifndef suff_h_2d5a821c

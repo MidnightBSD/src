@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/pc98/cbus/scvtb.c 111119 2003-02-19 05:47:46Z imp $
+ * $FreeBSD: release/10.0.0/sys/pc98/cbus/scvtb.c 228471 2011-12-13 14:06:01Z ed $
  */
 
 #include "opt_syscons.h"
@@ -174,7 +174,7 @@ sc_vtb_geta(sc_vtb_t *vtb, int at)
 		return (*(u_int16_t *)(p + attr_offset(vtb)) & 0xff00);
 }
 
-__inline static void
+static inline void
 vtb_putc(sc_vtb_t *vtb, vm_offset_t p, int c, int a)
 {
 	if (vtb->vtb_type == VTB_FRAMEBUFFER) {

@@ -1,4 +1,4 @@
-/*	$NetBSD: iso9660_rrip.c,v 1.10 2011/05/29 17:07:58 tsutsui Exp $	*/
+/*	$NetBSD: iso9660_rrip.c,v 1.11 2012/04/29 13:32:21 joerg Exp $	*/
 
 /*
  * Copyright (c) 2005 Daniel Watt, Walter Deignan, Ryan Gabrys, Alan
@@ -42,7 +42,7 @@
 #include <stdio.h>
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/makefs/cd9660/iso9660_rrip.c 248293 2013-03-14 22:57:27Z brooks $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/makefs/cd9660/iso9660_rrip.c 253707 2013-07-27 15:28:31Z marius $");
 
 static void cd9660_rrip_initialize_inode(cd9660node *);
 static int cd9660_susp_handle_continuation(cd9660node *);
@@ -419,9 +419,9 @@ cd9660_rrip_initialize_node(cd9660node *node, cd9660node *parent,
 		}
 		else if ((node->node != NULL) &&
 			((strlen(node->node->name) !=
-			    (int)node->isoDirRecord->name_len[0]) ||
+			    (uint8_t)node->isoDirRecord->name_len[0]) ||
 			(memcmp(node->node->name,node->isoDirRecord->name,
-				(int) node->isoDirRecord->name_len[0]) != 0))) {
+				(uint8_t)node->isoDirRecord->name_len[0]) != 0))) {
 			cd9660_rrip_NM(node);
 		}
 
@@ -685,7 +685,7 @@ int
 cd9660node_rrip_tf(struct ISO_SUSP_ATTRIBUTES *p, fsnode *_node)
 {
 	p->attr.rr_entry.TF.flags[0] = TF_MODIFY | TF_ACCESS | TF_ATTRIBUTES;
-	p->attr.rr_entry.TF.h.length[0] = 4;
+	p->attr.rr_entry.TF.h.length[0] = 5;
 	p->attr.rr_entry.TF.h.version[0] = 1;
 
 	/*

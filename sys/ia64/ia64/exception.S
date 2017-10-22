@@ -26,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/sys/ia64/ia64/exception.S 223700 2011-06-30 20:34:55Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ia64/ia64/exception.S 223700 2011-06-30 20:34:55Z marcel $");
 
 #include "opt_xtrace.h"
 

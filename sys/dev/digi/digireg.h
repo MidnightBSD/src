@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/digi/digireg.h 118607 2003-08-07 15:04:27Z jhb $
+ * $FreeBSD: release/10.0.0/sys/dev/digi/digireg.h 118607 2003-08-07 15:04:27Z jhb $
  */
 
 struct global_data {

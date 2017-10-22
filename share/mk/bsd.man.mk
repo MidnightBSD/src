@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/mk/bsd.man.mk 248531 2013-03-19 20:00:34Z brooks $
+# $FreeBSD: release/10.0.0/share/mk/bsd.man.mk 245752 2013-01-21 22:40:39Z brooks $
 #
 # The include file <bsd.man.mk> handles installing manual pages and
 # their links.
@@ -216,7 +216,7 @@ _maninstall: ${MAN}
 		t=${DESTDIR}${MANDIR}$${sect}${MANSUBDIR}/$$name; \
 		${ECHO} $${t}${ZEXT} -\> $${l}${ZEXT}; \
 		rm -f $${t} $${t}${MCOMPRESS_EXT}; \
-		ln $${l}${ZEXT} $${t}${ZEXT}; \
+		${INSTALL_LINK} $${l}${ZEXT} $${t}${ZEXT}; \
 	done
 .if defined(MANBUILDCAT) && !empty(MANBUILDCAT)
 	@set ${MLINKS:C/\.([^.]*)$/.\1 \1/}; \
@@ -231,7 +231,7 @@ _maninstall: ${MAN}
 		t=${DESTDIR}${CATDIR}$${sect}${MANSUBDIR}/$$name; \
 		${ECHO} $${t}${ZEXT} -\> $${l}${ZEXT}; \
 		rm -f $${t} $${t}${MCOMPRESS_EXT}; \
-		ln $${l}${ZEXT} $${t}${ZEXT}; \
+		${INSTALL_LINK} $${l}${ZEXT} $${t}${ZEXT}; \
 	done
 .endif
 .endif

@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/9/sys/dev/e1000/if_lem.h 235527 2012-05-16 22:22:52Z jfv $*/
+/*$FreeBSD: release/10.0.0/sys/dev/e1000/if_lem.h 250414 2013-05-09 17:07:30Z luigi $*/
 
 
 #ifndef _LEM_H_DEFINED_
@@ -363,6 +363,7 @@ struct adapter {
 	struct em_int_delay_info tx_abs_int_delay;
 	struct em_int_delay_info rx_int_delay;
 	struct em_int_delay_info rx_abs_int_delay;
+	struct em_int_delay_info tx_itr;
 
 	/*
 	 * Transmit definitions

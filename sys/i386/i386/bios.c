@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/i386/bios.c 184564 2008-11-02 18:48:54Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/i386/bios.c 236213 2012-05-29 01:48:06Z kevlo $");
 
 /*
  * Code for dealing with the BIOS in x86 PC systems.
@@ -372,9 +372,11 @@ bios16(struct bios_args *args, char *fmt, ...)
 	    break;
 
 	default:
+	    va_end(ap);
 	    return (EINVAL);
 	}
     }
+    va_end(ap);
 
     if (flags & BIOSARGS_FLAG) {
 	if (arg_end - arg_start > ctob(16))
@@ -448,9 +450,11 @@ bios16(struct bios_args *args, char *fmt, ...)
 	    break;
 
 	default:
+	    va_end(ap);
 	    return (EINVAL);
 	}
     }
+    va_end(ap);
 
     set_bios_selectors(&args->seg, flags);
     bioscall_vector.vec16.offset = (u_short)args->entry;

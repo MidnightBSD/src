@@ -31,7 +31,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.bin/truss/i386-linux.c 241162 2012-10-03 14:28:55Z zont $";
+  "$FreeBSD: release/10.0.0/usr.bin/truss/i386-linux.c 240562 2012-09-16 14:38:01Z zont $";
 #endif /* not lint */
 
 /*
@@ -235,7 +235,7 @@ i386_linux_syscall_entry(struct trussinfo *trussinfo, int nargs)
 /*
  * Linux syscalls return negative errno's, we do positive and map them
  */
-const int bsd_to_linux_errno[] = {
+static const int bsd_to_linux_errno[] = {
 	-0,  -1,  -2,  -3,  -4,  -5,  -6,  -7,  -8,  -9,
 	-10, -35, -12, -13, -14, -15, -16, -17, -18, -19,
 	-20, -21, -22, -23, -24, -25, -26, -27, -28, -29,

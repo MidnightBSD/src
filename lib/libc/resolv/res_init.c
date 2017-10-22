@@ -69,7 +69,7 @@ static const char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
 static const char rcsid[] = "$Id: res_init.c,v 1.16.18.7 2007/07/09 01:52:58 marka Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/resolv/res_init.c 174226 2007-12-03 15:13:44Z ume $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/resolv/res_init.c 254700 2013-08-23 13:59:47Z jilles $");
 
 #include "port_before.h"
 
@@ -304,7 +304,7 @@ __res_vinit(res_state statp, int preinit) {
 	 line[sizeof(name) - 1] == '\t'))
 
 	nserv = 0;
-	if ((fp = fopen(_PATH_RESCONF, "r")) != NULL) {
+	if ((fp = fopen(_PATH_RESCONF, "re")) != NULL) {
 	    /* read the config file */
 	    while (fgets(buf, sizeof(buf), fp) != NULL) {
 		/* skip comments */

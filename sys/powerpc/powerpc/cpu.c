@@ -55,7 +55,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * from $NetBSD: cpu_subr.c,v 1.1 2003/02/03 17:10:09 matt Exp $
- * $FreeBSD: stable/9/sys/powerpc/powerpc/cpu.c 225963 2011-10-04 10:02:14Z mav $
+ * $FreeBSD: release/10.0.0/sys/powerpc/powerpc/cpu.c 255640 2013-09-17 17:29:56Z nwhitehorn $
  */
 
 #include <sys/param.h>
@@ -75,13 +75,13 @@
 #include <machine/spr.h>
 
 static void	cpu_6xx_setup(int cpuid, uint16_t vers);
-static void	cpu_e500_setup(int cpuid, uint16_t vers);
 static void	cpu_970_setup(int cpuid, uint16_t vers);
+static void	cpu_booke_setup(int cpuid, uint16_t vers);
 
 int powerpc_pow_enabled;
-void (*cpu_idle_hook)(void) = NULL;
-static void	cpu_idle_60x(void);
-static void	cpu_idle_e500(void);
+void (*cpu_idle_hook)(sbintime_t) = NULL;
+static void	cpu_idle_60x(sbintime_t);
+static void	cpu_idle_booke(sbintime_t);
 
 struct cputab {
 	const char	*name;
@@ -127,6 +127,26 @@ static const struct cputab models[] = {
         { "IBM PowerPC 970MP",		IBM970MP,	REVFMT_MAJMIN,
 	   PPC_FEATURE_64 | PPC_FEATURE_HAS_ALTIVEC | PPC_FEATURE_HAS_FPU,
 	   cpu_970_setup },
+        { "IBM POWER4",		IBMPOWER4,	REVFMT_MAJMIN,
+	   PPC_FEATURE_64 | PPC_FEATURE_HAS_FPU, NULL },
+        { "IBM POWER4+",	IBMPOWER4PLUS,	REVFMT_MAJMIN,
+	   PPC_FEATURE_64 | PPC_FEATURE_HAS_FPU, NULL },
+        { "IBM POWER5",		IBMPOWER5,	REVFMT_MAJMIN,
+	   PPC_FEATURE_64 | PPC_FEATURE_HAS_FPU, NULL },
+        { "IBM POWER5+",	IBMPOWER5PLUS,	REVFMT_MAJMIN,
+	   PPC_FEATURE_64 | PPC_FEATURE_HAS_FPU, NULL },
+        { "IBM POWER6",		IBMPOWER6,	REVFMT_MAJMIN,
+	   PPC_FEATURE_64 | PPC_FEATURE_HAS_ALTIVEC | PPC_FEATURE_HAS_FPU,
+	   NULL },
+        { "IBM POWER7",		IBMPOWER7,	REVFMT_MAJMIN,
+	   PPC_FEATURE_64 | PPC_FEATURE_HAS_ALTIVEC | PPC_FEATURE_HAS_FPU,
+	   NULL },
+        { "IBM POWER7+",	IBMPOWER7PLUS,	REVFMT_MAJMIN,
+	   PPC_FEATURE_64 | PPC_FEATURE_HAS_ALTIVEC | PPC_FEATURE_HAS_FPU,
+	   NULL },
+        { "IBM POWER8",		IBMPOWER8,	REVFMT_MAJMIN,
+	   PPC_FEATURE_64 | PPC_FEATURE_HAS_ALTIVEC | PPC_FEATURE_HAS_FPU,
+	   NULL },
         { "Motorola PowerPC 7400",	MPC7400,	REVFMT_MAJMIN,
 	   PPC_FEATURE_HAS_ALTIVEC | PPC_FEATURE_HAS_FPU, cpu_6xx_setup },
         { "Motorola PowerPC 7410",	MPC7410,	REVFMT_MAJMIN,
@@ -146,9 +166,13 @@ static const struct cputab models[] = {
         { "Motorola PowerPC 8245",	MPC8245,	REVFMT_MAJMIN,
 	   PPC_FEATURE_HAS_FPU, cpu_6xx_setup },
         { "Freescale e500v1 core",	FSL_E500v1,	REVFMT_MAJMIN,
-	   0, cpu_e500_setup },
+	   0, cpu_booke_setup },
         { "Freescale e500v2 core",	FSL_E500v2,	REVFMT_MAJMIN,
-	   0, cpu_e500_setup },
+	   0, cpu_booke_setup },
+	{ "Freescale e500mc core",	FSL_E500mc,	REVFMT_MAJMIN,
+	   0, cpu_booke_setup },
+	{ "Freescale e5500 core",	FSL_E5500,	REVFMT_MAJMIN,
+	   0, cpu_booke_setup },
         { "IBM Cell Broadband Engine",	IBMCELLBE,	REVFMT_MAJMIN,
 	   PPC_FEATURE_64 | PPC_FEATURE_HAS_ALTIVEC | PPC_FEATURE_HAS_FPU,
 	   NULL},
@@ -191,6 +215,8 @@ cpu_setup(u_int cpuid)
 			break;
 		case FSL_E500v1:
 		case FSL_E500v2:
+		case FSL_E500mc:
+		case FSL_E5500:
 			maj = (pvr >>  4) & 0xf;
 			min = (pvr >>  0) & 0xf;
 			break;
@@ -438,8 +464,9 @@ cpu_6xx_print_cacheinfo(u_int cpuid, uint16_t vers)
 }
 
 static void
-cpu_e500_setup(int cpuid, uint16_t vers)
+cpu_booke_setup(int cpuid, uint16_t vers)
 {
+#ifdef BOOKE_E500
 	register_t hid0;
 
 	hid0 = mfspr(SPR_HID0);
@@ -451,9 +478,10 @@ cpu_e500_setup(int cpuid, uint16_t vers)
 	mtspr(SPR_HID0, hid0);
 
 	printf("cpu%d: HID0 %b\n", cpuid, (int)hid0, HID0_E500_BITMASK);
+#endif
 
 	if (cpu_idle_hook == NULL)
-		cpu_idle_hook = cpu_idle_e500;
+		cpu_idle_hook = cpu_idle_booke;
 }
 
 static void
@@ -508,6 +536,7 @@ cpu_feature_bit(SYSCTL_HANDLER_ARGS)
 void
 cpu_idle(int busy)
 {
+	sbintime_t sbt = -1;
 
 #ifdef INVARIANTS
 	if ((mfmsr() & PSL_EE) != PSL_EE) {
@@ -519,17 +548,19 @@ cpu_idle(int busy)
 
 	CTR2(KTR_SPARE2, "cpu_idle(%d) at %d",
 	    busy, curcpu);
+
 	if (cpu_idle_hook != NULL) {
 		if (!busy) {
 			critical_enter();
-			cpu_idleclock();
+			sbt = cpu_idleclock();
 		}
-		cpu_idle_hook();
+		cpu_idle_hook(sbt);
 		if (!busy) {
 			cpu_activeclock();
 			critical_exit();
 		}
 	}
+
 	CTR2(KTR_SPARE2, "cpu_idle(%d) at %d done",
 	    busy, curcpu);
 }
@@ -541,7 +572,7 @@ cpu_idle_wakeup(int cpu)
 }
 
 static void
-cpu_idle_60x(void)
+cpu_idle_60x(sbintime_t sbt)
 {
 	register_t msr;
 	uint16_t vers;
@@ -576,7 +607,7 @@ cpu_idle_60x(void)
 }
 
 static void
-cpu_idle_e500(void)
+cpu_idle_booke(sbintime_t sbt)
 {
 	register_t msr;
 

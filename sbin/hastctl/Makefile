@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sbin/hastctl/Makefile 229193 2012-01-01 19:19:48Z dim $
+# $FreeBSD: release/10.0.0/sbin/hastctl/Makefile 250503 2013-05-11 09:51:44Z trociny $
 
 .include <bsd.own.mk>
 
@@ -21,6 +21,7 @@ MAN=	hastctl.8
 
 NO_WFORMAT=
 NO_WCAST_ALIGN=
+NO_WMISSING_VARIABLE_DECLARATIONS=
 CFLAGS+=-I${.CURDIR}/../hastd
 CFLAGS+=-DHAVE_CAPSICUM
 CFLAGS+=-DINET
@@ -31,8 +32,8 @@ CFLAGS+=-DINET6
 CFLAGS+=-DYY_NO_UNPUT
 CFLAGS+=-DYY_NO_INPUT
 
-DPADD=	${LIBL} ${LIBUTIL}
-LDADD=	-ll -lutil
+DPADD=	${LIBUTIL}
+LDADD=	-lutil
 .if ${MK_OPENSSL} != "no"
 DPADD+=	${LIBCRYPTO}
 LDADD+=	-lcrypto

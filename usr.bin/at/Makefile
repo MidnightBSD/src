@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.bin/at/Makefile 201386 2010-01-02 10:27:05Z ed $
+# $FreeBSD: release/10.0.0/usr.bin/at/Makefile 226420 2011-10-16 07:57:01Z ed $
 
 .include "${.CURDIR}/Makefile.inc"
 
@@ -11,7 +11,7 @@ MLINKS=	at.1 batch.1 \
 	at.1 atq.1 \
 	at.1 atrm.1
 
-WARNS?=	1
+NO_WFORMAT=
 
 BINOWN=	root
 BINMODE= 4555

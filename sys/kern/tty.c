@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/tty.c 242892 2012-11-11 12:12:44Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/tty.c 255219 2013-09-05 00:09:56Z pjd $");
 
 #include "opt_capsicum.h"
 #include "opt_compat.h"
@@ -114,7 +114,7 @@ tty_watermarks(struct tty *tp)
 	/* Set low watermark at 10% (when 90% is available). */
 	tp->t_inlow = (ttyinq_getallocatedsize(&tp->t_inq) * 9) / 10;
 
-	/* Provide an ouput buffer for 0.2 seconds of data. */
+	/* Provide an output buffer for 0.2 seconds of data. */
 	bs = MIN(tp->t_termios.c_ospeed / 5, TTYBUF_MAX);
 	ttyoutq_setsize(&tp->t_outq, tp, bs);
 
@@ -1237,7 +1237,7 @@ tty_makedev(struct tty *tp, struct ucred *cred, const char *fmt, ...)
 
 		/* Slave call-out devices. */
 		if (tp->t_flags & TF_INITLOCK) {
-			dev = make_dev_cred(&ttyil_cdevsw, 
+			dev = make_dev_cred(&ttyil_cdevsw,
 			    TTYUNIT_CALLOUT | TTYUNIT_INIT, cred,
 			    UID_UUCP, GID_DIALER, 0660, "cua%s.init", name);
 			dev_depends(tp->t_dev, dev);
@@ -1379,6 +1379,16 @@ tty_flush(struct tty *tp, int flags)
 		ttydevsw_inwakeup(tp);
 		ttydevsw_pktnotify(tp, TIOCPKT_FLUSHREAD);
 	}
+}
+
+void
+tty_set_winsize(struct tty *tp, const struct winsize *wsz)
+{
+
+	if (memcmp(&tp->t_winsize, wsz, sizeof(*wsz)) == 0)
+		return;
+	tp->t_winsize = *wsz;
+	tty_signal_pgrp(tp, SIGWINCH);
 }
 
 static int
@@ -1689,10 +1699,7 @@ tty_generic_ioctl(struct tty *tp, u_long cmd, void *data, int fflag,
 		return (0);
 	case TIOCSWINSZ:
 		/* Set window size. */
-		if (bcmp(&tp->t_winsize, data, sizeof(struct winsize)) == 0)
-			return (0);
-		tp->t_winsize = *(struct winsize*)data;
-		tty_signal_pgrp(tp, SIGWINCH);
+		tty_set_winsize(tp, data);
 		return (0);
 	case TIOCEXCL:
 		tp->t_flags |= TF_EXCLUDE;
@@ -1827,32 +1834,22 @@ ttyhook_register(struct tty **rtp, struct proc *p, int fd,
 {
 	struct tty *tp;
 	struct file *fp;
-#ifdef CAPABILITIES
-	struct file *fp_cap;
-#endif
 	struct cdev *dev;
 	struct cdevsw *cdp;
 	struct filedesc *fdp;
+	cap_rights_t rights;
 	int error, ref;
 
 	/* Validate the file descriptor. */
-	if ((fdp = p->p_fd) == NULL)
-		return (EBADF);
-
-	fp = fget_unlocked(fdp, fd);
-	if (fp == NULL)
-		return (EBADF);
+	fdp = p->p_fd;
+	error = fget_unlocked(fdp, fd, cap_rights_init(&rights, CAP_TTYHOOK),
+	    0, &fp, NULL);
+	if (error != 0)
+		return (error);
 	if (fp->f_ops == &badfileops) {
 		error = EBADF;
 		goto done1;
 	}
-
-#ifdef CAPABILITIES
-	fp_cap = fp;
-	error = cap_funwrap(fp_cap, CAP_TTYHOOK, &fp);
-	if (error)
-		return (error);
-#endif
 
 	/*
 	 * Make sure the vnode is bound to a character device.

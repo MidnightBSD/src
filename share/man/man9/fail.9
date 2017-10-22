@@ -24,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man9/fail.9 235591 2012-05-18 02:13:19Z gjb $
+.\" $FreeBSD: release/10.0.0/share/man/man9/fail.9 235373 2012-05-12 20:46:19Z gjb $
 .\"
 .Dd May 10, 2009
 .Dt FAIL 9
@@ -165,7 +165,6 @@ term only cascades when passed a non-zero argument.
 A pid can optionally be specified.
 The fail point term is only executed when invoked by a process with a
 matching p_pid.
-.Pp
 .Sh EXAMPLES
 .Bl -tag -width Sy
 .It Sy sysctl debug.fail_point.foobar="2.1%return(5)"

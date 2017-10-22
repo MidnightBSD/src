@@ -1,10 +1,8 @@
 /*
- * $FreeBSD: stable/9/libexec/rtld-elf/libmap.h 141232 2005-02-04 02:46:41Z mdodd $
+ * $FreeBSD: release/10.0.0/libexec/rtld-elf/libmap.h 255765 2013-09-21 21:03:52Z des $
  */
 
 int	lm_init (char *);
 void	lm_fini (void);
 char *	lm_find (const char *, const char *);
-#ifdef COMPAT_32BIT
 char *	lm_findn (const char *, const char *, const int);
-#endif

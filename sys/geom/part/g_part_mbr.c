@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/part/g_part_mbr.c 234922 2012-05-02 08:38:43Z marck $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/part/g_part_mbr.c 251588 2013-06-09 23:34:26Z marcel $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -118,6 +118,7 @@ static struct g_part_mbr_alias {
 	{ DOSPTYP_386BSD,	G_PART_ALIAS_FREEBSD },
 	{ DOSPTYP_EXT,		G_PART_ALIAS_EBR },
 	{ DOSPTYP_NTFS,		G_PART_ALIAS_MS_NTFS },
+	{ DOSPTYP_FAT16,	G_PART_ALIAS_MS_FAT16 },
 	{ DOSPTYP_FAT32,	G_PART_ALIAS_MS_FAT32 },
 	{ DOSPTYP_EXTLBA,	G_PART_ALIAS_EBR },
 	{ DOSPTYP_LDM,		G_PART_ALIAS_MS_LDM_DATA },
@@ -125,6 +126,7 @@ static struct g_part_mbr_alias {
 	{ DOSPTYP_LINUX,	G_PART_ALIAS_LINUX_DATA },
 	{ DOSPTYP_LINLVM,	G_PART_ALIAS_LINUX_LVM },
 	{ DOSPTYP_LINRAID,	G_PART_ALIAS_LINUX_RAID },
+	{ DOSPTYP_PPCBOOT,	G_PART_ALIAS_FREEBSD_BOOT },
 	{ DOSPTYP_VMFS,		G_PART_ALIAS_VMFS },
 	{ DOSPTYP_VMKDIAG,	G_PART_ALIAS_VMKDIAG },
 };
@@ -495,6 +497,8 @@ g_part_mbr_setunset(struct g_part_table *table, struct g_part_entry *baseentry,
 	struct g_part_mbr_entry *entry;
 	int changed;
 
+	if (baseentry == NULL)
+		return (ENODEV);
 	if (strcasecmp(attrib, "active") != 0)
 		return (EINVAL);
 

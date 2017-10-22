@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/mvs/mvs.h 237378 2012-06-21 10:28:59Z mav $
+ * $FreeBSD: release/10.0.0/sys/dev/mvs/mvs.h 236952 2012-06-12 11:08:51Z mav $
  */
 
 #include "mvs_if.h"

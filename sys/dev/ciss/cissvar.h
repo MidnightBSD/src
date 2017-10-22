@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/sys/dev/ciss/cissvar.h 246152 2013-01-31 19:24:33Z sbruno $
+ *	$FreeBSD: release/10.0.0/sys/dev/ciss/cissvar.h 246713 2013-02-12 16:57:20Z kib $
  */
 
 /*
@@ -116,6 +116,7 @@ struct ciss_request
 #define CISS_REQ_DATAOUT	(1<<3)		/* data host->adapter */
 #define CISS_REQ_DATAIN		(1<<4)		/* data adapter->host */
 #define CISS_REQ_BUSY		(1<<5)		/* controller has req */
+#define CISS_REQ_CCB		(1<<6)		/* data is ccb */
 
     void			(* cr_complete)(struct ciss_request *);
     void			*cr_private;

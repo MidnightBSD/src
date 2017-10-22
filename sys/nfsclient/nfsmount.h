@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsmount.h	8.3 (Berkeley) 3/30/95
- * $FreeBSD: stable/9/sys/nfsclient/nfsmount.h 233326 2012-03-22 21:07:54Z jhb $
+ * $FreeBSD: release/10.0.0/sys/nfsclient/nfsmount.h 248255 2013-03-13 21:06:03Z jhb $
  */
 
 #ifndef _NFSCLIENT_NFSMOUNT_H_
@@ -124,8 +124,6 @@ struct	nfsmount {
 #ifndef NFS_DEFAULT_NEGNAMETIMEO
 #define NFS_DEFAULT_NEGNAMETIMEO	60
 #endif
-
-#define	NFS_PCATCH	(PCATCH | PBDRY)
 
 #endif
 

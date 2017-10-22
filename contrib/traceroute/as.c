@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/contrib/traceroute/as.c 216184 2010-12-04 14:19:27Z uqs $ */
+/* $FreeBSD: release/10.0.0/contrib/traceroute/as.c 216184 2010-12-04 14:19:27Z uqs $ */
 /*	$NetBSD: as.c,v 1.1 2001/11/04 23:14:36 atatat Exp $	*/
 
 /*

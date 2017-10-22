@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/ibcs2/ibcs2_sysvec.c 219405 2011-03-08 19:01:45Z dchagin $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/ibcs2/ibcs2_sysvec.c 256119 2013-10-07 16:57:48Z dim $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -54,8 +54,6 @@ MODULE_VERSION(ibcs2, 1);
 
 extern int bsd_to_ibcs2_errno[];
 extern struct sysent ibcs2_sysent[IBCS2_SYS_MAXSYSCALL];
-extern int szsigcode;
-extern char sigcode[];
 static int ibcs2_fixup(register_t **, struct image_params *);
 
 struct sysentvec ibcs2_svr3_sysvec = {

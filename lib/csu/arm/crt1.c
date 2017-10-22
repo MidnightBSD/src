@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/csu/arm/crt1.c 245777 2013-01-22 07:32:26Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/csu/arm/crt1.c 255874 2013-09-26 07:53:18Z andrew $");
 
 #ifndef lint
 #ifndef __GNUC__
@@ -52,16 +52,11 @@ __FBSDID("$FreeBSD: stable/9/lib/csu/arm/crt1.c 245777 2013-01-22 07:32:26Z kib 
 
 #include "libc_private.h"
 #include "crtbrand.c"
+#include "ignore_init.c"
 
 struct Struct_Obj_Entry;
 struct ps_strings;
 
-extern int _DYNAMIC;
-#pragma weak _DYNAMIC
-
-extern void _fini(void);
-extern void _init(void);
-extern int main(int, char **, char **);
 extern void _start(int, char **, char **, const struct Struct_Obj_Entry *,
     void (*)(void), struct ps_strings *);
 
@@ -72,8 +67,6 @@ extern int eprol;
 extern int etext;
 #endif
 
-char **environ;
-const char *__progname = "";
 struct ps_strings *__ps_strings;
 
 void __start(int, char **, char **, struct ps_strings *,
@@ -104,17 +97,8 @@ void
 __start(int argc, char **argv, char **env, struct ps_strings *ps_strings,
     const struct Struct_Obj_Entry *obj __unused, void (*cleanup)(void))
 {
-	const char *s;
 
-	if (environ == NULL)
-		environ = env;
-
-	if (argc > 0 && argv[0] != NULL) {
-		__progname = argv[0];
-		for (s = __progname; *s != '\0'; s++)
-			if (*s == '/')
-				__progname = s + 1;
-	}
+	handle_argv(argc, argv, env);
 
 	if (ps_strings != (struct ps_strings *)0)
 		__ps_strings = ps_strings;
@@ -125,14 +109,25 @@ __start(int argc, char **argv, char **env, struct ps_strings *ps_strings,
 		_init_tls();
 #ifdef GCRT
 	atexit(_mcleanup);
-#endif
-	atexit(_fini);
-#ifdef GCRT
 	monstartup(&eprol, &etext);
 #endif
-	_init();
-	exit( main(argc, argv, env) );
+	handle_static_init(argc, argv, env);
+	exit(main(argc, argv, env));
 }
+
+static const struct {
+	int32_t	namesz;
+	int32_t	descsz;
+	int32_t	type;
+	char	name[sizeof(NOTE_FREEBSD_VENDOR)];
+	char	desc[sizeof(MACHINE_ARCH)];
+} archtag __attribute__ ((section (NOTE_SECTION), aligned(4))) __used = {
+	.namesz = sizeof(NOTE_FREEBSD_VENDOR),
+	.descsz = sizeof(int32_t),
+	.type = ARCH_NOTETYPE,
+	.name = NOTE_FREEBSD_VENDOR,
+	.desc = MACHINE_ARCH
+};
 
 #ifdef GCRT
 __asm__(".text");

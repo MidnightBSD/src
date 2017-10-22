@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_dev.c 248085 2013-03-09 02:36:32Z marius $ */
+/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_dev.c 257375 2013-10-30 08:05:39Z hselasky $ */
 /*-
  * Copyright (c) 2006-2008 Hans Petter Selasky. All rights reserved.
  *
@@ -27,6 +27,9 @@
  * usb_dev.c - An abstraction layer for creating devices under /dev/...
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -75,6 +78,7 @@
 #include <sys/syscallsubr.h>
 
 #include <machine/stdarg.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 #if USB_HAVE_UGEN
 
@@ -1095,7 +1099,7 @@ usb_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int fflag, struct thread* 
 
 	/* Wait for re-enumeration, if any */
 
-	while (f->udev->re_enumerate_wait != 0) {
+	while (f->udev->re_enumerate_wait != USB_RE_ENUM_DONE) {
 
 		usb_unref_device(cpd, &refs);
 

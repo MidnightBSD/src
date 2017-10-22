@@ -1,5 +1,5 @@
 #	from: @(#)sys.mk	8.2 (Berkeley) 3/21/94
-# $FreeBSD: stable/9/share/mk/sys.mk 241711 2012-10-19 00:22:09Z jhb $
+# $FreeBSD: release/10.0.0/share/mk/sys.mk 254980 2013-08-27 23:09:34Z sjg $
 
 unix		?=	We run FreeBSD, not UNIX.
 .FreeBSD	?=	true
@@ -13,8 +13,12 @@ unix		?=	We run FreeBSD, not UNIX.
 # and/or endian.  This is called MACHINE_CPU in NetBSD, but that's used
 # for something different in FreeBSD.
 #
-MACHINE_CPUARCH=${MACHINE_ARCH:C/mips.*e[lb]/mips/:C/armeb/arm/:C/powerpc64/powerpc/}
+MACHINE_CPUARCH=${MACHINE_ARCH:C/mips(n32|64)?(el)?/mips/:C/arm(v6)?(eb)?/arm/:C/powerpc64/powerpc/}
 .endif
+
+# Set any local definitions first. Place this early, but it needs
+# MACHINE_CPUARCH to be defined.
+.sinclude <local.sys.mk>
 
 # If the special target .POSIX appears (without prerequisites or
 # commands) before the first noncomment line in the makefile, make shall
@@ -35,7 +39,7 @@ AR		?=	ar
 .if defined(%POSIX)
 ARFLAGS		?=	-rv
 .else
-ARFLAGS		?=	rl
+ARFLAGS		?=	cru
 .endif
 RANLIB		?=	ranlib
 
@@ -91,7 +95,13 @@ ECHODIR		?=	true
 .endif
 .endif
 
-.if !empty(.MAKEFLAGS:M-n) && ${.MAKEFLAGS:M-n} == "-n"
+.if defined(.PARSEDIR)
+# _+_ appears to be a workaround for the special src .MAKE not working.
+# setting it to + interferes with -N
+_+_		?=
+.elif !empty(.MAKEFLAGS:M-n) && ${.MAKEFLAGS:M-n} == "-n"
+# the check above matches only a single -n, so -n -n will result
+# in _+_ = +
 _+_		?=
 .else
 _+_		?=	+
@@ -123,14 +133,20 @@ LINTLIBFLAGS	?=	-cghapbxu -C ${LIB}
 
 MAKE		?=	make
 
+.if !defined(%POSIX)
+NM		?=	nm
+
 OBJC		?=	cc
 OBJCFLAGS	?=	${OBJCINCLUDES} ${CFLAGS} -Wno-import
+
+OBJCOPY		?=	objcopy
 
 PC		?=	pc
 PFLAGS		?=
 
 RC		?=	f77
 RFLAGS		?=
+.endif
 
 SHELL		?=	sh
 
@@ -316,14 +332,37 @@ SHELL=	${__MAKE_SHELL}
 .SHELL: path=${__MAKE_SHELL}
 .endif
 
-# Default executable format
-# XXX hint for bsd.port.mk
-OBJFORMAT?=	elf
+.if !defined(.PARSEDIR)
+# We are not bmake, which is more aggressive about searching .PATH
+# It is sometime necessary to curb its enthusiasm with .NOPATH
+# The following allows us to quietly ignore .NOPATH when not using bmake.
+.NOTMAIN: .NOPATH
+.NOPATH:
 
 # Toggle on warnings
 .WARN: dirsyntax
+.endif
 
 .endif
 
-.include <bsd.compat.mk>
+.if defined(.PARSEDIR)
+# Tell bmake to expand -V VAR by default
+.MAKE.EXPAND_VARIABLES= yes
+
+# Tell bmake the makefile preference
+.MAKE.MAKEFILE_PREFERENCE= BSDmakefile makefile Makefile
+
+# By default bmake does *not* use set -e
+# when running target scripts, this is a problem for many makefiles here.
+# So define a shell that will do what FreeBSD expects.
+.ifndef WITHOUT_SHELL_ERRCTL
+.SHELL: name=sh \
+	quiet="set -" echo="set -v" filter="set -" \
+	hasErrCtl=yes check="set -e" ignore="set +e" \
+	echoFlag=v errFlag=e \
+	path=${__MAKE_SHELL:U/bin/sh}
+.endif
+
+.endif
+
 .include <bsd.cpu.mk>

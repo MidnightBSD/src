@@ -28,7 +28,7 @@
  *
  *	@(#)extern.h	8.2 (Berkeley) 4/20/95 
  *
- * $FreeBSD: stable/9/usr.bin/mail/extern.h 216370 2010-12-11 08:32:16Z joel $
+ * $FreeBSD: release/10.0.0/usr.bin/mail/extern.h 228468 2011-12-13 13:32:56Z ed $
  */
 
 struct name *cat(struct name *, struct name *);
@@ -154,7 +154,7 @@ int	 ishead(char []);
 int	 isign(const char *, struct ignoretab []);
 int	 isprefix(const char *, const char *);
 void	 istrncpy(char *, const char *, size_t);
-__const struct cmd *
+const struct cmd *
 	 lex(char []);
 void	 load(char *);
 struct var *

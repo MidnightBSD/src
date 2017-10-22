@@ -34,7 +34,7 @@
 # From src/sys/kern/makedevops.pl,v 1.12 1999/11/22 14:40:04 n_hibma Exp
 # From src/sys/kern/makeobjops.pl,v 1.8 2001/11/16 02:02:42 joe Exp
 #
-# $FreeBSD: stable/9/sys/tools/makeobjops.awk 198374 2009-10-22 20:57:17Z emaste $
+# $FreeBSD: release/10.0.0/sys/tools/makeobjops.awk 227385 2011-11-09 13:26:59Z ed $
 
 #
 #   Script to produce kobj front-end sugar.
@@ -307,12 +307,8 @@ function handle_method (static, doc)
 	    line_width, length(prototype)));
 
 	# Print out the method desc
-	printc("struct kobj_method " mname "_method_default = {");
-	printc("\t&" mname "_desc, (kobjop_t) " default_function);
-	printc("};\n");
-
 	printc("struct kobjop_desc " mname "_desc = {");
-	printc("\t0, &" mname "_method_default");
+	printc("\t0, { &" mname "_desc, (kobjop_t)" default_function " }");
 	printc("};\n");
 
 	# Print out the method itself

@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/9/sys/dev/e1000/e1000_mac.h 248292 2013-03-14 22:55:59Z jfv $*/
+/*$FreeBSD: release/10.0.0/sys/dev/e1000/e1000_mac.h 247064 2013-02-21 00:25:45Z jfv $*/
 
 #ifndef _E1000_MAC_H_
 #define _E1000_MAC_H_

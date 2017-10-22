@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/lib/libc/arm/gen/_set_tp.c 237396 2012-06-21 13:51:50Z marius $
+ *	$FreeBSD: release/10.0.0/lib/libc/arm/gen/_set_tp.c 239271 2012-08-15 03:09:00Z gonzo $
  */
 
 #include <string.h>
@@ -35,5 +35,9 @@ void
 _set_tp(void *tp)
 {
 
+#ifdef ARM_TP_ADDRESS
 	*((struct tcb **)ARM_TP_ADDRESS) = tp;
+#else
+	sysarch(ARM_SET_TP, tp);
+#endif
 }

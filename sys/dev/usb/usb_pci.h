@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_pci.h 196219 2009-08-14 20:03:53Z jhb $ */
+/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_pci.h 246122 2013-01-30 15:26:04Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -31,9 +31,11 @@
  * We don't want the following files included everywhere, that's why
  * they are in a separate file.
  */
+#ifndef USB_GLOBAL_INCLUDE_FILE
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
 #include <sys/rman.h>
+#endif
 
 #endif					/* _USB_PCI_H_ */

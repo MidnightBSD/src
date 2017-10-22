@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/geom_dump.c 222603 2011-06-02 12:49:45Z ae $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/geom_dump.c 250868 2013-05-21 18:40:54Z jh $");
 
 #include <sys/param.h>
 #include <sys/sbuf.h>
@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD: stable/9/sys/geom/geom_dump.c 222603 2011-06-02 12:49:45Z ae
 
 #include <geom/geom.h>
 #include <geom/geom_int.h>
+#include <geom/geom_disk.h>
 
 
 static void
@@ -104,7 +105,7 @@ g_confdot(void *p, int flag )
 	sbuf_printf(sb, "digraph geom {\n");
 	LIST_FOREACH(mp, &g_classes, class)
 		g_confdot_class(sb, mp);
-	sbuf_printf(sb, "};\n");
+	sbuf_printf(sb, "}\n");
 	sbuf_finish(sb);
 }
 
@@ -146,7 +147,7 @@ g_conftxt(void *p, int flag)
 	sb = p;
 	g_topology_assert();
 	LIST_FOREACH(mp, &g_classes, class) {
-		if (!strcmp(mp->name, "DISK") || !strcmp(mp->name, "MD"))
+		if (!strcmp(mp->name, G_DISK_CLASS_NAME) || !strcmp(mp->name, "MD"))
 			g_conftxt_class(sb, mp);
 	}
 	sbuf_finish(sb);

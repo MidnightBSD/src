@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.bin/lzmainfo/Makefile 207844 2010-05-10 07:47:31Z mm $
+# $FreeBSD: release/10.0.0/usr.bin/lzmainfo/Makefile 226421 2011-10-16 08:04:43Z ed $
 
 PROG=	lzmainfo
 
@@ -11,8 +11,6 @@ SRCS+=	lzmainfo.c
 .PATH: ${XZDIR}/common
 SRCS+=	tuklib_progname.c \
 	tuklib_exit.c
-
-WARNS?=	3
 
 CFLAGS+=	-DHAVE_CONFIG_H \
 		-I${LZMALIBDIR} \

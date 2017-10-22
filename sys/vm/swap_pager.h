@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)swap_pager.h	7.1 (Berkeley) 12/5/90
- * $FreeBSD: stable/9/sys/vm/swap_pager.h 224582 2011-08-01 19:12:15Z kib $
+ * $FreeBSD: release/10.0.0/sys/vm/swap_pager.h 248514 2013-03-19 14:39:27Z kib $
  */
 
 #ifndef	_VM_SWAP_PAGER_H_
@@ -68,6 +68,7 @@ struct swdevt {
 	sw_close_t		*sw_close;
 };
 
+#define	SW_UNMAPPED	0x01
 #define	SW_CLOSING	0x04
 
 #ifdef _KERNEL

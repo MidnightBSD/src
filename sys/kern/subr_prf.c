@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/subr_prf.c 222804 2011-06-07 05:04:37Z ken $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_prf.c 255509 2013-09-13 06:39:10Z kib $");
 
 #include "opt_ddb.h"
 #include "opt_printf.h"
@@ -151,39 +151,47 @@ uprintf(const char *fmt, ...)
 	PROC_LOCK(p);
 	if ((p->p_flag & P_CONTROLT) == 0) {
 		PROC_UNLOCK(p);
-		retval = 0;
-		goto out;
+		sx_sunlock(&proctree_lock);
+		return (0);
 	}
 	SESS_LOCK(p->p_session);
 	pca.tty = p->p_session->s_ttyp;
 	SESS_UNLOCK(p->p_session);
 	PROC_UNLOCK(p);
 	if (pca.tty == NULL) {
-		retval = 0;
-		goto out;
+		sx_sunlock(&proctree_lock);
+		return (0);
 	}
 	pca.flags = TOTTY;
 	pca.p_bufr = NULL;
 	va_start(ap, fmt);
 	tty_lock(pca.tty);
+	sx_sunlock(&proctree_lock);
 	retval = kvprintf(fmt, putchar, &pca, 10, ap);
 	tty_unlock(pca.tty);
 	va_end(ap);
-out:
-	sx_sunlock(&proctree_lock);
 	return (retval);
 }
 
 /*
- * tprintf prints on the controlling terminal associated with the given
- * session, possibly to the log as well.
+ * tprintf and vtprintf print on the controlling terminal associated with the
+ * given session, possibly to the log as well.
  */
 void
 tprintf(struct proc *p, int pri, const char *fmt, ...)
 {
+	va_list ap;
+
+	va_start(ap, fmt);
+	vtprintf(p, pri, fmt, ap);
+	va_end(ap);
+}
+
+void
+vtprintf(struct proc *p, int pri, const char *fmt, va_list ap)
+{
 	struct tty *tp = NULL;
 	int flags = 0;
-	va_list ap;
 	struct putchar_arg pca;
 	struct session *sess = NULL;
 
@@ -208,17 +216,15 @@ tprintf(struct proc *p, int pri, const char *fmt, ...)
 	pca.tty = tp;
 	pca.flags = flags;
 	pca.p_bufr = NULL;
-	va_start(ap, fmt);
 	if (pca.tty != NULL)
 		tty_lock(pca.tty);
+	sx_sunlock(&proctree_lock);
 	kvprintf(fmt, putchar, &pca, 10, ap);
 	if (pca.tty != NULL)
 		tty_unlock(pca.tty);
-	va_end(ap);
 	if (sess != NULL)
 		sess_release(sess);
 	msgbuftrigger = 1;
-	sx_sunlock(&proctree_lock);
 }
 
 /*
@@ -467,25 +473,19 @@ putchar(int c, void *arg)
 	struct putchar_arg *ap = (struct putchar_arg*) arg;
 	struct tty *tp = ap->tty;
 	int flags = ap->flags;
-	int putbuf_done = 0;
 
 	/* Don't use the tty code after a panic or while in ddb. */
 	if (kdb_active) {
 		if (c != '\0')
 			cnputc(c);
-	} else {
-		if ((panicstr == NULL) && (flags & TOTTY) && (tp != NULL))
-			tty_putchar(tp, c);
+		return;
+	}
 
-		if (flags & TOCONS) {
-			putbuf(c, ap);
-			putbuf_done = 1;
-		}
-	}
-	if ((flags & TOLOG) && (putbuf_done == 0)) {
-		if (c != '\0')
-			putbuf(c, ap);
-	}
+	if ((flags & TOTTY) && tp != NULL && panicstr == NULL)
+		tty_putchar(tp, c);
+
+	if ((flags & (TOCONS | TOLOG)) && c != '\0')
+		putbuf(c, ap);
 }
 
 /*

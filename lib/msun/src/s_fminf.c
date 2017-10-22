@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/src/s_fminf.c 131320 2004-06-30 07:04:01Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_fminf.c 131320 2004-06-30 07:04:01Z das $");
 
 #include <math.h>
 

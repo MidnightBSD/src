@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ddb/db_input.c 176895 2008-03-07 13:13:17Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ddb/db_input.c 229272 2012-01-02 12:12:10Z ed $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -253,7 +253,7 @@ db_inputchar(c)
 		db_putnchars(BACKUP, db_lc - db_lbuf_start);
 		db_putnchars(BLANK, db_le - db_lbuf_start);
 		db_putnchars(BACKUP, db_le - db_lbuf_start);
-		db_le = index(db_lbuf_start, '\0');
+		db_le = strchr(db_lbuf_start, '\0');
 		if (db_le[-1] == '\r' || db_le[-1] == '\n')
 		    *--db_le = '\0';
 		db_lc = db_le;

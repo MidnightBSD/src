@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/csu/i386-elf/Makefile 234726 2012-04-27 06:49:35Z dim $
+# $FreeBSD: release/10.0.0/lib/csu/i386-elf/Makefile 234502 2012-04-20 21:00:39Z dim $
 
 .PATH: ${.CURDIR}/../common
 
@@ -18,7 +18,7 @@ CLEANFILES+=	crt1_c.s gcrt1_c.s Scrt1_c.s
 
 gcrt1_c.s: crt1_c.c
 	${CC} ${CFLAGS} -DGCRT -S -o ${.TARGET} ${.CURDIR}/crt1_c.c
-	sed -i "" -e '/\.note\.ABI-tag/s/progbits/note/' ${.TARGET}
+	sed ${SED_FIX_NOTE} ${.TARGET}
 
 gcrt1_c.o: gcrt1_c.s
 	${CC} ${ACFLAGS} -c -o ${.TARGET} gcrt1_c.s
@@ -28,7 +28,7 @@ gcrt1.o: gcrt1_c.o crt1_s.o
 
 crt1_c.s: crt1_c.c
 	${CC} ${CFLAGS} -S -o ${.TARGET} ${.CURDIR}/crt1_c.c
-	sed -i "" -e '/\.note\.ABI-tag/s/progbits/note/' ${.TARGET}
+	sed ${SED_FIX_NOTE} ${.TARGET}
 
 crt1_c.o: crt1_c.s
 	${CC} ${ACFLAGS} -c -o ${.TARGET} crt1_c.s
@@ -39,7 +39,7 @@ crt1.o:	crt1_c.o crt1_s.o
 
 Scrt1_c.s: crt1_c.c
 	${CC} ${CFLAGS} -fPIC -DPIC -S -o ${.TARGET} ${.CURDIR}/crt1_c.c
-	sed -i "" -e '/\.note\.ABI-tag/s/progbits/note/' ${.TARGET}
+	sed ${SED_FIX_NOTE} ${.TARGET}
 
 Scrt1_c.o: Scrt1_c.s
 	${CC} ${ACFLAGS} -c -o ${.TARGET} Scrt1_c.s

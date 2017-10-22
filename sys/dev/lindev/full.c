@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/lindev/full.c 197518 2009-09-26 12:45:28Z bz $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/lindev/full.c 197518 2009-09-26 12:45:28Z bz $");
 
 #include <sys/param.h>
 #include <sys/conf.h>

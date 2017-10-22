@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/compat/ia32/ia32_sysvec.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/compat/ia32/ia32_sysvec.c 238687 2012-07-22 13:41:45Z kib $");
 
 #include "opt_compat.h"
 
@@ -69,15 +69,6 @@ __FBSDID("$FreeBSD: stable/9/sys/compat/ia32/ia32_sysvec.c 248085 2013-03-09 02:
 #include <compat/freebsd32/freebsd32_proto.h>
 #include <compat/freebsd32/freebsd32_syscall.h>
 #include <compat/ia32/ia32_signal.h>
-#ifdef __amd64__
-#include <machine/psl.h>
-#include <machine/segments.h>
-#include <machine/specialreg.h>
-#else
-#include <i386/include/psl.h>
-#include <i386/include/segments.h>
-#include <i386/include/specialreg.h>
-#endif
 #include <machine/frame.h>
 #include <machine/md_var.h>
 #include <machine/pcb.h>

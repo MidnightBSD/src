@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/procfs.h 215679 2010-11-22 14:42:13Z attilio $
+ * $FreeBSD: release/10.0.0/sys/sys/procfs.h 215679 2010-11-22 14:42:13Z attilio $
  */
 
 #ifndef _SYS_PROCFS_H_

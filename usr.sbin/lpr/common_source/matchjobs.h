@@ -30,7 +30,7 @@
  * or FreeBSD, Inc.
  *
  * ------+---------+---------+---------+---------+---------+---------+---------*
- * $FreeBSD: stable/9/usr.sbin/lpr/common_source/matchjobs.h 117541 2003-07-14 05:15:21Z gad $
+ * $FreeBSD: release/10.0.0/usr.sbin/lpr/common_source/matchjobs.h 117541 2003-07-14 05:15:21Z gad $
  * ------+---------+---------+---------+---------+---------+---------+---------*
  */
 

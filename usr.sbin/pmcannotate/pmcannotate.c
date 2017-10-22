@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pmcannotate/pmcannotate.c 213928 2010-10-16 17:30:27Z bcr $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pmcannotate/pmcannotate.c 250304 2013-05-06 18:30:49Z hiren $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -118,8 +118,6 @@ isasminline(const char *str)
 	void *ptr;
 	int nbytes;
 
-	if (isxdigit(str[1]) == 0)
-		return (0);
 	if (sscanf(str, " %p%n", &ptr, &nbytes) != 1)
 		return (0);
 	if (str[nbytes] != ':' || isspace(str[nbytes + 1]) == 0)

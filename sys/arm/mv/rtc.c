@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/mv/rtc.c 209131 2010-06-13 13:28:53Z raj $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/mv/rtc.c 209131 2010-06-13 13:28:53Z raj $");
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/lock.h>

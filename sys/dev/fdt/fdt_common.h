@@ -26,19 +26,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/fdt/fdt_common.h 233015 2012-03-15 22:15:06Z raj $
+ * $FreeBSD: release/10.0.0/sys/dev/fdt/fdt_common.h 257457 2013-10-31 16:18:36Z brooks $
  */
 
 #ifndef _FDT_COMMON_H_
 #define _FDT_COMMON_H_
 
+#include <sys/slicer.h>
 #include <contrib/libfdt/libfdt_env.h>
 #include <dev/ofw/ofw_bus.h>
 #include <machine/fdt.h>
 
 #define FDT_MEM_REGIONS	8
 
-#define DI_MAX_INTR_NUM	8
+#define DI_MAX_INTR_NUM	32
 
 struct fdt_pci_range {
 	u_long	base_pci;
@@ -69,6 +70,13 @@ struct fdt_fixup_entry {
 };
 extern struct fdt_fixup_entry fdt_fixup_table[];
 
+extern SLIST_HEAD(fdt_ic_list, fdt_ic) fdt_ic_list_head;
+struct fdt_ic {
+	SLIST_ENTRY(fdt_ic)	fdt_ics;
+	ihandle_t		iph;
+	device_t		dev;
+};
+
 extern vm_paddr_t fdt_immr_pa;
 extern vm_offset_t fdt_immr_va;
 extern vm_offset_t fdt_immr_size;
@@ -89,7 +97,9 @@ int fdt_data_to_res(pcell_t *, int, int, u_long *, u_long *);
 int fdt_data_verify(void *, int);
 phandle_t fdt_find_compatible(phandle_t, const char *, int);
 int fdt_get_mem_regions(struct mem_region *, int *, uint32_t *);
+int fdt_get_reserved_regions(struct mem_region *, int *);
 int fdt_get_phyaddr(phandle_t, device_t, int *, void **);
+int fdt_get_range(phandle_t, int, u_long *, u_long *);
 int fdt_immr_addr(vm_offset_t);
 int fdt_regsize(phandle_t, u_long *, u_long *);
 int fdt_intr_decode(phandle_t, pcell_t *, int *, int *, int *);
@@ -106,7 +116,8 @@ int fdt_pci_ranges_decode(phandle_t, struct fdt_pci_range *,
     struct fdt_pci_range *);
 int fdt_pci_route_intr(int, int, int, int, struct fdt_pci_intr *, int *);
 int fdt_ranges_verify(pcell_t *, int, int, int, int);
-int fdt_reg_to_rl(phandle_t, struct resource_list *, u_long);
+int fdt_reg_to_rl(phandle_t, struct resource_list *);
 int fdt_pm(phandle_t);
+int fdt_get_unit(device_t);
 
 #endif /* _FDT_COMMON_H_ */

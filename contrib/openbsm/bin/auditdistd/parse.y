@@ -56,7 +56,6 @@ extern int lineno;
 
 extern FILE *yyin;
 extern char *yytext;
-extern int yyparse(void);
 
 static struct adist_config *lconfig;
 static struct adist_host *curhost;

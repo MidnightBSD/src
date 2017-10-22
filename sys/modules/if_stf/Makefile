@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/if_stf/Makefile 193588 2009-06-06 17:01:44Z rwatson $
+# $FreeBSD: release/10.0.0/sys/modules/if_stf/Makefile 193588 2009-06-06 17:01:44Z rwatson $
 
 .PATH: ${.CURDIR}/../../net
 

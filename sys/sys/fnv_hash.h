@@ -5,7 +5,7 @@
  * This is an implementation of the algorithms posted above.
  * This file is placed in the public domain by Peter Wemm.
  *
- * $FreeBSD: stable/9/sys/sys/fnv_hash.h 248235 2013-03-13 10:45:36Z ae $
+ * $FreeBSD: release/10.0.0/sys/sys/fnv_hash.h 244209 2012-12-14 12:37:35Z ae $
  */
 #ifndef _SYS_FNV_HASH_H_
 #define	_SYS_FNV_HASH_H_

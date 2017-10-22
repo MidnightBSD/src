@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)popen.c	8.3 (Berkeley) 4/6/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/libexec/ftpd/popen.c 228843 2011-12-23 15:00:37Z cperciva $");
+__FBSDID("$FreeBSD: release/10.0.0/libexec/ftpd/popen.c 228843 2011-12-23 15:00:37Z cperciva $");
 
 #include <sys/types.h>
 #include <sys/wait.h>

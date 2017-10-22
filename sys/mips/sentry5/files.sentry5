@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/mips/sentry5/files.sentry5 202175 2010-01-12 21:36:08Z imp $
+# $FreeBSD: release/10.0.0/sys/mips/sentry5/files.sentry5 202175 2010-01-12 21:36:08Z imp $
 
 # TODO: Add attachment elsehwere in the tree
 # for USB 1.1 OHCI, Ethernet and IPSEC cores

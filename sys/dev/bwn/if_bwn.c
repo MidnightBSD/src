@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/bwn/if_bwn.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/bwn/if_bwn.c 250314 2013-05-06 21:57:44Z hiren $");
 
 /*
  * The Broadcom Wireless LAN controller driver.
@@ -9242,7 +9242,7 @@ back:
 	/*
 	 * Setup RX buf descriptor
 	 */
-	dr->setdesc(dr, desc, paddr, meta->mt_m->m_len -
+	dr->setdesc(dr, desc, meta->mt_paddr, meta->mt_m->m_len -
 	    sizeof(*hdr), 0, 0, 0);
 	return (error);
 }

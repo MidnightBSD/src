@@ -32,7 +32,7 @@
  *
  *	@(#)fbio.h	8.2 (Berkeley) 10/30/93
  *
- * $FreeBSD: stable/9/sys/sys/fbio.h 204265 2010-02-23 21:51:14Z jkim $
+ * $FreeBSD: release/10.0.0/sys/sys/fbio.h 204265 2010-02-23 21:51:14Z jkim $
  */
 
 #ifndef _SYS_FBIO_H_

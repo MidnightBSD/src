@@ -5,7 +5,7 @@
 .\" This file contains changes from the Open Software Foundation.
 .\"
 .\"     from: @(#)newsyslog.8
-.\" $FreeBSD: stable/9/usr.sbin/newsyslog/newsyslog.conf.5 237216 2012-06-18 04:55:07Z eadler $
+.\" $FreeBSD: release/10.0.0/usr.sbin/newsyslog/newsyslog.conf.5 236805 2012-06-09 09:54:07Z joel $
 .\"
 .\" Copyright 1988, 1989 by the Massachusetts Institute of Technology
 .\"
@@ -155,12 +155,17 @@ The particular format of the time in restricted
 .Tn ISO 8601
 is:
 .Sm off
+.Oo Oo Oo Oo Oo
+.Va cc Oc
+.Va yy Oc
+.Va mm Oc
+.Va dd Oc
 .Oo
-.Op Oo Oo Oo Va cc Oc Va yy Oc Va mm Oc Va dd
-.Oo
-.Li T
-.Op Va hh Oo Va mm Oo Va ss Oc Oc Oc
-.Oc .
+.Li T Oo
+.Va hh Oo
+.Va mm Oo
+.Va ss
+.Oc Oc Oc Oc Oc .
 .Sm on
 Optional date fields default to the appropriate component of the
 current date; optional time fields default to midnight; hence if today

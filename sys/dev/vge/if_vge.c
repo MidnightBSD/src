@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/vge/if_vge.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/vge/if_vge.c 243857 2012-12-04 09:32:43Z glebius $");
 
 /*
  * VIA Networking Technologies VT612x PCI gigabit ethernet NIC driver.
@@ -2022,11 +2022,9 @@ static void
 vge_init_locked(struct vge_softc *sc)
 {
 	struct ifnet *ifp = sc->vge_ifp;
-	struct mii_data *mii;
 	int error, i;
 
 	VGE_LOCK_ASSERT(sc);
-	mii = device_get_softc(sc->vge_miibus);
 
 	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0)
 		return;

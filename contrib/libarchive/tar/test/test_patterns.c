@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/tar/test/test_patterns.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/tar/test/test_patterns.c 232153 2012-02-25 10:58:02Z mm $");
 
 DEFINE_TEST(test_patterns)
 {
@@ -122,6 +122,7 @@ DEFINE_TEST(test_patterns)
 		char file_b1[] = "tmp/server/share/fileXX";
 		char file_b2[] = "tmp/server\\share\\fileXX";
 		char file_c[] = "tmp/../fileXX";
+		char file_d[] = "tmp/../../fileXX";
 		char *filex;
 		int xsize;
 
@@ -169,8 +170,13 @@ DEFINE_TEST(test_patterns)
 			 * \/?\UnC\../file54
 			 */
 			assertFileNotExists(filex);
-			filex = file_c;
-			xsize = sizeof(file_c);
+			if (r == 6 || r == 26 || r == 43) {
+				filex = file_d;
+				xsize = sizeof(file_d);
+			} else {
+				filex = file_c;
+				xsize = sizeof(file_c);
+			}
 			filex[xsize-3] = '0' + r / 10;
 			filex[xsize-2] = '0' + r % 10;
 			assertFileNotExists(filex);

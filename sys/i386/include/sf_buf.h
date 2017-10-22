@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/i386/include/sf_buf.h 222813 2011-06-07 08:46:13Z attilio $
+ * $FreeBSD: release/10.0.0/sys/i386/include/sf_buf.h 255318 2013-09-06 17:44:13Z glebius $
  */
 
 #ifndef _MACHINE_SF_BUF_H_
@@ -44,6 +44,9 @@ struct sf_buf {
 	cpuset_t	cpumask;	/* cpus on which mapping is valid */
 #endif
 };
+
+struct sf_buf * sf_buf_alloc(struct vm_page *m, int flags);
+void sf_buf_free(struct sf_buf *sf);
 
 static __inline vm_offset_t
 sf_buf_kva(struct sf_buf *sf)

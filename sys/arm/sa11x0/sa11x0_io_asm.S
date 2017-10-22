@@ -35,7 +35,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/sa11x0/sa11x0_io_asm.S 139735 2005-01-05 21:58:49Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/sa11x0/sa11x0_io_asm.S 236990 2012-06-13 04:59:00Z imp $");
 
 /*
  * bus_space I/O functions for sa11x0
@@ -208,7 +208,7 @@ ENTRY(sa11x0_bs_rr_2)
 	movle	pc, lr
 
 sa11x0_bs_rr_2_loop:
-	ldrh	r1, [r0], #0x0002  
+	ldrh	r1, [r0], #0x0002
 	strh	r1, [r3], #0x0002
         subs    r2, r2, #0x00000001
 	bgt	sa11x0_bs_rr_2_loop
@@ -222,7 +222,7 @@ sa11x0_bs_rr_2_loop:
 ENTRY(sa11x0_bs_wr_2)
 	add	r0, r1, r2
 	ldr	r2, [sp, #0]
-	cmp	r2, #0x00000000  
+	cmp	r2, #0x00000000
 	movle	pc, lr
 
 sa11x0_bs_wr_2_loop:

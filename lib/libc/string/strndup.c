@@ -12,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/string/strndup.c 203391 2010-02-02 19:02:08Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/string/strndup.c 251069 2013-05-28 20:57:40Z emaste $");
 
 #include <stddef.h>
 #include <stdlib.h>

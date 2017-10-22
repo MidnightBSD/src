@@ -1,6 +1,6 @@
 .file "__modsi3.s"
 
-// $FreeBSD: stable/9/sys/libkern/ia64/__modsi3.S 139815 2005-01-07 00:24:33Z imp $
+// $FreeBSD: release/10.0.0/sys/libkern/ia64/__modsi3.S 139815 2005-01-07 00:24:33Z imp $
 
 //-
 // Copyright (c) 2000, Intel Corporation

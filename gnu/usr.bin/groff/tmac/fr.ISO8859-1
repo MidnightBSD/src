@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/gnu/usr.bin/groff/tmac/fr.ISO8859-1 120302 2003-09-20 21:23:53Z ru $
+.\" $FreeBSD: release/10.0.0/gnu/usr.bin/groff/tmac/fr.ISO8859-1 120302 2003-09-20 21:23:53Z ru $
 .\"
 .\"     %beginstrip%
 .

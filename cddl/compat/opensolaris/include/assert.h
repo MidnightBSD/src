@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/cddl/compat/opensolaris/include/assert.h 222950 2011-06-10 20:10:30Z gibbs $
+ * $FreeBSD: release/10.0.0/cddl/compat/opensolaris/include/assert.h 222950 2011-06-10 20:10:30Z gibbs $
  */
 
 #undef assert

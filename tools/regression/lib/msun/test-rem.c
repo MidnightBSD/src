@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/msun/test-rem.c 177767 2008-03-30 20:48:33Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/msun/test-rem.c 251120 2013-05-30 04:47:03Z das $");
 
 #include <assert.h>
 #include <float.h>
@@ -55,7 +55,7 @@ int
 main(int argc, char *argv[])
 {
 
-	printf("1..2\n");
+	printf("1..3\n");
 
 	test_invalid(0.0, 0.0);
 	test_invalid(1.0, 0.0);
@@ -67,8 +67,8 @@ main(int argc, char *argv[])
 
 	test(4, 4, 0, 1);
 	test(0, 3.0, 0, 0);
-	testd(0x1p-1074, 1, 0x1p-1074, 0x1p-1074);
-	testf(0x1p-149, 1, 0x1p-149, 0x1p-149);
+	testd(0x1p-1074, 1, 0x1p-1074, 0);
+	testf(0x1p-149, 1, 0x1p-149, 0);
 	test(3.0, 4, -1, 1);
 	test(3.0, -4, -1, -1);
 	testd(275 * 1193040, 275, 0, 1193040);
@@ -95,6 +95,14 @@ main(int argc, char *argv[])
 	    -0x1.69c78ec4p-121, -63816414);
 
 	printf("ok 2 - rem\n");
+
+	test(0x1.66666cp+120, 0x1p+71, 0.0, 1476395008);
+	testd(-0x1.0000000000003p+0, 0x1.0000000000003p+0, -0.0, -1);
+	testl(-0x1.0000000000003p+0, 0x1.0000000000003p+0, -0.0, -1);
+	testd(-0x1.0000000000001p-749, 0x1.4p-1072, 0x1p-1074, -1288490189);
+	testl(-0x1.0000000000001p-749, 0x1.4p-1072, 0x1p-1074, -1288490189);
+
+	printf("ok 3 - rem\n");
 
 	return (0);
 }
@@ -136,10 +144,16 @@ static void
 testl(long double x, long double y, long double expected_rem, int expected_quo)
 {
 	int q;
+	long double rem;
 
 	q = random();
-	assert(remainderl(x, y) == expected_rem);
-	assert(remquol(x, y, &q) == expected_rem);
+	rem = remainderl(x, y);
+	assert(rem == expected_rem);
+	assert(!signbit(rem) == !signbit(expected_rem));
+	rem = remquol(x, y, &q);
+	assert(rem == expected_rem);
+	assert(!signbit(rem) == !signbit(expected_rem));
+	assert((q ^ expected_quo) >= 0); /* sign(q) == sign(expected_quo) */
 	assert((q & 0x7) == (expected_quo & 0x7));
 	if (q != 0) {
 		assert((q > 0) ^ !(expected_quo > 0));
@@ -152,10 +166,16 @@ static void
 testd(double x, double y, double expected_rem, int expected_quo)
 {
 	int q;
+	double rem;
 
 	q = random();
-	assert(remainder(x, y) == expected_rem);
-	assert(remquo(x, y, &q) == expected_rem);
+	rem = remainder(x, y);
+	assert(rem == expected_rem);
+	assert(!signbit(rem) == !signbit(expected_rem));
+	rem = remquo(x, y, &q);
+	assert(rem == expected_rem);
+	assert(!signbit(rem) == !signbit(expected_rem));
+	assert((q ^ expected_quo) >= 0); /* sign(q) == sign(expected_quo) */
 	assert((q & 0x7) == (expected_quo & 0x7));
 	if (q != 0) {
 		assert((q > 0) ^ !(expected_quo > 0));
@@ -168,10 +188,16 @@ static void
 testf(float x, float y, float expected_rem, int expected_quo)
 {
 	int q;
+	float rem;
 
 	q = random();
-	assert(remainderf(x, y) == expected_rem);
-	assert(remquof(x, y, &q) == expected_rem);
+	rem = remainderf(x, y);
+	assert(rem == expected_rem);
+	assert(!signbit(rem) == !signbit(expected_rem));
+	rem = remquof(x, y, &q);
+	assert(rem == expected_rem);
+	assert(!signbit(rem) == !signbit(expected_rem));
+	assert((q ^ expected_quo) >= 0); /* sign(q) == sign(expected_quo) */
 	assert((q & 0x7) == (expected_quo & 0x7));
 	if (q != 0) {
 		assert((q > 0) ^ !(expected_quo > 0));

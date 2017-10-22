@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libiconv_modules/JOHAB/citrus_johab.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libiconv_modules/JOHAB/citrus_johab.c 252583 2013-07-03 18:27:45Z peter $ */
 /* $NetBSD: citrus_johab.c,v 1.4 2008/06/14 16:01:07 tnozaki Exp $ */
 
 /*-
@@ -143,10 +143,10 @@ ishanja(int l, int t)
 static int
 /*ARGSUSED*/
 _citrus_JOHAB_mbrtowc_priv(_JOHABEncodingInfo * __restrict ei,
-    wchar_t * __restrict pwc, char ** __restrict s, size_t n,
+    wchar_t * __restrict pwc, const char ** __restrict s, size_t n,
     _JOHABState * __restrict psenc, size_t * __restrict nresult)
 {
-	char *s0;
+	const char *s0;
 	int l, t;
 
 	if (*s == NULL) {

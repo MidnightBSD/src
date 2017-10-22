@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1994-1995 Søren Schmidt
+ * Copyright (c) 1994-1995 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/kbdcontrol/lex.h 99818 2002-07-11 21:13:37Z alfred $
+ * $FreeBSD: release/10.0.0/usr.sbin/kbdcontrol/lex.h 228976 2011-12-30 00:59:08Z uqs $
  */
 
 #define TNOP		256

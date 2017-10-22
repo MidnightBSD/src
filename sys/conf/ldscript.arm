@@ -1,5 +1,4 @@
-/* $FreeBSD: stable/9/sys/conf/ldscript.arm 152742 2005-11-24 02:25:49Z cognet $ */
-OUTPUT_FORMAT("elf32-littlearm", "elf32-bigarm", "elf32-littlearm")
+/* $FreeBSD: release/10.0.0/sys/conf/ldscript.arm 248122 2013-03-10 00:47:19Z andrew $ */
 OUTPUT_ARCH(arm)
 ENTRY(_start)
 
@@ -56,6 +55,19 @@ SECTIONS
   .rela.plt      : { *(.rela.plt)		}
   .init          : { *(.init)	} =0x9090
   .plt      : { *(.plt)	}
+
+  . = ALIGN(4);
+  _extab_start = .;
+  PROVIDE(extab_start = .);
+  .ARM.extab : { *(.ARM.extab) }
+  _extab.end = .;
+  PROVIDE(extab_end = .);
+
+  _exidx_start = .;
+  PROVIDE(exidx_start = .);
+  .ARM.exidx : { *(.ARM.exidx) }
+  _exidx_end = .;
+  PROVIDE(exidx_end = .);
 
   /* Adjust the address for the data segment.  We want to adjust up to
      the same address within the page on the next page up.  */

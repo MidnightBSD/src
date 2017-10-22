@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/tools/test/netfibs/reflector.sh 232566 2012-03-05 19:13:18Z bz $
+# $FreeBSD: release/10.0.0/tools/test/netfibs/reflector.sh 232114 2012-02-24 14:13:06Z bz $
 #
 
 # We will use the RFC5180 (and Errata) benchmarking working group prefix

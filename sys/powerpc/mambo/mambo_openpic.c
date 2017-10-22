@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/mambo/mambo_openpic.c 218075 2011-01-29 20:58:38Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/mambo/mambo_openpic.c 218075 2011-01-29 20:58:38Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

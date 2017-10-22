@@ -1,5 +1,5 @@
 /*	$NetBSD: rpcbind.c,v 1.3 2002/11/08 00:16:40 fvdl Exp $	*/
-/*	$FreeBSD: stable/9/usr.sbin/rpcbind/rpcbind.c 224001 2011-07-14 07:28:49Z delphij $ */
+/*	$FreeBSD: release/10.0.0/usr.sbin/rpcbind/rpcbind.c 244538 2012-12-21 15:54:13Z kevlo $ */
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
@@ -289,7 +289,7 @@ init_transport(struct netconfig *nconf)
 	     */
 	    if ((fd = __rpc_nconf2fd(nconf)) < 0) {
 		int non_fatal = 0;
-		if (errno == EPROTONOSUPPORT)
+		if (errno == EAFNOSUPPORT)
 		    non_fatal = 1;
 		syslog(non_fatal?LOG_DEBUG:LOG_ERR, "cannot create socket for %s",
 		    nconf->nc_netid);
@@ -352,7 +352,7 @@ init_transport(struct netconfig *nconf)
 		 */
 		if ((fd = __rpc_nconf2fd(nconf)) < 0) {
 		    int non_fatal = 0;
-		    if (errno == EPROTONOSUPPORT &&
+		    if (errno == EAFNOSUPPORT &&
 			nconf->nc_semantics != NC_TPI_CLTS) 
 			non_fatal = 1;
 		    syslog(non_fatal ? LOG_DEBUG : LOG_ERR, 
@@ -366,7 +366,7 @@ init_transport(struct netconfig *nconf)
 			hints.ai_flags &= AI_NUMERICHOST;
 		    } else {
 			/*
-			 * Skip if we have an AF_INET6 adress.
+			 * Skip if we have an AF_INET6 address.
 			 */
 			if (inet_pton(AF_INET6,
 			    hosts[nhostsbak], host_addr) == 1) {
@@ -381,7 +381,7 @@ init_transport(struct netconfig *nconf)
 			hints.ai_flags &= AI_NUMERICHOST;
 		    } else {
 			/*
-			 * Skip if we have an AF_INET adress.
+			 * Skip if we have an AF_INET address.
 			 */
 			if (inet_pton(AF_INET, hosts[nhostsbak],
 			    host_addr) == 1) {

@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_read_format_isojoliet_long.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_format_isojoliet_long.c 248616 2013-03-22 13:36:03Z mm $");
 
 /*
 Execute the following to rebuild the data for this program:
@@ -64,14 +64,14 @@ DEFINE_TEST(test_read_format_isojoliet_long)
 	struct archive *a;
 	const void *p;
 	size_t size;
-	off_t offset;
+	int64_t offset;
 	int i;
 
 	for (i = 0; i < 100; i++)
 		pathname[i] = '0' + ((i+1) % 10); 
 	extract_reference_file(refname);
 	assert((a = archive_read_new()) != NULL);
-	assertEqualInt(0, archive_read_support_compression_all(a));
+	assertEqualInt(0, archive_read_support_filter_all(a));
 	assertEqualInt(0, archive_read_support_format_all(a));
 	assertEqualInt(ARCHIVE_OK,
 	    archive_read_set_options(a, "iso9660:!rockridge"));
@@ -118,7 +118,7 @@ DEFINE_TEST(test_read_format_isojoliet_long)
 	assertEqualInt(0, archive_read_data_block(a, &p, &size, &offset));
 	assertEqualInt(6, (int)size);
 	assertEqualInt(0, offset);
-	assertEqualInt(0, memcmp(p, "hello\n", 6));
+	assertEqualMem(p, "hello\n", 6);
 
 	/* Second name for the same regular file (this happens to be
 	 * returned second, so does get marked as a hardlink). */
@@ -132,10 +132,10 @@ DEFINE_TEST(test_read_format_isojoliet_long)
 	assertEqualInt(ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
 	/* Verify archive format. */
-	assertEqualInt(archive_compression(a), ARCHIVE_COMPRESSION_COMPRESS);
+	assertEqualInt(archive_filter_code(a, 0), ARCHIVE_FILTER_COMPRESS);
 
 	/* Close the archive. */
-	assertEqualInt(0, archive_read_close(a));
-	assertEqualInt(0, archive_read_finish(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 

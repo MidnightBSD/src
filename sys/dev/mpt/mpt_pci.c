@@ -99,7 +99,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/mpt/mpt_pci.c 242286 2012-10-29 04:09:20Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mpt/mpt_pci.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #include <dev/mpt/mpt.h>
 #include <dev/mpt/mpt_cam.h>
@@ -268,11 +268,6 @@ mpt_set_options(struct mpt_softc *mpt)
 
 	tval = 0;
 	if (resource_int_value(device_get_name(mpt->dev),
-	    device_get_unit(mpt->dev), "disable", &tval) == 0 && tval != 0) {
-		mpt->disabled = 1;
-	}
-	tval = 0;
-	if (resource_int_value(device_get_name(mpt->dev),
 	    device_get_unit(mpt->dev), "debug", &tval) == 0 && tval != 0) {
 		mpt->verbose = tval;
 	}
@@ -394,16 +389,11 @@ mpt_pci_attach(device_t dev)
 		/* Print INFO level (if any) if bootverbose is set */
 		mpt->verbose += (bootverbose != 0)? 1 : 0;
 	}
-	/* Make sure memory access decoders are enabled */
-	cmd = pci_read_config(dev, PCIR_COMMAND, 2);
-	if ((cmd & PCIM_CMD_MEMEN) == 0) {
-		device_printf(dev, "Memory accesses disabled");
-		return (ENXIO);
-	}
 
 	/*
 	 * Make sure that SERR, PERR, WRITE INVALIDATE and BUSMASTER are set.
 	 */
+	cmd = pci_read_config(dev, PCIR_COMMAND, 2);
 	cmd |=
 	    PCIM_CMD_SERRESPEN | PCIM_CMD_PERRESPEN |
 	    PCIM_CMD_BUSMASTEREN | PCIM_CMD_MWRICEN;
@@ -568,7 +558,7 @@ mpt_pci_attach(device_t dev)
 	}
 
 	mpt->eh = EVENTHANDLER_REGISTER(shutdown_post_sync, mpt_pci_shutdown,
-	    dev, SHUTDOWN_PRI_DEFAULT);
+	    dev, SHUTDOWN_PRI_LAST);
 
 	if (mpt->eh == NULL) {
 		mpt_prt(mpt, "shutdown event registration failed\n");

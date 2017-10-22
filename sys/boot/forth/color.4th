@@ -1,4 +1,4 @@
-\ Copyright (c) 2011 Devin Teske <devinteske@hotmail.com>
+\ Copyright (c) 2011-2013 Devin Teske <dteske@FreeBSD.org>
 \ All rights reserved.
 \ 
 \ Redistribution and use in source and binary forms, with or without
@@ -22,27 +22,28 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $FreeBSD: stable/9/sys/boot/forth/color.4th 222417 2011-05-28 08:50:38Z julian $
+\ $FreeBSD: release/10.0.0/sys/boot/forth/color.4th 254105 2013-08-08 22:09:46Z dteske $
 
 marker task-color.4th
 
-\ This function returns TRUE if the `loader_color' environment variable is set
-\ to YES, yes, or 1. Otherwise, FALSE is returned.
+\ This function returns FALSE if the `loader_color' environment variable is set
+\ to NO, no, or 0. Otherwise, TRUE is returned (unless booting serial).
 \ 
 : loader_color? ( -- N )
 
 	s" loader_color" getenv dup -1 <> if
 
-		2dup s" YES" compare-insensitive 0= if
+		2dup s" NO" compare-insensitive 0= if
 			2drop
-			TRUE exit
+			FALSE exit
 		then
-		2dup s" 1" compare 0= if
+		2dup s" 0" compare 0= if
 			2drop
-			TRUE exit
+			FALSE exit
 		then
 		drop
 	then
+	drop
 
-	drop FALSE exit
+	boot_serial? if FALSE else TRUE then
 ;

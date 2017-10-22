@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/geom/class/raid/geom_raid.c 235874 2012-05-24 02:34:03Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/class/raid/geom_raid.c 234940 2012-05-03 05:32:56Z mav $");
 
 #include <sys/param.h>
 #include <errno.h>

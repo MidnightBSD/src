@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: stable/9/sys/pc98/include/specialreg.h 144513 2005-04-01 23:19:43Z imp $ */
+/* $FreeBSD: release/10.0.0/sys/pc98/include/specialreg.h 233207 2012-03-19 21:34:11Z tijl $ */
 
-#include <i386/specialreg.h>
+#include <x86/specialreg.h>

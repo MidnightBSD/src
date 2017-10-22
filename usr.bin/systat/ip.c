@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/systat/ip.c 241213 2012-10-04 22:56:15Z melifaro $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/systat/ip.c 240605 2012-09-17 13:36:47Z melifaro $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)mbufs.c	8.1 (Berkeley) 6/6/93";
@@ -337,4 +337,3 @@ fetchip(void)
 	if (sysctl(name, 4, &curstat.u, &len, 0, 0) < 0)
 		return;
 }
-

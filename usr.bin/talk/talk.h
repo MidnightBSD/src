@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)talk.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/9/usr.bin/talk/talk.h 216370 2010-12-11 08:32:16Z joel $
+ * $FreeBSD: release/10.0.0/usr.bin/talk/talk.h 227185 2011-11-06 08:17:23Z ed $
  */
 
 #include <sys/cdefs.h>
@@ -38,6 +38,7 @@
 #include <arpa/inet.h>
 #include <protocols/talkd.h>
 #include <curses.h>
+#include <signal.h>
 
 extern	int sockt;
 extern	int curses_initialized;
@@ -45,6 +46,8 @@ extern	int invitation_waiting;
 
 extern	const char *current_state;
 extern	int current_line;
+
+extern volatile sig_atomic_t gotwinch;
 
 typedef struct xwin {
 	WINDOW	*x_win;

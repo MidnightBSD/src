@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/usb/controller/ehci.h 242776 2012-11-08 16:17:52Z hselasky $ */
+/* $FreeBSD: release/10.0.0/sys/dev/usb/controller/ehci.h 242523 2012-11-03 21:05:32Z marcel $ */
 /*-
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
  * All rights reserved.

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/imgact_shell.c 219352 2011-03-06 22:59:30Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/imgact_shell.c 219352 2011-03-06 22:59:30Z kib $");
 
 #include <sys/param.h>
 #include <sys/vnode.h>

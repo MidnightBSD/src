@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/isa/elink.c 139790 2005-01-06 22:18:23Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/isa/elink.c 241394 2012-10-10 08:36:38Z kevlo $");
 
 /*
  * Common code for dealing with 3COM ethernet cards.

@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)umount.c	8.8 (Berkeley) 5/8/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/umount/umount.c 243698 2012-11-30 03:48:45Z eadler $";
+  "$FreeBSD: release/10.0.0/sbin/umount/umount.c 243082 2012-11-15 15:06:21Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -63,9 +63,9 @@ static const char rcsid[] =
 
 typedef enum { FIND, REMOVE, CHECKUNIQUE } dowhat;
 
-struct  addrinfo *nfshost_ai = NULL;
-int	fflag, vflag;
-char   *nfshost;
+static struct addrinfo *nfshost_ai = NULL;
+static int	fflag, vflag;
+static char	*nfshost;
 
 struct statfs *checkmntlist(char *);
 int	 checkvfsname (const char *, char **);

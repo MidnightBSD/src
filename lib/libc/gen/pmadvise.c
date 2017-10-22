@@ -5,7 +5,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/pmadvise.c 118684 2003-08-09 03:23:24Z bms $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/pmadvise.c 118684 2003-08-09 03:23:24Z bms $");
 
 #include <sys/mman.h>
 

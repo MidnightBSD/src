@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/KSE/rr/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD: release/10.0.0/tools/KSE/rr/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 PROG=		rr	
 NO_MAN=

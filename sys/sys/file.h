@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)file.h	8.3 (Berkeley) 1/9/95
- * $FreeBSD: stable/9/sys/sys/file.h 245103 2013-01-06 15:07:19Z kib $
+ * $FreeBSD: release/10.0.0/sys/sys/file.h 255675 2013-09-18 18:48:33Z rdivacky $
  */
 
 #ifndef _SYS_FILE_H_
@@ -64,12 +64,12 @@ struct socket;
 #define	DTYPE_SEM	9	/* posix semaphore */
 #define	DTYPE_PTS	10	/* pseudo teletype master device */
 #define	DTYPE_DEV	11	/* Device specific fd type */
-#define	DTYPE_CAPABILITY	12	/* capability */
-#define	DTYPE_PROCDESC	13	/* process descriptor */
+#define	DTYPE_PROCDESC	12	/* process descriptor */
 
 #ifdef _KERNEL
 
 struct file;
+struct filecaps;
 struct ucred;
 
 #define	FOF_OFFSET	0x01	/* Use the offset in uio argument */
@@ -105,6 +105,11 @@ typedef	int fo_chmod_t(struct file *fp, mode_t mode,
 		    struct ucred *active_cred, struct thread *td);
 typedef	int fo_chown_t(struct file *fp, uid_t uid, gid_t gid,
 		    struct ucred *active_cred, struct thread *td);
+typedef int fo_sendfile_t(struct file *fp, int sockfd, struct uio *hdr_uio,
+		    struct uio *trl_uio, off_t offset, size_t nbytes,
+		    off_t *sent, int flags, int kflags, struct thread *td);
+typedef int fo_seek_t(struct file *fp, off_t offset, int whence,
+		    struct thread *td);
 typedef	int fo_flags_t;
 
 struct fileops {
@@ -118,6 +123,8 @@ struct fileops {
 	fo_close_t	*fo_close;
 	fo_chmod_t	*fo_chmod;
 	fo_chown_t	*fo_chown;
+	fo_sendfile_t	*fo_sendfile;
+	fo_seek_t	*fo_seek;
 	fo_flags_t	fo_flags;	/* DFLAG_* below */
 };
 
@@ -203,10 +210,6 @@ struct xfile {
 
 #ifdef _KERNEL
 
-#ifdef MALLOC_DECLARE
-MALLOC_DECLARE(M_FILE);
-#endif
-
 extern struct fileops vnops;
 extern struct fileops badfileops;
 extern struct fileops socketops;
@@ -214,14 +217,13 @@ extern int maxfiles;		/* kernel limit on number of open files */
 extern int maxfilesperproc;	/* per process limit on number of open files */
 extern volatile int openfiles;	/* actual number of open files */
 
-int fget(struct thread *td, int fd, cap_rights_t rights, struct file **fpp);
-int fget_mmap(struct thread *td, int fd, cap_rights_t rights,
+int fget(struct thread *td, int fd, cap_rights_t *rightsp, struct file **fpp);
+int fget_mmap(struct thread *td, int fd, cap_rights_t *rightsp,
     u_char *maxprotp, struct file **fpp);
-int fget_read(struct thread *td, int fd, cap_rights_t rights,
+int fget_read(struct thread *td, int fd, cap_rights_t *rightsp,
     struct file **fpp);
-int fget_write(struct thread *td, int fd, cap_rights_t rights,
+int fget_write(struct thread *td, int fd, cap_rights_t *rightsp,
     struct file **fpp);
-int fgetcap(struct thread *td, int fd, struct file **fpp);
 int _fdrop(struct file *fp, struct thread *td);
 
 /*
@@ -240,19 +242,24 @@ fo_close_t	soo_close;
 
 fo_chmod_t	invfo_chmod;
 fo_chown_t	invfo_chown;
+fo_sendfile_t	invfo_sendfile;
+
+fo_sendfile_t	vn_sendfile;
+fo_seek_t	vn_seek;
 
 void finit(struct file *, u_int, short, void *, struct fileops *);
-int fgetvp(struct thread *td, int fd, cap_rights_t rights, struct vnode **vpp);
-int fgetvp_exec(struct thread *td, int fd, cap_rights_t rights,
+int fgetvp(struct thread *td, int fd, cap_rights_t *rightsp,
     struct vnode **vpp);
-int fgetvp_rights(struct thread *td, int fd, cap_rights_t need,
-    cap_rights_t *have, struct vnode **vpp);
-int fgetvp_read(struct thread *td, int fd, cap_rights_t rights,
+int fgetvp_exec(struct thread *td, int fd, cap_rights_t *rightsp,
     struct vnode **vpp);
-int fgetvp_write(struct thread *td, int fd, cap_rights_t rights,
+int fgetvp_rights(struct thread *td, int fd, cap_rights_t *needrightsp,
+    struct filecaps *havecaps, struct vnode **vpp);
+int fgetvp_read(struct thread *td, int fd, cap_rights_t *rightsp,
+    struct vnode **vpp);
+int fgetvp_write(struct thread *td, int fd, cap_rights_t *rightsp,
     struct vnode **vpp);
 
-int fgetsock(struct thread *td, int fd, cap_rights_t rights,
+int fgetsock(struct thread *td, int fd, cap_rights_t *rightsp,
     struct socket **spp, u_int *fflagp);
 void fputsock(struct socket *sp);
 
@@ -278,6 +285,7 @@ static __inline fo_stat_t	fo_stat;
 static __inline fo_close_t	fo_close;
 static __inline fo_chmod_t	fo_chmod;
 static __inline fo_chown_t	fo_chown;
+static __inline fo_sendfile_t	fo_sendfile;
 
 static __inline int
 fo_read(struct file *fp, struct uio *uio, struct ucred *active_cred,
@@ -355,6 +363,23 @@ fo_chown(struct file *fp, uid_t uid, gid_t gid, struct ucred *active_cred,
 {
 
 	return ((*fp->f_ops->fo_chown)(fp, uid, gid, active_cred, td));
+}
+
+static __inline int
+fo_sendfile(struct file *fp, int sockfd, struct uio *hdr_uio,
+    struct uio *trl_uio, off_t offset, size_t nbytes, off_t *sent, int flags,
+    int kflags, struct thread *td)
+{
+
+	return ((*fp->f_ops->fo_sendfile)(fp, sockfd, hdr_uio, trl_uio, offset,
+	    nbytes, sent, flags, kflags, td));
+}
+
+static __inline int
+fo_seek(struct file *fp, off_t offset, int whence, struct thread *td)
+{
+
+	return ((*fp->f_ops->fo_seek)(fp, offset, whence, td));
 }
 
 #endif /* _KERNEL */

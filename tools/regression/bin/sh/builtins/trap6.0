@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/bin/sh/builtins/trap6.0 217472 2011-01-16 13:56:41Z jilles $
+# $FreeBSD: release/10.0.0/tools/regression/bin/sh/builtins/trap6.0 217472 2011-01-16 13:56:41Z jilles $
 
 v=$(
 	${SH} -c 'trap "echo ok; exit" USR1; kill -USR1 $$' &

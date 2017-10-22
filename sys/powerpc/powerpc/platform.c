@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/powerpc/platform.c 227711 2011-11-19 12:55:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powerpc/platform.c 255417 2013-09-09 12:49:19Z nwhitehorn $");
 
 /*
  * Dispatch platform calls to the appropriate platform implementation
@@ -92,7 +92,7 @@ mem_valid(vm_offset_t addr, int len)
 		    &aregions, &naregions);
 
 	for (i = 0; i < npregions; i++)
-		if ((addr >= pregions[i].mr_start) 
+		if ((addr >= pregions[i].mr_start)
 		   && (addr + len <= pregions[i].mr_start + pregions[i].mr_size))
 			return (0);
 
@@ -116,7 +116,7 @@ platform_timebase_freq(struct cpuref *cpu)
 {
 	return (PLATFORM_TIMEBASE_FREQ(plat_obj, cpu));
 }
-	
+
 int
 platform_smp_first_cpu(struct cpuref *cpu)
 {
@@ -139,6 +139,12 @@ int
 platform_smp_start_cpu(struct pcpu *cpu)
 {
 	return (PLATFORM_SMP_START_CPU(plat_obj, cpu));
+}
+
+void
+platform_smp_ap_init()
+{
+	PLATFORM_SMP_AP_INIT(plat_obj);
 }
 
 #ifdef SMP

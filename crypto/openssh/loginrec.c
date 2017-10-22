@@ -180,10 +180,6 @@
 # include <util.h>
 #endif
 
-#ifdef HAVE_LIBUTIL_H
-# include <libutil.h>
-#endif
-
 /**
  ** prototypes for helper functions in this file
  **/
@@ -351,7 +347,7 @@ logininfo *login_alloc_entry(pid_t pid, const char *username,
 void
 login_free_entry(struct logininfo *li)
 {
-	xfree(li);
+	free(li);
 }
 
 

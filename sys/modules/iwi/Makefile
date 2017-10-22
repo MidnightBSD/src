@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/iwi/Makefile 156600 2006-03-12 19:06:06Z damien $
+# $FreeBSD: release/10.0.0/sys/modules/iwi/Makefile 156600 2006-03-12 19:06:06Z damien $
 
 .PATH: ${.CURDIR}/../../dev/iwi
 

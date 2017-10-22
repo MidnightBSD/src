@@ -36,7 +36,7 @@
 static char sccsid[] = "@(#)from: init.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/libexec/getty/init.c 144716 2005-04-06 17:42:24Z stefanf $";
+  "$FreeBSD: release/10.0.0/libexec/getty/init.c 229780 2012-01-07 16:09:54Z uqs $";
 #endif /* not lint */
 
 /*
@@ -64,7 +64,7 @@ struct	gettystrs gettystrs[] = {
 	{ "et", &omode.c_cc[VEOF] },	/* eof chatacter (eot) */
 	{ "pc", nullstr },		/* pad character */
 	{ "tt" },			/* terminal type */
-	{ "ev" },			/* enviroment */
+	{ "ev" },			/* environment */
 	{ "lo", loginprg },		/* login program */
 	{ "hn", hostname },		/* host name */
 	{ "he" },			/* host name edit */

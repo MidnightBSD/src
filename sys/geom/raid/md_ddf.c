@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/raid/md_ddf.c 248263 2013-03-14 05:24:25Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/raid/md_ddf.c 250819 2013-05-20 00:33:54Z mav $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -515,7 +515,7 @@ ddf_meta_find_disk(struct ddf_vol_meta *vmeta, uint32_t PD_Reference,
 	int i, bvd, pos;
 
 	i = 0;
-	for (bvd = 0; bvd < GET16(vmeta, vdc->Secondary_Element_Count); bvd++) {
+	for (bvd = 0; bvd < GET8(vmeta, vdc->Secondary_Element_Count); bvd++) {
 		if (vmeta->bvdc[bvd] == NULL) {
 			i += GET16(vmeta, vdc->Primary_Element_Count); // XXX
 			continue;

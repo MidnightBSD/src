@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ia64/ia64/highfp.c 205434 2010-03-22 04:01:45Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ia64/ia64/highfp.c 205434 2010-03-22 04:01:45Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

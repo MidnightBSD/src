@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/backend-query/disk-list.sh 233573 2012-03-27 19:05:49Z jpaetzel $
+# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend-query/disk-list.sh 249094 2013-04-04 12:03:30Z mav $
 
 ARGS=$1
 FLAGS_MD=""
@@ -82,15 +82,10 @@ do
     esac
   fi
 
-  # Try and find some identification information with camcontrol or atacontrol
+  # Try and find some identification information with camcontrol
   NEWLINE=$(camcontrol identify $DEV 2>/dev/null | sed -ne 's/^device model *//p')
   if [ -z "$NEWLINE" ]; then
-	# Now try atacontrol
-  	NEWLINE=$(atacontrol list 2>/dev/null | sed -n "s|^.*$DEV <\(.*\)>.*|\1|p")
-	
-  	if [ -z "$NEWLINE" ]; then
-    		NEWLINE=" <Unknown Device>"
-	fi
+    	NEWLINE=" <Unknown Device>"
   fi
 
   if [ -n "${FLAGS_MD}" ] && echo "${DEV}" | grep -E '^md[0-9]+' >/dev/null 2>/dev/null

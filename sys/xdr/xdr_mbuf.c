@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/xdr/xdr_mbuf.c 196149 2009-08-12 16:27:51Z rmacklem $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/xdr/xdr_mbuf.c 248318 2013-03-15 10:21:18Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -123,7 +123,7 @@ xdrmbuf_getall(XDR *xdrs)
 	if (m)
 		m_adj(m, xdrs->x_handy);
 	else
-		MGET(m, M_WAITOK, MT_DATA);
+		m = m_get(M_WAITOK, MT_DATA);
 	return (m);
 }
 
@@ -228,9 +228,10 @@ xdrmbuf_putbytes(XDR *xdrs, const char *addr, u_int len)
 
 		if (xdrs->x_handy == m->m_len && M_TRAILINGSPACE(m) == 0) {
 			if (!m->m_next) {
-				MGET(n, M_TRYWAIT, m->m_type);
 				if (m->m_flags & M_EXT)
-					MCLGET(n, M_TRYWAIT);
+					n = m_getcl(M_WAITOK, m->m_type, 0);
+				else
+					n = m_get(M_WAITOK, m->m_type);
 				m->m_next = n;
 			}
 			m = m->m_next;

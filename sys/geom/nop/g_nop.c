@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/nop/g_nop.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/nop/g_nop.c 258505 2013-11-23 23:54:38Z mjg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -72,6 +72,30 @@ g_nop_orphan(struct g_consumer *cp)
 }
 
 static void
+g_nop_resize(struct g_consumer *cp)
+{
+	struct g_nop_softc *sc;
+	struct g_geom *gp;
+	struct g_provider *pp;
+	off_t size;
+
+	g_topology_assert();
+
+	gp = cp->geom;
+	sc = gp->softc;
+
+	if (sc->sc_explicitsize != 0)
+		return;
+	if (cp->provider->mediasize < sc->sc_offset) {
+		g_nop_destroy(gp, 1);
+		return;
+	}
+	size = cp->provider->mediasize - sc->sc_offset;
+	LIST_FOREACH(pp, &gp->provider, provider)
+		g_resize_provider(pp, size);
+}
+
+static void
 g_nop_start(struct bio *bp)
 {
 	struct g_nop_softc *sc;
@@ -100,7 +124,7 @@ g_nop_start(struct bio *bp)
 
 		rval = arc4random() % 100;
 		if (rval < failprob) {
-			G_NOP_LOGREQ(bp, "Returning error=%d.", sc->sc_error);
+			G_NOP_LOGREQLVL(1, bp, "Returning error=%d.", sc->sc_error);
 			g_io_deliver(bp, sc->sc_error);
 			return;
 		}
@@ -112,8 +136,6 @@ g_nop_start(struct bio *bp)
 	}
 	cbp->bio_done = g_std_done;
 	cbp->bio_offset = bp->bio_offset + sc->sc_offset;
-	cbp->bio_data = bp->bio_data;
-	cbp->bio_length = bp->bio_length;
 	pp = LIST_FIRST(&gp->provider);
 	KASSERT(pp != NULL, ("NULL pp"));
 	cbp->bio_to = pp;
@@ -146,6 +168,7 @@ g_nop_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 	struct g_consumer *cp;
 	char name[64];
 	int error;
+	off_t explicitsize;
 
 	g_topology_assert();
 
@@ -165,6 +188,7 @@ g_nop_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 		gctl_error(req, "Invalid offset for provider %s.", pp->name);
 		return (EINVAL);
 	}
+	explicitsize = size;
 	if (size == 0)
 		size = pp->mediasize - offset;
 	if (offset + size > pp->mediasize) {
@@ -190,8 +214,9 @@ g_nop_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 		}
 	}
 	gp = g_new_geomf(mp, "%s", name);
-	sc = g_malloc(sizeof(*sc), M_WAITOK);
+	sc = g_malloc(sizeof(*sc), M_WAITOK | M_ZERO);
 	sc->sc_offset = offset;
+	sc->sc_explicitsize = explicitsize;
 	sc->sc_error = ioerror;
 	sc->sc_rfailprob = rfailprob;
 	sc->sc_wfailprob = wfailprob;
@@ -202,6 +227,7 @@ g_nop_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 	gp->softc = sc;
 	gp->start = g_nop_start;
 	gp->orphan = g_nop_orphan;
+	gp->resize = g_nop_resize;
 	gp->access = g_nop_access;
 	gp->dumpconf = g_nop_dumpconf;
 
@@ -216,6 +242,7 @@ g_nop_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 		goto fail;
 	}
 
+	newpp->flags |= pp->flags & G_PF_ACCEPT_UNMAPPED;
 	g_error_provider(newpp, 0);
 	G_NOP_DEBUG(0, "Device %s created.", gp->name);
 	return (0);

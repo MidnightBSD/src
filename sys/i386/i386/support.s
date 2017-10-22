@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/i386/i386/support.s 249532 2013-04-16 06:20:35Z kib $
+ * $FreeBSD: release/10.0.0/sys/i386/i386/support.s 253328 2013-07-13 19:42:52Z kib $
  */
 
 #include "opt_npx.h"
@@ -181,11 +181,13 @@ END(bcopyb)
  *  ws@tools.de     (Wolfgang Solfrank, TooLs GmbH) +49-228-985800
  */
 ENTRY(bcopy)
+	pushl	%ebp
+	movl	%esp,%ebp
 	pushl	%esi
 	pushl	%edi
-	movl	12(%esp),%esi
-	movl	16(%esp),%edi
-	movl	20(%esp),%ecx
+	movl	8(%ebp),%esi
+	movl	12(%ebp),%edi
+	movl	16(%ebp),%ecx
 
 	movl	%edi,%eax
 	subl	%esi,%eax
@@ -196,12 +198,13 @@ ENTRY(bcopy)
 	cld					/* nope, copy forwards */
 	rep
 	movsl
-	movl	20(%esp),%ecx
+	movl	16(%ebp),%ecx
 	andl	$3,%ecx				/* any bytes left? */
 	rep
 	movsb
 	popl	%edi
 	popl	%esi
+	popl	%ebp
 	ret
 
 	ALIGN_TEXT
@@ -214,7 +217,7 @@ ENTRY(bcopy)
 	std
 	rep
 	movsb
-	movl	20(%esp),%ecx			/* copy remainder by 32-bit words */
+	movl	16(%ebp),%ecx			/* copy remainder by 32-bit words */
 	shrl	$2,%ecx
 	subl	$3,%esi
 	subl	$3,%edi
@@ -223,6 +226,7 @@ ENTRY(bcopy)
 	popl	%edi
 	popl	%esi
 	cld
+	popl	%ebp
 	ret
 END(bcopy)
 

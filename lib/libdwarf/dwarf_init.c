@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libdwarf/dwarf_init.c 242544 2012-11-04 01:21:49Z eadler $
+ * $FreeBSD: release/10.0.0/lib/libdwarf/dwarf_init.c 252430 2013-06-30 21:06:47Z kaiw $
  */
 
 #include <stdlib.h>
@@ -192,7 +192,7 @@ dwarf_read_sleb128(Elf_Data **dp, uint64_t *offsetp)
 		shift += 7;
 	} while ((b & 0x80) != 0);
 
-	if (shift < 32 && (b & 0x40) != 0)
+	if (shift < 64 && (b & 0x40) != 0)
 		ret |= (-1 << shift);
 
 	return ret;

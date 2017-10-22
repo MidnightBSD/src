@@ -24,7 +24,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/include/trap_booke.h 236511 2012-06-03 11:54:26Z marius $
+ * $FreeBSD: release/10.0.0/sys/powerpc/include/trap_booke.h 233635 2012-03-29 02:02:14Z nwhitehorn $
  */
 
 #ifndef	_POWERPC_TRAP_H_

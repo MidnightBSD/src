@@ -35,7 +35,7 @@
  * otherwise) arising in any way out of the use of this software, even if
  * advised of the possibility of such damage.
  *  
- * $FreeBSD: stable/9/sys/geom/vinum/geom_vinum_var.h 207878 2010-05-10 19:12:23Z jh $
+ * $FreeBSD: release/10.0.0/sys/geom/vinum/geom_vinum_var.h 207878 2010-05-10 19:12:23Z jh $
  */
 
 #ifndef	_GEOM_VINUM_VAR_H_

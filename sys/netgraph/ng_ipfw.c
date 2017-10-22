@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_ipfw.c 243401 2012-11-22 12:11:32Z glebius $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_ipfw.c 243882 2012-12-05 08:04:20Z glebius $
  */
 
 #include "opt_inet.h"
@@ -195,7 +195,7 @@ ng_ipfw_connect(hook_p hook)
 }
 
 /* Look up hook by name */
-hook_p
+static hook_p
 ng_ipfw_findhook(node_p node, const char *name)
 {
 	u_int16_t n;	/* numeric representation of hook */
@@ -243,7 +243,7 @@ ng_ipfw_rcvdata(hook_p hook, item_p item)
 
 	if (m->m_len < sizeof(struct ip) &&
 	    (m = m_pullup(m, sizeof(struct ip))) == NULL)
-		return (EINVAL);
+		return (ENOBUFS);
 
 	ip = mtod(m, struct ip *);
 
@@ -253,23 +253,18 @@ ng_ipfw_rcvdata(hook_p hook, item_p item)
 #ifdef INET
 		case IPVERSION:
 			ip_input(m);
-			break;
+			return (0);
 #endif
 #ifdef INET6
 		case IPV6_VERSION >> 4:
 			ip6_input(m);
-			break;
+			return (0);
 #endif
-		default:
-			NG_FREE_M(m);
-			return (EINVAL);
 		}
-		return (0);
 	} else {
 		switch (ip->ip_v) {
 #ifdef INET
 		case IPVERSION:
-			SET_HOST_IPLEN(ip);
 			return (ip_output(m, NULL, NULL, IP_FORWARDING,
 			    NULL, NULL));
 #endif
@@ -278,10 +273,12 @@ ng_ipfw_rcvdata(hook_p hook, item_p item)
 			return (ip6_output(m, NULL, NULL, 0, NULL,
 			    NULL, NULL));
 #endif
-		default:
-			return (EINVAL);
 		}
 	}
+
+	/* unknown IP protocol version */
+	NG_FREE_M(m);
+	return (EPROTONOSUPPORT);
 }
 
 static int
@@ -323,7 +320,7 @@ ng_ipfw_input(struct mbuf **m0, int dir, struct ip_fw_args *fwa, int tee)
 		m_tag_prepend(m, tag);
 
 	} else
-		if ((m = m_dup(*m0, M_DONTWAIT)) == NULL)
+		if ((m = m_dup(*m0, M_NOWAIT)) == NULL)
 			return (ENOMEM);	/* which is ignored */
 
 	if (m->m_len < sizeof(struct ip) &&

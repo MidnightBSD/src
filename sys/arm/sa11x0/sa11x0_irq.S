@@ -36,7 +36,7 @@
 #include <machine/armreg.h>
 #include <machine/asmacros.h>
 #include <arm/sa11x0/sa11x0_reg.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/sa11x0/sa11x0_irq.S 224612 2011-08-02 17:49:27Z attilio $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/sa11x0/sa11x0_irq.S 236990 2012-06-13 04:59:00Z imp $");
 Lcurrent_intr_depth:
 	.word	_C_LABEL(current_intr_depth)
 
@@ -120,7 +120,7 @@ ENTRY(sa11x0_activateirqs)
 	mov	pc, lr
 
 	.global _C_LABEL(intrnames), _C_LABEL(sintrnames)
-_C_LABEL(intrnames): 
+_C_LABEL(intrnames):
 _C_LABEL(sintrnames):
 	.int	0
 

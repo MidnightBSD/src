@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/stg/tmc18c30_subr.c 194023 2009-06-11 17:14:28Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/stg/tmc18c30_subr.c 240325 2012-09-10 18:49:49Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,7 +52,6 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/stg/tmc18c30_subr.c 194023 2009-06-11 17:14
 #include <sys/rman.h> 
 
 #include <cam/scsi/scsi_low.h>
-#include <cam/scsi/scsi_low_pisa.h>
 
 #include <dev/stg/tmc18c30reg.h>
 #include <dev/stg/tmc18c30var.h>

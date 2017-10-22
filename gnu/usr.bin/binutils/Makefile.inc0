@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/binutils/Makefile.inc0 218822 2011-02-18 20:54:12Z dim $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/binutils/Makefile.inc0 239272 2012-08-15 03:21:56Z gonzo $
 #
 # This is included explicitly at the top of each sub-Makefile.  We can't
 # use the normal "Makefile.inc" mechanism, because we need some of these
@@ -7,7 +7,7 @@
 VERSION=	"2.17.50 [FreeBSD] 2007-07-03"
 
 .if defined(TARGET_ARCH)
-TARGET_CPUARCH=${TARGET_ARCH:C/mips.*e[bl]/mips/:C/armeb/arm/:C/powerpc64/powerpc/}
+TARGET_CPUARCH=${TARGET_ARCH:C/mips(n32|64)?(el)?/mips/:C/arm(v6)?(eb)?/arm/:C/powerpc64/powerpc/}
 .else
 TARGET_CPUARCH=${MACHINE_CPUARCH}
 .endif
@@ -16,7 +16,8 @@ TARGET_VENDOR?=	unknown
 TARGET_OS?=	freebsd
 BINUTILS_ARCH=${TARGET_ARCH:C/amd64/x86_64/}
 TARGET_TUPLE?=	${BINUTILS_ARCH}-${TARGET_VENDOR}-${TARGET_OS}
-.if ${TARGET_ARCH} == "armeb" || ${TARGET_ARCH:Mmips*eb} != ""
+.if ${TARGET_ARCH} == "armeb" || ${TARGET_ARCH} == "armv6eb" || \
+	(${TARGET_CPUARCH} == "mips" && ${TARGET_ARCH:Mmips*el} == "")
 TARGET_BIG_ENDIAN=t
 .endif
 

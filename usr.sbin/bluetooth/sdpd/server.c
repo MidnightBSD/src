@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: server.c,v 1.6 2004/01/13 01:54:39 max Exp $
- * $FreeBSD: stable/9/usr.sbin/bluetooth/sdpd/server.c 229210 2012-01-01 21:28:55Z dim $
+ * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/sdpd/server.c 229655 2012-01-05 21:36:45Z uqs $
  */
 
 #include <sys/param.h>
@@ -334,7 +334,7 @@ server_accept_client(server_p srv, int32_t fd)
 		 * The minimum L2CAP MTU is 43 bytes. That means we need
 		 * 65536 / 43 = ~1524 chunks to transfer maximum packet
 		 * size with minimum MTU. The "rsp_cs" field in fd_idx_t
-		 * is 11 bit wide that gives us upto 2048 chunks.
+		 * is 11 bits wide, which gives us up to 2048 chunks.
 		 */
 
 		if (omtu < NG_L2CAP_MTU_MINIMUM) {

@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/9/tools/tools/ath/athdecode/main.c 217680 2011-01-21 02:53:32Z adrian $
+ * $FreeBSD: release/10.0.0/tools/tools/ath/athdecode/main.c 244962 2013-01-02 18:09:30Z adrian $
  */
 #include "diag.h"
 
@@ -69,7 +69,7 @@ main(int argc, char *argv[])
 		filename = argv[1];
 	fd = open(filename, O_RDONLY);
 	if (fd < 0)
-		err(1, filename);
+		err(1, "open: %s", filename);
 	if (fstat(fd, &sb) < 0)
 		err(1, "fstat");
 	addr = mmap(0, sb.st_size, PROT_READ, MAP_PRIVATE|MAP_NOCORE, fd, 0);
@@ -192,6 +192,7 @@ opmark(FILE *fd, int i, const struct athregrec *r)
 		fprintf(fd, "mark #%u value %u/0x%x", r->reg, r->val, r->val);
 		break;
 	}
+	exit(0);
 }
 
 #include "ah_devid.h"
@@ -302,8 +303,8 @@ register_regs(struct dumpreg *chipregs, u_int nchipregs,
 			 */
 			if (nr->addr == r->addr &&
 			    (nr->name == r->name ||
-			     nr->name != NULL && r->name != NULL &&
-			     strcmp(nr->name, r->name) == 0)) {
+			     (nr->name != NULL && r->name != NULL &&
+			     strcmp(nr->name, r->name) == 0))) {
 				if (nr->srevMin < r->srevMin &&
 				    (r->srevMin <= nr->srevMax &&
 				     nr->srevMax+1 <= r->srevMax)) {
@@ -375,7 +376,7 @@ oprw(FILE *fd, int recnum, struct athregrec *r)
 	const char* bits;
 	int i;
 
-	fprintf(fd, "\n%05d: ", recnum);
+	fprintf(fd, "\n%05d: [%d] ", recnum, r->threadid);
 	dr = findreg(r->reg);
 	if (dr != NULL && dr->name != NULL) {
 		snprintf(buf, sizeof (buf), "AR_%s (0x%x)", dr->name, r->reg);

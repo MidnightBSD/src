@@ -21,7 +21,7 @@
  *  Internet, ethernet, port, and protocol string to address
  *  and address to string conversion routines
  *
- * $FreeBSD: stable/9/contrib/tcpdump/addrtoname.c 236192 2012-05-28 19:13:21Z delphij $
+ * $FreeBSD: release/10.0.0/contrib/tcpdump/addrtoname.c 251158 2013-05-30 20:51:22Z delphij $
  */
 #ifndef lint
 static const char rcsid[] _U_ =
@@ -383,6 +383,9 @@ lookup_bytestring(register const u_char *bs, const unsigned int nlen)
 	tp->e_addr2 = k;
 
 	tp->e_bs = (u_char *) calloc(1, nlen + 1);
+	if (tp->e_bs == NULL)
+		error("lookup_bytestring: calloc");
+
 	memcpy(tp->e_bs, bs, nlen);
 	tp->e_nxt = (struct enamemem *)calloc(1, sizeof(*tp));
 	if (tp->e_nxt == NULL)

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/gnu/usr.bin/gdb/arch/i386/config.h 146818 2005-05-31 09:43:04Z dfr $ */
+/* $FreeBSD: release/10.0.0/gnu/usr.bin/gdb/arch/i386/config.h 251512 2013-06-07 21:40:02Z emaste $ */
 
 /* config.h.  Generated automatically by configure.  */
 /* config.in.  Generated automatically from configure.in by autoheader.  */
@@ -438,9 +438,6 @@
 
 /* Name of this package.  */
 #define PACKAGE "gdb"
-
-/* Global directory for separate debug files.  */
-#define DEBUGDIR "/usr/local/lib/debug"
 
 /* Define to BFD's default architecture.  */
 #define DEFAULT_BFD_ARCH bfd_i386_arch

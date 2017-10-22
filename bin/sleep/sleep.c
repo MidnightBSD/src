@@ -39,10 +39,11 @@ static char sccsid[] = "@(#)sleep.c	8.3 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/sleep/sleep.c 210749 2010-08-02 10:57:56Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/sleep/sleep.c 251433 2013-06-05 20:15:18Z jilles $");
 
 #include <ctype.h>
 #include <err.h>
+#include <errno.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdint.h>
@@ -81,14 +82,20 @@ main(int argc, char *argv[])
 	time_to_sleep.tv_nsec = 1e9 * (d - time_to_sleep.tv_sec);
 
 	signal(SIGINFO, report_request);
+
+	/*
+	 * Note: [EINTR] is supposed to happen only when a signal was handled
+	 * but the kernel also returns it when a ptrace-based debugger
+	 * attaches. This is a bug but it is hard to fix.
+	 */
 	while (nanosleep(&time_to_sleep, &time_to_sleep) != 0) {
 		if (report_requested) {
 			/* Reporting does not bother with nanoseconds. */
 			warnx("about %d second(s) left out of the original %d",
 			    (int)time_to_sleep.tv_sec, (int)original);
 			report_requested = 0;
-		} else
-			break;
+		} else if (errno != EINTR)
+			err(1, "nanosleep");
 	}
 	return (0);
 }

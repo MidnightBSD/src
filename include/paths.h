@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)paths.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/9/include/paths.h 246234 2013-02-02 09:57:34Z trasz $
+ * $FreeBSD: release/10.0.0/include/paths.h 255629 2013-09-17 11:48:47Z sbruno $
  */
 
 #ifndef _PATHS_H_
@@ -50,6 +50,7 @@
 #define	_PATH_CSHELL	"/bin/csh"
 #define	_PATH_CSMAPPER	"/usr/share/i18n/csmapper"
 #define	_PATH_DEFTAPE	"/dev/sa0"
+#define	_PATH_DEVGPIOC	"/dev/gpioc"
 #define	_PATH_DEVNULL	"/dev/null"
 #define	_PATH_DEVZERO	"/dev/zero"
 #define	_PATH_DRUM	"/dev/drum"
@@ -57,6 +58,8 @@
 #define	_PATH_ETC	"/etc"
 #define	_PATH_FTPUSERS	"/etc/ftpusers"
 #define	_PATH_FWMEM	"/dev/fwmem"
+#define	_PATH_GBDE	"/sbin/gbde"
+#define	_PATH_GELI	"/sbin/geli"
 #define	_PATH_HALT	"/sbin/halt"
 #ifdef COMPAT_32BIT
 #define	_PATH_I18NMODULE	"/usr/lib32/i18n"

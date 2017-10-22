@@ -50,7 +50,7 @@
 
 %{
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libipsec/policy_parse.y 171135 2007-07-01 12:08:08Z gnn $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libipsec/policy_parse.y 243906 2012-12-05 20:28:44Z bapt $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -88,7 +88,6 @@ static caddr_t policy_parse(char *msg, int msglen);
 
 extern void __policy__strbuffer__init__(char *msg);
 extern void __policy__strbuffer__free__(void);
-extern int yyparse(void);
 extern int yylex(void);
 
 extern char *__libipsecyytext;	/*XXX*/

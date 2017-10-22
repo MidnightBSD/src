@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/limits/limits.c 230919 2012-02-02 18:25:12Z trociny $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/limits/limits.c 230549 2012-01-25 20:14:41Z trociny $");
 
 #include <err.h>
 #include <stdio.h>
@@ -237,7 +237,7 @@ static struct {
 
 /*
  * One letter for each resource levels.
- * NOTE: There is a dependancy on the corresponding
+ * NOTE: There is a dependency on the corresponding
  * letter index being equal to the resource number.
  * If sys/resource.h defines are changed, this needs
  * to be modified accordingly!

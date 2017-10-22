@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/powerpc/powerpc/sigcode32.S 209975 2010-07-13 05:32:19Z nwhitehorn $ */
+/* $FreeBSD: release/10.0.0/sys/powerpc/powerpc/sigcode32.S 209975 2010-07-13 05:32:19Z nwhitehorn $ */
 /* $NetBSD: sigcode.S,v 1.1 1999/11/17 14:56:11 kleink Exp $	*/
 
 /*-

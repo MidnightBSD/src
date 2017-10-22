@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fcntl.h	8.3 (Berkeley) 1/21/94
- * $FreeBSD: stable/9/sys/sys/fcntl.h 239899 2012-08-30 10:12:40Z kib $
+ * $FreeBSD: release/10.0.0/sys/sys/fcntl.h 254888 2013-08-25 21:52:04Z jilles $
  */
 
 #ifndef _SYS_FCNTL_H_
@@ -136,8 +136,8 @@ typedef	__pid_t		pid_t;
 
 #ifdef _KERNEL
 /* convert from open() flags to/from fflags; convert O_RD/WR to FREAD/FWRITE */
-#define	FFLAGS(oflags)	((oflags) + 1)
-#define	OFLAGS(fflags)	((fflags) - 1)
+#define	FFLAGS(oflags)	((oflags) & O_EXEC ? (oflags) : (oflags) + 1)
+#define	OFLAGS(fflags)	((fflags) & O_EXEC ? (fflags) : (fflags) - 1)
 
 /* bits to save after open */
 #define	FMASK	(FREAD|FWRITE|FAPPEND|FASYNC|FFSYNC|FNONBLOCK|O_DIRECT|FEXEC)
@@ -307,15 +307,15 @@ __BEGIN_DECLS
 int	open(const char *, int, ...);
 int	creat(const char *, mode_t);
 int	fcntl(int, int, ...);
+#if __BSD_VISIBLE
+int	flock(int, int);
+#endif
 #if __BSD_VISIBLE || __POSIX_VISIBLE >= 200809
 int	openat(int, const char *, int, ...);
 #endif
 #if __BSD_VISIBLE || __POSIX_VISIBLE >= 200112
 int	posix_fadvise(int, off_t, off_t, int);
 int	posix_fallocate(int, off_t, off_t);
-#endif
-#if __BSD_VISIBLE
-int	flock(int, int);
 #endif
 __END_DECLS
 #endif

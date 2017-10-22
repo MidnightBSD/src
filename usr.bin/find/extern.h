@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/16/94
- *	$FreeBSD: stable/9/usr.bin/find/extern.h 216370 2010-12-11 08:32:16Z joel $
+ *	$FreeBSD: release/10.0.0/usr.bin/find/extern.h 247730 2013-03-03 20:10:56Z dwmalone $
  */
 
 #include <sys/cdefs.h>
@@ -58,6 +58,7 @@ creat_f	c_flags;
 creat_f	c_follow;
 creat_f	c_fstype;
 creat_f	c_group;
+creat_f	c_ignore_readdir_race;
 creat_f	c_inum;
 creat_f	c_links;
 creat_f	c_ls;
@@ -72,6 +73,7 @@ creat_f	c_regex;
 creat_f	c_samefile;
 creat_f	c_simple;
 creat_f	c_size;
+creat_f	c_sparse;
 creat_f	c_type;
 creat_f	c_user;
 creat_f	c_xdev;
@@ -108,10 +110,12 @@ exec_f	f_prune;
 exec_f	f_quit;
 exec_f	f_regex;
 exec_f	f_size;
+exec_f	f_sparse;
 exec_f	f_type;
 exec_f	f_user;
 
-extern int ftsoptions, isdeprecated, isdepth, isoutput, issort, isxargs;
+extern int ftsoptions, ignore_readdir_race, isdeprecated, isdepth, isoutput;
+extern int issort, isxargs;
 extern int mindepth, maxdepth;
 extern int regexp_flags;
 extern time_t now;

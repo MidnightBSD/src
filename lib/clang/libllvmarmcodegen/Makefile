@@ -1,11 +1,12 @@
-# $FreeBSD: stable/9/lib/clang/libllvmarmcodegen/Makefile 246637 2013-02-10 21:24:47Z dim $
+# $FreeBSD: release/10.0.0/lib/clang/libllvmarmcodegen/Makefile 249423 2013-04-12 17:57:40Z dim $
 
 .include <bsd.own.mk>
 
 LIB=	llvmarmcodegen
 
 SRCDIR=	lib/Target/ARM
-SRCS=	ARMAsmPrinter.cpp \
+SRCS=	A15SDOptimizer.cpp \
+	ARMAsmPrinter.cpp \
 	ARMBaseInstrInfo.cpp \
 	ARMBaseRegisterInfo.cpp \
 	ARMCodeEmitter.cpp \
@@ -27,6 +28,7 @@ SRCS=	ARMAsmPrinter.cpp \
 	ARMSubtarget.cpp \
 	ARMTargetMachine.cpp \
 	ARMTargetObjectFile.cpp \
+	ARMTargetTransformInfo.cpp \
 	MLxExpansionPass.cpp \
 	Thumb1FrameLowering.cpp \
 	Thumb1InstrInfo.cpp \

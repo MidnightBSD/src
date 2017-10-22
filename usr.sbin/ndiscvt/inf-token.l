@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/ndiscvt/inf-token.l 229228 2012-01-01 23:08:19Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ndiscvt/inf-token.l 250227 2013-05-03 23:51:32Z jkim $");
 
 #include <regex.h>
 #include <ctype.h>
@@ -43,8 +43,6 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/ndiscvt/inf-token.l 229228 2012-01-01 23:0
 #include "y.tab.h"
 
 int lineno = 1;
-#define YY_NO_UNPUT
-#define YY_NO_INPUT
 
 int yylex(void);
 void yyerror(const char *);
@@ -58,6 +56,9 @@ update_lineno(const char *cp)
 }
 
 %}
+
+%option nounput
+%option noinput
 
 %%
 

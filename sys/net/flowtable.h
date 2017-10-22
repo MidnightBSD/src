@@ -25,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: stable/9/sys/net/flowtable.h 208171 2010-05-16 21:48:39Z kmacy $
+$FreeBSD: release/10.0.0/sys/net/flowtable.h 208171 2010-05-16 21:48:39Z kmacy $
 
 ***************************************************************************/
 

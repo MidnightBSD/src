@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/clang/libllvmvectorize/Makefile 246637 2013-02-10 21:24:47Z dim $
+# $FreeBSD: release/10.0.0/lib/clang/libllvmvectorize/Makefile 251662 2013-06-12 18:48:53Z dim $
 
 .include <bsd.own.mk>
 
@@ -7,6 +7,8 @@ LIB=	llvmvectorize
 SRCDIR=	lib/Transforms/Vectorize
 SRCS=	BBVectorize.cpp \
 	LoopVectorize.cpp \
+	SLPVectorizer.cpp \
+	VecUtils.cpp \
 	Vectorize.cpp
 
 TGHDRS=	Intrinsics

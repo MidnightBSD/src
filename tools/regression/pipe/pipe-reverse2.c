@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/pipe/pipe-reverse2.c 230956 2012-02-03 20:27:14Z jilles $
+ * $FreeBSD: release/10.0.0/tools/regression/pipe/pipe-reverse2.c 228512 2011-12-14 23:26:48Z jilles $
  */
 
 #include	<sys/select.h>

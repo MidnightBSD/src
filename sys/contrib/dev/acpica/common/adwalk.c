@@ -5,7 +5,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2011, Intel Corp.
+ * Copyright (C) 2000 - 2013, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -373,12 +373,27 @@ AcpiDmDumpDescending (
     switch (Op->Common.AmlOpcode)
     {
     case AML_BYTE_OP:
+
+        AcpiOsPrintf ("%2.2X", (UINT32) Op->Common.Value.Integer);
+        break;
+
     case AML_WORD_OP:
+
+        AcpiOsPrintf ("%4.4X", (UINT32) Op->Common.Value.Integer);
+        break;
+
     case AML_DWORD_OP:
-        AcpiOsPrintf ("%X", (UINT32) Op->Common.Value.Integer);
+
+        AcpiOsPrintf ("%8.8X", (UINT32) Op->Common.Value.Integer);
+        break;
+
+    case AML_QWORD_OP:
+
+        AcpiOsPrintf ("%8.8X%8.8X", ACPI_FORMAT_UINT64 (Op->Common.Value.Integer));
         break;
 
     case AML_INT_NAMEPATH_OP:
+
         if (Op->Common.Value.String)
         {
             AcpiNsExternalizeName (ACPI_UINT32_MAX, Op->Common.Value.String,
@@ -396,10 +411,12 @@ AcpiDmDumpDescending (
     case AML_METHOD_OP:
     case AML_DEVICE_OP:
     case AML_INT_NAMEDFIELD_OP:
+
         AcpiOsPrintf ("%4.4s", ACPI_CAST_PTR (char, &Op->Named.Name));
         break;
 
     default:
+
         break;
     }
 
@@ -446,6 +463,7 @@ AcpiDmFindOrphanDescending (
     {
 #ifdef ACPI_UNDER_DEVELOPMENT
     case AML_ADD_OP:
+
         ChildOp = Op->Common.Value.Arg;
         if ((ChildOp->Common.AmlOpcode == AML_INT_NAMEPATH_OP) &&
             !ChildOp->Common.Node)
@@ -517,6 +535,7 @@ AcpiDmFindOrphanDescending (
 
         if ((OpInfo->Class != AML_CLASS_EXECUTE) &&
             (OpInfo->Class != AML_CLASS_CREATE) &&
+            (OpInfo->ObjectType != ACPI_TYPE_LOCAL_ALIAS) &&
             (ParentOp->Common.AmlOpcode != AML_INT_METHODCALL_OP) &&
             !Op->Common.Node)
         {
@@ -551,6 +570,7 @@ AcpiDmFindOrphanDescending (
         break;
 
     default:
+
         break;
     }
 
@@ -649,8 +669,8 @@ AcpiDmLoadDescendingOp (
 
         while (AcpiGbl_PreDefinedNames[PreDefineIndex].Name)
         {
-            if (!ACPI_STRNCMP (Node->Name.Ascii,
-                AcpiGbl_PreDefinedNames[PreDefineIndex].Name, 4))
+            if (ACPI_COMPARE_NAME (Node->Name.Ascii,
+                AcpiGbl_PreDefinedNames[PreDefineIndex].Name))
             {
                 PreDefined = TRUE;
                 break;
@@ -739,19 +759,31 @@ AcpiDmXrefDescendingOp (
 
     if (OpInfo->Flags & AML_NAMED)
     {
-        if ((Op->Common.AmlOpcode == AML_ALIAS_OP) ||
-            (Op->Common.AmlOpcode == AML_SCOPE_OP))
+        /*
+         * Only these two operators (Alias, Scope) refer to an existing
+         * name, it is the first argument
+         */
+        if (Op->Common.AmlOpcode == AML_ALIAS_OP)
         {
-            /*
-             * Only these two operators refer to an existing name,
-             * first argument
-             */
+            ObjectType = ACPI_TYPE_ANY;
+
+            NextOp = Op->Common.Value.Arg;
+            NextOp = NextOp->Common.Value.Arg;
+            if (NextOp->Common.AmlOpcode == AML_INT_NAMEPATH_OP)
+            {
+                Path = NextOp->Common.Value.String;
+            }
+        }
+        else if (Op->Common.AmlOpcode == AML_SCOPE_OP)
+        {
             Path = (char *) Op->Named.Path;
         }
     }
     else if (OpInfo->Flags & AML_CREATE)
     {
         /* Referenced Buffer Name is the first child */
+
+        ObjectType = ACPI_TYPE_BUFFER; /* Change from TYPE_BUFFER_FIELD */
 
         NextOp = Op->Common.Value.Arg;
         if (NextOp->Common.AmlOpcode == AML_INT_NAMEPATH_OP)
@@ -770,7 +802,7 @@ AcpiDmXrefDescendingOp (
     }
 
     /*
-     * Lookup the name in the namespace.  Name must exist at this point, or it
+     * Lookup the name in the namespace. Name must exist at this point, or it
      * is an invalid reference.
      *
      * The namespace is also used as a lookup table for references to resource
@@ -779,6 +811,11 @@ AcpiDmXrefDescendingOp (
     Status = AcpiNsLookup (WalkState->ScopeInfo, Path, ACPI_TYPE_ANY,
                 ACPI_IMODE_EXECUTE, ACPI_NS_SEARCH_PARENT | ACPI_NS_DONT_OPEN_SCOPE,
                 WalkState, &Node);
+    if (ACPI_SUCCESS (Status) && (Node->Flags & ANOBJ_IS_EXTERNAL))
+    {
+        Status = AE_NOT_FOUND;
+    }
+
     if (ACPI_FAILURE (Status))
     {
         if (Status == AE_NOT_FOUND)
@@ -815,7 +852,7 @@ AcpiDmXrefDescendingOp (
             }
         }
 
-        AcpiDmAddToExternalList (Op, Path, (UINT8) ObjectType2, ParamCount);
+        AcpiDmAddToExternalList (Op, Path, (UINT8) ObjectType2, ParamCount | 0x80);
         Op->Common.Node = Node;
     }
     else
@@ -996,5 +1033,3 @@ AcpiDmInspectPossibleArgs (
 
     return (Last);
 }
-
-

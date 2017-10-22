@@ -1,5 +1,5 @@
 /*	$NetBSD: pwcache.h,v 1.5 2003/11/10 08:51:51 wiz Exp $	*/
-/*	$FreeBSD: stable/9/contrib/libc-pwcache/pwcache.h 241731 2012-10-19 12:44:22Z brooks $	*/
+/*	$FreeBSD: release/10.0.0/contrib/libc-pwcache/pwcache.h 241731 2012-10-19 12:44:22Z brooks $	*/
 
 /*-
  * Copyright (c) 1992 Keith Muller.

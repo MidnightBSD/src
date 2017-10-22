@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/tr/cset.c 200462 2009-12-13 03:14:06Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tr/cset.c 226363 2011-10-14 10:43:55Z ed $");
 
 #include <assert.h>
 #include <stdbool.h>
@@ -153,11 +153,11 @@ cset_in_hard(struct cset *cs, wchar_t ch)
 	struct csclass *csc;
 
 	for (csc = cs->cs_classes; csc != NULL; csc = csc->csc_next)
-		if (csc->csc_invert ^ iswctype(ch, csc->csc_type) != 0)
+		if (csc->csc_invert ^ (iswctype(ch, csc->csc_type) != 0))
 			return (cs->cs_invert ^ true);
 	if (cs->cs_root != NULL) {
 		cs->cs_root = cset_splay(cs->cs_root, ch);
-		return (cs->cs_invert ^ cset_rangecmp(cs->cs_root, ch) == 0);
+		return (cs->cs_invert ^ (cset_rangecmp(cs->cs_root, ch) == 0));
 	}
 	return (cs->cs_invert ^ false);
 }

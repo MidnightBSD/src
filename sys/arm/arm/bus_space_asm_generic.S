@@ -37,7 +37,7 @@
 
 #include <machine/asm.h>
 #include <machine/cpuconf.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/bus_space_asm_generic.S 139735 2005-01-05 21:58:49Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/bus_space_asm_generic.S 248361 2013-03-16 02:48:49Z andrew $");
 
 /*
  * Generic bus_space functions.
@@ -50,16 +50,17 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/arm/bus_space_asm_generic.S 139735 2005-01-
 ENTRY(generic_bs_r_1)
 	ldrb	r0, [r1, r2]
 	RET
+END(generic_bs_r_1)
 
-#if (ARM_ARCH_4 + ARM_ARCH_5) > 0
 ENTRY(generic_armv4_bs_r_2)
 	ldrh	r0, [r1, r2]
 	RET
-#endif
+END(generic_armv4_bs_r_2)
 
 ENTRY(generic_bs_r_4)
 	ldr	r0, [r1, r2]
 	RET
+END(generic_bs_r_4)
 
 /*
  * write single
@@ -68,16 +69,17 @@ ENTRY(generic_bs_r_4)
 ENTRY(generic_bs_w_1)
 	strb	r3, [r1, r2]
 	RET
+END(generic_bs_w_1)
 
-#if (ARM_ARCH_4 + ARM_ARCH_5) > 0
 ENTRY(generic_armv4_bs_w_2)
 	strh	r3, [r1, r2]
 	RET
-#endif
+END(generic_armv4_bs_w_2)
 
 ENTRY(generic_bs_w_4)
 	str	r3, [r1, r2]
 	RET
+END(generic_bs_w_4)
 
 /*
  * read multiple
@@ -96,8 +98,8 @@ ENTRY(generic_bs_rm_1)
 	bne	1b
 
 	RET
+END(generic_bs_rm_1)
 
-#if (ARM_ARCH_4 + ARM_ARCH_5) > 0
 ENTRY(generic_armv4_bs_rm_2)
 	add	r0, r1, r2
 	mov	r1, r3
@@ -111,7 +113,7 @@ ENTRY(generic_armv4_bs_rm_2)
 	bne	1b
 
 	RET
-#endif
+END(generic_armv4_bs_rm_2)
 
 ENTRY(generic_bs_rm_4)
 	add	r0, r1, r2
@@ -126,6 +128,7 @@ ENTRY(generic_bs_rm_4)
 	bne	1b
 
 	RET
+END(generic_bs_rm_4)
 
 /*
  * write multiple
@@ -144,8 +147,8 @@ ENTRY(generic_bs_wm_1)
 	bne	1b
 
 	RET
+END(generic_bs_wm_1)
 
-#if (ARM_ARCH_4 + ARM_ARCH_5) > 0
 ENTRY(generic_armv4_bs_wm_2)
 	add	r0, r1, r2
 	mov	r1, r3
@@ -159,7 +162,7 @@ ENTRY(generic_armv4_bs_wm_2)
 	bne	1b
 
 	RET
-#endif
+END(generic_armv4_bs_wm_2)
 
 ENTRY(generic_bs_wm_4)
 	add	r0, r1, r2
@@ -174,6 +177,7 @@ ENTRY(generic_bs_wm_4)
 	bne	1b
 
 	RET
+END(generic_bs_wm_4)
 
 /*
  * read region
@@ -192,8 +196,8 @@ ENTRY(generic_bs_rr_1)
 	bne	1b
 
 	RET
+END(generic_bs_rr_1)
 
-#if (ARM_ARCH_4 + ARM_ARCH_5) > 0
 ENTRY(generic_armv4_bs_rr_2)
 	add	r0, r1, r2
 	mov	r1, r3
@@ -207,7 +211,7 @@ ENTRY(generic_armv4_bs_rr_2)
 	bne	1b
 
 	RET
-#endif
+END(generic_armv4_bs_rr_2)
 
 ENTRY(generic_bs_rr_4)
 	add	r0, r1, r2
@@ -222,6 +226,7 @@ ENTRY(generic_bs_rr_4)
 	bne	1b
 
 	RET
+END(generic_bs_rr_4)
 
 /*
  * write region.
@@ -240,8 +245,8 @@ ENTRY(generic_bs_wr_1)
 	bne	1b
 
 	RET
+END(generic_bs_wr_1)
 
-#if (ARM_ARCH_4 + ARM_ARCH_5) > 0
 ENTRY(generic_armv4_bs_wr_2)
 	add	r0, r1, r2
 	mov	r1, r3
@@ -255,7 +260,7 @@ ENTRY(generic_armv4_bs_wr_2)
 	bne	1b
 
 	RET
-#endif
+END(generic_armv4_bs_wr_2)
 
 ENTRY(generic_bs_wr_4)
 	add	r0, r1, r2
@@ -270,6 +275,7 @@ ENTRY(generic_bs_wr_4)
 	bne	1b
 
 	RET
+END(generic_bs_wr_4)
 
 /*
  * set region
@@ -287,8 +293,8 @@ ENTRY(generic_bs_sr_1)
 	bne	1b
 
 	RET
+END(generic_bs_sr_1)
 
-#if (ARM_ARCH_4 + ARM_ARCH_5) > 0
 ENTRY(generic_armv4_bs_sr_2)
 	add	r0, r1, r2
 	mov	r1, r3
@@ -301,7 +307,7 @@ ENTRY(generic_armv4_bs_sr_2)
 	bne	1b
 
 	RET
-#endif
+END(generic_armv4_bs_sr_2)
 
 ENTRY(generic_bs_sr_4)
 	add	r0, r1, r2
@@ -315,12 +321,12 @@ ENTRY(generic_bs_sr_4)
 	bne	1b
 
 	RET
+END(generic_bs_sr_4)
 
 /*
  * copy region
  */
 
-#if (ARM_ARCH_4 + ARM_ARCH_5) > 0
 ENTRY(generic_armv4_bs_c_2)
 	add	r0, r1, r2
 	ldr	r2, [sp, #0]
@@ -350,4 +356,5 @@ ENTRY(generic_armv4_bs_c_2)
 	bne	3b
 
 	RET
-#endif
+END(generic_armv4_bs_c_2)
+

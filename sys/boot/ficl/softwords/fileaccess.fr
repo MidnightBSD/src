@@ -4,7 +4,7 @@
 \ ** submitted by Larry Hastings, larry@hastings.org
 \ **
 \
-\ $FreeBSD: stable/9/sys/boot/ficl/softwords/fileaccess.fr 167850 2007-03-23 22:26:01Z jkim $
+\ $FreeBSD: release/10.0.0/sys/boot/ficl/softwords/fileaccess.fr 167850 2007-03-23 22:26:01Z jkim $
 
 : r/o 1 ;
 : r/w 3 ; 

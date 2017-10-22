@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/null/null.c 230320 2012-01-18 21:54:34Z gnn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/null/null.c 242439 2012-11-01 17:01:05Z alfred $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -91,7 +91,7 @@ null_ioctl(struct cdev *dev __unused, u_long cmd, caddr_t data __unused,
 	case DIOCSKERNELDUMP:
 		error = priv_check(td, PRIV_SETDUMPER);
 		if (error == 0)
-			error = set_dumper(NULL);
+			error = set_dumper(NULL, NULL);
 		break;
 	case FIONBIO:
 		break;

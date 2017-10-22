@@ -22,13 +22,13 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/virtio.4 246584 2013-02-09 06:31:13Z bryanv $
+.\" $FreeBSD: release/10.0.0/share/man/man4/virtio.4 252707 2013-07-04 17:57:26Z bryanv $
 .\"
 .Dd January 22, 2012
 .Dt VIRTIO 4
 .Os
 .Sh NAME
-.Nm virtio 
+.Nm virtio
 .Nd VirtIO Device Support
 .Sh SYNOPSIS
 To compile VirtIO device support into the kernel, place the following lines
@@ -53,13 +53,13 @@ This emulation is often inefficient.
 .Pp
 VirtIO defines an interface for efficient I/O between the hypervisor and VM.
 The
-.Xr virtio 4
+.Nm
 module provides a shared memory transport called a virtqueue.
 The
-.Xr virtio_pci 4
+.Xr virtio_pci
 device driver represents an emulated PCI device that the hypervisor makes
 available to the VM.
-This device provides the probing, configuration, and 
+This device provides the probing, configuration, and
 interrupt notifications needed to interact with the hypervisor.
 .Fx
 supports the following VirtIO devices:
@@ -94,4 +94,4 @@ Support for VirtIO first appeared in
 .An -nosplit
 .Fx
 support for VirtIO was first added by
-.An Bryan Venteicher Aq bryanv@daemoninthecloset.org .
+.An Bryan Venteicher Aq bryanv@FreeBSD.org .

@@ -28,7 +28,7 @@ AND WITH ALL FAULTS AND CAVIUM  NETWORKS MAKES NO PROMISES, REPRESENTATIONS OR W
 *************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octe/ethernet-common.c 219706 2011-03-16 22:51:34Z jmallett $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octe/ethernet-common.c 250192 2013-05-02 19:47:36Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,9 +44,8 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octe/ethernet-common.c 219706 2011-
 #include "wrapper-cvmx-includes.h"
 #include "ethernet-headers.h"
 
-extern int octeon_is_simulation(void);
-extern cvmx_bootinfo_t *octeon_bootinfo;
-
+static uint64_t cvm_oct_mac_addr = 0;
+static uint32_t cvm_oct_mac_addr_offset = 0;
 
 /**
  * Set the multicast list. Currently unimplemented.
@@ -89,6 +88,42 @@ void cvm_oct_common_set_multicast_list(struct ifnet *ifp)
 	}
 }
 
+
+/**
+ * Assign a MAC addres from the pool of available MAC addresses
+ * Can return as either a 64-bit value and/or 6 octets.
+ *
+ * @param macp    Filled in with the assigned address if non-NULL
+ * @param octets  Filled in with the assigned address if non-NULL
+ * @return Zero on success
+ */
+int cvm_assign_mac_address(uint64_t *macp, uint8_t *octets)
+{
+	/* Initialize from global MAC address base; fail if not set */
+	if (cvm_oct_mac_addr == 0) {
+		memcpy((uint8_t *)&cvm_oct_mac_addr + 2,
+		    cvmx_sysinfo_get()->mac_addr_base, 6);
+
+		if (cvm_oct_mac_addr == 0)
+			return ENXIO;
+
+		cvm_oct_mac_addr_offset = cvmx_mgmt_port_num_ports();
+		cvm_oct_mac_addr += cvm_oct_mac_addr_offset;
+	}
+
+	if (cvm_oct_mac_addr_offset >= cvmx_sysinfo_get()->mac_addr_count)
+		return ENXIO;	    /* Out of addresses to assign */
+	
+	if (macp)
+		*macp = cvm_oct_mac_addr;
+	if (octets)
+		memcpy(octets, (u_int8_t *)&cvm_oct_mac_addr + 2, 6);
+
+	cvm_oct_mac_addr++;
+	cvm_oct_mac_addr_offset++;
+
+	return 0;
+}
 
 /**
  * Set the hardware MAC address for a device
@@ -191,7 +226,7 @@ int cvm_oct_common_open(struct ifnet *ifp)
 	/*
 	 * Set the link state unless we are using MII.
 	 */
-        if (!octeon_is_simulation() && priv->miibus == NULL) {
+        if (cvmx_sysinfo_get()->board_type != CVMX_BOARD_TYPE_SIM && priv->miibus == NULL) {
              link_info = cvmx_helper_link_get(priv->port);
              if (!link_info.s.link_up)  
 		if_link_state_change(ifp, LINK_STATE_DOWN);
@@ -230,7 +265,7 @@ void cvm_oct_common_poll(struct ifnet *ifp)
 	/*
 	 * If this is a simulation, do nothing.
 	 */
-	if (octeon_is_simulation())
+	if (cvmx_sysinfo_get()->board_type == CVMX_BOARD_TYPE_SIM)
 		return;
 
 	/*
@@ -269,16 +304,11 @@ void cvm_oct_common_poll(struct ifnet *ifp)
  */
 int cvm_oct_common_init(struct ifnet *ifp)
 {
-	char mac[6] = {
-		octeon_bootinfo->mac_addr_base[0],
-		octeon_bootinfo->mac_addr_base[1],
-		octeon_bootinfo->mac_addr_base[2],
-		octeon_bootinfo->mac_addr_base[3],
-		octeon_bootinfo->mac_addr_base[4],
-		octeon_bootinfo->mac_addr_base[5] };
+	uint8_t mac[6];
 	cvm_oct_private_t *priv = (cvm_oct_private_t *)ifp->if_softc;
 
-	mac[5] += cvm_oct_mac_addr_offset++;
+	if (cvm_assign_mac_address(NULL, mac) != 0)
+		return ENXIO;
 
 	ifp->if_mtu = ETHERMTU;
 

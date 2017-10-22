@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)auth_unix.c 1.19 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)auth_unix.c	2.2 88/08/01 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/auth_unix.c 241309 2012-10-07 05:11:29Z pfg $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/rpc/auth_unix.c 241181 2012-10-04 04:15:18Z pfg $");
 
 /*
  * auth_unix.c, Implements UNIX style authentication parameters.
@@ -189,9 +189,9 @@ authunix_create_default()
 	int ngids;
 	long ngids_max;
 	char machname[MAXHOSTNAMELEN + 1];
-	u_int uid;
-	u_int gid;
-	u_int *gids;
+	uid_t uid;
+	gid_t gid;
+	gid_t *gids;
 
 	ngids_max = sysconf(_SC_NGROUPS_MAX) + 1;
 	gids = malloc(sizeof(gid_t) * ngids_max);

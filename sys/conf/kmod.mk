@@ -1,5 +1,5 @@
 #	From: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
-# $FreeBSD: stable/9/sys/conf/kmod.mk 243041 2012-11-14 20:27:17Z dim $
+# $FreeBSD: release/10.0.0/sys/conf/kmod.mk 253072 2013-07-09 08:42:02Z avg $
 #
 # The include file <bsd.kmod.mk> handles building and installing loadable
 # kernel modules.
@@ -61,7 +61,7 @@
 #
 
 # backwards compat option for older systems.
-MACHINE_CPUARCH?=${MACHINE_ARCH:C/mipse[lb]/mips/:C/armeb/arm/:C/powerpc64/powerpc/}
+MACHINE_CPUARCH?=${MACHINE_ARCH:C/mips(n32|64)?(el)?/mips/:C/arm(v6)?(eb)?/arm/:C/powerpc64/powerpc/}
 
 AWK?=		awk
 KMODLOAD?=	/sbin/kldload
@@ -122,7 +122,7 @@ LDFLAGS+=	-d -warn-common
 
 CFLAGS+=	${DEBUG_FLAGS}
 .if ${MACHINE_CPUARCH} == amd64
-CFLAGS+=	-fno-omit-frame-pointer
+CFLAGS+=	-fno-omit-frame-pointer -mno-omit-leaf-frame-pointer
 .endif
 
 .if ${MACHINE_CPUARCH} == powerpc
@@ -284,8 +284,7 @@ realinstall: _kmodinstall
 _kmodinstall:
 	${INSTALL} -o ${KMODOWN} -g ${KMODGRP} -m ${KMODMODE} \
 	    ${_INSTALLFLAGS} ${PROG} ${DESTDIR}${KMODDIR}
-.if defined(DEBUG_FLAGS) && !defined(INSTALL_NODEBUG) && \
-    (defined(MK_KERNEL_SYMBOLS) && ${MK_KERNEL_SYMBOLS} != "no")
+.if defined(DEBUG_FLAGS) && !defined(INSTALL_NODEBUG) && ${MK_KERNEL_SYMBOLS} != "no"
 	${INSTALL} -o ${KMODOWN} -g ${KMODGRP} -m ${KMODMODE} \
 	    ${_INSTALLFLAGS} ${PROG}.symbols ${DESTDIR}${KMODDIR}
 .endif
@@ -341,11 +340,13 @@ CFLAGS+=	${CONF_CFLAGS}
 
 MFILES?= dev/acpica/acpi_if.m dev/acpi_support/acpi_wmi_if.m \
 	dev/agp/agp_if.m dev/ata/ata_if.m dev/eisa/eisa_if.m \
+	dev/gpio/gpio_if.m dev/gpio/gpiobus_if.m \
 	dev/iicbus/iicbb_if.m dev/iicbus/iicbus_if.m \
 	dev/mmc/mmcbr_if.m dev/mmc/mmcbus_if.m \
 	dev/mii/miibus_if.m dev/mvs/mvs_if.m dev/ofw/ofw_bus_if.m \
 	dev/pccard/card_if.m dev/pccard/power_if.m dev/pci/pci_if.m \
-	dev/pci/pcib_if.m dev/ppbus/ppbus_if.m dev/smbus/smbus_if.m \
+	dev/pci/pcib_if.m dev/ppbus/ppbus_if.m \
+	dev/sdhci/sdhci_if.m dev/smbus/smbus_if.m \
 	dev/sound/pci/hda/hdac_if.m \
 	dev/sound/pcm/ac97_if.m dev/sound/pcm/channel_if.m \
 	dev/sound/pcm/feeder_if.m dev/sound/pcm/mixer_if.m \
@@ -354,7 +355,7 @@ MFILES?= dev/acpica/acpi_if.m dev/acpi_support/acpi_wmi_if.m \
 	kern/bus_if.m kern/clock_if.m \
 	kern/cpufreq_if.m kern/device_if.m kern/serdev_if.m \
 	libkern/iconv_converter_if.m opencrypto/cryptodev_if.m \
-	pc98/pc98/canbus_if.m
+	pc98/pc98/canbus_if.m dev/etherswitch/mdio_if.m
 
 .for _srcsrc in ${MFILES}
 .for _ext in c h

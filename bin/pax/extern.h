@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.2 (Berkeley) 4/18/94
- * $FreeBSD: stable/9/bin/pax/extern.h 140097 2005-01-12 03:25:55Z brian $
+ * $FreeBSD: release/10.0.0/bin/pax/extern.h 241720 2012-10-19 05:43:38Z ed $
  */
 
 /*
@@ -186,7 +186,7 @@ void options(int, char **);
 OPLIST * opt_next(void);
 int opt_add(const char *);
 int bad_opt(void);
-char *chdname;
+extern char *chdname;
 
 /*
  * pat_rep.c
@@ -231,6 +231,7 @@ extern int exit_val;
 extern int docrc;
 extern char *dirptr;
 extern const char *argv0;
+extern sigset_t s_mask;
 extern FILE *listf;
 extern char *tempfile;
 extern char *tempbase;

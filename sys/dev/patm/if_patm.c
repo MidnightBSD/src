@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/patm/if_patm.c 148887 2005-08-09 10:20:02Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/patm/if_patm.c 254804 2013-08-24 19:51:18Z andre $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -319,7 +319,7 @@ patm_stop(struct patm_softc *sc)
 		for (i = 0; i < IDT_TSQE_TAG_SPACE; i++) {
 			if ((m = scd->on_card[i]) != NULL) {
 				scd->on_card[i] = 0;
-				map = m->m_pkthdr.header;
+				map = m->m_pkthdr.PH_loc.ptr;
 
 				bus_dmamap_unload(sc->tx_tag, map->map);
 				SLIST_INSERT_HEAD(&sc->tx_maps_free, map, link);

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ufs/ffs/ffs_vfsops.c 248233 2013-03-13 10:01:05Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ufs/ffs/ffs_vfsops.c 253106 2013-07-09 20:49:32Z kib $");
 
 #include "opt_quota.h"
 #include "opt_ufs.h"
@@ -52,6 +52,7 @@ __FBSDID("$FreeBSD: stable/9/sys/ufs/ffs/ffs_vfsops.c 248233 2013-03-13 10:01:05
 #include <sys/ioccom.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
+#include <sys/rwlock.h>
 
 #include <security/mac/mac_framework.h>
 
@@ -142,7 +143,7 @@ ffs_mount(struct mount *mp)
 {
 	struct vnode *devvp;
 	struct thread *td;
-	struct ufsmount *ump = 0;
+	struct ufsmount *ump = NULL;
 	struct fs *fs;
 	pid_t fsckpid = 0;
 	int error, flags;
@@ -256,7 +257,7 @@ ffs_mount(struct mount *mp)
 				return (error);
 			for (;;) {
 				vn_finished_write(mp);
-				if ((error = vfs_write_suspend(mp)) != 0)
+				if ((error = vfs_write_suspend(mp, 0)) != 0)
 					return (error);
 				MNT_ILOCK(mp);
 				if (mp->mnt_kern_flag & MNTK_SUSPENDED) {
@@ -292,7 +293,7 @@ ffs_mount(struct mount *mp)
 				error = ffs_flushfiles(mp, flags, td);
 			}
 			if (error) {
-				vfs_write_resume(mp);
+				vfs_write_resume(mp, 0);
 				return (error);
 			}
 			if (fs->fs_pendingblocks != 0 ||
@@ -309,7 +310,7 @@ ffs_mount(struct mount *mp)
 			if ((error = ffs_sbupdate(ump, MNT_WAIT, 0)) != 0) {
 				fs->fs_ronly = 0;
 				fs->fs_clean = 0;
-				vfs_write_resume(mp);
+				vfs_write_resume(mp, 0);
 				return (error);
 			}
 			if (MOUNTEDSOFTDEP(mp))
@@ -330,7 +331,7 @@ ffs_mount(struct mount *mp)
 			 * Allow the writers to note that filesystem
 			 * is ro now.
 			 */
-			vfs_write_resume(mp);
+			vfs_write_resume(mp, 0);
 		}
 		if ((mp->mnt_flag & MNT_RELOAD) &&
 		    (error = ffs_reload(mp, td, 0)) != 0)
@@ -1075,8 +1076,8 @@ ffs_mountfs(devvp, mp, td)
 	 * Initialize filesystem stat information in mount struct.
 	 */
 	MNT_ILOCK(mp);
-	mp->mnt_kern_flag |= MNTK_MPSAFE | MNTK_LOOKUP_SHARED |
-	    MNTK_EXTENDED_SHARED | MNTK_NO_IOPF;
+	mp->mnt_kern_flag |= MNTK_LOOKUP_SHARED | MNTK_EXTENDED_SHARED |
+	    MNTK_NO_IOPF | MNTK_UNMAPPED_BUFS;
 	MNT_IUNLOCK(mp);
 #ifdef UFS_EXTATTR
 #ifdef UFS_EXTATTR_AUTOSTART
@@ -1254,7 +1255,7 @@ ffs_unmount(mp, mntflags)
 		 */
 		for (;;) {
 			vn_finished_write(mp);
-			if ((error = vfs_write_suspend(mp)) != 0)
+			if ((error = vfs_write_suspend(mp, 0)) != 0)
 				return (error);
 			MNT_ILOCK(mp);
 			if (mp->mnt_kern_flag & MNTK_SUSPENDED) {
@@ -1294,10 +1295,8 @@ ffs_unmount(mp, mntflags)
 			goto fail;
 		}
 	}
-	if (susp) {
-		vfs_write_resume(mp);
-		vn_start_write(NULL, &mp, V_WAIT);
-	}
+	if (susp)
+		vfs_write_resume(mp, VR_START_WRITE);
 	DROP_GIANT();
 	g_topology_lock();
 	if (ump->um_fsckpid > 0) {
@@ -1329,10 +1328,8 @@ ffs_unmount(mp, mntflags)
 	return (error);
 
 fail:
-	if (susp) {
-		vfs_write_resume(mp);
-		vn_start_write(NULL, &mp, V_WAIT);
-	}
+	if (susp)
+		vfs_write_resume(mp, VR_START_WRITE);
 #ifdef UFS_EXTATTR
 	if (e_restart) {
 		ufs_extattr_uepm_init(&ump->um_extattr);
@@ -1695,14 +1692,6 @@ ffs_vgetf(mp, ino, flags, vpp, ffs_flags)
 	ump = VFSTOUFS(mp);
 	dev = ump->um_dev;
 	fs = ump->um_fs;
-
-	/*
-	 * If this malloc() is performed after the getnewvnode()
-	 * it might block, leaving a vnode with a NULL v_data to be
-	 * found by ffs_sync() if a sync happens to fire right then,
-	 * which will cause a panic because ffs_sync() blindly
-	 * dereferences vp->v_data (as well it should).
-	 */
 	ip = uma_zalloc(uma_inode, M_WAITOK | M_ZERO);
 
 	/* Allocate a new vnode/inode. */
@@ -2012,12 +2001,11 @@ ffs_backgroundwritedone(struct buf *bp)
 	BO_LOCK(bufobj);
 	if ((origbp = gbincore(bp->b_bufobj, bp->b_lblkno)) == NULL)
 		panic("backgroundwritedone: lost buffer");
-	/* Grab an extra reference to be dropped by the bufdone() below. */
-	bufobj_wrefl(bufobj);
 	BO_UNLOCK(bufobj);
 	/*
 	 * Process dependencies then return any unfinished ones.
 	 */
+	pbrelvp(bp);
 	if (!LIST_EMPTY(&bp->b_dep))
 		buf_complete(bp);
 #ifdef SOFTUPDATES
@@ -2063,8 +2051,8 @@ ffs_backgroundwritedone(struct buf *bp)
 static int
 ffs_bufwrite(struct buf *bp)
 {
-	int oldflags, s;
 	struct buf *newbp;
+	int oldflags;
 
 	CTR3(KTR_BUF, "bufwrite(%p) vp %p flags %X", bp, bp->b_vp, bp->b_flags);
 	if (bp->b_flags & B_INVAL) {
@@ -2076,7 +2064,6 @@ ffs_bufwrite(struct buf *bp)
 
 	if (!BUF_ISLOCKED(bp))
 		panic("bufwrite: buffer is not busy???");
-	s = splbio();
 	/*
 	 * If a background write is already in progress, delay
 	 * writing this block if it is asynchronous. Otherwise
@@ -2086,12 +2073,12 @@ ffs_bufwrite(struct buf *bp)
 	if (bp->b_vflags & BV_BKGRDINPROG) {
 		if (bp->b_flags & B_ASYNC) {
 			BO_UNLOCK(bp->b_bufobj);
-			splx(s);
 			bdwrite(bp);
 			return (0);
 		}
 		bp->b_vflags |= BV_BKGRDWAIT;
-		msleep(&bp->b_xflags, BO_MTX(bp->b_bufobj), PRIBIO, "bwrbg", 0);
+		msleep(&bp->b_xflags, BO_LOCKPTR(bp->b_bufobj), PRIBIO,
+		    "bwrbg", 0);
 		if (bp->b_vflags & BV_BKGRDINPROG)
 			panic("bufwrite: still writing");
 	}
@@ -2117,24 +2104,19 @@ ffs_bufwrite(struct buf *bp)
 		if (newbp == NULL)
 			goto normal_write;
 
-		/*
-		 * set it to be identical to the old block.  We have to
-		 * set b_lblkno and BKGRDMARKER before calling bgetvp()
-		 * to avoid confusing the splay tree and gbincore().
-		 */
+		KASSERT((bp->b_flags & B_UNMAPPED) == 0, ("Unmapped cg"));
 		memcpy(newbp->b_data, bp->b_data, bp->b_bufsize);
-		newbp->b_lblkno = bp->b_lblkno;
-		newbp->b_xflags |= BX_BKGRDMARKER;
 		BO_LOCK(bp->b_bufobj);
 		bp->b_vflags |= BV_BKGRDINPROG;
-		bgetvp(bp->b_vp, newbp);
 		BO_UNLOCK(bp->b_bufobj);
-		newbp->b_bufobj = &bp->b_vp->v_bufobj;
+		newbp->b_xflags |= BX_BKGRDMARKER;
+		newbp->b_lblkno = bp->b_lblkno;
 		newbp->b_blkno = bp->b_blkno;
 		newbp->b_offset = bp->b_offset;
 		newbp->b_iodone = ffs_backgroundwritedone;
 		newbp->b_flags |= B_ASYNC;
 		newbp->b_flags &= ~B_INVAL;
+		pbgetvp(bp->b_vp, newbp);
 
 #ifdef SOFTUPDATES
 		/*
@@ -2150,12 +2132,9 @@ ffs_bufwrite(struct buf *bp)
 #endif
 
 		/*
-		 * Initiate write on the copy, release the original to
-		 * the B_LOCKED queue so that it cannot go away until
-		 * the background write completes. If not locked it could go
-		 * away and then be reconstituted while it was being written.
-		 * If the reconstituted buffer were written, we could end up
-		 * with two background copies being written at the same time.
+		 * Initiate write on the copy, release the original.  The
+		 * BKGRDINPROG flag prevents it from going away until 
+		 * the background write completes.
 		 */
 		bqrelse(bp);
 		bp = newbp;

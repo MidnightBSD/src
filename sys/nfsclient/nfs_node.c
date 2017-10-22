@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/nfsclient/nfs_node.c 236096 2012-05-26 13:12:14Z rmacklem $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/nfsclient/nfs_node.c 243311 2012-11-19 22:43:45Z attilio $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -128,12 +128,6 @@ nfs_nget(struct mount *mntp, nfsfh_t *fhp, int fhsize, struct nfsnode **npp, int
 		*npp = VTONFS(nvp);
 		return (0);
 	}
-
-	/*
-	 * Allocate before getnewvnode since doing so afterward
-	 * might cause a bogus v_data pointer to get dereferenced
-	 * elsewhere if zalloc should block.
-	 */
 	np = uma_zalloc(nfsnode_zone, M_WAITOK | M_ZERO);
 
 	error = getnewvnode("nfs", mntp, &nfs_vnodeops, &nvp);

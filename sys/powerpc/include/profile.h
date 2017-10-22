@@ -26,7 +26,7 @@
  *
  *	from: NetBSD: profile.h,v 1.9 1997/04/06 08:47:37 cgd Exp
  *	from: FreeBSD: src/sys/alpha/include/profile.h,v 1.4 1999/12/29
- * $FreeBSD: stable/9/sys/powerpc/include/profile.h 234708 2012-04-26 14:02:39Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/powerpc/include/profile.h 236141 2012-05-27 10:25:20Z raj $
  */
 
 #ifndef _MACHINE_PROFILE_H_
@@ -172,12 +172,13 @@ __asm(	"	.globl	_mcount			\n" \
 #define	__PROFILE_VECTOR_BASE	EXC_RST
 #define	__PROFILE_VECTOR_TOP	(EXC_LAST + 0x100)
 #endif	/* AIM */
-#ifdef E500
+#if defined(BOOKE)
 extern char interrupt_vector_base[];
 extern char interrupt_vector_top[];
 #define	__PROFILE_VECTOR_BASE	(uintfptr_t)interrupt_vector_base
 #define	__PROFILE_VECTOR_TOP	(uintfptr_t)interrupt_vector_top
-#endif	/* E500 */
+#endif	/* BOOKE_E500 || BOOKE_PPC4XX */
+
 #endif	/* !COMPILING_LINT */
 
 #ifndef __PROFILE_VECTOR_BASE

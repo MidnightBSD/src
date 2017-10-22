@@ -15,7 +15,7 @@
 # If you are in doubt as to the purpose or necessity of a line, check first 
 # in NOTES.
 #
-# $FreeBSD: stable/9/sys/mips/conf/MALTA64 221753 2011-05-11 00:52:41Z gonzo $
+# $FreeBSD: release/10.0.0/sys/mips/conf/MALTA64 255089 2013-08-31 01:30:01Z gonzo $
 
 ident		MALTA
 
@@ -31,9 +31,9 @@ makeoptions	MODULES_OVERRIDE=""
 options 	TICK_USE_YAMON_FREQ=defined
 #options 	TICK_USE_MALTA_RTC=defined
 
-include		"../malta/std.malta"
+makeoptions 	KERNLOADADDR=0xffffffff80100000
 
-options		ISA_MIPS64
+include		"../malta/std.malta"
 
 hints		"MALTA.hints"		#Default places to look for devices.
 
@@ -68,4 +68,5 @@ device		ether
 device		le
 device		miibus
 device		md
+device		bpf
 device		uart

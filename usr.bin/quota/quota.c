@@ -44,7 +44,7 @@ static const char sccsid[] = "from: @(#)quota.c	8.1 (Berkeley) 6/6/93";
  * Disk quota reporting program.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/quota/quota.c 223690 2011-06-30 09:20:26Z pluknet $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/quota/quota.c 227176 2011-11-06 08:16:29Z ed $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -73,8 +73,7 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/quota/quota.c 223690 2011-06-30 09:20:26Z p
 #include <time.h>
 #include <unistd.h>
 
-const char *qfname = QUOTAFILENAME;
-const char *qfextension[] = INITQFNAMES;
+static const char *qfextension[] = INITQFNAMES;
 
 struct quotause {
 	struct	quotause *next;
@@ -101,12 +100,12 @@ static int callaurpc(char *host, int prognum, int versnum, int procnum,
 	xdrproc_t inproc, char *in, xdrproc_t outproc, char *out);
 static int alldigits(char *s);
 
-int	hflag;
-int	lflag;
-int	rflag;
-int	qflag;
-int	vflag;
-char	*filename = NULL;
+static int	hflag;
+static int	lflag;
+static int	rflag;
+static int	qflag;
+static int	vflag;
+static char	*filename = NULL;
 
 int
 main(int argc, char *argv[])

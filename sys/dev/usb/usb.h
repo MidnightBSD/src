@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb.h 242775 2012-11-08 16:13:51Z hselasky $ */
+/* $FreeBSD: release/10.0.0/sys/dev/usb/usb.h 246124 2013-01-30 15:49:37Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
@@ -40,22 +40,28 @@
 #define	_USB_STANDARD_H_
 
 #if defined(_KERNEL)
+#ifndef USB_GLOBAL_INCLUDE_FILE
 #include "opt_usb.h"
+#endif
 
 /* Declare parent SYSCTL USB node. */
 #ifdef SYSCTL_DECL
 SYSCTL_DECL(_hw_usb);
 #endif
 
+#ifndef USB_GLOBAL_INCLUDE_FILE
 #include <sys/malloc.h>
+#endif
 
 MALLOC_DECLARE(M_USB);
 MALLOC_DECLARE(M_USBDEV);
 MALLOC_DECLARE(M_USBHC);
 #endif /* _KERNEL */
 
+#ifndef USB_GLOBAL_INCLUDE_FILE
 #include <dev/usb/usb_endian.h>
 #include <dev/usb/usb_freebsd.h>
+#endif
 
 #define	USB_STACK_VERSION 2000		/* 2.0 */
 
@@ -544,6 +550,8 @@ struct usb_endpoint_ss_comp_descriptor {
 	uByte	bDescriptorType;
 	uByte	bMaxBurst;
 	uByte	bmAttributes;
+#define	UE_GET_BULK_STREAMS(x) ((x) & 0x0F)
+#define	UE_GET_SS_ISO_MULT(x) ((x) & 0x03)
 	uWord	wBytesPerInterval;
 } __packed;
 typedef struct usb_endpoint_ss_comp_descriptor
@@ -558,16 +566,22 @@ struct usb_string_descriptor {
 typedef struct usb_string_descriptor usb_string_descriptor_t;
 
 #define	USB_MAKE_STRING_DESC(m,name)	\
-struct name {				\
+static const struct {			\
   uByte bLength;			\
   uByte bDescriptorType;		\
   uByte bData[sizeof((uint8_t []){m})];	\
-} __packed;				\
-static const struct name name = {	\
-  .bLength = sizeof(struct name),	\
+} __packed name = {			\
+  .bLength = sizeof(name),		\
   .bDescriptorType = UDESC_STRING,	\
   .bData = { m },			\
 }
+
+struct usb_string_lang {
+	uByte bLength;
+	uByte bDescriptorType;
+	uByte bData[2];
+} __packed;
+typedef struct usb_string_lang usb_string_lang_t;
 
 struct usb_hub_descriptor {
 	uByte	bDescLength;
@@ -742,7 +756,7 @@ enum usb_revision {
 #define	USB_REV_MAX	(USB_REV_3_0+1)
 
 /*
- * Supported host contoller modes.
+ * Supported host controller modes.
  */
 enum usb_hc_mode {
 	USB_MODE_HOST,		/* initiates transfers */
@@ -752,7 +766,7 @@ enum usb_hc_mode {
 #define	USB_MODE_MAX	(USB_MODE_DUAL+1)
 
 /*
- * The "USB_MODE" macros defines all the supported device states.
+ * The "USB_STATE" enums define all the supported device states.
  */
 enum usb_dev_state {
 	USB_STATE_DETACHED,
@@ -762,4 +776,18 @@ enum usb_dev_state {
 	USB_STATE_CONFIGURED,
 };
 #define	USB_STATE_MAX	(USB_STATE_CONFIGURED+1)
+
+/*
+ * The "USB_EP_MODE" macros define all the currently supported
+ * endpoint modes.
+ */
+enum usb_ep_mode {
+	USB_EP_MODE_DEFAULT,
+	USB_EP_MODE_STREAMS,	/* USB3.0 specific */
+	USB_EP_MODE_HW_MASS_STORAGE,
+	USB_EP_MODE_HW_SERIAL,
+	USB_EP_MODE_HW_ETHERNET_CDC,
+	USB_EP_MODE_HW_ETHERNET_NCM,
+	USB_EP_MODE_MAX
+};
 #endif					/* _USB_STANDARD_H_ */

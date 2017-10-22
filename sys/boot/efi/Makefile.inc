@@ -1,6 +1,17 @@
-# $FreeBSD: stable/9/sys/boot/efi/Makefile.inc 180012 2008-06-25 21:33:28Z ru $
+# $FreeBSD: release/10.0.0/sys/boot/efi/Makefile.inc 241785 2012-10-20 16:57:23Z avg $
 
 BINDIR?=	/boot
+
+.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
+CFLAGS+=        -march=i386
+.endif
+
+.if ${MACHINE_CPUARCH} == "amd64"
+CFLAGS+=        -m32
+ACFLAGS+=       -m32
+LDFLAGS+=       -m elf_i386_fbsd
+AFLAGS+=        --32
+.endif
 
 # Options used when building app-specific efi components
 CFLAGS+=	-ffreestanding -fshort-wchar -Wformat

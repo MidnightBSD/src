@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/powermac/atibl.c 239929 2012-08-30 23:54:49Z jhibbits $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powermac/atibl.c 255100 2013-08-31 16:31:48Z jhibbits $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -86,6 +86,8 @@ DRIVER_MODULE(atibl, vgapci, atibl_driver, atibl_devclass, 0, 0);
 static void
 atibl_identify(driver_t *driver, device_t parent)
 {
+	if (OF_finddevice("mac-io/backlight") == -1)
+		return;
 	if (device_find_child(parent, "backlight", -1) == NULL)
 		device_add_child(parent, "backlight", -1);
 }

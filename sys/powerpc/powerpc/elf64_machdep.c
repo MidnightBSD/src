@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/powerpc/elf64_machdep.c 219405 2011-03-08 19:01:45Z dchagin $
+ * $FreeBSD: release/10.0.0/sys/powerpc/powerpc/elf64_machdep.c 219405 2011-03-08 19:01:45Z dchagin $
  */
 
 #include <sys/param.h>

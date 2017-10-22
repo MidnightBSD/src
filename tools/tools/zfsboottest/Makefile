@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/tools/zfsboottest/Makefile 227705 2011-11-19 10:49:03Z pjd $
+# $FreeBSD: release/10.0.0/tools/tools/zfsboottest/Makefile 253605 2013-07-24 09:50:44Z avg $
 
 .PATH:		${.CURDIR}/../../../sys/boot/zfs ${.CURDIR}/../../../sys/cddl/boot/zfs
 
@@ -15,8 +15,7 @@ CFLAGS=	-O1 \
 	-I${.CURDIR}/../../../sys/cddl/boot/zfs \
 	-I. \
 	-fdiagnostics-show-option \
-	-W -Wextra -Wno-sign-compare -Wno-unused-parameter \
-	-Werror
+	-W -Wextra -Wno-sign-compare -Wno-unused-parameter
 LDFLAGS+=-lmd
 
 .if ${MACHINE_CPUARCH} == "amd64"

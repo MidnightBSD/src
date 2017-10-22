@@ -23,7 +23,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/usr.sbin/ac/ac.8 242891 2012-11-11 12:06:12Z ed $
+.\" $FreeBSD: release/10.0.0/usr.sbin/ac/ac.8 248413 2013-03-17 06:54:04Z joel $
 .\"
 .Dd January 21, 2010
 .Dt AC 8
@@ -105,17 +105,6 @@ hand.
 No login or connect time accounting is performed if
 .Pa /var/log/utx.log
 does not exist.
-.Pp
-For example,
-.Bd -literal -offset indent
-ac -p -t "ttyd*" > modems
-ac -p -t "!ttyd*" > other
-.Ed
-.Pp
-allows times recorded in
-.Pa modems
-to be charged out at a different rate than
-.Pa other .
 .Sh FILES
 .Bl -tag -width /var/log/utx.log -compact
 .It Pa /var/log/utx.log
@@ -123,6 +112,15 @@ connect time accounting file
 .El
 .Sh EXIT STATUS
 .Ex -std
+.Sh EXAMPLES
+Allow times recorded in
+.Pa modems
+to be charged out at a different rate than
+.Pa other :
+.Bd -literal -offset indent
+ac -p -t "ttyd*" > modems
+ac -p -t "!ttyd*" > other
+.Ed
 .Sh SEE ALSO
 .Xr login 1 ,
 .Xr getutxent 3 ,

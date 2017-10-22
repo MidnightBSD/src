@@ -27,12 +27,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libthr/arch/mips/mips/pthread_md.c 178938 2008-05-11 05:54:52Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libthr/arch/mips/mips/pthread_md.c 231350 2012-02-10 06:53:25Z gonzo $");
 
 #include <stdlib.h>
 #include <sys/types.h>
 #include <rtld_tls.h>
 #include <strings.h>
+
+#include <machine/sysarch.h>
 
 #include "pthread_md.h"
 
@@ -41,16 +43,17 @@ _tcb_ctor(struct pthread *thread, int initial)
 {
 	struct tcb *tcb;
 
-	tcb = malloc(sizeof(struct tcb));
-	if (tcb) {
-		bzero(tcb, sizeof(struct tcb));
+	tcb = _rtld_allocate_tls((initial) ? _tcb_get() :  NULL,
+	    sizeof(struct tcb), 16);
+	if (tcb)
 		tcb->tcb_thread = thread;
-	}
+
 	return (tcb);
 }
 
 void
 _tcb_dtor(struct tcb *tcb)
 {
-	free(tcb);
+
+	_rtld_free_tls(tcb, sizeof(struct tcb), 16);
 }

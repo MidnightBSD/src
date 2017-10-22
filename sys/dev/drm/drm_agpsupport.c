@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm/drm_agpsupport.c 219902 2011-03-23 13:10:15Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/drm_agpsupport.c 219902 2011-03-23 13:10:15Z jhb $");
 
 /** @file drm_agpsupport.c
  * Support code for tying the kernel AGP support to DRM drivers and

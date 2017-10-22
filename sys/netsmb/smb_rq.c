@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netsmb/smb_rq.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netsmb/smb_rq.c 243882 2012-12-05 08:04:20Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -427,7 +427,7 @@ smb_t2_placedata(struct mbuf *mtop, u_int16_t offset, u_int16_t count,
 	struct mbuf *m, *m0;
 	int len;
 
-	m0 = m_split(mtop, offset, M_WAIT);
+	m0 = m_split(mtop, offset, M_WAITOK);
 	len = m_length(m0, &m);
 	m->m_len -= len - count;
 	if (mdp->md_top == NULL) {

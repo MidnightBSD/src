@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/compat/freebsd32/freebsd32_ipc.h 205322 2010-03-19 11:01:51Z kib $
+ * $FreeBSD: release/10.0.0/sys/compat/freebsd32/freebsd32_ipc.h 205322 2010-03-19 11:01:51Z kib $
  */
 
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_IPC_H_

@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/x86/cpufreq/p4tcc.c 193530 2009-06-05 18:44:36Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/x86/cpufreq/p4tcc.c 250487 2013-05-10 22:43:27Z hiren $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -73,6 +73,7 @@ static int	p4tcc_features(driver_t *driver, u_int *features);
 static void	p4tcc_identify(driver_t *driver, device_t parent);
 static int	p4tcc_probe(device_t dev);
 static int	p4tcc_attach(device_t dev);
+static int	p4tcc_detach(device_t dev);
 static int	p4tcc_settings(device_t dev, struct cf_setting *sets,
 		    int *count);
 static int	p4tcc_set(device_t dev, const struct cf_setting *set);
@@ -84,6 +85,7 @@ static device_method_t p4tcc_methods[] = {
 	DEVMETHOD(device_identify,	p4tcc_identify),
 	DEVMETHOD(device_probe,		p4tcc_probe),
 	DEVMETHOD(device_attach,	p4tcc_attach),
+	DEVMETHOD(device_detach,	p4tcc_detach),
 
 	/* cpufreq interface */
 	DEVMETHOD(cpufreq_drv_set,	p4tcc_set),
@@ -213,6 +215,24 @@ p4tcc_attach(device_t dev)
 }
 
 static int
+p4tcc_detach(device_t dev)
+{
+	struct cf_setting set;
+	int error;
+
+	error = cpufreq_unregister(dev);
+	if (error)
+		return (error);
+
+	/*
+	 * Before we finish detach, switch to Automatic mode.
+	 */
+	set.freq = 10000;
+	p4tcc_set(dev, &set);
+	return(0);
+}
+
+static int
 p4tcc_settings(device_t dev, struct cf_setting *sets, int *count)
 {
 	struct p4tcc_softc *sc;
@@ -276,9 +296,9 @@ p4tcc_set(device_t dev, const struct cf_setting *set)
 	 * what the current mode.
 	 */
 	if (msr & TCC_ENABLE_ONDEMAND)
-		sc->auto_mode = TRUE;
-	else
 		sc->auto_mode = FALSE;
+	else
+		sc->auto_mode = TRUE;
 
 	return (0);
 }

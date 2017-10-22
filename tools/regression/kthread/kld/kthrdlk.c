@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/kthread/kld/kthrdlk.c 204123 2010-02-20 15:20:28Z attilio $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/kthread/kld/kthrdlk.c 241394 2012-10-10 08:36:38Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -164,7 +164,7 @@ kthrdlk_done(void)
 	while (test_thrcnt != 0) {
 		ret = mtx_sleep(&global_condvar, &test_global_lock, 0, "waiting thrs end", 30 * hz);
 		if (ret == EWOULDBLOCK) {
-			panic("some threads not die! remaing: %d", test_thrcnt);
+			panic("some threads not die! remaining: %d", test_thrcnt);
 			break;
 		}
 	}

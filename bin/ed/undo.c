@@ -26,15 +26,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/ed/undo.c 99109 2002-06-30 05:13:54Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/ed/undo.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include "ed.h"
 
 
 #define USIZE 100				/* undo stack size */
-undo_t *ustack = NULL;				/* undo stack */
-long usize = 0;					/* stack size variable */
-long u_p = 0;					/* undo stack pointer */
+static undo_t *ustack = NULL;			/* undo stack */
+static long usize = 0;				/* stack size variable */
+static long u_p = 0;				/* undo stack pointer */
 
 /* push_undo_stack: return pointer to initialized undo node */
 undo_t *

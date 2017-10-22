@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_cmd_table.c#4 $
- * $FreeBSD: stable/9/sys/cam/ctl/ctl_cmd_table.c 237824 2012-06-29 21:27:37Z ken $
+ * $FreeBSD: release/10.0.0/sys/cam/ctl/ctl_cmd_table.c 233963 2012-04-06 22:23:13Z ken $
  */
 /*
  * CAM Target Layer command table.

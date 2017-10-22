@@ -1,5 +1,5 @@
 /*
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/lib/exec.c 167972 2007-03-28 05:33:52Z njl $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg_install/lib/exec.c 252363 2013-06-29 00:37:49Z obrien $");
 
 #include "lib.h"
 #include <err.h>
@@ -34,7 +34,8 @@ vsystem(const char *fmt, ...)
 {
     va_list args;
     char *cmd;
-    int ret, maxargs;
+    long maxargs;
+    int ret;
 
     maxargs = sysconf(_SC_ARG_MAX);
     maxargs -= 32;			/* some slop for the sh -c */
@@ -47,6 +48,7 @@ vsystem(const char *fmt, ...)
     va_start(args, fmt);
     if (vsnprintf(cmd, maxargs, fmt, args) > maxargs) {
 	warnx("vsystem args are too long");
+	va_end(args);
 	return 1;
     }
 #ifdef DEBUG
@@ -63,7 +65,7 @@ vpipe(const char *fmt, ...)
 {
    FILE *fp;
    char *cmd, *rp;
-   int maxargs;
+   long maxargs;
    va_list args;
 
     rp = malloc(MAXPATHLEN);
@@ -82,6 +84,7 @@ vpipe(const char *fmt, ...)
     va_start(args, fmt);
     if (vsnprintf(cmd, maxargs, fmt, args) > maxargs) {
 	warnx("vsystem args are too long");
+	va_end(args);
 	return NULL;
     }
 #ifdef DEBUG
@@ -91,6 +94,7 @@ vpipe(const char *fmt, ...)
     fp = popen(cmd, "r");
     if (fp == NULL) {
 	warnx("popen() failed");
+	va_end(args);
 	return NULL;
     }
     get_string(rp, MAXPATHLEN, fp);

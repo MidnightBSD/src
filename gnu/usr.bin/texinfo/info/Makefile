@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/texinfo/info/Makefile 172244 2007-09-19 14:21:18Z obrien $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/texinfo/info/Makefile 172244 2007-09-19 14:21:18Z obrien $
 
 PROG=	info
 MAN=	info.1 info.5 texinfo.5

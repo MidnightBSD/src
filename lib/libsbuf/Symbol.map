@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/lib/libsbuf/Symbol.map 222033 2011-05-17 17:37:58Z phk $
+ * $FreeBSD: release/10.0.0/lib/libsbuf/Symbol.map 249378 2013-04-11 19:50:10Z trociny $
  */
 
 FBSD_1.2 {
@@ -21,4 +21,9 @@ FBSD_1.2 {
 	sbuf_len;
 	sbuf_done;
 	sbuf_delete;
+};
+
+FBSD_1.3 {
+	sbuf_start_section;
+	sbuf_end_section;
 };

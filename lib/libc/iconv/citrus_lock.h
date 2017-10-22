@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libc/iconv/citrus_lock.h 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libc/iconv/citrus_lock.h 252584 2013-07-03 18:35:21Z peter $ */
 /*-
  * Copyright (C) 2010 Gabor Kovesdan <gabor@FreeBSD.org>
  * All rights reserved.
@@ -27,9 +27,7 @@
 
 #include <pthread.h>
 
-static pthread_rwlock_t	lock;
-
-#define WLOCK	if (__isthreaded)		\
-		    pthread_rwlock_wrlock(&lock);
-#define UNLOCK	if (__isthreaded)		\
-		    pthread_rwlock_unlock(&lock);
+#define WLOCK(lock)	if (__isthreaded)		\
+			    pthread_rwlock_wrlock(lock);
+#define UNLOCK(lock)	if (__isthreaded)		\
+			    pthread_rwlock_unlock(lock);

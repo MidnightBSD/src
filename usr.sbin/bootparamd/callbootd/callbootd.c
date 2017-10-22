@@ -9,7 +9,7 @@ use and modify. Please send modifications and/or suggestions + bug fixes to
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/bootparamd/callbootd/callbootd.c 173412 2007-11-07 10:53:41Z kevlo $";
+  "$FreeBSD: release/10.0.0/usr.sbin/bootparamd/callbootd/callbootd.c 230361 2012-01-20 01:39:26Z eadler $";
 #endif /* not lint */
 
 #include "bootparam_prot.h"
@@ -81,7 +81,6 @@ char **argv;
 
   long the_inet_addr;
   CLIENT *clnt;
-  enum clnt_stat clnt_stat;
 
   stat_whoami_res.client_name = cln;
   stat_whoami_res.domain_name = dmn;
@@ -117,7 +116,7 @@ char **argv;
       } else
 	exit(0);
      } else {
-       clnt_stat=clnt_broadcast(BOOTPARAMPROG, BOOTPARAMVERS,
+       (void)clnt_broadcast(BOOTPARAMPROG, BOOTPARAMVERS,
 			       BOOTPARAMPROC_WHOAMI,
 			       (xdrproc_t)xdr_bp_whoami_arg,
 			       (char *)&whoami_arg,
@@ -140,7 +139,7 @@ char **argv;
       } else
 	exit(0);
     } else {
-      clnt_stat=clnt_broadcast(BOOTPARAMPROG, BOOTPARAMVERS,
+      (void)clnt_broadcast(BOOTPARAMPROG, BOOTPARAMVERS,
 			       BOOTPARAMPROC_GETFILE,
 			       (xdrproc_t)xdr_bp_getfile_arg,
 			       (char *)&getfile_arg,

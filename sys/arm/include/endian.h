@@ -27,7 +27,7 @@
  *
  *	@(#)endian.h	8.1 (Berkeley) 6/10/93
  * $NetBSD: endian.h,v 1.7 1999/08/21 05:53:51 simonb Exp $
- * $FreeBSD: stable/9/sys/arm/include/endian.h 182086 2008-08-23 23:35:08Z imp $
+ * $FreeBSD: release/10.0.0/sys/arm/include/endian.h 236992 2012-06-13 05:02:51Z imp $
  */
 
 #ifndef _ENDIAN_H_
@@ -78,7 +78,7 @@ __bswap64(__uint64_t _x)
 
 	return ((_x >> 56) | ((_x >> 40) & 0xff00) | ((_x >> 24) & 0xff0000) |
 	    ((_x >> 8) & 0xff000000) | ((_x << 8) & ((__uint64_t)0xff << 32)) |
-	    ((_x << 24) & ((__uint64_t)0xff << 40)) | 
+	    ((_x << 24) & ((__uint64_t)0xff << 40)) |
 	    ((_x << 40) & ((__uint64_t)0xff << 48)) | ((_x << 56)));
 }
 

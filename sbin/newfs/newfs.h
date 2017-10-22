@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/newfs/newfs.h 246284 2013-02-03 12:17:49Z trasz $
+ * $FreeBSD: release/10.0.0/sbin/newfs/newfs.h 248623 2013-03-22 21:45:28Z mckusick $
  */
 
 #include <libufs.h>
@@ -81,6 +81,7 @@ extern int	Nflag;		/* run mkfs without writing file system */
 extern int	Oflag;		/* build UFS1 format file system */
 extern int	Rflag;		/* regression test */
 extern int	Uflag;		/* enable soft updates for file system */
+extern int	jflag;		/* enable soft updates journaling for filesys */
 extern int	Xflag;		/* exit in middle of newfs for testing */
 extern int	Jflag;		/* enable gjournal for file system */
 extern int	lflag;		/* enable multilabel MAC for file system */
@@ -95,6 +96,7 @@ extern int	bsize;		/* block size */
 extern int	maxbsize;	/* maximum clustering */
 extern int	maxblkspercg;	/* maximum blocks per cylinder group */
 extern int	minfree;	/* free space threshold */
+extern int	metaspace;	/* space held for metadata blocks */
 extern int	opt;		/* optimization preference (space or time) */
 extern int	density;	/* number of bytes per inode */
 extern int	maxcontig;	/* max contiguous blocks to allocate */

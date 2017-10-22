@@ -36,7 +36,7 @@
 /* The actual program logic is in the file procs.c			*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/rpc.statd/statd.c 222627 2011-06-02 20:15:32Z rmacklem $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/rpc.statd/statd.c 222627 2011-06-02 20:15:32Z rmacklem $");
 
 #include <err.h>
 #include <errno.h>

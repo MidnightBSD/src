@@ -47,7 +47,7 @@
  *
  *	from: @(#)locore.s	8.5 (Berkeley) 1/4/94
  *	JNPR: locore.S,v 1.6.2.1 2007/08/29 12:24:49 girish
- * $FreeBSD: stable/9/sys/mips/mips/locore.S 238266 2012-07-08 21:21:45Z rwatson $
+ * $FreeBSD: release/10.0.0/sys/mips/mips/locore.S 232615 2012-03-06 19:01:32Z jmallett $
  */
 
 /*
@@ -95,23 +95,23 @@ VECTOR(_locore, unknown)
 	 */
 
 	/* Set these bits */
-        li	t1, (MIPS_SR_COP_2_BIT | MIPS_SR_COP_0_BIT | MIPS_SR_PX | MIPS_SR_KX | MIPS_SR_UX | MIPS_SR_SX | MIPS_SR_BEV)
+        li	t1, (MIPS_SR_COP_0_BIT | MIPS_SR_PX | MIPS_SR_KX | MIPS_SR_UX | MIPS_SR_SX | MIPS_SR_BEV)
 
 	/* Reset these bits */
-        li	t0, ~(MIPS_SR_DE | MIPS_SR_SOFT_RESET | MIPS_SR_ERL | MIPS_SR_EXL | MIPS_SR_INT_IE)
+        li	t0, ~(MIPS_SR_DE | MIPS_SR_SR | MIPS_SR_ERL | MIPS_SR_EXL | MIPS_SR_INT_IE | MIPS_SR_COP_2_BIT)
 #elif defined (CPU_RMI) || defined (CPU_NLM) 
 	/* Set these bits */
         li	t1, (MIPS_SR_COP_2_BIT | MIPS_SR_COP_0_BIT | MIPS_SR_KX | MIPS_SR_UX)
 
 	/* Reset these bits */
-        li	t0, ~(MIPS_SR_BEV | MIPS_SR_SOFT_RESET | MIPS_SR_INT_IE)
+        li	t0, ~(MIPS_SR_BEV | MIPS_SR_SR | MIPS_SR_INT_IE)
 #else
 	/*
 	 * t0: Bits to preserve if set:
 	 * 	Soft reset
 	 *	Boot exception vectors (firmware-provided)
 	 */
-	li	t0, (MIPS_SR_BEV | MIPS_SR_SOFT_RESET)
+	li	t0, (MIPS_SR_BEV | MIPS_SR_SR)
 	/*
 	 * t1: Bits to set explicitly:
 	 *	Enable FPU

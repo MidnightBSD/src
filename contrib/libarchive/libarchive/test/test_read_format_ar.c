@@ -26,7 +26,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_read_format_ar.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_format_ar.c 248616 2013-03-22 13:36:03Z mm $");
 
 
 DEFINE_TEST(test_read_format_ar)
@@ -38,9 +38,9 @@ DEFINE_TEST(test_read_format_ar)
 
 	extract_reference_file(reffile);
 	assert((a = archive_read_new()) != NULL);
-	assertA(0 == archive_read_support_compression_all(a));
+	assertA(0 == archive_read_support_filter_all(a));
 	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_open_file(a, reffile, 7));
+	assertA(0 == archive_read_open_filename(a, reffile, 7));
 
 	/* Filename table.  */
 	assertA(0 == archive_read_next_header(a, &ae));
@@ -58,7 +58,7 @@ DEFINE_TEST(test_read_format_ar)
 	assertEqualInt(0, archive_entry_gid(ae));
 	assert(8 == archive_entry_size(ae));
 	assertA(8 == archive_read_data(a, buff, 10));
-	assert(0 == memcmp(buff, "55667788", 8));
+	assertEqualMem(buff, "55667788", 8);
 
 	/* Second Entry */
 	assertA(0 == archive_read_next_header(a, &ae));
@@ -68,7 +68,7 @@ DEFINE_TEST(test_read_format_ar)
 	assertEqualInt(0, archive_entry_gid(ae));
 	assert(4 == archive_entry_size(ae));
 	assertA(4 == archive_read_data(a, buff, 10));
-	assert(0 == memcmp(buff, "3333", 4));
+	assertEqualMem(buff, "3333", 4);
 
 	/* Third Entry */
 	assertA(0 == archive_read_next_header(a, &ae));
@@ -78,10 +78,11 @@ DEFINE_TEST(test_read_format_ar)
 	assertEqualInt(0, archive_entry_gid(ae));
 	assert(9 == archive_entry_size(ae));
 	assertA(9 == archive_read_data(a, buff, 9));
-	assert(0 == memcmp(buff, "987654321", 9));
+	assertEqualMem(buff, "987654321", 9);
 
 	/* Test EOF */
 	assertA(1 == archive_read_next_header(a, &ae));
-	assert(0 == archive_read_close(a));
-	assert(0 == archive_read_finish(a));
+	assertEqualInt(4, archive_file_count(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }

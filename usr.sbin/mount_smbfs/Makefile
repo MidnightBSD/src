@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/mount_smbfs/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD: release/10.0.0/usr.sbin/mount_smbfs/Makefile 258125 2013-11-14 09:25:29Z glebius $
 
 PROG=	mount_smbfs
 SRCS=	mount_smbfs.c getmntopts.c
@@ -10,11 +10,6 @@ CFLAGS+=	-DSMBFS -I${MOUNTDIR} -I${CONTRIBDIR}/include
 
 LDADD=	-lsmb -lkiconv
 DPADD=	${LIBSMB} ${LIBKICONV}
-
-# Needs to be dynamically linked for optional dlopen() access to
-# userland libiconv (see the -E option).
-#
-NO_SHARED?=	NO
 
 .PATH:	${CONTRIBDIR}/mount_smbfs
 .PATH:  ${MOUNTDIR}

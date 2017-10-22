@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/hastd/proto_common.c 240269 2012-09-09 08:39:41Z trociny $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/hastd/proto_common.c 237931 2012-07-01 16:26:07Z pjd $");
 
 #include <sys/types.h>
 #include <sys/socket.h>

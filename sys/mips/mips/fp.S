@@ -32,7 +32,7 @@
  *
  *	from: @(#)fp.s	8.1 (Berkeley) 6/10/93
  *	JNPR: fp.S,v 1.1 2006/08/07 05:38:57 katta
- * $FreeBSD: stable/9/sys/mips/mips/fp.S 210038 2010-07-14 00:41:22Z imp $
+ * $FreeBSD: release/10.0.0/sys/mips/mips/fp.S 210038 2010-07-14 00:41:22Z imp $
  */
 
 /*

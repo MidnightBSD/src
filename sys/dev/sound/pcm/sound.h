@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/sound/pcm/sound.h 193979 2009-06-11 09:06:09Z ariff $
+ * $FreeBSD: release/10.0.0/sys/dev/sound/pcm/sound.h 193979 2009-06-11 09:06:09Z ariff $
  */
 
 /*

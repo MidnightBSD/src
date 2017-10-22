@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libc/iconv/citrus_stdenc_local.h 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libc/iconv/citrus_stdenc_local.h 252583 2013-07-03 18:27:45Z peter $ */
 /* $NetBSD: citrus_stdenc_local.h,v 1.4 2008/02/09 14:56:20 junyoung Exp $ */
 
 /*-
@@ -55,7 +55,7 @@ static int	 _citrus_##_e_##_stdenc_mbtocs				\
 		    (struct _citrus_stdenc * __restrict,		\
 		    _citrus_csid_t * __restrict,			\
 		    _citrus_index_t * __restrict,			\
-		    char ** __restrict, size_t,				\
+		    const char ** __restrict, size_t,			\
 		    void * __restrict, size_t * __restrict,		\
 		    struct iconv_hooks *);				\
 static int	 _citrus_##_e_##_stdenc_cstomb				\
@@ -66,7 +66,7 @@ static int	 _citrus_##_e_##_stdenc_cstomb				\
 static int	 _citrus_##_e_##_stdenc_mbtowc				\
 		    (struct _citrus_stdenc * __restrict,		\
 		    _citrus_wc_t * __restrict,				\
-		    char ** __restrict, size_t,				\
+		    const char ** __restrict, size_t,				\
 		    void * __restrict, size_t * __restrict,		\
 		    struct iconv_hooks *);				\
 static int	 _citrus_##_e_##_stdenc_wctomb				\
@@ -84,6 +84,7 @@ static int	 _citrus_##_e_##_stdenc_get_state_desc			\
 		    struct _citrus_stdenc_state_desc * __restrict)
 
 #define _CITRUS_STDENC_DEF_OPS(_e_)					\
+extern struct _citrus_stdenc_ops _citrus_##_e_##_stdenc_ops;		\
 struct _citrus_stdenc_ops _citrus_##_e_##_stdenc_ops = {		\
 	/* eo_init */		&_citrus_##_e_##_stdenc_init,		\
 	/* eo_uninit */		&_citrus_##_e_##_stdenc_uninit,		\
@@ -105,7 +106,7 @@ typedef int (*_citrus_stdenc_init_state_t)
 typedef int (*_citrus_stdenc_mbtocs_t)
     (struct _citrus_stdenc * __restrict,
     _citrus_csid_t * __restrict, _citrus_index_t * __restrict,
-    char ** __restrict, size_t,
+    const char ** __restrict, size_t,
     void * __restrict, size_t * __restrict,
     struct iconv_hooks *);
 typedef int (*_citrus_stdenc_cstomb_t)
@@ -115,7 +116,7 @@ typedef int (*_citrus_stdenc_cstomb_t)
 typedef int (*_citrus_stdenc_mbtowc_t)
     (struct _citrus_stdenc * __restrict,
     _citrus_wc_t * __restrict,
-    char ** __restrict, size_t,
+    const char ** __restrict, size_t,
     void * __restrict, size_t * __restrict,
     struct iconv_hooks *);
 typedef int (*_citrus_stdenc_wctomb_t)

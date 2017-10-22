@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libelf/gelf.h 167315 2007-03-08 04:01:30Z jkoshy $
+ * $FreeBSD: release/10.0.0/lib/libelf/gelf.h 167315 2007-03-08 04:01:30Z jkoshy $
  */
 
 #ifndef	_GELF_H_

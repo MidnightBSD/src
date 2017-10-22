@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)kvm_proc.c	8.3 (Berkeley) 9/23/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libkvm/kvm_proc.c 241632 2012-10-17 11:26:27Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libkvm/kvm_proc.c 241303 2012-10-06 20:16:04Z avg $");
 
 /*
  * Proc traversal interface for kvm.  ps and w are (probably) the exclusive

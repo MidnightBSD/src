@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/clang/libclanganalysis/Makefile 246637 2013-02-10 21:24:47Z dim $
+# $FreeBSD: release/10.0.0/lib/clang/libclanganalysis/Makefile 249423 2013-04-12 17:57:40Z dim $
 
 .include <bsd.own.mk>
 
@@ -27,6 +27,7 @@ SRCS=	AnalysisDeclContext.cpp \
 
 TGHDRS=	AttrList \
 	Attrs \
+	CommentCommandList \
 	CommentNodes \
 	DeclNodes \
 	DiagnosticAnalysisKinds \

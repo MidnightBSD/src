@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/userboot/Makefile 223695 2011-06-30 16:08:56Z dfr $
+# $FreeBSD: release/10.0.0/sys/boot/userboot/Makefile 223695 2011-06-30 16:08:56Z dfr $
 
 .include <bsd.own.mk>
 

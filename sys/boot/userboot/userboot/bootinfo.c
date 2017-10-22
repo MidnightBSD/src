@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/userboot/userboot/bootinfo.c 223695 2011-06-30 16:08:56Z dfr $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/userboot/userboot/bootinfo.c 223695 2011-06-30 16:08:56Z dfr $");
 
 #include <stand.h>
 #include <sys/param.h>

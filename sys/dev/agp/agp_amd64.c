@@ -25,9 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/agp/agp_amd64.c 190169 2009-03-20 18:30:20Z rnoland $");
-
-#include "opt_bus.h"
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/agp/agp_amd64.c 244926 2013-01-01 18:16:49Z antoine $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -115,7 +113,7 @@ agp_amd64_match(device_t dev)
 		return ("VIA K8T800Pro host to PCI bridge");
 	case 0x31881106:
 		return ("VIA 8385 host to PCI bridge");
-	};
+	}
 
 	return (NULL);
 }

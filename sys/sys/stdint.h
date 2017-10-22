@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/stdint.h 235786 2012-05-22 15:26:55Z theraven $
+ * $FreeBSD: release/10.0.0/sys/sys/stdint.h 237517 2012-06-24 04:15:58Z andrew $
  */
 
 #ifndef _SYS_STDINT_H_
@@ -70,5 +70,9 @@ typedef	__uintmax_t		uintmax_t;
 #else
 #define	__WORDSIZE		32
 #endif
+
+/* Limits of wchar_t. */
+#define	WCHAR_MIN	__WCHAR_MIN
+#define	WCHAR_MAX	__WCHAR_MAX
 
 #endif /* !_SYS_STDINT_H_ */

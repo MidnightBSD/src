@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/lib/libc/powerpc/Symbol.map 172764 2007-10-18 18:58:07Z grehan $
+ * $FreeBSD: release/10.0.0/lib/libc/powerpc/Symbol.map 236006 2012-05-25 16:30:42Z marcel $
  */
 
 /*
@@ -24,7 +24,6 @@ FBSD_1.0 {
 	__infinity;
 	__nan;
 	makecontext;
-	modf;
 	setjmp;
 	longjmp;
 	sigsetjmp;
@@ -37,6 +36,10 @@ FBSD_1.0 {
 	exect;
 	sbrk;
 	vfork;
+};
+
+FBSD_1.3 {
+	__eabi;
 };
 
 FBSDprivate_1.0 {

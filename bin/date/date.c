@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)date.c	8.2 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/date/date.c 202193 2010-01-13 17:56:54Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/date/date.c 239991 2012-09-01 14:45:15Z ed $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -137,7 +137,7 @@ main(int argc, char *argv[])
 	 * If -d or -t, set the timezone or daylight savings time; this
 	 * doesn't belong here; the kernel should not know about either.
 	 */
-	if (set_timezone && settimeofday((struct timeval *)NULL, &tz))
+	if (set_timezone && settimeofday(NULL, &tz) != 0)
 		err(1, "settimeofday (timezone)");
 
 	if (!rflag && time(&tval) == -1)
@@ -273,14 +273,14 @@ setthetime(const char *fmt, const char *p, int jflag, int nflag)
 		/* set the time */
 		if (nflag || netsettime(tval)) {
 			utx.ut_type = OLD_TIME;
-			gettimeofday(&utx.ut_tv, NULL);
+			(void)gettimeofday(&utx.ut_tv, NULL);
 			pututxline(&utx);
 			tv.tv_sec = tval;
 			tv.tv_usec = 0;
-			if (settimeofday(&tv, (struct timezone *)NULL))
+			if (settimeofday(&tv, NULL) != 0)
 				err(1, "settimeofday (timeval)");
 			utx.ut_type = NEW_TIME;
-			gettimeofday(&utx.ut_tv, NULL);
+			(void)gettimeofday(&utx.ut_tv, NULL);
 			pututxline(&utx);
 		}
 

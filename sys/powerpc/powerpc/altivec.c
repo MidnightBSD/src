@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/powerpc/altivec.c 188860 2009-02-20 17:48:40Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powerpc/altivec.c 188860 2009-02-20 17:48:40Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/proc.h>

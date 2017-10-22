@@ -45,7 +45,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)mount_cd9660.c	8.7 (Berkeley) 5/1/95";
 */
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/mount_cd9660/mount_cd9660.c 199584 2009-11-20 15:28:38Z netchild $";
+  "$FreeBSD: release/10.0.0/sbin/mount_cd9660/mount_cd9660.c 247856 2013-03-05 22:41:35Z jkim $";
 #endif /* not lint */
 
 #include <sys/cdio.h>
@@ -68,7 +68,7 @@ static const char rcsid[] =
 
 #include "mntopts.h"
 
-struct mntopt mopts[] = {
+static struct mntopt mopts[] = {
 	MOPT_STDOPTS,
 	MOPT_UPDATE,
 	MOPT_END
@@ -83,7 +83,7 @@ main(int argc, char **argv)
 {
 	struct iovec *iov;
 	int iovlen;
-	int ch, mntflags, opts;
+	int ch, mntflags;
 	char *dev, *dir, *p, *val, mntpath[MAXPATHLEN];
 	int verbose;
 	int ssector;		/* starting sector, 0 for 1st session */
@@ -91,7 +91,7 @@ main(int argc, char **argv)
 
 	iov = NULL;
 	iovlen = 0;
-	mntflags = opts = verbose = 0;
+	mntflags = verbose = 0;
 	ssector = -1;
 
 	while ((ch = getopt(argc, argv, "begjo:rs:vC:")) != -1)
@@ -109,7 +109,7 @@ main(int argc, char **argv)
 			build_iovec(&iov, &iovlen, "nojoliet", NULL, (size_t)-1);
 			break;
 		case 'o':
-			getmntopts(optarg, mopts, &mntflags, &opts);
+			getmntopts(optarg, mopts, &mntflags, NULL);
 			p = strchr(optarg, '=');
 			val = NULL;
 			if (p != NULL) {
@@ -149,7 +149,8 @@ main(int argc, char **argv)
 	 * Resolve the mountpoint with realpath(3) and remove unnecessary
 	 * slashes from the devicename if there are any.
 	 */
-	(void)checkpath(dir, mntpath);
+	if (checkpath(dir, mntpath) != 0)
+		err(1, "%s", mntpath);
 	(void)rmslashes(dev, dev);
 
 	if (ssector == -1) {

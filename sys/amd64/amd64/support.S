@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/amd64/amd64/support.S 249532 2013-04-16 06:20:35Z kib $
+ * $FreeBSD: release/10.0.0/sys/amd64/amd64/support.S 249439 2013-04-13 15:20:33Z kib $
  */
 
 #include "opt_ddb.h"

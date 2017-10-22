@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/rc.d/mountlate 180563 2008-07-16 19:22:48Z dougb $
+# $FreeBSD: release/10.0.0/etc/rc.d/mountlate 250235 2013-05-04 14:00:16Z crees $
 #
 
 # PROVIDE: mountlate
@@ -21,19 +21,10 @@ mountlate_start()
 	# Mount "late" filesystems.
 	#
 	err=0
-	latefs=
-	# / (root) fs is always remounted, so remove from list
-	latefs="`/sbin/mount -d -a -l | grep -v ' /$'`"
-	case ${latefs} in
-	'')
-		;;
-	*)
-		echo -n 'Mounting late file systems:'
-		mount -a -l
-		err=$?
-		echo '.'
-		;;
-	esac
+	echo -n 'Mounting late file systems:'
+	mount -a -L
+	err=$?
+	echo '.'
 
 	case ${err} in
 	0)

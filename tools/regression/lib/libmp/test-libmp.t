@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/lib/libmp/test-libmp.t 160786 2006-07-28 16:00:59Z simon $
+# $FreeBSD: release/10.0.0/tools/regression/lib/libmp/test-libmp.t 160786 2006-07-28 16:00:59Z simon $
 
 cd `dirname $0`
 

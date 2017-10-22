@@ -31,7 +31,7 @@
 static const char sccsid[] = "@(#)inet_lnaof.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/inet/inet_lnaof.c 170244 2007-06-03 17:20:27Z ume $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/inet/inet_lnaof.c 170244 2007-06-03 17:20:27Z ume $");
 
 #include "port_before.h"
 

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/thread/thr_fork.c 213096 2010-09-24 07:52:07Z davidxu $
+ * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_fork.c 239609 2012-08-23 05:15:15Z davidxu $
  */
 
 /*
@@ -199,9 +199,6 @@ _fork(void)
 		if (was_threaded)
 			_rtld_atfork_post(rtld_locks);
 		_thr_setthreaded(0);
-
-		/* reinitialize libc spinlocks. */
-		_thr_spinlock_init();
 
 		/* reinitalize library. */
 		_libpthread_init(curthread);

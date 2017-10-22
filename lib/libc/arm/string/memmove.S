@@ -30,7 +30,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/arm/string/memmove.S 204607 2010-03-02 22:16:40Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/arm/string/memmove.S 204607 2010-03-02 22:16:40Z joel $");
 
 #ifndef _BCOPY
 /* LINTSTUB: Func: void *memmove(void *, const void *, size_t) */

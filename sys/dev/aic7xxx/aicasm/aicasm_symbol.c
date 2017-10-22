@@ -39,12 +39,12 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_symbol.c#24 $
  *
- * $FreeBSD: stable/9/sys/dev/aic7xxx/aicasm/aicasm_symbol.c 224046 2011-07-15 00:36:47Z emaste $
+ * $FreeBSD: release/10.0.0/sys/dev/aic7xxx/aicasm/aicasm_symbol.c 233479 2012-03-25 21:54:36Z rmh $
  */
 
 #include <sys/types.h>
 #include <sys/param.h>
-#ifdef BSD
+#if defined(BSD) && !defined(__GNU__)
 #include <db.h>
 #else
 #include <db_185.h>

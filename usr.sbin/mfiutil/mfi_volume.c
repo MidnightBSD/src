@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/mfiutil/mfi_volume.c 237589 2012-06-26 03:05:17Z eadler $
+ * $FreeBSD: release/10.0.0/usr.sbin/mfiutil/mfi_volume.c 249257 2013-04-08 17:46:45Z markj $
  */
 
 #include <sys/types.h>
@@ -363,7 +363,8 @@ volume_cache(int ac, char **av)
 			break;
 		}
 		if (props.default_cache_policy != props.current_cache_policy)
-			printf("Cache Disabled Due to Dead Battery\n");
+			printf(
+	"Cache disabled due to dead battery or ongoing battery relearn\n");
 		error = 0;
 	} else {
 		new = props;

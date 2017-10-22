@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/jail/jailp.h 248939 2013-03-31 04:10:37Z jamie $
+ * $FreeBSD: release/10.0.0/usr.sbin/jail/jailp.h 256387 2013-10-12 17:46:13Z hrs $
  */
 
 #include <sys/param.h>
@@ -95,6 +95,7 @@ enum intparam {
 #endif
 	IP_MOUNT,		/* Mount points in fstab(5) form */
 	IP_MOUNT_DEVFS,		/* Mount /dev under prison root */
+	IP_MOUNT_FDESCFS,	/* Mount /dev/fd under prison root */
 	IP_MOUNT_FSTAB,		/* A standard fstab(5) file */
 	IP_STOP_TIMEOUT,	/* Time to wait after sending SIGTERM */
 	IP_VNET_INTERFACE,	/* Assign interface(s) to vnet jail */
@@ -223,7 +224,6 @@ extern void requeue(struct cfjail *j, struct cfjails *queue);
 
 extern void yyerror(const char *);
 extern int yylex(void);
-extern int yyparse(void);
 
 extern struct cfjails cfjails;
 extern struct cfjails ready;

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/cddl/compat/opensolaris/sys/sdt.h 177698 2008-03-28 22:16:18Z jb $
+ * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/sdt.h 249195 2013-04-06 10:39:38Z mm $
  */
 
 #ifndef _OPENSOLARIS_SYS_SDT_H_
@@ -41,6 +41,8 @@
 #define	DTRACE_PROBE1(name, type1, arg1)
 #define	DTRACE_PROBE2(name, type1, arg1, type2, arg2)
 #define	DTRACE_PROBE3(name, type1, arg1, type2, arg2, type3, arg3)
-#define	DTRACE_PROBE4(name, type1, arg1, type2, arg2, type3, arg3, type4, arg4) 
+#define	DTRACE_PROBE4(name, type1, arg1, type2, arg2, type3, arg3, type4, arg4)
+
+#define	SET_ERROR(err)	(err)
 
 #endif	/* _OPENSOLARIS_SYS_SDT_H_ */

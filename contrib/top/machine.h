@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/contrib/top/machine.h 239750 2012-08-27 19:55:19Z jhb $
+ * $FreeBSD: release/10.0.0/contrib/top/machine.h 237656 2012-06-27 18:08:48Z jhb $
  */
 
 /*

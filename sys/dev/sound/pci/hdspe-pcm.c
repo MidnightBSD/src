@@ -38,7 +38,7 @@
 
 #include <mixer_if.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pci/hdspe-pcm.c 233165 2012-03-19 07:34:09Z mav $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/hdspe-pcm.c 241066 2012-09-30 09:21:10Z kevlo $");
 
 struct hdspe_latency {
 	uint32_t n;
@@ -207,6 +207,7 @@ hdspe_running(struct sc_info *sc)
 		}
 	}
 
+	free(devlist, M_TEMP);
 	return 0;
 bad:
 
@@ -214,6 +215,7 @@ bad:
 	device_printf(sc->dev,"hdspe is running\n");
 #endif
 
+	free(devlist, M_TEMP);
 	return 1;
 }
 

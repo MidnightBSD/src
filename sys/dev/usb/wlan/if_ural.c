@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_ural.c 248085 2013-03-09 02:36:32Z marius $	*/
+/*	$FreeBSD: release/10.0.0/sys/dev/usb/wlan/if_ural.c 253340 2013-07-14 18:26:47Z rpaulo $	*/
 
 /*-
  * Copyright (c) 2005, 2006
@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/wlan/if_ural.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/wlan/if_ural.c 253340 2013-07-14 18:26:47Z rpaulo $");
 
 /*-
  * Ralink Technology RT2500USB chipset driver
@@ -385,8 +385,7 @@ static device_method_t ural_methods[] = {
 	DEVMETHOD(device_probe,		ural_match),
 	DEVMETHOD(device_attach,	ural_attach),
 	DEVMETHOD(device_detach,	ural_detach),
-
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t ural_driver = {
@@ -527,6 +526,11 @@ ural_detach(device_t self)
 	struct ural_softc *sc = device_get_softc(self);
 	struct ifnet *ifp = sc->sc_ifp;
 	struct ieee80211com *ic;
+
+	/* prevent further ioctls */
+	RAL_LOCK(sc);
+	sc->sc_detached = 1;
+	RAL_UNLOCK(sc);
 
 	/* stop all USB transfers */
 	usbd_transfer_unsetup(sc->sc_xfer, URAL_N_TRANSFER);
@@ -1371,7 +1375,14 @@ ural_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	struct ural_softc *sc = ifp->if_softc;
 	struct ieee80211com *ic = ifp->if_l2com;
 	struct ifreq *ifr = (struct ifreq *) data;
-	int error = 0, startall = 0;
+	int error;
+	int startall = 0;
+
+	RAL_LOCK(sc);
+	error = sc->sc_detached ? ENXIO : 0;
+	RAL_UNLOCK(sc);
+	if (error)
+		return (error);
 
 	switch (cmd) {
 	case SIOCSIFFLAGS:

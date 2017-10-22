@@ -24,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/security/cap_test/cap_test_relative.c 224793 2011-08-12 10:52:46Z jonathan $
+ * $FreeBSD: release/10.0.0/tools/regression/security/cap_test/cap_test_relative.c 247605 2013-03-02 00:56:53Z pjd $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/security/cap_test/cap_test_relative.c 224793 2011-08-12 10:52:46Z jonathan $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/security/cap_test/cap_test_relative.c 247605 2013-03-02 00:56:53Z pjd $");
 
 #include <sys/param.h>
 #include <sys/capability.h>
@@ -61,7 +61,8 @@ test_relative(void)
 	cap_rights_t rights;
 
 	REQUIRE(etc = open("/etc/", O_RDONLY));
-	CHECK_SYSCALL_FAILS(EINVAL, cap_getrights, etc, &rights);
+	CHECK_SYSCALL_SUCCEEDS(cap_getrights, etc, &rights);
+	CHECK_RIGHTS(rights, CAP_ALL);
 
 	MAKE_CAPABILITY(etc_cap, etc, CAP_READ);
 	MAKE_CAPABILITY(etc_cap_ro, etc, CAP_READ | CAP_LOOKUP);

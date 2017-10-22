@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_timewait.c 247658 2013-03-02 17:51:22Z flo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/tcp_timewait.c 243882 2012-12-05 08:04:20Z glebius $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -523,7 +523,7 @@ tcp_twrespond(struct tcptw *tw, int flags)
 
 	INP_WLOCK_ASSERT(inp);
 
-	m = m_gethdr(M_DONTWAIT, MT_DATA);
+	m = m_gethdr(M_NOWAIT, MT_DATA);
 	if (m == NULL)
 		return (ENOBUFS);
 	m->m_data += max_linkhdr;
@@ -594,9 +594,9 @@ tcp_twrespond(struct tcptw *tw, int flags)
 		m->m_pkthdr.csum_flags = CSUM_TCP;
 		th->th_sum = in_pseudo(ip->ip_src.s_addr, ip->ip_dst.s_addr,
 		    htons(sizeof(struct tcphdr) + optlen + IPPROTO_TCP));
-		ip->ip_len = m->m_pkthdr.len;
+		ip->ip_len = htons(m->m_pkthdr.len);
 		if (V_path_mtu_discovery)
-			ip->ip_off |= IP_DF;
+			ip->ip_off |= htons(IP_DF);
 		error = ip_output(m, inp->inp_options, NULL,
 		    ((tw->tw_so_options & SO_DONTROUTE) ? IP_ROUTETOIF : 0),
 		    NULL, inp);

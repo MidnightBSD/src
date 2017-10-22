@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_core.h 199672 2009-11-22 21:16:43Z thompsa $ */
+/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_core.h 246123 2013-01-30 15:46:26Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -69,6 +69,7 @@ struct usb_page;
 struct usb_page_cache;
 struct usb_xfer;
 struct usb_xfer_root;
+struct usb_string_lang;
 
 /* typedefs */
 
@@ -151,6 +152,7 @@ struct usb_xfer {
 	usb_frcount_t nframes;		/* number of USB frames to transfer */
 	usb_frcount_t aframes;		/* actual number of USB frames
 					 * transferred */
+	usb_stream_t stream_id;		/* USB3.0 specific field */
 
 	uint16_t max_packet_size;
 	uint16_t max_frame_size;
@@ -173,6 +175,7 @@ struct usb_xfer {
 /* external variables */
 
 extern struct mtx usb_ref_lock;
+extern const struct usb_string_lang usb_string_lang_en;
 
 /* typedefs */
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/usr.sbin/acpi/acpidb/acpidb.c 202771 2010-01-21 21:14:28Z jkim $
+ *	$FreeBSD: release/10.0.0/usr.sbin/acpi/acpidb/acpidb.c 252276 2013-06-26 23:52:10Z jkim $
  */
 
 #include <sys/param.h>
@@ -43,13 +43,14 @@
 #include <unistd.h>
 
 #include <contrib/dev/acpica/include/acpi.h>
-#include <contrib/dev/acpica/tools/acpiexec/aecommon.h>
+#include <contrib/dev/acpica/include/accommon.h>
+#include <contrib/dev/acpica/include/acdebug.h>
 
 /*
  * Dummy DSDT Table Header
  */
 
-ACPI_TABLE_HEADER	dummy_dsdt_table = {
+static ACPI_TABLE_HEADER dummy_dsdt_table = {
 	"DSDT", 123, 1, 123, "OEMID", "OEMTBLID", 1, "CRID", 1
 };
 
@@ -57,7 +58,7 @@ ACPI_TABLE_HEADER	dummy_dsdt_table = {
  * Region space I/O routines on virtual machine
  */
 
-int	aml_debug_prompt = 1;
+static int	aml_debug_prompt = 1;
 
 struct ACPIRegionContent {
 	TAILQ_ENTRY(ACPIRegionContent) links;
@@ -67,9 +68,12 @@ struct ACPIRegionContent {
 };
 
 TAILQ_HEAD(ACPIRegionContentList, ACPIRegionContent);
-struct	ACPIRegionContentList RegionContentList;
+static struct	ACPIRegionContentList RegionContentList;
 
 static int		 aml_simulation_initialized = 0;
+
+ACPI_PHYSICAL_ADDRESS	 AeLocalGetRootPointer(void);
+void			 AeTableOverride(ACPI_TABLE_HEADER *, ACPI_TABLE_HEADER **);
 
 static void		 aml_simulation_init(void);
 static int		 aml_simulate_regcontent_add(int regtype,
@@ -86,11 +90,11 @@ static void		 aml_simulation_regload(const char *dumpfile);
 static void		 aml_simulation_regdump(const char *dumpfile);
 
 /* Stubs to simplify linkage to the ACPI CA core subsystem. */
-ACPI_STATUS
+ACPI_PHYSICAL_ADDRESS
 AeLocalGetRootPointer(void)
 {
 
-	return (AE_ERROR);
+	return (0);
 }
 
 void
@@ -172,8 +176,8 @@ aml_simulate_prompt(char *msg, UINT64 def_val)
 	if (msg != NULL) {
 		printf("%s", msg);
 	}
-	printf("(default: 0x%jx ", val);
-	printf(" / %ju) >>", val);
+	printf("(default: 0x%jx ", (uintmax_t)val);
+	printf(" / %ju) >>", (uintmax_t)val);
 	fflush(stdout);
 
 	bzero(buf, sizeof buf);
@@ -370,6 +374,7 @@ load_dsdt(const char *dsdtfile)
 	}
 	if (fstat(fd, &sb) == -1) {
 		perror("fstat");
+		close(fd);
 		return (-1);
 	}
 	code = mmap(NULL, (size_t)sb.st_size, PROT_READ, MAP_PRIVATE, fd, (off_t)0);

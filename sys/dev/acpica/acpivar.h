@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/acpica/acpivar.h 247881 2013-03-06 10:23:56Z avg $
+ * $FreeBSD: release/10.0.0/sys/dev/acpica/acpivar.h 242922 2012-11-12 18:09:25Z sbruno $
  */
 
 #ifndef _ACPIVAR_H_
@@ -71,8 +71,6 @@ struct acpi_softc {
     int			acpi_verbose;
     int			acpi_handle_reboot;
 
-    bus_dma_tag_t	acpi_waketag;
-    bus_dmamap_t	acpi_wakemap;
     vm_offset_t		acpi_wakeaddr;
     vm_paddr_t		acpi_wakephys;
 
@@ -268,7 +266,7 @@ acpi_get_type(device_t dev)
 
     if ((h = acpi_get_handle(dev)) == NULL)
 	return (ACPI_TYPE_NOT_FOUND);
-    if (AcpiGetType(h, &t) != AE_OK)
+    if (ACPI_FAILURE(AcpiGetType(h, &t)))
 	return (ACPI_TYPE_NOT_FOUND);
     return (t);
 }

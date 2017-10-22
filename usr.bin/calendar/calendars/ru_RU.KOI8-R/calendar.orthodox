@@ -1,7 +1,7 @@
 /*
  * Православные праздники
  *
- * $FreeBSD: stable/9/usr.bin/calendar/calendars/ru_RU.KOI8-R/calendar.orthodox 219175 2011-03-02 11:09:34Z osa $
+ * $FreeBSD: release/10.0.0/usr.bin/calendar/calendars/ru_RU.KOI8-R/calendar.orthodox 219175 2011-03-02 11:09:34Z osa $
  */
 
 #ifndef _ru_RU_KOI8_R_orthodox_

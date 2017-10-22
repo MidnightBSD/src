@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/sa11x0/sa11x0_ost.c 178429 2008-04-22 19:38:30Z phk $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/sa11x0/sa11x0_ost.c 236990 2012-06-13 04:59:00Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -56,7 +56,7 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/sa11x0/sa11x0_ost.c 178429 2008-04-22 19:38
 #include <machine/cpufunc.h>
 #include <machine/frame.h>
 
-#include <arm/sa11x0/sa11x0_reg.h> 
+#include <arm/sa11x0/sa11x0_reg.h>
 #include <arm/sa11x0/sa11x0_var.h>
 #include <arm/sa11x0/sa11x0_ostreg.h>
 
@@ -127,7 +127,7 @@ saost_attach(device_t dev)
 
 	saost_sc = sc;
 
-	if(bus_space_map(sa->sc_iot, sc->sc_baseaddr, 8, 0, 
+	if(bus_space_map(sa->sc_iot, sc->sc_baseaddr, 8, 0,
 			&sc->sc_ioh))
 		panic("%s: Cannot map registers", device_get_name(dev));
 
@@ -251,7 +251,7 @@ cpu_initclocks()
 	stathz = STATHZ;
 	profhz = stathz;
 #if 0
-	mtx_init(&clock_lock, "SA1110 Clock locké", NULL, MTX_SPIN);
+	mtx_init(&clock_lock, "SA1110 Clock locked", NULL, MTX_SPIN);
 #endif
 	saost_sc->sc_statclock_step = TIMER_FREQUENCY / stathz;
 	struct resource *irq1, *irq2;

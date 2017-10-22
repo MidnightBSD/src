@@ -1,11 +1,11 @@
-$FreeBSD: stable/9/tools/regression/lib/libc/nss/README 168754 2007-04-15 11:02:31Z bushman $
+$FreeBSD: release/10.0.0/tools/regression/lib/libc/nss/README 228975 2011-12-30 00:04:11Z uqs $
 
 A brief how-to
 --------------
 
 Each nsswitch regression test does 2 kinds of actions:
 1. It runs a series of queries and tests the correctness of results.
-   There are 2 basic criterias which are used for that:
+   There are 2 basic criteria which are used for that:
       - numbers must be in the correct range
       - certain pointers should not be NULL
 

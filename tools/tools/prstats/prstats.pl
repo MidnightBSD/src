@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #-
-# Copyright (c) 2001 Dag-Erling Coïdan Smørgrav
+# Copyright (c) 2001 Dag-Erling CoÃ¯dan SmÃ¸rgrav
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-#      $FreeBSD: stable/9/tools/tools/prstats/prstats.pl 94738 2002-04-15 06:36:22Z des $
+#      $FreeBSD: release/10.0.0/tools/tools/prstats/prstats.pl 228953 2011-12-29 12:33:27Z uqs $
 #
 
 use strict;

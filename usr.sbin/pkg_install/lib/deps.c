@@ -1,5 +1,5 @@
 /*
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -20,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/lib/deps.c 170947 2007-06-18 22:49:13Z pav $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg_install/lib/deps.c 228990 2011-12-30 10:58:14Z uqs $");
 
 #include "lib.h"
 #include <err.h>
@@ -168,7 +168,7 @@ void list_deps(const char *pkgname, char **pkgs, char *listed,
 
 /*
  * Load +REQUIRED_BY file and return a list with names of
- * packages that require package reffered to by `pkgname'.
+ * packages that require package referred to by `pkgname'.
  *
  * Optionally check that packages listed there are actually
  * installed and filter out those that don't (filter == TRUE).

@@ -27,11 +27,13 @@
  * SUCH DAMAGE.
  *
  *	@(#)tftp.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/9/include/arpa/tftp.h 203965 2010-02-16 19:46:46Z imp $
+ * $FreeBSD: release/10.0.0/include/arpa/tftp.h 250887 2013-05-21 21:20:10Z ed $
  */
 
 #ifndef _ARPA_TFTP_H_
 #define	_ARPA_TFTP_H_
+
+#include <sys/cdefs.h>
 
 /*
  * Trivial File Transfer Protocol (IEN-133)

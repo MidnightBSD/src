@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)correct.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/timed/timed/correct.c 229247 2012-01-01 23:49:11Z dim $";
+  "$FreeBSD: release/10.0.0/usr.sbin/timed/timed/correct.c 246209 2013-02-01 14:26:54Z charnier $";
 #endif /* not lint */
 
 #include "globals.h"
@@ -47,8 +47,7 @@ static void adjclock(struct timeval *);
  * own
  */
 void
-correct(avdelta)
-	long avdelta;
+correct(long avdelta)
 {
 	struct hosttbl *htp;
 	int corr;
@@ -112,8 +111,7 @@ correct(avdelta)
 
 
 static void
-adjclock(corr)
-	struct timeval *corr;
+adjclock(struct timeval *corr)
 {
 	static int passes = 0;
 	static int smoother = 0;
@@ -176,9 +174,7 @@ adjclock(corr)
  *	spent in the queue
  */
 void
-adj_msg_time(msg, now)
-	struct tsp *msg;
-	struct timeval *now;
+adj_msg_time(struct tsp *msg, struct timeval *now)
 {
 	msg->tsp_time.tv_sec += (now->tv_sec - from_when.tv_sec);
 	msg->tsp_time.tv_usec += (now->tv_usec - from_when.tv_usec);

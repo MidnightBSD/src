@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/iicbus/iicbus.c 229093 2011-12-31 14:12:12Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/iicbus/iicbus.c 228257 2011-12-04 11:55:33Z adrian $");
 
 /*
  * Autoconfiguration and support routines for the Philips serial I2C bus
@@ -92,10 +92,16 @@ iicbus_attach(device_t dev)
 	unsigned char addr;
 #endif
 	struct iicbus_softc *sc = IICBUS_SOFTC(dev);
+	int strict;
 
 	sc->dev = dev;
 	mtx_init(&sc->lock, "iicbus", NULL, MTX_DEF);
 	iicbus_reset(dev, IIC_FASTEST, 0, NULL);
+	if (resource_int_value(device_get_name(dev),
+		device_get_unit(dev), "strict", &strict) == 0)
+		sc->strict = strict;
+	else
+		sc->strict = 1;
 
 	/* device probing is meaningless since the bus is supposed to be
 	 * hot-plug. Moreover, some I2C chips do not appreciate random

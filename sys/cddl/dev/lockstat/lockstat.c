@@ -20,7 +20,7 @@
  *
  * Portions Copyright (c) 2008-2009 Stacey Son <sson@FreeBSD.org> 
  *
- * $FreeBSD: stable/9/sys/cddl/dev/lockstat/lockstat.c 192853 2009-05-26 20:28:22Z sson $
+ * $FreeBSD: release/10.0.0/sys/cddl/dev/lockstat/lockstat.c 242723 2012-11-07 23:45:09Z jhibbits $
  *
  */
 
@@ -45,7 +45,8 @@
 #include <sys/dtrace.h>
 #include <sys/lockstat.h>
 
-#if defined(__i386__) || defined(__amd64__)
+#if defined(__i386__) || defined(__amd64__) || \
+	defined(__mips__) || defined(__powerpc__)
 #define LOCKSTAT_AFRAMES 1
 #else
 #error "architecture not supported"

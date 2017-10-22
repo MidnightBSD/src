@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/lib/libc/net/Symbol.map 234942 2012-05-03 07:12:38Z tuexen $
+ * $FreeBSD: release/10.0.0/lib/libc/net/Symbol.map 234716 2012-04-26 19:56:06Z tuexen $
  */
 
 FBSD_1.0 {
@@ -160,14 +160,14 @@ FBSDprivate_1.0 {
 	__ivaliduser_sa;
 	__check_rhosts_file;
 	__rcmd_errstr;
- 	__nss_compat_getgrnam_r;
- 	__nss_compat_getgrgid_r;
- 	__nss_compat_getgrent_r;
- 	__nss_compat_setgrent;
- 	__nss_compat_endgrent;
- 	__nss_compat_getpwnam_r;
- 	__nss_compat_getpwuid_r;
- 	__nss_compat_getpwent_r;
- 	__nss_compat_setpwent;
- 	__nss_compat_endpwent;
+	__nss_compat_getgrnam_r;
+	__nss_compat_getgrgid_r;
+	__nss_compat_getgrent_r;
+	__nss_compat_setgrent;
+	__nss_compat_endgrent;
+	__nss_compat_getpwnam_r;
+	__nss_compat_getpwuid_r;
+	__nss_compat_getpwent_r;
+	__nss_compat_setpwent;
+	__nss_compat_endpwent;
 };

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/hastd/pjdlog.c 229509 2012-01-04 17:22:10Z trociny $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/hastd/pjdlog.c 225773 2011-09-27 06:43:51Z pjd $");
 
 #include <sys/types.h>
 #include <sys/socket.h>

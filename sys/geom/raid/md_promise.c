@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/raid/md_promise.c 246164 2013-01-31 22:05:18Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/raid/md_promise.c 245533 2013-01-17 03:27:08Z mav $");
 
 #include <sys/param.h>
 #include <sys/bio.h>

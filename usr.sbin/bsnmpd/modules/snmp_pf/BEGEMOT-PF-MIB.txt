@@ -6,7 +6,7 @@
 -- this stuff is worth it, you can buy me a beer in return.   -Philip Paeps
 -- ----------------------------------------------------------------------------
 --
--- $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_pf/BEGEMOT-PF-MIB.txt 205607 2010-03-24 16:07:33Z syrinx $
+-- $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_pf/BEGEMOT-PF-MIB.txt 240233 2012-09-08 06:41:54Z glebius $
 -- 
 
 BEGEMOT-PF-MIB DEFINITIONS ::= BEGIN
@@ -585,7 +585,7 @@ PfInterfacesIfEntry ::= SEQUENCE {
     pfInterfacesIfDescr		    OCTET STRING,
     pfInterfacesIfType		    INTEGER,
     pfInterfacesIfTZero		    TimeTicks,
-    pfInterfacesIfRefsState	    Unsigned32,
+    pfInterfacesIfRefsState	    Null,
     pfInterfacesIfRefsRule	    Unsigned32,
     pfInterfacesIf4BytesInPass	    Counter64,
     pfInterfacesIf4BytesInBlock	    Counter64,

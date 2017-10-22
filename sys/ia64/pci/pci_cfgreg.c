@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/ia64/pci/pci_cfgreg.c 205432 2010-03-22 03:06:11Z marcel $
+ * $FreeBSD: release/10.0.0/sys/ia64/pci/pci_cfgreg.c 253560 2013-07-23 03:03:17Z marcel $
  */
 
 #include <sys/param.h>
@@ -70,7 +70,7 @@ pci_cfgregread(int bus, int slot, int func, int reg, int len)
 	register_t is;
 	u_long addr;
 
-	addr = pci_sal_address(0, bus, slot, func, reg);
+	addr = pci_sal_address(bus >> 8, bus & 0xff, slot, func, reg);
 	if (addr == ~0ul)
 		return (~0);
 
@@ -91,7 +91,7 @@ pci_cfgregwrite(int bus, int slot, int func, int reg, uint32_t data, int len)
 	register_t is;
 	u_long addr;
 
-	addr = pci_sal_address(0, bus, slot, func, reg);
+	addr = pci_sal_address(bus >> 8, bus & 0xff, slot, func, reg);
 	if (addr == ~0ul)
 		return;
 

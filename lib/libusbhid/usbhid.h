@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libusbhid/usbhid.h 229387 2012-01-03 12:47:55Z mav $
+ * $FreeBSD: release/10.0.0/lib/libusbhid/usbhid.h 225839 2011-09-28 14:52:25Z mav $
  *
  */
 

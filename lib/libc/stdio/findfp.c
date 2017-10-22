@@ -13,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)findfp.c	8.2 (Berkeley) 1/4/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/stdio/findfp.c 234871 2012-05-01 10:49:20Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/findfp.c 249810 2013-04-23 14:36:44Z emaste $");
 
 #include <sys/param.h>
 #include <machine/atomic.h>
@@ -91,8 +91,7 @@ spinlock_t __stdio_thread_lock = _SPINLOCK_INITIALIZER;
 #endif
 
 static struct glue *
-moreglue(n)
-	int n;
+moreglue(int n)
 {
 	struct glue *g;
 	static FILE empty = { ._fl_mutex = PTHREAD_MUTEX_INITIALIZER };

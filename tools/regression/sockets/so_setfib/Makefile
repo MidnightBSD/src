@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/sockets/so_setfib/Makefile 231855 2012-02-17 03:25:26Z bz $
+# $FreeBSD: release/10.0.0/tools/regression/sockets/so_setfib/Makefile 231855 2012-02-17 03:25:26Z bz $
 
 PROG=	so_setfib
 NO_MAN=

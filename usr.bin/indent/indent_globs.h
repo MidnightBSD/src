@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)indent_globs.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/9/usr.bin/indent/indent_globs.h 205989 2010-03-31 17:05:30Z avg $
+ * $FreeBSD: release/10.0.0/usr.bin/indent/indent_globs.h 244578 2012-12-22 04:11:59Z andrew $
  */
 
 #define BACKSLASH '\\'
@@ -213,7 +213,7 @@ struct fstate {
     char        font[4];
     char        size;
     int         allcaps:1;
-};
+} __aligned(sizeof(int));
 char       *chfont(struct fstate *, struct fstate *, char *);
 
 struct fstate

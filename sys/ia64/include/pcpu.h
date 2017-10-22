@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/ia64/include/pcpu.h 223526 2011-06-25 02:15:14Z marcel $
+ * $FreeBSD: release/10.0.0/sys/ia64/include/pcpu.h 249265 2013-04-08 19:19:10Z glebius $
  */
 
 #ifndef	_MACHINE_PCPU_H_
@@ -64,7 +64,8 @@ struct pcpu_md {
 
 #define	PCPU_MD_FIELDS							\
 	uint32_t	pc_acpi_id;		/* ACPI CPU id. */	\
-	struct pcpu_md	pc_md			/* MD fields. */
+	struct pcpu_md	pc_md;			/* MD fields. */	\
+	char		__pad[1265]
 
 #ifdef _KERNEL
 

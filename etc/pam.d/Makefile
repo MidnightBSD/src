@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/etc/pam.d/Makefile 195753 2009-07-18 16:29:40Z marcus $
+# $FreeBSD: release/10.0.0/etc/pam.d/Makefile 236281 2012-05-30 03:10:22Z miwi $
 
 NO_OBJ=
 
@@ -7,7 +7,6 @@ FILES=	README \
 	cron \
 	ftpd \
 	imap \
-	kde \
 	login \
 	other \
 	passwd pop3 \

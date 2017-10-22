@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/gdb/gdb_cons.c 235405 2012-05-13 17:04:46Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/gdb/gdb_cons.c 253604 2013-07-24 09:45:31Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -136,7 +136,7 @@ oktousecallout(void *data __unused)
 {
 	calloutok = 1;
 }
-SYSINIT(gdbhack, SI_SUB_RUN_SCHEDULER, SI_ORDER_MIDDLE, oktousecallout, NULL);
+SYSINIT(gdbhack, SI_SUB_LAST, SI_ORDER_MIDDLE, oktousecallout, NULL);
 
 static void
 gdb_cnputc(struct consdev *cp, int c)

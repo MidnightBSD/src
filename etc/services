@@ -16,7 +16,7 @@
 # Kerberos services are for Kerberos v4, and are unofficial.  Sites running
 # v5 should uncomment v5 entries and comment v4 entries.
 #
-# $FreeBSD: stable/9/etc/services 233772 2012-04-02 10:24:50Z ivoras $
+# $FreeBSD: release/10.0.0/etc/services 233506 2012-03-26 11:48:47Z ivoras $
 #	From: @(#)services	5.8 (Berkeley) 5/9/91
 #
 # WELL KNOWN PORT NUMBERS
@@ -795,7 +795,7 @@ alpes		463/udp
 kpasswd5	464/tcp	   # Kerberos (v5)
 kpasswd5	464/udp	   # Kerberos (v5)
 #PROBLEMS!==============================================================
-# IANA has offically assigned these two ports as ``kpasswd''
+# IANA has officially assigned these two ports as ``kpasswd''
 #kpasswd	464/tcp	   # Kerberos (v5)
 #kpasswd	464/udp	   # Kerberos (v5)
 #PROBLEMS!==============================================================
@@ -1275,8 +1275,8 @@ hcp-wismar      686/tcp    #Hardware Control Protocol Wismar
 hcp-wismar      686/udp    #Hardware Control Protocol Wismar
 asipregistry	687/tcp
 asipregistry	687/udp
-realm-rusd      688/tcp    #ApplianceWare managment protocol
-realm-rusd      688/udp    #ApplianceWare managment protocol
+realm-rusd      688/tcp    #ApplianceWare management protocol
+realm-rusd      688/udp    #ApplianceWare management protocol
 nmap            689/tcp
 nmap            689/udp
 vatp            690/tcp    #Velazquez Application Transfer Protocol
@@ -2394,7 +2394,7 @@ xdsxdm		6558/tcp
 xdsxdm		6558/udp
 sane-port	6566/tcp   #Scanner Access Now Easy (SANE) Control Port
 sane-port	6566/udp   #Scanner Access Now Easy (SANE) Control Port
-ircd		6667/tcp   #Internet Relay Chat (unoffical)
+ircd		6667/tcp   #Internet Relay Chat (unofficial)
 frc-hp		6704/sctp  #ForCES HP (High Priority) channel
 frc-mp		6705/sctp  #ForCES MP (Medium Priority) channel
 frc-lp		6706/sctp  #ForCES LP (Low priority) channel

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.bin/atm/sscop/Makefile 201386 2010-01-02 10:27:05Z ed $
+# $FreeBSD: release/10.0.0/usr.bin/atm/sscop/Makefile 201386 2010-01-02 10:27:05Z ed $
 
 CONTRIB= ${.CURDIR}/../../../contrib/ngatm/sscop
 

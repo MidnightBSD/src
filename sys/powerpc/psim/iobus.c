@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/psim/iobus.c 183882 2008-10-14 14:54:14Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/powerpc/psim/iobus.c 183882 2008-10-14 14:54:14Z nwhitehorn $
  */
 
 /*

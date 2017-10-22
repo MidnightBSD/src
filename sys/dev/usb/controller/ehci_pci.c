@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ehci_pci.c 238134 2012-07-05 15:35:59Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/controller/ehci_pci.c 254438 2013-08-17 06:29:45Z hselasky $");
 
 /*
  * USB Enhanced Host Controller Driver, a.k.a. USB 2.0 controller.
@@ -165,7 +165,7 @@ ehci_pci_match(device_t self)
 	case 0x00e810de:
 		return "NVIDIA nForce3 250 USB 2.0 controller";
 	case 0x005b10de:
-		return "NVIDIA nForce4 USB 2.0 controller";
+		return "NVIDIA nForce CK804 USB 2.0 controller";
 	case 0x036d10de:
 		return "NVIDIA nForce MCP55 USB 2.0 controller";
 	case 0x03f210de:

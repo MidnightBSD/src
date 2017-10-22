@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)route.h	8.4 (Berkeley) 1/9/95
- * $FreeBSD: stable/9/sys/net/route.h 248895 2013-03-29 16:24:20Z melifaro $
+ * $FreeBSD: release/10.0.0/sys/net/route.h 252184 2013-06-25 00:10:49Z qingli $
  */
 
 #ifndef _NET_ROUTE_H_
@@ -184,6 +184,9 @@ struct ortentry {
 #define	RTF_STICKY	 0x10000000	/* always route dst->src */
 
 #define	RTF_RNH_LOCKED	 0x40000000	/* radix node head is locked */
+
+#define	RTF_GWFLAG_COMPAT 0x80000000	/* a compatibility bit for interacting
+					   with existing routing apps */
 
 /* Mask of RTF flags that are allowed to be modified by RTM_CHANGE. */
 #define RTF_FMASK	\

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/examples/ses/getencstat/Makefile 153291 2005-12-10 12:09:54Z ru $
+# $FreeBSD: release/10.0.0/share/examples/ses/getencstat/Makefile 153291 2005-12-10 12:09:54Z ru $
 #
 # Copyright (c) 2000 by Matthew Jacob
 # All rights reserved.

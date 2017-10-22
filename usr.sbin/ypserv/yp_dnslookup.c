@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/ypserv/yp_dnslookup.c 146446 2005-05-20 13:04:10Z charnier $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ypserv/yp_dnslookup.c 253350 2013-07-15 05:09:13Z hrs $");
 
 /*
  * Do standard and reverse DNS lookups using the resolver library.
@@ -456,7 +456,7 @@ yp_async_lookup_name(struct svc_req *rqstp, char *name, int af)
 	pending++;
 
 	if (debug)
-		yp_error("queueing async DNS name lookup (%d)", q->id);
+		yp_error("queueing async DNS name lookup (%lu)", q->id);
 
 	yp_prune_dnsq();
 	return(YP_TRUE);
@@ -544,7 +544,7 @@ yp_async_lookup_addr(struct svc_req *rqstp, char *addr, int af)
 	pending++;
 
 	if (debug)
-		yp_error("queueing async DNS address lookup (%d)", q->id);
+		yp_error("queueing async DNS address lookup (%lu)", q->id);
 
 	yp_prune_dnsq();
 	return(YP_TRUE);

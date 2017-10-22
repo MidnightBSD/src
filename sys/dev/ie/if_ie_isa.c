@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ie/if_ie_isa.c 181134 2008-08-01 21:33:07Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ie/if_ie_isa.c 241066 2012-09-30 09:21:10Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -875,6 +875,7 @@ ie_modevent (mod, what, arg)
 		devclass_get_devices(ie_devclass, &devs, &count);
 		for (i = 0; i < count; i++)
 			device_delete_child(device_get_parent(devs[i]), devs[i]);
+		free(devs, M_TEMP);
 		break;
 	default:
 		break;

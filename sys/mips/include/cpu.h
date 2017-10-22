@@ -41,7 +41,7 @@
  *
  *	from: @(#)cpu.h	8.4 (Berkeley) 1/4/94
  *	JNPR: cpu.h,v 1.9.2.2 2007/09/10 08:23:46 girish
- * $FreeBSD: stable/9/sys/mips/include/cpu.h 210158 2010-07-16 06:09:51Z imp $
+ * $FreeBSD: release/10.0.0/sys/mips/include/cpu.h 253750 2013-07-28 18:44:17Z avg $
  */
 
 #ifndef _MACHINE_CPU_H_
@@ -50,11 +50,6 @@
 #include <machine/endian.h>
 
 /* BEGIN: these are going away */
-
-#define	SR_KSU_MASK		0x00000018
-#define	SR_KSU_USER		0x00000010
-#define	SR_KSU_SUPER		0x00000008
-#define	SR_KSU_KERNEL		0x00000000
 
 #define	soft_int_mask(softintr)	(1 << ((softintr) + 8))
 #define	hard_int_mask(hardintr)	(1 << ((hardintr) + 10))
@@ -69,7 +64,7 @@
 #include <machine/cpufunc.h>
 #include <machine/frame.h>
 
-#define	TRAPF_USERMODE(framep)  (((framep)->sr & SR_KSU_USER) != 0)
+#define	TRAPF_USERMODE(framep)  (((framep)->sr & MIPS_SR_KSU_USER) != 0)
 #define	TRAPF_PC(framep)	((framep)->pc)
 #define	cpu_getstack(td)	((td)->td_frame->sp)
 #define	cpu_setstack(td, nsp)	((td)->td_frame->sp = (nsp))

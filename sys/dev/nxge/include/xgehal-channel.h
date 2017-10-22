@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/nxge/include/xgehal-channel.h 173139 2007-10-29 14:19:32Z rwatson $
+ * $FreeBSD: release/10.0.0/sys/dev/nxge/include/xgehal-channel.h 230133 2012-01-15 13:23:33Z uqs $
  */
 
 #ifndef XGE_HAL_CHANNEL_H
@@ -139,7 +139,7 @@ typedef enum xge_hal_channel_reopen_e {
  * Channel callback gets called by HAL if, and only if, there is at least
  * one new completion on a given ring or fifo channel. Upon processing the
  * first @dtrh ULD is _supposed_ to continue consuming completions
- * usingáone of the following HAL APIs:
+ * using one of the following HAL APIs:
  *    - xge_hal_fifo_dtr_next_completed()
  *      or
  *    - xge_hal_ring_dtr_next_completed().

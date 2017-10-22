@@ -1,7 +1,7 @@
 #	@(#)Makefile	8.8 (Berkeley) 6/21/2000
 #
 # $TSHeader: src/sbin/growfs/Makefile,v 1.4 2000/12/05 19:45:24 tomsoft Exp $
-# $FreeBSD: stable/9/sbin/growfs/Makefile 237501 2012-06-23 19:15:12Z trasz $
+# $FreeBSD: release/10.0.0/sbin/growfs/Makefile 234846 2012-04-30 16:08:02Z trasz $
 #
 
 #GFSDBG=

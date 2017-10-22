@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sys/net/if_gif.h 207369 2010-04-29 11:52:42Z bz $	*/
+/*	$FreeBSD: release/10.0.0/sys/net/if_gif.h 249925 2013-04-26 12:50:32Z glebius $	*/
 /*	$KAME: if_gif.h,v 1.17 2000/09/11 11:36:41 sumikawa Exp $	*/
 
 /*-
@@ -112,7 +112,7 @@ struct etherip_header {
 
 /* Prototypes */
 void gif_input(struct mbuf *, int, struct ifnet *);
-int gif_output(struct ifnet *, struct mbuf *, struct sockaddr *,
+int gif_output(struct ifnet *, struct mbuf *, const struct sockaddr *,
 	       struct route *);
 int gif_ioctl(struct ifnet *, u_long, caddr_t);
 int gif_set_tunnel(struct ifnet *, struct sockaddr *, struct sockaddr *);

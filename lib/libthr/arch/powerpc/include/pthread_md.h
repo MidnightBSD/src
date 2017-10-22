@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/arch/powerpc/include/pthread_md.h 211773 2010-08-24 20:50:08Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/lib/libthr/arch/powerpc/include/pthread_md.h 211773 2010-08-24 20:50:08Z nwhitehorn $
  */
 
 /*

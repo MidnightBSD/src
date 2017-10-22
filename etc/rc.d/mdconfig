@@ -24,11 +24,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/etc/rc.d/mdconfig 208307 2010-05-19 19:03:19Z dougb $
+# $FreeBSD: release/10.0.0/etc/rc.d/mdconfig 252310 2013-06-27 18:28:45Z hrs $
 #
 
 # PROVIDE: mdconfig
-# REQUIRE: localswap root
+# REQUIRE: swap root
 
 . /etc/rc.subr
 

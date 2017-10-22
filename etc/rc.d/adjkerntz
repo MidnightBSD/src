@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/rc.d/adjkerntz 180563 2008-07-16 19:22:48Z dougb $
+# $FreeBSD: release/10.0.0/etc/rc.d/adjkerntz 239570 2012-08-22 18:49:02Z obrien $
 #
 
 # PROVIDE: adjkerntz
-# REQUIRE: FILESYSTEMS random
+# REQUIRE: FILESYSTEMS postrandom
 # BEFORE: netif
 # KEYWORD: nojail
 

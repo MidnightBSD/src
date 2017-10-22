@@ -1,4 +1,4 @@
-#	$FreeBSD: stable/9/sbin/ipf/Makefile.inc 229176 2012-01-01 17:37:17Z dim $
+#	$FreeBSD: release/10.0.0/sbin/ipf/Makefile.inc 228612 2011-12-17 00:54:09Z dim $
 
 WARNS?=		2
 NO_WFORMAT=

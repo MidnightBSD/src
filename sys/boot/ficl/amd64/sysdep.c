@@ -7,7 +7,7 @@
 **
 *******************************************************************/
 
-/* $FreeBSD: stable/9/sys/boot/ficl/amd64/sysdep.c 223695 2011-06-30 16:08:56Z dfr $ */
+/* $FreeBSD: release/10.0.0/sys/boot/ficl/amd64/sysdep.c 223695 2011-06-30 16:08:56Z dfr $ */
 
 #ifdef TESTMAIN
 #include <stdio.h>

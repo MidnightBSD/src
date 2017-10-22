@@ -1,4 +1,4 @@
-/* $OpenBSD: sftp-server.c,v 1.94 2011/06/17 21:46:16 djm Exp $ */
+/* $OpenBSD: sftp-server.c,v 1.97 2013/05/17 00:13:14 djm Exp $ */
 /*
  * Copyright (c) 2000-2004 Markus Friedl.  All rights reserved.
  *
@@ -319,11 +319,11 @@ handle_close(int handle)
 
 	if (handle_is_ok(handle, HANDLE_FILE)) {
 		ret = close(handles[handle].fd);
-		xfree(handles[handle].name);
+		free(handles[handle].name);
 		handle_unused(handle);
 	} else if (handle_is_ok(handle, HANDLE_DIR)) {
 		ret = closedir(handles[handle].dirp);
-		xfree(handles[handle].name);
+		free(handles[handle].name);
 		handle_unused(handle);
 	} else {
 		errno = ENOENT;
@@ -367,7 +367,7 @@ get_handle(void)
 	handle = get_string(&hlen);
 	if (hlen < 256)
 		val = handle_from_string(handle, hlen);
-	xfree(handle);
+	free(handle);
 	return val;
 }
 
@@ -450,7 +450,7 @@ send_handle(u_int32_t id, int handle)
 	handle_to_string(handle, &string, &hlen);
 	debug("request %u: sent handle handle %d", id, handle);
 	send_data_or_handle(SSH2_FXP_HANDLE, id, string, hlen);
-	xfree(string);
+	free(string);
 }
 
 static void
@@ -578,7 +578,7 @@ process_open(void)
 	}
 	if (status != SSH2_FX_OK)
 		send_status(id, status);
-	xfree(name);
+	free(name);
 }
 
 static void
@@ -679,7 +679,7 @@ process_write(void)
 		}
 	}
 	send_status(id, status);
-	xfree(data);
+	free(data);
 }
 
 static void
@@ -705,7 +705,7 @@ process_do_stat(int do_lstat)
 	}
 	if (status != SSH2_FX_OK)
 		send_status(id, status);
-	xfree(name);
+	free(name);
 }
 
 static void
@@ -807,7 +807,7 @@ process_setstat(void)
 			status = errno_to_portable(errno);
 	}
 	send_status(id, status);
-	xfree(name);
+	free(name);
 }
 
 static void
@@ -904,7 +904,7 @@ process_opendir(void)
 	}
 	if (status != SSH2_FX_OK)
 		send_status(id, status);
-	xfree(path);
+	free(path);
 }
 
 static void
@@ -953,13 +953,13 @@ process_readdir(void)
 		if (count > 0) {
 			send_names(id, count, stats);
 			for (i = 0; i < count; i++) {
-				xfree(stats[i].name);
-				xfree(stats[i].long_name);
+				free(stats[i].name);
+				free(stats[i].long_name);
 			}
 		} else {
 			send_status(id, SSH2_FX_EOF);
 		}
-		xfree(stats);
+		free(stats);
 	}
 }
 
@@ -982,7 +982,7 @@ process_remove(void)
 		status = (ret == -1) ? errno_to_portable(errno) : SSH2_FX_OK;
 	}
 	send_status(id, status);
-	xfree(name);
+	free(name);
 }
 
 static void
@@ -1007,7 +1007,7 @@ process_mkdir(void)
 		status = (ret == -1) ? errno_to_portable(errno) : SSH2_FX_OK;
 	}
 	send_status(id, status);
-	xfree(name);
+	free(name);
 }
 
 static void
@@ -1028,7 +1028,7 @@ process_rmdir(void)
 		status = (ret == -1) ? errno_to_portable(errno) : SSH2_FX_OK;
 	}
 	send_status(id, status);
-	xfree(name);
+	free(name);
 }
 
 static void
@@ -1041,7 +1041,7 @@ process_realpath(void)
 	id = get_int();
 	path = get_string(NULL);
 	if (path[0] == '\0') {
-		xfree(path);
+		free(path);
 		path = xstrdup(".");
 	}
 	debug3("request %u: realpath", id);
@@ -1054,7 +1054,7 @@ process_realpath(void)
 		s.name = s.long_name = resolvedname;
 		send_names(id, 1, &s);
 	}
-	xfree(path);
+	free(path);
 }
 
 static void
@@ -1115,8 +1115,8 @@ process_rename(void)
 			status = SSH2_FX_OK;
 	}
 	send_status(id, status);
-	xfree(oldpath);
-	xfree(newpath);
+	free(oldpath);
+	free(newpath);
 }
 
 static void
@@ -1141,7 +1141,7 @@ process_readlink(void)
 		s.name = s.long_name = buf;
 		send_names(id, 1, &s);
 	}
-	xfree(path);
+	free(path);
 }
 
 static void
@@ -1164,8 +1164,8 @@ process_symlink(void)
 		status = (ret == -1) ? errno_to_portable(errno) : SSH2_FX_OK;
 	}
 	send_status(id, status);
-	xfree(oldpath);
-	xfree(newpath);
+	free(oldpath);
+	free(newpath);
 }
 
 static void
@@ -1185,8 +1185,8 @@ process_extended_posix_rename(u_int32_t id)
 		status = (ret == -1) ? errno_to_portable(errno) : SSH2_FX_OK;
 	}
 	send_status(id, status);
-	xfree(oldpath);
-	xfree(newpath);
+	free(oldpath);
+	free(newpath);
 }
 
 static void
@@ -1203,7 +1203,7 @@ process_extended_statvfs(u_int32_t id)
 		send_status(id, errno_to_portable(errno));
 	else
 		send_statvfs(id, &st);
-        xfree(path);
+        free(path);
 }
 
 static void
@@ -1242,8 +1242,8 @@ process_extended_hardlink(u_int32_t id)
 		status = (ret == -1) ? errno_to_portable(errno) : SSH2_FX_OK;
 	}
 	send_status(id, status);
-	xfree(oldpath);
-	xfree(newpath);
+	free(oldpath);
+	free(newpath);
 }
 
 static void
@@ -1264,7 +1264,7 @@ process_extended(void)
 		process_extended_hardlink(id);
 	else
 		send_status(id, SSH2_FX_OP_UNSUPPORTED);	/* MUST */
-	xfree(request);
+	free(request);
 }
 
 /* stolen from ssh-agent */
@@ -1390,7 +1390,8 @@ sftp_server_usage(void)
 	extern char *__progname;
 
 	fprintf(stderr,
-	    "usage: %s [-ehR] [-f log_facility] [-l log_level] [-u umask]\n",
+	    "usage: %s [-ehR] [-d start_directory] [-f log_facility] "
+	    "[-l log_level]\n\t[-u umask]\n",
 	    __progname);
 	exit(1);
 }
@@ -1402,7 +1403,7 @@ sftp_server_main(int argc, char **argv, struct passwd *user_pw)
 	int in, out, max, ch, skipargs = 0, log_stderr = 0;
 	ssize_t len, olen, set_size;
 	SyslogFacility log_facility = SYSLOG_FACILITY_AUTH;
-	char *cp, buf[4*4096];
+	char *cp, *homedir = NULL, buf[4*4096];
 	long mask;
 
 	extern char *optarg;
@@ -1411,7 +1412,9 @@ sftp_server_main(int argc, char **argv, struct passwd *user_pw)
 	__progname = ssh_get_progname(argv[0]);
 	log_init(__progname, log_level, log_facility, log_stderr);
 
-	while (!skipargs && (ch = getopt(argc, argv, "f:l:u:cehR")) != -1) {
+	pw = pwcopy(user_pw);
+
+	while (!skipargs && (ch = getopt(argc, argv, "d:f:l:u:cehR")) != -1) {
 		switch (ch) {
 		case 'R':
 			readonly = 1;
@@ -1435,6 +1438,12 @@ sftp_server_main(int argc, char **argv, struct passwd *user_pw)
 			log_facility = log_facility_number(optarg);
 			if (log_facility == SYSLOG_FACILITY_NOT_SET)
 				error("Invalid log facility \"%s\"", optarg);
+			break;
+		case 'd':
+			cp = tilde_expand_filename(optarg, user_pw->pw_uid);
+			homedir = percent_expand(cp, "d", user_pw->pw_dir,
+			    "u", user_pw->pw_name, (char *)NULL);
+			free(cp);
 			break;
 		case 'u':
 			errno = 0;
@@ -1463,8 +1472,6 @@ sftp_server_main(int argc, char **argv, struct passwd *user_pw)
 	} else
 		client_addr = xstrdup("UNKNOWN");
 
-	pw = pwcopy(user_pw);
-
 	logit("session opened for local user %s from [%s]",
 	    pw->pw_name, client_addr);
 
@@ -1488,6 +1495,13 @@ sftp_server_main(int argc, char **argv, struct passwd *user_pw)
 	set_size = howmany(max + 1, NFDBITS) * sizeof(fd_mask);
 	rset = (fd_set *)xmalloc(set_size);
 	wset = (fd_set *)xmalloc(set_size);
+
+	if (homedir != NULL) {
+		if (chdir(homedir) != 0) {
+			error("chdir to \"%s\" failed: %s", homedir,
+			    strerror(errno));
+		}
+	}
 
 	for (;;) {
 		memset(rset, 0, set_size);

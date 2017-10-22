@@ -1,7 +1,15 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: stable/9/share/man/man1/Makefile 163029 2006-10-05 12:40:44Z ru $
+# $FreeBSD: release/10.0.0/share/man/man1/Makefile 241823 2012-10-22 01:18:41Z marcel $
+
+.include <bsd.own.mk>
 
 MAN=	builtin.1 intro.1
+
+.if ${MK_ATF} != "no"
+ATF=	${.CURDIR}/../../../contrib/atf
+.PATH:	${ATF}/doc
+MAN+=	atf-test-program.1
+.endif
 
 # Create MLINKS for Shell built in commands for which there are no userland
 # utilities of the same name:

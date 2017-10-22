@@ -27,7 +27,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/sbin/fsck/fsck.8 210933 2010-08-06 14:33:42Z joel $
+.\" $FreeBSD: release/10.0.0/sbin/fsck/fsck.8 226711 2011-10-25 01:46:42Z sobomax $
 .\"
 .Dd January 25, 2009
 .Dt FSCK 8
@@ -41,6 +41,7 @@
 .Op Fl B | F
 .Op Fl T Ar fstype : Ns Ar fsoptions
 .Op Fl t Ar fstype
+.Op Fl c Ar fstab
 .Oo Ar special | node Oc ...
 .Sh DESCRIPTION
 The
@@ -117,6 +118,10 @@ Check if the
 .Dq clean
 flag is set in the superblock and skip file system checks if file system was
 properly dismounted and marked clean.
+.It Fl c Ar fstab
+Specify the
+.Pa fstab
+file to use.
 .It Fl d
 Debugging mode.
 Just print the commands without executing them.

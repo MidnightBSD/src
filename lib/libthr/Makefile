@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libthr/Makefile 213541 2010-10-08 01:53:33Z davidxu $
+# $FreeBSD: release/10.0.0/lib/libthr/Makefile 213541 2010-10-08 01:53:33Z davidxu $
 #
 # All library objects contain FreeBSD revision strings by default; they may be
 # excluded as a space-saving measure.  To produce a library that does

@@ -1,0 +1,6 @@
+# $FreeBSD: release/10.0.0/sys/mips/beri/std.beri 257528 2013-11-01 21:17:45Z brooks $
+files	"../beri/files.beri"
+
+cpu		CPU_MIPS4KC
+
+options 	BERI_LARGE_TLB

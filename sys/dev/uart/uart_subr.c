@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/uart/uart_subr.c 215034 2010-11-09 10:59:09Z brucec $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_subr.c 252394 2013-06-29 23:48:08Z ray $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,17 +52,21 @@ static struct uart_class *uart_classes[] = {
 	&uart_ns8250_class,
 	&uart_sab82532_class,
 	&uart_z8530_class,
+#if defined(__arm__)
+	&uart_lpc_class,
+	&uart_s3c2410_class,
+#endif
 };
 static size_t uart_nclasses = sizeof(uart_classes) / sizeof(uart_classes[0]);
 
 static bus_addr_t
-uart_parse_addr(__const char **p)
+uart_parse_addr(const char **p)
 {
 	return (strtoul(*p, (char**)(uintptr_t)p, 0));
 }
 
 static struct uart_class *
-uart_parse_class(struct uart_class *class, __const char **p)
+uart_parse_class(struct uart_class *class, const char **p)
 {
 	struct uart_class *uc;
 	const char *nm;
@@ -84,13 +88,13 @@ uart_parse_class(struct uart_class *class, __const char **p)
 }
 
 static long
-uart_parse_long(__const char **p)
+uart_parse_long(const char **p)
 {
 	return (strtol(*p, (char**)(uintptr_t)p, 0));
 }
 
 static int
-uart_parse_parity(__const char **p)
+uart_parse_parity(const char **p)
 {
 	if (!strncmp(*p, "even", 4)) {
 		*p += 4;
@@ -116,7 +120,7 @@ uart_parse_parity(__const char **p)
 }
 
 static int
-uart_parse_tag(__const char **p)
+uart_parse_tag(const char **p)
 {
 	int tag;
 
@@ -192,7 +196,7 @@ out:
 int
 uart_getenv(int devtype, struct uart_devinfo *di, struct uart_class *class)
 {
-	__const char *spec;
+	const char *spec;
 	bus_addr_t addr = ~0U;
 	int error;
 

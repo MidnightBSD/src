@@ -1,0 +1,15 @@
+/*
+ * $FreeBSD: release/10.0.0/tools/tools/shlib-compat/test/libtest2/Symbol.map 248693 2013-03-25 00:31:14Z gleb $
+ */
+
+TEST_1.0 {
+	func2;
+	func3;
+	func4;
+	func5;
+	func6;
+};
+
+TEST_1.1 {
+	func1;
+};

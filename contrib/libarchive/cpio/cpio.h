@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/contrib/libarchive/cpio/cpio.h 229592 2012-01-05 12:06:54Z mm $
+ * $FreeBSD: release/10.0.0/contrib/libarchive/cpio/cpio.h 248616 2013-03-22 13:36:03Z mm $
  */
 
 #ifndef CPIO_H_INCLUDED
@@ -30,8 +30,6 @@
 
 #include "cpio_platform.h"
 #include <stdio.h>
-
-#include "matching.h"
 
 /*
  * The internal state for the "cpio" program.
@@ -43,18 +41,19 @@
  */
 struct cpio {
 	/* Option parsing */
-	const char	 *optarg;
+	const char	 *argument;
 
 	/* Options */
+	int		  add_filter; /* --uuencode */
 	const char	 *filename;
-	char		  mode; /* -i -o -p */
-	char		  compress; /* -j, -y, or -z */
+	int		  mode; /* -i -o -p */
+	int		  compress; /* -j, -y, or -z */
 	const char	 *format; /* -H format */
 	int		  bytes_per_block; /* -b block_size */
 	int		  verbose;   /* -v */
+	int		  dot;  /* -V */
 	int		  quiet;   /* --quiet */
 	int		  extract_flags; /* Flags for extract operation */
-	char		  symlink_mode; /* H or L, per BSD conventions */
 	const char	 *compress_program;
 	int		  option_append; /* -A, only relevant for -o */
 	int		  option_atime_restore; /* -a */
@@ -88,7 +87,7 @@ struct cpio {
 	struct name_cache *gname_cache;
 
 	/* Work data. */
-	struct lafe_matching  *matching;
+	struct archive   *matching;
 	char		 *buff;
 	size_t		  buff_size;
 };
@@ -98,11 +97,16 @@ const char *owner_parse(const char *, int *, int *);
 
 /* Fake short equivalents for long options that otherwise lack them. */
 enum {
-	OPTION_INSECURE = 1,
+	OPTION_B64ENCODE = 1,
+	OPTION_GRZIP,
+	OPTION_INSECURE,
+	OPTION_LRZIP,
 	OPTION_LZMA,
+	OPTION_LZOP,
 	OPTION_NO_PRESERVE_OWNER,
 	OPTION_PRESERVE_OWNER,
 	OPTION_QUIET,
+	OPTION_UUENCODE,
 	OPTION_VERSION
 };
 

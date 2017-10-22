@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/x86/acpica/madt.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/x86/acpica/madt.c 256073 2013-10-05 23:11:01Z gibbs $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -575,4 +575,4 @@ madt_set_ids(void *dummy)
 			    la->la_acpi_id);
 	}
 }
-SYSINIT(madt_set_ids, SI_SUB_CPU, SI_ORDER_ANY, madt_set_ids, NULL);
+SYSINIT(madt_set_ids, SI_SUB_CPU, SI_ORDER_MIDDLE, madt_set_ids, NULL);

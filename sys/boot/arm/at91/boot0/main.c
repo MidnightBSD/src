@@ -21,7 +21,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/boot/arm/at91/boot0/main.c 157926 2006-04-21 07:45:57Z imp $
+ * $FreeBSD: release/10.0.0/sys/boot/arm/at91/boot0/main.c 157926 2006-04-21 07:45:57Z imp $
  */
 
 #include "at91rm9200.h"

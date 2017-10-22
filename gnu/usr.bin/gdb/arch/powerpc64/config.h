@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/gnu/usr.bin/gdb/arch/powerpc64/config.h 209867 2010-07-10 02:29:22Z nwhitehorn $ */
+/* $FreeBSD: release/10.0.0/gnu/usr.bin/gdb/arch/powerpc64/config.h 251512 2013-06-07 21:40:02Z emaste $ */
 
 /* config.h.  Generated automatically by configure.  */
 /* config.in.  Generated automatically from configure.in by autoheader.  */
@@ -438,9 +438,6 @@
 
 /* Name of this package.  */
 #define PACKAGE "gdb"
-
-/* Global directory for separate debug files.  */
-#define DEBUGDIR "/usr/local/lib/debug"
 
 /* Define to BFD's default architecture.  */
 #define DEFAULT_BFD_ARCH bfd_rs6000_arch

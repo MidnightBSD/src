@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/subr_mbpool.c 170023 2007-05-27 17:38:36Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_mbpool.c 254842 2013-08-25 10:57:09Z andre $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/subr_mbpool.c 170023 2007-05-27 17:38:36Z 
 
 #include <machine/bus.h>
 
+#include <sys/mbuf.h>
 #include <sys/mbpool.h>
 
 MODULE_VERSION(libmbpool, 1);
@@ -282,10 +283,12 @@ mbp_free(struct mbpool *p, void *ptr)
 /*
  * Mbuf system external mbuf free routine
  */
-void
-mbp_ext_free(void *buf, void *arg)
+int
+mbp_ext_free(struct mbuf *m, void *buf, void *arg)
 {
 	mbp_free(arg, buf);
+
+	return (EXT_FREE_OK);
 }
 
 /*

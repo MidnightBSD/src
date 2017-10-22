@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)netstat.h	8.2 (Berkeley) 1/4/94
- * $FreeBSD: stable/9/usr.bin/netstat/netstat.h 217642 2011-01-20 15:22:01Z ume $
+ * $FreeBSD: release/10.0.0/usr.bin/netstat/netstat.h 253275 2013-07-12 17:11:30Z hrs $
  */
 
 #include <sys/cdefs.h>
@@ -60,6 +60,7 @@ extern int	af;	/* address family */
 extern int	live;	/* true if we are examining a live system */
 
 int	kread(u_long addr, void *buf, size_t size);
+int	kread_counters(u_long addr, void *buf, size_t size);
 const char *plural(uintmax_t);
 const char *plurales(uintmax_t);
 const char *pluralies(uintmax_t);
@@ -134,7 +135,7 @@ char	*atalk_print(struct sockaddr *, int);
 char	*atalk_print2(struct sockaddr *, struct sockaddr *, int);
 char	*ipx_print(struct sockaddr *);
 char	*ns_print(struct sockaddr *);
-void	routepr(u_long);
+void	routepr(u_long, int);
 
 void	ipxprotopr(u_long, const char *, int, int);
 void	spx_stats(u_long, const char *, int, int);

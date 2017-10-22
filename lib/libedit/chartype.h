@@ -32,7 +32,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libedit/chartype.h 220624 2011-04-14 15:42:15Z obrien $
+ * $FreeBSD: release/10.0.0/lib/libedit/chartype.h 220624 2011-04-14 15:42:15Z obrien $
  */
 
 #ifndef _h_chartype_f

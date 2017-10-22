@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/atm/atmconfig/atmconfig_device.c 133565 2004-08-12 12:31:43Z harti $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/atm/atmconfig/atmconfig_device.c 227081 2011-11-04 13:36:02Z ed $");
 
 #include "atmconfig.h"
 #include "atmconfig_device.h"
@@ -103,7 +103,7 @@ static struct atmhw_list atmhw_list;
 /*
  * Read ATM hardware table
  */
-const struct snmp_table atmhw_table = {
+static const struct snmp_table atmhw_table = {
 	OIDX_begemotAtmHWTable,
 	OIDX_begemotAtmIfTableLastChange, 2,
 	sizeof(struct atmhw),

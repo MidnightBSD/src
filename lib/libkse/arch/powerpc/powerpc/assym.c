@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libkse/arch/powerpc/powerpc/assym.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD: release/10.0.0/lib/libkse/arch/powerpc/powerpc/assym.c 172491 2007-10-09 13:42:34Z obrien $
  */
 
 /* Used to generate mcontext_t offsets */

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/cddl/compat/opensolaris/sys/cred.h 185029 2008-11-17 20:49:29Z pjd $
+ * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/cred.h 248571 2013-03-21 08:38:03Z mm $
  */
 
 #ifndef _OPENSOLARIS_SYS_CRED_H_
@@ -46,6 +46,7 @@ typedef struct ucred ucred_t;
 #define	kcred	(thread0.td_ucred)
 
 #define	crgetuid(cred)		((cred)->cr_uid)
+#define	crgetruid(cred)		((cred)->cr_ruid)
 #define	crgetgid(cred)		((cred)->cr_gid)
 #define	crgetgroups(cred)	((cred)->cr_groups)
 #define	crgetngroups(cred)	((cred)->cr_ngroups)

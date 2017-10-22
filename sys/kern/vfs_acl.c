@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/vfs_acl.c 246757 2013-02-13 10:16:58Z pluknet $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/vfs_acl.c 255219 2013-09-05 00:09:56Z pjd $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -327,16 +327,14 @@ int
 sys___acl_get_file(struct thread *td, struct __acl_get_file_args *uap)
 {
 	struct nameidata nd;
-	int vfslocked, error;
+	int error;
 
-	NDINIT(&nd, LOOKUP, MPSAFE|FOLLOW, UIO_USERSPACE, uap->path, td);
+	NDINIT(&nd, LOOKUP, FOLLOW, UIO_USERSPACE, uap->path, td);
 	error = namei(&nd);
-	vfslocked = NDHASGIANT(&nd);
 	if (error == 0) {
 		error = vacl_get_acl(td, nd.ni_vp, uap->type, uap->aclp);
 		NDFREE(&nd, 0);
 	}
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -347,16 +345,14 @@ int
 sys___acl_get_link(struct thread *td, struct __acl_get_link_args *uap)
 {
 	struct nameidata nd;
-	int vfslocked, error;
+	int error;
 
-	NDINIT(&nd, LOOKUP, MPSAFE|NOFOLLOW, UIO_USERSPACE, uap->path, td);
+	NDINIT(&nd, LOOKUP, NOFOLLOW, UIO_USERSPACE, uap->path, td);
 	error = namei(&nd);
-	vfslocked = NDHASGIANT(&nd);
 	if (error == 0) {
 		error = vacl_get_acl(td, nd.ni_vp, uap->type, uap->aclp);
 		NDFREE(&nd, 0);
 	}
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -367,16 +363,14 @@ int
 sys___acl_set_file(struct thread *td, struct __acl_set_file_args *uap)
 {
 	struct nameidata nd;
-	int vfslocked, error;
+	int error;
 
-	NDINIT(&nd, LOOKUP, MPSAFE|FOLLOW, UIO_USERSPACE, uap->path, td);
+	NDINIT(&nd, LOOKUP, FOLLOW, UIO_USERSPACE, uap->path, td);
 	error = namei(&nd);
-	vfslocked = NDHASGIANT(&nd);
 	if (error == 0) {
 		error = vacl_set_acl(td, nd.ni_vp, uap->type, uap->aclp);
 		NDFREE(&nd, 0);
 	}
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -387,16 +381,14 @@ int
 sys___acl_set_link(struct thread *td, struct __acl_set_link_args *uap)
 {
 	struct nameidata nd;
-	int vfslocked, error;
+	int error;
 
-	NDINIT(&nd, LOOKUP, MPSAFE|NOFOLLOW, UIO_USERSPACE, uap->path, td);
+	NDINIT(&nd, LOOKUP, NOFOLLOW, UIO_USERSPACE, uap->path, td);
 	error = namei(&nd);
-	vfslocked = NDHASGIANT(&nd);
 	if (error == 0) {
 		error = vacl_set_acl(td, nd.ni_vp, uap->type, uap->aclp);
 		NDFREE(&nd, 0);
 	}
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -407,14 +399,14 @@ int
 sys___acl_get_fd(struct thread *td, struct __acl_get_fd_args *uap)
 {
 	struct file *fp;
-	int vfslocked, error;
+	cap_rights_t rights;
+	int error;
 
-	error = getvnode(td->td_proc->p_fd, uap->filedes, CAP_ACL_GET, &fp);
+	error = getvnode(td->td_proc->p_fd, uap->filedes,
+	    cap_rights_init(&rights, CAP_ACL_GET), &fp);
 	if (error == 0) {
-		vfslocked = VFS_LOCK_GIANT(fp->f_vnode->v_mount);
 		error = vacl_get_acl(td, fp->f_vnode, uap->type, uap->aclp);
 		fdrop(fp, td);
-		VFS_UNLOCK_GIANT(vfslocked);
 	}
 	return (error);
 }
@@ -426,14 +418,14 @@ int
 sys___acl_set_fd(struct thread *td, struct __acl_set_fd_args *uap)
 {
 	struct file *fp;
-	int vfslocked, error;
+	cap_rights_t rights;
+	int error;
 
-	error = getvnode(td->td_proc->p_fd, uap->filedes, CAP_ACL_SET, &fp);
+	error = getvnode(td->td_proc->p_fd, uap->filedes,
+	    cap_rights_init(&rights, CAP_ACL_SET), &fp);
 	if (error == 0) {
-		vfslocked = VFS_LOCK_GIANT(fp->f_vnode->v_mount);
 		error = vacl_set_acl(td, fp->f_vnode, uap->type, uap->aclp);
 		fdrop(fp, td);
-		VFS_UNLOCK_GIANT(vfslocked);
 	}
 	return (error);
 }
@@ -445,16 +437,14 @@ int
 sys___acl_delete_file(struct thread *td, struct __acl_delete_file_args *uap)
 {
 	struct nameidata nd;
-	int vfslocked, error;
+	int error;
 
-	NDINIT(&nd, LOOKUP, MPSAFE|FOLLOW, UIO_USERSPACE, uap->path, td);
+	NDINIT(&nd, LOOKUP, FOLLOW, UIO_USERSPACE, uap->path, td);
 	error = namei(&nd);
-	vfslocked = NDHASGIANT(&nd);
 	if (error == 0) {
 		error = vacl_delete(td, nd.ni_vp, uap->type);
 		NDFREE(&nd, 0);
 	}
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -465,16 +455,14 @@ int
 sys___acl_delete_link(struct thread *td, struct __acl_delete_link_args *uap)
 {
 	struct nameidata nd;
-	int vfslocked, error;
+	int error;
 
-	NDINIT(&nd, LOOKUP, MPSAFE|NOFOLLOW, UIO_USERSPACE, uap->path, td);
+	NDINIT(&nd, LOOKUP, NOFOLLOW, UIO_USERSPACE, uap->path, td);
 	error = namei(&nd);
-	vfslocked = NDHASGIANT(&nd);
 	if (error == 0) {
 		error = vacl_delete(td, nd.ni_vp, uap->type);
 		NDFREE(&nd, 0);
 	}
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -485,15 +473,14 @@ int
 sys___acl_delete_fd(struct thread *td, struct __acl_delete_fd_args *uap)
 {
 	struct file *fp;
-	int vfslocked, error;
+	cap_rights_t rights;
+	int error;
 
-	error = getvnode(td->td_proc->p_fd, uap->filedes, CAP_ACL_DELETE,
-	    &fp);
+	error = getvnode(td->td_proc->p_fd, uap->filedes,
+	    cap_rights_init(&rights, CAP_ACL_DELETE), &fp);
 	if (error == 0) {
-		vfslocked = VFS_LOCK_GIANT(fp->f_vnode->v_mount);
 		error = vacl_delete(td, fp->f_vnode, uap->type);
 		fdrop(fp, td);
-		VFS_UNLOCK_GIANT(vfslocked);
 	}
 	return (error);
 }
@@ -505,16 +492,14 @@ int
 sys___acl_aclcheck_file(struct thread *td, struct __acl_aclcheck_file_args *uap)
 {
 	struct nameidata nd;
-	int vfslocked, error;
+	int error;
 
-	NDINIT(&nd, LOOKUP, MPSAFE|FOLLOW, UIO_USERSPACE, uap->path, td);
+	NDINIT(&nd, LOOKUP, FOLLOW, UIO_USERSPACE, uap->path, td);
 	error = namei(&nd);
-	vfslocked = NDHASGIANT(&nd);
 	if (error == 0) {
 		error = vacl_aclcheck(td, nd.ni_vp, uap->type, uap->aclp);
 		NDFREE(&nd, 0);
 	}
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -525,16 +510,14 @@ int
 sys___acl_aclcheck_link(struct thread *td, struct __acl_aclcheck_link_args *uap)
 {
 	struct nameidata nd;
-	int vfslocked, error;
+	int error;
 
-	NDINIT(&nd, LOOKUP, MPSAFE|NOFOLLOW, UIO_USERSPACE, uap->path, td);
+	NDINIT(&nd, LOOKUP, NOFOLLOW, UIO_USERSPACE, uap->path, td);
 	error = namei(&nd);
-	vfslocked = NDHASGIANT(&nd);
 	if (error == 0) {
 		error = vacl_aclcheck(td, nd.ni_vp, uap->type, uap->aclp);
 		NDFREE(&nd, 0);
 	}
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -545,15 +528,14 @@ int
 sys___acl_aclcheck_fd(struct thread *td, struct __acl_aclcheck_fd_args *uap)
 {
 	struct file *fp;
-	int vfslocked, error;
+	cap_rights_t rights;
+	int error;
 
-	error = getvnode(td->td_proc->p_fd, uap->filedes, CAP_ACL_CHECK,
-	    &fp);
+	error = getvnode(td->td_proc->p_fd, uap->filedes,
+	    cap_rights_init(&rights, CAP_ACL_CHECK), &fp);
 	if (error == 0) {
-		vfslocked = VFS_LOCK_GIANT(fp->f_vnode->v_mount);
 		error = vacl_aclcheck(td, fp->f_vnode, uap->type, uap->aclp);
 		fdrop(fp, td);
-		VFS_UNLOCK_GIANT(vfslocked);
 	}
 	return (error);
 }
@@ -564,6 +546,9 @@ acl_alloc(int flags)
 	struct acl *aclp;
 
 	aclp = malloc(sizeof(*aclp), M_ACL, flags);
+	if (aclp == NULL)
+		return (NULL);
+
 	aclp->acl_maxcnt = ACL_MAX_ENTRIES;
 
 	return (aclp);

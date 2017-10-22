@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netsmb/smb_iod.c 206361 2010-04-07 16:50:38Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netsmb/smb_iod.c 243882 2012-12-05 08:04:20Z glebius $");
  
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -255,7 +255,7 @@ smb_iod_sendrq(struct smbiod *iod, struct smb_rq *rqp)
 	}
 	SMBSDEBUG("M:%04x, P:%04x, U:%04x, T:%04x\n", rqp->sr_mid, 0, 0, 0);
 	m_dumpm(rqp->sr_rq.mb_top);
-	m = m_copym(rqp->sr_rq.mb_top, 0, M_COPYALL, M_WAIT);
+	m = m_copym(rqp->sr_rq.mb_top, 0, M_COPYALL, M_WAITOK);
 	error = rqp->sr_lerror = SMB_TRAN_SEND(vcp, m, td);
 	if (error == 0) {
 		getnanotime(&rqp->sr_timesent);

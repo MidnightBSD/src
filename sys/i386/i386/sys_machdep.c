@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/i386/sys_machdep.c 231150 2012-02-07 19:23:08Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/i386/sys_machdep.c 255677 2013-09-18 19:26:08Z pjd $");
 
 #include "opt_capsicum.h"
 #include "opt_kstack_pages.h"
@@ -130,6 +130,10 @@ sysarch(td, uap)
 
 		case I386_SET_IOPERM:
 		default:
+#ifdef KTRACE
+			if (KTRPOINT(td, KTR_CAPFAIL))
+				ktrcapfail(CAPFAIL_SYSCALL, NULL, NULL);
+#endif
 			return (ECAPMODE);
 		}
 	}
@@ -160,8 +164,9 @@ sysarch(td, uap)
 		break;
 	case I386_SET_LDT:
 		if (kargs.largs.descs != NULL) {
-			lp = (union descriptor *)kmem_alloc(kernel_map,
-			    kargs.largs.num * sizeof(union descriptor));
+			lp = (union descriptor *)kmem_malloc(kernel_arena,
+			    kargs.largs.num * sizeof(union descriptor),
+			    M_WAITOK);
 			if (lp == NULL) {
 				error = ENOMEM;
 				break;
@@ -170,7 +175,7 @@ sysarch(td, uap)
 			    kargs.largs.num * sizeof(union descriptor));
 			if (error == 0)
 				error = i386_set_ldt(td, &kargs.largs, lp);
-			kmem_free(kernel_map, (vm_offset_t)lp,
+			kmem_free(kernel_arena, (vm_offset_t)lp,
 			    kargs.largs.num * sizeof(union descriptor));
 		} else {
 			error = i386_set_ldt(td, &kargs.largs, NULL);
@@ -294,7 +299,8 @@ i386_extend_pcb(struct thread *td)
 		0			/* granularity */
 	};
 
-	ext = (struct pcb_ext *)kmem_alloc(kernel_map, ctob(IOPAGES+1));
+	ext = (struct pcb_ext *)kmem_malloc(kernel_arena, ctob(IOPAGES+1),
+	    M_WAITOK);
 	if (ext == 0)
 		return (ENOMEM);
 	bzero(ext, sizeof(struct pcb_ext)); 
@@ -467,8 +473,8 @@ user_ldt_alloc(struct mdproc *mdp, int len)
                 M_SUBPROC, M_WAITOK); 
  
         new_ldt->ldt_len = len = NEW_MAX_LD(len); 
-        new_ldt->ldt_base = (caddr_t)kmem_alloc(kernel_map, 
-                round_page(len * sizeof(union descriptor))); 
+        new_ldt->ldt_base = (caddr_t)kmem_malloc(kernel_arena, 
+                round_page(len * sizeof(union descriptor)), M_WAITOK);
         if (new_ldt->ldt_base == NULL) { 
                 free(new_ldt, M_SUBPROC);
 		mtx_lock_spin(&dt_lock);
@@ -507,8 +513,8 @@ user_ldt_alloc(struct mdproc *mdp, int len)
 		M_SUBPROC, M_WAITOK);
 
 	new_ldt->ldt_len = len = NEW_MAX_LD(len);
-	new_ldt->ldt_base = (caddr_t)kmem_alloc(kernel_map,
-		len * sizeof(union descriptor));
+	new_ldt->ldt_base = (caddr_t)kmem_malloc(kernel_arena,
+		len * sizeof(union descriptor), M_WAITOK);
 	if (new_ldt->ldt_base == NULL) {
 		free(new_ldt, M_SUBPROC);
 		mtx_lock_spin(&dt_lock);
@@ -570,7 +576,7 @@ user_ldt_deref(struct proc_ldt *pldt)
 	mtx_assert(&dt_lock, MA_OWNED);
 	if (--pldt->ldt_refcnt == 0) {
 		mtx_unlock_spin(&dt_lock);
-		kmem_free(kernel_map, (vm_offset_t)pldt->ldt_base,
+		kmem_free(kernel_arena, (vm_offset_t)pldt->ldt_base,
 			pldt->ldt_len * sizeof(union descriptor));
 		free(pldt, M_SUBPROC);
 	} else
@@ -849,7 +855,7 @@ i386_ldt_grow(struct thread *td, int len)
 				 * free the new object and return.
 				 */
 				mtx_unlock_spin(&dt_lock);
-				kmem_free(kernel_map,
+				kmem_free(kernel_arena,
 				   (vm_offset_t)new_ldt->ldt_base,
 				   new_ldt->ldt_len * sizeof(union descriptor));
 				free(new_ldt, M_SUBPROC);
@@ -883,7 +889,7 @@ i386_ldt_grow(struct thread *td, int len)
 		mtx_unlock_spin(&dt_lock);
 #endif
 		if (old_ldt_base != NULL_LDT_BASE) {
-			kmem_free(kernel_map, (vm_offset_t)old_ldt_base,
+			kmem_free(kernel_arena, (vm_offset_t)old_ldt_base,
 			    old_ldt_len * sizeof(union descriptor));
 			free(new_ldt, M_SUBPROC);
 		}

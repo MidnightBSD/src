@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/mchain.h 230196 2012-01-16 05:15:13Z kevlo $
+ * $FreeBSD: release/10.0.0/sys/sys/mchain.h 227650 2011-11-18 03:05:20Z kevlo $
  */
 #ifndef _SYS_MCHAIN_H_
 #define _SYS_MCHAIN_H_

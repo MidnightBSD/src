@@ -1,3 +1,0 @@
-.\" $FreeBSD: stable/9/tools/build/options/WITHOUT_BIND_ETC 156932 2006-03-21 07:50:50Z ru $
-Set to avoid installing the default files to
-.Pa /var/named/etc/namedb .

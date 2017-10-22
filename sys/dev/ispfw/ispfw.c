@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ispfw/ispfw.c 204748 2010-03-05 03:37:42Z sobomax $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ispfw/ispfw.c 204748 2010-03-05 03:37:42Z sobomax $");
 
 #include <sys/param.h>
 #include <sys/firmware.h>

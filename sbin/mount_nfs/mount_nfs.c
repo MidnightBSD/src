@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)mount_nfs.c	8.11 (Berkeley) 5/4/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/mount_nfs/mount_nfs.c 229604 2012-01-05 17:22:32Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/mount_nfs/mount_nfs.c 247856 2013-03-05 22:41:35Z jkim $");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -130,7 +130,7 @@ enum tryret {
 	TRYRET_LOCALERR		/* Local failure. */
 };
 
-static int	fallback_mount(struct iovec *iov, int iovlen, int mntflags);
+static int	fallback_mount(struct iovec *iov, int iovlen);
 static int	sec_name_to_num(char *sec);
 static char	*sec_num_to_name(int num);
 static int	getnfsargs(char *, struct iovec **iov, int *iovlen);
@@ -149,13 +149,12 @@ main(int argc, char *argv[])
 {
 	int c;
 	struct iovec *iov;
-	int mntflags, num, iovlen;
+	int num, iovlen;
 	int osversion;
 	char *name, *p, *spec, *fstype;
 	char mntpath[MAXPATHLEN], errmsg[255];
 	char hostname[MAXHOSTNAMELEN + 1], *gssname, gssn[MAXHOSTNAMELEN + 50];
 
-	mntflags = 0;
 	iov = NULL;
 	iovlen = 0;
 	memset(errmsg, 0, sizeof(errmsg));
@@ -411,7 +410,8 @@ main(int argc, char *argv[])
 		exit(1);
 
 	/* resolve the mountpoint with realpath(3) */
-	(void)checkpath(name, mntpath);
+	if (checkpath(name, mntpath) != 0)
+		err(1, "%s", mntpath);
 
 	build_iovec(&iov, &iovlen, "fstype", fstype, (size_t)-1);
 	build_iovec(&iov, &iovlen, "fspath", mntpath, (size_t)-1);
@@ -426,10 +426,10 @@ main(int argc, char *argv[])
 	 */
 	osversion = getosreldate();
 	if (osversion >= 702100) {
-		if (nmount(iov, iovlen, mntflags))
+		if (nmount(iov, iovlen, 0))
 			err(1, "%s, %s", mntpath, errmsg);
 	} else {
-		if (fallback_mount(iov, iovlen, mntflags))
+		if (fallback_mount(iov, iovlen))
 			err(1, "%s, %s", mntpath, errmsg);
 	}
 
@@ -472,7 +472,7 @@ copyopt(struct iovec **newiov, int *newiovlen,
  *      parameters.  It should be eventually be removed.
  */
 static int
-fallback_mount(struct iovec *iov, int iovlen, int mntflags)
+fallback_mount(struct iovec *iov, int iovlen)
 {
 	struct nfs_args args = {
 	    .version = NFS_ARGSVERSION,
@@ -662,7 +662,7 @@ fallback_mount(struct iovec *iov, int iovlen, int mntflags)
 	copyopt(&newiov, &newiovlen, iov, iovlen, "fspath");
 	copyopt(&newiov, &newiovlen, iov, iovlen, "errmsg");
 
-	return nmount(newiov, newiovlen, mntflags);
+	return nmount(newiov, newiovlen, 0);
 }
 
 static int
@@ -788,7 +788,7 @@ getnfsargs(char *spec, struct iovec **iov, int *iovlen)
 	for (;;) {
 		/*
 		 * Try each entry returned by getaddrinfo(). Note the
-		 * occurence of remote errors by setting `remoteerr'.
+		 * occurrence of remote errors by setting `remoteerr'.
 		 */
 		remoteerr = 0;
 		for (ai = ai_nfs; ai != NULL; ai = ai->ai_next) {

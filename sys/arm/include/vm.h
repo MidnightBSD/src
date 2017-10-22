@@ -23,13 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/include/vm.h 195649 2009-07-12 23:31:20Z alc $
+ * $FreeBSD: release/10.0.0/sys/arm/include/vm.h 244414 2012-12-19 00:24:31Z cognet $
  */
 
 #ifndef _MACHINE_VM_H_
 #define	_MACHINE_VM_H_
 
-/* Memory attribute configuration is not (yet) implemented. */
+/* Memory attribute configuration. */
 #define	VM_MEMATTR_DEFAULT	0
+#define	VM_MEMATTR_UNCACHEABLE	1
 
 #endif /* !_MACHINE_VM_H_ */

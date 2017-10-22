@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/periodic/daily/220.backup-pkgdb 221475 2011-05-05 02:35:11Z dougb $
+# $FreeBSD: release/10.0.0/etc/periodic/daily/220.backup-pkgdb 226470 2011-10-17 14:33:41Z se $
 #
 
 # If there is a global system configuration file, suck it in.
@@ -25,7 +25,7 @@ case "$daily_backup_pkgdb_enable" in
 	then
 	    install -d -o root -g wheel -m 750 $bak || {
 		echo '$daily_backup_pkgdb_enable is enabled but' \
-		    "$daily_backup_pkgdb_dbdir doesn't exist" ;
+		    "$daily_backup_pkgdb_dir doesn't exist" ;
 		exit 2 ; }
 	fi
 

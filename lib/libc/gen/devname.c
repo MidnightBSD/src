@@ -31,12 +31,13 @@
 static char sccsid[] = "@(#)devname.c	8.2 (Berkeley) 4/29/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/devname.c 203290 2010-01-31 14:51:04Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/devname.c 225847 2011-09-28 18:53:36Z ed $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
 
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -60,8 +61,8 @@ devname_r(dev_t dev, mode_t type, char *buf, int len)
 	}
 
 	/* Finally just format it */
-	snprintf(buf, len, "#%c:%d:0x%x",
-	    S_ISCHR(type) ? 'C' : 'B', major(dev), minor(dev));
+	snprintf(buf, len, "#%c:%#jx",
+	    S_ISCHR(type) ? 'C' : 'B', (uintmax_t)dev);
 	return (buf);
 }
 

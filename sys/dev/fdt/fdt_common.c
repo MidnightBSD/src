@@ -28,13 +28,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/fdt/fdt_common.c 233015 2012-03-15 22:15:06Z raj $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/fdt/fdt_common.c 257457 2013-10-31 16:18:36Z brooks $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/bus.h>
+#include <sys/limits.h>
 
 #include <machine/fdt.h>
 #include <machine/resource.h>
@@ -62,14 +63,65 @@ vm_paddr_t fdt_immr_pa;
 vm_offset_t fdt_immr_va;
 vm_offset_t fdt_immr_size;
 
+struct fdt_ic_list fdt_ic_list_head = SLIST_HEAD_INITIALIZER(fdt_ic_list_head);
+
+int
+fdt_get_range(phandle_t node, int range_id, u_long *base, u_long *size)
+{
+	pcell_t ranges[6], *rangesptr;
+	pcell_t addr_cells, size_cells, par_addr_cells;
+	int len, tuple_size, tuples;
+
+	if ((fdt_addrsize_cells(node, &addr_cells, &size_cells)) != 0)
+		return (ENXIO);
+	/*
+	 * Process 'ranges' property.
+	 */
+	par_addr_cells = fdt_parent_addr_cells(node);
+	if (par_addr_cells > 2)
+		return (ERANGE);
+
+	len = OF_getproplen(node, "ranges");
+	if (len > sizeof(ranges))
+		return (ENOMEM);
+	if (len == 0) {
+		*base = 0;
+		*size = ULONG_MAX;
+		return (0);
+	}
+
+	if (!(range_id < len))
+		return (ERANGE);
+
+	if (OF_getprop(node, "ranges", ranges, sizeof(ranges)) <= 0)
+		return (EINVAL);
+
+	tuple_size = sizeof(pcell_t) * (addr_cells + par_addr_cells +
+	    size_cells);
+	tuples = len / tuple_size;
+
+	if (fdt_ranges_verify(ranges, tuples, par_addr_cells,
+	    addr_cells, size_cells)) {
+		return (ERANGE);
+	}
+	*base = 0;
+	*size = 0;
+	rangesptr = &ranges[range_id];
+
+	*base = fdt_data_get((void *)rangesptr, addr_cells);
+	rangesptr += addr_cells;
+	*base += fdt_data_get((void *)rangesptr, par_addr_cells);
+	rangesptr += par_addr_cells;
+	*size = fdt_data_get((void *)rangesptr, size_cells);
+	return (0);
+}
+
 int
 fdt_immr_addr(vm_offset_t immr_va)
 {
-	pcell_t ranges[6], *rangesptr;
 	phandle_t node;
 	u_long base, size;
-	pcell_t addr_cells, size_cells, par_addr_cells;
-	int len, tuple_size, tuples;
+	int r;
 
 	/*
 	 * Try to access the SOC node directly i.e. through /aliases/.
@@ -87,45 +139,13 @@ fdt_immr_addr(vm_offset_t immr_va)
 		return (ENXIO);
 
 moveon:
-	if ((fdt_addrsize_cells(node, &addr_cells, &size_cells)) != 0)
-		return (ENXIO);
-	/*
-	 * Process 'ranges' property.
-	 */
-	par_addr_cells = fdt_parent_addr_cells(node);
-	if (par_addr_cells > 2)
-		return (ERANGE);
-
-	len = OF_getproplen(node, "ranges");
-	if (len > sizeof(ranges))
-		return (ENOMEM);
-
-	if (OF_getprop(node, "ranges", ranges, sizeof(ranges)) <= 0)
-		return (EINVAL);
-
-	tuple_size = sizeof(pcell_t) * (addr_cells + par_addr_cells +
-	    size_cells);
-	tuples = len / tuple_size;
-
-	if (fdt_ranges_verify(ranges, tuples, par_addr_cells,
-	    addr_cells, size_cells)) {
-		return (ERANGE);
+	if ((r = fdt_get_range(node, 0, &base, &size)) == 0) {
+		fdt_immr_pa = base;
+		fdt_immr_va = immr_va;
+		fdt_immr_size = size;
 	}
-	base = 0;
-	size = 0;
-	rangesptr = &ranges[0];
 
-	base = fdt_data_get((void *)rangesptr, addr_cells);
-	rangesptr += addr_cells;
-	base += fdt_data_get((void *)rangesptr, par_addr_cells);
-	rangesptr += par_addr_cells;
-	size = fdt_data_get((void *)rangesptr, size_cells);
-
-	fdt_immr_pa = base;
-	fdt_immr_va = immr_va;
-	fdt_immr_size = size;
-
-	return (0);
+	return (r);
 }
 
 /*
@@ -401,16 +421,21 @@ fdt_regsize(phandle_t node, u_long *base, u_long *size)
 }
 
 int
-fdt_reg_to_rl(phandle_t node, struct resource_list *rl, u_long base)
+fdt_reg_to_rl(phandle_t node, struct resource_list *rl)
 {
-	u_long start, end, count;
+	u_long end, count, start;
 	pcell_t *reg, *regptr;
 	pcell_t addr_cells, size_cells;
 	int tuple_size, tuples;
 	int i, rv;
+	long busaddr, bussize;
 
 	if (fdt_addrsize_cells(OF_parent(node), &addr_cells, &size_cells) != 0)
 		return (ENXIO);
+	if (fdt_get_range(OF_parent(node), 0, &busaddr, &bussize)) {
+		busaddr = 0;
+		bussize = 0;
+	}
 
 	tuple_size = sizeof(pcell_t) * (addr_cells + size_cells);
 	tuples = OF_getprop_alloc(node, "reg", tuple_size, (void **)&reg);
@@ -432,8 +457,7 @@ fdt_reg_to_rl(phandle_t node, struct resource_list *rl, u_long base)
 		reg += addr_cells + size_cells;
 
 		/* Calculate address range relative to base. */
-		start &= 0x000ffffful;
-		start = base + start;
+		start += busaddr;
 		end = start + count - 1;
 
 		debugf("reg addr start = %lx, end = %lx, count = %lx\n", start,
@@ -502,7 +526,8 @@ fdt_intr_to_rl(phandle_t node, struct resource_list *rl,
 		debugf("no intr-cells defined, defaulting to 1\n");
 		intr_cells = 1;
 	}
-	intr_cells = fdt32_to_cpu(intr_cells);
+	else 
+		intr_cells = fdt32_to_cpu(intr_cells);
 
 	intr_num = OF_getprop_alloc(node, "interrupts",
 	    intr_cells * sizeof(pcell_t), (void **)&intr);
@@ -608,6 +633,66 @@ fdt_get_phyaddr(phandle_t node, device_t dev, int *phy_addr, void **phy_sc)
 }
 
 int
+fdt_get_reserved_regions(struct mem_region *mr, int *mrcnt)
+{
+	pcell_t reserve[FDT_REG_CELLS * FDT_MEM_REGIONS];
+	pcell_t *reservep;
+	phandle_t memory, root;
+	uint32_t memory_size;
+	int addr_cells, size_cells;
+	int i, max_size, res_len, rv, tuple_size, tuples;
+
+	max_size = sizeof(reserve);
+	root = OF_finddevice("/");
+	memory = OF_finddevice("/memory");
+	if (memory == -1) {
+		rv = ENXIO;
+		goto out;
+	}
+
+	if ((rv = fdt_addrsize_cells(OF_parent(memory), &addr_cells,
+	    &size_cells)) != 0)
+		goto out;
+
+	if (addr_cells > 2) {
+		rv = ERANGE;
+		goto out;
+	}
+
+	tuple_size = sizeof(pcell_t) * (addr_cells + size_cells);
+
+	res_len = OF_getproplen(root, "memreserve");
+	if (res_len <= 0 || res_len > sizeof(reserve)) {
+		rv = ERANGE;
+		goto out;
+	}
+
+	if (OF_getprop(root, "memreserve", reserve, res_len) <= 0) {
+		rv = ENXIO;
+		goto out;
+	}
+
+	memory_size = 0;
+	tuples = res_len / tuple_size;
+	reservep = (pcell_t *)&reserve;
+	for (i = 0; i < tuples; i++) {
+
+		rv = fdt_data_to_res(reservep, addr_cells, size_cells,
+			(u_long *)&mr[i].mr_start, (u_long *)&mr[i].mr_size);
+
+		if (rv != 0)
+			goto out;
+
+		reservep += addr_cells + size_cells;
+	}
+
+	*mrcnt = i;
+	rv = 0;
+out:
+	return (rv);
+}
+
+int
 fdt_get_mem_regions(struct mem_region *mr, int *mrcnt, uint32_t *memsize)
 {
 	pcell_t reg[FDT_REG_CELLS * FDT_MEM_REGIONS];
@@ -619,7 +704,7 @@ fdt_get_mem_regions(struct mem_region *mr, int *mrcnt, uint32_t *memsize)
 
 	max_size = sizeof(reg);
 	memory = OF_finddevice("/memory");
-	if (memory <= 0) {
+	if (memory == -1) {
 		rv = ENXIO;
 		goto out;
 	}
@@ -670,4 +755,15 @@ fdt_get_mem_regions(struct mem_region *mr, int *mrcnt, uint32_t *memsize)
 	rv = 0;
 out:
 	return (rv);
+}
+
+int
+fdt_get_unit(device_t dev)
+{
+	const char * name;
+
+	name = ofw_bus_get_name(dev);
+	name = strchr(name, '@') + 1;
+
+	return (strtol(name,NULL,0));
 }

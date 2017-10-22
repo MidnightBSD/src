@@ -71,7 +71,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/cache.c 230890 2012-02-01 21:19:52Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/cache.c 230633 2012-01-27 23:21:54Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

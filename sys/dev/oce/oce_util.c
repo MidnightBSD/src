@@ -1,5 +1,5 @@
 /*-
- * Copyright (C) 2012 Emulex
+ * Copyright (C) 2013 Emulex
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,9 +36,7 @@
  * Costa Mesa, CA 92626
  */
 
-
-/* $FreeBSD: stable/9/sys/dev/oce/oce_util.c 248062 2013-03-08 18:46:21Z delphij $ */
-
+/* $FreeBSD: release/10.0.0/sys/dev/oce/oce_util.c 257187 2013-10-26 19:02:39Z delphij $ */
 
 #include "oce_if.h"
 

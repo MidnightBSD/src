@@ -13,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/src/e_atanh.c 176451 2008-02-22 02:30:36Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/e_atanh.c 251599 2013-06-10 06:04:58Z das $");
 
 /* __ieee754_atanh(x)
  * Method :
@@ -32,6 +32,8 @@ __FBSDID("$FreeBSD: stable/9/lib/msun/src/e_atanh.c 176451 2008-02-22 02:30:36Z 
  *	atanh(+-1) is +-INF with signal.
  *
  */
+
+#include <float.h>
 
 #include "math.h"
 #include "math_private.h"
@@ -60,3 +62,7 @@ __ieee754_atanh(double x)
 	    t = 0.5*log1p((x+x)/(one-x));
 	if(hx>=0) return t; else return -t;
 }
+
+#if LDBL_MANT_DIG == 53
+__weak_reference(atanh, atanhl);
+#endif

@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)union_vfsops.c	8.20 (Berkeley) 5/20/95
- * $FreeBSD: stable/9/sys/fs/unionfs/union_vfsops.c 235243 2012-05-10 20:35:50Z daichi $
+ * $FreeBSD: release/10.0.0/sys/fs/unionfs/union_vfsops.c 242833 2012-11-09 18:02:25Z attilio $
  */
 
 #include <sys/param.h>
@@ -266,11 +266,6 @@ unionfs_domount(struct mount *mp)
 	ump->um_copymode = copymode;
 	ump->um_whitemode = whitemode;
 
-	MNT_ILOCK(mp);
-	if ((lowerrootvp->v_mount->mnt_kern_flag & MNTK_MPSAFE) &&
-	    (upperrootvp->v_mount->mnt_kern_flag & MNTK_MPSAFE))
-		mp->mnt_kern_flag |= MNTK_MPSAFE;
-	MNT_IUNLOCK(mp);
 	mp->mnt_data = ump;
 
 	/*
@@ -352,7 +347,7 @@ unionfs_unmount(struct mount *mp, int mntflags)
 		return (error);
 
 	free(ump, M_UNIONFSMNT);
-	mp->mnt_data = 0;
+	mp->mnt_data = NULL;
 
 	return (0);
 }

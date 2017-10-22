@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/x86/x86/msi.c 214631 2010-11-01 18:18:46Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/x86/x86/msi.c 214631 2010-11-01 18:18:46Z jhb $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

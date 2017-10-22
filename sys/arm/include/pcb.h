@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/include/pcb.h 235539 2012-05-17 10:25:34Z dim $
+ * $FreeBSD: release/10.0.0/sys/arm/include/pcb.h 254452 2013-08-17 14:53:53Z andrew $
  */
 
 #ifndef	_MACHINE_PCB_H_
@@ -80,7 +80,8 @@ struct pcb {
 #define PCB_NOALIGNFLT	0x00000002
 	caddr_t	pcb_onfault;			/* On fault handler */
 	struct	pcb_arm32 un_32;
-	struct	fpe_sp_state pcb_fpstate;	/* Floating Point state */
+	struct vfp_state pcb_vfpstate;          /* VP/NEON state */
+	u_int pcb_vfpcpu;                       /* VP/NEON last cpu */
 };
 
 /*

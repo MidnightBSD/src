@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/kldxref/ef_powerpc.c 153504 2005-12-18 04:52:37Z marcel $
+ * $FreeBSD: release/10.0.0/usr.sbin/kldxref/ef_powerpc.c 153504 2005-12-18 04:52:37Z marcel $
  */
 
 #include <sys/types.h>

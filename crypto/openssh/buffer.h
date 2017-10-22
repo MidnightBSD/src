@@ -1,5 +1,5 @@
-/* $OpenBSD: buffer.h,v 1.21 2010/08/31 11:54:45 djm Exp $ */
-/* $FreeBSD: stable/9/crypto/openssh/buffer.h 224640 2011-08-03 20:00:36Z brooks $ */
+/* $OpenBSD: buffer.h,v 1.22 2013/07/12 00:19:58 djm Exp $ */
+/* $FreeBSD: release/10.0.0/crypto/openssh/buffer.h 255767 2013-09-21 21:36:09Z des $ */
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -87,7 +87,7 @@ int	buffer_get_int64_ret(u_int64_t *, Buffer *);
 void	*buffer_get_string_ret(Buffer *, u_int *);
 char	*buffer_get_cstring_ret(Buffer *, u_int *);
 void	*buffer_get_string_ptr_ret(Buffer *, u_int *);
-int	buffer_get_char_ret(char *, Buffer *);
+int	buffer_get_char_ret(u_char *, Buffer *);
 
 #ifdef OPENSSL_HAS_ECC
 #include <openssl/ec.h>

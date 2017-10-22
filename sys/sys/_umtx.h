@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/_umtx.h 216641 2010-12-22 05:01:52Z davidxu $
+ * $FreeBSD: release/10.0.0/sys/sys/_umtx.h 232144 2012-02-25 02:12:17Z davidxu $
  *
  */
 
@@ -31,6 +31,7 @@
 #define	_SYS__UMTX_H_
 
 #include <sys/_types.h>
+#include <sys/_timespec.h>
 
 struct umtx {
 	volatile unsigned long	u_owner;	/* Owner of the mutex. */
@@ -62,6 +63,12 @@ struct _usem {
 	volatile __uint32_t	_has_waiters;
 	volatile __uint32_t	_count;
 	__uint32_t		_flags;
+};
+
+struct _umtx_time {
+	struct timespec		_timeout;
+	__uint32_t		_flags;
+	__uint32_t		_clockid;
 };
 
 #endif /* !_SYS__UMTX_H_ */

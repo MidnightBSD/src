@@ -1,7 +1,7 @@
 #
 # XBOX -- kernel for an XBOX
 #
-# $FreeBSD: stable/9/sys/i386/conf/XBOX 224699 2011-08-07 20:16:46Z rmacklem $
+# $FreeBSD: release/10.0.0/sys/i386/conf/XBOX 253845 2013-07-31 17:21:18Z obrien $
 cpu		I686_CPU		# Celeron
 ident		XBOX
 
@@ -51,7 +51,6 @@ device		pci
 
 # ATA and ATAPI devices
 device		ata
-options 	ATA_CAM
 options 	ATA_STATIC_ID	# Static device numbering
 
 # ATA/SCSI peripherals
@@ -65,7 +64,6 @@ device		loop		# Network loopback
 device		random		# Entropy device
 device		ether		# Ethernet support
 #device		tun		# Packet tunnel.
-device		pty		# BSD-style compatibility pseudo ttys
 #device		md		# Memory "disks"
 #device		gif		# IPv6 and IPv4 tunneling
 #device		faith		# IPv6-to-IPv4 relaying (translation)
@@ -80,20 +78,10 @@ options 	USB_DEBUG	# enable debug msgs
 #device		uhci		# UHCI PCI->USB interface
 device		ohci		# OHCI PCI->USB interface
 device		usb		# USB Bus (required)
-device		uhid		# "Human Interface Devices"
 device		ukbd		# Keyboard
-device		ulpt		# Printer
 device		umass		# Disks/Mass storage - Requires scbus and da
-device		ums		# Mouse
-device		urio		# Diamond Rio 500 MP3 player
 
 device		miibus
-device		aue		# ADMtek USB Ethernet
-device		axe		# ASIX Electronics USB Ethernet
-device		cdce		# Generic USB over Ethernet
-device		cue		# CATC USB Ethernet
-device		kue		# Kawasaki LSI USB Ethernet
-device		rue		# RealTek RTL8150 USB Ethernet
 
 device		sound
 device		snd_ich		# nForce audio

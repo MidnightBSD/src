@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/backend-query/Makefile 211485 2010-08-19 05:59:27Z imp $
+# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend-query/Makefile 211485 2010-08-19 05:59:27Z imp $
 
 FILES=	detect-laptop.sh detect-nics.sh detect-emulation.sh disk-info.sh \
 	disk-list.sh disk-part.sh enable-net.sh get-packages.sh list-config.sh \

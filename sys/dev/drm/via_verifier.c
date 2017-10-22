@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm/via_verifier.c 203288 2010-01-31 14:30:39Z rnoland $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/via_verifier.c 203288 2010-01-31 14:30:39Z rnoland $");
 
 #include "dev/drm/via_3d_reg.h"
 #include "dev/drm/drmP.h"

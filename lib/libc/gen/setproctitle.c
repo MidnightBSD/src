@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/setproctitle.c 117102 2003-07-01 09:45:35Z alfred $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/setproctitle.c 117102 2003-07-01 09:45:35Z alfred $");
 
 #include "namespace.h"
 #include <sys/types.h>

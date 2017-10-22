@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/locale/collate.c 240603 2012-09-17 13:05:39Z glebius $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/locale/collate.c 244126 2012-12-11 22:52:56Z jilles $");
 
 #include "namespace.h"
 #include <arpa/inet.h>
@@ -135,7 +135,7 @@ __collate_load_tables_l(const char *encoding, struct xlocale_collate *table)
 	(void)strcat(buf, "/");
 	(void)strcat(buf, encoding);
 	(void)strcat(buf, "/LC_COLLATE");
-	if ((fp = fopen(buf, "r")) == NULL)
+	if ((fp = fopen(buf, "re")) == NULL)
 		return (_LDP_ERROR);
 
 	if (fread(strbuf, sizeof(strbuf), 1, fp) != 1) {

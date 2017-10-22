@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/config/main.c 223744 2011-07-03 20:59:57Z ed $";
+  "$FreeBSD: release/10.0.0/usr.sbin/config/main.c 250133 2013-05-01 05:14:59Z wkoszek $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -91,6 +91,7 @@ static void usage(void);
 static void cleanheaders(char *);
 static void kernconfdump(const char *);
 static void checkversion(void);
+extern int yyparse(void);
 
 struct hdr_list {
 	char *h_name;
@@ -350,16 +351,24 @@ begin:
 	if (ch == '"' || ch == '\'') {
 		int quote = ch;
 
+		escaped_nl = 0;
 		while ((ch = getc(fp)) != EOF) {
-			if (ch == quote)
+			if (ch == quote && !escaped_nl)
 				break;
-			if (ch == '\n') {
+			if (ch == '\n' && !escaped_nl) {
 				*cp = 0;
 				printf("config: missing quote reading `%s'\n",
 					line);
 				exit(2);
 			}
+			if (ch == '\\' && !escaped_nl) {
+				escaped_nl = 1;
+				continue;
+			}
+			if (ch != quote && escaped_nl)
+				*cp++ = '\\';
 			*cp++ = ch;
+			escaped_nl = 0;
 		}
 	} else {
 		*cp++ = ch;
@@ -626,7 +635,7 @@ remember(const char *file)
 	else
 		s = ns(file);
 
-	if (index(s, '_') && strncmp(s, "opt_", 4) != 0) {
+	if (strchr(s, '_') && strncmp(s, "opt_", 4) != 0) {
 		free(s);
 		return;
 	}
@@ -697,17 +706,11 @@ kernconfdump(const char *file)
 		r = fgetc(fp);
 		if (r == EOF)
 			break;
-		/* 
-		 * If '\0' is present in the middle of the configuration
-		 * string, this means something very weird is happening.
-		 * Make such case very visible.  However, some architectures
-		 * pad the length of the section with NULs to a multiple of
-		 * sh_addralign, allow a NUL in that part of the section.
-		 */
-		if (r == '\0' && (size - i) < align)
+		if (r == '\0') {
+			assert(i == size - 1 &&
+			    ("\\0 found in the middle of a file"));
 			break;
-		assert(r != '\0' && ("Char present in the configuration "
-		    "string mustn't be equal to 0"));
+		}
 		fputc(r, stdout);
 	}
 	fclose(fp);

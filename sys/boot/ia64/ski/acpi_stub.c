@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/ia64/ski/acpi_stub.c 193530 2009-06-05 18:44:36Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/ia64/ski/acpi_stub.c 193530 2009-06-05 18:44:36Z jkim $");
 
 #include <contrib/dev/acpica/include/acpi.h>
 

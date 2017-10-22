@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/ofw/rtas.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ofw/rtas.c 255416 2013-09-09 12:45:41Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -93,7 +93,7 @@ rtas_setup(void *junk)
 		return;
 	}
 
-	mtx_init(&rtas_mtx, "RTAS", MTX_DEF, 0);
+	mtx_init(&rtas_mtx, "RTAS", NULL, MTX_SPIN);
 
 	/* RTAS must be called with everything turned off in MSR */
 	rtasmsr = mfmsr();
@@ -208,7 +208,7 @@ rtas_call_method(cell_t token, int nargs, int nreturns, ...)
 	args.token = token;
 	va_start(ap, nreturns);
 
-	mtx_lock(&rtas_mtx);
+	mtx_lock_spin(&rtas_mtx);
 	rtas_bounce_offset = 0;
 
 	args.nargs = nargs;
@@ -232,7 +232,7 @@ rtas_call_method(cell_t token, int nargs, int nreturns, ...)
 	__asm __volatile ("sync");
 
 	rtas_real_unmap(argsptr, &args, sizeof(args));
-	mtx_unlock(&rtas_mtx);
+	mtx_unlock_spin(&rtas_mtx);
 
 	if (result < 0)
 		return (result);

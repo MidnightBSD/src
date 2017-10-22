@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: sdpcontrol.c,v 1.1 2003/09/08 02:27:27 max Exp $
- * $FreeBSD: stable/9/usr.sbin/bluetooth/sdpcontrol/sdpcontrol.c 133178 2004-08-05 16:32:41Z emax $
+ * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/sdpcontrol/sdpcontrol.c 133178 2004-08-05 16:32:41Z emax $
  */
 
 #include <assert.h>

@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/lib/libradius/Makefile 234191 2012-04-12 17:49:53Z melifaro $
+# $FreeBSD: release/10.0.0/lib/libradius/Makefile 243956 2012-12-06 19:00:37Z sem $
 
 .include <bsd.own.mk>
 
@@ -35,6 +35,7 @@ MAN=		libradius.3 radius.conf.5
 
 MLINKS+=libradius.3 rad_acct_open.3 \
 	libradius.3 rad_add_server.3 \
+	libradius.3 rad_add_server_ex.3 \
 	libradius.3 rad_auth_open.3 \
 	libradius.3 rad_bind_to.3 \
 	libradius.3 rad_close.3 \

@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/geom_event.c 249152 2013-04-05 11:41:56Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/geom_event.c 248674 2013-03-24 03:15:20Z mav $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -273,21 +273,16 @@ one_event(void)
 void
 g_run_events()
 {
-	int i;
 
 	for (;;) {
 		g_topology_lock();
 		while (one_event())
 			;
 		mtx_assert(&g_eventlock, MA_OWNED);
-		i = g_wither_work;
-		if (i) {
+		if (g_wither_work) {
+			g_wither_work = 0;
 			mtx_unlock(&g_eventlock);
-			while (i) {
-				i = g_wither_washer();
-				g_wither_work = i & 1;
-				i &= 2;
-			}
+			g_wither_washer();
 			g_topology_unlock();
 		} else {
 			g_topology_unlock();

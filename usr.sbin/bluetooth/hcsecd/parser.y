@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  * $Id: parser.y,v 1.5 2003/06/07 21:22:30 max Exp $
- * $FreeBSD: stable/9/usr.sbin/bluetooth/hcsecd/parser.y 135245 2004-09-14 20:04:33Z emax $
+ * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/hcsecd/parser.y 235789 2012-05-22 16:33:10Z bapt $
  */
 
 #include <sys/fcntl.h>
@@ -36,6 +36,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
 #include <syslog.h>

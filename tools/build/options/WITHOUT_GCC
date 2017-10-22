@@ -1,6 +1,2 @@
-.\" $FreeBSD: stable/9/tools/build/options/WITHOUT_GCC 222090 2011-05-19 05:13:25Z imp $
-Set to not install gcc and g++.
-.Bf -symbolic
-The option does not generally work for build targets, unless some alternative
-toolchain is enabled.
-.Ef
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_GCC 255326 2013-09-06 20:49:48Z zeising $
+Set to not build and install gcc and g++.

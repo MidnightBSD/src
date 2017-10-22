@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ppbus/ppb_base.c 230800 2012-01-31 01:51:30Z attilio $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ppbus/ppb_base.c 227814 2011-11-22 11:35:24Z attilio $");
 
 #include <sys/param.h>
 #include <sys/lock.h>

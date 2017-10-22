@@ -76,7 +76,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/adm5120/if_admsw.c 208022 2010-05-13 01:50:29Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/adm5120/if_admsw.c 243882 2012-12-05 08:04:20Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -647,14 +647,14 @@ admsw_start(struct ifnet *ifp)
 		if (m0->m_pkthdr.len < ETHER_MIN_LEN ||
 		    bus_dmamap_load_mbuf(sc->sc_bufs_dmat, dmamap, m0,
 		    admsw_mbuf_map_addr, ds, BUS_DMA_NOWAIT) != 0) {
-			MGETHDR(m, M_DONTWAIT, MT_DATA);
+			MGETHDR(m, M_NOWAIT, MT_DATA);
 			if (m == NULL) {
 				device_printf(sc->sc_dev, 
 				    "unable to allocate Tx mbuf\n");
 				break;
 			}
 			if (m0->m_pkthdr.len > MHLEN) {
-				MCLGET(m, M_DONTWAIT);
+				MCLGET(m, M_NOWAIT);
 				if ((m->m_flags & M_EXT) == 0) {
 					device_printf(sc->sc_dev, 
 					    "unable to allocate Tx cluster\n");
@@ -1222,11 +1222,11 @@ admsw_add_rxbuf(struct admsw_softc *sc, int idx, int high)
 	else
 		ds = &sc->sc_rxlsoft[idx];
 
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	MGETHDR(m, M_NOWAIT, MT_DATA);
 	if (m == NULL)
 		return (ENOBUFS);
 
-	MCLGET(m, M_DONTWAIT);
+	MCLGET(m, M_NOWAIT);
 	if ((m->m_flags & M_EXT) == 0) {
 		m_freem(m);
 		return (ENOBUFS);

@@ -30,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/dumpcis/cis.h 199141 2009-11-10 14:32:09Z jhb $
+ * $FreeBSD: release/10.0.0/usr.sbin/dumpcis/cis.h 199141 2009-11-10 14:32:09Z jhb $
  *
  */
 

@@ -1,4 +1,4 @@
-#$FreeBSD: stable/9/sys/modules/mxge/mxge/Makefile 247472 2013-02-28 16:38:28Z gallatin $
+#$FreeBSD: release/10.0.0/sys/modules/mxge/mxge/Makefile 247133 2013-02-21 21:28:33Z gallatin $
 
 .PATH: ${.CURDIR}/../../../dev/mxge
 

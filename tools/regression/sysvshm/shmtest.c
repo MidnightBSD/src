@@ -28,14 +28,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * Obtained from: $NetBSD: shmtest.c,v 1.3 2002/07/20 08:36:26 grant Exp $
- * $FreeBSD: stable/9/tools/regression/sysvshm/shmtest.c 204627 2010-03-03 07:38:12Z joel $
+ * $FreeBSD: release/10.0.0/tools/regression/sysvshm/shmtest.c 235719 2012-05-21 07:52:46Z kevlo $
  */
 
 /*
  * Test the SVID-compatible Shared Memory facility.
  */
 
-#include <sys/param.h>
+#include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/wait.h>

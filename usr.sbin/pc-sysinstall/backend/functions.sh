@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/backend/functions.sh 236458 2012-06-02 18:22:38Z jpaetzel $
+# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend/functions.sh 247735 2013-03-03 23:07:27Z jpaetzel $
 
 # functions.sh
 # Library of functions which pc-sysinstall may call upon
@@ -277,7 +277,11 @@ get_zpool_name()
     while :
     do
       NEWNAME="${BASENAME}${NUM}"
-      zpool import | grep -qw "${NEWNAME}" || break
+      zpool list | grep -qw "${NEWNAME}"
+      local chk1=$?
+      zpool import | grep -qw "${NEWNAME}"
+      local chk2=$?
+      if [ $chk1 -eq 1 -a $chk2 -eq 1 ] ; then break ; fi 
       NUM=$((NUM+1))
     done
 

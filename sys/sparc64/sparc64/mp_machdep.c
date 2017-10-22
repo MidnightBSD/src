@@ -55,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/mp_machdep.c 241681 2012-10-18 12:06:26Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/mp_machdep.c 254025 2013-08-07 06:21:20Z jeff $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -336,10 +336,12 @@ ap_start(phandle_t node, u_int mid, u_int cpu_impl)
 	cpuid_to_mid[cpuid] = mid;
 	cpu_identify(csa->csa_ver, clock, cpuid);
 
-	va = kmem_alloc(kernel_map, PCPU_PAGES * PAGE_SIZE);
+	va = kmem_malloc(kernel_arena, PCPU_PAGES * PAGE_SIZE,
+	    M_WAITOK | M_ZERO);
 	pc = (struct pcpu *)(va + (PCPU_PAGES * PAGE_SIZE)) - 1;
 	pcpu_init(pc, cpuid, sizeof(*pc));
-	dpcpu_init((void *)kmem_alloc(kernel_map, DPCPU_SIZE), cpuid);
+	dpcpu_init((void *)kmem_malloc(kernel_arena, DPCPU_SIZE,
+	    M_WAITOK | M_ZERO), cpuid);
 	pc->pc_addr = va;
 	pc->pc_clock = clock;
 	pc->pc_impl = cpu_impl;
@@ -557,7 +559,7 @@ spitfire_ipi_selected(cpuset_t cpus, u_long d0, u_long d1, u_long d2)
 {
 	u_int cpu;
 
-	while ((cpu = cpusetobj_ffs(&cpus)) != 0) {
+	while ((cpu = CPU_FFS(&cpus)) != 0) {
 		cpu--;
 		CPU_CLR(cpu, &cpus);
 		spitfire_ipi_single(cpu, d0, d1, d2);

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/amd64/include/xen/xenvar.h 207673 2010-05-05 20:39:02Z joel $
+ * $FreeBSD: release/10.0.0/sys/amd64/include/xen/xenvar.h 207673 2010-05-05 20:39:02Z joel $
  */
 #ifndef XENVAR_H_
 #define XENVAR_H_

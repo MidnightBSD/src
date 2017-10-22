@@ -37,7 +37,7 @@
 static char sccsid[] = "@(#)dirs.c	8.7 (Berkeley) 5/1/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/restore/dirs.c 203155 2010-01-29 10:00:42Z jh $";
+  "$FreeBSD: release/10.0.0/sbin/restore/dirs.c 241013 2012-09-27 23:31:06Z mdf $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -637,7 +637,8 @@ setdirmodes(int flags)
 				continue;
 		}
 		if (ep == NULL) {
-			panic("cannot find directory inode %d\n", node.ino);
+			panic("cannot find directory inode %ju\n",
+			    (uintmax_t)node.ino);
 			continue;
 		}
 		cp = myname(ep);
@@ -678,7 +679,8 @@ genliteraldir(char *name, ino_t ino)
 
 	itp = inotablookup(ino);
 	if (itp == NULL)
-		panic("Cannot find directory inode %d named %s\n", ino, name);
+		panic("Cannot find directory inode %ju named %s\n",
+		    (uintmax_t)ino, name);
 	if ((ofile = open(name, O_WRONLY | O_CREAT | O_TRUNC, 0666)) < 0) {
 		fprintf(stderr, "%s: ", name);
 		(void) fflush(stderr);
@@ -691,15 +693,15 @@ genliteraldir(char *name, ino_t ino)
 		size = i < BUFSIZ ? i : BUFSIZ;
 		if (read(dp, buf, (int) size) == -1) {
 			fprintf(stderr,
-				"write error extracting inode %d, name %s\n",
-				curfile.ino, curfile.name);
+			    "write error extracting inode %ju, name %s\n",
+			    (uintmax_t)curfile.ino, curfile.name);
 			fprintf(stderr, "read: %s\n", strerror(errno));
 			done(1);
 		}
 		if (!Nflag && write(ofile, buf, (int) size) == -1) {
 			fprintf(stderr,
-				"write error extracting inode %d, name %s\n",
-				curfile.ino, curfile.name);
+			    "write error extracting inode %ju, name %s\n",
+			    (uintmax_t)curfile.ino, curfile.name);
 			fprintf(stderr, "write: %s\n", strerror(errno));
 			done(1);
 		}

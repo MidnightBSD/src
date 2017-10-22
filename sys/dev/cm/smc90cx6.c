@@ -1,7 +1,7 @@
 /*	$NetBSD: smc90cx6.c,v 1.38 2001/07/07 15:57:53 thorpej Exp $ */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/cm/smc90cx6.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cm/smc90cx6.c 243857 2012-12-04 09:32:43Z glebius $");
 
 /*-
  * Copyright (c) 1994, 1995, 1998 The NetBSD Foundation, Inc.
@@ -596,7 +596,7 @@ cleanup:
 	}
 }
 
-__inline static void
+static inline void
 cm_tint_locked(sc, isr)
 	struct cm_softc *sc;
 	int isr;

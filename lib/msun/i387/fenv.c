@@ -23,13 +23,19 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/msun/i387/fenv.c 229841 2012-01-09 04:57:06Z das $
+ * $FreeBSD: release/10.0.0/lib/msun/i387/fenv.c 226594 2011-10-21 06:25:31Z das $
  */
 
 #include <sys/cdefs.h>
 #include <sys/types.h>
 #include <machine/npx.h>
+
+#define	__fenv_static
 #include "fenv.h"
+
+#ifdef __GNUC_GNU_INLINE__
+#error "This file must be compiled with C99 'inline' semantics"
+#endif
 
 const fenv_t __fe_dfl_env = {
 	__INITIAL_NPXCW__,
@@ -83,6 +89,9 @@ __test_sse(void)
 	return (0);
 }
 
+extern inline int feclearexcept(int __excepts);
+extern inline int fegetexceptflag(fexcept_t *__flagp, int __excepts);
+
 int
 fesetexceptflag(const fexcept_t *flagp, int excepts)
 {
@@ -113,6 +122,10 @@ feraiseexcept(int excepts)
 	__fwait();
 	return (0);
 }
+
+extern inline int fetestexcept(int __excepts);
+extern inline int fegetround(void);
+extern inline int fesetround(int __round);
 
 int
 fegetenv(fenv_t *envp)
@@ -148,6 +161,8 @@ feholdexcept(fenv_t *envp)
 	}
 	return (0);
 }
+
+extern inline int fesetenv(const fenv_t *__envp);
 
 int
 feupdateenv(const fenv_t *envp)

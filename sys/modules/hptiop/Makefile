@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/hptiop/Makefile 169412 2007-05-09 07:07:26Z scottl $
+# $FreeBSD: release/10.0.0/sys/modules/hptiop/Makefile 169412 2007-05-09 07:07:26Z scottl $
 
 .PATH: ${.CURDIR}/../../dev/hptiop
 

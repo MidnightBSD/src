@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/sockets/zerosend/zerosend.c 165984 2007-01-12 22:17:31Z rwatson $
+ * $FreeBSD: release/10.0.0/tools/regression/sockets/zerosend/zerosend.c 243313 2012-11-19 22:53:57Z emaste $
  */
 
 #include <sys/select.h>
@@ -56,7 +56,7 @@ try_0send(const char *test, int fd)
 	if (len < 0)
 		err(-1, "%s: try_0send", test);
 	if (len != 0)
-		errx(-1, "%s: try_0send: returned %d", test, len);
+		errx(-1, "%s: try_0send: returned %zd", test, len);
 }
 
 static void
@@ -70,7 +70,7 @@ try_0write(const char *test, int fd)
 	if (len < 0)
 		err(-1, "%s: try_0write", test);
 	if (len != 0)
-		errx(-1, "%s: try_0write: returned %d", test, len);
+		errx(-1, "%s: try_0write: returned %zd", test, len);
 }
 
 static void

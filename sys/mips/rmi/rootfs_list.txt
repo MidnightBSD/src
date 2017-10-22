@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/mips/rmi/rootfs_list.txt 238481 2012-07-15 11:39:35Z des $
+# $FreeBSD: release/10.0.0/sys/mips/rmi/rootfs_list.txt 241636 2012-10-17 11:30:00Z attilio $
 #
 # This is the list of files that
 # should be in your rootfs (copy it from
@@ -530,7 +530,6 @@
 ./sbin/mount_msdosfs
 ./sbin/mount_nfs
 ./sbin/mount_newnfs
-./sbin/mount_ntfs
 ./sbin/mount_nullfs
 ./sbin/mount_udf
 ./sbin/mount_unionfs

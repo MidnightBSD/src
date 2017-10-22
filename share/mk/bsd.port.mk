@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/mk/bsd.port.mk 206082 2010-04-02 06:55:31Z netchild $
+# $FreeBSD: release/10.0.0/share/mk/bsd.port.mk 226162 2011-10-08 18:25:01Z crees $
 
 PORTSDIR?=	/usr/ports
 BSDPORTMK?=	${PORTSDIR}/Mk/bsd.port.mk

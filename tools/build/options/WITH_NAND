@@ -1,0 +1,2 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITH_NAND 235537 2012-05-17 10:11:18Z gber $
+Set to build the NAND Flash components.

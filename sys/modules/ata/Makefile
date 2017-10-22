@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/ata/Makefile 183724 2008-10-09 12:56:57Z sos $
+# $FreeBSD: release/10.0.0/sys/modules/ata/Makefile 249083 2013-04-04 07:12:24Z mav $
 
 SUBDIR = atacore
 SUBDIR += atacard
@@ -8,6 +8,5 @@ SUBDIR += atacbus
 SUBDIR += ataisa
 .endif
 SUBDIR += atapci 
-SUBDIR += atadisk atapicd atapifd atapist ataraid atapicam #atacam
 
 .include <bsd.subdir.mk>

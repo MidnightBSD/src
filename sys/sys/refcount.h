@@ -26,12 +26,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/refcount.h 180763 2008-07-23 16:44:20Z des $
+ * $FreeBSD: release/10.0.0/sys/sys/refcount.h 238828 2012-07-27 09:16:48Z glebius $
  */
 
 #ifndef __SYS_REFCOUNT_H__
 #define __SYS_REFCOUNT_H__
 
+#include <sys/limits.h>
 #include <machine/atomic.h>
 
 #ifdef _KERNEL
@@ -51,6 +52,7 @@ static __inline void
 refcount_acquire(volatile u_int *count)
 {
 
+	KASSERT(*count < UINT_MAX, ("refcount %p overflowed", count));
 	atomic_add_acq_int(count, 1);	
 }
 

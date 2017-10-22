@@ -25,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: stable/9/sys/dev/mxge/if_mxge_var.h 247795 2013-03-04 15:32:38Z gallatin $
+$FreeBSD: release/10.0.0/sys/dev/mxge/if_mxge_var.h 247160 2013-02-22 19:23:33Z gallatin $
 
 ***************************************************************************/
 
@@ -50,6 +50,19 @@ $FreeBSD: stable/9/sys/dev/mxge/if_mxge_var.h 247795 2013-03-04 15:32:38Z gallat
 #define IFNET_BUF_RING 1
 #endif
 
+#if (__FreeBSD_version < 1000020)
+#undef IF_Kbps
+#undef IF_Mbps
+#undef IF_Gbps
+#define	IF_Kbps(x)	((uintmax_t)(x) * 1000)	/* kilobits/sec. */
+#define	IF_Mbps(x)	(IF_Kbps((x) * 1000))	/* megabits/sec. */
+#define	IF_Gbps(x)	(IF_Mbps((x) * 1000))	/* gigabits/sec. */
+static __inline void
+if_initbaudrate(struct ifnet *ifp, uintmax_t baud)
+{
+	ifp->if_baudrate = baud;
+}
+#endif
 #ifndef VLAN_CAPABILITIES
 #define VLAN_CAPABILITIES(ifp)
 #define mxge_vlans_active(sc) (sc)->ifp->if_nvlans

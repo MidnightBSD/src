@@ -35,10 +35,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/bwi/bwirf.c 191762 2009-05-03 04:01:43Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/bwi/bwirf.c 235338 2012-05-12 15:11:53Z adrian $");
 
 #include "opt_inet.h"
 #include "opt_bwi.h"
+#include "opt_wlan.h"
 
 #include <sys/param.h>
 #include <sys/endian.h>

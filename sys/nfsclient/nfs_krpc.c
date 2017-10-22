@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/nfsclient/nfs_krpc.c 247502 2013-02-28 21:57:38Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/nfsclient/nfs_krpc.c 247116 2013-02-21 19:02:50Z jhb $");
 
 /*
  * Socket operations for use by nfs
@@ -572,7 +572,7 @@ tryagain:
 	 * These could cause pointer alignment problems, so copy them to
 	 * well aligned mbufs.
 	 */
-	error = nfs_realign(&mrep, M_DONTWAIT);
+	error = nfs_realign(&mrep, M_NOWAIT);
 	if (error == ENOMEM) {
 		m_freem(mrep);
 		AUTH_DESTROY(auth);
@@ -699,7 +699,6 @@ int nfs_sig_set[] = {
 	SIGTERM,
 	SIGHUP,
 	SIGKILL,
-	SIGSTOP,
 	SIGQUIT
 };
 
@@ -720,7 +719,7 @@ nfs_sig_pending(sigset_t set)
 
 /*
  * The set/restore sigmask functions are used to (temporarily) overwrite
- * the process p_sigmask during an RPC call (for example).  These are also
+ * the thread td_sigmask during an RPC call (for example).  These are also
  * used in other places in the NFS client that might tsleep().
  */
 void
@@ -749,8 +748,9 @@ nfs_set_sigmask(struct thread *td, sigset_t *oldset)
 			SIGDELSET(newset, nfs_sig_set[i]);
 	}
 	mtx_unlock(&p->p_sigacts->ps_mtx);
+	kern_sigprocmask(td, SIG_SETMASK, &newset, oldset,
+	    SIGPROCMASK_PROC_LOCKED);
 	PROC_UNLOCK(p);
-	kern_sigprocmask(td, SIG_SETMASK, &newset, oldset, 0);
 }
 
 void

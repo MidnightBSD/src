@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/nscd/debug.c 194093 2009-06-13 00:43:56Z des $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/nscd/debug.c 194093 2009-06-13 00:43:56Z des $");
 
 #include <stdio.h>
 

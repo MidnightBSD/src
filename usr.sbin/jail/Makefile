@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/jail/Makefile 235839 2012-05-23 15:29:34Z jamie $
+# $FreeBSD: release/10.0.0/usr.sbin/jail/Makefile 249657 2013-04-19 19:45:00Z ed $
 
 .include <bsd.own.mk>
 
@@ -8,6 +8,8 @@ SRCS=	jail.c command.c config.c state.c jailp.h jaillex.l jailparse.y y.tab.h
 
 DPADD=	${LIBJAIL} ${LIBKVM} ${LIBUTIL} ${LIBL}
 LDADD=	-ljail -lkvm -lutil -ll
+
+NO_WMISSING_VARIABLE_DECLARATIONS=
 
 YFLAGS+=-v
 CFLAGS+=-I. -I${.CURDIR}

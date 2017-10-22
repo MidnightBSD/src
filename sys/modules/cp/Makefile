@@ -1,5 +1,5 @@
 # $Cronyx: sys.modules.cp.Makefile,v 1.1.2.3 2004/04/28 16:17:57 rik Exp $
-# $FreeBSD: stable/9/sys/modules/cp/Makefile 182668 2008-09-01 23:59:00Z imp $
+# $FreeBSD: release/10.0.0/sys/modules/cp/Makefile 182668 2008-09-01 23:59:00Z imp $
 
 .PATH:  ${.CURDIR}/../../dev/cp
 KMOD	= if_cp

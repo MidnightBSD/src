@@ -68,12 +68,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/mips/cache.c 224139 2011-07-17 16:50:12Z bz $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/cache.c 232896 2012-03-12 21:25:32Z jmallett $");
 
 #include <sys/types.h>
 #include <sys/systm.h>
-
-#include "opt_cputype.h"
 
 #include <machine/cpuinfo.h>
 #include <machine/cache.h>
@@ -101,13 +99,8 @@ mips_config_cache(struct mips_cpuinfo * cpuinfo)
 		break;
 	case 32:
 		mips_cache_ops.mco_icache_sync_all = mipsNN_icache_sync_all_32;
-#ifdef CPU_NLM
-		mips_cache_ops.mco_icache_sync_range =
-		    mipsNN_icache_sync_range_index_32;
-#else
 		mips_cache_ops.mco_icache_sync_range =
 		    mipsNN_icache_sync_range_32;
-#endif
 		mips_cache_ops.mco_icache_sync_range_index =
 		    mipsNN_icache_sync_range_index_32;
 		break;
@@ -155,18 +148,23 @@ mips_config_cache(struct mips_cpuinfo * cpuinfo)
 		mips_cache_ops.mco_pdcache_wbinv_all =
 		    mips_cache_ops.mco_intern_pdcache_wbinv_all =
 		    mipsNN_pdcache_wbinv_all_32;
-#ifdef CPU_NLM
-		mips_cache_ops.mco_pdcache_wbinv_range =
-		    mipsNN_pdcache_wbinv_range_index_32;
+#if defined(CPU_RMI) || defined(CPU_NLM)
+		mips_cache_ops.mco_pdcache_wbinv_range = cache_noop;
 #else
 		mips_cache_ops.mco_pdcache_wbinv_range =
 		    mipsNN_pdcache_wbinv_range_32;
 #endif
+#if defined(CPU_RMI) || defined(CPU_NLM)
+		mips_cache_ops.mco_pdcache_wbinv_range_index =
+		    mips_cache_ops.mco_intern_pdcache_wbinv_range_index = cache_noop;
+		mips_cache_ops.mco_pdcache_inv_range = cache_noop;
+#else
 		mips_cache_ops.mco_pdcache_wbinv_range_index =
 		    mips_cache_ops.mco_intern_pdcache_wbinv_range_index =
 		    mipsNN_pdcache_wbinv_range_index_32;
 		mips_cache_ops.mco_pdcache_inv_range =
 		    mipsNN_pdcache_inv_range_32;
+#endif
 #if defined(CPU_RMI) || defined(CPU_NLM)
 		mips_cache_ops.mco_pdcache_wb_range =
 		    mips_cache_ops.mco_intern_pdcache_wb_range = cache_noop;

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/lib/msun/test-invtrig.t 181076 2008-07-31 22:43:38Z das $
+# $FreeBSD: release/10.0.0/tools/regression/lib/msun/test-invtrig.t 181076 2008-07-31 22:43:38Z das $
 
 cd `dirname $0`
 

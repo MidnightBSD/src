@@ -1,4 +1,4 @@
-$FreeBSD: stable/9/sys/netipx/README 194590 2009-06-21 16:11:26Z rwatson $
+$FreeBSD: release/10.0.0/sys/netipx/README 194590 2009-06-21 16:11:26Z rwatson $
 
 This protocol implements IPX/SPX over Ethernet_II frame type 0x8137.
 Please note: the SPX implementation may require further work and testing

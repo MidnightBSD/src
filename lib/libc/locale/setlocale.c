@@ -35,7 +35,7 @@
 static char sccsid[] = "@(#)setlocale.c	8.1 (Berkeley) 7/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/locale/setlocale.c 235785 2012-05-22 14:40:39Z theraven $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/locale/setlocale.c 228921 2011-12-27 23:28:01Z jilles $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -57,7 +57,7 @@ __FBSDID("$FreeBSD: stable/9/lib/libc/locale/setlocale.c 235785 2012-05-22 14:40
 /*
  * Category names for getenv()
  */
-static char *categories[_LC_LAST] = {
+static const char categories[_LC_LAST][12] = {
     "LC_ALL",
     "LC_COLLATE",
     "LC_CTYPE",

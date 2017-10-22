@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/talk/ctl.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/talk/ctl.c 227185 2011-11-06 08:17:23Z ed $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)ctl.c	8.1 (Berkeley) 6/6/93";
@@ -47,6 +47,7 @@ static const char sccsid[] = "@(#)ctl.c	8.1 (Berkeley) 6/6/93";
 #include <string.h>
 
 #include "talk.h"
+#include "talk_ctl.h"
 
 struct	sockaddr_in daemon_addr = { .sin_len = sizeof(daemon_addr), .sin_family = AF_INET };
 struct	sockaddr_in ctl_addr = { .sin_len = sizeof(ctl_addr), .sin_family = AF_INET };

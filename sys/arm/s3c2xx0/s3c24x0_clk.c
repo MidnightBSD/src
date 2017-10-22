@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/s3c2xx0/s3c24x0_clk.c 217072 2011-01-06 21:08:06Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/s3c2xx0/s3c24x0_clk.c 217072 2011-01-06 21:08:06Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

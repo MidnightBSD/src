@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/ifconfig/ifbridge.c 173320 2007-11-04 08:32:27Z thompsa $";
+  "$FreeBSD: release/10.0.0/sbin/ifconfig/ifbridge.c 173320 2007-11-04 08:32:27Z thompsa $";
 #endif /* not lint */
 
 #include <sys/param.h>

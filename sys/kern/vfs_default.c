@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/vfs_default.c 248029 2013-03-08 08:09:26Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/vfs_default.c 251171 2013-05-31 00:43:41Z jeff $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -47,8 +47,8 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/vfs_default.c 248029 2013-03-08 08:09:26Z 
 #include <sys/lockf.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
-#include <sys/mutex.h>
 #include <sys/namei.h>
+#include <sys/rwlock.h>
 #include <sys/fcntl.h>
 #include <sys/unistd.h>
 #include <sys/vnode.h>
@@ -354,8 +354,8 @@ dirent_exists(struct vnode *vp, const char *dirname, struct thread *td)
 		if (error)
 			goto out;
 
-		if ((dp->d_type != DT_WHT) &&
-		    !strcmp(dp->d_name, dirname)) {
+		if (dp->d_type != DT_WHT && dp->d_fileno != 0 &&
+		    strcmp(dp->d_name, dirname) == 0) {
 			found = 1;
 			goto out;
 		}
@@ -662,7 +662,7 @@ loop2:
 				continue;
 			if (BUF_LOCK(bp,
 			    LK_EXCLUSIVE | LK_INTERLOCK | LK_SLEEPFAIL,
-			    BO_MTX(bo)) != 0) {
+			    BO_LOCKPTR(bo)) != 0) {
 				BO_LOCK(bo);
 				goto loop1;
 			}
@@ -1017,7 +1017,7 @@ vop_stdadvise(struct vop_advise_args *ap)
 {
 	struct vnode *vp;
 	off_t start, end;
-	int error, vfslocked;
+	int error;
 
 	vp = ap->a_vp;
 	switch (ap->a_advice) {
@@ -1038,24 +1038,21 @@ vop_stdadvise(struct vop_advise_args *ap)
 		 * requested range.
 		 */
 		error = 0;
-		vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 		if (vp->v_iflag & VI_DOOMED) {
 			VOP_UNLOCK(vp, 0);
-			VFS_UNLOCK_GIANT(vfslocked);
 			break;
 		}
 		vinvalbuf(vp, V_CLEANONLY, 0, 0);
 		if (vp->v_object != NULL) {
 			start = trunc_page(ap->a_start);
 			end = round_page(ap->a_end);
-			VM_OBJECT_LOCK(vp->v_object);
+			VM_OBJECT_WLOCK(vp->v_object);
 			vm_object_page_cache(vp->v_object, OFF_TO_IDX(start),
 			    OFF_TO_IDX(end));
-			VM_OBJECT_UNLOCK(vp->v_object);
+			VM_OBJECT_WUNLOCK(vp->v_object);
 		}
 		VOP_UNLOCK(vp, 0);
-		VFS_UNLOCK_GIANT(vfslocked);
 		break;
 	default:
 		error = EINVAL;

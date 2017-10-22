@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/tools/regression/usr.bin/sed/inplace_race.t 217134 2011-01-08 00:06:22Z jilles $
+# $FreeBSD: release/10.0.0/tools/regression/usr.bin/sed/inplace_race.t 217134 2011-01-08 00:06:22Z jilles $
 
 : "${SED=sed}"
 

@@ -24,7 +24,7 @@
  * the rights to redistribute these changes.
  *
  *	from: FreeBSD: src/sys/i386/include/db_machdep.h,v 1.16 1999/10/04
- * $FreeBSD: stable/9/sys/arm/include/db_machdep.h 181253 2008-08-03 15:35:32Z cognet $
+ * $FreeBSD: release/10.0.0/sys/arm/include/db_machdep.h 181253 2008-08-03 15:35:32Z cognet $
  */
 
 #ifndef	_MACHINE_DB_MACHDEP_H_

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/powerpc/dump_machdep.c 221173 2011-04-28 16:02:05Z attilio $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powerpc/dump_machdep.c 221173 2011-04-28 16:02:05Z attilio $");
 
 #include "opt_watchdog.h"
 

@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/ofw/ofw_real.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ofw/ofw_real.c 253588 2013-07-24 02:01:01Z jhibbits $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -170,7 +170,6 @@ static size_t		of_bounce_size;
 static struct mtx	of_bounce_mtx;
 
 extern int		ofw_real_mode;
-extern struct pmap	ofw_pmap;
 
 /*
  * After the VM is up, allocate a wired, low memory bounce page.
@@ -211,12 +210,12 @@ ofw_real_bounce_alloc(void *junk)
 
 	mtx_lock(&of_bounce_mtx);
 
-	of_bounce_virt = contigmalloc(PAGE_SIZE, M_OFWREAL, 0, 0,
+	of_bounce_virt = contigmalloc(4 * PAGE_SIZE, M_OFWREAL, 0, 0,
 	    ulmin(platform_real_maxaddr(), BUS_SPACE_MAXADDR_32BIT), PAGE_SIZE,
-	    PAGE_SIZE);
+	    4 * PAGE_SIZE);
 
 	of_bounce_phys = vtophys(of_bounce_virt);
-	of_bounce_size = PAGE_SIZE;
+	of_bounce_size = 4 * PAGE_SIZE;
 
 	/*
 	 * For virtual-mode OF, direct map this physical address so that

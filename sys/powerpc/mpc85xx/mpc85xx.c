@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/mpc85xx/mpc85xx.c 222428 2011-05-28 19:14:16Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/mpc85xx/mpc85xx.c 235934 2012-05-24 21:07:10Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,6 +38,7 @@ __FBSDID("$FreeBSD: stable/9/sys/powerpc/mpc85xx/mpc85xx.c 222428 2011-05-28 19:
 
 #include <machine/cpu.h>
 #include <machine/cpufunc.h>
+#include <machine/pio.h>
 #include <machine/spr.h>
 
 #include <powerpc/mpc85xx/mpc85xx.h>
@@ -60,7 +61,7 @@ ccsr_write4(uintptr_t addr, uint32_t val)
 	volatile uint32_t *ptr = (void *)addr;
 
 	*ptr = val;
-	__asm __volatile("eieio; sync");
+	powerpc_iomb();
 }
 
 int
@@ -86,6 +87,9 @@ law_enable(int trgt, u_long addr, u_long size)
 {
 	uint32_t bar, sr;
 	int i, law_max;
+
+	if (size == 0)
+		return (0);
 
 	law_max = law_getmax();
 	bar = _LAW_BAR(addr);
@@ -167,7 +171,10 @@ law_pci_target(struct resource *res, int *trgt_mem, int *trgt_io)
 	default:
 		rv = ENXIO;
 	}
-	*trgt_mem = *trgt_io = trgt;
+	if (rv == 0) {
+		*trgt_mem = trgt;
+		*trgt_io = trgt;
+	}
 	return (rv);
 }
 

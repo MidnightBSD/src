@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/hastd/nv.h 217732 2011-01-22 22:38:18Z pjd $
+ * $FreeBSD: release/10.0.0/sbin/hastd/nv.h 217732 2011-01-22 22:38:18Z pjd $
  */
 
 #ifndef	_NV_H_

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/i386/libi386/bootinfo64.c 187101 2009-01-12 16:28:19Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/i386/libi386/bootinfo64.c 245424 2013-01-14 15:05:22Z sbruno $");
 
 #include <stand.h>
 #include <sys/param.h>
@@ -134,7 +134,8 @@ bi_checkcpu(void)
 {
     char *cpu_vendor;
     int vendor[3];
-    int eflags, regs[4];
+    int eflags;
+    unsigned int regs[4];
 
     /* Check for presence of "cpuid". */
     eflags = read_eflags();

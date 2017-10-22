@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/contrib/libarchive/tar/bsdtar_platform.h 229592 2012-01-05 12:06:54Z mm $
+ * $FreeBSD: release/10.0.0/contrib/libarchive/tar/bsdtar_platform.h 232153 2012-02-25 10:58:02Z mm $
  */
 
 /*
@@ -67,10 +67,10 @@
 #endif
 
 /*
- * Include "dirent.h" (or it's equivalent on several different platforms).
+ * Include "dirent.h" (or its equivalent on several different platforms).
  *
  * This is slightly modified from the GNU autoconf recipe.
- * In particular, FreeBSD includes d_namlen in it's dirent structure,
+ * In particular, FreeBSD includes d_namlen in its dirent structure,
  * so my configure script includes an explicit test for the d_namlen
  * field.
  */

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/i386/gen/getcontextx.c 238513 2012-07-16 02:10:26Z davidxu $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/i386/gen/getcontextx.c 251047 2013-05-28 04:54:16Z kib $");
 
 #include <sys/types.h>
 #include <sys/ucontext.h>
@@ -89,14 +89,12 @@ __getcontextx_size(void)
 }
 
 int
-__fillcontextx(char *ctx)
+__fillcontextx2(char *ctx)
 {
 	struct i386_get_xfpustate xfpu;
 	ucontext_t *ucp;
 
 	ucp = (ucontext_t *)ctx;
-	if (getcontext(ucp) == -1)
-		return (-1);
 	if (xstate_sz != 0) {
 		xfpu.addr = (char *)(ucp + 1);
 		xfpu.len = xstate_sz;
@@ -109,6 +107,18 @@ __fillcontextx(char *ctx)
 		ucp->uc_mcontext.mc_xfpustate = 0;
 		ucp->uc_mcontext.mc_xfpustate_len = 0;
 	}
+	return (0);
+}
+
+int
+__fillcontextx(char *ctx)
+{
+	ucontext_t *ucp;
+
+	ucp = (ucontext_t *)ctx;
+	if (getcontext(ucp) == -1)
+		return (-1);
+	__fillcontextx2(ctx);
 	return (0);
 }
 

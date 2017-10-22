@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/uboot/lib/time.c 204318 2010-02-25 15:30:26Z raj $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/uboot/lib/time.c 204318 2010-02-25 15:30:26Z raj $");
 
 #include <stand.h>
 

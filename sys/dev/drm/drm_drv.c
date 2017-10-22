@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm/drm_drv.c 215367 2010-11-16 03:43:06Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/drm_drv.c 215367 2010-11-16 03:43:06Z nwhitehorn $");
 
 /** @file drm_drv.c
  * The catch-all file for DRM device support, including module setup/teardown,

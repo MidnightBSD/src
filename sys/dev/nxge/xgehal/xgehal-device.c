@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/nxge/xgehal/xgehal-device.c 218909 2011-02-21 09:01:34Z brucec $
+ * $FreeBSD: release/10.0.0/sys/dev/nxge/xgehal/xgehal-device.c 242692 2012-11-07 07:00:59Z kevlo $
  */
 
 #include <dev/nxge/include/xgehal-device.h>
@@ -6793,7 +6793,7 @@ _again:
 	} else {
 	    /*
 	     * Logging Error messages in the excess temperature,
-	     * Bias current, laser ouput for three cycle
+	     * Bias current, laser output for three cycle
 	     */
 	    __hal_updt_stats_xpak(hldev);
 	    hldev->stats.sw_dev_err_stats.xpak_counter.tick_period = 0;

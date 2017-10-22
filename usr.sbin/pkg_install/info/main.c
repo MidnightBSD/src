@@ -1,6 +1,6 @@
 /*
  *
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -20,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/info/main.c 222035 2011-05-17 19:11:47Z flz $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg_install/info/main.c 241830 2012-10-22 02:12:20Z eadler $");
 
 #include <getopt.h>
 #include <err.h>
@@ -68,6 +68,7 @@ main(int argc, char **argv)
     char **pkgs, **start;
     char *pkgs_split;
 
+    warnpkgng();
     whead = malloc(sizeof(struct which_head));
     if (whead == NULL)
 	err(2, NULL);

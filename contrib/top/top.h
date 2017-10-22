@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/contrib/top/top.h 223342 2011-06-20 16:48:00Z delphij $
+ * $FreeBSD: release/10.0.0/contrib/top/top.h 244180 2012-12-13 06:45:45Z rpaulo $
  */
 /*
  *  Top - a top users display for Berkeley Unix
@@ -14,7 +14,7 @@
 extern int Header_lines;	/* 7 */
 
 /* Maximum number of columns allowed for display */
-#define MAX_COLS	128
+#define MAX_COLS	512
 
 /* Log base 2 of 1024 is 10 (2^10 == 1024) */
 #define LOG1024		10

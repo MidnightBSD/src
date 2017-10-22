@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2006 Michael Bushkov <bushman@freebsd.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/lib/libc/nss/testutil.h 168754 2007-04-15 11:02:31Z bushman $
+ * $FreeBSD: release/10.0.0/tools/regression/lib/libc/nss/testutil.h 251818 2013-06-16 19:35:01Z eadler $
  */
 
 #include <sys/queue.h>

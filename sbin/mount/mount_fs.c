@@ -41,7 +41,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)mount_fs.c	8.6 (Berkeley) 4/26/95";
 #endif
 static const char rcsid[] =
-	"$FreeBSD: stable/9/sbin/mount/mount_fs.c 231596 2012-02-13 19:02:11Z jh $";
+	"$FreeBSD: release/10.0.0/sbin/mount/mount_fs.c 230377 2012-01-20 12:59:12Z jh $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -58,7 +58,7 @@ static const char rcsid[] =
 #include "extern.h"
 #include "mntopts.h"
 
-struct mntopt mopts[] = {
+static struct mntopt mopts[] = {
 	MOPT_STDOPTS,
 	MOPT_END
 };
@@ -117,7 +117,10 @@ mount_fs(const char *vfstype, int argc, char *argv[])
 	dev = argv[0];
 	dir = argv[1];
 
-	(void)checkpath(dir, mntpath);
+	if (checkpath(dir, mntpath) != 0) {
+		warn("%s", mntpath);
+		return (1);
+	}
 	(void)rmslashes(dev, dev);
 
 	build_iovec(&iov, &iovlen, "fstype", fstype, (size_t)-1);

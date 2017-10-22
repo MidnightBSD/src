@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/powerpc/ofw/Makefile 222450 2011-05-29 14:27:11Z andreast $
+# $FreeBSD: release/10.0.0/sys/boot/powerpc/ofw/Makefile 242688 2012-11-07 02:14:03Z dteske $
 
 .include <bsd.own.mk>
 MK_SSP=		no
@@ -105,7 +105,7 @@ loader.help: help.common help.ofw
 FILES=	loader.help loader.4th support.4th loader.conf
 FILES+=	screen.4th frames.4th
 FILES+=	beastie.4th brand.4th check-password.4th color.4th delay.4th
-FILES+=	menu.4th menu-commands.4th shortcuts.4th version.4th
+FILES+=	menu.4th menu-commands.4th menusets.4th shortcuts.4th version.4th
 FILESDIR_loader.conf=	/boot/defaults
 
 .if !exists(${DESTDIR}/boot/loader.rc)

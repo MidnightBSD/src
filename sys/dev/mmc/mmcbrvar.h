@@ -49,7 +49,7 @@
  * or the SD Card Association to disclose or distribute any technical
  * information, know-how or other confidential information to any third party.
  *
- * "$FreeBSD: stable/9/sys/dev/mmc/mmcbrvar.h 236089 2012-05-26 09:31:23Z marius $"
+ * "$FreeBSD: release/10.0.0/sys/dev/mmc/mmcbrvar.h 234524 2012-04-21 01:51:16Z marius $"
  */
 
 #ifndef DEV_MMC_MMCBRVAR_H

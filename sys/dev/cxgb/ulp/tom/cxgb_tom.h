@@ -26,7 +26,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$FreeBSD: stable/9/sys/dev/cxgb/ulp/tom/cxgb_tom.h 247434 2013-02-28 00:44:54Z np $
+$FreeBSD: release/10.0.0/sys/dev/cxgb/ulp/tom/cxgb_tom.h 241733 2012-10-19 13:26:40Z ed $
 
 ***************************************************************************/
 #ifndef CXGB_TOM_H_

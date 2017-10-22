@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/tools/bootparttest/bootparttest.c 243244 2012-11-18 17:27:10Z ae $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/tools/bootparttest/bootparttest.c 253986 2013-08-06 10:35:05Z ae $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -54,7 +54,7 @@ diskread(void *arg, void *buf, size_t blocks, off_t offset)
 	struct disk *dp;
 
 	dp = (struct disk *)arg;
-	printf("%s: read %d blocks from the offset %jd [+%jd]\n", dp->name,
+	printf("%s: read %lu blocks from the offset %jd [+%jd]\n", dp->name,
 	    blocks, offset, dp->offset);
 	if (offset >= dp->mediasize / dp->sectorsize)
 		return (-1);

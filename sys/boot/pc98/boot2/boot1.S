@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/boot/pc98/boot2/boot1.S 229957 2012-01-11 13:52:34Z nyan $
+ * $FreeBSD: release/10.0.0/sys/boot/pc98/boot2/boot1.S 229462 2012-01-04 03:49:41Z nyan $
  */
 
 /* Memory Locations */

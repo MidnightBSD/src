@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/fs/nfsclient/nfsmount.h 233326 2012-03-22 21:07:54Z jhb $
+ * $FreeBSD: release/10.0.0/sys/fs/nfsclient/nfsmount.h 244042 2012-12-08 22:52:39Z rmacklem $
  */
 
 #ifndef _NFSCLIENT_NFSMOUNT_H_
@@ -70,10 +70,12 @@ struct	nfsmount {
 	int	nm_negnametimeo;	/* timeout for -ve entries (sec) */
 
 	/* Newnfs additions */
+	TAILQ_HEAD(, nfsclds) nm_sess;	/* Session(s) for NFSv4.1. */
 	struct	nfsclclient *nm_clp;
 	uid_t	nm_uid;			/* Uid for SetClientID etc. */
 	u_int64_t nm_clval;		/* identifies which clientid */
 	u_int64_t nm_fsid[2];		/* NFSv4 fsid */
+	int	nm_minorvers;		/* Minor version # for NFSv4 */
 	u_int16_t nm_krbnamelen;	/* Krb5 host principal, if any */
 	u_int16_t nm_dirpathlen;	/* and mount dirpath, for V4 */
 	u_int16_t nm_srvkrbnamelen;	/* and the server's target name */
@@ -106,6 +108,12 @@ struct	nfsmount {
  * Convert mount ptr to nfsmount ptr.
  */
 #define	VFSTONFS(mp)	((struct nfsmount *)((mp)->mnt_data))
+
+/*
+ * Get a pointer to the MDS session, which is always the first element
+ * in the list.
+ */
+#define	NFSMNT_MDSSESSION(m)	(&(TAILQ_FIRST(&((m)->nm_sess))->nfsclds_sess))
 
 #ifndef NFS_DEFAULT_NAMETIMEO
 #define NFS_DEFAULT_NAMETIMEO		60

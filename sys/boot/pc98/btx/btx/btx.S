@@ -12,7 +12,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD: stable/9/sys/boot/pc98/btx/btx/btx.S 243445 2012-11-23 13:09:20Z nyan $
+ * $FreeBSD: release/10.0.0/sys/boot/pc98/btx/btx/btx.S 249846 2013-04-24 17:20:45Z dim $
  */
 
 #include <bootargs.h>
@@ -248,7 +248,7 @@ exit:		cli				# Disable interrupts
 /*
  * Restore the GDT in case we caught a kernel trap.
  */
-		lgdt gdtdesc	 		# Set GDT
+		lgdt %cs:gdtdesc		# Set GDT
 /*
  * To 16 bits.
  */

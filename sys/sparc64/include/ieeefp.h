@@ -1,11 +1,13 @@
 /*-
  * Written by J.T. Conklin, Apr 6, 1995
  * Public domain.
- * $FreeBSD: stable/9/sys/sparc64/include/ieeefp.h 139825 2005-01-07 02:29:27Z imp $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/ieeefp.h 226607 2011-10-21 06:41:46Z das $
  */
 
 #ifndef _MACHINE_IEEEFP_H_
 #define _MACHINE_IEEEFP_H_
+
+/* Deprecated FPU control interface */
 
 #include <machine/fsr.h>
 
@@ -22,5 +24,14 @@ typedef enum {
 	FP_RP = FSR_RD_PINF,	/* round toward positive infinity */
 	FP_RM = FSR_RD_NINF	/* round toward negative infinity */
 } fp_rnd_t;
+
+__BEGIN_DECLS
+extern fp_rnd_t    fpgetround(void);
+extern fp_rnd_t    fpsetround(fp_rnd_t);
+extern fp_except_t fpgetmask(void);
+extern fp_except_t fpsetmask(fp_except_t);
+extern fp_except_t fpgetsticky(void);
+__END_DECLS
+
 
 #endif /* _MACHINE_IEEEFP_H_ */

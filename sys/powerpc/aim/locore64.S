@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/powerpc/aim/locore64.S 231907 2012-02-19 08:58:31Z andreast $ */
+/* $FreeBSD: release/10.0.0/sys/powerpc/aim/locore64.S 242723 2012-11-07 23:45:09Z jhibbits $ */
 /* $NetBSD: locore.S,v 1.24 2000/05/31 05:09:17 thorpej Exp $ */
 
 /*-
@@ -64,6 +64,8 @@
 #include <machine/param.h>
 #include <machine/spr.h>
 #include <machine/asm.h>
+
+#include "opt_kdtrace.h"
 
 /* Locate the per-CPU data structure */
 #define GET_CPUINFO(r)  \
@@ -164,12 +166,13 @@ ASENTRY_NOPROF(__start)
 	bl	OF_initial_setup
 	nop
 
-	lis	4,end@ha
-	addi	4,4,end@l
-	mr	5,4
-
 	lis	3,kernbase@ha
 	addi	3,3,kernbase@l
+
+	lis	4,end@ha
+	addi	4,4,end@l
+	add	4,4,3
+	mr	5,4
 
 	/* Restore the argument pointer and length */
 	mr	6,20

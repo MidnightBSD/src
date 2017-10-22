@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/ppp/auth.c 174870 2007-12-22 19:29:32Z des $
+ * $FreeBSD: release/10.0.0/usr.sbin/ppp/auth.c 231994 2012-02-22 06:27:20Z kevlo $
  */
 
 #include <sys/param.h>
@@ -126,9 +126,11 @@ auth_CheckPasswd(const char *name, const char *data, const char *key)
     /* Then look up the real password database */
     struct passwd *pw;
     int result;
+    char *cryptpw;
 
+    cryptpw = crypt(key, pw->pw_passwd);
     result = (pw = getpwnam(name)) &&
-             !strcmp(crypt(key, pw->pw_passwd), pw->pw_passwd);
+             (cryptpw == NULL || !strcmp(cryptpw, pw->pw_passwd));
     endpwent();
     return result;
 #else /* !NOPAM */

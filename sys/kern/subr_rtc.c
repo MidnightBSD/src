@@ -1,11 +1,16 @@
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1982, 1990, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *	The Regents of the University of California.
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
  *
  * This code is derived from software contributed to Berkeley by
  * the Systems Programming Group of the University of Utah Computer
  * Science Department.
+ *
+ * Portions of this software were developed by Julien Ridoux at the University
+ * of Melbourne under sponsorship from the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +53,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/subr_rtc.c 211230 2010-08-12 17:17:05Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_rtc.c 227723 2011-11-19 14:10:16Z lstewart $");
+
+#include "opt_ffclock.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -56,6 +63,9 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/subr_rtc.c 211230 2010-08-12 17:17:05Z jki
 #include <sys/bus.h>
 #include <sys/clock.h>
 #include <sys/sysctl.h>
+#ifdef FFCLOCK
+#include <sys/timeffc.h>
+#endif
 #include <sys/timetc.h>
 
 #include "clock_if.h"
@@ -133,6 +143,9 @@ inittodr(time_t base)
 	ts.tv_sec += utc_offset();
 	timespecadd(&ts, &clock_adj);
 	tc_setclock(&ts);
+#ifdef FFCLOCK
+	ffclock_reset_clock(&ts);
+#endif
 	return;
 
 wrong_time:

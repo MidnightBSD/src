@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/gate/g_gate.c 240265 2012-09-09 08:15:49Z trociny $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/gate/g_gate.c 248720 2013-03-26 05:42:12Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -245,8 +245,6 @@ g_gate_start(struct bio *pbp)
 			}
 			cbp->bio_done = g_gate_done;
 			cbp->bio_offset = pbp->bio_offset + sc->sc_readoffset;
-			cbp->bio_data = pbp->bio_data;
-			cbp->bio_length = pbp->bio_length;
 			cbp->bio_to = sc->sc_readcons->provider;
 			g_io_request(cbp, sc->sc_readcons);
 			return;
@@ -813,7 +811,7 @@ g_gate_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flags, struct threa
 			}
 		}
 		ggio->gctl_cmd = bp->bio_cmd;
-		if ((bp->bio_cmd == BIO_DELETE || bp->bio_cmd == BIO_WRITE) &&
+		if (bp->bio_cmd == BIO_WRITE &&
 		    bp->bio_length > ggio->gctl_length) {
 			mtx_unlock(&sc->sc_queue_mtx);
 			ggio->gctl_length = bp->bio_length;

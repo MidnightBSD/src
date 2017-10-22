@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)wc.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/wc/wc.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/wc/wc.c 227201 2011-11-06 08:19:00Z ed $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -58,8 +58,8 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/wc/wc.c 216370 2010-12-11 08:32:16Z joel $"
 #include <wchar.h>
 #include <wctype.h>
 
-uintmax_t tlinect, twordct, tcharct, tlongline;
-int doline, doword, dochar, domulti, dolongline;
+static uintmax_t tlinect, twordct, tcharct, tlongline;
+static int doline, doword, dochar, domulti, dolongline;
 static volatile sig_atomic_t siginfo;
 
 static void	show_cnt(const char *file, uintmax_t linect, uintmax_t wordct,

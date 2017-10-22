@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libiconv_modules/mapper_zone/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD: release/10.0.0/lib/libiconv_modules/mapper_zone/Makefile 219019 2011-02-25 00:04:39Z gabor $
 
 SHLIB=	mapper_zone
 SRCS+=	citrus_mapper_zone.c

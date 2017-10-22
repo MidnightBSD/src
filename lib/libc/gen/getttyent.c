@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)getttyent.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/getttyent.c 203068 2010-01-27 11:54:42Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/getttyent.c 244092 2012-12-10 17:56:51Z jilles $");
 
 #include <ttyent.h>
 #include <stdio.h>
@@ -78,7 +78,7 @@ getttyent(void)
 		if (!fgets(p = line, lbsize, tf))
 			return (NULL);
 		/* extend buffer if line was too big, and retry */
-		while (!index(p, '\n') && !feof(tf)) {
+		while (!strchr(p, '\n') && !feof(tf)) {
 			i = strlen(p);
 			lbsize += MALLOCCHUNK;
 			if ((p = realloc(line, lbsize)) == NULL) {
@@ -148,7 +148,7 @@ getttyent(void)
 	tty.ty_comment = p;
 	if (*p == 0)
 		tty.ty_comment = 0;
-	if ( (p = index(p, '\n')) )
+	if ((p = strchr(p, '\n')))
 		*p = '\0';
 	return (&tty);
 }
@@ -196,7 +196,7 @@ static char *
 value(char *p)
 {
 
-	return ((p = index(p, '=')) ? ++p : NULL);
+	return ((p = strchr(p, '=')) ? ++p : NULL);
 }
 
 int
@@ -211,7 +211,7 @@ setttyent(void)
 	if (tf) {
 		rewind(tf);
 		return (1);
-	} else if ( (tf = fopen(_PATH_TTYS, "r")) )
+	} else if ( (tf = fopen(_PATH_TTYS, "re")) )
 		return (1);
 	return (0);
 }

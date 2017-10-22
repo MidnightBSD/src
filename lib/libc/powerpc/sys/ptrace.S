@@ -26,7 +26,7 @@
 /*      $NetBSD: ptrace.S,v 1.3 2000/02/23 20:16:57 kleink Exp $        */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/powerpc/sys/ptrace.S 217398 2011-01-14 11:33:40Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/powerpc/sys/ptrace.S 217398 2011-01-14 11:33:40Z kib $");
 
 #include "SYS.h"
 

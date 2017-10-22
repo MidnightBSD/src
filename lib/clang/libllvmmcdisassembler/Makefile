@@ -1,14 +1,10 @@
-# $FreeBSD: stable/9/lib/clang/libllvmmcdisassembler/Makefile 246637 2013-02-10 21:24:47Z dim $
+# $FreeBSD: release/10.0.0/lib/clang/libllvmmcdisassembler/Makefile 249423 2013-04-12 17:57:40Z dim $
 
 .include <bsd.own.mk>
 
 LIB=	llvmmcdisassembler
 
 SRCDIR=	lib/MC/MCDisassembler
-SRCS=	Disassembler.cpp \
-	EDDisassembler.cpp \
-	EDInst.cpp \
-	EDOperand.cpp \
-	EDToken.cpp
+SRCS=	Disassembler.cpp
 
 .include "../clang.lib.mk"

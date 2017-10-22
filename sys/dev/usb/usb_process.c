@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_process.c 248085 2013-03-09 02:36:32Z marius $ */
+/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_process.c 246360 2013-02-05 13:30:07Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -24,8 +24,9 @@
  * SUCH DAMAGE.
  */
 
-#define	USB_DEBUG_VAR usb_proc_debug
-
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -49,12 +50,15 @@
 #include <dev/usb/usbdi.h>
 #include <dev/usb/usbdi_util.h>
 #include <dev/usb/usb_process.h>
+
+#define	USB_DEBUG_VAR usb_proc_debug
 #include <dev/usb/usb_debug.h>
 #include <dev/usb/usb_util.h>
 
 #include <sys/proc.h>
 #include <sys/kthread.h>
 #include <sys/sched.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 #if (__FreeBSD_version < 700000)
 #define	thread_lock(td) mtx_lock_spin(&sched_lock)
@@ -67,13 +71,17 @@ static int usb_pcount;
 #define	USB_THREAD_CREATE(f, s, p, ...) \
 		kproc_kthread_add((f), (s), &usbproc, (p), RFHIGHPID, \
 		    0, "usb", __VA_ARGS__)
+#if (__FreeBSD_version >= 900000)
 #define	USB_THREAD_SUSPEND_CHECK() kthread_suspend_check()
+#else
+#define	USB_THREAD_SUSPEND_CHECK() kthread_suspend_check(curthread)
+#endif
 #define	USB_THREAD_SUSPEND(p)   kthread_suspend(p,0)
 #define	USB_THREAD_EXIT(err)	kthread_exit()
 #else
 #define	USB_THREAD_CREATE(f, s, p, ...) \
 		kthread_create((f), (s), (p), RFHIGHPID, 0, __VA_ARGS__)
-#define	USB_THREAD_SUSPEND_CHECK() kthread_suspend_check()
+#define	USB_THREAD_SUSPEND_CHECK() kthread_suspend_check(curproc)
 #define	USB_THREAD_SUSPEND(p)   kthread_suspend(p,0)
 #define	USB_THREAD_EXIT(err)	kthread_exit(err)
 #endif

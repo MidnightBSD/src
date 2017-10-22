@@ -36,7 +36,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: read.c,v 1.12 2002/01/21 19:49:52 tv Exp $");
 #endif
-__FBSDID("$FreeBSD: stable/9/usr.bin/xlint/lint2/read.c 223262 2011-06-18 13:56:33Z benl $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/xlint/lint2/read.c 228992 2011-12-30 11:02:40Z uqs $");
 
 #include <ctype.h>
 #include <err.h>
@@ -506,7 +506,7 @@ decldef(pos_t *posp, const char *cp)
 }
 
 /*
- * Read an u-record (emited by lint1 if a symbol was used).
+ * Read an u-record (emitted by lint1 if a symbol was used).
  */
 static void
 usedsym(pos_t *posp, const char *cp)

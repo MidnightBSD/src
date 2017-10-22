@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/sound/chip.h 55320 2000-01-03 02:51:16Z tanimura $
+ * $FreeBSD: release/10.0.0/sys/dev/sound/chip.h 55320 2000-01-03 02:51:16Z tanimura $
  */
 
 /*

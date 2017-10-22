@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/libexec/rtld-elf/ia64/rtld_machdep.h 233694 2012-03-30 09:34:19Z kib $
+ * $FreeBSD: release/10.0.0/libexec/rtld-elf/ia64/rtld_machdep.h 232831 2012-03-11 20:03:09Z kib $
  */
 
 #ifndef RTLD_MACHDEP_H

@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)quotaon.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/quotaon/quotaon.c 207736 2010-05-07 00:41:12Z mckusick $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/quotaon/quotaon.c 241737 2012-10-19 14:49:42Z ed $");
 
 /*
  * Turn quota on/off for a filesystem.
@@ -59,29 +59,26 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/quotaon/quotaon.c 207736 2010-05-07 00:41:
 #include <string.h>
 #include <unistd.h>
 
-const char *qfname = QUOTAFILENAME;
-const char *qfextension[] = INITQFNAMES;
+static const char *qfextension[] = INITQFNAMES;
 
-int	aflag;		/* all filesystems */
-int	gflag;		/* operate on group quotas */
-int	uflag;		/* operate on user quotas */
-int	vflag;		/* verbose */
+static int	aflag;		/* all filesystems */
+static int	gflag;		/* operate on group quotas */
+static int	uflag;		/* operate on user quotas */
+static int	vflag;		/* verbose */
 
-int oneof(char *, char *[], int);
-int quotaonoff(struct fstab *fs, int, int);
+static int oneof(char *, char *[], int);
+static int quotaonoff(struct fstab *fs, int, int);
 static void usage(void);
 
 int
 main(int argc, char **argv)
 {
 	struct fstab *fs;
-	char *whoami;
+	const char *whoami;
 	long argnum, done = 0;
 	int ch, i, offmode = 0, errs = 0;
 
-	whoami = rindex(*argv, '/') + 1;
-	if (whoami == (char *)1)
-		whoami = *argv;
+	whoami = getprogname();
 	if (strcmp(whoami, "quotaoff") == 0)
 		offmode++;
 	else if (strcmp(whoami, "quotaon") != 0)
@@ -152,7 +149,7 @@ usage(void)
 	exit(1);
 }
 
-int
+static int
 quotaonoff(struct fstab *fs, int offmode, int type)
 {
 	struct quotafile *qf;
@@ -183,7 +180,7 @@ quotaonoff(struct fstab *fs, int offmode, int type)
 /*
  * Check to see if target appears in list of size cnt.
  */
-int
+static int
 oneof(char *target, char *list[], int cnt)
 {
 	int i;

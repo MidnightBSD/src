@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libkiconv/xlat16_iconv.c 237698 2012-06-28 09:18:11Z gabor $
+ * $FreeBSD: release/10.0.0/lib/libkiconv/xlat16_iconv.c 254273 2013-08-13 07:15:01Z peter $
  */
 
 /*
@@ -49,8 +49,6 @@
 
 #include "quirks.h"
 
-typedef void *iconv_t;
-
 struct xlat16_table {
 	uint32_t *	idx[0x200];
 	void *		data;
@@ -61,6 +59,7 @@ static struct xlat16_table kiconv_xlat16_open(const char *, const char *, int);
 static int chklocale(int, const char *);
 
 #ifdef ICONV_DLOPEN
+typedef void *iconv_t;
 static int my_iconv_init(void);
 static iconv_t (*my_iconv_open)(const char *, const char *);
 static size_t (*my_iconv)(iconv_t, const char **, size_t *, char **, size_t *);

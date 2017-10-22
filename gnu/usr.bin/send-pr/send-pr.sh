@@ -20,7 +20,7 @@
 # along with GNU GNATS; see the file COPYING.  If not, write to
 # the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# $FreeBSD: stable/9/gnu/usr.bin/send-pr/send-pr.sh 242335 2012-10-30 03:21:23Z eadler $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/send-pr/send-pr.sh 241857 2012-10-22 03:41:19Z eadler $
 
 # The version of this send-pr.
 VERSION=3.114

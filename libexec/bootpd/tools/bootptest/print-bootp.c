@@ -23,7 +23,7 @@
  * This file was copied from tcpdump-2.1.1 and modified.
  * There is an e-mail list for tcpdump: <tcpdump@ee.lbl.gov>
  *
- * $FreeBSD: stable/9/libexec/bootpd/tools/bootptest/print-bootp.c 229138 2011-12-31 19:28:54Z dim $
+ * $FreeBSD: release/10.0.0/libexec/bootpd/tools/bootptest/print-bootp.c 229780 2012-01-07 16:09:54Z uqs $
  */
 
 #include <stdio.h>
@@ -187,7 +187,7 @@ bootp_print(bp, length, sport, dport)
 
 /*
  * Option description data follows.
- * These are decribed in: RFC-1048, RFC-1395, RFC-1497, RFC-1533
+ * These are described in: RFC-1048, RFC-1395, RFC-1497, RFC-1533
  *
  * The first char of each option string encodes the data format:
  * ?: unknown

@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libkse/arch/ia64/include/pthread_md.h 174127 2007-12-01 14:23:29Z rwatson $
+ * $FreeBSD: release/10.0.0/lib/libkse/arch/ia64/include/pthread_md.h 174127 2007-12-01 14:23:29Z rwatson $
  */
 
 #ifndef _PTHREAD_MD_H_

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/ia64/common/icache.c 222798 2011-06-07 00:39:15Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/ia64/common/icache.c 222798 2011-06-07 00:39:15Z marcel $");
 
 #include <stand.h>
 #include <machine/ia64_cpu.h>

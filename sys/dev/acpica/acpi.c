@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/acpi.c 249767 2013-04-22 15:51:06Z jhb $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -217,7 +217,7 @@ static device_method_t acpi_methods[] = {
     /* ISA emulation */
     DEVMETHOD(isa_pnp_probe,		acpi_isa_pnp_probe),
 
-    {0, 0}
+    DEVMETHOD_END
 };
 
 static driver_t acpi_driver = {
@@ -613,7 +613,9 @@ acpi_attach(device_t dev)
     /* Probe all supported sleep states. */
     acpi_sleep_states[ACPI_STATE_S0] = TRUE;
     for (state = ACPI_STATE_S1; state < ACPI_S_STATE_COUNT; state++)
-	if (ACPI_SUCCESS(AcpiGetSleepTypeData(state, &TypeA, &TypeB)))
+	if (ACPI_SUCCESS(AcpiEvaluateObject(ACPI_ROOT_OBJECT,
+	    __DECONST(char *, AcpiGbl_SleepStateNames[state]), NULL, NULL)) &&
+	    ACPI_SUCCESS(AcpiGetSleepTypeData(state, &TypeA, &TypeB)))
 	    acpi_sleep_states[state] = TRUE;
 
     /*
@@ -1479,7 +1481,7 @@ static int
 acpi_isa_get_compatid(device_t dev, uint32_t *cids, int count)
 {
     ACPI_DEVICE_INFO	*devinfo;
-    ACPI_DEVICE_ID	*ids;
+    ACPI_PNP_DEVICE_ID	*ids;
     ACPI_HANDLE		h;
     uint32_t		*pnpid;
     int			i, valid;
@@ -2332,7 +2334,7 @@ acpi_AppendBufferResource(ACPI_BUFFER *buf, ACPI_RESOURCE *res)
 	    return (AE_NO_MEMORY);
 	rp = (ACPI_RESOURCE *)buf->Pointer;
 	rp->Type = ACPI_RESOURCE_TYPE_END_TAG;
-	rp->Length = 0;
+	rp->Length = ACPI_RS_SIZE_MIN;
     }
     if (res == NULL)
 	return (AE_OK);
@@ -2382,7 +2384,7 @@ acpi_AppendBufferResource(ACPI_BUFFER *buf, ACPI_RESOURCE *res)
     /* And add the terminator. */
     rp = ACPI_NEXT_RESOURCE(rp);
     rp->Type = ACPI_RESOURCE_TYPE_END_TAG;
-    rp->Length = 0;
+    rp->Length = ACPI_RS_SIZE_MIN;
 
     return (AE_OK);
 }
@@ -2756,6 +2758,7 @@ acpi_EnterSleepState(struct acpi_softc *sc, int state)
 	if (sleep_result == 1 && state != ACPI_STATE_S4)
 	    AcpiWriteBitRegister(ACPI_BITREG_SCI_ENABLE, ACPI_ENABLE_EVENT);
 
+	AcpiLeaveSleepStatePrep(state);
 
 	if (sleep_result == 1 && state == ACPI_STATE_S3) {
 	    /*
@@ -2793,6 +2796,7 @@ acpi_EnterSleepState(struct acpi_softc *sc, int state)
 	    AcpiEnable();
     } else {
 	status = AcpiEnterSleepState(state);
+	AcpiLeaveSleepStatePrep(state);
 	intr_restore(intr);
 	if (ACPI_FAILURE(status)) {
 	    device_printf(sc->acpi_dev, "AcpiEnterSleepState failed - %s\n",

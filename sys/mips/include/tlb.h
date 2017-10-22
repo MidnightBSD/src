@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/mips/include/tlb.h 210105 2010-07-15 03:56:08Z imp $
+ * $FreeBSD: release/10.0.0/sys/mips/include/tlb.h 241123 2012-10-02 07:14:22Z alc $
  */
 
 #ifndef	_MACHINE_TLB_H_
@@ -53,6 +53,7 @@ void tlb_insert_wired(unsigned, vm_offset_t, pt_entry_t, pt_entry_t);
 void tlb_invalidate_address(struct pmap *, vm_offset_t);
 void tlb_invalidate_all(void);
 void tlb_invalidate_all_user(struct pmap *);
+void tlb_invalidate_range(struct pmap *, vm_offset_t, vm_offset_t);
 void tlb_save(void);
 void tlb_update(struct pmap *, vm_offset_t, pt_entry_t);
 

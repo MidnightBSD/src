@@ -45,7 +45,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/rmi/dev/nlge/if_nlge.c 229093 2011-12-31 14:12:12Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/rmi/dev/nlge/if_nlge.c 243882 2012-12-05 08:04:20Z glebius $");
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -2158,7 +2158,7 @@ get_buf(void)
 	vm_paddr_t	temp1, temp2;
 #endif
 
-	if ((m_new = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR)) == NULL)
+	if ((m_new = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR)) == NULL)
 		return (NULL);
 	m_new->m_len = m_new->m_pkthdr.len = MCLBYTES;
 	m_adj(m_new, XLR_CACHELINE_SIZE - ((uintptr_t)m_new->m_data & 0x1f));

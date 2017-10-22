@@ -1,7 +1,0 @@
-.\" $FreeBSD: stable/9/tools/build/options/WITHOUT_BIND_UTILS 156932 2006-03-21 07:50:50Z ru $
-Set to avoid building or installing the BIND userland utilities,
-.Xr dig 1 ,
-.Xr host 1 ,
-.Xr nslookup 1 ,
-and
-.Xr nsupdate 8 .

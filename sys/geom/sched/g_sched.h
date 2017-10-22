@@ -30,7 +30,7 @@
 
 /*
  * $Id$
- * $FreeBSD: stable/9/sys/geom/sched/g_sched.h 206552 2010-04-13 09:56:17Z luigi $
+ * $FreeBSD: release/10.0.0/sys/geom/sched/g_sched.h 206552 2010-04-13 09:56:17Z luigi $
  *
  * Header for the geom_sched class (userland library and kernel part).
  * See g_sched.c for documentation.

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)string.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/9/include/string.h 235785 2012-05-22 14:40:39Z theraven $
+ * $FreeBSD: release/10.0.0/include/string.h 246803 2013-02-14 19:26:58Z zeising $
  */
 
 #ifndef _STRING_H_
@@ -74,6 +74,9 @@ char	*strcasestr(const char *, const char *) __pure;
 #endif
 char	*strcat(char * __restrict, const char * __restrict);
 char	*strchr(const char *, int) __pure;
+#if __BSD_VISIBLE
+char	*strchrnul(const char*, int) __pure;
+#endif
 int	 strcmp(const char *, const char *) __pure;
 int	 strcoll(const char *, const char *);
 char	*strcpy(char * __restrict, const char * __restrict);

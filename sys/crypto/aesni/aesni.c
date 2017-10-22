@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/crypto/aesni/aesni.c 231979 2012-02-21 20:56:03Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/crypto/aesni/aesni.c 258623 2013-11-26 08:46:39Z jmg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -40,7 +40,7 @@ __FBSDID("$FreeBSD: stable/9/sys/crypto/aesni/aesni.c 231979 2012-02-21 20:56:03
 #include <sys/bus.h>
 #include <sys/uio.h>
 #include <crypto/aesni/aesni.h>
-#include "cryptodev_if.h"
+#include <cryptodev_if.h>
 
 struct aesni_softc {
 	int32_t cid;
@@ -74,6 +74,12 @@ aesni_probe(device_t dev)
 		device_printf(dev, "No AESNI support.\n");
 		return (EINVAL);
 	}
+
+	if ((cpu_feature & CPUID_SSE2) == 0) {
+		device_printf(dev, "No SSE2 support but AESNI!?!\n");
+		return (EINVAL);
+	}
+
 	device_set_desc_copy(dev, "AES-CBC,AES-XTS");
 	return (0);
 }
@@ -86,7 +92,8 @@ aesni_attach(device_t dev)
 	sc = device_get_softc(dev);
 	TAILQ_INIT(&sc->sessions);
 	sc->sid = 1;
-	sc->cid = crypto_get_driverid(dev, CRYPTOCAP_F_HARDWARE);
+	sc->cid = crypto_get_driverid(dev, CRYPTOCAP_F_HARDWARE |
+	    CRYPTOCAP_F_SYNC);
 	if (sc->cid < 0) {
 		device_printf(dev, "Could not get crypto driver id.\n");
 		return (ENOMEM);

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/cfi/cfi_bus_ixp4xx.c 188741 2009-02-17 23:43:17Z sam $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cfi/cfi_bus_ixp4xx.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -69,7 +69,7 @@ static device_method_t cfi_ixp4xx_methods[] = {
 	DEVMETHOD(device_attach,	cfi_attach),
 	DEVMETHOD(device_detach,	cfi_detach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t cfi_ixp4xx_driver = {

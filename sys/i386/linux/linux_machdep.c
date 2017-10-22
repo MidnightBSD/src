@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/linux/linux_machdep.c 248532 2013-03-19 20:18:30Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/linux/linux_machdep.c 255219 2013-09-05 00:09:56Z pjd $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -422,6 +422,7 @@ linux_mmap_common(struct thread *td, l_uintptr_t addr, l_size_t len, l_int prot,
 	} */ bsd_args;
 	int error;
 	struct file *fp;
+	cap_rights_t rights;
 
 	error = 0;
 	bsd_args.flags = 0;
@@ -473,7 +474,9 @@ linux_mmap_common(struct thread *td, l_uintptr_t addr, l_size_t len, l_int prot,
 		 * is done in the FreeBSD mmap().
 		 */
 
-		if ((error = fget(td, bsd_args.fd, CAP_MMAP, &fp)) != 0)
+		error = fget(td, bsd_args.fd,
+		    cap_rights_init(&rights, CAP_MMAP), &fp);
+		if (error != 0)
 			return (error);
 		if (fp->f_type != DTYPE_VNODE) {
 			fdrop(fp, td);

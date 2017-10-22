@@ -19,7 +19,7 @@
 /* Written July 1992 by Mike Haertel.  */
 /* Builtin decompression 1997 by Wolfram Schneider <wosch@FreeBSD.org>.  */
 
-/* $FreeBSD: stable/9/gnu/usr.bin/grep/grep.c 151534 2005-10-21 15:17:18Z jkim $ */
+/* $FreeBSD: release/10.0.0/gnu/usr.bin/grep/grep.c 254093 2013-08-08 11:53:47Z ache $ */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -301,14 +301,16 @@ reset (int fd, char const *file, struct stats *stats)
       error (0, errno, "fstat");
       return 0;
     }
-  if (directories == SKIP_DIRECTORIES && S_ISDIR (stats->stat.st_mode))
-    return 0;
+  if (fd != STDIN_FILENO) {
+    if (directories == SKIP_DIRECTORIES && S_ISDIR (stats->stat.st_mode))
+      return 0;
 #ifndef DJGPP
-  if (devices == SKIP_DEVICES && (S_ISCHR(stats->stat.st_mode) || S_ISBLK(stats->stat.st_mode) || S_ISSOCK(stats->stat.st_mode)))
+    if (devices == SKIP_DEVICES && (S_ISCHR(stats->stat.st_mode) || S_ISBLK(stats->stat.st_mode) || S_ISSOCK(stats->stat.st_mode) || S_ISFIFO(stats->stat.st_mode)))
 #else
-  if (devices == SKIP_DEVICES && (S_ISCHR(stats->stat.st_mode) || S_ISBLK(stats->stat.st_mode)))
+    if (devices == SKIP_DEVICES && (S_ISCHR(stats->stat.st_mode) || S_ISBLK(stats->stat.st_mode)))
 #endif
-    return 0;
+      return 0;
+  }
   if (
       BZflag ||
 #if HAVE_LIBZ > 0
@@ -942,6 +944,7 @@ grepfile (char const *file, struct stats *stats)
   int desc;
   int count;
   int status;
+  int flags;
 
   if (! file)
     {
@@ -950,7 +953,7 @@ grepfile (char const *file, struct stats *stats)
     }
   else
     {
-      while ((desc = open (file, O_RDONLY)) < 0 && errno == EINTR)
+      while ((desc = open (file, O_RDONLY | O_NONBLOCK)) < 0 && errno == EINTR)
 	continue;
 
       if (desc < 0)
@@ -990,6 +993,9 @@ grepfile (char const *file, struct stats *stats)
 	  return 1;
 	}
 
+      flags = fcntl(desc, F_GETFL);
+      flags &= ~O_NONBLOCK;
+      fcntl(desc, F_SETFL, flags);
       filename = file;
     }
 
@@ -1346,9 +1352,9 @@ int
 main (int argc, char **argv)
 {
   char *keys;
-  size_t keycc, oldcc, keyalloc;
+  size_t cc, keycc, oldcc, keyalloc;
   int with_filenames;
-  int opt, cc, status;
+  int opt, status;
   int default_context;
   FILE *fp;
   extern char *optarg;

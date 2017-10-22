@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/include/elf.h 237753 2012-06-29 09:41:09Z kib $
+ * $FreeBSD: release/10.0.0/sys/arm/include/elf.h 237430 2012-06-22 06:38:31Z kib $
  */
 
 #ifndef _MACHINE_ELF_H_
@@ -100,8 +100,8 @@ __ElfType(Auxinfo);
 #define	ELF_TARG_MACH	EM_ARM
 #define	ELF_TARG_VER	1
 
-/* 
- * Magic number for the elf trampoline, chosen wisely to be an immediate 
+/*
+ * Magic number for the elf trampoline, chosen wisely to be an immediate
  * value.
  */
 #define MAGIC_TRAMP_NUMBER	0x5c000003

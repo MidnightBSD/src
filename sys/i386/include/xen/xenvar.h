@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/i386/include/xen/xenvar.h 231697 2012-02-14 18:00:37Z ken $
+ * $FreeBSD: release/10.0.0/sys/i386/include/xen/xenvar.h 255781 2013-09-22 00:54:22Z gibbs $
  */
 
 #ifndef XENVAR_H_
@@ -37,7 +37,8 @@
 #define XPMAP   0x2
 extern int xendebug_flags;
 #ifndef NOXENDEBUG
-#define XENPRINTF printk
+/* Print directly to the Xen console during debugging. */
+#define XENPRINTF xc_printf
 #else
 #define XENPRINTF printf
 #endif
@@ -93,7 +94,7 @@ extern xen_pfn_t *xen_machine_phys;
 void xpq_init(void);
 
 #define BITS_PER_LONG 32
-#define NR_CPUS      MAX_VIRT_CPUS
+#define NR_CPUS      XEN_LEGACY_MAX_VCPUS
 
 #define BITS_TO_LONGS(bits) \
 	(((bits)+BITS_PER_LONG-1)/BITS_PER_LONG)
@@ -106,9 +107,7 @@ void  xen_destroy_contiguous_region(void * addr, int npages);
 
 #elif defined(XENHVM)
 
-#if !defined(PAE)
 #define	vtomach(va)	pmap_kextract((vm_offset_t) (va))
-#endif
 #define	PFNTOMFN(pa)	(pa)
 #define	MFNTOPFN(ma)	(ma)
 

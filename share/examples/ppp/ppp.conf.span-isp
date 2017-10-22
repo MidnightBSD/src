@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/examples/ppp/ppp.conf.span-isp 138815 2004-12-13 17:54:30Z brian $
+# $FreeBSD: release/10.0.0/share/examples/ppp/ppp.conf.span-isp 244040 2012-12-08 22:16:36Z eadler $
 
 # This advanced ppp configuration file explains how to implement
 # the following:
@@ -104,7 +104,7 @@
 
 default:
   set speed 115200
-  set device /dev/cuad0 /dev/cuad1 /dev/cuad2 /dev/cuad3
+  set device /dev/cuau0 /dev/cuau1 /dev/cuau2 /dev/cuau3
   set dial "ABORT BUSY ABORT NO\\sCARRIER ABORT NO\\sDIAL\\sTONE TIMEOUT 4 \
             \"\" ATZ OK-ATZ-OK ATDT\\T TIMEOUT 60 CONNECT \\c \\n"
   set login

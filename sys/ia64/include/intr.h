@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/ia64/include/intr.h 205726 2010-03-27 05:40:50Z marcel $
+ * $FreeBSD: release/10.0.0/sys/ia64/include/intr.h 205726 2010-03-27 05:40:50Z marcel $
  */
 
 #ifndef _MACHINE_INTR_H_

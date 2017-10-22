@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)io.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/indent/io.c 229194 2012-01-01 19:25:43Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/indent/io.c 228992 2011-12-30 11:02:40Z uqs $");
 
 #include <ctype.h>
 #include <err.h>
@@ -232,7 +232,7 @@ dump_line(void)
 			target = ((target - 1) & ~7) + 9, com_st++;
 		    else
 			target = 1;
-		if (cur_col > target) {	/* if comment cant fit on this line,
+		if (cur_col > target) {	/* if comment can't fit on this line,
 					 * put it on next line */
 		    putc('\n', output);
 		    cur_col = 1;

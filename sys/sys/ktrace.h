@@ -27,11 +27,13 @@
  * SUCH DAMAGE.
  *
  *	@(#)ktrace.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/9/sys/sys/ktrace.h 237719 2012-06-28 18:38:24Z jhb $
+ * $FreeBSD: release/10.0.0/sys/sys/ktrace.h 255219 2013-09-05 00:09:56Z pjd $
  */
 
 #ifndef _SYS_KTRACE_H_
 #define _SYS_KTRACE_H_
+
+#include <sys/caprights.h>
 
 /*
  * operations to ktrace system call  (KTROP(op))
@@ -184,6 +186,22 @@ struct ktr_proc_ctor {
 #define KTR_PROCDTOR	11
 
 /*
+ * KTR_CAPFAIL - trace capability check failures
+ */
+#define KTR_CAPFAIL	12
+enum ktr_cap_fail_type {
+	CAPFAIL_NOTCAPABLE,	/* insufficient capabilities in cap_check() */
+	CAPFAIL_INCREASE,	/* attempt to increase capabilities */
+	CAPFAIL_SYSCALL,	/* disallowed system call */
+	CAPFAIL_LOOKUP,		/* disallowed VFS lookup */
+};
+struct ktr_cap_fail {
+	enum ktr_cap_fail_type cap_type;
+	cap_rights_t	cap_needed;
+	cap_rights_t	cap_held;
+};
+
+/*
  * KTR_FAULT - page fault record
  */
 #define KTR_FAULT	13
@@ -221,6 +239,7 @@ struct ktr_faultend {
 #define KTRFAC_SYSCTL	(1<<KTR_SYSCTL)
 #define KTRFAC_PROCCTOR	(1<<KTR_PROCCTOR)
 #define KTRFAC_PROCDTOR	(1<<KTR_PROCDTOR)
+#define KTRFAC_CAPFAIL	(1<<KTR_CAPFAIL)
 #define KTRFAC_FAULT	(1<<KTR_FAULT)
 #define KTRFAC_FAULTEND	(1<<KTR_FAULTEND)
 
@@ -247,6 +266,10 @@ void	ktrprocexit(struct thread *);
 void	ktrprocfork(struct proc *, struct proc *);
 void	ktruserret(struct thread *);
 void	ktrstruct(const char *, void *, size_t);
+void	ktrcapfail(enum ktr_cap_fail_type, const cap_rights_t *,
+	    const cap_rights_t *);
+#define ktrcaprights(s) \
+	ktrstruct("caprights", (s), sizeof(cap_rights_t))
 #define ktrsockaddr(s) \
 	ktrstruct("sockaddr", (s), ((struct sockaddr *)(s))->sa_len)
 #define ktrstat(s) \

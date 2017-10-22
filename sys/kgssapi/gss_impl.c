@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kgssapi/gss_impl.c 245018 2013-01-03 23:15:36Z rmacklem $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kgssapi/gss_impl.c 253049 2013-07-09 01:05:28Z rmacklem $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -286,6 +286,7 @@ kgssapi_modevent(module_t mod, int type, void *data)
 
 	switch (type) {
 	case MOD_LOAD:
+		rpc_gss_entries.rpc_gss_refresh_auth = rpc_gss_refresh_auth;
 		rpc_gss_entries.rpc_gss_secfind = rpc_gss_secfind;
 		rpc_gss_entries.rpc_gss_secpurge = rpc_gss_secpurge;
 		rpc_gss_entries.rpc_gss_seccreate = rpc_gss_seccreate;

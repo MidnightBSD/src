@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/makefs/ffs/ufs_bmap.c 248293 2013-03-14 22:57:27Z brooks $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/makefs/ffs/ufs_bmap.c 239359 2012-08-17 17:45:27Z mjg $");
 
 #include <sys/param.h>
 #include <sys/time.h>

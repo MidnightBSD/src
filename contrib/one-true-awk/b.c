@@ -25,7 +25,7 @@ THIS SOFTWARE.
 /* lasciate ogne speranza, voi ch'intrate. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/contrib/one-true-awk/b.c 224731 2011-08-09 12:54:43Z ru $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/one-true-awk/b.c 224731 2011-08-09 12:54:43Z ru $");
 
 #define	DEBUG
 

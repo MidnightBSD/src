@@ -54,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/aim/nexus.c 229093 2011-12-31 14:12:12Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/aim/nexus.c 255419 2013-09-09 12:52:34Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -195,7 +195,8 @@ static driver_t nexus_driver = {
 
 static devclass_t nexus_devclass;
 
-DRIVER_MODULE(nexus, root, nexus_driver, nexus_devclass, 0, 0);
+EARLY_DRIVER_MODULE(nexus, root, nexus_driver, nexus_devclass, 0, 0,
+    BUS_PASS_BUS);
 
 static int
 nexus_probe(device_t dev)
@@ -216,7 +217,7 @@ nexus_attach(device_t dev)
 	sc = device_get_softc(dev);
 
 	start = 0;
-	end = MAX_PICS*INTR_VECTORS - 1;
+	end = ~0;
 
 	sc->sc_rman.rm_start = start;
 	sc->sc_rman.rm_end = end;

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/mmap/mmap.c 197713 2009-10-02 17:53:48Z bz $
+ * $FreeBSD: release/10.0.0/tools/regression/mmap/mmap.c 197713 2009-10-02 17:53:48Z bz $
  */
 
 #include <sys/param.h>

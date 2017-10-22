@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libc/stdio/test-print-positional.c 180103 2008-06-29 21:03:14Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/libc/stdio/test-print-positional.c 180103 2008-06-29 21:03:14Z das $");
 
 #include <stdio.h>
 #include <stdlib.h>

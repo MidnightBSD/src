@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/boot/powerpc/ps3/start.S 236518 2012-06-03 17:48:04Z marius $
+ * $FreeBSD: release/10.0.0/sys/boot/powerpc/ps3/start.S 233666 2012-03-29 16:04:42Z nwhitehorn $
  */
 
 #define LOCORE

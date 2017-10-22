@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/Makefile.ia64 212525 2010-09-13 02:21:07Z imp $
+# $FreeBSD: release/10.0.0/usr.sbin/Makefile.ia64 252356 2013-06-28 21:00:08Z davide $
 
 .if ${MK_ACPI} != "no"
 SUBDIR+=	acpi

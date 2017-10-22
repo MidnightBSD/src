@@ -26,15 +26,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/bce/if_bcereg.h 248036 2013-03-08 11:32:58Z marius $
+ * $FreeBSD: release/10.0.0/sys/dev/bce/if_bcereg.h 252402 2013-06-30 05:12:18Z yongari $
  */
 
 #ifndef	_BCEREG_H_DEFINED
 #define _BCEREG_H_DEFINED
-
-#ifdef HAVE_KERNEL_OPTION_HEADERS
-#include "opt_device_polling.h"
-#endif
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -289,7 +285,6 @@
  *
  * #define BCE_DEBUG
  * #define BCE_NVRAM_WRITE_SUPPORT
- * #define BCE_JUMBO_HDRSPLIT
  */
 
 /****************************************************************************/
@@ -6337,13 +6332,13 @@ struct fw_info {
 	u32 bss_addr;
 	u32 bss_len;
 	u32 bss_index;
-	u32 *bss;
+	const u32 *bss;
 
 	/* Read-only section. */
 	u32 rodata_addr;
 	u32 rodata_len;
 	u32 rodata_index;
-	u32 *rodata;
+	const u32 *rodata;
 };
 
 #define RV2P_PROC1		0
@@ -6422,6 +6417,8 @@ struct fw_info {
 
 struct bce_softc
 {
+	struct mtx		bce_mtx;
+
 	/* Interface info */
 	struct ifnet		*bce_ifp;
 
@@ -6449,8 +6446,6 @@ struct bce_softc
 	/* IRQ Resource Handle */
 	struct resource		*bce_res_irq;
 
-	struct mtx		bce_mtx;
-
 	/* Interrupt handler. */
 	void			*bce_intrhand;
 
@@ -6470,6 +6465,7 @@ struct bce_softc
 #define BCE_USING_MSIX_FLAG			0x00000100
 #define BCE_PCIE_FLAG				0x00000200
 #define BCE_USING_TX_FLOW_CONTROL		0x00000400
+#define BCE_USING_RX_FLOW_CONTROL		0x00000800
 
 	/* Controller capability flags. */
 	u32			bce_cap_flags;
@@ -6564,14 +6560,6 @@ struct bce_softc
 	u16			bce_rx_ticks;
 	u32			bce_stats_ticks;
 
-	/* ToDo: Can these be removed? */
-	u16			bce_comp_prod_trip_int;
-	u16			bce_comp_prod_trip;
-	u16			bce_com_ticks_int;
-	u16			bce_com_ticks;
-	u16			bce_cmd_ticks_int;
-	u16			bce_cmd_ticks;
-
 	/* The address of the integrated PHY on the MII bus. */
 	int			bce_phy_addr;
 
@@ -6604,11 +6592,9 @@ struct bce_softc
 	int			watchdog_timer;
 
 	/* Frame size and mbuf allocation size for RX frames. */
-	u32			max_frame_size;
 	int			rx_bd_mbuf_alloc_size;
 	int			rx_bd_mbuf_data_len;
 	int			rx_bd_mbuf_align_pad;
-	int			pg_bd_mbuf_alloc_size;
 
 	/* Receive mode settings (i.e promiscuous, multicast, etc.). */
 	u32			rx_mode;

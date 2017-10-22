@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/9/sys/sys/smp.h 235796 2012-05-22 17:44:01Z iwasaki $
+ * $FreeBSD: release/10.0.0/sys/sys/smp.h 255726 2013-09-20 05:06:03Z gibbs $
  */
 
 #ifndef _SYS_SMP_H_
@@ -75,6 +75,7 @@ extern int smp_active;
 extern int smp_cpus;
 extern volatile cpuset_t started_cpus;
 extern volatile cpuset_t stopped_cpus;
+extern volatile cpuset_t suspended_cpus;
 extern cpuset_t hlt_cpus_mask;
 extern cpuset_t logical_cpus_mask;
 #endif /* SMP */
@@ -165,11 +166,16 @@ int	stop_cpus(cpuset_t);
 int	stop_cpus_hard(cpuset_t);
 #if defined(__amd64__) || defined(__i386__)
 int	suspend_cpus(cpuset_t);
+int	resume_cpus(cpuset_t);
 #endif
+
 void	smp_rendezvous_action(void);
 extern	struct mtx smp_ipi_mtx;
 
 #endif /* SMP */
+
+int	quiesce_all_cpus(const char *, int);
+int	quiesce_cpus(cpuset_t, const char *, int);
 void	smp_no_rendevous_barrier(void *);
 void	smp_rendezvous(void (*)(void *), 
 		       void (*)(void *),

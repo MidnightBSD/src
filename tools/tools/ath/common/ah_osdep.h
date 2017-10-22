@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/9/tools/tools/ath/common/ah_osdep.h 185743 2008-12-07 19:17:33Z sam $
+ * $FreeBSD: release/10.0.0/tools/tools/ath/common/ah_osdep.h 239162 2012-08-09 23:08:22Z adrian $
  */
 #ifndef _ATH_AH_OSDEP_H_
 #define _ATH_AH_OSDEP_H_
@@ -41,6 +41,7 @@
 typedef void *HAL_SOFTC;
 typedef int HAL_BUS_TAG;
 typedef void *HAL_BUS_HANDLE;
+typedef uint32_t HAL_DMA_ADDR;
 
 #define	OS_DELAY(_n)	DELAY(_n)
 #define	OS_INLINE	__inline

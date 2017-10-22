@@ -1,5 +1,5 @@
 /*	$NetBSD: lockd.h,v 1.2 2000/06/07 14:34:40 bouyer Exp $	*/
-/*	$FreeBSD: stable/9/usr.sbin/rpc.lockd/lockd.h 87096 2001-11-29 17:36:45Z alfred $ */
+/*	$FreeBSD: release/10.0.0/usr.sbin/rpc.lockd/lockd.h 87096 2001-11-29 17:36:45Z alfred $ */
 
 /*
  * Copyright (c) 1995

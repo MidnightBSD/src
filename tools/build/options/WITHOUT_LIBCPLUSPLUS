@@ -1,0 +1,2 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_LIBCPLUSPLUS 246262 2013-02-02 22:42:46Z dim $
+Set to avoid building libcxxrt and libc++.

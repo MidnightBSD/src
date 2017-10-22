@@ -56,7 +56,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/systat/devs.c 231279 2012-02-09 15:21:54Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/systat/devs.c 229403 2012-01-03 18:51:58Z ed $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)disks.c	8.1 (Berkeley) 6/6/93";
@@ -265,7 +265,7 @@ dsselect(const char *args, devstat_select_mode select_mode, int maxshowdevs,
 	specified_devices = (char **)malloc(sizeof(char *));
 
 	tmpstr = tmpstr1 = strdup(args);
-	cp = index(tmpstr1, '\n');
+	cp = strchr(tmpstr1, '\n');
 	if (cp)
 		*cp = '\0';
 	for (;;) {

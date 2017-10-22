@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_patch.h 208989 2010-06-10 16:45:30Z ae $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_patch.h 208989 2010-06-10 16:45:30Z ae $
  */
 
 #ifndef _NETGRAPH_NG_PATCH_H_

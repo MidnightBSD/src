@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)pac.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: stable/9/usr.sbin/lpr/pac/pac.c 216372 2010-12-11 09:38:12Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/lpr/pac/pac.c 228990 2011-12-30 10:58:14Z uqs $");
 
 /*
  * Do Printer accounting summary.
@@ -203,7 +203,7 @@ usage(void)
  * Read the entire accounting file, accumulating statistics
  * for the users that we have in the hash table.  If allflag
  * is set, then just gather the facts on everyone.
- * Note that we must accomodate both the active and summary file
+ * Note that we must accommodate both the active and summary file
  * formats here.
  * Host names are ignored if the -m flag is present.
  */

@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/net80211/ieee80211_ratectl.h 215289 2010-11-14 09:59:52Z bschmidt $
+ * $FreeBSD: release/10.0.0/sys/net80211/ieee80211_ratectl.h 215289 2010-11-14 09:59:52Z bschmidt $
  */
 
 enum ieee80211_ratealgs {

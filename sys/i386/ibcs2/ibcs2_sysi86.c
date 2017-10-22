@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1994 Søren Schmidt
+ * Copyright (c) 1994 SÃ¸ren Schmidt
  * Copyright (c) 1995 Steven Wallace
  * All rights reserved.
  *
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/ibcs2/ibcs2_sysi86.c 188937 2009-02-23 15:38:35Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/ibcs2/ibcs2_sysi86.c 230132 2012-01-15 13:23:18Z uqs $");
 
 #include <sys/param.h>
 #include <sys/lock.h>

@@ -40,7 +40,7 @@
  * important not to run this code in a fast loop or the test will
  * fail.
  *
- * $FreeBSD: stable/9/tools/regression/netinet/arphold/arphold.c 215207 2010-11-12 22:03:02Z gnn $
+ * $FreeBSD: release/10.0.0/tools/regression/netinet/arphold/arphold.c 243319 2012-11-20 01:42:18Z emaste $
  */
 
 #include <unistd.h>
@@ -63,7 +63,6 @@ main(int argc, char **argv)
 
 	int sock;
 	int maxhold;
-	int wait;
 	size_t size = sizeof(maxhold);
 	struct sockaddr_in dest;
 	char message[MSG_SIZE];

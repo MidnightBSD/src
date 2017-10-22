@@ -23,11 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/ia64/include/ieeefp.h 160105 2006-07-05 06:10:21Z bde $
+ * $FreeBSD: release/10.0.0/sys/ia64/include/ieeefp.h 226607 2011-10-21 06:41:46Z das $
  */
 
 #ifndef _MACHINE_IEEEFP_H_
 #define _MACHINE_IEEEFP_H_
+
+/* Deprecated historical FPU control interface */
 
 #include <machine/fpu.h>
 
@@ -44,5 +46,12 @@ typedef enum {
 	FP_RP,			/* round toward plus infinity */
 	FP_RZ			/* round toward zero */
 } fp_rnd_t;
+
+__BEGIN_DECLS
+extern fp_rnd_t    fpgetround(void);
+extern fp_rnd_t    fpsetround(fp_rnd_t);
+extern fp_except_t fpgetmask(void);
+extern fp_except_t fpsetmask(fp_except_t);
+__END_DECLS
 
 #endif /* !_MACHINE_IEEEFP_H_ */

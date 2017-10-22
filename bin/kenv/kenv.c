@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/kenv/kenv.c 236118 2012-05-26 20:13:24Z mdf $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/kenv/kenv.c 250666 2013-05-15 18:38:28Z delphij $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -37,9 +37,9 @@ __FBSDID("$FreeBSD: stable/9/bin/kenv/kenv.c 236118 2012-05-26 20:13:24Z mdf $")
 
 static void	usage(void);
 static int	kdumpenv(void);
-static int	kgetenv(char *);
-static int	ksetenv(char *, char *);
-static int	kunsetenv(char *);
+static int	kgetenv(const char *);
+static int	ksetenv(const char *, char *);
+static int	kunsetenv(const char *);
 
 static int hflag = 0;
 static int Nflag = 0;
@@ -170,7 +170,7 @@ kdumpenv(void)
 }
 
 static int
-kgetenv(char *env)
+kgetenv(const char *env)
 {
 	char buf[1024];
 	int ret;
@@ -186,7 +186,7 @@ kgetenv(char *env)
 }
 
 static int
-ksetenv(char *env, char *val)
+ksetenv(const char *env, char *val)
 {
 	int ret;
 
@@ -197,7 +197,7 @@ ksetenv(char *env, char *val)
 }
 
 static int
-kunsetenv(char *env)
+kunsetenv(const char *env)
 {
 	int ret;
 	

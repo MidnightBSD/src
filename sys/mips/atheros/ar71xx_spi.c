@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/atheros/ar71xx_spi.c 202723 2010-01-21 00:15:59Z gonzo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/atheros/ar71xx_spi.c 254990 2013-08-28 14:46:15Z loos $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -108,7 +108,7 @@ ar71xx_spi_attach(device_t dev)
 	SPI_WRITE(sc, AR71XX_SPI_CTRL, 0x43);
 	SPI_WRITE(sc, AR71XX_SPI_IO_CTRL, SPI_IO_CTRL_CSMASK);
 
-	device_add_child(dev, "spibus", 0);
+	device_add_child(dev, "spibus", -1);
 	return (bus_generic_attach(dev));
 }
 

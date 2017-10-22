@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_pcb.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/9/sys/netinet/in_pcb.h 241435 2012-10-11 01:32:51Z glebius $
+ * $FreeBSD: release/10.0.0/sys/netinet/in_pcb.h 252710 2013-07-04 18:38:00Z trociny $
  */
 
 #ifndef _NETINET_IN_PCB_H_
@@ -442,6 +442,7 @@ struct tcpcb *
 	inp_inpcbtotcpcb(struct inpcb *inp);
 void 	inp_4tuple_get(struct inpcb *inp, uint32_t *laddr, uint16_t *lp,
 		uint32_t *faddr, uint16_t *fp);
+short	inp_so_options(const struct inpcb *inp);
 
 #endif /* _KERNEL */
 
@@ -543,6 +544,7 @@ void 	inp_4tuple_get(struct inpcb *inp, uint32_t *laddr, uint16_t *lp,
 #define	INP_PCBGROUPWILD	0x00000004 /* in pcbgroup wildcard list */
 #define	INP_REUSEPORT		0x00000008 /* SO_REUSEPORT option is set */
 #define	INP_FREED		0x00000010 /* inp itself is not valid */
+#define	INP_REUSEADDR		0x00000020 /* SO_REUSEADDR option is set */
 
 /*
  * Flags passed to in_pcblookup*() functions.

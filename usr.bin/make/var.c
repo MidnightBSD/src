@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/make/var.c 241767 2012-10-20 09:22:57Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/make/var.c 241280 2012-10-06 19:19:32Z avg $");
 
 /**
  * var.c --
@@ -842,7 +842,7 @@ VarLocal(const char name[])
 }
 
 /**
- * Find the given variable in the given context and the enviornment.
+ * Find the given variable in the given context and the environment.
  *
  * Results:
  *	A pointer to the structure describing the desired variable or

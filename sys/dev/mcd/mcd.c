@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/mcd/mcd.c 146734 2005-05-29 04:42:30Z nyan $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mcd/mcd.c 247069 2013-02-21 02:34:04Z imp $");
 static const char COPYRIGHT[] = "mcd-driver (C)1993 by H.Veit & B.Moore";
 
 #include <sys/param.h>
@@ -289,7 +289,6 @@ static void
 mcdstrategy(struct bio *bp)
 {
 	struct mcd_softc *sc;
-	int s;
 
 	sc = (struct mcd_softc *)bp->bio_dev->si_drv1;
 
@@ -318,9 +317,7 @@ mcdstrategy(struct bio *bp)
 	bp->bio_resid = 0;
 
 	/* queue it */
-	s = splbio();
 	bioq_disksort(&sc->data.head, bp);
-	splx(s);
 
 	/* now check whether we can perform processing */
 	mcd_start(sc);
@@ -338,10 +335,8 @@ static void
 mcd_start(struct mcd_softc *sc)
 {
 	struct bio *bp;
-	int s = splbio();
 
 	if (sc->data.flags & MCDMBXBSY) {
-		splx(s);
 		return;
 	}
 
@@ -350,10 +345,8 @@ mcd_start(struct mcd_softc *sc)
 		/* block found to process, dequeue */
 		/*MCD_TRACE("mcd_start: found block bp=0x%x\n",bp,0,0,0);*/
 		sc->data.flags |= MCDMBXBSY;
-		splx(s);
 	} else {
 		/* nothing to do */
-		splx(s);
 		return;
 	}
 

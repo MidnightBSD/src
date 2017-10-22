@@ -28,7 +28,7 @@
 //
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/ia64/gen/__umodsi3.S 111777 2003-03-03 01:09:46Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/ia64/gen/__umodsi3.S 111777 2003-03-03 01:09:46Z obrien $");
 
 .section .text
 

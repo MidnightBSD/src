@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: stable/9/sys/pc98/include/sysarch.h 144513 2005-04-01 23:19:43Z imp $ */
+/* $FreeBSD: release/10.0.0/sys/pc98/include/sysarch.h 233209 2012-03-19 21:57:31Z tijl $ */
 
-#include <i386/sysarch.h>
+#include <x86/sysarch.h>

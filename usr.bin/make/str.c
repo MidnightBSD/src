@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/make/str.c 209951 2010-07-12 17:18:58Z emaste $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/make/str.c 228992 2011-12-30 11:02:40Z uqs $");
 
 #include <stdlib.h>
 #include <string.h>
@@ -50,10 +50,10 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/make/str.c 209951 2010-07-12 17:18:58Z emas
 
 /**
  * Initialize the argument array object.  The array is initially
- * eight positions, and will be expaned as neccessary.  The first
+ * eight positions, and will be expanded as necessary.  The first
  * position is set to NULL since everything ignores it.  We allocate
  * (size + 1) since we need space for the terminating NULL.  The
- * buffer is set to NULL, since no common buffer is alloated yet.
+ * buffer is set to NULL, since no common buffer is allocated yet.
  */
 void
 ArgArray_Init(ArgArray *aa)

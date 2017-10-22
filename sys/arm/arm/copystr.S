@@ -43,18 +43,23 @@
 #include <machine/asm.h>
 #include <machine/armreg.h>
 #include <machine/asmacros.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/copystr.S 139735 2005-01-05 21:58:49Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/copystr.S 248361 2013-03-16 02:48:49Z andrew $");
 
 #include <sys/errno.h>
 
 	.text
 	.align	0
-#ifdef MULTIPROCESSOR
-.Lcpu_info:
-	.word	_C_LABEL(cpu_info)
+
+#ifdef _ARM_ARCH_6
+#define GET_PCB(tmp) \
+	mrc p15, 0, tmp, c13, c0, 4; \
+	add	tmp, tmp, #(PC_CURPCB)
 #else
 .Lpcb:
 	.word	_C_LABEL(__pcpu) + PC_CURPCB
+
+#define GET_PCB(tmp) \
+	ldr	tmp, .Lpcb
 #endif
 
 /*
@@ -88,6 +93,7 @@ ENTRY(copystr)
 
 	ldmfd	sp!, {r4-r5}			/* stack is 8 byte aligned */
 	RET
+END(copystr)
 
 #define SAVE_REGS	stmfd	sp!, {r4-r6}
 #define RESTORE_REGS	ldmfd	sp!, {r4-r6}
@@ -108,18 +114,8 @@ ENTRY(copyinstr)
 	moveq	r0, #ENAMETOOLONG
 	beq	2f
 
-#ifdef MULTIPROCESSOR
-	/* XXX Probably not appropriate for non-Hydra SMPs */
-	stmfd	sp!, {r0-r3, r14}
-	bl	_C_LABEL(cpu_number)
-	ldr	r4, .Lcpu_info
-	ldr	r4, [r4, r0, lsl #2]
-	ldr	r4, [r4, #CI_CURPCB]
-	ldmfd	sp!, {r0-r3, r14}
-#else
-	ldr	r4, .Lpcb
+	GET_PCB(r4)
 	ldr	r4, [r4]
-#endif
 
 #ifdef DIAGNOSTIC
 	teq	r4, #0x00000000
@@ -148,6 +144,7 @@ ENTRY(copyinstr)
 
 	RESTORE_REGS
 	RET
+END(copyinstr)
 
 /*
  * r0 - kernel space address
@@ -165,18 +162,8 @@ ENTRY(copyoutstr)
 	moveq	r0, #ENAMETOOLONG
 	beq	2f
 
-#ifdef MULTIPROCESSOR
-	/* XXX Probably not appropriate for non-Hydra SMPs */
-	stmfd	sp!, {r0-r3, r14}
-	bl	_C_LABEL(cpu_number)
-	ldr	r4, .Lcpu_info
-	ldr	r4, [r4, r0, lsl #2]
-	ldr	r4, [r4, #CI_CURPCB]
-	ldmfd	sp!, {r0-r3, r14}
-#else
-	ldr	r4, .Lpcb
+	GET_PCB(r4)
 	ldr	r4, [r4]
-#endif
 
 #ifdef DIAGNOSTIC
 	teq	r4, #0x00000000
@@ -205,6 +192,7 @@ ENTRY(copyoutstr)
 
 	RESTORE_REGS
 	RET
+END(copyoutstr)
 
 /* A fault occurred during the copy */
 .Lcopystrfault:

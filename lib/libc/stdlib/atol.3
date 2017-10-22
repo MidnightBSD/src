@@ -13,7 +13,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)atol.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/9/lib/libc/stdlib/atol.3 189207 2009-03-01 05:44:28Z delphij $
+.\" $FreeBSD: release/10.0.0/lib/libc/stdlib/atol.3 251069 2013-05-28 20:57:40Z emaste $
 .\"
-.Dd February 1, 2009
+.Dd May 14, 2013
 .Dt ATOL 3
 .Os
 .Sh NAME
@@ -88,13 +88,13 @@ and
 functions are thin wrappers around
 .Fn strtol
 and
-.Fn stroll
+.Fn strtoll
 respectively, so these functions will affect the value of
 .Va errno
 in the same way that the
 .Fn strtol
 and
-.Fn stroll
+.Fn strtoll
 functions are able to.
 This behavior of
 .Fn atol

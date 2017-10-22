@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/tools/regression/usr.sbin/sa/regress.t 201479 2010-01-04 09:50:30Z obrien $
+# $FreeBSD: release/10.0.0/tools/regression/usr.sbin/sa/regress.t 201479 2010-01-04 09:50:30Z obrien $
 #
 
 DIR=`dirname $0`

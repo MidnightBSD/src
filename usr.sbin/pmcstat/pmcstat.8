@@ -23,7 +23,7 @@
 .\" out of the use of this software, even if advised of the possibility of
 .\" such damage.
 .\"
-.\" $FreeBSD: stable/9/usr.sbin/pmcstat/pmcstat.8 206622 2010-04-14 19:08:06Z uqs $
+.\" $FreeBSD: release/10.0.0/usr.sbin/pmcstat/pmcstat.8 236509 2012-06-03 11:29:48Z joel $
 .\"
 .Dd September 19, 2008
 .Dt PMCSTAT 8
@@ -263,7 +263,7 @@ Print the sampled PCs with the name, the start and ending addresses
 of the function within they live.
 The
 .Ar pathname
-argument is mandatory and indicates where informations will be stored.
+argument is mandatory and indicates where the information will be stored.
 If argument
 .Ar pathname
 is a
@@ -388,7 +388,7 @@ If option
 is specified,
 .Nm
 may issue the following diagnostic messages:
-.Bl -diag -width indent
+.Bl -diag
 .It "#callchain/dubious-frames"
 The number of callchain records that had an
 .Dq impossible

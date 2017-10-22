@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/ldconfig/ldconfig.h 92882 2002-03-21 13:14:21Z imp $
+ * $FreeBSD: release/10.0.0/sbin/ldconfig/ldconfig.h 92882 2002-03-21 13:14:21Z imp $
  */
 
 #ifndef LDCONFIG_H

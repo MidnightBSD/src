@@ -3,12 +3,12 @@
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <beat@chruetertee.ch> wrote this file. As long as you retain this notice you
  * can do whatever you want with this stuff. If we meet some day, and you think
- * this stuff is worth it, you can buy me a beer in return.          Beat Gätzi
+ * this stuff is worth it, you can buy me a beer in return.          Beat GÃ¤tzi
  * ----------------------------------------------------------------------------
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/updating/main.c 229234 2012-01-01 23:18:34Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg_install/updating/main.c 241830 2012-10-22 02:12:20Z eadler $");
 
 
 #include <sys/param.h>
@@ -87,6 +87,7 @@ main(int argc, char *argv[])
 	DIR *dir;
 	FILE *fd;
 
+	warnpkgng();
 	while ((ch = getopt_long(argc, argv, opts, longopts, NULL)) != -1) {
 		switch (ch) {
 			case 'd':

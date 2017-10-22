@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/ppp/ip.c 134875 2004-09-06 23:54:54Z brian $
+ * $FreeBSD: release/10.0.0/usr.sbin/ppp/ip.c 134875 2004-09-06 23:54:54Z brian $
  */
 
 #include <sys/param.h>

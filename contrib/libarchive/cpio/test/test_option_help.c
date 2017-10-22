@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/cpio/test/test_option_help.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/cpio/test/test_option_help.c 228763 2011-12-21 11:13:29Z mm $");
 
 /*
  * Test that "--help", "-h", and "-W help" options all work and

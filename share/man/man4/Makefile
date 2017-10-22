@@ -1,9 +1,13 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
-# $FreeBSD: stable/9/share/man/man4/Makefile 249510 2013-04-15 17:16:12Z trasz $
+# $FreeBSD: release/10.0.0/share/man/man4/Makefile 257771 2013-11-06 23:59:19Z pjd $
+
+.include <bsd.own.mk>
 
 MAN=	aac.4 \
+	aacraid.4 \
 	acpi.4 \
 	${_acpi_asus.4} \
+	${_acpi_asus_wmi.4} \
 	${_acpi_dock.4} \
 	${_acpi_fujitsu.4} \
 	${_acpi_hp.4} \
@@ -31,8 +35,10 @@ MAN=	aac.4 \
 	alc.4 \
 	ale.4 \
 	alpm.4 \
+	altera_avgen.4 \
+	altera_jtag_uart.4 \
+	altera_sdcard.4 \
 	altq.4 \
-	amd.4 \
 	amdpm.4 \
 	${_amdsbwd.4} \
 	${_amdsmb.4} \
@@ -46,8 +52,6 @@ MAN=	aac.4 \
 	${_asmc.4} \
 	asr.4 \
 	ata.4 \
-	atapicam.4 \
-	ataraid.4 \
 	ath.4 \
 	ath_ahb.4 \
 	ath_hal.4 \
@@ -55,6 +59,7 @@ MAN=	aac.4 \
 	atkbd.4 \
 	atkbdc.4 \
 	${_atp.4} \
+	${_atf_test_case.4} \
 	${_atrtc.4} \
 	${_attimer.4} \
 	audit.4 \
@@ -64,6 +69,7 @@ MAN=	aac.4 \
 	bce.4 \
 	bfe.4 \
 	bge.4 \
+	${_bhyve.4} \
 	bktr.4 \
 	blackhole.4 \
 	bpf.4 \
@@ -75,6 +81,7 @@ MAN=	aac.4 \
 	cardbus.4 \
 	carp.4 \
 	cas.4 \
+	cc_cdg.4 \
 	cc_chd.4 \
 	cc_cubic.4 \
 	cc_hd.4 \
@@ -88,7 +95,6 @@ MAN=	aac.4 \
 	ciss.4 \
 	cm.4 \
 	cmx.4 \
-	coda.4 \
 	${_coretemp.4} \
 	${_cpuctl.4} \
 	cpufreq.4 \
@@ -130,6 +136,7 @@ MAN=	aac.4 \
 	fdc.4 \
 	fdt.4 \
 	fdtbus.4 \
+	ffclock.4 \
 	filemon.4 \
 	firewire.4 \
 	fpa.4 \
@@ -147,6 +154,7 @@ MAN=	aac.4 \
 	geom_uzip.4 \
 	gif.4 \
 	gpib.4 \
+	gpio.4 \
 	gre.4 \
 	h_ertt.4 \
 	hatm.4 \
@@ -156,6 +164,7 @@ MAN=	aac.4 \
 	${_hpt27xx.4} \
 	${_hptiop.4} \
 	${_hptmv.4} \
+	${_hptnr.4} \
 	${_hptrr.4} \
 	hwpmc.4 \
 	ichsmb.4 \
@@ -252,6 +261,8 @@ MAN=	aac.4 \
 	mwlfw.4 \
 	mxge.4 \
 	my.4 \
+	nand.4 \
+	nandsim.4 \
 	natm.4 \
 	natmip.4 \
 	ncr.4 \
@@ -325,8 +336,11 @@ MAN=	aac.4 \
 	ng_vlan.4 \
 	nmdm.4 \
 	nsp.4 \
+	${_ntb.4} \
 	null.4 \
+	${_nvd.4} \
 	${_nve.4} \
+	${_nvme.4} \
 	${_nvram.4} \
 	${_nvram2env.4} \
 	${_nxge.4} \
@@ -345,27 +359,36 @@ MAN=	aac.4 \
 	pcii.4 \
 	pcm.4 \
 	pcn.4 \
+	${_pf.4} \
+	${_pflog.4} \
+	${_pfsync.4} \
 	pim.4 \
 	polling.4 \
 	ppbus.4 \
 	ppc.4 \
 	ppi.4 \
+	procdesc.4 \
 	psm.4 \
 	pst.4 \
 	pt.4 \
 	pts.4 \
 	pty.4 \
 	puc.4 \
+	${_qlxge.4} \
 	${_qlxgb.4} \
+	${_qlxgbe.4} \
 	ral.4 \
 	random.4 \
 	rc.4 \
 	re.4 \
 	rgephy.4 \
+	rights.4 \
 	rl.4 \
 	rndtest.4 \
 	route.4 \
 	rp.4 \
+	rsu.4 \
+	rsufw.4 \
 	rue.4 \
 	rum.4 \
 	run.4 \
@@ -448,6 +471,7 @@ MAN=	aac.4 \
 	targ.4 \
 	tcp.4 \
 	tdfx.4 \
+	terasic_mtl.4 \
 	termios.4 \
 	textdump.4 \
 	ti.4 \
@@ -499,23 +523,25 @@ MAN=	aac.4 \
 	ural.4 \
 	urio.4 \
 	${_urtw.4} \
+	urtwn.4 \
 	usb.4 \
 	usb_quirk.4 \
 	uslcom.4 \
 	utopia.4 \
 	uvisor.4 \
 	uvscom.4 \
+	vale.4 \
 	vga.4 \
 	vge.4 \
 	viapm.4 \
 	${_viawd.4} \
-	vinum.4 \
 	${_virtio.4} \
 	${_virtio_balloon.4} \
 	${_virtio_blk.4} \
 	${_virtio_scsi.4} \
 	vkbd.4 \
 	vlan.4 \
+	${_vmx.4} \
 	vpo.4 \
 	vr.4 \
 	vte.4 \
@@ -523,6 +549,7 @@ MAN=	aac.4 \
 	${_vxge.4} \
 	watchdog.4 \
 	wb.4 \
+	${_wbwd.4} \
 	wi.4 \
 	witness.4 \
 	wlan.4 \
@@ -547,6 +574,7 @@ MLINKS+=age.4 if_age.4
 MLINKS+=agp.4 agpgart.4
 MLINKS+=alc.4 if_alc.4
 MLINKS+=ale.4 if_ale.4
+MLINKS+=altera_sdcard.4 altera_sdcardc.4
 MLINKS+=altq.4 ALTQ.4
 MLINKS+=ath.4 if_ath.4
 MLINKS+=ath_pci.4 if_ath_pci.4
@@ -631,6 +659,8 @@ MLINKS+=netintro.4 net.4 \
 	netintro.4 networking.4
 MLINKS+=${_nfe.4} ${_if_nfe.4}
 MLINKS+=nge.4 if_nge.4
+MLINKS+=${_ntb.4} ${_if_ntb.4} \
+	${_ntb.4} ${_ntb_hw.4}
 MLINKS+=${_nve.4} ${_if_nve.4}
 MLINKS+=${_nxge.4} ${_if_nxge.4}
 MLINKS+=patm.4 if_patm.4
@@ -679,6 +709,7 @@ MLINKS+=ural.4 if_ural.4
 MLINKS+=${_urtw.4} ${_if_urtw.4}
 MLINKS+=vge.4 if_vge.4
 MLINKS+=vlan.4 if_vlan.4
+MLINKS+=${_vmx.4} ${_if_vmx.4}
 MLINKS+=vpo.4 imm.4
 MLINKS+=vr.4 if_vr.4
 MLINKS+=vte.4 if_vte.4
@@ -694,6 +725,7 @@ MLINKS+=zyd.4 if_zyd.4
 
 .if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
 _acpi_asus.4=	acpi_asus.4
+_acpi_asus_wmi.4=	acpi_asus_wmi.4
 _acpi_dock.4=	acpi_dock.4
 _acpi_fujitsu.4=acpi_fujitsu.4
 _acpi_hp.4=	acpi_hp.4
@@ -720,6 +752,7 @@ _dpms.4=	dpms.4
 _hpt27xx.4=	hpt27xx.4
 _hptiop.4=	hptiop.4
 _hptmv.4=	hptmv.4
+_hptnr.4=	hptnr.4
 _hptrr.4=	hptrr.4
 _i8254.4=	i8254.4
 _ichwd.4=	ichwd.4
@@ -729,6 +762,7 @@ _if_nfe.4=	if_nfe.4
 _if_nve.4=	if_nve.4
 _if_nxge.4=	if_nxge.4
 _if_urtw.4=	if_urtw.4
+_if_vmx.4=	if_vmx.4
 _if_vtnet.4=	if_vtnet.4
 _if_vxge.4=	if_vxge.4
 _if_wpi.4=	if_wpi.4
@@ -739,13 +773,16 @@ _linux.4=	linux.4
 _ndis.4=	ndis.4
 _nfe.4=		nfe.4
 _nfsmb.4=	nfsmb.4
+_nvd.4=		nvd.4
 _nve.4=		nve.4
+_nvme.4=	nvme.4
 _nvram.4=	nvram.4
 _nxge.4=	nxge.4
 _virtio.4=	virtio.4
 _virtio_balloon.4=virtio_balloon.4
 _virtio_blk.4=	virtio_blk.4
 _virtio_scsi.4= virtio_scsi.4
+_vmx.4=		vmx.4
 _vtnet.4=	vtnet.4
 _vxge.4=	vxge.4
 _padlock.4=	padlock.4
@@ -755,6 +792,7 @@ _spkr.4=	spkr.4
 _tpm.4=		tpm.4
 _urtw.4=	urtw.4
 _viawd.4=	viawd.4
+_wbwd.4=	wbwd.4
 _wpi.4=		wpi.4
 _xen.4=		xen.4
 _xnb.4=		xnb.4
@@ -763,10 +801,18 @@ MLINKS+=lindev.4 full.4
 .endif
 
 .if ${MACHINE_CPUARCH} == "amd64"
+_bhyve.4=	bhyve.4
+_if_ntb.4=	if_ntb.4
+_ntb.4=		ntb.4
+_ntb_hw.4=	ntb_hw.4
+_qlxge.4=	qlxge.4
 _qlxgb.4=	qlxgb.4
+_qlxgbe.4=	qlxgbe.4
 _sfxge.4=	sfxge.4
 
+MLINKS+=qlxge.4 if_qlxge.4
 MLINKS+=qlxgb.4 if_qlxgb.4
+MLINKS+=qlxgbe.4 if_qlxgbe.4
 MLINKS+=sfxge.4 if_sfxge.4
 .endif
 
@@ -779,6 +825,18 @@ _nvram2env.4=	nvram2env.4
 
 .if exists(${.CURDIR}/man4.${MACHINE_CPUARCH})
 SUBDIR=	man4.${MACHINE_CPUARCH}
+.endif
+
+.if ${MK_ATF} != "no"
+ATF=            ${.CURDIR}/../../../contrib/atf
+.PATH:          ${ATF}/doc
+_atf_test_case.4=	atf-test-case.4
+.endif
+
+.if ${MK_PF} != "no"
+_pf.4=		pf.4
+_pflog.4=	pflog.4
+_pfsync.4=	pfsync.4
 .endif
 
 .include <bsd.prog.mk>

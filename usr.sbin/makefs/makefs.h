@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/makefs/makefs.h 248293 2013-03-14 22:57:27Z brooks $
+ * $FreeBSD: release/10.0.0/usr.sbin/makefs/makefs.h 250407 2013-05-09 14:43:36Z brooks $
  */
 
 #ifndef	_MAKEFS_H
@@ -281,23 +281,5 @@ struct fs;
 void   ffs_fragacct_swap(struct fs *, int, int32_t [], int, int);
 
 fsinode *link_check(fsinode *);
-
-/*
- * Declarations for compat routines.
- */
-long long strsuftoll(const char *, const char *, long long, long long);
-long long strsuftollx(const char *, const char *,
-                       long long, long long, char *, size_t);
-
-struct passwd;
-int uid_from_user(const char *, uid_t *);
-int pwcache_userdb(int (*)(int), void (*)(void),
-               struct passwd * (*)(const char *), struct passwd * (*)(uid_t));
-struct group;
-int gid_from_group(const char *, gid_t *);
-int pwcache_groupdb(int (*)(int), void (*)(void),
-               struct group * (*)(const char *), struct group * (*)(gid_t));
-
-int setup_getid(const char *dir);
 
 #endif	/* _MAKEFS_H */

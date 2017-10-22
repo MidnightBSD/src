@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libelf/elf_begin.c 210351 2010-07-21 13:18:57Z kaiw $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libelf/elf_begin.c 210351 2010-07-21 13:18:57Z kaiw $");
 
 #include <sys/types.h>
 #include <sys/errno.h>

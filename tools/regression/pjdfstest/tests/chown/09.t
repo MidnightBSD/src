@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/chown/09.t 210984 2010-08-06 23:58:54Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/chown/09.t 210984 2010-08-06 23:58:54Z pjd $
 
 desc="chown returns EROFS if the named file resides on a read-only file system"
 

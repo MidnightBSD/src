@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/rp/Makefile 182668 2008-09-01 23:59:00Z imp $
+# $FreeBSD: release/10.0.0/sys/modules/rp/Makefile 182668 2008-09-01 23:59:00Z imp $
 
 .PATH: ${.CURDIR}/../../dev/rp
 

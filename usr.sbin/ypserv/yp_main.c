@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/ypserv/yp_main.c 233259 2012-03-21 07:05:29Z glebius $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ypserv/yp_main.c 253253 2013-07-12 06:54:29Z hrs $");
 
 /*
  * ypserv startup function.
@@ -292,7 +292,7 @@ create_service(const int sock, const struct netconfig *nconf,
 
 				s = __rpc_nconf2fd(nconf);
 				if (s < 0) {
-					if (errno == EPROTONOSUPPORT)
+					if (errno == EAFNOSUPPORT)
 						_msgout("unsupported"
 						    " transport: %s",
 						    nconf->nc_netid);
@@ -329,9 +329,8 @@ create_service(const int sock, const struct netconfig *nconf,
 					return -1;
 				}
 				memset(slep, 0, sizeof(*slep));
-				memcpy(&slep->sle_ss,
-				    (struct sockaddr *)(res->ai_addr),
-				    sizeof(res->ai_addr));
+				memcpy(&slep->sle_ss, res->ai_addr,
+				    res->ai_addrlen);
 				slep->sle_sock = s;
 				SLIST_INSERT_HEAD(&sle_head, slep, sle_next);
 

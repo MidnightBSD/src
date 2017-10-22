@@ -23,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/mips/cavium/octeon_mp.c 224661 2011-08-05 22:54:42Z marcel $
+ * $FreeBSD: release/10.0.0/sys/mips/cavium/octeon_mp.c 232812 2012-03-11 06:17:49Z jmallett $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octeon_mp.c 224661 2011-08-05 22:54:42Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octeon_mp.c 232812 2012-03-11 06:17:49Z jmallett $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -41,13 +41,9 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octeon_mp.c 224661 2011-08-05 22:54
 #include <mips/cavium/octeon_pcmap_regs.h>
 
 #include <contrib/octeon-sdk/cvmx.h>
-#include <contrib/octeon-sdk/cvmx-interrupt.h>
+#include <mips/cavium/octeon_irq.h>
 
-/* XXX */
-extern cvmx_bootinfo_t *octeon_bootinfo;
-
-/* NOTE: this 64-bit mask (and many others) limits MAXCPU to 64 */
-uint64_t octeon_ap_boot = ~0ULL;
+unsigned octeon_ap_boot = ~0;
 
 void
 platform_ipi_send(int cpuid)
@@ -106,7 +102,7 @@ platform_init_ap(int cpuid)
 void
 platform_cpu_mask(cpuset_t *mask)
 {
-	uint64_t core_mask = octeon_bootinfo->core_mask;
+	uint64_t core_mask = cvmx_sysinfo_get()->core_mask;
 	uint64_t i, m;
 
 	CPU_ZERO(mask);
@@ -139,11 +135,11 @@ platform_start_ap(int cpuid)
 	    DELAY(2000);    /* Give it a moment to start */
 	}
 
-	if (atomic_cmpset_64(&octeon_ap_boot, ~0, cpuid) == 0)
+	if (atomic_cmpset_32(&octeon_ap_boot, ~0, cpuid) == 0)
 		return (-1);
 	for (;;) {
 		DELAY(1000);
-		if (atomic_cmpset_64(&octeon_ap_boot, 0, ~0) != 0)
+		if (atomic_cmpset_32(&octeon_ap_boot, 0, ~0) != 0)
 			return (0);
 		printf("Waiting for cpu%d to start\n", cpuid);
 	}

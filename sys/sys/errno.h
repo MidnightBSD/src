@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)errno.h	8.5 (Berkeley) 1/21/94
- * $FreeBSD: stable/9/sys/sys/errno.h 220335 2011-04-04 17:39:30Z avg $
+ * $FreeBSD: release/10.0.0/sys/sys/errno.h 250250 2013-05-04 19:07:22Z pluknet $
  */
 
 #ifndef _SYS_ERRNO_H_
@@ -176,10 +176,12 @@ __END_DECLS
 #ifndef _POSIX_SOURCE
 #define	ENOTCAPABLE	93		/* Capabilities insufficient */
 #define	ECAPMODE	94		/* Not permitted in capability mode */
+#define	ENOTRECOVERABLE	95		/* State not recoverable */
+#define	EOWNERDEAD	96		/* Previous owner died */
 #endif /* _POSIX_SOURCE */
 
 #ifndef _POSIX_SOURCE
-#define	ELAST		94		/* Must be equal largest errno */
+#define	ELAST		96		/* Must be equal largest errno */
 #endif /* _POSIX_SOURCE */
 
 #ifdef _KERNEL

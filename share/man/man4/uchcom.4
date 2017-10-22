@@ -27,9 +27,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/uchcom.4 219387 2011-03-07 21:53:15Z hselasky $
+.\" $FreeBSD: release/10.0.0/share/man/man4/uchcom.4 227750 2011-11-20 12:18:21Z miwi $
 .\"
-.Dd May 18, 2009
+.Dd November 20, 2011
 .Dt UCHCOM 4
 .Os
 .Sh NAME
@@ -40,6 +40,8 @@ To compile this driver into the kernel,
 place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
+.Cd "device usb"
+.Cd "device ucom"
 .Cd "device uchcom"
 .Ed
 .Pp

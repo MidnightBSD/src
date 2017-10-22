@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_io.h#5 $
- * $FreeBSD: stable/9/sys/cam/ctl/ctl_io.h 229997 2012-01-12 00:34:33Z ken $
+ * $FreeBSD: release/10.0.0/sys/cam/ctl/ctl_io.h 254759 2013-08-24 01:50:31Z trasz $
  */
 /*
  * CAM Target Layer data movement structures/interface.
@@ -204,6 +204,8 @@ struct ctl_nexus {
 	uint32_t targ_port;		/* Target port, filled in by PORT */
 	struct ctl_id targ_target;	/* Destination target */
 	uint32_t targ_lun;		/* Destination lun */
+	uint32_t (*lun_map_fn)(void *arg, uint32_t lun);
+	void *lun_map_arg;
 };
 
 typedef enum {

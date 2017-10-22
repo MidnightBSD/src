@@ -18,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ed/if_ed_pci.c 211792 2010-08-25 02:03:48Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ed/if_ed_pci.c 211792 2010-08-25 02:03:48Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

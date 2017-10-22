@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libkse/Makefile 209118 2010-06-13 01:27:29Z imp $
+# $FreeBSD: release/10.0.0/lib/libkse/Makefile 234412 2012-04-18 07:02:53Z pluknet $
 #
 # All library objects contain FreeBSD revision strings by default; they may be
 # excluded as a space-saving measure.  To produce a library that does
@@ -38,7 +38,7 @@ SYMBOL_MAPS=${.CURDIR}/kse.map
 
 PRECIOUSLIB=
 
-.path: ${.CURDIR}/arch/${MACHINE_CPUARCH}/${MACHINE_CPUARCH}
+.PATH: ${.CURDIR}/arch/${MACHINE_CPUARCH}/${MACHINE_CPUARCH}
 
 .include "${.CURDIR}/arch/${MACHINE_CPUARCH}/Makefile.inc"
 .include "${.CURDIR}/support/Makefile.inc"

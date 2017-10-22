@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/drm_gem_names.c 235783 2012-05-22 11:07:44Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/drm_gem_names.c 254838 2013-08-25 10:04:10Z dumbbell $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -132,12 +132,12 @@ drm_gem_name_create(struct drm_gem_names *names, void *p, uint32_t *name)
 {
 	struct drm_gem_name *np;
 
-	np = malloc(sizeof(struct drm_gem_name), M_GEM_NAMES, M_WAITOK);
-	mtx_lock(&names->lock);
 	if (*name != 0) {
-		mtx_unlock(&names->lock);
 		return (EALREADY);
 	}
+
+	np = malloc(sizeof(struct drm_gem_name), M_GEM_NAMES, M_WAITOK);
+	mtx_lock(&names->lock);
 	np->name = alloc_unr(names->unr);
 	if (np->name == -1) {
 		mtx_unlock(&names->lock);

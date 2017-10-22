@@ -37,7 +37,7 @@
 static char sccsid[] = "@(#)clnt_dg.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/rpc/clnt_dg.c 227630 2011-11-17 16:08:46Z rmacklem $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/rpc/clnt_dg.c 255284 2013-09-06 02:34:34Z rmacklem $");
 
 /*
  * Implements a connectionless client side RPC.
@@ -431,7 +431,7 @@ call_again:
 send_again:
 	mtx_unlock(&cs->cs_lock);
 
-	MGETHDR(mreq, M_WAIT, MT_DATA);
+	mreq = m_gethdr(M_WAITOK, MT_DATA);
 	KASSERT(cu->cu_mcalllen <= MHLEN, ("RPC header too big"));
 	bcopy(cu->cu_mcallc, mreq->m_data, cu->cu_mcalllen);
 	mreq->m_len = cu->cu_mcalllen;
@@ -682,6 +682,7 @@ get_reply:
 			next_sendtime += retransmit_time;
 			goto send_again;
 		}
+		cu->cu_sent += CWNDSCALE;
 		TAILQ_INSERT_TAIL(&cs->cs_pending, cr, cr_link);
 	}
 
@@ -733,6 +734,7 @@ got_reply:
 					 */
 					XDR_DESTROY(&xdrs);
 					mtx_lock(&cs->cs_lock);
+					cu->cu_sent += CWNDSCALE;
 					TAILQ_INSERT_TAIL(&cs->cs_pending,
 					    cr, cr_link);
 					cr->cr_mrep = NULL;

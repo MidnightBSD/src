@@ -1,7 +1,7 @@
 /*
  * LOCALE_CTYPE for the iso_8859_2 Locale
  *
- * $FreeBSD: stable/9/share/mklocale/la_LN.ISO8859-2.src 87108 2001-11-30 05:05:53Z ache $
+ * $FreeBSD: release/10.0.0/share/mklocale/la_LN.ISO8859-2.src 87108 2001-11-30 05:05:53Z ache $
  */
 
 ENCODING	"NONE"

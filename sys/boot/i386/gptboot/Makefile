@@ -1,8 +1,9 @@
-# $FreeBSD: stable/9/sys/boot/i386/gptboot/Makefile 232930 2012-03-13 18:39:57Z dim $
+# $FreeBSD: release/10.0.0/sys/boot/i386/gptboot/Makefile 252492 2013-07-01 22:38:36Z wblock $
 
 .PATH:		${.CURDIR}/../boot2 ${.CURDIR}/../common ${.CURDIR}/../../common
 
 FILES=		gptboot
+MAN=		gptboot.8
 
 NM?=		nm
 

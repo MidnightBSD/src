@@ -93,7 +93,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/*$FreeBSD: stable/9/sys/dev/msk/if_mskreg.h 229524 2012-01-04 21:50:59Z yongari $*/
+/*$FreeBSD: release/10.0.0/sys/dev/msk/if_mskreg.h 227582 2011-11-16 19:25:26Z yongari $*/
 
 /*
  * SysKonnect PCI vendor ID

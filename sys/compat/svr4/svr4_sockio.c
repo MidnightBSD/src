@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/compat/svr4/svr4_sockio.c 196019 2009-08-01 19:26:27Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/compat/svr4/svr4_sockio.c 196019 2009-08-01 19:26:27Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/proc.h>

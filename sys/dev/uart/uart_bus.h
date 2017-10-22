@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/uart/uart_bus.h 247887 2013-03-06 11:07:59Z avg $
+ * $FreeBSD: release/10.0.0/sys/dev/uart/uart_bus.h 246243 2013-02-02 11:38:26Z avg $
  */
 
 #ifndef _DEV_UART_BUS_H_
@@ -87,6 +87,7 @@ struct uart_softc {
 	struct resource *sc_ires;	/* Interrupt resource. */
 	void		*sc_icookie;
 	int		sc_irid;
+	struct callout	sc_timer;
 
 	int		sc_callout:1;	/* This UART is opened for callout. */
 	int		sc_fastintr:1;	/* This UART uses fast interrupts. */

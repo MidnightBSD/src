@@ -31,7 +31,7 @@ SOFTWARE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/libexec/bootpd/bootpgw/bootpgw.c 229136 2011-12-31 19:19:19Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/libexec/bootpd/bootpgw/bootpgw.c 229780 2012-01-07 16:09:54Z uqs $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -534,7 +534,7 @@ handle_request()
 	/* Has this packet hopped too many times? */
 	hops = bp->bp_hops;
 	if (++hops > maxhops) {
-		report(LOG_NOTICE, "reqest from %s reached hop limit",
+		report(LOG_NOTICE, "request from %s reached hop limit",
 			   inet_ntoa(recv_addr.sin_addr));
 		return;
 	}

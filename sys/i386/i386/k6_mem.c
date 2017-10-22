@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/i386/k6_mem.c 189903 2009-03-17 00:48:11Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/i386/k6_mem.c 189903 2009-03-17 00:48:11Z jkim $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

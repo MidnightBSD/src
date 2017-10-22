@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/streams/streams.c 224914 2011-08-16 20:07:47Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/streams/streams.c 254415 2013-08-16 14:22:20Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -98,6 +98,7 @@ static struct fileops svr4_netops = {
 	.fo_close =  svr4_soo_close,
 	.fo_chmod = invfo_chmod,
 	.fo_chown = invfo_chown,
+	.fo_sendfile = invfo_sendfile,
 };
  
 static struct cdevsw streams_cdevsw = {

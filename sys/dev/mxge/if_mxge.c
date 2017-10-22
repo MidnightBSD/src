@@ -28,7 +28,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/mxge/if_mxge.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mxge/if_mxge.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -127,7 +127,8 @@ static device_method_t mxge_methods[] =
   DEVMETHOD(device_attach, mxge_attach),
   DEVMETHOD(device_detach, mxge_detach),
   DEVMETHOD(device_shutdown, mxge_shutdown),
-  {0, 0}
+
+  DEVMETHOD_END
 };
 
 static driver_t mxge_driver =
@@ -2946,7 +2947,7 @@ mxge_media_init(mxge_softc_t *sc)
 	}
 
 	for (i = 0; i < 3; i++, ptr++) {
-		ptr = index(ptr, '-');
+		ptr = strchr(ptr, '-');
 		if (ptr == NULL) {
 			device_printf(sc->dev,
 				      "only %d dashes in PC?!?\n", i);
@@ -3138,7 +3139,7 @@ mxge_intr(void *arg)
 			sc->link_state = stats->link_up;
 			if (sc->link_state) {
 				if_link_state_change(sc->ifp, LINK_STATE_UP);
-				 sc->ifp->if_baudrate = IF_Gbps(10UL);
+				if_initbaudrate(sc->ifp, IF_Gbps(10));
 				if (mxge_verbose)
 					device_printf(sc->dev, "link up\n");
 			} else {
@@ -3417,7 +3418,7 @@ mxge_alloc_slice_rings(struct mxge_slice_state *ss, int rx_ring_entries,
 		return err;
 	}
 
-	/* now allocate TX resouces */
+	/* now allocate TX resources */
 
 #ifndef IFNET_BUF_RING
 	/* only use a single TX ring for now */
@@ -3826,7 +3827,7 @@ mxge_setup_cfg_space(mxge_softc_t *sc)
 {
 	device_t dev = sc->dev;
 	int reg;
-	uint16_t cmd, lnk, pectl;
+	uint16_t lnk, pectl;
 
 	/* find the PCIe link width and set max read request to 4KB*/
 	if (pci_find_cap(dev, PCIY_EXPRESS, &reg) == 0) {
@@ -3846,9 +3847,6 @@ mxge_setup_cfg_space(mxge_softc_t *sc)
 
 	/* Enable DMA and Memory space access */
 	pci_enable_busmaster(dev);
-	cmd = pci_read_config(dev, PCIR_COMMAND, 2);
-	cmd |= PCIM_CMD_MEMEN;
-	pci_write_config(dev, PCIR_COMMAND, cmd, 2);
 }
 
 static uint32_t
@@ -4888,7 +4886,7 @@ mxge_attach(device_t dev)
 		goto abort_with_rings;
 	}
 
-	ifp->if_baudrate = IF_Gbps(10UL);
+	if_initbaudrate(ifp, IF_Gbps(10));
 	ifp->if_capabilities = IFCAP_RXCSUM | IFCAP_TXCSUM | IFCAP_TSO4 |
 		IFCAP_VLAN_MTU | IFCAP_LINKSTATE | IFCAP_TXCSUM_IPV6 |
 		IFCAP_RXCSUM_IPV6;

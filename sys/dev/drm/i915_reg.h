@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm/i915_reg.h 205120 2010-03-13 11:51:18Z rnoland $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/i915_reg.h 205120 2010-03-13 11:51:18Z rnoland $");
 
 #ifndef _I915_REG_H_
 #define _I915_REG_H_

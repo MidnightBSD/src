@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/usb/urtw/Makefile 192873 2009-05-27 03:57:38Z weongyo $
+# $FreeBSD: release/10.0.0/sys/modules/usb/urtw/Makefile 192873 2009-05-27 03:57:38Z weongyo $
 
 .PATH: ${.CURDIR}/../../../dev/usb/wlan
 

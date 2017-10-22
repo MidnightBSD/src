@@ -26,7 +26,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __FreeBSD__
-__FBSDID("$FreeBSD: stable/9/sys/net80211/ieee80211_tdma.c 205140 2010-03-14 01:57:32Z weongyo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/net80211/ieee80211_tdma.c 254506 2013-08-18 23:40:30Z adrian $");
 #endif
 
 /*
@@ -35,6 +35,8 @@ __FBSDID("$FreeBSD: stable/9/sys/net80211/ieee80211_tdma.c 205140 2010-03-14 01:
 #include "opt_inet.h"
 #include "opt_tdma.h"
 #include "opt_wlan.h"
+
+#ifdef	IEEE80211_SUPPORT_TDMA
 
 #include <sys/param.h>
 #include <sys/systm.h> 
@@ -285,6 +287,8 @@ static void
 tdma_beacon_miss(struct ieee80211vap *vap)
 {
 	struct ieee80211_tdma_state *ts = vap->iv_tdma;
+
+	IEEE80211_LOCK_ASSERT(vap->iv_ic);
 
 	KASSERT((vap->iv_ic->ic_flags & IEEE80211_F_SCAN) == 0, ("scanning"));
 	KASSERT(vap->iv_state == IEEE80211_S_RUN,
@@ -740,7 +744,7 @@ tdma_ioctl_get80211(struct ieee80211vap *vap, struct ieee80211req *ireq)
 	struct ieee80211_tdma_state *ts = vap->iv_tdma;
 
 	if ((vap->iv_caps & IEEE80211_C_TDMA) == 0)
-		return EOPNOTSUPP;
+		return ENOSYS;
 
 	switch (ireq->i_type) {
 	case IEEE80211_IOC_TDMA_SLOT:
@@ -768,7 +772,7 @@ tdma_ioctl_set80211(struct ieee80211vap *vap, struct ieee80211req *ireq)
 	struct ieee80211_tdma_state *ts = vap->iv_tdma;
 
 	if ((vap->iv_caps & IEEE80211_C_TDMA) == 0)
-		return EOPNOTSUPP;
+		return ENOSYS;
 
 	switch (ireq->i_type) {
 	case IEEE80211_IOC_TDMA_SLOT:
@@ -818,3 +822,5 @@ restart:
 	return ERESTART;
 }
 IEEE80211_IOCTL_SET(tdma, tdma_ioctl_set80211);
+
+#endif	/* IEEE80211_SUPPORT_TDMA */

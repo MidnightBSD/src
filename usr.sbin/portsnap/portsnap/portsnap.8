@@ -23,9 +23,9 @@
 .\" IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/usr.sbin/portsnap/portsnap/portsnap.8 241106 2012-10-01 16:34:12Z issyl0 $
+.\" $FreeBSD: release/10.0.0/usr.sbin/portsnap/portsnap/portsnap.8 250604 2013-05-13 18:13:50Z joel $
 .\"
-.Dd September 28, 2012
+.Dd October 14, 2012
 .Dt PORTSNAP 8
 .Os FreeBSD
 .Sh NAME
@@ -55,10 +55,6 @@ In a normal update operation,
 .Nm
 will routinely restore modified files to their unmodified state and
 delete unrecognized local files.
-This behavior is different to
-.Xr cvs 1
-and
-.Xr cvsup 1 .
 .Sh OPTIONS
 The following options are supported:
 .Bl -tag -width "-f conffile"
@@ -110,6 +106,12 @@ command only, operate only on parts of the ports tree starting with
 .Ar sysutils/port
 would extract sysutils/portsman, sysutils/portsnap,
 sysutils/portupgrade, etc.)
+.It Fl Fl interactive
+override auto-detection of calling process.
+Only use this when calling portsnap from an
+.Sy interactive, non-terminal application.
+(Cron jobs are particularly bad since they cause
+load spikes on the Portsnap mirrors.)
 .El
 .Sh COMMANDS
 The
@@ -167,7 +169,9 @@ If your clock is set to local time, adding the line
 .Pp
 .Dl 0 3 * * * root /usr/sbin/portsnap cron
 .Pp
-to /etc/crontab is a good way to make sure you always have
+to
+.Pa /etc/crontab
+is a good way to make sure you always have
 an up-to-date snapshot of the ports tree available which
 can quickly be extracted into
 .Pa /usr/ports .
@@ -245,11 +249,11 @@ may be published, but only in aggregate and after anonymizing the
 individual systems.
 .Sh FILES
 .Bl -tag -width "/etc/portsnap.conf"
-.It /etc/portsnap.conf
+.It Pa /etc/portsnap.conf
 Default location of the portsnap configuration file.
-.It /var/db/portsnap
+.It Pa /var/db/portsnap
 Default location where compressed snapshots are stored.
-.It /usr/ports
+.It Pa /usr/ports
 Default location where the ports tree is extracted.
 .El
 .Sh SEE ALSO

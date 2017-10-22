@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/sys/modules/virtio/scsi/Makefile 241470 2012-10-11 23:41:18Z grehan $
+# $FreeBSD: release/10.0.0/sys/modules/virtio/scsi/Makefile 241470 2012-10-11 23:41:18Z grehan $
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions

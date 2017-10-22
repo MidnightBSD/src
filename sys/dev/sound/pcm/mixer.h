@@ -24,8 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/sound/pcm/mixer.h 246786 2013-02-14 10:48:08Z hselasky $
+ * $FreeBSD: release/10.0.0/sys/dev/sound/pcm/mixer.h 246454 2013-02-07 08:20:03Z hselasky $
  */
+
+#ifndef _PCM_MIXER_H_
+#define	_PCM_MIXER_H_
 
 struct snd_mixer *mixer_create(device_t dev, kobj_class_t cls, void *devinfo,
     const char *desc);
@@ -79,3 +82,5 @@ extern int mixer_count;
 			    sizeof(oss_mixer_enuminfo))
 
 #define MIXER_DECLARE(name) static DEFINE_CLASS(name, name ## _methods, MIXER_SIZE)
+
+#endif				/* _PCM_MIXER_H_ */

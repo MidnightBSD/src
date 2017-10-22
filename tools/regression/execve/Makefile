@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/execve/Makefile 163153 2006-10-09 06:47:08Z maxim $
+# $FreeBSD: release/10.0.0/tools/regression/execve/Makefile 163153 2006-10-09 06:47:08Z maxim $
 
 PROG=	doexec
 NO_MAN=

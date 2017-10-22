@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)strerror.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/string/strsignal.c 202916 2010-01-24 10:35:26Z ume $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/string/strsignal.c 251069 2013-05-28 20:57:40Z emaste $");
 
 #include "namespace.h"
 #if defined(NLS)
@@ -120,29 +120,29 @@ strsignal(int num)
 			UPREFIX,
 #endif
 			sizeof(sig_ebuf));
+
+		signum = num;
+		if (num < 0)
+			signum = -signum;
+
+		t = tmp;
+		do {
+			*t++ = "0123456789"[signum % 10];
+		} while (signum /= 10);
+		if (num < 0)
+			*t++ = '-';
+
+		p = (ebuf + n);
+		*p++ = ':';
+		*p++ = ' ';
+
+		for (;;) {
+			*p++ = *--t;
+			if (t <= tmp)
+				break;
+		}
+		*p = '\0';
 	}
-
-	signum = num;
-	if (num < 0)
-		signum = -signum;
-
-	t = tmp;
-	do {
-		*t++ = "0123456789"[signum % 10];
-	} while (signum /= 10);
-	if (num < 0)
-		*t++ = '-';
-
-	p = (ebuf + n);
-	*p++ = ':';
-	*p++ = ' ';
-
-	for (;;) {
-		*p++ = *--t;
-		if (t <= tmp)
-			break;
-	}
-	*p = '\0';
 
 #if defined(NLS)
 	catclose(catd);

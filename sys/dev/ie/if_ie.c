@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ie/if_ie.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ie/if_ie.c 243857 2012-12-04 09:32:43Z glebius $");
 
 /*
  * Intel 82586 Ethernet chip
@@ -156,6 +156,9 @@ static int	ie_debug = IED_RNR;
 #endif
 
 #define IE_BUF_LEN	ETHER_MAX_LEN	/* length of transmit buffer */
+
+/* XXX this driver uses `volatile' and `caddr_t' to a fault. */
+typedef	volatile char *v_caddr_t;	/* core address, pointer to volatile */
 
 /* Forward declaration */
 struct ie_softc;
@@ -313,7 +316,6 @@ ie_attach(device_t dev)
 
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_start = iestart;
 	ifp->if_ioctl = ieioctl;

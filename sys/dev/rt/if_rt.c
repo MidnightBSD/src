@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/rt/if_rt.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/rt/if_rt.c 251734 2013-06-14 05:36:47Z kevlo $");
 
 #include "if_rtvar.h"
 #include "if_rtreg.h"
@@ -383,7 +383,6 @@ rt_attach(device_t dev)
 	ifp->if_init = rt_init;
 	ifp->if_ioctl = rt_ioctl;
 	ifp->if_start = rt_start;
-	ifp->if_mtu = ETHERMTU;
 #define	RT_TX_QLEN	256
 
 	IFQ_SET_MAXLEN(&ifp->if_snd, RT_TX_QLEN);
@@ -476,20 +475,16 @@ rt_ifmedia_upd(struct ifnet *ifp)
 	struct rt_softc *sc;
 #ifdef IF_RT_PHY_SUPPORT
 	struct mii_data *mii;
+	struct mii_softc *miisc;
 	int error = 0;
 
 	sc = ifp->if_softc;
 	RT_SOFTC_LOCK(sc);
 
 	mii = device_get_softc(sc->rt_miibus);
-	if (mii->mii_instance) {
-		struct mii_softc *miisc;
-		for (miisc = LIST_FIRST(&mii->mii_phys); miisc != NULL;
-				miisc = LIST_NEXT(miisc, mii_list))
-			mii_phy_reset(miisc);
-	}
-	if (mii)
-		error = mii_mediachg(mii);
+	LIST_FOREACH(miisc, &mii->mii_phys, mii_list)
+		PHY_RESET(miisc);
+	error = mii_mediachg(mii);
 	RT_SOFTC_UNLOCK(sc);
 
 	return (error);

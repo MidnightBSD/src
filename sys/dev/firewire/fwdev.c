@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: stable/9/sys/dev/firewire/fwdev.c 201223 2009-12-29 21:51:28Z rnoland $
+ * $FreeBSD: release/10.0.0/sys/dev/firewire/fwdev.c 255359 2013-09-07 13:45:44Z davide $
  *
  */
 
@@ -992,11 +992,9 @@ found:
 	sc = devclass_get_softc(firewire_devclass, unit);
 	if (sc == NULL)
 		return;
-	*dev = make_dev(&firewire_cdevsw, MAKEMINOR(devflag[i], unit, sub),
-		       UID_ROOT, GID_OPERATOR, 0660,
-		       "%s%d.%d", devnames[i], unit, sub);
-	dev_ref(*dev);
-	(*dev)->si_flags |= SI_CHEAPCLONE;
+	*dev = make_dev_credf(MAKEDEV_REF, &firewire_cdevsw,
+	    MAKEMINOR(devflag[i], unit, sub), cred, UID_ROOT, GID_OPERATOR,
+	    0660, "%s%d.%d", devnames[i], unit, sub);
 	dev_depends(sc->dev, *dev);
 	return;
 }

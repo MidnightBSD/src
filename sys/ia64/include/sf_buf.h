@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/ia64/include/sf_buf.h 223873 2011-07-08 16:30:54Z marcel $
+ * $FreeBSD: release/10.0.0/sys/ia64/include/sf_buf.h 255289 2013-09-06 05:37:49Z glebius $
  */
 
 #ifndef _MACHINE_SF_BUF_H_
@@ -40,6 +40,18 @@
  * actual mapping is provided by the direct virtual-to-physical mapping.  
  */
 struct sf_buf;
+
+static inline struct sf_buf *
+sf_buf_alloc(struct vm_page *m, int pri)
+{
+
+	return ((struct sf_buf *)m);
+}
+
+static inline void
+sf_buf_free(struct sf_buf *sf)
+{
+}
 
 static __inline vm_page_t
 sf_buf_page(struct sf_buf *sf)

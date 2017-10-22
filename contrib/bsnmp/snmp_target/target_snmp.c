@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/contrib/bsnmp/snmp_target/target_snmp.c 246069 2013-01-29 13:49:08Z pfg $
+ * $FreeBSD: release/10.0.0/contrib/bsnmp/snmp_target/target_snmp.c 245952 2013-01-26 22:08:21Z pfg $
  */
 #include <sys/queue.h>
 #include <sys/types.h>

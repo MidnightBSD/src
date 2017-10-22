@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/doc/llvm/Makefile 225880 2011-09-29 18:12:40Z dim $
+# $FreeBSD: release/10.0.0/share/doc/llvm/Makefile 225880 2011-09-29 18:12:40Z dim $
 
 SUBDIR=		clang
 

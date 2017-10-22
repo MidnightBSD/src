@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/amd64/include/apicvar.h 212541 2010-09-13 07:25:35Z mav $
+ * $FreeBSD: release/10.0.0/sys/amd64/include/apicvar.h 255040 2013-08-29 19:52:18Z gibbs $
  */
 
 #ifndef _MACHINE_APICVAR_H_
@@ -227,6 +227,7 @@ int	lapic_set_lvt_triggermode(u_int apic_id, u_int lvt,
 	    enum intr_trigger trigger);
 void	lapic_set_tpr(u_int vector);
 void	lapic_setup(int boot);
+void	xen_intr_handle_upcall(struct trapframe *frame);
 
 #endif /* !LOCORE */
 #endif /* _MACHINE_APICVAR_H_ */

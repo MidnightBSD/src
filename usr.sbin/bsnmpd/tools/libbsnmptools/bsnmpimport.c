@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmpimport.c 216295 2010-12-08 14:30:25Z syrinx $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmpimport.c 216295 2010-12-08 14:30:25Z syrinx $
  */
 
 /*

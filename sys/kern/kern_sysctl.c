@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_sysctl.c 248034 2013-03-08 11:25:52Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_sysctl.c 254115 2013-08-09 01:04:44Z scottl $");
 
 #include "opt_capsicum.h"
 #include "opt_compat.h"
@@ -412,8 +412,12 @@ sysctl_remove_oid_locked(struct sysctl_oid *oidp, int del, int recurse)
 		if (oidp->oid_refcnt == 1) {
 			SLIST_FOREACH_SAFE(p,
 			    SYSCTL_CHILDREN(oidp), oid_link, tmp) {
-				if (!recurse)
+				if (!recurse) {
+					printf("Warning: failed attempt to "
+					    "remove oid %s with child %s\n",
+					    oidp->oid_name, p->oid_name);
 					return (ENOTEMPTY);
+				}
 				error = sysctl_remove_oid_locked(p, del,
 				    recurse);
 				if (error)

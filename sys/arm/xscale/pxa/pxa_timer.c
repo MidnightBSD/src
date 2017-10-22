@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/pxa/pxa_timer.c 179595 2008-06-06 05:08:09Z benno $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/pxa/pxa_timer.c 179595 2008-06-06 05:08:09Z benno $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: stable/9/usr.sbin/fwcontrol/fwmpegts.c 216948 2011-01-04 02:52:22Z emaste $
+ * $FreeBSD: release/10.0.0/usr.sbin/fwcontrol/fwmpegts.c 228990 2011-12-30 10:58:14Z uqs $
  */
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -94,7 +94,7 @@ MPEG-2 Transport Stream (MPEG TS) packet format according to IEC 61883:
 
 N.b. that CRCs are removed by firewire layer!
 
-The following fiels are fixed for IEEE-1394:
+The following fields are fixed for IEEE-1394:
 tag = 01b
 tcode = 1010b
 The length is payload length, i.e. includes CIP header and data size.

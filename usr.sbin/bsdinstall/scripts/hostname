@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/usr.sbin/bsdinstall/scripts/hostname 218799 2011-02-18 14:54:34Z nwhitehorn $
+# $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/scripts/hostname 218799 2011-02-18 14:54:34Z nwhitehorn $
 
 : ${DIALOG_OK=0}
 : ${DIALOG_CANCEL=1}

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/lib/libc/stdlib/test-sort.h 131099 2004-06-25 12:31:12Z sobomax $
+ * $FreeBSD: release/10.0.0/tools/regression/lib/libc/stdlib/test-sort.h 131099 2004-06-25 12:31:12Z sobomax $
  */
 
 #ifndef _TEST_SORT_H

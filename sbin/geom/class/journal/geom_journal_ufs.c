@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/geom/class/journal/geom_journal_ufs.c 245659 2013-01-19 06:17:27Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/class/journal/geom_journal_ufs.c 245074 2013-01-05 21:52:38Z kib $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>

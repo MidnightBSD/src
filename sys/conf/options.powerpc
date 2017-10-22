@@ -1,8 +1,10 @@
-# $FreeBSD: stable/9/sys/conf/options.powerpc 217044 2011-01-06 04:12:29Z nwhitehorn $
+# $FreeBSD: release/10.0.0/sys/conf/options.powerpc 255643 2013-09-17 17:37:04Z nwhitehorn $
 # Options specific to the powerpc platform kernels
 
 AIM			opt_global.h
-E500			opt_global.h
+BOOKE			opt_global.h
+BOOKE_E500		opt_global.h
+BOOKE_PPC4XX		opt_global.h
 CELL
 
 POWERPC
@@ -20,7 +22,9 @@ MPC85XX			opt_platform.h
 POWERMAC		opt_platform.h
 PS3			opt_platform.h
 MAMBO
+PSERIES
 PSIM
+WII			opt_platform.h
 
 SC_OFWFB		opt_ofwfb.h
 

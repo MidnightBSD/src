@@ -32,7 +32,7 @@
 .\" the referee document.  The original Standard can be obtained online at
 .\"	http://www.opengroup.org/unix/online.html.
 .\"
-.\" $FreeBSD: stable/9/lib/libc/gen/posix_spawnattr_getflags.3 198788 2009-11-02 12:35:38Z brueffer $
+.\" $FreeBSD: release/10.0.0/lib/libc/gen/posix_spawnattr_getflags.3 236438 2012-06-02 08:47:26Z joel $
 .\"
 .Dd March 24, 2008
 .Dt POSIX_SPAWNATTR_GETFLAGS 3
@@ -70,7 +70,7 @@ or
 It is the bitwise-inclusive OR of zero or more of the following flags
 (see
 .Fn posix_spawn ) :
-.Bl -tag -offset indent
+.Bl -tag -width "POSIX_SPAWN_SETSCHEDPARAM" -offset indent
 .It Dv POSIX_SPAWN_RESETIDS
 .It Dv POSIX_SPAWN_SETPGROUP
 .It Dv POSIX_SPAWN_SETSIGDEF

@@ -24,13 +24,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/csu/common/crtbrand.c 217375 2011-01-13 20:44:31Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/csu/common/crtbrand.c 232832 2012-03-11 20:04:09Z kib $");
 
 #include <sys/param.h>
-
-#define ABI_VENDOR	"FreeBSD"
-#define ABI_SECTION	".note.ABI-tag"
-#define ABI_NOTETYPE	1
+#include "notes.h"
 
 /*
  * Special ".note" entry specifying the ABI version.  See
@@ -55,15 +52,15 @@ __FBSDID("$FreeBSD: stable/9/lib/csu/common/crtbrand.c 217375 2011-01-13 20:44:3
  * These steps are done in the invididual Makefiles for each applicable arch.
  */
 static const struct {
-    int32_t	namesz;
-    int32_t	descsz;
-    int32_t	type;
-    char	name[sizeof ABI_VENDOR];
-    int32_t	desc;
-} abitag __attribute__ ((section (ABI_SECTION), aligned(4))) __used = {
-    sizeof ABI_VENDOR,
-    sizeof(int32_t),
-    ABI_NOTETYPE,
-    ABI_VENDOR,
-    __FreeBSD_version
+	int32_t	namesz;
+	int32_t	descsz;
+	int32_t	type;
+	char	name[sizeof(NOTE_FREEBSD_VENDOR)];
+	int32_t	desc;
+} abitag __attribute__ ((section (NOTE_SECTION), aligned(4))) __used = {
+	.namesz = sizeof(NOTE_FREEBSD_VENDOR),
+	.descsz = sizeof(int32_t),
+	.type = ABI_NOTETYPE,
+	.name = NOTE_FREEBSD_VENDOR,
+	.desc = __FreeBSD_version
 };

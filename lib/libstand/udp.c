@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libstand/udp.c 221364 2011-05-03 07:39:54Z rodrigc $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libstand/udp.c 221364 2011-05-03 07:39:54Z rodrigc $");
 
 #include <sys/param.h>
 #include <sys/socket.h>

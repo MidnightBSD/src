@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libfetch/http.errors 242289 2012-10-29 04:16:52Z eadler $
+# $FreeBSD: release/10.0.0/lib/libfetch/http.errors 241840 2012-10-22 03:00:10Z eadler $
 #
 # This list is taken from RFC 2068.
 #

@@ -25,7 +25,7 @@
  */
 
 #include <sys/types.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/filemon/filemontest.c 237795 2012-06-29 15:57:25Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/filemon/filemontest.c 251368 2013-06-04 06:38:01Z obrien $");
 
 #include <sys/wait.h>
 #include <sys/ioctl.h>
@@ -43,9 +43,13 @@ __FBSDID("$FreeBSD: stable/9/tools/regression/filemon/filemontest.c 237795 2012-
  * "test_script.sh" in the cwd.
  */
 
+#ifndef BIT
+#define BIT ""
+#endif
+
 int
 main(void) {
-	char log_name[] = "filemon_log.XXXXXX";
+	char log_name[] = "filemon_log" BIT ".XXXXXX";
 	pid_t child;
 	int fm_fd, fm_log;
 
@@ -66,7 +70,7 @@ main(void) {
 		child = getpid();
 		if (ioctl(fm_fd, FILEMON_SET_PID, &child) == -1)
 			err(1, "Cannot set filemon PID to %d", child);
-		system("./test_script.sh");
+		system("env BIT=" BIT "	./test_script.sh");
 		break;
 	case -1:
 		err(1, "Cannot fork");

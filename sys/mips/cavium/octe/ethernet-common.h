@@ -26,7 +26,7 @@ TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS"
 AND WITH ALL FAULTS AND CAVIUM  NETWORKS MAKES NO PROMISES, REPRESENTATIONS OR WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT TO THE SOFTWARE, INCLUDING ITS CONDITION, ITS CONFORMITY TO ANY REPRESENTATION OR DESCRIPTION, OR THE EXISTENCE OF ANY LATENT OR PATENT DEFECTS, AND CAVIUM SPECIFICALLY DISCLAIMS ALL IMPLIED (IF ANY) WARRANTIES OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION OR CORRESPONDENCE TO DESCRIPTION. THE ENTIRE  RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE LIES WITH YOU.
 
 *************************************************************************/
-/* $FreeBSD: stable/9/sys/mips/cavium/octe/ethernet-common.h 219706 2011-03-16 22:51:34Z jmallett $ */
+/* $FreeBSD: release/10.0.0/sys/mips/cavium/octe/ethernet-common.h 231987 2012-02-22 01:30:25Z gonzo $ */
 
 int cvm_oct_common_open(struct ifnet *ifp);
 int cvm_oct_common_stop(struct ifnet *ifp);
@@ -37,6 +37,7 @@ void cvm_oct_common_uninit(struct ifnet *ifp);
 int cvm_oct_common_change_mtu(struct ifnet *ifp, int new_mtu);
 void cvm_oct_common_set_multicast_list(struct ifnet *ifp);
 void cvm_oct_common_set_mac_address(struct ifnet *ifp, const void *);
+int cvm_assign_mac_address(uint64_t *, uint8_t *);
 
 int cvm_oct_init_module(device_t);
 void cvm_oct_cleanup_module(device_t);
@@ -52,4 +53,3 @@ int cvm_oct_spi_init(struct ifnet *ifp);
 void cvm_oct_spi_uninit(struct ifnet *ifp);
 int cvm_oct_xaui_init(struct ifnet *ifp);
 
-extern unsigned int cvm_oct_mac_addr_offset;

@@ -2,33 +2,23 @@
 #
 # Add additional swap files
 #
-# $FreeBSD: stable/9/etc/rc.d/addswap 242153 2012-10-26 18:06:49Z obrien $
+# $FreeBSD: release/10.0.0/etc/rc.d/addswap 252310 2013-06-27 18:28:45Z hrs $
 #
 
 # PROVIDE: addswap
 # REQUIRE: FILESYSTEMS kld
 # BEFORE:  netif
-# KEYWORD: nojail
+# KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 
 name="addswap"
-start_cmd="addswap_start"
+start_cmd=":"
 stop_cmd=":"
+rcvar=
 
-addswap_start()
-{
-	case ${swapfile} in
-	[Nn][Oo] | '')
-		;;
-	*)
-		if [ -w "${swapfile}" ]; then
-			echo "Adding ${swapfile} as additional swap"
-			mdev=`mdconfig -a -t vnode -f ${swapfile}` && swapon /dev/${mdev}
-		fi
-		;;
-	esac
-}
+set_rcvar_obsolete swapfile
+set_rcvar_obsolete geli_swap_flags
 
 load_rc_config $name
 run_rc_command "$1"

@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)ls.c	8.5 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/ls/ls.c 244075 2012-12-10 03:11:19Z grog $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/ls/ls.c 242840 2012-11-09 20:19:56Z peter $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -133,7 +133,7 @@ static int f_sizesort;
        int f_statustime;	/* use time of last mode change */
 static int f_stream;		/* stream the output, separate with commas */
        int f_thousands;		/* show file sizes with thousands separators */
-       char *f_timeformat;      /* user-specified time format */
+       char *f_timeformat;	/* user-specified time format */
 static int f_timesort;		/* sort by time vice name */
        int f_type;		/* add type character for non-regular files */
 static int f_whiteout;		/* show whiteout entries */
@@ -594,7 +594,7 @@ display(const FTSENT *p, FTSENT *list, int options)
 	initmax = getenv("LS_COLWIDTHS");
 	/* Fields match -lios order.  New ones should be added at the end. */
 	maxlabelstr = maxblock = maxlen = maxnlink = 0;
-	    maxuser = maxgroup = maxflags = maxsize = 0;
+	maxuser = maxgroup = maxflags = maxsize = 0;
 	maxinode = 0;
 	if (initmax != NULL && *initmax != '\0') {
 		char *initmax2, *jinitmax;

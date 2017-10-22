@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man9/kernel_mount.9 138854 2004-12-14 18:07:46Z trhodes $
+.\" $FreeBSD: release/10.0.0/share/man/man9/kernel_mount.9 251825 2013-06-17 03:32:27Z delphij $
 .\"
 .Dd December 13, 2004
 .Dt KERNEL_MOUNT 9
@@ -153,12 +153,12 @@ msdosfs_cmount(struct mntarg *ma, void *data, int flags, struct thread *td)
 
 	if (data == NULL)
 		return (EINVAL);
-	error = copyin(data, &args, sizeof args);
+	error = copyin(data, &args, sizeof(args));
 	if (error)
 		return (error);
 
 	ma = mount_argsu(ma, "from", args.fspec, MAXPATHLEN);
-	ma = mount_arg(ma, "export", &args.export, sizeof args.export);
+	ma = mount_arg(ma, "export", &args.export, sizeof(args.export));
 	ma = mount_argf(ma, "uid", "%d", args.uid);
 	ma = mount_argf(ma, "gid", "%d", args.gid);
 	ma = mount_argf(ma, "mask", "%d", args.mask);
@@ -195,7 +195,6 @@ must come in pairs, e.g.,
 .Sh SEE ALSO
 .Xr VFS 9 ,
 .Xr VFS_MOUNT 9 ,
-.Xr vfs_mount 9
 .Sh HISTORY
 The
 .Fn kernel_mount

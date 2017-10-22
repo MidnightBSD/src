@@ -34,22 +34,23 @@
  *
  * RiscBSD kernel project
  *
- * cpufunc.S 
+ * cpufunc.S
  *
  * Assembly functions for CPU / MMU / TLB specific operations
  *
  * Created      : 30/01/97
  *
  */
- 
+
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/cpufunc_asm.S 142570 2005-02-26 18:59:01Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/cpufunc_asm.S 248361 2013-03-16 02:48:49Z andrew $");
 
 	.text
 	.align	0
 
 ENTRY(cpufunc_nullop)
 	RET
+END(cpufunc_nullop)
 
 /*
  * Generic functions to read the internal coprocessor registers
@@ -64,55 +65,66 @@ ENTRY(cpufunc_nullop)
 ENTRY(cpufunc_id)
 	mrc	p15, 0, r0, c0, c0, 0
 	RET
+END(cpufunc_id)
+
+ENTRY(cpufunc_cpuid)
+	mrc	p15, 0, r0, c0, c0, 0
+	RET
+END(cpufunc_cpuid)
 
 ENTRY(cpu_get_control)
 	mrc	p15, 0, r0, c1, c0, 0
 	RET
+END(cpu_get_control)
 
 ENTRY(cpu_read_cache_config)
 	mrc	p15, 0, r0, c0, c0, 1
 	RET
+END(cpu_read_cache_config)
 
 ENTRY(cpufunc_faultstatus)
 	mrc	p15, 0, r0, c5, c0, 0
 	RET
+END(cpufunc_faultstatus)
 
 ENTRY(cpufunc_faultaddress)
 	mrc	p15, 0, r0, c6, c0, 0
 	RET
-
+END(cpufunc_faultaddress)
 
 /*
  * Generic functions to write the internal coprocessor registers
  *
  *
- * Currently these registers are 
+ * Currently these registers are
  *  c1 - CPU Control
  *  c3 - Domain Access Control
  *
  * All other registers are CPU architecture specific
  */
- 
+
 #if 0 /* See below. */
 ENTRY(cpufunc_control)
 	mcr	p15, 0, r0, c1, c0, 0
 	RET
+END(cpufunc_control)
 #endif
 
 ENTRY(cpufunc_domains)
 	mcr	p15, 0, r0, c3, c0, 0
 	RET
+END(cpufunc_domains)
 
 /*
  * Generic functions to read/modify/write the internal coprocessor registers
  *
  *
- * Currently these registers are 
+ * Currently these registers are
  *  c1 - CPU Control
  *
  * All other registers are CPU architecture specific
  */
- 
+
 ENTRY(cpufunc_control)
 	mrc	p15, 0, r3, c1, c0, 0	/* Read the control register */
 	bic	r2, r3, r0		/* Clear bits */
@@ -127,6 +139,8 @@ ENTRY(cpufunc_control)
 .Lglou:
 	.asciz "plop %p\n"
 	.align 0
+END(cpufunc_control)
+
 /*
  * other potentially useful software functions are:
  *  clean D cache entry and flush I cache entry
@@ -153,6 +167,7 @@ ENTRY(get_pc_str_offset)
 	ldr	r0, [sp]
 	sub	r0, r0, r1
 	ldmdb	fp, {fp, sp, pc}
+END(get_pc_str_offset)
 
 /* Allocate and lock a cacheline for the specified address. */
 
@@ -176,3 +191,5 @@ ENTRY(arm_lock_cache_line)
 	mcr	p15, 0, r1, c9, c2, 0 /* Disable data cache lock mode */
 	CPWAIT()
 	RET
+END(arm_lock_cache_line)
+

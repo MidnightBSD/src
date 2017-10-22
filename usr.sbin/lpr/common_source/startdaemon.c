@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)startdaemon.c	8.2 (Berkeley) 4/17/94";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: stable/9/usr.sbin/lpr/common_source/startdaemon.c 216372 2010-12-11 09:38:12Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/lpr/common_source/startdaemon.c 242091 2012-10-25 20:16:38Z ed $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -48,8 +48,6 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/lpr/common_source/startdaemon.c 216372 201
 #include <unistd.h>
 #include "lp.h"
 #include "pathnames.h"
-
-extern uid_t	uid, euid;
 
 /*
  * Tell the printer daemon that there are new files in the spool directory.
@@ -74,9 +72,9 @@ startdaemon(const struct printer *pp)
 #ifndef SUN_LEN
 #define SUN_LEN(unp) (strlen((unp)->sun_path) + 2)
 #endif
-	seteuid(euid);
+	PRIV_START
 	connectres = connect(s, (struct sockaddr *)&un, SUN_LEN(&un));
-	seteuid(uid);
+	PRIV_END
 	if (connectres < 0) {
 		warn("Unable to connect to %s", _PATH_SOCKETNAME);
 		warnx("Check to see if the master 'lpd' process is running.");

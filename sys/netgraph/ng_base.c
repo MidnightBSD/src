@@ -34,7 +34,7 @@
  * Authors: Julian Elischer <julian@freebsd.org>
  *          Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_base.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_base.c 253346 2013-07-15 01:32:55Z rodrigc $
  * $Whistle: ng_base.c,v 1.39 1999/01/28 23:54:53 julian Exp $
  */
 
@@ -92,7 +92,7 @@ static void ng_dumphooks(void);
 #endif	/* NETGRAPH_DEBUG */
 /*
  * DEAD versions of the structures.
- * In order to avoid races, it is sometimes neccesary to point
+ * In order to avoid races, it is sometimes necessary to point
  * at SOMETHING even though theoretically, the current entity is
  * INVALID. Use these to avoid these races.
  */
@@ -789,6 +789,8 @@ ng_unref_node(node_p node)
 	if (node == &ng_deadnode)
 		return;
 
+	CURVNET_SET(node->nd_vnet);
+
 	if (refcount_release(&node->nd_refs)) { /* we were the last */
 
 		node->nd_type->refs--; /* XXX maybe should get types lock? */
@@ -807,6 +809,7 @@ ng_unref_node(node_p node)
 		mtx_destroy(&node->nd_input_queue.q_mtx);
 		NG_FREE_NODE(node);
 	}
+	CURVNET_RESTORE();
 }
 
 /************************************************************************
@@ -3601,7 +3604,7 @@ ng_address_hook(node_p here, item_p item, hook_p hook, ng_ID_t retaddr)
 }
 
 int
-ng_address_path(node_p here, item_p item, char *address, ng_ID_t retaddr)
+ng_address_path(node_p here, item_p item, const char *address, ng_ID_t retaddr)
 {
 	node_p	dest = NULL;
 	hook_p	hook = NULL;

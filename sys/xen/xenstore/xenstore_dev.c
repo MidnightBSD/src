@@ -31,7 +31,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/xen/xenstore/xenstore_dev.c 214077 2010-10-19 20:53:30Z gibbs $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/xen/xenstore/xenstore_dev.c 255040 2013-08-29 19:52:18Z gibbs $");
 
 #include <sys/types.h>
 #include <sys/cdefs.h>
@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD: stable/9/sys/xen/xenstore/xenstore_dev.c 214077 2010-10-19 2
 #include <sys/malloc.h>
 #include <sys/conf.h>
 
-#include <machine/xen/xen-os.h>
+#include <xen/xen-os.h>
 
 #include <xen/hypervisor.h>
 #include <xen/xenstore/xenstorevar.h>

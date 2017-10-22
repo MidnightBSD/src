@@ -1,5 +1,5 @@
 # $Id: Makefile,v 1.5 2003/09/08 02:28:35 max Exp $
-# $FreeBSD: stable/9/usr.sbin/bluetooth/Makefile 215195 2010-11-12 19:43:12Z emax $
+# $FreeBSD: release/10.0.0/usr.sbin/bluetooth/Makefile 215195 2010-11-12 19:43:12Z emax $
 
 SUBDIR= \
 	ath3kfw \

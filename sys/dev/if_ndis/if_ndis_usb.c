@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/if_ndis/if_ndis_usb.c 229093 2011-12-31 14:12:12Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/if_ndis/if_ndis_usb.c 227843 2011-11-22 21:28:20Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

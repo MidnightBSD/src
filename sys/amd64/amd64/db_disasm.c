@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/amd64/amd64/db_disasm.c 239879 2012-08-29 19:47:19Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/amd64/db_disasm.c 255192 2013-09-03 21:21:47Z jhb $");
 
 /*
  * Instruction disassembler.
@@ -127,7 +127,7 @@ struct finst {
 static const struct inst db_inst_0f388x[] = {
 /*80*/	{ "",	   TRUE,  SDEP,  op2(E, Rq),  "invept" },
 /*81*/	{ "",	   TRUE,  SDEP,  op2(E, Rq),  "invvpid" },
-/*82*/	{ "",	   FALSE, NONE,  0,	      0 },
+/*82*/	{ "",	   TRUE,  SDEP,  op2(E, Rq),  "invpcid" },
 /*83*/	{ "",	   FALSE, NONE,  0,	      0 },
 /*84*/	{ "",	   FALSE, NONE,  0,	      0 },
 /*85*/	{ "",	   FALSE, NONE,  0,	      0 },

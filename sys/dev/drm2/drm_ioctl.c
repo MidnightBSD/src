@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/drm_ioctl.c 235783 2012-05-22 11:07:44Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/drm_ioctl.c 258706 2013-11-28 09:30:05Z dumbbell $");
 
 /** @file drm_ioctl.c
  * Varios minor DRM ioctls not applicable to other files, such as versioning
@@ -37,6 +37,7 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/drm2/drm_ioctl.c 235783 2012-05-22 11:07:44
  */
 
 #include <dev/drm2/drmP.h>
+#include <dev/drm2/drm_core.h>
 
 /*
  * Beginning in revision 1.1 of the DRM interface, getunique will return
@@ -249,15 +250,14 @@ int drm_getcap(struct drm_device *dev, void *data, struct drm_file *file_priv)
 	case DRM_CAP_DUMB_PREFER_SHADOW:
 		req->value = dev->mode_config.prefer_shadow;
 		break;
+	case DRM_CAP_TIMESTAMP_MONOTONIC:
+		req->value = drm_timestamp_monotonic;
+		break;
 	default:
 		return EINVAL;
 	}
 	return 0;
 }
-
-
-#define DRM_IF_MAJOR	1
-#define DRM_IF_MINOR	2
 
 int drm_setversion(struct drm_device *dev, void *data,
 		   struct drm_file *file_priv)

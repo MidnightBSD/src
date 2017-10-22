@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/isci/isci.h 239734 2012-08-27 15:47:46Z jimharris $
+ * $FreeBSD: release/10.0.0/sys/dev/isci/isci.h 241403 2012-10-10 18:01:56Z jimharris $
  */
 
 #ifndef _ISCI_H
@@ -143,6 +143,16 @@ struct ISCI_INTERRUPT_INFO
 
 };
 
+struct ISCI_PHY
+{
+	struct cdev		*cdev_fault;
+	struct cdev		*cdev_locate;
+	SCI_CONTROLLER_HANDLE_T	handle;
+	int			index;
+	int			led_fault;
+	int			led_locate;
+};
+
 struct ISCI_CONTROLLER
 {
 	struct isci_softc 	*isci;
@@ -169,6 +179,7 @@ struct ISCI_CONTROLLER
 	uint32_t		queue_depth;
 	uint32_t		sim_queue_depth;
 	SCI_FAST_LIST_T		pending_device_reset_list;
+	struct ISCI_PHY		phys[SCI_MAX_PHYS];
 
 	SCI_MEMORY_DESCRIPTOR_LIST_HANDLE_T mdl;
 

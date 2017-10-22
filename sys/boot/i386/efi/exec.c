@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/i386/efi/exec.c 206376 2010-04-07 18:16:05Z rpaulo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/i386/efi/exec.c 243875 2012-12-05 04:22:53Z rpaulo $");
 
 #include <stand.h>
 #include <machine/elf.h>
@@ -46,14 +46,4 @@ __v86int()
 void
 __exec(caddr_t addr, ...)
 {
-	/* XXX this is wrong */
-	__asm __volatile("movl %cr0, %eax");
-	__asm __volatile("andl $0x7fffffff, %eax");
-	__asm __volatile("mov %eax, %cr0");
-	__asm __volatile("xorl %eax, %eax");
-	__asm __volatile("mov %eax, %cr3");
-	__asm __volatile("movl %cr0, %eax");
-	__asm __volatile("andl $0xfffffffe, %eax");
-	__asm __volatile("movl %eax, %cr0");
-	__asm __volatile("jmp %0" :: "r" (addr));
 }

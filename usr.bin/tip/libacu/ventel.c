@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/tip/libacu/ventel.c 161754 2006-08-31 14:14:30Z ru $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tip/libacu/ventel.c 161754 2006-08-31 14:14:30Z ru $");
 
 #ifndef lint
 #if 0

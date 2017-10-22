@@ -23,7 +23,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/kgzip/kgzip.h 68313 2000-11-04 13:02:00Z rnordier $
+ * $FreeBSD: release/10.0.0/usr.sbin/kgzip/kgzip.h 68313 2000-11-04 13:02:00Z rnordier $
  */
 
 #include "kgz.h"

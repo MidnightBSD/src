@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/sys/arm/at91/at91_spireg.h 237095 2012-06-14 20:05:12Z marius $ */
+/* $FreeBSD: release/10.0.0/sys/arm/at91/at91_spireg.h 236495 2012-06-03 00:54:10Z marius $ */
 
 #ifndef ARM_AT91_AT91_SPIREG_H
 #define ARM_AT91_AT91_SPIREG_H

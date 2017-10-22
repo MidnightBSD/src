@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/make/arch.c 200630 2009-12-17 12:42:45Z stas $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/make/arch.c 228992 2011-12-30 11:02:40Z uqs $");
 
 /*-
  * arch.c --
@@ -179,8 +179,8 @@ Boolean arch_fatal = TRUE;
 
 /**
  * ArchError
- *	An error happend while handling an archive. BSDmake traditionally
- *	ignored these errors. Now this is dependend on the global arch_fatal
+ *	An error happened while handling an archive. BSDmake traditionally
+ *	ignored these errors. Now this is dependent on the global arch_fatal
  *	which, if true, makes these errors fatal and, if false, just emits an
  *	error message.
  */
@@ -529,7 +529,7 @@ ArchArchiveOpen(const char *archive, const char *mode)
 
 /*
  * Read the next header from the archive. The return value will be +1 if
- * the header is read successfully, 0 on EOF and -1 if an error happend.
+ * the header is read successfully, 0 on EOF and -1 if an error happened.
  * On a successful return sname contains the truncated member name and
  * member the full name. hdr contains the member header. For the symbol table
  * names of length 0 are returned. The entry for the file name table is never
@@ -830,7 +830,7 @@ ArchFindMember(const char *archive, const char *member, const char *mode)
 		 * (3) the name is longer and the archive doesn't support long
 		 * names.
 		 * Because we don't know whether the archive supports long
-		 * names or not we need to be carefull.
+		 * names or not we need to be careful.
 		 */
 		if (member == NULL) {
 			/* special case - symbol table */
@@ -942,7 +942,7 @@ ArchStatMember(const char *archive, const char *member, Boolean hash)
 		ArchArchiveClose(arf);
 
 		if (t < 0) {
-			/* error happend - throw away everything */
+			/* error happened - throw away everything */
 			Hash_DeleteTable(&ar->members);
 			free(ar->name);
 			free(ar);

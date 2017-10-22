@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2006 Michael Bushkov <bushman@freebsd.org>
- * All rights rehted.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libc/nss/test-gethostby.c 242544 2012-11-04 01:21:49Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/libc/nss/test-gethostby.c 251867 2013-06-17 20:27:20Z eadler $");
 
 #include <arpa/inet.h>
 #include <sys/socket.h>

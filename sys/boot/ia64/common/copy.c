@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/ia64/common/copy.c 221269 2011-04-30 20:16:49Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/ia64/common/copy.c 221269 2011-04-30 20:16:49Z marcel $");
 
 #include <stand.h>
 #include <machine/param.h>

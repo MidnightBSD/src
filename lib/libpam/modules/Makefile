@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/lib/libpam/modules/Makefile 112044 2003-03-09 20:06:38Z obrien $
+# $FreeBSD: release/10.0.0/lib/libpam/modules/Makefile 112044 2003-03-09 20:06:38Z obrien $
 
 .include "modules.inc"
 

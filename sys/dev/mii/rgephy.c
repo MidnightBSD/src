@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/mii/rgephy.c 233492 2012-03-26 04:27:01Z yongari $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mii/rgephy.c 257612 2013-11-04 05:52:33Z yongari $");
 
 /*
  * Driver for the RealTek 8169S/8110S/8211B/8211C internal 10/100/1000 PHY.
@@ -90,6 +90,7 @@ static void	rgephy_load_dspcode(struct mii_softc *);
 
 static const struct mii_phydesc rgephys[] = {
 	MII_PHY_DESC(REALTEK, RTL8169S),
+	MII_PHY_DESC(REALTEK, RTL8251),
 	MII_PHY_END
 };
 
@@ -406,7 +407,8 @@ rgephy_loop(struct mii_softc *sc)
 {
 	int i;
 
-	if (sc->mii_mpd_rev < 2) {
+	if (sc->mii_mpd_model != MII_MODEL_REALTEK_RTL8251 &&
+	    sc->mii_mpd_rev < 2) {
 		PHY_WRITE(sc, RGEPHY_MII_BMCR, RGEPHY_BMCR_PDOWN);
 		DELAY(1000);
 	}
@@ -439,7 +441,8 @@ rgephy_load_dspcode(struct mii_softc *sc)
 {
 	int val;
 
-	if (sc->mii_mpd_rev >= 2)
+	if (sc->mii_mpd_model == MII_MODEL_REALTEK_RTL8251 ||
+	    sc->mii_mpd_rev >= 2)
 		return;
 
 	PHY_WRITE(sc, 31, 0x0001);
@@ -488,7 +491,7 @@ rgephy_load_dspcode(struct mii_softc *sc)
 static void
 rgephy_reset(struct mii_softc *sc)
 {
-	uint16_t ssr;
+	uint16_t pcr, ssr;
 
 	if ((sc->mii_flags & MIIF_PHYPRIV0) == 0 && sc->mii_mpd_rev == 3) {
 		/* RTL8211C(L) */
@@ -496,6 +499,15 @@ rgephy_reset(struct mii_softc *sc)
 		if ((ssr & RGEPHY_SSR_ALDPS) != 0) {
 			ssr &= ~RGEPHY_SSR_ALDPS;
 			PHY_WRITE(sc, RGEPHY_MII_SSR, ssr);
+		}
+	}
+
+	if (sc->mii_mpd_rev >= 2) {
+		pcr = PHY_READ(sc, RGEPHY_MII_PCR);
+		if ((pcr & RGEPHY_PCR_MDIX_AUTO) == 0) {
+			pcr &= ~RGEPHY_PCR_MDI_MASK;
+			pcr |= RGEPHY_PCR_MDIX_AUTO;
+			PHY_WRITE(sc, RGEPHY_MII_PCR, pcr);
 		}
 	}
 

@@ -1,4 +1,4 @@
- $FreeBSD: stable/9/sys/i386/linux/syscalls.master 248532 2013-03-19 20:18:30Z jkim $
+ $FreeBSD: release/10.0.0/sys/i386/linux/syscalls.master 255675 2013-09-18 18:48:33Z rdivacky $
 
 ;	@(#)syscalls.master	8.1 (Berkeley) 7/19/93
 ; System call name/number master file (or rather, slave, from LINUX).
@@ -86,7 +86,7 @@
 				    struct l_utimbuf *times); }
 31	AUE_NULL	UNIMPL	stty
 32	AUE_NULL	UNIMPL	gtty
-33	AUE_ACCESS	STD	{ int linux_access(char *path, l_int flags); }
+33	AUE_ACCESS	STD	{ int linux_access(char *path, l_int amode); }
 34	AUE_NICE	STD	{ int linux_nice(l_int inc); }
 35	AUE_NULL	UNIMPL	ftime
 36	AUE_SYNC	NOPROTO	{ int sync(void); }
@@ -158,7 +158,7 @@
 				    struct l_old_select_argv *ptr); }
 83	AUE_SYMLINK	STD	{ int linux_symlink(char *path, char *to); }
 ; 84: oldlstat
-84	AUE_LSTAT	STD	{ int linux_lstat(char *path, struct ostat *up); }
+84	AUE_LSTAT	STD	{ int linux_lstat(char *path, struct l_stat *up); }
 85	AUE_READLINK	STD	{ int linux_readlink(char *name, char *buf, \
 				    l_int count); }
 86	AUE_USELIB	STD	{ int linux_uselib(char *library); }
@@ -203,7 +203,7 @@
 				    struct l_newstat *buf); }
 ; 109: olduname
 109	AUE_NULL	STD	{ int linux_uname(void); }
-110	AUE_NULL	STD	{ int linux_iopl(l_ulong level); }
+110	AUE_NULL	STD	{ int linux_iopl(l_int level); }
 111	AUE_NULL	STD	{ int linux_vhangup(void); }
 112	AUE_NULL	UNIMPL	idle
 113	AUE_NULL	STD	{ int linux_vm86old(void); }
@@ -353,12 +353,12 @@
 				    l_loff_t length); }
 194	AUE_FTRUNCATE	STD	{ int linux_ftruncate64(l_uint fd, \
 				    l_loff_t length); }
-195	AUE_STAT	STD	{ int linux_stat64(char *filename, \
-				    struct l_stat64 *statbuf, l_long flags); }
-196	AUE_LSTAT	STD	{ int linux_lstat64(char *filename, \
-				    struct l_stat64 *statbuf, l_long flags); }
-197	AUE_FSTAT	STD	{ int linux_fstat64(l_ulong fd, \
-				    struct l_stat64 *statbuf, l_long flags); }
+195	AUE_STAT	STD	{ int linux_stat64(const char *filename, \
+				    struct l_stat64 *statbuf); }
+196	AUE_LSTAT	STD	{ int linux_lstat64(const char *filename, \
+				    struct l_stat64 *statbuf); }
+197	AUE_FSTAT	STD	{ int linux_fstat64(l_int fd, \
+				    struct l_stat64 *statbuf); }
 198	AUE_LCHOWN	STD	{ int linux_lchown(char *path, l_uid_t uid, \
 				    l_gid_t gid); }
 199	AUE_GETUID	STD	{ int linux_getuid(void); }
@@ -506,14 +506,14 @@
 302	AUE_RENAMEAT	STD	{ int linux_renameat(l_int olddfd, const char *oldname, \
 					l_int newdfd, const char *newname); }
 303	AUE_LINKAT	STD	{ int linux_linkat(l_int olddfd, const char *oldname, \
-					l_int newdfd, const char *newname, l_int flags); }
+					l_int newdfd, const char *newname, l_int flag); }
 304	AUE_SYMLINKAT	STD	{ int linux_symlinkat(const char *oldname, l_int newdfd, \
 					const char *newname); }
 305	AUE_READLINKAT	STD	{ int linux_readlinkat(l_int dfd, const char *path, \
 					char *buf, l_int bufsiz); }
 306	AUE_FCHMODAT	STD	{ int linux_fchmodat(l_int dfd, const char *filename, \
 					l_mode_t mode); }
-307	AUE_FACCESSAT	STD	{ int linux_faccessat(l_int dfd, const char *filename, l_int mode); }
+307	AUE_FACCESSAT	STD	{ int linux_faccessat(l_int dfd, const char *filename, l_int amode, l_int flag); }
 308	AUE_NULL	STD	{ int linux_pselect6(void); }
 309	AUE_NULL	STD	{ int linux_ppoll(void); }
 310	AUE_NULL	STD	{ int linux_unshare(void); }

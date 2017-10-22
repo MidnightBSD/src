@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/geom/geom_part/geom_part_bsd/Makefile 177512 2008-03-23 01:42:47Z marcel $
+# $FreeBSD: release/10.0.0/sys/modules/geom/geom_part/geom_part_bsd/Makefile 177512 2008-03-23 01:42:47Z marcel $
 
 .PATH: ${.CURDIR}/../../../../geom/part
 

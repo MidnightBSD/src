@@ -1,7 +1,7 @@
-/*	$FreeBSD: stable/9/contrib/ipfilter/pcap-ipf.h 145519 2005-04-25 18:20:15Z darrenr $	*/
+/*	$FreeBSD: release/10.0.0/contrib/ipfilter/pcap-ipf.h 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 1993-2001 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *

@@ -38,7 +38,7 @@ SOFTWARE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/libexec/bootpd/bootpd.c 153706 2005-12-24 22:22:17Z trhodes $");
+__FBSDID("$FreeBSD: release/10.0.0/libexec/bootpd/bootpd.c 229780 2012-01-07 16:09:54Z uqs $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -663,7 +663,7 @@ ignoring request for server %s from client at %s address %s",
 	bp->bp_op = BOOTREPLY;
 	if (bp->bp_ciaddr.s_addr == 0) {
 		/*
-		 * client doesnt know his IP address,
+		 * client doesn't know his IP address,
 		 * search by hardware address.
 		 */
 		if (debug > 1) {
@@ -1119,7 +1119,7 @@ sendreply(forward, dst_override)
 
 /*
  * This call checks read access to a file.  It returns 0 if the file given
- * by "path" exists and is publically readable.  A value of -1 is returned if
+ * by "path" exists and is publicly readable.  A value of -1 is returned if
  * access is not permitted or an error occurs.  Successful calls also
  * return the file size in bytes using the long pointer "filesize".
  *

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_read_format_gtar_gz.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_format_gtar_gz.c 248616 2013-03-22 13:36:03Z mm $");
 
 static unsigned char archive[] = {
 31,139,8,0,'+','e',217,'D',0,3,211,211,'g',160,'9','0',0,2,'s','S','S',16,
@@ -39,22 +39,23 @@ DEFINE_TEST(test_read_format_gtar_gz)
 	int r;
 
 	assert((a = archive_read_new()) != NULL);
-	assertEqualInt(ARCHIVE_OK, archive_read_support_compression_all(a));
-	r = archive_read_support_compression_gzip(a);
+	assertEqualInt(ARCHIVE_OK, archive_read_support_filter_all(a));
+	r = archive_read_support_filter_gzip(a);
 	if (r == ARCHIVE_WARN) {
 		skipping("gzip reading not fully supported on this platform");
-		assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 		return;
 	}
 	assertEqualInt(ARCHIVE_OK, archive_read_support_format_all(a));
 	assertEqualInt(ARCHIVE_OK,
 	    archive_read_open_memory(a, archive, sizeof(archive)));
 	assertEqualInt(ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt(archive_compression(a),
-	    ARCHIVE_COMPRESSION_GZIP);
+	assertEqualInt(1, archive_file_count(a));
+	assertEqualInt(archive_filter_code(a, 0),
+	    ARCHIVE_FILTER_GZIP);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_GNUTAR);
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 
 

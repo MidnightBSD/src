@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_constants.h 237896 2012-07-01 07:59:00Z tuexen $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/sctp_constants.h 258454 2013-11-21 23:00:09Z tuexen $");
 
 #ifndef _NETINET_SCTP_CONSTANTS_H_
 #define _NETINET_SCTP_CONSTANTS_H_
@@ -370,6 +370,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_constants.h 237896 2012-07-01 07:5
 #define SCTP_DATAGRAM_ACKED		10010
 #define SCTP_DATAGRAM_MARKED		20010
 #define SCTP_FORWARD_TSN_SKIP		30010
+#define SCTP_DATAGRAM_NR_ACKED		40010
 
 /* chunk output send from locations */
 #define SCTP_OUTPUT_FROM_USR_SEND       0
@@ -520,9 +521,6 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_constants.h 237896 2012-07-01 07:5
 /* How long a cookie lives in milli-seconds */
 #define SCTP_DEFAULT_COOKIE_LIFE	60000
 
-/* resource limit of streams */
-#define MAX_SCTP_STREAMS	2048
-
 /* Maximum the mapping array will  grow to (TSN mapping array) */
 #define SCTP_MAPPING_ARRAY	512
 
@@ -657,6 +655,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_constants.h 237896 2012-07-01 07:5
 
 /* How many streams I request initally by default */
 #define SCTP_OSTREAM_INITIAL 10
+#define SCTP_ISTREAM_INITIAL 2048
 
 /*
  * How many smallest_mtu's need to increase before a window update sack is
@@ -727,7 +726,6 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_constants.h 237896 2012-07-01 07:5
 /* small chunk store for looking at chunk_list in auth */
 #define SCTP_SMALL_CHUNK_STORE 260
 
-#define SCTP_DEFAULT_MINSEGMENT 512	/* MTU size ... if no mtu disc */
 #define SCTP_HOW_MANY_SECRETS	2	/* how many secrets I keep */
 
 #define SCTP_NUMBER_OF_SECRETS	8	/* or 8 * 4 = 32 octets */
@@ -995,6 +993,10 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_constants.h 237896 2012-07-01 07:5
      (((uint8_t *)&(a)->s_addr)[1] == 0) && \
      (((uint8_t *)&(a)->s_addr)[2] == 0) && \
      (((uint8_t *)&(a)->s_addr)[3] == 1))
+
+#define IN4_ISLINKLOCAL_ADDRESS(a) \
+    ((((uint8_t *)&(a)->s_addr)[0] == 169) && \
+     (((uint8_t *)&(a)->s_addr)[1] == 254))
 
 
 #if defined(_KERNEL)

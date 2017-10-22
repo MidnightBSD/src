@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)wait.h	8.2 (Berkeley) 7/10/94
- * $FreeBSD: stable/9/sys/sys/wait.h 244172 2012-12-13 06:17:05Z kib $
+ * $FreeBSD: release/10.0.0/sys/sys/wait.h 254218 2013-08-11 14:15:01Z jilles $
  */
 
 #ifndef _SYS_WAIT_H_
@@ -53,7 +53,7 @@
 #define	_WSTOPPED	0177		/* _WSTATUS if process is stopped */
 #define	WIFSTOPPED(x)	(_WSTATUS(x) == _WSTOPPED)
 #define	WSTOPSIG(x)	(_W_INT(x) >> 8)
-#define	WIFSIGNALED(x)	(_WSTATUS(x) != _WSTOPPED && _WSTATUS(x) != 0)
+#define	WIFSIGNALED(x)	(_WSTATUS(x) != _WSTOPPED && _WSTATUS(x) != 0 && (x) != 0x13)
 #define	WTERMSIG(x)	(_WSTATUS(x))
 #define	WIFEXITED(x)	(_WSTATUS(x) == 0)
 #define	WEXITSTATUS(x)	(_W_INT(x) >> 8)

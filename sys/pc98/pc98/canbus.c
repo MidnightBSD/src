@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/pc98/pc98/canbus.c 212413 2010-09-10 11:19:03Z avg $
+ * $FreeBSD: release/10.0.0/sys/pc98/pc98/canbus.c 249586 2013-04-17 11:47:32Z gabor $
  */
 
 #include <sys/param.h>
@@ -62,13 +62,13 @@ struct canbus_softc {
 
 	/* index register */
 	int index_id;				/* index ID */
-	struct resource *index_res;		/* index resouce */
+	struct resource *index_res;		/* index resource */
 	bus_space_tag_t index_tag;		/* index tag */
 	bus_space_handle_t index_handle;	/* index handle */
 
 	/* data register */
 	int data_id;				/* data ID */
-	struct resource *data_res;		/* data resouce */
+	struct resource *data_res;		/* data resource */
 	bus_space_tag_t data_tag;		/* data tag */
 	bus_space_handle_t data_handle;		/* data handle */
 };

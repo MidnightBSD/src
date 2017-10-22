@@ -1,5 +1,5 @@
 #	from @(#)Makefile.inc	8.2 (Berkeley) 9/5/93
-# $FreeBSD: stable/9/lib/libc/net/Makefile.inc 173660 2007-11-15 22:39:15Z ru $
+# $FreeBSD: release/10.0.0/lib/libc/net/Makefile.inc 237402 2012-06-21 15:47:06Z obrien $
 
 # machine-independent net sources
 .PATH: ${.CURDIR}/net
@@ -36,7 +36,7 @@ LFLAGS+=-P_nsyy
 
 CLEANFILES+=nslexer.c
 
-nslexer.c: nslexer.l
+nslexer.c: nslexer.l nsparser.h
 	${LEX} ${LFLAGS} -o/dev/stdout ${.IMPSRC} | \
 		sed -e '/YY_BUF_SIZE/s/16384/1024/' >${.TARGET}
 

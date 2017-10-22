@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/agp/agp_i810.h 236926 2012-06-11 21:33:02Z kib $
+ * $FreeBSD: release/10.0.0/sys/dev/agp/agp_i810.h 235782 2012-05-22 10:59:26Z kib $
  */
 
 #ifndef AGP_AGP_I810_H

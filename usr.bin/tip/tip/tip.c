@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/tip/tip/tip.c 178736 2008-05-03 02:29:02Z bms $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tip/tip/tip.c 230654 2012-01-28 20:45:47Z phk $");
 
 #ifndef lint
 static const char copyright[] =
@@ -584,7 +584,7 @@ parwrite(int fd, char *buf, size_t n)
 			bp++;
 		}
 	if (write(fd, buf, n) < 0) {
-		if (errno == EIO)
+		if (errno == EIO || errno == ENXIO)
 			tipabort("Lost carrier.");
 		/* this is questionable */
 		perror("write");

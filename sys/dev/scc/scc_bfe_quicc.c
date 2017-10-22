@@ -25,9 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/scc/scc_bfe_quicc.c 229093 2011-12-31 14:12:12Z hselasky $");
-
-#define	__RMAN_RESOURCE_VISIBLE
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/scc/scc_bfe_quicc.c 253900 2013-08-02 23:30:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -98,4 +96,4 @@ static driver_t scc_quicc_driver = {
 	sizeof(struct scc_softc),
 };
 
-DRIVER_MODULE(scc, quicc, scc_quicc_driver, scc_devclass, 0, 0);
+DRIVER_MODULE(scc, quicc, scc_quicc_driver, scc_devclass, NULL, NULL);

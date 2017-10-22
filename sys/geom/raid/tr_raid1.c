@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/raid/tr_raid1.c 243678 2012-11-29 18:08:36Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/raid/tr_raid1.c 242328 2012-10-29 21:08:06Z mav $");
 
 #include <sys/param.h>
 #include <sys/bio.h>

@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/ksem.h 180059 2008-06-27 05:39:04Z jhb $
+ * $FreeBSD: release/10.0.0/sys/sys/ksem.h 250223 2013-05-03 21:11:57Z jhb $
  */
 
 #ifndef _POSIX4_KSEM_H_
 #define	_POSIX4_KSEM_H_
 
-#ifndef _KERNEL
+#if !defined(_KERNEL) && !defined(_WANT_FILE)
 #error "no user-servicable parts inside"
 #endif
 
@@ -57,9 +57,15 @@ struct ksem {
 	struct timespec	ks_birthtime;
 
 	struct label	*ks_label;	/* MAC label */
+	const char	*ks_path;
 };
 
 #define	KS_ANONYMOUS	0x0001		/* Anonymous (unnamed) semaphore. */
 #define	KS_DEAD		0x0002		/* No new waiters allowed. */
+
+#ifdef _KERNEL
+extern void	(*ksem_info)(struct ksem *ks, char *path, size_t size,
+		    uint32_t *value);
+#endif
 
 #endif /* !_POSIX4_KSEM_H_ */

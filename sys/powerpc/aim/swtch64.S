@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/powerpc/aim/swtch64.S 234704 2012-04-26 13:56:38Z nwhitehorn $ */
+/* $FreeBSD: release/10.0.0/sys/powerpc/aim/swtch64.S 235013 2012-05-04 16:00:22Z nwhitehorn $ */
 /* $NetBSD: locore.S,v 1.24 2000/05/31 05:09:17 thorpej Exp $ */
 
 /*-
@@ -150,7 +150,8 @@ cpu_switchin:
 blocked_loop:
 	ld	%r7,TD_LOCK(%r13)
 	cmpd	%r6,%r7 
-	beq	blocked_loop
+	beq-	blocked_loop
+	isync
 #endif
 
 	mfsprg	%r7,0			/* Get the pcpu pointer */

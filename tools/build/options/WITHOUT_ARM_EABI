@@ -1,0 +1,2 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_ARM_EABI 253396 2013-07-16 19:15:19Z andrew $
+Set the ARM ABI to OABI.

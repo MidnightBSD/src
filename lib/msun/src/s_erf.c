@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/src/s_erf.c 176451 2008-02-22 02:30:36Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_erf.c 254994 2013-08-28 16:59:55Z kargl $");
 
 /* double erf(double x)
  * double erfc(double x)
@@ -201,7 +201,7 @@ erf(double x)
 	if(ix < 0x3feb0000) {		/* |x|<0.84375 */
 	    if(ix < 0x3e300000) { 	/* |x|<2**-28 */
 	        if (ix < 0x00800000)
-		    return 0.125*(8.0*x+efx8*x);  /*avoid underflow */
+		    return (8*x+efx8*x)/8;	/* avoid spurious underflow */
 		return x + efx*x;
 	    }
 	    z = x*x;

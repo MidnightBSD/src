@@ -1,11 +1,11 @@
-# $FreeBSD: stable/9/usr.sbin/wpa/wpa_cli/Makefile 220370 2011-04-05 18:41:01Z obrien $
+# $FreeBSD: release/10.0.0/usr.sbin/wpa/wpa_cli/Makefile 252726 2013-07-04 21:12:58Z rpaulo $
 
 .include "${.CURDIR}/../Makefile.inc"
 
 .PATH.c:${WPA_SUPPLICANT_DISTDIR}
 
 PROG=	wpa_cli
-SRCS=	wpa_cli.c wpa_ctrl.c os_unix.c
+SRCS=	common.c edit.c eloop.c os_unix.c wpa_cli.c wpa_ctrl.c wpa_debug.c
 
 MAN=	wpa_cli.8
 

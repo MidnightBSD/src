@@ -22,7 +22,7 @@ The Regents of the University of California.  All rights reserved.\n";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/rarpd/rarpd.c 245076 2013-01-05 22:55:08Z markj $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/rarpd/rarpd.c 249234 2013-04-07 15:33:06Z marius $");
 
 /*
  * rarpd - Reverse ARP Daemon
@@ -90,13 +90,13 @@ struct if_info {
  * The list of all interfaces that are being listened to.  rarp_loop()
  * "selects" on the descriptors in this list.
  */
-struct if_info *iflist;
+static struct if_info *iflist;
 
-int verbose;			/* verbose messages */
-const char *tftp_dir = TFTP_DIR;	/* tftp directory */
+static int verbose;		/* verbose messages */
+static const char *tftp_dir = TFTP_DIR;	/* tftp directory */
 
-int dflag;			/* messages to stdout/stderr, not syslog(3) */
-int sflag;			/* ignore /tftpboot */
+static int dflag;		/* messages to stdout/stderr, not syslog(3) */
+static int sflag;		/* ignore /tftpboot */
 
 static	u_char zero[6];
 
@@ -128,7 +128,7 @@ int
 main(int argc, char *argv[])
 {
 	int op;
-	char *ifname, *hostname, *name;
+	char *ifname, *name;
 
 	int aflag = 0;		/* listen on "all" interfaces  */
 	int fflag = 0;		/* don't fork */
@@ -186,7 +186,6 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	ifname = (aflag == 0) ? argv[0] : NULL;
-	hostname = ifname ? argv[1] : argv[0];
 	
 	if ((aflag && ifname) || (!aflag && ifname == NULL))
 		usage();
@@ -309,6 +308,7 @@ init_one(struct ifaddrs *ifa, char *target, int pass1)
 		break;
 	}
 }
+
 /*
  * Initialize all "candidate" interfaces that are in the system
  * configuration list.  A "candidate" is up, not loopback and not
@@ -370,6 +370,7 @@ init(char *target)
 static void
 usage(void)
 {
+
 	(void)fprintf(stderr, "%s\n%s\n",
 	    "usage: rarpd -a [-dfsv] [-t directory] [-P pidfile]",
 	    "       rarpd [-dfsv] [-t directory] [-P pidfile] interface");
@@ -631,6 +632,7 @@ rarp_bootable_err:
 static in_addr_t
 choose_ipaddr(in_addr_t **alist, in_addr_t net, in_addr_t netmask)
 {
+
 	for (; *alist; ++alist)
 		if ((**alist & netmask) == net)
 			return **alist;
@@ -693,17 +695,18 @@ rarp_process(struct if_info *ii, u_char *pkt, u_int len)
  * host (i.e. the guy running rarpd), won't try to ARP for the hardware
  * address of the guy being booted (he cannot answer the ARP).
  */
-struct sockaddr_inarp sin_inarp = {
-	sizeof(struct sockaddr_inarp), AF_INET, 0,
+static struct sockaddr_in sin_inarp = {
+	sizeof(struct sockaddr_in), AF_INET, 0,
 	{0},
 	{0},
-	0, 0
 };
-struct sockaddr_dl sin_dl = {
+
+static struct sockaddr_dl sin_dl = {
 	sizeof(struct sockaddr_dl), AF_LINK, 0, IFT_ETHER, 0, 6,
 	0, ""
 };
-struct {
+
+static struct {
 	struct rt_msghdr rthdr;
 	char rtspace[512];
 } rtmsg;
@@ -713,7 +716,7 @@ update_arptab(u_char *ep, in_addr_t ipaddr)
 {
 	struct timespec tp;
 	int cc;
-	struct sockaddr_inarp *ar, *ar2;
+	struct sockaddr_in *ar, *ar2;
 	struct sockaddr_dl *ll, *ll2;
 	struct rt_msghdr *rt;
 	int xtype, xindex;
@@ -741,7 +744,7 @@ update_arptab(u_char *ep, in_addr_t ipaddr)
 	rt->rtm_addrs = RTA_DST;
 	rt->rtm_type = RTM_GET;
 	rt->rtm_seq = ++seq;
-	ar2 = (struct sockaddr_inarp *)rtmsg.rtspace;
+	ar2 = (struct sockaddr_in *)rtmsg.rtspace;
 	bcopy(ar, ar2, sizeof(*ar));
 	rt->rtm_msglen = sizeof(*rt) + sizeof(*ar);
 	errno = 0;
@@ -885,6 +888,7 @@ rarp_reply(struct if_info *ii, struct ether_header *ep, in_addr_t ipaddr,
 static in_addr_t
 ipaddrtonetmask(in_addr_t addr)
 {
+
 	addr = ntohl(addr);
 	if (IN_CLASSA(addr))
 		return htonl(IN_CLASSA_NET);

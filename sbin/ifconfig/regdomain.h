@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/ifconfig/regdomain.h 188258 2009-02-07 01:12:51Z sam $
+ * $FreeBSD: release/10.0.0/sbin/ifconfig/regdomain.h 188258 2009-02-07 01:12:51Z sam $
  */
 #ifndef _LIB80211_H_
 #define _LIB80211_H_

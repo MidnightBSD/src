@@ -1,7 +1,7 @@
 /*	$NecBSD: ct.c,v 1.13.12.5 2001/06/26 07:31:53 honda Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ct/ct.c 243455 2012-11-23 14:16:55Z nyan $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ct/ct.c 242871 2012-11-10 14:58:06Z nyan $");
 /*	$NetBSD$	*/
 
 #define	CT_DEBUG
@@ -42,47 +42,19 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/ct/ct.c 243455 2012-11-23 14:16:55Z nyan $"
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
-#if defined(__FreeBSD__) && __FreeBSD_version > 500001
 #include <sys/bio.h>
-#endif	/* __ FreeBSD__ */
 #include <sys/buf.h>
 #include <sys/queue.h>
 #include <sys/malloc.h>
 #include <sys/errno.h>
 
-#ifdef __NetBSD__
-#include <sys/device.h>
-
 #include <machine/bus.h>
-#include <machine/intr.h>
-
-#include <dev/scsipi/scsi_all.h>
-#include <dev/scsipi/scsipi_all.h>
-#include <dev/scsipi/scsiconf.h>
-#include <dev/scsipi/scsi_disk.h>
-
-#include <machine/dvcfg.h>
-#include <machine/physio_proc.h>
-
-#include <i386/Cbus/dev/scsi_low.h>
-
-#include <dev/ic/wd33c93reg.h>
-#include <i386/Cbus/dev/ct/ctvar.h>
-#include <i386/Cbus/dev/ct/ct_machdep.h>
-#endif /* __NetBSD__ */
-
-#ifdef __FreeBSD__
-#include <machine/bus.h>
-
-#include <compat/netbsd/dvcfg.h>
-#include <compat/netbsd/physio_proc.h>
 
 #include <cam/scsi/scsi_low.h>
 
 #include <dev/ic/wd33c93reg.h>
 #include <dev/ct/ctvar.h>
 #include <dev/ct/ct_machdep.h>
-#endif /* __FreeBSD__ */
 
 #define	CT_NTARGETS		8
 #define	CT_NLUNS		8
@@ -222,7 +194,7 @@ cthw_chip_reset(struct ct_bus_access_handle *chp, int *chiprevp, int chipclk,
 
 	/* issue abort cmd */
 	ct_cr_write_1(chp, wd3s_cmd, WD3S_ABORT);
-	SCSI_LOW_DELAY(1000);	/* 1ms wait */
+	DELAY(1000);	/* 1ms wait */
 	(void) ct_stat_read_1(chp);
 	(void) ct_cr_read_1(chp, wd3s_stat);
 
@@ -269,7 +241,7 @@ cthw_chip_reset(struct ct_bus_access_handle *chp, int *chiprevp, int chipclk,
 
 			ct_cr_write_1(chp, wd3s_cmd, WD3S_RESET);
 		}
-		SCSI_LOW_DELAY(1);
+		DELAY(1);
 	}
 	if (wc == 0)
 		return ENXIO;
@@ -364,17 +336,6 @@ ctprobesubr(struct ct_bus_access_handle *chp, u_int dvcfg, int hsid,
 	return 1;
 }
 
-int
-ctprint(aux, name)
-	void *aux;
-	const char *name;
-{
-
-	if (name != NULL)
-		printf("%s: scsibus ", name);
-	return UNCONF;
-}
-
 void
 ctattachsubr(struct ct_softc *ct)
 {
@@ -400,7 +361,7 @@ cthw_attention(struct ct_softc *ct)
 		return;
 
 	ct_cr_write_1(chp, wd3s_cmd, WD3S_ASSERT_ATN);
-	SCSI_LOW_DELAY(10);
+	DELAY(10);
 	if ((ct_stat_read_1(chp) & STR_LCI) == 0)
 		ct->sc_atten = 0;
 	ct_unbusy(ct);
@@ -488,7 +449,6 @@ ct_world_start(struct ct_softc *ct, int fdone)
 	scsi_low_bus_reset(slp);
 	cthw_chip_reset(chp, NULL, ct->sc_chipclk, slp->sl_hostid);
 
-	SOFT_INTR_REQUIRED(slp);
 	return 0;
 }
 
@@ -664,7 +624,7 @@ ct_xfer(struct ct_softc *ct, u_int8_t *data, int len, int direction,
 		}
 		else
 		{
-			SCSI_LOW_DELAY(1);
+			DELAY(1);
 		}
 
 		/* check phase miss */
@@ -695,7 +655,7 @@ ct_io_xfer(struct ct_softc *ct)
 		slp->sl_error |= PDMAERR;
 
 		if (slp->sl_scp.scp_direction == SCSI_LOW_WRITE)
-			SCSI_LOW_BZERO(pbuf, CT_PADDING_BUF_SIZE);
+			bzero(pbuf, CT_PADDING_BUF_SIZE);
 		ct_xfer(ct, pbuf, CT_PADDING_BUF_SIZE, 
 			sp->scp_direction, &stat);
 	}
@@ -757,8 +717,8 @@ ct_phase_error(struct ct_softc *ct, u_int8_t scsi_status)
 
 		if (pep->pe_msg != NULL)
 		{
-			printf("%s: phase error: %s",
-				slp->sl_xname, pep->pe_msg);
+			device_printf(slp->sl_dev, "phase error: %s",
+			    pep->pe_msg);
 			scsi_low_print(slp, slp->sl_Tnexus);
 		}
 
@@ -891,10 +851,10 @@ ct_unbusy(struct ct_softc *ct)
 		if (regv == (u_int8_t) -1)
 			return EIO;
 
-		SCSI_LOW_DELAY(CT_DELAY_INTERVAL);
+		DELAY(CT_DELAY_INTERVAL);
 	}
 
-	printf("%s: unbusy timeout\n", slp->sl_xname);
+	device_printf(slp->sl_dev, "unbusy timeout\n");
 	return EBUSY;
 }
 	
@@ -911,7 +871,7 @@ ct_catch_intr(struct ct_softc *ct)
 		if ((regv & (STR_INT | STR_BSY | STR_CIP)) == STR_INT)
 			return 0;
 
-		SCSI_LOW_DELAY(CT_DELAY_INTERVAL);
+		DELAY(CT_DELAY_INTERVAL);
 	}
 	return EJUSTRETURN;
 }
@@ -923,7 +883,6 @@ ctintr(void *arg)
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 	struct targ_info *ti;
-	struct physio_proc *pp;
 	struct buf *bp;
 	u_int derror, flags;
 	int len, satgo, error;
@@ -962,11 +921,11 @@ again:
 	if (ct_debug > 0)
 	{
 		scsi_low_print(slp, NULL);
-		printf("%s: scsi_status 0x%x\n\n", slp->sl_xname, 
+		device_printf(slp->sl_dev, "scsi_status 0x%x\n\n", 
 		       (u_int) scsi_status);
 #ifdef	KDB
 		if (ct_debug > 1)
-			SCSI_LOW_DEBUGGER("ct");
+			kdb_enter(KDB_WHY_CAM, "ct");
 #endif	/* KDB */
 	}
 #endif	/* CT_DEBUG */
@@ -1067,9 +1026,7 @@ common_data_phase:
 				slp->sl_flags |= HW_PDMASTART;
 				if ((ct->sc_xmode & CT_XMODE_PIO) != 0)
 				{
-					pp = physio_proc_enter(bp);
 					error = (*ct->ct_pio_xfer_start) (ct);
-					physio_proc_leave(pp);
 					if (error == 0)
 					{
 						ct->sc_dma |= CT_DMA_PIOSTART;
@@ -1093,7 +1050,8 @@ common_data_phase:
 				{
 					if (!(slp->sl_flags & HW_READ_PADDING))
 					{
-						printf("%s: read padding required\n", slp->sl_xname);
+						device_printf(slp->sl_dev,
+						    "read padding required\n");
 						return 1;
 					}
 				}
@@ -1101,7 +1059,8 @@ common_data_phase:
 				{
 					if (!(slp->sl_flags & HW_WRITE_PADDING))
 					{
-						printf("%s: write padding required\n", slp->sl_xname);
+						device_printf(slp->sl_dev,
+						    "write padding required\n");
 						return 1;
 					}
 				}
@@ -1122,8 +1081,8 @@ common_data_phase:
 				    slp->sl_scp.scp_cmdlen,
 				    SCSI_LOW_WRITE, &derror) != 0)
 			{
-				printf("%s: scsi cmd xfer short\n",
-					slp->sl_xname);
+				device_printf(slp->sl_dev,
+				    "scsi cmd xfer short\n");
 			}
 			return 1;
 
@@ -1155,7 +1114,7 @@ common_data_phase:
 
 		case BSR_UNSPINFO0:
 		case BSR_UNSPINFO1:
-			printf("%s: illegal bus phase (0x%x)\n", slp->sl_xname,
+			device_printf(slp->sl_dev, "illegal bus phase (0x%x)\n",
 				(u_int) scsi_status);
 			scsi_low_print(slp, ti);
 			return 1;
@@ -1175,8 +1134,8 @@ common_data_phase:
 			if (ct_xfer(ct, ti->ti_msgoutstr, len, 
 				    SCSI_LOW_WRITE, &derror) != 0)
 			{
-				printf("%s: scsi msgout xfer short\n",
-					slp->sl_xname);
+				device_printf(slp->sl_dev,
+				    "scsi msgout xfer short\n");
 			}
 			SCSI_LOW_DEASSERT_ATN(slp);
 			ct->sc_atten = 0;

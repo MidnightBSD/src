@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)printjob.c	8.7 (Berkeley) 5/10/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: stable/9/usr.sbin/lpr/lpd/printjob.c 229226 2012-01-01 23:04:27Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/lpr/lpd/printjob.c 241852 2012-10-22 03:31:22Z eadler $");
 
 /*
  * printjob -- print jobs in the queue.
@@ -61,6 +61,7 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/lpr/lpd/printjob.c 229226 2012-01-01 23:04
 #include <syslog.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <err.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -173,7 +174,7 @@ printjob(struct printer *pp)
 		    pp->log_file);
 		(void) open(_PATH_DEVNULL, O_WRONLY);
 	}
-	setgid(getegid());
+	if(setgid(getegid()) != 0) err(1, "setgid() failed");
 	printpid = getpid();			/* for use with lprm */
 	setpgrp(0, printpid);
 
@@ -604,7 +605,7 @@ pass2:
 /*
  * Print a file.
  * Set up the chain [ PR [ | {IF, OF} ] ] or {IF, RF, TF, NF, DF, CF, VF}.
- * Return -1 if a non-recoverable error occured,
+ * Return -1 if a non-recoverable error occurred,
  * 2 if the filter detected some errors (but printed the job anyway),
  * 1 if we should try to reprint this job and
  * 0 if all is well.
@@ -887,7 +888,7 @@ start:
 
 /*
  * Send the daemon control file (cf) and any data files.
- * Return -1 if a non-recoverable error occured, 1 if a recoverable error and
+ * Return -1 if a non-recoverable error occurred, 1 if a recoverable error and
  * 0 if all is well.
  */
 static int
@@ -1788,7 +1789,7 @@ openpr(const struct printer *pp)
 		of_pid = 0;
 		return;
 	} else if (*pp->lp) {
-		if ((cp = strchr(pp->lp, '@')) != NULL)
+		if (strchr(pp->lp, '@') != NULL)
 			opennet(pp);
 		else
 			opentty(pp);

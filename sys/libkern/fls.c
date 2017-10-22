@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/libkern/fls.c 128019 2004-04-07 20:46:16Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/fls.c 128019 2004-04-07 20:46:16Z imp $");
 
 #include <sys/libkern.h>
 

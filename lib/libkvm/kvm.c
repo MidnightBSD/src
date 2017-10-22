@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libkvm/kvm.c 218196 2011-02-02 17:01:26Z uqs $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libkvm/kvm.c 250231 2013-05-04 11:45:48Z jilles $");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -166,7 +166,7 @@ _kvm_open(kvm_t *kd, const char *uf, const char *mf, int flag, char *errout)
 	if (mf == 0)
 		mf = _PATH_MEM;
 
-	if ((kd->pmfd = open(mf, flag, 0)) < 0) {
+	if ((kd->pmfd = open(mf, flag | O_CLOEXEC, 0)) < 0) {
 		_kvm_syserr(kd, kd->program, "%s", mf);
 		goto failed;
 	}
@@ -179,10 +179,6 @@ _kvm_open(kvm_t *kd, const char *uf, const char *mf, int flag, char *errout)
 		_kvm_syserr(kd, kd->program, "empty file");
 		goto failed;
 	}
-	if (fcntl(kd->pmfd, F_SETFD, FD_CLOEXEC) < 0) {
-		_kvm_syserr(kd, kd->program, "%s", mf);
-		goto failed;
-	}
 	if (S_ISCHR(st.st_mode)) {
 		/*
 		 * If this is a character special device, then check that
@@ -191,14 +187,11 @@ _kvm_open(kvm_t *kd, const char *uf, const char *mf, int flag, char *errout)
 		 * case you're working with a live kernel.)
 		 */
 		if (strcmp(mf, _PATH_DEVNULL) == 0) {
-			kd->vmfd = open(_PATH_DEVNULL, O_RDONLY);
+			kd->vmfd = open(_PATH_DEVNULL, O_RDONLY | O_CLOEXEC);
 			return (kd);
 		} else if (strcmp(mf, _PATH_MEM) == 0) {
-			if ((kd->vmfd = open(_PATH_KMEM, flag)) < 0) {
-				_kvm_syserr(kd, kd->program, "%s", _PATH_KMEM);
-				goto failed;
-			}
-			if (fcntl(kd->vmfd, F_SETFD, FD_CLOEXEC) < 0) {
+			if ((kd->vmfd = open(_PATH_KMEM, flag | O_CLOEXEC)) <
+			    0) {
 				_kvm_syserr(kd, kd->program, "%s", _PATH_KMEM);
 				goto failed;
 			}
@@ -210,11 +203,7 @@ _kvm_open(kvm_t *kd, const char *uf, const char *mf, int flag, char *errout)
 	 * Initialize the virtual address translation machinery,
 	 * but first setup the namelist fd.
 	 */
-	if ((kd->nlfd = open(uf, O_RDONLY, 0)) < 0) {
-		_kvm_syserr(kd, kd->program, "%s", uf);
-		goto failed;
-	}
-	if (fcntl(kd->nlfd, F_SETFD, FD_CLOEXEC) < 0) {
+	if ((kd->nlfd = open(uf, O_RDONLY | O_CLOEXEC, 0)) < 0) {
 		_kvm_syserr(kd, kd->program, "%s", uf);
 		goto failed;
 	}

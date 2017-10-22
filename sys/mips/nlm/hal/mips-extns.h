@@ -26,11 +26,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: stable/9/sys/mips/nlm/hal/mips-extns.h 225394 2011-09-05 10:45:29Z jchandra $
+ * $FreeBSD: release/10.0.0/sys/mips/nlm/hal/mips-extns.h 227722 2011-11-19 14:06:15Z jchandra $
  */
 
 #ifndef __NLM_MIPS_EXTNS_H__
-#define __NLM_MIPS_EXTNS_H__
+#define	__NLM_MIPS_EXTNS_H__
 
 #if !defined(LOCORE) && !defined(__ASSEMBLY__)
 static __inline__ int32_t nlm_swapw(int32_t *loc, int32_t val)
@@ -115,7 +115,7 @@ nlm_ldaddwu(unsigned int value, unsigned int *addr)
 /*
  * 32 bit read write for c0
  */
-#define read_c0_register32(reg, sel)				\
+#define	read_c0_register32(reg, sel)				\
 ({								\
 	 uint32_t __rv;						\
 	__asm__ __volatile__(					\
@@ -127,7 +127,7 @@ nlm_ldaddwu(unsigned int value, unsigned int *addr)
 	__rv;							\
  })
 
-#define write_c0_register32(reg,  sel, value)			\
+#define	write_c0_register32(reg,  sel, value)			\
 	__asm__ __volatile__(					\
 	    ".set	push\n\t"				\
 	    ".set	mips32\n\t"				\
@@ -139,7 +139,7 @@ nlm_ldaddwu(unsigned int value, unsigned int *addr)
 /*
  * On 64 bit compilation, the operations are simple
  */
-#define read_c0_register64(reg, sel)				\
+#define	read_c0_register64(reg, sel)				\
 ({								\
 	uint64_t __rv;						\
 	__asm__ __volatile__(					\
@@ -151,7 +151,7 @@ nlm_ldaddwu(unsigned int value, unsigned int *addr)
 	__rv;							\
  })
 
-#define write_c0_register64(reg,  sel, value)			\
+#define	write_c0_register64(reg,  sel, value)			\
 	__asm__ __volatile__(					\
 	    ".set	push\n\t"				\
 	    ".set	mips64\n\t"				\
@@ -163,7 +163,7 @@ nlm_ldaddwu(unsigned int value, unsigned int *addr)
 /*
  * 32 bit compilation, 64 bit values has to split 
  */
-#define read_c0_register64(reg, sel)				\
+#define	read_c0_register64(reg, sel)				\
 ({								\
 	uint32_t __high, __low;					\
 	__asm__ __volatile__(					\
@@ -179,7 +179,7 @@ nlm_ldaddwu(unsigned int value, unsigned int *addr)
 	((uint64_t)__high << 32) | __low;			\
 })
 
-#define write_c0_register64(reg, sel, value)			\
+#define	write_c0_register64(reg, sel, value)			\
 do {								\
        uint32_t __high = value >> 32;				\
        uint32_t __low = value & 0xffffffff;			\
@@ -267,8 +267,8 @@ nlm_coreid(void)
 }
 #endif
 
-#define XLP_MAX_NODES	4
-#define XLP_MAX_CORES	8
-#define XLP_MAX_THREADS	4
+#define	XLP_MAX_NODES	4
+#define	XLP_MAX_CORES	8
+#define	XLP_MAX_THREADS	4
 
 #endif

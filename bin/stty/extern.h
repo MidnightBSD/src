@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: stable/9/bin/stty/extern.h 127958 2004-04-06 20:06:54Z markm $
+ * $FreeBSD: release/10.0.0/bin/stty/extern.h 238508 2012-07-15 21:12:22Z jilles $
  */
 
 int	c_cchars(const void *, const void *);
@@ -40,6 +40,6 @@ int	ksearch(char ***, struct info *);
 int	msearch(char ***, struct info *);
 void	optlist(void);
 void	print(struct termios *, struct winsize *, int, enum FMT);
-void	usage(void);
+void	usage(void) __dead2;
 
 extern struct cchar cchars1[], cchars2[];

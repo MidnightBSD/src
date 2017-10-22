@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/ofw/libofw/devicename.c 237766 2012-06-29 10:19:15Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/ofw/libofw/devicename.c 240655 2012-09-18 15:38:42Z mav $");
 
 #include <stand.h>
 
@@ -105,7 +105,7 @@ ofw_parsedev(struct ofw_devdesc **dev, const char *devspec, const char **path)
     return(ENOENT);
 
 found:
-    if (path != NULL && *s != '\0')
+    if (path != NULL)
 	*path = s;
     idev = malloc(sizeof(struct ofw_devdesc));
     if (idev == NULL) {

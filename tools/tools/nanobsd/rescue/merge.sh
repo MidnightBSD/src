@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/tools/nanobsd/rescue/merge.sh 219823 2011-03-21 13:23:25Z mr $
+# $FreeBSD: release/10.0.0/tools/tools/nanobsd/rescue/merge.sh 219823 2011-03-21 13:23:25Z mr $
 
 D1="/usr/obj/nanobsd.rescue_i386"
 D2="/usr/obj/nanobsd.rescue_amd64"

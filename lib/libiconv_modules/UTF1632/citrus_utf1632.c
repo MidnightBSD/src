@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libiconv_modules/UTF1632/citrus_utf1632.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libiconv_modules/UTF1632/citrus_utf1632.c 252583 2013-07-03 18:27:45Z peter $ */
 /*	$NetBSD: citrus_utf1632.c,v 1.9 2008/06/14 16:01:08 tnozaki Exp $	*/
 
 /*-
@@ -97,9 +97,9 @@ _citrus_UTF1632_init_state(_UTF1632EncodingInfo *ei __unused,
 
 static int
 _citrus_UTF1632_mbrtowc_priv(_UTF1632EncodingInfo *ei, wchar_t *pwc,
-    char **s, size_t n, _UTF1632State *psenc, size_t *nresult)
+    const char **s, size_t n, _UTF1632State *psenc, size_t *nresult)
 {
-	char *s0;
+	const char *s0;
 	size_t result;
 	wchar_t wc = L'\0';
 	int chlenbak, endian, needlen;

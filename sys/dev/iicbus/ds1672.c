@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/iicbus/ds1672.c 191369 2009-04-21 22:48:12Z stas $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/iicbus/ds1672.c 246128 2013-01-30 18:01:20Z sbz $");
 /*
  * Dallas Semiconductor DS1672 RTC sitting on the I2C bus.
  */
@@ -167,7 +167,7 @@ static device_method_t ds1672_methods[] = {
 	DEVMETHOD(clock_gettime,	ds1672_gettime),
 	DEVMETHOD(clock_settime,	ds1672_settime),
 
-	{0, 0},
+	DEVMETHOD_END
 };
 
 static driver_t ds1672_driver = {

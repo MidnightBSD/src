@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/rt305x/uart_dev_rt305x.c 220297 2011-04-03 14:39:55Z adrian $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/rt305x/uart_dev_rt305x.c 248965 2013-04-01 00:44:20Z ian $");
 
 #include "opt_ddb.h"
 
@@ -272,9 +272,6 @@ rt305x_uart_bus_attach(struct uart_softc *sc)
 		rt305x_uart_init(bas, 115200, 8, 1, 0);
 	}
 
-	sc->sc_rxfifosz = 16;
-	sc->sc_txfifosz = 16;
-
 	(void)rt305x_uart_bus_getsig(sc);
 
 	/* Enable FIFO */
@@ -437,6 +434,9 @@ rt305x_uart_bus_probe(struct uart_softc *sc)
 	error = rt305x_uart_probe(&sc->sc_bas);
 	if (error)
 		return (error);
+
+	sc->sc_rxfifosz = 16;
+	sc->sc_txfifosz = 16;
 
 	snprintf(buf, sizeof(buf), "rt305x_uart");
 	device_set_desc_copy(sc->sc_dev, buf);

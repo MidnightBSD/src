@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/ggate/ggatel/ggatel.c 220265 2011-04-02 06:59:05Z pjd $
+ * $FreeBSD: release/10.0.0/sbin/ggate/ggatel/ggatel.c 241720 2012-10-19 05:43:38Z ed $
  */
 
 #include <stdio.h>
@@ -47,7 +47,7 @@
 #include "ggate.h"
 
 
-enum { UNSET, CREATE, DESTROY, LIST, RESCUE } action = UNSET;
+static enum { UNSET, CREATE, DESTROY, LIST, RESCUE } action = UNSET;
 
 static const char *path = NULL;
 static int unit = G_GATE_UNIT_AUTO;

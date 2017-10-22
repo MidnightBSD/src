@@ -64,7 +64,7 @@ static char sccsid[] = "@(#)inet.c	8.5 (Berkeley) 5/24/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/netstat/pfkey.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/netstat/pfkey.c 253088 2013-07-09 10:08:13Z ae $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -119,7 +119,7 @@ pfkey_stats(u_long off, const char *name, int family __unused,
 	if (off == 0)
 		return;
 	printf ("%s:\n", name);
-	kread(off, (char *)&pfkeystat, sizeof(pfkeystat));
+	kread_counters(off, (char *)&pfkeystat, sizeof(pfkeystat));
 
 #define	p(f, m) if (pfkeystat.f || sflag <= 1) \
     printf(m, (uintmax_t)pfkeystat.f, plural(pfkeystat.f))

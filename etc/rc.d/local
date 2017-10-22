@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/rc.d/local 179931 2008-06-22 16:23:39Z mtm $
+# $FreeBSD: release/10.0.0/etc/rc.d/local 179931 2008-06-22 16:23:39Z mtm $
 #
 
 # PROVIDE: local

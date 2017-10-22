@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/src/s_scalbln.c 143219 2005-03-07 04:57:50Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_scalbln.c 143219 2005-03-07 04:57:50Z das $");
 
 #include <limits.h>
 #include <math.h>

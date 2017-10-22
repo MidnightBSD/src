@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/9/tools/tools/ath/common/diag.h 185743 2008-12-07 19:17:33Z sam $
+ * $FreeBSD: release/10.0.0/tools/tools/ath/common/diag.h 238651 2012-07-20 07:49:26Z adrian $
  */
 #include <sys/types.h>
 #include <sys/file.h>
@@ -38,6 +38,7 @@
 #include <stdio.h>
 
 #include <net80211/ieee80211_radiotap.h>
+#include <net80211/ieee80211.h>
 #include "if_athioctl.h"
 
 struct statshandler {

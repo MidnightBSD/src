@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libkvm/kvm_i386.c 217744 2011-01-23 11:08:28Z uqs $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libkvm/kvm_i386.c 240301 2012-09-10 08:16:45Z kevlo $");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -238,7 +238,6 @@ _kvm_initvtop(kvm_t *kd)
 			return (-1);
 		}
 		kd->vmst->PTD = PTD;
-		return (0);
 		kd->vmst->pae = 0;
 	}
 	return (0);

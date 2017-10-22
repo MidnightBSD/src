@@ -25,7 +25,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/ifconfig/af_nd6.c 245555 2013-01-17 16:39:21Z ume $";
+  "$FreeBSD: release/10.0.0/sbin/ifconfig/af_nd6.c 252557 2013-07-03 09:50:59Z hrs $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -148,7 +148,7 @@ nd6_status(int s)
 	memset(&nd, 0, sizeof(nd));
 	strncpy(nd.ifname, ifr.ifr_name, sizeof(nd.ifname));
 	if ((s6 = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
-		if (errno != EPROTONOSUPPORT)
+		if (errno != EAFNOSUPPORT && errno != EPROTONOSUPPORT)
 			warn("socket(AF_INET6, SOCK_DGRAM)");
 		return;
 	}

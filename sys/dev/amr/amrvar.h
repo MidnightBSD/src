@@ -53,7 +53,7 @@
  * SUCH DAMAGE.
  *
  *
- *      $FreeBSD: stable/9/sys/dev/amr/amrvar.h 210570 2010-07-28 16:24:11Z mdf $
+ *      $FreeBSD: release/10.0.0/sys/dev/amr/amrvar.h 239939 2012-08-31 09:42:46Z scottl $
  */
 
 #include <geom/geom_disk.h>
@@ -256,7 +256,6 @@ struct amr_softc
     device_t			amr_pass;
     int				(*amr_cam_command)(struct amr_softc *sc, struct amr_command **acp);
     struct intr_config_hook	amr_ich;		/* wait-for-interrupts probe hook */
-    struct callout_handle	amr_timeout;		/* periodic status check */
     int				amr_allow_vol_config;
     int				amr_linux_no_adapters;
     int				amr_ld_del_supported;

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/rc.d/random 242153 2012-10-26 18:06:49Z obrien $
+# $FreeBSD: release/10.0.0/etc/rc.d/random 240336 2012-09-11 05:04:59Z obrien $
 #
 
 # PROVIDE: random
@@ -13,6 +13,9 @@
 name="random"
 start_cmd="random_start"
 stop_cmd="random_stop"
+
+extra_commands="saveseed"
+saveseed_cmd="${name}_stop"
 
 feed_dev_random()
 {

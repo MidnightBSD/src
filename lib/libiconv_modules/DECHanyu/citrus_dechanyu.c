@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libiconv_modules/DECHanyu/citrus_dechanyu.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libiconv_modules/DECHanyu/citrus_dechanyu.c 252583 2013-07-03 18:27:45Z peter $ */
 /* $NetBSD: citrus_dechanyu.c,v 1.3 2008/06/14 16:01:07 tnozaki Exp $ */
 
 /*-
@@ -163,10 +163,10 @@ is_94charset(int c)
 static int
 /*ARGSUSED*/
 _citrus_DECHanyu_mbrtowc_priv(_DECHanyuEncodingInfo * __restrict ei,
-    wchar_t * __restrict pwc, char ** __restrict s, size_t n,
+    wchar_t * __restrict pwc, const char ** __restrict s, size_t n,
     _DECHanyuState * __restrict psenc, size_t * __restrict nresult)
 {
-	char *s0;
+	const char *s0;
 	wchar_t wc;
 	int ch;
 

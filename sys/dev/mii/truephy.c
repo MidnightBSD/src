@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  * 
  * $DragonFly: src/sys/dev/netif/mii_layer/truephy.c,v 1.3 2008/02/10 07:29:27 sephe Exp $
- * $FreeBSD: stable/9/sys/dev/mii/truephy.c 229093 2011-12-31 14:12:12Z hselasky $
+ * $FreeBSD: release/10.0.0/sys/dev/mii/truephy.c 227908 2011-11-23 20:27:26Z marius $
  */
 
 #include <sys/param.h>

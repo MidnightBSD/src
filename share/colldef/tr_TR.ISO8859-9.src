@@ -1,6 +1,6 @@
 # latin5 (backward compatible with ASCII)
 #
-# $FreeBSD: stable/9/share/colldef/tr_TR.ISO8859-9.src 174887 2007-12-24 10:30:09Z ache $
+# $FreeBSD: release/10.0.0/share/colldef/tr_TR.ISO8859-9.src 174887 2007-12-24 10:30:09Z ache $
 #
 charmap map.ISO8859-9
 order \

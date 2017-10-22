@@ -28,7 +28,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/cxgb/cxgb_main.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cxgb/cxgb_main.c 250697 2013-05-16 13:07:02Z kib $");
 
 #include "opt_inet.h"
 
@@ -149,6 +149,7 @@ static devclass_t	cxgb_controller_devclass;
 DRIVER_MODULE(cxgbc, pci, cxgb_controller_driver, cxgb_controller_devclass,
     cxgbc_mod_event, 0);
 MODULE_VERSION(cxgbc, 1);
+MODULE_DEPEND(cxgbc, firmware, 1, 1, 1);
 
 /*
  * Attachment glue for the ports.  Attachment is done directly to the
@@ -992,7 +993,7 @@ cxgb_makedev(struct port_info *pi)
 #define CXGB_CAP (IFCAP_VLAN_HWTAGGING | IFCAP_VLAN_MTU | IFCAP_HWCSUM | \
     IFCAP_VLAN_HWCSUM | IFCAP_TSO | IFCAP_JUMBO_MTU | IFCAP_LRO | \
     IFCAP_VLAN_HWTSO | IFCAP_LINKSTATE | IFCAP_HWCSUM_IPV6)
-#define CXGB_CAP_ENABLE (CXGB_CAP)
+#define CXGB_CAP_ENABLE CXGB_CAP
 
 static int
 cxgb_port_attach(device_t dev)

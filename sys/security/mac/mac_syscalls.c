@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/security/mac/mac_syscalls.c 238285 2012-07-09 08:42:54Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/security/mac/mac_syscalls.c 255219 2013-09-05 00:09:56Z pjd $");
 
 #include "opt_mac.h"
 
@@ -229,8 +229,9 @@ sys___mac_get_fd(struct thread *td, struct __mac_get_fd_args *uap)
 	struct vnode *vp;
 	struct pipe *pipe;
 	struct socket *so;
+	cap_rights_t rights;
 	short label_type;
-	int vfslocked, error;
+	int error;
 
 	error = copyin(uap->mac_p, &mac, sizeof(mac));
 	if (error)
@@ -248,7 +249,7 @@ sys___mac_get_fd(struct thread *td, struct __mac_get_fd_args *uap)
 	}
 
 	buffer = malloc(mac.m_buflen, M_MACTEMP, M_WAITOK | M_ZERO);
-	error = fget(td, uap->fd, CAP_MAC_GET, &fp);
+	error = fget(td, uap->fd, cap_rights_init(&rights, CAP_MAC_GET), &fp);
 	if (error)
 		goto out;
 
@@ -262,11 +263,9 @@ sys___mac_get_fd(struct thread *td, struct __mac_get_fd_args *uap)
 		}
 		vp = fp->f_vnode;
 		intlabel = mac_vnode_label_alloc();
-		vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 		mac_vnode_copy_label(vp->v_label, intlabel);
 		VOP_UNLOCK(vp, 0);
-		VFS_UNLOCK_GIANT(vfslocked);
 		error = mac_vnode_externalize_label(intlabel, elements,
 		    buffer, mac.m_buflen);
 		mac_vnode_label_free(intlabel);
@@ -322,7 +321,7 @@ sys___mac_get_file(struct thread *td, struct __mac_get_file_args *uap)
 	struct nameidata nd;
 	struct label *intlabel;
 	struct mac mac;
-	int vfslocked, error;
+	int error;
 
 	if (!(mac_labeled & MPC_OBJECT_VNODE))
 		return (EINVAL);
@@ -343,20 +342,18 @@ sys___mac_get_file(struct thread *td, struct __mac_get_file_args *uap)
 	}
 
 	buffer = malloc(mac.m_buflen, M_MACTEMP, M_WAITOK | M_ZERO);
-	NDINIT(&nd, LOOKUP, MPSAFE | LOCKLEAF | FOLLOW, UIO_USERSPACE,
+	NDINIT(&nd, LOOKUP, LOCKLEAF | FOLLOW, UIO_USERSPACE,
 	    uap->path_p, td);
 	error = namei(&nd);
 	if (error)
 		goto out;
 
 	intlabel = mac_vnode_label_alloc();
-	vfslocked = NDHASGIANT(&nd);
 	mac_vnode_copy_label(nd.ni_vp->v_label, intlabel);
 	error = mac_vnode_externalize_label(intlabel, elements, buffer,
 	    mac.m_buflen);
 
 	NDFREE(&nd, 0);
-	VFS_UNLOCK_GIANT(vfslocked);
 	mac_vnode_label_free(intlabel);
 	if (error == 0)
 		error = copyout(buffer, mac.m_string, strlen(buffer)+1);
@@ -375,7 +372,7 @@ sys___mac_get_link(struct thread *td, struct __mac_get_link_args *uap)
 	struct nameidata nd;
 	struct label *intlabel;
 	struct mac mac;
-	int vfslocked, error;
+	int error;
 
 	if (!(mac_labeled & MPC_OBJECT_VNODE))
 		return (EINVAL);
@@ -396,19 +393,17 @@ sys___mac_get_link(struct thread *td, struct __mac_get_link_args *uap)
 	}
 
 	buffer = malloc(mac.m_buflen, M_MACTEMP, M_WAITOK | M_ZERO);
-	NDINIT(&nd, LOOKUP, MPSAFE | LOCKLEAF | NOFOLLOW, UIO_USERSPACE,
+	NDINIT(&nd, LOOKUP, LOCKLEAF | NOFOLLOW, UIO_USERSPACE,
 	    uap->path_p, td);
 	error = namei(&nd);
 	if (error)
 		goto out;
 
 	intlabel = mac_vnode_label_alloc();
-	vfslocked = NDHASGIANT(&nd);
 	mac_vnode_copy_label(nd.ni_vp->v_label, intlabel);
 	error = mac_vnode_externalize_label(intlabel, elements, buffer,
 	    mac.m_buflen);
 	NDFREE(&nd, 0);
-	VFS_UNLOCK_GIANT(vfslocked);
 	mac_vnode_label_free(intlabel);
 
 	if (error == 0)
@@ -431,8 +426,9 @@ sys___mac_set_fd(struct thread *td, struct __mac_set_fd_args *uap)
 	struct mount *mp;
 	struct vnode *vp;
 	struct mac mac;
+	cap_rights_t rights;
 	char *buffer;
-	int error, vfslocked;
+	int error;
 
 	error = copyin(uap->mac_p, &mac, sizeof(mac));
 	if (error)
@@ -449,7 +445,7 @@ sys___mac_set_fd(struct thread *td, struct __mac_set_fd_args *uap)
 		return (error);
 	}
 
-	error = fget(td, uap->fd, CAP_MAC_SET, &fp);
+	error = fget(td, uap->fd, cap_rights_init(&rights, CAP_MAC_SET), &fp);
 	if (error)
 		goto out;
 
@@ -467,10 +463,8 @@ sys___mac_set_fd(struct thread *td, struct __mac_set_fd_args *uap)
 			break;
 		}
 		vp = fp->f_vnode;
-		vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 		error = vn_start_write(vp, &mp, V_WAIT | PCATCH);
 		if (error != 0) {
-			VFS_UNLOCK_GIANT(vfslocked);
 			mac_vnode_label_free(intlabel);
 			break;
 		}
@@ -478,7 +472,6 @@ sys___mac_set_fd(struct thread *td, struct __mac_set_fd_args *uap)
 		error = vn_setlabel(vp, intlabel, td->td_ucred);
 		VOP_UNLOCK(vp, 0);
 		vn_finished_write(mp);
-		VFS_UNLOCK_GIANT(vfslocked);
 		mac_vnode_label_free(intlabel);
 		break;
 
@@ -532,7 +525,7 @@ sys___mac_set_file(struct thread *td, struct __mac_set_file_args *uap)
 	struct mount *mp;
 	struct mac mac;
 	char *buffer;
-	int vfslocked, error;
+	int error;
 
 	if (!(mac_labeled & MPC_OBJECT_VNODE))
 		return (EINVAL);
@@ -558,10 +551,9 @@ sys___mac_set_file(struct thread *td, struct __mac_set_file_args *uap)
 	if (error)
 		goto out;
 
-	NDINIT(&nd, LOOKUP, MPSAFE | LOCKLEAF | FOLLOW, UIO_USERSPACE,
+	NDINIT(&nd, LOOKUP, LOCKLEAF | FOLLOW, UIO_USERSPACE,
 	    uap->path_p, td);
 	error = namei(&nd);
-	vfslocked = NDHASGIANT(&nd);
 	if (error == 0) {
 		error = vn_start_write(nd.ni_vp, &mp, V_WAIT | PCATCH);
 		if (error == 0) {
@@ -572,7 +564,6 @@ sys___mac_set_file(struct thread *td, struct __mac_set_file_args *uap)
 	}
 
 	NDFREE(&nd, 0);
-	VFS_UNLOCK_GIANT(vfslocked);
 out:
 	mac_vnode_label_free(intlabel);
 	return (error);
@@ -586,7 +577,7 @@ sys___mac_set_link(struct thread *td, struct __mac_set_link_args *uap)
 	struct mount *mp;
 	struct mac mac;
 	char *buffer;
-	int vfslocked, error;
+	int error;
 
 	if (!(mac_labeled & MPC_OBJECT_VNODE))
 		return (EINVAL);
@@ -612,10 +603,9 @@ sys___mac_set_link(struct thread *td, struct __mac_set_link_args *uap)
 	if (error)
 		goto out;
 
-	NDINIT(&nd, LOOKUP, MPSAFE | LOCKLEAF | NOFOLLOW, UIO_USERSPACE,
+	NDINIT(&nd, LOOKUP, LOCKLEAF | NOFOLLOW, UIO_USERSPACE,
 	    uap->path_p, td);
 	error = namei(&nd);
-	vfslocked = NDHASGIANT(&nd);
 	if (error == 0) {
 		error = vn_start_write(nd.ni_vp, &mp, V_WAIT | PCATCH);
 		if (error == 0) {
@@ -626,7 +616,6 @@ sys___mac_set_link(struct thread *td, struct __mac_set_link_args *uap)
 	}
 
 	NDFREE(&nd, 0);
-	VFS_UNLOCK_GIANT(vfslocked);
 out:
 	mac_vnode_label_free(intlabel);
 	return (error);

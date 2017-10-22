@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/ixp425_mem.c 186352 2008-12-20 03:26:09Z sam $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/ixp425_mem.c 186352 2008-12-20 03:26:09Z sam $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

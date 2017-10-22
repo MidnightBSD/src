@@ -62,7 +62,7 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_gif_demux.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_gif_demux.c 243882 2012-12-05 08:04:20Z glebius $
  */
 
 /*
@@ -341,7 +341,7 @@ ng_gif_demux_rcvdata(hook_p hook, item_p item)
 		 * Add address family header and set the output hook.
 		 */
 		iffam = get_iffam_from_hook(priv, hook);
-		M_PREPEND(m, sizeof (iffam->family), M_DONTWAIT);
+		M_PREPEND(m, sizeof (iffam->family), M_NOWAIT);
 		if (m == NULL) {
 			NG_FREE_M(m);
 			NG_FREE_ITEM(item);

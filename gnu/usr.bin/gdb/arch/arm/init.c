@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/gnu/usr.bin/gdb/arch/arm/init.c 241193 2012-10-04 09:53:59Z fjoe $ */
+/* $FreeBSD: release/10.0.0/gnu/usr.bin/gdb/arch/arm/init.c 173705 2007-11-17 21:30:03Z cognet $ */
 
 /* Do not modify this file.  */
 /* It is created automatically by the Makefile.  */

@@ -67,7 +67,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/ip6_id.c 174510 2007-12-10 16:03:40Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet6/ip6_id.c 253970 2013-08-05 20:13:02Z hrs $");
 
 /*
  * seed = random (bits - 1) bit
@@ -221,7 +221,7 @@ initid(struct randomtab *p)
 	p->ru_g = pmod(p->ru_gen, j, p->ru_n);
 	p->ru_counter = 0;
 
-	p->ru_reseed = time_second + p->ru_out;
+	p->ru_reseed = time_uptime + p->ru_out;
 	p->ru_msb = p->ru_msb ? 0 : (1U << (p->ru_bits - 1));
 }
 
@@ -231,7 +231,7 @@ randomid(struct randomtab *p)
 	int i, n;
 	u_int32_t tmp;
 
-	if (p->ru_counter >= p->ru_max || time_second > p->ru_reseed)
+	if (p->ru_counter >= p->ru_max || time_uptime > p->ru_reseed)
 		initid(p);
 
 	tmp = arc4random();

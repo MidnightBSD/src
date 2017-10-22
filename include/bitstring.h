@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/include/bitstring.h 116306 2003-06-13 19:40:13Z phk $
+ * $FreeBSD: release/10.0.0/include/bitstring.h 116306 2003-06-13 19:40:13Z phk $
  */
 
 #ifndef _BITSTRING_H_

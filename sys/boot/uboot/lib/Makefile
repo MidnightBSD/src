@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/uboot/lib/Makefile 243243 2012-11-18 17:09:29Z ae $
+# $FreeBSD: release/10.0.0/sys/boot/uboot/lib/Makefile 240275 2012-09-09 11:34:27Z ae $
 
 .PATH: ${.CURDIR}/../../common
 

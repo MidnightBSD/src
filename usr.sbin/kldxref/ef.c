@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/kldxref/ef.c 237415 2012-06-22 05:23:39Z eadler $
+ * $FreeBSD: release/10.0.0/usr.sbin/kldxref/ef.c 251439 2013-06-05 21:55:20Z delphij $
  */
 
 #include <sys/param.h>
@@ -42,7 +42,6 @@
 #include <fcntl.h>
 #include <machine/elf.h>
 #define FREEBSD_ELF
-#include <link.h>
 
 #include <err.h>
 
@@ -600,7 +599,8 @@ ef_open(const char *filename, struct elf_file *efile, int verbose)
 			printf("\n");
 		ef->ef_nsegs = nsegs;
 		if (phdyn == NULL) {
-			warnx("file isn't dynamically-linked");
+			warnx("Skipping %s: not dynamically-linked",
+			    filename);
 			break;
 		}
 		if (ef_read_entry(ef, phdyn->p_offset,

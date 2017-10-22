@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/lib/libkse/test/Makefile 172491 2007-10-09 13:42:34Z obrien $
+# $FreeBSD: release/10.0.0/lib/libkse/test/Makefile 172491 2007-10-09 13:42:34Z obrien $
 #
 # Automated test suite for libpthread (pthreads).
 #

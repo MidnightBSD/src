@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/9/sys/sys/timetc.h 224043 2011-07-14 21:02:15Z jkim $
+ * $FreeBSD: release/10.0.0/sys/sys/timetc.h 255726 2013-09-20 05:06:03Z gibbs $
  */
 
 #ifndef _SYS_TIMETC_H_
@@ -59,6 +59,10 @@ struct timecounter {
 		 */
 	u_int			tc_flags;
 #define	TC_FLAGS_C3STOP		1	/* Timer dies in C3. */
+#define	TC_FLAGS_SUSPEND_SAFE	2	/*
+					 * Timer functional across
+					 * suspend/resume.
+					 */
 
 	void			*tc_priv;
 		/* Pointer to the timecounter's private parts. */

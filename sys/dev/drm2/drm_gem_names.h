@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/drm2/drm_gem_names.h 235783 2012-05-22 11:07:44Z kib $
+ * $FreeBSD: release/10.0.0/sys/dev/drm2/drm_gem_names.h 235783 2012-05-22 11:07:44Z kib $
  *
  */
 

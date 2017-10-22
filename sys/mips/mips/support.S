@@ -47,7 +47,7 @@
  *
  *	from: @(#)locore.s	8.5 (Berkeley) 1/4/94
  *	JNPR: support.S,v 1.5.2.2 2007/08/29 10:03:49 girish
- * $FreeBSD: stable/9/sys/mips/mips/support.S 210626 2010-07-29 19:47:15Z jchandra $
+ * $FreeBSD: release/10.0.0/sys/mips/mips/support.S 255367 2013-09-07 16:31:30Z jchandra $
  */
 
 /*
@@ -83,17 +83,16 @@
  */
 
 /*
- *	Contains code that is the first executed at boot time plus
- *	assembly language support routines.
+ *	Contains assembly language support routines.
  */
 
-#include "opt_cputype.h"
 #include "opt_ddb.h"
 #include <sys/errno.h>
 #include <machine/asm.h>
 #include <machine/cpu.h>
 #include <machine/regnum.h>
 #include <machine/cpuregs.h>
+#include <machine/pcb.h>
 
 #include "assym.s"
 
@@ -165,148 +164,6 @@ LEAF(copystr)
 	nop
 END(copystr)
 
-
-/*
- * fillw(pat, addr, count)
- */
-LEAF(fillw)
-1:
-	PTR_ADDU	a2, a2, -1
-	sh		a0, 0(a1)
-	bne		a2,zero, 1b
-	PTR_ADDU	a1, a1, 2
-
-	jr		ra
-	nop
-END(fillw)
-
-/*
- * Optimized memory zero code.
- * mem_zero_page(addr);
- */
-LEAF(mem_zero_page)
-	li		v0, PAGE_SIZE
-1:
-	PTR_SUBU	v0, 8
-	sd		zero, 0(a0)
-	bne		zero, v0, 1b
-	PTR_ADDU	a0, 8
-	jr		ra
-	nop
-END(mem_zero_page)
-
-/*
- *	Block I/O routines mainly used by I/O drivers.
- *
- *	Args as:	a0 = port
- *			a1 = memory address
- *			a2 = count
- */
-LEAF(insb)
-	beq		a2, zero, 2f
-	PTR_ADDU	a2, a1
-1:
-	lbu		v0, 0(a0)
-	PTR_ADDU	a1, 1
-	bne		a1, a2, 1b
-	sb		v0, -1(a1)
-2:
-	jr		ra
-	nop
-END(insb)
-
-LEAF(insw)
-	beq		a2, zero, 2f
-	PTR_ADDU	a2, a2
-	PTR_ADDU	a2, a1
-1:
-	lhu		v0, 0(a0)
-	PTR_ADDU	a1, 2
-	bne		a1, a2, 1b
-	sh		v0, -2(a1)
-2:
-	jr		ra
-	nop
-END(insw)
-
-LEAF(insl)
-	beq		a2, zero, 2f
-	sll		a2, 2
-	PTR_ADDU	a2, a1
-1:
-	lw		v0, 0(a0)
-	PTR_ADDU	a1, 4
-	bne		a1, a2, 1b
-	sw		v0, -4(a1)
-2:
-	jr		ra
-	nop
-END(insl)
-
-LEAF(outsb)
-	beq		a2, zero, 2f
-	PTR_ADDU	a2, a1
-1:
-	lbu		v0, 0(a1)
-	PTR_ADDU	a1, 1
-	bne		a1, a2, 1b
-	sb		v0, 0(a0)
-2:
-	jr		ra
-	nop
-END(outsb)
-
-LEAF(outsw)
-	beq	a2, zero, 2f
-	addu	a2, a2
-	li	v0, 1
-	and	v0, a1
-	bne	v0, zero, 3f		# arghh, unaligned.
-	addu	a2, a1
-1:
-	lhu	v0, 0(a1)
-	addiu	a1, 2
-	bne	a1, a2, 1b
-	sh	v0, 0(a0)
-2:
-	jr	ra
-	nop
-3:
-	LWHI	v0, 0(a1)
-	LWLO	v0, 3(a1)
-	addiu	a1, 2
-	bne	a1, a2, 3b
-	sh	v0, 0(a0)
-
-	jr	ra
-	nop
-END(outsw)
-
-LEAF(outsl)
-	beq	a2, zero, 2f
-	sll	a2, 2
-	li	v0, 3
-	and	v0, a1
-	bne	v0, zero, 3f		# arghh, unaligned.
-	addu	a2, a1
-1:
-	lw	v0, 0(a1)
-	addiu	a1, 4
-	bne	a1, a2, 1b
-	sw	v0, 0(a0)
-2:
-	jr	ra
-	nop
-3:
-	LWHI	v0, 0(a1)
-	LWLO	v0, 3(a1)
-	addiu	a1, 4
-	bne	a1, a2, 3b
-	sw	v0, 0(a0)
-
-	jr	ra
-	nop
-END(outsl)
 
 /*
  * Copy a null terminated string from the user address space into
@@ -432,7 +289,6 @@ END(copyerr)
 #ifdef __mips_n64
 LEAF(fuword64)
 ALEAF(fuword)
-ALEAF(fuiword)
 	PTR_LA	v0, fswberr
 	blt	a0, zero, fswberr	# make sure address is in user space
 	nop
@@ -448,7 +304,6 @@ END(fuword64)
 LEAF(fuword32)
 #ifndef __mips_n64
 ALEAF(fuword)
-ALEAF(fuiword)
 #endif
 	PTR_LA	v0, fswberr
 	blt	a0, zero, fswberr	# make sure address is in user space
@@ -462,7 +317,6 @@ ALEAF(fuiword)
 END(fuword32)
 
 LEAF(fusword)
-ALEAF(fuisword)
 	PTR_LA	v0, fswberr
 	blt	a0, zero, fswberr	# make sure address is in user space
 	nop
@@ -475,7 +329,6 @@ ALEAF(fuisword)
 END(fusword)
 
 LEAF(fubyte)
-ALEAF(fuibyte)
 	PTR_LA	v0, fswberr
 	blt	a0, zero, fswberr	# make sure address is in user space
 	nop
@@ -584,30 +437,10 @@ XLEAF(casuword)
 END(casuword64)
 #endif
 
-#if 0
-	/* unused in FreeBSD */
-/*
- * Have to flush instruction cache afterwards.
- */
-LEAF(suiword)
-	PTR_LA	v0, fswberr
-	blt	a0, zero, fswberr	# make sure address is in user space
-	nop
-	GET_CPU_PCPU(v1)
-	PTR_L	v1, PC_CURPCB(v1)
-	PTR_S	v0, U_PCB_ONFAULT(v1)
-	sw	a1, 0(a0)		# store word
-	PTR_S	zero, U_PCB_ONFAULT(v1)
-	j	_C_LABEL(Mips_SyncICache)  # FlushICache sets v0 = 0. (Ugly)
-	li	a1, 4			# size of word
-END(suiword)
-#endif
-
 /*
  * Will have to flush the instruction cache if byte merging is done in hardware.
  */
 LEAF(susword)
-ALEAF(suisword)
 	PTR_LA	v0, fswberr
 	blt	a0, zero, fswberr	# make sure address is in user space
 	nop
@@ -621,7 +454,6 @@ ALEAF(suisword)
 END(susword)
 
 LEAF(subyte)
-ALEAF(suibyte)
 	PTR_LA	v0, fswberr
 	blt	a0, zero, fswberr	# make sure address is in user space
 	nop
@@ -675,98 +507,6 @@ LEAF(fswintrberr)
 END(fswintrberr)
 
 /*
- * memcpy(to, from, len)
- * {ov}bcopy(from, to, len)
- */
-LEAF(memcpy)
-	.set	noreorder
-	move	v0, a0			# swap from and to
-	move	a0, a1
-	move	a1, v0
-ALEAF(bcopy)
-ALEAF(ovbcopy)
-	.set	noreorder
-	PTR_ADDU	t0, a0, a2		# t0 = end of s1 region
-	sltu	t1, a1, t0
-	sltu	t2, a0, a1
-	and	t1, t1, t2		# t1 = true if from < to < (from+len)
-	beq	t1, zero, forward	# non overlapping, do forward copy
-	slt	t2, a2, 12		# check for small copy
-
-	ble	a2, zero, 2f
-	PTR_ADDU	t1, a1, a2		# t1 = end of to region
-1:
-	lb	v1, -1(t0)		# copy bytes backwards,
-	PTR_SUBU	t0, t0, 1		#   doesnt happen often so do slow way
-	PTR_SUBU	t1, t1, 1
-	bne	t0, a0, 1b
-	sb	v1, 0(t1)
-2:
-	j	ra
-	nop
-forward:
-	bne	t2, zero, smallcpy	# do a small bcopy
-	xor	v1, a0, a1		# compare low two bits of addresses
-	and	v1, v1, 3
-	PTR_SUBU	a3, zero, a1		# compute # bytes to word align address
-	beq	v1, zero, aligned	# addresses can be word aligned
-	and	a3, a3, 3
-
-	beq	a3, zero, 1f
-	PTR_SUBU	a2, a2, a3		# subtract from remaining count
-	LWHI	v1, 0(a0)		# get next 4 bytes (unaligned)
-	LWLO	v1, 3(a0)
-	PTR_ADDU	a0, a0, a3
-	SWHI	v1, 0(a1)		# store 1, 2, or 3 bytes to align a1
-	PTR_ADDU	a1, a1, a3
-1:
-	and	v1, a2, 3		# compute number of words left
-	PTR_SUBU	a3, a2, v1
-	move	a2, v1
-	PTR_ADDU	a3, a3, a0		# compute ending address
-2:
-	LWHI	v1, 0(a0)		# copy words a0 unaligned, a1 aligned
-	LWLO	v1, 3(a0)
-	PTR_ADDU	a0, a0, 4
-	sw	v1, 0(a1)
-	PTR_ADDU	a1, a1, 4
-	bne	a0, a3, 2b
-	nop				# We have to do this mmu-bug.
-	b	smallcpy
-	nop
-aligned:
-	beq	a3, zero, 1f
-	PTR_SUBU	a2, a2, a3		# subtract from remaining count
-	LWHI	v1, 0(a0)		# copy 1, 2, or 3 bytes to align
-	PTR_ADDU	a0, a0, a3
-	SWHI	v1, 0(a1)
-	PTR_ADDU	a1, a1, a3
-1:
-	and	v1, a2, 3		# compute number of whole words left
-	PTR_SUBU	a3, a2, v1
-	move	a2, v1
-	PTR_ADDU	a3, a3, a0		# compute ending address
-2:
-	lw	v1, 0(a0)		# copy words
-	PTR_ADDU	a0, a0, 4
-	sw	v1, 0(a1)
-	bne	a0, a3, 2b
-	PTR_ADDU	a1, a1, 4
-smallcpy:
-	ble	a2, zero, 2f
-	PTR_ADDU	a3, a2, a0		# compute ending address
-1:
-	lbu	v1, 0(a0)		# copy bytes
-	PTR_ADDU	a0, a0, 1
-	sb	v1, 0(a1)
-	bne	a0, a3, 1b
-	PTR_ADDU	a1, a1, 1	   # MMU BUG ? can not do -1(a1) at 0x80000000!!
-2:
-	j	ra
-	nop
-END(memcpy)
-
-/*
  * memset(void *s1, int c, int len)
  * NetBSD: memset.S,v 1.3 2001/10/16 15:40:53 uch Exp
  */
@@ -793,12 +533,6 @@ LEAF(memset)
 	PTR_ADDU	t0, t0, a0		# compute ending address
 2:
 	PTR_ADDU	a0, a0, 4		# clear words
-#ifdef MIPS3_5900
-	nop
-	nop
-	nop
-	nop
-#endif
 	bne	a0, t0, 2b		#  unrolling loop does not help
 	sw	t1, -4(a0)		#  since we are limited by memory speed
 
@@ -807,12 +541,6 @@ memsetsmallclr:
 	PTR_ADDU	t0, a2, a0		# compute ending address
 1:
 	PTR_ADDU	a0, a0, 1		# clear bytes
-#ifdef MIPS3_5900
-	nop
-	nop
-	nop
-	nop
-#endif
 	bne	a0, t0, 1b
 	sb	a1, -1(a0)
 2:
@@ -951,154 +679,6 @@ LEAF(ffs)
 	j	ra
 	nop
 END(ffs)
-
-LEAF(get_current_fp)
-	j	ra
-	move	v0, s8
-END(get_current_fp)
-
-LEAF(loadandclear)
-	.set	noreorder
-1:
-	ll	v0, 0(a0)
-	move	t0, zero
-	sc	t0, 0(a0)
-	beq	t0, zero, 1b
-	nop
-	j	ra
-	nop
-END(loadandclear)
-
-#if 0
-/*
- * u_int32_t atomic_cmpset_32(u_int32_t *p, u_int32_t cmpval, u_int32_t newval)
- * Atomically compare the value stored at p with cmpval
- * and if the two values are equal, update value *p with
- * newval. Return zero if compare failed, non-zero otherwise
- *
- */
-
-LEAF(atomic_cmpset_32)
-	.set	noreorder
-1:
-	ll	t0, 0(a0)
-	move	v0, zero
-	bne	t0, a1, 2f
-	move	t1, a2
-	sc	t1, 0(a0)
-	beq	t1, zero, 1b
-	or	v0, v0, 1
-2:
-	j	ra
-	nop
-END(atomic_cmpset_32)
-
-/**
- * u_int32_t
- * atomic_readandclear_32(u_int32_t *a)
- * {
- *	u_int32_t retval;
- *	retval = *a;
- *	*a = 0;
- * }
- */
-LEAF(atomic_readandclear_32)
-	.set	noreorder
-1:
-	ll	t0, 0(a0)
-	move	t1, zero
-	move	v0, t0
-	sc	t1, 0(a0)
-	beq	t1, zero, 1b
-	nop
-	j	ra
-	nop
-END(atomic_readandclear_32)
-
-/**
- * void
- * atomic_set_32(u_int32_t *a, u_int32_t b)
- * {
- *	*a |= b;
- * }
- */
-LEAF(atomic_set_32)
-	.set	noreorder
-1:
-	ll	t0, 0(a0)
-	or	t0, t0, a1
-	sc	t0, 0(a0)
-	beq	t0, zero, 1b
-	nop
-	j	ra
-	nop
-END(atomic_set_32)
-
-/**
- * void
- * atomic_add_32(uint32_t *a, uint32_t b)
- * {
- *	*a += b;
- * }
- */
-LEAF(atomic_add_32)
-	.set	noreorder
-	srl	a0, a0, 2	# round down address to be 32-bit aligned
-	sll	a0, a0, 2
-1:
-	ll	t0, 0(a0)
-	addu	t0, t0, a1
-	sc	t0, 0(a0)
-	beq	t0, zero, 1b
-	nop
-	j	ra
-	nop
-END(atomic_add_32)
-
-/**
- * void
- * atomic_clear_32(u_int32_t *a, u_int32_t b)
- * {
- *	*a &= ~b;
- * }
- */
-LEAF(atomic_clear_32)
-	.set	noreorder
-	srl	a0, a0, 2	# round down address to be 32-bit aligned
-	sll	a0, a0, 2
-	nor	a1, zero, a1
-1:
-	ll	t0, 0(a0)
-	and	t0, t0, a1	# t1 has the new lower 16 bits
-	sc	t0, 0(a0)
-	beq	t0, zero, 1b
-	nop
-	j	ra
-	nop
-END(atomic_clear_32)
-
-/**
- * void
- * atomic_subtract_32(uint16_t *a, uint16_t b)
- * {
- *	*a -= b;
- * }
- */
-LEAF(atomic_subtract_32)
-	.set	noreorder
-	srl	a0, a0, 2	# round down address to be 32-bit aligned
-	sll	a0, a0, 2
-1:
-	ll	t0, 0(a0)
-	subu	t0, t0, a1
-	sc	t0, 0(a0)
-	beq	t0, zero, 1b
-	nop
-	j	ra
-	nop
-END(atomic_subtract_32)
-
-#endif
 
 /**
  * void
@@ -1271,6 +851,15 @@ END(atomic_subtract_8)
 	 * NOPs in it for all processors.  XXX
 	 *
 	 * Maybe it would be better to just leave this undefined in that case.
+	 *
+	 * XXX These routines are not safe in the case of a TLB miss on a1 or
+	 *     a0 unless the trapframe is 64-bit, which it just isn't with O32.
+	 *     If we take any exception, not just an interrupt, the upper
+	 *     32-bits will be clobbered.  Use only N32 and N64 kernels if you
+	 *     want to use 64-bit registers while interrupts are enabled or
+	 *     with memory operations.  Since this isn't even using load-linked
+	 *     and store-conditional, perhaps it should just use two registers
+	 *     instead, as is right and good with the O32 ABI.
 	 */
 LEAF(atomic_store_64)
 	mfc0	t1, MIPS_COP_0_STATUS
@@ -1340,6 +929,25 @@ LEAF(kdbpeek)
 	PTR_S	zero, U_PCB_ONFAULT(t1)
 END(kdbpeek)
 
+LEAF(kdbpeekd)
+	PTR_LA	v1, ddberr
+	and	v0, a0, 3			# unaligned ?
+	GET_CPU_PCPU(t1)
+	PTR_L	t1, PC_CURPCB(t1)
+	bne	v0, zero, 1f
+	PTR_S	v1, U_PCB_ONFAULT(t1)
+
+	ld	v0, (a0)
+	jr	ra
+	PTR_S	zero, U_PCB_ONFAULT(t1)
+
+1:
+	REG_LHI	v0, 0(a0)
+	REG_LLO	v0, 7(a0)
+	jr	ra
+	PTR_S	zero, U_PCB_ONFAULT(t1)
+END(kdbpeekd)
+
 ddberr:
 	jr	ra
 	nop
@@ -1376,129 +984,44 @@ LEAF(breakpoint)
 	break	MIPS_BREAK_SOVER_VAL
 	jr	ra
 	nop
-	END(breakpoint)
+END(breakpoint)
 
 LEAF(setjmp)
 	mfc0	v0, MIPS_COP_0_STATUS	# Later the "real" spl value!
-	REG_S	s0, (SZREG * PREG_S0)(a0)
-	REG_S	s1, (SZREG * PREG_S1)(a0)
-	REG_S	s2, (SZREG * PREG_S2)(a0)
-	REG_S	s3, (SZREG * PREG_S3)(a0)
-	REG_S	s4, (SZREG * PREG_S4)(a0)
-	REG_S	s5, (SZREG * PREG_S5)(a0)
-	REG_S	s6, (SZREG * PREG_S6)(a0)
-	REG_S	s7, (SZREG * PREG_S7)(a0)
-	REG_S	s8, (SZREG * PREG_S8)(a0)
-	REG_S	sp, (SZREG * PREG_SP)(a0)
-	REG_S	ra, (SZREG * PREG_RA)(a0)
-	REG_S	v0, (SZREG * PREG_SR)(a0)
+	REG_S	s0, (SZREG * PCB_REG_S0)(a0)
+	REG_S	s1, (SZREG * PCB_REG_S1)(a0)
+	REG_S	s2, (SZREG * PCB_REG_S2)(a0)
+	REG_S	s3, (SZREG * PCB_REG_S3)(a0)
+	REG_S	s4, (SZREG * PCB_REG_S4)(a0)
+	REG_S	s5, (SZREG * PCB_REG_S5)(a0)
+	REG_S	s6, (SZREG * PCB_REG_S6)(a0)
+	REG_S	s7, (SZREG * PCB_REG_S7)(a0)
+	REG_S	s8, (SZREG * PCB_REG_S8)(a0)
+	REG_S	sp, (SZREG * PCB_REG_SP)(a0)
+	REG_S	ra, (SZREG * PCB_REG_RA)(a0)
+	REG_S	v0, (SZREG * PCB_REG_SR)(a0)
 	jr	ra
 	li	v0, 0			# setjmp return
 END(setjmp)
 
 LEAF(longjmp)
-	REG_L	v0, (SZREG * PREG_SR)(a0)
-	REG_L	ra, (SZREG * PREG_RA)(a0)
-	REG_L	s0, (SZREG * PREG_S0)(a0)
-	REG_L	s1, (SZREG * PREG_S1)(a0)
-	REG_L	s2, (SZREG * PREG_S2)(a0)
-	REG_L	s3, (SZREG * PREG_S3)(a0)
-	REG_L	s4, (SZREG * PREG_S4)(a0)
-	REG_L	s5, (SZREG * PREG_S5)(a0)
-	REG_L	s6, (SZREG * PREG_S6)(a0)
-	REG_L	s7, (SZREG * PREG_S7)(a0)
-	REG_L	s8, (SZREG * PREG_S8)(a0)
-	REG_L	sp, (SZREG * PREG_SP)(a0)
+	REG_L	v0, (SZREG * PCB_REG_SR)(a0)
+	REG_L	ra, (SZREG * PCB_REG_RA)(a0)
+	REG_L	s0, (SZREG * PCB_REG_S0)(a0)
+	REG_L	s1, (SZREG * PCB_REG_S1)(a0)
+	REG_L	s2, (SZREG * PCB_REG_S2)(a0)
+	REG_L	s3, (SZREG * PCB_REG_S3)(a0)
+	REG_L	s4, (SZREG * PCB_REG_S4)(a0)
+	REG_L	s5, (SZREG * PCB_REG_S5)(a0)
+	REG_L	s6, (SZREG * PCB_REG_S6)(a0)
+	REG_L	s7, (SZREG * PCB_REG_S7)(a0)
+	REG_L	s8, (SZREG * PCB_REG_S8)(a0)
+	REG_L	sp, (SZREG * PCB_REG_SP)(a0)
 	mtc0	v0, MIPS_COP_0_STATUS	# Later the "real" spl value!
 	ITLBNOPFIX
 	jr	ra
 	li	v0, 1			# longjmp return
 END(longjmp)
-
-LEAF(fusufault)
-	GET_CPU_PCPU(t0)
-	lw	t0, PC_CURTHREAD(t0)
-	lw	t0, TD_PCB(t0)
-	li	v0, -1
-	j	ra
-END(fusufault)
-
-    /* Define a new md function 'casuptr'.  This atomically compares and sets
-       a pointer that is in user space.	 It will be used as the basic primitive
-       for a kernel supported user space lock implementation. */
-LEAF(casuptr)
-	PTR_LI	t0, VM_MAXUSER_ADDRESS /* verify address validity */
-	blt	a0, t0, fusufault		/* trap faults */
-	nop
-
-	GET_CPU_PCPU(t1)
-	lw	t1, PC_CURTHREAD(t1)
-	lw	t1, TD_PCB(t1)
-
-	PTR_LA	t2, fusufault
-	PTR_S	t2, U_PCB_ONFAULT(t1)
-1:
-	ll	v0, 0(a0)		/* try to load the old value */
-	beq	v0, a1, 2f		/* compare */
-	move	t0, a2			/* setup value to write */
-	sc	t0, 0(a0)		/* write if address still locked */
-	beq	t0, zero, 1b			/* if it failed, spin */
-2:
-	PTR_S	zero, U_PCB_ONFAULT(t1) /* clean up */
-	j	ra
-END(casuptr)
-
-
-#ifdef CPU_CNMIPS
-/* 
- * void octeon_enable_shadow(void)
- *	turns on access to CC and CCRes
- */	
-LEAF(octeon_enable_shadow)
-	li      t1, 0x0000000f
-	mtc0	t1, MIPS_COP_0_INFO
-	jr	ra
-	nop
-END(octeon_enable_shadow)
-
-	
-LEAF(octeon_get_shadow)
-	mfc0	v0, MIPS_COP_0_INFO
-	jr	ra
-	nop
-END(octeon_get_shadow)
-
-/*
- * octeon_set_control(addr, uint32_t val)
- */
-LEAF(octeon_set_control)
-	.set push
-	or      t1, a1, zero
-/*	dmfc0   a1, 9, 7*/
-	.word 0x40254807
-	sd	a1, 0(a0)
-	or      a1, t1, zero
-/*	dmtc0   a1, 9, 7*/
-	.word 0x40a54807
-	jr	ra
-	nop
-	.set pop
-END(octeon_set_control)
-
-/*
- * octeon_get_control(addr)
- */
-LEAF(octeon_get_control)
-	.set push
-	.set mips64r2
-/*	dmfc0   a1, 9, 7 */
-	.word 0x40254807
-	sd	a1, 0(a0)
-	jr	ra
-	nop
-	.set pop
-END(octeon_get_control)
-#endif
 
 LEAF(mips3_ld)
 	.set push

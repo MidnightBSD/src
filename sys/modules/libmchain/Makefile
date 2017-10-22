@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/libmchain/Makefile 230196 2012-01-16 05:15:13Z kevlo $
+# $FreeBSD: release/10.0.0/sys/modules/libmchain/Makefile 227650 2011-11-18 03:05:20Z kevlo $
 
 .PATH: ${.CURDIR}/../../kern
 

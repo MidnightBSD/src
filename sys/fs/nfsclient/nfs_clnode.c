@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/fs/nfsclient/nfs_clnode.c 237543 2012-06-25 01:48:18Z rmacklem $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfsclient/nfs_clnode.c 248084 2013-03-09 02:32:23Z attilio $");
 
 #include "opt_kdtrace.h"
 
@@ -122,12 +122,6 @@ ncl_nget(struct mount *mntp, u_int8_t *fhp, int fhsize, struct nfsnode **npp,
 		*npp = VTONFS(nvp);
 		return (0);
 	}
-
-	/*
-	 * Allocate before getnewvnode since doing so afterward
-	 * might cause a bogus v_data pointer to get dereferenced
-	 * elsewhere if zalloc should block.
-	 */
 	np = uma_zalloc(newnfsnode_zone, M_WAITOK | M_ZERO);
 
 	error = getnewvnode("newnfs", mntp, &newnfs_vnodeops, &nvp);
@@ -222,10 +216,10 @@ ncl_inactive(struct vop_inactive_args *ap)
 		 * stateid is available for the writes.
 		 */
 		if (vp->v_object != NULL) {
-			VM_OBJECT_LOCK(vp->v_object);
+			VM_OBJECT_WLOCK(vp->v_object);
 			retv = vm_object_page_clean(vp->v_object, 0, 0,
 			    OBJPC_SYNC);
-			VM_OBJECT_UNLOCK(vp->v_object);
+			VM_OBJECT_WUNLOCK(vp->v_object);
 		} else
 			retv = TRUE;
 		if (retv == TRUE) {

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/i915/i915_gem_execbuffer.c 236933 2012-06-11 21:44:24Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/i915/i915_gem_execbuffer.c 255013 2013-08-28 23:59:38Z jkim $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm.h>
@@ -192,7 +192,7 @@ i915_gem_object_set_to_gpu_domain(struct drm_i915_gem_object *obj,
 		i915_gem_clflush_object(obj);
 
 	if (obj->base.pending_write_domain)
-		cd->flips |= atomic_read(&obj->pending_flip);
+		cd->flips |= atomic_load_acq_int(&obj->pending_flip);
 
 	/* The actual obj->write_domain will be updated with
 	 * pending_write_domain after we emit the accumulated flush for all

@@ -1,7 +1,7 @@
 /*	$NetBSD: mdreloc.c,v 1.23 2003/07/26 15:04:38 mrg Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/libexec/rtld-elf/arm/reloc.c 237394 2012-06-21 13:01:00Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/libexec/rtld-elf/arm/reloc.c 239269 2012-08-15 03:07:41Z gonzo $");
 #include <sys/param.h>
 #include <sys/mman.h>
 
@@ -433,7 +433,9 @@ reloc_jmpslot(Elf_Addr *where, Elf_Addr target, const Obj_Entry *defobj,
 void
 allocate_initial_tls(Obj_Entry *objs)
 {
+#ifdef ARM_TP_ADDRESS
 	void **_tp = (void **)ARM_TP_ADDRESS;
+#endif
 
 	/*
 	* Fix the size of the static TLS block by using the maximum
@@ -443,16 +445,27 @@ allocate_initial_tls(Obj_Entry *objs)
 
 	tls_static_space = tls_last_offset + tls_last_size + RTLD_STATIC_TLS_EXTRA;
 
+#ifdef ARM_TP_ADDRESS
 	(*_tp) = (void *) allocate_tls(objs, NULL, TLS_TCB_SIZE, 8);
+#else
+	sysarch(ARM_SET_TP, allocate_tls(objs, NULL, TLS_TCB_SIZE, 8));
+#endif
 }
 
 void *
 __tls_get_addr(tls_index* ti)
 {
-	void **_tp = (void **)ARM_TP_ADDRESS;
 	char *p;
+#ifdef ARM_TP_ADDRESS
+	void **_tp = (void **)ARM_TP_ADDRESS;
 
 	p = tls_get_addr_common((Elf_Addr **)(*_tp), ti->ti_module, ti->ti_offset);
+#else
+	void *_tp;
+	__asm __volatile("mrc  p15, 0, %0, c13, c0, 3"		\
+	    : "=r" (_tp));
+	p = tls_get_addr_common((Elf_Addr **)(_tp), ti->ti_module, ti->ti_offset);
+#endif
 
 	return (p);
 }

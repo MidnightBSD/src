@@ -31,7 +31,7 @@
 static const char sccsid[] = "@(#)inet_network.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/inet/inet_network.c 175330 2008-01-14 22:56:05Z cperciva $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/inet/inet_network.c 175330 2008-01-14 22:56:05Z cperciva $");
 
 #include "port_before.h"
 

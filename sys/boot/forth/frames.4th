@@ -1,6 +1,6 @@
 \ Words implementing frame drawing
 \ XXX Filled boxes are left as an exercise for the reader... ;-/
-\ $FreeBSD: stable/9/sys/boot/forth/frames.4th 124648 2004-01-18 04:13:27Z nyan $
+\ $FreeBSD: release/10.0.0/sys/boot/forth/frames.4th 244048 2012-12-09 15:25:34Z dteske $
 
 marker task-frames.4th
 
@@ -11,6 +11,11 @@ variable lb_el
 variable rt_el
 variable rb_el
 variable fill
+
+\ ASCII frames (used when serial console is detected)
+ 45 constant ascii_dash
+124 constant ascii_pipe
+ 43 constant ascii_plus
 
 s" arch-pc98" environment? [if]
 	\ Single frames
@@ -63,7 +68,17 @@ s" arch-pc98" environment? [if]
 	loop
 ;
 
+: f_ascii ( -- )	( -- )	\ set frames to ascii
+	ascii_dash h_el !
+	ascii_pipe v_el !
+	ascii_plus lt_el !
+	ascii_plus lb_el !
+	ascii_plus rt_el !
+	ascii_plus rb_el !
+;
+
 : f_single	( -- )	\ set frames to single
+	boot_serial? if f_ascii exit then
 	sh_el h_el !
 	sv_el v_el !
 	slt_el lt_el !
@@ -73,6 +88,7 @@ s" arch-pc98" environment? [if]
 ;
 
 : f_double	( -- )	\ set frames to double
+	boot_serial? if f_ascii exit then
 	dh_el h_el !
 	dv_el v_el !
 	dlt_el lt_el !

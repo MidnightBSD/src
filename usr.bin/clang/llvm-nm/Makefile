@@ -1,4 +1,6 @@
-# $FreeBSD: stable/9/usr.bin/clang/llvm-nm/Makefile 231057 2012-02-05 23:56:22Z dim $
+# $FreeBSD: release/10.0.0/usr.bin/clang/llvm-nm/Makefile 246705 2013-02-12 05:56:00Z andrew $
+
+.include <bsd.own.mk>
 
 PROG_CXX=llvm-nm
 

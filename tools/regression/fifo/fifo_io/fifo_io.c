@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/fifo/fifo_io/fifo_io.c 164083 2006-11-07 23:28:30Z jkim $
+ * $FreeBSD: release/10.0.0/tools/regression/fifo/fifo_io/fifo_io.c 228975 2011-12-30 00:04:11Z uqs $
  */
 
 #include <sys/types.h>
@@ -395,7 +395,7 @@ timed_read(int fd, void *data, size_t len, ssize_t *read_lenp,
  *
  * We use a timeout of 5 seconds, concluding that in 5 seconds either all I/O
  * that can take place will, and that if we reach the end of the timeout,
- * then blocking has occured.
+ * then blocking has occurred.
  *
  * We assume that the buffer size on a fifo is <512K, and as such, that
  * writing that much data without an active reader will result in blocking.

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/aac/aac_debug.c 206534 2010-04-13 00:33:07Z emaste $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/aac/aac_debug.c 242823 2012-11-09 13:58:52Z rdivacky $");
 
 /*
  * Debugging support.
@@ -160,7 +160,7 @@ void
 aac_panic(struct aac_softc *sc, char *reason)
 {
 	aac_print_queues(sc);
-	panic(reason);
+	panic("%s", reason);
 }
 
 /*

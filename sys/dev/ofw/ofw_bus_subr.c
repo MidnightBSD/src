@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ofw/ofw_bus_subr.c 234160 2012-04-12 00:38:34Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ofw/ofw_bus_subr.c 255596 2013-09-15 14:19:17Z nwhitehorn $");
 
 #include "opt_platform.h"
 #include <sys/param.h>
@@ -167,7 +167,8 @@ ofw_bus_is_compatible(device_t dev, const char *onecompat)
 	onelen = strlen(onecompat);
 
 	while (len > 0) {
-		if (strncasecmp(compat, onecompat, onelen) == 0)
+		if (strlen(compat) == onelen &&
+		    strncasecmp(compat, onecompat, onelen) == 0)
 			/* Found it. */
 			return (1);
 
@@ -183,14 +184,28 @@ int
 ofw_bus_is_compatible_strict(device_t dev, const char *compatible)
 {
 	const char *compat;
+	size_t len;
 
 	if ((compat = ofw_bus_get_compat(dev)) == NULL)
 		return (0);
 
-	if (strncasecmp(compat, compatible, strlen(compatible)) == 0)
+	len = strlen(compatible);
+	if (strlen(compat) == len &&
+	    strncasecmp(compat, compatible, len) == 0)
 		return (1);
 
 	return (0);
+}
+
+int
+ofw_bus_has_prop(device_t dev, const char *propname)
+{
+	phandle_t node;
+
+	if ((node = ofw_bus_get_node(dev)) == -1)
+		return (0);
+
+	return (OF_hasprop(node, propname));
 }
 
 #ifndef FDT
@@ -285,7 +300,7 @@ ofw_bus_search_intrmap(void *intr, int intrsz, void *regs, int physsz,
 	i = imapsz;
 	while (i > 0) {
 		bcopy(mptr + physsz + intrsz, &parent, sizeof(parent));
-		if (OF_searchprop(parent, "#interrupt-cells",
+		if (OF_searchprop(OF_xref_phandle(parent), "#interrupt-cells",
 		    &pintrsz, sizeof(pintrsz)) == -1)
 			pintrsz = 1;	/* default */
 		pintrsz *= sizeof(pcell_t);

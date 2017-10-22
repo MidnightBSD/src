@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/gdb/kgdb/Makefile 215082 2010-11-10 06:39:49Z imp $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/gdb/kgdb/Makefile 215082 2010-11-10 06:39:49Z imp $
 
 PROG=	kgdb${GDB_SUFFIX}
 SRCS=	main.c kld.c kthr.c trgt.c trgt_${TARGET_CPUARCH}.c

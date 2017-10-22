@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/thread/thr_mutexattr.c 177451 2008-03-20 11:47:08Z ru $
+ * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_mutexattr.c 177451 2008-03-20 11:47:08Z ru $
  */
 
 /*

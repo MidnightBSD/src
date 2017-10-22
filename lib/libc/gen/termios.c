@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)termios.c	8.2 (Berkeley) 2/21/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/termios.c 214680 2010-11-02 17:00:56Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/termios.c 214680 2010-11-02 17:00:56Z ed $");
 
 #include "namespace.h"
 #include <sys/types.h>

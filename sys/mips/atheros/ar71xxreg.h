@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/sys/mips/atheros/ar71xxreg.h 213286 2010-09-29 23:06:41Z gonzo $ */
+/* $FreeBSD: release/10.0.0/sys/mips/atheros/ar71xxreg.h 256175 2013-10-09 03:19:05Z adrian $ */
 
 #ifndef _AR71XX_REG_H_
 #define _AR71XX_REG_H_
@@ -267,15 +267,40 @@
 #define		AR91XX_REV_ID_REVISION_MASK	0x3
 #define		AR91XX_REV_ID_REVISION_SHIFT	2
 
+typedef enum {
+	AR71XX_MII_MODE_NONE = 0,
+	AR71XX_MII_MODE_GMII,
+	AR71XX_MII_MODE_MII,
+	AR71XX_MII_MODE_RGMII,
+	AR71XX_MII_MODE_RMII,
+} ar71xx_mii_mode;
+
+/*
+ * AR71xx MII control region
+ */
+#define	AR71XX_MII0_CTRL	0x18070000
+#define			MII_CTRL_SPEED_SHIFT	4
+#define			MII_CTRL_SPEED_MASK	3
+#define				MII_CTRL_SPEED_10	0
+#define				MII_CTRL_SPEED_100	1
+#define				MII_CTRL_SPEED_1000	2
+#define			MII_CTRL_IF_MASK	3
+#define			MII_CTRL_IF_SHIFT	0
+#define				MII0_CTRL_IF_GMII	0
+#define				MII0_CTRL_IF_MII	1
+#define				MII0_CTRL_IF_RGMII	2
+#define				MII0_CTRL_IF_RMII	3
+
+#define	AR71XX_MII1_CTRL	0x18070004
+
+#define				MII1_CTRL_IF_RGMII	0
+#define				MII1_CTRL_IF_RMII	1
+
 /*
  * GigE adapters region
  */
 #define AR71XX_MAC0_BASE	0x19000000
 #define AR71XX_MAC1_BASE	0x1A000000
-/*
- * All 5 PHYs accessible only through MAC0 register space
- */
-#define AR71XX_MII_BASE		0x19000000
 
 #define		AR71XX_MAC_CFG1			0x00
 #define			MAC_CFG1_SOFT_RESET		(1 << 31)
@@ -311,6 +336,7 @@
 #define			MAC_MII_CFG_SCAN_AUTO_INC	(1 <<  5)
 #define			MAC_MII_CFG_PREAMBLE_SUP	(1 <<  4)
 #define			MAC_MII_CFG_CLOCK_SELECT_MASK	0x7
+#define			MAC_MII_CFG_CLOCK_SELECT_MASK_AR933X	0xf
 #define			MAC_MII_CFG_CLOCK_DIV_4		0
 #define			MAC_MII_CFG_CLOCK_DIV_6		2
 #define			MAC_MII_CFG_CLOCK_DIV_8		3
@@ -318,6 +344,17 @@
 #define			MAC_MII_CFG_CLOCK_DIV_14	5
 #define			MAC_MII_CFG_CLOCK_DIV_20	6
 #define			MAC_MII_CFG_CLOCK_DIV_28	7
+
+/* .. and the AR933x/AR934x extensions */
+#define			MAC_MII_CFG_CLOCK_DIV_34	8
+#define			MAC_MII_CFG_CLOCK_DIV_42	9
+#define			MAC_MII_CFG_CLOCK_DIV_50	10
+#define			MAC_MII_CFG_CLOCK_DIV_58	11
+#define			MAC_MII_CFG_CLOCK_DIV_66	12
+#define			MAC_MII_CFG_CLOCK_DIV_74	13
+#define			MAC_MII_CFG_CLOCK_DIV_82	14
+#define			MAC_MII_CFG_CLOCK_DIV_98	15
+
 #define		AR71XX_MAC_MII_CMD		0x24
 #define			MAC_MII_CMD_SCAN_CYCLE		(1 << 1)
 #define			MAC_MII_CMD_READ		1

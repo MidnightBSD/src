@@ -1,7 +1,11 @@
 /*-
  * Copyright (c) 2004 Poul-Henning Kamp
  * Copyright (c) 1994,1997 John S. Dyson
+ * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
+ *
+ * Portions of this software were developed by Konstantin Belousov
+ * under sponsorship from the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/vfs_bio.c 249329 2013-04-10 08:49:37Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/vfs_bio.c 256213 2013-10-09 18:45:01Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -58,7 +62,9 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/vfs_bio.c 249329 2013-04-10 08:49:37Z kib 
 #include <sys/kthread.h>
 #include <sys/proc.h>
 #include <sys/resourcevar.h>
+#include <sys/rwlock.h>
 #include <sys/sysctl.h>
+#include <sys/vmem.h>
 #include <sys/vmmeter.h>
 #include <sys/vnode.h>
 #include <geom/geom.h>
@@ -91,6 +97,7 @@ struct	buf_ops buf_ops_bio = {
  * carnal knowledge of buffers.  This knowledge should be moved to vfs_bio.c.
  */
 struct buf *buf;		/* buffer header pool */
+caddr_t unmapped_buf;
 
 static struct proc *bufdaemonproc;
 
@@ -101,16 +108,16 @@ static void vm_hold_load_pages(struct buf *bp, vm_offset_t from,
 static void vfs_page_set_valid(struct buf *bp, vm_ooffset_t off, vm_page_t m);
 static void vfs_page_set_validclean(struct buf *bp, vm_ooffset_t off,
 		vm_page_t m);
-static void vfs_drain_busy_pages(struct buf *bp);
 static void vfs_clean_pages_dirty_buf(struct buf *bp);
 static void vfs_setdirty_locked_object(struct buf *bp);
 static void vfs_vmio_release(struct buf *bp);
 static int vfs_bio_clcheck(struct vnode *vp, int size,
 		daddr_t lblkno, daddr_t blkno);
-static int buf_do_flush(struct vnode *vp);
-static int flushbufqueues(struct vnode *, int, int);
+static int buf_flush(int);
+static int flushbufqueues(int, int);
 static void buf_daemon(void);
 static void bremfreel(struct buf *bp);
+static __inline void bd_wakeup(void);
 #if defined(COMPAT_FREEBSD4) || defined(COMPAT_FREEBSD5) || \
     defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD7)
 static int sysctl_bufspace(SYSCTL_HANDLER_ARGS);
@@ -131,6 +138,10 @@ SYSCTL_PROC(_vfs, OID_AUTO, bufspace, CTLTYPE_LONG|CTLFLAG_MPSAFE|CTLFLAG_RD,
 SYSCTL_LONG(_vfs, OID_AUTO, bufspace, CTLFLAG_RD, &bufspace, 0,
     "Virtual memory used for buffers");
 #endif
+static long unmapped_bufspace;
+SYSCTL_LONG(_vfs, OID_AUTO, unmapped_bufspace, CTLFLAG_RD,
+    &unmapped_bufspace, 0,
+    "Amount of unmapped buffers, inclusive in the bufspace");
 static long maxbufspace;
 SYSCTL_LONG(_vfs, OID_AUTO, maxbufspace, CTLFLAG_RD, &maxbufspace, 0,
     "Maximum allowed value of bufspace (including buf_daemon)");
@@ -200,15 +211,53 @@ SYSCTL_INT(_vfs, OID_AUTO, getnewbufcalls, CTLFLAG_RW, &getnewbufcalls, 0,
 static int getnewbufrestarts;
 SYSCTL_INT(_vfs, OID_AUTO, getnewbufrestarts, CTLFLAG_RW, &getnewbufrestarts, 0,
     "Number of times getnewbuf has had to restart a buffer aquisition");
+static int mappingrestarts;
+SYSCTL_INT(_vfs, OID_AUTO, mappingrestarts, CTLFLAG_RW, &mappingrestarts, 0,
+    "Number of times getblk has had to restart a buffer mapping for "
+    "unmapped buffer");
 static int flushbufqtarget = 100;
 SYSCTL_INT(_vfs, OID_AUTO, flushbufqtarget, CTLFLAG_RW, &flushbufqtarget, 0,
     "Amount of work to do in flushbufqueues when helping bufdaemon");
-static long notbufdflashes;
-SYSCTL_LONG(_vfs, OID_AUTO, notbufdflashes, CTLFLAG_RD, &notbufdflashes, 0,
+static long notbufdflushes;
+SYSCTL_LONG(_vfs, OID_AUTO, notbufdflushes, CTLFLAG_RD, &notbufdflushes, 0,
     "Number of dirty buffer flushes done by the bufdaemon helpers");
 static long barrierwrites;
 SYSCTL_LONG(_vfs, OID_AUTO, barrierwrites, CTLFLAG_RW, &barrierwrites, 0,
     "Number of barrier writes");
+SYSCTL_INT(_vfs, OID_AUTO, unmapped_buf_allowed, CTLFLAG_RD,
+    &unmapped_buf_allowed, 0,
+    "Permit the use of the unmapped i/o");
+
+/*
+ * Lock for the non-dirty bufqueues
+ */
+static struct mtx_padalign bqclean;
+
+/*
+ * Lock for the dirty queue.
+ */
+static struct mtx_padalign bqdirty;
+
+/*
+ * This lock synchronizes access to bd_request.
+ */
+static struct mtx_padalign bdlock;
+
+/*
+ * This lock protects the runningbufreq and synchronizes runningbufwakeup and
+ * waitrunningbufspace().
+ */
+static struct mtx_padalign rbreqlock;
+
+/*
+ * Lock that protects needsbuffer and the sleeps/wakeups surrounding it.
+ */
+static struct mtx_padalign nblock;
+
+/*
+ * Lock that protects bdirtywait.
+ */
+static struct mtx_padalign bdirtylock;
 
 /*
  * Wakeup point for bufdaemon, as well as indicator of whether it is already
@@ -226,11 +275,6 @@ static int bd_request;
 static int bd_speedupreq;
 
 /*
- * This lock synchronizes access to bd_request.
- */
-static struct mtx bdlock;
-
-/*
  * bogus page -- for I/O to/from partially complete buffers
  * this is a temporary solution to the problem, but it is not
  * really that bad.  it would be better to split the buffer
@@ -246,44 +290,37 @@ vm_page_t bogus_page;
  */
 static int runningbufreq;
 
-/*
- * This lock protects the runningbufreq and synchronizes runningbufwakeup and
- * waitrunningbufspace().
- */
-static struct mtx rbreqlock;
-
 /* 
  * Synchronization (sleep/wakeup) variable for buffer requests.
  * Can contain the VFS_BIO_NEED flags defined below; setting/clearing is done
  * by and/or.
- * Used in numdirtywakeup(), bufspacewakeup(), bufcountwakeup(), bwillwrite(),
+ * Used in numdirtywakeup(), bufspacewakeup(), bufcountadd(), bwillwrite(),
  * getnewbuf(), and getblk().
  */
 static int needsbuffer;
 
 /*
- * Lock that protects needsbuffer and the sleeps/wakeups surrounding it.
+ * Synchronization for bwillwrite() waiters.
  */
-static struct mtx nblock;
+static int bdirtywait;
 
 /*
  * Definitions for the buffer free lists.
  */
-#define BUFFER_QUEUES	6	/* number of free buffer queues */
+#define BUFFER_QUEUES	5	/* number of free buffer queues */
 
 #define QUEUE_NONE	0	/* on no queue */
 #define QUEUE_CLEAN	1	/* non-B_DELWRI buffers */
 #define QUEUE_DIRTY	2	/* B_DELWRI buffers */
-#define QUEUE_DIRTY_GIANT 3	/* B_DELWRI buffers that need giant */
-#define QUEUE_EMPTYKVA	4	/* empty buffer headers w/KVA assignment */
-#define QUEUE_EMPTY	5	/* empty buffer headers */
+#define QUEUE_EMPTYKVA	3	/* empty buffer headers w/KVA assignment */
+#define QUEUE_EMPTY	4	/* empty buffer headers */
 #define QUEUE_SENTINEL	1024	/* not an queue index, but mark for sentinel */
 
 /* Queues for free buffers with various properties */
 static TAILQ_HEAD(bqueues, buf) bufqueues[BUFFER_QUEUES] = { { 0 } };
-
-/* Lock for the bufqueues */
-static struct mtx bqlock;
+#ifdef INVARIANTS
+static int bq_len[BUFFER_QUEUES];
+#endif
 
 /*
  * Single global constant for BUF_WMESG, to avoid getting multiple references.
@@ -292,7 +329,6 @@ static struct mtx bqlock;
 const char *buf_wmesg = BUF_WMESG;
 
 #define VFS_BIO_NEED_ANY	0x01	/* any freeable buffer */
-#define VFS_BIO_NEED_DIRTYFLUSH	0x02	/* waiting for dirty buffer flush */
 #define VFS_BIO_NEED_FREE	0x04	/* wait for free bufs, hi hysteresis */
 #define VFS_BIO_NEED_BUFSPACE	0x08	/* wait for buf space, lo hysteresis */
 
@@ -318,25 +354,69 @@ sysctl_bufspace(SYSCTL_HANDLER_ARGS)
 #ifdef DIRECTIO
 extern void ffs_rawread_setup(void);
 #endif /* DIRECTIO */
-/*
- *	numdirtywakeup:
- *
- *	If someone is blocked due to there being too many dirty buffers,
- *	and numdirtybuffers is now reasonable, wake them up.
- */
 
-static __inline void
-numdirtywakeup(int level)
+/*
+ *	bqlock:
+ *
+ *	Return the appropriate queue lock based on the index.
+ */
+static inline struct mtx *
+bqlock(int qindex)
 {
 
-	if (numdirtybuffers <= level) {
-		mtx_lock(&nblock);
-		if (needsbuffer & VFS_BIO_NEED_DIRTYFLUSH) {
-			needsbuffer &= ~VFS_BIO_NEED_DIRTYFLUSH;
-			wakeup(&needsbuffer);
-		}
-		mtx_unlock(&nblock);
+	if (qindex == QUEUE_DIRTY)
+		return (struct mtx *)(&bqdirty);
+	return (struct mtx *)(&bqclean);
+}
+
+/*
+ *	bdirtywakeup:
+ *
+ *	Wakeup any bwillwrite() waiters.
+ */
+static void
+bdirtywakeup(void)
+{
+	mtx_lock(&bdirtylock);
+	if (bdirtywait) {
+		bdirtywait = 0;
+		wakeup(&bdirtywait);
 	}
+	mtx_unlock(&bdirtylock);
+}
+
+/*
+ *	bdirtysub:
+ *
+ *	Decrement the numdirtybuffers count by one and wakeup any
+ *	threads blocked in bwillwrite().
+ */
+static void
+bdirtysub(void)
+{
+
+	if (atomic_fetchadd_int(&numdirtybuffers, -1) ==
+	    (lodirtybuffers + hidirtybuffers) / 2)
+		bdirtywakeup();
+}
+
+/*
+ *	bdirtyadd:
+ *
+ *	Increment the numdirtybuffers count by one and wakeup the buf 
+ *	daemon if needed.
+ */
+static void
+bdirtyadd(void)
+{
+
+	/*
+	 * Only do the wakeup once as we cross the boundary.  The
+	 * buf daemon will keep running until the condition clears.
+	 */
+	if (atomic_fetchadd_int(&numdirtybuffers, 1) ==
+	    (lodirtybuffers + hidirtybuffers) / 2)
+		bd_wakeup();
 }
 
 /*
@@ -366,44 +446,67 @@ bufspacewakeup(void)
 }
 
 /*
- * runningbufwakeup() - in-progress I/O accounting.
+ *	runningwakeup:
  *
+ *	Wake up processes that are waiting on asynchronous writes to fall
+ *	below lorunningspace.
+ */
+static void
+runningwakeup(void)
+{
+
+	mtx_lock(&rbreqlock);
+	if (runningbufreq) {
+		runningbufreq = 0;
+		wakeup(&runningbufreq);
+	}
+	mtx_unlock(&rbreqlock);
+}
+
+/*
+ *	runningbufwakeup:
+ *
+ *	Decrement the outstanding write count according.
  */
 void
 runningbufwakeup(struct buf *bp)
 {
+	long space, bspace;
 
-	if (bp->b_runningbufspace) {
-		atomic_subtract_long(&runningbufspace, bp->b_runningbufspace);
-		bp->b_runningbufspace = 0;
-		mtx_lock(&rbreqlock);
-		if (runningbufreq && runningbufspace <= lorunningspace) {
-			runningbufreq = 0;
-			wakeup(&runningbufreq);
-		}
-		mtx_unlock(&rbreqlock);
-	}
+	bspace = bp->b_runningbufspace;
+	if (bspace == 0)
+		return;
+	space = atomic_fetchadd_long(&runningbufspace, -bspace);
+	KASSERT(space >= bspace, ("runningbufspace underflow %ld %ld",
+	    space, bspace));
+	bp->b_runningbufspace = 0;
+	/*
+	 * Only acquire the lock and wakeup on the transition from exceeding
+	 * the threshold to falling below it.
+	 */
+	if (space < lorunningspace)
+		return;
+	if (space - bspace > lorunningspace)
+		return;
+	runningwakeup();
 }
 
 /*
- *	bufcountwakeup:
+ *	bufcountadd:
  *
  *	Called when a buffer has been added to one of the free queues to
  *	account for the buffer and to wakeup anyone waiting for free buffers.
  *	This typically occurs when large amounts of metadata are being handled
  *	by the buffer cache ( else buffer space runs out first, usually ).
  */
-
 static __inline void
-bufcountwakeup(struct buf *bp) 
+bufcountadd(struct buf *bp)
 {
 	int old;
 
-	KASSERT((bp->b_vflags & BV_INFREECNT) == 0,
+	KASSERT((bp->b_flags & B_INFREECNT) == 0,
 	    ("buf %p already counted as free", bp));
-	if (bp->b_bufobj != NULL)
-		mtx_assert(BO_MTX(bp->b_bufobj), MA_OWNED);
-	bp->b_vflags |= BV_INFREECNT;
+	bp->b_flags |= B_INFREECNT;
 	old = atomic_fetchadd_int(&numfreebuffers, 1);
 	KASSERT(old >= 0 && old < nbuf,
 	    ("numfreebuffers climbed to %d", old + 1));
@@ -418,15 +521,36 @@ bufcountwakeup(struct buf *bp)
 }
 
 /*
+ *	bufcountsub:
+ *
+ *	Decrement the numfreebuffers count as needed.
+ */
+static void
+bufcountsub(struct buf *bp)
+{
+	int old;
+
+	/*
+	 * Fixup numfreebuffers count.  If the buffer is invalid or not
+	 * delayed-write, the buffer was free and we must decrement
+	 * numfreebuffers.
+	 */
+	if ((bp->b_flags & B_INVAL) || (bp->b_flags & B_DELWRI) == 0) {
+		KASSERT((bp->b_flags & B_INFREECNT) != 0,
+		    ("buf %p not counted in numfreebuffers", bp));
+		bp->b_flags &= ~B_INFREECNT;
+		old = atomic_fetchadd_int(&numfreebuffers, -1);
+		KASSERT(old > 0, ("numfreebuffers dropped to %d", old - 1));
+	}
+}
+
+/*
  *	waitrunningbufspace()
  *
  *	runningbufspace is a measure of the amount of I/O currently
  *	running.  This routine is used in async-write situations to
  *	prevent creating huge backups of pending writes to a device.
  *	Only asynchronous writes are governed by this function.
- *
- *	Reads will adjust runningbufspace, but will not block based on it.
- *	The read load has a side effect of reducing the allowed write load.
  *
  *	This does NOT turn an async write into a sync write.  It waits  
  *	for earlier writes to complete and generally returns before the
@@ -438,7 +562,7 @@ waitrunningbufspace(void)
 
 	mtx_lock(&rbreqlock);
 	while (runningbufspace > hirunningspace) {
-		++runningbufreq;
+		runningbufreq = 1;
 		msleep(&runningbufreq, &rbreqlock, PVM, "wdrain", 0);
 	}
 	mtx_unlock(&rbreqlock);
@@ -459,7 +583,7 @@ vfs_buf_test_cache(struct buf *bp,
 		  vm_page_t m)
 {
 
-	VM_OBJECT_LOCK_ASSERT(m->object, MA_OWNED);
+	VM_OBJECT_ASSERT_LOCKED(m->object);
 	if (bp->b_flags & B_CACHE) {
 		int base = (foff + off) & PAGE_MASK;
 		if (vm_page_is_valid(m, base, size) == 0)
@@ -468,13 +592,12 @@ vfs_buf_test_cache(struct buf *bp,
 }
 
 /* Wake up the buffer daemon if necessary */
-static __inline
-void
-bd_wakeup(int dirtybuflevel)
+static __inline void
+bd_wakeup(void)
 {
 
 	mtx_lock(&bdlock);
-	if (bd_request == 0 && numdirtybuffers >= dirtybuflevel) {
+	if (bd_request == 0) {
 		bd_request = 1;
 		wakeup(&bd_request);
 	}
@@ -484,7 +607,6 @@ bd_wakeup(int dirtybuflevel)
 /*
  * bd_speedup - speedup the buffer cache flushing code
  */
-
 void
 bd_speedup(void)
 {
@@ -501,6 +623,12 @@ bd_speedup(void)
 	mtx_unlock(&bdlock);
 }
 
+#ifdef __i386__
+#define	TRANSIENT_DENOM	5
+#else
+#define	TRANSIENT_DENOM 10
+#endif
+
 /*
  * Calculating buffer cache scaling values and reserve space for buffer
  * headers.  This is called during low level kernel initialization and
@@ -511,7 +639,7 @@ caddr_t
 kern_vfs_bio_buffer_alloc(caddr_t v, long physmem_est)
 {
 	int tuned_nbuf;
-	long maxbuf;
+	long maxbuf, maxbuf_sz, buf_sz,	biotmap_sz;
 
 	/*
 	 * physmem_est is in pages.  Convert it to kilobytes (assumes
@@ -537,7 +665,8 @@ kern_vfs_bio_buffer_alloc(caddr_t v, long physmem_est)
 			nbuf += min((physmem_est - 4096) / factor,
 			    65536 / factor);
 		if (physmem_est > 65536)
-			nbuf += (physmem_est - 65536) * 2 / (factor * 5);
+			nbuf += min((physmem_est - 65536) * 2 / (factor * 5),
+			    32 * 1024 * 1024 / (factor * 5));
 
 		if (maxbcache && nbuf > maxbcache / BKVASIZE)
 			nbuf = maxbcache / BKVASIZE;
@@ -552,6 +681,53 @@ kern_vfs_bio_buffer_alloc(caddr_t v, long physmem_est)
 			printf("Warning: nbufs lowered from %d to %ld\n", nbuf,
 			    maxbuf);
 		nbuf = maxbuf;
+	}
+
+	/*
+	 * Ideal allocation size for the transient bio submap if 10%
+	 * of the maximal space buffer map.  This roughly corresponds
+	 * to the amount of the buffer mapped for typical UFS load.
+	 *
+	 * Clip the buffer map to reserve space for the transient
+	 * BIOs, if its extent is bigger than 90% (80% on i386) of the
+	 * maximum buffer map extent on the platform.
+	 *
+	 * The fall-back to the maxbuf in case of maxbcache unset,
+	 * allows to not trim the buffer KVA for the architectures
+	 * with ample KVA space.
+	 */
+	if (bio_transient_maxcnt == 0 && unmapped_buf_allowed) {
+		maxbuf_sz = maxbcache != 0 ? maxbcache : maxbuf * BKVASIZE;
+		buf_sz = (long)nbuf * BKVASIZE;
+		if (buf_sz < maxbuf_sz / TRANSIENT_DENOM *
+		    (TRANSIENT_DENOM - 1)) {
+			/*
+			 * There is more KVA than memory.  Do not
+			 * adjust buffer map size, and assign the rest
+			 * of maxbuf to transient map.
+			 */
+			biotmap_sz = maxbuf_sz - buf_sz;
+		} else {
+			/*
+			 * Buffer map spans all KVA we could afford on
+			 * this platform.  Give 10% (20% on i386) of
+			 * the buffer map to the transient bio map.
+			 */
+			biotmap_sz = buf_sz / TRANSIENT_DENOM;
+			buf_sz -= biotmap_sz;
+		}
+		if (biotmap_sz / INT_MAX > MAXPHYS)
+			bio_transient_maxcnt = INT_MAX;
+		else
+			bio_transient_maxcnt = biotmap_sz / MAXPHYS;
+		/*
+		 * Artifically limit to 1024 simultaneous in-flight I/Os
+		 * using the transient mapping.
+		 */
+		if (bio_transient_maxcnt > 1024)
+			bio_transient_maxcnt = 1024;
+		if (tuned_nbuf)
+			nbuf = buf_sz / BKVASIZE;
 	}
 
 	/*
@@ -585,10 +761,12 @@ bufinit(void)
 	struct buf *bp;
 	int i;
 
-	mtx_init(&bqlock, "buf queue lock", NULL, MTX_DEF);
+	mtx_init(&bqclean, "bufq clean lock", NULL, MTX_DEF);
+	mtx_init(&bqdirty, "bufq dirty lock", NULL, MTX_DEF);
 	mtx_init(&rbreqlock, "runningbufspace lock", NULL, MTX_DEF);
 	mtx_init(&nblock, "needsbuffer lock", NULL, MTX_DEF);
 	mtx_init(&bdlock, "buffer daemon lock", NULL, MTX_DEF);
+	mtx_init(&bdirtylock, "dirty buf lock", NULL, MTX_DEF);
 
 	/* next, make a null set of free lists */
 	for (i = 0; i < BUFFER_QUEUES; i++)
@@ -598,15 +776,17 @@ bufinit(void)
 	for (i = 0; i < nbuf; i++) {
 		bp = &buf[i];
 		bzero(bp, sizeof *bp);
-		bp->b_flags = B_INVAL;	/* we're just an empty header */
+		bp->b_flags = B_INVAL | B_INFREECNT;
 		bp->b_rcred = NOCRED;
 		bp->b_wcred = NOCRED;
 		bp->b_qindex = QUEUE_EMPTY;
-		bp->b_vflags = BV_INFREECNT;	/* buf is counted as free */
 		bp->b_xflags = 0;
 		LIST_INIT(&bp->b_dep);
 		BUF_LOCKINIT(bp);
 		TAILQ_INSERT_TAIL(&bufqueues[QUEUE_EMPTY], bp, b_freelist);
+#ifdef INVARIANTS
+		bq_len[QUEUE_EMPTY]++;
+#endif
 	}
 
 	/*
@@ -675,6 +855,55 @@ bufinit(void)
 
 	bogus_page = vm_page_alloc(NULL, 0, VM_ALLOC_NOOBJ |
 	    VM_ALLOC_NORMAL | VM_ALLOC_WIRED);
+	unmapped_buf = (caddr_t)kva_alloc(MAXPHYS);
+}
+
+#ifdef INVARIANTS
+static inline void
+vfs_buf_check_mapped(struct buf *bp)
+{
+
+	KASSERT((bp->b_flags & B_UNMAPPED) == 0,
+	    ("mapped buf %p %x", bp, bp->b_flags));
+	KASSERT(bp->b_kvabase != unmapped_buf,
+	    ("mapped buf: b_kvabase was not updated %p", bp));
+	KASSERT(bp->b_data != unmapped_buf,
+	    ("mapped buf: b_data was not updated %p", bp));
+}
+
+static inline void
+vfs_buf_check_unmapped(struct buf *bp)
+{
+
+	KASSERT((bp->b_flags & B_UNMAPPED) == B_UNMAPPED,
+	    ("unmapped buf %p %x", bp, bp->b_flags));
+	KASSERT(bp->b_kvabase == unmapped_buf,
+	    ("unmapped buf: corrupted b_kvabase %p", bp));
+	KASSERT(bp->b_data == unmapped_buf,
+	    ("unmapped buf: corrupted b_data %p", bp));
+}
+
+#define	BUF_CHECK_MAPPED(bp) vfs_buf_check_mapped(bp)
+#define	BUF_CHECK_UNMAPPED(bp) vfs_buf_check_unmapped(bp)
+#else
+#define	BUF_CHECK_MAPPED(bp) do {} while (0)
+#define	BUF_CHECK_UNMAPPED(bp) do {} while (0)
+#endif
+
+static void
+bpmap_qenter(struct buf *bp)
+{
+
+	BUF_CHECK_MAPPED(bp);
+
+	/*
+	 * bp->b_data is relative to bp->b_offset, but
+	 * bp->b_offset may be offset into the first page.
+	 */
+	bp->b_data = (caddr_t)trunc_page((vm_offset_t)bp->b_data);
+	pmap_qenter((vm_offset_t)bp->b_data, bp->b_pages, bp->b_npages);
+	bp->b_data = (caddr_t)((vm_offset_t)bp->b_data |
+	    (vm_offset_t)(bp->b_offset & PAGE_MASK));
 }
 
 /*
@@ -686,45 +915,93 @@ static void
 bfreekva(struct buf *bp)
 {
 
-	if (bp->b_kvasize) {
-		atomic_add_int(&buffreekvacnt, 1);
-		atomic_subtract_long(&bufspace, bp->b_kvasize);
-		vm_map_remove(buffer_map, (vm_offset_t) bp->b_kvabase,
-		    (vm_offset_t) bp->b_kvabase + bp->b_kvasize);
-		bp->b_kvasize = 0;
-		bufspacewakeup();
+	if (bp->b_kvasize == 0)
+		return;
+
+	atomic_add_int(&buffreekvacnt, 1);
+	atomic_subtract_long(&bufspace, bp->b_kvasize);
+	if ((bp->b_flags & B_UNMAPPED) == 0) {
+		BUF_CHECK_MAPPED(bp);
+		vmem_free(buffer_arena, (vm_offset_t)bp->b_kvabase,
+		    bp->b_kvasize);
+	} else {
+		BUF_CHECK_UNMAPPED(bp);
+		if ((bp->b_flags & B_KVAALLOC) != 0) {
+			vmem_free(buffer_arena, (vm_offset_t)bp->b_kvaalloc,
+			    bp->b_kvasize);
+		}
+		atomic_subtract_long(&unmapped_bufspace, bp->b_kvasize);
+		bp->b_flags &= ~(B_UNMAPPED | B_KVAALLOC);
 	}
+	bp->b_kvasize = 0;
+	bufspacewakeup();
+}
+
+/*
+ *	binsfree:
+ *
+ *	Insert the buffer into the appropriate free list.
+ */
+static void
+binsfree(struct buf *bp, int qindex)
+{
+	struct mtx *olock, *nlock;
+
+	BUF_ASSERT_XLOCKED(bp);
+
+	olock = bqlock(bp->b_qindex);
+	nlock = bqlock(qindex);
+	mtx_lock(olock);
+	/* Handle delayed bremfree() processing. */
+	if (bp->b_flags & B_REMFREE)
+		bremfreel(bp);
+
+	if (bp->b_qindex != QUEUE_NONE)
+		panic("binsfree: free buffer onto another queue???");
+
+	bp->b_qindex = qindex;
+	if (olock != nlock) {
+		mtx_unlock(olock);
+		mtx_lock(nlock);
+	}
+	if (bp->b_flags & B_AGE)
+		TAILQ_INSERT_HEAD(&bufqueues[bp->b_qindex], bp, b_freelist);
+	else
+		TAILQ_INSERT_TAIL(&bufqueues[bp->b_qindex], bp, b_freelist);
+#ifdef INVARIANTS
+	bq_len[bp->b_qindex]++;
+#endif
+	mtx_unlock(nlock);
+
+	/*
+	 * Something we can maybe free or reuse.
+	 */
+	if (bp->b_bufsize && !(bp->b_flags & B_DELWRI))
+		bufspacewakeup();
+
+	if ((bp->b_flags & B_INVAL) || !(bp->b_flags & B_DELWRI))
+		bufcountadd(bp);
 }
 
 /*
  *	bremfree:
  *
- *	Mark the buffer for removal from the appropriate free list in brelse.
+ *	Mark the buffer for removal from the appropriate free list.
  *	
  */
 void
 bremfree(struct buf *bp)
 {
-	int old;
 
 	CTR3(KTR_BUF, "bremfree(%p) vp %p flags %X", bp, bp->b_vp, bp->b_flags);
 	KASSERT((bp->b_flags & B_REMFREE) == 0,
 	    ("bremfree: buffer %p already marked for delayed removal.", bp));
 	KASSERT(bp->b_qindex != QUEUE_NONE,
 	    ("bremfree: buffer %p not on a queue.", bp));
-	BUF_ASSERT_HELD(bp);
+	BUF_ASSERT_XLOCKED(bp);
 
 	bp->b_flags |= B_REMFREE;
-	/* Fixup numfreebuffers count.  */
-	if ((bp->b_flags & B_INVAL) || (bp->b_flags & B_DELWRI) == 0) {
-		KASSERT((bp->b_vflags & BV_INFREECNT) != 0,
-		    ("buf %p not counted in numfreebuffers", bp));
-		if (bp->b_bufobj != NULL)
-			mtx_assert(BO_MTX(bp->b_bufobj), MA_OWNED);
-		bp->b_vflags &= ~BV_INFREECNT;
-		old = atomic_fetchadd_int(&numfreebuffers, -1);
-		KASSERT(old > 0, ("numfreebuffers dropped to %d", old - 1));
-	}
+	bufcountsub(bp);
 }
 
 /*
@@ -736,30 +1013,37 @@ bremfree(struct buf *bp)
 void
 bremfreef(struct buf *bp)
 {
-	mtx_lock(&bqlock);
+	struct mtx *qlock;
+
+	qlock = bqlock(bp->b_qindex);
+	mtx_lock(qlock);
 	bremfreel(bp);
-	mtx_unlock(&bqlock);
+	mtx_unlock(qlock);
 }
 
 /*
  *	bremfreel:
  *
  *	Removes a buffer from the free list, must be called with the
- *	bqlock held.
+ *	correct qlock held.
  */
 static void
 bremfreel(struct buf *bp)
 {
-	int old;
 
 	CTR3(KTR_BUF, "bremfreel(%p) vp %p flags %X",
 	    bp, bp->b_vp, bp->b_flags);
 	KASSERT(bp->b_qindex != QUEUE_NONE,
 	    ("bremfreel: buffer %p not on a queue.", bp));
-	BUF_ASSERT_HELD(bp);
-	mtx_assert(&bqlock, MA_OWNED);
+	BUF_ASSERT_XLOCKED(bp);
+	mtx_assert(bqlock(bp->b_qindex), MA_OWNED);
 
 	TAILQ_REMOVE(&bufqueues[bp->b_qindex], bp, b_freelist);
+#ifdef INVARIANTS
+	KASSERT(bq_len[bp->b_qindex] >= 1, ("queue %d underflow",
+	    bp->b_qindex));
+	bq_len[bp->b_qindex]--;
+#endif
 	bp->b_qindex = QUEUE_NONE;
 	/*
 	 * If this was a delayed bremfree() we only need to remove the buffer
@@ -769,31 +1053,7 @@ bremfreel(struct buf *bp)
 		bp->b_flags &= ~B_REMFREE;
 		return;
 	}
-	/*
-	 * Fixup numfreebuffers count.  If the buffer is invalid or not
-	 * delayed-write, the buffer was free and we must decrement
-	 * numfreebuffers.
-	 */
-	if ((bp->b_flags & B_INVAL) || (bp->b_flags & B_DELWRI) == 0) {
-		KASSERT((bp->b_vflags & BV_INFREECNT) != 0,
-		    ("buf %p not counted in numfreebuffers", bp));
-		if (bp->b_bufobj != NULL)
-			mtx_assert(BO_MTX(bp->b_bufobj), MA_OWNED);
-		bp->b_vflags &= ~BV_INFREECNT;
-		old = atomic_fetchadd_int(&numfreebuffers, -1);
-		KASSERT(old > 0, ("numfreebuffers dropped to %d", old - 1));
-	}
-}
-
-/*
- * Get a buffer with the specified data.
- */
-int
-bread(struct vnode * vp, daddr_t blkno, int size, struct ucred * cred,
-    struct buf **bpp)
-{
-
-	return (breadn_flags(vp, blkno, size, 0, 0, 0, cred, 0, bpp));
+	bufcountsub(bp);
 }
 
 /*
@@ -833,21 +1093,7 @@ breada(struct vnode * vp, daddr_t * rablkno, int * rabsize,
 }
 
 /*
- * Operates like bread, but also starts asynchronous I/O on
- * read-ahead blocks.
- */
-int
-breadn(struct vnode * vp, daddr_t blkno, int size,
-    daddr_t * rablkno, int *rabsize,
-    int cnt, struct ucred * cred, struct buf **bpp)
-{
-
-	return (breadn_flags(vp, blkno, size, rablkno, rabsize, cnt,
-		    cred, 0, bpp));
-}
-
-/*
- * Entry point for bread() and breadn().
+ * Entry point for bread() and breadn() via #defines in sys/buf.h.
  *
  * Get a buffer with the specified data.  Look in the cache first.  We
  * must clear BIO_ERROR and B_INVAL prior to initiating I/O.  If B_CACHE
@@ -855,9 +1101,8 @@ breadn(struct vnode * vp, daddr_t blkno, int size,
  * getblk(). Also starts asynchronous I/O on read-ahead blocks.
  */
 int
-breadn_flags(struct vnode * vp, daddr_t blkno, int size,
-    daddr_t * rablkno, int *rabsize, int cnt,
-    struct ucred * cred, int flags, struct buf **bpp)
+breadn_flags(struct vnode *vp, daddr_t blkno, int size, daddr_t *rablkno,
+    int *rabsize, int cnt, struct ucred *cred, int flags, struct buf **bpp)
 {
 	struct buf *bp;
 	int rv = 0, readwait = 0;
@@ -909,6 +1154,7 @@ bufwrite(struct buf *bp)
 {
 	int oldflags;
 	struct vnode *vp;
+	long space;
 	int vp_md;
 
 	CTR3(KTR_BUF, "bufwrite(%p) vp %p flags %X", bp, bp->b_vp, bp->b_flags);
@@ -956,7 +1202,7 @@ bufwrite(struct buf *bp)
 	 * Normal bwrites pipeline writes
 	 */
 	bp->b_runningbufspace = bp->b_bufsize;
-	atomic_add_long(&runningbufspace, bp->b_runningbufspace);
+	space = atomic_fetchadd_long(&runningbufspace, bp->b_runningbufspace);
 
 	if (!TD_IS_IDLETHREAD(curthread))
 		curthread->td_ru.ru_oublock++;
@@ -969,7 +1215,7 @@ bufwrite(struct buf *bp)
 		int rtval = bufwait(bp);
 		brelse(bp);
 		return (rtval);
-	} else {
+	} else if (space > hirunningspace) {
 		/*
 		 * don't allow the async write to saturate the I/O
 		 * system.  We will not deadlock here because
@@ -1104,13 +1350,6 @@ bdwrite(struct buf *bp)
 	bqrelse(bp);
 
 	/*
-	 * Wakeup the buffer flushing daemon if we have a lot of dirty
-	 * buffers (midpoint between our recovery point and our stall
-	 * point).
-	 */
-	bd_wakeup((lodirtybuffers + hidirtybuffers) / 2);
-
-	/*
 	 * note: we cannot initiate I/O from a bdwrite even if we wanted to,
 	 * due to the softdep code.
 	 */
@@ -1150,8 +1389,7 @@ bdirty(struct buf *bp)
 	if ((bp->b_flags & B_DELWRI) == 0) {
 		bp->b_flags |= /* XXX B_DONE | */ B_DELWRI;
 		reassignbuf(bp);
-		atomic_add_int(&numdirtybuffers, 1);
-		bd_wakeup((lodirtybuffers + hidirtybuffers) / 2);
+		bdirtyadd();
 	}
 }
 
@@ -1179,8 +1417,7 @@ bundirty(struct buf *bp)
 	if (bp->b_flags & B_DELWRI) {
 		bp->b_flags &= ~B_DELWRI;
 		reassignbuf(bp);
-		atomic_subtract_int(&numdirtybuffers, 1);
-		numdirtywakeup(lodirtybuffers);
+		bdirtysub();
 	}
 	/*
 	 * Since it is now being written, we can clear its deferred write flag.
@@ -1248,20 +1485,18 @@ bbarrierwrite(struct buf *bp)
  *	of any vnodes we attempt to avoid the situation where a locked vnode
  *	prevents the various system daemons from flushing related buffers.
  */
-
 void
 bwillwrite(void)
 {
 
 	if (numdirtybuffers >= hidirtybuffers) {
-		mtx_lock(&nblock);
+		mtx_lock(&bdirtylock);
 		while (numdirtybuffers >= hidirtybuffers) {
-			bd_wakeup(1);
-			needsbuffer |= VFS_BIO_NEED_DIRTYFLUSH;
-			msleep(&needsbuffer, &nblock,
-			    (PRIBIO + 4), "flswai", 0);
+			bdirtywait = 1;
+			msleep(&bdirtywait, &bdirtylock, (PRIBIO + 4),
+			    "flswai", 0);
 		}
-		mtx_unlock(&nblock);
+		mtx_unlock(&bdirtylock);
 	}
 }
 
@@ -1294,6 +1529,8 @@ buf_vm_page_count_severe(void)
 void
 brelse(struct buf *bp)
 {
+	int qindex;
+
 	CTR3(KTR_BUF, "brelse(%p) vp %p flags %X",
 	    bp, bp->b_vp, bp->b_flags);
 	KASSERT(!(bp->b_flags & (B_CLUSTER|B_PAGING)),
@@ -1332,10 +1569,8 @@ brelse(struct buf *bp)
 		bp->b_flags |= B_INVAL;
 		if (!LIST_EMPTY(&bp->b_dep))
 			buf_deallocate(bp);
-		if (bp->b_flags & B_DELWRI) {
-			atomic_subtract_int(&numdirtybuffers, 1);
-			numdirtywakeup(lodirtybuffers);
-		}
+		if (bp->b_flags & B_DELWRI)
+			bdirtysub();
 		bp->b_flags &= ~(B_DELWRI | B_CACHE);
 		if ((bp->b_flags & B_VMIO) == 0) {
 			if (bp->b_bufsize)
@@ -1361,15 +1596,10 @@ brelse(struct buf *bp)
 		bp->b_flags &= ~B_RELBUF;
 	else if (buf_vm_page_count_severe()) {
 		/*
-		 * The locking of the BO_LOCK is not necessary since
-		 * BKGRDINPROG cannot be set while we hold the buf
-		 * lock, it can only be cleared if it is already
-		 * pending.
+		 * BKGRDINPROG can only be set with the buf and bufobj
+		 * locks both held.  We tolerate a race to clear it here.
 		 */
-		if (bp->b_vp) {
-			if (!(bp->b_vflags & BV_BKGRDINPROG))
-				bp->b_flags |= B_RELBUF;
-		} else
+		if (!(bp->b_vflags & BV_BKGRDINPROG))
 			bp->b_flags |= B_RELBUF;
 	}
 
@@ -1419,7 +1649,6 @@ brelse(struct buf *bp)
 		 */
 		resid = bp->b_bufsize;
 		foff = bp->b_offset;
-		VM_OBJECT_LOCK(obj);
 		for (i = 0; i < bp->b_npages; i++) {
 			int had_bogus = 0;
 
@@ -1433,6 +1662,7 @@ brelse(struct buf *bp)
 				poff = OFF_TO_IDX(bp->b_offset);
 				had_bogus = 1;
 
+				VM_OBJECT_RLOCK(obj);
 				for (j = i; j < bp->b_npages; j++) {
 					vm_page_t mtmp;
 					mtmp = bp->b_pages[j];
@@ -1444,8 +1674,10 @@ brelse(struct buf *bp)
 						bp->b_pages[j] = mtmp;
 					}
 				}
+				VM_OBJECT_RUNLOCK(obj);
 
-				if ((bp->b_flags & B_INVAL) == 0) {
+				if ((bp->b_flags & (B_INVAL | B_UNMAPPED)) == 0) {
+					BUF_CHECK_MAPPED(bp);
 					pmap_qenter(
 					    trunc_page((vm_offset_t)bp->b_data),
 					    bp->b_pages, bp->b_npages);
@@ -1460,14 +1692,22 @@ brelse(struct buf *bp)
 					(PAGE_SIZE - poffset) : resid;
 
 				KASSERT(presid >= 0, ("brelse: extra page"));
-				vm_page_set_invalid(m, poffset, presid);
+				VM_OBJECT_WLOCK(obj);
+				while (vm_page_xbusied(m)) {
+					vm_page_lock(m);
+					VM_OBJECT_WUNLOCK(obj);
+					vm_page_busy_sleep(m, "mbncsh");
+					VM_OBJECT_WLOCK(obj);
+				}
+				if (pmap_page_wired_mappings(m) == 0)
+					vm_page_set_invalid(m, poffset, presid);
+				VM_OBJECT_WUNLOCK(obj);
 				if (had_bogus)
 					printf("avoided corruption bug in bogus_page/brelse code\n");
 			}
 			resid -= PAGE_SIZE - (foff & PAGE_MASK);
 			foff = (foff + PAGE_SIZE) & ~(off_t)PAGE_MASK;
 		}
-		VM_OBJECT_UNLOCK(obj);
 		if (bp->b_flags & (B_INVAL | B_RELBUF))
 			vfs_vmio_release(bp);
 
@@ -1484,22 +1724,6 @@ brelse(struct buf *bp)
 			brelvp(bp);
 	}
 			
-	/* enqueue */
-	mtx_lock(&bqlock);
-	/* Handle delayed bremfree() processing. */
-	if (bp->b_flags & B_REMFREE) {
-		struct bufobj *bo;
-
-		bo = bp->b_bufobj;
-		if (bo != NULL)
-			BO_LOCK(bo);
-		bremfreel(bp);
-		if (bo != NULL)
-			BO_UNLOCK(bo);
-	}
-	if (bp->b_qindex != QUEUE_NONE)
-		panic("brelse: free buffer onto another queue???");
-
 	/*
 	 * If the buffer has junk contents signal it and eventually
 	 * clean up B_DELWRI and diassociate the vnode so that gbincore()
@@ -1520,59 +1744,26 @@ brelse(struct buf *bp)
 		bp->b_xflags &= ~(BX_BKGRDWRITE | BX_ALTDATA);
 		if (bp->b_vflags & BV_BKGRDINPROG)
 			panic("losing buffer 1");
-		if (bp->b_kvasize) {
-			bp->b_qindex = QUEUE_EMPTYKVA;
-		} else {
-			bp->b_qindex = QUEUE_EMPTY;
-		}
-		TAILQ_INSERT_HEAD(&bufqueues[bp->b_qindex], bp, b_freelist);
+		if (bp->b_kvasize)
+			qindex = QUEUE_EMPTYKVA;
+		else
+			qindex = QUEUE_EMPTY;
+		bp->b_flags |= B_AGE;
 	/* buffers with junk contents */
 	} else if (bp->b_flags & (B_INVAL | B_NOCACHE | B_RELBUF) ||
 	    (bp->b_ioflags & BIO_ERROR)) {
 		bp->b_xflags &= ~(BX_BKGRDWRITE | BX_ALTDATA);
 		if (bp->b_vflags & BV_BKGRDINPROG)
 			panic("losing buffer 2");
-		bp->b_qindex = QUEUE_CLEAN;
-		TAILQ_INSERT_HEAD(&bufqueues[QUEUE_CLEAN], bp, b_freelist);
+		qindex = QUEUE_CLEAN;
+		bp->b_flags |= B_AGE;
 	/* remaining buffers */
-	} else {
-		if ((bp->b_flags & (B_DELWRI|B_NEEDSGIANT)) ==
-		    (B_DELWRI|B_NEEDSGIANT))
-			bp->b_qindex = QUEUE_DIRTY_GIANT;
-		else if (bp->b_flags & B_DELWRI)
-			bp->b_qindex = QUEUE_DIRTY;
-		else
-			bp->b_qindex = QUEUE_CLEAN;
-		if (bp->b_flags & B_AGE)
-			TAILQ_INSERT_HEAD(&bufqueues[bp->b_qindex], bp, b_freelist);
-		else
-			TAILQ_INSERT_TAIL(&bufqueues[bp->b_qindex], bp, b_freelist);
-	}
-	mtx_unlock(&bqlock);
+	} else if (bp->b_flags & B_DELWRI)
+		qindex = QUEUE_DIRTY;
+	else
+		qindex = QUEUE_CLEAN;
 
-	/*
-	 * Fixup numfreebuffers count.  The bp is on an appropriate queue
-	 * unless locked.  We then bump numfreebuffers if it is not B_DELWRI.
-	 * We've already handled the B_INVAL case ( B_DELWRI will be clear
-	 * if B_INVAL is set ).
-	 */
-
-	if (!(bp->b_flags & B_DELWRI)) {
-		struct bufobj *bo;
-
-		bo = bp->b_bufobj;
-		if (bo != NULL)
-			BO_LOCK(bo);
-		bufcountwakeup(bp);
-		if (bo != NULL)
-			BO_UNLOCK(bo);
-	}
-
-	/*
-	 * Something we can maybe free or reuse
-	 */
-	if (bp->b_bufsize || bp->b_kvasize)
-		bufspacewakeup();
+	binsfree(bp, qindex);
 
 	bp->b_flags &= ~(B_ASYNC | B_NOCACHE | B_AGE | B_RELBUF | B_DIRECT);
 	if ((bp->b_flags & B_DELWRI) == 0 && (bp->b_xflags & BX_VNDIRTY))
@@ -1595,7 +1786,7 @@ brelse(struct buf *bp)
 void
 bqrelse(struct buf *bp)
 {
-	struct bufobj *bo;
+	int qindex;
 
 	CTR3(KTR_BUF, "bqrelse(%p) vp %p flags %X", bp, bp->b_vp, bp->b_flags);
 	KASSERT(!(bp->b_flags & (B_CLUSTER|B_PAGING)),
@@ -1606,83 +1797,40 @@ bqrelse(struct buf *bp)
 		BUF_UNLOCK(bp);
 		return;
 	}
+	bp->b_flags &= ~(B_ASYNC | B_NOCACHE | B_AGE | B_RELBUF);
 
-	bo = bp->b_bufobj;
 	if (bp->b_flags & B_MANAGED) {
-		if (bp->b_flags & B_REMFREE) {
-			mtx_lock(&bqlock);
-			if (bo != NULL)
-				BO_LOCK(bo);
-			bremfreel(bp);
-			if (bo != NULL)
-				BO_UNLOCK(bo);
-			mtx_unlock(&bqlock);
-		}
-		bp->b_flags &= ~(B_ASYNC | B_NOCACHE | B_AGE | B_RELBUF);
-		BUF_UNLOCK(bp);
-		return;
+		if (bp->b_flags & B_REMFREE)
+			bremfreef(bp);
+		goto out;
 	}
 
-	mtx_lock(&bqlock);
-	/* Handle delayed bremfree() processing. */
-	if (bp->b_flags & B_REMFREE) {
-		if (bo != NULL)
-			BO_LOCK(bo);
-		bremfreel(bp);
-		if (bo != NULL)
-			BO_UNLOCK(bo);
-	}
-	if (bp->b_qindex != QUEUE_NONE)
-		panic("bqrelse: free buffer onto another queue???");
 	/* buffers with stale but valid contents */
 	if (bp->b_flags & B_DELWRI) {
-		if (bp->b_flags & B_NEEDSGIANT)
-			bp->b_qindex = QUEUE_DIRTY_GIANT;
-		else
-			bp->b_qindex = QUEUE_DIRTY;
-		TAILQ_INSERT_TAIL(&bufqueues[bp->b_qindex], bp, b_freelist);
+		qindex = QUEUE_DIRTY;
 	} else {
+		if ((bp->b_flags & B_DELWRI) == 0 &&
+		    (bp->b_xflags & BX_VNDIRTY))
+			panic("bqrelse: not dirty");
 		/*
-		 * The locking of the BO_LOCK for checking of the
-		 * BV_BKGRDINPROG is not necessary since the
-		 * BV_BKGRDINPROG cannot be set while we hold the buf
-		 * lock, it can only be cleared if it is already
-		 * pending.
+		 * BKGRDINPROG can only be set with the buf and bufobj
+		 * locks both held.  We tolerate a race to clear it here.
 		 */
-		if (!buf_vm_page_count_severe() || (bp->b_vflags & BV_BKGRDINPROG)) {
-			bp->b_qindex = QUEUE_CLEAN;
-			TAILQ_INSERT_TAIL(&bufqueues[QUEUE_CLEAN], bp,
-			    b_freelist);
-		} else {
+		if (buf_vm_page_count_severe() &&
+		    (bp->b_vflags & BV_BKGRDINPROG) == 0) {
 			/*
 			 * We are too low on memory, we have to try to free
 			 * the buffer (most importantly: the wired pages
 			 * making up its backing store) *now*.
 			 */
-			mtx_unlock(&bqlock);
 			brelse(bp);
 			return;
 		}
+		qindex = QUEUE_CLEAN;
 	}
-	mtx_unlock(&bqlock);
+	binsfree(bp, qindex);
 
-	if ((bp->b_flags & B_INVAL) || !(bp->b_flags & B_DELWRI)) {
-		if (bo != NULL)
-			BO_LOCK(bo);
-		bufcountwakeup(bp);
-		if (bo != NULL)
-			BO_UNLOCK(bo);
-	}
-
-	/*
-	 * Something we can maybe free or reuse.
-	 */
-	if (bp->b_bufsize && !(bp->b_flags & B_DELWRI))
-		bufspacewakeup();
-
-	bp->b_flags &= ~(B_ASYNC | B_NOCACHE | B_AGE | B_RELBUF);
-	if ((bp->b_flags & B_DELWRI) == 0 && (bp->b_xflags & BX_VNDIRTY))
-		panic("bqrelse: not dirty");
+out:
 	/* unlock */
 	BUF_UNLOCK(bp);
 }
@@ -1694,8 +1842,12 @@ vfs_vmio_release(struct buf *bp)
 	int i;
 	vm_page_t m;
 
-	pmap_qremove(trunc_page((vm_offset_t)bp->b_data), bp->b_npages);
-	VM_OBJECT_LOCK(bp->b_bufobj->bo_object);
+	if ((bp->b_flags & B_UNMAPPED) == 0) {
+		BUF_CHECK_MAPPED(bp);
+		pmap_qremove(trunc_page((vm_offset_t)bp->b_data), bp->b_npages);
+	} else
+		BUF_CHECK_UNMAPPED(bp);
+	VM_OBJECT_WLOCK(bp->b_bufobj->bo_object);
 	for (i = 0; i < bp->b_npages; i++) {
 		m = bp->b_pages[i];
 		bp->b_pages[i] = NULL;
@@ -1705,29 +1857,22 @@ vfs_vmio_release(struct buf *bp)
 		 */
 		vm_page_lock(m);
 		vm_page_unwire(m, 0);
+
 		/*
-		 * We don't mess with busy pages, it is
-		 * the responsibility of the process that
-		 * busied the pages to deal with them.
+		 * Might as well free the page if we can and it has
+		 * no valid data.  We also free the page if the
+		 * buffer was used for direct I/O
 		 */
-		if ((m->oflags & VPO_BUSY) == 0 && m->busy == 0 &&
-		    m->wire_count == 0) {
-			/*
-			 * Might as well free the page if we can and it has
-			 * no valid data.  We also free the page if the
-			 * buffer was used for direct I/O
-			 */
-			if ((bp->b_flags & B_ASYNC) == 0 && !m->valid) {
+		if ((bp->b_flags & B_ASYNC) == 0 && !m->valid) {
+			if (m->wire_count == 0 && !vm_page_busied(m))
 				vm_page_free(m);
-			} else if (bp->b_flags & B_DIRECT) {
-				vm_page_try_to_free(m);
-			} else if (buf_vm_page_count_severe()) {
-				vm_page_try_to_cache(m);
-			}
-		}
+		} else if (bp->b_flags & B_DIRECT)
+			vm_page_try_to_free(m);
+		else if (buf_vm_page_count_severe())
+			vm_page_try_to_cache(m);
 		vm_page_unlock(m);
 	}
-	VM_OBJECT_UNLOCK(bp->b_bufobj->bo_object);
+	VM_OBJECT_WUNLOCK(bp->b_bufobj->bo_object);
 	
 	if (bp->b_bufsize) {
 		bufspacewakeup();
@@ -1798,8 +1943,10 @@ vfs_bio_awrite(struct buf *bp)
 	int nwritten;
 	int size;
 	int maxcl;
+	int gbflags;
 
 	bo = &vp->v_bufobj;
+	gbflags = (bp->b_flags & B_UNMAPPED) != 0 ? GB_UNMAPPED : 0;
 	/*
 	 * right now we support clustered writing only to regular files.  If
 	 * we find a clusterable block we could be in the middle of a cluster
@@ -1812,7 +1959,7 @@ vfs_bio_awrite(struct buf *bp)
 		size = vp->v_mount->mnt_stat.f_iosize;
 		maxcl = MAXPHYS / size;
 
-		BO_LOCK(bo);
+		BO_RLOCK(bo);
 		for (i = 1; i < maxcl; i++)
 			if (vfs_bio_clcheck(vp, size, lblkno + i,
 			    bp->b_blkno + ((i * size) >> DEV_BSHIFT)) == 0)
@@ -1822,7 +1969,7 @@ vfs_bio_awrite(struct buf *bp)
 			if (vfs_bio_clcheck(vp, size, lblkno - j,
 			    bp->b_blkno - ((j * size) >> DEV_BSHIFT)) == 0)
 				break;
-		BO_UNLOCK(bo);
+		BO_RUNLOCK(bo);
 		--j;
 		ncl = i + j;
 		/*
@@ -1830,8 +1977,9 @@ vfs_bio_awrite(struct buf *bp)
 		 */
 		if (ncl != 1) {
 			BUF_UNLOCK(bp);
-			nwritten = cluster_wbuild(vp, size, lblkno - j, ncl);
-			return nwritten;
+			nwritten = cluster_wbuild(vp, size, lblkno - j, ncl,
+			    gbflags);
+			return (nwritten);
 		}
 	}
 	bremfree(bp);
@@ -1844,49 +1992,211 @@ vfs_bio_awrite(struct buf *bp)
 	nwritten = bp->b_bufsize;
 	(void) bwrite(bp);
 
-	return nwritten;
+	return (nwritten);
+}
+
+static void
+setbufkva(struct buf *bp, vm_offset_t addr, int maxsize, int gbflags)
+{
+
+	KASSERT((bp->b_flags & (B_UNMAPPED | B_KVAALLOC)) == 0 &&
+	    bp->b_kvasize == 0, ("call bfreekva(%p)", bp));
+	if ((gbflags & GB_UNMAPPED) == 0) {
+		bp->b_kvabase = (caddr_t)addr;
+	} else if ((gbflags & GB_KVAALLOC) != 0) {
+		KASSERT((gbflags & GB_UNMAPPED) != 0,
+		    ("GB_KVAALLOC without GB_UNMAPPED"));
+		bp->b_kvaalloc = (caddr_t)addr;
+		bp->b_flags |= B_UNMAPPED | B_KVAALLOC;
+		atomic_add_long(&unmapped_bufspace, bp->b_kvasize);
+	}
+	bp->b_kvasize = maxsize;
 }
 
 /*
- *	getnewbuf:
- *
- *	Find and initialize a new buffer header, freeing up existing buffers 
- *	in the bufqueues as necessary.  The new buffer is returned locked.
- *
- *	Important:  B_INVAL is not set.  If the caller wishes to throw the
- *	buffer away, the caller must set B_INVAL prior to calling brelse().
- *
- *	We block if:
- *		We have insufficient buffer headers
- *		We have insufficient buffer space
- *		buffer_map is too fragmented ( space reservation fails )
- *		If we have to flush dirty buffers ( but we try to avoid this )
- *
- *	To avoid VFS layer recursion we do not flush dirty buffers ourselves.
- *	Instead we ask the buf daemon to do it for us.  We attempt to
- *	avoid piecemeal wakeups of the pageout daemon.
+ * Allocate the buffer KVA and set b_kvasize. Also set b_kvabase if
+ * needed.
  */
+static int
+allocbufkva(struct buf *bp, int maxsize, int gbflags)
+{
+	vm_offset_t addr;
 
-static struct buf *
-getnewbuf(struct vnode *vp, int slpflag, int slptimeo, int size, int maxsize,
-    int gbflags)
+	bfreekva(bp);
+	addr = 0;
+
+	if (vmem_alloc(buffer_arena, maxsize, M_BESTFIT | M_NOWAIT, &addr)) {
+		/*
+		 * Buffer map is too fragmented.  Request the caller
+		 * to defragment the map.
+		 */
+		atomic_add_int(&bufdefragcnt, 1);
+		return (1);
+	}
+	setbufkva(bp, addr, maxsize, gbflags);
+	atomic_add_long(&bufspace, bp->b_kvasize);
+	return (0);
+}
+
+/*
+ * Ask the bufdaemon for help, or act as bufdaemon itself, when a
+ * locked vnode is supplied.
+ */
+static void
+getnewbuf_bufd_help(struct vnode *vp, int gbflags, int slpflag, int slptimeo,
+    int defrag)
 {
 	struct thread *td;
-	struct buf *bp;
-	struct buf *nbp;
-	int defrag = 0;
-	int nqindex;
-	static int flushingbufs;
+	char *waitmsg;
+	int cnt, error, flags, norunbuf, wait;
+
+	mtx_assert(&bqclean, MA_OWNED);
+
+	if (defrag) {
+		flags = VFS_BIO_NEED_BUFSPACE;
+		waitmsg = "nbufkv";
+	} else if (bufspace >= hibufspace) {
+		waitmsg = "nbufbs";
+		flags = VFS_BIO_NEED_BUFSPACE;
+	} else {
+		waitmsg = "newbuf";
+		flags = VFS_BIO_NEED_ANY;
+	}
+	mtx_lock(&nblock);
+	needsbuffer |= flags;
+	mtx_unlock(&nblock);
+	mtx_unlock(&bqclean);
+
+	bd_speedup();	/* heeeelp */
+	if ((gbflags & GB_NOWAIT_BD) != 0)
+		return;
 
 	td = curthread;
+	cnt = 0;
+	wait = MNT_NOWAIT;
+	mtx_lock(&nblock);
+	while (needsbuffer & flags) {
+		if (vp != NULL && vp->v_type != VCHR &&
+		    (td->td_pflags & TDP_BUFNEED) == 0) {
+			mtx_unlock(&nblock);
+
+			/*
+			 * getblk() is called with a vnode locked, and
+			 * some majority of the dirty buffers may as
+			 * well belong to the vnode.  Flushing the
+			 * buffers there would make a progress that
+			 * cannot be achieved by the buf_daemon, that
+			 * cannot lock the vnode.
+			 */
+			if (cnt++ > 2)
+				wait = MNT_WAIT;
+			ASSERT_VOP_LOCKED(vp, "bufd_helper");
+			error = VOP_ISLOCKED(vp) == LK_EXCLUSIVE ? 0 :
+			    vn_lock(vp, LK_TRYUPGRADE);
+			if (error == 0) {
+				/* play bufdaemon */
+				norunbuf = curthread_pflags_set(TDP_BUFNEED |
+				    TDP_NORUNNINGBUF);
+				VOP_FSYNC(vp, wait, td);
+				atomic_add_long(&notbufdflushes, 1);
+				curthread_pflags_restore(norunbuf);
+			}
+			mtx_lock(&nblock);
+			if ((needsbuffer & flags) == 0)
+				break;
+		}
+		if (msleep(&needsbuffer, &nblock, (PRIBIO + 4) | slpflag,
+		    waitmsg, slptimeo))
+			break;
+	}
+	mtx_unlock(&nblock);
+}
+
+static void
+getnewbuf_reuse_bp(struct buf *bp, int qindex)
+{
+
+	CTR6(KTR_BUF, "getnewbuf(%p) vp %p flags %X kvasize %d bufsize %d "
+	    "queue %d (recycling)", bp, bp->b_vp, bp->b_flags,
+	     bp->b_kvasize, bp->b_bufsize, qindex);
+	mtx_assert(&bqclean, MA_NOTOWNED);
+
 	/*
-	 * We can't afford to block since we might be holding a vnode lock,
-	 * which may prevent system daemons from running.  We deal with
-	 * low-memory situations by proactively returning memory and running
-	 * async I/O rather then sync I/O.
+	 * Note: we no longer distinguish between VMIO and non-VMIO
+	 * buffers.
 	 */
-	atomic_add_int(&getnewbufcalls, 1);
-	atomic_subtract_int(&getnewbufrestarts, 1);
+	KASSERT((bp->b_flags & B_DELWRI) == 0,
+	    ("delwri buffer %p found in queue %d", bp, qindex));
+
+	if (qindex == QUEUE_CLEAN) {
+		if (bp->b_flags & B_VMIO) {
+			bp->b_flags &= ~B_ASYNC;
+			vfs_vmio_release(bp);
+		}
+		if (bp->b_vp != NULL)
+			brelvp(bp);
+	}
+
+	/*
+	 * Get the rest of the buffer freed up.  b_kva* is still valid
+	 * after this operation.
+	 */
+
+	if (bp->b_rcred != NOCRED) {
+		crfree(bp->b_rcred);
+		bp->b_rcred = NOCRED;
+	}
+	if (bp->b_wcred != NOCRED) {
+		crfree(bp->b_wcred);
+		bp->b_wcred = NOCRED;
+	}
+	if (!LIST_EMPTY(&bp->b_dep))
+		buf_deallocate(bp);
+	if (bp->b_vflags & BV_BKGRDINPROG)
+		panic("losing buffer 3");
+	KASSERT(bp->b_vp == NULL, ("bp: %p still has vnode %p.  qindex: %d",
+	    bp, bp->b_vp, qindex));
+	KASSERT((bp->b_xflags & (BX_VNCLEAN|BX_VNDIRTY)) == 0,
+	    ("bp: %p still on a buffer list. xflags %X", bp, bp->b_xflags));
+
+	if (bp->b_bufsize)
+		allocbuf(bp, 0);
+
+	bp->b_flags &= B_UNMAPPED | B_KVAALLOC;
+	bp->b_ioflags = 0;
+	bp->b_xflags = 0;
+	KASSERT((bp->b_flags & B_INFREECNT) == 0,
+	    ("buf %p still counted as free?", bp));
+	bp->b_vflags = 0;
+	bp->b_vp = NULL;
+	bp->b_blkno = bp->b_lblkno = 0;
+	bp->b_offset = NOOFFSET;
+	bp->b_iodone = 0;
+	bp->b_error = 0;
+	bp->b_resid = 0;
+	bp->b_bcount = 0;
+	bp->b_npages = 0;
+	bp->b_dirtyoff = bp->b_dirtyend = 0;
+	bp->b_bufobj = NULL;
+	bp->b_pin_count = 0;
+	bp->b_fsprivate1 = NULL;
+	bp->b_fsprivate2 = NULL;
+	bp->b_fsprivate3 = NULL;
+
+	LIST_INIT(&bp->b_dep);
+}
+
+static int flushingbufs;
+
+static struct buf *
+getnewbuf_scan(int maxsize, int defrag, int unmapped, int metadata)
+{
+	struct buf *bp, *nbp;
+	int nqindex, qindex, pass;
+
+	KASSERT(!unmapped || !defrag, ("both unmapped and defrag"));
+
+	pass = 1;
 restart:
 	atomic_add_int(&getnewbufrestarts, 1);
 
@@ -1896,66 +2206,90 @@ restart:
 	 * that if we are specially marked process, we are allowed to
 	 * dip into our reserves.
 	 *
-	 * The scanning sequence is nominally:  EMPTY->EMPTYKVA->CLEAN
+	 * The scanning sequence is nominally: EMPTY->EMPTYKVA->CLEAN
+	 * for the allocation of the mapped buffer.  For unmapped, the
+	 * easiest is to start with EMPTY outright.
 	 *
 	 * We start with EMPTYKVA.  If the list is empty we backup to EMPTY.
 	 * However, there are a number of cases (defragging, reusing, ...)
 	 * where we cannot backup.
 	 */
-	mtx_lock(&bqlock);
-	nqindex = QUEUE_EMPTYKVA;
-	nbp = TAILQ_FIRST(&bufqueues[QUEUE_EMPTYKVA]);
-
+	nbp = NULL;
+	mtx_lock(&bqclean);
+	if (!defrag && unmapped) {
+		nqindex = QUEUE_EMPTY;
+		nbp = TAILQ_FIRST(&bufqueues[QUEUE_EMPTY]);
+	}
 	if (nbp == NULL) {
-		/*
-		 * If no EMPTYKVA buffers and we are either
-		 * defragging or reusing, locate a CLEAN buffer
-		 * to free or reuse.  If bufspace useage is low
-		 * skip this step so we can allocate a new buffer.
-		 */
-		if (defrag || bufspace >= lobufspace) {
-			nqindex = QUEUE_CLEAN;
-			nbp = TAILQ_FIRST(&bufqueues[QUEUE_CLEAN]);
-		}
+		nqindex = QUEUE_EMPTYKVA;
+		nbp = TAILQ_FIRST(&bufqueues[QUEUE_EMPTYKVA]);
+	}
 
-		/*
-		 * If we could not find or were not allowed to reuse a
-		 * CLEAN buffer, check to see if it is ok to use an EMPTY
-		 * buffer.  We can only use an EMPTY buffer if allocating
-		 * its KVA would not otherwise run us out of buffer space.
-		 */
-		if (nbp == NULL && defrag == 0 &&
-		    bufspace + maxsize < hibufspace) {
-			nqindex = QUEUE_EMPTY;
-			nbp = TAILQ_FIRST(&bufqueues[QUEUE_EMPTY]);
-		}
+	/*
+	 * If no EMPTYKVA buffers and we are either defragging or
+	 * reusing, locate a CLEAN buffer to free or reuse.  If
+	 * bufspace useage is low skip this step so we can allocate a
+	 * new buffer.
+	 */
+	if (nbp == NULL && (defrag || bufspace >= lobufspace)) {
+		nqindex = QUEUE_CLEAN;
+		nbp = TAILQ_FIRST(&bufqueues[QUEUE_CLEAN]);
+	}
+
+	/*
+	 * If we could not find or were not allowed to reuse a CLEAN
+	 * buffer, check to see if it is ok to use an EMPTY buffer.
+	 * We can only use an EMPTY buffer if allocating its KVA would
+	 * not otherwise run us out of buffer space.  No KVA is needed
+	 * for the unmapped allocation.
+	 */
+	if (nbp == NULL && defrag == 0 && (bufspace + maxsize < hibufspace ||
+	    metadata)) {
+		nqindex = QUEUE_EMPTY;
+		nbp = TAILQ_FIRST(&bufqueues[QUEUE_EMPTY]);
+	}
+
+	/*
+	 * All available buffers might be clean, retry ignoring the
+	 * lobufspace as the last resort.
+	 */
+	if (nbp == NULL && !TAILQ_EMPTY(&bufqueues[QUEUE_CLEAN])) {
+		nqindex = QUEUE_CLEAN;
+		nbp = TAILQ_FIRST(&bufqueues[QUEUE_CLEAN]);
 	}
 
 	/*
 	 * Run scan, possibly freeing data and/or kva mappings on the fly
 	 * depending.
 	 */
-
 	while ((bp = nbp) != NULL) {
-		int qindex = nqindex;
+		qindex = nqindex;
 
 		/*
-		 * Calculate next bp ( we can only use it if we do not block
-		 * or do other fancy things ).
+		 * Calculate next bp (we can only use it if we do not
+		 * block or do other fancy things).
 		 */
 		if ((nbp = TAILQ_NEXT(bp, b_freelist)) == NULL) {
-			switch(qindex) {
+			switch (qindex) {
 			case QUEUE_EMPTY:
 				nqindex = QUEUE_EMPTYKVA;
-				if ((nbp = TAILQ_FIRST(&bufqueues[QUEUE_EMPTYKVA])))
+				nbp = TAILQ_FIRST(&bufqueues[QUEUE_EMPTYKVA]);
+				if (nbp != NULL)
 					break;
 				/* FALLTHROUGH */
 			case QUEUE_EMPTYKVA:
 				nqindex = QUEUE_CLEAN;
-				if ((nbp = TAILQ_FIRST(&bufqueues[QUEUE_CLEAN])))
+				nbp = TAILQ_FIRST(&bufqueues[QUEUE_CLEAN]);
+				if (nbp != NULL)
 					break;
 				/* FALLTHROUGH */
 			case QUEUE_CLEAN:
+				if (metadata && pass == 1) {
+					pass = 2;
+					nqindex = QUEUE_EMPTY;
+					nbp = TAILQ_FIRST(
+					    &bufqueues[QUEUE_EMPTY]);
+				}
 				/*
 				 * nbp is NULL. 
 				 */
@@ -1979,100 +2313,27 @@ restart:
 		 */
 		if (BUF_LOCK(bp, LK_EXCLUSIVE | LK_NOWAIT, NULL) != 0)
 			continue;
-		if (bp->b_vp) {
-			BO_LOCK(bp->b_bufobj);
-			if (bp->b_vflags & BV_BKGRDINPROG) {
-				BO_UNLOCK(bp->b_bufobj);
-				BUF_UNLOCK(bp);
-				continue;
-			}
-			BO_UNLOCK(bp->b_bufobj);
+		/*
+		 * BKGRDINPROG can only be set with the buf and bufobj
+		 * locks both held.  We tolerate a race to clear it here.
+		 */
+		if (bp->b_vflags & BV_BKGRDINPROG) {
+			BUF_UNLOCK(bp);
+			continue;
 		}
-		CTR6(KTR_BUF,
-		    "getnewbuf(%p) vp %p flags %X kvasize %d bufsize %d "
-		    "queue %d (recycling)", bp, bp->b_vp, bp->b_flags,
-		    bp->b_kvasize, bp->b_bufsize, qindex);
 
-		/*
-		 * Sanity Checks
-		 */
-		KASSERT(bp->b_qindex == qindex, ("getnewbuf: inconsistant queue %d bp %p", qindex, bp));
+		KASSERT(bp->b_qindex == qindex,
+		    ("getnewbuf: inconsistent queue %d bp %p", qindex, bp));
 
-		/*
-		 * Note: we no longer distinguish between VMIO and non-VMIO
-		 * buffers.
-		 */
-
-		KASSERT((bp->b_flags & B_DELWRI) == 0, ("delwri buffer %p found in queue %d", bp, qindex));
-
-		if (bp->b_bufobj != NULL)
-			BO_LOCK(bp->b_bufobj);
 		bremfreel(bp);
-		if (bp->b_bufobj != NULL)
-			BO_UNLOCK(bp->b_bufobj);
-		mtx_unlock(&bqlock);
-
-		if (qindex == QUEUE_CLEAN) {
-			if (bp->b_flags & B_VMIO) {
-				bp->b_flags &= ~B_ASYNC;
-				vfs_vmio_release(bp);
-			}
-			if (bp->b_vp)
-				brelvp(bp);
-		}
-
+		mtx_unlock(&bqclean);
 		/*
 		 * NOTE:  nbp is now entirely invalid.  We can only restart
 		 * the scan from this point on.
-		 *
-		 * Get the rest of the buffer freed up.  b_kva* is still
-		 * valid after this operation.
 		 */
 
-		if (bp->b_rcred != NOCRED) {
-			crfree(bp->b_rcred);
-			bp->b_rcred = NOCRED;
-		}
-		if (bp->b_wcred != NOCRED) {
-			crfree(bp->b_wcred);
-			bp->b_wcred = NOCRED;
-		}
-		if (!LIST_EMPTY(&bp->b_dep))
-			buf_deallocate(bp);
-		if (bp->b_vflags & BV_BKGRDINPROG)
-			panic("losing buffer 3");
-		KASSERT(bp->b_vp == NULL,
-		    ("bp: %p still has vnode %p.  qindex: %d",
-		    bp, bp->b_vp, qindex));
-		KASSERT((bp->b_xflags & (BX_VNCLEAN|BX_VNDIRTY)) == 0,
-		   ("bp: %p still on a buffer list. xflags %X",
-		    bp, bp->b_xflags));
-
-		if (bp->b_bufsize)
-			allocbuf(bp, 0);
-
-		bp->b_flags = 0;
-		bp->b_ioflags = 0;
-		bp->b_xflags = 0;
-		KASSERT((bp->b_vflags & BV_INFREECNT) == 0,
-		    ("buf %p still counted as free?", bp));
-		bp->b_vflags = 0;
-		bp->b_vp = NULL;
-		bp->b_blkno = bp->b_lblkno = 0;
-		bp->b_offset = NOOFFSET;
-		bp->b_iodone = 0;
-		bp->b_error = 0;
-		bp->b_resid = 0;
-		bp->b_bcount = 0;
-		bp->b_npages = 0;
-		bp->b_dirtyoff = bp->b_dirtyend = 0;
-		bp->b_bufobj = NULL;
-		bp->b_pin_count = 0;
-		bp->b_fsprivate1 = NULL;
-		bp->b_fsprivate2 = NULL;
-		bp->b_fsprivate3 = NULL;
-
-		LIST_INIT(&bp->b_dep);
+		getnewbuf_reuse_bp(bp, qindex);
+		mtx_assert(&bqclean, MA_NOTOWNED);
 
 		/*
 		 * If we are defragging then free the buffer.
@@ -2096,6 +2357,9 @@ restart:
 			goto restart;
 		}
 
+		if (metadata)
+			break;
+
 		/*
 		 * If we are overcomitted then recover the buffer and its
 		 * KVM space.  This occurs in rare situations when multiple
@@ -2113,6 +2377,55 @@ restart:
 			flushingbufs = 0;
 		break;
 	}
+	return (bp);
+}
+
+/*
+ *	getnewbuf:
+ *
+ *	Find and initialize a new buffer header, freeing up existing buffers
+ *	in the bufqueues as necessary.  The new buffer is returned locked.
+ *
+ *	Important:  B_INVAL is not set.  If the caller wishes to throw the
+ *	buffer away, the caller must set B_INVAL prior to calling brelse().
+ *
+ *	We block if:
+ *		We have insufficient buffer headers
+ *		We have insufficient buffer space
+ *		buffer_arena is too fragmented ( space reservation fails )
+ *		If we have to flush dirty buffers ( but we try to avoid this )
+ */
+static struct buf *
+getnewbuf(struct vnode *vp, int slpflag, int slptimeo, int size, int maxsize,
+    int gbflags)
+{
+	struct buf *bp;
+	int defrag, metadata;
+
+	KASSERT((gbflags & (GB_UNMAPPED | GB_KVAALLOC)) != GB_KVAALLOC,
+	    ("GB_KVAALLOC only makes sense with GB_UNMAPPED"));
+	if (!unmapped_buf_allowed)
+		gbflags &= ~(GB_UNMAPPED | GB_KVAALLOC);
+
+	defrag = 0;
+	if (vp == NULL || (vp->v_vflag & (VV_MD | VV_SYSTEM)) != 0 ||
+	    vp->v_type == VCHR)
+		metadata = 1;
+	else
+		metadata = 0;
+	/*
+	 * We can't afford to block since we might be holding a vnode lock,
+	 * which may prevent system daemons from running.  We deal with
+	 * low-memory situations by proactively returning memory and running
+	 * async I/O rather then sync I/O.
+	 */
+	atomic_add_int(&getnewbufcalls, 1);
+	atomic_subtract_int(&getnewbufrestarts, 1);
+restart:
+	bp = getnewbuf_scan(maxsize, defrag, (gbflags & (GB_UNMAPPED |
+	    GB_KVAALLOC)) == GB_UNMAPPED, metadata);
+	if (bp != NULL)
+		defrag = 0;
 
 	/*
 	 * If we exhausted our list, sleep as appropriate.  We may have to
@@ -2120,65 +2433,23 @@ restart:
 	 *
 	 * Generally we are sleeping due to insufficient buffer space.
 	 */
-
 	if (bp == NULL) {
-		int flags, norunbuf;
-		char *waitmsg;
-		int fl;
+		mtx_assert(&bqclean, MA_OWNED);
+		getnewbuf_bufd_help(vp, gbflags, slpflag, slptimeo, defrag);
+		mtx_assert(&bqclean, MA_NOTOWNED);
+	} else if ((gbflags & (GB_UNMAPPED | GB_KVAALLOC)) == GB_UNMAPPED) {
+		mtx_assert(&bqclean, MA_NOTOWNED);
 
-		if (defrag) {
-			flags = VFS_BIO_NEED_BUFSPACE;
-			waitmsg = "nbufkv";
-		} else if (bufspace >= hibufspace) {
-			waitmsg = "nbufbs";
-			flags = VFS_BIO_NEED_BUFSPACE;
-		} else {
-			waitmsg = "newbuf";
-			flags = VFS_BIO_NEED_ANY;
-		}
-		mtx_lock(&nblock);
-		needsbuffer |= flags;
-		mtx_unlock(&nblock);
-		mtx_unlock(&bqlock);
-
-		bd_speedup();	/* heeeelp */
-		if (gbflags & GB_NOWAIT_BD)
-			return (NULL);
-
-		mtx_lock(&nblock);
-		while (needsbuffer & flags) {
-			if (vp != NULL && (td->td_pflags & TDP_BUFNEED) == 0) {
-				mtx_unlock(&nblock);
-				/*
-				 * getblk() is called with a vnode
-				 * locked, and some majority of the
-				 * dirty buffers may as well belong to
-				 * the vnode. Flushing the buffers
-				 * there would make a progress that
-				 * cannot be achieved by the
-				 * buf_daemon, that cannot lock the
-				 * vnode.
-				 */
-				norunbuf = ~(TDP_BUFNEED | TDP_NORUNNINGBUF) |
-				    (td->td_pflags & TDP_NORUNNINGBUF);
-				/* play bufdaemon */
-				td->td_pflags |= TDP_BUFNEED | TDP_NORUNNINGBUF;
-				fl = buf_do_flush(vp);
-				td->td_pflags &= norunbuf;
-				mtx_lock(&nblock);
-				if (fl != 0)
-					continue;
-				if ((needsbuffer & flags) == 0)
-					break;
-			}
-			if (msleep(&needsbuffer, &nblock,
-			    (PRIBIO + 4) | slpflag, waitmsg, slptimeo)) {
-				mtx_unlock(&nblock);
-				return (NULL);
-			}
-		}
-		mtx_unlock(&nblock);
+		bfreekva(bp);
+		bp->b_flags |= B_UNMAPPED;
+		bp->b_kvabase = bp->b_data = unmapped_buf;
+		bp->b_kvasize = maxsize;
+		atomic_add_long(&bufspace, bp->b_kvasize);
+		atomic_add_long(&unmapped_bufspace, bp->b_kvasize);
+		atomic_add_int(&bufreusecnt, 1);
 	} else {
+		mtx_assert(&bqclean, MA_NOTOWNED);
+
 		/*
 		 * We finally have a valid bp.  We aren't quite out of the
 		 * woods, we still have to reserve kva space.  In order
@@ -2187,39 +2458,47 @@ restart:
 		 */
 		maxsize = (maxsize + BKVAMASK) & ~BKVAMASK;
 
-		if (maxsize != bp->b_kvasize) {
-			vm_offset_t addr = 0;
-			int rv;
-
-			bfreekva(bp);
-
-			vm_map_lock(buffer_map);
-			if (vm_map_findspace(buffer_map,
-			    vm_map_min(buffer_map), maxsize, &addr)) {
-				/*
-				 * Buffer map is too fragmented.
-				 * We must defragment the map.
-				 */
-				atomic_add_int(&bufdefragcnt, 1);
-				vm_map_unlock(buffer_map);
+		if (maxsize != bp->b_kvasize || (bp->b_flags & (B_UNMAPPED |
+		    B_KVAALLOC)) == B_UNMAPPED) {
+			if (allocbufkva(bp, maxsize, gbflags)) {
 				defrag = 1;
 				bp->b_flags |= B_INVAL;
 				brelse(bp);
 				goto restart;
 			}
-			rv = vm_map_insert(buffer_map, NULL, 0, addr,
-			    addr + maxsize, VM_PROT_ALL, VM_PROT_ALL,
-			    MAP_NOFAULT);
-			KASSERT(rv == KERN_SUCCESS,
-			    ("vm_map_insert(buffer_map) rv %d", rv));
-			vm_map_unlock(buffer_map);
-			bp->b_kvabase = (caddr_t)addr;
-			bp->b_kvasize = maxsize;
-			atomic_add_long(&bufspace, bp->b_kvasize);
+			atomic_add_int(&bufreusecnt, 1);
+		} else if ((bp->b_flags & B_KVAALLOC) != 0 &&
+		    (gbflags & (GB_UNMAPPED | GB_KVAALLOC)) == 0) {
+			/*
+			 * If the reused buffer has KVA allocated,
+			 * reassign b_kvaalloc to b_kvabase.
+			 */
+			bp->b_kvabase = bp->b_kvaalloc;
+			bp->b_flags &= ~B_KVAALLOC;
+			atomic_subtract_long(&unmapped_bufspace,
+			    bp->b_kvasize);
+			atomic_add_int(&bufreusecnt, 1);
+		} else if ((bp->b_flags & (B_UNMAPPED | B_KVAALLOC)) == 0 &&
+		    (gbflags & (GB_UNMAPPED | GB_KVAALLOC)) == (GB_UNMAPPED |
+		    GB_KVAALLOC)) {
+			/*
+			 * The case of reused buffer already have KVA
+			 * mapped, but the request is for unmapped
+			 * buffer with KVA allocated.
+			 */
+			bp->b_kvaalloc = bp->b_kvabase;
+			bp->b_data = bp->b_kvabase = unmapped_buf;
+			bp->b_flags |= B_UNMAPPED | B_KVAALLOC;
+			atomic_add_long(&unmapped_bufspace,
+			    bp->b_kvasize);
 			atomic_add_int(&bufreusecnt, 1);
 		}
-		bp->b_saveaddr = bp->b_kvabase;
-		bp->b_data = bp->b_saveaddr;
+		if ((gbflags & GB_UNMAPPED) == 0) {
+			bp->b_saveaddr = bp->b_kvabase;
+			bp->b_data = bp->b_saveaddr;
+			bp->b_flags &= ~B_UNMAPPED;
+			BUF_CHECK_MAPPED(bp);
+		}
 	}
 	return (bp);
 }
@@ -2240,30 +2519,18 @@ static struct kproc_desc buf_kp = {
 SYSINIT(bufdaemon, SI_SUB_KTHREAD_BUF, SI_ORDER_FIRST, kproc_start, &buf_kp);
 
 static int
-buf_do_flush(struct vnode *vp)
+buf_flush(int target)
 {
 	int flushed;
 
-	flushed = flushbufqueues(vp, QUEUE_DIRTY, 0);
-	/* The list empty check here is slightly racy */
-	if (!TAILQ_EMPTY(&bufqueues[QUEUE_DIRTY_GIANT])) {
-		mtx_lock(&Giant);
-		flushed += flushbufqueues(vp, QUEUE_DIRTY_GIANT, 0);
-		mtx_unlock(&Giant);
-	}
+	flushed = flushbufqueues(target, 0);
 	if (flushed == 0) {
 		/*
 		 * Could not find any buffers without rollback
 		 * dependencies, so just write the first one
 		 * in the hopes of eventually making progress.
 		 */
-		flushbufqueues(vp, QUEUE_DIRTY, 1);
-		if (!TAILQ_EMPTY(
-			    &bufqueues[QUEUE_DIRTY_GIANT])) {
-			mtx_lock(&Giant);
-			flushbufqueues(vp, QUEUE_DIRTY_GIANT, 1);
-			mtx_unlock(&Giant);
-		}
+		flushed = flushbufqueues(target, 1);
 	}
 	return (flushed);
 }
@@ -2271,7 +2538,7 @@ buf_do_flush(struct vnode *vp)
 static void
 buf_daemon()
 {
-	int lodirtysave;
+	int lodirty;
 
 	/*
 	 * This process needs to be suspended prior to shutdown sync.
@@ -2289,23 +2556,21 @@ buf_daemon()
 		mtx_unlock(&bdlock);
 
 		kproc_suspend_check(bufdaemonproc);
-		lodirtysave = lodirtybuffers;
+		lodirty = lodirtybuffers;
 		if (bd_speedupreq) {
-			lodirtybuffers = numdirtybuffers / 2;
+			lodirty = numdirtybuffers / 2;
 			bd_speedupreq = 0;
 		}
 		/*
 		 * Do the flush.  Limit the amount of in-transit I/O we
 		 * allow to build up, otherwise we would completely saturate
-		 * the I/O system.  Wakeup any waiting processes before we
-		 * normally would so they can run in parallel with our drain.
+		 * the I/O system.
 		 */
-		while (numdirtybuffers > lodirtybuffers) {
-			if (buf_do_flush(NULL) == 0)
+		while (numdirtybuffers > lodirty) {
+			if (buf_flush(numdirtybuffers - lodirty) == 0)
 				break;
-			kern_yield(PRI_UNCHANGED);
+			kern_yield(PRI_USER);
 		}
-		lodirtybuffers = lodirtysave;
 
 		/*
 		 * Only clear bd_request if we have reached our low water
@@ -2314,8 +2579,8 @@ buf_daemon()
 		 * built up, within reason.
 		 *
 		 * If we were unable to hit our low water mark and couldn't
-		 * find any flushable buffers, we sleep half a second.
-		 * Otherwise we loop immediately.
+		 * find any flushable buffers, we sleep for a short period
+		 * to avoid endless loops on unlockable buffers.
 		 */
 		mtx_lock(&bdlock);
 		if (numdirtybuffers <= lodirtybuffers) {
@@ -2325,6 +2590,14 @@ buf_daemon()
 			 * The sleep is just so the suspend code works.
 			 */
 			bd_request = 0;
+			/*
+			 * Do an extra wakeup in case dirty threshold
+			 * changed via sysctl and the explicit transition
+			 * out of shortfall was missed.
+			 */
+			bdirtywakeup();
+			if (runningbufspace <= lorunningspace)
+				runningwakeup();
 			msleep(&bd_request, &bdlock, PVM, "psleep", hz);
 		} else {
 			/*
@@ -2349,7 +2622,7 @@ SYSCTL_INT(_vfs, OID_AUTO, flushwithdeps, CTLFLAG_RW, &flushwithdeps,
     0, "Number of buffers flushed with dependecies that require rollbacks");
 
 static int
-flushbufqueues(struct vnode *lvp, int queue, int flushdeps)
+flushbufqueues(int target, int flushdeps)
 {
 	struct buf *sentinel;
 	struct vnode *vp;
@@ -2357,61 +2630,52 @@ flushbufqueues(struct vnode *lvp, int queue, int flushdeps)
 	struct buf *bp;
 	int hasdeps;
 	int flushed;
-	int target;
+	int queue;
+	int error;
 
-	if (lvp == NULL) {
-		target = numdirtybuffers - lodirtybuffers;
-		if (flushdeps && target > 2)
-			target /= 2;
-	} else
-		target = flushbufqtarget;
 	flushed = 0;
+	queue = QUEUE_DIRTY;
 	bp = NULL;
 	sentinel = malloc(sizeof(struct buf), M_TEMP, M_WAITOK | M_ZERO);
 	sentinel->b_qindex = QUEUE_SENTINEL;
-	mtx_lock(&bqlock);
+	mtx_lock(&bqdirty);
 	TAILQ_INSERT_HEAD(&bufqueues[queue], sentinel, b_freelist);
+	mtx_unlock(&bqdirty);
 	while (flushed != target) {
+		maybe_yield();
+		mtx_lock(&bqdirty);
 		bp = TAILQ_NEXT(sentinel, b_freelist);
 		if (bp != NULL) {
 			TAILQ_REMOVE(&bufqueues[queue], sentinel, b_freelist);
 			TAILQ_INSERT_AFTER(&bufqueues[queue], bp, sentinel,
 			    b_freelist);
-		} else
+		} else {
+			mtx_unlock(&bqdirty);
 			break;
-		/*
-		 * Skip sentinels inserted by other invocations of the
-		 * flushbufqueues(), taking care to not reorder them.
-		 */
-		if (bp->b_qindex == QUEUE_SENTINEL)
-			continue;
-		/*
-		 * Only flush the buffers that belong to the
-		 * vnode locked by the curthread.
-		 */
-		if (lvp != NULL && bp->b_vp != lvp)
-			continue;
-		if (BUF_LOCK(bp, LK_EXCLUSIVE | LK_NOWAIT, NULL) != 0)
+		}
+		KASSERT(bp->b_qindex != QUEUE_SENTINEL,
+		    ("parallel calls to flushbufqueues() bp %p", bp));
+		error = BUF_LOCK(bp, LK_EXCLUSIVE | LK_NOWAIT, NULL);
+		mtx_unlock(&bqdirty);
+		if (error != 0)
 			continue;
 		if (bp->b_pin_count > 0) {
 			BUF_UNLOCK(bp);
 			continue;
 		}
-		BO_LOCK(bp->b_bufobj);
+		/*
+		 * BKGRDINPROG can only be set with the buf and bufobj
+		 * locks both held.  We tolerate a race to clear it here.
+		 */
 		if ((bp->b_vflags & BV_BKGRDINPROG) != 0 ||
 		    (bp->b_flags & B_DELWRI) == 0) {
-			BO_UNLOCK(bp->b_bufobj);
 			BUF_UNLOCK(bp);
 			continue;
 		}
-		BO_UNLOCK(bp->b_bufobj);
 		if (bp->b_flags & B_INVAL) {
-			bremfreel(bp);
-			mtx_unlock(&bqlock);
+			bremfreef(bp);
 			brelse(bp);
 			flushed++;
-			numdirtywakeup((lodirtybuffers + hidirtybuffers) / 2);
-			mtx_lock(&bqlock);
 			continue;
 		}
 
@@ -2438,37 +2702,25 @@ flushbufqueues(struct vnode *lvp, int queue, int flushdeps)
 			BUF_UNLOCK(bp);
 			continue;
 		}
-		if (vn_lock(vp, LK_EXCLUSIVE | LK_NOWAIT | LK_CANRECURSE) == 0) {
-			mtx_unlock(&bqlock);
+		error = vn_lock(vp, LK_EXCLUSIVE | LK_NOWAIT);
+		if (error == 0) {
 			CTR3(KTR_BUF, "flushbufqueue(%p) vp %p flags %X",
 			    bp, bp->b_vp, bp->b_flags);
-			if (curproc == bufdaemonproc)
-				vfs_bio_awrite(bp);
-			else {
-				bremfree(bp);
-				bwrite(bp);
-				notbufdflashes++;
-			}
+			vfs_bio_awrite(bp);
 			vn_finished_write(mp);
 			VOP_UNLOCK(vp, 0);
 			flushwithdeps += hasdeps;
 			flushed++;
-
-			/*
-			 * Sleeping on runningbufspace while holding
-			 * vnode lock leads to deadlock.
-			 */
-			if (curproc == bufdaemonproc)
+			if (runningbufspace > hirunningspace)
 				waitrunningbufspace();
-			numdirtywakeup((lodirtybuffers + hidirtybuffers) / 2);
-			mtx_lock(&bqlock);
 			continue;
 		}
 		vn_finished_write(mp);
 		BUF_UNLOCK(bp);
 	}
+	mtx_lock(&bqdirty);
 	TAILQ_REMOVE(&bufqueues[queue], sentinel, b_freelist);
-	mtx_unlock(&bqlock);
+	mtx_unlock(&bqdirty);
 	free(sentinel, M_TEMP);
 	return (flushed);
 }
@@ -2481,9 +2733,9 @@ incore(struct bufobj *bo, daddr_t blkno)
 {
 	struct buf *bp;
 
-	BO_LOCK(bo);
+	BO_RLOCK(bo);
 	bp = gbincore(bo, blkno);
-	BO_UNLOCK(bo);
+	BO_RUNLOCK(bo);
 	return (bp);
 }
 
@@ -2516,7 +2768,7 @@ inmem(struct vnode * vp, daddr_t blkno)
 		size = vp->v_mount->mnt_stat.f_iosize;
 	off = (vm_ooffset_t)blkno * (vm_ooffset_t)vp->v_mount->mnt_stat.f_iosize;
 
-	VM_OBJECT_LOCK(obj);
+	VM_OBJECT_RLOCK(obj);
 	for (toff = 0; toff < vp->v_mount->mnt_stat.f_iosize; toff += tinc) {
 		m = vm_page_lookup(obj, OFF_TO_IDX(off + toff));
 		if (!m)
@@ -2528,11 +2780,11 @@ inmem(struct vnode * vp, daddr_t blkno)
 		    (vm_offset_t) ((toff + off) & PAGE_MASK), tinc) == 0)
 			goto notinmem;
 	}
-	VM_OBJECT_UNLOCK(obj);
+	VM_OBJECT_RUNLOCK(obj);
 	return 1;
 
 notinmem:
-	VM_OBJECT_UNLOCK(obj);
+	VM_OBJECT_RUNLOCK(obj);
 	return (0);
 }
 
@@ -2562,7 +2814,7 @@ vfs_clean_pages_dirty_buf(struct buf *bp)
 	KASSERT(bp->b_offset != NOOFFSET,
 	    ("vfs_clean_pages_dirty_buf: no buffer offset"));
 
-	VM_OBJECT_LOCK(bp->b_bufobj->bo_object);
+	VM_OBJECT_WLOCK(bp->b_bufobj->bo_object);
 	vfs_drain_busy_pages(bp);
 	vfs_setdirty_locked_object(bp);
 	for (i = 0; i < bp->b_npages; i++) {
@@ -2575,7 +2827,7 @@ vfs_clean_pages_dirty_buf(struct buf *bp)
 		/* vm_page_clear_dirty(m, foff & PAGE_MASK, eoff - foff); */
 		foff = noff;
 	}
-	VM_OBJECT_UNLOCK(bp->b_bufobj->bo_object);
+	VM_OBJECT_WUNLOCK(bp->b_bufobj->bo_object);
 }
 
 static void
@@ -2585,7 +2837,7 @@ vfs_setdirty_locked_object(struct buf *bp)
 	int i;
 
 	object = bp->b_bufobj->bo_object;
-	VM_OBJECT_LOCK_ASSERT(object, MA_OWNED);
+	VM_OBJECT_ASSERT_WLOCKED(object);
 
 	/*
 	 * We qualify the scan for modified pages on whether the
@@ -2642,6 +2894,90 @@ vfs_setdirty_locked_object(struct buf *bp)
 }
 
 /*
+ * Allocate the KVA mapping for an existing buffer. It handles the
+ * cases of both B_UNMAPPED buffer, and buffer with the preallocated
+ * KVA which is not mapped (B_KVAALLOC).
+ */
+static void
+bp_unmapped_get_kva(struct buf *bp, daddr_t blkno, int size, int gbflags)
+{
+	struct buf *scratch_bp;
+	int bsize, maxsize, need_mapping, need_kva;
+	off_t offset;
+
+	need_mapping = (bp->b_flags & B_UNMAPPED) != 0 &&
+	    (gbflags & GB_UNMAPPED) == 0;
+	need_kva = (bp->b_flags & (B_KVAALLOC | B_UNMAPPED)) == B_UNMAPPED &&
+	    (gbflags & GB_KVAALLOC) != 0;
+	if (!need_mapping && !need_kva)
+		return;
+
+	BUF_CHECK_UNMAPPED(bp);
+
+	if (need_mapping && (bp->b_flags & B_KVAALLOC) != 0) {
+		/*
+		 * Buffer is not mapped, but the KVA was already
+		 * reserved at the time of the instantiation.  Use the
+		 * allocated space.
+		 */
+		bp->b_flags &= ~B_KVAALLOC;
+		KASSERT(bp->b_kvaalloc != 0, ("kvaalloc == 0"));
+		bp->b_kvabase = bp->b_kvaalloc;
+		atomic_subtract_long(&unmapped_bufspace, bp->b_kvasize);
+		goto has_addr;
+	}
+
+	/*
+	 * Calculate the amount of the address space we would reserve
+	 * if the buffer was mapped.
+	 */
+	bsize = vn_isdisk(bp->b_vp, NULL) ? DEV_BSIZE : bp->b_bufobj->bo_bsize;
+	offset = blkno * bsize;
+	maxsize = size + (offset & PAGE_MASK);
+	maxsize = imax(maxsize, bsize);
+
+mapping_loop:
+	if (allocbufkva(bp, maxsize, gbflags)) {
+		/*
+		 * Request defragmentation. getnewbuf() returns us the
+		 * allocated space by the scratch buffer KVA.
+		 */
+		scratch_bp = getnewbuf(bp->b_vp, 0, 0, size, maxsize, gbflags |
+		    (GB_UNMAPPED | GB_KVAALLOC));
+		if (scratch_bp == NULL) {
+			if ((gbflags & GB_NOWAIT_BD) != 0) {
+				/*
+				 * XXXKIB: defragmentation cannot
+				 * succeed, not sure what else to do.
+				 */
+				panic("GB_NOWAIT_BD and B_UNMAPPED %p", bp);
+			}
+			atomic_add_int(&mappingrestarts, 1);
+			goto mapping_loop;
+		}
+		KASSERT((scratch_bp->b_flags & B_KVAALLOC) != 0,
+		    ("scratch bp !B_KVAALLOC %p", scratch_bp));
+		setbufkva(bp, (vm_offset_t)scratch_bp->b_kvaalloc,
+		    scratch_bp->b_kvasize, gbflags);
+
+		/* Get rid of the scratch buffer. */
+		scratch_bp->b_kvasize = 0;
+		scratch_bp->b_flags |= B_INVAL;
+		scratch_bp->b_flags &= ~(B_UNMAPPED | B_KVAALLOC);
+		brelse(scratch_bp);
+	}
+	if (!need_mapping)
+		return;
+
+has_addr:
+	bp->b_saveaddr = bp->b_kvabase;
+	bp->b_data = bp->b_saveaddr; /* b_offset is handled by bpmap_qenter */
+	bp->b_flags &= ~B_UNMAPPED;
+	BUF_CHECK_MAPPED(bp);
+	bpmap_qenter(bp);
+}
+
+/*
  *	getblk:
  *
  *	Get a block given a specified block and offset into a file/device.
@@ -2678,43 +3014,32 @@ vfs_setdirty_locked_object(struct buf *bp)
  *	prior to issuing the READ.  biodone() will *not* clear B_INVAL.
  */
 struct buf *
-getblk(struct vnode * vp, daddr_t blkno, int size, int slpflag, int slptimeo,
+getblk(struct vnode *vp, daddr_t blkno, int size, int slpflag, int slptimeo,
     int flags)
 {
 	struct buf *bp;
 	struct bufobj *bo;
-	int error;
+	int bsize, error, maxsize, vmio;
+	off_t offset;
 
 	CTR3(KTR_BUF, "getblk(%p, %ld, %d)", vp, (long)blkno, size);
+	KASSERT((flags & (GB_UNMAPPED | GB_KVAALLOC)) != GB_KVAALLOC,
+	    ("GB_KVAALLOC only makes sense with GB_UNMAPPED"));
 	ASSERT_VOP_LOCKED(vp, "getblk");
 	if (size > MAXBSIZE)
 		panic("getblk: size(%d) > MAXBSIZE(%d)\n", size, MAXBSIZE);
+	if (!unmapped_buf_allowed)
+		flags &= ~(GB_UNMAPPED | GB_KVAALLOC);
 
 	bo = &vp->v_bufobj;
 loop:
-	/*
-	 * Block if we are low on buffers.   Certain processes are allowed
-	 * to completely exhaust the buffer cache.
-         *
-         * If this check ever becomes a bottleneck it may be better to
-         * move it into the else, when gbincore() fails.  At the moment
-         * it isn't a problem.
-         */
-	if (numfreebuffers == 0) {
-		if (TD_IS_IDLETHREAD(curthread))
-			return NULL;
-		mtx_lock(&nblock);
-		needsbuffer |= VFS_BIO_NEED_ANY;
-		mtx_unlock(&nblock);
-	}
-
-	BO_LOCK(bo);
+	BO_RLOCK(bo);
 	bp = gbincore(bo, blkno);
 	if (bp != NULL) {
 		int lockflags;
 		/*
-		 * Buffer is in-core.  If the buffer is not busy, it must
-		 * be on a queue.
+		 * Buffer is in-core.  If the buffer is not busy nor managed,
+		 * it must be on a queue.
 		 */
 		lockflags = LK_EXCLUSIVE | LK_SLEEPFAIL | LK_INTERLOCK;
 
@@ -2722,7 +3047,7 @@ loop:
 			lockflags |= LK_NOWAIT;
 
 		error = BUF_TIMELOCK(bp, lockflags,
-		    BO_MTX(bo), "getblk", slpflag, slptimeo);
+		    BO_LOCKPTR(bo), "getblk", slpflag, slptimeo);
 
 		/*
 		 * If we slept and got the lock we have to restart in case
@@ -2747,14 +3072,14 @@ loop:
 			bp->b_flags &= ~B_CACHE;
 		else if ((bp->b_flags & (B_VMIO | B_INVAL)) == 0)
 			bp->b_flags |= B_CACHE;
-		BO_LOCK(bo);
-		bremfree(bp);
-		BO_UNLOCK(bo);
+		if (bp->b_flags & B_MANAGED)
+			MPASS(bp->b_qindex == QUEUE_NONE);
+		else
+			bremfree(bp);
 
 		/*
-		 * check for size inconsistancies for non-VMIO case.
+		 * check for size inconsistencies for non-VMIO case.
 		 */
-
 		if (bp->b_bcount != size) {
 			if ((bp->b_flags & B_VMIO) == 0 ||
 			    (size > bp->b_kvasize)) {
@@ -2788,12 +3113,18 @@ loop:
 		}
 
 		/*
+		 * Handle the case of unmapped buffer which should
+		 * become mapped, or the buffer for which KVA
+		 * reservation is requested.
+		 */
+		bp_unmapped_get_kva(bp, blkno, size, flags);
+
+		/*
 		 * If the size is inconsistant in the VMIO case, we can resize
 		 * the buffer.  This might lead to B_CACHE getting set or
 		 * cleared.  If the size has not changed, B_CACHE remains
 		 * unchanged from its previous state.
 		 */
-
 		if (bp->b_bcount != size)
 			allocbuf(bp, size);
 
@@ -2834,25 +3165,31 @@ loop:
 		}
 		bp->b_flags &= ~B_DONE;
 	} else {
-		int bsize, maxsize, vmio;
-		off_t offset;
-
 		/*
 		 * Buffer is not in-core, create new buffer.  The buffer
 		 * returned by getnewbuf() is locked.  Note that the returned
 		 * buffer is also considered valid (not marked B_INVAL).
 		 */
-		BO_UNLOCK(bo);
+		BO_RUNLOCK(bo);
 		/*
 		 * If the user does not want us to create the buffer, bail out
 		 * here.
 		 */
 		if (flags & GB_NOCREAT)
 			return NULL;
+		if (numfreebuffers == 0 && TD_IS_IDLETHREAD(curthread))
+			return NULL;
+
 		bsize = vn_isdisk(vp, NULL) ? DEV_BSIZE : bo->bo_bsize;
 		offset = blkno * bsize;
 		vmio = vp->v_object != NULL;
-		maxsize = vmio ? size + (offset & PAGE_MASK) : size;
+		if (vmio) {
+			maxsize = size + (offset & PAGE_MASK);
+		} else {
+			maxsize = size;
+			/* Do not allow non-VMIO notmapped buffers. */
+			flags &= ~GB_UNMAPPED;
+		}
 		maxsize = imax(maxsize, bsize);
 
 		bp = getnewbuf(vp, slpflag, slptimeo, size, maxsize, flags);
@@ -2908,6 +3245,7 @@ loop:
 			KASSERT(bp->b_bufobj->bo_object == NULL,
 			    ("ARGH! has b_bufobj->bo_object %p %p\n",
 			    bp, bp->b_bufobj->bo_object));
+			BUF_CHECK_MAPPED(bp);
 		}
 
 		allocbuf(bp, size);
@@ -3083,11 +3421,15 @@ allocbuf(struct buf *bp, int size)
 			if (desiredpages < bp->b_npages) {
 				vm_page_t m;
 
-				pmap_qremove((vm_offset_t)trunc_page(
-				    (vm_offset_t)bp->b_data) +
-				    (desiredpages << PAGE_SHIFT),
-				    (bp->b_npages - desiredpages));
-				VM_OBJECT_LOCK(bp->b_bufobj->bo_object);
+				if ((bp->b_flags & B_UNMAPPED) == 0) {
+					BUF_CHECK_MAPPED(bp);
+					pmap_qremove((vm_offset_t)trunc_page(
+					    (vm_offset_t)bp->b_data) +
+					    (desiredpages << PAGE_SHIFT),
+					    (bp->b_npages - desiredpages));
+				} else
+					BUF_CHECK_UNMAPPED(bp);
+				VM_OBJECT_WLOCK(bp->b_bufobj->bo_object);
 				for (i = desiredpages; i < bp->b_npages; i++) {
 					/*
 					 * the page is not freed here -- it
@@ -3097,7 +3439,7 @@ allocbuf(struct buf *bp, int size)
 					m = bp->b_pages[i];
 					KASSERT(m != bogus_page,
 					    ("allocbuf: bogus page found"));
-					while (vm_page_sleep_if_busy(m, TRUE,
+					while (vm_page_sleep_if_busy(m,
 					    "biodep"))
 						continue;
 
@@ -3106,7 +3448,7 @@ allocbuf(struct buf *bp, int size)
 					vm_page_unwire(m, 0);
 					vm_page_unlock(m);
 				}
-				VM_OBJECT_UNLOCK(bp->b_bufobj->bo_object);
+				VM_OBJECT_WUNLOCK(bp->b_bufobj->bo_object);
 				bp->b_npages = desiredpages;
 			}
 		} else if (size > bp->b_bcount) {
@@ -3127,7 +3469,7 @@ allocbuf(struct buf *bp, int size)
 
 			obj = bp->b_bufobj->bo_object;
 
-			VM_OBJECT_LOCK(obj);
+			VM_OBJECT_WLOCK(obj);
 			while (bp->b_npages < desiredpages) {
 				vm_page_t m;
 
@@ -3136,15 +3478,15 @@ allocbuf(struct buf *bp, int size)
 				 * here could interfere with paging I/O, no
 				 * matter which process we are.
 				 *
-				 * We can only test VPO_BUSY here.  Blocking on
-				 * m->busy might lead to a deadlock:
-				 *  vm_fault->getpages->cluster_read->allocbuf
-				 * Thus, we specify VM_ALLOC_IGN_SBUSY.
+				 * Only exclusive busy can be tested here.
+				 * Blocking on shared busy might lead to
+				 * deadlocks once allocbuf() is called after
+				 * pages are vfs_busy_pages().
 				 */
 				m = vm_page_grab(obj, OFF_TO_IDX(bp->b_offset) +
 				    bp->b_npages, VM_ALLOC_NOBUSY |
 				    VM_ALLOC_SYSTEM | VM_ALLOC_WIRED |
-				    VM_ALLOC_RETRY | VM_ALLOC_IGN_SBUSY |
+				    VM_ALLOC_IGN_SBUSY |
 				    VM_ALLOC_COUNT(desiredpages - bp->b_npages));
 				if (m->valid == 0)
 					bp->b_flags &= ~B_CACHE;
@@ -3189,24 +3531,15 @@ allocbuf(struct buf *bp, int size)
 				toff += tinc;
 				tinc = PAGE_SIZE;
 			}
-			VM_OBJECT_UNLOCK(obj);
+			VM_OBJECT_WUNLOCK(obj);
 
 			/*
-			 * Step 3, fixup the KVM pmap.  Remember that
-			 * bp->b_data is relative to bp->b_offset, but 
-			 * bp->b_offset may be offset into the first page.
+			 * Step 3, fixup the KVM pmap.
 			 */
-
-			bp->b_data = (caddr_t)
-			    trunc_page((vm_offset_t)bp->b_data);
-			pmap_qenter(
-			    (vm_offset_t)bp->b_data,
-			    bp->b_pages, 
-			    bp->b_npages
-			);
-			
-			bp->b_data = (caddr_t)((vm_offset_t)bp->b_data | 
-			    (vm_offset_t)(bp->b_offset & PAGE_MASK));
+			if ((bp->b_flags & B_UNMAPPED) == 0)
+				bpmap_qenter(bp);
+			else
+				BUF_CHECK_UNMAPPED(bp);
 		}
 	}
 	if (newbsize < bp->b_bufsize)
@@ -3216,21 +3549,38 @@ allocbuf(struct buf *bp, int size)
 	return 1;
 }
 
+extern int inflight_transient_maps;
+
 void
 biodone(struct bio *bp)
 {
 	struct mtx *mtxp;
 	void (*done)(struct bio *);
+	vm_offset_t start, end;
+	int transient;
 
 	mtxp = mtx_pool_find(mtxpool_sleep, bp);
 	mtx_lock(mtxp);
 	bp->bio_flags |= BIO_DONE;
+	if ((bp->bio_flags & BIO_TRANSIENT_MAPPING) != 0) {
+		start = trunc_page((vm_offset_t)bp->bio_data);
+		end = round_page((vm_offset_t)bp->bio_data + bp->bio_length);
+		transient = 1;
+	} else {
+		transient = 0;
+		start = end = 0;
+	}
 	done = bp->bio_done;
 	if (done == NULL)
 		wakeup(bp);
 	mtx_unlock(mtxp);
 	if (done != NULL)
 		done(bp);
+	if (transient) {
+		pmap_qremove(start, OFF_TO_IDX(end - start));
+		vmem_free(transient_arena, start, end - start);
+		atomic_add_int(&inflight_transient_maps, -1);
+	}
 }
 
 /*
@@ -3356,7 +3706,7 @@ dev_strategy_csw(struct cdev *dev, struct cdevsw *csw, struct buf *bp)
 	bip->bio_offset = bp->b_iooffset;
 	bip->bio_length = bp->b_bcount;
 	bip->bio_bcount = bp->b_bcount;	/* XXX: remove */
-	bip->bio_data = bp->b_data;
+	bdata2bio(bp, bip);
 	bip->bio_done = bufdonebio;
 	bip->bio_caller2 = bp;
 	bip->bio_dev = dev;
@@ -3455,7 +3805,7 @@ bufdone_finish(struct buf *bp)
 			bp->b_flags |= B_CACHE;
 		}
 		bogus = 0;
-		VM_OBJECT_LOCK(obj);
+		VM_OBJECT_WLOCK(obj);
 		for (i = 0; i < bp->b_npages; i++) {
 			int bogusflag = 0;
 			int resid;
@@ -3491,16 +3841,18 @@ bufdone_finish(struct buf *bp)
 				vfs_page_set_valid(bp, foff, m);
 			}
 
-			vm_page_io_finish(m);
+			vm_page_sunbusy(m);
 			vm_object_pip_subtract(obj, 1);
 			foff = (foff + PAGE_SIZE) & ~(off_t)PAGE_MASK;
 			iosize -= resid;
 		}
 		vm_object_pip_wakeupn(obj, 0);
-		VM_OBJECT_UNLOCK(obj);
-		if (bogus)
+		VM_OBJECT_WUNLOCK(obj);
+		if (bogus && (bp->b_flags & B_UNMAPPED) == 0) {
+			BUF_CHECK_MAPPED(bp);
 			pmap_qenter(trunc_page((vm_offset_t)bp->b_data),
 			    bp->b_pages, bp->b_npages);
+		}
 	}
 
 	/*
@@ -3535,7 +3887,7 @@ vfs_unbusy_pages(struct buf *bp)
 		return;
 
 	obj = bp->b_bufobj->bo_object;
-	VM_OBJECT_LOCK(obj);
+	VM_OBJECT_WLOCK(obj);
 	for (i = 0; i < bp->b_npages; i++) {
 		m = bp->b_pages[i];
 		if (m == bogus_page) {
@@ -3543,14 +3895,18 @@ vfs_unbusy_pages(struct buf *bp)
 			if (!m)
 				panic("vfs_unbusy_pages: page missing\n");
 			bp->b_pages[i] = m;
-			pmap_qenter(trunc_page((vm_offset_t)bp->b_data),
-			    bp->b_pages, bp->b_npages);
+			if ((bp->b_flags & B_UNMAPPED) == 0) {
+				BUF_CHECK_MAPPED(bp);
+				pmap_qenter(trunc_page((vm_offset_t)bp->b_data),
+				    bp->b_pages, bp->b_npages);
+			} else
+				BUF_CHECK_UNMAPPED(bp);
 		}
 		vm_object_pip_subtract(obj, 1);
-		vm_page_io_finish(m);
+		vm_page_sunbusy(m);
 	}
 	vm_object_pip_wakeupn(obj, 0);
-	VM_OBJECT_UNLOCK(obj);
+	VM_OBJECT_WUNLOCK(obj);
 }
 
 /*
@@ -3581,7 +3937,7 @@ vfs_page_set_valid(struct buf *bp, vm_ooffset_t off, vm_page_t m)
 	 * entire page.
 	 */
 	if (eoff > off)
-		vm_page_set_valid(m, off & PAGE_MASK, eoff - off);
+		vm_page_set_valid_range(m, off & PAGE_MASK, eoff - off);
 }
 
 /*
@@ -3620,35 +3976,39 @@ vfs_page_set_validclean(struct buf *bp, vm_ooffset_t off, vm_page_t m)
 }
 
 /*
- * Ensure that all buffer pages are not busied by VPO_BUSY flag. If
- * any page is busy, drain the flag.
+ * Ensure that all buffer pages are not exclusive busied.  If any page is
+ * exclusive busy, drain it.
  */
-static void
+void
 vfs_drain_busy_pages(struct buf *bp)
 {
 	vm_page_t m;
 	int i, last_busied;
 
-	VM_OBJECT_LOCK_ASSERT(bp->b_bufobj->bo_object, MA_OWNED);
+	VM_OBJECT_ASSERT_WLOCKED(bp->b_bufobj->bo_object);
 	last_busied = 0;
 	for (i = 0; i < bp->b_npages; i++) {
 		m = bp->b_pages[i];
-		if ((m->oflags & VPO_BUSY) != 0) {
+		if (vm_page_xbusied(m)) {
 			for (; last_busied < i; last_busied++)
-				vm_page_busy(bp->b_pages[last_busied]);
-			while ((m->oflags & VPO_BUSY) != 0)
-				vm_page_sleep(m, "vbpage");
+				vm_page_sbusy(bp->b_pages[last_busied]);
+			while (vm_page_xbusied(m)) {
+				vm_page_lock(m);
+				VM_OBJECT_WUNLOCK(bp->b_bufobj->bo_object);
+				vm_page_busy_sleep(m, "vbpage");
+				VM_OBJECT_WLOCK(bp->b_bufobj->bo_object);
+			}
 		}
 	}
 	for (i = 0; i < last_busied; i++)
-		vm_page_wakeup(bp->b_pages[i]);
+		vm_page_sunbusy(bp->b_pages[i]);
 }
 
 /*
  * This routine is called before a device strategy routine.
  * It is used to tell the VM system that paging I/O is in
  * progress, and treat the pages associated with the buffer
- * almost as being VPO_BUSY.  Also the object paging_in_progress
+ * almost as being exclusive busy.  Also the object paging_in_progress
  * flag is handled to make sure that the object doesn't become
  * inconsistant.
  *
@@ -3671,7 +4031,7 @@ vfs_busy_pages(struct buf *bp, int clear_modify)
 	foff = bp->b_offset;
 	KASSERT(bp->b_offset != NOOFFSET,
 	    ("vfs_busy_pages: no buffer offset"));
-	VM_OBJECT_LOCK(obj);
+	VM_OBJECT_WLOCK(obj);
 	vfs_drain_busy_pages(bp);
 	if (bp->b_bufsize != 0)
 		vfs_setdirty_locked_object(bp);
@@ -3681,7 +4041,7 @@ vfs_busy_pages(struct buf *bp, int clear_modify)
 
 		if ((bp->b_flags & B_CLUSTER) == 0) {
 			vm_object_pip_add(obj, 1);
-			vm_page_io_start(m);
+			vm_page_sbusy(m);
 		}
 		/*
 		 * When readying a buffer for a read ( i.e
@@ -3708,10 +4068,12 @@ vfs_busy_pages(struct buf *bp, int clear_modify)
 		}
 		foff = (foff + PAGE_SIZE) & ~(off_t)PAGE_MASK;
 	}
-	VM_OBJECT_UNLOCK(obj);
-	if (bogus)
+	VM_OBJECT_WUNLOCK(obj);
+	if (bogus && (bp->b_flags & B_UNMAPPED) == 0) {
+		BUF_CHECK_MAPPED(bp);
 		pmap_qenter(trunc_page((vm_offset_t)bp->b_data),
 		    bp->b_pages, bp->b_npages);
+	}
 }
 
 /*
@@ -3739,17 +4101,17 @@ vfs_bio_set_valid(struct buf *bp, int base, int size)
 	base += (bp->b_offset & PAGE_MASK);
 	n = PAGE_SIZE - (base & PAGE_MASK);
 
-	VM_OBJECT_LOCK(bp->b_bufobj->bo_object);
+	VM_OBJECT_WLOCK(bp->b_bufobj->bo_object);
 	for (i = base / PAGE_SIZE; size > 0 && i < bp->b_npages; ++i) {
 		m = bp->b_pages[i];
 		if (n > size)
 			n = size;
-		vm_page_set_valid(m, base & PAGE_MASK, n);
+		vm_page_set_valid_range(m, base & PAGE_MASK, n);
 		base += n;
 		size -= n;
 		n = PAGE_SIZE;
 	}
-	VM_OBJECT_UNLOCK(bp->b_bufobj->bo_object);
+	VM_OBJECT_WUNLOCK(bp->b_bufobj->bo_object);
 }
 
 /*
@@ -3775,13 +4137,13 @@ vfs_bio_clrbuf(struct buf *bp)
 	}
 	bp->b_flags &= ~B_INVAL;
 	bp->b_ioflags &= ~BIO_ERROR;
-	VM_OBJECT_LOCK(bp->b_bufobj->bo_object);
+	VM_OBJECT_WLOCK(bp->b_bufobj->bo_object);
 	if ((bp->b_npages == 1) && (bp->b_bufsize < PAGE_SIZE) &&
 	    (bp->b_offset & PAGE_MASK) == 0) {
 		if (bp->b_pages[0] == bogus_page)
 			goto unlock;
 		mask = (1 << (bp->b_bufsize / DEV_BSIZE)) - 1;
-		VM_OBJECT_LOCK_ASSERT(bp->b_pages[0]->object, MA_OWNED);
+		VM_OBJECT_ASSERT_WLOCKED(bp->b_pages[0]->object);
 		if ((bp->b_pages[0]->valid & mask) == mask)
 			goto unlock;
 		if ((bp->b_pages[0]->valid & mask) == 0) {
@@ -3801,7 +4163,7 @@ vfs_bio_clrbuf(struct buf *bp)
 			continue;
 		j = sa / DEV_BSIZE;
 		mask = ((1 << ((ea - sa) / DEV_BSIZE)) - 1) << j;
-		VM_OBJECT_LOCK_ASSERT(bp->b_pages[i]->object, MA_OWNED);
+		VM_OBJECT_ASSERT_WLOCKED(bp->b_pages[i]->object);
 		if ((bp->b_pages[i]->valid & mask) == mask)
 			continue;
 		if ((bp->b_pages[i]->valid & mask) == 0)
@@ -3817,8 +4179,32 @@ vfs_bio_clrbuf(struct buf *bp)
 		bp->b_pages[i]->valid |= mask;
 	}
 unlock:
-	VM_OBJECT_UNLOCK(bp->b_bufobj->bo_object);
+	VM_OBJECT_WUNLOCK(bp->b_bufobj->bo_object);
 	bp->b_resid = 0;
+}
+
+void
+vfs_bio_bzero_buf(struct buf *bp, int base, int size)
+{
+	vm_page_t m;
+	int i, n;
+
+	if ((bp->b_flags & B_UNMAPPED) == 0) {
+		BUF_CHECK_MAPPED(bp);
+		bzero(bp->b_data + base, size);
+	} else {
+		BUF_CHECK_UNMAPPED(bp);
+		n = PAGE_SIZE - (base & PAGE_MASK);
+		for (i = base / PAGE_SIZE; size > 0 && i < bp->b_npages; ++i) {
+			m = bp->b_pages[i];
+			if (n > size)
+				n = size;
+			pmap_zero_page_area(m, base & PAGE_MASK, n);
+			base += n;
+			size -= n;
+			n = PAGE_SIZE;
+		}
+	}
 }
 
 /*
@@ -3832,6 +4218,8 @@ vm_hold_load_pages(struct buf *bp, vm_offset_t from, vm_offset_t to)
 	vm_offset_t pg;
 	vm_page_t p;
 	int index;
+
+	BUF_CHECK_MAPPED(bp);
 
 	to = round_page(to);
 	from = round_page(from);
@@ -3864,6 +4252,8 @@ vm_hold_free_pages(struct buf *bp, int newbsize)
 	vm_page_t p;
 	int index, newnpages;
 
+	BUF_CHECK_MAPPED(bp);
+
 	from = round_page((vm_offset_t)bp->b_data + newbsize);
 	newnpages = (from - trunc_page((vm_offset_t)bp->b_data)) >> PAGE_SHIFT;
 	if (bp->b_npages > newnpages)
@@ -3871,7 +4261,7 @@ vm_hold_free_pages(struct buf *bp, int newbsize)
 	for (index = newnpages; index < bp->b_npages; index++) {
 		p = bp->b_pages[index];
 		bp->b_pages[index] = NULL;
-		if (p->busy != 0)
+		if (vm_page_sbusied(p))
 			printf("vm_hold_free_pages: blkno: %jd, lblkno: %jd\n",
 			    (intmax_t)bp->b_blkno, (intmax_t)bp->b_lblkno);
 		p->wire_count--;
@@ -3894,7 +4284,7 @@ vm_hold_free_pages(struct buf *bp, int newbsize)
  * check the return value.
  */
 int
-vmapbuf(struct buf *bp)
+vmapbuf(struct buf *bp, int mapbuf)
 {
 	caddr_t kva;
 	vm_prot_t prot;
@@ -3909,12 +4299,19 @@ vmapbuf(struct buf *bp)
 	    (vm_offset_t)bp->b_data, bp->b_bufsize, prot, bp->b_pages,
 	    btoc(MAXPHYS))) < 0)
 		return (-1);
-	pmap_qenter((vm_offset_t)bp->b_saveaddr, bp->b_pages, pidx);
-	
-	kva = bp->b_saveaddr;
 	bp->b_npages = pidx;
-	bp->b_saveaddr = bp->b_data;
-	bp->b_data = kva + (((vm_offset_t) bp->b_data) & PAGE_MASK);
+	if (mapbuf || !unmapped_buf_allowed) {
+		pmap_qenter((vm_offset_t)bp->b_saveaddr, bp->b_pages, pidx);
+		kva = bp->b_saveaddr;
+		bp->b_saveaddr = bp->b_data;
+		bp->b_data = kva + (((vm_offset_t)bp->b_data) & PAGE_MASK);
+		bp->b_flags &= ~B_UNMAPPED;
+	} else {
+		bp->b_flags |= B_UNMAPPED;
+		bp->b_offset = ((vm_offset_t)bp->b_data) & PAGE_MASK;
+		bp->b_saveaddr = bp->b_data;
+		bp->b_data = unmapped_buf;
+	}
 	return(0);
 }
 
@@ -3928,7 +4325,10 @@ vunmapbuf(struct buf *bp)
 	int npages;
 
 	npages = bp->b_npages;
-	pmap_qremove(trunc_page((vm_offset_t)bp->b_data), npages);
+	if (bp->b_flags & B_UNMAPPED)
+		bp->b_flags &= ~B_UNMAPPED;
+	else
+		pmap_qremove(trunc_page((vm_offset_t)bp->b_data), npages);
 	vm_page_unhold_pages(bp->b_pages, npages);
 	
 	bp->b_data = bp->b_saveaddr;
@@ -3984,7 +4384,7 @@ bufobj_wrefl(struct bufobj *bo)
 {
 
 	KASSERT(bo != NULL, ("NULL bo in bufobj_wref"));
-	ASSERT_BO_LOCKED(bo);
+	ASSERT_BO_WLOCKED(bo);
 	bo->bo_numoutput++;
 }
 
@@ -4018,11 +4418,11 @@ bufobj_wwait(struct bufobj *bo, int slpflag, int timeo)
 	int error;
 
 	KASSERT(bo != NULL, ("NULL bo in bufobj_wwait"));
-	ASSERT_BO_LOCKED(bo);
+	ASSERT_BO_WLOCKED(bo);
 	error = 0;
 	while (bo->bo_numoutput) {
 		bo->bo_flag |= BO_WWAIT;
-		error = msleep(&bo->bo_numoutput, BO_MTX(bo),
+		error = msleep(&bo->bo_numoutput, BO_LOCKPTR(bo),
 		    slpflag | (PRIBIO + 1), "bo_wwait", timeo);
 		if (error)
 			break;
@@ -4063,6 +4463,30 @@ bunpin_wait(struct buf *bp)
 	while (bp->b_pin_count > 0)
 		msleep(bp, mtxp, PRIBIO, "bwunpin", 0);
 	mtx_unlock(mtxp);
+}
+
+/*
+ * Set bio_data or bio_ma for struct bio from the struct buf.
+ */
+void
+bdata2bio(struct buf *bp, struct bio *bip)
+{
+
+	if ((bp->b_flags & B_UNMAPPED) != 0) {
+		KASSERT(unmapped_buf_allowed, ("unmapped"));
+		bip->bio_ma = bp->b_pages;
+		bip->bio_ma_n = bp->b_npages;
+		bip->bio_data = unmapped_buf;
+		bip->bio_ma_offset = (vm_offset_t)bp->b_offset & PAGE_MASK;
+		bip->bio_flags |= BIO_UNMAPPED;
+		KASSERT(round_page(bip->bio_ma_offset + bip->bio_length) /
+		    PAGE_SIZE == bp->b_npages,
+		    ("Buffer %p too short: %d %lld %d", bp, bip->bio_ma_offset,
+		    (long long)bip->bio_length, bip->bio_ma_n));
+	} else {
+		bip->bio_data = bp->b_data;
+		bip->bio_ma = NULL;
+	}
 }
 
 #include "opt_ddb.h"
@@ -4156,7 +4580,7 @@ DB_COMMAND(countfreebufs, db_coundfreebufs)
 
 	for (i = 0; i < nbuf; i++) {
 		bp = &buf[i];
-		if ((bp->b_vflags & BV_INFREECNT) != 0)
+		if ((bp->b_flags & B_INFREECNT) != 0)
 			nfree++;
 		else
 			used++;

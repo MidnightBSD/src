@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/gnu/usr.bin/gdb/kgdb/trgt_ia64.c 205711 2010-03-26 19:41:40Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/gnu/usr.bin/gdb/kgdb/trgt_ia64.c 246893 2013-02-17 02:15:19Z marcel $");
 
 #include <sys/types.h>
 #ifdef CROSS_DEBUGGER
@@ -51,6 +51,18 @@ __FBSDID("$FreeBSD: stable/9/gnu/usr.bin/gdb/kgdb/trgt_ia64.c 205711 2010-03-26 
 #include <ia64-tdep.h>
 
 #include "kgdb.h"
+
+CORE_ADDR
+kgdb_trgt_core_pcb(u_int cpuid)
+{
+	CORE_ADDR addr;
+	char *expr;
+
+	asprintf(&expr, "&cpuid_to_pcpu[%d]->pc_md.pcb", cpuid);
+	addr = kgdb_parse(expr);
+	free(expr);
+	return (addr);
+}
 
 void
 kgdb_trgt_fetch_registers(int regno __unused)

@@ -24,11 +24,13 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/sys/mips/atheros/ar71xx_chip.h 211476 2010-08-19 02:03:12Z adrian $ */
+/* $FreeBSD: release/10.0.0/sys/mips/atheros/ar71xx_chip.h 234906 2012-05-02 01:21:57Z adrian $ */
 
 #ifndef	__AR71XX_CHIP_H__
 #define	__AR71XX_CHIP_H__
 
 extern struct ar71xx_cpu_def ar71xx_chip_def;
+extern void ar71xx_chip_set_mii_speed(uint32_t unit, uint32_t speed);
+extern void ar71xx_chip_set_mii_if(uint32_t unit, uint32_t mii_if);
 
 #endif

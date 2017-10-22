@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/posix1e/mac.c 176901 2008-03-07 15:25:56Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/posix1e/mac.c 254700 2013-08-23 13:59:47Z jilles $");
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -179,7 +179,7 @@ mac_init_internal(int ignore_errors)
 		filename = getenv("MAC_CONFFILE");
 	else
 		filename = MAC_CONFFILE;
-	file = fopen(filename, "r");
+	file = fopen(filename, "re");
 	if (file == NULL)
 		return (0);
 

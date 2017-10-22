@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/mii/ciphy.c 229093 2011-12-31 14:12:12Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mii/ciphy.c 235999 2012-05-25 15:05:17Z raj $");
 
 /*
  * Driver for the Cicada/Vitesse CS/VSC8xxx 10/100/1000 copper PHY.
@@ -91,8 +91,10 @@ static const struct mii_phydesc ciphys[] = {
 	MII_PHY_DESC(xxCICADA, CS8201B),
 	MII_PHY_DESC(xxCICADA, CS8204),
 	MII_PHY_DESC(xxCICADA, VSC8211),
+	MII_PHY_DESC(xxCICADA, VSC8221),
 	MII_PHY_DESC(xxCICADA, CS8244),
 	MII_PHY_DESC(xxVITESSE, VSC8601),
+	MII_PHY_DESC(xxVITESSE, VSC8641),
 	MII_PHY_END
 };
 
@@ -368,8 +370,10 @@ ciphy_fixup(struct mii_softc *sc)
 
 		break;
 	case MII_MODEL_xxCICADA_VSC8211:
+	case MII_MODEL_xxCICADA_VSC8221:
 	case MII_MODEL_xxCICADA_CS8244:
 	case MII_MODEL_xxVITESSE_VSC8601:
+	case MII_MODEL_xxVITESSE_VSC8641:
 		break;
 	default:
 		device_printf(sc->mii_dev, "unknown CICADA PHY model %x\n",

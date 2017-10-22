@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/ofw/ofw_syscons.h 186050 2008-12-13 20:13:22Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/powerpc/ofw/ofw_syscons.h 255904 2013-09-26 22:47:02Z nwhitehorn $
  */
 
 #ifndef _OFW_SYSCONS_H_
@@ -32,6 +32,7 @@
 struct ofwfb_softc {
 	video_adapter_t	sc_va;
 	struct cdev *sc_si;
+	bus_space_tag_t sc_tag;
 	phandle_t	sc_node;
 	int	       	sc_console;
 

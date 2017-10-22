@@ -28,7 +28,7 @@
 #elif defined(HAVE_SYS_UTIME_H)
 #include <sys/utime.h>
 #endif
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/cpio/test/test_option_u.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/cpio/test/test_option_u.c 232153 2012-02-25 10:58:02Z mm $");
 
 DEFINE_TEST(test_option_u)
 {
@@ -41,7 +41,7 @@ DEFINE_TEST(test_option_u)
 	assertMakeFile("f", 0644, "a");
 
 	/* Copy the file to the "copy" dir. */
-	r = systemf("echo f | %s -pd copy >copy.out 2>copy.err",
+	r = systemf("echo f| %s -pd copy >copy.out 2>copy.err",
 	    testprog);
 	assertEqualInt(r, 0);
 
@@ -60,7 +60,7 @@ DEFINE_TEST(test_option_u)
 	assertEqualInt(0, utime("f", &times));
 
 	/* Copy the file to the "copy" dir. */
-	r = systemf("echo f | %s -pd copy >copy.out 2>copy.err",
+	r = systemf("echo f| %s -pd copy >copy.out 2>copy.err",
 	    testprog);
 	assertEqualInt(r, 0);
 
@@ -70,7 +70,7 @@ DEFINE_TEST(test_option_u)
 	assertEqualMem(p, "a", 1);
 
 	/* Copy the file to the "copy" dir with -u (force) */
-	r = systemf("echo f | %s -pud copy >copy.out 2>copy.err",
+	r = systemf("echo f| %s -pud copy >copy.out 2>copy.err",
 	    testprog);
 	assertEqualInt(r, 0);
 

@@ -37,14 +37,17 @@
 #include <machine/asmacros.h>
 #include <machine/armreg.h>
 #include "assym.s"
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/fusu.S 163449 2006-10-17 02:24:47Z davidxu $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/fusu.S 248361 2013-03-16 02:48:49Z andrew $");
 
-#ifdef MULTIPROCESSOR
-.Lcpu_info:
-	.word	_C_LABEL(cpu_info)
+#ifdef _ARM_ARCH_6
+#define GET_PCB(tmp) \
+	mrc p15, 0, tmp, c13, c0, 4; \
+	add	tmp, tmp, #(PC_CURPCB)
 #else
 .Lcurpcb:
 	.word	_C_LABEL(__pcpu) + PC_CURPCB
+#define GET_PCB(tmp) \
+	ldr	tmp, .Lcurpcb
 #endif
 
 /*
@@ -54,18 +57,8 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/arm/fusu.S 163449 2006-10-17 02:24:47Z davi
 
 ENTRY_NP(casuword32)
 ENTRY(casuword)
-#ifdef MULTIPROCESSOR
-	/* XXX Probably not appropriate for non-Hydra SMPs */
-	stmfd	sp!, {r0, r14}
-	bl	_C_LABEL(cpu_number)
-	ldr	r2, .Lcpu_info
-	ldr	r2, [r2, r0, lsl #2]
-	ldr	r2, [r2, #CI_CURPCB]
-	ldmfd	sp!, {r0, r14}
-#else
-	ldr	r3, .Lcurpcb
+	GET_PCB(r3)
 	ldr	r3, [r3]
-#endif
 
 #ifdef DIAGNOSTIC
 	teq	r3, #0x00000000
@@ -83,6 +76,8 @@ ENTRY(casuword)
 	mov	r1, #0x00000000
 	str	r1, [r3, #PCB_ONFAULT]
 	RET
+END(casuword32)
+END(casuword)
 
 /*
  * Handle faults from casuword.  Clean up and return -1.
@@ -94,6 +89,7 @@ ENTRY(casuword)
 	mvn	r0, #0x00000000
 	ldmfd	sp!, {r4, r5}
 	RET	
+
 /*
  * fuword(caddr_t uaddr);
  * Fetch an int from the user's address space.
@@ -101,18 +97,8 @@ ENTRY(casuword)
 
 ENTRY_NP(fuword32)
 ENTRY(fuword)
-#ifdef MULTIPROCESSOR
-	/* XXX Probably not appropriate for non-Hydra SMPs */
-	stmfd	sp!, {r0, r14}
-	bl	_C_LABEL(cpu_number)
-	ldr	r2, .Lcpu_info
-	ldr	r2, [r2, r0, lsl #2]
-	ldr	r2, [r2, #CI_CURPCB]
-	ldmfd	sp!, {r0, r14}
-#else
-	ldr	r2, .Lcurpcb
+	GET_PCB(r2)
 	ldr	r2, [r2]
-#endif
 
 #ifdef DIAGNOSTIC
 	teq	r2, #0x00000000
@@ -128,6 +114,8 @@ ENTRY(fuword)
 	str	r1, [r2, #PCB_ONFAULT]
 	mov	r0, r3
 	RET
+END(fuword32)
+END(fuword)
 
 /*
  * fusword(caddr_t uaddr);
@@ -135,18 +123,8 @@ ENTRY(fuword)
  */
 
 ENTRY(fusword)
-#ifdef MULTIPROCESSOR
-	/* XXX Probably not appropriate for non-Hydra SMPs */
-	stmfd	sp!, {r0, r14}
-	bl	_C_LABEL(cpu_number)
-	ldr	r2, .Lcpu_info
-	ldr	r2, [r2, r0, lsl #2]
-	ldr	r2, [r2, #CI_CURPCB]
-	ldmfd	sp!, {r0, r14}
-#else
-	ldr	r2, .Lcurpcb
+	GET_PCB(r2)
 	ldr	r2, [r2]
-#endif
 
 #ifdef DIAGNOSTIC
 	teq	r2, #0x00000000
@@ -166,6 +144,7 @@ ENTRY(fusword)
 	mov	r1, #0x00000000
 	str	r1, [r2, #PCB_ONFAULT]
 	RET
+END(fusword)
 
 /*
  * fuswintr(caddr_t uaddr);
@@ -180,18 +159,8 @@ ENTRY(fuswintr)
 	mvnne	r0, #0x00000000
 	RETne
 
-#ifdef MULTIPROCESSOR
-	/* XXX Probably not appropriate for non-Hydra SMPs */
-	stmfd	sp!, {r0, r14}
-	bl	_C_LABEL(cpu_number)
-	ldr	r2, .Lcpu_info
-	ldr	r2, [r2, r0, lsl #2]
-	ldr	r2, [r2, #CI_CURPCB]
-	ldmfd	sp!, {r0, r14}
-#else
-	ldr	r2, .Lcurpcb
+	GET_PCB(r2)
 	ldr	r2, [r2]
-#endif
 
 #ifdef DIAGNOSTIC
 	teq	r2, #0x00000000
@@ -212,6 +181,7 @@ ENTRY(fuswintr)
 	mov	r1, #0x00000000
 	str	r1, [r2, #PCB_ONFAULT]
 	RET
+END(fuswintr)
 
 Lblock_userspace_access:
 	.word	_C_LABEL(block_userspace_access)
@@ -229,18 +199,8 @@ _C_LABEL(block_userspace_access):
  */
 
 ENTRY(fubyte)
-#ifdef MULTIPROCESSOR
-	/* XXX Probably not appropriate for non-Hydra SMPs */
-	stmfd	sp!, {r0, r14}
-	bl	_C_LABEL(cpu_number)
-	ldr	r2, .Lcpu_info
-	ldr	r2, [r2, r0, lsl #2]
-	ldr	r2, [r2, #CI_CURPCB]
-	ldmfd	sp!, {r0, r14}
-#else
-	ldr	r2, .Lcurpcb
+	GET_PCB(r2)
 	ldr	r2, [r2]
-#endif
 
 #ifdef DIAGNOSTIC
 	teq	r2, #0x00000000
@@ -256,6 +216,7 @@ ENTRY(fubyte)
 	str	r1, [r2, #PCB_ONFAULT]
 	mov	r0, r3
 	RET
+END(fubyte)
 
 /*
  * Handle faults from [fs]u*().  Clean up and return -1.
@@ -303,18 +264,8 @@ fusupcbfaulttext:
 
 ENTRY_NP(suword32)
 ENTRY(suword)
-#ifdef MULTIPROCESSOR
-	/* XXX Probably not appropriate for non-Hydra SMPs */
-	stmfd	sp!, {r0, r1, r14}
-	bl	_C_LABEL(cpu_number)
-	ldr	r2, .Lcpu_info
-	ldr	r2, [r2, r0, lsl #2]
-	ldr	r2, [r2, #CI_CURPCB]
-	ldmfd	sp!, {r0, r1, r14}
-#else
-	ldr	r2, .Lcurpcb
+	GET_PCB(r2)
 	ldr	r2, [r2]
-#endif
 
 #ifdef DIAGNOSTIC
 	teq	r2, #0x00000000
@@ -329,6 +280,8 @@ ENTRY(suword)
 	mov	r0, #0x00000000
 	str	r0, [r2, #PCB_ONFAULT]
 	RET
+END(suword32)
+END(suword)
 
 /*
  * suswintr(caddr_t uaddr, short x);
@@ -343,17 +296,8 @@ ENTRY(suswintr)
 	mvnne	r0, #0x00000000
 	RETne
 
-#ifdef MULTIPROCESSOR
-	stmfd	sp!, {r0, r1, r14}
-	bl	_C_LABEL(cpu_number)
-	ldr	r2, .Lcpu_info
-	ldr	r2, [r2, r0, lsl #2]
-	ldr	r2, [r2, #CI_CURPCB]
-	ldmfd	sp!, {r0, r1, r14}
-#else
-	ldr	r2, .Lcurpcb
+	GET_PCB(r2)
 	ldr	r2, [r2]
-#endif
 
 #ifdef DIAGNOSTIC
 	teq	r2, #0x00000000
@@ -375,6 +319,7 @@ ENTRY(suswintr)
 	mov	r0, #0x00000000
 	str	r0, [r2, #PCB_ONFAULT]
 	RET
+END(suswintr)
 
 /*
  * susword(caddr_t uaddr, short x);
@@ -382,17 +327,8 @@ ENTRY(suswintr)
  */
 
 ENTRY(susword)
-#ifdef MULTIPROCESSOR
-	stmfd	sp!, {r0, r1, r14}
-	bl	_C_LABEL(cpu_number)
-	ldr	r2, .Lcpu_info
-	ldr	r2, [r2, r0, lsl #2]
-	ldr	r2, [r2, #CI_CURPCB]
-	ldmfd	sp!, {r0, r1, r14}
-#else
-	ldr	r2, .Lcurpcb
+	GET_PCB(r2)
 	ldr	r2, [r2]
-#endif
 
 #ifdef DIAGNOSTIC
 	teq	r2, #0x00000000
@@ -414,6 +350,7 @@ ENTRY(susword)
 	mov	r0, #0x00000000
 	str	r0, [r2, #PCB_ONFAULT]
 	RET
+END(susword)
 
 /*
  * subyte(caddr_t uaddr, char x);
@@ -421,17 +358,8 @@ ENTRY(susword)
  */
 
 ENTRY(subyte)
-#ifdef MULTIPROCESSOR
-	stmfd	sp!, {r0, r1, r14}
-	bl	_C_LABEL(cpu_number)
-	ldr	r2, .Lcpu_info
-	ldr	r2, [r2, r0, lsl #2]
-	ldr	r2, [r2, #CI_CURPCB]
-	ldmfd	sp!, {r0, r1, r14}
-#else
-	ldr	r2, .Lcurpcb
+	GET_PCB(r2)
 	ldr	r2, [r2]
-#endif
 
 
 #ifdef DIAGNOSTIC
@@ -446,3 +374,5 @@ ENTRY(subyte)
 	mov	r0, #0x00000000
 	str	r0, [r2, #PCB_ONFAULT]
 	RET
+END(subyte)
+

@@ -13,7 +13,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)rand.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/9/lib/libc/stdlib/rand.3 240353 2012-09-11 08:30:48Z des $
+.\" $FreeBSD: release/10.0.0/lib/libc/stdlib/rand.3 251672 2013-06-13 00:19:30Z emaste $
 .\"
-.Dd September 4, 2012
+.Dd April 2, 2013
 .Dt RAND 3
 .Os
 .Sh NAME
@@ -91,9 +91,7 @@ seeded with a value of 1.
 .Pp
 The
 .Fn sranddev
-function initializes a seed using the
-.Xr random 4
-random number device which returns good random numbers.
+function initializes a seed using pseudo-random numbers obtained from the kernel.
 .Pp
 The
 .Fn rand_r

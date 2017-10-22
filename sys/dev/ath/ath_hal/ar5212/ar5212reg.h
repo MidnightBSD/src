@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/9/sys/dev/ath/ath_hal/ar5212/ar5212reg.h 222644 2011-06-03 07:27:53Z adrian $
+ * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar5212/ar5212reg.h 226489 2011-10-18 03:17:06Z adrian $
  */
 #ifndef _DEV_ATH_AR5212REG_H_
 #define _DEV_ATH_AR5212REG_H_
@@ -94,7 +94,9 @@
 #define	AR_QTXDP(_i)	(AR_Q0_TXDP + ((_i)<<2))
 
 #define	AR_Q_TXE	0x0840	/* MAC Transmit Queue enable */
+#define	AR_Q_TXE_M	0x000003FF	/* Mask for TXE (QCU 0-9) */
 #define	AR_Q_TXD	0x0880	/* MAC Transmit Queue disable */
+#define	AR_Q_TXD_M	0x000003FF	/* Mask for TXD (QCU 0-9) */
 
 #define	AR_Q0_CBRCFG	0x08c0	/* MAC CBR configuration */
 #define	AR_Q1_CBRCFG	0x08c4	/* MAC CBR configuration */

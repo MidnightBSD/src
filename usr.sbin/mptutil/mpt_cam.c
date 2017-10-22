@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__RCSID("$FreeBSD: stable/9/usr.sbin/mptutil/mpt_cam.c 215046 2010-11-09 19:28:06Z jhb $");
+__RCSID("$FreeBSD: release/10.0.0/usr.sbin/mptutil/mpt_cam.c 230590 2012-01-26 18:09:28Z ken $");
 
 #include <sys/param.h>
 #include <err.h>
@@ -277,7 +277,7 @@ fetch_scsi_capacity(struct cam_device *dev, struct mpt_standalone_disk *disk)
 	    sizeof(struct ccb_hdr));
 
 	scsi_read_capacity_16(&ccb->csio, 1, NULL, MSG_SIMPLE_Q_TAG, 0, 0, 0,
-	    &rcaplong, SSD_FULL_SIZE, 5000);
+	    (uint8_t *)&rcaplong, sizeof(rcaplong), SSD_FULL_SIZE, 5000);
 
 	/* Disable freezing the device queue */
 	ccb->ccb_h.flags |= CAM_DEV_QFRZDIS;

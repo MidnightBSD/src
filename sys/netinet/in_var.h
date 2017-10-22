@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_var.h	8.2 (Berkeley) 1/9/95
- * $FreeBSD: stable/9/sys/netinet/in_var.h 242640 2012-11-06 00:49:52Z melifaro $
+ * $FreeBSD: release/10.0.0/sys/netinet/in_var.h 250300 2013-05-06 16:42:18Z andre $
  */
 
 #ifndef _NETINET_IN_VAR_H_
@@ -77,6 +77,7 @@ struct	in_aliasreq {
 	struct	sockaddr_in ifra_broadaddr;
 #define ifra_dstaddr ifra_broadaddr
 	struct	sockaddr_in ifra_mask;
+	int	ifra_vhid;
 };
 /*
  * Given a pointer to an in_ifaddr (ifaddr),
@@ -84,6 +85,7 @@ struct	in_aliasreq {
  */
 #define IA_SIN(ia)    (&(((struct in_ifaddr *)(ia))->ia_addr))
 #define IA_DSTSIN(ia) (&(((struct in_ifaddr *)(ia))->ia_dstaddr))
+#define IA_MASKSIN(ia) (&(((struct in_ifaddr *)(ia))->ia_sockmask))
 
 #define IN_LNAOF(in, ifa) \
 	((ntohl((in).s_addr) & ~((struct in_ifaddr *)(ifa)->ia_subnetmask))
@@ -445,6 +447,8 @@ int	in_leavegroup_locked(struct in_multi *,
 int	in_control(struct socket *, u_long, caddr_t, struct ifnet *,
 	    struct thread *);
 void	in_rtqdrain(void);
+int	in_addprefix(struct in_ifaddr *, int);
+int	in_scrubprefix(struct in_ifaddr *, u_int);
 void	ip_input(struct mbuf *);
 int	in_ifadown(struct ifaddr *ifa, int);
 void	in_ifscrub(struct ifnet *, struct in_ifaddr *, u_int);

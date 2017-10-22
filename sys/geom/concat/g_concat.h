@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/geom/concat/g_concat.h 249145 2013-04-05 10:27:05Z mav $
+ * $FreeBSD: release/10.0.0/sys/geom/concat/g_concat.h 227004 2011-11-01 20:56:19Z mav $
  */
 
 #ifndef	_G_CONCAT_H_

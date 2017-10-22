@@ -1,10 +1,10 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/9/usr.bin/gcore/Makefile 204329 2010-02-25 20:24:19Z ru $
+# $FreeBSD: release/10.0.0/usr.bin/gcore/Makefile 250511 2013-05-11 13:46:05Z antoine $
 
 PROG=	gcore
 SRCS=	elfcore.c gcore.c
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+DPADD=	${LIBSBUF} ${LIBUTIL}
+LDADD=	-lsbuf -lutil
 
 WARNS?=	1
 

@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	JNPR: db_machdep.h,v 1.7 2006/10/16 12:30:34 katta
- * $FreeBSD: stable/9/sys/mips/include/db_machdep.h 210041 2010-07-14 00:52:29Z imp $
+ * $FreeBSD: release/10.0.0/sys/mips/include/db_machdep.h 230094 2012-01-13 23:31:36Z gonzo $
  */
 
 #ifndef	_MIPS_DB_MACHDEP_H_
@@ -93,6 +93,7 @@ db_addr_t	next_instr_address(db_addr_t, boolean_t);
 int db_inst_type(int);
 db_addr_t branch_taken(int inst, db_addr_t pc);
 void stacktrace_subr(register_t pc, register_t sp, register_t ra, int (*)(const char *, ...));
-int kdbpeek(int *);
+int32_t kdbpeek(int *);
+int64_t kdbpeekd(int *);
 
 #endif	/* !_MIPS_DB_MACHDEP_H_ */

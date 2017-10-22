@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libmagic/config.h 240157 2012-09-06 06:17:39Z mckay $ */
+/* $FreeBSD: release/10.0.0/lib/libmagic/config.h 240377 2012-09-11 22:38:33Z obrien $ */
 
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
@@ -39,9 +39,7 @@
 #define HAVE_FSEEKO 1
 
 /* Define to 1 if you have the `getline' function. */
-#ifndef HOSTPROG
 #define HAVE_GETLINE 1
-#endif
 
 /* Define to 1 if you have the <getopt.h> header file. */
 #define HAVE_GETOPT_H 1

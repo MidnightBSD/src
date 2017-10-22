@@ -38,7 +38,7 @@
 
 #include <mixer_if.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pci/hdspe.c 241989 2012-10-24 09:32:34Z glebius $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/hdspe.c 254263 2013-08-12 23:30:01Z scottl $");
 
 static struct hdspe_channel chan_map_aio[] = {
 	{  0,  1,   "line", 1, 1 },
@@ -107,6 +107,7 @@ hdspe_intr(void *p)
 		}
 
 		hdspe_write_1(sc, HDSPE_INTERRUPT_ACK, 0);
+		free(devlist, M_TEMP);
 	}
 
 	snd_mtxunlock(sc->lock);
@@ -242,20 +243,6 @@ hdspe_probe(device_t dev)
 }
 
 static int
-set_pci_config(device_t dev)
-{
-	uint32_t data;
-
-	pci_enable_busmaster(dev);
-
-	data = pci_get_revid(dev);
-	data |= PCIM_CMD_PORTEN;
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-
-	return 0;
-}
-
-static int
 hdspe_init(struct sc_info *sc)
 {
 	long long period;
@@ -306,13 +293,12 @@ hdspe_attach(device_t dev)
 	device_printf(dev, "hdspe_attach()\n");
 #endif
 
-	set_pci_config(dev);
-
 	sc = device_get_softc(dev);
 	sc->lock = snd_mtxcreate(device_get_nameunit(dev),
 	    "snd_hdspe softc");
 	sc->dev = dev;
 
+	pci_enable_busmaster(dev);
 	rev = pci_get_revid(dev);
 	switch (rev) {
 	case PCI_REVISION_AIO:

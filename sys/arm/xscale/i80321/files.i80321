@@ -1,4 +1,4 @@
-#$FreeBSD: stable/9/sys/arm/xscale/i80321/files.i80321 177887 2008-04-03 18:22:08Z raj $
+#$FreeBSD: release/10.0.0/sys/arm/xscale/i80321/files.i80321 177887 2008-04-03 18:22:08Z raj $
 arm/arm/bus_space_generic.c		standard
 arm/arm/cpufunc_asm_xscale.S		standard
 arm/arm/irq_dispatch.S			standard

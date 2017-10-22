@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/common/console.c 242557 2012-11-04 13:32:16Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/common/console.c 241299 2012-10-06 20:01:17Z avg $");
 
 #include <stand.h>
 #include <string.h>

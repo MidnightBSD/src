@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/i386/loader/conf.c 243243 2012-11-18 17:09:29Z ae $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/i386/loader/conf.c 241068 2012-09-30 12:24:15Z ae $");
 
 #include <stand.h>
 #include <bootstrap.h>
@@ -77,6 +77,9 @@ struct fs_ops *file_system[] = {
     &ext2fs_fsops,
     &dosfs_fsops,
     &cd9660_fsops,
+#if defined(LOADER_NANDFS_SUPPORT)
+    &nandfs_fsops,
+#endif
 #ifdef LOADER_SPLIT_SUPPORT
     &splitfs_fsops,
 #endif

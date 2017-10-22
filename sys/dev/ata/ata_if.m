@@ -1,4 +1,4 @@
-# Copyright (c) 2004 - 2008 Søren Schmidt <sos@FreeBSD.org>
+# Copyright (c) 2004 - 2008 SÃ¸ren Schmidt <sos@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/sys/dev/ata/ata_if.m 202699 2010-01-20 14:29:55Z rpaulo $
+# $FreeBSD: release/10.0.0/sys/dev/ata/ata_if.m 249083 2013-04-04 07:12:24Z mav $
 
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -37,24 +37,6 @@
 #include <dev/ata/ata-all.h>
 
 INTERFACE ata;
-
-CODE {
-	static int ata_null_locking(device_t dev, int mode)
-	{
-	    struct ata_channel *ch = device_get_softc(dev);
-	
-	    return ch->unit;
-	}
-};
-METHOD int locking {
-    device_t    channel;
-    int         mode;
-} DEFAULT ata_null_locking;
-HEADER {
-#define         ATA_LF_LOCK             0x0001
-#define         ATA_LF_UNLOCK           0x0002
-#define         ATA_LF_WHICH            0x0004
-};
 
 CODE {
 	static int ata_null_setmode(device_t dev, int target, int mode)

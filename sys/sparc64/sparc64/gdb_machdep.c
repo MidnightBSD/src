@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/gdb_machdep.c 139825 2005-01-07 02:29:27Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/gdb_machdep.c 139825 2005-01-07 02:29:27Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

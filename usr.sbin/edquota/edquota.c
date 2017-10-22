@@ -43,14 +43,12 @@ static char sccsid[] = "@(#)edquota.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/edquota/edquota.c 242166 2012-10-27 01:20:48Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/edquota/edquota.c 243321 2012-11-20 02:12:01Z eadler $");
 
 /*
  * Disk quota editor.
  */
 
-#include <sys/param.h>
-#include <sys/stat.h>
 #include <sys/file.h>
 #include <sys/mount.h>
 #include <sys/wait.h>
@@ -426,7 +424,7 @@ putprivs(long id, struct quotause *quplist)
 }
 
 /*
- * Take a list of priviledges and get it edited.
+ * Take a list of privileges and get it edited.
  */
 int
 editit(char *tmpf)

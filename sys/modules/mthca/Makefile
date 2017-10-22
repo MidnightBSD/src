@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/mthca/Makefile 239748 2012-08-27 19:37:02Z jhb $
+# $FreeBSD: release/10.0.0/sys/modules/mthca/Makefile 242933 2012-11-12 22:01:29Z dim $
 
 .PATH:  ${.CURDIR}/../../ofed/drivers/infiniband/hw/mthca
 

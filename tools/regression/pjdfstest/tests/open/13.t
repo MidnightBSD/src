@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/open/13.t 210953 2010-08-06 19:18:19Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/open/13.t 210953 2010-08-06 19:18:19Z pjd $
 
 desc="open returns EISDIR when trying to open a directory for writing"
 

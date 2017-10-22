@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/test/dtrace/Makefile 211567 2010-08-21 14:14:24Z rpaulo $
+# $FreeBSD: release/10.0.0/tools/test/dtrace/Makefile 251239 2013-06-02 01:07:38Z markj $
 
 TESTSRCDIR=	${.CURDIR}/../../../cddl/contrib/opensolaris/cmd/dtrace/test
 CFLAGS+=	-w
@@ -159,7 +159,6 @@ NOTWORK+= \
 	${TESTSRCDIR}/tst/common/sched/tst.enqueue.d			\
 	${TESTSRCDIR}/tst/common/sched/tst.oncpu.d			\
 	${TESTSRCDIR}/tst/common/sched/tst.stackdepth.d			\
-	${TESTSRCDIR}/tst/common/sdt/tst.sdtargs.d			\
 	${TESTSRCDIR}/tst/common/usdt/argmap.d				\
 	${TESTSRCDIR}/tst/common/usdt/args.d				\
 	${TESTSRCDIR}/tst/common/usdt/forker.d				\

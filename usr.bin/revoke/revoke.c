@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/revoke/revoke.c 194267 2009-06-15 21:52:27Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/revoke/revoke.c 194267 2009-06-15 21:52:27Z ed $");
 
 #include <stdio.h>
 #include <stdlib.h>

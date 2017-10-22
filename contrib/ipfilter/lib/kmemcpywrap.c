@@ -1,19 +1,19 @@
-/*	$FreeBSD: stable/9/contrib/ipfilter/lib/kmemcpywrap.c 170268 2007-06-04 02:54:36Z darrenr $	*/
+/*	$FreeBSD: release/10.0.0/contrib/ipfilter/lib/kmemcpywrap.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2002 by Darren Reed.
- * 
- * See the IPFILTER.LICENCE file for details on licencing.  
- *   
- * $Id: kmemcpywrap.c,v 1.1.4.1 2006/06/16 17:21:05 darrenr Exp $ 
- */     
+ * Copyright (C) 2012 by Darren Reed.
+ *
+ * See the IPFILTER.LICENCE file for details on licencing.
+ *
+ * $Id$
+ */
 
 #include "ipf.h"
 #include "kmem.h"
 
 int kmemcpywrap(from, to, size)
-void *from, *to;
-size_t size;
+	void *from, *to;
+	size_t size;
 {
 	int ret;
 

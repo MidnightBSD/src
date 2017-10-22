@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libbluetooth/dev.c 189462 2009-03-06 23:30:07Z emax $
+ * $FreeBSD: release/10.0.0/lib/libbluetooth/dev.c 189462 2009-03-06 23:30:07Z emax $
  */
 
 #include <bluetooth.h>

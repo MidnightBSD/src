@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/drm/sis/Makefile 124472 2004-01-13 11:28:51Z ru $
+# $FreeBSD: release/10.0.0/sys/modules/drm/sis/Makefile 124472 2004-01-13 11:28:51Z ru $
 
 .PATH:	${.CURDIR}/../../../dev/drm
 KMOD= 	sis

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/wpa/Makefile.inc 235328 2012-05-12 08:22:41Z bschmidt $
+# $FreeBSD: release/10.0.0/usr.sbin/wpa/Makefile.inc 252726 2013-07-04 21:12:58Z rpaulo $
 
 BINDIR?=	/usr/sbin
 
@@ -19,7 +19,8 @@ HOSTAPD_DISTDIR?=	${WPA_DISTDIR}/hostapd
 	${WPA_DISTDIR}/src/radius \
 	${WPA_DISTDIR}/src/rsn_supp \
 	${WPA_DISTDIR}/src/tls \
-	${WPA_DISTDIR}/src/utils
+	${WPA_DISTDIR}/src/utils \
+	${WPA_DISTDIR}/src/wps
 
 CFLAGS+=-I${.CURDIR}
 CFLAGS+=-I${HOSTAPD_DISTDIR}
@@ -29,6 +30,7 @@ CFLAGS+=-I${WPA_DISTDIR}/src/crypto
 CFLAGS+=-I${WPA_DISTDIR}/src/drivers
 CFLAGS+=-I${WPA_DISTDIR}/src/l2_packet
 CFLAGS+=-I${WPA_DISTDIR}/src/utils
+CFLAGS+=-I${WPA_DISTDIR}/src/wps
 
 CFLAGS+= -DCONFIG_CTRL_IFACE
 CFLAGS+= -DCONFIG_CTRL_IFACE_UNIX

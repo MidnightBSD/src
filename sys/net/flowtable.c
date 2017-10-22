@@ -34,13 +34,14 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net/flowtable.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/net/flowtable.c 240086 2012-09-04 12:07:33Z glebius $");
 
 #include <sys/param.h>  
 #include <sys/types.h>
 #include <sys/bitstring.h>
 #include <sys/condvar.h>
 #include <sys/callout.h>
+#include <sys/hash.h>
 #include <sys/kernel.h>  
 #include <sys/kthread.h>
 #include <sys/limits.h>
@@ -73,7 +74,6 @@ __FBSDID("$FreeBSD: stable/9/sys/net/flowtable.c 248085 2013-03-09 02:36:32Z mar
 #include <netinet/udp.h>
 #include <netinet/sctp.h>
 
-#include <libkern/jenkins.h>
 #include <ddb/ddb.h>
 
 struct ipv4_tuple {
@@ -585,7 +585,7 @@ ipv4_flow_lookup_hash_internal(
 	} else
 		offset = V_flow_hashjitter + proto;
 
-	return (jenkins_hashword(key, 3, offset));
+	return (jenkins_hash32(key, 3, offset));
 }
 
 static struct flentry *
@@ -791,7 +791,7 @@ ipv6_flow_lookup_hash_internal(
 	} else
 		offset = V_flow_hashjitter + proto;
 
-	return (jenkins_hashword(key, 9, offset));
+	return (jenkins_hash32(key, 9, offset));
 }
 
 static struct flentry *

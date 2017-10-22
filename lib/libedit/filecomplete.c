@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libedit/filecomplete.c 209224 2010-06-15 22:23:21Z jilles $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libedit/filecomplete.c 209224 2010-06-15 22:23:21Z jilles $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

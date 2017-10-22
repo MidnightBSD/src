@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: vmparam.h,v 1.11 2000/02/11 19:25:16 thorpej Exp $
- * $FreeBSD: stable/9/sys/powerpc/include/vmparam.h 229170 2012-01-01 16:04:02Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/powerpc/include/vmparam.h 250338 2013-05-07 22:46:24Z attilio $
  */
 
 #ifndef _MACHINE_VMPARAM_H_
@@ -78,7 +78,7 @@
 #endif
 #define	SHAREDPAGE		(VM_MAXUSER_ADDRESS - PAGE_SIZE)
 #else /* LOCORE */
-#if !defined(__powerpc64__) && defined(E500)
+#if !defined(__powerpc64__) && defined(BOOKE)
 #define	VM_MIN_ADDRESS		0
 #define	VM_MAXUSER_ADDRESS	0x7ffff000
 #endif
@@ -121,11 +121,6 @@
 
 #endif /* AIM/E500 */
 
-/* XXX max. amount of KVM to be used by buffers. */
-#ifndef VM_MAX_KERNEL_BUF
-#define	VM_MAX_KERNEL_BUF	(SEGMENT_LENGTH * 7 / 10)
-#endif
-
 #if !defined(LOCORE)
 struct pmap_physseg {
 	struct pv_entry *pvent;
@@ -166,13 +161,6 @@ struct pmap_physseg {
  * The largest allocation size is 4MB.
  */
 #define	VM_NFREEORDER		11
-
-/*
- * Only one memory domain.
- */
-#ifndef VM_NDOMAIN
-#define	VM_NDOMAIN		1
-#endif
 
 /*
  * Disable superpage reservations.

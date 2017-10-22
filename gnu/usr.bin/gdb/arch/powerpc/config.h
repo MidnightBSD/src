@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/gnu/usr.bin/gdb/arch/powerpc/config.h 161564 2006-08-24 02:44:59Z marcel $ */
+/* $FreeBSD: release/10.0.0/gnu/usr.bin/gdb/arch/powerpc/config.h 251512 2013-06-07 21:40:02Z emaste $ */
 
 /* config.h.  Generated automatically by configure.  */
 /* config.in.  Generated automatically from configure.in by autoheader.  */
@@ -175,7 +175,7 @@
 
 /* nativefile */
 #ifndef CROSS_DEBUGGER
-#define GDB_NM_FILE config/ia64/nm-fbsd.h
+#define GDB_NM_FILE config/powerpc/nm-fbsd.h
 #endif
 
 /* Define to 1 so <sys/proc.h> gets a definition of anon_hdl.  Works
@@ -438,9 +438,6 @@
 
 /* Name of this package.  */
 #define PACKAGE "gdb"
-
-/* Global directory for separate debug files.  */
-#define DEBUGDIR "/usr/local/lib/debug"
 
 /* Define to BFD's default architecture.  */
 #define DEFAULT_BFD_ARCH bfd_rs6000_arch

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/doc/psd/contents/Makefile 106146 2002-10-29 15:01:59Z ru $
+# $FreeBSD: release/10.0.0/share/doc/psd/contents/Makefile 106146 2002-10-29 15:01:59Z ru $
 
 VOLUME=	psd
 DOC=	contents

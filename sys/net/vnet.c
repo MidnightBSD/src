@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net/vnet.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/net/vnet.c 227293 2011-11-07 06:44:47Z ed $");
 
 #include "opt_ddb.h"
 #include "opt_kdb.h"

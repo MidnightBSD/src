@@ -1,10 +1,11 @@
-# $FreeBSD: stable/9/kerberos5/lib/libkadm5srv/Makefile 225811 2011-09-27 18:40:13Z stas $
+# $FreeBSD: release/10.0.0/kerberos5/lib/libkadm5srv/Makefile 236337 2012-05-30 22:21:25Z obrien $
 
 LIB=	kadm5srv
 LDFLAGS=	-Wl,--no-undefined
 LDADD=	-lcom_err -lhdb -lkrb5 -lroken
 DPADD=	${LIBCOM_ERR} ${LIBHDB} ${LIBKRB5} ${LIBROKEN}
 VERSION_MAP= ${KRB5DIR}/lib/kadm5/version-script.map
+MAN=	kadm5_pwcheck.3
 
 SRCS=	acl.c \
 	bump_pw_expire.c \

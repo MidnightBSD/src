@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/compat/svr4/svr4_stream.c 225617 2011-09-16 13:58:51Z kmacy $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/compat/svr4/svr4_stream.c 255219 2013-09-05 00:09:56Z pjd $");
 
 #include "opt_compat.h"
 #include "opt_ktrace.h"
@@ -1446,10 +1446,12 @@ svr4_sys_putmsg(td, uap)
 	struct thread *td;
 	struct svr4_sys_putmsg_args *uap;
 {
-	struct file     *fp;
+	cap_rights_t rights;
+	struct file *fp;
 	int error;
 
-	if ((error = fget(td, uap->fd, CAP_WRITE, &fp)) != 0) {
+	error = fget(td, uap->fd, cap_rights_init(&rights, CAP_SEND), &fp);
+	if (error != 0) {
 #ifdef DEBUG_SVR4
 	        uprintf("putmsg: bad fp\n");
 #endif
@@ -1618,10 +1620,12 @@ svr4_sys_getmsg(td, uap)
 	struct thread *td;
 	struct svr4_sys_getmsg_args *uap;
 {
-	struct file     *fp;
+	cap_rights_t rights;
+	struct file *fp;
 	int error;
 
-	if ((error = fget(td, uap->fd, CAP_READ, &fp)) != 0) {
+	error = fget(td, uap->fd, cap_rights_init(&rights, CAP_RECV), &fp);
+	if (error != 0) {
 #ifdef DEBUG_SVR4
 	        uprintf("getmsg: bad fp\n");
 #endif

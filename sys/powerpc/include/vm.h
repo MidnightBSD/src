@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/include/vm.h 234179 2012-04-12 13:46:56Z jhb $
+ * $FreeBSD: release/10.0.0/sys/powerpc/include/vm.h 233671 2012-03-29 16:51:22Z jhb $
  */
 
 #ifndef _MACHINE_VM_H_

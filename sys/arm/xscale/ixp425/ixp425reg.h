@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/xscale/ixp425/ixp425reg.h 214946 2010-11-07 20:33:39Z thompsa $
+ * $FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/ixp425reg.h 236987 2012-06-13 04:38:09Z imp $
  *
  */
 
@@ -65,7 +65,7 @@
  * 4000 0000 ---------------------------
  *           SDRAM
  * 0000 0000 ---------------------------
- */           
+ */
 
 /*
  * Virtual memory map for the Intel IXP425/IXP435 integrated devices
@@ -613,7 +613,7 @@
 #define PMNC_EVCNT2_SHIFT 16
 #define PMNC_EVCNT3_SHIFT 24
 
-/* 
+/*
  * Queue Manager
  */
 #define	IXP425_QMGR_HWBASE	0x60000000UL

@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/netstat/netisr.c 222250 2011-05-24 12:38:00Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/netstat/netisr.c 246988 2013-02-19 13:17:16Z charnier $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -76,12 +76,12 @@ static u_int				*nws_array;
 static u_int				 maxprot;
 
 static void
-netisr_dispatch_policy_to_string(u_int dispatch_policy, char *buf,
+netisr_dispatch_policy_to_string(u_int policy, char *buf,
     size_t buflen)
 {
 	const char *str;
 
-	switch (dispatch_policy) {
+	switch (policy) {
 	case NETISR_DISPATCH_DEFAULT:
 		str = "default";
 		break;
@@ -102,7 +102,7 @@ netisr_dispatch_policy_to_string(u_int dispatch_policy, char *buf,
 }
 
 static void
-netisr_load_kvm_uint(kvm_t *kd, char *name, u_int *p)
+netisr_load_kvm_uint(kvm_t *kd, const char *name, u_int *p)
 {
 	struct nlist nl[] = {
 		{ .n_name = name },

@@ -15,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/common/interp_backslash.c 119483 2003-08-25 23:30:41Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/common/interp_backslash.c 119483 2003-08-25 23:30:41Z obrien $");
 
 #include <stand.h>
 #include <string.h>

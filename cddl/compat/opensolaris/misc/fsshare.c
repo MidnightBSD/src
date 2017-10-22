@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/cddl/compat/opensolaris/misc/fsshare.c 222313 2011-05-26 16:27:00Z will $");
+__FBSDID("$FreeBSD: release/10.0.0/cddl/compat/opensolaris/misc/fsshare.c 222313 2011-05-26 16:27:00Z will $");
 
 #include <sys/param.h>
 

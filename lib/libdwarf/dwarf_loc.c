@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libdwarf/dwarf_loc.c 195747 2009-07-17 21:15:09Z np $
+ * $FreeBSD: release/10.0.0/lib/libdwarf/dwarf_loc.c 252430 2013-06-30 21:06:47Z kaiw $
  */
 
 #include <stdlib.h>
@@ -46,7 +46,7 @@ dwarf_decode_sleb128(uint8_t **dp)
 		shift += 7;
 	} while ((b & 0x80) != 0);
 
-	if (shift < 32 && (b & 0x40) != 0)
+	if (shift < 64 && (b & 0x40) != 0)
 		ret |= (-1 << shift);
 
 	*dp = src;

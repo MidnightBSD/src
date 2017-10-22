@@ -27,7 +27,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.bin/truss/powerpc-fbsd.c 241162 2012-10-03 14:28:55Z zont $";
+  "$FreeBSD: release/10.0.0/usr.bin/truss/powerpc-fbsd.c 240562 2012-09-16 14:38:01Z zont $";
 #endif /* not lint */
 
 /*

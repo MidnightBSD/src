@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/tty_info.c 192252 2009-05-17 16:17:48Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/tty_info.c 231095 2012-02-06 18:15:46Z ed $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -109,7 +109,7 @@ thread_compare(struct thread *td, struct thread *td2)
 
 	/*
 	 * Fetch running stats, pctcpu usage, and interruptable flag.
- 	 */
+	 */
 	thread_lock(td);
 	runa = TD_IS_RUNNING(td) | TD_ON_RUNQ(td);
 	slpa = td->td_flags & TDF_SINTR;
@@ -173,7 +173,7 @@ proc_compare(struct proc *p1, struct proc *p2)
 	PROC_LOCK(p2);
 	runb = proc_sum(p2, &estb);
 	PROC_UNLOCK(p2);
-	
+
 	/*
 	 * see if at least one of them is runnable
 	 */

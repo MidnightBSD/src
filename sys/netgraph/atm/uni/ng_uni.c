@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netgraph/atm/uni/ng_uni.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netgraph/atm/uni/ng_uni.c 241686 2012-10-18 13:57:24Z andre $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -907,10 +907,8 @@ ng_uni_free(enum unimem type, void *ptr, const char *file, u_int lno)
 static int
 ng_uni_mod_event(module_t mod, int event, void *data)
 {
-	int s;
 	int error = 0;
 
-	s = splnet();
 	switch(event) {
 
 	  case MOD_LOAD:
@@ -925,6 +923,5 @@ ng_uni_mod_event(module_t mod, int event, void *data)
 		error = EOPNOTSUPP;
 		break;
 	}
-	splx(s);
 	return (error);
 }

@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/in6_rmx.c 242646 2012-11-06 01:18:53Z melifaro $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet6/in6_rmx.c 241884 2012-10-22 12:54:52Z melifaro $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

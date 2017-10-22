@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/cddl/compat/opensolaris/misc/deviceid.c 185174 2008-11-22 13:33:06Z pjd $");
+__FBSDID("$FreeBSD: release/10.0.0/cddl/compat/opensolaris/misc/deviceid.c 238112 2012-07-04 17:36:26Z pjd $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -45,7 +45,7 @@ devid_str_decode(char *devidstr, ddi_devid_t *retdevid, char **retminor_name)
 		return (EINVAL);
 	}
 	*retminor_name = strdup("");
-	if (*retminor_name == NULL);
+	if (*retminor_name == NULL)
 		return (ENOMEM);
 	return (0);
 }

@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_btsocket_sco.c,v 1.2 2005/10/31 18:08:51 max Exp $
- * $FreeBSD: stable/9/sys/netgraph/bluetooth/socket/ng_btsocket_sco.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: release/10.0.0/sys/netgraph/bluetooth/socket/ng_btsocket_sco.c 243882 2012-12-05 08:04:20Z glebius $
  */
 
 #include <sys/param.h>
@@ -1746,14 +1746,14 @@ ng_btsocket_sco_send2(ng_btsocket_sco_pcb_p pcb)
 	while (pcb->rt->pending < pcb->rt->num_pkts &&
 	       pcb->so->so_snd.sb_cc > 0) {
 		/* Get a copy of the first packet on send queue */
-		m = m_dup(pcb->so->so_snd.sb_mb, M_DONTWAIT);
+		m = m_dup(pcb->so->so_snd.sb_mb, M_NOWAIT);
 		if (m == NULL) {
 			error = ENOBUFS;
 			break;
 		}
 
 		/* Create SCO packet header */
-		M_PREPEND(m, sizeof(*hdr), M_DONTWAIT);
+		M_PREPEND(m, sizeof(*hdr), M_NOWAIT);
 		if (m != NULL)
 			if (m->m_len < sizeof(*hdr))
 				m = m_pullup(m, sizeof(*hdr));

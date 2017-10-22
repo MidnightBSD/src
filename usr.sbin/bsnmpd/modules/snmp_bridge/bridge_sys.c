@@ -26,7 +26,7 @@
  * Bridge MIB implementation for SNMPd.
  * Bridge OS specific ioctls.
  *
- * $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_sys.c 171791 2007-08-08 19:27:50Z syrinx $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_sys.c 228990 2011-12-30 10:58:14Z uqs $
  */
 
 #include <sys/ioctl.h>
@@ -1167,7 +1167,7 @@ bridge_port_find_ifstplist(uint8_t port_no, struct ifbpstpreq *buf,
 /*
  * Read the initial info for all members of a bridge interface.
  * Returns the number of ports, 0 - if none, otherwise
- * -1 if some other error occured.
+ * -1 if some other error occurred.
  */
 int
 bridge_getinfo_bif_ports(struct bridge_if *bif)
@@ -1358,7 +1358,7 @@ bridge_addrs_getinfo_ifalist(struct bridge_if *bif, struct ifbareq **buf)
 /*
  * Read the initial info for all addresses on a bridge interface.
  * Returns the number of addresses, 0 - if none, otherwise
- * -1 if some other error occured.
+ * -1 if some other error occurred.
  */
 int
 bridge_getinfo_bif_addrs(struct bridge_if *bif)

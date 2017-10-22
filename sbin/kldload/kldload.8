@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/sbin/kldload/kldload.8 233560 2012-03-27 15:29:51Z hselasky $
+.\" $FreeBSD: release/10.0.0/sbin/kldload/kldload.8 249373 2013-04-11 18:46:41Z joel $
 .\"
 .Dd March 18, 2012
 .Dt KLDLOAD 8
@@ -63,14 +63,13 @@ in the current directory.
 The following options are available:
 .Bl -tag -width indent
 .It Fl n
-Don't try to load module if already loaded.
+Do not try to load module if already loaded.
 .It Fl v
 Be more verbose.
 .It Fl q
 Silence any extraneous warnings.
 .El
 .Sh NOTES
-.Pp
 The kernel security level settings may prevent a module from being
 loaded or unloaded by giving
 .Em "Operation not permitted" .

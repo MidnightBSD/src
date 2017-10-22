@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/1/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/dump/main.c 217769 2011-01-24 06:17:05Z mckusick $";
+  "$FreeBSD: release/10.0.0/sbin/dump/main.c 229403 2012-01-03 18:51:58Z ed $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -290,7 +290,7 @@ main(int argc, char *argv[])
 		tape = strchr(host, ':');
 		*tape++ = '\0';
 #ifdef RDUMP
-		if (index(tape, '\n')) {
+		if (strchr(tape, '\n')) {
 		    (void)fprintf(stderr, "invalid characters in tape\n");
 		    exit(X_STARTUP);
 		}

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001,2002,2003 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 2001,2002,2003 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/pst/pst-iop.h 136094 2004-10-03 16:06:46Z stefanf $
+ * $FreeBSD: release/10.0.0/sys/dev/pst/pst-iop.h 230132 2012-01-15 13:23:18Z uqs $
  */
 
 /* misc defines */

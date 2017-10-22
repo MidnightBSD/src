@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/i386/boot2/boot2.c 242562 2012-11-04 13:37:33Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/i386/boot2/boot2.c 241301 2012-10-06 20:08:29Z avg $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -138,7 +138,6 @@ static uint8_t ioctrl = IO_KEYBOARD;
 void exit(int);
 static void load(void);
 static int parse(void);
-static int xfsread(ino_t, void *, size_t);
 static int dskread(void *, unsigned, unsigned);
 static void printf(const char *,...);
 static void putchar(int);
@@ -170,7 +169,7 @@ strcmp(const char *s1, const char *s2)
 #include "ufsread.c"
 
 static inline int
-xfsread(ino_t inode, void *buf, size_t nbyte)
+xfsread(ufs_ino_t inode, void *buf, size_t nbyte)
 {
     if ((size_t)fsread(inode, buf, nbyte) != nbyte) {
 	printf("Invalid %s\n", "format");
@@ -222,7 +221,7 @@ int
 main(void)
 {
     uint8_t autoboot;
-    ino_t ino;
+    ufs_ino_t ino;
     size_t nbyte;
 
     dmadat = (void *)(roundup2(__base + (int32_t)&_end, 0x10000) - __base);
@@ -307,7 +306,7 @@ load(void)
     static Elf32_Phdr ep[2];
     static Elf32_Shdr es[2];
     caddr_t p;
-    ino_t ino;
+    ufs_ino_t ino;
     uint32_t addr;
     int i, j;
 

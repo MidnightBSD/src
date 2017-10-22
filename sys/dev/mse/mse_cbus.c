@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/mse/mse_cbus.c 158651 2006-05-16 14:37:58Z phk $
+ * $FreeBSD: release/10.0.0/sys/dev/mse/mse_cbus.c 158651 2006-05-16 14:37:58Z phk $
  */
 
 /*-

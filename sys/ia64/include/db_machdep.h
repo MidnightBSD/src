@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/ia64/include/db_machdep.h 147745 2005-07-02 23:52:37Z marcel $
+ * $FreeBSD: release/10.0.0/sys/ia64/include/db_machdep.h 147745 2005-07-02 23:52:37Z marcel $
  */
 
 #ifndef	_MACHINE_DB_MACHDEP_H_

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/bin/sh/expansion/trim4.0 213814 2010-10-13 23:29:09Z obrien $
+# $FreeBSD: release/10.0.0/tools/regression/bin/sh/expansion/trim4.0 213814 2010-10-13 23:29:09Z obrien $
 
 v1=/homes/SOME_USER
 v2=

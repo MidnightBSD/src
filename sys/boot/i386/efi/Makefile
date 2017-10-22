@@ -1,10 +1,10 @@
-# $FreeBSD: stable/9/sys/boot/i386/efi/Makefile 212066 2010-08-31 19:01:12Z delphij $
+# $FreeBSD: release/10.0.0/sys/boot/i386/efi/Makefile 255944 2013-09-29 20:20:17Z bdrewery $
 
 NO_MAN=
-WITHOUT_SSP=
 BUILDING_EFI=
 
 .include <bsd.own.mk>
+MK_SSP=		no
 
 PROG=		loader.sym
 INTERNALPROG=
@@ -35,8 +35,8 @@ CFLAGS+=	-I${.CURDIR}/../../common
 FILES=	loader.efi
 FILESMODE_loader.efi=	${BINMODE}
 
-LDSCRIPT=	${.CURDIR}/ldscript.${MACHINE_ARCH}
-LDFLAGS=	-Wl,-T${LDSCRIPT} -shared -symbolic
+LDSCRIPT=	${.CURDIR}/ldscript.i386
+LDFLAGS=	-Wl,-T${LDSCRIPT} -Wl,-Bsymbolic -shared
 
 ${PROG}:	${LDSCRIPT}
 
@@ -64,6 +64,13 @@ CFLAGS+=	-I${.CURDIR}/../libi386
 CFLAGS+=	-I${.CURDIR}/../btx/lib
 
 DPADD=		${LIBFICL} ${LIBEFI} ${LIBSTAND}
-LDADD=		${LIBFICL} ${LIBEFI} -lstand
+LDADD=		${LIBFICL} ${LIBEFI} ${LIBSTAND}
 
 .include <bsd.prog.mk>
+
+.if ${MACHINE_CPUARCH} == "amd64"
+CFLAGS+=        -I.
+beforedepend ${OBJS}: machine
+machine:
+	ln -sf ${.CURDIR}/../../../i386/include machine
+.endif

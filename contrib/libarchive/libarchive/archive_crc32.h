@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/contrib/libarchive/libarchive/archive_crc32.h 229592 2012-01-05 12:06:54Z mm $
+ * $FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_crc32.h 232153 2012-02-25 10:58:02Z mm $
  */
 
 #ifndef __LIBARCHIVE_BUILD
@@ -60,6 +60,18 @@ crc32(unsigned long crc, const void *_p, size_t len)
 	}
 
 	crc = crc ^ 0xffffffffUL;
+	/* A use of this loop is about 20% - 30% faster than
+	 * no use version in any optimization option of gcc.  */
+	for (;len >= 8; len -= 8) {
+		crc = crc_tbl[(crc ^ *p++) & 0xff] ^ (crc >> 8);
+		crc = crc_tbl[(crc ^ *p++) & 0xff] ^ (crc >> 8);
+		crc = crc_tbl[(crc ^ *p++) & 0xff] ^ (crc >> 8);
+		crc = crc_tbl[(crc ^ *p++) & 0xff] ^ (crc >> 8);
+		crc = crc_tbl[(crc ^ *p++) & 0xff] ^ (crc >> 8);
+		crc = crc_tbl[(crc ^ *p++) & 0xff] ^ (crc >> 8);
+		crc = crc_tbl[(crc ^ *p++) & 0xff] ^ (crc >> 8);
+		crc = crc_tbl[(crc ^ *p++) & 0xff] ^ (crc >> 8);
+	}
 	while (len--)
 		crc = crc_tbl[(crc ^ *p++) & 0xff] ^ (crc >> 8);
 	return (crc ^ 0xffffffffUL);

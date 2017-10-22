@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)paste.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/paste/paste.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/paste/paste.c 227242 2011-11-06 18:49:53Z ed $");
 
 #include <sys/types.h>
 
@@ -57,15 +57,15 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/paste/paste.c 216370 2010-12-11 08:32:16Z j
 #include <unistd.h>
 #include <wchar.h>
 
-wchar_t *delim;
-int delimcnt;
+static wchar_t *delim;
+static int delimcnt;
 
-int parallel(char **);
-int sequential(char **);
-int tr(wchar_t *);
+static int parallel(char **);
+static int sequential(char **);
+static int tr(wchar_t *);
 static void usage(void);
 
-wchar_t tab[] = L"\t";
+static wchar_t tab[] = L"\t";
 
 int
 main(int argc, char *argv[])
@@ -125,7 +125,7 @@ typedef struct _list {
 	char *name;
 } LIST;
 
-int
+static int
 parallel(char **argv)
 {
 	LIST *lp;
@@ -195,7 +195,7 @@ parallel(char **argv)
 	return (0);
 }
 
-int
+static int
 sequential(char **argv)
 {
 	FILE *fp;
@@ -235,7 +235,7 @@ sequential(char **argv)
 	return (failed != 0);
 }
 
-int
+static int
 tr(wchar_t *arg)
 {
 	int cnt;

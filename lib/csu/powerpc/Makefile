@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/csu/powerpc/Makefile 234726 2012-04-27 06:49:35Z dim $
+# $FreeBSD: release/10.0.0/lib/csu/powerpc/Makefile 234596 2012-04-23 06:33:27Z dim $
 
 .PATH: ${.CURDIR}/../common
 
@@ -18,21 +18,21 @@ CLEANFILES+=	crt1.s gcrt1.s Scrt1.s
 
 crt1.s: crt1.c
 	${CC} ${CFLAGS} -S -o ${.TARGET} ${.CURDIR}/crt1.c
-	sed -i "" -e '/\.note\.ABI-tag/s/progbits/note/' ${.TARGET}
+	sed ${SED_FIX_NOTE} ${.TARGET}
 
 crt1.o: crt1.s
 	${CC} ${ACFLAGS} -c -o ${.TARGET} crt1.s
 
 gcrt1.s: crt1.c
 	${CC} ${CFLAGS} -DGCRT -S -o ${.TARGET} ${.CURDIR}/crt1.c
-	sed -i "" -e '/\.note\.ABI-tag/s/progbits/note/' ${.TARGET}
+	sed ${SED_FIX_NOTE} ${.TARGET}
 
 gcrt1.o: gcrt1.s
 	${CC} ${ACFLAGS} -c -o ${.TARGET} gcrt1.s
 
 Scrt1.s: crt1.c
 	${CC} ${CFLAGS} -fPIC -DPIC -S -o ${.TARGET} ${.CURDIR}/crt1.c
-	sed -i "" -e '/\.note\.ABI-tag/s/progbits/note/' ${.TARGET}
+	sed ${SED_FIX_NOTE} ${.TARGET}
 
 Scrt1.o: Scrt1.s
 	${CC} ${ACFLAGS} -c -o ${.TARGET} Scrt1.s

@@ -1,12 +1,12 @@
 /*
- * $FreeBSD: stable/9/lib/libc/sparc64/Symbol.map 174759 2007-12-18 23:46:32Z das $
+ * $FreeBSD: release/10.0.0/lib/libc/sparc64/Symbol.map 226606 2011-10-21 06:40:36Z das $
  */
 
 /*
  * This only needs to contain symbols that are not listed in
  * symbol maps from other parts of libc (i.e., not found in
  * stdlib/Symbol.map, string/Symbol.map, sys/Symbol.map, ...).
- */ 
+ */
 FBSD_1.0 {
 	/* PSEUDO syscalls */
 	_exit;
@@ -24,7 +24,6 @@ FBSD_1.0 {
 	__infinity;
 	__nan;
 	makecontext;
-	modf;
 	setjmp;
 	longjmp;
 	sigsetjmp;

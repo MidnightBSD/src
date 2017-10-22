@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/libexec/rtld-elf/libmap.c 236523 2012-06-03 18:16:17Z bapt $
+ * $FreeBSD: release/10.0.0/libexec/rtld-elf/libmap.c 255765 2013-09-21 21:03:52Z des $
  */
 
 #include <sys/types.h>
@@ -121,7 +121,7 @@ lmc_parse_file(char *path)
 		}
 	}
 
-	fd = open(rpath, O_RDONLY);
+	fd = open(rpath, O_RDONLY | O_CLOEXEC);
 	if (fd == -1) {
 		dbg("lm_parse_file: open(\"%s\") failed, %s", rpath,
 		    rtld_strerror(errno));
@@ -396,7 +396,6 @@ lm_find (const char *p, const char *f)
 
 /* Given a libmap translation list and a library name, return the
    replacement library, or NULL */
-#ifdef COMPAT_32BIT
 char *
 lm_findn (const char *p, const char *f, const int n)
 {
@@ -413,7 +412,6 @@ lm_findn (const char *p, const char *f, const int n)
 		free(s);
 	return (t);
 }
-#endif
 
 static char *
 lml_find (struct lm_list *lmh, const char *f)

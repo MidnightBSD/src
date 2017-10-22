@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/clang/libllvmmc/Makefile 245431 2013-01-14 19:51:26Z dim $
+# $FreeBSD: release/10.0.0/lib/clang/libllvmmc/Makefile 255722 2013-09-20 01:52:02Z emaste $
 
 .include <bsd.own.mk>
 
@@ -41,7 +41,6 @@ SRCS=	ELFObjectWriter.cpp \
 	MCStreamer.cpp \
 	MCSubtargetInfo.cpp \
 	MCSymbol.cpp \
-	MCTargetAsmLexer.cpp \
 	MCValue.cpp \
 	MCWin64EH.cpp \
 	MachObjectWriter.cpp \
@@ -49,7 +48,7 @@ SRCS=	ELFObjectWriter.cpp \
 	WinCOFFObjectWriter.cpp \
 	WinCOFFStreamer.cpp
 
-.if ${MK_CLANG_EXTRAS} != "no"
+.if ${MK_CLANG_EXTRAS} != "no" || ${MK_LLDB} != "no"
 SRCS+=	MCDisassembler.cpp
 .endif
 

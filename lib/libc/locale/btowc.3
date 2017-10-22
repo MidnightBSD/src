@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/lib/libc/locale/btowc.3 235785 2012-05-22 14:40:39Z theraven $
+.\" $FreeBSD: release/10.0.0/lib/libc/locale/btowc.3 248803 2013-03-27 21:31:40Z jilles $
 .\"
 .Dd February 13, 2012
 .Dt BTOWC 3
@@ -42,9 +42,9 @@
 .In wchar.h
 .In xlocale.h
 .Ft wint_t
-.Fn btowc "int c"
+.Fn btowc_l "int c" "locale_t loc"
 .Ft int
-.Fn wctob "wint_t c"
+.Fn wctob_l "wint_t c" "locale_t loc"
 .Sh DESCRIPTION
 The
 .Fn btowc

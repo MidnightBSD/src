@@ -36,7 +36,7 @@
 static char sccsid[] = "@(#)map.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libedit/map.c 245025 2013-01-04 04:03:21Z pfg $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libedit/map.c 244941 2013-01-01 19:20:51Z pfg $");
 
 /*
  * map.c: Editor function definitions

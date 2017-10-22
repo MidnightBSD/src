@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)dir.c	8.8 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/fsck_ffs/dir.c 225338 2011-09-02 17:05:34Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/dir.c 247212 2013-02-24 06:44:29Z mckusick $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -708,6 +708,6 @@ getdirblk(ufs2_daddr_t blkno, long size)
 
 	if (pdirbp != 0)
 		pdirbp->b_flags &= ~B_INUSE;
-	pdirbp = getdatablk(blkno, size);
+	pdirbp = getdatablk(blkno, size, BT_DIRDATA);
 	return (pdirbp);
 }

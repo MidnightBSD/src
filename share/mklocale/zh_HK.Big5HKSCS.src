@@ -2,7 +2,7 @@
  * big5hkscs   first byte:    81-FE
  *             second byte:   40-7E, A1-FE
  *
- * $FreeBSD: stable/9/share/mklocale/zh_HK.Big5HKSCS.src 123664 2003-12-19 12:51:40Z ache $
+ * $FreeBSD: release/10.0.0/share/mklocale/zh_HK.Big5HKSCS.src 123664 2003-12-19 12:51:40Z ache $
  */
 
 ENCODING        "GBK"

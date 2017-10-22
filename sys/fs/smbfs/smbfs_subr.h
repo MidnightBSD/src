@@ -23,13 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/fs/smbfs/smbfs_subr.h 206361 2010-04-07 16:50:38Z joel $
+ * $FreeBSD: release/10.0.0/sys/fs/smbfs/smbfs_subr.h 242386 2012-10-31 03:34:07Z davide $
  */
 #ifndef _FS_SMBFS_SMBFS_SUBR_H_
 #define _FS_SMBFS_SMBFS_SUBR_H_
 
 #ifdef MALLOC_DECLARE
 MALLOC_DECLARE(M_SMBFSDATA);
+MALLOC_DECLARE(M_SMBFSCRED);
 #endif
 
 #define SMBFSERR(format, args...) printf("%s: "format, __func__ ,## args)
@@ -178,4 +179,6 @@ void  smb_time_unix2dos(struct timespec *tsp, int tzoff, u_int16_t *ddp,
 	     u_int16_t *dtp, u_int8_t *dhp);
 void smb_dos2unixtime (u_int dd, u_int dt, u_int dh, int tzoff, struct timespec *tsp);
 
+void *smbfs_malloc_scred(void);
+void smbfs_free_scred(void *);
 #endif /* !_FS_SMBFS_SMBFS_SUBR_H_ */

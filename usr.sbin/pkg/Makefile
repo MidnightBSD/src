@@ -1,10 +1,14 @@
-# $FreeBSD: stable/9/usr.sbin/pkg/Makefile 245394 2013-01-13 22:37:45Z bapt $
+# $FreeBSD: release/10.0.0/usr.sbin/pkg/Makefile 257573 2013-11-03 13:06:43Z bdrewery $
 
 PROG=	pkg
-SRCS=	pkg.c dns_utils.c
+SRCS=	pkg.c dns_utils.c config.c
+MAN=	pkg.7
 
-NO_MAN=	yes
-DPADD=	${LIBARCHIVE} ${LIBELF} ${LIBFETCH}
-LDADD=	-larchive -lelf -lfetch
+CFLAGS+=-I${.CURDIR}/../../contrib/libyaml/include
+.PATH:	${.CURDIR}/../../contrib/libyaml/include
+DPADD=	${LIBARCHIVE} ${LIBELF} ${LIBFETCH} ${LIBYAML} ${LIBSBUF} ${LIBSSL} \
+	${LIBCRYPTO}
+LDADD=	-larchive -lelf -lfetch -lyaml -lsbuf -lssl -lcrypto
+USEPRIVATELIB=	yaml
 
 .include <bsd.prog.mk>

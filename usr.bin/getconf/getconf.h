@@ -26,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/getconf/getconf.h 106017 2002-10-27 04:14:08Z wollman $
+ * $FreeBSD: release/10.0.0/usr.bin/getconf/getconf.h 106017 2002-10-27 04:14:08Z wollman $
  */
 
 #ifdef STABLE

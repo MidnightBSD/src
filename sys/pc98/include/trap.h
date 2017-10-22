@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: stable/9/sys/pc98/include/trap.h 144513 2005-04-01 23:19:43Z imp $ */
+/* $FreeBSD: release/10.0.0/sys/pc98/include/trap.h 232492 2012-03-04 14:12:57Z tijl $ */
 
-#include <i386/trap.h>
+#include <x86/trap.h>

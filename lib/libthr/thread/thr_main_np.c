@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/thread/thr_main_np.c 157457 2006-04-04 02:57:49Z davidxu $
+ * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_main_np.c 157457 2006-04-04 02:57:49Z davidxu $
  */
 
 #include "namespace.h"

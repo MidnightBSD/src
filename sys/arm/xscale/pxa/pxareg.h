@@ -16,7 +16,7 @@
  *    must display the following acknowledgement:
  *	This product includes software developed for the NetBSD Project by
  *	Genetec Corporation.
- * 4. The name of Genetec Corporation may not be used to endorse or 
+ * 4. The name of Genetec Corporation may not be used to endorse or
  *    promote products derived from this software without specific prior
  *    written permission.
  *
@@ -32,7 +32,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/xscale/pxa/pxareg.h 179595 2008-06-06 05:08:09Z benno $
+ * $FreeBSD: release/10.0.0/sys/arm/xscale/pxa/pxareg.h 236987 2012-06-13 04:38:09Z imp $
  */
 
 
@@ -139,7 +139,7 @@
 /* width of interrupt controller */
 #define ICU_LEN			32   /* but [0..7,15,16] is not used */
 #define ICU_INT_HWMASK		0xffffff00
-#define PXA250_IRQ_MIN 8	/* 0..7 are not used by integrated 
+#define PXA250_IRQ_MIN 8	/* 0..7 are not used by integrated
 				   peripherals */
 #define PXA270_IRQ_MIN 0
 

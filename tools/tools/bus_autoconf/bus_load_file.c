@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/tools/tools/bus_autoconf/bus_load_file.c 223535 2011-06-25 15:22:44Z hselasky $ */
+/* $FreeBSD: release/10.0.0/tools/tools/bus_autoconf/bus_load_file.c 255122 2013-09-01 14:06:57Z ian $ */
 
 /*-
  * Copyright (c) 2011 Hans Petter Selasky. All rights reserved.
@@ -39,7 +39,7 @@ void
 load_file(const char *fname, uint8_t **pptr, uint32_t *plen)
 {
 	uint8_t *ptr;
-	uint32_t len;
+	ssize_t len;
 	off_t off;
 	int f;
 

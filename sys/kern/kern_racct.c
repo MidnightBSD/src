@@ -26,11 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/kern/kern_racct.c 249444 2013-04-13 21:04:06Z trasz $
+ * $FreeBSD: release/10.0.0/sys/kern/kern_racct.c 248298 2013-03-14 23:20:18Z trasz $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_racct.c 249444 2013-04-13 21:04:06Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_racct.c 248298 2013-03-14 23:20:18Z trasz $");
 
 #include "opt_kdtrace.h"
 #include "opt_sched.h"

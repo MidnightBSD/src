@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/security/audit/audit_worker.c 244324 2012-12-16 23:41:34Z pjd $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/security/audit/audit_worker.c 243723 2012-11-30 23:03:51Z pjd $");
 
 #include <sys/param.h>
 #include <sys/condvar.h>
@@ -114,7 +114,7 @@ audit_record_write(struct vnode *vp, struct ucred *cred, void *data,
 	static struct timeval last_fail;
 	static int cur_lowspace_trigger;
 	struct statfs *mnt_stat;
-	int error, vfslocked;
+	int error;
 	static int cur_fail;
 	long temp;
 
@@ -124,7 +124,6 @@ audit_record_write(struct vnode *vp, struct ucred *cred, void *data,
 		return;
 
 	mnt_stat = &vp->v_mount->mnt_stat;
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 
 	/*
 	 * First, gather statistics on the audit log file and file system so
@@ -254,7 +253,6 @@ audit_record_write(struct vnode *vp, struct ucred *cred, void *data,
 		}
 	}
 
-	VFS_UNLOCK_GIANT(vfslocked);
 	return;
 
 fail_enospc:
@@ -285,7 +283,6 @@ fail:
 		panic("audit_worker: write error %d\n", error);
 	} else if (ppsratecheck(&last_fail, &cur_fail, 1))
 		printf("audit_worker: write error %d\n", error);
-	VFS_UNLOCK_GIANT(vfslocked);
 }
 
 /*
@@ -447,7 +444,6 @@ audit_rotate_vnode(struct ucred *cred, struct vnode *vp)
 {
 	struct ucred *old_audit_cred;
 	struct vnode *old_audit_vp;
-	int vfslocked;
 	struct vattr vattr;
 
 	KASSERT((cred != NULL && vp != NULL) || (cred == NULL && vp == NULL),
@@ -480,10 +476,8 @@ audit_rotate_vnode(struct ucred *cred, struct vnode *vp)
 	 * If there was an old vnode/credential, close and free.
 	 */
 	if (old_audit_vp != NULL) {
-		vfslocked = VFS_LOCK_GIANT(old_audit_vp->v_mount);
 		vn_close(old_audit_vp, AUDIT_CLOSE_FLAGS, old_audit_cred,
 		    curthread);
-		VFS_UNLOCK_GIANT(vfslocked);
 		crfree(old_audit_cred);
 	}
 }

@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/lib/libcrypt/Makefile 238481 2012-07-15 11:39:35Z des $
+# $FreeBSD: release/10.0.0/lib/libcrypt/Makefile 236967 2012-06-12 17:14:19Z des $
 #
 
 SHLIBDIR?=	/lib

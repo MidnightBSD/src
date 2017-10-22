@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)proc_compare.c	8.2 (Berkeley) 9/23/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/w/proc_compare.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/w/proc_compare.c 243183 2012-11-17 16:47:05Z ed $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -62,11 +62,11 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/w/proc_compare.c 216370 2010-12-11 08:32:16
  * TODO - consider whether pctcpu should be used.
  */
 
-#define ISRUN(p)	(((p)->ki_stat == SRUN) || ((p)->ki_stat == SIDL))
-#define TESTAB(a, b)    ((a)<<1 | (b))
-#define ONLYA   2
-#define ONLYB   1
-#define BOTH    3
+#define	ISRUN(p)	(((p)->ki_stat == SRUN) || ((p)->ki_stat == SIDL))
+#define	TESTAB(a, b)    ((a)<<1 | (b))
+#define	ONLYA   2
+#define	ONLYB   1
+#define	BOTH    3
 
 int
 proc_compare(struct kinfo_proc *p1, struct kinfo_proc *p2)
@@ -93,7 +93,7 @@ proc_compare(struct kinfo_proc *p1, struct kinfo_proc *p2)
 		return (p2->ki_pid > p1->ki_pid); /* tie - return highest pid */
 	}
 	/*
- 	 * weed out zombies
+	 * weed out zombies
 	 */
 	switch (TESTAB(p1->ki_stat == SZOMB, p2->ki_stat == SZOMB)) {
 	case ONLYA:

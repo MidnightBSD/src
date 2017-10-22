@@ -29,30 +29,16 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/msun/test-fmaxmin.c 216222 2010-12-06 00:02:49Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/msun/test-fmaxmin.c 251241 2013-06-02 04:30:03Z das $");
 
 #include <fenv.h>
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
 
-#define	ALL_STD_EXCEPT	(FE_DIVBYZERO | FE_INEXACT | FE_INVALID | \
-			 FE_OVERFLOW | FE_UNDERFLOW)
+#include "test-utils.h"
 
 #pragma STDC FENV_ACCESS ON
-
-/*
- * Test for equality with two special rules:
- *   fpequal(NaN, NaN) is true
- *   fpequal(+0.0, -0.0) is false
- */
-static inline int
-fpequal(long double x, long double y)
-{
-
-	return ((x == y && !signbit(x) == !signbit(y))
-		|| (isnan(x) && isnan(y)));
-}
 
 /*
  * Test whether func(x, y) has the expected result, and make sure no

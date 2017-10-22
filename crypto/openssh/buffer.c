@@ -1,5 +1,5 @@
-/* $OpenBSD: buffer.c,v 1.32 2010/02/09 03:56:28 djm Exp $ */
-/* $FreeBSD: stable/9/crypto/openssh/buffer.c 224640 2011-08-03 20:00:36Z brooks $ */
+/* $OpenBSD: buffer.c,v 1.33 2013/05/17 00:13:13 djm Exp $ */
+/* $FreeBSD: release/10.0.0/crypto/openssh/buffer.c 255767 2013-09-21 21:36:09Z des $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -51,7 +51,7 @@ buffer_free(Buffer *buffer)
 	if (buffer->alloc > 0) {
 		memset(buffer->buf, 0, buffer->alloc);
 		buffer->alloc = 0;
-		xfree(buffer->buf);
+		free(buffer->buf);
 	}
 }
 

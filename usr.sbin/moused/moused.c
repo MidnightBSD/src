@@ -45,7 +45,7 @@
  **/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/moused/moused.c 241084 2012-10-01 05:48:46Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/moused/moused.c 248478 2013-03-18 23:22:47Z jkim $");
 
 #include <sys/param.h>
 #include <sys/consio.h>
@@ -174,14 +174,14 @@ typedef struct {
 
 /* global variables */
 
-int	debug = 0;
-int	nodaemon = FALSE;
-int	background = FALSE;
-int	paused = FALSE;
-int	identify = ID_NONE;
-int	extioctl = FALSE;
-const char *pidfile = "/var/run/moused.pid";
-struct pidfh *pfh;
+static int	debug = 0;
+static int	nodaemon = FALSE;
+static int	background = FALSE;
+static int	paused = FALSE;
+static int	identify = ID_NONE;
+static int	extioctl = FALSE;
+static const char *pidfile = "/var/run/moused.pid";
+static struct pidfh *pfh;
 
 #define SCROLL_NOTSCROLLING	0
 #define SCROLL_PREPARE		1
@@ -245,6 +245,7 @@ static symtab_t	rmodels[] = {
     { "4D Mouse",		MOUSE_MODEL_4D,			0 },
     { "4D+ Mouse",		MOUSE_MODEL_4DPLUS,		0 },
     { "Synaptics Touchpad",	MOUSE_MODEL_SYNAPTICS,		0 },
+    { "TrackPoint",		MOUSE_MODEL_TRACKPOINT,		0 },
     { "generic",		MOUSE_MODEL_GENERIC,		0 },
     { NULL,			MOUSE_MODEL_UNKNOWN,		0 },
 };
@@ -1012,7 +1013,7 @@ moused(void)
 {
     struct mouse_info mouse;
     mousestatus_t action0;		/* original mouse action */
-    mousestatus_t action;		/* interrim buffer */
+    mousestatus_t action;		/* interim buffer */
     mousestatus_t action2;		/* mapped action */
     struct timeval timeout;
     fd_set fds;
@@ -2265,7 +2266,7 @@ r_protocol(u_char rBuf, mousestatus_t *act)
 	    act->button |= ((pBuf[0] & MOUSE_PS2_TAP)) ? 0 : MOUSE_BUTTON4DOWN;
 	    break;
 	case MOUSE_MODEL_NETSCROLL:
-	    /* three addtional bytes encode buttons and wheel events */
+	    /* three additional bytes encode buttons and wheel events */
 	    act->button |= (pBuf[3] & MOUSE_PS2_BUTTON3DOWN)
 		? MOUSE_BUTTON4DOWN : 0;
 	    act->button |= (pBuf[3] & MOUSE_PS2_BUTTON1DOWN)
@@ -3229,7 +3230,7 @@ kidspad(u_char rxc, mousestatus_t *act)
     static int buf[5];
     static int buflen = 0, b_prev = 0 , x_prev = -1, y_prev = -1;
     static k_status status = S_IDLE;
-    static struct timespec old, now;
+    static struct timespec now;
 
     int x, y;
 
@@ -3267,7 +3268,6 @@ kidspad(u_char rxc, mousestatus_t *act)
 	x_prev = x;
 	y_prev = y;
     }
-    old = now;
     act->dx = x - x_prev;
     act->dy = y - y_prev;
     if (act->dx || act->dy)

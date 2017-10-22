@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/9/sbin/recoverdisk/recoverdisk.c 248474 2013-03-18 20:36:25Z delphij $
+ * $FreeBSD: release/10.0.0/sbin/recoverdisk/recoverdisk.c 248279 2013-03-14 20:05:49Z delphij $
  */
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -24,7 +24,7 @@
 #include <time.h>
 #include <unistd.h>
 
-volatile sig_atomic_t aborting = 0;
+static volatile sig_atomic_t aborting = 0;
 static size_t bigsize = 1024 * 1024;
 static size_t medsize;
 static size_t minsize = 512;

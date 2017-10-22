@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/lib/libc/yp/Symbol.map 169092 2007-04-29 14:05:22Z deischen $
+ * $FreeBSD: release/10.0.0/lib/libc/yp/Symbol.map 169092 2007-04-29 14:05:22Z deischen $
  */
 
 FBSD_1.0 {

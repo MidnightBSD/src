@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1996, Javier Martín Rueda (jmrueda@diatel.upm.es)
+ * Copyright (c) 1996, Javier MartÃ­n Rueda (jmrueda@diatel.upm.es)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ex/if_ex.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ex/if_ex.c 243857 2012-12-04 09:32:43Z glebius $");
 
 /*
  * Intel EtherExpress Pro/10, Pro/10+ Ethernet driver
@@ -232,7 +232,6 @@ ex_attach(device_t dev)
 	 */
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_SIMPLEX | IFF_BROADCAST | IFF_MULTICAST;
 	ifp->if_start = ex_start;
 	ifp->if_ioctl = ex_ioctl;

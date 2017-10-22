@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pmcstat/pmcstat_log.c 237970 2012-07-02 07:18:27Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pmcstat/pmcstat_log.c 241737 2012-10-19 14:49:42Z ed $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -142,7 +142,7 @@ struct pmcstat_image_hash_list pmcstat_image_hash[PMCSTAT_NHASH];
 struct pmcstat_process_hash_list pmcstat_process_hash[PMCSTAT_NHASH];
 
 struct pmcstat_stats pmcstat_stats; /* statistics */
-int ps_samples_period; /* samples count between top refresh. */
+static int ps_samples_period; /* samples count between top refresh. */
 
 struct pmcstat_process *pmcstat_kernproc; /* kernel 'process' */
 
@@ -151,7 +151,7 @@ struct pmcstat_process *pmcstat_kernproc; /* kernel 'process' */
 #include "pmcpl_annotate.h"
 #include "pmcpl_calltree.h"
 
-struct pmc_plugins  {
+static struct pmc_plugins  {
 	const char 	*pl_name;	/* name */
 
 	/* configure */
@@ -218,7 +218,7 @@ struct pmc_plugins  {
 	}
 };
 
-int pmcstat_mergepmc;
+static int pmcstat_mergepmc;
 
 int pmcstat_pmcinfilter = 0; /* PMC filter for top mode. */
 float pmcstat_threshold = 0.5; /* Cost filter for top mode. */
@@ -254,7 +254,7 @@ static void pmcstat_stats_reset(int _reset_global);
 /*
  * A simple implementation of interned strings.  Each interned string
  * is assigned a unique address, so that subsequent string compares
- * can be done by a simple pointer comparision instead of using
+ * can be done by a simple pointer comparison instead of using
  * strcmp().  This speeds up hash table lookups and saves memory if
  * duplicate strings are the norm.
  */
@@ -275,7 +275,7 @@ int pmcstat_npmcs;
 /*
  * PMC Top mode pause state.
  */
-int pmcstat_pause;
+static int pmcstat_pause;
 
 static void
 pmcstat_stats_reset(int reset_global)
@@ -572,6 +572,8 @@ pmcstat_image_add_symbols(struct pmcstat_image *image, Elf *e,
 	}
 
 	image->pi_symcount += newsyms;
+	if (image->pi_symcount == 0)
+		return;
 
 	assert(newsyms <= nfuncsyms);
 
@@ -708,8 +710,8 @@ pmcstat_image_get_elf_params(struct pmcstat_image *image)
 				        ph.p_offset);
 				break;
 			case PT_LOAD:
-				if (ph.p_offset == 0)
-					image->pi_vaddr = ph.p_vaddr;
+				if ((ph.p_offset & (-ph.p_align)) == 0)
+					image->pi_vaddr = ph.p_vaddr & (-ph.p_align);
 				break;
 			}
 		}

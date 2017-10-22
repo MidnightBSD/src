@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/bin/sh/expansion/pathname2.0 207944 2010-05-11 23:19:28Z jilles $
+# $FreeBSD: release/10.0.0/tools/regression/bin/sh/expansion/pathname2.0 207944 2010-05-11 23:19:28Z jilles $
 
 failures=0
 

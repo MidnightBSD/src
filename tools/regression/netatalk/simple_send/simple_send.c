@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/netatalk/simple_send/simple_send.c 156815 2006-03-17 20:14:25Z rwatson $
+ * $FreeBSD: release/10.0.0/tools/regression/netatalk/simple_send/simple_send.c 156815 2006-03-17 20:14:25Z rwatson $
  */
 
 #include <sys/types.h>

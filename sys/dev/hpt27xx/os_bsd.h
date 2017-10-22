@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/hpt27xx/os_bsd.h 245938 2013-01-26 05:20:09Z delphij $
+ * $FreeBSD: release/10.0.0/sys/dev/hpt27xx/os_bsd.h 255871 2013-09-25 17:16:21Z scottl $
  */
 
 #include <dev/hpt27xx/hpt27xx_config.h>
@@ -174,6 +174,7 @@ typedef struct _os_cmdext {
 	struct _os_cmdext *next;
 	union ccb         *ccb;
 	bus_dmamap_t       dma_map;
+	struct callout_handle timeout_ch;
 	SG                 psg[os_max_sg_descriptors];
 }
 OS_CMDEXT, *POS_CMDEXT;

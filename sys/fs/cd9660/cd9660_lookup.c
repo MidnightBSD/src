@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/fs/cd9660/cd9660_lookup.c 195294 2009-07-02 18:02:55Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/fs/cd9660/cd9660_lookup.c 195294 2009-07-02 18:02:55Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

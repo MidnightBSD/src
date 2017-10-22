@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/net/if_indextoname.c 100138 2002-07-15 19:58:56Z ume $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/if_indextoname.c 235640 2012-05-19 02:39:43Z marcel $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -70,7 +70,7 @@ if_indextoname(unsigned int ifindex, char *ifname)
 	for (ifa = ifaddrs; ifa != NULL; ifa = ifa->ifa_next) {
 		if (ifa->ifa_addr &&
 		    ifa->ifa_addr->sa_family == AF_LINK &&
-		    ifindex == ((struct sockaddr_dl*)ifa->ifa_addr)->sdl_index)
+		    ifindex == LLINDEX((struct sockaddr_dl*)ifa->ifa_addr))
 			break;
 	}
 

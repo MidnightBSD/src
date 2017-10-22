@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/cddl/compat/opensolaris/kern/opensolaris_lookup.c 243484 2012-11-24 12:42:29Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/kern/opensolaris_lookup.c 242569 2012-11-04 14:16:18Z avg $");
  
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -54,7 +54,7 @@ lookupnameat(char *dirname, enum uio_seg seg, enum symfollow follow,
 	vref(startvp);
 	ltype = VOP_ISLOCKED(startvp);
 	VOP_UNLOCK(startvp, 0);
-	NDINIT_ATVP(&nd, LOOKUP, LOCKLEAF | MPSAFE | follow, seg, dirname,
+	NDINIT_ATVP(&nd, LOOKUP, LOCKLEAF | follow, seg, dirname,
 	    startvp, curthread);
 	error = namei(&nd);
 	*compvpp = nd.ni_vp;

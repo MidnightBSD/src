@@ -35,7 +35,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: src/sys/i386/include/_stdint.h,v 1.2 2004/05/18 16:04:57 stefanf
- * $FreeBSD: stable/9/sys/mips/include/_stdint.h 218266 2011-02-04 13:09:46Z tijl $
+ * $FreeBSD: release/10.0.0/sys/mips/include/_stdint.h 255194 2013-09-03 22:04:55Z imp $
  */
 
 #ifndef _MACHINE__STDINT_H_
@@ -66,6 +66,16 @@
 
 #if !defined(__cplusplus) || defined(__STDC_LIMIT_MACROS)
 
+#ifndef __INT64_C
+#ifdef __mips_n64
+#define __INT64_C(c)              (c ## L)
+#define __UINT64_C(c)             (c ## UL)
+#else
+#define __INT64_C(c)              (c ## LL)
+#define __UINT64_C(c)             (c ## ULL)
+#endif
+#endif
+
 /*
  * ISO/IEC 9899:1999
  * 7.18.2.1 Limits of exact-width integer types
@@ -74,19 +84,19 @@
 #define	INT8_MIN	(-0x7f-1)
 #define	INT16_MIN	(-0x7fff-1)
 #define	INT32_MIN	(-0x7fffffff-1)
-#define	INT64_MIN	(-INT64_C(0x7fffffffffffffff)-1)
+#define	INT64_MIN	(-__INT64_C(0x7fffffffffffffff)-1)
 
 /* Maximum values of exact-width signed integer types. */
 #define	INT8_MAX	0x7f
 #define	INT16_MAX	0x7fff
 #define	INT32_MAX	0x7fffffff
-#define	INT64_MAX	INT64_C(0x7fffffffffffffff)
+#define	INT64_MAX	__INT64_C(0x7fffffffffffffff)
 
 /* Maximum values of exact-width unsigned integer types. */
 #define	UINT8_MAX	0xff
 #define	UINT16_MAX	0xffff
 #define	UINT32_MAX	0xffffffff
-#define	UINT64_MAX	UINT64_C(0xffffffffffffffff)
+#define	UINT64_MAX	__UINT64_C(0xffffffffffffffff)
 
 /*
  * ISO/IEC 9899:1999
@@ -177,12 +187,6 @@
 /* Limits of sig_atomic_t. */
 #define	SIG_ATOMIC_MIN	INT32_MIN
 #define	SIG_ATOMIC_MAX	INT32_MAX
-
-#ifndef WCHAR_MIN /* Also possibly defined in <wchar.h> */
-/* Limits of wchar_t. */
-#define	WCHAR_MIN	INT32_MIN
-#define	WCHAR_MAX	INT32_MAX
-#endif
 
 /* Limits of wint_t. */
 #define	WINT_MIN	INT32_MIN

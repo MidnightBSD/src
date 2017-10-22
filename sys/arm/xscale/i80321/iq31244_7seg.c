@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/i80321/iq31244_7seg.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/i80321/iq31244_7seg.c 236987 2012-06-13 04:38:09Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -206,7 +206,7 @@ static const uint8_t digitmap[] = {
 	SEG_D|SEG_E,
 };
 
-static uint8_t 
+static uint8_t
 iq80321_7seg_xlate(char c)
 {
 	uint8_t rv;
@@ -336,7 +336,7 @@ static const uint8_t snakemap[][2] = {
 
 static SYSCTL_NODE(_hw, OID_AUTO, sevenseg, CTLFLAG_RD, 0, "7 seg");
 static int freq = 20;
-SYSCTL_INT(_hw_sevenseg, OID_AUTO, freq, CTLFLAG_RW, &freq, 0, 
+SYSCTL_INT(_hw_sevenseg, OID_AUTO, freq, CTLFLAG_RW, &freq, 0,
     "7 Seg update frequency");
 static void
 iq31244_7seg_snake(void)

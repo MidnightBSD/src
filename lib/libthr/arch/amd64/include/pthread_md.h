@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/arch/amd64/include/pthread_md.h 229047 2011-12-30 23:41:24Z dim $
+ * $FreeBSD: release/10.0.0/lib/libthr/arch/amd64/include/pthread_md.h 228536 2011-12-15 19:42:25Z dim $
  */
 
 /*

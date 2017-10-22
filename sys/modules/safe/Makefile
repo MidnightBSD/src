@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/sys/modules/safe/Makefile 182668 2008-09-01 23:59:00Z imp $
+# $FreeBSD: release/10.0.0/sys/modules/safe/Makefile 182668 2008-09-01 23:59:00Z imp $
 #
 
 .PATH:	${.CURDIR}/../../dev/safe

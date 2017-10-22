@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/pc98/pc98/machdep.c 243460 2012-11-23 15:42:25Z nyan $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/pc98/pc98/machdep.c 258559 2013-11-25 15:58:48Z emaste $");
 
 #include "opt_apic.h"
 #include "opt_atalk.h"
@@ -80,6 +80,7 @@ __FBSDID("$FreeBSD: stable/9/sys/pc98/pc98/machdep.c 243460 2012-11-23 15:42:25Z
 #include <sys/pcpu.h>
 #include <sys/ptrace.h>
 #include <sys/reboot.h>
+#include <sys/rwlock.h>
 #include <sys/sched.h>
 #include <sys/signalvar.h>
 #ifdef SMP
@@ -274,11 +275,6 @@ cpu_startup(dummy)
 	bufinit();
 	vm_pager_bufferinit();
 	cpu_setregs();
-
-	/*
-	 * Add BSP as an interrupt target.
-	 */
-	intr_add_cpu(0);
 }
 
 /*
@@ -777,17 +773,7 @@ osigreturn(td, uap)
 		/*
 		 * Don't allow users to change privileged or reserved flags.
 		 */
-		/*
-		 * XXX do allow users to change the privileged flag PSL_RF.
-		 * The cpu sets PSL_RF in tf_eflags for faults.  Debuggers
-		 * should sometimes set it there too.  tf_eflags is kept in
-		 * the signal context during signal handling and there is no
-		 * other place to remember it, so the PSL_RF bit may be
-		 * corrupted by the signal handler without us knowing.
-		 * Corruption of the PSL_RF bit at worst causes one more or
-		 * one less debugger trap, so allowing it is fairly harmless.
-		 */
-		if (!EFL_SECURE(eflags & ~PSL_RF, regs->tf_eflags & ~PSL_RF)) {
+		if (!EFL_SECURE(eflags, regs->tf_eflags)) {
 	    		return (EINVAL);
 		}
 
@@ -903,17 +889,7 @@ freebsd4_sigreturn(td, uap)
 		/*
 		 * Don't allow users to change privileged or reserved flags.
 		 */
-		/*
-		 * XXX do allow users to change the privileged flag PSL_RF.
-		 * The cpu sets PSL_RF in tf_eflags for faults.  Debuggers
-		 * should sometimes set it there too.  tf_eflags is kept in
-		 * the signal context during signal handling and there is no
-		 * other place to remember it, so the PSL_RF bit may be
-		 * corrupted by the signal handler without us knowing.
-		 * Corruption of the PSL_RF bit at worst causes one more or
-		 * one less debugger trap, so allowing it is fairly harmless.
-		 */
-		if (!EFL_SECURE(eflags & ~PSL_RF, regs->tf_eflags & ~PSL_RF)) {
+		if (!EFL_SECURE(eflags, regs->tf_eflags)) {
 			uprintf("pid %d (%s): freebsd4_sigreturn eflags = 0x%x\n",
 			    td->td_proc->p_pid, td->td_name, eflags);
 	    		return (EINVAL);
@@ -1017,17 +993,7 @@ sys_sigreturn(td, uap)
 		/*
 		 * Don't allow users to change privileged or reserved flags.
 		 */
-		/*
-		 * XXX do allow users to change the privileged flag PSL_RF.
-		 * The cpu sets PSL_RF in tf_eflags for faults.  Debuggers
-		 * should sometimes set it there too.  tf_eflags is kept in
-		 * the signal context during signal handling and there is no
-		 * other place to remember it, so the PSL_RF bit may be
-		 * corrupted by the signal handler without us knowing.
-		 * Corruption of the PSL_RF bit at worst causes one more or
-		 * one less debugger trap, so allowing it is fairly harmless.
-		 */
-		if (!EFL_SECURE(eflags & ~PSL_RF, regs->tf_eflags & ~PSL_RF)) {
+		if (!EFL_SECURE(eflags, regs->tf_eflags)) {
 			uprintf("pid %d (%s): sigreturn eflags = 0x%x\n",
 			    td->td_proc->p_pid, td->td_name, eflags);
 	    		return (EINVAL);
@@ -1137,7 +1103,7 @@ void
 cpu_halt(void)
 {
 	for (;;)
-		__asm__ ("hlt");
+		halt();
 }
 
 static int	idle_mwait = 1;		/* Use MONITOR/MWAIT for short idle. */
@@ -1150,15 +1116,28 @@ SYSCTL_INT(_machdep, OID_AUTO, idle_mwait, CTLFLAG_RW, &idle_mwait,
 #define	STATE_SLEEPING	0x2
 
 static void
-cpu_idle_hlt(int busy)
+cpu_idle_hlt(sbintime_t sbt)
 {
 	int *state;
 
 	state = (int *)PCPU_PTR(monitorbuf);
 	*state = STATE_SLEEPING;
+
 	/*
-	 * We must absolutely guarentee that hlt is the next instruction
-	 * after sti or we introduce a timing window.
+	 * Since we may be in a critical section from cpu_idle(), if
+	 * an interrupt fires during that critical section we may have
+	 * a pending preemption.  If the CPU halts, then that thread
+	 * may not execute until a later interrupt awakens the CPU.
+	 * To handle this race, check for a runnable thread after
+	 * disabling interrupts and immediately return if one is
+	 * found.  Also, we must absolutely guarentee that hlt is
+	 * the next instruction after sti.  This ensures that any
+	 * interrupt that fires after the call to disable_intr() will
+	 * immediately awaken the CPU from hlt.  Finally, please note
+	 * that on x86 this works fine because of interrupts enabled only
+	 * after the instruction following sti takes place, while IF is set
+	 * to 1 immediately, allowing hlt instruction to acknowledge the
+	 * interrupt.
 	 */
 	disable_intr();
 	if (sched_runnable())
@@ -1178,28 +1157,42 @@ cpu_idle_hlt(int busy)
 #define	MWAIT_C4	0x30
 
 static void
-cpu_idle_mwait(int busy)
+cpu_idle_mwait(sbintime_t sbt)
 {
 	int *state;
 
 	state = (int *)PCPU_PTR(monitorbuf);
 	*state = STATE_MWAIT;
-	if (!sched_runnable()) {
-		cpu_monitor(state, 0, 0);
-		if (*state == STATE_MWAIT)
-			cpu_mwait(0, MWAIT_C1);
+
+	/* See comments in cpu_idle_hlt(). */
+	disable_intr();
+	if (sched_runnable()) {
+		enable_intr();
+		*state = STATE_RUNNING;
+		return;
 	}
+	cpu_monitor(state, 0, 0);
+	if (*state == STATE_MWAIT)
+		__asm __volatile("sti; mwait" : : "a" (MWAIT_C1), "c" (0));
+	else
+		enable_intr();
 	*state = STATE_RUNNING;
 }
 
 static void
-cpu_idle_spin(int busy)
+cpu_idle_spin(sbintime_t sbt)
 {
 	int *state;
 	int i;
 
 	state = (int *)PCPU_PTR(monitorbuf);
 	*state = STATE_RUNNING;
+
+	/*
+	 * The sched_runnable() call is racy but as long as there is
+	 * a loop missing it one time will have just a little impact if any 
+	 * (and it is much better than missing the check at all).
+	 */
 	for (i = 0; i < 1000; i++) {
 		if (sched_runnable())
 			return;
@@ -1207,11 +1200,12 @@ cpu_idle_spin(int busy)
 	}
 }
 
-void (*cpu_idle_fn)(int) = cpu_idle_hlt;
+void (*cpu_idle_fn)(sbintime_t) = cpu_idle_hlt;
 
 void
 cpu_idle(int busy)
 {
+	sbintime_t sbt = -1;
 
 	CTR2(KTR_SPARE2, "cpu_idle(%d) at %d",
 	    busy, curcpu);
@@ -1229,11 +1223,11 @@ cpu_idle(int busy)
 	/* If we have time - switch timers into idle mode. */
 	if (!busy) {
 		critical_enter();
-		cpu_idleclock();
+		sbt = cpu_idleclock();
 	}
 
 	/* Call main idle method. */
-	cpu_idle_fn(busy);
+	cpu_idle_fn(sbt);
 
 	/* Switch timers mack into active mode. */
 	if (!busy) {
@@ -1334,21 +1328,6 @@ idle_sysctl(SYSCTL_HANDLER_ARGS)
 
 SYSCTL_PROC(_machdep, OID_AUTO, idle, CTLTYPE_STRING | CTLFLAG_RW, 0, 0,
     idle_sysctl, "A", "currently selected idle function");
-
-uint64_t (*atomic_load_acq_64)(volatile uint64_t *) =
-    atomic_load_acq_64_i386;
-void (*atomic_store_rel_64)(volatile uint64_t *, uint64_t) =
-    atomic_store_rel_64_i386;
-
-static void
-cpu_probe_cmpxchg8b(void)
-{
-
-	if ((cpu_feature & CPUID_CX8) != 0) {
-		atomic_load_acq_64 = atomic_load_acq_64_i586;
-		atomic_store_rel_64 = atomic_store_rel_64_i586;
-	}
-}
 
 /*
  * Reset registers to default values on exec.
@@ -2398,8 +2377,6 @@ init386(first)
 	thread0.td_pcb->pcb_cr3 = (int)IdlePTD;
 	thread0.td_pcb->pcb_ext = 0;
 	thread0.td_frame = &proc0_tf;
-
-	cpu_probe_cmpxchg8b();
 }
 
 void
@@ -2455,7 +2432,7 @@ f00f_hack(void *unused)
 
 	printf("Intel Pentium detected, installing workaround for F00F bug\n");
 
-	tmp = kmem_alloc(kernel_map, PAGE_SIZE * 2);
+	tmp = kmem_malloc(kernel_arena, PAGE_SIZE * 2, M_WAITOK | M_ZERO);
 	if (tmp == 0)
 		panic("kmem_alloc returned 0");
 
@@ -2466,9 +2443,7 @@ f00f_hack(void *unused)
 	r_idt.rd_base = (u_int)new_idt;
 	lidt(&r_idt);
 	idt = new_idt;
-	if (vm_map_protect(kernel_map, tmp, tmp + PAGE_SIZE,
-			   VM_PROT_READ, FALSE) != KERN_SUCCESS)
-		panic("vm_map_protect failed");
+	pmap_protect(kernel_pmap, tmp, tmp + PAGE_SIZE, VM_PROT_READ);
 }
 #endif /* defined(I586_CPU) && !NO_F00F_HACK */
 
@@ -2765,7 +2740,7 @@ get_fpcontext(struct thread *td, mcontext_t *mcp)
 	bzero(mcp->mc_fpstate, sizeof(mcp->mc_fpstate));
 #else
 	mcp->mc_ownedfp = npxgetregs(td);
-	bcopy(&td->td_pcb->pcb_user_save, &mcp->mc_fpstate,
+	bcopy(&td->td_pcb->pcb_user_save, &mcp->mc_fpstate[0],
 	    sizeof(mcp->mc_fpstate));
 	mcp->mc_fpformat = npxformat();
 #endif

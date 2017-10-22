@@ -1,5 +1,5 @@
 .\"
-.\" FreeBSD install - a package for the installation and maintainance
+.\" FreeBSD install - a package for the installation and maintenance
 .\" of non-core utilities.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -13,9 +13,9 @@
 .\"
 .\" Jordan K. Hubbard
 .\"
-.\" $FreeBSD: stable/9/usr.sbin/pkg_install/add/pkg_add.1 236462 2012-06-02 18:28:34Z jpaetzel $
+.\" $FreeBSD: release/10.0.0/usr.sbin/pkg_install/add/pkg_add.1 243554 2012-11-26 05:11:07Z eadler $
 .\"
-.Dd January 4, 2009
+.Dd November 9, 2012
 .Dt PKG_ADD 1
 .Os
 .Sh NAME
@@ -578,6 +578,10 @@ and
 are not suitable for creating the staging area.
 .It Pa /var/db/pkg
 Default location of the installed package database.
+.It Ev PKG_OLD_NOWARN
+If set
+.Nm
+will not warn about its use in the presence of pkgng databases.
 .El
 .Sh SEE ALSO
 .Xr pkg_create 1 ,

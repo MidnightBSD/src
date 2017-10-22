@@ -1,13 +1,13 @@
-#	$NetBSD: Makefile,v 1.13 2009/04/14 22:15:20 lukem Exp $
-# $FreeBSD: stable/9/usr.bin/gzip/Makefile 222210 2011-05-23 09:02:44Z delphij $
+#	$NetBSD: Makefile,v 1.16 2011/06/21 13:25:45 joerg Exp $
+# $FreeBSD: release/10.0.0/usr.bin/gzip/Makefile 226184 2011-10-10 06:37:32Z delphij $
 
 .include <bsd.own.mk>
 
 PROG=		gzip
 MAN=		gzip.1 gzexe.1 zdiff.1 zforce.1 zmore.1 znew.1
 
-DPADD=		${LIBZ}
-LDADD=		-lz
+DPADD=		${LIBZ} ${LIBLZMA}
+LDADD=		-lz -llzma
 
 .if ${MK_BZIP2_SUPPORT} != "no"
 DPADD+=		${LIBBZ2}

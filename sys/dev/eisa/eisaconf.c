@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/eisa/eisaconf.c 229093 2011-12-31 14:12:12Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/eisa/eisaconf.c 227843 2011-11-22 21:28:20Z marius $");
 
 #include "opt_eisa.h"
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/nxge/if_nxge.c 248078 2013-03-09 00:39:54Z marius $
+ * $FreeBSD: release/10.0.0/sys/dev/nxge/if_nxge.c 246128 2013-01-30 18:01:20Z sbz $
  */
 
 #include <dev/nxge/if_nxge.h>
@@ -3507,7 +3507,8 @@ static device_method_t xge_methods[] = {
 	DEVMETHOD(device_attach,    xge_attach),
 	DEVMETHOD(device_detach,    xge_detach),
 	DEVMETHOD(device_shutdown,  xge_shutdown),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t xge_driver = {

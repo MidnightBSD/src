@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi_throttle.c 193530 2009-06-05 18:44:36Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/acpi_throttle.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -114,7 +114,7 @@ static device_method_t acpi_throttle_methods[] = {
 	DEVMETHOD(cpufreq_drv_get,	acpi_thr_get),
 	DEVMETHOD(cpufreq_drv_type,	acpi_thr_type),
 	DEVMETHOD(cpufreq_drv_settings,	acpi_thr_settings),
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t acpi_throttle_driver = {

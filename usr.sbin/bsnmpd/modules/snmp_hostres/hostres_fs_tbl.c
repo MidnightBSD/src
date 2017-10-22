@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_fs_tbl.c 192243 2009-05-17 05:54:25Z kmacy $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_fs_tbl.c 192243 2009-05-17 05:54:25Z kmacy $
  */
 
 /*

@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/9/tools/tools/net80211/wlanstats/main.c 188206 2009-02-05 22:17:10Z sam $
+ * $FreeBSD: release/10.0.0/tools/tools/net80211/wlanstats/main.c 237129 2012-06-15 08:37:46Z adrian $
  */
 
 /*
@@ -57,7 +57,8 @@ static struct {
   },
   { "ampdu",
     "input,output,ampdu_reorder,ampdu_oor,rx_dup,ampdu_flush,ampdu_move,"
-    "ampdu_drop,ampdu_bar,ampdu_baroow,ampdu_barmove,rssi,rate"
+    "ampdu_drop,ampdu_bar,ampdu_baroow,ampdu_barmove,ampdu_bartx,"
+    "ampdu_bartxfail,ampdu_bartxretry,rssi,rate"
   },
 };
 

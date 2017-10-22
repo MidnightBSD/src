@@ -2,9 +2,9 @@
  * Copyright 2000 Hans Reiser
  * See README for licensing and copyright details
  * 
- * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
+ * Ported to FreeBSD by Jean-SÃ©bastien PÃ©dron <jspedron@club-internet.fr>
  * 
- * $FreeBSD: stable/9/sys/gnu/fs/reiserfs/reiserfs_mount.h 213664 2010-10-10 07:05:47Z kib $
+ * $FreeBSD: release/10.0.0/sys/gnu/fs/reiserfs/reiserfs_mount.h 230132 2012-01-15 13:23:18Z uqs $
  */
 
 #ifndef _GNU_REISERFS_REISERFS_MOUNT_H

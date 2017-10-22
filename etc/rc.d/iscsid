@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# $FreeBSD: release/10.0.0/etc/rc.d/iscsid 255570 2013-09-14 15:29:06Z trasz $
+#
+
+# PROVIDE: iscsid
+# REQUIRE: NETWORK
+# BEFORE:  DAEMON
+# KEYWORD: nojail
+
+. /etc/rc.subr
+
+name="iscsid"
+rcvar="iscsid_enable"
+pidfile="/var/run/${name}.pid"
+command="/usr/sbin/${name}"
+required_modules="iscsi"
+
+load_rc_config $name
+run_rc_command "$1"

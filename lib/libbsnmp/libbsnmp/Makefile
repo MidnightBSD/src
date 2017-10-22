@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libbsnmp/libbsnmp/Makefile 225227 2011-08-28 09:26:48Z kib $
+# $FreeBSD: release/10.0.0/lib/libbsnmp/libbsnmp/Makefile 244931 2013-01-01 18:29:25Z antoine $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 
@@ -15,6 +15,7 @@ CFLAGS+= -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DQUADFMT='"llu"' -DQUADXFMT='"llx"'
 
 .if ${MK_OPENSSL} != "no"
 CFLAGS+= -DHAVE_LIBCRYPTO
+DPADD+= ${LIBCRYPTO}
 LDADD+= -lcrypto
 .endif
 

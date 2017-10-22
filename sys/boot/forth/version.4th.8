@@ -1,4 +1,4 @@
-.\" Copyright (c) 2011 Devin Teske
+.\" Copyright (c) 2011-2013 Devin Teske
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/sys/boot/forth/version.4th.8 237247 2012-06-19 02:54:54Z wblock $
+.\" $FreeBSD: release/10.0.0/sys/boot/forth/version.4th.8 254942 2013-08-26 23:37:11Z dteske $
 .\"
-.Dd May 19, 2011
+.Dd August 6, 2013
 .Dt VERSION.4TH 8
 .Os
 .Sh NAME
@@ -84,13 +84,14 @@ Sets the desired ending row position of
 Default is 24.
 .It Va loader_color
 If set to
-.Dq Li YES
+.Dq Li NO
 (case-insensitive) or
-.Dq Li 1 ,
-causes the version to be printed in ANSI Cyan.
+.Dq Li 0 ,
+causes the version to be printed without color
+.Pq default is ANSI Cyan .
 .El
 .Sh FILES
-.Bl -tag -width /boot/loader.4th -compact
+.Bl -tag -width /boot/version.4th -compact
 .It Pa /boot/loader
 The
 .Xr loader 8 .
@@ -113,6 +114,7 @@ loader_version="loader 1.1"
 .Sh SEE ALSO
 .Xr loader.conf 5 ,
 .Xr loader 8 ,
+.Xr color.4th 8
 .Sh HISTORY
 The
 .Nm
@@ -123,4 +125,4 @@ The
 .Nm
 set of commands was written by
 .An -nosplit
-.An Devin Teske Aq devinteske@hotmail.com .
+.An Devin Teske Aq dteske@FreeBSD.org .

@@ -2,7 +2,7 @@
 #
 # Common code used run regression tests for usr.bin/make.
 #
-# $FreeBSD: stable/9/tools/regression/usr.bin/make/common.sh 201526 2010-01-04 18:57:22Z obrien $
+# $FreeBSD: release/10.0.0/tools/regression/usr.bin/make/common.sh 237344 2012-06-20 21:38:16Z obrien $
 
 #
 # Output a message and exit with an error.
@@ -239,8 +239,10 @@ eval_clean()
 	if [ -n "${TEST_CLEANUP}" ] ; then
 		. ${SRC_DIR}/cleanup
 	fi
-	rm -rf ${WORK_DIR}
-	rm -rf ${OUTPUT_DIR}
+	if [ -z "${NO_TEST_CLEANUP}" ] ; then
+		rm -rf ${WORK_DIR}
+		rm -rf ${OUTPUT_DIR}
+	fi
 }
 
 #

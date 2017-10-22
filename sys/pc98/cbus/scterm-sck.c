@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/pc98/cbus/scterm-sck.c 199171 2009-11-11 08:20:19Z ed $
+ * $FreeBSD: release/10.0.0/sys/pc98/cbus/scterm-sck.c 228471 2011-12-13 14:06:01Z ed $
  */
 
 #include "opt_syscons.h"
@@ -133,7 +133,7 @@ static void		scterm_scan_esc(scr_stat *scp, term_stat *tcp,
 static int		mask2attr(term_stat *tcp);
 
 #ifdef KANJI
-__inline static u_char
+static inline u_char
 iskanji1(u_char mode, u_char c)
 {
 	if (c > 0x80) {
@@ -186,7 +186,7 @@ iskanji1(u_char mode, u_char c)
 	return KTYPE_ASCII;
 }
 
-__inline static u_char
+static inline u_char
 iskanji2(u_char mode, u_char c)
 {
 	switch (mode) {

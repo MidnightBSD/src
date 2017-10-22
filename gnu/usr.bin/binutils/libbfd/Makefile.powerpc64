@@ -1,8 +1,9 @@
-# $FreeBSD: stable/9/gnu/usr.bin/binutils/libbfd/Makefile.powerpc64 209867 2010-07-10 02:29:22Z nwhitehorn $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/binutils/libbfd/Makefile.powerpc64 239654 2012-08-24 16:37:00Z rdivacky $
 
 ARCHS+=	rs6000
 
 DEFAULT_VECTOR=	bfd_elf64_powerpc_vec
+NO_WERROR.clang= 
 
 SRCS+=	cpu-powerpc.c	\
 	cpu-rs6000.c	\

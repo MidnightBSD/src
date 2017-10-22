@@ -31,7 +31,7 @@
 .\"
 .\"	@(#)3.t	8.1 (Berkeley) 6/8/93
 .\"
-.\"	$FreeBSD: stable/9/share/doc/psd/21.ipc/3.t 117278 2003-07-06 10:37:00Z charnier $
+.\"	$FreeBSD: release/10.0.0/share/doc/psd/21.ipc/3.t 117278 2003-07-06 10:37:00Z charnier $
 .\"
 .\".ds RH "Network Library Routines
 .bp

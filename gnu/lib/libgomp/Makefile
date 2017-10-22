@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/lib/libgomp/Makefile 218182 2011-02-02 03:27:31Z imp $
+# $FreeBSD: release/10.0.0/gnu/lib/libgomp/Makefile 218182 2011-02-02 03:27:31Z imp $
 
 GCCDIR=	${.CURDIR}/../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs

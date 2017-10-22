@@ -23,14 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/s3c2xx0/s3c2440reg.h 205354 2010-03-20 03:39:35Z imp $
+ * $FreeBSD: release/10.0.0/sys/arm/s3c2xx0/s3c2440reg.h 236990 2012-06-13 04:59:00Z imp $
  */
 
 /*
  * Samsung S3C2440X processor is ARM920T based integrated CPU
  *
  * Reference:
- *  S3C2440A/S3C2442B User's Manual 
+ *  S3C2440A/S3C2442B User's Manual
  */
 #ifndef _ARM_S3C2XX0_S3C2440REG_H_
 #define	_ARM_S3C2XX0_S3C2440REG_H_

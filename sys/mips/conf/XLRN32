@@ -15,9 +15,9 @@
 # If you are in doubt as to the purpose or necessity of a line, check first 
 # in NOTES.
 #
-# $FreeBSD: stable/9/sys/mips/conf/XLRN32 221753 2011-05-11 00:52:41Z gonzo $
+# $FreeBSD: release/10.0.0/sys/mips/conf/XLRN32 253845 2013-07-31 17:21:18Z obrien $
 
-machine 	mips mipsn32eb
+machine 	mips mipsn32
 ident 		XLRN32
 include		"../rmi/std.xlr"
 
@@ -26,7 +26,6 @@ makeoptions	DEBUG=-g		# Build kernel with gdb(1) debug symbols
 makeoptions	ARCH_FLAGS="-march=mips64 -mabi=n32"
 makeoptions	KERNLOADADDR=0x80100000
 
-options		ISA_MIPS64
 #profile		2
 
 options 	SCHED_ULE		# ULE scheduler
@@ -80,7 +79,6 @@ options 	INVARIANT_SUPPORT	#Extra sanity checks of internal structures, required
 
 device		pci
 #device		ata
-#device		atadisk
 #options 	XLR_PERFMON		# Enable XLR processor activity monitoring
 options  	BREAK_TO_DEBUGGER
 device 		uart
@@ -88,7 +86,6 @@ device 		uart
 device 		loop
 device 		random
 device 		md
-device 		pty
 device		bpf
 
 # Network

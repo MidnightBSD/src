@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libiconv/Makefile 222772 2011-06-06 20:24:17Z ed $
+# $FreeBSD: release/10.0.0/lib/libiconv/Makefile 222772 2011-06-06 20:24:17Z ed $
 
 .PATH: ${.CURDIR}/../libc/iconv
 

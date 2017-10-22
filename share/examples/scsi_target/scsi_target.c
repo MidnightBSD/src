@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/share/examples/scsi_target/scsi_target.c 237825 2012-06-29 21:33:36Z ken $
+ * $FreeBSD: release/10.0.0/share/examples/scsi_target/scsi_target.c 255120 2013-09-01 13:01:59Z mav $
  */
 
 #include <sys/types.h>
@@ -100,8 +100,8 @@ static void		usage(void);
 int
 main(int argc, char *argv[])
 {
-	int ch, unit;
-	char *file_name, targname[16];
+	int ch;
+	char *file_name;
 	u_int16_t req_flags, sim_flags;
 	off_t user_size;
 
@@ -283,17 +283,11 @@ main(int argc, char *argv[])
 			warnx("aio support tested ok");
 	}
 
-	/* Go through all the control devices and find one that isn't busy. */
-	unit = 0;
-	do {
-		snprintf(targname, sizeof(targname), "/dev/targ%d", unit++);
-    		targ_fd = open(targname, O_RDWR);
-	} while (targ_fd < 0 && errno == EBUSY);
-
+	targ_fd = open("/dev/targ", O_RDWR);
 	if (targ_fd < 0)
-    	    errx(1, "Tried to open %d devices, none available", unit);
+    	    err(1, "/dev/targ");
 	else
-	    warnx("opened %s", targname);
+	    warnx("opened /dev/targ");
 
 	/* The first three are handled by kevent() later */
 	signal(SIGHUP, SIG_IGN);
@@ -371,7 +365,7 @@ init_ccbs()
 	for (i = 0; i < MAX_INITIATORS; i++) {
 		struct ccb_accept_tio *atio;
 		struct atio_descr *a_descr;
-		struct ccb_immed_notify *inot;
+		struct ccb_immediate_notify *inot;
 
 		atio = (struct ccb_accept_tio *)malloc(sizeof(*atio));
 		if (atio == NULL) {
@@ -388,7 +382,7 @@ init_ccbs()
 		atio->ccb_h.targ_descr = a_descr;
 		send_ccb((union ccb *)atio, /*priority*/1);
 
-		inot = (struct ccb_immed_notify *)malloc(sizeof(*inot));
+		inot = (struct ccb_immediate_notify *)malloc(sizeof(*inot));
 		if (inot == NULL) {
 			warn("malloc INOT");
 			return (-1);
@@ -599,7 +593,7 @@ handle_read()
 			oo += run_queue(c_descr->atio);
 			break;
 		}
-		case XPT_IMMED_NOTIFY:
+		case XPT_IMMEDIATE_NOTIFY:
 			/* INOTs are handled with priority */
 			TAILQ_INSERT_HEAD(&work_queue, &ccb->ccb_h,
 					  periph_links.tqe);
@@ -909,7 +903,7 @@ free_ccb(union ccb *ccb)
 	case XPT_ACCEPT_TARGET_IO:
 		free(ccb->ccb_h.targ_descr);
 		/* FALLTHROUGH */
-	case XPT_IMMED_NOTIFY:
+	case XPT_IMMEDIATE_NOTIFY:
 	default:
 		free(ccb);
 		break;

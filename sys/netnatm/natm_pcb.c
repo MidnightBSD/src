@@ -39,7 +39,7 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netnatm/natm_pcb.c 184205 2008-10-23 15:53:51Z des $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netnatm/natm_pcb.c 184205 2008-10-23 15:53:51Z des $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)getsockopt.2	8.4 (Berkeley) 5/2/95
-.\" $FreeBSD: stable/9/lib/libc/sys/getsockopt.2 232806 2012-03-11 00:51:16Z kib $
+.\" $FreeBSD: release/10.0.0/lib/libc/sys/getsockopt.2 249166 2013-04-05 18:09:43Z gnn $
 .\"
-.Dd February 26, 2012
+.Dd April 5, 2013
 .Dt GETSOCKOPT 2
 .Os
 .Sh NAME
@@ -437,7 +437,7 @@ The
 .Vt cmsghdr
 fields have the following values for TIMESTAMP:
 .Bd -literal
-     cmsg_len = sizeof(struct timeval);
+     cmsg_len = CMSG_LEN(sizeof(struct timeval));
      cmsg_level = SOL_SOCKET;
      cmsg_type = SCM_TIMESTAMP;
 .Ed
@@ -445,7 +445,7 @@ fields have the following values for TIMESTAMP:
 and for
 .Dv SO_BINTIME :
 .Bd -literal
-     cmsg_len = sizeof(struct bintime);
+     cmsg_len = CMSG_LEN(sizeof(struct bintime));
      cmsg_level = SOL_SOCKET;
      cmsg_type = SCM_BINTIME;
 .Ed

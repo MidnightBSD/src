@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/mfi/mfi_linux.c 234429 2012-04-18 18:31:11Z ambrisko $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mfi/mfi_linux.c 255219 2013-09-05 00:09:56Z pjd $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -84,6 +84,7 @@ MODULE_DEPEND(mfi, linux, 1, 1, 1);
 static int
 mfi_linux_ioctl(struct thread *p, struct linux_ioctl_args *args)
 {
+	cap_rights_t rights;
 	struct file *fp;
 	int error;
 	u_long cmd = args->cmd;
@@ -97,7 +98,8 @@ mfi_linux_ioctl(struct thread *p, struct linux_ioctl_args *args)
 		break;
 	}
 
-	if ((error = fget(p, args->fd, CAP_IOCTL, &fp)) != 0)
+	error = fget(p, args->fd, cap_rights_init(&rights, CAP_IOCTL), &fp);
+	if (error != 0)
 		return (error);
 	error = fo_ioctl(fp, cmd, (caddr_t)args->arg, p->td_ucred, p);
 	fdrop(fp, p);

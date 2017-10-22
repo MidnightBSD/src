@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vm_pager.h	8.4 (Berkeley) 1/12/94
- * $FreeBSD: stable/9/sys/vm/vm_pager.h 236925 2012-06-11 21:25:20Z kib $
+ * $FreeBSD: release/10.0.0/sys/vm/vm_pager.h 252330 2013-06-28 03:51:20Z jeff $
  */
 
 /*
@@ -95,9 +95,8 @@ extern struct pagerops mgtdevicepagerops;
 
 #ifdef _KERNEL
 
-extern vm_map_t pager_map;
 extern struct pagerops *pagertab[];
-extern struct mtx pbuf_mtx;
+extern struct mtx_padalign pbuf_mtx;
 
 vm_object_t vm_pager_allocate(objtype_t, void *, vm_ooffset_t, vm_prot_t,
     vm_ooffset_t, struct ucred *);
@@ -124,7 +123,7 @@ vm_pager_get_pages(
 ) {
 	int r;
 
-	VM_OBJECT_LOCK_ASSERT(object, MA_OWNED);
+	VM_OBJECT_ASSERT_WLOCKED(object);
 	r = (*pagertab[object->type]->pgo_getpages)(object, m, count, reqpage);
 	if (r == VM_PAGER_OK && m[reqpage]->valid != VM_PAGE_BITS_ALL) {
 		vm_page_zero_invalid(m[reqpage], TRUE);
@@ -141,7 +140,7 @@ vm_pager_put_pages(
 	int *rtvals
 ) {
 
-	VM_OBJECT_LOCK_ASSERT(object, MA_OWNED);
+	VM_OBJECT_ASSERT_WLOCKED(object);
 	(*pagertab[object->type]->pgo_putpages)
 	    (object, m, count, flags, rtvals);
 }
@@ -165,7 +164,7 @@ vm_pager_has_page(
 ) {
 	boolean_t ret;
 
-	VM_OBJECT_LOCK_ASSERT(object, MA_OWNED);
+	VM_OBJECT_ASSERT_WLOCKED(object);
 	ret = (*pagertab[object->type]->pgo_haspage)
 	    (object, offset, before, after);
 	return (ret);
@@ -188,7 +187,7 @@ static __inline void
 vm_pager_page_unswapped(vm_page_t m)
 {
 
-	VM_OBJECT_LOCK_ASSERT(m->object, MA_OWNED);
+	VM_OBJECT_ASSERT_WLOCKED(m->object);
 	if (pagertab[m->object->type]->pgo_pageunswapped)
 		(*pagertab[m->object->type]->pgo_pageunswapped)(m);
 }

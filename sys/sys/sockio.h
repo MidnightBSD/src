@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)sockio.h	8.1 (Berkeley) 3/28/94
- * $FreeBSD: stable/9/sys/sys/sockio.h 223735 2011-07-03 12:22:02Z bz $
+ * $FreeBSD: release/10.0.0/sys/sys/sockio.h 228768 2011-12-21 12:39:08Z glebius $
  */
 
 #ifndef _SYS_SOCKIO_H_
@@ -68,8 +68,7 @@
 #define	SIOCGIFMETRIC	_IOWR('i', 23, struct ifreq)	/* get IF metric */
 #define	SIOCSIFMETRIC	 _IOW('i', 24, struct ifreq)	/* set IF metric */
 #define	SIOCDIFADDR	 _IOW('i', 25, struct ifreq)	/* delete IF addr */
-#define	SIOCAIFADDR	 _IOW('i', 26, struct ifaliasreq)/* add/chg IF alias */
-
+#define	OSIOCAIFADDR	 _IOW('i', 26, struct oifaliasreq)/* add/chg IF alias */
 #define	SIOCALIFADDR	 _IOW('i', 27, struct if_laddrreq) /* add IF addr */
 #define	SIOCGLIFADDR	_IOWR('i', 28, struct if_laddrreq) /* get IF addr */
 #define	SIOCDLIFADDR	 _IOW('i', 29, struct if_laddrreq) /* delete IF addr */
@@ -81,6 +80,7 @@
 #define	SIOCSIFNAME	 _IOW('i', 40, struct ifreq)	/* set IF name */
 #define	SIOCSIFDESCR	 _IOW('i', 41, struct ifreq)	/* set ifnet descr */ 
 #define	SIOCGIFDESCR	_IOWR('i', 42, struct ifreq)	/* get ifnet descr */ 
+#define	SIOCAIFADDR	 _IOW('i', 43, struct ifaliasreq)/* add/chg IF alias */
 
 #define	SIOCADDMULTI	 _IOW('i', 49, struct ifreq)	/* add m'cast addr */
 #define	SIOCDELMULTI	 _IOW('i', 50, struct ifreq)	/* del m'cast addr */

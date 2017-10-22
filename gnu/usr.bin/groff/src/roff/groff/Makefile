@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/groff/src/roff/groff/Makefile 114412 2003-05-01 13:22:21Z ru $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/groff/src/roff/groff/Makefile 114412 2003-05-01 13:22:21Z ru $
 
 PROG_CXX=	groff
 SRCS=		groff.cpp pipeline.c

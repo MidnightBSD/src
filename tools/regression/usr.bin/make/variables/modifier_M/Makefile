@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/usr.bin/make/variables/modifier_M/Makefile 146822 2005-05-31 14:13:07Z harti $
+# $FreeBSD: release/10.0.0/tools/regression/usr.bin/make/variables/modifier_M/Makefile 228975 2011-12-30 00:04:11Z uqs $
 #
 # Test the M modifier.
 #
@@ -12,7 +12,7 @@ test1:
 	@echo "all files: ${FILES}"
 	@echo "cfiles: ${FILES:M*.c}"
 	@echo "hfiles: ${FILES:M*.h}"
-	@echo "grammer and lexer: ${FILES:M*.[ly]}"
+	@echo "grammar and lexer: ${FILES:M*.[ly]}"
 	@echo "man page: ${FILES:M*.[1-9]}"
 	@echo "utility files: ${FILES:Mutil.?}"
 	@echo "m files: ${FILES:Mm*}"

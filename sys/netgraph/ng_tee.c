@@ -38,7 +38,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_tee.c 220768 2011-04-18 09:12:27Z glebius $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_tee.c 243882 2012-12-05 08:04:20Z glebius $
  * $Whistle: ng_tee.c,v 1.18 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -305,7 +305,7 @@ ng_tee_rcvdata(hook_p hook, item_p item)
 		struct mbuf *m2;
 
 		/* Copy packet (failure will not stop the original)*/
-		m2 = m_dup(m, M_DONTWAIT);
+		m2 = m_dup(m, M_NOWAIT);
 		if (m2) {
 			/* Deliver duplicate */
 			h = hinfo->dup;

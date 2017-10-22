@@ -25,8 +25,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/lib/libc/locale/freelocale.3 237974 2012-07-02 07:39:33Z obrien $
-.Dd September 17 2011
+.\" $FreeBSD: release/10.0.0/lib/libc/locale/freelocale.3 250245 2013-05-04 17:21:44Z pluknet $
+.Dd September 17, 2011
 .Dt FREELOCALE 3
 .Os
 .Sh NAME
@@ -34,7 +34,7 @@
 .Nd Frees a locale created with
 .Xr duplocale 3
 or
-.Xr newlocale 3 .
+.Xr newlocale 3
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
@@ -57,5 +57,12 @@ Returns 0 on success or -1 on error.
 .Xr uselocale 3 ,
 .Xr xlocale 3
 .Sh STANDARDS
-This function, conforms to
-.St -p1003.1-2008 .
+The
+.Fn freelocale
+function
+differs from
+.St -p1003.1-2008
+in that its return type is
+.Vt int
+rather than
+.Vt void .

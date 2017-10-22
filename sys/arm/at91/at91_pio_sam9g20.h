@@ -6,7 +6,7 @@
  * that is identical to the AT91SAM9G20.
  */
 
-/* $FreeBSD: stable/9/sys/arm/at91/at91_pio_sam9g20.h 213498 2010-10-06 22:40:27Z cognet $ */
+/* $FreeBSD: release/10.0.0/sys/arm/at91/at91_pio_sam9g20.h 213498 2010-10-06 22:40:27Z cognet $ */
 
 #ifndef  ARM_AT91_AT91_PIO_SAM9G20_H
 #define  ARM_AT91_AT91_PIO_SAM9G20_H

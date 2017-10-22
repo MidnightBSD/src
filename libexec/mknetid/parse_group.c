@@ -36,7 +36,7 @@
 static const char sccsid[] = "@(#)getgrent.c	8.2 (Berkeley) 3/21/94";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/libexec/mknetid/parse_group.c 216227 2010-12-06 10:24:06Z kevlo $";
+  "$FreeBSD: release/10.0.0/libexec/mknetid/parse_group.c 229403 2012-01-03 18:51:58Z ed $";
 #endif /* not lint */
 
 /*
@@ -114,7 +114,7 @@ grscan(int search, int gid)
 			return(0);
 		bp = line;
 		/* skip lines that are too big */
-		if (!index(line, '\n')) {
+		if (!strchr(line, '\n')) {
 			int ch;
 
 			while ((ch = getc(_gr_fp)) != '\n' && ch != EOF)

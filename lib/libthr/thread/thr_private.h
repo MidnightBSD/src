@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/thread/thr_private.h 237455 2012-06-22 19:19:58Z gnn $
+ * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_private.h 258766 2013-11-30 14:36:32Z kib $
  */
 
 #ifndef _THR_PRIVATE_H
@@ -182,9 +182,11 @@ struct pthread_cond_attr {
 struct pthread_barrier {
 	struct umutex		b_lock;
 	struct ucond		b_cv;
-	volatile int64_t	b_cycle;
-	volatile int		b_count;
-	volatile int		b_waiters;
+	int64_t			b_cycle;
+	int			b_count;
+	int			b_waiters;
+	int			b_refcount;
+	int			b_destroying;
 };
 
 struct pthread_barrierattr {
@@ -430,6 +432,9 @@ struct pthread {
 
 	/* the sigaction should be used for deferred signal. */
 	struct sigaction	deferred_sigact;
+
+	/* deferred signal delivery is performed, do not reenter. */
+	int			deferred_run;
 
 	/* Force new thread to exit. */
 	int			force_exit;
@@ -708,6 +713,7 @@ extern size_t	_thr_stack_initial __hidden;
 extern int	_thr_page_size __hidden;
 extern int	_thr_spinloops __hidden;
 extern int	_thr_yieldloops __hidden;
+extern int	_thr_queuefifo __hidden;
 
 /* Garbage thread count. */
 extern int	_gc_count __hidden;
@@ -718,16 +724,20 @@ extern struct umutex	_rwlock_static_lock __hidden;
 extern struct umutex	_keytable_lock __hidden;
 extern struct urwlock	_thr_list_lock __hidden;
 extern struct umutex	_thr_event_lock __hidden;
+extern struct umutex	_suspend_all_lock __hidden;
+extern int		_suspend_all_waiters __hidden;
+extern int		_suspend_all_cycle __hidden;
+extern struct pthread	*_single_thread __hidden;
 
 /*
  * Function prototype definitions.
  */
 __BEGIN_DECLS
 int	_thr_setthreaded(int) __hidden;
-int	_mutex_cv_lock(struct pthread_mutex *, int count) __hidden;
-int	_mutex_cv_unlock(struct pthread_mutex *, int *count) __hidden;
-int     _mutex_cv_attach(struct pthread_mutex *, int count) __hidden;
-int     _mutex_cv_detach(struct pthread_mutex *, int *count) __hidden;
+int	_mutex_cv_lock(struct pthread_mutex *, int) __hidden;
+int	_mutex_cv_unlock(struct pthread_mutex *, int *, int *) __hidden;
+int     _mutex_cv_attach(struct pthread_mutex *, int) __hidden;
+int     _mutex_cv_detach(struct pthread_mutex *, int *) __hidden;
 int     _mutex_owned(struct pthread *, const struct pthread_mutex *) __hidden;
 int	_mutex_reinit(pthread_mutex_t *) __hidden;
 void	_mutex_fork(struct pthread *curthread) __hidden;
@@ -739,7 +749,6 @@ void	_thr_ref_delete(struct pthread *, struct pthread *) __hidden;
 void	_thr_ref_delete_unlocked(struct pthread *, struct pthread *) __hidden;
 int	_thr_find_thread(struct pthread *, struct pthread *, int) __hidden;
 void	_thr_rtld_init(void) __hidden;
-void	_thr_rtld_fini(void) __hidden;
 void	_thr_rtld_postfork_child(void) __hidden;
 int	_thr_stack_alloc(struct pthread_attr *) __hidden;
 void	_thr_stack_free(struct pthread_attr *) __hidden;
@@ -774,6 +783,8 @@ int	_thr_setscheduler(lwpid_t, int, const struct sched_param *) __hidden;
 void	_thr_signal_prefork(void) __hidden;
 void	_thr_signal_postfork(void) __hidden;
 void	_thr_signal_postfork_child(void) __hidden;
+void	_thr_suspend_all_lock(struct pthread *) __hidden;
+void	_thr_suspend_all_unlock(struct pthread *) __hidden;
 void	_thr_try_gc(struct pthread *, struct pthread *) __hidden;
 int	_rtp_to_schedparam(const struct rtprio *rtp, int *policy,
 		struct sched_param *param) __hidden;

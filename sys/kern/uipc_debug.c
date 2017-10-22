@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/uipc_debug.c 192802 2009-05-26 09:19:21Z pjd $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/uipc_debug.c 255138 2013-09-01 23:34:53Z davide $");
 
 #include "opt_ddb.h"
 
@@ -411,7 +411,7 @@ db_print_sockbuf(struct sockbuf *sb, const char *sockbufname, int indent)
 	db_print_indent(indent);
 	db_printf("sb_ctl: %u   ", sb->sb_ctl);
 	db_printf("sb_lowat: %d   ", sb->sb_lowat);
-	db_printf("sb_timeo: %d\n", sb->sb_timeo);
+	db_printf("sb_timeo: %jd\n", sb->sb_timeo);
 
 	db_print_indent(indent);
 	db_printf("sb_flags: 0x%x (", sb->sb_flags);

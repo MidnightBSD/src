@@ -1,14 +1,18 @@
-# $FreeBSD: stable/9/usr.bin/clang/llvm-extract/Makefile 245431 2013-01-14 19:51:26Z dim $
+# $FreeBSD: release/10.0.0/usr.bin/clang/llvm-extract/Makefile 249423 2013-04-12 17:57:40Z dim $
+
+.include <bsd.own.mk>
 
 PROG_CXX=llvm-extract
 
 SRCDIR=	tools/llvm-extract
 SRCS=	llvm-extract.cpp
 
-LIBDEPS=llvmasmparser \
+LIBDEPS=llvmirreader \
+	llvmasmparser \
 	llvmbitwriter \
 	llvmbitreader \
 	llvmipo \
+	llvmobjcarcopts \
 	llvmvectorize \
 	llvmscalaropts \
 	llvminstcombine \

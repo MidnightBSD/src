@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/apm/apm.c 208290 2010-05-19 08:52:59Z uqs $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/apm/apm.c 227249 2011-11-06 19:01:30Z ed $");
 
 #include <sys/file.h>
 #include <sys/ioctl.h>
@@ -38,7 +38,7 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/apm/apm.c 208290 2010-05-19 08:52:59Z uqs 
 #define xl(a)	((a) & 0xff)
 #define APMERR(a) xh(a)
 
-int cmos_wall = 0;	/* True when wall time is in cmos clock, else UTC */
+static int cmos_wall = 0; /* True when wall time is in cmos clock, else UTC */
 
 static void
 usage(void)

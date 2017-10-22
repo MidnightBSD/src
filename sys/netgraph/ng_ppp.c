@@ -58,7 +58,7 @@
  *
  * Authors: Archie Cobbs <archie@freebsd.org>, Alexander Motin <mav@alkar.net>
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_ppp.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_ppp.c 243882 2012-12-05 08:04:20Z glebius $
  * $Whistle: ng_ppp.c,v 1.24 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -2095,7 +2095,7 @@ deliver:
 			/* Split off next fragment as "m2" */
 			m2 = m;
 			if (!lastFragment) {
-				struct mbuf *n = m_split(m, len, M_DONTWAIT);
+				struct mbuf *n = m_split(m, len, M_NOWAIT);
 
 				if (n == NULL) {
 					NG_FREE_M(m);
@@ -2103,7 +2103,7 @@ deliver:
 						NG_FREE_ITEM(item);
 					return (ENOMEM);
 				}
-				m_tag_copy_chain(n, m, M_DONTWAIT);
+				m_tag_copy_chain(n, m, M_NOWAIT);
 				m = n;
 			}
 
@@ -2445,7 +2445,7 @@ ng_ppp_cutproto(struct mbuf *m, uint16_t *proto)
 static struct mbuf *
 ng_ppp_prepend(struct mbuf *m, const void *buf, int len)
 {
-	M_PREPEND(m, len, M_DONTWAIT);
+	M_PREPEND(m, len, M_NOWAIT);
 	if (m == NULL || (m->m_len < len && (m = m_pullup(m, len)) == NULL))
 		return (NULL);
 	bcopy(buf, mtod(m, uint8_t *), len);

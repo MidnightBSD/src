@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/fb/creator.c 201223 2009-12-29 21:51:28Z rnoland $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/fb/creator.c 201223 2009-12-29 21:51:28Z rnoland $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

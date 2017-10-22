@@ -62,7 +62,7 @@
  *    cc -o lmcconfig lmcconfig.c
  * Install the executable program in /usr/local/sbin/lmcconfig.
  *
- * $FreeBSD: stable/9/usr.sbin/lmcconfig/lmcconfig.c 216600 2010-12-20 19:08:15Z uqs $
+ * $FreeBSD: release/10.0.0/usr.sbin/lmcconfig/lmcconfig.c 239988 2012-09-01 10:56:15Z ed $
  */
 
 #include <sys/param.h>
@@ -1074,18 +1074,16 @@ print_hssi_sigs(void)
 static void
 print_events(void)
 {
-  char *time;
-  struct timeval tv;
-  struct timezone tz;
+  const char *reset_time;
+  time_t now;
 
-  gettimeofday(&tv, &tz);
-  time = (char *)ctime((time_t *)&tv);
-  printf("Current time:\t\t%s", time);
+  now = time(NULL);
+  printf("Current time:\t\t%s", ctime(&now));
   if (status.cntrs.reset_time.tv_sec < 1000)
-    time = "Never\n";
+    reset_time = "Never\n";
   else
-    time = (char *)ctime((time_t *)&status.cntrs.reset_time.tv_sec);
-  printf("Cntrs reset:\t\t%s", time);
+    reset_time = ctime(&status.cntrs.reset_time.tv_sec);
+  printf("Cntrs reset:\t\t%s", reset_time);
 
   if (status.cntrs.ibytes)     printf("Rx bytes:\t\t%ju\n",    (uintmax_t)status.cntrs.ibytes);
   if (status.cntrs.obytes)     printf("Tx bytes:\t\t%ju\n",    (uintmax_t)status.cntrs.obytes);

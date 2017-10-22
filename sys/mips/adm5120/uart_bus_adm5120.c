@@ -35,7 +35,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/adm5120/uart_bus_adm5120.c 202175 2010-01-12 21:36:08Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/adm5120/uart_bus_adm5120.c 202175 2010-01-12 21:36:08Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

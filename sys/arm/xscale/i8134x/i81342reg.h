@@ -24,12 +24,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/sys/arm/xscale/i8134x/i81342reg.h 172299 2007-09-22 22:25:24Z cognet $ */
+/* $FreeBSD: release/10.0.0/sys/arm/xscale/i8134x/i81342reg.h 236987 2012-06-13 04:38:09Z imp $ */
 
 #ifndef I83142_REG_H_
 #define I83142_REG_H_
 /* Physical Memory Map */
-/* 
+/*
  * 0x000000000 - 0x07FFFFFFF SDRAM
  * 0x090100000 - 0x0901FFFFF ATUe Outbound IO Window
  * 0x0F0000000 - 0x0F1FFFFFF Flash
@@ -62,7 +62,7 @@
 
 #define	IOP34X_ADMA_IE		(1 << 0) /* Interrupt enable */
 #define IOP34X_ADMA_TR		(1 << 1) /* Transfert Direction */
-/* 
+/*
  *               Source                   Destination
  *  00         Host I/O Interface	Local Memory
  *  01         Local Memory             Host I/O Interface

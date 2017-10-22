@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001 Dag-Erling Smørgrav
+ * Copyright (c) 2001 Dag-Erling SmÃ¸rgrav
  * Copyright (c) 1993 Jan-Simon Pendry
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@
  *
  *	@(#)procfs_vfsops.c	8.7 (Berkeley) 5/10/95
  *
- * $FreeBSD: stable/9/sys/fs/procfs/procfs.c 232728 2012-03-09 16:17:46Z mm $
+ * $FreeBSD: release/10.0.0/sys/fs/procfs/procfs.c 232278 2012-02-29 00:30:18Z mm $
  */
 
 #include <sys/param.h>

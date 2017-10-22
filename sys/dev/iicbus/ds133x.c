@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/iicbus/ds133x.c 191369 2009-04-21 22:48:12Z stas $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/iicbus/ds133x.c 246128 2013-01-30 18:01:20Z sbz $");
 /*
  * Dallas Semiconductor DS133X RTC sitting on the I2C bus.
  */
@@ -347,7 +347,7 @@ static device_method_t ds133x_methods[] = {
 	DEVMETHOD(clock_gettime,	ds133x_gettime),
 	DEVMETHOD(clock_settime,	ds133x_settime),
 
-	{0, 0},
+	DEVMETHOD_END
 };
 
 static driver_t ds133x_driver = {

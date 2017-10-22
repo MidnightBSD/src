@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/makefs/ffs/ffs_alloc.c 248293 2013-03-14 22:57:27Z brooks $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/makefs/ffs/ffs_alloc.c 241015 2012-09-27 23:31:19Z mdf $");
 
 #include <sys/param.h>
 #include <sys/time.h>

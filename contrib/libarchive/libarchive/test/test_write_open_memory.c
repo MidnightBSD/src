@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_write_open_memory.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_write_open_memory.c 248616 2013-03-22 13:36:03Z mm $");
 
 /* Try to force archive_write_open_memory.c to write past the end of an array. */
 static unsigned char buff[16384];
@@ -45,32 +45,40 @@ DEFINE_TEST(test_write_open_memory)
 	/* Make sure that we get failure on too-small buffers, success on
 	 * large enough ones. */
 	for (i = 100; i < 1600; i++) {
-		size_t s;
+		size_t used;
 		size_t blocksize = 94;
 		assert((a = archive_write_new()) != NULL);
-		assertA(0 == archive_write_set_format_ustar(a));
-		assertA(0 == archive_write_set_bytes_in_last_block(a, 1));
-		assertA(0 == archive_write_set_bytes_per_block(a, (int)blocksize));
+		assertEqualIntA(a, ARCHIVE_OK,
+		    archive_write_set_format_ustar(a));
+		assertEqualIntA(a, ARCHIVE_OK,
+		    archive_write_set_bytes_in_last_block(a, 1));
+		assertEqualIntA(a, ARCHIVE_OK,
+		    archive_write_set_bytes_per_block(a, (int)blocksize));
 		buff[i] = 0xAE;
-		assertA(0 == archive_write_open_memory(a, buff, i, &s));
+		assertEqualIntA(a, ARCHIVE_OK,
+		    archive_write_open_memory(a, buff, i, &used));
 		/* If buffer is smaller than a tar header, this should fail. */
 		if (i < (511/blocksize)*blocksize)
-			assertA(ARCHIVE_FATAL == archive_write_header(a,ae));
+			assertEqualIntA(a, ARCHIVE_FATAL,
+			    archive_write_header(a,ae));
 		else
-			assertA(0 == archive_write_header(a, ae));
+			assertEqualIntA(a, ARCHIVE_OK,
+			    archive_write_header(a, ae));
 		/* If buffer is smaller than a tar header plus 1024 byte
 		 * end-of-archive marker, then this should fail. */
+		failure("buffer size=%d\n", (int)i);
 		if (i < 1536)
-			assertA(ARCHIVE_FATAL == archive_write_close(a));
-		else
-			assertA(0 == archive_write_close(a));
-#if ARCHIVE_VERSION_NUMBER < 2000000
-		archive_write_finish(a);
-#else
-		assert(0 == archive_write_finish(a));
-#endif
-		assert(buff[i] == 0xAE);
-		assert(s <= i);
+			assertEqualIntA(a, ARCHIVE_FATAL,
+			    archive_write_close(a));
+		else {
+			assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
+			assertEqualInt(used, archive_filter_bytes(a, -1));
+			assertEqualInt(archive_filter_bytes(a, -1),
+			    archive_filter_bytes(a, 0));
+		}
+		assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+		assertEqualInt(buff[i], 0xAE);
+		assert(used <= i);
 	}
 	archive_entry_free(ae);
 }

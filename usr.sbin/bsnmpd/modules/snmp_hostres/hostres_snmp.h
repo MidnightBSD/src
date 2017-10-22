@@ -28,7 +28,7 @@
  *
  * Host Resources MIB for SNMPd.
  *
- * $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_snmp.h 160341 2006-07-14 09:07:56Z harti $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_snmp.h 228990 2011-12-30 10:58:14Z uqs $
  */
 
 #ifndef HOSTRES_SNMP_H_1132245017
@@ -218,7 +218,7 @@ void fs_tbl_process_statfs_entry(const struct statfs *, int32_t);
 /* Called after refreshing fs part of hrStorageTable */
 void fs_tbl_post_refresh(void);
 
-/* Refresh the FS table if neccessary. */
+/* Refresh the FS table if necessary. */
 void refresh_fs_tbl(void);
 
 /* Finalization routine for hrFSTable. */

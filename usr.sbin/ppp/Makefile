@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/ppp/Makefile 202440 2010-01-16 12:20:26Z antoine $
+# $FreeBSD: release/10.0.0/usr.sbin/ppp/Makefile 251279 2013-06-02 23:56:38Z brian $
 
 .include <bsd.own.mk>
 
@@ -43,13 +43,6 @@ M4FLAGS=
 
 LDADD= -lcrypt -lmd -lutil -lz
 DPADD=	${LIBCRYPT} ${LIBMD} ${LIBUTIL} ${LIBZ}
-
-.SUFFIXES: .8 .8.m4
-
-.8.m4.8:
-	m4 ${M4FLAGS} ${.IMPSRC} >${.TARGET}
-
-CLEANFILES= ppp.8
 
 .if defined(PPP_CONFDIR) && !empty(PPP_CONFDIR)
 CFLAGS+=-DPPP_CONFDIR=\"${PPP_CONFDIR}\"

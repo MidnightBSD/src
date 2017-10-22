@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/i386/trap.c 241811 2012-10-21 12:17:22Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/i386/trap.c 251324 2013-06-03 17:40:05Z kib $");
 
 /*
  * 386 Trap and System call handling
@@ -310,8 +310,9 @@ trap(struct trapframe *frame)
 			uprintf(
 			    "pid %ld (%s): trap %d with interrupts disabled\n",
 			    (long)curproc->p_pid, curthread->td_name, type);
-		else if (type != T_BPTFLT && type != T_TRCTRAP &&
-			 frame->tf_eip != (int)cpu_switch_load_gs) {
+		else if (type != T_NMI && type != T_BPTFLT &&
+		    type != T_TRCTRAP &&
+		    frame->tf_eip != (int)cpu_switch_load_gs) {
 			/*
 			 * XXX not quite right, since this may be for a
 			 * multiple fault in user mode.
@@ -321,9 +322,9 @@ trap(struct trapframe *frame)
 			/*
 			 * Page faults need interrupts disabled until later,
 			 * and we shouldn't enable interrupts while holding
-			 * a spin lock or if servicing an NMI.
+			 * a spin lock.
 			 */
-			if (type != T_NMI && type != T_PAGEFLT &&
+			if (type != T_PAGEFLT &&
 			    td->td_md.md_spinlock_count == 0)
 				enable_intr();
 		}
@@ -766,10 +767,10 @@ trap(struct trapframe *frame)
 	ksi.ksi_trapno = type;
 	if (uprintf_signal) {
 		uprintf("pid %d comm %s: signal %d err %x code %d type %d "
-		    "addr 0x%x eip 0x%08x "
+		    "addr 0x%x esp 0x%08x eip 0x%08x "
 		    "<%02x %02x %02x %02x %02x %02x %02x %02x>\n",
 		    p->p_pid, p->p_comm, i, frame->tf_err, ucode, type, addr,
-		    frame->tf_eip,
+		    frame->tf_esp, frame->tf_eip,
 		    fubyte((void *)(frame->tf_eip + 0)),
 		    fubyte((void *)(frame->tf_eip + 1)),
 		    fubyte((void *)(frame->tf_eip + 2)),
@@ -779,6 +780,7 @@ trap(struct trapframe *frame)
 		    fubyte((void *)(frame->tf_eip + 6)),
 		    fubyte((void *)(frame->tf_eip + 7)));
 	}
+	KASSERT((read_eflags() & PSL_I) != 0, ("interrupts disabled"));
 	trapsignal(td, &ksi);
 
 #ifdef DEBUG
@@ -793,7 +795,6 @@ trap(struct trapframe *frame)
 
 user:
 	userret(td, frame);
-	mtx_assert(&Giant, MA_NOTOWNED);
 	KASSERT(PCB_USER_FPU(td->td_pcb),
 	    ("Return from trap with kernel FPU ctx leaked"));
 userout:
@@ -808,7 +809,7 @@ trap_pfault(frame, usermode, eva)
 	vm_offset_t eva;
 {
 	vm_offset_t va;
-	struct vmspace *vm = NULL;
+	struct vmspace *vm;
 	vm_map_t map;
 	int rv = 0;
 	vm_prot_t ftype;
@@ -871,7 +872,7 @@ trap_pfault(frame, usermode, eva)
 		 */
 #if defined(I586_CPU) && !defined(NO_F00F_HACK)
 		if ((eva == (unsigned int)&idt[6]) && has_f00f_bug)
-			return -2;
+			return (-2);
 #endif
 		if (usermode)
 			goto nogo;
@@ -879,17 +880,21 @@ trap_pfault(frame, usermode, eva)
 		map = kernel_map;
 	} else {
 		/*
-		 * This is a fault on non-kernel virtual memory.
-		 * vm is initialized above to NULL. If curproc is NULL
-		 * or curproc->p_vmspace is NULL the fault is fatal.
+		 * This is a fault on non-kernel virtual memory.  If either
+		 * p or p->p_vmspace is NULL, then the fault is fatal.
 		 */
-		if (p != NULL)
-			vm = p->p_vmspace;
-
-		if (vm == NULL)
+		if (p == NULL || (vm = p->p_vmspace) == NULL)
 			goto nogo;
 
 		map = &vm->vm_map;
+
+		/*
+		 * When accessing a user-space address, kernel must be
+		 * ready to accept the page fault, and provide a
+		 * handling routine.  Since accessing the address
+		 * without the handler is a bug, do not try to handle
+		 * it normally, and panic immediately.
+		 */
 		if (!usermode && (td->td_intr_nesting_level != 0 ||
 		    curpcb->pcb_onfault == NULL)) {
 			trap_fatal(frame, eva);
@@ -956,8 +961,7 @@ nogo:
 		trap_fatal(frame, eva);
 		return (-1);
 	}
-
-	return((rv == KERN_PROTECTION_FAILURE) ? SIGBUS : SIGSEGV);
+	return ((rv == KERN_PROTECTION_FAILURE) ? SIGBUS : SIGSEGV);
 }
 
 static void

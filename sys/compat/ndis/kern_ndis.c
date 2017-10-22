@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/compat/ndis/kern_ndis.c 249288 2013-04-08 22:56:40Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/compat/ndis/kern_ndis.c 254842 2013-08-25 10:57:09Z andre $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -482,16 +482,14 @@ ndis_return(dobj, arg)
 	KeReleaseSpinLock(&block->nmb_returnlock, irql);
 }
 
-void
-ndis_return_packet(buf, arg)
-	void			*buf;	/* not used */
-	void			*arg;
+int
+ndis_return_packet(struct mbuf *m, void *buf, void *arg)
 {
 	ndis_packet		*p;
 	ndis_miniport_block	*block;
 
 	if (arg == NULL)
-		return;
+		return (EXT_FREE_OK);
 
 	p = arg;
 
@@ -500,7 +498,7 @@ ndis_return_packet(buf, arg)
 
 	/* Release packet when refcount hits zero, otherwise return. */
 	if (p->np_refcnt)
-		return;
+		return (EXT_FREE_OK);
 
 	block = ((struct ndis_softc *)p->np_softc)->ndis_block;
 
@@ -512,6 +510,8 @@ ndis_return_packet(buf, arg)
 	IoQueueWorkItem(block->nmb_returnitem,
 	    (io_workitem_func)kernndis_functbl[7].ipt_wrap,
 	    WORKQUEUE_CRITICAL, block);
+
+	return (EXT_FREE_OK);
 }
 
 void
@@ -656,13 +656,9 @@ ndis_ptom(m0, p)
 
 	for (buf = priv->npp_head; buf != NULL; buf = buf->mdl_next) {
 		if (buf == priv->npp_head)
-#ifdef MT_HEADER
-			MGETHDR(m, M_DONTWAIT, MT_HEADER);
-#else
-			MGETHDR(m, M_DONTWAIT, MT_DATA);
-#endif
+			m = m_gethdr(M_NOWAIT, MT_DATA);
 		else
-			MGET(m, M_DONTWAIT, MT_DATA);
+			m = m_get(M_NOWAIT, MT_DATA);
 		if (m == NULL) {
 			m_freem(*m0);
 			*m0 = NULL;

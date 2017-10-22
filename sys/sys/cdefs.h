@@ -30,11 +30,28 @@
  * SUCH DAMAGE.
  *
  *	@(#)cdefs.h	8.8 (Berkeley) 1/9/95
- * $FreeBSD: stable/9/sys/sys/cdefs.h 242893 2012-11-11 12:21:51Z ed $
+ * $FreeBSD: release/10.0.0/sys/sys/cdefs.h 251804 2013-06-16 10:48:47Z ed $
  */
 
 #ifndef	_SYS_CDEFS_H_
 #define	_SYS_CDEFS_H_
+
+/*
+ * Testing against Clang-specific extensions.
+ */
+
+#ifndef	__has_extension
+#define	__has_extension		__has_feature
+#endif
+#ifndef	__has_feature
+#define	__has_feature(x)	0
+#endif
+#ifndef	__has_include
+#define	__has_include(x)	0
+#endif
+#ifndef	__has_builtin
+#define	__has_builtin(x)	0
+#endif
 
 #if defined(__cplusplus)
 #define	__BEGIN_DECLS	extern "C" {
@@ -80,6 +97,13 @@
 
 #if defined(__GNUC__)
 # define __GNUC_VA_LIST_COMPATIBILITY 1
+#endif
+
+/*
+ * Compiler memory barriers, specific to gcc and clang.
+ */
+#if defined(__GNUC__)
+#define	__compiler_membar()	__asm __volatile(" " : : : "memory")
 #endif
 
 #ifndef __INTEL_COMPILER
@@ -225,22 +249,44 @@
 /*
  * Keywords added in C11.
  */
-#if defined(__cplusplus) && __cplusplus >= 201103L
-#define	_Alignas(e)		alignas(e)
-#define	_Alignof(e)		alignof(e)
-#define	_Noreturn		[[noreturn]]
-#define	_Static_assert(e, s)	static_assert(e, s)
-/* FIXME: change this to thread_local when clang in base supports it */
-#define	_Thread_local		__thread
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-/* Do nothing.  They are language keywords. */
+
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L
+
+#if !__has_extension(c_alignas)
+#if (defined(__cplusplus) && __cplusplus >= 201103L) || \
+    __has_extension(cxx_alignas)
+#define	_Alignas(x)		alignas(x)
 #else
-/* Not supported.  Implement them using our versions. */
+/* XXX: Only emulates _Alignas(constant-expression); not _Alignas(type-name). */
 #define	_Alignas(x)		__aligned(x)
+#endif
+#endif
+
+#if defined(__cplusplus) && __cplusplus >= 201103L
+#define	_Alignof(x)		alignof(x)
+#else
 #define	_Alignof(x)		__alignof(x)
+#endif
+
+#if !__has_extension(c_atomic) && !__has_extension(cxx_atomic)
+/*
+ * No native support for _Atomic(). Place object in structure to prevent
+ * most forms of direct non-atomic access.
+ */
+#define	_Atomic(T)		struct { T volatile __val; }
+#endif
+
+#if defined(__cplusplus) && __cplusplus >= 201103L
+#define	_Noreturn		[[noreturn]]
+#else
 #define	_Noreturn		__dead2
-#define	_Thread_local		__thread
-#ifdef __COUNTER__
+#endif
+
+#if !__has_extension(c_static_assert)
+#if (defined(__cplusplus) && __cplusplus >= 201103L) || \
+    __has_extension(cxx_static_assert)
+#define	_Static_assert(x, y)	static_assert(x, y)
+#elif defined(__COUNTER__)
 #define	_Static_assert(x, y)	__Static_assert(x, __COUNTER__)
 #define	__Static_assert(x, y)	___Static_assert(x, y)
 #define	___Static_assert(x, y)	typedef char __assert_ ## y[(x) ? 1 : -1]
@@ -248,6 +294,18 @@
 #define	_Static_assert(x, y)	struct __hack
 #endif
 #endif
+
+#if !__has_extension(c_thread_local)
+/* XXX: Change this to test against C++11 when clang in base supports it. */
+#if /* (defined(__cplusplus) && __cplusplus >= 201103L) || */ \
+    __has_extension(cxx_thread_local)
+#define	_Thread_local		thread_local
+#else
+#define	_Thread_local		__thread
+#endif
+#endif
+
+#endif /* __STDC_VERSION__ || __STDC_VERSION__ < 201112L */
 
 /*
  * Emulation of C11 _Generic().  Unlike the previously defined C11
@@ -444,7 +502,8 @@
 #endif
 
 /* Compiler-dependent macros that rely on FreeBSD-specific extensions. */
-#if __FreeBSD_cc_version >= 300001 && defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#if defined(__FreeBSD_cc_version) && __FreeBSD_cc_version >= 300001 && \
+    defined(__GNUC__) && !defined(__INTEL_COMPILER)
 #define	__printf0like(fmtarg, firstvararg) \
 	    __attribute__((__format__ (__printf0__, fmtarg, firstvararg)))
 #else
@@ -502,7 +561,7 @@
  * Embed the rcs id of a source file in the resulting library.  Note that in
  * more recent ELF binutils, we use .ident allowing the ID to be stripped.
  * Usage:
- *	__FBSDID("$FreeBSD: stable/9/sys/sys/cdefs.h 242893 2012-11-11 12:21:51Z ed $");
+ *	__FBSDID("$FreeBSD: release/10.0.0/sys/sys/cdefs.h 251804 2013-06-16 10:48:47Z ed $");
  */
 #ifndef	__FBSDID
 #if !defined(lint) && !defined(STRIP_FBSDID)
@@ -661,25 +720,20 @@
 #define	__XSI_VISIBLE		0
 #define	__BSD_VISIBLE		0
 #define	__ISO_C_VISIBLE		1999
+#elif defined(_C11_SOURCE)	/* Localism to specify strict C11 env. */
+#define	__POSIX_VISIBLE		0
+#define	__XSI_VISIBLE		0
+#define	__BSD_VISIBLE		0
+#define	__ISO_C_VISIBLE		2011
 #else				/* Default environment: show everything. */
 #define	__POSIX_VISIBLE		200809
 #define	__XSI_VISIBLE		700
 #define	__BSD_VISIBLE		1
-#define	__ISO_C_VISIBLE		1999
+#define	__ISO_C_VISIBLE		2011
 #endif
 #endif
 
-#ifndef	__has_feature
-#define	__has_feature(x) 0
-#endif
-#ifndef	__has_include
-#define	__has_include(x) 0
-#endif
-#ifndef	__has_builtin
-#define	__has_builtin(x) 0
-#endif
-
-#if defined(__mips) || defined(__powerpc64__) || defined(__arm__)
+#if defined(__mips) || defined(__powerpc64__)
 #define __NO_TLS 1
 #endif
 

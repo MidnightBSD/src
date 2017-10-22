@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_btsocket_l2cap.c,v 1.16 2003/09/14 23:29:06 max Exp $
- * $FreeBSD: stable/9/sys/netgraph/bluetooth/socket/ng_btsocket_l2cap.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: release/10.0.0/sys/netgraph/bluetooth/socket/ng_btsocket_l2cap.c 243882 2012-12-05 08:04:20Z glebius $
  */
 
 #include <sys/param.h>
@@ -1533,7 +1533,7 @@ ng_btsocket_l2cap_data_input(struct mbuf *m, hook_p hook)
 			 * it is a broadcast traffic after all
 			 */
 
-			copy = m_dup(m, M_DONTWAIT);
+			copy = m_dup(m, M_NOWAIT);
 			if (copy != NULL) {
 				sbappendrecord(&pcb->so->so_rcv, copy);
 				sorwakeup(pcb->so);
@@ -2513,12 +2513,12 @@ ng_btsocket_l2cap_send2(ng_btsocket_l2cap_pcb_p pcb)
 	if (pcb->so->so_snd.sb_cc == 0)
 		return (EINVAL); /* XXX */
 
-	m = m_dup(pcb->so->so_snd.sb_mb, M_DONTWAIT);
+	m = m_dup(pcb->so->so_snd.sb_mb, M_NOWAIT);
 	if (m == NULL)
 		return (ENOBUFS);
 
 	/* Create L2CA packet header */
-	M_PREPEND(m, sizeof(*hdr), M_DONTWAIT);
+	M_PREPEND(m, sizeof(*hdr), M_NOWAIT);
 	if (m != NULL)
 		if (m->m_len < sizeof(*hdr))
 			m = m_pullup(m, sizeof(*hdr));

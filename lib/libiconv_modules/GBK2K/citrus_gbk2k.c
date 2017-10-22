@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libiconv_modules/GBK2K/citrus_gbk2k.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libiconv_modules/GBK2K/citrus_gbk2k.c 252583 2013-07-03 18:27:45Z peter $ */
 /* $NetBSD: citrus_gbk2k.c,v 1.7 2008/06/14 16:01:07 tnozaki Exp $ */
 
 /*-
@@ -147,10 +147,10 @@ _mb_count(wchar_t v)
 
 static int
 _citrus_GBK2K_mbrtowc_priv(_GBK2KEncodingInfo * __restrict ei,
-    wchar_t * __restrict pwc, char ** __restrict s, size_t n,
+    wchar_t * __restrict pwc, const char ** __restrict s, size_t n,
     _GBK2KState * __restrict psenc, size_t * __restrict nresult)
 {
-	char *s0, *s1;
+	const char *s0, *s1;
 	wchar_t wc;
 	int chlenbak, len;
 

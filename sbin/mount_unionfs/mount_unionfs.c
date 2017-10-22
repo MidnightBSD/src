@@ -44,7 +44,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)mount_union.c	8.5 (Berkeley) 3/27/94";
 #else
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/mount_unionfs/mount_unionfs.c 166684 2007-02-13 05:39:38Z rodrigc $";
+  "$FreeBSD: release/10.0.0/sbin/mount_unionfs/mount_unionfs.c 247856 2013-03-05 22:41:35Z jkim $";
 #endif
 #endif /* not lint */
 
@@ -129,7 +129,7 @@ int
 main(int argc, char *argv[])
 {
 	struct iovec	*iov;
-	int ch, mntflags, iovlen;
+	int ch, iovlen;
 	char source [MAXPATHLEN], target[MAXPATHLEN], errmsg[255];
 	char uid_str[20], gid_str[20];
 	char fstype[] = "unionfs";
@@ -137,7 +137,6 @@ main(int argc, char *argv[])
 
 	iov = NULL;
 	iovlen = 0;
-	mntflags = 0;
 	memset(errmsg, 0, sizeof(errmsg));
 
 	while ((ch = getopt(argc, argv, "bo:")) != -1) {
@@ -176,8 +175,10 @@ main(int argc, char *argv[])
 		usage();
 
 	/* resolve both target and source with realpath(3) */
-	(void)checkpath(argv[0], target);
-	(void)checkpath(argv[1], source);
+	if (checkpath(argv[0], target) != 0)
+		err(EX_USAGE, "%s", target);
+	if (checkpath(argv[1], source) != 0)
+		err(EX_USAGE, "%s", source);
 
 	if (subdir(target, source) || subdir(source, target))
 		errx(EX_USAGE, "%s (%s) and %s (%s) are not distinct paths",
@@ -188,7 +189,7 @@ main(int argc, char *argv[])
 	build_iovec(&iov, &iovlen, "from", target, (size_t)-1);
 	build_iovec(&iov, &iovlen, "errmsg", errmsg, sizeof(errmsg));
 
-	if (nmount(iov, iovlen, mntflags))
+	if (nmount(iov, iovlen, 0))
 		err(EX_OSERR, "%s: %s", source, errmsg);
 	exit(0);
 }

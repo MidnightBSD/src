@@ -1,6 +1,6 @@
 /*	$OpenBSD: if_zydreg.h,v 1.19 2006/11/30 19:28:07 damien Exp $	*/
 /*	$NetBSD: if_zydreg.h,v 1.2 2007/06/16 11:18:45 kiyohara Exp $	*/
-/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_zydreg.h 206358 2010-04-07 15:29:13Z rpaulo $	*/
+/*	$FreeBSD: release/10.0.0/sys/dev/usb/wlan/if_zydreg.h 253757 2013-07-29 05:54:13Z hselasky $	*/
 
 /*-
  * Copyright (c) 2006 by Damien Bergamini <damien.bergamini@free.fr>
@@ -112,7 +112,7 @@
 #define ZYD_MACB_MAX_RETRY	0x9b28
 
 /*
- * Miscellanous registers.
+ * Miscellaneous registers.
  */
 #define ZYD_FIRMWARE_START_ADDR	0xee00
 #define ZYD_FIRMWARE_BASE_ADDR	0xee1d /* Firmware base address */
@@ -1185,7 +1185,7 @@ struct zyd_rx_radiotap_header {
 	uint16_t		wr_chan_flags;
 	int8_t			wr_antsignal;
 	int8_t			wr_antnoise;
-} __packed;
+} __packed __aligned(8);
 
 #define ZYD_RX_RADIOTAP_PRESENT						\
 	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
@@ -1200,7 +1200,7 @@ struct zyd_tx_radiotap_header {
 	uint8_t			wt_rate;
 	uint16_t		wt_chan_freq;
 	uint16_t		wt_chan_flags;
-} __packed;
+} __packed __aligned(8);
 
 #define ZYD_TX_RADIOTAP_PRESENT						\
 	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
@@ -1259,6 +1259,7 @@ struct zyd_softc {
 #define	ZYD_FLAG_FWLOADED		(1 << 0)
 #define	ZYD_FLAG_INITONCE		(1 << 1)
 #define	ZYD_FLAG_INITDONE		(1 << 2)
+#define	ZYD_FLAG_DETACHED		(1 << 3)
 
 	struct zyd_rf		sc_rf;
 

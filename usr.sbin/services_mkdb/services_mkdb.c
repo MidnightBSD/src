@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/services_mkdb/services_mkdb.c 206163 2010-04-04 15:21:09Z ume $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/services_mkdb/services_mkdb.c 241778 2012-10-20 10:34:55Z ed $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -49,12 +49,12 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/services_mkdb/services_mkdb.c 206163 2010-
 #include <errno.h>
 #include <stringlist.h>
 
+#include "extern.h"
+
 static char tname[MAXPATHLEN];
 
 #define	PMASK		0xffff
 #define PROTOMAX	5
-
-extern void	uniq(const char *);
 
 static void	add(DB *, StringList *, size_t, const char *, size_t *, int);
 static StringList ***parseservices(const char *, StringList *);

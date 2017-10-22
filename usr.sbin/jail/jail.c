@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/jail/jail.c 239892 2012-08-30 07:34:25Z maxim $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/jail/jail.c 256387 2013-10-12 17:46:13Z hrs $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -92,6 +92,7 @@ static const enum intparam startcommands[] = {
     IP_MOUNT,
     IP__MOUNT_FROM_FSTAB,
     IP_MOUNT_DEVFS,
+    IP_MOUNT_FDESCFS,
     IP_EXEC_PRESTART, 
     IP__OP,
     IP_VNET_INTERFACE,
@@ -108,6 +109,7 @@ static const enum intparam stopcommands[] = {
     IP_STOP_TIMEOUT,
     IP__OP,
     IP_EXEC_POSTSTOP,
+    IP_MOUNT_FDESCFS,
     IP_MOUNT_DEVFS,
     IP__MOUNT_FROM_FSTAB,
     IP_MOUNT,
@@ -470,10 +472,12 @@ main(int argc, char **argv)
 				if (dep_check(j))
 					continue;
 				if (j->jid < 0) {
-					if (!(j->flags & (JF_DEPEND | JF_WILD))
-					    && verbose >= 0)
-						jail_quoted_warnx(j,
-						    "not found", NULL);
+					if (!(j->flags & (JF_DEPEND|JF_WILD))) {
+						if (verbose >= 0)
+							jail_quoted_warnx(j,
+							    "not found", NULL);
+						failed(j);
+					}
 					goto jail_remove_done;
 				}
 				j->comparam = stopcommands;

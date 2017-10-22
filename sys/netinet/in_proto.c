@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/in_proto.c 230868 2012-02-01 15:57:49Z glebius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/in_proto.c 229850 2012-01-09 08:50:22Z glebius $");
 
 #include "opt_ipx.h"
 #include "opt_mrouting.h"

@@ -36,7 +36,7 @@
 static char sccsid[] = "@(#)sig.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libedit/sig.c 239589 2012-08-22 20:06:59Z pfg $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libedit/sig.c 238378 2012-07-11 22:20:19Z pfg $");
 
 /*
  * sig.c: Signal handling stuff.

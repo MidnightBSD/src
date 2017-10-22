@@ -36,7 +36,7 @@ static const char sccsid[] = "@(#)local_passwd.c	8.3 (Berkeley) 4/2/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/release/picobsd/tinyware/passwd/local_passwd.c 98514 2002-06-20 21:17:33Z luigi $");
+__FBSDID("$FreeBSD: release/10.0.0/release/picobsd/tinyware/passwd/local_passwd.c 229779 2012-01-07 16:09:43Z uqs $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -172,7 +172,7 @@ getnewpasswd(pw, nis)
 	to64(&salt[5], random(), 4);
 	salt[9] = '\0';
 #else
-	/* Make a good size salt for algoritms that can use it. */
+	/* Make a good size salt for algorithms that can use it. */
 	gettimeofday(&tv,0);
 #ifdef LOGIN_CAP
 	if (login_setcryptfmt(lc, "md5", NULL) == NULL)

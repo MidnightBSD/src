@@ -1,4 +1,4 @@
- /*
+/*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)sys_term.c	8.4+1 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/contrib/telnet/telnetd/sys_term.c 202212 2010-01-13 18:37:42Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/telnet/telnetd/sys_term.c 251188 2013-05-31 17:30:12Z marcel $");
 
 #include <sys/types.h>
 #include <sys/tty.h>
@@ -1026,6 +1026,10 @@ void
 start_login(char *host undef1, int autologin undef1, char *name undef1)
 {
 	char **argv;
+	char *user;
+
+	user = getenv("USER");
+	user = (user != NULL) ? strdup(user) : NULL;
 
 	scrub_env();
 
@@ -1160,9 +1164,9 @@ start_login(char *host undef1, int autologin undef1, char *name undef1)
 # endif
 	} else
 #endif
-	if (getenv("USER")) {
+	if (user != NULL) {
  		argv = addarg(argv, "--");
-		argv = addarg(argv, getenv("USER"));
+		argv = addarg(argv, user);
 #if	defined(LOGIN_ARGS) && defined(NO_LOGIN_P)
 		{
 			char **cpp;
@@ -1170,17 +1174,6 @@ start_login(char *host undef1, int autologin undef1, char *name undef1)
 				argv = addarg(argv, *cpp);
 		}
 #endif
-		/*
-		 * Assume that login will set the USER variable
-		 * correctly.  For SysV systems, this means that
-		 * USER will no longer be set, just LOGNAME by
-		 * login.  (The problem is that if the auto-login
-		 * fails, and the user then specifies a different
-		 * account name, he can get logged in with both
-		 * LOGNAME and USER in his environment, but the
-		 * USER value will be wrong.
-		 */
-		unsetenv("USER");
 	}
 #ifdef	AUTHENTICATION
 #if	defined(NO_LOGIN_F) && defined(LOGIN_R)
@@ -1189,6 +1182,9 @@ start_login(char *host undef1, int autologin undef1, char *name undef1)
 #endif
 #endif /* AUTHENTICATION */
 	closelog();
+
+	if (user != NULL)
+		free(user);
 
 	if (altlogin == NULL) {
 		altlogin = _PATH_LOGIN;

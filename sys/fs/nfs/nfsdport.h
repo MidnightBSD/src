@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/fs/nfs/nfsdport.h 224086 2011-07-16 08:51:09Z zack $
+ * $FreeBSD: release/10.0.0/sys/fs/nfs/nfsdport.h 247602 2013-03-02 00:53:12Z pjd $
  */
 
 /*
@@ -93,8 +93,6 @@ struct nfsexstuff {
 #define	NFSFPVNODE(f)	((struct vnode *)((f)->f_data))
 #define	NFSFPCRED(f)	((f)->f_cred)
 #define	NFSFPFLAG(f)	((f)->f_flag)
-
-int fp_getfvp(NFSPROC_T *, int, struct file **, struct vnode **);
 
 #define	NFSNAMEICNDSET(n, c, o, f)	do {				\
 	(n)->cn_cred = (c);						\

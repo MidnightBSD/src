@@ -1,0 +1,12 @@
+#$FreeBSD: release/10.0.0/sys/arm/at91/std.sn9g45 238789 2012-07-26 08:05:28Z andrew $
+include "../at91/std.at91sam9g45"
+
+options		STARTUP_PAGETABLE_ADDR=0x70800000
+makeoptions	KERNPHYSADDR=0x70008000
+options		KERNPHYSADDR=0x70008000	
+makeoptions	KERNVIRTADDR=0xc0008000
+options		KERNVIRTADDR=0xc0008000
+
+device		at91sam9g45
+device		at91_board_sn9g45
+

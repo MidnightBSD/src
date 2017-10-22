@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/drm/r128/Makefile 229731 2012-01-06 21:14:54Z dim $
+# $FreeBSD: release/10.0.0/sys/modules/drm/r128/Makefile 242203 2012-10-28 02:15:35Z nwhitehorn $
 
 .PATH:	${.CURDIR}/../../../dev/drm
 KMOD	= r128
@@ -7,6 +7,6 @@ SRCS	+=device_if.h bus_if.h pci_if.h opt_drm.h
 
 .include <bsd.kmod.mk>
 
-CWARNFLAGS.r128_cce.c=		${NO_WUNUSED_VALUE} ${NO_WCONSTANT_CONVERSION}
-CWARNFLAGS.r128_state.c=	${NO_WUNUSED_VALUE}
+CWARNFLAGS.r128_cce.c=		-Wno-unused ${NO_WCONSTANT_CONVERSION}
+CWARNFLAGS.r128_state.c=	-Wno-unused
 CWARNFLAGS+=			${CWARNFLAGS.${.IMPSRC:T}}

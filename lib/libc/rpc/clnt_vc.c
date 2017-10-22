@@ -35,7 +35,7 @@ static char *sccsid = "@(#)clnt_tcp.c	2.2 88/08/01 4.0 RPCSRC";
 static char sccsid3[] = "@(#)clnt_vc.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/clnt_vc.c 241601 2012-10-16 01:37:17Z pfg $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/rpc/clnt_vc.c 247550 2013-03-01 15:45:57Z kevlo $");
  
 /*
  * clnt_tcp.c, Implements a TCP/IP based, client side RPC.
@@ -260,7 +260,7 @@ clnt_vc_create(fd, raddr, prog, vers, sendsz, recvsz)
 	if (ct->ct_addr.buf == NULL)
 		goto err;
 	memcpy(ct->ct_addr.buf, raddr->buf, raddr->len);
-	ct->ct_addr.len = raddr->maxlen;
+	ct->ct_addr.len = raddr->len;
 	ct->ct_addr.maxlen = raddr->maxlen;
 
 	/*

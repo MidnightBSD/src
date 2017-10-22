@@ -25,9 +25,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/subr_bus.c 247344 2013-02-26 20:19:19Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_bus.c 256381 2013-10-12 15:31:36Z markm $");
 
 #include "opt_bus.h"
+#include "opt_random.h"
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -44,6 +45,7 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/subr_bus.c 247344 2013-02-26 20:19:19Z jhb
 #include <sys/condvar.h>
 #include <sys/queue.h>
 #include <machine/bus.h>
+#include <sys/random.h>
 #include <sys/rman.h>
 #include <sys/selinfo.h>
 #include <sys/signalvar.h>
@@ -53,6 +55,9 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/subr_bus.c 247344 2013-02-26 20:19:19Z jhb
 #include <sys/bus.h>
 #include <sys/interrupt.h>
 
+#include <net/vnet.h>
+
+#include <machine/cpu.h>
 #include <machine/stdarg.h>
 
 #include <vm/uma.h>
@@ -1810,6 +1815,8 @@ device_add_child_ordered(device_t dev, u_int order, const char *name, int unit)
 
 	PDEBUG(("%s at %s with order %u as unit %d",
 	    name, DEVICENAME(dev), order, unit));
+	KASSERT(name != NULL || unit == -1,
+	    ("child device with wildcard name and specific unit number"));
 
 	child = make_device(dev, name, unit);
 	if (child == NULL)
@@ -2021,9 +2028,15 @@ device_probe_child(device_t dev, device_t child)
 			if (!hasclass) {
 				if (device_set_devclass(child,
 				    dl->driver->name) != 0) {
+					char const * devname =
+					    device_get_name(child);
+					if (devname == NULL)
+						devname = "(unknown)";
 					printf("driver bug: Unable to set "
-					    "devclass (devname: %s)\n",
-					    device_get_name(child));
+					    "devclass (class: %s "
+					    "devname: %s)\n",
+					    dl->driver->name,
+					    devname);
 					(void)device_set_driver(child, NULL);
 					continue;
 				}
@@ -2067,11 +2080,11 @@ device_probe_child(device_t dev, device_t child)
 			if (best == NULL || result > pri) {
 				/*
 				 * Probes that return BUS_PROBE_NOWILDCARD
-				 * or lower only match when they are set
-				 * in stone by the parent bus.
+				 * or lower only match on devices whose
+				 * driver was explicitly specified.
 				 */
 				if (result <= BUS_PROBE_NOWILDCARD &&
-				    child->flags & DF_WILDCARD)
+				    !(child->flags & DF_FIXEDCLASS))
 					continue;
 				best = dl;
 				pri = result;
@@ -2727,7 +2740,11 @@ device_probe_and_attach(device_t dev)
 		return (0);
 	else if (error != 0)
 		return (error);
-	return (device_attach(dev));
+
+	CURVNET_SET_QUIET(vnet0);
+	error = device_attach(dev);
+	CURVNET_RESTORE();
+	return error;
 }
 
 /**
@@ -2752,6 +2769,7 @@ device_probe_and_attach(device_t dev)
 int
 device_attach(device_t dev)
 {
+	uint64_t attachtime;
 	int error;
 
 	if (resource_disabled(dev->driver->name, dev->unit)) {
@@ -2764,6 +2782,7 @@ device_attach(device_t dev)
 	device_sysctl_init(dev);
 	if (!device_is_quiet(dev))
 		device_print_child(dev->parent, dev);
+	attachtime = get_cyclecount();
 	dev->state = DS_ATTACHING;
 	if ((error = DEVICE_ATTACH(dev)) != 0) {
 		printf("device_attach: %s%d attach returned %d\n",
@@ -2776,6 +2795,17 @@ device_attach(device_t dev)
 		dev->state = DS_NOTPRESENT;
 		return (error);
 	}
+	attachtime = get_cyclecount() - attachtime;
+	/*
+	 * 4 bits per device is a reasonable value for desktop and server
+	 * hardware with good get_cyclecount() implementations, but may
+	 * need to be adjusted on other platforms.
+	 */
+#ifdef RANDOM_DEBUG
+	printf("%s(): feeding %d bit(s) of entropy from %s%d\n",
+	    __func__, 4, dev->driver->name, dev->unit);
+#endif
+	random_harvest(&attachtime, sizeof(attachtime), 4, RANDOM_ATTACH);
 	device_sysctl_update(dev);
 	if (dev->busy)
 		dev->state = DS_BUSY;
@@ -3308,9 +3338,51 @@ resource_list_release(struct resource_list *rl, device_t bus, device_t child,
 }
 
 /**
+ * @brief Release all active resources of a given type
+ *
+ * Release all active resources of a specified type.  This is intended
+ * to be used to cleanup resources leaked by a driver after detach or
+ * a failed attach.
+ *
+ * @param rl		the resource list which was allocated from
+ * @param bus		the parent device of @p child
+ * @param child		the device whose active resources are being released
+ * @param type		the type of resources to release
+ * 
+ * @retval 0		success
+ * @retval EBUSY	at least one resource was active
+ */
+int
+resource_list_release_active(struct resource_list *rl, device_t bus,
+    device_t child, int type)
+{
+	struct resource_list_entry *rle;
+	int error, retval;
+
+	retval = 0;
+	STAILQ_FOREACH(rle, rl, link) {
+		if (rle->type != type)
+			continue;
+		if (rle->res == NULL)
+			continue;
+		if ((rle->flags & (RLE_RESERVED | RLE_ALLOCATED)) ==
+		    RLE_RESERVED)
+			continue;
+		retval = EBUSY;
+		error = resource_list_release(rl, bus, child, type,
+		    rman_get_rid(rle->res), rle->res);
+		if (error != 0)
+			device_printf(bus,
+			    "Failed to release active resource: %d\n", error);
+	}
+	return (retval);
+}
+
+
+/**
  * @brief Fully release a reserved resource
  *
- * Fully releases a resouce reserved via resource_list_reserve().
+ * Fully releases a resource reserved via resource_list_reserve().
  *
  * @param rl		the resource list which was allocated from
  * @param bus		the parent device of @p child

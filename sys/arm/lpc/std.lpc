@@ -1,0 +1,15 @@
+# $FreeBSD: release/10.0.0/sys/arm/lpc/std.lpc 239362 2012-08-18 05:48:19Z andrew $
+#
+# DM644x
+#
+
+files		"../lpc/files.lpc"
+cpu		CPU_ARM9
+machine 	arm
+makeoptions	CONF_CFLAGS="-march=armv5te"
+options		PHYSADDR=0x80000000
+options		STARTUP_PAGETABLE_ADDR=0x80000000
+makeoptions	KERNPHYSADDR=0x80100000
+options		KERNPHYSADDR=0x80100000
+makeoptions	KERNVIRTADDR=0xc0100000
+options		KERNVIRTADDR=0xc0100000

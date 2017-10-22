@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_device_tbl.c 223933 2011-07-11 12:51:35Z ae $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_device_tbl.c 228990 2011-12-30 10:58:14Z uqs $
  */
 
 /*
@@ -200,7 +200,7 @@ device_entry_create(const char *name, const char *location, const char *descr)
 
 	/*
 	 * From here till the end of this function we reuse name_len
-	 * for a diferrent purpose - for device_entry::descr
+	 * for a different purpose - for device_entry::descr
 	 */
 	if (name[0] != '\0')
 		name_len = strlen(name) + strlen(descr) +

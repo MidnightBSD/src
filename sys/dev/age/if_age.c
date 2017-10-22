@@ -28,7 +28,7 @@
 /* Driver for Attansic Technology Corp. L1 Gigabit Ethernet. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/age/if_age.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/age/if_age.c 251872 2013-06-17 22:59:47Z markj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -2478,7 +2478,7 @@ age_rxintr(struct age_softc *sc, int rr_prod, int count)
 	    sc->age_cdata.age_rx_ring_map, BUS_DMASYNC_POSTWRITE);
 
 	for (prog = 0; rr_cons != rr_prod; prog++) {
-		if (count <= 0)
+		if (count-- <= 0)
 			break;
 		rxrd = &sc->age_rdata.age_rr_ring[rr_cons];
 		nsegs = AGE_RX_NSEGS(le32toh(rxrd->index));

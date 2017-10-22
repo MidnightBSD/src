@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)ns16550.h	7.1 (Berkeley) 5/9/91
- * $FreeBSD: stable/9/sys/dev/ic/ns16550.h 202062 2010-01-11 04:13:06Z imp $
+ * $FreeBSD: release/10.0.0/sys/dev/ic/ns16550.h 247519 2013-03-01 01:42:31Z ganbold $
  */
 
 /*
@@ -182,6 +182,7 @@
 #define	com_xoff1	6	/* XOFF 1 character (R/W) */
 #define	com_xoff2	7	/* XOFF 2 character (R/W) */
 
+#define DW_REG_USR	31	/* DesignWare derived Uart Status Reg */
 #define com_usr		39	/* Octeon 16750/16550 Uart Status Reg */
 #define REG_USR		com_usr
 #define USR_TXFIFO_NOTFULL 2    /* Uart TX FIFO Not full */

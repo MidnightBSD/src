@@ -36,7 +36,7 @@ static const char sccsid[] = "@(#)pw_copy.c	8.4 (Berkeley) 4/2/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/release/picobsd/tinyware/passwd/pw_copy.c 125668 2004-02-10 20:42:33Z cperciva $");
+__FBSDID("$FreeBSD: release/10.0.0/release/picobsd/tinyware/passwd/pw_copy.c 229779 2012-01-07 16:09:43Z uqs $");
 
 /*
  * This module is used to copy the master password file, replacing a single
@@ -193,7 +193,7 @@ err:		pw_error(NULL, 1, 1);
  * by default, warning for IDs greater than USHRT_MAX.
  *
  * If pw_big_ids_warning is anything other than -1 on entry to pw_scan()
- * it will be set based on the existance of PW_SCAN_BIG_IDS in the
+ * it will be set based on the existence of PW_SCAN_BIG_IDS in the
  * environment.
  */
 int     pw_big_ids_warning = -1;

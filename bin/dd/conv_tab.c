@@ -37,9 +37,15 @@ static char sccsid[] = "@(#)conv_tab.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/dd/conv_tab.c 127958 2004-04-06 20:06:54Z markm $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/dd/conv_tab.c 250469 2013-05-10 18:43:36Z eadler $");
 
 #include <sys/types.h>
+
+#include <signal.h>
+#include <stdint.h>
+
+#include "dd.h"
+#include "extern.h"
 
 /*
  * There are currently six tables:

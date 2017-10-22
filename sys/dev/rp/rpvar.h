@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/rp/rpvar.h 183397 2008-09-27 08:51:18Z ed $
+ * $FreeBSD: release/10.0.0/sys/dev/rp/rpvar.h 183397 2008-09-27 08:51:18Z ed $
  */
 
 /*

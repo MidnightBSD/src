@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/mips/rmi/dev/xlr/rge.h 212759 2010-09-16 19:25:24Z jchandra $
+ * $FreeBSD: release/10.0.0/sys/mips/rmi/dev/xlr/rge.h 212759 2010-09-16 19:25:24Z jchandra $
  * RMI_BSD */
 #ifndef _RMI_RGE_H_
 #define _RMI_RGE_H_

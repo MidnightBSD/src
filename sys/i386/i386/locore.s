@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)locore.s	7.3 (Berkeley) 5/13/91
- * $FreeBSD: stable/9/sys/i386/i386/locore.s 213455 2010-10-05 17:06:51Z alc $
+ * $FreeBSD: release/10.0.0/sys/i386/i386/locore.s 228535 2011-12-15 17:54:23Z alc $
  *
  *		originally from: locore.s, by William F. Jolitz
  *
@@ -775,8 +775,7 @@ no_kernend:
  * if we've enabled PSE above, we'll just switch the corresponding kernel
  * PDEs before we turn on paging.
  *
- * XXX: We waste some pages here in the PSE case!  DON'T BLINDLY REMOVE
- * THIS!  SMP needs the page table to be there to map the kernel P==V.
+ * XXX: We waste some pages here in the PSE case!
  */
 	xorl	%eax, %eax
 	movl	R(KERNend),%ecx

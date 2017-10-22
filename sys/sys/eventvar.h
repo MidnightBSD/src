@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/sys/sys/eventvar.h 133741 2004-08-15 06:24:42Z jmg $
+ *	$FreeBSD: release/10.0.0/sys/sys/eventvar.h 255527 2013-09-13 19:50:50Z kib $
  */
 
 #ifndef _SYS_EVENTVAR_H_
@@ -41,7 +41,7 @@
 struct kqueue {
 	struct		mtx kq_lock;
 	int		kq_refcnt;
-	SLIST_ENTRY(kqueue)	kq_list;
+	TAILQ_ENTRY(kqueue)	kq_list;
 	TAILQ_HEAD(, knote)	kq_head;	/* list of pending event */
 	int		kq_count;		/* number of pending events */
 	struct		selinfo kq_sel;

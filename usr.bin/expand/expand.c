@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)expand.c	8.1 (Berkeley) 6/9/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/expand/expand.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/expand/expand.c 227238 2011-11-06 18:49:30Z ed $");
 
 #include <ctype.h>
 #include <err.h>
@@ -53,8 +53,8 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/expand/expand.c 216370 2010-12-11 08:32:16Z
 /*
  * expand - expand tabs to equivalent spaces
  */
-int	nstops;
-int	tabstops[100];
+static int	nstops;
+static int	tabstops[100];
 
 static void getstops(char *);
 static void usage(void);

@@ -22,7 +22,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/eeprom/ofw_options.h 129590 2004-05-22 16:56:04Z marius $
+ * $FreeBSD: release/10.0.0/usr.sbin/eeprom/ofw_options.h 129590 2004-05-22 16:56:04Z marius $
  */
 
 #ifndef OFW_OPTIONS_H

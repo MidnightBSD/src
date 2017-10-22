@@ -27,13 +27,15 @@
  * SUCH DAMAGE.
  *
  *	$KAME: scope6_var.h,v 1.4 2000/05/18 15:03:27 jinmei Exp $
- * $FreeBSD: stable/9/sys/netinet6/scope6_var.h 244524 2012-12-21 00:41:52Z delphij $
+ * $FreeBSD: release/10.0.0/sys/netinet6/scope6_var.h 243903 2012-12-05 19:45:24Z hrs $
  */
 
 #ifndef _NETINET6_SCOPE6_VAR_H_
 #define _NETINET6_SCOPE6_VAR_H_
 
 #ifdef _KERNEL
+#include <net/vnet.h>
+
 struct scope6_id {
 	/*
 	 * 16 is correspondent to 4bit multicast scope field.
@@ -41,6 +43,9 @@ struct scope6_id {
 	 */
 	u_int32_t s6id_list[16];
 };
+
+VNET_DECLARE(int, deembed_scopeid);
+#define V_deembed_scopeid       VNET(deembed_scopeid)
 
 void	scope6_init(void);
 struct scope6_id *scope6_ifattach(struct ifnet *);

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/games/random/randomize_fd.h 181527 2008-08-10 11:31:56Z ache $
+ * $FreeBSD: release/10.0.0/games/random/randomize_fd.h 181527 2008-08-10 11:31:56Z ache $
  */
 
 #ifndef __RANDOMIZE_FD__

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_eiface.c 222255 2011-05-24 14:10:33Z zec $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_eiface.c 241686 2012-10-18 13:57:24Z andre $
  */
 
 #include <sys/param.h>
@@ -132,12 +132,11 @@ ng_eiface_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 {
 	const priv_p priv = (priv_p)ifp->if_softc;
 	struct ifreq *const ifr = (struct ifreq *)data;
-	int s, error = 0;
+	int error = 0;
 
 #ifdef DEBUG
 	ng_eiface_print_ioctl(ifp, command, data);
 #endif
-	s = splimp();
 	switch (command) {
 
 	/* These two are mostly handled at a higher layer */
@@ -193,7 +192,6 @@ ng_eiface_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		error = EINVAL;
 		break;
 	}
-	splx(s);
 	return (error);
 }
 
@@ -202,14 +200,9 @@ ng_eiface_init(void *xsc)
 {
 	priv_p sc = xsc;
 	struct ifnet *ifp = sc->ifp;
-	int s;
-
-	s = splimp();
 
 	ifp->if_drv_flags |= IFF_DRV_RUNNING;
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
-
-	splx(s);
 }
 
 /*

@@ -1,8 +1,8 @@
-# $FreeBSD: stable/9/lib/clang/include/Makefile 245431 2013-01-14 19:51:26Z dim $
+# $FreeBSD: release/10.0.0/lib/clang/include/Makefile 249423 2013-04-12 17:57:40Z dim $
 
 .PATH: ${.CURDIR}/../../../contrib/llvm/tools/clang/lib/Headers
 
-INCSDIR=${INCLUDEDIR}/clang/3.2
+INCSDIR=${INCLUDEDIR}/clang/3.3
 
 INCS=	__wmmintrin_aes.h \
 	__wmmintrin_pclmul.h \
@@ -26,6 +26,8 @@ INCS=	__wmmintrin_aes.h \
 	nmmintrin.h \
 	pmmintrin.h \
 	popcntintrin.h \
+	prfchwintrin.h \
+	rdseedintrin.h \
 	rtmintrin.h \
 	smmintrin.h \
 	tmmintrin.h \
@@ -34,6 +36,4 @@ INCS=	__wmmintrin_aes.h \
 	xmmintrin.h \
 	xopintrin.h
 
-.include <bsd.init.mk>
-.include <bsd.incs.mk>
-.include <bsd.obj.mk>
+.include <bsd.prog.mk>

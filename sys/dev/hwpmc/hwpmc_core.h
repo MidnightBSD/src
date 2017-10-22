@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/hwpmc/hwpmc_core.h 241609 2012-10-16 13:27:20Z fabient $
+ * $FreeBSD: release/10.0.0/sys/dev/hwpmc/hwpmc_core.h 240164 2012-09-06 13:54:01Z fabient $
  */
 
 #ifndef _DEV_HWPMC_CORE_H_

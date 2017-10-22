@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/fs/cd9660/cd9660_node.c 215548 2010-11-19 21:17:34Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/fs/cd9660/cd9660_node.c 234607 2012-04-23 14:10:34Z trasz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -65,7 +65,6 @@ cd9660_inactive(ap)
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
-	struct thread *td = ap->a_td;
 	struct iso_node *ip = VTOI(vp);
 	int error = 0;
 
@@ -74,7 +73,7 @@ cd9660_inactive(ap)
 	 * so that it can be reused immediately.
 	 */
 	if (ip->inode.iso_mode == 0)
-		vrecycle(vp, td);
+		vrecycle(vp);
 	return error;
 }
 

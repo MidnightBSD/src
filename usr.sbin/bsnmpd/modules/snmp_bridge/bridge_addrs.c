@@ -26,7 +26,7 @@
  * Bridge MIB implementation for SNMPd.
  * Bridge addresses.
  *
- * $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_addrs.c 165253 2006-12-15 20:01:57Z syrinx $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_addrs.c 228990 2011-12-30 10:58:14Z uqs $
  */
 
 #include <sys/queue.h>
@@ -108,7 +108,7 @@ bridge_compare_macs(const uint8_t *m1, const uint8_t *m2)
 /*
  * Insert an address entry in the bridge address TAILQ starting to search
  * for its place from the position of the first bridge address for the bridge
- * interface. Update the first bridge address if neccessary.
+ * interface. Update the first bridge address if necessary.
  */
 static void
 bridge_addrs_insert_at(struct tp_entries *headp,
@@ -136,7 +136,7 @@ bridge_addrs_insert_at(struct tp_entries *headp,
 }
 
 /*
- * Find an address entry's possition in the address list
+ * Find an address entry's position in the address list
  * according to bridge interface name.
  */
 static struct tp_entry *

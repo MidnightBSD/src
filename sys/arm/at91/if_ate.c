@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/at91/if_ate.c 236081 2012-05-26 09:05:45Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/if_ate.c 259747 2013-12-22 22:24:17Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -569,8 +569,6 @@ ate_activate(device_t dev)
 
 	/*
 	 * DMA tag and map for the TX descriptors.
-	 * XXX Old EMAC (not EMACB) doesn't really need DMA'able
-	 * memory. We could just malloc it. gja XXX
 	 */
 	if (bus_dma_tag_create(bus_get_dma_tag(dev), sizeof(eth_tx_desc_t),
 	    0, BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
@@ -606,11 +604,10 @@ ate_activate(device_t dev)
 	if (sc->is_emacb) {
 		/* Write the descriptor queue address. */
 		WR4(sc, ETHB_TBQP, sc->tx_desc_phys);
-	}
 
-	/* EMACB: Enable transceiver input clock */
-	if (sc->is_emacb)
+		/* EMACB: Enable transceiver input clock */
 		WR4(sc, ETHB_UIO, RD4(sc, ETHB_UIO) | ETHB_UIO_CLKE);
+	}
 
 	return (0);
 
@@ -676,7 +673,7 @@ ate_deactivate(struct ate_softc *sc)
 	}
 
 	if (sc->is_emacb)
-	    WR4(sc, ETHB_UIO, RD4(sc, ETHB_UIO) & ~ETHB_UIO_CLKE);
+		WR4(sc, ETHB_UIO, RD4(sc, ETHB_UIO) & ~ETHB_UIO_CLKE);
 }
 
 /*
@@ -849,12 +846,11 @@ ate_intr(void *xsc)
 		return;
 
 	if (status & ETH_ISR_RCOM) {
-
-	    bus_dmamap_sync(sc->rx_desc_tag, sc->rx_desc_map,
+		bus_dmamap_sync(sc->rx_desc_tag, sc->rx_desc_map,
 		    BUS_DMASYNC_POSTREAD);
 
-	    rxdhead = &sc->rx_descs[sc->rxhead];
-	    while (rxdhead->addr & ETH_CPU_OWNER) {
+		rxdhead = &sc->rx_descs[sc->rxhead];
+		while (rxdhead->addr & ETH_CPU_OWNER) {
 			if (!sc->is_emacb) {
 				/*
 				 * Simulate SAM9 FIRST/LAST bits for RM9200.
@@ -903,12 +899,9 @@ ate_intr(void *xsc)
 			/* FCS is not coppied into mbuf. */
 			remain = (sc->rx_descs[idx].status & ETH_LEN_MASK) - 4;
 
-			/* Get an appropriately sized mbuf  */
-			if (remain + ETHER_ALIGN >= MINCLSIZE)
-				mb = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
-			else
-				MGETHDR(mb, M_DONTWAIT, MT_DATA);
-
+			/* Get an appropriately sized mbuf. */
+			mb = m_get2(remain + ETHER_ALIGN, M_NOWAIT, MT_DATA,
+			    M_PKTHDR);
 			if (mb == NULL) {
 				sc->ifp->if_iqdrops++;
 				rxdhead->status = 0;
@@ -933,7 +926,8 @@ ate_intr(void *xsc)
 
 						/* XXX Performance robbing copy. Could
 						 * recieve directly to mbufs if not an
-						 * RM9200. XXX  */
+						 * RM9200. And even then we could likely
+						 * copy just the protocol headers. XXX  */
 						m_append(mb, count, sc->rx_buf[sc->rxhead]);
 						remain -= count;
 				}
@@ -952,10 +946,8 @@ ate_intr(void *xsc)
 
 			} while (!done);
 
-			if (mb != NULL) {
-				ifp->if_ipackets++;
-				(*ifp->if_input)(ifp, mb);
-			}
+			ifp->if_ipackets++;
+			(*ifp->if_input)(ifp, mb);
 		}
 	}
 
@@ -979,16 +971,14 @@ ate_intr(void *xsc)
 				sc->tx_descs[sc->txtail + 1].status |= ETHB_TX_USED;
 		}
 
-		while (sc->txtail != sc->txhead &&
-		    sc->tx_descs[sc->txtail].status & ETHB_TX_USED ) {
-
+		while ((sc->tx_descs[sc->txtail].status & ETHB_TX_USED) &&
+		    sc->sent_mbuf[sc->txtail] != NULL) {
 			bus_dmamap_sync(sc->mtag, sc->tx_map[sc->txtail],
 			    BUS_DMASYNC_POSTWRITE);
 			bus_dmamap_unload(sc->mtag, sc->tx_map[sc->txtail]);
 			m_freem(sc->sent_mbuf[sc->txtail]);
 			sc->tx_descs[sc->txtail].addr = 0;
 			sc->sent_mbuf[sc->txtail] = NULL;
-
 			ifp->if_opackets++;
 			sc->txtail = NEXT_TX_IDX(sc, sc->txtail);
 		}
@@ -1014,6 +1004,9 @@ ate_intr(void *xsc)
 		BARRIER(sc, ETH_CTL, 4, BUS_SPACE_BARRIER_WRITE);
 		WR4(sc, ETH_CTL, reg | ETH_CTL_RE);
 	}
+
+	/* XXX need to work around SAM9260 errata 43.2.4.1:
+	 * disable the mac, reset tx buffer, enable mac on TUND */
 }
 
 /*
@@ -1120,12 +1113,10 @@ atestart_locked(struct ifnet *ifp)
 		 * xmit packets.  We use OACTIVE to indicate "we can stuff more
 		 * into our buffers (clear) or not (set)."
 		 */
-		if (!sc->is_emacb) {
-			/* RM9200 has only two hardware entries */
-			if (!sc->is_emacb && (RD4(sc, ETH_TSR) & ETH_TSR_BNQ) == 0) {
-				ifp->if_drv_flags |= IFF_DRV_OACTIVE;
-				return;
-			}
+		/* RM9200 has only two hardware entries */
+		if (!sc->is_emacb && (RD4(sc, ETH_TSR) & ETH_TSR_BNQ) == 0) {
+			ifp->if_drv_flags |= IFF_DRV_OACTIVE;
+			return;
 		}
 
 		IFQ_DRV_DEQUEUE(&ifp->if_snd, m);
@@ -1135,7 +1126,7 @@ atestart_locked(struct ifnet *ifp)
 		e = bus_dmamap_load_mbuf_sg(sc->mtag, sc->tx_map[sc->txhead], m,
 		    segs, &nseg, 0);
 		if (e == EFBIG) {
-			mdefrag = m_defrag(m, M_DONTWAIT);
+			mdefrag = m_defrag(m, M_NOWAIT);
 			if (mdefrag == NULL) {
 				IFQ_DRV_PREPEND(&ifp->if_snd, m);
 				return;
@@ -1148,6 +1139,21 @@ atestart_locked(struct ifnet *ifp)
 			m_freem(m);
 			continue;
 		}
+
+		/*
+		 * There's a small race between the loop in ate_intr finishing
+		 * and the check above to see if the packet was finished, as well
+		 * as when atestart gets called via other paths. Lose the race
+		 * gracefully and free the mbuf...
+		 */
+		if (sc->sent_mbuf[sc->txhead] != NULL) {
+			bus_dmamap_sync(sc->mtag, sc->tx_map[sc->txtail],
+			    BUS_DMASYNC_POSTWRITE);
+			bus_dmamap_unload(sc->mtag, sc->tx_map[sc->txtail]);
+			m_free(sc->sent_mbuf[sc->txhead]);
+			ifp->if_opackets++;
+		}
+		
 		sc->sent_mbuf[sc->txhead] = m;
 
 		bus_dmamap_sync(sc->mtag, sc->tx_map[sc->txhead],
@@ -1269,7 +1275,7 @@ atestop(struct ate_softc *sc)
 
 	/* Turn off transeiver input clock */
 	if (sc->is_emacb)
-	    WR4(sc, ETHB_UIO, RD4(sc, ETHB_UIO) & ~ETHB_UIO_CLKE);
+		WR4(sc, ETHB_UIO, RD4(sc, ETHB_UIO) & ~ETHB_UIO_CLKE);
 
 	/*
 	 * XXX we should power down the EMAC if it isn't in use, after

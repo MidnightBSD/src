@@ -1,0 +1,2 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_LDNS 255591 2013-09-15 13:11:13Z des $
+Setting this variable will prevent the LDNS library from being built.

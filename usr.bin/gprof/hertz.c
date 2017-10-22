@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)hertz.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/gprof/hertz.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/gprof/hertz.c 246783 2013-02-14 08:16:03Z charnier $");
 
 #include <sys/time.h>
 
@@ -43,6 +43,8 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/gprof/hertz.c 216370 2010-12-11 08:32:16Z j
      *	if something goes wrong, we return 0, an impossible hertz.
      */
 #define	HZ_WRONG	0
+
+int hertz(void);
 
 int
 hertz(void)

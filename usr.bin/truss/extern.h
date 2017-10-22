@@ -28,15 +28,19 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/truss/extern.h 241162 2012-10-03 14:28:55Z zont $
+ * $FreeBSD: release/10.0.0/usr.bin/truss/extern.h 247975 2013-03-07 23:44:35Z cognet $
  */
 
 extern int setup_and_wait(char **);
 extern int start_tracing(pid_t);
 extern void restore_proc(int);
 extern void waitevent(struct trussinfo *);
-extern const char *ioctlname(register_t val);
+extern const char *ioctlname(unsigned long val);
 extern char *strsig(int sig);
+#ifdef __arm__
+extern void arm_syscall_entry(struct trussinfo *, int);
+extern long arm_syscall_exit(struct trussinfo *, int);
+#endif
 #ifdef __amd64__
 extern void amd64_syscall_entry(struct trussinfo *, int);
 extern long amd64_syscall_exit(struct trussinfo *, int);

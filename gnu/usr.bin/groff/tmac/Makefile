@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/groff/tmac/Makefile 161282 2006-08-14 13:02:01Z ru $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/groff/tmac/Makefile 239640 2012-08-24 06:55:16Z ru $
 
 .include <bsd.own.mk>			# SHAREDIR
 
@@ -62,13 +62,12 @@ $f-s: $f
 .endfor
 
 beforeinstall:
-	cd ${DIST_DIR}; \
+	(cd ${DIST_DIR} && \
 	    ${INSTALL} -o ${TMACOWN} -g ${TMACGRP} -m ${TMACMODE} \
-	    ${NORMALFILES} ${DESTDIR}${TMACDIR}
-	cd ${.CURDIR}; \
+	    ${NORMALFILES} ${DESTDIR}${TMACDIR})
+	(cd ${.CURDIR} && \
 	    ${INSTALL} -o ${TMACOWN} -g ${TMACGRP} -m ${TMACMODE} \
-	    koi8-r.tmac hyphen.ru ${DESTDIR}${TMACDIR}
-	cd ${.OBJDIR}
+	    koi8-r.tmac hyphen.ru ${DESTDIR}${TMACDIR})
 .for f in ${STRIPFILES} ${SPECIALFILES}
 	${INSTALL} -o ${TMACOWN} -g ${TMACGRP} -m ${TMACMODE} \
 	    $f-s ${DESTDIR}${TMACDIR}/$f

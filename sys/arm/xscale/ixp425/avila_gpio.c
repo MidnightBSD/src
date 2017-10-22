@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/avila_gpio.c 229883 2012-01-09 21:49:47Z thompsa $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/avila_gpio.c 249449 2013-04-13 21:21:13Z dim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -102,7 +102,7 @@ static struct avila_gpio_pin avila_gpio_pins[] = {
 /*
  * Helpers
  */
-static void avila_gpio_pin_configure(struct avila_gpio_softc *sc, 
+static void avila_gpio_pin_configure(struct avila_gpio_softc *sc,
     struct gpio_pin *pin, uint32_t flags);
 static int  avila_gpio_pin_flags(struct avila_gpio_softc *sc, uint32_t pin);
 
@@ -220,8 +220,8 @@ avila_gpio_pin_setflags(device_t dev, uint32_t pin, uint32_t flags)
 	if (pin >= IXP4XX_GPIO_PINS || !(sc->sc_valid & mask))
 		return (EINVAL);
 
-	/* Filter out unwanted flags */
-	if ((flags &= sc->sc_pins[pin].gp_caps) != flags)
+	/* Check for unwanted flags. */
+	if ((flags & sc->sc_pins[pin].gp_caps) != flags)
 		return (EINVAL);
 
 	/* Can't mix input/output together */

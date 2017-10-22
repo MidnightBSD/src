@@ -42,7 +42,7 @@
 #include <unistd.h>
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/camcontrol/progress.c 237740 2012-06-29 03:37:23Z scottl $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/camcontrol/progress.c 237285 2012-06-20 04:11:34Z scottl $");
 
 #include "progress.h"
 

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ufs/ffs/ffs_inode.c 248626 2013-03-22 22:40:16Z mckusick $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ufs/ffs/ffs_inode.c 251171 2013-05-31 00:43:41Z jeff $");
 
 #include "opt_quota.h"
 
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: stable/9/sys/ufs/ffs/ffs_inode.c 248626 2013-03-22 22:40:16Z
 #include <sys/vnode.h>
 #include <sys/malloc.h>
 #include <sys/resourcevar.h>
+#include <sys/rwlock.h>
 #include <sys/vmmeter.h>
 #include <sys/stat.h>
 
@@ -170,12 +171,11 @@ loop:
  * disk blocks.
  */
 int
-ffs_truncate(vp, length, flags, cred, td)
+ffs_truncate(vp, length, flags, cred)
 	struct vnode *vp;
 	off_t length;
 	int flags;
 	struct ucred *cred;
-	struct thread *td;
 {
 	struct inode *ip;
 	ufs2_daddr_t bn, lbn, lastblock, lastiblock[NIADDR], indir_lbn[NIADDR];
@@ -449,7 +449,7 @@ ffs_truncate(vp, length, flags, cred, td)
 	ip->i_size = osize;
 	DIP_SET(ip, i_size, osize);
 
-	error = vtruncbuf(vp, cred, td, length, fs->fs_bsize);
+	error = vtruncbuf(vp, cred, length, fs->fs_bsize);
 	if (error && (allerror == 0))
 		allerror = error;
 

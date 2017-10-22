@@ -24,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/lib/libusb/libusb.3 235575 2012-05-18 00:31:20Z gjb $
+.\" $FreeBSD: release/10.0.0/lib/libusb/libusb.3 251495 2013-06-07 13:45:58Z emaste $
 .\"
-.Dd April 12, 2012
+.Dd June 7, 2013
 .Dt LIBUSB 3
 .Os
 .Sh NAME
@@ -101,6 +101,19 @@ counter decremented once.
 .Fn libusb_get_bus_number "libusb_device *dev"
 Returns the number of the bus contained by the device
 .Fa dev .
+.Pp
+.Ft int
+.Fn libusb_get_port_numbers "libusb_device *dev" "uint8_t *buf" "uint8_t bufsize"
+Stores, in the buffer
+.Fa buf
+of size
+.Fa bufsize ,
+the list of all port numbers from root for the device
+.Fa dev .
+.Pp
+.Ft int
+.Fn libusb_get_port_path "libusb_context *ctx" "libusb_device *dev" "uint8_t *buf" "uint8_t bufsize"
+Deprecated function equivalent to libusb_get_port_numbers.
 .Pp
 .Ft uint8_t
 .Fn libusb_get_device_address "libusb_device *dev"
@@ -312,6 +325,12 @@ LIBUSB_ERROR code on failure.
 .Ft void
 .Fn libusb_free_config_descriptor "libusb_config_descriptor *config"
 Free a configuration descriptor.
+.Pp
+.Ft int
+.Fn libusb_get_string_descriptor "libusb_device_handle *devh" "uint8_t desc_idx" "uint16_t langid" "unsigned char *data" "int length"
+Retrieve a string descriptor in raw format.
+Returns the number of bytes actually transferred on success
+or a negative LIBUSB_ERROR code on failure.
 .Pp
 .Ft int
 .Fn libusb_get_string_descriptor_ascii "libusb_device_handle *devh" "uint8_t desc_idx" "unsigned char *data" "int length"

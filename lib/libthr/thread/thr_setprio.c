@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/thread/thr_setprio.c 238714 2012-07-23 09:33:31Z davidxu $
+ * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_setprio.c 238642 2012-07-20 03:22:17Z davidxu $
  */
 
 #include "namespace.h"

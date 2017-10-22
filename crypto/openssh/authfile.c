@@ -1,4 +1,4 @@
-/* $OpenBSD: authfile.c,v 1.93 2012/01/25 19:36:31 markus Exp $ */
+/* $OpenBSD: authfile.c,v 1.97 2013/05/17 00:13:13 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -89,7 +89,7 @@ key_private_rsa1_to_blob(Key *key, Buffer *blob, const char *passphrase,
 	u_char buf[100], *cp;
 	int i, cipher_num;
 	CipherContext ciphercontext;
-	Cipher *cipher;
+	const Cipher *cipher;
 	u_int32_t rnd;
 
 	/*
@@ -150,7 +150,7 @@ key_private_rsa1_to_blob(Key *key, Buffer *blob, const char *passphrase,
 	cipher_set_key_string(&ciphercontext, cipher, passphrase,
 	    CIPHER_ENCRYPT);
 	cipher_crypt(&ciphercontext, cp,
-	    buffer_ptr(&buffer), buffer_len(&buffer));
+	    buffer_ptr(&buffer), buffer_len(&buffer), 0, 0);
 	cipher_cleanup(&ciphercontext);
 	memset(&ciphercontext, 0, sizeof(ciphercontext));
 
@@ -421,7 +421,7 @@ key_parse_private_rsa1(Buffer *blob, const char *passphrase, char **commentp)
 	Buffer decrypted;
 	u_char *cp;
 	CipherContext ciphercontext;
-	Cipher *cipher;
+	const Cipher *cipher;
 	Key *prv = NULL;
 	Buffer copy;
 
@@ -474,7 +474,7 @@ key_parse_private_rsa1(Buffer *blob, const char *passphrase, char **commentp)
 	cipher_set_key_string(&ciphercontext, cipher, passphrase,
 	    CIPHER_DECRYPT);
 	cipher_crypt(&ciphercontext, cp,
-	    buffer_ptr(&copy), buffer_len(&copy));
+	    buffer_ptr(&copy), buffer_len(&copy), 0, 0);
 	cipher_cleanup(&ciphercontext);
 	memset(&ciphercontext, 0, sizeof(ciphercontext));
 	buffer_free(&copy);
@@ -509,8 +509,8 @@ key_parse_private_rsa1(Buffer *blob, const char *passphrase, char **commentp)
 	return prv;
 
 fail:
-	if (commentp)
-		xfree(*commentp);
+	if (commentp != NULL)
+		free(*commentp);
 	key_free(prv);
 	return NULL;
 }
@@ -832,10 +832,10 @@ key_load_cert(const char *filename)
 	pub = key_new(KEY_UNSPEC);
 	xasprintf(&file, "%s-cert.pub", filename);
 	if (key_try_load_public(pub, file, NULL) == 1) {
-		xfree(file);
+		free(file);
 		return pub;
 	}
-	xfree(file);
+	free(file);
 	key_free(pub);
 	return NULL;
 }

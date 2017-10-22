@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/apmd/apmd.h 208075 2010-05-14 14:26:56Z uqs $
+ * $FreeBSD: release/10.0.0/usr.sbin/apmd/apmd.h 208075 2010-05-14 14:26:56Z uqs $
  */
 
 #define APMD_CONFIGFILE		"/etc/apmd.conf"

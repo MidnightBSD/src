@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)pwd_mkdb.c	8.5 (Berkeley) 4/20/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pwd_mkdb/pwd_mkdb.c 223818 2011-07-06 06:34:08Z gordon $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pwd_mkdb/pwd_mkdb.c 227257 2011-11-06 19:02:25Z ed $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -68,7 +68,7 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/pwd_mkdb/pwd_mkdb.c 223818 2011-07-06 06:3
 #define LEGACY_VERSION(x)  _PW_VERSIONED(x, 3)
 #define CURRENT_VERSION(x) _PW_VERSIONED(x, 4)
 
-HASHINFO openinfo = {
+static HASHINFO openinfo = {
 	4096,		/* bsize */
 	32,		/* ffactor */
 	256,		/* nelem */

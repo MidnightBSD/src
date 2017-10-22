@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/9/sys/dev/ath/ath_hal/ar5416/ar5416_power.c 221800 2011-05-12 03:15:21Z adrian $
+ * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar5416/ar5416_power.c 234269 2012-04-14 04:40:11Z adrian $
  */
 #include "opt_ah.h"
 
@@ -50,6 +50,7 @@ ar5416SetPowerModeAwake(struct ath_hal *ah, int setChip)
 			& AR_RTC_PM_STATUS_M) == AR_RTC_STATUS_SHUTDOWN) {
 			if (!ar5416SetResetReg(ah, HAL_RESET_POWER_ON))
 				goto bad;			
+			AH5416(ah)->ah_initPLL(ah, AH_NULL);
 		}
 
 		if (AR_SREV_HOWL(ah))

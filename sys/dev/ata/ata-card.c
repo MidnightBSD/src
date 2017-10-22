@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2008 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ata/ata-card.c 242908 2012-11-12 07:34:05Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/ata-card.c 256326 2013-10-11 18:27:12Z grehan $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -140,7 +140,7 @@ ata_pccard_attach(device_t dev)
         ch-> flags |= ATA_NO_SLAVE;
     ata_generic_hw(dev);
     err = ata_probe(dev);
-    if (err)
+    if (err > 0)
 	return (err);
     return (ata_attach(dev));
 }

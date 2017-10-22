@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: stable/9/sys/dev/vxge/vxge.c 248078 2013-03-09 00:39:54Z marius $*/
+/*$FreeBSD: release/10.0.0/sys/dev/vxge/vxge.c 246128 2013-01-30 18:01:20Z sbz $*/
 
 #include <dev/vxge/vxge.h>
 
@@ -1380,7 +1380,6 @@ vxge_ifp_setup(device_t ndev)
 	/* Initialize interface ifnet structure */
 	if_initname(ifp, device_get_name(ndev), device_get_unit(ndev));
 
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_baudrate = VXGE_BAUDRATE;
 	ifp->if_init = vxge_init;
 	ifp->if_softc = vdev;
@@ -4189,7 +4188,8 @@ static device_method_t vxge_methods[] = {
 	DEVMETHOD(device_attach, vxge_attach),
 	DEVMETHOD(device_detach, vxge_detach),
 	DEVMETHOD(device_shutdown, vxge_shutdown),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t vxge_driver = {

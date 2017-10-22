@@ -29,7 +29,7 @@
  * SUCH DAMAGE.
  *
  * $Id: parser.y,v 1.7 2006/09/07 21:06:53 max Exp $
- * $FreeBSD: stable/9/usr.sbin/bluetooth/bthidd/parser.y 164700 2006-11-27 22:52:11Z emax $
+ * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/bthidd/parser.y 235789 2012-05-22 16:33:10Z bapt $
  */
 
 #include <sys/queue.h>
@@ -39,6 +39,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <usbhid.h>
@@ -61,7 +62,6 @@
 
 #include "bthid_config.h"
 
-	int	yyparse		(void);
 	int	yylex		(void);
 	void	yyerror		(char const *);
 static	int32_t	check_hid_device(hid_device_p hid_device);

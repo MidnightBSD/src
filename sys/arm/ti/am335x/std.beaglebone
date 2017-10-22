@@ -1,0 +1,4 @@
+# $FreeBSD: release/10.0.0/sys/arm/ti/am335x/std.beaglebone 239281 2012-08-15 06:31:32Z gonzo $
+
+files		"../ti/am335x/files.beaglebone"
+include		"../ti/am335x/std.am335x"

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpi_support/acpi_panasonic.c 202771 2010-01-21 21:14:28Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpi_support/acpi_panasonic.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -118,7 +118,7 @@ static device_method_t acpi_panasonic_methods[] = {
 	DEVMETHOD(device_detach,	acpi_panasonic_detach),
 	DEVMETHOD(device_shutdown,	acpi_panasonic_shutdown),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t acpi_panasonic_driver = {

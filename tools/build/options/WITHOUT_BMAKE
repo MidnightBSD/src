@@ -1,0 +1,8 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_BMAKE 250839 2013-05-21 00:41:49Z delphij $
+Set to not build and install the portable BSD make (bmake) as
+.Xr make 1
+instead of the traditional FreeBSD make.
+This build option is temporary.
+It allows developers to switch to bmake in order to work out any remaining
+kinks or issues.
+This option will be removed in due time.

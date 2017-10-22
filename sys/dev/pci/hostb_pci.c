@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/pci/hostb_pci.c 219902 2011-03-23 13:10:15Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/pci/hostb_pci.c 232472 2012-03-03 18:08:57Z jhb $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -197,11 +197,27 @@ pci_hostb_assign_interrupt(device_t dev, device_t child)
 }
 
 static int
+pci_hostb_find_cap(device_t dev, device_t child, int capability,
+    int *capreg)
+{
+
+	return (pci_find_cap(dev, capability, capreg));
+}
+
+static int
 pci_hostb_find_extcap(device_t dev, device_t child, int capability,
     int *capreg)
 {
 
 	return (pci_find_extcap(dev, capability, capreg));
+}
+
+static int
+pci_hostb_find_htcap(device_t dev, device_t child, int capability,
+    int *capreg)
+{
+
+	return (pci_find_htcap(dev, capability, capreg));
 }
 
 static device_method_t pci_hostb_methods[] = {
@@ -233,7 +249,9 @@ static device_method_t pci_hostb_methods[] = {
 	DEVMETHOD(pci_get_powerstate,	pci_hostb_get_powerstate),
 	DEVMETHOD(pci_set_powerstate,	pci_hostb_set_powerstate),
 	DEVMETHOD(pci_assign_interrupt,	pci_hostb_assign_interrupt),
+	DEVMETHOD(pci_find_cap,		pci_hostb_find_cap),
 	DEVMETHOD(pci_find_extcap,	pci_hostb_find_extcap),
+	DEVMETHOD(pci_find_htcap,	pci_hostb_find_htcap),
 
 	{ 0, 0 }
 };

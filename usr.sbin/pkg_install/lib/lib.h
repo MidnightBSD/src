@@ -1,7 +1,7 @@
-/* $FreeBSD: stable/9/usr.sbin/pkg_install/lib/lib.h 241135 2012-10-02 17:04:53Z bapt $ */
+/* $FreeBSD: release/10.0.0/usr.sbin/pkg_install/lib/lib.h 245828 2013-01-22 22:41:12Z bapt $ */
 
 /*
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -99,7 +99,7 @@
  * Version of the package tools - increase whenever you make a change
  * in the code that is not cosmetic only.
  */
-#define PKG_INSTALL_VERSION	20120918
+#define PKG_INSTALL_VERSION	20130122
 
 #define PKG_WRAPCONF_FNAME	"/var/db/pkg_install.conf"
 #define main(argc, argv)	real_main(argc, argv)
@@ -157,6 +157,7 @@ const char	*make_playpen(char *, off_t);
 char		*where_playpen(void);
 int		leave_playpen(void);
 off_t		min_free(const char *);
+void		warnpkgng(void);
 
 /* String */
 char 		*get_dash_string(char **);

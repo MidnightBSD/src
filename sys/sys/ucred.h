@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ucred.h	8.4 (Berkeley) 1/9/95
- * $FreeBSD: stable/9/sys/sys/ucred.h 219304 2011-03-05 12:40:35Z trasz $
+ * $FreeBSD: release/10.0.0/sys/sys/ucred.h 219304 2011-03-05 12:40:35Z trasz $
  */
 
 #ifndef _SYS_UCRED_H_

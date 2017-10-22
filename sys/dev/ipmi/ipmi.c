@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ipmi/ipmi.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ipmi/ipmi.c 258120 2013-11-14 09:11:54Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -646,6 +646,9 @@ ipmi_wd_event(void *arg, unsigned int cmd, int *error)
 	struct ipmi_softc *sc = arg;
 	unsigned int timeout;
 	int e;
+
+	if (dumping)
+		return;
 
 	cmd &= WD_INTERVAL;
 	if (cmd > 0 && cmd <= 63) {

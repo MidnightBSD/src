@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2000,2001,2002 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 2000,2001,2002 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/cdrio.h 105421 2002-10-18 22:03:39Z njl $
+ * $FreeBSD: release/10.0.0/sys/sys/cdrio.h 230132 2012-01-15 13:23:18Z uqs $
  */
 
 #ifndef	_SYS_CDRIO_H_

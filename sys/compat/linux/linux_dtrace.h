@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/compat/linux/linux_dtrace.h 246290 2013-02-03 18:14:37Z dchagin $
+ * $FreeBSD: release/10.0.0/sys/compat/linux/linux_dtrace.h 254467 2013-08-17 21:53:37Z markj $
  */
 
 #ifndef _LINUX_DTRACE_H_
@@ -71,11 +71,6 @@
     SDT_PROBE_DEFINE5(a, b, c, d, d, e, f, g, h, i)
 #define	LIN_SDT_PROBE_DEFINE5(a, b, c, d, e, f, g, h)	_LIN_SDT_PROBE_DEFINE5(\
     LINUX_DTRACE, a, b, c, d, e, f, g, h)
-
-#define	_LIN_SDT_PROBE_ARGTYPE(a, b, c, d, e, f)	SDT_PROBE_ARGTYPE(a, b,\
-    c, d, e, f)
-#define LIN_SDT_PROBE_ARGTYPE(a, b, c, d, e)	_LIN_SDT_PROBE_ARGTYPE( \
-    LINUX_DTRACE, a, b, c, d, e)
 
 #define	LIN_SDT_PROBE0(a, b, c)			SDT_PROBE1(LINUX_DTRACE, a, b, \
     c, 0)

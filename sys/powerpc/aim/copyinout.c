@@ -54,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/aim/copyinout.c 223485 2011-06-23 22:21:28Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/aim/copyinout.c 223485 2011-06-23 22:21:28Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/lock.h>

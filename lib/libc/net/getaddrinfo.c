@@ -54,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/net/getaddrinfo.c 238994 2012-08-02 20:48:22Z emax $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/getaddrinfo.c 255328 2013-09-06 21:02:06Z jilles $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -155,7 +155,6 @@ struct explore {
 	int e_af;
 	int e_socktype;
 	int e_protocol;
-	const char *e_protostr;
 	int e_wild;
 #define WILD_AF(ex)		((ex)->e_wild & 0x01)
 #define WILD_SOCKTYPE(ex)	((ex)->e_wild & 0x02)
@@ -164,21 +163,21 @@ struct explore {
 
 static const struct explore explore[] = {
 #if 0
-	{ PF_LOCAL, ANY, ANY, NULL, 0x01 },
+	{ PF_LOCAL, ANY, ANY, 0x01 },
 #endif
 #ifdef INET6
-	{ PF_INET6, SOCK_DGRAM, IPPROTO_UDP, "udp", 0x07 },
-	{ PF_INET6, SOCK_STREAM, IPPROTO_TCP, "tcp", 0x07 },
-	{ PF_INET6, SOCK_STREAM, IPPROTO_SCTP, "sctp", 0x03 },
-	{ PF_INET6, SOCK_SEQPACKET, IPPROTO_SCTP, "sctp", 0x07 },
-	{ PF_INET6, SOCK_RAW, ANY, NULL, 0x05 },
+	{ PF_INET6, SOCK_DGRAM, IPPROTO_UDP, 0x07 },
+	{ PF_INET6, SOCK_STREAM, IPPROTO_TCP, 0x07 },
+	{ PF_INET6, SOCK_STREAM, IPPROTO_SCTP, 0x03 },
+	{ PF_INET6, SOCK_SEQPACKET, IPPROTO_SCTP, 0x07 },
+	{ PF_INET6, SOCK_RAW, ANY, 0x05 },
 #endif
-	{ PF_INET, SOCK_DGRAM, IPPROTO_UDP, "udp", 0x07 },
-	{ PF_INET, SOCK_STREAM, IPPROTO_TCP, "tcp", 0x07 },
-	{ PF_INET, SOCK_STREAM, IPPROTO_SCTP, "sctp", 0x03 },
-	{ PF_INET, SOCK_SEQPACKET, IPPROTO_SCTP, "sctp", 0x07 },
-	{ PF_INET, SOCK_RAW, ANY, NULL, 0x05 },
-	{ -1, 0, 0, NULL, 0 },
+	{ PF_INET, SOCK_DGRAM, IPPROTO_UDP, 0x07 },
+	{ PF_INET, SOCK_STREAM, IPPROTO_TCP, 0x07 },
+	{ PF_INET, SOCK_STREAM, IPPROTO_SCTP, 0x03 },
+	{ PF_INET, SOCK_SEQPACKET, IPPROTO_SCTP, 0x07 },
+	{ PF_INET, SOCK_RAW, ANY, 0x05 },
+	{ -1, 0, 0, 0 },
 };
 
 #ifdef INET6
@@ -832,7 +831,8 @@ set_source(struct ai_order *aio, struct policyhead *ph)
 	get_port(&ai, "1", 0);
 
 	/* open a socket to get the source address for the given dst */
-	if ((s = _socket(ai.ai_family, ai.ai_socktype, ai.ai_protocol)) < 0)
+	if ((s = _socket(ai.ai_family, ai.ai_socktype | SOCK_CLOEXEC,
+	    ai.ai_protocol)) < 0)
 		return;		/* give up */
 	if (_connect(s, ai.ai_addr, ai.ai_addrlen) < 0)
 		goto cleanup;
@@ -1132,7 +1132,7 @@ explore_null(const struct addrinfo *pai, const char *servname,
 	 * filter out AFs that are not supported by the kernel
 	 * XXX errno?
 	 */
-	s = _socket(pai->ai_family, SOCK_DGRAM, 0);
+	s = _socket(pai->ai_family, SOCK_DGRAM | SOCK_CLOEXEC, 0);
 	if (s < 0) {
 		if (errno != EMFILE)
 			return 0;
@@ -1542,18 +1542,19 @@ addrconfig(struct addrinfo *pai)
 	 */
 	af = pai->ai_family;
 	if (af == AF_UNSPEC) {
-		if ((s = _socket(AF_INET6, SOCK_DGRAM, 0)) < 0)
+		if ((s = _socket(AF_INET6, SOCK_DGRAM | SOCK_CLOEXEC, 0)) < 0)
 			af = AF_INET;
 		else {
 			_close(s);
-			if ((s = _socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+			if ((s = _socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC,
+			    0)) < 0)
 				af = AF_INET6;
 			else
 				_close(s);
 		}
 	}
 	if (af != AF_UNSPEC) {
-		if ((s = _socket(af, SOCK_DGRAM, 0)) < 0)
+		if ((s = _socket(af, SOCK_DGRAM | SOCK_CLOEXEC, 0)) < 0)
 			return 0;
 		_close(s);
 	}
@@ -2241,7 +2242,7 @@ static void
 _sethtent(FILE **hostf)
 {
 	if (!*hostf)
-		*hostf = fopen(_PATH_HOSTS, "r");
+		*hostf = fopen(_PATH_HOSTS, "re");
 	else
 		rewind(*hostf);
 }
@@ -2265,7 +2266,7 @@ _gethtent(FILE **hostf, const char *name, const struct addrinfo *pai)
 	const char *addr;
 	char hostbuf[8*1024];
 
-	if (!*hostf && !(*hostf = fopen(_PATH_HOSTS, "r")))
+	if (!*hostf && !(*hostf = fopen(_PATH_HOSTS, "re")))
 		return (NULL);
 again:
 	if (!(p = fgets(hostbuf, sizeof hostbuf, *hostf)))

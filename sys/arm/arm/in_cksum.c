@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>			/* RCS ID & Copyright macro defns */
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/in_cksum.c 160459 2006-07-18 00:07:05Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/in_cksum.c 236991 2012-06-13 04:59:55Z imp $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>
@@ -149,4 +149,4 @@ u_int in_cksum_hdr(const struct ip *ip)
     	union l_util l_util;
 	REDUCE16;
 	return (~sum & 0xffff);
-}			    
+}

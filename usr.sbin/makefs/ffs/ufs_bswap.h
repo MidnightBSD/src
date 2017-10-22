@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/makefs/ffs/ufs_bswap.h 196696 2009-08-31 13:23:55Z jhb $
+ * $FreeBSD: release/10.0.0/usr.sbin/makefs/ffs/ufs_bswap.h 253675 2013-07-26 14:22:03Z marius $
  */
 
 #ifndef _UFS_UFS_BSWAP_H_
@@ -39,6 +39,8 @@
 #endif
 
 #include <sys/endian.h>
+
+#include "makefs.h"
 
 /* Macros to access UFS flags */
 #ifdef FFS_EI

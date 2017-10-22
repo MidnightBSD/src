@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/powerpc/uboot/Makefile 243243 2012-11-18 17:09:29Z ae $
+# $FreeBSD: release/10.0.0/sys/boot/powerpc/uboot/Makefile 246647 2013-02-11 02:15:26Z kientzle $
 
 .include <bsd.own.mk>
 
@@ -103,7 +103,7 @@ LDADD=		${LIBFICL} ${LIBUBOOT} ${LIBFDT} -lstand
 vers.c:	${.CURDIR}/../../common/newvers.sh ${.CURDIR}/version
 	sh ${.CURDIR}/../../common/newvers.sh ${.CURDIR}/version ${NEWVERSWHAT}
 
-loader.help: help.common help.uboot
+loader.help: help.common help.uboot ${.CURDIR}/../../fdt/help.fdt
 	cat ${.ALLSRC} | \
 	    awk -f ${.CURDIR}/../../common/merge_help.awk > ${.TARGET}
 

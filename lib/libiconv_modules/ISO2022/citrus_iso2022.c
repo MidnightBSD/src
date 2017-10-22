@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libiconv_modules/ISO2022/citrus_iso2022.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libiconv_modules/ISO2022/citrus_iso2022.c 252583 2013-07-03 18:27:45Z peter $ */
 /*	$NetBSD: citrus_iso2022.c,v 1.19 2008/06/14 16:01:07 tnozaki Exp $	*/
 
 /*-
@@ -572,7 +572,7 @@ terminate:
 
 static wchar_t
 _ISO2022_sgetwchar(_ISO2022EncodingInfo * __restrict ei __unused,
-    char * __restrict string, size_t n, char ** __restrict result,
+    const char * __restrict string, size_t n, const char ** __restrict result,
     _ISO2022State * __restrict psenc)
 {
 	const struct seqtable *sp;
@@ -840,10 +840,10 @@ asis:
 
 static int
 _citrus_ISO2022_mbrtowc_priv(_ISO2022EncodingInfo * __restrict ei,
-    wchar_t * __restrict pwc, char ** __restrict s,
+    wchar_t * __restrict pwc, const char ** __restrict s,
     size_t n, _ISO2022State * __restrict psenc, size_t * __restrict nresult)
 {
-	char *p, *result, *s0;
+	const char *p, *result, *s0;
 	wchar_t wchar;
 	int c, chlenbak;
 

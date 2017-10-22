@@ -26,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/tools/ifinfo/ifinfo.c 189331 2009-03-04 01:31:09Z yongari $
+ * $FreeBSD: release/10.0.0/tools/tools/ifinfo/ifinfo.c 254570 2013-08-20 14:37:06Z bz $
  */
 #include <sys/types.h>
 #include <sys/socket.h>		/* for PF_LINK */
@@ -169,8 +169,11 @@ printit(const struct ifmibdata *ifmd, const char *dname)
 					  ifmd->ifmd_data.ifi_physical));
 	printf("\taddress length: %d\n", ifmd->ifmd_data.ifi_addrlen);
 	printf("\theader length: %d\n", ifmd->ifmd_data.ifi_hdrlen);
-	printf("\treceive spare char1: %u\n", ifmd->ifmd_data.ifi_spare_char1);
-	printf("\ttransmit spare char2: %u\n", ifmd->ifmd_data.ifi_spare_char2);
+	printf("\tlink state: %u\n", ifmd->ifmd_data.ifi_link_state);
+	printf("\tvhid: %u\n", ifmd->ifmd_data.ifi_vhid);
+	printf("\tbaudrate power factor: %u\n",
+	    ifmd->ifmd_data.ifi_baudrate_pf);
+	printf("\tdatalen: %u\n", ifmd->ifmd_data.ifi_datalen);
 	printf("\tmtu: %lu\n", ifmd->ifmd_data.ifi_mtu);
 	printf("\tmetric: %lu\n", ifmd->ifmd_data.ifi_metric);
 	printf("\tline rate: %lu bit/s\n", ifmd->ifmd_data.ifi_baudrate);
@@ -186,6 +189,10 @@ printit(const struct ifmibdata *ifmd, const char *dname)
 	printf("\tinput queue drops: %lu\n", ifmd->ifmd_data.ifi_iqdrops);
 	printf("\tpackets for unknown protocol: %lu\n", 
 	       ifmd->ifmd_data.ifi_noproto);
+	printf("\tHW offload capabilities: 0x%lx\n",
+	    ifmd->ifmd_data.ifi_hwassist);
+	printf("\tuptime at attach or stat reset: %lu\n",
+	    ifmd->ifmd_data.ifi_epoch);
 #ifdef notdef
 	printf("\treceive timing: %lu usec\n", ifmd->ifmd_data.ifi_recvtiming);
 	printf("\ttransmit timing: %lu usec\n", 

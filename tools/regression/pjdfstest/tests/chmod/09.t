@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/chmod/09.t 211336 2010-08-15 14:44:48Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/chmod/09.t 211336 2010-08-15 14:44:48Z pjd $
 
 desc="chmod returns EROFS if the named file resides on a read-only file system"
 

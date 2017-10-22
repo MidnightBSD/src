@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/sys/mips/atheros/ar71xx_cpudef.h 221198 2011-04-29 06:25:11Z adrian $ */
+/* $FreeBSD: release/10.0.0/sys/mips/atheros/ar71xx_cpudef.h 253507 2013-07-21 03:51:24Z adrian $ */
 
 #ifndef	__AR71XX_CPUDEF_H__
 #define	__AR71XX_CPUDEF_H__
@@ -35,10 +35,10 @@ struct ar71xx_cpu_def {
 	void (* ar71xx_chip_device_stop) (uint32_t);
 	void (* ar71xx_chip_device_start) (uint32_t);
 	int (* ar71xx_chip_device_stopped) (uint32_t);
-	void (* ar71xx_chip_set_pll_ge0) (int);
-	void (* ar71xx_chip_set_pll_ge1) (int);
-	void (* ar71xx_chip_ddr_flush_ge0) (void);
-	void (* ar71xx_chip_ddr_flush_ge1) (void);
+	void (* ar71xx_chip_set_pll_ge) (int, int, uint32_t);
+	void (* ar71xx_chip_set_mii_speed) (uint32_t, uint32_t);
+	void (* ar71xx_chip_set_mii_if) (uint32_t, ar71xx_mii_mode);
+	void (* ar71xx_chip_ddr_flush_ge) (int);
 	uint32_t (* ar71xx_chip_get_eth_pll) (unsigned int, int);
 
 	/*
@@ -81,24 +81,29 @@ static inline int ar71xx_device_stopped(uint32_t mask)
 	return ar71xx_cpu_ops->ar71xx_chip_device_stopped(mask);
 }
 
-static inline void ar71xx_device_set_pll_ge0(int speed)
+static inline void ar71xx_device_set_pll_ge(int unit, int speed, uint32_t pll)
 {
-	ar71xx_cpu_ops->ar71xx_chip_set_pll_ge0(speed);
+	ar71xx_cpu_ops->ar71xx_chip_set_pll_ge(unit, speed, pll);
 }
 
-static inline void ar71xx_device_set_pll_ge1(int speed)
+static inline void ar71xx_device_set_mii_speed(int unit, int speed)
 {
-	ar71xx_cpu_ops->ar71xx_chip_set_pll_ge1(speed);
+	ar71xx_cpu_ops->ar71xx_chip_set_mii_speed(unit, speed);
 }
 
-static inline void ar71xx_device_flush_ddr_ge0(void)
+static inline void ar71xx_device_set_mii_if(int unit, ar71xx_mii_mode mii_cfg)
 {
-	ar71xx_cpu_ops->ar71xx_chip_ddr_flush_ge0();
+	ar71xx_cpu_ops->ar71xx_chip_set_mii_if(unit, mii_cfg);
 }
 
-static inline void ar71xx_device_flush_ddr_ge1(void)
+static inline void ar71xx_device_flush_ddr_ge(int unit)
 {
-	ar71xx_cpu_ops->ar71xx_chip_ddr_flush_ge1();
+	ar71xx_cpu_ops->ar71xx_chip_ddr_flush_ge(unit);
+}
+
+static inline uint32_t ar71xx_device_get_eth_pll(unsigned int unit, int speed)
+{
+	return (ar71xx_cpu_ops->ar71xx_chip_get_eth_pll(unit, speed));
 }
 
 static inline void ar71xx_init_usb_peripheral(void)
@@ -112,12 +117,18 @@ static inline void ar71xx_device_ddr_flush_ip2(void)
 }
 
 /* XXX shouldn't be here! */
+extern uint32_t u_ar71xx_refclk;
 extern uint32_t u_ar71xx_cpu_freq;
 extern uint32_t u_ar71xx_ahb_freq;
 extern uint32_t u_ar71xx_ddr_freq;
+extern uint32_t u_ar71xx_uart_freq;
+extern uint32_t u_ar71xx_wdt_freq;
 
+static inline uint64_t ar71xx_refclk(void) { return u_ar71xx_refclk; }
 static inline uint64_t ar71xx_cpu_freq(void) { return u_ar71xx_cpu_freq; }
 static inline uint64_t ar71xx_ahb_freq(void) { return u_ar71xx_ahb_freq; }
 static inline uint64_t ar71xx_ddr_freq(void) { return u_ar71xx_ddr_freq; }
- 
+static inline uint64_t ar71xx_uart_freq(void) { return u_ar71xx_uart_freq; }
+static inline uint64_t ar71xx_wdt_freq(void) { return u_ar71xx_wdt_freq; }
+
 #endif

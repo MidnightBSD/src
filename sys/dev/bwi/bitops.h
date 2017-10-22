@@ -29,7 +29,7 @@
  * OF SUCH DAMAGE.
  *
  * $DragonFly: src/sys/dev/netif/bwi/bitops.h,v 1.1 2007/09/08 06:15:54 sephe Exp $
- * $FreeBSD: stable/9/sys/dev/bwi/bitops.h 191762 2009-05-03 04:01:43Z imp $
+ * $FreeBSD: release/10.0.0/sys/dev/bwi/bitops.h 191762 2009-05-03 04:01:43Z imp $
  */
 
 #ifndef _BITOPS_H

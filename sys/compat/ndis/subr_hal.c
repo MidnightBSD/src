@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/compat/ndis/subr_hal.c 198786 2009-11-02 11:07:42Z rpaulo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/compat/ndis/subr_hal.c 232509 2012-03-04 17:08:43Z brucec $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -392,16 +392,18 @@ KfRaiseIrql(uint8_t irql)
 {
 	uint8_t			oldirql;
 
+	sched_pin();
 	oldirql = KeGetCurrentIrql();
 
 	/* I am so going to hell for this. */
 	if (oldirql > irql)
-		panic("IRQL_NOT_LESS_THAN");
+		panic("IRQL_NOT_LESS_THAN_OR_EQUAL");
 
-	if (oldirql != DISPATCH_LEVEL) {
-		sched_pin();
+	if (oldirql != DISPATCH_LEVEL) 
 		mtx_lock(&disp_lock[curthread->td_oncpu]);
-	}
+	else
+		sched_unpin();	
+
 /*printf("RAISE IRQL: %d %d\n", irql, oldirql);*/
 
 	return (oldirql);

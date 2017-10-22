@@ -27,7 +27,7 @@
 #include "opt_geom.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/part/g_part_ebr.c 232535 2012-03-05 04:51:22Z ae $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/part/g_part_ebr.c 251588 2013-06-09 23:34:26Z marcel $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -540,6 +540,8 @@ g_part_ebr_setunset(struct g_part_table *table, struct g_part_entry *baseentry,
 	struct g_part_ebr_entry *entry;
 	int changed;
 
+	if (baseentry == NULL)
+		return (ENODEV);
 	if (strcasecmp(attrib, "active") != 0)
 		return (EINVAL);
 

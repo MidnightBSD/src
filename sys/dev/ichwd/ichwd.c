@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ichwd/ichwd.c 231153 2012-02-07 19:40:52Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ichwd/ichwd.c 253475 2013-07-19 21:37:40Z jfv $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -191,7 +191,11 @@ static struct ichwd_device ichwd_devices[] = {
 	{ DEVICEID_PPT29,    "Intel Panther Point watchdog timer",	10 },
 	{ DEVICEID_PPT30,    "Intel Panther Point watchdog timer",	10 },
 	{ DEVICEID_PPT31,    "Intel Panther Point watchdog timer",	10 },
+	{ DEVICEID_LPT0,     "Intel Lynx Point watchdog timer",		10 },
+	{ DEVICEID_LPT1,     "Intel Lynx Point watchdog timer",		10 },
+	{ DEVICEID_LPT2,     "Intel Lynx Point watchdog timer",		10 },
 	{ DEVICEID_DH89XXCC_LPC,  "Intel DH89xxCC watchdog timer",	10 },
+	{ DEVICEID_COLETOCRK_LPC, "Intel Coleto Creek watchdog timer",  10 },
 	{ 0, NULL, 0 },
 };
 
@@ -320,8 +324,6 @@ ichwd_tmr_reload(struct ichwd_softc *sc)
 		ichwd_write_tco_1(sc, TCO_RLD, 1);
 	else
 		ichwd_write_tco_2(sc, TCO_RLD, 1);
-
-	ichwd_verbose_printf(sc->device, "timer reloaded\n");
 }
 
 /*

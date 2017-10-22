@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/ufs/ufs/extattr.h 191990 2009-05-11 15:33:26Z attilio $
+ * $FreeBSD: release/10.0.0/sys/ufs/ufs/extattr.h 227267 2011-11-06 20:16:50Z ed $
  */
 /*
  * Developed by the TrustedBSD Project.
@@ -114,10 +114,6 @@ struct extattr {
 #ifdef _KERNEL
 
 #include <sys/_sx.h>
-
-#ifdef MALLOC_DECLARE
-MALLOC_DECLARE(M_EXTATTR);
-#endif
 
 struct vnode;
 LIST_HEAD(ufs_extattr_list_head, ufs_extattr_list_entry);

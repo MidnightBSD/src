@@ -39,7 +39,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aic7xxx.h#85 $
  *
- * $FreeBSD: stable/9/sys/dev/aic7xxx/aic7xxx.h 168873 2007-04-19 18:53:52Z scottl $
+ * $FreeBSD: release/10.0.0/sys/dev/aic7xxx/aic7xxx.h 250460 2013-05-10 16:41:26Z eadler $
  */
 
 #ifndef _AIC7XXX_H_
@@ -768,7 +768,7 @@ struct ahc_syncrate {
 #define	AHC_ULTRA2_XFER_PERIOD 0x0a
 
 /*
- * Indexes into our table of syncronous transfer rates.
+ * Indexes into our table of synchronous transfer rates.
  */
 #define AHC_SYNCRATE_DT		0
 #define AHC_SYNCRATE_ULTRA2	1

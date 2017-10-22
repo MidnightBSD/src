@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/sbin/geom/class/virstor/gvirstor.8 237247 2012-06-19 02:54:54Z wblock $
+.\" $FreeBSD: release/10.0.0/sbin/geom/class/virstor/gvirstor.8 255977 2013-10-01 18:41:53Z pluknet $
 .\"
-.Dd January 24, 2011
+.Dd October 1, 2013
 .Dt GVIRSTOR 8
 .Os
 .Sh NAME
@@ -40,6 +40,10 @@
 .Ar prov ...
 .Nm
 .Cm stop
+.Op Fl fv
+.Ar name ...
+.Nm
+.Cm destroy
 .Op Fl fv
 .Ar name ...
 .Nm
@@ -107,6 +111,9 @@ Turn off an existing virtual device with the given
 .Ar name .
 This command does not touch on-disk metadata.
 As with other GEOM classes, stopped geoms cannot be started manually.
+.It Cm destroy
+Same as
+.Cm stop.
 .It Cm add
 Adds new components to existing virtual device with the given
 .Ar name .
@@ -154,7 +161,7 @@ size
 .Pq 4 MiB ,
 with two physical devices for backing storage.
 .Bd -literal -offset indent
-.No gvirstor label -v Ar mydata Ar /dev/ad4 Ar /dev/ad6
+.No gvirstor label -v Ar mydata Ar /dev/ada4 Ar /dev/ada6
 .No newfs Ar /dev/virstor/mydata
 .Ed
 .Pp
@@ -163,11 +170,11 @@ From now on, the virtual device will be available via the
 device entry.
 To add a new physical device / component to an active virstor device:
 .Bd -literal -offset indent
-.No gvirstor add Ar mydata Ar ad8
+.No gvirstor add Ar mydata Ar ada8
 .Ed
 .Pp
 This will add physical storage of
-.Ar ad8
+.Ar ada8
 to
 .Pa /dev/virstor/mydata
 device.

@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: rfcomm_sppd.c,v 1.4 2003/09/07 18:15:55 max Exp $
- * $FreeBSD: stable/9/usr.bin/bluetooth/rfcomm_sppd/rfcomm_sppd.c 188130 2009-02-04 22:04:06Z emax $
+ * $FreeBSD: release/10.0.0/usr.bin/bluetooth/rfcomm_sppd/rfcomm_sppd.c 188130 2009-02-04 22:04:06Z emax $
  */
 
 #include <sys/stat.h>

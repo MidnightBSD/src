@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2011 Qlogic Corporation
+ * Copyright (c) 2011-2013 Qlogic Corporation
  * All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/qlxgb/qla_os.h 227064 2011-11-03 21:20:22Z bz $
+ * $FreeBSD: release/10.0.0/sys/dev/qlxgb/qla_os.h 250340 2013-05-07 22:58:42Z davidcs $
  */
 /*
  * File: qla_os.h

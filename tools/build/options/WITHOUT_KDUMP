@@ -1,0 +1,5 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_KDUMP 240690 2012-09-19 11:38:37Z zeising $
+Set to not build
+.Xr kdump 1
+and
+.Xr truss 1 .

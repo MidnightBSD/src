@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/libexec/rtld-aout/shlib.c 201217 2009-12-29 21:07:17Z ed $
+ * $FreeBSD: release/10.0.0/libexec/rtld-aout/shlib.c 241737 2012-10-19 14:49:42Z ed $
  */
 
 #include <sys/param.h>
@@ -62,7 +62,7 @@
 char	 **search_dirs;
 int	n_search_dirs;
 
-const char	*standard_search_dirs[] = {
+static const char *standard_search_dirs[] = {
 	STANDARD_SEARCH_DIRS
 };
 
@@ -159,7 +159,7 @@ cmpndewey(int d1[], int n1, int d2[], int n2)
 	if (i == n2)
 		return 1;
 
-	errx(1, "cmpndewey: cant happen");
+	errx(1, "cmpndewey: can't happen");
 	return 0;
 }
 

@@ -32,7 +32,7 @@ static const char copyright[] =
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/adjkerntz/adjkerntz.c 163628 2006-10-23 10:48:19Z ru $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/adjkerntz/adjkerntz.c 253750 2013-07-28 18:44:17Z avg $");
 
 /*
  * Andrey A. Chernov   <ache@astral.msk.su>    Dec 20 1993
@@ -315,10 +315,7 @@ recalculate:
 			 * restoring disrtcset, since we don't clean up
 			 * anything.
 			 */
-			if (gettimeofday(&tv, (struct timezone *)NULL)) {
-				syslog(LOG_ERR, "gettimeofday: %m");
-				return 1;
-			}
+			(void)gettimeofday(&tv, NULL);
 			tv.tv_sec += diff;
 			stv = &tv;
 		}

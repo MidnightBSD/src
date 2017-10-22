@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libmemstat/memstat_uma.c 242365 2012-10-30 17:05:12Z mdf $
+ * $FreeBSD: release/10.0.0/lib/libmemstat/memstat_uma.c 251894 2013-06-18 04:50:20Z jeff $
  */
 
 #include <sys/param.h>
@@ -446,7 +446,7 @@ skip_percpu:
 				    kz.uk_ipers;
 			mtp->mt_byteslimit = mtp->mt_countlimit * mtp->mt_size;
 			mtp->mt_count = mtp->mt_numallocs - mtp->mt_numfrees;
-			for (ubp = LIST_FIRST(&uz.uz_full_bucket); ubp !=
+			for (ubp = LIST_FIRST(&uz.uz_buckets); ubp !=
 			    NULL; ubp = LIST_NEXT(&ub, ub_link)) {
 				ret = kread(kvm, ubp, &ub, sizeof(ub), 0);
 				mtp->mt_zonefree += ub.ub_cnt;

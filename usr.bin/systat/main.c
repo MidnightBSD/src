@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/systat/main.c 241213 2012-10-04 22:56:15Z melifaro $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/systat/main.c 246987 2013-02-19 12:57:07Z charnier $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/6/93";
@@ -192,7 +192,7 @@ labels(void)
 }
 
 void
-display()
+display(void)
 {
 	int i, j;
 

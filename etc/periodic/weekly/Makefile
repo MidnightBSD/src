@@ -1,8 +1,9 @@
-# $FreeBSD: stable/9/etc/periodic/weekly/Makefile 208320 2010-05-19 23:56:26Z jkim $
+# $FreeBSD: release/10.0.0/etc/periodic/weekly/Makefile 254974 2013-08-27 21:20:28Z jlh $
 
 .include <bsd.own.mk>
 
 FILES=	340.noid \
+	450.status-security \
 	999.local
 
 # NB: keep these sorted by MK_* knobs

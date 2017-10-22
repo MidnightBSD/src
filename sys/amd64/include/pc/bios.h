@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/amd64/include/pc/bios.h 247481 2013-02-28 18:22:41Z jhb $
+ * $FreeBSD: release/10.0.0/sys/amd64/include/pc/bios.h 241027 2012-09-28 11:59:32Z jhb $
  */
 
 #ifndef _MACHINE_PC_BIOS_H_

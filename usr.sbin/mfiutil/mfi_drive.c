@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/mfiutil/mfi_drive.c 237589 2012-06-26 03:05:17Z eadler $
+ * $FreeBSD: release/10.0.0/usr.sbin/mfiutil/mfi_drive.c 254906 2013-08-26 12:05:38Z sbruno $
  */
 
 #include <sys/types.h>
@@ -472,6 +472,20 @@ rebuild_drive(int ac, char **av)
 	return (drive_set_state(av[1], MFI_PD_STATE_REBUILD));
 }
 MFI_COMMAND(top, rebuild, rebuild_drive);
+
+static int
+syspd_drive(int ac, char **av)
+{
+
+	if (ac != 2) {
+		warnx("syspd: %s", ac > 2 ? "extra arguments" :
+		    "drive required");
+		return (EINVAL);
+	}
+
+	return (drive_set_state(av[1], MFI_PD_STATE_SYSTEM));
+}
+MFI_COMMAND(top, syspd, syspd_drive);
 
 static int
 start_rebuild(int ac, char **av)

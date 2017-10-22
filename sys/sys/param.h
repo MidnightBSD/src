@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.3 (Berkeley) 4/4/95
- * $FreeBSD: stable/9/sys/sys/param.h 248338 2013-03-15 19:32:37Z brooks $
+ * $FreeBSD: release/10.0.0/sys/sys/param.h 259067 2013-12-07 12:57:38Z gjb $
  */
 
 #ifndef _SYS_PARAM_H_
@@ -58,7 +58,7 @@
  *		in the range 5 to 9.
  */
 #undef __FreeBSD_version
-#define __FreeBSD_version 901504	/* Master, propagated to newvers */
+#define __FreeBSD_version 1000510	/* Master, propagated to newvers */
 
 /*
  * __FreeBSD_kernel__ indicates that this system uses the kernel of FreeBSD,
@@ -80,6 +80,8 @@
 #define	P_OSREL_SIGWAIT		700000
 #define	P_OSREL_SIGSEGV		700004
 #define	P_OSREL_MAP_ANON	800104
+
+#define	P_OSREL_MAJOR(x)	((x) / 100000)
 #endif
 
 #ifndef LOCORE
@@ -96,7 +98,7 @@
 
 #define	MAXCOMLEN	19		/* max command name remembered */
 #define	MAXINTERP	PATH_MAX	/* max interpreter file name length */
-#define	MAXLOGNAME	17		/* max login name length (incl. NUL) */
+#define	MAXLOGNAME	33		/* max login name length (incl. NUL) */
 #define	MAXUPRC		CHILD_MAX	/* max simultaneous processes */
 #define	NCARGS		ARG_MAX		/* max bytes for an exec function */
 #define	NGROUPS		(NGROUPS_MAX+1)	/* max number groups */
@@ -156,8 +158,8 @@
  * MCLBYTES must be no larger than PAGE_SIZE.
  */
 #ifndef	MSIZE
-#define MSIZE		256		/* size of an mbuf */
-#endif	/* MSIZE */
+#define	MSIZE		256		/* size of an mbuf */
+#endif
 
 #ifndef	MCLSHIFT
 #define MCLSHIFT	11		/* convert bytes to mbuf clusters */
@@ -211,7 +213,6 @@
 #define	PRIMASK	0x0ff
 #define	PCATCH	0x100		/* OR'd with pri for tsleep to check signals */
 #define	PDROP	0x200	/* OR'd with pri to stop re-entry of interlock mutex */
-#define	PBDRY	0x400	/* for PCATCH stop is done on the user boundary */
 
 #define	NZERO	0		/* default "nice" */
 
@@ -275,6 +276,7 @@
 #endif
 #define	nitems(x)	(sizeof((x)) / sizeof((x)[0]))
 #define	rounddown(x, y)	(((x)/(y))*(y))
+#define	rounddown2(x, y) ((x)&(~((y)-1)))          /* if y is power of two */
 #define	roundup(x, y)	((((x)+((y)-1))/(y))*(y))  /* to any y */
 #define	roundup2(x, y)	(((x)+((y)-1))&(~((y)-1))) /* if y is powers of two */
 #define powerof2(x)	((((x)-1)&(x))==0)

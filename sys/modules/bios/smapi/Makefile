@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/bios/smapi/Makefile 232930 2012-03-13 18:39:57Z dim $
+# $FreeBSD: release/10.0.0/sys/modules/bios/smapi/Makefile 232263 2012-02-28 18:30:18Z dim $
 #
 
 .PATH:  ${.CURDIR}/../../../i386/bios

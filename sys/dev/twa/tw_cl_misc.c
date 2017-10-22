@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/sys/dev/twa/tw_cl_misc.c 212008 2010-08-30 19:15:04Z delphij $
+ *	$FreeBSD: release/10.0.0/sys/dev/twa/tw_cl_misc.c 242827 2012-11-09 15:29:52Z rdivacky $
  */
 
 /*
@@ -641,7 +641,7 @@ tw_cli_dbg_printf(TW_UINT8 dbg_level,
 		va_end(ap);
 
 		tw_osl_strcpy(print_str + tw_osl_strlen(print_str), "\n");
-		tw_osl_dbg_printf(ctlr_handle, print_str);
+		tw_osl_dbg_printf(ctlr_handle, "%s", print_str);
 	}
 #endif /* TW_OSL_DEBUG */
 }

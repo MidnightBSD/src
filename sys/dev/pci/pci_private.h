@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/pci/pci_private.h 233393 2012-03-23 20:47:25Z jhb $
+ * $FreeBSD: release/10.0.0/sys/dev/pci/pci_private.h 257495 2013-11-01 06:33:17Z kib $
  *
  */
 
@@ -79,7 +79,11 @@ int		pci_enable_busmaster_method(device_t dev, device_t child);
 int		pci_disable_busmaster_method(device_t dev, device_t child);
 int		pci_enable_io_method(device_t dev, device_t child, int space);
 int		pci_disable_io_method(device_t dev, device_t child, int space);
+int		pci_find_cap_method(device_t dev, device_t child,
+		    int capability, int *capreg);
 int		pci_find_extcap_method(device_t dev, device_t child,
+		    int capability, int *capreg);
+int		pci_find_htcap_method(device_t dev, device_t child,
 		    int capability, int *capreg);
 int		pci_alloc_msi_method(device_t dev, device_t child, int *count);
 int		pci_alloc_msix_method(device_t dev, device_t child, int *count);
@@ -91,6 +95,8 @@ int		pci_msix_count_method(device_t dev, device_t child);
 struct resource	*pci_alloc_resource(device_t dev, device_t child, 
 		    int type, int *rid, u_long start, u_long end, u_long count,
 		    u_int flags);
+int		pci_release_resource(device_t dev, device_t child, int type,
+		    int rid, struct resource *r);
 int		pci_activate_resource(device_t dev, device_t child, int type,
 		    int rid, struct resource *r);
 int		pci_deactivate_resource(device_t dev, device_t child, int type,
@@ -102,6 +108,7 @@ struct pci_devinfo *pci_read_device(device_t pcib, int d, int b, int s, int f,
 		    size_t size);
 void		pci_print_verbose(struct pci_devinfo *dinfo);
 int		pci_freecfg(struct pci_devinfo *dinfo);
+void		pci_child_detached(device_t dev, device_t child);
 int		pci_child_location_str_method(device_t cbdev, device_t child,
 		    char *buf, size_t buflen);
 int		pci_child_pnpinfo_str_method(device_t cbdev, device_t child,
@@ -109,6 +116,7 @@ int		pci_child_pnpinfo_str_method(device_t cbdev, device_t child,
 int		pci_assign_interrupt_method(device_t dev, device_t child);
 int		pci_resume(device_t dev);
 int		pci_suspend(device_t dev);
+bus_dma_tag_t pci_get_dma_tag(device_t bus, device_t dev);
 
 /** Restore the config register state.  The state must be previously
  * saved with pci_cfg_save.  However, the pci bus driver takes care of

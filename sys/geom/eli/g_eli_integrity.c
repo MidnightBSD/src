@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/eli/g_eli_integrity.c 235498 2012-05-16 00:37:37Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/eli/g_eli_integrity.c 235419 2012-05-13 23:27:06Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

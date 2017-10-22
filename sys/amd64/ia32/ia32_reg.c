@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/amd64/ia32/ia32_reg.c 231979 2012-02-21 20:56:03Z kib $
+ * $FreeBSD: release/10.0.0/sys/amd64/ia32/ia32_reg.c 233125 2012-03-18 19:12:11Z tijl $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/amd64/ia32/ia32_reg.c 231979 2012-02-21 20:56:03Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/ia32/ia32_reg.c 233125 2012-03-18 19:12:11Z tijl $");
 
 #include "opt_compat.h"
 
@@ -65,7 +65,6 @@ __FBSDID("$FreeBSD: stable/9/sys/amd64/ia32/ia32_reg.c 231979 2012-02-21 20:56:0
 #include <compat/freebsd32/freebsd32_util.h>
 #include <compat/freebsd32/freebsd32_proto.h>
 #include <machine/fpu.h>
-#include <compat/ia32/ia32_reg.h>
 #include <machine/psl.h>
 #include <machine/segments.h>
 #include <machine/specialreg.h>

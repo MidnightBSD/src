@@ -33,7 +33,7 @@
  *	from: hp300: @(#)pmap.h 7.2 (Berkeley) 12/16/90
  *	from: @(#)pmap.h        7.4 (Berkeley) 5/12/91
  *	from: FreeBSD: src/sys/i386/include/pmap.h,v 1.70 2000/11/30
- * $FreeBSD: stable/9/sys/sparc64/include/pmap.h 240760 2012-09-20 18:21:29Z alc $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/pmap.h 253940 2013-08-04 21:17:05Z attilio $
  */
 
 #ifndef	_MACHINE_PMAP_H_
@@ -56,7 +56,6 @@ struct md_page {
 	struct	pmap *pmap;
 	uint32_t colors[DCACHE_COLORS];
 	int32_t	color;
-	uint32_t flags;
 };
 
 struct pmap {
@@ -66,11 +65,6 @@ struct pmap {
 	cpuset_t pm_active;
 	u_int	pm_context[MAXCPU];
 	struct	pmap_statistics pm_stats;
-};
-
-struct tte_list_lock {
-	struct rwlock lock;
-	char padding[CACHE_LINE_SIZE - sizeof(struct rwlock)];
 };
 
 #define	PMAP_LOCK(pmap)		mtx_lock(&(pmap)->pm_mtx)
@@ -108,8 +102,7 @@ void	pmap_set_kctx(void);
 
 extern	struct pmap kernel_pmap_store;
 #define	kernel_pmap	(&kernel_pmap_store)
-extern	struct tte_list_lock tte_list_global;
-#define	tte_list_global_lock	tte_list_global.lock
+extern	struct rwlock_padalign tte_list_global_lock;
 extern	vm_paddr_t phys_avail[];
 extern	vm_offset_t virtual_avail;
 extern	vm_offset_t virtual_end;

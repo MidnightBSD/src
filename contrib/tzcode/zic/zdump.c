@@ -5,7 +5,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/contrib/tzcode/zic/zdump.c 198831 2009-11-02 23:02:11Z edwin $";
+  "$FreeBSD: release/10.0.0/contrib/tzcode/zic/zdump.c 228342 2011-12-08 02:40:46Z eadler $";
 static char	elsieid[] = "@(#)zdump.c	8.10";
 #endif /* not lint */
 
@@ -260,6 +260,7 @@ char *	argv[];
 	register struct tm *	tmp;
 	register struct tm *	newtmp;
 
+	progname=argv[0];
 	INITIALIZE(cutlotime);
 	INITIALIZE(cuthitime);
 #if HAVE_GETTEXT

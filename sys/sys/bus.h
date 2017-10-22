@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/bus.h 249374 2013-04-11 18:47:16Z andreast $
+ * $FreeBSD: release/10.0.0/sys/sys/bus.h 252315 2013-06-27 20:21:54Z jhb $
  */
 
 #ifndef _SYS_BUS_H_
@@ -178,11 +178,8 @@ typedef void driver_intr_t(void*);
  * spls implicit in names like INTR_TYPE_TTY. In the meantime, don't
  * confuse things by renaming them (Grog, 18 July 2000).
  *
- * We define this in terms of bits because some devices may belong
- * to multiple classes (and therefore need to be included in
- * multiple interrupt masks, which is what this really serves to
- * indicate. Buses which do interrupt remapping will want to
- * change their type to reflect what sort of devices are underneath.
+ * Buses which do interrupt remapping will want to change their type
+ * to reflect what sort of devices are underneath.
  */
 enum intr_type {
 	INTR_TYPE_TTY = 1,
@@ -276,6 +273,9 @@ struct resource *
 int	resource_list_release(struct resource_list *rl,
 			      device_t bus, device_t child,
 			      int type, int rid, struct resource *res);
+int	resource_list_release_active(struct resource_list *rl,
+				     device_t bus, device_t child,
+				     int type);
 struct resource *
 	resource_list_reserve(struct resource_list *rl,
 			      device_t bus, device_t child,

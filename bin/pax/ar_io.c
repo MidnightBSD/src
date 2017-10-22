@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)ar_io.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/pax/ar_io.c 222177 2011-05-22 14:03:38Z uqs $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/pax/ar_io.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -85,7 +85,6 @@ const char *gzip_program;		/* name of gzip program */
 static pid_t zpid = -1;			/* pid of child process */
 
 static int get_phys(void);
-extern sigset_t s_mask;
 static void ar_start_gzip(int, const char *, int);
 
 /*

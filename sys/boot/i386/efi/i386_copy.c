@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/i386/efi/i386_copy.c 206376 2010-04-07 18:16:05Z rpaulo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/i386/efi/i386_copy.c 206376 2010-04-07 18:16:05Z rpaulo $");
 
 /*
  * MD primitives supporting placement of module data 

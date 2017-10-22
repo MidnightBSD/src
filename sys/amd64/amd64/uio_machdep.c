@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/amd64/amd64/uio_machdep.c 218195 2011-02-02 16:35:10Z mdf $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/amd64/uio_machdep.c 218195 2011-02-02 16:35:10Z mdf $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

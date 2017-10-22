@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/isci/scil/scu_bios_definitions.h 240579 2012-09-17 00:44:16Z eadler $
+ * $FreeBSD: release/10.0.0/sys/dev/isci/scil/scu_bios_definitions.h 240518 2012-09-14 21:28:56Z eadler $
  */
 #ifndef _SCU_BIOS_DEFINITIONS_H_
 #define _SCU_BIOS_DEFINITIONS_H_

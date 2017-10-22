@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/pc98/cbus/sio.c 235405 2012-05-13 17:04:46Z avg $
+ * $FreeBSD: release/10.0.0/sys/pc98/cbus/sio.c 228631 2011-12-17 15:08:43Z avg $
  *	from: @(#)com.c	7.5 (Berkeley) 5/16/91
  *	from: i386/isa sio.c,v 1.234
  */

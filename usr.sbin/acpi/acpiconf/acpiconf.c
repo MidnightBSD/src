@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  *	$Id: acpiconf.c,v 1.5 2000/08/08 14:12:19 iwasaki Exp $
- *	$FreeBSD: stable/9/usr.sbin/acpi/acpiconf/acpiconf.c 211763 2010-08-24 18:07:59Z mav $
+ *	$FreeBSD: release/10.0.0/usr.sbin/acpi/acpiconf/acpiconf.c 211763 2010-08-24 18:07:59Z mav $
  */
 
 #include <sys/param.h>

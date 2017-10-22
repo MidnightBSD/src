@@ -25,9 +25,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/sbin/hastctl/hastctl.8 237247 2012-06-19 02:54:54Z wblock $
+.\" $FreeBSD: release/10.0.0/sbin/hastctl/hastctl.8 248291 2013-03-14 22:29:37Z marck $
 .\"
-.Dd April 10, 2011
+.Dd March 14, 2013
 .Dt HASTCTL 8
 .Os
 .Sh NAME
@@ -48,6 +48,11 @@
 .Op Fl c Ar config
 .Aq init | primary | secondary
 .Ar all | name ...
+.Nm
+.Cm list
+.Op Fl d
+.Op Fl c Ar config
+.Op Ar all | name ...
 .Nm
 .Cm status
 .Op Fl d
@@ -139,8 +144,11 @@ GEOM provider
 .Pa /dev/hast/<name>
 will not be created on secondary node.
 .El
+.It Cm list
+Present verbose status of the configured resources.
 .It Cm status
-Present status of the configured resources.
+Present terse (and more easy machine-parseable) status of the configured
+resources.
 .It Cm dump
 Dump metadata stored on local component for the configured resources.
 .El

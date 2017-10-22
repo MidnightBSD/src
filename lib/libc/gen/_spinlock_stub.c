@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/_spinlock_stub.c 205996 2010-03-31 18:36:04Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/_spinlock_stub.c 205996 2010-03-31 18:36:04Z delphij $");
 
 #include <stdio.h>
 

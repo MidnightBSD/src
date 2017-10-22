@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/ksyms/ksyms.c 241088 2012-10-01 06:42:07Z hselasky $
+ * $FreeBSD: release/10.0.0/sys/dev/ksyms/ksyms.c 239303 2012-08-15 16:19:39Z hselasky $
  */
 
 #include <sys/param.h>
@@ -74,7 +74,7 @@ static	d_mmap_t	ksyms_mmap;
 
 static struct cdevsw ksyms_cdevsw = {
     .d_version	=	D_VERSION,
-    .d_flags	=	D_PSEUDO | D_TRACKCLOSE,
+    .d_flags	=	D_TRACKCLOSE,
     .d_open	=	ksyms_open,
     .d_close	=	ksyms_close,
     .d_read	=	ksyms_read,

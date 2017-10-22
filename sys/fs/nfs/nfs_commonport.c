@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/fs/nfs/nfs_commonport.c 240977 2012-09-26 23:07:00Z rmacklem $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfs/nfs_commonport.c 249592 2013-04-17 21:00:22Z ken $");
 
 /*
  * Functions that need to be different for different versions of BSD
@@ -106,6 +106,12 @@ MALLOC_DEFINE(M_NEWNFSDIROFF, "NFSCL diroffdiroff",
     "New NFS directory offset data");
 MALLOC_DEFINE(M_NEWNFSDROLLBACK, "NFSD rollback",
     "New NFS local lock rollback");
+MALLOC_DEFINE(M_NEWNFSLAYOUT, "NFSCL layout", "NFSv4.1 Layout");
+MALLOC_DEFINE(M_NEWNFSFLAYOUT, "NFSCL flayout", "NFSv4.1 File Layout");
+MALLOC_DEFINE(M_NEWNFSDEVINFO, "NFSCL devinfo", "NFSv4.1 Device Info");
+MALLOC_DEFINE(M_NEWNFSSOCKREQ, "NFSCL sockreq", "NFS Sock Req");
+MALLOC_DEFINE(M_NEWNFSCLDS, "NFSCL session", "NFSv4.1 Session");
+MALLOC_DEFINE(M_NEWNFSLAYRECALL, "NFSCL layrecall", "NFSv4.1 Layout Recall");
 
 /*
  * Definition of mutex locks.
@@ -126,11 +132,11 @@ static int nfssvc_call(struct thread *, struct nfssvc_args *, struct ucred *);
 /*
  * These architectures don't need re-alignment, so just return.
  */
-void
-newnfs_realign(struct mbuf **pm)
+int
+newnfs_realign(struct mbuf **pm, int how)
 {
 
-	return;
+	return (0);
 }
 #else	/* !__NO_STRICT_ALIGNMENT */
 /*
@@ -149,8 +155,8 @@ newnfs_realign(struct mbuf **pm)
  *	with TCP.  Use vfs.nfs.realign_count and realign_test to check this.
  *
  */
-void
-newnfs_realign(struct mbuf **pm)
+int
+newnfs_realign(struct mbuf **pm, int how)
 {
 	struct mbuf *m, *n;
 	int off, space;
@@ -167,11 +173,11 @@ newnfs_realign(struct mbuf **pm)
 			space = m_length(m, NULL);
 			if (space >= MINCLSIZE) {
 				/* NB: m_copyback handles space > MCLBYTES */
-				n = m_getcl(M_WAITOK, MT_DATA, 0);
+				n = m_getcl(how, MT_DATA, 0);
 			} else
-				n = m_get(M_WAITOK, MT_DATA);
+				n = m_get(how, MT_DATA);
 			if (n == NULL)
-				return;
+				return (ENOMEM);
 			/*
 			 * Align the remainder of the mbuf chain.
 			 */
@@ -189,6 +195,8 @@ newnfs_realign(struct mbuf **pm)
 		}
 		pm = &m->m_next;
 	}
+
+	return (0);
 }
 #endif	/* __NO_STRICT_ALIGNMENT */
 
@@ -211,7 +219,7 @@ nfsrv_lookupfilename(struct nameidata *ndp, char *fname, NFSPROC_T *p)
 {
 	int error;
 
-	NDINIT(ndp, LOOKUP, FOLLOW | LOCKLEAF | MPSAFE, UIO_USERSPACE, fname,
+	NDINIT(ndp, LOOKUP, FOLLOW | LOCKLEAF, UIO_USERSPACE, fname,
 	    p);
 	error = namei(ndp);
 	if (!error) {

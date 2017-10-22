@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)sysconf.c	8.2 (Berkeley) 3/20/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/sysconf.c 238136 2012-07-05 15:38:32Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/sysconf.c 239347 2012-08-17 02:26:31Z davidxu $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -359,11 +359,7 @@ yesno:
 		return (_POSIX_CLOCK_SELECTION);
 #endif
 	case _SC_CPUTIME:
-#if _POSIX_CPUTIME == 0
-#error "_POSIX_CPUTIME"
-#else
 		return (_POSIX_CPUTIME);
-#endif
 #ifdef notdef
 	case _SC_FILE_LOCKING:
 		/*

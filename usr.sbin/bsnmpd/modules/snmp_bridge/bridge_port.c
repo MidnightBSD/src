@@ -26,7 +26,7 @@
  * Bridge MIB implementation for SNMPd.
  * Bridge ports.
  *
- * $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_port.c 171791 2007-08-08 19:27:50Z syrinx $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_port.c 228990 2011-12-30 10:58:14Z uqs $
  */
 
 #include <sys/queue.h>
@@ -87,7 +87,7 @@ bridge_port_memif_free(struct bridge_ports *headp,
 /*
  * Insert a port entry in the base port TAILQ starting to search
  * for its place from the position of the first bridge port for the bridge
- * interface. Update the first bridge port if neccessary.
+ * interface. Update the first bridge port if necessary.
  */
 static void
 bridge_port_insert_at(struct bridge_ports *headp,
@@ -119,7 +119,7 @@ bridge_port_insert_at(struct bridge_ports *headp,
 }
 
 /*
- * Find a port entry's possition in the ports list according
+ * Find a port entry's position in the ports list according
  * to it's parent bridge interface name. Returns a NULL if
  * we should be at the TAILQ head, otherwise the entry after
  * which we should be inserted.

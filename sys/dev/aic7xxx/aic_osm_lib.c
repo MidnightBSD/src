@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/aic7xxx/aic_osm_lib.c 172836 2007-10-20 23:23:23Z julian $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/aic7xxx/aic_osm_lib.c 239047 2012-08-05 08:08:34Z eadler $");
 
 static void	aic_recovery_thread(void *arg);
 
@@ -54,9 +54,6 @@ aic_set_recoveryscb(struct aic_softc *aic, struct scb *scb)
 		 * them after we've successfully fixed this problem.
 		 */
 		LIST_FOREACH(list_scb, &aic->pending_scbs, pending_links) {
-			union ccb *ccb;
-
-			ccb = list_scb->io_ctx;
 			callout_stop(&scb->io_timer);
 		}
 	}

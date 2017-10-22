@@ -31,14 +31,12 @@
 static char sccsid[] = "@(#)send.c	8.2 (Berkeley) 2/21/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/net/send.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/send.c 251575 2013-06-09 14:31:59Z jilles $");
 
-#include "namespace.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 
 #include <stddef.h>
-#include "un-namespace.h"
 
 ssize_t
 send(s, msg, len, flags)
@@ -46,5 +44,9 @@ send(s, msg, len, flags)
 	size_t len;
 	const void *msg;
 {
-	return (_sendto(s, msg, len, flags, NULL, 0));
+	/*
+	 * POSIX says send() shall be a cancellation point, so call the
+	 * cancellation-enabled sendto() and not _sendto().
+	 */
+	return (sendto(s, msg, len, flags, NULL, 0));
 }

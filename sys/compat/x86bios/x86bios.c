@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/compat/x86bios/x86bios.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/compat/x86bios/x86bios.c 227309 2011-11-07 15:43:11Z ed $");
 
 #include "opt_x86bios.h"
 

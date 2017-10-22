@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_read_format_iso_Z.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_format_iso_Z.c 248616 2013-03-22 13:36:03Z mm $");
 
 static void
 test1(void)
@@ -36,22 +36,23 @@ test1(void)
 
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_support_compression_all(a));
+	    archive_read_support_filter_all(a));
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_support_format_all(a));
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_open_filename(a, name, 512));
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_next_header(a, &ae));
-	assertEqualInt(archive_compression(a),
-	    ARCHIVE_COMPRESSION_COMPRESS);
+	assertEqualInt(1, archive_file_count(a));
+	assertEqualInt(archive_filter_code(a, 0),
+	    ARCHIVE_FILTER_COMPRESS);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_ISO9660);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 
-static
-void test2(void)
+static void
+test2(void)
 {
 	struct archive_entry *ae;
 	struct archive *a;
@@ -61,7 +62,7 @@ void test2(void)
 
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_support_compression_all(a));
+	    archive_read_support_filter_all(a));
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_support_format_all(a));
 	assertEqualIntA(a, ARCHIVE_OK,
@@ -83,11 +84,12 @@ void test2(void)
 	assertEqualString("C/D", archive_entry_pathname(ae));
 	assertEqualIntA(a, ARCHIVE_EOF,
 	    archive_read_next_header(a, &ae));
-	assertEqualInt(archive_compression(a),
-	    ARCHIVE_COMPRESSION_COMPRESS);
+	assertEqualInt(5, archive_file_count(a));
+	assertEqualInt(archive_filter_code(a, 0),
+	    ARCHIVE_FILTER_COMPRESS);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_ISO9660);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 
 DEFINE_TEST(test_read_format_iso_Z)
@@ -95,5 +97,3 @@ DEFINE_TEST(test_read_format_iso_Z)
 	test1();
 	test2();
 }
-
-

@@ -1,14 +1,17 @@
-# $FreeBSD: stable/9/release/doc/en_US.ISO8859-1/Makefile 229979 2012-01-11 20:04:52Z hrs $
+# $FreeBSD: release/10.0.0/release/doc/en_US.ISO8859-1/Makefile 259807 2013-12-24 04:27:11Z gjb $
 
 RELN_ROOT?= ${.CURDIR}/..
 
 SUBDIR = relnotes
 SUBDIR+= hardware
+SUBDIR+= installation
 SUBDIR+= readme
 SUBDIR+= errata
-SUBDIR+= installation
 
 COMPAT_SYMLINK = en
+
+LANGCODE=en_US.ISO8859-1
+_LANGCODE=en_US.ISO8859-1
 
 .include "${RELN_ROOT}/share/mk/doc.relnotes.mk"
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

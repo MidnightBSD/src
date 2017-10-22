@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/lib/libc/ia64/Symbol.map 174759 2007-12-18 23:46:32Z das $
+ * $FreeBSD: release/10.0.0/lib/libc/ia64/Symbol.map 226606 2011-10-21 06:40:36Z das $
  */
 
 /*
@@ -23,7 +23,6 @@ FBSD_1.0 {
 	__infinity;
 	__nan;
 	makecontext;
-	modf;
 	setjmp;
 	longjmp;
 	sigsetjmp;

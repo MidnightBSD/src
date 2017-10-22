@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/econa/econa_var.h 201468 2010-01-04 03:35:45Z rpaulo $
+ * $FreeBSD: release/10.0.0/sys/arm/econa/econa_var.h 201468 2010-01-04 03:35:45Z rpaulo $
  */
 
 #ifndef	_ARM_ECONA_VAR_H

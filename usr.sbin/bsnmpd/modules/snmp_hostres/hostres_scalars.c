@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_scalars.c 241995 2012-10-24 10:30:40Z glebius $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_scalars.c 240354 2012-09-11 08:33:16Z glebius $
  */
 
 /*
@@ -170,8 +170,8 @@ OS_getSystemDate(struct snmp_value *value)
 
 /**
  * Get kernel boot path. For FreeBSD it seems that no arguments are
- * present. Returns NULL if an error occured. The returned data is a
- * pointer to a global strorage.
+ * present. Returns NULL if an error occurred. The returned data is a
+ * pointer to a global storage.
  */
 int
 OS_getSystemInitialLoadParameters(u_char **params)

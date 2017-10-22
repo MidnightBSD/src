@@ -9,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/xargs/strnsubst.c 153917 2005-12-30 23:22:50Z jmallett $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/xargs/strnsubst.c 245050 2013-01-05 00:23:58Z delphij $");
 
 #include <err.h>
 #include <stdlib.h>
@@ -48,7 +48,7 @@ strnsubst(char **str, const char *match, const char *replstr, size_t maxsize)
 		match = NULL;
 		maxsize = strlen(s1) + 1;
 	}
-	s2 = calloc(maxsize, 1);
+	s2 = calloc(1, maxsize);
 	if (s2 == NULL)
 		err(1, "calloc");
 

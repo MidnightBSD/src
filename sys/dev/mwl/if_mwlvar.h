@@ -27,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/9/sys/dev/mwl/if_mwlvar.h 199559 2009-11-19 22:06:40Z jhb $
+ * $FreeBSD: release/10.0.0/sys/dev/mwl/if_mwlvar.h 234324 2012-04-15 20:29:39Z adrian $
  */
 
 /*
@@ -187,10 +187,10 @@ struct mwl_bastate {
 };
 
 static __inline__ void
-mwl_bastream_setup(struct mwl_bastate *bas, int ac, int txq)
+mwl_bastream_setup(struct mwl_bastate *bas, int tid, int txq)
 {
 	bas->txq = txq;
-	bas->qos = htole16(WME_AC_TO_TID(ac) | IEEE80211_QOS_ACKPOLICY_BA);
+	bas->qos = htole16(tid | IEEE80211_QOS_ACKPOLICY_BA);
 }
 
 static __inline__ void

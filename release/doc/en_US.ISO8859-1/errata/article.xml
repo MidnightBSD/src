@@ -1,3 +1,9 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V5.0-Based Extension//EN"
+        "../../../share/xml/freebsd50.dtd" [
+<!ENTITY % release PUBLIC "-//FreeBSD//ENTITIES Release Specification//EN" "release.ent">
+%release;
+]>
 <!--
 	FreeBSD errata document.  Unlike some of the other RELNOTESng
 	files, this file should remain as a single SGML file, so that
@@ -9,58 +15,30 @@
 	not be the one that received the last change in the document.)
 
 -->
-<?xml version="1.0" encoding="iso-8859-1" standalone="no"?>
-<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V4.2-Based Extension//EN" [
-<!ENTITY % entities PUBLIC "-//FreeBSD//ENTITIES DocBook FreeBSD Entity Set//EN">
-%entities;
+<article xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0">
+  <info><title>&os; &release; Errata </title>
+    
 
-<!ENTITY % release PUBLIC "-//FreeBSD//ENTITIES Release Specification//EN">
-%release;
-]>
-<article>
-  <articleinfo>
-    <title>&os;
-<![ %release.type.current [
-    &release.current;
-]]>
-<![ %release.type.snapshot [
-    &release.prev;
-]]>
-<![ %release.type.release [
-    &release.current;
-]]>
-    Errata</title>
-
-    <corpauthor>
+    <author><orgname>
     The &os; Project
-    </corpauthor>
+    </orgname></author>
 
-    <pubdate>$FreeBSD: stable/9/release/doc/en_US.ISO8859-1/errata/article.xml 244671 2012-12-25 06:07:34Z hrs $</pubdate>
+    <pubdate>$FreeBSD: release/10.0.0/release/doc/en_US.ISO8859-1/errata/article.xml 260657 2014-01-14 23:58:50Z hrs $</pubdate>
 
     <copyright>
-      <year>2012</year>
+      <year>2014</year>
       <holder role="mailto:doc@FreeBSD.org">The &os; Documentation Project</holder>
     </copyright>
 
-    <legalnotice id="trademarks" role="trademarks">
+    <legalnotice xml:id="trademarks" role="trademarks">
       &tm-attrib.freebsd;
       &tm-attrib.intel;
       &tm-attrib.sparc;
       &tm-attrib.general;
     </legalnotice>
-  </articleinfo>
 
   <abstract>
-    <para>This document lists errata items for &os;
-<![ %release.type.current [
-      &release.current;,
-]]>
-<![ %release.type.snapshot [
-      &release.prev;,
-]]>
-<![ %release.type.release [
-      &release.current;,
-]]>
+    <para>This document lists errata items for &os; &release;,
       containing significant information discovered after the release
       or too late in the release cycle to be otherwise included in the
       release documentation.
@@ -70,33 +48,16 @@
       should always be consulted before installing this version of
       &os;.</para>
 
-    <para>This errata document for &os;
-<![ %release.type.current [
-      &release.current;
-]]>
-<![ %release.type.snapshot [
-      &release.prev;
-]]>
-<![ %release.type.release [
-      &release.current;
-]]>
+    <para>This errata document for &os; &release;
       will be maintained until the release of &os; &release.next;.</para>
   </abstract>
+  </info>
 
-  <sect1 id="intro">
+  <sect1 xml:id="intro">
     <title>Introduction</title>
 
     <para>This errata document contains <quote>late-breaking news</quote>
-      about &os;
-<![ %release.type.current [
-      &release.current;.
-]]>
-<![ %release.type.snapshot [
-      &release.prev;.
-]]>
-<![ %release.type.release [
-      &release.current;.
-]]>
+      about &os; &release;
       Before installing this version, it is important to consult this
       document to learn about any post-release discoveries or problems
       that may already have been found and fixed.</para>
@@ -106,132 +67,44 @@
       out of date by definition, but other copies are kept updated on
       the Internet and should be consulted as the <quote>current
       errata</quote> for this release.  These other copies of the
-      errata are located at <ulink
-      url="http://www.FreeBSD.org/releases/"></ulink>, plus any sites
+      errata are located at <uri xlink:href="http://www.FreeBSD.org/releases/">http://www.FreeBSD.org/releases/</uri>, plus any sites
       which keep up-to-date mirrors of this location.</para>
 
     <para>Source and binary snapshots of &os; &release.branch; also
       contain up-to-date copies of this document (as of the time of
       the snapshot).</para>
 
-    <para>For a list of all &os; CERT security advisories, see <ulink
-      url="http://www.FreeBSD.org/security/"></ulink> or <ulink
-      url="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/"></ulink>.</para>
+    <para>For a list of all &os; CERT security advisories, see <uri xlink:href="http://www.FreeBSD.org/security/">http://www.FreeBSD.org/security/</uri> or <uri xlink:href="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/">ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/</uri>.</para>
 
   </sect1>
 
-  <sect1 id="security">
+  <sect1 xml:id="security">
     <title>Security Advisories</title>
 
-    <para>Problems described in the following security advisories have
-      been fixed in &release.current;.  For more information, consult
-      the individual advisories available from <ulink
-	url="http://security.FreeBSD.org/"></ulink>.</para>
+    <para releasetype="current">No advisories.</para>
 
-    <informaltable frame="none" pgwide="1">
-      <tgroup cols="3">
-	<colspec colwidth="1*" />
-	<colspec colwidth="1*" />
-	<colspec colwidth="3*" />
-	<thead>
-	  <row>
-	    <entry>Advisory</entry>
-	    <entry>Date</entry>
-	    <entry>Topic</entry>
-	  </row>
-	</thead>
+    <para releasetype="release">No advisories.</para>
 
-	<tbody>
-	  <row>
-	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:01.openssl.asc"
-		>SA-12:01.openssl</ulink></entry>
-	    <entry>3&nbsp;May&nbsp;2012</entry>
-	    <entry><para>OpenSSL multiple vulnerabilities</para></entry>
-	  </row>
-
-	  <row>
-	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:02.crypt.asc"
-		>SA-12:02.crypt</ulink></entry>
-	    <entry>30&nbsp;May&nbsp;2012</entry>
-	    <entry><para>Incorrect <function>crypt()</function> hashing</para></entry>
-	  </row>
-
-	  <row>
-	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:03.bind.asc"
-		>SA-12:03.bind</ulink></entry>
-	    <entry>12&nbsp;June&nbsp;2012</entry>
-	    <entry><para>Incorrect handling of zero-length RDATA fields in &man.named.8;</para></entry>
-	  </row>
-
-	  <row>
-	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:04.sysret.asc"
-		>SA-12:04.sysret</ulink></entry>
-	    <entry>12&nbsp;June&nbsp;2012</entry>
-	    <entry><para>Privilege escalation when returning from kernel</para></entry>
-	  </row>
-
-	  <row>
-	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:05.bind.asc"
-		>SA-12:05.bind</ulink></entry>
-	    <entry>6&nbsp;August&nbsp;2012</entry>
-	    <entry><para>&man.named.8; DNSSEC validation Denial of Service</para></entry>
-	  </row>
-
-	  <row>
-	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:06.bind.asc"
-		>SA-12:06.bind</ulink></entry>
-	    <entry>22&nbsp;November&nbsp;2012</entry>
-	    <entry><para>Multiple Denial of Service vulnerabilities with &man.named.8;</para></entry>
-	  </row>
-
-	  <row>
-	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:07.hostapd.asc"
-		>SA-12:07.hostapd</ulink></entry>
-	    <entry>22&nbsp;November&nbsp;2012</entry>
-	    <entry><para>Insufficient message length validation for EAP-TLS messages</para></entry>
-	  </row>
-
-	  <row>
-	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:08.linux.asc"
-		>SA-12:08.linux</ulink></entry>
-	    <entry>22&nbsp;November&nbsp;2012</entry>
-	    <entry><para>Linux compatibility layer input validation error</para></entry>
-	  </row>
-	</tbody>
-      </tgroup>
-    </informaltable>
+    <para releasetype="snapshot">No advisories.</para>
   </sect1>
 
-  <sect1 id="late-news">
+  <sect1 xml:id="open-issues">
+    <title>Open Issues</title>
+
+    <para releasetype="current">No open issues.</para>
+
+    <para releasetype="release">No open issues.</para>
+
+    <para releasetype="snapshot">No open issues.</para>
+  </sect1>
+
+  <sect1 xml:id="late-news">
     <title>Late-Breaking News</title>
 
-    <para>[November 2, 2012] The current &man.mfi.4; driver has an
-      overflow bug when handling disks larger than 2^32 sectors in
-      SYSPD volumes, also known as JBODs, which will cause data
-      corruption.  This bug has been fixed on this &os;-CURRENT but
-      was too late for inclusion in this release.  An Errata Notice
-      for &release.current; is planned.</para>
+    <para releasetype="current">No news.</para>
 
-    <para>[December 25, 2012] The Installtion Instructions had the
-      following wrong information about upgrading procedure.  All of
-      them have been fixed in the online version.</para>
+    <para releasetype="release">No news.</para>
 
-    <itemizedlist>
-      <listitem>
-	<para>The link URL of <quote>upgrading section in the Release
-	    Notes</quote>, branch names where upcoming Security
-	  Advisories or Errata Notices will be applied, and a
-	  command line argument of &man.freebsd-update.8; were ones
-	  for 9.0-RELEASE, not for &release.current;.</para>
-      </listitem>
-
-      <listitem>
-	<para>The list of releases supported by &man.freebsd-update.8;
-	  utility were incorrect.  For 9.X, The following versions are
-	  supported: <literal>9.0-RELEASE</literal>,
-	  <literal>9.1-BETA1</literal>, and
-	  <literal>9.1-RC[123]</literal>.</para>
-      </listitem>
-    </itemizedlist>
+    <para releasetype="snapshot">No news.</para>
   </sect1>
 </article>

@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net80211/ieee80211_crypto_ccmp.c 209636 2010-07-01 20:50:12Z bschmidt $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/net80211/ieee80211_crypto_ccmp.c 209636 2010-07-01 20:50:12Z bschmidt $");
 
 /*
  * IEEE 802.11i AES-CCMP crypto support.

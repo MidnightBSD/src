@@ -27,7 +27,7 @@
  *      Dave Airlie <airlied@linux.ie>
  *      Jesse Barnes <jesse.barnes@intel.com>
  *
- * $FreeBSD: stable/9/sys/dev/drm2/drm_fb_helper.h 235783 2012-05-22 11:07:44Z kib $
+ * $FreeBSD: release/10.0.0/sys/dev/drm2/drm_fb_helper.h 235783 2012-05-22 11:07:44Z kib $
  */
 #ifndef DRM_FB_HELPER_H
 #define DRM_FB_HELPER_H

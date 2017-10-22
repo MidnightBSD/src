@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/9/sys/cddl/dev/dtrace/amd64/dtrace_isa.c 211608 2010-08-22 10:53:32Z rpaulo $
+ * $FreeBSD: release/10.0.0/sys/cddl/dev/dtrace/amd64/dtrace_isa.c 251238 2013-06-02 01:05:36Z markj $
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -398,7 +398,7 @@ dtrace_getarg(int arg, int aframes)
 	}
 
 	arg -= (inreg + 1);
-	stack = (uintptr_t *)&fp[1];
+	stack = (uintptr_t *)fp + 2;
 
 load:
 	DTRACE_CPUFLAG_SET(CPU_DTRACE_NOFAULT);

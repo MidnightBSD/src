@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/compat/ndis/ndis_var.h 216242 2010-12-06 20:54:53Z bschmidt $
+ * $FreeBSD: release/10.0.0/sys/compat/ndis/ndis_var.h 254842 2013-08-25 10:57:09Z andre $
  */
 
 #ifndef _NDIS_VAR_H_
@@ -1743,7 +1743,7 @@ extern int ndis_halt_nic(void *);
 extern int ndis_shutdown_nic(void *);
 extern int ndis_pnpevent_nic(void *, int);
 extern int ndis_init_nic(void *);
-extern void ndis_return_packet(void *, void *);
+extern int ndis_return_packet(struct mbuf *, void *, void *);
 extern int ndis_init_dma(void *);
 extern int ndis_destroy_dma(void *);
 extern int ndis_create_sysctls(void *);

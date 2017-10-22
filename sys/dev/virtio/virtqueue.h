@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2011, Bryan Venteicher <bryanv@daemoninthecloset.org>
+ * Copyright (c) 2011, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/virtio/virtqueue.h 246582 2013-02-09 06:11:45Z bryanv $
+ * $FreeBSD: release/10.0.0/sys/dev/virtio/virtqueue.h 255109 2013-09-01 04:16:43Z bryanv $
  */
 
 #ifndef _VIRTIO_VIRTQUEUE_H
@@ -39,7 +39,17 @@ struct sglist;
 #define VIRTIO_RING_F_EVENT_IDX		(1 << 29)
 
 /* Device callback for a virtqueue interrupt. */
-typedef int virtqueue_intr_t(void *);
+typedef void virtqueue_intr_t(void *);
+
+/*
+ * Hint on how long the next interrupt should be postponed. This is
+ * only used when the EVENT_IDX feature is negotiated.
+ */
+typedef enum {
+	VQ_POSTPONE_SHORT,
+	VQ_POSTPONE_LONG,
+	VQ_POSTPONE_EMPTIED	/* Until all available desc are used. */
+} vq_postpone_t;
 
 #define VIRTQUEUE_MAX_NAME_SZ	32
 
@@ -70,9 +80,10 @@ void	*virtqueue_drain(struct virtqueue *vq, int *last);
 void	 virtqueue_free(struct virtqueue *vq);
 int	 virtqueue_reinit(struct virtqueue *vq, uint16_t size);
 
-int	 virtqueue_intr(struct virtqueue *vq);
+int	 virtqueue_intr_filter(struct virtqueue *vq);
+void	 virtqueue_intr(struct virtqueue *vq);
 int	 virtqueue_enable_intr(struct virtqueue *vq);
-int	 virtqueue_postpone_intr(struct virtqueue *vq);
+int	 virtqueue_postpone_intr(struct virtqueue *vq, vq_postpone_t hint);
 void	 virtqueue_disable_intr(struct virtqueue *vq);
 
 /* Get physical address of the virtqueue ring. */

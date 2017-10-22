@@ -21,7 +21,7 @@
  *
  * Portions Copyright 2006 John Birrell jb@freebsd.org
  *
- * $FreeBSD: stable/9/cddl/lib/libdtrace/psinfo.d 179189 2008-05-22 04:26:42Z jb $
+ * $FreeBSD: release/10.0.0/cddl/lib/libdtrace/psinfo.d 239972 2012-09-01 08:14:21Z rpaulo $
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.
@@ -42,6 +42,7 @@ typedef struct psinfo {
 		pr_addr;	/* address of process */
 	string	pr_psargs;	/* process arguments */
 	u_int	pr_arglen;	/* process argument length */
+	u_int	pr_jailid;	/* jail id */
 } psinfo_t;
 
 #pragma D binding "1.0" translator
@@ -58,6 +59,7 @@ translator psinfo_t < struct proc *T > {
 	pr_addr = 0;
 	pr_psargs = stringof(T->p_args->ar_args);
 	pr_arglen = T->p_args->ar_length;
+	pr_jailid = T->p_ucred->cr_prison->pr_id;
 };
 
 typedef struct lwpsinfo {

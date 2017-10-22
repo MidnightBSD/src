@@ -23,7 +23,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/powermac_nvram/powermac_nvram.c 236368 2012-05-31 23:05:07Z jhibbits $
+ * $FreeBSD: release/10.0.0/sys/dev/powermac_nvram/powermac_nvram.c 235678 2012-05-20 02:43:54Z jhibbits $
  */
 
 #include <sys/param.h>

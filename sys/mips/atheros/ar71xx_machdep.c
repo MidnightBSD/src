@@ -25,9 +25,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/atheros/ar71xx_machdep.c 223562 2011-06-26 10:07:48Z kevlo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/atheros/ar71xx_machdep.c 248865 2013-03-29 06:31:31Z adrian $");
 
 #include "opt_ddb.h"
+#include "opt_ar71xx.h"
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -105,36 +106,12 @@ platform_cpu_init()
 }
 
 void
-platform_halt(void)
-{
-
-}
-
-void
-platform_identify(void)
-{
-
-}
-
-void
 platform_reset(void)
 {
 	ar71xx_device_stop(RST_RESET_FULL_CHIP);
 	/* Wait for reset */
 	while(1)
 		;
-}
-
-void
-platform_trap_enter(void)
-{
-
-}
-
-void
-platform_trap_exit(void)
-{
-
 }
 
 /*
@@ -168,8 +145,8 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
     __register_t a2 __unused, __register_t a3 __unused)
 {
 	uint64_t platform_counter_freq;
-	int argc, i;
-	char **argv, **envp;
+	int argc = 0, i;
+	char **argv = NULL, **envp = NULL;
 	vm_offset_t kernend;
 
 	/* 
@@ -184,9 +161,18 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 	/* Initialize pcpu stuff */
 	mips_pcpu0_init();
 
+	/*
+	 * Until some more sensible abstractions for uboot/redboot
+	 * environment handling, we have to make this a compile-time
+	 * hack.  The existing code handles the uboot environment
+	 * very incorrectly so we should just ignore initialising
+	 * the relevant pointers.
+	 */
+#ifndef	AR71XX_ENV_UBOOT
 	argc = a0;
 	argv = (char**)a1;
 	envp = (char**)a2;
+#endif
 	/* 
 	 * Protect ourselves from garbage in registers 
 	 */
@@ -246,15 +232,18 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 	printf("CPU platform: %s\n", ar71xx_get_system_type());
 	printf("CPU Frequency=%d MHz\n", u_ar71xx_cpu_freq / 1000000);
 	printf("CPU DDR Frequency=%d MHz\n", u_ar71xx_ddr_freq / 1000000);
-	printf("CPU AHB Frequency=%d MHz\n", u_ar71xx_ahb_freq / 1000000); 
-
+	printf("CPU AHB Frequency=%d MHz\n", u_ar71xx_ahb_freq / 1000000);
 	printf("platform frequency: %lld\n", platform_counter_freq);
+	printf("CPU reference clock: %d MHz\n", u_ar71xx_refclk / 1000000);
 	printf("arguments: \n");
 	printf("  a0 = %08x\n", a0);
 	printf("  a1 = %08x\n", a1);
 	printf("  a2 = %08x\n", a2);
 	printf("  a3 = %08x\n", a3);
 
+	/*
+	 * XXX this code is very redboot specific.
+	 */
 	printf("Cmd line:");
 	if (MIPS_IS_VALID_PTR(argv)) {
 		for (i = 0; i < argc; i++) {

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/i386/include/md_var.h 235796 2012-05-22 17:44:01Z iwasaki $
+ * $FreeBSD: release/10.0.0/sys/i386/include/md_var.h 253747 2013-07-28 17:54:42Z avg $
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -57,6 +57,9 @@ extern	u_int	cpu_procinfo2;
 extern	char	cpu_vendor[];
 extern	u_int	cpu_vendor_id;
 extern	u_int	cyrix_did;
+extern	u_int	cpu_mon_mwait_flags;
+extern	u_int	cpu_mon_min_size;
+extern	u_int	cpu_mon_max_size;
 extern	char	kstack[];
 extern	char	sigcode[];
 extern	int	szsigcode;

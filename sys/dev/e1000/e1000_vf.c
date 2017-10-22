@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/9/sys/dev/e1000/e1000_vf.c 235527 2012-05-16 22:22:52Z jfv $*/
+/*$FreeBSD: release/10.0.0/sys/dev/e1000/e1000_vf.c 228386 2011-12-10 06:55:02Z jfv $*/
 
 
 #include "e1000_api.h"

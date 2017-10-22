@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libelf/elf_data.c 247724 2013-03-03 19:02:23Z markj $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libelf/elf_data.c 246978 2013-02-19 03:23:13Z markj $");
 
 #include <assert.h>
 #include <errno.h>

@@ -24,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man9/ieee80211_node.9 237216 2012-06-18 04:55:07Z eadler $
+.\" $FreeBSD: release/10.0.0/share/man/man9/ieee80211_node.9 238542 2012-07-17 02:05:39Z kevlo $
 .\"
 .Dd April 28, 2010
 .Dt IEEE80211_NODE 9
@@ -185,7 +185,7 @@ iwi_node_alloc(struct ieee80211vap *vap,
 {
         struct iwi_node *in;
 
-        in = malloc(sizeof (struct iwi_node), M_80211_NODE,
+        in = malloc(sizeof(struct iwi_node), M_80211_NODE,
 		M_NOWAIT | M_ZERO);
         if (in == NULL)
                 return NULL;

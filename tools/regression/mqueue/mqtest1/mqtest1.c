@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/tools/regression/mqueue/mqtest1/mqtest1.c 205225 2010-03-16 20:42:54Z kib $ */
+/* $FreeBSD: release/10.0.0/tools/regression/mqueue/mqtest1/mqtest1.c 205225 2010-03-16 20:42:54Z kib $ */
 
 #include <err.h>
 #include <errno.h>

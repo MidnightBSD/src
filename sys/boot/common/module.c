@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/common/module.c 243243 2012-11-18 17:09:29Z ae $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/common/module.c 249719 2013-04-21 09:10:35Z ae $");
 
 /*
  * file/module function dispatcher, support, etc.
@@ -289,7 +289,8 @@ file_load(char *filename, vm_offset_t dest, struct preloaded_file **result)
 	    break;
 	} else if (last_file_format == i && i != 0) {
 	    /* Restart from the beginning */
-	    last_file_format = i = 0;
+	    i = -1;
+	    last_file_format = 0;
 	    fp = NULL;
 	    continue;
 	}
@@ -351,6 +352,7 @@ file_load_dependencies(struct preloaded_file *base_file)
     }
     return (error);
 }
+
 /*
  * We've been asked to load (name) as (type), so just suck it in,
  * no arguments or anything.

@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/vm/vm_zeroidle.c 198854 2009-11-03 16:46:52Z attilio $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/vm/vm_zeroidle.c 254065 2013-08-07 16:36:38Z kib $");
 
 #include <opt_sched.h>
 
@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD: stable/9/sys/vm/vm_zeroidle.c 198854 2009-11-03 16:46:52Z at
 #include <sys/unistd.h>
 
 #include <vm/vm.h>
+#include <vm/vm_param.h>
 #include <vm/vm_page.h>
 #include <vm/vm_phys.h>
 

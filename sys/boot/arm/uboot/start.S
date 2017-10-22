@@ -23,10 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/boot/arm/uboot/start.S 183878 2008-10-14 10:11:14Z raj $
+ * $FreeBSD: release/10.0.0/sys/boot/arm/uboot/start.S 248962 2013-03-31 22:43:16Z ian $
  */
 
 #include <machine/asm.h>
+#include <machine/armreg.h>
 
 /*
  * Entry point to the loader that U-Boot passes control to.
@@ -42,6 +43,13 @@ _start:
 	ldr	ip, =saved_regs
 	str	r8, [ip, #0]
 
+#ifdef _ARM_ARCH_6
+	mrc     p15, 0, r2, c1, c0, 0
+	orr	r2, r2, #(CPU_CONTROL_UNAL_ENABLE)
+	orr	r2, r2, #(CPU_CONTROL_AFLT_ENABLE)
+	mcr     p15, 0, r2, c1, c0, 0
+#endif
+
 	/* Start loader */
 	b	main
 
@@ -49,27 +57,20 @@ _start:
  * syscall()
  */
 ENTRY(syscall)
-	/* Save caller's lr */
+	/* Save caller's lr and r8 */
 	ldr	ip, =saved_regs
 	str	lr, [ip, #4]
-	/* Save loader's r8 */
-	ldr	ip, =saved_regs
 	str	r8, [ip, #8]
-
 	/* Restore U-Boot's r8 */
-	ldr	ip, =saved_regs
 	ldr	r8, [ip, #0]
 	/* Call into U-Boot */
 	ldr	lr, =return_from_syscall
 	ldr	ip, =syscall_ptr
 	ldr	pc, [ip]
-
 return_from_syscall:
-	/* Restore loader's r8 */
+	/* Restore loader's r8 and lr */
 	ldr	ip, =saved_regs
 	ldr	r8, [ip, #8]
-	/* Restore caller's lr */
-	ldr	ip, =saved_regs
 	ldr	lr, [ip, #4]
 	/* Return to caller */
 	mov	pc, lr

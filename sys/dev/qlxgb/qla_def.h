@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2011 Qlogic Corporation
+ * Copyright (c) 2011-2013 Qlogic Corporation
  * All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/qlxgb/qla_def.h 227890 2011-11-23 16:02:12Z bz $
+ * $FreeBSD: release/10.0.0/sys/dev/qlxgb/qla_def.h 250340 2013-05-07 22:58:42Z davidcs $
  */
 
 /*
@@ -194,6 +194,8 @@ struct qla_host {
 	/* debug stuff */
 	volatile const char 	*qla_lock;
 	volatile const char	*qla_unlock;
+
+	uint8_t			fw_ver_str[32];
 };
 typedef struct qla_host qla_host_t;
 

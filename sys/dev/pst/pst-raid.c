@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001,2002,2003 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 2001,2002,2003 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/pst/pst-raid.c 135267 2004-09-15 15:39:28Z sos $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/pst/pst-raid.c 230132 2012-01-15 13:23:18Z uqs $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

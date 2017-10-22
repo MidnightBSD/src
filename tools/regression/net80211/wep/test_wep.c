@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/net80211/wep/test_wep.c 145904 2005-05-05 13:16:30Z avatar $
+ * $FreeBSD: release/10.0.0/tools/regression/net80211/wep/test_wep.c 241394 2012-10-10 08:36:38Z kevlo $
  */
 
 /*

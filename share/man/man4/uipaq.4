@@ -28,9 +28,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/uipaq.4 219387 2011-03-07 21:53:15Z hselasky $
+.\" $FreeBSD: release/10.0.0/share/man/man4/uipaq.4 233648 2012-03-29 05:02:12Z eadler $
 .\"
-.Dd August 24, 2008
+.Dd November 20, 2011
 .Dt UIPAQ 4
 .Os
 .Sh NAME
@@ -41,6 +41,8 @@ To compile this driver into the kernel,
 place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
+.Cd "device usb"
+.Cd "device ucom"
 .Cd "device uipaq"
 .Ed
 .Pp
@@ -84,10 +86,10 @@ driver which makes it behave like a
 .Xr usb 4
 .Sh HISTORY
 The
-.Fx 
+.Fx
 support was imported from
-.Nx 
-for 
+.Nx
+for
 .Fx 7.0 .
 .Nx
 added support in

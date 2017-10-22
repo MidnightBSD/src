@@ -1,0 +1,2 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_LZMA_SUPPORT 245171 2013-01-08 18:37:12Z obrien $
+Set to build some programs without optional lzma compression support.

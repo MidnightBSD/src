@@ -47,7 +47,7 @@ static const char sccsid[] = "@(#)caesar.c    8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/games/caesar/caesar.c 242047 2012-10-25 03:20:00Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/games/caesar/caesar.c 241846 2012-10-22 03:06:53Z eadler $");
 
 #include <errno.h>
 #include <math.h>
@@ -67,13 +67,13 @@ __FBSDID("$FreeBSD: stable/9/games/caesar/caesar.c 242047 2012-10-25 03:20:00Z e
  * letter frequencies (taken from some unix(tm) documentation)
  * (unix is a trademark of Bell Laboratories)
  */
-double stdf[26] = {
+static double stdf[26] = {
 	7.97, 1.35, 3.61, 4.78, 12.37, 2.01, 1.46, 4.49, 6.39, 0.04,
 	0.42, 3.81, 2.69, 5.92,  6.96, 2.91, 0.08, 6.63, 8.77, 9.68,
 	2.62, 0.81, 1.88, 0.23,  2.07, 0.06,
 };
 
-void printit(char *);
+static void printit(char *);
 
 int
 main(int argc, char **argv)
@@ -144,7 +144,7 @@ main(int argc, char **argv)
 	exit(0);
 }
 
-void
+static void
 printit(char *arg)
 {
 	int ch, rot;

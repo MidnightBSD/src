@@ -1,7 +1,7 @@
 <CHRP-BOOT>
 <DESCRIPTION>FreeBSD/powerpc bootloader</DESCRIPTION>
 <OS-NAME>FreeBSD</OS-NAME>
-<VERSION> $FreeBSD: stable/9/sys/boot/powerpc/boot1.chrp/bootinfo.txt 184490 2008-10-31 00:52:31Z nwhitehorn $ </VERSION>
+<VERSION> $FreeBSD: release/10.0.0/sys/boot/powerpc/boot1.chrp/bootinfo.txt 184490 2008-10-31 00:52:31Z nwhitehorn $ </VERSION>
 
 <COMPATIBLE>
 MacRISC MacRISC3 MacRISC4

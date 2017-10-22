@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/at91/at91_twi.c 237093 2012-06-14 20:02:53Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/at91_twi.c 237432 2012-06-22 06:44:22Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -284,7 +284,6 @@ at91_twi_rst_card(device_t dev, u_char speed, u_char addr, u_char *oldaddr)
 	WR4(sc, TWI_CR, TWI_CR_SWRST);
 	WR4(sc, TWI_CR, TWI_CR_MSEN | TWI_CR_SVDIS);
 	WR4(sc, TWI_CWGR, sc->cwgr);
-	printf("setting cwgr to %#x\n", sc->cwgr);
 	AT91_TWI_UNLOCK(sc);
 
 	return 0;

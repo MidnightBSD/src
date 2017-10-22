@@ -1,4 +1,6 @@
-# $FreeBSD: stable/9/gnu/usr.bin/cc/doc/Makefile 220755 2011-04-17 21:03:23Z dim $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/cc/doc/Makefile 245539 2013-01-17 05:56:28Z andrew $
+
+.include <bsd.own.mk>
 
 .include "../Makefile.inc"
 .include "../Makefile.ver"

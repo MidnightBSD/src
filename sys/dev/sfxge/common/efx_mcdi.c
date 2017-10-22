@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/sfxge/common/efx_mcdi.c 228100 2011-11-28 20:28:23Z philip $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/sfxge/common/efx_mcdi.c 250460 2013-05-10 16:41:26Z eadler $");
 
 #include "efsys.h"
 #include "efx.h"
@@ -86,7 +86,7 @@ efx_mcdi_request_start(
 	/*
 	 * efx_mcdi_request_start() is naturally serialised against both
 	 * efx_mcdi_request_poll() and efx_mcdi_ev_cpl()/efx_mcdi_ev_death(),
-	 * by virtue of there only being one oustanding MCDI request.
+	 * by virtue of there only being one outstanding MCDI request.
 	 * Unfortunately, upper layers may also call efx_mcdi_request_abort()
 	 * at any time, to timeout a pending mcdi request, That request may
 	 * then subsequently complete, meaning efx_mcdi_ev_cpl() or
@@ -439,7 +439,7 @@ efx_mcdi_ev_death(
 	 * The MCDI request (if there is one) has been terminated, either
 	 * by a BADASSERT or REBOOT event.
 	 *
-	 * If there is an oustanding event-completed MCDI operation, then we
+	 * If there is an outstanding event-completed MCDI operation, then we
 	 * will never receive the completion event (because both MCDI
 	 * completions and BADASSERT events are sent to the same evq). So
 	 * complete this MCDI op.

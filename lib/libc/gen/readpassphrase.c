@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/readpassphrase.c 215236 2010-11-13 10:38:06Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/readpassphrase.c 241046 2012-09-29 11:54:34Z jilles $");
 
 #include "namespace.h"
 #include <ctype.h>
@@ -68,7 +68,7 @@ restart:
 	 * stdin and write to stderr unless a tty is required.
 	 */
 	if ((flags & RPP_STDIN) ||
-	    (input = output = _open(_PATH_TTY, O_RDWR)) == -1) {
+	    (input = output = _open(_PATH_TTY, O_RDWR | O_CLOEXEC)) == -1) {
 		if (flags & RPP_REQUIRE_TTY) {
 			errno = ENOTTY;
 			return(NULL);

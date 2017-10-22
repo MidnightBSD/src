@@ -159,7 +159,7 @@ typedef struct ardef {
 /* Auxiliary structure for structure/union tdesc_t */
 typedef struct mlist {
 	int	ml_offset;	/* Offset from start of structure (in bits) */
-	int	ml_size;	/* Member size (in bits) */
+	uint_t	ml_size;	/* Member size (in bits) */
 	char	*ml_name;	/* Member name */
 	struct	tdesc *ml_type;	/* Member type */
 	struct	mlist *ml_next;	/* Next member */
@@ -391,6 +391,7 @@ void merge_into_master(tdata_t *, tdata_t *, tdata_t *, int);
 #define	CTF_USE_DYNSYM	0x2 /* use .dynsym not .symtab */
 #define	CTF_COMPRESS	0x4 /* compress CTF output */
 #define	CTF_KEEP_STABS	0x8 /* keep .stabs sections */
+#define	CTF_SWAP_BYTES	0x10 /* target byte order is different from host */
 
 void write_ctf(tdata_t *, const char *, const char *, int);
 

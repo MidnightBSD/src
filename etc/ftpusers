@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/etc/ftpusers 243947 2012-12-06 11:52:31Z rwatson $
+# $FreeBSD: release/10.0.0/etc/ftpusers 256366 2013-10-12 06:08:18Z rpaulo $
 #
 # list of users disallowed any ftp access.
 # read by ftpd(8).
@@ -13,7 +13,10 @@ games
 news
 man
 sshd
+smmsp
+mailnull
 bind
+unbound
 proxy
 _pflogd
 _dhcp
@@ -23,5 +26,3 @@ auditdistd
 www
 hast
 nobody
-mailnull
-smmsp

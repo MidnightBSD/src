@@ -1,5 +1,5 @@
 \ Loader.rc
-\ $FreeBSD: stable/9/sys/boot/forth/loader.rc 223109 2011-06-15 14:07:16Z nwhitehorn $
+\ $FreeBSD: release/10.0.0/sys/boot/forth/loader.rc 253715 2013-07-27 18:19:28Z kientzle $
 \
 \ Includes additional commands
 include /boot/loader.4th
@@ -9,6 +9,10 @@ start
 
 \ Tests for password -- executes autoboot first if a password was defined
 check-password
+
+\ Uncomment to enable boot menu
+\ include /boot/beastie.4th
+\ beastie-start
 
 \ Unless set otherwise, autoboot is automatic at this point
 

@@ -1,5 +1,5 @@
 /*      $NetBSD: usbhidaction.c,v 1.8 2002/06/11 06:06:21 itojun Exp $ */
-/*	$FreeBSD: stable/9/usr.bin/usbhidaction/usbhidaction.c 229387 2012-01-03 12:47:55Z mav $ */
+/*	$FreeBSD: release/10.0.0/usr.bin/usbhidaction/usbhidaction.c 227195 2011-11-06 08:18:23Z ed $ */
 
 /*
  * Copyright (c) 2000, 2002 The NetBSD Foundation, Inc.
@@ -64,7 +64,7 @@ struct command {
 	char *name;
 	char *action;
 };
-struct command *commands;
+static struct command *commands;
 
 #define SIZE 4000
 

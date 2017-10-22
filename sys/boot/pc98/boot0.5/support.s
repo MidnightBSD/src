@@ -25,7 +25,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/sys/boot/pc98/boot0.5/support.s 64123 2000-08-02 08:46:08Z kato $
+# $FreeBSD: release/10.0.0/sys/boot/pc98/boot0.5/support.s 64123 2000-08-02 08:46:08Z kato $
 #
 
 	.code16

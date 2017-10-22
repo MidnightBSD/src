@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/kgssapi/krb5/kcrypto.h 184588 2008-11-03 10:38:00Z dfr $
+ * $FreeBSD: release/10.0.0/sys/kgssapi/krb5/kcrypto.h 184588 2008-11-03 10:38:00Z dfr $
  */
 
 #include <sys/_iovec.h>

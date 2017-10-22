@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_fec.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_fec.h 139823 2005-01-07 01:45:51Z imp $
  */
 /*-
  * Copyright (c) 1996-1999 Whistle Communications, Inc.

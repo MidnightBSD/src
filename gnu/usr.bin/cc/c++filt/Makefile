@@ -1,4 +1,7 @@
-# $FreeBSD: stable/9/gnu/usr.bin/cc/c++filt/Makefile 169718 2007-05-19 04:25:59Z kan $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/cc/c++filt/Makefile 245539 2013-01-17 05:56:28Z andrew $
+
+NO_MAN=
+.include <bsd.own.mk>
 
 .include "../Makefile.inc"
 .include "../Makefile.fe"
@@ -7,7 +10,6 @@
 
 PROG=	c++filt
 SRCS=	cp-demangle.c
-NO_MAN=
 
 CFLAGS+= -DSTANDALONE_DEMANGLER -DVERSION=\"$(GCC_VERSION)\"
 

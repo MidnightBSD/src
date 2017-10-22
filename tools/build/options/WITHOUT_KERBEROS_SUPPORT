@@ -1,6 +1,5 @@
-.\" $FreeBSD: stable/9/tools/build/options/WITHOUT_KERBEROS_SUPPORT 156932 2006-03-21 07:50:50Z ru $
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_KERBEROS_SUPPORT 251794 2013-06-15 20:29:07Z eadler $
 Set to build some programs without Kerberos support, like
-.Xr cvs 1 ,
 .Xr ssh 1 ,
 .Xr telnet 1 ,
 .Xr sshd 8 ,

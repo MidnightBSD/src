@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/powerpc/boot1.chrp/boot1.c 246234 2013-02-02 09:57:34Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/powerpc/boot1.chrp/boot1.c 243254 2012-11-19 01:15:32Z trasz $");
 
 #include <sys/param.h>
 #include <sys/dirent.h>
@@ -45,7 +45,6 @@ static char bootargs[128];
 static ofwh_t bootdev;
 
 static struct fs fs;
-static ino_t inomap;
 static char blkbuf[BSIZEMAX];
 static unsigned int fsblks;
 
@@ -492,7 +491,7 @@ load(const char *fname)
 	Elf32_Ehdr eh;
 	Elf32_Phdr ph;
 	caddr_t p;
-	ino_t ino;
+	ufs_ino_t ino;
 	int i;
 
 	if ((ino = lookup(fname)) == 0) {

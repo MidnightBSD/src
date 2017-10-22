@@ -1,11 +1,9 @@
-# $FreeBSD: stable/9/sys/mips/malta/std.malta 220982 2011-04-24 08:58:58Z mav $
+# $FreeBSD: release/10.0.0/sys/mips/malta/std.malta 249083 2013-04-04 07:12:24Z mav $
 files	"../malta/files.malta"
 
 cpu		CPU_MIPS4KC
-#options 	ISA_MIPS32
 device		pci
 device		ata
-options 	ATA_CAM
 
 device		scbus		# SCSI bus (required for ATA/SCSI)
 device		cd		# CD

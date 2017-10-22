@@ -32,7 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/tools/cxgbtool/cxgbtool.c 216285 2010-12-08 01:35:19Z kevlo $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/tools/cxgbtool/cxgbtool.c 216285 2010-12-08 01:35:19Z kevlo $");
 
 #include <stdlib.h>
 #include <stdio.h>

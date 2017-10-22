@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/link_elf.c 243308 2012-11-19 21:10:52Z trociny $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/link_elf.c 255426 2013-09-09 18:11:59Z jhb $");
 
 #include "opt_ddb.h"
 #include "opt_gdb.h"
@@ -702,16 +702,6 @@ link_elf_link_preload_finish(linker_file_t lf)
 	int error;
 
 	ef = (elf_file_t) lf;
-#if 0	/* this will be more trouble than it's worth for now */
-	for (dp = ef->dynamic; dp->d_tag != DT_NULL; dp++) {
-		if (dp->d_tag != DT_NEEDED)
-			continue;
-		modname = ef->strtab + dp->d_un.d_val;
-		error = linker_load_module(modname, lf);
-		if (error != 0)
-			goto out;
-    }
-#endif
 	error = relocate_file(ef);
 	if (error != 0)
 		return (error);
@@ -750,17 +740,15 @@ link_elf_load_file(linker_class_t cls, const char* filename,
 	int symstrindex;
 	int symcnt;
 	int strcnt;
-	int vfslocked;
 
 	shdr = NULL;
 	lf = NULL;
 
-	NDINIT(&nd, LOOKUP, FOLLOW | MPSAFE, UIO_SYSSPACE, filename, td);
+	NDINIT(&nd, LOOKUP, FOLLOW, UIO_SYSSPACE, filename, td);
 	flags = FREAD;
 	error = vn_open(&nd, &flags, 0, NULL);
 	if (error != 0)
 		return (error);
-	vfslocked = NDHASGIANT(&nd);
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	if (nd.ni_vp->v_type != VREG) {
 		error = ENOEXEC;
@@ -903,7 +891,7 @@ link_elf_load_file(linker_class_t cls, const char* filename,
 	}
 	ef->address = (caddr_t) vm_map_min(kernel_map);
 	error = vm_map_find(kernel_map, ef->object, 0,
-	    (vm_offset_t *) &ef->address, mapsize, 1,
+	    (vm_offset_t *) &ef->address, mapsize, 0, VMFS_OPTIMAL_SPACE,
 	    VM_PROT_ALL, VM_PROT_ALL, 0);
 	if (error != 0) {
 		vm_object_deallocate(ef->object);
@@ -975,16 +963,6 @@ link_elf_load_file(linker_class_t cls, const char* filename,
 	vn_lock(nd.ni_vp, LK_EXCLUSIVE | LK_RETRY);
 	if (error != 0)
 		goto out;
-#if 0	/* this will be more trouble than it's worth for now */
-	for (dp = ef->dynamic; dp->d_tag != DT_NULL; dp++) {
-		if (dp->d_tag != DT_NEEDED)
-			continue;
-		modname = ef->strtab + dp->d_un.d_val;
-		error = linker_load_module(modname, lf);
-		if (error != 0)
-			goto out;
-    }
-#endif
 	error = relocate_file(ef);
 	if (error != 0)
 		goto out;
@@ -1047,7 +1025,6 @@ nosyms:
 out:
 	VOP_UNLOCK(nd.ni_vp, 0);
 	vn_close(nd.ni_vp, FREAD, td->td_ucred, td);
-	VFS_UNLOCK_GIANT(vfslocked);
 	if (error != 0 && lf != NULL)
 		linker_file_unload(lf, LINKER_UNLOAD_FORCE);
 	if (shdr != NULL)

@@ -28,7 +28,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/icmp6.4 243815 2012-12-03 18:19:58Z delphij $
+.\" $FreeBSD: release/10.0.0/share/man/man4/icmp6.4 242728 2012-11-08 00:54:43Z delphij $
 .\"
 .Dd November 7, 2012
 .Dt ICMP6 4
@@ -140,13 +140,13 @@ This header corresponds to the
 structure and has the following definition:
 .Bd -literal -offset indent
 struct icmp6_hdr {
-	u_int8_t	icmp6_type;	/* type field */
-	u_int8_t	icmp6_code;	/* code field */
-	u_int16_t	icmp6_cksum;	/* checksum field */
+	uint8_t  icmp6_type;	/* type field */
+	uint8_t  icmp6_code;	/* code field */
+	uint16_t icmp6_cksum;	/* checksum field */
 	union {
-		u_int32_t icmp6_un_data32[1]; /* type-specific */
-		u_int16_t icmp6_un_data16[2]; /* type-specific */
-		u_int8_t  icmp6_un_data8[4];  /* type-specific */
+		uint32_t icmp6_un_data32[1]; /* type-specific */
+		uint16_t icmp6_un_data16[2]; /* type-specific */
+		uint8_t  icmp6_un_data8[4];  /* type-specific */
 	} icmp6_dataun;
 } __packed;
 

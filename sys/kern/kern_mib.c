@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_mib.c 247874 2013-03-06 09:12:38Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_mib.c 259515 2013-12-17 14:55:23Z nwhitehorn $");
 
 #include "opt_compat.h"
 #include "opt_posix.h"
@@ -261,6 +261,13 @@ sysctl_hw_machine_arch(SYSCTL_HANDLER_ARGS)
 SYSCTL_PROC(_hw, HW_MACHINE_ARCH, machine_arch, CTLTYPE_STRING | CTLFLAG_RD,
     NULL, 0, sysctl_hw_machine_arch, "A", "System architecture");
 
+SYSCTL_STRING(_kern, OID_AUTO, supported_archs, CTLFLAG_RD | CTLFLAG_MPSAFE,
+#ifdef COMPAT_FREEBSD32
+    MACHINE_ARCH " " MACHINE_ARCH32, 0, "Supported architectures for binaries");
+#else
+    MACHINE_ARCH, 0, "Supported architectures for binaries");
+#endif
+
 static int
 sysctl_hostname(SYSCTL_HANDLER_ARGS)
 {
@@ -380,15 +387,8 @@ SYSCTL_PROC(_kern, KERN_SECURELVL, securelevel,
 /* Actual kernel configuration options. */
 extern char kernconfstring[];
 
-static int
-sysctl_kern_config(SYSCTL_HANDLER_ARGS)
-{
-	return (sysctl_handle_string(oidp, kernconfstring,
-	    strlen(kernconfstring), req));
-}
-
-SYSCTL_PROC(_kern, OID_AUTO, conftxt, CTLTYPE_STRING|CTLFLAG_RW, 
-    0, 0, sysctl_kern_config, "", "Kernel configuration file");
+SYSCTL_STRING(_kern, OID_AUTO, conftxt, CTLFLAG_RD, kernconfstring, 0,
+    "Kernel configuration file");
 #endif
 
 static int

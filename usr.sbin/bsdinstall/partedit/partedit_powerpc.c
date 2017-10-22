@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/bsdinstall/partedit/partedit_powerpc.c 248237 2013-03-13 13:41:28Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/partedit/partedit_powerpc.c 255817 2013-09-23 14:18:34Z nwhitehorn $
  */
 
 #include <sys/types.h>
@@ -59,7 +59,8 @@ is_scheme_bootable(const char *part_type) {
 		return (1);
 	if (strcmp(platform, "ps3") == 0 && strcmp(part_type, "GPT") == 0)
 		return (1);
-	if (strcmp(platform, "chrp") == 0 && strcmp(part_type, "MBR") == 0)
+	if (strcmp(platform, "chrp") == 0 &&
+	    (strcmp(part_type, "MBR") == 0 || strcmp(part_type, "BSD") == 0))
 		return (1);
 
 	return (0);

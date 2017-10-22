@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/i386/xen/exception.s 199852 2009-11-27 01:02:17Z attilio $
+ * $FreeBSD: release/10.0.0/sys/i386/xen/exception.s 255040 2013-08-29 19:52:18Z gibbs $
  */
 
 #include "opt_apic.h"
@@ -168,7 +168,7 @@ call_evtchn_upcall:
 	jb	critical_region_fixup
 	
 10:	pushl	%esp
-	call	evtchn_do_upcall
+	call	xen_intr_handle_upcall
 	addl	$4,%esp
 
 	/*

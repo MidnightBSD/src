@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_deflate.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_deflate.c 243882 2012-12-05 08:04:20Z glebius $
  */
 
 /*
@@ -462,7 +462,7 @@ ng_deflate_compress(node_p node, struct mbuf *m, struct mbuf **resultp)
 	}
 
 	/* We must own the mbuf chain exclusively to modify it. */
-	m = m_unshare(m, M_DONTWAIT);
+	m = m_unshare(m, M_NOWAIT);
 	if (m == NULL) {
 		priv->stats.Errors++;
 		return (ENOMEM);
@@ -556,7 +556,7 @@ ng_deflate_decompress(node_p node, struct mbuf *m, struct mbuf **resultp)
 	}
 
 	/* We must own the mbuf chain exclusively to modify it. */
-	m = m_unshare(m, M_DONTWAIT);
+	m = m_unshare(m, M_NOWAIT);
 	if (m == NULL) {
 		priv->stats.Errors++;
 		return (ENOMEM);

@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/dirname.c 184578 2008-11-03 05:19:45Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/dirname.c 184578 2008-11-03 05:19:45Z delphij $");
 
 #include <errno.h>
 #include <libgen.h>

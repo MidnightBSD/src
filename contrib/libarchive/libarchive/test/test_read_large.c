@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_read_large.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_large.c 232153 2012-02-25 10:58:02Z mm $");
 
 static unsigned char testdata[10 * 1024 * 1024];
 static unsigned char testdatacopy[10 * 1024 * 1024];
@@ -58,21 +58,22 @@ DEFINE_TEST(test_read_large)
 	assertA(0 == archive_write_header(a, entry));
 	archive_entry_free(entry);
 	assertA((int)sizeof(testdata) == archive_write_data(a, testdata, sizeof(testdata)));
-	assertA(0 == archive_write_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	assert(NULL != (a = archive_read_new()));
 	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_support_compression_all(a));
+	assertA(0 == archive_read_support_filter_all(a));
 	assertA(0 == archive_read_open_memory(a, buff, sizeof(buff)));
 	assertA(0 == archive_read_next_header(a, &entry));
-	assertA(0 == archive_read_data_into_buffer(a, testdatacopy, sizeof(testdatacopy)));
-	assertA(0 == archive_read_finish(a));
-	assert(0 == memcmp(testdata, testdatacopy, sizeof(testdata)));
+	assertEqualIntA(a, sizeof(testdatacopy),
+	    archive_read_data(a, testdatacopy, sizeof(testdatacopy)));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualMem(testdata, testdatacopy, sizeof(testdata));
 
 
 	assert(NULL != (a = archive_read_new()));
 	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_support_compression_all(a));
+	assertA(0 == archive_read_support_filter_all(a));
 	assertA(0 == archive_read_open_memory(a, buff, sizeof(buff)));
 	assertA(0 == archive_read_next_header(a, &entry));
 #if defined(__BORLANDC__)
@@ -83,11 +84,11 @@ DEFINE_TEST(test_read_large)
 	assert(0 < tmpfilefd);
 	assertA(0 == archive_read_data_into_fd(a, tmpfilefd));
 	close(tmpfilefd);
-	assertA(0 == archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 
 	f = fopen(tmpfilename, "rb");
 	assertEqualInt(sizeof(testdatacopy),
 	    fread(testdatacopy, 1, sizeof(testdatacopy), f));
 	fclose(f);
-	assert(0 == memcmp(testdata, testdatacopy, sizeof(testdata)));
+	assertEqualMem(testdata, testdatacopy, sizeof(testdata));
 }

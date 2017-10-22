@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/gdb/arch/ia64/Makefile 241193 2012-10-04 09:53:59Z fjoe $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/gdb/arch/ia64/Makefile 203960 2010-02-16 16:38:57Z marcel $
 
 .if !defined(GDB_CROSS_DEBUGGER)
 LIBSRCS+= fbsd-proc.c fbsd-threads.c gcore.c

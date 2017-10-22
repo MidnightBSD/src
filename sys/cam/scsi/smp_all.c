@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/cam/scsi/smp_all.c 216088 2010-11-30 22:39:46Z ken $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/cam/scsi/smp_all.c 216088 2010-11-30 22:39:46Z ken $");
 
 #include <sys/param.h>
 #include <sys/types.h>

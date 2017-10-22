@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libelf/Makefile 221569 2011-05-07 01:05:31Z obrien $
+# $FreeBSD: release/10.0.0/lib/libelf/Makefile 238741 2012-07-24 16:03:28Z ache $
 
 LIB=	elf
 
@@ -55,9 +55,22 @@ SRCS=	elf_begin.c						\
 	${GENSRCS}
 INCS=	libelf.h gelf.h
 
+#
+# We need to link against the correct version of these files. One
+# solution is to include ../../sys in the include path. This causes
+# problems when a header file in sys depends on a file in another
+# part of the tree, e.g. a machine dependent header.
+#
+SRCS+=	sys/elf32.h sys/elf64.h sys/elf_common.h
+
 GENSRCS=	libelf_fsize.c libelf_msize.c libelf_convert.c
 CLEANFILES=	${GENSRCS}
-CFLAGS+=	-I${.CURDIR} -I${.CURDIR}/../../sys
+CLEANDIRS=	sys
+CFLAGS+=	-I${.CURDIR} -I.
+
+sys/elf32.h sys/elf64.h sys/elf_common.h: ${.CURDIR}/../../sys/${.TARGET}
+	mkdir -p ${.OBJDIR}/sys
+	ln -sf ${.CURDIR}/../../sys/${.TARGET} ${.TARGET}
 
 SHLIB_MAJOR=	1
 

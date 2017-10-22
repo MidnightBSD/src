@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/isci/scil/scif_sas_domain.h 231689 2012-02-14 15:58:49Z jimharris $
+ * $FreeBSD: release/10.0.0/sys/dev/isci/scil/scif_sas_domain.h 231136 2012-02-07 17:43:58Z jimharris $
  */
 #ifndef _SCIF_SAS_DOMAIN_H_
 #define _SCIF_SAS_DOMAIN_H_

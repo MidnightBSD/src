@@ -28,7 +28,7 @@ AND WITH ALL FAULTS AND CAVIUM  NETWORKS MAKES NO PROMISES, REPRESENTATIONS OR W
 *************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octe/ethernet-sgmii.c 216071 2010-11-30 07:14:05Z jmallett $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octe/ethernet-sgmii.c 242346 2012-10-30 06:36:14Z jmallett $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,12 +44,13 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octe/ethernet-sgmii.c 216071 2010-1
 #include "wrapper-cvmx-includes.h"
 #include "ethernet-headers.h"
 
-extern int octeon_is_simulation(void);
-
 int cvm_oct_sgmii_init(struct ifnet *ifp)
 {
 	cvm_oct_private_t *priv = (cvm_oct_private_t *)ifp->if_softc;
-	cvm_oct_common_init(ifp);
+
+	if (cvm_oct_common_init(ifp) != 0)
+	    return ENXIO;
+
 	priv->open = cvm_oct_common_open;
 	priv->stop = cvm_oct_common_stop;
 	priv->stop(ifp);

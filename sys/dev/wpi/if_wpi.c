@@ -19,7 +19,7 @@
 #define VERSION "20071127"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/wpi/if_wpi.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/wpi/if_wpi.c 243857 2012-12-04 09:32:43Z glebius $");
 
 /*
  * Driver for Intel PRO/Wireless 3945ABG 802.11 network adapters.
@@ -58,6 +58,8 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/wpi/if_wpi.c 248078 2013-03-09 00:39:54Z ma
  * on the majority of communications between the driver and the card goes
  * via the firmware.
  */
+
+#include "opt_wlan.h"
 
 #include <sys/param.h>
 #include <sys/sysctl.h>

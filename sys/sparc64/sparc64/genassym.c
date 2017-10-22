@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/genassym.c 230682 2012-01-28 23:35:24Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/genassym.c 254065 2013-08-07 16:36:38Z kib $");
 
 #include "opt_kstack_pages.h"
 
@@ -39,6 +39,7 @@ __FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/genassym.c 230682 2012-01-28 23
 #include <sys/vmmeter.h>
 #include <sys/_cpuset.h>
 
+#include <machine/atomic.h>
 #include <vm/vm.h>
 #include <vm/vm_page.h>
 #include <vm/vm_map.h>

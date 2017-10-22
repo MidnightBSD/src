@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/sys/boot/common/loader.8 240097 2012-09-04 19:14:57Z des $
+.\" $FreeBSD: release/10.0.0/sys/boot/common/loader.8 255977 2013-10-01 18:41:53Z pluknet $
 .\"
-.Dd January 7, 2012
+.Dd October 1, 2013
 .Dt LOADER 8
 .Os
 .Sh NAME
@@ -480,7 +480,7 @@ Sets the list of binaries which the kernel will try to run as the initial
 process.
 The first matching binary is used.
 The default list is
-.Dq Li /sbin/init:/sbin/oinit:/sbin/init.bak:\:/rescue/init:/stand/sysinstall .
+.Dq Li /sbin/init:/sbin/oinit:/sbin/init.bak:\:/rescue/init .
 .It Va init_script
 If set to a valid file name in the root file system,
 instructs
@@ -972,7 +972,7 @@ autoboot 5
 .Pp
 Set the disk unit of the root device to 2, and then boot.
 This would be needed in a system with two IDE disks,
-with the second IDE disk hardwired to ad2 instead of ad1.
+with the second IDE disk hardwired to ada2 instead of ada1.
 .Bd -literal -offset indent
 set root_disk_unit=2
 boot /boot/kernel/kernel

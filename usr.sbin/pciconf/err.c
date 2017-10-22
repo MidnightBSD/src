@@ -27,7 +27,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-    "$FreeBSD: stable/9/usr.sbin/pciconf/err.c 247408 2013-02-27 19:38:25Z jhb $";
+    "$FreeBSD: release/10.0.0/usr.sbin/pciconf/err.c 240680 2012-09-18 22:04:59Z gavin $";
 #endif /* not lint */
 
 #include <sys/param.h>

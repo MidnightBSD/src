@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/lib/libradius/radlib.h 234191 2012-04-12 17:49:53Z melifaro $
+ *	$FreeBSD: release/10.0.0/lib/libradius/radlib.h 243956 2012-12-06 19:00:37Z sem $
  */
 
 #ifndef _RADLIB_H_
@@ -194,6 +194,9 @@ __BEGIN_DECLS
 struct rad_handle	*rad_acct_open(void);
 int			 rad_add_server(struct rad_handle *,
 			    const char *, int, const char *, int, int);
+int			 rad_add_server_ex(struct rad_handle *,
+			    const char *, int, const char *, int, int,
+			    int, struct in_addr *);
 struct rad_handle	*rad_auth_open(void);
 void			 rad_bind_to(struct rad_handle *, in_addr_t);
 void			 rad_close(struct rad_handle *);
@@ -203,6 +206,7 @@ int			 rad_continue_send_request(struct rad_handle *, int,
 int			 rad_create_request(struct rad_handle *, int);
 int			 rad_create_response(struct rad_handle *, int);
 struct in_addr		 rad_cvt_addr(const void *);
+struct in6_addr		 rad_cvt_addr6(const void *);
 u_int32_t		 rad_cvt_int(const void *);
 char			*rad_cvt_string(const void *, size_t);
 int			 rad_get_attr(struct rad_handle *, const void **,
@@ -211,6 +215,7 @@ int			 rad_init_send_request(struct rad_handle *, int *,
 			    struct timeval *);
 struct rad_handle	*rad_open(void);  /* Deprecated, == rad_auth_open */
 int			 rad_put_addr(struct rad_handle *, int, struct in_addr);
+int			 rad_put_addr6(struct rad_handle *, int, struct in6_addr);
 int			 rad_put_attr(struct rad_handle *, int,
 			    const void *, size_t);
 int			 rad_put_int(struct rad_handle *, int, u_int32_t);

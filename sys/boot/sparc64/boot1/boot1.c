@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/sparc64/boot1/boot1.c 246234 2013-02-02 09:57:34Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/sparc64/boot1/boot1.c 244307 2012-12-16 20:43:29Z marius $");
 
 #include <sys/param.h>
 #include <sys/dirent.h>
@@ -415,7 +415,6 @@ loadzfs(void)
 	Elf64_Ehdr eh;
 	Elf64_Phdr ph;
 	caddr_t p;
-	ino_t ino;
 	int i;
 
 	if (zbread((char *)&eh, 0, sizeof(eh)) != sizeof(eh)) {
@@ -459,7 +458,7 @@ load(const char *fname)
 	Elf64_Ehdr eh;
 	Elf64_Phdr ph;
 	caddr_t p;
-	ino_t ino;
+	ufs_ino_t ino;
 	int i;
 
 	if ((ino = lookup(fname)) == 0) {

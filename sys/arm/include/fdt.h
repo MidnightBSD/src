@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/include/fdt.h 218073 2011-01-29 20:25:20Z marcel $
+ * $FreeBSD: release/10.0.0/sys/arm/include/fdt.h 236992 2012-06-13 05:02:51Z imp $
  */
 
 #ifndef _MACHINE_FDT_H_
@@ -44,7 +44,7 @@
 /* Max interrupt number */
 #define FDT_INTR_MAX	NIRQ
 
-/* Map phandle/intpin pair to global IRQ number */ 
+/* Map phandle/intpin pair to global IRQ number */
 #define	FDT_MAP_IRQ(node, pin)	(pin)
 
 /*
@@ -57,6 +57,7 @@ struct mem_region {
 	vm_size_t	mr_size;
 };
 
+int fdt_localbus_devmap(phandle_t, struct pmap_devmap *, int, int *);
 int fdt_pci_devmap(phandle_t, struct pmap_devmap *devmap, vm_offset_t,
     vm_offset_t);
 

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/conf/ldscript.ia64 221271 2011-04-30 20:49:00Z marcel $ */
+/* $FreeBSD: release/10.0.0/sys/conf/ldscript.ia64 221271 2011-04-30 20:49:00Z marcel $ */
 OUTPUT_FORMAT("elf64-ia64-freebsd", "elf64-ia64-freebsd", "elf64-ia64-freebsd")
 OUTPUT_ARCH(ia64)
 ENTRY(__start)

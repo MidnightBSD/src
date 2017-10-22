@@ -1,5 +1,5 @@
 /*
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/lib/match.c 206043 2010-04-01 14:27:29Z flz $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg_install/lib/match.c 228990 2011-12-30 10:58:14Z uqs $");
 
 #include "lib.h"
 #include <err.h>
@@ -361,7 +361,7 @@ LIST_HEAD(, iip_memo) iip_memo = LIST_HEAD_INITIALIZER(iip_memo);
 /*
  * 
  * Return 1 if the specified package is installed,
- * 0 if not, and -1 if an error occured.
+ * 0 if not, and -1 if an error occurred.
  */
 int
 isinstalledpkg(const char *name)

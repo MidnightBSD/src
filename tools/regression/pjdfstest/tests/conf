@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/conf 211354 2010-08-15 21:29:03Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/conf 211354 2010-08-15 21:29:03Z pjd $
 # pjdfstest configuration file
 
 # Supported operating systems: FreeBSD, Darwin, SunOS, Linux

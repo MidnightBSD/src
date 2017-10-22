@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/elf64.h 186667 2009-01-01 02:08:56Z obrien $
+ * $FreeBSD: release/10.0.0/sys/sys/elf64.h 186667 2009-01-01 02:08:56Z obrien $
  */
 
 #ifndef _SYS_ELF64_H_

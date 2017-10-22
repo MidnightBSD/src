@@ -17,7 +17,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/cron/cron/do_command.c 181115 2008-08-01 08:01:33Z marck $";
+  "$FreeBSD: release/10.0.0/usr.sbin/cron/cron/do_command.c 228990 2011-12-30 10:58:14Z uqs $";
 #endif
 
 
@@ -147,7 +147,7 @@ child_process(e, u)
 #ifdef USE_SIGCHLD
 	/* our parent is watching for our death by catching SIGCHLD.  we
 	 * do not care to watch for our children's deaths this way -- we
-	 * use wait() explictly.  so we have to disable the signal (which
+	 * use wait() explicitly.  so we have to disable the signal (which
 	 * was inherited from the parent).
 	 */
 	(void) signal(SIGCHLD, SIG_DFL);

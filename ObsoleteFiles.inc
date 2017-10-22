@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/ObsoleteFiles.inc 249521 2013-04-15 18:38:21Z bapt $
+# $FreeBSD: release/10.0.0/ObsoleteFiles.inc 259128 2013-12-09 13:44:07Z gjb $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -38,20 +38,516 @@
 #   xargs -n1 | sort | uniq -d;
 # done
 
-# 20130415: Ports are no more available via cvsup
+# 20131109: extattr(2) mlinks fixed
+OLD_FILES+=usr/share/man/man2/extattr_delete_list.2.gz
+OLD_FILES+=usr/share/man/man2/extattr_get_list.2.gz
+# 20131103: WITH_LIBICONV_COMPAT removal
+OLD_FILES+=usr/include/_libiconv_compat.h
+OLD_FILES+=usr/lib/libiconv.a
+OLD_FILES+=usr/lib/libiconv.so
+OLD_FILES+=usr/lib/libiconv.so.3
+OLD_FILES+=usr/lib/libiconv_p.a
+OLD_FILES+=usr/lib32/libiconv.a
+OLD_FILES+=usr/lib32/libiconv.so
+OLD_FILES+=usr/lib32/libiconv.so.3
+OLD_FILES+=usr/lib32/libiconv_p.a
+# 20131030: /etc/keys moved to /usr/share/keys
+OLD_DIRS+=etc/keys
+OLD_DIRS+=etc/keys/pkg
+OLD_DIRS+=etc/keys/pkg/revoked
+OLD_DIRS+=etc/keys/pkg/trusted
+OLD_FILES+=etc/keys/pkg/trusted/pkg.freebsd.org.2013102301
+# 20131014: libbsdyml becomes private
+OLD_FILES+=usr/lib/libbsdyml.a
+OLD_FILES+=usr/lib/libbsdyml.so
+OLD_LIBS+=usr/lib/libbsdyml.so.0
+OLD_FILES+=usr/lib/libbsdyml_p.a
+OLD_FILES+=usr/lib32/libbsdyml.a
+OLD_FILES+=usr/lib32/libbsdyml.so
+OLD_LIBS+=usr/lib32/libbsdyml.so.0
+OLD_FILES+=usr/lib32/libbsdyml_p.a
+OLD_FILES+=usr/share/man/man3/libbsdyml.3.gz
+OLD_FILES+=usr/include/bsdyml.h
+# 20131013: Removal of the ATF tools
+OLD_FILES+=etc/atf/FreeBSD.conf
+OLD_FILES+=etc/atf/atf-run.hooks
+OLD_FILES+=etc/atf/common.conf
+OLD_FILES+=usr/bin/atf-config
+OLD_FILES+=usr/bin/atf-report
+OLD_FILES+=usr/bin/atf-run
+OLD_FILES+=usr/bin/atf-version
+OLD_FILES+=usr/share/atf/atf-run.hooks
+OLD_FILES+=usr/share/examples/atf/atf-run.hooks
+OLD_FILES+=usr/share/examples/atf/tests-results.css
+OLD_FILES+=usr/share/man/man1/atf-config.1.gz
+OLD_FILES+=usr/share/man/man1/atf-report.1.gz
+OLD_FILES+=usr/share/man/man1/atf-run.1.gz
+OLD_FILES+=usr/share/man/man1/atf-version.1.gz
+OLD_FILES+=usr/share/man/man5/atf-formats.5.gz
+OLD_FILES+=usr/share/man/man7/atf.7.gz
+OLD_FILES+=usr/share/xml/atf/tests-results.dtd
+OLD_FILES+=usr/share/xsl/atf/tests-results.xsl
+# 20131009: freebsd-version moved from /libexec to /bin
+OLD_FILES+=libexec/freebsd-version
+# 20131001: ar and ranlib from binutils not used
+OLD_FILES+=usr/bin/gnu-ar
+OLD_FILES+=usr/bin/gnu-ranlib
+OLD_FILES+=usr/share/man/man1/gnu-ar.1.gz
+OLD_FILES+=usr/share/man/man1/gnu-ranlib.1.gz
+# 20130930: BIND removed from base
+OLD_FILES+=etc/mtree/BIND.chroot.dist
+OLD_FILES+=etc/namedb
+OLD_FILES+=etc/periodic/daily/470.status-named
+OLD_FILES+=usr/bin/dig
+OLD_FILES+=usr/bin/nslookup
+OLD_FILES+=usr/bin/nsupdate
+OLD_DIRS+=usr/include/lwres
+OLD_FILES+=usr/include/lwres/context.h
+OLD_FILES+=usr/include/lwres/int.h
+OLD_FILES+=usr/include/lwres/ipv6.h
+OLD_FILES+=usr/include/lwres/lang.h
+OLD_FILES+=usr/include/lwres/list.h
+OLD_FILES+=usr/include/lwres/lwbuffer.h
+OLD_FILES+=usr/include/lwres/lwpacket.h
+OLD_FILES+=usr/include/lwres/lwres.h
+OLD_FILES+=usr/include/lwres/net.h
+OLD_FILES+=usr/include/lwres/netdb.h
+OLD_FILES+=usr/include/lwres/platform.h
+OLD_FILES+=usr/include/lwres/result.h
+OLD_FILES+=usr/include/lwres/version.h
+OLD_FILES+=usr/lib/liblwres.a
+OLD_FILES+=usr/lib/liblwres.so
+OLD_LIBS+=usr/lib/liblwres.so.90
+OLD_FILES+=usr/lib/liblwres_p.a
+OLD_FILES+=usr/sbin/arpaname
+OLD_FILES+=usr/sbin/ddns-confgen
+OLD_FILES+=usr/sbin/dnssec-dsfromkey
+OLD_FILES+=usr/sbin/dnssec-keyfromlabel
+OLD_FILES+=usr/sbin/dnssec-keygen
+OLD_FILES+=usr/sbin/dnssec-revoke
+OLD_FILES+=usr/sbin/dnssec-settime
+OLD_FILES+=usr/sbin/dnssec-signzone
+OLD_FILES+=usr/sbin/dnssec-verify
+OLD_FILES+=usr/sbin/genrandom
+OLD_FILES+=usr/sbin/isc-hmac-fixup
+OLD_FILES+=usr/sbin/lwresd
+OLD_FILES+=usr/sbin/named
+OLD_FILES+=usr/sbin/named-checkconf
+OLD_FILES+=usr/sbin/named-checkzone
+OLD_FILES+=usr/sbin/named-compilezone
+OLD_FILES+=usr/sbin/named-journalprint
+OLD_FILES+=usr/sbin/named.reconfig
+OLD_FILES+=usr/sbin/named.reload
+OLD_FILES+=usr/sbin/nsec3hash
+OLD_FILES+=usr/sbin/rndc
+OLD_FILES+=usr/sbin/rndc-confgen
+OLD_DIRS+=usr/share/doc/bind9
+OLD_FILES+=usr/share/doc/bind9/CHANGES
+OLD_FILES+=usr/share/doc/bind9/COPYRIGHT
+OLD_FILES+=usr/share/doc/bind9/FAQ
+OLD_FILES+=usr/share/doc/bind9/HISTORY
+OLD_FILES+=usr/share/doc/bind9/README
+OLD_DIRS+=usr/share/doc/bind9/arm
+OLD_FILES+=usr/share/doc/bind9/arm/Bv9ARM.ch01.html
+OLD_FILES+=usr/share/doc/bind9/arm/Bv9ARM.ch02.html
+OLD_FILES+=usr/share/doc/bind9/arm/Bv9ARM.ch03.html
+OLD_FILES+=usr/share/doc/bind9/arm/Bv9ARM.ch04.html
+OLD_FILES+=usr/share/doc/bind9/arm/Bv9ARM.ch05.html
+OLD_FILES+=usr/share/doc/bind9/arm/Bv9ARM.ch06.html
+OLD_FILES+=usr/share/doc/bind9/arm/Bv9ARM.ch07.html
+OLD_FILES+=usr/share/doc/bind9/arm/Bv9ARM.ch08.html
+OLD_FILES+=usr/share/doc/bind9/arm/Bv9ARM.ch09.html
+OLD_FILES+=usr/share/doc/bind9/arm/Bv9ARM.ch10.html
+OLD_FILES+=usr/share/doc/bind9/arm/Bv9ARM.html
+OLD_FILES+=usr/share/doc/bind9/arm/Bv9ARM.pdf
+OLD_FILES+=usr/share/doc/bind9/arm/man.arpaname.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.ddns-confgen.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.dig.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.dnssec-dsfromkey.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.dnssec-keyfromlabel.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.dnssec-keygen.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.dnssec-revoke.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.dnssec-settime.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.dnssec-signzone.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.dnssec-verify.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.genrandom.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.host.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.isc-hmac-fixup.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.named-checkconf.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.named-checkzone.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.named-journalprint.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.named.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.nsec3hash.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.nsupdate.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.rndc-confgen.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.rndc.conf.html
+OLD_FILES+=usr/share/doc/bind9/arm/man.rndc.html
+OLD_DIRS+=usr/share/doc/bind9/misc
+OLD_FILES+=usr/share/doc/bind9/misc/dnssec
+OLD_FILES+=usr/share/doc/bind9/misc/format-options.pl
+OLD_FILES+=usr/share/doc/bind9/misc/ipv6
+OLD_FILES+=usr/share/doc/bind9/misc/migration
+OLD_FILES+=usr/share/doc/bind9/misc/migration-4to9
+OLD_FILES+=usr/share/doc/bind9/misc/options
+OLD_FILES+=usr/share/doc/bind9/misc/rfc-compliance
+OLD_FILES+=usr/share/doc/bind9/misc/roadmap
+OLD_FILES+=usr/share/doc/bind9/misc/sdb
+OLD_FILES+=usr/share/doc/bind9/misc/sort-options.pl
+OLD_FILES+=usr/share/man/man1/arpaname.1.gz
+OLD_FILES+=usr/share/man/man1/dig.1.gz
+OLD_FILES+=usr/share/man/man1/nslookup.1.gz
+OLD_FILES+=usr/share/man/man1/nsupdate.1.gz
+OLD_FILES+=usr/share/man/man3/lwres.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_addr_parse.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_add.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_back.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_clear.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_first.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_forward.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_getmem.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_getuint16.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_getuint32.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_getuint8.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_init.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_invalidate.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_putmem.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_putuint16.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_putuint32.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_putuint8.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_buffer_subtract.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_conf_clear.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_conf_get.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_conf_init.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_conf_parse.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_conf_print.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_config.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_context.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_context_allocmem.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_context_create.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_context_destroy.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_context_freemem.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_context_initserial.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_context_nextserial.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_context_sendrecv.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_endhostent.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_endhostent_r.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_freeaddrinfo.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_freehostent.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gabn.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gabnrequest_free.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gabnrequest_parse.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gabnrequest_render.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gabnresponse_free.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gabnresponse_parse.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gabnresponse_render.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gai_strerror.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_getaddrinfo.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_getaddrsbyname.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gethostbyaddr.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gethostbyaddr_r.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gethostbyname.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gethostbyname2.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gethostbyname_r.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gethostent.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gethostent_r.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_getipnode.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_getipnodebyaddr.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_getipnodebyname.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_getnamebyaddr.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_getnameinfo.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_getrrsetbyname.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gnba.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gnbarequest_free.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gnbarequest_parse.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gnbarequest_render.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gnbaresponse_free.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gnbaresponse_parse.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_gnbaresponse_render.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_herror.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_hstrerror.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_inetntop.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_lwpacket_parseheader.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_lwpacket_renderheader.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_net_ntop.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_noop.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_nooprequest_free.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_nooprequest_parse.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_nooprequest_render.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_noopresponse_free.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_noopresponse_parse.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_noopresponse_render.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_packet.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_resutil.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_sethostent.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_sethostent_r.3.gz
+OLD_FILES+=usr/share/man/man3/lwres_string_parse.3.gz
+OLD_FILES+=usr/share/man/man5/named.conf.5.gz
+OLD_FILES+=usr/share/man/man5/rndc.conf.5.gz
+OLD_FILES+=usr/share/man/man8/ddns-confgen.8.gz
+OLD_FILES+=usr/share/man/man8/dnssec-dsfromkey.8.gz
+OLD_FILES+=usr/share/man/man8/dnssec-keyfromlabel.8.gz
+OLD_FILES+=usr/share/man/man8/dnssec-keygen.8.gz
+OLD_FILES+=usr/share/man/man8/dnssec-revoke.8.gz
+OLD_FILES+=usr/share/man/man8/dnssec-settime.8.gz
+OLD_FILES+=usr/share/man/man8/dnssec-signzone.8.gz
+OLD_FILES+=usr/share/man/man8/genrandom.8.gz
+OLD_FILES+=usr/share/man/man8/isc-hmac-fixup.8.gz
+OLD_FILES+=usr/share/man/man8/lwresd.8.gz
+OLD_FILES+=usr/share/man/man8/named-checkconf.8.gz
+OLD_FILES+=usr/share/man/man8/named-checkzone.8.gz
+OLD_FILES+=usr/share/man/man8/named-compilezone.8.gz
+OLD_FILES+=usr/share/man/man8/named-journalprint.8.gz
+OLD_FILES+=usr/share/man/man8/named.8.gz
+OLD_FILES+=usr/share/man/man8/named.reconfig.8.gz
+OLD_FILES+=usr/share/man/man8/named.reload.8.gz
+OLD_FILES+=usr/share/man/man8/nsec3hash.8.gz
+OLD_FILES+=usr/share/man/man8/rndc-confgen.8.gz
+OLD_FILES+=usr/share/man/man8/rndc.8.gz
+OLD_DIRS+=var/named/dev
+OLD_DIRS+=var/named/etc
+OLD_DIRS+=var/named/etc/namedb
+OLD_FILES+=var/named/etc/namedb/PROTO.localhost-v6.rev
+OLD_FILES+=var/named/etc/namedb/PROTO.localhost.rev
+OLD_DIRS+=var/named/etc/namedb/dynamic
+OLD_FILES+=var/named/etc/namedb/make-localhost
+OLD_DIRS+=var/named/etc/namedb/master
+OLD_FILES+=var/named/etc/namedb/master/empty.db
+OLD_FILES+=var/named/etc/namedb/master/localhost-forward.db
+OLD_FILES+=var/named/etc/namedb/master/localhost-reverse.db
+#OLD_FILES+=var/named/etc/namedb/named.conf	# intentionally left out
+OLD_FILES+=var/named/etc/namedb/named.root
+OLD_DIRS+=var/named/etc/namedb/slave
+OLD_DIRS+=var/named/var
+OLD_DIRS+=var/named/var/dump
+OLD_DIRS+=var/named/var/log
+OLD_DIRS+=var/named/var/run
+OLD_DIRS+=var/named/var/run/named
+OLD_DIRS+=var/named/var/stats
+OLD_DIRS+=var/run/named
+# 20130908: libssh becomes private
+OLD_FILES+=usr/lib/libssh.a
+OLD_FILES+=usr/lib/libssh.so
+OLD_LIBS+=usr/lib/libssh.so.5
+OLD_FILES+=usr/lib/libssh_p.a
+OLD_FILES+=usr/lib32/libssh.a
+OLD_FILES+=usr/lib32/libssh.so
+OLD_LIBS+=usr/lib32/libssh.so.5
+OLD_FILES+=usr/lib32/libssh_p.a
+# 20130903: gnupatch is no more
+OLD_FILES+=usr/bin/gnupatch
+OLD_FILES+=usr/share/man/man1/gnupatch.1.gz
+# 20130829: bsdpatch is patch unconditionally
+OLD_FILES+=usr/bin/bsdpatch
+OLD_FILES+=usr/share/man/man1/bsdpatch.1.gz
+# 20130822: bind 9.9.3-P2 import
+OLD_LIBS+=usr/lib/liblwres.so.80
+# 20130814: vm_page_busy(9)
+OLD_FILES+=usr/share/man/man9/vm_page_flash.9.gz
+OLD_FILES+=usr/share/man/man9/vm_page_io.9.gz
+OLD_FILES+=usr/share/man/man9/vm_page_io_finish.9.gz
+OLD_FILES+=usr/share/man/man9/vm_page_io_start.9.gz
+OLD_FILES+=usr/share/man/man9/vm_page_wakeup.9.gz
+# 20130710: libkvm version bump 
+OLD_LIBS+=lib/libkvm.so.5
+OLD_LIBS+=usr/lib32/libkvm.so.5
+# 20130623: dialog update from 1.1 to 1.2
+OLD_LIBS+=usr/lib/libdialog.so.7
+OLD_LIBS+=usr/lib32/libdialog.so.7
+# 20130616: vfs_mount.9 removed
+OLD_FILES+=usr/share/man/man9/vfs_mount.9.gz
+# 20130614: remove CVS from base
+OLD_FILES+=usr/bin/cvs
+OLD_FILES+=usr/bin/cvsbug
+OLD_FILES+=usr/share/doc/psd/28.cvs/paper.ascii.gz
+OLD_DIRS+=usr/share/doc/psd/28.cvs
+OLD_FILES+=usr/share/examples/cvs/contrib/README
+OLD_FILES+=usr/share/examples/cvs/contrib/clmerge
+OLD_FILES+=usr/share/examples/cvs/contrib/cln_hist
+OLD_FILES+=usr/share/examples/cvs/contrib/commit_prep
+OLD_FILES+=usr/share/examples/cvs/contrib/cvs2vendor
+OLD_FILES+=usr/share/examples/cvs/contrib/cvs_acls
+OLD_FILES+=usr/share/examples/cvs/contrib/cvscheck
+OLD_FILES+=usr/share/examples/cvs/contrib/cvscheck.man
+OLD_FILES+=usr/share/examples/cvs/contrib/cvshelp.man
+OLD_FILES+=usr/share/examples/cvs/contrib/descend.man
+OLD_FILES+=usr/share/examples/cvs/contrib/easy-import
+OLD_FILES+=usr/share/examples/cvs/contrib/intro.doc
+OLD_FILES+=usr/share/examples/cvs/contrib/log
+OLD_FILES+=usr/share/examples/cvs/contrib/log_accum
+OLD_FILES+=usr/share/examples/cvs/contrib/mfpipe
+OLD_FILES+=usr/share/examples/cvs/contrib/rcs-to-cvs
+OLD_FILES+=usr/share/examples/cvs/contrib/rcs2log
+OLD_FILES+=usr/share/examples/cvs/contrib/rcslock
+OLD_FILES+=usr/share/examples/cvs/contrib/sccs2rcs
+OLD_DIRS+=usr/share/examples/cvs/contrib
+OLD_DIRS+=usr/share/examples/cvs
+OLD_FILES+=usr/share/info/cvs.info.gz
+OLD_FILES+=usr/share/info/cvsclient.info.gz
+OLD_FILES+=usr/share/man/man1/cvs.1.gz
+OLD_FILES+=usr/share/man/man5/cvs.5.gz
+OLD_FILES+=usr/share/man/man8/cvsbug.8.gz
+# 20130607: WITH_DEBUG_FILES added
+OLD_FILES+=lib/libufs.so.6.symbols
+OLD_FILES+=usr/lib32/libufs.so.6.symbols
+# 20130417: nfs fha moved from nfsserver to nfs
+OLD_FILES+=usr/include/nfsserver/nfs_fha.h
+# 20130411: new clang import which bumps version from 3.2 to 3.3.
+OLD_FILES+=usr/include/clang/3.2/__wmmintrin_aes.h
+OLD_FILES+=usr/include/clang/3.2/__wmmintrin_pclmul.h
+OLD_FILES+=usr/include/clang/3.2/altivec.h
+OLD_FILES+=usr/include/clang/3.2/ammintrin.h
+OLD_FILES+=usr/include/clang/3.2/avx2intrin.h
+OLD_FILES+=usr/include/clang/3.2/avxintrin.h
+OLD_FILES+=usr/include/clang/3.2/bmi2intrin.h
+OLD_FILES+=usr/include/clang/3.2/bmiintrin.h
+OLD_FILES+=usr/include/clang/3.2/cpuid.h
+OLD_FILES+=usr/include/clang/3.2/emmintrin.h
+OLD_FILES+=usr/include/clang/3.2/f16cintrin.h
+OLD_FILES+=usr/include/clang/3.2/fma4intrin.h
+OLD_FILES+=usr/include/clang/3.2/fmaintrin.h
+OLD_FILES+=usr/include/clang/3.2/immintrin.h
+OLD_FILES+=usr/include/clang/3.2/lzcntintrin.h
+OLD_FILES+=usr/include/clang/3.2/mm3dnow.h
+OLD_FILES+=usr/include/clang/3.2/mm_malloc.h
+OLD_FILES+=usr/include/clang/3.2/mmintrin.h
+OLD_FILES+=usr/include/clang/3.2/module.map
+OLD_FILES+=usr/include/clang/3.2/nmmintrin.h
+OLD_FILES+=usr/include/clang/3.2/pmmintrin.h
+OLD_FILES+=usr/include/clang/3.2/popcntintrin.h
+OLD_FILES+=usr/include/clang/3.2/rtmintrin.h
+OLD_FILES+=usr/include/clang/3.2/smmintrin.h
+OLD_FILES+=usr/include/clang/3.2/tmmintrin.h
+OLD_FILES+=usr/include/clang/3.2/wmmintrin.h
+OLD_FILES+=usr/include/clang/3.2/x86intrin.h
+OLD_FILES+=usr/include/clang/3.2/xmmintrin.h
+OLD_FILES+=usr/include/clang/3.2/xopintrin.h
+OLD_DIRS+=usr/include/clang/3.2
+# 20130404: legacy ATA stack removed
+OLD_FILES+=etc/periodic/daily/405.status-ata-raid
+OLD_FILES+=rescue/atacontrol
+OLD_FILES+=sbin/atacontrol
+OLD_FILES+=usr/share/man/man8/atacontrol.8.gz
+OLD_FILES+=usr/share/man/man4/atapicam.4.gz
+OLD_FILES+=usr/share/man/man4/ataraid.4.gz
+OLD_FILES+=usr/sbin/burncd
+OLD_FILES+=usr/share/man/man8/burncd.8.gz
+# 20130316: vinum.4 removed
+OLD_FILES+=usr/share/man/man4/vinum.4.gz
+# 20130312: fortunes-o removed
+OLD_FILES+=usr/share/games/fortune/fortunes-o
+OLD_FILES+=usr/share/games/fortune/fortunes-o.dat
+# 20130311: Ports are no more available via cvsup
 OLD_FILES+=usr/share/examples/cvsup/ports-supfile
 OLD_FILES+=usr/share/examples/cvsup/refuse
 OLD_FILES+=usr/share/examples/cvsup/refuse.README
-# 20130315: removed long unused directories for .1aout section manpages
+# 20130309: NWFS and NCP supports removed
+OLD_FILES+=usr/bin/ncplist
+OLD_FILES+=usr/bin/ncplogin
+OLD_FILES+=usr/bin/ncplogout
+OLD_FILES+=usr/include/fs/nwfs/nwfs.h
+OLD_FILES+=usr/include/fs/nwfs/nwfs_mount.h
+OLD_FILES+=usr/include/fs/nwfs/nwfs_node.h
+OLD_FILES+=usr/include/fs/nwfs/nwfs_subr.h
+OLD_DIRS+=usr/include/fs/nwfs
+OLD_FILES+=usr/include/netncp/ncp.h
+OLD_FILES+=usr/include/netncp/ncp_cfg.h
+OLD_FILES+=usr/include/netncp/ncp_conn.h
+OLD_FILES+=usr/include/netncp/ncp_file.h
+OLD_FILES+=usr/include/netncp/ncp_lib.h
+OLD_FILES+=usr/include/netncp/ncp_ncp.h
+OLD_FILES+=usr/include/netncp/ncp_nls.h
+OLD_FILES+=usr/include/netncp/ncp_rcfile.h
+OLD_FILES+=usr/include/netncp/ncp_rq.h
+OLD_FILES+=usr/include/netncp/ncp_sock.h
+OLD_FILES+=usr/include/netncp/ncp_subr.h
+OLD_FILES+=usr/include/netncp/ncp_user.h
+OLD_FILES+=usr/include/netncp/ncpio.h
+OLD_FILES+=usr/include/netncp/nwerror.h
+OLD_DIRS+=usr/include/netncp
+OLD_FILES+=usr/lib/libncp.a
+OLD_FILES+=usr/lib/libncp.so
+OLD_LIBS+=usr/lib/libncp.so.4
+OLD_FILES+=usr/lib/libncp_p.a
+OLD_FILES+=usr/lib32/libncp.a
+OLD_FILES+=usr/lib32/libncp.so
+OLD_LIBS+=usr/lib32/libncp.so.4
+OLD_FILES+=usr/lib32/libncp_p.a
+OLD_FILES+=usr/sbin/mount_nwfs
+OLD_FILES+=usr/share/examples/nwclient/dot.nwfsrc
+OLD_FILES+=usr/share/examples/nwclient/nwfs.sh.sample
+OLD_DIRS+=usr/share/examples/nwclient
+OLD_FILES+=usr/share/man/man1/ncplist.1.gz
+OLD_FILES+=usr/share/man/man1/ncplogin.1.gz
+OLD_FILES+=usr/share/man/man1/ncplogout.1.gz
+OLD_FILES+=usr/share/man/man8/mount_nwfs.8.gz
+# 20130302: NTFS support removed
+OLD_FILES+=rescue/mount_ntfs
+OLD_FILES+=sbin/mount_ntfs
+OLD_FILES+=usr/include/fs/ntfs/ntfs.h
+OLD_FILES+=usr/include/fs/ntfs/ntfs_compr.h
+OLD_FILES+=usr/include/fs/ntfs/ntfs_ihash.h
+OLD_FILES+=usr/include/fs/ntfs/ntfs_inode.h
+OLD_FILES+=usr/include/fs/ntfs/ntfs_subr.h
+OLD_FILES+=usr/include/fs/ntfs/ntfs_vfsops.h
+OLD_FILES+=usr/include/fs/ntfs/ntfsmount.h
+OLD_DIRS+=usr/include/fs/ntfs
+OLD_FILES+=usr/share/man/man8/mount_ntfs.8.gz
+# 20130302: PORTALFS support removed
+OLD_FILES+=usr/include/fs/portalfs/portal.h
+OLD_DIRS+=usr/include/fs/portalfs
+OLD_FILES+=usr/sbin/mount_portalfs
+OLD_FILES+=usr/share/examples/portal/README
+OLD_FILES+=usr/share/examples/portal/portal.conf
+OLD_DIRS+=usr/share/examples/portal
+OLD_FILES+=usr/share/man/man8/mount_portalfs.8.gz
+# 20130302: CODAFS support removed
+OLD_FILES+=usr/share/man/man4/coda.4.gz
+# 20130302: XFS support removed
+OLD_FILES+=usr/share/man/man5/xfs.5.gz
+# 20130302: Capsicum overhaul
+OLD_FILES+=usr/share/man/man2/cap_getrights.2.gz
+OLD_FILES+=usr/share/man/man2/cap_new.2.gz
+# 20130213: OpenSSL 1.0.1e import
+OLD_FILES+=usr/share/openssl/man/man3/EVP_PKEY_verifyrecover.3.gz
+OLD_FILES+=usr/share/openssl/man/man3/EVP_PKEY_verifyrecover_init.3.gz
+# 20130116: removed long unused directories for .1aout section manpages
 OLD_FILES+=usr/share/man/en.ISO8859-1/man1aout
 OLD_FILES+=usr/share/man/en.UTF-8/man1aout
 OLD_DIRS+=usr/share/man/man1aout
 OLD_DIRS+=usr/share/man/cat1aout
 OLD_DIRS+=usr/share/man/en.ISO8859-1/cat1aout
 OLD_DIRS+=usr/share/man/en.UTF-8/cat1aout
+# 20130110: bsd.compat.mk removed
+OLD_FILES+=usr/share/mk/bsd.compat.mk
+# 20130103: gnats-supfile removed
+OLD_FILES+=usr/share/examples/cvsup/gnats-supfile
+# 20121230: libdisk removed
+OLD_FILES+=usr/share/man/man3/libdisk.3.gz usr/include/libdisk.h
+OLD_FILES+=usr/lib/libdisk.a usr/lib32/libdisk.a
 # 20121230: remove wrongly created directories for auditdistd
 OLD_DIRS+=var/dist
 OLD_DIRS+=var/remote
+# 20121114: zpool-features manual page moved from section 5 to 7
+OLD_FILES+=usr/share/man/man5/zpool-features.5.gz
+# 20121022: remove harp, hfa and idt man page
+OLD_FILES+=usr/share/man/man4/harp.4.gz
+OLD_FILES+=usr/share/man/man4/hfa.4.gz
+OLD_FILES+=usr/share/man/man4/idt.4.gz
+OLD_FILES+=usr/share/man/man4/if_idt.4.gz
+# 20121022: VFS_LOCK_GIANT elimination
+OLD_FILES+=usr/share/man/man9/VFS_LOCK_GIANT.9.gz
+OLD_FILES+=usr/share/man/man9/VFS_UNLOCK_GIANT.9.gz
+# 20121004: remove incomplete unwind.h
+OLD_FILES+=usr/include/clang/3.2/unwind.h
+# 20120910: NetBSD compat shims removed
+OLD_FILES+=usr/include/cam/scsi/scsi_low_pisa.h
+OLD_FILES+=usr/include/sys/device_port.h
+# 20120909: doc and www supfiles removed
+OLD_FILES+=usr/share/examples/cvsup/doc-supfile
+OLD_FILES+=usr/share/examples/cvsup/www-supfile
+# 20120908: pf cleanup
+OLD_FILES+=usr/include/net/if_pflow.h
 # 20120816: new clang import which bumps version from 3.1 to 3.2
 OLD_FILES+=usr/bin/llvm-ld
 OLD_FILES+=usr/bin/llvm-stub
@@ -80,11 +576,55 @@ OLD_FILES+=usr/include/clang/3.1/x86intrin.h
 OLD_FILES+=usr/include/clang/3.1/xmmintrin.h
 OLD_DIRS+=usr/include/clang/3.1
 OLD_FILES+=usr/share/man/man1/llvm-ld.1.gz
-# 20120713: auth.conf removed
+# 20120712: OpenSSL 1.0.1c import
+OLD_LIBS+=lib/libcrypto.so.6
+OLD_LIBS+=usr/lib/libssl.so.6
+OLD_LIBS+=usr/lib32/libcrypto.so.6
+OLD_LIBS+=usr/lib32/libssl.so.6
+OLD_FILES+=usr/include/openssl/aes_locl.h
+OLD_FILES+=usr/include/openssl/bio_lcl.h
+OLD_FILES+=usr/include/openssl/e_os.h
+OLD_FILES+=usr/include/openssl/fips.h
+OLD_FILES+=usr/include/openssl/fips_rand.h
+OLD_FILES+=usr/include/openssl/md2.h
+OLD_FILES+=usr/include/openssl/pq_compat.h
+OLD_FILES+=usr/include/openssl/store.h
+OLD_FILES+=usr/include/openssl/tmdiff.h
+OLD_FILES+=usr/include/openssl/ui_locl.h
+OLD_FILES+=usr/share/openssl/man/man3/CRYPTO_set_id_callback.3.gz
+# 20120621: remove old man page
+OLD_FILES+=usr/share/man/man8/vnconfig.8.gz
+# 20120619: TOE support updated
+OLD_FILES+=usr/include/netinet/toedev.h
+# 20120613: auth.conf removed
 OLD_FILES+=etc/auth.conf
 OLD_FILES+=usr/share/examples/etc/auth.conf
 OLD_FILES+=usr/share/man/man3/auth.3.gz
+OLD_FILES+=usr/share/man/man3/auth_getval.3.gz
 OLD_FILES+=usr/share/man/man5/auth.conf.5.gz
+# 20120530: kde pam lives now in ports
+OLD_FILES+=etc/pam.d/kde
+# 20120521: byacc import
+OLD_FILES+=usr/bin/yyfix
+OLD_FILES+=usr/share/man/man1/yyfix.1.gz
+# 20120505: new clang import installed a redundant internal header
+OLD_FILES+=usr/include/clang/3.1/stdalign.h
+# 20120428: MD2 removed from libmd
+OLD_LIBS+=lib/libmd.so.5
+OLD_FILES+=usr/include/md2.h
+OLD_LIBS+=usr/lib32/libmd.so.5
+OLD_FILES+=usr/share/man/man3/MD2Data.3.gz
+OLD_FILES+=usr/share/man/man3/MD2End.3.gz
+OLD_FILES+=usr/share/man/man3/MD2File.3.gz
+OLD_FILES+=usr/share/man/man3/MD2FileChunk.3.gz
+OLD_FILES+=usr/share/man/man3/MD2Final.3.gz
+OLD_FILES+=usr/share/man/man3/MD2Init.3.gz
+OLD_FILES+=usr/share/man/man3/MD2Update.3.gz
+OLD_FILES+=usr/share/man/man3/md2.3.gz
+# 20120425: libusb version bump (r234684)
+OLD_LIBS+=usr/lib/libusb.so.2
+OLD_LIBS+=usr/lib32/libusb.so.2
+OLD_FILES+=usr/share/man/man3/libsub_get_active_config_descriptor.3.gz
 # 20120415: new clang import which bumps version from 3.0 to 3.1
 OLD_FILES+=usr/include/clang/3.0/altivec.h
 OLD_FILES+=usr/include/clang/3.0/avxintrin.h
@@ -101,6 +641,111 @@ OLD_FILES+=usr/include/clang/3.0/wmmintrin.h
 OLD_FILES+=usr/include/clang/3.0/x86intrin.h
 OLD_FILES+=usr/include/clang/3.0/xmmintrin.h
 OLD_DIRS+=usr/include/clang/3.0
+# 20120412: BIND 9.8.1 release notes removed
+OLD_FILES+=usr/share/doc/bind9/RELEASE-NOTES-BIND-9.8.1.pdf
+OLD_FILES+=usr/share/doc/bind9/RELEASE-NOTES-BIND-9.8.1.txt
+OLD_FILES+=usr/share/doc/bind9/RELEASE-NOTES-BIND-9.8.1.html
+OLD_FILES+=usr/share/doc/bind9/release-notes.css
+# 20120330: legacy(4) moved to x86
+OLD_FILES+=usr/include/machine/legacyvar.h
+# 20120324: MPI headers updated
+OLD_FILES+=usr/include/dev/mpt/mpilib/mpi_inb.h
+# 20120322: hwpmc_mips24k.h removed
+OLD_FILES+=usr/include/dev/hwpmc/hwpmc_mips24k.h
+# 20120322: Update heimdal to 1.5.1.
+OLD_FILES+=usr/include/krb5-v4compat.h \
+	usr/include/krb_err.h \
+	usr/include/hdb-private.h \
+        usr/share/man/man3/krb5_addresses.3.gz \
+        usr/share/man/man3/krb5_cc_cursor.3.gz \
+        usr/share/man/man3/krb5_cc_ops.3.gz \
+        usr/share/man/man3/krb5_config.3.gz \
+        usr/share/man/man3/krb5_config_get_int_default.3.gz \
+        usr/share/man/man3/krb5_context.3.gz \
+        usr/share/man/man3/krb5_data.3.gz \
+        usr/share/man/man3/krb5_err.3.gz \
+        usr/share/man/man3/krb5_errx.3.gz \
+        usr/share/man/man3/krb5_keyblock.3.gz \
+        usr/share/man/man3/krb5_keytab_entry.3.gz \
+        usr/share/man/man3/krb5_kt_cursor.3.gz \
+        usr/share/man/man3/krb5_kt_ops.3.gz \
+        usr/share/man/man3/krb5_set_warn_dest.3.gz \
+        usr/share/man/man3/krb5_verr.3.gz \
+        usr/share/man/man3/krb5_verrx.3.gz \
+        usr/share/man/man3/krb5_vwarnx.3.gz \
+        usr/share/man/man3/krb5_warn.3.gz \
+        usr/share/man/man3/krb5_warnx.3.gz
+OLD_LIBS+=usr/lib/libasn1.so.10 \
+	usr/lib/libhdb.so.10 \
+	usr/lib/libheimntlm.so.10 \
+	usr/lib/libhx509.so.10 \
+	usr/lib/libkadm5clnt.so.10 \
+	usr/lib/libkadm5srv.so.10 \
+	usr/lib/libkafs5.so.10 \
+	usr/lib/libkrb5.so.10 \
+	usr/lib/libroken.so.10 \
+	usr/lib32/libasn1.so.10 \
+	usr/lib32/libhdb.so.10 \
+	usr/lib32/libheimntlm.so.10 \
+	usr/lib32/libhx509.so.10 \
+	usr/lib32/libkadm5clnt.so.10 \
+	usr/lib32/libkadm5srv.so.10 \
+	usr/lib32/libkafs5.so.10 \
+	usr/lib32/libkrb5.so.10 \
+	usr/lib32/libroken.so.10
+# 20120309: Remove fifofs header files.
+OLD_FILES+=usr/include/fs/fifofs/fifo.h
+OLD_DIRS+=usr/include/fs/fifofs
+# 20120304: xlocale cleanup
+OLD_FILES+=usr/include/_xlocale_ctype.h
+# 20120225: libarchive 3.0.3
+OLD_FILES+=usr/share/man/man3/archive_read_data_into_buffer.3.gz \
+	usr/share/man/man3/archive_read_support_compression_all.3.gz \
+	usr/share/man/man3/archive_read_support_compression_bzip2.3.gz \
+	usr/share/man/man3/archive_read_support_compression_compress.3.gz \
+	usr/share/man/man3/archive_read_support_compression_gzip.3.gz \
+	usr/share/man/man3/archive_read_support_compression_lzma.3.gz \
+	usr/share/man/man3/archive_read_support_compression_none.3.gz \
+	usr/share/man/man3/archive_read_support_compression_program.3.gz \
+	usr/share/man/man3/archive_read_support_compression_program_signature.3.gz \
+	usr/share/man/man3/archive_read_support_compression_xz.3.gz \
+	usr/share/man/man3/archive_write_set_callbacks.3.gz \
+	usr/share/man/man3/archive_write_set_compression_bzip2.3.gz \
+	usr/share/man/man3/archive_write_set_compression_compress.3.gz \
+	usr/share/man/man3/archive_write_set_compression_gzip.3.gz \
+	usr/share/man/man3/archive_write_set_compression_none.3.gz \
+	usr/share/man/man3/archive_write_set_compression_program.3.gz
+OLD_LIBS+=usr/lib/libarchive.so.5
+OLD_LIBS+=usr/lib32/libarchive.so.5
+# 20120113: removal of wtmpcvt(1)
+OLD_FILES+=usr/bin/wtmpcvt
+OLD_FILES+=usr/share/man/man1/wtmpcvt.1.gz
+# 20111214: eventtimers(7) moved to eventtimers(4)
+OLD_FILES+=usr/share/man/man7/eventtimers.7.gz
+# 20111125: amd(4) removed
+OLD_FILES+=usr/share/man/man4/amd.4.gz
+# 20111125: libodialog removed
+OLD_FILES+=usr/lib/libodialog.a
+OLD_FILES+=usr/lib/libodialog.so
+OLD_LIBS+=usr/lib/libodialog.so.7
+OLD_FILES+=usr/lib/libodialog_p.a
+OLD_FILES+=usr/lib32/libodialog.a
+OLD_FILES+=usr/lib32/libodialog.so
+OLD_LIBS+=usr/lib32/libodialog.so.7
+OLD_FILES+=usr/lib32/libodialog_p.a
+# 20110930: sysinstall removed
+OLD_FILES+=usr/sbin/sysinstall
+OLD_FILES+=usr/share/man/man8/sysinstall.8.gz
+OLD_FILES+=usr/lib/libftpio.a
+OLD_FILES+=usr/lib/libftpio.so
+OLD_LIBS+=usr/lib/libftpio.so.8
+OLD_FILES+=usr/lib/libftpio_p.a
+OLD_FILES+=usr/lib32/libftpio.a
+OLD_FILES+=usr/lib32/libftpio.so
+OLD_LIBS+=usr/lib32/libftpio.so.8
+OLD_FILES+=usr/lib32/libftpio_p.a
+OLD_FILES+=usr/include/ftpio.h
+OLD_FILES+=usr/share/man/man3/ftpio.3.gz
 # 20110915: rename congestion control manpages
 OLD_FILES+=usr/share/man/man4/cc.4.gz
 OLD_FILES+=usr/share/man/man9/cc.9.gz
@@ -1042,12 +1687,6 @@ OLD_FILES+=usr/include/sys/linedisc.h
 OLD_FILES+=usr/share/man/man3/posix_openpt.3.gz
 # 20080725: sgtty.h removed
 OLD_FILES+=usr/include/sgtty.h
-# 20080719: sade(8) removed on all but amd64, i386 and sparc64
-.if ${TARGET_ARCH} != "amd64" && ${TARGET_ARCH} != "i386" && \
-    ${TARGET_ARCH} != "sparc64"
-OLD_FILES+=usr/sbin/sade
-OLD_FILES+=usr/share/man/man8/sade.8.gz
-.endif
 # 20080706: bsdlabel(8) removed on powerpc
 .if ${TARGET_ARCH} == "powerpc"
 OLD_FILES+=sbin/bsdlabel
@@ -2626,7 +3265,7 @@ OLD_FILES+=usr/lib/libpam_ssh.a
 OLD_FILES+=usr/lib/libpam_ssh_p.a
 OLD_FILES+=usr/bin/help
 OLD_FILES+=usr/bin/sccs
-.if ${TARGET_ARCH} != "amd64" && ${TARGET_ARCH} != "arm" && ${TARGET_ARCH} != "i386" && ${TARGET_ARCH} != "powerpc"
+.if ${TARGET_ARCH} != "amd64" && ${TARGET} != "arm" && ${TARGET_ARCH} != "i386" && ${TARGET} != "powerpc"
 OLD_FILES+=usr/bin/gdbserver
 .endif
 OLD_FILES+=usr/bin/ssh-keysign
@@ -4584,9 +5223,7 @@ OLD_FILES+=usr/share/man/man1/x509.1.gz
 OLD_FILES+=usr/share/man/man3/SSL_COMP_add_compression_method.3.gz
 OLD_FILES+=usr/share/man/man3/SSL_CTX_get_ex_new_index.3.gz
 OLD_FILES+=usr/share/man/man3/archive_entry_dup.3.gz
-OLD_FILES+=usr/share/man/man3/archive_entry_hardlink_w.3.gz
 OLD_FILES+=usr/share/man/man3/archive_entry_set_tartype.3.gz
-OLD_FILES+=usr/share/man/man3/archive_entry_symlink_w.3.gz
 OLD_FILES+=usr/share/man/man3/archive_entry_tartype.3.gz
 OLD_FILES+=usr/share/man/man3/archive_read_data_into_file.3.gz
 OLD_FILES+=usr/share/man/man3/archive_read_open_tar.3.gz
@@ -5507,6 +6144,13 @@ OLD_LIBS+=usr/lib/libkse.so.1
 OLD_LIBS+=usr/lib/liblwres.so.3
 OLD_LIBS+=usr/lib/pam_ftp.so.2
 
+# 20131013: Removal of the ATF tools
+OLD_DIRS+=etc/atf
+OLD_DIRS+=usr/share/examples/atf
+OLD_DIRS+=usr/share/xml/atf
+OLD_DIRS+=usr/share/xml
+OLD_DIRS+=usr/share/xsl/atf
+OLD_DIRS+=usr/share/xsl
 # 20040925: bind9 import
 OLD_DIRS+=usr/share/doc/bind/html
 OLD_DIRS+=usr/share/doc/bind/misc

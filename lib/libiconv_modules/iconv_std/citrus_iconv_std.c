@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libiconv_modules/iconv_std/citrus_iconv_std.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libiconv_modules/iconv_std/citrus_iconv_std.c 252583 2013-07-03 18:27:45Z peter $ */
 /*	$NetBSD: citrus_iconv_std.c,v 1.15 2006/11/13 19:08:19 tnozaki Exp $	*/
 
 /*-
@@ -104,7 +104,7 @@ init_encoding_state(struct _citrus_iconv_std_encoding *se)
 
 static __inline int
 mbtocsx(struct _citrus_iconv_std_encoding *se,
-    _csid_t *csid, _index_t *idx, char **s, size_t n, size_t *nresult,
+    _csid_t *csid, _index_t *idx, const char **s, size_t n, size_t *nresult,
     struct iconv_hooks *hooks)
 {
 
@@ -461,7 +461,7 @@ _citrus_iconv_std_iconv_uninit_context(struct _citrus_iconv *cv)
 
 static int
 _citrus_iconv_std_iconv_convert(struct _citrus_iconv * __restrict cv,
-    char * __restrict * __restrict in, size_t * __restrict inbytes,
+    const char * __restrict * __restrict in, size_t * __restrict inbytes,
     char * __restrict * __restrict out, size_t * __restrict outbytes,
     uint32_t flags, size_t * __restrict invalids)
 {
@@ -469,7 +469,7 @@ _citrus_iconv_std_iconv_convert(struct _citrus_iconv * __restrict cv,
 	struct _citrus_iconv_std_context *sc = cv->cv_closure;
 	_csid_t csid;
 	_index_t idx;
-	char *tmpin;
+	const char *tmpin;
 	size_t inval, szrin, szrout;
 	int ret, state = 0;
 

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/cam/scsi/scsi_pass.c 247115 2013-02-21 19:02:29Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/cam/scsi/scsi_pass.c 257049 2013-10-24 10:33:31Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -48,6 +48,7 @@ __FBSDID("$FreeBSD: stable/9/sys/cam/scsi/scsi_pass.c 247115 2013-02-21 19:02:29
 #include <cam/cam_xpt_periph.h>
 #include <cam/cam_debug.h>
 #include <cam/cam_sim.h>
+#include <cam/cam_compat.h>
 
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_pass.h>
@@ -87,6 +88,7 @@ struct pass_softc {
 static	d_open_t	passopen;
 static	d_close_t	passclose;
 static	d_ioctl_t	passioctl;
+static	d_ioctl_t	passdoioctl;
 
 static	periph_init_t	passinit;
 static	periph_ctor_t	passregister;
@@ -205,11 +207,6 @@ passoninvalidate(struct cam_periph *periph)
 	 * XXX Handle any transactions queued to the card
 	 *     with XPT_ABORT_CCB.
 	 */
-
-	if (bootverbose) {
-		xpt_print(periph->path, "lost device\n");
-	}
-
 }
 
 static void
@@ -219,8 +216,6 @@ passcleanup(struct cam_periph *periph)
 
 	softc = (struct pass_softc *)periph->softc;
 
-	if (bootverbose)
-		xpt_print(periph->path, "removing device entry\n");
 	devstat_remove_entry(softc->device_stats);
 
 	cam_periph_unlock(periph);
@@ -381,7 +376,7 @@ passregister(struct cam_periph *periph, void *arg)
 	 * know what the blocksize of this device is, if 
 	 * it even has a blocksize.
 	 */
-	mtx_unlock(periph->sim->mtx);
+	cam_periph_unlock(periph);
 	no_tags = (cgd->inq_data.flags & SID_CmdQue) == 0;
 	softc->device_stats = devstat_new_entry("pass",
 			  periph->unit_number, 0,
@@ -417,7 +412,7 @@ passregister(struct cam_periph *periph, void *arg)
 	 */
 	dev_ref(softc->dev);
 
-	mtx_lock(periph->sim->mtx);
+	cam_periph_lock(periph);
 	softc->dev->si_drv1 = periph;
 
 	TASK_INIT(&softc->add_physpath_task, /*priority*/0,
@@ -575,6 +570,17 @@ passdone(struct cam_periph *periph, union ccb *done_ccb)
 static int
 passioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td)
 {
+	int error;
+
+	if ((error = passdoioctl(dev, cmd, addr, flag, td)) == ENOTTY) {
+		error = cam_compat_ioctl(dev, cmd, addr, flag, td, passdoioctl);
+	}
+	return (error);
+}
+
+static int
+passdoioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td)
+{
 	struct	cam_periph *periph;
 	struct	pass_softc *softc;
 	int	error;
@@ -613,8 +619,8 @@ passioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *t
 
 		/* Compatibility for RL/priority-unaware code. */
 		priority = inccb->ccb_h.pinfo.priority;
-		if (priority < CAM_RL_TO_PRIORITY(CAM_RL_NORMAL))
-		    priority += CAM_RL_TO_PRIORITY(CAM_RL_NORMAL);
+		if (priority <= CAM_PRIORITY_OOB)
+		    priority += CAM_PRIORITY_OOB + 1;
 
 		/*
 		 * Non-immediate CCBs need a CCB from the per-device pool
@@ -668,11 +674,10 @@ passsendccb(struct cam_periph *periph, union ccb *ccb, union ccb *inccb)
 {
 	struct pass_softc *softc;
 	struct cam_periph_map_info mapinfo;
-	int error, need_unmap;
+	xpt_opcode fc;
+	int error;
 
 	softc = (struct pass_softc *)periph->softc;
-
-	need_unmap = 0;
 
 	/*
 	 * There are some fields in the CCB header that need to be
@@ -687,25 +692,13 @@ passsendccb(struct cam_periph *periph, union ccb *ccb, union ccb *inccb)
 	ccb->ccb_h.cbfcnp = passdone;
 
 	/*
-	 * We only attempt to map the user memory into kernel space
-	 * if they haven't passed in a physical memory pointer,
-	 * and if there is actually an I/O operation to perform.
-	 * cam_periph_mapmem() supports SCSI, ATA, SMP, ADVINFO and device
-	 * match CCBs.  For the SCSI, ATA and ADVINFO CCBs, we only pass the
-	 * CCB in if there's actually data to map.  cam_periph_mapmem() will
-	 * do the right thing, even if there isn't data to map, but since CCBs
-	 * without data are a reasonably common occurance (e.g. test unit
-	 * ready), it will save a few cycles if we check for it here.
+	 * Let cam_periph_mapmem do a sanity check on the data pointer format.
+	 * Even if no data transfer is needed, it's a cheap check and it
+	 * simplifies the code.
 	 */
-	if (((ccb->ccb_h.flags & CAM_DATA_PHYS) == 0)
-	 && (((ccb->ccb_h.func_code == XPT_SCSI_IO ||
-	       ccb->ccb_h.func_code == XPT_ATA_IO)
-	    && ((ccb->ccb_h.flags & CAM_DIR_MASK) != CAM_DIR_NONE))
-	  || (ccb->ccb_h.func_code == XPT_DEV_MATCH)
-	  || (ccb->ccb_h.func_code == XPT_SMP_IO)
-	  || ((ccb->ccb_h.func_code == XPT_DEV_ADVINFO)
-	   && (ccb->cdai.bufsiz > 0)))) {
-
+	fc = ccb->ccb_h.func_code;
+	if ((fc == XPT_SCSI_IO) || (fc == XPT_ATA_IO) || (fc == XPT_SMP_IO)
+	 || (fc == XPT_DEV_MATCH) || (fc == XPT_DEV_ADVINFO)) {
 		bzero(&mapinfo, sizeof(mapinfo));
 
 		/*
@@ -723,13 +716,9 @@ passsendccb(struct cam_periph *periph, union ccb *ccb, union ccb *inccb)
 		 */
 		if (error)
 			return(error);
-
-		/*
-		 * We successfully mapped the memory in, so we need to
-		 * unmap it when the transaction is done.
-		 */
-		need_unmap = 1;
-	}
+	} else
+		/* Ensure that the unmap call later on is a no-op. */
+		mapinfo.num_bufs_used = 0;
 
 	/*
 	 * If the user wants us to perform any error recovery, then honor
@@ -741,8 +730,7 @@ passsendccb(struct cam_periph *periph, union ccb *ccb, union ccb *inccb)
 	     SF_RETRY_UA : SF_NO_RECOVERY) | SF_NO_PRINT,
 	    softc->device_stats);
 
-	if (need_unmap != 0)
-		cam_periph_unmapmem(ccb, &mapinfo);
+	cam_periph_unmapmem(ccb, &mapinfo);
 
 	ccb->ccb_h.cbfcnp = NULL;
 	ccb->ccb_h.periph_priv = inccb->ccb_h.periph_priv;

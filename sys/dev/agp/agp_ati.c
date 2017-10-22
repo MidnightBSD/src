@@ -27,9 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/agp/agp_ati.c 194017 2009-06-11 17:06:07Z avg $");
-
-#include "opt_bus.h"
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/agp/agp_ati.c 244926 2013-01-01 18:16:49Z antoine $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -101,7 +99,7 @@ agp_ati_match(device_t dev)
 		return ("ATI RS300_166 AGP bridge");
 	case 0x58331002:
 		return ("ATI RS300_200 AGP bridge");
-	};
+	}
 
 	return NULL;
 }
@@ -201,7 +199,7 @@ agp_ati_attach(device_t dev)
 	default:
 		/* Unknown chipset */
 		return EINVAL;
-	};
+	}
 
 	rid = ATI_GART_MMADDR;
 	sc->regs = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid, RF_ACTIVE);

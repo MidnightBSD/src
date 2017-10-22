@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/ia64/include/ia64_cpu.h 223170 2011-06-17 04:26:03Z marcel $
+ * $FreeBSD: release/10.0.0/sys/ia64/include/ia64_cpu.h 223170 2011-06-17 04:26:03Z marcel $
  */
 
 #ifndef _MACHINE_IA64_CPU_H_

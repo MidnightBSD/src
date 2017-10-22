@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/getopt/getopt.c 200462 2009-12-13 03:14:06Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/getopt/getopt.c 200462 2009-12-13 03:14:06Z delphij $");
 
 /*
  * This material, written by Henry Spencer, was released by him

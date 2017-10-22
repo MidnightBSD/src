@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/mk/bsd.links.mk 248531 2013-03-19 20:00:34Z brooks $
+# $FreeBSD: release/10.0.0/share/mk/bsd.links.mk 245752 2013-01-21 22:40:39Z brooks $
 
 .if !target(__<bsd.init.mk>__)
 .error bsd.links.mk cannot be included directly.
@@ -15,7 +15,7 @@ _installlinks:
 		t=${DESTDIR}$$1; \
 		shift; \
 		${ECHO} $$t -\> $$l; \
-		ln -f $$l $$t; \
+		${INSTALL_LINK} $$l $$t; \
 	done; true
 .endif
 .if defined(SYMLINKS) && !empty(SYMLINKS)
@@ -26,6 +26,6 @@ _installlinks:
 		t=${DESTDIR}$$1; \
 		shift; \
 		${ECHO} $$t -\> $$l; \
-		ln -fs $$l $$t; \
+		${INSTALL_SYMLINK} $$l $$t; \
 	done; true
 .endif

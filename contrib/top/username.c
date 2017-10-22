@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $FreeBSD: stable/9/contrib/top/username.c 200979 2009-12-25 09:02:41Z ed $
+ * $FreeBSD: release/10.0.0/contrib/top/username.c 200979 2009-12-25 09:02:41Z ed $
  */
 
 /*

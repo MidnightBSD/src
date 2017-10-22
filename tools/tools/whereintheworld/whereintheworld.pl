@@ -4,10 +4,10 @@
 # Parses "make world" output and summarize where it's been so far.
 #
 # Bill Fenner <fenner@freebsd.org> 11 January 2000
-# Dag-Erling Smørgrav <des@freebsd.org> 09 January 2003
+# Dag-Erling SmÃ¸rgrav <des@freebsd.org> 09 January 2003
 #
 # $Id: whereintheworld,v 1.3 2000/01/28 00:42:32 fenner Exp $
-# $FreeBSD: stable/9/tools/tools/whereintheworld/whereintheworld.pl 110939 2003-02-15 14:30:51Z des $
+# $FreeBSD: release/10.0.0/tools/tools/whereintheworld/whereintheworld.pl 228953 2011-12-29 12:33:27Z uqs $
 #
 
 use strict;

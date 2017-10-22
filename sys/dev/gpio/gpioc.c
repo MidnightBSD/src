@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/gpio/gpioc.c 215142 2010-11-11 20:18:33Z thompsa $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/gpio/gpioc.c 233767 2012-04-02 00:11:26Z gonzo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -61,9 +61,6 @@ static struct cdevsw gpioc_cdevsw = {
 	.d_version	= D_VERSION,
 	.d_ioctl	= gpioc_ioctl,
 	.d_name		= "gpioc",
-#if __FreeBSD_version >= 800039
-	.d_flags	= D_PSEUDO | D_NEEDMINOR
-#endif
 };
 
 struct gpioc_softc {
@@ -105,7 +102,7 @@ gpioc_detach(device_t dev)
 	struct gpioc_softc *sc = device_get_softc(dev);
 	int err;
 
-	if (sc->sc_ctl_dev);
+	if (sc->sc_ctl_dev)
 		destroy_dev(sc->sc_ctl_dev);
 
 	if ((err = bus_generic_detach(dev)) != 0)

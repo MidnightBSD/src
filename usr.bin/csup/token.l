@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/csup/token.l 204556 2010-03-02 07:26:07Z lulf $
+ * $FreeBSD: release/10.0.0/usr.bin/csup/token.l 250227 2013-05-03 23:51:32Z jkim $
  */
 
 #include <err.h>
@@ -35,12 +35,11 @@
 #include "misc.h"
 #include "token.h"
 
-#define	YY_NO_UNPUT
-
 int lineno = 1;
 
 %}
 
+%option nounput
 %option noyywrap
 
 %%

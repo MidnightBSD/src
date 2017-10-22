@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: mount_smbfs.c,v 1.17 2002/04/10 04:17:51 bp Exp $
- * $FreeBSD: stable/9/contrib/smbfs/mount_smbfs/mount_smbfs.c 187583 2009-01-22 08:29:39Z trhodes $
+ * $FreeBSD: release/10.0.0/contrib/smbfs/mount_smbfs/mount_smbfs.c 250236 2013-05-04 14:03:18Z davide $
  */
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -82,7 +82,7 @@ main(int argc, char *argv[])
 	struct xvfsconf vfc;
 #endif
 	char *next;
-	int opt, error, mntflags, caseopt, dev;
+	int opt, error, mntflags, caseopt, fd;
 	uid_t uid;
 	gid_t gid;
 	mode_t dir_mode, file_mode;
@@ -90,7 +90,7 @@ main(int argc, char *argv[])
 
 	iov = NULL;
 	iovlen = 0;
-	dev = 0;
+	fd = 0;
 	uid = (uid_t)-1;
 	gid = (gid_t)-1;
 	caseopt = 0;
@@ -266,11 +266,11 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	dev = ctx->ct_fd;
+	fd = ctx->ct_fd;
 
 	build_iovec(&iov, &iovlen, "fstype", strdup("smbfs"), -1);
 	build_iovec(&iov, &iovlen, "fspath", mount_point, -1);
-	build_iovec_argf(&iov, &iovlen, "dev", "%d", dev);
+	build_iovec_argf(&iov, &iovlen, "fd", "%d", fd);
 	build_iovec(&iov, &iovlen, "mountpoint", mount_point, -1);
 	build_iovec_argf(&iov, &iovlen, "uid", "%d", uid);
 	build_iovec_argf(&iov, &iovlen, "gid", "%d", gid);

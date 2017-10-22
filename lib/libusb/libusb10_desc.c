@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libusb/libusb10_desc.c 235004 2012-05-04 15:27:18Z hselasky $ */
+/* $FreeBSD: release/10.0.0/lib/libusb/libusb10_desc.c 248236 2013-03-13 12:23:14Z hselasky $ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  *
@@ -24,10 +24,15 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/queue.h>
-
+#ifdef LIBUSB_GLOBAL_INCLUDE_FILE
+#include LIBUSB_GLOBAL_INCLUDE_FILE
+#else
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <sys/queue.h>
+#endif
 
 #define	libusb_device_handle libusb20_device
 
@@ -291,6 +296,25 @@ void
 libusb_free_config_descriptor(struct libusb_config_descriptor *config)
 {
 	free(config);
+}
+
+int
+libusb_get_string_descriptor(libusb_device_handle *pdev,
+    uint8_t desc_index, uint16_t langid, unsigned char *data,
+    int length)
+{
+	if (pdev == NULL || data == NULL || length < 1)
+		return (LIBUSB_ERROR_INVALID_PARAM);
+
+	if (length > 65535)
+		length = 65535;
+
+	/* put some default data into the destination buffer */
+	data[0] = 0;
+
+	return (libusb_control_transfer(pdev, LIBUSB_ENDPOINT_IN,
+	    LIBUSB_REQUEST_GET_DESCRIPTOR, (LIBUSB_DT_STRING << 8) | desc_index,
+	    langid, data, length, 1000));
 }
 
 int

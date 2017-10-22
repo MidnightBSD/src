@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/dtrace/dtio/Makefile 238366 2012-07-11 16:27:02Z gnn $
+# $FreeBSD: release/10.0.0/sys/modules/dtrace/dtio/Makefile 253996 2013-08-06 15:51:56Z avg $
 
 .PATH: ${.CURDIR}/../../../kern
 
@@ -11,3 +11,5 @@ CFLAGS+=	-I${.CURDIR}/../../../cddl/compat/opensolaris \
 		-I${.CURDIR}/../../..
 
 .include <bsd.kmod.mk>
+
+CFLAGS+=	-include ${.CURDIR}/../../../cddl/compat/opensolaris/sys/debug_compat.h

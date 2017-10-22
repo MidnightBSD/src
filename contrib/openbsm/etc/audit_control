@@ -1,6 +1,6 @@
 #
 # $P4: //depot/projects/trustedbsd/openbsm/etc/audit_control#9 $
-# $FreeBSD: stable/9/contrib/openbsm/etc/audit_control 244390 2012-12-18 09:32:44Z rwatson $
+# $FreeBSD: release/10.0.0/contrib/openbsm/etc/audit_control 243750 2012-12-01 11:58:08Z rwatson $
 #
 dir:/var/audit
 dist:off

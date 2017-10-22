@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/cddl/boot/zfs/zfssubr.c 247309 2013-02-26 05:58:05Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/cddl/boot/zfs/zfssubr.c 246586 2013-02-09 06:39:28Z delphij $");
 
 static uint64_t zfs_crc64_table[256];
 

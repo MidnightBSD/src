@@ -51,7 +51,7 @@ All rights reserved.\n";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/growfs/growfs.c 246284 2013-02-03 12:17:49Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/growfs/growfs.c 250377 2013-05-08 18:55:38Z eadler $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -141,14 +141,9 @@ growfs(int fsi, int fso, unsigned int Nflag)
 	uint cylno;
 	int i, j, width;
 	char tmpbuf[100];
-	static int randinit = 0;
 
 	DBG_ENTER;
 
-	if (!randinit) {
-		randinit = 1;
-		srandomdev();
-	}
 	time(&modtime);
 
 	/*
@@ -325,6 +320,7 @@ initcg(int cylno, time_t modtime, int fso, unsigned int Nflag)
 	DBG_FUNC("initcg")
 	static caddr_t iobuf;
 	long blkno, start;
+	ino_t ino;
 	ufs2_daddr_t i, cbase, dmax;
 	struct ufs1_dinode *dp1;
 	struct csum *cs;
@@ -393,8 +389,8 @@ initcg(int cylno, time_t modtime, int fso, unsigned int Nflag)
 	}
 	acg.cg_cs.cs_nifree += sblock.fs_ipg;
 	if (cylno == 0)
-		for (i = 0; i < ROOTINO; i++) {
-			setbit(cg_inosused(&acg), i);
+		for (ino = 0; ino < ROOTINO; ino++) {
+			setbit(cg_inosused(&acg), ino);
 			acg.cg_cs.cs_nifree--;
 		}
 	/*
@@ -406,7 +402,7 @@ initcg(int cylno, time_t modtime, int fso, unsigned int Nflag)
 		    i += sblock.fs_frag) {
 			dp1 = (struct ufs1_dinode *)(void *)iobuf;
 			for (j = 0; j < INOPB(&sblock); j++) {
-				dp1->di_gen = random();
+				dp1->di_gen = arc4random();
 				dp1++;
 			}
 			wtfs(fsbtodb(&sblock, cgimin(&sblock, cylno) + i),
@@ -1548,7 +1544,7 @@ main(int argc, char **argv)
 		printf(" from %s to %s? [Yes/No] ", oldsizebuf, newsizebuf);
 		fflush(stdout);
 		fgets(reply, (int)sizeof(reply), stdin);
-		if (strcmp(reply, "Yes\n")){
+		if (strcasecmp(reply, "Yes\n")){
 			printf("\nNothing done\n");
 			exit (0);
 		}

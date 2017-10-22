@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/tools/netrate/tcpp/tcpp_client.c 208873 2010-06-06 15:27:08Z rwatson $
+ * $FreeBSD: release/10.0.0/tools/tools/netrate/tcpp/tcpp_client.c 228956 2011-12-29 15:34:59Z rwatson $
  */
 
 #include <sys/types.h>
@@ -99,7 +99,7 @@ tcpp_client_newconn(void)
 	int fd, i;
 
 	/*
-	 * Spread load over available IPs, roating through them as we go.  No
+	 * Spread load over available IPs, rotating through them as we go.  No
 	 * attempt to localize IPs to particular workers.
 	 */
 	sin = localipbase;

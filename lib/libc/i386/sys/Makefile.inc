@@ -1,5 +1,5 @@
 #	from: Makefile.inc,v 1.1 1993/09/03 19:04:23 jtc Exp
-# $FreeBSD: stable/9/lib/libc/i386/sys/Makefile.inc 240819 2012-09-22 12:38:19Z kib $
+# $FreeBSD: release/10.0.0/lib/libc/i386/sys/Makefile.inc 237434 2012-06-22 07:13:30Z kib $
 
 .if !defined(COMPAT_32BIT)
 SRCS+=	i386_clr_watch.c i386_set_watch.c i386_vm86.c

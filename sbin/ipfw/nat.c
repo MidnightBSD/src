@@ -17,7 +17,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $FreeBSD: stable/9/sbin/ipfw/nat.c 228051 2011-11-28 08:12:37Z glebius $
+ * $FreeBSD: release/10.0.0/sbin/ipfw/nat.c 240351 2012-09-11 07:54:41Z kevlo $
  *
  * In-kernel nat support
  */
@@ -318,6 +318,7 @@ estimate_redir_addr(int *ac, char ***av)
 	char *sep = **av;
 	u_int c = 0;
 
+	(void)ac;	/* UNUSED */
 	while ((sep = strchr(sep, ',')) != NULL) {
 		c++;
 		sep++;
@@ -379,6 +380,7 @@ estimate_redir_port(int *ac, char ***av)
 	char *sep = **av;
 	u_int c = 0;
 
+	(void)ac;	/* UNUSED */
 	while ((sep = strchr(sep, ',')) != NULL) {
 		c++;
 		sep++;
@@ -419,7 +421,7 @@ setup_redir_port(char *buf, int *ac, char ***av)
 	/*
 	 * Extract local address.
 	 */
-	if ((sep = strchr(**av, ',')) != NULL) {
+	if (strchr(**av, ',') != NULL) {
 		r->laddr.s_addr = INADDR_NONE;
 		r->lport = ~0;
 		numLocalPorts = 1;
@@ -452,7 +454,7 @@ setup_redir_port(char *buf, int *ac, char ***av)
 	/*
 	 * Extract public port and optionally address.
 	 */
-	if ((sep = strchr(**av, ':')) != NULL) {
+	if (strchr(**av, ':') != NULL) {
 		if (StrToAddrAndPortRange(**av, &r->paddr, protoName,
 		    &portRange) != 0)
 			errx(EX_DATAERR, "redirect_port: "
@@ -480,7 +482,7 @@ setup_redir_port(char *buf, int *ac, char ***av)
 	 * option for this redirect entry, else stop here processing arg[cv].
 	 */
 	if (*ac != 0 && isdigit(***av)) {
-		if ((sep = strchr(**av, ':')) != NULL) {
+		if (strchr(**av, ':') != NULL) {
 			if (StrToAddrAndPortRange(**av, &r->raddr, protoName,
 			    &portRange) != 0)
 				errx(EX_DATAERR, "redirect_port: "

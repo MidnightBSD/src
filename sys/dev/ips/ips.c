@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ips/ips.c 163024 2006-10-05 07:28:43Z maxim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ips/ips.c 249595 2013-04-17 21:21:27Z hiren $");
 
 #include <dev/ips/ipsreg.h>
 #include <dev/ips/ips.h>
@@ -595,7 +595,7 @@ static int ips_copperhead_queue_init(ips_softc_t *sc)
 				&dmatag) != 0) {
                 device_printf(sc->dev, "can't alloc dma tag for statue queue\n");
 		error = ENOMEM;
-		goto exit;
+		return error;
         }
 	if(bus_dmamem_alloc(dmatag, (void *)&(sc->copper_queue), 
 	   		    BUS_DMA_NOWAIT, &dmamap)){
@@ -623,7 +623,8 @@ static int ips_copperhead_queue_init(ips_softc_t *sc)
 	
 	return 0;
 exit:
-	bus_dmamem_free(dmatag, sc->copper_queue, dmamap);
+	if (sc->copper_queue != NULL)
+		bus_dmamem_free(dmatag, sc->copper_queue, dmamap);
 	bus_dma_tag_destroy(dmatag);
 	return error;
 }

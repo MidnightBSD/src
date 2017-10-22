@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/ixp425_pci_space.c 164426 2006-11-19 23:55:23Z sam $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/ixp425_pci_space.c 254025 2013-08-07 06:21:20Z jeff $");
 
 /*
  * bus_space PCI functions for ixp425
@@ -432,7 +432,7 @@ ixp425_pci_mem_bs_unmap(void *t, bus_space_handle_t h, bus_size_t size)
 	endva = va + round_page(size);
 
 	/* Free the kernel virtual mapping. */
-	kmem_free(kernel_map, va, endva - va);
+	kva_free(va, endva - va);
 }
 
 int
@@ -443,7 +443,7 @@ ixp425_pci_mem_bs_alloc(void *t, bus_addr_t rstart, bus_addr_t rend,
 	panic("ixp425_mem_bs_alloc(): not implemented\n");
 }
 
-void    
+void
 ixp425_pci_mem_bs_free(void *t, bus_space_handle_t bsh, bus_size_t size)
 {
 	panic("ixp425_mem_bs_free(): not implemented\n");

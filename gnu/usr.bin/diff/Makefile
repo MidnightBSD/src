@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/diff/Makefile 204227 2010-02-22 22:32:24Z delphij $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/diff/Makefile 251468 2013-06-06 11:59:38Z jkim $
 
 DIFFSRC=${.CURDIR}/../../../contrib/diff/src
 .PATH: ${DIFFSRC} \
@@ -17,20 +17,14 @@ CFLAGS+=-funsigned-char
 
 CFLAGS+=-DHAVE_CONFIG_H
 CFLAGS+=-DPR_PROGRAM=\"/usr/bin/pr\"
-CFLAGS+=-I${DESTDIR}/usr/include/gnu
 CFLAGS+=-I${.CURDIR}/../../../contrib/diff
 CFLAGS+=-I${.CURDIR}/../../../contrib/diff/src
 CFLAGS+=-I${.CURDIR}/../../../contrib/diff/lib
+CFLAGS+=-I${DESTDIR}/usr/include/gnu
 
 SUBDIR+=doc
 
 DPADD=	${LIBGNUREGEX}
 LDADD=	-lgnuregex
-
-.for f in diff.c context.c
-${f}: ${DIFFSRC}/${f} ${.CURDIR}/${f}.diff
-	patch -s -o ${.TARGET} < ${.CURDIR}/${f}.diff ${DIFFSRC}/${f}
-CLEANFILES+= ${f}
-.endfor
 
 .include <bsd.prog.mk>

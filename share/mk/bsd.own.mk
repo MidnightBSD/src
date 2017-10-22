@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/mk/bsd.own.mk 248531 2013-03-19 20:00:34Z brooks $
+# $FreeBSD: release/10.0.0/share/mk/bsd.own.mk 258230 2013-11-16 18:40:44Z gjb $
 #
 # The include file <bsd.own.mk> set common variables for owner,
 # group, mode, and directories. Defaults are in brackets.
@@ -28,6 +28,8 @@
 #
 # LIBCOMPATDIR	Base path for compat libraries. [/usr/lib/compat]
 #
+# LIBPRIVATEDIR	Base path for private libraries. [/usr/lib/private]
+#
 # LIBDATADIR	Base path for misc. utility data files. [/usr/libdata]
 #
 # LIBEXECDIR	Base path for system daemons and utilities. [/usr/libexec]
@@ -41,6 +43,11 @@
 # LIBGRP	Library group. [${BINGRP}]
 #
 # LIBMODE	Library mode. [${NOBINMODE}]
+#
+#
+# DEBUGDIR	Base path for standalone debug files. [/usr/lib/debug]
+#
+# DEBUGMODE	Mode for debug files. [${NOBINMODE}]
 #
 #
 # KMODDIR	Base path for loadable kernel modules
@@ -117,7 +124,7 @@ __<bsd.own.mk>__:
 
 .if !defined(_WITHOUT_SRCCONF)
 SRCCONF?=	/etc/src.conf
-.if exists(${SRCCONF})
+.if exists(${SRCCONF}) || ${SRCCONF} != "/etc/src.conf"
 .include "${SRCCONF}"
 .endif
 .endif
@@ -139,6 +146,7 @@ KMODMODE?=	${BINMODE}
 
 LIBDIR?=	/usr/lib
 LIBCOMPATDIR?=	/usr/lib/compat
+LIBPRIVATEDIR?=	/usr/lib/private
 LIBDATADIR?=	/usr/libdata
 LIBEXECDIR?=	/usr/libexec
 LINTLIBDIR?=	/usr/libdata/lint
@@ -146,6 +154,9 @@ SHLIBDIR?=	${LIBDIR}
 LIBOWN?=	${BINOWN}
 LIBGRP?=	${BINGRP}
 LIBMODE?=	${NOBINMODE}
+
+DEBUGDIR?=	/usr/lib/debug
+DEBUGMODE?=	${NOBINMODE}
 
 
 # Share files
@@ -181,6 +192,15 @@ NLSMODE?=	${NOBINMODE}
 
 INCLUDEDIR?=	/usr/include
 
+#
+# install(1) parameters.
+#
+HRDLINK?=	-l h
+SYMLINK?=	-l s
+
+INSTALL_LINK?=		${INSTALL} ${HRDLINK}
+INSTALL_SYMLINK?=	${INSTALL} ${SYMLINK}
+
 # Common variables
 .if !defined(DEBUG_FLAGS)
 STRIP?=		-s
@@ -204,93 +224,17 @@ COMPRESS_EXT?=	.gz
 #
 .for var in \
     CTF \
+    DEBUG_FILES \
     INSTALLLIB \
     MAN \
     PROFILE
 .if defined(NO_${var})
 .if defined(WITH_${var})
-.warning unsetting WITH_${var}
 .undef WITH_${var}
-.if defined(WITH_${var})
-.error wtf
-.endif
 .endif
 WITHOUT_${var}=
 .endif
 .endfor
-
-#
-# Compat NO_* options (same as above, except their use is deprecated).
-#
-.if !defined(BURN_BRIDGES)
-.for var in \
-    ACPI \
-    ATM \
-    AUDIT \
-    AUTHPF \
-    BIND \
-    BIND_DNSSEC \
-    BIND_ETC \
-    BIND_LIBS_LWRES \
-    BIND_MTREE \
-    BIND_NAMED \
-    BIND_UTILS \
-    BLUETOOTH \
-    BOOT \
-    CALENDAR \
-    CPP \
-    CRYPT \
-    CVS \
-    CXX \
-    DICT \
-    DYNAMICROOT \
-    EXAMPLES \
-    FORTH \
-    FP_LIBC \
-    GAMES \
-    GCOV \
-    GDB \
-    GNU \
-    GPIB \
-    GROFF \
-    HTML \
-    INET6 \
-    INFO \
-    IPFILTER \
-    IPX \
-    KERBEROS \
-    LIB32 \
-    LIBPTHREAD \
-    LIBTHR \
-    LOCALES \
-    LPR \
-    MAILWRAPPER \
-    NETCAT \
-    NIS \
-    NLS \
-    NLS_CATALOGS \
-    NS_CACHING \
-    OPENSSH \
-    OPENSSL \
-    PAM \
-    PF \
-    RCMDS \
-    RCS \
-    RESCUE \
-    SENDMAIL \
-    SETUID_LOGIN \
-    SHAREDOCS \
-    SYSCONS \
-    TCSH \
-    TOOLCHAIN \
-    USB \
-    WPA_SUPPLICANT_EAPOL
-.if defined(NO_${var})
-#.warning NO_${var} is deprecated in favour of WITHOUT_${var}=
-WITHOUT_${var}=
-.endif
-.endfor
-.endif # !defined(BURN_BRIDGES)
 
 #
 # Older-style variables that enabled behaviour when set.
@@ -298,52 +242,44 @@ WITHOUT_${var}=
 .if defined(YES_HESIOD)
 WITH_HESIOD=
 .endif
-.if defined(MAKE_IDEA)
-WITH_IDEA=
-.endif
 
 __DEFAULT_YES_OPTIONS = \
     ACCT \
     ACPI \
     AMD \
     APM \
+    ARM_EABI \
     ASSERT_DEBUG \
     AT \
+    ATF \
     ATM \
     AUDIT \
     AUTHPF \
-    BIND \
-    BIND_DNSSEC \
-    BIND_ETC \
-    BIND_LIBS_LWRES \
-    BIND_MTREE \
-    BIND_NAMED \
-    BIND_UTILS \
     BINUTILS \
     BLUETOOTH \
+    BMAKE \
     BOOT \
     BSD_CPIO \
     BSNMP \
-    SOURCELESS \
-    SOURCELESS_HOST \
-    SOURCELESS_UCODE \
     BZIP2 \
     CALENDAR \
+    CAPSICUM \
     CDDL \
     CPP \
+    CROSS_COMPILER \
     CRYPT \
     CTM \
-    CVS \
     CXX \
     DICT \
     DYNAMICROOT \
+    ED_CRYPTO \
     EXAMPLES \
     FLOPPY \
+    FORMAT_EXTENSIONS \
     FORTH \
     FP_LIBC \
     FREEBSD_UPDATE \
     GAMES \
-    GCC \
     GCOV \
     GDB \
     GNU \
@@ -351,6 +287,7 @@ __DEFAULT_YES_OPTIONS = \
     GPIO \
     GROFF \
     HTML \
+    ICONV \
     INET \
     INET6 \
     INFO \
@@ -359,9 +296,12 @@ __DEFAULT_YES_OPTIONS = \
     IPFW \
     IPX \
     JAIL \
+    KDUMP \
     KERBEROS \
     KERNEL_SYMBOLS \
     KVM \
+    LDNS \
+    LDNS_UTILS \
     LEGACY_CONSOLE \
     LIB32 \
     LIBPTHREAD \
@@ -369,17 +309,18 @@ __DEFAULT_YES_OPTIONS = \
     LOCALES \
     LOCATE \
     LPR \
+    LS_COLORS \
     MAIL \
     MAILWRAPPER \
     MAKE \
     MAN \
-    NCP \
     NDIS \
     NETCAT \
     NETGRAPH \
     NIS \
     NLS \
     NLS_CATALOGS \
+    NMTREE \
     NS_CACHING \
     NTP \
     OPENSSH \
@@ -387,7 +328,7 @@ __DEFAULT_YES_OPTIONS = \
     PAM \
     PC_SYSINSTALL \
     PF \
-    PKGTOOLS \
+    PKGBOOTSTRAP \
     PMC \
     PORTSNAP \
     PPP \
@@ -400,14 +341,19 @@ __DEFAULT_YES_OPTIONS = \
     SENDMAIL \
     SETUID_LOGIN \
     SHAREDOCS \
+    SOURCELESS \
+    SOURCELESS_HOST \
+    SOURCELESS_UCODE \
     SSP \
-    SYSINSTALL \
+    SVNLITE \
     SYMVER \
     SYSCONS \
+    SYSINSTALL \
     TCSH \
     TELNET \
     TEXTPROC \
     TOOLCHAIN \
+    UNBOUND \
     USB \
     UTMPX \
     WIRELESS \
@@ -417,22 +363,20 @@ __DEFAULT_YES_OPTIONS = \
 
 __DEFAULT_NO_OPTIONS = \
     BSD_GREP \
-    BIND_IDN \
-    BIND_LARGE_FILE \
-    BIND_LIBS \
-    BIND_SIGCHASE \
-    BIND_XML \
     CLANG_EXTRAS \
-    CLANG_IS_CC \
     CTF \
+    DEBUG_FILES \
+    GPL_DTC \
     HESIOD \
-    ICONV \
-    IDEA \
-    LIBCPLUSPLUS \
-    NMTREE \
+    INSTALL_AS_USER \
+    LLDB \
+    NAND \
     OFED \
     OPENSSH_NONE_CIPHER \
-    SHARED_TOOLCHAIN
+    PKGTOOLS \
+    SHARED_TOOLCHAIN \
+    SVN \
+    USB_GADGET_EXAMPLES
 
 #
 # Default behaviour of some options depends on the architecture.  Unfortunately
@@ -447,14 +391,55 @@ __T=${TARGET_ARCH}
 .else
 __T=${MACHINE_ARCH}
 .endif
-# Clang is only for x86 and powerpc right now, by default.
+.if defined(TARGET)
+__TT=${TARGET}
+.else
+__TT=${MACHINE}
+.endif
+# Clang is only for x86, powerpc and little-endian arm right now, by default.
 .if ${__T} == "amd64" || ${__T} == "i386" || ${__T:Mpowerpc*}
 __DEFAULT_YES_OPTIONS+=CLANG CLANG_FULL
+.elif ${__T} == "arm" || ${__T} == "armv6"
+__DEFAULT_YES_OPTIONS+=CLANG
+# GCC is unable to build the full clang on arm, disable it by default.
+__DEFAULT_NO_OPTIONS+=CLANG_FULL
 .else
 __DEFAULT_NO_OPTIONS+=CLANG CLANG_FULL
 .endif
-# FDT is needed only for arm and powerpc
-.if ${__T:Marm*} || ${__T:Mpowerpc*}
+# Clang the default system compiler only on little-endian arm and x86.
+.if ${__T} == "amd64" || ${__T} == "arm" || ${__T} == "armv6" || \
+    ${__T} == "i386"
+__DEFAULT_YES_OPTIONS+=CLANG_IS_CC
+# The pc98 bootloader requires gcc to build and so we must leave gcc enabled
+# for pc98 for now.
+.if ${__TT} == "pc98"
+__DEFAULT_NO_OPTIONS+=GNUCXX
+__DEFAULT_YES_OPTIONS+=GCC
+.else
+__DEFAULT_NO_OPTIONS+=GCC GNUCXX
+.endif
+# The libc++ headers use c++11 extensions.  These are normally silenced because
+# they are treated as system headers, but we explicitly disable that warning
+# suppression when building the base system to catch bugs in our headers.
+# Eventually we'll want to start building the base system C++ code as C++11,
+# but not yet.
+_COMPVERSION!= ${CC} --version
+.if ${_COMPVERSION:Mclang}
+CXXFLAGS+=	-Wno-c++11-extensions
+.endif
+.else
+# If clang is not cc, then build gcc by default
+__DEFAULT_NO_OPTIONS+=CLANG_IS_CC
+__DEFAULT_YES_OPTIONS+=GCC
+# And if g++ is c++, build the rest of the GNU C++ stack
+.if defined(WITHOUT_CXX)
+__DEFAULT_NO_OPTIONS+=GNUCXX
+.else
+__DEFAULT_YES_OPTIONS+=GNUCXX
+.endif
+.endif
+# FDT is needed only for arm, mips and powerpc
+.if ${__T:Marm*} || ${__T:Mpowerpc*} || ${__T:Mmips*}
 __DEFAULT_YES_OPTIONS+=FDT
 .else
 __DEFAULT_NO_OPTIONS+=FDT
@@ -505,22 +490,9 @@ MK_${var}:=	no
 MK_LIBTHR:=	no
 .endif
 
-.if ${MK_LIBTHR} == "no"
-MK_BIND:=	no
-.endif
-
-.if ${MK_BIND} == "no"
-MK_BIND_DNSSEC:= no
-MK_BIND_ETC:=	no
-MK_BIND_LIBS:=	no
-MK_BIND_LIBS_LWRES:= no
-MK_BIND_MTREE:=	no
-MK_BIND_NAMED:=	no
-MK_BIND_UTILS:=	no
-.endif
-
-.if ${MK_BIND_MTREE} == "no"
-MK_BIND_ETC:=	no
+.if ${MK_LDNS} == "no"
+MK_LDNS_UTILS:=	no
+MK_UNBOUND:= no
 .endif
 
 .if ${MK_SOURCELESS} == "no"
@@ -542,10 +514,6 @@ MK_KERBEROS:=	no
 .if ${MK_CXX} == "no"
 MK_CLANG:=	no
 MK_GROFF:=	no
-.endif
-
-.if ${MK_IPX} == "no"
-MK_NCP:=	no
 .endif
 
 .if ${MK_MAIL} == "no"
@@ -581,12 +549,11 @@ MK_GDB:=	no
 .if ${MK_CLANG} == "no"
 MK_CLANG_EXTRAS:= no
 MK_CLANG_FULL:= no
-MK_CLANG_IS_CC:= no
 .endif
 
-MK_LIBCPLUSPLUS?= no
-
-MK_LIBCPLUSPLUS?= no
+.if ${MK_CLANG_IS_CC} == "no"
+MK_LLDB:= no
+.endif
 
 #
 # Set defaults for the MK_*_SUPPORT variables.
@@ -641,13 +608,54 @@ MK_${vv:H}:=	${MK_${vv:T}}
 .endif
 .endfor
 
+#
+# MK_* options that default to "yes" if the compiler is a C++11 compiler.
+#
+.include <bsd.compiler.mk>
+.for var in \
+    LIBCPLUSPLUS
+.if defined(WITH_${var}) && defined(WITHOUT_${var})
+.error WITH_${var} and WITHOUT_${var} can't both be set.
+.endif
+.if defined(MK_${var})
+.error MK_${var} can't be set by a user.
+.endif
+.if ${COMPILER_FEATURES:Mc++11}
+.if defined(WITHOUT_${var})
+MK_${var}:=	no
+.else
+MK_${var}:=	yes
+.endif
+.else
+.if defined(WITH_${var})
+MK_${var}:=	yes
+.else
+MK_${var}:=	no
+.endif
+.endif
+.endfor
+
 .if ${MK_CTF} != "no"
 CTFCONVERT_CMD=	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
-.elif ${MAKE_VERSION} >= 9201210220
+.elif defined(.PARSEDIR) || (defined(MAKE_VERSION) && ${MAKE_VERSION} >= 5201111300)
 CTFCONVERT_CMD=
 .else
 CTFCONVERT_CMD=	@:
 .endif 
+
+.if ${MK_INSTALL_AS_USER} != "no"
+_uid!=	id -u
+.if ${_uid} != 0
+.if !defined(USER)
+USER!=	id -un
+.endif
+_gid!=	id -gn
+.for x in BIN CONF DOC INFO KMOD LIB MAN NLS SHARE
+$xOWN=	${USER}
+$xGRP=	${_gid}
+.endfor
+.endif
+.endif
 
 .endif # !_WITHOUT_SRCCONF
 

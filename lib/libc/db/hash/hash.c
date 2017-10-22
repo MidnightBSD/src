@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)hash.c	8.9 (Berkeley) 6/16/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/db/hash/hash.c 206178 2010-04-05 10:12:21Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/db/hash/hash.c 254222 2013-08-11 15:38:48Z jilles $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -121,9 +121,8 @@ __hash_open(const char *file, int flags, int mode,
 	hashp->flags = flags;
 
 	if (file) {
-		if ((hashp->fp = _open(file, flags, mode)) == -1)
+		if ((hashp->fp = _open(file, flags | O_CLOEXEC, mode)) == -1)
 			RETURN_ERROR(errno, error0);
-		(void)_fcntl(hashp->fp, F_SETFD, 1);
 		new_table = _fstat(hashp->fp, &statbuf) == 0 &&
 		    statbuf.st_size == 0 && (flags & O_ACCMODE) != O_RDONLY;
 	} else

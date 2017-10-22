@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/mpc85xx/pci_fdt.c 242015 2012-10-24 19:04:17Z gavin $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/mpc85xx/pci_fdt.c 240680 2012-09-18 22:04:59Z gavin $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -816,8 +816,13 @@ fsl_pcib_set_range(struct fsl_pcib_softc *sc, int type, int wnd, u_long start,
 	}
 
 	*allocp = pci_start + alloc;
-	*vap = (uintptr_t)pmap_mapdev(start, size);
-	fsl_pcib_outbound(sc, wnd, type, start, size, pci_start);
+	if (size > 0) {
+		*vap = (uintptr_t)pmap_mapdev(start, size);
+		fsl_pcib_outbound(sc, wnd, type, start, size, pci_start);
+	} else {
+		*vap = 0;
+		fsl_pcib_outbound(sc, wnd, -1, 0, 0, 0);
+	}
 	return (0);
 }
 

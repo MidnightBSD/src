@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libc/stdio/test-perror.c 137587 2004-11-11 19:47:55Z nik $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/libc/stdio/test-perror.c 244038 2012-12-08 19:42:15Z jilles $");
 
 #include <assert.h>
 #include <err.h>
@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: stable/9/tools/regression/lib/libc/stdio/test-perror.c 13758
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 static void cleanup(void);
 static char tmpfil[PATH_MAX];

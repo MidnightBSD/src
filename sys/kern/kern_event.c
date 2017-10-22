@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_event.c 239915 2012-08-30 18:29:49Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_event.c 258324 2013-11-18 22:37:01Z pjd $");
 
 #include "opt_ktrace.h"
 
@@ -37,6 +37,7 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/kern_event.c 239915 2012-08-30 18:29:49Z j
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include <sys/rwlock.h>
 #include <sys/proc.h>
 #include <sys/malloc.h>
 #include <sys/unistd.h>
@@ -46,6 +47,7 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/kern_event.c 239915 2012-08-30 18:29:49Z j
 #include <sys/fcntl.h>
 #include <sys/kthread.h>
 #include <sys/selinfo.h>
+#include <sys/stdatomic.h>
 #include <sys/queue.h>
 #include <sys/event.h>
 #include <sys/eventvar.h>
@@ -125,6 +127,7 @@ static struct fileops kqueueops = {
 	.fo_close = kqueue_close,
 	.fo_chmod = invfo_chmod,
 	.fo_chown = invfo_chown,
+	.fo_sendfile = invfo_sendfile,
 };
 
 static int 	knote_attach(struct knote *kn, struct kqueue *kq);
@@ -181,9 +184,9 @@ static struct filterops user_filtops = {
 };
 
 static uma_zone_t	knote_zone;
-static int 		kq_ncallouts = 0;
-static int 		kq_calloutmax = (4 * 1024);
-SYSCTL_INT(_kern, OID_AUTO, kq_calloutmax, CTLFLAG_RW,
+static atomic_uint	kq_ncallouts = ATOMIC_VAR_INIT(0);
+static unsigned int 	kq_calloutmax = 4 * 1024;
+SYSCTL_UINT(_kern, OID_AUTO, kq_calloutmax, CTLFLAG_RW,
     &kq_calloutmax, 0, "Maximum number of callouts allocated for kqueue");
 
 /* XXX - ensure not KN_INFLUX?? */
@@ -429,8 +432,11 @@ filt_proc(struct knote *kn, long hint)
 		if (!(kn->kn_status & KN_DETACHED))
 			knlist_remove_inevent(&p->p_klist, kn);
 		kn->kn_flags |= (EV_EOF | EV_ONESHOT);
-		kn->kn_data = p->p_xstat;
 		kn->kn_ptr.p_proc = NULL;
+		if (kn->kn_fflags & NOTE_EXIT)
+			kn->kn_data = p->p_xstat;
+		if (kn->kn_fflags == 0)
+			kn->kn_flags |= EV_DROP;
 		return (1);
 	}
 
@@ -472,7 +478,7 @@ knote_fork(struct knlist *list, int pid)
 		 */
 		if ((kn->kn_sfflags & NOTE_TRACK) == 0) {
 			kn->kn_status |= KN_HASKQLOCK;
-			if (kn->kn_fop->f_event(kn, NOTE_FORK | pid))
+			if (kn->kn_fop->f_event(kn, NOTE_FORK))
 				KNOTE_ACTIVATE(kn, 1);
 			kn->kn_status &= ~KN_HASKQLOCK;
 			KQ_UNLOCK(kq);
@@ -500,10 +506,10 @@ knote_fork(struct knlist *list, int pid)
 		kev.data = kn->kn_id;		/* parent */
 		kev.udata = kn->kn_kevent.udata;/* preserve udata */
 		error = kqueue_register(kq, &kev, NULL, 0);
-		if (kn->kn_fop->f_event(kn, NOTE_FORK | pid))
-			KNOTE_ACTIVATE(kn, 0);
 		if (error)
 			kn->kn_fflags |= NOTE_TRACKERR;
+		if (kn->kn_fop->f_event(kn, NOTE_FORK))
+			KNOTE_ACTIVATE(kn, 0);
 		KQ_LOCK(kq);
 		kn->kn_status &= ~KN_INFLUX;
 		KQ_UNLOCK_FLUX(kq);
@@ -516,39 +522,28 @@ knote_fork(struct knlist *list, int pid)
  * XXX: EVFILT_TIMER should perhaps live in kern_time.c beside the
  * interval timer support code.
  */
-static int
-timertoticks(intptr_t data)
+static __inline sbintime_t 
+timer2sbintime(intptr_t data)
 {
-	struct timeval tv;
-	int tticks;
 
-	tv.tv_sec = data / 1000;
-	tv.tv_usec = (data % 1000) * 1000;
-	tticks = tvtohz(&tv);
-
-	return tticks;
+	return (SBT_1MS * data);
 }
 
 static void
 filt_timerexpire(void *knx)
 {
-	struct knote *kn = knx;
 	struct callout *calloutp;
+	struct knote *kn;
 
+	kn = knx;
 	kn->kn_data++;
 	KNOTE_ACTIVATE(kn, 0);	/* XXX - handle locking */
 
-	/*
-	 * timertoticks() uses tvtohz() which always adds 1 to allow
-	 * for the time until the next clock interrupt being strictly
-	 * less than 1 clock tick.  We don't want that here since we
-	 * want to appear to be in sync with the clock interrupt even
-	 * when we're delayed.
-	 */
 	if ((kn->kn_flags & EV_ONESHOT) != EV_ONESHOT) {
 		calloutp = (struct callout *)kn->kn_hook;
-		callout_reset_curcpu(calloutp, timertoticks(kn->kn_sdata) - 1,
-		    filt_timerexpire, kn);
+		callout_reset_sbt_on(calloutp,
+		    timer2sbintime(kn->kn_sdata), 0 /* 1ms? */,
+		    filt_timerexpire, kn, PCPU_GET(cpuid), 0);
 	}
 }
 
@@ -559,21 +554,32 @@ static int
 filt_timerattach(struct knote *kn)
 {
 	struct callout *calloutp;
+	sbintime_t to;
+	unsigned int ncallouts;
 
-	atomic_add_int(&kq_ncallouts, 1);
+	if ((intptr_t)kn->kn_sdata < 0)
+		return (EINVAL);
+	if ((intptr_t)kn->kn_sdata == 0 && (kn->kn_flags & EV_ONESHOT) == 0)
+		kn->kn_sdata = 1;
+	to = timer2sbintime(kn->kn_sdata);
+	if (to < 0)
+		return (EINVAL);
 
-	if (kq_ncallouts >= kq_calloutmax) {
-		atomic_add_int(&kq_ncallouts, -1);
-		return (ENOMEM);
-	}
+	ncallouts = atomic_load_explicit(&kq_ncallouts, memory_order_relaxed);
+	do {
+		if (ncallouts >= kq_calloutmax)
+			return (ENOMEM);
+	} while (!atomic_compare_exchange_weak_explicit(&kq_ncallouts,
+	    &ncallouts, ncallouts + 1, memory_order_relaxed,
+	    memory_order_relaxed));
 
 	kn->kn_flags |= EV_CLEAR;		/* automatically set */
-	kn->kn_status &= ~KN_DETACHED;		/* knlist_add usually sets it */
+	kn->kn_status &= ~KN_DETACHED;		/* knlist_add clears it */
 	calloutp = malloc(sizeof(*calloutp), M_KQUEUE, M_WAITOK);
 	callout_init(calloutp, CALLOUT_MPSAFE);
 	kn->kn_hook = calloutp;
-	callout_reset_curcpu(calloutp, timertoticks(kn->kn_sdata),
-	    filt_timerexpire, kn);
+	callout_reset_sbt_on(calloutp, to, 0 /* 1ms? */,
+	    filt_timerexpire, kn, PCPU_GET(cpuid), 0);
 
 	return (0);
 }
@@ -582,12 +588,14 @@ static void
 filt_timerdetach(struct knote *kn)
 {
 	struct callout *calloutp;
+	unsigned int old;
 
 	calloutp = (struct callout *)kn->kn_hook;
 	callout_drain(calloutp);
 	free(calloutp, M_KQUEUE);
-	atomic_add_int(&kq_ncallouts, -1);
-	kn->kn_status |= KN_DETACHED;	/* knlist_remove usually clears it */
+	old = atomic_fetch_sub_explicit(&kq_ncallouts, 1, memory_order_relaxed);
+	KASSERT(old > 0, ("Number of callouts cannot become negative"));
+	kn->kn_status |= KN_DETACHED;	/* knlist_remove sets it */
 }
 
 static int
@@ -698,7 +706,7 @@ sys_kqueue(struct thread *td, struct kqueue_args *uap)
 	if (error)
 		goto done2;
 
-	/* An extra reference on `nfp' has been held for us by falloc(). */
+	/* An extra reference on `fp' has been held for us by falloc(). */
 	kq = malloc(sizeof *kq, M_KQUEUE, M_WAITOK | M_ZERO);
 	mtx_init(&kq->kq_lock, "kqueue", NULL, MTX_DEF|MTX_DUPOK);
 	TAILQ_INIT(&kq->kq_head);
@@ -707,7 +715,7 @@ sys_kqueue(struct thread *td, struct kqueue_args *uap)
 	TASK_INIT(&kq->kq_task, 0, kqueue_task, kq);
 
 	FILEDESC_XLOCK(fdp);
-	SLIST_INSERT_HEAD(&fdp->fd_kqlist, kq, kq_list);
+	TAILQ_INSERT_HEAD(&fdp->fd_kqlist, kq, kq_list);
 	FILEDESC_XUNLOCK(fdp);
 
 	finit(fp, FREAD | FWRITE, DTYPE_KQUEUE, kq, &kqueueops);
@@ -824,11 +832,20 @@ kern_kevent(struct thread *td, int fd, int nchanges, int nevents,
 	struct kevent *kevp, *changes;
 	struct kqueue *kq;
 	struct file *fp;
+	cap_rights_t rights;
 	int i, n, nerrors, error;
 
-	if ((error = fget(td, fd, CAP_POST_EVENT, &fp)) != 0)
+	cap_rights_init(&rights);
+	if (nchanges > 0)
+		cap_rights_set(&rights, CAP_KQUEUE_CHANGE);
+	if (nevents > 0)
+		cap_rights_set(&rights, CAP_KQUEUE_EVENT);
+	error = fget(td, fd, &rights, &fp);
+	if (error != 0)
 		return (error);
-	if ((error = kqueue_acquire(fp, &kq)) != 0)
+
+	error = kqueue_acquire(fp, &kq);
+	if (error != 0)
 		goto done_norel;
 
 	nerrors = 0;
@@ -964,13 +981,15 @@ kqueue_register(struct kqueue *kq, struct kevent *kev, struct thread *td, int wa
 	struct filterops *fops;
 	struct file *fp;
 	struct knote *kn, *tkn;
+	cap_rights_t rights;
 	int error, filt, event;
-	int haskqglobal;
+	int haskqglobal, filedesc_unlock;
 
 	fp = NULL;
 	kn = NULL;
 	error = 0;
 	haskqglobal = 0;
+	filedesc_unlock = 0;
 
 	filt = kev->filter;
 	fops = kqueue_fo_find(filt);
@@ -982,7 +1001,8 @@ kqueue_register(struct kqueue *kq, struct kevent *kev, struct thread *td, int wa
 findkn:
 	if (fops->f_isfd) {
 		KASSERT(td != NULL, ("td is NULL"));
-		error = fget(td, kev->ident, CAP_POLL_EVENT, &fp);
+		error = fget(td, kev->ident,
+		    cap_rights_init(&rights, CAP_EVENT), &fp);
 		if (error)
 			goto done;
 
@@ -1010,6 +1030,13 @@ findkn:
 				goto done;
 			}
 
+			/*
+			 * Pre-lock the filedesc before the global
+			 * lock mutex, see the comment in
+			 * kqueue_close().
+			 */
+			FILEDESC_XLOCK(td->td_proc->p_fd);
+			filedesc_unlock = 1;
 			KQ_GLOBAL_LOCK(&kq_global, haskqglobal);
 		}
 
@@ -1039,6 +1066,10 @@ findkn:
 	/* knote is in the process of changing, wait for it to stablize. */
 	if (kn != NULL && (kn->kn_status & KN_INFLUX) == KN_INFLUX) {
 		KQ_GLOBAL_UNLOCK(&kq_global, haskqglobal);
+		if (filedesc_unlock) {
+			FILEDESC_XUNLOCK(td->td_proc->p_fd);
+			filedesc_unlock = 0;
+		}
 		kq->kq_state |= KQ_FLUXWAIT;
 		msleep(kq, &kq->kq_lock, PSOCK | PDROP, "kqflxwt", 0);
 		if (fp != NULL) {
@@ -1155,6 +1186,8 @@ done_ev_add:
 
 done:
 	KQ_GLOBAL_UNLOCK(&kq_global, haskqglobal);
+	if (filedesc_unlock)
+		FILEDESC_XUNLOCK(td->td_proc->p_fd);
 	if (fp != NULL)
 		fdrop(fp, td);
 	if (tkn != NULL)
@@ -1318,10 +1351,9 @@ kqueue_scan(struct kqueue *kq, int maxevents, struct kevent_copyops *k_ops,
     const struct timespec *tsp, struct kevent *keva, struct thread *td)
 {
 	struct kevent *kevp;
-	struct timeval atv, rtv, ttv;
 	struct knote *kn, *marker;
-	int count, timeout, nkev, error, influx;
-	int haskqglobal, touch;
+	sbintime_t asbt, rsbt;
+	int count, error, haskqglobal, influx, nkev, touch;
 
 	count = maxevents;
 	nkev = 0;
@@ -1331,24 +1363,29 @@ kqueue_scan(struct kqueue *kq, int maxevents, struct kevent_copyops *k_ops,
 	if (maxevents == 0)
 		goto done_nl;
 
+	rsbt = 0;
 	if (tsp != NULL) {
-		TIMESPEC_TO_TIMEVAL(&atv, tsp);
-		if (itimerfix(&atv)) {
+		if (tsp->tv_sec < 0 || tsp->tv_nsec < 0 ||
+		    tsp->tv_nsec >= 1000000000) {
 			error = EINVAL;
 			goto done_nl;
 		}
-		if (tsp->tv_sec == 0 && tsp->tv_nsec == 0)
-			timeout = -1;
-		else
-			timeout = atv.tv_sec > 24 * 60 * 60 ?
-			    24 * 60 * 60 * hz : tvtohz(&atv);
-		getmicrouptime(&rtv);
-		timevaladd(&atv, &rtv);
-	} else {
-		atv.tv_sec = 0;
-		atv.tv_usec = 0;
-		timeout = 0;
-	}
+		if (timespecisset(tsp)) {
+			if (tsp->tv_sec <= INT32_MAX) {
+				rsbt = tstosbt(*tsp);
+				if (TIMESEL(&asbt, rsbt))
+					asbt += tc_tick_sbt;
+				if (asbt <= INT64_MAX - rsbt)
+					asbt += rsbt;
+				else
+					asbt = 0;
+				rsbt >>= tc_precexp;
+			} else
+				asbt = 0;
+		} else
+			asbt = -1;
+	} else
+		asbt = 0;
 	marker = knote_alloc(1);
 	if (marker == NULL) {
 		error = ENOMEM;
@@ -1356,28 +1393,16 @@ kqueue_scan(struct kqueue *kq, int maxevents, struct kevent_copyops *k_ops,
 	}
 	marker->kn_status = KN_MARKER;
 	KQ_LOCK(kq);
-	goto start;
 
 retry:
-	if (atv.tv_sec || atv.tv_usec) {
-		getmicrouptime(&rtv);
-		if (timevalcmp(&rtv, &atv, >=))
-			goto done;
-		ttv = atv;
-		timevalsub(&ttv, &rtv);
-		timeout = ttv.tv_sec > 24 * 60 * 60 ?
-			24 * 60 * 60 * hz : tvtohz(&ttv);
-	}
-
-start:
 	kevp = keva;
 	if (kq->kq_count == 0) {
-		if (timeout < 0) {
+		if (asbt == -1) {
 			error = EWOULDBLOCK;
 		} else {
 			kq->kq_state |= KQ_SLEEP;
-			error = msleep(kq, &kq->kq_lock, PSOCK | PCATCH,
-			    "kqread", timeout);
+			error = msleep_sbt(kq, &kq->kq_lock, PSOCK | PCATCH,
+			    "kqread", asbt, rsbt, C_ABSOLUTE);
 		}
 		if (error == 0)
 			goto retry;
@@ -1422,7 +1447,21 @@ start:
 		KASSERT((kn->kn_status & KN_INFLUX) == 0,
 		    ("KN_INFLUX set when not suppose to be"));
 
-		if ((kn->kn_flags & EV_ONESHOT) == EV_ONESHOT) {
+		if ((kn->kn_flags & EV_DROP) == EV_DROP) {
+			kn->kn_status &= ~KN_QUEUED;
+			kn->kn_status |= KN_INFLUX;
+			kq->kq_count--;
+			KQ_UNLOCK(kq);
+			/*
+			 * We don't need to lock the list since we've marked
+			 * it _INFLUX.
+			 */
+			if (!(kn->kn_status & KN_DETACHED))
+				kn->kn_fop->f_detach(kn);
+			knote_drop(kn, td);
+			KQ_LOCK(kq);
+			continue;
+		} else if ((kn->kn_flags & EV_ONESHOT) == EV_ONESHOT) {
 			kn->kn_status &= ~KN_QUEUED;
 			kn->kn_status |= KN_INFLUX;
 			kq->kq_count--;
@@ -1461,7 +1500,7 @@ start:
 				*kevp = kn->kn_kevent;
 			KQ_LOCK(kq);
 			KQ_GLOBAL_UNLOCK(&kq_global, haskqglobal);
-			if (kn->kn_flags & (EV_CLEAR |  EV_DISPATCH)) {
+			if (kn->kn_flags & (EV_CLEAR | EV_DISPATCH)) {
 				/* 
 				 * Manually clear knotes who weren't 
 				 * 'touch'ed.
@@ -1642,10 +1681,12 @@ kqueue_close(struct file *fp, struct thread *td)
 	struct knote *kn;
 	int i;
 	int error;
+	int filedesc_unlock;
 
 	if ((error = kqueue_acquire(fp, &kq)))
 		return error;
 
+	filedesc_unlock = 0;
 	KQ_LOCK(kq);
 
 	KASSERT((kq->kq_state & KQ_CLOSING) != KQ_CLOSING,
@@ -1707,9 +1748,20 @@ kqueue_close(struct file *fp, struct thread *td)
 
 	KQ_UNLOCK(kq);
 
-	FILEDESC_XLOCK(fdp);
-	SLIST_REMOVE(&fdp->fd_kqlist, kq, kqueue, kq_list);
-	FILEDESC_XUNLOCK(fdp);
+	/*
+	 * We could be called due to the knote_drop() doing fdrop(),
+	 * called from kqueue_register().  In this case the global
+	 * lock is owned, and filedesc sx is locked before, to not
+	 * take the sleepable lock after non-sleepable.
+	 */
+	if (!sx_xlocked(FILEDESC_LOCK(fdp))) {
+		FILEDESC_XLOCK(fdp);
+		filedesc_unlock = 1;
+	} else
+		filedesc_unlock = 0;
+	TAILQ_REMOVE(&fdp->fd_kqlist, kq, kq_list);
+	if (filedesc_unlock)
+		FILEDESC_XUNLOCK(fdp);
 
 	seldrain(&kq->kq_sel);
 	knlist_destroy(&kq->kq_sel.si_note);
@@ -1853,7 +1905,7 @@ knlist_remove_kq(struct knlist *knl, struct knote *kn, int knlislocked, int kqis
 }
 
 /*
- * remove all knotes from a specified klist
+ * remove knote from the specified knlist
  */
 void
 knlist_remove(struct knlist *knl, struct knote *kn, int islocked)
@@ -1863,7 +1915,7 @@ knlist_remove(struct knlist *knl, struct knote *kn, int islocked)
 }
 
 /*
- * remove knote from a specified klist while in f_event handler.
+ * remove knote from the specified knlist while in f_event handler.
  */
 void
 knlist_remove_inevent(struct knlist *knl, struct knote *kn)
@@ -1876,6 +1928,7 @@ knlist_remove_inevent(struct knlist *knl, struct knote *kn)
 int
 knlist_empty(struct knlist *knl)
 {
+
 	KNL_ASSERT_LOCKED(knl);
 	return SLIST_EMPTY(&knl->kl_list);
 }
@@ -1889,25 +1942,57 @@ static void knlist_mtx_unlock(void *arg);
 static void
 knlist_mtx_lock(void *arg)
 {
+
 	mtx_lock((struct mtx *)arg);
 }
 
 static void
 knlist_mtx_unlock(void *arg)
 {
+
 	mtx_unlock((struct mtx *)arg);
 }
 
 static void
 knlist_mtx_assert_locked(void *arg)
 {
+
 	mtx_assert((struct mtx *)arg, MA_OWNED);
 }
 
 static void
 knlist_mtx_assert_unlocked(void *arg)
 {
+
 	mtx_assert((struct mtx *)arg, MA_NOTOWNED);
+}
+
+static void
+knlist_rw_rlock(void *arg)
+{
+
+	rw_rlock((struct rwlock *)arg);
+}
+
+static void
+knlist_rw_runlock(void *arg)
+{
+
+	rw_runlock((struct rwlock *)arg);
+}
+
+static void
+knlist_rw_assert_locked(void *arg)
+{
+
+	rw_assert((struct rwlock *)arg, RA_LOCKED);
+}
+
+static void
+knlist_rw_assert_unlocked(void *arg)
+{
+
+	rw_assert((struct rwlock *)arg, RA_UNLOCKED);
 }
 
 void
@@ -1949,13 +2034,21 @@ knlist_init_mtx(struct knlist *knl, struct mtx *lock)
 }
 
 void
+knlist_init_rw_reader(struct knlist *knl, struct rwlock *lock)
+{
+
+	knlist_init(knl, lock, knlist_rw_rlock, knlist_rw_runlock,
+	    knlist_rw_assert_locked, knlist_rw_assert_unlocked);
+}
+
+void
 knlist_destroy(struct knlist *knl)
 {
 
 #ifdef INVARIANTS
 	/*
 	 * if we run across this error, we need to find the offending
-	 * driver and have it call knlist_clear.
+	 * driver and have it call knlist_clear or knlist_delete.
 	 */
 	if (!SLIST_EMPTY(&knl->kl_list))
 		printf("WARNING: destroying knlist w/ knotes on it!\n");
@@ -2044,7 +2137,7 @@ knote_fdclose(struct thread *td, int fd)
 	 * We shouldn't have to worry about new kevents appearing on fd
 	 * since filedesc is locked.
 	 */
-	SLIST_FOREACH(kq, &fdp->fd_kqlist, kq_list) {
+	TAILQ_FOREACH(kq, &fdp->fd_kqlist, kq_list) {
 		KQ_LOCK(kq);
 
 again:
@@ -2190,9 +2283,11 @@ kqfd_register(int fd, struct kevent *kev, struct thread *td, int waitok)
 {
 	struct kqueue *kq;
 	struct file *fp;
+	cap_rights_t rights;
 	int error;
 
-	if ((error = fget(td, fd, CAP_POST_EVENT, &fp)) != 0)
+	error = fget(td, fd, cap_rights_init(&rights, CAP_KQUEUE_CHANGE), &fp);
+	if (error != 0)
 		return (error);
 	if ((error = kqueue_acquire(fp, &kq)) != 0)
 		goto noacquire;

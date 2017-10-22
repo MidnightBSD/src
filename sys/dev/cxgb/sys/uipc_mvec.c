@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/cxgb/sys/uipc_mvec.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cxgb/sys/uipc_mvec.c 251263 2013-06-02 18:10:16Z alc $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -34,7 +34,6 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/cxgb/sys/uipc_mvec.c 248078 2013-03-09 00:3
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/ktr.h>
-#include <sys/sf_buf.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -43,10 +42,6 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/cxgb/sys/uipc_mvec.c 248078 2013-03-09 00:3
 
 #include <cxgb_include.h>
 #include <sys/mvec.h>
-
-#include <vm/vm.h>
-#include <vm/vm_page.h>
-#include <vm/pmap.h>
 
 #ifdef INVARIANTS
 #define M_SANITY m_sanity

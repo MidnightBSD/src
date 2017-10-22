@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)pass4.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/fsck_ffs/pass4.c 208330 2010-05-20 06:05:40Z mckusick $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/pass4.c 241012 2012-09-27 23:30:58Z mdf $");
 
 #include <sys/param.h>
 
@@ -41,6 +41,7 @@ __FBSDID("$FreeBSD: stable/9/sbin/fsck_ffs/pass4.c 208330 2010-05-20 06:05:40Z m
 #include <ufs/ffs/fs.h>
 
 #include <err.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "fsck.h"
@@ -114,8 +115,9 @@ pass4(void)
 				break;
 
 			default:
-				errx(EEXIT, "BAD STATE %d FOR INODE I=%d",
-				    inoinfo(inumber)->ino_state, inumber);
+				errx(EEXIT, "BAD STATE %d FOR INODE I=%ju",
+				    inoinfo(inumber)->ino_state,
+				    (uintmax_t)inumber);
 			}
 		}
 	}

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/stdlib/getenv.c 241483 2012-10-12 13:17:19Z ache $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdlib/getenv.c 253413 2013-07-17 08:45:27Z avg $");
 
 
 #include "namespace.h"
@@ -505,9 +505,8 @@ __setenv(const char *name, size_t nameLen, const char *value, int overwrite)
 		envVars[envNdx].valueSize = valueLen;
 
 		/* Save name of name/value pair. */
-		env = stpcpy(envVars[envNdx].name, name);
-		if ((envVars[envNdx].name)[nameLen] != '=')
-			env = stpcpy(env, "=");
+		env = stpncpy(envVars[envNdx].name, name, nameLen);
+		*env++ = '=';
 	}
 	else
 		env = envVars[envNdx].value;

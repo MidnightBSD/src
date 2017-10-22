@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/bin/sh/builtins/cd7.0 222381 2011-05-27 20:01:46Z jilles $
+# $FreeBSD: release/10.0.0/tools/regression/bin/sh/builtins/cd7.0 222381 2011-05-27 20:01:46Z jilles $
 
 set -e
 cd /usr/bin

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/idt/obio.c 212413 2010-09-10 11:19:03Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/idt/obio.c 212413 2010-09-10 11:19:03Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

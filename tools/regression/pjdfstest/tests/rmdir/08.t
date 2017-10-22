@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/rmdir/08.t 166065 2007-01-17 01:42:12Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/rmdir/08.t 166065 2007-01-17 01:42:12Z pjd $
 
 desc="rmdir returns EACCES when write permission is denied on the directory containing the link to be removed"
 

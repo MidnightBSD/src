@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/pxa/pxa_space.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/pxa/pxa_space.c 227293 2011-11-07 06:44:47Z ed $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

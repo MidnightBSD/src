@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/dhclient/inet.c 149399 2005-08-23 23:59:55Z brooks $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/dhclient/inet.c 149399 2005-08-23 23:59:55Z brooks $");
 
 #include "dhcpd.h"
 

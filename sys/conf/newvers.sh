@@ -28,17 +28,20 @@
 # SUCH DAMAGE.
 #
 #	@(#)newvers.sh	8.1 (Berkeley) 4/20/94
-# $FreeBSD: stable/9/sys/conf/newvers.sh 247874 2013-03-06 09:12:38Z avg $
+# $FreeBSD: release/10.0.0/sys/conf/newvers.sh 260664 2014-01-15 01:14:52Z gjb $
 
 TYPE="FreeBSD"
-REVISION="9.1"
-BRANCH="STABLE"
+REVISION="10.0"
+BRANCH="RELEASE"
 if [ "X${BRANCH_OVERRIDE}" != "X" ]; then
 	BRANCH=${BRANCH_OVERRIDE}
 fi
 RELEASE="${REVISION}-${BRANCH}"
 VERSION="${TYPE} ${RELEASE}"
-SYSDIR=$(dirname $0)/..
+
+if [ "X${SYSDIR}" = "X" ]; then
+    SYSDIR=$(dirname $0)/..
+fi
 
 if [ "X${PARAMFILE}" != "X" ]; then
 	RELDATE=$(awk '/__FreeBSD_version.*propagated to newvers/ {print $3}' \
@@ -88,14 +91,38 @@ v=`cat version` u=${USER:-root} d=`pwd` h=${HOSTNAME:-`hostname`} t=`date`
 i=`${MAKE:-make} -V KERN_IDENT`
 compiler_v=$($(${MAKE:-make} -V CC) -v 2>&1 | grep 'version')
 
-for dir in /bin /usr/bin /usr/local/bin; do
-	if [ -x "${dir}/svnversion" ] ; then
-		svnversion=${dir}/svnversion
+for dir in /usr/bin /usr/local/bin; do
+	if [ ! -z "${svnversion}" ] ; then
 		break
+	fi
+	if [ -x "${dir}/svnversion" ] && [ -z ${svnversion} ] ; then
+		# Run svnversion from ${dir} on this script; if return code
+		# is not zero, the checkout might not be compatible with the
+		# svnversion being used.
+		${dir}/svnversion $(realpath ${0}) >/dev/null 2>&1
+		if [ $? -eq 0 ]; then
+			svnversion=${dir}/svnversion
+			break
+		fi
+	fi
+done
+
+if [ -z "${svnversion}" ] && [ -x /usr/bin/svnliteversion ] ; then
+	/usr/bin/svnliteversion $(realpath ${0}) >/dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		svnversion=/usr/bin/svnliteversion
+	else
+		svnversion=
+	fi
+fi
+
+for dir in /usr/bin /usr/local/bin; do
+	if [ -x "${dir}/p4" ] && [ -z ${p4_cmd} ] ; then
+		p4_cmd=${dir}/p4
 	fi
 done
 if [ -d "${SYSDIR}/../.git" ] ; then
-	for dir in /bin /usr/bin /usr/local/bin; do
+	for dir in /usr/bin /usr/local/bin; do
 		if [ -x "${dir}/git" ] ; then
 			git_cmd="${dir}/git --git-dir=${SYSDIR}/../.git"
 			break
@@ -104,8 +131,7 @@ if [ -d "${SYSDIR}/../.git" ] ; then
 fi
 
 if [ -n "$svnversion" ] ; then
-	echo "$svnversion"
-	svn=`cd ${SYSDIR} && $svnversion`
+	svn=`cd ${SYSDIR} && $svnversion 2>/dev/null`
 	case "$svn" in
 	[0-9]*)	svn=" r${svn}" ;;
 	*)	unset svn ;;
@@ -121,12 +147,21 @@ if [ -n "$git_cmd" ] ; then
 	else
 		svn=`$git_cmd log | fgrep 'git-svn-id:' | head -1 | \
 		     sed -n 's/^.*@\([0-9][0-9]*\).*$/\1/p'`
-		if [ -n $svn ] ; then
+		if [ -z "$svn" ] ; then
+			svn=`$git_cmd log --format='format:%N' | \
+			     grep '^svn ' | head -1 | \
+			     sed -n 's/^.*revision=\([0-9][0-9]*\).*$/\1/p'`
+		fi
+		if [ -n "$svn" ] ; then
 			svn=" r${svn}"
 			git="+${git}"
 		else
 			git=" ${git}"
 		fi
+	fi
+	git_b=`$git_cmd rev-parse --abbrev-ref HEAD`
+	if [ -n "$git_b" ] ; then
+		git="${git}(${git_b})"
 	fi
 	if $git_cmd --work-tree=${SYSDIR}/.. diff-index \
 	    --name-only HEAD | read dummy; then
@@ -134,10 +169,27 @@ if [ -n "$git_cmd" ] ; then
 	fi
 fi
 
+if [ -n "$p4_cmd" ] ; then
+	p4version=`cd ${SYSDIR} && $p4_cmd changes -m1 "./...#have" 2>&1 | \
+		awk '{ print $2 }'`
+	case "$p4version" in
+	[0-9]*)
+		p4version=" ${p4version}"
+		p4opened=`cd ${SYSDIR} && $p4_cmd opened ./... 2>&1`
+		case "$p4opened" in
+		File*) ;;
+		//*)	p4version="${p4version}+edit" ;;
+		esac
+		;;
+	*)	unset p4version ;;
+	esac
+fi
+	
+
 cat << EOF > vers.c
 $COPYRIGHT
-#define SCCSSTR "@(#)${VERSION} #${v}${svn}${git}: ${t}"
-#define VERSTR "${VERSION} #${v}${svn}${git}: ${t}\\n    ${u}@${h}:${d}\\n"
+#define SCCSSTR "@(#)${VERSION} #${v}${svn}${git}${p4version}: ${t}"
+#define VERSTR "${VERSION} #${v}${svn}${git}${p4version}: ${t}\\n    ${u}@${h}:${d}\\n"
 #define RELSTR "${RELEASE}"
 
 char sccs[sizeof(SCCSSTR) > 128 ? sizeof(SCCSSTR) : 128] = SCCSSTR;

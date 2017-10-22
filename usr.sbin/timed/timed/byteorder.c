@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)byteorder.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/timed/timed/byteorder.c 216372 2010-12-11 09:38:12Z joel $";
+  "$FreeBSD: release/10.0.0/usr.sbin/timed/timed/byteorder.c 246209 2013-02-01 14:26:54Z charnier $";
 #endif /* not lint */
 
 #include "globals.h"
@@ -42,8 +42,7 @@ static const char rcsid[] =
  * messages. Protocol is defined in /usr/include/protocols/timed.h
  */
 void
-bytenetorder(ptr)
-	struct tsp *ptr;
+bytenetorder(struct tsp *ptr)
 {
 	ptr->tsp_seq = htons((u_short)ptr->tsp_seq);
 	switch (ptr->tsp_type) {
@@ -62,8 +61,7 @@ bytenetorder(ptr)
 }
 
 void
-bytehostorder(ptr)
-	struct tsp *ptr;
+bytehostorder(struct tsp *ptr)
 {
 	ptr->tsp_seq = ntohs((u_short)ptr->tsp_seq);
 	switch (ptr->tsp_type) {

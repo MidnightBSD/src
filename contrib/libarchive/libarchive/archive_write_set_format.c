@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/archive_write_set_format.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_write_set_format.c 232153 2012-02-25 10:58:02Z mm $");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -41,18 +41,22 @@ __FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/archive_write_set_for
 static
 struct { int code; int (*setter)(struct archive *); } codes[] =
 {
+	{ ARCHIVE_FORMAT_7ZIP,		archive_write_set_format_7zip },
 	{ ARCHIVE_FORMAT_CPIO,		archive_write_set_format_cpio },
-	{ ARCHIVE_FORMAT_CPIO_SVR4_NOCRC,	archive_write_set_format_cpio_newc },
 	{ ARCHIVE_FORMAT_CPIO_POSIX,	archive_write_set_format_cpio },
+	{ ARCHIVE_FORMAT_CPIO_SVR4_NOCRC,	archive_write_set_format_cpio_newc },
+	{ ARCHIVE_FORMAT_ISO9660,	archive_write_set_format_iso9660 },
 	{ ARCHIVE_FORMAT_MTREE,		archive_write_set_format_mtree },
 	{ ARCHIVE_FORMAT_SHAR,		archive_write_set_format_shar },
 	{ ARCHIVE_FORMAT_SHAR_BASE,	archive_write_set_format_shar },
 	{ ARCHIVE_FORMAT_SHAR_DUMP,	archive_write_set_format_shar_dump },
 	{ ARCHIVE_FORMAT_TAR,	archive_write_set_format_pax_restricted },
+	{ ARCHIVE_FORMAT_TAR_GNUTAR,	archive_write_set_format_gnutar },
 	{ ARCHIVE_FORMAT_TAR_PAX_INTERCHANGE, archive_write_set_format_pax },
 	{ ARCHIVE_FORMAT_TAR_PAX_RESTRICTED,
 				archive_write_set_format_pax_restricted },
 	{ ARCHIVE_FORMAT_TAR_USTAR,	archive_write_set_format_ustar },
+	{ ARCHIVE_FORMAT_XAR,		archive_write_set_format_xar },
 	{ ARCHIVE_FORMAT_ZIP,	archive_write_set_format_zip },
 	{ 0,		NULL }
 };

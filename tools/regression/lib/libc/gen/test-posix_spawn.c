@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libc/gen/test-posix_spawn.c 223907 2011-07-10 14:20:11Z jilles $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/libc/gen/test-posix_spawn.c 223907 2011-07-10 14:20:11Z jilles $");
 
 #include <sys/wait.h>
 

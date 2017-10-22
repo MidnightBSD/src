@@ -1,0 +1,5 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_FORMAT_EXTENSIONS 250658 2013-05-15 13:04:10Z brooks $
+Set to not enable
+.Fl fformat-extensions
+when compiling the kernel.
+Also disables all format checking.

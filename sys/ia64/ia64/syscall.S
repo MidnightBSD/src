@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/ia64/ia64/syscall.S 247018 2013-02-20 03:59:45Z marcel $
+ * $FreeBSD: release/10.0.0/sys/ia64/ia64/syscall.S 246890 2013-02-17 00:51:34Z marcel $
  */
 
 #include <sys/syscall.h>

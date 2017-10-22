@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_var.h 244524 2012-12-21 00:41:52Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/sctp_var.h 242327 2012-10-29 20:47:32Z tuexen $");
 
 #ifndef _NETINET_SCTP_VAR_H_
 #define _NETINET_SCTP_VAR_H_
@@ -321,48 +321,34 @@ struct sctphdr;
 
 void sctp_close(struct socket *so);
 int sctp_disconnect(struct socket *so);
-
 void sctp_ctlinput(int, struct sockaddr *, void *);
 int sctp_ctloutput(struct socket *, struct sockopt *);
 
 #ifdef INET
 void sctp_input_with_port(struct mbuf *, int, uint16_t);
-
-#endif
-#ifdef INET
 void sctp_input(struct mbuf *, int);
 
 #endif
 void sctp_pathmtu_adjustment(struct sctp_tcb *, uint16_t);
 void sctp_drain(void);
 void sctp_init(void);
-
 void sctp_finish(void);
-
 int sctp_flush(struct socket *, int);
 int sctp_shutdown(struct socket *);
-void sctp_notify 
-(struct sctp_inpcb *, struct ip *ip, struct sctphdr *,
+void 
+sctp_notify(struct sctp_inpcb *, struct ip *ip, struct sctphdr *,
     struct sockaddr *, struct sctp_tcb *,
     struct sctp_nets *);
-
-	int sctp_bindx(struct socket *, int, struct sockaddr_storage *,
-        int, int, struct proc *);
+int 
+sctp_bindx(struct socket *, int, struct sockaddr_storage *,
+    int, int, struct proc *);
 
 /* can't use sctp_assoc_t here */
-	int sctp_peeloff(struct socket *, struct socket *, int, caddr_t, int *);
-
-	int sctp_ingetaddr(struct socket *,
-        struct sockaddr **
-);
-
-	int sctp_peeraddr(struct socket *,
-        struct sockaddr **
-);
-
-	int sctp_listen(struct socket *, int, struct thread *);
-
-	int sctp_accept(struct socket *, struct sockaddr **);
+int sctp_peeloff(struct socket *, struct socket *, int, caddr_t, int *);
+int sctp_ingetaddr(struct socket *, struct sockaddr **);
+int sctp_peeraddr(struct socket *, struct sockaddr **);
+int sctp_listen(struct socket *, int, struct thread *);
+int sctp_accept(struct socket *, struct sockaddr **);
 
 #endif				/* _KERNEL */
 

@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/at/panic.h 89315 2002-01-13 20:21:08Z mike $
+ * $FreeBSD: release/10.0.0/usr.bin/at/panic.h 89315 2002-01-13 20:21:08Z mike $
  */
 
 #include <sys/cdefs.h>

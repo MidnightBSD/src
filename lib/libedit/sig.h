@@ -31,7 +31,7 @@
  *
  *	@(#)sig.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: sig.h,v 1.8 2009/02/19 15:20:22 christos Exp $
- * $FreeBSD: stable/9/lib/libedit/sig.h 239589 2012-08-22 20:06:59Z pfg $
+ * $FreeBSD: release/10.0.0/lib/libedit/sig.h 238378 2012-07-11 22:20:19Z pfg $
  */
 
 /*

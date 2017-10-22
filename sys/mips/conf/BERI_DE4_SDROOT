@@ -1,0 +1,16 @@
+#
+# BERI_DE4_SDROOT -- Kernel for the SRI/Cambridge "BERI" (Bluespec Extensible
+# RISC Implementation) FPGA soft core, as configured in its Terasic DE-4
+# reference configuration.
+#
+# $FreeBSD: release/10.0.0/sys/mips/conf/BERI_DE4_SDROOT 257527 2013-11-01 21:15:39Z brooks $
+#
+
+include "BERI_DE4_BASE"
+
+ident		BERI_DE4_SDROOT
+
+#
+# This kernel expects to find its root filesystem on the SD Card.
+#
+options 	ROOTDEVNAME=\"ufs:/dev/altera_sdcard0\"

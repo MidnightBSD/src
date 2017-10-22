@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net/bridgestp.c 236052 2012-05-26 07:43:17Z thompsa $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/net/bridgestp.c 248324 2013-03-15 12:55:30Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -234,7 +234,7 @@ bstp_transmit_tcn(struct bstp_state *bs, struct bstp_port *bp)
 	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0)
 		return;
 
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	m = m_gethdr(M_NOWAIT, MT_DATA);
 	if (m == NULL)
 		return;
 
@@ -348,7 +348,7 @@ bstp_send_bpdu(struct bstp_state *bs, struct bstp_port *bp,
 	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0)
 		return;
 
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	m = m_gethdr(M_NOWAIT, MT_DATA);
 	if (m == NULL)
 		return;
 

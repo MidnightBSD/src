@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/mknod/02.t 211178 2010-08-11 16:33:17Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/mknod/02.t 211178 2010-08-11 16:33:17Z pjd $
 
 desc="mknod returns ENAMETOOLONG if a component of a pathname exceeded {NAME_MAX} characters"
 

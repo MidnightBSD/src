@@ -1,6 +1,6 @@
 /*
- * $FreeBSD: stable/9/sys/teken/libteken/Symbol.map 221698 2011-05-09 16:27:39Z ed $
- */	
+ * $FreeBSD: release/10.0.0/sys/teken/libteken/Symbol.map 226111 2011-10-07 15:05:24Z ed $
+ */
 
 FBSD_1.2 {
 	teken_256to8;

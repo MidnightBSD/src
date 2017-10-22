@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/ia64/include/_limits.h 217145 2011-01-08 11:13:34Z tijl $ */
+/* $FreeBSD: release/10.0.0/sys/ia64/include/_limits.h 217145 2011-01-08 11:13:34Z tijl $ */
 /* From: NetBSD: limits.h,v 1.3 1997/04/06 08:47:31 cgd Exp */
 
 /*-

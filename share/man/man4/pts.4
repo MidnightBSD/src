@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)pty.4	8.2 (Berkeley) 11/30/93
-.\" $FreeBSD: stable/9/share/man/man4/pts.4 213573 2010-10-08 12:40:16Z uqs $
+.\" $FreeBSD: release/10.0.0/share/man/man4/pts.4 233648 2012-03-29 05:02:12Z eadler $
 .\"
 .Dd August 20, 2008
 .Dt PTS 4
@@ -131,7 +131,7 @@ function should be used.
 .It Dv TIOCPTMASTER
 Determine whether the file descriptor is pointing to a pseudo-terminal
 master device.
-This 
+This
 .Xr ioctl 2
 should not be used directly. It is used to implement routines like
 .Xr grantpt 3 .

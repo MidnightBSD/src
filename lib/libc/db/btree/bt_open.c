@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)bt_open.c	8.10 (Berkeley) 8/17/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/db/btree/bt_open.c 190498 2009-03-28 07:31:02Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/db/btree/bt_open.c 254289 2013-08-13 19:20:50Z jilles $");
 
 /*
  * Implementation of btree access method for 4.4BSD.
@@ -196,7 +196,7 @@ __bt_open(const char *fname, int flags, int mode, const BTREEINFO *openinfo, int
 			goto einval;
 		}
 
-		if ((t->bt_fd = _open(fname, flags, mode)) < 0)
+		if ((t->bt_fd = _open(fname, flags | O_CLOEXEC, mode)) < 0)
 			goto err;
 
 	} else {
@@ -206,9 +206,6 @@ __bt_open(const char *fname, int flags, int mode, const BTREEINFO *openinfo, int
 			goto err;
 		F_SET(t, B_INMEM);
 	}
-
-	if (_fcntl(t->bt_fd, F_SETFD, 1) == -1)
-		goto err;
 
 	if (_fstat(t->bt_fd, &sb))
 		goto err;
@@ -405,7 +402,7 @@ tmp(void)
 
 	(void)sigfillset(&set);
 	(void)_sigprocmask(SIG_BLOCK, &set, &oset);
-	if ((fd = mkstemp(path)) != -1)
+	if ((fd = mkostemp(path, O_CLOEXEC)) != -1)
 		(void)unlink(path);
 	(void)_sigprocmask(SIG_SETMASK, &oset, NULL);
 	return(fd);

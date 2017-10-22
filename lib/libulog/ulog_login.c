@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libulog/ulog_login.c 202215 2010-01-13 18:53:06Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libulog/ulog_login.c 234462 2012-04-19 15:28:15Z ed $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -55,7 +55,7 @@ ulog_fill(struct utmpx *utx, const char *line)
 	SHA1_Init(&c);
 	SHA1_Update(&c, "libulog", 7);
 	SHA1_Update(&c, utx->ut_line, sizeof utx->ut_line);
-	SHA_Final(id, &c);
+	SHA1_Final(id, &c);
 
 	memcpy(utx->ut_id, id, MIN(sizeof utx->ut_id, sizeof id));
 }

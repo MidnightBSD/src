@@ -3,7 +3,9 @@
 #	All rights reserved.
 # Author: Harti Brandt <brandt@fokus.gmd.de>
 #
-# $FreeBSD: stable/9/sbin/atm/atmconfig/Makefile 211725 2010-08-23 22:24:11Z imp $
+# $FreeBSD: release/10.0.0/sbin/atm/atmconfig/Makefile 226440 2011-10-16 16:58:28Z cognet $
+
+.include <bsd.own.mk>
 
 PROG=	atmconfig
 .ifndef RESCUE
@@ -21,6 +23,9 @@ CFLAGS+= -I${.OBJDIR}
 .ifndef RESCUE
 DPADD=	${LIBBSNMP}
 LDADD=	-lbsnmp
+. if ${MK_DYNAMICROOT} == "no" && ${MK_OPENSSL} != "no"
+LDADD+= -lcrypto
+. endif
 .endif
 
 .ifndef RESCUE

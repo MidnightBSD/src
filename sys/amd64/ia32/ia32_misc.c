@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/amd64/ia32/ia32_misc.c 220238 2011-04-01 11:16:29Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/ia32/ia32_misc.c 220238 2011-04-01 11:16:29Z kib $");
 
 #include "opt_compat.h"
 

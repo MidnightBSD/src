@@ -107,7 +107,7 @@ static char sccsid[] = "@(#)ftpd.c	8.5 (Berkeley) 4/28/95";
 #else
 __RCSID("$NetBSD: ftpd.c,v 1.176 2006/05/09 20:18:06 mrg Exp $");
 #endif
-__FBSDID("$FreeBSD: stable/9/contrib/lukemftpd/src/ftpd.c 223702 2011-06-30 20:58:38Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/lukemftpd/src/ftpd.c 223702 2011-06-30 20:58:38Z trasz $");
 #endif /* not lint */
 
 /*

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/fdescfs/Makefile 89260 2002-01-11 15:49:02Z ru $
+# $FreeBSD: release/10.0.0/sys/modules/fdescfs/Makefile 89260 2002-01-11 15:49:02Z ru $
 
 .PATH: ${.CURDIR}/../../fs/fdescfs
 

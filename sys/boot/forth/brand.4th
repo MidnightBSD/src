@@ -1,4 +1,4 @@
-\ Copyright (c) 2006-2011 Devin Teske <devinteske@hotmail.com>
+\ Copyright (c) 2006-2011 Devin Teske <dteske@FreeBSD.org>
 \ All rights reserved.
 \ 
 \ Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,7 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $FreeBSD: stable/9/sys/boot/forth/brand.4th 222417 2011-05-28 08:50:38Z julian $
+\ $FreeBSD: release/10.0.0/sys/boot/forth/brand.4th 238431 2012-07-14 01:45:35Z dteske $
 
 marker task-brand.4th
 

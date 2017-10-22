@@ -1,3 +1,2 @@
-# $FreeBSD: stable/9/usr.bin/Makefile.arm 212526 2010-09-13 02:23:03Z imp $
+# $FreeBSD: release/10.0.0/usr.bin/Makefile.arm 247975 2013-03-07 23:44:35Z cognet $
 
-SUBDIR:=	${SUBDIR:Ntruss}

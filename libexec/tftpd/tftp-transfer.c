@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/libexec/tftpd/tftp-transfer.c 224536 2011-07-31 03:12:20Z rodrigc $");
+__FBSDID("$FreeBSD: release/10.0.0/libexec/tftpd/tftp-transfer.c 224536 2011-07-31 03:12:20Z rodrigc $");
 
 #include <sys/types.h>
 #include <sys/param.h>

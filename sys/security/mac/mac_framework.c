@@ -70,7 +70,7 @@
 #include "opt_mac.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/security/mac/mac_framework.c 230167 2012-01-15 21:58:51Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/security/mac/mac_framework.c 255971 2013-10-01 15:40:27Z markj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -95,7 +95,7 @@ SDT_PROVIDER_DEFINE(mac);
 SDT_PROVIDER_DEFINE(mac_framework);
 
 SDT_PROBE_DEFINE2(mac, kernel, policy, modevent, modevent, "int",
-    "struct mac_policy_conf *mpc");
+    "struct mac_policy_conf *");
 SDT_PROBE_DEFINE1(mac, kernel, policy, register, register,
     "struct mac_policy_conf *");
 SDT_PROBE_DEFINE1(mac, kernel, policy, unregister, unregister,
@@ -292,7 +292,8 @@ mac_init(void)
 	mac_labelzone_init();
 
 #ifndef MAC_STATIC
-	rm_init_flags(&mac_policy_rm, "mac_policy_rm", RM_NOWITNESS);
+	rm_init_flags(&mac_policy_rm, "mac_policy_rm", RM_NOWITNESS |
+	    RM_RECURSE);
 	sx_init_flags(&mac_policy_sx, "mac_policy_sx", SX_NOWITNESS);
 #endif
 }

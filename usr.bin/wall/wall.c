@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/wall/wall.c 242166 2012-10-27 01:20:48Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/wall/wall.c 241848 2012-10-22 03:07:05Z eadler $");
 
 #ifndef lint
 static const char copyright[] =
@@ -70,14 +70,14 @@ static const char sccsid[] = "@(#)wall.c	8.2 (Berkeley) 11/16/93";
 static void makemsg(char *);
 static void usage(void);
 
-struct wallgroup {
+static struct wallgroup {
 	struct wallgroup *next;
 	char		*name;
 	gid_t		gid;
 } *grouplist;
-int nobanner;
-int mbufsize;
-char *mbuf;
+static int nobanner;
+static int mbufsize;
+static char *mbuf;
 
 static int
 ttystat(char *line)

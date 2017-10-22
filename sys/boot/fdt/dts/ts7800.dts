@@ -25,7 +25,7 @@
  *
  * Technologic Systems TS-7800 Device Tree Source.
  *
- * $FreeBSD: stable/9/sys/boot/fdt/dts/ts7800.dts 220653 2011-04-15 13:37:43Z philip $
+ * $FreeBSD: release/10.0.0/sys/boot/fdt/dts/ts7800.dts 220653 2011-04-15 13:37:43Z philip $
  */
 
 /dts-v1/;

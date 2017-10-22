@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/mips/rmi/std.xlr 217636 2011-01-20 12:45:29Z jchandra $
+# $FreeBSD: release/10.0.0/sys/mips/rmi/std.xlr 217636 2011-01-20 12:45:29Z jchandra $
 files	"../rmi/files.xlr"
 
 cpu	CPU_RMI

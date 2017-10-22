@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libc/ia64/gen/fpgetround.c 109096 2003-01-11 07:24:54Z marcel $
+ * $FreeBSD: release/10.0.0/lib/libc/ia64/gen/fpgetround.c 109096 2003-01-11 07:24:54Z marcel $
  */
 
 #include <sys/types.h>

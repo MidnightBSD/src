@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/cardbus/Makefile 153811 2005-12-29 01:43:47Z imp $
+# $FreeBSD: release/10.0.0/sys/modules/cardbus/Makefile 153811 2005-12-29 01:43:47Z imp $
 
 .PATH: ${.CURDIR}/../../dev/cardbus
 

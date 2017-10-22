@@ -47,7 +47,7 @@
 /*%
  *	@(#)resolv.h	8.1 (Berkeley) 6/2/93
  *	$Id: resolv.h,v 1.19.18.4 2008/04/03 23:15:15 marka Exp $
- * $FreeBSD: stable/9/include/resolv.h 203964 2010-02-16 19:39:50Z imp $
+ * $FreeBSD: release/10.0.0/include/resolv.h 229781 2012-01-07 16:10:15Z uqs $
  */
 
 #ifndef _RESOLV_H_
@@ -184,7 +184,7 @@ struct __res_state {
 			u_int16_t		nscount;
 			u_int16_t		nstimes[MAXNS];	/*%< ms. */
 			int			nssocks[MAXNS];
-			struct __res_state_ext *ext;	/*%< extention for IPv6 */
+			struct __res_state_ext *ext;	/*%< extension for IPv6 */
 		} _ext;
 	} _u;
 };

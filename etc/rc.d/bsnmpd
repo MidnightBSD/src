@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/rc.d/bsnmpd 231653 2012-02-14 10:16:56Z dougb $
+# $FreeBSD: release/10.0.0/etc/rc.d/bsnmpd 254511 2013-08-19 05:37:49Z peter $
 #
 
 # PROVIDE: bsnmpd
@@ -12,7 +12,8 @@
 name="bsnmpd"
 rcvar="bsnmpd_enable"
 command="/usr/sbin/${name}"
-pidfile="/var/run/snmpd.pid"
 
 load_rc_config $name
+pidfile="${bsnmpd_pidfile:-/var/run/snmpd.pid}"
+command_args="-p ${pidfile}"
 run_rc_command "$1"

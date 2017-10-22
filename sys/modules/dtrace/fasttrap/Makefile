@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/dtrace/fasttrap/Makefile 211746 2010-08-24 12:18:39Z rpaulo $
+# $FreeBSD: release/10.0.0/sys/modules/dtrace/fasttrap/Makefile 253996 2013-08-06 15:51:56Z avg $
 
 .PATH:	${.CURDIR}/../../../cddl/contrib/opensolaris/uts/common/dtrace
 
@@ -15,6 +15,9 @@ CFLAGS+=	-I${.CURDIR}/../../../cddl/contrib/opensolaris/uts/intel
 .PATH:		${.CURDIR}/../../../cddl/contrib/opensolaris/uts/intel/dtrace
 .endif
 
-CFLAGS+=	-DSMP -DDEBUG
+CFLAGS+=	-DSMP
 
 .include <bsd.kmod.mk>
+
+CFLAGS+=	-include ${.CURDIR}/../../../cddl/compat/opensolaris/sys/debug_compat.h
+CWARNFLAGS+=	-Wno-unused

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)config.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/9/usr.sbin/config/config.h 219819 2011-03-21 09:40:01Z jeff $
+ * $FreeBSD: release/10.0.0/usr.sbin/config/config.h 235789 2012-05-22 16:33:10Z bapt $
  */
 
 /*
@@ -171,7 +171,6 @@ char	*path(const char *);
 char	*raisestr(char *);
 void	remember(const char *);
 void	moveifchanged(const char *, const char *);
-int	yyparse(void);
 int	yylex(void);
 void	options(void);
 void	makefile(void);

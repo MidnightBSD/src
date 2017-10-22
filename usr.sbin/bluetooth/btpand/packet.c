@@ -25,7 +25,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/usr.sbin/bluetooth/btpand/packet.c 187938 2009-01-30 22:23:21Z emax $ */
+/* $FreeBSD: release/10.0.0/usr.sbin/bluetooth/btpand/packet.c 187938 2009-01-30 22:23:21Z emax $ */
 
 #include <sys/cdefs.h>
 __RCSID("$NetBSD: packet.c,v 1.1 2008/08/17 13:20:57 plunky Exp $");

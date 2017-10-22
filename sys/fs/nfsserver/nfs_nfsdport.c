@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/fs/nfsserver/nfs_nfsdport.c 247502 2013-02-28 21:57:38Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfsserver/nfs_nfsdport.c 255219 2013-09-05 00:09:56Z pjd $");
 
 #include <sys/capability.h>
 
@@ -60,7 +60,8 @@ extern SVCPOOL	*nfsrvd_pool;
 extern struct nfsv4lock nfsd_suspend_lock;
 struct vfsoptlist nfsv4root_opt, nfsv4root_newopt;
 NFSDLOCKMUTEX;
-struct mtx nfs_cache_mutex;
+struct nfsrchash_bucket nfsrchash_table[NFSRVCACHE_HASHSIZE];
+struct mtx nfsrc_udpmtx;
 struct mtx nfs_v4root_mutex;
 struct nfsrvfh nfs_rootfh, nfs_pubfh;
 int nfs_pubfhset = 0, nfs_rootfhset = 0;
@@ -390,7 +391,7 @@ nfsvno_namei(struct nfsrv_descript *nd, struct nameidata *ndp,
 
 	/*
 	 * Initialize for scan, set ni_startdir and bump ref on dp again
-	 * becuase lookup() will dereference ni_startdir.
+	 * because lookup() will dereference ni_startdir.
 	 */
 
 	cnp->cn_thread = p;
@@ -506,11 +507,10 @@ nfsvno_namei(struct nfsrv_descript *nd, struct nameidata *ndp,
 
 out:
 	if (error) {
-		uma_zfree(namei_zone, cnp->cn_pnbuf);
+		nfsvno_relpathbuf(ndp);
 		ndp->ni_vp = NULL;
 		ndp->ni_dvp = NULL;
 		ndp->ni_startdir = NULL;
-		cnp->cn_flags &= ~HASBUF;
 	} else if ((ndp->ni_cnd.cn_flags & (WANTPARENT|LOCKPARENT)) == 0) {
 		ndp->ni_dvp = NULL;
 	}
@@ -566,7 +566,7 @@ nfsvno_readlink(struct vnode *vp, struct ucred *cred, struct thread *p,
 	i = 0;
 	while (len < NFS_MAXPATHLEN) {
 		NFSMGET(mp);
-		MCLGET(mp, M_WAIT);
+		MCLGET(mp, M_WAITOK);
 		mp->m_len = NFSMSIZ(mp);
 		if (len == 0) {
 			mp3 = mp2 = mp;
@@ -636,7 +636,7 @@ nfsvno_read(struct vnode *vp, off_t off, int cnt, struct ucred *cred,
 	i = 0;
 	while (left > 0) {
 		NFSMGET(m);
-		MCLGET(m, M_WAIT);
+		MCLGET(m, M_WAITOK);
 		m->m_len = 0;
 		siz = min(M_TRAILINGSPACE(m), left);
 		left -= siz;
@@ -1268,9 +1268,9 @@ nfsvno_fsync(struct vnode *vp, u_int64_t off, int cnt, struct ucred *cred,
 		 */
 		if (vp->v_object &&
 		   (vp->v_object->flags & OBJ_MIGHTBEDIRTY)) {
-			VM_OBJECT_LOCK(vp->v_object);
+			VM_OBJECT_WLOCK(vp->v_object);
 			vm_object_page_clean(vp->v_object, 0, 0, OBJPC_SYNC);
-			VM_OBJECT_UNLOCK(vp->v_object);
+			VM_OBJECT_WUNLOCK(vp->v_object);
 		}
 		error = VOP_FSYNC(vp, MNT_WAIT, td);
 	} else {
@@ -1299,10 +1299,10 @@ nfsvno_fsync(struct vnode *vp, u_int64_t off, int cnt, struct ucred *cred,
 
 		if (vp->v_object &&
 		   (vp->v_object->flags & OBJ_MIGHTBEDIRTY)) {
-			VM_OBJECT_LOCK(vp->v_object);
+			VM_OBJECT_WLOCK(vp->v_object);
 			vm_object_page_clean(vp->v_object, off, off + cnt,
 			    OBJPC_SYNC);
-			VM_OBJECT_UNLOCK(vp->v_object);
+			VM_OBJECT_WUNLOCK(vp->v_object);
 		}
 
 		bo = &vp->v_bufobj;
@@ -1322,7 +1322,7 @@ nfsvno_fsync(struct vnode *vp, u_int64_t off, int cnt, struct ucred *cred,
 			 */
 			if ((bp = gbincore(&vp->v_bufobj, lblkno)) != NULL) {
 				if (BUF_LOCK(bp, LK_EXCLUSIVE | LK_SLEEPFAIL |
-				    LK_INTERLOCK, BO_MTX(bo)) == ENOLCK) {
+				    LK_INTERLOCK, BO_LOCKPTR(bo)) == ENOLCK) {
 					BO_LOCK(bo);
 					continue; /* retry */
 				}
@@ -1575,6 +1575,8 @@ nfsrvd_readdir(struct nfsrv_descript *nd, int isdgram,
 			nd->nd_repstat = NFSERR_BAD_COOKIE;
 #endif
 	}
+	if (!nd->nd_repstat && vp->v_type != VDIR)
+		nd->nd_repstat = NFSERR_NOTDIR;
 	if (nd->nd_repstat == 0 && cnt == 0) {
 		if (nd->nd_flag & ND_NFSV2)
 			/* NFSv2 does not have NFSERR_TOOSMALL */
@@ -2061,8 +2063,7 @@ again:
 						cn.cn_nameptr = dp->d_name;
 						cn.cn_namelen = nlen;
 						cn.cn_flags = ISLASTCN |
-						    NOFOLLOW | LOCKLEAF |
-						    MPSAFE;
+						    NOFOLLOW | LOCKLEAF;
 						if (nlen == 2 &&
 						    dp->d_name[0] == '.' &&
 						    dp->d_name[1] == '.')
@@ -2638,10 +2639,7 @@ nfsvno_fhtovp(struct mount *mp, fhandle_t *fhp, struct sockaddr *nam,
 
 	*credp = NULL;
 	exp->nes_numsecflavor = 0;
-	if (VFS_NEEDSGIANT(mp))
-		error = ESTALE;
-	else
-		error = VFS_FHTOVP(mp, &fhp->fh_fid, LK_EXCLUSIVE, vpp);
+	error = VFS_FHTOVP(mp, &fhp->fh_fid, lktype, vpp);
 	if (error != 0)
 		/* Make sure the server replies ESTALE to the client. */
 		error = ESTALE;
@@ -2662,14 +2660,6 @@ nfsvno_fhtovp(struct mount *mp, fhandle_t *fhp, struct sockaddr *nam,
 				exp->nes_secflavors[i] = secflavors[i];
 		}
 	}
-	if (error == 0 && lktype == LK_SHARED)
-		/*
-		 * It would be much better to pass lktype to VFS_FHTOVP(),
-		 * but this will have to do until VFS_FHTOVP() has a lock
-		 * type argument like VFS_VGET().
-		 */
-		NFSVOPLOCK(*vpp, LK_DOWNGRADE | LK_RETRY);
-
 	NFSEXITCODE(error);
 	return (error);
 }
@@ -2705,9 +2695,11 @@ nfsd_fhtovp(struct nfsrv_descript *nd, struct nfsrvfh *nfp, int lktype,
 		goto out;
 	}
 
-	if (startwrite)
+	if (startwrite) {
 		vn_start_write(NULL, mpp, V_WAIT);
-
+		if (lktype == LK_SHARED && !(MNT_SHARED_WRITES(mp)))
+			lktype = LK_EXCLUSIVE;
+	}
 	nd->nd_repstat = nfsvno_fhtovp(mp, fhp, nd->nd_nam, lktype, vpp, exp,
 	    &credanon);
 	vfs_unbusy(mp);
@@ -2780,7 +2772,7 @@ out:
 /*
  * glue for fp.
  */
-int
+static int
 fp_getfvp(struct thread *p, int fd, struct file **fpp, struct vnode **vpp)
 {
 	struct filedesc *fdp;
@@ -2788,8 +2780,8 @@ fp_getfvp(struct thread *p, int fd, struct file **fpp, struct vnode **vpp)
 	int error = 0;
 
 	fdp = p->td_proc->p_fd;
-	if (fd >= fdp->fd_nfiles ||
-	    (fp = fdp->fd_ofiles[fd]) == NULL) {
+	if (fd < 0 || fd >= fdp->fd_nfiles ||
+	    (fp = fdp->fd_ofiles[fd].fde_file) == NULL) {
 		error = EBADF;
 		goto out;
 	}
@@ -2824,7 +2816,7 @@ nfsrv_v4rootexport(void *argp, struct ucred *cred, struct thread *p)
 		/*
 		 * If fspec != NULL, this is the v4root path.
 		 */
-		NDINIT(&nd, LOOKUP, FOLLOW | MPSAFE, UIO_USERSPACE,
+		NDINIT(&nd, LOOKUP, FOLLOW, UIO_USERSPACE,
 		    nfsexargp->fspec, p);
 		if ((error = namei(&nd)) != 0)
 			goto out;
@@ -3043,6 +3035,7 @@ nfssvc_nfsd(struct thread *td, struct nfssvc_args *uap)
 	struct file *fp;
 	struct nfsd_addsock_args sockarg;
 	struct nfsd_nfsd_args nfsdarg;
+	cap_rights_t rights;
 	int error;
 
 	if (uap->flag & NFSSVC_NFSDADDSOCK) {
@@ -3054,7 +3047,9 @@ nfssvc_nfsd(struct thread *td, struct nfssvc_args *uap)
 		 * pretend that we need them all. It is better to be too
 		 * careful than too reckless.
 		 */
-		if ((error = fget(td, sockarg.sock, CAP_SOCK_ALL, &fp)) != 0)
+		error = fget(td, sockarg.sock,
+		    cap_rights_init(&rights, CAP_SOCK_SERVER), &fp);
+		if (error != 0)
 			goto out;
 		if (fp->f_type != DTYPE_SOCKET) {
 			fdrop(fp, td);
@@ -3287,7 +3282,7 @@ extern int (*nfsd_call_nfsd)(struct thread *, struct nfssvc_args *);
 static int
 nfsd_modevent(module_t mod, int type, void *data)
 {
-	int error = 0;
+	int error = 0, i;
 	static int loaded = 0;
 
 	switch (type) {
@@ -3295,7 +3290,14 @@ nfsd_modevent(module_t mod, int type, void *data)
 		if (loaded)
 			goto out;
 		newnfs_portinit();
-		mtx_init(&nfs_cache_mutex, "nfs_cache_mutex", NULL, MTX_DEF);
+		for (i = 0; i < NFSRVCACHE_HASHSIZE; i++) {
+			snprintf(nfsrchash_table[i].lock_name,
+			    sizeof(nfsrchash_table[i].lock_name), "nfsrc_tcp%d",
+			    i);
+			mtx_init(&nfsrchash_table[i].mtx,
+			    nfsrchash_table[i].lock_name, NULL, MTX_DEF);
+		}
+		mtx_init(&nfsrc_udpmtx, "nfs_udpcache_mutex", NULL, MTX_DEF);
 		mtx_init(&nfs_v4root_mutex, "nfs_v4root_mutex", NULL, MTX_DEF);
 		mtx_init(&nfsv4root_mnt.mnt_mtx, "struct mount mtx", NULL,
 		    MTX_DEF);
@@ -3339,7 +3341,9 @@ nfsd_modevent(module_t mod, int type, void *data)
 			svcpool_destroy(nfsrvd_pool);
 
 		/* and get rid of the locks */
-		mtx_destroy(&nfs_cache_mutex);
+		for (i = 0; i < NFSRVCACHE_HASHSIZE; i++)
+			mtx_destroy(&nfsrchash_table[i].mtx);
+		mtx_destroy(&nfsrc_udpmtx);
 		mtx_destroy(&nfs_v4root_mutex);
 		mtx_destroy(&nfsv4root_mnt.mnt_mtx);
 		lockdestroy(&nfsv4root_mnt.mnt_explock);

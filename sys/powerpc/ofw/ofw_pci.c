@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/ofw/ofw_pci.c 235060 2012-05-05 16:41:17Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ofw/ofw_pci.c 231149 2012-02-07 19:14:13Z nwhitehorn $");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>

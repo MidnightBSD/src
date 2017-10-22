@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/wpifw/Makefile 216559 2010-12-19 11:37:44Z bschmidt $
+# $FreeBSD: release/10.0.0/sys/modules/wpifw/Makefile 216559 2010-12-19 11:37:44Z bschmidt $
 
 .PATH: ${.CURDIR}/../../contrib/dev/wpi
 

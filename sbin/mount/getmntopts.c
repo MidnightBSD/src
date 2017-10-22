@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)getmntopts.c	8.3 (Berkeley) 3/29/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/mount/getmntopts.c 186505 2008-12-26 22:55:38Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/mount/getmntopts.c 230372 2012-01-20 07:29:29Z jh $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -46,7 +46,6 @@ __FBSDID("$FreeBSD: stable/9/sbin/mount/getmntopts.c 186505 2008-12-26 22:55:38Z
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sysexits.h>
 
 #include "mntopts.h"
 
@@ -124,16 +123,18 @@ rmslashes(char *rrpin, char *rrpout)
 		*rrpout = '\0';
 }
 
-void
+int
 checkpath(const char *path, char *resolved)
 {
 	struct stat sb;
 
-	if (realpath(path, resolved) != NULL && stat(resolved, &sb) == 0) {
-		if (!S_ISDIR(sb.st_mode))
-			errx(EX_USAGE, "%s: not a directory", resolved);
-	} else
-		errx(EX_USAGE, "%s: %s", resolved, strerror(errno));
+	if (realpath(path, resolved) == NULL || stat(resolved, &sb) != 0)
+		return (1);
+	if (!S_ISDIR(sb.st_mode)) {
+		errno = ENOTDIR;
+		return (1);
+	}
+	return (0);
 }
 
 void

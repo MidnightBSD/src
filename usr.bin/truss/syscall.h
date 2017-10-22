@@ -32,7 +32,7 @@
  * IN (meaning that the data is passed *into* the system call).
  */
 /*
- * $FreeBSD: stable/9/usr.bin/truss/syscall.h 241162 2012-10-03 14:28:55Z zont $
+ * $FreeBSD: release/10.0.0/usr.bin/truss/syscall.h 255708 2013-09-19 18:53:42Z jhb $
  */
 
 enum Argtype { None = 1, Hex, Octal, Int, Name, Ptr, Stat, Ioctl, Quad,
@@ -40,7 +40,7 @@ enum Argtype { None = 1, Hex, Octal, Int, Name, Ptr, Stat, Ioctl, Quad,
 	Fd_set, Sigaction, Fcntl, Mprot, Mmapflags, Whence, Readlinkres,
 	Umtx, Sigset, Sigprocmask, Kevent, Sockdomain, Socktype, Open,
 	Fcntlflag, Rusage, BinString, Shutdown, Resource, Rlimit, Timeval2,
-	Pathconf };
+	Pathconf, Rforkflags, ExitStatus, Waitoptions, Idtype, Procctl };
 
 #define	ARG_MASK	0xff
 #define	OUT	0x100

@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/libexec/rtld-elf/rtld.c 240801 2012-09-22 05:27:47Z kib $
+ * $FreeBSD: release/10.0.0/libexec/rtld-elf/rtld.c 256101 2013-10-07 08:19:30Z kib $
  */
 
 /*
@@ -116,6 +116,7 @@ static Objlist_Entry *objlist_find(Objlist *, const Obj_Entry *);
 static void objlist_init(Objlist *);
 static void objlist_push_head(Objlist *, Obj_Entry *);
 static void objlist_push_tail(Objlist *, Obj_Entry *);
+static void objlist_put_after(Objlist *, Obj_Entry *, Obj_Entry *);
 static void objlist_remove(Objlist *, Obj_Entry *);
 static void *path_enumerate(const char *, path_enum_proc, void *);
 static int relocate_object_dag(Obj_Entry *root, bool bind_now,
@@ -145,9 +146,8 @@ static void unlink_object(Obj_Entry *);
 static void unload_object(Obj_Entry *);
 static void unref_dag(Obj_Entry *);
 static void ref_dag(Obj_Entry *);
-static int origin_subst_one(char **, const char *, const char *,
-  const char *, char *);
-static char *origin_subst(const char *, const char *);
+static char *origin_subst_one(char *, const char *, const char *, bool);
+static char *origin_subst(char *, const char *);
 static void preinit_main(void);
 static int  rtld_verify_versions(const Objlist *);
 static int  rtld_verify_object_versions(Obj_Entry *);
@@ -234,7 +234,7 @@ size_t tls_static_space;	/* Static TLS space allocated */
 int tls_dtv_generation = 1;	/* Used to detect when dtv size changes  */
 int tls_max_index = 1;		/* Largest module index allocated */
 
-bool ld_library_path_rpath = true;
+bool ld_library_path_rpath = false;
 
 /*
  * Fill in a DoneList with an allocation large enough to hold all of
@@ -324,6 +324,7 @@ _rtld(Elf_Addr *sp, func_ptr_type *exit_proc, Obj_Entry **objp)
     Objlist_Entry *entry;
     Obj_Entry *obj;
     Obj_Entry **preload_tail;
+    Obj_Entry *last_interposer;
     Objlist initlist;
     RtldLockState lockstate;
     char *library_path_rpath;
@@ -538,8 +539,14 @@ _rtld(Elf_Addr *sp, func_ptr_type *exit_proc, Obj_Entry **objp)
 	die();
 
     /* Make a list of all objects loaded at startup. */
+    last_interposer = obj_main;
     for (obj = obj_list;  obj != NULL;  obj = obj->next) {
-	objlist_push_tail(&list_main, obj);
+	if (obj->z_interpose && obj != obj_main) {
+	    objlist_put_after(&list_main, last_interposer, obj);
+	    last_interposer = obj;
+	} else {
+	    objlist_push_tail(&list_main, obj);
+	}
     	obj->refcount++;
     }
 
@@ -748,79 +755,81 @@ basename(const char *name)
 
 static struct utsname uts;
 
-static int
-origin_subst_one(char **res, const char *real, const char *kw, const char *subst,
-    char *may_free)
+static char *
+origin_subst_one(char *real, const char *kw, const char *subst,
+    bool may_free)
 {
-    const char *p, *p1;
-    char *res1;
-    int subst_len;
-    int kw_len;
+	char *p, *p1, *res, *resp;
+	int subst_len, kw_len, subst_count, old_len, new_len;
 
-    res1 = *res = NULL;
-    p = real;
-    subst_len = kw_len = 0;
-    for (;;) {
-	 p1 = strstr(p, kw);
-	 if (p1 != NULL) {
-	     if (subst_len == 0) {
-		 subst_len = strlen(subst);
-		 kw_len = strlen(kw);
-	     }
-	     if (*res == NULL) {
-		 *res = xmalloc(PATH_MAX);
-		 res1 = *res;
-	     }
-	     if ((res1 - *res) + subst_len + (p1 - p) >= PATH_MAX) {
-		 _rtld_error("Substitution of %s in %s cannot be performed",
-		     kw, real);
-		 if (may_free != NULL)
-		     free(may_free);
-		 free(res);
-		 return (false);
-	     }
-	     memcpy(res1, p, p1 - p);
-	     res1 += p1 - p;
-	     memcpy(res1, subst, subst_len);
-	     res1 += subst_len;
-	     p = p1 + kw_len;
-	 } else {
-	    if (*res == NULL) {
-		if (may_free != NULL)
-		    *res = may_free;
-		else
-		    *res = xstrdup(real);
-		return (true);
-	    }
-	    *res1 = '\0';
-	    if (may_free != NULL)
-		free(may_free);
-	    if (strlcat(res1, p, PATH_MAX - (res1 - *res)) >= PATH_MAX) {
-		free(res);
-		return (false);
-	    }
-	    return (true);
-	 }
-    }
+	kw_len = strlen(kw);
+
+	/*
+	 * First, count the number of the keyword occurences, to
+	 * preallocate the final string.
+	 */
+	for (p = real, subst_count = 0;; p = p1 + kw_len, subst_count++) {
+		p1 = strstr(p, kw);
+		if (p1 == NULL)
+			break;
+	}
+
+	/*
+	 * If the keyword is not found, just return.
+	 */
+	if (subst_count == 0)
+		return (may_free ? real : xstrdup(real));
+
+	/*
+	 * There is indeed something to substitute.  Calculate the
+	 * length of the resulting string, and allocate it.
+	 */
+	subst_len = strlen(subst);
+	old_len = strlen(real);
+	new_len = old_len + (subst_len - kw_len) * subst_count;
+	res = xmalloc(new_len + 1);
+
+	/*
+	 * Now, execute the substitution loop.
+	 */
+	for (p = real, resp = res, *resp = '\0';;) {
+		p1 = strstr(p, kw);
+		if (p1 != NULL) {
+			/* Copy the prefix before keyword. */
+			memcpy(resp, p, p1 - p);
+			resp += p1 - p;
+			/* Keyword replacement. */
+			memcpy(resp, subst, subst_len);
+			resp += subst_len;
+			*resp = '\0';
+			p = p1 + kw_len;
+		} else
+			break;
+	}
+
+	/* Copy to the end of string and finish. */
+	strcat(resp, p);
+	if (may_free)
+		free(real);
+	return (res);
 }
 
 static char *
-origin_subst(const char *real, const char *origin_path)
+origin_subst(char *real, const char *origin_path)
 {
-    char *res1, *res2, *res3, *res4;
+	char *res1, *res2, *res3, *res4;
 
-    if (uts.sysname[0] == '\0') {
-	if (uname(&uts) != 0) {
-	    _rtld_error("utsname failed: %d", errno);
-	    return (NULL);
+	if (uts.sysname[0] == '\0') {
+		if (uname(&uts) != 0) {
+			_rtld_error("utsname failed: %d", errno);
+			return (NULL);
+		}
 	}
-    }
-    if (!origin_subst_one(&res1, real, "$ORIGIN", origin_path, NULL) ||
-	!origin_subst_one(&res2, res1, "$OSNAME", uts.sysname, res1) ||
-	!origin_subst_one(&res3, res2, "$OSREL", uts.release, res2) ||
-	!origin_subst_one(&res4, res3, "$PLATFORM", uts.machine, res3))
-	    return (NULL);
-    return (res4);
+	res1 = origin_subst_one(real, "$ORIGIN", origin_path, false);
+	res2 = origin_subst_one(res1, "$OSNAME", uts.sysname, true);
+	res3 = origin_subst_one(res2, "$OSREL", uts.release, true);
+	res4 = origin_subst_one(res3, "$PLATFORM", uts.machine, true);
+	return (res4);
 }
 
 static void
@@ -1110,11 +1119,7 @@ digest_dynamic1(Obj_Entry *obj, int early, const Elf_Dyn **dyn_rpath,
 		break;
 
 	case DT_MIPS_RLD_MAP:
-#ifdef notyet
-		if (!early)
-			dbg("Filling in DT_DEBUG entry");
-		((Elf_Dyn*)dynp)->d_un.d_ptr = (Elf_Addr) &r_debug;
-#endif
+		*((Elf_Addr *)(dynp->d_un.d_ptr)) = (Elf_Addr) &r_debug;
 		break;
 #endif
 
@@ -1131,6 +1136,8 @@ digest_dynamic1(Obj_Entry *obj, int early, const Elf_Dyn **dyn_rpath,
 		    obj->z_nodelete = true;
 		if (dynp->d_un.d_val & DF_1_LOADFLTR)
 		    obj->z_loadfltr = true;
+		if (dynp->d_un.d_val & DF_1_INTERPOSE)
+		    obj->z_interpose = true;
 		if (dynp->d_un.d_val & DF_1_NODEFLIB)
 		    obj->z_nodeflib = true;
 	    break;
@@ -1438,10 +1445,12 @@ find_library(const char *xname, const Obj_Entry *refobj)
 	      xname);
 	    return NULL;
 	}
-	if (objgiven && refobj->z_origin)
-	    return origin_subst(xname, refobj->origin_path);
-	else
-	    return xstrdup(xname);
+	if (objgiven && refobj->z_origin) {
+		return (origin_subst(__DECONST(char *, xname),
+		    refobj->origin_path));
+	} else {
+		return (xstrdup(xname));
+	}
     }
 
     if (libmap_disable || !objgiven ||
@@ -1598,7 +1607,7 @@ gethints(bool nostdlib)
 		/* Keep from trying again in case the hints file is bad. */
 		hints = "";
 
-		if ((fd = open(ld_elf_hints_path, O_RDONLY)) == -1)
+		if ((fd = open(ld_elf_hints_path, O_RDONLY | O_CLOEXEC)) == -1)
 			return (NULL);
 		if (read(fd, &hdr, sizeof hdr) != sizeof hdr ||
 		    hdr.magic != ELFHINTS_MAGIC ||
@@ -1977,6 +1986,7 @@ static int
 load_preload_objects(void)
 {
     char *p = ld_preload;
+    Obj_Entry *obj;
     static const char delim[] = " \t:;";
 
     if (p == NULL)
@@ -1989,8 +1999,10 @@ load_preload_objects(void)
 
 	savech = p[len];
 	p[len] = '\0';
-	if (load_object(p, -1, NULL, 0) == NULL)
+	obj = load_object(p, -1, NULL, 0);
+	if (obj == NULL)
 	    return -1;	/* XXX - cleanup */
+	obj->z_interpose = true;
 	p[len] = savech;
 	p += len;
 	p += strspn(p, delim);
@@ -2046,13 +2058,13 @@ load_object(const char *name, int fd_u, const Obj_Entry *refobj, int flags)
      */
     fd = -1;
     if (fd_u == -1) {
-	if ((fd = open(path, O_RDONLY)) == -1) {
+	if ((fd = open(path, O_RDONLY | O_CLOEXEC)) == -1) {
 	    _rtld_error("Cannot open \"%s\"", path);
 	    free(path);
 	    return (NULL);
 	}
     } else {
-	fd = dup(fd_u);
+	fd = fcntl(fd_u, F_DUPFD_CLOEXEC, 0);
 	if (fd == -1) {
 	    _rtld_error("Cannot dup fd");
 	    free(path);
@@ -2379,6 +2391,23 @@ objlist_push_tail(Objlist *list, Obj_Entry *obj)
 }
 
 static void
+objlist_put_after(Objlist *list, Obj_Entry *listobj, Obj_Entry *obj)
+{
+	Objlist_Entry *elm, *listelm;
+
+	STAILQ_FOREACH(listelm, list, link) {
+		if (listelm->obj == listobj)
+			break;
+	}
+	elm = NEW(Objlist_Entry);
+	elm->obj = obj;
+	if (listelm != NULL)
+		STAILQ_INSERT_AFTER(list, listelm, elm, link);
+	else
+		STAILQ_INSERT_TAIL(list, elm, link);
+}
+
+static void
 objlist_remove(Objlist *list, Obj_Entry *obj)
 {
     Objlist_Entry *elm;
@@ -2578,12 +2607,14 @@ rtld_exit(void)
     lock_release(rtld_bind_lock, &lockstate);
 }
 
+/*
+ * Iterate over a search path, translate each element, and invoke the
+ * callback on the result.
+ */
 static void *
 path_enumerate(const char *path, path_enum_proc callback, void *arg)
 {
-#ifdef COMPAT_32BIT
     const char *trans;
-#endif
     if (path == NULL)
 	return (NULL);
 
@@ -2593,13 +2624,11 @@ path_enumerate(const char *path, path_enum_proc callback, void *arg)
 	char  *res;
 
 	len = strcspn(path, ":;");
-#ifdef COMPAT_32BIT
 	trans = lm_findn(NULL, path, len);
 	if (trans)
 	    res = callback(trans, strlen(trans), arg);
 	else
-#endif
-	res = callback(path, len, arg);
+	    res = callback(path, len, arg);
 
 	if (res != NULL)
 	    return (res);
@@ -4157,7 +4186,7 @@ tls_get_addr_common(Elf_Addr **dtvp, int index, size_t offset)
 	return (tls_get_addr_slow(dtvp, index, offset));
 }
 
-#if defined(__arm__) || defined(__ia64__) || defined(__powerpc__)
+#if defined(__arm__) || defined(__ia64__) || defined(__mips__) || defined(__powerpc__)
 
 /*
  * Allocate Static TLS using the Variant I method.
@@ -4238,8 +4267,7 @@ free_tls(void *tcb, size_t tcbsize, size_t tcbalign)
 
 #endif
 
-#if defined(__i386__) || defined(__amd64__) || defined(__sparc64__) || \
-    defined(__mips__)
+#if defined(__i386__) || defined(__amd64__) || defined(__sparc64__)
 
 /*
  * Allocate Static TLS using the Variant II method.

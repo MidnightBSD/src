@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/i386/identcpu.c 240898 2012-09-24 20:05:52Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/i386/identcpu.c 258159 2013-11-15 07:10:42Z kib $");
 
 #include "opt_cpu.h"
 
@@ -842,18 +842,18 @@ printcpuinfo(void)
 				"\017<b14>"
 				"\020LWP"	/* Lightweight Profiling */
 				"\021FMA4"	/* 4-operand FMA instructions */
-				"\022<b17>"
+				"\022TCE"	/* Translation Cache Extension */
 				"\023<b18>"
 				"\024NodeId"	/* NodeId MSR support */
 				"\025<b20>"
 				"\026TBM"	/* Trailing Bit Manipulation */
 				"\027Topology"	/* Topology Extensions */
-				"\030<b23>"
-				"\031<b24>"
+				"\030PCXC"	/* Core perf count */
+				"\031PNXC"	/* NB perf count */
 				"\032<b25>"
-				"\033<b26>"
-				"\034<b27>"
-				"\035<b28>"
+				"\033DBE"	/* Data Breakpoint extension */
+				"\034PTSC"	/* Performance TSC */
+				"\035PL2I"	/* L2I perf count */
 				"\036<b29>"
 				"\037<b30>"
 				"\040<b31>"
@@ -1119,6 +1119,13 @@ finishidentcpu(void)
 			do_cpuid(0, regs);
 			cpu_high = regs[0];
 		}
+	}
+
+	if (cpu_high >= 5 && (cpu_feature2 & CPUID2_MON) != 0) {
+		do_cpuid(5, regs);
+		cpu_mon_mwait_flags = regs[2];
+		cpu_mon_min_size = regs[0] &  CPUID5_MON_MIN_SIZE;
+		cpu_mon_max_size = regs[1] &  CPUID5_MON_MAX_SIZE;
 	}
 
 	/* Detect AMD features (PTE no-execute bit, 3dnow, 64 bit mode etc) */

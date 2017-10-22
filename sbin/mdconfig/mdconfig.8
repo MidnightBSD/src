@@ -39,9 +39,9 @@
 .\"     @(#)vnconfig.8	8.1 (Berkeley) 6/5/93
 .\" from: src/usr.sbin/vnconfig/vnconfig.8,v 1.19 2000/12/27 15:30:29
 .\"
-.\" $FreeBSD: stable/9/sbin/mdconfig/mdconfig.8 245037 2013-01-04 11:57:27Z jh $
+.\" $FreeBSD: release/10.0.0/sbin/mdconfig/mdconfig.8 252379 2013-06-29 16:05:44Z joel $
 .\"
-.Dd November 3, 2012
+.Dd June 20, 2013
 .Dt MDCONFIG 8
 .Os
 .Sh NAME
@@ -64,9 +64,15 @@
 .Fl u Ar unit
 .Op Fl o Oo Cm no Oc Ns Ar force
 .Nm
+.Fl r
+.Fl u Ar unit
+.Fl s Ar size
+.Op Fl o Oo Cm no Oc Ns Ar force
+.Nm
 .Fl l
 .Op Fl n
 .Op Fl v
+.Op Fl f Ar file
 .Op Fl u Ar unit
 .Nm
 .Ar file
@@ -85,6 +91,8 @@ This will configure and attach a memory disk with the
 parameters specified and attach it to the system.
 .It Fl d
 Detach a memory disk from the system and release all resources.
+.It Fl r
+Resize a memory disk.
 .It Fl t Ar type
 Select the type of the memory disk.
 .Bl -tag -width "malloc"
@@ -124,11 +132,24 @@ List configured devices.
 If given with
 .Fl u ,
 display details about that particular device.
+If given with
+.Fl f Ar file ,
+display
+.Xr md 4
+device names of which
+.Ar file
+is used as the backing store.
+If both of
+.Fl u
+and
+.Fl f
+options are specified,
+display devices which match the two conditions.
 If the
 .Fl v
 option is specified, show all details.
 .It Fl n
-When printing 
+When printing
 .Xr md 4
 device names, print only the unit number without the
 .Xr md 4
@@ -235,10 +256,11 @@ chmod 1777 /tmp
 .Ed
 .Pp
 Create a 5MB file-backed disk
-.Ns ( Fl a
+.Po Fl a
 and
 .Fl t Ar vnode
-are implied):
+are implied
+.Pc :
 .Bd -literal -offset indent
 dd if=/dev/zero of=somebackingfile bs=1k count=5k
 mdconfig -f somebackingfile -u 0
@@ -250,10 +272,11 @@ mount /dev/md0c /mnt
 Create an
 .Xr md 4
 device out of an ISO 9660 CD image file
-.Ns ( Fl a
+.Po Fl a
 and
 .Fl t Ar vnode
-are implied), using the first available
+are implied
+.Pc , using the first available
 .Xr md 4
 device, and then mount the new memory disk:
 .Bd -literal -offset indent

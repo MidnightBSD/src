@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)rcmd.c	8.3 (Berkeley) 3/26/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/net/rcmd.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/rcmd.c 254700 2013-08-23 13:59:47Z jilles $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -458,7 +458,7 @@ iruserok_sa(ra, rlen, superuser, ruser, luser)
 	raddr = (struct sockaddr *)&ss;
 
 	first = 1;
-	hostf = superuser ? NULL : fopen(_PATH_HEQUIV, "r");
+	hostf = superuser ? NULL : fopen(_PATH_HEQUIV, "re");
 again:
 	if (hostf) {
 		if (__ivaliduser_sa(hostf, raddr, rlen, luser, ruser) == 0) {
@@ -481,7 +481,7 @@ again:
 		 */
 		uid = geteuid();
 		(void)seteuid(pwd->pw_uid);
-		hostf = fopen(pbuf, "r");
+		hostf = fopen(pbuf, "re");
 		(void)seteuid(uid);
 
 		if (hostf == NULL)

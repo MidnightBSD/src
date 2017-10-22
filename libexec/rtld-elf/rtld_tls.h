@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/libexec/rtld-elf/rtld_tls.h 133063 2004-08-03 08:51:00Z dfr $
+ *	$FreeBSD: release/10.0.0/libexec/rtld-elf/rtld_tls.h 133063 2004-08-03 08:51:00Z dfr $
  */
 
 /*

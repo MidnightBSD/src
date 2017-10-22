@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/sa11x0/sa11x0_var.h 203974 2010-02-16 21:59:17Z imp $
+ * $FreeBSD: release/10.0.0/sys/arm/sa11x0/sa11x0_var.h 236990 2012-06-13 04:59:00Z imp $
  *
  */
 
@@ -58,7 +58,7 @@ typedef void *sa11x0_chipset_tag_t;
 
 extern struct bus_space sa11x0_bs_tag;
 
-void *sa11x0_intr_establish(sa11x0_chipset_tag_t, int, int, int, 
+void *sa11x0_intr_establish(sa11x0_chipset_tag_t, int, int, int,
 			    int (*)(void *), void *);
 void sa11x0_intr_disestablish(sa11x0_chipset_tag_t, void *);
 

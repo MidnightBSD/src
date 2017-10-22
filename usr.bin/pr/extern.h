@@ -35,10 +35,12 @@
  * SUCH DAMAGE.
  *
  *      @(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/9/usr.bin/pr/extern.h 102944 2002-09-04 23:29:10Z dwmalone $
+ * $FreeBSD: release/10.0.0/usr.bin/pr/extern.h 227175 2011-11-06 08:16:24Z ed $
  */
 
+extern int eopterr;
 extern int eoptind;
+extern int eoptopt;
 extern char *eoptarg;
 
 void	 addnum(char *, int, int);

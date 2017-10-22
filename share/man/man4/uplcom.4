@@ -27,7 +27,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/uplcom.4 239725 2012-08-27 12:40:40Z gavin $
+.\" $FreeBSD: release/10.0.0/share/man/man4/uplcom.4 238774 2012-07-25 17:25:44Z gavin $
 .\"
 .Dd July 25, 2012
 .Dt UPLCOM 4
@@ -40,6 +40,8 @@ To compile this driver into the kernel,
 place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
+.Cd "device usb"
+.Cd "device ucom"
 .Cd "device uplcom"
 .Ed
 .Pp

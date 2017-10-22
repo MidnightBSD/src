@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/boot/ia64/efi/ldscript.ia64 218822 2011-02-18 20:54:12Z dim $ */
+/* $FreeBSD: release/10.0.0/sys/boot/ia64/efi/ldscript.ia64 218822 2011-02-18 20:54:12Z dim $ */
 OUTPUT_FORMAT("elf64-ia64-freebsd", "elf64-ia64-freebsd", "elf64-ia64-freebsd")
 OUTPUT_ARCH(ia64)
 ENTRY(_start_plabel)

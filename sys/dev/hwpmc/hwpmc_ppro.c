@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/hwpmc/hwpmc_ppro.c 236238 2012-05-29 14:50:21Z fabient $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/hwpmc/hwpmc_ppro.c 233628 2012-03-28 20:58:30Z fabient $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

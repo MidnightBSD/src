@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/mii/brgphy.c 245865 2013-01-24 02:19:38Z yongari $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mii/brgphy.c 253481 2013-07-20 07:24:01Z yongari $");
 
 /*
  * Driver for the Broadcom BCM54xx/57xx 1000baseTX PHY.
@@ -147,6 +147,7 @@ static const struct mii_phydesc brgphys[] = {
 	MII_PHY_DESC(BROADCOM3, BCM5720C),
 	MII_PHY_DESC(BROADCOM3, BCM57765),
 	MII_PHY_DESC(BROADCOM3, BCM57780),
+	MII_PHY_DESC(BROADCOM4, BCM5725C),
 	MII_PHY_DESC(xxBROADCOM_ALT1, BCM5906),
 	MII_PHY_END
 };
@@ -932,6 +933,8 @@ brgphy_reset(struct mii_softc *sc)
 			return;
 		}
 		break;
+	case MII_OUI_BROADCOM4:
+		return;
 	}
 
 	ifp = sc->mii_pdata->mii_ifp;

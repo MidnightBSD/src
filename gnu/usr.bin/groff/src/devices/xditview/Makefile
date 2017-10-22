@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/groff/src/devices/xditview/Makefile 151505 2005-10-20 11:10:43Z ru $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/groff/src/devices/xditview/Makefile 151505 2005-10-20 11:10:43Z ru $
 
 PROG=		gxditview
 SRCS=		device.c draw.c Dvi.c font.c lex.c page.c parse.c xditview.c

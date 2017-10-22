@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/drm_global.c 249082 2013-04-04 05:47:50Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/drm_global.c 248060 2013-03-08 18:11:02Z dumbbell $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm_global.h>
@@ -104,6 +104,7 @@ void drm_global_item_unref(struct drm_global_reference *ref)
 	MPASS(ref->object == item->object);
 	if (--item->refcount == 0) {
 		ref->release(ref);
+		free(item->object, M_DRM_GLOBAL);
 		item->object = NULL;
 	}
 	sx_xunlock(&item->mutex);

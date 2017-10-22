@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/rename/03.t 166065 2007-01-17 01:42:12Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/rename/03.t 166065 2007-01-17 01:42:12Z pjd $
 
 desc="rename returns ENOENT if a component of the 'from' path does not exist, or a path prefix of 'to' does not exist"
 

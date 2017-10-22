@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/ar/read.c 208189 2010-05-17 09:37:59Z kaiw $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/ar/read.c 248612 2013-03-22 10:17:42Z mm $");
 
 #include <sys/queue.h>
 #include <sys/stat.h>
@@ -87,9 +87,8 @@ read_archive(struct bsdar *bsdar, char mode)
 
 	if ((a = archive_read_new()) == NULL)
 		bsdar_errc(bsdar, EX_SOFTWARE, 0, "archive_read_new failed");
-	archive_read_support_compression_none(a);
 	archive_read_support_format_ar(a);
-	AC(archive_read_open_file(a, bsdar->filename, DEF_BLKSZ));
+	AC(archive_read_open_filename(a, bsdar->filename, DEF_BLKSZ));
 
 	for (;;) {
 		r = archive_read_next_header(a, &entry);
@@ -200,5 +199,5 @@ read_archive(struct bsdar *bsdar, char mode)
 		}
 	}
 	AC(archive_read_close(a));
-	AC(archive_read_finish(a));
+	AC(archive_read_free(a));
 }

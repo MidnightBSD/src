@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_debug.c 242775 2012-11-08 16:13:51Z hselasky $ */
+/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_debug.c 246122 2013-01-30 15:26:04Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -24,6 +24,9 @@
  * SUCH DAMAGE.
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -55,6 +58,7 @@
 
 #include <ddb/ddb.h>
 #include <ddb/db_sym.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 /*
  * Define this unconditionally in case a kernel module is loaded that
@@ -161,10 +165,12 @@ void
 usb_dump_queue(struct usb_endpoint *ep)
 {
 	struct usb_xfer *xfer;
+	usb_stream_t x;
 
 	printf("usb_dump_queue: endpoint=%p xfer: ", ep);
-	TAILQ_FOREACH(xfer, &ep->endpoint_q.head, wait_entry) {
-		printf(" %p", xfer);
+	for (x = 0; x != USB_MAX_EP_STREAMS; x++) {
+		TAILQ_FOREACH(xfer, &ep->endpoint_q[x].head, wait_entry)
+			printf(" %p", xfer);
 	}
 	printf("\n");
 }

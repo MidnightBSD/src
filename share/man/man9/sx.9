@@ -24,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man9/sx.9 193011 2009-05-29 01:49:27Z attilio $
+.\" $FreeBSD: release/10.0.0/share/man/man9/sx.9 227588 2011-11-16 21:51:17Z pjd $
 .\"
-.Dd May 28, 2009
+.Dd November 16, 2011
 .Dt SX 9
 .Os
 .Sh NAME
@@ -88,12 +88,12 @@
 .Ft "struct thread *"
 .Fn sx_xholder "struct sx *sx"
 .Ft int
-.Fn sx_xlocked "struct sx *sx"
+.Fn sx_xlocked "const struct sx *sx"
 .Pp
 .Cd "options INVARIANTS"
 .Cd "options INVARIANT_SUPPORT"
 .Ft void
-.Fn sx_assert "struct sx *sx" "int what"
+.Fn sx_assert "const struct sx *sx" "int what"
 .In sys/kernel.h
 .Fn SX_SYSINIT "name" "struct sx *sx" "const char *description"
 .Sh DESCRIPTION

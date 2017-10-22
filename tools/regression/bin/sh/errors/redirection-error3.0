@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/bin/sh/errors/redirection-error3.0 213738 2010-10-12 18:20:38Z obrien $
+# $FreeBSD: release/10.0.0/tools/regression/bin/sh/errors/redirection-error3.0 213738 2010-10-12 18:20:38Z obrien $
 IFS=,
 
 SPECIAL="break,\

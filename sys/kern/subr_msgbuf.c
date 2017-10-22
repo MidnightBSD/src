@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/kern/subr_msgbuf.c 234075 2012-04-10 01:20:32Z eadler $
+ * $FreeBSD: release/10.0.0/sys/kern/subr_msgbuf.c 233135 2012-03-19 00:36:32Z eadler $
  */
 
 /*

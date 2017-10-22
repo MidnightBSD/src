@@ -49,7 +49,7 @@
 static char *orig_rcsid = "$NetBSD: hesiod.c,v 1.9 1999/02/11 06:16:38 simonb Exp $";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/net/hesiod.c 217143 2011-01-08 10:56:58Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/hesiod.c 254700 2013-08-23 13:59:47Z jilles $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -286,7 +286,7 @@ read_config_file(ctx, filename)
 	ctx->classes[1] = C_HS;
 
 		/* Try to open the configuration file. */
-	fp = fopen(filename, "r");
+	fp = fopen(filename, "re");
 	if (!fp) {
 		/* Use compiled in default domain names. */
 		ctx->lhs = strdup(DEF_LHS);

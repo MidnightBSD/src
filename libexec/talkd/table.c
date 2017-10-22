@@ -36,7 +36,7 @@
 static char sccsid[] = "@(#)table.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/libexec/talkd/table.c 211056 2010-08-08 02:45:48Z ed $";
+  "$FreeBSD: release/10.0.0/libexec/talkd/table.c 241777 2012-10-20 10:33:15Z ed $";
 #endif /* not lint */
 
 /*
@@ -64,8 +64,7 @@ static const char rcsid[] =
 
 #define NIL ((TABLE_ENTRY *)0)
 
-extern	int debug;
-struct	timeval tp;
+static struct timeval tp;
 
 typedef struct table_entry TABLE_ENTRY;
 
@@ -78,7 +77,7 @@ struct table_entry {
 
 static void delete(TABLE_ENTRY *);
 
-TABLE_ENTRY *table = NIL;
+static TABLE_ENTRY *table = NIL;
 
 /*
  * Look in the table for an invitation that matches the current

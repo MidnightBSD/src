@@ -36,7 +36,7 @@
  *	from: Utah Hdr: trap.h 1.1 90/07/09
  *	from: @(#)trap.h	8.1 (Berkeley) 6/10/93
  *	JNPR: trap.h,v 1.3 2006/12/02 09:53:41 katta
- * $FreeBSD: stable/9/sys/mips/include/trap.h 206717 2010-04-17 01:17:31Z jmallett $
+ * $FreeBSD: release/10.0.0/sys/mips/include/trap.h 232853 2012-03-12 07:34:15Z jmallett $
  */
 
 #ifndef _MACHINE_TRAP_H_
@@ -117,11 +117,5 @@ void MipsUserGenException(void);
 void MipsUserIntr(void);
 
 register_t trap(struct trapframe *);
-
-#ifndef LOCORE /* XXX */
-int check_address(void *);
-void platform_trap_enter(void);
-void platform_trap_exit(void);
-#endif
 
 #endif /* !_MACHINE_TRAP_H_ */

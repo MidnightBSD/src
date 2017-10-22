@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 9/21/96
-# $FreeBSD: stable/9/usr.sbin/mailstats/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD: release/10.0.0/usr.sbin/mailstats/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 SENDMAIL_DIR= ${.CURDIR}/../../contrib/sendmail
 .PATH: ${SENDMAIL_DIR}/mailstats

@@ -1,43 +1,50 @@
-# $FreeBSD: stable/9/usr.bin/clang/llvm-objdump/Makefile 245431 2013-01-14 19:51:26Z dim $
+# $FreeBSD: release/10.0.0/usr.bin/clang/llvm-objdump/Makefile 251662 2013-06-12 18:48:53Z dim $
+
+NO_MAN=
+.include <bsd.own.mk>
 
 PROG_CXX=llvm-objdump
-NO_MAN=
+DPADD=	${LIBZ}
+LDADD=	-lz
 
 SRCDIR=	tools/llvm-objdump
 SRCS=	llvm-objdump.cpp \
+	COFFDump.cpp \
+	ELFDump.cpp \
 	MachODump.cpp \
-	MCFunction.cpp \
+	MCFunction.cpp
 
 LIBDEPS=llvmmcdisassembler \
 	llvmdebuginfo \
 	llvmarmdisassembler \
-	llvmarmasmparser \
 	llvmarmcodegen \
+	llvmarmasmparser \
 	llvmarmdesc \
 	llvmarminfo \
 	llvmarminstprinter \
-	llvmmipsasmparser \
-	llvmmipscodegen \
-	llvmmipsdesc \
-	llvmmipsinstprinter \
 	llvmmipsdisassembler \
+	llvmmipscodegen \
+	llvmmipsasmparser \
+	llvmmipsdesc \
 	llvmmipsinfo \
+	llvmmipsinstprinter \
 	llvmpowerpccodegen \
 	llvmpowerpcdesc \
 	llvmpowerpcinfo \
 	llvmpowerpcinstprinter \
+	llvmx86disassembler \
 	llvmx86asmparser \
 	llvmx86codegen \
 	llvmselectiondag \
 	llvmasmprinter \
 	llvmmcparser \
 	llvmcodegen \
+	llvmobjcarcopts \
 	llvmscalaropts \
 	llvminstcombine \
 	llvmtransformutils \
 	llvmipa \
 	llvmanalysis \
-	llvmx86disassembler \
 	llvmx86desc \
 	llvmx86info \
 	llvmtarget \

@@ -1,5 +1,5 @@
-# $FreeBSD: stable/9/kerberos5/lib/Makefile.inc 178828 2008-05-07 13:53:12Z dfr $
+# $FreeBSD: release/10.0.0/kerberos5/lib/Makefile.inc 233294 2012-03-22 08:48:42Z stas $
 
-SHLIB_MAJOR?=	10
+SHLIB_MAJOR?=	11
 
 .include "../Makefile.inc"

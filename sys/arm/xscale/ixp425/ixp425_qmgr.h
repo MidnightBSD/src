@@ -26,13 +26,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/9/sys/arm/xscale/ixp425/ixp425_qmgr.h 193096 2009-05-30 15:14:44Z attilio $
+ * $FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/ixp425_qmgr.h 236987 2012-06-13 04:38:09Z imp $
  */
 
 /*-
  * Copyright (c) 2001-2005, Intel Corporation.
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -44,8 +44,8 @@
  * 3. Neither the name of the Intel Corporation nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
- * 
- * 
+ *
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS IS''
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -148,7 +148,7 @@
         (((qId) * (IX_QMGR_QUEACC_SIZE * sizeof(uint32_t)))\
 	 + IX_QMGR_QUEACC0_OFFSET)
 
-/* 
+/*
  * Bit location of bit-3 of INT0SRCSELREG0 register to enabled
  * sticky interrupt register.
  */

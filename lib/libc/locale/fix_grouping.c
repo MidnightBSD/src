@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/locale/fix_grouping.c 116875 2003-06-26 10:46:16Z phantom $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/locale/fix_grouping.c 116875 2003-06-26 10:46:16Z phantom $");
 
 #include <ctype.h>
 #include <limits.h>

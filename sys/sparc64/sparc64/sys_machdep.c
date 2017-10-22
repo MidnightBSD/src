@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sparc64/sparc64/sys_machdep.c 223692 2011-06-30 10:56:02Z jonathan $
+ * $FreeBSD: release/10.0.0/sys/sparc64/sparc64/sys_machdep.c 255677 2013-09-18 19:26:08Z pjd $
  */
 
 #include "opt_capsicum.h"
@@ -69,6 +69,10 @@ sysarch(struct thread *td, struct sysarch_args *uap)
 			break;
 
 		default:
+#ifdef KTRACE
+			if (KTRPOINT(td, KTR_CAPFAIL))
+				ktrcapfail(CAPFAIL_SYSCALL, NULL, NULL);
+#endif
 			return (ECAPMODE);
 		}
 	}

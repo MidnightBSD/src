@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)cat.c	8.2 (Berkeley) 4/27/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/cat/cat.c 248337 2013-03-15 19:27:27Z brooks $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/cat/cat.c 249804 2013-04-23 13:03:11Z eadler $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -68,7 +68,7 @@ static int bflag, eflag, lflag, nflag, sflag, tflag, vflag;
 static int rval;
 static const char *filename;
 
-static void usage(void);
+static void usage(void) __dead2;
 static void scanfiles(char *argv[], int cooked);
 static void cook_cat(FILE *);
 static void raw_cat(int);
@@ -153,6 +153,7 @@ main(int argc, char *argv[])
 static void
 usage(void)
 {
+
 	fprintf(stderr, "usage: cat [-belnstuv] [file ...]\n");
 	exit(1);
 	/* NOTREACHED */

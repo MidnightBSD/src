@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/tools/tinybsd/conf/default/TINYBSD 209331 2010-06-19 09:21:34Z brian $
+# $FreeBSD: release/10.0.0/tools/tools/tinybsd/conf/default/TINYBSD 209331 2010-06-19 09:21:34Z brian $
 
 machine		i386
 cpu		I486_CPU

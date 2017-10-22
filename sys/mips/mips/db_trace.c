@@ -2,11 +2,32 @@
  * Copyright (c) 2004-2005, Juniper Networks, Inc.
  * All rights reserved.
  *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
  *	JNPR: db_trace.c,v 1.8 2007/08/09 11:23:32 katta
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/mips/db_trace.c 210096 2010-07-15 01:47:47Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/db_trace.c 251103 2013-05-29 16:51:03Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -30,7 +51,7 @@ extern char edata[];
 
 /*
  * A function using a stack frame has the following instruction as the first
- * one: addiu sp,sp,-<frame_size>
+ * one: [d]addiu sp,sp,-<frame_size>
  *
  * We make use of this to detect starting address of a function. This works
  * better than using 'j ra' instruction to signify end of the previous
@@ -39,7 +60,8 @@ extern char edata[];
  *
  * XXX the abi does not require that the addiu instruction be the first one.
  */
-#define	MIPS_START_OF_FUNCTION(ins)	(((ins) & 0xffff8000) == 0x27bd8000)
+#define	MIPS_START_OF_FUNCTION(ins)	((((ins) & 0xffff8000) == 0x27bd8000) \
+	|| (((ins) & 0xffff8000) == 0x67bd8000))
 
 /*
  * MIPS ABI 3.0 requires that all functions return using the 'j ra' instruction
@@ -48,10 +70,13 @@ extern char edata[];
  */
 #define	MIPS_END_OF_FUNCTION(ins)	((ins) == 0x03e00008)
 
-/*
- * kdbpeekD(addr) - skip one word starting at 'addr', then read the second word
- */
-#define	kdbpeekD(addr)	kdbpeek(((int *)(addr)) + 1)
+#if defined(__mips_n64)
+#	define	MIPS_IS_VALID_KERNELADDR(reg)	((((reg) & 3) == 0) && \
+					((vm_offset_t)(reg) >= MIPS_XKPHYS_START))
+#else
+#	define	MIPS_IS_VALID_KERNELADDR(reg)	((((reg) & 3) == 0) && \
+					((vm_offset_t)(reg) >= MIPS_KSEG0_START))
+#endif
 
 /*
  * Functions ``special'' enough to print by name
@@ -140,8 +165,8 @@ loop:
 	}
 	/* check for bad SP: could foul up next frame */
 	/*XXX MIPS64 bad: this hard-coded SP is lame */
-	if (sp & 3 || (uintptr_t)sp < 0x80000000u) {
-		(*printfn) ("SP 0x%x: not in kernel\n", sp);
+	if (!MIPS_IS_VALID_KERNELADDR(sp)) {
+		(*printfn) ("SP 0x%jx: not in kernel\n", sp);
 		ra = 0;
 		subr = 0;
 		goto done;
@@ -181,8 +206,8 @@ loop:
 	}
 	/* check for bad PC */
 	/*XXX MIPS64 bad: These hard coded constants are lame */
-	if (pc & 3 || pc < (uintptr_t)0x80000000) {
-		(*printfn) ("PC 0x%x: not in kernel\n", pc);
+	if (!MIPS_IS_VALID_KERNELADDR(pc)) {
+		(*printfn) ("PC 0x%jx: not in kernel\n", pc);
 		ra = 0;
 		goto done;
 	}
@@ -303,32 +328,34 @@ loop:
 			mask |= (1 << i.IType.rt);
 			switch (i.IType.rt) {
 			case 4:/* a0 */
-				args[0] = kdbpeekD((int *)(sp + (short)i.IType.imm));
+				args[0] = kdbpeekd((int *)(sp + (short)i.IType.imm));
 				valid_args[0] = 1;
 				break;
 
 			case 5:/* a1 */
-				args[1] = kdbpeekD((int *)(sp + (short)i.IType.imm));
+				args[1] = kdbpeekd((int *)(sp + (short)i.IType.imm));
 				valid_args[1] = 1;
 				break;
 
 			case 6:/* a2 */
-				args[2] = kdbpeekD((int *)(sp + (short)i.IType.imm));
+				args[2] = kdbpeekd((int *)(sp + (short)i.IType.imm));
 				valid_args[2] = 1;
 				break;
 
 			case 7:/* a3 */
-				args[3] = kdbpeekD((int *)(sp + (short)i.IType.imm));
+				args[3] = kdbpeekd((int *)(sp + (short)i.IType.imm));
 				valid_args[3] = 1;
 				break;
 
 			case 31:	/* ra */
-				ra = kdbpeekD((int *)(sp + (short)i.IType.imm));
+				ra = kdbpeekd((int *)(sp + (short)i.IType.imm));
 			}
 			break;
 
 		case OP_ADDI:
 		case OP_ADDIU:
+		case OP_DADDI:
+		case OP_DADDIU:
 			/* look for stack pointer adjustment */
 			if (i.IType.rs != 29 || i.IType.rt != 29)
 				break;
@@ -347,7 +374,7 @@ done:
 			(*printfn)("?");
 	}
 
-	(*printfn) (") ra %x sp %x sz %d\n", ra, sp, stksize);
+	(*printfn) (") ra %jx sp %jx sz %d\n", ra, sp, stksize);
 
 	if (ra) {
 		if (pc == ra && stksize == 0)
@@ -417,9 +444,9 @@ db_trace_thread(struct thread *thr, int count)
 
 	} else {
 		ctx = kdb_thr_ctx(thr);
-		sp = (register_t)ctx->pcb_context[PREG_SP];
-		pc = (register_t)ctx->pcb_context[PREG_PC];
-		ra = (register_t)ctx->pcb_context[PREG_RA];
+		sp = (register_t)ctx->pcb_context[PCB_REG_SP];
+		pc = (register_t)ctx->pcb_context[PCB_REG_PC];
+		ra = (register_t)ctx->pcb_context[PCB_REG_RA];
 	}
 
 	stacktrace_subr(pc, sp, ra,

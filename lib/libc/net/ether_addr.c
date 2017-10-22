@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/net/ether_addr.c 169522 2007-05-13 13:57:45Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/ether_addr.c 254700 2013-08-23 13:59:47Z jilles $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -148,7 +148,7 @@ ether_ntohost(char *hostname, const struct ether_addr *e)
 	char *yp_domain;
 #endif
 
-	if ((fp = fopen(_PATH_ETHERS, "r")) == NULL)
+	if ((fp = fopen(_PATH_ETHERS, "re")) == NULL)
 		return (1);
 	while (fgets(buf,BUFSIZ,fp)) {
 		if (buf[0] == '#')
@@ -197,7 +197,7 @@ ether_hostton(const char *hostname, struct ether_addr *e)
 	char *yp_domain;
 #endif
 
-	if ((fp = fopen(_PATH_ETHERS, "r")) == NULL)
+	if ((fp = fopen(_PATH_ETHERS, "re")) == NULL)
 		return (1);
 	while (fgets(buf,BUFSIZ,fp)) {
 		if (buf[0] == '#')

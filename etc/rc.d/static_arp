@@ -26,7 +26,7 @@
 #
 # Configure static ARP table
 #
-# $FreeBSD: stable/9/etc/rc.d/static_arp 202130 2010-01-11 23:32:36Z delphij $
+# $FreeBSD: release/10.0.0/etc/rc.d/static_arp 202130 2010-01-11 23:32:36Z delphij $
 #
 
 # PROVIDE: static_arp

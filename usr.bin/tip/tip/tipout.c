@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/tip/tip/tipout.c 221727 2011-05-10 10:58:57Z phk $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tip/tip/tipout.c 230654 2012-01-28 20:45:47Z phk $");
 
 #ifndef lint
 #if 0
@@ -148,11 +148,12 @@ tipout(void)
 		scnt = read(FD, buf, BUFSIZ);
 		if (scnt <= 0) {
 			/* lost carrier */
-			if (scnt == 0 || (scnt < 0 && errno == EIO)) {
+			if (scnt == 0 ||
+			    (scnt < 0 && (errno == EIO || errno == ENXIO))) {
 				sigemptyset(&mask);
 				sigaddset(&mask, SIGTERM);
 				sigprocmask(SIG_BLOCK, &mask, NULL);
-				intTERM(0);
+				intTERM(SIGHUP);
 				/*NOTREACHED*/
 			}
 			continue;

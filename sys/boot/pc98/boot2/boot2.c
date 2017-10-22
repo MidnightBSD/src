@@ -15,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/pc98/boot2/boot2.c 243448 2012-11-23 13:35:17Z nyan $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/pc98/boot2/boot2.c 254015 2013-08-07 00:00:48Z marcel $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -140,7 +140,6 @@ static uint8_t ioctrl = IO_KEYBOARD;
 void exit(int);
 static void load(void);
 static int parse(void);
-static int xfsread(ino_t, void *, size_t);
 static int dskread(void *, unsigned, unsigned);
 static void printf(const char *,...);
 static void putchar(int);
@@ -172,7 +171,7 @@ strcmp(const char *s1, const char *s2)
 #include "ufsread.c"
 
 static inline int
-xfsread(ino_t inode, void *buf, size_t nbyte)
+xfsread(ufs_ino_t inode, void *buf, size_t nbyte)
 {
     if ((size_t)fsread(inode, buf, nbyte) != nbyte) {
 	printf("Invalid %s\n", "format");
@@ -331,10 +330,10 @@ check_slice(void)
 
     if (dsk.type == TYPE_FD)
 	return (WHOLE_DISK_SLICE);
-    if (drvread(sec, DOSBBSECTOR + 1))
+    if (drvread(sec, PC98_BBSECTOR))
 	return (WHOLE_DISK_SLICE);	/* Read error */
-    dp = (void *)(sec + DOSPARTOFF);
-    for (i = 0; i < NDOSPART; i++) {
+    dp = (void *)(sec + PC98_PARTOFF);
+    for (i = 0; i < PC98_NPARTS; i++) {
 	if (dp[i].dp_mid == DOSMID_386BSD) {
 	    if (dp[i].dp_scyl <= cyl && cyl <= dp[i].dp_ecyl)
 		return (BASE_SLICE + i);
@@ -351,7 +350,7 @@ main(void)
     int i;
 #endif
     uint8_t autoboot;
-    ino_t ino;
+    ufs_ino_t ino;
     size_t nbyte;
 
     dmadat = (void *)(roundup2(__base + (int32_t)&_end, 0x10000) - __base);
@@ -446,7 +445,7 @@ load(void)
     static Elf32_Phdr ep[2];
     static Elf32_Shdr es[2];
     caddr_t p;
-    ino_t ino;
+    ufs_ino_t ino;
     uint32_t addr;
     int i, j;
 
@@ -584,7 +583,7 @@ parse()
 		dsk.slice = WHOLE_DISK_SLICE;
 		if (arg[1] == ',') {
 		    dsk.slice = *arg - '0' + 1;
-		    if (dsk.slice > NDOSPART + 1)
+		    if (dsk.slice > PC98_NPARTS + 1)
 			return -1;
 		    arg += 2;
 		}
@@ -627,12 +626,12 @@ dskread(void *buf, unsigned lba, unsigned nblk)
 	set_dsk();
 	if (dsk.type == TYPE_FD)
 	    goto unsliced;
-	if (drvread(sec, DOSBBSECTOR + 1))
+	if (drvread(sec, PC98_BBSECTOR))
 	    return -1;
-	dp = (void *)(sec + DOSPARTOFF);
+	dp = (void *)(sec + PC98_PARTOFF);
 	sl = dsk.slice;
 	if (sl < BASE_SLICE) {
-	    for (i = 0; i < NDOSPART; i++)
+	    for (i = 0; i < PC98_NPARTS; i++)
 		if (dp[i].dp_mid == DOSMID_386BSD) {
 		    sl = BASE_SLICE + i;
 		    break;

@@ -5,7 +5,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/input/uhid.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/input/uhid.c 246128 2013-01-30 18:01:20Z sbz $");
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -852,7 +852,8 @@ static device_method_t uhid_methods[] = {
 	DEVMETHOD(device_probe, uhid_probe),
 	DEVMETHOD(device_attach, uhid_attach),
 	DEVMETHOD(device_detach, uhid_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t uhid_driver = {

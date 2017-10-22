@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/gnu/usr.bin/gdb/libgdb/fbsd-threads.c 220043 2011-03-26 21:12:53Z kib $ */
+/* $FreeBSD: release/10.0.0/gnu/usr.bin/gdb/libgdb/fbsd-threads.c 235714 2012-05-21 03:06:31Z davidxu $ */
 /* FreeBSD libthread_db assisted debugging support.
    Copyright 1999, 2000, 2001 Free Software Foundation, Inc.
 
@@ -1311,7 +1311,7 @@ tsd_cb (thread_key_t key, void (*destructor)(void *), void *ignore)
   else
     name = DEPRECATED_SYMBOL_NAME (ms);
 
-  printf_filtered ("Destructor %p <%s>\n", destructor, name);
+  printf_filtered ("Key %d, destructor %p <%s>\n", key, destructor, name);
   return 0;
 }
 

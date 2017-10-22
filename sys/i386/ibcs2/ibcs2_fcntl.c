@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/ibcs2/ibcs2_fcntl.c 224778 2011-08-11 12:30:23Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/ibcs2/ibcs2_fcntl.c 255219 2013-09-05 00:09:56Z pjd $");
 
 #include "opt_spx_hack.h"
 
@@ -201,10 +201,12 @@ ibcs2_open(td, uap)
 	free(path, M_TEMP);
 	PROC_LOCK(p);
 	if (!ret && !noctty && SESS_LEADER(p) && !(p->p_flag & P_CONTROLT)) {
+		cap_rights_t rights;
 		struct file *fp;
 		int error;
 
-		error = fget(td, td->td_retval[0], CAP_IOCTL, &fp);
+		error = fget(td, td->td_retval[0],
+		    cap_rights_init(&rights, CAP_IOCTL), &fp);
 		PROC_UNLOCK(p);
 		if (error)
 			return (EBADF);
@@ -243,7 +245,7 @@ ibcs2_access(td, uap)
 	int error;
 
         CHECKALTEXIST(td, uap->path, &path);
-	error = kern_access(td, path, UIO_SYSSPACE, uap->flags);
+	error = kern_access(td, path, UIO_SYSSPACE, uap->amode);
 	free(path, M_TEMP);
 	return (error);
 }

@@ -30,7 +30,7 @@
  *
  *	from: @(#)xdr.h 1.19 87/04/22 SMI
  *	from: @(#)xdr.h	2.2 88/07/29 4.0 RPCSRC
- * $FreeBSD: stable/9/sys/rpc/xdr.h 240542 2012-09-16 00:32:25Z pfg $
+ * $FreeBSD: release/10.0.0/sys/rpc/xdr.h 240060 2012-09-02 21:04:40Z pfg $
  */
 
 /*

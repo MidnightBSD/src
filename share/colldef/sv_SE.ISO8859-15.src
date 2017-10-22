@@ -2,7 +2,7 @@
 #
 # (Based on the German de_DE.ISO_8859-15)
 #
-# $FreeBSD: stable/9/share/colldef/sv_SE.ISO8859-15.src 173749 2007-11-19 12:39:02Z ache $
+# $FreeBSD: release/10.0.0/share/colldef/sv_SE.ISO8859-15.src 173749 2007-11-19 12:39:02Z ache $
 #
 charmap map.ISO8859-15
 order \

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/efi/libefi/libefi.c 219691 2011-03-16 03:53:18Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/efi/libefi/libefi.c 243978 2012-12-07 07:08:39Z rpaulo $");
 
 #include <efi.h>
 #include <efilib.h>
@@ -135,7 +135,7 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 	 * first count the number of words. Then, after allocating the
 	 * vector, we split the string up. We don't deal with quotes or
 	 * other more advanced shell features.
-	 * The EFI shell will pas the name of the image as the first
+	 * The EFI shell will pass the name of the image as the first
 	 * word in the argument list. This does not happen if we're
 	 * loaded by the boot manager. This is not so easy to figure
 	 * out though. The ParentHandle is not always NULL, because

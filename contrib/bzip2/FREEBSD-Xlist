@@ -1,4 +1,5 @@
-# $FreeBSD: stable/9/contrib/bzip2/FREEBSD-Xlist 146297 2005-05-16 18:56:30Z obrien $
+# $FreeBSD: release/10.0.0/contrib/bzip2/FREEBSD-Xlist 240373 2012-09-11 21:16:22Z delphij $
+*Makefile*
 *README.XML.STUFF
 *bz-common.xsl
 *bz-fo.xsl
@@ -12,10 +13,11 @@
 *bzip2.txt
 *bzmore
 *bzmore.1
-*dlltest.dsp
+*dlltest.*
 *entities.xml
 *format.pl
 *libbz2.dsp
+*makefile.msc
 *manual.html
 *manual.pdf
 *manual.ps

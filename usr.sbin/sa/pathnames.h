@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/sa/pathnames.h 50479 1999-08-28 01:35:59Z peter $
+ * $FreeBSD: release/10.0.0/usr.sbin/sa/pathnames.h 50479 1999-08-28 01:35:59Z peter $
  */
 
 #define	_PATH_ACCT	"/var/account/acct"

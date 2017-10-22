@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/hifn/hifn7751var.h 213091 2010-09-24 04:46:46Z gonzo $ */
+/* $FreeBSD: release/10.0.0/sys/dev/hifn/hifn7751var.h 213091 2010-09-24 04:46:46Z gonzo $ */
 /*	$OpenBSD: hifn7751var.h,v 1.42 2002/04/08 17:49:42 jason Exp $	*/
 
 /*-

@@ -34,7 +34,7 @@
 #include <dev/sound/version.h>
 #include <sys/sx.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pcm/sndstat.c 235157 2012-05-09 08:18:22Z pho $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pcm/sndstat.c 248381 2013-03-16 17:57:00Z joel $");
 
 #define	SS_TYPE_MODULE		0
 #define	SS_TYPE_FIRST		1
@@ -345,8 +345,12 @@ sndstat_prepare(struct sbuf *s)
 	struct snddev_info *d;
     	int i, j;
 
-	sbuf_printf(s, "FreeBSD Audio Driver (newpcm: %ubit %d/%s)\n",
-	    (u_int)sizeof(intpcm32_t) << 3, SND_DRV_VERSION, MACHINE_ARCH);
+	if (snd_verbose > 0) {
+		sbuf_printf(s, "FreeBSD Audio Driver (%ubit %d/%s)\n",
+		    (u_int)sizeof(intpcm32_t) << 3, SND_DRV_VERSION,
+		    MACHINE_ARCH);
+	}
+
 	if (SLIST_EMPTY(&sndstat_devlist)) {
 		sbuf_printf(s, "No devices installed.\n");
 		sbuf_finish(s);

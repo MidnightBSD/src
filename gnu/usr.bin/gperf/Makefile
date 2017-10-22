@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/gperf/Makefile 230237 2012-01-16 22:17:12Z bapt $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/gperf/Makefile 228060 2011-11-28 12:29:16Z bapt $
 
 .include <bsd.own.mk>
 GPERFDIR=	${.CURDIR}/../../../contrib/gperf

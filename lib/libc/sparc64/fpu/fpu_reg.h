@@ -22,7 +22,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libc/sparc64/fpu/fpu_reg.h 91174 2002-02-23 21:37:18Z tmm $
+ * $FreeBSD: release/10.0.0/lib/libc/sparc64/fpu/fpu_reg.h 91174 2002-02-23 21:37:18Z tmm $
  */
 
 #ifndef _LIBC_SPARC64_FPU_FPU_REG_H_

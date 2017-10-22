@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: powerpc.h,v 1.3 2000/06/01 00:49:59 matt Exp $
- * $FreeBSD: stable/9/sys/powerpc/include/platform.h 215159 2010-11-12 04:18:19Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/powerpc/include/platform.h 255417 2013-09-09 12:49:19Z nwhitehorn $
  */
 
 #ifndef	_MACHINE_PLATFORM_H_
@@ -52,6 +52,7 @@ int	platform_smp_first_cpu(struct cpuref *);
 int	platform_smp_next_cpu(struct cpuref *);
 int	platform_smp_get_bsp(struct cpuref *);
 int	platform_smp_start_cpu(struct pcpu *);
+void	platform_smp_ap_init(void);
   
 const char *installed_platform(void);
 void platform_probe_and_attach(void);

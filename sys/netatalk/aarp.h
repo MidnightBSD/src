@@ -23,7 +23,7 @@
  *	+1-313-764-2278
  *	netatalk@umich.edu
  *
- * $FreeBSD: stable/9/sys/netatalk/aarp.h 171078 2007-06-28 12:54:58Z rwatson $
+ * $FreeBSD: release/10.0.0/sys/netatalk/aarp.h 249925 2013-04-26 12:50:32Z glebius $
  */
 
 #ifndef _NETATALK_AARP_H_
@@ -80,7 +80,7 @@ struct aarptab {
 #define	AARPOP_PROBE	0x03
 
 #ifdef _KERNEL
-struct aarptab		*aarptnew(struct at_addr      *);
+struct aarptab		*aarptnew(const struct at_addr *);
 #endif
 
 #endif /* _NETATALK_AARP_H_ */

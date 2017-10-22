@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: stable/9/sys/pc98/include/float.h 144513 2005-04-01 23:19:43Z imp $ */
+/* $FreeBSD: release/10.0.0/sys/pc98/include/float.h 232491 2012-03-04 14:00:32Z tijl $ */
 
-#include <i386/float.h>
+#include <x86/float.h>

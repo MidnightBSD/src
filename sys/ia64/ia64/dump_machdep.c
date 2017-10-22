@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ia64/ia64/dump_machdep.c 224668 2011-08-06 03:40:33Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ia64/ia64/dump_machdep.c 246712 2013-02-12 16:51:43Z marcel $");
 
 #include "opt_watchdog.h"
 
@@ -193,7 +193,10 @@ foreach_chunk(callback_t cb, void *arg)
 	mdp = efi_md_first();
 	while (mdp != NULL) {
 		if (mdp->md_type == EFI_MD_TYPE_FREE ||
-		    mdp->md_type == EFI_MD_TYPE_DATA) {
+		    mdp->md_type == EFI_MD_TYPE_DATA ||
+		    mdp->md_type == EFI_MD_TYPE_CODE ||
+		    mdp->md_type == EFI_MD_TYPE_BS_DATA ||
+		    mdp->md_type == EFI_MD_TYPE_BS_CODE) {
 			error = (*cb)(mdp, seqnr++, arg);
 			if (error)
 				return (-error);

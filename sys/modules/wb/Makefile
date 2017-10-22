@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/wb/Makefile 181741 2008-08-14 21:26:29Z imp $
+# $FreeBSD: release/10.0.0/sys/modules/wb/Makefile 181741 2008-08-14 21:26:29Z imp $
 
 .PATH: ${.CURDIR}/../../dev/wb
 

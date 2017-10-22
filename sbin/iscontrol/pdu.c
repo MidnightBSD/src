@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/iscontrol/pdu.c 211095 2010-08-09 12:36:36Z des $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/iscontrol/pdu.c 254657 2013-08-22 14:02:34Z trasz $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -43,7 +43,7 @@ __FBSDID("$FreeBSD: stable/9/sbin/iscontrol/pdu.c 211095 2010-08-09 12:36:36Z de
 #include <stdarg.h>
 #include <camlib.h>
 
-#include <dev/iscsi/initiator/iscsi.h>
+#include <dev/iscsi_initiator/iscsi.h>
 #include "iscontrol.h"
 
 static void	pukeText(char *it, pdu_t *pp);

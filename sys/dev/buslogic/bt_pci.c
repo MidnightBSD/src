@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/buslogic/bt_pci.c 233024 2012-03-16 08:46:58Z scottl $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/buslogic/bt_pci.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -57,24 +57,19 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/buslogic/bt_pci.c 233024 2012-03-16 08:46:5
 static int
 bt_pci_alloc_resources(device_t dev)
 {
-	int		command, type = 0, rid, zero;
+	int		type = 0, rid, zero;
 	struct resource *regs = 0;
 	struct resource *irq = 0;
 
-	command = pci_read_config(dev, PCIR_COMMAND, /*bytes*/1);
 #if 0
 	/* XXX Memory Mapped I/O seems to cause problems */
-	if (command & PCIM_CMD_MEMEN) {
-		type = SYS_RES_MEMORY;
-		rid = BT_PCI_MEMADDR;
-		regs = bus_alloc_resource_any(dev, type, &rid, RF_ACTIVE);
-	}
+	type = SYS_RES_MEMORY;
+	rid = BT_PCI_MEMADDR;
+	regs = bus_alloc_resource_any(dev, type, &rid, RF_ACTIVE);
 #else
-	if (!regs && (command & PCIM_CMD_PORTEN)) {
-		type = SYS_RES_IOPORT;
-		rid = BT_PCI_IOADDR;
-		regs = bus_alloc_resource_any(dev, type, &rid, RF_ACTIVE);
-	}
+	type = SYS_RES_IOPORT;
+	rid = BT_PCI_IOADDR;
+	regs = bus_alloc_resource_any(dev, type, &rid, RF_ACTIVE);
 #endif
 	if (!regs)
 		return (ENOMEM);
@@ -148,7 +143,7 @@ bt_pci_probe(device_t dev)
 			}
 			bt_pci_release_resources(dev);
 			device_set_desc(dev, "Buslogic Multi-Master SCSI Host Adapter");
-			return (0);
+			return (BUS_PROBE_DEFAULT);
 		}
 		default:
 			break;
@@ -161,7 +156,6 @@ static int
 bt_pci_attach(device_t dev)
 {
 	struct bt_softc   *bt = device_get_softc(dev);
-	int		   opri;
 	int		   error;
 
 	/* Initialize softc */
@@ -183,31 +177,19 @@ bt_pci_attach(device_t dev)
 				/* nsegments	*/ ~0,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_32BIT,
 				/* flags	*/ 0,
-				/* lockfunc	*/ busdma_lock_mutex,
-				/* lockarg	*/ &Giant,
+				/* lockfunc	*/ NULL,
+				/* lockarg	*/ NULL,
 				&bt->parent_dmat) != 0) {
 		bt_pci_release_resources(dev);
 		return (ENOMEM);
 	}
 
-	/*
-	 * Protect ourself from spurrious interrupts during
-	 * intialization and attach.  We should really rely
-	 * on interrupts during attach, but we don't have
-	 * access to our interrupts during ISA probes, so until
-	 * that changes, we mask our interrupts during attach
-	 * too.
-	 */
-	opri = splcam();
-
 	if (bt_probe(dev) || bt_fetch_adapter_info(dev) || bt_init(dev)) {
 		bt_pci_release_resources(dev);
-		splx(opri);
 		return (ENXIO);
 	}
 
 	error = bt_attach(dev);
-	splx(opri);
 
 	if (error) {
 		bt_pci_release_resources(dev);

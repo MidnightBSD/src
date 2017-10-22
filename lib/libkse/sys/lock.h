@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libkse/sys/lock.h 173967 2007-11-27 03:16:44Z jasone $
+ * $FreeBSD: release/10.0.0/lib/libkse/sys/lock.h 173967 2007-11-27 03:16:44Z jasone $
  */
 
 #ifndef _LOCK_H_

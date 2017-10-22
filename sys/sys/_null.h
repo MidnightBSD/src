@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/_null.h 235786 2012-05-22 15:26:55Z theraven $
+ * $FreeBSD: release/10.0.0/sys/sys/_null.h 228918 2011-12-27 21:36:31Z theraven $
  */
 
 #ifndef NULL

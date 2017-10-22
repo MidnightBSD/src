@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/sys/modules/usb/usb/Makefile 215649 2010-11-22 01:11:28Z weongyo $
+# $FreeBSD: release/10.0.0/sys/modules/usb/usb/Makefile 215649 2010-11-22 01:11:28Z weongyo $
 #
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #

@@ -25,7 +25,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ed.h,v 1.5 1994/02/01 00:34:39 alm Exp
- * $FreeBSD: stable/9/bin/ed/ed.h 139969 2005-01-10 08:39:26Z imp $
+ * $FreeBSD: release/10.0.0/bin/ed/ed.h 241737 2012-10-19 14:49:42Z ed $
  */
 
 #include <sys/param.h>
@@ -277,3 +277,9 @@ extern int lineno;
 extern long second_addr;
 extern long u_addr_last;
 extern long u_current_addr;
+extern long rows;
+extern int cols;
+extern int newline_added;
+extern int des;
+extern int scripted;
+extern int patlock;

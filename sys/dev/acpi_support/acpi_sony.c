@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpi_support/acpi_sony.c 203622 2010-02-07 18:36:30Z gavin $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpi_support/acpi_sony.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -95,7 +95,7 @@ static device_method_t acpi_sony_methods[] = {
 	DEVMETHOD(device_attach, acpi_sony_attach),
 	DEVMETHOD(device_detach, acpi_sony_detach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t	acpi_sony_driver = {

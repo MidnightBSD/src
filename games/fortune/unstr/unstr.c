@@ -42,7 +42,7 @@ static const char sccsid[] = "@(#)unstr.c     8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/games/fortune/unstr/unstr.c 203926 2010-02-15 15:10:21Z uqs $");
+__FBSDID("$FreeBSD: release/10.0.0/games/fortune/unstr/unstr.c 227101 2011-11-05 07:18:53Z ed $");
 
 /*
  *	This program un-does what "strfile" makes, thereby obtaining the
@@ -67,13 +67,13 @@ __FBSDID("$FreeBSD: stable/9/games/fortune/unstr/unstr.c 203926 2010-02-15 15:10
 
 #include "strfile.h"
 
-char	*Infile,			/* name of input file */
-	Datafile[MAXPATHLEN],		/* name of data file */
-	Delimch;			/* delimiter character */
+static char	*Infile,		/* name of input file */
+		Datafile[MAXPATHLEN],	/* name of data file */
+		Delimch;		/* delimiter character */
 
-FILE	*Inf, *Dataf;
+static FILE	*Inf, *Dataf;
 
-void order_unstr(STRFILE *);
+static void order_unstr(STRFILE *);
 
 /* ARGSUSED */
 int
@@ -107,7 +107,7 @@ main(int argc, char *argv[])
 	exit(0);
 }
 
-void
+static void
 order_unstr(STRFILE *tbl)
 {
 	uint32_t i;

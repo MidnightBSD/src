@@ -37,7 +37,7 @@
 #define SND_USE_FXDIV
 #include "snd_fxdiv_gen.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pcm/buffer.c 233164 2012-03-19 07:24:26Z mav $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pcm/buffer.c 243450 2012-11-23 13:43:51Z mav $");
 
 struct snd_dbuf *
 sndbuf_create(device_t dev, char *drv, char *desc, struct pcm_channel *channel)
@@ -70,7 +70,7 @@ sndbuf_setmap(void *arg, bus_dma_segment_t *segs, int nseg, int error)
 {
 	struct snd_dbuf *b = (struct snd_dbuf *)arg;
 
-	if (bootverbose) {
+	if (snd_verbose > 3) {
 		device_printf(b->dev, "sndbuf_setmap %lx, %lx; ",
 		    (u_long)segs[0].ds_addr, (u_long)segs[0].ds_len);
 		printf("%p -> %lx\n", b->buf, (u_long)segs[0].ds_addr);

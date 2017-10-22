@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/ggate/ggatec/ggatec.c 204076 2010-02-18 23:16:19Z pjd $
+ * $FreeBSD: release/10.0.0/sbin/ggate/ggatec/ggatec.c 241720 2012-10-19 05:43:38Z ed $
  */
 
 #include <stdio.h>
@@ -55,7 +55,7 @@
 #include "ggate.h"
 
 
-enum { UNSET, CREATE, DESTROY, LIST, RESCUE } action = UNSET;
+static enum { UNSET, CREATE, DESTROY, LIST, RESCUE } action = UNSET;
 
 static const char *path = NULL;
 static const char *host = NULL;

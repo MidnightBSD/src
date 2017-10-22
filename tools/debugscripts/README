@@ -1,4 +1,4 @@
-$FreeBSD: stable/9/tools/debugscripts/README 210641 2010-07-30 11:58:18Z uqs $
+$FreeBSD: release/10.0.0/tools/debugscripts/README 210641 2010-07-30 11:58:18Z uqs $
 
 This directory contains gdb macros for kernel debugging.  When you
 build a debug kernel, the target "gdbinit" in the kernel Makefile will

@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libstand/net.h 213235 2010-09-28 01:30:49Z emaste $
+ * $FreeBSD: release/10.0.0/lib/libstand/net.h 213235 2010-09-28 01:30:49Z emaste $
  */
 
 #ifndef _KERNEL	/* XXX - see <netinet/in.h> */

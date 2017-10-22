@@ -69,7 +69,7 @@ static const char sccsid[] = "@(#)res_query.c	8.1 (Berkeley) 6/4/93";
 static const char rcsid[] = "$Id: res_query.c,v 1.7.18.2 2008/04/03 23:15:15 marka Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/resolv/res_query.c 186090 2008-12-14 19:39:53Z ume $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/resolv/res_query.c 254700 2013-08-23 13:59:47Z jilles $");
 
 #include "port_before.h"
 #include <sys/types.h>
@@ -457,7 +457,7 @@ res_hostalias(const res_state statp, const char *name, char *dst, size_t siz) {
 	if (issetugid())
 		return (NULL);
 	file = getenv("HOSTALIASES");
-	if (file == NULL || (fp = fopen(file, "r")) == NULL)
+	if (file == NULL || (fp = fopen(file, "re")) == NULL)
 		return (NULL);
 	setbuf(fp, NULL);
 	buf[sizeof(buf) - 1] = '\0';

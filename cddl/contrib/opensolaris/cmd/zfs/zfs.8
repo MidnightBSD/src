@@ -19,16 +19,16 @@
 .\"
 .\" Copyright (c) 2010, Sun Microsystems, Inc. All Rights Reserved.
 .\" Copyright (c) 2012 by Delphix. All rights reserved.
-.\" Copyright (c) 2012, Joyent, Inc. All rights reserved.
 .\" Copyright (c) 2011, Pawel Jakub Dawidek <pjd@FreeBSD.org>
-.\" Copyright (c) 2012, Bryan Drewery <bdrewery@FreeBSD.org>
 .\" Copyright (c) 2012, Glen Barber <gjb@FreeBSD.org>
+.\" Copyright (c) 2012, Bryan Drewery <bdrewery@FreeBSD.org>
 .\" Copyright (c) 2013 by Saso Kiselkov. All rights reserved.
 .\" Copyright (c) 2013 Nexenta Systems, Inc. All Rights Reserved.
+.\" Copyright (c) 2013, Joyent, Inc. All rights reserved.
 .\"
-.\" $FreeBSD: stable/9/cddl/contrib/opensolaris/cmd/zfs/zfs.8 248369 2013-03-16 08:16:11Z mm $
+.\" $FreeBSD: release/10.0.0/cddl/contrib/opensolaris/cmd/zfs/zfs.8 255750 2013-09-21 00:17:26Z delphij $
 .\"
-.Dd March 1, 2013
+.Dd September 20, 2013
 .Dt ZFS 8
 .Os
 .Sh NAME
@@ -39,7 +39,7 @@
 .Op Fl \&?
 .Nm
 .Cm create
-.Op Fl p
+.Op Fl pu
 .Oo Fl o Ar property Ns = Ns Ar value Oc Ns ... Ar filesystem
 .Nm
 .Cm create
@@ -65,6 +65,7 @@
 .Op Fl r
 .Oo Fl o Ar property Ns = Ns Ar value Oc Ns ...
 .Ar filesystem@snapname Ns | Ns Ar volume@snapname
+.Ar filesystem@snapname Ns | Ns Ar volume@snapname Ns ...
 .Nm
 .Cm rollback
 .Op Fl rRf
@@ -423,9 +424,15 @@ subcommand. You cannot attach a dataset to one jail and the children of the
 same dataset to another jails. To allow management of the dataset from within
 a jail, the
 .Sy jailed
-property has to be set. The
+property has to be set and the jail needs access to the
+.Pa /dev/zfs
+device. The
 .Sy quota
-property cannot be changed from within a jail.
+property cannot be changed from within a jail. See
+.Xr jail 8
+for information on how to allow mounting
+.Tn ZFS
+datasets from within a jail.
 .Pp
 .No A Tn ZFS
 dataset can be detached from a jail using the
@@ -884,19 +891,26 @@ command or unmounted by the
 command.
 .Pp
 This property is not inherited.
-.It Sy checksum Ns = Ns Cm on | off | fletcher2 | fletcher4 | sha256
+.It Sy checksum Ns = Ns Cm on | off | fletcher2 | fletcher4 | sha256 | noparity
 Controls the checksum used to verify data integrity. The default value is
 .Cm on ,
 which automatically selects an appropriate algorithm (currently,
 .Cm fletcher4 ,
 but this may change in future releases). The value
 .Cm off
-disables integrity checking on user data. Disabling checksums is
+disables integrity checking on user data.
+The value
+.Cm noparity
+not only
+disables integrity but also disables maintaining parity for user data.  This
+setting is used internally by a dump device residing on a RAID-Z pool and should
+not be used by any other dataset.
+Disabling checksums is
 .Em NOT
 a recommended practice.
 .It Sy compression Ns = Ns Cm on | off | lzjb | gzip | gzip- Ns Ar N | zle | Cm lz4
 Controls the compression algorithm used for this dataset. The
-.CM lzjb
+.Cm lzjb
 compression algorithm is optimized for performance while providing decent data
 compression. Setting compression to
 .Cm on
@@ -1192,7 +1206,7 @@ When the
 .Sy sharenfs
 property is changed for a dataset, the
 .Xr mountd 8
-dameon is reloaded.
+daemon is reloaded.
 .It Sy logbias Ns = Ns Cm latency | throughput
 Provide a hint to
 .Tn ZFS
@@ -1358,11 +1372,11 @@ for legacy mounts or the
 command for normal file systems, its mount options are set according to its
 properties. The correlation between properties and mount options is as follows:
 .Bl -column -offset 4n "PROPERTY" "MOUNT OPTION"
-.It PROPERTY	MOUNT OPTION
-.It atime	atime/noatime
-.It exec	exec/noexec
-.It readonly	ro/rw
-.It setuid	suid/nosuid
+.It "PROPERTY	MOUNT OPTION"
+.It "atime	atime/noatime"
+.It "exec	exec/noexec"
+.It "readonly	ro/rw"
+.It "setuid	suid/nosuid"
 .El
 .Pp
 In addition, these options can be set on a per-mount basis using the
@@ -1437,7 +1451,7 @@ Displays a help message.
 .It Xo
 .Nm
 .Cm create
-.Op Fl p
+.Op Fl pu
 .Oo Fl o Ar property Ns = Ns Ar value Oc Ns ...
 .Ar filesystem
 .Xc
@@ -1457,6 +1471,8 @@ line using the
 .Fl o
 option is ignored. If the target filesystem already exists, the operation
 completes successfully.
+.It Fl u
+Newly created file system is not mounted.
 .It Fl o Ar property Ns = Ns Ar value
 Sets the specified property as if the command
 .Qq Nm Cm set Ar property Ns = Ns Ar value
@@ -1609,7 +1625,11 @@ multiple snapshots.
 Destroy (or mark for deferred deletion) all snapshots with this name in
 descendent file systems.
 .It Fl R
-Recursively destroy all dependents.
+Recursively destroy all clones of these snapshots, including the clones,
+snapshots, and children.
+If this flag is specified, the
+.Op fl d
+flag will have no effect.
 .It Fl n
 Do a dry-run ("No-op") deletion. No data will be deleted. This is useful in
 conjunction with the
@@ -1637,17 +1657,18 @@ behavior for mounted file systems in use.
 .Op Fl r
 .Oo Fl o Ar property Ns = Ns Ar value Oc Ns ...
 .Ar filesystem@snapname Ns | Ns volume@snapname
+.Ar filesystem@snapname Ns | Ns volume@snapname Ns ...
 .Xc
 .Pp
-Creates a snapshot with the given name. All previous modifications by
-successful system calls to the file system are part of the snapshot. See the
+Creates snapshots with the given names. All previous modifications by
+successful system calls to the file system are part of the snapshots.
+Snapshots are taken atomically, so that all snapshots correspond to the same
+moment in time. See the
 .Qq Sx Snapshots
 section for details.
 .Bl -tag -width indent
 .It Fl r
-Recursively create snapshots of all descendent datasets. Snapshots are taken
-atomically, so that all recursive snapshots correspond to the same moment in
-time.
+Recursively create snapshots of all descendent datasets
 .It Fl o Ar property Ns = Ns Ar value
 Sets the specified property; see
 .Qq Nm Cm create
@@ -2816,13 +2837,12 @@ to the jail identified by JID
 From now on this file system tree can be managed from within a jail if the
 .Sy jailed
 property has been set. To use this functionality, the jail needs the
-.Va enforce_statfs
-parameter set to
-.Sy 0
-and the
 .Va allow.mount
-parameter set to
-.Sy 1 .
+and
+.Va allow.mount.zfs
+parameters set to 1 and the
+.Va enforce_statfs
+parameter set to a value lower than 2.
 .Pp
 See
 .Xr jail 8

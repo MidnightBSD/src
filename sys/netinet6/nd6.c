@@ -30,10 +30,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/nd6.c 248852 2013-03-28 20:48:40Z emaste $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet6/nd6.c 254889 2013-08-25 21:54:41Z markj $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
+#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,6 +51,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet6/nd6.c 248852 2013-03-28 20:48:40Z emas
 #include <sys/lock.h>
 #include <sys/rwlock.h>
 #include <sys/queue.h>
+#include <sys/sdt.h>
 #include <sys/sysctl.h>
 
 #include <net/if.h>
@@ -62,6 +64,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet6/nd6.c 248852 2013-03-28 20:48:40Z emas
 #include <net/vnet.h>
 
 #include <netinet/in.h>
+#include <netinet/in_kdtrace.h>
 #include <net/if_llatbl.h>
 #define	L3_ADDR_SIN6(le)	((struct sockaddr_in6 *) L3_ADDR(le))
 #include <netinet/if_ether.h>
@@ -81,7 +84,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet6/nd6.c 248852 2013-03-28 20:48:40Z emas
 #define ND6_SLOWTIMER_INTERVAL (60 * 60) /* 1 hour */
 #define ND6_RECALC_REACHTM_INTERVAL (60 * 120) /* 2 hours */
 
-#define SIN6(s) ((struct sockaddr_in6 *)s)
+#define SIN6(s) ((const struct sockaddr_in6 *)(s))
 
 /* timer values */
 VNET_DEFINE(int, nd6_prune)	= 1;	/* walk list every 1 seconds */
@@ -120,8 +123,6 @@ VNET_DEFINE(struct nd_prhead, nd_prefix);
 VNET_DEFINE(int, nd6_recalc_reachtm_interval) = ND6_RECALC_REACHTM_INTERVAL;
 #define	V_nd6_recalc_reachtm_interval	VNET(nd6_recalc_reachtm_interval)
 
-static struct sockaddr_in6 all1_sa;
-
 int	(*send_sendso_input_hook)(struct mbuf *, struct ifnet *, int, int);
 
 static int nd6_is_new_addr_neighbor(struct sockaddr_in6 *,
@@ -141,14 +142,8 @@ VNET_DEFINE(struct callout, nd6_timer_ch);
 void
 nd6_init(void)
 {
-	int i;
 
 	LIST_INIT(&V_nd_prefix);
-
-	all1_sa.sin6_family = AF_INET6;
-	all1_sa.sin6_len = sizeof(struct sockaddr_in6);
-	for (i = 0; i < sizeof(all1_sa.sin6_addr); i++)
-		all1_sa.sin6_addr.s6_addr[i] = 0xff;
 
 	/* initialization of the default router list */
 	TAILQ_INIT(&V_nd_defrouter);
@@ -184,13 +179,25 @@ nd6_ifattach(struct ifnet *ifp)
 
 	nd->flags = ND6_IFF_PERFORMNUD;
 
-	/* A loopback interface always has ND6_IFF_AUTO_LINKLOCAL. */
-	if (V_ip6_auto_linklocal || (ifp->if_flags & IFF_LOOPBACK))
+	/* A loopback interface always has ND6_IFF_AUTO_LINKLOCAL.
+	 * XXXHRS: Clear ND6_IFF_AUTO_LINKLOCAL on an IFT_BRIDGE interface by
+	 * default regardless of the V_ip6_auto_linklocal configuration to
+	 * give a reasonable default behavior.
+	 */
+	if ((V_ip6_auto_linklocal && ifp->if_type != IFT_BRIDGE) ||
+	    (ifp->if_flags & IFF_LOOPBACK))
 		nd->flags |= ND6_IFF_AUTO_LINKLOCAL;
-
-	/* A loopback interface does not need to accept RTADV. */
-	if (V_ip6_accept_rtadv && !(ifp->if_flags & IFF_LOOPBACK))
-		nd->flags |= ND6_IFF_ACCEPT_RTADV;
+	/*
+	 * A loopback interface does not need to accept RTADV.
+	 * XXXHRS: Clear ND6_IFF_ACCEPT_RTADV on an IFT_BRIDGE interface by
+	 * default regardless of the V_ip6_accept_rtadv configuration to
+	 * prevent the interface from accepting RA messages arrived
+	 * on one of the member interfaces with ND6_IFF_ACCEPT_RTADV.
+	 */
+	if (V_ip6_accept_rtadv &&
+	    !(ifp->if_flags & IFF_LOOPBACK) &&
+	    (ifp->if_type != IFT_BRIDGE))
+			nd->flags |= ND6_IFF_ACCEPT_RTADV;
 	if (V_ip6_no_radr && !(ifp->if_flags & IFF_LOOPBACK))
 		nd->flags |= ND6_IFF_NO_RADR;
 
@@ -424,7 +431,7 @@ nd6_llinfo_settimer_locked(struct llentry *ln, long tick)
 		ln->ln_ntick = 0;
 		canceled = callout_stop(&ln->ln_timer_ch);
 	} else {
-		ln->la_expire = time_second + tick / hz;
+		ln->la_expire = time_uptime + tick / hz;
 		LLE_ADDREF(ln);
 		if (tick > INT_MAX) {
 			ln->ln_ntick = tick - INT_MAX;
@@ -509,6 +516,7 @@ nd6_llinfo_timer(void *arg)
 				ln->la_hold = m0;
 				clear_llinfo_pqueue(ln);
 			}
+			EVENTHANDLER_INVOKE(lle_event, ln, LLENTRY_TIMEDOUT);
 			(void)nd6_free(ln, 0);
 			ln = NULL;
 			if (m != NULL)
@@ -526,6 +534,7 @@ nd6_llinfo_timer(void *arg)
 	case ND6_LLINFO_STALE:
 		/* Garbage Collection(RFC 2461 5.3) */
 		if (!ND6_LLINFO_PERMANENT(ln)) {
+			EVENTHANDLER_INVOKE(lle_event, ln, LLENTRY_EXPIRED);
 			(void)nd6_free(ln, 1);
 			ln = NULL;
 		}
@@ -553,6 +562,7 @@ nd6_llinfo_timer(void *arg)
 			nd6_ns_output(ifp, dst, dst, ln, 0);
 			LLE_WLOCK(ln);
 		} else {
+			EVENTHANDLER_INVOKE(lle_event, ln, LLENTRY_EXPIRED);
 			(void)nd6_free(ln, 0);
 			ln = NULL;
 		}
@@ -575,7 +585,6 @@ void
 nd6_timer(void *arg)
 {
 	CURVNET_SET((struct vnet *) arg);
-	int s;
 	struct nd_defrouter *dr, *ndr;
 	struct nd_prefix *pr, *npr;
 	struct in6_ifaddr *ia6, *nia6;
@@ -584,9 +593,8 @@ nd6_timer(void *arg)
 	    nd6_timer, curvnet);
 
 	/* expire default router list */
-	s = splnet();
 	TAILQ_FOREACH_SAFE(dr, &V_nd_defrouter, dr_entry, ndr) {
-		if (dr->expire && dr->expire < time_second)
+		if (dr->expire && dr->expire < time_uptime)
 			defrtrlist_del(dr);
 	}
 
@@ -670,7 +678,7 @@ nd6_timer(void *arg)
 		 * prefix is not necessary.
 		 */
 		if (pr->ndpr_vltime != ND6_INFINITE_LIFETIME &&
-		    time_second - pr->ndpr_lastupdate > pr->ndpr_vltime) {
+		    time_uptime - pr->ndpr_lastupdate > pr->ndpr_vltime) {
 
 			/*
 			 * address expiration and prefix expiration are
@@ -679,7 +687,6 @@ nd6_timer(void *arg)
 			prelist_remove(pr);
 		}
 	}
-	splx(s);
 	CURVNET_RESTORE();
 }
 
@@ -1029,9 +1036,9 @@ nd6_free(struct llentry *ln, int gc)
 			 * XXX: the check for ln_state would be redundant,
 			 *      but we intentionally keep it just in case.
 			 */
-			if (dr->expire > time_second)
+			if (dr->expire > time_uptime)
 				nd6_llinfo_settimer_locked(ln,
-				    (dr->expire - time_second) * hz);
+				    (dr->expire - time_uptime) * hz);
 			else
 				nd6_llinfo_settimer_locked(ln,
 				    (long)V_nd6_gctimer * hz);
@@ -1222,15 +1229,15 @@ nd6_ioctl(u_long cmd, caddr_t data, struct ifnet *ifp)
 	struct nd_defrouter *dr;
 	struct nd_prefix *pr;
 	int i = 0, error = 0;
-	int s;
 
+	if (ifp->if_afdata[AF_INET6] == NULL)
+		return (EPFNOSUPPORT);
 	switch (cmd) {
 	case SIOCGDRLST_IN6:
 		/*
 		 * obsolete API, use sysctl under net.inet6.icmp6
 		 */
 		bzero(drl, sizeof(*drl));
-		s = splnet();
 		TAILQ_FOREACH(dr, &V_nd_defrouter, dr_entry) {
 			if (i >= DRLSTSIZ)
 				break;
@@ -1239,11 +1246,11 @@ nd6_ioctl(u_long cmd, caddr_t data, struct ifnet *ifp)
 
 			drl->defrouter[i].flags = dr->flags;
 			drl->defrouter[i].rtlifetime = dr->rtlifetime;
-			drl->defrouter[i].expire = dr->expire;
+			drl->defrouter[i].expire = dr->expire +
+			    (time_second - time_uptime);
 			drl->defrouter[i].if_index = dr->ifp->if_index;
 			i++;
 		}
-		splx(s);
 		break;
 	case SIOCGPRLST_IN6:
 		/*
@@ -1259,7 +1266,6 @@ nd6_ioctl(u_long cmd, caddr_t data, struct ifnet *ifp)
 		 * how about separating ioctls into two?
 		 */
 		bzero(oprl, sizeof(*oprl));
-		s = splnet();
 		LIST_FOREACH(pr, &V_nd_prefix, ndpr_entry) {
 			struct nd_pfxrouter *pfr;
 			int j;
@@ -1285,7 +1291,8 @@ nd6_ioctl(u_long cmd, caddr_t data, struct ifnet *ifp)
 				    maxexpire - pr->ndpr_lastupdate) {
 					oprl->prefix[i].expire =
 					    pr->ndpr_lastupdate +
-					    pr->ndpr_vltime;
+					    pr->ndpr_vltime +
+					    (time_second - time_uptime);
 				} else
 					oprl->prefix[i].expire = maxexpire;
 			}
@@ -1305,7 +1312,6 @@ nd6_ioctl(u_long cmd, caddr_t data, struct ifnet *ifp)
 
 			i++;
 		}
-		splx(s);
 
 		break;
 	case OSIOCGIFINFO_IN6:
@@ -1356,16 +1362,6 @@ nd6_ioctl(u_long cmd, caddr_t data, struct ifnet *ifp)
 	{
 		struct ifaddr *ifa;
 		struct in6_ifaddr *ia;
-
-		/*
-		 * Try to clear ifdisabled flag when enabling
-		 * accept_rtadv or auto_linklocal.
-		 */
-		if ((ND_IFINFO(ifp)->flags & ND6_IFF_IFDISABLED) &&
-		    !(ND.flags & ND6_IFF_IFDISABLED) &&
-		    (ND.flags & (ND6_IFF_ACCEPT_RTADV |
-		    ND6_IFF_AUTO_LINKLOCAL)))
-			ND.flags &= ~ND6_IFF_IFDISABLED;
 
 		if ((ND_IFINFO(ifp)->flags & ND6_IFF_IFDISABLED) &&
 		    !(ND.flags & ND6_IFF_IFDISABLED)) {
@@ -1464,7 +1460,6 @@ nd6_ioctl(u_long cmd, caddr_t data, struct ifnet *ifp)
 		/* flush all the prefix advertised by routers */
 		struct nd_prefix *pr, *next;
 
-		s = splnet();
 		LIST_FOREACH_SAFE(pr, &V_nd_prefix, ndpr_entry, next) {
 			struct in6_ifaddr *ia, *ia_next;
 
@@ -1483,7 +1478,6 @@ nd6_ioctl(u_long cmd, caddr_t data, struct ifnet *ifp)
 			}
 			prelist_remove(pr);
 		}
-		splx(s);
 		break;
 	}
 	case SIOCSRTRFLUSH_IN6:
@@ -1491,13 +1485,11 @@ nd6_ioctl(u_long cmd, caddr_t data, struct ifnet *ifp)
 		/* flush all the default routers */
 		struct nd_defrouter *dr, *next;
 
-		s = splnet();
 		defrouter_reset();
 		TAILQ_FOREACH_SAFE(dr, &V_nd_defrouter, dr_entry, next) {
 			defrtrlist_del(dr);
 		}
 		defrouter_select();
-		splx(s);
 		break;
 	}
 	case SIOCGNBRINFO_IN6:
@@ -1519,7 +1511,11 @@ nd6_ioctl(u_long cmd, caddr_t data, struct ifnet *ifp)
 		nbi->state = ln->ln_state;
 		nbi->asked = ln->la_asked;
 		nbi->isrouter = ln->ln_router;
-		nbi->expire = ln->la_expire;
+		if (ln->la_expire == 0)
+			nbi->expire = 0;
+		else
+			nbi->expire = ln->la_expire +
+			    (time_second - time_uptime);
 		LLE_RUNLOCK(ln);
 		break;
 	}
@@ -1623,6 +1619,7 @@ nd6_cache_lladdr(struct ifnet *ifp, struct in6_addr *from, char *lladdr,
 		 */
 		bcopy(lladdr, &ln->ll_addr, ifp->if_addrlen);
 		ln->la_flags |= LLE_VALID;
+		EVENTHANDLER_INVOKE(lle_event, ln, LLENTRY_RESOLVED);
 	}
 
 	if (!is_newentry) {
@@ -1815,6 +1812,8 @@ nd6_slowtimo(void *arg)
 	    nd6_slowtimo, curvnet);
 	IFNET_RLOCK_NOSLEEP();
 	TAILQ_FOREACH(ifp, &V_ifnet, if_list) {
+		if (ifp->if_afdata[AF_INET6] == NULL)
+			continue;
 		nd6if = ND_IFINFO(ifp);
 		if (nd6if->basereachable && /* already initialized */
 		    (nd6if->recalctm -= ND6_SLOWTIMER_INTERVAL) <= 0) {
@@ -2086,8 +2085,9 @@ nd6_output_lle(struct ifnet *ifp, struct ifnet *origifp, struct mbuf *m0,
 		}
 		return (error);
 	}
-	/* Reset layer specific mbuf flags to avoid confusing lower layers. */
-	m->m_flags &= ~(M_PROTOFLAGS);  
+	m_clrprotoflags(m);	/* Avoid confusing lower layers. */
+	IP_PROBE(send, NULL, NULL, mtod(m, struct ip6_hdr *), ifp, NULL,
+	    mtod(m, struct ip6_hdr *));
 	if ((ifp->if_flags & IFF_LOOPBACK) != 0) {
 		return ((*ifp->if_output)(origifp, m, (struct sockaddr *)dst,
 		    NULL));
@@ -2164,9 +2164,6 @@ nd6_need_cache(struct ifnet *ifp)
 #ifdef IFT_IEEE80211
 	case IFT_IEEE80211:
 #endif
-#ifdef IFT_CARP
-	case IFT_CARP:
-#endif
 	case IFT_INFINIBAND:
 	case IFT_GIF:		/* XXX need more cases? */
 	case IFT_PPP:
@@ -2185,13 +2182,13 @@ nd6_need_cache(struct ifnet *ifp)
  */
 int
 nd6_storelladdr(struct ifnet *ifp, struct mbuf *m,
-    struct sockaddr *dst, u_char *desten, struct llentry **lle)
+    const struct sockaddr *dst, u_char *desten, struct llentry **lle)
 {
 	struct llentry *ln;
 
 	*lle = NULL;
 	IF_AFDATA_UNLOCK_ASSERT(ifp);
-	if (m->m_flags & M_MCAST) {
+	if (m != NULL && m->m_flags & M_MCAST) {
 		int i;
 
 		switch (ifp->if_type) {
@@ -2299,7 +2296,7 @@ nd6_sysctl_drlist(SYSCTL_HANDLER_ARGS)
 			return (error);
 		d.flags = dr->flags;
 		d.rtlifetime = dr->rtlifetime;
-		d.expire = dr->expire;
+		d.expire = dr->expire + (time_second - time_uptime);
 		d.if_index = dr->ifp->if_index;
 		error = SYSCTL_OUT(req, &d, sizeof(d));
 		if (error != 0)
@@ -2351,7 +2348,8 @@ nd6_sysctl_prlist(SYSCTL_HANDLER_ARGS)
 			    ~((time_t)1 << ((sizeof(maxexpire) * 8) - 1));
 			if (pr->ndpr_vltime < maxexpire - pr->ndpr_lastupdate)
 				p.expire = pr->ndpr_lastupdate +
-				    pr->ndpr_vltime;
+				    pr->ndpr_vltime +
+				    (time_second - time_uptime);
 			else
 				p.expire = maxexpire;
 		}

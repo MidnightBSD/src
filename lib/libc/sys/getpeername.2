@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)getpeername.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/9/lib/libc/sys/getpeername.2 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD: release/10.0.0/lib/libc/sys/getpeername.2 243439 2012-11-23 10:14:54Z kevlo $
 .\"
 .Dd June 4, 1993
 .Dt GETPEERNAME 2
@@ -67,6 +67,10 @@ The argument
 is not a valid descriptor.
 .It Bq Er ECONNRESET
 The connection has been reset by the peer.
+.It Bq Er EINVAL
+The value of the
+.Fa namelen
+argument is not valid.
 .It Bq Er ENOTSOCK
 The argument
 .Fa s

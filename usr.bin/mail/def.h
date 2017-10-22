@@ -28,7 +28,7 @@
  *
  *	@(#)def.h	8.4 (Berkeley) 4/20/95
  *
- * $FreeBSD: stable/9/usr.bin/mail/def.h 216370 2010-12-11 08:32:16Z joel $
+ * $FreeBSD: release/10.0.0/usr.bin/mail/def.h 216370 2010-12-11 08:32:16Z joel $
  */
 
 /*

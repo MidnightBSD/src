@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/tools/tools/bus_autoconf/bus_autoconf.c 223534 2011-06-25 13:44:05Z hselasky $ */
+/* $FreeBSD: release/10.0.0/tools/tools/bus_autoconf/bus_autoconf.c 228975 2011-12-30 00:04:11Z uqs $ */
 
 /*-
  * Copyright (c) 2011 Hans Petter Selasky. All rights reserved.
@@ -27,7 +27,7 @@
 
 /*
  * Disclaimer: This utility and format is subject to change and not a
- * comitted interface.
+ * committed interface.
  */
 
 #include <stdio.h>

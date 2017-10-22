@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libprocstat/Versions.def 236698 2012-06-06 21:49:31Z jhb $
+# $FreeBSD: release/10.0.0/lib/libprocstat/Versions.def 233760 2012-04-01 18:22:48Z jhb $
 
 # This version was first added to 9.0-current.
 FBSD_1.2 {

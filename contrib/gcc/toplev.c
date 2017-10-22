@@ -20,7 +20,7 @@ along with GCC; see the file COPYING.  If not, write to the Free
 Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA
 02110-1301, USA.  */
 
-/* $FreeBSD: stable/9/contrib/gcc/toplev.c 215840 2010-11-25 20:29:14Z dim $ */
+/* $FreeBSD: release/10.0.0/contrib/gcc/toplev.c 215840 2010-11-25 20:29:14Z dim $ */
 
 /* This is the top level of cc1/c++.
    It parses command args, opens files, invokes the various passes

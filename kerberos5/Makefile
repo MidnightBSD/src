@@ -1,6 +1,6 @@
-# $FreeBSD: stable/9/kerberos5/Makefile 237991 2012-07-02 10:06:13Z obrien $
+# $FreeBSD: release/10.0.0/kerberos5/Makefile 241298 2012-10-06 20:01:05Z marcel $
 
-SUBDIR=	doc tools lib libexec usr.bin usr.sbin
+SUBDIR=	doc lib libexec tools usr.bin usr.sbin
 
 # These are the programs which depend on Kerberos.
 KPROGS=	lib/libpam \

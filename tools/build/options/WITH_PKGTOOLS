@@ -1,0 +1,4 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITH_PKGTOOLS 253305 2013-07-12 23:11:17Z bapt $
+Set to build
+.Xr pkg_add 8
+and related programs.

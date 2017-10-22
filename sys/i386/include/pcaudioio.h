@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1994 Søren Schmidt
+ * Copyright (c) 1994 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/i386/include/pcaudioio.h 50477 1999-08-28 01:08:13Z peter $
+ * $FreeBSD: release/10.0.0/sys/i386/include/pcaudioio.h 230132 2012-01-15 13:23:18Z uqs $
  */
 
 #ifndef	_MACHINE_PCAUDIOIO_H_

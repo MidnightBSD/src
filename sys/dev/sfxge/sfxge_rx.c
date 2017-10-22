@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/sfxge/sfxge_rx.c 227569 2011-11-16 17:11:13Z philip $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/sfxge/sfxge_rx.c 254800 2013-08-24 17:14:14Z andre $");
 
 #include <sys/types.h>
 #include <sys/mbuf.h>
@@ -176,10 +176,10 @@ static inline struct mbuf *sfxge_rx_alloc_mbuf(struct sfxge_softc *sc)
 	/* Allocate mbuf structure */
 	args.flags = M_PKTHDR;
 	args.type = MT_DATA;
-	m = (struct mbuf *)uma_zalloc_arg(zone_mbuf, &args, M_DONTWAIT);
+	m = (struct mbuf *)uma_zalloc_arg(zone_mbuf, &args, M_NOWAIT);
 
 	/* Allocate (and attach) packet buffer */
-	if (m && !uma_zalloc_arg(sc->rx_buffer_zone, m, M_DONTWAIT)) {
+	if (m && !uma_zalloc_arg(sc->rx_buffer_zone, m, M_NOWAIT)) {
 		uma_zfree(zone_mbuf, m);
 		m = NULL;
 	}
@@ -282,7 +282,6 @@ static void __sfxge_rx_deliver(struct sfxge_softc *sc, struct mbuf *m)
 	struct ifnet *ifp = sc->ifnet;
 
 	m->m_pkthdr.rcvif = ifp;
-	m->m_pkthdr.header = m->m_data;
 	m->m_pkthdr.csum_data = 0xffff;
 	ifp->if_input(ifp, m);
 }
@@ -586,7 +585,7 @@ static void sfxge_lro_new_conn(struct sfxge_lro_state *st, uint32_t conn_hash,
 		c = TAILQ_FIRST(&st->free_conns);
 		TAILQ_REMOVE(&st->free_conns, c, link);
 	} else {
-		c = malloc(sizeof(*c), M_SFXGE, M_DONTWAIT);
+		c = malloc(sizeof(*c), M_SFXGE, M_NOWAIT);
 		if (c == NULL)
 			return;
 		c->mbuf = NULL;

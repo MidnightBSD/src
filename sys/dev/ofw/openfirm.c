@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ofw/openfirm.c 230884 2012-02-01 21:11:06Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ofw/openfirm.c 255596 2013-09-15 14:19:17Z nwhitehorn $");
 
 #include "opt_platform.h"
 
@@ -133,7 +133,7 @@ OF_init(void *cookie)
 
 	rv = OFW_INIT(ofw_obj, cookie);
 
-	if ((chosen = OF_finddevice("/chosen")) > 0)
+	if ((chosen = OF_finddevice("/chosen")) != -1)
 		if (OF_getprop(chosen, "stdout", &stdout, sizeof(stdout)) == -1)
 			stdout = -1;
 
@@ -261,6 +261,14 @@ OF_getproplen(phandle_t package, const char *propname)
 	return (OFW_GETPROPLEN(ofw_obj, package, propname));
 }
 
+/* Check existence of a property of a package. */
+int
+OF_hasprop(phandle_t package, const char *propname)
+{
+
+	return (OF_getproplen(package, propname) >= 0 ? 1 : 0);
+}
+
 /* Get the value of a property of a package. */
 ssize_t
 OF_getprop(phandle_t package, const char *propname, void *buf, size_t buflen)
@@ -376,6 +384,48 @@ OF_package_to_path(phandle_t package, char *buf, size_t len)
 		return (-1);
 
 	return (OFW_PACKAGE_TO_PATH(ofw_obj, package, buf, len));
+}
+
+/* Look up effective phandle (see FDT/PAPR spec) */
+static phandle_t
+OF_child_xref_phandle(phandle_t parent, phandle_t xref)
+{
+	phandle_t child, rxref;
+
+	/*
+	 * Recursively descend from parent, looking for a node with a property
+	 * named either "phandle", "ibm,phandle", or "linux,phandle" that
+	 * matches the xref we are looking for.
+	 */
+
+	for (child = OF_child(parent); child != 0; child = OF_peer(child)) {
+		rxref = OF_child_xref_phandle(child, xref);
+		if (rxref != -1)
+			return (rxref);
+
+		if (OF_getprop(child, "phandle", &rxref, sizeof(rxref)) == -1 &&
+		    OF_getprop(child, "ibm,phandle", &rxref,
+		    sizeof(rxref)) == -1 && OF_getprop(child,
+		    "linux,phandle", &rxref, sizeof(rxref)) == -1)
+			continue;
+
+		if (rxref == xref)
+			return (child);
+	}
+
+	return (-1);
+}
+
+phandle_t
+OF_xref_phandle(phandle_t xref)
+{
+	phandle_t node;
+
+	node = OF_child_xref_phandle(OF_peer(0), xref);
+	if (node == -1)
+		return (xref);
+
+	return (node);
 }
 
 /*  Call the method in the scope of a given instance. */

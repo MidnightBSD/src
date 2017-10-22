@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ubsec/ubsec.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ubsec/ubsec.c 256381 2013-10-12 15:31:36Z markm $");
 
 /*
  * uBsec 5[56]01, 58xx hardware crypto accelerator
@@ -259,7 +259,7 @@ ubsec_partname(struct ubsec_softc *sc)
 static void
 default_harvest(struct rndtest_state *rsp, void *buf, u_int count)
 {
-	random_harvest(buf, count, count*NBBY, 0, RANDOM_PURE);
+	random_harvest(buf, count, count*NBBY/2, RANDOM_PURE_UBSEC);
 }
 
 static int
@@ -267,7 +267,7 @@ ubsec_attach(device_t dev)
 {
 	struct ubsec_softc *sc = device_get_softc(dev);
 	struct ubsec_dma *dmap;
-	u_int32_t cmd, i;
+	u_int32_t i;
 	int rid;
 
 	bzero(sc, sizeof (*sc));
@@ -312,20 +312,7 @@ ubsec_attach(device_t dev)
 		    UBS_FLAGS_LONGCTX | UBS_FLAGS_HWNORM | UBS_FLAGS_BIGKEY;
 	}
 
-	cmd = pci_read_config(dev, PCIR_COMMAND, 4);
-	cmd |= PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN;
-	pci_write_config(dev, PCIR_COMMAND, cmd, 4);
-	cmd = pci_read_config(dev, PCIR_COMMAND, 4);
-
-	if (!(cmd & PCIM_CMD_MEMEN)) {
-		device_printf(dev, "failed to enable memory mapping\n");
-		goto bad;
-	}
-
-	if (!(cmd & PCIM_CMD_BUSMASTEREN)) {
-		device_printf(dev, "failed to enable bus mastering\n");
-		goto bad;
-	}
+	pci_enable_busmaster(dev);
 
 	/*
 	 * Setup memory-mapping of PCI registers.

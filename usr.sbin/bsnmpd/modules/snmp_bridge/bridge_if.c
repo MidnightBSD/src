@@ -26,7 +26,7 @@
  * Bridge MIB implementation for SNMPd.
  * Bridge interface objects.
  *
- * $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_if.c 165642 2006-12-29 19:23:38Z bz $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_if.c 228990 2011-12-30 10:58:14Z uqs $
  */
 
 #include <sys/queue.h>
@@ -378,7 +378,7 @@ bridge_get_time_since_tc(struct bridge_if *bif, uint32_t *ticks)
  * Return:
  * 1, if successful
  * 0, if the interface was deleted
- * -1, error occured while fetching the info from the kernel.
+ * -1, error occurred while fetching the info from the kernel.
  */
 static int
 bridge_update_bif(struct bridge_if *bif)

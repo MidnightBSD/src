@@ -56,7 +56,7 @@ static const char sccsid[] = "@(#)rbootd.c	8.1 (Berkeley) 6/4/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/libexec/rbootd/rbootd.c 216583 2010-12-20 08:37:26Z charnier $");
+__FBSDID("$FreeBSD: release/10.0.0/libexec/rbootd/rbootd.c 239991 2012-09-01 14:45:15Z ed $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -231,7 +231,7 @@ main(int argc, char *argv[])
 
 		r = rset;
 
-		if (RmpConns == NULL) {		/* timeout isnt necessary */
+		if (RmpConns == NULL) {		/* timeout isn't necessary */
 			nsel = select(maxfds, &r, NULL, NULL, NULL);
 		} else {
 			timeout.tv_sec = RMP_TIMEOUT;
@@ -310,16 +310,15 @@ void
 DoTimeout(void)
 {
 	RMPCONN *rtmp;
-	struct timeval now;
-
-	(void) gettimeofday(&now, (struct timezone *)0);
+	time_t now;
 
 	/*
 	 *  For each active connection, if RMP_TIMEOUT seconds have passed
 	 *  since the last packet was sent, delete the connection.
 	 */
+	now = time(NULL);
 	for (rtmp = RmpConns; rtmp != NULL; rtmp = rtmp->next)
-		if ((rtmp->tstamp.tv_sec + RMP_TIMEOUT) < now.tv_sec) {
+		if ((rtmp->tstamp.tv_sec + RMP_TIMEOUT) < now) {
 			syslog(LOG_WARNING, "%s: connection timed out (%u)",
 			       EnetStr(rtmp), rtmp->rmp.r_type);
 			RemoveConn(rtmp);

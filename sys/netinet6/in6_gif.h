@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: in6_gif.h,v 1.5 2000/04/14 08:36:03 itojun Exp $
- * $FreeBSD: stable/9/sys/netinet6/in6_gif.h 244524 2012-12-21 00:41:52Z delphij $
+ * $FreeBSD: release/10.0.0/sys/netinet6/in6_gif.h 241916 2012-10-22 21:49:56Z delphij $
  */
 
 #ifndef _NETINET6_IN6_GIF_H_

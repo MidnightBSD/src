@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libkse/arch/sparc64/include/pthread_md.h 174112 2007-11-30 17:20:29Z deischen $
+ * $FreeBSD: release/10.0.0/lib/libkse/arch/sparc64/include/pthread_md.h 174112 2007-11-30 17:20:29Z deischen $
  */
 
 /*

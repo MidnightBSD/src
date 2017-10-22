@@ -24,7 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/tools/regression/geom_gpt/gctl.t 157622 2006-04-10 04:13:44Z marcel $
+# $FreeBSD: release/10.0.0/tools/regression/geom_gpt/gctl.t 157622 2006-04-10 04:13:44Z marcel $
 
 my $srcdir = `dirname $0`;
 chomp $srcdir;

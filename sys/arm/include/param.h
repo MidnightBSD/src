@@ -35,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: stable/9/sys/arm/include/param.h 224207 2011-07-19 00:37:24Z attilio $
+ * $FreeBSD: release/10.0.0/sys/arm/include/param.h 254918 2013-08-26 17:12:30Z raj $
  */
 
 #ifndef _ARM_INCLUDE_PARAM_H_
@@ -56,17 +56,33 @@
 #define	MACHINE		"arm"
 #endif
 #ifndef MACHINE_ARCH
+#if defined(__FreeBSD_ARCH_armv6__) || (defined(__ARM_ARCH) && __ARM_ARCH >= 6)
+#ifdef __ARMEB__
+#define	MACHINE_ARCH	"armv6eb"
+#else
+#define	MACHINE_ARCH	"armv6"
+#endif
+#else
+#ifdef __ARMEB__
+#define	MACHINE_ARCH	"armeb"
+#else
 #define	MACHINE_ARCH	"arm"
 #endif
-#define	MID_MACHINE	MID_ARM6 
+#endif
+#endif
+#define	MID_MACHINE	MID_ARM6
 
 #if defined(SMP) || defined(KLD_MODULE)
 #ifndef MAXCPU
-#define	MAXCPU		2
+#define	MAXCPU		4
 #endif
 #else
 #define	MAXCPU		1
 #endif /* SMP || KLD_MODULE */
+
+#ifndef MAXMEMDOM
+#define	MAXMEMDOM	1
+#endif
 
 #define	ALIGNBYTES	_ALIGNBYTES
 #define	ALIGN(p)	_ALIGN(p)
@@ -74,7 +90,7 @@
  * ALIGNED_POINTER is a boolean macro that checks whether an address
  * is valid to fetch data elements of type t from on this architecture.
  * This does not reflect the optimal alignment, just the possibility
- * (within reasonable limits). 
+ * (within reasonable limits).
  */
 #define	ALIGNED_POINTER(p, t)	((((unsigned)(p)) & (sizeof(t)-1)) == 0)
 
@@ -92,9 +108,10 @@
 
 #define PDR_SHIFT	20 /* log2(NBPDR) */
 #define NBPDR		(1 << PDR_SHIFT)
+#define PDRMASK		(NBPDR - 1)
 #define NPDEPG          (1 << (32 - PDR_SHIFT))
 
-#define	MAXPAGESIZES	1		/* maximum number of supported page sizes */
+#define	MAXPAGESIZES	2		/* maximum number of supported page sizes */
 
 #ifndef KSTACK_PAGES
 #define KSTACK_PAGES    2
@@ -117,8 +134,8 @@
  */
 #define	trunc_page(x)		((x) & ~PAGE_MASK)
 #define	round_page(x)		(((x) + PAGE_MASK) & ~PAGE_MASK)
-#define	trunc_4mpage(x)		((unsigned)(x) & ~PDRMASK)
-#define	round_4mpage(x)		((((unsigned)(x)) + PDRMASK) & ~PDRMASK)
+#define	trunc_1mpage(x)		((unsigned)(x) & ~PDRMASK)
+#define	round_1mpage(x)		((((unsigned)(x)) + PDRMASK) & ~PDRMASK)
 
 #define	atop(x)			((unsigned)(x) >> PAGE_SHIFT)
 #define	ptoa(x)			((unsigned)(x) << PAGE_SHIFT)

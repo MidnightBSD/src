@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/cddl/compat/opensolaris/kern/opensolaris_kstat.c 217616 2011-01-19 23:00:25Z mdf $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/kern/opensolaris_kstat.c 244155 2012-12-12 16:14:14Z smh $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -118,7 +118,7 @@ kstat_install(kstat_t *ksp)
 		SYSCTL_ADD_PROC(&ksp->ks_sysctl_ctx,
 		    SYSCTL_CHILDREN(ksp->ks_sysctl_root), OID_AUTO, ksent->name,
 		    CTLTYPE_U64 | CTLFLAG_RD, ksent, sizeof(*ksent),
-		    kstat_sysctl, "QU", "");
+		    kstat_sysctl, "QU", ksent->desc);
 	}
 }
 

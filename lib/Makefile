@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: stable/9/lib/Makefile 247544 2013-03-01 10:33:31Z des $
+# $FreeBSD: release/10.0.0/lib/Makefile 258398 2013-11-20 20:24:59Z peter $
 
 .include <bsd.own.mk>
 
@@ -8,10 +8,11 @@
 #
 # csu must be built before all shared libaries for ELF.
 # libc must be built before all other shared libraries.
-# libbsm must be built before ibauditd.
+# libbsm must be built before libauditd.
 # libcom_err must be built before libpam.
 # libcrypt must be built before libpam.
 # libkvm must be built before libdevstat.
+# libldns must be built before libunbound.
 # msun must be built before libg++ and libstdc++.
 # libmd must be built before libatm, libopie, libradius, and libtacplus.
 # ncurses must be built before libdialog, libedit and libreadline.
@@ -31,14 +32,15 @@
 
 SUBDIR_ORDERED=	${_csu} \
 	libc \
+	libc_nonshared \
 	libbsm \
 	libauditd \
-	libcom_err \
 	libcompiler_rt \
 	libcrypt \
 	libelf \
 	${_libiconv_modules} \
 	libkvm \
+	${_libldns} \
 	msun \
 	libmd \
 	ncurses \
@@ -51,6 +53,10 @@ SUBDIR_ORDERED=	${_csu} \
 	${_libypclnt} \
 	${_libcxxrt} \
 	${_libcplusplus}
+
+.if ${MK_KERBEROS_SUPPORT} != "no"
+SUBDIR_ORDERED+=	libcom_err
+.endif
 
 SUBDIR=	${SUBDIR_ORDERED} \
 	libalias \
@@ -66,13 +72,12 @@ SUBDIR=	${SUBDIR_ORDERED} \
 	libcompat \
 	libdevinfo \
 	libdevstat \
-	libdisk \
 	libdwarf \
 	libedit \
 	${_libefi} \
+	libexecinfo \
 	libexpat \
 	libfetch \
-	libftpio \
 	libgeom \
 	${_libgpib} \
 	${_libgssapi} \
@@ -83,10 +88,11 @@ SUBDIR=	${SUBDIR_ORDERED} \
 	libkiconv \
 	liblzma \
 	libmagic \
+	libmandoc \
 	libmemstat \
 	${_libmilter} \
 	${_libmp} \
-	${_libncp} \
+	${_libnandfs} \
 	libnetbsd \
 	${_libngatm} \
 	libopie \
@@ -104,19 +110,23 @@ SUBDIR=	${SUBDIR_ORDERED} \
 	${_libsmutil} \
 	libstand \
 	libstdbuf \
+	libstdthreads \
 	${_libtelnet} \
 	${_libthr} \
 	libthread_db \
 	libufs \
 	libugidfw \
 	libulog \
+	${_libunbound} \
 	${_libusbhid} \
 	${_libusb} \
 	${_libvgl} \
+	${_libvmmapi} \
 	libwrap \
 	liby \
+	libyaml \
 	libz \
-	${_bind} \
+	${_atf} \
 	${_clang}
 
 .if exists(${.CURDIR}/csu/${MACHINE_ARCH}-elf)
@@ -131,12 +141,12 @@ _csu=csu
 
 # NB: keep these sorted by MK_* knobs
 
-.if ${MK_ATM} != "no"
-_libngatm=	libngatm
+.if ${MK_ATF} != "no"
+_atf=		atf
 .endif
 
-.if ${MK_BIND} != "no"
-_bind=		bind
+.if ${MK_ATM} != "no"
+_libngatm=	libngatm
 .endif
 
 .if ${MK_BLUETOOTH} != "no"
@@ -169,6 +179,10 @@ _libiconv_modules=	libiconv_modules
 _libipx=	libipx
 .endif
 
+.if ${MK_LDNS} != "no"
+_libldns=	libldns
+.endif
+
 .if ${MK_LIBCPLUSPLUS} != "no"
 _libcxxrt=	libcxxrt
 _libcplusplus=	libc++
@@ -176,6 +190,10 @@ _libcplusplus=	libc++
 
 .if ${MK_LIBTHR} != "no"
 _libthr=	libthr
+.endif
+
+.if ${MK_NAND} != "no"
+_libnandfs=	libnandfs
 .endif
 
 .if ${MK_NETGRAPH} != "no"
@@ -187,13 +205,14 @@ _libypclnt=	libypclnt
 .endif
 
 .if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
-.if ${MK_NCP} != "no"
-_libncp=	libncp
-.endif
 _libsmb=	libsmb
 _libvgl=	libvgl
 _libproc=	libproc
 _librtld_db=	librtld_db
+.endif
+
+.if ${MACHINE_CPUARCH} == "amd64"
+_libvmmapi=	libvmmapi
 .endif
 
 .if ${MACHINE_CPUARCH} == "ia64"
@@ -201,13 +220,14 @@ _libefi=	libefi
 _libsmb=	libsmb
 .endif
 
-.if ${MACHINE_CPUARCH} == "amd64"
-.if ${MK_NCP} != "no"
-_libncp=	libncp
-.endif
+.if ${MACHINE_CPUARCH} == "mips"
+_libproc=	libproc
+_librtld_db=	librtld_db
 .endif
 
 .if ${MACHINE_CPUARCH} == "powerpc"
+_libproc=	libproc
+_librtld_db=	librtld_db
 _libsmb=	libsmb
 .endif
 
@@ -234,9 +254,18 @@ _libsmutil=	libsmutil
 _libtelnet=	libtelnet
 .endif
 
+.if ${MK_UNBOUND} != "no"
+_libunbound=	libunbound
+.endif
+
 .if ${MK_USB} != "no"
 _libusbhid=	libusbhid
 _libusb=	libusb
+.endif
+
+.if !defined(LIBRARIES_ONLY)
+afterinstall:
+	${INSTALL_SYMLINK} ../include ${DESTDIR}/usr/lib/include
 .endif
 
 .include <bsd.subdir.mk>

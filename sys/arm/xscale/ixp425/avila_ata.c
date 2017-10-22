@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/avila_ata.c 229118 2011-12-31 15:31:34Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/avila_ata.c 236987 2012-06-13 04:38:09Z imp $");
 
 /*
  * Compact Flash Support for the Avila Gateworks XScale boards.
@@ -304,7 +304,7 @@ ata_avila_release_resource(device_t dev, device_t child, int type, int rid,
 }
 
 static int
-ata_avila_setup_intr(device_t dev, device_t child, struct resource *irq, 
+ata_avila_setup_intr(device_t dev, device_t child, struct resource *irq,
 		   int flags, driver_filter_t *filt,
 		   driver_intr_t *function, void *argument, void **cookiep)
 {

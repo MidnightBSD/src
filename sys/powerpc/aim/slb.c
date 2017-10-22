@@ -23,12 +23,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/aim/slb.c 232431 2012-03-03 02:19:33Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/powerpc/aim/slb.c 243040 2012-11-14 20:01:40Z kib $
  */
 
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/systm.h>
@@ -40,7 +41,6 @@
 #include <vm/vm_map.h>
 #include <vm/vm_page.h>
 #include <vm/vm_pageout.h>
-#include <vm/vm_phys.h>
 
 #include <machine/md_var.h>
 #include <machine/platform.h>
@@ -140,7 +140,7 @@ make_new_leaf(uint64_t esid, uint64_t slbv, struct slbtnode *parent)
 	 * that a lockless searcher always sees a valid path through
 	 * the tree.
 	 */
-	powerpc_sync();
+	mb();
 
 	idx = esid2idx(esid, parent->ua_level);
 	parent->u.ua_child[idx] = child;
@@ -188,7 +188,7 @@ make_intermediate(uint64_t esid, struct slbtnode *parent)
 	idx = esid2idx(child->ua_base, inter->ua_level);
 	inter->u.ua_child[idx] = child;
 	setbit(&inter->ua_alloc, idx);
-	powerpc_sync();
+	mb();
 
 	/* Set up parent to point to intermediate node ... */
 	idx = esid2idx(inter->ua_base, parent->ua_level);
@@ -478,15 +478,17 @@ slb_uma_real_alloc(uma_zone_t zone, int bytes, u_int8_t *flags, int wait)
 	static vm_offset_t realmax = 0;
 	void *va;
 	vm_page_t m;
+	int pflags;
 
 	if (realmax == 0)
 		realmax = platform_real_maxaddr();
 
 	*flags = UMA_SLAB_PRIV;
+	pflags = malloc2vm_flags(wait) | VM_ALLOC_NOOBJ | VM_ALLOC_WIRED;
 
 	for (;;) {
-		m = vm_phys_alloc_contig(1, 0, realmax, PAGE_SIZE,
-			    PAGE_SIZE);
+		m = vm_page_alloc_contig(NULL, 0, pflags, 1, 0, realmax,
+		    PAGE_SIZE, PAGE_SIZE, VM_MEMATTR_DEFAULT);
 		if (m == NULL) {
 			if (wait & M_NOWAIT)
 				return (NULL);
@@ -502,10 +504,6 @@ slb_uma_real_alloc(uma_zone_t zone, int bytes, u_int8_t *flags, int wait)
 
 	if ((wait & M_ZERO) && (m->flags & PG_ZERO) == 0)
 		bzero(va, PAGE_SIZE);
-
-	/* vm_phys_alloc_contig does not track wiring */
-	atomic_add_int(&cnt.v_wire_count, 1);
-	m->wire_count = 1;
 
 	return (va);
 }

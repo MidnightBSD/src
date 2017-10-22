@@ -48,7 +48,7 @@
 
 #define HDA_DRV_TEST_REV	"20120126_0002"
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pci/hda/hdac.c 247120 2013-02-21 19:40:46Z mav $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/hda/hdac.c 244980 2013-01-02 21:56:58Z jfv $");
 
 #define hdac_lock(sc)		snd_mtxlock((sc)->lock)
 #define hdac_unlock(sc)		snd_mtxunlock((sc)->lock)

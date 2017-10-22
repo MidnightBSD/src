@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)uio.h	8.5 (Berkeley) 2/22/94
- * $FreeBSD: stable/9/sys/sys/uio.h 223889 2011-07-09 15:21:10Z kib $
+ * $FreeBSD: release/10.0.0/sys/sys/uio.h 255608 2013-09-16 06:25:54Z kib $
  */
 
 #ifndef _SYS_UIO_H_
@@ -89,19 +89,21 @@ struct vm_page;
 struct uio *cloneuio(struct uio *uiop);
 int	copyinfrom(const void * __restrict src, void * __restrict dst,
 	    size_t len, int seg);
-int	copyiniov(struct iovec *iovp, u_int iovcnt, struct iovec **iov,
+int	copyiniov(const struct iovec *iovp, u_int iovcnt, struct iovec **iov,
 	    int error);
 int	copyinstrfrom(const void * __restrict src, void * __restrict dst,
 	    size_t len, size_t * __restrict copied, int seg);
-int	copyinuio(struct iovec *iovp, u_int iovcnt, struct uio **uiop);
+int	copyinuio(const struct iovec *iovp, u_int iovcnt, struct uio **uiop);
 int	copyout_map(struct thread *td, vm_offset_t *addr, size_t sz);
 int	copyout_unmap(struct thread *td, vm_offset_t addr, size_t sz);
+int	physcopyin(void *src, vm_paddr_t dst, size_t len);
+int	physcopyout(vm_paddr_t src, void *dst, size_t len);
 int	uiomove(void *cp, int n, struct uio *uio);
 int	uiomove_frombuf(void *buf, int buflen, struct uio *uio);
 int	uiomove_fromphys(struct vm_page *ma[], vm_offset_t offset, int n,
 	    struct uio *uio);
 int	uiomove_nofault(void *cp, int n, struct uio *uio);
-int	uiomoveco(void *cp, int n, struct uio *uio, int disposable);
+int	uiomove_object(struct vm_object *obj, off_t obj_size, struct uio *uio);
 
 #else /* !_KERNEL */
 

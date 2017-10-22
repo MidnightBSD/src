@@ -22,7 +22,7 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * $FreeBSD: stable/9/sys/dev/drm2/drm_crtc_helper.h 235783 2012-05-22 11:07:44Z kib $
+ * $FreeBSD: release/10.0.0/sys/dev/drm2/drm_crtc_helper.h 254797 2013-08-24 16:50:47Z dumbbell $
  */
 
 /*
@@ -51,7 +51,7 @@ struct drm_crtc_helper_funcs {
 
 	/* Provider can fixup or change mode timings before modeset occurs */
 	bool (*mode_fixup)(struct drm_crtc *crtc,
-			   struct drm_display_mode *mode,
+			   const struct drm_display_mode *mode,
 			   struct drm_display_mode *adjusted_mode);
 	/* Actually set the mode */
 	int (*mode_set)(struct drm_crtc *crtc, struct drm_display_mode *mode,
@@ -78,7 +78,7 @@ struct drm_encoder_helper_funcs {
 	void (*restore)(struct drm_encoder *encoder);
 
 	bool (*mode_fixup)(struct drm_encoder *encoder,
-			   struct drm_display_mode *mode,
+			   const struct drm_display_mode *mode,
 			   struct drm_display_mode *adjusted_mode);
 	void (*prepare)(struct drm_encoder *encoder);
 	void (*commit)(struct drm_encoder *encoder);

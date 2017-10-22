@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/mips/include/hwfunc.h 222813 2011-06-07 08:46:13Z attilio $
+ * $FreeBSD: release/10.0.0/sys/mips/include/hwfunc.h 232853 2012-03-12 07:34:15Z jmallett $
  */
 
 #ifndef _MACHINE_HWFUNC_H_
@@ -30,14 +30,11 @@
 
 #include <sys/_cpuset.h>
 
-struct trapframe;
 struct timecounter;
-/*
- * Hooks downward into hardware functionality.
- */
 
-void platform_halt(void);
-void platform_intr(struct trapframe *);
+/*
+ * Hooks downward into platform functionality.
+ */
 void platform_reset(void);
 void platform_start(__register_t, __register_t,  __register_t, __register_t);
 
@@ -48,7 +45,6 @@ unsigned platform_get_timecount(struct timecounter *);
 
 /* For hardware specific CPU initialization */
 void platform_cpu_init(void);
-void platform_secondary_init(void);
 
 #ifdef SMP
 
@@ -100,6 +96,6 @@ extern void platform_cpu_mask(cpuset_t *mask);
  */
 struct cpu_group *platform_smp_topo(void);
 
-
 #endif	/* SMP */
+
 #endif /* !_MACHINE_HWFUNC_H_ */

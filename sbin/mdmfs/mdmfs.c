@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/mdmfs/mdmfs.c 225534 2011-09-13 20:16:11Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/mdmfs/mdmfs.c 229778 2012-01-07 16:09:33Z uqs $");
 
 #include <sys/param.h>
 #include <sys/mdioctl.h>
@@ -632,7 +632,7 @@ run(int *ofd, const char *cmdline, ...)
 		 * loop.
 		 */
 		(void)fprintf(stderr, "DEBUG: running:");
-		/* Should be equivilent to 'cmd' (before strsep, of course). */
+		/* Should be equivalent to 'cmd' (before strsep, of course). */
 		for (i = 0; argv[i] != NULL; i++)
 			(void)fprintf(stderr, " %s", argv[i]);
 		(void)fprintf(stderr, "\n");

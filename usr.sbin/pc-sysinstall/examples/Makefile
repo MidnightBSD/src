@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/examples/Makefile 209513 2010-06-24 22:21:47Z imp $
+# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/examples/Makefile 209513 2010-06-24 22:21:47Z imp $
 
 FILES=	README pc-autoinstall.conf pcinstall.cfg.fbsd-netinstall \
 	pcinstall.cfg.geli pcinstall.cfg.gmirror pcinstall.cfg.netinstall \

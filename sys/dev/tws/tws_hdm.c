@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/tws/tws_hdm.c 226026 2011-10-04 21:40:25Z delphij $
+ * $FreeBSD: release/10.0.0/sys/dev/tws/tws_hdm.c 247551 2013-03-01 15:48:31Z kevlo $
  */
 
 
@@ -99,7 +99,7 @@ tws_init_ctlr(struct tws_softc *sc)
         regh = tws_read_reg(sc, TWS_I2O0_IOPOBQPH, 4);
         regl = tws_read_reg(sc, TWS_I2O0_IOPOBQPL, 4);
         reg = (((u_int64_t)regh) << 32) | regl;
-        TWS_TRACE_DEBUG(sc, "host outbound clenup",reg, regl);
+        TWS_TRACE_DEBUG(sc, "host outbound cleanup",reg, regl);
         if ( regh == TWS_FIFO_EMPTY32 )
             break;
     } 

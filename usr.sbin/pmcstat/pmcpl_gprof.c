@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pmcstat/pmcpl_gprof.c 237969 2012-07-02 07:14:21Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pmcstat/pmcpl_gprof.c 228990 2011-12-30 10:58:14Z uqs $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -326,7 +326,7 @@ pmcpl_gmon_initimage(struct pmcstat_image *pi)
 	else {
 		/*
 		 * Otherwise use a prefix from the original name and
-		 * upto 3 digits.
+		 * up to 3 digits.
 		 */
 		nlen = strlen(sn);
 		nlen = min(nlen, (int) (sizeof(name)-sizeof("~NNN.gmon")));

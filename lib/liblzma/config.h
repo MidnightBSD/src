@@ -1,4 +1,4 @@
-// $FreeBSD: stable/9/lib/liblzma/config.h 223935 2011-07-11 14:15:27Z mm $
+// $FreeBSD: release/10.0.0/lib/liblzma/config.h 223935 2011-07-11 14:15:27Z mm $
 #define ASSUME_RAM 128
 #define HAVE_CHECK_CRC32 1
 #define HAVE_CHECK_CRC64 1

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/cam/cam_sim.c 249337 2013-04-10 17:49:25Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/cam/cam_sim.c 249108 2013-04-04 20:31:40Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -109,6 +109,7 @@ cam_sim_free(struct cam_sim *sim, int free_devq)
 	union ccb *ccb;
 	int error;
 
+	mtx_assert(sim->mtx, MA_OWNED);
 	sim->refcount--;
 	if (sim->refcount > 0) {
 		error = msleep(sim, sim->mtx, PRIBIO, "simfree", 0);

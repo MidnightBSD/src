@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/kldxref/ef_i386.c 186826 2009-01-06 14:21:17Z luigi $
+ * $FreeBSD: release/10.0.0/usr.sbin/kldxref/ef_i386.c 251439 2013-06-05 21:55:20Z delphij $
  */
 
 #include <sys/types.h>
@@ -32,7 +32,6 @@
 
 #include <err.h>
 #include <errno.h>
-#include <string.h>
 
 #include "ef.h"
 

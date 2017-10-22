@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)rcp.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/rcp/rcp.c 223494 2011-06-24 07:29:04Z kevlo $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/rcp/rcp.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -61,7 +61,6 @@ __FBSDID("$FreeBSD: stable/9/bin/rcp/rcp.c 223494 2011-06-24 07:29:04Z kevlo $")
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <libutil.h>
 #include <limits.h>
 #include <netdb.h>
 #include <paths.h>
@@ -77,12 +76,13 @@ __FBSDID("$FreeBSD: stable/9/bin/rcp/rcp.c 223494 2011-06-24 07:29:04Z kevlo $")
 
 #define	OPTIONS "46dfprt"
 
-struct passwd *pwd;
-u_short	port;
-uid_t	userid;
-int errs, rem;
-int pflag, iamremote, iamrecursive, targetshouldbedirectory;
-int family = PF_UNSPEC;
+static struct passwd *pwd;
+static u_short	port;
+static uid_t	userid;
+static int errs, rem;
+int iamremote;
+static int pflag, iamrecursive, targetshouldbedirectory;
+static int family = PF_UNSPEC;
 
 static int argc_copy;
 static const char **argv_copy;
@@ -90,7 +90,7 @@ static const char **argv_copy;
 static char period[] = ".";
 
 #define	CMDNEEDS	64
-char cmd[CMDNEEDS];		/* must hold "rcp -r -p -d\0" */
+static char cmd[CMDNEEDS];	/* must hold "rcp -r -p -d\0" */
 
 int	 response(void);
 void	 rsource(char *, struct stat *);

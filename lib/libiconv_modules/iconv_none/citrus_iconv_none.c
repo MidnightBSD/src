@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libiconv_modules/iconv_none/citrus_iconv_none.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libiconv_modules/iconv_none/citrus_iconv_none.c 252583 2013-07-03 18:27:45Z peter $ */
 /*	$NetBSD: citrus_iconv_none.c,v 1.2 2003/07/01 09:42:16 tshiozak Exp $	*/
 
 /*-
@@ -97,7 +97,7 @@ _citrus_iconv_none_iconv_uninit_context(struct _citrus_iconv *cv __unused)
 static int
 /*ARGSUSED*/
 _citrus_iconv_none_iconv_convert(struct _citrus_iconv * __restrict ci __unused,
-    char * __restrict * __restrict in, size_t * __restrict inbytes,
+    const char * __restrict * __restrict in, size_t * __restrict inbytes,
     char * __restrict * __restrict out, size_t * __restrict outbytes,
     uint32_t flags __unused, size_t * __restrict invalids)
 {

@@ -23,7 +23,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/rtadvd/control_server.c 225519 2011-09-12 23:52:55Z hrs $
+ * $FreeBSD: release/10.0.0/usr.sbin/rtadvd/control_server.c 225519 2011-09-12 23:52:55Z hrs $
  *
  */
 

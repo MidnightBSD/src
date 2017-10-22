@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libiconv_modules/ISO2022/citrus_iso2022.h 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libiconv_modules/ISO2022/citrus_iso2022.h 219019 2011-02-25 00:04:39Z gabor $ */
 /*	$NetBSD: citrus_iso2022.h,v 1.2 2003/06/25 09:51:44 tshiozak Exp $	*/
 
 /*-

@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/trap.c 233889 2012-04-04 21:19:19Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/trap.c 240244 2012-09-08 18:27:11Z attilio $");
 
 #include "opt_ddb.h"
 #include "opt_ktr.h"
@@ -329,7 +329,6 @@ trap(struct trapframe *tf)
 		}
 
 		userret(td, tf);
-		mtx_assert(&Giant, MA_NOTOWNED);
 	} else {
 		KASSERT((tf->tf_type & T_KERNEL) != 0,
 		    ("trap: kernel trap isn't"));

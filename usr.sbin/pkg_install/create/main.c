@@ -1,5 +1,5 @@
 /*
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Jordan K. Hubbard
@@ -10,7 +10,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/create/main.c 222035 2011-05-17 19:11:47Z flz $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg_install/create/main.c 241830 2012-10-22 02:12:20Z eadler $");
 
 #include <getopt.h>
 #include <err.h>
@@ -72,6 +72,7 @@ main(int argc, char **argv)
     int ch;
     char **pkgs, **start, *tmp;
 
+    warnpkgng();
     pkgs = start = argv;
     while ((ch = getopt_long(argc, argv, opts, longopts, NULL)) != -1)
 	switch(ch) {

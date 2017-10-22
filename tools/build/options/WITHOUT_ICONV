@@ -1,0 +1,2 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_ICONV 254919 2013-08-26 17:15:56Z antoine $
+Set to not build iconv as part of libc.

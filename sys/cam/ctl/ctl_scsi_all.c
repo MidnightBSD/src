@@ -31,7 +31,7 @@
 
 #include <sys/param.h>
 
-__FBSDID("$FreeBSD: stable/9/sys/cam/ctl/ctl_scsi_all.c 229997 2012-01-12 00:34:33Z ken $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/cam/ctl/ctl_scsi_all.c 229997 2012-01-12 00:34:33Z ken $");
 
 #include <sys/types.h>
 #ifdef _KERNEL

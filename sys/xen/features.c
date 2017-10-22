@@ -1,10 +1,10 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/xen/features.c 189699 2009-03-11 15:30:12Z dfr $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/xen/features.c 255040 2013-08-29 19:52:18Z gibbs $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 
-#include <machine/xen/xen-os.h>
+#include <xen/xen-os.h>
 #include <xen/hypervisor.h>
 #include <xen/features.h>
 

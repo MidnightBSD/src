@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/ixdp425_pci.c 196479 2009-08-23 19:54:36Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/ixdp425_pci.c 229125 2011-12-31 15:53:34Z marius $");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
@@ -43,6 +43,9 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/ixdp425_pci.c 196479 2009-08-
 #include <sys/module.h>
 #include <sys/malloc.h>
 #include <sys/rman.h>
+
+#include <dev/pci/pcivar.h>
+
 #include <machine/bus.h>
 #include <machine/intr.h>
 

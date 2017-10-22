@@ -27,7 +27,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/pw/pw_user.c 242916 2012-11-12 14:13:49Z bapt $";
+  "$FreeBSD: release/10.0.0/usr.sbin/pw/pw_user.c 252688 2013-07-04 07:59:11Z des $";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -42,6 +42,9 @@ static const char rcsid[] =
 #include <sys/resource.h>
 #include <unistd.h>
 #include <login_cap.h>
+#include <pwd.h>
+#include <grp.h>
+#include <libutil.h>
 #include "pw.h"
 #include "bitmap.h"
 
@@ -197,7 +200,7 @@ pw_user(struct userconf * cnf, int mode, struct cargs * args)
 			strlcpy(dbuf, cnf->home, sizeof(dbuf));
 			p = dbuf;
 			if (stat(dbuf, &st) == -1) {
-				while ((p = strchr(++p, '/')) != NULL) {
+				while ((p = strchr(p + 1, '/')) != NULL) {
 					*p = '\0';
 					if (stat(dbuf, &st) == -1) {
 						if (mkdir(dbuf, _DEF_DIRMODE) == -1)
@@ -292,7 +295,6 @@ pw_user(struct userconf * cnf, int mode, struct cargs * args)
 	if (mode == M_PRINT && getarg(args, 'a')) {
 		int             pretty = getarg(args, 'P') != NULL;
 		int		v7 = getarg(args, '7') != NULL;
-
 		SETPWENT();
 		while ((pwd = GETPWENT()) != NULL)
 			print_user(pwd, pretty, v7);
@@ -392,7 +394,7 @@ pw_user(struct userconf * cnf, int mode, struct cargs * args)
 				/*
 				 * Remove crontabs
 				 */
-				sprintf(file, "/var/cron/tabs/%s", pwd->pw_name);
+				snprintf(file, sizeof(file), "/var/cron/tabs/%s", pwd->pw_name);
 				if (access(file, F_OK) == 0) {
 					sprintf(file, "crontab -u %s -r", pwd->pw_name);
 					system(file);
@@ -422,7 +424,24 @@ pw_user(struct userconf * cnf, int mode, struct cargs * args)
 				/* non-fatal */
 			}
 
-			editgroups(a_name->val, NULL);
+			grp = GETGRNAM(a_name->val);
+			if (grp != NULL && *grp->gr_mem == NULL)
+				delgrent(GETGRNAM(a_name->val));
+			SETGRENT();
+			while ((grp = GETGRENT()) != NULL) {
+				int i;
+				char group[MAXLOGNAME];
+				for (i = 0; grp->gr_mem[i] != NULL; i++) {
+					if (!strcmp(grp->gr_mem[i], a_name->val)) {
+						while (grp->gr_mem[i] != NULL) {
+							grp->gr_mem[i] = grp->gr_mem[i+1];
+						}	
+						strlcpy(group, grp->gr_name, MAXLOGNAME);
+						chggrent(group, grp);
+					}
+				}
+			}
+			ENDGRENT();
 
 			pw_log(cnf, mode, W_USER, "%s(%ld) account removed", a_name->val, (long) uid);
 
@@ -494,8 +513,6 @@ pw_user(struct userconf * cnf, int mode, struct cargs * args)
 				time_t          now = time(NULL);
 				time_t          expire = parse_date(now, arg->val);
 
-				if (now == expire)
-					errx(EX_DATAERR, "invalid password change date `%s'", arg->val);
 				if (pwd->pw_change != expire) {
 					pwd->pw_change = expire;
 					edited = 1;
@@ -514,8 +531,6 @@ pw_user(struct userconf * cnf, int mode, struct cargs * args)
 				time_t          now = time(NULL);
 				time_t          expire = parse_date(now, arg->val);
 
-				if (now == expire)
-					errx(EX_DATAERR, "invalid account expiry date `%s'", arg->val);
 				if (pwd->pw_expire != expire) {
 					pwd->pw_expire = expire;
 					edited = 1;
@@ -558,7 +573,7 @@ pw_user(struct userconf * cnf, int mode, struct cargs * args)
 
 			lc = login_getpwclass(pwd);
 			if (lc == NULL ||
-			    login_setcryptfmt(lc, "md5", NULL) == NULL)
+			    login_setcryptfmt(lc, "sha512", NULL) == NULL)
 				warn("setting crypt(3) format");
 			login_close(lc);
 			pwd->pw_passwd = pw_password(cnf, args, pwd->pw_name);
@@ -725,8 +740,24 @@ pw_user(struct userconf * cnf, int mode, struct cargs * args)
 	 * Ok, user is created or changed - now edit group file
 	 */
 
-	if (mode == M_ADD || getarg(args, 'G') != NULL)
-		editgroups(pwd->pw_name, cnf->groups);
+	if (mode == M_ADD || getarg(args, 'G') != NULL) {
+		int i;
+		for (i = 0; cnf->groups[i] != NULL; i++) {
+			grp = GETGRNAM(cnf->groups[i]);
+			grp = gr_add(grp, pwd->pw_name);
+			/*
+			 * grp can only be NULL in 2 cases:
+			 * - the new member is already a member
+			 * - a problem with memory occurs
+			 * in both cases we want to skip now.
+			 */
+			if (grp == NULL)
+				continue;
+			chggrent(cnf->groups[i], grp);
+			free(grp);
+		}
+	}
+
 
 	/* go get a current version of pwd */
 	pwd = GETPWNAM(a_name->val);
@@ -1028,6 +1059,7 @@ pw_pwcrypt(char *password)
 {
 	int             i;
 	char            salt[SALTSIZE + 1];
+	char		*cryptpw;
 
 	static char     buf[256];
 
@@ -1038,7 +1070,10 @@ pw_pwcrypt(char *password)
 		salt[i] = chars[arc4random_uniform(sizeof(chars) - 1)];
 	salt[SALTSIZE] = '\0';
 
-	return strcpy(buf, crypt(password, salt));
+	cryptpw = crypt(password, salt);
+	if (cryptpw == NULL)
+		errx(EX_CONFIG, "crypt(3) failure");
+	return strcpy(buf, cryptpw);
 }
 
 
@@ -1086,10 +1121,14 @@ static int
 print_user(struct passwd * pwd, int pretty, int v7)
 {
 	if (!pretty) {
-		char            buf[_UC_MAXLINE];
+		char            *buf;
 
-		fmtpwentry(buf, pwd, v7 ? PWF_PASSWD : PWF_STANDARD);
-		fputs(buf, stdout);
+		if (!v7)
+			pwd->pw_passwd = (pwd->pw_passwd == NULL) ? "" : "*";
+
+		buf = v7 ? pw_make_v7(pwd) : pw_make(pwd);
+		printf("%s\n", buf);
+		free(buf);
 	} else {
 		int		j;
 		char           *p;

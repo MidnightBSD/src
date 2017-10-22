@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pmcstat/pmcstat.c 240093 2012-09-04 17:24:11Z jimharris $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pmcstat/pmcstat.c 241737 2012-10-19 14:49:42Z ed $");
 
 #include <sys/param.h>
 #include <sys/cpuset.h>
@@ -98,20 +98,19 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/pmcstat/pmcstat.c 240093 2012-09-04 17:24:
  *    and starts them. Sets up
  *    monitoring for the child.
  *  - Signals child to start.
- *					- Recieves signal, attempts exec().
+ *					- Receives signal, attempts exec().
  *
  * After this point normal processing can happen.
  */
 
 /* Globals */
 
-int	pmcstat_interrupt = 0;
-int	pmcstat_displayheight = DEFAULT_DISPLAY_HEIGHT;
-int	pmcstat_displaywidth  = DEFAULT_DISPLAY_WIDTH;
-int	pmcstat_sockpair[NSOCKPAIRFD];
-int	pmcstat_kq;
-kvm_t	*pmcstat_kvm;
-struct kinfo_proc *pmcstat_plist;
+int		pmcstat_displayheight = DEFAULT_DISPLAY_HEIGHT;
+int		pmcstat_displaywidth  = DEFAULT_DISPLAY_WIDTH;
+static int	pmcstat_sockpair[NSOCKPAIRFD];
+static int	pmcstat_kq;
+static kvm_t	*pmcstat_kvm;
+static struct kinfo_proc *pmcstat_plist;
 struct pmcstat_args args;
 
 static void
@@ -552,7 +551,7 @@ main(int argc, char **argv)
 	cpuset_t cpumask;
 	double interval;
 	int hcpu, option, npmc, ncpu;
-	int c, check_driver_stats, current_cpu, current_sampling_count;
+	int c, check_driver_stats, current_sampling_count;
 	int do_callchain, do_descendants, do_logproccsw, do_logprocexit;
 	int do_print, do_read;
 	size_t dummy;
@@ -572,7 +571,6 @@ main(int argc, char **argv)
 	char buffer[PATH_MAX];
 
 	check_driver_stats      = 0;
-	current_cpu 		= 0;
 	current_sampling_count  = DEFAULT_SAMPLE_COUNT;
 	do_callchain		= 1;
 	do_descendants          = 0;

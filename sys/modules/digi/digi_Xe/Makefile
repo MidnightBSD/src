@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/digi/digi_Xe/Makefile 76195 2001-05-02 01:08:09Z brian $
+# $FreeBSD: release/10.0.0/sys/modules/digi/digi_Xe/Makefile 76195 2001-05-02 01:08:09Z brian $
 
 .PATH:	${.CURDIR}/../../../dev/digi
 KMOD=	digi_Xe

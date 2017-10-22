@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/bios/apm.c 220844 2011-04-19 16:30:17Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/bios/apm.c 241885 2012-10-22 13:06:09Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

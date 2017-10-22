@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/amd64/include/cputypes.h 186797 2009-01-05 21:51:49Z jkim $
+ * $FreeBSD: release/10.0.0/sys/amd64/include/cputypes.h 186797 2009-01-05 21:51:49Z jkim $
  */
 
 #ifndef _MACHINE_CPUTYPES_H_

@@ -35,7 +35,7 @@
  *
  *	@(#)vmparam.h	8.2 (Berkeley) 4/22/94
  *
- * $FreeBSD: stable/9/sys/ia64/include/vmparam.h 221855 2011-05-13 19:35:01Z mdf $
+ * $FreeBSD: release/10.0.0/sys/ia64/include/vmparam.h 250338 2013-05-07 22:46:24Z attilio $
  */
 
 #ifndef	_MACHINE_VMPARAM_H_
@@ -101,13 +101,6 @@
  * use of the identity mappings in region 7 by UMA.
  */
 #define	VM_NFREEORDER		16
-
-/*
- * Only one memory domain.
- */
-#ifndef VM_NDOMAIN
-#define	VM_NDOMAIN		1
-#endif
 
 /*
  * Disable superpage reservations.
@@ -181,12 +174,13 @@
 /* user/kernel map constants */
 #define	VM_MIN_ADDRESS		0
 #define	VM_MAXUSER_ADDRESS	IA64_RR_BASE(IA64_VM_MINKERN_REGION)
-#define	VM_MIN_KERNEL_ADDRESS	IA64_RR_BASE(IA64_VM_MINKERN_REGION + 1)
-#define	VM_MAX_KERNEL_ADDRESS	\
-		(VM_MIN_KERNEL_ADDRESS + IA64_REGION_GAP_START - 1)
+#define	VM_MIN_KERNEL_ADDRESS	VM_MAXUSER_ADDRESS
+#define	VM_INIT_KERNEL_ADDRESS	IA64_RR_BASE(IA64_VM_MINKERN_REGION + 1)
+#define	VM_MAX_KERNEL_ADDRESS	(IA64_RR_BASE(IA64_VM_MINKERN_REGION + 2) - 1)
 #define	VM_MAX_ADDRESS		~0UL
 
-#define	KERNBASE		VM_MAXUSER_ADDRESS
+/* We link the kernel at IA64_PBVM_BASE. */
+#define	KERNBASE		IA64_PBVM_BASE
 
 /*
  * USRSTACK is the top (end) of the user stack.  Immediately above the user

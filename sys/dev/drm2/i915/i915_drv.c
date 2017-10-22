@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/i915/i915_drv.c 241091 2012-10-01 08:33:39Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/i915/i915_drv.c 257311 2013-10-29 07:35:19Z kib $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm.h>
@@ -685,7 +685,7 @@ gen6_do_reset(struct drm_device *dev, u8 flags)
 
 	/* Spin waiting for the device to ack the reset request */
 	ret = _intel_wait_for(dev,
-	    (I915_READ(GEN6_GDRST) & GEN6_GRDOM_FULL) == 0,
+	    (I915_READ_NOTRACE(GEN6_GDRST) & GEN6_GRDOM_FULL) == 0,
 	    500, 1, "915rst");
 
 	/* If reset with a user forcewake, try to restore, otherwise turn it off */

@@ -36,7 +36,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/libexec/revnetgroup/parse_netgroup.c 93590 2002-04-01 21:13:17Z mike $";
+  "$FreeBSD: release/10.0.0/libexec/revnetgroup/parse_netgroup.c 229780 2012-01-07 16:09:54Z uqs $";
 #endif /* not lint */
 
 /*
@@ -199,8 +199,8 @@ parse_netgrp(char *group)
 	if (lp->l_parsed) {
 #ifdef DEBUG
 		/*
-		 * This error message is largely superflous since the
-		 * code handles the error condition sucessfully, and
+		 * This error message is largely superfluous since the
+		 * code handles the error condition successfully, and
 		 * spewing it out from inside libc can actually hose
 		 * certain programs.
 		 */

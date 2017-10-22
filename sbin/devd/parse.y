@@ -26,9 +26,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/devd/parse.y 147874 2005-07-10 03:37:15Z imp $
+ * $FreeBSD: release/10.0.0/sbin/devd/parse.y 235789 2012-05-22 16:33:10Z bapt $
  */
 
+#include <sys/cdefs.h>
 #include "devd.h"
 #include <stdio.h>
 #include <string.h>

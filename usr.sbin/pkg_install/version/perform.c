@@ -1,5 +1,5 @@
 /*
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/version/perform.c 241135 2012-10-02 17:04:53Z bapt $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg_install/version/perform.c 241737 2012-10-19 14:49:42Z ed $");
 
 #include "lib.h"
 #include "version.h"
@@ -27,9 +27,9 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/version/perform.c 241135 2012-
 #include <fetch.h>
 #include <signal.h>
 
-FILE *IndexFile;
-char IndexPath[PATH_MAX] = "";
-struct index_head Index = SLIST_HEAD_INITIALIZER(Index);
+static FILE *IndexFile;
+static char IndexPath[PATH_MAX] = "";
+static struct index_head Index = SLIST_HEAD_INITIALIZER(Index);
 
 static int pkg_do(char *);
 static void show_version(Package, const char *, const char *);

@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)mkfs.c	8.11 (Berkeley) 5/3/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/newfs/mkfs.c 246284 2013-02-03 12:17:49Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/newfs/mkfs.c 248623 2013-03-22 21:45:28Z mckusick $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -444,6 +444,12 @@ restart:
 	if (sblock.fs_sbsize > SBLOCKSIZE)
 		sblock.fs_sbsize = SBLOCKSIZE;
 	sblock.fs_minfree = minfree;
+	if (metaspace > 0 && metaspace < sblock.fs_fpg / 2)
+		sblock.fs_metaspace = blknum(&sblock, metaspace);
+	else if (metaspace != -1)
+		/* reserve half of minfree for metadata blocks */
+		sblock.fs_metaspace = blknum(&sblock,
+		    (sblock.fs_fpg * minfree) / 200);
 	if (maxbpg == 0)
 		sblock.fs_maxbpg = MAXBLKPG(sblock.fs_bsize);
 	else
@@ -540,7 +546,7 @@ restart:
 	 * Now build the cylinders group blocks and
 	 * then print out indices of cylinder groups.
 	 */
-	printf("super-block backups (for fsck_ffs -b #) at:\n");
+	printf("super-block backups (for fsck -b #) at:\n");
 	i = 0;
 	width = charsperline();
 	/*
@@ -805,7 +811,7 @@ initcg(int cylno, time_t utime)
  */
 #define ROOTLINKCNT 3
 
-struct direct root_dir[] = {
+static struct direct root_dir[] = {
 	{ ROOTINO, sizeof(struct direct), DT_DIR, 1, "." },
 	{ ROOTINO, sizeof(struct direct), DT_DIR, 2, ".." },
 	{ ROOTINO + 1, sizeof(struct direct), DT_DIR, 5, ".snap" },
@@ -813,7 +819,7 @@ struct direct root_dir[] = {
 
 #define SNAPLINKCNT 2
 
-struct direct snap_dir[] = {
+static struct direct snap_dir[] = {
 	{ ROOTINO + 1, sizeof(struct direct), DT_DIR, 1, "." },
 	{ ROOTINO, sizeof(struct direct), DT_DIR, 2, ".." },
 };
@@ -1004,7 +1010,8 @@ iput(union dinode *ip, ino_t ino)
 	sblock.fs_cstotal.cs_nifree--;
 	fscs[0].cs_nifree--;
 	if (ino >= (unsigned long)sblock.fs_ipg * sblock.fs_ncg) {
-		printf("fsinit: inode value out of range (%d).\n", ino);
+		printf("fsinit: inode value out of range (%ju).\n",
+		    (uintmax_t)ino);
 		exit(32);
 	}
 	d = fsbtodb(&sblock, ino_to_fsba(&sblock, ino));

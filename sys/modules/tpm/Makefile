@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/tpm/Makefile 211270 2010-08-13 04:00:35Z takawata $
+# $FreeBSD: release/10.0.0/sys/modules/tpm/Makefile 211270 2010-08-13 04:00:35Z takawata $
 
 .PATH:	${.CURDIR}/../../dev/tpm
 

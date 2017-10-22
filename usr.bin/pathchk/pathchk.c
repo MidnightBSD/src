@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/pathchk/pathchk.c 207483 2010-05-01 22:00:28Z jilles $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/pathchk/pathchk.c 207483 2010-05-01 22:00:28Z jilles $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

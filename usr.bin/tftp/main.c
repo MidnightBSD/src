@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/tftp/main.c 223926 2011-07-11 05:57:49Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tftp/main.c 241737 2012-10-19 14:49:42Z ed $");
 
 /* Many bug fixes are from Jim Guyton <guyton@rand-unix> */
 
@@ -80,7 +80,7 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/tftp/main.c 223926 2011-07-11 05:57:49Z del
 typedef struct	sockaddr_storage peeraddr;
 static int	connected;
 static char	mode[32];
-jmp_buf		toplevel;
+static jmp_buf	toplevel;
 volatile int	txrx_error;
 static int	peer;
 
@@ -89,7 +89,7 @@ static int	margc;
 static char	*margv[MAX_MARGV];
 
 int		verbose;
-char		*port = NULL;
+static char	*port = NULL;
 
 static void	get(int, char **);
 static void	help(int, char **);
@@ -437,16 +437,16 @@ put(int argc, char *argv[])
 		return;
 	}
 	targ = argv[argc - 1];
-	if (rindex(argv[argc - 1], ':')) {
+	if (strrchr(argv[argc - 1], ':')) {
 		char *lcp;
 
 		for (n = 1; n < argc - 1; n++)
-			if (index(argv[n], ':')) {
+			if (strchr(argv[n], ':')) {
 				putusage(argv[0]);
 				return;
 			}
 		lcp = argv[argc - 1];
-		targ = rindex(lcp, ':');
+		targ = strrchr(lcp, ':');
 		*targ++ = 0;
 		if (lcp[0] == '[' && lcp[strlen(lcp) - 1] == ']') {
 			lcp[strlen(lcp) - 1] = '\0';
@@ -477,7 +477,7 @@ put(int argc, char *argv[])
 	}
 				/* this assumes the target is a directory */
 				/* on a remote unix system.  hmmmm.  */
-	cp = index(targ, '\0');
+	cp = strchr(targ, '\0');
 	*cp++ = '/';
 	for (n = 1; n < argc - 1; n++) {
 		strcpy(cp, tail(argv[n]));
@@ -532,7 +532,7 @@ get(int argc, char *argv[])
 	}
 	if (!connected) {
 		for (n = 1; n < argc ; n++)
-			if (rindex(argv[n], ':') == 0) {
+			if (strrchr(argv[n], ':') == 0) {
 				printf("No remote host specified and "
 				    "no host given for file '%s'\n", argv[n]);
 				getusage(argv[0]);
@@ -540,7 +540,7 @@ get(int argc, char *argv[])
 			}
 	}
 	for (n = 1; n < argc ; n++) {
-		src = rindex(argv[n], ':');
+		src = strrchr(argv[n], ':');
 		if (src == NULL)
 			src = argv[n];
 		else {
@@ -681,7 +681,7 @@ tail(char *filename)
 	char *s;
 
 	while (*filename) {
-		s = rindex(filename, '/');
+		s = strrchr(filename, '/');
 		if (s == NULL)
 			break;
 		if (s[1])
@@ -734,7 +734,7 @@ command(void)
                         history(hist, &he, H_ENTER, bp);
 		} else {
 			line[0] = 0;
-			if (fgets(line, sizeof line , stdin) == 0) {
+			if (fgets(line, sizeof line , stdin) == NULL) {
 				if (feof(stdin)) {
 					exit(txrx_error);
 				} else {

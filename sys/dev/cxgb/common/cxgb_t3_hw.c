@@ -28,7 +28,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/cxgb/common/cxgb_t3_hw.c 219945 2011-03-24 01:13:28Z np $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cxgb/common/cxgb_t3_hw.c 249582 2013-04-17 11:40:10Z gabor $");
 
 
 #include <cxgb_include.h>
@@ -1727,7 +1727,7 @@ struct intr_info {
  *	@reg: the interrupt status register to process
  *	@mask: a mask to apply to the interrupt status
  *	@acts: table of interrupt actions
- *	@stats: statistics counters tracking interrupt occurences
+ *	@stats: statistics counters tracking interrupt occurrences
  *
  *	A table driven interrupt handler that applies a set of masks to an
  *	interrupt status word and performs the corresponding actions if the

@@ -36,9 +36,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)tcp.4	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD: stable/9/share/man/man4/tcp.4 243298 2012-11-19 18:54:37Z emaste $
+.\" $FreeBSD: release/10.0.0/share/man/man4/tcp.4 233229 2012-03-20 12:24:36Z maxim $
 .\"
-.Dd November 19, 2012
+.Dd March 7, 2012
 .Dt TCP 4
 .Os
 .Sh NAME
@@ -147,7 +147,7 @@ See
 .Xr mod_cc 4
 for details.
 .It Dv TCP_KEEPINIT
-This write-only 
+This write-only
 .Xr setsockopt 2
 option accepts a per-socket timeout argument of
 .Vt "u_int"
@@ -160,7 +160,7 @@ in the
 .Sx MIB Variables
 section further down.
 .It Dv TCP_KEEPIDLE
-This write-only 
+This write-only
 .Xr setsockopt 2
 option accepts an argument of
 .Vt "u_int"
@@ -176,7 +176,7 @@ in the
 .Sx MIB Variables
 section further down.
 .It Dv TCP_KEEPINTVL
-This write-only 
+This write-only
 .Xr setsockopt 2
 option accepts an argument of
 .Vt "u_int"
@@ -191,7 +191,7 @@ in the
 .Sx MIB Variables
 section further down.
 .It Dv TCP_KEEPCNT
-This write-only 
+This write-only
 .Xr setsockopt 2
 option accepts an argument of
 .Vt "u_int"
@@ -351,14 +351,6 @@ That of 2 results in any
 packets to closed ports being logged.
 Any value unlisted above disables the logging
 (default is 0, i.e., the logging is disabled).
-.It Va slowstart_flightsize
-The number of packets allowed to be in-flight during the
-.Tn TCP
-slow-start phase on a non-local network.
-.It Va local_slowstart_flightsize
-The number of packets allowed to be in-flight during the
-.Tn TCP
-slow-start phase to local machines in the same subnet.
 .It Va msl
 The Maximum Segment Lifetime, in milliseconds, for a packet.
 .It Va keepinit
@@ -476,15 +468,6 @@ maximum segment size.
 This helps throughput in general, but
 particularly affects short transfers and high-bandwidth large
 propagation-delay connections.
-.Pp
-When this feature is enabled, the
-.Va slowstart_flightsize
-and
-.Va local_slowstart_flightsize
-settings are not observed for new
-connection slow starts, but they are still used for slow starts
-that occur when the connection has been idle and starts sending
-again.
 .It Va sack.enable
 Enable support for RFC 2018, TCP Selective Acknowledgment option,
 which allows the receiver to inform the sender about all successfully
@@ -579,6 +562,7 @@ address.
 .Xr intro 4 ,
 .Xr ip 4 ,
 .Xr mod_cc 4 ,
+.Xr siftr 4 ,
 .Xr syncache 4 ,
 .Xr setkey 8
 .Rs

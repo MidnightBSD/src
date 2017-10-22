@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/include/wchar.h 235785 2012-05-22 14:40:39Z theraven $
+ * $FreeBSD: release/10.0.0/include/wchar.h 247411 2013-02-27 19:50:46Z jhb $
  */
 
 /*-
@@ -88,10 +88,8 @@ typedef	__wint_t	wint_t;
 #define	_WINT_T_DECLARED
 #endif
 
-#ifndef	WCHAR_MIN 
-#define	WCHAR_MIN	__INT_MIN
-#define	WCHAR_MAX	__INT_MAX
-#endif
+#define	WCHAR_MIN	__WCHAR_MIN
+#define	WCHAR_MAX	__WCHAR_MAX
 
 #ifndef WEOF
 #define	WEOF 	((wint_t)-1)
@@ -209,6 +207,7 @@ int	wcwidth(wchar_t);
 #if __POSIX_VISIBLE >= 200809 || __BSD_VISIBLE
 size_t	mbsnrtowcs(wchar_t * __restrict, const char ** __restrict, size_t,
 	    size_t, mbstate_t * __restrict);
+FILE	*open_wmemstream(wchar_t **, size_t *);
 wchar_t	*wcpcpy(wchar_t * __restrict, const wchar_t * __restrict);
 wchar_t	*wcpncpy(wchar_t * __restrict, const wchar_t * __restrict, size_t);
 wchar_t	*wcsdup(const wchar_t *) __malloc_like;

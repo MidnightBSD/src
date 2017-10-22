@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/Osd/OsdSynch.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/Osd/OsdSynch.c 254300 2013-08-13 21:34:03Z jkim $");
 
 #include <contrib/dev/acpica/include/acpi.h>
 #include <contrib/dev/acpica/include/accommon.h>
@@ -208,7 +208,7 @@ AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Timeout)
 			tmo -= slptick;
 		}
 	}
-	if (status == AE_OK)
+	if (ACPI_SUCCESS(status))
 		as->as_units -= Units;
 
 	mtx_unlock(&as->as_lock);
@@ -402,7 +402,7 @@ AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout)
 			tmo -= slptick;
 		}
 	}
-	if (status == AE_OK)
+	if (ACPI_SUCCESS(status))
 		am->am_owner = curthread;
 
 	mtx_unlock(&am->am_lock);
@@ -566,8 +566,6 @@ AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags)
 }
 
 /* Section 5.2.10.1: global lock acquire/release functions */
-#define	GL_BIT_PENDING	0x01
-#define	GL_BIT_OWNED	0x02
 
 /*
  * Acquire the global lock.  If busy, set the pending bit.  The caller
@@ -575,18 +573,18 @@ AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags)
  * and then attempt to acquire it again.
  */
 int
-acpi_acquire_global_lock(uint32_t *lock)
+acpi_acquire_global_lock(volatile uint32_t *lock)
 {
 	uint32_t	new, old;
 
 	do {
 		old = *lock;
-		new = (old & ~GL_BIT_PENDING) | GL_BIT_OWNED;
-		if ((old & GL_BIT_OWNED) != 0)
-			new |= GL_BIT_PENDING;
-	} while (atomic_cmpset_acq_int(lock, old, new) == 0);
+		new = (old & ~ACPI_GLOCK_PENDING) | ACPI_GLOCK_OWNED;
+		if ((old & ACPI_GLOCK_OWNED) != 0)
+			new |= ACPI_GLOCK_PENDING;
+	} while (atomic_cmpset_32(lock, old, new) == 0);
 
-	return ((new & GL_BIT_PENDING) == 0);
+	return ((new & ACPI_GLOCK_PENDING) == 0);
 }
 
 /*
@@ -595,14 +593,14 @@ acpi_acquire_global_lock(uint32_t *lock)
  * releases the lock.
  */
 int
-acpi_release_global_lock(uint32_t *lock)
+acpi_release_global_lock(volatile uint32_t *lock)
 {
 	uint32_t	new, old;
 
 	do {
 		old = *lock;
-		new = old & ~(GL_BIT_PENDING | GL_BIT_OWNED);
-	} while (atomic_cmpset_rel_int(lock, old, new) == 0);
+		new = old & ~(ACPI_GLOCK_PENDING | ACPI_GLOCK_OWNED);
+	} while (atomic_cmpset_32(lock, old, new) == 0);
 
-	return ((old & GL_BIT_PENDING) != 0);
+	return ((old & ACPI_GLOCK_PENDING) != 0);
 }

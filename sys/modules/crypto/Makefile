@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/crypto/Makefile 212496 2010-09-12 16:28:26Z ivoras $
+# $FreeBSD: release/10.0.0/sys/modules/crypto/Makefile 212496 2010-09-12 16:28:26Z ivoras $
 
 .PATH:	${.CURDIR}/../../opencrypto
 .PATH:	${.CURDIR}/../../crypto

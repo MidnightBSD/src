@@ -4,7 +4,7 @@
 # Author: Jordan K Hubbard
 # Date:   22 June 2001
 #
-# $FreeBSD: stable/9/release/powerpc/mkisoimages.sh 224866 2011-08-14 14:36:32Z nwhitehorn $
+# $FreeBSD: release/10.0.0/release/powerpc/mkisoimages.sh 255641 2013-09-17 17:30:49Z nwhitehorn $
 #
 # This script is used by release/Makefile to build the (optional) ISO images
 # for a FreeBSD release.  It is considered architecture dependent since each
@@ -40,7 +40,7 @@ if [ "x$1" = "x-b" ]; then
 <chrp-boot>
 <description>FreeBSD Install</description>
 <os-name>FreeBSD</os-name>
-<boot-script>boot &device;:&partition;,\ppc\chrp\loader</boot-script>
+<boot-script>boot &device;:,\ppc\chrp\loader</boot-script>
 </chrp-boot>
 EOF
 	bootable="$bootable -o chrp-boot"
@@ -58,12 +58,12 @@ if [ $# -lt 3 ]; then
 	exit 1
 fi
 
-LABEL=$1; shift
+LABEL=`echo $1 | tr '[:lower:]' '[:upper:]'`; shift
 NAME=$1; shift
 
-echo "/dev/iso9660/`echo $LABEL | tr '[:lower:]' '[:upper:]'` / cd9660 ro 0 0" > $1/etc/fstab
-makefs -t cd9660 $bootable -o rockridge -o label=$LABEL $NAME $*
+publisher="The FreeBSD Project.  http://www.FreeBSD.org/"
+echo "/dev/iso9660/$LABEL / cd9660 ro 0 0" > $1/etc/fstab
+makefs -t cd9660 $bootable -o rockridge -o label=$LABEL -o publisher="$publisher" $NAME $*
 rm $1/etc/fstab
 rm /tmp/hfs-boot-block
 rm -rf $1/ppc
-

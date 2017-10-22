@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/spibus/spi.h 160452 2006-07-17 21:18:03Z cognet $ */
+/* $FreeBSD: release/10.0.0/sys/dev/spibus/spi.h 239626 2012-08-23 22:38:37Z imp $ */
 
 struct spi_command {
 	void	*tx_cmd;
@@ -10,3 +10,5 @@ struct spi_command {
 	void	*rx_data;
 	uint32_t rx_data_sz;
 };
+
+#define	SPI_CHIP_SELECT_HIGH	0x1		/* Chip select high (else low) */

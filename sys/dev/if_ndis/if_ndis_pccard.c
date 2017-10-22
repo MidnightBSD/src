@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/if_ndis/if_ndis_pccard.c 229922 2012-01-10 07:38:46Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/if_ndis/if_ndis_pccard.c 229401 2012-01-03 18:40:41Z dim $");
 
 #include <sys/ctype.h>
 #include <sys/param.h>

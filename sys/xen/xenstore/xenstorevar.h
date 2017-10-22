@@ -28,7 +28,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * $FreeBSD: stable/9/sys/xen/xenstore/xenstorevar.h 222975 2011-06-11 04:59:01Z gibbs $
+ * $FreeBSD: release/10.0.0/sys/xen/xenstore/xenstorevar.h 255040 2013-08-29 19:52:18Z gibbs $
  */
 
 #ifndef _XEN_XENSTORE_XENSTOREVAR_H
@@ -41,8 +41,8 @@
 #include <sys/sbuf.h>
 
 #include <machine/stdarg.h>
-#include <machine/xen/xen-os.h>
 
+#include <xen/xen-os.h>
 #include <xen/interface/grant_table.h>
 #include <xen/interface/io/xenbus.h>
 #include <xen/interface/io/xs_wire.h>

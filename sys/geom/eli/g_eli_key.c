@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/eli/g_eli_key.c 220922 2011-04-21 13:31:43Z pjd $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/eli/g_eli_key.c 238114 2012-07-04 17:43:25Z pjd $");
 
 #include <sys/param.h>
 #ifdef _KERNEL
@@ -197,7 +197,7 @@ g_eli_mkey_propagate(struct g_eli_softc *sc, const unsigned char *mkey)
 	mkey += sizeof(sc->sc_ivkey);
 
 	/*
-	 * The authentication key is: akey = HMAC_SHA512(Master-Key, 0x11)
+	 * The authentication key is: akey = HMAC_SHA512(Data-Key, 0x11)
 	 */
 	if ((sc->sc_flags & G_ELI_FLAG_AUTH) != 0) {
 		g_eli_crypto_hmac(mkey, G_ELI_MAXKEYLEN, "\x11", 1,
@@ -209,7 +209,7 @@ g_eli_mkey_propagate(struct g_eli_softc *sc, const unsigned char *mkey)
 	/* Initialize encryption keys. */
 	g_eli_key_init(sc);
 
-	if (sc->sc_flags & G_ELI_FLAG_AUTH) {
+	if ((sc->sc_flags & G_ELI_FLAG_AUTH) != 0) {
 		/*
 		 * Precalculate SHA256 for HMAC key generation.
 		 * This is expensive operation and we can do it only once now or

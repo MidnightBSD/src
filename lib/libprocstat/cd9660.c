@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libprocstat/cd9660.c 221807 2011-05-12 10:11:39Z stas $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libprocstat/cd9660.c 235602 2012-05-18 10:15:46Z gleb $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -84,7 +84,7 @@ isofs_filestat(kvm_t *kd, struct vnode *vp, struct vnstat *vn)
 	}
 	vn->vn_fsid = dev2udev(kd, mnt.im_dev);
 	vn->vn_mode = (mode_t)isonode.inode.iso_mode;
-	vn->vn_fileid = (long)isonode.i_number;
-	vn->vn_size = (u_long)isonode.i_size;
+	vn->vn_fileid = isonode.i_number;
+	vn->vn_size = isonode.i_size;
 	return (0);
 }

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/examples/Makefile 249503 2013-04-15 07:01:20Z bapt $
+# $FreeBSD: release/10.0.0/share/examples/Makefile 256366 2013-10-12 06:08:18Z rpaulo $
 #
 # Doing a make install builds /usr/share/examples
 
@@ -7,6 +7,7 @@
 LDIRS=	BSD_daemon \
 	FreeBSD_version \
 	IPv6 \
+	bhyve \
 	bootforth \
 	csh \
 	cvsup \
@@ -20,12 +21,11 @@ LDIRS=	BSD_daemon \
 	ipfw \
 	jails \
 	kld \
+	libusb20 \
 	libvgl \
 	mdoc \
 	netgraph \
-	nwclient \
 	perfmon \
-	portal \
 	ppi \
 	ppp \
 	printing \
@@ -43,6 +43,7 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	FreeBSD_version/Makefile \
 	FreeBSD_version/README \
 	IPv6/USAGE \
+	bhyve/vmrun.sh \
 	bootforth/README \
 	bootforth/boot.4th \
 	bootforth/frames.4th \
@@ -53,7 +54,6 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	csh/dot.cshrc \
 	cvsup/README \
 	cvsup/cvs-supfile \
-	cvsup/gnats-supfile \
 	cvsup/stable-supfile \
 	cvsup/standard-supfile \
 	diskless/ME \
@@ -105,6 +105,12 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	kld/syscall/module/syscall.c \
 	kld/syscall/test/Makefile \
 	kld/syscall/test/call.c \
+	libusb20/Makefile \
+	libusb20/README \
+	libusb20/aux.c \
+	libusb20/aux.h \
+	libusb20/bulk.c \
+	libusb20/control.c \
 	libvgl/Makefile \
 	libvgl/demo.c \
 	mdoc/POSIX-copyright \
@@ -120,13 +126,9 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	netgraph/udp.tunnel \
 	netgraph/virtual.chain \
 	netgraph/virtual.lan \
-	nwclient/dot.nwfsrc \
-	nwclient/nwfs.sh.sample \
 	perfmon/Makefile \
 	perfmon/README \
 	perfmon/perfmon.c \
-	portal/README \
-	portal/portal.conf \
 	ppi/Makefile \
 	ppi/ppilcd.c \
 	ppp/chap-auth \

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/sys/sem.h 224016 2011-07-14 14:18:14Z bz $ */
+/* $FreeBSD: release/10.0.0/sys/sys/sem.h 224016 2011-07-14 14:18:14Z bz $ */
 /*	$NetBSD: sem.h,v 1.5 1994/06/29 06:45:15 cgd Exp $	*/
 
 /*

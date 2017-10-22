@@ -74,10 +74,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_fastfwd.c 243586 2012-11-27 01:59:51Z ae $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/ip_fastfwd.c 254889 2013-08-25 21:54:41Z markj $");
 
 #include "opt_ipfw.h"
 #include "opt_ipstealth.h"
+#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -85,6 +86,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/ip_fastfwd.c 243586 2012-11-27 01:59:51
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/protosw.h>
+#include <sys/sdt.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 
@@ -97,6 +99,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/ip_fastfwd.c 243586 2012-11-27 01:59:51
 #include <net/vnet.h>
 
 #include <netinet/in.h>
+#include <netinet/in_kdtrace.h>
 #include <netinet/in_systm.h>
 #include <netinet/in_var.h>
 #include <netinet/ip.h>
@@ -164,7 +167,7 @@ ip_fastforward(struct mbuf *m)
 	struct sockaddr_in *dst = NULL;
 	struct ifnet *ifp;
 	struct in_addr odest, dest;
-	u_short sum, ip_len;
+	uint16_t sum, ip_len, ip_off;
 	int error = 0;
 	int hlen, mtu;
 	struct m_tag *fwd_tag = NULL;
@@ -338,12 +341,6 @@ ip_fastforward(struct mbuf *m)
 	 * Step 3: incoming packet firewall processing
 	 */
 
-	/*
-	 * Convert to host representation
-	 */
-	ip->ip_len = ntohs(ip->ip_len);
-	ip->ip_off = ntohs(ip->ip_off);
-
 	odest.s_addr = dest.s_addr = ip->ip_dst.s_addr;
 
 	/*
@@ -462,8 +459,6 @@ passin:
 forwardlocal:
 			/*
 			 * Return packet for processing by ip_input().
-			 * Keep host byte order as expected at ip_input's
-			 * "ours"-label.
 			 */
 			m->m_flags |= M_FASTFWD_OURS;
 			if (ro.ro_rt)
@@ -489,6 +484,8 @@ passout:
 	/*
 	 * Step 6: send off the packet
 	 */
+	ip_len = ntohs(ip->ip_len);
+	ip_off = ntohs(ip->ip_off);
 
 	/*
 	 * Check if route is dampned (when ARP is unable to resolve)
@@ -504,7 +501,7 @@ passout:
 	/*
 	 * Check if there is enough space in the interface queue
 	 */
-	if ((ifp->if_snd.ifq_len + ip->ip_len / ifp->if_mtu + 1) >=
+	if ((ifp->if_snd.ifq_len + ip_len / ifp->if_mtu + 1) >=
 	    ifp->if_snd.ifq_maxlen) {
 		IPSTAT_INC(ips_odropped);
 		/* would send source quench here but that is depreciated */
@@ -528,23 +525,23 @@ passout:
 	else
 		mtu = ifp->if_mtu;
 
-	if (ip->ip_len <= mtu ||
-	    (ifp->if_hwassist & CSUM_FRAGMENT && (ip->ip_off & IP_DF) == 0)) {
+	if (ip_len <= mtu ||
+	    (ifp->if_hwassist & CSUM_FRAGMENT && (ip_off & IP_DF) == 0)) {
 		/*
-		 * Restore packet header fields to original values
+		 * Avoid confusing lower layers.
 		 */
-		ip->ip_len = htons(ip->ip_len);
-		ip->ip_off = htons(ip->ip_off);
+		m_clrprotoflags(m);
 		/*
 		 * Send off the packet via outgoing interface
 		 */
+		IP_PROBE(send, NULL, NULL, ip, ifp, ip, NULL);
 		error = (*ifp->if_output)(ifp, m,
 				(struct sockaddr *)dst, &ro);
 	} else {
 		/*
 		 * Handle EMSGSIZE with icmp reply needfrag for TCP MTU discovery
 		 */
-		if (ip->ip_off & IP_DF) {
+		if (ip_off & IP_DF) {
 			IPSTAT_INC(ips_cantfrag);
 			icmp_error(m, ICMP_UNREACH, ICMP_UNREACH_NEEDFRAG,
 				0, mtu);
@@ -554,14 +551,8 @@ passout:
 			 * We have to fragment the packet
 			 */
 			m->m_pkthdr.csum_flags |= CSUM_IP;
-			/*
-			 * ip_fragment expects ip_len and ip_off in host byte
-			 * order but returns all packets in network byte order
-			 */
-			if (ip_fragment(ip, &m, mtu, ifp->if_hwassist,
-					(~ifp->if_hwassist & CSUM_DELAY_IP))) {
+			if (ip_fragment(ip, &m, mtu, ifp->if_hwassist))
 				goto drop;
-			}
 			KASSERT(m != NULL, ("null mbuf and no error"));
 			/*
 			 * Send off the fragments via outgoing interface
@@ -570,7 +561,12 @@ passout:
 			do {
 				m0 = m->m_nextpkt;
 				m->m_nextpkt = NULL;
+				/*
+				 * Avoid confusing lower layers.
+				 */
+				m_clrprotoflags(m);
 
+				IP_PROBE(send, NULL, NULL, ip, ifp, ip, NULL);
 				error = (*ifp->if_output)(ifp, m,
 					(struct sockaddr *)dst, &ro);
 				if (error)

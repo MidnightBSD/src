@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/csup/stream.c 204556 2010-03-02 07:26:07Z lulf $
+ * $FreeBSD: release/10.0.0/usr.bin/csup/stream.c 204556 2010-03-02 07:26:07Z lulf $
  */
 
 #include <sys/types.h>

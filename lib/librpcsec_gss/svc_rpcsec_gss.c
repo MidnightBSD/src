@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/lib/librpcsec_gss/svc_rpcsec_gss.c 201145 2009-12-28 22:56:30Z antoine $
+ *	$FreeBSD: release/10.0.0/lib/librpcsec_gss/svc_rpcsec_gss.c 241720 2012-10-19 05:43:38Z ed $
  */
 /*
   svc_rpcsec_gss.c
@@ -140,8 +140,8 @@ TAILQ_HEAD(svc_rpc_gss_client_list, svc_rpc_gss_client);
 
 #define CLIENT_HASH_SIZE	256
 #define CLIENT_MAX		128
-struct svc_rpc_gss_client_list svc_rpc_gss_client_hash[CLIENT_HASH_SIZE];
-struct svc_rpc_gss_client_list svc_rpc_gss_clients;
+static struct svc_rpc_gss_client_list svc_rpc_gss_client_hash[CLIENT_HASH_SIZE];
+static struct svc_rpc_gss_client_list svc_rpc_gss_clients;
 static size_t svc_rpc_gss_client_count;
 static uint32_t svc_rpc_gss_next_clientid = 1;
 

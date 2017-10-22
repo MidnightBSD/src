@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #-
-# Copyright (c) 2005 Dag-Erling Coïdan Smørgrav
+# Copyright (c) 2005 Dag-Erling CoÃ¯dan SmÃ¸rgrav
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/tools/tools/ansify/ansify.pl 153393 2005-12-13 22:21:46Z des $
+# $FreeBSD: release/10.0.0/tools/tools/ansify/ansify.pl 228953 2011-12-29 12:33:27Z uqs $
 #
 
 use v5.6.0;

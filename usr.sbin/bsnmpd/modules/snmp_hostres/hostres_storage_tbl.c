@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_storage_tbl.c 249271 2013-04-08 19:48:40Z trociny $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_storage_tbl.c 248707 2013-03-25 19:12:36Z trociny $
  */
 
 /*
@@ -133,7 +133,7 @@ static const struct asn_oid OIDX_hrStorageVirtualMemory_c =
     OIDX_hrStorageVirtualMemory;
 
 /**
- * Create a new entry into the storage table and, if neccessary, an
+ * Create a new entry into the storage table and, if necessary, an
  * entry into the storage map.
  */
 static struct storage_entry *

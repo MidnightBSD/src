@@ -28,7 +28,7 @@
 #ifndef lint
 __RCSID("$NetBSD: main.c,v 1.10 1997/10/01 02:18:14 enami Exp $");
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/fsck_msdosfs/main.c 203872 2010-02-14 12:30:30Z kib $";
+  "$FreeBSD: release/10.0.0/sbin/fsck_msdosfs/main.c 236213 2012-05-29 01:48:06Z kevlo $";
 #endif /* not lint */
 
 #include <stdlib.h>
@@ -138,6 +138,7 @@ ask(int def, const char *fmt, ...)
 
 	va_start(ap, fmt);
 	vsnprintf(prompt, sizeof(prompt), fmt, ap);
+	va_end(ap);
 	if (alwaysyes || rdonly) {
 		printf("%s? %s\n", prompt, rdonly ? "no" : "yes");
 		return !rdonly;

@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/drm_sysctl.c 235783 2012-05-22 11:07:44Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/drm_sysctl.c 255012 2013-08-28 23:43:28Z jkim $");
 
 /** @file drm_sysctl.c
  * Implementation of various sysctls for controlling DRM behavior and reporting
@@ -177,7 +177,15 @@ static int drm_vm_info DRM_SYSCTL_HANDLER_ARGS
 {
 	struct drm_device *dev = arg1;
 	drm_local_map_t *map, *tempmaps;
-	const char   *types[] = { "FB", "REG", "SHM", "AGP", "SG" };
+	const char *types[] = {
+		[_DRM_FRAME_BUFFER] = "FB",
+		[_DRM_REGISTERS] = "REG",
+		[_DRM_SHM] = "SHM",
+		[_DRM_AGP] = "AGP",
+		[_DRM_SCATTER_GATHER] = "SG",
+		[_DRM_CONSISTENT] = "CONS",
+		[_DRM_GEM] = "GEM"
+	};
 	const char *type, *yesno;
 	int i, mapcount;
 	char buf[128];
@@ -211,10 +219,20 @@ static int drm_vm_info DRM_SYSCTL_HANDLER_ARGS
 	for (i = 0; i < mapcount; i++) {
 		map = &tempmaps[i];
 
-		if (map->type < 0 || map->type > 4)
+		switch(map->type) {
+		default:
 			type = "??";
-		else
+			break;
+		case _DRM_FRAME_BUFFER:
+		case _DRM_REGISTERS:
+		case _DRM_SHM:
+		case _DRM_AGP:
+		case _DRM_SCATTER_GATHER:
+		case _DRM_CONSISTENT:
+		case _DRM_GEM:
 			type = types[map->type];
+			break;
+		}
 
 		if (!map->mtrr)
 			yesno = "no";

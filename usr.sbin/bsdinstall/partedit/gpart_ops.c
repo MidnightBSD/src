@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/bsdinstall/partedit/gpart_ops.c 248237 2013-03-13 13:41:28Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/partedit/gpart_ops.c 255817 2013-09-23 14:18:34Z nwhitehorn $
  */
 
 #include <sys/param.h>
@@ -954,7 +954,8 @@ addpartform:
 	}
 
 	/* If there isn't one, and we need one, ask */
-	if (strcmp(items[2].text, "/") == 0 && bootpart_size(scheme) > 0 &&
+	if ((strcmp(items[0].text, "freebsd") == 0 ||
+	    strcmp(items[2].text, "/") == 0) && bootpart_size(scheme) > 0 &&
 	    pp == NULL) {
 		if (interactive)
 			choice = dialog_yesno("Boot Partition",

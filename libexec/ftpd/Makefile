@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/4/94
-# $FreeBSD: stable/9/libexec/ftpd/Makefile 159276 2006-06-05 15:50:34Z yar $
+# $FreeBSD: release/10.0.0/libexec/ftpd/Makefile 159276 2006-06-05 15:50:34Z yar $
 
 .include <bsd.own.mk>
 

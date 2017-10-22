@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/fdc/fdc_acpi.c 208650 2010-05-30 03:45:41Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/fdc/fdc_acpi.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -258,7 +258,7 @@ static device_method_t fdc_acpi_methods[] = {
 	DEVMETHOD(bus_read_ivar,	fdc_read_ivar),
 	DEVMETHOD(bus_write_ivar,	fdc_write_ivar),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t fdc_acpi_driver = {

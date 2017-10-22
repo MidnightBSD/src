@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/rmi/dev/xlr/rge.c 223562 2011-06-26 10:07:48Z kevlo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/rmi/dev/xlr/rge.c 243882 2012-12-05 08:04:20Z glebius $");
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -568,7 +568,7 @@ get_mbuf(void)
 {
 	struct mbuf *m_new = NULL;
 
-	if ((m_new = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR)) == NULL)
+	if ((m_new = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR)) == NULL)
 		return NULL;
 
 	m_new->m_len = MCLBYTES;

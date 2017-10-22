@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl.h#5 $
- * $FreeBSD: stable/9/sys/cam/ctl/ctl.h 237821 2012-06-29 21:19:24Z ken $
+ * $FreeBSD: release/10.0.0/sys/cam/ctl/ctl.h 254759 2013-08-24 01:50:31Z trasz $
  */
 /*
  * Function definitions used both within CTL and potentially in various CTL
@@ -52,6 +52,7 @@ typedef enum {
 	CTL_PORT_SCSI		= 0x02,
 	CTL_PORT_IOCTL		= 0x04,
 	CTL_PORT_INTERNAL	= 0x08,
+	CTL_PORT_ISCSI		= 0x10,
 	CTL_PORT_ALL		= 0xff,
 	CTL_PORT_ISC		= 0x100 // FC port for inter-shelf communication
 } ctl_port_type;

@@ -27,12 +27,15 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/9/93
- *	$FreeBSD: stable/9/usr.bin/tset/extern.h 216370 2010-12-11 08:32:16Z joel $
+ *	$FreeBSD: release/10.0.0/usr.bin/tset/extern.h 241737 2012-10-19 14:49:42Z ed $
  */
+
+#include <termios.h>
 
 extern struct termios mode, oldmode;
 extern int Columns, isreset, Lines;
 extern int erasech, intrchar, killch;
+extern speed_t Ospeed;
 
 void	 add_mapping(const char *, char *);
 void	 cat(char *);

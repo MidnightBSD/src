@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/sio/sio.c 235405 2012-05-13 17:04:46Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/sio/sio.c 237693 2012-06-28 07:28:39Z imp $");
 
 #include "opt_compat.h"
 #include "opt_gdb.h"
@@ -278,6 +278,11 @@ static int	sio_inited;
 
 /* table and macro for fast conversion from a unit number to its com struct */
 devclass_t	sio_devclass;
+/*
+ * XXX Assmues that devclass_get_device, devclass_get_softc and
+ * device_get_softc are fast interrupt safe.  The current implementation
+ * of these functions are.
+ */
 #define	com_addr(unit)	((struct com_s *) \
 			 devclass_get_softc(sio_devclass, unit)) /* XXX */
 

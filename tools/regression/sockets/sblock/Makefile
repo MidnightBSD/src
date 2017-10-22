@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/tools/regression/sockets/sblock/Makefile 169311 2007-05-06 14:28:49Z rwatson $
+# $FreeBSD: release/10.0.0/tools/regression/sockets/sblock/Makefile 169311 2007-05-06 14:28:49Z rwatson $
 #
 
 PROG=	sblock

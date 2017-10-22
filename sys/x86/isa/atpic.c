@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/x86/isa/atpic.c 234144 2012-04-11 20:04:31Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/x86/isa/atpic.c 255726 2013-09-20 05:06:03Z gibbs $");
 
 #include "opt_auto_eoi.h"
 #include "opt_isa.h"
@@ -123,7 +123,7 @@ static void atpic_eoi_slave(struct intsrc *isrc);
 static void atpic_enable_intr(struct intsrc *isrc);
 static void atpic_disable_intr(struct intsrc *isrc);
 static int atpic_vector(struct intsrc *isrc);
-static void atpic_resume(struct pic *pic);
+static void atpic_resume(struct pic *pic, bool suspend_cancelled);
 static int atpic_source_pending(struct intsrc *isrc);
 static int atpic_config_intr(struct intsrc *isrc, enum intr_trigger trig,
     enum intr_polarity pol);
@@ -276,7 +276,7 @@ atpic_source_pending(struct intsrc *isrc)
 }
 
 static void
-atpic_resume(struct pic *pic)
+atpic_resume(struct pic *pic, bool suspend_cancelled)
 {
 	struct atpic *ap = (struct atpic *)pic;
 

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/skel/dot.profile 199243 2009-11-13 05:54:55Z ed $
+# $FreeBSD: release/10.0.0/share/skel/dot.profile 199243 2009-11-13 05:54:55Z ed $
 #
 # .profile - Bourne Shell startup script for login shells
 #

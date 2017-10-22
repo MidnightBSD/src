@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2006 Michael Bushkov <bushman@freebsd.org>
- * All rights repwded.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libc/nss/test-getpw.c 168754 2007-04-15 11:02:31Z bushman $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/libc/nss/test-getpw.c 251867 2013-06-17 20:27:20Z eadler $");
 
 #include <assert.h>
 #include <errno.h>

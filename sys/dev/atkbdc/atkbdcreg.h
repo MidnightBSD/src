@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/atkbdc/atkbdcreg.h 216492 2010-12-16 17:14:37Z jhb $
+ * $FreeBSD: release/10.0.0/sys/dev/atkbdc/atkbdcreg.h 216492 2010-12-16 17:14:37Z jhb $
  * from kbdio.h,v 1.8 1998/09/25 11:55:46 yokota Exp
  */
 

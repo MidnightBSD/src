@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net/if_dead.c 199975 2009-11-30 21:25:57Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/net/if_dead.c 249925 2013-04-26 12:50:32Z glebius $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>
@@ -42,7 +42,7 @@ __FBSDID("$FreeBSD: stable/9/sys/net/if_dead.c 199975 2009-11-30 21:25:57Z jhb $
 #include <net/if_var.h>
 
 static int
-ifdead_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *sa,
+ifdead_output(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *sa,
     struct route *ro)
 {
 

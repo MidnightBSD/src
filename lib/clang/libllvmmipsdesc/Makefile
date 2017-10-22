@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/clang/libllvmmipsdesc/Makefile 246637 2013-02-10 21:24:47Z dim $
+# $FreeBSD: release/10.0.0/lib/clang/libllvmmipsdesc/Makefile 249423 2013-04-12 17:57:40Z dim $
 
 .include <bsd.own.mk>
 
@@ -8,9 +8,11 @@ SRCDIR=	lib/Target/Mips/MCTargetDesc
 SRCS=	MipsAsmBackend.cpp \
 	MipsDirectObjLower.cpp \
 	MipsELFObjectWriter.cpp \
+	MipsELFStreamer.cpp \
 	MipsMCAsmInfo.cpp \
 	MipsMCCodeEmitter.cpp \
-	MipsMCTargetDesc.cpp
+	MipsMCTargetDesc.cpp \
+	MipsReginfo.cpp
 CFLAGS+= -I${LLVM_SRCS}/${SRCDIR}/..
 
 TGHDRS=	MipsGenInstrInfo \

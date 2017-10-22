@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/mk/bsd.info.mk 248531 2013-03-19 20:00:34Z brooks $
+# $FreeBSD: release/10.0.0/share/mk/bsd.info.mk 245752 2013-01-21 22:40:39Z brooks $
 #
 # The include file <bsd.info.mk> handles installing GNU (tech)info files.
 # Texinfo is a documentation system that uses a single source
@@ -113,7 +113,7 @@ DVIPS2ASCII?=	dvips2ascii
 
 .info.html:
 	${INFO2HTML} ${.IMPSRC}
-	ln -f ${.TARGET:R}.info.Top.html ${.TARGET}
+	${INSTALL_LINK} ${.TARGET:R}.info.Top.html ${.TARGET}
 
 .PATH: ${.CURDIR} ${SRCDIR}
 

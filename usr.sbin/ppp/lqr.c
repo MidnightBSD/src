@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/ppp/lqr.c 242095 2012-10-25 20:45:57Z n_hibma $
+ * $FreeBSD: release/10.0.0/usr.sbin/ppp/lqr.c 241496 2012-10-12 22:48:33Z n_hibma $
  */
 
 #include <sys/param.h>

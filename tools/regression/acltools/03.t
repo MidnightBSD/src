@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/tools/regression/acltools/03.t 219266 2011-03-04 17:07:02Z trasz $
+# $FreeBSD: release/10.0.0/tools/regression/acltools/03.t 219266 2011-03-04 17:07:02Z trasz $
 #
 
 # This is a wrapper script to run tools-crossfs.test between UFS without

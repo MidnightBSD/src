@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/i18n/csmapper/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD: release/10.0.0/share/i18n/csmapper/Makefile 255651 2013-09-17 20:09:25Z jilles $
 # $NetBSD: Makefile,v 1.13 2007/03/13 16:34:37 tnozaki Exp $
 
 FILESDIR= ${CSMAPPERDIR}
@@ -7,10 +7,11 @@ SUBDIR=	APPLE AST BIG5 CNS CP EBCDIC GB GEORGIAN ISO646 ISO-8859 JIS \
 	KAZAKH KOI KS MISC TCVN
 
 mapper.dir: ${SUBDIR}
-	touch ${.TARGET}
-.for i in ${SUBDIR}
-	cat ${i}/mapper.dir.${i} >> ${.TARGET}
-.endfor
+	newfile=$$(for i in ${SUBDIR}; do \
+		cat $$i/mapper.dir.$$i; \
+	done); \
+	[ "$$newfile" = "$$(cat ${.TARGET} 2>/dev/null)" ] || \
+		printf '%s\n' "$$newfile" >${.TARGET}
 mapper.dir.db: mapper.dir
 	${MKCSMAPPER} -m -o ${.TARGET} ${.ALLSRC}
 
@@ -18,10 +19,11 @@ FILES+=	mapper.dir mapper.dir.db
 CLEANFILES+= mapper.dir mapper.dir.db
 
 charset.pivot: ${SUBDIR}
-	touch ${.TARGET}
-.for i in ${SUBDIR}
-	cat ${i}/charset.pivot.${i} >> ${.TARGET}
-.endfor
+	newfile=$$(for i in ${SUBDIR}; do \
+		cat $$i/charset.pivot.$$i; \
+	done); \
+	[ "$$newfile" = "$$(cat ${.TARGET} 2>/dev/null)" ] || \
+		printf '%s\n' "$$newfile" >${.TARGET}
 charset.pivot.pvdb: charset.pivot
 	${MKCSMAPPER} -p -o ${.TARGET} ${.ALLSRC}
 

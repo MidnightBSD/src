@@ -1,6 +1,6 @@
 # Latin-7 / Baltic Rim (backward compatible with ASCII)
 #
-# $FreeBSD: stable/9/share/colldef/la_LN.ISO8859-13.src 196788 2009-09-03 16:53:11Z ache $
+# $FreeBSD: release/10.0.0/share/colldef/la_LN.ISO8859-13.src 196788 2009-09-03 16:53:11Z ache $
 #
 charmap map.ISO8859-13
 order \

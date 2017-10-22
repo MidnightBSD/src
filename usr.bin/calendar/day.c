@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/calendar/day.c 205872 2010-03-30 06:42:01Z edwin $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/calendar/day.c 241737 2012-10-19 14:49:42Z ed $");
 
 #include <err.h>
 #include <locale.h>
@@ -39,7 +39,7 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/calendar/day.c 205872 2010-03-30 06:42:01Z 
 
 #include "calendar.h"
 
-time_t			time1, time2;
+static time_t		time1, time2;
 const struct tm		tm0;
 char			dayname[100];
 int			year1, year2;

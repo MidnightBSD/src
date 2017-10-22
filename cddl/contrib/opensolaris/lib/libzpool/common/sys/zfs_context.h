@@ -20,6 +20,7 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013 by Delphix. All rights reserved.
  * Copyright (c) 2012, Joyent, Inc. All rights reserved.
  */
 
@@ -60,6 +61,8 @@ extern "C" {
 #include <umem.h>
 #include <inttypes.h>
 #include <fsshare.h>
+#include <pthread.h>
+#include <sys/debug.h>
 #include <sys/note.h>
 #include <sys/types.h>
 #include <sys/cred.h>
@@ -84,6 +87,9 @@ extern "C" {
 #include <sys/sysevent/dev.h>
 #include <machine/atomic.h>
 #include <sys/debug.h>
+#ifdef illumos
+#include "zfs.h"
+#endif
 
 #define	ZFS_EXPORTS_PATH	"/etc/zfs/exports"
 
@@ -131,28 +137,64 @@ extern int aok;
 
 #ifdef DTRACE_PROBE
 #undef	DTRACE_PROBE
-#define	DTRACE_PROBE(a)	((void)0)
 #endif	/* DTRACE_PROBE */
+#ifdef illumos
+#define	DTRACE_PROBE(a) \
+	ZFS_PROBE0(#a)
+#endif
 
 #ifdef DTRACE_PROBE1
 #undef	DTRACE_PROBE1
-#define	DTRACE_PROBE1(a, b, c)	((void)0)
 #endif	/* DTRACE_PROBE1 */
+#ifdef illumos
+#define	DTRACE_PROBE1(a, b, c) \
+	ZFS_PROBE1(#a, (unsigned long)c)
+#endif
 
 #ifdef DTRACE_PROBE2
 #undef	DTRACE_PROBE2
-#define	DTRACE_PROBE2(a, b, c, d, e)	((void)0)
 #endif	/* DTRACE_PROBE2 */
+#ifdef illumos
+#define	DTRACE_PROBE2(a, b, c, d, e) \
+	ZFS_PROBE2(#a, (unsigned long)c, (unsigned long)e)
+#endif
 
 #ifdef DTRACE_PROBE3
 #undef	DTRACE_PROBE3
-#define	DTRACE_PROBE3(a, b, c, d, e, f, g)	((void)0)
 #endif	/* DTRACE_PROBE3 */
+#ifdef illumos
+#define	DTRACE_PROBE3(a, b, c, d, e, f, g) \
+	ZFS_PROBE3(#a, (unsigned long)c, (unsigned long)e, (unsigned long)g)
+#endif
 
 #ifdef DTRACE_PROBE4
 #undef	DTRACE_PROBE4
-#define	DTRACE_PROBE4(a, b, c, d, e, f, g, h, i)	((void)0)
 #endif	/* DTRACE_PROBE4 */
+#ifdef illumos
+#define	DTRACE_PROBE4(a, b, c, d, e, f, g, h, i) \
+	ZFS_PROBE4(#a, (unsigned long)c, (unsigned long)e, (unsigned long)g, \
+	(unsigned long)i)
+#endif
+
+#ifdef illumos
+/*
+ * We use the comma operator so that this macro can be used without much
+ * additional code.  For example, "return (EINVAL);" becomes
+ * "return (SET_ERROR(EINVAL));".  Note that the argument will be evaluated
+ * twice, so it should not have side effects (e.g. something like:
+ * "return (SET_ERROR(log_error(EINVAL, info)));" would log the error twice).
+ */
+#define	SET_ERROR(err)	(ZFS_SET_ERROR(err), err)
+#else	/* !illumos */
+
+#define	DTRACE_PROBE(a)	((void)0)
+#define	DTRACE_PROBE1(a, b, c)	((void)0)
+#define	DTRACE_PROBE2(a, b, c, d, e)	((void)0)
+#define	DTRACE_PROBE3(a, b, c, d, e, f, g)	((void)0)
+#define	DTRACE_PROBE4(a, b, c, d, e, f, g, h, i)	((void)0)
+
+#define SET_ERROR(err) (err)
+#endif	/* !illumos */
 
 /*
  * Threads
@@ -242,6 +284,9 @@ typedef int krw_t;
 #define	RW_WRITE_HELD(x)	((x)->rw_owner == curthread)
 #define	RW_LOCK_HELD(x)		rw_lock_held(x)
 
+#undef RW_LOCK_HELD
+#define	RW_LOCK_HELD(x)		(RW_READ_HELD(x) || RW_WRITE_HELD(x))
+
 extern void rw_init(krwlock_t *rwlp, char *name, int type, void *arg);
 extern void rw_destroy(krwlock_t *rwlp);
 extern void rw_enter(krwlock_t *rwlp, krw_t rw);
@@ -252,6 +297,7 @@ extern int rw_lock_held(krwlock_t *rwlp);
 #define	rw_downgrade(rwlp) do { } while (0)
 
 extern uid_t crgetuid(cred_t *cr);
+extern uid_t crgetruid(cred_t *cr);
 extern gid_t crgetgid(cred_t *cr);
 extern int crgetngroups(cred_t *cr);
 extern gid_t *crgetgroups(cred_t *cr);
@@ -267,8 +313,18 @@ extern void cv_init(kcondvar_t *cv, char *name, int type, void *arg);
 extern void cv_destroy(kcondvar_t *cv);
 extern void cv_wait(kcondvar_t *cv, kmutex_t *mp);
 extern clock_t cv_timedwait(kcondvar_t *cv, kmutex_t *mp, clock_t abstime);
+extern clock_t cv_timedwait_hires(kcondvar_t *cvp, kmutex_t *mp, hrtime_t tim,
+    hrtime_t res, int flag);
 extern void cv_signal(kcondvar_t *cv);
 extern void cv_broadcast(kcondvar_t *cv);
+
+/*
+ * Thread-specific data
+ */
+#define	tsd_get(k) pthread_getspecific(k)
+#define	tsd_set(k, v) pthread_setspecific(k, v)
+#define	tsd_create(kp, d) pthread_key_create(kp, d)
+#define	tsd_destroy(kp) /* nothing */
 
 /*
  * Kernel memory
@@ -276,9 +332,9 @@ extern void cv_broadcast(kcondvar_t *cv);
 #define	KM_SLEEP		UMEM_NOFAIL
 #define	KM_PUSHPAGE		KM_SLEEP
 #define	KM_NOSLEEP		UMEM_DEFAULT
-#define	KM_NODEBUG		0
 #define	KMC_NODEBUG		UMC_NODEBUG
 #define	KMC_NOTOUCH		0	/* not needed for userland caches */
+#define	KM_NODEBUG		0
 #define	kmem_alloc(_s, _f)	umem_alloc(_s, _f)
 #define	kmem_zalloc(_s, _f)	umem_zalloc(_s, _f)
 #define	kmem_free(_b, _s)	umem_free(_b, _s)
@@ -430,14 +486,6 @@ extern int fop_getattr(vnode_t *vp, vattr_t *vap);
 
 #define	vn_lock(vp, type)
 #define	VOP_UNLOCK(vp, type)
-#ifdef VFS_LOCK_GIANT
-#undef VFS_LOCK_GIANT
-#endif
-#define	VFS_LOCK_GIANT(mp)	0
-#ifdef VFS_UNLOCK_GIANT
-#undef VFS_UNLOCK_GIANT
-#endif
-#define	VFS_UNLOCK_GIANT(vfslocked)
 
 extern int vn_open(char *path, int x1, int oflags, int mode, vnode_t **vpp,
     int x2, int x3);
@@ -527,7 +575,7 @@ typedef struct callb_cpr {
 #define	INGLOBALZONE(z)			(1)
 
 extern char *kmem_asprintf(const char *fmt, ...);
-#define	strfree(str) kmem_free((str), strlen(str)+1)
+#define	strfree(str) kmem_free((str), strlen(str) + 1)
 
 /*
  * Hostname information
@@ -613,11 +661,55 @@ typedef	uint32_t	idmap_rid_t;
 
 #define	SX_SYSINIT(name, lock, desc)
 
+#define SYSCTL_HANDLER_ARGS struct sysctl_oid *oidp, void *arg1,	\
+	intptr_t arg2, struct sysctl_req *req
+
+/*
+ * This describes the access space for a sysctl request.  This is needed
+ * so that we can use the interface from the kernel or from user-space.
+ */
+struct sysctl_req {
+	struct thread	*td;		/* used for access checking */
+	int		lock;		/* wiring state */
+	void		*oldptr;
+	size_t		oldlen;
+	size_t		oldidx;
+	int		(*oldfunc)(struct sysctl_req *, const void *, size_t);
+	void		*newptr;
+	size_t		newlen;
+	size_t		newidx;
+	int		(*newfunc)(struct sysctl_req *, void *, size_t);
+	size_t		validlen;
+	int		flags;
+};
+
+SLIST_HEAD(sysctl_oid_list, sysctl_oid);
+
+/*
+ * This describes one "oid" in the MIB tree.  Potentially more nodes can
+ * be hidden behind it, expanded by the handler.
+ */
+struct sysctl_oid {
+	struct sysctl_oid_list *oid_parent;
+	SLIST_ENTRY(sysctl_oid) oid_link;
+	int		oid_number;
+	u_int		oid_kind;
+	void		*oid_arg1;
+	intptr_t	oid_arg2;
+	const char	*oid_name;
+	int 		(*oid_handler)(SYSCTL_HANDLER_ARGS);
+	const char	*oid_fmt;
+	int		oid_refcnt;
+	u_int		oid_running;
+	const char	*oid_descr;
+};
+
 #define	SYSCTL_DECL(...)
 #define	SYSCTL_NODE(...)
 #define	SYSCTL_INT(...)
 #define	SYSCTL_UINT(...)
 #define	SYSCTL_ULONG(...)
+#define	SYSCTL_PROC(...)
 #define	SYSCTL_QUAD(...)
 #define	SYSCTL_UQUAD(...)
 #ifdef TUNABLE_INT
@@ -628,6 +720,8 @@ typedef	uint32_t	idmap_rid_t;
 #define	TUNABLE_INT(...)
 #define	TUNABLE_ULONG(...)
 #define	TUNABLE_QUAD(...)
+
+int sysctl_handle_64(SYSCTL_HANDLER_ARGS);
 
 /* Errors */
 

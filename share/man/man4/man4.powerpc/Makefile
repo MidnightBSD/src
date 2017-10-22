@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/man/man4/man4.powerpc/Makefile 230751 2012-01-29 18:54:25Z jhibbits $
+# $FreeBSD: release/10.0.0/share/man/man4/man4.powerpc/Makefile 226449 2011-10-16 21:01:42Z nwhitehorn $
 
 MAN=	adb.4 \
 	akbd.4 \

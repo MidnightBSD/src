@@ -13,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/src/s_cbrt.c 219571 2011-03-12 16:50:39Z kargl $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_cbrt.c 219571 2011-03-12 16:50:39Z kargl $");
 
 #include "math.h"
 #include "math_private.h"

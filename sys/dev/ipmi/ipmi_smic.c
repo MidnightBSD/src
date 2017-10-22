@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ipmi/ipmi_smic.c 172836 2007-10-20 23:23:23Z julian $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ipmi/ipmi_smic.c 248705 2013-03-25 14:30:34Z melifaro $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -362,6 +362,7 @@ smic_loop(void *arg)
 
 	IPMI_LOCK(sc);
 	while ((req = ipmi_dequeue_request(sc)) != NULL) {
+		IPMI_UNLOCK(sc);
 		ok = 0;
 		for (i = 0; i < 3 && !ok; i++)
 			ok = smic_polled_request(sc, req);
@@ -369,6 +370,7 @@ smic_loop(void *arg)
 			req->ir_error = 0;
 		else
 			req->ir_error = EIO;
+		IPMI_LOCK(sc);
 		ipmi_complete_request(sc, req);
 	}
 	IPMI_UNLOCK(sc);

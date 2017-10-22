@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/psim/uart_iobus.c 160722 2006-07-26 19:39:55Z marcel $
+ * $FreeBSD: release/10.0.0/sys/powerpc/psim/uart_iobus.c 160722 2006-07-26 19:39:55Z marcel $
  */
 
 /*

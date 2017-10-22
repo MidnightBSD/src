@@ -1,4 +1,6 @@
-# $FreeBSD: stable/9/usr.bin/clang/llvm-prof/Makefile 245431 2013-01-14 19:51:26Z dim $
+# $FreeBSD: release/10.0.0/usr.bin/clang/llvm-prof/Makefile 246705 2013-02-12 05:56:00Z andrew $
+
+.include <bsd.own.mk>
 
 PROG_CXX=llvm-prof
 

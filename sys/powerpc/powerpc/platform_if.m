@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/sys/powerpc/powerpc/platform_if.m 215159 2010-11-12 04:18:19Z nwhitehorn $
+# $FreeBSD: release/10.0.0/sys/powerpc/powerpc/platform_if.m 255417 2013-09-09 12:49:19Z nwhitehorn $
 #
 
 #include <sys/param.h>
@@ -79,6 +79,10 @@ CODE {
 	static vm_offset_t platform_null_real_maxaddr(platform_t plat)
 	{
 		return (VM_MAX_ADDRESS);
+	}
+	static void platform_null_smp_ap_init(platform_t plat)
+	{
+		return;
 	}
 };
 
@@ -183,6 +187,14 @@ METHOD int smp_start_cpu {
 	platform_t	_plat;
 	struct pcpu	*_cpu;
 };
+
+/**
+ * @brief Start a CPU
+ *
+ */
+METHOD void smp_ap_init {
+	platform_t	_plat;
+} DEFAULT platform_null_smp_ap_init;
 
 /**
  * @brief Return SMP topology

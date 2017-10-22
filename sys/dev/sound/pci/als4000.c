@@ -46,7 +46,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pci/als4000.c 193640 2009-06-07 19:12:08Z ariff $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/als4000.c 254263 2013-08-12 23:30:01Z scottl $");
 
 /* Debugging macro's */
 #undef DEB
@@ -806,16 +806,13 @@ static int
 als_pci_attach(device_t dev)
 {
 	struct sc_info *sc;
-	u_int32_t data;
 	char status[SND_STATUSLEN];
 
 	sc = malloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
 	sc->lock = snd_mtxcreate(device_get_nameunit(dev), "snd_als4000 softc");
 	sc->dev = dev;
 
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= (PCIM_CMD_PORTEN | PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
+	pci_enable_busmaster(dev);
 	/*
 	 * By default the power to the various components on the
          * ALS4000 is entirely controlled by the pci powerstate.  We

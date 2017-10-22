@@ -23,14 +23,14 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/9/sys/powerpc/powermac/ata_macio.c 200171 2009-12-06 00:10:13Z mav $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powermac/ata_macio.c 256857 2013-10-21 19:11:15Z andreast $");
 
 /*
  * Mac-io ATA controller
  */
-#include "opt_ata.h"
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -85,7 +85,7 @@ struct ide_timings {
 	int active;     /* minimum command active time [ns] */
 };
 
-struct ide_timings pio_timings[5] = {
+static const struct ide_timings pio_timings[5] = {
 	{ 600, 180 },	/* PIO 0 */
 	{ 390, 150 },	/* PIO 1 */
 	{ 240, 105 },	/* PIO 2 */
@@ -122,7 +122,7 @@ static device_method_t ata_macio_methods[] = {
 
 	/* ATA interface */
 	DEVMETHOD(ata_setmode,		ata_macio_setmode),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 struct ata_macio_softc {
@@ -143,7 +143,7 @@ static driver_t ata_macio_driver = {
 	sizeof(struct ata_macio_softc),
 };
 
-DRIVER_MODULE(ata, macio, ata_macio_driver, ata_devclass, 0, 0);
+DRIVER_MODULE(ata, macio, ata_macio_driver, ata_devclass, NULL, NULL);
 MODULE_DEPEND(ata, ata, 1, 1, 1);
 
 static int
@@ -152,8 +152,6 @@ ata_macio_probe(device_t dev)
 	const char *type = ofw_bus_get_type(dev);
 	const char *name = ofw_bus_get_name(dev);
 	struct ata_macio_softc *sc;
-	struct ata_channel *ch;
-	int rid, i;
 
 	if (strcmp(type, "ata") != 0 &&
 	    strcmp(type, "ide") != 0)
@@ -161,7 +159,6 @@ ata_macio_probe(device_t dev)
 
 	sc = device_get_softc(dev);
 	bzero(sc, sizeof(struct ata_macio_softc));
-	ch = &sc->sc_ch.sc_ch;
 
 	if (strcmp(name,"ata-4") == 0) {
 		device_set_desc(dev,"Apple MacIO Ultra ATA Controller");
@@ -173,7 +170,23 @@ ata_macio_probe(device_t dev)
 		sc->max_mode = ATA_WDMA2;
 	}
 
+	return (ata_probe(dev));
+}
+
+static int
+ata_macio_attach(device_t dev)
+{
+	struct ata_macio_softc *sc = device_get_softc(dev);
+	uint32_t timingreg;
+	struct ata_channel *ch;
+	int rid, i;
+
+	/*
+	 * Allocate resources
+	 */
+
 	rid = 0;
+	ch = &sc->sc_ch.sc_ch;
 	sc->sc_mem = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid, 
 	    RF_ACTIVE);
 	if (sc->sc_mem == NULL) {
@@ -195,15 +208,6 @@ ata_macio_probe(device_t dev)
 	ch->unit = 0;
 	ch->flags |= ATA_USE_16BIT | ATA_NO_ATAPI_DMA;
 	ata_generic_hw(dev);
-
-	return (ata_probe(dev));
-}
-
-static int
-ata_macio_attach(device_t dev)
-{
-	struct ata_macio_softc *sc = device_get_softc(dev);
-	uint32_t timingreg;
 
 #if USE_DBDMA_IRQ
 	int dbdma_irq_rid = 1;
@@ -332,4 +336,3 @@ ata_macio_begin_transaction(struct ata_request *request)
 
 	return ata_begin_transaction(request);
 }
-

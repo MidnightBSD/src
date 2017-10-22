@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netgraph/atm/ngatmbase.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netgraph/atm/ngatmbase.c 241394 2012-10-10 08:36:38Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/module.h>

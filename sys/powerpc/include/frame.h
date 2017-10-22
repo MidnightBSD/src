@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: frame.h,v 1.2 1999/01/10 10:13:15 tsubai Exp $
- * $FreeBSD: stable/9/sys/powerpc/include/frame.h 219718 2011-03-17 19:44:00Z andreast $
+ * $FreeBSD: release/10.0.0/sys/powerpc/include/frame.h 255282 2013-09-05 23:28:50Z nwhitehorn $
  */
 
 #ifndef	_MACHINE_FRAME_H_
@@ -94,6 +94,7 @@ struct callframe {
 	register_t	cf_func;
 	register_t	cf_arg0;
 	register_t	cf_arg1;
+	register_t	_padding;	/* Maintain 16-byte alignment */
 };
 #else
 struct callframe {
@@ -102,6 +103,7 @@ struct callframe {
 	register_t	cf_func;
 	register_t	cf_arg0;
 	register_t	cf_arg1;
+	register_t	_padding;	/* Maintain 16-byte alignment */
 };
 #endif
 

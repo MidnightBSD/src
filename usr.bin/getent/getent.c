@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/getent/getent.c 241075 2012-09-30 16:17:54Z kevlo $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/getent/getent.c 250942 2013-05-23 20:52:30Z ghelmer $");
 
 #include <sys/socket.h>
 #include <sys/param.h>
@@ -61,6 +61,7 @@ static int	parsenum(const char *, unsigned long *);
 static int	ethers(int, char *[]);
 static int	group(int, char *[]);
 static int	hosts(int, char *[]);
+static int	netgroup(int, char *[]);
 static int	networks(int, char *[]);
 static int	passwd(int, char *[]);
 static int	protocols(int, char *[]);
@@ -89,6 +90,7 @@ static struct getentdb {
 	{	"rpc",		rpc,		},
 	{	"services",	services,	},
 	{	"shells",	shells,		},
+	{	"netgroup",	netgroup,	},
 	{	"utmpx",	utmpx,		},
 
 	{	NULL,		NULL,		},
@@ -571,6 +573,47 @@ shells(int argc, char *argv[])
 }
 
 /*
+ * netgroup
+ */
+static int
+netgroup(int argc, char *argv[])
+{
+	char		*host, *user, *domain;
+	int		first;
+	int		rv, i;
+
+	assert(argc > 1);
+	assert(argv != NULL);
+
+#define NETGROUPPRINT(s)	(((s) != NULL) ? (s) : "")
+
+	rv = RV_OK;
+	if (argc == 2) {
+		fprintf(stderr, "Enumeration not supported on netgroup\n");
+		rv = RV_NOENUM;
+	} else {
+		for (i = 2; i < argc; i++) {
+			setnetgrent(argv[i]);
+			first = 1;
+			while (getnetgrent(&host, &user, &domain) != 0) {
+				if (first) {
+					first = 0;
+					(void)fputs(argv[i], stdout);
+				}
+				(void)printf(" (%s,%s,%s)",
+				    NETGROUPPRINT(host),
+				    NETGROUPPRINT(user),
+				    NETGROUPPRINT(domain));
+			}
+			if (!first)
+				(void)putchar('\n');
+			endnetgrent();
+		}
+	}
+	return rv;
+}
+
+/*
  * utmpx
  */
 
@@ -610,13 +653,24 @@ utmpxprint(const struct utmpx *ut)
 		printf("\" pid=\"%d\" user=\"%s\" line=\"%s\" host=\"%s\"\n",
 		    ut->ut_pid, ut->ut_user, ut->ut_line, ut->ut_host);
 		break;
+	case INIT_PROCESS:
+		printf("init process: id=\"");
+		UTMPXPRINTID;
+		printf("\" pid=\"%d\"\n", ut->ut_pid);
+		break;
+	case LOGIN_PROCESS:
+		printf("login process: id=\"");
+		UTMPXPRINTID;
+		printf("\" pid=\"%d\" user=\"%s\" line=\"%s\" host=\"%s\"\n",
+		    ut->ut_pid, ut->ut_user, ut->ut_line, ut->ut_host);
+		break;
 	case DEAD_PROCESS:
 		printf("dead process: id=\"");
 		UTMPXPRINTID;
 		printf("\" pid=\"%d\"\n", ut->ut_pid);
 		break;
 	default:
-		printf("unknown record type\n");
+		printf("unknown record type %hu\n", ut->ut_type);
 		break;
 	}
 }

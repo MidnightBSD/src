@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/mpc85xx/i2c.c 209908 2010-07-11 21:08:29Z raj $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/mpc85xx/i2c.c 235935 2012-05-24 21:09:38Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -71,9 +71,6 @@ __FBSDID("$FreeBSD: stable/9/sys/powerpc/mpc85xx/i2c.c 209908 2010-07-11 21:08:2
 #define I2C_BAUD_RATE_FAST	0x31
 #define I2C_BAUD_RATE_DEF	0x3F
 #define I2C_DFSSR_DIV		0x10
-
-#define DEBUG
-#undef DEBUG
 
 #ifdef  DEBUG
 #define debugf(fmt, args...) do { printf("%s(): ", __func__); printf(fmt,##args); } while (0)

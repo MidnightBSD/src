@@ -43,7 +43,7 @@ static char sccsid[] = "From: @(#)comm.c	8.4 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/comm/comm.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/comm/comm.c 227235 2011-11-06 18:49:10Z ed $");
 
 #include <err.h>
 #include <limits.h>
@@ -57,12 +57,12 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/comm/comm.c 216370 2010-12-11 08:32:16Z joe
 #include <wchar.h>
 #include <wctype.h>
 
-int iflag;
-const char *tabs[] = { "", "\t", "\t\t" };
+static int iflag;
+static const char *tabs[] = { "", "\t", "\t\t" };
 
-FILE   *file(const char *);
-wchar_t	*convert(const char *);
-void	show(FILE *, const char *, const char *, char **, size_t *);
+static FILE	*file(const char *);
+static wchar_t	*convert(const char *);
+static void	show(FILE *, const char *, const char *, char **, size_t *);
 static void	usage(void);
 
 int
@@ -189,7 +189,7 @@ main(int argc, char *argv[])
 	exit(0);
 }
 
-wchar_t *
+static wchar_t *
 convert(const char *str)
 {
 	size_t n;
@@ -212,7 +212,7 @@ convert(const char *str)
 	return (buf);
 }
 
-void
+static void
 show(FILE *fp, const char *fn, const char *offset, char **bufp, size_t *buflenp)
 {
 	ssize_t n;
@@ -228,7 +228,7 @@ show(FILE *fp, const char *fn, const char *offset, char **bufp, size_t *buflenp)
 		err(1, "%s", fn);
 }
 
-FILE *
+static FILE *
 file(const char *name)
 {
 	FILE *fp;

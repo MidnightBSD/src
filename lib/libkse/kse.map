@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libkse/kse.map 176060 2008-02-06 20:44:29Z des $ */
+/* $FreeBSD: release/10.0.0/lib/libkse/kse.map 176060 2008-02-06 20:44:29Z des $ */
 
 /*
  * Use the same naming scheme as libc.

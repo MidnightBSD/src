@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/posixshm/test.h 175383 2008-01-16 15:51:24Z jhb $
+ * $FreeBSD: release/10.0.0/tools/regression/posixshm/test.h 175383 2008-01-16 15:51:24Z jhb $
  */
 
 #ifndef __TEST_H__

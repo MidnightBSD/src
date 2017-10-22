@@ -22,8 +22,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/libexec/talkd/extern.h 112998 2003-04-03 05:13:27Z jmallett $
+ * $FreeBSD: release/10.0.0/libexec/talkd/extern.h 241777 2012-10-20 10:33:15Z ed $
  */
+
+extern int debug;
+extern char hostname[];
 
 int	announce(CTL_MSG *, const char *);
 int	delete_invite(u_int32_t);

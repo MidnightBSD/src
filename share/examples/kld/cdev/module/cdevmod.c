@@ -65,7 +65,7 @@
  * SUCH DAMAGE.
  *
  *
- * $FreeBSD: stable/9/share/examples/kld/cdev/module/cdevmod.c 158751 2006-05-19 20:02:44Z sobomax $
+ * $FreeBSD: release/10.0.0/share/examples/kld/cdev/module/cdevmod.c 158751 2006-05-19 20:02:44Z sobomax $
  */
 #include <sys/param.h>
 #include <sys/systm.h>

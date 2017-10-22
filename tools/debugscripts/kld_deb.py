@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/tools/debugscripts/kld_deb.py 143864 2005-03-20 02:08:21Z jmg $
+# $FreeBSD: release/10.0.0/tools/debugscripts/kld_deb.py 228975 2011-12-30 00:04:11Z uqs $
 
 import sys
 import os
@@ -68,9 +68,9 @@ gdb = popen2.popen4(gdb_cmd)
 
 def searchfor(inp, re, j = 0, l = None):
 	"""searchfor(inp, re, j, l):  Searches for regex re in inp.  It will
-automaticly add more lines.  If j is set, the lines will be joined together.
+automatically add more lines.  If j is set, the lines will be joined together.
 l can provide a starting line to help search against.  Return value is a
-tupple of the last line, and the match if any."""
+tuple of the last line, and the match if any."""
 	ret = None
 	if not l:
 		l = inp.readline()
@@ -87,7 +87,7 @@ tupple of the last line, and the match if any."""
 def get_addresses(inp, out):
 	"""get_addresses(inp, out):  It will search for addresses from gdb.
 inp and out, are the gdb input and output respectively.  Return value is
-a list of tupples.  The tupples contain the filename and the address the
+a list of tuples.  The tuples contain the filename and the address the
 filename was loaded."""
 	addr = []
 	nxad = 1

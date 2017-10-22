@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/msun/amd64/Makefile.inc 177768 2008-03-30 21:21:53Z das $
+# $FreeBSD: release/10.0.0/lib/msun/amd64/Makefile.inc 177768 2008-03-30 21:21:53Z das $
 
 ARCH_SRCS = e_remainder.S e_remainderf.S e_remainderl.S \
 	    e_sqrt.S e_sqrtf.S e_sqrtl.S \

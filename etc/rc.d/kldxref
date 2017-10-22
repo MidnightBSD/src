@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/rc.d/kldxref 180563 2008-07-16 19:22:48Z dougb $
+# $FreeBSD: release/10.0.0/etc/rc.d/kldxref 238416 2012-07-13 06:46:09Z kevlo $
 #
 
 # PROVIDE: kldxref
@@ -15,7 +15,7 @@ name="kldxref"
 stop_cmd=":"
 start_cmd="kldxref_start"
 
-kldxref_start () {
+kldxref_start() {
 	if [ -n "$kldxref_module_path" ]; then
 		MODULE_PATHS="$kldxref_module_path"
 	else

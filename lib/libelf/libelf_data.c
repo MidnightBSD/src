@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libelf/libelf_data.c 221569 2011-05-07 01:05:31Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libelf/libelf_data.c 255105 2013-08-31 18:13:20Z andrew $");
 
 #include <libelf.h>
 #include <osreldate.h>
@@ -84,9 +84,21 @@ _libelf_xlate_shtype(uint32_t sht)
 	case SHT_SUNW_dof:
 		return (ELF_T_BYTE);
 #endif
+	case SHT_ARM_PREEMPTMAP:
+		/* FALLTHROUGH */
+	case SHT_ARM_ATTRIBUTES:
+		/* FALLTHROUGH */
+	case SHT_ARM_DEBUGOVERLAY:
+		/* FALLTHROUGH */
+	case SHT_ARM_OVERLAYSECTION:
+		/* FALLTHROUGH */
 	case SHT_MIPS_DWARF:
 		/* FALLTHROUGH */
-	case SHT_AMD64_UNWIND:	/* == SHT_IA_64_UNWIND */
+	case SHT_MIPS_REGINFO:
+		/* FALLTHROUGH */
+	case SHT_MIPS_OPTIONS:
+		/* FALLTHROUGH */
+	case SHT_AMD64_UNWIND:	/* == SHT_IA_64_UNWIND == SHT_ARM_EXIDX */
 		return (ELF_T_BYTE);
 	default:
 		return (-1);

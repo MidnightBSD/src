@@ -1,5 +1,5 @@
 /*
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/add/extract.c 240673 2012-09-18 19:08:07Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg_install/add/extract.c 252363 2013-06-29 00:37:49Z obrien $");
 
 #include <ctype.h>
 #include <err.h>
@@ -110,7 +110,8 @@ extract_plist(const char *home, Package *pkg)
     PackingList p = pkg->head;
     char *last_file, *prefix = NULL;
     char *where_args, *perm_args, *last_chdir;
-    int maxargs, where_count = 0, perm_count = 0, add_count;
+    long maxargs;
+    int where_count = 0, perm_count = 0, add_count;
     Boolean preserve;
 
     maxargs = sysconf(_SC_ARG_MAX) / 2;	/* Just use half the argument space */

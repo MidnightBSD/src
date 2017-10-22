@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: sdp.h,v 1.3 2003/09/05 00:33:59 max Exp $
- * $FreeBSD: stable/9/lib/libsdp/sdp.h 177364 2008-03-19 00:06:30Z emax $
+ * $FreeBSD: release/10.0.0/lib/libsdp/sdp.h 226426 2011-10-16 08:45:16Z ed $
  */
 
 #ifndef _SDP_H_
@@ -312,13 +312,13 @@ typedef struct sdp_attr *	sdp_attr_p;
 
 /* Inline versions of get/put byte/short/long. Pointer is advanced */
 #define SDP_GET8(b, cp) { \
-	register uint8_t *t_cp = (uint8_t *)(cp); \
+	const uint8_t *t_cp = (const uint8_t *)(cp); \
 	(b) = *t_cp; \
 	(cp) ++; \
 }
 
 #define SDP_GET16(s, cp) { \
-	register uint8_t *t_cp = (uint8_t *)(cp); \
+	const uint8_t *t_cp = (const uint8_t *)(cp); \
 	(s) = ((uint16_t)t_cp[0] << 8) \
 	    | ((uint16_t)t_cp[1]) \
 	    ; \
@@ -326,7 +326,7 @@ typedef struct sdp_attr *	sdp_attr_p;
 }
 
 #define SDP_GET32(l, cp) { \
-	register uint8_t *t_cp = (uint8_t *)(cp); \
+	const uint8_t *t_cp = (const uint8_t *)(cp); \
 	(l) = ((uint32_t)t_cp[0] << 24) \
 	    | ((uint32_t)t_cp[1] << 16) \
 	    | ((uint32_t)t_cp[2] << 8) \

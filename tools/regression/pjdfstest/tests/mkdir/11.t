@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/mkdir/11.t 210984 2010-08-06 23:58:54Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/mkdir/11.t 210984 2010-08-06 23:58:54Z pjd $
 
 desc="mkdir returns ENOSPC if there are no free inodes on the file system on which the directory is being created"
 

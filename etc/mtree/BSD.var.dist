@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/etc/mtree/BSD.var.dist 244771 2012-12-28 10:58:03Z ume $
+# $FreeBSD: release/10.0.0/etc/mtree/BSD.var.dist 258762 2013-11-30 07:03:18Z delphij $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -23,10 +23,12 @@
         remote          uname=auditdistd gname=wheel mode=0700
         ..
     ..
+    authpf              uname=root gname=authpf mode=0770
+    ..
 /set gname=wheel
     backups
     ..
-    cache
+    cache		mode=0755
     ..
     crash
     ..
@@ -61,13 +63,9 @@
     ..
     msgs            uname=daemon
     ..
-    named
-    ..
     preserve
     ..
     run
-        named           uname=bind gname=bind
-        ..
         ppp             gname=network mode=0770
         ..
         wpa_supplicant
@@ -94,6 +92,8 @@
     tmp             mode=01777
         vi.recover      mode=01777
         ..
+    ..
+    unbound         uname=unbound gname=unbound mode=0755
     ..
     yp
     ..

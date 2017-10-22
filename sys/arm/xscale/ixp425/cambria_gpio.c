@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/cambria_gpio.c 229885 2012-01-09 21:52:55Z thompsa $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/cambria_gpio.c 249449 2013-04-13 21:21:13Z dim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -96,11 +96,11 @@ struct cambria_gpio_pin {
 extern struct ixp425_softc *ixp425_softc;
 
 static struct cambria_gpio_pin cambria_gpio_pins[GPIO_PINS] = {
-	{ "GPIO0", 0, GPIO_PIN_OUTPUT },
-	{ "GPIO1", 1, GPIO_PIN_OUTPUT },
-	{ "GPIO2", 2, GPIO_PIN_OUTPUT },
-	{ "GPIO3", 3, GPIO_PIN_OUTPUT },
-	{ "GPIO4", 4, GPIO_PIN_OUTPUT },
+	{ "PLD0", 0, GPIO_PIN_OUTPUT },
+	{ "PLD1", 1, GPIO_PIN_OUTPUT },
+	{ "PLD2", 2, GPIO_PIN_OUTPUT },
+	{ "PLD3", 3, GPIO_PIN_OUTPUT },
+	{ "PLD4", 4, GPIO_PIN_OUTPUT },
 };
 
 /*
@@ -317,8 +317,8 @@ cambria_gpio_pin_setflags(device_t dev, uint32_t pin, uint32_t flags)
 	if (pin >= GPIO_PINS)
 		return (EINVAL);
 
-	/* Filter out unwanted flags */
-	if ((flags &= sc->sc_pins[pin].gp_caps) != flags)
+	/* Check for unwanted flags. */
+	if ((flags & sc->sc_pins[pin].gp_caps) != flags)
 		return (EINVAL);
 
 	/* Can't mix input/output together */
@@ -435,8 +435,7 @@ cambria_gpio_attach(device_t dev)
 	sc->sc_iot = ixp425_softc->sc_iot;
 	sc->sc_gpio_ioh = ixp425_softc->sc_gpio_ioh;
 
-	mtx_init(&sc->sc_mtx, device_get_nameunit(dev), MTX_NETWORK_LOCK,
-	    MTX_DEF);
+	mtx_init(&sc->sc_mtx, device_get_nameunit(dev), NULL, MTX_DEF);
 
 	for (pin = 0; pin < GPIO_PINS; pin++) {
 		struct cambria_gpio_pin *p = &cambria_gpio_pins[pin];

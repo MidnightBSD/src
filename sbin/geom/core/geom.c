@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/geom/core/geom.c 219969 2011-03-24 19:11:05Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/core/geom.c 241737 2012-10-19 14:49:42Z ed $");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -74,7 +74,7 @@ static void std_status(struct gctl_req *req, unsigned flags);
 static void std_load(struct gctl_req *req, unsigned flags);
 static void std_unload(struct gctl_req *req, unsigned flags);
 
-struct g_command std_commands[] = {
+static struct g_command std_commands[] = {
 	{ "help", 0, std_help, G_NULL_OPTS, NULL },
 	{ "list", 0, std_list,
 	    {

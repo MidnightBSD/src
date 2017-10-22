@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/csup/fixups.c 226834 2011-10-27 12:26:16Z kib $
+ * $FreeBSD: release/10.0.0/usr.bin/csup/fixups.c 228992 2011-12-30 11:02:40Z uqs $
  */
 
 #include <assert.h>
@@ -38,7 +38,7 @@
 /*
  * A synchronized queue to implement fixups.  The updater thread adds
  * fixup requests to the queue with fixups_put() when a checksum
- * mismatch error occured.  It then calls fixups_close() when he's
+ * mismatch error occurred.  It then calls fixups_close() when he's
  * done requesting fixups.  The detailer thread gets the fixups with
  * fixups_get() and then send the requests to the server.
  *

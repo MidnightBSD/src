@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/ccdconfig/pathnames.h 109421 2003-01-17 14:53:53Z phk $
+ * $FreeBSD: release/10.0.0/sbin/ccdconfig/pathnames.h 109421 2003-01-17 14:53:53Z phk $
  */
 
 #define _PATH_CCDCONF		"/etc/ccd.conf"

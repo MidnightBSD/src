@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/hwpmc/hwpmc_arm.c 237556 2012-06-25 07:56:23Z fabient $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/hwpmc/hwpmc_arm.c 240475 2012-09-13 22:26:22Z attilio $");
 
 #include <sys/param.h>
 #include <sys/pmc.h>
@@ -75,11 +75,9 @@ pmc_save_kernel_callchain(uintptr_t *cc, int maxsamples,
 	KASSERT(TRAPF_USERMODE(tf) == 0,("[arm,%d] not a kernel backtrace",
 	    __LINE__));
 
+	td = curthread;
 	pc = PMC_TRAPFRAME_TO_PC(tf);
 	*cc++ = pc;
-
-	if ((td = curthread) == NULL)
-		return (1);
 
 	if (maxsamples <= 1)
 		return (1);
@@ -126,11 +124,9 @@ pmc_save_user_callchain(uintptr_t *cc, int maxsamples,
 	KASSERT(TRAPF_USERMODE(tf), ("[x86,%d] Not a user trap frame tf=%p",
 	    __LINE__, (void *) tf));
 
+	td = curthread;
 	pc = PMC_TRAPFRAME_TO_PC(tf);
 	*cc++ = pc;
-
-	if ((td = curthread) == NULL)
-		return (1);
 
 	if (maxsamples <= 1)
 		return (1);

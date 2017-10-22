@@ -1,3 +1,3 @@
-# $FreeBSD: stable/9/sbin/Makefile.ia64 212527 2010-09-13 02:25:21Z imp $
+# $FreeBSD: release/10.0.0/sbin/Makefile.ia64 212527 2010-09-13 02:25:21Z imp $
 
 SUBDIR += mca

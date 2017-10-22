@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libc/stdio/xprintf.c 205021 2010-03-11 17:03:32Z jhb $
+ * $FreeBSD: release/10.0.0/lib/libc/stdio/xprintf.c 238111 2012-07-04 17:35:07Z pjd $
  */
 
 #include "namespace.h"
@@ -651,7 +651,7 @@ register_printf_render(int spec, printf_render *render, printf_arginfo_function 
 }
 
 int
-register_printf_render_std(const unsigned char *specs)
+register_printf_render_std(const char *specs)
 {
 
 	for (; *specs != '\0'; specs++) {

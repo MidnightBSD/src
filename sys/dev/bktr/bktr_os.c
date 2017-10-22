@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/bktr/bktr_os.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/bktr/bktr_os.c 254263 2013-08-12 23:30:01Z scottl $");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -318,7 +318,6 @@ bktr_attach( device_t dev )
 {
 	u_long		latency;
 	u_long		fun;
-	u_long		val;
 	unsigned int	rev;
 	unsigned int	unit;
 	int		error = 0;
@@ -336,9 +335,7 @@ bktr_attach( device_t dev )
 	/*
 	 * Enable bus mastering and Memory Mapped device
 	 */
-	val = pci_read_config(dev, PCIR_COMMAND, 4);
-	val |= (PCIM_CMD_MEMEN|PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, val, 4);
+	pci_enable_busmaster(dev);
 
 	/*
 	 * Map control/status registers.
@@ -404,7 +401,7 @@ bktr_attach( device_t dev )
 
 #if defined( BKTR_SIS_VIA_MODE )
 	if (bootverbose) printf("Using SiS/VIA chipset compatibilty mode\n");
-        fun = fun | 4;	/* Enable SiS/VIA compatibility mode (usefull for
+        fun = fun | 4;	/* Enable SiS/VIA compatibility mode (useful for
                            OPTi chipset motherboards too */
 #endif
 	pci_write_config(dev, 0x40, fun, 2);

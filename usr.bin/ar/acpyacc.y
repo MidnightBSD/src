@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/ar/acpyacc.y 222122 2011-05-20 11:29:09Z bcr $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/ar/acpyacc.y 248612 2013-03-22 10:17:42Z mm $");
 
 #include <sys/mman.h>
 #include <sys/param.h>
@@ -54,7 +54,6 @@ struct list {
 
 
 extern int	yylex(void);
-extern int	yyparse(void);
 
 static void	yyerror(const char *);
 static void	arscp_addlib(char *archive, struct list *list);
@@ -250,13 +249,12 @@ arscp_open(char *fname)
 
 	if ((a = archive_read_new()) == NULL)
 		bsdar_errc(bsdar, EX_SOFTWARE, 0, "archive_read_new failed");
-	archive_read_support_compression_none(a);
 	archive_read_support_format_ar(a);
-	AC(archive_read_open_file(a, fname, DEF_BLKSZ));
+	AC(archive_read_open_filename(a, fname, DEF_BLKSZ));
 	if ((r = archive_read_next_header(a, &entry)))
 		bsdar_warnc(bsdar, 0, "%s", archive_error_string(a));
 	AC(archive_read_close(a));
-	AC(archive_read_finish(a));
+	AC(archive_read_free(a));
 	if (r != ARCHIVE_OK)
 		return;
 	arscp_create(fname, fname);
@@ -312,7 +310,7 @@ arscp_create(char *in, char *out)
 		archive_write_set_format_ar_svr4(a);
 		AC(archive_write_open_fd(a, ofd));
 		AC(archive_write_close(a));
-		AC(archive_write_finish(a));
+		AC(archive_write_free(a));
 	}
 
 	/* Override previous target, if any. */

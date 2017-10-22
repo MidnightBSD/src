@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/etc/mtree/BSD.root.dist 219738 2011-03-18 12:18:52Z ume $
+# $FreeBSD: release/10.0.0/etc/mtree/BSD.root.dist 257572 2013-11-03 13:00:12Z bdrewery $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -51,6 +51,8 @@
             ..
             weekly
             ..
+        ..
+        pkg
         ..
         ppp
         ..

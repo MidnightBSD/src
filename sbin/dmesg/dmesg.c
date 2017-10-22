@@ -39,7 +39,7 @@ static const char sccsid[] = "@(#)dmesg.c	8.1 (Berkeley) 6/5/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/dmesg/dmesg.c 156076 2006-02-27 19:13:47Z dwmalone $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/dmesg/dmesg.c 251618 2013-06-11 17:46:32Z flo $");
 
 #include <sys/types.h>
 #include <sys/msgbuf.h>
@@ -54,17 +54,16 @@ __FBSDID("$FreeBSD: stable/9/sbin/dmesg/dmesg.c 156076 2006-02-27 19:13:47Z dwma
 #include <locale.h>
 #include <nlist.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <vis.h>
 #include <sys/syslog.h>
 
-char s_msgbufp[] = "_msgbufp";
-
-struct nlist nl[] = {
+static struct nlist nl[] = {
 #define	X_MSGBUF	0
-	{ s_msgbufp, 0, 0, 0, 0 },
+	{ "_msgbufp", 0, 0, 0, 0 },
 	{ NULL, 0, 0, 0, 0 },
 };
 
@@ -81,15 +80,20 @@ main(int argc, char *argv[])
 	kvm_t *kd;
 	size_t buflen, bufpos;
 	long pri;
-	int all, ch;
+	int ch, clear;
+	bool all;
 
-	all = 0;
+	all = false;
+	clear = false;
 	(void) setlocale(LC_CTYPE, "");
 	memf = nlistf = NULL;
-	while ((ch = getopt(argc, argv, "aM:N:")) != -1)
+	while ((ch = getopt(argc, argv, "acM:N:")) != -1)
 		switch(ch) {
 		case 'a':
-			all++;
+			all = true;
+			break;
+		case 'c':
+			clear = true;
 			break;
 		case 'M':
 			memf = optarg;
@@ -116,6 +120,9 @@ main(int argc, char *argv[])
 			errx(1, "malloc failed");
 		if (sysctlbyname("kern.msgbuf", bp, &buflen, NULL, 0) == -1)
 			err(1, "sysctl kern.msgbuf");
+		if (clear)
+			if (sysctlbyname("kern.msgbuf_clear", NULL, NULL, &clear, sizeof(int)))
+				err(1, "sysctl kern.msgbuf_clear");
 	} else {
 		/* Read in kernel message buffer and do sanity checks. */
 		kd = kvm_open(nlistf, memf, NULL, O_RDONLY, "dmesg");
@@ -198,6 +205,6 @@ main(int argc, char *argv[])
 void
 usage(void)
 {
-	(void)fprintf(stderr, "usage: dmesg [-a] [-M core [-N system]]\n");
+	fprintf(stderr, "usage: dmesg [-ac] [-M core [-N system]]\n");
 	exit(1);
 }

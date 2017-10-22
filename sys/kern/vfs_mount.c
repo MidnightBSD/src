@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/vfs_mount.c 249053 2013-04-03 15:34:25Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/vfs_mount.c 256032 2013-10-03 22:52:03Z sbruno $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -232,7 +232,7 @@ vfs_equalopts(const char *opt1, const char *opt2)
 /*
  * If a mount option is specified several times,
  * (with or without the "no" prefix) only keep
- * the last occurence of it.
+ * the last occurrence of it.
  */
 static void
 vfs_sanitizeopts(struct vfsoptlist *opts)
@@ -656,7 +656,7 @@ vfs_donmount(struct thread *td, uint64_t fsflags, struct uio *fsoptions)
 	 * variables will fit in our mp buffers, including the
 	 * terminating NUL.
 	 */
-	if (fstypelen >= MFSNAMELEN - 1 || fspathlen >= MNAMELEN - 1) {
+	if (fstypelen > MFSNAMELEN || fspathlen > MNAMELEN) {
 		error = ENAMETOOLONG;
 		goto bail;
 	}
@@ -861,8 +861,9 @@ vfs_domount_first(
 	vfs_event_signal(NULL, VQ_MOUNT, 0);
 	if (VFS_ROOT(mp, LK_EXCLUSIVE, &newdp))
 		panic("mount: lost mount");
-	VOP_UNLOCK(newdp, 0);
 	VOP_UNLOCK(vp, 0);
+	EVENTHANDLER_INVOKE(vfs_mounted, mp, newdp, td);
+	VOP_UNLOCK(newdp, 0);
 	mountcheckdirs(vp, newdp);
 	vrele(newdp);
 	if ((mp->mnt_flag & MNT_RDONLY) == 0)
@@ -1085,13 +1086,12 @@ vfs_domount(
 	/*
 	 * Get vnode to be covered or mount point's vnode in case of MNT_UPDATE.
 	 */
-	NDINIT(&nd, LOOKUP, FOLLOW | LOCKLEAF | MPSAFE | AUDITVNODE1,
+	NDINIT(&nd, LOOKUP, FOLLOW | LOCKLEAF | AUDITVNODE1,
 	    UIO_SYSSPACE, fspath, td);
 	error = namei(&nd);
 	if (error != 0)
 		return (error);
-	if (!NDHASGIANT(&nd))
-		mtx_lock(&Giant);
+	mtx_lock(&Giant);
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	vp = nd.ni_vp;
 	if ((fsflags & MNT_UPDATE) == 0) {
@@ -1138,7 +1138,7 @@ sys_unmount(td, uap)
 	struct nameidata nd;
 	struct mount *mp;
 	char *pathbuf;
-	int error, id0, id1, vfslocked;
+	int error, id0, id1;
 
 	AUDIT_ARG_VALUE(uap->flags);
 	if (jailed(td->td_ucred) || usermount == 0) {
@@ -1174,17 +1174,14 @@ sys_unmount(td, uap)
 		/*
 		 * Try to find global path for path argument.
 		 */
-		NDINIT(&nd, LOOKUP,
-		    FOLLOW | LOCKLEAF | MPSAFE | AUDITVNODE1,
+		NDINIT(&nd, LOOKUP, FOLLOW | LOCKLEAF | AUDITVNODE1,
 		    UIO_SYSSPACE, pathbuf, td);
 		if (namei(&nd) == 0) {
-			vfslocked = NDHASGIANT(&nd);
 			NDFREE(&nd, NDF_ONLY_PNBUF);
 			error = vn_path_to_global_path(td, nd.ni_vp, pathbuf,
 			    MNAMELEN);
 			if (error == 0 || error == ENODEV)
 				vput(nd.ni_vp);
-			VFS_UNLOCK_GIANT(vfslocked);
 		}
 		mtx_lock(&mountlist_mtx);
 		TAILQ_FOREACH_REVERSE(mp, &mountlist, mntlist, mnt_list) {
@@ -1272,8 +1269,16 @@ dounmount(mp, flags, td)
 	}
 	mp->mnt_kern_flag |= MNTK_UNMOUNT | MNTK_NOINSMNTQ;
 	/* Allow filesystems to detect that a forced unmount is in progress. */
-	if (flags & MNT_FORCE)
+	if (flags & MNT_FORCE) {
 		mp->mnt_kern_flag |= MNTK_UNMOUNTF;
+		MNT_IUNLOCK(mp);
+		/*
+		 * Must be done after setting MNTK_UNMOUNTF and before
+		 * waiting for mnt_lockref to become 0.
+		 */
+		VFS_PURGE(mp);
+		MNT_ILOCK(mp);
+	}
 	error = 0;
 	if (mp->mnt_lockref) {
 		mp->mnt_kern_flag |= MNTK_DRAINING;
@@ -1359,6 +1364,7 @@ dounmount(mp, flags, td)
 	mtx_lock(&mountlist_mtx);
 	TAILQ_REMOVE(&mountlist, mp, mnt_list);
 	mtx_unlock(&mountlist_mtx);
+	EVENTHANDLER_INVOKE(vfs_unmounted, mp, td);
 	if (coveredvp != NULL) {
 		coveredvp->v_mountedhere = NULL;
 		vput(coveredvp);
@@ -1509,6 +1515,48 @@ vfs_getopt_pos(struct vfsoptlist *opts, const char *name)
 		}
 	}
 	return (-1);
+}
+
+int
+vfs_getopt_size(struct vfsoptlist *opts, const char *name, off_t *value)
+{
+	char *opt_value, *vtp;
+	quad_t iv;
+	int error, opt_len;
+
+	error = vfs_getopt(opts, name, (void **)&opt_value, &opt_len);
+	if (error != 0)
+		return (error);
+	if (opt_len == 0 || opt_value == NULL)
+		return (EINVAL);
+	if (opt_value[0] == '\0' || opt_value[opt_len - 1] != '\0')
+		return (EINVAL);
+	iv = strtoq(opt_value, &vtp, 0);
+	if (vtp == opt_value || (vtp[0] != '\0' && vtp[1] != '\0'))
+		return (EINVAL);
+	if (iv < 0)
+		return (EINVAL);
+	switch (vtp[0]) {
+	case 't':
+	case 'T':
+		iv *= 1024;
+	case 'g':
+	case 'G':
+		iv *= 1024;
+	case 'm':
+	case 'M':
+		iv *= 1024;
+	case 'k':
+	case 'K':
+		iv *= 1024;
+	case '\0':
+		break;
+	default:
+		return (EINVAL);
+	}
+	*value = iv;
+
+	return (0);
 }
 
 char *
@@ -1666,103 +1714,6 @@ vfs_copyopt(opts, name, dest, len)
 		}
 	}
 	return (ENOENT);
-}
-
-/*
- * These are helper functions for filesystems to traverse all
- * their vnodes.  See MNT_VNODE_FOREACH() in sys/mount.h.
- *
- * This interface has been deprecated in favor of MNT_VNODE_FOREACH_ALL.
- */
-
-MALLOC_DECLARE(M_VNODE_MARKER);
-
-struct vnode *
-__mnt_vnode_next(struct vnode **mvp, struct mount *mp)
-{
-	struct vnode *vp;
-
-	mtx_assert(MNT_MTX(mp), MA_OWNED);
-
-	KASSERT((*mvp)->v_mount == mp, ("marker vnode mount list mismatch"));
-	if (should_yield()) {
-		MNT_IUNLOCK(mp);
-		kern_yield(PRI_UNCHANGED);
-		MNT_ILOCK(mp);
-	}
-	vp = TAILQ_NEXT(*mvp, v_nmntvnodes);
-	while (vp != NULL && vp->v_type == VMARKER)
-		vp = TAILQ_NEXT(vp, v_nmntvnodes);
-
-	/* Check if we are done */
-	if (vp == NULL) {
-		__mnt_vnode_markerfree(mvp, mp);
-		return (NULL);
-	}
-	TAILQ_REMOVE(&mp->mnt_nvnodelist, *mvp, v_nmntvnodes);
-	TAILQ_INSERT_AFTER(&mp->mnt_nvnodelist, vp, *mvp, v_nmntvnodes);
-	return (vp);
-}
-
-struct vnode *
-__mnt_vnode_first(struct vnode **mvp, struct mount *mp)
-{
-	struct vnode *vp;
-
-	mtx_assert(MNT_MTX(mp), MA_OWNED);
-
-	vp = TAILQ_FIRST(&mp->mnt_nvnodelist);
-	while (vp != NULL && vp->v_type == VMARKER)
-		vp = TAILQ_NEXT(vp, v_nmntvnodes);
-
-	/* Check if we are done */
-	if (vp == NULL) {
-		*mvp = NULL;
-		return (NULL);
-	}
-	MNT_REF(mp);
-	MNT_IUNLOCK(mp);
-	*mvp = (struct vnode *) malloc(sizeof(struct vnode),
-				       M_VNODE_MARKER,
-				       M_WAITOK | M_ZERO);
-	MNT_ILOCK(mp);
-	(*mvp)->v_type = VMARKER;
-
-	vp = TAILQ_FIRST(&mp->mnt_nvnodelist);
-	while (vp != NULL && vp->v_type == VMARKER)
-		vp = TAILQ_NEXT(vp, v_nmntvnodes);
-
-	/* Check if we are done */
-	if (vp == NULL) {
-		MNT_IUNLOCK(mp);
-		free(*mvp, M_VNODE_MARKER);
-		MNT_ILOCK(mp);
-		*mvp = NULL;
-		MNT_REL(mp);
-		return (NULL);
-	}
-	(*mvp)->v_mount = mp;
-	TAILQ_INSERT_AFTER(&mp->mnt_nvnodelist, vp, *mvp, v_nmntvnodes);
-	return (vp);
-}
-
-
-void
-__mnt_vnode_markerfree(struct vnode **mvp, struct mount *mp)
-{
-
-	if (*mvp == NULL)
-		return;
-
-	mtx_assert(MNT_MTX(mp), MA_OWNED);
-
-	KASSERT((*mvp)->v_mount == mp, ("marker vnode mount list mismatch"));
-	TAILQ_REMOVE(&mp->mnt_nvnodelist, *mvp, v_nmntvnodes);
-	MNT_IUNLOCK(mp);
-	free(*mvp, M_VNODE_MARKER);
-	MNT_ILOCK(mp);
-	*mvp = NULL;
-	MNT_REL(mp);
 }
 
 int

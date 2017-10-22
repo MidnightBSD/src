@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/geom/class/stripe/geom_stripe.c 213662 2010-10-09 20:20:27Z ae $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/class/stripe/geom_stripe.c 213662 2010-10-09 20:20:27Z ae $");
 
 #include <sys/param.h>
 #include <errno.h>

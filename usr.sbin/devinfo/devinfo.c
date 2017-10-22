@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/devinfo/devinfo.c 199291 2009-11-15 16:44:43Z attilio $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/devinfo/devinfo.c 227252 2011-11-06 19:01:48Z ed $");
 
 #include <sys/types.h>
 #include <err.h>
@@ -39,8 +39,8 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/devinfo/devinfo.c 199291 2009-11-15 16:44:
 #include <unistd.h>
 #include "devinfo.h"
 
-int	rflag;
-int	vflag;
+static int	rflag;
+static int	vflag;
 
 static void	print_resource(struct devinfo_res *);
 static int	print_device_matching_resource(struct devinfo_res *, void *);

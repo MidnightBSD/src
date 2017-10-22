@@ -30,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/xlint/lint1/param.h 177927 2008-04-04 21:35:13Z imp $
+ * $FreeBSD: release/10.0.0/usr.bin/xlint/lint1/param.h 177927 2008-04-04 21:35:13Z imp $
  */
 
 /*

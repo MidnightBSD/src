@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/msun/test-next.c 174691 2007-12-16 23:36:37Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/msun/test-next.c 251241 2013-06-02 04:30:03Z das $");
 
 #include <fenv.h>
 #include <float.h>
@@ -41,8 +41,8 @@ __FBSDID("$FreeBSD: stable/9/tools/regression/lib/msun/test-next.c 174691 2007-1
 #include <ieeefp.h>
 #endif
 
-#define	ALL_STD_EXCEPT	(FE_DIVBYZERO | FE_INEXACT | FE_INVALID |\
-			 FE_OVERFLOW | FE_UNDERFLOW)
+#include "test-utils.h"
+
 #define	test(exp, ans, ex)	do {			\
 	double __ans = (ans);				\
 	feclearexcept(ALL_STD_EXCEPT);			\
@@ -211,7 +211,9 @@ main(int argc, char *argv[])
 	test(idd(nextafter(DBL_MAX, INFINITY)), INFINITY, ex_over);
 	test(idd(nextafter(INFINITY, 0.0)), DBL_MAX, 0);
 	test(idd(nexttoward(DBL_MAX, DBL_MAX * 2.0L)), INFINITY, ex_over);
+#if LDBL_MANT_DIG > 53
 	test(idd(nexttoward(INFINITY, DBL_MAX * 2.0L)), DBL_MAX, 0);
+#endif
 
 	testf(idf(nextafterf(FLT_MAX, INFINITY)), INFINITY, ex_over);
 	testf(idf(nextafterf(INFINITY, 0.0)), FLT_MAX, 0);
@@ -233,7 +235,7 @@ _testl(const char *exp, int line, long double actual, long double expected,
 	int actual_except;
 
 	actual_except = fetestexcept(ALL_STD_EXCEPT);
-	if (actual != expected && !(isnan(actual) && isnan(expected))) {
+	if (!fpequal(actual, expected)) {
 		fprintf(stderr, "%d: %s returned %La, expecting %La\n",
 		    line, exp, actual, expected);
 		abort();

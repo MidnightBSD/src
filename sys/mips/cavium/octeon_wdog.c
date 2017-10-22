@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octeon_wdog.c 217243 2011-01-10 22:14:08Z jmallett $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octeon_wdog.c 232812 2012-03-11 06:17:49Z jmallett $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octeon_wdog.c 217243 2011-01-10 22:
 #include <sys/smp.h>
 
 #include <contrib/octeon-sdk/cvmx.h>
-#include <contrib/octeon-sdk/cvmx-interrupt.h>
+#include <mips/cavium/octeon_irq.h>
 
 #define	DEFAULT_TIMER_VAL	65535
 
@@ -174,7 +174,7 @@ octeon_wdog_setup(struct octeon_wdog_softc *sc, int core)
 	/* Interrupt part */
 	rid = 0;
 	csc->csc_intr = bus_alloc_resource(sc->sc_dev, SYS_RES_IRQ, &rid,
-	    CVMX_IRQ_WDOG0 + core, CVMX_IRQ_WDOG0 + core, 1, RF_ACTIVE);
+	    OCTEON_IRQ_WDOG0 + core, OCTEON_IRQ_WDOG0 + core, 1, RF_ACTIVE);
 	if (csc->csc_intr == NULL)
 		panic("%s: bus_alloc_resource for core %u failed",
 		    __func__, core);

@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/include/pthread.h 217039 2011-01-06 03:30:16Z davidxu $
+ * $FreeBSD: release/10.0.0/include/pthread.h 257113 2013-10-25 13:27:55Z tijl $
  */
 #ifndef _PTHREAD_H_
 #define _PTHREAD_H_
@@ -175,6 +175,7 @@ int		pthread_barrierattr_setpshared(pthread_barrierattr_t *, int);
 			{
 
 #define		pthread_cleanup_pop(execute)					\
+				(void)0;					\
 			}							\
 			__pthread_cleanup_pop_imp(execute);			\
 		}

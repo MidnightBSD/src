@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1994-1995 Søren Schmidt
+ * Copyright (c) 1994-1995 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/amd64/linux32/linux32_dummy.c 248532 2013-03-19 20:18:30Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/linux32/linux32_dummy.c 255675 2013-09-18 18:48:33Z rdivacky $");
 
 #include "opt_compat.h"
 #include "opt_kdtrace.h"

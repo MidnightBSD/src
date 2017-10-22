@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)make.1	8.8 (Berkeley) 6/13/95
-.\" $FreeBSD: stable/9/usr.bin/make/make.1 237100 2012-06-14 20:44:56Z obrien $
+.\" $FreeBSD: release/10.0.0/usr.bin/make/make.1 236365 2012-05-31 20:13:44Z obrien $
 .\"
 .Dd May 30, 2012
 .Dt MAKE 1
@@ -1672,7 +1672,7 @@ To prevent infinite loops the following source Makefile targets are ignored:
 .Ic ::
 targets that have no prerequisites
 .It
-.Ic !
+.Ic \&!
 targets
 .It
 targets that have
@@ -1757,7 +1757,7 @@ The use of the
 .Cm :L
 and
 .Cm :U
-modifiers will be deprecated
+modifiers are deprecated
 in
 .Fx 10.0
 and the more portable (among Pmake decedents)

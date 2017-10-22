@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ohci_s3c24x0.c 229118 2011-12-31 15:31:34Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/controller/ohci_s3c24x0.c 228483 2011-12-14 00:28:54Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>

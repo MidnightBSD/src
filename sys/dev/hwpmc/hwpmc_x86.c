@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/hwpmc/hwpmc_x86.c 239433 2012-08-20 14:54:30Z emaste $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/hwpmc/hwpmc_x86.c 240475 2012-09-13 22:26:22Z attilio $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -161,15 +161,13 @@ pmc_save_kernel_callchain(uintptr_t *cc, int nframes, struct trapframe *tf)
 	KASSERT(TRAPF_USERMODE(tf) == 0,("[x86,%d] not a kernel backtrace",
 	    __LINE__));
 
+	td = curthread;
 	pc = PMC_TRAPFRAME_TO_PC(tf);
 	fp = PMC_TRAPFRAME_TO_FP(tf);
 	sp = PMC_TRAPFRAME_TO_KERNEL_SP(tf);
 
 	*cc++ = pc;
 	r = fp + sizeof(uintptr_t); /* points to return address */
-
-	if ((td = curthread) == NULL)
-		return (1);
 
 	if (nframes <= 1)
 		return (1);

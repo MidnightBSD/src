@@ -26,7 +26,7 @@
 /*      $NetBSD: setjmp.S,v 1.3 1998/10/03 12:30:38 tsubai Exp $        */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/powerpc64/gen/setjmp.S 234520 2012-04-21 00:26:03Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/powerpc64/gen/setjmp.S 234115 2012-04-11 00:00:40Z nwhitehorn $");
 
 #include <sys/syscall.h>
 	
@@ -93,10 +93,7 @@ ENTRY(setjmp)
 	li	%r3,0			/* return (0) */
 	blr
 
-	.weak CNAME(longjmp)
-	.set CNAME(longjmp),CNAME(__longjmp)
-	.weak CNAME(.longjmp)
-	.set CNAME(.longjmp),CNAME(.__longjmp)
+	WEAK_REFERENCE(__longjmp, longjmp)
 ENTRY(__longjmp)
 	ld	%r9,40 + 0*8(%r3)
 	ld	%r10,40 + 1*8(%r3)

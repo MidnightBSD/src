@@ -31,7 +31,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/getpwent.c 158115 2006-04-28 12:03:38Z ume $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/getpwent.c 158115 2006-04-28 12:03:38Z ume $");
 
 #include "namespace.h"
 #include <sys/param.h>

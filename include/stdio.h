@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stdio.h	8.5 (Berkeley) 4/29/95
- * $FreeBSD: stable/9/include/stdio.h 235785 2012-05-22 14:40:39Z theraven $
+ * $FreeBSD: release/10.0.0/include/stdio.h 247411 2013-02-27 19:50:46Z jhb $
  */
 
 #ifndef	_STDIO_H_
@@ -343,8 +343,10 @@ char	*tempnam(const char *, const char *);
 #endif
 
 #if __BSD_VISIBLE || __POSIX_VISIBLE >= 200809
+FILE	*fmemopen(void * __restrict, size_t, const char * __restrict);
 ssize_t	 getdelim(char ** __restrict, size_t * __restrict, int,
 	    FILE * __restrict);
+FILE	*open_memstream(char **, size_t *);
 int	 renameat(int, const char *, int, const char *);
 int	 vdprintf(int, const char * __restrict, __va_list);
 
@@ -407,8 +409,8 @@ int	 vasprintf(char **, const char *, __va_list)
  * positive errno values.  Use strerror() or strerror_r() from <string.h>
  * instead.
  */
-extern __const int sys_nerr;
-extern __const char *__const sys_errlist[];
+extern const int sys_nerr;
+extern const char * const sys_errlist[];
 
 /*
  * Stdio function-access interface.

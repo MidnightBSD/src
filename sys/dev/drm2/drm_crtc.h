@@ -22,7 +22,7 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * $FreeBSD: stable/9/sys/dev/drm2/drm_crtc.h 235783 2012-05-22 11:07:44Z kib $
+ * $FreeBSD: release/10.0.0/sys/dev/drm2/drm_crtc.h 254797 2013-08-24 16:50:47Z dumbbell $
  */
 #ifndef __DRM_CRTC_H__
 #define __DRM_CRTC_H__
@@ -659,7 +659,7 @@ struct drm_mode_config {
 
 	int min_width, min_height;
 	int max_width, max_height;
-	struct drm_mode_config_funcs *funcs;
+	const struct drm_mode_config_funcs *funcs;
 	resource_size_t fb_base;
 
 	/* output poll support */

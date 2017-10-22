@@ -1,6 +1,6 @@
-# $FreeBSD: stable/9/sys/boot/powerpc/boot1.chrp/Makefile 232432 2012-03-03 02:20:46Z nwhitehorn $
+# $FreeBSD: release/10.0.0/sys/boot/powerpc/boot1.chrp/Makefile 255944 2013-09-29 20:20:17Z bdrewery $
 
-WITHOUT_SSP=
+SSP_CFLAGS=
 
 PROG=           boot1.elf
 NEWVERSWHAT=    "Open Firmware boot block" ${MACHINE_ARCH}
@@ -10,7 +10,6 @@ INSTALLFLAGS=   -b
 FILES=		boot1.hfs
 SRCS=		boot1.c ashldi3.c syncicache.c
 
-INTERNALPROG=
 NO_MAN=
 
 CFLAGS= -ffreestanding -msoft-float -Os \

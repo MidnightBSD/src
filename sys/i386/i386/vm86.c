@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/i386/vm86.c 239996 2012-09-01 15:59:09Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/i386/vm86.c 238792 2012-07-26 09:11:37Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -650,7 +650,6 @@ vm86_getptr(vmc, kva, sel, off)
 			return (1);
 		}
 	return (0);
-	panic("vm86_getptr: address not found");
 }
 	
 int

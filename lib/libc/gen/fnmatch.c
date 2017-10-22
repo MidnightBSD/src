@@ -39,7 +39,7 @@
 static char sccsid[] = "@(#)fnmatch.c	8.2 (Berkeley) 4/16/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/fnmatch.c 235785 2012-05-22 14:40:39Z theraven $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/fnmatch.c 254091 2013-08-08 09:04:02Z ache $");
 
 /*
  * Function fnmatch() as specified in POSIX 1003.2-1992, section B.6.
@@ -194,8 +194,6 @@ fnmatch1(pattern, string, stringstart, flags, patmbs, strmbs)
 				    &patmbs);
 				if (pclen == (size_t)-1 || pclen == (size_t)-2)
 					return (FNM_NOMATCH);
-				if (pclen == 0)
-					pc = '\\';
 				pattern += pclen;
 			}
 			/* FALLTHROUGH */

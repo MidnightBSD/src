@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libusb/libusb.h 235004 2012-05-04 15:27:18Z hselasky $ */
+/* $FreeBSD: release/10.0.0/lib/libusb/libusb.h 251495 2013-06-07 13:45:58Z emaste $ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  *
@@ -27,8 +27,11 @@
 #ifndef __LIBUSB_H__
 #define	__LIBUSB_H__
 
+#ifndef LIBUSB_GLOBAL_INCLUDE_FILE
+#include <stdint.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#endif
 
 #ifdef __cplusplus
 extern	"C" {
@@ -340,7 +343,7 @@ typedef void (*libusb_transfer_cb_fn) (struct libusb_transfer *transfer);
 typedef struct libusb_transfer {
 	libusb_device_handle *dev_handle;
 	uint8_t	flags;
-	uint32_t endpoint;
+	uint8_t endpoint;
 	uint8_t type;
 	uint32_t timeout;
 	enum libusb_transfer_status status;
@@ -349,7 +352,6 @@ typedef struct libusb_transfer {
 	libusb_transfer_cb_fn callback;
 	void   *user_data;
 	uint8_t *buffer;
-	void *os_priv;
 	int	num_iso_packets;
 	struct libusb_iso_packet_descriptor iso_packet_desc[0];
 }	libusb_transfer __aligned(sizeof(void *));
@@ -367,6 +369,8 @@ void	libusb_exit(struct libusb_context *ctx);
 ssize_t libusb_get_device_list(libusb_context * ctx, libusb_device *** list);
 void	libusb_free_device_list(libusb_device ** list, int unref_devices);
 uint8_t	libusb_get_bus_number(libusb_device * dev);
+int	libusb_get_port_numbers(libusb_device *dev, uint8_t *buf, uint8_t bufsize);
+int	libusb_get_port_path(libusb_context *ctx, libusb_device *dev, uint8_t *buf, uint8_t bufsize);
 uint8_t	libusb_get_device_address(libusb_device * dev);
 enum libusb_speed libusb_get_device_speed(libusb_device * dev);
 int	libusb_clear_halt(libusb_device_handle *devh, uint8_t endpoint);
@@ -399,6 +403,7 @@ int	libusb_get_active_config_descriptor(libusb_device * dev, struct libusb_confi
 int	libusb_get_config_descriptor(libusb_device * dev, uint8_t config_index, struct libusb_config_descriptor **config);
 int	libusb_get_config_descriptor_by_value(libusb_device * dev, uint8_t bConfigurationValue, struct libusb_config_descriptor **config);
 void	libusb_free_config_descriptor(struct libusb_config_descriptor *config);
+int	libusb_get_string_descriptor(libusb_device_handle * devh, uint8_t desc_index, uint16_t langid, unsigned char *data, int length);
 int	libusb_get_string_descriptor_ascii(libusb_device_handle * devh, uint8_t desc_index, uint8_t *data, int length);
 int	libusb_get_descriptor(libusb_device_handle * devh, uint8_t desc_type, uint8_t desc_index, uint8_t *data, int length);
 int	libusb_parse_ss_endpoint_comp(const void *buf, int len, struct libusb_ss_endpoint_companion_descriptor **ep_comp);
@@ -438,7 +443,7 @@ int	libusb_handle_events(libusb_context * ctx);
 int	libusb_handle_events_locked(libusb_context * ctx, struct timeval *tv);
 int	libusb_get_next_timeout(libusb_context * ctx, struct timeval *tv);
 void	libusb_set_pollfd_notifiers(libusb_context * ctx, libusb_pollfd_added_cb added_cb, libusb_pollfd_removed_cb removed_cb, void *user_data);
-struct libusb_pollfd **libusb_get_pollfds(libusb_context * ctx);
+const struct libusb_pollfd **libusb_get_pollfds(libusb_context * ctx);
 
 /* Synchronous device I/O */
 

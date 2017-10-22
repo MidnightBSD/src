@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/sa/pdb.c 201227 2009-12-29 22:53:27Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/sa/pdb.c 201227 2009-12-29 22:53:27Z ed $");
 
 #include <sys/types.h>
 #include <sys/acct.h>

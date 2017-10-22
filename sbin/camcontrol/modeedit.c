@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/camcontrol/modeedit.c 243294 2012-11-19 18:20:27Z emaste $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/camcontrol/modeedit.c 256318 2013-10-11 17:10:28Z mav $");
 
 #include <sys/queue.h>
 #include <sys/types.h>
@@ -886,12 +886,12 @@ mode_list(struct cam_device *device, int page_control, int dbd,
 	    timeout, data, sizeof(data));
 
 	mh = (struct scsi_mode_header_6 *)data;
-	len = mh->blk_desc_len;		/* Skip block descriptors. */
+	len = sizeof(*mh) + mh->blk_desc_len;	/* Skip block descriptors. */
 	/* Iterate through the pages in the reply. */
 	while (len < mh->data_length) {
 		/* Locate the next mode page header. */
 		mph = (struct scsi_mode_page_header *)
-		    ((intptr_t)mh + sizeof(*mh) + len);
+		    ((intptr_t)mh + len);
 
 		mph->page_code &= SMS_PAGE_CODE;
 		nameentry = nameentry_lookup(mph->page_code);

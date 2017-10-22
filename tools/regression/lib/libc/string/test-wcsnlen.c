@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libc/string/test-wcsnlen.c 189140 2009-02-28 06:34:04Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/libc/string/test-wcsnlen.c 189140 2009-02-28 06:34:04Z das $");
 
 #include <sys/mman.h>
 #include <sys/param.h>

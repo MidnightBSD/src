@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/linker.h 218494 2011-02-09 19:08:21Z marcel $
+ * $FreeBSD: release/10.0.0/sys/sys/linker.h 254267 2013-08-13 03:09:00Z markj $
  */
 
 #ifndef _SYS_LINKER_H_
@@ -92,10 +92,6 @@ struct linker_file {
      */
     int			nenabled;	/* number of enabled probes. */
     int			fbt_nentries;	/* number of fbt entries created. */
-    void		*sdt_probes;
-    int			sdt_nentries;
-    size_t		sdt_nprobes;
-    size_t		sdt_size;
 };
 
 /*

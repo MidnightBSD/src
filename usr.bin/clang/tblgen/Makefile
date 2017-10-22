@@ -1,4 +1,6 @@
-# $FreeBSD: stable/9/usr.bin/clang/tblgen/Makefile 245431 2013-01-14 19:51:26Z dim $
+# $FreeBSD: release/10.0.0/usr.bin/clang/tblgen/Makefile 249423 2013-04-12 17:57:40Z dim $
+
+.include <bsd.own.mk>
 
 PROG_CXX=tblgen
 
@@ -6,6 +8,7 @@ SRCDIR=	utils/TableGen
 SRCS=	AsmMatcherEmitter.cpp \
 	AsmWriterEmitter.cpp \
 	AsmWriterInst.cpp \
+	CTagsEmitter.cpp \
 	CallingConvEmitter.cpp \
 	CodeEmitterGen.cpp \
 	CodeGenDAGPatterns.cpp \
@@ -21,11 +24,11 @@ SRCS=	AsmMatcherEmitter.cpp \
 	DAGISelMatcherOpt.cpp \
 	DFAPacketizerEmitter.cpp \
 	DisassemblerEmitter.cpp \
-	EDEmitter.cpp \
 	FastISelEmitter.cpp \
 	FixedLenDecoderEmitter.cpp \
 	InstrInfoEmitter.cpp \
 	IntrinsicEmitter.cpp \
+	OptParserEmitter.cpp \
 	PseudoLoweringEmitter.cpp \
 	RegisterInfoEmitter.cpp \
 	SetTheory.cpp \
@@ -35,7 +38,6 @@ SRCS=	AsmMatcherEmitter.cpp \
 	X86DisassemblerTables.cpp \
 	X86ModRMFilters.cpp \
 	X86RecognizableInstr.cpp
-LLVM_REQUIRES_EH=
 
 LIBDEPS=llvmtablegen \
 	llvmsupport

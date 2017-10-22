@@ -49,14 +49,17 @@ struct g_class zfs_vdev_class = {
 
 DECLARE_GEOM_CLASS(zfs_vdev_class, zfs_vdev);
 
-/*
- * Don't send BIO_FLUSH.
- */
+SYSCTL_DECL(_vfs_zfs_vdev);
+/* Don't send BIO_FLUSH. */
 static int vdev_geom_bio_flush_disable = 0;
 TUNABLE_INT("vfs.zfs.vdev.bio_flush_disable", &vdev_geom_bio_flush_disable);
-SYSCTL_DECL(_vfs_zfs_vdev);
 SYSCTL_INT(_vfs_zfs_vdev, OID_AUTO, bio_flush_disable, CTLFLAG_RW,
     &vdev_geom_bio_flush_disable, 0, "Disable BIO_FLUSH");
+/* Don't send BIO_DELETE. */
+static int vdev_geom_bio_delete_disable = 0;
+TUNABLE_INT("vfs.zfs.vdev.bio_delete_disable", &vdev_geom_bio_delete_disable);
+SYSCTL_INT(_vfs_zfs_vdev, OID_AUTO, bio_delete_disable, CTLFLAG_RW,
+    &vdev_geom_bio_delete_disable, 0, "Disable BIO_DELETE");
 
 static void
 vdev_geom_orphan(struct g_consumer *cp)
@@ -66,6 +69,8 @@ vdev_geom_orphan(struct g_consumer *cp)
 	g_topology_assert();
 
 	vd = cp->private;
+	if (vd == NULL)
+		return;
 
 	/*
 	 * Orphan callbacks occur from the GEOM event thread.
@@ -267,8 +272,7 @@ vdev_geom_read_config(struct g_consumer *cp, nvlist_t **config)
 			continue;
 
 		if (nvlist_lookup_uint64(*config, ZPOOL_CONFIG_POOL_STATE,
-		    &state) != 0 || state == POOL_STATE_DESTROYED ||
-		    state > POOL_STATE_L2CACHE) {
+		    &state) != 0 || state > POOL_STATE_L2CACHE) {
 			nvlist_free(*config);
 			*config = NULL;
 			continue;
@@ -572,7 +576,7 @@ vdev_geom_open_by_path(vdev_t *vd, int check_guid)
 
 static int
 vdev_geom_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
-    uint64_t *ashift)
+    uint64_t *logical_ashift, uint64_t *physical_ashift)
 {
 	struct g_provider *pp;
 	struct g_consumer *cp;
@@ -658,13 +662,17 @@ vdev_geom_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
 	*max_psize = *psize = pp->mediasize;
 
 	/*
-	 * Determine the device's minimum transfer size.
+	 * Determine the device's minimum transfer size and preferred
+	 * transfer size.
 	 */
-	*ashift = highbit(MAX(pp->sectorsize, SPA_MINBLOCKSIZE)) - 1;
+	*logical_ashift = highbit(MAX(pp->sectorsize, SPA_MINBLOCKSIZE)) - 1;
+	*physical_ashift = 0;
+	if (pp->stripesize)
+		*physical_ashift = highbit(pp->stripesize) - 1;
 
 	/*
-	 * Clear the nowritecache bit, so that on a vdev_reopen() we will
-	 * try again.
+	 * Clear the nowritecache settings, so that on a vdev_reopen()
+	 * we will try again.
 	 */
 	vd->vdev_nowritecache = B_FALSE;
 
@@ -687,6 +695,7 @@ vdev_geom_close(vdev_t *vd)
 		return;
 	vd->vdev_tsd = NULL;
 	vd->vdev_delayed_close = B_FALSE;
+	cp->private = NULL;	/* XXX locking */
 	g_post_event(vdev_geom_detach, cp, M_WAITOK, NULL);
 }
 
@@ -709,6 +718,15 @@ vdev_geom_io_intr(struct bio *bp)
 		 * with the ioctl in the future.
 		 */
 		vd->vdev_nowritecache = B_TRUE;
+	}
+	if (bp->bio_cmd == BIO_DELETE && bp->bio_error == ENOTSUP) {
+		/*
+		 * If we get ENOTSUP, we know that no future
+		 * attempts will ever succeed.  In this case we
+		 * set a persistent bit so that we don't bother
+		 * with the ioctl in the future.
+		 */
+		vd->vdev_notrim = B_TRUE;
 	}
 	if (zio->io_error == EIO && !vd->vdev_remove_wanted) {
 		/*
@@ -752,17 +770,21 @@ vdev_geom_io_start(zio_t *zio)
 		}
 
 		switch (zio->io_cmd) {
-
 		case DKIOCFLUSHWRITECACHE:
-
 			if (zfs_nocacheflush || vdev_geom_bio_flush_disable)
 				break;
-
 			if (vd->vdev_nowritecache) {
 				zio->io_error = ENOTSUP;
 				break;
 			}
-
+			goto sendreq;
+		case DKIOCTRIM:
+			if (vdev_geom_bio_delete_disable)
+				break;
+			if (vd->vdev_notrim) {
+				zio->io_error = ENOTSUP;
+				break;
+			}
 			goto sendreq;
 		default:
 			zio->io_error = ENOTSUP;
@@ -787,11 +809,21 @@ sendreq:
 		bp->bio_length = zio->io_size;
 		break;
 	case ZIO_TYPE_IOCTL:
-		bp->bio_cmd = BIO_FLUSH;
-		bp->bio_flags |= BIO_ORDERED;
-		bp->bio_data = NULL;
-		bp->bio_offset = cp->provider->mediasize;
-		bp->bio_length = 0;
+		switch (zio->io_cmd) {
+		case DKIOCFLUSHWRITECACHE:
+			bp->bio_cmd = BIO_FLUSH;
+			bp->bio_flags |= BIO_ORDERED;
+			bp->bio_data = NULL;
+			bp->bio_offset = cp->provider->mediasize;
+			bp->bio_length = 0;
+			break;
+		case DKIOCTRIM:
+			bp->bio_cmd = BIO_DELETE;
+			bp->bio_data = NULL;
+			bp->bio_offset = zio->io_offset;
+			bp->bio_length = zio->io_size;
+			break;
+		}
 		break;
 	}
 	bp->bio_done = vdev_geom_io_intr;

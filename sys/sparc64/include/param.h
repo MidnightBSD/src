@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: stable/9/sys/sparc64/include/param.h 224232 2011-07-20 18:51:18Z marius $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/param.h 250338 2013-05-07 22:46:24Z attilio $
  */
 
 #ifndef _SPARC64_INCLUDE_PARAM_H_
@@ -56,6 +56,10 @@
 #else
 #define MAXCPU		1
 #endif /* SMP || KLD_MODULE */
+
+#ifndef MAXMEMDOM
+#define	MAXMEMDOM	1
+#endif
 
 #define	INT_SHIFT	2
 #define	PTR_SHIFT	3

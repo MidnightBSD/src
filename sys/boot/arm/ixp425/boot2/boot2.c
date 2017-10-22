@@ -15,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/arm/ixp425/boot2/boot2.c 231287 2012-02-09 16:53:51Z bapt $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/arm/ixp425/boot2/boot2.c 235988 2012-05-25 09:36:39Z gleb $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -98,7 +98,6 @@ static int disk_layout;
 
 static void load(void);
 static int parse(void);
-static int xfsread(ino_t, void *, size_t);
 static int dskread(void *, unsigned, unsigned);
 static int drvread(void *, unsigned, unsigned);
 #ifdef FIXUP_BOOT_DRV
@@ -114,7 +113,7 @@ static void fixup_boot_drv(caddr_t, int, int, int);
 #endif
 
 static inline int
-xfsread(ino_t inode, void *buf, size_t nbyte)
+xfsread(ufs_ino_t inode, void *buf, size_t nbyte)
 {
 	if ((size_t)fsread(inode, buf, nbyte) != nbyte)
 		return -1;
@@ -158,7 +157,7 @@ main(void)
 {
 	const char *bt;
 	int autoboot, c = 0;
-	ino_t ino;
+	ufs_ino_t ino;
 
 	dmadat = (void *)(0x1c0000);
 	p_memset((char *)dmadat, 0, 32 * 1024);
@@ -207,7 +206,7 @@ load(void)
 	Elf32_Ehdr eh;
 	static Elf32_Phdr ep[2];
 	caddr_t p;
-	ino_t ino;
+	ufs_ino_t ino;
 	uint32_t addr;
 	int i, j;
 #ifdef FIXUP_BOOT_DRV

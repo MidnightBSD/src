@@ -31,7 +31,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/s3c2xx0/s3c2xx0reg.h 205354 2010-03-20 03:39:35Z imp $
+ * $FreeBSD: release/10.0.0/sys/arm/s3c2xx0/s3c2xx0reg.h 205354 2010-03-20 03:39:35Z imp $
  */
 
 

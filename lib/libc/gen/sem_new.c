@@ -26,7 +26,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libc/gen/sem_new.c 235035 2012-05-04 20:45:53Z jilles $
+ * $FreeBSD: release/10.0.0/lib/libc/gen/sem_new.c 246894 2013-02-17 02:52:42Z davidxu $
  */
 
 #include "namespace.h"
@@ -198,15 +198,11 @@ _sem_open(const char *name, int flags, ...)
 		goto error;
 	}
 
-	fd = _open(path, flags|O_RDWR, mode);
+	fd = _open(path, flags|O_RDWR|O_CLOEXEC|O_EXLOCK, mode);
 	if (fd == -1)
 		goto error;
-	if (flock(fd, LOCK_EX) == -1)
+	if (_fstat(fd, &sb))
 		goto error;
-	if (_fstat(fd, &sb)) {
-		flock(fd, LOCK_UN);
-		goto error;
-	}
 	if (sb.st_size < sizeof(sem_t)) {
 		sem_t tmp;
 
@@ -214,10 +210,8 @@ _sem_open(const char *name, int flags, ...)
 		tmp._kern._has_waiters = 0;
 		tmp._kern._count = value;
 		tmp._kern._flags = USYNC_PROCESS_SHARED | SEM_NAMED;
-		if (_write(fd, &tmp, sizeof(tmp)) != sizeof(tmp)) {
-			flock(fd, LOCK_UN);
+		if (_write(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
 			goto error;
-		}
 	}
 	flock(fd, LOCK_UN);
 	sem = (sem_t *)mmap(NULL, sizeof(sem_t), PROT_READ|PROT_WRITE,
@@ -235,18 +229,18 @@ _sem_open(const char *name, int flags, ...)
 	ni->open_count = 1;
 	ni->sem = sem;
 	LIST_INSERT_HEAD(&sem_list, ni, next);
-	_pthread_mutex_unlock(&sem_llock);
 	_close(fd);
+	_pthread_mutex_unlock(&sem_llock);
 	return (sem);
 
 error:
 	errsave = errno;
-	_pthread_mutex_unlock(&sem_llock);
 	if (fd != -1)
 		_close(fd);
 	if (sem != NULL)
 		munmap(sem, sizeof(sem_t));
 	free(ni);
+	_pthread_mutex_unlock(&sem_llock);
 	errno = errsave;
 	return (SEM_FAILED);
 }
@@ -338,21 +332,27 @@ _sem_getvalue(sem_t * __restrict sem, int * __restrict sval)
 static __inline int
 usem_wake(struct _usem *sem)
 {
-	if (!sem->_has_waiters)
-		return (0);
 	return _umtx_op(sem, UMTX_OP_SEM_WAKE, 0, NULL, NULL);
 }
 
 static __inline int
-usem_wait(struct _usem *sem, const struct timespec *timeout)
+usem_wait(struct _usem *sem, const struct timespec *abstime)
 {
-	if (timeout && (timeout->tv_sec < 0 || (timeout->tv_sec == 0 &&
-	    timeout->tv_nsec <= 0))) {
-		errno = ETIMEDOUT;
-		return (-1);
+	struct _umtx_time *tm_p, timeout;
+	size_t tm_size;
+
+	if (abstime == NULL) {
+		tm_p = NULL;
+		tm_size = 0;
+	} else {
+		timeout._clockid = CLOCK_REALTIME;
+		timeout._flags = UMTX_ABSTIME;
+		timeout._timeout = *abstime;
+		tm_p = &timeout;
+		tm_size = sizeof(timeout);
 	}
-	return _umtx_op(sem, UMTX_OP_SEM_WAIT, 0, NULL,
-			__DECONST(void*, timeout));
+	return _umtx_op(sem, UMTX_OP_SEM_WAIT, 0, 
+		    (void *)tm_size, __DECONST(void*, tm_p));
 }
 
 int
@@ -371,22 +371,10 @@ _sem_trywait(sem_t *sem)
 	return (-1);
 }
 
-#define TIMESPEC_SUB(dst, src, val)                             \
-        do {                                                    \
-                (dst)->tv_sec = (src)->tv_sec - (val)->tv_sec;  \
-                (dst)->tv_nsec = (src)->tv_nsec - (val)->tv_nsec; \
-                if ((dst)->tv_nsec < 0) {                       \
-                        (dst)->tv_sec--;                        \
-                        (dst)->tv_nsec += 1000000000;           \
-                }                                               \
-        } while (0)
-
-
 int
 _sem_timedwait(sem_t * __restrict sem,
 	const struct timespec * __restrict abstime)
 {
-	struct timespec ts, ts2;
 	int val, retval;
 
 	if (sem_check_validity(sem) != 0)
@@ -413,11 +401,9 @@ _sem_timedwait(sem_t * __restrict sem,
 				errno = EINVAL;
 				return (-1);
 			}
-			clock_gettime(CLOCK_REALTIME, &ts);
-			TIMESPEC_SUB(&ts2, abstime, &ts);
 		}
 		_pthread_cancel_enter(1);
-		retval = usem_wait(&sem->_kern, abstime ? &ts2 : NULL);
+		retval = usem_wait(&sem->_kern, abstime);
 		_pthread_cancel_leave(0);
 	}
 	return (retval);
@@ -438,10 +424,16 @@ _sem_wait(sem_t *sem)
 int
 _sem_post(sem_t *sem)
 {
+	unsigned int count;
 
 	if (sem_check_validity(sem) != 0)
 		return (-1);
 
-	atomic_add_rel_int(&sem->_kern._count, 1);
-	return usem_wake(&sem->_kern);
+	do {
+		count = sem->_kern._count;
+		if (count + 1 > SEM_VALUE_MAX)
+			return (EOVERFLOW);
+	} while(!atomic_cmpset_rel_int(&sem->_kern._count, count, count+1));
+	(void)usem_wake(&sem->_kern);
+	return (0);
 }

@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)pstat.c	8.16 (Berkeley) 5/9/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pstat/pstat.c 196244 2009-08-15 14:39:33Z stas $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pstat/pstat.c 225847 2011-09-28 18:53:36Z ed $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -345,7 +345,7 @@ ttyprt(struct xtty *xt)
 		errx(1, "struct xtty size mismatch");
 	if (usenumflag || xt->xt_dev == 0 ||
 	   (name = devname(xt->xt_dev, S_IFCHR)) == NULL)
-		printf("%5d,%4d ", major(xt->xt_dev), minor(xt->xt_dev));
+		printf("%#10jx ", (uintmax_t)xt->xt_dev);
 	else
 		printf("%10s ", name);
 	printf("%5zu %4zu %4zu %4zu %5zu %4zu %4zu %5u %5d %5d ",

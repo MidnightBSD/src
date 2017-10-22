@@ -1,10 +1,11 @@
-# $FreeBSD: stable/9/usr.bin/clang/Makefile 245431 2013-01-14 19:51:26Z dim $
+# $FreeBSD: release/10.0.0/usr.bin/clang/Makefile 255722 2013-09-20 01:52:02Z emaste $
 
 .include <bsd.own.mk>
 
 SUBDIR=	clang clang-tblgen tblgen
 
-.if ${MK_CLANG_EXTRAS} != "no" && !defined(TOOLS_PREFIX)
+.if !defined(TOOLS_PREFIX)
+.if ${MK_CLANG_EXTRAS} != "no"
 SUBDIR+=bugpoint \
 	llc \
 	lli \
@@ -24,5 +25,10 @@ SUBDIR+=bugpoint \
 	macho-dump \
 	opt
 .endif
+
+.if ${MK_LLDB} != "no"
+SUBDIR+=lldb
+.endif
+.endif # TOOLS_PREFIX
 
 .include <bsd.subdir.mk>

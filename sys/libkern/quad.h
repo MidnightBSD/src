@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)quad.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: stable/9/sys/libkern/quad.h 176496 2008-02-23 22:40:05Z marcel $
+ * $FreeBSD: release/10.0.0/sys/libkern/quad.h 245840 2013-01-23 09:18:18Z andrew $
  */
 
 #ifndef _LIBKERN_QUAD_H_
@@ -109,5 +109,10 @@ u_quad_t	__qdivrem(u_quad_t u, u_quad_t v, u_quad_t *rem);
 u_quad_t	__udivdi3(u_quad_t a, u_quad_t b);
 u_quad_t	__umoddi3(u_quad_t a, u_quad_t b);
 int		__ucmpdi2(u_quad_t a, u_quad_t b);
+
+/* ARM EABI support functions. */
+#ifdef __ARM_EABI__
+int		__aeabi_ulcmp(unsigned long long, unsigned long long);
+#endif
 
 #endif /* !_LIBKERN_QUAD_H_ */

@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/geom/geom_int.h 136946 2004-10-25 12:28:28Z phk $
+ * $FreeBSD: release/10.0.0/sys/geom/geom_int.h 255860 2013-09-24 20:05:16Z des $
  */
 
 LIST_HEAD(class_list_head, g_class);
@@ -65,7 +65,7 @@ void g_do_wither(void);
 /* geom_subr.c */
 extern struct class_list_head g_classes;
 extern char *g_wait_event, *g_wait_sim, *g_wait_up, *g_wait_down;
-int g_wither_washer(void);
+void g_wither_washer(void);
 
 /* geom_io.c */
 void g_io_init(void);
@@ -75,6 +75,7 @@ void g_io_schedule_up(struct thread *tp);
 /* geom_kern.c / geom_kernsim.c */
 void g_init(void);
 extern int g_shutdown;
+extern int g_notaste;
 
 /* geom_ctl.c */
 void g_ctl_init(void);

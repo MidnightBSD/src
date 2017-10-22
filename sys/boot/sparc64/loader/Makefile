@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/boot/sparc64/loader/Makefile 237766 2012-06-29 10:19:15Z avg $
+# $FreeBSD: release/10.0.0/sys/boot/sparc64/loader/Makefile 242688 2012-11-07 02:14:03Z dteske $
 
 .include <bsd.own.mk>
 MK_SSP=		no
@@ -99,7 +99,7 @@ loader.help: help.common help.sparc64
 FILES=	loader.help loader.4th support.4th loader.conf
 FILES+=	screen.4th frames.4th
 FILES+=	beastie.4th brand.4th check-password.4th color.4th delay.4th
-FILES+=	menu.4th menu-commands.4th shortcuts.4th version.4th
+FILES+=	menu.4th menu-commands.4th menusets.4th shortcuts.4th version.4th
 FILESDIR_loader.conf=	/boot/defaults
 
 .if !exists(${DESTDIR}/boot/loader.rc)

@@ -1,3 +1,4 @@
+/* $FreeBSD: release/10.0.0/sys/dev/usb/controller/ehci.c 254238 2013-08-12 06:09:28Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 2004 The NetBSD Foundation, Inc. All rights reserved.
@@ -43,9 +44,9 @@
  * 1) command failures are not recovered correctly
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ehci.c 248085 2013-03-09 02:36:32Z marius $");
-
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -81,6 +82,8 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ehci.c 248085 2013-03-09 02:
 
 #include <dev/usb/usb_controller.h>
 #include <dev/usb/usb_bus.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
+
 #include <dev/usb/controller/ehci.h>
 #include <dev/usb/controller/ehcireg.h>
 
@@ -256,7 +259,7 @@ ehci_init_sub(struct ehci_softc *sc)
 		DPRINTF("HCC uses 64-bit structures\n");
 
 		/* MUST clear segment register if 64 bit capable */
-		EWRITE4(sc, EHCI_CTRLDSSEGMENT, 0);
+		EOWRITE4(sc, EHCI_CTRLDSSEGMENT, 0);
 	}
 
 	usbd_get_page(&sc->sc_hw.pframes_pc, 0, &buf_res);
@@ -3705,10 +3708,6 @@ ehci_ep_init(struct usb_device *udev, struct usb_endpoint_descriptor *edesc,
 	    edesc->bEndpointAddress, udev->flags.usb_mode,
 	    sc->sc_addr);
 
-	if (udev->flags.usb_mode != USB_MODE_HOST) {
-		/* not supported */
-		return;
-	}
 	if (udev->device_index != sc->sc_addr) {
 
 		if ((udev->speed != USB_SPEED_HIGH) &&

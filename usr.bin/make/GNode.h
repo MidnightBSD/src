@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/make/GNode.h 168893 2007-04-20 06:33:25Z fjoe $
+ * $FreeBSD: release/10.0.0/usr.bin/make/GNode.h 228992 2011-12-30 11:02:40Z uqs $
  */
 
 #ifndef GNode_h_39503bf2
@@ -139,7 +139,7 @@ typedef struct GNode {
 		UPTODATE,	/* Was already up-to-date */
 
 		/*
-		 * An error occured while it was being
+		 * An error occurred while it was being
 		 * made (used only in compat mode)
 		 */
 		ERROR,

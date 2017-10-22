@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/binutils/ld/Makefile 235398 2012-05-13 13:57:53Z kib $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/binutils/ld/Makefile 257662 2013-11-04 23:36:49Z brooks $
 
 .include "../Makefile.inc0"
 .include <bsd.own.mk>
@@ -31,7 +31,12 @@ CFLAGS+= -DTARGET=\"${TARGET_TUPLE}\"
 CFLAGS+= -DDEFAULT_EMULATION=\"${NATIVE_EMULATION}\"
 CFLAGS+= -DSCRIPTDIR=\"${TOOLS_PREFIX}/usr/libdata\"
 CFLAGS+= -DBFD_VERSION_STRING=\"${VERSION}\"
-CFLAGS+= -DBINDIR=\"${BINDIR}\" -DTARGET_SYSTEM_ROOT=\"${TOOLS_PREFIX}\"
+CFLAGS+= -DBINDIR=\"${BINDIR}\"
+.if defined(TOOLS_PREFIX)
+CFLAGS+= -DTARGET_SYSTEM_ROOT=\"${TOOLS_PREFIX}\"
+.else
+CFLAGS+= -DTARGET_SYSTEM_ROOT=\"/\"
+.endif
 CFLAGS+= -DTOOLBINDIR=\"${TOOLS_PREFIX}/${BINDIR}/libexec\"
 CFLAGS+= -D_GNU_SOURCE
 CFLAGS+= -I${SRCDIR}/ld -I${SRCDIR}/bfd

@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man9/devfs_set_cdevpriv.9 222286 2011-05-25 14:13:53Z ru $
+.\" $FreeBSD: release/10.0.0/share/man/man9/devfs_set_cdevpriv.9 239303 2012-08-15 16:19:39Z hselasky $
 .\"
-.Dd September 8, 2008
+.Dd August 15, 2012
 .Dt DEVFS_CDEVPRIV 9
 .Os
 .Sh NAME
@@ -79,6 +79,10 @@ finished operating, the
 callback is called, with private data supplied
 .Va data
 argument.
+The
+.Fn devfs_clear_cdevpriv
+function will be also be called if the open callback
+function returns an error code.
 .Pp
 On the last filedescriptor close, system automatically arranges
 .Fn devfs_clear_cdevpriv

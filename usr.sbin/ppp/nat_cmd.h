@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/ppp/nat_cmd.h 120372 2003-09-23 07:41:55Z marcus $
+ * $FreeBSD: release/10.0.0/usr.sbin/ppp/nat_cmd.h 120372 2003-09-23 07:41:55Z marcus $
  */
 
 struct cmdargs;

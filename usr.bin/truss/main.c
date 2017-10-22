@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/truss/main.c 246142 2013-01-31 01:15:12Z mjg $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/truss/main.c 247975 2013-03-07 23:44:35Z cognet $");
 
 /*
  * The main module for truss.  Surprisingly simple, but, then, the other
@@ -74,11 +74,14 @@ usage(void)
  * WARNING! "FreeBSD a.out" must be first, or set_etype will not
  * work correctly.
  */
-struct ex_types {
+static struct ex_types {
 	const char *type;
 	void (*enter_syscall)(struct trussinfo *, int);
 	long (*exit_syscall)(struct trussinfo *, int);
 } ex_types[] = {
+#ifdef __arm__
+	{ "FreeBSD ELF32", arm_syscall_entry, arm_syscall_exit },
+#endif
 #ifdef __amd64__
 	{ "FreeBSD ELF64", amd64_syscall_entry, amd64_syscall_exit },
 	{ "FreeBSD ELF32", amd64_fbsd32_syscall_entry, amd64_fbsd32_syscall_exit },
@@ -234,15 +237,12 @@ main(int ac, char **av)
 		usage();
 
 	if (fname != NULL) { /* Use output file */
-		if ((trussinfo->outfile = fopen(fname, "w")) == NULL)
-			err(1, "cannot open %s", fname);
 		/*
-		 * Set FD_CLOEXEC, so that the output file is not shared with
-		 * the traced process.
+		 * Set close-on-exec ('e'), so that the output file is not
+		 * shared with the traced process.
 		 */
-		if (fcntl(fileno(trussinfo->outfile), F_SETFD, FD_CLOEXEC) ==
-		    -1)
-			warn("fcntl()");
+		if ((trussinfo->outfile = fopen(fname, "we")) == NULL)
+			err(1, "cannot open %s", fname);
 	}
 
 	/*

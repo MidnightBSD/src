@@ -27,7 +27,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/thread/thr_sem.c 201546 2010-01-05 02:37:59Z davidxu $
+ * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_sem.c 201546 2010-01-05 02:37:59Z davidxu $
  */
 
 #include "namespace.h"

@@ -2,7 +2,7 @@
 #
 # (Based on the Swedish sv_SE.ISO_8859-15)
 #
-# $FreeBSD: stable/9/share/colldef/no_NO.ISO8859-15.src 180998 2008-07-30 15:37:13Z des $
+# $FreeBSD: release/10.0.0/share/colldef/no_NO.ISO8859-15.src 180998 2008-07-30 15:37:13Z des $
 #
 charmap map.ISO8859-15
 order \

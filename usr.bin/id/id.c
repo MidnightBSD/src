@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)id.c	8.2 (Berkeley) 2/16/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/id/id.c 219304 2011-03-05 12:40:35Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/id/id.c 227203 2011-11-06 09:09:45Z ed $");
 
 #include <sys/param.h>
 #include <sys/mac.h>
@@ -57,16 +57,18 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/id/id.c 219304 2011-03-05 12:40:35Z trasz $
 #include <string.h>
 #include <unistd.h>
 
-void	id_print(struct passwd *, int, int, int);
-void	pline(struct passwd *);
-void	pretty(struct passwd *);
-void	auditid(void);
-void	group(struct passwd *, int);
-void	maclabel(void);
-void	usage(void);
-struct passwd *who(char *);
+static void	id_print(struct passwd *, int, int, int);
+static void	pline(struct passwd *);
+static void	pretty(struct passwd *);
+#ifdef USE_BSM_AUDIT
+static void	auditid(void);
+#endif
+static void	group(struct passwd *, int);
+static void	maclabel(void);
+static void	usage(void);
+static struct passwd *who(char *);
 
-int isgroups, iswhoami;
+static int isgroups, iswhoami;
 
 int
 main(int argc, char *argv[])
@@ -220,7 +222,7 @@ main(int argc, char *argv[])
 	exit(0);
 }
 
-void
+static void
 pretty(struct passwd *pw)
 {
 	struct group *gr;
@@ -260,7 +262,7 @@ pretty(struct passwd *pw)
 	}
 }
 
-void
+static void
 id_print(struct passwd *pw, int use_ggl, int p_euid, int p_egid)
 {
 	struct group *gr;
@@ -324,7 +326,7 @@ id_print(struct passwd *pw, int use_ggl, int p_euid, int p_egid)
 }
 
 #ifdef USE_BSM_AUDIT
-void
+static void
 auditid(void)
 {
 	auditinfo_t auditinfo;
@@ -371,7 +373,7 @@ auditid(void)
 }
 #endif
 
-void
+static void
 group(struct passwd *pw, int nflag)
 {
 	struct group *gr;
@@ -411,7 +413,7 @@ group(struct passwd *pw, int nflag)
 	free(groups);
 }
 
-void
+static void
 maclabel(void)
 {
 	char *string;
@@ -435,7 +437,7 @@ maclabel(void)
 	free(string);
 }
 
-struct passwd *
+static struct passwd *
 who(char *u)
 {
 	struct passwd *pw;
@@ -455,7 +457,7 @@ who(char *u)
 	/* NOTREACHED */
 }
 
-void
+static void
 pline(struct passwd *pw)
 {
 
@@ -471,7 +473,7 @@ pline(struct passwd *pw)
 }
 
 
-void
+static void
 usage(void)
 {
 

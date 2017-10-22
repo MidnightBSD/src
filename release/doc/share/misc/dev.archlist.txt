@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/release/doc/share/misc/dev.archlist.txt 233464 2012-03-25 13:20:38Z brueffer $
+# $FreeBSD: release/10.0.0/release/doc/share/misc/dev.archlist.txt 237700 2012-06-28 10:12:46Z brueffer $
 #
 
 #
@@ -52,6 +52,7 @@ bce	i386,amd64
 bge	i386,pc98,sparc64,ia64,amd64
 bktr	i386,pc98
 bt	i386,amd64
+bxe	i386,amd64
 cdce	i386,pc98,ia64,amd64,powerpc
 ciss	i386,ia64,amd64
 ce	i386,pc98

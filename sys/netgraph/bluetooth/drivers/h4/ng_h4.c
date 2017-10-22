@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_h4.c,v 1.10 2005/10/31 17:57:43 max Exp $
- * $FreeBSD: stable/9/sys/netgraph/bluetooth/drivers/h4/ng_h4.c 184205 2008-10-23 15:53:51Z des $
+ * $FreeBSD: release/10.0.0/sys/netgraph/bluetooth/drivers/h4/ng_h4.c 243882 2012-12-05 08:04:20Z glebius $
  * 
  * Based on:
  * ---------
@@ -525,7 +525,7 @@ ng_h4_input(int c, struct tty *tp)
 		if (sc->hook != NULL && NG_HOOK_IS_VALID(sc->hook)) {
 			struct mbuf	*m = NULL;
 
-			MGETHDR(m, M_DONTWAIT, MT_DATA);
+			MGETHDR(m, M_NOWAIT, MT_DATA);
 			if (m != NULL) {
 				m->m_pkthdr.len = 0;
 

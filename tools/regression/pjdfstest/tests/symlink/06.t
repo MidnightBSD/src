@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/symlink/06.t 166065 2007-01-17 01:42:12Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/symlink/06.t 166065 2007-01-17 01:42:12Z pjd $
 
 desc="symlink returns EACCES if the parent directory of the file to be created denies write permission"
 

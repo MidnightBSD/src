@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/aac/aac_linux.c 224778 2011-08-11 12:30:23Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/aac/aac_linux.c 255219 2013-09-05 00:09:56Z pjd $");
 
 /*
  * Linux ioctl handler for the aac device driver
@@ -75,11 +75,13 @@ MODULE_DEPEND(aac_linux, linux, 1, 1, 1);
 static int
 aac_linux_ioctl(struct thread *td, struct linux_ioctl_args *args)
 {
+	cap_rights_t rights;
 	struct file *fp;
 	u_long cmd;
 	int error;
 
-	if ((error = fget(td, args->fd, CAP_IOCTL, &fp)) != 0)
+	error = fget(td, args->fd, cap_rights_init(&rights, CAP_IOCTL), &fp);
+	if (error != 0)
 		return (error);
 	cmd = args->cmd;
 

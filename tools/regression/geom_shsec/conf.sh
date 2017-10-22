@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/geom_shsec/conf.sh 153188 2005-12-07 01:29:50Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/geom_shsec/conf.sh 153188 2005-12-07 01:29:50Z pjd $
 
 name="test"
 class="shsec"

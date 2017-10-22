@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_btsocket.c,v 1.4 2003/09/14 23:29:06 max Exp $
- * $FreeBSD: stable/9/sys/netgraph/bluetooth/socket/ng_btsocket.c 195837 2009-07-23 20:46:49Z rwatson $
+ * $FreeBSD: release/10.0.0/sys/netgraph/bluetooth/socket/ng_btsocket.c 253346 2013-07-15 01:32:55Z rodrigc $
  */
 
 #include <sys/param.h>
@@ -45,6 +45,8 @@
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
 #include <sys/taskqueue.h>
+
+#include <net/vnet.h>
 
 #include <netgraph/ng_message.h>
 #include <netgraph/netgraph.h>
@@ -285,4 +287,4 @@ ng_btsocket_modevent(module_t mod, int event, void *data)
 	return (error);
 } /* ng_btsocket_modevent */
 
-DOMAIN_SET(ng_btsocket_);
+VNET_DOMAIN_SET(ng_btsocket_);

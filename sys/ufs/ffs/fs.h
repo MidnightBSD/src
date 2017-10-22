@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fs.h	8.13 (Berkeley) 3/21/95
- * $FreeBSD: stable/9/sys/ufs/ffs/fs.h 246284 2013-02-03 12:17:49Z trasz $
+ * $FreeBSD: release/10.0.0/sys/ufs/ffs/fs.h 248623 2013-03-22 21:45:28Z mckusick $
  */
 
 #ifndef _UFS_FFS_FS_H_
@@ -333,7 +333,8 @@ struct fs {
 	int32_t	 fs_maxbsize;		/* maximum blocking factor permitted */
 	int64_t	 fs_unrefs;		/* number of unreferenced inodes */
 	int64_t  fs_providersize;	/* size of underlying GEOM provider */
-	int64_t	 fs_sparecon64[15];	/* old rotation block list head */
+	int64_t	 fs_metaspace;		/* size of area reserved for metadata */
+	int64_t	 fs_sparecon64[14];	/* old rotation block list head */
 	int64_t	 fs_sblockloc;		/* byte offset of standard superblock */
 	struct	csum_total fs_cstotal;	/* (u) cylinder summary information */
 	ufs_time_t fs_time;		/* last time written */
@@ -342,7 +343,7 @@ struct fs {
 	ufs2_daddr_t fs_csaddr;		/* blk addr of cyl grp summary area */
 	int64_t	 fs_pendingblocks;	/* (u) blocks being freed */
 	u_int32_t fs_pendinginodes;	/* (u) inodes being freed */
-	ino_t	 fs_snapinum[FSMAXSNAP];/* list of snapshot inode numbers */
+	uint32_t fs_snapinum[FSMAXSNAP];/* list of snapshot inode numbers */
 	u_int32_t fs_avgfilesize;	/* expected average file size */
 	u_int32_t fs_avgfpdir;		/* expected # of files per directory */
 	int32_t	 fs_save_cgsize;	/* save real cg size to use fs_bsize */
@@ -525,6 +526,8 @@ struct cg {
  * They calc filesystem addresses of cylinder group data structures.
  */
 #define	cgbase(fs, c)	(((ufs2_daddr_t)(fs)->fs_fpg) * (c))
+#define	cgdata(fs, c)	(cgdmin(fs, c) + (fs)->fs_metaspace)	/* data zone */
+#define	cgmeta(fs, c)	(cgdmin(fs, c))				/* meta data */
 #define	cgdmin(fs, c)	(cgstart(fs, c) + (fs)->fs_dblkno)	/* 1st data */
 #define	cgimin(fs, c)	(cgstart(fs, c) + (fs)->fs_iblkno)	/* inode blk */
 #define	cgsblock(fs, c)	(cgstart(fs, c) + (fs)->fs_sblkno)	/* super blk */
@@ -699,11 +702,11 @@ struct jsegrec {
  */
 struct jrefrec {
 	uint32_t	jr_op;
-	ino_t		jr_ino;
-	ino_t		jr_parent;
+	uint32_t	jr_ino;
+	uint32_t	jr_parent;
 	uint16_t	jr_nlink;
 	uint16_t	jr_mode;
-	off_t		jr_diroff;
+	int64_t		jr_diroff;
 	uint64_t	jr_unused;
 };
 
@@ -713,11 +716,11 @@ struct jrefrec {
  */
 struct jmvrec {
 	uint32_t	jm_op;
-	ino_t		jm_ino;
-	ino_t		jm_parent;
+	uint32_t	jm_ino;
+	uint32_t	jm_parent;
 	uint16_t	jm_unused;
-	off_t		jm_oldoff;
-	off_t		jm_newoff;
+	int64_t		jm_oldoff;
+	int64_t		jm_newoff;
 };
 
 /*
@@ -741,7 +744,7 @@ struct jblkrec {
 struct jtrncrec {
 	uint32_t	jt_op;
 	uint32_t	jt_ino;
-	off_t		jt_size;
+	int64_t		jt_size;
 	uint32_t	jt_extsize;
 	uint32_t	jt_pad[3];
 };

@@ -1,0 +1,7 @@
+# $FreeBSD: release/10.0.0/sys/arm/broadcom/bcm2835/std.bcm2835 253355 2013-07-15 07:01:30Z rpaulo $
+
+machine	arm armv6
+cpu	CPU_ARM1176
+
+files	"../broadcom/bcm2835/files.bcm2835"
+

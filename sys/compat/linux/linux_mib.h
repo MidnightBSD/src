@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/compat/linux/linux_mib.h 219668 2011-03-15 13:40:47Z netchild $
+ * $FreeBSD: release/10.0.0/sys/compat/linux/linux_mib.h 219668 2011-03-15 13:40:47Z netchild $
  */
 
 #ifndef _LINUX_MIB_H_

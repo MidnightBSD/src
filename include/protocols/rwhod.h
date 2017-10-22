@@ -28,11 +28,13 @@
  *
  *	@(#)rwhod.h	8.1 (Berkeley) 6/2/93
  *
- * $FreeBSD: stable/9/include/protocols/rwhod.h 203965 2010-02-16 19:46:46Z imp $
+ * $FreeBSD: release/10.0.0/include/protocols/rwhod.h 250889 2013-05-21 21:50:11Z ed $
  */
 
 #ifndef _PROTOCOLS_RWHOD_H_
 #define	_PROTOCOLS_RWHOD_H_
+
+#include <sys/_types.h>
 
 /*
  * rwho protocol packet format.
@@ -40,7 +42,7 @@
 struct	outmp {
 	char	out_line[8];		/* tty name */
 	char	out_name[8];		/* user id */
-	int32_t	out_time;		/* time on */
+	__int32_t out_time;		/* time on */
 };
 
 struct	whod {

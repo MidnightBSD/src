@@ -23,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libc/arm/_fpmath.h 237023 2012-06-13 20:31:30Z mav $
+ * $FreeBSD: release/10.0.0/lib/libc/arm/_fpmath.h 255361 2013-09-07 14:04:10Z andrew $
  */
 
-#if defined(__VFP_FP__)
+#if defined(__VFP_FP__) || defined(__ARM_EABI__)
 #define	_IEEE_WORD_ORDER	_BYTE_ORDER
 #else
 #define	_IEEE_WORD_ORDER	_BIG_ENDIAN

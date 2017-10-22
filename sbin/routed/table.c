@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/routed/table.c 190718 2009-04-05 17:33:07Z phk $
+ * $FreeBSD: release/10.0.0/sbin/routed/table.c 229778 2012-01-07 16:09:33Z uqs $
  */
 
 #include "defs.h"
@@ -34,7 +34,7 @@
 #ifdef __NetBSD__
 __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
-__RCSID("$FreeBSD: stable/9/sbin/routed/table.c 190718 2009-04-05 17:33:07Z phk $");
+__RCSID("$FreeBSD: release/10.0.0/sbin/routed/table.c 229778 2012-01-07 16:09:33Z uqs $");
 #else
 __RCSID("$Revision: 2.27 $");
 #ident "$Revision: 2.27 $"
@@ -2071,7 +2071,7 @@ walk_age(struct radix_node *rn,
 	/* try to switch to an alternative */
 	rtswitch(RT, 0);
 
-	/* Delete a dead route after it has been publically mourned. */
+	/* Delete a dead route after it has been publicly mourned. */
 	if (now_garbage > RT->rt_time) {
 		rtdelete(RT);
 		return 0;

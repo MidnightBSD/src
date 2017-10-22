@@ -45,7 +45,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/amdsbwd/amdsbwd.c 222805 2011-06-07 06:18:02Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/amdsbwd/amdsbwd.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -139,7 +139,7 @@ static device_method_t amdsbwd_methods[] = {
 #if 0
 	DEVMETHOD(device_shutdown,	amdsbwd_detach),
 #endif
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static devclass_t	amdsbwd_devclass;

@@ -30,7 +30,7 @@
  *
  *	from: @(#)svc.h 1.35 88/12/17 SMI
  *	from: @(#)svc.h      1.27    94/04/25 SMI
- * $FreeBSD: stable/9/sys/rpc/svc.h 193436 2009-06-04 14:13:06Z rmacklem $
+ * $FreeBSD: release/10.0.0/sys/rpc/svc.h 244008 2012-12-08 00:29:16Z rmacklem $
  */
 
 /*
@@ -702,6 +702,8 @@ extern SVCXPRT *svc_vc_create(SVCPOOL *, struct socket *,
          * const size_t sendsize;                        -- max send size
          * const size_t recvsize;                        -- max recv size
          */
+
+extern SVCXPRT *svc_vc_create_backchannel(SVCPOOL *);
 
 /*
  * Generic TLI create routine

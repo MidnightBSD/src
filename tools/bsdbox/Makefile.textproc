@@ -1,0 +1,20 @@
+#
+# This builds a variety of text processing tools that
+# may be useful on an embedded device.
+#
+# $FreeBSD: release/10.0.0/tools/bsdbox/Makefile.textproc 229675 2012-01-06 00:56:31Z adrian $
+#
+
+# Sed
+CRUNCH_PROGS_usr.bin+=	sed
+
+# Awk
+# Disable - it's big! -adrian
+#CRUNCH_PROGS_usr.bin+=	awk
+#CRUNCH_BUILDTOOLS+=	usr.bin/awk
+
+# vi
+# Disable - it's big! -adrian
+#CRUNCH_PROGS_usr.bin+=	vi
+
+CRUNCH_PROGS_usr.bin+=	ee

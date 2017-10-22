@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/contrib/x86emu/x86emu.c 204934 2010-03-09 22:42:24Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/contrib/x86emu/x86emu.c 204934 2010-03-09 22:42:24Z delphij $");
 
 #include <contrib/x86emu/x86emu.h>
 #include <contrib/x86emu/x86emu_regs.h>

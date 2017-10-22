@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/pci/pci_subr.c 224069 2011-07-15 21:08:58Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/pci/pci_subr.c 224069 2011-07-15 21:08:58Z jhb $");
 
 /*
  * Support APIs for Host to PCI bridge drivers and drivers that

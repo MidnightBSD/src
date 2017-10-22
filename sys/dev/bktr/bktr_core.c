@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/bktr/bktr_core.c 225617 2011-09-16 13:58:51Z kmacy $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/bktr/bktr_core.c 254025 2013-08-07 06:21:20Z jeff $");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -109,6 +109,7 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/bktr/bktr_core.c 225617 2011-09-16 13:58:51
 #include <sys/kernel.h>
 #include <sys/fcntl.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/signalvar.h>
@@ -1801,8 +1802,10 @@ video_ioctl( bktr_ptr_t bktr, int unit, ioctl_cmd_t cmd, caddr_t arg, struct thr
 #else
                                 buf = get_bktr_mem(unit, temp*PAGE_SIZE);
                                 if (buf != 0) {
-                                        kmem_free(kernel_map, bktr->bigbuf,
-                                          (bktr->alloc_pages * PAGE_SIZE));
+					contigfree(
+					  (void *)(uintptr_t)bktr->bigbuf,
+                                          (bktr->alloc_pages * PAGE_SIZE),
+					  M_DEVBUF);
 #endif                                          
 
 					bktr->bigbuf = buf;
@@ -1936,7 +1939,7 @@ int
 tuner_ioctl( bktr_ptr_t bktr, int unit, ioctl_cmd_t cmd, caddr_t arg, struct thread* td )
 {
 	int		tmp_int;
-	unsigned int	temp, temp1;
+	int		temp, temp1;
 	int		offset;
 	int		count;
 	u_char		*buf;

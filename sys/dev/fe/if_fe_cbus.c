@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/fe/if_fe_cbus.c 179959 2008-06-23 18:16:25Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/fe/if_fe_cbus.c 179959 2008-06-23 18:16:25Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/sbin/geom/class/shsec/gshsec.8 143576 2005-03-14 13:14:04Z pjd $
+.\" $FreeBSD: release/10.0.0/sbin/geom/class/shsec/gshsec.8 255977 2013-10-01 18:41:53Z pluknet $
 .\"
-.Dd January 8, 2005
+.Dd October 1, 2013
 .Dt GSHSEC 8
 .Os
 .Sh NAME
@@ -108,7 +108,7 @@ Exit status is 0 on success, and 1 if the command fails.
 The following example shows how to create a shared secret device.
 The secret will be split between a slice on a local disk and a USB Pen drive.
 .Bd -literal -offset indent
-gshsec label -v secret /dev/ad0s1 /dev/da0
+gshsec label -v secret /dev/ada0s1 /dev/da0
 newfs /dev/shsec/secret
 .Ed
 .Pp

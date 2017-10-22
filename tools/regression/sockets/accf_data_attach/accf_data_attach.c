@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/sockets/accf_data_attach/accf_data_attach.c 197432 2009-09-23 14:23:09Z jhb $
+ * $FreeBSD: release/10.0.0/tools/regression/sockets/accf_data_attach/accf_data_attach.c 197432 2009-09-23 14:23:09Z jhb $
  */
 
 #include <sys/types.h>

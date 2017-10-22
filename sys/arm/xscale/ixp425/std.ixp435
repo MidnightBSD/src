@@ -1,8 +1,7 @@
 #XScale IXP435 generic configuration
-#$FreeBSD: stable/9/sys/arm/xscale/ixp425/std.ixp435 192599 2009-05-22 20:07:39Z des $
+#$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/std.ixp435 239362 2012-08-18 05:48:19Z andrew $
 
 files		"../xscale/ixp425/files.ixp425"
-include		"../xscale/std.xscale"
+include		"../xscale/std.xscale-be"
 cpu 		CPU_XSCALE_IXP435
 cpu 		CPU_XSCALE_IXP425
-makeoption	ARM_BIG_ENDIAN

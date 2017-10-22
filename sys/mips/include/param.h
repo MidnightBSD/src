@@ -36,7 +36,7 @@
  *	from: Utah Hdr: machparam.h 1.11 89/08/14
  *	from: @(#)param.h	8.1 (Berkeley) 6/10/93
  *	JNPR: param.h,v 1.6.2.1 2007/09/10 07:49:36 girish
- * $FreeBSD: stable/9/sys/mips/include/param.h 224207 2011-07-19 00:37:24Z attilio $
+ * $FreeBSD: release/10.0.0/sys/mips/include/param.h 250338 2013-05-07 22:46:24Z attilio $
  */
 
 #ifndef _MIPS_INCLUDE_PARAM_H_
@@ -59,15 +59,21 @@
 #ifndef MACHINE_ARCH
 #if _BYTE_ORDER == _BIG_ENDIAN
 #ifdef __mips_n64
-#define	MACHINE_ARCH	"mips64eb"
+#define	MACHINE_ARCH	"mips64"
+#ifndef	MACHINE_ARCH32
+#define	MACHINE_ARCH32	"mips"
+#endif
 #elif defined(__mips_n32)
-#define	MACHINE_ARCH	"mipsn32eb"
+#define	MACHINE_ARCH	"mipsn32"
 #else
-#define	MACHINE_ARCH	"mipseb"
+#define	MACHINE_ARCH	"mips"
 #endif
 #else
 #ifdef __mips_n64
 #define	MACHINE_ARCH	"mips64el"
+#ifndef	MACHINE_ARCH32
+#define	MACHINE_ARCH32	"mipsel"
+#endif
 #elif defined(__mips_n32)
 #define	MACHINE_ARCH	"mipsn32el"
 #else
@@ -93,6 +99,10 @@
 #else
 #define	MAXSMPCPU	1
 #define	MAXCPU		1
+#endif
+
+#ifndef MAXMEMDOM
+#define	MAXMEMDOM	1
 #endif
 
 /*
@@ -149,7 +159,6 @@
 
 #define	MAXPAGESIZES		1		/* max supported pagesizes */
 
-#define	BLKDEV_IOSIZE		2048		/* xxx: Why is this 1/2 page? */
 #define	MAXDUMPPGS		1		/* xxx: why is this only one? */
 
 /*
@@ -157,20 +166,6 @@
  */
 #define	KSTACK_PAGES		2	/* kernel stack */
 #define	KSTACK_GUARD_PAGES	2	/* pages of kstack guard; 0 disables */
-
-#define	UPAGES			2
-
-/* pages ("clicks") (4096 bytes) to disk blocks */
-#define	ctod(x)			((x) << (PAGE_SHIFT - DEV_BSHIFT))
-#define	dtoc(x)			((x) >> (PAGE_SHIFT - DEV_BSHIFT))
-
-/*
- * Map a ``block device block'' to a file system block.
- * This should be device dependent, and should use the bsize
- * field from the disk label.
- * For now though just use DEV_BSIZE.
- */
-#define	bdbtofsb(bn)		((bn) / (BLKDEV_IOSIZE/DEV_BSIZE))
 
 /*
  * Mach derived conversion macros

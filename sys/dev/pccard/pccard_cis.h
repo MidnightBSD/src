@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/pccard/pccard_cis.h 147962 2005-07-13 14:59:06Z imp $ */
+/* $FreeBSD: release/10.0.0/sys/dev/pccard/pccard_cis.h 147962 2005-07-13 14:59:06Z imp $ */
 
 /*-
  * Copyright (c) 1997 Marc Horowitz.  All rights reserved.

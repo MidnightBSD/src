@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/ia64/emulated/test.c 160416 2006-07-17 00:27:12Z marcel $
+ * $FreeBSD: release/10.0.0/tools/regression/ia64/emulated/test.c 160416 2006-07-17 00:27:12Z marcel $
  */
 
 #include <sys/mman.h>

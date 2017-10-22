@@ -1,4 +1,6 @@
-This is the pkg_install suite of tools for doing maintainance of
+$FreeBSD: release/10.0.0/usr.sbin/pkg_install/README 228990 2011-12-30 10:58:14Z uqs $
+
+This is the pkg_install suite of tools for doing maintenance of
 software "packages".  More documentation is available in the man pages
 for each individual command.
 

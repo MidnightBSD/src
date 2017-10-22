@@ -68,7 +68,7 @@
 static char sccsid[] = 	"@(#)svcauth_des.c	2.3 89/07/11 4.0 RPCSRC; from 1.15 88/02/08 SMI";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/svc_auth_des.c 201959 2010-01-09 23:36:51Z brooks $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/rpc/svc_auth_des.c 239991 2012-09-01 14:45:15Z ed $");
 
 extern int key_decryptsession_pk(const char *, netobj *, des_block *);
 
@@ -271,7 +271,7 @@ _svcauth_des(rqst, msg)
 			debug("timestamp before last seen");
 			return (AUTH_REJECTEDVERF);	/* replay */
 		}
-		(void) gettimeofday(&current, (struct timezone *)NULL);
+		(void)gettimeofday(&current, NULL);
 		current.tv_sec -= window;	/* allow for expiration */
 		if (!BEFORE(&current, &timestamp)) {
 			debug("timestamp expired");

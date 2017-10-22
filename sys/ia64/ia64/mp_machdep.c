@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ia64/ia64/mp_machdep.c 223758 2011-07-04 12:04:52Z attilio $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ia64/ia64/mp_machdep.c 254025 2013-08-07 06:21:20Z jeff $");
 
 #include "opt_kstack_pages.h"
 
@@ -304,14 +304,14 @@ cpu_mp_add(u_int acpi_id, u_int id, u_int eid)
 	if (cpuid != 0) {
 		pc = (struct pcpu *)malloc(sizeof(*pc), M_SMP, M_WAITOK);
 		pcpu_init(pc, cpuid, sizeof(*pc));
-		dpcpu = (void *)kmem_alloc(kernel_map, DPCPU_SIZE);
+		dpcpu = (void *)kmem_malloc(kernel_arena, DPCPU_SIZE,
+		    M_WAITOK | M_ZERO);
 		dpcpu_init(dpcpu, cpuid);
 	} else
 		pc = pcpup;
 
-	pc->pc_acpi_id = acpi_id;
-	pc->pc_md.lid = IA64_LID_SET_SAPIC_ID(sapic_id);
-
+	cpu_pcpu_setup(pc, acpi_id, sapic_id);
+ 
 	CPU_SET(pc->pc_cpuid, &all_cpus);
 }
 
@@ -466,6 +466,7 @@ cpu_mp_unleash(void *dummy)
 	 */
 	ia64_bind_intr();
 }
+SYSINIT(start_aps, SI_SUB_KICK_SCHEDULER, SI_ORDER_ANY, cpu_mp_unleash, NULL);
 
 /*
  * send an IPI to a set of cpus.
@@ -522,5 +523,3 @@ ipi_send(struct pcpu *cpu, int xiv)
 	ia64_mf_a();
 	CTR3(KTR_SMP, "ipi_send(%p, %d): cpuid=%d", cpu, xiv, PCPU_GET(cpuid));
 }
-
-SYSINIT(start_aps, SI_SUB_SMP, SI_ORDER_FIRST, cpu_mp_unleash, NULL);

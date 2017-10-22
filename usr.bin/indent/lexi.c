@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)lexi.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/indent/lexi.c 206687 2010-04-15 21:41:07Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/indent/lexi.c 206687 2010-04-15 21:41:07Z avg $");
 
 /*
  * Here we have the token scanner for indent.  It scans off one token and puts

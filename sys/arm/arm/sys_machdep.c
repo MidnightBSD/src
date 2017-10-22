@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/sys_machdep.c 223692 2011-06-30 10:56:02Z jonathan $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/sys_machdep.c 255677 2013-09-18 19:26:08Z pjd $");
 
 #include "opt_capsicum.h"
 
@@ -88,7 +88,14 @@ static int
 arm32_set_tp(struct thread *td, void *args)
 {
 
-	td->td_md.md_tp = (register_t)args;
+	if (td != curthread)
+		td->td_md.md_tp = (register_t)args;
+	else 
+#ifndef ARM_TP_ADDRESS
+		set_tls(args);
+#else
+		*(register_t *)ARM_TP_ADDRESS = (register_t)args;
+#endif
 	return (0);
 }
 
@@ -96,7 +103,14 @@ static int
 arm32_get_tp(struct thread *td, void *args)
 {
 
-	td->td_retval[0] = td->td_md.md_tp;
+	if (td != curthread)
+		td->td_retval[0] = td->td_md.md_tp;
+	else
+#ifndef ARM_TP_ADDRESS
+		td->td_retval[0] = (register_t)get_tls();
+#else
+		td->td_retval[0] = *(register_t *)ARM_TP_ADDRESS;
+#endif
 	return (0);
 }
 
@@ -122,16 +136,20 @@ sysarch(td, uap)
 			break;
 
 		default:
+#ifdef KTRACE
+			if (KTRPOINT(td, KTR_CAPFAIL))
+				ktrcapfail(CAPFAIL_SYSCALL, NULL, NULL);
+#endif
 			return (ECAPMODE);
 		}
 	}
 #endif
 
 	switch (uap->op) {
-	case ARM_SYNC_ICACHE : 
+	case ARM_SYNC_ICACHE:
 		error = arm32_sync_icache(td, uap->parms);
 		break;
-	case ARM_DRAIN_WRITEBUF : 
+	case ARM_DRAIN_WRITEBUF:
 		error = arm32_drain_writebuf(td, uap->parms);
 		break;
 	case ARM_SET_TP:

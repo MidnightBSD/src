@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/* $FreeBSD: stable/9/tools/regression/lib/libc/resolv/resolv.c 204627 2010-03-03 07:38:12Z joel $ */
+/* $FreeBSD: release/10.0.0/tools/regression/lib/libc/resolv/resolv.c 243346 2012-11-20 19:23:44Z emaste $ */
 #include <sys/cdefs.h>
 __RCSID("$NetBSD: resolv.c,v 1.6 2004/05/23 16:59:11 christos Exp $");
 
@@ -226,7 +226,7 @@ resolvloop(void *p)
 {
 	int *nhosts = (int *)p;
 	if (*nhosts == 0)
-		return;
+		return NULL;
 	do
 		resolvone(*nhosts);
 	while (--(*nhosts));

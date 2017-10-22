@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/jail/config.c 248939 2013-03-31 04:10:37Z jamie $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/jail/config.c 256387 2013-10-12 17:46:13Z hrs $");
 
 #include <sys/types.h>
 #include <sys/errno.h>
@@ -51,6 +51,8 @@ struct ipspec {
 
 extern FILE *yyin;
 extern int yynerrs;
+
+extern int yyparse(void);
 
 struct cfjails cfjails = TAILQ_HEAD_INITIALIZER(cfjails);
 
@@ -81,6 +83,7 @@ static const struct ipspec intparams[] = {
 #endif
     [IP_MOUNT] =		{"mount",		PF_INTERNAL | PF_REV},
     [IP_MOUNT_DEVFS] =		{"mount.devfs",		PF_INTERNAL | PF_BOOL},
+    [IP_MOUNT_FDESCFS] =	{"mount.fdescfs",	PF_INTERNAL | PF_BOOL},
     [IP_MOUNT_FSTAB] =		{"mount.fstab",		PF_INTERNAL},
     [IP_STOP_TIMEOUT] =		{"stop.timeout",	PF_INTERNAL | PF_INT},
     [IP_VNET_INTERFACE] =	{"vnet.interface",	PF_INTERNAL},
@@ -688,6 +691,7 @@ import_params(struct cfjail *j)
 		if (jailparam_init(jp, p->name) < 0) {
 			error = -1;
 			jail_warnx(j, "%s", jail_errmsg);
+			jp++;
 			continue;
 		}
 		if (TAILQ_EMPTY(&p->val))

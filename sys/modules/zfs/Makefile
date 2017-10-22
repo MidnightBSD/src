@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/zfs/Makefile 243674 2012-11-29 14:05:04Z mm $
+# $FreeBSD: release/10.0.0/sys/modules/zfs/Makefile 253996 2013-08-06 15:51:56Z avg $
 
 KMOD=	zfs
 
@@ -28,6 +28,7 @@ SRCS+=	opensolaris_sysevent.c
 SRCS+=	opensolaris_taskq.c
 SRCS+=	opensolaris_uio.c
 SRCS+=	opensolaris_vfs.c
+SRCS+=	opensolaris_vm.c
 SRCS+=	opensolaris_zone.c
 
 _A=${.CURDIR}/../../cddl/contrib/opensolaris/common/atomic
@@ -72,6 +73,7 @@ SRCS+=	sha2.c
 ZFS_SRCS=	${ZFS_OBJS:C/.o$/.c/}
 SRCS+=	${ZFS_SRCS}
 SRCS+=	vdev_geom.c
+SRCS+=	trim_map.c
 
 # Use FreeBSD's namecache.
 CFLAGS+=-DFREEBSD_NAMECACHE
@@ -93,6 +95,8 @@ CFLAGS+=-mminimal-toc
 #DEBUG_FLAGS=-g
 
 .include <bsd.kmod.mk>
+
+CFLAGS+=	-include ${.CURDIR}/../../cddl/compat/opensolaris/sys/debug_compat.h
 
 CWARNFLAGS+=-Wno-unknown-pragmas
 CWARNFLAGS+=-Wno-missing-prototypes

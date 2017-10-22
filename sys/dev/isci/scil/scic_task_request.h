@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/isci/scil/scic_task_request.h 231689 2012-02-14 15:58:49Z jimharris $
+ * $FreeBSD: release/10.0.0/sys/dev/isci/scil/scic_task_request.h 231136 2012-02-07 17:43:58Z jimharris $
  */
 #ifndef _SCIC_TASK_REQUEST_H_
 #define _SCIC_TASK_REQUEST_H_

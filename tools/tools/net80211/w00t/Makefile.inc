@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/tools/net80211/w00t/Makefile.inc 204311 2010-02-25 14:42:26Z ru $
+# $FreeBSD: release/10.0.0/tools/tools/net80211/w00t/Makefile.inc 204311 2010-02-25 14:42:26Z ru $
 
 W00T=	../libw00t
 # NB: we get crc32 from -lz

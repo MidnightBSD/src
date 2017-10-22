@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/arm/sa11x0/files.sa11x0 177887 2008-04-03 18:22:08Z raj $
+# $FreeBSD: release/10.0.0/sys/arm/sa11x0/files.sa11x0 177887 2008-04-03 18:22:08Z raj $
 arm/arm/bus_space_generic.c	standard
 arm/arm/cpufunc_asm_sa1.S 	standard
 arm/arm/cpufunc_asm_sa11x0.S 	standard

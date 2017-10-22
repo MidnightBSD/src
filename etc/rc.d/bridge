@@ -22,7 +22,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/etc/rc.d/bridge 225684 2011-09-20 00:37:35Z hrs $
+# $FreeBSD: release/10.0.0/etc/rc.d/bridge 238416 2012-07-13 06:46:09Z kevlo $
 #
 
 # PROVIDE: bridge
@@ -37,14 +37,14 @@ start_cmd="bridge_start"
 stop_cmd="bridge_stop"
 cmd=""
 
-glob_int () {
+glob_int() {
 	case "$1" in
 		$2 ) true ;;
 		* ) false ;;
 	esac
 }
 
-bridge_test () {
+bridge_test() {
 	bridge=$1
 	iface=$2
 

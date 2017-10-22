@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/usr.bin/m4/Makefile 98760 2002-06-24 14:29:19Z jmallett $
+# $FreeBSD: release/10.0.0/tools/regression/usr.bin/m4/Makefile 234852 2012-04-30 22:00:34Z bapt $
 
 all:
-	@sh ${.CURDIR}/regress.sh ${.CURDIR}
+	@m4 ${.CURDIR}/../regress.m4 ${.CURDIR}/regress.sh | sh /dev/stdin ${.CURDIR}

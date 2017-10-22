@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ufs/ffs/ffs_snapshot.c 245283 2013-01-11 05:39:17Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ufs/ffs/ffs_snapshot.c 253280 2013-07-12 18:52:33Z kib $");
 
 #include "opt_quota.h"
 
@@ -53,6 +53,7 @@ __FBSDID("$FreeBSD: stable/9/sys/ufs/ffs/ffs_snapshot.c 245283 2013-01-11 05:39:
 #include <sys/mount.h>
 #include <sys/resource.h>
 #include <sys/resourcevar.h>
+#include <sys/rwlock.h>
 #include <sys/vnode.h>
 
 #include <geom/geom.h>
@@ -422,7 +423,7 @@ restart:
 	 */
 	for (;;) {
 		vn_finished_write(wrtmp);
-		if ((error = vfs_write_suspend(vp->v_mount)) != 0) {
+		if ((error = vfs_write_suspend(vp->v_mount, 0)) != 0) {
 			vn_start_write(NULL, &wrtmp, V_WAIT);
 			vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 			goto out;
@@ -674,7 +675,8 @@ loop:
 	VI_LOCK(devvp);
 	fs->fs_snapinum[snaploc] = ip->i_number;
 	if (ip->i_nextsnap.tqe_prev != 0)
-		panic("ffs_snapshot: %d already on list", ip->i_number);
+		panic("ffs_snapshot: %ju already on list",
+		    (uintmax_t)ip->i_number);
 	TAILQ_INSERT_TAIL(&sn->sn_head, ip, i_nextsnap);
 	devvp->v_vflag |= VV_COPYONWRITE;
 	VI_UNLOCK(devvp);
@@ -686,7 +688,7 @@ out1:
 	/*
 	 * Resume operation on filesystem.
 	 */
-	vfs_write_resume_flags(vp->v_mount, VR_START_WRITE | VR_NO_SUSPCLR);
+	vfs_write_resume(vp->v_mount, VR_START_WRITE | VR_NO_SUSPCLR);
 	if (collectsnapstats && starttime.tv_sec > 0) {
 		nanotime(&endtime);
 		timespecsub(&endtime, &starttime);
@@ -790,7 +792,7 @@ out1:
 		brelse(nbp);
 	} else {
 		loc = blkoff(fs, fs->fs_sblockloc);
-		bcopy((char *)copy_fs, &nbp->b_data[loc], fs->fs_bsize);
+		bcopy((char *)copy_fs, &nbp->b_data[loc], (u_int)fs->fs_sbsize);
 		bawrite(nbp);
 	}
 	/*
@@ -849,7 +851,7 @@ out:
 	mp->mnt_flag = (mp->mnt_flag & MNT_QUOTA) | (flag & ~MNT_QUOTA);
 	MNT_IUNLOCK(mp);
 	if (error)
-		(void) ffs_truncate(vp, (off_t)0, 0, NOCRED, td);
+		(void) ffs_truncate(vp, (off_t)0, 0, NOCRED);
 	(void) ffs_syncvnode(vp, MNT_WAIT, 0);
 	if (error)
 		vput(vp);
@@ -1570,8 +1572,8 @@ ffs_snapgone(ip)
 	if (xp != NULL)
 		vrele(ITOV(ip));
 	else if (snapdebug)
-		printf("ffs_snapgone: lost snapshot vnode %d\n",
-		    ip->i_number);
+		printf("ffs_snapgone: lost snapshot vnode %ju\n",
+		    (uintmax_t)ip->i_number);
 	/*
 	 * Delete snapshot inode from superblock. Keep list dense.
 	 */
@@ -1741,7 +1743,7 @@ ffs_snapblkfree(fs, devvp, bno, size, inum, vtype, wkhd)
 	enum vtype vtype;
 	struct workhead *wkhd;
 {
-	struct buf *ibp, *cbp, *savedcbp = 0;
+	struct buf *ibp, *cbp, *savedcbp = NULL;
 	struct thread *td = curthread;
 	struct inode *ip;
 	struct vnode *vp = NULL;
@@ -1833,9 +1835,10 @@ retry:
 		if (size == fs->fs_bsize) {
 #ifdef DEBUG
 			if (snapdebug)
-				printf("%s %d lbn %jd from inum %d\n",
-				    "Grabonremove: snapino", ip->i_number,
-				    (intmax_t)lbn, inum);
+				printf("%s %ju lbn %jd from inum %ju\n",
+				    "Grabonremove: snapino",
+				    (uintmax_t)ip->i_number,
+				    (intmax_t)lbn, (uintmax_t)inum);
 #endif
 			/*
 			 * If journaling is tracking this write we must add
@@ -1877,9 +1880,9 @@ retry:
 			break;
 #ifdef DEBUG
 		if (snapdebug)
-			printf("%s%d lbn %jd %s %d size %ld to blkno %jd\n",
-			    "Copyonremove: snapino ", ip->i_number,
-			    (intmax_t)lbn, "for inum", inum, size,
+			printf("%s%ju lbn %jd %s %ju size %ld to blkno %jd\n",
+			    "Copyonremove: snapino ", (uintmax_t)ip->i_number,
+			    (intmax_t)lbn, "for inum", (uintmax_t)inum, size,
 			    (intmax_t)cbp->b_blkno);
 #endif
 		/*
@@ -1988,7 +1991,7 @@ ffs_snapshot_mount(mp)
 				reason = "non-snapshot";
 			} else {
 				reason = "old format snapshot";
-				(void)ffs_truncate(vp, (off_t)0, 0, NOCRED, td);
+				(void)ffs_truncate(vp, (off_t)0, 0, NOCRED);
 				(void)ffs_syncvnode(vp, MNT_WAIT, 0);
 			}
 			printf("ffs_snapshot_mount: %s inode %d\n",
@@ -2020,8 +2023,8 @@ ffs_snapshot_mount(mp)
 		 */
 		VI_LOCK(devvp);
 		if (ip->i_nextsnap.tqe_prev != 0)
-			panic("ffs_snapshot_mount: %d already on list",
-			    ip->i_number);
+			panic("ffs_snapshot_mount: %ju already on list",
+			    (uintmax_t)ip->i_number);
 		else
 			TAILQ_INSERT_TAIL(&sn->sn_head, ip, i_nextsnap);
 		vp->v_vflag |= VV_SYSTEM;
@@ -2202,10 +2205,8 @@ ffs_bdflush(bo, bp)
 			if (bp_bdskip) {
 				VI_LOCK(devvp);
 				if (!ffs_bp_snapblk(vp, nbp)) {
-					if (BO_MTX(bo) != VI_MTX(vp)) {
-						VI_UNLOCK(devvp);
-						BO_LOCK(bo);
-					}
+					VI_UNLOCK(devvp);
+					BO_LOCK(bo);
 					BUF_UNLOCK(nbp);
 					continue;
 				}
@@ -2235,11 +2236,11 @@ ffs_copyonwrite(devvp, bp)
 	struct buf *bp;
 {
 	struct snapdata *sn;
-	struct buf *ibp, *cbp, *savedcbp = 0;
+	struct buf *ibp, *cbp, *savedcbp = NULL;
 	struct thread *td = curthread;
 	struct fs *fs;
 	struct inode *ip;
-	struct vnode *vp = 0;
+	struct vnode *vp = NULL;
 	ufs2_daddr_t lbn, blkno, *snapblklist;
 	int lower, upper, mid, indiroff, error = 0;
 	int launched_async_io, prev_norunningbuf;
@@ -2365,12 +2366,13 @@ ffs_copyonwrite(devvp, bp)
 			break;
 #ifdef DEBUG
 		if (snapdebug) {
-			printf("Copyonwrite: snapino %d lbn %jd for ",
-			    ip->i_number, (intmax_t)lbn);
+			printf("Copyonwrite: snapino %ju lbn %jd for ",
+			    (uintmax_t)ip->i_number, (intmax_t)lbn);
 			if (bp->b_vp == devvp)
 				printf("fs metadata");
 			else
-				printf("inum %d", VTOI(bp->b_vp)->i_number);
+				printf("inum %ju",
+				    (uintmax_t)VTOI(bp->b_vp)->i_number);
 			printf(" lblkno %jd to blkno %jd\n",
 			    (intmax_t)bp->b_lblkno, (intmax_t)cbp->b_blkno);
 		}

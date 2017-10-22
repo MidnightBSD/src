@@ -1,10 +1,12 @@
-#  $FreeBSD: stable/9/sys/boot/arm/at91/libat91/Makefile 171794 2007-08-09 05:16:55Z imp $
+#  $FreeBSD: release/10.0.0/sys/boot/arm/at91/libat91/Makefile 238187 2012-07-07 04:51:59Z imp $
 
 .include "${.CURDIR}/../Makefile.inc"
 
+SOC?=at91rm9200
+
 LIB=		at91
 INTERNALLIB=
-SRCS=at91rm9200_lowlevel.c delay.c eeprom.c emac.c emac_init.c getc.c \
+SRCS=${SOC}_lowlevel.c delay.c eeprom.c emac.c emac_init.c getc.c \
 	putchar.c printf.c reset.c spi_flash.c xmodem.c \
 	sd-card.c strcvt.c strlen.c strcmp.c memcpy.c strcpy.c \
 	memset.c memcmp.c

@@ -13,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/9/tools/regression/kqueue/signal.c 200483 2009-12-13 20:27:46Z rwatson $
+ * $FreeBSD: release/10.0.0/tools/regression/kqueue/signal.c 200483 2009-12-13 20:27:46Z rwatson $
  */
 
 #include "common.h"

@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/ar/ar.c 222122 2011-05-20 11:29:09Z bcr $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/ar/ar.c 232153 2012-02-25 10:58:02Z mm $");
 
 #include <sys/queue.h>
 #include <sys/types.h>
@@ -386,13 +386,13 @@ ranlib_usage(void)
 static void
 bsdar_version(void)
 {
-	(void)printf("BSD ar %s - %s\n", BSDAR_VERSION, archive_version());
+	(void)printf("BSD ar %s - %s\n", BSDAR_VERSION, archive_version_string());
 	exit(EX_OK);
 }
 
 static void
 ranlib_version(void)
 {
-	(void)printf("ranlib %s - %s\n", BSDAR_VERSION, archive_version());
+	(void)printf("ranlib %s - %s\n", BSDAR_VERSION, archive_version_string());
 	exit(EX_OK);
 }

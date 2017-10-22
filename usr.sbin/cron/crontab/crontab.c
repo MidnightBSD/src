@@ -18,7 +18,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/cron/crontab/crontab.c 239876 2012-08-29 19:17:29Z jhb $";
+  "$FreeBSD: release/10.0.0/usr.sbin/cron/crontab/crontab.c 239991 2012-09-01 14:45:15Z ed $";
 #endif
 
 /* crontab - install and manage per-user crontab files
@@ -627,9 +627,8 @@ static void
 poke_daemon() {
 #ifdef USE_UTIMES
 	struct timeval tvs[2];
-	struct timezone tz;
 
-	(void) gettimeofday(&tvs[0], &tz);
+	(void)gettimeofday(&tvs[0], NULL);
 	tvs[1] = tvs[0];
 	if (utimes(SPOOL_DIR, tvs) < OK) {
 		warn("can't update mtime on spooldir %s", SPOOL_DIR);

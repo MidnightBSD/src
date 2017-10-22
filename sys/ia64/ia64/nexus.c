@@ -26,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/ia64/ia64/nexus.c 224184 2011-07-18 14:04:37Z jhb $
+ * $FreeBSD: release/10.0.0/sys/ia64/ia64/nexus.c 235041 2012-05-04 23:16:29Z marcel $
  */
 
 /*
@@ -64,9 +64,6 @@
 #include <contrib/dev/acpica/include/acpi.h>
 
 #include <dev/acpica/acpivar.h>
-
-#include <isa/isareg.h>
-#include <sys/rtprio.h>
 
 #include "clock_if.h"
 
@@ -190,12 +187,6 @@ nexus_probe(device_t dev)
 static int
 nexus_attach(device_t dev)
 {
-
-	/*
-	 * Mask the legacy PICs - we will use the I/O SAPIC for interrupt.
-	 */
-	outb(IO_ICU1+1, 0xff);
-	outb(IO_ICU2+1, 0xff);
 
 	if (acpi_identify() == 0)
 		BUS_ADD_CHILD(dev, 10, "acpi", 0);

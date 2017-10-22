@@ -31,14 +31,14 @@
  * SUCH DAMAGE.
  *
  *	@(#)profile.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: stable/9/sys/arm/include/profile.h 169768 2007-05-19 16:20:37Z cognet $
+ * $FreeBSD: release/10.0.0/sys/arm/include/profile.h 236992 2012-06-13 05:02:51Z imp $
  */
 
 #ifndef _MACHINE_PROFILE_H_
 #define	_MACHINE_PROFILE_H_
 
 /*
- * Config generates something to tell the compiler to align functions on 32 
+ * Config generates something to tell the compiler to align functions on 32
  * byte boundaries.  A strict alignment is good for keeping the tables small.
  */
 #define	FUNCTION_ALIGNMENT	16

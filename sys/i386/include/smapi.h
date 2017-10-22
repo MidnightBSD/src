@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/i386/include/smapi.h 112558 2003-03-24 20:44:39Z mdodd $
+ * $FreeBSD: release/10.0.0/sys/i386/include/smapi.h 112558 2003-03-24 20:44:39Z mdodd $
  */
 
 #ifndef _MACHINE_SMAPI_H_

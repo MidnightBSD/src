@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/opencrypto/deflate.c 211616 2010-08-22 11:18:57Z rpaulo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/opencrypto/deflate.c 211616 2010-08-22 11:18:57Z rpaulo $");
 
 #include "opt_kdtrace.h"
 

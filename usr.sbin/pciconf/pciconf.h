@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/pciconf/pciconf.h 237731 2012-06-28 21:24:09Z jhb $
+ * $FreeBSD: release/10.0.0/usr.sbin/pciconf/pciconf.h 236415 2012-06-01 18:33:40Z jhb $
  */
 
 #ifndef __PCICONF_H__

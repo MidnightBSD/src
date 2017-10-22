@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/ip6addrctl/Makefile 241428 2012-10-10 21:30:26Z eadler $
+# $FreeBSD: release/10.0.0/usr.sbin/ip6addrctl/Makefile 241134 2012-10-02 14:48:03Z eadler $
 
 PROG=	ip6addrctl
 MAN=	ip6addrctl.8

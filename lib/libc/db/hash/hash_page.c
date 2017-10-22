@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)hash_page.c	8.7 (Berkeley) 8/16/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/db/hash/hash_page.c 190500 2009-03-28 07:44:08Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/db/hash/hash_page.c 254289 2013-08-13 19:20:50Z jilles $");
 
 /*
  * PACKAGE:  hashing
@@ -862,10 +862,8 @@ open_temp(HTAB *hashp)
 	/* Block signals; make sure file goes away at process exit. */
 	(void)sigfillset(&set);
 	(void)_sigprocmask(SIG_BLOCK, &set, &oset);
-	if ((hashp->fp = mkstemp(path)) != -1) {
+	if ((hashp->fp = mkostemp(path, O_CLOEXEC)) != -1)
 		(void)unlink(path);
-		(void)_fcntl(hashp->fp, F_SETFD, 1);
-	}
 	(void)_sigprocmask(SIG_SETMASK, &oset, (sigset_t *)NULL);
 	return (hashp->fp != -1 ? 0 : -1);
 }

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/hastd/hast_proto.c 249236 2013-04-07 17:05:16Z trociny $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/hastd/hast_proto.c 246922 2013-02-17 21:12:34Z pjd $");
 
 #include <sys/endian.h>
 

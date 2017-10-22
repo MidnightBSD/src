@@ -28,7 +28,7 @@ SUCH DAMAGE.
 #include <sys/stat.h>
 
 /*
- * $FreeBSD: stable/9/tools/regression/pipe/pipe-fstatbug.c 231832 2012-02-16 19:39:49Z eadler $
+ * $FreeBSD: release/10.0.0/tools/regression/pipe/pipe-fstatbug.c 228274 2011-12-05 04:20:13Z eadler $
  * The goal of this program is to see if fstat reports the correct
  * data count for a pipe.  Prior to revision 1.172 of sys_pipe.c,
  * 0 would be returned once the pipe entered direct write mode.

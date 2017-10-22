@@ -1,5 +1,5 @@
-# $FreeBSD: stable/9/kerberos5/tools/Makefile.inc 125261 2004-01-31 08:15:57Z ru $
+# $FreeBSD: release/10.0.0/kerberos5/tools/Makefile.inc 233294 2012-03-22 08:48:42Z stas $
 
-realinstall:
+BINDIR?=	/usr/bin
 
 .include "../Makefile.inc"

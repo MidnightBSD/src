@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/wds/wd7000.c 233024 2012-03-16 08:46:58Z scottl $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/wds/wd7000.c 246713 2013-02-12 16:57:20Z kib $");
 
 /* All bugs are subject to removal without further notice */
 
@@ -1066,7 +1066,7 @@ wds_scsi_io(struct cam_sim * sim, struct ccb_scsiio * csio)
 		xpt_done((union ccb *) csio);
 		return;
 	}
-	if (ccb_h->flags & (CAM_CDB_PHYS | CAM_SCATTER_VALID | CAM_DATA_PHYS)) {
+	if ((ccb_h->flags & CAM_DATA_MASK) != CAM_DATA_VADDR) {
 		/* don't support these */
 		ccb_h->status = CAM_REQ_INVALID;
 		xpt_done((union ccb *) csio);

@@ -23,12 +23,12 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/sys/arm/at91/at91_pitreg.h 210040 2010-07-14 00:48:53Z cognet $ */
+/* $FreeBSD: release/10.0.0/sys/arm/at91/at91_pitreg.h 238370 2012-07-11 17:11:54Z imp $ */
 
-#ifndef ARM_AT91_AT91PITREG_H
-#define ARM_AT91_AT91PITREG_H
+#ifndef ARM_AT91_AT91_PITREG_H
+#define ARM_AT91_AT91_PITREG_H
 
-#define PIT_MR		0x0 
+#define PIT_MR		0x0
 #define PIT_SR		0x4
 #define PIT_PIVR	0x8
 #define PIT_PIIR	0xc
@@ -42,4 +42,6 @@
 /* PIT_SR */
 #define PIT_PITS_DONE	1 /* interrupt done */
 
-#endif /* ARM_AT91_AT91PITREG_H */
+void at91_pit_delay(int us);
+
+#endif /* ARM_AT91_AT91_PITREG_H */

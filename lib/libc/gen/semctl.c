@@ -27,7 +27,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/semctl.c 194910 2009-06-24 21:10:52Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/semctl.c 194910 2009-06-24 21:10:52Z jhb $");
 
 #define _WANT_SEMUN_OLD
 

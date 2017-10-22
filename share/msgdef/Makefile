@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/msgdef/Makefile 196813 2009-09-04 06:19:37Z ache $
+# $FreeBSD: release/10.0.0/share/msgdef/Makefile 245889 2013-01-24 17:00:11Z brooks $
 
 LOCALES=	af_ZA.ISO8859-1 \
 		am_ET.UTF-8 \
@@ -112,7 +112,7 @@ ISO8859-1_ISO8859-15= af_ZA ca_ES da_DK de_DE en_CA en_GB en_US es_ES \
 		${NL_LINKS} ${NO_LINKS}
 ISO8859-1_US-ASCII= ${GB_LINKS} en_CA en_GB en_US
 ISO8859-1_UTF-8= af_ZA ca_ES da_DK de_DE en_CA en_GB en_US es_ES eu_ES \
-		fi_FI fr_BE fr_CH fr_FR is_IS it_IT nb_NO nl_NL nn_NO no_NO \
+		fi_FI fr_BE fr_CH fr_FR is_IS it_IT nl_NL no_NO \
 		pt_PT sv_SE
 ISO8859-2_ISO8859-2= ${CZ_LINKS}
 ISO8859-2_UTF-8= cs_CZ hr_HR hu_HU pl_PL ro_RO sl_SI

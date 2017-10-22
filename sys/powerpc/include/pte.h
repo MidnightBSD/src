@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: pte.h,v 1.2 1998/08/31 14:43:40 tsubai Exp $
- * $FreeBSD: stable/9/sys/powerpc/include/pte.h 217044 2011-01-06 04:12:29Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/powerpc/include/pte.h 255415 2013-09-09 12:44:48Z nwhitehorn $
  */
 
 #ifndef	_MACHINE_PTE_H_
@@ -96,8 +96,9 @@ struct lpteg {
 #define LPTE_VSID_SHIFT		12
 #define LPTE_AVPN_MASK		0xFFFFFFFFFFFFFF80ULL
 #define LPTE_API		0x0000000000000F80ULL
-#define LPTE_LOCKED		0x0000000000000040ULL
-#define LPTE_WIRED		0x0000000000000008ULL
+#define LPTE_SWBITS		0x0000000000000078ULL
+#define LPTE_WIRED		0x0000000000000010ULL
+#define LPTE_LOCKED		0x0000000000000008ULL
 #define LPTE_BIG		0x0000000000000004ULL	/* 4kb/16Mb page */
 #define LPTE_HID		0x0000000000000002ULL
 #define LPTE_VALID		0x0000000000000001ULL
@@ -163,7 +164,7 @@ extern u_int dsisr(void);
 #endif	/* _KERNEL */
 #endif	/* LOCORE */
 
-#else
+#else /* BOOKE */
 
 #include <machine/tlb.h>
 
@@ -224,6 +225,8 @@ typedef struct pte pte_t;
 /* RPN mask, TLB0 4K pages */
 #define PTE_PA_MASK	PAGE_MASK
 
+#if defined(BOOKE_E500)
+
 /* PTE bits assigned to MAS2, MAS3 flags */
 #define PTE_W		MAS2_W
 #define PTE_I		MAS2_I
@@ -241,6 +244,26 @@ typedef struct pte pte_t;
 #define PTE_MAS3_MASK	((MAS3_UX | MAS3_SX | MAS3_UW	\
 			| MAS3_SW | MAS3_UR | MAS3_SR) << PTE_MAS3_SHIFT)
 
+#elif defined(BOOKE_PPC4XX)
+
+#define PTE_WL1		TLB_WL1
+#define PTE_IL2I	TLB_IL2I
+#define PTE_IL2D	TLB_IL2D
+
+#define PTE_W		TLB_W
+#define PTE_I		TLB_I
+#define PTE_M		TLB_M
+#define PTE_G		TLB_G
+
+#define PTE_UX		TLB_UX
+#define PTE_SX		TLB_SX
+#define PTE_UW		TLB_UW
+#define PTE_SW		TLB_SW
+#define PTE_UR		TLB_UR
+#define PTE_SR		TLB_SR
+
+#endif
+
 /* Other PTE flags */
 #define PTE_VALID	0x80000000	/* Valid */
 #define PTE_MODIFIED	0x40000000	/* Modified */
@@ -256,6 +279,5 @@ typedef struct pte pte_t;
 #define PTE_ISMODIFIED(pte)	((pte)->flags & PTE_MODIFIED)
 #define PTE_ISREFERENCED(pte)	((pte)->flags & PTE_REFERENCED)
 
-#endif /* #elif defined(E500) */
-
+#endif /* BOOKE_PPC4XX */
 #endif /* _MACHINE_PTE_H_ */

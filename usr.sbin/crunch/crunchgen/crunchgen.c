@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/crunch/crunchgen/crunchgen.c 246895 2013-02-17 03:33:13Z pfg $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/crunch/crunchgen/crunchgen.c 246346 2013-02-05 02:57:59Z pfg $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -113,12 +113,13 @@ int is_nonempty_file(const char *pathname);
 int subtract_strlst(strlst_t **lista, strlst_t **listb);
 int in_list(strlst_t **listp, char *str);
 
-
-extern char *crunched_skel[];
+/* helper routines for main() */
 
 void usage(void);
 void parse_conf_file(void);
 void gen_outputs(void);
+
+extern char *crunched_skel[];
 
 
 int

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/raw_ip.c 227423 2011-11-10 19:10:53Z andre $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/raw_ip.c 243882 2012-12-05 08:04:20Z glebius $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -99,9 +99,6 @@ int	(*ip_dn_io_ptr)(struct mbuf **, int, struct ip_fw_args *);
 void	(*ip_divert_ptr)(struct mbuf *, int);
 int	(*ng_ipfw_input_p)(struct mbuf **, int,
 			struct ip_fw_args *, int);
-
-/* Hook for telling pf that the destination address changed */
-void	(*m_addr_chg_pf_p)(struct mbuf *m);
 
 #ifdef INET
 /*
@@ -289,6 +286,11 @@ rip_input(struct mbuf *m, int off)
 	last = NULL;
 
 	ifp = m->m_pkthdr.rcvif;
+	/*
+	 * Applications on raw sockets expect host byte order.
+	 */
+	ip->ip_len = ntohs(ip->ip_len);
+	ip->ip_off = ntohs(ip->ip_off);
 
 	hash = INP_PCBHASH_RAW(proto, ip->ip_src.s_addr,
 	    ip->ip_dst.s_addr, V_ripcbinfo.ipi_hashmask);
@@ -437,7 +439,7 @@ rip_output(struct mbuf *m, struct socket *so, u_long dst)
 			m_freem(m);
 			return(EMSGSIZE);
 		}
-		M_PREPEND(m, sizeof(struct ip), M_DONTWAIT);
+		M_PREPEND(m, sizeof(struct ip), M_NOWAIT);
 		if (m == NULL)
 			return(ENOBUFS);
 
@@ -445,11 +447,11 @@ rip_output(struct mbuf *m, struct socket *so, u_long dst)
 		ip = mtod(m, struct ip *);
 		ip->ip_tos = inp->inp_ip_tos;
 		if (inp->inp_flags & INP_DONTFRAG)
-			ip->ip_off = IP_DF;
+			ip->ip_off = htons(IP_DF);
 		else
-			ip->ip_off = 0;
+			ip->ip_off = htons(0);
 		ip->ip_p = inp->inp_ip_p;
-		ip->ip_len = m->m_pkthdr.len;
+		ip->ip_len = htons(m->m_pkthdr.len);
 		ip->ip_src = inp->inp_laddr;
 		if (jailed(inp->inp_cred)) {
 			/*
@@ -501,6 +503,13 @@ rip_output(struct mbuf *m, struct socket *so, u_long dst)
 			ip->ip_id = ip_newid();
 
 		/*
+		 * Applications on raw sockets pass us packets
+		 * in host byte order.
+		 */
+		ip->ip_len = htons(ip->ip_len);
+		ip->ip_off = htons(ip->ip_off);
+
+		/*
 		 * XXX prevent ip_output from overwriting header fields.
 		 */
 		flags |= IP_RAWOUTPUT;
@@ -537,6 +546,8 @@ rip_output(struct mbuf *m, struct socket *so, u_long dst)
  *
  * When adding new socket options here, make sure to add access control
  * checks here as necessary.
+ *
+ * XXX-BZ inp locking?
  */
 int
 rip_ctloutput(struct socket *so, struct sockopt *sopt)

@@ -1,6 +1,6 @@
 # Common defines for all of /sys/boot/pc98/
 #
-# $FreeBSD: stable/9/sys/boot/pc98/Makefile.inc 243446 2012-11-23 13:17:18Z nyan $
+# $FreeBSD: release/10.0.0/sys/boot/pc98/Makefile.inc 242865 2012-11-10 12:42:28Z nyan $
 
 BINDIR?=	/boot
 

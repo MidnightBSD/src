@@ -12,7 +12,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD: stable/9/sys/boot/i386/common/cons.h 213136 2010-09-24 19:49:12Z pjd $
+ * $FreeBSD: release/10.0.0/sys/boot/i386/common/cons.h 213136 2010-09-24 19:49:12Z pjd $
  */
 
 #ifndef _CONS_H_

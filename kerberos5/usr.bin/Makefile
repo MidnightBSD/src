@@ -1,6 +1,6 @@
-# $FreeBSD: stable/9/kerberos5/usr.bin/Makefile 125261 2004-01-31 08:15:57Z ru $
+# $FreeBSD: release/10.0.0/kerberos5/usr.bin/Makefile 233294 2012-03-22 08:48:42Z stas $
 
-SUBDIR=	kadmin kdestroy kinit klist kpasswd krb5-config ksu \
-	verify_krb5_conf
+SUBDIR=	hxtool kadmin kcc kdestroy kgetcred kf kinit kpasswd krb5-config ksu \
+	string2key verify_krb5_conf
 
 .include <bsd.subdir.mk>

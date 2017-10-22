@@ -27,7 +27,7 @@
  * Portions Copyright (c) 1999 Whistle Communications, Inc.
  * (ng_bpf by Archie Cobbs <archie@freebsd.org>)
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_tag.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_tag.c 230272 2012-01-17 18:10:25Z glebius $
  */
 
 /*
@@ -303,8 +303,9 @@ ng_tag_newhook(node_p node, hook_p hook, const char *name)
 	int error;
 
 	/* Create hook private structure. */
-	hip = malloc(sizeof(*hip), M_NETGRAPH_TAG, M_WAITOK | M_ZERO);
-	/* M_WAITOK can't return NULL. */
+	hip = malloc(sizeof(*hip), M_NETGRAPH_TAG, M_NOWAIT | M_ZERO);
+	if (hip == NULL)
+		return (ENOMEM);
 	NG_HOOK_SET_PRIVATE(hook, hip);
 
 	/*

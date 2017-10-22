@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/kldconfig/kldconfig.c 152169 2005-11-07 19:22:20Z ru $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/kldconfig/kldconfig.c 152169 2005-11-07 19:22:20Z ru $");
 
 #include <sys/param.h>
 #include <sys/types.h>

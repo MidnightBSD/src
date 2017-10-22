@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)syslog.c	8.5 (Berkeley) 4/29/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/syslog.c 237973 2012-07-02 07:37:06Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/syslog.c 241046 2012-09-29 11:54:34Z jilles $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -300,7 +300,8 @@ vsyslog(int pri, const char *fmt, va_list ap)
 	 * Make sure the error reported is the one from the syslogd failure.
 	 */
 	if (LogStat & LOG_CONS &&
-	    (fd = _open(_PATH_CONSOLE, O_WRONLY|O_NONBLOCK, 0)) >= 0) {
+	    (fd = _open(_PATH_CONSOLE, O_WRONLY|O_NONBLOCK|O_CLOEXEC, 0)) >=
+	    0) {
 		struct iovec iov[2];
 		struct iovec *v = iov;
 

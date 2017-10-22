@@ -28,7 +28,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- * $FreeBSD: stable/9/tools/regression/p1003_1b/sched.c 57257 2000-02-16 14:28:42Z dufault $
+ * $FreeBSD: release/10.0.0/tools/regression/p1003_1b/sched.c 57257 2000-02-16 14:28:42Z dufault $
  *
  */
 

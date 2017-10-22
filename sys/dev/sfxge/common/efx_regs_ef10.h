@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/sfxge/common/efx_regs_ef10.h 228100 2011-11-28 20:28:23Z philip $
+ * $FreeBSD: release/10.0.0/sys/dev/sfxge/common/efx_regs_ef10.h 228078 2011-11-28 17:19:05Z philip $
  */
 
 #ifndef	_SYS_EFX_EF10_REGS_H

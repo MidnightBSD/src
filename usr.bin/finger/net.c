@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)net.c	8.4 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/finger/net.c 223374 2011-06-21 20:33:55Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/finger/net.c 223374 2011-06-21 20:33:55Z delphij $");
 
 #include <sys/param.h>
 #include <sys/socket.h>

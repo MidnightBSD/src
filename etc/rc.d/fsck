@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/rc.d/fsck 197947 2009-10-10 22:17:03Z dougb $
+# $FreeBSD: release/10.0.0/etc/rc.d/fsck 252310 2013-06-27 18:28:45Z hrs $
 #
 
 # PROVIDE: fsck
-# REQUIRE: localswap
+# REQUIRE: swap
 # KEYWORD: nojail
 
 . /etc/rc.subr

@@ -1,7 +1,7 @@
 /*
  * Computer
  *
- * $FreeBSD: stable/9/usr.bin/calendar/calendars/calendar.computer 172071 2007-09-07 03:23:06Z edwin $
+ * $FreeBSD: release/10.0.0/usr.bin/calendar/calendars/calendar.computer 172071 2007-09-07 03:23:06Z edwin $
  */
 
 #ifndef _calendar_computer_

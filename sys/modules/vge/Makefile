@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/vge/Makefile 150636 2005-09-27 18:10:43Z mlaier $
+# $FreeBSD: release/10.0.0/sys/modules/vge/Makefile 150636 2005-09-27 18:10:43Z mlaier $
 
 .PATH: ${.CURDIR}/../../dev/vge
 

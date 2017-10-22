@@ -34,7 +34,7 @@
 	.asciz "@(#)setlogin.s	5.2 (Berkeley) 4/12/91"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/amd64/sys/setlogin.S 217106 2011-01-07 16:08:40Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/amd64/sys/setlogin.S 254463 2013-08-17 19:24:58Z jilles $");
 
 #include "SYS.h"
 
@@ -47,21 +47,9 @@ __FBSDID("$FreeBSD: stable/9/lib/libc/amd64/sys/setlogin.S 217106 2011-01-07 16:
 ENTRY(__sys_setlogin)
 	mov	$SYS_setlogin,%rax
 	KERNCALL
-	jb	1f
-#ifdef PIC
-	movq	PIC_GOT(CNAME(_logname_valid)),%rdx
-	movl	$0,(%rdx)
-#else
+	jb	HIDENAME(cerror)
 	movl	$0,CNAME(_logname_valid)(%rip)
-#endif
 	ret				/* setlogin(name) */
-1:
-#ifdef PIC
-	movq	PIC_GOT(HIDENAME(cerror)),%rdx
-	jmp	*%rdx
-#else
-	jmp	HIDENAME(cerror)
-#endif
 END(__sys_setlogin)
 
 	.section .note.GNU-stack,"",%progbits

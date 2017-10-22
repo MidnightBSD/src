@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/gaithrstress/gaithrstress.c 203800 2010-02-12 16:33:03Z ru $
+ * $FreeBSD: release/10.0.0/tools/regression/gaithrstress/gaithrstress.c 203800 2010-02-12 16:33:03Z ru $
  */
 
 #include <sys/types.h>

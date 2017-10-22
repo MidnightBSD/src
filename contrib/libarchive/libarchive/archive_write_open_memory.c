@@ -24,25 +24,13 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/archive_write_open_memory.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_write_open_memory.c 232153 2012-02-25 10:58:02Z mm $");
 
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "archive.h"
-
-/*
- * This is a little tricky.  I used to allow the
- * compression handling layer to fork the compressor,
- * which means this write function gets invoked in
- * a separate process.  That would, of course, make it impossible
- * to actually use the data stored into memory here.
- * Fortunately, none of the compressors fork today and
- * I'm reluctant to use that route in the future but, if
- * forking compressors ever do reappear, this will have
- * to get a lot more complicated.
- */
 
 struct write_memory_data {
 	size_t	used;

@@ -36,7 +36,7 @@
 static char sccsid[] = "@(#)process.c	8.2 (Berkeley) 11/16/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/libexec/talkd/process.c 202210 2010-01-13 18:28:58Z ed $";
+  "$FreeBSD: release/10.0.0/libexec/talkd/process.c 241777 2012-10-20 10:33:15Z ed $";
 #endif /* not lint */
 
 /*
@@ -62,8 +62,6 @@ static const char rcsid[] =
 #include <utmpx.h>
 
 #include "extern.h"
-
-extern int debug;
 
 void
 process_request(CTL_MSG *mp, CTL_RESPONSE *rp)

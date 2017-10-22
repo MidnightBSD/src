@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net/if_debug.c 223735 2011-07-03 12:22:02Z bz $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/net/if_debug.c 223735 2011-07-03 12:22:02Z bz $");
 
 #include "opt_ddb.h"
 

@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# $FreeBSD: release/10.0.0/etc/rc.d/swaplate 252310 2013-06-27 18:28:45Z hrs $
+#
+
+# PROVIDE: swaplate
+# REQUIRE: mountlate
+# KEYWORD: nojail shutdown
+
+. /etc/rc.subr
+
+name="swaplate"
+start_cmd='/sbin/swapon -aLq'
+stop_cmd='/sbin/swapoff -aq'
+
+load_rc_config swap
+run_rc_command "$1"

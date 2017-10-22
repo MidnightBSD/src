@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/iscontrol/config.c 217859 2011-01-25 22:25:16Z cracauer $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/iscontrol/config.c 254657 2013-08-22 14:02:34Z trasz $");
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -41,7 +41,7 @@ __FBSDID("$FreeBSD: stable/9/sbin/iscontrol/config.c 217859 2011-01-25 22:25:16Z
 #include <ctype.h>
 #include <camlib.h>
 
-#include <dev/iscsi/initiator/iscsi.h>
+#include <dev/iscsi_initiator/iscsi.h>
 #include "iscontrol.h"
 
 /*

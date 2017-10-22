@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)close.2	8.2 (Berkeley) 4/19/94
-.\" $FreeBSD: stable/9/lib/libc/sys/close.2 230723 2012-01-29 04:42:19Z kib $
+.\" $FreeBSD: release/10.0.0/lib/libc/sys/close.2 255486 2013-09-12 00:53:38Z bdrewery $
 .\"
-.Dd January 22, 2012
+.Dd September 11, 2013
 .Dt CLOSE 2
 .Os
 .Sh NAME
@@ -39,7 +39,7 @@
 .Sh SYNOPSIS
 .In unistd.h
 .Ft int
-.Fn close "int d"
+.Fn close "int fd"
 .Sh DESCRIPTION
 The
 .Fn close
@@ -107,7 +107,7 @@ system call will fail if:
 .Bl -tag -width Er
 .It Bq Er EBADF
 The
-.Fa d
+.Fa fd
 argument
 is not an active descriptor.
 .It Bq Er EINTR

@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/9/usr.sbin/wlandebug/wlandebug.c 195746 2009-07-17 21:11:08Z sam $
+ * $FreeBSD: release/10.0.0/usr.sbin/wlandebug/wlandebug.c 195746 2009-07-17 21:11:08Z sam $
  */
 
 /*

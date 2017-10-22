@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/mips/include/cpuinfo.h 204690 2010-03-04 05:37:19Z neel $
+ * $FreeBSD: release/10.0.0/sys/mips/include/cpuinfo.h 204690 2010-03-04 05:37:19Z neel $
  *	@(#)cpu.h	8.4 (Berkeley) 1/4/94
  */
 

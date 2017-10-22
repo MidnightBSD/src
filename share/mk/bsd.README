@@ -1,5 +1,5 @@
 #	@(#)bsd.README	8.2 (Berkeley) 4/2/94
-# $FreeBSD: stable/9/share/mk/bsd.README 248350 2013-03-15 20:34:10Z brooks $
+# $FreeBSD: release/10.0.0/share/mk/bsd.README 245561 2013-01-17 17:27:10Z brooks $
 
 This is the README file for the "include" files for the FreeBSD
 source tree.  The files are installed in /usr/share/mk, and are by
@@ -228,7 +228,7 @@ LDADD		Additional loader objects.  Usually used for libraries.
 		For example, to load with the compatibility and utility
 		libraries, use:
 
-			LDFILES=-lutil -lcompat
+			LDADD=-lutil -lcompat
 
 LDFLAGS		Additional loader flags.
 
@@ -261,7 +261,7 @@ DPADD		Additional dependencies for the program.  Usually used for
 		libraries.  For example, to depend on the compatibility and
 		utility libraries use:
 
-			SRCLIB=${LIBCOMPAT} ${LIBUTIL}
+			DPADD=${LIBCOMPAT} ${LIBUTIL}
 
 		There is a predefined identifier for each (non-profiled,
 		non-shared) library and object.  Library file names are

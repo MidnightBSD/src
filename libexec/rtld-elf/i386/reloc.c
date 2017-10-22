@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/libexec/rtld-elf/i386/reloc.c 235396 2012-05-13 12:50:42Z kib $
+ * $FreeBSD: release/10.0.0/libexec/rtld-elf/i386/reloc.c 234841 2012-04-30 13:31:10Z kib $
  */
 
 /*
@@ -446,10 +446,8 @@ __attribute__((__regparm__(1)))
 void *___tls_get_addr(tls_index *ti)
 {
     Elf_Addr** segbase;
-    Elf_Addr* dtv;
 
     __asm __volatile("movl %%gs:0, %0" : "=r" (segbase));
-    dtv = segbase[1];
 
     return tls_get_addr_common(&segbase[1], ti->ti_module, ti->ti_offset);
 }
@@ -458,10 +456,8 @@ void *___tls_get_addr(tls_index *ti)
 void *__tls_get_addr(tls_index *ti)
 {
     Elf_Addr** segbase;
-    Elf_Addr* dtv;
 
     __asm __volatile("movl %%gs:0, %0" : "=r" (segbase));
-    dtv = segbase[1];
 
     return tls_get_addr_common(&segbase[1], ti->ti_module, ti->ti_offset);
 }

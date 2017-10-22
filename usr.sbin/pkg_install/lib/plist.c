@@ -1,5 +1,5 @@
 /*
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/lib/plist.c 241135 2012-10-02 17:04:53Z bapt $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg_install/lib/plist.c 240682 2012-09-18 22:09:23Z bapt $");
 
 #include "lib.h"
 #include <err.h>
@@ -123,7 +123,7 @@ find_plist_option(Package *pkg, const char *name)
 
 /*
  * Delete plist item 'type' in the list (if 'name' is non-null, match it
- * too.)  If 'all' is set, delete all items, not just the first occurance.
+ * too.)  If 'all' is set, delete all items, not just the first occurrence.
  */
 void
 delete_plist(Package *pkg, Boolean all, plist_t type, const char *name)

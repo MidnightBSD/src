@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_environment.c 241222 2012-10-05 09:47:54Z jh $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_environment.c 249570 2013-04-16 22:09:08Z imp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -231,20 +231,23 @@ init_dynamic_kenv(void *data __unused)
 	kenvp = malloc((KENV_SIZE + 1) * sizeof(char *), M_KENV,
 		M_WAITOK | M_ZERO);
 	i = 0;
-	for (cp = kern_envp; cp != NULL; cp = kernenv_next(cp)) {
-		len = strlen(cp) + 1;
-		if (len > KENV_MNAMELEN + 1 + KENV_MVALLEN + 1) {
-			printf("WARNING: too long kenv string, ignoring %s\n",
-			    cp);
-			continue;
+	if (kern_envp && *kern_envp != '\0') {
+		for (cp = kern_envp; cp != NULL; cp = kernenv_next(cp)) {
+			len = strlen(cp) + 1;
+			if (len > KENV_MNAMELEN + 1 + KENV_MVALLEN + 1) {
+				printf(
+				"WARNING: too long kenv string, ignoring %s\n",
+				    cp);
+				continue;
+			}
+			if (i < KENV_SIZE) {
+				kenvp[i] = malloc(len, M_KENV, M_WAITOK);
+				strcpy(kenvp[i++], cp);
+			} else
+				printf(
+				"WARNING: too many kenv strings, ignoring %s\n",
+				    cp);
 		}
-		if (i < KENV_SIZE) {
-			kenvp[i] = malloc(len, M_KENV, M_WAITOK);
-			strcpy(kenvp[i++], cp);
-		} else
-			printf(
-			    "WARNING: too many kenv strings, ignoring %s\n",
-			    cp);
 	}
 	kenvp[i] = NULL;
 

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/hastd/activemap.h 204076 2010-02-18 23:16:19Z pjd $
+ * $FreeBSD: release/10.0.0/sbin/hastd/activemap.h 204076 2010-02-18 23:16:19Z pjd $
  */
 
 #ifndef	_ACTIVEMAP_H_

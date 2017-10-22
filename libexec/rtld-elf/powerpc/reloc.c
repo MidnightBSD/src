@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/libexec/rtld-elf/powerpc/reloc.c 235396 2012-05-13 12:50:42Z kib $
+ * $FreeBSD: release/10.0.0/libexec/rtld-elf/powerpc/reloc.c 253750 2013-07-28 18:44:17Z avg $
  */
 
 #include <sys/param.h>
@@ -38,7 +38,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <machine/cpu.h>
-#include <machine/cpufunc.h>
+#include <machine/atomic.h>
 #include <machine/md_var.h>
 
 #include "debug.h"
@@ -499,7 +499,7 @@ reloc_jmpslot(Elf_Addr *wherep, Elf_Addr target, const Obj_Entry *defobj,
 
 		jmptab = obj->pltgot + JMPTAB_BASE(N);
 		jmptab[reloff] = target;
-		powerpc_mb(); /* Order jmptab update before next changes */
+		mb(); /* Order jmptab update before next changes */
 
 		if (reloff < PLT_EXTENDED_BEGIN) {
 			/* for extended PLT entries, we keep the old code */

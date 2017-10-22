@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/sound/pci/hda/hdaa.h 243060 2012-11-15 05:54:18Z mav $
+ * $FreeBSD: release/10.0.0/sys/dev/sound/pci/hda/hdaa.h 242352 2012-10-30 10:59:42Z mav $
  */
 
 /*

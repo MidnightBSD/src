@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/pci/nfsmb.c 202931 2010-01-24 14:57:54Z gavin $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/pci/nfsmb.c 202931 2010-01-24 14:57:54Z gavin $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

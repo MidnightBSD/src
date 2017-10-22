@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/stdio/fputws.c 235785 2012-05-22 14:40:39Z theraven $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/fputws.c 234536 2012-04-21 07:31:27Z das $");
 
 #include "namespace.h"
 #include <errno.h>

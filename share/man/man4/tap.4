@@ -1,7 +1,7 @@
-.\" $FreeBSD: stable/9/share/man/man4/tap.4 206622 2010-04-14 19:08:06Z uqs $
+.\" $FreeBSD: release/10.0.0/share/man/man4/tap.4 230580 2012-01-26 10:53:39Z glebius $
 .\" Based on PR#2411
 .\"
-.Dd September 8, 2008
+.Dd January 26, 2012
 .Dt TAP 4
 .Os
 .Sh NAME
@@ -89,11 +89,7 @@ Control devices (once successfully opened) persist until
 is unloaded or the interface is destroyed.
 .Pp
 Each interface supports the usual Ethernet network interface
-.Xr ioctl 2 Ns s ,
-such as
-.Dv SIOCSIFADDR
-and
-.Dv SIOCSIFNETMASK ,
+.Xr ioctl 2 Ns s
 and thus can be used with
 .Xr ifconfig 8
 like any other Ethernet interface.

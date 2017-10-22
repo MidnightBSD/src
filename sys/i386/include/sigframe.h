@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/i386/include/sigframe.h 105950 2002-10-25 19:10:58Z peter $
+ * $FreeBSD: release/10.0.0/sys/i386/include/sigframe.h 247047 2013-02-20 17:39:52Z kib $
  */
 
 #ifndef _MACHINE_SIGFRAME_H_
@@ -89,25 +89,6 @@ struct sigframe4 {
 #endif
 #endif
 
-struct sigframe {
-	/*
-	 * The first four members may be used by applications.
-	 *
-	 * NOTE: The 4th argument is undocumented, ill commented
-	 * on and seems to be somewhat BSD "standard".  Handlers
-	 * installed with sigvec may be using it.
-	 */
-	register_t	sf_signum;
-	register_t	sf_siginfo;	/* code or pointer to sf_si */
-	register_t	sf_ucontext;	/* points to sf_uc */
-	register_t	sf_addr;	/* undocumented 4th arg */
-
-	union {
-		__siginfohandler_t	*sf_action;
-		__sighandler_t		*sf_handler;
-	} sf_ahu;
-	ucontext_t	sf_uc;		/* = *sf_ucontext */
-	siginfo_t	sf_si;		/* = *sf_siginfo (SA_SIGINFO case) */
-};
+#include <x86/sigframe.h>
 
 #endif /* !_MACHINE_SIGFRAME_H_ */

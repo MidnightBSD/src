@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/rc.d/pfsync 249046 2013-04-03 11:00:50Z des $
+# $FreeBSD: release/10.0.0/etc/rc.d/pfsync 253357 2013-07-15 08:48:45Z des $
 #
 
 # PROVIDE: pfsync
@@ -42,7 +42,7 @@ pfsync_start()
 pfsync_stop()
 {
 	echo "Disabling pfsync."
-	ifconfig pfsync0 -syncdev down
+	ifconfig pfsync0 -syncdev -syncpeer down
 }
 
 load_rc_config $name

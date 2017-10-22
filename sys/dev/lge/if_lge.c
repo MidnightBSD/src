@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/lge/if_lge.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/lge/if_lge.c 254842 2013-08-25 10:57:09Z andre $");
 
 /*
  * Level 1 LXT1001 gigabit ethernet driver for FreeBSD. Public
@@ -122,7 +122,7 @@ static int lge_detach(device_t);
 static int lge_alloc_jumbo_mem(struct lge_softc *);
 static void lge_free_jumbo_mem(struct lge_softc *);
 static void *lge_jalloc(struct lge_softc *);
-static void lge_jfree(void *, void *);
+static int lge_jfree(struct mbuf *, void *, void *);
 
 static int lge_newbuf(struct lge_softc *, struct lge_rx_desc *, struct mbuf *);
 static int lge_encap(struct lge_softc *, struct mbuf *, u_int32_t *);
@@ -536,7 +536,6 @@ lge_attach(dev)
 	}
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = lge_ioctl;
 	ifp->if_start = lge_start;
@@ -847,10 +846,8 @@ lge_jalloc(sc)
 /*
  * Release a jumbo buffer.
  */
-static void
-lge_jfree(buf, args)
-	void			*buf;
-	void			*args;
+static int
+lge_jfree(struct mbuf *m, void *buf, void *args)
 {
 	struct lge_softc	*sc;
 	int		        i;
@@ -876,7 +873,7 @@ lge_jfree(buf, args)
 	SLIST_REMOVE_HEAD(&sc->lge_jinuse_listhead, jpool_entries);
 	SLIST_INSERT_HEAD(&sc->lge_jfree_listhead, entry, jpool_entries);
 
-	return;
+	return (EXT_FREE_OK);
 }
 
 /*

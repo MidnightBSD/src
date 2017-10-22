@@ -1,0 +1,7 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITH_DEBUG_FILES 251512 2013-06-07 21:40:02Z emaste $
+Set to strip debug info into a separate file for each executable binary
+and shared library.
+The debug files will be placed in a subdirectory of
+.Pa /usr/lib/debug
+and are located automatically by
+.Xr gdb 1 .

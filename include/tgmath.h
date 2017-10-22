@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/include/tgmath.h 236326 2012-05-30 19:21:54Z theraven $
+ * $FreeBSD: release/10.0.0/include/tgmath.h 249995 2013-04-27 21:18:34Z ed $
  */
 
 #ifndef _TGMATH_H_
@@ -60,7 +60,8 @@
  * compilers use an inefficient yet reliable version.
  */
 
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || \
+    __has_extension(c_generic_selections)
 #define	__tg_generic(x, cfnl, cfn, cfnf, fnl, fn, fnf)			\
 	_Generic(x,							\
 		long double _Complex: cfnl,				\

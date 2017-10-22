@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/uboot/lib/glue.c 233719 2012-03-31 00:07:53Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/uboot/lib/glue.c 235609 2012-05-18 14:41:14Z gber $");
 
 #include <sys/types.h>
 
@@ -406,6 +406,9 @@ ub_stor_type(int type)
 
 	if (type & DT_STOR_MMC)
 		return ("MMC");
+
+	if (type & DT_STOR_NAND)
+		return ("NAND");
 
 	return ("Unknown");
 }

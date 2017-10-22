@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libc/iconv/citrus_csmapper.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libc/iconv/citrus_csmapper.c 252584 2013-07-03 18:35:21Z peter $ */
 /* $NetBSD: citrus_csmapper.c,v 1.10 2009/01/11 02:46:24 christos Exp $ */
 
 /*-
@@ -57,6 +57,8 @@
 #include "citrus_lookup.h"
 
 static struct _citrus_mapper_area	*maparea = NULL;
+
+static pthread_rwlock_t			ma_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 #define CS_ALIAS	_PATH_CSMAPPER "/charset.alias"
 #define CS_PIVOT	_PATH_CSMAPPER "/charset.pivot"
@@ -314,7 +316,7 @@ get_none(struct _citrus_mapper_area *__restrict ma,
 {
 	int ret;
 
-	WLOCK;
+	WLOCK(&ma_lock);
 	if (csm_none) {
 		*rcsm = csm_none;
 		ret = 0;
@@ -329,7 +331,7 @@ get_none(struct _citrus_mapper_area *__restrict ma,
 	*rcsm = csm_none;
 	ret = 0;
 quit:
-	UNLOCK;
+	UNLOCK(&ma_lock);
 	return (ret);
 }
 

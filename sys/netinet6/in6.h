@@ -58,7 +58,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in.h	8.3 (Berkeley) 1/3/94
- * $FreeBSD: stable/9/sys/netinet6/in6.h 244524 2012-12-21 00:41:52Z delphij $
+ * $FreeBSD: release/10.0.0/sys/netinet6/in6.h 253970 2013-08-05 20:13:02Z hrs $
  */
 
 #ifndef __KAME_NETINET_IN_H_INCLUDED_
@@ -361,11 +361,11 @@ extern const struct in6_addr in6addr_linklocal_allv2routers;
 
 #define IFA6_IS_DEPRECATED(a) \
 	((a)->ia6_lifetime.ia6t_pltime != ND6_INFINITE_LIFETIME && \
-	 (u_int32_t)((time_second - (a)->ia6_updatetime)) > \
+	 (u_int32_t)((time_uptime - (a)->ia6_updatetime)) > \
 	 (a)->ia6_lifetime.ia6t_pltime)
 #define IFA6_IS_INVALID(a) \
 	((a)->ia6_lifetime.ia6t_vltime != ND6_INFINITE_LIFETIME && \
-	 (u_int32_t)((time_second - (a)->ia6_updatetime)) > \
+	 (u_int32_t)((time_uptime - (a)->ia6_updatetime)) > \
 	 (a)->ia6_lifetime.ia6t_vltime)
 #endif /* _KERNEL */
 

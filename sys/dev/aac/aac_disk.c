@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/aac/aac_disk.c 240876 2012-09-23 20:28:47Z sbruno $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/aac/aac_disk.c 251116 2013-05-30 00:22:07Z marius $");
 
 #include "opt_aac.h"
 
@@ -73,7 +73,7 @@ static device_method_t aac_disk_methods[] = {
 	DEVMETHOD(device_probe,	aac_disk_probe),
 	DEVMETHOD(device_attach,	aac_disk_attach),
 	DEVMETHOD(device_detach,	aac_disk_detach),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t aac_disk_driver = {
@@ -82,7 +82,7 @@ static driver_t aac_disk_driver = {
 	sizeof(struct aac_disk)
 };
 
-DRIVER_MODULE(aacd, aac, aac_disk_driver, aac_disk_devclass, 0, 0);
+DRIVER_MODULE(aacd, aac, aac_disk_driver, aac_disk_devclass, NULL, NULL);
 
 /*
  * Handle open from generic layer.
@@ -167,8 +167,6 @@ aac_disk_strategy(struct bio *bp)
 	mtx_lock(&sc->ad_controller->aac_io_lock);
 	aac_submit_bio(bp);
 	mtx_unlock(&sc->ad_controller->aac_io_lock);
-
-	return;
 }
 
 /*
@@ -399,6 +397,7 @@ aac_disk_attach(device_t dev)
 	sc->unit = device_get_unit(dev);
 	sc->ad_disk = disk_alloc();
 	sc->ad_disk->d_drv1 = sc;
+	sc->ad_disk->d_flags = DISKFLAG_UNMAPPED_BIO;
 	sc->ad_disk->d_name = "aacd";
 	sc->ad_disk->d_maxsize = sc->ad_controller->aac_max_sectors << 9;
 	sc->ad_disk->d_open = aac_disk_open;

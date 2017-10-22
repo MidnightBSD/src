@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/csup/rcsfile.h 216542 2010-12-18 20:43:18Z lulf $
+ * $FreeBSD: release/10.0.0/usr.bin/csup/rcsfile.h 216542 2010-12-18 20:43:18Z lulf $
  */
 
 #ifndef _RCSFILE_H_

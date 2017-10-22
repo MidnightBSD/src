@@ -1,11 +1,11 @@
-/*	$FreeBSD: stable/9/contrib/ipfilter/opts.h 153881 2005-12-30 11:52:26Z guido $	*/
+/*	$FreeBSD: release/10.0.0/contrib/ipfilter/opts.h 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2000 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: opts.h,v 2.12 2003/08/14 14:24:27 darrenr Exp $
+ * $Id$
  */
 
 #ifndef	__OPTS_H__
@@ -42,6 +42,8 @@
 #define	OPT_HEX		0x2000000
 #define	OPT_ASCII	0x4000000
 #define	OPT_NORESOLVE	0x8000000
+#define	OPT_DONTOPEN	0x10000000
+#define	OPT_PURGE	0x20000000
 
 #define	OPT_STAT	OPT_FRSTATES
 #define	OPT_LIST	OPT_SHOWLIST

@@ -23,7 +23,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/boot/powerpc/ps3/lv1call.S 224857 2011-08-14 00:20:37Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/boot/powerpc/ps3/lv1call.S 224857 2011-08-14 00:20:37Z nwhitehorn $
  */
 
 /* Hypercall stubs. Note: this is all a hack and should die. */

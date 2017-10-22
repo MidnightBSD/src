@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/common/misc.c 181278 2008-08-04 06:39:52Z cperciva $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/common/misc.c 181278 2008-08-04 06:39:52Z cperciva $");
 
 #include <string.h>
 #include <stand.h>

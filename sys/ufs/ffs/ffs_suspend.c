@@ -26,11 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/ufs/ffs/ffs_suspend.c 246234 2013-02-02 09:57:34Z trasz $
+ * $FreeBSD: release/10.0.0/sys/ufs/ffs/ffs_suspend.c 253106 2013-07-09 20:49:32Z kib $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ufs/ffs/ffs_suspend.c 246234 2013-02-02 09:57:34Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ufs/ffs/ffs_suspend.c 253106 2013-07-09 20:49:32Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -206,7 +206,7 @@ ffs_susp_suspend(struct mount *mp)
 		return (EPERM);
 #endif
 
-	if ((error = vfs_write_suspend(mp)) != 0)
+	if ((error = vfs_write_suspend(mp, VS_SKIP_UNMOUNT)) != 0)
 		return (error);
 
 	ump->um_writesuspended = 1;
@@ -252,7 +252,7 @@ ffs_susp_dtor(void *data)
 	 */
 	mp->mnt_susp_owner = curthread;
 
-	vfs_write_resume(mp);
+	vfs_write_resume(mp, 0);
 	vfs_unbusy(mp);
 	ump->um_writesuspended = 0;
 

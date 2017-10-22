@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/cddl/Makefile.inc 215455 2010-11-18 16:32:52Z markm $
+# $FreeBSD: release/10.0.0/cddl/Makefile.inc 215455 2010-11-18 16:32:52Z markm $
 
 OPENSOLARIS_USR_DISTDIR= ${.CURDIR}/../../../cddl/contrib/opensolaris
 OPENSOLARIS_SYS_DISTDIR= ${.CURDIR}/../../../sys/cddl/contrib/opensolaris

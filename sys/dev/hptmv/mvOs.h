@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/hptmv/mvOs.h 190809 2009-04-07 16:38:25Z delphij $
+ * $FreeBSD: release/10.0.0/sys/dev/hptmv/mvOs.h 190809 2009-04-07 16:38:25Z delphij $
  */
 #ifndef __INCmvOsBsdh
 #define __INCmvOsBsdh

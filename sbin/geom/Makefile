@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sbin/geom/Makefile 198236 2009-10-19 16:00:24Z ru $
+# $FreeBSD: release/10.0.0/sbin/geom/Makefile 198236 2009-10-19 16:00:24Z ru $
 
 .if defined(RESCUE) || defined(RELEASE_CRUNCH)
 

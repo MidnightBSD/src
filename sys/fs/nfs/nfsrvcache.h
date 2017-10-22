@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/fs/nfs/nfsrvcache.h 191783 2009-05-04 15:23:58Z rmacklem $
+ * $FreeBSD: release/10.0.0/sys/fs/nfs/nfsrvcache.h 254337 2013-08-14 21:11:26Z rmacklem $
  */
 
 #ifndef _NFS_NFSRVCACHE_H_
@@ -41,8 +41,9 @@
 #define	NFSRVCACHE_MAX_SIZE	2048
 #define	NFSRVCACHE_MIN_SIZE	  64
 
-#define	NFSRVCACHE_HASHSIZE	20
+#define	NFSRVCACHE_HASHSIZE	500
 
+/* Cache table entry. */
 struct nfsrvcache {
 	LIST_ENTRY(nfsrvcache) rc_hash;		/* Hash chain */
 	TAILQ_ENTRY(nfsrvcache)	rc_lru;		/* UDP lru chain */
@@ -103,5 +104,12 @@ struct nfsrvcache {
 #define	RC_SAMETCPCONN	0x1000
 
 LIST_HEAD(nfsrvhashhead, nfsrvcache);
+
+/* The fine-grained locked cache hash table for TCP. */
+struct nfsrchash_bucket {
+	struct mtx		mtx;
+	char			lock_name[16];
+	struct nfsrvhashhead	tbl;
+};
 
 #endif	/* _NFS_NFSRVCACHE_H_ */

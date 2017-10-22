@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libcrypt/crypt-md5.c 115733 2003-06-02 21:43:14Z markm $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libcrypt/crypt-md5.c 115733 2003-06-02 21:43:14Z markm $");
 
 #include <sys/types.h>
 

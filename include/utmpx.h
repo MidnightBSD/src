@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/include/utmpx.h 202188 2010-01-13 17:29:55Z ed $
+ * $FreeBSD: release/10.0.0/include/utmpx.h 202188 2010-01-13 17:29:55Z ed $
  */
 
 #ifndef _UTMPX_H_

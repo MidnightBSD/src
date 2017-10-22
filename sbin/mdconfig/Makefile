@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sbin/mdconfig/Makefile 240229 2012-09-08 03:11:02Z eadler $
+# $FreeBSD: release/10.0.0/sbin/mdconfig/Makefile 238202 2012-07-07 17:20:27Z eadler $
 
 PROG=		mdconfig
 MAN=		mdconfig.8

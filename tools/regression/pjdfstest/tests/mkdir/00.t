@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/mkdir/00.t 166232 2007-01-25 20:50:02Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/mkdir/00.t 166232 2007-01-25 20:50:02Z pjd $
 
 desc="mkdir creates directories"
 

@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: stable/9/contrib/tcpdump/print-udp.c 236192 2012-05-28 19:13:21Z delphij $
+ * $FreeBSD: release/10.0.0/contrib/tcpdump/print-udp.c 251158 2013-05-30 20:51:22Z delphij $
  */
 
 #ifndef lint
@@ -471,6 +471,16 @@ udp_print(register const u_char *bp, u_int length,
 			    0);
 #endif
 			break;
+
+		case PT_RADIUS:
+			udpipaddr_print(ip, sport, dport);
+			radius_print(cp, length);
+			break;
+
+		case PT_VXLAN:
+			udpipaddr_print(ip, sport, dport);
+			vxlan_print((const u_char *)(up + 1), length);
+			break;
 		}
 		return;
 	}
@@ -660,6 +670,8 @@ udp_print(register const u_char *bp, u_int length,
 			sip_print((const u_char *)(up + 1), length);
                 else if (ISPORT(SYSLOG_PORT))
 			syslog_print((const u_char *)(up + 1), length);
+                else if (ISPORT(OTV_PORT))
+			otv_print((const u_char *)(up + 1), length);
 		else
 			(void)printf("UDP, length %u",
 			    (u_int32_t)(ulen - sizeof(*up)));

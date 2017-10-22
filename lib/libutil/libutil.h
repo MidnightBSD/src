@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libutil/libutil.h 236451 2012-06-02 15:13:28Z bapt $
+ * $FreeBSD: release/10.0.0/lib/libutil/libutil.h 247919 2013-03-07 19:00:00Z db $
  */
 
 #ifndef _LIBUTIL_H_
@@ -162,16 +162,21 @@ int	pw_tmp(int _mfd);
 #endif
 
 #ifdef _GRP_H_
-int 	gr_copy(int __ffd, int _tfd, const struct group *_gr, struct group *_old_gr);
-struct group *gr_dup(const struct group *gr);
-int	gr_equal(const struct group *gr1, const struct group *gr2);
+int 	gr_copy(int __ffd, int _tfd, const struct group *_gr,
+	    struct group *_old_gr);
+struct group *
+	gr_dup(const struct group *_gr);
+struct group *
+	gr_add(const struct group *_gr, const char *_newmember);
+int	gr_equal(const struct group *_gr1, const struct group *_gr2);
 void	gr_fini(void);
 int	gr_init(const char *_dir, const char *_master);
 int	gr_lock(void);
-char	*gr_make(const struct group *gr);
+char	*gr_make(const struct group *_gr);
 int	gr_mkdb(void);
+struct group *
+	gr_scan(const char *_line);
 int	gr_tmp(int _mdf);
-struct group *gr_scan(const char *line);
 #endif
 
 #ifdef _UFS_UFS_QUOTA_H_

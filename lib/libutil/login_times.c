@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libutil/login_times.c 184087 2008-10-20 17:09:50Z des $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libutil/login_times.c 252376 2013-06-29 15:52:48Z kientzle $");
 
 #include <sys/types.h>
 #include <ctype.h>
@@ -96,7 +96,7 @@ parse_lt(const char *str)
 	else
 	    m.lt_start = 0;
 	if (*p == '-')
-	    p = parse_time(++p, &m.lt_end);
+	    p = parse_time(p + 1, &m.lt_end);
 	else
 	    m.lt_end = 1440;
 

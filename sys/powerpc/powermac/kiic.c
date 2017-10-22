@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/powermac/kiic.c 212687 2010-09-15 19:08:41Z andreast $
+ * $FreeBSD: release/10.0.0/sys/powerpc/powermac/kiic.c 254737 2013-08-23 20:39:41Z andreast $
  *	NetBSD: ki2c.c,v 1.11 2007/12/06 17:00:33 ad Exp
  *	Id: ki2c.c,v 1.7 2002/10/05 09:56:05 tsubai Exp
  */
@@ -420,7 +420,7 @@ kiic_transfer(device_t dev, struct iic_msg *msgs, uint32_t nmsgs)
 			device_printf(sc->sc_dev, "I2C error\n");
 			sc->sc_flags = 0;
 			mtx_unlock(&sc->sc_mutex);
-			return (-1);
+			return (EIO);
 		}
 	}
 

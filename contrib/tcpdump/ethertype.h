@@ -19,7 +19,7 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
  * @(#) $Header: /tcpdump/master/tcpdump/ethertype.h,v 1.30 2008-02-06 10:47:53 guy Exp $ (LBL)
- * $FreeBSD: stable/9/contrib/tcpdump/ethertype.h 242485 2012-11-02 16:57:51Z delphij $
+ * $FreeBSD: release/10.0.0/contrib/tcpdump/ethertype.h 251158 2013-05-30 20:51:22Z delphij $
  */
 
 /*
@@ -153,6 +153,9 @@
 #endif
 #ifndef ETHERTYPE_PPPOES2
 #define ETHERTYPE_PPPOES2	0x3c13
+#endif
+#ifndef ETHERTYPE_MS_NLB_HB
+#define ETHERTYPE_MS_NLB_HB	0x886f /* MS Network Load Balancing Heartbeat */
 #endif
 #ifndef ETHERTYPE_JUMBO
 #define ETHERTYPE_JUMBO         0x8870

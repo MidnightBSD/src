@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/ti/if_tireg.h 229441 2012-01-03 23:44:05Z yongari $
+ * $FreeBSD: release/10.0.0/sys/dev/ti/if_tireg.h 227512 2011-11-14 20:38:14Z yongari $
  */
 
 /*

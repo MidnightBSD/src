@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/geom_mbr_enc.c 139778 2005-01-06 18:27:30Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/geom_mbr_enc.c 139778 2005-01-06 18:27:30Z imp $");
 
 #include <sys/types.h>
 #include <sys/diskmbr.h>

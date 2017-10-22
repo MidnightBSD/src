@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/bin/sh/cd.h 223060 2011-06-13 21:03:27Z jilles $
+ * $FreeBSD: release/10.0.0/bin/sh/cd.h 223060 2011-06-13 21:03:27Z jilles $
  */
 
 void	 pwd_init(int);

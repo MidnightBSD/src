@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/fs/nfsserver/nfs_nfsdsocket.c 224086 2011-07-16 08:51:09Z zack $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfsserver/nfs_nfsdsocket.c 249592 2013-04-17 21:00:22Z ken $");
 
 /*
  * Socket operations for use by the nfs server.
@@ -379,6 +379,7 @@ nfsrvd_dorpc(struct nfsrv_descript *nd, int isdgram,
 				goto out;
 			}
 			if (nd->nd_procnum == NFSPROC_READ ||
+			    nd->nd_procnum == NFSPROC_WRITE ||
 			    nd->nd_procnum == NFSPROC_READDIR ||
 			    nd->nd_procnum == NFSPROC_READLINK ||
 			    nd->nd_procnum == NFSPROC_GETATTR ||

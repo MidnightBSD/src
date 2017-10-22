@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/sbin/setkey/Makefile 171135 2007-07-01 12:08:08Z gnn $
+# $FreeBSD: release/10.0.0/sbin/setkey/Makefile 245492 2013-01-16 05:03:46Z eadler $
 
 .include <bsd.own.mk>
 
@@ -61,7 +61,7 @@ CLEANFILES+=	scriptdump y.tab.h
 
 #SCRIPTS= scriptdump
 
-LOCALPREFIX=	/usr
+LOCALPREFIX=	/usr/local
 
 scriptdump: scriptdump.pl
 	sed -e 's#@LOCALPREFIX@#${LOCALPREFIX}#' < $> > scriptdump

@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/9/sys/cddl/compat/opensolaris/sys/cyclic.h 179202 2008-05-22 08:33:24Z jb $
+ * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/cyclic.h 179202 2008-05-22 08:33:24Z jb $
  *
  */
 /*

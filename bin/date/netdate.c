@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)netdate.c	8.1 (Berkeley) 5/31/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/date/netdate.c 161469 2006-08-20 06:31:24Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/date/netdate.c 244538 2012-12-21 15:54:13Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -54,8 +54,6 @@ __FBSDID("$FreeBSD: stable/9/bin/date/netdate.c 161469 2006-08-20 06:31:24Z imp 
 
 #define	WAITACK		2	/* seconds */
 #define	WAITDATEACK	5	/* seconds */
-
-extern int retval;
 
 /*
  * Set the date in the machines controlled by timedaemons by communicating the
@@ -87,7 +85,7 @@ netsettime(time_t tval)
 	dest.sin_addr.s_addr = htonl((u_long)INADDR_ANY);
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s < 0) {
-		if (errno != EPROTONOSUPPORT)
+		if (errno != EAFNOSUPPORT)
 			warn("timed");
 		return (retval = 2);
 	}

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/age/if_agevar.h 246724 2013-02-13 00:46:41Z yongari $
+ * $FreeBSD: release/10.0.0/sys/dev/age/if_agevar.h 246341 2013-02-05 00:37:45Z yongari $
  */
 
 #ifndef	_IF_AGEVAR_H

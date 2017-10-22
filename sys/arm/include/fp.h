@@ -42,7 +42,7 @@
  *
  * Created      : 10/10/95
  *
- * $FreeBSD: stable/9/sys/arm/include/fp.h 139735 2005-01-05 21:58:49Z imp $
+ * $FreeBSD: release/10.0.0/sys/arm/include/fp.h 254452 2013-08-17 14:53:53Z andrew $
  */
 
 #ifndef _MACHINE_FP_H
@@ -66,18 +66,16 @@ typedef struct fp_extended_precision fp_reg_t;
  * This needs to move and be hidden from userland.
  */
 
-struct fpe_sp_state {
-	unsigned int fp_flags;
-	unsigned int fp_sr;
-	unsigned int fp_cr;
-	fp_reg_t fp_registers[16];
+struct vfp_state {
+	u_int64_t reg[32];
+	u_int32_t fpscr;
 };
 
 /*
  * Type for a saved FP context, if we want to translate the context to a
  * user-readable form
  */
- 
+
 typedef struct {
 	u_int32_t fpsr;
 	fp_extended_precision_t regs[8];

@@ -31,7 +31,7 @@
  */
 
 #ifndef lint
-char copyright[] =
+static const char copyright[] =
 "@(#) Copyright (c) 1990, 1993, 1994\n\
 	The Regents of the University of California.  All rights reserved.\n";
 #endif /* not lint */
@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)main.c	8.4 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/find/main.c 241227 2012-10-05 15:36:30Z jilles $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/find/main.c 246628 2013-02-10 18:56:37Z jilles $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -64,6 +64,7 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/find/main.c 241227 2012-10-05 15:36:30Z jil
 time_t now;			/* time find was run */
 int dotfd;			/* starting directory */
 int ftsoptions;			/* options for the ftsopen(3) call */
+int ignore_readdir_race;	/* ignore readdir race */
 int isdeprecated;		/* using deprecated syntax */
 int isdepth;			/* do directories on post-order visit */
 int isoutput;			/* user specified output operator */
@@ -151,7 +152,7 @@ main(int argc, char *argv[])
 	*p = NULL;
 
 	if ((dotfd = open(".", O_RDONLY | O_CLOEXEC, 0)) < 0)
-		err(1, ".");
+		ftsoptions |= FTS_NOCHDIR;
 
 	exit(find_execute(find_formplan(argv), start));
 }

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/boot/i386/common/edd.h 243217 2012-11-18 12:20:11Z avg $
+ * $FreeBSD: release/10.0.0/sys/boot/i386/common/edd.h 243025 2012-11-14 11:05:16Z avg $
  */
 
 #ifndef	_EDD_H_

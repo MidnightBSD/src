@@ -25,11 +25,53 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/compat/linux/linux_ipc.h 165439 2006-12-21 13:11:06Z netchild $
+ * $FreeBSD: release/10.0.0/sys/compat/linux/linux_ipc.h 246085 2013-01-29 18:41:30Z jhb $
  */
 
 #ifndef _LINUX_IPC_H_
 #define _LINUX_IPC_H_
+
+/*
+ * SystemV IPC defines
+ */
+#define	LINUX_SEMOP		1
+#define	LINUX_SEMGET		2
+#define	LINUX_SEMCTL		3
+#define	LINUX_MSGSND		11
+#define	LINUX_MSGRCV		12
+#define	LINUX_MSGGET		13
+#define	LINUX_MSGCTL		14
+#define	LINUX_SHMAT		21
+#define	LINUX_SHMDT		22
+#define	LINUX_SHMGET		23
+#define	LINUX_SHMCTL		24
+
+#define	LINUX_IPC_RMID		0
+#define	LINUX_IPC_SET		1
+#define	LINUX_IPC_STAT		2
+#define	LINUX_IPC_INFO		3
+
+#define	LINUX_MSG_INFO	12
+
+#define	LINUX_SHM_LOCK		11
+#define	LINUX_SHM_UNLOCK	12
+#define	LINUX_SHM_STAT		13
+#define	LINUX_SHM_INFO		14
+
+#define	LINUX_SHM_RDONLY	0x1000
+#define	LINUX_SHM_RND		0x2000
+#define	LINUX_SHM_REMAP		0x4000
+
+/* semctl commands */
+#define	LINUX_GETPID		11
+#define	LINUX_GETVAL		12
+#define	LINUX_GETALL		13
+#define	LINUX_GETNCNT		14
+#define	LINUX_GETZCNT		15
+#define	LINUX_SETVAL		16
+#define	LINUX_SETALL		17
+#define	LINUX_SEM_STAT		18
+#define	LINUX_SEM_INFO		19
 
 /*
  * Version flags for semctl, msgctl, and shmctl commands
@@ -134,8 +176,6 @@ int linux_shmat(struct thread *, struct linux_shmat_args *);
 int linux_shmctl(struct thread *, struct linux_shmctl_args *);
 int linux_shmdt(struct thread *, struct linux_shmdt_args *);
 int linux_shmget(struct thread *, struct linux_shmget_args *);
-
-#define	LINUX_MSG_INFO	12
 
 #endif	/* __i386__ || __amd64__ */
 

@@ -1,8 +1,8 @@
-# $FreeBSD: stable/9/kerberos5/libexec/hprop/Makefile 178828 2008-05-07 13:53:12Z dfr $
+# $FreeBSD: release/10.0.0/kerberos5/libexec/hprop/Makefile 236337 2012-05-30 22:21:25Z obrien $
 
 PROG=	hprop
 MAN=	hprop.8
-SRCS=	hprop.c mit_dump.c v4_dump.c
+SRCS=	hprop.c mit_dump.c
 CFLAGS+=-I${KRB5DIR}/lib/roken
 CFLAGS+=-I${KRB5DIR}/lib/krb5
 CFLAGS+=-I${KRB5DIR}/lib/asn1

@@ -24,7 +24,7 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/tar/util.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/tar/util.c 248616 2013-03-22 13:36:03Z mm $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -56,7 +56,7 @@ __FBSDID("$FreeBSD: stable/9/contrib/libarchive/tar/util.c 229592 2012-01-05 12:
 #include <wctype.h>
 #else
 /* If we don't have wctype, we need to hack up some version of iswprint(). */
-#define iswprint isprint
+#define	iswprint isprint
 #endif
 
 #include "bsdtar.h"
@@ -66,14 +66,14 @@ static size_t	bsdtar_expand_char(char *, size_t, char);
 static const char *strip_components(const char *path, int elements);
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
-#define read _read
+#define	read _read
 #endif
 
 /* TODO:  Hack up a version of mbtowc for platforms with no wide
  * character support at all.  I think the following might suffice,
  * but it needs careful testing.
  * #if !HAVE_MBTOWC
- * #define mbtowc(wcp, p, n) ((*wcp = *p), 1)
+ * #define	mbtowc(wcp, p, n) ((*wcp = *p), 1)
  * #endif
  */
 
@@ -115,8 +115,19 @@ safe_fprintf(FILE *f, const char *fmt, ...)
 	va_end(ap);
 
 	/* If the result was too large, allocate a buffer on the heap. */
-	if (length >= fmtbuff_length) {
-		fmtbuff_length = length+1;
+	while (length < 0 || length >= fmtbuff_length) {
+		if (length >= fmtbuff_length)
+			fmtbuff_length = length+1;
+		else if (fmtbuff_length < 8192)
+			fmtbuff_length *= 2;
+		else if (fmtbuff_length < 1000000)
+			fmtbuff_length += fmtbuff_length / 4;
+		else {
+			length = fmtbuff_length;
+			fmtbuff_heap[length-1] = '\0';
+			break;
+		}
+		free(fmtbuff_heap);
 		fmtbuff_heap = malloc(fmtbuff_length);
 
 		/* Reformat the result into the heap buffer if we can. */
@@ -129,12 +140,18 @@ safe_fprintf(FILE *f, const char *fmt, ...)
 			/* Leave fmtbuff pointing to the truncated
 			 * string in fmtbuff_stack. */
 			length = sizeof(fmtbuff_stack) - 1;
+			break;
 		}
 	}
 
 	/* Note: mbrtowc() has a cleaner API, but mbtowc() seems a bit
 	 * more portable, so we use that here instead. */
-	n = mbtowc(NULL, NULL, 1); /* Reset the shift state. */
+	if (mbtowc(NULL, NULL, 1) == -1) { /* Reset the shift state. */
+		/* mbtowc() should never fail in practice, but
+		 * handle the theoretical error anyway. */
+		free(fmtbuff_heap);
+		return;
+	}
 
 	/* Write data, expanding unprintable characters. */
 	p = fmtbuff;
@@ -174,8 +191,7 @@ safe_fprintf(FILE *f, const char *fmt, ...)
 	fprintf(f, "%s", outbuff);
 
 	/* If we allocated a heap-based formatting buffer, free it now. */
-	if (fmtbuff_heap != NULL)
-		free(fmtbuff_heap);
+	free(fmtbuff_heap);
 }
 
 /*
@@ -267,12 +283,19 @@ yes(const char *fmt, ...)
  * about -C with non-existent directories; such requests will only
  * fail if the directory must be accessed.
  *
- * TODO: Make this handle Windows paths correctly.
  */
 void
 set_chdir(struct bsdtar *bsdtar, const char *newdir)
 {
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	if (newdir[0] == '/' || newdir[0] == '\\' ||
+	    /* Detect this type, for example, "C:\" or "C:/" */
+	    (((newdir[0] >= 'a' && newdir[0] <= 'z') ||
+	      (newdir[0] >= 'A' && newdir[0] <= 'Z')) &&
+	    newdir[1] == ':' && (newdir[2] == '/' || newdir[2] == '\\'))) {
+#else
 	if (newdir[0] == '/') {
+#endif
 		/* The -C /foo -C /bar case; dump first one. */
 		free(bsdtar->pending_chdir);
 		bsdtar->pending_chdir = NULL;
@@ -359,13 +382,11 @@ int
 edit_pathname(struct bsdtar *bsdtar, struct archive_entry *entry)
 {
 	const char *name = archive_entry_pathname(entry);
-#if HAVE_REGEX_H
+#if defined(HAVE_REGEX_H) || defined(HAVE_PCREPOSIX_H)
 	char *subst_name;
 	int r;
-#endif
 
-#if HAVE_REGEX_H
-	r = apply_substitution(bsdtar, name, &subst_name, 0);
+	r = apply_substitution(bsdtar, name, &subst_name, 0, 0);
 	if (r == -1) {
 		lafe_warnc(0, "Invalid substitution, skipping entry");
 		return 1;
@@ -381,7 +402,7 @@ edit_pathname(struct bsdtar *bsdtar, struct archive_entry *entry)
 	}
 
 	if (archive_entry_hardlink(entry)) {
-		r = apply_substitution(bsdtar, archive_entry_hardlink(entry), &subst_name, 1);
+		r = apply_substitution(bsdtar, archive_entry_hardlink(entry), &subst_name, 0, 1);
 		if (r == -1) {
 			lafe_warnc(0, "Invalid substitution, skipping entry");
 			return 1;
@@ -392,7 +413,7 @@ edit_pathname(struct bsdtar *bsdtar, struct archive_entry *entry)
 		}
 	}
 	if (archive_entry_symlink(entry) != NULL) {
-		r = apply_substitution(bsdtar, archive_entry_symlink(entry), &subst_name, 1);
+		r = apply_substitution(bsdtar, archive_entry_symlink(entry), &subst_name, 1, 0);
 		if (r == -1) {
 			lafe_warnc(0, "Invalid substitution, skipping entry");
 			return 1;
@@ -507,14 +528,13 @@ const char *
 tar_i64toa(int64_t n0)
 {
 	static char buff[24];
-	int64_t n = n0 < 0 ? -n0 : n0;
+	uint64_t n = n0 < 0 ? -n0 : n0;
 	char *p = buff + sizeof(buff);
 
 	*--p = '\0';
 	do {
 		*--p = '0' + (int)(n % 10);
-		n /= 10;
-	} while (n > 0);
+	} while (n /= 10);
 	if (n0 < 0)
 		*--p = '-';
 	return p;

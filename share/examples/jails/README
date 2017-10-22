@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/examples/jails/README 214306 2010-10-24 22:59:38Z julian $
+# $FreeBSD: release/10.0.0/share/examples/jails/README 214306 2010-10-24 22:59:38Z julian $
 
 See under share/examples/netgraph for some examples of
 making and hooking together jails using netgraph as the

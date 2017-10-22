@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/uart_bus_ixp425.c 194668 2009-06-22 22:46:37Z sam $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/uart_bus_ixp425.c 194668 2009-06-22 22:46:37Z sam $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

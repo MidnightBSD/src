@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/x86/cpufreq/est.c 220433 2011-04-07 23:28:28Z jkim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/x86/cpufreq/est.c 241885 2012-10-22 13:06:09Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

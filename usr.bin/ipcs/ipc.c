@@ -24,12 +24,12 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * The split of ipcs.c into ipcs.c and ipc.c to accomodate the
+ * The split of ipcs.c into ipcs.c and ipc.c to accommodate the
  * changes in ipcrm.c was done by Edwin Groothuis <edwin@FreeBSD.org>
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/ipcs/ipc.c 224016 2011-07-14 14:18:14Z bz $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/ipcs/ipc.c 228992 2011-12-30 11:02:40Z uqs $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

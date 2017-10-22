@@ -1,11 +1,6 @@
-# $FreeBSD: stable/9/usr.bin/tar/test/Makefile 229595 2012-01-05 12:52:05Z mm $
+# $FreeBSD: release/10.0.0/usr.bin/tar/test/Makefile 248616 2013-03-22 13:36:03Z mm $
 
 LIBARCHIVEDIR=	${.CURDIR}/../../../contrib/libarchive
-
-.PATH: ${LIBARCHIVEDIR}/tar
-# Some tar sources are pulled in for white-box tests
-TAR_SRCS=						\
-	getdate.c
 
 .PATH: ${LIBARCHIVEDIR}/tar/test
 TESTS=	\
@@ -13,13 +8,48 @@ TESTS=	\
 	test_basic.c				\
 	test_copy.c				\
 	test_empty_mtree.c			\
-	test_getdate.c				\
+	test_extract_tar_bz2.c			\
+	test_extract_tar_grz.c			\
+	test_extract_tar_gz.c			\
+	test_extract_tar_lrz.c			\
+	test_extract_tar_lz.c			\
+	test_extract_tar_lzma.c			\
+	test_extract_tar_lzo.c			\
+	test_extract_tar_xz.c			\
+	test_format_newc.c			\
 	test_help.c				\
+	test_option_C_upper.c			\
+	test_option_H_upper.c			\
+	test_option_L_upper.c			\
+	test_option_O_upper.c			\
 	test_option_T_upper.c			\
+	test_option_U_upper.c			\
+	test_option_X_upper.c			\
+	test_option_a.c				\
+	test_option_b.c				\
+	test_option_b64encode.c			\
+	test_option_exclude.c			\
+	test_option_gid_gname.c			\
+	test_option_grzip.c			\
+	test_option_j.c				\
+	test_option_k.c				\
+	test_option_keep_newer_files.c		\
+	test_option_lrzip.c			\
+	test_option_lzma.c			\
+	test_option_lzop.c			\
+	test_option_n.c				\
+	test_option_newer_than.c		\
+	test_option_nodump.c			\
+	test_option_older_than.c		\
 	test_option_q.c				\
 	test_option_r.c				\
 	test_option_s.c				\
+	test_option_uid_uname.c			\
+	test_option_uuencode.c			\
+	test_option_xz.c			\
+	test_option_z.c				\
 	test_patterns.c				\
+	test_print_longpath.c			\
 	test_stdio.c				\
 	test_strip_components.c			\
 	test_symlink_dir.c			\
@@ -31,17 +61,20 @@ SRCS=	${TAR_SRCS}				\
 	list.h					\
 	main.c
 
+.PATH: ${LIBARCHIVEDIR}/test_utils
+SRCS+=	test_utils.c
+
 CLEANFILES+= list.h
 
 NO_MAN=yes
 
 PROG=bsdtar_test
 DPADD=${LIBARCHIVE} ${LIBBZ2} ${LIBZ} ${LIBLZMA}
-CFLAGS+=	-DPLATFORM_CONFIG_H=\"${.CURDIR}/../config_freebsd.h\"
+CFLAGS+=	-DPLATFORM_CONFIG_H=\"${.CURDIR}/../../../lib/libarchive/config_freebsd.h\"
 LDADD= -larchive -lz -lbz2 -llzma
 CFLAGS+= -static -g -O2 -Wall
-CFLAGS+= -I${.CURDIR}/.. -I${.OBJDIR}
-CFLAGS+= -I${LIBARCHIVEDIR}/tar
+CFLAGS+= -I${.CURDIR}/../../../lib/libarchive -I${.OBJDIR}
+CFLAGS+= -I${LIBARCHIVEDIR}/tar -I${LIBARCHIVEDIR}/test_utils
 
 # Uncomment to link against dmalloc
 #LDADD+= -L/usr/local/lib -ldmalloc

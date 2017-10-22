@@ -42,7 +42,7 @@
 
 #include "feeder_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pcm/sound.c 231762 2012-02-15 14:30:04Z mav $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pcm/sound.c 243459 2012-11-23 15:31:00Z mav $");
 
 devclass_t pcm_devclass;
 
@@ -1073,13 +1073,6 @@ pcm_register(device_t dev, void *devinfo, int numplay, int numrec)
 	    SND_CLONE_DEADLINE_DEFAULT, SND_CLONE_WAITOK |
 	    SND_CLONE_GC_ENABLE | SND_CLONE_GC_UNREF |
 	    SND_CLONE_GC_LASTREF | SND_CLONE_GC_EXPIRED);
-
-	if (bootverbose != 0 || snd_verbose > 3) {
-		device_printf(dev,
-		    "clone manager: deadline=%dms flags=0x%08x\n",
-		    snd_clone_getdeadline(d->clones),
-		    snd_clone_getflags(d->clones));
-	}
 
 	CHN_INIT(d, channels.pcm);
 	CHN_INIT(d, channels.pcm.busy);

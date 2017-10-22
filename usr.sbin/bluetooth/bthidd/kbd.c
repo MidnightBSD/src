@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: kbd.c,v 1.4 2006/09/07 21:06:53 max Exp $
- * $FreeBSD: stable/9/usr.sbin/bluetooth/bthidd/kbd.c 162157 2006-09-08 15:05:38Z emax $
+ * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/bthidd/kbd.c 162157 2006-09-08 15:05:38Z emax $
  */
 
 #include <sys/consio.h>

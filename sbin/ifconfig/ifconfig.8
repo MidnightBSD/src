@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)ifconfig.8	8.3 (Berkeley) 1/5/94
-.\" $FreeBSD: stable/9/sbin/ifconfig/ifconfig.8 245555 2013-01-17 16:39:21Z ume $
+.\" $FreeBSD: release/10.0.0/sbin/ifconfig/ifconfig.8 257321 2013-10-29 09:24:39Z glebius $
 .\"
-.Dd January 10, 2013
+.Dd October 21, 2013
 .Dt IFCONFIG 8
 .Os
 .Sh NAME
@@ -716,12 +716,6 @@ Set a flag to enable Neighbor Unreachability Detection.
 .It Cm -nud
 Clear a flag
 .Cm nud .
-.It Cm prefer_source
-Set a flag to prefer addresses on the interface as candidates of the
-source address for outgoing packets.
-.It Cm -prefer_source
-Clear a flag
-.Cm prefer_source .
 .It Cm no_prefer_iface
 Set a flag to not prefer address on the interface as candidates of the
 source address for outgoing packets, even when the interface is
@@ -1060,7 +1054,9 @@ can be used on a channel are defined by this setting.
 Country/Region codes are specified as a 2-character abbreviation
 defined by ISO 3166 or using a longer, but possibly ambiguous, spelling;
 e.g., "ES" and "Spain".
-The set of country codes are taken from /etc/regdomain.xml and can also
+The set of country codes are taken from
+.Pa /etc/regdomain.xml
+and can also
 be viewed with the ``list countries'' request.
 Note that not all devices support changing the country code from a default
 setting; typically stored in EEPROM.
@@ -1078,7 +1074,9 @@ according to a least-congested criteria.
 DFS support is mandatory for some 5GHz frequencies in certain
 locales (e.g., ETSI).
 By default DFS is enabled according to the regulatory definitions
-specified in /etc/regdomain.xml and the current country code, regdomain,
+specified in
+.Pa /etc/regdomain.xml
+and the current country code, regdomain,
 and channel.
 Note the underlying device (and driver) must support radar detection
 for full DFS support to work.
@@ -1127,6 +1125,38 @@ The
 specifies the number of beacon intervals between DTIM
 and must be in the range 1 to 15.
 By default DTIM is 1 (i.e., DTIM occurs at each beacon).
+.It Cm quiet
+Enable the use of quiet IE.  Hostap will use this to silence other
+stations to reduce interference for radar detection when
+operating on 5GHz frequency and doth support is enabled.
+Use
+.Fl quiet
+to disable this functionality.
+.It Cm quiet_period Ar period
+Set the QUIET
+.Ar period
+to the number of beacon intervals between the start of regularly
+scheduled quiet intervals defined by Quiet element.
+.It Cm quiet_count Ar count
+Set the QUIET
+.Ar count
+to the number of TBTTs until the beacon interval during which the
+next quiet interval shall start.  A value of 1 indicates the quiet
+interval will start during the beacon interval starting at the next
+TBTT. A value 0 is reserved.
+.It Cm quiet_offset Ar offset
+Set the QUIET
+.Ar offset
+to the offset of the start of the quiet interval from the TBTT
+specified by the Quiet count, expressed in TUs.
+The value of the
+.Ar offset
+shall be less than one beacon interval.
+.It Cm quiet_duration Ar dur
+Set the QUIET
+.Ar dur
+to the duration of the Quiet interval, expressed in TUs.
+The value should be less than beacon interval.
 .It Cm dturbo
 Enable the use of Atheros Dynamic Turbo mode when communicating with
 another Dynamic Turbo-capable station.
@@ -1552,7 +1582,9 @@ for operation.
 In particular the set of available channels, how the wireless device
 will operation on the channels, and the maximum transmit power that
 can be used on a channel are defined by this setting.
-Regdomain codes (SKU's) are taken from /etc/regdomain.xml and can also
+Regdomain codes (SKU's) are taken from
+.Pa /etc/regdomain.xml
+and can also
 be viewed with the ``list countries'' request.
 Note that not all devices support changing the regdomain from a default
 setting; typically stored in EEPROM.
@@ -1986,6 +2018,12 @@ Enable or disable forwarding packets by a mesh interface.
 By default
 .Cm meshforward
 is enabled.
+.It Cm meshgate
+This attribute specifies whether or not the mesh STA activates mesh gate
+announcements.
+By default
+.Cm meshgate
+is disabled.
 .It Cm meshmetric Ar protocol
 Set the specified
 .Ar protocol
@@ -2020,7 +2058,7 @@ Send broadcast path requests every two seconds.
 Nodes on the mesh without a path to this root mesh station with try to
 discover a path to us.
 .It Cm PROACTIVE
-Send broadcast path requests every two seconds and every node must reply with
+Send broadcast path requests every two seconds and every node must reply
 with a path reply even if it already has a path to this root mesh station.
 .It Cm RANN
 Send broadcast root announcement (RANN) frames.
@@ -2387,10 +2425,28 @@ The following parameters are specific to
 .Xr pfsync 4
 interfaces:
 .Bl -tag -width indent
+.It Cm syncdev Ar iface
+Use the specified interface
+to send and receive pfsync state synchronisation messages.
+.It Fl syncdev
+Stop sending pfsync state synchronisation messages over the network.
+.It Cm syncpeer Ar peer_address
+Make the pfsync link point-to-point rather than using
+multicast to broadcast the state synchronisation messages.
+The peer_address is the IP address of the other host taking part in
+the pfsync cluster.
+.It Fl syncpeer
+Broadcast the packets using multicast.
 .It Cm maxupd Ar n
 Set the maximum number of updates for a single state which
 can be collapsed into one.
 This is an 8-bit number; the default value is 128.
+.It Cm defer
+Defer transmission of the first packet in a state until a peer has
+acknowledged that the associated state has been inserted.
+.It Fl defer
+Do not defer the first packet in a state.
+This is the default.
 .El
 .Pp
 The following parameters are specific to
@@ -2400,7 +2456,7 @@ interfaces:
 .It Cm vlan Ar vlan_tag
 Set the VLAN tag value to
 .Ar vlan_tag .
-This value is a 16-bit number which is used to create an 802.1Q
+This value is a 12-bit VLAN Identifier (VID) which is used to create an 802.1Q
 VLAN header for packets sent from the
 .Xr vlan 4
 interface.
@@ -2422,7 +2478,7 @@ diverted to the specified physical interface
 .Ar iface
 with 802.1Q VLAN encapsulation.
 Packets with 802.1Q encapsulation received
-by the parent interface with the correct VLAN tag will be diverted to
+by the parent interface with the correct VLAN Identifier will be diverted to
 the associated
 .Xr vlan 4
 pseudo-interface.
@@ -2461,22 +2517,43 @@ pseudo device, disassociate the parent interface from it.
 This breaks the link between the
 .Xr vlan 4
 interface and its parent,
-clears its VLAN tag, flags and its link address and shuts the interface down.
+clears its VLAN Identifier, flags and its link address and shuts the interface
+down.
 The
 .Ar iface
 argument is useless and hence deprecated.
 .El
 .Pp
-The following parameters are specific to
+The following parameters are used to configure
 .Xr carp 4
-interfaces:
+protocol on an interface:
 .Bl -tag -width indent
+.It Cm vhid Ar n
+Set the virtual host ID.
+This is a required setting to initiate
+.Xr carp 4 .
+If the virtual host ID does not exist yet, it is created and attached to the
+interface, otherwise configuration of an existing vhid is adjusted.
+If the
+.Cm vhid
+keyword is supplied along with an
+.Dq inet6
+or
+.Dq inet
+address, then this address is configured to be run under control of the
+specified vhid.
+Whenever a last address that refers to a particular vhid is removed from an
+interface, the vhid is automatically removed from interface and destroyed.
+Any other configuration parameters for the
+.Xr carp 4
+protocol should be supplied along with the
+.Cm vhid
+keyword.
+Acceptable values for vhid are 1 to 255.
 .It Cm advbase Ar seconds
 Specifies the base of the advertisement interval in seconds.
 The acceptable values are 1 to 255.
 The default value is 1.
-.\" The default value is
-.\" .Dv CARP_DFLTINTV .
 .It Cm advskew Ar interval
 Specifies the skew to add to the base advertisement interval to
 make one host advertise slower than another host.
@@ -2486,17 +2563,8 @@ The default value is 0.
 .It Cm pass Ar phrase
 Set the authentication key to
 .Ar phrase .
-.It Cm vhid Ar n
-Set the virtual host ID.
-This is a required setting.
-Acceptable values are 1 to 255.
-.It Cm state Ar state
-Force the interface into state 
-.Ar state . 
-Valid states are INIT, BACKUP, and MASTER. Note that manually setting the state
-to INIT is ignored by 
-.Xr carp 4 .
-This state is set automatically when the underlying interface is down.
+.It Cm state Ar MASTER|BACKUP
+Forcibly change state of a given vhid.
 .El
 .Pp
 The
@@ -2559,8 +2627,9 @@ The
 .Fl k
 flag causes keying information for the interface, if available, to be
 printed.
-For example, the values of 802.11 WEP keys will be printed, if accessible to
-the current user.
+For example, the values of 802.11 WEP keys and
+.Xr carp 4
+passphrases will be printed, if accessible to the current user.
 This information is not printed by default, as it may be considered
 sensitive.
 .Pp
@@ -2618,6 +2687,11 @@ and using
 as a synonym for the canonical form of the option
 .Fl alias :
 .Dl # ifconfig em0 inet6 2001:db8:bdbd::123/48 delete
+.Pp
+Configure a single CARP redundant address on igb0, and then switch it
+to be master:
+.Dl # ifconfig igb0 vhid 1 10.0.0.1/24 pass foobar up
+.Dl # ifconfig igb0 vhid 1 state master
 .Pp
 Configure the interface
 .Li xl0 ,

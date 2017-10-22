@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)spec.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/mtree/spec.c 187940 2009-01-31 05:17:28Z kientzle $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/mtree/spec.c 229403 2012-01-03 18:51:58Z ed $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -73,7 +73,7 @@ mtree_readspec(FILE *fi)
 			continue;
 
 		/* Find end of line. */
-		if ((p = index(buf, '\n')) == NULL)
+		if ((p = strchr(buf, '\n')) == NULL)
 			errx(1, "line %d too long", lineno);
 
 		/* See if next line is continuation line. */
@@ -118,7 +118,7 @@ mtree_readspec(FILE *fi)
 				continue;
 			}
 
-		if (index(p, '/'))
+		if (strchr(p, '/'))
 			errx(1, "line %d: slash character in file name",
 			lineno);
 

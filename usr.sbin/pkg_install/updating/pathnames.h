@@ -3,10 +3,10 @@
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <beat@chruetertee.ch> wrote this file. As long as you retain this notice you
  * can do whatever you want with this stuff. If we meet some day, and you think
- * this stuff is worth it, you can buy me a beer in return.          Beat Gätzi
+ * this stuff is worth it, you can buy me a beer in return.          Beat GÃ¤tzi
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/9/usr.sbin/pkg_install/updating/pathnames.h 173514 2007-11-10 10:21:29Z krion $
+ * $FreeBSD: release/10.0.0/usr.sbin/pkg_install/updating/pathnames.h 228976 2011-12-30 00:59:08Z uqs $
  *
  */
 

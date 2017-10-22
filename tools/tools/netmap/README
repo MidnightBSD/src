@@ -1,4 +1,4 @@
-$FreeBSD: stable/9/tools/tools/netmap/README 235549 2012-05-17 15:02:51Z luigi $
+$FreeBSD: release/10.0.0/tools/tools/netmap/README 250099 2013-04-30 13:13:32Z luigi $
 
 This directory contains examples that use netmap
 
@@ -21,3 +21,4 @@ BSD	netmap
  0.77	 3.82	ports/trafshow (version 5)
  0.94	 7.7	net-mgmt/ipcad (ip accounting daemon)
  0.9	 5.0	net-mgmt/darkstat (ip accounting + graphing)
+ 0.83	 2.45	net-mgmt/iftop (curses traffic display)

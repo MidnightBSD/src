@@ -1,0 +1,15 @@
+# $FreeBSD: release/10.0.0/sys/arm/freescale/imx/std.imx51 253746 2013-07-28 17:37:30Z ian $
+machine		arm	armv6
+cpu 		CPU_CORTEXA
+makeoptions	ARM_LITTLE_ENDIAN
+options		ARM_L2_PIPT
+
+options		KERNVIRTADDR=0xc0100000
+makeoptions	KERNVIRTADDR=0xc0100000
+options		KERNPHYSADDR=0x90100000
+makeoptions	KERNPHYSADDR=0x90100000
+options		PHYSADDR=0x90000000
+options		STARTUP_PAGETABLE_ADDR=0x91000000
+
+files "../freescale/imx/files.imx51"
+

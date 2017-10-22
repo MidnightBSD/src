@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/etc/mtree/BSD.include.dist 247566 2013-03-01 19:39:54Z jhb $
+# $FreeBSD: release/10.0.0/etc/mtree/BSD.include.dist 255953 2013-09-30 18:00:54Z des $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -8,6 +8,10 @@
     altq
     ..
     arpa
+    ..
+    atf-c
+    ..
+    atf-c++
     ..
     bsm
     ..
@@ -79,6 +83,8 @@
         v1
             ext
             ..
+            tr1
+            ..
         ..
     ..
     cam
@@ -88,7 +94,7 @@
         ..
     ..
     clang
-        3.2
+        3.3
         ..
     ..
     crypto
@@ -126,6 +132,10 @@
             mpilib
             ..
         ..
+        nand
+        ..
+        nvme
+        ..
         ofw
         ..
         pbio
@@ -158,19 +168,13 @@
         ..
         fdescfs
         ..
-        fifofs
-        ..
         msdosfs
+        ..
+        nandfs
         ..
         nfs
         ..
-        ntfs
-        ..
         nullfs
-        ..
-        nwfs
-        ..
-        portalfs
         ..
         procfs
         ..
@@ -241,9 +245,9 @@
     ..
     kadm5
     ..
-    libmilter
+    krb5
     ..
-    lwres
+    libmilter
     ..
     lzma
     ..
@@ -284,8 +288,6 @@
         ..
         sig
         ..
-    ..
-    netncp
     ..
     netsmb
     ..

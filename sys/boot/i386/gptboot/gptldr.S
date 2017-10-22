@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/boot/i386/gptboot/gptldr.S 173957 2007-11-26 21:29:59Z jhb $
+ * $FreeBSD: release/10.0.0/sys/boot/i386/gptboot/gptldr.S 173957 2007-11-26 21:29:59Z jhb $
  *
  * Partly from: src/sys/boot/i386/boot2/boot1.S 1.31
  */

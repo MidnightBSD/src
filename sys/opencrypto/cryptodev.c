@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/opencrypto/cryptodev.c 224914 2011-08-16 20:07:47Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/opencrypto/cryptodev.c 254356 2013-08-15 07:54:31Z glebius $");
 
 #include "opt_compat.h"
 
@@ -304,6 +304,7 @@ static struct fileops cryptofops = {
     .fo_close = cryptof_close,
     .fo_chmod = invfo_chmod,
     .fo_chown = invfo_chown,
+    .fo_sendfile = invfo_sendfile,
 };
 
 static struct csession *csefind(struct fcrypt *, u_int);

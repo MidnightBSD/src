@@ -47,7 +47,7 @@ static char sccsid[] = "@(#)ftpcmd.y	8.3 (Berkeley) 4/6/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/libexec/ftpd/ftpcmd.y 190828 2009-04-07 20:34:34Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/libexec/ftpd/ftpcmd.y 229780 2012-01-07 16:09:54Z uqs $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -1718,7 +1718,7 @@ exptilde(char *s)
  * Avoid expanding to a pathname including '\r' or '\n' in order to
  * not disrupt the FTP protocol.
  * The expansion found must be unique.
- * Return the result as a malloced string, or NULL if an error occured.
+ * Return the result as a malloced string, or NULL if an error occurred.
  *
  * Problem: this production is used for all pathname
  * processing, but only gives a 550 error reply.

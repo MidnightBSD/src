@@ -1,8 +1,9 @@
-# $FreeBSD: stable/9/gnu/usr.bin/cc/cc1plus/Makefile 235398 2012-05-13 13:57:53Z kib $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/cc/cc1plus/Makefile 245539 2013-01-17 05:56:28Z andrew $
 
-.include "../Makefile.inc"
 NO_MAN=
 .include <bsd.own.mk>
+
+.include "../Makefile.inc"
 
 .PATH: ${GCCDIR}/cp ${GCCDIR}
 

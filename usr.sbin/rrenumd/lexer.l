@@ -28,12 +28,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/rrenumd/lexer.l 173412 2007-11-07 10:53:41Z kevlo $
+ * $FreeBSD: release/10.0.0/usr.sbin/rrenumd/lexer.l 250227 2013-05-03 23:51:32Z jkim $
  */
 
 %{
-#define YY_NO_UNPUT
-
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -63,6 +61,8 @@ int parse(FILE **);
 void yyerror(const char *);
 int yylex(void);
 %}
+
+%option nounput
 
 /* common section */
 nl		\n

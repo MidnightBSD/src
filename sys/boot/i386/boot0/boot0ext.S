@@ -12,7 +12,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD: stable/9/sys/boot/i386/boot0/boot0ext.S 128741 2004-04-29 18:58:38Z ru $
+ * $FreeBSD: release/10.0.0/sys/boot/i386/boot0/boot0ext.S 128741 2004-04-29 18:58:38Z ru $
  */
 
 /* A 1024-byte boot manager. */

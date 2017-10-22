@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/snc/dp83932subr.c 243455 2012-11-23 14:16:55Z nyan $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/snc/dp83932subr.c 242871 2012-11-10 14:58:06Z nyan $");
 /*
  * Routines of NEC PC-9801-83, 84, 103, 104, PC-9801N-25 and PC-9801N-J02, J02R 
  * Ethernet interface for NetBSD/pc98, ported by Kouichi Matsuda.

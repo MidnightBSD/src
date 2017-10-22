@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/ia64/include/signal.h 149337 2005-08-20 16:44:41Z stefanf $ */
+/* $FreeBSD: release/10.0.0/sys/ia64/include/signal.h 149337 2005-08-20 16:44:41Z stefanf $ */
 /* From: NetBSD: signal.h,v 1.3 1997/04/06 08:47:43 cgd Exp */
 
 /*-

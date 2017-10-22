@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/ndiscvt/inf-parse.y 124060 2004-01-02 04:31:06Z wpaul $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ndiscvt/inf-parse.y 243906 2012-12-05 20:28:44Z bapt $");
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -40,7 +40,6 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/ndiscvt/inf-parse.y 124060 2004-01-02 04:3
 
 #include "inf.h"
 
-extern int yyparse (void);
 extern int yylex (void);
 extern void yyerror(const char *);
 %}

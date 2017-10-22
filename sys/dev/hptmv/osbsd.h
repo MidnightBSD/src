@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/hptmv/osbsd.h 190809 2009-04-07 16:38:25Z delphij $
+ * $FreeBSD: release/10.0.0/sys/dev/hptmv/osbsd.h 255871 2013-09-25 17:16:21Z scottl $
  */
 #ifndef _OSBSD_H_
 #define _OSBSD_H_
@@ -153,6 +153,7 @@ typedef struct _BUS_DMAMAP
 {	struct _BUS_DMAMAP 	 	*next;
 	struct IALAdapter 			*pAdapter;
 	bus_dmamap_t 			dma_map;
+	struct callout_handle		timeout_ch;
 	SCAT_GATH				psg[MAX_SG_DESCRIPTORS];
 } BUS_DMAMAP, *PBUS_DMAMAP;
 

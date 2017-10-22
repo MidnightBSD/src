@@ -15,9 +15,9 @@
 # If you are in doubt as to the purpose or necessity of a line, check first 
 # in NOTES.
 #
-# $FreeBSD: stable/9/sys/mips/conf/XLR64 221753 2011-05-11 00:52:41Z gonzo $
+# $FreeBSD: release/10.0.0/sys/mips/conf/XLR64 253845 2013-07-31 17:21:18Z obrien $
 
-machine 	mips mips64eb
+machine 	mips mips64
 ident 		XLR64
 include		"../rmi/std.xlr"
 
@@ -25,8 +25,6 @@ makeoptions	MODULES_OVERRIDE=""
 makeoptions	DEBUG=-g		# Build kernel with gdb(1) debug symbols
 makeoptions	ARCH_FLAGS="-march=mips64 -mabi=64"
 makeoptions	KERNLOADADDR=0xffffffff80100000
-
-options		ISA_MIPS64
 
 #profile		2
 
@@ -82,13 +80,11 @@ options 	INVARIANT_SUPPORT	#Extra sanity checks of internal structures, required
 
 device		pci
 #device		ata
-#device		atadisk
 device 		uart
 # Pseudo
 device 		loop
 device 		random
 device 		md
-device 		pty
 device		bpf
 
 # Network

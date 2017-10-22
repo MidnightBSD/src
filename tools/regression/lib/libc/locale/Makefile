@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/lib/libc/locale/Makefile 137960 2004-11-21 03:21:22Z tjr $
+# $FreeBSD: release/10.0.0/tools/regression/lib/libc/locale/Makefile 250883 2013-05-21 19:59:37Z ed $
 
 TESTS=	test-mbrtowc	\
 	test-wcrtomb	\
@@ -14,7 +14,9 @@ TESTS=	test-mbrtowc	\
 	test-wcstombs	\
 	test-mblen	\
 	test-iswctype	\
-	test-towctrans
+	test-towctrans \
+	test-c16rtomb \
+	test-mbrtoc16
 
 .PHONY: tests
 tests: ${TESTS}

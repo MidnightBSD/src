@@ -1,5 +1,5 @@
 /*	$NetBSD: file.c,v 1.5 2011/02/16 18:35:39 joerg Exp $	*/
-/*	$FreeBSD: stable/9/usr.bin/grep/file.c 226573 2011-10-20 16:08:11Z gabor $	*/
+/*	$FreeBSD: release/10.0.0/usr.bin/grep/file.c 245171 2013-01-08 18:37:12Z obrien $	*/
 /*	$OpenBSD: file.c,v 1.11 2010/07/02 20:48:48 nicm Exp $	*/
 
 /*-
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/grep/file.c 226573 2011-10-20 16:08:11Z gabor $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/grep/file.c 245171 2013-01-08 18:37:12Z obrien $");
 
 #include <sys/param.h>
 #include <sys/mman.h>
@@ -41,7 +41,6 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/grep/file.c 226573 2011-10-20 16:08:11Z gab
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <lzma.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,6 +48,10 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/grep/file.c 226573 2011-10-20 16:08:11Z gab
 #include <wchar.h>
 #include <wctype.h>
 #include <zlib.h>
+
+#ifndef WITHOUT_LZMA
+#include <lzma.h>
+#endif
 
 #ifndef WITHOUT_BZIP2
 #include <bzlib.h>
@@ -60,7 +63,9 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/grep/file.c 226573 2011-10-20 16:08:11Z gab
 #define	LNBUFBUMP	80
 
 static gzFile gzbufdesc;
+#ifndef WITHOUT_LZMA
 static lzma_stream lstrm = LZMA_STREAM_INIT;
+#endif
 #ifndef WITHOUT_BZIP2
 static BZFILE* bzbufdesc;
 #endif
@@ -116,6 +121,7 @@ grep_refill(struct file *f)
 			nr = -1;
 		}
 #endif
+#ifndef WITHOUT_LZMA
 	} else if ((filebehave == FILE_XZ) || (filebehave == FILE_LZMA)) {
 		lzma_action action = LZMA_RUN;
 		uint8_t in_buf[MAXBUFSIZ];
@@ -146,6 +152,7 @@ grep_refill(struct file *f)
 			return (-1);
 		bufrem = MAXBUFSIZ - lstrm.avail_out;
 		return (0);
+#endif	/* WIHTOUT_LZMA */
 	} else
 		nr = read(f->fd, buffer, MAXBUFSIZ);
 

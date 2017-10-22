@@ -39,9 +39,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/mips/vm_machdep.c 217944 2011-01-27 14:49:22Z jchandra $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/vm_machdep.c 255786 2013-09-22 13:36:52Z glebius $");
 
-#include "opt_cputype.h"
+#include "opt_compat.h"
 #include "opt_ddb.h"
 
 #include <sys/param.h>
@@ -49,6 +49,7 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/mips/vm_machdep.c 217944 2011-01-27 14:49:
 #include <sys/malloc.h>
 #include <sys/proc.h>
 #include <sys/syscall.h>
+#include <sys/sysent.h>
 #include <sys/buf.h>
 #include <sys/vnode.h>
 #include <sys/vmmeter.h>
@@ -56,7 +57,6 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/mips/vm_machdep.c 217944 2011-01-27 14:49:
 #include <sys/sysctl.h>
 #include <sys/unistd.h>
 
-#include <machine/asm.h>
 #include <machine/cache.h>
 #include <machine/clock.h>
 #include <machine/cpu.h>
@@ -76,13 +76,39 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/mips/vm_machdep.c 217944 2011-01-27 14:49:
 
 #include <sys/user.h>
 #include <sys/mbuf.h>
+#ifndef __mips_n64
 #include <sys/sf_buf.h>
+#endif
+
+/* Duplicated from asm.h */
+#if defined(__mips_o32)
+#define	SZREG	4
+#else
+#define	SZREG	8
+#endif
+#if defined(__mips_o32) || defined(__mips_o64)
+#define	CALLFRAME_SIZ	(SZREG * (4 + 2))
+#elif defined(__mips_n32) || defined(__mips_n64)
+#define	CALLFRAME_SIZ	(SZREG * 4)
+#endif
+
+#ifndef __mips_n64
 
 #ifndef NSFBUFS
 #define	NSFBUFS		(512 + maxusers * 16)
 #endif
 
-#ifndef __mips_n64
+static int nsfbufs;
+static int nsfbufspeak;
+static int nsfbufsused;
+
+SYSCTL_INT(_kern_ipc, OID_AUTO, nsfbufs, CTLFLAG_RDTUN, &nsfbufs, 0,
+    "Maximum number of sendfile(2) sf_bufs available");
+SYSCTL_INT(_kern_ipc, OID_AUTO, nsfbufspeak, CTLFLAG_RD, &nsfbufspeak, 0,
+    "Number of sendfile(2) sf_bufs at peak usage");
+SYSCTL_INT(_kern_ipc, OID_AUTO, nsfbufsused, CTLFLAG_RD, &nsfbufsused, 0,
+    "Number of sendfile(2) sf_bufs in use");
+
 static void	sf_buf_init(void *arg);
 SYSINIT(sock_sf, SI_SUB_MBUF, SI_ORDER_ANY, sf_buf_init, NULL);
 
@@ -96,7 +122,7 @@ static struct {
 } sf_freelist;
 
 static u_int	sf_buf_alloc_want;
-#endif
+#endif /* !__mips_n64 */
 
 /*
  * Finish a fork operation, with process p2 nearly set up.
@@ -163,7 +189,36 @@ cpu_fork(register struct thread *td1,register struct proc *p2,
 	td2->td_md.md_saved_intr = MIPS_SR_INT_IE;
 	td2->td_md.md_spinlock_count = 1;
 #ifdef CPU_CNMIPS
-	pcb2->pcb_context[PCB_REG_SR] |= MIPS_SR_COP_2_BIT | MIPS_SR_PX | MIPS_SR_UX | MIPS_SR_KX | MIPS_SR_SX;
+	if (td1->td_md.md_flags & MDTD_COP2USED) {
+		if (td1->td_md.md_cop2owner == COP2_OWNER_USERLAND) {
+			if (td1->td_md.md_ucop2)
+				octeon_cop2_save(td1->td_md.md_ucop2);
+			else
+				panic("cpu_fork: ucop2 is NULL but COP2 is enabled");
+		}
+		else {
+			if (td1->td_md.md_cop2)
+				octeon_cop2_save(td1->td_md.md_cop2);
+			else
+				panic("cpu_fork: cop2 is NULL but COP2 is enabled");
+		}
+	}
+
+	if (td1->td_md.md_cop2) {
+		td2->td_md.md_cop2 = octeon_cop2_alloc_ctx();
+		memcpy(td2->td_md.md_cop2, td1->td_md.md_cop2, 
+			sizeof(*td1->td_md.md_cop2));
+	}
+	if (td1->td_md.md_ucop2) {
+		td2->td_md.md_ucop2 = octeon_cop2_alloc_ctx();
+		memcpy(td2->td_md.md_ucop2, td1->td_md.md_ucop2, 
+			sizeof(*td1->td_md.md_ucop2));
+	}
+	td2->td_md.md_cop2owner = td1->td_md.md_cop2owner;
+	pcb2->pcb_context[PCB_REG_SR] |= MIPS_SR_PX | MIPS_SR_UX | MIPS_SR_KX | MIPS_SR_SX;
+	/* Clear COP2 bits for userland & kernel */
+	td2->td_frame->sr &= ~MIPS_SR_COP_2_BIT;
+	pcb2->pcb_context[PCB_REG_SR] &= ~MIPS_SR_COP_2_BIT;
 #endif
 }
 
@@ -195,11 +250,27 @@ cpu_thread_exit(struct thread *td)
 
 	if (PCPU_GET(fpcurthread) == td)
 		PCPU_GET(fpcurthread) = (struct thread *)0;
+#ifdef  CPU_CNMIPS
+	if (td->td_md.md_cop2)
+		memset(td->td_md.md_cop2, 0,
+			sizeof(*td->td_md.md_cop2));
+	if (td->td_md.md_ucop2)
+		memset(td->td_md.md_ucop2, 0,
+			sizeof(*td->td_md.md_ucop2));
+#endif
 }
 
 void
 cpu_thread_free(struct thread *td)
 {
+#ifdef  CPU_CNMIPS
+	if (td->td_md.md_cop2)
+		octeon_cop2_free_ctx(td->td_md.md_cop2);
+	if (td->td_md.md_ucop2)
+		octeon_cop2_free_ctx(td->td_md.md_ucop2);
+	td->td_md.md_cop2 = NULL;
+	td->td_md.md_ucop2 = NULL;
+#endif
 }
 
 void
@@ -256,7 +327,12 @@ cpu_set_syscall_retval(struct thread *td, int error)
 
 	code = locr0->v0;
 	quad_syscall = 0;
-#if defined(__mips_o32)
+#if defined(__mips_n32) || defined(__mips_n64)
+#ifdef COMPAT_FREEBSD32
+	if (code == SYS___syscall && SV_PROC_FLAG(td->td_proc, SV_ILP32))
+		quad_syscall = 1;
+#endif
+#else
 	if (code == SYS___syscall)
 		quad_syscall = 1;
 #endif
@@ -354,12 +430,7 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	pcb2->pcb_context[PCB_REG_S2] = (register_t)(intptr_t)td->td_frame;
 	/* Dont set IE bit in SR. sched lock release will take care of it */
 	pcb2->pcb_context[PCB_REG_SR] = mips_rd_status() &
-	    (MIPS_SR_KX | MIPS_SR_UX | MIPS_SR_INT_MASK);
-
-#ifdef CPU_CNMIPS
-	pcb2->pcb_context[PCB_REG_SR] |= MIPS_SR_COP_2_BIT | MIPS_SR_COP_0_BIT |
-	  MIPS_SR_PX | MIPS_SR_UX | MIPS_SR_KX | MIPS_SR_SX;
-#endif
+	    (MIPS_SR_PX | MIPS_SR_KX | MIPS_SR_UX | MIPS_SR_INT_MASK);
 
 	/*
 	 * FREEBSD_DEVELOPERS_FIXME:
@@ -391,10 +462,11 @@ cpu_set_upcall_kse(struct thread *td, void (*entry)(void *), void *arg,
 	register_t sp;
 
 	/*
-	* At the point where a function is called, sp must be 8
-	* byte aligned[for compatibility with 64-bit CPUs]
-	* in ``See MIPS Run'' by D. Sweetman, p. 269
-	* align stack */
+	 * At the point where a function is called, sp must be 8
+	 * byte aligned[for compatibility with 64-bit CPUs]
+	 * in ``See MIPS Run'' by D. Sweetman, p. 269
+	 * align stack
+	 */
 	sp = ((register_t)(intptr_t)(stack->ss_sp + stack->ss_size) & ~0x7) -
 	    CALLFRAME_SIZ;
 
@@ -423,10 +495,6 @@ cpu_set_upcall_kse(struct thread *td, void (*entry)(void *), void *arg,
 #elif  defined(__mips_n64)
 	td->td_frame->sr |= MIPS_SR_PX | MIPS_SR_UX | MIPS_SR_KX;
 #endif
-#ifdef CPU_CNMIPS
-	tf->sr |=  MIPS_SR_INT_IE | MIPS_SR_COP_0_BIT | MIPS_SR_PX | MIPS_SR_UX |
-	  MIPS_SR_KX;
-#endif
 /*	tf->sr |= (ALL_INT_MASK & idle_mask) | SR_INT_ENAB; */
 	/**XXX the above may now be wrong -- mips2 implements this as panic */
 	/*
@@ -434,19 +502,6 @@ cpu_set_upcall_kse(struct thread *td, void (*entry)(void *), void *arg,
 	 * Setup any other CPU-Specific registers (Not MIPS Standard)
 	 * that are needed.
 	 */
-}
-/*
- * Convert kernel VA to physical address
- */
-u_long
-kvtop(void *addr)
-{
-	vm_offset_t va;
-
-	va = pmap_kextract((vm_offset_t)addr);
-	if (va == 0)
-		panic("kvtop: zero page frame");
-	return((intptr_t)va);
 }
 
 /*
@@ -473,7 +528,7 @@ sf_buf_init(void *arg)
 
 	mtx_init(&sf_freelist.sf_lock, "sf_bufs list lock", NULL, MTX_DEF);
 	SLIST_INIT(&sf_freelist.sf_head);
-	sf_base = kmem_alloc_nofault(kernel_map, nsfbufs * PAGE_SIZE);
+	sf_base = kva_alloc(nsfbufs * PAGE_SIZE);
 	sf_bufs = malloc(nsfbufs * sizeof(struct sf_buf), M_TEMP,
 	    M_NOWAIT | M_ZERO);
 	for (i = 0; i < nsfbufs; i++) {
@@ -482,7 +537,6 @@ sf_buf_init(void *arg)
 	}
 	sf_buf_alloc_want = 0;
 }
-#endif
 
 /*
  * Get an sf_buf from the freelist.  Will block if none are available.
@@ -490,7 +544,6 @@ sf_buf_init(void *arg)
 struct sf_buf *
 sf_buf_alloc(struct vm_page *m, int flags)
 {
-#ifndef __mips_n64
 	struct sf_buf *sf;
 	int error;
 
@@ -499,7 +552,7 @@ sf_buf_alloc(struct vm_page *m, int flags)
 		if (flags & SFB_NOWAIT)
 			break;
 		sf_buf_alloc_want++;
-		mbstat.sf_allocwait++;
+		SFSTAT_INC(sf_allocwait);
 		error = msleep(&sf_freelist, &sf_freelist.sf_lock,
 		    (flags & SFB_CATCH) ? PCATCH | PVM : PVM, "sfbufa", 0);
 		sf_buf_alloc_want--;
@@ -519,9 +572,6 @@ sf_buf_alloc(struct vm_page *m, int flags)
 	}
 	mtx_unlock(&sf_freelist.sf_lock);
 	return (sf);
-#else
-	return ((struct sf_buf *)m);
-#endif
 }
 
 /*
@@ -530,7 +580,6 @@ sf_buf_alloc(struct vm_page *m, int flags)
 void
 sf_buf_free(struct sf_buf *sf)
 {
-#ifndef __mips_n64
 	pmap_qremove(sf->kva, 1);
 	mtx_lock(&sf_freelist.sf_lock);
 	SLIST_INSERT_HEAD(&sf_freelist.sf_head, sf, free_list);
@@ -538,8 +587,8 @@ sf_buf_free(struct sf_buf *sf)
 	if (sf_buf_alloc_want > 0)
 		wakeup(&sf_freelist);
 	mtx_unlock(&sf_freelist.sf_lock);
-#endif
 }
+#endif	/* !__mips_n64 */
 
 /*
  * Software interrupt handler for queued VM system processing.
@@ -556,7 +605,8 @@ int
 cpu_set_user_tls(struct thread *td, void *tls_base)
 {
 
-	td->td_md.md_tls = tls_base;
+	td->td_md.md_tls = (char*)tls_base;
+
 	return (0);
 }
 
@@ -583,6 +633,16 @@ dump_trapframe(struct trapframe *trapframe)
 	DB_PRINT_REG(trapframe, a1);
 	DB_PRINT_REG(trapframe, a2);
 	DB_PRINT_REG(trapframe, a3);
+#if defined(__mips_n32) || defined(__mips_n64)
+	DB_PRINT_REG(trapframe, a4);
+	DB_PRINT_REG(trapframe, a5);
+	DB_PRINT_REG(trapframe, a6);
+	DB_PRINT_REG(trapframe, a7);
+	DB_PRINT_REG(trapframe, t0);
+	DB_PRINT_REG(trapframe, t1);
+	DB_PRINT_REG(trapframe, t2);
+	DB_PRINT_REG(trapframe, t3);
+#else
 	DB_PRINT_REG(trapframe, t0);
 	DB_PRINT_REG(trapframe, t1);
 	DB_PRINT_REG(trapframe, t2);
@@ -591,6 +651,7 @@ dump_trapframe(struct trapframe *trapframe)
 	DB_PRINT_REG(trapframe, t5);
 	DB_PRINT_REG(trapframe, t6);
 	DB_PRINT_REG(trapframe, t7);
+#endif
 	DB_PRINT_REG(trapframe, s0);
 	DB_PRINT_REG(trapframe, s1);
 	DB_PRINT_REG(trapframe, s2);

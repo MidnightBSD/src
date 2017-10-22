@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/x86/x86/mptable_pci.c 234150 2012-04-11 20:50:17Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/x86/x86/mptable_pci.c 233707 2012-03-30 19:10:14Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,7 +46,7 @@ __FBSDID("$FreeBSD: stable/9/sys/x86/x86/mptable_pci.c 234150 2012-04-11 20:50:1
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcib_private.h>
 #include <x86/mptable.h>
-#include <machine/legacyvar.h>
+#include <x86/legacyvar.h>
 #include <machine/pci_cfgreg.h>
 
 #include "pcib_if.h"

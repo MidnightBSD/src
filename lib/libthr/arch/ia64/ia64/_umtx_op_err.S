@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libthr/arch/ia64/ia64/_umtx_op_err.S 198450 2009-10-24 20:07:17Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libthr/arch/ia64/ia64/_umtx_op_err.S 198450 2009-10-24 20:07:17Z marcel $");
 
 #include <sys/syscall.h>
 

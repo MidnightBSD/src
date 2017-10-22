@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/mpc85xx/mpc85xx.h 222426 2011-05-28 16:30:24Z marcel $
+ * $FreeBSD: release/10.0.0/sys/powerpc/mpc85xx/mpc85xx.h 222426 2011-05-28 16:30:24Z marcel $
  */
 
 #ifndef _MPC85XX_H_

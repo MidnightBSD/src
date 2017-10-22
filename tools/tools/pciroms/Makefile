@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/tools/tools/pciroms/Makefile 167167 2007-03-02 13:53:23Z bms $
+# $FreeBSD: release/10.0.0/tools/tools/pciroms/Makefile 167167 2007-03-02 13:53:23Z bms $
 #
 
 PROG=	pciroms

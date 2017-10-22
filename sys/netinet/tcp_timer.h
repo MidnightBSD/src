@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_timer.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/9/sys/netinet/tcp_timer.h 232945 2012-03-13 20:37:57Z glebius $
+ * $FreeBSD: release/10.0.0/sys/netinet/tcp_timer.h 243621 2012-11-27 19:07:28Z andre $
  */
 
 #ifndef _NETINET_TCP_TIMER_H_
@@ -118,11 +118,11 @@
 
 #define	TCP_MAXRXTSHIFT	12			/* maximum retransmits */
 
-#define	TCPTV_DELACK	(hz / PR_FASTHZ / 2)	/* 100ms timeout */
+#define	TCPTV_DELACK	( hz/10 )		/* 100ms timeout */
 
 #ifdef	TCPTIMERS
 static const char *tcptimers[] =
-    { "REXMT", "PERSIST", "KEEP", "2MSL" };
+    { "REXMT", "PERSIST", "KEEP", "2MSL", "DELACK" };
 #endif
 
 /*
@@ -170,6 +170,7 @@ extern int tcp_rexmit_slop;
 extern int tcp_msl;
 extern int tcp_ttl;			/* time to live for TCP segs */
 extern int tcp_backoff[];
+extern int tcp_syn_backoff[];
 
 extern int tcp_finwait2_timeout;
 extern int tcp_fast_finwait2_recycle;

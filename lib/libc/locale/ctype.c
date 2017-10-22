@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libc/locale/ctype.c 235785 2012-05-22 14:40:39Z theraven $
+ * $FreeBSD: release/10.0.0/lib/libc/locale/ctype.c 227753 2011-11-20 14:45:42Z theraven $
  */
 #define _XLOCALE_INLINE
 #include <ctype.h>

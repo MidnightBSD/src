@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/periodic/daily/490.status-pkg-changes 241786 2012-10-20 17:27:57Z ume $
+# $FreeBSD: release/10.0.0/etc/periodic/daily/490.status-pkg-changes 241507 2012-10-13 14:45:42Z ume $
 #
 
 # If there is a global system configuration file, suck it in.

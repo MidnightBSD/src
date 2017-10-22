@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/cxgbe/offload.h 247434 2013-02-28 00:44:54Z np $
+ * $FreeBSD: release/10.0.0/sys/dev/cxgbe/offload.h 255005 2013-08-28 20:45:45Z np $
  *
  */
 
@@ -59,8 +59,8 @@ struct listen_ctx;
 
 struct stid_region {
 	TAILQ_ENTRY(stid_region) link;
-	int used;	/* # of stids used by this region */
-	int free;	/* # of contiguous stids free right after this region */
+	u_int used;	/* # of stids used by this region */
+	u_int free;	/* # of contiguous stids free right after this region */
 };
 
 /*
@@ -123,6 +123,7 @@ struct t4_virt_res {                      /* virtualized HW resources */
 #ifdef TCP_OFFLOAD
 enum {
 	ULD_TOM = 1,
+	ULD_IWARP = 2,
 };
 
 struct adapter;
@@ -140,6 +141,7 @@ struct tom_tunables {
 	int ddp;
 	int indsz;
 	int ddp_thres;
+	int rx_coalesce;
 };
 
 int t4_register_uld(struct uld_info *);

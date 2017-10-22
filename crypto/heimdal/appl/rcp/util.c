@@ -37,13 +37,13 @@
 static char sccsid[] = "@(#)util.c	8.2 (Berkeley) 4/2/94";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/crypto/heimdal/appl/rcp/util.c 178826 2008-05-07 13:39:42Z dfr $";
+  "$FreeBSD: release/10.0.0/crypto/heimdal/appl/rcp/util.c 233294 2012-03-22 08:48:42Z stas $";
 #endif /* not lint */
 #endif
 
 #include "rcp_locl.h"
 
-RCSID("$Id: util.c 17878 2006-08-08 21:43:58Z lha $");
+RCSID("$Id$");
 
 char *
 colon(cp)
@@ -59,6 +59,21 @@ colon(cp)
 			return (0);
 	}
 	return (0);
+}
+
+char *
+unbracket(char *cp)
+{
+	char *ep;
+
+	if (*cp == '[') {
+		ep = cp + (strlen(cp) - 1);
+		if (*ep == ']') {
+			*ep = '\0';
+			++cp;
+		}
+	}
+	return (cp);
 }
 
 void
@@ -98,8 +113,7 @@ bad:	warnx("%s: invalid user name", cp0);
 }
 
 int
-susystem(s, userid)
-	int userid;
+susystem(s)
 	char *s;
 {
 	void (*istat)(int), (*qstat)(int);
@@ -112,8 +126,6 @@ susystem(s, userid)
 		return (127);
 
 	case 0:
-		if (setuid(userid) < 0)
-			_exit(127);
 		execl(_PATH_BSHELL, "sh", "-c", s, NULL);
 		_exit(127);
 	}

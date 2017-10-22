@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_fork.c 244806 2012-12-29 02:13:31Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_fork.c 255708 2013-09-19 18:53:42Z jhb $");
 
 #include "opt_kdtrace.h"
 #include "opt_ktrace.h"
@@ -89,10 +89,8 @@ dtrace_fork_func_t	dtrace_fasttrap_fork;
 #endif
 
 SDT_PROVIDER_DECLARE(proc);
-SDT_PROBE_DEFINE(proc, kernel, , create, create);
-SDT_PROBE_ARGTYPE(proc, kernel, , create, 0, "struct proc *");
-SDT_PROBE_ARGTYPE(proc, kernel, , create, 1, "struct proc *");
-SDT_PROBE_ARGTYPE(proc, kernel, , create, 2, "int");
+SDT_PROBE_DEFINE3(proc, kernel, , create, create, "struct proc *",
+    "struct proc *", "int");
 
 #ifndef _SYS_SYSPROTO_H_
 struct fork_args {
@@ -342,7 +340,7 @@ fork_norfproc(struct thread *td, int flags)
 	if (flags & RFCFDG) {
 		struct filedesc *fdtmp;
 		fdtmp = fdinit(td->td_proc->p_fd);
-		fdfree(td);
+		fdescfree(td);
 		p1->p_fd = fdtmp;
 	}
 
@@ -471,7 +469,6 @@ do_fork(struct thread *td, int flags, struct proc *p2, struct thread *td2,
 
 	bcopy(&p2->p_comm, &td2->td_name, sizeof(td2->td_name));
 	td2->td_sigstk = td->td_sigstk;
-	td2->td_sigmask = td->td_sigmask;
 	td2->td_flags = TDF_INMEM;
 	td2->td_lend_user_pri = PRI_MAX;
 
@@ -492,6 +489,7 @@ do_fork(struct thread *td, int flags, struct proc *p2, struct thread *td2,
 	 * Increase reference counts on shared objects.
 	 */
 	p2->p_flag = P_INMEM;
+	p2->p_flag2 = 0;
 	p2->p_swtick = ticks;
 	if (p1->p_flag & P_PROFIL)
 		startprofclock(p2);
@@ -514,6 +512,11 @@ do_fork(struct thread *td, int flags, struct proc *p2, struct thread *td2,
 	p2->p_textvp = p1->p_textvp;
 	p2->p_fd = fd;
 	p2->p_fdtol = fdtol;
+
+	if (p1->p_flag2 & P2_INHERIT_PROTECTED) {
+		p2->p_flag |= P_PROTECTED;
+		p2->p_flag2 |= P2_INHERIT_PROTECTED;
+	}
 
 	/*
 	 * p_limit is copy-on-write.  Bump its refcount.
@@ -918,8 +921,10 @@ fork1(struct thread *td, int flags, int pages, struct proc **procp,
 		 */
 		*procp = newproc;
 #ifdef PROCDESC
-		if (flags & RFPROCDESC)
+		if (flags & RFPROCDESC) {
 			procdesc_finit(newproc->p_procdesc, fp_procdesc);
+			fdrop(fp_procdesc, td);
+		}
 #endif
 		racct_proc_fork_done(newproc);
 		return (0);
@@ -929,8 +934,8 @@ fork1(struct thread *td, int flags, int pages, struct proc **procp,
 fail:
 	sx_sunlock(&proctree_lock);
 	if (ppsratecheck(&lastfail, &curfail, 1))
-		printf("maxproc limit exceeded by uid %i, please see tuning(7) and login.conf(5).\n",
-		    td->td_ucred->cr_ruid);
+		printf("maxproc limit exceeded by uid %u (pid %d); see tuning(7) and login.conf(5)\n",
+		    td->td_ucred->cr_ruid, p1->p_pid);
 	sx_xunlock(&allproc_lock);
 #ifdef MAC
 	mac_proc_destroy(newproc);
@@ -941,8 +946,10 @@ fail1:
 		vmspace_free(vm2);
 	uma_zfree(proc_zone, newproc);
 #ifdef PROCDESC
-	if (((flags & RFPROCDESC) != 0) && (fp_procdesc != NULL))
+	if ((flags & RFPROCDESC) != 0 && fp_procdesc != NULL) {
+		fdclose(td->td_proc->p_fd, fp_procdesc, *procdescp, td);
 		fdrop(fp_procdesc, td);
+	}
 #endif
 	pause("fork", hz / 2);
 	return (error);
@@ -1048,5 +1055,4 @@ fork_return(struct thread *td, struct trapframe *frame)
 	if (KTRPOINT(td, KTR_SYSRET))
 		ktrsysret(SYS_fork, 0, 0);
 #endif
-	mtx_assert(&Giant, MA_NOTOWNED);
 }

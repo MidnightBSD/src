@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/usr.sbin/usbconfig/usbconfig.c 214271 2010-10-24 13:48:11Z hselasky $ */
+/* $FreeBSD: release/10.0.0/usr.sbin/usbconfig/usbconfig.c 248236 2013-03-13 12:23:14Z hselasky $ */
 /*-
  * Copyright (c) 2008-2009 Hans Petter Selasky. All rights reserved.
  *
@@ -33,6 +33,7 @@
 #include <grp.h>
 #include <errno.h>
 #include <ctype.h>
+#include <sys/types.h>
 
 #include <libusb20_desc.h>
 #include <libusb20.h>

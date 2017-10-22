@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libc/iconv/citrus_csmapper.h 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libc/iconv/citrus_csmapper.h 258011 2013-11-11 20:57:04Z dim $ */
 /* $NetBSD: citrus_csmapper.h,v 1.2 2008/02/09 14:56:20 junyoung Exp $ */
 
 /*-
@@ -28,7 +28,7 @@
  */
 
 #ifndef _CITRUS_CSMAPPER_H_
-#define _CITRUS_CSMAPPER_H
+#define _CITRUS_CSMAPPER_H_
 
 #define _citrus_csmapper		_citrus_mapper
 #define _citrus_csmapper_close		_citrus_mapper_close

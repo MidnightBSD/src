@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/x86/x86/intr_machdep.c 247877 2013-03-06 09:22:45Z avg $
+ * $FreeBSD: release/10.0.0/sys/x86/x86/intr_machdep.c 255726 2013-09-20 05:06:03Z gibbs $
  */
 
 /*
@@ -279,7 +279,7 @@ intr_execute_handlers(struct intsrc *isrc, struct trapframe *frame)
 }
 
 void
-intr_resume(void)
+intr_resume(bool suspend_cancelled)
 {
 	struct pic *pic;
 
@@ -289,7 +289,7 @@ intr_resume(void)
 	mtx_lock(&intr_table_lock);
 	TAILQ_FOREACH(pic, &pics, pics) {
 		if (pic->pic_resume != NULL)
-			pic->pic_resume(pic);
+			pic->pic_resume(pic, suspend_cancelled);
 	}
 	mtx_unlock(&intr_table_lock);
 }
@@ -452,7 +452,7 @@ DB_SHOW_COMMAND(irqs, db_show_irqs)
  * allocate CPUs round-robin.
  */
 
-static cpuset_t intr_cpus;
+static cpuset_t intr_cpus = CPUSET_T_INITIALIZER(0x1);
 static int current_cpu;
 
 /*
@@ -564,12 +564,5 @@ intr_next_cpu(void)
 {
 
 	return (PCPU_GET(apic_id));
-}
-
-/* Use an empty stub for compatibility. */
-void
-intr_add_cpu(u_int cpu __unused)
-{
-
 }
 #endif

@@ -1,4 +1,6 @@
-# $FreeBSD: stable/9/lib/libproc/Makefile 210694 2010-07-31 17:14:54Z rpaulo $
+# $FreeBSD: release/10.0.0/lib/libproc/Makefile 240156 2012-09-06 03:19:48Z rpaulo $
+
+.include <bsd.own.mk>
 
 LIB=	proc
 
@@ -12,6 +14,14 @@ SRCS=	proc_bkpt.c		\
 INCS=	libproc.h
 
 CFLAGS+=	-I${.CURDIR}
+
+.if ${MK_LIBCPLUSPLUS} != "no"
+LDADD+=		-lcxxrt
+DPADD+=		${LIBCXXRT}
+.else
+LDADD+=		-lsupc++
+DPADD+=		${LIBSTDCPLUSPLUS}
+.endif
 
 SHLIB_MAJOR=	2
 

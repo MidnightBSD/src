@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net80211/ieee80211_scan.c 218091 2011-01-30 14:00:50Z bschmidt $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/net80211/ieee80211_scan.c 259185 2013-12-10 19:14:19Z gavin $");
 
 /*
  * IEEE 802.11 scanning support.
@@ -859,6 +859,7 @@ scan_task(void *arg, int pending)
 	if (ss->ss_next == ss->ss_last) {
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_SCAN,
 			"%s: no channels to scan\n", __func__);
+		scandone = 1;
 		goto done;
 	}
 
@@ -866,7 +867,7 @@ scan_task(void *arg, int pending)
 	    vap->iv_state == IEEE80211_S_RUN) {
 		if ((vap->iv_bss->ni_flags & IEEE80211_NODE_PWR_MGT) == 0) {
 			/* Enable station power save mode */
-			ieee80211_sta_pwrsave(vap, 1);
+			vap->iv_sta_ps(vap, 1);
 			/*
 			 * Use an 1ms delay so the null data frame has a chance
 			 * to go out.
@@ -960,6 +961,19 @@ scan_task(void *arg, int pending)
 	IEEE80211_LOCK(ic);
 
 	/*
+	 * Since a cancellation may have occured during one of the
+	 * driver calls (whilst unlocked), update scandone.
+	 */
+	if (scandone == 0 &&
+	    ((SCAN_PRIVATE(ss)->ss_iflags & ISCAN_CANCEL) != 0)) {
+		/* XXX printf? */
+		if_printf(vap->iv_ifp,
+		    "%s: OOPS! scan cancelled during driver call!\n",
+		    __func__);
+	}
+	scandone |= ((SCAN_PRIVATE(ss)->ss_iflags & ISCAN_CANCEL) != 0);
+
+	/*
 	 * Record scan complete time.  Note that we also do
 	 * this when canceled so any background scan will
 	 * not be restarted for a while.
@@ -1034,7 +1048,7 @@ done:
 	 * waiting for us.
 	 */
 	if (scandone) {
-		ieee80211_sta_pwrsave(vap, 0);
+		vap->iv_sta_ps(vap, 0);
 		if (ss->ss_next >= ss->ss_last) {
 			ieee80211_notify_scan_done(vap);
 			ic->ic_flags_ext &= ~IEEE80211_FEXT_BGSCAN;

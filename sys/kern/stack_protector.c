@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/stack_protector.c 198295 2009-10-20 16:36:51Z ru $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/stack_protector.c 198295 2009-10-20 16:36:51Z ru $");
 
 #include <sys/types.h>
 #include <sys/param.h>

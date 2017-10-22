@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)gprof.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/gprof/aout.c 229190 2012-01-01 19:11:47Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/gprof/aout.c 246783 2013-02-14 08:16:03Z charnier $");
 
 #include <netinet/in.h>
 
@@ -68,7 +68,6 @@ int
 aout_getnfile(const char *filename, char ***defaultEs)
 {
     FILE	*nfile;
-    int		valcmp();
 
     nfile = fopen( filename ,"r");
     if (nfile == NULL)

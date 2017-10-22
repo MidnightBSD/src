@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_cisco.h 231752 2012-02-15 10:08:13Z fjoe $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_cisco.h 231543 2012-02-12 05:14:12Z fjoe $
  * $Whistle: ng_cisco.h,v 1.6 1999/01/25 01:21:48 archie Exp $
  */
 

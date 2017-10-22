@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/digi/Xe.c 119418 2003-08-24 17:55:58Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/digi/Xe.c 119418 2003-08-24 17:55:58Z obrien $");
 
 #include <sys/param.h>
 #include <sys/conf.h>

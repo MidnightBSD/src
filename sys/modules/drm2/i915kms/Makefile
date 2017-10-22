@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/drm2/i915kms/Makefile 239965 2012-09-01 05:35:48Z kib $
+# $FreeBSD: release/10.0.0/sys/modules/drm2/i915kms/Makefile 239375 2012-08-18 18:26:25Z kib $
 
 .PATH:	${.CURDIR}/../../../dev/drm2/i915
 KMOD	= i915kms

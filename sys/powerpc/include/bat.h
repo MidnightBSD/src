@@ -65,16 +65,18 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: bat.h,v 1.2 1999/12/18 01:36:06 thorpej Exp $
- * $FreeBSD: stable/9/sys/powerpc/include/bat.h 139825 2005-01-07 02:29:27Z imp $
+ * $FreeBSD: release/10.0.0/sys/powerpc/include/bat.h 242904 2012-11-12 06:15:54Z rpaulo $
  */
 
 #ifndef	_MACHINE_BAT_H_
 #define	_MACHINE_BAT_H_
 
+#ifndef LOCORE
 struct bat {
 	u_int32_t batu;
 	u_int32_t batl;
 };
+#endif
 
 /* Lower BAT bits (all but PowerPC 601): */
 #define	BAT_PBS		0xfffe0000	/* physical block start */
@@ -165,7 +167,7 @@ struct bat {
 #define	BATL601(pa, size, v)						\
 	(((pa) & BAT601_PBN) | (v) | (size))
 
-#ifdef _KERNEL
+#if defined(_KERNEL) && !defined(LOCORE)
 extern struct bat battable[16];
 #endif
 

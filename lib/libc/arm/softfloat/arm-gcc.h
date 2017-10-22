@@ -1,5 +1,5 @@
 /* $NetBSD: arm-gcc.h,v 1.2 2001/02/21 18:09:25 bjh21 Exp $ */
-/* $FreeBSD: stable/9/lib/libc/arm/softfloat/arm-gcc.h 129202 2004-05-14 12:04:31Z cognet $ */
+/* $FreeBSD: release/10.0.0/lib/libc/arm/softfloat/arm-gcc.h 255361 2013-09-07 14:04:10Z andrew $ */
 
 /*
 -------------------------------------------------------------------------------
@@ -91,11 +91,11 @@ what the endianness of the CPU.  VFP is sane.
 -------------------------------------------------------------------------------
 */
 #if defined(SOFTFLOAT_FOR_GCC)
-#if defined(__VFP_FP__) || defined(__ARMEB__)
+#if defined (__ARM_EABI__) || defined(__VFP_FP__) || defined(__ARMEB__)
 #define FLOAT64_DEMANGLE(a)	(a)
 #define FLOAT64_MANGLE(a)	(a)
 #else
-#define FLOAT64_DEMANGLE(a)	(((a) << 32) | ((a) >> 32))
+#define FLOAT64_DEMANGLE(a)	((((a) & 0xfffffffful) << 32) | ((a) >> 32))
 #define FLOAT64_MANGLE(a)	FLOAT64_DEMANGLE(a)
 #endif
 #endif

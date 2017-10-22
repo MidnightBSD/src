@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/dc/inout.c 203443 2010-02-03 21:06:13Z gabor $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/dc/inout.c 244861 2012-12-30 15:20:27Z kevlo $");
 
 #include <openssl/ssl.h>
 #include <ctype.h>
@@ -322,7 +322,7 @@ printnumber(FILE *f, const struct number *b, u_int base)
 		i++;
 	}
 	sz = i;
-	if (BN_cmp(b->number, &zero) < 0)
+	if (BN_is_negative(b->number))
 		putcharwrap(f, '-');
 	for (i = 0; i < sz; i++) {
 		p = stack_popstring(&stack);
@@ -353,7 +353,8 @@ printnumber(FILE *f, const struct number *b, u_int base)
 				putcharwrap(f, ' ');
 			i = 1;
 
-			bmul_number(fract_part, fract_part, num_base);
+			bmul_number(fract_part, fract_part, num_base,
+			    bmachine_scale());
 			split_number(fract_part, int_part->number, NULL);
 			rem = BN_get_word(int_part->number);
 			p = get_digit(rem, digits, base);
@@ -402,8 +403,8 @@ print_ascii(FILE *f, const struct number *n)
 	v = BN_dup(n->number);
 	bn_checkp(v);
 
-	if (BN_cmp(v, &zero) < 0)
-		bn_check(BN_sub(v, &zero, v));
+	if (BN_is_negative(v))
+		BN_set_negative(v, 0);
 
 	numbits = BN_num_bytes(v) * 8;
 	while (numbits > 0) {

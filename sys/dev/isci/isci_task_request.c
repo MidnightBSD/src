@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/isci/isci_task_request.c 234239 2012-04-13 21:50:14Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/isci_task_request.c 256231 2013-10-09 19:37:41Z jimharris $");
 
 #include <dev/isci/isci.h>
 
@@ -194,11 +194,20 @@ isci_task_request_complete(SCI_CONTROLLER_HANDLE_T scif_controller,
 		break;
 
 	case SCI_TASK_FAILURE_INVALID_STATE:
-	case SCI_TASK_FAILURE_INSUFFICIENT_RESOURCES:
-	case SCI_FAILURE_TIMEOUT:
 		retry_task = TRUE;
 		isci_log_message(0, "ISCI",
-		    "unhandled task completion code 0x%x\n", completion_status);
+		    "task failure (invalid state) - retrying\n");
+		break;
+
+	case SCI_TASK_FAILURE_INSUFFICIENT_RESOURCES:
+		retry_task = TRUE;
+		isci_log_message(0, "ISCI",
+		    "task failure (insufficient resources) - retrying\n");
+		break;
+
+	case SCI_FAILURE_TIMEOUT:
+		retry_task = TRUE;
+		isci_log_message(0, "ISCI", "task timeout - retrying\n");
 		break;
 
 	case SCI_TASK_FAILURE:

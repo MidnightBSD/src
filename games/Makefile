@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 3/31/94
-# $FreeBSD: stable/9/games/Makefile 105515 2002-10-20 11:18:56Z markm $
+# $FreeBSD: release/10.0.0/games/Makefile 105515 2002-10-20 11:18:56Z markm $
 
 SUBDIR= \
 	bcd \

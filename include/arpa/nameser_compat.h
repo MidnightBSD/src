@@ -29,7 +29,7 @@
 /*%
  *      from nameser.h	8.1 (Berkeley) 6/2/93
  *	$Id: nameser_compat.h,v 1.5.18.3 2006/05/19 02:36:00 marka Exp $
- * $FreeBSD: stable/9/include/arpa/nameser_compat.h 203965 2010-02-16 19:46:46Z imp $
+ * $FreeBSD: release/10.0.0/include/arpa/nameser_compat.h 229781 2012-01-07 16:10:15Z uqs $
  */
 
 #ifndef _ARPA_NAMESER_COMPAT_
@@ -63,7 +63,7 @@ typedef struct {
 			/* fields in third byte */
 	unsigned	qr: 1;		/*%< response flag */
 	unsigned	opcode: 4;	/*%< purpose of message */
-	unsigned	aa: 1;		/*%< authoritive answer */
+	unsigned	aa: 1;		/*%< authoritative answer */
 	unsigned	tc: 1;		/*%< truncated message */
 	unsigned	rd: 1;		/*%< recursion desired */
 			/* fields in fourth byte */
@@ -77,7 +77,7 @@ typedef struct {
 			/* fields in third byte */
 	unsigned	rd :1;		/*%< recursion desired */
 	unsigned	tc :1;		/*%< truncated message */
-	unsigned	aa :1;		/*%< authoritive answer */
+	unsigned	aa :1;		/*%< authoritative answer */
 	unsigned	opcode :4;	/*%< purpose of message */
 	unsigned	qr :1;		/*%< response flag */
 			/* fields in fourth byte */

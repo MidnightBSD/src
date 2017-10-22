@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/pkg/dns_utils.h 245394 2013-01-13 22:37:45Z bapt $
+ * $FreeBSD: release/10.0.0/usr.sbin/pkg/dns_utils.h 257309 2013-10-29 07:33:53Z bapt $
  */
 
 #ifndef DNS_UTILS_H
@@ -35,6 +35,7 @@ struct dns_srvinfo {
 	unsigned int priority;
 	unsigned int weight;
 	unsigned int port;
+	unsigned int finalweight;
 	char host[MAXHOSTNAMELEN];
 	struct dns_srvinfo *next;
 };

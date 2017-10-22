@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/efi/libefi/efi_console.c 126764 2004-03-09 04:00:33Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/efi/libefi/efi_console.c 126764 2004-03-09 04:00:33Z marcel $");
 
 #include <efi.h>
 #include <efilib.h>

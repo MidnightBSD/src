@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sys/contrib/altq/altq/altq_rio.c 219457 2011-03-10 18:49:15Z jkim $	*/
+/*	$FreeBSD: release/10.0.0/sys/contrib/altq/altq/altq_rio.c 240824 2012-09-22 12:49:36Z glebius $	*/
 /*	$KAME: altq_rio.c,v 1.17 2003/07/10 12:07:49 kjc Exp $	*/
 
 /*
@@ -204,10 +204,9 @@ rio_alloc(int weight, struct redparams *params, int flags, int pkttime)
 	int	 w, i;
 	int	 npkts_per_sec;
 
-	rp = malloc(sizeof(rio_t), M_DEVBUF, M_WAITOK);
+	rp = malloc(sizeof(rio_t), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (rp == NULL)
 		return (NULL);
-	bzero(rp, sizeof(rio_t));
 
 	rp->rio_flags = flags;
 	if (pkttime == 0)

@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/auxio/auxio.c 200874 2009-12-22 21:02:46Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/auxio/auxio.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -131,7 +131,8 @@ static device_method_t auxio_sbus_methods[] = {
 	DEVMETHOD(device_probe,		auxio_bus_probe),
 	DEVMETHOD(device_attach,	auxio_sbus_attach),
 	DEVMETHOD(device_detach,	auxio_bus_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t auxio_sbus_driver = {
@@ -151,7 +152,8 @@ static device_method_t auxio_ebus_methods[] = {
 	DEVMETHOD(device_probe,		auxio_bus_probe),
 	DEVMETHOD(device_attach,	auxio_ebus_attach),
 	DEVMETHOD(device_detach,	auxio_bus_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t auxio_ebus_driver = {

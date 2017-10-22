@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/fs/nfsserver/nfs_nfsdstate.c 247502 2013-02-28 21:57:38Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfsserver/nfs_nfsdstate.c 245909 2013-01-25 15:25:24Z jhb $");
 
 #ifndef APPLEKEXT
 #include <fs/nfs/nfsport.h>
@@ -3726,7 +3726,7 @@ nfsrv_docallback(struct nfsclient *clp, int procnum,
 	/*
 	 * Get the first mbuf for the request.
 	 */
-	MGET(m, M_WAIT, MT_DATA);
+	MGET(m, M_WAITOK, MT_DATA);
 	mbuf_setlen(m, 0);
 	nd->nd_mreq = nd->nd_mb = m;
 	nd->nd_bpos = NFSMTOD(m, caddr_t);
@@ -3780,7 +3780,8 @@ nfsrv_docallback(struct nfsclient *clp, int procnum,
 	newnfs_sndunlock(&clp->lc_req.nr_lock);
 	if (!error) {
 		error = newnfs_request(nd, NULL, clp, &clp->lc_req, NULL,
-		    NULL, cred, clp->lc_program, NFSV4_CBVERS, NULL, 1, NULL);
+		    NULL, cred, clp->lc_program, NFSV4_CBVERS, NULL, 1, NULL,
+		    NULL);
 	}
 	NFSFREECRED(cred);
 

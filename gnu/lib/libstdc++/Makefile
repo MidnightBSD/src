@@ -1,4 +1,6 @@
-# $FreeBSD: stable/9/gnu/lib/libstdc++/Makefile 242347 2012-10-30 07:51:18Z dim $
+# $FreeBSD: release/10.0.0/gnu/lib/libstdc++/Makefile 255500 2013-09-12 21:24:59Z dim $
+
+.include <bsd.own.mk>
 
 GCCVER=	4.2
 GCCDIR=	${.CURDIR}/../../../contrib/gcc
@@ -14,7 +16,7 @@ LIB=		stdc++
 SHLIB_MAJOR=	6
 
 CFLAGS+=	-DIN_GLIBCPP_V3 -DHAVE_CONFIG_H
-.if ${MACHINE_CPUARCH} == "arm"
+.if ${MACHINE_CPUARCH} == "arm" && ${MK_ARM_EABI} == "no"
 CFLAGS+=	-D_GLIBCXX_SJLJ_EXCEPTIONS=1
 .endif
 CFLAGS+=	-I${.CURDIR} -I${SUPDIR} -I${GCCDIR} -I${SRCDIR}/include
@@ -594,7 +596,13 @@ gthr-default.h: ${GCCDIR}/gthr-posix.h
 
 CLEANFILES+=	${THRHDRS}
 
+.if ${MACHINE_CPUARCH} == "arm" && ${MK_ARM_EABI} != "no"
+unwind.h: ${GCCDIR}/config/arm/unwind-arm.h
+.else
 unwind.h: ${GCCDIR}/unwind-generic.h
+.endif
+
+unwind.h:
 	ln -sf ${.ALLSRC} ${.TARGET}
 
 SRCS+=		unwind.h
@@ -628,3 +636,7 @@ CLEANFILES+=	${VERSION_MAP}
 
 # Filter out libc++-specific flags, and -std= flags above c++98 or gnu++98.
 CXXFLAGS:=	${CXXFLAGS:N-stdlib=libc++:N-std=c++[01][13x]:N-std=gnu++[01][13x]}
+
+.if ${COMPILER_TYPE} == "clang"
+CXXFLAGS+=	-stdlib=libstdc++
+.endif

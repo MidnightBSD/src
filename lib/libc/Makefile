@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 2/3/94
-# $FreeBSD: stable/9/lib/libc/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD: release/10.0.0/lib/libc/Makefile 258750 2013-11-29 19:44:30Z gjb $
 
 SHLIBDIR?= /lib
 
@@ -23,10 +23,13 @@ LIBC_ARCH=${MACHINE_CPUARCH}
 # to CFLAGS below.  -DSYSLIBC_SCCS affects just the system call stubs.
 LIB=c
 SHLIB_MAJOR= 7
+SHLIB_LDSCRIPT=libc.ldscript
 WARNS?=	2
 CFLAGS+=-I${.CURDIR}/include -I${.CURDIR}/../../include
 CFLAGS+=-I${.CURDIR}/${LIBC_ARCH}
+.if ${MK_NLS} != "no"
 CFLAGS+=-DNLS
+.endif
 CLEANFILES+=tags
 INSTALL_PIC_ARCHIVE=
 PRECIOUSLIB=
@@ -41,7 +44,14 @@ CFLAGS+=${CANCELPOINTS_CFLAGS}
 #
 DPADD+=	${LIBGCC}
 LDFLAGS+= -nodefaultlibs
-LDADD+= -lgcc -lssp_nonshared
+LDADD+= -lgcc
+
+.if ${MK_SSP} != "no"
+LDADD+= -lssp_nonshared
+.endif
+
+# Extras that live in either libc.a or libc_nonshared.a
+LIBC_NONSHARED_SRCS=
 
 # Define (empty) variables so that make doesn't give substitution
 # errors if the included makefiles don't change these:
@@ -79,6 +89,7 @@ NOASM=
 .include "${.CURDIR}/resolv/Makefile.inc"
 .include "${.CURDIR}/stdio/Makefile.inc"
 .include "${.CURDIR}/stdlib/Makefile.inc"
+.include "${.CURDIR}/stdlib/jemalloc/Makefile.inc"
 .include "${.CURDIR}/stdtime/Makefile.inc"
 .include "${.CURDIR}/string/Makefile.inc"
 .include "${.CURDIR}/sys/Makefile.inc"
@@ -92,6 +103,7 @@ NOASM=
 CFLAGS+= -DYP
 .include "${.CURDIR}/yp/Makefile.inc"
 .endif
+.include "${.CURDIR}/capability/Makefile.inc"
 .if ${MK_HESIOD} != "no"
 CFLAGS+= -DHESIOD
 .endif
@@ -104,6 +116,8 @@ CFLAGS+= -DNS_CACHING
 .if defined(_FREEFALL_CONFIG)
 CFLAGS+=-D_FREEFALL_CONFIG
 .endif
+
+STATICOBJS+=${LIBC_NONSHARED_SRCS:S/.c$/.o/}
 
 VERSION_DEF=${.CURDIR}/Versions.def
 SYMBOL_MAPS=${SYM_MAPS}
@@ -127,8 +141,8 @@ SRCS+=	${_src}
 KQSRCS=	adddi3.c anddi3.c ashldi3.c ashrdi3.c cmpdi2.c divdi3.c iordi3.c \
 	lshldi3.c lshrdi3.c moddi3.c muldi3.c negdi2.c notdi2.c qdivrem.c \
 	subdi3.c ucmpdi2.c udivdi3.c umoddi3.c xordi3.c
-KSRCS=	bcmp.c ffs.c ffsl.c fls.c flsl.c index.c mcount.c rindex.c \
-	strcat.c strcmp.c strcpy.c strlen.c strncpy.c
+KSRCS=	bcmp.c ffs.c ffsl.c fls.c flsl.c mcount.c strcat.c strchr.c \
+	strcmp.c strcpy.c strlen.c strncpy.c strrchr.c
 
 libkern: libkern.gen libkern.${LIBC_ARCH}
 

@@ -38,7 +38,7 @@
 #include "opt_rootdevname.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/vfs_mountroot.c 244110 2012-12-11 05:11:28Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/vfs_mountroot.c 255412 2013-09-09 05:01:18Z delphij $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -119,6 +119,7 @@ static int root_mount_complete;
 
 /* By default wait up to 3 seconds for devices to appear. */
 static int root_mount_timeout = 3;
+TUNABLE_INT("vfs.mountroot.timeout", &root_mount_timeout);
 
 struct root_hold_token *
 root_mount_hold(const char *identifier)
@@ -199,8 +200,6 @@ set_rootvnode(void)
 	VREF(rootvnode);
 
 	FILEDESC_XUNLOCK(p->p_fd);
-
-	EVENTHANDLER_INVOKE(mountroot);
 }
 
 static int
@@ -711,13 +710,13 @@ parse_mount(char **conf)
 	errmsg = malloc(ERRMSGL, M_TEMP, M_WAITOK | M_ZERO);
 
 	if (vfs_byname(fs) == NULL) {
-		strlcpy(errmsg, "unknown file system", sizeof(errmsg));
+		strlcpy(errmsg, "unknown file system", ERRMSGL);
 		error = ENOENT;
 		goto out;
 	}
 
-	if (strcmp(fs, "zfs") != 0 && dev[0] != '\0' &&
-	    !parse_mount_dev_present(dev)) {
+	if (strcmp(fs, "zfs") != 0 && strstr(fs, "nfs") == NULL && 
+	    dev[0] != '\0' && !parse_mount_dev_present(dev)) {
 		printf("mountroot: waiting for device %s ...\n", dev);
 		delay = hz / 10;
 		timeout = root_mount_timeout * hz;
@@ -875,16 +874,14 @@ vfs_mountroot_readconf(struct thread *td, struct sbuf *sb)
 	struct nameidata nd;
 	off_t ofs;
 	ssize_t resid;
-	int error, flags, len, vfslocked;
+	int error, flags, len;
 
-	NDINIT(&nd, LOOKUP, FOLLOW | MPSAFE, UIO_SYSSPACE,
-	    "/.mount.conf", td);
+	NDINIT(&nd, LOOKUP, FOLLOW, UIO_SYSSPACE, "/.mount.conf", td);
 	flags = FREAD;
 	error = vn_open(&nd, &flags, 0, NULL);
 	if (error)
 		return (error);
 
-	vfslocked = NDHASGIANT(&nd);
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	ofs = 0;
 	len = sizeof(buf) - 1;
@@ -903,7 +900,6 @@ vfs_mountroot_readconf(struct thread *td, struct sbuf *sb)
 
 	VOP_UNLOCK(nd.ni_vp, 0);
 	vn_close(nd.ni_vp, FREAD, td->td_ucred, td);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -994,6 +990,8 @@ vfs_mountroot(void)
 	atomic_store_rel_int(&root_mount_complete, 1);
 	wakeup(&root_mount_complete);
 	mtx_unlock(&mountlist_mtx);
+
+	EVENTHANDLER_INVOKE(mountroot);
 }
 
 static struct mntarg *

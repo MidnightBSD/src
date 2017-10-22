@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/filemon/timed-forkb.c 242142 2012-10-26 16:07:53Z obrien $
+ * $FreeBSD: release/10.0.0/tools/regression/filemon/timed-forkb.c 251174 2013-05-31 04:27:41Z obrien $
  */
 
 #include <sys/types.h>
@@ -45,7 +45,7 @@
 #define	SLEEP	20	/* seconds */
 #endif
 
-int verbose;
+static int verbose;
 
 static void
 usage(void)

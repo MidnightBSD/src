@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/ufs/uprintf/ufs_uprintf.c 150332 2005-09-19 16:29:36Z rwatson $
+ * $FreeBSD: release/10.0.0/tools/regression/ufs/uprintf/ufs_uprintf.c 243316 2012-11-19 23:07:38Z emaste $
  */
 
 #include <err.h>
@@ -86,7 +86,7 @@ fill_blocks(void)
 		if (len < 0)
 			break;
 		if (len != BLOCKSIZE) {
-			warnx("fill_blocks: write(%d) returned %d",
+			warnx("fill_blocks: write(%d) returned %zd",
 			    BLOCKSIZE, len);
 			close(fd);
 			(void)unlink(BLOCKS_FILENAME);

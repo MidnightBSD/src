@@ -29,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/pciconf/pciconf.c 241101 2012-10-01 15:47:01Z gavin $";
+  "$FreeBSD: release/10.0.0/usr.sbin/pciconf/pciconf.c 246632 2013-02-10 19:35:40Z neel $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -194,10 +194,10 @@ list_devs(int verbose, int bars, int caps, int errors)
 		/*
 		 * 255 entries should be more than enough for most people,
 		 * but if someone has more devices, and then changes things
-		 * around between ioctls, we'll do the cheezy thing and
+		 * around between ioctls, we'll do the cheesy thing and
 		 * just bail.  The alternative would be to go back to the
 		 * beginning of the list, and print things twice, which may
-		 * not be desireable.
+		 * not be desirable.
 		 */
 		if (pc.status == PCI_GETCONF_LIST_CHANGED) {
 			warnx("PCI device list changed, please try again");
@@ -290,7 +290,7 @@ list_bars(int fd, struct pci_conf *p)
 		}
 		printf("    bar   [%02x] = type %s, range %2d, base %#jx, ",
 		    PCIR_BAR(i), type, range, (uintmax_t)base);
-		printf("size %2d, %s\n", (int)bar.pbi_length,
+		printf("size %ju, %s\n", (uintmax_t)bar.pbi_length,
 		    bar.pbi_enabled ? "enabled" : "disabled");
 	}
 }

@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)utilities.c	8.5 (Berkeley) 4/28/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/restore/utilities.c 128073 2004-04-09 19:58:40Z markm $";
+  "$FreeBSD: release/10.0.0/sbin/restore/utilities.c 236213 2012-05-29 01:48:06Z kevlo $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -411,6 +411,7 @@ panic(const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	vfprintf(stderr, fmt, ap);
+	va_end(ap);
 	if (yflag)
 		return;
 	if (reply("abort") == GOOD) {

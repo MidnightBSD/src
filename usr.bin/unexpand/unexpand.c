@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/unexpand/unexpand.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/unexpand/unexpand.c 227192 2011-11-06 08:18:05Z ed $");
 
 #ifndef lint
 static const char copyright[] =
@@ -55,9 +55,9 @@ static const char sccsid[] = "@(#)unexpand.c	8.1 (Berkeley) 6/6/93";
 #include <wchar.h>
 #include <wctype.h>
 
-int	all;
-int	nstops;
-int	tabstops[100];
+static int	all;
+static int	nstops;
+static int	tabstops[100];
 
 static void getstops(const char *);
 static void usage(void);

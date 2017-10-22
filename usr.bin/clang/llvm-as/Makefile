@@ -1,10 +1,11 @@
-# $FreeBSD: stable/9/usr.bin/clang/llvm-as/Makefile 231057 2012-02-05 23:56:22Z dim $
+# $FreeBSD: release/10.0.0/usr.bin/clang/llvm-as/Makefile 249423 2013-04-12 17:57:40Z dim $
+
+.include <bsd.own.mk>
 
 PROG_CXX=llvm-as
 
 SRCDIR=	tools/llvm-as
 SRCS=	llvm-as.cpp
-LLVM_REQUIRES_EH=
 
 LIBDEPS=llvmbitwriter \
 	llvmasmparser \

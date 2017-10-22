@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/ia64/include/ieee.h 139790 2005-01-06 22:18:23Z imp $ */
+/* $FreeBSD: release/10.0.0/sys/ia64/include/ieee.h 139790 2005-01-06 22:18:23Z imp $ */
 /* From: NetBSD: ieee.h,v 1.2 1997/04/06 08:47:27 cgd Exp */
 
 /*-

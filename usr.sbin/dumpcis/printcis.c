@@ -26,7 +26,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/dumpcis/printcis.c 188633 2009-02-15 03:21:37Z imp $";
+  "$FreeBSD: release/10.0.0/usr.sbin/dumpcis/printcis.c 250460 2013-05-10 16:41:26Z eadler $";
 #endif /* not lint */
 
 /* 
@@ -969,7 +969,7 @@ dump_network_ext(u_char *p, int len)
 			printf(" %02x", p[i + 2]);
 		putchar('\n');
 		break;
-	case 5:			/* Connecter type */
+	case 5:			/* Connector type */
 		if (len < 2)
 			goto err;
 		printf("\tNetwork connector: %s connector standard\n",

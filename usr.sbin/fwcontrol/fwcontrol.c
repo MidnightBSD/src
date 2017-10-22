@@ -34,7 +34,7 @@
 
 #if defined(__FreeBSD__)
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/fwcontrol/fwcontrol.c 229899 2012-01-10 01:01:57Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/fwcontrol/fwcontrol.c 228990 2011-12-30 10:58:14Z uqs $");
 #endif
 
 #include <sys/param.h>
@@ -1056,7 +1056,7 @@ main(int argc, char **argv)
 		show_topology_map(fd);
 
 	/*
-	 * Recieve data file from node "-R"
+	 * Receive data file from node "-R"
 	 */
 #define TAG	(1<<6)
 #define CHANNEL	63

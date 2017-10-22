@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/powerpc/powerpc/in_cksum.c 209975 2010-07-13 05:32:19Z nwhitehorn $ */
+/* $FreeBSD: release/10.0.0/sys/powerpc/powerpc/in_cksum.c 209975 2010-07-13 05:32:19Z nwhitehorn $ */
 /* $NetBSD: in_cksum.c,v 1.7 1997/09/02 13:18:15 thorpej Exp $ */
 
 /*-

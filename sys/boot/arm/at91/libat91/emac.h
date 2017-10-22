@@ -17,7 +17,7 @@
  * only.
  * END_BLOCK
  *
- * $FreeBSD: stable/9/sys/boot/arm/at91/libat91/emac.h 171426 2007-07-13 14:27:05Z imp $
+ * $FreeBSD: release/10.0.0/sys/boot/arm/at91/libat91/emac.h 171426 2007-07-13 14:27:05Z imp $
  *****************************************************************************/
 
 

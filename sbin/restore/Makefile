@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: stable/9/sbin/restore/Makefile 203155 2010-01-29 10:00:42Z jh $
+# $FreeBSD: release/10.0.0/sbin/restore/Makefile 203155 2010-01-29 10:00:42Z jh $
 
 .PATH: ${.CURDIR}/../dump
 

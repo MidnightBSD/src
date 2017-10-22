@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/sys/arm/include/sysarch.h 237491 2012-06-23 18:39:35Z marius $ */
+/* $FreeBSD: release/10.0.0/sys/arm/include/sysarch.h 249582 2013-04-17 11:40:10Z gabor $ */
 
 #ifndef _ARM_SYSARCH_H_
 #define _ARM_SYSARCH_H_
@@ -47,12 +47,21 @@
  * update the cpu_switch() (and cpu_throw()) code as well.
  * In addition, code in arm/include/atomic.h and arm/include/asmacros.h
  * assumes that ARM_RAS_END is at ARM_RAS_START+4, so be sure to update those
- * if ARM_RAS_END moves in relation to ARM_RAS_START (look for occurrances
+ * if ARM_RAS_END moves in relation to ARM_RAS_START (look for occurrences
  * of ldr/str rm,[rn, #4]).
  */
+
+/* ARM_TP_ADDRESS is needed for processors that don't support
+ * the exclusive-access opcodes introduced with ARMv6K. */
+/* TODO: #if !defined(_HAVE_ARMv6K_INSTRUCTIONS) */
+#if !defined (__ARM_ARCH_7__) && \
+	!defined (__ARM_ARCH_7A__) && \
+	!defined (__ARM_ARCH_6K__) &&  \
+	!defined (__ARM_ARCH_6ZK__)
 #define ARM_TP_ADDRESS		(ARM_VECTORS_HIGH + 0x1000)
 #define ARM_RAS_START		(ARM_TP_ADDRESS + 4)
 #define ARM_RAS_END		(ARM_TP_ADDRESS + 8)
+#endif
 
 #ifndef LOCORE
 #ifndef __ASSEMBLER__

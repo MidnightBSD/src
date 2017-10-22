@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/siba/siba_core.c 232786 2012-03-10 17:47:43Z gavin $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/siba/siba_core.c 232250 2012-02-28 13:19:34Z gavin $");
 
 /*
  * the Sonics Silicon Backplane driver.

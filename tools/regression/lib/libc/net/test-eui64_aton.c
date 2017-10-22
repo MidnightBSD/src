@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/lib/libc/net/test-eui64_aton.c 137587 2004-11-11 19:47:55Z nik $
+ * $FreeBSD: release/10.0.0/tools/regression/lib/libc/net/test-eui64_aton.c 137587 2004-11-11 19:47:55Z nik $
  */
 
 #include <sys/types.h>

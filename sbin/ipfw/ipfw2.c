@@ -17,7 +17,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $FreeBSD: stable/9/sbin/ipfw/ipfw2.c 248505 2013-03-19 13:29:01Z melifaro $
+ * $FreeBSD: release/10.0.0/sbin/ipfw/ipfw2.c 250759 2013-05-18 04:49:00Z melifaro $
  */
 
 #include <sys/types.h>
@@ -167,6 +167,32 @@ static struct _s_x f_iptos[] = {
 	{ NULL,	0 }
 };
 
+static struct _s_x f_ipdscp[] = {
+	{ "af11", IPTOS_DSCP_AF11 >> 2 },	/* 001010 */
+	{ "af12", IPTOS_DSCP_AF12 >> 2 },	/* 001100 */
+	{ "af13", IPTOS_DSCP_AF13 >> 2 },	/* 001110 */
+	{ "af21", IPTOS_DSCP_AF21 >> 2 },	/* 010010 */
+	{ "af22", IPTOS_DSCP_AF22 >> 2 },	/* 010100 */
+	{ "af23", IPTOS_DSCP_AF23 >> 2 },	/* 010110 */
+	{ "af31", IPTOS_DSCP_AF31 >> 2 },	/* 011010 */
+	{ "af32", IPTOS_DSCP_AF32 >> 2 },	/* 011100 */
+	{ "af33", IPTOS_DSCP_AF33 >> 2 },	/* 011110 */
+	{ "af41", IPTOS_DSCP_AF41 >> 2 },	/* 100010 */
+	{ "af42", IPTOS_DSCP_AF42 >> 2 },	/* 100100 */
+	{ "af43", IPTOS_DSCP_AF43 >> 2 },	/* 100110 */
+	{ "be", IPTOS_DSCP_CS0 >> 2 }, 	/* 000000 */
+	{ "ef", IPTOS_DSCP_EF >> 2 },	/* 101110 */
+	{ "cs0", IPTOS_DSCP_CS0 >> 2 },	/* 000000 */
+	{ "cs1", IPTOS_DSCP_CS1 >> 2 },	/* 001000 */
+	{ "cs2", IPTOS_DSCP_CS2 >> 2 },	/* 010000 */
+	{ "cs3", IPTOS_DSCP_CS3 >> 2 },	/* 011000 */
+	{ "cs4", IPTOS_DSCP_CS4 >> 2 },	/* 100000 */
+	{ "cs5", IPTOS_DSCP_CS5 >> 2 },	/* 101000 */
+	{ "cs6", IPTOS_DSCP_CS6 >> 2 },	/* 110000 */
+	{ "cs7", IPTOS_DSCP_CS7 >> 2 },	/* 100000 */
+	{ NULL, 0 }
+};
+
 static struct _s_x limit_masks[] = {
 	{"all",		DYN_SRC_ADDR|DYN_SRC_PORT|DYN_DST_ADDR|DYN_DST_PORT},
 	{"src-addr",	DYN_SRC_ADDR},
@@ -237,6 +263,7 @@ static struct _s_x rule_actions[] = {
 	{ "nat",		TOK_NAT },
 	{ "reass",		TOK_REASS },
 	{ "setfib",		TOK_SETFIB },
+	{ "setdscp",		TOK_SETDSCP },
 	{ "call",		TOK_CALL },
 	{ "return",		TOK_RETURN },
 	{ NULL, 0 }	/* terminator */
@@ -428,7 +455,7 @@ do_cmd(int optname, void *optval, uintptr_t optlen)
  * and calls setsockopt().
  * Function returns 0 on success or -1 otherwise.
  */
-int
+static int
 do_setcmd3(int optname, void *optval, socklen_t optlen)
 {
 	socklen_t len;
@@ -509,8 +536,8 @@ _substrcmp(const char *str1, const char* str2)
  * of the first.  A warning is printed to stderr in the case that the
  * first string does not match the third.
  *
- * This function exists to warn about the bizzare construction
- * strncmp(str, "by", 2) which is used to allow people to use a shotcut
+ * This function exists to warn about the bizarre construction
+ * strncmp(str, "by", 2) which is used to allow people to use a shortcut
  * for "bytes".  The problem is that in addition to accepting "by",
  * "byt", "byte", and "bytes", it also excepts "by_rabid_dogs" and any
  * other string beginning with "by".
@@ -712,6 +739,51 @@ fill_newports(ipfw_insn_u16 *cmd, char *av, int proto, int cblen)
 		cmd->o.len |= i + 1;	/* leave F_NOT and F_OR untouched */
 	}
 	return (i);
+}
+
+/*
+ * Fill the body of the command with the list of DiffServ codepoints.
+ */
+static void
+fill_dscp(ipfw_insn *cmd, char *av, int cblen)
+{
+	uint32_t *low, *high;
+	char *s = av, *a;
+	int code;
+
+	cmd->opcode = O_DSCP;
+	cmd->len |= F_INSN_SIZE(ipfw_insn_u32) + 1;
+
+	CHECK_CMDLEN;
+
+	low = (uint32_t *)(cmd + 1);
+	high = low + 1;
+
+	*low = 0;
+	*high = 0;
+
+	while (s != NULL) {
+		a = strchr(s, ',');
+
+		if (a != NULL)
+			*a++ = '\0';
+
+		if (isalpha(*s)) {
+			if ((code = match_token(f_ipdscp, s)) == -1)
+				errx(EX_DATAERR, "Unknown DSCP code");
+		} else {
+			code = strtoul(s, NULL, 10);
+			if (code < 0 || code > 63)
+				errx(EX_DATAERR, "Invalid DSCP value");
+		}
+
+		if (code > 32)
+			*high |= 1 << (code - 32);
+		else
+			*low |= 1 << code;
+
+		s = a;
+	}
 }
 
 static struct _s_x icmpcodes[] = {
@@ -972,6 +1044,32 @@ print_icmptypes(ipfw_insn_u32 *cmd)
 	}
 }
 
+static void
+print_dscp(ipfw_insn_u32 *cmd)
+{
+	int i, c;
+	uint32_t *v;
+	char sep= ' ';
+	const char *code;
+
+	printf(" dscp");
+	i = 0;
+	c = 0;
+	v = cmd->d;
+	while (i < 64) {
+		if (*v & (1 << i)) {
+			if ((code = match_value(f_ipdscp, i)) != NULL)
+				printf("%c%s", sep, code);
+			else
+				printf("%c%d", sep, i);
+			sep = ',';
+		}
+
+		if ((++i % 32) == 0)
+			v++;
+	}
+}
+
 /*
  * show_ipfw() prints the body of an ipfw rule.
  * Because the standard rule has at least proto src_ip dst_ip, we use
@@ -994,8 +1092,9 @@ print_icmptypes(ipfw_insn_u32 *cmd)
 #define	HAVE_OPTIONS	0x8000
 
 static void
-show_prerequisites(int *flags, int want, int cmd __unused)
+show_prerequisites(int *flags, int want, int cmd)
 {
+	(void)cmd;	/* UNUSED */
 	if (co.comment_only)
 		return;
 	if ( (*flags & HAVE_IP) == HAVE_IP)
@@ -1202,6 +1301,17 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 
 		case O_SETFIB:
 			PRINT_UINT_ARG("setfib ", cmd->arg1);
+ 			break;
+
+		case O_SETDSCP:
+		    {
+			const char *code;
+
+			if ((code = match_value(f_ipdscp, cmd->arg1)) != NULL)
+				printf("setdscp %s", code);
+			else
+				PRINT_UINT_ARG("setdscp ", cmd->arg1);
+		    }
  			break;
 
 		case O_REASS:
@@ -1498,6 +1608,10 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 			case O_IPPRECEDENCE:
 				printf(" ipprecedence %u", (cmd->arg1) >> 5 );
 				break;
+
+			case O_DSCP:
+				print_dscp((ipfw_insn_u32 *)cmd);
+	 			break;
 
 			case O_IPLEN:
 				if (F_LEN(cmd) == 1)
@@ -2665,13 +2779,19 @@ static ipfw_insn *
 add_src(ipfw_insn *cmd, char *av, u_char proto, int cblen)
 {
 	struct in6_addr a;
-	char *host, *ch;
+	char *host, *ch, buf[INET6_ADDRSTRLEN];
 	ipfw_insn *ret = NULL;
+	int len;
 
-	if ((host = strdup(av)) == NULL)
-		return NULL;
-	if ((ch = strrchr(host, '/')) != NULL)
-		*ch = '\0';
+	/* Copy first address in set if needed */
+	if ((ch = strpbrk(av, "/,")) != NULL) {
+		len = ch - av;
+		strlcpy(buf, av, sizeof(buf));
+		if (len < sizeof(buf))
+			buf[len] = '\0';
+		host = buf;
+	} else
+		host = av;
 
 	if (proto == IPPROTO_IPV6  || strcmp(av, "me6") == 0 ||
 	    inet_pton(AF_INET6, host, &a) == 1)
@@ -2683,7 +2803,6 @@ add_src(ipfw_insn *cmd, char *av, u_char proto, int cblen)
 	if (ret == NULL && strcmp(av, "any") != 0)
 		ret = cmd;
 
-	free(host);
 	return ret;
 }
 
@@ -2691,13 +2810,19 @@ static ipfw_insn *
 add_dst(ipfw_insn *cmd, char *av, u_char proto, int cblen)
 {
 	struct in6_addr a;
-	char *host, *ch;
+	char *host, *ch, buf[INET6_ADDRSTRLEN];
 	ipfw_insn *ret = NULL;
+	int len;
 
-	if ((host = strdup(av)) == NULL)
-		return NULL;
-	if ((ch = strrchr(host, '/')) != NULL)
-		*ch = '\0';
+	/* Copy first address in set if needed */
+	if ((ch = strpbrk(av, "/,")) != NULL) {
+		len = ch - av;
+		strlcpy(buf, av, sizeof(buf));
+		if (len < sizeof(buf))
+			buf[len] = '\0';
+		host = buf;
+	} else
+		host = av;
 
 	if (proto == IPPROTO_IPV6  || strcmp(av, "me6") == 0 ||
 	    inet_pton(AF_INET6, host, &a) == 1)
@@ -2709,7 +2834,6 @@ add_dst(ipfw_insn *cmd, char *av, u_char proto, int cblen)
 	if (ret == NULL && strcmp(av, "any") != 0)
 		ret = cmd;
 
-	free(host);
 	return ret;
 }
 
@@ -2958,9 +3082,9 @@ chkarg:
 			((struct sockaddr_in*)&result)->sin_addr.s_addr =
 			    INADDR_ANY;
 		} else {
-			/* 
+			/*
 			 * Resolve the host name or address to a family and a
-			 * network representation of the addres.
+			 * network representation of the address.
 			 */
 			if (getaddrinfo(*av, NULL, NULL, &res))
 				errx(EX_DATAERR, NULL);
@@ -3031,6 +3155,24 @@ chkarg:
 			if (action->arg1 >= numfibs)  /* Temporary */
 				errx(EX_DATAERR, "fib too large.\n");
 		}
+		av++;
+		break;
+	    }
+
+	case TOK_SETDSCP:
+	    {
+		int code;
+
+		action->opcode = O_SETDSCP;
+		NEED1("missing DSCP code");
+		if (_substrcmp(*av, "tablearg") == 0) {
+			action->arg1 = IP_FW_TABLEARG;
+		} else if (isalpha(*av[0])) {
+			if ((code = match_token(f_ipdscp, *av)) == -1)
+				errx(EX_DATAERR, "Unknown DSCP code");
+			action->arg1 = code;
+		} else
+		        action->arg1 = strtoul(*av, NULL, 10);
 		av++;
 		break;
 	    }
@@ -3444,6 +3586,12 @@ read_options:
 			NEED1("ipprecedence requires value");
 			fill_cmd(cmd, O_IPPRECEDENCE, 0,
 			    (strtoul(*av, NULL, 0) & 7) << 5);
+			av++;
+			break;
+
+		case TOK_DSCP:
+			NEED1("missing DSCP code");
+			fill_dscp(cmd, *av, cblen);
 			av++;
 			break;
 
@@ -4234,7 +4382,7 @@ table_list(uint16_t num, int need_header)
 		if (sz < xent->len)
 			break;
 		sz -= xent->len;
-		xent = (void *)xent + xent->len;
+		xent = (ipfw_table_xentry *)((char *)xent + xent->len);
 	}
 
 	free(tbl);

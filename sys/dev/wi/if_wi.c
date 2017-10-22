@@ -60,7 +60,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/wi/if_wi.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/wi/if_wi.c 253756 2013-07-29 05:39:20Z jhibbits $");
+
+#include "opt_wlan.h"
 
 #define WI_HERMES_STATS_WAR	/* Work around stats counter bug. */
 
@@ -1509,6 +1511,10 @@ wi_info_intr(struct wi_softc *sc)
 	case WI_INFO_LINK_STAT:
 		wi_read_bap(sc, fid, sizeof(ltbuf), &stat, sizeof(stat));
 		DPRINTF(("wi_info_intr: LINK_STAT 0x%x\n", le16toh(stat)));
+
+		if (vap == NULL)
+			goto finish;
+
 		switch (le16toh(stat)) {
 		case WI_INFO_LINK_STAT_CONNECTED:
 			if (vap->iv_state == IEEE80211_S_RUN &&
@@ -1564,6 +1570,7 @@ wi_info_intr(struct wi_softc *sc)
 		    le16toh(ltbuf[1]), le16toh(ltbuf[0])));
 		break;
 	}
+finish:
 	CSR_WRITE_2(sc, WI_EVENT_ACK, WI_EV_INFO);
 }
 
@@ -1898,8 +1905,7 @@ wi_seek_bap(struct wi_softc *sc, int id, int off)
 static int
 wi_read_bap(struct wi_softc *sc, int id, int off, void *buf, int buflen)
 {
-	u_int16_t *ptr;
-	int i, error, cnt;
+	int error, cnt;
 
 	if (buflen == 0)
 		return 0;
@@ -1908,9 +1914,7 @@ wi_read_bap(struct wi_softc *sc, int id, int off, void *buf, int buflen)
 			return error;
 	}
 	cnt = (buflen + 1) / 2;
-	ptr = (u_int16_t *)buf;
-	for (i = 0; i < cnt; i++)
-		*ptr++ = CSR_READ_2(sc, WI_DATA0);
+	CSR_READ_MULTI_STREAM_2(sc, WI_DATA0, (u_int16_t *)buf, cnt);
 	sc->sc_bap_off += cnt * 2;
 	return 0;
 }
@@ -1918,8 +1922,7 @@ wi_read_bap(struct wi_softc *sc, int id, int off, void *buf, int buflen)
 static int
 wi_write_bap(struct wi_softc *sc, int id, int off, void *buf, int buflen)
 {
-	u_int16_t *ptr;
-	int i, error, cnt;
+	int error, cnt;
 
 	if (buflen == 0)
 		return 0;
@@ -1929,9 +1932,7 @@ wi_write_bap(struct wi_softc *sc, int id, int off, void *buf, int buflen)
 			return error;
 	}
 	cnt = (buflen + 1) / 2;
-	ptr = (u_int16_t *)buf;
-	for (i = 0; i < cnt; i++)
-		CSR_WRITE_2(sc, WI_DATA0, ptr[i]);
+	CSR_WRITE_MULTI_STREAM_2(sc, WI_DATA0, (u_int16_t *)buf, cnt);
 	sc->sc_bap_off += cnt * 2;
 
 	return 0;

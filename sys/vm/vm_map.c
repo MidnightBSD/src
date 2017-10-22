@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/vm/vm_map.c 249531 2013-04-16 06:17:15Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/vm/vm_map.c 260122 2013-12-31 08:02:34Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -77,6 +77,7 @@ __FBSDID("$FreeBSD: stable/9/sys/vm/vm_map.c 249531 2013-04-16 06:17:15Z kib $")
 #include <sys/vnode.h>
 #include <sys/racct.h>
 #include <sys/resourcevar.h>
+#include <sys/rwlock.h>
 #include <sys/file.h>
 #include <sys/sysctl.h>
 #include <sys/sysent.h>
@@ -125,11 +126,8 @@ static uma_zone_t mapentzone;
 static uma_zone_t kmapentzone;
 static uma_zone_t mapzone;
 static uma_zone_t vmspace_zone;
-static struct vm_object kmapentobj;
 static int vmspace_zinit(void *mem, int size, int flags);
-static void vmspace_zfini(void *mem, int size);
 static int vm_map_zinit(void *mem, int ize, int flags);
-static void vm_map_zfini(void *mem, int size);
 static void _vm_map_init(vm_map_t map, pmap_t pmap, vm_offset_t min,
     vm_offset_t max);
 static void vm_map_entry_deallocate(vm_map_entry_t entry, boolean_t system_map);
@@ -192,23 +190,20 @@ vm_map_startup(void)
 #else
 	    NULL,
 #endif
-	    vm_map_zinit, vm_map_zfini, UMA_ALIGN_PTR, UMA_ZONE_NOFREE);
+	    vm_map_zinit, NULL, UMA_ALIGN_PTR, UMA_ZONE_NOFREE);
 	uma_prealloc(mapzone, MAX_KMAP);
 	kmapentzone = uma_zcreate("KMAP ENTRY", sizeof(struct vm_map_entry),
 	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR,
 	    UMA_ZONE_MTXCLASS | UMA_ZONE_VM);
-	uma_prealloc(kmapentzone, MAX_KMAPENT);
 	mapentzone = uma_zcreate("MAP ENTRY", sizeof(struct vm_map_entry),
 	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, 0);
-}
-
-static void
-vmspace_zfini(void *mem, int size)
-{
-	struct vmspace *vm;
-
-	vm = (struct vmspace *)mem;
-	vm_map_zfini(&vm->vm_map, sizeof(vm->vm_map));
+	vmspace_zone = uma_zcreate("VMSPACE", sizeof(struct vmspace), NULL,
+#ifdef INVARIANTS
+	    vmspace_zdtor,
+#else
+	    NULL,
+#endif
+	    vmspace_zinit, NULL, UMA_ALIGN_PTR, UMA_ZONE_NOFREE);
 }
 
 static int
@@ -220,17 +215,8 @@ vmspace_zinit(void *mem, int size, int flags)
 
 	vm->vm_map.pmap = NULL;
 	(void)vm_map_zinit(&vm->vm_map, sizeof(vm->vm_map), flags);
+	PMAP_LOCK_INIT(vmspace_pmap(vm));
 	return (0);
-}
-
-static void
-vm_map_zfini(void *mem, int size)
-{
-	vm_map_t map;
-
-	map = (vm_map_t)mem;
-	mtx_destroy(&map->system_mtx);
-	sx_destroy(&map->lock);
 }
 
 static int
@@ -239,8 +225,7 @@ vm_map_zinit(void *mem, int size, int flags)
 	vm_map_t map;
 
 	map = (vm_map_t)mem;
-	map->nentries = 0;
-	map->size = 0;
+	memset(map, 0, sizeof(*map));
 	mtx_init(&map->system_mtx, "vm map (system)", NULL, MTX_DEF | MTX_DUPOK);
 	sx_init(&map->lock, "vm map (user)");
 	return (0);
@@ -274,15 +259,22 @@ vm_map_zdtor(void *mem, int size, void *arg)
 /*
  * Allocate a vmspace structure, including a vm_map and pmap,
  * and initialize those structures.  The refcnt is set to 1.
+ *
+ * If 'pinit' is NULL then the embedded pmap is initialized via pmap_pinit().
  */
 struct vmspace *
-vmspace_alloc(min, max)
-	vm_offset_t min, max;
+vmspace_alloc(vm_offset_t min, vm_offset_t max, pmap_pinit_t pinit)
 {
 	struct vmspace *vm;
 
 	vm = uma_zalloc(vmspace_zone, M_WAITOK);
-	if (vm->vm_map.pmap == NULL && !pmap_pinit(vmspace_pmap(vm))) {
+
+	KASSERT(vm->vm_map.pmap == NULL, ("vm_map.pmap must be NULL"));
+
+	if (pinit == NULL)
+		pinit = &pmap_pinit;
+
+	if (!pinit(vmspace_pmap(vm))) {
 		uma_zfree(vmspace_zone, vm);
 		return (NULL);
 	}
@@ -298,21 +290,6 @@ vmspace_alloc(min, max)
 	vm->vm_daddr = 0;
 	vm->vm_maxsaddr = 0;
 	return (vm);
-}
-
-void
-vm_init2(void)
-{
-	uma_zone_set_obj(kmapentzone, &kmapentobj, lmin(cnt.v_page_count,
-	    (VM_MAX_KERNEL_ADDRESS - VM_MIN_KERNEL_ADDRESS) / PAGE_SIZE) / 8 +
-	     maxproc * 2 + maxfiles);
-	vmspace_zone = uma_zcreate("VMSPACE", sizeof(struct vmspace), NULL,
-#ifdef INVARIANTS
-	    vmspace_zdtor,
-#else
-	    NULL,
-#endif
-	    vmspace_zinit, vmspace_zfini, UMA_ALIGN_PTR, UMA_ZONE_NOFREE);
 }
 
 static void
@@ -1223,13 +1200,14 @@ charged:
 		 * reference counting is insufficient to recognize
 		 * aliases with precision.)
 		 */
-		VM_OBJECT_LOCK(object);
+		VM_OBJECT_WLOCK(object);
 		if (object->ref_count > 1 || object->shadow_count != 0)
 			vm_object_clear_flag(object, OBJ_ONEMAPPING);
-		VM_OBJECT_UNLOCK(object);
+		VM_OBJECT_WUNLOCK(object);
 	}
 	else if ((prev_entry != &map->header) &&
 		 (prev_entry->eflags == protoeflags) &&
+		 (cow & (MAP_ENTRY_GROWS_DOWN | MAP_ENTRY_GROWS_UP)) == 0 &&
 		 (prev_entry->end == start) &&
 		 (prev_entry->wired_count == 0) &&
 		 (prev_entry->cred == cred ||
@@ -1441,31 +1419,48 @@ vm_map_fixed(vm_map_t map, vm_object_t object, vm_ooffset_t offset,
 int
 vm_map_find(vm_map_t map, vm_object_t object, vm_ooffset_t offset,
 	    vm_offset_t *addr,	/* IN/OUT */
-	    vm_size_t length, int find_space, vm_prot_t prot,
-	    vm_prot_t max, int cow)
+	    vm_size_t length, vm_offset_t max_addr, int find_space,
+	    vm_prot_t prot, vm_prot_t max, int cow)
 {
-	vm_offset_t start;
+	vm_offset_t alignment, initial_addr, start;
 	int result;
 
-	start = *addr;
+	if (find_space == VMFS_OPTIMAL_SPACE && (object == NULL ||
+	    (object->flags & OBJ_COLORED) == 0))
+		find_space = VMFS_ANY_SPACE;
+	if (find_space >> 8 != 0) {
+		KASSERT((find_space & 0xff) == 0, ("bad VMFS flags"));
+		alignment = (vm_offset_t)1 << (find_space >> 8);
+	} else
+		alignment = 0;
+	initial_addr = *addr;
+again:
+	start = initial_addr;
 	vm_map_lock(map);
 	do {
 		if (find_space != VMFS_NO_SPACE) {
-			if (vm_map_findspace(map, start, length, addr)) {
+			if (vm_map_findspace(map, start, length, addr) ||
+			    (max_addr != 0 && *addr + length > max_addr)) {
 				vm_map_unlock(map);
+				if (find_space == VMFS_OPTIMAL_SPACE) {
+					find_space = VMFS_ANY_SPACE;
+					goto again;
+				}
 				return (KERN_NO_SPACE);
 			}
 			switch (find_space) {
-			case VMFS_ALIGNED_SPACE:
+			case VMFS_SUPER_SPACE:
+			case VMFS_OPTIMAL_SPACE:
 				pmap_align_superpage(object, offset, addr,
 				    length);
 				break;
-#ifdef VMFS_TLB_ALIGNED_SPACE
-			case VMFS_TLB_ALIGNED_SPACE:
-				pmap_align_tlb(addr);
+			case VMFS_ANY_SPACE:
 				break;
-#endif
 			default:
+				if ((*addr & (alignment - 1)) != 0) {
+					*addr &= ~(alignment - 1);
+					*addr += alignment;
+				}
 				break;
 			}
 
@@ -1473,11 +1468,8 @@ vm_map_find(vm_map_t map, vm_object_t object, vm_ooffset_t offset,
 		}
 		result = vm_map_insert(map, object, offset, start, start +
 		    length, prot, max, cow);
-	} while (result == KERN_NO_SPACE && (find_space == VMFS_ALIGNED_SPACE
-#ifdef VMFS_TLB_ALIGNED_SPACE
-	    || find_space == VMFS_TLB_ALIGNED_SPACE
-#endif
-	    ));
+	} while (result == KERN_NO_SPACE && find_space != VMFS_NO_SPACE &&
+	    find_space != VMFS_ANY_SPACE);
 	vm_map_unlock(map);
 	return (result);
 }
@@ -1624,12 +1616,12 @@ _vm_map_clip_start(vm_map_t map, vm_map_entry_t entry, vm_offset_t start)
 	} else if (entry->object.vm_object != NULL &&
 		   ((entry->eflags & MAP_ENTRY_NEEDS_COPY) == 0) &&
 		   entry->cred != NULL) {
-		VM_OBJECT_LOCK(entry->object.vm_object);
+		VM_OBJECT_WLOCK(entry->object.vm_object);
 		KASSERT(entry->object.vm_object->cred == NULL,
 		    ("OVERCOMMIT: vm_entry_clip_start: both cred e %p", entry));
 		entry->object.vm_object->cred = entry->cred;
 		entry->object.vm_object->charge = entry->end - entry->start;
-		VM_OBJECT_UNLOCK(entry->object.vm_object);
+		VM_OBJECT_WUNLOCK(entry->object.vm_object);
 		entry->cred = NULL;
 	}
 
@@ -1701,12 +1693,12 @@ _vm_map_clip_end(vm_map_t map, vm_map_entry_t entry, vm_offset_t end)
 	} else if (entry->object.vm_object != NULL &&
 		   ((entry->eflags & MAP_ENTRY_NEEDS_COPY) == 0) &&
 		   entry->cred != NULL) {
-		VM_OBJECT_LOCK(entry->object.vm_object);
+		VM_OBJECT_WLOCK(entry->object.vm_object);
 		KASSERT(entry->object.vm_object->cred == NULL,
 		    ("OVERCOMMIT: vm_entry_clip_end: both cred e %p", entry));
 		entry->object.vm_object->cred = entry->cred;
 		entry->object.vm_object->charge = entry->end - entry->start;
-		VM_OBJECT_UNLOCK(entry->object.vm_object);
+		VM_OBJECT_WUNLOCK(entry->object.vm_object);
 		entry->cred = NULL;
 	}
 
@@ -1787,10 +1779,14 @@ vm_map_submap(
 /*
  *	vm_map_pmap_enter:
  *
- *	Preload read-only mappings for the given object's resident pages into
- *	the given map.  This eliminates the soft faults on process startup and
- *	immediately after an mmap(2).  Because these are speculative mappings,
- *	cached pages are not reactivated and mapped.
+ *	Preload read-only mappings for the specified object's resident pages
+ *	into the target map.  If "flags" is MAP_PREFAULT_PARTIAL, then only
+ *	the resident pages within the address range [addr, addr + ulmin(size,
+ *	ptoa(MAX_INIT_PT))) are mapped.  Otherwise, all resident pages within
+ *	the specified address range are mapped.  This eliminates many soft
+ *	faults on process startup and immediately after an mmap(2).  Because
+ *	these are speculative mappings, cached pages are not reactivated and
+ *	mapped.
  */
 void
 vm_map_pmap_enter(vm_map_t map, vm_offset_t addr, vm_prot_t prot,
@@ -1802,21 +1798,27 @@ vm_map_pmap_enter(vm_map_t map, vm_offset_t addr, vm_prot_t prot,
 
 	if ((prot & (VM_PROT_READ | VM_PROT_EXECUTE)) == 0 || object == NULL)
 		return;
-	VM_OBJECT_LOCK(object);
+	VM_OBJECT_RLOCK(object);
 	if (object->type == OBJT_DEVICE || object->type == OBJT_SG) {
-		pmap_object_init_pt(map->pmap, addr, object, pindex, size);
-		goto unlock_return;
+		VM_OBJECT_RUNLOCK(object);
+		VM_OBJECT_WLOCK(object);
+		if (object->type == OBJT_DEVICE || object->type == OBJT_SG) {
+			pmap_object_init_pt(map->pmap, addr, object, pindex,
+			    size);
+			VM_OBJECT_WUNLOCK(object);
+			return;
+		}
+		VM_OBJECT_LOCK_DOWNGRADE(object);
 	}
 
 	psize = atop(size);
-
-	if ((flags & MAP_PREFAULT_PARTIAL) && psize > MAX_INIT_PT &&
-	    object->resident_page_count > MAX_INIT_PT)
-		goto unlock_return;
-
+	if (psize > MAX_INIT_PT && (flags & MAP_PREFAULT_PARTIAL) != 0)
+		psize = MAX_INIT_PT;
 	if (psize + pindex > object->size) {
-		if (object->size < pindex)
-			goto unlock_return;
+		if (object->size < pindex) {
+			VM_OBJECT_RUNLOCK(object);
+			return;
+		}
 		psize = object->size - pindex;
 	}
 
@@ -1855,8 +1857,7 @@ vm_map_pmap_enter(vm_map_t map, vm_offset_t addr, vm_prot_t prot,
 	if (p_start != NULL)
 		pmap_enter_object(map->pmap, start, addr + ptoa(psize),
 		    p_start, prot);
-unlock_return:
-	VM_OBJECT_UNLOCK(object);
+	VM_OBJECT_RUNLOCK(object);
 }
 
 /*
@@ -1932,9 +1933,9 @@ vm_map_protect(vm_map_t map, vm_offset_t start, vm_offset_t end,
 			continue;
 		}
 
-		VM_OBJECT_LOCK(obj);
+		VM_OBJECT_WLOCK(obj);
 		if (obj->type != OBJT_DEFAULT && obj->type != OBJT_SWAP) {
-			VM_OBJECT_UNLOCK(obj);
+			VM_OBJECT_WUNLOCK(obj);
 			continue;
 		}
 
@@ -1946,7 +1947,7 @@ vm_map_protect(vm_map_t map, vm_offset_t start, vm_offset_t end,
 		KASSERT(obj->charge == 0,
 		    ("vm_map_protect: object %p overcharged\n", obj));
 		if (!swap_reserve(ptoa(obj->size))) {
-			VM_OBJECT_UNLOCK(obj);
+			VM_OBJECT_WUNLOCK(obj);
 			vm_map_unlock(map);
 			return (KERN_RESOURCE_SHORTAGE);
 		}
@@ -1954,7 +1955,7 @@ vm_map_protect(vm_map_t map, vm_offset_t start, vm_offset_t end,
 		crhold(cred);
 		obj->cred = cred;
 		obj->charge = ptoa(obj->size);
-		VM_OBJECT_UNLOCK(obj);
+		VM_OBJECT_WUNLOCK(obj);
 	}
 
 	/*
@@ -2112,7 +2113,7 @@ vm_map_madvise(
 		     (current != &map->header) && (current->start < end);
 		     current = current->next
 		) {
-			vm_offset_t useStart;
+			vm_offset_t useEnd, useStart;
 
 			if (current->eflags & MAP_ENTRY_IS_SUB_MAP)
 				continue;
@@ -2120,16 +2121,33 @@ vm_map_madvise(
 			pstart = OFF_TO_IDX(current->offset);
 			pend = pstart + atop(current->end - current->start);
 			useStart = current->start;
+			useEnd = current->end;
 
 			if (current->start < start) {
 				pstart += atop(start - current->start);
 				useStart = start;
 			}
-			if (current->end > end)
+			if (current->end > end) {
 				pend -= atop(current->end - end);
+				useEnd = end;
+			}
 
 			if (pstart >= pend)
 				continue;
+
+			/*
+			 * Perform the pmap_advise() before clearing
+			 * PGA_REFERENCED in vm_page_advise().  Otherwise, a
+			 * concurrent pmap operation, such as pmap_remove(),
+			 * could clear a reference in the pmap and set
+			 * PGA_REFERENCED on the page before the pmap_advise()
+			 * had completed.  Consequently, the page would appear
+			 * referenced based upon an old reference that
+			 * occurred before this pmap_advise() ran.
+			 */
+			if (behav == MADV_DONTNEED || behav == MADV_FREE)
+				pmap_advise(map->pmap, useStart, useEnd,
+				    behav);
 
 			vm_object_madvise(current->object.vm_object, pstart,
 			    pend, behav);
@@ -2272,6 +2290,7 @@ vm_map_unwire(vm_map_t map, vm_offset_t start, vm_offset_t end,
 		 * above.)
 		 */
 		entry->eflags |= MAP_ENTRY_IN_TRANSITION;
+		entry->wiring_thread = curthread;
 		/*
 		 * Check the map for holes in the specified region.
 		 * If VM_MAP_WIRE_HOLESOK was specified, skip this check.
@@ -2304,8 +2323,24 @@ done:
 		else
 			KASSERT(result, ("vm_map_unwire: lookup failed"));
 	}
-	entry = first_entry;
-	while (entry != &map->header && entry->start < end) {
+	for (entry = first_entry; entry != &map->header && entry->start < end;
+	    entry = entry->next) {
+		/*
+		 * If VM_MAP_WIRE_HOLESOK was specified, an empty
+		 * space in the unwired region could have been mapped
+		 * while the map lock was dropped for draining
+		 * MAP_ENTRY_IN_TRANSITION.  Moreover, another thread
+		 * could be simultaneously wiring this new mapping
+		 * entry.  Detect these cases and skip any entries
+		 * marked as in transition by us.
+		 */
+		if ((entry->eflags & MAP_ENTRY_IN_TRANSITION) == 0 ||
+		    entry->wiring_thread != curthread) {
+			KASSERT((flags & VM_MAP_WIRE_HOLESOK) != 0,
+			    ("vm_map_unwire: !HOLESOK and new/changed entry"));
+			continue;
+		}
+
 		if (rv == KERN_SUCCESS && (!user_unwire ||
 		    (entry->eflags & MAP_ENTRY_USER_WIRED))) {
 			if (user_unwire)
@@ -2317,19 +2352,19 @@ done:
 				 */
 				vm_fault_unwire(map, entry->start, entry->end,
 				    entry->object.vm_object != NULL &&
-				    (entry->object.vm_object->type == OBJT_DEVICE ||
-				    entry->object.vm_object->type == OBJT_SG));
+				    (entry->object.vm_object->flags &
+				    OBJ_FICTITIOUS) != 0);
 			}
 		}
-		KASSERT(entry->eflags & MAP_ENTRY_IN_TRANSITION,
-			("vm_map_unwire: in-transition flag missing"));
+		KASSERT((entry->eflags & MAP_ENTRY_IN_TRANSITION) != 0,
+		    ("vm_map_unwire: in-transition flag missing"));
 		entry->eflags &= ~MAP_ENTRY_IN_TRANSITION;
+		entry->wiring_thread = NULL;
 		if (entry->eflags & MAP_ENTRY_NEEDS_WAKEUP) {
 			entry->eflags &= ~MAP_ENTRY_NEEDS_WAKEUP;
 			need_wakeup = TRUE;
 		}
 		vm_map_simplify_entry(map, entry);
-		entry = entry->next;
 	}
 	vm_map_unlock(map);
 	if (need_wakeup)
@@ -2423,6 +2458,7 @@ vm_map_wire(vm_map_t map, vm_offset_t start, vm_offset_t end,
 		 * above.)
 		 */
 		entry->eflags |= MAP_ENTRY_IN_TRANSITION;
+		entry->wiring_thread = curthread;
 		if ((entry->protection & (VM_PROT_READ | VM_PROT_EXECUTE)) == 0
 		    || (entry->protection & prot) != prot) {
 			entry->eflags |= MAP_ENTRY_WIRE_SKIPPED;
@@ -2438,8 +2474,8 @@ vm_map_wire(vm_map_t map, vm_offset_t start, vm_offset_t end,
 			saved_start = entry->start;
 			saved_end = entry->end;
 			fictitious = entry->object.vm_object != NULL &&
-			    (entry->object.vm_object->type == OBJT_DEVICE ||
-			    entry->object.vm_object->type == OBJT_SG);
+			    (entry->object.vm_object->flags &
+			    OBJ_FICTITIOUS) != 0;
 			/*
 			 * Release the map lock, relying on the in-transition
 			 * mark.  Mark the map busy for fork.
@@ -2514,10 +2550,27 @@ done:
 		else
 			KASSERT(result, ("vm_map_wire: lookup failed"));
 	}
-	entry = first_entry;
-	while (entry != &map->header && entry->start < end) {
+	for (entry = first_entry; entry != &map->header && entry->start < end;
+	    entry = entry->next) {
 		if ((entry->eflags & MAP_ENTRY_WIRE_SKIPPED) != 0)
 			goto next_entry_done;
+
+		/*
+		 * If VM_MAP_WIRE_HOLESOK was specified, an empty
+		 * space in the unwired region could have been mapped
+		 * while the map lock was dropped for faulting in the
+		 * pages or draining MAP_ENTRY_IN_TRANSITION.
+		 * Moreover, another thread could be simultaneously
+		 * wiring this new mapping entry.  Detect these cases
+		 * and skip any entries marked as in transition by us.
+		 */
+		if ((entry->eflags & MAP_ENTRY_IN_TRANSITION) == 0 ||
+		    entry->wiring_thread != curthread) {
+			KASSERT((flags & VM_MAP_WIRE_HOLESOK) != 0,
+			    ("vm_map_wire: !HOLESOK and new/changed entry"));
+			continue;
+		}
+
 		if (rv == KERN_SUCCESS) {
 			if (user_wire)
 				entry->eflags |= MAP_ENTRY_USER_WIRED;
@@ -2537,20 +2590,23 @@ done:
 				 */
 				vm_fault_unwire(map, entry->start, entry->end,
 				    entry->object.vm_object != NULL &&
-				    (entry->object.vm_object->type == OBJT_DEVICE ||
-				    entry->object.vm_object->type == OBJT_SG));
+				    (entry->object.vm_object->flags &
+				    OBJ_FICTITIOUS) != 0);
 			}
 		}
 	next_entry_done:
-		KASSERT(entry->eflags & MAP_ENTRY_IN_TRANSITION,
-			("vm_map_wire: in-transition flag missing"));
-		entry->eflags &= ~(MAP_ENTRY_IN_TRANSITION|MAP_ENTRY_WIRE_SKIPPED);
+		KASSERT((entry->eflags & MAP_ENTRY_IN_TRANSITION) != 0,
+		    ("vm_map_wire: in-transition flag missing %p", entry));
+		KASSERT(entry->wiring_thread == curthread,
+		    ("vm_map_wire: alien wire %p", entry));
+		entry->eflags &= ~(MAP_ENTRY_IN_TRANSITION |
+		    MAP_ENTRY_WIRE_SKIPPED);
+		entry->wiring_thread = NULL;
 		if (entry->eflags & MAP_ENTRY_NEEDS_WAKEUP) {
 			entry->eflags &= ~MAP_ENTRY_NEEDS_WAKEUP;
 			need_wakeup = TRUE;
 		}
 		vm_map_simplify_entry(map, entry);
-		entry = entry->next;
 	}
 	vm_map_unlock(map);
 	if (need_wakeup)
@@ -2674,8 +2730,7 @@ vm_map_entry_unwire(vm_map_t map, vm_map_entry_t entry)
 {
 	vm_fault_unwire(map, entry->start, entry->end,
 	    entry->object.vm_object != NULL &&
-	    (entry->object.vm_object->type == OBJT_DEVICE ||
-	    entry->object.vm_object->type == OBJT_SG));
+	    (entry->object.vm_object->flags & OBJ_FICTITIOUS) != 0);
 	entry->wired_count = 0;
 }
 
@@ -2718,7 +2773,7 @@ vm_map_entry_delete(vm_map_t map, vm_map_entry_t entry)
 		count = OFF_TO_IDX(size);
 		offidxstart = OFF_TO_IDX(entry->offset);
 		offidxend = offidxstart + count;
-		VM_OBJECT_LOCK(object);
+		VM_OBJECT_WLOCK(object);
 		if (object->ref_count != 1 &&
 		    ((object->flags & (OBJ_NOSPLIT|OBJ_ONEMAPPING)) == OBJ_ONEMAPPING ||
 		    object == kernel_object || object == kmem_object)) {
@@ -2747,7 +2802,7 @@ vm_map_entry_delete(vm_map_t map, vm_map_entry_t entry)
 				}
 			}
 		}
-		VM_OBJECT_UNLOCK(object);
+		VM_OBJECT_WUNLOCK(object);
 	} else
 		entry->object.vm_object = NULL;
 	if (map->system_map)
@@ -2955,7 +3010,7 @@ vm_map_copy_entry(
 		 */
 		size = src_entry->end - src_entry->start;
 		if ((src_object = src_entry->object.vm_object) != NULL) {
-			VM_OBJECT_LOCK(src_object);
+			VM_OBJECT_WLOCK(src_object);
 			charged = ENTRY_CHARGED(src_entry);
 			if ((src_object->handle == NULL) &&
 				(src_object->type == OBJT_DEFAULT ||
@@ -2976,7 +3031,7 @@ vm_map_copy_entry(
 				src_object->cred = src_entry->cred;
 				src_object->charge = size;
 			}
-			VM_OBJECT_UNLOCK(src_object);
+			VM_OBJECT_WUNLOCK(src_object);
 			dst_entry->object.vm_object = src_object;
 			if (charged) {
 				cred = curthread->td_ucred;
@@ -3089,7 +3144,7 @@ vmspace_fork(struct vmspace *vm1, vm_ooffset_t *fork_charge)
 
 	old_map = &vm1->vm_map;
 	/* Copy immutable fields of vm1 to vm2. */
-	vm2 = vmspace_alloc(old_map->min_offset, old_map->max_offset);
+	vm2 = vmspace_alloc(old_map->min_offset, old_map->max_offset, NULL);
 	if (vm2 == NULL)
 		return (NULL);
 	vm2->vm_taddr = vm1->vm_taddr;
@@ -3152,7 +3207,7 @@ vmspace_fork(struct vmspace *vm1, vm_ooffset_t *fork_charge)
 				vm_object_deallocate(object);
 				object = old_entry->object.vm_object;
 			}
-			VM_OBJECT_LOCK(object);
+			VM_OBJECT_WLOCK(object);
 			vm_object_clear_flag(object, OBJ_ONEMAPPING);
 			if (old_entry->cred != NULL) {
 				KASSERT(object->cred == NULL, ("vmspace_fork both cred"));
@@ -3176,7 +3231,7 @@ vmspace_fork(struct vmspace *vm1, vm_ooffset_t *fork_charge)
 				    ("vmspace_fork: vnp.writecount %p",
 				    object));
 			}
-			VM_OBJECT_UNLOCK(object);
+			VM_OBJECT_WUNLOCK(object);
 
 			/*
 			 * Clone the entry, referencing the shared object.
@@ -3185,6 +3240,7 @@ vmspace_fork(struct vmspace *vm1, vm_ooffset_t *fork_charge)
 			*new_entry = *old_entry;
 			new_entry->eflags &= ~(MAP_ENTRY_USER_WIRED |
 			    MAP_ENTRY_IN_TRANSITION);
+			new_entry->wiring_thread = NULL;
 			new_entry->wired_count = 0;
 			if (new_entry->eflags & MAP_ENTRY_VN_WRITECNT) {
 				vnode_pager_update_writecount(object,
@@ -3219,6 +3275,7 @@ vmspace_fork(struct vmspace *vm1, vm_ooffset_t *fork_charge)
 			 */
 			new_entry->eflags &= ~(MAP_ENTRY_USER_WIRED |
 			    MAP_ENTRY_IN_TRANSITION | MAP_ENTRY_VN_WRITECNT);
+			new_entry->wiring_thread = NULL;
 			new_entry->wired_count = 0;
 			new_entry->object.vm_object = NULL;
 			new_entry->cred = NULL;
@@ -3260,7 +3317,6 @@ vm_map_stack(vm_map_t map, vm_offset_t addrbos, vm_size_t max_ssize,
 	 * NOTE: We explicitly allow bi-directional stacks.
 	 */
 	orient = cow & (MAP_STACK_GROWS_DOWN|MAP_STACK_GROWS_UP);
-	cow &= ~orient;
 	KASSERT(orient != 0, ("No stack grow direction"));
 
 	if (addrbos < vm_map_min(map) ||
@@ -3669,7 +3725,7 @@ vmspace_exec(struct proc *p, vm_offset_t minuser, vm_offset_t maxuser)
 	struct vmspace *oldvmspace = p->p_vmspace;
 	struct vmspace *newvmspace;
 
-	newvmspace = vmspace_alloc(minuser, maxuser);
+	newvmspace = vmspace_alloc(minuser, maxuser, NULL);
 	if (newvmspace == NULL)
 		return (ENOMEM);
 	newvmspace->vm_swrss = oldvmspace->vm_swrss;
@@ -3799,6 +3855,12 @@ RetryLookup:;
 		vm_map_unlock_read(map);
 		return (KERN_PROTECTION_FAILURE);
 	}
+	if ((fault_typea & VM_PROT_COPY) != 0 &&
+	    (entry->max_protection & VM_PROT_WRITE) == 0 &&
+	    (entry->eflags & MAP_ENTRY_COW) == 0) {
+		vm_map_unlock_read(map);
+		return (KERN_PROTECTION_FAILURE);
+	}
 
 	/*
 	 * If this page is not pageable, we have to get it for all possible
@@ -3856,10 +3918,10 @@ RetryLookup:;
 				crfree(entry->cred);
 				entry->cred = NULL;
 			} else if (entry->cred != NULL) {
-				VM_OBJECT_LOCK(eobject);
+				VM_OBJECT_WLOCK(eobject);
 				eobject->cred = entry->cred;
 				eobject->charge = size;
-				VM_OBJECT_UNLOCK(eobject);
+				VM_OBJECT_WUNLOCK(eobject);
 				entry->cred = NULL;
 			}
 
@@ -3884,10 +3946,10 @@ RetryLookup:;
 		    atop(size));
 		entry->offset = 0;
 		if (entry->cred != NULL) {
-			VM_OBJECT_LOCK(entry->object.vm_object);
+			VM_OBJECT_WLOCK(entry->object.vm_object);
 			entry->object.vm_object->cred = entry->cred;
 			entry->object.vm_object->charge = size;
-			VM_OBJECT_UNLOCK(entry->object.vm_object);
+			VM_OBJECT_WUNLOCK(entry->object.vm_object);
 			entry->cred = NULL;
 		}
 		vm_map_lock_downgrade(map);
@@ -4010,32 +4072,20 @@ vm_map_lookup_done(vm_map_t map, vm_map_entry_t entry)
 
 #include <ddb/ddb.h>
 
-/*
- *	vm_map_print:	[ debug ]
- */
-DB_SHOW_COMMAND(map, vm_map_print)
+static void
+vm_map_print(vm_map_t map)
 {
-	static int nlines;
-	/* XXX convert args. */
-	vm_map_t map = (vm_map_t)addr;
-	boolean_t full = have_addr;
-
 	vm_map_entry_t entry;
 
 	db_iprintf("Task map %p: pmap=%p, nentries=%d, version=%u\n",
 	    (void *)map,
 	    (void *)map->pmap, map->nentries, map->timestamp);
-	nlines++;
-
-	if (!full && db_indent)
-		return;
 
 	db_indent += 2;
 	for (entry = map->header.next; entry != &map->header;
 	    entry = entry->next) {
 		db_iprintf("map entry %p: start=%p, end=%p\n",
 		    (void *)entry, (void *)entry->start, (void *)entry->end);
-		nlines++;
 		{
 			static char *inheritance_name[4] =
 			{"share", "copy", "none", "donate_copy"};
@@ -4051,14 +4101,11 @@ DB_SHOW_COMMAND(map, vm_map_print)
 			db_printf(", share=%p, offset=0x%jx\n",
 			    (void *)entry->object.sub_map,
 			    (uintmax_t)entry->offset);
-			nlines++;
 			if ((entry->prev == &map->header) ||
 			    (entry->prev->object.sub_map !=
 				entry->object.sub_map)) {
 				db_indent += 2;
-				vm_map_print((db_expr_t)(intptr_t)
-					     entry->object.sub_map,
-					     full, 0, (char *)0);
+				vm_map_print((vm_map_t)entry->object.sub_map);
 				db_indent -= 2;
 			}
 		} else {
@@ -4075,7 +4122,6 @@ DB_SHOW_COMMAND(map, vm_map_print)
 				db_printf(", copy (%s)",
 				    (entry->eflags & MAP_ENTRY_NEEDS_COPY) ? "needed" : "done");
 			db_printf("\n");
-			nlines++;
 
 			if ((entry->prev == &map->header) ||
 			    (entry->prev->object.vm_object !=
@@ -4083,17 +4129,23 @@ DB_SHOW_COMMAND(map, vm_map_print)
 				db_indent += 2;
 				vm_object_print((db_expr_t)(intptr_t)
 						entry->object.vm_object,
-						full, 0, (char *)0);
-				nlines += 4;
+						1, 0, (char *)0);
 				db_indent -= 2;
 			}
 		}
 	}
 	db_indent -= 2;
-	if (db_indent == 0)
-		nlines = 0;
 }
 
+DB_SHOW_COMMAND(map, map)
+{
+
+	if (!have_addr) {
+		db_printf("usage: show map <addr>\n");
+		return;
+	}
+	vm_map_print((vm_map_t)addr);
+}
 
 DB_SHOW_COMMAND(procvm, procvm)
 {
@@ -4109,7 +4161,7 @@ DB_SHOW_COMMAND(procvm, procvm)
 	    (void *)p, (void *)p->p_vmspace, (void *)&p->p_vmspace->vm_map,
 	    (void *)vmspace_pmap(p->p_vmspace));
 
-	vm_map_print((db_expr_t)(intptr_t)&p->p_vmspace->vm_map, 1, 0, NULL);
+	vm_map_print((vm_map_t)&p->p_vmspace->vm_map);
 }
 
 #endif /* DDB */

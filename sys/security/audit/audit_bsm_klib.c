@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/security/audit/audit_bsm_klib.c 244324 2012-12-16 23:41:34Z pjd $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/security/audit/audit_bsm_klib.c 255240 2013-09-05 11:58:12Z pjd $");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -468,7 +468,7 @@ audit_canon_path(struct thread *td, int dirfd, char *path, char *cpath)
 	char *rbuf, *fbuf, *copy;
 	struct filedesc *fdp;
 	struct sbuf sbf;
-	int error, needslash, vfslocked;
+	int error, needslash;
 
 	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, NULL, "%s: at %s:%d",
 	    __func__,  __FILE__, __LINE__);
@@ -496,7 +496,7 @@ audit_canon_path(struct thread *td, int dirfd, char *path, char *cpath)
 			vhold(cvnp);
 		} else {
 			/* XXX: fgetvp() that vhold()s vnode instead of vref()ing it would be better */
-			error = fgetvp(td, dirfd, 0, &cvnp);
+			error = fgetvp(td, dirfd, NULL, &cvnp);
 			if (error) {
 				cpath[0] = '\0';
 				if (rvnp != NULL)
@@ -504,9 +504,7 @@ audit_canon_path(struct thread *td, int dirfd, char *path, char *cpath)
 				return;
 			}
 			vhold(cvnp);
-			vfslocked = VFS_LOCK_GIANT(cvnp->v_mount);
 			vrele(cvnp);
-			VFS_UNLOCK_GIANT(vfslocked);
 		}
 		needslash = (fdp->fd_rdir != cvnp);
 	} else {

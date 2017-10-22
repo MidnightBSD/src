@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/cddl/lib/libdtrace/Makefile 248350 2013-03-15 20:34:10Z brooks $
+# $FreeBSD: release/10.0.0/cddl/lib/libdtrace/Makefile 254889 2013-08-25 21:54:41Z markj $
 
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libdtrace/common
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libgen/common
@@ -31,7 +31,9 @@ SRCS=		dt_aggregate.c \
 		dt_parser.c \
 		dt_pcb.c \
 		dt_pid.c \
+		dt_pq.c \
 		dt_pragma.c \
+		dt_print.c \
 		dt_printf.c \
 		dt_proc.c \
 		dt_program.c \
@@ -42,13 +44,15 @@ SRCS=		dt_aggregate.c \
 		dt_subr.c \
 		dt_work.c \
 		dt_xlator.c \
-		gmatch.c \
-		dis_tables.c
+		gmatch.c
 
 DSRCS=		errno.d			\
 		io.d			\
+		ip.d			\
 		psinfo.d		\
 		signal.d		\
+		tcp.d			\
+		udp.d			\
 		unistd.d
 
 WARNS?=		1
@@ -71,12 +75,21 @@ CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/intel -DDIS_MEM
 .elif ${MACHINE_CPUARCH} == "sparc64"
 CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/sparc
 .PATH:		${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libdtrace/sparc
+.elif ${MACHINE_CPUARCH} == "mips"
+CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/mips
+.PATH:		${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libdtrace/mips
+.PATH:		${.CURDIR}/../../../sys/cddl/dev/dtrace/mips
+.elif ${MACHINE_CPUARCH} == "powerpc"
+CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/powerpc
+.PATH:		${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libdtrace/powerpc
+.PATH:		${.CURDIR}/../../../sys/cddl/dev/dtrace/powerpc
 .else
 # temporary hack
 CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/intel
 .endif
 
 .if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
+SRCS+=		dis_tables.c
 DSRCS+=		regs_x86.d
 .endif
 

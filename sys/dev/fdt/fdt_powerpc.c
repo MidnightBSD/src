@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/fdt/fdt_powerpc.c 209906 2010-07-11 20:49:36Z raj $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/fdt/fdt_powerpc.c 228201 2011-12-02 15:24:39Z jchandra $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -62,7 +62,7 @@ fdt_fixup_busfreq(phandle_t root)
 	 * This fixup uses /cpus/ bus-frequency prop value to set simple-bus
 	 * bus-frequency property.
 	 */
-	if ((cpus = OF_finddevice("/cpus")) == 0)
+	if ((cpus = OF_finddevice("/cpus")) == -1)
 		return;
 
 	if ((child = OF_child(cpus)) == 0)

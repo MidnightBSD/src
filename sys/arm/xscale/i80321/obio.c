@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/i80321/obio.c 171629 2007-07-27 14:53:42Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/i80321/obio.c 236987 2012-06-13 04:38:09Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -120,7 +120,7 @@ obio_alloc_resource(device_t bus, device_t child, int type, int *rid,
 
 
 	rv = rman_reserve_resource(rm, start, end, count, flags, child);
-	if (rv == NULL) 
+	if (rv == NULL)
 		return (NULL);
 	if (type == SYS_RES_IRQ)
 		return (rv);

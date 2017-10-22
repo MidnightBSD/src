@@ -1,0 +1,2 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_CAPSICUM 229319 2012-01-02 21:57:58Z rwatson $
+Set to not build Capsicum support into system programs.

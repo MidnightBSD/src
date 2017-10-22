@@ -1,4 +1,4 @@
-$ $FreeBSD: stable/9/lib/libc/nls/hu_HU.ISO8859-2.msg 199417 2009-11-17 18:57:44Z gabor $
+$ $FreeBSD: release/10.0.0/lib/libc/nls/hu_HU.ISO8859-2.msg 199417 2009-11-17 18:57:44Z gabor $
 $
 $ Message catalog for hu_HU.ISO8859-2 locale
 $

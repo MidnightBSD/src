@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)ln.c	8.2 (Berkeley) 3/31/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/ln/ln.c 219680 2011-03-15 22:22:11Z jilles $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/ln/ln.c 251261 2013-06-02 17:55:00Z eadler $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -54,19 +54,19 @@ __FBSDID("$FreeBSD: stable/9/bin/ln/ln.c 219680 2011-03-15 22:22:11Z jilles $");
 #include <string.h>
 #include <unistd.h>
 
-int	fflag;				/* Unlink existing files. */
-int	Fflag;				/* Remove empty directories also. */
-int	hflag;				/* Check new name for symlink first. */
-int	iflag;				/* Interactive mode. */
-int	Pflag;				/* Create hard links to symlinks. */
-int	sflag;				/* Symbolic, not hard, link. */
-int	vflag;				/* Verbose output. */
-int	wflag;				/* Warn if symlink target does not
+static int	fflag;			/* Unlink existing files. */
+static int	Fflag;			/* Remove empty directories also. */
+static int	hflag;			/* Check new name for symlink first. */
+static int	iflag;			/* Interactive mode. */
+static int	Pflag;			/* Create hard links to symlinks. */
+static int	sflag;			/* Symbolic, not hard, link. */
+static int	vflag;			/* Verbose output. */
+static int	wflag;			/* Warn if symlink target does not
 					 * exist, and -f is not enabled. */
-char	linkch;
+static char	linkch;
 
-int	linkit(const char *, const char *, int);
-void	usage(void);
+static int	linkit(const char *, const char *, int);
+static void	usage(void);
 
 int
 main(int argc, char *argv[])
@@ -219,7 +219,7 @@ samedirent(const char *path1, const char *path2)
 	return sb1.st_dev == sb2.st_dev && sb1.st_ino == sb2.st_ino;
 }
 
-int
+static int
 linkit(const char *source, const char *target, int isdir)
 {
 	struct stat sb;
@@ -347,7 +347,7 @@ linkit(const char *source, const char *target, int isdir)
 	return (0);
 }
 
-void
+static void
 usage(void)
 {
 	(void)fprintf(stderr, "%s\n%s\n%s\n",

@@ -37,7 +37,7 @@ static const char	elsieid[] = "@(#)strftime.3	8.3";
 static const char	sccsid[] = "@(#)strftime.c	5.4 (Berkeley) 3/14/89";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/stdtime/strftime.c 235785 2012-05-22 14:40:39Z theraven $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdtime/strftime.c 237211 2012-06-17 21:40:13Z jilles $");
 
 #include "tzfile.h"
 #include <fcntl.h>
@@ -67,7 +67,7 @@ extern char *	tzname[];
 #define PAD_SPACE	2
 #define PAD_ZERO	3
 
-static const char* fmt_padding[][4] = {
+static const char fmt_padding[][4][5] = {
 	/* DEFAULT,	LESS,	SPACE,	ZERO */
 #define PAD_FMT_MONTHDAY	0
 #define PAD_FMT_HMS		0

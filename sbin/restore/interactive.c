@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)interactive.c	8.5 (Berkeley) 5/1/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/restore/interactive.c 203155 2010-01-29 10:00:42Z jh $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/restore/interactive.c 241013 2012-09-27 23:31:06Z mdf $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -47,6 +47,7 @@ __FBSDID("$FreeBSD: stable/9/sbin/restore/interactive.c 203155 2010-01-29 10:00:
 #include <glob.h>
 #include <limits.h>
 #include <setjmp.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -675,7 +676,8 @@ formatf(struct afile *list, int nentry)
 		for (j = 0; j < columns; j++) {
 			fp = &list[j * lines + i];
 			if (vflag) {
-				fprintf(stderr, "%*d ", precision, fp->fnum);
+				fprintf(stderr, "%*ju ",
+				    precision, (uintmax_t)fp->fnum);
 				fp->len += precision + 1;
 			}
 			if (haveprefix) {

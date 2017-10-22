@@ -33,7 +33,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/libexec/rpc.rusersd/rusers_proc.c 202210 2010-01-13 18:28:58Z ed $";
+  "$FreeBSD: release/10.0.0/libexec/rpc.rusersd/rusers_proc.c 241777 2012-10-20 10:33:15Z ed $";
 #endif /* not lint */
 
 #ifdef DEBUG
@@ -53,6 +53,8 @@ static const char rcsid[] =
 #endif
 #include <rpcsvc/rnusers.h>
 
+#include "extern.h"
+
 #ifndef _PATH_DEV
 #define _PATH_DEV "/dev"
 #endif
@@ -60,10 +62,6 @@ static const char rcsid[] =
 static utmpidle utmp_idle[MAXUSERS];
 static utmp old_utmp[MAXUSERS];
 static struct utmpx utmp_list[MAXUSERS];
-
-extern int from_inetd;
-
-void rusers_service(struct svc_req *, SVCXPRT *);
 
 #ifdef XIDLE
 static Display *dpy;

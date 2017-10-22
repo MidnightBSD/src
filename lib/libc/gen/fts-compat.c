@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)fts.c	8.6 (Berkeley) 8/14/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/fts-compat.c 247273 2013-02-25 18:07:20Z jilles $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/fts-compat.c 241010 2012-09-27 22:05:54Z jilles $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -51,6 +51,8 @@ __FBSDID("$FreeBSD: stable/9/lib/libc/gen/fts-compat.c 247273 2013-02-25 18:07:2
 #include <unistd.h>
 #include "fts-compat.h"
 #include "un-namespace.h"
+
+#include "gen-private.h"
 
 FTSENT	*__fts_children_44bsd(FTS *, int);
 int	 __fts_close_44bsd(FTS *);
@@ -713,7 +715,7 @@ fts_build(sp, type)
 	 */
 	cderrno = 0;
 	if (nlinks || type == BREAD) {
-		if (fts_safe_changedir(sp, cur, dirfd(dirp), NULL)) {
+		if (fts_safe_changedir(sp, cur, _dirfd(dirp), NULL)) {
 			if (nlinks && type == BREAD)
 				cur->fts_errno = errno;
 			cur->fts_flags |= FTS_DONTCHDIR;

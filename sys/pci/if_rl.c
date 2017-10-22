@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/pci/if_rl.c 245857 2013-01-24 01:07:34Z yongari $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/pci/if_rl.c 245485 2013-01-16 01:30:46Z yongari $");
 
 /*
  * RealTek 8129/8139 PCI NIC driver
@@ -1567,7 +1567,7 @@ rl_encap(struct rl_softc *sc, struct mbuf **m_head)
 	 */
 	if (m->m_next != NULL || (mtod(m, uintptr_t) & 3) != 0 ||
 	    (padlen > 0 && M_TRAILINGSPACE(m) < padlen)) {
-		m = m_defrag(*m_head, M_DONTWAIT);
+		m = m_defrag(*m_head, M_NOWAIT);
 		if (m == NULL) {
 			m_freem(*m_head);
 			*m_head = NULL;

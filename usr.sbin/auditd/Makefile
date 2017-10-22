@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/usr.sbin/auditd/Makefile 204352 2010-02-26 09:41:16Z ru $
+# $FreeBSD: release/10.0.0/usr.sbin/auditd/Makefile 204352 2010-02-26 09:41:16Z ru $
 #
 
 OPENBSMDIR=${.CURDIR}/../../contrib/openbsm

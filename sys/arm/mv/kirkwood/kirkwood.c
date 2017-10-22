@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/mv/kirkwood/kirkwood.c 209131 2010-06-13 13:28:53Z raj $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/mv/kirkwood/kirkwood.c 238873 2012-07-28 21:56:24Z hrs $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -73,6 +73,8 @@ get_tclk(void)
 	 */
 	soc_id(&dev, &rev);
 	if (dev == MV_DEV_88F6281 && (rev == 2 || rev == 3))
+		return (TCLK_200MHZ);
+	if (dev == MV_DEV_88F6282)
 		return (TCLK_200MHZ);
 
 	return (TCLK_166MHZ);

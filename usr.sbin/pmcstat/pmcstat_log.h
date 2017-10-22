@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/pmcstat/pmcstat_log.h 212176 2010-09-03 13:54:02Z fabient $
+ * $FreeBSD: release/10.0.0/usr.sbin/pmcstat/pmcstat_log.h 241737 2012-10-19 14:49:42Z ed $
  */
 
 #ifndef	_PMCSTAT_LOG_H_
@@ -176,8 +176,8 @@ extern int pmcstat_npmcs; /* PMC count. */
 /*
  * Top mode global options.
  */
-float pmcstat_threshold; /* Threshold to filter node. */
-int pmcstat_pmcinfilter; /* PMC index displayed. */
+extern float pmcstat_threshold; /* Threshold to filter node. */
+extern int pmcstat_pmcinfilter; /* PMC index displayed. */
 
 /* Function prototypes */
 const char *pmcstat_pmcid_to_name(pmc_id_t _pmcid);

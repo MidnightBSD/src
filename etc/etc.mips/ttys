@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/etc/etc.mips/ttys 220154 2011-03-30 08:22:29Z ed $
+# $FreeBSD: release/10.0.0/etc/etc.mips/ttys 220154 2011-03-30 08:22:29Z ed $
 #	@(#)ttys	5.1 (Berkeley) 4/17/89
 #
 # This file specifies various information about terminals on the system.

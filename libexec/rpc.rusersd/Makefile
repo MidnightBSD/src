@@ -1,7 +1,7 @@
-# $FreeBSD: stable/9/libexec/rpc.rusersd/Makefile 202210 2010-01-13 18:28:58Z ed $
+# $FreeBSD: release/10.0.0/libexec/rpc.rusersd/Makefile 241777 2012-10-20 10:33:15Z ed $
 
 PROG =	rpc.rusersd
-SRCS =	rusersd.c rusers_proc.c
+SRCS =	rusersd.c rusers_proc.c extern.h
 MAN =	rpc.rusersd.8
 
 DPADD=	${LIBRPCSVC} ${LIBUTIL}

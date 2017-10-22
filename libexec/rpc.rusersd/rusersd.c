@@ -33,7 +33,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/libexec/rpc.rusersd/rusersd.c 201192 2009-12-29 10:28:20Z ed $";
+  "$FreeBSD: release/10.0.0/libexec/rpc.rusersd/rusersd.c 241777 2012-10-20 10:33:15Z ed $";
 #endif /* not lint */
 
 #include <stdlib.h>
@@ -43,7 +43,7 @@ static const char rcsid[] =
 #include <syslog.h>
 #include <rpcsvc/rnusers.h>
 
-extern void rusers_service(struct svc_req *, SVCXPRT *);
+#include "extern.h"
 
 int from_inetd = 1;
 

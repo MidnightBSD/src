@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/procdesc.h 224987 2011-08-18 22:51:30Z jonathan $
+ * $FreeBSD: release/10.0.0/sys/sys/procdesc.h 255219 2013-09-05 00:09:56Z pjd $
  */
 
 #ifndef _SYS_PROCDESC_H_
@@ -92,8 +92,8 @@ struct procdesc {
  * In-kernel interfaces to process descriptors.
  */
 int	 procdesc_exit(struct proc *);
-int	 procdesc_find(struct thread *, int fd, cap_rights_t, struct proc **);
-int	 kern_pdgetpid(struct thread *, int fd, cap_rights_t, pid_t *pidp);
+int	 procdesc_find(struct thread *, int fd, cap_rights_t *, struct proc **);
+int	 kern_pdgetpid(struct thread *, int fd, cap_rights_t *, pid_t *pidp);
 void	 procdesc_new(struct proc *, int);
 void	 procdesc_finit(struct procdesc *, struct file *);
 pid_t	 procdesc_pid(struct file *);

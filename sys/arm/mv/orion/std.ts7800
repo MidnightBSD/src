@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/arm/mv/orion/std.ts7800 220653 2011-04-15 13:37:43Z philip $
+# $FreeBSD: release/10.0.0/sys/arm/mv/orion/std.ts7800 220653 2011-04-15 13:37:43Z philip $
 
 include	"../mv/std.mv"
 files	"../mv/orion/files.ts7800"

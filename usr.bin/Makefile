@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
-# $FreeBSD: stable/9/usr.bin/Makefile 236244 2012-05-29 16:21:43Z jpaetzel $
+# $FreeBSD: release/10.0.0/usr.bin/Makefile 256055 2013-10-04 18:27:02Z nwhitehorn $
 
 .include <bsd.own.mk>
 
@@ -12,6 +12,7 @@
 SUBDIR=	alias \
 	apply \
 	asa \
+	${_atf} \
 	awk \
 	banner \
 	basename \
@@ -36,6 +37,7 @@ SUBDIR=	alias \
 	ctlstat \
 	cut \
 	dirname \
+	dtc \
 	du \
 	ee \
 	elf2aout \
@@ -66,9 +68,10 @@ SUBDIR=	alias \
 	id \
 	ipcrm \
 	ipcs \
+	iscsictl \
 	join \
 	jot \
-	kdump \
+	${_kdump} \
 	keylogin \
 	keylogout \
 	killall \
@@ -96,6 +99,7 @@ SUBDIR=	alias \
 	m4 \
 	${_makewhatis} \
 	${_man} \
+	mandoc \
 	mesg \
 	minigzip \
 	ministat \
@@ -121,12 +125,14 @@ SUBDIR=	alias \
 	pagesize \
 	passwd \
 	paste \
+	patch \
 	pathchk \
 	perror \
 	pr \
 	printenv \
 	printf \
 	procstat \
+	protect \
 	rctl \
 	renice \
 	rev \
@@ -142,6 +148,7 @@ SUBDIR=	alias \
 	shar \
 	showmount \
 	sockstat \
+	sort \
 	split \
 	stat \
 	stdbuf \
@@ -162,7 +169,7 @@ SUBDIR=	alias \
 	tr \
 	true \
 	truncate \
-	truss \
+	${_truss} \
 	tset \
 	tsort \
 	tty \
@@ -203,19 +210,12 @@ SUBDIR=	alias \
 SUBDIR+=	at
 .endif
 
+.if ${MK_ATF} != "no"
+_atf=		atf
+.endif
+
 .if ${MK_ATM} != "no"
 SUBDIR+=	atm
-.endif
-
-.if ${MK_MAN_UTILS} != "no"
-SUBDIR+=	catman
-.endif
-
-.if ${MK_BIND_UTILS} != "no"
-SUBDIR+=	dig
-SUBDIR+=	host
-SUBDIR+=	nslookup
-SUBDIR+=	nsupdate
 .endif
 
 .if ${MK_BLUETOOTH} != "no"
@@ -234,6 +234,10 @@ SUBDIR+=	calendar
 _clang=		clang
 .endif
 
+.if ${MK_GROFF} != "no"
+SUBDIR+=	vgrind
+.endif
+
 .if ${MK_HESIOD} != "no"
 SUBDIR+=	hesinfo
 .endif
@@ -244,15 +248,18 @@ _mkcsmapper=	mkcsmapper
 _mkesdb=	mkesdb
 .endif
 
-.if ${MK_GROFF} != "no"
-SUBDIR+=	vgrind
+.if ${MK_KDUMP} != "no"
+SUBDIR+=        kdump
+SUBDIR+=        truss
 .endif
 
-.if ${MK_OPENSSL} != "no"
-SUBDIR+=	bc
-SUBDIR+=	chkey
-SUBDIR+=	dc
-SUBDIR+=	newkey
+.if ${MK_KERBEROS_SUPPORT} != "no"
+SUBDIR+=	compile_et
+.endif
+
+.if ${MK_LDNS_UTILS} != "no"
+SUBDIR+=	drill
+SUBDIR+=	host
 .endif
 
 .if ${MK_LIBTHR} != "no"
@@ -272,10 +279,15 @@ SUBDIR+=	msgs
 .endif
 
 .if ${MK_MAKE} != "no"
+.if ${MK_BMAKE} != "no"
+SUBDIR+=	bmake
+.else
 SUBDIR+=	make
+.endif
 .endif
 
 .if ${MK_MAN_UTILS} != "no"
+SUBDIR+=	catman
 _makewhatis=	makewhatis
 _man=		man
 .endif
@@ -288,6 +300,17 @@ SUBDIR+=	nc
 SUBDIR+=	ypcat
 SUBDIR+=	ypmatch
 SUBDIR+=	ypwhich
+.endif
+
+.if ${MK_OPENSSH} != "no"
+SUBDIR+=	ssh-copy-id
+.endif
+
+.if ${MK_OPENSSL} != "no"
+SUBDIR+=	bc
+SUBDIR+=	chkey
+SUBDIR+=	dc
+SUBDIR+=	newkey
 .endif
 
 .if ${MK_QUOTAS} != "no"
@@ -319,7 +342,6 @@ SUBDIR+=	ul
 SUBDIR+=	ar
 SUBDIR+=	c89
 SUBDIR+=	c99
-SUBDIR+=	compile_et
 SUBDIR+=	ctags
 SUBDIR+=	file2c
 SUBDIR+=	gprof
@@ -342,7 +364,10 @@ SUBDIR+=	usbhidctl
 SUBDIR+=	last
 SUBDIR+=	users
 SUBDIR+=	who
-SUBDIR+=	wtmpcvt
+.endif
+
+.if ${MK_SVN} == "yes" || ${MK_SVNLITE} == "yes"
+SUBDIR+=	svn
 .endif
 
 .include <bsd.arch.inc.mk>

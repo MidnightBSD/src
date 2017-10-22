@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/bsdinstall/distfetch/distfetch.c 232433 2012-03-03 02:23:09Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/distfetch/distfetch.c 232200 2012-02-26 22:09:21Z nwhitehorn $
  */
 
 #include <sys/param.h>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/hwpmc/hwpmc_uncore.h 237444 2012-06-22 14:58:40Z gnn $
+ * $FreeBSD: release/10.0.0/sys/dev/hwpmc/hwpmc_uncore.h 232366 2012-03-01 21:23:26Z davide $
  */
 
 #ifndef _DEV_HWPMC_UNCORE_H_

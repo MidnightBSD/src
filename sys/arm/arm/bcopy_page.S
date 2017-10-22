@@ -40,7 +40,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/bcopy_page.S 172614 2007-10-13 12:05:03Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/bcopy_page.S 248361 2013-03-16 02:48:49Z andrew $");
 
 #include "assym.s"
 
@@ -117,6 +117,7 @@ ENTRY(bcopy_page)
 	bne	1b
 
 	RESTORE_REGS		/* ...and return. */
+END(bcopy_page)
 
 /*
  * bzero_page(dest)
@@ -178,6 +179,7 @@ ENTRY(bzero_page)
 	bne	1b
 
 	ldmfd	sp!, {r4-r8, pc}
+END(bzero_page)
 
 #else	/* _ARM_ARCH_5E */
 
@@ -246,6 +248,7 @@ ENTRY(bcopy_page)
 	bgt	1b
 	ldmfd	sp!, {r4, r5}
 	RET
+END(bcopy_page)
 
 /*
  * armv5e version of bzero_page
@@ -273,4 +276,5 @@ ENTRY(bzero_page)
 	subs	r1, r1, #128
 	bne	1b
 	RET
+END(bzero_page)
 #endif	/* _ARM_ARCH_5E */

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__RCSID("$FreeBSD: stable/9/usr.sbin/mptutil/mpt_config.c 215678 2010-11-22 14:36:04Z jhb $");
+__RCSID("$FreeBSD: release/10.0.0/usr.sbin/mptutil/mpt_config.c 228990 2011-12-30 10:58:14Z uqs $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -482,7 +482,7 @@ restart:
 		if (state->list->drives[i]->PhysDiskID == state->target_id)
 			goto restart;
 
-	/* Seach volumes second. */
+	/* Search volumes second. */
 	vol = state->ioc2->RaidVolume;
 	for (i = 0; i < state->ioc2->NumActiveVolumes; vol++, i++)
 		if (vol->VolumeID == state->target_id)

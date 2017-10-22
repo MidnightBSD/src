@@ -1,8 +1,8 @@
-# $FreeBSD: stable/9/usr.sbin/bsdinstall/scripts/Makefile 248240 2013-03-13 13:50:50Z nwhitehorn $
+# $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/scripts/Makefile 256361 2013-10-11 23:12:05Z dteske $
 
-SCRIPTS= auto adduser checksum config docsinstall hostname jail keymap \
-	 mirrorselect mount netconfig netconfig_ipv4 netconfig_ipv6 rootpass \
-	 script services time umount wlanconfig
+SCRIPTS= auto adduser checksum config docsinstall entropy hostname jail \
+	 keymap mirrorselect mount netconfig netconfig_ipv4 netconfig_ipv6 \
+	 rootpass script services time umount wlanconfig zfsboot
 BINDIR= /usr/libexec/bsdinstall
 
 NO_MAN=	true

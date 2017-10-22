@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/share/examples/printing/hpvf 230653 2012-01-28 19:48:44Z eadler $
+# $FreeBSD: release/10.0.0/share/examples/printing/hpvf 229831 2012-01-09 00:48:19Z eadler $
 #
 #  hpvf - Convert GIF files into HP/PCL, then print
 #  Installed in /usr/local/libexec/hpvf

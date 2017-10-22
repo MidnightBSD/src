@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)from: main.c	8.1 (Berkeley) 6/20/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/libexec/getty/main.c 216582 2010-12-20 08:29:54Z charnier $");
+__FBSDID("$FreeBSD: release/10.0.0/libexec/getty/main.c 216582 2010-12-20 08:29:54Z charnier $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>

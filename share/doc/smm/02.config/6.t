@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)6.t	8.1 (Berkeley) 6/8/93
-.\" $FreeBSD: stable/9/share/doc/smm/02.config/6.t 216178 2010-12-04 10:11:20Z uqs $
+.\" $FreeBSD: release/10.0.0/share/doc/smm/02.config/6.t 216178 2010-12-04 10:11:20Z uqs $
 .\"
 .\".ds RH "Adding New Devices
 .ne 2i

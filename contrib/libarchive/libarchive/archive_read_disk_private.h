@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/contrib/libarchive/libarchive/archive_read_disk_private.h 229592 2012-01-05 12:06:54Z mm $
+ * $FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_read_disk_private.h 238856 2012-07-28 06:38:44Z mm $
  */
 
 #ifndef __LIBARCHIVE_BUILD
@@ -32,6 +32,9 @@
 
 #ifndef ARCHIVE_READ_DISK_PRIVATE_H_INCLUDED
 #define ARCHIVE_READ_DISK_PRIVATE_H_INCLUDED
+
+struct tree;
+struct archive_entry;
 
 struct archive_read_disk {
 	struct archive	archive;
@@ -51,12 +54,39 @@ struct archive_read_disk {
 	 */
 	char	follow_symlinks;  /* Either 'L' or 'P'. */
 
-	const char * (*lookup_gname)(void *private, gid_t gid);
+	/* Directory traversals. */
+	struct tree *tree;
+	int	(*open_on_current_dir)(struct tree*, const char *, int);
+	int	(*tree_current_dir_fd)(struct tree*);
+	int	(*tree_enter_working_dir)(struct tree*);
+
+	/* Set 1 if users request to restore atime . */
+	int		 restore_time;
+	/* Set 1 if users request to honor nodump flag . */
+	int		 honor_nodump;
+	/* Set 1 if users request to enable mac copyfile. */
+	int		 enable_copyfile;
+	/* Set 1 if users request to traverse mount points. */
+	int		 traverse_mount_points;
+
+	const char * (*lookup_gname)(void *private, int64_t gid);
 	void	(*cleanup_gname)(void *private);
 	void	 *lookup_gname_data;
-	const char * (*lookup_uname)(void *private, gid_t gid);
+	const char * (*lookup_uname)(void *private, int64_t uid);
 	void	(*cleanup_uname)(void *private);
 	void	 *lookup_uname_data;
+
+	int	(*metadata_filter_func)(struct archive *, void *,
+			struct archive_entry *);
+	void	*metadata_filter_data;
+
+	/* ARCHIVE_MATCH object. */
+	struct archive	*matching;
+	/* Callback function, this will be invoked when ARCHIVE_MATCH
+	 * archive_match_*_excluded_ae return true. */
+	void	(*excluded_cb_func)(struct archive *, void *,
+			 struct archive_entry *);
+	void	*excluded_cb_data;
 };
 
 #endif

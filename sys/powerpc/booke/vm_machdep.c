@@ -26,7 +26,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *	from: $FreeBSD: stable/9/sys/powerpc/booke/vm_machdep.c 217561 2011-01-18 21:57:02Z kib $
+ *	from: $FreeBSD: release/10.0.0/sys/powerpc/booke/vm_machdep.c 255786 2013-09-22 13:36:52Z glebius $
  */
 /*-
  * Copyright (c) 1982, 1986 The Regents of the University of California.
@@ -97,7 +97,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/booke/vm_machdep.c 217561 2011-01-18 21:57:02Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/booke/vm_machdep.c 255786 2013-09-22 13:36:52Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -136,6 +136,17 @@ __FBSDID("$FreeBSD: stable/9/sys/powerpc/booke/vm_machdep.c 217561 2011-01-18 21
 #ifndef NSFBUFS
 #define NSFBUFS		(512 + maxusers * 16)
 #endif
+
+static int nsfbufs;
+static int nsfbufspeak;
+static int nsfbufsused;
+
+SYSCTL_INT(_kern_ipc, OID_AUTO, nsfbufs, CTLFLAG_RDTUN, &nsfbufs, 0,
+    "Maximum number of sendfile(2) sf_bufs available");
+SYSCTL_INT(_kern_ipc, OID_AUTO, nsfbufspeak, CTLFLAG_RD, &nsfbufspeak, 0,
+    "Number of sendfile(2) sf_bufs at peak usage");
+SYSCTL_INT(_kern_ipc, OID_AUTO, nsfbufsused, CTLFLAG_RD, &nsfbufsused, 0,
+    "Number of sendfile(2) sf_bufs in use");
 
 static void sf_buf_init(void *arg);
 SYSINIT(sock_sf, SI_SUB_MBUF, SI_ORDER_ANY, sf_buf_init, NULL);
@@ -260,7 +271,7 @@ sf_buf_init(void *arg)
 
 	sf_buf_active = hashinit(nsfbufs, M_TEMP, &sf_buf_hashmask);
 	TAILQ_INIT(&sf_buf_freelist);
-	sf_base = kmem_alloc_nofault(kernel_map, nsfbufs * PAGE_SIZE);
+	sf_base = kva_alloc(nsfbufs * PAGE_SIZE);
 	sf_bufs = malloc(nsfbufs * sizeof(struct sf_buf), M_TEMP, M_NOWAIT | M_ZERO);
 
 	for (i = 0; i < nsfbufs; i++) {
@@ -300,7 +311,7 @@ sf_buf_alloc(struct vm_page *m, int flags)
 			goto done;
 
 		sf_buf_alloc_want++;
-		mbstat.sf_allocwait++;
+		SFSTAT_INC(sf_allocwait);
 		error = msleep(&sf_buf_freelist, &sf_buf_lock,
 		    (flags & SFB_CATCH) ? PCATCH | PVM : PVM, "sfbufa", 0);
 		sf_buf_alloc_want--;

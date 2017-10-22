@@ -33,7 +33,7 @@
 
 /* @(#)log.c	8.2 (Berkeley) 11/30/93 */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/bsdsrc/b_log.c 176449 2008-02-22 02:26:51Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/bsdsrc/b_log.c 176449 2008-02-22 02:26:51Z das $");
 
 #include <math.h>
 #include <errno.h>

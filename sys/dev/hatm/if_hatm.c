@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/hatm/if_hatm.c 233024 2012-03-16 08:46:58Z scottl $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/hatm/if_hatm.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -1686,7 +1686,7 @@ hatm_attach(device_t dev)
 	 * 4.2 BIOS Configuration
 	 */
 	v = pci_read_config(dev, PCIR_COMMAND, 2);
-	v |= PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN | PCIM_CMD_MWRICEN;
+	v |= PCIM_CMD_BUSMASTEREN | PCIM_CMD_MWRICEN;
 	pci_write_config(dev, PCIR_COMMAND, v, 2);
 
 	/*
@@ -1702,12 +1702,6 @@ hatm_attach(device_t dev)
 	/*
 	 * Map memory
 	 */
-	v = pci_read_config(dev, PCIR_COMMAND, 2);
-	if (!(v & PCIM_CMD_MEMEN)) {
-		device_printf(dev, "failed to enable memory\n");
-		error = ENXIO;
-		goto failed;
-	}
 	sc->memid = PCIR_BAR(0);
 	sc->memres = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &sc->memid,
 	    RF_ACTIVE);

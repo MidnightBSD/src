@@ -1,5 +1,5 @@
-/* $OpenBSD: myproposal.h,v 1.29 2012/06/28 05:07:45 dtucker Exp $ */
-/* $FreeBSD: stable/9/crypto/openssh/myproposal.h 247485 2013-02-28 18:43:50Z des $ */
+/* $OpenBSD: myproposal.h,v 1.32 2013/01/08 18:49:04 markus Exp $ */
+/* $FreeBSD: release/10.0.0/crypto/openssh/myproposal.h 255767 2013-09-21 21:36:09Z des $ */
 
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
@@ -27,6 +27,8 @@
 
 #include <openssl/opensslv.h>
 
+/* conditional algorithm support */
+
 #ifdef OPENSSL_HAS_ECC
 # define KEX_ECDH_METHODS \
 	"ecdh-sha2-nistp256," \
@@ -46,12 +48,22 @@
 # define HOSTKEY_ECDSA_METHODS
 #endif
 
-/* Old OpenSSL doesn't support what we need for DHGEX-sha256 */
-#if OPENSSL_VERSION_NUMBER >= 0x00907000L
+#ifdef OPENSSL_HAVE_EVPGCM
+# define AESGCM_CIPHER_MODES \
+	"aes128-gcm@openssh.com,aes256-gcm@openssh.com,"
+#else
+# define AESGCM_CIPHER_MODES
+#endif
+
+#ifdef HAVE_EVP_SHA256
 # define KEX_SHA256_METHODS \
 	"diffie-hellman-group-exchange-sha256,"
+#define	SHA2_HMAC_MODES \
+	"hmac-sha2-256," \
+	"hmac-sha2-512,"
 #else
 # define KEX_SHA256_METHODS
+# define SHA2_HMAC_MODES
 #endif
 
 # define KEX_DEFAULT_KEX \
@@ -71,26 +83,33 @@
 	"ssh-rsa," \
 	"ssh-dss"
 
+/* the actual algorithms */
+
 #define	KEX_DEFAULT_ENCRYPT \
 	"aes128-ctr,aes192-ctr,aes256-ctr," \
 	"arcfour256,arcfour128," \
+	AESGCM_CIPHER_MODES \
 	"aes128-cbc,3des-cbc,blowfish-cbc,cast128-cbc," \
 	"aes192-cbc,aes256-cbc,arcfour,rijndael-cbc@lysator.liu.se"
 #ifdef	NONE_CIPHER_ENABLED
 #define KEX_ENCRYPT_INCLUDE_NONE KEX_DEFAULT_ENCRYPT \
 	",none"
 #endif
-#ifdef HAVE_EVP_SHA256
-#define	SHA2_HMAC_MODES \
-	"hmac-sha2-256," \
-	"hmac-sha2-512,"
-#else
-# define SHA2_HMAC_MODES
-#endif
+
 #define	KEX_DEFAULT_MAC \
+	"hmac-md5-etm@openssh.com," \
+	"hmac-sha1-etm@openssh.com," \
+	"umac-64-etm@openssh.com," \
+	"umac-128-etm@openssh.com," \
+	"hmac-sha2-256-etm@openssh.com," \
+	"hmac-sha2-512-etm@openssh.com," \
+	"hmac-ripemd160-etm@openssh.com," \
+	"hmac-sha1-96-etm@openssh.com," \
+	"hmac-md5-96-etm@openssh.com," \
 	"hmac-md5," \
 	"hmac-sha1," \
 	"umac-64@openssh.com," \
+	"umac-128@openssh.com," \
 	SHA2_HMAC_MODES \
 	"hmac-ripemd160," \
 	"hmac-ripemd160@openssh.com," \

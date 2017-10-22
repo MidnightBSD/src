@@ -7,7 +7,7 @@
 # Be sure to include a meta-character into the command line, so that
 # really our shell is executed.
 #
-# $FreeBSD: stable/9/tools/regression/usr.bin/make/shell/path_select/Makefile 146822 2005-05-31 14:13:07Z harti $
+# $FreeBSD: release/10.0.0/tools/regression/usr.bin/make/shell/path_select/Makefile 146822 2005-05-31 14:13:07Z harti $
 #
 
 .ifmake sh_test

@@ -18,7 +18,7 @@
 
 /* Written August 1992 by Mike Haertel. */
 
-/* $FreeBSD: stable/9/gnu/usr.bin/grep/search.c 155829 2006-02-19 04:27:39Z tjr $ */
+/* $FreeBSD: release/10.0.0/gnu/usr.bin/grep/search.c 250823 2013-05-20 03:15:25Z pfg $ */
 
 #ifndef _GNU_SOURCE
 # define _GNU_SOURCE 1
@@ -112,7 +112,7 @@ static void
 kwsinit (void)
 {
   static char trans[NCHAR];
-  int i;
+  size_t i;
 
   if (match_icase)
     for (i = 0; i < NCHAR; ++i)
@@ -326,7 +326,8 @@ EGexecute (char const *buf, size_t size, size_t *match_size, int exact)
 {
   register char const *buflim, *beg, *end;
   char eol = eolbyte;
-  int backref, start, len;
+  int backref;
+  ptrdiff_t start, len;
   struct kwsmatch kwsm;
   size_t i, ret_val;
   static int use_dfa;

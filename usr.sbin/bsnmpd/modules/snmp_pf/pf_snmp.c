@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_pf/pf_snmp.c 216294 2010-12-08 13:51:38Z syrinx $
+ * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_pf/pf_snmp.c 240233 2012-09-08 06:41:54Z glebius $
  */
 
 #include <sys/queue.h>
@@ -586,11 +586,8 @@ pf_iftable(struct snmp_context __unused *ctx, struct snmp_value *val,
 			val->v.uint32 =
 			    (time(NULL) - e->pfi.pfik_tzero) * 100;
 			break;
-		case LEAF_pfInterfacesIfRefsState:
-			val->v.uint32 = e->pfi.pfik_states;
-			break;
 		case LEAF_pfInterfacesIfRefsRule:
-			val->v.uint32 = e->pfi.pfik_rules;
+			val->v.uint32 = e->pfi.pfik_rulerefs;
 			break;
 		case LEAF_pfInterfacesIf4BytesInPass:
 			val->v.counter64 =

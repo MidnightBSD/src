@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)timezone.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/timezone.c 200150 2009-12-05 19:31:38Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/timezone.c 229403 2012-01-03 18:51:58Z ed $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -59,7 +59,7 @@ timezone(int zone, int dst)
 			*end;
 
 	if ( (beg = getenv("TZNAME")) ) {	/* set in environment */
-		if ( (end = index(beg, ',')) ) {/* "PST,PDT" */
+		if ((end = strchr(beg, ','))) {	/* "PST,PDT" */
 			if (dst)
 				return(++end);
 			*end = '\0';

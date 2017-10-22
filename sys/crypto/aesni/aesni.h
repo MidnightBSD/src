@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/crypto/aesni/aesni.h 231979 2012-02-21 20:56:03Z kib $
+ * $FreeBSD: release/10.0.0/sys/crypto/aesni/aesni.h 258212 2013-11-16 09:01:24Z jmg $
  */
 
 #ifndef _AESNI_H_
@@ -71,28 +71,30 @@ struct aesni_session {
 /*
  * Internal functions, implemented in assembler.
  */
-void aesni_enc(int rounds, const uint8_t *key_schedule,
-    const uint8_t from[AES_BLOCK_LEN], uint8_t to[AES_BLOCK_LEN],
-    const uint8_t iv[AES_BLOCK_LEN]);
-void aesni_dec(int rounds, const uint8_t *key_schedule,
-    const uint8_t from[AES_BLOCK_LEN], uint8_t to[AES_BLOCK_LEN],
-    const uint8_t iv[AES_BLOCK_LEN]);
-void aesni_set_enckey(const uint8_t *userkey, uint8_t *encrypt_schedule,
-    int number_of_rounds);
-void aesni_set_deckey(const uint8_t *encrypt_schedule,
-    uint8_t *decrypt_schedule, int number_of_rounds);
+void aesni_set_enckey(const uint8_t *userkey,
+    uint8_t *encrypt_schedule /*__aligned(16)*/, int number_of_rounds);
+void aesni_set_deckey(const uint8_t *encrypt_schedule /*__aligned(16)*/,
+    uint8_t *decrypt_schedule /*__aligned(16)*/, int number_of_rounds);
 
 /*
  * Slightly more public interfaces.
  */
-void aesni_encrypt_cbc(int rounds, const void *key_schedule, size_t len,
+void aesni_encrypt_cbc(int rounds, const void *key_schedule /*__aligned(16)*/,
+    size_t len, const uint8_t *from, uint8_t *to,
+    const uint8_t iv[AES_BLOCK_LEN]);
+void aesni_decrypt_cbc(int rounds, const void *key_schedule /*__aligned(16)*/,
+    size_t len, uint8_t *buf, const uint8_t iv[AES_BLOCK_LEN]);
+void aesni_encrypt_ecb(int rounds, const void *key_schedule /*__aligned(16)*/,
+    size_t len, const uint8_t *from, uint8_t *to);
+void aesni_decrypt_ecb(int rounds, const void *key_schedule /*__aligned(16)*/,
+    size_t len, const uint8_t *from, uint8_t *to);
+
+void aesni_encrypt_xts(int rounds, const void *data_schedule /*__aligned(16)*/,
+    const void *tweak_schedule /*__aligned(16)*/, size_t len,
     const uint8_t *from, uint8_t *to, const uint8_t iv[AES_BLOCK_LEN]);
-void aesni_decrypt_cbc(int rounds, const void *key_schedule, size_t len,
-    const uint8_t *from, const uint8_t iv[AES_BLOCK_LEN]);
-void aesni_encrypt_ecb(int rounds, const void *key_schedule, size_t len,
-    const uint8_t from[AES_BLOCK_LEN], uint8_t to[AES_BLOCK_LEN]);
-void aesni_decrypt_ecb(int rounds, const void *key_schedule, size_t len,
-    const uint8_t from[AES_BLOCK_LEN], uint8_t to[AES_BLOCK_LEN]);
+void aesni_decrypt_xts(int rounds, const void *data_schedule /*__aligned(16)*/,
+    const void *tweak_schedule /*__aligned(16)*/, size_t len,
+    const uint8_t *from, uint8_t *to, const uint8_t iv[AES_BLOCK_LEN]);
 
 int aesni_cipher_setup(struct aesni_session *ses,
     struct cryptoini *encini);
@@ -102,4 +104,4 @@ int aesni_cipher_process(struct aesni_session *ses,
 uint8_t *aesni_cipher_alloc(struct cryptodesc *enccrd, struct cryptop *crp,
     int *allocated);
 
-#endif
+#endif /* _AESNI_H_ */

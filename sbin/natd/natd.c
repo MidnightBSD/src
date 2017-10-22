@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/natd/natd.c 242544 2012-11-04 01:21:49Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/natd/natd.c 241844 2012-10-22 03:00:37Z eadler $");
 
 #define SYSLOG_NAMES
 
@@ -71,8 +71,8 @@ struct instance {
 static LIST_HEAD(, instance) root = LIST_HEAD_INITIALIZER(root);
 
 struct libalias *mla;
-struct instance *mip;
-int ninstance = 1;
+static struct instance *mip;
+static int ninstance = 1;
 
 /* 
  * Default values for input and output
@@ -1330,7 +1330,7 @@ static void ParseOption (const char* option, const char* parms)
 	struct in_addr		addrValue;
 	int			max;
 	char*			end;
-	CODE* 			fac_record = NULL;
+	const CODE* 		fac_record = NULL;
 /*
  * Find option from table.
  */

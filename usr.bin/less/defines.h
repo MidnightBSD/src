@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/usr.bin/less/defines.h 240121 2012-09-04 23:24:00Z delphij $ */
+/* $FreeBSD: release/10.0.0/usr.bin/less/defines.h 242618 2012-11-05 17:42:50Z delphij $ */
 /* defines.h.  Generated from defines.h.in by configure.  */
 /* defines.h.in.  Generated from configure.ac by autoheader.  */
 
@@ -184,6 +184,7 @@
 /*
  * Sizes of various buffers.
  */
+#if 0 /* old sizes for small memory machines */
 #define	CMDBUF_SIZE	512	/* Buffer for multichar commands */
 #define	UNGOT_SIZE	100	/* Max chars to unget() */
 #define	LINEBUF_SIZE	1024	/* Max size of line in input file */
@@ -193,6 +194,17 @@
 #define	TERMSBUF_SIZE	1024	/* Buffer to hold termcap strings */
 #define	TAGLINE_SIZE	512	/* Max size of line in tags file */
 #define	TABSTOP_MAX	32	/* Max number of custom tab stops */
+#else /* more reasonable sizes for modern machines */
+#define	CMDBUF_SIZE	2048	/* Buffer for multichar commands */
+#define	UNGOT_SIZE	200	/* Max chars to unget() */
+#define	LINEBUF_SIZE	1024	/* Initial max size of line in input file */
+#define	OUTBUF_SIZE	1024	/* Output buffer */
+#define	PROMPT_SIZE	2048	/* Max size of prompt string */
+#define	TERMBUF_SIZE	2048	/* Termcap buffer for tgetent */
+#define	TERMSBUF_SIZE	1024	/* Buffer to hold termcap strings */
+#define	TAGLINE_SIZE	1024	/* Max size of line in tags file */
+#define	TABSTOP_MAX	128	/* Max number of custom tab stops */
+#endif
 
 /* Settings automatically determined by configure.  */
 

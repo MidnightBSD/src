@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/libkern/ashldi3.c 128019 2004-04-07 20:46:16Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/ashldi3.c 255939 2013-09-29 15:19:34Z andrew $");
 
 #include <libkern/quad.h>
 
@@ -59,3 +59,13 @@ __ashldi3(a, shift)
 	}
 	return (aa.q);
 }
+
+#ifdef __ARM_EABI__
+long long __aeabi_llsl(long long, int);
+
+long long
+__aeabi_llsl(long long a, int b)
+{
+	return __ashldi3(a, b);
+}
+#endif

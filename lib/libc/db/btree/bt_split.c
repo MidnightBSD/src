@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)bt_split.c	8.10 (Berkeley) 1/9/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/db/btree/bt_split.c 223262 2011-06-18 13:56:33Z benl $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/db/btree/bt_split.c 223262 2011-06-18 13:56:33Z benl $");
 
 #include <sys/types.h>
 #include <sys/param.h>

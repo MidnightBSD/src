@@ -16,7 +16,7 @@
 # If you are in doubt as to the purpose or necessity of a line, check first
 # in NOTES.
 #
-# $FreeBSD: stable/9/sys/sparc64/conf/GENERIC 246321 2013-02-04 15:51:27Z des $
+# $FreeBSD: release/10.0.0/sys/sparc64/conf/GENERIC 256283 2013-10-10 17:59:44Z gjb $
 
 cpu		SUN4U
 ident		GENERIC
@@ -61,10 +61,15 @@ options 	_KPOSIX_PRIORITY_SCHEDULING # POSIX P1003_1B real-time extensions
 options 	PRINTF_BUFR_SIZE=128	# Prevent printf output being interspersed.
 options 	HWPMC_HOOKS		# Necessary kernel hooks for hwpmc(4)
 options 	AUDIT			# Security event auditing
+options 	CAPABILITY_MODE		# Capsicum capability mode
+options 	CAPABILITIES		# Capsicum capabilities
+options 	PROCDESC		# Support for process descriptors
 options 	MAC			# TrustedBSD MAC Framework
 options 	INCLUDE_CONFIG_FILE	# Include this file in kernel
-options 	KDB			# Kernel debugger related code
-options 	KDB_TRACE		# Print a stack trace for a panic
+
+# Debugging support.  Always need this:
+options 	KDB			# Enable kernel debugger support.
+options 	KDB_TRACE		# Print a stack trace for a panic.
 
 # Make an SMP-capable kernel by default
 options 	SMP			# Symmetric MultiProcessor Kernel
@@ -83,7 +88,6 @@ device		fhc
 # ATA controllers
 device		ahci		# AHCI-compatible SATA controllers
 device		ata		# Legacy ATA/SATA controllers
-options 	ATA_CAM		# Handle legacy controllers with CAM
 device		mvs		# Marvell 88SX50XX/88SX60XX/88SX70XX/SoC SATA
 device		siis		# SiliconImage SiI3124/SiI3132/SiI3531 SATA
 
@@ -106,8 +110,8 @@ device		da		# Direct Access (disks)
 device		sa		# Sequential Access (tape etc)
 device		cd		# CD
 device		pass		# Passthrough device (direct ATA/SCSI access)
-device		ses		# SCSI Environmental Services (and SAF-TE)
-device		ctl		# CAM Target Layer
+device		ses		# Enclosure Services (SES and SAF-TE)
+#device		ctl		# CAM Target Layer
 
 # RAID controllers
 #device		amr		# AMI MegaRAID
@@ -147,7 +151,6 @@ device		uart		# Multi-uart driver
 #device		ppc
 #device		ppbus		# Parallel port bus (required)
 #device		lpt		# Printer
-#device		plip		# TCP/IP over parallel
 #device		ppi		# Parallel port interface device
 #device		vpo		# Requires scbus and da
 
@@ -206,7 +209,6 @@ device		random		# Entropy device
 device		ether		# Ethernet support
 device		vlan		# 802.1Q VLAN support
 device		tun		# Packet tunnel.
-device		pty		# BSD-style compatibility pseudo ttys
 device		md		# Memory "disks"
 device		gif		# IPv6 and IPv4 tunneling
 device		faith		# IPv6-to-IPv4 relaying (translation)
@@ -223,39 +225,11 @@ device		uhci		# UHCI PCI->USB interface
 device		ohci		# OHCI PCI->USB interface
 device		ehci		# EHCI PCI->USB interface (USB 2.0)
 device		usb		# USB Bus (required)
-#device		udbp		# USB Double Bulk Pipe devices (needs netgraph)
-device		uhid		# "Human Interface Devices"
 device		ukbd		# Keyboard
-device		ulpt		# Printer
 device		umass		# Disks/Mass storage - Requires scbus and da
-device		ums		# Mouse
-device		urio		# Diamond Rio 500 MP3 player
-# USB Serial devices
-device		uark		# Technologies ARK3116 based serial adapters
-device		ubsa		# Belkin F5U103 and compatible serial adapters
-device		uftdi		# For FTDI usb serial adapters
-device		uipaq		# Some WinCE based devices
-device		uplcom		# Prolific PL-2303 serial adapters
-device		uslcom		# SI Labs CP2101/CP2102 serial adapters
-device		uvisor		# Visor and Palm devices
-device		uvscom		# USB serial support for DDI pocket's PHS
-# USB Ethernet, requires miibus
-device		aue		# ADMtek USB Ethernet
-device		axe		# ASIX Electronics USB Ethernet
-device		cdce		# Generic USB over Ethernet
-device		cue		# CATC USB Ethernet
-device		kue		# Kawasaki LSI USB Ethernet
-device		rue		# RealTek RTL8150 USB Ethernet
-device		udav		# Davicom DM9601E USB
-# USB Wireless
-device		rum		# Ralink Technology RT2501USB wireless NICs
-device		uath		# Atheros AR5523 wireless NICs
-device		ural		# Ralink Technology RT2500USB wireless NICs
-device		zyd		# ZyDAS zd1211/zd1211b wireless NICs
 
 # Sound support
 device		sound		# Generic sound driver (required)
 device		snd_audiocs	# Crystal Semiconductor CS4231
 device		snd_es137x	# Ensoniq AudioPCI ES137x
 device		snd_t4dwave	# Acer Labs M5451
-device		snd_uaudio	# USB Audio

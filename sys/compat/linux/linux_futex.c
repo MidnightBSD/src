@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/compat/linux/linux_futex.c 246292 2013-02-03 18:37:08Z dchagin $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/compat/linux/linux_futex.c 255971 2013-10-01 15:40:27Z markj $");
 #if 0
 __KERNEL_RCSID(1, "$NetBSD: linux_futex.c,v 1.7 2006/07/24 19:01:49 manu Exp $");
 #endif
@@ -119,7 +119,7 @@ LIN_SDT_PROBE_DEFINE1(futex, futex_sleep, return, "int");
 LIN_SDT_PROBE_DEFINE3(futex, futex_wake, entry, "struct futex *", "int",
     "uint32_t");
 LIN_SDT_PROBE_DEFINE3(futex, futex_wake, iterate, "uint32_t",
-    "struct waiting_proc *", "uin32_t");
+    "struct waiting_proc *", "uint32_t");
 LIN_SDT_PROBE_DEFINE1(futex, futex_wake, wakeup, "struct waiting_proc *");
 LIN_SDT_PROBE_DEFINE1(futex, futex_wake, return, "int");
 LIN_SDT_PROBE_DEFINE4(futex, futex_requeue, entry, "struct futex *", "int",

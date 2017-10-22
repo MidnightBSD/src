@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/teken/teken.c 223574 2011-06-26 18:25:10Z ed $
+ * $FreeBSD: release/10.0.0/sys/teken/teken.c 223574 2011-06-26 18:25:10Z ed $
  */
 
 #include <sys/cdefs.h>

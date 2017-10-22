@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/dhclient/conflex.c 149481 2005-08-26 01:25:59Z brooks $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/dhclient/conflex.c 149481 2005-08-26 01:25:59Z brooks $");
 
 #include <ctype.h>
 

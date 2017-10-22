@@ -41,7 +41,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)nfsstat.c	8.2 (Berkeley) 3/31/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.bin/nfsstat/nfsstat.c 244291 2012-12-16 14:10:12Z rmacklem $";
+  "$FreeBSD: release/10.0.0/usr.bin/nfsstat/nfsstat.c 251585 2013-06-09 21:54:19Z rmacklem $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -133,6 +133,9 @@ main(int argc, char **argv)
 						printf("%s on %s\n%s\n",
 						    mntbuf->f_mntfromname,
 						    mntbuf->f_mntonname, buf);
+					else if (errno == EPERM)
+						errx(1, "Only priviledged users"
+						    " can use the -m option");
 				}
 				mntbuf++;
 			}
@@ -1017,7 +1020,6 @@ exp_sidewaysintpr(u_int interval, int clientOnly, int serverOnly)
 			    );
 		    }
 		    printf("\n");
-		    lastst = nfsstats;
 		}
 		if (serverOnly) {
 		    printf("%s %6d %6d %6d %6d %6d %6d %6d %6d",
@@ -1041,8 +1043,8 @@ exp_sidewaysintpr(u_int interval, int clientOnly, int serverOnly)
 			(nfsstats.srvrpccnt[NFSV4OP_READDIRPLUS] -
 			 lastst.srvrpccnt[NFSV4OP_READDIRPLUS]));
 		    printf("\n");
-		    lastst = nfsstats;
 		}
+		lastst = nfsstats;
 		fflush(stdout);
 		sleep(interval);
 	}

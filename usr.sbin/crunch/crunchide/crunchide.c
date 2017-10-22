@@ -63,7 +63,7 @@
 #ifndef lint
 __RCSID("$NetBSD: crunchide.c,v 1.8 1997/11/01 06:51:45 lukem Exp $");
 #endif
-__FBSDID("$FreeBSD: stable/9/usr.sbin/crunch/crunchide/crunchide.c 246576 2013-02-09 01:08:49Z pfg $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/crunch/crunchide/crunchide.c 237625 2012-06-27 04:39:30Z obrien $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

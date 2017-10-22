@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/cddl/usr.bin/ctfmerge/Makefile 211187 2010-08-11 18:00:45Z rpaulo $
+# $FreeBSD: release/10.0.0/cddl/usr.bin/ctfmerge/Makefile 211187 2010-08-11 18:00:45Z rpaulo $
 
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/tools/ctf/common
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/tools/ctf/cvt

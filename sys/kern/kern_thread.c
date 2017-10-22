@@ -31,7 +31,7 @@
 #include "opt_hwpmc_hooks.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_thread.c 241812 2012-10-21 12:33:38Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_thread.c 248584 2013-03-21 14:06:27Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -207,7 +207,6 @@ thread_init(void *mem, int size, int flags)
 	td->td_sleepqueue = sleepq_alloc();
 	td->td_turnstile = turnstile_alloc();
 	td->td_rlqe = NULL;
-	td->td_vp_reserv = 0;
 	EVENTHANDLER_INVOKE(thread_init, td);
 	td->td_sched = (struct td_sched *)&td[1];
 	umtx_thread_init(td);
@@ -623,7 +622,6 @@ thread_single(int mode)
 	p = td->td_proc;
 	mtx_assert(&Giant, MA_NOTOWNED);
 	PROC_LOCK_ASSERT(p, MA_OWNED);
-	KASSERT((td != NULL), ("curthread is NULL"));
 
 	if ((p->p_flag & P_HADTHREADS) == 0)
 		return (0);
@@ -719,7 +717,7 @@ stopme:
 		/*
 		 * We have gotten rid of all the other threads and we
 		 * are about to either exit or exec. In either case,
-		 * we try our utmost  to revert to being a non-threaded
+		 * we try our utmost to revert to being a non-threaded
 		 * process.
 		 */
 		p->p_singlethread = NULL;
@@ -750,10 +748,10 @@ stopme:
  * P_SINGLE_EXIT | return_instead == 0| return_instead != 0
  *---------------+--------------------+---------------------
  *       0       | returns 0          |   returns 0 or 1
- *               | when ST ends       |   immediatly
+ *               | when ST ends       |   immediately
  *---------------+--------------------+---------------------
  *       1       | thread exits       |   returns 1
- *               |                    |  immediatly
+ *               |                    |  immediately
  * 0 = thread_exit() or suspension ok,
  * other = return error instead of stopping the thread.
  *
@@ -795,6 +793,17 @@ thread_suspend_check(int return_instead)
 		if (P_SHOULDSTOP(p) == P_STOPPED_SINGLE &&
 		    (p->p_flag & P_SINGLE_BOUNDARY) && return_instead)
 			return (ERESTART);
+
+		/*
+		 * Ignore suspend requests for stop signals if they
+		 * are deferred.
+		 */
+		if (P_SHOULDSTOP(p) == P_STOPPED_SIG &&
+		    td->td_flags & TDF_SBDRY) {
+			KASSERT(return_instead,
+			    ("TDF_SBDRY set for unsafe thread_suspend_check"));
+			return (0);
+		}
 
 		/*
 		 * If the process is waiting for us to exit,

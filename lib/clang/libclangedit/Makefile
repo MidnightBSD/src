@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/clang/libclangedit/Makefile 246637 2013-02-10 21:24:47Z dim $
+# $FreeBSD: release/10.0.0/lib/clang/libclangedit/Makefile 249423 2013-04-12 17:57:40Z dim $
 
 .include <bsd.own.mk>
 
@@ -11,6 +11,7 @@ SRCS=	Commit.cpp \
 
 TGHDRS=	AttrList \
 	Attrs \
+	CommentCommandList \
 	CommentNodes \
 	DeclNodes \
 	StmtNodes \

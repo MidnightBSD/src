@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/sparc64/pci/apb.c 230687 2012-01-28 23:53:06Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/pci/apb.c 227848 2011-11-22 21:55:40Z marius $");
 
 /*
  * Support for the Sun APB (Advanced PCI Bridge) PCI-PCI bridge.

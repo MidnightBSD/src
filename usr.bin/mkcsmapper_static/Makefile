@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.bin/mkcsmapper_static/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD: release/10.0.0/usr.bin/mkcsmapper_static/Makefile 219019 2011-02-25 00:04:39Z gabor $
 
 .PATH: ${.CURDIR}/../../lib/libc/iconv ${.CURDIR}/../mkcsmapper
 

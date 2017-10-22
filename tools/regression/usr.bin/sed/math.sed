@@ -1,6 +1,6 @@
 # This is ksb's infamous sed calculator.		(ksb@sa.fedex.com)
 #
-# $FreeBSD: stable/9/tools/regression/usr.bin/sed/math.sed 167533 2007-03-14 07:40:44Z dds $
+# $FreeBSD: release/10.0.0/tools/regression/usr.bin/sed/math.sed 228975 2011-12-30 00:04:11Z uqs $
 #
 # $Id: math.sed,v 2.5 1998/08/02 13:23:34 ksb Exp ksb $
 # expr ::= (expr) | expr! |
@@ -57,7 +57,7 @@ x
 	s//\1(\2)/
 	b loop
 }
-# pull any burried exponents
+# pull any buried exponents
 /^\(.*[^0-9]\)\([0-9][0-9]*^[0-9][0-9]*\)$/{
 	s//\1(\2)/
 	b loop

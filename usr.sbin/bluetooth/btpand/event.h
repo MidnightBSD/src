@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/usr.sbin/bluetooth/btpand/event.h 187938 2009-01-30 22:23:21Z emax $ */
+/* $FreeBSD: release/10.0.0/usr.sbin/bluetooth/btpand/event.h 228990 2011-12-30 10:58:14Z uqs $ */
 
 /*
  * Hack to provide libevent (see devel/libevent port) like API.
@@ -40,7 +40,7 @@
 
 #define	EV_READ         0x02
 #define	EV_WRITE        0x04
-#define	EV_PERSIST      0x10		/* Persistant event */
+#define	EV_PERSIST      0x10		/* Persistent event */
 #define	EV_PENDING	(1 << 13)	/* internal use only! */
 #define	EV_HAS_TIMEOUT	(1 << 14)	/* internal use only! */
 #define	EV_CURRENT	(1 << 15)	/* internal use only! */

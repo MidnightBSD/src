@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/isp/ispreg.h 240009 2012-09-02 14:44:09Z mjacob $ */
+/* $FreeBSD: release/10.0.0/sys/dev/isp/ispreg.h 253330 2013-07-13 21:24:25Z mjacob $ */
 /*-
  *  Copyright (c) 1997-2009 by Matthew Jacob
  *  All rights reserved.
@@ -464,8 +464,10 @@
 #define	MBCMD_DEFAULT_TIMEOUT	100000	/* 100 ms */
 typedef struct {
 	uint16_t param[MAX_MAILBOX];
-	uint32_t ibits;
-	uint32_t obits;
+	uint32_t ibits;	/* bits to add for register copyin */
+	uint32_t obits;	/* bits to add for register copyout */
+	uint32_t ibitm;	/* bits to mask for register copyin */
+	uint32_t obitm;	/* bits to mask for register copyout */
 	uint32_t
 		lineno	: 16,
 			: 12,
@@ -475,6 +477,8 @@ typedef struct {
 } mbreg_t;
 #define	MBSINIT(mbxp, code, loglev, timo)	\
 	ISP_MEMZERO((mbxp), sizeof (mbreg_t));	\
+	(mbxp)->ibitm = ~0;			\
+	(mbxp)->obitm = ~0;			\
 	(mbxp)->param[0] = code;		\
 	(mbxp)->lineno = __LINE__;		\
 	(mbxp)->func = __func__;		\

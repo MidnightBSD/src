@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/pci/if_rlreg.h 245857 2013-01-24 01:07:34Z yongari $
+ * $FreeBSD: release/10.0.0/sys/pci/if_rlreg.h 257617 2013-11-04 05:58:59Z yongari $
  */
 
 /*
@@ -189,8 +189,13 @@
 #define	RL_HWREV_8105E		0x40800000
 #define	RL_HWREV_8105E_SPIN1	0x40C00000
 #define	RL_HWREV_8402		0x44000000
+#define	RL_HWREV_8106E		0x44800000
 #define	RL_HWREV_8168F		0x48000000
 #define	RL_HWREV_8411		0x48800000
+#define	RL_HWREV_8168G		0x4C000000
+#define	RL_HWREV_8168EP		0x50000000
+#define	RL_HWREV_8168GU		0x50800000
+#define	RL_HWREV_8411B		0x5C800000
 #define	RL_HWREV_8139		0x60000000
 #define	RL_HWREV_8139A		0x70000000
 #define	RL_HWREV_8139AG		0x70800000
@@ -877,6 +882,7 @@ struct rl_softc {
 	bus_dma_tag_t		rl_parent_tag;
 	uint8_t			rl_type;
 	const struct rl_hwrev	*rl_hwrev;
+	uint32_t		rl_macrev;
 	int			rl_eecmd_read;
 	int			rl_eewidth;
 	int			rl_expcap;

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/netipx/ipxdgramloopback/ipxdgramloopback.c 157151 2006-03-26 18:25:53Z rwatson $
+ * $FreeBSD: release/10.0.0/tools/regression/netipx/ipxdgramloopback/ipxdgramloopback.c 243316 2012-11-19 23:07:38Z emaste $
  */
 
 /*
@@ -95,7 +95,7 @@ main(int argc, char *argv[])
 	if (len < 0)
 		err(-1, "sendto()");
 	if (len != sizeof(packet))
-		errx(-1, "sendto(): short send (%d length, %d sent)",
+		errx(-1, "sendto(): short send (%zu length, %zd sent)",
 		    sizeof(packet), len);
 
 	sleep(1);	/* Arbitrary non-zero amount. */
@@ -105,7 +105,7 @@ main(int argc, char *argv[])
 	if (len < 0)
 		err(-1, "recv()");
 	if (len != sizeof(packet))
-		errx(-1, "recv(): short receive (%d length, %d received)",
+		errx(-1, "recv(): short receive (%zu length, %zd received)",
 		    sizeof(packet), len);
 
 	for (i = 0; i < PACKETLEN; i++) {

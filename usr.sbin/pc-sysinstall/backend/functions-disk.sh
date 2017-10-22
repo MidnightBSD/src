@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/backend/functions-disk.sh 240315 2012-09-10 14:10:10Z jpaetzel $
+# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend/functions-disk.sh 247735 2013-03-03 23:07:27Z jpaetzel $
 
 # Functions related to disk operations using gpart
 
@@ -33,6 +33,7 @@ is_disk()
   for _dsk in `sysctl -n kern.disks`
   do
     [ "$_dsk" = "${1}" ] && return 0
+    [ "/dev/$_dsk" = "${1}" ] && return 0
   done
 
   return 1
@@ -428,7 +429,7 @@ setup_disk_slice()
 
         if [ $LASTSLICE -gt 4 ]
         then
-          exit_err "ERROR: BSD only supports primary partitions, and there are none availble on $DISK"
+          exit_err "ERROR: BSD only supports primary partitions, and there are none available on $DISK"
         fi
 
       fi

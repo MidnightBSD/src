@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/src/s_tanl.c 222508 2011-05-30 19:41:28Z kargl $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_tanl.c 240828 2012-09-22 15:38:29Z kargl $");
 
 /*
  * Limited testing on pseudorandom numbers drawn within [0:4e8] shows
@@ -34,6 +34,9 @@ __FBSDID("$FreeBSD: stable/9/lib/msun/src/s_tanl.c 222508 2011-05-30 19:41:28Z k
  */
 
 #include <float.h>
+#ifdef __i386__
+#include <ieeefp.h>
+#endif
 
 #include "math.h"
 #include "math_private.h"
@@ -65,10 +68,12 @@ tanl(long double x)
 	if (z.bits.exp == 32767)
 		return ((x - x) / (x - x));
 
+	ENTERI();
+
 	/* Optimize the case where x is already within range. */
 	if (z.e < M_PI_4) {
 		hi = __kernel_tanl(z.e, 0, 0);
-		return (s ? -hi : hi);
+		RETURNI(s ? -hi : hi);
 	}
 
 	e0 = __ieee754_rem_pio2l(x, y);
@@ -86,5 +91,5 @@ tanl(long double x)
 	    break;
 	}
 
-	return (hi);
+	RETURNI(hi);
 }

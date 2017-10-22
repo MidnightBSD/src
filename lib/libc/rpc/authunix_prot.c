@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)authunix_prot.c 1.15 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)authunix_prot.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/authunix_prot.c 241309 2012-10-07 05:11:29Z pfg $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/rpc/authunix_prot.c 241181 2012-10-04 04:15:18Z pfg $");
 
 /*
  * authunix_prot.c

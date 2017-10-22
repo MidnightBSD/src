@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/idt/idt_machdep.c 216320 2010-12-09 07:47:40Z gonzo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/idt/idt_machdep.c 247297 2013-02-26 01:00:11Z attilio $");
 
 #include "opt_ddb.h"
 
@@ -55,7 +55,6 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/idt/idt_machdep.c 216320 2010-12-09 07:47:
 #include <vm/vm.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
-#include <vm/vm_pager.h>
 
 #include <machine/cache.h>
 #include <machine/clock.h>
@@ -82,19 +81,6 @@ platform_cpu_init()
 }
 
 void
-platform_halt(void)
-{
-
-}
-
-
-void
-platform_identify(void)
-{
-
-}
-
-void
 platform_reset(void)
 {
 	volatile unsigned int * p = (void *)0xb8008000;
@@ -108,18 +94,6 @@ platform_reset(void)
 
 	__asm __volatile("li	$25, 0xbfc00000");
 	__asm __volatile("j	$25");
-}
-
-void
-platform_trap_enter(void)
-{
-
-}
-
-void
-platform_trap_exit(void)
-{
-
 }
 
 void

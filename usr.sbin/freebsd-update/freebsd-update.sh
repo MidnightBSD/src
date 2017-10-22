@@ -25,7 +25,7 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# $FreeBSD: stable/9/usr.sbin/freebsd-update/freebsd-update.sh 226811 2011-10-26 20:01:43Z cperciva $
+# $FreeBSD: release/10.0.0/usr.sbin/freebsd-update/freebsd-update.sh 258723 2013-11-28 22:06:37Z delphij $
 
 #### Usage function -- called from command-line handling code.
 
@@ -1200,7 +1200,7 @@ fetch_metadata_sanity () {
 	# Some aliases to save space later: ${P} is a character which can
 	# appear in a path; ${M} is the four numeric metadata fields; and
 	# ${H} is a sha256 hash.
-	P="[-+./:=%@_[[:alnum:]]"
+	P="[-+./:=%@_[~[:alnum:]]"
 	M="[0-9]+\|[0-9]+\|[0-9]+\|[0-9]+"
 	H="[0-9a-f]{64}"
 
@@ -2255,7 +2255,7 @@ upgrade_oldall_to_oldnew () {
 }
 
 # Helper for upgrade_merge: Return zero true iff the two files differ only
-# in the contents of their $FreeBSD: stable/9/usr.sbin/freebsd-update/freebsd-update.sh 226811 2011-10-26 20:01:43Z cperciva $ tags.
+# in the contents of their $FreeBSD: release/10.0.0/usr.sbin/freebsd-update/freebsd-update.sh 258723 2013-11-28 22:06:37Z delphij $ tags.
 samef () {
 	X=`sed -E 's/\\$FreeBSD.*\\$/\$FreeBSD\$/' < $1 | ${SHA256}`
 	Y=`sed -E 's/\\$FreeBSD.*\\$/\$FreeBSD\$/' < $2 | ${SHA256}`
@@ -2351,7 +2351,7 @@ upgrade_merge () {
 		# Ask the user to handle any files which didn't merge.
 		while read F; do
 			# If the installed file differs from the version in
-			# the old release only due to $FreeBSD: stable/9/usr.sbin/freebsd-update/freebsd-update.sh 226811 2011-10-26 20:01:43Z cperciva $ tag expansion
+			# the old release only due to $FreeBSD: release/10.0.0/usr.sbin/freebsd-update/freebsd-update.sh 258723 2013-11-28 22:06:37Z delphij $ tag expansion
 			# then just use the version in the new release.
 			if samef merge/old/${F} merge/${OLDRELNUM}/${F}; then
 				cp merge/${RELNUM}/${F} merge/new/${F}
@@ -2373,14 +2373,14 @@ manually...
 		# of merging files.
 		while read F; do
 			# Skip files which haven't changed except possibly
-			# in their $FreeBSD: stable/9/usr.sbin/freebsd-update/freebsd-update.sh 226811 2011-10-26 20:01:43Z cperciva $ tags.
+			# in their $FreeBSD: release/10.0.0/usr.sbin/freebsd-update/freebsd-update.sh 258723 2013-11-28 22:06:37Z delphij $ tags.
 			if [ -f merge/old/${F} ] && [ -f merge/new/${F} ] &&
 			    samef merge/old/${F} merge/new/${F}; then
 				continue
 			fi
 
 			# Skip files where the installed file differs from
-			# the old file only due to $FreeBSD: stable/9/usr.sbin/freebsd-update/freebsd-update.sh 226811 2011-10-26 20:01:43Z cperciva $ tags.
+			# the old file only due to $FreeBSD: release/10.0.0/usr.sbin/freebsd-update/freebsd-update.sh 258723 2013-11-28 22:06:37Z delphij $ tags.
 			if [ -f merge/old/${F} ] &&
 			    [ -f merge/${OLDRELNUM}/${F} ] &&
 			    samef merge/old/${F} merge/${OLDRELNUM}/${F}; then
@@ -2814,16 +2814,24 @@ Kernel updates have been installed.  Please reboot and run
 
 	# If we haven't already dealt with the world, deal with it.
 	if ! [ -f $1/worlddone ]; then
+		# Create any necessary directories first
+		grep -vE '^/boot/' $1/INDEX-NEW |
+		    grep -E '^[^|]+\|d\|' > INDEX-NEW
+		install_from_index INDEX-NEW || return 1
+
 		# Install new shared libraries next
 		grep -vE '^/boot/' $1/INDEX-NEW |
-		    grep -E '/lib/.*\.so\.[0-9]+\|' > INDEX-NEW
+		    grep -vE '^[^|]+\|d\|' |
+		    grep -E '^[^|]*/lib/[^|]*\.so\.[0-9]+\|' > INDEX-NEW
 		install_from_index INDEX-NEW || return 1
 
 		# Deal with everything else
 		grep -vE '^/boot/' $1/INDEX-OLD |
-		    grep -vE '/lib/.*\.so\.[0-9]+\|' > INDEX-OLD
+		    grep -vE '^[^|]+\|d\|' |
+		    grep -vE '^[^|]*/lib/[^|]*\.so\.[0-9]+\|' > INDEX-OLD
 		grep -vE '^/boot/' $1/INDEX-NEW |
-		    grep -vE '/lib/.*\.so\.[0-9]+\|' > INDEX-NEW
+		    grep -vE '^[^|]+\|d\|' |
+		    grep -vE '^[^|]*/lib/[^|]*\.so\.[0-9]+\|' > INDEX-NEW
 		install_from_index INDEX-NEW || return 1
 		install_delete INDEX-OLD INDEX-NEW || return 1
 
@@ -2844,11 +2852,11 @@ Kernel updates have been installed.  Please reboot and run
 
 		# Do we need to ask the user to portupgrade now?
 		grep -vE '^/boot/' $1/INDEX-NEW |
-		    grep -E '/lib/.*\.so\.[0-9]+\|' |
+		    grep -E '^[^|]*/lib/[^|]*\.so\.[0-9]+\|' |
 		    cut -f 1 -d '|' |
 		    sort > newfiles
 		if grep -vE '^/boot/' $1/INDEX-OLD |
-		    grep -E '/lib/.*\.so\.[0-9]+\|' |
+		    grep -E '^[^|]*/lib/[^|]*\.so\.[0-9]+\|' |
 		    cut -f 1 -d '|' |
 		    sort |
 		    join -v 1 - newfiles |
@@ -2868,9 +2876,18 @@ again to finish installing updates.
 
 	# Remove old shared libraries
 	grep -vE '^/boot/' $1/INDEX-NEW |
-	    grep -E '/lib/.*\.so\.[0-9]+\|' > INDEX-NEW
+	    grep -vE '^[^|]+\|d\|' |
+	    grep -E '^[^|]*/lib/[^|]*\.so\.[0-9]+\|' > INDEX-NEW
 	grep -vE '^/boot/' $1/INDEX-OLD |
-	    grep -E '/lib/.*\.so\.[0-9]+\|' > INDEX-OLD
+	    grep -vE '^[^|]+\|d\|' |
+	    grep -E '^[^|]*/lib/[^|]*\.so\.[0-9]+\|' > INDEX-OLD
+	install_delete INDEX-OLD INDEX-NEW || return 1
+
+	# Remove old directories
+	grep -vE '^/boot/' $1/INDEX-NEW |
+	    grep -E '^[^|]+\|d\|' > INDEX-NEW
+	grep -vE '^/boot/' $1/INDEX-OLD |
+	    grep -E '^[^|]+\|d\|' > INDEX-OLD
 	install_delete INDEX-OLD INDEX-NEW || return 1
 
 	# Remove temporary files

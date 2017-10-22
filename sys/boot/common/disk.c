@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/common/disk.c 243243 2012-11-18 17:09:29Z ae $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/common/disk.c 241876 2012-10-22 11:01:43Z ae $");
 
 #include <sys/disk.h>
 #include <sys/queue.h>

@@ -90,7 +90,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/thread/thr_attr.c 214653 2010-11-02 02:13:13Z davidxu $
+ * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_attr.c 214653 2010-11-02 02:13:13Z davidxu $
  */
 
 #include "namespace.h"

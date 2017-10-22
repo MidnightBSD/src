@@ -1,6 +1,6 @@
 /*	$OpenBSD: tip.h,v 1.27 2006/08/18 03:06:18 jason Exp $	*/
 /*	$NetBSD: tip.h,v 1.7 1997/04/20 00:02:46 mellon Exp $	*/
-/*	$FreeBSD: stable/9/usr.bin/tip/tip/tip.h 218965 2011-02-23 09:22:33Z brucec $	*/
+/*	$FreeBSD: release/10.0.0/usr.bin/tip/tip/tip.h 228992 2011-12-30 11:02:40Z uqs $	*/
 
 /*
  * Copyright (c) 1989, 1993
@@ -99,7 +99,7 @@ typedef
 		char	*v_name;	/* whose name is it */
 		char	v_type;		/* for interpreting set's */
 		char	v_access;	/* protection of touchy ones */
-		char	*v_abrev;	/* possible abreviation */
+		char	*v_abrev;	/* possible abbreviation */
 		char	*v_value;	/* casted to a union later */
 	}
 	value_t;
@@ -162,7 +162,7 @@ typedef
 /*
  * Escape command table definitions --
  *   lookup in this table is performed when ``escapec'' is recognized
- *   at the begining of a line (as defined by the eolmarks variable).
+ *   at the beginning of a line (as defined by the eolmarks variable).
 */
 
 typedef

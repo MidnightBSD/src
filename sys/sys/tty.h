@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/tty.h 242892 2012-11-11 12:12:44Z ed $
+ * $FreeBSD: release/10.0.0/sys/sys/tty.h 242529 2012-11-03 22:21:37Z ed $
  */
 
 #ifndef _SYS_TTY_H_
@@ -192,6 +192,7 @@ int	tty_ioctl(struct tty *tp, u_long cmd, void *data, int fflag,
     struct thread *td);
 int	tty_ioctl_compat(struct tty *tp, u_long cmd, caddr_t data,
     int fflag, struct thread *td);
+void	tty_set_winsize(struct tty *tp, const struct winsize *wsz);
 void	tty_init_console(struct tty *tp, speed_t speed);
 void	tty_flush(struct tty *tp, int flags);
 void	tty_hiwat_in_block(struct tty *tp);

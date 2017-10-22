@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/ktrdump/ktrdump.c 243097 2012-11-15 19:27:11Z np $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/ktrdump/ktrdump.c 243046 2012-11-15 00:51:57Z jeff $");
 
 #include <sys/types.h>
 #include <sys/ktr.h>
@@ -86,6 +86,7 @@ main(int ac, char **av)
 	u_long parms[KTR_PARMS];
 	struct ktr_entry *buf;
 	uintmax_t tlast, tnow;
+	unsigned long bufptr;
 	struct stat sb;
 	kvm_t *kd;
 	FILE *out;
@@ -179,8 +180,9 @@ main(int ac, char **av)
 		if ((buf = malloc(sizeof(*buf) * entries)) == NULL)
 			err(1, NULL);
 		if (kvm_read(kd, nl[2].n_value, &index, sizeof(index)) == -1 ||
-		    kvm_read(kd, nl[3].n_value, buf, sizeof(*buf) * entries)
-		    == -1)
+		    kvm_read(kd, nl[3].n_value, &bufptr,
+		    sizeof(bufptr)) == -1 ||
+		    kvm_read(kd, bufptr, buf, sizeof(*buf) * entries) == -1)
 			errx(1, "%s", kvm_geterr(kd));
 	}
 

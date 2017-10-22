@@ -30,7 +30,7 @@
  * FDT 'simple-bus' attachment for Freescale TSEC controller.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/tsec/if_tsec_fdt.c 233015 2012-03-15 22:15:06Z raj $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/tsec/if_tsec_fdt.c 232518 2012-03-04 19:22:52Z raj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

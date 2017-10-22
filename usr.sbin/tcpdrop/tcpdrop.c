@@ -18,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/tcpdrop/tcpdrop.c 247562 2013-03-01 19:01:40Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/tcpdrop/tcpdrop.c 246129 2013-01-30 18:24:29Z jhb $");
 
 #include <sys/param.h>
 #include <sys/types.h>

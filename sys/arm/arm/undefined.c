@@ -48,7 +48,7 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/undefined.c 196484 2009-08-23 23:37:53Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/undefined.c 254461 2013-08-17 18:51:38Z andrew $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -64,9 +64,6 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/arm/undefined.c 196484 2009-08-23 23:37:53Z
 #include <sys/ptrace.h>
 #ifdef KDB
 #include <sys/kdb.h>
-#endif
-#ifdef FAST_FPE
-#include <sys/acct.h>
 #endif
 
 #include <vm/vm.h>
@@ -89,9 +86,6 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/arm/undefined.c 196484 2009-08-23 23:37:53Z
 #endif
 
 static int gdb_trapper(u_int, u_int, struct trapframe *, int);
-#ifdef FAST_FPE
-extern int want_resched;
-#endif
 
 LIST_HEAD(, undefined_handler) undefined_handlers[MAX_COPROCS];
 
@@ -194,8 +188,8 @@ undefinedinstruction(trapframe_t *frame)
 
 	fault_pc = frame->tf_pc;
 
-	/* 
-	 * Get the current thread/proc structure or thread0/proc0 if there is 
+	/*
+	 * Get the current thread/proc structure or thread0/proc0 if there is
 	 * none.
 	 */
 	td = curthread == NULL ? &thread0 : curthread;
@@ -237,10 +231,16 @@ undefinedinstruction(trapframe_t *frame)
 	 * instruction trap.
 	 */
 
+	coprocessor = 0;
 	if ((fault_instruction & (1 << 27)) != 0)
 		coprocessor = (fault_instruction >> 8) & 0x0f;
-	else
-		coprocessor = 0;
+#ifdef VFP
+	else {          /* check for special instructions */
+		if (((fault_instruction & 0xfe000000) == 0xf2000000) ||
+		    ((fault_instruction & 0xff100000) == 0xf4000000))
+			coprocessor = 10;       /* vfp / simd */
+	}
+#endif	/* VFP */
 
 	if ((frame->tf_spsr & PSR_MODE) == PSR_USR32_MODE) {
 		/*
@@ -288,33 +288,5 @@ undefinedinstruction(trapframe_t *frame)
 			panic("Undefined instruction in kernel.\n");
 	}
 
-#ifdef FAST_FPE
-	/* Optimised exit code */
-	{
-
-		/*
-		 * Check for reschedule request, at the moment there is only
-		 * 1 ast so this code should always be run
-		 */
-
-		if (want_resched) {
-			/*
-			 * We are being preempted.
-			 */
-			preempt(0);
-		}
-
-		/* Invoke MI userret code */
-		mi_userret(td);
-
-#if 0
-		l->l_priority = l->l_usrpri;
-
-		curcpu()->ci_schedstate.spc_curpriority = l->l_priority;
-#endif
-	}
-
-#else
 	userret(td, frame);
-#endif
 }

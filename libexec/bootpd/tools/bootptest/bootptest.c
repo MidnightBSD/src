@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/libexec/bootpd/tools/bootptest/bootptest.c 110395 2003-02-05 13:45:25Z charnier $");
+__FBSDID("$FreeBSD: release/10.0.0/libexec/bootpd/tools/bootptest/bootptest.c 229780 2012-01-07 16:09:54Z uqs $");
 
 char *usage = "bootptest [-h] server-name [vendor-data-template-file]";
 
@@ -186,7 +186,7 @@ main(argc, argv)
 			break;
 		switch (argv[0][1]) {
 
-		case 'f':				/* File name to reqest. */
+		case 'f':				/* File name to request. */
 			if (argc < 2)
 				goto error;
 			argc--; argv++;

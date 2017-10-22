@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/fs/nfsclient/nfs_clport.c 249078 2013-04-04 05:26:22Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfsclient/nfs_clport.c 255219 2013-09-05 00:09:56Z pjd $");
 
 #include "opt_inet6.h"
 #include "opt_kdtrace.h"
@@ -197,12 +197,6 @@ nfscl_nget(struct mount *mntp, struct vnode *dvp, struct nfsfh *nfhp,
 		FREE((caddr_t)nfhp, M_NFSFH);
 		return (0);
 	}
-
-	/*
-	 * Allocate before getnewvnode since doing so afterward
-	 * might cause a bogus v_data pointer to get dereferenced
-	 * elsewhere if zalloc should block.
-	 */
 	np = uma_zalloc(newnfsnode_zone, M_WAITOK | M_ZERO);
 
 	error = getnewvnode("newnfs", mntp, &newnfs_vnodeops, &nvp);
@@ -439,6 +433,7 @@ nfscl_loadattrcache(struct vnode **vpp, struct nfsvattr *nap, void *nvaper,
 				vap->va_size = np->n_size;
 				np->n_attrstamp = 0;
 				KDTRACE_NFS_ATTRCACHE_FLUSH_DONE(vp);
+				vnode_pager_setsize(vp, np->n_size);
 			} else if (np->n_flag & NMODIFIED) {
 				/*
 				 * We've modified the file: Use the larger
@@ -450,16 +445,24 @@ nfscl_loadattrcache(struct vnode **vpp, struct nfsvattr *nap, void *nvaper,
 					np->n_size = vap->va_size;
 					np->n_flag |= NSIZECHANGED;
 				}
+				vnode_pager_setsize(vp, np->n_size);
+			} else if (vap->va_size < np->n_size) {
+				/*
+				 * When shrinking the size, the call to
+				 * vnode_pager_setsize() cannot be done
+				 * with the mutex held, so delay it until
+				 * after the mtx_unlock call.
+				 */
+				nsize = np->n_size = vap->va_size;
+				np->n_flag |= NSIZECHANGED;
+				setnsize = 1;
 			} else {
 				np->n_size = vap->va_size;
 				np->n_flag |= NSIZECHANGED;
+				vnode_pager_setsize(vp, np->n_size);
 			}
 		} else {
 			np->n_size = vap->va_size;
-		}
-		if (vap->va_type == VREG || vap->va_type == VDIR) {
-			setnsize = 1;
-			nsize = vap->va_size;
 		}
 	}
 	/*
@@ -866,7 +869,7 @@ nfscl_request(struct nfsrv_descript *nd, struct vnode *vp, NFSPROC_T *p,
 	else
 		vers = NFS_VER2;
 	ret = newnfs_request(nd, nmp, NULL, &nmp->nm_sockreq, vp, p, cred,
-		NFS_PROG, vers, NULL, 1, NULL);
+		NFS_PROG, vers, NULL, 1, NULL, NULL);
 	return (ret);
 }
 
@@ -1125,10 +1128,15 @@ nfscl_maperr(struct thread *td, int error, uid_t uid, gid_t gid)
 		    "No name and/or group mapping for uid,gid:(%d,%d)\n",
 		    uid, gid);
 		return (EPERM);
+	case NFSERR_BADNAME:
+	case NFSERR_BADCHAR:
+		printf("nfsv4 char/name not handled by server\n");
+		return (ENOENT);
 	case NFSERR_STALECLIENTID:
 	case NFSERR_STALESTATEID:
 	case NFSERR_EXPIRED:
 	case NFSERR_BADSTATEID:
+	case NFSERR_BADSESSION:
 		printf("nfsv4 recover err returned %d\n", error);
 		return (EIO);
 	case NFSERR_BADHANDLE:
@@ -1144,8 +1152,6 @@ nfscl_maperr(struct thread *td, int error, uid_t uid, gid_t gid)
 	case NFSERR_LEASEMOVED:
 	case NFSERR_RECLAIMBAD:
 	case NFSERR_BADXDR:
-	case NFSERR_BADCHAR:
-	case NFSERR_BADNAME:
 	case NFSERR_OPILLEGAL:
 		printf("nfsv4 client/server protocol prob err=%d\n",
 		    error);
@@ -1213,10 +1219,11 @@ nfssvc_nfscl(struct thread *td, struct nfssvc_args *uap)
 	struct file *fp;
 	struct nfscbd_args nfscbdarg;
 	struct nfsd_nfscbd_args nfscbdarg2;
-	int error;
 	struct nameidata nd;
 	struct nfscl_dumpmntopts dumpmntopts;
+	cap_rights_t rights;
 	char *buf;
+	int error;
 
 	if (uap->flag & NFSSVC_CBADDSOCK) {
 		error = copyin(uap->argp, (caddr_t)&nfscbdarg, sizeof(nfscbdarg));
@@ -1227,10 +1234,10 @@ nfssvc_nfscl(struct thread *td, struct nfssvc_args *uap)
 		 * pretend that we need them all. It is better to be too
 		 * careful than too reckless.
 		 */
-		if ((error = fget(td, nfscbdarg.sock, CAP_SOCK_ALL, &fp))
-		    != 0) {
+		error = fget(td, nfscbdarg.sock,
+		    cap_rights_init(&rights, CAP_SOCK_CLIENT), &fp);
+		if (error)
 			return (error);
-		}
 		if (fp->f_type != DTYPE_SOCKET) {
 			fdrop(fp, td);
 			return (EPERM);

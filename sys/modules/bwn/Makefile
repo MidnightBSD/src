@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/bwn/Makefile 245431 2013-01-14 19:51:26Z dim $
+# $FreeBSD: release/10.0.0/sys/modules/bwn/Makefile 239462 2012-08-20 18:33:03Z dim $
 
 .PATH: ${.CURDIR}/../../dev/bwn
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/zfs/zpool/replace/disk.t 185029 2008-11-17 20:49:29Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/zfs/zpool/replace/disk.t 185029 2008-11-17 20:49:29Z pjd $
 
 dir=`dirname $0`
 . ${dir}/../../misc.sh

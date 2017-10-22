@@ -1,4 +1,4 @@
-#$FreeBSD: stable/9/sys/arm/at91/std.bwct 185539 2008-12-02 02:26:15Z peter $
+#$FreeBSD: release/10.0.0/sys/arm/at91/std.bwct 185539 2008-12-02 02:26:15Z peter $
 include "../at91/std.at91"
 
 options		STARTUP_PAGETABLE_ADDR=0x20800000

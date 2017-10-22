@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sparc64/include/cmt.h 203829 2010-02-13 14:13:39Z marius $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/cmt.h 203829 2010-02-13 14:13:39Z marius $
  */
 
 #ifndef _MACHINE_CMT_H_

@@ -13,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/9/tools/tools/ath/arcode/arcode.c 220366 2011-04-05 16:12:38Z adrian $
+ * $FreeBSD: release/10.0.0/tools/tools/ath/arcode/arcode.c 244960 2013-01-02 18:03:19Z adrian $
  */
 
 #include <stdio.h>
@@ -106,7 +106,7 @@ main(int argc, const char *argv[])
 				op_mark(&a);
 				break;
 			default:
-				printf("op: %s; reg: %x; val: %x\n",
+				printf("op: %d; reg: 0x%x; val: 0x%x\n",
 				    a.op, a.reg, a.val);
 		}
 	}

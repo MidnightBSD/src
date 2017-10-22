@@ -24,12 +24,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * High-level driver for µPD7210 based GPIB cards.
+ * High-level driver for ÂµPD7210 based GPIB cards.
  *
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ieee488/ibfoo.c 216364 2010-12-10 22:20:11Z joerg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ieee488/ibfoo.c 230134 2012-01-15 13:23:43Z uqs $");
 
 #  define	IBDEBUG
 #  undef	IBDEBUG

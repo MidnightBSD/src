@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/etc/master.passwd 243947 2012-12-06 11:52:31Z rwatson $
+# $FreeBSD: release/10.0.0/etc/master.passwd 256366 2013-10-12 06:08:18Z rpaulo $
 #
 root::0:0::0:0:Charlie &:/root:/bin/csh
 toor:*:0:0::0:0:Bourne-again Superuser:/root:
@@ -14,6 +14,7 @@ sshd:*:22:22::0:0:Secure Shell Daemon:/var/empty:/usr/sbin/nologin
 smmsp:*:25:25::0:0:Sendmail Submission User:/var/spool/clientmqueue:/usr/sbin/nologin
 mailnull:*:26:26::0:0:Sendmail Default User:/var/spool/mqueue:/usr/sbin/nologin
 bind:*:53:53::0:0:Bind Sandbox:/:/usr/sbin/nologin
+unbound:*:59:59::0:0:Unbound DNS Resolver:/var/unbound:/usr/sbin/nologin
 proxy:*:62:62::0:0:Packet Filter pseudo-user:/nonexistent:/usr/sbin/nologin
 _pflogd:*:64:64::0:0:pflogd privsep user:/var/empty:/usr/sbin/nologin
 _dhcp:*:65:65::0:0:dhcp programs:/var/empty:/usr/sbin/nologin

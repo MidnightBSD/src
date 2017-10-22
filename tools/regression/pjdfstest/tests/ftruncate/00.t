@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/ftruncate/00.t 219439 2011-03-09 23:11:30Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/ftruncate/00.t 219439 2011-03-09 23:11:30Z pjd $
 
 desc="ftruncate descrease/increase file size"
 

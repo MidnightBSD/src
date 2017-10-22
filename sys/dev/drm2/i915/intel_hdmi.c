@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/i915/intel_hdmi.c 235783 2012-05-22 11:07:44Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/i915/intel_hdmi.c 254797 2013-08-24 16:50:47Z dumbbell $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm.h>
@@ -318,7 +318,7 @@ static int intel_hdmi_mode_valid(struct drm_connector *connector,
 }
 
 static bool intel_hdmi_mode_fixup(struct drm_encoder *encoder,
-				  struct drm_display_mode *mode,
+				  const struct drm_display_mode *mode,
 				  struct drm_display_mode *adjusted_mode)
 {
 	return true;

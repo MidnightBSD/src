@@ -31,7 +31,7 @@
  *	from: @(#)auth.h 1.17 88/02/08 SMI
  *	from: @(#)auth.h	2.3 88/08/07 4.0 RPCSRC
  *	from: @(#)auth.h	1.43 	98/02/02 SMI
- * $FreeBSD: stable/9/sys/rpc/auth.h 241309 2012-10-07 05:11:29Z pfg $
+ * $FreeBSD: release/10.0.0/sys/rpc/auth.h 241181 2012-10-04 04:15:18Z pfg $
  */
 
 /*

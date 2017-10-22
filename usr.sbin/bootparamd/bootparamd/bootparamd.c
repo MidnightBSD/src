@@ -9,7 +9,7 @@ use and modify. Please send modifications and/or suggestions + bug fixes to
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/bootparamd/bootparamd/bootparamd.c 201521 2010-01-04 18:08:16Z ed $";
+  "$FreeBSD: release/10.0.0/usr.sbin/bootparamd/bootparamd/bootparamd.c 229403 2012-01-03 18:51:58Z ed $";
 #endif /* not lint */
 
 #ifdef YP
@@ -114,7 +114,7 @@ bp_getfile_res *
 bp_getfile_arg *getfile;
 struct svc_req *req;
 {
-  char *where, *index();
+  char *where;
   static bp_getfile_res res;
 
   if (debug)
@@ -133,7 +133,7 @@ struct svc_req *req;
   askname[sizeof(askname)-1] = 0;
 
   if (getthefile(askname, getfile->file_id,buffer,sizeof(buffer))) {
-    if ( (where = index(buffer,':')) ) {
+    if ( (where = strchr(buffer,':')) ) {
       /* buffer is re-written to contain the name of the info of file */
       strncpy(hostname, buffer, where - buffer);
       hostname[where - buffer] = '\0';

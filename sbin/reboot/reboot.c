@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)reboot.c	8.1 (Berkeley) 6/5/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/reboot/reboot.c 202195 2010-01-13 17:59:23Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/reboot/reboot.c 228408 2011-12-11 11:42:44Z ed $");
 
 #include <sys/reboot.h>
 #include <sys/time.h>
@@ -60,7 +60,7 @@ __FBSDID("$FreeBSD: stable/9/sbin/reboot/reboot.c 202195 2010-01-13 17:59:23Z ed
 static void usage(void);
 static u_int get_pageins(void);
 
-int dohalt;
+static int dohalt;
 
 int
 main(int argc, char *argv[])
@@ -69,9 +69,9 @@ main(int argc, char *argv[])
 	const struct passwd *pw;
 	int ch, howto, i, fd, lflag, nflag, qflag, sverrno;
 	u_int pageins;
-	const char *p, *user, *kernel = NULL;
+	const char *user, *kernel = NULL;
 
-	if (strstr((p = rindex(*argv, '/')) ? p + 1 : *argv, "halt")) {
+	if (strcmp(getprogname(), "halt") == 0) {
 		dohalt = 1;
 		howto = RB_HALT;
 	} else

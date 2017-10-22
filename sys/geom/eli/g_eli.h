@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/geom/eli/g_eli.h 221629 2011-05-08 09:25:16Z pjd $
+ * $FreeBSD: release/10.0.0/sys/geom/eli/g_eli.h 238116 2012-07-04 17:54:17Z pjd $
  */
 
 #ifndef	_G_ELI_H_
@@ -43,6 +43,7 @@
 #include <sys/tree.h>
 #include <geom/geom.h>
 #else
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -67,6 +68,8 @@
  * 5 - Added multiple encrypton keys and AES-XTS support.
  * 6 - Fixed usage of multiple keys for authenticated providers (the
  *     G_ELI_FLAG_FIRST_KEY flag will be set for older versions).
+ * 7 - Encryption keys are now generated from the Data Key and not from the
+ *     IV Key (the G_ELI_FLAG_ENC_IVKEY flag will be set for older versions).
  */
 #define	G_ELI_VERSION_00	0
 #define	G_ELI_VERSION_01	1
@@ -75,7 +78,8 @@
 #define	G_ELI_VERSION_04	4
 #define	G_ELI_VERSION_05	5
 #define	G_ELI_VERSION_06	6
-#define	G_ELI_VERSION		G_ELI_VERSION_06
+#define	G_ELI_VERSION_07	7
+#define	G_ELI_VERSION		G_ELI_VERSION_07
 
 /* ON DISK FLAGS. */
 /* Use random, onetime keys. */
@@ -103,6 +107,8 @@
 #define	G_ELI_FLAG_SUSPEND		0x00100000
 /* Provider uses first encryption key. */
 #define	G_ELI_FLAG_FIRST_KEY		0x00200000
+/* Provider uses IV-Key for encryption key generation. */
+#define	G_ELI_FLAG_ENC_IVKEY		0x00400000
 
 #define	G_ELI_NEW_BIO	255
 
@@ -166,6 +172,7 @@ struct g_eli_worker {
 
 struct g_eli_softc {
 	struct g_geom	*sc_geom;
+	u_int		 sc_version;
 	u_int		 sc_crypto;
 	uint8_t		 sc_mkey[G_ELI_DATAIVKEYLEN];
 	uint8_t		 sc_ekey[G_ELI_DATAKEYLEN];
@@ -190,6 +197,7 @@ struct g_eli_softc {
 	size_t		 sc_sectorsize;
 	u_int		 sc_bytes_per_sector;
 	u_int		 sc_data_per_sector;
+	boolean_t	 sc_cpubind;
 
 	/* Only for software cryptography. */
 	struct bio_queue_head sc_queue;
@@ -217,14 +225,28 @@ struct g_eli_metadata {
 } __packed;
 #ifndef _OpenSSL_
 static __inline void
-eli_metadata_encode(struct g_eli_metadata *md, u_char *data)
+eli_metadata_encode_v0(struct g_eli_metadata *md, u_char **datap)
 {
-	MD5_CTX ctx;
 	u_char *p;
 
-	p = data;
-	bcopy(md->md_magic, p, sizeof(md->md_magic)); p += sizeof(md->md_magic);
-	le32enc(p, md->md_version);	p += sizeof(md->md_version);
+	p = *datap;
+	le32enc(p, md->md_flags);	p += sizeof(md->md_flags);
+	le16enc(p, md->md_ealgo);	p += sizeof(md->md_ealgo);
+	le16enc(p, md->md_keylen);	p += sizeof(md->md_keylen);
+	le64enc(p, md->md_provsize);	p += sizeof(md->md_provsize);
+	le32enc(p, md->md_sectorsize);	p += sizeof(md->md_sectorsize);
+	*p = md->md_keys;		p += sizeof(md->md_keys);
+	le32enc(p, md->md_iterations);	p += sizeof(md->md_iterations);
+	bcopy(md->md_salt, p, sizeof(md->md_salt)); p += sizeof(md->md_salt);
+	bcopy(md->md_mkeys, p, sizeof(md->md_mkeys)); p += sizeof(md->md_mkeys);
+	*datap = p;
+}
+static __inline void
+eli_metadata_encode_v1v2v3v4v5v6v7(struct g_eli_metadata *md, u_char **datap)
+{
+	u_char *p;
+
+	p = *datap;
 	le32enc(p, md->md_flags);	p += sizeof(md->md_flags);
 	le16enc(p, md->md_ealgo);	p += sizeof(md->md_ealgo);
 	le16enc(p, md->md_keylen);	p += sizeof(md->md_keylen);
@@ -235,6 +257,40 @@ eli_metadata_encode(struct g_eli_metadata *md, u_char *data)
 	le32enc(p, md->md_iterations);	p += sizeof(md->md_iterations);
 	bcopy(md->md_salt, p, sizeof(md->md_salt)); p += sizeof(md->md_salt);
 	bcopy(md->md_mkeys, p, sizeof(md->md_mkeys)); p += sizeof(md->md_mkeys);
+	*datap = p;
+}
+static __inline void
+eli_metadata_encode(struct g_eli_metadata *md, u_char *data)
+{
+	MD5_CTX ctx;
+	u_char *p;
+
+	p = data;
+	bcopy(md->md_magic, p, sizeof(md->md_magic));
+	p += sizeof(md->md_magic);
+	le32enc(p, md->md_version);
+	p += sizeof(md->md_version);
+	switch (md->md_version) {
+	case G_ELI_VERSION_00:
+		eli_metadata_encode_v0(md, &p);
+		break;
+	case G_ELI_VERSION_01:
+	case G_ELI_VERSION_02:
+	case G_ELI_VERSION_03:
+	case G_ELI_VERSION_04:
+	case G_ELI_VERSION_05:
+	case G_ELI_VERSION_06:
+	case G_ELI_VERSION_07:
+		eli_metadata_encode_v1v2v3v4v5v6v7(md, &p);
+		break;
+	default:
+#ifdef _KERNEL
+		panic("%s: Unsupported version %u.", __func__,
+		    (u_int)md->md_version);
+#else
+		assert(!"Unsupported metadata version.");
+#endif
+	}
 	MD5Init(&ctx);
 	MD5Update(&ctx, data, p - data);
 	MD5Final(md->md_hash, &ctx);
@@ -265,7 +321,7 @@ eli_metadata_decode_v0(const u_char *data, struct g_eli_metadata *md)
 }
 
 static __inline int
-eli_metadata_decode_v1v2v3v4v5v6(const u_char *data, struct g_eli_metadata *md)
+eli_metadata_decode_v1v2v3v4v5v6v7(const u_char *data, struct g_eli_metadata *md)
 {
 	MD5_CTX ctx;
 	const u_char *p;
@@ -294,6 +350,8 @@ eli_metadata_decode(const u_char *data, struct g_eli_metadata *md)
 	int error;
 
 	bcopy(data, md->md_magic, sizeof(md->md_magic));
+	if (strcmp(md->md_magic, G_ELI_MAGIC) != 0)
+		return (EINVAL);
 	md->md_version = le32dec(data + sizeof(md->md_magic));
 	switch (md->md_version) {
 	case G_ELI_VERSION_00:
@@ -305,10 +363,11 @@ eli_metadata_decode(const u_char *data, struct g_eli_metadata *md)
 	case G_ELI_VERSION_04:
 	case G_ELI_VERSION_05:
 	case G_ELI_VERSION_06:
-		error = eli_metadata_decode_v1v2v3v4v5v6(data, md);
+	case G_ELI_VERSION_07:
+		error = eli_metadata_decode_v1v2v3v4v5v6v7(data, md);
 		break;
 	default:
-		error = EINVAL;
+		error = EOPNOTSUPP;
 		break;
 	}
 	return (error);

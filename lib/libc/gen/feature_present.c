@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/feature_present.c 175220 2008-01-10 22:11:21Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/feature_present.c 175220 2008-01-10 22:11:21Z jhb $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/csu/ia64/Makefile 234726 2012-04-27 06:49:35Z dim $
+# $FreeBSD: release/10.0.0/lib/csu/ia64/Makefile 234502 2012-04-20 21:00:39Z dim $
 
 .PATH: ${.CURDIR}/../common
 

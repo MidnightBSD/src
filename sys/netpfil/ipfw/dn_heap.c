@@ -27,13 +27,13 @@
 /*
  * Binary heap and hash tables, used in dummynet
  *
- * $FreeBSD: stable/9/sys/netpfil/ipfw/dn_heap.c 243401 2012-11-22 12:11:32Z glebius $
+ * $FreeBSD: release/10.0.0/sys/netpfil/ipfw/dn_heap.c 240494 2012-09-14 11:51:49Z glebius $
  */
 
 #include <sys/cdefs.h>
 #include <sys/param.h>
 #ifdef _KERNEL
-__FBSDID("$FreeBSD: stable/9/sys/netpfil/ipfw/dn_heap.c 243401 2012-11-22 12:11:32Z glebius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netpfil/ipfw/dn_heap.c 240494 2012-09-14 11:51:49Z glebius $");
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/kernel.h>
@@ -59,7 +59,7 @@ static void my_free(void *p) {	free(p); }
 #define free(p, t)	my_free(p)
 #endif /* !_KERNEL */
 
-MALLOC_DEFINE(M_DN_HEAP, "dummynet", "dummynet heap");
+static MALLOC_DEFINE(M_DN_HEAP, "dummynet", "dummynet heap");
 
 /*
  * Heap management functions.

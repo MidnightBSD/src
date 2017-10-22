@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/ia64/include/param.h 224217 2011-07-19 13:00:30Z attilio $ */
+/* $FreeBSD: release/10.0.0/sys/ia64/include/param.h 250338 2013-05-07 22:46:24Z attilio $ */
 /* From: NetBSD: param.h,v 1.20 1997/09/19 13:52:53 leo Exp */
 
 /*-
@@ -69,6 +69,10 @@
 #define MAXCPU		1
 #endif
 
+#ifndef MAXMEMDOM
+#define	MAXMEMDOM	1
+#endif
+
 #define	ALIGNBYTES		_ALIGNBYTES
 #define	ALIGN(p)		_ALIGN(p)
 /*
@@ -109,9 +113,6 @@
 
 #define atop(x)			((unsigned long)(x) >> PAGE_SHIFT)
 #define ptoa(x)			((unsigned long)(x) << PAGE_SHIFT)
-
-#define	ia64_btop(x)		((unsigned long)(x) >> PAGE_SHIFT)
-#define	ia64_ptob(x)		((unsigned long)(x) << PAGE_SHIFT)
 
 #define pgtok(x)                ((x) * (PAGE_SIZE / 1024)) 
 

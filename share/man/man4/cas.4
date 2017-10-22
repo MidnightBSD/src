@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/cas.4 233737 2012-03-31 10:20:48Z marius $
+.\" $FreeBSD: release/10.0.0/share/man/man4/cas.4 248253 2013-03-13 18:43:25Z pluknet $
 .\"
 .Dd March 24, 2012
 .Dt CAS 4
@@ -44,7 +44,7 @@ Alternatively, to load the driver as a
 module at boot time, place the following line in
 .Xr loader.conf 5 :
 .Bd -literal -offset indent
-if_cas="YES"
+if_cas_load="YES"
 .Ed
 .Sh DESCRIPTION
 The
@@ -70,7 +70,6 @@ Selecting an MTU larger than 1500 bytes with the
 .Xr ifconfig 8
 utility configures the adapter to receive and transmit Jumbo Frames.
 .Sh HARDWARE
-.Pp
 The chips supported by the
 .Nm
 driver are:

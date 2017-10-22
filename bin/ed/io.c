@@ -26,12 +26,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/ed/io.c 229143 2011-12-31 19:48:04Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/ed/io.c 241737 2012-10-19 14:49:42Z ed $");
 
 #include "ed.h"
-
-
-extern int scripted;
 
 /* read_file: read a named file/pipe into the buffer; return line count */
 long
@@ -58,11 +55,8 @@ read_file(char *fn, long n)
 	return current_addr - n;
 }
 
-
-extern int des;
-
-char *sbuf;			/* file i/o buffer */
-int sbufsz;			/* file i/o buffer size */
+static char *sbuf;		/* file i/o buffer */
+static int sbufsz;		/* file i/o buffer size */
 int newline_added;		/* if set, newline appended to input file */
 
 /* read_stream: read a stream into the editor buffer; return status */
@@ -297,9 +291,6 @@ get_tty_line(void)
 
 #define ESCAPES "\a\b\f\n\r\t\v\\"
 #define ESCCHARS "abfnrtv\\"
-
-extern int rows;
-extern int cols;
 
 /* put_tty_line: print text to stdout */
 int

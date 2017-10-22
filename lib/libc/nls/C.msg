@@ -1,4 +1,4 @@
-$ $FreeBSD: stable/9/lib/libc/nls/C.msg 199083 2009-11-09 12:46:59Z ume $
+$ $FreeBSD: release/10.0.0/lib/libc/nls/C.msg 250250 2013-05-04 19:07:22Z pluknet $
 $
 $ Message catalog for C locale (template)
 $
@@ -191,6 +191,12 @@ $ EPROTO
 92 Protocol error
 $ ENOTCAPABLE
 93 Capabilities insufficient
+$ ECAPMODE
+94 Not permitted in capability mode
+$ ENOTRECOVERABLE
+95 State not recoverable
+$ EOWNERDEAD
+96 Previous owner died
 $
 $ strsignal() support catalog
 $

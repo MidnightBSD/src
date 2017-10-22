@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)rpcinfo.c 1.16 89/04/05 Copyr 1986 Sun Micro";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/rpcinfo/rpcinfo.c 221860 2011-05-13 22:35:06Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/rpcinfo/rpcinfo.c 239373 2012-08-18 16:14:50Z kevlo $");
 
 /*
  * rpcinfo: ping a particular rpc program
@@ -50,7 +50,7 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/rpcinfo/rpcinfo.c 221860 2011-05-13 22:35:0
  */
 
 /*
- * We are for now defining PORTMAP here.  It doesnt even compile
+ * We are for now defining PORTMAP here.  It doesn't even compile
  * unless it is defined.
  */
 #ifndef	PORTMAP
@@ -476,7 +476,7 @@ pmapdump(int argc, char **argv)
 	struct rpcent *rpc;
 	enum clnt_stat clnt_st;
 	struct rpc_err err;
-	char *host;
+	char *host = NULL;
 
 	if (argc > 1)
 		usage();
@@ -513,10 +513,16 @@ pmapdump(int argc, char **argv)
 		if ((clnt_st == RPC_PROGVERSMISMATCH) ||
 		    (clnt_st == RPC_PROGUNAVAIL)) {
 			CLNT_GETERR(client, &err);
-			if (err.re_vers.low > PMAPVERS)
-				warnx(
-		"%s does not support portmapper.  Try rpcinfo %s instead",
-					host, host);
+			if (err.re_vers.low > PMAPVERS) {
+				if (host)
+					warnx("%s does not support portmapper."
+					    "Try rpcinfo %s instead", host,
+					    host);
+				else
+					warnx("local host does not support "
+					    "portmapper.  Try 'rpcinfo' "
+					    "instead");
+			}
 			exit(1);
 		}
 		clnt_perror(client, "rpcinfo: can't contact portmapper");

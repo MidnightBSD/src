@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: stable/9/sbin/shutdown/Makefile 216823 2010-12-30 18:06:31Z pjd $
+# $FreeBSD: release/10.0.0/sbin/shutdown/Makefile 216823 2010-12-30 18:06:31Z pjd $
 
 PROG=	shutdown
 MAN=	shutdown.8

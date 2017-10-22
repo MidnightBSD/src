@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/mmcsd/Makefile 236089 2012-05-26 09:31:23Z marius $
+# $FreeBSD: release/10.0.0/sys/modules/mmcsd/Makefile 234524 2012-04-21 01:51:16Z marius $
 
 .PATH: ${.CURDIR}/../../dev/mmc
 

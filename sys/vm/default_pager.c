@@ -38,14 +38,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/vm/default_pager.c 216128 2010-12-02 17:37:16Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/vm/default_pager.c 248084 2013-03-09 02:32:23Z attilio $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/lock.h>
 #include <sys/proc.h>
 #include <sys/resourcevar.h>
-#include <sys/mutex.h>
+#include <sys/rwlock.h>
 
 #include <vm/vm.h>
 #include <vm/vm_object.h>
@@ -91,10 +91,10 @@ default_pager_alloc(void *handle, vm_ooffset_t size, vm_prot_t prot,
 	object = vm_object_allocate(OBJT_DEFAULT,
 	    OFF_TO_IDX(round_page(offset + size)));
 	if (cred != NULL) {
-		VM_OBJECT_LOCK(object);
+		VM_OBJECT_WLOCK(object);
 		object->cred = cred;
 		object->charge = size;
-		VM_OBJECT_UNLOCK(object);
+		VM_OBJECT_WUNLOCK(object);
 	}
 	return (object);
 }

@@ -44,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/x86/cpufreq/hwpstate.c 215398 2010-11-16 12:43:45Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/x86/cpufreq/hwpstate.c 258994 2013-12-05 17:57:51Z sbruno $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -184,16 +184,21 @@ hwpstate_goto_pstate(device_t dev, int pstate)
 			id, PCPU_GET(cpuid));
 		/* Go To Px-state */
 		wrmsr(MSR_AMD_10H_11H_CONTROL, id);
+	}
+	CPU_FOREACH(i) {
+		/* Bind to each cpu. */
+		thread_lock(curthread);
+		sched_bind(curthread, i);
+		thread_unlock(curthread);
 		/* wait loop (100*100 usec is enough ?) */
 		for(j = 0; j < 100; j++){
+			/* get the result. not assure msr=id */
 			msr = rdmsr(MSR_AMD_10H_11H_STATUS);
 			if(msr == id){
 				break;
 			}
 			DELAY(100);
 		}
-		/* get the result. not assure msr=id */
-		msr = rdmsr(MSR_AMD_10H_11H_STATUS);
 		HWPSTATE_DEBUG(dev, "result  P%d-state on cpu%d\n",
 		    (int)msr, PCPU_GET(cpuid));
 		if (msr != id) {

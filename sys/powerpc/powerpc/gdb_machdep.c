@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/powerpc/gdb_machdep.c 177288 2008-03-17 00:46:52Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powerpc/gdb_machdep.c 236141 2012-05-27 10:25:20Z raj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -84,7 +84,7 @@ gdb_cpu_setreg(int regnum, void *val)
 int
 gdb_cpu_signal(int vector, int dummy __unused)
 {
-#ifdef E500
+#if defined(BOOKE)
 	if (vector == EXC_DEBUG || vector == EXC_PGM)
 		return (SIGTRAP);
 #else

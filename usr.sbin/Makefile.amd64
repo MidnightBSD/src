@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/Makefile.amd64 216322 2010-12-09 11:37:40Z brucec $
+# $FreeBSD: release/10.0.0/usr.sbin/Makefile.amd64 252356 2013-06-28 21:00:08Z davide $
 
 # kgzip: builds, but missing support files
 # mptable: broken (not 64 bit clean)
@@ -10,6 +10,9 @@ SUBDIR+=	acpi
 SUBDIR+=	apm
 .endif
 SUBDIR+=	asf
+SUBDIR+=	bhyve
+SUBDIR+=	bhyvectl
+SUBDIR+=	bhyveload
 SUBDIR+=	boot0cfg
 .if ${MK_TOOLCHAIN} != "no"
 SUBDIR+=	btxld
@@ -17,9 +20,6 @@ SUBDIR+=	btxld
 SUBDIR+=	cpucontrol
 SUBDIR+=	kgmon
 SUBDIR+=	lptcontrol
-.if ${MK_NCP} != "no"
-SUBDIR+=	mount_nwfs
-.endif
 SUBDIR+=	mount_smbfs
 SUBDIR+=	mptable
 .if ${MK_NDIS} != "no"
@@ -27,7 +27,4 @@ SUBDIR+=	ndiscvt
 .endif
 SUBDIR+=	sicontrol
 SUBDIR+=	spkrtest
-.if ${MK_SYSINSTALL} != "no"
-SUBDIR+=	sade
-.endif
 SUBDIR+=	zzz

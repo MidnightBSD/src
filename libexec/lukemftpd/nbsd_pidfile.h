@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/libexec/lukemftpd/nbsd_pidfile.h 161768 2006-08-31 16:57:46Z obrien $ */
+/* $FreeBSD: release/10.0.0/libexec/lukemftpd/nbsd_pidfile.h 229780 2012-01-07 16:09:54Z uqs $ */
 
 #include <sys/stdint.h>
 #include <sysexits.h>
@@ -10,7 +10,7 @@ pidfile(const char *basename)
 	pid_t otherpid, childpid;
 
 	if (basename != NULL) {
-		errx(EX_USAGE, "Need to impliment NetBSD semantics.");
+		errx(EX_USAGE, "Need to implement NetBSD semantics.");
 	}
 
 	pfh = pidfile_open(basename, 0644, &otherpid);

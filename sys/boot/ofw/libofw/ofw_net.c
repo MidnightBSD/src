@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/ofw/libofw/ofw_net.c 215437 2010-11-17 19:31:48Z andreast $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/ofw/libofw/ofw_net.c 229403 2012-01-03 18:51:58Z ed $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -185,7 +185,7 @@ ofwn_init(struct iodesc *desc, void *machdep_hint)
 	int		pathlen;
 
 	pathlen = OF_getprop(chosen, "bootpath", path, 64);
-	if ((ch = index(path, ':')) != NULL)
+	if ((ch = strchr(path, ':')) != NULL)
 		*ch = '\0';
 	netdev = OF_finddevice(path);
 #ifdef __sparc64__

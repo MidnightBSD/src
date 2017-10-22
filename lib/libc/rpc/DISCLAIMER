@@ -1,5 +1,5 @@
 /*	$NetBSD: DISCLAIMER,v 1.2 1998/01/09 04:11:51 perry Exp $	*/
-/*	$FreeBSD: stable/9/lib/libc/rpc/DISCLAIMER 74462 2001-03-19 12:50:13Z alfred $ */
+/*	$FreeBSD: release/10.0.0/lib/libc/rpc/DISCLAIMER 74462 2001-03-19 12:50:13Z alfred $ */
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for

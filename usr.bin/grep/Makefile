@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile,v 1.4 2011/02/16 01:31:33 joerg Exp $
-#	$FreeBSD: stable/9/usr.bin/grep/Makefile 229081 2011-12-31 13:12:10Z gabor $
+#	$FreeBSD: release/10.0.0/usr.bin/grep/Makefile 251468 2013-06-06 11:59:38Z jkim $
 #	$OpenBSD: Makefile,v 1.6 2003/06/25 15:00:04 millert Exp $
 
 .include <bsd.own.mk>
@@ -40,17 +40,24 @@ MLINKS= grep.1 egrep.1 \
 	grep.1 lzfgrep.1
 .endif
 
+LDADD=	-lz
+DPADD=	${LIBZ}
+
+.if !defined(WITHOUT_LZMA_SUPPORT)
+LDADD+=	-llzma
+DPADD+=	${LIBLZMA}
+
 LINKS+=	${BINDIR}/${PROG} ${BINDIR}/xzgrep \
 	${BINDIR}/${PROG} ${BINDIR}/xzegrep \
 	${BINDIR}/${PROG} ${BINDIR}/xzfgrep \
 	${BINDIR}/${PROG} ${BINDIR}/lzgrep \
 	${BINDIR}/${PROG} ${BINDIR}/lzegrep \
 	${BINDIR}/${PROG} ${BINDIR}/lzfgrep
+.else
+CFLAGS+= -DWITHOUT_LZMA
+.endif
 
-LDADD=	-lz -llzma
-DPADD=	${LIBZ} ${LIBLZMA}
-
-.if !defined(WITHOUT_BZIP2)
+.if !defined(WITHOUT_BZIP2_SUPPORT)
 LDADD+=	-lbz2
 DPADD+=	${LIBBZ2}
 
@@ -67,7 +74,7 @@ CFLAGS+= -DWITHOUT_BZIP2
 .endif
 
 .if !defined(WITHOUT_GNU_COMPAT)
-CFLAGS+= -I/usr/include/gnu
+CFLAGS+= -I${DESTDIR}/usr/include/gnu
 LDADD+=	-lgnuregex
 DPADD+=	${LIBGNUREGEX}
 .endif

@@ -25,12 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/userboot/userboot/elf32_freebsd.c 223695 2011-06-30 16:08:56Z dfr $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/userboot/userboot/elf32_freebsd.c 247047 2013-02-20 17:39:52Z kib $");
 
 #include <sys/param.h>
 #include <sys/exec.h>
 #include <sys/linker.h>
 #include <string.h>
+#define	_MACHINE_ELF_WANT_32BIT
 #include <i386/include/bootinfo.h>
 #include <i386/include/elf.h>
 #include <stand.h>

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/i8134x/i81342_mcu.c 187340 2009-01-16 19:31:27Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/i8134x/i81342_mcu.c 236987 2012-06-13 04:38:09Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,7 +38,7 @@ __FBSDID("$FreeBSD: stable/9/sys/arm/xscale/i8134x/i81342_mcu.c 187340 2009-01-1
 #include <arm/xscale/i8134x/i81342var.h>
 
 void
-i81342_sdram_bounds(bus_space_tag_t bt, bus_space_handle_t bh, 
+i81342_sdram_bounds(bus_space_tag_t bt, bus_space_handle_t bh,
     vm_paddr_t *start, vm_size_t *size)
 {
 	uint32_t reg;

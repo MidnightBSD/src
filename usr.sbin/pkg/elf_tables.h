@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/pkg/elf_tables.h 234313 2012-04-15 15:13:36Z bapt $
+ * $FreeBSD: release/10.0.0/usr.sbin/pkg/elf_tables.h 255468 2013-09-11 06:42:55Z bapt $
  */
 
 #ifndef ELF_TABLES_H_
@@ -34,7 +34,7 @@ struct _elf_corres {
 	const char *string;
 };
 
-struct _elf_corres mach_corres[] = {
+static struct _elf_corres mach_corres[] = {
 	{ EM_386, "x86" },
 	{ EM_AMD64, "x86" },
 	{ EM_ARM, "arm" },
@@ -46,32 +46,23 @@ struct _elf_corres mach_corres[] = {
 	{ -1, NULL },
 };
 
-struct _elf_corres wordsize_corres[] = {
+static struct _elf_corres wordsize_corres[] = {
 	{ ELFCLASS32, "32" },
 	{ ELFCLASS64, "64" },
 	{ -1, NULL},
 };
 
-struct _elf_corres endian_corres[] = {
+static struct _elf_corres endian_corres[] = {
 	{ ELFDATA2MSB, "eb" },
 	{ ELFDATA2LSB, "el" },
 	{ -1, NULL}
 };
 
-struct _elf_corres os_corres[] = {
-	{ ELFOSABI_FREEBSD, "freebsd" },
-	{ -1, NULL }
-};
-
-#define EF_MIPS_ABI	0x0000F000
+#ifndef EF_MIPS_ABI
+#define EF_MIPS_ABI	0x0000f000
+#endif
 #define E_MIPS_ABI_O32	0x00001000
 #define E_MIPS_ABI_N32	0x00000020
-
-#define EF_ARM_NEW_ABI	0x80
-#define EF_ARM_OLD_ABI	0x100
-
-#define EF_ARM_SOFT_FLOAT	0x200
-#define EF_ARM_VFP_FLOAT	0x400
 
 #define NT_VERSION	1
 #define NT_ARCH	2

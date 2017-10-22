@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/systat/cmdtab.c 231279 2012-02-09 15:21:54Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/systat/cmdtab.c 253360 2013-07-15 12:15:14Z glebius $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)cmdtab.c	8.1 (Berkeley) 6/6/93";
@@ -45,9 +45,6 @@ struct	cmdtab cmdtab[] = {
 	  0,		CF_LOADAV },
 	{ "swap",	showswap,	fetchswap,	labelswap,
 	  initswap,	openswap,	closeswap,	0,
-	  0,		CF_LOADAV },
-	{ "mbufs",	showmbufs,	fetchmbufs,	labelmbufs,
-	  initmbufs,	openmbufs,	closembufs,	0,
 	  0,		CF_LOADAV },
 	{ "iostat",	showiostat,	fetchiostat,	labeliostat,
 	  initiostat,	openiostat,	closeiostat,	cmdiostat,

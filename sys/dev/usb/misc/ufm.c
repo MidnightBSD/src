@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/misc/ufm.c 235000 2012-05-04 15:05:30Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/misc/ufm.c 246128 2013-01-30 18:01:20Z sbz $");
 
 
 #include <sys/stdint.h>
@@ -105,7 +105,8 @@ static device_method_t ufm_methods[] = {
 	DEVMETHOD(device_probe, ufm_probe),
 	DEVMETHOD(device_attach, ufm_attach),
 	DEVMETHOD(device_detach, ufm_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t ufm_driver = {

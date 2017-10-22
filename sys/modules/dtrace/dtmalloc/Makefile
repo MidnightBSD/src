@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/dtrace/dtmalloc/Makefile 179065 2008-05-17 02:31:19Z jb $
+# $FreeBSD: release/10.0.0/sys/modules/dtrace/dtmalloc/Makefile 253996 2013-08-06 15:51:56Z avg $
 
 .PATH: ${.CURDIR}/../../../cddl/dev/dtmalloc
 
@@ -11,3 +11,5 @@ CFLAGS+=	-I${.CURDIR}/../../../cddl/compat/opensolaris \
 		-I${.CURDIR}/../../..
 
 .include <bsd.kmod.mk>
+
+CFLAGS+=	-include ${.CURDIR}/../../../cddl/compat/opensolaris/sys/debug_compat.h

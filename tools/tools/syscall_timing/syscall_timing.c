@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/tools/syscall_timing/syscall_timing.c 236798 2012-06-09 08:25:39Z kib $
+ * $FreeBSD: release/10.0.0/tools/tools/syscall_timing/syscall_timing.c 236690 2012-06-06 17:26:52Z kib $
  */
 
 #include <sys/types.h>

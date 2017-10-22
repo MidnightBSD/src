@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/sbin/devd/devd.conf.5 247767 2013-03-04 05:46:35Z hrs $
+.\" $FreeBSD: release/10.0.0/sbin/devd/devd.conf.5 247134 2013-02-21 21:35:09Z pluknet $
 .\"
 .\" The section on comments was taken from named.conf.5, which has the
 .\" following copyright:
@@ -41,7 +41,7 @@
 .\" ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
 .\" SOFTWARE.
 .\"
-.Dd March 4, 2013
+.Dd February 22, 2013
 .Dt DEVD.CONF 5
 .Os
 .Sh NAME
@@ -181,9 +181,8 @@ Valid media types are:
 .Dq Li Tokenring ,
 .Dq Li FDDI ,
 .Dq Li 802.11 ,
-.Dq Li ATM ,
 and
-.Dq Li CARP .
+.Dq Li ATM .
 .It Ic subdevice Qq Ar string ;
 This is shorthand for
 .Dq Ic match Qo Li subdevice Qc Qq Ar string .
@@ -350,6 +349,7 @@ The network interface is attached to the system.
 The network interface is detached from the system.
 .El
 .El
+.Pp
 .It Li DEVFS
 Events related to the
 .Xr devfs 5
@@ -369,6 +369,7 @@ The
 node is destroyed.
 .El
 .El
+.Pp
 .It Li USB
 Events related to the USB subsystem.
 .Bl -tag -width ".Sy Subsystem" -compact
@@ -390,6 +391,7 @@ USB interface is attached to a device.
 USB interface is detached from a device.
 .El
 .El
+.Pp
 .It Li coretemp
 Events related to the
 .Xr coretemp 4
@@ -404,6 +406,7 @@ Notification that the CPU core has reached critical temperature.
 String containing the temperature of the core that has become too hot.
 .El
 .El
+.Pp
 .It Li kern
 Events related to the kernel.
 .Bl -tag -width ".Sy Subsystem" -compact
@@ -544,4 +547,5 @@ has many additional examples.
 .Sh SEE ALSO
 .Xr coretemp 4 ,
 .Xr devfs 5 ,
+.Xr re_format 7 ,
 .Xr devd 8

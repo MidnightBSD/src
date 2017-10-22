@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/cam/scsi/scsi_sg.c 247115 2013-02-21 19:02:29Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/cam/scsi/scsi_sg.c 257049 2013-10-24 10:33:31Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -238,9 +238,6 @@ sgoninvalidate(struct cam_periph *periph)
 	 *     with XPT_ABORT_CCB.
 	 */
 
-	if (bootverbose) {
-		xpt_print(periph->path, "lost device\n");
-	}
 }
 
 static void
@@ -249,8 +246,6 @@ sgcleanup(struct cam_periph *periph)
 	struct sg_softc *softc;
 
 	softc = (struct sg_softc *)periph->softc;
-	if (bootverbose)
-		xpt_print(periph->path, "removing device entry\n");
 
 	devstat_remove_entry(softc->device_stats);
 
@@ -946,25 +941,23 @@ sgsendccb(struct cam_periph *periph, union ccb *ccb)
 {
 	struct sg_softc *softc;
 	struct cam_periph_map_info mapinfo;
-	int error, need_unmap = 0;
+	int error;
 
 	softc = periph->softc;
-	if (((ccb->ccb_h.flags & CAM_DIR_MASK) != CAM_DIR_NONE)
-	    && (ccb->csio.data_ptr != NULL)) {
-		bzero(&mapinfo, sizeof(mapinfo));
+	bzero(&mapinfo, sizeof(mapinfo));
 
-		/*
-		 * cam_periph_mapmem calls into proc and vm functions that can
-		 * sleep as well as trigger I/O, so we can't hold the lock.
-		 * Dropping it here is reasonably safe.
-		 */
-		cam_periph_unlock(periph);
-		error = cam_periph_mapmem(ccb, &mapinfo);
-		cam_periph_lock(periph);
-		if (error)
-			return (error);
-		need_unmap = 1;
-	}
+	/*
+	 * cam_periph_mapmem calls into proc and vm functions that can
+	 * sleep as well as trigger I/O, so we can't hold the lock.
+	 * Dropping it here is reasonably safe.
+	 * The only CCB opcode that is possible here is XPT_SCSI_IO, no
+	 * need for additional checks.
+	 */
+	cam_periph_unlock(periph);
+	error = cam_periph_mapmem(ccb, &mapinfo);
+	cam_periph_lock(periph);
+	if (error)
+		return (error);
 
 	error = cam_periph_runccb(ccb,
 				  sgerror,
@@ -972,8 +965,7 @@ sgsendccb(struct cam_periph *periph, union ccb *ccb)
 				  SF_RETRY_UA,
 				  softc->device_stats);
 
-	if (need_unmap)
-		cam_periph_unmapmem(ccb, &mapinfo);
+	cam_periph_unmapmem(ccb, &mapinfo);
 
 	return (error);
 }

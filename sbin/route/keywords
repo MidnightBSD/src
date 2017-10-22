@@ -1,5 +1,5 @@
 #	@(#)keywords	8.2 (Berkeley) 3/19/94
-# $FreeBSD: stable/9/sbin/route/keywords 191080 2009-04-14 23:05:36Z kmacy $
+# $FreeBSD: release/10.0.0/sbin/route/keywords 243185 2012-11-17 19:54:23Z hrs $
 
 add
 atalk
@@ -10,6 +10,7 @@ del
 delete
 dst
 expire
+fib
 flush
 gateway
 genmask

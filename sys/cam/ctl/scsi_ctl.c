@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/cam/ctl/scsi_ctl.c 249511 2013-04-15 17:19:28Z trasz $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/cam/ctl/scsi_ctl.c 255117 2013-09-01 10:11:00Z mav $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -244,7 +244,6 @@ MODULE_DEPEND(ctlfe, ctl, 1, 1, 1);
 MODULE_DEPEND(ctlfe, cam, 1, 1, 1);
 
 extern struct ctl_softc *control_softc;
-extern int ctl_disable;
 
 void
 ctlfeshutdown(void)
@@ -256,10 +255,6 @@ void
 ctlfeinit(void)
 {
 	cam_status status;
-
-	/* Don't initialize if we're disabled */
-	if (ctl_disable != 0)
-		return;
 
 	STAILQ_INIT(&ctlfe_softc_list);
 
@@ -879,6 +874,7 @@ ctlfestart(struct cam_periph *periph, union ccb *start_ccb)
 			
 			csio->cdb_len = atio->cdb_len;
 
+			flags &= ~CAM_DATA_MASK;
 			if (io->scsiio.kern_sg_entries == 0) {
 				/* No S/G list */
 				data_ptr = io->scsiio.kern_data_ptr;
@@ -886,7 +882,9 @@ ctlfestart(struct cam_periph *periph, union ccb *start_ccb)
 				csio->sglist_cnt = 0;
 
 				if (io->io_hdr.flags & CTL_FLAG_BUS_ADDR)
-					flags |= CAM_DATA_PHYS;
+					flags |= CAM_DATA_PADDR;
+				else
+					flags |= CAM_DATA_VADDR;
 			} else if (io->scsiio.kern_sg_entries <=
 				   (sizeof(cmd_info->cam_sglist)/
 				   sizeof(cmd_info->cam_sglist[0]))) {
@@ -910,11 +908,10 @@ ctlfestart(struct cam_periph *periph, union ccb *start_ccb)
 						ctl_sglist[i].len;
 				}
 				csio->sglist_cnt = io->scsiio.kern_sg_entries;
-				flags |= CAM_SCATTER_VALID;
 				if (io->io_hdr.flags & CTL_FLAG_BUS_ADDR)
-					flags |= CAM_SG_LIST_PHYS;
+					flags |= CAM_DATA_SG_PADDR;
 				else
-					flags &= ~CAM_SG_LIST_PHYS;
+					flags |= CAM_DATA_SG;
 				data_ptr = (uint8_t *)cam_sglist;
 				dxfer_len = io->scsiio.kern_data_len;
 			} else {
@@ -936,6 +933,10 @@ ctlfestart(struct cam_periph *periph, union ccb *start_ccb)
 				data_ptr = sglist[*ti].addr;
 				dxfer_len = sglist[*ti].len;
 				csio->sglist_cnt = 0;
+				if (io->io_hdr.flags & CTL_FLAG_BUS_ADDR)
+					flags |= CAM_DATA_PADDR;
+				else
+					flags |= CAM_DATA_VADDR;
 				cmd_info->flags |= CTLFE_CMD_PIECEWISE;
 				(*ti)++;
 			}
@@ -960,23 +961,23 @@ ctlfestart(struct cam_periph *periph, union ccb *start_ccb)
 
 		/*
 		 * Valid combinations:
-		 *  - CAM_SEND_STATUS, SCATTER_VALID = 0, dxfer_len = 0,
+		 *  - CAM_SEND_STATUS, CAM_DATA_SG = 0, dxfer_len = 0,
 		 *    sglist_cnt = 0
-		 *  - CAM_SEND_STATUS = 0, SCATTER_VALID = 0, dxfer_len != 0,
+		 *  - CAM_SEND_STATUS = 0, CAM_DATA_SG = 0, dxfer_len != 0,
 		 *    sglist_cnt = 0 
-		 *  - CAM_SEND_STATUS = 0, SCATTER_VALID, dxfer_len != 0,
+		 *  - CAM_SEND_STATUS = 0, CAM_DATA_SG, dxfer_len != 0,
 		 *    sglist_cnt != 0
 		 */
 #ifdef CTLFEDEBUG
 		if (((flags & CAM_SEND_STATUS)
-		  && (((flags & CAM_SCATTER_VALID) != 0)
+		  && (((flags & CAM_DATA_SG) != 0)
 		   || (dxfer_len != 0)
 		   || (csio->sglist_cnt != 0)))
 		 || (((flags & CAM_SEND_STATUS) == 0)
 		  && (dxfer_len == 0))
-		 || ((flags & CAM_SCATTER_VALID)
+		 || ((flags & CAM_DATA_SG)
 		  && (csio->sglist_cnt == 0))
-		 || (((flags & CAM_SCATTER_VALID) == 0)
+		 || (((flags & CAM_DATA_SG) == 0)
 		  && (csio->sglist_cnt != 0))) {
 			printf("%s: tag %04x cdb %02x flags %#x dxfer_len "
 			       "%d sg %u\n", __func__, atio->tag_id,
@@ -2059,7 +2060,6 @@ ctlfe_lun_disable(void *arg, struct ctl_id targ_id, int lun_id)
 static void
 ctlfe_dump_sim(struct cam_sim *sim)
 {
-	int i;
 
 	printf("%s%d: max tagged openings: %d, max dev openings: %d\n",
 	       sim->sim_name, sim->unit_number,
@@ -2070,14 +2070,6 @@ ctlfe_dump_sim(struct cam_sim *sim)
 	printf("%s%d: ccb_freeq is %sempty\n",
 	       sim->sim_name, sim->unit_number,
 	       (SLIST_FIRST(&sim->ccb_freeq) == NULL) ? "" : "NOT ");
-	printf("%s%d: alloc_queue.entries %d, alloc_openings %d\n",
-	       sim->sim_name, sim->unit_number,
-	       sim->devq->alloc_queue.entries, sim->devq->alloc_openings);
-	printf("%s%d: qfrozen_cnt:", sim->sim_name, sim->unit_number);
-	for (i = 0; i < CAM_RL_VALUES; i++) {
-		printf("%s%u", (i != 0) ? ":" : "",
-		sim->devq->alloc_queue.qfrozen_cnt[i]);
-	}
 	printf("\n");
 }
 
@@ -2145,7 +2137,7 @@ ctlfe_dump_queue(struct ctlfe_lun_softc *softc)
 
 	xpt_print(periph->path, "%d requests total waiting for CCBs\n",
 		  num_items);
-	xpt_print(periph->path, "%ju CCBs oustanding (%ju allocated, %ju "
+	xpt_print(periph->path, "%ju CCBs outstanding (%ju allocated, %ju "
 		  "freed)\n", (uintmax_t)(softc->ccbs_alloced -
 		  softc->ccbs_freed), (uintmax_t)softc->ccbs_alloced,
 		  (uintmax_t)softc->ccbs_freed);

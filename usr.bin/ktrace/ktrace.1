@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)ktrace.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: stable/9/usr.bin/ktrace/ktrace.1 237663 2012-06-27 21:12:15Z jhb $
+.\" $FreeBSD: release/10.0.0/usr.bin/ktrace/ktrace.1 236357 2012-05-31 14:46:02Z jhb $
 .\"
 .Dd May 31, 2012
 .Dt KTRACE 1
@@ -115,6 +115,8 @@ trace
 .Tn I/O
 .It Cm n
 trace namei translations
+.It Cm p
+trace capability check failures
 .It Cm s
 trace signal processing
 .It Cm t
@@ -129,7 +131,7 @@ trace
 requests
 .It Cm +
 trace the default set of trace points -
-.Cm c , i , n , s , t , u , y
+.Cm c , i , n , p , s , t , u , y
 .El
 .It Ar command
 Execute

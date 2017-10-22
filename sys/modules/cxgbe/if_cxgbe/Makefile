@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/sys/modules/cxgbe/if_cxgbe/Makefile 240169 2012-09-06 17:28:47Z np $
+# $FreeBSD: release/10.0.0/sys/modules/cxgbe/if_cxgbe/Makefile 253691 2013-07-26 22:04:11Z np $
 #
 
 .include <bsd.own.mk>
@@ -8,7 +8,7 @@ CXGBE = ${.CURDIR}/../../../dev/cxgbe
 .PATH: ${CXGBE} ${CXGBE}/common
 
 KMOD = if_cxgbe
-SRCS = t4_main.c t4_sge.c t4_l2t.c
+SRCS = t4_main.c t4_sge.c t4_l2t.c t4_tracer.c
 SRCS+= t4_hw.c
 SRCS+= device_if.h bus_if.h pci_if.h
 SRCS+= opt_inet.h opt_inet6.h

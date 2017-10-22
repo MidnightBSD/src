@@ -1,0 +1,5 @@
+#Big-Endian XScale generic configuration
+#$FreeBSD: release/10.0.0/sys/arm/xscale/std.xscale-be 239362 2012-08-18 05:48:19Z andrew $
+
+include		"../xscale/std.xscale"
+machine 	arm	armeb

@@ -27,7 +27,7 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ia64/ia64/interrupt.c 224114 2011-07-16 20:16:49Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ia64/ia64/interrupt.c 224114 2011-07-16 20:16:49Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -25,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: stable/9/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_wr.h 237920 2012-07-01 12:00:36Z np $
+$FreeBSD: release/10.0.0/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_wr.h 237263 2012-06-19 07:34:13Z np $
 
 ***************************************************************************/
 #ifndef __CXIO_WR_H__

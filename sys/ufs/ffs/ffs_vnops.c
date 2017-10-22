@@ -62,7 +62,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ufs/ffs/ffs_vnops.c 240238 2012-09-08 16:40:18Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ufs/ffs/ffs_vnops.c 248521 2013-03-19 15:08:15Z kib $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -75,6 +75,7 @@ __FBSDID("$FreeBSD: stable/9/sys/ufs/ffs/ffs_vnops.c 240238 2012-09-08 16:40:18Z
 #include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/priv.h>
+#include <sys/rwlock.h>
 #include <sys/stat.h>
 #include <sys/vmmeter.h>
 #include <sys/vnode.h>
@@ -508,7 +509,8 @@ ffs_read(ap)
 			/*
 			 * Don't do readahead if this is the end of the file.
 			 */
-			error = bread(vp, lbn, size, NOCRED, &bp);
+			error = bread_gb(vp, lbn, size, NOCRED,
+			    GB_UNMAPPED, &bp);
 		} else if ((vp->v_mount->mnt_flag & MNT_NOCLUSTERR) == 0) {
 			/*
 			 * Otherwise if we are allowed to cluster,
@@ -518,7 +520,8 @@ ffs_read(ap)
 			 * doing sequential access.
 			 */
 			error = cluster_read(vp, ip->i_size, lbn,
-				size, NOCRED, blkoffset + uio->uio_resid, seqcount, &bp);
+			    size, NOCRED, blkoffset + uio->uio_resid,
+			    seqcount, GB_UNMAPPED, &bp);
 		} else if (seqcount > 1) {
 			/*
 			 * If we are NOT allowed to cluster, then
@@ -529,15 +532,16 @@ ffs_read(ap)
 			 * the 6th argument.
 			 */
 			int nextsize = blksize(fs, ip, nextlbn);
-			error = breadn(vp, lbn,
-			    size, &nextlbn, &nextsize, 1, NOCRED, &bp);
+			error = breadn_flags(vp, lbn, size, &nextlbn,
+			    &nextsize, 1, NOCRED, GB_UNMAPPED, &bp);
 		} else {
 			/*
 			 * Failing all of the above, just read what the
 			 * user asked for. Interestingly, the same as
 			 * the first option above.
 			 */
-			error = bread(vp, lbn, size, NOCRED, &bp);
+			error = bread_gb(vp, lbn, size, NOCRED,
+			    GB_UNMAPPED, &bp);
 		}
 		if (error) {
 			brelse(bp);
@@ -568,8 +572,13 @@ ffs_read(ap)
 			xfersize = size;
 		}
 
-		error = vn_io_fault_uiomove((char *)bp->b_data + blkoffset,
-		    (int)xfersize, uio);
+		if ((bp->b_flags & B_UNMAPPED) == 0) {
+			error = vn_io_fault_uiomove((char *)bp->b_data +
+			    blkoffset, (int)xfersize, uio);
+		} else {
+			error = vn_io_fault_pgmove(bp->b_pages, blkoffset,
+			    (int)xfersize, uio);
+		}
 		if (error)
 			break;
 
@@ -700,6 +709,7 @@ ffs_write(ap)
 		flags = seqcount << BA_SEQSHIFT;
 	if ((ioflag & IO_SYNC) && !DOINGASYNC(vp))
 		flags |= IO_SYNC;
+	flags |= BA_UNMAPPED;
 
 	for (error = 0; uio->uio_resid > 0;) {
 		lbn = lblkno(fs, uio->uio_offset);
@@ -739,8 +749,13 @@ ffs_write(ap)
 		if (size < xfersize)
 			xfersize = size;
 
-		error = vn_io_fault_uiomove((char *)bp->b_data + blkoffset,
-		    (int)xfersize, uio);
+		if ((bp->b_flags & B_UNMAPPED) == 0) {
+			error = vn_io_fault_uiomove((char *)bp->b_data +
+			    blkoffset, (int)xfersize, uio);
+		} else {
+			error = vn_io_fault_pgmove(bp->b_pages, blkoffset,
+			    (int)xfersize, uio);
+		}
 		/*
 		 * If the buffer is not already filled and we encounter an
 		 * error while trying to fill it, we have to clear out any
@@ -783,7 +798,8 @@ ffs_write(ap)
 		} else if (xfersize + blkoffset == fs->fs_bsize) {
 			if ((vp->v_mount->mnt_flag & MNT_NOCLUSTERW) == 0) {
 				bp->b_flags |= B_CLUSTEROK;
-				cluster_write(vp, bp, ip->i_size, seqcount);
+				cluster_write(vp, bp, ip->i_size, seqcount,
+				    GB_UNMAPPED);
 			} else {
 				bawrite(bp);
 			}
@@ -813,8 +829,7 @@ ffs_write(ap)
 	if (error) {
 		if (ioflag & IO_UNIT) {
 			(void)ffs_truncate(vp, osize,
-			    IO_NORMAL | (ioflag & IO_SYNC),
-			    ap->a_cred, uio->uio_td);
+			    IO_NORMAL | (ioflag & IO_SYNC), ap->a_cred);
 			uio->uio_offset -= resid - uio->uio_resid;
 			uio->uio_resid = resid;
 		}
@@ -843,7 +858,7 @@ ffs_getpages(ap)
 	 * user programs might reference data beyond the actual end of file
 	 * occuring within the page.  We have to zero that data.
 	 */
-	VM_OBJECT_LOCK(mreq->object);
+	VM_OBJECT_WLOCK(mreq->object);
 	if (mreq->valid) {
 		if (mreq->valid != VM_PAGE_BITS_ALL)
 			vm_page_zero_invalid(mreq, TRUE);
@@ -854,10 +869,10 @@ ffs_getpages(ap)
 				vm_page_unlock(ap->a_m[i]);
 			}
 		}
-		VM_OBJECT_UNLOCK(mreq->object);
+		VM_OBJECT_WUNLOCK(mreq->object);
 		return VM_PAGER_OK;
 	}
-	VM_OBJECT_UNLOCK(mreq->object);
+	VM_OBJECT_WUNLOCK(mreq->object);
 
 	return vnode_pager_generic_getpages(ap->a_vp, ap->a_m,
 					    ap->a_count,
@@ -1136,7 +1151,7 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 	if (error) {
 		if (ioflag & IO_UNIT) {
 			(void)ffs_truncate(vp, osize,
-			    IO_EXT | (ioflag&IO_SYNC), ucred, uio->uio_td);
+			    IO_EXT | (ioflag&IO_SYNC), ucred);
 			uio->uio_offset -= resid - uio->uio_resid;
 			uio->uio_resid = resid;
 		}
@@ -1327,7 +1342,7 @@ ffs_close_ea(struct vnode *vp, int commit, struct ucred *cred, struct thread *td
 		luio.uio_td = td;
 		/* XXX: I'm not happy about truncating to zero size */
 		if (ip->i_ea_len < dp->di_extsize)
-			error = ffs_truncate(vp, 0, IO_EXT, cred, td);
+			error = ffs_truncate(vp, 0, IO_EXT, cred);
 		error = ffs_extwrite(vp, &luio, IO_EXT | IO_SYNC, cred);
 	}
 	if (--ip->i_ea_refs == 0) {

@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)mount.c	8.25 (Berkeley) 5/8/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/mount/mount.c 225341 2011-09-02 17:11:59Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/mount/mount.c 253372 2013-07-15 21:57:21Z rmh $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -66,7 +66,7 @@ __FBSDID("$FreeBSD: stable/9/sbin/mount/mount.c 225341 2011-09-02 17:11:59Z jhb 
 #define MOUNT_META_OPTION_FSTAB		"fstab"
 #define MOUNT_META_OPTION_CURRENT	"current"
 
-int debug, fstab_style, verbose;
+static int debug, fstab_style, verbose;
 
 struct cpa {
 	char	**a;
@@ -142,8 +142,8 @@ use_mountprog(const char *vfstype)
 	 */
 	unsigned int i;
 	const char *fs[] = {
-	"cd9660", "mfs", "msdosfs", "nfs", "ntfs",
-	"nwfs", "nullfs", "oldnfs", "portalfs", "smbfs", "udf", "unionfs",
+	"cd9660", "mfs", "msdosfs", "nfs",
+	"nullfs", "oldnfs", "smbfs", "udf", "unionfs",
 	NULL
 	};
 
@@ -245,14 +245,15 @@ main(int argc, char *argv[])
 	struct fstab *fs;
 	struct statfs *mntbuf;
 	int all, ch, i, init_flags, late, failok, mntsize, rval, have_fstab, ro;
+	int onlylate;
 	char *cp, *ep, *options;
 
-	all = init_flags = late = 0;
+	all = init_flags = late = onlylate = 0;
 	ro = 0;
 	options = NULL;
 	vfslist = NULL;
 	vfstype = "ufs";
-	while ((ch = getopt(argc, argv, "adF:flo:prt:uvw")) != -1)
+	while ((ch = getopt(argc, argv, "adF:fLlno:prt:uvw")) != -1)
 		switch (ch) {
 		case 'a':
 			all = 1;
@@ -266,8 +267,15 @@ main(int argc, char *argv[])
 		case 'f':
 			init_flags |= MNT_FORCE;
 			break;
+		case 'L':
+			onlylate = 1;
+			late = 1;
+			break;
 		case 'l':
 			late = 1;
+			break;
+		case 'n':
+			/* For compatibility with the Linux version of mount. */
 			break;
 		case 'o':
 			if (*optarg) {
@@ -326,6 +334,8 @@ main(int argc, char *argv[])
 				if (checkvfsname(fs->fs_vfstype, vfslist))
 					continue;
 				if (hasopt(fs->fs_mntops, "noauto"))
+					continue;
+				if (!hasopt(fs->fs_mntops, "late") && onlylate)
 					continue;
 				if (hasopt(fs->fs_mntops, "late") && !late)
 					continue;
@@ -539,7 +549,10 @@ mountfs(const char *vfstype, const char *spec, const char *name, int flags,
 	static struct cpa mnt_argv;
 
 	/* resolve the mountpoint with realpath(3) */
-	(void)checkpath(name, mntpath);
+	if (checkpath(name, mntpath) != 0) {
+		warn("%s", mntpath);
+		return (1);
+	}
 	name = mntpath;
 
 	if (mntopts == NULL)

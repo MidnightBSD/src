@@ -1,6 +1,6 @@
 /*-
- * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
- * Copyright (c) 2009 Alexander Motin <mav@FreeBSD.org>
+ * Copyright (c) 1998 - 2008 SÃ¸ren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 2009-2012 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/ahci/ahci.h 224498 2011-07-29 20:35:23Z mav $
+ * $FreeBSD: release/10.0.0/sys/dev/ahci/ahci.h 253647 2013-07-25 10:29:40Z mav $
  */
 
 /* ATA register defines */
@@ -100,6 +100,7 @@
 #define         ATA_SS_IPM_ACTIVE       0x00000100
 #define         ATA_SS_IPM_PARTIAL      0x00000200
 #define         ATA_SS_IPM_SLUMBER      0x00000600
+#define         ATA_SS_IPM_DEVSLEEP     0x00000800
 
 #define ATA_SERROR                      14
 #define         ATA_SE_DATA_CORRECTED   0x00000001
@@ -205,6 +206,9 @@
 #define		AHCI_CAP2_BOH	0x00000001
 #define		AHCI_CAP2_NVMP	0x00000002
 #define		AHCI_CAP2_APST	0x00000004
+#define		AHCI_CAP2_SDS	0x00000008
+#define		AHCI_CAP2_SADM	0x00000010
+#define		AHCI_CAP2_DESO	0x00000020
 
 #define AHCI_OFFSET                 0x100
 #define AHCI_STEP                   0x80
@@ -262,6 +266,7 @@
 #define         AHCI_P_CMD_ACTIVE   0x10000000
 #define         AHCI_P_CMD_PARTIAL  0x20000000
 #define         AHCI_P_CMD_SLUMBER  0x60000000
+#define         AHCI_P_CMD_DEVSLEEP 0x80000000
 
 #define AHCI_P_TFD                  0x20
 #define AHCI_P_SIG                  0x24
@@ -348,7 +353,6 @@ struct ata_dma {
     uint8_t                     *rfis;          /* FIS receive area */
     bus_addr_t                  rfis_bus;       /* bus address of rfis */
     bus_dma_tag_t               data_tag;       /* data DMA tag */
-    u_int64_t                   max_address;    /* highest DMA'able address */
 };
 
 enum ahci_slot_states {
@@ -395,7 +399,6 @@ struct ahci_channel {
 	struct ata_dma		dma;            /* DMA data */
 	struct cam_sim		*sim;
 	struct cam_path		*path;
-	struct ahci_led		leds[3];
 	uint32_t		caps;		/* Controller capabilities */
 	uint32_t		caps2;		/* Controller capabilities */
 	uint32_t		chcaps;		/* Channel capabilities */
@@ -435,9 +438,26 @@ struct ahci_channel {
 	struct ahci_device	curr[16];	/* Current settings */
 };
 
+struct ahci_enclosure {
+	device_t		dev;            /* Device handle */
+	struct resource		*r_memc;	/* Control register */
+	struct resource		*r_memt;	/* Transmit buffer */
+	struct resource		*r_memr;	/* Recieve buffer */
+	struct cam_sim		*sim;
+	struct cam_path		*path;
+	struct mtx		mtx;		/* state lock */
+	struct ahci_led		leds[AHCI_MAX_PORTS * 3];
+	uint32_t		capsem;		/* Controller capabilities */
+	uint8_t			status[AHCI_MAX_PORTS][4]; /* ArrayDev statuses */
+	int			quirks;
+	int			channels;
+	int			ichannels;
+};
+
 /* structure describing a AHCI controller */
 struct ahci_controller {
 	device_t		dev;
+	bus_dma_tag_t		dma_tag;
 	int			r_rid;
 	struct resource		*r_mem;
 	struct rman		sc_iomem;
@@ -465,7 +485,6 @@ struct ahci_controller {
 		void			(*function)(void *);
 		void			*argument;
 	} interrupt[AHCI_MAX_PORTS];
-	struct mtx		em_mtx;		/* EM access lock */
 };
 
 enum ahci_err_type {

@@ -55,11 +55,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/powerpc/aim/machdep.c 234703 2012-04-26 13:55:15Z nwhitehorn $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/aim/machdep.c 248084 2013-03-09 02:32:23Z attilio $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
 #include "opt_kstack_pages.h"
+#include "opt_platform.h"
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -83,6 +84,7 @@ __FBSDID("$FreeBSD: stable/9/sys/powerpc/aim/machdep.c 234703 2012-04-26 13:55:1
 #include <sys/mutex.h>
 #include <sys/ptrace.h>
 #include <sys/reboot.h>
+#include <sys/rwlock.h>
 #include <sys/signalvar.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysctl.h>
@@ -258,6 +260,9 @@ powerpc_init(vm_offset_t startkernel, vm_offset_t endkernel,
 	void		*kmdp;
         char		*env;
 	register_t	msr, scratch;
+#ifdef WII
+	register_t 	vers;
+#endif
 	uint8_t		*cache_check;
 	int		cacheline_warn;
 	#ifndef __powerpc64__
@@ -267,6 +272,16 @@ powerpc_init(vm_offset_t startkernel, vm_offset_t endkernel,
 	kmdp = NULL;
 	trap_offset = 0;
 	cacheline_warn = 0;
+
+#ifdef WII
+	/*
+	 * The Wii loader doesn't pass us any environment so, mdp
+	 * points to garbage at this point. The Wii CPU is a 750CL.
+	 */
+	vers = mfpvr();
+	if ((vers & 0xfffff0e0) == (MPC750 << 16 | MPC750CL)) 
+		mdp = NULL;
+#endif
 
 	/*
 	 * Parse metadata if present and fetch parameters.  Must be done
@@ -304,7 +319,12 @@ powerpc_init(vm_offset_t startkernel, vm_offset_t endkernel,
 	 */
 	pc = __pcpu;
 	pcpu_init(pc, 0, sizeof(struct pcpu));
-	curthread_reg = pc->pc_curthread = &thread0;
+	pc->pc_curthread = &thread0;
+#ifdef __powerpc64__
+	__asm __volatile("mr 13,%0" :: "r"(pc->pc_curthread));
+#else
+	__asm __volatile("mr 2,%0" :: "r"(pc->pc_curthread));
+#endif
 	pc->pc_cpuid = 0;
 
 	__asm __volatile("mtsprg 0, %0" :: "r"(pc));

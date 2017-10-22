@@ -57,18 +57,22 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/9/sys/vm/vm_kern.h 180308 2008-07-05 19:34:33Z alc $
+ * $FreeBSD: release/10.0.0/sys/vm/vm_kern.h 254307 2013-08-13 22:40:43Z jeff $
  */
 
 #ifndef _VM_VM_KERN_H_
 #define _VM_VM_KERN_H_ 1
 
 /* Kernel memory management definitions. */
-extern vm_map_t buffer_map;
 extern vm_map_t kernel_map;
-extern vm_map_t kmem_map;
 extern vm_map_t exec_map;
 extern vm_map_t pipe_map;
+extern struct vmem *kernel_arena;
+extern struct vmem *kmem_arena;
+extern struct vmem *buffer_arena;
+extern struct vmem *transient_arena;
+extern struct vmem *memguard_arena;
+extern vm_offset_t swapbkva;
 extern u_long vm_kmem_size;
 
 #endif				/* _VM_VM_KERN_H_ */

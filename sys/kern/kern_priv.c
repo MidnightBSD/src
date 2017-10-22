@@ -31,7 +31,7 @@
 #include "opt_kdtrace.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_priv.c 245420 2013-01-14 11:13:31Z zont $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_priv.c 252855 2013-07-06 00:10:52Z jamie $");
 
 #include <sys/param.h>
 #include <sys/jail.h>
@@ -52,14 +52,14 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/kern_priv.c 245420 2013-01-14 11:13:31Z zo
  * uid 0 is offered no special privilege in the kernel security policy.
  * Setting it to zero may seriously impact the functionality of many existing
  * userland programs, and should not be done without careful consideration of
- * the consequences. 
+ * the consequences.
  */
 static int	suser_enabled = 1;
 SYSCTL_INT(_security_bsd, OID_AUTO, suser_enabled, CTLFLAG_RW,
     &suser_enabled, 0, "processes with uid 0 have privilege");
 TUNABLE_INT("security.bsd.suser_enabled", &suser_enabled);
 
-static int	unprivileged_mlock = 0;
+static int	unprivileged_mlock = 1;
 SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_mlock, CTLFLAG_RW|CTLFLAG_TUN,
     &unprivileged_mlock, 0, "Allow non-root users to call mlock(2)");
 TUNABLE_INT("security.bsd.unprivileged_mlock", &unprivileged_mlock);
@@ -104,10 +104,10 @@ priv_check_cred(struct ucred *cred, int priv, int flags)
 		 * mlockall(2)/munlockall(2).
 		 */
 		switch (priv) {
-			case PRIV_VM_MLOCK:
-			case PRIV_VM_MUNLOCK:
-				error = 0;
-				goto out;
+		case PRIV_VM_MLOCK:
+		case PRIV_VM_MUNLOCK:
+			error = 0;
+			goto out;
 		}
 	}
 
@@ -132,7 +132,6 @@ priv_check_cred(struct ucred *cred, int priv, int flags)
 				goto out;
 			}
 			break;
-
 		default:
 			if (cred->cr_uid == 0) {
 				error = 0;
@@ -140,6 +139,16 @@ priv_check_cred(struct ucred *cred, int priv, int flags)
 			}
 			break;
 		}
+	}
+
+	/*
+	 * Writes to kernel/physical memory are a typical root-only operation,
+	 * but non-root users are expected to be able to read it (provided they
+	 * have permission to access /dev/[k]mem).
+	 */
+	if (priv == PRIV_KMEM_READ) {
+		error = 0;
+		goto out;
 	}
 
 	/*
@@ -159,13 +168,10 @@ priv_check_cred(struct ucred *cred, int priv, int flags)
 	 */
 	error = EPERM;
 out:
-	if (error) {
-		SDT_PROBE(priv, kernel, priv_check, priv_err, priv, 0, 0, 0,
-		    0);
-	} else {
-		SDT_PROBE(priv, kernel, priv_check, priv_ok, priv, 0, 0, 0,
-		    0);
-	}
+	if (error)
+		SDT_PROBE1(priv, kernel, priv_check, priv_err, priv);
+	else
+		SDT_PROBE1(priv, kernel, priv_check, priv_ok, priv);
 	return (error);
 }
 

@@ -33,7 +33,7 @@
  *
  *	from: @(#)vmparam.h     5.9 (Berkeley) 5/12/91
  *	from: FreeBSD: src/sys/i386/include/vmparam.h,v 1.33 2000/03/30
- * $FreeBSD: stable/9/sys/sparc64/include/vmparam.h 246645 2013-02-11 00:50:25Z kib $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/vmparam.h 250338 2013-05-07 22:46:24Z attilio $
  */
 
 #ifndef	_MACHINE_VMPARAM_H_
@@ -106,13 +106,6 @@
 #define	VM_NFREEORDER		12
 
 /*
- * Only one memory domain.
- */
-#ifndef VM_NDOMAIN
-#define	VM_NDOMAIN		1
-#endif
-
-/*
  * Enable superpage reservations: 1 level.
  */
 #ifndef	VM_NRESERVLEVEL
@@ -126,7 +119,7 @@
 #define	VM_LEVEL_0_ORDER	9
 #endif
 
-/*
+/**
  * Address space layout.
  *
  * UltraSPARC I and II implement a 44 bit virtual address space.  The address

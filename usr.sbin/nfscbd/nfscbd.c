@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/nfscbd/nfscbd.c 194526 2009-06-20 08:46:40Z stas $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/nfscbd/nfscbd.c 241737 2012-10-19 14:49:42Z ed $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -66,12 +66,12 @@ __FBSDID("$FreeBSD: stable/9/usr.sbin/nfscbd/nfscbd.c 194526 2009-06-20 08:46:40
 /* Global defs */
 #ifdef DEBUG
 #define	syslog(e, s)	fprintf(stderr,(s))
-int	debug = 1;
+static int	debug = 1;
 #else
-int	debug = 0;
+static int	debug = 0;
 #endif
 
-pid_t children;
+static pid_t	children;
 
 static void	nonfs(int);
 static void	reapchild(int);

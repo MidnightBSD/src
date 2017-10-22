@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/ata.4 243118 2012-11-16 02:26:23Z mav $
+.\" $FreeBSD: release/10.0.0/share/man/man4/ata.4 249083 2013-04-04 07:12:24Z mav $
 .\"
 .Dd October 3, 2012
 .Dt ATA 4
@@ -36,7 +36,6 @@ kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device scbus"
 .Cd "device ata"
-.Cd "options ATA_CAM"
 .Ed
 .Pp
 Alternatively, to load the driver as set of modules at boot time,
@@ -79,12 +78,6 @@ prerequisite for the other modules.
 The next three lines are generic bus-specific drivers.
 Of the rest, ataahci is the AHCI driver.
 The others are vendor-specific PCI drivers.
-The
-.Dv ATA_CAM
-option should always remain in the kernel configuration, to make
-the driver work as a
-.Xr CAM 4
-subsystem module.
 .Pp
 The following tunables are settable from the
 .Xr loader 8 :
@@ -106,7 +99,8 @@ limits the initial ATA mode for every device on the specified channel.
 controls SATA interface Power Management for the specified channel,
 allowing some power savings at the cost of additional command latency.
 Possible values:
-.Bl -tag -compact
+.Pp
+.Bl -tag -width 4n -offset indent -compact
 .It 0
 Interface Power Management is disabled.
 This is the default value.
@@ -117,6 +111,7 @@ The host initiates a PARTIAL PM state transition every time a port becomes idle.
 .It 3
 host initiates SLUMBER PM state transition every time port becomes idle.
 .El
+.Pp
 Modes 2 and 3 are only supported for AHCI.
 .It Va hint.ata. Ns Ar X Ns Va .dev Ns Ar X Ns Va .sata_rev
 limits the initial SATA revision (speed) for the specified device

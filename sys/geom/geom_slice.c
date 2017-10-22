@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/geom_slice.c 249152 2013-04-05 11:41:56Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/geom_slice.c 248722 2013-03-26 07:55:24Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -392,11 +392,12 @@ g_slice_config(struct g_geom *gp, u_int idx, int how, off_t offset, off_t length
 	sbuf_finish(sb);
 	pp = g_new_providerf(gp, "%s", sbuf_data(sb));
 	pp2 = LIST_FIRST(&gp->consumer)->provider;
-	pp->flags = pp2->flags & G_PF_CANDELETE;
 	pp->stripesize = pp2->stripesize;
 	pp->stripeoffset = pp2->stripeoffset + offset;
 	if (pp->stripesize > 0)
 		pp->stripeoffset %= pp->stripesize;
+	if (gsp->nhotspot == 0)
+		pp->flags |= pp2->flags & G_PF_ACCEPT_UNMAPPED;
 	if (0 && bootverbose)
 		printf("GEOM: Configure %s, start %jd length %jd end %jd\n",
 		    pp->name, (intmax_t)offset, (intmax_t)length,
@@ -429,11 +430,17 @@ g_slice_conf_hot(struct g_geom *gp, u_int idx, off_t offset, off_t length, int r
 {
 	struct g_slicer *gsp;
 	struct g_slice_hot *gsl, *gsl2;
+	struct g_provider *pp;
 
 	g_trace(G_T_TOPOLOGY, "g_slice_conf_hot(%s, idx: %d, off: %jd, len: %jd)",
 	    gp->name, idx, (intmax_t)offset, (intmax_t)length);
 	g_topology_assert();
 	gsp = gp->softc;
+	/* Deny unmapped I/O if hotspots are used. */
+	if (gsp->nhotspot == 0) {
+		LIST_FOREACH(pp, &gp->provider, provider)
+			pp->flags &= ~G_PF_ACCEPT_UNMAPPED;
+	}
 	gsl = gsp->hotspot;
 	if(idx >= gsp->nhotspot) {
 		gsl2 = g_malloc((idx + 1) * sizeof *gsl2, M_WAITOK | M_ZERO);

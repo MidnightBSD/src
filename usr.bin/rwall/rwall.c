@@ -43,7 +43,7 @@ static const char sccsid[] = "from: @(#)wall.c	5.14 (Berkeley) 3/2/91";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/rwall/rwall.c 200462 2009-12-13 03:14:06Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/rwall/rwall.c 227180 2011-11-06 08:16:53Z ed $");
 
 /*
  * This program is not related to David Wall, whose Stanford Ph.D. thesis
@@ -64,11 +64,11 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/rwall/rwall.c 200462 2009-12-13 03:14:06Z d
 #include <time.h>
 #include <unistd.h>
 
-char *mbuf;
+static char *mbuf;
 
 static char notty[] = "no tty";
 
-void	makemsg(const char *);
+static void	makemsg(const char *);
 static void usage(void);
 
 /* ARGSUSED */
@@ -121,7 +121,7 @@ usage(void)
 	exit(1);
 }
 
-void
+static void
 makemsg(const char *fname)
 {
 	struct tm *lt;

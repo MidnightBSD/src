@@ -32,7 +32,7 @@
  *
  *      from: @(#)proc.h        7.1 (Berkeley) 5/15/91
  *	from: FreeBSD: src/sys/i386/include/proc.h,v 1.11 2001/06/29
- * $FreeBSD: stable/9/sys/arm/include/proc.h 229376 2012-01-03 09:43:26Z kib $
+ * $FreeBSD: release/10.0.0/sys/arm/include/proc.h 245551 2013-01-17 09:52:35Z andrew $
  */
 
 #ifndef	_MACHINE_PROC_H_
@@ -60,7 +60,11 @@ struct mdproc {
 	void	*md_sigtramp;
 };
 
+#ifdef __ARM_EABI__
+#define	KINFO_PROC_SIZE 816
+#else
 #define	KINFO_PROC_SIZE 792
+#endif
 
 #define MAXARGS	8
 struct syscall_args {
@@ -69,7 +73,9 @@ struct syscall_args {
 	register_t args[MAXARGS];
 	int narg;
 	u_int nap;
+#ifndef __ARM_EABI__
 	u_int32_t insn;
+#endif
 };
 
 #endif /* !_MACHINE_PROC_H_ */

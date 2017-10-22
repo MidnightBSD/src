@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/common/interp.c 221601 2011-05-07 13:57:30Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/common/interp.c 242084 2012-10-25 15:45:32Z mav $");
 
 /*
  * Simple commandline interpreter, toplevel and misc.
@@ -211,7 +211,7 @@ include(const char *filename)
 #endif
 
     if (((fd = open(filename, O_RDONLY)) == -1)) {
-	sprintf(command_errbuf,"can't open '%s': %s\n", filename, strerror(errno));
+	sprintf(command_errbuf,"can't open '%s': %s", filename, strerror(errno));
 	return(CMD_ERROR);
     }
 
@@ -254,7 +254,7 @@ include(const char *filename)
 			free(se);
 		}
 		sprintf(command_errbuf, "file '%s' line %d: memory allocation "
-		    "failure - aborting\n", filename, line);
+		    "failure - aborting", filename, line);
 		return (CMD_ERROR);
 	}
 	strcpy(sp->text, cp);

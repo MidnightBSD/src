@@ -25,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: stable/9/sys/dev/xen/netfront/mbufq.h 181643 2008-08-12 20:01:57Z kmacy $
+$FreeBSD: release/10.0.0/sys/dev/xen/netfront/mbufq.h 181643 2008-08-12 20:01:57Z kmacy $
 
 ***************************************************************************/
 

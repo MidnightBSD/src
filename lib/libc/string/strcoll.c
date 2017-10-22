@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/string/strcoll.c 235785 2012-05-22 14:40:39Z theraven $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/string/strcoll.c 228202 2011-12-02 15:41:09Z eadler $");
 
 #include <stdlib.h>
 #include <string.h>

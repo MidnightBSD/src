@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/msun/src/s_fabsl.c 236111 2012-05-26 17:28:57Z des $
+ * $FreeBSD: release/10.0.0/lib/msun/src/s_fabsl.c 234685 2012-04-25 18:07:35Z des $
  */
 
 #include <math.h>

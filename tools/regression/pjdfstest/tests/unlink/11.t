@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/unlink/11.t 211242 2010-08-12 20:35:14Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/unlink/11.t 211242 2010-08-12 20:35:14Z pjd $
 
 desc="unlink returns EACCES or EPERM if the directory containing the file is marked sticky, and neither the containing directory nor the file to be removed are owned by the effective user ID"
 

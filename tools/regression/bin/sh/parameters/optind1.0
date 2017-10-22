@@ -1,0 +1,3 @@
+# $FreeBSD: release/10.0.0/tools/regression/bin/sh/parameters/optind1.0 227773 2011-11-20 21:48:50Z jilles $
+
+unset OPTIND && [ -z "$OPTIND" ]

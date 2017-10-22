@@ -14,7 +14,7 @@
  */
 
 /*
- * $FreeBSD: stable/9/sys/boot/i386/btx/lib/btxv86.h 229501 2012-01-04 16:39:39Z jhb $
+ * $FreeBSD: release/10.0.0/sys/boot/i386/btx/lib/btxv86.h 226746 2011-10-25 19:45:12Z jhb $
  */
 
 #ifndef _BTXV86_H_

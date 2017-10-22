@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)getlogin.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/getlogin.c 200142 2009-12-05 19:04:21Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/getlogin.c 254463 2013-08-17 19:24:58Z jilles $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -50,7 +50,7 @@ __FBSDID("$FreeBSD: stable/9/lib/libc/gen/getlogin.c 200142 2009-12-05 19:04:21Z
 
 extern int		_getlogin(char *, int);
 
-int			_logname_valid;		/* known to setlogin() */
+int			_logname_valid __hidden; /* known to setlogin() */
 static pthread_mutex_t	logname_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static char *

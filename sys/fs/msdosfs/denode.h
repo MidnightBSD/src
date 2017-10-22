@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/fs/msdosfs/denode.h 203822 2010-02-13 11:34:25Z kib $ */
+/* $FreeBSD: release/10.0.0/sys/fs/msdosfs/denode.h 234605 2012-04-23 13:21:28Z trasz $ */
 /*	$NetBSD: denode.h,v 1.25 1997/11/17 15:36:28 ws Exp $	*/
 
 /*-
@@ -276,6 +276,6 @@ int dosdirempty(struct denode *dep);
 int createde(struct denode *dep, struct denode *ddep, struct denode **depp, struct componentname *cnp);
 int deupdat(struct denode *dep, int waitfor);
 int removede(struct denode *pdep, struct denode *dep);
-int detrunc(struct denode *dep, u_long length, int flags, struct ucred *cred, struct thread *td);
+int detrunc(struct denode *dep, u_long length, int flags, struct ucred *cred);
 int doscheckpath( struct denode *source, struct denode *target);
 #endif	/* _KERNEL */

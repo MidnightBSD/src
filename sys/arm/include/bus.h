@@ -60,7 +60,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/include/bus.h 216143 2010-12-03 07:09:23Z brucec $
+ * $FreeBSD: release/10.0.0/sys/arm/include/bus.h 248467 2013-03-18 15:18:55Z ray $
  */
 
 #ifndef _MACHINE_BUS_H_
@@ -724,5 +724,13 @@ bs_c_8_proto(f);
 #define BUS_SPACE_UNRESTRICTED	(~0)
 
 #include <machine/bus_dma.h>
+
+/*
+ * Get the physical address of a bus space memory-mapped resource.
+ * Doing this as a macro is a temporary solution until a more robust fix is
+ * designed.  It also serves to mark the locations needing that fix.
+ */
+#define BUS_SPACE_PHYSADDR(res, offs) \
+	((u_int)(rman_get_start(res)+(offs)))
 
 #endif /* _MACHINE_BUS_H_ */

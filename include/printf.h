@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/include/printf.h 219343 2011-03-06 17:45:37Z pjd $
+ * $FreeBSD: release/10.0.0/include/printf.h 238111 2012-07-04 17:35:07Z pjd $
  */
 
 #ifndef _PRINTF_H_
@@ -123,7 +123,7 @@ int register_printf_function(int spec, printf_function *render, printf_arginfo_f
 
 /* FreeBSD */
 int register_printf_render(int spec, printf_render *render, printf_arginfo_function *arginfo);
-int register_printf_render_std(const unsigned char *specs);
+int register_printf_render_std(const char *specs);
 
 /* vprintf_errno.c */
 printf_arginfo_function		__printf_arginfo_errno;

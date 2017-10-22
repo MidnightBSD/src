@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/aim/mmu_oea64.h 216174 2010-12-04 02:42:52Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/powerpc/aim/mmu_oea64.h 255418 2013-09-09 12:51:24Z nwhitehorn $
  */
 
 #ifndef _POWERPC_AIM_MMU_OEA64_H
@@ -70,6 +70,7 @@ extern u_int	moea64_pte_overflow;
 
 extern struct pvo_head *moea64_pvo_table;
 extern int		moea64_large_page_shift;
+extern uint64_t		moea64_large_page_size;
 extern u_int		moea64_pteg_count;
 extern u_int		moea64_pteg_mask;
 

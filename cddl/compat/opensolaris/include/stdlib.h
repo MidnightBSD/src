@@ -23,14 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/cddl/compat/opensolaris/include/stdlib.h 177698 2008-03-28 22:16:18Z jb $
+ * $FreeBSD: release/10.0.0/cddl/compat/opensolaris/include/stdlib.h 234856 2012-04-30 23:12:16Z rmh $
  *
  */
 
+#include_next <stdlib.h>
+
 #ifndef _COMPAT_OPENSOLARIS_STDLIB_H_
 #define _COMPAT_OPENSOLARIS_STDLIB_H_
-
-#include_next <stdlib.h>
 
 #define getexecname	getprogname
 

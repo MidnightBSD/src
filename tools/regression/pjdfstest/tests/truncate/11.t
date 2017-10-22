@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/truncate/11.t 210984 2010-08-06 23:58:54Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/truncate/11.t 210984 2010-08-06 23:58:54Z pjd $
 
 desc="truncate returns ETXTBSY the file is a pure procedure (shared text) file that is being executed"
 

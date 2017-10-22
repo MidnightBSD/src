@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/wlan/if_run.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/wlan/if_run.c 257044 2013-10-24 07:43:35Z hselasky $");
 
 /*-
  * Ralink Technology RT2700U/RT2800U/RT3000U chipset driver.
@@ -147,6 +147,7 @@ static const STRUCT_USB_HOST_ID run_devs[] = {
     RUN_DEV(BELKIN,		F5D8055),
     RUN_DEV(BELKIN,		F5D8055V2),
     RUN_DEV(BELKIN,		F6D4050V1),
+    RUN_DEV(BELKIN,		F6D4050V2),
     RUN_DEV(BELKIN,		RT2870_1),
     RUN_DEV(BELKIN,		RT2870_2),
     RUN_DEV(CISCOLINKSYS,	AE1000),
@@ -171,6 +172,7 @@ static const STRUCT_USB_HOST_ID run_devs[] = {
     RUN_DEV(CYBERTAN,		RT2870),
     RUN_DEV(DLINK,		RT2870),
     RUN_DEV(DLINK,		RT3072),
+    RUN_DEV(DLINK,		DWA127),
     RUN_DEV(DLINK2,		DWA130),
     RUN_DEV(DLINK2,		RT2870_1),
     RUN_DEV(DLINK2,		RT2870_2),
@@ -211,6 +213,7 @@ static const STRUCT_USB_HOST_ID run_devs[] = {
     RUN_DEV(LOGITEC,		RT2870_3),
     RUN_DEV(LOGITEC,		LANW300NU2),
     RUN_DEV(LOGITEC,		LANW150NU2),
+    RUN_DEV(LOGITEC,		LANW300NU2S),
     RUN_DEV(MELCO,		RT2870_1),
     RUN_DEV(MELCO,		RT2870_2),
     RUN_DEV(MELCO,		WLIUCAG300N),
@@ -716,11 +719,14 @@ run_detach(device_t self)
 	struct ieee80211com *ic;
 	int i;
 
+	RUN_LOCK(sc);
+	sc->sc_detached = 1;
+	RUN_UNLOCK(sc);
+
 	/* stop all USB transfers */
 	usbd_transfer_unsetup(sc->sc_xfer, RUN_N_XFER);
 
 	RUN_LOCK(sc);
-
 	sc->ratectl_run = RUN_RATECTL_OFF;
 	sc->cmdq_run = sc->cmdq_key_set = RUN_CMDQ_ABORT;
 
@@ -3441,7 +3447,13 @@ run_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	struct ieee80211com *ic = sc->sc_ifp->if_l2com;
 	struct ifreq *ifr = (struct ifreq *) data;
 	int startall = 0;
-	int error = 0;
+	int error;
+
+	RUN_LOCK(sc);
+	error = sc->sc_detached ? ENXIO : 0;
+	RUN_UNLOCK(sc);
+	if (error)
+		return (error);
 
 	switch (cmd) {
 	case SIOCSIFFLAGS:
@@ -4963,8 +4975,7 @@ static device_method_t run_methods[] = {
 	DEVMETHOD(device_probe,		run_match),
 	DEVMETHOD(device_attach,	run_attach),
 	DEVMETHOD(device_detach,	run_detach),
-
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t run_driver = {

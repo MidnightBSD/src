@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm/mach64_dma.c 218909 2011-02-21 09:01:34Z brucec $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/mach64_dma.c 249816 2013-04-23 18:30:33Z jkim $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -512,7 +512,7 @@ void mach64_dump_ring_info(drm_mach64_private_t *dev_priv)
 
 	DRM_INFO("\n");
 
-	if (ring->head >= 0 && ring->head < ring->size / sizeof(u32)) {
+	if (ring->head < ring->size / sizeof(u32)) {
 		struct list_head *ptr;
 		u32 addr = le32_to_cpu(((u32 *) ring->start)[ring->head + 1]);
 
@@ -1276,7 +1276,7 @@ int mach64_do_dispatch_pseudo_dma(drm_mach64_private_t *dev_priv)
 			entry = list_entry(ptr, drm_mach64_freelist_t, list);
 			buf = entry->buf;
 			offset = buf_addr - GETBUFADDR(buf);
-			if (offset >= 0 && offset < MACH64_BUFFER_SIZE) {
+			if (offset < MACH64_BUFFER_SIZE) {
 				found = 1;
 				break;
 			}

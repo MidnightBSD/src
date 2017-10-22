@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/mips/cavium/ciu.c 217214 2011-01-10 03:48:41Z jmallett $
+ * $FreeBSD: release/10.0.0/sys/mips/cavium/ciu.c 232812 2012-03-11 06:17:49Z jmallett $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/ciu.c 217214 2011-01-10 03:48:41Z jmallett $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/ciu.c 232812 2012-03-11 06:17:49Z jmallett $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,7 +43,7 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/cavium/ciu.c 217214 2011-01-10 03:48:41Z j
 #include <machine/intr_machdep.h>
 
 #include <contrib/octeon-sdk/cvmx.h>
-#include <contrib/octeon-sdk/cvmx-interrupt.h>
+#include <mips/cavium/octeon_irq.h>
 
 /*
  * This bus sits between devices/buses and nexus and handles CIU interrupts
@@ -53,12 +53,12 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/cavium/ciu.c 217214 2011-01-10 03:48:41Z j
 
 #define	CIU_IRQ_HARD		(0)
 
-#define	CIU_IRQ_EN0_BEGIN	CVMX_IRQ_WORKQ0
-#define	CIU_IRQ_EN0_END		CVMX_IRQ_BOOTDMA
+#define	CIU_IRQ_EN0_BEGIN	OCTEON_IRQ_WORKQ0
+#define	CIU_IRQ_EN0_END		OCTEON_IRQ_BOOTDMA
 #define	CIU_IRQ_EN0_COUNT	((CIU_IRQ_EN0_END - CIU_IRQ_EN0_BEGIN) + 1)
 
-#define	CIU_IRQ_EN1_BEGIN	CVMX_IRQ_WDOG0
-#define	CIU_IRQ_EN1_END		CVMX_IRQ_DFM
+#define	CIU_IRQ_EN1_BEGIN	OCTEON_IRQ_WDOG0
+#define	CIU_IRQ_EN1_END		OCTEON_IRQ_DFM
 #define	CIU_IRQ_EN1_COUNT	((CIU_IRQ_EN1_END - CIU_IRQ_EN1_BEGIN) + 1)
 
 struct ciu_softc {

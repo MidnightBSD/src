@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_sharedpage.c 240818 2012-09-22 12:36:31Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_sharedpage.c 254649 2013-08-22 07:39:53Z kib $");
 
 #include "opt_compat.h"
 #include "opt_vm.h"
@@ -34,7 +34,7 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/kern_sharedpage.c 240818 2012-09-22 12:36:
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
-#include <sys/mutex.h>
+#include <sys/rwlock.h>
 #include <sys/sysent.h>
 #include <sys/sysctl.h>
 #include <sys/vdso.h>
@@ -107,12 +107,11 @@ shared_page_init(void *dummy __unused)
 	sx_init(&shared_page_alloc_sx, "shpsx");
 	shared_page_obj = vm_pager_allocate(OBJT_PHYS, 0, PAGE_SIZE,
 	    VM_PROT_DEFAULT, 0, NULL);
-	VM_OBJECT_LOCK(shared_page_obj);
-	m = vm_page_grab(shared_page_obj, 0, VM_ALLOC_RETRY | VM_ALLOC_NOBUSY |
-	    VM_ALLOC_ZERO);
+	VM_OBJECT_WLOCK(shared_page_obj);
+	m = vm_page_grab(shared_page_obj, 0, VM_ALLOC_NOBUSY | VM_ALLOC_ZERO);
 	m->valid = VM_PAGE_BITS_ALL;
-	VM_OBJECT_UNLOCK(shared_page_obj);
-	addr = kmem_alloc_nofault(kernel_map, PAGE_SIZE);
+	VM_OBJECT_WUNLOCK(shared_page_obj);
+	addr = kva_alloc(PAGE_SIZE);
 	pmap_qenter(addr, &m, 1);
 	shared_page_mapping = (char *)addr;
 }

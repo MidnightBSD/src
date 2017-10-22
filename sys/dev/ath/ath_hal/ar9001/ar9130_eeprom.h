@@ -14,11 +14,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/9/sys/dev/ath/ath_hal/ar9001/ar9130_eeprom.h 221163 2011-04-28 12:47:40Z adrian $
+ * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar9001/ar9130_eeprom.h 230147 2012-01-15 19:22:34Z adrian $
  */
 #ifndef	__AR9130_EEPROM_H__
 #define	__AR9130_EEPROM_H__
-
-extern	HAL_BOOL ar9130EepromRead(struct ath_hal *ah, u_int off, uint16_t *data);
 
 #endif

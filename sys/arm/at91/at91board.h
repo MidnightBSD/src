@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/sys/arm/at91/at91board.h 185305 2008-11-25 18:40:40Z imp $ */
+/* $FreeBSD: release/10.0.0/sys/arm/at91/at91board.h 238189 2012-07-07 05:02:39Z imp $ */
 
 #ifndef _ARM_AT91_AT91BOARD_H_
 #define _ARM_AT91_AT91BOARD_H_
@@ -32,10 +32,5 @@
  * These routines are used by board init routines
  */
 long at91_ramsize(void);
-
-/*
- * These routines are expected to be provided by the board files.
- */
-long board_init(void);
 
 #endif /* _ARM_AT91_AT91BOARD_H_ */

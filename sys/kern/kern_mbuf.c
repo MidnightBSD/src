@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2004, 2005,
- * 	Bosko Milekic <bmilekic@FreeBSD.org>.  All rights reserved.
+ *	Bosko Milekic <bmilekic@FreeBSD.org>.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_mbuf.c 241468 2012-10-11 23:02:35Z np $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_mbuf.c 256274 2013-10-10 16:11:34Z jhb $");
 
 #include "opt_param.h"
 
@@ -47,6 +47,7 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/kern_mbuf.c 241468 2012-10-11 23:02:35Z np
 #include <vm/vm_extern.h>
 #include <vm/vm_kern.h>
 #include <vm/vm_page.h>
+#include <vm/vm_map.h>
 #include <vm/uma.h>
 #include <vm/uma_int.h>
 #include <vm/uma_dbg.h>
@@ -76,7 +77,7 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/kern_mbuf.c 241468 2012-10-11 23:02:35Z np
  *  [ Cluster Zone  ]   [     Zone     ]   [ Mbuf Master Zone ]
  *        |                       \________         |
  *  [ Cluster Keg   ]                      \       /
- *        |    	                         [ Mbuf Keg   ]
+ *        |	                         [ Mbuf Keg   ]
  *  [ Cluster Slabs ]                         |
  *        |                              [ Mbuf Slabs ]
  *         \____________(VM)_________________/
@@ -96,39 +97,62 @@ __FBSDID("$FreeBSD: stable/9/sys/kern/kern_mbuf.c 241468 2012-10-11 23:02:35Z np
  *
  */
 
+int nmbufs;			/* limits number of mbufs */
 int nmbclusters;		/* limits number of mbuf clusters */
 int nmbjumbop;			/* limits number of page size jumbo clusters */
 int nmbjumbo9;			/* limits number of 9k jumbo clusters */
 int nmbjumbo16;			/* limits number of 16k jumbo clusters */
-struct mbstat mbstat;
+
+static quad_t maxmbufmem;	/* overall real memory limit for all mbufs */
+
+SYSCTL_QUAD(_kern_ipc, OID_AUTO, maxmbufmem, CTLFLAG_RDTUN, &maxmbufmem, 0,
+    "Maximum real memory allocatable to various mbuf types");
 
 /*
- * tunable_mbinit() has to be run before init_maxsockets() thus
- * the SYSINIT order below is SI_ORDER_MIDDLE while init_maxsockets()
- * runs at SI_ORDER_ANY.
+ * tunable_mbinit() has to be run before any mbuf allocations are done.
  */
 static void
 tunable_mbinit(void *dummy)
 {
+	quad_t realmem;
 
-	/* This has to be done before VM init. */
+	/*
+	 * The default limit for all mbuf related memory is 1/2 of all
+	 * available kernel memory (physical or kmem).
+	 * At most it can be 3/4 of available kernel memory.
+	 */
+	realmem = qmin((quad_t)physmem * PAGE_SIZE, vm_kmem_size);
+	maxmbufmem = realmem / 2;
+	TUNABLE_QUAD_FETCH("kern.ipc.maxmbufmem", &maxmbufmem);
+	if (maxmbufmem > realmem / 4 * 3)
+		maxmbufmem = realmem / 4 * 3;
+
 	TUNABLE_INT_FETCH("kern.ipc.nmbclusters", &nmbclusters);
 	if (nmbclusters == 0)
-		nmbclusters = 1024 + maxusers * 64;
+		nmbclusters = maxmbufmem / MCLBYTES / 4;
 
 	TUNABLE_INT_FETCH("kern.ipc.nmbjumbop", &nmbjumbop);
 	if (nmbjumbop == 0)
-		nmbjumbop = nmbclusters / 2;
+		nmbjumbop = maxmbufmem / MJUMPAGESIZE / 4;
 
 	TUNABLE_INT_FETCH("kern.ipc.nmbjumbo9", &nmbjumbo9);
 	if (nmbjumbo9 == 0)
-		nmbjumbo9 = nmbclusters / 4;
+		nmbjumbo9 = maxmbufmem / MJUM9BYTES / 6;
 
 	TUNABLE_INT_FETCH("kern.ipc.nmbjumbo16", &nmbjumbo16);
 	if (nmbjumbo16 == 0)
-		nmbjumbo16 = nmbclusters / 8;
+		nmbjumbo16 = maxmbufmem / MJUM16BYTES / 6;
+
+	/*
+	 * We need at least as many mbufs as we have clusters of
+	 * the various types added together.
+	 */
+	TUNABLE_INT_FETCH("kern.ipc.nmbufs", &nmbufs);
+	if (nmbufs < nmbclusters + nmbjumbop + nmbjumbo9 + nmbjumbo16)
+		nmbufs = lmax(maxmbufmem / MSIZE / 5,
+		    nmbclusters + nmbjumbop + nmbjumbo9 + nmbjumbo16);
 }
-SYSINIT(tunable_mbinit, SI_SUB_TUNABLES, SI_ORDER_MIDDLE, tunable_mbinit, NULL);
+SYSINIT(tunable_mbinit, SI_SUB_KMEM, SI_ORDER_MIDDLE, tunable_mbinit, NULL);
 
 static int
 sysctl_nmbclusters(SYSCTL_HANDLER_ARGS)
@@ -136,11 +160,12 @@ sysctl_nmbclusters(SYSCTL_HANDLER_ARGS)
 	int error, newnmbclusters;
 
 	newnmbclusters = nmbclusters;
-	error = sysctl_handle_int(oidp, &newnmbclusters, 0, req); 
-	if (error == 0 && req->newptr) {
-		if (newnmbclusters > nmbclusters) {
+	error = sysctl_handle_int(oidp, &newnmbclusters, 0, req);
+	if (error == 0 && req->newptr && newnmbclusters != nmbclusters) {
+		if (newnmbclusters > nmbclusters &&
+		    nmbufs >= nmbclusters + nmbjumbop + nmbjumbo9 + nmbjumbo16) {
 			nmbclusters = newnmbclusters;
-			uma_zone_set_max(zone_clust, nmbclusters);
+			nmbclusters = uma_zone_set_max(zone_clust, nmbclusters);
 			EVENTHANDLER_INVOKE(nmbclusters_change);
 		} else
 			error = EINVAL;
@@ -157,11 +182,12 @@ sysctl_nmbjumbop(SYSCTL_HANDLER_ARGS)
 	int error, newnmbjumbop;
 
 	newnmbjumbop = nmbjumbop;
-	error = sysctl_handle_int(oidp, &newnmbjumbop, 0, req); 
-	if (error == 0 && req->newptr) {
-		if (newnmbjumbop> nmbjumbop) {
+	error = sysctl_handle_int(oidp, &newnmbjumbop, 0, req);
+	if (error == 0 && req->newptr && newnmbjumbop != nmbjumbop) {
+		if (newnmbjumbop > nmbjumbop &&
+		    nmbufs >= nmbclusters + nmbjumbop + nmbjumbo9 + nmbjumbo16) {
 			nmbjumbop = newnmbjumbop;
-			uma_zone_set_max(zone_jumbop, nmbjumbop);
+			nmbjumbop = uma_zone_set_max(zone_jumbop, nmbjumbop);
 		} else
 			error = EINVAL;
 	}
@@ -169,8 +195,7 @@ sysctl_nmbjumbop(SYSCTL_HANDLER_ARGS)
 }
 SYSCTL_PROC(_kern_ipc, OID_AUTO, nmbjumbop, CTLTYPE_INT|CTLFLAG_RW,
 &nmbjumbop, 0, sysctl_nmbjumbop, "IU",
-	 "Maximum number of mbuf page size jumbo clusters allowed");
-
+    "Maximum number of mbuf page size jumbo clusters allowed");
 
 static int
 sysctl_nmbjumbo9(SYSCTL_HANDLER_ARGS)
@@ -178,11 +203,12 @@ sysctl_nmbjumbo9(SYSCTL_HANDLER_ARGS)
 	int error, newnmbjumbo9;
 
 	newnmbjumbo9 = nmbjumbo9;
-	error = sysctl_handle_int(oidp, &newnmbjumbo9, 0, req); 
-	if (error == 0 && req->newptr) {
-		if (newnmbjumbo9> nmbjumbo9) {
+	error = sysctl_handle_int(oidp, &newnmbjumbo9, 0, req);
+	if (error == 0 && req->newptr && newnmbjumbo9 != nmbjumbo9) {
+		if (newnmbjumbo9 > nmbjumbo9 &&
+		    nmbufs >= nmbclusters + nmbjumbop + nmbjumbo9 + nmbjumbo16) {
 			nmbjumbo9 = newnmbjumbo9;
-			uma_zone_set_max(zone_jumbo9, nmbjumbo9);
+			nmbjumbo9 = uma_zone_set_max(zone_jumbo9, nmbjumbo9);
 		} else
 			error = EINVAL;
 	}
@@ -190,7 +216,7 @@ sysctl_nmbjumbo9(SYSCTL_HANDLER_ARGS)
 }
 SYSCTL_PROC(_kern_ipc, OID_AUTO, nmbjumbo9, CTLTYPE_INT|CTLFLAG_RW,
 &nmbjumbo9, 0, sysctl_nmbjumbo9, "IU",
-	"Maximum number of mbuf 9k jumbo clusters allowed"); 
+    "Maximum number of mbuf 9k jumbo clusters allowed");
 
 static int
 sysctl_nmbjumbo16(SYSCTL_HANDLER_ARGS)
@@ -198,11 +224,12 @@ sysctl_nmbjumbo16(SYSCTL_HANDLER_ARGS)
 	int error, newnmbjumbo16;
 
 	newnmbjumbo16 = nmbjumbo16;
-	error = sysctl_handle_int(oidp, &newnmbjumbo16, 0, req); 
-	if (error == 0 && req->newptr) {
-		if (newnmbjumbo16> nmbjumbo16) {
+	error = sysctl_handle_int(oidp, &newnmbjumbo16, 0, req);
+	if (error == 0 && req->newptr && newnmbjumbo16 != nmbjumbo16) {
+		if (newnmbjumbo16 > nmbjumbo16 &&
+		    nmbufs >= nmbclusters + nmbjumbop + nmbjumbo9 + nmbjumbo16) {
 			nmbjumbo16 = newnmbjumbo16;
-			uma_zone_set_max(zone_jumbo16, nmbjumbo16);
+			nmbjumbo16 = uma_zone_set_max(zone_jumbo16, nmbjumbo16);
 		} else
 			error = EINVAL;
 	}
@@ -212,10 +239,26 @@ SYSCTL_PROC(_kern_ipc, OID_AUTO, nmbjumbo16, CTLTYPE_INT|CTLFLAG_RW,
 &nmbjumbo16, 0, sysctl_nmbjumbo16, "IU",
     "Maximum number of mbuf 16k jumbo clusters allowed");
 
+static int
+sysctl_nmbufs(SYSCTL_HANDLER_ARGS)
+{
+	int error, newnmbufs;
 
-
-SYSCTL_STRUCT(_kern_ipc, OID_AUTO, mbstat, CTLFLAG_RD, &mbstat, mbstat,
-    "Mbuf general information and statistics");
+	newnmbufs = nmbufs;
+	error = sysctl_handle_int(oidp, &newnmbufs, 0, req);
+	if (error == 0 && req->newptr && newnmbufs != nmbufs) {
+		if (newnmbufs > nmbufs) {
+			nmbufs = newnmbufs;
+			nmbufs = uma_zone_set_max(zone_mbuf, nmbufs);
+			EVENTHANDLER_INVOKE(nmbufs_change);
+		} else
+			error = EINVAL;
+	}
+	return (error);
+}
+SYSCTL_PROC(_kern_ipc, OID_AUTO, nmbufs, CTLTYPE_INT|CTLFLAG_RW,
+&nmbufs, 0, sysctl_nmbufs, "IU",
+    "Maximum number of mbufs allowed");
 
 /*
  * Zones from which we allocate.
@@ -241,16 +284,14 @@ static int	mb_zinit_pack(void *, int, int);
 static void	mb_zfini_pack(void *, int);
 
 static void	mb_reclaim(void *);
-static void	mbuf_init(void *);
 static void    *mbuf_jumbo_alloc(uma_zone_t, int, uint8_t *, int);
 
-/* Ensure that MSIZE doesn't break dtom() - it must be a power of 2 */
+/* Ensure that MSIZE is a power of 2. */
 CTASSERT((((MSIZE - 1) ^ MSIZE) + 1) >> 1 == MSIZE);
 
 /*
  * Initialize FreeBSD Network buffer allocation.
  */
-SYSINIT(mbuf, SI_SUB_MBUF, SI_ORDER_FIRST, mbuf_init, NULL);
 static void
 mbuf_init(void *dummy)
 {
@@ -266,6 +307,9 @@ mbuf_init(void *dummy)
 	    NULL, NULL,
 #endif
 	    MSIZE - 1, UMA_ZONE_MAXBUCKET);
+	if (nmbufs > 0)
+		nmbufs = uma_zone_set_max(zone_mbuf, nmbufs);
+	uma_zone_set_warning(zone_mbuf, "kern.ipc.nmbufs limit reached");
 
 	zone_clust = uma_zcreate(MBUF_CLUSTER_MEM_NAME, MCLBYTES,
 	    mb_ctor_clust, mb_dtor_clust,
@@ -276,7 +320,8 @@ mbuf_init(void *dummy)
 #endif
 	    UMA_ALIGN_PTR, UMA_ZONE_REFCNT);
 	if (nmbclusters > 0)
-		uma_zone_set_max(zone_clust, nmbclusters);
+		nmbclusters = uma_zone_set_max(zone_clust, nmbclusters);
+	uma_zone_set_warning(zone_clust, "kern.ipc.nmbclusters limit reached");
 
 	zone_pack = uma_zsecond_create(MBUF_PACKET_MEM_NAME, mb_ctor_pack,
 	    mb_dtor_pack, mb_zinit_pack, mb_zfini_pack, zone_mbuf);
@@ -291,7 +336,8 @@ mbuf_init(void *dummy)
 #endif
 	    UMA_ALIGN_PTR, UMA_ZONE_REFCNT);
 	if (nmbjumbop > 0)
-		uma_zone_set_max(zone_jumbop, nmbjumbop);
+		nmbjumbop = uma_zone_set_max(zone_jumbop, nmbjumbop);
+	uma_zone_set_warning(zone_jumbop, "kern.ipc.nmbjumbop limit reached");
 
 	zone_jumbo9 = uma_zcreate(MBUF_JUMBO9_MEM_NAME, MJUM9BYTES,
 	    mb_ctor_clust, mb_dtor_clust,
@@ -301,9 +347,10 @@ mbuf_init(void *dummy)
 	    NULL, NULL,
 #endif
 	    UMA_ALIGN_PTR, UMA_ZONE_REFCNT);
-	if (nmbjumbo9 > 0)
-		uma_zone_set_max(zone_jumbo9, nmbjumbo9);
 	uma_zone_set_allocf(zone_jumbo9, mbuf_jumbo_alloc);
+	if (nmbjumbo9 > 0)
+		nmbjumbo9 = uma_zone_set_max(zone_jumbo9, nmbjumbo9);
+	uma_zone_set_warning(zone_jumbo9, "kern.ipc.nmbjumbo9 limit reached");
 
 	zone_jumbo16 = uma_zcreate(MBUF_JUMBO16_MEM_NAME, MJUM16BYTES,
 	    mb_ctor_clust, mb_dtor_clust,
@@ -313,9 +360,10 @@ mbuf_init(void *dummy)
 	    NULL, NULL,
 #endif
 	    UMA_ALIGN_PTR, UMA_ZONE_REFCNT);
-	if (nmbjumbo16 > 0)
-		uma_zone_set_max(zone_jumbo16, nmbjumbo16);
 	uma_zone_set_allocf(zone_jumbo16, mbuf_jumbo_alloc);
+	if (nmbjumbo16 > 0)
+		nmbjumbo16 = uma_zone_set_max(zone_jumbo16, nmbjumbo16);
+	uma_zone_set_warning(zone_jumbo16, "kern.ipc.nmbjumbo16 limit reached");
 
 	zone_ext_refcnt = uma_zcreate(MBUF_EXTREFCNT_MEM_NAME, sizeof(u_int),
 	    NULL, NULL,
@@ -331,26 +379,8 @@ mbuf_init(void *dummy)
 	 */
 	EVENTHANDLER_REGISTER(vm_lowmem, mb_reclaim, NULL,
 	    EVENTHANDLER_PRI_FIRST);
-
-	/*
-	 * [Re]set counters and local statistics knobs.
-	 * XXX Some of these should go and be replaced, but UMA stat
-	 * gathering needs to be revised.
-	 */
-	mbstat.m_mbufs = 0;
-	mbstat.m_mclusts = 0;
-	mbstat.m_drain = 0;
-	mbstat.m_msize = MSIZE;
-	mbstat.m_mclbytes = MCLBYTES;
-	mbstat.m_minclsize = MINCLSIZE;
-	mbstat.m_mlen = MLEN;
-	mbstat.m_mhlen = MHLEN;
-	mbstat.m_numtypes = MT_NTYPES;
-
-	mbstat.m_mcfail = mbstat.m_mpfail = 0;
-	mbstat.sf_iocnt = 0;
-	mbstat.sf_allocwait = mbstat.sf_allocfail = 0;
 }
+SYSINIT(mbuf, SI_SUB_MBUF, SI_ORDER_FIRST, mbuf_init, NULL);
 
 /*
  * UMA backend page allocator for the jumbo frame zones.
@@ -364,7 +394,7 @@ mbuf_jumbo_alloc(uma_zone_t zone, int bytes, uint8_t *flags, int wait)
 
 	/* Inform UMA that this allocator uses kernel_map/object. */
 	*flags = UMA_SLAB_KERNEL;
-	return ((void *)kmem_alloc_contig(kernel_map, bytes, wait,
+	return ((void *)kmem_alloc_contig(kernel_arena, bytes, wait,
 	    (vm_paddr_t)0, ~(vm_paddr_t)0, 1, 0, VM_MEMATTR_DEFAULT));
 }
 
@@ -380,18 +410,14 @@ mb_ctor_mbuf(void *mem, int size, void *arg, int how)
 {
 	struct mbuf *m;
 	struct mb_args *args;
-#ifdef MAC
 	int error;
-#endif
 	int flags;
 	short type;
 
 #ifdef INVARIANTS
 	trash_ctor(mem, size, arg, how);
 #endif
-	m = (struct mbuf *)mem;
 	args = (struct mb_args *)arg;
-	flags = args->flags;
 	type = args->type;
 
 	/*
@@ -401,31 +427,12 @@ mb_ctor_mbuf(void *mem, int size, void *arg, int how)
 	if (type == MT_NOINIT)
 		return (0);
 
-	m->m_next = NULL;
-	m->m_nextpkt = NULL;
-	m->m_len = 0;
-	m->m_flags = flags;
-	m->m_type = type;
-	if (flags & M_PKTHDR) {
-		m->m_data = m->m_pktdat;
-		m->m_pkthdr.rcvif = NULL;
-		m->m_pkthdr.header = NULL;
-		m->m_pkthdr.len = 0;
-		m->m_pkthdr.csum_flags = 0;
-		m->m_pkthdr.csum_data = 0;
-		m->m_pkthdr.tso_segsz = 0;
-		m->m_pkthdr.ether_vtag = 0;
-		m->m_pkthdr.flowid = 0;
-		SLIST_INIT(&m->m_pkthdr.tags);
-#ifdef MAC
-		/* If the label init fails, fail the alloc */
-		error = mac_mbuf_init(m, how);
-		if (error)
-			return (error);
-#endif
-	} else
-		m->m_data = m->m_dat;
-	return (0);
+	m = (struct mbuf *)mem;
+	flags = args->flags;
+
+	error = m_init(m, NULL, size, how, type, flags);
+
+	return (error);
 }
 
 /*
@@ -435,12 +442,12 @@ static void
 mb_dtor_mbuf(void *mem, int size, void *arg)
 {
 	struct mbuf *m;
-	unsigned long flags; 
+	unsigned long flags;
 
 	m = (struct mbuf *)mem;
 	flags = (unsigned long)arg;
 
-	if ((flags & MB_NOTAGS) == 0 && (m->m_flags & M_PKTHDR) != 0)
+	if ((m->m_flags & M_PKTHDR) && !SLIST_EMPTY(&m->m_pkthdr.tags))
 		m_tag_delete_chain(m, NULL);
 	KASSERT((m->m_flags & M_EXT) == 0, ("%s: M_EXT set", __func__));
 	KASSERT((m->m_flags & M_NOFREE) == 0, ("%s: M_NOFREE set", __func__));
@@ -540,6 +547,7 @@ mb_ctor_clust(void *mem, int size, void *arg, int how)
 		m->m_ext.ext_arg2 = NULL;
 		m->m_ext.ext_size = size;
 		m->m_ext.ext_type = type;
+		m->m_ext.ext_flags = 0;
 		m->m_ext.ref_cnt = refcnt;
 	}
 
@@ -611,10 +619,7 @@ mb_ctor_pack(void *mem, int size, void *arg, int how)
 {
 	struct mbuf *m;
 	struct mb_args *args;
-#ifdef MAC
-	int error;
-#endif
-	int flags;
+	int error, flags;
 	short type;
 
 	m = (struct mbuf *)mem;
@@ -625,33 +630,14 @@ mb_ctor_pack(void *mem, int size, void *arg, int how)
 #ifdef INVARIANTS
 	trash_ctor(m->m_ext.ext_buf, MCLBYTES, arg, how);
 #endif
-	m->m_next = NULL;
-	m->m_nextpkt = NULL;
-	m->m_data = m->m_ext.ext_buf;
-	m->m_len = 0;
-	m->m_flags = (flags | M_EXT);
-	m->m_type = type;
 
-	if (flags & M_PKTHDR) {
-		m->m_pkthdr.rcvif = NULL;
-		m->m_pkthdr.len = 0;
-		m->m_pkthdr.header = NULL;
-		m->m_pkthdr.csum_flags = 0;
-		m->m_pkthdr.csum_data = 0;
-		m->m_pkthdr.tso_segsz = 0;
-		m->m_pkthdr.ether_vtag = 0;
-		m->m_pkthdr.flowid = 0;
-		SLIST_INIT(&m->m_pkthdr.tags);
-#ifdef MAC
-		/* If the label init fails, fail the alloc */
-		error = mac_mbuf_init(m, how);
-		if (error)
-			return (error);
-#endif
-	}
+	error = m_init(m, NULL, size, how, type, flags);
+
 	/* m_ext is already initialized. */
+	m->m_data = m->m_ext.ext_buf;
+ 	m->m_flags = (flags | M_EXT);
 
-	return (0);
+	return (error);
 }
 
 int
@@ -661,15 +647,20 @@ m_pkthdr_init(struct mbuf *m, int how)
 	int error;
 #endif
 	m->m_data = m->m_pktdat;
-	SLIST_INIT(&m->m_pkthdr.tags);
 	m->m_pkthdr.rcvif = NULL;
-	m->m_pkthdr.header = NULL;
+	SLIST_INIT(&m->m_pkthdr.tags);
 	m->m_pkthdr.len = 0;
 	m->m_pkthdr.flowid = 0;
 	m->m_pkthdr.csum_flags = 0;
-	m->m_pkthdr.csum_data = 0;
-	m->m_pkthdr.tso_segsz = 0;
-	m->m_pkthdr.ether_vtag = 0;
+	m->m_pkthdr.fibnum = 0;
+	m->m_pkthdr.cosqos = 0;
+	m->m_pkthdr.rsstype = 0;
+	m->m_pkthdr.l2hlen = 0;
+	m->m_pkthdr.l3hlen = 0;
+	m->m_pkthdr.l4hlen = 0;
+	m->m_pkthdr.l5hlen = 0;
+	m->m_pkthdr.PH_per.sixtyfour[0] = 0;
+	m->m_pkthdr.PH_loc.sixtyfour[0] = 0;
 #ifdef MAC
 	/* If the label init fails, fail the alloc */
 	error = mac_mbuf_init(m, how);

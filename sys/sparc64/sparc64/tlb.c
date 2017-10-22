@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/tlb.c 223346 2011-06-20 21:31:01Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/tlb.c 223346 2011-06-20 21:31:01Z marius $");
 
 #include "opt_pmap.h"
 

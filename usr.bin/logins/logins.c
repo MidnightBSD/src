@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 2004 Dag-Erling CoÃ¯dan SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,11 +25,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/logins/logins.c 126700 2004-03-06 21:57:29Z des $
+ * $FreeBSD: release/10.0.0/usr.bin/logins/logins.c 228991 2011-12-30 10:59:15Z uqs $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/logins/logins.c 126700 2004-03-06 21:57:29Z des $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/logins/logins.c 228991 2011-12-30 10:59:15Z uqs $");
 
 #include <err.h>
 #include <grp.h>

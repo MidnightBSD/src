@@ -19,7 +19,7 @@
 static const char rcsid[] = "$Id: res_data.c,v 1.3.18.2 2007/09/14 05:35:47 marka Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/resolv/res_data.c 174226 2007-12-03 15:13:44Z ume $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/resolv/res_data.c 174226 2007-12-03 15:13:44Z ume $");
 
 #include "port_before.h"
 

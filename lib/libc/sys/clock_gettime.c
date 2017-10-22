@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/sys/clock_gettime.c 240819 2012-09-22 12:38:19Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/sys/clock_gettime.c 237434 2012-06-22 07:13:30Z kib $");
 
 #include <sys/syscall.h>
 #include <sys/time.h>

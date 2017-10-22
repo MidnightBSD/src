@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mntopts.h	8.7 (Berkeley) 3/29/95
- * $FreeBSD: stable/9/sbin/mount/mntopts.h 200796 2009-12-21 19:39:10Z trasz $
+ * $FreeBSD: release/10.0.0/sbin/mount/mntopts.h 230226 2012-01-16 19:34:21Z jh $
  */
 
 struct mntopt {
@@ -93,7 +93,7 @@ struct mntopt {
 
 void getmntopts(const char *, const struct mntopt *, int *, int *);
 void rmslashes(char *, char *);
-void checkpath(const char *, char resolved_path[]);
+int checkpath(const char *, char resolved_path[]);
 extern int getmnt_silent;
 void build_iovec(struct iovec **iov, int *iovlen, const char *name, void *val, size_t len);
 void build_iovec_argf(struct iovec **iov, int *iovlen, const char *name, const char *fmt, ...);

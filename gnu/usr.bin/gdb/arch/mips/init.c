@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/gnu/usr.bin/gdb/arch/mips/init.c 241193 2012-10-04 09:53:59Z fjoe $ */
+/* $FreeBSD: release/10.0.0/gnu/usr.bin/gdb/arch/mips/init.c 214960 2010-11-07 23:22:22Z gonzo $ */
 
 /* Do not modify this file.  */
 /* It is created automatically by the Makefile.  */

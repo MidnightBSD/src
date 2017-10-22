@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libutil/login_cap.c 184633 2008-11-04 13:49:53Z des $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libutil/login_cap.c 255007 2013-08-28 21:10:37Z jilles $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -239,7 +239,7 @@ login_getclassbyname(char const *name, const struct passwd *pwd)
 		break;	/* Don't retry default on 'me' */
 	    if (i == 0)
 	        r = -1;
-	    else if ((r = open(login_dbarray[0], O_RDONLY)) >= 0)
+	    else if ((r = open(login_dbarray[0], O_RDONLY | O_CLOEXEC)) >= 0)
 	        close(r);
 	    /*
 	     * If there's at least one login class database,

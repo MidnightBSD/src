@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/fsck_ffs/ea.c 221110 2011-04-27 02:55:03Z des $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/ea.c 247212 2013-02-24 06:44:29Z mckusick $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -73,7 +73,7 @@ eascan(struct inodesc *idesc, struct ufs2_dinode *dp)
 	else
 		blksiz = sblock.fs_bsize;
 	printf("blksiz = %ju\n", (intmax_t)blksiz);
-	bp = getdatablk(dp->di_extb[0], blksiz);
+	bp = getdatablk(dp->di_extb[0], blksiz, BT_EXTATTR);
 	cp = (u_char *)bp->b_un.b_buf;
 	for (n = 0; n < blksiz; n++) {
 		printf("%02x", cp[n]);

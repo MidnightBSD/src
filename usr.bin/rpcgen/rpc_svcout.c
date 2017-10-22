@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)rpc_svcout.c 1.29 89/03/30 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/rpcgen/rpc_svcout.c 222080 2011-05-18 20:52:52Z benl $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/rpcgen/rpc_svcout.c 241737 2012-10-19 14:49:42Z ed $");
 
 /*
  * rpc_svcout.c, Server-skeleton outputter for the RPC protocol compiler
@@ -54,7 +54,7 @@ static char RESULT[] = "result";
 static char ROUTINE[] = "local";
 static char RETVAL[] = "retval";
 
-char _errbuf[256];	/* For all messages */
+static char _errbuf[256];	/* For all messages */
 
 void internal_proctype( proc_list * );
 static void write_real_program( definition * );
@@ -325,7 +325,7 @@ write_programs(const char *storage)
 
 /*
  * write out definition of internal function (e.g. _printmsg_1(...))
- *  which calls server's defintion of actual function (e.g. printmsg_1(...)).
+ *  which calls server's definition of actual function (e.g. printmsg_1(...)).
  *  Unpacks single user argument of printmsg_1 to call-by-value format
  *  expected by printmsg_1.
  */

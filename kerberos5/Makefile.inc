@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/kerberos5/Makefile.inc 230113 2012-01-14 19:38:24Z ume $
+# $FreeBSD: release/10.0.0/kerberos5/Makefile.inc 255455 2013-09-10 18:40:43Z des $
 
 NO_LINT=
 
@@ -28,7 +28,9 @@ ETSRCS=	\
 	${KRB5DIR}/lib/krb5/krb5_err.et \
 	${KRB5DIR}/lib/krb5/krb_err.et \
 	${KRB5DIR}/lib/gssapi/krb5/gkrb5_err.et \
-	${KRB5DIR}/lib/hx509/hx509_err.et
+	${KRB5DIR}/lib/hx509/hx509_err.et \
+	${KRB5DIR}/lib/wind/wind_err.et \
+	${KRB5DIR}/lib/ntlm/ntlm_err.et
 
 .for ET in ${ETSRCS}
 .for _ET in ${ET:T:R}
@@ -42,3 +44,7 @@ CLEANFILES+=	${_ET}.h ${_ET}.c
 .endfor
 
 .endif # defined(SRCS)
+
+ASN1_COMPILE=	asn1_compile
+MAKE_ROKEN=	make-roken
+SLC=		slc

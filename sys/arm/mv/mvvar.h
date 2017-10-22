@@ -34,13 +34,14 @@
  *
  * from: FreeBSD: //depot/projects/arm/src/sys/arm/xscale/pxa2x0/pxa2x0var.h, rev 1
  *
- * $FreeBSD: stable/9/sys/arm/mv/mvvar.h 209131 2010-06-13 13:28:53Z raj $
+ * $FreeBSD: release/10.0.0/sys/arm/mv/mvvar.h 250295 2013-05-06 14:54:17Z gber $
  */
 
 #ifndef _MVVAR_H_
 #define _MVVAR_H_
 
 #include <sys/rman.h>
+#include <machine/bus.h>
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #include <machine/pmap.h>
@@ -48,6 +49,9 @@
 
 #define	MV_TYPE_PCI		0
 #define	MV_TYPE_PCIE		1
+
+#define MV_MODE_ENDPOINT	0
+#define MV_MODE_ROOT		1
 
 struct gpio_config {
 	int		gc_gpio;	/* GPIO number */
@@ -60,11 +64,12 @@ struct decode_win {
 	int		attr;		/* Attributes of the target interface */
 	vm_paddr_t	base;		/* Physical base addr */
 	uint32_t	size;
-	int		remap;
+	vm_paddr_t	remap;
 };
 
 extern const struct pmap_devmap pmap_devmap[];
 extern const struct gpio_config mv_gpio_config[];
+extern const struct decode_win *cpu_wins;
 extern const struct decode_win *idma_wins;
 extern const struct decode_win *xor_wins;
 extern int idma_wins_no;
@@ -84,12 +89,15 @@ void soc_id(uint32_t *dev, uint32_t *rev);
 void soc_dump_decode_win(void);
 uint32_t soc_power_ctrl_get(uint32_t mask);
 void soc_power_ctrl_set(uint32_t mask);
+uint64_t get_sar_value(void);
 
 int decode_win_cpu_set(int target, int attr, vm_paddr_t base, uint32_t size,
-    int remap);
+    vm_paddr_t remap);
 int decode_win_overlap(int, int, const struct decode_win *);
 int win_cpu_can_remap(int);
+void decode_win_pcie_setup(u_long);
 
+void ddr_disable(int i);
 int ddr_is_active(int i);
 uint32_t ddr_base(int i);
 uint32_t ddr_size(int i);
@@ -98,7 +106,35 @@ uint32_t ddr_target(int i);
 
 uint32_t cpu_extra_feat(void);
 uint32_t get_tclk(void);
+uint32_t get_l2clk(void);
 uint32_t read_cpu_ctrl(uint32_t);
 void write_cpu_ctrl(uint32_t, uint32_t);
+
+#if defined(SOC_MV_ARMADAXP)
+uint32_t read_cpu_mp_clocks(uint32_t reg);
+void write_cpu_mp_clocks(uint32_t reg, uint32_t val);
+uint32_t read_cpu_misc(uint32_t reg);
+void write_cpu_misc(uint32_t reg, uint32_t val);
+#endif
+
+int mv_pcib_bar_win_set(device_t dev, uint32_t base, uint32_t size,
+    uint32_t remap, int winno, int busno);
+int mv_pcib_cpu_win_remap(device_t dev, uint32_t remap, uint32_t size);
+
+void mv_mask_endpoint_irq(uintptr_t nb, int unit);
+void mv_unmask_endpoint_irq(uintptr_t nb, int unit);
+
+int	mv_drbl_get_next_irq(int dir, int unit);
+void	mv_drbl_mask_all(int unit);
+void	mv_drbl_mask_irq(uint32_t irq, int dir, int unit);
+void	mv_drbl_unmask_irq(uint32_t irq, int dir, int unit);
+void	mv_drbl_set_mask(uint32_t val, int dir, int unit);
+uint32_t mv_drbl_get_mask(int dir, int unit);
+void	mv_drbl_set_cause(uint32_t val, int dir, int unit);
+uint32_t mv_drbl_get_cause(int dir, int unit);
+void	mv_drbl_set_msg(uint32_t val, int mnr, int dir, int unit);
+uint32_t mv_drbl_get_msg(int mnr, int dir, int unit);
+
+int	mv_msi_data(int irq, uint64_t *addr, uint32_t *data);
 
 #endif /* _MVVAR_H_ */

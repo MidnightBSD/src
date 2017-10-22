@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/nlm/nlm.h 197840 2009-10-07 19:50:14Z zml $
+ * $FreeBSD: release/10.0.0/sys/nlm/nlm.h 197840 2009-10-07 19:50:14Z zml $
  */
 
 #ifndef _NLM_NLM_H_

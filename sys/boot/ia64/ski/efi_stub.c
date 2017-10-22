@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/ia64/ski/efi_stub.c 220313 2011-04-03 23:49:20Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/ia64/ski/efi_stub.c 220313 2011-04-03 23:49:20Z marcel $");
 
 #include <sys/types.h>
 #include <machine/bootinfo.h>

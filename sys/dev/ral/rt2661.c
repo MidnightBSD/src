@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sys/dev/ral/rt2661.c 248078 2013-03-09 00:39:54Z marius $	*/
+/*	$FreeBSD: release/10.0.0/sys/dev/ral/rt2661.c 252727 2013-07-04 21:16:49Z adrian $	*/
 
 /*-
  * Copyright (c) 2006
@@ -18,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ral/rt2661.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ral/rt2661.c 252727 2013-07-04 21:16:49Z adrian $");
 
 /*-
  * Ralink Technology RT2561, RT2561S and RT2661 chipset driver
@@ -1923,7 +1923,7 @@ rt2661_set_basicrates(struct rt2661_softc *sc,
 		if (!(rate & IEEE80211_RATE_BASIC))
 			continue;
 
-		mask |= 1 << ic->ic_rt->rateCodeToIndex[RV(rate)];
+		mask |= 1 << ieee80211_legacy_rate_lookup(ic->ic_rt, RV(rate));
 	}
 
 	RAL_WRITE(sc, RT2661_TXRX_CSR5, mask);

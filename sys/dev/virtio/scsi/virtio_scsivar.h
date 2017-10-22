@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2012, Bryan Venteicher <bryanv@daemoninthecloset.org>
+ * Copyright (c) 2012, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/virtio/scsi/virtio_scsivar.h 241470 2012-10-11 23:41:18Z grehan $
+ * $FreeBSD: release/10.0.0/sys/dev/virtio/scsi/virtio_scsivar.h 252707 2013-07-04 17:57:26Z bryanv $
  */
 
 #ifndef _VIRTIO_SCSIVAR_H
@@ -61,11 +61,6 @@ struct vtscsi_softc {
 	struct virtqueue	*vtscsi_control_vq;
 	struct virtqueue	*vtscsi_event_vq;
 	struct virtqueue	*vtscsi_request_vq;
-
-	struct taskqueue	*vtscsi_tq;
-	struct task		 vtscsi_control_intr_task;
-	struct task		 vtscsi_event_intr_task;
-	struct task		 vtscsi_request_intr_task;
 
 	struct cam_sim		*vtscsi_sim;
 	struct cam_path		*vtscsi_path;

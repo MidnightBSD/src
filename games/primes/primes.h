@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)primes.h	8.2 (Berkeley) 3/1/94
- * $FreeBSD: stable/9/games/primes/primes.h 203932 2010-02-15 18:46:02Z imp $
+ * $FreeBSD: release/10.0.0/games/primes/primes.h 203932 2010-02-15 18:46:02Z imp $
  */
 
 /*

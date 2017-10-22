@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/procstat/procstat_args.c 230917 2012-02-02 18:17:49Z trociny $
+ * $FreeBSD: release/10.0.0/usr.bin/procstat/procstat_args.c 249680 2013-04-20 08:08:29Z trociny $
  */
 
 #include <sys/param.h>
@@ -40,52 +40,40 @@
 
 #include "procstat.h"
 
-static char args[ARG_MAX];
-
 static void
-do_args(struct kinfo_proc *kipp, int env)
+do_args(struct procstat *procstat, struct kinfo_proc *kipp, int env)
 {
-	int error, name[4];
-	size_t len;
-	char *cp;
+	int i;
+	char **args;
 
-	if (!hflag)
+	if (!hflag) {
 		printf("%5s %-16s %-53s\n", "PID", "COMM",
 		    env ? "ENVIRONMENT" : "ARGS");
-
-	name[0] = CTL_KERN;
-	name[1] = KERN_PROC;
-	name[2] = env ? KERN_PROC_ENV : KERN_PROC_ARGS;
-	name[3] = kipp->ki_pid;
-	len = sizeof(args);
-	error = sysctl(name, 4, args, &len, NULL, 0);
-	if (error < 0 && errno != ESRCH && errno != EPERM) {
-		warn("sysctl: kern.proc.%s: %d: %d", env ? "env" : "args",
-		    kipp->ki_pid, errno);
-		return;
-	}
-	if (error < 0)
-		return;
-	if (len == 0 || strlen(args) == 0) {
-		strcpy(args, "-");
-		len = strlen(args) + 1;
 	}
 
-	printf("%5d ", kipp->ki_pid);
-	printf("%-16s ", kipp->ki_comm);
-	for (cp = args; cp < args + len; cp += strlen(cp) + 1)
-		printf("%s%s", cp != args ? " " : "", cp);
+	args = env ? procstat_getenvv(procstat, kipp, 0) :
+	    procstat_getargv(procstat, kipp, 0);
+
+	printf("%5d %-16s", kipp->ki_pid, kipp->ki_comm);
+
+	if (args == NULL) {
+		printf(" -\n");
+		return;
+	}
+
+	for (i = 0; args[i] != NULL; i++)
+		printf(" %s", args[i]);
 	printf("\n");
 }
 
 void
-procstat_args(struct kinfo_proc *kipp)
+procstat_args(struct procstat *procstat, struct kinfo_proc *kipp)
 {
-	do_args(kipp, 0);
+	do_args(procstat, kipp, 0);
 }
 
 void
-procstat_env(struct kinfo_proc *kipp)
+procstat_env(struct procstat *procstat, struct kinfo_proc *kipp)
 {
-	do_args(kipp, 1);
+	do_args(procstat, kipp, 1);
 }

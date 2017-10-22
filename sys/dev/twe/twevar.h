@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/sys/dev/twe/twevar.h 247331 2013-02-26 18:19:51Z jhb $
+ *	$FreeBSD: release/10.0.0/sys/dev/twe/twevar.h 240209 2012-09-07 18:41:19Z jhb $
  */
 
 #define TWE_DRIVER_VERSION_STRING	"1.50.01.002"

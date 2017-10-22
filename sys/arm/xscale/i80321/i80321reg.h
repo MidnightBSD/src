@@ -34,12 +34,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/xscale/i80321/i80321reg.h 161592 2006-08-24 23:51:28Z cognet $
+ * $FreeBSD: release/10.0.0/sys/arm/xscale/i80321/i80321reg.h 236987 2012-06-13 04:38:09Z imp $
  *
  */
 
-#ifndef _ARM_XSCALE_I80321REG_H_ 
-#define _ARM_XSCALE_I80321REG_H_ 
+#ifndef _ARM_XSCALE_I80321REG_H_
+#define _ARM_XSCALE_I80321REG_H_
 
 /*
  * Register definitions for the Intel 80321 (``Verde'') I/O processor,
@@ -102,7 +102,7 @@
 #if defined(CPU_XSCALE_80321)
 #define	VERDE_AAU_BASE			0x0800
 #define	VERDE_AAU_SIZE			0x0100
-#endif 
+#endif
 
 #define	VERDE_I2C_BASE			0x1680
 #define	VERDE_I2C_BASE0			(VERDE_I2C_BASE + 0x00)

@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/lib/libipsec/policy_token.l 229094 2011-12-31 14:13:11Z dim $	*/
+/*	$FreeBSD: release/10.0.0/lib/libipsec/policy_token.l 250227 2013-05-03 23:51:32Z jkim $	*/
 /*	$KAME: policy_token.l,v 1.13 2003/05/09 05:19:55 sakane Exp $	*/
 
 /*
@@ -139,8 +139,8 @@ void
 __policy__strbuffer__init__(msg)
 	char *msg;
 {
-	if (yy_current_buffer)
-		yy_delete_buffer(yy_current_buffer);
+	if (YY_CURRENT_BUFFER)
+		yy_delete_buffer(YY_CURRENT_BUFFER);
 	strbuffer = (YY_BUFFER_STATE)yy_scan_string(msg);
 	yy_switch_to_buffer(strbuffer);
 

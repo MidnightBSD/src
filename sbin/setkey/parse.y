@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sbin/setkey/parse.y 175248 2008-01-12 20:00:23Z maxim $	*/
+/*	$FreeBSD: release/10.0.0/sbin/setkey/parse.y 175248 2008-01-12 20:00:23Z maxim $	*/
 /*	$KAME: parse.y,v 1.83 2004/05/18 08:48:23 sakane Exp $	*/
 
 /*

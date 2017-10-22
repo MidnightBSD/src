@@ -1,9 +1,10 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: stable/9/libexec/Makefile 200062 2009-12-03 15:48:24Z ed $
+# $FreeBSD: release/10.0.0/libexec/Makefile 256241 2013-10-09 20:47:20Z des $
 
 .include <bsd.own.mk>
 
-SUBDIR=	${_atrun} \
+SUBDIR=	${_atf} \
+	${_atrun} \
 	bootpd \
 	${_comsat} \
 	fingerd \
@@ -31,6 +32,10 @@ SUBDIR=	${_atrun} \
 	${_tftp-proxy} \
 	ulog-helper \
 	${_ypxfr}
+
+.if ${MK_ATF} != "no"
+_atf=		atf
+.endif
 
 .if ${MK_AT} != "no"
 _atrun=		atrun

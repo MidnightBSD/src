@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/hastd/control.c 247866 2013-03-06 06:57:18Z trociny $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/hastd/control.c 252472 2013-07-01 18:41:07Z trociny $");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -271,6 +271,7 @@ control_status(struct hastd_config *cfg, struct nv *nvout,
 	nv_add_string(nvout, compression_name(res->hr_compression),
 	    "compression%u", no);
 	nv_add_string(nvout, role2str(res->hr_role), "role%u", no);
+	nv_add_int32(nvout, res->hr_workerpid, "workerpid%u", no);
 
 	switch (res->hr_role) {
 	case HAST_ROLE_PRIMARY:

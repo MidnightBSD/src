@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ctx.c,v 1.24 2002/04/13 14:35:28 bp Exp $
- * $FreeBSD: stable/9/contrib/smbfs/lib/smb/ctx.c 150802 2005-10-02 08:32:49Z bp $
+ * $FreeBSD: release/10.0.0/contrib/smbfs/lib/smb/ctx.c 250236 2013-05-04 14:03:18Z davide $
  */
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -602,40 +602,12 @@ smb_ctx_gethandle(struct smb_ctx *ctx)
 	int fd, i;
 	char buf[20];
 
-	/*
-	 * First, try to open as cloned device
-	 */
 	fd = open("/dev/"NSMB_NAME, O_RDWR);
 	if (fd >= 0) {
 		ctx->ct_fd = fd;
 		return 0;
 	}
-	/*
-	 * well, no clone capabilities available - we have to scan
-	 * all devices in order to get free one
-	 */
-	 for (i = 0; i < 1024; i++) {
-	         snprintf(buf, sizeof(buf), "/dev/%s%d", NSMB_NAME, i);
-		 fd = open(buf, O_RDWR);
-		 if (fd >= 0) {
-			ctx->ct_fd = fd;
-			return 0;
-		 }
-	 }
-	 /*
-	  * This is a compatibility with old /dev/net/nsmb device
-	  */
-	 for (i = 0; i < 1024; i++) {
-	         snprintf(buf, sizeof(buf), "/dev/net/%s%d", NSMB_NAME, i);
-		 fd = open(buf, O_RDWR);
-		 if (fd >= 0) {
-			ctx->ct_fd = fd;
-			return 0;
-		 }
-		 if (errno == ENOENT)
-		         return ENOENT;
-	 }
-	 return ENOENT;
+	return ENOENT;
 }
 
 int

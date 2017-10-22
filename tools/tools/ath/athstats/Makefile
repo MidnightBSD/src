@@ -1,8 +1,12 @@
-# $FreeBSD: stable/9/tools/tools/ath/athstats/Makefile 217738 2011-01-22 23:37:42Z adrian $
+# $FreeBSD: release/10.0.0/tools/tools/ath/athstats/Makefile 244970 2013-01-02 18:49:40Z adrian $
 
 .PATH:	${.CURDIR}/../../../../sys/dev/ath/ath_hal
 
 PROG=	athstats
+
+# Because of a clang preprocessor parser limitation causing this
+# to not compile, use gcc for now.
+CC=	gcc
 
 SRCS=	main.c statfoo.c athstats.c opt_ah.h ah_osdep.h
 
@@ -22,5 +26,6 @@ ah_osdep.h:
 	echo 'typedef void *HAL_SOFTC;' >ah_osdep.h
 	echo 'typedef int HAL_BUS_TAG;' >>ah_osdep.h
 	echo 'typedef void *HAL_BUS_HANDLE;' >>ah_osdep.h
+	echo 'typedef uint32_t HAL_DMA_ADDR;' >>ah_osdep.h
 
 .include <bsd.prog.mk>

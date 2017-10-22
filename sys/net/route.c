@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)route.c	8.3.1.1 (Berkeley) 2/23/95
- * $FreeBSD: stable/9/sys/net/route.c 248895 2013-03-29 16:24:20Z melifaro $
+ * $FreeBSD: release/10.0.0/sys/net/route.c 258913 2013-12-04 07:55:49Z rodrigc $
  */
 /************************************************************************
  * Note: In this file a 'fib' is a "forwarding information base"	*
@@ -68,8 +68,7 @@
 
 #include <vm/uma.h>
 
-/* We use 4 bits in the mbuf flags, thus we are limited to 16 FIBS. */
-#define	RT_MAXFIBS	16
+#define	RT_MAXFIBS	UINT16_MAX
 
 /* Kernel config default option. */
 #ifdef ROUTETABLES
@@ -86,17 +85,10 @@
 #define	RT_NUMFIBS	1
 #endif
 
+/* This is read-only.. */
 u_int rt_numfibs = RT_NUMFIBS;
 SYSCTL_UINT(_net, OID_AUTO, fibs, CTLFLAG_RD, &rt_numfibs, 0, "");
-/*
- * Allow the boot code to allow LESS than RT_MAXFIBS to be used.
- * We can't do more because storage is statically allocated for now.
- * (for compatibility reasons.. this will change. When this changes, code should
- * be refactored to protocol independent parts and protocol dependent parts,
- * probably hanging of domain(9) specific storage to not need the full
- * fib * af RNH allocation etc. but allow tuning the number of tables per
- * address family).
- */
+/* and this can be set too big but will be fixed before it is used */
 TUNABLE_INT("net.fibs", &rt_numfibs);
 
 /*
@@ -270,6 +262,9 @@ vnet_route_uninit(const void *unused __unused)
 			dom->dom_rtdetach((void **)rnh, dom->dom_rtoffset);
 		}
 	}
+
+	free(V_rt_tables, M_RTABLE);
+	uma_zdestroy(V_rtzone);
 }
 VNET_SYSUNINIT(vnet_route_uninit, SI_SUB_PROTO_DOMAIN, SI_ORDER_THIRD,
     vnet_route_uninit, 0);
@@ -1180,8 +1175,7 @@ rtrequest1_fib(int req, struct rt_addrinfo *info, struct rtentry **ret_nrt,
 		ifa = info->rti_ifa;
 		rt = uma_zalloc(V_rtzone, M_NOWAIT | M_ZERO);
 		if (rt == NULL) {
-			if (ifa != NULL)
-				ifa_free(ifa);
+			ifa_free(ifa);
 			senderr(ENOBUFS);
 		}
 		RT_LOCK_INIT(rt);
@@ -1193,8 +1187,7 @@ rtrequest1_fib(int req, struct rt_addrinfo *info, struct rtentry **ret_nrt,
 		RT_LOCK(rt);
 		if ((error = rt_setgate(rt, dst, gateway)) != 0) {
 			RT_LOCK_DESTROY(rt);
-			if (ifa != NULL)
-				ifa_free(ifa);
+			ifa_free(ifa);
 			uma_zfree(V_rtzone, rt);
 			senderr(error);
 		}
@@ -1225,9 +1218,7 @@ rtrequest1_fib(int req, struct rt_addrinfo *info, struct rtentry **ret_nrt,
 		/* do not permit exactly the same dst/mask/gw pair */
 		if (rn_mpath_capable(rnh) &&
 			rt_mpath_conflict(rnh, rt, netmask)) {
-			if (rt->rt_ifa) {
-				ifa_free(rt->rt_ifa);
-			}
+			ifa_free(rt->rt_ifa);
 			Free(rt_key(rt));
 			RT_LOCK_DESTROY(rt);
 			uma_zfree(V_rtzone, rt);
@@ -1295,8 +1286,7 @@ rtrequest1_fib(int req, struct rt_addrinfo *info, struct rtentry **ret_nrt,
 		 * then un-make it (this should be a function)
 		 */
 		if (rn == NULL) {
-			if (rt->rt_ifa)
-				ifa_free(rt->rt_ifa);
+			ifa_free(rt->rt_ifa);
 			Free(rt_key(rt));
 			RT_LOCK_DESTROY(rt);
 			uma_zfree(V_rtzone, rt);
@@ -1579,7 +1569,7 @@ rtinit1(struct ifaddr *ifa, int cmd, int flags, int fibnum)
 			info.rti_ifa = NULL;
 			info.rti_flags = RTF_RNH_LOCKED;
 
-			error = rtrequest1_fib(RTM_DELETE, &info, &rt, fibnum);
+			error = rtrequest1_fib(RTM_DELETE, &info, NULL, fibnum);
 			if (error == 0) {
 				info.rti_ifa = ifa;
 				info.rti_flags = flags | RTF_RNH_LOCKED |

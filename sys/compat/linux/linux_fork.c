@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/compat/linux/linux_fork.c 246290 2013-02-03 18:14:37Z dchagin $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/compat/linux/linux_fork.c 246085 2013-01-29 18:41:30Z jhb $");
 
 #include "opt_compat.h"
 #include "opt_kdtrace.h"
@@ -53,6 +53,7 @@ __FBSDID("$FreeBSD: stable/9/sys/compat/linux/linux_fork.c 246290 2013-02-03 18:
 #include <compat/linux/linux_dtrace.h>
 #include <compat/linux/linux_signal.h>
 #include <compat/linux/linux_emul.h>
+#include <compat/linux/linux_misc.h>
 
 /* DTrace init */
 LIN_SDT_PROVIDER_DECLARE(LINUX_DTRACE);

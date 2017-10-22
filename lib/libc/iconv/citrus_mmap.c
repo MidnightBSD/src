@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libc/iconv/citrus_mmap.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libc/iconv/citrus_mmap.c 244350 2012-12-17 10:38:51Z jilles $ */
 /* $NetBSD: citrus_mmap.c,v 1.3 2005/01/19 00:52:37 mycroft Exp $ */
 
 /*-
@@ -57,12 +57,8 @@ _citrus_map_file(struct _citrus_region * __restrict r,
 
 	_region_init(r, NULL, 0);
 
-	if ((fd = open(path, O_RDONLY)) == -1)
+	if ((fd = open(path, O_RDONLY | O_CLOEXEC)) == -1)
 		return (errno);
-	if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
-		ret = errno;
-		goto error;
-	}
 
 	if (fstat(fd, &st)  == -1) {
 		ret = errno;

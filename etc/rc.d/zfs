@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/rc.d/zfs 195938 2009-07-29 05:23:52Z pjd $
+# $FreeBSD: release/10.0.0/etc/rc.d/zfs 253076 2013-07-09 08:59:39Z avg $
 #
 
 # PROVIDE: zfs
@@ -23,7 +23,7 @@ zfs_start_jail()
 
 zfs_start_main()
 {
-	zfs mount -a
+	zfs mount -va
 	zfs share -a
 	if [ ! -r /etc/zfs/exports ]; then
 		touch /etc/zfs/exports

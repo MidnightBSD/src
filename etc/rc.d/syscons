@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/etc/rc.d/syscons 208060 2010-05-14 04:53:57Z dougb $
+# $FreeBSD: release/10.0.0/etc/rc.d/syscons 227366 2011-11-08 23:02:32Z jilles $
 #
 
 # PROVIDE: syscons
@@ -99,7 +99,7 @@ syscons_configure_keyboard()
 	*)
 		sc_init
 		echo -n ' keychange'
-		set - ${keychange}
+		set -- ${keychange}
 		while [ $# -gt 0 ]; do
 			kbdcontrol <${kbddev} -f "$1" "$2"
 			shift; shift

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/cam/cam_debug.h 237317 2012-06-20 14:36:09Z mav $
+ * $FreeBSD: release/10.0.0/sys/cam/cam_debug.h 255126 2013-09-01 17:37:19Z mav $
  */
 #ifndef	_CAM_CAM_DEBUG_H
 #define _CAM_CAM_DEBUG_H 1
@@ -94,6 +94,17 @@ extern u_int32_t cam_debug_delay;
 	 && (xpt_path_comp(cam_dpath, path) >= 0)	\
 	 && (xpt_path_comp(cam_dpath, path) < 2)) {	\
 		xpt_print_path(path);			\
+		printf printfargs;			\
+		if (cam_debug_delay != 0)		\
+			DELAY(cam_debug_delay);		\
+	}
+
+#define	CAM_DEBUG_DEV(dev, flag, printfargs)		\
+	if (((flag) & (CAM_DEBUG_COMPILE) & cam_dflags)	\
+	 && (cam_dpath != NULL)				\
+	 && (xpt_path_comp_dev(cam_dpath, dev) >= 0)	\
+	 && (xpt_path_comp_dev(cam_dpath, dev) < 2)) {	\
+		xpt_print_device(dev);			\
 		printf printfargs;			\
 		if (cam_debug_delay != 0)		\
 			DELAY(cam_debug_delay);		\

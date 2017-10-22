@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/ypserv/yp_access.c 194968 2009-06-25 16:15:39Z brian $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ypserv/yp_access.c 253350 2013-07-15 05:09:13Z hrs $");
 
 #include <stdlib.h>
 #include <rpc/rpc.h>
@@ -96,6 +96,10 @@ struct securenet {
 struct securenet *securenets;
 
 #define LINEBUFSZ 1024
+
+#ifdef TCP_WRAPPER
+int hosts_ctl(char *, char *, char *, char *);
+#endif
 
 /*
  * Read /var/yp/securenets file and initialize the securenets
@@ -287,7 +291,7 @@ not privileged", map, inet_ntoa(rqhost->sin_addr), ntohs(rqhost->sin_port));
 	if (status_securenets == 0) {
 #endif
 	/*
-	 * One of the following two events occured:
+	 * One of the following two events occurred:
 	 *
 	 * (1) The /var/yp/securenets exists and the remote host does not
 	 *     match any of the networks specified in it.

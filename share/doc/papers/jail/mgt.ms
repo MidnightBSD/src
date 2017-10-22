@@ -1,5 +1,5 @@
 .\"
-.\" $FreeBSD: stable/9/share/doc/papers/jail/mgt.ms 215334 2010-11-15 05:25:51Z dougb $
+.\" $FreeBSD: release/10.0.0/share/doc/papers/jail/mgt.ms 215334 2010-11-15 05:25:51Z dougb $
 .\"
 .NH
 Managing Jails and the Jail File System Environment

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/syscons/keymaps/INDEX.keymaps 242679 2012-11-06 22:46:11Z gavin $
+# $FreeBSD: release/10.0.0/share/syscons/keymaps/INDEX.keymaps 256369 2013-10-12 07:50:15Z eadler $
 #
 # database for kbdmap(8) 
 #
@@ -117,7 +117,7 @@ danish.cp865.kbd:fr:Danois Code page 865
 danish.cp865.kbd:pt:Dinamarquês Codepage 865
 danish.cp865.kbd:es:Danés Codepage 865
 
-danish.iso.macbook.kbd:Danish ISO-8859-1 (macbook)
+danish.iso.macbook.kbd:da:Danish ISO-8859-1 (macbook)
 
 dutch.iso.acc.kbd:en:Dutch ISO keymap (accent keys)
 
@@ -519,6 +519,8 @@ us.dvorakl.kbd:de:US-amerikanisch dvorak linke Hand
 us.dvorakl.kbd:fr:États Unis d'Amérique dvorakl
 us.dvorakl.kbd:pt:Estados Unidos da América dvorakl
 us.dvorakl.kbd:es:Estadounidense dvorak zurdo
+
+us.dvorakp.kbd:en:United States of America Programmer Dvorak
 
 us.dvorakx.kbd:en:United States of America dvorakx
 us.dvorakx.kbd:de:US-amerikanisch dvorakx

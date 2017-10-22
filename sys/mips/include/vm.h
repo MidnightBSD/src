@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/mips/include/vm.h 234179 2012-04-12 13:46:56Z jhb $
+ * $FreeBSD: release/10.0.0/sys/mips/include/vm.h 233670 2012-03-29 16:48:36Z jhb $
  */
 
 #ifndef _MACHINE_VM_H_

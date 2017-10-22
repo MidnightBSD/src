@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libstand/rpc.h 165906 2007-01-09 01:02:06Z imp $
+ * $FreeBSD: release/10.0.0/lib/libstand/rpc.h 165906 2007-01-09 01:02:06Z imp $
  */
 
 /* XXX defines we can't easily get from system includes */

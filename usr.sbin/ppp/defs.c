@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/ppp/defs.c 134789 2004-09-05 01:46:52Z brian $
+ * $FreeBSD: release/10.0.0/usr.sbin/ppp/defs.c 252826 2013-07-05 19:26:01Z rmh $
  */
 
 
@@ -43,7 +43,7 @@
 #include <sys/module.h>
 #endif
 #include <termios.h>
-#if !defined(__FreeBSD__) || __FreeBSD__ < 3
+#ifndef __FreeBSD__
 #include <time.h>
 #endif
 #include <unistd.h>
@@ -56,20 +56,11 @@
 
 #define	issep(c)	((c) == '\t' || (c) == ' ')
 
-#if defined(__NetBSD__) || __FreeBSD__ < 3
+#ifdef __NetBSD__
 void
 randinit()
 {
-#if defined(__FreeBSD__)
-  static int initdone;		/* srandomdev() call is only required once */
-
-  if (!initdone) {
-    initdone = 1;
-    srandomdev();
-  }
-#else
   srandom((time(NULL)^getpid())+random());
-#endif
 }
 #endif
 

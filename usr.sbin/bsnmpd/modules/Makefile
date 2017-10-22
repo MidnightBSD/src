@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/Makefile 216594 2010-12-20 17:13:14Z syrinx $
+# $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/Makefile 250564 2013-05-12 13:42:49Z trociny $
 
 .include <bsd.own.mk>
 
@@ -10,6 +10,7 @@ _snmp_atm= snmp_atm
 
 SUBDIR=	${_snmp_atm} \
 	snmp_bridge \
+	snmp_hast \
 	snmp_hostres \
 	snmp_mibII \
 	snmp_pf \

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/iir/iir_pci.c 233024 2012-03-16 08:46:58Z scottl $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/iir/iir_pci.c 254379 2013-08-15 20:03:22Z jkim $");
 
 /*
  *  iir_pci.c:  PCI Bus Attachment for Intel Integrated RAID Controller driver
@@ -163,7 +163,7 @@ MODULE_DEPEND(iir, cam, 1, 1, 1);
 static int
 iir_pci_probe(device_t dev)
 {
-    if (pci_get_vendor(dev) == INTEL_VENDOR_ID &&
+    if (pci_get_vendor(dev) == INTEL_VENDOR_ID_IIR &&
         pci_get_device(dev) == INTEL_DEVICE_ID_IIR) {
         device_set_desc(dev, "Intel Integrated RAID Controller");
         return (BUS_PROBE_DEFAULT);

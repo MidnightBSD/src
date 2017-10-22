@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/i80321/i80321.c 193847 2009-06-09 18:18:41Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/i80321/i80321.c 236987 2012-06-13 04:38:09Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -225,9 +225,9 @@ i80321_attach(struct i80321_softc *sc)
 
 static __inline uint32_t
 i80321_iintsrc_read(void)
-{       
-	uint32_t iintsrc;                                       
-		                                                                
+{
+	uint32_t iintsrc;
+		
 	__asm __volatile("mrc p6, 0, %0, c8, c0, 0"
 	    : "=r" (iintsrc));
 	

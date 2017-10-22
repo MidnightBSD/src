@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/make/str.h 146543 2005-05-23 13:27:52Z harti $
+ * $FreeBSD: release/10.0.0/usr.bin/make/str.h 146543 2005-05-23 13:27:52Z harti $
  */
 
 #ifndef str_h_44db59e6

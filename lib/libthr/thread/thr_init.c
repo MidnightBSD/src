@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/thread/thr_init.c 223294 2011-06-19 13:35:36Z kan $
+ * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_init.c 245630 2013-01-18 23:08:40Z jilles $
  */
 
 #include "namespace.h"
@@ -112,6 +112,7 @@ size_t		_thr_stack_initial = THR_STACK_INITIAL;
 int		_thr_page_size;
 int		_thr_spinloops;
 int		_thr_yieldloops;
+int		_thr_queuefifo = 4;
 int		_gc_count;
 struct umutex	_mutex_static_lock = DEFAULT_UMUTEX;
 struct umutex	_cond_static_lock = DEFAULT_UMUTEX;
@@ -119,6 +120,10 @@ struct umutex	_rwlock_static_lock = DEFAULT_UMUTEX;
 struct umutex	_keytable_lock = DEFAULT_UMUTEX;
 struct urwlock	_thr_list_lock = DEFAULT_URWLOCK;
 struct umutex	_thr_event_lock = DEFAULT_UMUTEX;
+struct umutex	_suspend_all_lock = DEFAULT_UMUTEX;
+struct pthread	*_single_thread;
+int		_suspend_all_cycle;
+int		_suspend_all_waiters;
 
 int	__pthread_cond_wait(pthread_cond_t *, pthread_mutex_t *);
 int	__pthread_mutex_lock(pthread_mutex_t *);
@@ -358,6 +363,12 @@ _libpthread_init(struct pthread *curthread)
 		_thr_signal_init();
 		if (_thread_event_mask & TD_CREATE)
 			_thr_report_creation(curthread, curthread);
+		/*
+		 * Always use our rtld lock implementation.
+		 * It is faster because it postpones signal handlers
+		 * instead of calling sigprocmask(2).
+		 */
+		_thr_rtld_init();
 	}
 }
 
@@ -440,11 +451,14 @@ init_private(void)
 	_thr_umutex_init(&_keytable_lock);
 	_thr_urwlock_init(&_thr_atfork_lock);
 	_thr_umutex_init(&_thr_event_lock);
+	_thr_umutex_init(&_suspend_all_lock);
 	_thr_once_init();
 	_thr_spinlock_init();
 	_thr_list_init();
 	_thr_wake_addr_init();
 	_sleepq_init();
+	_single_thread = NULL;
+	_suspend_all_waiters = 0;
 
 	/*
 	 * Avoid reinitializing some things if they don't need to be,
@@ -470,6 +484,9 @@ init_private(void)
 		env = getenv("LIBPTHREAD_YIELDLOOPS");
 		if (env)
 			_thr_yieldloops = atoi(env);
+		env = getenv("LIBPTHREAD_QUEUE_FIFO");
+		if (env)
+			_thr_queuefifo = atoi(env);
 		TAILQ_INIT(&_thr_atfork_list);
 	}
 	init_once = 1;

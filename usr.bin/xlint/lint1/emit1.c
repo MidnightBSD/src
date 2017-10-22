@@ -36,7 +36,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: emit1.c,v 1.11 2002/01/31 19:36:54 tv Exp $");
 #endif
-__FBSDID("$FreeBSD: stable/9/usr.bin/xlint/lint1/emit1.c 108470 2002-12-30 21:18:15Z schweikh $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/xlint/lint1/emit1.c 228992 2011-12-30 11:02:40Z uqs $");
 
 #include <ctype.h>
 
@@ -81,7 +81,7 @@ static	void	outfstrg(strg_t *);
  *				2 n typename		only type name
  *
  * spaces are only for better readability
- * additionaly it is possible to prepend the characters 'c' (for const)
+ * additionally it is possible to prepend the characters 'c' (for const)
  * and 'v' (for volatile)
  */
 void

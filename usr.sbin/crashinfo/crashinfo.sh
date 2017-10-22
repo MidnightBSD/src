@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/usr.sbin/crashinfo/crashinfo.sh 239431 2012-08-20 14:49:06Z emaste $
+# $FreeBSD: release/10.0.0/usr.sbin/crashinfo/crashinfo.sh 254959 2013-08-27 15:06:39Z gavin $
 
 usage()
 {
@@ -268,9 +268,9 @@ netstat -M $VMCORE -N $KERNEL -m
 echo
 
 echo "------------------------------------------------------------------------"
-echo "netstat -id"
+echo "netstat -idW"
 echo
-netstat -M $VMCORE -N $KERNEL -id
+netstat -M $VMCORE -N $KERNEL -idW
 echo
 
 echo "------------------------------------------------------------------------"

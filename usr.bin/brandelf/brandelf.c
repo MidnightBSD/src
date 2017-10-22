@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2000, 2001 David O'Brien
- * Copyright (c) 1996 Søren Schmidt
+ * Copyright (c) 1996 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/brandelf/brandelf.c 231812 2012-02-16 05:01:09Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/brandelf/brandelf.c 229908 2012-01-10 02:58:29Z eadler $");
 
 #include <sys/types.h>
 #include <sys/elf_common.h>

@@ -22,9 +22,9 @@
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" $Id: cvsup.1,v 1.70 2003/03/04 18:23:46 jdp Exp $
-.\" $FreeBSD: stable/9/usr.bin/csup/csup.1 237216 2012-06-18 04:55:07Z eadler $
+.\" $FreeBSD: release/10.0.0/usr.bin/csup/csup.1 246806 2013-02-14 19:46:41Z joel $
 .\"
-.Dd February 1, 2006
+.Dd February 8, 2013
 .Dt CSUP 1
 .Os FreeBSD
 .Sh NAME
@@ -902,14 +902,14 @@ will work through any firewall which permits outbound connections to
 port 5999 of the server host.
 .Sh USING csup WITH SOCKS
 .Nm
-can be used through a SOCKS proxy server with the standard
-.Nm runsocks
+can be used through a SOCKS proxy server with the
+.Nm tsocks
 command.
-Your
+The
 .Nm
 executable needs to be dynamically-linked with the system
 libraries for
-.Nm runsocks
+.Nm tsocks
 to work properly.
 .Sh USING ssh PORT FORWARDING
 As an alternative to SOCKS, a user behind a firewall can penetrate it

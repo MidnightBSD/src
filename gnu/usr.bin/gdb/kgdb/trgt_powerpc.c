@@ -25,11 +25,16 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/gnu/usr.bin/gdb/kgdb/trgt_powerpc.c 178713 2008-05-01 20:36:48Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/gnu/usr.bin/gdb/kgdb/trgt_powerpc.c 246893 2013-02-17 02:15:19Z marcel $");
 
 #include <sys/types.h>
+#ifdef CROSS_DEBUGGER
+#include <sys/powerpc/include/pcb.h>
+#include <sys/powerpc/include/frame.h>
+#else
 #include <machine/pcb.h>
 #include <machine/frame.h>
+#endif
 #include <err.h>
 #include <kvm.h>
 #include <string.h>
@@ -43,6 +48,12 @@ __FBSDID("$FreeBSD: stable/9/gnu/usr.bin/gdb/kgdb/trgt_powerpc.c 178713 2008-05-
 #include <ppc-tdep.h>
 
 #include "kgdb.h"
+
+CORE_ADDR
+kgdb_trgt_core_pcb(u_int cpuid)
+{
+	return (kgdb_trgt_stop_pcb(cpuid, sizeof(struct pcb)));
+}
 
 void
 kgdb_trgt_fetch_registers(int regno __unused)

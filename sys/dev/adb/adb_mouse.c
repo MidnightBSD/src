@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/adb/adb_mouse.c 199888 2009-11-28 17:48:25Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/dev/adb/adb_mouse.c 255921 2013-09-28 02:13:59Z jhibbits $
  */
 
 #include <sys/cdefs.h>
@@ -471,7 +471,8 @@ ams_poll(struct cdev *dev, int events, struct thread *p)
 		mtx_lock(&sc->sc_mtx);
 		
 		if (sc->xdelta == 0 && sc->ydelta == 0 && 
-		   sc->buttons == sc->last_buttons) {
+		   sc->buttons == sc->last_buttons &&
+		   sc->packet_read_len == 0) {
 			selrecord(p, &sc->rsel);
 			events = 0;
 		} else {
@@ -569,9 +570,9 @@ ams_read(struct cdev *dev, struct uio *uio, int flag)
 
 	mtx_unlock(&sc->sc_mtx);
 
-	uiomove(outpacket,len,uio);
+	error = uiomove(outpacket,len,uio);
 
-	return (0);
+	return (error);
 }
 
 

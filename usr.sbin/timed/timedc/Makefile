@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/9/usr.sbin/timed/timedc/Makefile 189090 2009-02-26 20:59:05Z ed $
+# $FreeBSD: release/10.0.0/usr.sbin/timed/timedc/Makefile 189090 2009-02-26 20:59:05Z ed $
 
 .PATH: ${.CURDIR}/../timed
 

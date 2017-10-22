@@ -72,7 +72,7 @@
 #include <machine/asm.h>
 #include <machine/asmacros.h>
 #include <machine/armreg.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/irq_dispatch.S 232508 2012-03-04 17:00:46Z raj $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/irq_dispatch.S 254845 2013-08-25 11:21:03Z andrew $");
 
 /*
  * irq_entry:
@@ -89,6 +89,7 @@ AST_LOCALS
 ASENTRY_NP(irq_entry)
 	sub	lr, lr, #0x00000004	/* Adjust the lr */
 	PUSHFRAMEINSVC			/* Push an interrupt frame */
+	UNWINDSVCFRAME
 	mov	r0, sp			/* arg for dispatcher */
 
 	mov	r1, #0
@@ -97,13 +98,14 @@ ASENTRY_NP(irq_entry)
 	DO_AST
 	PULLFRAMEFROMSVCANDEXIT
 	movs	pc, lr			/* Exit */
+END(irq_entry)
 
 	.data
 	.align	0
 
 	.global _C_LABEL(intrnames), _C_LABEL(sintrnames)
 	.global _C_LABEL(intrcnt), _C_LABEL(sintrcnt)
-_C_LABEL(intrnames): 
+_C_LABEL(intrnames):
 	.space NIRQ * (MAXCOMLEN + 1)
 _C_LABEL(intrcnt):
 	.space NIRQ * 4

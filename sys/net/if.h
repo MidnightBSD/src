@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/9/sys/net/if.h 238247 2012-07-08 14:21:36Z bz $
+ * $FreeBSD: release/10.0.0/sys/net/if.h 256218 2013-10-09 19:04:40Z glebius $
  */
 
 #ifndef _NET_IF_H_
@@ -85,8 +85,8 @@ struct if_data {
 	u_char	ifi_addrlen;		/* media address length */
 	u_char	ifi_hdrlen;		/* media header length */
 	u_char	ifi_link_state;		/* current link state */
-	u_char	ifi_spare_char1;	/* spare byte */
-	u_char	ifi_spare_char2;	/* spare byte */
+	u_char	ifi_vhid;		/* carp vhid */
+	u_char	ifi_baudrate_pf;	/* baudrate power factor */
 	u_char	ifi_datalen;		/* length of this data struct */
 	u_long	ifi_mtu;		/* maximum transmission unit */
 	u_long	ifi_metric;		/* routing metric (external only) */
@@ -103,7 +103,7 @@ struct if_data {
 	u_long	ifi_omcasts;		/* packets sent via multicast */
 	u_long	ifi_iqdrops;		/* dropped on input, this interface */
 	u_long	ifi_noproto;		/* destined for unsupported protocol */
-	u_long	ifi_hwassist;		/* HW offload capabilities, see IFCAP */
+	uint64_t ifi_hwassist;		/* HW offload capabilities, see IFCAP */
 	time_t	ifi_epoch;		/* uptime at attach or stat reset */
 	struct	timeval ifi_lastchange;	/* time of last administrative change */
 };
@@ -153,7 +153,6 @@ struct if_data {
 #define	IFF_STATICARP	0x80000		/* (n) static ARP */
 #define	IFF_DYING	0x200000	/* (n) interface is winding down */
 #define	IFF_RENAMING	0x400000	/* (n) interface is being renamed */
-
 /*
  * Old names for driver flags so that user space tools can continue to use
  * the old (portable) names.
@@ -180,7 +179,7 @@ struct if_data {
  * Some convenience macros used for setting ifi_baudrate.
  * XXX 1000 vs. 1024? --thorpej@netbsd.org
  */
-#define	IF_Kbps(x)	((x) * 1000)		/* kilobits/sec. */
+#define	IF_Kbps(x)	((uintmax_t)(x) * 1000)	/* kilobits/sec. */
 #define	IF_Mbps(x)	(IF_Kbps((x) * 1000))	/* megabits/sec. */
 #define	IF_Gbps(x)	(IF_Mbps((x) * 1000))	/* gigabits/sec. */
 
@@ -232,6 +231,7 @@ struct if_data {
 #define	IFCAP_NETMAP		0x100000 /* netmap mode supported/enabled */
 #define	IFCAP_RXCSUM_IPV6	0x200000  /* can offload checksum on IPv6 RX */
 #define	IFCAP_TXCSUM_IPV6	0x400000  /* can offload checksum on IPv6 TX */
+#define	IFCAP_HWSTATS		0x800000 /* manages counters internally */
 
 #define IFCAP_HWCSUM_IPV6	(IFCAP_RXCSUM_IPV6 | IFCAP_TXCSUM_IPV6)
 
@@ -412,6 +412,15 @@ struct	ifreq {
 
 struct ifaliasreq {
 	char	ifra_name[IFNAMSIZ];		/* if name, e.g. "en0" */
+	struct	sockaddr ifra_addr;
+	struct	sockaddr ifra_broadaddr;
+	struct	sockaddr ifra_mask;
+	int	ifra_vhid;
+};
+
+/* Compat with pre-10.x */
+struct oifaliasreq {
+	char	ifra_name[IFNAMSIZ];
 	struct	sockaddr ifra_addr;
 	struct	sockaddr ifra_broadaddr;
 	struct	sockaddr ifra_mask;

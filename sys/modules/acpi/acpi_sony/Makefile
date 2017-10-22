@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/acpi/acpi_sony/Makefile 193530 2009-06-05 18:44:36Z jkim $
+# $FreeBSD: release/10.0.0/sys/modules/acpi/acpi_sony/Makefile 193530 2009-06-05 18:44:36Z jkim $
 
 .PATH:		${.CURDIR}/../../../dev/acpi_support
 

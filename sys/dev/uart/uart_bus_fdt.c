@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/uart/uart_bus_fdt.c 217520 2011-01-17 23:34:36Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_bus_fdt.c 254598 2013-08-21 14:33:02Z ian $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -100,11 +100,23 @@ uart_fdt_probe(device_t dev)
 	pcell_t clock, shift;
 	int err;
 
-	if (!ofw_bus_is_compatible(dev, "ns16550"))
-		return (ENXIO);
-
 	sc = device_get_softc(dev);
-	sc->sc_class = &uart_ns8250_class;
+	if (ofw_bus_is_compatible(dev, "lpc,uart"))
+		sc->sc_class = &uart_lpc_class;
+	else if (ofw_bus_is_compatible(dev, "fsl,imx-uart"))
+		sc->sc_class = &uart_imx_class;
+	else if (ofw_bus_is_compatible(dev, "arm,pl011"))
+		sc->sc_class = &uart_pl011_class;
+	else if (ofw_bus_is_compatible(dev, "exynos"))
+		sc->sc_class = &uart_s3c2410_class;
+	else if (ofw_bus_is_compatible(dev, "cadence,uart"))
+		sc->sc_class = &uart_cdnc_class;
+	else if (ofw_bus_is_compatible(dev, "ti,ns16550"))
+		sc->sc_class = &uart_ti8250_class;
+	else if (ofw_bus_is_compatible(dev, "ns16550"))
+		sc->sc_class = &uart_ns8250_class;
+	else
+		return (ENXIO);
 
 	node = ofw_bus_get_node(dev);
 
@@ -116,88 +128,3 @@ uart_fdt_probe(device_t dev)
 }
 
 DRIVER_MODULE(uart, simplebus, uart_fdt_driver, uart_devclass, 0, 0);
-
-/*
- * UART console routines.
- */
-bus_space_tag_t uart_bus_space_io;
-bus_space_tag_t uart_bus_space_mem;
-
-int
-uart_cpu_eqres(struct uart_bas *b1, struct uart_bas *b2)
-{
-
-	return ((b1->bsh == b2->bsh && b1->bst == b2->bst) ? 1 : 0);
-}
-
-int
-uart_cpu_getdev(int devtype, struct uart_devinfo *di)
-{
-	char buf[64];
-	struct uart_class *class;
-	phandle_t node, chosen;
-	pcell_t shift, br, rclk;
-	u_long start, size;
-	int err;
-
-	uart_bus_space_mem = fdtbus_bs_tag;
-	uart_bus_space_io = NULL;
-
-	/* Allow overriding the FDT uning the environment. */
-	class = &uart_ns8250_class;
-	err = uart_getenv(devtype, di, class);
-	if (!err)
-		return (0);
-
-	if (devtype != UART_DEV_CONSOLE)
-		return (ENXIO);
-
-	/*
-	 * Retrieve /chosen/std{in,out}.
-	 */
-	if ((chosen = OF_finddevice("/chosen")) == 0)
-		return (ENXIO);
-	if (OF_getprop(chosen, "stdin", buf, sizeof(buf)) <= 0)
-		return (ENXIO);
-	if ((node = OF_finddevice(buf)) == 0)
-		return (ENXIO);
-	if (OF_getprop(chosen, "stdout", buf, sizeof(buf)) <= 0)
-		return (ENXIO);
-	if (OF_finddevice(buf) != node)
-		/* Only stdin == stdout is supported. */
-		return (ENXIO);
-	/*
-	 * Retrieve serial attributes.
-	 */
-	uart_fdt_get_shift(node, &shift);
-
-	if (OF_getprop(node, "current-speed", &br, sizeof(br)) <= 0)
-		br = 0;
-	br = fdt32_to_cpu(br);
-
-	if ((err = uart_fdt_get_clock(node, &rclk)) != 0)
-		return (err);
-	/*
-	 * Finalize configuration.
-	 */
-	class = &uart_quicc_class;
-	if (fdt_is_compatible(node, "ns16550"))
-		class = &uart_ns8250_class;
-
-	di->bas.chan = 0;
-	di->bas.regshft = (u_int)shift;
-	di->baudrate = 0;
-	di->bas.rclk = (u_int)rclk;
-	di->ops = uart_getops(class);
-	di->databits = 8;
-	di->stopbits = 1;
-	di->parity = UART_PARITY_NONE;
-	di->bas.bst = uart_bus_space_mem;
-
-	err = fdt_regsize(node, &start, &size);
-	if (err)
-		return (ENXIO);
-	start += fdt_immr_va;
-
-	return (bus_space_map(di->bas.bst, start, size, 0, &di->bas.bsh));
-}

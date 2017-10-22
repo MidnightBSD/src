@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/9/sys/dev/bwn/if_bwnvar.h 206358 2010-04-07 15:29:13Z rpaulo $
+ * $FreeBSD: release/10.0.0/sys/dev/bwn/if_bwnvar.h 228399 2011-12-10 21:05:06Z eadler $
  */
 
 #ifndef _IF_BWNVAR_H
@@ -714,7 +714,7 @@ struct bwn_txhdr {
 			uint16_t	tx_status;
 			struct bwn_plcp6	rts_plcp;
 			uint8_t		rts_frame[16];
-			uint8_t		pad1[2];;
+			uint8_t		pad1[2];
 			struct bwn_plcp6	plcp;
 		} __packed old;
 		/* format > r410 */

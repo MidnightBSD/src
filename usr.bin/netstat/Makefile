@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/12/93
-# $FreeBSD: stable/9/usr.bin/netstat/Makefile 238613 2012-07-19 09:32:59Z tuexen $
+# $FreeBSD: release/10.0.0/usr.bin/netstat/Makefile 238514 2012-07-16 06:43:04Z tuexen $
 
 .include <bsd.own.mk>
 

@@ -23,11 +23,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/puc/puc_bfe.h 223091 2011-06-14 18:19:48Z jhb $
+ * $FreeBSD: release/10.0.0/sys/dev/puc/puc_bfe.h 251862 2013-06-17 20:11:04Z pluknet $
  */
 
 #ifndef _DEV_PUC_BFE_H_
-#define	_DEV_PUC_BFE_H
+#define	_DEV_PUC_BFE_H_
 
 #define	PUC_PCI_BARS	6
 

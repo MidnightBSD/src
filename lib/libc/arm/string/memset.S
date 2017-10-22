@@ -67,7 +67,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/arm/string/memset.S 172616 2007-10-13 12:06:31Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/arm/string/memset.S 172616 2007-10-13 12:06:31Z cognet $");
 
 /*
  * memset: Sets a block of memory to the specified value

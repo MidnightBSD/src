@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/i915/intel_overlay.c 235783 2012-05-22 11:07:44Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/i915/intel_overlay.c 235783 2012-05-22 11:07:44Z kib $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm.h>

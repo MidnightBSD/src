@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/compat/freebsd32/freebsd32.h 244172 2012-12-13 06:17:05Z kib $
+ * $FreeBSD: release/10.0.0/sys/compat/freebsd32/freebsd32.h 258885 2013-12-03 19:40:32Z kib $
  */
 
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_H_
@@ -42,8 +42,17 @@
 #define PTROUT_CP(src,dst,fld) \
 	do { (dst).fld = PTROUT((src).fld); } while (0)
 
+/*
+ * Being a newer port, 32-bit FreeBSD/MIPS uses 64-bit time_t.
+ */
+#ifdef __mips__
+typedef	int64_t	time32_t;
+#else
+typedef	int32_t	time32_t;
+#endif
+
 struct timeval32 {
-	int32_t	tv_sec;
+	time32_t tv_sec;
 	int32_t tv_usec;
 };
 #define TV_CP(src,dst,fld) do {			\
@@ -52,12 +61,21 @@ struct timeval32 {
 } while (0)
 
 struct timespec32 {
-	int32_t tv_sec;
+	time32_t tv_sec;
 	int32_t tv_nsec;
 };
 #define TS_CP(src,dst,fld) do {			\
 	CP((src).fld,(dst).fld,tv_sec);		\
 	CP((src).fld,(dst).fld,tv_nsec);	\
+} while (0)
+
+struct itimerspec32 {
+	struct timespec32  it_interval;
+	struct timespec32  it_value;
+};
+#define ITS_CP(src, dst) do {			\
+	TS_CP((src), (dst), it_interval);	\
+	TS_CP((src), (dst), it_value);		\
 } while (0)
 
 struct rusage32 {
@@ -157,6 +175,7 @@ struct stat32 {
 	u_int32_t st_blksize;
 	u_int32_t st_flags;
 	u_int32_t st_gen;
+	int32_t	st_lspare;
 	struct timespec32 st_birthtim;
 	unsigned int :(8 / 2) * (16 - (int)sizeof(struct timespec32));
 	unsigned int :(8 / 2) * (16 - (int)sizeof(struct timespec32));
@@ -324,6 +343,8 @@ struct kinfo_proc32 {
 	char	ki_loginclass[LOGINCLASSLEN+1];
 	char	ki_sparestrings[50];
 	int	ki_spareints[KI_NSPARE_INT];
+	int	ki_flag2;
+	int	ki_fibnum;
 	u_int	ki_cr_flags;
 	int	ki_jid;
 	int	ki_numthreads;
@@ -339,6 +360,12 @@ struct kinfo_proc32 {
 	int	ki_sparelongs[KI_NSPARE_LONG];
 	int	ki_sflag;
 	int	ki_tdflags;
+};
+
+struct kinfo_sigtramp32 {
+	uint32_t ksigtramp_start;
+	uint32_t ksigtramp_end;
+	uint32_t ksigtramp_spare[4];
 };
 
 struct kld32_file_stat_1 {

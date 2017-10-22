@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/usr.bin/bc/pathnames.h 202719 2010-01-20 21:30:52Z gabor $							*/
+/*	$FreeBSD: release/10.0.0/usr.bin/bc/pathnames.h 202719 2010-01-20 21:30:52Z gabor $							*/
 /*      $OpenBSD: pathnames.h,v 1.1 2003/09/25 19:32:44 otto Exp $	*/
 
 /*

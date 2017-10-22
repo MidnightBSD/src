@@ -21,7 +21,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sparc64/include/fsr.h 241693 2012-10-18 15:24:43Z marius $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/fsr.h 239941 2012-08-31 11:15:01Z marius $
  */
 
 #ifndef	_MACHINE_FSR_H_

@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/atp.4 235578 2012-05-18 00:55:47Z gjb $
+.\" $FreeBSD: release/10.0.0/share/man/man4/atp.4 235317 2012-05-12 03:25:46Z gjb $
 .\"
 .Dd November 12, 2009
 .Dt ATP 4
@@ -98,7 +98,7 @@ Core2 Duo MacBook3,1 (IDs: 0x0229, 0x022a, 0x022b)
 .El
 .Pp
 To discover the product\-id of a touchpad, search for 'Trackpad' in the
-output of 
+output of
 .Xr lshal 1
 and look up the property
 .Nm usb_device.product_id .
@@ -108,7 +108,7 @@ creates a blocking pseudo\-device file,
 .Pa /dev/atp0 ,
 which presents the mouse as a
 .Ar sysmouse
-or 
+or
 .Ar mousesystems
 type device\-\-see
 .Xr moused 8
@@ -117,7 +117,7 @@ types.
 .Xr moused 8
 can be configured to read touchpad data from
 .Pa /dev/atp0
-and pass it along to the 
+and pass it along to the
 .Xr sysmouse 4
 driver so that any process wanting to utilize mouse operation (such as
 an X server) may fetch it from

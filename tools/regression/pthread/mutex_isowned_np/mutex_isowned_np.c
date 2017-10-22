@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2008 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 2008 Dag-Erling CoÃ¯dan SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/pthread/mutex_isowned_np/mutex_isowned_np.c 176050 2008-02-06 19:41:05Z des $
+ * $FreeBSD: release/10.0.0/tools/regression/pthread/mutex_isowned_np/mutex_isowned_np.c 228953 2011-12-29 12:33:27Z uqs $
  */
 
 #include <pthread.h>

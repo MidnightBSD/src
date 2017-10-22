@@ -1,4 +1,7 @@
-# $FreeBSD: stable/9/sys/mips/nlm/std.xlp 224115 2011-07-16 20:31:29Z jchandra $
+# $FreeBSD: release/10.0.0/sys/mips/nlm/std.xlp 227663 2011-11-18 11:18:59Z jchandra $
 files	"../nlm/files.xlp"
 cpu	CPU_NLM
 
+# Devices needed always
+device		uart
+device		pci

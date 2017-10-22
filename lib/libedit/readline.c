@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 __RCSID("$NetBSD: readline.c,v 1.90 2010/08/04 20:29:18 christos Exp $");
-__FBSDID("$FreeBSD: stable/9/lib/libedit/readline.c 220370 2011-04-05 18:41:01Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libedit/readline.c 255891 2013-09-26 17:54:58Z delphij $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -1362,6 +1362,9 @@ add_history(const char *line)
 {
 	TYPE(HistEvent) ev;
 	const Char *wline;
+
+	if (line == NULL)
+		return 0;
 
 	if (h == NULL || e == NULL)
 		rl_initialize();

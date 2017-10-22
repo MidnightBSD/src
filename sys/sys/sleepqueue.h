@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/sleepqueue.h 216421 2010-12-13 23:53:55Z mckusick $
+ * $FreeBSD: release/10.0.0/sys/sys/sleepqueue.h 248470 2013-03-18 17:23:58Z jhb $
  */
 
 #ifndef _SYS_SLEEPQUEUE_H_
@@ -93,8 +93,6 @@ struct thread;
 #define	SLEEPQ_SX		0x03		/* Used by an sx lock. */
 #define	SLEEPQ_LK		0x04		/* Used by a lockmgr. */
 #define	SLEEPQ_INTERRUPTIBLE	0x100		/* Sleep is interruptible. */
-#define	SLEEPQ_STOP_ON_BDRY	0x200		/* Stop sleeping thread on
-						   user mode boundary */
 
 void	init_sleepqueues(void);
 int	sleepq_abort(struct thread *td, int intrval);
@@ -108,7 +106,10 @@ struct sleepqueue *sleepq_lookup(void *wchan);
 void	sleepq_release(void *wchan);
 void	sleepq_remove(struct thread *td, void *wchan);
 int	sleepq_signal(void *wchan, int flags, int pri, int queue);
-void	sleepq_set_timeout(void *wchan, int timo);
+void	sleepq_set_timeout_sbt(void *wchan, sbintime_t sbt,
+	    sbintime_t pr, int flags);
+#define	sleepq_set_timeout(wchan, timo)					\
+    sleepq_set_timeout_sbt((wchan), tick_sbt * (timo), 0, C_HARDCLOCK)
 u_int	sleepq_sleepcnt(void *wchan, int queue);
 int	sleepq_timedwait(void *wchan, int pri);
 int	sleepq_timedwait_sig(void *wchan, int pri);

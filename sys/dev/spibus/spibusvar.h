@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/spibus/spibusvar.h 160452 2006-07-17 21:18:03Z cognet $ */
+/* $FreeBSD: release/10.0.0/sys/dev/spibus/spibusvar.h 228471 2011-12-13 14:06:01Z ed $ */
 
 #define SPIBUS_IVAR(d) (struct spibus_ivar *) device_get_ivars(d)
 #define SPIBUS_SOFTC(d) (struct spibus_softc *) device_get_softc(d)
@@ -18,7 +18,7 @@ enum {
 };
 
 #define SPIBUS_ACCESSOR(A, B, T)					\
-__inline static int							\
+static inline int							\
 spibus_get_ ## A(device_t dev, T *t)					\
 {									\
 	return BUS_READ_IVAR(device_get_parent(dev), dev,		\

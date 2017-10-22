@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/librt/sigev_thread.h 156383 2006-03-07 08:28:07Z davidxu $
+ * $FreeBSD: release/10.0.0/lib/librt/sigev_thread.h 233519 2012-03-26 19:12:09Z rmh $
  *
  */
 
@@ -66,8 +66,6 @@ struct sigev_thread {
 #define	SNF_WORKING		0x01
 #define	SNF_REMOVED		0x02
 #define	SNF_SYNC		0x04
-
-#define	SIGSERVICE		(SIGTHR+1)
 
 int	__sigev_check_init();
 struct sigev_node *__sigev_alloc(int, const struct sigevent *,

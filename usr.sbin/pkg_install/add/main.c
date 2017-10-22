@@ -1,6 +1,6 @@
 /*
  *
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/add/main.c 241976 2012-10-24 02:00:54Z kensmith $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg_install/add/main.c 254525 2013-08-19 14:04:35Z gjb $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -90,6 +90,7 @@ struct {
 	{ 803000, 803499, "/packages-8.3-release" },
 	{ 900000, 900499, "/packages-9.0-release" },
 	{ 901000, 901499, "/packages-9.1-release" },
+	{ 902000, 902499, "/packages-9.2-release" },
 	{ 300000, 399000, "/packages-3-stable" },
 	{ 400000, 499000, "/packages-4-stable" },
 	{ 502100, 502128, "/packages-5-current" },
@@ -294,6 +295,7 @@ main(int argc, char **argv)
 	if (chroot("."))
 	    errx(1, "chroot to %s failed", Chroot);
     }
+    warnpkgng();
     /* Make sure the sub-execs we invoke get found */
     setenv("PATH", 
 	   "/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin",

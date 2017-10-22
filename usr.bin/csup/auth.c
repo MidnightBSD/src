@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/csup/auth.c 230743 2012-01-29 14:55:20Z marius $
+ * $FreeBSD: release/10.0.0/usr.bin/csup/auth.c 232320 2012-02-29 22:35:09Z cognet $
  */
 
 #include <sys/param.h>
@@ -293,7 +293,7 @@ auth_makechallenge(struct config *config, char *challenge)
 	gettimeofday(&tv, NULL);
 	pid = getpid();
 	ppid = getppid();
-	srand(tv.tv_usec ^ tv.tv_sec ^ pid);
+	srandom(tv.tv_usec ^ tv.tv_sec ^ pid);
 	addrlen = sizeof(laddr);
 	error = getsockname(config->socket, (struct sockaddr *)&laddr, &addrlen);
 	if (error < 0) {

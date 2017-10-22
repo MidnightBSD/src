@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libgeom/libgeom.h 202454 2010-01-17 06:20:30Z delphij $
+ * $FreeBSD: release/10.0.0/lib/libgeom/libgeom.h 253469 2013-07-19 06:42:15Z scottl $
  */
 #ifndef _LIBGEOM_H_
 #define _LIBGEOM_H_
@@ -39,6 +39,10 @@
 #include <geom/geom_ctl.h>
 
 __BEGIN_DECLS
+
+#ifndef DEBUG_LIBGEOM
+#define DEBUG_LIBGEOM 0
+#endif
 
 void geom_stats_close(void);
 void geom_stats_resync(void);

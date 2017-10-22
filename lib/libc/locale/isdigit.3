@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)isdigit.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/9/lib/libc/locale/isdigit.3 235785 2012-05-22 14:40:39Z theraven $
+.\" $FreeBSD: release/10.0.0/lib/libc/locale/isdigit.3 233992 2012-04-07 09:05:30Z joel $
 .\"
 .Dd May 4, 2007
 .Dt ISDIGIT 3
@@ -55,10 +55,9 @@ The
 .Fn isdigit
 function tests for a decimal digit character.
 Regardless of locale, this includes the following characters only:
-.Pp
 .Bl -column \&``0''______ \&``0''______ \&``0''______ \&``0''______ \&``0''______
-.It "\&``0''\t``1''\t``2''\t``3''\t``4''"
-.It "\&``5''\t``6''\t``7''\t``8''\t``9''"
+.It "\&``0''" Ta "``1''" Ta "``2''" Ta "``3''" Ta "``4''"
+.It "\&``5''" Ta "``6''" Ta "``7''" Ta "``8''" Ta "``9''"
 .El
 .Pp
 The

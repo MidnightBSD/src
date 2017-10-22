@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/tr/tr.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tr/tr.c 245767 2013-01-22 05:39:34Z andrew $");
 
 #ifndef lint
 static const char copyright[] =
@@ -47,6 +47,7 @@ static const char sccsid[] = "@(#)tr.c	8.2 (Berkeley) 5/4/95";
 #include <err.h>
 #include <limits.h>
 #include <locale.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,8 +59,8 @@ static const char sccsid[] = "@(#)tr.c	8.2 (Berkeley) 5/4/95";
 #include "cset.h"
 #include "extern.h"
 
-STR s1 = { STRING1, NORMAL, 0, OOBCH, 0, { 0, OOBCH }, NULL, NULL };
-STR s2 = { STRING2, NORMAL, 0, OOBCH, 0, { 0, OOBCH }, NULL, NULL };
+static STR s1 = { STRING1, NORMAL, 0, OOBCH, 0, { 0, OOBCH }, NULL, NULL };
+static STR s2 = { STRING2, NORMAL, 0, OOBCH, 0, { 0, OOBCH }, NULL, NULL };
 
 static struct cset *setup(char *, STR *, int, int);
 static void usage(void);
@@ -267,7 +268,7 @@ endloop:
 		 */
 		s2.str = argv[1];
 		s2.state = NORMAL;
-		for (cnt = 0; cnt < WCHAR_MAX; cnt++) {
+		for (cnt = 0; cnt < WINT_MAX; cnt++) {
 			if (Cflag && !iswrune(cnt))
 				continue;
 			if (cmap_lookup(map, cnt) == OOBCH) {

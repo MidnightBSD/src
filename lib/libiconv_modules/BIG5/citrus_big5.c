@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/lib/libiconv_modules/BIG5/citrus_big5.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: release/10.0.0/lib/libiconv_modules/BIG5/citrus_big5.c 252583 2013-07-03 18:27:45Z peter $ */
 /*	$NetBSD: citrus_big5.c,v 1.12 2008/06/14 16:01:07 tnozaki Exp $	*/
 
 /*-
@@ -268,12 +268,12 @@ static int
 /*ARGSUSED*/
 _citrus_BIG5_mbrtowc_priv(_BIG5EncodingInfo * __restrict ei,
     wchar_t * __restrict pwc,
-    char ** __restrict s, size_t n,
+    const char ** __restrict s, size_t n,
     _BIG5State * __restrict psenc,
     size_t * __restrict nresult)
 {
 	wchar_t wchar;
-	char *s0;
+	const char *s0;
 	int c, chlenbak;
 
 	s0 = *s;

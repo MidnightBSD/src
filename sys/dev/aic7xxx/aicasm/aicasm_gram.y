@@ -40,7 +40,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_gram.y#29 $
  *
- * $FreeBSD: stable/9/sys/dev/aic7xxx/aicasm/aicasm_gram.y 243198 2012-11-17 23:34:10Z dim $
+ * $FreeBSD: release/10.0.0/sys/dev/aic7xxx/aicasm/aicasm_gram.y 243906 2012-12-05 20:28:44Z bapt $
  */
 
 #include <sys/types.h>
@@ -103,7 +103,6 @@ static void add_version(const char *verstring);
 static int  is_download_const(expression_t *immed);
 
 extern int yylex (void);
-extern int yyparse (void);
 
 #define SRAM_SYMNAME "SRAM_BASE"
 #define SCB_SYMNAME "SCB_BASE"

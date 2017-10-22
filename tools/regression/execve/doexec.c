@@ -31,7 +31,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/execve/doexec.c 159097 2006-05-31 11:13:10Z maxim $
+ * $FreeBSD: release/10.0.0/tools/regression/execve/doexec.c 159097 2006-05-31 11:13:10Z maxim $
  */
 
 #include <errno.h>

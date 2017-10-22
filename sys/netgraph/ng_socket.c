@@ -37,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_socket.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_socket.c 231823 2012-02-16 14:44:52Z glebius $
  * $Whistle: ng_socket.c,v 1.28 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -164,6 +164,27 @@ static struct mtx	ngsocketlist_mtx;
 #ifndef TRAP_ERROR
 #define TRAP_ERROR
 #endif
+
+struct hookpriv {
+	LIST_ENTRY(hookpriv)	next;
+	hook_p			hook;
+};
+LIST_HEAD(ngshash, hookpriv);
+
+/* Per-node private data */
+struct ngsock {
+	struct ng_node	*node;		/* the associated netgraph node */
+	struct ngpcb	*datasock;	/* optional data socket */
+	struct ngpcb	*ctlsock;	/* optional control socket */
+	struct ngshash	*hash;		/* hash for hook names */
+	u_long		hmask;		/* hash mask */
+	int	flags;
+	int	refs;
+	struct mtx	mtx;		/* mtx to wait on */
+	int		error;		/* place to store error */
+};
+
+#define	NGS_FLAG_NOLINGER	1	/* close with last hook */
 
 /***************************************************************
 	Control sockets
@@ -541,9 +562,7 @@ ng_attach_cntl(struct socket *so)
 	pcbp->sockdata = priv;
 	priv->refs++;
 	priv->node = node;
-
-	/* Store a hint for netstat(1). */
-	priv->node_id = priv->node->nd_ID;
+	pcbp->node_id = node->nd_ID;	/* hint for netstat(1) */
 
 	/* Link the node and the private data. */
 	NG_NODE_SET_PRIVATE(priv->node, priv);
@@ -614,6 +633,7 @@ ng_detach_common(struct ngpcb *pcbp, int which)
 			panic("%s", __func__);
 		}
 		pcbp->sockdata = NULL;
+		pcbp->node_id = 0;
 
 		ng_socket_free_priv(priv);
 	}
@@ -705,6 +725,7 @@ ng_connect_data(struct sockaddr *nam, struct ngpcb *pcbp)
 	mtx_lock(&priv->mtx);
 	priv->datasock = pcbp;
 	pcbp->sockdata = priv;
+	pcbp->node_id = priv->node->nd_ID;	/* hint for netstat(1) */
 	priv->refs++;
 	mtx_unlock(&priv->mtx);
 	NG_FREE_ITEM(item);	/* drop the reference to the node */

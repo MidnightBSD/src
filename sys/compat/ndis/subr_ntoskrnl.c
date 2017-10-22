@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/compat/ndis/subr_ntoskrnl.c 229739 2012-01-06 22:15:58Z dim $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/compat/ndis/subr_ntoskrnl.c 254025 2013-08-07 06:21:20Z jeff $");
 
 #include <sys/ctype.h>
 #include <sys/unistd.h>
@@ -2489,7 +2489,7 @@ MmAllocateContiguousMemorySpecifyCache(size, lowest, highest,
 		break;
 	}
 
-	ret = (void *)kmem_alloc_contig(kernel_map, size, M_ZERO | M_NOWAIT,
+	ret = (void *)kmem_alloc_contig(kernel_arena, size, M_ZERO | M_NOWAIT,
 	    lowest, highest, PAGE_SIZE, boundary, memattr);
 	if (ret != NULL)
 		malloc_type_allocated(M_DEVBUF, round_page(size));
@@ -3591,6 +3591,7 @@ DbgPrint(char *fmt, ...)
 	if (bootverbose) {
 		va_start(ap, fmt);
 		vprintf(fmt, ap);
+		va_end(ap);
 	}
 
 	return (STATUS_SUCCESS);

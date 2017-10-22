@@ -1,5 +1,5 @@
 #	@(#)Makefile.inc	8.1 (Berkeley) 6/2/93
-# $FreeBSD: stable/9/lib/libc/compat-43/Makefile.inc 211774 2010-08-24 20:54:43Z imp $
+# $FreeBSD: release/10.0.0/lib/libc/compat-43/Makefile.inc 211774 2010-08-24 20:54:43Z imp $
 
 # compat-43 sources
 .PATH: ${.CURDIR}/${LIBC_ARCH}/compat-43 ${.CURDIR}/compat-43

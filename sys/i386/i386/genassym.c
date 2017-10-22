@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/i386/genassym.c 235796 2012-05-22 17:44:01Z iwasaki $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/i386/genassym.c 254671 2013-08-22 20:07:06Z gibbs $");
 
 #include "opt_apic.h"
 #include "opt_compat.h"
@@ -246,9 +246,8 @@ ASSYM(BUS_SPACE_HANDLE_IAT, offsetof(struct bus_space_handle, bsh_iat));
 #endif
 
 #ifdef XEN
-#include <xen/hypervisor.h>
 ASSYM(PC_CR3, offsetof(struct pcpu, pc_cr3));
-ASSYM(HYPERVISOR_VIRT_START, __HYPERVISOR_VIRT_START);
+ASSYM(XEN_HYPERVISOR_VIRT_START, HYPERVISOR_VIRT_START);
 #endif
 
 #ifdef	HWPMC_HOOKS

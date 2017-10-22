@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/mii/e1000phy.c 229093 2011-12-31 14:12:12Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mii/e1000phy.c 242272 2012-10-29 00:17:12Z jmallett $");
 
 /*
  * driver for the Marvell 88E1000 series external 1000/100/10-BT PHY.
@@ -106,7 +106,9 @@ static const struct mii_phydesc e1000phys[] = {
 	MII_PHY_DESC(xxMARVELL, E1111),
 	MII_PHY_DESC(xxMARVELL, E1116),
 	MII_PHY_DESC(xxMARVELL, E1116R),
+	MII_PHY_DESC(xxMARVELL, E1116R_29),
 	MII_PHY_DESC(xxMARVELL, E1118),
+	MII_PHY_DESC(xxMARVELL, E1145),
 	MII_PHY_DESC(xxMARVELL, E1149R),
 	MII_PHY_DESC(xxMARVELL, E3016),
 	MII_PHY_DESC(xxMARVELL, PHYG65G),
@@ -208,6 +210,7 @@ e1000phy_reset(struct mii_softc *sc)
 		case MII_MODEL_xxMARVELL_E1111:
 		case MII_MODEL_xxMARVELL_E1112:
 		case MII_MODEL_xxMARVELL_E1116:
+		case MII_MODEL_xxMARVELL_E1116R_29:
 		case MII_MODEL_xxMARVELL_E1118:
 		case MII_MODEL_xxMARVELL_E1149:
 		case MII_MODEL_xxMARVELL_E1149R:
@@ -215,7 +218,8 @@ e1000phy_reset(struct mii_softc *sc)
 			/* Disable energy detect mode. */
 			reg &= ~E1000_SCR_EN_DETECT_MASK;
 			reg |= E1000_SCR_AUTO_X_MODE;
-			if (sc->mii_mpd_model == MII_MODEL_xxMARVELL_E1116)
+			if (sc->mii_mpd_model == MII_MODEL_xxMARVELL_E1116 ||
+			    sc->mii_mpd_model == MII_MODEL_xxMARVELL_E1116R_29)
 				reg &= ~E1000_SCR_POWER_DOWN;
 			reg |= E1000_SCR_ASSERT_CRS_ON_TX;
 			break;
@@ -243,6 +247,7 @@ e1000phy_reset(struct mii_softc *sc)
 		PHY_WRITE(sc, E1000_SCR, reg);
 
 		if (sc->mii_mpd_model == MII_MODEL_xxMARVELL_E1116 ||
+		    sc->mii_mpd_model == MII_MODEL_xxMARVELL_E1116R_29 ||
 		    sc->mii_mpd_model == MII_MODEL_xxMARVELL_E1149 ||
 		    sc->mii_mpd_model == MII_MODEL_xxMARVELL_E1149R) {
 			PHY_WRITE(sc, E1000_EADR, 2);
@@ -259,6 +264,7 @@ e1000phy_reset(struct mii_softc *sc)
 	case MII_MODEL_xxMARVELL_E1118:
 		break;
 	case MII_MODEL_xxMARVELL_E1116:
+	case MII_MODEL_xxMARVELL_E1116R_29:
 		page = PHY_READ(sc, E1000_EADR);
 		/* Select page 3, LED control register. */
 		PHY_WRITE(sc, E1000_EADR, 3);

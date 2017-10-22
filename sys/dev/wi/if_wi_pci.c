@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/wi/if_wi_pci.c 181209 2008-08-02 20:45:28Z imp $
+ * $FreeBSD: release/10.0.0/sys/dev/wi/if_wi_pci.c 254263 2013-08-12 23:30:01Z scottl $
  */
 
 /*
@@ -137,22 +137,12 @@ static int
 wi_pci_attach(device_t dev)
 {
 	struct wi_softc		*sc;
-	u_int32_t		command, wanted;
+	u_int32_t		command;
 	u_int16_t		reg;
 	int			error;
 	int			timeout;
 
 	sc = device_get_softc(dev);
-
-	command = pci_read_config(dev, PCIR_COMMAND, 4);
-	wanted = PCIM_CMD_PORTEN|PCIM_CMD_MEMEN;
-	command |= wanted;
-	pci_write_config(dev, PCIR_COMMAND, command, 4);
-	command = pci_read_config(dev, PCIR_COMMAND, 4);
-	if ((command & wanted) != wanted) {
-		device_printf(dev, "wi_pci_attach() failed to enable pci!\n");
-		return (ENXIO);
-	}
 
 	if (sc->wi_bus_type != WI_BUS_PCI_NATIVE) {
 		error = wi_alloc(dev, WI_PCI_IORES);

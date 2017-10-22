@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/si/si.c 193018 2009-05-29 06:41:23Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/si/si.c 247089 2013-02-21 07:19:50Z imp $");
 
 #ifndef lint
 static const char si_copyright1[] =  "@(#) Copyright (C) Specialix International, 1990,1992,1998",
@@ -1446,7 +1446,6 @@ si_start(struct tty *tp)
 
 #if 0
 /*
- * Note: called at splsoftclock from the timeout code
  * This has to deal with two things...  cause wakeups while waiting for
  * tty drains on last process exit, and call l_start at about the right
  * time for protocols like ppp.

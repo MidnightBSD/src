@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/i915/intel_panel.c 235783 2012-05-22 11:07:44Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/i915/intel_panel.c 254797 2013-08-24 16:50:47Z dumbbell $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm.h>
@@ -59,7 +59,7 @@ intel_fixed_panel_mode(struct drm_display_mode *fixed_mode,
 void
 intel_pch_panel_fitting(struct drm_device *dev,
 			int fitting_mode,
-			struct drm_display_mode *mode,
+			const struct drm_display_mode *mode,
 			struct drm_display_mode *adjusted_mode)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;

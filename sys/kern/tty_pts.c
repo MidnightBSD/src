@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/tty_pts.c 243584 2012-11-27 01:33:23Z mjg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/tty_pts.c 254356 2013-08-15 07:54:31Z glebius $");
 
 /* Add compatibility bits for FreeBSD. */
 #define PTS_COMPAT
@@ -599,6 +599,7 @@ static struct fileops ptsdev_ops = {
 	.fo_close	= ptsdev_close,
 	.fo_chmod	= invfo_chmod,
 	.fo_chown	= invfo_chown,
+	.fo_sendfile	= invfo_sendfile,
 	.fo_flags	= DFLAG_PASSABLE,
 };
 
@@ -825,10 +826,10 @@ sys_posix_openpt(struct thread *td, struct posix_openpt_args *uap)
 	 * POSIX states it's unspecified when other flags are passed. We
 	 * don't allow this.
 	 */
-	if (uap->flags & ~(O_RDWR|O_NOCTTY))
+	if (uap->flags & ~(O_RDWR|O_NOCTTY|O_CLOEXEC))
 		return (EINVAL);
 
-	error = falloc(td, &fp, &fd, 0);
+	error = falloc(td, &fp, &fd, uap->flags);
 	if (error)
 		return (error);
 

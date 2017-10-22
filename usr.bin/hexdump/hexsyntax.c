@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)hexsyntax.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/hexdump/hexsyntax.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/hexdump/hexsyntax.c 229403 2012-01-03 18:51:58Z ed $");
 
 #include <sys/types.h>
 
@@ -54,7 +54,7 @@ newsyntax(int argc, char ***argvp)
 	char *p, **argv;
 
 	argv = *argvp;
-	if ((p = rindex(argv[0], 'h')) != NULL &&
+	if ((p = strrchr(argv[0], 'h')) != NULL &&
 	    strcmp(p, "hd") == 0) {
 		/* "Canonical" format, implies -C. */
 		add("\"%08.8_Ax\n\"");

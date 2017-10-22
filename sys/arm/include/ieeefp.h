@@ -1,5 +1,5 @@
 /*	$NetBSD: ieeefp.h,v 1.1 2001/01/10 19:02:06 bjh21 Exp $	*/
-/* $FreeBSD: stable/9/sys/arm/include/ieeefp.h 139735 2005-01-05 21:58:49Z imp $ */
+/* $FreeBSD: release/10.0.0/sys/arm/include/ieeefp.h 226607 2011-10-21 06:41:46Z das $ */
 /*-
  * Based on ieeefp.h written by J.T. Conklin, Apr 28, 1995
  * Public domain.
@@ -7,6 +7,8 @@
 
 #ifndef _MACHINE_IEEEFP_H_
 #define _MACHINE_IEEEFP_H_
+
+/* Deprecated historical FPU control interface */
 
 /* FP exception codes */
 #define FP_EXCEPT_INV	0

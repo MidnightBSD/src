@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/gstat/gstat.c 189739 2009-03-12 13:17:46Z maxim $
+ * $FreeBSD: release/10.0.0/usr.sbin/gstat/gstat.c 189739 2009-03-12 13:17:46Z maxim $
  */
 
 

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/powerpc/aim/trap_subr32.S 223570 2011-06-26 15:08:14Z nwhitehorn $ */
+/* $FreeBSD: release/10.0.0/sys/powerpc/aim/trap_subr32.S 248457 2013-03-18 05:30:18Z jhibbits $ */
 /* $NetBSD: trap_subr.S,v 1.20 2002/04/22 23:20:08 kleink Exp $	*/
 
 /*-
@@ -240,6 +240,19 @@
 	mfsprg2	%r2;			/* restore r2 & r3 */		\
 	mfsprg3	%r3
 
+#ifdef KDTRACE_HOOKS
+	.data
+	.globl	dtrace_invop_calltrap_addr
+	.align	4
+	.type	dtrace_invop_calltrap_addr, @object
+        .size	dtrace_invop_calltrap_addr, 4
+dtrace_invop_calltrap_addr:
+	.word	0
+	.word	0
+
+	.text
+#endif
+
 /*
  * The next two routines are 64-bit glue code. The first is used to test if
  * we are on a 64-bit system. By copying it to the illegal instruction
@@ -303,6 +316,7 @@ cpu_reset:
 
 	lis	%r3,1@l
 	bla	CNAME(cpudep_ap_early_bootstrap)
+	lis	%r3,1@l
 	bla	CNAME(pmap_cpu_bootstrap)
 	bla	CNAME(cpudep_ap_bootstrap)
 	mr	%r1,%r3
@@ -665,8 +679,8 @@ disitrap:
 	GET_CPUINFO(%r1)
 	lwz	%r30,(PC_TEMPSAVE+CPUSAVE_AIM_DAR)(%r1) /* get DAR */
 	stw	%r30,(PC_DBSAVE  +CPUSAVE_AIM_DAR)(%r1) /* save DAR */
-	lwz	%r30,(PC_TEMPSAVE+CPUSAVE_AIM_DSISR)(%r1) /* get DSISR */
-	stw	%r30,(PC_DBSAVE  +CPUSAVE_AIM_DSISR)(%r1) /* save DSISR */
+	lwz	%r31,(PC_TEMPSAVE+CPUSAVE_AIM_DSISR)(%r1) /* get DSISR */
+	stw	%r31,(PC_DBSAVE  +CPUSAVE_AIM_DSISR)(%r1) /* save DSISR */
 	lwz	%r30,(PC_DISISAVE+CPUSAVE_R28)(%r1) /* get  r28 */
 	stw	%r30,(PC_DBSAVE  +CPUSAVE_R28)(%r1) /* save r28 */
 	lwz	%r31,(PC_DISISAVE+CPUSAVE_R29)(%r1) /* get  r29 */

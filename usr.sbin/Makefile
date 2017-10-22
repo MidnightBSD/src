@@ -1,12 +1,12 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
-# $FreeBSD: stable/9/usr.sbin/Makefile 248354 2013-03-15 22:14:41Z brooks $
+# $FreeBSD: release/10.0.0/usr.sbin/Makefile 257456 2013-10-31 16:16:52Z brooks $
 
 .include <bsd.own.mk>
 
 SUBDIR=	adduser \
 	arp \
 	bootparamd \
-	burncd \
+	bsdconfig \
 	bsdinstall \
 	cdcontrol \
 	chkgrp \
@@ -17,12 +17,14 @@ SUBDIR=	adduser \
 	crashinfo \
 	cron \
 	ctladm \
+	ctld \
 	daemon \
 	dconschat \
 	devinfo \
 	digictl \
 	diskinfo \
 	dumpcis \
+	etcupdate \
 	extattr \
 	extattrctl \
 	fifolog \
@@ -34,6 +36,7 @@ SUBDIR=	adduser \
 	ifmcstat \
 	inetd \
 	iostat \
+	iscsid \
 	kldxref \
 	mailwrapper \
 	makefs \
@@ -43,7 +46,6 @@ SUBDIR=	adduser \
 	mixer \
 	mlxcontrol \
 	mountd \
-	mount_portalfs \
 	mptutil \
 	mtest \
 	mtree \
@@ -80,6 +82,7 @@ SUBDIR=	adduser \
 	snapinfo \
 	spray \
 	syslogd \
+	sysrc \
 	tcpdchk \
 	tcpdmatch \
 	tcpdrop \
@@ -118,28 +121,6 @@ SUBDIR+=	praudit
 
 .if ${MK_AUTHPF} != "no"
 SUBDIR+=	authpf
-.endif
-
-.if ${MK_BIND_DNSSEC} != "no" && ${MK_OPENSSL} != "no"
-SUBDIR+=	dnssec-dsfromkey
-SUBDIR+=	dnssec-keyfromlabel
-SUBDIR+=	dnssec-keygen
-SUBDIR+=	dnssec-revoke
-SUBDIR+=	dnssec-settime
-SUBDIR+=	dnssec-signzone
-.endif
-.if ${MK_BIND_NAMED} != "no"
-SUBDIR+=	arpaname
-SUBDIR+=	ddns-confgen
-SUBDIR+=	genrandom
-SUBDIR+=	isc-hmac-fixup
-SUBDIR+=	named
-SUBDIR+=	named-checkconf
-SUBDIR+=	named-checkzone
-SUBDIR+=	named-journalprint
-SUBDIR+=	nsec3hash
-SUBDIR+=	rndc
-SUBDIR+=	rndc-confgen
 .endif
 
 .if ${MK_BLUETOOTH} != "no"
@@ -226,6 +207,11 @@ SUBDIR+=	lpr
 SUBDIR+=	manctl
 .endif
 
+.if ${MK_NAND} != "no"
+SUBDIR+=	nandsim
+SUBDIR+=	nandtool
+.endif
+
 .if ${MK_NETGRAPH} != "no"
 SUBDIR+=	flowctl
 SUBDIR+=	lmcconfig
@@ -261,9 +247,12 @@ _pc_sysinstall=	pc-sysinstall
 SUBDIR+=	ftp-proxy
 .endif
 
+.if ${MK_PKGBOOTSTRAP} != "no"
+SUBDIR+=	pkg
+.endif
+
 .if ${MK_PKGTOOLS} != "no"
 SUBDIR+=	pkg_install
-SUBDIR+=	pkg
 .endif
 
 # XXX MK_TOOLCHAIN?
@@ -299,13 +288,13 @@ SUBDIR+=	praliases
 SUBDIR+=	sendmail
 .endif
 
-.if ${MK_SYSINSTALL} != "no"
-SUBDIR+=	sysinstall
-.endif
-
 .if ${MK_TOOLCHAIN} != "no"
 SUBDIR+=	config
 SUBDIR+=	crunch
+.endif
+
+.if ${MK_UNBOUND} != "no"
+SUBDIR+=	unbound
 .endif
 
 .if ${MK_USB} != "no"
@@ -318,7 +307,7 @@ SUBDIR+=	usbdump
 .if ${MK_UTMPX} != "no"
 SUBDIR+=	ac
 SUBDIR+=	lastlogin
-SUBDIR+=	utxrm
+SUBDIR+=	utx
 .endif
 
 .if ${MK_WIRELESS} != "no"

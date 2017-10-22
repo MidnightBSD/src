@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.bin/xz/Makefile 213700 2010-10-11 21:16:50Z mm $
+# $FreeBSD: release/10.0.0/usr.bin/xz/Makefile 213700 2010-10-11 21:16:50Z mm $
 
 PROG=	xz
 

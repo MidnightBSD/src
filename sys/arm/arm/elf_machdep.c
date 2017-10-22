@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/elf_machdep.c 229373 2012-01-03 09:40:31Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/elf_machdep.c 225973 2011-10-04 13:14:24Z kib $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

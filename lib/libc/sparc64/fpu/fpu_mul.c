@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/sparc64/fpu/fpu_mul.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/sparc64/fpu/fpu_mul.c 230193 2012-01-16 04:09:45Z das $");
 
 /*
  * Perform an FPU multiply (return x * y).
@@ -125,10 +125,8 @@ __fpu_mul(fe)
 	 *	The result is x * y (XOR sign, multiply bits, add exponents).
 	 */
 	ORDER(x, y);
-	if (ISNAN(y)) {
-		y->fp_sign ^= x->fp_sign;
+	if (ISNAN(y))
 		return (y);
-	}
 	if (ISINF(y)) {
 		if (ISZERO(x))
 			return (__fpu_newnan(fe));

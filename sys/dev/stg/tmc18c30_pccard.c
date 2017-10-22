@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/stg/tmc18c30_pccard.c 166901 2007-02-23 12:19:07Z piso $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/stg/tmc18c30_pccard.c 240325 2012-09-10 18:49:49Z jhb $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -49,14 +49,12 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/stg/tmc18c30_pccard.c 166901 2007-02-23 12:
 #include <sys/systm.h>
 
 #include <machine/bus.h>
-#include <compat/netbsd/dvcfg.h>
 
-#include <sys/device_port.h>
+#include <sys/bus.h>
 
 #include <dev/pccard/pccardvar.h>
 
 #include <cam/scsi/scsi_low.h>
-#include <cam/scsi/scsi_low_pisa.h>
 
 #include <dev/stg/tmc18c30reg.h>
 #include <dev/stg/tmc18c30var.h>

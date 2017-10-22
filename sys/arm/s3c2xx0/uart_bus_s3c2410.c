@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/s3c2xx0/uart_bus_s3c2410.c 205354 2010-03-20 03:39:35Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/s3c2xx0/uart_bus_s3c2410.c 256196 2013-10-09 17:05:02Z dim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -35,7 +35,6 @@ static driver_t uart_s3c2410_driver = {
 	sizeof(struct uart_softc),
 };
 
-extern struct uart_class uart_s3c2410_class;
 extern SLIST_HEAD(uart_devinfo_list, uart_devinfo) uart_sysdevs;
 static int
 uart_s3c2410_probe(device_t dev)

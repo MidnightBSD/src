@@ -1,5 +1,5 @@
 
-# $FreeBSD: stable/9/sys/modules/ppi/Makefile 122894 2003-11-19 05:08:27Z imp $
+# $FreeBSD: release/10.0.0/sys/modules/ppi/Makefile 122894 2003-11-19 05:08:27Z imp $
 
 .PATH:	${.CURDIR}/../../dev/ppbus
 KMOD=	ppi

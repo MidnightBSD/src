@@ -33,7 +33,7 @@
  *
  *	from: @(#)mips_opcode.h 8.1 (Berkeley) 6/10/93
  *	JNPR: mips_opcode.h,v 1.1 2006/08/07 05:38:57 katta
- * $FreeBSD: stable/9/sys/mips/include/mips_opcode.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD: release/10.0.0/sys/mips/include/mips_opcode.h 231312 2012-02-09 22:17:13Z gonzo $
  */
 
 #ifndef _MACHINE_MIPS_OPCODE_H_
@@ -175,6 +175,11 @@ typedef union {
 #define	OP_DADDIU	031
 #define	OP_LDL		032
 #define	OP_LDR		033
+
+#define OP_SPECIAL2	034
+#define OP_JALX		035
+
+#define OP_SPECIAL3	037
 
 #define	OP_LB		040
 #define	OP_LH		041
@@ -387,6 +392,11 @@ typedef union {
 #define	OP_R_BGEZAL	OP_BGEZAL
 #define	OP_R_BLTZALL	OP_BLTZALL
 #define	OP_R_BGEZALL	OP_BGEZALL
+
+/*
+ * Values for the 'func' field when 'op' == OP_SPECIAL3.
+ */
+#define	OP_RDHWR	073
 
 /*
  * Values for the 'rs' field when 'op' == OP_COPz.

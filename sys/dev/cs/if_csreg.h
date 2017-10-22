@@ -27,7 +27,7 @@
  */
 
 /*
- * $FreeBSD: stable/9/sys/dev/cs/if_csreg.h 218055 2011-01-29 00:53:58Z andrew $
+ * $FreeBSD: release/10.0.0/sys/dev/cs/if_csreg.h 218055 2011-01-29 00:53:58Z andrew $
  */
 
 #include <sys/rman.h>

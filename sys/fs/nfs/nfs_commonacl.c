@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/fs/nfs/nfs_commonacl.c 241194 2012-10-04 12:43:45Z rmacklem $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfs/nfs_commonacl.c 240720 2012-09-20 02:49:25Z rmacklem $");
 
 #ifndef APPLEKEXT
 #include <fs/nfs/nfsport.h>

@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/arch/powerpc/powerpc/pthread_md.c 161801 2006-09-01 06:15:00Z marcel $
+ * $FreeBSD: release/10.0.0/lib/libthr/arch/powerpc/powerpc/pthread_md.c 161801 2006-09-01 06:15:00Z marcel $
  */
 
 #include <sys/types.h>

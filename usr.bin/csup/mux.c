@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/csup/mux.c 204556 2010-03-02 07:26:07Z lulf $
+ * $FreeBSD: release/10.0.0/usr.bin/csup/mux.c 228992 2011-12-30 11:02:40Z uqs $
  */
 
 #include <sys/param.h>
@@ -680,7 +680,7 @@ mux_init(struct mux *m)
 
 /*
  * Close all the channels, terminate the sender and receiver thread.
- * This is an important function because it is used everytime we need
+ * This is an important function because it is used every time we need
  * to wake up all the worker threads to abort the program.
  *
  * This function accepts an error message that will be printed if the

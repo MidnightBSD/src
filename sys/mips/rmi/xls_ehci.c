@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/rmi/xls_ehci.c 229118 2011-12-31 15:31:34Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/rmi/xls_ehci.c 228483 2011-12-14 00:28:54Z hselasky $");
 
 #include "opt_bus.h"
 

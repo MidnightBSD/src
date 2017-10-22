@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/fdc/fdc_isa.c 143618 2005-03-15 08:02:47Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/fdc/fdc_isa.c 143618 2005-03-15 08:02:47Z imp $");
 
 #include <sys/param.h>
 #include <sys/bio.h>

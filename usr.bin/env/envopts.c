@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/env/envopts.c 148142 2005-07-18 22:18:16Z gad $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/env/envopts.c 148142 2005-07-18 22:18:16Z gad $");
 
 #include <sys/stat.h>
 #include <sys/param.h>

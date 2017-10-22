@@ -41,7 +41,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: stable/9/sys/boot/ficl/words.c 218909 2011-02-21 09:01:34Z brucec $ */
+/* $FreeBSD: release/10.0.0/sys/boot/ficl/words.c 218909 2011-02-21 09:01:34Z brucec $ */
 
 #ifdef TESTMAIN
 #include <stdlib.h>

@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/nexus.c 221218 2011-04-29 18:41:21Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/nexus.c 238545 2012-07-17 03:18:12Z gonzo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -117,12 +117,16 @@ static int
 nexus_setup_intr(device_t dev, device_t child, struct resource *res, int flags,
     driver_filter_t *filt, driver_intr_t *intr, void *arg, void **cookiep)
 {
+	int irq;
 
 	if ((rman_get_flags(res) & RF_SHAREABLE) == 0)
 		flags |= INTR_EXCL;
 
-	arm_setup_irqhandler(device_get_nameunit(child), 
-	    filt, intr, arg, rman_get_start(res), flags, cookiep);
+	for (irq = rman_get_start(res); irq <= rman_get_end(res); irq++) {
+		arm_setup_irqhandler(device_get_nameunit(child),
+		    filt, intr, arg, irq, flags, cookiep);
+		arm_unmask_irq(irq);
+	}
 	return (0);
 }
 
@@ -160,7 +164,7 @@ nexus_print_child(device_t bus, device_t child)
 	int retval = 0;
 
 	retval += bus_print_child_header(bus, child);
-	retval += printf(" on motherboard\n");	/* XXX "motherboard", ick */
+	retval += printf("\n");
 
 	return (retval);
 }

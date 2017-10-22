@@ -21,11 +21,11 @@
 .\" out of the use of this software, even if advised of the possibility of
 .\" such damage.
 .\"
-.\" $FreeBSD: stable/9/lib/libelf/elf_getshdrstrndx.3 210345 2010-07-21 12:14:50Z kaiw $
+.\" $FreeBSD: release/10.0.0/lib/libelf/elf_getshdrstrndx.3 233520 2012-03-26 19:23:57Z joel $
 .\"
 .Dd August 5, 2009
-.Os
 .Dt ELF_GETSHDRSTRNDX 3
+.Os
 .Sh NAME
 .Nm elf_getshdrstrndx
 .Nd retrieve the index of the section name string table
@@ -46,7 +46,6 @@ and stores it into the location pointed to by argument
 .Pp
 This function allow applications to process both normal ELF
 objects and ELF objects that use extended section numbering uniformly.
-.Pp
 .Sh RETURN VALUES
 These functions return zero if successful, or -1 in case of an error.
 .Sh ERRORS

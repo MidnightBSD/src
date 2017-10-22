@@ -34,9 +34,9 @@
  * ARM7TDMI assembly functions for CPU / MMU / TLB specific operations
  *
  */
- 
+
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/cpufunc_asm_arm7tdmi.S 139735 2005-01-05 21:58:49Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/cpufunc_asm_arm7tdmi.S 248361 2013-03-16 02:48:49Z andrew $");
 
 /*
  * Functions to set the MMU Translation Table Base register
@@ -60,6 +60,7 @@ ENTRY(arm7tdmi_setttb)
 	bl	_C_LABEL(arm7tdmi_cache_flushID)
 
 	mov	pc, r2
+END(arm7tdmi_setttb)
 
 /*
  * TLB functions
@@ -68,10 +69,12 @@ ENTRY(arm7tdmi_tlb_flushID)
 	mov	r0, #0
 	mcr	p15, 0, r0, c8, c7, 0
 	RET
+END(arm7tdmi_tlb_flushID)
 
 ENTRY(arm7tdmi_tlb_flushID_SE)
 	mcr	p15, 0, r0, c8, c7, 1
 	RET
+END(arm7tdmi_tlb_flushID_SE)
 
 /*
  * Cache functions
@@ -86,6 +89,7 @@ ENTRY(arm7tdmi_cache_flushID)
 	mov	r0, r0
 
 	RET
+END(arm7tdmi_cache_flushID)
 
 /*
  * Context switch.
@@ -98,3 +102,5 @@ ENTRY(arm7tdmi_cache_flushID)
  */
 ENTRY(arm7tdmi_context_switch)
 	b	_C_LABEL(arm7tdmi_setttb)
+END(arm7tdmi_context_switch)
+

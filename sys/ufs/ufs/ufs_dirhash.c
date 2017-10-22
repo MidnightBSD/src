@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ufs/ufs/ufs_dirhash.c 219388 2011-03-07 22:36:11Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ufs/ufs/ufs_dirhash.c 254986 2013-08-28 10:06:20Z ivoras $");
 
 #include "opt_ufs.h"
 
@@ -85,7 +85,7 @@ SYSCTL_INT(_vfs_ufs, OID_AUTO, dirhash_docheck, CTLFLAG_RW, &ufs_dirhashcheck,
 static int ufs_dirhashlowmemcount = 0;
 SYSCTL_INT(_vfs_ufs, OID_AUTO, dirhash_lowmemcount, CTLFLAG_RD, 
     &ufs_dirhashlowmemcount, 0, "number of times low memory hook called");
-static int ufs_dirhashreclaimage = 5;
+static int ufs_dirhashreclaimage = 60;
 SYSCTL_INT(_vfs_ufs, OID_AUTO, dirhash_reclaimage, CTLFLAG_RW, 
     &ufs_dirhashreclaimage, 0, 
     "max time in seconds of hash inactivity before deletion in low VM events");
@@ -1248,7 +1248,12 @@ ufsdirhash_lowmem()
 {
 	struct dirhash *dh, *dh_temp;
 	int memfreed = 0;
-	/* XXX: this 10% may need to be adjusted */
+	/* 
+	 * Will free a *minimum* of 10% of the dirhash, but possibly much
+	 * more (depending on dirhashreclaimage). System with large dirhashes
+	 * probably also need a much larger dirhashreclaimage.
+	 * XXX: this percentage may need to be adjusted.
+	 */
 	int memwanted = ufs_dirhashmem / 10;
 
 	ufs_dirhashlowmemcount++;

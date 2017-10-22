@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/sound/pci/emu10kx-midi.c 230964 2012-02-03 22:39:04Z pfg $
+ * $FreeBSD: release/10.0.0/sys/dev/sound/pci/emu10kx-midi.c 246128 2013-01-30 18:01:20Z sbz $
  */
 
 #include <sys/param.h>
@@ -239,7 +239,7 @@ static device_method_t emu_midi_methods[] = {
 	DEVMETHOD(device_attach, emu_midi_attach),
 	DEVMETHOD(device_detach, emu_midi_detach),
 
-	{0, 0},
+	DEVMETHOD_END
 };
 
 static driver_t emu_midi_driver = {

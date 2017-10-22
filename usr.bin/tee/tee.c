@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)tee.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.bin/tee/tee.c 216370 2010-12-11 08:32:16Z joel $";
+  "$FreeBSD: release/10.0.0/usr.bin/tee/tee.c 231524 2012-02-11 16:34:03Z cracauer $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -56,9 +56,9 @@ typedef struct _list {
 	int fd;
 	const char *name;
 } LIST;
-LIST *head;
+static LIST *head;
 
-void add(int, const char *);
+static void add(int, const char *);
 static void usage(void);
 
 int
@@ -125,7 +125,7 @@ usage(void)
 	exit(1);
 }
 
-void
+static void
 add(int fd, const char *name)
 {
 	LIST *p;

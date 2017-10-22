@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/pwait/pwait.c 199458 2009-11-17 22:47:20Z jilles $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/pwait/pwait.c 245506 2013-01-16 18:15:25Z delphij $");
 
 #include <sys/types.h>
 #include <sys/event.h>
@@ -141,5 +141,5 @@ main(int argc, char *argv[])
 		nleft -= n;
 	}
 
-	return 0;
+	exit(EX_OK);
 }

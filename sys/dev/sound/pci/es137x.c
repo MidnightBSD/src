@@ -88,7 +88,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pci/es137x.c 218909 2011-02-21 09:01:34Z brucec $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/es137x.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #define MEM_MAP_REG 0x14
 
@@ -1704,7 +1704,6 @@ es_init_sysctls(device_t dev)
 static int
 es_pci_attach(device_t dev)
 {
-	uint32_t	data;
 	struct es_info *es = NULL;
 	int		mapped, i, numplay, dac_cfg;
 	char		status[SND_STATUSLEN];
@@ -1719,11 +1718,7 @@ es_pci_attach(device_t dev)
 	mapped = 0;
 
 	pci_enable_busmaster(dev);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= (PCIM_CMD_PORTEN|PCIM_CMD_MEMEN);
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	if (mapped == 0 && (data & PCIM_CMD_MEMEN)) {
+	if (mapped == 0) {
 		es->regid = MEM_MAP_REG;
 		es->regtype = SYS_RES_MEMORY;
 		es->reg = bus_alloc_resource_any(dev, es->regtype, &es->regid,
@@ -1731,7 +1726,7 @@ es_pci_attach(device_t dev)
 		if (es->reg)
 			mapped++;
 	}
-	if (mapped == 0 && (data & PCIM_CMD_PORTEN)) {
+	if (mapped == 0) {
 		es->regid = PCIR_BAR(0);
 		es->regtype = SYS_RES_IOPORT;
 		es->reg = bus_alloc_resource_any(dev, es->regtype, &es->regid,

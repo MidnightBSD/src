@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/ipmi/ipmivars.h 239920 2012-08-30 20:42:42Z jhb $
+ * $FreeBSD: release/10.0.0/sys/dev/ipmi/ipmivars.h 253812 2013-07-30 18:44:29Z sbruno $
  */
 
 #ifndef __IPMIVARS_H__
@@ -219,7 +219,7 @@ struct ipmi_ipmb {
 	((sc)->ipmi_io_res[1] != NULL ? OUTB_MULTIPLE(sc, x, value) :	\
 	    OUTB_SINGLE(sc, x, value))
 
-#define MAX_TIMEOUT 3 * hz
+#define MAX_TIMEOUT 6 * hz
 
 int	ipmi_attach(device_t);
 int	ipmi_detach(device_t);

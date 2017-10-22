@@ -30,7 +30,7 @@
  *
  *	from: @(#)pmap_rmt.h 1.2 88/02/08 SMI
  *	from: @(#)pmap_rmt.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: stable/9/include/rpc/pmap_rmt.h 93032 2002-03-23 17:24:55Z imp $
+ * $FreeBSD: release/10.0.0/include/rpc/pmap_rmt.h 240062 2012-09-02 22:23:23Z pfg $
  */
 
 /*

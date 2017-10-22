@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/fe/if_fe.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/fe/if_fe.c 243857 2012-12-04 09:32:43Z glebius $");
 
 /*
  *
@@ -2255,6 +2255,7 @@ fe_medchange (struct ifnet *ifp)
 static void
 fe_medstat (struct ifnet *ifp, struct ifmediareq *ifmr)
 {
-	(void)ifp;
-	(void)ifmr;
+	struct fe_softc *sc = ifp->if_softc;
+
+	ifmr->ifm_active = sc->media.ifm_media;
 }

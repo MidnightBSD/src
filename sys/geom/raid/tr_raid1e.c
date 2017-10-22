@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/raid/tr_raid1e.c 243678 2012-11-29 18:08:36Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/raid/tr_raid1e.c 248720 2013-03-26 05:42:12Z mav $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -1076,8 +1076,6 @@ rebuild_round_done:
 				offset += vol->v_strip_size;
 			}
 			cbp->bio_offset = offset + start;
-			cbp->bio_length = bp->bio_length;
-			cbp->bio_data = bp->bio_data;
 			cbp->bio_cmd = BIO_WRITE;
 			cbp->bio_cflags = G_RAID_BIO_FLAG_REMAP;
 			cbp->bio_caller2 = (void *)mask;

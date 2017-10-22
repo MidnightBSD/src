@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sparc64/include/smp.h 246014 2013-01-27 23:21:47Z marius $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/smp.h 245850 2013-01-23 22:52:20Z marius $
  */
 
 #ifndef	_MACHINE_SMP_H_

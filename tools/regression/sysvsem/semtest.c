@@ -28,14 +28,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * Obtained from: $NetBSD: semtest.c,v 1.4 2002/07/20 08:36:25 grant Exp $
- * $FreeBSD: stable/9/tools/regression/sysvsem/semtest.c 204586 2010-03-02 17:05:19Z joel $
+ * $FreeBSD: release/10.0.0/tools/regression/sysvsem/semtest.c 235719 2012-05-21 07:52:46Z kevlo $
  */
 
 /*
  * Test the SVID-compatible Semaphore facility.
  */
 
-#include <sys/param.h>
+#include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <sys/wait.h>

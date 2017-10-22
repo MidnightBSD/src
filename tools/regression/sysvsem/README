@@ -1,4 +1,4 @@
-$FreeBSD: stable/9/tools/regression/sysvsem/README 101902 2002-08-15 06:34:37Z alfred $
+$FreeBSD: release/10.0.0/tools/regression/sysvsem/README 101902 2002-08-15 06:34:37Z alfred $
 
 SysV IPC Semaphore Regression Utility.
 

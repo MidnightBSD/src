@@ -19,7 +19,7 @@
 ## Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,
 ## USA.
 
-## $FreeBSD: stable/9/gnu/lib/libsupc++/Version.map 246368 2013-02-05 19:10:50Z dim $
+## $FreeBSD: release/10.0.0/gnu/lib/libsupc++/Version.map 251820 2013-06-16 21:15:35Z theraven $
 
 
 # Symbols in the support library (libsupc++) have their own tag.
@@ -147,6 +147,13 @@ GLIBCXX_3.4 {
       std::set_terminate*;
       std::set_unexpected*;
 
+      "std::unexpected()";
+      "std::get_terminate()";
+      "std::get_unexpected()";
+      "std::uncaught_exception()";
+      "std::terminate()";
+
+
       std::bad_alloc;
       std::bad_cast;
       std::exception*;
@@ -154,14 +161,20 @@ GLIBCXX_3.4 {
       "typeinfo for std::bad_alloc";
       "typeinfo for std::bad_cast";
       "typeinfo for std::exception";
+      "typeinfo for std::type_info";
 
       "typeinfo name for std::bad_alloc";
       "typeinfo name for std::bad_cast";
       "typeinfo name for std::exception";
+      "typeinfo name for std::type_info";
 
       "vtable for std::bad_alloc";
       "vtable for std::bad_cast";
       "vtable for std::exception";
+      "vtable for std::type_info";
+
+      std::type_info::__*;
+      "std::type_info::~type_info()";
     };
 };
 

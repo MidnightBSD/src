@@ -31,7 +31,7 @@
  *
  *	@(#)fdesc_vfsops.c	8.4 (Berkeley) 1/21/94
  *
- * $FreeBSD: stable/9/sys/fs/fdescfs/fdesc_vfsops.c 230725 2012-01-29 08:03:45Z mckusick $
+ * $FreeBSD: release/10.0.0/sys/fs/fdescfs/fdesc_vfsops.c 247602 2013-03-02 00:53:12Z pjd $
  */
 
 /*
@@ -98,7 +98,7 @@ fdesc_mount(struct mount *mp)
 	error = fdesc_allocvp(Froot, -1, FD_ROOT, mp, &rvp);
 	if (error) {
 		free(fmp, M_FDESCMNT);
-		mp->mnt_data = 0;
+		mp->mnt_data = NULL;
 		return (error);
 	}
 	rvp->v_type = VDIR;
@@ -107,9 +107,6 @@ fdesc_mount(struct mount *mp)
 	VOP_UNLOCK(rvp, 0);
 	/* XXX -- don't mark as local to work around fts() problems */
 	/*mp->mnt_flag |= MNT_LOCAL;*/
-	MNT_ILOCK(mp);
-	mp->mnt_kern_flag |= MNTK_MPSAFE;
-	MNT_IUNLOCK(mp);
 	vfs_getnewfsid(mp);
 
 	vfs_mountedfrom(mp, "fdescfs");
@@ -152,7 +149,7 @@ fdesc_unmount(mp, mntflags)
 	 */
 	mtx_lock(&fdesc_hashmtx);
 	data = mp->mnt_data;
-	mp->mnt_data = 0;
+	mp->mnt_data = NULL;
 	mtx_unlock(&fdesc_hashmtx);
 	free(data, M_FDESCMNT);	/* XXX */
 
@@ -208,7 +205,7 @@ fdesc_statfs(mp, sbp)
 	last = min(fdp->fd_nfiles, lim);
 	freefd = 0;
 	for (i = fdp->fd_freefile; i < last; i++)
-		if (fdp->fd_ofiles[i] == NULL)
+		if (fdp->fd_ofiles[i].fde_file == NULL)
 			freefd++;
 
 	/*

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/ncurses/ncurses/Makefile 248358 2013-03-15 22:31:51Z brooks $
+# $FreeBSD: release/10.0.0/lib/ncurses/ncurses/Makefile 245887 2013-01-24 16:38:47Z brooks $
 
 SHLIBDIR?=	/lib
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: stable/9/tools/tools/vhba/lots/vhba_lots.c 208926 2010-06-08 22:26:47Z mjacob $ */
+/* $FreeBSD: release/10.0.0/tools/tools/vhba/lots/vhba_lots.c 208926 2010-06-08 22:26:47Z mjacob $ */
 /*
  * VHBA device that just reate boatloads of devices.
  */

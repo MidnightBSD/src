@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)calendar.c  8.3 (Berkeley) 3/25/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/calendar/io.c 222755 2011-06-06 13:50:29Z jh $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/calendar/io.c 255715 2013-09-19 20:17:50Z db $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -60,10 +60,10 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/calendar/io.c 222755 2011-06-06 13:50:29Z j
 #include "calendar.h"
 
 const char *calendarFile = "calendar";	/* default calendar file */
-const char *calendarHomes[] = {".calendar", _PATH_INCLUDE};	/* HOME */
-const char *calendarNoMail = "nomail";	/* don't sent mail if this file exist */
+static const char *calendarHomes[] = {".calendar", _PATH_INCLUDE}; /* HOME */
+static const char *calendarNoMail = "nomail";/* don't sent mail if file exist */
 
-char	path[MAXPATHLEN];
+static char path[MAXPATHLEN];
 
 struct fixs neaster, npaskha, ncny, nfullmoon, nnewmoon;
 struct fixs nmarequinox, nsepequinox, njunsolstice, ndecsolstice;
@@ -81,8 +81,9 @@ void
 cal(void)
 {
 	char *pp, p;
-	FILE *fp;
-	int ch, l;
+	FILE *fpin;
+	FILE *fpout;
+	int l;
 	int count, i;
 	int month[MAXCOUNT];
 	int day[MAXCOUNT];
@@ -95,6 +96,7 @@ cal(void)
 	struct tm tm;
 	char dbuf[80];
 
+	initcpp();
 	extradata = (char **)calloc(MAXCOUNT, sizeof(char *));
 	for (i = 0; i < MAXCOUNT; i++) {
 		extradata[i] = (char *)calloc(1, 20);
@@ -107,16 +109,18 @@ cal(void)
 	tm.tm_wday = 0;
 
 	count = 0;
-	if ((fp = opencal()) == NULL) {
+	if ((fpin = opencalin()) == NULL) {
 		free(extradata);
 		return;
 	}
-	while (fgets(buf, sizeof(buf), stdin) != NULL) {
-		if ((pp = strchr(buf, '\n')) != NULL)
-			*pp = '\0';
-		else
-			/* Flush this line */
-			while ((ch = getchar()) != '\n' && ch != EOF);
+	if ((fpout = opencalout()) == NULL) {
+		fclose(fpin);
+		free(extradata);
+		return;
+	}
+	while ((fpin = fincludegets(buf, sizeof(buf), fpin)) != NULL) {
+		if (*buf == '\0')
+			continue;
 		for (l = strlen(buf);
 		     l > 0 && isspace((unsigned char)buf[l - 1]);
 		     l--)
@@ -176,7 +180,8 @@ cal(void)
 		*pp = p;
 		if (count < 0) {
 			/* Show error status based on return value */
-			fprintf(stderr, "Ignored: %s\n", buf);
+			if (debug)
+				fprintf(stderr, "Ignored: %s\n", buf);
 			if (count == -1)
 				continue;
 			count = -count + 1;
@@ -203,27 +208,27 @@ cal(void)
 		}
 	}
 
-	event_print_all(fp);
-	closecal(fp);
+	event_print_all(fpout);
+	closecal(fpout);
 	free(extradata);
 }
 
 FILE *
-opencal(void)
+opencalin(void)
 {
-	uid_t uid;
 	size_t i;
-	int fd, found, pdes[2];
+	int found;
 	struct stat sbuf;
+	FILE *fpin;
 
-	/* open up calendar file as stdin */
-	if (!freopen(calendarFile, "r", stdin)) {
+	/* open up calendar file */
+	if ((fpin = fopen(calendarFile, "r")) == NULL) {
 		if (doall) {
 			if (chdir(calendarHomes[0]) != 0)
 				return (NULL);
 			if (stat(calendarNoMail, &sbuf) == 0)
 				return (NULL);
-			if (!freopen(calendarFile, "r", stdin))
+			if ((fpin = fopen(calendarFile, "r")) == NULL)
 				return (NULL);
 		} else {
 			char *home = getenv("HOME");
@@ -234,7 +239,7 @@ opencal(void)
 			for (found = i = 0; i < sizeof(calendarHomes) /
 			    sizeof(calendarHomes[0]); i++)
 				if (chdir(calendarHomes[i]) == 0 &&
-				    freopen(calendarFile, "r", stdin)) {
+				    (fpin = fopen(calendarFile, "r")) != NULL) {
 					found = 1;
 					break;
 				}
@@ -244,50 +249,20 @@ opencal(void)
 				    calendarFile, strerror(errno), errno);
 		}
 	}
-	if (pipe(pdes) < 0)
-		return (NULL);
-	switch (fork()) {
-	case -1:			/* error */
-		(void)close(pdes[0]);
-		(void)close(pdes[1]);
-		return (NULL);
-	case 0:
-		/* child -- stdin already setup, set stdout to pipe input */
-		if (pdes[1] != STDOUT_FILENO) {
-			(void)dup2(pdes[1], STDOUT_FILENO);
-			(void)close(pdes[1]);
-		}
-		(void)close(pdes[0]);
-		uid = geteuid();
-		if (setuid(getuid()) < 0) {
-			warnx("first setuid failed");
-			_exit(1);
-		};
-		if (setgid(getegid()) < 0) {
-			warnx("setgid failed");
-			_exit(1);
-		}
-		if (setuid(uid) < 0) {
-			warnx("setuid failed");
-			_exit(1);
-		}
-		execl(_PATH_CPP, "cpp", "-P",
-		    "-traditional", "-nostdinc",	/* GCC specific opts */
-		    "-I.", "-I", _PATH_INCLUDE, (char *)NULL);
-		warn(_PATH_CPP);
-		_exit(1);
-	}
-	/* parent -- set stdin to pipe output */
-	(void)dup2(pdes[0], STDIN_FILENO);
-	(void)close(pdes[0]);
-	(void)close(pdes[1]);
+	return (fpin);
+}
+
+FILE *
+opencalout(void)
+{
+	int fd;
 
 	/* not reading all calendar files, just set output to stdout */
 	if (!doall)
 		return (stdout);
 
 	/* set output to a temporary file, so if no output don't send mail */
-	(void)snprintf(path, sizeof(path), "%s/_calXXXXXX", _PATH_TMP);
+	snprintf(path, sizeof(path), "%s/_calXXXXXX", _PATH_TMP);
 	if ((fd = mkstemp(path)) < 0)
 		return (NULL);
 	return (fdopen(fd, "w+"));

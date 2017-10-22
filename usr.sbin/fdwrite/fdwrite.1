@@ -6,7 +6,7 @@
 .\" this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 .\" ----------------------------------------------------------------------------
 .\"
-.\" $FreeBSD: stable/9/usr.sbin/fdwrite/fdwrite.1 206622 2010-04-14 19:08:06Z uqs $
+.\" $FreeBSD: release/10.0.0/usr.sbin/fdwrite/fdwrite.1 233510 2012-03-26 15:18:14Z joel $
 .\"
 .\"
 .Dd September 16, 1993
@@ -87,7 +87,7 @@ utility
 was planned as a tool to make life easier when writing a set of floppies,
 one such use could be to write a tar-archive:
 .Pp
-.Dl "tar cf - . | gzip -9 | fdwrite -d /dev/fd0.1720 -v
+.Dl tar cf - . | gzip -9 | fdwrite -d /dev/fd0.1720 -v
 .Pp
 The main difference from using
 .Xr tar 1 Ns 's

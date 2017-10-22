@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/etc/rc.d/tmp 221007 2011-04-25 06:03:22Z dougb $
+# $FreeBSD: release/10.0.0/etc/rc.d/tmp 238427 2012-07-13 20:10:59Z brooks $
 #
 
 # PROVIDE: tmp
@@ -37,9 +37,9 @@ stop_cmd=':'
 
 load_rc_config $name
 
-mount_tmpmfs ()
+mount_tmpmfs()
 {
-	if ! /bin/df /tmp | grep -q "^/dev/md[0-9]"; then
+	if ! /bin/df /tmp | grep -q "^/dev/md[0-9].* /tmp"; then
 		mount_md ${tmpsize} /tmp "${tmpmfs_flags}"
 		chmod 01777 /tmp
 	fi

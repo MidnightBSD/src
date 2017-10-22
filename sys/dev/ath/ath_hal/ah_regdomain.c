@@ -15,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/9/sys/dev/ath/ath_hal/ah_regdomain.c 224719 2011-08-08 18:05:22Z adrian $
+ * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ah_regdomain.c 243975 2012-12-07 06:38:30Z adrian $
  */
 #include "opt_ah.h"
 
@@ -169,7 +169,7 @@ isEepromValid(struct ath_hal *ah)
 			if (regDomainPairs[i].regDmnEnum == rd)
 				return AH_TRUE;
 	}
-	HALDEBUG_G(ah, HAL_DEBUG_REGDOMAIN,
+	HALDEBUG(ah, HAL_DEBUG_REGDOMAIN,
 	    "%s: invalid regulatory domain/country code 0x%x\n", __func__, rd);
 	return AH_FALSE;
 }
@@ -613,7 +613,9 @@ ath_hal_mapgsm(int sku, int freq)
 		return 1544 + freq;
 	if (sku == SKU_SR9)
 		return 3344 - freq;
-	HALDEBUG_G(AH_NULL, HAL_DEBUG_ANY,
+	if (sku == SKU_XC900M)
+		return 1517 + freq;
+	HALDEBUG(AH_NULL, HAL_DEBUG_ANY,
 	    "%s: cannot map freq %u unknown gsm sku %u\n",
 	    __func__, freq, sku);
 	return freq;
@@ -727,6 +729,7 @@ ath_hal_set_channels(struct ath_hal *ah,
 	case SKU_SR9:
 	case SKU_XR9:
 	case SKU_GZ901:
+	case SKU_XC900M:
 		/*
 		 * Map 900MHz sku's.  The frequencies will be mapped
 		 * according to the sku to compensate for the down-converter.

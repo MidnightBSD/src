@@ -12,7 +12,7 @@
  * all derivative works or modified versions.
  *
  * Cronyx Id: csigma.c,v 1.1.2.1 2003/11/12 17:13:41 rik Exp $
- * $FreeBSD: stable/9/sys/dev/cx/csigma.c 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: release/10.0.0/sys/dev/cx/csigma.c 250460 2013-05-10 16:41:26Z eadler $
  */
 #include <dev/cx/machdep.h>
 #include <dev/cx/cxddk.h>
@@ -1168,7 +1168,7 @@ void cx_set_dtr (cx_chan_t *c, int on)
 
 	switch (c->num) {
 	default:
-		/* Channels 4..7 and 12..15 in syncronous mode
+		/* Channels 4..7 and 12..15 in synchronous mode
 		 * have no DTR signal. */
 		break;
 

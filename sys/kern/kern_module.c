@@ -27,7 +27,7 @@
 #include "opt_compat.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/kern/kern_module.c 225617 2011-09-16 13:58:51Z kmacy $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_module.c 239586 2012-08-22 20:01:57Z jhb $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -133,7 +133,7 @@ module_register_init(const void *arg)
 		MOD_XLOCK;
 		if (mod->file) {
 			/*
-			 * Once a module is succesfully loaded, move
+			 * Once a module is successfully loaded, move
 			 * it to the head of the module list for this
 			 * linker file.  This resorts the list so that
 			 * when the kernel linker iterates over the

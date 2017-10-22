@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/boot/ia64/common/libia64.h 222798 2011-06-07 00:39:15Z marcel $
+ * $FreeBSD: release/10.0.0/sys/boot/ia64/common/libia64.h 222798 2011-06-07 00:39:15Z marcel $
  */
 
 #ifndef _LIBIA64_H_

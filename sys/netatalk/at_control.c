@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netatalk/at_control.c 233200 2012-03-19 20:49:16Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netatalk/at_control.c 249925 2013-04-26 12:50:32Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -721,7 +721,7 @@ at_ifinit(struct ifnet *ifp, struct at_ifaddr *aa, struct sockaddr_at *sat)
  * check whether a given address is a broadcast address for us..
  */
 int
-at_broadcast(struct sockaddr_at *sat)
+at_broadcast(const struct sockaddr_at *sat)
 {
 	struct at_ifaddr *aa;
 

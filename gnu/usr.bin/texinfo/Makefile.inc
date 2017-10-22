@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/texinfo/Makefile.inc 147225 2005-06-10 06:12:53Z des $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/texinfo/Makefile.inc 147225 2005-06-10 06:12:53Z des $
 
 TXIDIR=		${.CURDIR}/../../../../contrib/texinfo
 LIBTXI=		${.OBJDIR}/../libtxi/libtxi.a

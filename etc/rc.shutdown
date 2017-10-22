@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/etc/rc.shutdown 233943 2012-04-06 11:07:44Z ed $
+# $FreeBSD: release/10.0.0/etc/rc.shutdown 250804 2013-05-19 04:10:34Z jamie $
 #
 
 # Site-specific closing actions for daemons run by init on shutdown,
@@ -81,7 +81,12 @@ fi
 # and perform the operation
 #
 rcorder_opts="-k shutdown"
-[ `/sbin/sysctl -n security.jail.jailed` -eq 1 ] && rcorder_opts="$rcorder_opts -s nojail"
+if [ `/sbin/sysctl -n security.jail.jailed` -eq 1 ]; then
+	rcorder_opts="$rcorder_opts -s nojail"
+	if [ `/sbin/sysctl -n security.jail.vnet` -ne 1 ]; then
+		rcorder_opts="$rcorder_opts -s nojailvnet"
+	fi
+fi
 
 case ${local_startup} in
 [Nn][Oo] | '') ;;

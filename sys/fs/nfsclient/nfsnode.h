@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/fs/nfsclient/nfsnode.h 236096 2012-05-26 13:12:14Z rmacklem $
+ * $FreeBSD: release/10.0.0/sys/fs/nfsclient/nfsnode.h 244042 2012-12-08 22:52:39Z rmacklem $
  */
 
 #ifndef _NFSCLIENT_NFSNODE_H_
@@ -99,9 +99,6 @@ struct nfsnode {
 	time_t			n_attrstamp;	/* Attr. cache timestamp */
 	struct nfs_accesscache	n_accesscache[NFS_ACCESSCACHESIZE];
 	struct timespec		n_mtime;	/* Prev modify time. */
-	struct timespec		n_unused0;
-	struct timespec		n_unused1;
-	int			n_unused2;
 	struct nfsfh		*n_fhp;		/* NFS File Handle */
 	struct vnode		*n_vnode;	/* associated vnode */
 	struct vnode		*n_dvp;		/* parent vnode */
@@ -158,6 +155,8 @@ struct nfsnode {
 #define	NREMOVEWANT	0x00004000  /* Want notification that remove is done */
 #define	NLOCK		0x00008000  /* Sleep lock the node */
 #define	NLOCKWANT	0x00010000  /* Want the sleep lock */
+#define	NNOLAYOUT	0x00020000  /* Can't get a layout for this file */
+#define	NWRITEOPENED	0x00040000  /* Has been opened for writing */
 
 /*
  * Convert between nfsnode pointers and vnode pointers

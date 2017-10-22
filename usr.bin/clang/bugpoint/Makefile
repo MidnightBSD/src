@@ -1,4 +1,6 @@
-# $FreeBSD: stable/9/usr.bin/clang/bugpoint/Makefile 235633 2012-05-18 21:49:11Z dim $
+# $FreeBSD: release/10.0.0/usr.bin/clang/bugpoint/Makefile 249423 2013-04-12 17:57:40Z dim $
+
+.include <bsd.own.mk>
 
 PROG_CXX=bugpoint
 
@@ -14,11 +16,12 @@ SRCS=	BugDriver.cpp \
 	bugpoint.cpp
 
 TGHDRS=	Intrinsics
-LIBDEPS=llvmbitwriter \
-	llvmlinker \
-	llvmarchive \
+LIBDEPS=llvmirreader \
+	llvmbitwriter \
 	llvmbitreader \
+	llvmlinker \
 	llvmipo \
+	llvmobjcarcopts \
 	llvmvectorize \
 	llvmscalaropts \
 	llvminstcombine \

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/pututxline.c 223576 2011-06-26 18:27:17Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/pututxline.c 249593 2013-04-17 21:08:15Z jilles $");
 
 #include "namespace.h"
 #include <sys/endian.h>
@@ -47,7 +47,7 @@ futx_open(const char *file)
 	struct stat sb;
 	int fd;
 
-	fd = _open(file, O_CREAT|O_RDWR|O_EXLOCK, 0644);
+	fd = _open(file, O_CREAT|O_RDWR|O_EXLOCK|O_CLOEXEC, 0644);
 	if (fd < 0)
 		return (NULL);
 
@@ -86,6 +86,9 @@ utx_active_add(const struct futx *fu)
 		return (-1);
 	while (fread(&fe, sizeof(fe), 1, fp) == 1) {
 		switch (fe.fu_type) {
+		case BOOT_TIME:
+			/* Leave these intact. */
+			break;
 		case USER_PROCESS:
 		case INIT_PROCESS:
 		case LOGIN_PROCESS:
@@ -128,7 +131,8 @@ exact:
 	else
 		error = 0;
 	fclose(fp);
-	errno = error;
+	if (error != 0)
+		errno = error;
 	return (error == 0 ? 0 : 1);
 }
 
@@ -166,8 +170,22 @@ utx_active_remove(struct futx *fu)
 		}
 
 	fclose(fp);
-	errno = error;
+	if (ret != 0)
+		errno = error;
 	return (ret);
+}
+
+static void
+utx_active_init(const struct futx *fu)
+{
+	int fd;
+
+	/* Initialize utx.active with a single BOOT_TIME record. */
+	fd = _open(_PATH_UTX_ACTIVE, O_CREAT|O_RDWR|O_TRUNC, 0644);
+	if (fd < 0)
+		return;
+	_write(fd, fu, sizeof(*fu));
+	_close(fd);
 }
 
 static void
@@ -209,7 +227,8 @@ utx_lastlogin_add(const struct futx *fu)
 		ret = -1;
 	}
 	fclose(fp);
-	errno = error;
+	if (ret == -1)
+		errno = error;
 	return (ret);
 }
 
@@ -219,7 +238,7 @@ utx_lastlogin_upgrade(void)
 	struct stat sb;
 	int fd;
 
-	fd = _open(_PATH_UTX_LASTLOGIN, O_RDWR, 0644);
+	fd = _open(_PATH_UTX_LASTLOGIN, O_RDWR|O_CLOEXEC, 0644);
 	if (fd < 0)
 		return;
 
@@ -253,7 +272,7 @@ utx_log_add(const struct futx *fu)
 	vec[1].iov_len = l;
 	l = htobe16(l);
 
-	fd = _open(_PATH_UTX_LOG, O_CREAT|O_WRONLY|O_APPEND, 0644);
+	fd = _open(_PATH_UTX_LOG, O_CREAT|O_WRONLY|O_APPEND|O_CLOEXEC, 0644);
 	if (fd < 0)
 		return (-1);
 	if (_writev(fd, vec, 2) == -1)
@@ -261,7 +280,8 @@ utx_log_add(const struct futx *fu)
 	else
 		error = 0;
 	_close(fd);
-	errno = error;
+	if (error != 0)
+		errno = error;
 	return (error == 0 ? 0 : 1);
 }
 
@@ -277,9 +297,11 @@ pututxline(const struct utmpx *utmpx)
 
 	switch (fu.fu_type) {
 	case BOOT_TIME:
+		utx_active_init(&fu);
+		utx_lastlogin_upgrade();
+		break;
 	case SHUTDOWN_TIME:
 		utx_active_purge();
-		utx_lastlogin_upgrade();
 		break;
 	case OLD_TIME:
 	case NEW_TIME:

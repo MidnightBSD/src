@@ -1,10 +1,9 @@
-# $FreeBSD: stable/9/gnu/usr.bin/Makefile 222878 2011-06-08 21:29:33Z obrien $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/Makefile 256198 2013-10-09 17:07:20Z gjb $
 
 .include <bsd.own.mk>
 
 SUBDIR= ${_binutils} \
 	${_cc} \
-	${_cvs} \
 	dialog \
 	diff \
 	diff3 \
@@ -13,11 +12,9 @@ SUBDIR= ${_binutils} \
 	${_gperf} \
 	grep \
 	${_groff} \
-	patch \
 	${_rcs} \
 	sdiff \
 	send-pr \
-	sort \
 	${_texinfo}
 
 .if ${MK_CXX} != "no"
@@ -27,11 +24,7 @@ _groff=		groff
 .endif
 .endif
 
-.if ${MK_CVS} != "no"
-_cvs=		cvs
-.endif
-
-.if ${MK_FDT}	!= "no"
+.if ${MK_GPL_DTC} != "no"
 _dtc=		dtc
 .endif
 

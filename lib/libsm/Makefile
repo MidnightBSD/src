@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libsm/Makefile 247333 2013-02-26 18:31:03Z dim $
+# $FreeBSD: release/10.0.0/lib/libsm/Makefile 246880 2013-02-16 20:17:31Z dim $
 
 .include <bsd.own.mk>
 

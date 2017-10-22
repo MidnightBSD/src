@@ -25,7 +25,7 @@
 #
 # Merges FreeBSD's several CD installation medias to the single DVD disk.
 #
-# $FreeBSD: stable/9/tools/tools/cd2dvd/cd2dvd.sh 182578 2008-08-31 22:08:39Z rik $
+# $FreeBSD: release/10.0.0/tools/tools/cd2dvd/cd2dvd.sh 228975 2011-12-30 00:04:11Z uqs $
 
 ## Helper functions
 usage () {
@@ -229,7 +229,7 @@ then
 	echo "Error: less than two CD images specified."
 fi
 
-## Some usefull variables
+## Some useful variables
 pwd=`pwd`
 tmpdirin="${pwd}/tmp-$$-in"
 tmpdirout="${pwd}/tmp-$$-out"

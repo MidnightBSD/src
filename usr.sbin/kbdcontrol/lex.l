@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1994-1995 Søren Schmidt
+ * Copyright (c) 1994-1995 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,16 +25,17 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/kbdcontrol/lex.l 215676 2010-11-22 14:16:22Z brucec $
+ * $FreeBSD: release/10.0.0/usr.sbin/kbdcontrol/lex.l 250227 2013-05-03 23:51:32Z jkim $
  */
 
 %{
 
 #include "lex.h"
-#define YY_NO_UNPUT
-#define YY_NO_INPUT
 
 %}
+
+%option nounput
+%option noinput
 
 D	[0-9]
 X	[0-9a-fA-F]

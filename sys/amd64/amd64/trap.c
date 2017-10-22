@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/amd64/amd64/trap.c 241810 2012-10-21 12:15:58Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/amd64/trap.c 256072 2013-10-05 21:22:35Z neel $");
 
 /*
  * AMD64 Trap and System call handling
@@ -617,10 +617,10 @@ trap(struct trapframe *frame)
 	ksi.ksi_addr = (void *)addr;
 	if (uprintf_signal) {
 		uprintf("pid %d comm %s: signal %d err %lx code %d type %d "
-		    "addr 0x%lx rip 0x%lx "
+		    "addr 0x%lx rsp 0x%lx rip 0x%lx "
 		    "<%02x %02x %02x %02x %02x %02x %02x %02x>\n",
 		    p->p_pid, p->p_comm, i, frame->tf_err, ucode, type, addr,
-		    frame->tf_rip,
+		    frame->tf_rsp, frame->tf_rip,
 		    fubyte((void *)(frame->tf_rip + 0)),
 		    fubyte((void *)(frame->tf_rip + 1)),
 		    fubyte((void *)(frame->tf_rip + 2)),
@@ -630,11 +630,11 @@ trap(struct trapframe *frame)
 		    fubyte((void *)(frame->tf_rip + 6)),
 		    fubyte((void *)(frame->tf_rip + 7)));
 	}
+	KASSERT((read_rflags() & PSL_I) != 0, ("interrupts disabled"));
 	trapsignal(td, &ksi);
 
 user:
 	userret(td, frame);
-	mtx_assert(&Giant, MA_NOTOWNED);
 	KASSERT(PCB_USER_FPU(td->td_pcb),
 	    ("Return from trap with kernel FPU ctx leaked"));
 userout:
@@ -648,7 +648,7 @@ trap_pfault(frame, usermode)
 	int usermode;
 {
 	vm_offset_t va;
-	struct vmspace *vm = NULL;
+	struct vmspace *vm;
 	vm_map_t map;
 	int rv = 0;
 	vm_prot_t ftype;
@@ -711,14 +711,10 @@ trap_pfault(frame, usermode)
 		map = kernel_map;
 	} else {
 		/*
-		 * This is a fault on non-kernel virtual memory.
-		 * vm is initialized above to NULL. If curproc is NULL
-		 * or curproc->p_vmspace is NULL the fault is fatal.
+		 * This is a fault on non-kernel virtual memory.  If either
+		 * p or p->p_vmspace is NULL, then the fault is fatal.
 		 */
-		if (p != NULL)
-			vm = p->p_vmspace;
-
-		if (vm == NULL)
+		if (p == NULL || (vm = p->p_vmspace) == NULL)
 			goto nogo;
 
 		map = &vm->vm_map;
@@ -735,6 +731,14 @@ trap_pfault(frame, usermode)
 			trap_fatal(frame, eva);
 			return (-1);
 		}
+	}
+
+	/*
+	 * If the trap was caused by errant bits in the PTE then panic.
+	 */
+	if (frame->tf_err & PGEX_RSV) {
+		trap_fatal(frame, eva);
+		return (-1);
 	}
 
 	/*
@@ -794,8 +798,7 @@ nogo:
 		trap_fatal(frame, eva);
 		return (-1);
 	}
-
-	return((rv == KERN_PROTECTION_FAILURE) ? SIGBUS : SIGSEGV);
+	return ((rv == KERN_PROTECTION_FAILURE) ? SIGBUS : SIGSEGV);
 }
 
 static void
@@ -827,10 +830,11 @@ trap_fatal(frame, eva)
 #endif
 	if (type == T_PAGEFLT) {
 		printf("fault virtual address	= 0x%lx\n", eva);
-		printf("fault code		= %s %s %s, %s\n",
+		printf("fault code		= %s %s %s%s, %s\n",
 			code & PGEX_U ? "user" : "supervisor",
 			code & PGEX_W ? "write" : "read",
 			code & PGEX_I ? "instruction" : "data",
+			code & PGEX_RSV ? " rsv" : "",
 			code & PGEX_P ? "protection violation" : "page not present");
 	}
 	printf("instruction pointer	= 0x%lx:0x%lx\n",

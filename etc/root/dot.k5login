@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/etc/root/dot.k5login 114328 2003-04-30 20:58:49Z markm $
+# $FreeBSD: release/10.0.0/etc/root/dot.k5login 114328 2003-04-30 20:58:49Z markm $
 #
 # user1/root@YOUR.REALM.WHEREVER
 # user2/root@YOUR.REALM.WHEREVER

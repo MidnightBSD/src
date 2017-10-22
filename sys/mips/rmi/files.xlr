@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/mips/rmi/files.xlr 216390 2010-12-12 06:00:26Z jchandra $
+# $FreeBSD: release/10.0.0/sys/mips/rmi/files.xlr 216390 2010-12-12 06:00:26Z jchandra $
 #mips/rmi/xlr_boot1_console.c			standard
 mips/rmi/xlr_machdep.c				standard
 #mips/rmi/clock.c				standard

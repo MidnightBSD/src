@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/in6.c 244524 2012-12-21 00:41:52Z delphij $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet6/in6.c 255442 2013-09-10 10:05:59Z des $");
 
 #include "opt_compat.h"
 #include "opt_inet.h"
@@ -95,6 +95,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet6/in6.c 244524 2012-12-21 00:41:52Z delp
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/in_pcb.h>
+#include <netinet/ip_carp.h>
 
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
@@ -104,6 +105,9 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet6/in6.c 244524 2012-12-21 00:41:52Z delp
 #include <netinet6/in6_ifattach.h>
 #include <netinet6/scope6_var.h>
 #include <netinet6/in6_pcb.h>
+
+VNET_DECLARE(int, icmp6_nodeinfo_oldmcprefix);
+#define V_icmp6_nodeinfo_oldmcprefix	VNET(icmp6_nodeinfo_oldmcprefix)
 
 /*
  * Definitions of some costant IP6 addresses.
@@ -194,10 +198,10 @@ in6_ifremloop(struct ifaddr *ifa)
 
 	ia = ifa2ia6(ifa);
 	ifp = ifa->ifa_ifp;
-	IF_AFDATA_LOCK(ifp);
-	lla_lookup(LLTABLE6(ifp), (LLE_DELETE | LLE_IFADDR),
-	    (struct sockaddr *)&ia->ia_addr);
-	IF_AFDATA_UNLOCK(ifp);
+	memcpy(&addr, &ia->ia_addr, sizeof(ia->ia_addr));
+	memcpy(&mask, &ia->ia_prefixmask, sizeof(ia->ia_prefixmask));
+	lltable_prefix_free(AF_INET6, (struct sockaddr *)&addr,
+	            (struct sockaddr *)&mask, LLE_STATIC);
 
 	/*
 	 * initialize for rtmsg generation
@@ -209,8 +213,6 @@ in6_ifremloop(struct ifaddr *ifa)
 	gateway.sdl_alen = ifp->if_addrlen;
 	bzero(&rt0, sizeof(rt0));
 	rt0.rt_gateway = (struct sockaddr *)&gateway;
-	memcpy(&mask, &ia->ia_prefixmask, sizeof(ia->ia_prefixmask));
-	memcpy(&addr, &ia->ia_addr, sizeof(ia->ia_addr));
 	rt_mask(&rt0) = (struct sockaddr *)&mask;
 	rt_key(&rt0) = (struct sockaddr *)&addr;
 	rt0.rt_flags = RTF_HOST | RTF_STATIC;
@@ -270,7 +272,15 @@ in6_control(struct socket *so, u_long cmd, caddr_t data,
 	struct	in6_ifaddr *ia = NULL;
 	struct	in6_aliasreq *ifra = (struct in6_aliasreq *)data;
 	struct sockaddr_in6 *sa6;
+	int carp_attached = 0;
 	int error;
+	u_long ocmd = cmd;
+
+	/*
+	 * Compat to make pre-10.x ifconfig(8) operable.
+	 */
+	if (cmd == OSIOCAIFADDR_IN6)
+		cmd = SIOCAIFADDR_IN6;
 
 	switch (cmd) {
 	case SIOCGETSGCNT_IN6:
@@ -421,6 +431,18 @@ in6_control(struct socket *so, u_long cmd, caddr_t data,
 	case SIOCGIFSTAT_ICMP6:
 		sa6 = &ifr->ifr_addr;
 		break;
+	case SIOCSIFADDR:
+	case SIOCSIFBRDADDR:
+	case SIOCSIFDSTADDR:
+	case SIOCSIFNETMASK:
+		/*
+		 * Although we should pass any non-INET6 ioctl requests
+		 * down to driver, we filter some legacy INET requests.
+		 * Drivers trust SIOCSIFADDR et al to come from an already
+		 * privileged layer, and do not perform any credentials
+		 * checks or input validation.
+		 */
+		return (EINVAL);
 	default:
 		sa6 = NULL;
 		break;
@@ -513,12 +535,12 @@ in6_control(struct socket *so, u_long cmd, caddr_t data,
 		/* sanity for overflow - beware unsigned */
 		lt = &ifr->ifr_ifru.ifru_lifetime;
 		if (lt->ia6t_vltime != ND6_INFINITE_LIFETIME &&
-		    lt->ia6t_vltime + time_second < time_second) {
+		    lt->ia6t_vltime + time_uptime < time_uptime) {
 			error = EINVAL;
 			goto out;
 		}
 		if (lt->ia6t_pltime != ND6_INFINITE_LIFETIME &&
-		    lt->ia6t_pltime + time_second < time_second) {
+		    lt->ia6t_pltime + time_uptime < time_uptime) {
 			error = EINVAL;
 			goto out;
 		}
@@ -560,10 +582,10 @@ in6_control(struct socket *so, u_long cmd, caddr_t data,
 			error = EINVAL;
 			goto out;
 		}
-		bzero(&ifr->ifr_ifru.ifru_stat,
-		    sizeof(ifr->ifr_ifru.ifru_stat));
-		ifr->ifr_ifru.ifru_stat =
-		    *((struct in6_ifextra *)ifp->if_afdata[AF_INET6])->in6_ifstat;
+		COUNTER_ARRAY_COPY(((struct in6_ifextra *)
+		    ifp->if_afdata[AF_INET6])->in6_ifstat,
+		    &ifr->ifr_ifru.ifru_stat,
+		    sizeof(struct in6_ifstat) / sizeof(uint64_t));
 		break;
 
 	case SIOCGIFSTAT_ICMP6:
@@ -571,10 +593,10 @@ in6_control(struct socket *so, u_long cmd, caddr_t data,
 			error = EINVAL;
 			goto out;
 		}
-		bzero(&ifr->ifr_ifru.ifru_icmp6stat,
-		    sizeof(ifr->ifr_ifru.ifru_icmp6stat));
-		ifr->ifr_ifru.ifru_icmp6stat =
-		    *((struct in6_ifextra *)ifp->if_afdata[AF_INET6])->icmp6_ifstat;
+		COUNTER_ARRAY_COPY(((struct in6_ifextra *)
+		    ifp->if_afdata[AF_INET6])->icmp6_ifstat,
+		    &ifr->ifr_ifru.ifru_icmp6stat,
+		    sizeof(struct icmp6_ifstat) / sizeof(uint64_t));
 		break;
 
 	case SIOCGIFALIFETIME_IN6:
@@ -622,12 +644,12 @@ in6_control(struct socket *so, u_long cmd, caddr_t data,
 		/* for sanity */
 		if (ia->ia6_lifetime.ia6t_vltime != ND6_INFINITE_LIFETIME) {
 			ia->ia6_lifetime.ia6t_expire =
-				time_second + ia->ia6_lifetime.ia6t_vltime;
+				time_uptime + ia->ia6_lifetime.ia6t_vltime;
 		} else
 			ia->ia6_lifetime.ia6t_expire = 0;
 		if (ia->ia6_lifetime.ia6t_pltime != ND6_INFINITE_LIFETIME) {
 			ia->ia6_lifetime.ia6t_preferred =
-				time_second + ia->ia6_lifetime.ia6t_pltime;
+				time_uptime + ia->ia6_lifetime.ia6t_pltime;
 		} else
 			ia->ia6_lifetime.ia6t_preferred = 0;
 		break;
@@ -653,6 +675,18 @@ in6_control(struct socket *so, u_long cmd, caddr_t data,
 			 * lifetime.
 			 */
 			break;
+		}
+
+		if (cmd == ocmd && ifra->ifra_vhid > 0) {
+			if (carp_attach_p != NULL)
+				error = (*carp_attach_p)(&ia->ia_ifa,
+				    ifra->ifra_vhid);
+			else
+				error = EPROTONOSUPPORT;
+			if (error)
+				goto out;
+			else
+				carp_attached = 1;
 		}
 
 		/*
@@ -698,9 +732,14 @@ in6_control(struct socket *so, u_long cmd, caddr_t data,
 			 * nd6_prelist_add will install the corresponding
 			 * interface route.
 			 */
-			if ((error = nd6_prelist_add(&pr0, NULL, &pr)) != 0)
+			if ((error = nd6_prelist_add(&pr0, NULL, &pr)) != 0) {
+				if (carp_attached)
+					(*carp_detach_p)(&ia->ia_ifa);
 				goto out;
+			}
 			if (pr == NULL) {
+				if (carp_attached)
+					(*carp_detach_p)(&ia->ia_ifa);
 				log(LOG_ERR, "nd6_prelist_add succeeded but "
 				    "no prefix\n");
 				error = EINVAL;
@@ -923,6 +962,17 @@ in6_update_ifa_join_mc(struct ifnet *ifp, struct in6_aliasreq *ifra,
 		else
 			LIST_INSERT_HEAD(&ia->ia6_memberships, imm, i6mm_chain);
 	}
+	if (V_icmp6_nodeinfo_oldmcprefix && 
+	     in6_nigroup_oldmcprefix(ifp, NULL, -1, &mltaddr.sin6_addr) == 0) {
+		imm = in6_joingroup(ifp, &mltaddr.sin6_addr, &error, delay);
+		if (imm == NULL)
+			nd6log((LOG_WARNING, "%s: addmulti failed for %s on %s "
+			    "(errno=%d)\n", __func__, ip6_sprintf(ip6buf,
+			    &mltaddr.sin6_addr), if_name(ifp), error));
+			/* XXX not very fatal, go on... */
+		else
+			LIST_INSERT_HEAD(&ia->ia6_memberships, imm, i6mm_chain);
+	}
 
 	/*
 	 * Join interface-local all-nodes address.
@@ -969,7 +1019,6 @@ cleanup:
  * Update parameters of an IPv6 interface address.
  * If necessary, a new entry is created and linked into address chains.
  * This function is separated from in6_control().
- * XXX: should this be performed under splnet()?
  */
 int
 in6_update_ifa(struct ifnet *ifp, struct in6_aliasreq *ifra,
@@ -1103,7 +1152,7 @@ in6_update_ifa(struct ifnet *ifp, struct in6_aliasreq *ifra,
 		ia->ia_ifa.ifa_addr = (struct sockaddr *)&ia->ia_addr;
 		ia->ia_addr.sin6_family = AF_INET6;
 		ia->ia_addr.sin6_len = sizeof(ia->ia_addr);
-		ia->ia6_createtime = time_second;
+		ia->ia6_createtime = time_uptime;
 		if ((ifp->if_flags & (IFF_POINTOPOINT | IFF_LOOPBACK)) != 0) {
 			/*
 			 * XXX: some functions expect that ifa_dstaddr is not
@@ -1124,11 +1173,13 @@ in6_update_ifa(struct ifnet *ifp, struct in6_aliasreq *ifra,
 		ifa_ref(&ia->ia_ifa);			/* in6_ifaddrhead */
 		IN6_IFADDR_WLOCK();
 		TAILQ_INSERT_TAIL(&V_in6_ifaddrhead, ia, ia_link);
+		LIST_INSERT_HEAD(IN6ADDR_HASH(&ifra->ifra_addr.sin6_addr),
+		    ia, ia6_hash);
 		IN6_IFADDR_WUNLOCK();
 	}
 
 	/* update timestamp */
-	ia->ia6_updatetime = time_second;
+	ia->ia6_updatetime = time_uptime;
 
 	/* set prefix mask */
 	if (ifra->ifra_prefixmask.sin6_len) {
@@ -1147,6 +1198,7 @@ in6_update_ifa(struct ifnet *ifp, struct in6_aliasreq *ifra,
 			goto unlink;
 		}
 		ia->ia_prefixmask = ifra->ifra_prefixmask;
+		ia->ia_prefixmask.sin6_family = AF_INET6;
 	}
 
 	/*
@@ -1177,12 +1229,12 @@ in6_update_ifa(struct ifnet *ifp, struct in6_aliasreq *ifra,
 	ia->ia6_lifetime = ifra->ifra_lifetime;
 	if (ia->ia6_lifetime.ia6t_vltime != ND6_INFINITE_LIFETIME) {
 		ia->ia6_lifetime.ia6t_expire =
-		    time_second + ia->ia6_lifetime.ia6t_vltime;
+		    time_uptime + ia->ia6_lifetime.ia6t_vltime;
 	} else
 		ia->ia6_lifetime.ia6t_expire = 0;
 	if (ia->ia6_lifetime.ia6t_pltime != ND6_INFINITE_LIFETIME) {
 		ia->ia6_lifetime.ia6t_preferred =
-		    time_second + ia->ia6_lifetime.ia6t_pltime;
+		    time_uptime + ia->ia6_lifetime.ia6t_pltime;
 	} else
 		ia->ia6_lifetime.ia6t_preferred = 0;
 
@@ -1200,7 +1252,7 @@ in6_update_ifa(struct ifnet *ifp, struct in6_aliasreq *ifra,
 	 */
 	if ((ifra->ifra_flags & IN6_IFF_DEPRECATED) != 0) {
 		ia->ia6_lifetime.ia6t_pltime = 0;
-		ia->ia6_lifetime.ia6t_preferred = time_second;
+		ia->ia6_lifetime.ia6t_preferred = time_uptime;
 	}
 	/*
 	 * Make the address tentative before joining multicast addresses,
@@ -1435,6 +1487,9 @@ in6_purgeaddr(struct ifaddr *ifa)
 	int plen, error;
 	struct ifaddr *ifa0;
 
+	if (ifa->ifa_carp)
+		(*carp_detach_p)(ifa);
+
 	/*
 	 * find another IPv6 address as the gateway for the
 	 * link-local and node-local all-nodes multicast
@@ -1493,7 +1548,6 @@ in6_purgeaddr(struct ifaddr *ifa)
 static void
 in6_unlink_ifa(struct in6_ifaddr *ia, struct ifnet *ifp)
 {
-	int	s = splnet();
 
 	IF_ADDR_WLOCK(ifp);
 	TAILQ_REMOVE(&ifp->if_addrhead, &ia->ia_ifa, ifa_link);
@@ -1507,6 +1561,7 @@ in6_unlink_ifa(struct in6_ifaddr *ia, struct ifnet *ifp)
 	 */
 	IN6_IFADDR_WLOCK();
 	TAILQ_REMOVE(&V_in6_ifaddrhead, ia, ia_link);
+	LIST_REMOVE(ia, ia6_hash);
 	IN6_IFADDR_WUNLOCK();
 
 	/*
@@ -1531,7 +1586,6 @@ in6_unlink_ifa(struct in6_ifaddr *ia, struct ifnet *ifp)
 		pfxlist_onlink_check();
 	}
 	ifa_free(&ia->ia_ifa);			/* in6_ifaddrhead */
-	splx(s);
 }
 
 void
@@ -1827,7 +1881,6 @@ in6_ifinit(struct ifnet *ifp, struct in6_ifaddr *ia,
     struct sockaddr_in6 *sin6, int newhost)
 {
 	int	error = 0, plen, ifacount = 0;
-	int	s = splimp();
 	struct ifaddr *ifa;
 
 	/*
@@ -1847,12 +1900,9 @@ in6_ifinit(struct ifnet *ifp, struct in6_ifaddr *ia,
 
 	if (ifacount <= 1 && ifp->if_ioctl) {
 		error = (*ifp->if_ioctl)(ifp, SIOCSIFADDR, (caddr_t)ia);
-		if (error) {
-			splx(s);
+		if (error)
 			return (error);
-		}
 	}
-	splx(s);
 
 	ia->ia_ifa.ifa_metric = ifp->if_metric;
 
@@ -1944,6 +1994,32 @@ in6ifa_ifpwithaddr(struct ifnet *ifp, struct in6_addr *addr)
 		}
 	}
 	IF_ADDR_RUNLOCK(ifp);
+
+	return ((struct in6_ifaddr *)ifa);
+}
+
+/*
+ * Find a link-local scoped address on ifp and return it if any.
+ */
+struct in6_ifaddr *
+in6ifa_llaonifp(struct ifnet *ifp)
+{
+	struct sockaddr_in6 *sin6;
+	struct ifaddr *ifa;
+
+	if (ND_IFINFO(ifp)->flags & ND6_IFF_IFDISABLED)
+		return (NULL);
+	if_addr_rlock(ifp);
+	TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
+		if (ifa->ifa_addr->sa_family != AF_INET6)
+			continue;
+		sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+		if (IN6_IS_SCOPE_LINKLOCAL(&sin6->sin6_addr) ||
+		    IN6_IS_ADDR_MC_INTFACELOCAL(&sin6->sin6_addr) ||
+		    IN6_IS_ADDR_MC_NODELOCAL(&sin6->sin6_addr))
+			break;
+	}
+	if_addr_runlock(ifp);
 
 	return ((struct in6_ifaddr *)ifa);
 }
@@ -2061,7 +2137,7 @@ in6_localip(struct in6_addr *in6)
 	struct in6_ifaddr *ia;
 
 	IN6_IFADDR_RLOCK();
-	TAILQ_FOREACH(ia, &V_in6_ifaddrhead, ia_link) {
+	LIST_FOREACH(ia, IN6ADDR_HASH(in6), ia6_hash) {
 		if (IN6_ARE_ADDR_EQUAL(in6, &ia->ia_addr.sin6_addr)) {
 			IN6_IFADDR_RUNLOCK();
 			return (1);
@@ -2071,22 +2147,20 @@ in6_localip(struct in6_addr *in6)
 	return (0);
 }
 
-
 int
 in6_is_addr_deprecated(struct sockaddr_in6 *sa6)
 {
 	struct in6_ifaddr *ia;
 
 	IN6_IFADDR_RLOCK();
-	TAILQ_FOREACH(ia, &V_in6_ifaddrhead, ia_link) {
-		if (IN6_ARE_ADDR_EQUAL(&ia->ia_addr.sin6_addr,
-		    &sa6->sin6_addr) &&
-		    (ia->ia6_flags & IN6_IFF_DEPRECATED) != 0) {
-			IN6_IFADDR_RUNLOCK();
-			return (1); /* true */
+	LIST_FOREACH(ia, IN6ADDR_HASH(&sa6->sin6_addr), ia6_hash) {
+		if (IN6_ARE_ADDR_EQUAL(IA6_IN6(ia), &sa6->sin6_addr)) {
+			if (ia->ia6_flags & IN6_IFF_DEPRECATED) {
+				IN6_IFADDR_RUNLOCK();
+				return (1); /* true */
+			}
+			break;
 		}
-
-		/* XXX: do we still have to go thru the rest of the list? */
 	}
 	IN6_IFADDR_RUNLOCK();
 
@@ -2581,10 +2655,14 @@ in6_lltable_lookup(struct lltable *llt, u_int flags,
 		if (!(lle->la_flags & LLE_IFADDR) || (flags & LLE_IFADDR)) {
 			LLE_WLOCK(lle);
 			lle->la_flags |= LLE_DELETED;
-			LLE_WUNLOCK(lle);
 #ifdef DIAGNOSTIC
-			log(LOG_INFO, "ifaddr cache = %p  is deleted\n", lle);
+			log(LOG_INFO, "ifaddr cache = %p is deleted\n", lle);
 #endif
+			if ((lle->la_flags &
+			    (LLE_STATIC | LLE_IFADDR)) == LLE_STATIC)
+				llentry_free(lle);
+			else
+				LLE_WUNLOCK(lle);
 		}
 		lle = (void *)-1;
 	}
@@ -2647,6 +2725,8 @@ in6_lltable_dump(struct lltable *llt, struct sysctl_req *wr)
 			ndpc.sin6.sin6_family = AF_INET6;
 			ndpc.sin6.sin6_len = sizeof(ndpc.sin6);
 			bcopy(L3_ADDR(lle), &ndpc.sin6, L3_ADDR_LEN(lle));
+			if (V_deembed_scopeid)
+				sa6_recoverscope(&ndpc.sin6);
 
 			/* publish */
 			if (lle->la_flags & LLE_PUB)
@@ -2678,17 +2758,26 @@ in6_domifattach(struct ifnet *ifp)
 {
 	struct in6_ifextra *ext;
 
+	/* There are not IPv6-capable interfaces. */
+	switch (ifp->if_type) {
+	case IFT_PFLOG:
+	case IFT_PFSYNC:
+	case IFT_USB:
+		return (NULL);
+	}
 	ext = (struct in6_ifextra *)malloc(sizeof(*ext), M_IFADDR, M_WAITOK);
 	bzero(ext, sizeof(*ext));
 
-	ext->in6_ifstat = (struct in6_ifstat *)malloc(sizeof(struct in6_ifstat),
-	    M_IFADDR, M_WAITOK);
-	bzero(ext->in6_ifstat, sizeof(*ext->in6_ifstat));
+	ext->in6_ifstat = malloc(sizeof(counter_u64_t) *
+	    sizeof(struct in6_ifstat) / sizeof(uint64_t), M_IFADDR, M_WAITOK);
+	COUNTER_ARRAY_ALLOC(ext->in6_ifstat,
+	    sizeof(struct in6_ifstat) / sizeof(uint64_t), M_WAITOK);
 
-	ext->icmp6_ifstat =
-	    (struct icmp6_ifstat *)malloc(sizeof(struct icmp6_ifstat),
-	    M_IFADDR, M_WAITOK);
-	bzero(ext->icmp6_ifstat, sizeof(*ext->icmp6_ifstat));
+	ext->icmp6_ifstat = malloc(sizeof(counter_u64_t) *
+	    sizeof(struct icmp6_ifstat) / sizeof(uint64_t), M_IFADDR,
+	    M_WAITOK);
+	COUNTER_ARRAY_ALLOC(ext->icmp6_ifstat,
+	    sizeof(struct icmp6_ifstat) / sizeof(uint64_t), M_WAITOK);
 
 	ext->nd_ifinfo = nd6_ifattach(ifp);
 	ext->scope6_id = scope6_ifattach(ifp);
@@ -2713,7 +2802,11 @@ in6_domifdetach(struct ifnet *ifp, void *aux)
 	scope6_ifdetach(ext->scope6_id);
 	nd6_ifdetach(ext->nd_ifinfo);
 	lltable_free(ext->lltable);
+	COUNTER_ARRAY_FREE(ext->in6_ifstat,
+	    sizeof(struct in6_ifstat) / sizeof(uint64_t));
 	free(ext->in6_ifstat, M_IFADDR);
+	COUNTER_ARRAY_FREE(ext->icmp6_ifstat,
+	    sizeof(struct icmp6_ifstat) / sizeof(uint64_t));
 	free(ext->icmp6_ifstat, M_IFADDR);
 	free(ext, M_IFADDR);
 }

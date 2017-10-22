@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)cksum.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/timed/timed/cksum.c 216372 2010-12-11 09:38:12Z joel $";
+  "$FreeBSD: release/10.0.0/usr.sbin/timed/timed/cksum.c 246209 2013-02-01 14:26:54Z charnier $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -49,9 +49,7 @@ static const char rcsid[] =
  * worry about carries except at the end.
  */
 int
-in_cksum(addr, len)
-	u_short *addr;
-	int len;
+in_cksum(u_short *addr, int len)
 {
 	register int nleft = len;
 	register u_short *w = addr;

@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/intr_machdep.c 245981 2013-01-27 16:49:11Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/intr_machdep.c 241780 2012-10-20 12:07:48Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -456,7 +456,7 @@ intr_describe(int vec, void *ih, const char *descr)
  * allocate CPUs round-robin.
  */
 
-static cpuset_t intr_cpus;
+static cpuset_t intr_cpus = CPUSET_T_INITIALIZER(0x1);
 static int current_cpu;
 
 static void
@@ -554,11 +554,4 @@ intr_shuffle_irqs(void *arg __unused)
 }
 SYSINIT(intr_shuffle_irqs, SI_SUB_SMP, SI_ORDER_SECOND, intr_shuffle_irqs,
     NULL);
-#else /* !SMP */
-/* Use an empty stub for compatibility. */
-void
-intr_add_cpu(u_int cpu __unused)
-{
-
-}
 #endif

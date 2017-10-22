@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/uboot/lib/reboot.c 182723 2008-09-03 15:39:50Z raj $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/uboot/lib/reboot.c 182723 2008-09-03 15:39:50Z raj $");
 
 #include <stand.h>
 #include "glue.h"

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ipmi/ipmi_smbios.c 247481 2013-02-28 18:22:41Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ipmi/ipmi_smbios.c 241027 2012-09-28 11:59:32Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

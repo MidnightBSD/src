@@ -21,7 +21,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/boot/arm/ixp425/boot2/cf_ata.h 183651 2008-10-06 19:38:10Z jhay $
+ * $FreeBSD: release/10.0.0/sys/boot/arm/ixp425/boot2/cf_ata.h 183651 2008-10-06 19:38:10Z jhay $
  */
 
 #ifndef ARM_BOOT_CF_ATA_H

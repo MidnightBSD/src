@@ -29,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/ifconfig/af_inet.c 224179 2011-07-18 10:29:16Z bz $";
+  "$FreeBSD: release/10.0.0/sbin/ifconfig/af_inet.c 228574 2011-12-16 13:30:17Z glebius $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -84,8 +84,11 @@ in_status(int s __unused, const struct ifaddrs *ifa)
 	if (ifa->ifa_flags & IFF_BROADCAST) {
 		sin = (struct sockaddr_in *)ifa->ifa_broadaddr;
 		if (sin != NULL && sin->sin_addr.s_addr != 0)
-			printf("broadcast %s", inet_ntoa(sin->sin_addr));
+			printf("broadcast %s ", inet_ntoa(sin->sin_addr));
 	}
+
+	print_vhid(ifa, " ");
+
 	putchar('\n');
 }
 
@@ -104,8 +107,7 @@ in_getaddr(const char *s, int which)
 	struct netent *np;
 
 	sin->sin_len = sizeof(*sin);
-	if (which != MASK)
-		sin->sin_family = AF_INET;
+	sin->sin_family = AF_INET;
 
 	if (which == ADDR) {
 		char *p = NULL;
@@ -124,6 +126,7 @@ in_getaddr(const char *s, int which)
 				*p = '/';
 				errx(1, "%s: bad value (width %s)", s, errstr);
 			}
+			min->sin_family = AF_INET;
 			min->sin_len = sizeof(*min);
 			min->sin_addr.s_addr = htonl(~((1LL << (32 - masklen)) - 1) & 
 				              0xffffffff);

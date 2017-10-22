@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/9/cddl/compat/opensolaris/misc/mkdirp.c 178414 2008-04-22 07:43:00Z jb $
+ * $FreeBSD: release/10.0.0/cddl/compat/opensolaris/misc/mkdirp.c 178414 2008-04-22 07:43:00Z jb $
  */
 
 /*	Copyright (c) 1988 AT&T	*/

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libcam/Makefile 225227 2011-08-28 09:26:48Z kib $
+# $FreeBSD: release/10.0.0/lib/libcam/Makefile 225227 2011-08-28 09:26:48Z kib $
 
 LIB=		cam
 SHLIBDIR?=	/lib

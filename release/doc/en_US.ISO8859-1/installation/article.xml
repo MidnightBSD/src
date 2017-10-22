@@ -1,65 +1,56 @@
-<?xml version="1.0" encoding="iso-8859-1" standalone="no"?>
-<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V4.2-Based Extension//EN" [
-<!ENTITY % entities PUBLIC "-//FreeBSD//ENTITIES DocBook FreeBSD Entity Set//EN">
-%entities;
-
-<!ENTITY % release PUBLIC "-//FreeBSD//ENTITIES Release Specification//EN">
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V5.0-Based Extension//EN"
+        "../../../share/xml/freebsd50.dtd" [
+<!ENTITY % release PUBLIC "-//FreeBSD//ENTITIES Release Specification//EN" "release.ent">
 %release;
-
-<!-- Text constants which probably don't need to be changed.-->
-
-<!ENTITY % include.historic "IGNORE">
-<!ENTITY % no.include.historic "IGNORE">
 ]>
 
-<article>
-  <articleinfo>
-    <title>&os; &release.current; Installation Instructions</title>
+<article xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0">
+  <info><title>&os; &release.current; Installation Instructions</title>
 
-    <corpauthor>The &os; Project</corpauthor>
+    <author><orgname>The &os; Project</orgname></author>
 
-    <pubdate>$FreeBSD: stable/9/release/doc/en_US.ISO8859-1/installation/article.xml 244867 2012-12-30 16:41:17Z hrs $</pubdate>
+    <pubdate>$FreeBSD: release/10.0.0/release/doc/en_US.ISO8859-1/installation/article.xml 260611 2014-01-13 23:15:51Z gjb $</pubdate>
 
     <copyright>
-      <year>2012</year>
-
+      <year>2014</year>
       <holder role="mailto:doc@FreeBSD.org">The &os; Documentation Project</holder>
     </copyright>
 
-    <legalnotice id="trademarks" role="trademarks">
+    <legalnotice xml:id="trademarks" role="trademarks">
       &tm-attrib.freebsd;
       &tm-attrib.intel;
       &tm-attrib.sparc;
       &tm-attrib.general;
     </legalnotice>
-  </articleinfo>
 
   <abstract>
     <para>This article gives some brief instructions on installing
       &os; &release.current; and upgrading the systems running earlier
       releases.</para>
   </abstract>
+</info>
 
-  <sect1 id="install">
+  <sect1 xml:id="install">
     <title>Installing &os;</title>
 
-    <para>The <ulink
-	url="&url.books.handbook;/bsdinstall.html"><quote>Installing
-	  &os;</quote></ulink>
-      chapter of the <ulink
-	url="&url.books.handbook;/">&os;
-	Handbook</ulink> provides more in-depth information about the
+    <para>The <uri
+	xlink:href="&url.books.handbook;/bsdinstall.html">Installing
+	  &os;</uri>
+      chapter of the <uri
+	xlink:href="&url.books.handbook;/">&os;
+	Handbook</uri> provides more in-depth information about the
       installation program itself, including a guided walk-through with
       screenshots.</para>
   </sect1>
 
-  <sect1 id="upgrade">
+  <sect1 xml:id="upgrade">
     <title>Upgrading &os;</title>
 
     <para>If you are upgrading from a previous release of &os;, please
-      read <ulink
-      url="http://www.FreeBSD.org/releases/9.1R/relnotes-detailed.html#upgrade">upgrading
-      section in the Release Notes</ulink> for notable
+      read <uri
+      xlink:href="http://www.FreeBSD.org/releases/10.0R/relnotes.html#upgrade">upgrading
+      section in the Release Notes</uri> for notable
       incompatibilities carefully.</para>
 
     <sect2>
@@ -67,13 +58,12 @@
 
       <para>The procedure for doing a source code based update is
 	described in
-	<ulink url="&url.books.handbook;/synching.html"></ulink> and
-	<ulink url="&url.books.handbook;/makeworld.html"></ulink>.</para>
+	<uri xlink:href="&url.books.handbook;/synching.html"></uri> and
+	<uri xlink:href="&url.books.handbook;/makeworld.html"></uri>.</para>
 
-      <para>For SVN use the <filename>releng/9.1</filename> branch
+      <para>For SVN use the <filename>releng/10.0</filename> branch
 	which will be where any upcoming Security Advisories or Errata
-	Notices will be applied.  The branch tag to use for updating
-	the source is <literal>RELENG_9_1</literal> for CVS.</para>
+	Notices will be applied.</para>
     </sect2>
 
     <sect2>
@@ -83,17 +73,9 @@
 	upgrades of &arch.i386; and &arch.amd64; systems running
 	earlier FreeBSD releases. Systems running
 	<literal>7.[34]-RELEASE</literal>,
-	<literal>8.[12]-RELEASE</literal>,
-	<literal>9.0-RELEASE</literal>,
-	<literal>9.1-BETA1</literal>, or
-	<literal>9.1-RC[123]</literal> can upgrade as follows:</para>
-
-      <para>First, ensure that your current system is up to date; a
-	change was recently made to &man.freebsd-update.8; (Errata
-	Notice <ulink
-	  url="http://security.FreeBSD.org/advisories/FreeBSD-EN-12:01.freebsd-update.asc">FreeBSD-EN-12:01.freebsd-update</ulink>)
-	which is needed in order to upgrade to &os;
-	&release.current;.</para>
+	<literal>8.[1234]-RELEASE</literal>,
+	<literal>9.[012]-RELEASE</literal>,
+	<literal>10.0-RC[123]</literal> can upgrade as follows:</para>
 
       <screen>&prompt.root; freebsd-update fetch
 &prompt.root; freebsd-update install</screen>
@@ -103,11 +85,11 @@
 	&man.freebsd-update.8; will ask for help in merging
 	configuration files.</para>
 
-      <screen>&prompt.root; freebsd-update upgrade -r 9.1-RELEASE</screen>
+      <screen>&prompt.root; freebsd-update upgrade -r 10.0-RELEASE</screen>
 
       <para>Due to changes in the way that &os; is packaged on the
 	release media, two complications may arise in this process if
-	upgrading from FreeBSD 7.x or 8.x:</para>
+	upgrading from FreeBSD 8.x or 9.x:</para>
 
       <orderedlist>
 	<listitem>
@@ -148,7 +130,7 @@
       <screen>&prompt.root; freebsd-update install</screen>
 
       <para>At this point, users of systems being upgraded from &os;
-	8.2-RELEASE or earlier will be prompted by
+	9.2-RELEASE or earlier will be prompted by
 	&man.freebsd-update.8; to rebuild all third-party applications
 	(e.g., ports installed from the ports tree) due to updates in
 	system libraries.</para>

@@ -1,5 +1,5 @@
-/*	$NetBSD: vis.h,v 1.20 2012/12/14 21:36:59 christos Exp $	*/
-/*	$FreeBSD: stable/9/contrib/libc-vis/vis.h 244401 2012-12-18 16:37:24Z brooks $	*/
+/*	$NetBSD: vis.h,v 1.21 2013/02/20 17:01:15 christos Exp $	*/
+/*	$FreeBSD: release/10.0.0/contrib/libc-vis/vis.h 248302 2013-03-14 23:51:47Z brooks $	*/
 
 /*-
  * Copyright (c) 1990, 1993
@@ -96,9 +96,12 @@ int	strsnvis(char *, size_t, const char *, int, const char *);
 
 int	strvisx(char *, const char *, size_t, int);
 int	strnvisx(char *, size_t, const char *, size_t, int);
+int 	strenvisx(char *, size_t, const char *, size_t, int, int *);
 
 int	strsvisx(char *, const char *, size_t, int, const char *);
 int	strsnvisx(char *, size_t, const char *, size_t, int, const char *);
+int	strsenvisx(char *, size_t, const char *, size_t , int, const char *,
+    int *);
 
 int	strunvis(char *, const char *);
 int	strnunvis(char *, size_t, const char *);

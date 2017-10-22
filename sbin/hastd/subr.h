@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/hastd/subr.h 231017 2012-02-05 15:51:19Z trociny $
+ * $FreeBSD: release/10.0.0/sbin/hastd/subr.h 229699 2012-01-06 12:27:17Z pjd $
  */
 
 #ifndef	_SUBR_H_

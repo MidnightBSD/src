@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/msun/src/k_rem_pio2.c 176550 2008-02-25 11:43:20Z bde $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/k_rem_pio2.c 242692 2012-11-07 07:00:59Z kevlo $");
 
 /*
  * __kernel_rem_pio2(x,y,e0,nx,prec)
@@ -45,7 +45,7 @@ __FBSDID("$FreeBSD: stable/9/lib/msun/src/k_rem_pio2.c 176550 2008-02-25 11:43:2
  *			z    = (z-x[i])*2**24
  *
  *
- *	y[]	ouput result in an array of double precision numbers.
+ *	y[]	output result in an array of double precision numbers.
  *		The dimension of y[] is:
  *			24-bit  precision	1
  *			53-bit  precision	2

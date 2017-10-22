@@ -1,0 +1,6 @@
+# $FreeBSD: release/10.0.0/sys/arm/mv/armadaxp/files.armadaxp 239277 2012-08-15 05:15:49Z gonzo $
+
+arm/mv/armadaxp/armadaxp.c	standard
+arm/mv/mpic.c			standard
+arm/mv/rtc.c			standard
+arm/mv/armadaxp/armadaxp_mp.c	optional smp

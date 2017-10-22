@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libelf/libelf_ar.c 210348 2010-07-21 12:54:34Z kaiw $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libelf/libelf_ar.c 210348 2010-07-21 12:54:34Z kaiw $");
 
 #include <ar.h>
 #include <assert.h>

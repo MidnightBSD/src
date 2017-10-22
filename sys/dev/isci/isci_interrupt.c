@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/isci/isci_interrupt.c 236263 2012-05-29 23:10:10Z jimharris $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/isci_interrupt.c 235751 2012-05-21 22:54:33Z jimharris $");
 
 #include <dev/isci/isci.h>
 

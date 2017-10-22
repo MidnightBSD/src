@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)keylogin.c 1.4 91/03/11 Copyr 1986 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/keylogin/keylogin.c 99112 2002-06-30 05:25:07Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/keylogin/keylogin.c 246990 2013-02-19 13:32:26Z charnier $");
 
 /*
  * Copyright (C) 1986, Sun Microsystems, Inc.
@@ -48,8 +48,10 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/keylogin/keylogin.c 99112 2002-06-30 05:25:
 #include <rpc/rpc.h>
 #include <rpc/key_prot.h>
 
+extern int key_setnet(struct key_netstarg *);
+
 int
-main()
+main(void)
 {
 	char fullname[MAXNETNAMELEN + 1];
 	struct key_netstarg netst;

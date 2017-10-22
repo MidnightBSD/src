@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  *	from BSDI $Id: ktr.h,v 1.10.2.7 2000/03/16 21:44:42 cp Exp $
- * $FreeBSD: stable/9/sys/sparc64/include/ktr.h 222828 2011-06-07 17:33:39Z marius $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/ktr.h 243046 2012-11-15 00:51:57Z jeff $
  */
 
 #ifndef _MACHINE_KTR_H_
@@ -58,6 +58,7 @@ l2:	add	r2, 1, r3 ; \
 	bne	%icc, l2 ## b ; \
 	 mov	r3, r2 ; \
 	SET(ktr_buf, r3, r1) ; \
+	ldx	[r1], r1 ; \
 	mulx	r2, KTR_SIZEOF, r2 ; \
 	add	r1, r2, r1 ; \
 	rd	%tick, r2 ; \

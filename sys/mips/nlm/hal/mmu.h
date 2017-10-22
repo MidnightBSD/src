@@ -26,11 +26,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: stable/9/sys/mips/nlm/hal/mmu.h 225394 2011-09-05 10:45:29Z jchandra $
+ * $FreeBSD: release/10.0.0/sys/mips/nlm/hal/mmu.h 227722 2011-11-19 14:06:15Z jchandra $
  */
 
 #ifndef __XLP_MMU_H__
-#define __XLP_MMU_H__
+#define	__XLP_MMU_H__
 
 #include <mips/nlm/hal/mips-extns.h>
 

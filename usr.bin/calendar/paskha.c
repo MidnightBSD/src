@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/calendar/paskha.c 218797 2011-02-18 13:41:45Z osa $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/calendar/paskha.c 218797 2011-02-18 13:41:45Z osa $");
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003 - 2008 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 2003 - 2008 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/ata/ata-pci.h 247098 2013-02-21 15:21:25Z mav $
+ * $FreeBSD: release/10.0.0/sys/dev/ata/ata-pci.h 253475 2013-07-19 21:37:40Z jfv $
  */
 
 /* structure holding chipset config info */
@@ -62,9 +62,6 @@ struct ata_pci_controller {
     int                 (*ch_detach)(device_t);
     int                 (*ch_suspend)(device_t);
     int                 (*ch_resume)(device_t);
-#ifndef ATA_CAM
-    int                 (*locking)(device_t, int);
-#endif
     void                (*reset)(device_t);
     int                 (*setmode)(device_t, int, int);
     int                 (*getrev)(device_t, int);
@@ -276,6 +273,10 @@ struct ata_pci_controller {
 #define ATA_I31244              0x32008086
 #define ATA_ISCH                0x811a8086
 #define ATA_DH89XXCC            0x23238086
+
+#define ATA_COLETOCRK_AH1       0x23a38086
+#define ATA_COLETOCRK_S1        0x23a18086
+#define ATA_COLETOCRK_S2        0x23a68086
 
 #define ATA_ITE_ID              0x1283
 #define ATA_IT8211F             0x82111283

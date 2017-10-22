@@ -47,7 +47,7 @@
  *
  *	from: @(#)clnt.h 1.31 94/04/29 SMI
  *	from: @(#)clnt.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: stable/9/sys/rpc/clnt.h 221127 2011-04-27 18:19:26Z rmacklem $
+ * $FreeBSD: release/10.0.0/sys/rpc/clnt.h 244008 2012-12-08 00:29:16Z rmacklem $
  */
 
 /*
@@ -372,6 +372,7 @@ enum clnt_stat clnt_call_private(CLIENT *, struct rpc_callextra *, rpcproc_t,
 #define CLGET_RETRIES		26	/* get retry count for reconnect */
 #define CLSET_PRIVPORT		27	/* set privileged source port flag */
 #define CLGET_PRIVPORT		28	/* get privileged source port flag */
+#define CLSET_BACKCHANNEL	29	/* set backchannel for socket */
 #endif
 
 

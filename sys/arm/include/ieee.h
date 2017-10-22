@@ -39,7 +39,7 @@
  *
  *	@(#)ieee.h	8.1 (Berkeley) 6/11/93
  *
- * $FreeBSD: stable/9/sys/arm/include/ieee.h 186461 2008-12-23 22:20:59Z marcel $
+ * $FreeBSD: release/10.0.0/sys/arm/include/ieee.h 255361 2013-09-07 14:04:10Z andrew $
  *
  */
 
@@ -91,7 +91,7 @@
 #define	DBL_EXPBITS	11
 #define	DBL_FRACBITS	52
 
-#if defined(__VFP_FP__)
+#if defined(__VFP_FP__) || defined(__ARM_EABI__)
 #define	_IEEE_WORD_ORDER	_BYTE_ORDER
 #else
 #define	_IEEE_WORD_ORDER	_BIG_ENDIAN
@@ -124,7 +124,7 @@ struct ieee_double {
 	u_int	dbl_sign:1;
 #if _IEEE_WORD_ORDER == _BIG_ENDIAN
 	u_int   dbl_fracl;
-#endif  
+#endif
 #endif
 };
 

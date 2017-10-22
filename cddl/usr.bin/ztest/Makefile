@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/cddl/usr.bin/ztest/Makefile 243674 2012-11-29 14:05:04Z mm $
+# $FreeBSD: release/10.0.0/cddl/usr.bin/ztest/Makefile 254949 2013-08-27 04:01:31Z will $
 
 .PATH: ${.CURDIR}/../..//contrib/opensolaris/cmd/ztest
 
@@ -19,12 +19,14 @@ CFLAGS+= -I${.CURDIR}/../../contrib/opensolaris/head
 CFLAGS+= -I${.CURDIR}/../../lib/libumem
 
 DPADD=	${LIBGEOM} ${LIBM} ${LIBNVPAIR} ${LIBUMEM} ${LIBZPOOL} \
-	${LIBPTHREAD} ${LIBAVL} ${LIBZFS} ${LIBUUTIL}
-LDADD=	-lgeom -lm -lnvpair -lumem -lzpool -lpthread -lavl -lzfs -luutil
+	${LIBPTHREAD} ${LIBAVL} ${LIBZFS_CORE} ${LIBZFS} ${LIBUUTIL}
+LDADD=	-lgeom -lm -lnvpair -lumem -lzpool -lpthread -lavl -lzfs_core -lzfs \
+	-luutil
 
 CSTD=	c99
 
-CFLAGS+= -DDEBUG=1
-#DEBUG_FLAGS+=	-g
+# Since there are many asserts in this program, it makes no sense to compile
+# it without debugging.
+CFLAGS+= -g -DDEBUG=1
 
 .include <bsd.prog.mk>

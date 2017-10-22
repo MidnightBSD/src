@@ -1,10 +1,11 @@
-# $FreeBSD: stable/9/lib/clang/libllvmmcjit/Makefile 245431 2013-01-14 19:51:26Z dim $
+# $FreeBSD: release/10.0.0/lib/clang/libllvmmcjit/Makefile 249423 2013-04-12 17:57:40Z dim $
 
 .include <bsd.own.mk>
 
 LIB=	llvmmcjit
 
 SRCDIR=	lib/ExecutionEngine/MCJIT
-SRCS=	MCJIT.cpp
+SRCS=	MCJIT.cpp \
+	SectionMemoryManager.cpp
 
 .include "../clang.lib.mk"

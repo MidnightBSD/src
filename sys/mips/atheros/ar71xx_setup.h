@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/9/sys/mips/atheros/ar71xx_setup.h 211476 2010-08-19 02:03:12Z adrian $ */
+/* $FreeBSD: release/10.0.0/sys/mips/atheros/ar71xx_setup.h 253027 2013-07-08 06:10:29Z adrian $ */
 
 #ifndef	__AR71XX_SETUP_H__
 #define	__AR71XX_SETUP_H__
@@ -38,7 +38,12 @@ enum ar71xx_soc_type {
 	AR71XX_SOC_AR7241,
 	AR71XX_SOC_AR7242,
 	AR71XX_SOC_AR9130,
-	AR71XX_SOC_AR9132
+	AR71XX_SOC_AR9132,
+	AR71XX_SOC_AR9330,
+	AR71XX_SOC_AR9331,
+	AR71XX_SOC_AR9341,
+	AR71XX_SOC_AR9342,
+	AR71XX_SOC_AR9344,
 };
 extern enum ar71xx_soc_type ar71xx_soc;   
 

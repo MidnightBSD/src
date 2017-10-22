@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)ar_subs.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/pax/ar_subs.c 222177 2011-05-22 14:03:38Z uqs $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/pax/ar_subs.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -55,7 +55,6 @@ __FBSDID("$FreeBSD: stable/9/bin/pax/ar_subs.c 222177 2011-05-22 14:03:38Z uqs $
 static void wr_archive(ARCHD *, int is_app);
 static int get_arc(void);
 static int next_head(ARCHD *);
-extern sigset_t s_mask;
 
 /*
  * Routines which control the overall operation modes of pax as specified by

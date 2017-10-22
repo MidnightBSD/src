@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libelf/README 186758 2009-01-05 05:14:26Z jkoshy $
+# $FreeBSD: release/10.0.0/lib/libelf/README 186758 2009-01-05 05:14:26Z jkoshy $
 # $NetBSD$
 
 libelf: a BSD-licensed implementation of the ELF(3)/GELF(3) API.

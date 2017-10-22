@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/i80321/uart_cpu_i80321.c 168281 2007-04-02 22:00:22Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/i80321/uart_cpu_i80321.c 168281 2007-04-02 22:00:22Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/i386/libi386/biospnp.c 193720 2009-06-08 15:09:22Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/i386/libi386/biospnp.c 236213 2012-05-29 01:48:06Z kevlo $");
 
 /*
  * PnP BIOS enumerator.
@@ -276,6 +276,7 @@ biospnp_call(int func, const char *fmt, ...)
 	    break;
 	}
     }
+    va_end(ap);
 
     /* BIOS segment last */
     *(u_int16_t *)argp = pnp_Icheck->pnp_rmds;

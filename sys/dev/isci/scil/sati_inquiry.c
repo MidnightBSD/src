@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/isci/scil/sati_inquiry.c 235494 2012-05-16 00:10:42Z jimharris $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/sati_inquiry.c 235043 2012-05-04 23:45:34Z jimharris $");
 
 /**
  * @file

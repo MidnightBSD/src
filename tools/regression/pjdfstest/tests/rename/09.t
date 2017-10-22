@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/rename/09.t 211180 2010-08-11 16:34:44Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/rename/09.t 211180 2010-08-11 16:34:44Z pjd $
 
 desc="rename returns EACCES or EPERM if the directory containing 'from' is marked sticky, and neither the containing directory nor 'from' are owned by the effective user ID"
 

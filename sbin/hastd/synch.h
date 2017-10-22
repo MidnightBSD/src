@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sbin/hastd/synch.h 229509 2012-01-04 17:22:10Z trociny $
+ * $FreeBSD: release/10.0.0/sbin/hastd/synch.h 236919 2012-06-11 20:27:52Z hselasky $
  */
 
 #ifndef	_SYNCH_H_
@@ -168,7 +168,7 @@ cv_timedwait(pthread_cond_t *cv, pthread_mutex_t *lock, int timeout)
 		return (false);
 	}
 
-        error = clock_gettime(CLOCK_MONOTONIC, &ts);
+	error = clock_gettime(CLOCK_MONOTONIC, &ts);
 	PJDLOG_ASSERT(error == 0);
 	ts.tv_sec += timeout;
 	error = pthread_cond_timedwait(cv, lock, &ts);

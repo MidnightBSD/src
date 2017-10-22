@@ -23,11 +23,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/puc/puc_cfg.h 239783 2012-08-28 17:08:47Z fjoe $
+ * $FreeBSD: release/10.0.0/sys/dev/puc/puc_cfg.h 251862 2013-06-17 20:11:04Z pluknet $
  */
 
 #ifndef _DEV_PUC_CFG_H_
-#define	_DEV_PUC_CFG_H
+#define	_DEV_PUC_CFG_H_
 
 #define	DEFAULT_RCLK	1843200
 

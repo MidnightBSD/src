@@ -1,7 +1,7 @@
 /*
  * Christian
  *
- * $FreeBSD: stable/9/usr.bin/calendar/calendars/calendar.christian 178453 2008-04-24 01:37:12Z scf $
+ * $FreeBSD: release/10.0.0/usr.bin/calendar/calendars/calendar.christian 178453 2008-04-24 01:37:12Z scf $
  */
 
 #ifndef _calendar_christian_

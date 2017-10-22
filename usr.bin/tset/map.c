@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/tset/map.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tset/map.c 241737 2012-10-19 14:49:42Z ed $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)map.c	8.1 (Berkeley) 6/9/93";
@@ -44,8 +44,7 @@ static const char sccsid[] = "@(#)map.c	8.1 (Berkeley) 6/9/93";
 
 #include "extern.h"
 
-extern speed_t Ospeed;
-speed_t	tset_baudrate(char *);
+static speed_t tset_baudrate(char *);
 
 /* Baud rate conditionals for mapping. */
 #define	GT		0x01
@@ -63,7 +62,7 @@ typedef struct map {
 	speed_t	speed;		/* Baud	rate to	compare	against. */
 } MAP;
 
-MAP *cur, *maplist;
+static MAP *cur, *maplist;
 
 /*
  * Syntax for -m:
@@ -132,7 +131,7 @@ next:	if (*arg == ':') {
 			goto badmopt;
 		++arg;
 	} else {				/* Optional baudrate. */
-		arg = index(p = arg, ':');
+		arg = strchr(p = arg, ':');
 		if (arg == NULL)
 			goto badmopt;
 		*arg++ = '\0';
@@ -224,7 +223,7 @@ typedef struct speeds {
 	speed_t	speed;
 } SPEEDS;
 
-SPEEDS speeds[] = {
+static SPEEDS speeds[] = {
 	{ "0",		B0 },
 	{ "134.5",	B134 },
 	{ "exta",	B19200 },
@@ -232,7 +231,7 @@ SPEEDS speeds[] = {
 	{ NULL, 0 }
 };
 
-speed_t
+static speed_t
 tset_baudrate(char *rate)
 {
 	SPEEDS *sp;

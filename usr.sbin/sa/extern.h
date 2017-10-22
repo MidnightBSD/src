@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/sa/extern.h 169857 2007-05-22 06:51:38Z dds $
+ * $FreeBSD: release/10.0.0/usr.sbin/sa/extern.h 169857 2007-05-22 06:51:38Z dds $
  */
 
 #include <sys/types.h>

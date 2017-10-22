@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/cddl/lib/libzpool/Makefile 243674 2012-11-29 14:05:04Z mm $
+# $FreeBSD: release/10.0.0/cddl/lib/libzpool/Makefile 254949 2013-08-27 04:01:31Z will $
 
 .include "${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/Makefile.files"
 
@@ -26,7 +26,7 @@ ATOMIC_SRCS=	opensolaris_atomic.c
 
 LIB=		zpool
 
-ZFS_COMMON_SRCS= ${ZFS_COMMON_OBJS:C/.o$/.c/} vdev_file.c
+ZFS_COMMON_SRCS= ${ZFS_COMMON_OBJS:C/.o$/.c/} vdev_file.c trim_map.c
 ZFS_SHARED_SRCS= ${ZFS_SHARED_OBJS:C/.o$/.c/}
 KERNEL_SRCS=	kernel.c taskq.c util.c
 LIST_SRCS=	list.c
@@ -64,7 +64,9 @@ NO_PROFILE=
 
 CSTD=	c99
 
-CFLAGS+=	-DDEBUG=1
-#DEBUG_FLAGS+=	-g
+# Since there are many asserts in this library, it makes no sense to compile
+# it without debugging.
+
+CFLAGS+=	-g -DDEBUG=1
 
 .include <bsd.lib.mk>

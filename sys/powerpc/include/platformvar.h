@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/include/platformvar.h 192067 2009-05-14 00:34:26Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/powerpc/include/platformvar.h 246732 2013-02-13 02:21:45Z rpaulo $
  */
 
 #ifndef _MACHINE_PLATFORMVAR_H_
@@ -81,7 +81,8 @@ typedef struct platform_kobj	*platform_t;
 typedef struct kobj_class	platform_def_t;
 #define platform_method_t	kobj_method_t
 
-#define PLATFORMMETHOD	KOBJMETHOD
+#define PLATFORMMETHOD		KOBJMETHOD
+#define	PLATFORMMETHOD_END	KOBJMETHOD_END
 
 #define PLATFORM_DEF(name)	DATA_SET(platform_set, name)
 

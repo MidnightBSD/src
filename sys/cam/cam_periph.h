@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/cam/cam_periph.h 237327 2012-06-20 16:51:14Z mav $
+ * $FreeBSD: release/10.0.0/sys/cam/cam_periph.h 257049 2013-10-24 10:33:31Z mav $
  */
 
 #ifndef _CAM_CAM_PERIPH_H
@@ -35,6 +35,8 @@
 #include <cam/cam_sim.h>
 
 #ifdef _KERNEL
+
+#include <cam/cam_xpt.h>
 
 struct devstat;
 
@@ -88,7 +90,7 @@ typedef enum {
 	CAM_PERIPH_BIO
 } cam_periph_type;
 
-/* Generically usefull offsets into the peripheral private area */
+/* Generically useful offsets into the peripheral private area */
 #define ppriv_ptr0 periph_priv.entries[0].ptr
 #define ppriv_ptr1 periph_priv.entries[1].ptr
 #define ppriv_field0 periph_priv.entries[0].field
@@ -119,6 +121,7 @@ struct cam_periph {
 #define CAM_PERIPH_NEW_DEV_FOUND	0x10
 #define CAM_PERIPH_RECOVERY_INPROG	0x20
 #define CAM_PERIPH_FREE			0x80
+#define CAM_PERIPH_ANNOUNCED		0x100
 	u_int32_t		 immediate_priority;
 	u_int32_t		 refcount;
 	SLIST_HEAD(, ccb_hdr)	 ccb_list;	/* For "immediate" requests */
@@ -169,8 +172,6 @@ int		cam_periph_ioctl(struct cam_periph *periph, u_long cmd,
 						      cam_flags camflags,
 						      u_int32_t sense_flags));
 void		cam_freeze_devq(struct cam_path *path);
-void		cam_freeze_devq_arg(struct cam_path *path, u_int32_t flags,
-		    uint32_t arg);
 u_int32_t	cam_release_devq(struct cam_path *path, u_int32_t relsim_flags,
 				 u_int32_t opening_reduction, u_int32_t arg,
 				 int getcount_only);
@@ -208,6 +209,43 @@ cam_periph_sleep(struct cam_periph *periph, void *chan, int priority,
 {
 	return (msleep(chan, periph->sim->mtx, priority, wmesg, timo));
 }
+
+static inline struct cam_periph *
+cam_periph_acquire_first(struct periph_driver *driver)
+{
+	struct cam_periph *periph;
+
+	xpt_lock_buses();
+	periph = TAILQ_FIRST(&driver->units);
+	while (periph != NULL && (periph->flags & CAM_PERIPH_INVALID) != 0)
+		periph = TAILQ_NEXT(periph, unit_links);
+	if (periph != NULL)
+		periph->refcount++;
+	xpt_unlock_buses();
+	return (periph);
+}
+
+static inline struct cam_periph *
+cam_periph_acquire_next(struct cam_periph *pperiph)
+{
+	struct cam_periph *periph = pperiph;
+
+	mtx_assert(pperiph->sim->mtx, MA_NOTOWNED);
+	xpt_lock_buses();
+	do {
+		periph = TAILQ_NEXT(periph, unit_links);
+	} while (periph != NULL && (periph->flags & CAM_PERIPH_INVALID) != 0);
+	if (periph != NULL)
+		periph->refcount++;
+	xpt_unlock_buses();
+	cam_periph_release(pperiph);
+	return (periph);
+}
+
+#define CAM_PERIPH_FOREACH(periph, driver)				\
+	for ((periph) = cam_periph_acquire_first(driver);		\
+	    (periph) != NULL;						\
+	    (periph) = cam_periph_acquire_next(periph))
 
 #endif /* _KERNEL */
 #endif /* _CAM_CAM_PERIPH_H */

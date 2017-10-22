@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)getnetpath.c	1.11 91/12/19 SMI";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/getnetpath.c 201603 2010-01-05 20:18:41Z brueffer $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/rpc/getnetpath.c 238483 2012-07-15 11:52:24Z brueffer $");
 
 /*
  * Copyright (c) 1989 by Sun Microsystems, Inc.
@@ -99,9 +99,8 @@ setnetpath()
 	return (NULL);
     }
     if ((np_sessionp->nc_handlep = setnetconfig()) == NULL) {
-	free(np_sessionp);
 	syslog (LOG_ERR, "rpc: failed to open " NETCONFIG);
-    	return (NULL);
+	goto failed;
     }
     np_sessionp->valid = NP_VALID;
     np_sessionp->ncp_list = NULL;

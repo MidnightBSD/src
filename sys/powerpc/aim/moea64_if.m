@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/sys/powerpc/aim/moea64_if.m 216174 2010-12-04 02:42:52Z nwhitehorn $
+# $FreeBSD: release/10.0.0/sys/powerpc/aim/moea64_if.m 216174 2010-12-04 02:42:52Z nwhitehorn $
 #
 
 

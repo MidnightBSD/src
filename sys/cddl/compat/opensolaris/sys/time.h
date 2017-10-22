@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/cddl/compat/opensolaris/sys/time.h 248369 2013-03-16 08:16:11Z mm $
+ * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/time.h 255437 2013-09-10 01:46:47Z delphij $
  */
 
 #ifndef _OPENSOLARIS_SYS_TIME_H_
@@ -35,6 +35,10 @@
 #define MILLISEC	1000
 #define MICROSEC	1000000
 #define NANOSEC		1000000000
+#define TIME_MAX	LLONG_MAX
+
+#define	MSEC2NSEC(m)	((hrtime_t)(m) * (NANOSEC / MILLISEC))
+#define	NSEC2MSEC(n)	((n) / (NANOSEC / MILLISEC))
 
 typedef longlong_t	hrtime_t;
 

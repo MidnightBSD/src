@@ -27,14 +27,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/bin/ed/sub.c 99109 2002-06-30 05:13:54Z obrien $");
+__FBSDID("$FreeBSD: release/10.0.0/bin/ed/sub.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include "ed.h"
 
 
-char *rhbuf;			/* rhs substitution buffer */
-int rhbufsz;			/* rhs substitution buffer size */
-int rhbufi;			/* rhs substitution buffer index */
+static char *rhbuf;		/* rhs substitution buffer */
+static int rhbufsz;		/* rhs substitution buffer size */
+static int rhbufi;		/* rhs substitution buffer index */
 
 /* extract_subst_tail: extract substitution tail from the command buffer */
 int
@@ -105,8 +105,8 @@ extract_subst_template(void)
 }
 
 
-char *rbuf;			/* substitute_matching_text buffer */
-int rbufsz;			/* substitute_matching_text buffer size */
+static char *rbuf;		/* substitute_matching_text buffer */
+static int rbufsz;		/* substitute_matching_text buffer size */
 
 /* search_and_replace: for each line in a range, change text matching a pattern
    according to a substitution template; return status  */

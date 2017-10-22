@@ -26,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/rman.h 221220 2011-04-29 20:05:19Z jhb $
+ * $FreeBSD: release/10.0.0/sys/sys/rman.h 232237 2012-02-27 18:28:31Z jhb $
  */
 
 #ifndef _SYS_RMAN_H_
@@ -50,7 +50,7 @@
 
 #define	RF_ALIGNMENT_SHIFT	10 /* alignment size bit starts bit 10 */
 #define	RF_ALIGNMENT_MASK	(0x003F << RF_ALIGNMENT_SHIFT)
-				/* resource address alignemnt size bit mask */
+				/* resource address alignment size bit mask */
 #define	RF_ALIGNMENT_LOG2(x)	((x) << RF_ALIGNMENT_SHIFT)
 #define	RF_ALIGNMENT(x)		(((x) & RF_ALIGNMENT_MASK) >> RF_ALIGNMENT_SHIFT)
 

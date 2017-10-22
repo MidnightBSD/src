@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/iconv.h 230196 2012-01-16 05:15:13Z kevlo $
+ * $FreeBSD: release/10.0.0/sys/sys/iconv.h 235711 2012-05-21 02:30:22Z kevlo $
  */
 #ifndef _SYS_ICONV_H_
 #define _SYS_ICONV_H_
@@ -240,7 +240,7 @@ int iconv_converter_tolowerstub(int c, void *handle);
 int iconv_converter_handler(module_t mod, int type, void *data);
 
 #ifdef ICONV_DEBUG
-#define ICDEBUG(format, ...) printf("%s: "format, __func__ , __VA_ARGS__)
+#define ICDEBUG(format, ...) printf("%s: "format, __func__ , ## __VA_ARGS__)
 #else
 #define ICDEBUG(format, ...)
 #endif

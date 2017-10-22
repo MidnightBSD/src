@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/uart/uart_bus_acpi.c 247887 2013-03-06 11:07:59Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_bus_acpi.c 246243 2013-02-02 11:38:26Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

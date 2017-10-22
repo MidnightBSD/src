@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/ppp/chap.h 173710 2007-11-17 23:14:06Z jb $
+ * $FreeBSD: release/10.0.0/usr.sbin/ppp/chap.h 173710 2007-11-17 23:14:06Z jb $
  */
 
 struct mbuf;

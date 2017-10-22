@@ -29,7 +29,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/doc/smm/01.setup/3.t 114299 2003-04-30 17:01:43Z markm $
+.\" $FreeBSD: release/10.0.0/share/doc/smm/01.setup/3.t 241606 2012-10-16 09:59:10Z attilio $
 .\"	@(#)3.t	8.1 (Berkeley) 7/27/93
 .\"
 .ds lq ``
@@ -1237,10 +1237,8 @@ location that uses a different password file.
 .PP
 Other new filesystems that may be stacked include the loopback filesystem
 .Xr mount_lofs (8),
-the kernel filesystem
-.Xr mount_kernfs (8),
-and the portal filesystem
-.Xr mount_portal (8).
+and the kernel filesystem
+.Xr mount_kernfs (8).
 .PP
 The buffer cache in the kernel is now organized as a file block cache
 rather than a device block cache.

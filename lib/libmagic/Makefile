@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/lib/libmagic/Makefile 240157 2012-09-06 06:17:39Z mckay $
+# $FreeBSD: release/10.0.0/lib/libmagic/Makefile 240377 2012-09-11 22:38:33Z obrien $
 # Copyright (c) David E. O'Brien, 2000-2004, 2006, 2009
 
 CONTRDIR=	${.CURDIR}/../../contrib/file
@@ -13,7 +13,6 @@ MAN=	libmagic.3 magic.5
 SRCS=	apprentice.c apptype.c ascmagic.c cdf.c cdf_time.c compress.c \
 	encoding.c fsmagic.c funcs.c \
 	is_tar.c magic.c print.c readcdf.c readelf.c softmagic.c
-SRCS+=	getline.c
 INCS=	magic.h
 
 MAGICPATH?=	/usr/share/misc
@@ -40,9 +39,9 @@ magic.mgc: mkmagic magic
 
 CLEANFILES+=	mkmagic
 build-tools: mkmagic
-mkmagic: apprentice.c encoding.c funcs.c getline.c magic.c print.c
-	${CC} ${CFLAGS} -DCOMPILE_ONLY -DHOSTPROG ${LDFLAGS} \
-	    -o ${.TARGET} ${.ALLSRC}
+mkmagic: apprentice.c encoding.c funcs.c magic.c print.c
+	${CC} ${CFLAGS} -DCOMPILE_ONLY ${LDFLAGS} -o ${.TARGET} ${.ALLSRC} \
+	    ${LDADD}
 
 FILEVER!= awk '$$1 == "\#define" && $$2 == "VERSION" { print $$3; exit }' \
 			${.CURDIR}/config.h

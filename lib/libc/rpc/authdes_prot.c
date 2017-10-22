@@ -2,7 +2,7 @@
 static char sccsid[] = 	"@(#)authdes_prot.c	2.1 88/07/29 4.0 RPCSRC; from 1.6 88/02/08 SMI";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/authdes_prot.c 173763 2007-11-20 01:51:20Z jb $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/rpc/authdes_prot.c 173763 2007-11-20 01:51:20Z jb $");
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for

@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/ps3/if_glc.c 223792 2011-07-05 15:00:55Z nwhitehorn $
+ * $FreeBSD: release/10.0.0/sys/powerpc/ps3/if_glc.c 243882 2012-12-05 08:04:20Z glebius $
  */
 
 #include <sys/param.h>
@@ -555,7 +555,7 @@ glc_add_rxbuf(struct glc_softc *sc, int idx)
 	bus_dma_segment_t segs[1];
 	int error, nsegs;
 			
-	m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+	m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (m == NULL)
 		return (ENOBUFS);
 	m->m_len = m->m_pkthdr.len = m->m_ext.ext_size;
@@ -630,7 +630,7 @@ glc_encap(struct glc_softc *sc, struct mbuf **m_head, bus_addr_t *pktdesc)
 		nsegs++;
 
 	if (nsegs > nsegs_max) {
-		m = m_collapse(*m_head, M_DONTWAIT, nsegs_max);
+		m = m_collapse(*m_head, M_NOWAIT, nsegs_max);
 		if (m == NULL) {
 			m_freem(*m_head);
 			*m_head = NULL;

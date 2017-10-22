@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/usr.sbin/rtadvd/if.c 224144 2011-07-17 19:24:54Z hrs $	*/
+/*	$FreeBSD: release/10.0.0/usr.sbin/rtadvd/if.c 255156 2013-09-02 20:44:19Z hrs $	*/
 /*	$KAME: if.c,v 1.17 2001/01/21 15:27:30 itojun Exp $	*/
 
 /*
@@ -394,8 +394,8 @@ update_ifinfo_nd_flags(struct ifinfo *ifi)
 	error = ioctl(s, SIOCGIFINFO_IN6, (caddr_t)&nd);
 	if (error) {
 		close(s);
-		syslog(LOG_ERR,
-		    "<%s> ioctl() failed.", __func__);
+		if (errno != EPFNOSUPPORT)
+			syslog(LOG_ERR, "<%s> ioctl() failed.", __func__);
 		return (1);
 	}
 	ifi->ifi_nd_flags = nd.ndi.flags;

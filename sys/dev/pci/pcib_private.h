@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/pci/pcib_private.h 224069 2011-07-15 21:08:58Z jhb $
+ * $FreeBSD: release/10.0.0/sys/dev/pci/pcib_private.h 253450 2013-07-18 15:17:11Z jhb $
  */
 
 #ifndef __PCIB_PRIVATE_H__
@@ -73,7 +73,8 @@ struct pcib_window {
 	pci_addr_t	base;		/* base address */
 	pci_addr_t	limit;		/* topmost address */
 	struct rman	rman;
-	struct resource *res;
+	struct resource **res;
+	int		count;		/* size of 'res' array */
 	int		reg;		/* resource id from parent */
 	int		valid;
 	int		mask;		/* WIN_* bitmask of this window */
@@ -91,6 +92,7 @@ struct pcib_softc
     uint32_t	flags;		/* flags */
 #define	PCIB_SUBTRACTIVE	0x1
 #define	PCIB_DISABLE_MSI	0x2
+#define	PCIB_DISABLE_MSIX	0x4
     uint16_t	command;	/* command register */
     u_int	domain;		/* domain number */
     u_int	pribus;		/* primary bus number */

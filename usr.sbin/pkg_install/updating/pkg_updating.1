@@ -6,11 +6,11 @@
 .\" "THE BEER-WARE LICENSE" (Revision 42):
 .\" <beat@chruetertee.ch> wrote this file. As long as you retain this notice you
 .\" can do whatever you want with this stuff. If we meet some day, and you think
-.\" this stuff is worth it, you can buy me a beer in return.          Beat Gätzi
+.\" this stuff is worth it, you can buy me a beer in return.          Beat GÃ¤tzi
 .\"
-.\" $FreeBSD: stable/9/usr.sbin/pkg_install/updating/pkg_updating.1 237216 2012-06-18 04:55:07Z eadler $
+.\" $FreeBSD: release/10.0.0/usr.sbin/pkg_install/updating/pkg_updating.1 243554 2012-11-26 05:11:07Z eadler $
 .\"
-.Dd May 30, 2008
+.Dd November 9, 2012
 .Dt PKG_UPDATING 1
 .Os
 .Sh NAME
@@ -77,6 +77,13 @@ installed ports:
 Fetch UPDATING file from ftp mirror and show all entries of all
 installed ports:
 .Dl % pkg_updating -f ftp://ftp.freebsd.org/pub/FreeBSD/ports/packages/UPDATING
+.Sh ENVRIOMENT
+.Bl -tag -width indent
+.It Ev PKG_OLD_NOWARN
+If set
+.Nm
+will not warn about its use in the presence of pkgng databases.
+.El
 .Sh SEE ALSO
 .Xr pkg_add 1 ,
 .Xr pkg_create 1 ,

@@ -1,19 +1,19 @@
-/*	$FreeBSD: stable/9/contrib/ipfilter/lib/fill6bits.c 170268 2007-06-04 02:54:36Z darrenr $	*/
+/*	$FreeBSD: release/10.0.0/contrib/ipfilter/lib/fill6bits.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2000-2002 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: fill6bits.c,v 1.5.4.1 2006/06/16 17:20:58 darrenr Exp $
+ * $Id$
  */
 
 #include "ipf.h"
 
 
 void fill6bits(bits, msk)
-int bits;
-u_int *msk;
+	int bits;
+	u_int *msk;
 {
 	if (bits == 0) {
 		msk[0] = 0;

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libthread_db/arch/sparc64/libpthread_md.c 224685 2011-08-06 17:50:37Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libthread_db/arch/sparc64/libpthread_md.c 253266 2013-07-12 14:24:52Z marius $");
 
 #include <sys/types.h>
 #include <string.h>
@@ -57,9 +57,9 @@ pt_fpreg_to_ucontext(const struct fpreg* r, ucontext_t *uc)
 
 	memcpy(mc->mc_fp, r->fr_regs, MIN(sizeof(mc->mc_fp),
 	    sizeof(r->fr_regs)));
-	mc->mc_fsr = r->fr_fsr;
-	mc->mc_gsr = r->fr_gsr;
-	mc->mc_fprs |= FPRS_FEF;
+	mc->_mc_fsr = r->fr_fsr;
+	mc->_mc_gsr = r->fr_gsr;
+	mc->_mc_fprs |= FPRS_FEF;
 }
 
 void
@@ -67,11 +67,11 @@ pt_ucontext_to_fpreg(const ucontext_t *uc, struct fpreg *r)
 {
 	const mcontext_t *mc = &uc->uc_mcontext;
 
-	if ((mc->mc_fprs & FPRS_FEF) != 0) {
+	if ((mc->_mc_fprs & FPRS_FEF) != 0) {
 		memcpy(r->fr_regs, mc->mc_fp, MIN(sizeof(mc->mc_fp),
 		    sizeof(r->fr_regs)));
-		r->fr_fsr = mc->mc_fsr;
-		r->fr_gsr = mc->mc_gsr;
+		r->fr_fsr = mc->_mc_fsr;
+		r->fr_gsr = mc->_mc_gsr;
 	} else
 		memset(r, 0, sizeof(*r));
 }

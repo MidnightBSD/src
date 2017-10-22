@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/backend/functions-parse.sh 235443 2012-05-14 15:06:04Z jpaetzel $
+# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend/functions-parse.sh 247705 2013-03-03 09:47:47Z jpaetzel $
 
 # functions.sh
 # Library of functions which pc-sysinstall may call upon for parsing the config
@@ -45,7 +45,7 @@ get_value_from_cfg_with_spaces()
 {
   if [ -n "${1}" ]
   then
-    export VAL=`grep "^${1}=" ${CFGF} | head -n 1 | cut -d '=' -f 2-`
+    export VAL="`grep ^${1}= ${CFGF} | head -n 1 | cut -d '=' -f 2-`"
   else
     exit_err "Error: Did we forgot to supply a setting to grab?"
   fi
@@ -69,7 +69,7 @@ if_check_value_exists()
 {
   if [ -n "${1}" -a -n "${2}" ]
   then
-    # Get the first occurance of the setting from the config, strip out whitespace
+    # Get the first occurrence of the setting from the config, strip out whitespace
 
     VAL=`grep "^${1}" ${CFGF} | head -n 1 | cut -d '=' -f 2- | tr -d ' '`
     if [ -z "${VAL}" ]
@@ -103,7 +103,7 @@ check_value()
 {
   if [ -n "${1}" -a -n "${2}" ]
   then
-    # Get the first occurance of the setting from the config, strip out whitespace
+    # Get the first occurrence of the setting from the config, strip out whitespace
     VAL=`grep "^${1}" ${CFGF} | head -n 1 | cut -d '=' -f 2- | tr -d ' '`
     VALID="1"
     for i in ${2}
@@ -122,7 +122,7 @@ check_value()
   fi
 };
 
-# Checks for the presense of the supplied arguements in the config file
+# Checks for the presence of the supplied arguments in the config file
 # 1  = values to confirm exist
 file_sanity_check()
 {

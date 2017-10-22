@@ -27,7 +27,7 @@
  *	from: NetBSD: htons.S,v 1.1 1996/04/17 22:36:54 cgd
  *	from: src/sys/libkern/ia64/htons.S,v 1.2 2002/02/18 20:35:21
  *
- * $FreeBSD: stable/9/sys/libkern/ia64/bswap16.S 139815 2005-01-07 00:24:33Z imp $
+ * $FreeBSD: release/10.0.0/sys/libkern/ia64/bswap16.S 139815 2005-01-07 00:24:33Z imp $
  */
 
 #define	NAME	__bswap16

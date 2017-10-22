@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netpfil/ipfw/ip_fw_sockopt.c 249002 2013-04-02 06:49:44Z ae $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netpfil/ipfw/ip_fw_sockopt.c 248971 2013-04-01 11:28:52Z melifaro $");
 
 /*
  * Sockopt support for ipfw. The routines here implement
@@ -164,8 +164,6 @@ ipfw_add_rule(struct ip_fw_chain *chain, struct ip_fw *input_rule)
 
 	l = RULESIZE(input_rule);
 	rule = malloc(l, M_IPFW, M_WAITOK | M_ZERO);
-	if (rule == NULL)
-		return (ENOSPC);
 	/* get_map returns with IPFW_UH_WLOCK if successful */
 	map = get_map(chain, 1, 0 /* not locked */);
 	if (map == NULL) {
@@ -177,9 +175,7 @@ ipfw_add_rule(struct ip_fw_chain *chain, struct ip_fw *input_rule)
 	/* clear fields not settable from userland */
 	rule->x_next = NULL;
 	rule->next_rule = NULL;
-	rule->pcnt = 0;
-	rule->bcnt = 0;
-	rule->timestamp = 0;
+	IPFW_ZERO_RULE_COUNTER(rule);
 
 	if (V_autoinc_step < 1)
 		V_autoinc_step = 1;
@@ -442,10 +438,8 @@ clear_counters(struct ip_fw *rule, int log_only)
 {
 	ipfw_insn_log *l = (ipfw_insn_log *)ACTION_PTR(rule);
 
-	if (log_only == 0) {
-		rule->bcnt = rule->pcnt = 0;
-		rule->timestamp = 0;
-	}
+	if (log_only == 0)
+		IPFW_ZERO_RULE_COUNTER(rule);
 	if (l->o.opcode == O_LOG)
 		l->log_left = l->max_log;
 }
@@ -685,6 +679,11 @@ check_ipfw_struct(struct ip_fw *rule, int size)
 				goto bad_size;
 			break;
 
+		case O_DSCP:
+			if (cmdlen != F_INSN_SIZE(ipfw_insn_u32) + 1)
+				goto bad_size;
+			break;
+
 		case O_MAC_TYPE:
 		case O_IP_SRCPORT:
 		case O_IP_DSTPORT: /* XXX artificial limit, 30 port pairs */
@@ -745,6 +744,7 @@ check_ipfw_struct(struct ip_fw *rule, int size)
 		case O_ACCEPT:
 		case O_DENY:
 		case O_REJECT:
+		case O_SETDSCP:
 #ifdef INET6
 		case O_UNREACH6:
 #endif
@@ -1003,8 +1003,6 @@ ipfw_ctl(struct sockopt *sopt)
 			if (size >= sopt->sopt_valsize)
 				break;
 			buf = malloc(size, M_TEMP, M_WAITOK);
-			if (buf == NULL)
-				break;
 			IPFW_UH_RLOCK(chain);
 			/* check again how much space we need */
 			want = chain->static_len + ipfw_dyn_len();

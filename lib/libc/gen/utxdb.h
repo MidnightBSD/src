@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libc/gen/utxdb.h 202530 2010-01-17 21:40:05Z ed $
+ * $FreeBSD: release/10.0.0/lib/libc/gen/utxdb.h 202530 2010-01-17 21:40:05Z ed $
  */
 
 #ifndef _UTXDB_H_

@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)time.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.bin/time/time.c 216370 2010-12-11 08:32:16Z joel $";
+  "$FreeBSD: release/10.0.0/usr.bin/time/time.c 244034 2012-12-08 17:41:39Z jilles $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -112,19 +112,17 @@ main(int argc, char **argv)
 	argv += optind;
 
 	if (ofn) {
-	        if ((out = fopen(ofn, aflag ? "a" : "w")) == NULL)
+	        if ((out = fopen(ofn, aflag ? "ae" : "we")) == NULL)
 		        err(1, "%s", ofn);
 		setvbuf(out, (char *)NULL, _IONBF, (size_t)0);
 	}
 
-	gettimeofday(&before_tv, (struct timezone *)NULL);
+	(void)gettimeofday(&before_tv, NULL);
 	switch(pid = fork()) {
 	case -1:			/* error */
 		err(1, "time");
 		/* NOTREACHED */
 	case 0:				/* child */
-		if (ofn)
-			fclose(out);
 		execvp(*argv, argv);
 		err(errno == ENOENT ? 127 : 126, "%s", *argv);
 		/* NOTREACHED */
@@ -134,7 +132,7 @@ main(int argc, char **argv)
 	(void)signal(SIGQUIT, SIG_IGN);
 	(void)signal(SIGINFO, siginfo);
 	while (wait4(pid, &status, 0, &ru) != pid);
-	gettimeofday(&after, (struct timezone *)NULL);
+	(void)gettimeofday(&after, NULL);
 	if ( ! WIFEXITED(status))
 		warnx("command terminated abnormally");
 	exitonsig = WIFSIGNALED(status) ? WTERMSIG(status) : 0;
@@ -297,7 +295,7 @@ siginfo(int sig __unused)
 	struct timeval after;
 	struct rusage ru;
 
-	gettimeofday(&after, (struct timezone *)NULL);
+	(void)gettimeofday(&after, NULL);
 	getrusage(RUSAGE_CHILDREN, &ru);
 	showtime(stdout, &before_tv, &after, &ru);
 }

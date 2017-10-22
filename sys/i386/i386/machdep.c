@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/i386/machdep.c 240816 2012-09-22 12:34:02Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/i386/machdep.c 258996 2013-12-05 18:08:05Z royger $");
 
 #include "opt_apic.h"
 #include "opt_atalk.h"
@@ -54,6 +54,7 @@ __FBSDID("$FreeBSD: stable/9/sys/i386/i386/machdep.c 240816 2012-09-22 12:34:02Z
 #include "opt_mp_watchdog.h"
 #include "opt_npx.h"
 #include "opt_perfmon.h"
+#include "opt_platform.h"
 #include "opt_xbox.h"
 #include "opt_kdtrace.h"
 
@@ -81,6 +82,7 @@ __FBSDID("$FreeBSD: stable/9/sys/i386/i386/machdep.c 240816 2012-09-22 12:34:02Z
 #include <sys/pcpu.h>
 #include <sys/ptrace.h>
 #include <sys/reboot.h>
+#include <sys/rwlock.h>
 #include <sys/sched.h>
 #include <sys/signalvar.h>
 #ifdef SMP
@@ -137,6 +139,9 @@ __FBSDID("$FreeBSD: stable/9/sys/i386/i386/machdep.c 240816 2012-09-22 12:34:02Z
 #ifdef SMP
 #include <machine/smp.h>
 #endif
+#ifdef FDT
+#include <x86/fdt.h>
+#endif
 
 #ifdef DEV_APIC
 #include <machine/apicvar.h>
@@ -155,9 +160,8 @@ uint32_t arch_i386_xbox_memsize = 0;
 
 #ifdef XEN
 /* XEN includes */
-#include <machine/xen/xen-os.h>
+#include <xen/xen-os.h>
 #include <xen/hypervisor.h>
-#include <machine/xen/xen-os.h>
 #include <machine/xen/xenvar.h>
 #include <machine/xen/xenfunc.h>
 #include <xen/xen_intr.h>
@@ -290,7 +294,6 @@ cpu_startup(dummy)
 #ifdef PERFMON
 	perfmon_init();
 #endif
-	realmem = Maxmem;
 
 	/*
 	 * Display physical memory if SMBIOS reports reasonable amount.
@@ -304,6 +307,7 @@ cpu_startup(dummy)
 	if (memsize < ptoa((uintmax_t)cnt.v_free_count))
 		memsize = ptoa((uintmax_t)Maxmem);
 	printf("real memory  = %ju (%ju MB)\n", memsize, memsize >> 20);
+	realmem = atop(memsize);
 
 	/*
 	 * Display any holes after the first chunk of extended memory.
@@ -338,11 +342,6 @@ cpu_startup(dummy)
 #ifndef XEN
 	cpu_setregs();
 #endif
-
-	/*
-	 * Add BSP as an interrupt target.
-	 */
-	intr_add_cpu(0);
 }
 
 /*
@@ -758,6 +757,8 @@ sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 
 	regs->tf_esp = (int)sfp;
 	regs->tf_eip = p->p_sysent->sv_sigcode_base;
+	if (regs->tf_eip == 0)
+		regs->tf_eip = p->p_sysent->sv_psstrings - szsigcode;
 	regs->tf_eflags &= ~(PSL_T | PSL_D);
 	regs->tf_cs = _ucodesel;
 	regs->tf_ds = _udatasel;
@@ -841,17 +842,7 @@ osigreturn(td, uap)
 		/*
 		 * Don't allow users to change privileged or reserved flags.
 		 */
-		/*
-		 * XXX do allow users to change the privileged flag PSL_RF.
-		 * The cpu sets PSL_RF in tf_eflags for faults.  Debuggers
-		 * should sometimes set it there too.  tf_eflags is kept in
-		 * the signal context during signal handling and there is no
-		 * other place to remember it, so the PSL_RF bit may be
-		 * corrupted by the signal handler without us knowing.
-		 * Corruption of the PSL_RF bit at worst causes one more or
-		 * one less debugger trap, so allowing it is fairly harmless.
-		 */
-		if (!EFL_SECURE(eflags & ~PSL_RF, regs->tf_eflags & ~PSL_RF)) {
+		if (!EFL_SECURE(eflags, regs->tf_eflags)) {
 	    		return (EINVAL);
 		}
 
@@ -967,17 +958,7 @@ freebsd4_sigreturn(td, uap)
 		/*
 		 * Don't allow users to change privileged or reserved flags.
 		 */
-		/*
-		 * XXX do allow users to change the privileged flag PSL_RF.
-		 * The cpu sets PSL_RF in tf_eflags for faults.  Debuggers
-		 * should sometimes set it there too.  tf_eflags is kept in
-		 * the signal context during signal handling and there is no
-		 * other place to remember it, so the PSL_RF bit may be
-		 * corrupted by the signal handler without us knowing.
-		 * Corruption of the PSL_RF bit at worst causes one more or
-		 * one less debugger trap, so allowing it is fairly harmless.
-		 */
-		if (!EFL_SECURE(eflags & ~PSL_RF, regs->tf_eflags & ~PSL_RF)) {
+		if (!EFL_SECURE(eflags, regs->tf_eflags)) {
 			uprintf("pid %d (%s): freebsd4_sigreturn eflags = 0x%x\n",
 			    td->td_proc->p_pid, td->td_name, eflags);
 	    		return (EINVAL);
@@ -1081,17 +1062,7 @@ sys_sigreturn(td, uap)
 		/*
 		 * Don't allow users to change privileged or reserved flags.
 		 */
-		/*
-		 * XXX do allow users to change the privileged flag PSL_RF.
-		 * The cpu sets PSL_RF in tf_eflags for faults.  Debuggers
-		 * should sometimes set it there too.  tf_eflags is kept in
-		 * the signal context during signal handling and there is no
-		 * other place to remember it, so the PSL_RF bit may be
-		 * corrupted by the signal handler without us knowing.
-		 * Corruption of the PSL_RF bit at worst causes one more or
-		 * one less debugger trap, so allowing it is fairly harmless.
-		 */
-		if (!EFL_SECURE(eflags & ~PSL_RF, regs->tf_eflags & ~PSL_RF)) {
+		if (!EFL_SECURE(eflags, regs->tf_eflags)) {
 			uprintf("pid %d (%s): sigreturn eflags = 0x%x\n",
 			    td->td_proc->p_pid, td->td_name, eflags);
 	    		return (EINVAL);
@@ -1216,6 +1187,13 @@ cpu_est_clockrate(int cpu_id, uint64_t *rate)
 
 #ifdef XEN
 
+static void
+idle_block(void)
+{
+
+	HYPERVISOR_sched_op(SCHEDOP_block, 0);
+}
+
 void
 cpu_halt(void)
 {
@@ -1225,7 +1203,7 @@ cpu_halt(void)
 int scheduler_running;
 
 static void
-cpu_idle_hlt(int busy)
+cpu_idle_hlt(sbintime_t sbt)
 {
 
 	scheduler_running = 1;
@@ -1241,12 +1219,12 @@ void
 cpu_halt(void)
 {
 	for (;;)
-		__asm__ ("hlt");
+		halt();
 }
 
 #endif
 
-void (*cpu_idle_hook)(void) = NULL;	/* ACPI idle hook. */
+void (*cpu_idle_hook)(sbintime_t) = NULL;	/* ACPI idle hook. */
 static int	cpu_ident_amdc1e = 0;	/* AMD C1E supported. */
 static int	idle_mwait = 1;		/* Use MONITOR/MWAIT for short idle. */
 TUNABLE_INT("machdep.idle_mwait", &idle_mwait);
@@ -1258,17 +1236,19 @@ SYSCTL_INT(_machdep, OID_AUTO, idle_mwait, CTLFLAG_RW, &idle_mwait,
 #define	STATE_SLEEPING	0x2
 
 static void
-cpu_idle_acpi(int busy)
+cpu_idle_acpi(sbintime_t sbt)
 {
 	int *state;
 
 	state = (int *)PCPU_PTR(monitorbuf);
 	*state = STATE_SLEEPING;
+
+	/* See comments in cpu_idle_hlt(). */
 	disable_intr();
 	if (sched_runnable())
 		enable_intr();
 	else if (cpu_idle_hook)
-		cpu_idle_hook();
+		cpu_idle_hook(sbt);
 	else
 		__asm __volatile("sti; hlt");
 	*state = STATE_RUNNING;
@@ -1276,15 +1256,28 @@ cpu_idle_acpi(int busy)
 
 #ifndef XEN
 static void
-cpu_idle_hlt(int busy)
+cpu_idle_hlt(sbintime_t sbt)
 {
 	int *state;
 
 	state = (int *)PCPU_PTR(monitorbuf);
 	*state = STATE_SLEEPING;
+
 	/*
-	 * We must absolutely guarentee that hlt is the next instruction
-	 * after sti or we introduce a timing window.
+	 * Since we may be in a critical section from cpu_idle(), if
+	 * an interrupt fires during that critical section we may have
+	 * a pending preemption.  If the CPU halts, then that thread
+	 * may not execute until a later interrupt awakens the CPU.
+	 * To handle this race, check for a runnable thread after
+	 * disabling interrupts and immediately return if one is
+	 * found.  Also, we must absolutely guarentee that hlt is
+	 * the next instruction after sti.  This ensures that any
+	 * interrupt that fires after the call to disable_intr() will
+	 * immediately awaken the CPU from hlt.  Finally, please note
+	 * that on x86 this works fine because of interrupts enabled only
+	 * after the instruction following sti takes place, while IF is set
+	 * to 1 immediately, allowing hlt instruction to acknowledge the
+	 * interrupt.
 	 */
 	disable_intr();
 	if (sched_runnable())
@@ -1305,28 +1298,42 @@ cpu_idle_hlt(int busy)
 #define	MWAIT_C4	0x30
 
 static void
-cpu_idle_mwait(int busy)
+cpu_idle_mwait(sbintime_t sbt)
 {
 	int *state;
 
 	state = (int *)PCPU_PTR(monitorbuf);
 	*state = STATE_MWAIT;
-	if (!sched_runnable()) {
-		cpu_monitor(state, 0, 0);
-		if (*state == STATE_MWAIT)
-			cpu_mwait(0, MWAIT_C1);
+
+	/* See comments in cpu_idle_hlt(). */
+	disable_intr();
+	if (sched_runnable()) {
+		enable_intr();
+		*state = STATE_RUNNING;
+		return;
 	}
+	cpu_monitor(state, 0, 0);
+	if (*state == STATE_MWAIT)
+		__asm __volatile("sti; mwait" : : "a" (MWAIT_C1), "c" (0));
+	else
+		enable_intr();
 	*state = STATE_RUNNING;
 }
 
 static void
-cpu_idle_spin(int busy)
+cpu_idle_spin(sbintime_t sbt)
 {
 	int *state;
 	int i;
 
 	state = (int *)PCPU_PTR(monitorbuf);
 	*state = STATE_RUNNING;
+
+	/*
+	 * The sched_runnable() call is racy but as long as there is
+	 * a loop missing it one time will have just a little impact if any 
+	 * (and it is much better than missing the check at all).
+	 */
 	for (i = 0; i < 1000; i++) {
 		if (sched_runnable())
 			return;
@@ -1364,9 +1371,9 @@ cpu_probe_amdc1e(void)
 }
 
 #ifdef XEN
-void (*cpu_idle_fn)(int) = cpu_idle_hlt;
+void (*cpu_idle_fn)(sbintime_t) = cpu_idle_hlt;
 #else
-void (*cpu_idle_fn)(int) = cpu_idle_acpi;
+void (*cpu_idle_fn)(sbintime_t) = cpu_idle_acpi;
 #endif
 
 void
@@ -1375,6 +1382,7 @@ cpu_idle(int busy)
 #ifndef XEN
 	uint64_t msr;
 #endif
+	sbintime_t sbt = -1;
 
 	CTR2(KTR_SPARE2, "cpu_idle(%d) at %d",
 	    busy, curcpu);
@@ -1394,7 +1402,7 @@ cpu_idle(int busy)
 	/* If we have time - switch timers into idle mode. */
 	if (!busy) {
 		critical_enter();
-		cpu_idleclock();
+		sbt = cpu_idleclock();
 	}
 
 #ifndef XEN
@@ -1407,7 +1415,7 @@ cpu_idle(int busy)
 #endif
 
 	/* Call main idle method. */
-	cpu_idle_fn(busy);
+	cpu_idle_fn(sbt);
 
 	/* Switch timers mack into active mode. */
 	if (!busy) {
@@ -1517,22 +1525,6 @@ idle_sysctl(SYSCTL_HANDLER_ARGS)
 
 SYSCTL_PROC(_machdep, OID_AUTO, idle, CTLTYPE_STRING | CTLFLAG_RW, 0, 0,
     idle_sysctl, "A", "currently selected idle function");
-
-uint64_t (*atomic_load_acq_64)(volatile uint64_t *) =
-    atomic_load_acq_64_i386;
-void (*atomic_store_rel_64)(volatile uint64_t *, uint64_t) =
-    atomic_store_rel_64_i386;
-
-static void
-cpu_probe_cmpxchg8b(void)
-{
-
-	if ((cpu_feature & CPUID_CX8) != 0 ||
-	    cpu_vendor_id == CPU_VENDOR_RISE) {
-		atomic_load_acq_64 = atomic_load_acq_64_i586;
-		atomic_store_rel_64 = atomic_store_rel_64_i586;
-	}
-}
 
 /*
  * Reset registers to default values on exec.
@@ -1946,6 +1938,9 @@ extern inthand_t
 #ifdef KDTRACE_HOOKS
 	IDTVEC(dtrace_ret),
 #endif
+#ifdef XENHVM
+	IDTVEC(xen_intr_upcall),
+#endif
 	IDTVEC(lcall_syscall), IDTVEC(int0x80_syscall);
 
 #ifdef DDB
@@ -2156,7 +2151,7 @@ getmemsize(int first)
 	pt_entry_t *pte;
 	quad_t dcons_addr, dcons_size;
 #ifndef XEN
-	int hasbrokenint12, i;
+	int hasbrokenint12, i, res;
 	u_int extmem;
 	struct vm86frame vmf;
 	struct vm86context vmc;
@@ -2241,7 +2236,8 @@ getmemsize(int first)
 	pmap_kenter(KERNBASE + (1 << PAGE_SHIFT), 1 << PAGE_SHIFT);
 	vmc.npages = 0;
 	smap = (void *)vm86_addpage(&vmc, 1, KERNBASE + (1 << PAGE_SHIFT));
-	vm86_getptr(&vmc, (vm_offset_t)smap, &vmf.vmf_es, &vmf.vmf_di);
+	res = vm86_getptr(&vmc, (vm_offset_t)smap, &vmf.vmf_es, &vmf.vmf_di);
+	KASSERT(res != 0, ("vm86_getptr() failed: address not found"));
 
 	vmf.vmf_ebx = 0;
 	do {
@@ -2794,7 +2790,6 @@ init386(first)
 	thread0.td_pcb->pcb_gsd = PCPU_GET(fsgs_gdt)[1];
 
 	cpu_probe_amdc1e();
-	cpu_probe_cmpxchg8b();
 }
 
 #else
@@ -2932,6 +2927,10 @@ init386(first)
 	    GSEL(GCODE_SEL, SEL_KPL));
 #ifdef KDTRACE_HOOKS
 	setidt(IDT_DTRACE_RET, &IDTVEC(dtrace_ret), SDT_SYS386TGT, SEL_UPL,
+	    GSEL(GCODE_SEL, SEL_KPL));
+#endif
+#ifdef XENHVM
+	setidt(IDT_EVTCHN, &IDTVEC(xen_intr_upcall), SDT_SYS386IGT, SEL_UPL,
 	    GSEL(GCODE_SEL, SEL_KPL));
 #endif
 
@@ -3085,7 +3084,10 @@ init386(first)
 	thread0.td_frame = &proc0_tf;
 
 	cpu_probe_amdc1e();
-	cpu_probe_cmpxchg8b();
+
+#ifdef FDT
+	x86_init_fdt();
+#endif
 }
 #endif
 
@@ -3143,9 +3145,9 @@ f00f_hack(void *unused)
 
 	printf("Intel Pentium detected, installing workaround for F00F bug\n");
 
-	tmp = kmem_alloc(kernel_map, PAGE_SIZE * 2);
+	tmp = kmem_malloc(kernel_arena, PAGE_SIZE * 2, M_WAITOK | M_ZERO);
 	if (tmp == 0)
-		panic("kmem_alloc returned 0");
+		panic("kmem_malloc returned 0");
 
 	/* Put the problematic entry (#6) at the end of the lower page. */
 	new_idt = (struct gate_descriptor*)
@@ -3154,9 +3156,7 @@ f00f_hack(void *unused)
 	r_idt.rd_base = (u_int)new_idt;
 	lidt(&r_idt);
 	idt = new_idt;
-	if (vm_map_protect(kernel_map, tmp, tmp + PAGE_SIZE,
-			   VM_PROT_READ, FALSE) != KERN_SUCCESS)
-		panic("vm_map_protect failed");
+	pmap_protect(kernel_pmap, tmp, tmp + PAGE_SIZE, VM_PROT_READ);
 }
 #endif /* defined(I586_CPU) && !NO_F00F_HACK */
 
@@ -3453,7 +3453,7 @@ get_fpcontext(struct thread *td, mcontext_t *mcp)
 	bzero(mcp->mc_fpstate, sizeof(mcp->mc_fpstate));
 #else
 	mcp->mc_ownedfp = npxgetregs(td);
-	bcopy(&td->td_pcb->pcb_user_save, &mcp->mc_fpstate,
+	bcopy(&td->td_pcb->pcb_user_save, &mcp->mc_fpstate[0],
 	    sizeof(mcp->mc_fpstate));
 	mcp->mc_fpformat = npxformat();
 #endif

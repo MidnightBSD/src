@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netpfil/ipfw/ip_fw_private.h 244571 2012-12-21 23:47:22Z melifaro $
+ * $FreeBSD: release/10.0.0/sys/netpfil/ipfw/ip_fw_private.h 254776 2013-08-24 11:59:51Z trociny $
  */
 
 #ifndef _IPFW2_PRIVATE_H
@@ -236,6 +236,30 @@ struct ip_fw_chain {
 
 struct sockopt;	/* used by tcp_var.h */
 
+/* Macro for working with various counters */
+#define	IPFW_INC_RULE_COUNTER(_cntr, _bytes)	do {	\
+	(_cntr)->pcnt++;				\
+	(_cntr)->bcnt += _bytes;			\
+	(_cntr)->timestamp = time_uptime;		\
+	} while (0)
+
+#define	IPFW_INC_DYN_COUNTER(_cntr, _bytes)	do {		\
+	(_cntr)->pcnt++;				\
+	(_cntr)->bcnt += _bytes;			\
+	} while (0)
+
+#define	IPFW_ZERO_RULE_COUNTER(_cntr) do {		\
+	(_cntr)->pcnt = 0;				\
+	(_cntr)->bcnt = 0;				\
+	(_cntr)->timestamp = 0;				\
+	} while (0)
+
+#define	IPFW_ZERO_DYN_COUNTER(_cntr) do {		\
+	(_cntr)->pcnt = 0;				\
+	(_cntr)->bcnt = 0;				\
+	} while (0)
+
+#define	IP_FW_ARG_TABLEARG(a)	(((a) == IP_FW_TABLEARG) ? tablearg : (a))
 /*
  * The lock is heavily used by ip_fw2.c (the main file) and ip_fw_nat.c
  * so the variable and the macros must be here.
@@ -254,10 +278,12 @@ struct sockopt;	/* used by tcp_var.h */
 #define	IPFW_RLOCK_ASSERT(_chain)	rw_assert(&(_chain)->rwmtx, RA_RLOCKED)
 #define	IPFW_WLOCK_ASSERT(_chain)	rw_assert(&(_chain)->rwmtx, RA_WLOCKED)
 
-#define IPFW_RLOCK(p) rw_rlock(&(p)->rwmtx)
-#define IPFW_RUNLOCK(p) rw_runlock(&(p)->rwmtx)
-#define IPFW_WLOCK(p) rw_wlock(&(p)->rwmtx)
-#define IPFW_WUNLOCK(p) rw_wunlock(&(p)->rwmtx)
+#define	IPFW_RLOCK(p)			rw_rlock(&(p)->rwmtx)
+#define	IPFW_RUNLOCK(p)			rw_runlock(&(p)->rwmtx)
+#define	IPFW_WLOCK(p)			rw_wlock(&(p)->rwmtx)
+#define	IPFW_WUNLOCK(p)			rw_wunlock(&(p)->rwmtx)
+#define	IPFW_PF_RLOCK(p)		IPFW_RLOCK(p)
+#define	IPFW_PF_RUNLOCK(p)		IPFW_RUNLOCK(p)
 
 #define	IPFW_UH_RLOCK_ASSERT(_chain)	rw_assert(&(_chain)->uh_lock, RA_RLOCKED)
 #define	IPFW_UH_WLOCK_ASSERT(_chain)	rw_assert(&(_chain)->uh_lock, RA_WLOCKED)
@@ -273,10 +299,6 @@ int ipfw_add_rule(struct ip_fw_chain *chain, struct ip_fw *input_rule);
 int ipfw_ctl(struct sockopt *sopt);
 int ipfw_chk(struct ip_fw_args *args);
 void ipfw_reap_rules(struct ip_fw *head);
-
-/* In ip_fw_pfil */
-int ipfw_check_hook(void *arg, struct mbuf **m0, struct ifnet *ifp, int dir,
-     struct inpcb *inp);
 
 /* In ip_fw_table.c */
 struct radix_node;
@@ -305,9 +327,11 @@ extern struct cfg_nat *(*lookup_nat_ptr)(struct nat_list *, int);
 typedef int ipfw_nat_t(struct ip_fw_args *, struct cfg_nat *, struct mbuf *);
 typedef int ipfw_nat_cfg_t(struct sockopt *);
 
-extern ipfw_nat_t *ipfw_nat_ptr;
-#define IPFW_NAT_LOADED (ipfw_nat_ptr != NULL)
+VNET_DECLARE(int, ipfw_nat_ready);
+#define	V_ipfw_nat_ready	VNET(ipfw_nat_ready)
+#define	IPFW_NAT_LOADED	(V_ipfw_nat_ready)
 
+extern ipfw_nat_t *ipfw_nat_ptr;
 extern ipfw_nat_cfg_t *ipfw_nat_cfg_ptr;
 extern ipfw_nat_cfg_t *ipfw_nat_del_ptr;
 extern ipfw_nat_cfg_t *ipfw_nat_get_cfg_ptr;

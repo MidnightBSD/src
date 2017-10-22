@@ -26,17 +26,23 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)swapon.8	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD: stable/9/sbin/swapon/swapon.8 179966 2008-06-23 22:17:08Z mtm $
+.\" $FreeBSD: release/10.0.0/sbin/swapon/swapon.8 252310 2013-06-27 18:28:45Z hrs $
 .\"
-.Dd June 23, 2008
+.Dd June 21, 2013
 .Dt SWAPON 8
 .Os
 .Sh NAME
 .Nm swapon , swapoff , swapctl
 .Nd "specify devices for paging and swapping"
 .Sh SYNOPSIS
-.Nm swapon Fl aq | Ar
-.Nm swapoff Fl aq | Ar
+.Nm swapon
+.Oo Fl F Ar fstab
+.Oc
+.Fl aLq | Ar
+.Nm swapoff
+.Oo Fl F Ar fstab
+.Oc
+.Fl aLq | Ar
 .Nm swapctl
 .Op Fl AghklmsU
 .Oo
@@ -68,10 +74,19 @@ option is used, all swap devices in
 .Pa /etc/fstab
 will be added, unless their
 .Dq noauto
+or
+.Dq late
 option is also set.
 If the
+.Fl L
+option is specified,
+swap devices with the
+.Dq late
+option will be added as well as ones with no option.
+If the
 .Fl q
-option is used informational messages will not be
+option is used,
+informational messages will not be
 written to standard output when a swap device is added.
 .Pp
 The
@@ -83,10 +98,19 @@ option is used, all swap devices in
 .Pa /etc/fstab
 will be removed, unless their
 .Dq noauto
+or
+.Dq late
 option is also set.
 If the
+.Fl L
+option is specified,
+swap devices with the
+.Dq late
+option will be removed as well as ones with no option.
+If the
 .Fl q
-option is used informational messages will not be
+option is used,
+informational messages will not be
 written to standard output when a swap device is removed.
 Note that
 .Nm swapoff
@@ -98,6 +122,18 @@ utility
 must move swapped pages out of the device being removed which could
 lead to high system loads for a period of time, depending on how
 much data has been swapped out to that device.
+.Pp
+Other options supported by both
+.Nm swapon
+and
+.Nm swapoff
+are as follows:
+.Bl -tag -width indent
+.It Fl F Ar fstab
+Specify the
+.Pa fstab
+file to use.
+.El
 .Pp
 The
 .Nm swapctl

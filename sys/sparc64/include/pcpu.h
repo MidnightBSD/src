@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/i386/include/globaldata.h,v 1.27 2001/04/27
- * $FreeBSD: stable/9/sys/sparc64/include/pcpu.h 227714 2011-11-19 13:03:59Z marius $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/pcpu.h 249265 2013-04-08 19:19:10Z glebius $
  */
 
 #ifndef	_MACHINE_PCPU_H_
@@ -60,7 +60,8 @@ struct pmap;
 	u_int	pc_node;						\
 	u_int	pc_tlb_ctx;						\
 	u_int	pc_tlb_ctx_max;						\
-	u_int	pc_tlb_ctx_min
+	u_int	pc_tlb_ctx_min;						\
+	char	__pad[405]
 
 #ifdef _KERNEL
 

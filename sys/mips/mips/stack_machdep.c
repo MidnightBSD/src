@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/mips/stack_machdep.c 209500 2010-06-24 08:08:43Z jchandra $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/stack_machdep.c 250576 2013-05-12 16:43:26Z eadler $");
 
 #include <sys/types.h>
 #include <sys/systm.h>
@@ -148,7 +148,7 @@ stack_save(struct stack *st)
 	u_register_t pc, sp;
 
 	if (curthread == NULL)
-		panic("stack_save: curthread == NULL)");
+		panic("stack_save: curthread == NULL");
 
 	pc = curthread->td_pcb->pcb_regs.pc;
 	sp = curthread->td_pcb->pcb_regs.sp;

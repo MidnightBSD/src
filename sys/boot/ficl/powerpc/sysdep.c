@@ -7,7 +7,7 @@
 **
 *******************************************************************/
 
-/* $FreeBSD: stable/9/sys/boot/ficl/powerpc/sysdep.c 123372 2003-12-10 09:05:08Z grehan $ */
+/* $FreeBSD: release/10.0.0/sys/boot/ficl/powerpc/sysdep.c 123372 2003-12-10 09:05:08Z grehan $ */
 
 #ifdef TESTMAIN
 #include <stdio.h>

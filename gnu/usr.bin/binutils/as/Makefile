@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/gnu/usr.bin/binutils/as/Makefile 235398 2012-05-13 13:57:53Z kib $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/binutils/as/Makefile 244377 2012-12-18 04:44:36Z ache $
 
 
 # BINDIR
@@ -7,6 +7,10 @@
 .include <bsd.own.mk>
 
 .PATH: ${SRCDIR}/gas ${SRCDIR}/gas/config
+
+.if ${TARGET_ARCH:Marm*} || ${TARGET_ARCH} == "powerpc64"
+NO_WERROR.clang=
+.endif
 
 PROG=	as
 SRCS+=	app.c \
@@ -42,8 +46,19 @@ SRCS+=	app.c \
 # DEO: why not used?
 #SRCS+=	itbl-ops.c
 
+.if ${TARGET_ARCH} == "armv6" || ${TARGET_ARCH} == "armv6eb"
+CFLAGS+=	-DCPU_DEFAULT=ARM_ARCH_V6K
+.endif
+
 .if ${TARGET_CPUARCH} == "mips"
 SRCS+=	itbl-ops.c itbl-parse.y itbl-lex.l
+.if ${TARGET_ARCH:Mmips64*} != ""
+CFLAGS+=	-DMIPS_DEFAULT_ABI=N64_ABI -DMIPS_DEFAULT_64BIT=1
+.elif ${TARGET_ARCH:Mmipsn32*} != ""
+CFLAGS+=	-DMIPS_DEFAULT_ABI=N32_ABI
+.else
+MIPS_ABI_DEFAULT=ABI_32
+.endif
 .endif
 
 .if ${TARGET_ARCH} == "amd64"

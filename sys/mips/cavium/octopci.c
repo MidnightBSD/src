@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/mips/cavium/octopci.c 229093 2011-12-31 14:12:12Z hselasky $
+ * $FreeBSD: release/10.0.0/sys/mips/cavium/octopci.c 242454 2012-11-01 20:39:39Z jmallett $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octopci.c 229093 2011-12-31 14:12:12Z hselasky $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octopci.c 242454 2012-11-01 20:39:39Z jmallett $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -49,7 +49,7 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octopci.c 229093 2011-12-31 14:12:1
 #include <machine/pmap.h>
 
 #include <contrib/octeon-sdk/cvmx.h>
-#include <contrib/octeon-sdk/cvmx-interrupt.h>
+#include <mips/cavium/octeon_irq.h>
 #include <contrib/octeon-sdk/cvmx-pcie.h>
 
 #include <dev/pci/pcireg.h>
@@ -104,8 +104,6 @@ static uint64_t	octopci_cs_addr(unsigned, unsigned, unsigned, unsigned);
 static void
 octopci_identify(driver_t *drv, device_t parent)
 {
-	/* XXX Check sysinfo flag.  */
-
 	BUS_ADD_CHILD(parent, 0, "pcib", 0);
 	if (octeon_has_feature(OCTEON_FEATURE_PCIE))
 		BUS_ADD_CHILD(parent, 0, "pcib", 1);
@@ -118,6 +116,10 @@ octopci_probe(device_t dev)
 		device_set_desc(dev, "Cavium Octeon PCIe bridge");
 		return (0);
 	}
+
+	/* Check whether we are a PCI host.  */
+	if ((cvmx_sysinfo_get()->bootloader_config_flags & CVMX_BOOTINFO_CFG_FLAG_PCI_HOST) == 0)
+		return (ENXIO);
 
 	if (device_get_unit(dev) != 0)
 		return (ENXIO);
@@ -424,7 +426,7 @@ octopci_route_interrupt(device_t dev, device_t child, int pin)
 	sc = device_get_softc(dev);
 
 	if (octeon_has_feature(OCTEON_FEATURE_PCIE))
-		return (CVMX_IRQ_PCI_INT0 + pin - 1);
+		return (OCTEON_IRQ_PCI_INT0 + pin - 1);
 
         bus = pci_get_bus(child);
         slot = pci_get_slot(child);
@@ -435,7 +437,7 @@ octopci_route_interrupt(device_t dev, device_t child, int pin)
 	 */
 #if defined(OCTEON_BOARD_CAPK_0100ND)
 	if (bus == 0 && slot == 12 && func == 0)
-		return (CVMX_IRQ_PCI_INT2);
+		return (OCTEON_IRQ_PCI_INT2);
 #endif
 
 	/*
@@ -444,14 +446,14 @@ octopci_route_interrupt(device_t dev, device_t child, int pin)
 	switch (cvmx_sysinfo_get()->board_type) {
 #if defined(OCTEON_VENDOR_LANNER)
 	case CVMX_BOARD_TYPE_CUST_LANNER_MR955:
-		return (CVMX_IRQ_PCI_INT0 + pin - 1);
+		return (OCTEON_IRQ_PCI_INT0 + pin - 1);
 	case CVMX_BOARD_TYPE_CUST_LANNER_MR320:
 		if (slot < 32) {
 			if (slot == 3 || slot == 9)
 				irq = pin;
 			else
 				irq = pin - 1;
-			return (CVMX_IRQ_PCI_INT0 + (irq & 3));
+			return (OCTEON_IRQ_PCI_INT0 + (irq & 3));
 		}
 		break;
 #endif
@@ -461,7 +463,7 @@ octopci_route_interrupt(device_t dev, device_t child, int pin)
 
 	irq = slot + pin - 3;
 
-	return (CVMX_IRQ_PCI_INT0 + (irq & 3));
+	return (OCTEON_IRQ_PCI_INT0 + (irq & 3));
 }
 
 static unsigned

@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $FreeBSD: stable/9/contrib/top/commands.c 223936 2011-07-11 16:48:52Z jhb $
+ * $FreeBSD: release/10.0.0/contrib/top/commands.c 242888 2012-11-11 08:22:58Z rpaulo $
  */
 
 /*
@@ -80,11 +80,11 @@ n or #  - change number of processes to display\n", stdout);
 #ifdef ORDER
 	if (displaymode == DISP_CPU)
 		fputs("\
-o       - specify sort order (pri, size, res, cpu, time, threads, jid)\n",
+o       - specify sort order (pri, size, res, cpu, time, threads, jid, pid)\n",
 	    stdout);
 	else
 		fputs("\
-o       - specify sort order (vcsw, ivcsw, read, write, fault, total, jid)\n",
+o       - specify sort order (vcsw, ivcsw, read, write, fault, total, jid, pid)\n",
 	    stdout);
 #endif
 	fputs("\

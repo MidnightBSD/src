@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netipx/ipx_outputfl.c 194905 2009-06-24 20:57:50Z rwatson $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netipx/ipx_outputfl.c 243882 2012-12-05 08:04:20Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -270,7 +270,7 @@ ipx_output_type20(struct mbuf *m)
 			if(ipx->ipx_sum != 0xffff)
 				ipx->ipx_sum = ipx_cksum(m, ntohs(ipx->ipx_len));
 
-			m1 = m_copym(m, 0, M_COPYALL, M_DONTWAIT);
+			m1 = m_copym(m, 0, M_COPYALL, M_NOWAIT);
 			if(m1) {
 				error = (*ifp->if_output)(ifp, m1,
 					(struct sockaddr *)&dst, NULL);

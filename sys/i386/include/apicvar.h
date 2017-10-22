@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/i386/include/apicvar.h 235796 2012-05-22 17:44:01Z iwasaki $
+ * $FreeBSD: release/10.0.0/sys/i386/include/apicvar.h 255040 2013-08-29 19:52:18Z gibbs $
  */
 
 #ifndef _MACHINE_APICVAR_H_
@@ -103,36 +103,6 @@
  */ 
 
 /* Interrupts for local APIC LVT entries other than the timer. */
-#ifdef XEN
-/* These are the Xen i386 APIC definitions */
-#define	APIC_LOCAL_INTS	240
-#define	APIC_ERROR_INT	APIC_LOCAL_INTS
-#define	APIC_THERMAL_INT (APIC_LOCAL_INTS + 1)
-#define	APIC_CMC_INT	(APIC_LOCAL_INTS + 2)
-#define	APIC_IPI_INTS	(APIC_LOCAL_INTS + 3)
-
-#define	IPI_RENDEZVOUS		(APIC_IPI_INTS)	/* Inter-CPU rendezvous. */
-#define	IPI_INVLTLB		(APIC_IPI_INTS + 1)	/* TLB Shootdown IPIs */
-#define	IPI_INVLPG		(APIC_IPI_INTS + 2)
-#define	IPI_INVLRNG		(APIC_IPI_INTS + 3)
-#define	IPI_INVLCACHE		(APIC_IPI_INTS + 4)
-#define	IPI_LAZYPMAP		(APIC_IPI_INTS + 5)	/* Lazy pmap release. */
-/* Vector to handle bitmap based IPIs */
-#define	IPI_BITMAP_VECTOR	(APIC_IPI_INTS + 6)
-
-/* IPIs handled by IPI_BITMAPED_VECTOR  (XXX ups is there a better place?) */
-#define	IPI_AST		0 	/* Generate software trap. */
-#define IPI_PREEMPT     1
-#define IPI_HARDCLOCK   2 
-#define IPI_BITMAP_LAST IPI_HARDCLOCK
-#define IPI_IS_BITMAPED(x) ((x) <= IPI_BITMAP_LAST)
-
-#define	IPI_STOP	(APIC_IPI_INTS + 7)	/* Stop CPU until restarted. */
-#define	IPI_SUSPEND	(APIC_IPI_INTS + 8)	/* Suspend CPU until restarted. */
-#define	IPI_STOP_HARD	(APIC_IPI_INTS + 9)	/* Stop CPU with a NMI. */
-
-#else /* XEN */
-/* These are the normal i386 APIC definitions */
 #define	APIC_LOCAL_INTS	240
 #define	APIC_ERROR_INT	APIC_LOCAL_INTS
 #define	APIC_THERMAL_INT (APIC_LOCAL_INTS + 1)
@@ -158,7 +128,6 @@
 #define	IPI_STOP	(APIC_IPI_INTS + 7)	/* Stop CPU until restarted. */
 #define	IPI_SUSPEND	(APIC_IPI_INTS + 8)	/* Suspend CPU until restarted. */
 #define	IPI_STOP_HARD	(APIC_IPI_INTS + 9)	/* Stop CPU with a NMI. */
-#endif /* XEN */
 
 /*
  * The spurious interrupt can share the priority class with the IPIs since
@@ -257,6 +226,7 @@ int	lapic_set_lvt_triggermode(u_int apic_id, u_int lvt,
 	    enum intr_trigger trigger);
 void	lapic_set_tpr(u_int vector);
 void	lapic_setup(int boot);
+void	xen_intr_handle_upcall(struct trapframe *frame);
 
 #endif /* !LOCORE */
 #endif /* _MACHINE_APICVAR_H_ */

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/usr.bin/truss/Makefile 234444 2012-04-18 20:32:07Z dim $
+# $FreeBSD: release/10.0.0/usr.bin/truss/Makefile 234060 2012-04-09 15:34:22Z dim $
 
 NO_WERROR=
 PROG=	truss
@@ -23,8 +23,8 @@ syscalls.h:	syscalls.master
 		${.CURDIR}/i386.conf
 
 ioctl.c: ${.CURDIR}/../kdump/mkioctls
-	env CPP="${CPP}" \
-	    sh ${.CURDIR}/../kdump/mkioctls ${DESTDIR}/usr/include > ${.TARGET}
+	env MACHINE=${MACHINE} CPP="${CPP}" \
+		/bin/sh ${.CURDIR}/../kdump/mkioctls return ${DESTDIR}/usr/include > ${.TARGET}
 
 .if ${MACHINE_CPUARCH} == "i386"
 SRCS+=	i386-linux.c linux_syscalls.h

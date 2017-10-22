@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/monetdef/zh_CN.UTF-8.src 127474 2004-03-27 08:14:15Z tjr $
+# $FreeBSD: release/10.0.0/share/monetdef/zh_CN.UTF-8.src 227467 2011-11-12 14:39:20Z theraven $
 #
 # WARNING: spaces may be essential at the end of lines
 # WARNING: empty lines are essential too
@@ -18,9 +18,9 @@ CNY
 # negative_sign
 -
 # int_frac_digits
-0
+2
 # frac_digits
-0
+2
 # p_cs_precedes
 1
 # p_sep_by_space

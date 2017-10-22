@@ -25,13 +25,16 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/compat/linux/linux_signal.h 218717 2011-02-15 21:22:09Z dchagin $
+ * $FreeBSD: release/10.0.0/sys/compat/linux/linux_signal.h 246085 2013-01-29 18:41:30Z jhb $
  */
 
 #ifndef _LINUX_SIGNAL_H_
 #define _LINUX_SIGNAL_H_
 
 #define	LINUX_SI_TKILL		-6;
+
+extern int bsd_to_linux_signal[];
+extern int linux_to_bsd_signal[];
 
 void linux_to_bsd_sigset(l_sigset_t *, sigset_t *);
 void bsd_to_linux_sigset(sigset_t *, l_sigset_t *);

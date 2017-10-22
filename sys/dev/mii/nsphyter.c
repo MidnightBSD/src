@@ -55,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/mii/nsphyter.c 232137 2012-02-25 00:41:35Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mii/nsphyter.c 231914 2012-02-19 12:25:58Z marius $");
 
 /*
  * Driver for the National Semiconductor's DP83843, DP83847 and DP83849

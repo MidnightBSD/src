@@ -1,5 +1,5 @@
 /*
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/lib/url.c 236462 2012-06-02 18:28:34Z jpaetzel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg_install/lib/url.c 236333 2012-05-30 21:01:06Z jpaetzel $");
 
 #include "lib.h"
 #include <err.h>

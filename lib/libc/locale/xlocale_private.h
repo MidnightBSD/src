@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libc/locale/xlocale_private.h 235785 2012-05-22 14:40:39Z theraven $
+ * $FreeBSD: release/10.0.0/lib/libc/locale/xlocale_private.h 250883 2013-05-21 19:59:37Z ed $
  */
 
 #ifndef _XLOCALE_PRIVATE__H_
@@ -109,6 +109,10 @@ struct _xlocale {
 	__mbstate_t mblen;
 	/** Persistent state used by mbrlen() calls. */
 	__mbstate_t mbrlen;
+	/** Persistent state used by mbrtoc16() calls. */
+	__mbstate_t mbrtoc16;
+	/** Persistent state used by mbrtoc32() calls. */
+	__mbstate_t mbrtoc32;
 	/** Persistent state used by mbrtowc() calls. */
 	__mbstate_t mbrtowc;
 	/** Persistent state used by mbsnrtowcs() calls. */
@@ -117,6 +121,10 @@ struct _xlocale {
 	__mbstate_t mbsrtowcs;
 	/** Persistent state used by mbtowc() calls. */
 	__mbstate_t mbtowc;
+	/** Persistent state used by c16rtomb() calls. */
+	__mbstate_t c16rtomb;
+	/** Persistent state used by c32rtomb() calls. */
+	__mbstate_t c32rtomb;
 	/** Persistent state used by wcrtomb() calls. */
 	__mbstate_t wcrtomb;
 	/** Persistent state used by wcsnrtombs() calls. */

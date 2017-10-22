@@ -24,7 +24,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/fdcio.h 139825 2005-01-07 02:29:27Z imp $
+ * $FreeBSD: release/10.0.0/sys/sys/fdcio.h 139825 2005-01-07 02:29:27Z imp $
  */
 
 #ifndef	_MACHINE_IOCTL_FD_H_

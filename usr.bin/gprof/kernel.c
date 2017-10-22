@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/gprof/kernel.c 136176 2004-10-05 23:50:10Z green $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/gprof/kernel.c 246783 2013-02-14 08:16:03Z charnier $");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -16,7 +16,7 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/gprof/kernel.c 136176 2004-10-05 23:50:10Z 
 static char	*excludes[] = { ".mcount", "_mcleanup", NULL };
 
 int
-kernel_getnfile(const char *unused, char ***defaultEs)
+kernel_getnfile(const char *unused __unused, char ***defaultEs)
 {
 	char *namelist;
 	size_t len;

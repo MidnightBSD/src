@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libmemstat/memstat.h 224569 2011-08-01 09:43:35Z pluknet $
+ * $FreeBSD: release/10.0.0/lib/libmemstat/memstat.h 224569 2011-08-01 09:43:35Z pluknet $
  */
 
 #ifndef _MEMSTAT_H_

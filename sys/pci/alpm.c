@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/pci/alpm.c 165951 2007-01-11 19:56:24Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/pci/alpm.c 165951 2007-01-11 19:56:24Z jhb $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

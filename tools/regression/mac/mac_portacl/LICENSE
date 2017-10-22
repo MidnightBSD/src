@@ -1,4 +1,4 @@
-$FreeBSD: stable/9/tools/regression/mac/mac_portacl/LICENSE 189833 2009-03-14 21:59:12Z pjd $
+$FreeBSD: release/10.0.0/tools/regression/mac/mac_portacl/LICENSE 189833 2009-03-14 21:59:12Z pjd $
 
 License for all mac_portacl regression tests:
 

@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/net/if_iso88025subr.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: release/10.0.0/sys/net/if_iso88025subr.c 254831 2013-08-25 09:41:37Z andre $
  *
  */
 
@@ -231,11 +231,8 @@ iso88025_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
  * ISO88025 encapsulation
  */
 int
-iso88025_output(ifp, m, dst, ro)
-	struct ifnet *ifp;
-	struct mbuf *m;
-	struct sockaddr *dst;
-	struct route *ro;
+iso88025_output(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
+	struct route *ro)
 {
 	u_int16_t snap_type = 0;
 	int loop_copy = 0, error = 0, rif_len = 0;
@@ -338,7 +335,7 @@ iso88025_output(ifp, m, dst, ro)
 		bcopy((caddr_t)&(satoipx_addr(dst).x_host), (caddr_t)edst,
 		      ISO88025_ADDR_LEN);
 
-		M_PREPEND(m, 3, M_WAIT);
+		M_PREPEND(m, 3, M_WAITOK);
 		m = m_pullup(m, 3);
 		if (m == 0)
 			senderr(ENOBUFS);
@@ -351,7 +348,7 @@ iso88025_output(ifp, m, dst, ro)
 #endif	/* IPX */
 	case AF_UNSPEC:
 	{
-		struct iso88025_sockaddr_data *sd;
+		const struct iso88025_sockaddr_data *sd;
 		/*
 		 * For AF_UNSPEC sockaddr.sa_data must contain all of the
 		 * mac information needed to send the packet.  This allows
@@ -361,13 +358,12 @@ iso88025_output(ifp, m, dst, ro)
 		 * should be an iso88025_sockaddr_data structure see iso88025.h
 		 */
                 loop_copy = -1;
-		sd = (struct iso88025_sockaddr_data *)dst->sa_data;
+		sd = (const struct iso88025_sockaddr_data *)dst->sa_data;
 		gen_th.ac = sd->ac;
 		gen_th.fc = sd->fc;
-		(void)memcpy((caddr_t)edst, (caddr_t)sd->ether_dhost,
-			     ISO88025_ADDR_LEN);
-		(void)memcpy((caddr_t)gen_th.iso88025_shost,
-			     (caddr_t)sd->ether_shost, ISO88025_ADDR_LEN);
+		(void)memcpy(edst, sd->ether_dhost, ISO88025_ADDR_LEN);
+		(void)memcpy(gen_th.iso88025_shost, sd->ether_shost,
+		    ISO88025_ADDR_LEN);
 		rif_len = 0;
 		break;
 	}
@@ -382,7 +378,7 @@ iso88025_output(ifp, m, dst, ro)
 	 */
 	if (snap_type != 0) {
         	struct llc *l;
-		M_PREPEND(m, LLC_SNAPFRAMELEN, M_DONTWAIT);
+		M_PREPEND(m, LLC_SNAPFRAMELEN, M_NOWAIT);
 		if (m == 0)
 			senderr(ENOBUFS);
 		l = mtod(m, struct llc *);
@@ -398,7 +394,7 @@ iso88025_output(ifp, m, dst, ro)
 	 * Add local net header.  If no space in first mbuf,
 	 * allocate another.
 	 */
-	M_PREPEND(m, ISO88025_HDR_LEN + rif_len, M_DONTWAIT);
+	M_PREPEND(m, ISO88025_HDR_LEN + rif_len, M_NOWAIT);
 	if (m == 0)
 		senderr(ENOBUFS);
 	th = mtod(m, struct iso88025_header *);
@@ -480,7 +476,6 @@ iso88025_input(ifp, m)
 		goto dropanyway;
 	}
 	th = mtod(m, struct iso88025_header *);
-	m->m_pkthdr.header = (void *)th;
 
 	/*
 	 * Discard packet if interface is not up.

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libkse/thread/thr_connect.c 174689 2007-12-16 23:29:57Z deischen $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libkse/thread/thr_connect.c 174689 2007-12-16 23:29:57Z deischen $");
 
 #include <sys/types.h>
 #include <sys/socket.h>

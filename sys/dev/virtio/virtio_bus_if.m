@@ -1,5 +1,5 @@
 #-
-# Copyright (c) 2011, Bryan Venteicher <bryanv@daemoninthecloset.org>
+# Copyright (c) 2011, Bryan Venteicher <bryanv@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/sys/dev/virtio/virtio_bus_if.m 227652 2011-11-18 05:43:43Z grehan $
+# $FreeBSD: release/10.0.0/sys/dev/virtio/virtio_bus_if.m 252707 2013-07-04 17:57:26Z bryanv $
 
 #include <sys/bus.h>
 #include <machine/bus.h>
@@ -49,9 +49,6 @@ METHOD int alloc_virtqueues {
 	int		flags;
 	int		nvqs;
 	struct vq_alloc_info *info;
-};
-HEADER {
-#define VIRTIO_ALLOC_VQS_DISABLE_MSIX 0x1
 };
 
 METHOD int setup_intr {

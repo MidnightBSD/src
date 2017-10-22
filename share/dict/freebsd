@@ -1,4 +1,4 @@
-$FreeBSD: stable/9/share/dict/freebsd 166081 2007-01-18 03:07:04Z delphij $
+$FreeBSD: release/10.0.0/share/dict/freebsd 241636 2012-10-17 11:30:00Z attilio $
 ABI
 ACL
 ACPI
@@ -128,7 +128,6 @@ NNTP
 NSS
 NSSwitch
 NT
-NTFS
 NTP
 Nasdaq
 NetBIOS

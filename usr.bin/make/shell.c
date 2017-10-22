@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/make/shell.c 146572 2005-05-24 15:30:03Z harti $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/make/shell.c 146572 2005-05-24 15:30:03Z harti $");
 
 #include <sys/queue.h>
 #include <stdio.h>

@@ -22,7 +22,7 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \
-\ $FreeBSD: stable/9/sys/boot/forth/loader.4th 230219 2012-01-16 14:55:42Z pluknet $
+\ $FreeBSD: release/10.0.0/sys/boot/forth/loader.4th 242667 2012-11-06 19:26:36Z dteske $
 
 s" arch-i386" environment? [if] [if]
 	s" loader_version" environment?  [if]
@@ -40,6 +40,7 @@ s" arch-i386" environment? [if] [if]
 2048 dictincrease !  \ 2048 additional cells each time
 
 include /boot/support.4th
+include /boot/color.4th
 
 only forth also support-functions also builtins definitions
 
@@ -59,10 +60,22 @@ only forth also support-functions also builtins definitions
   else
     drop
   then
+  s" menusets-unset"
+  sfind if
+    execute
+  else
+    drop
+  then
 ;
 
 : boot
   0= if ( interpreted ) get_arguments then
+
+  loader_color? if
+    ." [37;44mBooting...[0m" cr
+  else
+    ." Booting..." cr
+  then
 
   \ Unload only if a path was passed
   dup if

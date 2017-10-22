@@ -23,14 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/csup/diff.c 204556 2010-03-02 07:26:07Z lulf $
+ * $FreeBSD: release/10.0.0/usr.bin/csup/diff.c 225844 2011-09-28 17:03:49Z crees $
  */
-
-#include <sys/limits.h>
 
 #include <assert.h>
 #include <err.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

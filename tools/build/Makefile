@@ -1,13 +1,25 @@
-# $FreeBSD: stable/9/tools/build/Makefile 248330 2013-03-15 14:53:29Z brooks $
+# $FreeBSD: release/10.0.0/tools/build/Makefile 245311 2013-01-11 20:51:02Z brooks $
 
 .PATH: ${.CURDIR}/../../include
 
 LIB=		egacy
-SRCS=
+SRC=
 INCSGROUPS=	INCS
-INCS=		
+INCS=
 
 BOOTSTRAPPING?=	0
+
+_WITH_GETLINE!=	grep -c _WITH_GETLINE /usr/include/stdio.h || true
+.if ${_WITH_GETLINE} == 0
+.PATH: ${.CURDIR}/../../contrib/file ${.CURDIR}/../../lib/libmagic
+SRCS=		getline.c config.h
+CFLAGS+=	-DHAVE_CONFIG_H -I.
+CLEANFILES+=	config.h
+
+${SRCS:N*.h:R:S/$/.o/}: config.h
+config.h: ${.CURDIR}/../../lib/libmagic/config.h
+	grep -v HAVE_GETLINE ${.ALLSRC} > ${.TARGET}
+.endif
 
 _WITH_PWCACHEDB!= grep -c pwcache_groupdb /usr/include/pwd.h || true
 .if ${_WITH_PWCACHEDB} == 0

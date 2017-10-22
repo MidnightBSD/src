@@ -1,5 +1,5 @@
 /*-
- * $FreeBSD: stable/9/sys/dev/bktr/bktr_reg.h 146587 2005-05-24 20:42:08Z cognet $
+ * $FreeBSD: release/10.0.0/sys/dev/bktr/bktr_reg.h 227503 2011-11-14 18:21:27Z rmh $
  *
  * Copyright (c) 1999 Roger Hardiman
  * Copyright (c) 1998 Amancio Hasty
@@ -716,10 +716,6 @@ struct bt848_card_sig {
 /***********************************************************/
 /* ioctl_cmd_t int on old versions, u_long on new versions */
 /***********************************************************/
-
-#if (__FreeBSD__ == 2)
-typedef int ioctl_cmd_t;
-#endif
 
 #if defined(__FreeBSD__)
 typedef u_long ioctl_cmd_t;

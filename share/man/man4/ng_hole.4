@@ -32,7 +32,7 @@
 .\"
 .\" Author: Archie Cobbs <archie@FreeBSD.org>
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/ng_hole.4 191682 2009-04-30 10:01:13Z maxim $
+.\" $FreeBSD: release/10.0.0/share/man/man4/ng_hole.4 242997 2012-11-13 20:41:36Z joel $
 .\" $Whistle: ng_hole.8,v 1.4 1999/01/25 23:46:26 archie Exp $
 .\"
 .Dd May 19, 2004
@@ -57,19 +57,19 @@ as long as the name is unique.
 .Sh CONTROL MESSAGES
 This node type supports the generic control messages, plus the
 following:
-.Bl -tag -width indent
-.It Dv NGM_HOLE_GET_STATS
+.Bl -tag -width foo
+.It Dv NGM_HOLE_GET_STATS Pq Ic getstats
 This command takes an
 .Tn ASCII
 string argument, the hook name, and returns the statistics
 associated with the hook as a
 .Vt "struct ng_hole_hookstat" .
-.It Dv NGM_HOLE_CLR_STATS
+.It Dv NGM_HOLE_CLR_STATS Pq Ic clrstats
 This command takes an
 .Tn ASCII
 string argument, the hook name, and clears the statistics
 associated with the hook.
-.It Dv NGM_HOLE_GETCLR_STATS
+.It Dv NGM_HOLE_GETCLR_STATS Pq Ic getclrstats
 This command is identical to
 .Dv NGM_HOLE_GET_STATS ,
 except that the statistics are also atomically cleared.

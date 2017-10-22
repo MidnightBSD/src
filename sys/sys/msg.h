@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/sys/msg.h 220388 2011-04-06 16:59:54Z trasz $ */
+/* $FreeBSD: release/10.0.0/sys/sys/msg.h 220388 2011-04-06 16:59:54Z trasz $ */
 /*	$NetBSD: msg.h,v 1.4 1994/06/29 06:44:43 cgd Exp $	*/
 
 /*-

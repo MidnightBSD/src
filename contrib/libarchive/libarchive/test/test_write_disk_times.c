@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_write_disk_times.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_write_disk_times.c 232153 2012-02-25 10:58:02Z mm $");
 
 /*
  * Exercise time restores in archive_write_disk(), including
@@ -163,5 +163,5 @@ DEFINE_TEST(test_write_disk_times)
 	skipping("Platform-specific time restore tests");
 #endif
 
-	archive_write_finish(a);
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 }

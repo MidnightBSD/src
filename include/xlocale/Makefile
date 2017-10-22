@@ -1,8 +1,8 @@
-# $FreeBSD: stable/9/include/xlocale/Makefile 231673 2012-02-14 12:03:23Z theraven $ 
+# $FreeBSD: release/10.0.0/include/xlocale/Makefile 250883 2013-05-21 19:59:37Z ed $ 
 
 NO_OBJ=
 INCS=	_ctype.h _inttypes.h _langinfo.h _locale.h _monetary.h _stdio.h\
-	_stdlib.h _string.h _time.h _wchar.h
+	_stdlib.h _string.h _time.h _uchar.h _wchar.h
 INCSDIR=${INCLUDEDIR}/xlocale
 
 .include <bsd.prog.mk>

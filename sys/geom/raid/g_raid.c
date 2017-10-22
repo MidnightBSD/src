@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/geom/raid/g_raid.c 246178 2013-01-31 22:21:39Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/geom/raid/g_raid.c 254275 2013-08-13 07:56:40Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -92,6 +92,11 @@ TUNABLE_INT("kern.geom.raid.idle_threshold", &g_raid_idle_threshold);
 SYSCTL_UINT(_kern_geom_raid, OID_AUTO, idle_threshold, CTLFLAG_RW,
     &g_raid_idle_threshold, 1000000,
     "Time in microseconds to consider a volume idle.");
+static u_int ar_legacy_aliases = 1;
+SYSCTL_INT(_kern_geom_raid, OID_AUTO, legacy_aliases, CTLFLAG_RW,
+           &ar_legacy_aliases, 0, "Create aliases named as the legacy ataraid style.");
+TUNABLE_INT("kern.geom_raid.legacy_aliases", &ar_legacy_aliases);
+
 
 #define	MSLEEP(rv, ident, mtx, priority, wmesg, timeout)	do {	\
 	G_RAID_DEBUG(4, "%s: Sleeping %p.", __func__, (ident));		\
@@ -1637,6 +1642,7 @@ g_raid_launch_provider(struct g_raid_volume *vol)
 	struct g_raid_softc *sc;
 	struct g_provider *pp;
 	char name[G_RAID_MAX_VOLUMENAME];
+	char   announce_buf[80], buf1[32];
 	off_t off;
 
 	sc = vol->v_softc;
@@ -1650,6 +1656,22 @@ g_raid_launch_provider(struct g_raid_volume *vol)
 		/* Otherwise use sequential volume number. */
 		snprintf(name, sizeof(name), "raid/r%d", vol->v_global_id);
 	}
+
+	/*
+	 * Create a /dev/ar%d that the old ataraid(4) stack once
+	 * created as an alias for /dev/raid/r%d if requested.
+	 * This helps going from stable/7 ataraid devices to newer
+	 * FreeBSD releases. sbruno 07 MAY 2013
+	 */
+
+        if (ar_legacy_aliases) {
+		snprintf(announce_buf, sizeof(announce_buf),
+                        "kern.devalias.%s", name);
+                snprintf(buf1, sizeof(buf1),
+                        "ar%d", vol->v_global_id);
+                setenv(announce_buf, buf1);
+        }
+
 	pp = g_new_providerf(sc->sc_geom, "%s", name);
 	pp->private = vol;
 	pp->mediasize = vol->v_mediasize;
@@ -1839,6 +1861,11 @@ g_raid_access(struct g_provider *pp, int acr, int acw, int ace)
 	/* Deny new opens while dying. */
 	if (sc->sc_stopping != 0 && (acr > 0 || acw > 0 || ace > 0)) {
 		error = ENXIO;
+		goto out;
+	}
+	/* Deny write opens for read-only volumes. */
+	if (vol->v_read_only && acw > 0) {
+		error = EROFS;
 		goto out;
 	}
 	if (dcw == 0)
@@ -2149,7 +2176,7 @@ g_raid_destroy_disk(struct g_raid_disk *disk)
 int
 g_raid_destroy(struct g_raid_softc *sc, int how)
 {
-	int opens;
+	int error, opens;
 
 	g_topology_assert_not();
 	if (sc == NULL)
@@ -2166,11 +2193,13 @@ g_raid_destroy(struct g_raid_softc *sc, int how)
 			G_RAID_DEBUG1(1, sc,
 			    "%d volumes are still open.",
 			    opens);
+			sx_xunlock(&sc->sc_lock);
 			return (EBUSY);
 		case G_RAID_DESTROY_DELAYED:
 			G_RAID_DEBUG1(1, sc,
 			    "Array will be destroyed on last close.");
 			sc->sc_stopping = G_RAID_DESTROY_DELAYED;
+			sx_xunlock(&sc->sc_lock);
 			return (EBUSY);
 		case G_RAID_DESTROY_HARD:
 			G_RAID_DEBUG1(1, sc,
@@ -2184,9 +2213,9 @@ g_raid_destroy(struct g_raid_softc *sc, int how)
 	/* Wake up worker to let it selfdestruct. */
 	g_raid_event_send(sc, G_RAID_NODE_E_WAKE, 0);
 	/* Sleep until node destroyed. */
-	sx_sleep(&sc->sc_stopping, &sc->sc_lock,
-	    PRIBIO | PDROP, "r:destroy", 0);
-	return (0);
+	error = sx_sleep(&sc->sc_stopping, &sc->sc_lock,
+	    PRIBIO | PDROP, "r:destroy", hz * 3);
+	return (error == EWOULDBLOCK ? EBUSY : 0);
 }
 
 static void
@@ -2281,8 +2310,6 @@ g_raid_destroy_geom(struct gctl_req *req __unused,
 	sx_xlock(&sc->sc_lock);
 	g_cancel_event(sc);
 	error = g_raid_destroy(gp->softc, G_RAID_DESTROY_SOFT);
-	if (error != 0)
-		sx_xunlock(&sc->sc_lock);
 	g_topology_lock();
 	return (error);
 }
@@ -2335,6 +2362,10 @@ g_raid_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 		vol = pp->private;
 		g_topology_unlock();
 		sx_xlock(&sc->sc_lock);
+		sbuf_printf(sb, "%s<descr>%s %s volume</descr>\n", indent,
+		    sc->sc_md->mdo_class->name,
+		    g_raid_volume_level2str(vol->v_raid_level,
+		    vol->v_raid_level_qualifier));
 		sbuf_printf(sb, "%s<Label>%s</Label>\n", indent,
 		    vol->v_name);
 		sbuf_printf(sb, "%s<RAIDLevel>%s</RAIDLevel>\n", indent,
@@ -2443,7 +2474,6 @@ g_raid_shutdown_post_sync(void *arg, int howto)
 	struct g_geom *gp, *gp2;
 	struct g_raid_softc *sc;
 	struct g_raid_volume *vol;
-	int error;
 
 	mp = arg;
 	DROP_GIANT();
@@ -2457,9 +2487,7 @@ g_raid_shutdown_post_sync(void *arg, int howto)
 		TAILQ_FOREACH(vol, &sc->sc_volumes, v_next)
 			g_raid_clean(vol, -1);
 		g_cancel_event(sc);
-		error = g_raid_destroy(sc, G_RAID_DESTROY_DELAYED);
-		if (error != 0)
-			sx_xunlock(&sc->sc_lock);
+		g_raid_destroy(sc, G_RAID_DESTROY_DELAYED);
 		g_topology_lock();
 	}
 	g_topology_unlock();

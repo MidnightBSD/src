@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: stable/9/sys/pc98/include/setjmp.h 144513 2005-04-01 23:19:43Z imp $ */
+/* $FreeBSD: release/10.0.0/sys/pc98/include/setjmp.h 232275 2012-02-28 22:17:52Z tijl $ */
 
-#include <i386/setjmp.h>
+#include <x86/setjmp.h>

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libefi/libefi.c 203181 2010-01-30 04:24:03Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libefi/libefi.c 203181 2010-01-30 04:24:03Z marcel $");
 
 #include <sys/ioctl.h>
 #include <sys/types.h>

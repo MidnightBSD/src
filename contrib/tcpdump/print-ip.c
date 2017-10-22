@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: stable/9/contrib/tcpdump/print-ip.c 242485 2012-11-02 16:57:51Z delphij $
+ * $FreeBSD: release/10.0.0/contrib/tcpdump/print-ip.c 241235 2012-10-05 20:19:28Z delphij $
  */
 
 #ifndef lint
@@ -481,6 +481,10 @@ again:
 
 	case IPPROTO_PGM:
 		pgm_print(ipds->cp, ipds->len, (const u_char *)ipds->ip);
+		break;
+
+	case IPPROTO_PFSYNC:
+		pfsync_ip_print(ipds->cp, ipds->len);
 		break;
 
 	default:

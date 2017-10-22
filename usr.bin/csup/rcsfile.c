@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/csup/rcsfile.c 216542 2010-12-18 20:43:18Z lulf $
+ * $FreeBSD: release/10.0.0/usr.bin/csup/rcsfile.c 228992 2011-12-30 11:02:40Z uqs $
  */
 
 #include <assert.h>
@@ -1254,8 +1254,8 @@ rcsfile_insertsorteddelta(struct rcsfile *rf, struct delta *d)
 /*
  * Insert a delta into the correct place in branch. A trunk branch will have
  * different ordering scheme and be sorted by revision number, but a normal
- * branch will be sorted by date to maintain compability with branches that is
- * "hand-hacked".
+ * branch will be sorted by date to maintain compatibility with branches that
+ * is "hand-hacked".
  */
 static void
 rcsfile_insertdelta(struct branch *b, struct delta *d, int trunk)

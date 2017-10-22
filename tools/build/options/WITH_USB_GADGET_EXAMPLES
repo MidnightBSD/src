@@ -1,0 +1,2 @@
+.\" $FreeBSD: release/10.0.0/tools/build/options/WITH_USB_GADGET_EXAMPLES 254919 2013-08-26 17:15:56Z antoine $
+Set to build USB gadget kernel modules.

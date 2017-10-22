@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/9/sys/contrib/altq/altq/altq_subr.c 220433 2011-04-07 23:28:28Z jkim $	*/
+/*	$FreeBSD: release/10.0.0/sys/contrib/altq/altq/altq_subr.c 240233 2012-09-08 06:41:54Z glebius $	*/
 /*	$KAME: altq_subr.c,v 1.21 2003/11/06 06:32:53 kjc Exp $	*/
 
 /*
@@ -401,14 +401,11 @@ tbr_set(ifq, profile)
 		return (0);
 	}
 
-	IFQ_UNLOCK(ifq);
-	tbr = malloc(sizeof(struct tb_regulator),
-	       M_DEVBUF, M_WAITOK);
-	if (tbr == NULL) {		/* can not happen */
+	tbr = malloc(sizeof(struct tb_regulator), M_DEVBUF, M_NOWAIT | M_ZERO);
+	if (tbr == NULL) {
 		IFQ_UNLOCK(ifq);
 		return (ENOMEM);
 	}
-	bzero(tbr, sizeof(struct tb_regulator));
 
 	tbr->tbr_rate = TBR_SCALE(profile->rate / 8) / machclk_freq;
 	tbr->tbr_depth = TBR_SCALE(profile->depth);
@@ -420,7 +417,6 @@ tbr_set(ifq, profile)
 	tbr->tbr_last = read_machclk();
 	tbr->tbr_lastop = ALTDQ_REMOVE;
 
-	IFQ_LOCK(ifq);
 	otbr = ifq->altq_tbr;
 	ifq->altq_tbr = tbr;	/* set the new tbr */
 

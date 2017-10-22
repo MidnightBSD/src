@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/libexec/bootpd/bptypes.h 53105 1999-11-12 10:11:48Z marcel $
+/* $FreeBSD: release/10.0.0/libexec/bootpd/bptypes.h 53105 1999-11-12 10:11:48Z marcel $
  */
 
 #ifndef	BPTYPES_H

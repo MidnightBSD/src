@@ -17,7 +17,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $FreeBSD: stable/9/sbin/ipfw/ipv6.c 248505 2013-03-19 13:29:01Z melifaro $
+ * $FreeBSD: release/10.0.0/sbin/ipfw/ipv6.c 247712 2013-03-03 14:05:03Z melifaro $
  *
  * ipv6 support
  */

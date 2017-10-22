@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/isci/scil/scic_sds_port.c 231689 2012-02-14 15:58:49Z jimharris $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/scic_sds_port.c 249586 2013-04-17 11:47:32Z gabor $");
 
 /**
  * @file
@@ -1537,7 +1537,7 @@ void scic_port_enable_broadcast_change_notification(
  *
  * @param[in] controller This parameter specifies the core controller, one of
  *            its phy's resources are to be released.
- * @param[in] this_port This parameter specifies the port whose resourse is to
+ * @param[in] this_port This parameter specifies the port whose resource is to
  *            be released.
  */
 void scic_sds_port_release_resource(

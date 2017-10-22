@@ -23,7 +23,7 @@ Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA
 This paragraph is here to try to keep Sun CC from dying.
 The number of chars here seems crucial!!!!  */
 
-/* $FreeBSD: stable/9/contrib/gcc/gcc.c 247167 2013-02-23 04:51:20Z kientzle $ */
+/* $FreeBSD: release/10.0.0/contrib/gcc/gcc.c 231336 2012-02-10 05:05:42Z kientzle $ */
 
 /* This program is the user interface to the C compiler and possibly to
 other compilers.  It is used because compilation is a complicated procedure

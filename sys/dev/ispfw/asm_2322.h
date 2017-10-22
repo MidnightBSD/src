@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/ispfw/asm_2322.h 217034 2011-01-05 23:15:22Z mjacob $ */
+/* $FreeBSD: release/10.0.0/sys/dev/ispfw/asm_2322.h 217034 2011-01-05 23:15:22Z mjacob $ */
 /*-
  * Copyright (C) 2004-2005 by Qlogic, Inc.
  * All rights reserved.

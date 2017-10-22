@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/ia64/ia64/support.S 246937 2013-02-18 05:05:01Z marcel $
+ * $FreeBSD: release/10.0.0/sys/ia64/ia64/support.S 246715 2013-02-12 17:38:35Z marcel $
  */
 /*-
  * Copyright (c) 1994, 1995, 1996 Carnegie-Mellon University.

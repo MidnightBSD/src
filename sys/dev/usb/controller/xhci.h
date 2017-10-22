@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/dev/usb/controller/xhci.h 245731 2013-01-21 07:22:45Z hselasky $ */
+/* $FreeBSD: release/10.0.0/sys/dev/usb/controller/xhci.h 255768 2013-09-21 21:40:57Z hselasky $ */
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
@@ -35,7 +35,15 @@
 #define	XHCI_MAX_COMMANDS	(16 * 1)
 #define	XHCI_MAX_RSEG		1
 #define	XHCI_MAX_TRANSFERS	4
-
+#if USB_MAX_EP_STREAMS == 8
+#define	XHCI_MAX_STREAMS	8
+#define	XHCI_MAX_STREAMS_LOG	3
+#elif USB_MAX_EP_STREAMS == 1
+#define	XHCI_MAX_STREAMS	1
+#define	XHCI_MAX_STREAMS_LOG	0
+#else
+#error "The USB_MAX_EP_STREAMS value is not supported."
+#endif
 #define	XHCI_DEV_CTX_ADDR_ALIGN		64	/* bytes */
 #define	XHCI_DEV_CTX_ALIGN		64	/* bytes */
 #define	XHCI_INPUT_CTX_ALIGN		64	/* bytes */
@@ -307,7 +315,8 @@ struct xhci_trb {
 } __aligned(4);
 
 struct xhci_dev_endpoint_trbs {
-	struct xhci_trb		trb[XHCI_MAX_ENDPOINTS][XHCI_MAX_TRANSFERS];
+	struct xhci_trb		trb[XHCI_MAX_ENDPOINTS]
+	    [(XHCI_MAX_STREAMS * XHCI_MAX_TRANSFERS) + XHCI_MAX_STREAMS];
 };
 
 #define	XHCI_TD_PAGE_NBUF	17	/* units, room enough for 64Kbytes */
@@ -353,13 +362,14 @@ struct xhci_hw_root {
 
 struct xhci_endpoint_ext {
 	struct xhci_trb		*trb;
-	struct usb_xfer		*xfer[XHCI_MAX_TRANSFERS - 1];
+	struct usb_xfer		*xfer[XHCI_MAX_TRANSFERS * XHCI_MAX_STREAMS];
 	struct usb_page_cache	*page_cache;
 	uint64_t		physaddr;
-	uint8_t			trb_used;
-	uint8_t			trb_index;
+	uint8_t			trb_used[XHCI_MAX_STREAMS];
+	uint8_t			trb_index[XHCI_MAX_STREAMS];
 	uint8_t			trb_halted;
 	uint8_t			trb_running;
+	uint8_t			trb_ep_mode;
 };
 
 enum {
@@ -421,13 +431,18 @@ union xhci_hub_desc {
 	uint8_t				temp[128];
 };
 
+typedef int (xhci_port_route_t)(device_t, uint32_t, uint32_t);
+
 struct xhci_softc {
 	struct xhci_hw_softc	sc_hw;
 	/* base device */
 	struct usb_bus		sc_bus;
-	/* configure process */
-	struct usb_process	sc_config_proc;
+	/* configure message */
 	struct usb_bus_msg	sc_config_msg[2];
+
+	struct usb_callout	sc_callout;
+
+	xhci_port_route_t	*sc_port_route;
 
 	union xhci_hub_desc	sc_hub_desc;
 
@@ -436,6 +451,7 @@ struct xhci_softc {
 
 	struct usb_device	*sc_devices[XHCI_MAX_DEVICES];
 	struct resource		*sc_io_res;
+	int			sc_irq_rid;
 	struct resource		*sc_irq_res;
 
 	void			*sc_intr_hdl;
@@ -490,7 +506,7 @@ struct xhci_softc {
 
 /* prototypes */
 
-uint32_t	xhci_get_port_route(void);
+uint8_t 	xhci_use_polling(void);
 usb_error_t xhci_halt_controller(struct xhci_softc *);
 usb_error_t xhci_init(struct xhci_softc *, device_t);
 usb_error_t xhci_start_controller(struct xhci_softc *);

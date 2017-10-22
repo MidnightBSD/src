@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/mips/include/cache.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD: release/10.0.0/sys/mips/include/cache.h 232855 2012-03-12 08:13:04Z jmallett $
  */
 
 #ifndef	_MACHINE_CACHE_H_
@@ -217,7 +217,6 @@ do {									\
 struct mips_cpuinfo;
 
 void    mips_config_cache(struct mips_cpuinfo *);
-void    mips_dcache_compute_align(void);
 
 #include <machine/cache_mipsNN.h>
 #endif	/* _MACHINE_CACHE_H_ */

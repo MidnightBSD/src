@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/geom/bde/g_bde.c 249148 2013-04-05 10:35:36Z mav $
+ * $FreeBSD: release/10.0.0/sys/geom/bde/g_bde.c 243333 2012-11-20 12:32:18Z jh $
  *
  */
 
@@ -185,14 +185,6 @@ g_bde_create_geom(struct gctl_req *req, struct g_class *mp, struct g_provider *p
 		kproc_create(g_bde_worker, gp, &sc->thread, 0, 0,
 			"g_bde %s", gp->name);
 		pp = g_new_providerf(gp, "%s", gp->name);
-#if 0
-		/*
-		 * XXX: Disable this for now.  Appearantly UFS no longer
-		 * XXX: issues BIO_DELETE requests correctly, with the obvious
-		 * XXX: outcome that userdata is trashed.
-		 */
-		pp->flags |= G_PF_CANDELETE;
-#endif
 		pp->stripesize = kp->zone_cont;
 		pp->stripeoffset = 0;
 		pp->mediasize = sc->mediasize;

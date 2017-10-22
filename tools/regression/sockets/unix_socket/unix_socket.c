@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/regression/sockets/unix_socket/unix_socket.c 157602 2006-04-09 14:30:11Z rwatson $
+ * $FreeBSD: release/10.0.0/tools/regression/sockets/unix_socket/unix_socket.c 157602 2006-04-09 14:30:11Z rwatson $
  */
 
 /*

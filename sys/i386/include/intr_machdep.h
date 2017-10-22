@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/i386/include/intr_machdep.h 247877 2013-03-06 09:22:45Z avg $
+ * $FreeBSD: release/10.0.0/sys/i386/include/intr_machdep.h 255726 2013-09-20 05:06:03Z gibbs $
  */
 
 #ifndef __MACHINE_INTR_MACHDEP_H__
@@ -44,12 +44,30 @@
  * allocate IDT vectors.
  *
  * The first 255 IRQs (0 - 254) are reserved for ISA IRQs and PCI intline IRQs.
- * IRQ values beyond 256 are used by MSI.  We leave 255 unused to avoid
- * confusion since 255 is used in PCI to indicate an invalid IRQ.
+ * IRQ values from 256 to 767 are used by MSI.  When running under the Xen
+ * Hypervisor, IRQ values from 768 to 4863 are available for binding to
+ * event channel events.  We leave 255 unused to avoid confusion since 255 is
+ * used in PCI to indicate an invalid IRQ.
  */
 #define	NUM_MSI_INTS	512
 #define	FIRST_MSI_INT	256
-#define	NUM_IO_INTS	(FIRST_MSI_INT + NUM_MSI_INTS)
+#ifdef XENHVM
+#include <xen/xen-os.h>
+#define	NUM_EVTCHN_INTS	NR_EVENT_CHANNELS
+#define	FIRST_EVTCHN_INT \
+    (FIRST_MSI_INT + NUM_MSI_INTS)
+#define	LAST_EVTCHN_INT \
+    (FIRST_EVTCHN_INT + NUM_EVTCHN_INTS - 1)
+#elif defined(XEN)
+#include <xen/xen-os.h>
+#define	NUM_EVTCHN_INTS	NR_EVENT_CHANNELS
+#define	FIRST_EVTCHN_INT 0
+#define	LAST_EVTCHN_INT \
+    (FIRST_EVTCHN_INT + NUM_EVTCHN_INTS - 1)
+#else /* !XEN && !XENHVM */
+#define	NUM_EVTCHN_INTS	0
+#endif
+#define	NUM_IO_INTS	(FIRST_MSI_INT + NUM_MSI_INTS + NUM_EVTCHN_INTS)
 
 /*
  * Default base address for MSI messages on x86 platforms.
@@ -90,7 +108,7 @@ struct pic {
 	int (*pic_vector)(struct intsrc *);
 	int (*pic_source_pending)(struct intsrc *);
 	void (*pic_suspend)(struct pic *);
-	void (*pic_resume)(struct pic *);
+	void (*pic_resume)(struct pic *, bool suspend_cancelled);
 	int (*pic_config_intr)(struct intsrc *, enum intr_trigger,
 	    enum intr_polarity);
 	int (*pic_assign_cpu)(struct intsrc *, u_int apic_id);
@@ -131,7 +149,9 @@ int	elcr_probe(void);
 enum intr_trigger elcr_read_trigger(u_int irq);
 void	elcr_resume(void);
 void	elcr_write_trigger(u_int irq, enum intr_trigger trigger);
+#ifdef SMP
 void	intr_add_cpu(u_int cpu);
+#endif
 int	intr_add_handler(const char *name, int vector, driver_filter_t filter,
     driver_intr_t handler, void *arg, enum intr_type flags, void **cookiep);
 #ifdef SMP
@@ -146,7 +166,7 @@ struct intsrc *intr_lookup_source(int vector);
 int	intr_register_pic(struct pic *pic);
 int	intr_register_source(struct intsrc *isrc);
 int	intr_remove_handler(void *cookie);
-void	intr_resume(void);
+void	intr_resume(bool suspend_cancelled);
 void	intr_suspend(void);
 void	intrcnt_add(const char *name, u_long **countp);
 void	nexus_add_irq(u_long irq);

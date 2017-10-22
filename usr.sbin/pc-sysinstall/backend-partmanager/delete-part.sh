@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/backend-partmanager/delete-part.sh 220162 2011-03-30 17:37:04Z jpaetzel $
+# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend-partmanager/delete-part.sh 228990 2011-12-30 10:58:14Z uqs $
 
 # Delete a specified partition, takes effect immediately
 ########################################################
@@ -73,7 +73,7 @@ DISK="`echo $PARTITION | cut -c 1-${CHARS}`"
 
 # Make sure we have a valid disk name still
 if [ ! -e "/dev/${DISK}" ] ; then
-  echo "Error: Disk: ${DISK} doesnt exist!"
+  echo "Error: Disk: ${DISK} doesn't exist!"
   exit 1
 fi
 

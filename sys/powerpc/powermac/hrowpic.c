@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/powermac/hrowpic.c 218075 2011-01-29 20:58:38Z marcel $
+ * $FreeBSD: release/10.0.0/sys/powerpc/powermac/hrowpic.c 237936 2012-07-01 19:07:45Z rpaulo $
  */
 
 /*
@@ -245,7 +245,7 @@ hrowpic_enable(device_t dev, u_int irq, u_int vector)
 }
 
 static void
-hrowpic_eoi(device_t dev __unused, u_int irq __unused)
+hrowpic_eoi(device_t dev, u_int irq)
 {
 	struct hrowpic_softc *sc;
 	int bank;

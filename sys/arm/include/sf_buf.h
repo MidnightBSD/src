@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/include/sf_buf.h 161105 2006-08-08 20:59:38Z cognet $
+ * $FreeBSD: release/10.0.0/sys/arm/include/sf_buf.h 255352 2013-09-07 07:56:55Z glebius $
  */
 
 #ifndef _MACHINE_SF_BUF_H_
@@ -39,7 +39,6 @@ struct vm_page;
 #include <vm/vm_page.h>
 
 struct sf_buf;
-
 
 static __inline vm_offset_t
 sf_buf_kva(struct sf_buf *sf)
@@ -80,4 +79,8 @@ sf_buf_page(struct sf_buf *sf)
 }
 
 #endif
+
+struct sf_buf *	sf_buf_alloc(struct vm_page *m, int flags);
+void sf_buf_free(struct sf_buf *sf);
+
 #endif /* !_MACHINE_SF_BUF_H_ */

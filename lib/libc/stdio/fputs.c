@@ -13,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)fputs.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/stdio/fputs.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/fputs.c 249810 2013-04-23 14:36:44Z emaste $");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -48,9 +48,7 @@ __FBSDID("$FreeBSD: stable/9/lib/libc/stdio/fputs.c 165903 2007-01-09 00:28:16Z 
  * Write the given string to the given file.
  */
 int
-fputs(s, fp)
-	const char * __restrict s;
-	FILE * __restrict fp;
+fputs(const char * __restrict s, FILE * __restrict fp)
 {
 	int retval;
 	struct __suio uio;

@@ -35,7 +35,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pci/aureal.c 193640 2009-06-07 19:12:08Z ariff $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/aureal.c 254263 2013-08-12 23:30:01Z scottl $");
 
 /* PCI IDs of supported chips */
 #define AU8820_PCI_ID 0x000112eb
@@ -550,7 +550,6 @@ au_pci_probe(device_t dev)
 static int
 au_pci_attach(device_t dev)
 {
-	u_int32_t	data;
 	struct au_info *au;
 	int		type[10];
 	int		regid[10];
@@ -565,10 +564,7 @@ au_pci_attach(device_t dev)
 	au = malloc(sizeof(*au), M_DEVBUF, M_WAITOK | M_ZERO);
 	au->unit = device_get_unit(dev);
 
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= (PCIM_CMD_PORTEN|PCIM_CMD_MEMEN|PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
+	pci_enable_busmaster(dev);
 
 	j=0;
 	/* XXX dfr: is this strictly necessary? */

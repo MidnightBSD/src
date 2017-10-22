@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/kgssapi/gssapi_impl.h 245018 2013-01-03 23:15:36Z rmacklem $
+ * $FreeBSD: release/10.0.0/sys/kgssapi/gssapi_impl.h 244370 2012-12-18 00:25:48Z rmacklem $
  */
 
 #include "gssd.h"

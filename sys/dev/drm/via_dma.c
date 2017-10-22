@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm/via_dma.c 207066 2010-04-22 18:21:25Z rnoland $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/via_dma.c 242825 2012-11-09 14:46:23Z rdivacky $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -481,7 +481,7 @@ static int via_hook_segment(drm_via_private_t * dev_priv,
 			VIA_WRITE(VIA_REG_TRANSET, (HC_ParaType_PreCR << 16));
 			VIA_WRITE(VIA_REG_TRANSPACE, pause_addr_hi);
 			VIA_WRITE(VIA_REG_TRANSPACE, pause_addr_lo);
-			VIA_READ(VIA_REG_TRANSPACE);
+			(void)VIA_READ(VIA_REG_TRANSPACE);
 		}
 	}
 	return paused;
@@ -569,7 +569,7 @@ static void via_cmdbuf_start(drm_via_private_t * dev_priv)
 	VIA_WRITE(VIA_REG_TRANSPACE, pause_addr_lo);
 	DRM_WRITEMEMORYBARRIER();
 	VIA_WRITE(VIA_REG_TRANSPACE, command | HC_HAGPCMNT_MASK);
-	VIA_READ(VIA_REG_TRANSPACE);
+	(void)VIA_READ(VIA_REG_TRANSPACE);
 
 	dev_priv->dma_diff = 0;
 

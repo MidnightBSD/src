@@ -32,7 +32,7 @@
  *
  *	@(#)fpu_emu.h	8.1 (Berkeley) 6/11/93
  *	$NetBSD: fpu_emu.h,v 1.4 2000/08/03 18:32:07 eeh Exp $
- * $FreeBSD: stable/9/lib/libc/sparc64/fpu/fpu_emu.h 205002 2010-03-11 07:46:17Z marius $
+ * $FreeBSD: release/10.0.0/lib/libc/sparc64/fpu/fpu_emu.h 230193 2012-01-16 04:09:45Z das $
  */
 
 /*
@@ -159,7 +159,8 @@ struct fpemu {
  * Each of these may modify its inputs (f1,f2) and/or the temporary.
  * Each returns a pointer to the result and/or sets exceptions.
  */
-#define	__fpu_sub(fe) ((fe)->fe_f2.fp_sign ^= 1, __fpu_add(fe))
+#define	__fpu_sub(fe)	(ISNAN(&(fe)->fe_f2) ? 0 : ((fe)->fe_f2.fp_sign ^= 1), \
+			    __fpu_add(fe))
 
 #ifdef FPU_DEBUG
 #define	FPE_INSN	0x1

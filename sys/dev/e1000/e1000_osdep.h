@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/9/sys/dev/e1000/e1000_osdep.h 248292 2013-03-14 22:55:59Z jfv $*/
+/*$FreeBSD: release/10.0.0/sys/dev/e1000/e1000_osdep.h 256200 2013-10-09 17:32:52Z jfv $*/
 
 
 #ifndef _FREEBSD_OS_H_
@@ -60,6 +60,7 @@
 #define ASSERT(x) if(!(x)) panic("EM: x")
 
 #define usec_delay(x) DELAY(x)
+#define usec_delay_irq(x) DELAY(x)
 #define msec_delay(x) DELAY(1000*(x))
 #define msec_delay_irq(x) DELAY(1000*(x))
 

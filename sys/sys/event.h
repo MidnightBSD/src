@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sys/event.h 201350 2009-12-31 20:29:58Z brooks $
+ * $FreeBSD: release/10.0.0/sys/sys/event.h 255675 2013-09-18 18:48:33Z rdivacky $
  */
 
 #ifndef _SYS_EVENT_H_
@@ -76,6 +76,7 @@ struct kevent {
 #define EV_DISPATCH	0x0080		/* disable event after reporting */
 
 #define EV_SYSFLAGS	0xF000		/* reserved by system */
+#define	EV_DROP		0x1000		/* note should be dropped */
 #define EV_FLAG1	0x2000		/* filter-specific flag */
 
 /* returned values */
@@ -134,7 +135,7 @@ struct kevent {
 struct knote;
 SLIST_HEAD(klist, knote);
 struct kqueue;
-SLIST_HEAD(kqlist, kqueue);
+TAILQ_HEAD(kqlist, kqueue);
 struct knlist {
 	struct	klist	kl_list;
 	void    (*kl_lock)(void *);	/* lock function */
@@ -146,10 +147,6 @@ struct knlist {
 
 
 #ifdef _KERNEL
-
-#ifdef MALLOC_DECLARE
-MALLOC_DECLARE(M_KQUEUE);
-#endif
 
 /*
  * Flags for knote call
@@ -238,6 +235,7 @@ struct thread;
 struct proc;
 struct knlist;
 struct mtx;
+struct rwlock;
 
 extern void	knote(struct knlist *list, long hint, int lockflags);
 extern void	knote_fork(struct knlist *list, int pid);
@@ -249,6 +247,7 @@ extern void	knlist_init(struct knlist *knl, void *lock,
     void (*kl_lock)(void *), void (*kl_unlock)(void *),
     void (*kl_assert_locked)(void *), void (*kl_assert_unlocked)(void *));
 extern void	knlist_init_mtx(struct knlist *knl, struct mtx *lock);
+extern void	knlist_init_rw_reader(struct knlist *knl, struct rwlock *lock);
 extern void	knlist_destroy(struct knlist *knl);
 extern void	knlist_cleardel(struct knlist *knl, struct thread *td,
 	int islocked, int killkn);

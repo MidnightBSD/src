@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/usr.bin/touch/touch.c 241819 2012-10-21 21:47:58Z jilles $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/touch/touch.c 249806 2013-04-23 13:03:17Z eadler $");
 
 #ifndef lint
 static const char copyright[] =
@@ -56,13 +56,12 @@ static const char sccsid[] = "@(#)touch.c	8.1 (Berkeley) 6/6/93";
 #include <time.h>
 #include <unistd.h>
 
-int	rw(char *, struct stat *, int);
-void	stime_arg1(char *, struct timeval *);
-void	stime_arg2(char *, int, struct timeval *);
-void	stime_darg(char *, struct timeval *);
-void	stime_file(char *, struct timeval *);
-int	timeoffset(char *);
-void	usage(char *);
+static void	stime_arg1(const char *, struct timeval *);
+static void	stime_arg2(const char *, int, struct timeval *);
+static void	stime_darg(const char *, struct timeval *);
+static void	stime_file(const char *, struct timeval *);
+static int	timeoffset(const char *);
+static void	usage(const char *);
 
 int
 main(int argc, char *argv[])
@@ -71,15 +70,15 @@ main(int argc, char *argv[])
 	struct timeval tv[2];
 	int (*stat_f)(const char *, struct stat *);
 	int (*utimes_f)(const char *, const struct timeval *);
-	int Aflag, aflag, cflag, fflag, mflag, ch, fd, len, rval, timeset;
+	int Aflag, aflag, cflag, mflag, ch, fd, len, rval, timeset;
 	char *p;
 	char *myname;
 
 	myname = basename(argv[0]);
-	Aflag = aflag = cflag = fflag = mflag = timeset = 0;
+	Aflag = aflag = cflag = mflag = timeset = 0;
 	stat_f = stat;
 	utimes_f = utimes;
-	if (gettimeofday(&tv[0], NULL))
+	if (gettimeofday(&tv[0], NULL) == -1)
 		err(1, "gettimeofday");
 
 	while ((ch = getopt(argc, argv, "A:acd:fhmr:t:")) != -1)
@@ -98,7 +97,7 @@ main(int argc, char *argv[])
 			stime_darg(optarg, tv);
 			break;
 		case 'f':
-			fflag = 1;
+			/* No-op for compatibility. */
 			break;
 		case 'h':
 			cflag = 1;
@@ -116,7 +115,6 @@ main(int argc, char *argv[])
 			timeset = 1;
 			stime_arg1(optarg, tv);
 			break;
-		case '?':
 		default:
 			usage(myname);
 		}
@@ -228,22 +226,16 @@ main(int argc, char *argv[])
 		 if (!utimes_f(*argv, NULL))
 			continue;
 
-		/* Try reading/writing. */
-		if (!S_ISLNK(sb.st_mode) && !S_ISDIR(sb.st_mode)) {
-			if (rw(*argv, &sb, fflag))
-				rval = 1;
-		} else {
-			rval = 1;
-			warn("%s", *argv);
-		}
+		rval = 1;
+		warn("%s", *argv);
 	}
 	exit(rval);
 }
 
 #define	ATOI2(ar)	((ar)[0] - '0') * 10 + ((ar)[1] - '0'); (ar) += 2;
 
-void
-stime_arg1(char *arg, struct timeval *tvp)
+static void
+stime_arg1(const char *arg, struct timeval *tvp)
 {
 	time_t now;
 	struct tm *t;
@@ -297,14 +289,17 @@ stime_arg1(char *arg, struct timeval *tvp)
 	t->tm_isdst = -1;		/* Figure out DST. */
 	tvp[0].tv_sec = tvp[1].tv_sec = mktime(t);
 	if (tvp[0].tv_sec == -1)
-terr:		errx(1,
-	"out of range or illegal time specification: [[CC]YY]MMDDhhmm[.SS]");
+		goto terr;
 
 	tvp[0].tv_usec = tvp[1].tv_usec = 0;
+	return;
+
+terr:
+	errx(1, "out of range or illegal time specification: [[CC]YY]MMDDhhmm[.SS]");
 }
 
-void
-stime_arg2(char *arg, int year, struct timeval *tvp)
+static void
+stime_arg2(const char *arg, int year, struct timeval *tvp)
 {
 	time_t now;
 	struct tm *t;
@@ -333,8 +328,8 @@ stime_arg2(char *arg, int year, struct timeval *tvp)
 	tvp[0].tv_usec = tvp[1].tv_usec = 0;
 }
 
-void
-stime_darg(char *arg, struct timeval *tvp)
+static void
+stime_darg(const char *arg, struct timeval *tvp)
 {
 	struct tm t = { .tm_sec = 0 };
 	const char *fmt, *colon;
@@ -379,7 +374,7 @@ bad:
 
 /* Calculate a time offset in seconds, given an arg of the format [-]HHMMSS. */
 int
-timeoffset(char *arg)
+timeoffset(const char *arg)
 {
 	int offset;
 	int isneg;
@@ -407,8 +402,8 @@ timeoffset(char *arg)
 		return (offset);
 }
 
-void
-stime_file(char *fname, struct timeval *tvp)
+static void
+stime_file(const char *fname, struct timeval *tvp)
 {
 	struct stat sb;
 
@@ -418,59 +413,10 @@ stime_file(char *fname, struct timeval *tvp)
 	TIMESPEC_TO_TIMEVAL(tvp + 1, &sb.st_mtim);
 }
 
-int
-rw(char *fname, struct stat *sbp, int force)
+static void
+usage(const char *myname)
 {
-	int fd, needed_chmod, rval;
-	u_char byte;
-
-	/* Try regular files. */
-	if (!S_ISREG(sbp->st_mode)) {
-		warnx("%s: %s", fname, strerror(EFTYPE));
-		return (1);
-	}
-
-	needed_chmod = rval = 0;
-	if ((fd = open(fname, O_RDWR, 0)) == -1) {
-		if (!force || chmod(fname, DEFFILEMODE))
-			goto err;
-		if ((fd = open(fname, O_RDWR, 0)) == -1)
-			goto err;
-		needed_chmod = 1;
-	}
-
-	if (sbp->st_size != 0) {
-		if (read(fd, &byte, sizeof(byte)) != sizeof(byte))
-			goto err;
-		if (lseek(fd, (off_t)0, SEEK_SET) == -1)
-			goto err;
-		if (write(fd, &byte, sizeof(byte)) != sizeof(byte))
-			goto err;
-	} else {
-		if (write(fd, &byte, sizeof(byte)) != sizeof(byte)) {
-err:			rval = 1;
-			warn("%s", fname);
-		} else if (ftruncate(fd, (off_t)0)) {
-			rval = 1;
-			warn("%s: file modified", fname);
-		}
-	}
-
-	if (close(fd) && rval != 1) {
-		rval = 1;
-		warn("%s", fname);
-	}
-	if (needed_chmod && chmod(fname, sbp->st_mode) && rval != 1) {
-		rval = 1;
-		warn("%s: permissions modified", fname);
-	}
-	return (rval);
-}
-
-void
-usage(char *myname)
-{
-	fprintf(stderr, "usage: %s [-A [-][[hh]mm]SS] [-acfhm] [-r file] "
+	fprintf(stderr, "usage: %s [-A [-][[hh]mm]SS] [-achm] [-r file] "
 		"[-t [[CC]YY]MMDDhhmm[.SS]]\n"
 		"       [-d YYYY-MM-DDThh:mm:SS[.frac][tz]] "
 		"file ...\n", myname);

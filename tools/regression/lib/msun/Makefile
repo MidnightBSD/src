@@ -1,9 +1,11 @@
-# $FreeBSD: stable/9/tools/regression/lib/msun/Makefile 219362 2011-03-07 03:15:49Z das $
+# $FreeBSD: release/10.0.0/tools/regression/lib/msun/Makefile 251241 2013-06-02 04:30:03Z das $
 
-TESTS=	test-cexp test-conj test-csqrt test-exponential test-fenv test-fma \
-	test-fmaxmin test-ilogb test-invtrig test-logarithm test-lrint \
+TESTS=	test-cexp test-conj test-csqrt test-ctrig \
+	test-exponential test-fenv test-fma \
+	test-fmaxmin test-ilogb test-invtrig test-invctrig \
+	test-logarithm test-lrint \
 	test-lround test-nan test-nearbyint test-next test-rem test-trig
-CFLAGS+= -O0 -lm
+CFLAGS+= -O0 -lm -Wno-unknown-pragmas
 
 .PHONY: tests
 tests: ${TESTS}

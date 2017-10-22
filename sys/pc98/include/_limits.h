@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: stable/9/sys/pc98/include/_limits.h 144513 2005-04-01 23:19:43Z imp $ */
+/* $FreeBSD: release/10.0.0/sys/pc98/include/_limits.h 232262 2012-02-28 18:24:28Z tijl $ */
 
-#include <i386/_limits.h>
+#include <x86/_limits.h>

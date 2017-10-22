@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/econa/econa.c 201468 2010-01-04 03:35:45Z rpaulo $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/econa/econa.c 238545 2012-07-17 03:18:12Z gonzo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -592,14 +592,15 @@ econa_setup_intr(device_t dev, device_t child,
     struct resource *ires, int flags, driver_filter_t *filt,
     driver_intr_t *intr, void *arg, void **cookiep)
 {
+	int error;
 
 	if (rman_get_start(ires) == ECONA_IRQ_SYSTEM && filt == NULL)
 		panic("All system interrupt ISRs must be FILTER");
 
-	BUS_SETUP_INTR(device_get_parent(dev), child, ires, flags, filt,
-	    intr, arg, cookiep);
-
-	arm_unmask_irq(rman_get_start(ires));
+	error = BUS_SETUP_INTR(device_get_parent(dev), child, ires, flags,
+	    filt, intr, arg, cookiep);
+	if (error)
+		return (error);
 
 	return (0);
 }

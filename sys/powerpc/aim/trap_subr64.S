@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/powerpc/aim/trap_subr64.S 232431 2012-03-03 02:19:33Z nwhitehorn $ */
+/* $FreeBSD: release/10.0.0/sys/powerpc/aim/trap_subr64.S 248457 2013-03-18 05:30:18Z jhibbits $ */
 /* $NetBSD: trap_subr.S,v 1.20 2002/04/22 23:20:08 kleink Exp $	*/
 
 /*-
@@ -274,6 +274,19 @@ restore_kernsrs:
 	mtsrr1	%r3;							\
 	mfsprg3	%r3			/* restore r3 */
 
+#ifdef KDTRACE_HOOKS
+	.data
+	.globl	dtrace_invop_calltrap_addr
+	.align	8
+	.type	dtrace_invop_calltrap_addr, @object
+        .size	dtrace_invop_calltrap_addr, 8
+dtrace_invop_calltrap_addr:
+	.word	0
+	.word	0
+
+	.text
+#endif
+
 #ifdef SMP
 /*
  * Processor reset exception handler. These are typically
@@ -303,6 +316,7 @@ cpu_reset:
 	lis	%r3,1@l
 	bl	CNAME(cpudep_ap_early_bootstrap) /* Set PCPU */
 	nop
+	lis	%r3,1@l
 	bl	CNAME(pmap_cpu_bootstrap)	/* Turn on virtual memory */
 	nop
 	bl	CNAME(cpudep_ap_bootstrap)	/* Set up PCPU and stack */

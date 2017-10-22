@@ -37,7 +37,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/isa/ad1816.c 193640 2009-06-07 19:12:08Z ariff $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/isa/ad1816.c 193640 2009-06-07 19:12:08Z ariff $");
 
 struct ad1816_info;
 

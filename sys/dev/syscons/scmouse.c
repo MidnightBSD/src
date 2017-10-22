@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/syscons/scmouse.c 225617 2011-09-16 13:58:51Z kmacy $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/syscons/scmouse.c 256381 2013-10-12 15:31:36Z markm $");
 
 #include "opt_syscons.h"
 
@@ -666,7 +666,7 @@ sc_mouse_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
 
 	mouse = (mouse_info_t*)data;
 
-	random_harvest(mouse, sizeof(mouse_info_t), 2, 0, RANDOM_MOUSE);
+	random_harvest(mouse, sizeof(mouse_info_t), 2, RANDOM_MOUSE);
 
 	if (cmd == OLD_CONS_MOUSECTL) {
 	    static u_char swapb[] = { 0, 4, 2, 6, 1, 5, 3, 7 };

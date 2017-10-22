@@ -52,7 +52,7 @@ this code that are retained.
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/softfloat/bits32/softfloat.c 138590 2004-12-08 18:41:42Z cognet $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/softfloat/bits32/softfloat.c 230189 2012-01-16 04:05:53Z das $");
 
 #ifdef SOFTFLOAT_FOR_GCC
 #include "softfloat-for-gcc.h"
@@ -77,8 +77,8 @@ __FBSDID("$FreeBSD: stable/9/lib/libc/softfloat/bits32/softfloat.c 138590 2004-1
 Floating-point rounding mode and exception flags.
 -------------------------------------------------------------------------------
 */
-fp_rnd_t float_rounding_mode = float_round_nearest_even;
-fp_except float_exception_flags = 0;
+int float_rounding_mode = float_round_nearest_even;
+int float_exception_flags = 0;
 
 /*
 -------------------------------------------------------------------------------

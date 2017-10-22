@@ -25,14 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ia64/ia32/ia32_reg.c 149923 2005-09-10 01:13:33Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ia64/ia32/ia32_reg.c 233125 2012-03-18 19:12:11Z tijl $");
+
+#include "opt_compat.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/proc.h>
 #include <sys/procfs.h>
-
-#include <compat/ia32/ia32_reg.h>
 
 int
 fill_regs32(struct thread *td, struct reg32 *regs)

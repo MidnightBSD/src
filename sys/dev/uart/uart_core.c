@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/uart/uart_core.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_core.c 254534 2013-08-19 15:51:30Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -57,6 +57,12 @@ SLIST_HEAD(uart_devinfo_list, uart_devinfo) uart_sysdevs =
     SLIST_HEAD_INITIALIZER(uart_sysdevs);
 
 static MALLOC_DEFINE(M_UART, "UART", "UART driver");
+
+#ifndef	UART_POLL_FREQ
+#define	UART_POLL_FREQ		50
+#endif
+static int uart_poll_freq = UART_POLL_FREQ;
+TUNABLE_INT("debug.uart_poll_freq", &uart_poll_freq);
 
 void
 uart_add_sysdev(struct uart_devinfo *di)
@@ -131,7 +137,7 @@ uart_intr_break(void *arg)
  * much of the data we can, but otherwise flush the receiver FIFO to
  * create some breathing room. The net effect is that we avoid the
  * overrun condition to happen for the next X characters, where X is
- * related to the FIFO size at the cost of loosing data right away.
+ * related to the FIFO size at the cost of losing data right away.
  * So, instead of having multiple overrun interrupts in close proximity
  * to each other and possibly pessimizing UART interrupt latency for
  * other UARTs in a multiport configuration, we create a longer segment
@@ -186,7 +192,7 @@ uart_intr_rxready(void *arg)
  * Line or modem status change (OOB signalling).
  * We pass the signals to the software interrupt handler for further
  * processing. Note that we merge the delta bits, but set the state
- * bits. This is to avoid loosing state transitions due to having more
+ * bits. This is to avoid losing state transitions due to having more
  * than 1 hardware interrupt between software interrupts.
  */
 static __inline int
@@ -242,10 +248,14 @@ static int
 uart_intr(void *arg)
 {
 	struct uart_softc *sc = arg;
-	int flag = 0, ipend;
+	int cnt, ipend;
 
-	while (!sc->sc_leaving && (ipend = UART_IPEND(sc)) != 0) {
-		flag = 1;
+	if (sc->sc_leaving)
+		return (FILTER_STRAY);
+
+	cnt = 0;
+	while (cnt < 20 && (ipend = UART_IPEND(sc)) != 0) {
+		cnt++;
 		if (ipend & SER_INT_OVERRUN)
 			uart_intr_overrun(sc);
 		if (ipend & SER_INT_BREAK)
@@ -257,7 +267,14 @@ uart_intr(void *arg)
 		if (ipend & SER_INT_TXIDLE)
 			uart_intr_txidle(sc);		
 	}
-	return((flag)?FILTER_HANDLED:FILTER_STRAY);
+
+	if (sc->sc_polled) {
+		callout_reset(&sc->sc_timer, hz / uart_poll_freq,
+		    (timeout_t *)uart_intr, sc);
+	}
+
+	return ((cnt == 0) ? FILTER_STRAY :
+	    ((cnt == 20) ? FILTER_SCHEDULE_THREAD : FILTER_HANDLED));
 }
 
 serdev_intr_t *
@@ -378,7 +395,7 @@ uart_bus_attach(device_t dev)
 {
 	struct uart_softc *sc, *sc0;
 	const char *sep;
-	int error;
+	int error, filt;
 
 	/*
 	 * The sc_class field defines the type of UART we're going to work
@@ -418,33 +435,13 @@ uart_bus_attach(device_t dev)
 	sc->sc_bas.bsh = rman_get_bushandle(sc->sc_rres);
 	sc->sc_bas.bst = rman_get_bustag(sc->sc_rres);
 
-	sc->sc_irid = 0;
-	sc->sc_ires = bus_alloc_resource_any(dev, SYS_RES_IRQ, &sc->sc_irid,
-	    RF_ACTIVE | RF_SHAREABLE);
-	if (sc->sc_ires != NULL) {
-		error = bus_setup_intr(dev,
-		    sc->sc_ires, INTR_TYPE_TTY, 
-		    uart_intr, NULL, sc, &sc->sc_icookie);		    
-		if (error)
-			error = bus_setup_intr(dev,
-			    sc->sc_ires, INTR_TYPE_TTY | INTR_MPSAFE,
-			    NULL, (driver_intr_t *)uart_intr, sc, &sc->sc_icookie);
-		else
-			sc->sc_fastintr = 1;
-
-		if (error) {
-			device_printf(dev, "could not activate interrupt\n");
-			bus_release_resource(dev, SYS_RES_IRQ, sc->sc_irid,
-			    sc->sc_ires);
-			sc->sc_ires = NULL;
-		}
-	}
-	if (sc->sc_ires == NULL) {
-		/* XXX no interrupt resource. Force polled mode. */
-		sc->sc_polled = 1;
-	}
-
-	sc->sc_rxbufsz = 384;
+	/*
+	 * Ensure there is room for at least three full FIFOs of data in the
+	 * receive buffer (handles the case of low-level drivers with huge
+	 * FIFOs), and also ensure that there is no less than the historical
+	 * size of 384 bytes (handles the typical small-FIFO case).
+	 */
+	sc->sc_rxbufsz = MAX(384, sc->sc_rxfifosz * 3);
 	sc->sc_rxbuf = malloc(sc->sc_rxbufsz * sizeof(*sc->sc_rxbuf),
 	    M_UART, M_WAITOK);
 	sc->sc_txbuf = malloc(sc->sc_txfifosz * sizeof(*sc->sc_txbuf),
@@ -463,20 +460,6 @@ uart_bus_attach(device_t dev)
 		}
 		if (sc->sc_hwoflow) {
 			printf("%sCTS oflow", sep);
-			sep = ", ";
-		}
-		printf("\n");
-	}
-
-	if (bootverbose && (sc->sc_fastintr || sc->sc_polled)) {
-		sep = "";
-		device_print_prettyname(dev);
-		if (sc->sc_fastintr) {
-			printf("%sfast interrupt", sep);
-			sep = ", ";
-		}
-		if (sc->sc_polled) {
-			printf("%spolled mode", sep);
 			sep = ", ";
 		}
 		printf("\n");
@@ -510,6 +493,56 @@ uart_bus_attach(device_t dev)
 	sc->sc_pps.ppscap = PPS_CAPTUREBOTH;
 	pps_init(&sc->sc_pps);
 
+	sc->sc_leaving = 0;
+	filt = uart_intr(sc);
+
+	/*
+	 * Don't use interrupts if we couldn't clear any pending interrupt
+	 * conditions. We may have broken H/W and polling is probably the
+	 * safest thing to do.
+	 */
+	if (filt != FILTER_SCHEDULE_THREAD) {
+		sc->sc_irid = 0;
+		sc->sc_ires = bus_alloc_resource_any(dev, SYS_RES_IRQ,
+		    &sc->sc_irid, RF_ACTIVE | RF_SHAREABLE);
+	}
+	if (sc->sc_ires != NULL) {
+		error = bus_setup_intr(dev, sc->sc_ires, INTR_TYPE_TTY,
+		    uart_intr, NULL, sc, &sc->sc_icookie);
+		sc->sc_fastintr = (error == 0) ? 1 : 0;
+
+		if (!sc->sc_fastintr)
+			error = bus_setup_intr(dev, sc->sc_ires,
+			    INTR_TYPE_TTY | INTR_MPSAFE, NULL,
+			    (driver_intr_t *)uart_intr, sc, &sc->sc_icookie);
+
+		if (error) {
+			device_printf(dev, "could not activate interrupt\n");
+			bus_release_resource(dev, SYS_RES_IRQ, sc->sc_irid,
+			    sc->sc_ires);
+			sc->sc_ires = NULL;
+		}
+	}
+	if (sc->sc_ires == NULL) {
+		/* No interrupt resource. Force polled mode. */
+		sc->sc_polled = 1;
+		callout_init(&sc->sc_timer, 1);
+	}
+
+	if (bootverbose && (sc->sc_fastintr || sc->sc_polled)) {
+		sep = "";
+		device_print_prettyname(dev);
+		if (sc->sc_fastintr) {
+			printf("%sfast interrupt", sep);
+			sep = ", ";
+		}
+		if (sc->sc_polled) {
+			printf("%spolled mode (%dHz)", sep, uart_poll_freq);
+			sep = ", ";
+		}
+		printf("\n");
+	}
+
 	error = (sc->sc_sysdev != NULL && sc->sc_sysdev->attach != NULL)
 	    ? (*sc->sc_sysdev->attach)(sc) : uart_tty_attach(sc);
 	if (error)
@@ -518,8 +551,6 @@ uart_bus_attach(device_t dev)
 	if (sc->sc_sysdev != NULL)
 		sc->sc_sysdev->hwmtx = sc->sc_hwmtx;
 
-	sc->sc_leaving = 0;
-	uart_intr(sc);
 	return (0);
 
  fail:

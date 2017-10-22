@@ -2,9 +2,9 @@
  * Copyright 2000 Hans Reiser
  * See README for licensing and copyright details
  * 
- * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
+ * Ported to FreeBSD by Jean-SÃ©bastien PÃ©dron <jspedron@club-internet.fr>
  * 
- * $FreeBSD: stable/9/sys/gnu/fs/reiserfs/reiserfs_vfsops.c 239999 2012-09-02 03:36:57Z avatar $
+ * $FreeBSD: release/10.0.0/sys/gnu/fs/reiserfs/reiserfs_vfsops.c 242833 2012-11-09 18:02:25Z attilio $
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>
@@ -580,7 +580,6 @@ reiserfs_mountfs(struct vnode *devvp, struct mount *mp, struct thread *td)
 	mp->mnt_stat.f_fsid.val[1] = mp->mnt_vfc->vfc_typenum;
 	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
-	mp->mnt_kern_flag |= MNTK_MPSAFE;
 	MNT_IUNLOCK(mp);
 #if defined(si_mountpoint)
 	devvp->v_rdev->si_mountpoint = mp;

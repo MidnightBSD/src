@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/hastd/primary.c 249236 2013-04-07 17:05:16Z trociny $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/hastd/primary.c 257468 2013-10-31 20:30:26Z trociny $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -78,7 +78,7 @@ struct hio {
 	 * kernel. Each component has to decrease this counter by one
 	 * even on failure.
 	 */
-	unsigned int		 hio_countdown;
+	refcnt_t		 hio_countdown;
 	/*
 	 * Each component has a place to store its own error.
 	 * Once the request is handled by all components we can decide if the
@@ -172,7 +172,7 @@ static pthread_mutex_t metadata_lock;
 	    hio_next[(ncomp)]);						\
 	mtx_unlock(&hio_##name##_list_lock[ncomp]);			\
 	if (_wakeup)							\
-		cv_signal(&hio_##name##_list_cond[(ncomp)]);		\
+		cv_broadcast(&hio_##name##_list_cond[(ncomp)]);		\
 } while (0)
 #define	QUEUE_INSERT2(hio, name)	do {				\
 	bool _wakeup;							\
@@ -182,7 +182,7 @@ static pthread_mutex_t metadata_lock;
 	TAILQ_INSERT_TAIL(&hio_##name##_list, (hio), hio_##name##_next);\
 	mtx_unlock(&hio_##name##_list_lock);				\
 	if (_wakeup)							\
-		cv_signal(&hio_##name##_list_cond);			\
+		cv_broadcast(&hio_##name##_list_cond);			\
 } while (0)
 #define	QUEUE_TAKE1(hio, name, ncomp, timeout)	do {			\
 	bool _last;							\
@@ -291,22 +291,28 @@ primary_exitx(int exitcode, const char *fmt, ...)
 	exit(exitcode);
 }
 
+/* Expects res->hr_amp locked, returns unlocked. */
 static int
 hast_activemap_flush(struct hast_resource *res)
 {
 	const unsigned char *buf;
 	size_t size;
+	int ret;
 
+	mtx_lock(&res->hr_amp_diskmap_lock);
 	buf = activemap_bitmap(res->hr_amp, &size);
+	mtx_unlock(&res->hr_amp_lock);
 	PJDLOG_ASSERT(buf != NULL);
 	PJDLOG_ASSERT((size % res->hr_local_sectorsize) == 0);
+	ret = 0;
 	if (pwrite(res->hr_localfd, buf, size, METADATA_SIZE) !=
 	    (ssize_t)size) {
 		pjdlog_errno(LOG_ERR, "Unable to flush activemap to disk");
 		res->hr_stat_activemap_write_error++;
-		return (-1);
+		ret = -1;
 	}
-	if (res->hr_metaflush == 1 && g_flush(res->hr_localfd) == -1) {
+	if (ret == 0 && res->hr_metaflush == 1 &&
+	    g_flush(res->hr_localfd) == -1) {
 		if (errno == EOPNOTSUPP) {
 			pjdlog_warning("The %s provider doesn't support flushing write cache. Disabling it.",
 			    res->hr_localpath);
@@ -315,10 +321,11 @@ hast_activemap_flush(struct hast_resource *res)
 			pjdlog_errno(LOG_ERR,
 			    "Unable to flush disk cache on activemap update");
 			res->hr_stat_activemap_flush_error++;
-			return (-1);
+			ret = -1;
 		}
 	}
-	return (0);
+	mtx_unlock(&res->hr_amp_diskmap_lock);
+	return (ret);
 }
 
 static bool
@@ -415,7 +422,7 @@ init_environment(struct hast_resource *res __unused)
 			    "Unable to allocate %zu bytes of memory for hio request.",
 			    sizeof(*hio));
 		}
-		hio->hio_countdown = 0;
+		refcnt_init(&hio->hio_countdown, 0);
 		hio->hio_errors = malloc(sizeof(hio->hio_errors[0]) * ncomps);
 		if (hio->hio_errors == NULL) {
 			primary_exitx(EX_TEMPFAIL,
@@ -774,6 +781,7 @@ init_remote(struct hast_resource *res, struct proto_conn **inp,
 			free(map);
 			goto close;
 		}
+		mtx_lock(&res->hr_amp_lock);
 		/*
 		 * Merge local and remote bitmaps.
 		 */
@@ -1288,8 +1296,9 @@ ggate_recv_thread(void *arg)
 			    ggio->gctl_offset, ggio->gctl_length)) {
 				res->hr_stat_activemap_update++;
 				(void)hast_activemap_flush(res);
+			} else {
+				mtx_unlock(&res->hr_amp_lock);
 			}
-			mtx_unlock(&res->hr_amp_lock);
 			break;
 		case BIO_DELETE:
 			res->hr_stat_delete++;
@@ -1300,11 +1309,12 @@ ggate_recv_thread(void *arg)
 		}
 		pjdlog_debug(2,
 		    "ggate_recv: (%p) Moving request to the send queues.", hio);
-		hio->hio_countdown = ncomps;
 		if (hio->hio_replication == HAST_REPLICATION_MEMSYNC &&
 		    ggio->gctl_cmd == BIO_WRITE) {
 			/* Each remote request needs two responses in memsync. */
-			hio->hio_countdown++;
+			refcnt_init(&hio->hio_countdown, ncomps + 1);
+		} else {
+			refcnt_init(&hio->hio_countdown, ncomps);
 		}
 		for (ii = ncomp; ii < ncomps; ii++)
 			QUEUE_INSERT1(hio, send, ii);
@@ -1649,8 +1659,9 @@ done_queue:
 			if (activemap_need_sync(res->hr_amp, ggio->gctl_offset,
 			    ggio->gctl_length)) {
 				(void)hast_activemap_flush(res);
+			} else {
+				mtx_unlock(&res->hr_amp_lock);
 			}
-			mtx_unlock(&res->hr_amp_lock);
 			if (hio->hio_replication == HAST_REPLICATION_MEMSYNC)
 				(void)refcnt_release(&hio->hio_countdown);
 		}
@@ -1917,8 +1928,9 @@ ggate_send_thread(void *arg)
 			    ggio->gctl_offset, ggio->gctl_length)) {
 				res->hr_stat_activemap_update++;
 				(void)hast_activemap_flush(res);
+			} else {
+				mtx_unlock(&res->hr_amp_lock);
 			}
-			mtx_unlock(&res->hr_amp_lock);
 		}
 		if (ggio->gctl_cmd == BIO_WRITE) {
 			/*
@@ -2014,8 +2026,11 @@ sync_thread(void *arg __unused)
 			 */
 			if (activemap_extent_complete(res->hr_amp, syncext))
 				(void)hast_activemap_flush(res);
+			else
+				mtx_unlock(&res->hr_amp_lock);
+		} else {
+			mtx_unlock(&res->hr_amp_lock);
 		}
-		mtx_unlock(&res->hr_amp_lock);
 		if (dorewind) {
 			dorewind = false;
 			if (offset == -1)
@@ -2139,7 +2154,7 @@ sync_thread(void *arg __unused)
 			ncomp = 1;
 		}
 		mtx_unlock(&metadata_lock);
-		hio->hio_countdown = 1;
+		refcnt_init(&hio->hio_countdown, 1);
 		QUEUE_INSERT1(hio, send, ncomp);
 
 		/*
@@ -2189,7 +2204,7 @@ sync_thread(void *arg __unused)
 
 		pjdlog_debug(2, "sync: (%p) Moving request to the send queue.",
 		    hio);
-		hio->hio_countdown = 1;
+		refcnt_init(&hio->hio_countdown, 1);
 		QUEUE_INSERT1(hio, send, ncomp);
 
 		/*

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_write_disk_hardlink.c 229592 2012-01-05 12:06:54Z mm $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_write_disk_hardlink.c 232153 2012-02-25 10:58:02Z mm $");
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 /* Execution bits, Group members bits and others bits do not work. */
@@ -37,8 +37,8 @@ __FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_write_disk_
 /*
  * Exercise hardlink recreation.
  *
- * File permissions are chosen so that the authoritive entry
- * has the correct permission and the non-authoritive versions
+ * File permissions are chosen so that the authoritative entry
+ * has the correct permission and the non-authoritative versions
  * are just writeable files.
  */
 DEFINE_TEST(test_write_disk_hardlink)
@@ -157,11 +157,7 @@ DEFINE_TEST(test_write_disk_hardlink)
 	archive_entry_set_mode(ae, S_IFREG | 0600);
 	archive_entry_set_size(ae, 0);
 	assertEqualIntA(ad, 0, archive_write_header(ad, ae));
-#if ARCHIVE_VERSION_NUMBER < 3000000
 	assertEqualInt(ARCHIVE_WARN, archive_write_data(ad, data, 1));
-#else
-	assertEqualInt(-1, archive_write_data(ad, data, 1));
-#endif
 	assertEqualIntA(ad, 0, archive_write_finish_entry(ad));
 	archive_entry_free(ae);
 
@@ -178,14 +174,14 @@ DEFINE_TEST(test_write_disk_hardlink)
 		assertEqualIntA(ad, 0, archive_write_finish_entry(ad));
 	}
 	archive_entry_free(ae);
-	assertEqualInt(0, archive_write_finish(ad));
+	assertEqualInt(0, archive_write_free(ad));
 
 	/* Test the entries on disk. */
 
 	/* Test #1 */
 	/* If the hardlink was successfully created and the archive
 	 * doesn't carry data for it, we consider it to be
-	 * non-authoritive for meta data as well.  This is consistent
+	 * non-authoritative for meta data as well.  This is consistent
 	 * with GNU tar and BSD pax.  */
 	assertIsReg("link1a", 0755 & ~UMASK);
 	assertFileSize("link1a", sizeof(data));

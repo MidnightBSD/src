@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/9/etc/rc.d/savecore 208307 2010-05-19 19:03:19Z dougb $
+# $FreeBSD: release/10.0.0/etc/rc.d/savecore 254992 2013-08-28 15:12:15Z gavin $
 #
 
 # PROVIDE: savecore
@@ -23,6 +23,9 @@ savecore_prestart()
 		return 1
 		;;
 	[Aa][Uu][Tt][Oo])
+		if [ ! -L /dev/dumpdev ]; then
+			return 1
+		fi
 		dumpdev=`/bin/realpath /dev/dumpdev`
 		;;
 	esac
@@ -62,11 +65,12 @@ savecore_start()
 		;;
 	esac
 
-	if savecore -C "${dumpdir}" "${dev}" >/dev/null; then
+	if savecore -C "${dev}" >/dev/null; then
 		savecore ${savecore_flags} ${dumpdir} ${dumpdev}
 		if checkyesno crashinfo_enable; then
 			${crashinfo_program} -d ${dumpdir}
 		fi
+		sync
 	else
 		check_startmsgs && echo 'No core dumps found.'
 	fi

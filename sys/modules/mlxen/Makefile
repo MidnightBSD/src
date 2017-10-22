@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/mlxen/Makefile 239748 2012-08-27 19:37:02Z jhb $
+# $FreeBSD: release/10.0.0/sys/modules/mlxen/Makefile 234183 2012-04-12 14:01:06Z jhb $
 .PATH:  ${.CURDIR}/../../ofed/drivers/net/mlx4
 
 .include <bsd.own.mk>

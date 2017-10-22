@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ddb/db_command.c 229254 2012-01-02 00:01:09Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ddb/db_command.c 242424 2012-11-01 04:07:08Z alfred $");
 
 #include <sys/param.h>
 #include <sys/linker_set.h>
@@ -535,6 +535,11 @@ db_dump(db_expr_t dummy, boolean_t dummy2, db_expr_t dummy3, char *dummy4)
 {
 	int error;
 
+	if (textdump_pending) {
+		db_printf("textdump_pending set.\n"
+		    "run \"textdump unset\" first or \"textdump dump\" for a textdump.\n");
+		return;
+	}
 	error = doadump(FALSE);
 	if (error) {
 		db_printf("Cannot dump: ");

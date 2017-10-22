@@ -28,7 +28,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)routed.8	8.2 (Berkeley) 12/11/93
-.\" $FreeBSD: stable/9/sbin/routed/routed.8 214054 2010-10-19 12:35:40Z uqs $
+.\" $FreeBSD: release/10.0.0/sbin/routed/routed.8 250604 2013-05-13 18:13:50Z joel $
 .\"
 .Dd June 1, 1996
 .Dt ROUTED 8
@@ -576,7 +576,7 @@ Incoming packets can carry any password that is valid, will
 be valid within the next 24 hours, or that was valid within the preceding
 24 hours.
 To protect the secrets, the passwd settings are valid only in the
-.Em /etc/gateways
+.Pa /etc/gateways
 file and only when that file is readable only by UID 0.
 .It Cm md5_passwd Ns \&= Ns Ar XXX|KeyID[start|stop]
 specifies a RIPv2 MD5 password.

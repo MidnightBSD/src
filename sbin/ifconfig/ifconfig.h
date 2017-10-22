@@ -31,7 +31,7 @@
  *
  * so there!
  *
- * $FreeBSD: stable/9/sbin/ifconfig/ifconfig.h 194799 2009-06-23 23:49:52Z delphij $
+ * $FreeBSD: release/10.0.0/sbin/ifconfig/ifconfig.h 228571 2011-12-16 12:16:56Z glebius $
  */
 
 #define	__constructor	__attribute__((constructor))
@@ -148,3 +148,6 @@ void	clone_setdefcallback(const char *, clone_callback_func *);
  * operations on ifmedia can avoid cmd line ordering confusion.
  */
 struct ifmediareq *ifmedia_getstate(int s);
+
+void print_vhid(const struct ifaddrs *, const char *);
+

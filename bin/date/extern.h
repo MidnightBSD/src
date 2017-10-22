@@ -27,7 +27,9 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: stable/9/bin/date/extern.h 127958 2004-04-06 20:06:54Z markm $
+ * $FreeBSD: release/10.0.0/bin/date/extern.h 241737 2012-10-19 14:49:42Z ed $
  */
+
+extern int retval;
 
 int	netsettime(time_t);

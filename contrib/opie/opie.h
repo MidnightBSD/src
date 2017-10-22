@@ -37,7 +37,7 @@ License Agreement applies to this software.
 	Written at Bellcore for the S/Key Version 1 software distribution
 		(skey.h).
 
-$FreeBSD: stable/9/contrib/opie/opie.h 92914 2002-03-21 23:42:52Z markm $
+$FreeBSD: release/10.0.0/contrib/opie/opie.h 92914 2002-03-21 23:42:52Z markm $
 */
 #ifndef _OPIE_H
 #define _OPIE_H 1

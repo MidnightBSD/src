@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net80211/ieee80211_crypto_wep.c 186302 2008-12-18 23:00:09Z sam $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/net80211/ieee80211_crypto_wep.c 186302 2008-12-18 23:00:09Z sam $");
 
 /*
  * IEEE 802.11 WEP crypto support.

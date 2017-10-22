@@ -1,7 +1,7 @@
 /*
  * Test the POSIX shared-memory API.
- * Dedicated to tyhe public domain by Garrett A. Wollman, 2000.
- * $FreeBSD: stable/9/tools/test/posixshm/shm_test.c 59498 2000-04-22 15:29:21Z wollman $
+ * Dedicated to the public domain by Garrett A. Wollman, 2000.
+ * $FreeBSD: release/10.0.0/tools/test/posixshm/shm_test.c 254604 2013-08-21 17:47:11Z kib $
  */
 
 #include <sys/types.h>
@@ -21,7 +21,7 @@
  * Signal handler which does nothing.
  */
 static void 
-ignoreit(int sig)
+ignoreit(int sig __unused)
 {
 	;
 }
@@ -29,13 +29,13 @@ ignoreit(int sig)
 int
 main(int argc, char **argv)
 {
-	char buf[1024], *cp;
-	int desc, rv;
+	char buf[1024], *cp, c;
+	int error, desc, rv;
 	long scval;
 	sigset_t ss;
 	struct sigaction sa;
 	void *region;
-	size_t psize;
+	size_t i, psize;
 
 #ifndef _POSIX_SHARED_MEMORY_OBJECTS
 	printf("_POSIX_SHARED_MEMORY_OBJECTS is undefined\n");
@@ -118,14 +118,29 @@ main(int argc, char **argv)
 		sigemptyset(&ss);
 		sigsuspend(&ss);
 
-		for (cp = region; cp < (char *)region + psize; cp++)
+		for (cp = region; cp < (char *)region + psize; cp++) {
 			if (*cp != '\151')
 				_exit(1);
+		}
+		if (lseek(desc, 0, SEEK_SET) == -1)
+			_exit(1);
+		for (i = 0; i < psize; i++) {
+			error = read(desc, &c, 1);
+			if (c != '\151')
+				_exit(1);
+		}
 		_exit(0);
 	} else {
 		int status;
 
-		memset(region, '\151', psize);
+		memset(region, '\151', psize - 2);
+		error = pwrite(desc, region, 2, psize - 2);
+		if (error != 2) {
+			if (error >= 0)
+				errx(1, "short write %d", error);
+			else
+				err(1, "shmfd write");
+		}
 		kill(rv, SIGUSR1);
 		waitpid(rv, &status, 0);
 

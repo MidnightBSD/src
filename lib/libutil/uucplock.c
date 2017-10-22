@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libutil/uucplock.c 165906 2007-01-09 01:02:06Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libutil/uucplock.c 255007 2013-08-28 21:10:37Z jilles $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)uucplock.c	8.1 (Berkeley) 6/6/93";
@@ -76,7 +76,8 @@ uu_lock(const char *tty_name)
 			pid);
 	(void)snprintf(lckname, sizeof(lckname), _PATH_UUCPLOCK LOCKFMT,
 			tty_name);
-	if ((tmpfd = creat(lcktmpname, 0664)) < 0)
+	if ((tmpfd = open(lcktmpname, O_CREAT | O_TRUNC | O_WRONLY | O_CLOEXEC,
+	    0664)) < 0)
 		GORET(0, UU_LOCK_CREAT_ERR);
 
 	for (i = 0; i < MAXTRIES; i++) {
@@ -88,7 +89,7 @@ uu_lock(const char *tty_name)
 			 * check to see if the process holding the lock
 			 * still exists
 			 */
-			if ((fd = open(lckname, O_RDONLY)) < 0)
+			if ((fd = open(lckname, O_RDONLY | O_CLOEXEC)) < 0)
 				GORET(1, UU_LOCK_OPEN_ERR);
 
 			if ((pid_old = get_pid (fd, &err)) == -1)
@@ -132,7 +133,7 @@ uu_lock_txfr(const char *tty_name, pid_t pid)
 
 	snprintf(lckname, sizeof(lckname), _PATH_UUCPLOCK LOCKFMT, tty_name);
 
-	if ((fd = open(lckname, O_RDWR)) < 0)
+	if ((fd = open(lckname, O_RDWR | O_CLOEXEC)) < 0)
 		return UU_LOCK_OWNER_ERR;
 	if (get_pid(fd, &err) != getpid())
 		err = UU_LOCK_OWNER_ERR;

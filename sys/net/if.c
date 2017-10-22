@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if.c	8.5 (Berkeley) 1/9/95
- * $FreeBSD: stable/9/sys/net/if.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: release/10.0.0/sys/net/if.c 255442 2013-09-10 10:05:59Z des $
  */
 
 #include "opt_compat.h"
@@ -74,18 +74,18 @@
 #include <net/vnet.h>
 
 #if defined(INET) || defined(INET6)
-/*XXX*/
 #include <netinet/in.h>
 #include <netinet/in_var.h>
+#include <netinet/ip.h>
 #include <netinet/ip_carp.h>
+#ifdef INET
+#include <netinet/if_ether.h>
+#endif /* INET */
 #ifdef INET6
 #include <netinet6/in6_var.h>
 #include <netinet6/in6_ifattach.h>
-#endif
-#endif
-#ifdef INET
-#include <netinet/if_ether.h>
-#endif
+#endif /* INET6 */
+#endif /* INET || INET6 */
 
 #include <security/mac/mac_framework.h>
 
@@ -129,18 +129,22 @@ void	(*ng_ether_link_state_p)(struct ifnet *ifp, int state);
 void	(*lagg_linkstate_p)(struct ifnet *ifp, int state);
 /* These are external hooks for CARP. */
 void	(*carp_linkstate_p)(struct ifnet *ifp);
+void	(*carp_demote_adj_p)(int, char *);
+int	(*carp_master_p)(struct ifaddr *);
 #if defined(INET) || defined(INET6)
-struct ifnet *(*carp_forus_p)(struct ifnet *ifp, u_char *dhost);
+int	(*carp_forus_p)(struct ifnet *ifp, u_char *dhost);
 int	(*carp_output_p)(struct ifnet *ifp, struct mbuf *m,
-    struct sockaddr *sa, struct rtentry *rt);
+    const struct sockaddr *sa);
+int	(*carp_ioctl_p)(struct ifreq *, u_long, struct thread *);   
+int	(*carp_attach_p)(struct ifaddr *, int);
+void	(*carp_detach_p)(struct ifaddr *);
 #endif
 #ifdef INET
-int (*carp_iamatch_p)(struct ifnet *, struct in_ifaddr *, struct in_addr *,
-    u_int8_t **);
+int	(*carp_iamatch_p)(struct ifaddr *, uint8_t **);
 #endif
 #ifdef INET6
 struct ifaddr *(*carp_iamatch6_p)(struct ifnet *ifp, struct in6_addr *taddr6);
-caddr_t (*carp_macmatch6_p)(struct ifnet *ifp, struct mbuf *m,
+caddr_t	(*carp_macmatch6_p)(struct ifnet *ifp, struct mbuf *m,
     const struct in6_addr *taddr);
 #endif
 
@@ -453,7 +457,6 @@ if_alloc(u_char type)
 	ifp->if_afdata_initialized = 0;
 	IF_AFDATA_LOCK_INIT(ifp);
 	TAILQ_INIT(&ifp->if_addrhead);
-	TAILQ_INIT(&ifp->if_prefixhead);
 	TAILQ_INIT(&ifp->if_multiaddrs);
 	TAILQ_INIT(&ifp->if_groups);
 #ifdef MAC
@@ -494,21 +497,15 @@ if_free_internal(struct ifnet *ifp)
 }
 
 /*
- * This version should only be called by intefaces that switch their type
- * after calling if_alloc().  if_free_type() will go away again now that we
- * have if_alloctype to cache the original allocation type.  For now, assert
- * that they match, since we require that in practice.
+ * Deregister an interface and free the associated storage.
  */
 void
-if_free_type(struct ifnet *ifp, u_char type)
+if_free(struct ifnet *ifp)
 {
-
-	KASSERT(ifp->if_alloctype == type,
-	    ("if_free_type: type (%d) != alloctype (%d)", type,
-	    ifp->if_alloctype));
 
 	ifp->if_flags |= IFF_DYING;			/* XXX: Locking */
 
+	CURVNET_SET_QUIET(ifp->if_vnet);
 	IFNET_WLOCK();
 	KASSERT(ifp == ifnet_byindex_locked(ifp->if_index),
 	    ("%s: freeing unallocated ifnet", ifp->if_xname));
@@ -516,21 +513,9 @@ if_free_type(struct ifnet *ifp, u_char type)
 	ifindex_free_locked(ifp->if_index);
 	IFNET_WUNLOCK();
 
-	if (!refcount_release(&ifp->if_refcount))
-		return;
-	if_free_internal(ifp);
-}
-
-/*
- * This is the normal version of if_free(), used by device drivers to free a
- * detached network interface.  The contents of if_free_type() will move into
- * here when if_free_type() goes away.
- */
-void
-if_free(struct ifnet *ifp)
-{
-
-	if_free_type(ifp, ifp->if_alloctype);
+	if (refcount_release(&ifp->if_refcount))
+		if_free_internal(ifp);
+	CURVNET_RESTORE();
 }
 
 /*
@@ -669,6 +654,15 @@ if_attach_internal(struct ifnet *ifp, int vmove)
 		TAILQ_INSERT_HEAD(&ifp->if_addrhead, ifa, ifa_link);
 		/* Reliably crash if used uninitialized. */
 		ifp->if_broadcastaddr = NULL;
+
+#if defined(INET) || defined(INET6)
+		/* Initialize to max value. */
+		if (ifp->if_hw_tsomax == 0)
+			ifp->if_hw_tsomax = IP_MAXPACKET;
+		KASSERT(ifp->if_hw_tsomax <= IP_MAXPACKET &&
+		    ifp->if_hw_tsomax >= IP_MAXPACKET / 8,
+		    ("%s: tsomax outside of range", __func__));
+#endif
 	}
 #ifdef VIMAGE
 	else {
@@ -708,12 +702,9 @@ static void
 if_attachdomain(void *dummy)
 {
 	struct ifnet *ifp;
-	int s;
 
-	s = splnet();
 	TAILQ_FOREACH(ifp, &V_ifnet, if_link)
 		if_attachdomain1(ifp);
-	splx(s);
 }
 SYSINIT(domainifattach, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_SECOND,
     if_attachdomain, NULL);
@@ -722,23 +713,17 @@ static void
 if_attachdomain1(struct ifnet *ifp)
 {
 	struct domain *dp;
-	int s;
-
-	s = splnet();
 
 	/*
 	 * Since dp->dom_ifattach calls malloc() with M_WAITOK, we
 	 * cannot lock ifp->if_afdata initialization, entirely.
 	 */
-	if (IF_AFDATA_TRYLOCK(ifp) == 0) {
-		splx(s);
+	if (IF_AFDATA_TRYLOCK(ifp) == 0)
 		return;
-	}
 	if (ifp->if_afdata_initialized >= domain_init_status) {
 		IF_AFDATA_UNLOCK(ifp);
-		splx(s);
-		printf("if_attachdomain called more than once on %s\n",
-		    ifp->if_xname);
+		log(LOG_WARNING, "%s called more than once on %s\n",
+		    __func__, ifp->if_xname);
 		return;
 	}
 	ifp->if_afdata_initialized = domain_init_status;
@@ -751,8 +736,6 @@ if_attachdomain1(struct ifnet *ifp)
 			ifp->if_afdata[dp->dom_family] =
 			    (*dp->dom_ifattach)(ifp);
 	}
-
-	splx(s);
 }
 
 /*
@@ -821,7 +804,9 @@ void
 if_detach(struct ifnet *ifp)
 {
 
+	CURVNET_SET_QUIET(ifp->if_vnet);
 	if_detach_internal(ifp, 0);
+	CURVNET_RESTORE();
 }
 
 static void
@@ -1101,6 +1086,7 @@ if_addgroup(struct ifnet *ifp, const char *groupname)
 	struct ifg_list		*ifgl;
 	struct ifg_group	*ifg = NULL;
 	struct ifg_member	*ifgm;
+	int 			 new = 0;
 
 	if (groupname[0] && groupname[strlen(groupname) - 1] >= '0' &&
 	    groupname[strlen(groupname) - 1] <= '9')
@@ -1141,8 +1127,8 @@ if_addgroup(struct ifnet *ifp, const char *groupname)
 		strlcpy(ifg->ifg_group, groupname, sizeof(ifg->ifg_group));
 		ifg->ifg_refcnt = 0;
 		TAILQ_INIT(&ifg->ifg_members);
-		EVENTHANDLER_INVOKE(group_attach_event, ifg);
 		TAILQ_INSERT_TAIL(&V_ifg_head, ifg, ifg_next);
+		new = 1;
 	}
 
 	ifg->ifg_refcnt++;
@@ -1156,6 +1142,8 @@ if_addgroup(struct ifnet *ifp, const char *groupname)
 
 	IFNET_WUNLOCK();
 
+	if (new)
+		EVENTHANDLER_INVOKE(group_attach_event, ifg);
 	EVENTHANDLER_INVOKE(group_change_event, groupname);
 
 	return (0);
@@ -1194,10 +1182,11 @@ if_delgroup(struct ifnet *ifp, const char *groupname)
 
 	if (--ifgl->ifgl_group->ifg_refcnt == 0) {
 		TAILQ_REMOVE(&V_ifg_head, ifgl->ifgl_group, ifg_next);
+		IFNET_WUNLOCK();
 		EVENTHANDLER_INVOKE(group_detach_event, ifgl->ifgl_group);
 		free(ifgl->ifgl_group, M_TEMP);
-	}
-	IFNET_WUNLOCK();
+	} else
+		IFNET_WUNLOCK();
 
 	free(ifgl, M_TEMP);
 
@@ -1238,11 +1227,12 @@ if_delgroups(struct ifnet *ifp)
 
 		if (--ifgl->ifgl_group->ifg_refcnt == 0) {
 			TAILQ_REMOVE(&V_ifg_head, ifgl->ifgl_group, ifg_next);
+			IFNET_WUNLOCK();
 			EVENTHANDLER_INVOKE(group_detach_event,
 			    ifgl->ifgl_group);
 			free(ifgl->ifgl_group, M_TEMP);
-		}
-		IFNET_WUNLOCK();
+		} else
+			IFNET_WUNLOCK();
 
 		free(ifgl, M_TEMP);
 
@@ -1425,7 +1415,7 @@ if_maddr_runlock(struct ifnet *ifp)
 }
 
 /*
- * Reference count functions for ifaddrs.
+ * Initialization, destruction and refcounting functions for ifaddrs.
  */
 void
 ifa_init(struct ifaddr *ifa)
@@ -1433,6 +1423,7 @@ ifa_init(struct ifaddr *ifa)
 
 	mtx_init(&ifa->ifa_mtx, "ifaddr", NULL, MTX_DEF);
 	refcount_init(&ifa->ifa_refcnt, 1);
+	ifa->if_data.ifi_datalen = sizeof(ifa->if_data);
 }
 
 void
@@ -1476,7 +1467,7 @@ ifa_add_loopback_route(struct ifaddr *ifa, struct sockaddr *ia)
 		RT_REMREF(rt);
 		RT_UNLOCK(rt);
 	} else if (error != 0)
-		log(LOG_INFO, "ifa_add_loopback_route: insertion failed\n");
+		log(LOG_DEBUG, "%s: insertion failed: %u\n", __func__, error);
 
 	return (error);
 }
@@ -1500,7 +1491,7 @@ ifa_del_loopback_route(struct ifaddr *ifa, struct sockaddr *ia)
 	error = rtrequest1_fib(RTM_DELETE, &info, NULL, 0);
 
 	if (error != 0)
-		log(LOG_INFO, "ifa_del_loopback_route: deletion failed\n");
+		log(LOG_DEBUG, "%s: deletion failed: %u\n", __func__, error);
 
 	return (error);
 }
@@ -1729,11 +1720,13 @@ next:				continue;
 				/*
 				 * If the netmask of what we just found
 				 * is more specific than what we had before
-				 * (if we had one) then remember the new one
-				 * before continuing to search
-				 * for an even better one.
+				 * (if we had one), or if the virtual status
+				 * of new prefix is better than of the old one,
+				 * then remember the new one before continuing
+				 * to search for an even better one.
 				 */
 				if (ifa_maybe == NULL ||
+				    ifa_preferred(ifa_maybe, ifa) ||
 				    rn_refines((caddr_t)ifa->ifa_netmask,
 				    (caddr_t)ifa_maybe->ifa_netmask)) {
 					if (ifa_maybe != NULL)
@@ -1805,6 +1798,21 @@ done:
 	return (ifa);
 }
 
+/*
+ * See whether new ifa is better than current one:
+ * 1) A non-virtual one is preferred over virtual.
+ * 2) A virtual in master state preferred over any other state.
+ *
+ * Used in several address selecting functions.
+ */
+int
+ifa_preferred(struct ifaddr *cur, struct ifaddr *next)
+{
+
+	return (cur->ifa_carp && (!next->ifa_carp ||
+	    ((*carp_master_p)(next) && !(*carp_master_p)(cur))));
+}
+
 #include <net/if_llatbl.h>
 
 /*
@@ -1837,7 +1845,6 @@ link_rtrequest(int cmd, struct rtentry *rt, struct rt_addrinfo *info)
 /*
  * Mark an interface down and notify protocols of
  * the transition.
- * NOTE: must be called at splnet or eqivalent.
  */
 static void
 if_unroute(struct ifnet *ifp, int flag, int fam)
@@ -1861,7 +1868,6 @@ if_unroute(struct ifnet *ifp, int flag, int fam)
 /*
  * Mark an interface up and notify protocols of
  * the transition.
- * NOTE: must be called at splnet or eqivalent.
  */
 static void
 if_route(struct ifnet *ifp, int flag, int fam)
@@ -1947,7 +1953,6 @@ do_link_state_change(void *arg, int pending)
 /*
  * Mark an interface down and notify protocols of
  * the transition.
- * NOTE: must be called at splnet or eqivalent.
  */
 void
 if_down(struct ifnet *ifp)
@@ -1959,7 +1964,6 @@ if_down(struct ifnet *ifp)
 /*
  * Mark an interface up and notify protocols of
  * the transition.
- * NOTE: must be called at splnet or eqivalent.
  */
 void
 if_up(struct ifnet *ifp)
@@ -2162,14 +2166,10 @@ ifhwioctl(u_long cmd, struct ifnet *ifp, caddr_t data, struct thread *td)
 			/* Smart drivers twiddle their own routes */
 		} else if (ifp->if_flags & IFF_UP &&
 		    (new_flags & IFF_UP) == 0) {
-			int s = splimp();
 			if_down(ifp);
-			splx(s);
 		} else if (new_flags & IFF_UP &&
 		    (ifp->if_flags & IFF_UP) == 0) {
-			int s = splimp();
 			if_up(ifp);
-			splx(s);
 		}
 		/* See if permanently promiscuous mode bit is about to flip */
 		if ((ifp->if_flags ^ new_flags) & IFF_PPROMISC) {
@@ -2522,6 +2522,16 @@ ifioctl(struct socket *so, u_long cmd, caddr_t data, struct thread *td)
 		error = if_getgroupmembers((struct ifgroupreq *)data);
 		CURVNET_RESTORE();
 		return (error);
+#if defined(INET) || defined(INET6)
+	case SIOCSVH:
+	case SIOCGVH:
+		if (carp_ioctl_p == NULL)
+			error = EPROTONOSUPPORT;
+		else
+			error = (*carp_ioctl_p)(ifr, cmd, td);
+		CURVNET_RESTORE();
+		return (error);
+#endif
 	}
 
 	ifp = ifunit_ref(ifr->ifr_name);
@@ -2543,11 +2553,23 @@ ifioctl(struct socket *so, u_long cmd, caddr_t data, struct thread *td)
 		CURVNET_RESTORE();
 		return (EOPNOTSUPP);
 	}
+
+	/*
+	 * Pass the request on to the socket control method, and if the
+	 * latter returns EOPNOTSUPP, directly to the interface.
+	 *
+	 * Make an exception for the legacy SIOCSIF* requests.  Drivers
+	 * trust SIOCSIFADDR et al to come from an already privileged
+	 * layer, and do not perform any credentials checks or input
+	 * validation.
+	 */
 #ifndef COMPAT_43
 	error = ((*so->so_proto->pr_usrreqs->pru_control)(so, cmd,
 								 data,
 								 ifp, td));
-	if (error == EOPNOTSUPP && ifp != NULL && ifp->if_ioctl != NULL)
+	if (error == EOPNOTSUPP && ifp != NULL && ifp->if_ioctl != NULL &&
+	    cmd != SIOCSIFADDR && cmd != SIOCSIFBRDADDR &&
+	    cmd != SIOCSIFDSTADDR && cmd != SIOCSIFNETMASK)
 		error = (*ifp->if_ioctl)(ifp, cmd, data);
 #else
 	{
@@ -2591,7 +2613,9 @@ ifioctl(struct socket *so, u_long cmd, caddr_t data, struct thread *td)
 								   data,
 								   ifp, td));
 		if (error == EOPNOTSUPP && ifp != NULL &&
-		    ifp->if_ioctl != NULL)
+		    ifp->if_ioctl != NULL &&
+		    cmd != SIOCSIFADDR && cmd != SIOCSIFBRDADDR &&
+		    cmd != SIOCSIFDSTADDR && cmd != SIOCSIFNETMASK)
 			error = (*ifp->if_ioctl)(ifp, cmd, data);
 		switch (ocmd) {
 
@@ -2607,11 +2631,8 @@ ifioctl(struct socket *so, u_long cmd, caddr_t data, struct thread *td)
 
 	if ((oif_flags ^ ifp->if_flags) & IFF_UP) {
 #ifdef INET6
-		if (ifp->if_flags & IFF_UP) {
-			int s = splimp();
+		if (ifp->if_flags & IFF_UP)
 			in6_if_up(ifp);
-			splx(s);
-		}
 #endif
 	}
 	if_rele(ifp);

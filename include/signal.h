@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)signal.h	8.3 (Berkeley) 3/30/94
- * $FreeBSD: stable/9/include/signal.h 218881 2011-02-20 09:52:29Z kib $
+ * $FreeBSD: release/10.0.0/include/signal.h 228468 2011-12-13 13:32:56Z ed $
  */
 
 #ifndef _SIGNAL_H_
@@ -42,9 +42,9 @@
  * XXX should enlarge these, if only to give empty names instead of bounds
  * errors for large signal numbers.
  */
-extern __const char *__const sys_signame[NSIG];
-extern __const char *__const sys_siglist[NSIG];
-extern __const int sys_nsig;
+extern const char * const sys_signame[NSIG];
+extern const char * const sys_siglist[NSIG];
+extern const int sys_nsig;
 #endif
 
 #if __POSIX_VISIBLE >= 200112 || __XSI_VISIBLE

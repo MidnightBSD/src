@@ -45,7 +45,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/security/mac/mac_internal.h 211616 2010-08-22 11:18:57Z rpaulo $
+ * $FreeBSD: release/10.0.0/sys/security/mac/mac_internal.h 255971 2013-10-01 15:40:27Z markj $
  */
 
 #ifndef _SECURITY_MAC_MAC_INTERNAL_H_
@@ -119,7 +119,7 @@ SDT_PROVIDER_DECLARE(mac_framework);	/* Entry points to MAC. */
 	SDT_PROBE_DEFINE3(mac_framework, kernel, name, mac_grant_err,	\
 	    mac-grant-err, "int", arg0, arg1);				\
 	SDT_PROBE_DEFINE3(mac_framework, kernel, name, mac_grant_ok,	\
-	    mac-grant-ok, "INT", arg0, arg1);
+	    mac-grant-ok, "int", arg0, arg1);
 
 #define	MAC_GRANT_PROBE2(name, error, arg0, arg1)	do {		\
 	if (error) {							\

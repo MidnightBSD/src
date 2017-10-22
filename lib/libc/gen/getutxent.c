@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/gen/getutxent.c 232408 2012-03-02 21:38:27Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/getutxent.c 257320 2013-10-29 09:23:51Z glebius $");
 
 #include "namespace.h"
 #include <sys/endian.h>
@@ -38,8 +38,13 @@ __FBSDID("$FreeBSD: stable/9/lib/libc/gen/getutxent.c 232408 2012-03-02 21:38:27
 #include "utxdb.h"
 #include "un-namespace.h"
 
+#ifdef __NO_TLS
 static FILE *uf = NULL;
 static int udb;
+#else
+static _Thread_local FILE *uf = NULL;
+static _Thread_local int udb;
+#endif
 
 int
 setutxdb(int db, const char *file)
@@ -66,7 +71,7 @@ setutxdb(int db, const char *file)
 
 	if (uf != NULL)
 		fclose(uf);
-	uf = fopen(file, "r");
+	uf = fopen(file, "re");
 	if (uf == NULL)
 		return (-1);
 
@@ -117,9 +122,20 @@ getfutxent(struct futx *fu)
 	if (udb == UTXDB_LOG) {
 		uint16_t len;
 
+retry:
 		if (fread(&len, sizeof(len), 1, uf) != 1)
 			return (-1);
 		len = be16toh(len);
+		if (len == 0) {
+			/*
+			 * XXX: Though zero-size records are valid in theory,
+			 * they can never occur in practice. Zero-size records
+			 * indicate file corruption. Seek one byte forward, to
+			 * see if we can find a record there.
+			 */
+			ungetc('\0', uf);
+			goto retry;
+		}
 		if (len > sizeof *fu) {
 			/* Forward compatibility. */
 			if (fread(fu, sizeof(*fu), 1, uf) != 1)

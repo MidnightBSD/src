@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/9/lib/libc/arm/Symbol.map 237491 2012-06-23 18:39:35Z marius $
+ * $FreeBSD: release/10.0.0/lib/libc/arm/Symbol.map 245651 2013-01-19 04:11:45Z andrew $
  */
 
 /*
@@ -19,7 +19,6 @@ FBSD_1.0 {
 	__infinity;
 	__nan;
 	makecontext;
-	modf;
 	setjmp;
 	longjmp;
 	sigsetjmp;
@@ -34,6 +33,10 @@ FBSD_1.0 {
 	sbrk;
 };
 
+FBSD_1.3 {
+	__flt_rounds;
+};
+
 FBSDprivate_1.0 {
 	/* PSEUDO syscalls */
 	__sys_getlogin;
@@ -43,10 +46,6 @@ FBSDprivate_1.0 {
 	_set_tp;
 	__aeabi_read_tp;
 	___longjmp;
-	__umodsi3;
-	__modsi3;
-	__udivsi3;
-	__divsi3;
 	__makecontext;
 	__longjmp;
 	signalcontext;

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/net/rthdr.c 168867 2007-04-19 15:48:16Z mtm $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/rthdr.c 168867 2007-04-19 15:48:16Z mtm $");
 
 #include <sys/param.h>
 #include <sys/types.h>

@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: nap.c,v 1.1 2008/03/11 00:02:42 max Exp $
- * $FreeBSD: stable/9/usr.sbin/bluetooth/sdpd/nap.c 177358 2008-03-18 18:21:39Z emax $
+ * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/sdpd/nap.c 177358 2008-03-18 18:21:39Z emax $
  */
 
 #include <sys/queue.h>

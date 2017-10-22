@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/Osd/OsdMemory.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/Osd/OsdMemory.c 231844 2012-02-16 22:59:29Z jkim $");
 
 #include <contrib/dev/acpica/include/acpi.h>
 
@@ -87,7 +87,7 @@ AcpiOsWritable (void *Pointer, ACPI_SIZE Length)
 }
 
 ACPI_STATUS
-AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT32 *Value, UINT32 Width)
+AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 *Value, UINT32 Width)
 {
     void	*LogicalAddress;
 
@@ -105,6 +105,9 @@ AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT32 *Value, UINT32 Width)
     case 32:
 	*Value = *(volatile uint32_t *)LogicalAddress;
 	break;
+    case 64:
+	*Value = *(volatile uint64_t *)LogicalAddress;
+	break;
     }
 
     pmap_unmapdev((vm_offset_t)LogicalAddress, Width / 8);
@@ -113,7 +116,7 @@ AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT32 *Value, UINT32 Width)
 }
 
 ACPI_STATUS
-AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT32 Value, UINT32 Width)
+AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 Value, UINT32 Width)
 {
     void	*LogicalAddress;
 
@@ -130,6 +133,9 @@ AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT32 Value, UINT32 Width)
 	break;
     case 32:
 	*(volatile uint32_t *)LogicalAddress = Value;
+	break;
+    case 64:
+	*(volatile uint64_t *)LogicalAddress = Value;
 	break;
     }
 

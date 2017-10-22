@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sys/modules/cas/Makefile 209991 2010-07-13 12:47:31Z nwhitehorn $
+# $FreeBSD: release/10.0.0/sys/modules/cas/Makefile 209991 2010-07-13 12:47:31Z nwhitehorn $
 
 .PATH: ${.CURDIR}/../../dev/cas
 

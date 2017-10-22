@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)assert.h	8.2 (Berkeley) 1/21/94
- * $FreeBSD: stable/9/include/assert.h 217207 2011-01-09 21:39:46Z ed $
+ * $FreeBSD: release/10.0.0/include/assert.h 228955 2011-12-29 14:41:17Z ed $
  */
 
 #include <sys/cdefs.h>
@@ -57,7 +57,22 @@
 
 #ifndef _ASSERT_H_
 #define _ASSERT_H_
+
+/*
+ * Static assertions.  In principle we could define static_assert for
+ * C++ older than C++11, but this breaks if _Static_assert is
+ * implemented as a macro.
+ *
+ * C++ template parameters may contain commas, even if not enclosed in
+ * parentheses, causing the _Static_assert macro to be invoked with more
+ * than two parameters.
+ */
+#if __ISO_C_VISIBLE >= 2011 && !defined(__cplusplus)
+#define	static_assert	_Static_assert
+#endif
+
 __BEGIN_DECLS
 void __assert(const char *, const char *, int, const char *) __dead2;
 __END_DECLS
+
 #endif /* !_ASSERT_H_ */

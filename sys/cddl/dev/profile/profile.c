@@ -20,7 +20,7 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD: stable/9/sys/cddl/dev/profile/profile.c 179237 2008-05-23 05:59:42Z jb $
+ * $FreeBSD: release/10.0.0/sys/cddl/dev/profile/profile.c 242723 2012-11-07 23:45:09Z jhibbits $
  *
  */
 
@@ -110,6 +110,20 @@
 #endif
 #endif
 #endif
+#endif
+
+#ifdef __mips
+/*
+ * This value is bogus just to make module compilable on mips
+ */
+#define	PROF_ARTIFICIAL_FRAMES	3
+#endif
+
+#ifdef __powerpc__
+/*
+ * This value is bogus just to make module compilable on powerpc
+ */
+#define	PROF_ARTIFICIAL_FRAMES	3
 #endif
 
 typedef struct profile_probe {

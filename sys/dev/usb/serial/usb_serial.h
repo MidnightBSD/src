@@ -1,5 +1,5 @@
 /*	$NetBSD: ucomvar.h,v 1.9 2001/01/23 21:56:17 augustss Exp $	*/
-/*	$FreeBSD: stable/9/sys/dev/usb/serial/usb_serial.h 244813 2012-12-29 12:10:41Z hselasky $	*/
+/*	$FreeBSD: release/10.0.0/sys/dev/usb/serial/usb_serial.h 250576 2013-05-12 16:43:26Z eadler $	*/
 
 /*-
  * Copyright (c) 2001-2002, Shunsuke Akiyama <akiyama@jp.FreeBSD.org>.
@@ -146,7 +146,7 @@ struct ucom_super_softc {
 
 struct ucom_softc {
 	/*
-	 * NOTE: To avoid loosing level change information we use two
+	 * NOTE: To avoid losing level change information we use two
 	 * tasks instead of one for all commands.
 	 *
 	 * Level changes are transitions like:

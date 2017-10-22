@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ndbm.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/9/include/ndbm.h 203964 2010-02-16 19:39:50Z imp $
+ * $FreeBSD: release/10.0.0/include/ndbm.h 203964 2010-02-16 19:39:50Z imp $
  */
 
 #ifndef _NDBM_H_

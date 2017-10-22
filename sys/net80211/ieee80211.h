@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/net80211/ieee80211.h 239615 2012-08-23 17:09:52Z bschmidt $
+ * $FreeBSD: release/10.0.0/sys/net80211/ieee80211.h 253639 2013-07-25 06:23:26Z rpaulo $
  */
 #ifndef _NET80211_IEEE80211_H_
 #define _NET80211_IEEE80211_H_
@@ -199,6 +199,13 @@ struct ieee80211_qosframe_addr4 {
 #define	IEEE80211_QOS_EOSP			0x10	/* EndOfService Period*/
 #define	IEEE80211_QOS_EOSP_S			4
 #define	IEEE80211_QOS_TID			0x0f
+/* qos[1] byte used for all frames sent by mesh STAs in a mesh BSS */
+#define IEEE80211_QOS_MC			0x01	/* Mesh control */
+/* Mesh power save level*/
+#define IEEE80211_QOS_MESH_PSL			0x02
+/* Mesh Receiver Service Period Initiated */
+#define IEEE80211_QOS_RSPI			0x04
+/* bits 11 to 15 reserved */
 
 /* does frame have QoS sequence control data */
 #define	IEEE80211_QOS_HAS_SEQ(wh) \
@@ -325,6 +332,9 @@ struct ieee80211_action {
 #define	IEEE80211_ACTION_CAT_DLS	2	/* DLS */
 #define	IEEE80211_ACTION_CAT_BA		3	/* BA */
 #define	IEEE80211_ACTION_CAT_HT		7	/* HT */
+#define	IEEE80211_ACTION_CAT_MESH	13	/* Mesh */
+#define	IEEE80211_ACTION_CAT_SELF_PROT	15	/* Self-protected */
+/* 16 - 125 reserved */
 #define	IEEE80211_ACTION_CAT_VENDOR	127	/* Vendor Specific */
 
 #define	IEEE80211_ACTION_HT_TXCHWIDTH	0	/* recommended xmit chan width*/
@@ -701,6 +711,7 @@ enum {
 	IEEE80211_ELEMID_IBSSDFS	= 41,
 	IEEE80211_ELEMID_ERP		= 42,
 	IEEE80211_ELEMID_HTCAP		= 45,
+	IEEE80211_ELEMID_QOS		= 46,
 	IEEE80211_ELEMID_RSN		= 48,
 	IEEE80211_ELEMID_XRATES		= 50,
 	IEEE80211_ELEMID_HTINFO		= 61,
@@ -724,7 +735,7 @@ enum {
 	IEEE80211_ELEMID_MESHAWAKEW	= 119,
 	IEEE80211_ELEMID_MESHBEACONT	= 120,
 	/* 121-124 MMCAOP not implemented yet */
-	IEEE80211_ELEMID_MESHPANN	= 125, /* XXX: is GANN now, not used */
+	IEEE80211_ELEMID_MESHGANN	= 125,
 	IEEE80211_ELEMID_MESHRANN	= 126,
 	/* 127 Extended Capabilities */
 	/* 128-129 reserved */
@@ -760,6 +771,18 @@ struct ieee80211_country_ie {
 #define	IEEE80211_COUNTRY_MAX_BANDS	84	/* max possible bands */
 #define	IEEE80211_COUNTRY_MAX_SIZE \
 	(sizeof(struct ieee80211_country_ie) + 3*(IEEE80211_COUNTRY_MAX_BANDS-1))
+
+/*
+ * 802.11h Quiet Time Element.
+ */
+struct ieee80211_quiet_ie {
+	uint8_t		quiet_ie;		/* IEEE80211_ELEMID_QUIET */
+	uint8_t		len;
+	uint8_t		tbttcount;		/* quiet start */
+	uint8_t		period;			/* beacon intervals between quiets */
+	uint16_t	duration;		/* TUs of each quiet*/
+	uint16_t	offset;			/* TUs of from TBTT of quiet start */
+} __packed;
 
 /*
  * 802.11h Channel Switch Announcement (CSA).
@@ -920,19 +943,21 @@ enum {
 	IEEE80211_REASON_SETUP_NEEDED		= 38,	/* 11e */
 	IEEE80211_REASON_TIMEOUT		= 39,	/* 11e */
 
-	/* values not yet allocated by ANA */
-	IEEE80211_REASON_PEER_LINK_CANCELED	= 2,	/* 11s */
-	IEEE80211_REASON_MESH_MAX_PEERS		= 3,	/* 11s */
-	IEEE80211_REASON_MESH_CPVIOLATION	= 4,	/* 11s */
-	IEEE80211_REASON_MESH_CLOSE_RCVD	= 5,	/* 11s */
-	IEEE80211_REASON_MESH_MAX_RETRIES	= 6,	/* 11s */
-	IEEE80211_REASON_MESH_CONFIRM_TIMEOUT	= 7,	/* 11s */
-	IEEE80211_REASON_MESH_INVALID_GTK	= 8,	/* 11s */
-	IEEE80211_REASON_MESH_INCONS_PARAMS	= 9,	/* 11s */
-	IEEE80211_REASON_MESH_INVALID_SECURITY	= 10,	/* 11s */
-	IEEE80211_REASON_MESH_PERR_UNSPEC	= 11,	/* 11s */
-	IEEE80211_REASON_MESH_PERR_NO_FI	= 12,	/* 11s */
-	IEEE80211_REASON_MESH_PERR_DEST_UNREACH	= 13,	/* 11s */
+	IEEE80211_REASON_PEER_LINK_CANCELED	= 52,	/* 11s */
+	IEEE80211_REASON_MESH_MAX_PEERS		= 53,	/* 11s */
+	IEEE80211_REASON_MESH_CPVIOLATION	= 54,	/* 11s */
+	IEEE80211_REASON_MESH_CLOSE_RCVD	= 55,	/* 11s */
+	IEEE80211_REASON_MESH_MAX_RETRIES	= 56,	/* 11s */
+	IEEE80211_REASON_MESH_CONFIRM_TIMEOUT	= 57,	/* 11s */
+	IEEE80211_REASON_MESH_INVALID_GTK	= 58,	/* 11s */
+	IEEE80211_REASON_MESH_INCONS_PARAMS	= 59,	/* 11s */
+	IEEE80211_REASON_MESH_INVALID_SECURITY	= 60,	/* 11s */
+	IEEE80211_REASON_MESH_PERR_NO_PROXY	= 61,	/* 11s */
+	IEEE80211_REASON_MESH_PERR_NO_FI	= 62,	/* 11s */
+	IEEE80211_REASON_MESH_PERR_DEST_UNREACH	= 63,	/* 11s */
+	IEEE80211_REASON_MESH_MAC_ALRDY_EXISTS_MBSS = 64, /* 11s */
+	IEEE80211_REASON_MESH_CHAN_SWITCH_REG	= 65,	/* 11s */
+	IEEE80211_REASON_MESH_CHAN_SWITCH_UNSPEC = 66,	/* 11s */
 
 	IEEE80211_STATUS_SUCCESS		= 0,
 	IEEE80211_STATUS_UNSPECIFIED		= 1,

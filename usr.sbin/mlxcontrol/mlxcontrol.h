@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/usr.sbin/mlxcontrol/mlxcontrol.h 136057 2004-10-02 16:42:33Z stefanf $
+ *	$FreeBSD: release/10.0.0/usr.sbin/mlxcontrol/mlxcontrol.h 136057 2004-10-02 16:42:33Z stefanf $
  */
 
 #include <sys/queue.h>

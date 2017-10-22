@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/9/sys/dev/ath/ath_hal/ar5312/ar5312_reset.c 187831 2009-01-28 18:00:22Z sam $
+ * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar5312/ar5312_reset.c 234450 2012-04-19 03:26:21Z adrian $
  */
 #include "opt_ah.h"
 
@@ -740,8 +740,7 @@ ar5312SetResetReg(struct ath_hal *ah, uint32_t resetMask)
         if ((resetMask & AR_RC_MAC) == 0) {
 		if (isBigEndian()) {
 			/*
-			 * Set CFG, little-endian for register
-			 * and descriptor accesses.
+			 * Set CFG, little-endian for descriptor accesses.
 			 */
 #ifdef AH_NEED_DESC_SWAP
 			mask = INIT_CONFIG_STATUS | AR_CFG_SWRD;

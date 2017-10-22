@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/tools/regression/bin/sh/parser/empty-braces1.0 245690 2013-01-20 14:22:21Z jilles $
+# $FreeBSD: release/10.0.0/tools/regression/bin/sh/parser/empty-braces1.0 245382 2013-01-13 19:26:33Z jilles $
 
 # Unfortunately, some scripts depend on the extension of allowing an empty
 # pair of braces.

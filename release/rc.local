@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/release/rc.local 248241 2013-03-13 14:01:58Z nwhitehorn $
+# $FreeBSD: release/10.0.0/release/rc.local 245742 2013-01-21 14:06:33Z nwhitehorn $
 
 : ${DIALOG_OK=0}
 : ${DIALOG_CANCEL=1}

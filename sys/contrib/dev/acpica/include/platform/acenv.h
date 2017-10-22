@@ -5,7 +5,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2011, Intel Corp.
+ * Copyright (C) 2000 - 2013, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -79,7 +79,7 @@
 #define ACPI_SINGLE_THREADED
 #endif
 
-/* AcpiExec and AcpiBin configuration */
+/* AcpiExec configuration. Multithreaded with full AML debugger */
 
 #ifdef ACPI_EXEC_APP
 #define ACPI_APPLICATION
@@ -88,9 +88,30 @@
 #define ACPI_DBG_TRACK_ALLOCATIONS
 #endif
 
-#ifdef ACPI_BIN_APP
+/* AcpiNames configuration. Single threaded with debugger output enabled. */
+
+#ifdef ACPI_NAMES_APP
+#define ACPI_DEBUGGER
 #define ACPI_APPLICATION
 #define ACPI_SINGLE_THREADED
+#endif
+
+/*
+ * AcpiBin/AcpiDump/AcpiSrc/AcpiXtract configuration. All single
+ * threaded, with no debug output.
+ */
+#if (defined ACPI_BIN_APP)   || \
+    (defined ACPI_DUMP_APP)  || \
+    (defined ACPI_SRC_APP)   || \
+    (defined ACPI_XTRACT_APP)
+#define ACPI_APPLICATION
+#define ACPI_SINGLE_THREADED
+#endif
+
+#ifdef ACPI_HELP_APP
+#define ACPI_APPLICATION
+#define ACPI_SINGLE_THREADED
+#define ACPI_NO_ERROR_MESSAGES
 #endif
 
 /* Linkable ACPICA library */
@@ -127,6 +148,9 @@
 #if defined(_LINUX) || defined(__linux__)
 #include "aclinux.h"
 
+#elif defined(_APPLE) || defined(__APPLE__)
+#include "acmacosx.h"
+
 #elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 #include <contrib/dev/acpica/include/platform/acfreebsd.h>
 
@@ -159,6 +183,9 @@
 
 #elif defined(_AED_EFI)
 #include "acefi.h"
+
+#elif defined(__HAIKU__)
+#include "achaiku.h"
 
 #else
 
@@ -277,7 +304,7 @@
  */
 #ifdef ACPI_USE_SYSTEM_CLIBRARY
 
-/* Use the standard C library headers. We want to keep these to a minimum */
+/* Use the standard C library headers. We want to keep these to a minimum. */
 
 #ifdef ACPI_USE_STANDARD_HEADERS
 
@@ -344,7 +371,7 @@ typedef char *va_list;
 
 #define _Bnd(X, bnd)            (((sizeof (X)) + (bnd)) & (~(bnd)))
 #define va_arg(ap, T)           (*(T *)(((ap) += (_Bnd (T, _AUPBND))) - (_Bnd (T,_ADNBND))))
-#define va_end(ap)              (void) 0
+#define va_end(ap)              (ap = (va_list) NULL)
 #define va_start(ap, A)         (void) ((ap) = (((char *) &(A)) + (_Bnd (A,_AUPBND))))
 
 #endif /* va_arg */

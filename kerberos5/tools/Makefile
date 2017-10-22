@@ -1,5 +1,5 @@
-# $FreeBSD: stable/9/kerberos5/tools/Makefile 178828 2008-05-07 13:53:12Z dfr $
+# $FreeBSD: release/10.0.0/kerberos5/tools/Makefile 233294 2012-03-22 08:48:42Z stas $
 
-SUBDIR=	make-print-version make-roken asn1_compile slc
+SUBDIR=	make-roken asn1_compile slc
 
 .include <bsd.subdir.mk>

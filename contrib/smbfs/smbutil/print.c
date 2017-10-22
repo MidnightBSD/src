@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/contrib/smbfs/smbutil/print.c 161207 2006-08-11 12:35:22Z keramida $");
+__FBSDID("$FreeBSD: release/10.0.0/contrib/smbfs/smbutil/print.c 161207 2006-08-11 12:35:22Z keramida $");
 
 #include <sys/param.h>
 #include <sys/errno.h>

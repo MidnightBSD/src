@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/cddl/compat/opensolaris/sys/kmem.h 246533 2013-02-08 07:59:13Z avg $
+ * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/kmem.h 254025 2013-08-07 06:21:20Z jeff $
  */
 
 #ifndef _OPENSOLARIS_SYS_KMEM_H_
@@ -32,6 +32,7 @@
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/malloc.h>
+#include <sys/vmem.h>
 
 #include <vm/uma.h>
 #include <vm/vm.h>
@@ -46,8 +47,8 @@ MALLOC_DECLARE(M_SOLARIS);
 #define	KM_PUSHPAGE		M_WAITOK
 #define	KM_NOSLEEP		M_NOWAIT
 #define	KM_NODEBUG		M_NODUMP
-#define	KMC_NOTOUCH		0
 #define	KMC_NODEBUG		UMA_ZONE_NODUMP
+#define	KMC_NOTOUCH		0
 
 typedef struct kmem_cache {
 	char		kc_name[32];
@@ -60,8 +61,6 @@ typedef struct kmem_cache {
 	void		(*kc_destructor)(void *, void *);
 	void		*kc_private;
 } kmem_cache_t;
-
-#define vmem_t	void
 
 void *zfs_kmem_alloc(size_t size, int kmflags);
 void zfs_kmem_free(void *buf, size_t size);

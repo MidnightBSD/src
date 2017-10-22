@@ -25,12 +25,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.sbin/ppp/defs.h 137885 2004-11-19 03:56:47Z obrien $
+ * $FreeBSD: release/10.0.0/usr.sbin/ppp/defs.h 252826 2013-07-05 19:26:01Z rmh $
  */
 
 /* Check the following definitions for your machine environment */
 #ifdef __FreeBSD__
-# define  MODEM_LIST	"/dev/cuad1\0/dev/cuad0"	/* name of tty device */
+# define  MODEM_LIST	"/dev/cuau1\0/dev/cuau0"	/* name of tty device */
 #else
 # ifdef __OpenBSD__
 #  define MODEM_LIST	"/dev/cua01\0/dev/cua00"	/* name of tty device */
@@ -117,7 +117,7 @@
 
 #define ROUNDUP(x) ((x) ? (1 + (((x) - 1) | (sizeof(long) - 1))) : sizeof(long))
 
-#if defined(__NetBSD__) || __FreeBSD__ < 3
+#ifdef __NetBSD__
 extern void randinit(void);
 #else
 #define random arc4random

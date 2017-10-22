@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/sbin/devd/Makefile 203916 2010-02-15 14:07:40Z uqs $
+# $FreeBSD: release/10.0.0/sbin/devd/Makefile 203916 2010-02-15 14:07:40Z uqs $
 
 PROG_CXX=devd
 SRCS=	devd.cc token.l parse.y y.tab.h

@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)getservent.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/net/getservent.c 206267 2010-04-06 12:33:05Z ume $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/getservent.c 254700 2013-08-23 13:59:47Z jilles $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -335,7 +335,7 @@ files_servent(void *retval, void *mdata, va_list ap)
 	if (st->fp == NULL)
 		st->compat_mode_active = 0;
 
-	if (st->fp == NULL && (st->fp = fopen(_PATH_SERVICES, "r")) == NULL) {
+	if (st->fp == NULL && (st->fp = fopen(_PATH_SERVICES, "re")) == NULL) {
 		*errnop = errno;
 		return (NS_UNAVAIL);
 	}
@@ -449,7 +449,7 @@ files_setservent(void *retval, void *mdata, va_list ap)
 	case SETSERVENT:
 		f = va_arg(ap,int);
 		if (st->fp == NULL)
-			st->fp = fopen(_PATH_SERVICES, "r");
+			st->fp = fopen(_PATH_SERVICES, "re");
 		else
 			rewind(st->fp);
 		st->stayopen |= f;

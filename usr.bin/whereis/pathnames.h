@@ -1,5 +1,5 @@
 /*
- * Copyright © 2002, Jörg Wunsch
+ * Copyright Â© 2002, JÃ¶rg Wunsch
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,7 +22,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/usr.bin/whereis/pathnames.h 102246 2002-08-22 01:50:51Z johan $
+ * $FreeBSD: release/10.0.0/usr.bin/whereis/pathnames.h 228991 2011-12-30 10:59:15Z uqs $
  */
 
 /* Where to look for libexec and games */

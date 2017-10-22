@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 1998 Dag-Erling CoÃ¯dan SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,10 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/chkgrp/chkgrp.c 244067 2012-12-10 02:35:19Z eadler $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/chkgrp/chkgrp.c 243085 2012-11-15 15:21:58Z eadler $");
 
 #include <err.h>
+#include <errno.h>
 #include <ctype.h>
+#include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -66,7 +69,6 @@ main(int argc, char *argv[])
 			break;
 		case '?':
 		default:
-			printf("hello\n");
 			usage();
 	    }
     }
@@ -88,7 +90,7 @@ main(int argc, char *argv[])
 	    break;
 	if (len > 0 && line[len - 1] != '\n') {
 	    warnx("%s: line %d: no newline character", gfn, n);
-	    e++;
+	    e = 1;
 	}
 	while (len && isspace(line[len-1]))
 	    len--;
@@ -121,14 +123,14 @@ main(int argc, char *argv[])
             warnx("%s: line %d: missing field(s)", gfn, n);
 	    for ( ; k < 4; k++)
 		f[k] = empty;
-            e++;
+            e = 1;
         }
 
 	for (cp = f[0] ; *cp ; cp++) {
 	    if (!isalnum(*cp) && *cp != '.' && *cp != '_' && *cp != '-' &&
 		(cp > f[0] || *cp != '+')) {
 		warnx("%s: line %d: '%c' invalid character", gfn, n, *cp);
-		e++;
+		e = 1;
 	    }
 	}
 
@@ -136,14 +138,14 @@ main(int argc, char *argv[])
 	    if (!isalnum(*cp) && *cp != '.' && *cp != '_' && *cp != '-' &&
 			*cp != ',') {
 		warnx("%s: line %d: '%c' invalid character", gfn, n, *cp);
-		e++;
+		e = 1;
 	    }
 	}
 
 	/* check if fourth field ended with a colon */
 	if (i < len) {
 	    warnx("%s: line %d: too many fields", gfn, n);
-	    e++;
+	    e = 1;
 	}
 	
 	/* check that none of the fields contain whitespace */
@@ -151,14 +153,26 @@ main(int argc, char *argv[])
 	    if (strcspn(f[k], " \t") != strlen(f[k])) {
 		warnx("%s: line %d: field %d contains whitespace",
 		      gfn, n, k+1);
-		e++;
+		e = 1;
 	    }
 	}
 
 	/* check that the GID is numeric */
 	if (strspn(f[2], "0123456789") != strlen(f[2])) {
 	    warnx("%s: line %d: GID is not numeric", gfn, n);
-	    e++;
+	    e = 1;
+	}
+
+	/* check the range of the group id */
+	errno = 0;
+	unsigned long groupid = strtoul(f[2], NULL, 10);
+	if (errno != 0) {
+		warnx("%s: line %d: strtoul failed", gfn, n);
+	}
+	else if (groupid > GID_MAX) {
+		warnx("%s: line %d: group id is too large (> %ju)",
+		  gfn, n, (uintmax_t)GID_MAX);
+		e = 1;
 	}
 	
 #if 0

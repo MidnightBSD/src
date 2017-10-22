@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_frontend.h#2 $
- * $FreeBSD: stable/9/sys/cam/ctl/ctl_frontend.h 229997 2012-01-12 00:34:33Z ken $
+ * $FreeBSD: release/10.0.0/sys/cam/ctl/ctl_frontend.h 254759 2013-08-24 01:50:31Z trasz $
  */
 /*
  * CAM Target Layer front end registration hooks
@@ -49,6 +49,9 @@ typedef enum {
 typedef void (*port_func_t)(void *onoff_arg);
 typedef int (*targ_func_t)(void *arg, struct ctl_id targ_id);
 typedef	int (*lun_func_t)(void *arg, struct ctl_id targ_id, int lun_id);
+typedef int (*fe_ioctl_t)(struct cdev *dev, u_long cmd, caddr_t addr, int flag,
+			  struct thread *td);
+typedef int (*fe_devid_t)(struct ctl_scsiio *ctsio, int alloc_len);
 
 /*
  * The ctl_frontend structure is the registration mechanism between a FETD
@@ -213,6 +216,8 @@ struct ctl_frontend {
 	targ_func_t	targ_disable;		/* passed to CTL */
 	lun_func_t	lun_enable;		/* passed to CTL */
 	lun_func_t	lun_disable;		/* passed to CTL */
+	fe_ioctl_t	ioctl;			/* passed to CTL */
+	fe_devid_t	devid;			/* passed to CTL */
 	void		*targ_lun_arg;		/* passed to CTL */
 	void		(*fe_datamove)(union ctl_io *io); /* passed to CTL */
 	void		(*fe_done)(union ctl_io *io); /* passed to CTL */

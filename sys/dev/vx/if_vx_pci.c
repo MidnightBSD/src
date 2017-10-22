@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/vx/if_vx_pci.c 173839 2007-11-22 02:45:00Z yongari $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/vx/if_vx_pci.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -61,7 +61,7 @@ static device_method_t vx_methods[] = {
 	DEVMETHOD(device_attach, vx_pci_attach),
 	DEVMETHOD(device_shutdown, vx_pci_shutdown),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t vx_driver = {

@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)colcrt.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/colcrt/colcrt.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/colcrt/colcrt.c 227158 2011-11-06 08:14:28Z ed $");
 
 #include <err.h>
 #include <locale.h>
@@ -64,13 +64,13 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/colcrt/colcrt.c 216370 2010-12-11 08:32:16Z
  * Option -2 forces printing of all half lines.
  */
 
-wchar_t	page[267][132];
+static wchar_t	page[267][132];
 
-int	outline = 1;
-int	outcol;
+static int	outline = 1;
+static int	outcol;
 
-char	suppresul;
-char	printall;
+static char	suppresul;
+static char	printall;
 
 static void	move(int, int);
 static void	pflush(int);

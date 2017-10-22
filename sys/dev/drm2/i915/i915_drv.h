@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/i915/i915_drv.h 239965 2012-09-01 05:35:48Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/i915/i915_drv.h 240539 2012-09-15 19:28:54Z ed $");
 
 #ifndef _I915_DRV_H_
 #define _I915_DRV_H_
@@ -889,7 +889,7 @@ struct drm_i915_gem_object {
 	int pending_flip;
 };
 
-#define	to_intel_bo(x) member2struct(drm_i915_gem_object, base, (x))
+#define	to_intel_bo(x) __containerof(x, struct drm_i915_gem_object, base)
 
 /**
  * Request queue structure.

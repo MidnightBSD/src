@@ -1,7 +1,7 @@
-/* $FreeBSD: stable/9/usr.sbin/pkg_install/info/info.h 241135 2012-10-02 17:04:53Z bapt $ */
+/* $FreeBSD: release/10.0.0/usr.sbin/pkg_install/info/info.h 240682 2012-09-18 22:09:23Z bapt $ */
 
 /*
- * FreeBSD install - a package for the installation and maintainance
+ * FreeBSD install - a package for the installation and maintenance
  * of non-core utilities.
  *
  * Redistribution and use in source and binary forms, with or without

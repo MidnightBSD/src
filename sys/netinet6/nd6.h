@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: nd6.h,v 1.76 2001/12/18 02:10:31 itojun Exp $
- * $FreeBSD: stable/9/sys/netinet6/nd6.h 245555 2013-01-17 16:39:21Z ume $
+ * $FreeBSD: release/10.0.0/sys/netinet6/nd6.h 249925 2013-04-26 12:50:32Z glebius $
  */
 
 #ifndef _NETINET6_ND6_H_
@@ -79,7 +79,7 @@ struct nd_ifinfo {
 
 #define ND6_IFF_PERFORMNUD	0x1
 #define ND6_IFF_ACCEPT_RTADV	0x2
-#define ND6_IFF_PREFER_SOURCE	0x4 /* XXX: not related to ND. */
+#define ND6_IFF_PREFER_SOURCE	0x4 /* Not used in FreeBSD. */
 #define ND6_IFF_IFDISABLED	0x8 /* IPv6 operation is disabled due to
 				     * DAD failure.  (XXX: not ND-specific)
 				     */
@@ -417,7 +417,7 @@ int nd6_output_flush(struct ifnet *, struct ifnet *, struct mbuf *,
 	struct sockaddr_in6 *, struct route *);
 int nd6_need_cache(struct ifnet *);
 int nd6_storelladdr(struct ifnet *, struct mbuf *,
-	struct sockaddr *, u_char *, struct llentry **);
+	const struct sockaddr *, u_char *, struct llentry **);
 
 /* nd6_nbr.c */
 void nd6_na_input(struct mbuf *, int, int);

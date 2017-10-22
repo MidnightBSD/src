@@ -17,7 +17,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $FreeBSD: stable/9/sbin/ipfw/ipfw2.h 248505 2013-03-19 13:29:01Z melifaro $
+ * $FreeBSD: release/10.0.0/sbin/ipfw/ipfw2.h 248552 2013-03-20 10:35:33Z melifaro $
  */
 
 /*
@@ -203,6 +203,7 @@ enum tokens {
 	TOK_SETFIB,
 	TOK_LOOKUP,
 	TOK_SOCKARG,
+	TOK_SETDSCP,
 };
 /*
  * the following macro returns an error message if we run out of

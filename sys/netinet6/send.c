@@ -25,7 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/send.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/netinet6/send.c 254889 2013-08-25 21:54:41Z markj $");
+
+#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -33,6 +35,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet6/send.c 249132 2013-04-05 08:22:11Z mav
 #include <sys/module.h>
 #include <sys/priv.h>
 #include <sys/protosw.h>
+#include <sys/sdt.h>
 #include <sys/systm.h>
 #include <sys/socket.h>
 #include <sys/sockstate.h>
@@ -46,6 +49,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet6/send.c 249132 2013-04-05 08:22:11Z mav
 #include <net/vnet.h>
 
 #include <netinet/in.h>
+#include <netinet/in_kdtrace.h>
 #include <netinet/ip_var.h>
 #include <netinet/ip6.h>
 #include <netinet/icmp6.h>
@@ -179,6 +183,10 @@ send_output(struct mbuf *m, struct ifnet *ifp, int direction)
 		dst.sin6_family = AF_INET6;
 		dst.sin6_len = sizeof(dst);
 		dst.sin6_addr = ip6->ip6_dst;
+
+		m_clrprotoflags(m);	/* Avoid confusing lower layers. */
+
+		IP_PROBE(send, NULL, NULL, ip6, ifp, NULL, ip6);
 
 		/*
 		 * Output the packet as nd6.c:nd6_output_lle() would do.

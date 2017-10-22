@@ -26,7 +26,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/pw/pw.c 176474 2008-02-23 01:25:22Z scf $";
+  "$FreeBSD: release/10.0.0/usr.sbin/pw/pw.c 242349 2012-10-30 08:00:53Z bapt $";
 #endif /* not lint */
 
 #include <err.h>
@@ -62,13 +62,11 @@ struct pwf PWF =
 	getpwent,
 	getpwuid,
 	getpwnam,
-	pwdb,
 	setgrent,
 	endgrent,
 	getgrent,
 	getgrgid,
 	getgrnam,
-	grdb
 
 };
 struct pwf VPWF =
@@ -79,13 +77,11 @@ struct pwf VPWF =
 	vgetpwent,
 	vgetpwuid,
 	vgetpwnam,
-	vpwdb,
 	vsetgrent,
 	vendgrent,
 	vgetgrent,
 	vgetgrgid,
 	vgetgrnam,
-	vgrdb
 };
 
 static struct cargs arglist;

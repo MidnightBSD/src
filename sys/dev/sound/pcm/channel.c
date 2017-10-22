@@ -38,7 +38,7 @@
 
 #include "feeder_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pcm/channel.c 233164 2012-03-19 07:24:26Z mav $");
+SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pcm/channel.c 243138 2012-11-16 07:05:57Z mav $");
 
 int report_soft_formats = 1;
 SYSCTL_INT(_hw_snd, OID_AUTO, report_soft_formats, CTLFLAG_RW,
@@ -1037,12 +1037,14 @@ static const struct {
 	{ "2.0",  "2", "stereo", SND_CHN_MATRIX_2_0     },
 	{ "2.1", NULL,     NULL, SND_CHN_MATRIX_2_1     },
 	{ "3.0",  "3",     NULL, SND_CHN_MATRIX_3_0     },
+	{ "3.1", NULL,     NULL, SND_CHN_MATRIX_3_1     },
 	{ "4.0",  "4",   "quad", SND_CHN_MATRIX_4_0     },
 	{ "4.1", NULL,     NULL, SND_CHN_MATRIX_4_1     },
 	{ "5.0",  "5",     NULL, SND_CHN_MATRIX_5_0     },
 	{ "5.1",  "6",     NULL, SND_CHN_MATRIX_5_1     },
 	{ "6.0", NULL,     NULL, SND_CHN_MATRIX_6_0     },
 	{ "6.1",  "7",     NULL, SND_CHN_MATRIX_6_1     },
+	{ "7.0", NULL,     NULL, SND_CHN_MATRIX_7_0     },
 	{ "7.1",  "8",     NULL, SND_CHN_MATRIX_7_1     },
 	{  NULL, NULL,     NULL, SND_CHN_MATRIX_UNKNOWN }
 };

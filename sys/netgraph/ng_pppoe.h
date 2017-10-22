@@ -37,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_pppoe.h 189315 2009-03-03 18:47:33Z ed $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_pppoe.h 253564 2013-07-23 10:25:34Z glebius $
  * $Whistle: ng_pppoe.h,v 1.7 1999/10/16 10:16:43 julian Exp $
  */
 
@@ -172,6 +172,7 @@ struct ngpppoe_sts {
 #define PTT_AC_COOKIE	(0x0104)
 #define PTT_VENDOR 	(0x0105)
 #define PTT_RELAY_SID	(0x0110)
+#define	PTT_MAX_PAYL	(0x0120)	/* PPP-Max-Payload (RFC4638) */
 #define PTT_SRV_ERR     (0x0201)
 #define PTT_SYS_ERR  	(0x0202)
 #define PTT_GEN_ERR  	(0x0203)
@@ -188,6 +189,7 @@ struct ngpppoe_sts {
 #define PTT_AC_COOKIE	(0x0401)
 #define PTT_VENDOR 	(0x0501)
 #define PTT_RELAY_SID	(0x1001)
+#define	PTT_MAX_PAYL	(0x2001)	/* PPP-Max-Payload (RFC4638) */
 #define PTT_SRV_ERR     (0x0102)
 #define PTT_SYS_ERR  	(0x0202)
 #define PTT_GEN_ERR  	(0x0302)

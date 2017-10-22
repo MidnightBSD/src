@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/sparc64/include/sf_buf.h 122780 2003-11-16 06:11:26Z alc $
+ * $FreeBSD: release/10.0.0/sys/sparc64/include/sf_buf.h 255318 2013-09-06 17:44:13Z glebius $
  */
 
 #ifndef _MACHINE_SF_BUF_H_
@@ -38,6 +38,9 @@ struct sf_buf {
 	struct		vm_page *m;	/* currently mapped page */
 	vm_offset_t	kva;		/* va of mapping */
 };
+
+struct sf_buf * sf_buf_alloc(struct vm_page *m, int flags);
+void sf_buf_free(struct sf_buf *sf);
 
 static __inline vm_offset_t
 sf_buf_kva(struct sf_buf *sf)

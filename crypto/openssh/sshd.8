@@ -33,9 +33,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $OpenBSD: sshd.8,v 1.266 2012/06/18 12:07:07 dtucker Exp $
-.\" $FreeBSD: stable/9/crypto/openssh/sshd.8 247485 2013-02-28 18:43:50Z des $
-.Dd June 18 2012
+.\" $OpenBSD: sshd.8,v 1.270 2013/06/27 14:05:37 jmc Exp $
+.\" $FreeBSD: release/10.0.0/crypto/openssh/sshd.8 255767 2013-09-21 21:36:09Z des $
+.Dd June 27, 2013
 .Dt SSHD 8
 .Os
 .Sh NAME
@@ -48,6 +48,7 @@
 .Op Fl b Ar bits
 .Op Fl C Ar connection_spec
 .Op Fl c Ar host_certificate_file
+.Op Fl E Ar log_file
 .Op Fl f Ar config_file
 .Op Fl g Ar login_grace_time
 .Op Fl h Ar host_key_file
@@ -147,10 +148,12 @@ Multiple
 .Fl d
 options increase the debugging level.
 Maximum is 3.
+.It Fl E Ar log_file
+Append debug logs to
+.Ar log_file
+instead of the system log.
 .It Fl e
-When this option is specified,
-.Nm
-will send the output to the standard error instead of the system log.
+Write debug logs to standard error instead of the system log.
 .It Fl f Ar config_file
 Specifies the name of the configuration file.
 The default is
@@ -317,7 +320,7 @@ The client selects the encryption algorithm
 to use from those offered by the server.
 Additionally, session integrity is provided
 through a cryptographic message authentication code
-(hmac-md5, hmac-sha1, umac-64, hmac-ripemd160,
+(hmac-md5, hmac-sha1, umac-64, umac-128, hmac-ripemd160,
 hmac-sha2-256 or hmac-sha2-512).
 .Pp
 Finally, the server and the client enter an authentication dialog.
@@ -567,9 +570,7 @@ is enabled.
 Specifies that in addition to public key authentication, either the canonical
 name of the remote host or its IP address must be present in the
 comma-separated list of patterns.
-See
-.Sx PATTERNS
-in
+See PATTERNS in
 .Xr ssh_config 5
 for more information on patterns.
 .Pp

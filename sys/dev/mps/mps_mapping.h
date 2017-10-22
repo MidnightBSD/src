@@ -25,7 +25,7 @@
  *
  * LSI MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/9/sys/dev/mps/mps_mapping.h 237876 2012-07-01 05:22:45Z ken $
+ * $FreeBSD: release/10.0.0/sys/dev/mps/mps_mapping.h 237683 2012-06-28 03:48:54Z ken $
  */
 
 #ifndef _MPS_MAPPING_H

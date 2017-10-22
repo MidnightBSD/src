@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/fs/nfsclient/nfs_clbio.c 249077 2013-04-04 05:20:52Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfsclient/nfs_clbio.c 252072 2013-06-21 22:26:18Z rmacklem $");
 
 #include "opt_kdtrace.h"
 
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: stable/9/sys/fs/nfsclient/nfs_clbio.c 249077 2013-04-04 05:2
 #include <sys/buf.h>
 #include <sys/kernel.h>
 #include <sys/mount.h>
+#include <sys/rwlock.h>
 #include <sys/vmmeter.h>
 #include <sys/vnode.h>
 
@@ -134,7 +135,7 @@ ncl_getpages(struct vop_getpages_args *ap)
 	 * allow the pager to zero-out the blanks.  Partially valid pages
 	 * can only occur at the file EOF.
 	 */
-	VM_OBJECT_LOCK(object);
+	VM_OBJECT_WLOCK(object);
 	if (pages[ap->a_reqpage]->valid != 0) {
 		for (i = 0; i < npages; ++i) {
 			if (i != ap->a_reqpage) {
@@ -143,10 +144,10 @@ ncl_getpages(struct vop_getpages_args *ap)
 				vm_page_unlock(pages[i]);
 			}
 		}
-		VM_OBJECT_UNLOCK(object);
+		VM_OBJECT_WUNLOCK(object);
 		return (0);
 	}
-	VM_OBJECT_UNLOCK(object);
+	VM_OBJECT_WUNLOCK(object);
 
 	/*
 	 * We use only the kva address for the buffer, but this is extremely
@@ -176,7 +177,7 @@ ncl_getpages(struct vop_getpages_args *ap)
 
 	if (error && (uio.uio_resid == count)) {
 		ncl_printf("nfs_getpages: error %d\n", error);
-		VM_OBJECT_LOCK(object);
+		VM_OBJECT_WLOCK(object);
 		for (i = 0; i < npages; ++i) {
 			if (i != ap->a_reqpage) {
 				vm_page_lock(pages[i]);
@@ -184,7 +185,7 @@ ncl_getpages(struct vop_getpages_args *ap)
 				vm_page_unlock(pages[i]);
 			}
 		}
-		VM_OBJECT_UNLOCK(object);
+		VM_OBJECT_WUNLOCK(object);
 		return (VM_PAGER_ERROR);
 	}
 
@@ -195,7 +196,7 @@ ncl_getpages(struct vop_getpages_args *ap)
 	 */
 
 	size = count - uio.uio_resid;
-	VM_OBJECT_LOCK(object);
+	VM_OBJECT_WLOCK(object);
 	for (i = 0, toff = 0; i < npages; i++, toff = nextoff) {
 		vm_page_t m;
 		nextoff = toff + PAGE_SIZE;
@@ -213,7 +214,7 @@ ncl_getpages(struct vop_getpages_args *ap)
 			 * Read operation filled a partial page.
 			 */
 			m->valid = 0;
-			vm_page_set_valid(m, 0, size - toff);
+			vm_page_set_valid_range(m, 0, size - toff);
 			KASSERT(m->dirty == 0,
 			    ("nfs_getpages: page %p is dirty", m));
 		} else {
@@ -231,7 +232,7 @@ ncl_getpages(struct vop_getpages_args *ap)
 		if (i != ap->a_reqpage)
 			vm_page_readahead_finish(m);
 	}
-	VM_OBJECT_UNLOCK(object);
+	VM_OBJECT_WUNLOCK(object);
 	return (0);
 }
 
@@ -483,7 +484,7 @@ ncl_bioread(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *cred)
 	    case VREG:
 		NFSINCRGLOBAL(newnfsstats.biocache_reads);
 		lbn = uio->uio_offset / biosize;
-		on = uio->uio_offset & (biosize - 1);
+		on = uio->uio_offset - (lbn * biosize);
 
 		/*
 		 * Start the read ahead(s), as required.
@@ -1028,7 +1029,7 @@ flush_and_restart:
 	do {
 		NFSINCRGLOBAL(newnfsstats.biocache_writes);
 		lbn = uio->uio_offset / biosize;
-		on = uio->uio_offset & (biosize-1);
+		on = uio->uio_offset - (lbn * biosize);
 		n = MIN((unsigned)(biosize - on), uio->uio_resid);
 again:
 		/*
@@ -1296,7 +1297,7 @@ nfs_getcacheblk(struct vnode *vp, daddr_t bn, int size, struct thread *td)
 		sigset_t oldset;
 
 		newnfs_set_sigmask(td, &oldset);
-		bp = getblk(vp, bn, size, NFS_PCATCH, 0, 0);
+		bp = getblk(vp, bn, size, PCATCH, 0, 0);
 		newnfs_restore_sigmask(td, &oldset);
 		while (bp == NULL) {
 			if (newnfs_sigintr(nmp, td))
@@ -1331,7 +1332,7 @@ ncl_vinvalbuf(struct vnode *vp, int flags, struct thread *td, int intrflg)
 	if ((nmp->nm_mountp->mnt_kern_flag & MNTK_UNMOUNTF))
 		intrflg = 1;
 	if (intrflg) {
-		slpflag = NFS_PCATCH;
+		slpflag = PCATCH;
 		slptimeo = 2 * hz;
 	} else {
 		slpflag = 0;
@@ -1353,9 +1354,9 @@ ncl_vinvalbuf(struct vnode *vp, int flags, struct thread *td, int intrflg)
 	 * Now, flush as required.
 	 */
 	if ((flags & V_SAVE) && (vp->v_bufobj.bo_object != NULL)) {
-		VM_OBJECT_LOCK(vp->v_bufobj.bo_object);
+		VM_OBJECT_WLOCK(vp->v_bufobj.bo_object);
 		vm_object_page_clean(vp->v_bufobj.bo_object, 0, 0, OBJPC_SYNC);
-		VM_OBJECT_UNLOCK(vp->v_bufobj.bo_object);
+		VM_OBJECT_WUNLOCK(vp->v_bufobj.bo_object);
 		/*
 		 * If the page clean was interrupted, fail the invalidation.
 		 * Not doing so, we run the risk of losing dirty pages in the
@@ -1371,7 +1372,16 @@ ncl_vinvalbuf(struct vnode *vp, int flags, struct thread *td, int intrflg)
 			goto out;
 		error = vinvalbuf(vp, flags, 0, slptimeo);
 	}
-	mtx_lock(&np->n_mtx);
+	if (NFSHASPNFS(nmp)) {
+		nfscl_layoutcommit(vp, td);
+		/*
+		 * Invalidate the attribute cache, since writes to a DS
+		 * won't update the size attribute.
+		 */
+		mtx_lock(&np->n_mtx);
+		np->n_attrstamp = 0;
+	} else
+		mtx_lock(&np->n_mtx);
 	if (np->n_directio_asyncwr == 0)
 		np->n_flag &= ~NMODIFIED;
 	mtx_unlock(&np->n_mtx);
@@ -1401,16 +1411,24 @@ ncl_asyncio(struct nfsmount *nmp, struct buf *bp, struct ucred *cred, struct thr
 	 * Commits are usually short and sweet so lets save some cpu and
 	 * leave the async daemons for more important rpc's (such as reads
 	 * and writes).
+	 *
+	 * Readdirplus RPCs do vget()s to acquire the vnodes for entries
+	 * in the directory in order to update attributes. This can deadlock
+	 * with another thread that is waiting for async I/O to be done by
+	 * an nfsiod thread while holding a lock on one of these vnodes.
+	 * To avoid this deadlock, don't allow the async nfsiod threads to
+	 * perform Readdirplus RPCs.
 	 */
 	mtx_lock(&ncl_iod_mutex);
-	if (bp->b_iocmd == BIO_WRITE && (bp->b_flags & B_NEEDCOMMIT) &&
-	    (nmp->nm_bufqiods > ncl_numasync / 2)) {
+	if ((bp->b_iocmd == BIO_WRITE && (bp->b_flags & B_NEEDCOMMIT) &&
+	     (nmp->nm_bufqiods > ncl_numasync / 2)) ||
+	    (bp->b_vp->v_type == VDIR && (nmp->nm_flag & NFSMNT_RDIRPLUS))) {
 		mtx_unlock(&ncl_iod_mutex);
 		return(EIO);
 	}
 again:
 	if (nmp->nm_flag & NFSMNT_INT)
-		slpflag = NFS_PCATCH;
+		slpflag = PCATCH;
 	gotiod = FALSE;
 
 	/*
@@ -1475,7 +1493,7 @@ again:
 					mtx_unlock(&ncl_iod_mutex);
 					return (error2);
 				}
-				if (slpflag == NFS_PCATCH) {
+				if (slpflag == PCATCH) {
 					slpflag = 0;
 					slptimeo = 2 * hz;
 				}
@@ -1544,6 +1562,13 @@ ncl_doio_directwrite(struct buf *bp)
 	if ((bp->b_flags & B_DIRECT) && bp->b_iocmd == BIO_WRITE) {
 		struct nfsnode *np = VTONFS(bp->b_vp);
 		mtx_lock(&np->n_mtx);
+		if (NFSHASPNFS(VFSTONFS(vnode_mount(bp->b_vp)))) {
+			/*
+			 * Invalidate the attribute cache, since writes to a DS
+			 * won't update the size attribute.
+			 */
+			np->n_attrstamp = 0;
+		}
 		np->n_directio_asyncwr--;
 		if (np->n_directio_asyncwr == 0) {
 			np->n_flag &= ~NMODIFIED;
@@ -1842,9 +1867,9 @@ ncl_meta_setsize(struct vnode *vp, struct ucred *cred, struct thread *td, u_quad
 		 * truncation point.  We may have a B_DELWRI and/or B_CACHE
 		 * buffer that now needs to be truncated.
 		 */
-		error = vtruncbuf(vp, cred, td, nsize, biosize);
+		error = vtruncbuf(vp, cred, nsize, biosize);
 		lbn = nsize / biosize;
-		bufsize = nsize & (biosize - 1);
+		bufsize = nsize - (lbn * biosize);
 		bp = nfs_getcacheblk(vp, lbn, bufsize, td);
 		if (!bp)
 			return EINTR;

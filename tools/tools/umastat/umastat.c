@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/tools/tools/umastat/umastat.c 212949 2010-09-21 05:36:30Z avg $
+ * $FreeBSD: release/10.0.0/tools/tools/umastat/umastat.c 249430 2013-04-12 21:29:37Z pluknet $
  */
 
 #include <sys/param.h>
@@ -79,7 +79,7 @@ kread(kvm_t *kvm, void *kvm_pointer, void *address, size_t size,
 }
 
 static int
-kread_string(kvm_t *kvm, void *kvm_pointer, char *buffer, int buflen)
+kread_string(kvm_t *kvm, const void *kvm_pointer, char *buffer, int buflen)
 {
 	ssize_t ret;
 	int i;
@@ -151,7 +151,7 @@ uma_print_keg_flags(struct uma_keg *ukp, const char *spaces)
 		if (ukp->uk_flags & flaginfo[i].fi_flag) {
 			if (count++ > 0)
 				printf(" | ");
-			printf(flaginfo[i].fi_name);
+			printf("%s", flaginfo[i].fi_name);
 		}
 
 	}

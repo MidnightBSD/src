@@ -1,4 +1,6 @@
-# $FreeBSD: stable/9/gnu/usr.bin/cc/cc_int/Makefile 215082 2010-11-10 06:39:49Z imp $
+# $FreeBSD: release/10.0.0/gnu/usr.bin/cc/cc_int/Makefile 245539 2013-01-17 05:56:28Z andrew $
+
+.include <bsd.own.mk>
 
 .include "../Makefile.inc"
 .include "../Makefile.ver"
@@ -97,5 +99,8 @@ SRCS+= ${OBJS-all:R:S/$/.c/g}
 
 toplev.o:	toplev.c
 	${CC} ${CFLAGS} -DTARGET_NAME=\"${GCC_TARGET}\" -c ${.IMPSRC}
+
+# make sure we don't find .o's in ../cc_tools/
+CLEANFILES+= ${OBJS-all}
 
 .include <bsd.lib.mk>

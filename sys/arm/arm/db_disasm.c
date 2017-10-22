@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/arm/arm/db_disasm.c 139735 2005-01-05 21:58:49Z imp $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/db_disasm.c 236991 2012-06-13 04:59:55Z imp $");
 #include <sys/param.h>
 #include <machine/db_machdep.h>
 #include <ddb/ddb.h>
@@ -50,7 +50,7 @@ static u_int db_disasm_read_word(u_int);
 static void db_disasm_printaddr(u_int);
 
 static const disasm_interface_t db_disasm_interface = {
-	db_disasm_read_word, 
+	db_disasm_read_word,
 	db_disasm_printaddr,
        	db_printf
 };

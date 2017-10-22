@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/9/sys/modules/usb/ipheth/Makefile 213805 2010-10-13 21:36:42Z hselasky $
+# $FreeBSD: release/10.0.0/sys/modules/usb/ipheth/Makefile 213805 2010-10-13 21:36:42Z hselasky $
 #
 # Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
 #

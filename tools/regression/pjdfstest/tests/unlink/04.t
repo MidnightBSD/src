@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/unlink/04.t 166065 2007-01-17 01:42:12Z pjd $
+# $FreeBSD: release/10.0.0/tools/regression/pjdfstest/tests/unlink/04.t 166065 2007-01-17 01:42:12Z pjd $
 
 desc="unlink returns ENOENT if the named file does not exist"
 

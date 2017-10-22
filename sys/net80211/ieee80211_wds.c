@@ -25,7 +25,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __FreeBSD__
-__FBSDID("$FreeBSD: stable/9/sys/net80211/ieee80211_wds.c 221418 2011-05-04 02:23:59Z adrian $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/net80211/ieee80211_wds.c 254082 2013-08-08 05:09:35Z adrian $");
 #endif
 
 /*
@@ -232,7 +232,6 @@ void
 ieee80211_dwds_mcast(struct ieee80211vap *vap0, struct mbuf *m)
 {
 	struct ieee80211com *ic = vap0->iv_ic;
-	struct ifnet *parent = ic->ic_ifp;
 	const struct ether_header *eh = mtod(m, const struct ether_header *);
 	struct ieee80211_node *ni;
 	struct ieee80211vap *vap;
@@ -256,7 +255,7 @@ ieee80211_dwds_mcast(struct ieee80211vap *vap0, struct mbuf *m)
 		/*
 		 * Duplicate the frame and send it.
 		 */
-		mcopy = m_copypacket(m, M_DONTWAIT);
+		mcopy = m_copypacket(m, M_NOWAIT);
 		if (mcopy == NULL) {
 			ifp->if_oerrors++;
 			/* XXX stat + msg */
@@ -296,7 +295,7 @@ ieee80211_dwds_mcast(struct ieee80211vap *vap0, struct mbuf *m)
 		mcopy->m_flags |= M_MCAST;
 		mcopy->m_pkthdr.rcvif = (void *) ni;
 
-		err = parent->if_transmit(parent, mcopy);
+		err = ieee80211_parent_xmitpkt(ic, mcopy);
 		if (err) {
 			/* NB: IFQ_HANDOFF reclaims mbuf */
 			ifp->if_oerrors++;

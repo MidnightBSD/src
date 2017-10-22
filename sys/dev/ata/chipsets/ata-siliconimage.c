@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2008 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,9 +25,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/ata/chipsets/ata-siliconimage.c 243125 2012-11-16 03:04:30Z mav $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/chipsets/ata-siliconimage.c 249213 2013-04-06 19:12:49Z marius $");
 
-#include "opt_ata.h"
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -240,9 +239,7 @@ ata_cmd_ch_attach(device_t dev)
     if (ctlr->chip->cfg2 & SII_INTR)
 	ch->hw.status = ata_cmd_status;
 
-#ifdef ATA_CAM
 	ch->flags |= ATA_NO_ATAPI_DMA;
-#endif
 
     return 0;
 }

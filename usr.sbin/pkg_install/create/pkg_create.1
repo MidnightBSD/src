@@ -1,5 +1,5 @@
 .\"
-.\" FreeBSD install - a package for the installation and maintainance
+.\" FreeBSD install - a package for the installation and maintenance
 .\" of non-core utilities.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -15,7 +15,7 @@
 .\"
 .\"
 .\"     @(#)pkg_create.1
-.\" $FreeBSD: stable/9/usr.sbin/pkg_install/create/pkg_create.1 213718 2010-10-12 10:04:44Z flz $
+.\" $FreeBSD: release/10.0.0/usr.sbin/pkg_install/create/pkg_create.1 243554 2012-11-26 05:11:07Z eadler $
 .\"
 .\" hacked up by John Kohl for NetBSD--fixed a few bugs, extended keywords,
 .\" added dependency tracking, etc.
@@ -23,7 +23,7 @@
 .\" [jkh] Took John's changes back and made some additional extensions for
 .\" better integration with FreeBSD's new ports collection.
 .\"
-.Dd Oct 12, 2010
+.Dd November 9, 2012
 .Dt PKG_CREATE 1
 .Os
 .Sh NAME
@@ -635,6 +635,10 @@ does not exist.
 The last choice if
 .Pa /tmp
 is unsuitable.
+.It Ev PKG_OLD_NOWARN
+If set
+.Nm
+will not warn about its use in the presence of pkgng databases.
 .El
 .Sh SEE ALSO
 .Xr pkg_add 1 ,

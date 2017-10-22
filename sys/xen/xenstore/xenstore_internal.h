@@ -29,7 +29,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/9/sys/xen/xenstore/xenstore_internal.h 214077 2010-10-19 20:53:30Z gibbs $
+ * $FreeBSD: release/10.0.0/sys/xen/xenstore/xenstore_internal.h 214077 2010-10-19 20:53:30Z gibbs $
  */
 
 /* Initialize support for userspace access to the XenStore. */

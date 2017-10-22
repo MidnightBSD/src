@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1994-1996 Søren Schmidt
+ * Copyright (c) 1994-1996 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Portions of this software are based in part on the work of
@@ -33,7 +33,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/usr.sbin/vidcontrol/vidcontrol.c 238158 2012-07-06 01:32:53Z ache $";
+  "$FreeBSD: release/10.0.0/usr.sbin/vidcontrol/vidcontrol.c 250509 2013-05-11 13:32:38Z eadler $";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -63,14 +63,14 @@ static const char rcsid[] =
 /* Screen dump file format revision */
 #define DUMP_FMT_REV	1
 
-char 	legal_colors[16][16] = {
+static const char *legal_colors[16] = {
 	"black", "blue", "green", "cyan",
 	"red", "magenta", "brown", "white",
 	"grey", "lightblue", "lightgreen", "lightcyan",
 	"lightred", "lightmagenta", "yellow", "lightwhite"
 };
 
-struct {
+static struct {
 	int			active_vty;
 	vid_info_t		console_info;
 	unsigned char		screen_map[256];
@@ -78,18 +78,16 @@ struct {
 	struct video_info	video_mode_info;
 } cur_info;
 
-int	hex = 0;
-int	number;
-int	vesa_cols;
-int	vesa_rows;
-int	font_height;
-int	colors_changed;
-int	video_mode_changed;
-int	normal_fore_color, normal_back_color;
-int	revers_fore_color, revers_back_color;
-char	letter;
-struct	vid_info info;
-struct	video_info new_mode_info;
+static int	hex = 0;
+static int	vesa_cols;
+static int	vesa_rows;
+static int	font_height;
+static int	colors_changed;
+static int	video_mode_changed;
+static int	normal_fore_color, normal_back_color;
+static int	revers_fore_color, revers_back_color;
+static struct	vid_info info;
+static struct	video_info new_mode_info;
 
 
 /*
@@ -499,15 +497,15 @@ set_screensaver_timeout(char *arg)
  */
 
 static void
-set_cursor_type(char *appearence)
+set_cursor_type(char *appearance)
 {
 	int type;
 
-	if (!strcmp(appearence, "normal"))
+	if (!strcmp(appearance, "normal"))
 		type = 0;
-	else if (!strcmp(appearence, "blink"))
+	else if (!strcmp(appearance, "blink"))
 		type = 1;
-	else if (!strcmp(appearence, "destructive"))
+	else if (!strcmp(appearance, "destructive"))
 		type = 3;
 	else {
 		revert();
@@ -961,7 +959,7 @@ show_mode_info(void)
 	printf("---------------------------------------"
 	       "---------------------------------------\n");
 
-	for (mode = 0; mode < M_VESA_MODE_MAX; ++mode) {
+	for (mode = 0; mode <= M_VESA_MODE_MAX; ++mode) {
 		_info.vi_mode = mode;
 		if (ioctl(0, CONS_MODEINFO, &_info))
 			continue;

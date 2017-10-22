@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/ia64/gen/fpsetmask.c 121332 2003-10-22 09:00:07Z marcel $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/ia64/gen/fpsetmask.c 121332 2003-10-22 09:00:07Z marcel $");
 
 #include <sys/types.h>
 #include <ieeefp.h>

@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/share/man/man4/gpib.4 203359 2010-02-01 21:01:20Z joerg $
+.\" $FreeBSD: release/10.0.0/share/man/man4/gpib.4 238542 2012-07-17 02:05:39Z kevlo $
 .\"
 .Dd January 24, 2010
 .Dt GPIB 4
@@ -63,7 +63,7 @@ main(int argc, char **argv)
 {
 	int dmm;
         unsigned char buf[100];
-        char vbuf[sizeof buf * 4];
+        char vbuf[sizeof(buf) * 4];
 
         /* DVM */
         dmm = ibdev(0, (argc > 1? atoi(argv[1]): 7), 0,
@@ -71,7 +71,7 @@ main(int argc, char **argv)
         if (dmm < 0)
                 errx(1, "ibdev = %d\\n", dmm);
         ibwrt(dmm, "*IDN?\\r\\n", 7);
-        ibrd(dmm, buf, sizeof buf - 1);
+        ibrd(dmm, buf, sizeof(buf) - 1);
         strvisx(vbuf, buf, ibcnt, VIS_WHITE | VIS_CSTYLE);
         printf("%s\\n", vbuf);
         return (0);

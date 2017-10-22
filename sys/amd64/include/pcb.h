@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)pcb.h	5.10 (Berkeley) 5/12/91
- * $FreeBSD: stable/9/sys/amd64/include/pcb.h 235539 2012-05-17 10:25:34Z dim $
+ * $FreeBSD: release/10.0.0/sys/amd64/include/pcb.h 258886 2013-12-03 19:41:48Z kib $
  */
 
 #ifndef _AMD64_PCB_H_
@@ -43,6 +43,7 @@
 #include <machine/fpu.h>
 #include <machine/segments.h>
 
+#ifdef __amd64__
 struct pcb {
 	register_t	pcb_r15;
 	register_t	pcb_r14;
@@ -77,7 +78,6 @@ struct pcb {
 #define	PCB_KERNFPU	0x04	/* kernel uses fpu */
 #define	PCB_FPUINITDONE	0x08	/* fpu state is initialized */
 #define	PCB_USERFPUINITDONE 0x10 /* fpu user state is initialized */
-#define	PCB_GS32BIT	0x20	/* linux gs switch */
 #define	PCB_32BIT	0x40	/* process has 32 bit context (segs etc) */
 
 	uint16_t	pcb_initial_fpucw;
@@ -91,10 +91,22 @@ struct pcb {
 	/* local tss, with i/o bitmap; NULL for common */
 	struct amd64tss *pcb_tssp;
 
+	/* model specific registers */
+	register_t	pcb_efer;
+	register_t	pcb_star;
+	register_t	pcb_lstar;
+	register_t	pcb_cstar;
+	register_t	pcb_sfmask;
+	register_t	pcb_xsmask;
+
+	/* fpu context for suspend/resume */
+	void		*pcb_fpususpend;
+
 	struct savefpu	*pcb_save;
 
-	uint64_t	pcb_pad[2];
+	uint64_t	pcb_pad[3];
 };
+#endif
 
 #ifdef _KERNEL
 struct trapframe;
@@ -131,6 +143,7 @@ clear_pcb_flags(struct pcb *pcb, const u_int flags)
 
 void	makectx(struct trapframe *, struct pcb *);
 int	savectx(struct pcb *) __returns_twice;
+void	resumectx(struct pcb *);
 
 #endif
 

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libkvm/kvm_powerpc64.c 217777 2011-01-24 11:06:40Z uqs $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libkvm/kvm_powerpc64.c 217777 2011-01-24 11:06:40Z uqs $");
 
 #include <sys/param.h>
 #include <sys/endian.h>

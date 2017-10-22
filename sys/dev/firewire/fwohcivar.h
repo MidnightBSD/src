@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: stable/9/sys/dev/firewire/fwohcivar.h 188079 2009-02-03 17:13:37Z sbruno $
+ * $FreeBSD: release/10.0.0/sys/dev/firewire/fwohcivar.h 188079 2009-02-03 17:13:37Z sbruno $
  *
  */
 

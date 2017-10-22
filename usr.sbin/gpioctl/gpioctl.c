@@ -26,10 +26,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/gpioctl/gpioctl.c 213238 2010-09-28 03:28:20Z gonzo $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/gpioctl/gpioctl.c 255629 2013-09-17 11:48:47Z sbruno $");
 
 #include <fcntl.h>
 #include <getopt.h>
+#include <paths.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -43,7 +44,7 @@ struct flag_desc {
 	uint32_t flag;
 };
 
-struct flag_desc gpio_flags[] = {
+static struct flag_desc gpio_flags[] = {
 	{ "IN", GPIO_PIN_INPUT },
 	{ "OUT", GPIO_PIN_OUTPUT },
 	{ "OD", GPIO_PIN_OPENDRAIN },
@@ -63,10 +64,10 @@ static void
 usage(void)
 {
 	fprintf(stderr, "Usage:\n");
-	fprintf(stderr, "\tgpioctl -f ctldev -l [-v]\n");
-	fprintf(stderr, "\tgpioctl -f ctldev -t pin\n");
-	fprintf(stderr, "\tgpioctl -f ctldev -c pin flag ...\n");
-	fprintf(stderr, "\tgpioctl -f ctldev pin [0|1]\n");
+	fprintf(stderr, "\tgpioctl [-f ctldev] -l [-v]\n");
+	fprintf(stderr, "\tgpioctl [-f ctldev] -t pin\n");
+	fprintf(stderr, "\tgpioctl [-f ctldev] -c pin flag ...\n");
+	fprintf(stderr, "\tgpioctl [-f ctldev] pin [0|1]\n");
 	exit(1);
 }
 
@@ -185,6 +186,7 @@ main(int argc, char **argv)
 	int i;
 	struct gpio_pin pin;
 	struct gpio_req req;
+	char defctlfile[] = _PATH_DEVGPIOC "0";
 	char *ctlfile = NULL;
 	int pinn, pinv, fd, ch;
 	int flags, flag, ok;
@@ -226,7 +228,7 @@ main(int argc, char **argv)
 		printf("%d/%s\n", i, argv[i]);
 
 	if (ctlfile == NULL)
-		fail("No gpioctl device provided\n");
+		ctlfile = defctlfile;
 
 	fd = open(ctlfile, O_RDONLY);
 	if (fd < 0) {

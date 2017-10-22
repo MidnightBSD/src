@@ -25,9 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/agp/agp_via.c 200764 2009-12-21 03:28:05Z rnoland $");
-
-#include "opt_bus.h"
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/agp/agp_via.c 244926 2013-01-01 18:16:49Z antoine $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -137,7 +135,7 @@ agp_via_match(device_t dev)
 		return ("VIA PT880 host to PCI bridge");
 	case 0xb1981106:
 		return ("VIA VT83xx/VT87xx/KTxxx/Px8xx host to PCI bridge");
-	};
+	}
 
 	return NULL;
 }

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/iscontrol/iscontrol.c 249490 2013-04-14 22:38:28Z jpaetzel $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/iscontrol/iscontrol.c 254657 2013-08-22 14:02:34Z trasz $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -55,7 +55,7 @@ __FBSDID("$FreeBSD: stable/9/sbin/iscontrol/iscontrol.c 249490 2013-04-14 22:38:
 #include <unistd.h>
 #include <camlib.h>
 
-#include <dev/iscsi/initiator/iscsi.h>
+#include <dev/iscsi_initiator/iscsi.h>
 #include "iscontrol.h"
 
 static char version[] = "2.3.1"; // keep in sync with iscsi_initiator

@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/mips/cavium/octeon_rnd.c 210311 2010-07-20 19:25:11Z jmallett $
+ * $FreeBSD: release/10.0.0/sys/mips/cavium/octeon_rnd.c 256381 2013-10-12 15:31:36Z markm $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octeon_rnd.c 210311 2010-07-20 19:25:11Z jmallett $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octeon_rnd.c 256381 2013-10-12 15:31:36Z markm $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,11 +41,6 @@ __FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octeon_rnd.c 210311 2010-07-20 19:2
 #include <contrib/octeon-sdk/cvmx.h>
 #include <contrib/octeon-sdk/cvmx-rng.h>
 
-/*
- * XXX
- * random_harvest(9) says to call it with no more than 16 bytes, but at least
- * safe(4) seems to violate that rule.
- */
 #define	OCTEON_RND_WORDS	2
 
 struct octeon_rnd_softc {
@@ -131,7 +126,7 @@ octeon_rnd_harvest(void *arg)
 	for (i = 0; i < OCTEON_RND_WORDS; i++)
 		sc->sc_entropy[i] = cvmx_rng_get_random64();
 	random_harvest(sc->sc_entropy, sizeof sc->sc_entropy,
-		       sizeof sc->sc_entropy * 8, 0, RANDOM_PURE);
+		       (sizeof(sc->sc_entropy)*8)/2, RANDOM_PURE_OCTEON);
 
 	callout_reset(&sc->sc_callout, hz * 5, octeon_rnd_harvest, sc);
 }

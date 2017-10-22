@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/i386/gptboot/gptboot.c 242562 2012-11-04 13:37:33Z avg $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/boot/i386/gptboot/gptboot.c 241301 2012-10-06 20:08:29Z avg $");
 
 #include <sys/param.h>
 #include <sys/gpt.h>
@@ -90,14 +90,13 @@ static struct bootinfo bootinfo;
 void exit(int);
 static void load(void);
 static int parse(char *, int *);
-static int xfsread(ino_t, void *, size_t);
 static int dskread(void *, daddr_t, unsigned);
 static uint32_t memsize(void);
 
 #include "ufsread.c"
 
 static inline int
-xfsread(ino_t inode, void *buf, size_t nbyte)
+xfsread(ufs_ino_t inode, void *buf, size_t nbyte)
 {
 
 	if ((size_t)fsread(inode, buf, nbyte) != nbyte) {
@@ -138,7 +137,7 @@ main(void)
 {
 	char cmd[512], cmdtmp[512];
 	int autoboot, dskupdated;
-	ino_t ino;
+	ufs_ino_t ino;
 
 	dmadat = (void *)(roundup2(__base + (int32_t)&_end, 0x10000) - __base);
 	v86.ctl = V86_FLAGS;
@@ -247,7 +246,7 @@ load(void)
     static Elf32_Phdr ep[2];
     static Elf32_Shdr es[2];
     caddr_t p;
-    ino_t ino;
+    ufs_ino_t ino;
     uint32_t addr, x;
     int fmt, i, j;
 

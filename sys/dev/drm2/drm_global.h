@@ -27,7 +27,7 @@
 /*
  * Authors: Thomas Hellstrom <thellstrom-at-vmware-dot-com>
  */
-/* $FreeBSD: stable/9/sys/dev/drm2/drm_global.h 249082 2013-04-04 05:47:50Z kib $ */
+/* $FreeBSD: release/10.0.0/sys/dev/drm2/drm_global.h 247834 2013-03-05 09:27:21Z kib $ */
 
 #ifndef _DRM_GLOBAL_H_
 #define _DRM_GLOBAL_H_

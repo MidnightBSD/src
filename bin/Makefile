@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 5/31/93
-# $FreeBSD: stable/9/bin/Makefile 212515 2010-09-13 01:29:51Z imp $
+# $FreeBSD: release/10.0.0/bin/Makefile 256241 2013-10-09 20:47:20Z des $
 
 .include <bsd.own.mk>
 
@@ -15,6 +15,7 @@ SUBDIR= cat \
 	echo \
 	ed \
 	expr \
+	freebsd-version \
 	getfacl \
 	hostname \
 	kenv \

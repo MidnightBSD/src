@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/uart/uart_cpu_sparc64.c 221960 2011-05-15 13:27:38Z marius $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_cpu_sparc64.c 229272 2012-01-02 12:12:10Z ed $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -71,7 +71,7 @@ uart_cpu_channel(char *dev)
 	if ((aliases = OF_finddevice("/aliases")) != -1)
 		(void)OF_getprop(aliases, dev, alias, sizeof(alias));
 	len = strlen(alias);
-	if ((p = rindex(alias, ':')) == NULL)
+	if ((p = strrchr(alias, ':')) == NULL)
 		return (0);
 	p++;
 	if (p - alias == len - 1 && (*p == 'a' || *p == 'b'))

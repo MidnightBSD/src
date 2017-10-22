@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netgraph/ng_car.h 174795 2007-12-19 22:50:14Z mav $
+ * $FreeBSD: release/10.0.0/sys/netgraph/ng_car.h 174795 2007-12-19 22:50:14Z mav $
  */
 
 #ifndef _NETGRAPH_NG_CAR_H_

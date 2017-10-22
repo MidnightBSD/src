@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)types.h	8.6 (Berkeley) 2/19/95
- * $FreeBSD: stable/9/sys/sys/types.h 229285 2012-01-02 16:14:52Z mdf $
+ * $FreeBSD: release/10.0.0/sys/sys/types.h 255219 2013-09-05 00:09:56Z pjd $
  */
 
 #ifndef _SYS_TYPES_H_
@@ -72,8 +72,7 @@ typedef	__int64_t	quad_t;
 typedef	quad_t *	qaddr_t;
 
 typedef	char *		caddr_t;	/* core address */
-typedef	__const char *	c_caddr_t;	/* core address, pointer to const */
-typedef	__volatile char *v_caddr_t;	/* core address, pointer to volatile */
+typedef	const char *	c_caddr_t;	/* core address, pointer to const */
 
 #ifndef _BLKSIZE_T_DECLARED
 typedef	__blksize_t	blksize_t;
@@ -88,8 +87,6 @@ typedef	__cpusetid_t	cpusetid_t;
 typedef	__blkcnt_t	blkcnt_t;
 #define	_BLKCNT_T_DECLARED
 #endif
-
-typedef	__cap_rights_t	cap_rights_t;
 
 #ifndef _CLOCK_T_DECLARED
 typedef	__clock_t	clock_t;
@@ -189,6 +186,8 @@ typedef	__rlim_t	rlim_t;		/* resource limit */
 #define	_RLIM_T_DECLARED
 #endif
 
+typedef	__int64_t	sbintime_t;
+
 typedef	__segsz_t	segsz_t;	/* segment size (in pages) */
 
 #ifndef _SIZE_T_DECLARED
@@ -231,6 +230,13 @@ typedef	__uid_t		uid_t;		/* user id */
 #ifndef _USECONDS_T_DECLARED
 typedef	__useconds_t	useconds_t;	/* microseconds (unsigned) */
 #define	_USECONDS_T_DECLARED
+#endif
+
+#ifndef _CAP_RIGHTS_T_DECLARED
+#define	_CAP_RIGHTS_T_DECLARED
+struct cap_rights;
+
+typedef	struct cap_rights	cap_rights_t;
 #endif
 
 typedef	__vm_offset_t	vm_offset_t;

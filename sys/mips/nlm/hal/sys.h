@@ -26,11 +26,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: stable/9/sys/mips/nlm/hal/sys.h 225394 2011-09-05 10:45:29Z jchandra $
+ * $FreeBSD: release/10.0.0/sys/mips/nlm/hal/sys.h 255368 2013-09-07 18:26:16Z jchandra $
  */
 
 #ifndef __NLM_HAL_SYS_H__
-#define __NLM_HAL_SYS_H__
+#define	__NLM_HAL_SYS_H__
 
 /**
 * @file_name sys.h
@@ -95,9 +95,11 @@
 #define	SYS_UCO_S_ECC				0x38
 #define	SYS_UCO_M_ECC				0x39
 #define	SYS_UCO_ADDR				0x3a
+#define	SYS_PLL_DFS_BYP_CTRL			0x3a /* Bx stepping */
 #define	SYS_UCO_INSTR				0x3b
 #define	SYS_MEM_BIST0				0x3c
 #define	SYS_MEM_BIST1				0x3d
+#define	SYS_PLL_DFS_DIV_VALUE			0x3d /* Bx stepping */
 #define	SYS_MEM_BIST2				0x3e
 #define	SYS_MEM_BIST3				0x3f
 #define	SYS_MEM_BIST4				0x40
@@ -120,6 +122,38 @@
 #define	nlm_write_sys_reg(b, r, v)	nlm_write_reg(b, r, v)
 #define	nlm_get_sys_pcibase(node) nlm_pcicfg_base(XLP_IO_SYS_OFFSET(node))
 #define	nlm_get_sys_regbase(node) (nlm_get_sys_pcibase(node) + XLP_IO_PCI_HDRSZ)
+
+enum {
+	/* Don't change order and it must start from zero */
+	DFS_DEVICE_NAE = 0,
+	DFS_DEVICE_SAE,
+	DFS_DEVICE_RSA,
+	DFS_DEVICE_DTRE,
+	DFS_DEVICE_CMP,
+	DFS_DEVICE_KBP,
+	DFS_DEVICE_DMC,
+	DFS_DEVICE_NAND,
+	DFS_DEVICE_MMC,
+	DFS_DEVICE_NOR,
+	DFS_DEVICE_CORE,
+	DFS_DEVICE_REGEX_SLOW,
+	DFS_DEVICE_REGEX_FAST,
+	DFS_DEVICE_SATA,
+	INVALID_DFS_DEVICE = 0xFF
+};
+
+static __inline
+void nlm_sys_enable_block(uint64_t sys_base, int block)
+{
+	uint32_t dfsdis, mask;
+
+	mask = 1 << block;
+	dfsdis = nlm_read_sys_reg(sys_base, SYS_DFS_DIS_CTRL);
+	if ((dfsdis & mask) == 0)
+		return;			/* already enabled, nothing to do */
+	dfsdis &= ~mask;
+	nlm_write_sys_reg(sys_base, SYS_DFS_DIS_CTRL, dfsdis);
+}
 
 #endif
 #endif

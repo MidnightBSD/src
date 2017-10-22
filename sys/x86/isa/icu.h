@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)icu.h	5.6 (Berkeley) 5/9/91
- * $FreeBSD: stable/9/sys/x86/isa/icu.h 234144 2012-04-11 20:04:31Z jhb $
+ * $FreeBSD: release/10.0.0/sys/x86/isa/icu.h 233031 2012-03-16 12:13:44Z nyan $
  */
 
 /*

@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)uuencode.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.bin/uuencode/uuencode.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.bin/uuencode/uuencode.c 227197 2011-11-06 08:18:35Z ed $");
 
 /*
  * uuencode [input] output
@@ -60,13 +60,13 @@ __FBSDID("$FreeBSD: stable/9/usr.bin/uuencode/uuencode.c 216370 2010-12-11 08:32
 #include <string.h>
 #include <unistd.h>
 
-void encode(void);
-void base64_encode(void);
+static void encode(void);
+static void base64_encode(void);
 static void usage(void);
 
-FILE *output;
-int mode;
-char **av;
+static FILE *output;
+static int mode;
+static char **av;
 
 int
 main(int argc, char *argv[])
@@ -138,7 +138,7 @@ main(int argc, char *argv[])
 /*
  * Copy from in to out, encoding in base64 as you go along.
  */
-void
+static void
 base64_encode(void)
 {
 	/*
@@ -168,7 +168,7 @@ base64_encode(void)
 /*
  * Copy from in to out, encoding as you go along.
  */
-void
+static void
 encode(void)
 {
 	register int ch, n;

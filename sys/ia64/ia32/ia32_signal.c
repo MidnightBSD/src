@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/ia64/ia32/ia32_signal.c 225617 2011-09-16 13:58:51Z kmacy $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/ia64/ia32/ia32_signal.c 255426 2013-09-09 18:11:59Z jhb $");
 
 #include "opt_compat.h"
 
@@ -72,9 +72,9 @@ __FBSDID("$FreeBSD: stable/9/sys/ia64/ia32/ia32_signal.c 225617 2011-09-16 13:58
 #include <compat/freebsd32/freebsd32_util.h>
 #include <compat/freebsd32/freebsd32_proto.h>
 #include <compat/ia32/ia32_signal.h>
-#include <i386/include/psl.h>
-#include <i386/include/segments.h>
-#include <i386/include/specialreg.h>
+#include <x86/include/psl.h>
+#include <x86/include/segments.h>
+#include <x86/include/specialreg.h>
 
 char ia32_sigcode[] = {
 	0xff, 0x54, 0x24, 0x10,		/* call *SIGF_HANDLER(%esp) */
@@ -169,8 +169,8 @@ ia32_setregs(struct thread *td, struct image_params *imgp, u_long stack)
 	 * Build the GDT and LDT.
 	 */
 	gdt = sv->sv_usrstack;
-	vm_map_find(&vmspace->vm_map, 0, 0, &gdt, IA32_PAGE_SIZE << 1, 0,
-	    VM_PROT_ALL, VM_PROT_ALL, 0);
+	vm_map_find(&vmspace->vm_map, NULL, 0, &gdt, IA32_PAGE_SIZE << 1, 0,
+	    VMFS_NO_SPACE, VM_PROT_ALL, VM_PROT_ALL, 0);
 	ldt = gdt + IA32_PAGE_SIZE;
 
 	desc.sd_lolimit = 8*NLDT-1;

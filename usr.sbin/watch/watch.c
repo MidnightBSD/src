@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/usr.sbin/watch/watch.c 233083 2012-03-17 09:10:43Z ed $");
+__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/watch/watch.c 255261 2013-09-05 19:02:03Z jilles $");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -110,7 +110,6 @@ set_tty(void)
 {
 	struct termios	ntty;
 
-	tcgetattr(std_in, &otty);
 	ntty = otty;
 	ntty.c_lflag &= ~ICANON;	/* disable canonical operation */
 	ntty.c_lflag &= ~ECHO;
@@ -323,6 +322,8 @@ main(int ac, char *av[])
 		default:
 			usage();
 		}
+
+	tcgetattr(std_in, &otty);
 
 	if (modfind("snp") == -1)
 		if (kldload("snp") == -1 || modfind("snp") == -1)

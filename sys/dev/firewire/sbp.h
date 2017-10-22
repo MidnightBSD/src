@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: stable/9/sys/dev/firewire/sbp.h 190792 2009-04-07 02:33:46Z sbruno $
+ * $FreeBSD: release/10.0.0/sys/dev/firewire/sbp.h 190792 2009-04-07 02:33:46Z sbruno $
  *
  */
 

@@ -27,7 +27,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/9/sbin/newfs_msdos/newfs_msdos.c 245763 2013-01-22 03:39:55Z pfg $";
+  "$FreeBSD: release/10.0.0/sbin/newfs_msdos/newfs_msdos.c 255339 2013-09-07 03:10:12Z pfg $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -139,8 +139,8 @@ struct de {
     u_int8_t deName[11];		/* name and extension */
     u_int8_t deAttributes;		/* attributes */
     u_int8_t rsvd[10];			/* reserved */
-    u_int8_t deMTime[2];		/* creation time */
-    u_int8_t deMDate[2];		/* creation date */
+    u_int8_t deMTime[2];		/* last-modified time */
+    u_int8_t deMDate[2];		/* last-modified date */
     u_int8_t deStartCluster[2];		/* starting cluster */
     u_int8_t deFileSize[4];		/* size */
 } __packed;

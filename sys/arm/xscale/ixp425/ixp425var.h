@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/arm/xscale/ixp425/ixp425var.h 215319 2010-11-14 20:41:22Z thompsa $
+ * $FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/ixp425var.h 229125 2011-12-31 15:53:34Z marius $
  *
  */
 
@@ -44,7 +44,6 @@
 
 #include <machine/bus.h>
 
-#include <dev/pci/pcivar.h>
 #include <sys/rman.h>
 
 /* NB: cputype is setup by set_cpufuncs */

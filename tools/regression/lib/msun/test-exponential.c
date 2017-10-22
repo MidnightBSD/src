@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/tools/regression/lib/msun/test-exponential.c 216222 2010-12-06 00:02:49Z das $");
+__FBSDID("$FreeBSD: release/10.0.0/tools/regression/lib/msun/test-exponential.c 251241 2013-06-02 04:30:03Z das $");
 
 #include <assert.h>
 #include <fenv.h>
@@ -41,8 +41,7 @@ __FBSDID("$FreeBSD: stable/9/tools/regression/lib/msun/test-exponential.c 216222
 #include <ieeefp.h>
 #endif
 
-#define	ALL_STD_EXCEPT	(FE_DIVBYZERO | FE_INEXACT | FE_INVALID | \
-			 FE_OVERFLOW | FE_UNDERFLOW)
+#include "test-utils.h"
 
 #pragma STDC FENV_ACCESS ON
 
@@ -63,7 +62,7 @@ __FBSDID("$FreeBSD: stable/9/tools/regression/lib/msun/test-exponential.c 216222
 	volatile long double _d = x;					\
 	assert(feclearexcept(FE_ALL_EXCEPT) == 0);			\
 	assert(fpequal((func)(_d), (result)));				 \
-	assert(((func), fetestexcept(exceptmask) == (excepts)));	\
+	assert(((void)(func), fetestexcept(exceptmask) == (excepts)));	\
 } while (0)
 
 /* Test all the functions that compute b^x. */
@@ -80,17 +79,6 @@ __FBSDID("$FreeBSD: stable/9/tools/regression/lib/msun/test-exponential.c 216222
 	test(expm1, x, result, exceptmask, excepts);			\
 	test(expm1f, x, result, exceptmask, excepts);			\
 } while (0)
-
-/*
- * Determine whether x and y are equal, with two special rules:
- *	+0.0 != -0.0
- *	 NaN == NaN
- */
-int
-fpequal(long double x, long double y)
-{
-	return ((x == y && !signbit(x) == !signbit(y)) || isnan(x) && isnan(y));
-}
 
 void
 run_generic_tests(void)

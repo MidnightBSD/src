@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/powerpc/powermac/powermac_thermal.h 222659 2011-06-03 20:43:12Z andreast $
+ * $FreeBSD: release/10.0.0/sys/powerpc/powermac/powermac_thermal.h 222659 2011-06-03 20:43:12Z andreast $
  */
 
 #ifndef _POWERPC_POWERMAC_POWERMAC_THERMAL_H

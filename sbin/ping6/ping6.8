@@ -27,9 +27,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/sbin/ping6/ping6.8 237216 2012-06-18 04:55:07Z eadler $
+.\" $FreeBSD: release/10.0.0/sbin/ping6/ping6.8 250388 2013-05-08 21:04:19Z joel $
 .\"
-.Dd April 20, 2010
+.Dd May 5, 2013
 .Dt PING6 8
 .Os
 .Sh NAME
@@ -215,8 +215,8 @@ unicast and multicast packets.
 Numeric output only.
 No attempt will be made to lookup symbolic names from addresses in the reply.
 .It Fl N
-Probe node information multicast group
-.Pq Li ff02::2:xxxx:xxxx .
+Probe node information multicast group address
+.Pq Li ff02::2:ffxx:xxxx .
 .Ar host
 must be string hostname of the target
 (must not be a numeric IPv6 address).
@@ -227,6 +227,15 @@ Since node information multicast group is a link-local multicast group,
 outgoing interface needs to be specified by
 .Fl I
 option.
+.Pp
+When specified twice, the address
+.Pq Li ff02::2:xxxx:xxxx
+is used instead.
+The former is in RFC 4620, the latter is in an old Internet Draft
+draft-ietf-ipngwg-icmp-name-lookup.
+Note that KAME-derived implementations including
+.Fx
+use the latter.
 .It Fl o
 Exit successfully after receiving one reply packet.
 .It Fl p Ar pattern

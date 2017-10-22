@@ -1,11 +1,11 @@
-# $FreeBSD: stable/9/sys/conf/kern.mk 245431 2013-01-14 19:51:26Z dim $
+# $FreeBSD: release/10.0.0/sys/conf/kern.mk 250828 2013-05-20 19:41:34Z brooks $
 
 #
 # Warning flags for compiling the kernel and components of the kernel:
 #
 CWARNFLAGS?=	-Wall -Wredundant-decls -Wnested-externs -Wstrict-prototypes \
 		-Wmissing-prototypes -Wpointer-arith -Winline -Wcast-qual \
-		-Wundef -Wno-pointer-sign -fformat-extensions \
+		-Wundef -Wno-pointer-sign ${FORMAT_EXTENSIONS} \
 		-Wmissing-include-dirs -fdiagnostics-show-option \
 		${CWARNEXTRA}
 #
@@ -29,7 +29,15 @@ NO_WSOMETIMES_UNINITIALIZED=	-Wno-error-sometimes-uninitialized
 # enough to error out the whole kernel build.  Display them anyway, so there is
 # some incentive to fix them eventually.
 CWARNEXTRA?=	-Wno-error-tautological-compare -Wno-error-empty-body \
-		-Wno-error-parentheses-equality
+		-Wno-error-parentheses-equality ${NO_WFORMAT}
+.endif
+
+# External compilers may not support our format extensions.  Allow them
+# to be disabled.  WARNING: format checking is disabled in this case.
+.if ${MK_FORMAT_EXTENSIONS} == "no"
+NO_WFORMAT=		-Wno-format
+.else
+FORMAT_EXTENSIONS=	-fformat-extensions
 .endif
 
 #

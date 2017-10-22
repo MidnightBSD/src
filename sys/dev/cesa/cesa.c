@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/cesa/cesa.c 227730 2011-11-19 16:30:06Z raj $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cesa/cesa.c 250291 2013-05-06 13:34:36Z gber $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -80,6 +80,7 @@ static void	cesa_intr(void *);
 static int	cesa_newsession(device_t, u_int32_t *, struct cryptoini *);
 static int	cesa_freesession(device_t, u_int64_t);
 static int	cesa_process(device_t, struct cryptop *, int);
+static int	decode_win_cesa_setup(struct cesa_softc *sc);
 
 static struct resource_spec cesa_res_spec[] = {
 	{ SYS_RES_MEMORY, 0, RF_ACTIVE },
@@ -93,16 +94,12 @@ static device_method_t cesa_methods[] = {
 	DEVMETHOD(device_attach,	cesa_attach),
 	DEVMETHOD(device_detach,	cesa_detach),
 
-	/* Bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
-	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
-
 	/* Crypto device methods */
 	DEVMETHOD(cryptodev_newsession,	cesa_newsession),
 	DEVMETHOD(cryptodev_freesession,cesa_freesession),
 	DEVMETHOD(cryptodev_process,	cesa_process),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t cesa_driver = {
@@ -161,7 +158,7 @@ cesa_alloc_dma_mem(struct cesa_softc *sc, struct cesa_dma_mem *cdm,
 	KASSERT(cdm->cdm_vaddr == NULL,
 	    ("%s(): DMA memory descriptor in use.", __func__));
 
-	error = bus_dma_tag_create(NULL,	/* parent */
+	error = bus_dma_tag_create(bus_get_dma_tag(sc->sc_dev),	/* parent */
 	    PAGE_SIZE, 0,			/* alignment, boundary */
 	    BUS_SPACE_MAXADDR_32BIT,		/* lowaddr */
 	    BUS_SPACE_MAXADDR,			/* highaddr */
@@ -999,16 +996,17 @@ cesa_attach(device_t dev)
 	sc->sc_error = 0;
 	sc->sc_dev = dev;
 
-	error = cesa_setup_sram(sc);
-	if (error) {
-		device_printf(dev, "could not setup SRAM\n");
-		return (error);
+	/* Check if CESA peripheral device has power turned on */
+	if (soc_power_ctrl_get(CPU_PM_CTRL_CRYPTO) != CPU_PM_CTRL_CRYPTO) {
+		device_printf(dev, "not powered on\n");
+		return (ENXIO);
 	}
 
 	soc_id(&d, &r);
 
 	switch (d) {
 	case MV_DEV_88F6281:
+	case MV_DEV_88F6282:
 		sc->sc_tperr = 0;
 		break;
 	case MV_DEV_MV78100:
@@ -1041,6 +1039,20 @@ cesa_attach(device_t dev)
 	sc->sc_bsh = rman_get_bushandle(*(sc->sc_res));
 	sc->sc_bst = rman_get_bustag(*(sc->sc_res));
 
+	/* Setup CESA decoding windows */
+	error = decode_win_cesa_setup(sc);
+	if (error) {
+		device_printf(dev, "could not setup decoding windows\n");
+		goto err1;
+	}
+
+	/* Acquire SRAM base address */
+	error = cesa_setup_sram(sc);
+	if (error) {
+		device_printf(dev, "could not setup SRAM\n");
+		goto err1;
+	}
+
 	/* Setup interrupt handler */
 	error = bus_setup_intr(dev, sc->sc_res[1], INTR_TYPE_NET | INTR_MPSAFE,
 	    NULL, cesa_intr, sc, &(sc->sc_icookie));
@@ -1050,7 +1062,7 @@ cesa_attach(device_t dev)
 	}
 
 	/* Create DMA tag for processed data */
-	error = bus_dma_tag_create(NULL,	/* parent */
+	error = bus_dma_tag_create(bus_get_dma_tag(dev),	/* parent */
 	    1, 0,				/* alignment, boundary */
 	    BUS_SPACE_MAXADDR_32BIT,		/* lowaddr */
 	    BUS_SPACE_MAXADDR,			/* highaddr */
@@ -1612,3 +1624,50 @@ cesa_process(device_t dev, struct cryptop *crp, int hint)
 
 	return (0);
 }
+
+/*
+ * Set CESA TDMA decode windows.
+ */
+static int
+decode_win_cesa_setup(struct cesa_softc *sc)
+{
+	struct mem_region availmem_regions[FDT_MEM_REGIONS];
+	int availmem_regions_sz;
+	uint32_t memsize, br, cr, i;
+
+	/* Grab physical memory regions information from DTS */
+	if (fdt_get_mem_regions(availmem_regions, &availmem_regions_sz,
+	    &memsize) != 0)
+		return (ENXIO);
+
+	if (availmem_regions_sz > MV_WIN_CESA_MAX) {
+		device_printf(sc->sc_dev, "Too much memory regions, cannot "
+		    " set CESA windows to cover whole DRAM \n");
+		return (ENXIO);
+	}
+
+	/* Disable and clear all CESA windows */
+	for (i = 0; i < MV_WIN_CESA_MAX; i++) {
+		CESA_WRITE(sc, MV_WIN_CESA_BASE(i), 0);
+		CESA_WRITE(sc, MV_WIN_CESA_CTRL(i), 0);
+	}
+
+	/* Fill CESA TDMA decoding windows with information acquired from DTS */
+	for (i = 0; i < availmem_regions_sz; i++) {
+		br = availmem_regions[i].mr_start;
+		cr = availmem_regions[i].mr_size;
+
+		/* Don't add entries with size lower than 64KB */
+		if (cr & 0xffff0000) {
+			cr = (((cr - 1) & 0xffff0000) |
+			(MV_WIN_DDR_ATTR(i) << MV_WIN_CPU_ATTR_SHIFT) |
+			    (MV_WIN_DDR_TARGET << MV_WIN_CPU_TARGET_SHIFT) |
+			    MV_WIN_CPU_ENABLE_BIT);
+			CESA_WRITE(sc, MV_WIN_CESA_BASE(i), br);
+			CESA_WRITE(sc, MV_WIN_CESA_CTRL(i), cr);
+		}
+	}
+
+	return (0);
+}
+

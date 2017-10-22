@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/hastd/metadata.c 231017 2012-02-05 15:51:19Z trociny $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/hastd/metadata.c 229945 2012-01-10 22:39:07Z pjd $");
 
 #include <errno.h>
 #include <fcntl.h>

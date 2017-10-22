@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/mk/bsd.sys.mk 247333 2013-02-26 18:31:03Z dim $
+# $FreeBSD: release/10.0.0/share/mk/bsd.sys.mk 249657 2013-04-19 19:45:00Z ed $
 #
 # This file contains common settings used for building FreeBSD
 # sources.
@@ -54,6 +54,10 @@ CWARNFLAGS+=	-Wcast-align
 .if ${WARNS} >= 6
 CWARNFLAGS+=	-Wchar-subscripts -Winline -Wnested-externs -Wredundant-decls\
 		-Wold-style-definition
+.if ${COMPILER_TYPE} == "clang" && !defined(EARLY_BUILD) && \
+    !defined(NO_WMISSING_VARIABLE_DECLARATIONS)
+CWARNFLAGS+=	-Wmissing-variable-declarations
+.endif
 .endif # WARNS >= 6
 .if ${WARNS} >= 2 && ${WARNS} <= 4
 # XXX Delete -Wuninitialized by default for now -- the compiler doesn't
@@ -126,3 +130,18 @@ CFLAGS+=	${SSP_CFLAGS}
 
 # Allow user-specified additional warning flags
 CFLAGS+=	${CWARNFLAGS}
+
+
+# Tell bmake not to mistake standard targets for things to be searched for
+# or expect to ever be up-to-date.
+PHONY_NOTMAIN = afterdepend afterinstall all beforedepend beforeinstall \
+		beforelinking build build-tools buildfiles buildincludes \
+		checkdpadd clean cleandepend cleandir cleanobj configure \
+		depend dependall distclean distribute exe extract fetch \
+		html includes install installfiles installincludes lint \
+		obj objlink objs objwarn patch realall realdepend \
+		realinstall regress subdir-all subdir-depend subdir-install \
+		tags whereobj
+
+.PHONY: ${PHONY_NOTMAIN}
+.NOTMAIN: ${PHONY_NOTMAIN}

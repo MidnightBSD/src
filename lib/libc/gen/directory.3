@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)directory.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/9/lib/libc/gen/directory.3 231847 2012-02-17 00:55:26Z eadler $
+.\" $FreeBSD: release/10.0.0/lib/libc/gen/directory.3 254499 2013-08-18 20:11:34Z pjd $
 .\"
-.Dd April 16, 2008
+.Dd August 18, 2013
 .Dt DIRECTORY 3
 .Os
 .Sh NAME
@@ -40,6 +40,7 @@
 .Nm seekdir ,
 .Nm rewinddir ,
 .Nm closedir ,
+.Nm fdclosedir ,
 .Nm dirfd
 .Nd directory operations
 .Sh LIBRARY
@@ -63,6 +64,8 @@
 .Fn rewinddir "DIR *dirp"
 .Ft int
 .Fn closedir "DIR *dirp"
+.Ft int
+.Fn fdclosedir "DIR *dirp"
 .Ft int
 .Fn dirfd "DIR *dirp"
 .Sh DESCRIPTION
@@ -153,7 +156,7 @@ returns 0 on success or an error number to indicate failure.
 The
 .Fn telldir
 function
-returns the current location associated with the named
+returns a token representing the current location associated with the named
 .Em directory stream .
 Values returned by
 .Fn telldir
@@ -179,6 +182,13 @@ The new position reverts to the one associated with the
 when the
 .Fn telldir
 operation was performed.
+State associated with the token returned by
+.Fn telldir is freed when it is passed to
+.Fn seekdir .
+If you wish return to the same location again,
+then you must create a new token with another
+.Fn telldir
+call.
 .Pp
 The
 .Fn rewinddir
@@ -199,6 +209,13 @@ returning 0 on success.
 On failure, \-1 is returned and the global variable
 .Va errno
 is set to indicate the error.
+.Pp
+The
+.Fn fdclosedir
+function is equivalent to the
+.Fn closedir
+function except that this function returns directory file descriptor instead of
+closing it.
 .Pp
 The
 .Fn dirfd
@@ -245,3 +262,12 @@ The
 .Fn fdopendir
 function appeared in
 .Fx 8.0 .
+.Fn fdclosedir
+function appeared in
+.Fx 10.0 .
+.Sh BUGS
+The invalidation of
+.Fn telldir
+tokens when calling
+.Fn seekdir
+is non-standard.

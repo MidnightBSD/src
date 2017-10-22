@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/devfs/rule.c 154053 2006-01-05 13:37:07Z maxim $");
+__FBSDID("$FreeBSD: release/10.0.0/sbin/devfs/rule.c 229778 2012-01-07 16:09:33Z uqs $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -47,7 +47,7 @@ __FBSDID("$FreeBSD: stable/9/sbin/devfs/rule.c 154053 2006-01-05 13:37:07Z maxim
 
 #include "extern.h"
 
-static void rulespec_infp(FILE *fp, unsigned long reqest, devfs_rsnum rsnum);
+static void rulespec_infp(FILE *fp, unsigned long request, devfs_rsnum rsnum);
 static void rulespec_instr(struct devfs_rule *dr, const char *str,
     devfs_rsnum rsnum);
 static void rulespec_intok(struct devfs_rule *dr, int ac, char **av,
@@ -76,7 +76,7 @@ static struct intstr ist_type[] = {
 	{ NULL,			-1 }
 };
 
-devfs_rsnum in_rsnum;
+static devfs_rsnum in_rsnum;
 
 int
 rule_main(int ac, char **av)

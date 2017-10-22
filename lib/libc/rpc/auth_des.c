@@ -58,7 +58,7 @@
 static char sccsid[] = 	"@(#)auth_des.c	2.2 88/07/29 4.0 RPCSRC; from 1.9 88/02/08 SMI";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/auth_des.c 156090 2006-02-27 22:10:59Z deischen $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libc/rpc/auth_des.c 239991 2012-09-01 14:45:15Z ed $");
 
 #define USEC_PER_SEC		1000000
 #define RTIME_TIMEOUT		5	/* seconds to wait for sync */
@@ -286,7 +286,7 @@ authdes_marshal(AUTH *auth, XDR *xdrs)
 	 * Figure out the "time", accounting for any time difference
 	 * with the server if necessary.
 	 */
-	(void) gettimeofday(&ad->ad_timestamp, (struct timezone *)NULL);
+	(void)gettimeofday(&ad->ad_timestamp, NULL);
 	ad->ad_timestamp.tv_sec += ad->ad_timediff.tv_sec;
 	ad->ad_timestamp.tv_usec += ad->ad_timediff.tv_usec;
 	while (ad->ad_timestamp.tv_usec >= USEC_PER_SEC) {

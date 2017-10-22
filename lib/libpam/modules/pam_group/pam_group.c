@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libpam/modules/pam_group/pam_group.c 219564 2011-03-12 11:26:37Z des $");
+__FBSDID("$FreeBSD: release/10.0.0/lib/libpam/modules/pam_group/pam_group.c 219564 2011-03-12 11:26:37Z des $");
 
 #include <sys/types.h>
 

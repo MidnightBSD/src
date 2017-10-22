@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/9/sys/net/zlib.h 204552 2010-03-02 06:58:58Z alfred $	*/
+/* $FreeBSD: release/10.0.0/sys/net/zlib.h 245102 2013-01-06 14:59:59Z peter $	*/
 
 /*
  * This file is derived from zlib.h and zconf.h from the zlib-1.0.4
@@ -109,7 +109,7 @@ extern "C" {
 #if (defined(_WIN32) || defined(__WIN32__)) && !defined(WIN32)
 #  define WIN32
 #endif
-#if defined(__GNUC__) || defined(WIN32) || defined(__386__) || defined(i386)
+#if defined(__GNUC__) || defined(WIN32) || defined(__386__) || defined(__i386__)
 #  ifndef __32BIT__
 #    define __32BIT__
 #  endif
@@ -511,7 +511,7 @@ extern int EXPORT inflateInit OF((z_streamp strm));
 */
 
 #if defined(__FreeBSD__) && defined(_KERNEL)
-#define inflate       inflate_ppp     /* FreeBSD already has an inflate :-( */
+#define inflate       _zlib104_inflate     /* FreeBSD already has an inflate :-( */
 #endif
 
 extern int EXPORT inflate OF((z_streamp strm, int flush));

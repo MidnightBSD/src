@@ -1,4 +1,4 @@
-# $FreeBSD: stable/9/share/misc/usb_hid_usages 223153 2011-06-16 15:53:14Z mav $
+# $FreeBSD: release/10.0.0/share/misc/usb_hid_usages 223153 2011-06-16 15:53:14Z mav $
 #
 # USB HID usage table
 # Syntax:

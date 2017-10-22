@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/i386/i386/db_trace.c 244337 2012-12-17 05:13:15Z kib $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/i386/i386/db_trace.c 243836 2012-12-03 22:16:51Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

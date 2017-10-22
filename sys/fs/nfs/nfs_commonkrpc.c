@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/fs/nfs/nfs_commonkrpc.c 247502 2013-02-28 21:57:38Z jhb $");
+__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfs/nfs_commonkrpc.c 253049 2013-07-09 01:05:28Z rmacklem $");
 
 /*
  * Socket operations for use by nfs
@@ -76,29 +76,32 @@ dtrace_nfsclient_nfs23_done_probe_func_t
 /*
  * Registered probes by RPC type.
  */
-uint32_t	nfscl_nfs2_start_probes[NFS_NPROCS + 1];
-uint32_t	nfscl_nfs2_done_probes[NFS_NPROCS + 1];
+uint32_t	nfscl_nfs2_start_probes[NFSV41_NPROCS + 1];
+uint32_t	nfscl_nfs2_done_probes[NFSV41_NPROCS + 1];
 
-uint32_t	nfscl_nfs3_start_probes[NFS_NPROCS + 1];
-uint32_t	nfscl_nfs3_done_probes[NFS_NPROCS + 1];
+uint32_t	nfscl_nfs3_start_probes[NFSV41_NPROCS + 1];
+uint32_t	nfscl_nfs3_done_probes[NFSV41_NPROCS + 1];
 
-uint32_t	nfscl_nfs4_start_probes[NFS_NPROCS + 1];
-uint32_t	nfscl_nfs4_done_probes[NFS_NPROCS + 1];
+uint32_t	nfscl_nfs4_start_probes[NFSV41_NPROCS + 1];
+uint32_t	nfscl_nfs4_done_probes[NFSV41_NPROCS + 1];
 #endif
 
 NFSSTATESPINLOCK;
 NFSREQSPINLOCK;
+NFSDLOCKMUTEX;
 extern struct nfsstats newnfsstats;
 extern struct nfsreqhead nfsd_reqq;
 extern int nfscl_ticks;
 extern void (*ncl_call_invalcaches)(struct vnode *);
+extern int nfs_numnfscbd;
+extern int nfscl_debuglevel;
 
+SVCPOOL		*nfscbd_pool;
 static int	nfsrv_gsscallbackson = 0;
 static int	nfs_bufpackets = 4;
 static int	nfs_reconnects;
 static int	nfs3_jukebox_delay = 10;
 static int	nfs_skip_wcc_data_onerr = 1;
-static int	nfs_keytab_enctype = ETYPE_DES_CBC_CRC;
 
 SYSCTL_DECL(_vfs_nfs);
 
@@ -110,8 +113,6 @@ SYSCTL_INT(_vfs_nfs, OID_AUTO, nfs3_jukebox_delay, CTLFLAG_RW, &nfs3_jukebox_del
     "Number of seconds to delay a retry after receiving EJUKEBOX");
 SYSCTL_INT(_vfs_nfs, OID_AUTO, skip_wcc_data_onerr, CTLFLAG_RW, &nfs_skip_wcc_data_onerr, 0,
     "Disable weak cache consistency checking when server returns an error");
-SYSCTL_INT(_vfs_nfs, OID_AUTO, keytab_enctype, CTLFLAG_RW, &nfs_keytab_enctype, 0,
-    "Encryption type for the keytab entry used by nfs");
 
 static void	nfs_down(struct nfsmount *, struct thread *, const char *,
     int, int);
@@ -167,6 +168,7 @@ newnfs_connect(struct nfsmount *nmp, struct nfssockreq *nrp,
 	struct socket *so;
 	int one = 1, retries, error = 0;
 	struct thread *td = curthread;
+	SVCXPRT *xprt;
 	struct timeval timo;
 
 	/*
@@ -277,6 +279,24 @@ newnfs_connect(struct nfsmount *nmp, struct nfssockreq *nrp,
 				retries = nmp->nm_retry;
 		} else
 			retries = INT_MAX;
+		if (NFSHASNFSV4N(nmp)) {
+			/*
+			 * Make sure the nfscbd_pool doesn't get destroyed
+			 * while doing this.
+			 */
+			NFSD_LOCK();
+			if (nfs_numnfscbd > 0) {
+				nfs_numnfscbd++;
+				NFSD_UNLOCK();
+				xprt = svc_vc_create_backchannel(nfscbd_pool);
+				CLNT_CONTROL(client, CLSET_BACKCHANNEL, xprt);
+				NFSD_LOCK();
+				nfs_numnfscbd--;
+				if (nfs_numnfscbd == 0)
+					wakeup(&nfs_numnfscbd);
+			}
+			NFSD_UNLOCK();
+		}
 	} else {
 		/*
 		 * Three cases:
@@ -370,9 +390,6 @@ nfs_getauth(struct nfssockreq *nrp, int secflavour, char *clnt_principal,
 {
 	rpc_gss_service_t svc;
 	AUTH *auth;
-#ifdef notyet
-	rpc_gss_options_req_t req_options;
-#endif
 
 	switch (secflavour) {
 	case RPCSEC_GSS_KRB5:
@@ -388,28 +405,16 @@ nfs_getauth(struct nfssockreq *nrp, int secflavour, char *clnt_principal,
 			svc = rpc_gss_svc_integrity;
 		else
 			svc = rpc_gss_svc_privacy;
-#ifdef notyet
-		req_options.req_flags = GSS_C_MUTUAL_FLAG;
-		req_options.time_req = 0;
-		req_options.my_cred = GSS_C_NO_CREDENTIAL;
-		req_options.input_channel_bindings = NULL;
-		req_options.enc_type = nfs_keytab_enctype;
 
-		auth = rpc_gss_secfind_call(nrp->nr_client, cred,
-		    clnt_principal, srv_principal, mech_oid, svc,
-		    &req_options);
-#else
-		/*
-		 * Until changes to the rpcsec_gss code are committed,
-		 * there is no support for host based initiator
-		 * principals. As such, that case cannot yet be handled.
-		 */
 		if (clnt_principal == NULL)
 			auth = rpc_gss_secfind_call(nrp->nr_client, cred,
 			    srv_principal, mech_oid, svc);
-		else
-			auth = NULL;
-#endif
+		else {
+			auth = rpc_gss_seccreate_call(nrp->nr_client, cred,
+			    clnt_principal, srv_principal, "kerberosv5",
+			    svc, NULL, NULL, NULL);
+			return (auth);
+		}
 		if (auth != NULL)
 			return (auth);
 		/* fallthrough */
@@ -467,12 +472,13 @@ int
 newnfs_request(struct nfsrv_descript *nd, struct nfsmount *nmp,
     struct nfsclient *clp, struct nfssockreq *nrp, vnode_t vp,
     struct thread *td, struct ucred *cred, u_int32_t prog, u_int32_t vers,
-    u_char *retsum, int toplevel, u_int64_t *xidp)
+    u_char *retsum, int toplevel, u_int64_t *xidp, struct nfsclsession *sep)
 {
-	u_int32_t *tl;
+	u_int32_t retseq, retval, *tl;
 	time_t waituntil;
-	int i, j, set_sigset = 0, timeo;
+	int i = 0, j = 0, opcnt, set_sigset = 0, slot;
 	int trycnt, error = 0, usegssname = 0, secflavour = AUTH_SYS;
+	int freeslot, timeo;
 	u_int16_t procnum;
 	u_int trylater_delay = 1;
 	struct nfs_feedback_arg nf;
@@ -481,7 +487,7 @@ newnfs_request(struct nfsrv_descript *nd, struct nfsmount *nmp,
 	struct rpc_callextra ext;
 	enum clnt_stat stat;
 	struct nfsreq *rep = NULL;
-	char *srv_principal = NULL;
+	char *srv_principal = NULL, *clnt_principal = NULL;
 	sigset_t oldset;
 	struct ucred *authcred;
 
@@ -544,6 +550,7 @@ newnfs_request(struct nfsrv_descript *nd, struct nfsmount *nmp,
 			 */
 			if (nmp->nm_krbnamelen > 0) {
 				usegssname = 1;
+				clnt_principal = nmp->nm_krbname;
 			} else if (nmp->nm_uid != (uid_t)-1) {
 				KASSERT(nmp->nm_sockreq.nr_cred != NULL,
 				    ("newnfs_request: NULL nr_cred"));
@@ -598,10 +605,19 @@ newnfs_request(struct nfsrv_descript *nd, struct nfsmount *nmp,
 
 	if (nd->nd_procnum == NFSPROC_NULL)
 		auth = authnone_create();
-	else if (usegssname)
-		auth = nfs_getauth(nrp, secflavour, nmp->nm_krbname,
-		    srv_principal, NULL, authcred);
-	else
+	else if (usegssname) {
+		/*
+		 * For this case, the authenticator is held in the
+		 * nfssockreq structure, so don't release the reference count
+		 * held on it. --> Don't AUTH_DESTROY() it in this function.
+		 */
+		if (nrp->nr_auth == NULL)
+			nrp->nr_auth = nfs_getauth(nrp, secflavour,
+			    clnt_principal, srv_principal, NULL, authcred);
+		else
+			rpc_gss_refresh_auth_call(nrp->nr_auth);
+		auth = nrp->nr_auth;
+	} else
 		auth = nfs_getauth(nrp, secflavour, NULL,
 		    srv_principal, NULL, authcred);
 	crfree(authcred);
@@ -668,7 +684,9 @@ newnfs_request(struct nfsrv_descript *nd, struct nfsmount *nmp,
 #endif
 	}
 	trycnt = 0;
+	freeslot = -1;		/* Set to slot that needs to be free'd */
 tryagain:
+	slot = -1;		/* Slot that needs a sequence# increment. */
 	/*
 	 * This timeout specifies when a new socket should be created,
 	 * along with new xid values. For UDP, this should be done
@@ -755,7 +773,8 @@ tryagain:
 	}
 	if (error) {
 		m_freem(nd->nd_mreq);
-		AUTH_DESTROY(auth);
+		if (usegssname == 0)
+			AUTH_DESTROY(auth);
 		if (rep != NULL)
 			FREE((caddr_t)rep, M_NFSDREQ);
 		if (set_sigset)
@@ -771,16 +790,71 @@ tryagain:
 	 * These could cause pointer alignment problems, so copy them to
 	 * well aligned mbufs.
 	 */
-	newnfs_realign(&nd->nd_mrep);
+	newnfs_realign(&nd->nd_mrep, M_WAITOK);
 	nd->nd_md = nd->nd_mrep;
 	nd->nd_dpos = NFSMTOD(nd->nd_md, caddr_t);
 	nd->nd_repstat = 0;
 	if (nd->nd_procnum != NFSPROC_NULL) {
+		/* If sep == NULL, set it to the default in nmp. */
+		if (sep == NULL && nmp != NULL)
+			sep = NFSMNT_MDSSESSION(nmp);
 		/*
 		 * and now the actual NFS xdr.
 		 */
 		NFSM_DISSECT(tl, u_int32_t *, NFSX_UNSIGNED);
 		nd->nd_repstat = fxdr_unsigned(u_int32_t, *tl);
+		if (nd->nd_repstat >= 10000)
+			NFSCL_DEBUG(1, "proc=%d reps=%d\n", (int)nd->nd_procnum,
+			    (int)nd->nd_repstat);
+
+		/*
+		 * Get rid of the tag, return count and SEQUENCE result for
+		 * NFSv4.
+		 */
+		if ((nd->nd_flag & ND_NFSV4) != 0) {
+			NFSM_DISSECT(tl, u_int32_t *, NFSX_UNSIGNED);
+			i = fxdr_unsigned(int, *tl);
+			error = nfsm_advance(nd, NFSM_RNDUP(i), -1);
+			if (error)
+				goto nfsmout;
+			NFSM_DISSECT(tl, u_int32_t *, 3 * NFSX_UNSIGNED);
+			opcnt = fxdr_unsigned(int, *tl++);
+			i = fxdr_unsigned(int, *tl++);
+			j = fxdr_unsigned(int, *tl);
+			if (j >= 10000)
+				NFSCL_DEBUG(1, "fop=%d fst=%d\n", i, j);
+			/*
+			 * If the first op is Sequence, free up the slot.
+			 */
+			if (nmp != NULL && i == NFSV4OP_SEQUENCE && j != 0)
+				NFSCL_DEBUG(1, "failed seq=%d\n", j);
+			if (nmp != NULL && i == NFSV4OP_SEQUENCE && j == 0) {
+				NFSM_DISSECT(tl, uint32_t *, NFSX_V4SESSIONID +
+				    5 * NFSX_UNSIGNED);
+				mtx_lock(&sep->nfsess_mtx);
+				tl += NFSX_V4SESSIONID / NFSX_UNSIGNED;
+				retseq = fxdr_unsigned(uint32_t, *tl++);
+				slot = fxdr_unsigned(int, *tl++);
+				freeslot = slot;
+				if (retseq != sep->nfsess_slotseq[slot])
+					printf("retseq diff 0x%x\n", retseq);
+				retval = fxdr_unsigned(uint32_t, *++tl);
+				if ((retval + 1) < sep->nfsess_foreslots)
+					sep->nfsess_foreslots = (retval + 1);
+				else if ((retval + 1) > sep->nfsess_foreslots)
+					sep->nfsess_foreslots = (retval < 64) ?
+					    (retval + 1) : 64;
+				mtx_unlock(&sep->nfsess_mtx);
+
+				/* Grab the op and status for the next one. */
+				if (opcnt > 1) {
+					NFSM_DISSECT(tl, uint32_t *,
+					    2 * NFSX_UNSIGNED);
+					i = fxdr_unsigned(int, *tl++);
+					j = fxdr_unsigned(int, *tl);
+				}
+			}
+		}
 		if (nd->nd_repstat != 0) {
 			if (((nd->nd_repstat == NFSERR_DELAY ||
 			      nd->nd_repstat == NFSERR_GRACE) &&
@@ -788,7 +862,9 @@ tryagain:
 			     nd->nd_procnum != NFSPROC_DELEGRETURN &&
 			     nd->nd_procnum != NFSPROC_SETATTR &&
 			     nd->nd_procnum != NFSPROC_READ &&
+			     nd->nd_procnum != NFSPROC_READDS &&
 			     nd->nd_procnum != NFSPROC_WRITE &&
+			     nd->nd_procnum != NFSPROC_WRITEDS &&
 			     nd->nd_procnum != NFSPROC_OPEN &&
 			     nd->nd_procnum != NFSPROC_CREATE &&
 			     nd->nd_procnum != NFSPROC_OPENCONFIRM &&
@@ -805,6 +881,13 @@ tryagain:
 				while (NFSD_MONOSEC < waituntil)
 					(void) nfs_catnap(PZERO, 0, "nfstry");
 				trylater_delay *= 2;
+				if (slot != -1) {
+					mtx_lock(&sep->nfsess_mtx);
+					sep->nfsess_slotseq[slot]++;
+					*nd->nd_slotseq = txdr_unsigned(
+					    sep->nfsess_slotseq[slot]);
+					mtx_unlock(&sep->nfsess_mtx);
+				}
 				m_freem(nd->nd_mrep);
 				nd->nd_mrep = NULL;
 				goto tryagain;
@@ -821,34 +904,22 @@ tryagain:
 					(*ncl_call_invalcaches)(vp);
 			}
 		}
-
-		/*
-		 * Get rid of the tag, return count, and PUTFH result for V4.
-		 */
-		if (nd->nd_flag & ND_NFSV4) {
-			NFSM_DISSECT(tl, u_int32_t *, NFSX_UNSIGNED);
-			i = fxdr_unsigned(int, *tl);
-			error = nfsm_advance(nd, NFSM_RNDUP(i), -1);
-			if (error)
-				goto nfsmout;
-			NFSM_DISSECT(tl, u_int32_t *, 3 * NFSX_UNSIGNED);
-			i = fxdr_unsigned(int, *++tl);
-
+		if ((nd->nd_flag & ND_NFSV4) != 0) {
+			/* Free the slot, as required. */
+			if (freeslot != -1)
+				nfsv4_freeslot(sep, freeslot);
 			/*
-			 * If the first op's status is non-zero, mark that
-			 * there is no more data to process.
+			 * If this op is Putfh, throw its results away.
 			 */
-			if (*++tl)
-				nd->nd_flag |= ND_NOMOREDATA;
-
-			/*
-			 * If the first op is Putfh, throw its results away
-			 * and toss the op# and status for the first op.
-			 */
-			if (nmp != NULL && i == NFSV4OP_PUTFH && *tl == 0) {
+			if (j >= 10000)
+				NFSCL_DEBUG(1, "nop=%d nst=%d\n", i, j);
+			if (nmp != NULL && i == NFSV4OP_PUTFH && j == 0) {
 				NFSM_DISSECT(tl,u_int32_t *,2 * NFSX_UNSIGNED);
 				i = fxdr_unsigned(int, *tl++);
 				j = fxdr_unsigned(int, *tl);
+				if (j >= 10000)
+					NFSCL_DEBUG(1, "n2op=%d n2st=%d\n", i,
+					    j);
 				/*
 				 * All Compounds that do an Op that must
 				 * be in sequence consist of NFSV4OP_PUTFH
@@ -871,19 +942,20 @@ tryagain:
 				      j != NFSERR_RESOURCE &&
 				      j != NFSERR_NOFILEHANDLE)))		 
 					nd->nd_flag |= ND_INCRSEQID;
-				/*
-				 * If the first op's status is non-zero, mark
-				 * that there is no more data to process.
-				 */
-				if (j)
-					nd->nd_flag |= ND_NOMOREDATA;
 			}
+			/*
+			 * If this op's status is non-zero, mark
+			 * that there is no more data to process.
+			 */
+			if (j)
+				nd->nd_flag |= ND_NOMOREDATA;
 
 			/*
 			 * If R_DONTRECOVER is set, replace the stale error
 			 * reply, so that recovery isn't initiated.
 			 */
 			if ((nd->nd_repstat == NFSERR_STALECLIENTID ||
+			     nd->nd_repstat == NFSERR_BADSESSION ||
 			     nd->nd_repstat == NFSERR_STALESTATEID) &&
 			    rep != NULL && (rep->r_flags & R_DONTRECOVER))
 				nd->nd_repstat = NFSERR_STALEDONTRECOVER;
@@ -912,7 +984,8 @@ tryagain:
 #endif
 
 	m_freem(nd->nd_mreq);
-	AUTH_DESTROY(auth);
+	if (usegssname == 0)
+		AUTH_DESTROY(auth);
 	if (rep != NULL)
 		FREE((caddr_t)rep, M_NFSDREQ);
 	if (set_sigset)
@@ -921,7 +994,8 @@ tryagain:
 nfsmout:
 	mbuf_freem(nd->nd_mrep);
 	mbuf_freem(nd->nd_mreq);
-	AUTH_DESTROY(auth);
+	if (usegssname == 0)
+		AUTH_DESTROY(auth);
 	if (rep != NULL)
 		FREE((caddr_t)rep, M_NFSDREQ);
 	if (set_sigset)
@@ -952,7 +1026,6 @@ int newnfs_sig_set[] = {
 	SIGTERM,
 	SIGHUP,
 	SIGKILL,
-	SIGSTOP,
 	SIGQUIT
 };
 
@@ -973,7 +1046,7 @@ nfs_sig_pending(sigset_t set)
  
 /*
  * The set/restore sigmask functions are used to (temporarily) overwrite
- * the process p_sigmask during an RPC call (for example). These are also
+ * the thread td_sigmask during an RPC call (for example). These are also
  * used in other places in the NFS client that might tsleep().
  */
 void
@@ -1002,8 +1075,9 @@ newnfs_set_sigmask(struct thread *td, sigset_t *oldset)
 			SIGDELSET(newset, newnfs_sig_set[i]);
 	}
 	mtx_unlock(&p->p_sigacts->ps_mtx);
+	kern_sigprocmask(td, SIG_SETMASK, &newset, oldset,
+	    SIGPROCMASK_PROC_LOCKED);
 	PROC_UNLOCK(p);
-	kern_sigprocmask(td, SIG_SETMASK, &newset, oldset, 0);
 }
 
 void
