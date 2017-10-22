@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)miscbltin.c	8.4 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/sh/miscbltin.c 155301 2006-02-04 14:37:50Z schweikh $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Miscellaneous builtins.
@@ -73,6 +73,16 @@ int ulimitcmd(int, char **);
  * ordinary characters.
  *
  * This uses unbuffered input, which may be avoidable in some cases.
+ *
+ * Note that if IFS=' :' then read x y should work so that:
+ * 'a b'	x='a', y='b'
+ * ' a b '	x='a', y='b'
+ * ':b'		x='',  y='b'
+ * ':'		x='',  y=''
+ * '::'		x='',  y=''
+ * ': :'	x='',  y=''
+ * ':::'	x='',  y='::'
+ * ':b c:'	x='',  y='b c:'
  */
 
 int
@@ -83,16 +93,16 @@ readcmd(int argc __unused, char **argv __unused)
 	char c;
 	int rflag;
 	char *prompt;
-	char *ifs;
+	const char *ifs;
 	char *p;
 	int startword;
 	int status;
 	int i;
+	int is_ifs;
+	int saveall = 0;
 	struct timeval tv;
 	char *tvptr;
 	fd_set ifds;
-	struct termios told, tnew;
-	int tsaved;
 
 	rflag = 0;
 	prompt = NULL;
@@ -135,29 +145,15 @@ readcmd(int argc __unused, char **argv __unused)
 	if (*(ap = argptr) == NULL)
 		error("arg count");
 	if ((ifs = bltinlookup("IFS", 1)) == NULL)
-		ifs = nullstr;
+		ifs = " \t\n";
 
 	if (tv.tv_sec >= 0) {
-		/*
-		 * See if we can disable input processing; this will
-		 * not give the desired result if we are in a pipeline
-		 * and someone upstream is still in line-by-line mode.
-		 */
-		tsaved = 0;
-		if (tcgetattr(0, &told) == 0) {
-			memcpy(&tnew, &told, sizeof(told));
-			cfmakeraw(&tnew);
-			tcsetattr(0, TCSANOW, &tnew);
-			tsaved = 1;
-		}
 		/*
 		 * Wait for something to become available.
 		 */
 		FD_ZERO(&ifds);
 		FD_SET(0, &ifds);
 		status = select(1, &ifds, NULL, NULL, &tv);
-		if (tsaved)
-			tcsetattr(0, TCSANOW, &told);
 		/*
 		 * If there's nothing ready, return an error.
 		 */
@@ -166,7 +162,7 @@ readcmd(int argc __unused, char **argv __unused)
 	}
 
 	status = 0;
-	startword = 1;
+	startword = 2;
 	backslash = 0;
 	STARTSTACKSTR(p);
 	for (;;) {
@@ -176,10 +172,12 @@ readcmd(int argc __unused, char **argv __unused)
 		}
 		if (c == '\0')
 			continue;
+		CHECKSTRSPACE(1, p);
 		if (backslash) {
 			backslash = 0;
+			startword = 0;
 			if (c != '\n')
-				STPUTC(c, p);
+				USTPUTC(c, p);
 			continue;
 		}
 		if (!rflag && c == '\\') {
@@ -188,22 +186,68 @@ readcmd(int argc __unused, char **argv __unused)
 		}
 		if (c == '\n')
 			break;
-		if (startword && *ifs == ' ' && strchr(ifs, c)) {
+		if (strchr(ifs, c))
+			is_ifs = strchr(" \t\n", c) ? 1 : 2;
+		else
+			is_ifs = 0;
+
+		if (startword != 0) {
+			if (is_ifs == 1) {
+				/* Ignore leading IFS whitespace */
+				if (saveall)
+					USTPUTC(c, p);
+				continue;
+			}
+			if (is_ifs == 2 && startword == 1) {
+				/* Only one non-whitespace IFS per word */
+				startword = 2;
+				if (saveall)
+					USTPUTC(c, p);
+				continue;
+			}
+		}
+
+		if (is_ifs == 0) {
+			/* append this character to the current variable */
+			startword = 0;
+			if (saveall)
+				/* Not just a spare terminator */
+				saveall++;
+			USTPUTC(c, p);
 			continue;
 		}
-		startword = 0;
-		if (ap[1] != NULL && strchr(ifs, c) != NULL) {
-			STACKSTRNUL(p);
-			setvar(*ap, stackblock(), 0);
-			ap++;
-			startword = 1;
-			STARTSTACKSTR(p);
-		} else {
-			STPUTC(c, p);
+
+		/* end of variable... */
+		startword = is_ifs;
+
+		if (ap[1] == NULL) {
+			/* Last variable needs all IFS chars */
+			saveall++;
+			USTPUTC(c, p);
+			continue;
 		}
+
+		STACKSTRNUL(p);
+		setvar(*ap, stackblock(), 0);
+		ap++;
+		STARTSTACKSTR(p);
 	}
 	STACKSTRNUL(p);
+
+	/* Remove trailing IFS chars */
+	for (; stackblock() <= --p; *p = 0) {
+		if (!strchr(ifs, *p))
+			break;
+		if (strchr(" \t\n", *p))
+			/* Always remove whitespace */
+			continue;
+		if (saveall > 1)
+			/* Don't remove non-whitespace unless it was naked */
+			break;
+	}
 	setvar(*ap, stackblock(), 0);
+
+	/* Set any remaining args to "" */
 	while (*++ap != NULL)
 		setvar(*ap, nullstr, 0);
 	return status;
@@ -212,7 +256,7 @@ readcmd(int argc __unused, char **argv __unused)
 
 
 int
-umaskcmd(int argc __unused, char **argv)
+umaskcmd(int argc __unused, char **argv __unused)
 {
 	char *ap;
 	int mask;
@@ -342,6 +386,9 @@ static const struct limits limits[] = {
 #ifdef RLIMIT_SBSIZE
 	{ "sbsize",		"bytes",	RLIMIT_SBSIZE,	   1, 'b' },
 #endif
+#ifdef RLIMIT_NPTS
+	{ "pseudo-terminals",	(char *)0,	RLIMIT_NPTS,	   1, 'p' },
+#endif
 	{ (char *) 0,		(char *)0,	0,		   0, '\0' }
 };
 
@@ -358,7 +405,7 @@ ulimitcmd(int argc __unused, char **argv __unused)
 	struct rlimit	limit;
 
 	what = 'f';
-	while ((optc = nextopt("HSatfdsmcnuvlb")) != '\0')
+	while ((optc = nextopt("HSatfdsmcnuvlbpw")) != '\0')
 		switch (optc) {
 		case 'H':
 			how = HARD;
@@ -418,7 +465,7 @@ ulimitcmd(int argc __unused, char **argv __unused)
 					"(-%c) ", l->option);
 			out1fmt("%-18s %18s ", l->name, optbuf);
 			if (val == RLIM_INFINITY)
-				out1fmt("unlimited\n");
+				out1str("unlimited\n");
 			else
 			{
 				val /= l->factor;
@@ -444,7 +491,7 @@ ulimitcmd(int argc __unused, char **argv __unused)
 			val = limit.rlim_max;
 
 		if (val == RLIM_INFINITY)
-			out1fmt("unlimited\n");
+			out1str("unlimited\n");
 		else
 		{
 			val /= l->factor;

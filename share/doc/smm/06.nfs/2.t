@@ -34,7 +34,7 @@
 .\"
 .\"	@(#)2.t	8.1 (Berkeley) 6/8/93
 .\"
-.\"	$FreeBSD: release/7.0.0/share/doc/smm/06.nfs/2.t 108533 2003-01-01 18:49:04Z schweikh $
+.\"	$FreeBSD$
 .\"
 .sh 1 "Not Quite NFS, Crash Tolerant Cache Consistency for NFS"
 .pp

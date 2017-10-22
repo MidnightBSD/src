@@ -1,4 +1,4 @@
-/* $OpenBSD: cipher-bf1.c,v 1.5 2006/08/03 03:34:42 deraadt Exp $ */
+/* $OpenBSD: cipher-bf1.c,v 1.6 2010/10/01 23:05:32 djm Exp $ */
 /*
  * Copyright (c) 2003 Markus Friedl.  All rights reserved.
  *
@@ -35,9 +35,7 @@
 #include "xmalloc.h"
 #include "log.h"
 
-#if OPENSSL_VERSION_NUMBER < 0x00906000L
-#define SSH_OLD_EVP
-#endif
+#include "openbsd-compat/openssl-compat.h"
 
 /*
  * SSH1 uses a variation on Blowfish, all bytes must be swapped before
@@ -78,10 +76,12 @@ static void bf_ssh1_init (EVP_CIPHER_CTX * ctx, const unsigned char *key,
 }
 #endif
 
-static int (*orig_bf)(EVP_CIPHER_CTX *, u_char *, const u_char *, u_int) = NULL;
+static int (*orig_bf)(EVP_CIPHER_CTX *, u_char *,
+    const u_char *, LIBCRYPTO_EVP_INL_TYPE) = NULL;
 
 static int
-bf_ssh1_cipher(EVP_CIPHER_CTX *ctx, u_char *out, const u_char *in, u_int len)
+bf_ssh1_cipher(EVP_CIPHER_CTX *ctx, u_char *out, const u_char *in,
+    LIBCRYPTO_EVP_INL_TYPE len)
 {
 	int ret;
 

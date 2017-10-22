@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/i386/gen/rfork_thread.S 114804 2003-05-07 17:23:25Z jhb $");
+__FBSDID("$FreeBSD$");
 
 /*
  * With thanks to John Dyson for the original version of this.
@@ -115,3 +115,6 @@ ENTRY(rfork_thread)
 	popl	%ebp
 	PIC_PROLOGUE
 	jmp	PIC_PLT(HIDENAME(cerror))
+END(rfork_thread)
+
+	.section .note.GNU-stack,"",%progbits

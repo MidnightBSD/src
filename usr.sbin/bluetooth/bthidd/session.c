@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: session.c,v 1.3 2006/09/07 21:06:53 max Exp $
- * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/bthidd/session.c 162128 2006-09-07 21:47:49Z emax $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>

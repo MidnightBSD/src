@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/netinet/libalias/alias_pptp.c 162674 2006-09-26 23:26:53Z piso $");
+__FBSDID("$FreeBSD$");
 
 /* Includes */
 #ifdef _KERNEL
@@ -79,7 +79,7 @@ static int
 AliasHandlePptpGreIn(struct libalias *, struct ip *);
 
 static int 
-fingerprint(struct libalias *la, struct ip *pip, struct alias_data *ah)
+fingerprint(struct libalias *la, struct alias_data *ah)
 {
 
 	if (ah->dport == NULL || ah->sport == NULL || ah->lnk == NULL)
@@ -91,7 +91,7 @@ fingerprint(struct libalias *la, struct ip *pip, struct alias_data *ah)
 }
 
 static int 
-fingerprintgre(struct libalias *la, struct ip *pip, struct alias_data *ah)
+fingerprintgre(struct libalias *la, struct alias_data *ah)
 {
 
 	return (0);

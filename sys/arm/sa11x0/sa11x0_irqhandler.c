@@ -19,13 +19,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the NetBSD
- *	Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -76,7 +69,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/sa11x0_irqhandler.c 163553 2006-10-21 04:25:00Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -108,7 +101,7 @@ static uint32_t sa11x0_irq_mask = 0xfffffff;
 extern vm_offset_t saipic_base;
 
 int
-arm_get_next_irq()
+arm_get_next_irq(int last __unused)
 {
 	int irq;
 

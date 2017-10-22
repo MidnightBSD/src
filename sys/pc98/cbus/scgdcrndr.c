@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/pc98/cbus/scgdcrndr.c 146744 2005-05-29 11:53:14Z nyan $
+ * $FreeBSD$
  */
 
 #include "opt_syscons.h"
@@ -106,7 +106,7 @@ gdc_txtclear(scr_stat *scp, int c, int attr)
 static void
 gdc_txtborder(scr_stat *scp, int color)
 {
-	(*vidsw[scp->sc->adapter]->set_border)(scp->sc->adp, color);
+	vidd_set_border(scp->sc->adp, color);
 }
 
 static void
@@ -142,9 +142,8 @@ gdc_txtcursor_shape(scr_stat *scp, int base, int height, int blink)
 	if (base < 0 || base >= scp->font_size)
 		return;
 	/* the caller may set height <= 0 in order to disable the cursor */
-	(*vidsw[scp->sc->adapter]->set_hw_cursor_shape)(scp->sc->adp,
-							base, height,
-							scp->font_size, blink);
+	vidd_set_hw_cursor_shape(scp->sc->adp, base, height, scp->font_size,
+	    blink);
 }
 
 static void
@@ -152,12 +151,11 @@ gdc_txtcursor(scr_stat *scp, int at, int blink, int on, int flip)
 {
 	if (on) {
 		scp->status |= VR_CURSOR_ON;
-		(*vidsw[scp->sc->adapter]->set_hw_cursor)(scp->sc->adp,
-						 at%scp->xsize, at/scp->xsize); 
+		vidd_set_hw_cursor(scp->sc->adp, at%scp->xsize,
+		    at/scp->xsize);
 	} else {
 		if (scp->status & VR_CURSOR_ON)
-			(*vidsw[scp->sc->adapter]->set_hw_cursor)(scp->sc->adp,
-								  -1, -1);
+			vidd_set_hw_cursor(scp->sc->adp, -1, -1);
 		scp->status &= ~VR_CURSOR_ON;
 	}
 }
@@ -204,7 +202,7 @@ gdc_txtmouse(scr_stat *scp, int x, int y, int on)
 static void
 gdc_grborder(scr_stat *scp, int color)
 {
-	(*vidsw[scp->sc->adapter]->set_border)(scp->sc->adp, color);
+	vidd_set_border(scp->sc->adp, color);
 }
 
 #endif /* SC_NO_MODE_CHANGE */

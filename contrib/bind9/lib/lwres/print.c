@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: print.c,v 1.2.2.7 2005/10/14 01:28:30 marka Exp $ */
+/* $Id$ */
 
 #include <config.h>
 
@@ -115,6 +115,7 @@ lwres__print_vsnprintf(char *str, size_t size, const char *format, va_list ap) {
 		width = precision = 0;
 		head = "";
 		length = pad = zeropad = 0;
+		POST(length);
 
 		do {
 			if (*format == '#') {

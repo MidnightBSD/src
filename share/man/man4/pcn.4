@@ -29,7 +29,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man4/pcn.4 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
 .Dd January 31, 2006
 .Dt PCN 4
@@ -71,7 +71,6 @@ for the station address and a 64-bit multicast hash table.
 The
 .Nm
 driver supports the following media types:
-.Pp
 .Bl -tag -width 10baseTXUTP
 .It autoselect
 Enable autoselection of the media type and options.
@@ -103,10 +102,9 @@ modes.
 The
 .Nm
 driver supports the following media options:
-.Pp
 .Bl -tag -width full-duplex
 .It full-duplex
-Force full duplex operation
+Force full duplex operation.
 .It half-duplex
 Force half duplex operation.
 .El
@@ -179,7 +177,7 @@ the card should be configured correctly.
 .Xr ifconfig 8
 .Rs
 .%T AMD PCnet/FAST, PCnet/FAST+ and PCnet/Home datasheets
-.%O http://www.amd.com
+.%U http://www.amd.com
 .Re
 .Sh HISTORY
 The

@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/nscd/parser.h 172344 2007-09-27 12:30:12Z bushman $
+ * $FreeBSD$
  */
 
 #ifndef __NSCD_PARSER_H__
 #define __NSCD_PARSER_H__
 
-extern int parse_config_file(struct configuration *,
+int parse_config_file(struct configuration *,
 	const char *, char const **, int *);
 
 #endif

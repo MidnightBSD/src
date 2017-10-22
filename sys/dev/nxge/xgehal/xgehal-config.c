@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/nxge/xgehal/xgehal-config.c 173269 2007-11-02 00:52:34Z rwatson $
+ * $FreeBSD$
  */
 
 #include <dev/nxge/include/xgehal-config.h>

@@ -9,9 +9,13 @@
  *
  * This program is in the Public Domain.
  */
+/*
+ * Important: This file is used both as a standalone program /bin/test and
+ * as a builtin for /bin/sh (#define SHELL).
+ */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/test/test.c 139969 2005-01-10 08:39:26Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -140,6 +144,7 @@ struct t_op {
 	{"-L",	FILSYM,	UNOP},
 	{"-S",	FILSOCK,UNOP},
 	{"=",	STREQ,	BINOP},
+	{"==",	STREQ,	BINOP},
 	{"!=",	STRNE,	BINOP},
 	{"<",	STRLT,	BINOP},
 	{">",	STRGT,	BINOP},
@@ -163,6 +168,7 @@ struct t_op {
 struct t_op const *t_wp_op;
 int nargc;
 char **t_wp;
+int parenlevel;
 
 static int	aexpr(enum token);
 static int	binop(void);
@@ -171,7 +177,9 @@ static int	filstat(char *, enum token);
 static int	getn(const char *);
 static intmax_t	getq(const char *);
 static int	intcmp(const char *, const char *);
-static int	isoperand(void);
+static int	isunopoperand(void);
+static int	islparenoperand(void);
+static int	isrparenoperand(void);
 static int	newerf(const char *, const char *);
 static int	nexpr(enum token);
 static int	oexpr(enum token);
@@ -186,7 +194,7 @@ main(int argc, char **argv)
 	int	res;
 	char	*p;
 
-	if ((p = rindex(argv[0], '/')) == NULL)
+	if ((p = strrchr(argv[0], '/')) == NULL)
 		p = argv[0];
 	else
 		p++;
@@ -205,7 +213,14 @@ main(int argc, char **argv)
 #endif
 	nargc = argc;
 	t_wp = &argv[1];
-	res = !oexpr(t_lex(*t_wp));
+	parenlevel = 0;
+	if (nargc == 4 && strcmp(*t_wp, "!") == 0) {
+		/* Things like ! "" -o x do not fit in the normal grammar. */
+		--nargc;
+		++t_wp;
+		res = oexpr(t_lex(*t_wp));
+	} else
+		res = !oexpr(t_lex(*t_wp));
 
 	if (--nargc > 0)
 		syntax(*t_wp, "unexpected operator");
@@ -268,12 +283,16 @@ primary(enum token n)
 	if (n == EOI)
 		return 0;		/* missing expression */
 	if (n == LPAREN) {
+		parenlevel++;
 		if ((nn = t_lex(nargc > 0 ? (--nargc, *++t_wp) : NULL)) ==
-		    RPAREN)
+		    RPAREN) {
+			parenlevel--;
 			return 0;	/* missing expression */
+		}
 		res = oexpr(nn);
 		if (t_lex(nargc > 0 ? (--nargc, *++t_wp) : NULL) != RPAREN)
 			syntax(NULL, "closing paren expected");
+		parenlevel--;
 		return res;
 	}
 	if (t_wp_op && t_wp_op->op_type == UNOP) {
@@ -410,8 +429,10 @@ t_lex(char *s)
 	}
 	while (op->op_text) {
 		if (strcmp(s, op->op_text) == 0) {
-			if ((op->op_type == UNOP && isoperand()) ||
-			    (op->op_num == LPAREN && nargc == 1))
+			if (((op->op_type == UNOP || op->op_type == BUNOP)
+						&& isunopoperand()) ||
+			    (op->op_num == LPAREN && islparenoperand()) ||
+			    (op->op_num == RPAREN && isrparenoperand()))
 				break;
 			t_wp_op = op;
 			return op->op_num;
@@ -423,7 +444,7 @@ t_lex(char *s)
 }
 
 static int
-isoperand(void)
+isunopoperand(void)
 {
 	struct t_op const *op = ops;
 	char *s;
@@ -431,16 +452,50 @@ isoperand(void)
 
 	if (nargc == 1)
 		return 1;
-	if (nargc == 2)
-		return 0;
 	s = *(t_wp + 1);
+	if (nargc == 2)
+		return parenlevel == 1 && strcmp(s, ")") == 0;
 	t = *(t_wp + 2);
 	while (op->op_text) {
 		if (strcmp(s, op->op_text) == 0)
 			return op->op_type == BINOP &&
-			    (t[0] != ')' || t[1] != '\0');
+			    (parenlevel == 0 || t[0] != ')' || t[1] != '\0');
 		op++;
 	}
+	return 0;
+}
+
+static int
+islparenoperand(void)
+{
+	struct t_op const *op = ops;
+	char *s;
+
+	if (nargc == 1)
+		return 1;
+	s = *(t_wp + 1);
+	if (nargc == 2)
+		return parenlevel == 1 && strcmp(s, ")") == 0;
+	if (nargc != 3)
+		return 0;
+	while (op->op_text) {
+		if (strcmp(s, op->op_text) == 0)
+			return op->op_type == BINOP;
+		op++;
+	}
+	return 0;
+}
+
+static int
+isrparenoperand(void)
+{
+	char *s;
+
+	if (nargc == 1)
+		return 0;
+	s = *(t_wp + 1);
+	if (nargc == 2)
+		return parenlevel == 1 && strcmp(s, ")") == 0;
 	return 0;
 }
 
@@ -522,12 +577,12 @@ newerf (const char *f1, const char *f2)
 	if (stat(f1, &b1) != 0 || stat(f2, &b2) != 0)
 		return 0;
 
-	if (b1.st_mtimespec.tv_sec > b2.st_mtimespec.tv_sec)
+	if (b1.st_mtim.tv_sec > b2.st_mtim.tv_sec)
 		return 1;
-	if (b1.st_mtimespec.tv_sec < b2.st_mtimespec.tv_sec)
+	if (b1.st_mtim.tv_sec < b2.st_mtim.tv_sec)
 		return 0;
 
-       return (b1.st_mtimespec.tv_nsec > b2.st_mtimespec.tv_nsec);
+       return (b1.st_mtim.tv_nsec > b2.st_mtim.tv_nsec);
 }
 
 static int

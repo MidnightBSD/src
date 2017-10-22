@@ -26,18 +26,19 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_resume_np.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <errno.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
-static struct kse_mailbox *resume_common(struct pthread *);
+int	_pthread_resume_np(pthread_t thread);
+void	_pthread_resume_all_np(void);
 
-LT10_COMPAT_PRIVATE(_pthread_resume_np);
-LT10_COMPAT_DEFAULT(pthread_resume_np);
-LT10_COMPAT_PRIVATE(_pthread_resume_all_np);
-LT10_COMPAT_DEFAULT(pthread_resume_all_np);
+static struct kse_mailbox *resume_common(struct pthread *);
 
 __weak_reference(_pthread_resume_np, pthread_resume_np);
 __weak_reference(_pthread_resume_all_np, pthread_resume_all_np);

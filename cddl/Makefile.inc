@@ -1,3 +1,16 @@
-# $FreeBSD: release/7.0.0/cddl/Makefile.inc 168792 2007-04-16 21:20:26Z ru $
+# $FreeBSD$
 
-CFLAGS+= -D_SOLARIS_C_SOURCE
+OPENSOLARIS_USR_DISTDIR= ${.CURDIR}/../../../cddl/contrib/opensolaris
+OPENSOLARIS_SYS_DISTDIR= ${.CURDIR}/../../../sys/cddl/contrib/opensolaris
+
+IGNORE_PRAGMA=	YES
+
+CFLAGS+=	-DNEED_SOLARIS_BOOLEAN
+
+WARNS?=		6
+CSTD?=		gnu89
+
+# Do not lint the CDDL stuff. It is all externally maintained and
+# lint output is wasteful noise here.
+
+NO_LINT=

@@ -26,9 +26,9 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man4/crypto.4 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
-.Dd August 1, 2007
+.Dd September 7, 2010
 .Dt CRYPTO 4
 .Os
 .Sh NAME
@@ -82,6 +82,7 @@ asymmetric cryptographic features are potentially available from
 .It Dv CRYPTO_DES_CBC
 .It Dv CRYPTO_3DES_CBC
 .It Dv CRYPTO_BLF_CBC
+.It Dv CRYPTO_CAMELLIA_CBC
 .It Dv CRYPTO_CAST_CBC
 .It Dv CRYPTO_SKIPJACK_CBC
 .It Dv CRYPTO_MD5_HMAC
@@ -105,6 +106,8 @@ asymmetric cryptographic features are potentially available from
 crypto access device
 .El
 .Sh SEE ALSO
+.Xr aesni 4 ,
+.Xr glxsb 4 ,
 .Xr hifn 4 ,
 .Xr ipsec 4 ,
 .Xr padlock 4 ,

@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)getc.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/stdio/getc.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/stdio/getc.c 165903 2007-01-09 00:28:
 #include "local.h"
 
 #undef getc
+#undef getc_unlocked
 
 int
 getc(FILE *fp)
@@ -54,4 +55,11 @@ getc(FILE *fp)
 	retval = __sgetc(fp);
 	FUNLOCKFILE(fp);
 	return (retval);
+}
+
+int
+getc_unlocked(FILE *fp)
+{
+
+	return (__sgetc(fp));
 }

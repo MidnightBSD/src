@@ -1,9 +1,9 @@
-.\" $FreeBSD: release/7.0.0/share/misc/mdoc.template 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
 .\" The following requests are required for all man pages.
 .Dd Month day, year
-.Os [OPERATING_SYSTEM] [version/release]
 .Dt DOCUMENT_TITLE [section number] [architecture/volume]
+.Os [OPERATING_SYSTEM] [version/release]
 .Sh NAME
 .Nm name
 .Nd one line description of name
@@ -33,3 +33,4 @@
 .\" .Sh HISTORY
 .\" .Sh AUTHORS
 .\" .Sh BUGS
+.\" .Sh SECURITY CONSIDERATIONS

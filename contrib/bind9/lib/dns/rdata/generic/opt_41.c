@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2002  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: opt_41.c,v 1.29.18.2 2005/04/29 00:16:38 marka Exp $ */
+/* $Id$ */
 
 /* Reviewed: Thu Mar 16 14:06:44 PST 2000 by gson */
 
@@ -275,6 +275,11 @@ checknames_opt(ARGS_CHECKNAMES) {
 	UNUSED(bad);
 
 	return (ISC_TRUE);
+}
+
+static inline int
+casecompare_opt(ARGS_COMPARE) {
+	return (compare_opt(rdata1, rdata2));
 }
 
 #endif	/* RDATA_GENERIC_OPT_41_C */

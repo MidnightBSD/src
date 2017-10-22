@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2004-2010 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,22 +23,23 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sbin/geom/misc/subr.h 166215 2007-01-25 11:35:27Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef _SUBR_H_
 #define	_SUBR_H_
 #include <stdint.h>
 
-unsigned g_lcm(unsigned a, unsigned b);
+unsigned int g_lcm(unsigned int a, unsigned int b);
 uint32_t bitcount32(uint32_t x);
+int g_parse_lba(const char *lbastr, unsigned int sectorsize, off_t *sectors);
 
 off_t g_get_mediasize(const char *name);
-unsigned g_get_sectorsize(const char *name);
+unsigned int g_get_sectorsize(const char *name);
 
-int g_metadata_read(const char *name, u_char *md, size_t size,
+int g_metadata_read(const char *name, unsigned char *md, size_t size,
     const char *magic);
-int g_metadata_store(const char *name, u_char *md, size_t size);
+int g_metadata_store(const char *name, const unsigned char *md, size_t size);
 int g_metadata_clear(const char *name, const char *magic);
 
 void gctl_error(struct gctl_req *req, const char *error, ...) __printflike(2, 3);
@@ -47,4 +48,7 @@ intmax_t gctl_get_intmax(struct gctl_req *req, const char *pfmt, ...) __printfli
 const char *gctl_get_ascii(struct gctl_req *req, const char *pfmt, ...) __printflike(2, 3);
 int gctl_change_param(struct gctl_req *req, const char *name, int len,
     const void *value);
+int gctl_delete_param(struct gctl_req *req, const char *name);
+int gctl_has_param(struct gctl_req *req, const char *name);
+
 #endif	/* !_SUBR_H_ */

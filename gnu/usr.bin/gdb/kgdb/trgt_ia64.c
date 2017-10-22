@@ -25,12 +25,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/gnu/usr.bin/gdb/kgdb/trgt_ia64.c 149967 2005-09-11 00:47:03Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
+#ifdef CROSS_DEBUGGER
+#include <sys/ia64/include/_regset.h>
+#include <sys/ia64/include/frame.h>
+#include <sys/ia64/include/md_var.h>
+#include <sys/ia64/include/pcb.h>
+#else
 #include <machine/frame.h>
 #include <machine/md_var.h>
 #include <machine/pcb.h>
+#endif
 #include <err.h>
 #include <kvm.h>
 #include <string.h>
@@ -52,7 +59,7 @@ kgdb_trgt_fetch_registers(int regno __unused)
 	struct pcb pcb;
 	uint64_t r;
 
-	kt = kgdb_thr_lookup_tid(ptid_get_tid(inferior_ptid));
+	kt = kgdb_thr_lookup_tid(ptid_get_pid(inferior_ptid));
 	if (kt == NULL)
 		return;
 	if (kvm_read(kvm, kt->pcb, &pcb, sizeof(pcb)) != sizeof(pcb)) {
@@ -133,6 +140,11 @@ void
 kgdb_trgt_store_registers(int regno __unused)
 {
 	fprintf_unfiltered(gdb_stderr, "XXX: %s\n", __func__);
+}
+
+void
+kgdb_trgt_new_objfile(struct objfile *objfile)
+{
 }
 
 struct kgdb_frame_cache {

@@ -1,5 +1,4 @@
-.\" Copyright (c) 2005, 2006
-.\"     Damien Bergamini <damien.bergamini@free.fr>
+.\" Copyright (c) 2005-2010 Damien Bergamini <damien.bergamini@free.fr>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -13,21 +12,24 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man4/ral.4 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
-.Dd September 10, 2007
-.Os
+.Dd May 10, 2012
 .Dt RAL 4
+.Os
 .Sh NAME
 .Nm ral
-.Nd "Ralink Technology IEEE 802.11 wireless network driver"
+.Nd "Ralink Technology IEEE 802.11a/g/n wireless network device"
 .Sh SYNOPSIS
 To compile this driver into the kernel,
 place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device ral"
+.Cd "device ralfw"
 .Cd "device wlan"
+.Cd "device wlan_amrr"
+.Cd "device firmware"
 .Ed
 .Pp
 Alternatively, to load the driver as a
@@ -39,35 +41,78 @@ if_ral_load="YES"
 .Sh DESCRIPTION
 The
 .Nm
-driver supports PCI/CardBus wireless adapters based on the Ralink Technology
-RT2500, RT2501, and RT2600 chipsets.
+driver supports PCI/PCIe/CardBus wireless adapters based on the Ralink RT2500,
+RT2501, RT2600, RT2700, RT2800 and RT3090 chipsets.
 .Pp
 The RT2500 chipset is the first generation of 802.11b/g adapters from Ralink.
-It consists of two integrated chips, a RT2560 MAC/BBP and a RT2525 radio
+It consists of two integrated chips, an RT2560 MAC/BBP and an RT2525 radio
 transceiver.
 .Pp
-The RT2501 chipset is the second generation of 802.11b/g adapters from Ralink.
-It consists of two integrated chips, a RT2561 MAC/BBP and a RT2527 radio
+The RT2501 chipset is the second generation of 802.11a/b/g adapters from
+Ralink.
+It consists of two integrated chips, an RT2561 MAC/BBP and an RT2527 radio
 transceiver.
 This chipset provides support for the IEEE 802.11e standard with multiple
 hardware transmission queues and allows scatter/gather for efficient DMA
 operations.
 .Pp
-The RT2600 chipset consists of two integrated chips, a RT2661 MAC/BBP and a
+The RT2600 chipset consists of two integrated chips, an RT2661 MAC/BBP and an
 RT2529 radio transceiver.
 This chipset uses the MIMO (multiple-input multiple-output) technology with
-multiple antennas to extend the operating range of the adapter and to achieve
-higher throughput.
-MIMO is the basis of the forthcoming IEEE 802.11n standard.
+multiple radio transceivers to extend the operating range of the adapter and
+to achieve higher throughput.
+However, the RT2600 chipset does not support any of the 802.11n features.
+.Pp
+The RT2700 chipset is a low-cost version of the RT2800 chipset.
+It supports a single transmit path and two receiver paths (1T2R).
+It consists of two integrated chips, an RT2760 or RT2790 (PCIe) MAC/BBP and
+an RT2720 (2.4GHz) or RT2750 (2.4GHz/5GHz) radio transceiver.
+.Pp
+The RT2800 chipset is the first generation of 802.11n adapters from Ralink.
+It consists of two integrated chips, an RT2860 or RT2890 (PCIe) MAC/BBP and
+an RT2820 (2.4GHz) or RT2850 (2.4GHz/5GHz) radio transceiver.
+The RT2800 chipset supports two transmit paths and up to three receiver
+paths (2T2R/2T3R).
+It can achieve speeds up to 144Mbps (20MHz bandwidth) and 300Mbps (40MHz
+bandwidth.)
+.Pp
+The RT3090 chipset is the first generation of single-chip 802.11n adapters
+from Ralink.
+.Nm
+supports
+.Cm station ,
+.Cm adhoc ,
+.Cm hostap ,
+.Cm mesh ,
+.Cm wds ,
+and
+.Cm monitor
+mode operation.
+Only one
+.Cm hostap
+or
+.Cm mesh
+virtual interface may be configured at a time.
+Any number of 
+.Cm wds
+virtual interfaces may be configured together with a
+.Cm hostap
+interface.
+Multiple
+.Cm station
+interfaces may be operated together with a
+.Cm hostap
+interface to construct a wireless repeater device.
 .Pp
 The transmit speed is user-selectable or can be adapted automatically by the
-driver depending on the received signal strength and on the number of hardware
-transmission retries.
+driver depending on the number of hardware transmission retries.
+For more information on configuring this device, see
+.Xr ifconfig 8 .
 .Sh HARDWARE
 The
 .Nm
-driver supports PCI/CardBus wireless adapters based on the Ralink Technology
-RT2500, RT2501, and RT2600 chipsets, including:
+driver supports PCI/PCIe/CardBus wireless adapters based on Ralink Technology
+chipsets, including:
 .Pp
 .Bl -column -compact ".Li Atlantis Land A02-PCM-W54" "RT2561S" "CardBus"
 .It Em Card Ta Em MAC/BBP Ta Em Bus
@@ -157,28 +202,29 @@ RT2500, RT2501, and RT2600 chipsets, including:
 .It "Zonet ZEW1500" Ta RT2560 Ta CardBus
 .It "Zonet ZEW1600" Ta RT2560 Ta PCI
 .El
-.Pp
-An up to date list can be found at
-.Pa http://damien.bergamini.free.fr/ral/list.html .
 .Sh EXAMPLES
 Join an existing BSS network (i.e., connect to an access point):
 .Pp
-.Dl "ifconfig ral0 inet 192.168.0.20 netmask 0xffffff00"
+.Dl "ifconfig wlan create wlandev ral0 inet 192.168.0.20 netmask 0xffffff00"
 .Pp
 Join a specific BSS network with network name
 .Dq Li my_net :
-.Pp
-.Dl "ifconfig ral0 inet 192.168.0.20 netmask 0xffffff00 ssid my_net"
+.Bd -literal -offset indent
+ifconfig wlan create wlandev ral0 inet 192.168.0.20 \e
+    netmask 0xffffff00 ssid my_net
+.Ed
 .Pp
 Join a specific BSS network with 40-bit WEP encryption:
 .Bd -literal -offset indent
-ifconfig ral0 inet 192.168.0.20 netmask 0xffffff00 ssid my_net \e
+ifconfig wlan create wlandev ral0 inet 192.168.0.20 \e
+    netmask 0xffffff00 ssid my_net \e
     wepmode on wepkey 0x1234567890 weptxkey 1
 .Ed
 .Pp
 Join a specific BSS network with 104-bit WEP encryption:
 .Bd -literal -offset indent
-ifconfig ral0 inet 192.168.0.20 netmask 0xffffff00 ssid my_net \e
+ifconfig wlan create wlandev ral0 inet 192.168.0.20 \e
+    netmask 0xffffff00 ssid my_net \e
     wepmode on wepkey 0x01020304050607080910111213 weptxkey 1
 .Ed
 .Sh DIAGNOSTICS
@@ -194,33 +240,56 @@ The driver will reset the hardware.
 This should not happen.
 .El
 .Sh SEE ALSO
-.Xr altq 4 ,
-.Xr arp 4 ,
+.Xr intro 4 ,
 .Xr cardbus 4 ,
-.Xr netintro 4 ,
-.Xr pci 4 ,
 .Xr wlan 4 ,
-.Xr ifconfig 8
+.Xr wlan_ccmp 4 ,
+.Xr wlan_tkip 4 ,
+.Xr wlan_wep 4 ,
+.Xr wlan_xauth 4 ,
+.Xr hostapd 8 ,
+.Xr ifconfig 8 ,
+.Xr wpa_supplicant 8
 .Rs
 .%T "Ralink Technology"
-.%O http://www.ralinktech.com/
+.%U http://www.ralinktech.com/
 .Re
 .Sh HISTORY
 The
 .Nm
 driver first appeared in
 .Ox 3.7 .
-.Sh CAVEATS
-PCI
+Support for the RT2501 and RT2600 chipsets was added in
+.Ox 3.9 .
+Support for the RT2800 chipset was added in
+.Ox 4.3 .
+Support for the RT2700 chipset was added in
+.Ox 4.4 .
+Support for the RT3090 chipset was added in
+.Ox 4.9 .
+.Sh AUTHORS
+The original
 .Nm
-adapters seem to require a PCI 2.2 compliant motherboard and will likely not
-work with PCI 2.1 only motherboard.
+driver was written by
+.An Damien Bergamini Aq damien@openbsd.org .
+.Sh CAVEATS
+The
+.Nm
+driver does not make use of the hardware cryptographic engine.
 .Pp
 The
 .Nm
-driver does not implement frame aggregation.
-.Sh AUTHORS
-The
+driver does not support any of the 802.11n capabilities offered by
+the RT2700 and RT2800 chipsets.
+Additional work is required in before those features can be supported.
+.Pp
+Host AP mode doesn't support power saving.
+Clients attempting to use power saving mode may experience significant
+packet loss (disabling power saving on the client will fix this).
+.Pp
+Some PCI
 .Nm
-driver was written by
-.An Damien Bergamini Aq damien@FreeBSD.org .
+adapters seem to strictly require a system supporting PCI 2.2 or greater and
+will likely not work in systems based on older revisions of the PCI
+specification.
+Check the board's PCI version before purchasing the card.

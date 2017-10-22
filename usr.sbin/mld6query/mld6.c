@@ -1,5 +1,4 @@
 /*	$KAME: mld6.c,v 1.15 2003/04/02 11:29:54 suz Exp $	*/
-/*	$FreeBSD: release/7.0.0/usr.sbin/mld6query/mld6.c 121472 2003-10-24 18:26:30Z ume $	*/
 
 /*
  * Copyright (C) 1998 WIDE Project.
@@ -29,6 +28,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
 #include <sys/param.h>
 #include <sys/uio.h>
 #include <sys/socket.h>
@@ -330,9 +333,8 @@ dump(int s)
 	fflush(stdout);
 }
 
-/* ARGSUSED */
 void
-quit(int signum)
+quit(int signum __unused)
 {
 	mreq.ipv6mr_multiaddr = any;
 	mreq.ipv6mr_interface = ifindex;
@@ -344,7 +346,7 @@ quit(int signum)
 }
 
 void
-usage()
+usage(void)
 {
 	(void)fprintf(stderr, "usage: mld6query ifname [addr]\n");
 	exit(1);

@@ -1,6 +1,6 @@
 /*
  * $NetBSD: rpcb_stat.c,v 1.2 2000/07/04 20:27:40 matt Exp $
- * $FreeBSD: release/7.0.0/usr.sbin/rpcbind/rpcb_stat.c 121656 2003-10-29 09:30:37Z mbr $
+ * $FreeBSD$
  */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
@@ -54,7 +54,7 @@
 static rpcb_stat_byvers inf;
 
 void
-rpcbs_init()
+rpcbs_init(void)
 {
 
 }

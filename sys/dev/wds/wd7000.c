@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/wds/wd7000.c 170872 2007-06-17 05:55:54Z scottl $");
+__FBSDID("$FreeBSD$");
 
 /* All bugs are subject to removal without further notice */
 
@@ -549,7 +549,7 @@ wds_attach(device_t dev)
 		goto bad;
 
 	/* now create the memory buffer */
-	error = bus_dma_tag_create(NULL, /*alignment*/4,
+	error = bus_dma_tag_create(bus_get_dma_tag(dev), /*alignment*/4,
 				   /*boundary*/0,
 				   /*lowaddr*/BUS_SPACE_MAXADDR_24BIT,
 				   /*highaddr*/ BUS_SPACE_MAXADDR,

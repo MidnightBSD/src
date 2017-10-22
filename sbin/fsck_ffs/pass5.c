@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)pass5.c	8.9 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sbin/fsck_ffs/pass5.c 163845 2006-10-31 22:06:56Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -45,10 +45,13 @@ __FBSDID("$FreeBSD: release/7.0.0/sbin/fsck_ffs/pass5.c 163845 2006-10-31 22:06:
 #include <inttypes.h>
 #include <limits.h>
 #include <string.h>
+#include <libufs.h>
 
 #include "fsck.h"
 
-static void check_maps(u_char *, u_char *, int, int, const char *, int *, int, int);
+static void check_maps(u_char *, u_char *, int, ufs2_daddr_t, const char *,
+			int *, int, int, int);
+static void clear_blocks(ufs2_daddr_t start, ufs2_daddr_t end);
 
 void
 pass5(void)
@@ -57,8 +60,8 @@ pass5(void)
 	int inomapsize, blkmapsize;
 	struct fs *fs = &sblock;
 	struct cg *cg = &cgrp;
-	ufs2_daddr_t d, dbase, dmax;
-	int excessdirs, rewritecg = 0;
+	ufs2_daddr_t d, dbase, dmax, start;
+	int rewritecg = 0;
 	struct csum *cs;
 	struct csum_total cstotal;
 	struct inodesc idesc[3];
@@ -241,13 +244,21 @@ pass5(void)
 				setbit(cg_inosused(newcg), i);
 				newcg->cg_cs.cs_nifree--;
 			}
+		start = -1;
 		for (i = 0, d = dbase;
 		     d < dmax;
 		     d += fs->fs_frag, i += fs->fs_frag) {
 			frags = 0;
 			for (j = 0; j < fs->fs_frag; j++) {
-				if (testbmap(d + j))
+				if (testbmap(d + j)) {
+					if (Eflag && start != -1) {
+						clear_blocks(start, d + j - 1);
+						start = -1;
+					}
 					continue;
+				}
+				if (start == -1)
+					start = d + j;
 				setbit(cg_blksfree(newcg), i + j);
 				frags++;
 			}
@@ -262,6 +273,8 @@ pass5(void)
 				ffs_fragacct(fs, blk, newcg->cg_frsum, 1);
 			}
 		}
+		if (Eflag && start != -1)
+			clear_blocks(start, d - 1);
 		if (fs->fs_contigsumsize > 0) {
 			int32_t *sump = cg_clustersum(newcg);
 			u_char *mapp = cg_clustersfree(newcg);
@@ -291,10 +304,17 @@ pass5(void)
 				sump[run]++;
 			}
 		}
-		cstotal.cs_nffree += newcg->cg_cs.cs_nffree;
-		cstotal.cs_nbfree += newcg->cg_cs.cs_nbfree;
-		cstotal.cs_nifree += newcg->cg_cs.cs_nifree;
-		cstotal.cs_ndir += newcg->cg_cs.cs_ndir;
+		if (bkgrdflag != 0) {
+			cstotal.cs_nffree += cg->cg_cs.cs_nffree;
+			cstotal.cs_nbfree += cg->cg_cs.cs_nbfree;
+			cstotal.cs_nifree += cg->cg_cs.cs_nifree;
+			cstotal.cs_ndir += cg->cg_cs.cs_ndir;
+		} else {
+			cstotal.cs_nffree += newcg->cg_cs.cs_nffree;
+			cstotal.cs_nbfree += newcg->cg_cs.cs_nbfree;
+			cstotal.cs_nifree += newcg->cg_cs.cs_nifree;
+			cstotal.cs_ndir += newcg->cg_cs.cs_ndir;
+		}
 		cs = &fs->fs_cs(fs, c);
 		if (cursnapshot == 0 &&
 		    memcmp(&newcg->cg_cs, cs, sizeof *cs) != 0 &&
@@ -313,23 +333,8 @@ pass5(void)
 			memmove(cg, newcg, (size_t)basesize);
 			cgdirty();
 		}
-		if (bkgrdflag != 0 || usedsoftdep || debug) {
-			excessdirs = cg->cg_cs.cs_ndir - newcg->cg_cs.cs_ndir;
-			if (excessdirs < 0) {
-				pfatal("LOST %d DIRECTORIES\n", -excessdirs);
-				excessdirs = 0;
-			}
-			if (excessdirs > 0)
-				check_maps(cg_inosused(newcg), cg_inosused(cg),
-				    inomapsize, cg->cg_cgx * fs->fs_ipg, "DIR",
-				    freedirs, 0, excessdirs);
-			check_maps(cg_inosused(newcg), cg_inosused(cg),
-			    inomapsize, cg->cg_cgx * fs->fs_ipg, "FILE",
-			    freefiles, excessdirs, fs->fs_ipg);
-			check_maps(cg_blksfree(cg), cg_blksfree(newcg),
-			    blkmapsize, cg->cg_cgx * fs->fs_fpg, "FRAG",
-			    freeblks, 0, fs->fs_fpg);
-		}
+		if (bkgrdflag != 0 || usedsoftdep || debug)
+			update_maps(cg, newcg, bkgrdflag);
 		if (cursnapshot == 0 &&
 		    memcmp(cg_inosused(newcg), cg_inosused(cg), mapsize) != 0 &&
 		    dofix(&idesc[1], "BLK(S) MISSING IN BIT MAPS")) {
@@ -402,24 +407,59 @@ pass5(void)
 	}
 }
 
+/*
+ * Compare the original cylinder group inode and block bitmaps with the
+ * updated cylinder group inode and block bitmaps. Free inodes and blocks
+ * that have been added. Complain if any previously freed inodes blocks
+ * are now allocated.
+ */
+void
+update_maps(
+	struct cg *oldcg,	/* cylinder group of claimed allocations */
+	struct cg *newcg,	/* cylinder group of determined allocations */
+	int usesysctl)		/* 1 => use sysctl interface to update maps */
+{
+	int inomapsize, excessdirs;
+	struct fs *fs = &sblock;
+
+	inomapsize = howmany(fs->fs_ipg, CHAR_BIT);
+	excessdirs = oldcg->cg_cs.cs_ndir - newcg->cg_cs.cs_ndir;
+	if (excessdirs < 0) {
+		pfatal("LOST %d DIRECTORIES\n", -excessdirs);
+		excessdirs = 0;
+	}
+	if (excessdirs > 0)
+		check_maps(cg_inosused(newcg), cg_inosused(oldcg), inomapsize,
+		    oldcg->cg_cgx * (ufs2_daddr_t)fs->fs_ipg, "DIR", freedirs,
+		    0, excessdirs, usesysctl);
+	check_maps(cg_inosused(newcg), cg_inosused(oldcg), inomapsize,
+	    oldcg->cg_cgx * (ufs2_daddr_t)fs->fs_ipg, "FILE", freefiles,
+	    excessdirs, fs->fs_ipg, usesysctl);
+	check_maps(cg_blksfree(oldcg), cg_blksfree(newcg),
+	    howmany(fs->fs_fpg, CHAR_BIT),
+	    oldcg->cg_cgx * (ufs2_daddr_t)fs->fs_fpg, "FRAG",
+	    freeblks, 0, fs->fs_fpg, usesysctl);
+}
+
 static void
 check_maps(
 	u_char *map1,	/* map of claimed allocations */
 	u_char *map2,	/* map of determined allocations */
 	int mapsize,	/* size of above two maps */
-	int startvalue,	/* resource value for first element in map */
+	ufs2_daddr_t startvalue, /* resource value for first element in map */
 	const char *name,	/* name of resource found in maps */
 	int *opcode,	/* sysctl opcode to free resource */
 	int skip,	/* number of entries to skip before starting to free */
-	int limit)	/* limit on number of entries to free */
+	int limit,	/* limit on number of entries to free */
+	int usesysctl)	/* 1 => use sysctl interface to update maps */
 {
 #	define BUFSIZE 16
 	char buf[BUFSIZE];
-	long i, j, k, l, m, n, size;
-	int astart, aend, ustart, uend;
+	long i, j, k, l, m, size;
+	ufs2_daddr_t n, astart, aend, ustart, uend;
 	void (*msg)(const char *fmt, ...);
 
-	if (bkgrdflag)
+	if (usesysctl)
 		msg = pfatal;
 	else
 		msg = pwarn;
@@ -443,10 +483,12 @@ check_maps(
 					continue;
 				}
 				if (astart == aend)
-					(*msg)("ALLOCATED %s %d MARKED FREE\n",
+					(*msg)("ALLOCATED %s %" PRId64
+					    " MARKED FREE\n",
 					    name, astart);
 				else
-					(*msg)("%s %sS %d-%d MARKED FREE\n",
+					(*msg)("%s %sS %" PRId64 "-%" PRId64
+					    " MARKED FREE\n",
 					    "ALLOCATED", name, astart, aend);
 				astart = aend = n;
 			} else {
@@ -472,13 +514,15 @@ check_maps(
 				if (size > limit)
 					size = limit;
 				if (debug && size == 1)
-					pwarn("%s %s %d MARKED USED\n",
+					pwarn("%s %s %" PRId64
+					    " MARKED USED\n",
 					    "UNALLOCATED", name, ustart);
 				else if (debug)
-					pwarn("%s %sS %d-%ld MARKED USED\n",
+					pwarn("%s %sS %" PRId64 "-%" PRId64
+					    " MARKED USED\n",
 					    "UNALLOCATED", name, ustart,
 					    ustart + size - 1);
-				if (bkgrdflag != 0) {
+				if (usesysctl != 0) {
 					cmd.value = ustart;
 					cmd.size = size;
 					if (sysctl(opcode, MIBSIZE, 0, 0,
@@ -497,9 +541,11 @@ check_maps(
 	}
 	if (astart != -1) {
 		if (astart == aend)
-			(*msg)("ALLOCATED %s %d MARKED FREE\n", name, astart);
+			(*msg)("ALLOCATED %s %" PRId64
+			    " MARKED FREE\n", name, astart);
 		else
-			(*msg)("ALLOCATED %sS %d-%d MARKED FREE\n",
+			(*msg)("ALLOCATED %sS %" PRId64 "-%" PRId64
+			    " MARKED FREE\n",
 			    name, astart, aend);
 	}
 	if (ustart != -1) {
@@ -514,13 +560,15 @@ check_maps(
 			size = limit;
 		if (debug) {
 			if (size == 1)
-				pwarn("UNALLOCATED %s %d MARKED USED\n",
+				pwarn("UNALLOCATED %s %" PRId64
+				    " MARKED USED\n",
 				    name, ustart);
 			else
-				pwarn("UNALLOCATED %sS %d-%ld MARKED USED\n",
+				pwarn("UNALLOCATED %sS %" PRId64 "-%" PRId64
+				    " MARKED USED\n",
 				    name, ustart, ustart + size - 1);
 		}
-		if (bkgrdflag != 0) {
+		if (usesysctl != 0) {
 			cmd.value = ustart;
 			cmd.size = size;
 			if (sysctl(opcode, MIBSIZE, 0, 0, &cmd,
@@ -530,4 +578,13 @@ check_maps(
 			}
 		}
 	}
+}
+
+static void clear_blocks(ufs2_daddr_t start, ufs2_daddr_t end)
+{
+
+	if (debug)
+		printf("Zero frags %jd to %jd\n", start, end);
+	blerase(fswritefd, fsbtodb(&sblock, start),
+	    lfragtosize(&sblock, end - start + 1));
 }

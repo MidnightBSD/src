@@ -11,10 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -45,7 +41,7 @@ static char sccsid[] = "@(#)pac.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/lpr/pac/pac.c 117623 2003-07-15 08:48:30Z gad $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Do Printer accounting summary.

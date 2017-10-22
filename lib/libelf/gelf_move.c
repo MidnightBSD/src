@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libelf/gelf_move.c 165317 2006-12-18 05:40:01Z jkoshy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/limits.h>
 

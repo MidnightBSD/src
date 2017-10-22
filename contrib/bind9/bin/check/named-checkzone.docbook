@@ -2,7 +2,7 @@
                "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd"
 	       [<!ENTITY mdash "&#8212;">]>
 <!--
- - Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
+ - Copyright (C) 2004-2007, 2009, 2010  Internet Systems Consortium, Inc. ("ISC")
  - Copyright (C) 2000-2002  Internet Software Consortium.
  -
  - Permission to use, copy, modify, and/or distribute this software for any
@@ -18,7 +18,7 @@
  - PERFORMANCE OF THIS SOFTWARE.
 -->
 
-<!-- $Id: named-checkzone.docbook,v 1.11.18.21 2007/08/28 07:19:55 tbox Exp $ -->
+<!-- $Id: named-checkzone.docbook,v 1.40 2010/01/16 23:48:15 tbox Exp $ -->
 <refentry id="man.named-checkzone">
   <refentryinfo>
     <date>June 13, 2000</date>
@@ -36,6 +36,8 @@
       <year>2005</year>
       <year>2006</year>
       <year>2007</year>
+      <year>2009</year>
+      <year>2010</year>
       <holder>Internet Systems Consortium, Inc. ("ISC")</holder>
     </copyright>
     <copyright>
@@ -56,6 +58,7 @@
     <cmdsynopsis>
       <command>named-checkzone</command>
       <arg><option>-d</option></arg>
+      <arg><option>-h</option></arg>
       <arg><option>-j</option></arg>
       <arg><option>-q</option></arg>
       <arg><option>-v</option></arg>
@@ -68,6 +71,7 @@
       <arg><option>-M <replaceable class="parameter">mode</replaceable></option></arg>
       <arg><option>-n <replaceable class="parameter">mode</replaceable></option></arg>
       <arg><option>-o <replaceable class="parameter">filename</replaceable></option></arg>
+      <arg><option>-r <replaceable class="parameter">mode</replaceable></option></arg>
       <arg><option>-s <replaceable class="parameter">style</replaceable></option></arg>
       <arg><option>-S <replaceable class="parameter">mode</replaceable></option></arg>
       <arg><option>-t <replaceable class="parameter">directory</replaceable></option></arg>
@@ -91,12 +95,13 @@
       <arg><option>-k <replaceable class="parameter">mode</replaceable></option></arg>
       <arg><option>-m <replaceable class="parameter">mode</replaceable></option></arg>
       <arg><option>-n <replaceable class="parameter">mode</replaceable></option></arg>
-      <arg><option>-o <replaceable class="parameter">filename</replaceable></option></arg>
+      <arg><option>-r <replaceable class="parameter">mode</replaceable></option></arg>
       <arg><option>-s <replaceable class="parameter">style</replaceable></option></arg>
       <arg><option>-t <replaceable class="parameter">directory</replaceable></option></arg>
       <arg><option>-w <replaceable class="parameter">directory</replaceable></option></arg>
       <arg><option>-D</option></arg>
       <arg><option>-W <replaceable class="parameter">mode</replaceable></option></arg>
+      <arg choice="req"><option>-o <replaceable class="parameter">filename</replaceable></option></arg>
       <arg choice="req">zonename</arg>
       <arg choice="req">filename</arg>
     </cmdsynopsis>
@@ -137,6 +142,15 @@
       </varlistentry>
 
       <varlistentry>
+        <term>-h</term>
+        <listitem>
+          <para>
+            Print the usage summary and exit.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term>-q</term>
         <listitem>
           <para>
@@ -168,7 +182,7 @@
         <term>-c <replaceable class="parameter">class</replaceable></term>
         <listitem>
           <para>
-            Specify the class of the zone.  If not specified "IN" is assumed.
+            Specify the class of the zone.  If not specified, "IN" is assumed.
           </para>
         </listitem>
       </varlistentry>
@@ -301,8 +315,23 @@
         <listitem>
           <para>
             Write zone output to <filename>filename</filename>.
+	    If <filename>filename</filename> is <filename>-</filename> then
+	    write to standard out.
 	    This is mandatory for <command>named-compilezone</command>.
           </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>-r <replaceable class="parameter">mode</replaceable></term>
+        <listitem>
+	  <para>
+            Check for records that are treated as different by DNSSEC but
+	    are semantically equal in plain DNS.  
+            Possible modes are <command>"fail"</command>,
+            <command>"warn"</command> (default) and
+            <command>"ignore"</command>.
+	  </para>
         </listitem>
       </varlistentry>
 

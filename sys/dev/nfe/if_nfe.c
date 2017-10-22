@@ -21,7 +21,7 @@
 /* Driver for NVIDIA nForce MCP Fast Ethernet and Gigabit Ethernet */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/nfe/if_nfe.c 174328 2007-12-06 04:05:56Z yongari $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -76,12 +76,13 @@ static int  nfe_attach(device_t);
 static int  nfe_detach(device_t);
 static int  nfe_suspend(device_t);
 static int  nfe_resume(device_t);
-static void nfe_shutdown(device_t);
+static int nfe_shutdown(device_t);
+static int  nfe_can_use_msix(struct nfe_softc *);
 static void nfe_power(struct nfe_softc *);
 static int  nfe_miibus_readreg(device_t, int, int);
 static int  nfe_miibus_writereg(device_t, int, int, int);
 static void nfe_miibus_statchg(device_t);
-static void nfe_link_task(void *, int);
+static void nfe_mac_config(struct nfe_softc *, struct mii_data *);
 static void nfe_set_intr(struct nfe_softc *);
 static __inline void nfe_enable_intr(struct nfe_softc *);
 static __inline void nfe_disable_intr(struct nfe_softc *);
@@ -89,20 +90,17 @@ static int  nfe_ioctl(struct ifnet *, u_long, caddr_t);
 static void nfe_alloc_msix(struct nfe_softc *, int);
 static int nfe_intr(void *);
 static void nfe_int_task(void *, int);
-static void *nfe_jalloc(struct nfe_softc *);
-static void nfe_jfree(void *, void *);
 static __inline void nfe_discard_rxbuf(struct nfe_softc *, int);
 static __inline void nfe_discard_jrxbuf(struct nfe_softc *, int);
 static int nfe_newbuf(struct nfe_softc *, int);
 static int nfe_jnewbuf(struct nfe_softc *, int);
-static int  nfe_rxeof(struct nfe_softc *, int);
-static int  nfe_jrxeof(struct nfe_softc *, int);
+static int  nfe_rxeof(struct nfe_softc *, int, int *);
+static int  nfe_jrxeof(struct nfe_softc *, int, int *);
 static void nfe_txeof(struct nfe_softc *);
-static struct mbuf *nfe_defrag(struct mbuf *, int, int);
 static int  nfe_encap(struct nfe_softc *, struct mbuf **);
 static void nfe_setmulti(struct nfe_softc *);
-static void nfe_tx_task(void *, int);
 static void nfe_start(struct ifnet *);
+static void nfe_start_locked(struct ifnet *);
 static void nfe_watchdog(struct ifnet *);
 static void nfe_init(void *);
 static void nfe_init_locked(void *);
@@ -125,6 +123,11 @@ static void nfe_dma_map_segs(void *, bus_dma_segment_t *, int, int);
 
 static int sysctl_int_range(SYSCTL_HANDLER_ARGS, int, int);
 static int sysctl_hw_nfe_proc_limit(SYSCTL_HANDLER_ARGS);
+static void nfe_sysctl_node(struct nfe_softc *);
+static void nfe_stats_clear(struct nfe_softc *);
+static void nfe_stats_update(struct nfe_softc *);
+static void nfe_set_linkspeed(struct nfe_softc *);
+static void nfe_set_wol(struct nfe_softc *);
 
 #ifdef NFE_DEBUG
 static int nfedebug = 0;
@@ -145,9 +148,6 @@ static int nfedebug = 0;
 #define	NFE_UNLOCK(_sc)		mtx_unlock(&(_sc)->nfe_mtx)
 #define	NFE_LOCK_ASSERT(_sc)	mtx_assert(&(_sc)->nfe_mtx, MA_OWNED)
 
-#define	NFE_JLIST_LOCK(_sc)	mtx_lock(&(_sc)->nfe_jlist_mtx)
-#define	NFE_JLIST_UNLOCK(_sc)	mtx_unlock(&(_sc)->nfe_jlist_mtx)
-
 /* Tunables. */
 static int msi_disable = 0;
 static int msix_disable = 0;
@@ -165,16 +165,12 @@ static device_method_t nfe_methods[] = {
 	DEVMETHOD(device_resume,	nfe_resume),
 	DEVMETHOD(device_shutdown,	nfe_shutdown),
 
-	/* bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
-	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
-
 	/* MII interface */
 	DEVMETHOD(miibus_readreg,	nfe_miibus_readreg),
 	DEVMETHOD(miibus_writereg,	nfe_miibus_writereg),
 	DEVMETHOD(miibus_statchg,	nfe_miibus_statchg),
 
-	{ NULL, NULL }
+	DEVMETHOD_END
 };
 
 static driver_t nfe_driver = {
@@ -243,6 +239,30 @@ static struct nfe_type nfe_devs[] = {
 	    "NVIDIA nForce MCP67 Networking Adapter"},
 	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP67_LAN4,
 	    "NVIDIA nForce MCP67 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP73_LAN1,
+	    "NVIDIA nForce MCP73 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP73_LAN2,
+	    "NVIDIA nForce MCP73 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP73_LAN3,
+	    "NVIDIA nForce MCP73 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP73_LAN4,
+	    "NVIDIA nForce MCP73 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP77_LAN1,
+	    "NVIDIA nForce MCP77 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP77_LAN2,
+	    "NVIDIA nForce MCP77 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP77_LAN3,
+	    "NVIDIA nForce MCP77 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP77_LAN4,
+	    "NVIDIA nForce MCP77 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP79_LAN1,
+	    "NVIDIA nForce MCP79 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP79_LAN2,
+	    "NVIDIA nForce MCP79 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP79_LAN3,
+	    "NVIDIA nForce MCP79 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP79_LAN4,
+	    "NVIDIA nForce MCP79 Networking Adapter"},
 	{0, 0, NULL}
 };
 
@@ -326,11 +346,7 @@ nfe_attach(device_t dev)
 
 	mtx_init(&sc->nfe_mtx, device_get_nameunit(dev), MTX_NETWORK_LOCK,
 	    MTX_DEF);
-	mtx_init(&sc->nfe_jlist_mtx, "nfe_jlist_mtx", NULL, MTX_DEF);
 	callout_init_mtx(&sc->nfe_stat_ch, &sc->nfe_mtx, 0);
-	TASK_INIT(&sc->nfe_link_task, 0, nfe_link_task, sc);
-	SLIST_INIT(&sc->nfe_jfree_listhead);
-	SLIST_INIT(&sc->nfe_jinuse_listhead);
 
 	pci_enable_busmaster(dev);
 
@@ -343,7 +359,7 @@ nfe_attach(device_t dev)
 		return (ENXIO);
 	}
 
-	if (pci_find_extcap(dev, PCIY_EXPRESS, &reg) == 0) {
+	if (pci_find_cap(dev, PCIY_EXPRESS, &reg) == 0) {
 		uint16_t v, width;
 
 		v = pci_read_config(dev, reg + 0x08, 2);
@@ -362,6 +378,13 @@ nfe_attach(device_t dev)
 			device_printf(sc->nfe_dev,
 			    "warning, negotiated width of link(x%d) != "
 			    "max. width of link(x%d)\n", width, v);
+	}
+
+	if (nfe_can_use_msix(sc) == 0) {
+		device_printf(sc->nfe_dev,
+		    "MSI/MSI-X capability black-listed, will use INTx\n"); 
+		msix_disable = 1;
+		msi_disable = 1;
 	}
 
 	/* Allocate interrupt */
@@ -439,18 +462,19 @@ nfe_attach(device_t dev)
 		break;
 	case PCI_PRODUCT_NVIDIA_MCP51_LAN1:
 	case PCI_PRODUCT_NVIDIA_MCP51_LAN2:
-		sc->nfe_flags |= NFE_40BIT_ADDR | NFE_PWR_MGMT;
+		sc->nfe_flags |= NFE_40BIT_ADDR | NFE_PWR_MGMT | NFE_MIB_V1;
 		break;
 	case PCI_PRODUCT_NVIDIA_CK804_LAN1:
 	case PCI_PRODUCT_NVIDIA_CK804_LAN2:
 	case PCI_PRODUCT_NVIDIA_MCP04_LAN1:
 	case PCI_PRODUCT_NVIDIA_MCP04_LAN2:
-		sc->nfe_flags |= NFE_JUMBO_SUP | NFE_40BIT_ADDR | NFE_HW_CSUM;
+		sc->nfe_flags |= NFE_JUMBO_SUP | NFE_40BIT_ADDR | NFE_HW_CSUM |
+		    NFE_MIB_V1;
 		break;
 	case PCI_PRODUCT_NVIDIA_MCP55_LAN1:
 	case PCI_PRODUCT_NVIDIA_MCP55_LAN2:
 		sc->nfe_flags |= NFE_JUMBO_SUP | NFE_40BIT_ADDR | NFE_HW_CSUM |
-		    NFE_HW_VLAN | NFE_PWR_MGMT | NFE_TX_FLOW_CTRL;
+		    NFE_HW_VLAN | NFE_PWR_MGMT | NFE_TX_FLOW_CTRL | NFE_MIB_V2;
 		break;
 
 	case PCI_PRODUCT_NVIDIA_MCP61_LAN1:
@@ -461,15 +485,36 @@ nfe_attach(device_t dev)
 	case PCI_PRODUCT_NVIDIA_MCP67_LAN2:
 	case PCI_PRODUCT_NVIDIA_MCP67_LAN3:
 	case PCI_PRODUCT_NVIDIA_MCP67_LAN4:
+	case PCI_PRODUCT_NVIDIA_MCP73_LAN1:
+	case PCI_PRODUCT_NVIDIA_MCP73_LAN2:
+	case PCI_PRODUCT_NVIDIA_MCP73_LAN3:
+	case PCI_PRODUCT_NVIDIA_MCP73_LAN4:
 		sc->nfe_flags |= NFE_40BIT_ADDR | NFE_PWR_MGMT |
-		    NFE_CORRECT_MACADDR | NFE_TX_FLOW_CTRL;
+		    NFE_CORRECT_MACADDR | NFE_TX_FLOW_CTRL | NFE_MIB_V2;
+		break;
+	case PCI_PRODUCT_NVIDIA_MCP77_LAN1:
+	case PCI_PRODUCT_NVIDIA_MCP77_LAN2:
+	case PCI_PRODUCT_NVIDIA_MCP77_LAN3:
+	case PCI_PRODUCT_NVIDIA_MCP77_LAN4:
+		/* XXX flow control */
+		sc->nfe_flags |= NFE_40BIT_ADDR | NFE_HW_CSUM | NFE_PWR_MGMT |
+		    NFE_CORRECT_MACADDR | NFE_MIB_V3;
+		break;
+	case PCI_PRODUCT_NVIDIA_MCP79_LAN1:
+	case PCI_PRODUCT_NVIDIA_MCP79_LAN2:
+	case PCI_PRODUCT_NVIDIA_MCP79_LAN3:
+	case PCI_PRODUCT_NVIDIA_MCP79_LAN4:
+		/* XXX flow control */
+		sc->nfe_flags |= NFE_JUMBO_SUP | NFE_40BIT_ADDR | NFE_HW_CSUM |
+		    NFE_PWR_MGMT | NFE_CORRECT_MACADDR | NFE_MIB_V3;
 		break;
 	case PCI_PRODUCT_NVIDIA_MCP65_LAN1:
 	case PCI_PRODUCT_NVIDIA_MCP65_LAN2:
 	case PCI_PRODUCT_NVIDIA_MCP65_LAN3:
 	case PCI_PRODUCT_NVIDIA_MCP65_LAN4:
 		sc->nfe_flags |= NFE_JUMBO_SUP | NFE_40BIT_ADDR |
-		    NFE_PWR_MGMT | NFE_CORRECT_MACADDR | NFE_TX_FLOW_CTRL;
+		    NFE_PWR_MGMT | NFE_CORRECT_MACADDR | NFE_TX_FLOW_CTRL |
+		    NFE_MIB_V2;
 		break;
 	}
 
@@ -504,7 +549,6 @@ nfe_attach(device_t dev)
 		error = ENOSPC;
 		goto fail;
 	}
-	TASK_INIT(&sc->nfe_tx_task, 1, nfe_tx_task, ifp);
 
 	/*
 	 * Allocate Tx and Rx rings.
@@ -516,24 +560,8 @@ nfe_attach(device_t dev)
 		goto fail;
 
 	nfe_alloc_jrx_ring(sc, &sc->jrxq);
-
-	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
-	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-	    OID_AUTO, "process_limit", CTLTYPE_INT | CTLFLAG_RW,
-	    &sc->nfe_process_limit, 0, sysctl_hw_nfe_proc_limit, "I",
-	    "max number of Rx events to process");
-
-	sc->nfe_process_limit = NFE_PROC_DEFAULT;
-	error = resource_int_value(device_get_name(dev), device_get_unit(dev),
-	    "process_limit", &sc->nfe_process_limit);
-	if (error == 0) {
-		if (sc->nfe_process_limit < NFE_PROC_MIN ||
-		    sc->nfe_process_limit > NFE_PROC_MAX) {
-			device_printf(dev, "process_limit value out of range; "
-			    "using default: %d\n", NFE_PROC_DEFAULT);
-			sc->nfe_process_limit = NFE_PROC_DEFAULT;
-		}
-	}
+	/* Create sysctl node. */
+	nfe_sysctl_node(sc);
 
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
@@ -543,7 +571,6 @@ nfe_attach(device_t dev)
 	ifp->if_start = nfe_start;
 	ifp->if_hwassist = 0;
 	ifp->if_capabilities = 0;
-	ifp->if_watchdog = NULL;
 	ifp->if_init = nfe_init;
 	IFQ_SET_MAXLEN(&ifp->if_snd, NFE_TX_RING_COUNT - 1);
 	ifp->if_snd.ifq_drv_maxlen = NFE_TX_RING_COUNT - 1;
@@ -561,8 +588,12 @@ nfe_attach(device_t dev)
 	if ((sc->nfe_flags & NFE_HW_VLAN) != 0) {
 		ifp->if_capabilities |= IFCAP_VLAN_HWTAGGING;
 		if ((ifp->if_capabilities & IFCAP_HWCSUM) != 0)
-			ifp->if_capabilities |= IFCAP_VLAN_HWCSUM;
+			ifp->if_capabilities |= IFCAP_VLAN_HWCSUM |
+			    IFCAP_VLAN_HWTSO;
 	}
+
+	if (pci_find_cap(dev, PCIY_PMG, &reg) == 0)
+		ifp->if_capabilities |= IFCAP_WOL_MAGIC;
 	ifp->if_capenable = ifp->if_capabilities;
 
 	/*
@@ -577,10 +608,11 @@ nfe_attach(device_t dev)
 #endif
 
 	/* Do MII setup */
-	if (mii_phy_probe(dev, &sc->nfe_miibus, nfe_ifmedia_upd,
-	    nfe_ifmedia_sts)) {
-		device_printf(dev, "MII without any phy!\n");
-		error = ENXIO;
+	error = mii_attach(dev, &sc->nfe_miibus, ifp, nfe_ifmedia_upd,
+	    nfe_ifmedia_sts, BMSR_DEFCAPMASK, MII_PHY_ANY, MII_OFFSET_ANY,
+	    MIIF_DOPAUSE);
+	if (error != 0) {
+		device_printf(dev, "attaching PHYs failed\n");
 		goto fail;
 	}
 	ether_ifattach(ifp, sc->eaddr);
@@ -642,8 +674,6 @@ nfe_detach(device_t dev)
 		ifp->if_flags &= ~IFF_UP;
 		NFE_UNLOCK(sc);
 		callout_drain(&sc->nfe_stat_ch);
-		taskqueue_drain(taskqueue_fast, &sc->nfe_tx_task);
-		taskqueue_drain(taskqueue_swi, &sc->nfe_link_task);
 		ether_ifdetach(ifp);
 	}
 
@@ -714,7 +744,6 @@ nfe_detach(device_t dev)
 		sc->nfe_parent_tag = NULL;
 	}
 
-	mtx_destroy(&sc->nfe_jlist_mtx);
 	mtx_destroy(&sc->nfe_mtx);
 
 	return (0);
@@ -730,6 +759,7 @@ nfe_suspend(device_t dev)
 
 	NFE_LOCK(sc);
 	nfe_stop(sc->nfe_ifp);
+	nfe_set_wol(sc);
 	sc->nfe_suspended = 1;
 	NFE_UNLOCK(sc);
 
@@ -746,6 +776,7 @@ nfe_resume(device_t dev)
 	sc = device_get_softc(dev);
 
 	NFE_LOCK(sc);
+	nfe_power(sc);
 	ifp = sc->nfe_ifp;
 	if (ifp->if_flags & IFF_UP)
 		nfe_init_locked(sc);
@@ -753,6 +784,48 @@ nfe_resume(device_t dev)
 	NFE_UNLOCK(sc);
 
 	return (0);
+}
+
+
+static int
+nfe_can_use_msix(struct nfe_softc *sc)
+{
+	static struct msix_blacklist {
+		char	*maker;
+		char	*product;
+	} msix_blacklists[] = {
+		{ "ASUSTeK Computer INC.", "P5N32-SLI PREMIUM" }
+	};
+
+	struct msix_blacklist *mblp;
+	char *maker, *product;
+	int count, n, use_msix;
+
+	/*
+	 * Search base board manufacturer and product name table
+	 * to see this system has a known MSI/MSI-X issue.
+	 */
+	maker = getenv("smbios.planar.maker");
+	product = getenv("smbios.planar.product");
+	use_msix = 1;
+	if (maker != NULL && product != NULL) {
+		count = sizeof(msix_blacklists) / sizeof(msix_blacklists[0]);
+		mblp = msix_blacklists;
+		for (n = 0; n < count; n++) {
+			if (strcmp(maker, mblp->maker) == 0 &&
+			    strcmp(product, mblp->product) == 0) {
+				use_msix = 0;
+				break;
+			}
+			mblp++;
+		}
+	}
+	if (maker != NULL)
+		freeenv(maker);
+	if (product != NULL)
+		freeenv(product);
+
+	return (use_msix);
 }
 
 
@@ -784,37 +857,51 @@ static void
 nfe_miibus_statchg(device_t dev)
 {
 	struct nfe_softc *sc;
+	struct mii_data *mii;
+	struct ifnet *ifp;
+	uint32_t rxctl, txctl;
 
 	sc = device_get_softc(dev);
-	taskqueue_enqueue(taskqueue_swi, &sc->nfe_link_task);
+
+	mii = device_get_softc(sc->nfe_miibus);
+	ifp = sc->nfe_ifp;
+
+	sc->nfe_link = 0;
+	if ((mii->mii_media_status & (IFM_ACTIVE | IFM_AVALID)) ==
+	    (IFM_ACTIVE | IFM_AVALID)) {
+		switch (IFM_SUBTYPE(mii->mii_media_active)) {
+		case IFM_10_T:
+		case IFM_100_TX:
+		case IFM_1000_T:
+			sc->nfe_link = 1;
+			break;
+		default:
+			break;
+		}
+	}
+
+	nfe_mac_config(sc, mii);
+	txctl = NFE_READ(sc, NFE_TX_CTL);
+	rxctl = NFE_READ(sc, NFE_RX_CTL);
+	if (sc->nfe_link != 0 && (ifp->if_drv_flags & IFF_DRV_RUNNING) != 0) {
+		txctl |= NFE_TX_START;
+		rxctl |= NFE_RX_START;
+	} else {
+		txctl &= ~NFE_TX_START;
+		rxctl &= ~NFE_RX_START;
+	}
+	NFE_WRITE(sc, NFE_TX_CTL, txctl);
+	NFE_WRITE(sc, NFE_RX_CTL, rxctl);
 }
 
 
 static void
-nfe_link_task(void *arg, int pending)
+nfe_mac_config(struct nfe_softc *sc, struct mii_data *mii)
 {
-	struct nfe_softc *sc;
-	struct mii_data *mii;
-	struct ifnet *ifp;
-	uint32_t phy, seed, misc = NFE_MISC1_MAGIC, link = NFE_MEDIA_SET;
-	uint32_t gmask, rxctl, txctl, val;
+	uint32_t link, misc, phy, seed;
+	uint32_t val;
 
-	sc = (struct nfe_softc *)arg;
-
-	NFE_LOCK(sc);
-
-	mii = device_get_softc(sc->nfe_miibus);
-	ifp = sc->nfe_ifp;
-	if (mii == NULL || ifp == NULL) {
-		NFE_UNLOCK(sc);
-		return;
-	}
-
-	if (mii->mii_media_status & IFM_ACTIVE) {
-		if (IFM_SUBTYPE(mii->mii_media_active) != IFM_NONE)
-			sc->nfe_link = 1;
-	} else
-		sc->nfe_link = 0;
+	NFE_LOCK_ASSERT(sc);
 
 	phy = NFE_READ(sc, NFE_PHY_IFACE);
 	phy &= ~(NFE_PHY_HDX | NFE_PHY_100TX | NFE_PHY_1000T);
@@ -822,7 +909,10 @@ nfe_link_task(void *arg, int pending)
 	seed = NFE_READ(sc, NFE_RNDSEED);
 	seed &= ~NFE_SEED_MASK;
 
-	if (((mii->mii_media_active & IFM_GMASK) & IFM_FDX) == 0) {
+	misc = NFE_MISC1_MAGIC;
+	link = NFE_MEDIA_SET;
+
+	if ((IFM_OPTIONS(mii->mii_media_active) & IFM_FDX) == 0) {
 		phy  |= NFE_PHY_HDX;	/* half-duplex */
 		misc |= NFE_MISC1_HDX;
 	}
@@ -859,18 +949,19 @@ nfe_link_task(void *arg, int pending)
 	NFE_WRITE(sc, NFE_MISC1, misc);
 	NFE_WRITE(sc, NFE_LINKSPEED, link);
 
-	gmask = mii->mii_media_active & IFM_GMASK;
-	if ((gmask & IFM_FDX) != 0) {
+	if ((IFM_OPTIONS(mii->mii_media_active) & IFM_FDX) != 0) {
 		/* It seems all hardwares supports Rx pause frames. */
 		val = NFE_READ(sc, NFE_RXFILTER);
-		if ((gmask & IFM_FLAG0) != 0)
+		if ((IFM_OPTIONS(mii->mii_media_active) &
+		    IFM_ETH_RXPAUSE) != 0)
 			val |= NFE_PFF_RX_PAUSE;
 		else
 			val &= ~NFE_PFF_RX_PAUSE;
 		NFE_WRITE(sc, NFE_RXFILTER, val);
 		if ((sc->nfe_flags & NFE_TX_FLOW_CTRL) != 0) {
 			val = NFE_READ(sc, NFE_MISC1);
-			if ((gmask & IFM_FLAG1) != 0) {
+			if ((IFM_OPTIONS(mii->mii_media_active) &
+			    IFM_ETH_TXPAUSE) != 0) {
 				NFE_WRITE(sc, NFE_TX_PAUSE_FRAME,
 				    NFE_TX_PAUSE_FRAME_ENABLE);
 				val |= NFE_MISC1_TX_PAUSE;
@@ -894,20 +985,6 @@ nfe_link_task(void *arg, int pending)
 			NFE_WRITE(sc, NFE_MISC1, val);
 		}
 	}
-
-	txctl = NFE_READ(sc, NFE_TX_CTL);
-	rxctl = NFE_READ(sc, NFE_RX_CTL);
-	if (sc->nfe_link != 0 && (ifp->if_drv_flags & IFF_DRV_RUNNING) != 0) {
-		txctl |= NFE_TX_START;
-		rxctl |= NFE_RX_START;
-	} else {
-		txctl &= ~NFE_TX_START;
-		rxctl &= ~NFE_RX_START;
-	}
-	NFE_WRITE(sc, NFE_TX_CTL, txctl);
-	NFE_WRITE(sc, NFE_RX_CTL, rxctl);
-
-	NFE_UNLOCK(sc);
 }
 
 
@@ -980,63 +1057,6 @@ nfe_miibus_writereg(device_t dev, int phy, int reg, int val)
 		device_printf(sc->nfe_dev, "could not write to PHY\n");
 #endif
 	return (0);
-}
-
-/*
- * Allocate a jumbo buffer.
- */
-static void *
-nfe_jalloc(struct nfe_softc *sc)
-{
-	struct nfe_jpool_entry *entry;
-
-	NFE_JLIST_LOCK(sc);
-
-	entry = SLIST_FIRST(&sc->nfe_jfree_listhead);
-
-	if (entry == NULL) {
-		NFE_JLIST_UNLOCK(sc);
-		return (NULL);
-	}
-
-	SLIST_REMOVE_HEAD(&sc->nfe_jfree_listhead, jpool_entries);
-	SLIST_INSERT_HEAD(&sc->nfe_jinuse_listhead, entry, jpool_entries);
-
-	NFE_JLIST_UNLOCK(sc);
-
-	return (sc->jrxq.jslots[entry->slot]);
-}
-
-/*
- * Release a jumbo buffer.
- */
-static void
-nfe_jfree(void *buf, void *args)
-{
-	struct nfe_softc *sc;
-	struct nfe_jpool_entry *entry;
-	int i;
-
-	/* Extract the softc struct pointer. */
-	sc = (struct nfe_softc *)args;
-	KASSERT(sc != NULL, ("%s: can't find softc pointer!", __func__));
-
-	NFE_JLIST_LOCK(sc);
-	/* Calculate the slot this buffer belongs to. */
-	i = ((vm_offset_t)buf
-	     - (vm_offset_t)sc->jrxq.jpool) / NFE_JLEN;
-	KASSERT(i >= 0 && i < NFE_JSLOTS,
-	    ("%s: asked to free buffer that we don't manage!", __func__));
-
-	entry = SLIST_FIRST(&sc->nfe_jinuse_listhead);
-	KASSERT(entry != NULL, ("%s: buffer not in use!", __func__));
-	entry->slot = i;
-	SLIST_REMOVE_HEAD(&sc->nfe_jinuse_listhead, jpool_entries);
-	SLIST_INSERT_HEAD(&sc->nfe_jfree_listhead, entry, jpool_entries);
-	if (SLIST_EMPTY(&sc->nfe_jinuse_listhead))
-		wakeup(sc);
-
-	NFE_JLIST_UNLOCK(sc);
 }
 
 struct nfe_dmamap_arg {
@@ -1147,8 +1167,6 @@ nfe_alloc_jrx_ring(struct nfe_softc *sc, struct nfe_jrx_ring *ring)
 	struct nfe_dmamap_arg ctx;
 	struct nfe_rx_data *data;
 	void *desc;
-	struct nfe_jpool_entry *entry;
-	uint8_t *ptr;
 	int i, error, descsize;
 
 	if ((sc->nfe_flags & NFE_JUMBO_SUP) == 0)
@@ -1187,33 +1205,15 @@ nfe_alloc_jrx_ring(struct nfe_softc *sc, struct nfe_jrx_ring *ring)
 		goto fail;
 	}
 
-	/* Create DMA tag for jumbo buffer blocks. */
-	error = bus_dma_tag_create(sc->nfe_parent_tag,
-	    PAGE_SIZE, 0,			/* alignment, boundary */
-	    BUS_SPACE_MAXADDR,			/* lowaddr */
-	    BUS_SPACE_MAXADDR,			/* highaddr */
-	    NULL, NULL,				/* filter, filterarg */
-	    NFE_JMEM,				/* maxsize */
-	    1, 					/* nsegments */
-	    NFE_JMEM,				/* maxsegsize */
-	    0,					/* flags */
-	    NULL, NULL,				/* lockfunc, lockarg */
-	    &ring->jrx_jumbo_tag);
-	if (error != 0) {
-		device_printf(sc->nfe_dev,
-		    "could not create jumbo Rx buffer block DMA tag\n");
-		goto fail;
-	}
-
 	/* Create DMA tag for jumbo Rx buffers. */
 	error = bus_dma_tag_create(sc->nfe_parent_tag,
-	    PAGE_SIZE, 0,			/* alignment, boundary */
+	    1, 0,				/* alignment, boundary */
 	    BUS_SPACE_MAXADDR,			/* lowaddr */
 	    BUS_SPACE_MAXADDR,			/* highaddr */
 	    NULL, NULL,				/* filter, filterarg */
-	    NFE_JLEN,				/* maxsize */
+	    MJUM9BYTES,				/* maxsize */
 	    1,					/* nsegments */
-	    NFE_JLEN,				/* maxsegsize */
+	    MJUM9BYTES,				/* maxsegsize */
 	    0,					/* flags */
 	    NULL, NULL,				/* lockfunc, lockarg */
 	    &ring->jrx_data_tag);
@@ -1265,46 +1265,6 @@ nfe_alloc_jrx_ring(struct nfe_softc *sc, struct nfe_jrx_ring *ring)
 			    "could not create jumbo Rx DMA map\n");
 			goto fail;
 		}
-	}
-
-	/* Allocate DMA'able memory and load the DMA map for jumbo buf. */
-	error = bus_dmamem_alloc(ring->jrx_jumbo_tag, (void **)&ring->jpool,
-	    BUS_DMA_WAITOK | BUS_DMA_COHERENT | BUS_DMA_ZERO,
-	    &ring->jrx_jumbo_map);
-	if (error != 0) {
-		device_printf(sc->nfe_dev,
-		    "could not allocate DMA'able memory for jumbo pool\n");
-		goto fail;
-	}
-
-	ctx.nfe_busaddr = 0;
-	error = bus_dmamap_load(ring->jrx_jumbo_tag, ring->jrx_jumbo_map,
-	    ring->jpool, NFE_JMEM, nfe_dma_map_segs, &ctx, 0);
-	if (error != 0) {
-		device_printf(sc->nfe_dev,
-		    "could not load DMA'able memory for jumbo pool\n");
-		goto fail;
-	}
-
-	/*
-	 * Now divide it up into 9K pieces and save the addresses
-	 * in an array.
-	 */
-	ptr = ring->jpool;
-	for (i = 0; i < NFE_JSLOTS; i++) {
-		ring->jslots[i] = ptr;
-		ptr += NFE_JLEN;
-		entry = malloc(sizeof(struct nfe_jpool_entry), M_DEVBUF,
-		    M_WAITOK);
-		if (entry == NULL) {
-			device_printf(sc->nfe_dev,
-			    "no memory for jumbo buffers!\n");
-			error = ENOMEM;
-			goto fail;
-		}
-		entry->slot = i;
-		SLIST_INSERT_HEAD(&sc->nfe_jfree_listhead, entry,
-		    jpool_entries);
 	}
 
 	return;
@@ -1364,7 +1324,7 @@ nfe_init_jrx_ring(struct nfe_softc *sc, struct nfe_jrx_ring *ring)
 		desc = ring->jdesc32;
 		descsize = sizeof (struct nfe_desc32);
 	}
-	bzero(desc, descsize * NFE_RX_RING_COUNT);
+	bzero(desc, descsize * NFE_JUMBO_RX_RING_COUNT);
 	for (i = 0; i < NFE_JUMBO_RX_RING_COUNT; i++) {
 		if (nfe_jnewbuf(sc, i) != 0)
 			return (ENOBUFS);
@@ -1431,29 +1391,12 @@ nfe_free_rx_ring(struct nfe_softc *sc, struct nfe_rx_ring *ring)
 static void
 nfe_free_jrx_ring(struct nfe_softc *sc, struct nfe_jrx_ring *ring)
 {
-	struct nfe_jpool_entry *entry;
 	struct nfe_rx_data *data;
 	void *desc;
 	int i, descsize;
 
 	if ((sc->nfe_flags & NFE_JUMBO_SUP) == 0)
 		return;
-
-	NFE_JLIST_LOCK(sc);
-	while ((entry = SLIST_FIRST(&sc->nfe_jinuse_listhead))) {
-		device_printf(sc->nfe_dev,
-		    "asked to free buffer that is in use!\n");
-		SLIST_REMOVE_HEAD(&sc->nfe_jinuse_listhead, jpool_entries);
-		SLIST_INSERT_HEAD(&sc->nfe_jfree_listhead, entry,
-		    jpool_entries);
-	}
-
-	while (!SLIST_EMPTY(&sc->nfe_jfree_listhead)) {
-		entry = SLIST_FIRST(&sc->nfe_jfree_listhead);
-		SLIST_REMOVE_HEAD(&sc->nfe_jfree_listhead, jpool_entries);
-		free(entry, M_DEVBUF);
-	}
-        NFE_JLIST_UNLOCK(sc);
 
 	if (sc->nfe_flags & NFE_40BIT_ADDR) {
 		desc = ring->jdesc64;
@@ -1492,15 +1435,7 @@ nfe_free_jrx_ring(struct nfe_softc *sc, struct nfe_jrx_ring *ring)
 		ring->jdesc32 = NULL;
 		ring->jrx_desc_map = NULL;
 	}
-	/* Destroy jumbo buffer block. */
-	if (ring->jrx_jumbo_map != NULL)
-		bus_dmamap_unload(ring->jrx_jumbo_tag, ring->jrx_jumbo_map);
-	if (ring->jrx_jumbo_map != NULL) {
-		bus_dmamem_free(ring->jrx_jumbo_tag, ring->jpool,
-		    ring->jrx_jumbo_map);
-		ring->jpool = NULL;
-		ring->jrx_jumbo_map = NULL;
-	}
+
 	if (ring->jrx_desc_tag != NULL) {
 		bus_dma_tag_destroy(ring->jrx_desc_tag);
 		ring->jrx_desc_tag = NULL;
@@ -1670,31 +1605,32 @@ nfe_free_tx_ring(struct nfe_softc *sc, struct nfe_tx_ring *ring)
 static poll_handler_t nfe_poll;
 
 
-static void
+static int
 nfe_poll(struct ifnet *ifp, enum poll_cmd cmd, int count)
 {
 	struct nfe_softc *sc = ifp->if_softc;
 	uint32_t r;
+	int rx_npkts = 0;
 
 	NFE_LOCK(sc);
 
 	if (!(ifp->if_drv_flags & IFF_DRV_RUNNING)) {
 		NFE_UNLOCK(sc);
-		return;
+		return (rx_npkts);
 	}
 
 	if (sc->nfe_framesize > MCLBYTES - ETHER_HDR_LEN)
-		nfe_jrxeof(sc, count);
+		rx_npkts = nfe_jrxeof(sc, count, &rx_npkts);
 	else
-		nfe_rxeof(sc, count);
+		rx_npkts = nfe_rxeof(sc, count, &rx_npkts);
 	nfe_txeof(sc);
 	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
-		taskqueue_enqueue_fast(sc->nfe_tq, &sc->nfe_tx_task);
+		nfe_start_locked(ifp);
 
 	if (cmd == POLL_AND_CHECK_STATUS) {
 		if ((r = NFE_READ(sc, sc->nfe_irq_status)) == 0) {
 			NFE_UNLOCK(sc);
-			return;
+			return (rx_npkts);
 		}
 		NFE_WRITE(sc, sc->nfe_irq_status, r);
 
@@ -1705,6 +1641,7 @@ nfe_poll(struct ifnet *ifp, enum poll_cmd cmd, int count)
 		}
 	}
 	NFE_UNLOCK(sc);
+	return (rx_npkts);
 }
 #endif /* DEVICE_POLLING */
 
@@ -1768,8 +1705,10 @@ nfe_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			else {
 				NFE_LOCK(sc);
 				ifp->if_mtu = ifr->ifr_mtu;
-				if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0)
+				if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
+					ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 					nfe_init_locked(sc);
+				}
 				NFE_UNLOCK(sc);
 			}
 		}
@@ -1832,19 +1771,38 @@ nfe_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			}
 		}
 #endif /* DEVICE_POLLING */
-		if ((sc->nfe_flags & NFE_HW_CSUM) != 0 &&
-		    (mask & IFCAP_HWCSUM) != 0) {
-			ifp->if_capenable ^= IFCAP_HWCSUM;
-			if ((IFCAP_TXCSUM & ifp->if_capenable) != 0 &&
-			    (IFCAP_TXCSUM & ifp->if_capabilities) != 0)
+		if ((mask & IFCAP_WOL_MAGIC) != 0 &&
+		    (ifp->if_capabilities & IFCAP_WOL_MAGIC) != 0)
+			ifp->if_capenable ^= IFCAP_WOL_MAGIC;
+		if ((mask & IFCAP_TXCSUM) != 0 &&
+		    (ifp->if_capabilities & IFCAP_TXCSUM) != 0) {
+			ifp->if_capenable ^= IFCAP_TXCSUM;
+			if ((ifp->if_capenable & IFCAP_TXCSUM) != 0)
 				ifp->if_hwassist |= NFE_CSUM_FEATURES;
 			else
 				ifp->if_hwassist &= ~NFE_CSUM_FEATURES;
+		}
+		if ((mask & IFCAP_RXCSUM) != 0 &&
+		    (ifp->if_capabilities & IFCAP_RXCSUM) != 0) {
+			ifp->if_capenable ^= IFCAP_RXCSUM;
 			init++;
 		}
-		if ((sc->nfe_flags & NFE_HW_VLAN) != 0 &&
-		    (mask & IFCAP_VLAN_HWTAGGING) != 0) {
+		if ((mask & IFCAP_TSO4) != 0 &&
+		    (ifp->if_capabilities & IFCAP_TSO4) != 0) {
+			ifp->if_capenable ^= IFCAP_TSO4;
+			if ((IFCAP_TSO4 & ifp->if_capenable) != 0)
+				ifp->if_hwassist |= CSUM_TSO;
+			else
+				ifp->if_hwassist &= ~CSUM_TSO;
+		}
+		if ((mask & IFCAP_VLAN_HWTSO) != 0 &&
+		    (ifp->if_capabilities & IFCAP_VLAN_HWTSO) != 0)
+			ifp->if_capenable ^= IFCAP_VLAN_HWTSO;
+		if ((mask & IFCAP_VLAN_HWTAGGING) != 0 &&
+		    (ifp->if_capabilities & IFCAP_VLAN_HWTAGGING) != 0) {
 			ifp->if_capenable ^= IFCAP_VLAN_HWTAGGING;
+			if ((ifp->if_capenable & IFCAP_VLAN_HWTAGGING) == 0)
+				ifp->if_capenable &= ~IFCAP_VLAN_HWTSO;
 			init++;
 		}
 		/*
@@ -1854,28 +1812,17 @@ nfe_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		 * VLAN stripping. So when we know Rx checksum offload is
 		 * disabled turn entire hardware VLAN assist off.
 		 */
-		if ((sc->nfe_flags & (NFE_HW_CSUM | NFE_HW_VLAN)) ==
-		    (NFE_HW_CSUM | NFE_HW_VLAN)) {
-			if ((ifp->if_capenable & IFCAP_RXCSUM) == 0)
-				ifp->if_capenable &= ~IFCAP_VLAN_HWTAGGING;
+		if ((ifp->if_capenable & IFCAP_RXCSUM) == 0) {
+			if ((ifp->if_capenable & IFCAP_VLAN_HWTAGGING) != 0)
+				init++;
+			ifp->if_capenable &= ~(IFCAP_VLAN_HWTAGGING |
+			    IFCAP_VLAN_HWTSO);
 		}
-
-		if ((sc->nfe_flags & NFE_HW_CSUM) != 0 &&
-		    (mask & IFCAP_TSO4) != 0) {
-			ifp->if_capenable ^= IFCAP_TSO4;
-			if ((IFCAP_TSO4 & ifp->if_capenable) != 0 &&
-			    (IFCAP_TSO4 & ifp->if_capabilities) != 0)
-				ifp->if_hwassist |= CSUM_TSO;
-			else
-				ifp->if_hwassist &= ~CSUM_TSO;
-		}
-
 		if (init > 0 && (ifp->if_drv_flags & IFF_DRV_RUNNING) != 0) {
 			ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 			nfe_init(sc);
 		}
-		if ((sc->nfe_flags & NFE_HW_VLAN) != 0)
-			VLAN_CAPABILITIES(ifp);
+		VLAN_CAPABILITIES(ifp);
 		break;
 	default:
 		error = ether_ioctl(ifp, cmd, data);
@@ -1938,21 +1885,21 @@ nfe_int_task(void *arg, int pending)
 
 	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0) {
 		NFE_UNLOCK(sc);
-		nfe_enable_intr(sc);
+		nfe_disable_intr(sc);
 		return;
 	}
 
 	domore = 0;
 	/* check Rx ring */
 	if (sc->nfe_framesize > MCLBYTES - ETHER_HDR_LEN)
-		domore = nfe_jrxeof(sc, sc->nfe_process_limit);
+		domore = nfe_jrxeof(sc, sc->nfe_process_limit, NULL);
 	else
-		domore = nfe_rxeof(sc, sc->nfe_process_limit);
+		domore = nfe_rxeof(sc, sc->nfe_process_limit, NULL);
 	/* check Tx ring */
 	nfe_txeof(sc);
 
 	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
-		taskqueue_enqueue_fast(sc->nfe_tq, &sc->nfe_tx_task);
+		nfe_start_locked(ifp);
 
 	NFE_UNLOCK(sc);
 
@@ -2084,24 +2031,15 @@ nfe_jnewbuf(struct nfe_softc *sc, int idx)
 	bus_dma_segment_t segs[1];
 	bus_dmamap_t map;
 	int nsegs;
-	void *buf;
 
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	m = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR, MJUM9BYTES);
 	if (m == NULL)
 		return (ENOBUFS);
-	buf = nfe_jalloc(sc);
-	if (buf == NULL) {
-		m_freem(m);
-		return (ENOBUFS);
-	}
-	/* Attach the buffer to the mbuf. */
-	MEXTADD(m, buf, NFE_JLEN, nfe_jfree, (struct nfe_softc *)sc, 0,
-	    EXT_NET_DRV);
 	if ((m->m_flags & M_EXT) == 0) {
 		m_freem(m);
 		return (ENOBUFS);
 	}
-	m->m_pkthdr.len = m->m_len = NFE_JLEN;
+	m->m_pkthdr.len = m->m_len = MJUM9BYTES;
 	m_adj(m, ETHER_ALIGN);
 
 	if (bus_dmamap_load_mbuf_sg(sc->jrxq.jrx_data_tag,
@@ -2143,7 +2081,7 @@ nfe_jnewbuf(struct nfe_softc *sc, int idx)
 
 
 static int
-nfe_rxeof(struct nfe_softc *sc, int count)
+nfe_rxeof(struct nfe_softc *sc, int count, int *rx_npktsp)
 {
 	struct ifnet *ifp = sc->nfe_ifp;
 	struct nfe_desc32 *desc32;
@@ -2151,9 +2089,10 @@ nfe_rxeof(struct nfe_softc *sc, int count)
 	struct nfe_rx_data *data;
 	struct mbuf *m;
 	uint16_t flags;
-	int len, prog;
+	int len, prog, rx_npkts;
 	uint32_t vtag = 0;
 
+	rx_npkts = 0;
 	NFE_LOCK_ASSERT(sc);
 
 	bus_dmamap_sync(sc->rxq.rx_desc_tag, sc->rxq.rx_desc_map,
@@ -2243,18 +2182,21 @@ nfe_rxeof(struct nfe_softc *sc, int count)
 		NFE_UNLOCK(sc);
 		(*ifp->if_input)(ifp, m);
 		NFE_LOCK(sc);
+		rx_npkts++;
 	}
 
 	if (prog > 0)
 		bus_dmamap_sync(sc->rxq.rx_desc_tag, sc->rxq.rx_desc_map,
 		    BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE);
 
+	if (rx_npktsp != NULL)
+		*rx_npktsp = rx_npkts;
 	return (count > 0 ? 0 : EAGAIN);
 }
 
 
 static int
-nfe_jrxeof(struct nfe_softc *sc, int count)
+nfe_jrxeof(struct nfe_softc *sc, int count, int *rx_npktsp)
 {
 	struct ifnet *ifp = sc->nfe_ifp;
 	struct nfe_desc32 *desc32;
@@ -2262,9 +2204,10 @@ nfe_jrxeof(struct nfe_softc *sc, int count)
 	struct nfe_rx_data *data;
 	struct mbuf *m;
 	uint16_t flags;
-	int len, prog;
+	int len, prog, rx_npkts;
 	uint32_t vtag = 0;
 
+	rx_npkts = 0;
 	NFE_LOCK_ASSERT(sc);
 
 	bus_dmamap_sync(sc->jrxq.jrx_desc_tag, sc->jrxq.jrx_desc_map,
@@ -2355,12 +2298,15 @@ nfe_jrxeof(struct nfe_softc *sc, int count)
 		NFE_UNLOCK(sc);
 		(*ifp->if_input)(ifp, m);
 		NFE_LOCK(sc);
+		rx_npkts++;
 	}
 
 	if (prog > 0)
 		bus_dmamap_sync(sc->jrxq.jrx_desc_tag, sc->jrxq.jrx_desc_map,
 		    BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE);
 
+	if (rx_npktsp != NULL)
+		*rx_npktsp = rx_npkts;
 	return (count > 0 ? 0 : EAGAIN);
 }
 
@@ -2437,93 +2383,6 @@ nfe_txeof(struct nfe_softc *sc)
 	}
 }
 
-/*
- * It's copy of ath_defrag(ath(4)).
- *
- * Defragment an mbuf chain, returning at most maxfrags separate
- * mbufs+clusters.  If this is not possible NULL is returned and
- * the original mbuf chain is left in it's present (potentially
- * modified) state.  We use two techniques: collapsing consecutive
- * mbufs and replacing consecutive mbufs by a cluster.
- */
-static struct mbuf *
-nfe_defrag(struct mbuf *m0, int how, int maxfrags)
-{
-	struct mbuf *m, *n, *n2, **prev;
-	u_int curfrags;
-
-	/*
-	 * Calculate the current number of frags.
-	 */
-	curfrags = 0;
-	for (m = m0; m != NULL; m = m->m_next)
-		curfrags++;
-	/*
-	 * First, try to collapse mbufs.  Note that we always collapse
-	 * towards the front so we don't need to deal with moving the
-	 * pkthdr.  This may be suboptimal if the first mbuf has much
-	 * less data than the following.
-	 */
-	m = m0;
-again:
-	for (;;) {
-		n = m->m_next;
-		if (n == NULL)
-			break;
-		if ((m->m_flags & M_RDONLY) == 0 &&
-		    n->m_len < M_TRAILINGSPACE(m)) {
-			bcopy(mtod(n, void *), mtod(m, char *) + m->m_len,
-				n->m_len);
-			m->m_len += n->m_len;
-			m->m_next = n->m_next;
-			m_free(n);
-			if (--curfrags <= maxfrags)
-				return (m0);
-		} else
-			m = n;
-	}
-	KASSERT(maxfrags > 1,
-		("maxfrags %u, but normal collapse failed", maxfrags));
-	/*
-	 * Collapse consecutive mbufs to a cluster.
-	 */
-	prev = &m0->m_next;		/* NB: not the first mbuf */
-	while ((n = *prev) != NULL) {
-		if ((n2 = n->m_next) != NULL &&
-		    n->m_len + n2->m_len < MCLBYTES) {
-			m = m_getcl(how, MT_DATA, 0);
-			if (m == NULL)
-				goto bad;
-			bcopy(mtod(n, void *), mtod(m, void *), n->m_len);
-			bcopy(mtod(n2, void *), mtod(m, char *) + n->m_len,
-				n2->m_len);
-			m->m_len = n->m_len + n2->m_len;
-			m->m_next = n2->m_next;
-			*prev = m;
-			m_free(n);
-			m_free(n2);
-			if (--curfrags <= maxfrags)	/* +1 cl -2 mbufs */
-				return m0;
-			/*
-			 * Still not there, try the normal collapse
-			 * again before we allocate another cluster.
-			 */
-			goto again;
-		}
-		prev = &n->m_next;
-	}
-	/*
-	 * No place where we can collapse to a cluster; punt.
-	 * This can occur if, for example, you request 2 frags
-	 * but the packet requires that both be clusters (we
-	 * never reallocate the first mbuf to avoid moving the
-	 * packet header).
-	 */
-bad:
-	return (NULL);
-}
-
-
 static int
 nfe_encap(struct nfe_softc *sc, struct mbuf **m_head)
 {
@@ -2542,7 +2401,7 @@ nfe_encap(struct nfe_softc *sc, struct mbuf **m_head)
 	error = bus_dmamap_load_mbuf_sg(sc->txq.tx_data_tag, map, *m_head, segs,
 	    &nsegs, BUS_DMA_NOWAIT);
 	if (error == EFBIG) {
-		m = nfe_defrag(*m_head, M_DONTWAIT, NFE_MAX_SCATTER);
+		m = m_collapse(*m_head, M_DONTWAIT, NFE_MAX_SCATTER);
 		if (m == NULL) {
 			m_freem(*m_head);
 			*m_head = NULL;
@@ -2572,19 +2431,18 @@ nfe_encap(struct nfe_softc *sc, struct mbuf **m_head)
 	m = *m_head;
 	cflags = flags = 0;
 	tso_segsz = 0;
-	if ((m->m_pkthdr.csum_flags & NFE_CSUM_FEATURES) != 0) {
+	if ((m->m_pkthdr.csum_flags & CSUM_TSO) != 0) {
+		tso_segsz = (uint32_t)m->m_pkthdr.tso_segsz <<
+		    NFE_TX_TSO_SHIFT;
+		cflags &= ~(NFE_TX_IP_CSUM | NFE_TX_TCP_UDP_CSUM);
+		cflags |= NFE_TX_TSO;
+	} else if ((m->m_pkthdr.csum_flags & NFE_CSUM_FEATURES) != 0) {
 		if ((m->m_pkthdr.csum_flags & CSUM_IP) != 0)
 			cflags |= NFE_TX_IP_CSUM;
 		if ((m->m_pkthdr.csum_flags & CSUM_TCP) != 0)
 			cflags |= NFE_TX_TCP_UDP_CSUM;
 		if ((m->m_pkthdr.csum_flags & CSUM_UDP) != 0)
 			cflags |= NFE_TX_TCP_UDP_CSUM;
-	}
-	if ((m->m_pkthdr.csum_flags & CSUM_TSO) != 0) {
-		tso_segsz = (uint32_t)m->m_pkthdr.tso_segsz <<
-		    NFE_TX_TSO_SHIFT;
-		cflags &= ~(NFE_TX_IP_CSUM | NFE_TX_TCP_UDP_CSUM);
-		cflags |= NFE_TX_TSO;
 	}
 
 	for (i = 0; i < nsegs; i++) {
@@ -2696,7 +2554,7 @@ nfe_setmulti(struct nfe_softc *sc)
 	bcopy(etherbroadcastaddr, addr, ETHER_ADDR_LEN);
 	bcopy(etherbroadcastaddr, mask, ETHER_ADDR_LEN);
 
-	IF_ADDR_LOCK(ifp);
+	if_maddr_rlock(ifp);
 	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 		u_char *addrp;
 
@@ -2710,7 +2568,7 @@ nfe_setmulti(struct nfe_softc *sc)
 			mask[i] &= ~mcaddr;
 		}
 	}
-	IF_ADDR_UNLOCK(ifp);
+	if_maddr_runlock(ifp);
 
 	for (i = 0; i < ETHER_ADDR_LEN; i++) {
 		mask[i] |= addr[i];
@@ -2737,29 +2595,27 @@ done:
 
 
 static void
-nfe_tx_task(void *arg, int pending)
+nfe_start(struct ifnet *ifp)
 {
-	struct ifnet *ifp;
+	struct nfe_softc *sc = ifp->if_softc;
 
-	ifp = (struct ifnet *)arg;
-	nfe_start(ifp);
+	NFE_LOCK(sc);
+	nfe_start_locked(ifp);
+	NFE_UNLOCK(sc);
 }
 
-
 static void
-nfe_start(struct ifnet *ifp)
+nfe_start_locked(struct ifnet *ifp)
 {
 	struct nfe_softc *sc = ifp->if_softc;
 	struct mbuf *m0;
 	int enq;
 
-	NFE_LOCK(sc);
+	NFE_LOCK_ASSERT(sc);
 
 	if ((ifp->if_drv_flags & (IFF_DRV_RUNNING | IFF_DRV_OACTIVE)) !=
-	    IFF_DRV_RUNNING || sc->nfe_link == 0) {
-		NFE_UNLOCK(sc);
+	    IFF_DRV_RUNNING || sc->nfe_link == 0)
 		return;
-	}
 
 	for (enq = 0; !IFQ_DRV_IS_EMPTY(&ifp->if_snd);) {
 		IFQ_DRV_DEQUEUE(&ifp->if_snd, m0);
@@ -2789,8 +2645,6 @@ nfe_start(struct ifnet *ifp)
 		 */
 		sc->nfe_watchdog_timer = 5;
 	}
-
-	NFE_UNLOCK(sc);
 }
 
 
@@ -2808,7 +2662,7 @@ nfe_watchdog(struct ifnet *ifp)
 		if_printf(ifp, "watchdog timeout (missed Tx interrupts) "
 		    "-- recovering\n");
 		if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
-			taskqueue_enqueue_fast(sc->nfe_tq, &sc->nfe_tx_task);
+			nfe_start_locked(ifp);
 		return;
 	}
 	/* Check if we've lost start Tx command. */
@@ -2953,7 +2807,8 @@ nfe_init_locked(void *xsc)
 	NFE_WRITE(sc, NFE_STATUS, sc->mii_phyaddr << 24 | NFE_STATUS_MAGIC);
 
 	NFE_WRITE(sc, NFE_SETUP_R4, NFE_R4_MAGIC);
-	NFE_WRITE(sc, NFE_WOL_CTL, NFE_WOL_MAGIC);
+	/* Disable WOL. */
+	NFE_WRITE(sc, NFE_WOL_CTL, 0);
 
 	sc->rxtxctl &= ~NFE_RXTX_BIT2;
 	NFE_WRITE(sc, NFE_RXTX_CTL, sc->rxtxctl);
@@ -2970,6 +2825,9 @@ nfe_init_locked(void *xsc)
 	NFE_WRITE(sc, NFE_TX_CTL, NFE_TX_START);
 
 	NFE_WRITE(sc, NFE_PHY_STATUS, 0xf);
+
+	/* Clear hardware stats. */
+	nfe_stats_clear(sc);
 
 #ifdef DEVICE_POLLING
 	if (ifp->if_capenable & IFCAP_POLLING)
@@ -3059,6 +2917,8 @@ nfe_stop(struct ifnet *ifp)
 			tdata->m = NULL;
 		}
 	}
+	/* Update hardware stats. */
+	nfe_stats_update(sc);
 }
 
 
@@ -3088,10 +2948,10 @@ nfe_ifmedia_sts(struct ifnet *ifp, struct ifmediareq *ifmr)
 	NFE_LOCK(sc);
 	mii = device_get_softc(sc->nfe_miibus);
 	mii_pollstat(mii);
-	NFE_UNLOCK(sc);
 
 	ifmr->ifm_active = mii->mii_media_active;
 	ifmr->ifm_status = mii->mii_media_status;
+	NFE_UNLOCK(sc);
 }
 
 
@@ -3110,24 +2970,17 @@ nfe_tick(void *xsc)
 
 	mii = device_get_softc(sc->nfe_miibus);
 	mii_tick(mii);
+	nfe_stats_update(sc);
 	nfe_watchdog(ifp);
 	callout_reset(&sc->nfe_stat_ch, hz, nfe_tick, sc);
 }
 
 
-static void
+static int
 nfe_shutdown(device_t dev)
 {
-	struct nfe_softc *sc;
-	struct ifnet *ifp;
 
-	sc = device_get_softc(dev);
-
-	NFE_LOCK(sc);
-	ifp = sc->nfe_ifp;
-	nfe_stop(ifp);
-	/* nfe_reset(sc); */
-	NFE_UNLOCK(sc);
+	return (nfe_suspend(dev));
 }
 
 
@@ -3214,4 +3067,308 @@ sysctl_hw_nfe_proc_limit(SYSCTL_HANDLER_ARGS)
 
 	return (sysctl_int_range(oidp, arg1, arg2, req, NFE_PROC_MIN,
 	    NFE_PROC_MAX));
+}
+
+
+#define	NFE_SYSCTL_STAT_ADD32(c, h, n, p, d)	\
+	    SYSCTL_ADD_UINT(c, h, OID_AUTO, n, CTLFLAG_RD, p, 0, d)
+#define	NFE_SYSCTL_STAT_ADD64(c, h, n, p, d)	\
+	    SYSCTL_ADD_UQUAD(c, h, OID_AUTO, n, CTLFLAG_RD, p, d)
+
+static void
+nfe_sysctl_node(struct nfe_softc *sc)
+{
+	struct sysctl_ctx_list *ctx;
+	struct sysctl_oid_list *child, *parent;
+	struct sysctl_oid *tree;
+	struct nfe_hw_stats *stats;
+	int error;
+
+	stats = &sc->nfe_stats;
+	ctx = device_get_sysctl_ctx(sc->nfe_dev);
+	child = SYSCTL_CHILDREN(device_get_sysctl_tree(sc->nfe_dev));
+	SYSCTL_ADD_PROC(ctx, child,
+	    OID_AUTO, "process_limit", CTLTYPE_INT | CTLFLAG_RW,
+	    &sc->nfe_process_limit, 0, sysctl_hw_nfe_proc_limit, "I",
+	    "max number of Rx events to process");
+
+	sc->nfe_process_limit = NFE_PROC_DEFAULT;
+	error = resource_int_value(device_get_name(sc->nfe_dev),
+	    device_get_unit(sc->nfe_dev), "process_limit",
+	    &sc->nfe_process_limit);
+	if (error == 0) {
+		if (sc->nfe_process_limit < NFE_PROC_MIN ||
+		    sc->nfe_process_limit > NFE_PROC_MAX) {
+			device_printf(sc->nfe_dev,
+			    "process_limit value out of range; "
+			    "using default: %d\n", NFE_PROC_DEFAULT);
+			sc->nfe_process_limit = NFE_PROC_DEFAULT;
+		}
+	}
+
+	if ((sc->nfe_flags & (NFE_MIB_V1 | NFE_MIB_V2 | NFE_MIB_V3)) == 0)
+		return;
+
+	tree = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats", CTLFLAG_RD,
+	    NULL, "NFE statistics");
+	parent = SYSCTL_CHILDREN(tree);
+
+	/* Rx statistics. */
+	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "rx", CTLFLAG_RD,
+	    NULL, "Rx MAC statistics");
+	child = SYSCTL_CHILDREN(tree);
+
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "frame_errors",
+	    &stats->rx_frame_errors, "Framing Errors");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "extra_bytes",
+	    &stats->rx_extra_bytes, "Extra Bytes");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "late_cols",
+	    &stats->rx_late_cols, "Late Collisions");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "runts",
+	    &stats->rx_runts, "Runts");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "jumbos",
+	    &stats->rx_jumbos, "Jumbos");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "fifo_overuns",
+	    &stats->rx_fifo_overuns, "FIFO Overruns");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "crc_errors",
+	    &stats->rx_crc_errors, "CRC Errors");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "fae",
+	    &stats->rx_fae, "Frame Alignment Errors");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "len_errors",
+	    &stats->rx_len_errors, "Length Errors");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "unicast",
+	    &stats->rx_unicast, "Unicast Frames");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "multicast",
+	    &stats->rx_multicast, "Multicast Frames");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "broadcast",
+	    &stats->rx_broadcast, "Broadcast Frames");
+	if ((sc->nfe_flags & NFE_MIB_V2) != 0) {
+		NFE_SYSCTL_STAT_ADD64(ctx, child, "octets",
+		    &stats->rx_octets, "Octets");
+		NFE_SYSCTL_STAT_ADD32(ctx, child, "pause",
+		    &stats->rx_pause, "Pause frames");
+		NFE_SYSCTL_STAT_ADD32(ctx, child, "drops",
+		    &stats->rx_drops, "Drop frames");
+	}
+
+	/* Tx statistics. */
+	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "tx", CTLFLAG_RD,
+	    NULL, "Tx MAC statistics");
+	child = SYSCTL_CHILDREN(tree);
+	NFE_SYSCTL_STAT_ADD64(ctx, child, "octets",
+	    &stats->tx_octets, "Octets");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "zero_rexmits",
+	    &stats->tx_zero_rexmits, "Zero Retransmits");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "one_rexmits",
+	    &stats->tx_one_rexmits, "One Retransmits");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "multi_rexmits",
+	    &stats->tx_multi_rexmits, "Multiple Retransmits");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "late_cols",
+	    &stats->tx_late_cols, "Late Collisions");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "fifo_underuns",
+	    &stats->tx_fifo_underuns, "FIFO Underruns");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "carrier_losts",
+	    &stats->tx_carrier_losts, "Carrier Losts");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "excess_deferrals",
+	    &stats->tx_excess_deferals, "Excess Deferrals");
+	NFE_SYSCTL_STAT_ADD32(ctx, child, "retry_errors",
+	    &stats->tx_retry_errors, "Retry Errors");
+	if ((sc->nfe_flags & NFE_MIB_V2) != 0) {
+		NFE_SYSCTL_STAT_ADD32(ctx, child, "deferrals",
+		    &stats->tx_deferals, "Deferrals");
+		NFE_SYSCTL_STAT_ADD32(ctx, child, "frames",
+		    &stats->tx_frames, "Frames");
+		NFE_SYSCTL_STAT_ADD32(ctx, child, "pause",
+		    &stats->tx_pause, "Pause Frames");
+	}
+	if ((sc->nfe_flags & NFE_MIB_V3) != 0) {
+		NFE_SYSCTL_STAT_ADD32(ctx, child, "unicast",
+		    &stats->tx_deferals, "Unicast Frames");
+		NFE_SYSCTL_STAT_ADD32(ctx, child, "multicast",
+		    &stats->tx_frames, "Multicast Frames");
+		NFE_SYSCTL_STAT_ADD32(ctx, child, "broadcast",
+		    &stats->tx_pause, "Broadcast Frames");
+	}
+}
+
+#undef NFE_SYSCTL_STAT_ADD32
+#undef NFE_SYSCTL_STAT_ADD64
+
+static void
+nfe_stats_clear(struct nfe_softc *sc)
+{
+	int i, mib_cnt;
+
+	if ((sc->nfe_flags & NFE_MIB_V1) != 0)
+		mib_cnt = NFE_NUM_MIB_STATV1;
+	else if ((sc->nfe_flags & (NFE_MIB_V2 | NFE_MIB_V3)) != 0)
+		mib_cnt = NFE_NUM_MIB_STATV2;
+	else
+		return;
+
+	for (i = 0; i < mib_cnt; i += sizeof(uint32_t))
+		NFE_READ(sc, NFE_TX_OCTET + i);
+
+	if ((sc->nfe_flags & NFE_MIB_V3) != 0) {
+		NFE_READ(sc, NFE_TX_UNICAST);
+		NFE_READ(sc, NFE_TX_MULTICAST);
+		NFE_READ(sc, NFE_TX_BROADCAST);
+	}
+}
+
+static void
+nfe_stats_update(struct nfe_softc *sc)
+{
+	struct nfe_hw_stats *stats;
+
+	NFE_LOCK_ASSERT(sc);
+
+	if ((sc->nfe_flags & (NFE_MIB_V1 | NFE_MIB_V2 | NFE_MIB_V3)) == 0)
+		return;
+
+	stats = &sc->nfe_stats;
+	stats->tx_octets += NFE_READ(sc, NFE_TX_OCTET);
+	stats->tx_zero_rexmits += NFE_READ(sc, NFE_TX_ZERO_REXMIT);
+	stats->tx_one_rexmits += NFE_READ(sc, NFE_TX_ONE_REXMIT);
+	stats->tx_multi_rexmits += NFE_READ(sc, NFE_TX_MULTI_REXMIT);
+	stats->tx_late_cols += NFE_READ(sc, NFE_TX_LATE_COL);
+	stats->tx_fifo_underuns += NFE_READ(sc, NFE_TX_FIFO_UNDERUN);
+	stats->tx_carrier_losts += NFE_READ(sc, NFE_TX_CARRIER_LOST);
+	stats->tx_excess_deferals += NFE_READ(sc, NFE_TX_EXCESS_DEFERRAL);
+	stats->tx_retry_errors += NFE_READ(sc, NFE_TX_RETRY_ERROR);
+	stats->rx_frame_errors += NFE_READ(sc, NFE_RX_FRAME_ERROR);
+	stats->rx_extra_bytes += NFE_READ(sc, NFE_RX_EXTRA_BYTES);
+	stats->rx_late_cols += NFE_READ(sc, NFE_RX_LATE_COL);
+	stats->rx_runts += NFE_READ(sc, NFE_RX_RUNT);
+	stats->rx_jumbos += NFE_READ(sc, NFE_RX_JUMBO);
+	stats->rx_fifo_overuns += NFE_READ(sc, NFE_RX_FIFO_OVERUN);
+	stats->rx_crc_errors += NFE_READ(sc, NFE_RX_CRC_ERROR);
+	stats->rx_fae += NFE_READ(sc, NFE_RX_FAE);
+	stats->rx_len_errors += NFE_READ(sc, NFE_RX_LEN_ERROR);
+	stats->rx_unicast += NFE_READ(sc, NFE_RX_UNICAST);
+	stats->rx_multicast += NFE_READ(sc, NFE_RX_MULTICAST);
+	stats->rx_broadcast += NFE_READ(sc, NFE_RX_BROADCAST);
+
+	if ((sc->nfe_flags & NFE_MIB_V2) != 0) {
+		stats->tx_deferals += NFE_READ(sc, NFE_TX_DEFERAL);
+		stats->tx_frames += NFE_READ(sc, NFE_TX_FRAME);
+		stats->rx_octets += NFE_READ(sc, NFE_RX_OCTET);
+		stats->tx_pause += NFE_READ(sc, NFE_TX_PAUSE);
+		stats->rx_pause += NFE_READ(sc, NFE_RX_PAUSE);
+		stats->rx_drops += NFE_READ(sc, NFE_RX_DROP);
+	}
+
+	if ((sc->nfe_flags & NFE_MIB_V3) != 0) {
+		stats->tx_unicast += NFE_READ(sc, NFE_TX_UNICAST);
+		stats->tx_multicast += NFE_READ(sc, NFE_TX_MULTICAST);
+		stats->rx_broadcast += NFE_READ(sc, NFE_TX_BROADCAST);
+	}
+}
+
+
+static void
+nfe_set_linkspeed(struct nfe_softc *sc)
+{
+	struct mii_softc *miisc;
+	struct mii_data *mii;
+	int aneg, i, phyno;
+
+	NFE_LOCK_ASSERT(sc);
+
+	mii = device_get_softc(sc->nfe_miibus);
+	mii_pollstat(mii);
+	aneg = 0;
+	if ((mii->mii_media_status & (IFM_ACTIVE | IFM_AVALID)) ==
+	    (IFM_ACTIVE | IFM_AVALID)) {
+		switch IFM_SUBTYPE(mii->mii_media_active) {
+		case IFM_10_T:
+		case IFM_100_TX:
+			return;
+		case IFM_1000_T:
+			aneg++;
+			break;
+		default:
+			break;
+		}
+	}
+	miisc = LIST_FIRST(&mii->mii_phys);
+	phyno = miisc->mii_phy;
+	LIST_FOREACH(miisc, &mii->mii_phys, mii_list)
+		PHY_RESET(miisc);
+	nfe_miibus_writereg(sc->nfe_dev, phyno, MII_100T2CR, 0);
+	nfe_miibus_writereg(sc->nfe_dev, phyno,
+	    MII_ANAR, ANAR_TX_FD | ANAR_TX | ANAR_10_FD | ANAR_10 | ANAR_CSMA);
+	nfe_miibus_writereg(sc->nfe_dev, phyno,
+	    MII_BMCR, BMCR_RESET | BMCR_AUTOEN | BMCR_STARTNEG);
+	DELAY(1000);
+	if (aneg != 0) {
+		/*
+		 * Poll link state until nfe(4) get a 10/100Mbps link.
+		 */
+		for (i = 0; i < MII_ANEGTICKS_GIGE; i++) {
+			mii_pollstat(mii);
+			if ((mii->mii_media_status & (IFM_ACTIVE | IFM_AVALID))
+			    == (IFM_ACTIVE | IFM_AVALID)) {
+				switch (IFM_SUBTYPE(mii->mii_media_active)) {
+				case IFM_10_T:
+				case IFM_100_TX:
+					nfe_mac_config(sc, mii);
+					return;
+				default:
+					break;
+				}
+			}
+			NFE_UNLOCK(sc);
+			pause("nfelnk", hz);
+			NFE_LOCK(sc);
+		}
+		if (i == MII_ANEGTICKS_GIGE)
+			device_printf(sc->nfe_dev,
+			    "establishing a link failed, WOL may not work!");
+	}
+	/*
+	 * No link, force MAC to have 100Mbps, full-duplex link.
+	 * This is the last resort and may/may not work.
+	 */
+	mii->mii_media_status = IFM_AVALID | IFM_ACTIVE;
+	mii->mii_media_active = IFM_ETHER | IFM_100_TX | IFM_FDX;
+	nfe_mac_config(sc, mii);
+}
+
+
+static void
+nfe_set_wol(struct nfe_softc *sc)
+{
+	struct ifnet *ifp;
+	uint32_t wolctl;
+	int pmc;
+	uint16_t pmstat;
+
+	NFE_LOCK_ASSERT(sc);
+
+	if (pci_find_cap(sc->nfe_dev, PCIY_PMG, &pmc) != 0)
+		return;
+	ifp = sc->nfe_ifp;
+	if ((ifp->if_capenable & IFCAP_WOL_MAGIC) != 0)
+		wolctl = NFE_WOL_MAGIC;
+	else
+		wolctl = 0;
+	NFE_WRITE(sc, NFE_WOL_CTL, wolctl);
+	if ((ifp->if_capenable & IFCAP_WOL_MAGIC) != 0) {
+		nfe_set_linkspeed(sc);
+		if ((sc->nfe_flags & NFE_PWR_MGMT) != 0)
+			NFE_WRITE(sc, NFE_PWR2_CTL,
+			    NFE_READ(sc, NFE_PWR2_CTL) & ~NFE_PWR2_GATE_CLOCKS);
+		/* Enable RX. */
+		NFE_WRITE(sc, NFE_RX_RING_ADDR_HI, 0);
+		NFE_WRITE(sc, NFE_RX_RING_ADDR_LO, 0);
+		NFE_WRITE(sc, NFE_RX_CTL, NFE_READ(sc, NFE_RX_CTL) |
+		    NFE_RX_START);
+	}
+	/* Request PME if WOL is requested. */
+	pmstat = pci_read_config(sc->nfe_dev, pmc + PCIR_POWER_STATUS, 2);
+	pmstat &= ~(PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE);
+	if ((ifp->if_capenable & IFCAP_WOL) != 0)
+		pmstat |= PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE;
+	pci_write_config(sc->nfe_dev, pmc + PCIR_POWER_STATUS, pmstat, 2);
 }

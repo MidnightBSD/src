@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)vfslist.c	8.1 (Berkeley) 5/8/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sbin/mount/vfslist.c 128073 2004-04-09 19:58:40Z markm $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <stdlib.h>
@@ -44,9 +44,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sbin/mount/vfslist.c 128073 2004-04-09 19:58:4
 static int	  skipvfs;
 
 int
-checkvfsname(vfsname, vfslist)
-	const char *vfsname;
-	const char **vfslist;
+checkvfsname(const char *vfsname, const char **vfslist)
 {
 
 	if (vfslist == NULL)
@@ -60,8 +58,7 @@ checkvfsname(vfsname, vfslist)
 }
 
 const char **
-makevfslist(fslist)
-	char *fslist;
+makevfslist(char *fslist)
 {
 	const char **av;
 	int i;

@@ -24,7 +24,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/kgzip/aouthdr.c 68313 2000-11-04 13:02:00Z rnordier $
+ * $FreeBSD$
  */
 
 #include <stddef.h>

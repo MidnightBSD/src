@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)options.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/sh/options.c 157601 2006-04-09 12:21:20Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 #include <signal.h>
 #include <unistd.h>
@@ -56,6 +56,7 @@ __FBSDID("$FreeBSD: release/7.0.0/bin/sh/options.c 157601 2006-04-09 12:21:20Z s
 #include "memalloc.h"
 #include "error.h"
 #include "mystring.h"
+#include "builtins.h"
 #ifndef NO_HISTORY
 #include "myhistedit.h"
 #endif
@@ -64,15 +65,15 @@ char *arg0;			/* value of $0 */
 struct shparam shellparam;	/* current positional parameters */
 char **argptr;			/* argument list for builtin commands */
 char *shoptarg;			/* set by nextopt (like getopt) */
-char *optptr;			/* used by nextopt */
+char *nextopt_optptr;		/* used by nextopt */
 
 char *minusc;			/* argument to -c option */
 
 
-STATIC void options(int);
-STATIC void minus_o(char *, int);
-STATIC void setoption(int, int);
-STATIC int getopts(char *, char *, char **, char ***, char **);
+static void options(int);
+static void minus_o(char *, int);
+static void setoption(int, int);
+static int getopts(char *, char *, char **, char ***, char **);
 
 
 /*
@@ -83,6 +84,7 @@ void
 procargs(int argc, char **argv)
 {
 	int i;
+	char *scriptname;
 
 	argptr = argv;
 	if (argc > 0)
@@ -93,8 +95,11 @@ procargs(int argc, char **argv)
 	options(1);
 	if (*argptr == NULL && minusc == NULL)
 		sflag = 1;
-	if (iflag == 2 && sflag == 1 && isatty(0) && isatty(1))
+	if (iflag != 0 && sflag == 1 && isatty(0) && isatty(1)) {
 		iflag = 1;
+		if (Eflag == 2)
+			Eflag = 1;
+	}
 	if (mflag == 2)
 		mflag = iflag;
 	for (i = 0; i < NOPTS; i++)
@@ -102,8 +107,9 @@ procargs(int argc, char **argv)
 			optlist[i].val = 0;
 	arg0 = argv[0];
 	if (sflag == 0 && minusc == NULL) {
-		commandname = arg0 = *argptr++;
-		setinputfile(commandname, 0);
+		scriptname = *argptr++;
+		setinputfile(scriptname, 0);
+		commandname = arg0 = scriptname;
 	}
 	/* POSIX 1003.2: first arg after -c cmd is $0, remainder $1... */
 	if (argptr && minusc && *argptr)
@@ -135,7 +141,7 @@ optschanged(void)
  * to the argument list; we advance it past the options.
  */
 
-STATIC void
+static void
 options(int cmdline)
 {
 	char *kp, *p;
@@ -195,13 +201,8 @@ options(int cmdline)
 				minus_o(*argptr, val);
 				if (*argptr)
 					argptr++;
-			} else {
-				if (c == 'p' && !val && privileged) {
-					(void) setuid(getuid());
-					(void) setgid(getgid());
-				}
+			} else
 				setoption(c, val);
-			}
 		}
 	}
 	return;
@@ -244,7 +245,7 @@ end_options2:
 	}
 }
 
-STATIC void
+static void
 minus_o(char *name, int val)
 {
 	int i;
@@ -258,21 +259,16 @@ minus_o(char *name, int val)
 					optlist[i].val ? "on" : "off");
 		} else {
 			/* Output suitable for re-input to shell. */
-			for (i = 0; i < NOPTS; i++) {
-				if (i % 6 == 0)
-					out1str(i == 0 ? "set" : "\nset");
-				out1fmt(" %co %s", optlist[i].val ? '-' : '+',
-					optlist[i].name);
-			}
-			out1c('\n');
+			for (i = 0; i < NOPTS; i++)
+				out1fmt("%s %co %s%s",
+				    i % 6 == 0 ? "set" : "",
+				    optlist[i].val ? '-' : '+',
+				    optlist[i].name,
+				    i % 6 == 5 || i == NOPTS - 1 ? "\n" : "");
 		}
 	} else {
 		for (i = 0; i < NOPTS; i++)
 			if (equal(name, optlist[i].name)) {
-				if (!val && privileged && equal(name, "privileged")) {
-					(void) setuid(getuid());
-					(void) setgid(getgid());
-				}
 				setoption(optlist[i].letter, val);
 				return;
 			}
@@ -281,11 +277,17 @@ minus_o(char *name, int val)
 }
 
 
-STATIC void
+static void
 setoption(int flag, int val)
 {
 	int i;
 
+	if (flag == 'p' && !val && privileged) {
+		if (setgid(getgid()) == -1)
+			error("setgid");
+		if (setuid(getuid()) == -1)
+			error("setuid");
+	}
 	for (i = 0; i < NOPTS; i++)
 		if (optlist[i].letter == flag) {
 			optlist[i].val = val;
@@ -300,21 +302,6 @@ setoption(int flag, int val)
 		}
 	error("Illegal option -%c", flag);
 }
-
-
-
-#ifdef mkinit
-INCLUDE "options.h"
-
-SHELLPROC {
-	int i;
-
-	for (i = 0; i < NOPTS; i++)
-		optlist[i].val = 0;
-	optschanged();
-
-}
-#endif
 
 
 /*
@@ -338,6 +325,7 @@ setparam(char **argv)
 	shellparam.malloc = 1;
 	shellparam.nparam = nparam;
 	shellparam.p = newparam;
+	shellparam.reset = 1;
 	shellparam.optnext = NULL;
 }
 
@@ -383,7 +371,7 @@ shiftcmd(int argc, char **argv)
 	}
 	ap2 = shellparam.p;
 	while ((*ap2++ = *ap1++) != NULL);
-	shellparam.optnext = NULL;
+	shellparam.reset = 1;
 	INTON;
 	return 0;
 }
@@ -414,7 +402,6 @@ void
 getoptsreset(const char *value)
 {
 	if (number(value) == 1) {
-		shellparam.optnext = NULL;
 		shellparam.reset = 1;
 	}
 }
@@ -448,7 +435,7 @@ getoptscmd(int argc, char **argv)
 		       &shellparam.optptr);
 }
 
-STATIC int
+static int
 getopts(char *optstr, char *optvar, char **optfirst, char ***optnext,
     char **optptr)
 {
@@ -554,12 +541,13 @@ out:
  */
 
 int
-nextopt(char *optstring)
+nextopt(const char *optstring)
 {
-	char *p, *q;
+	char *p;
+	const char *q;
 	char c;
 
-	if ((p = optptr) == NULL || *p == '\0') {
+	if ((p = nextopt_optptr) == NULL || *p == '\0') {
 		p = *argptr;
 		if (p == NULL || *p != '-' || *++p == '\0')
 			return '\0';
@@ -580,6 +568,6 @@ nextopt(char *optstring)
 		shoptarg = p;
 		p = NULL;
 	}
-	optptr = p;
+	nextopt_optptr = p;
 	return c;
 }

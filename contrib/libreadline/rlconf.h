@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/contrib/libreadline/rlconf.h 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $FreeBSD$ */
 /* rlconf.h -- readline configuration definitions */
 
 /* Copyright (C) 1994 Free Software Foundation, Inc.

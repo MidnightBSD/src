@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/random/hash.h 128059 2004-04-09 15:47:10Z markm $
+ * $FreeBSD$
  */
 
 #define KEYSIZE		32		/* (in bytes) 32 bytes == 256 bits */

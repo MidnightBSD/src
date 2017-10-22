@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/libexec/rpc.rusersd/Makefile 74814 2001-03-26 14:22:12Z ru $
+# $FreeBSD$
 
 PROG =	rpc.rusersd
 SRCS =	rusersd.c rusers_proc.c
@@ -11,6 +11,5 @@ LDADD=	-lrpcsvc -lutil
 #CFLAGS+= -DXIDLE
 #LDADD+= -L/usr/X11R6/lib -lXext -lX11
 #.endif
-
 
 .include <bsd.prog.mk>

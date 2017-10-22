@@ -26,15 +26,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_multi_np.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <pthread.h>
 #include <pthread_np.h>
-
+#include "un-namespace.h"
 #include "thr_private.h"
-
-LT10_COMPAT_PRIVATE(_pthread_multi_np);
-LT10_COMPAT_DEFAULT(pthread_multi_np);
 
 __weak_reference(_pthread_multi_np, pthread_multi_np);
 
@@ -47,6 +46,6 @@ _pthread_multi_np()
 	 * XXX - Do we want to do this?
 	 * __is_threaded = 1;
 	 */
-	pthread_resume_all_np();
+	_pthread_resume_all_np();
 	return (0);
 }

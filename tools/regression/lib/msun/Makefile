@@ -1,8 +1,9 @@
-# $FreeBSD: release/7.0.0/tools/regression/lib/msun/Makefile 161526 2006-08-22 08:03:01Z ru $
+# $FreeBSD$
 
-TESTS=	test-fenv test-ilogb test-lrint test-lround test-next test-rem
+TESTS=	test-cexp test-conj test-csqrt test-exponential test-fenv test-fma \
+	test-fmaxmin test-ilogb test-invtrig test-logarithm test-lrint \
+	test-lround test-nan test-nearbyint test-next test-rem test-trig
 CFLAGS+= -O0 -lm
-ARCH!=	uname -m
 
 .PHONY: tests
 tests: ${TESTS}

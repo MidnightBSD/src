@@ -34,10 +34,12 @@
  */
 
 #include <machine/asm.h>
-
-RCSID("$FreeBSD: release/7.0.0/lib/msun/i387/e_sqrt.S 141280 2005-02-04 14:08:32Z das $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(sqrt)
 	fldl	4(%esp)
 	fsqrt
 	ret
+END(sqrt)
+
+	.section .note.GNU-stack,"",%progbits

@@ -20,7 +20,7 @@ along with GCC; see the file COPYING.  If not, write to the Free
 Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA
 02110-1301, USA.  */
 
-/* $FreeBSD: release/7.0.0/contrib/gcc/toplev.c 174854 2007-12-22 06:32:46Z cvs2svn $ */
+/* $FreeBSD$ */
 
 /* This is the top level of cc1/c++.
    It parses command args, opens files, invokes the various passes
@@ -1080,9 +1080,7 @@ compile_file (void)
 
   dw2_output_indirect_constants ();
 
-  /* Flush any pending external directives.  cgraph did this for
-     assemble_external calls from the front end, but the RTL
-     expander can also generate them.  */
+  /* Flush any pending external directives.  */
   process_pending_assemble_externals ();
 
   /* Attach a special .ident directive to the end of the file to identify

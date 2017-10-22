@@ -1,2 +1,0 @@
-# $FreeBSD: release/7.0.0/tools/regression/bin/sh/builtins/command4.127 151797 2005-10-28 14:02:42Z stefanf $
-command -v nonexisting

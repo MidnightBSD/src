@@ -34,11 +34,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/geom/geom_sunlabel.c 152971 2005-11-30 22:15:00Z sobomax $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/endian.h>
 #include <sys/systm.h>
+#include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/conf.h>
 #include <sys/bio.h>
@@ -46,10 +47,13 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/geom/geom_sunlabel.c 152971 2005-11-30 22:
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/md5.h>
+#include <sys/sbuf.h>
 #include <sys/sun_disklabel.h>
 #include <geom/geom.h>
 #include <geom/geom_slice.h>
 #include <machine/endian.h>
+
+FEATURE(geom_sunlabel, "GEOM Sun/Solaris partitioning support");
 
 #define SUNLABEL_CLASS_NAME "SUN"
 

@@ -38,7 +38,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: release/7.0.0/sys/compat/svr4/svr4_resource.h 139743 2005-01-05 22:34:37Z imp $
+ * $FreeBSD$
  */
 
 /*-

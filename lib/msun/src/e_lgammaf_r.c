@@ -13,9 +13,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: release/7.0.0/lib/msun/src/e_lgammaf_r.c 169220 2007-05-02 16:54:22Z bde $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include "math.h"
 #include "math_private.h"

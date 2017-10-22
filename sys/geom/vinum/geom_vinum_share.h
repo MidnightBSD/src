@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004 Lukas Ertl
+ * Copyright (c) 2004, 2007 Lukas Ertl
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/geom/vinum/geom_vinum_share.h 137727 2004-11-15 12:30:59Z le $
+ * $FreeBSD$
  */
 
 #ifndef _GEOM_VINUM_SHARE_H_
@@ -41,6 +41,10 @@ enum {
 off_t	gv_sizespec(char *);
 int	gv_tokenize(char *, char **, int);
 
+struct gv_sd	 *gv_alloc_sd(void);
+struct gv_volume *gv_alloc_volume(void);
+struct gv_plex	 *gv_alloc_plex(void);
+struct gv_drive	 *gv_alloc_drive(void);
 struct gv_drive	 *gv_new_drive(int, char **);
 struct gv_plex	 *gv_new_plex(int, char **);
 struct gv_sd	 *gv_new_sd(int, char **);

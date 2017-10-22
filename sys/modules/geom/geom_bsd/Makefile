@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/geom/geom_bsd/Makefile 150373 2005-09-20 11:16:05Z imura $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../geom
 

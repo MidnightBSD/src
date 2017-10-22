@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/arm/include/pcb.h 139735 2005-01-05 21:58:49Z imp $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_PCB_H_
@@ -94,7 +94,7 @@ void	makectx(struct trapframe *tf, struct pcb *pcb);
 
 #ifdef _KERNEL
 
-void    savectx(struct pcb *);
+void    savectx(struct pcb *) __returns_twice;
 #endif	/* _KERNEL */
 
 #endif	/* !_MACHINE_PCB_H_ */

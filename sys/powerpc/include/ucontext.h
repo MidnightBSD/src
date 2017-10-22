@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $NetBSD: signal.h,v 1.4 1998/09/14 02:48:34 thorpej Exp $
- * $FreeBSD: release/7.0.0/sys/powerpc/include/ucontext.h 139825 2005-01-07 02:29:27Z imp $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_UCONTEXT_H_
@@ -44,9 +44,24 @@ typedef struct __mcontext {
 	int		mc_len;			/* sizeof(__mcontext) */
 	uint64_t	mc_avec[32*2];		/* vector register file */
 	uint32_t	mc_av[2];
-	uint32_t	mc_frame[41];
+	register_t	mc_frame[42];
 	uint64_t	mc_fpreg[33];
 } mcontext_t __aligned(16);
+
+#if defined(_KERNEL) && defined(__powerpc64__)
+typedef struct __mcontext32 {
+	int		mc_vers;
+	int		mc_flags;
+#define _MC_FP_VALID	0x01
+#define _MC_AV_VALID	0x02
+	int		mc_onstack;	  	/* saved onstack flag */
+	int		mc_len;			/* sizeof(__mcontext) */
+	uint64_t	mc_avec[32*2];		/* vector register file */
+	uint32_t	mc_av[2];
+	uint32_t	mc_frame[42];
+	uint64_t	mc_fpreg[33];
+} mcontext32_t __aligned(16);
+#endif
 
 /* GPRs and supervisor-level regs */
 #define mc_gpr		mc_frame
@@ -56,9 +71,9 @@ typedef struct __mcontext {
 #define	mc_ctr		mc_frame[35]
 #define mc_srr0		mc_frame[36]
 #define mc_srr1		mc_frame[37]
-#define mc_dar		mc_frame[38]
-#define mc_dsisr	mc_frame[39]
-#define mc_exc		mc_frame[40]
+#define mc_exc		mc_frame[38]
+#define mc_dar		mc_frame[39]
+#define mc_dsisr	mc_frame[40]
 
 /* floating-point state */
 #define mc_fpscr	mc_fpreg[32]

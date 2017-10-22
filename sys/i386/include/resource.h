@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/i386/include/resource.h 139790 2005-01-06 22:18:23Z imp $ */
+/* $FreeBSD$ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *

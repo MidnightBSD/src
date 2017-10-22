@@ -18,12 +18,12 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: release/7.0.0/contrib/tcpdump/print-sl.c 172506 2007-10-10 16:59:15Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /tcpdump/master/tcpdump/print-sl.c,v 1.65 2005/04/06 21:32:42 mcr Exp $ (LBL)";
+    "@(#) $Header: /tcpdump/master/tcpdump/print-sl.c,v 1.65 2005-04-06 21:32:42 mcr Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -75,7 +75,7 @@ sl_if_print(const struct pcap_pkthdr *h, const u_char *p)
 		break;
 #ifdef INET6
 	case 6:
-		ip6_print((u_char *)ip, length);
+		ip6_print(gndo, (u_char *)ip, length);
 		break;
 #endif
 	default:

@@ -10,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -31,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/netsmb/smb_iod.c 161523 2006-08-22 03:05:51Z marcel $");
+__FBSDID("$FreeBSD$");
  
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -261,8 +255,8 @@ smb_iod_sendrq(struct smbiod *iod, struct smb_rq *rqp)
 	}
 	SMBSDEBUG("M:%04x, P:%04x, U:%04x, T:%04x\n", rqp->sr_mid, 0, 0, 0);
 	m_dumpm(rqp->sr_rq.mb_top);
-	m = m_copym(rqp->sr_rq.mb_top, 0, M_COPYALL, M_TRYWAIT);
-	error = rqp->sr_lerror = m ? SMB_TRAN_SEND(vcp, m, td) : ENOBUFS;
+	m = m_copym(rqp->sr_rq.mb_top, 0, M_COPYALL, M_WAIT);
+	error = rqp->sr_lerror = SMB_TRAN_SEND(vcp, m, td);
 	if (error == 0) {
 		getnanotime(&rqp->sr_timesent);
 		iod->iod_lastrqsent = rqp->sr_timesent;
@@ -653,6 +647,7 @@ smb_iod_thread(void *arg)
 	struct smbiod *iod = arg;
 
 	mtx_lock(&Giant);
+
 	/*
 	 * Here we assume that the thread structure will be the same
 	 * for an entire kthread (kproc, to be more precise) life.
@@ -662,13 +657,12 @@ smb_iod_thread(void *arg)
 	while ((iod->iod_flags & SMBIOD_SHUTDOWN) == 0) {
 		smb_iod_main(iod);
 		SMBIODEBUG("going to sleep for %d ticks\n", iod->iod_sleeptimo);
-/*		mtx_unlock(&Giant, MTX_DEF);*/
 		if (iod->iod_flags & SMBIOD_SHUTDOWN)
 			break;
 		tsleep(&iod->iod_flags, PWAIT, "90idle", iod->iod_sleeptimo);
 	}
-/*	mtx_lock(&Giant, MTX_DEF);*/
-	kthread_exit(0);
+	mtx_unlock(&Giant);
+	kproc_exit(0);
 }
 
 int
@@ -689,7 +683,7 @@ smb_iod_create(struct smb_vc *vcp)
 	TAILQ_INIT(&iod->iod_rqlist);
 	smb_sl_init(&iod->iod_evlock, "90evl");
 	STAILQ_INIT(&iod->iod_evlist);
-	error = kthread_create(smb_iod_thread, iod, &iod->iod_p,
+	error = kproc_create(smb_iod_thread, iod, &iod->iod_p,
 	    RFNOWAIT, 0, "smbiod%d", iod->iod_id);
 	if (error) {
 		SMBERROR("can't start smbiod: %d", error);

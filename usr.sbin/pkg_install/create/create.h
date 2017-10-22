@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/usr.sbin/pkg_install/create/create.h 152210 2005-11-08 20:48:26Z krion $ */
+/* $FreeBSD$ */
 
 /*
  * FreeBSD install - a package for the installation and maintainance
@@ -46,8 +46,9 @@ extern char	PlayPen[];
 extern int	Dereference;
 extern int	PlistOnly;
 extern int	Recursive;
+extern int	Regenerate;
 
-enum zipper {NONE, GZIP, BZIP, BZIP2 };
+enum zipper {NONE, GZIP, BZIP, BZIP2, XZ };
 extern enum zipper	Zipper;
 
 void		add_cksum(Package *, PackingList, const char *);

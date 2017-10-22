@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/include/ucontext.h 123255 2003-12-07 20:47:33Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_UCONTEXT_H_
@@ -79,7 +79,6 @@ typedef struct __mcontext {
 	unsigned long		mc_flags;
 #define	_MC_FLAGS_ASYNC_CONTEXT		0x0001
 #define	_MC_FLAGS_HIGHFP_VALID		0x0002
-#define	_MC_FLAGS_KSE_SET_MBOX		0x0004	/* Undocumented. Has to go. */
 #define	_MC_FLAGS_SYSCALL_CONTEXT	0x0008
 	unsigned long		_reserved_;
 	struct _special		mc_special;

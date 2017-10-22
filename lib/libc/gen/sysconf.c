@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)sysconf.c	8.2 (Berkeley) 3/20/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/gen/sysconf.c 168718 2007-04-14 13:06:57Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/gen/sysconf.c 168718 2007-04-14 13:06
 #include <sys/resource.h>
 #include <sys/socket.h>
 
+#include <elf.h>
 #include <errno.h>
 #include <limits.h>
 #include <paths.h>
@@ -50,7 +51,8 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/gen/sysconf.c 168718 2007-04-14 13:06
 #include <unistd.h>
 
 #include "../stdlib/atexit.h"
-#include "../stdtime/tzfile.h"
+#include "tzfile.h"		/* from ../../../contrib/tzcode/stdtime */
+#include "libc_private.h"
 
 #define	_PATH_ZONEINFO	TZDIR	/* from tzfile.h */
 
@@ -100,7 +102,6 @@ sysconf(name)
 		mib[1] = KERN_NGROUPS;
 		break;
 	case _SC_OPEN_MAX:
-	case _SC_STREAM_MAX:	/* assume fds run out before memory does */
 		if (getrlimit(RLIMIT_NOFILE, &rl) != 0)
 			return (-1);
 		if (rl.rlim_cur == RLIM_INFINITY)
@@ -109,6 +110,25 @@ sysconf(name)
 			errno = EOVERFLOW;
 			return (-1);
 		}
+		return ((long)rl.rlim_cur);
+	case _SC_STREAM_MAX:
+		if (getrlimit(RLIMIT_NOFILE, &rl) != 0)
+			return (-1);
+		if (rl.rlim_cur == RLIM_INFINITY)
+			return (-1);
+		if (rl.rlim_cur > LONG_MAX) {
+			errno = EOVERFLOW;
+			return (-1);
+		}
+		/*
+		 * struct __sFILE currently has a limitation that
+		 * file descriptors must fit in a signed short.
+		 * This doesn't precisely capture the letter of POSIX
+		 * but approximates the spirit.
+		 */
+		if (rl.rlim_cur > SHRT_MAX)
+			return (SHRT_MAX);
+
 		return ((long)rl.rlim_cur);
 	case _SC_JOB_CONTROL:
 		return (_POSIX_JOB_CONTROL);
@@ -567,6 +587,8 @@ yesno:
 
 	case _SC_NPROCESSORS_CONF:
 	case _SC_NPROCESSORS_ONLN:
+		if (_elf_aux_info(AT_NCPUS, &value, sizeof(value)) == 0)
+			return ((long)value);
 		mib[0] = CTL_HW;
 		mib[1] = HW_NCPU;
 		break;
@@ -577,6 +599,15 @@ yesno:
 		if (sysctlbyname("hw.availpages", &lvalue, &len, NULL, 0) == -1)
 			return (-1);
 		return (lvalue);
+#endif
+
+#ifdef _SC_CPUSET_SIZE
+	case _SC_CPUSET_SIZE:
+		len = sizeof(value);
+		if (sysctlbyname("kern.sched.cpusetsize", &value, &len, NULL,
+		    0) == -1)
+			return (-1);
+		return ((long)value);
 #endif
 
 	default:

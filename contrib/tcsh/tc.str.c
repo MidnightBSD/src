@@ -1,4 +1,4 @@
-/* $Header: /p/tcsh/cvsroot/tcsh/tc.str.c,v 3.26 2006/03/02 18:46:45 christos Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/tc.str.c,v 3.42 2012/01/10 21:34:31 christos Exp $ */
 /*
  * tc.str.c: Short string package
  * 	     This has been a lesson of how to write buggy code!
@@ -33,9 +33,10 @@
  */
 #include "sh.h"
 
+#include <assert.h>
 #include <limits.h>
 
-RCSID("$tcsh: tc.str.c,v 3.26 2006/03/02 18:46:45 christos Exp $")
+RCSID("$tcsh: tc.str.c,v 3.42 2012/01/10 21:34:31 christos Exp $")
 
 #define MALLOC_INCR	128
 #ifdef WIDE_STRINGS
@@ -46,13 +47,13 @@ RCSID("$tcsh: tc.str.c,v 3.26 2006/03/02 18:46:45 christos Exp $")
 
 #ifdef WIDE_STRINGS
 size_t
-one_mbtowc(wchar_t *pwc, const char *s, size_t n)
+one_mbtowc(Char *pwc, const char *s, size_t n)
 {
     int len;
 
     len = rt_mbtowc(pwc, s, n);
     if (len == -1) {
-        mbtowc(NULL, NULL, 0);
+        reset_mbtowc();
 	*pwc = (unsigned char)*s | INVALID_BYTE;
     }
     if (len <= 0)
@@ -61,7 +62,7 @@ one_mbtowc(wchar_t *pwc, const char *s, size_t n)
 }
 
 size_t
-one_wctomb(char *s, wchar_t wchar)
+one_wctomb(char *s, Char wchar)
 {
     int len;
 
@@ -69,7 +70,23 @@ one_wctomb(char *s, wchar_t wchar)
 	s[0] = wchar & 0xFF;
 	len = 1;
     } else {
-	len = wctomb(s, wchar);
+#ifdef UTF16_STRINGS
+	if (wchar >= 0x10000) {
+	    /* UTF-16 systems can't handle these values directly in calls to
+	       wctomb.  Convert value to UTF-16 surrogate and call wcstombs to
+	       convert the "string" to the correct multibyte representation,
+	       if any. */
+	    wchar_t ws[3];
+	    wchar -= 0x10000;
+	    ws[0] = 0xd800 | (wchar >> 10);
+	    ws[1] = 0xdc00 | (wchar & 0x3ff);
+	    ws[2] = 0;
+	    /* The return value of wcstombs excludes the trailing 0, so len is
+	       the correct number of multibytes for the Unicode char. */
+	    len = wcstombs (s, ws, MB_CUR_MAX + 1);
+	} else
+#endif
+	len = wctomb(s, (wchar_t) wchar);
 	if (len == -1)
 	    s[0] = wchar;
 	if (len <= 0)
@@ -79,14 +96,55 @@ one_wctomb(char *s, wchar_t wchar)
 }
 
 int
-rt_mbtowc(wchar_t *pwc, const char *s, size_t n)
+rt_mbtowc(Char *pwc, const char *s, size_t n)
 {
     int ret;
     char back[MB_LEN_MAX];
+    wchar_t tmp;
+#if defined(UTF16_STRINGS) && defined(HAVE_MBRTOWC)
+# if defined(AUTOSET_KANJI)
+    static mbstate_t mb_zero, mb;
+    /*
+     * Workaround the Shift-JIS endcoding that translates unshifted 7 bit ASCII!
+     */
+    if (!adrof(STRnokanji) && n && pwc && s && (*s == '\\' || *s == '~') &&
+	!memcmp(&mb, &mb_zero, sizeof(mb)))
+    {
+	*pwc = *s;
+	return 1;
+    }
+# else
+    mbstate_t mb;
+# endif
 
-    ret = mbtowc(pwc, s, n);
-    if (ret > 0 && (wctomb(back, *pwc) != ret || memcmp(s, back, ret) != 0))
+    memset (&mb, 0, sizeof mb);
+    ret = mbrtowc(&tmp, s, n, &mb);
+#else
+    ret = mbtowc(&tmp, s, n);
+#endif
+    if (ret > 0) {
+	*pwc = tmp;
+#if defined(UTF16_STRINGS) && defined(HAVE_MBRTOWC)
+	if (tmp >= 0xd800 && tmp <= 0xdbff) {
+	    /* UTF-16 surrogate pair.  Fetch second half and compute
+	       UTF-32 value.  Dispense with the inverse test in this case. */
+	    size_t n2 = mbrtowc(&tmp, s + ret, n - ret, &mb);
+	    if (n2 == 0 || n2 == (size_t)-1 || n2 == (size_t)-2)
+		ret = -1;
+	    else {
+		*pwc = (((*pwc & 0x3ff) << 10) | (tmp & 0x3ff)) + 0x10000;
+		ret += n2;
+	    }
+	} else
+#endif
+      	if (wctomb(back, *pwc) != ret || memcmp(s, back, ret) != 0)
+	    ret = -1;
+
+    } else if (ret == -2)
 	ret = -1;
+    else if (ret == 0)
+	*pwc = '\0';
+
     return ret;
 }
 #endif
@@ -169,17 +227,24 @@ short2str(const Char *src)
 	dst += one_wctomb(dst, *src & CHAR);
 	src++;
 	if (dst >= edst) {
+	    char *wdst = dst;
+	    char *wedst = edst;
+
 	    dstsize += MALLOC_INCR;
 	    sdst = xrealloc(sdst, (dstsize + MALLOC_SURPLUS) * sizeof(char));
 	    edst = &sdst[dstsize];
 	    dst = &edst[-MALLOC_INCR];
+	    while (wdst > wedst) {
+		dst++;
+		wdst--;
+	    }
 	}
     }
     *dst = 0;
     return (sdst);
 }
 
-#ifndef WIDE_STRINGS
+#if !defined (WIDE_STRINGS) || defined (UTF16_STRINGS)
 Char   *
 s_strcpy(Char *dst, const Char *src)
 {
@@ -327,18 +392,20 @@ int
 s_strcasecmp(const Char *str1, const Char *str2)
 {
 #ifdef WIDE_STRINGS
-    wchar_t l1 = 0, l2 = 0;
-    for (; *str1 && ((*str1 == *str2 && (l1 = l2 = 0) == 0) || 
-	(l1 = towlower(*str1)) == (l2 = towlower(*str2))); str1++, str2++)
-	continue;
-    
+    wint_t l1 = 0, l2 = 0;
+    for (; *str1; str1++, str2++)
+	if (*str1 == *str2)
+	    l1 = l2 = 0;
+	else if ((l1 = towlower(*str1)) != (l2 = towlower(*str2)))
+	    break;
 #else
-    unsigned char c1, c2, l1 = 0, l2 = 0;
-    for (; *str1 && ((*str1 == *str2 && (l1 = l2 = 0) == 0) || 
-	((c1 = (unsigned char)*str1) == *str1 &&
-	 (c2 = (unsigned char)*str2) == *str2 &&
-	(l1 = tolower(c1)) == (l2 = tolower(c2)))); str1++, str2++)
-	continue;
+    unsigned char l1 = 0, l2 = 0;
+    for (; *str1; str1++, str2++)
+	if (*str1 == *str2)
+		l1 = l2 = 0;
+	else if ((l1 = tolower((unsigned char)*str1)) !=
+	    (l2 = tolower((unsigned char)*str2)))
+	    break;
 #endif
     /*
      * The following case analysis is necessary so that characters which look
@@ -480,14 +547,21 @@ short2qstr(const Char *src)
 	dst += one_wctomb(dst, *src & CHAR);
 	src++;
 	if (dst >= edst) {
+	    ptrdiff_t i = dst - edst;
 	    dstsize += MALLOC_INCR;
 	    sdst = xrealloc(sdst, (dstsize + MALLOC_SURPLUS) * sizeof(char));
 	    edst = &sdst[dstsize];
-	    dst = &edst[-MALLOC_INCR];
+	    dst = &edst[-MALLOC_INCR + i];
 	}
     }
     *dst = 0;
     return (sdst);
+}
+
+struct blk_buf *
+bb_alloc()
+{
+    return xcalloc(1, sizeof(struct blk_buf));
 }
 
 static void
@@ -522,6 +596,13 @@ bb_cleanup(void *xbb)
     xfree(bb->vec);
 }
 
+void
+bb_free(void *bb)
+{
+    bb_cleanup(bb);
+    xfree(bb);
+}
+
 Char **
 bb_finish(struct blk_buf *bb)
 {
@@ -530,6 +611,13 @@ bb_finish(struct blk_buf *bb)
 }
 
 #define DO_STRBUF(STRBUF, CHAR, STRLEN)				\
+								\
+struct STRBUF *							\
+STRBUF##_alloc(void)						\
+{								\
+    return xcalloc(1, sizeof(struct STRBUF));			\
+}								\
+								\
 static void							\
 STRBUF##_store1(struct STRBUF *buf, CHAR c)			\
 {								\
@@ -540,6 +628,7 @@ STRBUF##_store1(struct STRBUF *buf, CHAR c)			\
 	    buf->size *= 2;					\
 	buf->s = xrealloc(buf->s, buf->size * sizeof(*buf->s));	\
     }								\
+    assert(buf->s);						\
     buf->s[buf->len] = c;					\
 }								\
 								\
@@ -591,6 +680,13 @@ STRBUF##_cleanup(void *xbuf)					\
 								\
     buf = xbuf;							\
     xfree(buf->s);						\
+}								\
+								\
+void								\
+STRBUF##_free(void *xbuf)					\
+{								\
+    STRBUF##_cleanup(xbuf);					\
+    xfree(xbuf);						\
 }								\
 								\
 const struct STRBUF STRBUF##_init /* = STRBUF##_INIT; */

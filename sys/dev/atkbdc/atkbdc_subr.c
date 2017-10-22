@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/atkbdc/atkbdc_subr.c 147271 2005-06-10 20:56:38Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_kbd.h"
 

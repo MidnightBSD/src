@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/librpcsvc/rnusers.c 121529 2003-10-26 03:43:35Z peter $");
+__FBSDID("$FreeBSD$");
 
 #if !defined(lint) && defined(SCCSIDS)
 static char sccsid[] = "@(#)rnusers.c	1.2 91/03/11 TIRPC 1.0; from 1.7 89/03/24 SMI";
@@ -47,9 +47,7 @@ static char sccsid[] = "@(#)rnusers.c	1.2 91/03/11 TIRPC 1.0; from 1.7 89/03/24 
 #include <rpcsvc/rnusers.h>
 
 int
-rusers(host, up)
-	char *host;
-	struct utmpidlearr *up;
+rusers(char *host, utmpidlearr *up)
 {
 	return (callrpc(host, RUSERSPROG, RUSERSVERS_IDLE, RUSERSPROC_NAMES,
 			(xdrproc_t)xdr_void, (char *) NULL,
@@ -57,8 +55,7 @@ rusers(host, up)
 }
 
 int
-rnusers(host)
-	char *host;
+rnusers(char *host)
 {
 	int nusers;
 

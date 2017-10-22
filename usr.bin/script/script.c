@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/script/script.c 125848 2004-02-15 17:30:13Z cperciva $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 static const char copyright[] =
@@ -63,19 +59,18 @@ static const char sccsid[] = "@(#)script.c	8.1 (Berkeley) 6/6/93";
 #include <termios.h>
 #include <unistd.h>
 
-FILE	*fscript;
-int	master, slave;
-int	child;
-const char *fname;
-int	qflg, ttyflg;
+static FILE *fscript;
+static int master, slave;
+static int child;
+static const char *fname;
+static int qflg, ttyflg;
 
-struct	termios tt;
+static struct termios tt;
 
-void	done(int) __dead2;
-void	dooutput(void);
-void	doshell(char **);
-void	fail(void);
-void	finish(void);
+static void done(int) __dead2;
+static void doshell(char **);
+static void fail(void);
+static void finish(void);
 static void usage(void);
 
 int
@@ -91,6 +86,7 @@ main(int argc, char *argv[])
 	char ibuf[BUFSIZ];
 	fd_set rfd;
 	int flushtime = 30;
+	int readstdin;
 
 	aflg = kflg = 0;
 	while ((ch = getopt(argc, argv, "aqkt:")) != -1)
@@ -126,7 +122,7 @@ main(int argc, char *argv[])
 	if ((fscript = fopen(fname, aflg ? "a" : "w")) == NULL)
 		err(1, "%s", fname);
 
-	if (ttyflg = isatty(STDIN_FILENO)) {
+	if ((ttyflg = isatty(STDIN_FILENO)) != 0) {
 		if (tcgetattr(STDIN_FILENO, &tt) == -1)
 			err(1, "tcgetattr");
 		if (ioctl(STDIN_FILENO, TIOCGWINSZ, &win) == -1)
@@ -158,20 +154,26 @@ main(int argc, char *argv[])
 	}
 	if (child == 0)
 		doshell(argv);
+	close(slave);
 
-	if (flushtime > 0)
-		tvp = &tv;
-	else
-		tvp = NULL;
-
-	start = time(0);
-	FD_ZERO(&rfd);
+	start = tvec = time(0);
+	readstdin = 1;
 	for (;;) {
+		FD_ZERO(&rfd);
 		FD_SET(master, &rfd);
-		FD_SET(STDIN_FILENO, &rfd);
-		if (flushtime > 0) {
-			tv.tv_sec = flushtime;
+		if (readstdin)
+			FD_SET(STDIN_FILENO, &rfd);
+		if (!readstdin && ttyflg) {
+			tv.tv_sec = 1;
 			tv.tv_usec = 0;
+			tvp = &tv;
+			readstdin = 1;
+		} else if (flushtime > 0) {
+			tv.tv_sec = flushtime - (tvec - start);
+			tv.tv_usec = 0;
+			tvp = &tv;
+		} else {
+			tvp = NULL;
 		}
 		n = select(master + 1, &rfd, 0, 0, tvp);
 		if (n < 0 && errno != EINTR)
@@ -180,8 +182,13 @@ main(int argc, char *argv[])
 			cc = read(STDIN_FILENO, ibuf, BUFSIZ);
 			if (cc < 0)
 				break;
-			if (cc == 0)
-				(void)write(master, ibuf, 0);
+			if (cc == 0) {
+				if (tcgetattr(master, &stt) == 0 &&
+				    (stt.c_lflag & ICANON) != 0) {
+					(void)write(master, &stt.c_cc[VEOF], 1);
+				}
+				readstdin = 0;
+			}
 			if (cc > 0) {
 				(void)write(master, ibuf, cc);
 				if (kflg && tcgetattr(master, &stt) >= 0 &&
@@ -215,40 +222,41 @@ usage(void)
 	exit(1);
 }
 
-void
+static void
 finish(void)
 {
-	pid_t pid;
-	int die, e, status;
+	int e, status;
 
-	die = e = 0;
-	while ((pid = wait3(&status, WNOHANG, 0)) > 0)
-	        if (pid == child) {
-			die = 1;
-			if (WIFEXITED(status))
-				e = WEXITSTATUS(status);
-			else if (WIFSIGNALED(status))
-				e = WTERMSIG(status);
-			else /* can't happen */
-				e = 1;
-		}
-
-	if (die)
+	if (waitpid(child, &status, 0) == child) {
+		if (WIFEXITED(status))
+			e = WEXITSTATUS(status);
+		else if (WIFSIGNALED(status))
+			e = WTERMSIG(status);
+		else /* can't happen */
+			e = 1;
 		done(e);
+	}
 }
 
-void
+static void
 doshell(char **av)
 {
 	const char *shell;
+	int k;
 
 	shell = getenv("SHELL");
 	if (shell == NULL)
 		shell = _PATH_BSHELL;
 
+	if (av[0])
+		for (k = 0 ; av[k] ; ++k)
+			fprintf(fscript, "%s%s", k ? " " : "", av[k]);
+		fprintf(fscript, "\r\n");
+
 	(void)close(master);
 	(void)fclose(fscript);
 	login_tty(slave);
+	setenv("SCRIPT", fname, 1);
 	if (av[0]) {
 		execvp(av[0], av);
 		warn("%s", av[0]);
@@ -259,14 +267,14 @@ doshell(char **av)
 	fail();
 }
 
-void
+static void
 fail(void)
 {
 	(void)kill(0, SIGTERM);
 	done(1);
 }
 
-void
+static void
 done(int eno)
 {
 	time_t tvec;

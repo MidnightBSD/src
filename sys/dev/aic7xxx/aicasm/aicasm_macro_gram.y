@@ -40,7 +40,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_macro_gram.y#5 $
  *
- * $FreeBSD: release/7.0.0/sys/dev/aic7xxx/aicasm/aicasm_macro_gram.y 165628 2006-12-29 13:08:46Z yar $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -51,12 +51,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sysexits.h>
-
-#ifdef __linux__
-#include "../queue.h"
-#else
 #include <sys/queue.h>
-#endif
 
 #include "aicasm.h"
 #include "aicasm_symbol.h"
@@ -65,6 +60,9 @@
 static symbol_t *macro_symbol;
 
 static void add_macro_arg(const char *argtext, int position);
+
+extern int mmlex(void);
+extern int mmparse(void);
 
 %}
 
@@ -157,7 +155,7 @@ add_macro_arg(const char *argtext, int argnum)
 	}
 }
 
-void
+static void
 mmerror(const char *string)
 {
 	stop(string, EX_DATAERR);

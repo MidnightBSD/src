@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/natd 165683 2006-12-31 10:37:18Z yar $
+# $FreeBSD$
 #
 
 # PROVIDE: natd
@@ -10,7 +10,7 @@
 . /etc/network.subr
 
 name="natd"
-rcvar=`set_rcvar`
+rcvar="natd_enable"
 command="/sbin/${name}"
 pidfile="/var/run/${name}.pid"
 start_precmd="natd_precmd"

@@ -10,10 +10,7 @@ Near term:
 Medium term:
 	Add missing VFS methods.
 	Do performance profile.
-	Tune hash algorithm used in cfs_namecache.
 	Tune hash algorithm used in cfs_subr.
+	Make MPSAFE
 
-Eventually:
-	Use standard queue macros.
-
-$FreeBSD: release/7.0.0/sys/fs/coda/TODO 171414 2007-07-12 20:40:38Z rwatson $
+$FreeBSD$

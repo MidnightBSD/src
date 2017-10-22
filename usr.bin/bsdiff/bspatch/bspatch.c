@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/bsdiff/bspatch/bspatch.c 164922 2006-12-05 20:22:14Z cperciva $");
+__FBSDID("$FreeBSD$");
 
 #include <bzlib.h>
 #include <stdlib.h>

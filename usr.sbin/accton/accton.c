@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)accton.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/accton/accton.c 133248 2004-08-07 04:19:37Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <err.h>
@@ -80,7 +80,7 @@ main(int argc, char *argv[])
 }
 
 static void
-usage()
+usage(void)
 {
 	(void)fprintf(stderr, "usage: accton [file]\n");
 	exit(1);

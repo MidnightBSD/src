@@ -34,7 +34,7 @@
 	.asciz "@(#)setlogin.s	5.2 (Berkeley) 4/12/91"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/i386/sys/setlogin.S 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "SYS.h"
 
@@ -52,3 +52,6 @@ SYSCALL(setlogin)
 	movl	$0,CNAME(_logname_valid)
 #endif
 	ret				/* setlogin(name) */
+END(__sys_setlogin)
+
+	.section .note.GNU-stack,"",%progbits

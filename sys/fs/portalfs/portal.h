@@ -31,7 +31,7 @@
  *
  *	@(#)portal.h	8.4 (Berkeley) 1/21/94
  *
- * $FreeBSD: release/7.0.0/sys/fs/portalfs/portal.h 139776 2005-01-06 18:10:42Z imp $
+ * $FreeBSD$
  */
 
 struct portal_args {
@@ -43,7 +43,7 @@ struct portal_cred {
 	int		pcr_flag;		/* File open mode */
 	uid_t		pcr_uid;		/* From ucred */
 	short		pcr_ngroups;		/* From ucred */
-	gid_t		pcr_groups[NGROUPS];	/* From ucred */
+	gid_t		pcr_groups[XU_NGROUPS];	/* From ucred */
 };
 
 #ifdef _KERNEL

@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/net/if_gif.h 174854 2007-12-22 06:32:46Z cvs2svn $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: if_gif.h,v 1.17 2000/09/11 11:36:41 sumikawa Exp $	*/
 
 /*-
@@ -67,9 +67,11 @@ struct gif_softc {
 #endif
 	} gifsc_gifscr;
 	int		gif_flags;
+	u_int		gif_fibnum;
 	const struct encaptab *encap_cookie4;
 	const struct encaptab *encap_cookie6;
 	void		*gif_netgraph;	/* ng_gif(4) netgraph node info */
+	u_int		gif_options;
 	LIST_ENTRY(gif_softc) gif_list; /* all gif's are linked */
 };
 #define	GIF2IFP(sc)	((sc)->gif_ifp)
@@ -93,22 +95,36 @@ struct gif_softc {
 #define	MTAG_GIF_CALLED	0
 
 struct etherip_header {
-	u_int8_t eip_ver;	/* version/reserved */
-	u_int8_t eip_pad;	/* required padding byte */
-};
-#define ETHERIP_VER_VERS_MASK   0x0f
-#define ETHERIP_VER_RSVD_MASK   0xf0
-#define ETHERIP_VERSION         0x03
+#if BYTE_ORDER == LITTLE_ENDIAN
+	u_int	eip_resvl:4,	/* reserved */
+		eip_ver:4;	/* version */
+#endif
+#if BYTE_ORDER == BIG_ENDIAN
+	u_int	eip_ver:4,	/* version */
+		eip_resvl:4;	/* reserved */
+#endif
+	u_int8_t eip_resvh;	/* reserved */
+} __packed;
+
+#define ETHERIP_VERSION			0x3
+/* mbuf adjust factor to force 32-bit alignment of IP header */
+#define	ETHERIP_ALIGN		2
 
 /* Prototypes */
 void gif_input(struct mbuf *, int, struct ifnet *);
 int gif_output(struct ifnet *, struct mbuf *, struct sockaddr *,
-	       struct rtentry *);
+	       struct route *);
 int gif_ioctl(struct ifnet *, u_long, caddr_t);
 int gif_set_tunnel(struct ifnet *, struct sockaddr *, struct sockaddr *);
 void gif_delete_tunnel(struct ifnet *);
 int gif_encapcheck(const struct mbuf *, int, int, void *);
-
 #endif /* _KERNEL */
+
+#define GIFGOPTS	_IOWR('i', 150, struct ifreq)
+#define GIFSOPTS	_IOW('i', 151, struct ifreq)
+
+#define	GIF_ACCEPT_REVETHIP	0x0001
+#define	GIF_SEND_REVETHIP	0x0010
+#define	GIF_OPTMASK		(GIF_ACCEPT_REVETHIP|GIF_SEND_REVETHIP)
 
 #endif /* _NET_IF_GIF_H_ */

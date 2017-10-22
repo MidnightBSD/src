@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/2/94
-# $FreeBSD: release/7.0.0/usr.bin/chpass/Makefile 156813 2006-03-17 18:54:44Z ru $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -9,7 +9,6 @@ PROG=	chpass
 SRCS=	chpass.c edit.c field.c pw_scan.c table.c util.c
 BINOWN=	root
 BINMODE=4555
-WARNS?=	5
 .if ${MK_NIS} != "no"
 CFLAGS+= -DYP
 .endif
@@ -39,11 +38,14 @@ MLINKS+= chpass.1 ypchpass.1 chpass.1 ypchfn.1 chpass.1 ypchsh.1
 
 beforeinstall:
 .for i in chpass chfn chsh ypchpass ypchfn ypchsh
-	[ ! -e ${DESTDIR}${BINDIR}/$i ] || \
-		chflags noschg ${DESTDIR}${BINDIR}/$i || true
+.if exists(${DESTDIR}${BINDIR}/$i)
+	-chflags noschg ${DESTDIR}${BINDIR}/$i
+.endif
 .endfor
 
+.if !defined(NO_FSCHG)
 afterinstall:
 	-chflags schg ${DESTDIR}${BINDIR}/chpass
+.endif
 
 .include <bsd.prog.mk>

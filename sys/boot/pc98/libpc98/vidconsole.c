@@ -28,12 +28,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/pc98/libpc98/vidconsole.c 146011 2005-05-08 14:17:28Z nyan $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include <bootstrap.h>
 #include <btxv86.h>
-#include <machine/psl.h>
 #include <machine/cpufunc.h>
 #include "libi386.h"
 

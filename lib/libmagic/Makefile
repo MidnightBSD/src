@@ -1,17 +1,19 @@
-# $FreeBSD: release/7.0.0/lib/libmagic/Makefile 169807 2007-05-21 02:49:08Z deischen $
-# Copyright (c) David E. O'Brien, 2000-2004
+# $FreeBSD$
+# Copyright (c) David E. O'Brien, 2000-2004, 2006, 2009
 
 CONTRDIR=	${.CURDIR}/../../contrib/file
 .PATH: ${CONTRDIR}
 
 LIB=	magic
-SHLIB_MAJOR=	3
+SHLIB_MAJOR=	4
 DPADD=	${LIBZ}
 LDADD=	-lz
 MAN=	libmagic.3 magic.5
 
-SRCS=	apprentice.c apptype.c ascmagic.c compress.c fsmagic.c funcs.c \
-	is_tar.c magic.c print.c readelf.c softmagic.c
+SRCS=	apprentice.c apptype.c ascmagic.c cdf.c cdf_time.c compress.c \
+	encoding.c fsmagic.c funcs.c \
+	is_tar.c magic.c print.c readcdf.c readelf.c softmagic.c
+SRCS+=	getline.c
 INCS=	magic.h
 
 MAGICPATH?=	/usr/share/misc
@@ -19,9 +21,11 @@ MAGICPATH?=	/usr/share/misc
 CFLAGS+= -DMAGIC='"${MAGICPATH}/magic"' -DHAVE_CONFIG_H
 CFLAGS+= -I${.CURDIR} -I${CONTRDIR}
 
-CLEANFILES+=	magic magic.mgc magic.mime.mgc
+WARNS?=		3
 
-FILES=		magic magic.mgc ${CONTRDIR}/magic.mime magic.mime.mgc
+CLEANFILES+=	magic magic.mgc
+
+FILES=		magic magic.mgc
 FILESDIR=	${MAGICPATH}
 
 MAGFILES=	${CONTRDIR}/Header\
@@ -34,14 +38,11 @@ magic: ${MAGFILES}
 magic.mgc: mkmagic magic
 	./mkmagic magic
 
-magic.mime.mgc: mkmagic magic.mime
-	./mkmagic ${CONTRDIR}/magic.mime
-
 CLEANFILES+=	mkmagic
 build-tools: mkmagic
-mkmagic: apprentice.c funcs.c magic.c print.c
-	${CC} -DHAVE_CONFIG_H -DCOMPILE_ONLY \
-	    -I${.CURDIR} -I${CONTRDIR} -o ${.TARGET} ${.ALLSRC}
+mkmagic: apprentice.c encoding.c funcs.c getline.c magic.c print.c
+	${CC} ${CFLAGS} -DCOMPILE_ONLY -DHOSTPROG ${LDFLAGS} \
+	    -o ${.TARGET} ${.ALLSRC}
 
 FILEVER!= awk '$$1 == "\#define" && $$2 == "VERSION" { print $$3; exit }' \
 			${.CURDIR}/config.h

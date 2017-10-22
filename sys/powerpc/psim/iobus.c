@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/powerpc/psim/iobus.c 157895 2006-04-20 04:19:10Z imp $
+ * $FreeBSD$
  */
 
 /*
@@ -44,6 +44,7 @@
 #include <machine/bus.h>
 #include <sys/rman.h>
 
+#include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/openfirm.h>
 
 #include <machine/vmparam.h>
@@ -52,7 +53,6 @@
 #include <machine/pmap.h>
 
 #include <machine/resource.h>
-#include <machine/nexusvar.h>
 
 #include <powerpc/psim/iobusvar.h>
 
@@ -121,7 +121,7 @@ DRIVER_MODULE(iobus, nexus, iobus_driver, iobus_devclass, 0, 0);
 static int
 iobus_probe(device_t dev)
 {
-	char *type = nexus_get_name(dev);
+	const char *type = ofw_bus_get_name(dev);
 
 	if (strcmp(type, "psim-iobus") != 0)
 		return (ENXIO);
@@ -190,7 +190,7 @@ iobus_attach(device_t dev)
 	int size;
 
 	sc = device_get_softc(dev);
-	sc->sc_node = nexus_get_node(dev);
+	sc->sc_node = ofw_bus_get_node(dev);
 
 	/*
 	 * Find the base addr/size of the iobus, and initialize the
@@ -311,7 +311,6 @@ iobus_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	int  needactivate;
 	struct  resource *rv;
 	struct  rman *rm;
-	bus_space_tag_t tagval;
 
 	sc = device_get_softc(bus);
 
@@ -322,15 +321,13 @@ iobus_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	case SYS_RES_MEMORY:
 	case SYS_RES_IOPORT:
 		rm = &sc->sc_mem_rman;
-		tagval = PPC_BUS_SPACE_MEM;
 		break;
 	case SYS_RES_IRQ:
 		return (bus_alloc_resource(bus, type, rid, start, end, count,
-					   flags));
-		break;
+		    flags));
 	default:
 		device_printf(bus, "unknown resource request from %s\n",
-			      device_get_nameunit(child));
+		    device_get_nameunit(child));
 		return (NULL);
 	}
 
@@ -342,8 +339,6 @@ iobus_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	}
 
 	rman_set_rid(rv, *rid);
-	rman_set_bustag(rv, tagval);
-	rman_set_bushandle(rv, rman_get_start(rv));
 
 	if (needactivate) {
 		if (bus_activate_resource(child, type, *rid, rv) != 0) {
@@ -391,6 +386,7 @@ iobus_activate_resource(device_t bus, device_t child, int type, int rid,
 		if (p == NULL)
 			return (ENOMEM);
 		rman_set_virtual(res, p);
+		rman_set_bustag(res, &bs_le_tag);
 		rman_set_bushandle(res, (u_long)p);
 	}
 

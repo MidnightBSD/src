@@ -34,13 +34,14 @@
 static char sccsid[] = "@(#)freopen.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/stdio/freopen.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <limits.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -149,14 +150,6 @@ freopen(file, mode, fp)
 
 	/* Get a new descriptor to refer to the new file. */
 	f = _open(file, oflags, DEFFILEMODE);
-	if (f < 0 && isopen) {
-		/* If out of fd's close the old one and try again. */
-		if (errno == ENFILE || errno == EMFILE) {
-			(void) (*fp->_close)(fp->_cookie);
-			isopen = 0;
-			f = _open(file, oflags, DEFFILEMODE);
-		}
-	}
 	sverrno = errno;
 
 finish:
@@ -164,9 +157,11 @@ finish:
 	 * Finish closing fp.  Even if the open succeeded above, we cannot
 	 * keep fp->_base: it may be the wrong size.  This loses the effect
 	 * of any setbuffer calls, but stdio has always done this before.
+	 *
+	 * Leave the existing file descriptor open until dup2() is called
+	 * below to avoid races where a concurrent open() in another thread
+	 * could claim the existing descriptor.
 	 */
-	if (isopen)
-		(void) (*fp->_close)(fp->_cookie);
 	if (fp->_flags & __SMBF)
 		free((char *)fp->_bf._base);
 	fp->_w = 0;
@@ -181,10 +176,12 @@ finish:
 	if (HASLB(fp))
 		FREELB(fp);
 	fp->_lb._size = 0;
-	fp->_extra->orientation = 0;
-	memset(&fp->_extra->mbstate, 0, sizeof(mbstate_t));
+	fp->_orientation = 0;
+	memset(&fp->_mbstate, 0, sizeof(mbstate_t));
 
 	if (f < 0) {			/* did not get it after all */
+		if (isopen)
+			(void) (*fp->_close)(fp->_cookie);
 		fp->_flags = 0;		/* set it free */
 		FUNLOCKFILE(fp);
 		errno = sverrno;	/* restore in case _close clobbered */
@@ -196,11 +193,26 @@ finish:
 	 * to maintain the descriptor.  Various C library routines (perror)
 	 * assume stderr is always fd STDERR_FILENO, even if being freopen'd.
 	 */
-	if (wantfd >= 0 && f != wantfd) {
+	if (wantfd >= 0) {
 		if (_dup2(f, wantfd) >= 0) {
 			(void)_close(f);
 			f = wantfd;
-		}
+		} else
+			(void)_close(fp->_file);
+	}
+
+	/*
+	 * File descriptors are a full int, but _file is only a short.
+	 * If we get a valid file descriptor that is greater than
+	 * SHRT_MAX, then the fd will get sign-extended into an
+	 * invalid file descriptor.  Handle this case by failing the
+	 * open.
+	 */
+	if (f > SHRT_MAX) {
+		fp->_flags = 0;		/* set it free */
+		FUNLOCKFILE(fp);
+		errno = EMFILE;
+		return (NULL);
 	}
 
 	fp->_flags = flags;

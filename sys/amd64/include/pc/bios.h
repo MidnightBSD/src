@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/amd64/include/pc/bios.h 148231 2005-07-21 09:48:37Z phk $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PC_BIOS_H_
@@ -38,10 +38,20 @@ extern u_int32_t	bios_sigsearch(u_int32_t start, u_char *sig, int siglen,
 
 /*
  * Int 15:E820 'SMAP' structure
- *
- * XXX add constants for type
  */
+
 #define SMAP_SIG	0x534D4150			/* 'SMAP' */
+
+#define	SMAP_TYPE_MEMORY	1
+#define	SMAP_TYPE_RESERVED	2
+#define	SMAP_TYPE_ACPI_RECLAIM	3
+#define	SMAP_TYPE_ACPI_NVS	4
+#define	SMAP_TYPE_ACPI_ERROR	5
+
+#define	SMAP_XATTR_ENABLED	0x00000001
+#define	SMAP_XATTR_NON_VOLATILE	0x00000002
+#define	SMAP_XATTR_MASK		(SMAP_XATTR_ENABLED | SMAP_XATTR_NON_VOLATILE)
+
 struct bios_smap {
     u_int64_t	base;
     u_int64_t	length;

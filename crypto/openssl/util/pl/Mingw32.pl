@@ -1,5 +1,4 @@
 #!/usr/local/bin/perl
-# $FreeBSD: release/7.0.0/crypto/openssl/util/pl/Mingw32.pl 172506 2007-10-10 16:59:15Z cvs2svn $
 #
 # Mingw32.pl -- Mingw
 #

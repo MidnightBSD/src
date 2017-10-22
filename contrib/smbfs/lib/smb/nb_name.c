@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/contrib/smbfs/lib/smb/nb_name.c 150312 2005-09-19 08:07:18Z imura $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -169,7 +169,7 @@ nb_name_encode(struct nb_name *np, u_char *dst)
 		memsetw(cp + 2, NB_NAMELEN - 1, NBENCODE(' '));
 		cp += NB_ENCNAMELEN;
 	} else {
-		for (i = 0; *name && i < NB_NAMELEN; i++, cp += 2, name++)
+		for (i = 0; *name && i < NB_NAMELEN - 1; i++, cp += 2, name++)
 			*(u_short*)cp = NBENCODE(toupper(*name));
 		i = NB_NAMELEN - i - 1;
 		if (i > 0) {

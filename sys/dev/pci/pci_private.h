@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/pci/pci_private.h 172394 2007-09-30 11:05:18Z marius $
+ * $FreeBSD$
  *
  */
 
@@ -38,11 +38,20 @@
  */
 DECLARE_CLASS(pci_driver);
 
+struct pci_softc {
+	bus_dma_tag_t sc_dma_tag;
+};
+
+extern int 	pci_do_power_resume;
+extern int 	pci_do_power_suspend;
+
 void		pci_add_children(device_t dev, int domain, int busno,
 		    size_t dinfo_size);
 void		pci_add_child(device_t bus, struct pci_devinfo *dinfo);
 void		pci_add_resources(device_t bus, device_t dev, int force,
 		    uint32_t prefetchmask);
+int		pci_attach_common(device_t dev);
+void		pci_delete_child(device_t dev, device_t child);
 void		pci_driver_added(device_t dev, driver_t *driver);
 int		pci_print_child(device_t dev, device_t child);
 void		pci_probe_nomatch(device_t dev, device_t child);
@@ -82,6 +91,10 @@ int		pci_msix_count_method(device_t dev, device_t child);
 struct resource	*pci_alloc_resource(device_t dev, device_t child, 
 		    int type, int *rid, u_long start, u_long end, u_long count,
 		    u_int flags);
+int		pci_activate_resource(device_t dev, device_t child, int type,
+		    int rid, struct resource *r);
+int		pci_deactivate_resource(device_t dev, device_t child, int type,
+		    int rid, struct resource *r);
 void		pci_delete_resource(device_t dev, device_t child, 
 		    int type, int rid);
 struct resource_list *pci_get_resource_list (device_t dev, device_t child);

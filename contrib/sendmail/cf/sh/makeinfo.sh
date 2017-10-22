@@ -13,7 +13,7 @@
 #
 #	$Id: makeinfo.sh,v 8.14 1999/02/07 07:26:25 gshapiro Exp $
 #
-# $FreeBSD: release/7.0.0/contrib/sendmail/cf/sh/makeinfo.sh 98125 2002-06-11 21:16:51Z gshapiro $
+# $FreeBSD$
 #
 
 usewhoami=0
@@ -54,7 +54,7 @@ then
 else
 	host=`uname -n`
 fi
-echo '#####' built by $user@$host on `LC_ALL=C LC_TIME=C date`
+echo '#####' built by $user@$host
 echo '#####' in `pwd` | sed 's/\/tmp_mnt//'
 echo '#####' using $1 as configuration include directory | sed 's/\/tmp_mnt//'
 echo "define(\`__HOST__', $host)dnl"

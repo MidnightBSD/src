@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/crypto/des/des_enc.c 130443 2004-06-14 00:38:54Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <crypto/des/des_locl.h>

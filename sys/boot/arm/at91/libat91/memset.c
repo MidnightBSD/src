@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/arm/at91/libat91/memset.c 164137 2006-11-09 20:32:36Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "lib.h"
 

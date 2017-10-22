@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libufs/type.c 167625 2007-03-16 03:13:28Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -65,6 +65,10 @@ ufs_disk_close(struct uufsd *disk)
 	if (disk->d_mine & MINE_NAME) {
 		free((char *)(uintptr_t)disk->d_name);
 		disk->d_name = NULL;
+	}
+	if (disk->d_sbcsum != NULL) {
+		free(disk->d_sbcsum);
+		disk->d_sbcsum = NULL;
 	}
 	return (0);
 }
@@ -108,7 +112,10 @@ again:	if ((ret = stat(name, &st)) < 0) {
 		 */
 		name = oname;
 	}
-	if (ret >= 0 && S_ISCHR(st.st_mode)) {
+	if (ret >= 0 && S_ISREG(st.st_mode)) {
+		/* Possibly a disk image, give it a try.  */
+		;
+	} else if (ret >= 0 && S_ISCHR(st.st_mode)) {
 		/* This is what we need, do nothing. */
 		;
 	} else if ((fs = getfsfile(name)) != NULL) {
@@ -153,6 +160,7 @@ again:	if ((ret = stat(name, &st)) < 0) {
 	disk->d_mine = 0;
 	disk->d_ufs = 0;
 	disk->d_error = NULL;
+	disk->d_sbcsum = NULL;
 
 	if (oname != name) {
 		name = strdup(name);

@@ -29,13 +29,9 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/cxgb/common/cxgb_vsc7323.c 172096 2007-09-09 01:28:03Z kmacy $");
+__FBSDID("$FreeBSD$");
 
-#ifdef CONFIG_DEFINED
 #include <common/cxgb_common.h>
-#else
-#include <dev/cxgb/common/cxgb_common.h>
-#endif
 
 enum {
 	ELMR_ADDR    = 0,

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/yp/xdryp.c 95658 2002-04-28 15:18:50Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <rpc/rpc.h>
 #include <rpcsvc/yp.h>
@@ -42,7 +42,7 @@ extern void *ypresp_data;
  * I'm leaving the xdr_datum() function in purely for backwards
  * compatibility. yplib.c doesn't actually use it, but it's listed
  * in yp_prot.h as being available, so it's probably a good idea to
- * leave it in in case somebody goes looking for it.
+ * leave it in case somebody goes looking for it.
  */
 typedef struct {
 	char *dptr;

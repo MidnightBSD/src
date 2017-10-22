@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/gdb/gdb_cons.c 158960 2006-05-26 13:54:27Z phk $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -87,6 +87,16 @@ gdb_cnterm(struct consdev *cp)
 {
 }
 
+static void
+gdb_cngrab(struct consdev *cp)
+{
+}
+
+static void
+gdb_cnungrab(struct consdev *cp)
+{
+}
+
 static int
 gdb_cngetc(struct consdev *cp)
 {
@@ -126,7 +136,7 @@ oktousecallout(void *data __unused)
 {
 	calloutok = 1;
 }
-SYSINIT(gdbhack, SI_SUB_RUN_SCHEDULER, SI_ORDER_ANY, oktousecallout, NULL)
+SYSINIT(gdbhack, SI_SUB_RUN_SCHEDULER, SI_ORDER_MIDDLE, oktousecallout, NULL);
 
 static void
 gdb_cnputc(struct consdev *cp, int c)

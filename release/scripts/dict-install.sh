@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/release/scripts/dict-install.sh 75328 2001-04-08 23:09:21Z obrien $
+# $FreeBSD$
 #
 
 if [ "`id -u`" != "0" ]; then

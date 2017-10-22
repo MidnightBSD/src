@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/routed 175737 2008-01-28 07:58:32Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: routed
@@ -10,13 +10,12 @@
 . /etc/rc.subr
 
 name="routed"
+rcvar="routed_enable"
+desc="network RIP and router discovery routing daemon"
 
-# XXX - Executable may be in a different location. The $name variable
-#       is different from the variable in rc.conf(5) so the
-#       subroutines in rc.subr won't catch it.
-#
+set_rcvar_obsolete router_enable routed_enable
+set_rcvar_obsolete router routed_program
+set_rcvar_obsolete router_flags	routed_flags
+
 load_rc_config $name
-rcvar="router_enable"
-command="${router:-/sbin/${name}}"
-eval ${name}_flags=\"${router_flags}\"
 run_rc_command "$1"

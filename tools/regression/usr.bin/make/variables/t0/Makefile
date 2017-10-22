@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/tools/regression/usr.bin/make/variables/t0/Makefile 146822 2005-05-31 14:13:07Z harti $
+# $FreeBSD$
 #
 # A unsorted set of macro expansions. This should be sorted out.
 #

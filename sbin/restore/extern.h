@@ -27,14 +27,14 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.2 (Berkeley) 1/7/94
- * $FreeBSD: release/7.0.0/sbin/restore/extern.h 167011 2007-02-26 08:15:56Z mckusick $
+ * $FreeBSD$
  */
 
 struct entry	*addentry(char *, ino_t, int);
 long		 addfile(char *, ino_t, int);
 int		 addwhiteout(char *);
 void		 badentry(struct entry *, char *);
-void	 	 canon(char *, char *, int);
+void	 	 canon(char *, char *, size_t);
 void		 checkrestore(void);
 void		 closemt(void);
 void		 createfiles(void);

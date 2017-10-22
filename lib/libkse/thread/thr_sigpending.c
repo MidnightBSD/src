@@ -29,18 +29,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_sigpending.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/signalvar.h>
 #include <signal.h>
 #include <errno.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(_sigpending);
-LT10_COMPAT_DEFAULT(sigpending);
+int	_sigpending(sigset_t *set);
 
 __weak_reference(_sigpending, sigpending);
 

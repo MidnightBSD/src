@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/cvs/cvs/Makefile 156813 2006-03-17 18:54:44Z ru $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 .include "${.CURDIR}/../Makefile.inc"
@@ -34,8 +34,8 @@ LDADD=	${LIBCVS} ${LIBDIFF} -lgnuregex -lmd -lcrypt -lz
 
 .if ${MK_KERBEROS_SUPPORT} != "no"
 CFLAGS+= -DHAVE_GSSAPI -DENCRYPTION
-LDADD+= -lgssapi -lkrb5 -lasn1 -lcrypto -lroken -lcrypt -lcom_err
-DPADD+= ${LIBGSSAPI} ${LIBKRB5} ${LIBASN1} ${LIBCRYPTO} ${LIBROKEN}
+LDADD+= -lgssapi -lkrb5 -lhx509 -lasn1 -lcrypto -lroken -lcrypt -lcom_err
+DPADD+= ${LIBGSSAPI} ${LIBKRB5} ${LIBHX509} ${LIBASN1} ${LIBCRYPTO} ${LIBROKEN}
 DPADD+= ${LIBCRYPT} ${LIBCOM_ERR}
 .endif
 

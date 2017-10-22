@@ -1,4 +1,4 @@
-/*	$NetBSD: zuncompress.c,v 1.6 2005/11/22 09:05:30 mrg Exp $ */
+/*	$NetBSD: zuncompress.c,v 1.8 2010/11/06 21:42:32 mrg Exp $ */
 
 /*-
  * Copyright (c) 1985, 1986, 1992, 1993
@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  * from: NetBSD: zopen.c,v 1.8 2003/08/07 11:13:29 agc Exp
- * $FreeBSD: release/7.0.0/usr.bin/gzip/zuncompress.c 166255 2007-01-26 10:19:08Z delphij $
+ * $FreeBSD$
  */
 
 /* This file is #included by gzip.c */
@@ -115,7 +115,7 @@ struct s_zstate {
 			code_int zs_ent;
 			code_int zs_hsize_reg;
 			int zs_hshift;
-		} w;			/* Write paramenters */
+		} w;			/* Write parameters */
 		struct {
 			char_type *zs_stackp;
 			int zs_finchar;
@@ -147,7 +147,7 @@ zuncompress(FILE *in, FILE *out, char *pre, size_t prelen,
 		compressed_pre = NULL;
 
 	while ((bin = fread(buf, 1, sizeof(buf), in)) != 0) {
-		if (tflag == 0 && fwrite(buf, 1, bin, out) != (size_t)bin) {
+		if (tflag == 0 && (off_t)fwrite(buf, 1, bin, out) != bin) {
 			free(buf);
 			return -1;
 		}
@@ -247,7 +247,7 @@ zread(void *cookie, char *rbp, int num)
 	zs->zs_block_compress = zs->zs_maxbits & BLOCK_MASK;
 	zs->zs_maxbits &= BIT_MASK;
 	zs->zs_maxmaxcode = 1L << zs->zs_maxbits;
-	if (zs->zs_maxbits > BITS) {
+	if (zs->zs_maxbits > BITS || zs->zs_maxbits < 12) {
 		errno = EFTYPE;
 		return (-1);
 	}
@@ -259,13 +259,7 @@ zread(void *cookie, char *rbp, int num)
 	}
 	zs->zs_free_ent = zs->zs_block_compress ? FIRST : 256;
 
-	zs->u.r.zs_finchar = zs->u.r.zs_oldcode = getcode(zs);
-	if (zs->u.r.zs_oldcode == -1)	/* EOF already? */
-		return (0);	/* Get out of here */
-
-	/* First code must be 8 bits = char. */
-	*bp++ = (u_char)zs->u.r.zs_finchar;
-	count--;
+	zs->u.r.zs_oldcode = -1;
 	zs->u.r.zs_stackp = de_stack;
 
 	while ((zs->u.r.zs_code = getcode(zs)) > -1) {
@@ -275,17 +269,29 @@ zread(void *cookie, char *rbp, int num)
 			    zs->u.r.zs_code--)
 				tab_prefixof(zs->u.r.zs_code) = 0;
 			zs->zs_clear_flg = 1;
-			zs->zs_free_ent = FIRST - 1;
-			if ((zs->u.r.zs_code = getcode(zs)) == -1)	/* O, untimely death! */
-				break;
+			zs->zs_free_ent = FIRST;
+			zs->u.r.zs_oldcode = -1;
+			continue;
 		}
 		zs->u.r.zs_incode = zs->u.r.zs_code;
 
 		/* Special case for KwKwK string. */
 		if (zs->u.r.zs_code >= zs->zs_free_ent) {
+			if (zs->u.r.zs_code > zs->zs_free_ent ||
+			    zs->u.r.zs_oldcode == -1) {
+				/* Bad stream. */
+				errno = EINVAL;
+				return (-1);
+			}
 			*zs->u.r.zs_stackp++ = zs->u.r.zs_finchar;
 			zs->u.r.zs_code = zs->u.r.zs_oldcode;
 		}
+		/*
+		 * The above condition ensures that code < free_ent.
+		 * The construction of tab_prefixof in turn guarantees that
+		 * each iteration decreases code and therefore stack usage is
+		 * bound by 1 << BITS - 256.
+		 */
 
 		/* Generate output characters in reverse order. */
 		while (zs->u.r.zs_code >= 256) {
@@ -302,7 +308,8 @@ middle:		do {
 		} while (zs->u.r.zs_stackp > de_stack);
 
 		/* Generate the new entry. */
-		if ((zs->u.r.zs_code = zs->zs_free_ent) < zs->zs_maxmaxcode) {
+		if ((zs->u.r.zs_code = zs->zs_free_ent) < zs->zs_maxmaxcode &&
+		    zs->u.r.zs_oldcode != -1) {
 			tab_prefixof(zs->u.r.zs_code) = (u_short) zs->u.r.zs_oldcode;
 			tab_suffixof(zs->u.r.zs_code) = zs->u.r.zs_finchar;
 			zs->zs_free_ent = zs->u.r.zs_code + 1;

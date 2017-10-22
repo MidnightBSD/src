@@ -1,6 +1,11 @@
 /*
- * Copyright (c) 1992, Brian Berliner and Jeff Polk
- * Copyright (c) 1989-1992, Brian Berliner
+ * Copyright (C) 1986-2005 The Free Software Foundation, Inc.
+ *
+ * Portions Copyright (C) 1998-2005 Derek Price, Ximbiot <http://ximbiot.com>,
+ *                                  and others.
+ *
+ * Portions Copyright (C) 1992, Brian Berliner and Jeff Polk
+ * Portions Copyright (C) 1989-1992, Brian Berliner
  * 
  * You may distribute under the terms of the GNU General Public License as
  * specified in the README file that comes with the CVS source distribution.
@@ -12,7 +17,7 @@
  */
 
 /*
- * $FreeBSD: release/7.0.0/contrib/cvs/src/entries.c 172506 2007-10-10 16:59:15Z cvs2svn $
+ * $FreeBSD$
  */
 #include "cvs.h"
 #include "getline.h"
@@ -540,6 +545,7 @@ Entries_Open (aflag, update_dir)
 		break;
 	    default:
 		/* Ignore unrecognized commands.  */
+		Entnode_Destroy (ent);
 	        break;
 	    }
 	}

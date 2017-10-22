@@ -19,7 +19,7 @@
 static const char rcsid[] = "$Id: ns_samedomain.c,v 1.5.18.1 2005/04/27 05:01:09 sra Exp $";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/nameser/ns_samedomain.c 170244 2007-06-03 17:20:27Z ume $");
+__FBSDID("$FreeBSD$");
 
 #include "port_before.h"
 

@@ -44,7 +44,7 @@
  *      from: @(#)pmap.h        7.4 (Berkeley) 5/12/91
  * 	from: FreeBSD: src/sys/i386/include/pmap.h,v 1.70 2000/11/30
  *
- * $FreeBSD: release/7.0.0/sys/arm/include/pmap.h 171620 2007-07-27 14:45:04Z cognet $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PMAP_H_
@@ -62,6 +62,7 @@
 #ifndef LOCORE
 
 #include <sys/queue.h>
+#include <sys/_cpuset.h>
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
 
@@ -75,7 +76,10 @@
 
 #endif
 
+#define	pmap_page_get_memattr(m)	VM_MEMATTR_DEFAULT
 #define	pmap_page_is_mapped(m)	(!TAILQ_EMPTY(&(m)->md.pv_list))
+#define	pmap_page_set_memattr(m, ma)	(void)0
+
 /*
  * Pmap stuff
  */
@@ -94,16 +98,7 @@ struct	pv_entry;
 
 struct	md_page {
 	int pvh_attrs;
-	u_int uro_mappings;
-	u_int urw_mappings;
-	union {
-		u_short s_mappings[2]; /* Assume kernel count <= 65535 */
-		u_int i_mappings;
-	} k_u;
-#define	kro_mappings	k_u.s_mappings[0]
-#define	krw_mappings	k_u.s_mappings[1]
-#define	k_mappings	k_u.i_mappings
-	int			pv_list_count;
+	vm_offset_t pv_kva;		/* first kernel VA mapping */
 	TAILQ_HEAD(,pv_entry)	pv_list;
 };
 
@@ -112,9 +107,6 @@ do {									\
 	TAILQ_INIT(&pg->pv_list);					\
 	mtx_init(&(pg)->md_page.pvh_mtx, "MDPAGE Mutex", NULL, MTX_DEV);\
 	(pg)->mdpage.pvh_attrs = 0;					\
-	(pg)->mdpage.uro_mappings = 0;					\
-	(pg)->mdpage.urw_mappings = 0;					\
-	(pg)->mdpage.k_mappings = 0;					\
 } while (/*CONSTCOND*/0)
 
 struct l1_ttable;
@@ -143,8 +135,7 @@ struct	pmap {
 	struct l1_ttable	*pm_l1;
 	struct l2_dtable	*pm_l2[L2_SIZE];
 	pd_entry_t		*pm_pdir;	/* KVA of page directory */
-	int			pm_count;	/* reference count */
-	int			pm_active;	/* active on cpus */
+	cpuset_t		pm_active;	/* active on cpus */
 	struct pmap_statistics	pm_stats;	/* pmap statictics */
 	TAILQ_HEAD(,pv_entry)	pm_pvlist;	/* list of mappings in pmap */
 };
@@ -152,7 +143,8 @@ struct	pmap {
 typedef struct pmap *pmap_t;
 
 #ifdef _KERNEL
-extern pmap_t	kernel_pmap;
+extern struct pmap	kernel_pmap_store;
+#define kernel_pmap	(&kernel_pmap_store)
 #define pmap_kernel() kernel_pmap
 
 #define	PMAP_ASSERT_LOCKED(pmap) \
@@ -179,8 +171,6 @@ typedef struct pv_entry {
 	TAILQ_ENTRY(pv_entry)	pv_plist;
 	int		pv_flags;	/* flags (wired, etc...) */
 } *pv_entry_t;
-
-#define PV_ENTRY_NULL   ((pv_entry_t) 0)
 
 #ifdef _KERNEL
 
@@ -213,13 +203,14 @@ vtopte(vm_offset_t va)
 	return (ptep);
 }
 
-extern vm_offset_t phys_avail[];
+extern vm_paddr_t phys_avail[];
 extern vm_offset_t virtual_avail;
 extern vm_offset_t virtual_end;
 
 void	pmap_bootstrap(vm_offset_t, vm_offset_t, struct pv_addr *);
 void	pmap_kenter(vm_offset_t va, vm_paddr_t pa);
 void	pmap_kenter_nocache(vm_offset_t va, vm_paddr_t pa);
+void	*pmap_kenter_temp(vm_paddr_t pa, int i);
 void 	pmap_kenter_user(vm_offset_t va, vm_paddr_t pa);
 void	pmap_kremove(vm_offset_t);
 void	*pmap_mapdev(vm_offset_t, vm_size_t);
@@ -344,10 +335,6 @@ extern int pmap_needs_pte_sync;
 
 #endif /* ARM_NMMUS > 1 */
 
-#ifdef SKYEYE_WORKAROUNDS
-#define PMAP_NEEDS_PTE_SYNC     1
-#define PMAP_INCLUDE_PTE_SYNC
-#else
 #if (ARM_MMU_SA1 == 1) && (ARM_NMMUS == 1)
 #define	PMAP_NEEDS_PTE_SYNC	1
 #define	PMAP_INCLUDE_PTE_SYNC
@@ -356,7 +343,6 @@ extern int pmap_needs_pte_sync;
 #define PMAP_INCLUDE_PTE_SYNC
 #elif (ARM_MMU_SA1 == 0)
 #define	PMAP_NEEDS_PTE_SYNC	0
-#endif
 #endif
 
 /*
@@ -396,7 +382,8 @@ do {									\
 	if (PMAP_NEEDS_PTE_SYNC) {					\
 		cpu_dcache_wb_range((vm_offset_t)(pte), sizeof(pt_entry_t));\
 		cpu_l2cache_wb_range((vm_offset_t)(pte), sizeof(pt_entry_t));\
-	}\
+	} else								\
+		cpu_drain_writebuf();					\
 } while (/*CONSTCOND*/0)
 
 #define	PTE_SYNC_RANGE(pte, cnt)					\
@@ -406,7 +393,8 @@ do {									\
 		    (cnt) << 2); /* * sizeof(pt_entry_t) */		\
 		cpu_l2cache_wb_range((vm_offset_t)(pte), 		\
 		    (cnt) << 2); /* * sizeof(pt_entry_t) */		\
-	}								\
+	} else								\
+		cpu_drain_writebuf();					\
 } while (/*CONSTCOND*/0)
 
 extern pt_entry_t		pte_l1_s_cache_mode;
@@ -506,9 +494,9 @@ void	pmap_use_minicache(vm_offset_t, vm_size_t);
 #define	PVF_WIRED	0x04		/* mapping is wired */
 #define	PVF_WRITE	0x08		/* mapping is writable */
 #define	PVF_EXEC	0x10		/* mapping is executable */
-#define	PVF_UNC		0x20		/* mapping is 'user' non-cacheable */
-#define	PVF_KNC		0x40		/* mapping is 'kernel' non-cacheable */
-#define	PVF_NC		(PVF_UNC|PVF_KNC)
+#define	PVF_NC		0x20		/* mapping is non-cacheable */
+#define	PVF_MWC		0x40		/* mapping is used multiple times in userland */
+#define	PVF_UNMAN	0x80		/* mapping is unmanaged */
 
 void vector_page_setprot(int);
 

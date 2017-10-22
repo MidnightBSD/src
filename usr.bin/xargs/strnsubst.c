@@ -9,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/xargs/strnsubst.c 153917 2005-12-30 23:22:50Z jmallett $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <stdlib.h>

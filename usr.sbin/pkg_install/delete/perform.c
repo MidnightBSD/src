@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/delete/perform.c 131285 2004-06-29 19:06:42Z eik $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include "lib.h"
@@ -122,16 +122,18 @@ static int
 pkg_do(char *pkg)
 {
     FILE *cfile;
-    char *deporigin, **depnames, home[FILENAME_MAX];
+    char *deporigin, **deporigins = NULL, **depnames = NULL, ***depmatches, home[FILENAME_MAX];
     PackingList p;
     int i, len;
     int isinstalled;
     /* support for separate pre/post install scripts */
-    int new_m = 0;
+    int new_m = 0, dep_count = 0;
     const char *pre_script = DEINSTALL_FNAME;
     const char *post_script, *pre_arg, *post_arg;
     struct reqr_by_entry *rb_entry;
     struct reqr_by_head *rb_list;
+    int fd;
+    struct stat sb;
 
     if (!pkg || !(len = strlen(pkg)))
 	return 1;
@@ -221,10 +223,12 @@ pkg_do(char *pkg)
 
     setenv(PKG_PREFIX_VNAME, p->name, 1);
 
-    if (fexists(REQUIRE_FNAME)) {
+    if ((fd = open(REQUIRE_FNAME, O_RDWR)) != -1) {
+	fstat(fd, &sb);
+	fchmod(fd, sb.st_mode | S_IXALL);       /* be sure, chmod a+x */
+	close(fd);
 	if (Verbose)
 	    printf("Executing 'require' script.\n");
-	vsystem("/bin/chmod +x %s", REQUIRE_FNAME);	/* be sure */
 	if (vsystem("./%s %s DEINSTALL", REQUIRE_FNAME, pkg)) {
 	    warnx("package %s fails requirements %s", pkg,
 		   Force ? "" : "- not deleted");
@@ -250,11 +254,13 @@ pkg_do(char *pkg)
 	post_script = pre_arg = post_arg = NULL;
     }
 
-    if (!NoDeInstall && pre_script != NULL && fexists(pre_script)) {
+    if (!NoDeInstall && pre_script != NULL && (fd = open(pre_script, O_RDWR)) != -1) {
 	if (Fake)
 	    printf("Would execute de-install script at this point.\n");
 	else {
-	    vsystem("/bin/chmod +x %s", pre_script);	/* make sure */
+	    fstat(fd, &sb);
+	    fchmod(fd, sb.st_mode | S_IXALL);       /* be sure, chmod a+x */
+	    close(fd);
 	    if (vsystem("./%s %s %s", pre_script, pkg, pre_arg)) {
 		warnx("deinstall script returned error status");
 		if (!Force)
@@ -266,7 +272,7 @@ pkg_do(char *pkg)
     for (p = Plist.head; p ; p = p->next) {
 	if (p->type != PLIST_PKGDEP)
 	    continue;
-	deporigin = (p->next->type == PLIST_DEPORIGIN) ? p->next->name :
+	deporigin = (p->next != NULL && p->next->type == PLIST_DEPORIGIN) ? p->next->name :
 							 NULL;
 	if (Verbose) {
 	    printf("Trying to remove dependency on package '%s'", p->name);
@@ -275,15 +281,34 @@ pkg_do(char *pkg)
 	    printf(".\n");
 	}
 	if (!Fake) {
-	    depnames = (deporigin != NULL) ? matchbyorigin(deporigin, NULL) :
-					     NULL;
-	    if (depnames == NULL) {
-		depnames = alloca(sizeof(*depnames) * 2);
-		depnames[0] = p->name;
-		depnames[1] = NULL;
+	    if (deporigin) {
+		deporigins = realloc(deporigins, (dep_count + 2) * sizeof(*deporigins));
+		depnames = realloc(depnames, (dep_count + 1) * sizeof(*depnames));
+		deporigins[dep_count] = deporigin;
+		deporigins[dep_count + 1] = NULL;
+		depnames[dep_count] = p->name;
+		dep_count++;
+	    } else {
+		undepend(p->name, pkg);
 	    }
-	    for (i = 0; depnames[i] != NULL; i++)
-		undepend(depnames[i], pkg);
+	}
+    }
+
+    if (dep_count > 0) {
+	/* Undepend all the dependencies at once */
+	depmatches = matchallbyorigin((const char **)deporigins, NULL);
+	free(deporigins);
+	if (depmatches) {
+	    for (i = 0; i < dep_count; i++) {
+		if (depmatches[i]) {
+		    char **tmp = depmatches[i];
+		    int j;
+		    for (j = 0; tmp[j] != NULL; j++)
+			undepend(tmp[j], pkg);
+		} else if (depnames[i]) {
+		    undepend(depnames[i], pkg);
+		}
+	    }
 	}
     }
 
@@ -299,19 +324,21 @@ pkg_do(char *pkg)
      */
     if (delete_package(FALSE, CleanDirs, &Plist) == FAIL)
 	warnx(
-	"couldn't entirely delete package (perhaps the packing list is\n"
-	"incorrectly specified?)");
+	"couldn't entirely delete package `%s'\n"
+	"(perhaps the packing list is incorrectly specified?)", pkg);
 
     if (chdir(LogDir) == FAIL) {
  	warnx("unable to change directory to %s! deinstall failed", LogDir);
  	return 1;
     }
 
-    if (!NoDeInstall && post_script != NULL && fexists(post_script)) {
+    if (!NoDeInstall && post_script != NULL && (fd = open(post_script, O_RDWR)) != -1) {
  	if (Fake)
  	    printf("Would execute post-deinstall script at this point.\n");
  	else {
- 	    vsystem("/bin/chmod +x %s", post_script);	/* make sure */
+	    fstat(fd, &sb);
+	    fchmod(fd, sb.st_mode | S_IXALL);       /* be sure, chmod a+x */
+	    close(fd);
  	    if (vsystem("./%s %s %s", post_script, pkg, post_arg)) {
  		warnx("post-deinstall script returned error status");
  		if (!Force)

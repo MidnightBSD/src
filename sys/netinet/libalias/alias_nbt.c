@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/netinet/libalias/alias_nbt.c 162674 2006-09-26 23:26:53Z piso $");
+__FBSDID("$FreeBSD$");
 
 /*
     alias_nbt.c performs special processing for NetBios over TCP/IP
@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/netinet/libalias/alias_nbt.c 162674 2006-0
 #include <errno.h>
 #include <sys/types.h>
 #include <stdio.h>
+#include <strings.h>
 #endif
 
 #include <netinet/in_systm.h>
@@ -76,7 +77,7 @@ static int
 AliasHandleUdpNbtNS(struct libalias *, struct ip *, struct alias_link *,
 		    struct in_addr *, u_short *, struct in_addr *, u_short *);
 static int 
-fingerprint1(struct libalias *la, struct ip *pip, struct alias_data *ah)
+fingerprint1(struct libalias *la, struct alias_data *ah)
 {
 
 	if (ah->dport == NULL || ah->sport == NULL || ah->lnk == NULL || 
@@ -92,12 +93,11 @@ static int
 protohandler1(struct libalias *la, struct ip *pip, struct alias_data *ah)
 {
 	
-	AliasHandleUdpNbt(la, pip, ah->lnk, ah->aaddr, *ah->aport);
-	return (0);
+	return (AliasHandleUdpNbt(la, pip, ah->lnk, ah->aaddr, *ah->aport));
 }
 
 static int 
-fingerprint2(struct libalias *la, struct ip *pip, struct alias_data *ah)
+fingerprint2(struct libalias *la, struct alias_data *ah)
 {
 
 	if (ah->dport == NULL || ah->sport == NULL || ah->lnk == NULL || 
@@ -122,9 +122,8 @@ static int
 protohandler2out(struct libalias *la, struct ip *pip, struct alias_data *ah)
 {
 	
-	AliasHandleUdpNbtNS(la, pip, ah->lnk, &pip->ip_src, ah->sport,
- 			    ah->aaddr, ah->aport);
-	return (0);
+	return (AliasHandleUdpNbtNS(la, pip, ah->lnk, &pip->ip_src, ah->sport,
+ 	    ah->aaddr, ah->aport));
 }
 
 /* Kernel module definition. */

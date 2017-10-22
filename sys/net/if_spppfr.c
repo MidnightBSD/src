@@ -20,7 +20,7 @@
  * works or modified versions.
  *
  * $Cronyx Id: if_spppfr.c,v 1.1.2.10 2004/06/29 09:02:30 rik Exp $
- * $FreeBSD: release/7.0.0/sys/net/if_spppfr.c 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -279,6 +279,8 @@ drop:		++ifp->if_ierrors;
 
 	if (! (ifp->if_flags & IFF_UP))
 		goto drop;
+
+	M_SETFIB(m, ifp->if_fib);
 
 	/* Check queue. */
 	if (netisr_queue(isr, m)) {	/* (0) on success. */

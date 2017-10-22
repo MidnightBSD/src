@@ -1,7 +1,6 @@
-# $FreeBSD: release/7.0.0/lib/libcalendar/Makefile 79752 2001-07-15 06:46:02Z dd $
+# $FreeBSD$
 
 LIB=	calendar
-WARNS?=	2
 
 SRCS=	calendar.c easter.c
 INCS=	calendar.h

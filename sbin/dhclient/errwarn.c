@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sbin/dhclient/errwarn.c 149399 2005-08-23 23:59:55Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 
@@ -83,6 +83,8 @@ error(char *fmt, ...)
 		fprintf(stderr, "exiting.\n");
 		fflush(stderr);
 	}
+	if (pidfile != NULL)
+		pidfile_remove(pidfile);
 	exit(1);
 }
 

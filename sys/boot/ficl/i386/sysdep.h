@@ -46,7 +46,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: release/7.0.0/sys/boot/ficl/i386/sysdep.h 96755 2002-05-16 21:28:32Z trhodes $ */
+/* $FreeBSD$ */
 
 #if !defined (__SYSDEP_H__)
 #define __SYSDEP_H__ 

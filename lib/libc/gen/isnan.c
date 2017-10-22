@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libc/gen/isnan.c 135713 2004-09-24 06:33:22Z das $
+ * $FreeBSD$
  */
 
 #include <math.h>

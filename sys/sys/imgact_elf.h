@@ -25,17 +25,17 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sys/imgact_elf.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_IMGACT_ELF_H_
-#define _SYS_IMGACT_ELF_H_
+#define	_SYS_IMGACT_ELF_H_
 
 #include <machine/elf.h>
 
 #ifdef _KERNEL
 
-#define AUXARGS_ENTRY(pos, id, val) {suword(pos++, id); suword(pos++, val);}
+#define	AUXARGS_ENTRY(pos, id, val) {suword(pos++, id); suword(pos++, val);}
 
 struct thread;
 
@@ -52,8 +52,17 @@ typedef struct {
 	Elf_Size	base;
 	Elf_Size	flags;
 	Elf_Size	entry;
-	Elf_Size	trace;
 } __ElfN(Auxargs);
+
+typedef struct {
+	Elf_Note	hdr;
+	const char *	vendor;
+	int		flags;
+	boolean_t	(*trans_osrel)(const Elf_Note *, int32_t *);
+#define	BN_CAN_FETCH_OSREL	0x0001	/* Deprecated. */
+#define	BN_TRANSLATE_OSREL	0x0002	/* Use trans_osrel to fetch osrel */
+		/* after checking the image ABI specification, if needed. */
+} Elf_Brandnote;
 
 typedef struct {
 	int brand;
@@ -63,26 +72,30 @@ typedef struct {
 	const char *interp_path;
 	struct sysentvec *sysvec;
 	const char *interp_newpath;
-        int flags;
-#define		BI_CAN_EXEC_DYN	0x0001
+	int flags;
+	Elf_Brandnote *brand_note;
+#define	BI_CAN_EXEC_DYN		0x0001
+#define	BI_BRAND_NOTE		0x0002	/* May have note.ABI-tag section. */
+#define	BI_BRAND_NOTE_MANDATORY	0x0004	/* Must have note.ABI-tag section. */
 } __ElfN(Brandinfo);
 
 __ElfType(Auxargs);
 __ElfType(Brandinfo);
 
-#define MAX_BRANDS	8
+#define	MAX_BRANDS	8
 
 int	__elfN(brand_inuse)(Elf_Brandinfo *entry);
 int	__elfN(insert_brand_entry)(Elf_Brandinfo *entry);
 int	__elfN(remove_brand_entry)(Elf_Brandinfo *entry);
 int	__elfN(freebsd_fixup)(register_t **, struct image_params *);
-int	__elfN(coredump)(struct thread *, struct vnode *, off_t);
+int	__elfN(coredump)(struct thread *, struct vnode *, off_t, int);
 
 /* Machine specific function to dump per-thread information. */
 void	__elfN(dump_thread)(struct thread *, void *, size_t *);
 
-extern	int __elfN(fallback_brand);
-
+extern int __elfN(fallback_brand);
+extern Elf_Brandnote __elfN(freebsd_brandnote);
+extern Elf_Brandnote __elfN(kfreebsd_brandnote);
 #endif /* _KERNEL */
 
 #endif /* !_SYS_IMGACT_ELF_H_ */

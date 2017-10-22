@@ -26,8 +26,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_select.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <unistd.h>
 #include <errno.h>
 #include <poll.h>
@@ -38,10 +40,11 @@
 #include <sys/time.h>
 #include <sys/fcntl.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(__select);
-LT10_COMPAT_DEFAULT(select);
+int	__select(int numfds, fd_set *readfds, fd_set *writefds,
+	    fd_set *exceptfds, struct timeval *timeout);
 
 __weak_reference(__select, select);
 
@@ -55,11 +58,11 @@ __select(int numfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 
 	if (numfds == 0 && timeout != NULL) {
 		TIMEVAL_TO_TIMESPEC(timeout, &ts);
-		return nanosleep(&ts, NULL);
+		ret = _nanosleep(&ts, NULL);
 	} else {
 		_thr_cancel_enter(curthread);
 		ret = __sys_select(numfds, readfds, writefds, exceptfds, timeout);
 		_thr_cancel_leave(curthread, 1);
 	}
-	return ret;
+	return (ret);
 }

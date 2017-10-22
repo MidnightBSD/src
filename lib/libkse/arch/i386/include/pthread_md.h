@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/arch/i386/include/pthread_md.h 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 /*
  * Machine-dependent thread prototypes/definitions for the thread kernel.
@@ -246,7 +246,7 @@ _thread_switch(struct kcb *kcb, struct tcb *tcb, int setmbox)
 		if (setmbox != 0)
 			_thr_setcontext(&tcb->tcb_tmbx.tm_context.uc_mcontext,
 			    (intptr_t)&tcb->tcb_tmbx,
-			    (intptr_t *)&kcb->kcb_kmbx.km_curthread);
+			    (intptr_t *)(void *)&kcb->kcb_kmbx.km_curthread);
 		else
 			_thr_setcontext(&tcb->tcb_tmbx.tm_context.uc_mcontext,
 				0, NULL);

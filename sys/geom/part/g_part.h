@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2006, 2007 Marcel Moolenaar
+ * Copyright (c) 2006-2008 Marcel Moolenaar
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/geom/part/g_part.h 173125 2007-10-29 00:11:40Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _GEOM_PART_H_
@@ -36,13 +36,42 @@
 #define	G_PART_PROBE_PRI_HIGH	0
 
 enum g_part_alias {
+	G_PART_ALIAS_APPLE_BOOT,	/* An Apple boot partition entry. */
+	G_PART_ALIAS_APPLE_HFS,		/* An HFS+ file system entry. */
+	G_PART_ALIAS_APPLE_LABEL,	/* An Apple label partition entry. */
+	G_PART_ALIAS_APPLE_RAID,	/* An Apple RAID partition entry. */
+	G_PART_ALIAS_APPLE_RAID_OFFLINE,/* An Apple RAID (offline) part entry.*/
+	G_PART_ALIAS_APPLE_TV_RECOVERY,	/* An Apple TV recovery part entry. */
+	G_PART_ALIAS_APPLE_UFS,		/* An Apple UFS partition entry. */
 	G_PART_ALIAS_EFI,		/* A EFI system partition entry. */
 	G_PART_ALIAS_FREEBSD,		/* A BSD labeled partition entry. */
+	G_PART_ALIAS_FREEBSD_BOOT,	/* A FreeBSD boot partition entry. */
 	G_PART_ALIAS_FREEBSD_SWAP,	/* A swap partition entry. */
 	G_PART_ALIAS_FREEBSD_UFS,	/* A UFS/UFS2 file system entry. */
 	G_PART_ALIAS_FREEBSD_VINUM,	/* A Vinum partition entry. */
 	G_PART_ALIAS_FREEBSD_ZFS,	/* A ZFS file system entry. */
 	G_PART_ALIAS_MBR,		/* A MBR (extended) partition entry. */
+	G_PART_ALIAS_LINUX_DATA,	/* A Linux data partition entry. */
+	G_PART_ALIAS_LINUX_LVM,		/* A Linux LVM partition entry. */
+	G_PART_ALIAS_LINUX_RAID,	/* A Linux RAID partition entry. */
+	G_PART_ALIAS_LINUX_SWAP,	/* A Linux swap partition entry. */
+	G_PART_ALIAS_MS_BASIC_DATA,	/* A Microsoft Data part. entry. */
+	G_PART_ALIAS_MS_LDM_DATA,	/* A Microsoft LDM Data part. entry. */
+	G_PART_ALIAS_MS_LDM_METADATA,	/* A Microsoft LDM Metadata entry. */
+	G_PART_ALIAS_MS_RESERVED,	/* A Microsoft Reserved part. entry. */
+	G_PART_ALIAS_MS_NTFS,		/* A Microsoft NTFS partition entry */
+	G_PART_ALIAS_NETBSD_CCD,	/* A NetBSD CCD partition entry. */
+	G_PART_ALIAS_NETBSD_CGD,	/* A NetBSD CGD partition entry. */
+	G_PART_ALIAS_NETBSD_FFS,	/* A NetBSD FFS partition entry. */
+	G_PART_ALIAS_NETBSD_RAID,	/* A NetBSD RAID partition entry. */
+	G_PART_ALIAS_NETBSD_SWAP,	/* A NetBSD swap partition entry. */
+	G_PART_ALIAS_NETBSD_LFS,	/* A NetBSD LFS partition entry. */
+	G_PART_ALIAS_EBR,		/* A EBR partition entry. */
+	G_PART_ALIAS_MS_FAT32,		/* A Microsoft FAT32 partition entry. */
+	G_PART_ALIAS_BIOS_BOOT,		/* A GRUB 2 boot partition entry. */
+	G_PART_ALIAS_VMFS,		/* A VMware VMFS partition entry */
+	G_PART_ALIAS_VMKDIAG,		/* A VMware vmkDiagnostic partition entry */
+	G_PART_ALIAS_VMRESERVED,	/* A VMware reserved partition entry */
 	/* Keep the following last */
 	G_PART_ALIAS_COUNT
 };
@@ -55,8 +84,9 @@ struct g_part_scheme {
 	size_t		gps_entrysz;
 	int		gps_minent;
 	int		gps_maxent;
+	int		gps_bootcodesz;
+	TAILQ_ENTRY(g_part_scheme) scheme_list;
 };
-#define	G_PART_SCHEME_DECLARE(s)	DATA_SET(g_part_scheme_set, s)
 
 struct g_part_entry {
 	LIST_ENTRY(g_part_entry) gpe_entry;
@@ -68,6 +98,7 @@ struct g_part_entry {
 	int		gpe_created:1;	/* Entry is newly created. */
 	int		gpe_deleted:1;	/* Entry has been deleted. */
 	int		gpe_modified:1;	/* Entry has been modified. */
+	int		gpe_internal:1;	/* Entry is not a used entry. */
 };
 
 /* G_PART table (KOBJ instance). */
@@ -107,10 +138,28 @@ struct g_part_table {
 	int		gpt_modified:1;	/* Table changes have been made. */
 	int		gpt_opened:1;	/* Permissions obtained. */
 	int		gpt_fixgeom:1;	/* Geometry is fixed. */
+	int		gpt_corrupt:1;	/* Table is corrupt. */
 };
 
 struct g_part_entry *g_part_new_entry(struct g_part_table *, int, quad_t,
     quad_t);
+
+enum g_part_ctl {
+	G_PART_CTL_NONE,
+	G_PART_CTL_ADD,
+	G_PART_CTL_BOOTCODE,
+	G_PART_CTL_COMMIT,
+	G_PART_CTL_CREATE,
+	G_PART_CTL_DELETE,
+	G_PART_CTL_DESTROY,
+	G_PART_CTL_MODIFY,
+	G_PART_CTL_MOVE,
+	G_PART_CTL_RECOVER,
+	G_PART_CTL_RESIZE,
+	G_PART_CTL_SET,
+	G_PART_CTL_UNDO,
+	G_PART_CTL_UNSET
+};
 
 /* G_PART ctlreq parameters. */
 #define	G_PART_PARM_ENTRIES	0x0001
@@ -125,6 +174,9 @@ struct g_part_entry *g_part_new_entry(struct g_part_table *, int, quad_t,
 #define	G_PART_PARM_START	0x0200
 #define	G_PART_PARM_TYPE	0x0400
 #define	G_PART_PARM_VERSION	0x0800
+#define	G_PART_PARM_BOOTCODE	0x1000
+#define	G_PART_PARM_ATTRIB	0x2000
+#define	G_PART_PARM_FORCE	0x4000
 
 struct g_part_parms {
 	unsigned int	gpp_parms;
@@ -139,8 +191,27 @@ struct g_part_parms {
 	quad_t		gpp_start;
 	const char	*gpp_type;
 	unsigned int	gpp_version;
+	const void	*gpp_codeptr;
+	unsigned int	gpp_codesize;
+	const char	*gpp_attrib;
+	unsigned int	gpp_force;
 };
 
 void g_part_geometry_heads(off_t, u_int, off_t *, u_int *);
+
+int g_part_modevent(module_t, int, struct g_part_scheme *);
+
+#define	G_PART_SCHEME_DECLARE(name)				\
+    static int name##_modevent(module_t mod, int tp, void *d)	\
+    {								\
+	return (g_part_modevent(mod, tp, d));			\
+    }								\
+    static moduledata_t name##_mod = {				\
+	#name,							\
+	name##_modevent,					\
+	&name##_scheme						\
+    };								\
+    DECLARE_MODULE(name, name##_mod, SI_SUB_DRIVERS, SI_ORDER_ANY); \
+    MODULE_DEPEND(name, g_part, 0, 0, 0)
 
 #endif /* !_GEOM_PART_H_ */

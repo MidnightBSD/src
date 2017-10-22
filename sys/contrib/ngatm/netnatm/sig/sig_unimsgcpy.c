@@ -1,6 +1,6 @@
 /* This file was created automatically
  * Source file: $Begemot: libunimsg/atm/msg/msg.def,v 1.3 2003/09/19 11:58:15 hbb Exp $
- * $FreeBSD: release/7.0.0/sys/contrib/ngatm/netnatm/sig/sig_unimsgcpy.c 172506 2007-10-10 16:59:15Z cvs2svn $
+ * $FreeBSD$
  */
 
 #include <netnatm/msg/unistruct.h>

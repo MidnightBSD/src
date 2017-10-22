@@ -26,7 +26,7 @@
 /*      $NetBSD: _setjmp.S,v 1.1 1997/03/29 20:55:53 thorpej Exp $      */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/powerpc/gen/_setjmp.S 107571 2002-12-04 07:25:14Z grehan $");
+__FBSDID("$FreeBSD$");
 
 /*
  * C library -- _setjmp, _longjmp
@@ -63,9 +63,10 @@ ENTRY(_longjmp)
 	lmw	%r9,20(%r3)
 	mtlr	%r11
 	mtcr	%r12
-	mr	%r2,%r9
 	mr	%r1,%r10
 	or.	%r3,%r4,%r4
 	bnelr
 	li	%r3,1
 	blr
+
+	.section .note.GNU-stack,"",%progbits

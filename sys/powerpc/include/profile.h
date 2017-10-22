@@ -26,7 +26,7 @@
  *
  *	from: NetBSD: profile.h,v 1.9 1997/04/06 08:47:37 cgd Exp
  *	from: FreeBSD: src/sys/alpha/include/profile.h,v 1.4 1999/12/29
- * $FreeBSD: release/7.0.0/sys/powerpc/include/profile.h 153813 2005-12-29 04:07:36Z grehan $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PROFILE_H_
@@ -34,9 +34,9 @@
 
 #define	_MCOUNT_DECL	void __mcount
 
-#define FUNCTION_ALIGNMENT 16
+#define	FUNCTION_ALIGNMENT	4
 
-typedef u_int	fptrdiff_t;
+typedef __ptrdiff_t	fptrdiff_t;
 
 /*
  * The mcount trampoline macro, expanded in libc/gmon/mcount.c
@@ -75,71 +75,146 @@ typedef u_int	fptrdiff_t;
  * to be restored to what it was on entry to the profiled routine.
  */
 
+#ifdef __powerpc64__
+#define	MCOUNT					\
+__asm(	"	.text				\n" \
+	"	.align	2			\n" \
+	"	.globl	_mcount			\n" \
+	"	.section \".opd\",\"aw\"	\n" \
+	"	.align	3			\n" \
+	"_mcount:				\n" \
+	"	.quad .L._mcount,.TOC.@tocbase,0\n" \
+	"	.previous			\n" \
+	"	.size   _mcount,24		\n" \
+	"	.type	_mcount,@function	\n" \
+	"	.align	4			\n" \
+	".L._mcount:				\n" \
+	"	stdu	%r1,-(288+128)(%r1)	\n" \
+	"	std	%r3,48(%r1)		\n" \
+	"	std	%r4,56(%r1)		\n" \
+	"	std	%r5,64(%r1)		\n" \
+	"	std	%r6,72(%r1)		\n" \
+	"	std	%r7,80(%r1)		\n" \
+	"	std	%r8,88(%r1)		\n" \
+	"	std	%r9,96(%r1)		\n" \
+	"	std	%r10,104(%r1)		\n" \
+	"	mflr	%r4			\n" \
+	"	std	%r4,112(%r1)		\n" \
+	"	ld	%r3,0(%r1)		\n" \
+	"	ld	%r3,0(%r3)		\n" \
+	"	ld	%r3,16(%r3)		\n" \
+	"	bl	__mcount		\n" \
+	"	nop				\n" \
+	"	ld	%r4,112(%r1)		\n" \
+	"	mtlr	%r4			\n" \
+	"	ld	%r3,48(%r1)		\n" \
+	"	ld	%r4,56(%r1)		\n" \
+	"	ld	%r5,64(%r1)		\n" \
+	"	ld	%r6,72(%r1)		\n" \
+	"	ld	%r7,80(%r1)		\n" \
+	"	ld	%r8,88(%r1)		\n" \
+	"	ld	%r9,96(%r1)		\n" \
+	"	ld	%r10,104(%r1)		\n" \
+	"	addi	%r1,%r1,(288+128)	\n" \
+	"	blr				\n");
+#else
+
 #ifdef PIC
 #define _PLT "@plt"
 #else
 #define _PLT
 #endif
 
-#define	MCOUNT \
-__asm("	.globl	_mcount						\n" \
-"	.type	_mcount,@function				\n" \
-"_mcount:							\n" \
-"	stwu	%r1,-64(%r1)	/* alloca for reg save space */	\n" \
-"	stw	%r3,16(%r1)	/* save parameter registers, */	\n" \
-"	stw	%r4,20(%r1)    	/*  r3-10		     */	\n" \
-"	stw	%r5,24(%r1)	       				\n" \
-"	stw	%r6,28(%r1)	       				\n" \
-"	stw	%r7,32(%r1)	       				\n" \
-"	stw	%r8,36(%r1)	       				\n" \
-"	stw	%r9,40(%r1)	       				\n" \
-"	stw	%r10,44(%r1)					\n" \
-"								\n" \
-"	mflr	%r4		/* link register is 'selfpc' */	\n" \
-"	stw	%r4,48(%r1)    	/* save since bl will scrub  */	\n" \
-"	lwz	%r3,68(%r1)    	/* get 'frompc' from LR-save */	\n" \
-"	bl	__mcount" _PLT "  /* __mcount(frompc, selfpc)*/	\n" \
-"	lwz	%r3,68(%r1)					\n" \
-"	mtlr	%r3		/* restore caller's lr	     */	\n" \
-"	lwz	%r4,48(%r1)     			       	\n" \
-"	mtctr	%r4		/* set up ctr for call back  */	\n" \
-"				/* note that blr is not used!*/	\n" \
-"	lwz	%r3,16(%r1)	/* restore r3-10 parameters  */	\n" \
-"	lwz	%r4,20(%r1)	       				\n" \
-"	lwz	%r5,24(%r1)	       				\n" \
-"	lwz	%r6,28(%r1)	       				\n" \
-"	lwz	%r7,32(%r1)	       				\n" \
-"	lwz	%r8,36(%r1)	       				\n" \
-"	lwz	%r9,40(%r1)	       				\n" \
-"	lwz	%r10,44(%r1)					\n" \
-"	addi	%r1,%r1,64	/* blow away alloca save area */ \n" \
-"	bctr			/* return with indirect call */	\n" \
-"_mcount_end:				\n" \
-"	.size	_mcount,_mcount_end-_mcount");
-
+#define	MCOUNT					\
+__asm(	"	.globl	_mcount			\n" \
+	"	.type	_mcount,@function	\n" \
+	"	.align	4			\n" \
+	"_mcount:				\n" \
+	"	stwu	%r1,-64(%r1)		\n" \
+	"	stw	%r3,16(%r1)		\n" \
+	"	stw	%r4,20(%r1)		\n" \
+	"	stw	%r5,24(%r1)		\n" \
+	"	stw	%r6,28(%r1)		\n" \
+	"	stw	%r7,32(%r1)		\n" \
+	"	stw	%r8,36(%r1)		\n" \
+	"	stw	%r9,40(%r1)		\n" \
+	"	stw	%r10,44(%r1)		\n" \
+	"	mflr	%r4			\n" \
+	"	stw	%r4,48(%r1)		\n" \
+	"	lwz	%r3,68(%r1)		\n" \
+	"	bl	__mcount" _PLT "	\n" \
+	"	lwz	%r3,68(%r1)		\n" \
+	"	mtlr	%r3			\n" \
+	"	lwz	%r4,48(%r1)		\n" \
+	"	mtctr	%r4			\n" \
+	"	lwz	%r3,16(%r1)		\n" \
+	"	lwz	%r4,20(%r1)		\n" \
+	"	lwz	%r5,24(%r1)		\n" \
+	"	lwz	%r6,28(%r1)		\n" \
+	"	lwz	%r7,32(%r1)		\n" \
+	"	lwz	%r8,36(%r1)		\n" \
+	"	lwz	%r9,40(%r1)		\n" \
+	"	lwz	%r10,44(%r1)		\n" \
+	"	addi	%r1,%r1,64		\n" \
+	"	bctr				\n" \
+	"_mcount_end:				\n" \
+	"	.size	_mcount,_mcount_end-_mcount");
+#endif
 
 #ifdef _KERNEL
-#define MCOUNT_ENTER(s)		s = intr_disable();
-#define MCOUNT_EXIT(s)		intr_restore(s);
-#define	MCOUNT_DECL(s)		register_t s
+#define	MCOUNT_ENTER(s)		s = intr_disable()
+#define	MCOUNT_EXIT(s)		intr_restore(s)
+#define	MCOUNT_DECL(s)		register_t s;
 
-void bintr(void);
-void btrap(void);
-void eintr(void);
-void user(void);
+#ifndef COMPILING_LINT
+#ifdef AIM
+#include <machine/trap.h>
+#define	__PROFILE_VECTOR_BASE	EXC_RST
+#define	__PROFILE_VECTOR_TOP	(EXC_LAST + 0x100)
+#endif	/* AIM */
+#ifdef E500
+extern char interrupt_vector_base[];
+extern char interrupt_vector_top[];
+#define	__PROFILE_VECTOR_BASE	(uintfptr_t)interrupt_vector_base
+#define	__PROFILE_VECTOR_TOP	(uintfptr_t)interrupt_vector_top
+#endif	/* E500 */
+#endif	/* !COMPILING_LINT */
 
-#define	MCOUNT_FROMPC_USER(pc)					\
-	((pc < (uintfptr_t)VM_MAXUSER_ADDRESS) ? (uintfptr_t)user : pc)
+#ifndef __PROFILE_VECTOR_BASE
+#define	__PROFILE_VECTOR_BASE	0
+#endif
+#ifndef __PROFILE_VECTOR_TOP
+#define	__PROFILE_VECTOR_TOP	1
+#endif
 
-#define	MCOUNT_FROMPC_INTR(pc)					\
-	((pc >= (uintfptr_t)btrap && pc < (uintfptr_t)eintr) ?	\
-	    ((pc >= (uintfptr_t)bintr) ? (uintfptr_t)bintr :	\
-		(uintfptr_t)btrap) : ~0U)
+static __inline void
+powerpc_profile_interrupt(void)
+{
+}
 
+static __inline void
+powerpc_profile_userspace(void)
+{
+}
+
+#define	MCOUNT_FROMPC_USER(pc)				\
+	((pc < (uintfptr_t)VM_MAXUSER_ADDRESS) ?	\
+	    (uintfptr_t)powerpc_profile_userspace : pc)
+
+#define	MCOUNT_FROMPC_INTR(pc)				\
+	((pc >= __PROFILE_VECTOR_BASE &&		\
+	  pc < __PROFILE_VECTOR_TOP) ?			\
+	    (uintfptr_t)powerpc_profile_interrupt : ~0U)
+
+void __mcount(uintfptr_t frompc, uintfptr_t selfpc);
 
 #else	/* !_KERNEL */
 
+#ifdef __powerpc64__
+typedef u_long	uintfptr_t;
+#else
 typedef u_int	uintfptr_t;
+#endif
 
 #endif	/* _KERNEL */
 

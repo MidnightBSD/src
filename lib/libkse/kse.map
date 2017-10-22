@@ -1,10 +1,9 @@
-/* $FreeBSD: release/7.0.0/lib/libkse/kse.map 172491 2007-10-09 13:42:34Z obrien $ */
+/* $FreeBSD$ */
 
 /*
  * Use the same naming scheme as libc.
  */
 FBSD_1.0 {
-global:
 	__error;
 	accept;
 	aio_suspend;
@@ -158,8 +157,6 @@ global:
 	waitpid;
 	write;
 	writev;
-local:
-	*;
 };
 
 /*
@@ -167,7 +164,6 @@ local:
  * These are not part of our application ABI.
  */
 FBSDprivate_1.0 {
-global:
 	___creat;
 	__accept;
 	__close;
@@ -259,6 +255,8 @@ global:
 	_pthread_mutex_destroy;
 	_pthread_mutex_getprioceiling;
 	_pthread_mutex_init;
+	_pthread_mutex_init_calloc_cb;
+	_pthread_mutex_isowned_np;
 	_pthread_mutex_lock;
 	_pthread_mutex_setprioceiling;
 	_pthread_mutex_timedlock;
@@ -362,7 +360,8 @@ global:
 	_thread_size_key;
 	_thread_state_running;
 	_thread_state_zoombie;
+};
 
-local:
-	*;
+FBSD_1.1 {
+	pthread_mutex_isowned_np;
 };

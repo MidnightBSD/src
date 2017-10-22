@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009, 2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: tkeyconf.c,v 1.20.18.6 2006/03/02 00:37:21 marka Exp $ */
+/* $Id: tkeyconf.c,v 1.33 2010/12/20 23:47:20 tbox Exp $ */
 
 /*! \file */
 
@@ -42,6 +42,13 @@
 		goto failure; \
 	} while (0)
 
+#include<named/log.h>
+#define LOG(msg) \
+	isc_log_write(ns_g_lctx, \
+	NS_LOGCATEGORY_GENERAL, \
+	NS_LOGMODULE_SERVER, \
+	ISC_LOG_ERROR, \
+	"%s", msg)
 
 isc_result_t
 ns_tkeyctx_fromconfig(const cfg_obj_t *options, isc_mem_t *mctx,
@@ -70,8 +77,7 @@ ns_tkeyctx_fromconfig(const cfg_obj_t *options, isc_mem_t *mctx,
 		isc_buffer_add(&b, strlen(s));
 		dns_fixedname_init(&fname);
 		name = dns_fixedname_name(&fname);
-		RETERR(dns_name_fromtext(name, &b, dns_rootname,
-					 ISC_FALSE, NULL));
+		RETERR(dns_name_fromtext(name, &b, dns_rootname, 0, NULL));
 		type = DST_TYPE_PUBLIC|DST_TYPE_PRIVATE|DST_TYPE_KEY;
 		RETERR(dst_key_fromfile(name, (dns_keytag_t) n, DNS_KEYALG_DH,
 					type, NULL, mctx, &tctx->dhkey));
@@ -85,8 +91,7 @@ ns_tkeyctx_fromconfig(const cfg_obj_t *options, isc_mem_t *mctx,
 		isc_buffer_add(&b, strlen(s));
 		dns_fixedname_init(&fname);
 		name = dns_fixedname_name(&fname);
-		RETERR(dns_name_fromtext(name, &b, dns_rootname, ISC_FALSE,
-					 NULL));
+		RETERR(dns_name_fromtext(name, &b, dns_rootname, 0, NULL));
 		tctx->domain = isc_mem_get(mctx, sizeof(dns_name_t));
 		if (tctx->domain == NULL) {
 			result = ISC_R_NOMEMORY;
@@ -100,15 +105,26 @@ ns_tkeyctx_fromconfig(const cfg_obj_t *options, isc_mem_t *mctx,
 	result = cfg_map_get(options, "tkey-gssapi-credential", &obj);
 	if (result == ISC_R_SUCCESS) {
 		s = cfg_obj_asstring(obj);
+
 		isc_buffer_init(&b, s, strlen(s));
 		isc_buffer_add(&b, strlen(s));
 		dns_fixedname_init(&fname);
 		name = dns_fixedname_name(&fname);
-		RETERR(dns_name_fromtext(name, &b, dns_rootname, ISC_FALSE,
-					 NULL));
-		RETERR(dst_gssapi_acquirecred(name, ISC_FALSE,
-					      &tctx->gsscred));
+		RETERR(dns_name_fromtext(name, &b, dns_rootname, 0, NULL));
+		RETERR(dst_gssapi_acquirecred(name, ISC_FALSE, &tctx->gsscred));
 	}
+
+	obj = NULL;
+	result = cfg_map_get(options, "tkey-gssapi-keytab", &obj);
+	if (result == ISC_R_SUCCESS) {
+		s = cfg_obj_asstring(obj);
+		tctx->gssapi_keytab = isc_mem_strdup(mctx, s);
+		if (tctx->gssapi_keytab == NULL) {
+			result = ISC_R_NOMEMORY;
+			goto failure;
+		}
+	}
+
 
 	*tctxp = tctx;
 	return (ISC_R_SUCCESS);

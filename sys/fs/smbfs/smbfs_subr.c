@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2000-2001, Boris Popov
+ * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -29,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/fs/smbfs/smbfs_subr.c 163652 2006-10-24 11:55:18Z phk $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -136,7 +130,10 @@ smb_fphelp(struct mbchain *mbp, struct smb_vc *vcp, struct smbnode *np,
 		return smb_put_dmem(mbp, vcp, "\\", 2, caseopt);*/
 	while (i--) {
 		np = *--npp;
-		error = mb_put_uint8(mbp, '\\');
+		if (SMB_UNICODE_STRINGS(vcp))
+			error = mb_put_uint16le(mbp, '\\');
+		else
+			error = mb_put_uint8(mbp, '\\');
 		if (error)
 			break;
 		error = smb_put_dmem(mbp, vcp, np->n_name, np->n_nmlen, caseopt);
@@ -154,6 +151,11 @@ smbfs_fullpath(struct mbchain *mbp, struct smb_vc *vcp, struct smbnode *dnp,
 	int caseopt = SMB_CS_NONE;
 	int error;
 
+	if (SMB_UNICODE_STRINGS(vcp)) {
+		error = mb_put_padbyte(mbp);
+		if (error)
+			return error;
+	}
 	if (SMB_DIALECT(vcp) < SMB_DIALECT_LANMAN1_0)
 		caseopt |= SMB_CS_UPPER;
 	if (dnp != NULL) {
@@ -162,7 +164,10 @@ smbfs_fullpath(struct mbchain *mbp, struct smb_vc *vcp, struct smbnode *dnp,
 			return error;
 	}
 	if (name) {
-		error = mb_put_uint8(mbp, '\\');
+		if (SMB_UNICODE_STRINGS(vcp))
+			error = mb_put_uint16le(mbp, '\\');
+		else
+			error = mb_put_uint8(mbp, '\\');
 		if (error)
 			return error;
 		error = smb_put_dmem(mbp, vcp, name, nmlen, caseopt);
@@ -170,6 +175,8 @@ smbfs_fullpath(struct mbchain *mbp, struct smb_vc *vcp, struct smbnode *dnp,
 			return error;
 	}
 	error = mb_put_uint8(mbp, 0);
+	if (SMB_UNICODE_STRINGS(vcp) && error == 0)
+		error = mb_put_uint8(mbp, 0);
 	return error;
 }
 
@@ -197,6 +204,17 @@ smbfs_fname_tolocal(struct smb_vc *vcp, char *name, int *nmlen, int caseopt)
 
 		error = iconv_conv_case
 			(vcp->vc_tolocal, (const char **)&ibuf, &ilen, &obuf, &olen, copt);
+		if (error && SMB_UNICODE_STRINGS(vcp)) {
+			/*
+			 * If using unicode, leaving a file name as it was when
+			 * convert fails will cause a problem because the file name
+			 * will contain NULL.
+			 * Here, put '?' and give converted file name.
+			 */
+			*obuf = '?';
+			olen--;
+			error = 0;
+		}
 		if (!error) {
 			*nmlen = sizeof(outbuf) - olen;
 			memcpy(name, outbuf, *nmlen);

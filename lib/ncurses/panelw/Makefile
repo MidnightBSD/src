@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/lib/ncurses/panelw/Makefile 167359 2007-03-09 12:11:58Z rafan $
+# $FreeBSD$
 
 ENABLE_WIDEC=
 

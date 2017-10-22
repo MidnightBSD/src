@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/common/ls.c 119483 2003-08-25 23:30:41Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <ufs/ufs/dinode.h>

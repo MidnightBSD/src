@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/lib/msun/ia64/Makefile.inc 157196 2006-03-27 23:59:45Z deischen $
+# $FreeBSD$
 
 ARCH_SRCS = s_fma.S s_fmaf.S s_fmal.S
 LDBL_PREC = 64

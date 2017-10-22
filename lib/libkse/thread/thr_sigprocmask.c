@@ -26,18 +26,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_sigprocmask.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/signalvar.h>
 #include <signal.h>
 #include <errno.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
-
-LT10_COMPAT_PRIVATE(_sigprocmask);
-LT10_COMPAT_DEFAULT(sigprocmask);
 
 __weak_reference(_sigprocmask, sigprocmask);
 
@@ -46,7 +46,7 @@ _sigprocmask(int how, const sigset_t *set, sigset_t *oset)
 {
 	int ret;
 
-	ret = pthread_sigmask(how, set, oset);
+	ret = _pthread_sigmask(how, set, oset);
 	if (ret) {
 		errno = ret;
 		ret = -1;

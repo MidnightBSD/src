@@ -25,12 +25,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sparc64/db_trace.c 160312 2006-07-12 21:22:44Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kdb.h>
-#include <sys/linker_set.h>
 #include <sys/proc.h>
 #include <sys/stack.h>
 #include <sys/sysent.h>
@@ -41,6 +40,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sparc64/db_trace.c 160312 2006-07-
 
 #include <machine/cpu.h>
 #include <machine/pcb.h>
+#include <machine/stack.h>
 #include <machine/trap.h>
 #include <machine/vmparam.h>
 
@@ -49,14 +49,6 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sparc64/db_trace.c 160312 2006-07-
 #include <ddb/db_sym.h>
 #include <ddb/db_variables.h>
 #include <ddb/db_watch.h>
-
-extern char tl_trap_begin[];
-extern char tl_trap_end[];
-extern char tl_text_begin[];
-extern char tl_text_end[];
-
-#define	INKERNEL(va) \
-	((va) >= VM_MIN_KERNEL_ADDRESS && (va) <= VM_MAX_KERNEL_ADDRESS)
 
 static db_varfcn_t db_frame;
 
@@ -283,10 +275,9 @@ db_backtrace(struct thread *td, struct frame *fp, int count)
 void
 db_trace_self(void)
 {
-	db_expr_t addr;
 
-	addr = (db_expr_t)__builtin_frame_address(1);
-	db_backtrace(curthread, (struct frame *)(addr + SPOFF), -1);
+	db_backtrace(curthread,
+	    (struct frame *)__builtin_frame_address(1), -1);
 }
 
 int
@@ -295,31 +286,6 @@ db_trace_thread(struct thread *td, int count)
 	struct pcb *ctx;
 
 	ctx = kdb_thr_ctx(td);
-	return (db_backtrace(td, (struct frame*)(ctx->pcb_sp + SPOFF), count));
-}
-
-void
-stack_save(struct stack *st)
-{
-	struct frame *fp;
-	db_expr_t addr;
-	vm_offset_t callpc;
-
-	stack_zero(st);
-	addr = (db_expr_t)__builtin_frame_address(1);
-	fp = (struct frame *)(addr + SPOFF);
-	while (1) {
-		callpc = fp->fr_pc;
-		if (!INKERNEL(callpc))
-			break;
-		/* Don't bother traversing trap frames. */
-		if ((callpc > (u_long)tl_trap_begin &&
-		    callpc < (u_long)tl_trap_end) ||
-		    (callpc > (u_long)tl_text_begin &&
-		    callpc < (u_long)tl_text_end))
-			break;
-		if (stack_put(st, callpc) == -1)
-			break;
-		fp = (struct frame *)(fp->fr_fp + SPOFF);
-	}
+	return (db_backtrace(td,
+	    (struct frame *)(ctx->pcb_sp + SPOFF), count));
 }

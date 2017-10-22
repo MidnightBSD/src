@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $FreeBSD: release/7.0.0/contrib/top/username.c 172506 2007-10-10 16:59:15Z cvs2svn $
+ * $FreeBSD$
  */
 
 /*
@@ -30,17 +30,17 @@
  *  This makes the table size independent of the passwd file size.
  */
 
+#include <sys/param.h>
 #include <sys/types.h>
 #include <stdio.h>
 #include <pwd.h>
-#include <utmp.h>
 
 #include "top.local.h"
 #include "utils.h"
 
 struct hash_el {
     int  uid;
-    char name[UT_NAMESIZE + 1];
+    char name[MAXLOGNAME];
 };
 
 #define    is_empty_hash(x)	(hash_table[x].name[0] == 0)
@@ -129,7 +129,7 @@ int wecare;		/* 1 = enter it always, 0 = nice to have */
 
     /* empty or wrong slot -- fill it with new value */
     hash_table[hashindex].uid = uid;
-    (void) strncpy(hash_table[hashindex].name, name, UT_NAMESIZE);
+    (void) strncpy(hash_table[hashindex].name, name, MAXLOGNAME - 1);
     return(hashindex);
 }
 

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/ypserv/yp_dnslookup.c 146446 2005-05-20 13:04:10Z charnier $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Do standard and reverse DNS lookups using the resolver library.

@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ssr.c,v 1.5 2004/01/13 01:54:39 max Exp $
- * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/sdpd/ssr.c 139721 2005-01-05 18:37:37Z emax $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>

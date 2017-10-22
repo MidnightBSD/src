@@ -1,4 +1,4 @@
-/*	$NetBSD: ftpd.c,v 1.176 2006/05/09 20:18:06 mrg Exp $	*/
+/*	$NetBSD: ftpd.c,v 1.187 2008/09/13 03:30:35 lukem Exp $	*/
 
 /*
  * Copyright (c) 1997-2004 The NetBSD Foundation, Inc.
@@ -107,7 +107,7 @@ static char sccsid[] = "@(#)ftpd.c	8.5 (Berkeley) 4/28/95";
 #else
 __RCSID("$NetBSD: ftpd.c,v 1.176 2006/05/09 20:18:06 mrg Exp $");
 #endif
-__FBSDID("$FreeBSD: release/7.0.0/contrib/lukemftpd/src/ftpd.c 172506 2007-10-10 16:59:15Z cvs2svn $");
+__FBSDID("$FreeBSD$");
 #endif /* not lint */
 
 /*
@@ -1263,8 +1263,9 @@ end_login(void)
 	curclass.type = CLASS_REAL;
 	(void) seteuid((uid_t)0);
 #ifdef	LOGIN_CAP
-	setusercontext(NULL, getpwuid(0), 0,
-		       LOGIN_SETPRIORITY|LOGIN_SETRESOURCES|LOGIN_SETUMASK|LOGIN_SETMAC);
+	setusercontext(NULL, getpwuid(0), 0, LOGIN_SETALL & ~(LOGIN_SETLOGIN |
+		       LOGIN_SETUSER | LOGIN_SETGROUP | LOGIN_SETPATH |
+		       LOGIN_SETENV));
 #endif
 #ifdef USE_PAM
 	if (pamh) {
@@ -1427,9 +1428,8 @@ pass(const char *passwd)
 #endif
 	}
 	setsid();
-	setusercontext(lc, pw, 0,
-		LOGIN_SETLOGIN|LOGIN_SETGROUP|LOGIN_SETPRIORITY|
-		LOGIN_SETRESOURCES|LOGIN_SETUMASK|LOGIN_SETMAC);
+	setusercontext(lc, pw, 0, LOGIN_SETALL &
+		       ~(LOGIN_SETUSER | LOGIN_SETPATH | LOGIN_SETENV));
 #else
 	(void) initgroups(pw->pw_name, pw->pw_gid);
 			/* cache groups for cmds.c::matchgroup() */
@@ -2896,6 +2896,7 @@ static int
 handleoobcmd()
 {
 	char *cp;
+	int ret;
 
 	if (!urgflag)
 		return (0);
@@ -2904,9 +2905,14 @@ handleoobcmd()
 	if (!transflag)
 		return (0);
 	cp = tmpline;
-	if (getline(cp, sizeof(tmpline), stdin) == NULL) {
+	ret = getline(cp, sizeof(tmpline)-1, stdin);
+	if (ret == -1) {
 		reply(221, "You could at least say goodbye.");
 		dologout(0);
+	} else if (ret == -2) {
+		/* Ignore truncated command */
+		/* XXX: abort xfer with "500 command too long", & return 1 ? */
+		return 0;
 	}
 		/*
 		 * Manually parse OOB commands, because we can't

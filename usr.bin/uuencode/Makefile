@@ -1,8 +1,7 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: release/7.0.0/usr.bin/uuencode/Makefile 96958 2002-05-19 20:39:42Z jmallett $
+# $FreeBSD$
 
 PROG=	uuencode
-WARNS?=	4
 MAN=	uuencode.1 uuencode.format.5
 LINKS=	${BINDIR}/uuencode ${BINDIR}/b64encode
 MLINKS=	uuencode.1 uudecode.1 \

@@ -23,7 +23,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: release/7.0.0/sys/ddb/db_sym.h 139747 2005-01-06 01:34:41Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _DDB_DB_SYM_H_

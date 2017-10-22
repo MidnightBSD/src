@@ -2,6 +2,11 @@
  * Copyright (c) 2002 Tim J. Robbins
  * All rights reserved.
  *
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
+ * Portions of this software were developed by David Chisnall
+ * under sponsorship from the FreeBSD Foundation.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -25,11 +30,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/stdio/fwscanf.c 103856 2002-09-23 12:40:06Z tjr $");
+__FBSDID("$FreeBSD$");
 
 #include <stdarg.h>
 #include <stdio.h>
 #include <wchar.h>
+#include <xlocale.h>
 
 int
 fwscanf(FILE * __restrict fp, const wchar_t * __restrict fmt, ...)
@@ -39,6 +45,18 @@ fwscanf(FILE * __restrict fp, const wchar_t * __restrict fmt, ...)
 
 	va_start(ap, fmt);
 	r = vfwscanf(fp, fmt, ap);
+	va_end(ap);
+
+	return (r);
+}
+int
+fwscanf_l(FILE * __restrict fp, locale_t locale, const wchar_t * __restrict fmt, ...)
+{
+	va_list ap;
+	int r;
+
+	va_start(ap, fmt);
+	r = vfwscanf_l(fp, locale, fmt, ap);
 	va_end(ap);
 
 	return (r);

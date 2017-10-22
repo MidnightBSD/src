@@ -1,4 +1,4 @@
-/*	$NetBSD: gzip.c,v 1.89 2006/11/13 21:57:59 mrg Exp $	*/
+/*	$NetBSD: gzip.c,v 1.99 2011/03/23 12:59:44 tsutsui Exp $	*/
 
 /*-
  * Copyright (c) 1997, 1998, 2003, 2004, 2006 Matthew R. Green
@@ -12,8 +12,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -31,9 +29,9 @@
 
 #include <sys/cdefs.h>
 #ifndef lint
-__COPYRIGHT("@(#) Copyright (c) 1997, 1998, 2003, 2004, 2006 Matthew R. Green\n\
-     All rights reserved.\n");
-__RCSID("$FreeBSD: release/7.0.0/usr.bin/gzip/gzip.c 171389 2007-07-12 01:17:14Z delphij $");
+__COPYRIGHT("@(#) Copyright (c) 1997, 1998, 2003, 2004, 2006\
+ Matthew R. Green.  All rights reserved.");
+__FBSDID("$FreeBSD$");
 #endif /* not lint */
 
 /*
@@ -45,7 +43,6 @@ __RCSID("$FreeBSD: release/7.0.0/usr.bin/gzip/gzip.c 171389 2007-07-12 01:17:14Z
  *
  * TODO:
  *	- use mmap where possible
- *	- handle some signals better (remove outfile?)
  *	- make bzip2/compress -v/-t/-l support work as well as possible
  */
 
@@ -68,10 +65,6 @@ __RCSID("$FreeBSD: release/7.0.0/usr.bin/gzip/gzip.c 171389 2007-07-12 01:17:14Z
 #include <getopt.h>
 #include <time.h>
 
-#ifndef PRIdOFF
-#define PRIdOFF PRId64
-#endif
-
 /* what type of file are we dealing with */
 enum filetype {
 	FT_GZIP,
@@ -80,6 +73,9 @@ enum filetype {
 #endif
 #ifndef NO_COMPRESS_SUPPORT
 	FT_Z,
+#endif
+#ifndef NO_PACK_SUPPORT
+	FT_PACK,
 #endif
 	FT_LAST,
 	FT_UNKNOWN
@@ -95,6 +91,10 @@ enum filetype {
 #ifndef NO_COMPRESS_SUPPORT
 #define Z_SUFFIX	".Z"
 #define Z_MAGIC		"\037\235"
+#endif
+
+#ifndef NO_PACK_SUPPORT
+#define PACK_MAGIC	"\037\036"
 #endif
 
 #define GZ_SUFFIX	".gz"
@@ -133,6 +133,8 @@ static suffixes_t suffixes[] = {
 	SUFFIX(".tgz",		".tar"),
 #ifndef NO_BZIP2_SUPPORT
 	SUFFIX(BZ2_SUFFIX,	""),
+	SUFFIX(".tbz",		".tar"),
+	SUFFIX(".tbz2",		".tar"),
 #endif
 #ifndef NO_COMPRESS_SUPPORT
 	SUFFIX(Z_SUFFIX,	""),
@@ -142,8 +144,9 @@ static suffixes_t suffixes[] = {
 #undef SUFFIX
 };
 #define NUM_SUFFIXES (sizeof suffixes / sizeof suffixes[0])
+#define SUFFIX_MAXLEN	30
 
-static	const char	gzip_version[] = "FreeBSD gzip 20070711";
+static	const char	gzip_version[] = "FreeBSD gzip 20110523";
 
 #ifndef SMALL
 static	const char	gzip_copyright[] = \
@@ -158,8 +161,6 @@ static	const char	gzip_copyright[] = \
 "   2. Redistributions in binary form must reproduce the above copyright\n"
 "      notice, this list of conditions and the following disclaimer in the\n"
 "      documentation and/or other materials provided with the distribution.\n"
-"   3. The name of the author may not be used to endorse or promote products\n"
-"      derived from this software without specific prior written permission.\n"
 "\n"
 "   THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR\n"
 "   IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES\n"
@@ -188,6 +189,7 @@ static	int	qflag;			/* quiet mode */
 static	int	rflag;			/* recursive mode */
 static	int	tflag;			/* test */
 static	int	vflag;			/* verbose mode */
+static	const char *remove_file = NULL;	/* file to be removed upon SIGINT */
 #else
 #define		qflag	0
 #define		tflag	0
@@ -197,10 +199,10 @@ static	int	exit_value = 0;		/* exit value */
 
 static	char	*infile;		/* name of file coming in */
 
-static	void	maybe_err(const char *fmt, ...)
+static	void	maybe_err(const char *fmt, ...) __dead2
     __attribute__((__format__(__printf__, 1, 2)));
-#ifndef NO_BZIP2_SUPPORT
-static	void	maybe_errx(const char *fmt, ...)
+#if !defined(NO_BZIP2_SUPPORT) || !defined(NO_PACK_SUPPORT)
+static	void	maybe_errx(const char *fmt, ...) __dead2
     __attribute__((__format__(__printf__, 1, 2)));
 #endif
 static	void	maybe_warn(const char *fmt, ...)
@@ -225,6 +227,7 @@ static	void	usage(void);
 static	void	display_version(void);
 #ifndef SMALL
 static	void	display_license(void);
+static	void	sigint_handler(int);
 #endif
 static	const suffixes_t *check_suffix(char *, int);
 static	ssize_t	read_retry(int, void *, size_t);
@@ -248,6 +251,10 @@ static	off_t	unbzip2(int, int, char *, size_t, off_t *);
 #ifndef NO_COMPRESS_SUPPORT
 static	FILE 	*zdopen(int);
 static	off_t	zuncompress(FILE *, FILE *, char *, size_t, off_t *);
+#endif
+
+#ifndef NO_PACK_SUPPORT
+static	off_t	unpack(int, int, char *, size_t, off_t *);
 #endif
 
 int main(int, char **p);
@@ -290,11 +297,10 @@ main(int argc, char **argv)
 #endif
 	int ch;
 
-	/* XXX set up signals */
-
 #ifndef SMALL
 	if ((gzip = getenv("GZIP")) != NULL)
 		prepend_gzip(gzip, &argc, &argv);
+	signal(SIGINT, sigint_handler);
 #endif
 
 	/*
@@ -308,7 +314,7 @@ main(int argc, char **argv)
 		dflag = cflag = 1;
 
 #ifdef SMALL
-#define OPT_LIST "123456789cdhltV"
+#define OPT_LIST "123456789cdhlV"
 #else
 #define OPT_LIST "123456789acdfhklLNnqrS:tVv"
 #endif
@@ -363,6 +369,8 @@ main(int argc, char **argv)
 		case 'S':
 			len = strlen(optarg);
 			if (len != 0) {
+				if (len > SUFFIX_MAXLEN)
+					errx(1, "incorrect suffix: '%s': too long", optarg);
 				suffixes[0].zipped = optarg;
 				suffixes[0].ziplen = len;
 			} else {
@@ -448,7 +456,7 @@ maybe_err(const char *fmt, ...)
 	exit(2);
 }
 
-#ifndef NO_BZIP2_SUPPORT
+#if !defined(NO_BZIP2_SUPPORT) || !defined(NO_PACK_SUPPORT)
 /* ... without an errno. */
 void
 maybe_errx(const char *fmt, ...)
@@ -908,6 +916,9 @@ gz_uncompress(int in, int out, char *pre, size_t prelen, off_t *gsizep,
 			switch (error) {
 			/* Z_BUF_ERROR goes with Z_FINISH... */
 			case Z_BUF_ERROR:
+				if (z.avail_out > 0 && !done_reading)
+					continue;
+
 			case Z_STREAM_END:
 			case Z_OK:
 				break;
@@ -1075,14 +1086,14 @@ copymodes(int fd, const struct stat *sbp, const char *file)
 	if (fchmod(fd, sb.st_mode) < 0)
 		maybe_warn("couldn't fchmod: %s", file);
 
+	TIMESPEC_TO_TIMEVAL(&times[0], &sb.st_atim);
+	TIMESPEC_TO_TIMEVAL(&times[1], &sb.st_mtim);
+	if (futimes(fd, times) < 0)
+		maybe_warn("couldn't utimes: %s", file);
+
 	/* only try flags if they exist already */
         if (sb.st_flags != 0 && fchflags(fd, sb.st_flags) < 0)
 		maybe_warn("couldn't fchflags: %s", file);
-
-	TIMESPEC_TO_TIMEVAL(&times[0], &sb.st_atimespec);
-	TIMESPEC_TO_TIMEVAL(&times[1], &sb.st_mtimespec);
-	if (futimes(fd, times) < 0)
-		maybe_warn("couldn't utimes: %s", file);
 }
 #endif
 
@@ -1104,6 +1115,11 @@ file_gettype(u_char *buf)
 #ifndef NO_COMPRESS_SUPPORT
 	if (memcmp(buf, Z_MAGIC, 2) == 0)
 		return FT_Z;
+	else
+#endif
+#ifndef NO_PACK_SUPPORT
+	if (memcmp(buf, PACK_MAGIC, 2) == 0)
+		return FT_PACK;
 	else
 #endif
 		return FT_UNKNOWN;
@@ -1147,12 +1163,21 @@ unlink_input(const char *file, const struct stat *sb)
 	if (kflag)
 		return;
 	if (stat(file, &nsb) != 0)
-		/* Must be gone alrady */
+		/* Must be gone already */
 		return;
 	if (nsb.st_dev != sb->st_dev || nsb.st_ino != sb->st_ino)
 		/* Definitely a different file */
 		return;
 	unlink(file);
+}
+
+static void
+sigint_handler(int signo __unused)
+{
+
+	if (remove_file != NULL)
+		unlink(remove_file);
+	_exit(2);
 }
 #endif
 
@@ -1195,40 +1220,46 @@ file_compress(char *file, char *outfile, size_t outsize)
 	in = open(file, O_RDONLY);
 	if (in == -1) {
 		maybe_warn("can't open %s", file);
-		return -1;
+		return (-1);
 	}
+
+#ifndef SMALL
+	if (fstat(in, &isb) != 0) {
+		maybe_warn("couldn't stat: %s", file);
+		close(in);
+		return (-1);
+	}
+#endif
 
 	if (cflag == 0) {
 #ifndef SMALL
-		if (fstat(in, &isb) == 0) {
-			if (isb.st_nlink > 1 && fflag == 0) {
-				maybe_warnx("%s has %d other link%s -- "
-					    "skipping", file, isb.st_nlink - 1,
-					    isb.st_nlink == 1 ? "" : "s");
-				close(in);
-				return -1;
-			}
+		if (isb.st_nlink > 1 && fflag == 0) {
+			maybe_warnx("%s has %d other link%s -- skipping",
+			    file, isb.st_nlink - 1,
+			    (isb.st_nlink - 1) == 1 ? "" : "s");
+			close(in);
+			return (-1);
 		}
 
-		if (fflag == 0 && (suff = check_suffix(file, 0))
-		    && suff->zipped[0] != 0) {
+		if (fflag == 0 && (suff = check_suffix(file, 0)) &&
+		    suff->zipped[0] != 0) {
 			maybe_warnx("%s already has %s suffix -- unchanged",
-				    file, suff->zipped);
+			    file, suff->zipped);
 			close(in);
-			return -1;
+			return (-1);
 		}
 #endif
 
 		/* Add (usually) .gz to filename */
 		if ((size_t)snprintf(outfile, outsize, "%s%s",
-					file, suffixes[0].zipped) >= outsize)
-			memcpy(outfile - suffixes[0].ziplen - 1,
-				suffixes[0].zipped, suffixes[0].ziplen + 1);
+		    file, suffixes[0].zipped) >= outsize)
+			memcpy(outfile + outsize - suffixes[0].ziplen - 1,
+			    suffixes[0].zipped, suffixes[0].ziplen + 1);
 
 #ifndef SMALL
 		if (check_outfile(outfile) == 0) {
 			close(in);
-			return -1;
+			return (-1);
 		}
 #endif
 	}
@@ -1238,8 +1269,11 @@ file_compress(char *file, char *outfile, size_t outsize)
 		if (out == -1) {
 			maybe_warn("could not create output: %s", outfile);
 			fclose(stdin);
-			return -1;
+			return (-1);
 		}
+#ifndef SMALL
+		remove_file = outfile;
+#endif
 	} else
 		out = STDOUT_FILENO;
 
@@ -1255,7 +1289,7 @@ file_compress(char *file, char *outfile, size_t outsize)
 	 * has the expected size.
 	 */
 	if (cflag != 0)
-		return insize == -1 ? -1 : size;
+		return (insize == -1 ? -1 : size);
 
 #ifndef SMALL
 	if (fstat(out, &osb) != 0) {
@@ -1264,20 +1298,20 @@ file_compress(char *file, char *outfile, size_t outsize)
 	}
 
 	if (osb.st_size != size) {
-		maybe_warnx("output file: %s wrong size (%" PRIdOFF
-				" != %" PRIdOFF "), deleting",
-				outfile, osb.st_size, size);
+		maybe_warnx("output file: %s wrong size (%ju != %ju), deleting",
+		    outfile, (uintmax_t)osb.st_size, (uintmax_t)size);
 		goto bad_outfile;
 	}
 
 	copymodes(out, &isb, outfile);
+	remove_file = NULL;
 #endif
 	if (close(out) == -1)
 		maybe_warn("couldn't close output");
 
 	/* output is good, ok to delete input */
 	unlink_input(file, &isb);
-	return size;
+	return (size);
 
 #ifndef SMALL
     bad_outfile:
@@ -1286,7 +1320,7 @@ file_compress(char *file, char *outfile, size_t outsize)
 
 	maybe_warnx("leaving original %s", file);
 	unlink(outfile);
-	return size;
+	return (size);
 #endif
 }
 
@@ -1299,8 +1333,9 @@ file_uncompress(char *file, char *outfile, size_t outsize)
 	ssize_t rbytes;
 	unsigned char header1[4];
 	enum filetype method;
-	int rv, fd, ofd, zfd = -1;
+	int fd, ofd, zfd = -1;
 #ifndef SMALL
+	ssize_t rv;
 	time_t timestamp = 0;
 	unsigned char name[PATH_MAX + 1];
 #endif
@@ -1348,7 +1383,7 @@ file_uncompress(char *file, char *outfile, size_t outsize)
 		unsigned char ts[4];	/* timestamp */
 
 		rv = pread(fd, ts, sizeof ts, GZIP_TIMESTAMP);
-		if (rv >= 0 && (size_t)rv < sizeof ts)
+		if (rv >= 0 && rv < (ssize_t)(sizeof ts))
 			goto unexpected_EOF;
 		if (rv == -1) {
 			if (!fflag)
@@ -1406,6 +1441,9 @@ file_uncompress(char *file, char *outfile, size_t outsize)
 			maybe_warn("can't open %s", outfile);
 			goto lose;
 		}
+#ifndef SMALL
+		remove_file = outfile;
+#endif
 	} else
 		zfd = STDOUT_FILENO;
 
@@ -1456,6 +1494,17 @@ file_uncompress(char *file, char *outfile, size_t outsize)
 			unlink(outfile);
 			goto lose;
 		}
+	} else
+#endif
+
+#ifndef NO_PACK_SUPPORT
+	if (method == FT_PACK) {
+		if (lflag) {
+			maybe_warnx("no -l with packed files");
+			goto lose;
+		}
+
+		size = unpack(fd, zfd, NULL, 0, NULL);
 	} else
 #endif
 
@@ -1519,18 +1568,18 @@ file_uncompress(char *file, char *outfile, size_t outsize)
 		return -1;
 	}
 	if (osb.st_size != size) {
-		maybe_warnx("stat gave different size: %" PRIdOFF
-				" != %" PRIdOFF " (leaving original)",
-				size, osb.st_size);
+		maybe_warnx("stat gave different size: %ju != %ju (leaving original)",
+		    (uintmax_t)size, (uintmax_t)osb.st_size);
 		close(ofd);
 		unlink(outfile);
 		return -1;
 	}
-	unlink_input(file, &isb);
 #ifndef SMALL
 	copymodes(ofd, &isb, outfile);
+	remove_file = NULL;
 #endif
 	close(ofd);
+	unlink_input(file, &isb);
 	return size;
 
     unexpected_EOF:
@@ -1652,6 +1701,12 @@ handle_stdin(void)
 		fclose(in);
 		break;
 #endif
+#ifndef NO_PACK_SUPPORT
+	case FT_PACK:
+		usize = unpack(STDIN_FILENO, STDOUT_FILENO,
+			       (char *)header1, sizeof header1, &gsize);
+		break;
+#endif
 	}
 
 #ifndef SMALL
@@ -1727,7 +1782,8 @@ handle_pathname(char *path)
 	}
 
 retry:
-	if (stat(path, &sb) != 0) {
+	if (stat(path, &sb) != 0 || (fflag == 0 && cflag == 0 &&
+	    lstat(path, &sb) != 0)) {
 		/* lets try <path>.gz if we're decompressing */
 		if (dflag && s == NULL && errno == ENOENT) {
 			len = strlen(path);
@@ -1968,6 +2024,8 @@ print_list(int fd, off_t out, const char *outfile, time_t ts)
 	}
 	in_tot += in;
 	out_tot += out;
+#else
+	(void)&ts;	/* XXX */
 #endif
 	printf("%12llu %12llu ", (unsigned long long)out, (unsigned long long)in);
 	print_ratio(in, out, stdout);
@@ -2016,7 +2074,7 @@ static void
 display_license(void)
 {
 
-	fprintf(stderr, "%s (based on NetBSD gzip 20060927)\n", gzip_version);
+	fprintf(stderr, "%s (based on NetBSD gzip 20091011)\n", gzip_version);
 	fprintf(stderr, "%s\n", gzip_copyright);
 	exit(0);
 }
@@ -2036,6 +2094,9 @@ display_version(void)
 #endif
 #ifndef NO_COMPRESS_SUPPORT
 #include "zuncompress.c"
+#endif
+#ifndef NO_PACK_SUPPORT
+#include "unpack.c"
 #endif
 
 static ssize_t
@@ -2059,4 +2120,3 @@ read_retry(int fd, void *buf, size_t sz)
 
 	return sz - left;
 }
-

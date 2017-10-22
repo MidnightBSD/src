@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)tar.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/pax/tar.c 164699 2006-11-27 22:17:11Z ru $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -291,7 +291,7 @@ tar_chksm(char *blk, int len)
 /*
  * tar_id()
  *	determine if a block given to us is a valid tar header (and not a USTAR
- *	header). We have to be on the lookout for those pesky blocks of	all
+ *	header). We have to be on the lookout for those pesky blocks of all
  *	zero's.
  * Return:
  *	0 if a tar header, -1 otherwise
@@ -1086,7 +1086,7 @@ name_split(char *name, int len)
 	 */
 	if (len <= TNMSZ)
 		return(name);
-	if (len > (TPFSZ + TNMSZ + 1))
+	if (len > TPFSZ + TNMSZ)
 		return(NULL);
 
 	/*
@@ -1095,7 +1095,7 @@ name_split(char *name, int len)
 	 * to find the biggest piece to fit in the name field (or the smallest
 	 * prefix we can find)
 	 */
-	start = name + len - TNMSZ - 1;
+	start = name + len - TNMSZ;
 	while ((*start != '\0') && (*start != '/'))
 		++start;
 

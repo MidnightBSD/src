@@ -1,4 +1,4 @@
-/* $OpenBSD: pathnames.h,v 1.16 2006/03/25 22:22:43 djm Exp $ */
+/* $OpenBSD: pathnames.h,v 1.20 2010/08/31 11:54:45 djm Exp $ */
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -38,6 +38,7 @@
 #define _PATH_HOST_CONFIG_FILE		SSHDIR "/ssh_config"
 #define _PATH_HOST_KEY_FILE		SSHDIR "/ssh_host_key"
 #define _PATH_HOST_DSA_KEY_FILE		SSHDIR "/ssh_host_dsa_key"
+#define _PATH_HOST_ECDSA_KEY_FILE	SSHDIR "/ssh_host_ecdsa_key"
 #define _PATH_HOST_RSA_KEY_FILE		SSHDIR "/ssh_host_rsa_key"
 #define _PATH_DH_MODULI			SSHDIR "/moduli"
 /* Backwards compatibility */
@@ -54,7 +55,7 @@
 #define _PATH_SSH_DAEMON_PID_FILE	_PATH_SSH_PIDDIR "/sshd.pid"
 
 /*
- * The directory in user\'s home directory in which the files reside. The
+ * The directory in user's home directory in which the files reside. The
  * directory should be world-readable (though not all files are).
  */
 #define _PATH_SSH_USER_DIR		".ssh"
@@ -74,12 +75,13 @@
  */
 #define _PATH_SSH_CLIENT_IDENTITY	".ssh/identity"
 #define _PATH_SSH_CLIENT_ID_DSA		".ssh/id_dsa"
+#define _PATH_SSH_CLIENT_ID_ECDSA	".ssh/id_ecdsa"
 #define _PATH_SSH_CLIENT_ID_RSA		".ssh/id_rsa"
 
 /*
- * Configuration file in user\'s home directory.  This file need not be
+ * Configuration file in user's home directory.  This file need not be
  * readable by anyone but the user him/herself, but does not contain anything
- * particularly secret.  If the user\'s home directory resides on an NFS
+ * particularly secret.  If the user's home directory resides on an NFS
  * volume where root is mapped to nobody, this may need to be world-readable.
  */
 #define _PATH_SSH_USER_CONFFILE		".ssh/config"
@@ -87,7 +89,7 @@
 /*
  * File containing a list of those rsa keys that permit logging in as this
  * user.  This file need not be readable by anyone but the user him/herself,
- * but does not contain anything particularly secret.  If the user\'s home
+ * but does not contain anything particularly secret.  If the user's home
  * directory resides on an NFS volume where root is mapped to nobody, this
  * may need to be world-readable.  (This file is read by the daemon which is
  * running as root.)
@@ -123,6 +125,11 @@
 /* Location of ssh-keysign for hostbased authentication */
 #ifndef _PATH_SSH_KEY_SIGN
 #define _PATH_SSH_KEY_SIGN		"/usr/libexec/ssh-keysign"
+#endif
+
+/* Location of ssh-pkcs11-helper to support keys in tokens */
+#ifndef _PATH_SSH_PKCS11_HELPER
+#define _PATH_SSH_PKCS11_HELPER		"/usr/libexec/ssh-pkcs11-helper"
 #endif
 
 /* xauth for X11 forwarding */

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005 Jean-Sébastien Pédron
+ * Copyright (c) 2005 Jean-SÃ©bastien PÃ©dron
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sbin/mount_reiserfs/mount_reiserfs.c 152357 2005-11-13 01:45:32Z rodrigc $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

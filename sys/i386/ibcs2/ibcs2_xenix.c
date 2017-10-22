@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/i386/ibcs2/ibcs2_xenix.c 171227 2007-07-05 05:32:44Z peter $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -103,7 +103,7 @@ xenix_chsize(td, uap)
 	DPRINTF(("IBCS2: 'xenix chsize'\n"));
 	sa.fd = uap->fd;
 	sa.length = uap->size;
-	return ftruncate(td, &sa);
+	return sys_ftruncate(td, &sa);
 }
 
 

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/ppp/fsm.h 165777 2007-01-05 00:33:00Z ticso $
+ * $FreeBSD$
  */
 
 /*

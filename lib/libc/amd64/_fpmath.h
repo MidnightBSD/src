@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libc/amd64/_fpmath.h 143214 2005-03-07 04:55:22Z das $
+ * $FreeBSD$
  */
 
 union IEEEl2bits {
@@ -36,6 +36,11 @@ union IEEEl2bits {
 		unsigned int	junkl	:16;
 		unsigned int	junkh	:32;
 	} bits;
+	struct {
+		unsigned long	man	:64;
+		unsigned int	expsign	:16;
+		unsigned long	junk	:48;
+	} xbits;
 };
 
 #define	LDBL_NBIT	0x80000000
@@ -47,4 +52,4 @@ union IEEEl2bits {
 #define	LDBL_TO_ARRAY32(u, a) do {			\
 	(a)[0] = (uint32_t)(u).bits.manl;		\
 	(a)[1] = (uint32_t)(u).bits.manh;		\
-} while(0)
+} while (0)

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sys/linker_set.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_LINKER_SET_H_
@@ -45,6 +45,8 @@
  */
 #ifdef __GNUCLIKE___SECTION
 #define __MAKE_SET(set, sym)						\
+	__GLOBL(__CONCAT(__start_set_,set));				\
+	__GLOBL(__CONCAT(__stop_set_,set));				\
 	static void const * const __set_##set##_sym_##sym 		\
 	__section("set_" #set) __used = &sym
 #else /* !__GNUCLIKE___SECTION */

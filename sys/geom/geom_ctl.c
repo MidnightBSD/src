@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/geom/geom_ctl.c 168052 2007-03-30 16:32:08Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_geom.h"
 
@@ -75,7 +75,7 @@ void
 g_ctl_init(void)
 {
 
-	make_dev(&g_ctl_cdevsw, 0,
+	make_dev_credf(MAKEDEV_ETERNAL, &g_ctl_cdevsw, 0, NULL,
 	    UID_ROOT, GID_OPERATOR, 0640, PATH_GEOM_CTL);
 	KASSERT(GCTL_PARAM_RD == VM_PROT_READ,
 		("GCTL_PARAM_RD != VM_PROT_READ"));
@@ -464,7 +464,7 @@ g_ctl_ioctl_ctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag, struct th
 
 	req = (void *)data;
 	req->nerror = 0;
-	req->serror = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	req->serror = sbuf_new_auto();
 	/* It is an error if we cannot return an error text */
 	if (req->lerror < 2)
 		return (EINVAL);

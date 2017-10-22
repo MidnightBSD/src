@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/gdb/gdbserver/Makefile 157574 2006-04-06 22:24:01Z jmg $
+# $FreeBSD$
 
 # Not elf specific so don't install in /usr/libexec/elf
 BINDIR=/usr/bin
@@ -10,10 +10,14 @@ GDBDIR=	${.CURDIR}/../../../../contrib/gdb
 
 PROG=	gdbserver
 
-SRCS=	i387-fp.c inferiors.c mem-break.c regcache.c remote-utils.c	\
-	server.c signals.c target.c reg-i386.c utils.c
-SRCS+=	fbsd-low.c fbsd-i386-low.c
+SRCS=	inferiors.c mem-break.c regcache.c remote-utils.c	\
+	server.c signals.c target.c utils.c
+SRCS+=	fbsd-low.c
 
+SRCS+=	fbsd-${MACHINE_CPUARCH}-low.c reg-${MACHINE_CPUARCH}.c
+.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
+SRCS+= i387-fp.c
+.endif
 #CFLAGS+=	-I${.CURDIR}/../arch/${MACHINE_ARCH}
 CFLAGS+=	-I${GDBDIR}/gdb/gdbserver
 CFLAGS+=	-I${GDBDIR}/gdb/regformats

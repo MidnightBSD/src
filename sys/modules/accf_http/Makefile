@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/accf_http/Makefile 70711 2001-01-06 14:00:42Z obrien $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../netinet
 

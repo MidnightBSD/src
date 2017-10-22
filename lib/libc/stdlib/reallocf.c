@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/stdlib/reallocf.c 174854 2007-12-22 06:32:46Z cvs2svn $");
+__FBSDID("$FreeBSD$");
 
 #include <stdlib.h>
 
@@ -35,7 +35,14 @@ reallocf(void *ptr, size_t size)
 	void *nptr;
 
 	nptr = realloc(ptr, size);
-	if (!nptr && ptr)
+
+	/*
+	 * When the System V compatibility option (malloc "V" flag) is
+	 * in effect, realloc(ptr, 0) frees the memory and returns NULL.
+	 * So, to avoid double free, call free() only when size != 0.
+	 * realloc(ptr, 0) can't fail when ptr != NULL.
+	 */
+	if (!nptr && ptr && size != 0)
 		free(ptr);
 	return (nptr);
 }

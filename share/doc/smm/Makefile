@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/10/93
-# $FreeBSD: release/7.0.0/share/doc/smm/Makefile 172506 2007-10-10 16:59:15Z cvs2svn $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -10,9 +10,6 @@
 # 13.amd (documentation is TeXinfo)
 # 16.security 17.password (encumbered)
 
-# The following modules are built with their programs:
-# 07.lpd
-
 SUBDIR=	title \
 	contents \
 	01.setup \
@@ -21,6 +18,7 @@ SUBDIR=	title \
 	04.quotas \
 	05.fastfs \
 	06.nfs \
+	07.lpd \
 	${_08.sendmailop} \
 	11.timedop \
 	12.timed \

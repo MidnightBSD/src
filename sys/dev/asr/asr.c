@@ -130,7 +130,6 @@
 #include <cam/cam_ccb.h>
 #include <cam/cam_sim.h>
 #include <cam/cam_xpt_sim.h>
-#include <cam/cam_xpt_periph.h>
 
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>
@@ -142,11 +141,9 @@
 #include "opt_asr.h"
 #include <i386/include/cputypes.h>
 
-#ifndef BURN_BRIDGES
 #if defined(ASR_COMPAT)
 #define ASR_IOCTL_COMPAT
 #endif /* ASR_COMPAT */
-#endif /* !BURN_BRIDGES */
 #endif
 #include <machine/vmparam.h>
 
@@ -163,7 +160,7 @@
 
 #include	<dev/asr/sys_info.h>
 
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/asr/asr.c 170872 2007-06-17 05:55:54Z scottl $");
+__FBSDID("$FreeBSD$");
 
 #define	ASR_VERSION	1
 #define	ASR_REVISION	'1'
@@ -381,11 +378,12 @@ typedef struct Asr_softc {
 	u_int16_t		ha_Msgs_Count;
 
 	/* Links into other parents and HBAs */
-	struct Asr_softc      * ha_next;       /* HBA list */
+	STAILQ_ENTRY(Asr_softc) ha_next;       /* HBA list */
 	struct cdev *ha_devt;
 } Asr_softc_t;
 
-static Asr_softc_t *Asr_softc_list;
+static STAILQ_HEAD(, Asr_softc) Asr_softc_list =
+	STAILQ_HEAD_INITIALIZER(Asr_softc_list);
 
 /*
  *	Prototypes of the routines we have in this object.
@@ -1962,7 +1960,7 @@ ASR_setSysTab(Asr_softc_t *sc)
 {
 	PI2O_EXEC_SYS_TAB_SET_MESSAGE Message_Ptr;
 	PI2O_SET_SYSTAB_HEADER	      SystemTable;
-	Asr_softc_t		    * ha;
+	Asr_softc_t		    * ha, *next;
 	PI2O_SGE_SIMPLE_ELEMENT	      sg;
 	int			      retVal;
 
@@ -1970,7 +1968,7 @@ ASR_setSysTab(Asr_softc_t *sc)
 	  sizeof(I2O_SET_SYSTAB_HEADER), M_TEMP, M_WAITOK | M_ZERO)) == NULL) {
 		return (ENOMEM);
 	}
-	for (ha = Asr_softc_list; ha; ha = ha->ha_next) {
+	STAILQ_FOREACH(ha, &Asr_softc_list, ha_next) {
 		++SystemTable->NumberEntries;
 	}
 	if ((Message_Ptr = (PI2O_EXEC_SYS_TAB_SET_MESSAGE)malloc (
@@ -2001,9 +1999,9 @@ ASR_setSysTab(Asr_softc_t *sc)
 	      &(Message_Ptr->StdMessageFrame)) & 0xF0) >> 2));
 	SG(sg, 0, I2O_SGL_FLAGS_DIR, SystemTable, sizeof(I2O_SET_SYSTAB_HEADER));
 	++sg;
-	for (ha = Asr_softc_list; ha; ha = ha->ha_next) {
+	STAILQ_FOREACH_SAFE(ha, &Asr_softc_list, ha_next, next) {
 		SG(sg, 0,
-		  ((ha->ha_next)
+		  ((next)
 		    ? (I2O_SGL_FLAGS_DIR)
 		    : (I2O_SGL_FLAGS_DIR | I2O_SGL_FLAGS_END_OF_BUFFER)),
 		  &(ha->ha_SystemTable), sizeof(ha->ha_SystemTable));
@@ -2331,7 +2329,7 @@ asr_alloc_dma(Asr_softc_t *sc)
 
 	dev = sc->ha_dev;
 
-	if (bus_dma_tag_create(NULL,			/* parent */
+	if (bus_dma_tag_create(bus_get_dma_tag(dev),	/* PCI parent */
 			       1, 0,			/* algnmnt, boundary */
 			       BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 			       BUS_SPACE_MAXADDR,	/* highaddr */
@@ -2399,7 +2397,7 @@ asr_attach(device_t dev)
 {
 	PI2O_EXEC_STATUS_GET_REPLY status;
 	PI2O_LCT_ENTRY		 Device;
-	Asr_softc_t		 *sc, **ha;
+	Asr_softc_t		 *sc;
 	struct scsi_inquiry_data *iq;
 	int			 bus, size, unit;
 	int			 error;
@@ -2408,7 +2406,7 @@ asr_attach(device_t dev)
 	unit = device_get_unit(dev);
 	sc->ha_dev = dev;
 
-	if (Asr_softc_list == NULL) {
+	if (STAILQ_EMPTY(&Asr_softc_list)) {
 		/*
 		 *	Fixup the OS revision as saved in the dptsig for the
 		 *	engine (dptioctl.h) to pick up.
@@ -2420,8 +2418,7 @@ asr_attach(device_t dev)
 	 */
 	LIST_INIT(&(sc->ha_ccb));
 	/* Link us into the HA list */
-	for (ha = &Asr_softc_list; *ha; ha = &((*ha)->ha_next));
-		*(ha) = sc;
+	STAILQ_INSERT_TAIL(&Asr_softc_list, sc, ha_next);
 
 	/*
 	 *	This is the real McCoy!
@@ -2703,7 +2700,7 @@ asr_action(struct cam_sim *sim, union ccb  *ccb)
 
 	ccb->ccb_h.spriv_ptr0 = sc = (struct Asr_softc *)cam_sim_softc(sim);
 
-	switch (ccb->ccb_h.func_code) {
+	switch ((int)ccb->ccb_h.func_code) {
 
 	/* Common cases first */
 	case XPT_SCSI_IO:	/* Execute the requested I/O operation */
@@ -3074,6 +3071,14 @@ asr_intr(Asr_softc_t *sc)
 				 && (size > ccb->csio.sense_len)) {
 					size = ccb->csio.sense_len;
 				}
+				if (size < ccb->csio.sense_len) {
+					ccb->csio.sense_resid =
+					    ccb->csio.sense_len - size;
+				} else {
+					ccb->csio.sense_resid = 0;
+				}
+				bzero(&(ccb->csio.sense_data),
+				    sizeof(ccb->csio.sense_data));
 				bcopy(Reply->SenseData,
 				      &(ccb->csio.sense_data), size);
 			}
@@ -3113,7 +3118,7 @@ typedef U32   DPT_RTN_T;
 #undef SCSI_RESET	/* Conflicts with "scsi/scsiconf.h" defintion */
 #include	"dev/asr/osd_unix.h"
 
-#define	asr_unit(dev)	  minor(dev)
+#define	asr_unit(dev)	  dev2unit(dev)
 
 static u_int8_t ASR_ctlr_held;
 
@@ -3569,6 +3574,12 @@ ASR_queue_i(Asr_softc_t	*sc, PI2O_MESSAGE_FRAME	Packet)
 		if (size > sizeof(ccb->csio.sense_data)) {
 			size = sizeof(ccb->csio.sense_data);
 		}
+		if (size < ccb->csio.sense_len) {
+			ccb->csio.sense_resid = ccb->csio.sense_len - size;
+		} else {
+			ccb->csio.sense_resid = 0;
+		}
+		bzero(&(ccb->csio.sense_data), sizeof(ccb->csio.sense_data));
 		bcopy(&(ccb->csio.sense_data), Reply_Ptr->SenseData, size);
 		I2O_SCSI_ERROR_REPLY_MESSAGE_FRAME_setAutoSenseTransferCount(
 		    Reply_Ptr, size);
@@ -3711,9 +3722,9 @@ asr_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *t
 		Info.drive1CMOS = j;
 
 		Info.numDrives = *((char *)ptok(0x475));
-#endif /* ASR_IOCTL_COMPAT */
-
+#else /* ASR_IOCTL_COMPAT */
 		bzero(&Info, sizeof(Info));
+#endif /* ASR_IOCTL_COMPAT */
 
 		Info.processorFamily = ASR_sig.dsProcessorFamily;
 #if defined(__i386__)

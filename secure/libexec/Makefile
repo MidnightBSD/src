@@ -1,10 +1,10 @@
-# $FreeBSD: release/7.0.0/secure/libexec/Makefile 156813 2006-03-17 18:54:44Z ru $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
 SUBDIR=
 .if ${MK_OPENSSH} != "no"
-SUBDIR+=sftp-server ssh-keysign
+SUBDIR+=sftp-server ssh-keysign ssh-pkcs11-helper
 .endif
 
 .include <bsd.subdir.mk>

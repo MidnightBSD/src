@@ -1,4 +1,4 @@
-	# $FreeBSD: release/7.0.0/secure/lib/libcrypto/i386/co-586.s 127326 2004-03-23 08:32:29Z markm $
+	# $FreeBSD$
 
 
 

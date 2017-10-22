@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/options.c 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -78,8 +78,8 @@ mediaCheck(Option *opt)
 	case DEVICE_TYPE_CDROM:
 	    return "CDROM";
 
-	case DEVICE_TYPE_TAPE:
-	    return "Tape";
+	case DEVICE_TYPE_USB:
+	    return "USB";
 
 	case DEVICE_TYPE_DOS:
 	    return "DOS";
@@ -97,7 +97,6 @@ mediaCheck(Option *opt)
     return "<not yet set>";
 }
 
-#define TAPE_PROMPT	"Please enter the tape block size in 512 byte blocks:"
 #define NEWFS_PROMPT	"Please enter newfs(8) parameters:"
 #define RELNAME_PROMPT	"Please specify the release you wish to load or\n\"any\" for a generic release install:"
 #define BPKG_PROMPT	"Please specify the name of the HTML browser package:"
@@ -126,14 +125,10 @@ static Option Options[] = {
       OPT_IS_VAR,	NULL,			VAR_TRY_DHCP,		varCheck	},
 { "IPv6",		"Attempt IPv6 configuration of interfaces",
       OPT_IS_VAR,	NULL,			VAR_TRY_RTSOL,		varCheck	},
-{ "Skip PCCARD",	"Skip PC Card probing, do not use PC Card devices for installation",
-      OPT_IS_VAR,	NULL,			VAR_SKIP_PCCARD,	varCheck	},
 { "FTP username",	"Username and password to use instead of anonymous",
       OPT_IS_FUNC,	mediaSetFTPUserPass,	VAR_FTP_USER,		varCheck	},
 { "Editor",		"Which text editor to use during installation",
       OPT_IS_VAR,	EDITOR_PROMPT,		VAR_EDITOR,		varCheck	},
-{ "Tape Blocksize",	"Tape media block size in 512 byte blocks",
-      OPT_IS_VAR,	TAPE_PROMPT,		VAR_TAPE_BLOCKSIZE,	varCheck	},
 { "Extract Detail",	"How verbosely to display file name information during extractions",
       OPT_IS_FUNC,	mediaSetCPIOVerbosity,	VAR_CPIO_VERBOSITY,	varCheck	},
 { "Release Name",	"Which release to attempt to load from installation media",

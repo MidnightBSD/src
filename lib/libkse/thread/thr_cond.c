@@ -26,28 +26,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_cond.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
-
-LT10_COMPAT_PRIVATE(__pthread_cond_wait);
-LT10_COMPAT_PRIVATE(_pthread_cond_wait);
-LT10_COMPAT_DEFAULT(pthread_cond_wait);
-LT10_COMPAT_PRIVATE(__pthread_cond_timedwait);
-LT10_COMPAT_PRIVATE(_pthread_cond_timedwait);
-LT10_COMPAT_DEFAULT(pthread_cond_timedwait);
-LT10_COMPAT_PRIVATE(_pthread_cond_init);
-LT10_COMPAT_DEFAULT(pthread_cond_init);
-LT10_COMPAT_PRIVATE(_pthread_cond_destroy);
-LT10_COMPAT_DEFAULT(pthread_cond_destroy);
-LT10_COMPAT_PRIVATE(_pthread_cond_signal);
-LT10_COMPAT_DEFAULT(pthread_cond_signal);
-LT10_COMPAT_PRIVATE(_pthread_cond_broadcast);
-LT10_COMPAT_DEFAULT(pthread_cond_broadcast);
 
 #define	THR_IN_CONDQ(thr)	(((thr)->sflags & THR_FLAGS_IN_SYNCQ) != 0)
 #define	THR_CONDQ_SET(thr)	(thr)->sflags |= THR_FLAGS_IN_SYNCQ
@@ -62,6 +50,10 @@ static inline void		cond_queue_enq(pthread_cond_t, pthread_t);
 static void			cond_wait_backout(void *);
 static inline void		check_continuation(struct pthread *,
 				    struct pthread_cond *, pthread_mutex_t *);
+
+int __pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
+int __pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,
+		       const struct timespec *abstime);
 
 /*
  * Double underscore versions are cancellation points.  Single underscore
@@ -122,7 +114,7 @@ _pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *cond_attr)
 			    malloc(sizeof(struct pthread_cond))) == NULL) {
 				rval = ENOMEM;
 			} else if (_lock_init(&pcond->c_lock, LCK_ADAPTIVE,
-			    _thr_lock_wait, _thr_lock_wakeup) != 0) {
+			    _thr_lock_wait, _thr_lock_wakeup, calloc) != 0) {
 				free(pcond);
 				rval = ENOMEM;
 			} else {
@@ -197,7 +189,7 @@ _pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 	 * perform the dynamic initialization:
 	 */
 	if (*cond == NULL &&
-	    (rval = pthread_cond_init(cond, NULL)) != 0)
+	    (rval = _pthread_cond_init(cond, NULL)) != 0)
 		return (rval);
 
 	if (!_kse_isthreaded())
@@ -395,7 +387,7 @@ _pthread_cond_timedwait(pthread_cond_t * cond, pthread_mutex_t * mutex,
 	 * If the condition variable is statically initialized, perform dynamic
 	 * initialization.
 	 */
-	if (*cond == NULL && (rval = pthread_cond_init(cond, NULL)) != 0)
+	if (*cond == NULL && (rval = _pthread_cond_init(cond, NULL)) != 0)
 		return (rval);
 
 	if (!_kse_isthreaded())
@@ -596,7 +588,7 @@ _pthread_cond_signal(pthread_cond_t * cond)
         * If the condition variable is statically initialized, perform dynamic
         * initialization.
         */
-	else if (*cond != NULL || (rval = pthread_cond_init(cond, NULL)) == 0) {
+	else if (*cond != NULL || (rval = _pthread_cond_init(cond, NULL)) == 0) {
 		/* Lock the condition variable structure: */
 		THR_LOCK_ACQUIRE(curthread, &(*cond)->c_lock);
 
@@ -665,7 +657,7 @@ _pthread_cond_broadcast(pthread_cond_t * cond)
         * If the condition variable is statically initialized, perform dynamic
         * initialization.
         */
-	else if (*cond != NULL || (rval = pthread_cond_init(cond, NULL)) == 0) {
+	else if (*cond != NULL || (rval = _pthread_cond_init(cond, NULL)) == 0) {
 		/* Lock the condition variable structure: */
 		THR_LOCK_ACQUIRE(curthread, &(*cond)->c_lock);
 

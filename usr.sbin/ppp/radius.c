@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/ppp/radius.c 169986 2007-05-25 13:45:49Z novel $
+ * $FreeBSD$
  *
  */
 

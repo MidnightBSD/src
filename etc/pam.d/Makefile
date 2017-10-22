@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/etc/pam.d/Makefile 170890 2007-06-17 17:25:53Z yar $
+# $FreeBSD$
 
 NO_OBJ=
 
@@ -6,7 +6,6 @@ FILES=	README \
 	atrun \
 	cron \
 	ftpd \
-	gdm \
 	imap \
 	kde \
 	login \

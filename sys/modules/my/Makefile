@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/my/Makefile 167453 2007-03-11 15:20:04Z brueffer $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/my
 

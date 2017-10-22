@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/7.0.0/tools/regression/geom_shsec/test-1.t 153188 2005-12-07 01:29:50Z pjd $
+# $FreeBSD$
 
 . `dirname $0`/conf.sh
 

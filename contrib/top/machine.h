@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/7.0.0/contrib/top/machine.h 172506 2007-10-10 16:59:15Z cvs2svn $
+ * $FreeBSD$
  */
 
 /*
@@ -20,6 +20,7 @@ struct statics
 #ifdef ORDER
     char **order_names;
 #endif
+    int ncpus;
 };
 
 /*
@@ -43,6 +44,7 @@ struct system_info
     int    *memory;
     int    *swap;
     struct timeval boottime;
+    int    ncpus;
 };
 
 /* cpu_states is an array of percentages * 10.  For example, 
@@ -63,6 +65,7 @@ struct process_select
     int uid;		/* only this uid (unless uid == -1) */
     int wcpu;		/* show weighted cpu */
     int jail;		/* show jail ID */
+    int kidle;		/* show per-CPU idle threads */
     char *command;	/* only this command (unless == NULL) */
 };
 

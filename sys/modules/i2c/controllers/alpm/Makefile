@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/i2c/controllers/alpm/Makefile 171020 2007-06-24 20:35:59Z njl $
+# $FreeBSD$
 
 .PATH:		${.CURDIR}/../../../../pci
 KMOD		= alpm

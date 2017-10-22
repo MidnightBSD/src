@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/gnu/usr.bin/gdb/arch/arm/nm-fbsd.h 174179 2007-12-02 14:38:21Z cognet $ */
+/* $FreeBSD$ */
 
 /* Native-dependent definitions for ARM running NetBSD, for GDB.
    Copyright 1986, 1987, 1989, 1992, 1994, 1999 Free Software Foundation, Inc.
@@ -32,4 +32,4 @@
 /* We can attach and detach.  */
 #define ATTACH_DETACH
 
-#endif /* NM_NBSD_H */
+#endif /* NM_FBSD_H */

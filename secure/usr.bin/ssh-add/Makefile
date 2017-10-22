@@ -1,7 +1,11 @@
-# $FreeBSD: release/7.0.0/secure/usr.bin/ssh-add/Makefile 158529 2006-05-13 21:38:16Z des $
+# $FreeBSD$
 
 PROG=	ssh-add
+SRCS+=	ssh-add.c
 CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
+
+# required when linking with a dynamic libssh 
+SRCS+=	roaming_dummy.c
 
 DPADD=	${LIBSSH} ${LIBCRYPT} ${LIBCRYPTO} ${LIBZ}
 LDADD=	-lssh -lcrypt -lcrypto -lz

@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/19/94
-# $FreeBSD: release/7.0.0/games/fortune/datfiles/Makefile 174574 2007-12-13 05:45:08Z dougb $
+# $FreeBSD$
 
 FILES=	fortunes freebsd-tips murphy startrek zippy
 BLDS=	fortunes.dat murphy.dat startrek.dat zippy.dat \

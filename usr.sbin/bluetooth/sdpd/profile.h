@@ -1,6 +1,8 @@
 /*
  * profile.h
- *
+ */
+
+/*-
  * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: profile.h,v 1.6 2004/01/13 19:31:54 max Exp $
- * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/sdpd/profile.h 124758 2004-01-20 20:48:26Z emax $
+ * $FreeBSD$
  */
 
 #ifndef _PROFILE_H_
@@ -79,10 +81,14 @@ profile_attr_create_t	common_profile_create_bluetooth_profile_descriptor_list;
 profile_attr_create_t	common_profile_create_language_base_attribute_id_list;
 profile_attr_create_t	common_profile_create_service_provider_name;
 profile_attr_create_t	common_profile_create_string8;
+profile_attr_create_t	common_profile_create_service_availability;
 profile_attr_create_t	rfcomm_profile_create_protocol_descriptor_list;
 profile_attr_create_t	obex_profile_create_protocol_descriptor_list;
 profile_attr_create_t	obex_profile_create_supported_formats_list;
+profile_attr_create_t	bnep_profile_create_protocol_descriptor_list;
+profile_attr_create_t	bnep_profile_create_security_description;
 
+profile_data_valid_t	common_profile_always_valid;
 profile_data_valid_t	common_profile_server_channel_valid;
 profile_data_valid_t	obex_profile_data_valid;
 

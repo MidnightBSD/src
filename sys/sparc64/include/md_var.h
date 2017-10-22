@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/i386/include/md_var.h,v 1.40 2001/07/12
- * $FreeBSD: release/7.0.0/sys/sparc64/include/md_var.h 140485 2005-01-19 18:24:07Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_MD_VAR_H_
@@ -47,6 +47,8 @@ extern	vm_paddr_t kstack0_phys;
 struct	pcpu;
 struct	md_utrap;
 
+const char *cpu_cpuid_prop(u_int cpu_impl);
+uint32_t cpu_get_mid(u_int cpu_impl);
 void	cpu_identify(u_long vers, u_int clock, u_int id);
 void	cpu_setregs(struct pcpu *pc);
 int	is_physical_memory(vm_paddr_t addr);
@@ -56,8 +58,21 @@ struct md_utrap *utrap_hold(struct md_utrap *ut);
 
 cpu_block_copy_t spitfire_block_copy;
 cpu_block_zero_t spitfire_block_zero;
+cpu_block_copy_t zeus_block_copy;
+cpu_block_zero_t zeus_block_zero;
 
 extern	cpu_block_copy_t *cpu_block_copy;
 extern	cpu_block_zero_t *cpu_block_zero;
+
+/*
+ * Given that the VTOC8 disk label only uses 16-bit fields for cylinders,
+ * heads and sectors we might need to adjust the geometry of large disks.
+ */
+struct ccb_calc_geometry;
+int scsi_da_bios_params(struct ccb_calc_geometry *ccg);
+struct disk;
+void sparc64_ata_disk_firmware_geom_adjust(struct disk *disk);
+#define	ata_disk_firmware_geom_adjust(disk)				\
+	sparc64_ata_disk_firmware_geom_adjust(disk)
 
 #endif /* !_MACHINE_MD_VAR_H_ */

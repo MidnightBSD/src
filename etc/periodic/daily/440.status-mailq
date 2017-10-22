@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/periodic/daily/440.status-mailq 156435 2006-03-08 17:26:53Z matteo $
+# $FreeBSD$
 #
 
 # If there is a global system configuration file, suck it in.
@@ -59,7 +59,7 @@ case "$daily_status_mailq_enable" in
 		fi;;
 	    esac
 	fi;;
-		
+
     *)  rc=0;;
 esac
 

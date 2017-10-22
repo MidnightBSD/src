@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/skel/dot.shrc 100569 2002-07-23 12:28:16Z jmallett $
+# $FreeBSD$
 #
 # .shrc - bourne shell startup file 
 #
@@ -44,4 +44,4 @@ alias g='egrep -i'
 # esac
 
 # search path for cd(1)
-# CDPATH=.:$HOME
+# CDPATH=:$HOME

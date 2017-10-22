@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)reboot.8	8.1 (Berkeley) 6/9/93
-.\" $FreeBSD: release/7.0.0/sbin/reboot/reboot.8 164509 2006-11-22 13:12:34Z jkoshy $
+.\" $FreeBSD$
 .\"
-.Dd June 9, 1993
+.Dd October 11, 2010
 .Dt REBOOT 8
 .Os
 .Sh NAME
@@ -61,9 +61,8 @@ a
 (and subsequently a
 .Dv SIGKILL )
 and, respectively, halt or restart the system.
-The action is logged, including entering a shutdown record into the
-.Xr wtmp 5
-file.
+The action is logged, including entering a shutdown record into the user
+accounting database.
 .Pp
 The options are as follows:
 .Bl -tag -width indent
@@ -130,7 +129,7 @@ utility is used when the system needs to be halted or restarted, giving
 users advance warning of their impending doom and cleanly terminating
 specific programs.
 .Sh SEE ALSO
-.Xr wtmp 5 ,
+.Xr getutxent 3 ,
 .Xr boot 8 ,
 .Xr dumpon 8 ,
 .Xr nextboot 8 ,

@@ -26,14 +26,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_fsync.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <unistd.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(__fsync);
-LT10_COMPAT_DEFAULT(fsync);
+int __fsync(int fd);
 
 __weak_reference(__fsync, fsync);
 

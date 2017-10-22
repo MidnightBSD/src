@@ -1,4 +1,8 @@
-#	$FreeBSD: release/7.0.0/sbin/ipf/Makefile.inc 146321 2005-05-17 14:29:06Z ru $
+#	$FreeBSD$
+
+WARNS?=		2
+NO_WFORMAT=
+NO_WARRAY_BOUNDS=
 
 CFLAGS+=	-I${.CURDIR}/../../../contrib/ipfilter
 CFLAGS+=	-I${.CURDIR}/../../../contrib/ipfilter/tools

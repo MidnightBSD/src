@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/patch/Makefile 125910 2004-02-17 01:34:53Z ache $
+# $FreeBSD$
 
 PROG= 	patch
 SRCS=   backupfile.c inp.c patch.c pch.c util.c version.c

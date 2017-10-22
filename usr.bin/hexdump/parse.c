@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -37,7 +33,7 @@ static char sccsid[] = "@(#)parse.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/hexdump/parse.c 161132 2006-08-09 19:12:10Z maxim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -142,8 +138,7 @@ add(const char *fmt)
 				badfmt(fmt);
 		if (!(tfu->fmt = malloc(p - savep + 1)))
 			err(1, NULL);
-		(void) strncpy(tfu->fmt, savep, p - savep);
-		tfu->fmt[p - savep] = '\0';
+		(void) strlcpy(tfu->fmt, savep, p - savep + 1);
 		escape(tfu->fmt);
 		p++;
 	}
@@ -260,7 +255,9 @@ rewrite(FS *fs)
 					sokay = NOTOKAY;
 			}
 
-			p2 = p1 + 1;		/* Set end pointer. */
+			p2 = *p1 ? p1 + 1 : p1;	/* Set end pointer -- make sure
+						 * that it's non-NUL/-NULL first
+						 * though. */
 			cs[0] = *p1;		/* Set conversion string. */
 			cs[1] = '\0';
 
@@ -454,13 +451,14 @@ escape(char *p1)
 	char *p2;
 
 	/* alphabetic escape sequences have to be done in place */
-	for (p2 = p1;; ++p1, ++p2) {
-		if (!*p1) {
-			*p2 = *p1;
-			break;
-		}
-		if (*p1 == '\\')
-			switch(*++p1) {
+	for (p2 = p1;; p1++, p2++) {
+		if (*p1 == '\\') {
+			p1++;
+			switch(*p1) {
+			case '\0':
+				*p2 = '\\';
+				*++p2 = '\0';
+				return;
 			case 'a':
 			     /* *p2 = '\a'; */
 				*p2 = '\007';
@@ -487,6 +485,11 @@ escape(char *p1)
 				*p2 = *p1;
 				break;
 			}
+		} else {
+			*p2 = *p1;
+			if (*p1 == '\0')
+				return;
+		}
 	}
 }
 

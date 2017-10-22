@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/dev/ct/ct_machdep.h 139749 2005-01-06 01:43:34Z imp $ */
+/* $FreeBSD$ */
 /*	$NecBSD: ct_machdep.h,v 1.4.12.2 2001/06/20 06:13:34 honda Exp $	*/
 /*	$NetBSD$	*/
 

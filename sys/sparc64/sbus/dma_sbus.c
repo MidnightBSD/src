@@ -1,5 +1,5 @@
-/*	$OpenBSD: dma_sbus.c,v 1.12 2005/03/03 01:41:45 miod Exp $	*/
-/*	$NetBSD: dma_sbus.c,v 1.5 2000/07/09 20:57:42 pk Exp $ */
+/*	$OpenBSD: dma_sbus.c,v 1.16 2008/06/26 05:42:18 ray Exp $	*/
+/*	$NetBSD: dma_sbus.c,v 1.32 2008/04/28 20:23:57 martin Exp $ */
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -16,13 +16,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -63,14 +56,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sbus/dma_sbus.c 166147 2007-01-20 14:06:01Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
-#include <sys/resource.h>
 #include <sys/rman.h>
 
 #include <dev/ofw/ofw_bus.h>
@@ -123,14 +115,16 @@ static device_method_t dma_methods[] = {
 	/* Bus interface */
 	DEVMETHOD(bus_print_child,	dma_print_child),
 	DEVMETHOD(bus_probe_nomatch,	dma_probe_nomatch),
-	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
-	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
 	DEVMETHOD(bus_alloc_resource,	bus_generic_rl_alloc_resource),
-	DEVMETHOD(bus_release_resource, bus_generic_rl_release_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
 	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
-	DEVMETHOD(bus_get_resource_list, dma_get_resource_list),
+	DEVMETHOD(bus_adjust_resource,	bus_generic_adjust_resource),
+	DEVMETHOD(bus_release_resource, bus_generic_rl_release_resource),
+	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
+	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
 	DEVMETHOD(bus_get_resource,	bus_generic_rl_get_resource),
+	DEVMETHOD(bus_get_resource_list, dma_get_resource_list),
+	DEVMETHOD(bus_child_pnpinfo_str, ofw_bus_gen_child_pnpinfo_str),
 
 	/* ofw_bus interface */
 	DEVMETHOD(ofw_bus_get_devinfo,	dma_get_devinfo),
@@ -140,7 +134,7 @@ static device_method_t dma_methods[] = {
 	DEVMETHOD(ofw_bus_get_node,	ofw_bus_gen_get_node),
 	DEVMETHOD(ofw_bus_get_type,	ofw_bus_gen_get_type),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t dma_driver = {
@@ -149,7 +143,15 @@ static driver_t dma_driver = {
 	sizeof(struct dma_softc),
 };
 
-DRIVER_MODULE(dma, sbus, dma_driver, dma_devclass, 0, 0);
+/*
+ * The probe order is handled by sbus(4) as we don't want the variants
+ * with children to be attached earlier than the stand-alone controllers
+ * in order to generally preserve the OFW device tree order.
+ */
+EARLY_DRIVER_MODULE(dma, sbus, dma_driver, dma_devclass, 0, 0,
+    BUS_PASS_DEFAULT);
+MODULE_DEPEND(dma, sbus, 1, 1, 1);
+MODULE_VERSION(dma, 1);
 
 static int
 dma_probe(device_t dev)
@@ -176,7 +178,7 @@ dma_attach(device_t dev)
 	char *cabletype;
 	uint32_t csr;
 	phandle_t child, node;
-	int error, burst, children;
+	int error, i;
 
 	dsc = device_get_softc(dev);
 	lsc = &dsc->sc_lsi64854;
@@ -186,15 +188,13 @@ dma_attach(device_t dev)
 	dsc->sc_ign = sbus_get_ign(dev);
 	dsc->sc_slot = sbus_get_slot(dev);
 
-	lsc->sc_rid = 0;
-	lsc->sc_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &lsc->sc_rid,
+	i = 0;
+	lsc->sc_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &i,
 	    RF_ACTIVE);
 	if (lsc->sc_res == NULL) {
 		device_printf(dev, "cannot allocate resources\n");
 		return (ENXIO);
 	}
-	lsc->sc_regt = rman_get_bustag(lsc->sc_res);
-	lsc->sc_regh = rman_get_bushandle(lsc->sc_res);
 
 	if (strcmp(name, "espdma") == 0 || strcmp(name, "dma") == 0)
 		lsc->sc_channel = L64854_CHANNEL_SCSI;
@@ -233,9 +233,9 @@ dma_attach(device_t dev)
 	    BUS_SPACE_MAXADDR,		/* lowaddr */
 	    BUS_SPACE_MAXADDR,		/* highaddr */
 	    NULL, NULL,			/* filter, filterarg */
-	    BUS_SPACE_MAXSIZE_32BIT,	/* maxsize */
-	    0,				/* nsegments */
-	    BUS_SPACE_MAXSIZE_32BIT,	/* maxsegsize */
+	    BUS_SPACE_MAXSIZE,		/* maxsize */
+	    BUS_SPACE_UNRESTRICTED,	/* nsegments */
+	    BUS_SPACE_MAXSIZE,		/* maxsegsize */
 	    0,				/* flags */
 	    NULL, NULL,			/* no locking */
 	    &lsc->sc_parent_dmat);
@@ -244,23 +244,17 @@ dma_attach(device_t dev)
 		goto fail_lres;
 	}
 
-	burst = sbus_get_burstsz(dev);
-	lsc->sc_burst = (burst & SBUS_BURST_32) ? 32 :
-	    (burst & SBUS_BURST_16) ? 16 : 0;
+	i = sbus_get_burstsz(dev);
+	lsc->sc_burst = (i & SBUS_BURST_32) ? 32 :
+	    (i & SBUS_BURST_16) ? 16 : 0;
 	lsc->sc_dev = dev;
 
-	error = lsi64854_attach(lsc);
-	if (error != 0) {
-		device_printf(dev, "lsi64854_attach failed\n");
-		goto fail_lpdma;
-	}
-
 	/* Attach children. */
-	children = 0;
+	i = 0;
 	for (child = OF_child(node); child != 0; child = OF_peer(child)) {
 		if ((ddi = dma_setup_dinfo(dev, dsc, child)) == NULL)
 			continue;
-		if (children != 0) {
+		if (i != 0) {
 			device_printf(dev,
 			    "<%s>: only one child per DMA channel supported\n",
 			    ddi->ddi_obdinfo.obd_name);
@@ -274,14 +268,13 @@ dma_attach(device_t dev)
 			continue;
 		}
 		device_set_ivars(cdev, ddi);
-		children++;
+		i++;
 	}
 	return (bus_generic_attach(dev));
 
- fail_lpdma:
-	bus_dma_tag_destroy(lsc->sc_parent_dmat);
  fail_lres:
-	bus_release_resource(dev, SYS_RES_MEMORY, lsc->sc_rid, lsc->sc_res);
+	bus_release_resource(dev, SYS_RES_MEMORY, rman_get_rid(lsc->sc_res),
+	    lsc->sc_res);
 	return (error);
 }
 

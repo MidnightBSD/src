@@ -39,6 +39,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
 #ifndef lint
 #ifndef __GNUC__
 #error "GCC is needed to compile this file"
@@ -59,8 +62,6 @@ extern int _DYNAMIC;
 extern void _fini(void);
 extern void _init(void);
 extern int main(int, char **, char **);
-extern void _start(int, char **, char **, const struct Struct_Obj_Entry *,
-    void (*)(void), struct ps_strings *);
 
 #ifdef GCRT
 extern void _mcleanup(void);
@@ -72,6 +73,9 @@ extern int etext;
 char **environ;
 const char *__progname = "";
 struct ps_strings *__ps_strings;
+
+void _start(int, char **, char **, const struct Struct_Obj_Entry *,
+    void (*)(void), struct ps_strings *);
 
 /* The entry function. */
 /*
@@ -119,5 +123,3 @@ __asm__(".text");
 __asm__("eprol:");
 __asm__(".previous");
 #endif
-
-__asm__(".ident\t\"$FreeBSD: release/7.0.0/lib/csu/powerpc/crt1.c 133754 2004-08-15 16:18:52Z dfr $\"");

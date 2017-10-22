@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/en/if_en_pci.c 166901 2007-02-23 12:19:07Z piso $");
+__FBSDID("$FreeBSD$");
 
 /*
  * i f _ e n _ p c i . c  
@@ -43,9 +43,6 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/en/if_en_pci.c 166901 2007-02-23 12:19
  * FreeBSD PCI glue for the eni155p card.
  * thanks to Matt Thomas for figuring out FreeBSD vs NetBSD vs etc.. diffs.
  */
-
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/en/if_en_pci.c 166901 2007-02-23 12:19:07Z piso $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

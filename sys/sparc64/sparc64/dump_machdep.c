@@ -23,9 +23,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: release/7.0.0/sys/sparc64/sparc64/dump_machdep.c 175834 2008-01-30 21:21:51Z ru $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,27 +55,6 @@ static char buffer[DEV_BSIZE];
 static vm_size_t fragsz;
 
 #define	MAXDUMPSZ	(MAXDUMPPGS << PAGE_SHIFT)
-
-/* XXX should be MI */
-static void
-mkdumpheader(struct kerneldumpheader *kdh, uint32_t archver, uint64_t dumplen,
-    uint32_t blksz)
-{
-
-	bzero(kdh, sizeof(*kdh));
-	strncpy(kdh->magic, KERNELDUMPMAGIC, sizeof(kdh->magic));
-	strncpy(kdh->architecture, MACHINE_ARCH, sizeof(kdh->architecture));
-	kdh->version = htod32(KERNELDUMPVERSION);
-	kdh->architectureversion = htod32(archver);
-	kdh->dumplength = htod64(dumplen);
-	kdh->dumptime = htod64(time_second);
-	kdh->blocksize = htod32(blksz);
-	strncpy(kdh->hostname, hostname, sizeof(kdh->hostname));
-	strncpy(kdh->versionstring, version, sizeof(kdh->versionstring));
-	if (panicstr != NULL)
-		strncpy(kdh->panicstring, panicstr, sizeof(kdh->panicstring));
-	kdh->parity = kerneldump_parity(kdh);
-}
 
 static int
 buf_write(struct dumperinfo *di, char *ptr, size_t sz)
@@ -113,6 +93,7 @@ buf_flush(struct dumperinfo *di)
 
 	error = dump_write(di, buffer, 0, dumplo, DEV_BSIZE);
 	dumplo += DEV_BSIZE;
+	fragsz = 0;
 	return (error);
 }
 
@@ -190,7 +171,8 @@ dumpsys(struct dumperinfo *di)
 	/* Determine dump offset on device. */
 	dumplo = di->mediaoffset + di->mediasize - totsize;
 
-	mkdumpheader(&kdh, KERNELDUMP_SPARC64_VERSION, size, di->blocksize);
+	mkdumpheader(&kdh, KERNELDUMPMAGIC, KERNELDUMP_SPARC64_VERSION, size,
+	    di->blocksize);
 
 	printf("Dumping %lu MB (%d chunks)\n", (u_long)(size >> 20), nreg);
 

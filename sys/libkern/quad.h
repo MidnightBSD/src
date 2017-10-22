@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)quad.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: release/7.0.0/sys/libkern/quad.h 128965 2004-05-05 15:12:55Z bde $
+ * $FreeBSD$
  */
 
 #ifndef _LIBKERN_QUAD_H_
@@ -101,6 +101,7 @@ typedef unsigned int	qshift_t;
 
 quad_t		__ashldi3(quad_t, qshift_t);
 quad_t		__ashrdi3(quad_t, qshift_t);
+int		__cmpdi2(quad_t a, quad_t b);
 quad_t		__divdi3(quad_t a, quad_t b);
 quad_t		__lshrdi3(quad_t, qshift_t);
 quad_t		__moddi3(quad_t a, quad_t b);

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sbin/ggate/ggatec/ggatec.c 156590 2006-03-12 09:27:51Z pjd $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -59,7 +59,7 @@ enum { UNSET, CREATE, DESTROY, LIST, RESCUE } action = UNSET;
 
 static const char *path = NULL;
 static const char *host = NULL;
-static int unit = -1;
+static int unit = G_GATE_UNIT_AUTO;
 static unsigned flags = 0;
 static int force = 0;
 static unsigned queue_size = G_GATE_QUEUE_SIZE;

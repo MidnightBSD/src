@@ -26,7 +26,7 @@
 /*      $NetBSD: setjmp.S,v 1.3 1998/10/03 12:30:38 tsubai Exp $        */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/powerpc/gen/setjmp.S 107571 2002-12-04 07:25:14Z grehan $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/syscall.h>
 	
@@ -76,7 +76,6 @@ ENTRY(__longjmp)
 	mr	%r6,%r4			/* save val param */
 	mtlr	%r11			/* r11 -> link reg */
 	mtcr	%r12			/* r12 -> condition reg */
-	mr	%r2,%r9			/* r9  -> global ptr */
 	mr	%r1,%r10		/* r10 -> stackptr */
 	mr	%r4,%r3
 	li	%r3,3			/* SIG_SETMASK */
@@ -89,3 +88,4 @@ ENTRY(__longjmp)
 	li	%r3,1
 	blr
 
+	.section .note.GNU-stack,"",%progbits

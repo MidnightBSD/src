@@ -31,10 +31,10 @@
  *
  * Distantly from :
  *	@(#)lptreg.h      1.1 (Berkeley) 12/19/90
- *	Id: lptreg.h,v 1.6 1997/02/22 09:36:52 peter Exp 
+ *	Id: lptreg.h,v 1.6 1997/02/22 09:36:52 peter Exp
  *	From Id: nlpt.h,v 1.3 1999/01/10 12:04:54 nsouch Exp
  *
- * $FreeBSD: release/7.0.0/sys/dev/ppbus/lpt.h 50477 1999-08-28 01:08:13Z peter $
+ * $FreeBSD$
  */
 
 /*
@@ -45,7 +45,7 @@
  */
 
 #ifndef __LPT_H
-#define __LPT_H
+#define	__LPT_H
 
 /* machine independent definitions, it shall only depend on the ppbus
  * parallel port model */

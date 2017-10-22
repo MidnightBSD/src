@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)profile.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: release/7.0.0/sys/amd64/include/profile.h 163738 2006-10-28 13:12:06Z bde $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PROFILE_H_
@@ -77,17 +77,17 @@
 #error this file needs to be ported to your compiler
 #endif /* !__GNUCLIKE_ASM */
 #else /* !GUPROF */
-#define	MCOUNT_DECL(s)	u_long s;
+#define	MCOUNT_DECL(s)	register_t s;
 #ifdef SMP
 extern int	mcount_lock;
-#define	MCOUNT_ENTER(s)	{ s = read_rflags(); disable_intr(); \
+#define	MCOUNT_ENTER(s)	{ s = intr_disable(); \
  			  while (!atomic_cmpset_acq_int(&mcount_lock, 0, 1)) \
 			  	/* nothing */ ; }
 #define	MCOUNT_EXIT(s)	{ atomic_store_rel_int(&mcount_lock, 0); \
-			  write_rflags(s); }
+			  intr_restore(s); }
 #else
-#define	MCOUNT_ENTER(s)	{ s = read_rflags(); disable_intr(); }
-#define	MCOUNT_EXIT(s)	(write_rflags(s))
+#define	MCOUNT_ENTER(s)	{ s = intr_disable(); }
+#define	MCOUNT_EXIT(s)	(intr_restore(s))
 #endif
 #endif /* GUPROF */
 

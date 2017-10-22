@@ -34,7 +34,7 @@
 	.asciz "@(#)modf.s	5.5 (Berkeley) 3/18/91"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/i386/gen/modf.S 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * modf(value, iptr): return fractional part of value, and stores the
@@ -82,3 +82,6 @@ ENTRY(modf)
 	fdivp	/* return +/- 0 for +/- Inf, NaN for NaN */
 	leave
 	ret
+END(modf)
+
+	.section .note.GNU-stack,"",%progbits

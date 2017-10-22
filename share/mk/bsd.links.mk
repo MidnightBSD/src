@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/mk/bsd.links.mk 99343 2002-07-03 12:28:03Z ru $
+# $FreeBSD$
 
 .if !target(__<bsd.init.mk>__)
 .error bsd.links.mk cannot be included directly.

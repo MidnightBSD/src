@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/syscons/star/star_saver.c 146239 2005-05-15 09:07:04Z nyan $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -85,7 +85,7 @@ star_saver(video_adapter_t *adp, int blank)
 			/* clear the screen and set the border color */
 			sc_vtb_clear(&scp->scr, sc->scr_map[0x20],
 				     (FG_LIGHTGREY | BG_BLACK) << 8);
-			(*vidsw[adp->va_index]->set_hw_cursor)(adp, -1, -1);
+			vidd_set_hw_cursor(adp, -1, -1);
 			sc_set_border(scp, 0);
 			blanked = TRUE;
 			for(i=0; i<NUM_STARS; i++) {

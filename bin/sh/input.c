@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)input.c	8.3 (Berkeley) 6/9/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/sh/input.c 158143 2006-04-29 10:29:10Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>	/* defines BUFSIZ */
 #include <fcntl.h>
@@ -93,38 +93,34 @@ struct parsefile {
 
 
 int plinno = 1;			/* input line number */
-MKINIT int parsenleft;		/* copy of parsefile->nleft */
+int parsenleft;			/* copy of parsefile->nleft */
 MKINIT int parselleft;		/* copy of parsefile->lleft */
 char *parsenextc;		/* copy of parsefile->nextc */
 MKINIT struct parsefile basepf;	/* top level input file */
 char basebuf[BUFSIZ];		/* buffer for top level input file */
-STATIC struct parsefile *parsefile = &basepf;	/* current input file */
+static struct parsefile *parsefile = &basepf;	/* current input file */
 int init_editline = 0;		/* editline library initialized? */
 int whichprompt;		/* 1 == PS1, 2 == PS2 */
 
 EditLine *el;			/* cookie for editline package */
 
-STATIC void pushfile(void);
+static void pushfile(void);
 static int preadfd(void);
+static void popstring(void);
 
 #ifdef mkinit
 INCLUDE "input.h"
 INCLUDE "error.h"
 
-INIT {
-	extern char basebuf[];
+MKINIT char basebuf[];
 
+INIT {
 	basepf.nextc = basepf.buf = basebuf;
 }
 
 RESET {
-	if (exception != EXSHELLPROC)
-		parselleft = parsenleft = 0;	/* clear input buffer */
 	popallfiles();
-}
-
-SHELLPROC {
-	popallfiles();
+	parselleft = parsenleft = 0;	/* clear input buffer */
 }
 #endif
 
@@ -215,7 +211,7 @@ retry:
                                 if (flags >= 0 && flags & O_NONBLOCK) {
                                         flags &=~ O_NONBLOCK;
                                         if (fcntl(0, F_SETFL, flags) >= 0) {
-						out2str("sh: turning off NDELAY mode\n");
+						out2fmt_flush("sh: turning off NDELAY mode\n");
                                                 goto retry;
                                         }
                                 }
@@ -321,6 +317,23 @@ check:
 }
 
 /*
+ * Returns if we are certain we are at EOF. Does not cause any more input
+ * to be read from the outside world.
+ */
+
+int
+preadateof(void)
+{
+	if (parsenleft > 0)
+		return 0;
+	if (parsefile->strpush)
+		return 0;
+	if (parsenleft == EOF_NLEFT || parsefile->buf == NULL)
+		return 1;
+	return 0;
+}
+
+/*
  * Undo the last call to pgetc.  Only one character may be pushed back.
  * PEOF may be pushed back.
  */
@@ -342,7 +355,7 @@ pushstring(char *s, int len, void *ap)
 	struct strpush *sp;
 
 	INTOFF;
-/*dprintf("*** calling pushstring: %s, %d\n", s, len);*/
+/*out2fmt_flush("*** calling pushstring: %s, %d\n", s, len);*/
 	if (parsefile->strpush) {
 		sp = ckmalloc(sizeof (struct strpush));
 		sp->prev = parsefile->strpush;
@@ -360,7 +373,7 @@ pushstring(char *s, int len, void *ap)
 	INTON;
 }
 
-void
+static void
 popstring(void)
 {
 	struct strpush *sp = parsefile->strpush;
@@ -369,7 +382,7 @@ popstring(void)
 	parsenextc = sp->prevstring;
 	parsenleft = sp->prevnleft;
 	parselleft = sp->prevlleft;
-/*dprintf("*** calling popstring: restoring to '%s'\n", parsenextc);*/
+/*out2fmt_flush("*** calling popstring: restoring to '%s'\n", parsenextc);*/
 	if (sp->ap)
 		sp->ap->flag &= ~ALIASINUSE;
 	parsefile->strpush = sp->prev;
@@ -384,14 +397,14 @@ popstring(void)
  */
 
 void
-setinputfile(char *fname, int push)
+setinputfile(const char *fname, int push)
 {
 	int fd;
 	int fd2;
 
 	INTOFF;
 	if ((fd = open(fname, O_RDONLY)) < 0)
-		error("Can't open %s: %s", fname, strerror(errno));
+		error("cannot open %s: %s", fname, strerror(errno));
 	if (fd < 10) {
 		fd2 = fcntl(fd, F_DUPFD, 10);
 		close(fd);
@@ -451,7 +464,7 @@ setinputstring(char *string, int push)
  * adds a new entry to the stack and popfile restores the previous level.
  */
 
-STATIC void
+static void
 pushfile(void)
 {
 	struct parsefile *pf;
@@ -490,6 +503,32 @@ popfile(void)
 	INTON;
 }
 
+
+/*
+ * Return current file (to go back to it later using popfilesupto()).
+ */
+
+struct parsefile *
+getcurrentfile(void)
+{
+	return parsefile;
+}
+
+
+/*
+ * Pop files until the given file is on top again. Useful for regular
+ * builtins that read shell commands from files or strings.
+ * If the given file is not an active file, an error is raised.
+ */
+
+void
+popfilesupto(struct parsefile *file)
+{
+	while (parsefile != file && parsefile != &basepf)
+		popfile();
+	if (parsefile != file)
+		error("popfilesupto() misused");
+}
 
 /*
  * Return to top level.

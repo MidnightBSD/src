@@ -1,6 +1,7 @@
-# $FreeBSD: release/7.0.0/tools/tools/iwi/Makefile 156735 2006-03-15 10:46:38Z ru $
+# $FreeBSD$
 
 PROG=	iwistats
 NO_MAN=
+WARNS?=6
 
 .include <bsd.prog.mk>

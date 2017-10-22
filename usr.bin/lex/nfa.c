@@ -28,7 +28,7 @@
 
 /* $Header: /home/daffy/u0/vern/flex/RCS/nfa.c,v 2.17 95/03/04 16:11:42 vern Exp $ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/lex/nfa.c 99112 2002-06-30 05:25:07Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include "flexdef.h"
 
@@ -321,7 +321,7 @@ int first, last;
  */
 
 void mark_beginning_as_normal( mach )
-register int mach;
+int mach;
 	{
 	switch ( state_type[mach] )
 		{

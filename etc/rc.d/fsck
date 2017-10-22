@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/fsck 175737 2008-01-28 07:58:32Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: fsck
@@ -23,7 +23,7 @@ fsck_start()
 					# During fsck ignore SIGQUIT
 		trap : 3
 
-		echo "Starting file system checks:"
+		check_startmsgs && echo "Starting file system checks:"
 		if checkyesno background_fsck; then
 			fsck -F -p
 		else
@@ -44,8 +44,8 @@ fsck_start()
 			;;
 		8)
 			if checkyesno fsck_y_enable; then
-				echo "File system preen failed, trying fsck -y."
-				fsck -y
+				echo "File system preen failed, trying fsck -y ${fsck_y_flags}"
+				fsck -y ${fsck_y_flags}
 				case $? in
 				0)
 					;;

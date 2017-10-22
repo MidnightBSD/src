@@ -1,9 +1,9 @@
-# $FreeBSD: release/7.0.0/sys/modules/if_tun/Makefile 151350 2005-10-14 23:30:17Z yar $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../net
 
 KMOD=	if_tun
-SRCS=	if_tun.c opt_atalk.h opt_inet.h opt_inet6.h opt_ipx.h opt_mac.h
+SRCS=	if_tun.c opt_atalk.h opt_inet.h opt_inet6.h opt_ipx.h
 
 .if !defined(KERNBUILDDIR)
 opt_atalk.h:

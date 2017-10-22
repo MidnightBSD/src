@@ -25,14 +25,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libkse/thread/thr_sigaltstack.c 172491 2007-10-09 13:42:34Z obrien $");
+__FBSDID("$FreeBSD$");
 
+#include "namespace.h"
 #include <errno.h>
 #include <signal.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(_sigaltstack);
-LT10_COMPAT_DEFAULT(sigaltstack);
+int	_sigaltstack(stack_t *_ss, stack_t *_oss);
 
 __weak_reference(_sigaltstack, sigaltstack);
 

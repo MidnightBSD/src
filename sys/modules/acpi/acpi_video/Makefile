@@ -1,9 +1,8 @@
-#	$FreeBSD: release/7.0.0/sys/modules/acpi/acpi_video/Makefile 171021 2007-06-24 20:36:51Z njl $
+#	$FreeBSD$
 
 .PATH:	${.CURDIR}/../../../dev/acpica
 
 KMOD=	acpi_video
-CFLAGS+= -I${.CURDIR}/../../../contrib/dev/acpica
 SRCS=	acpi_video.c
 SRCS+=	opt_acpi.h acpi_if.h bus_if.h device_if.h
 

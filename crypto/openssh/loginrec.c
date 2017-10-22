@@ -146,7 +146,7 @@
  */
 
 #include "includes.h"
-__RCSID("$FreeBSD: release/7.0.0/crypto/openssh/loginrec.c 172506 2007-10-10 16:59:15Z cvs2svn $");
+__RCSID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -162,6 +162,7 @@ __RCSID("$FreeBSD: release/7.0.0/crypto/openssh/loginrec.c 172506 2007-10-10 16:
 #include <pwd.h>
 #include <stdarg.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "xmalloc.h"
@@ -207,6 +208,7 @@ int syslogin_write_entry(struct logininfo *li);
 
 int getlast_entry(struct logininfo *li);
 int lastlog_get_entry(struct logininfo *li);
+int utmpx_get_entry(struct logininfo *li);
 int wtmp_get_entry(struct logininfo *li);
 int wtmpx_get_entry(struct logininfo *li);
 
@@ -272,7 +274,7 @@ login_logout(struct logininfo *li)
  *                try to retrieve lastlog information from wtmp/wtmpx.
  */
 unsigned int
-login_get_lastlog_time(const int uid)
+login_get_lastlog_time(const uid_t uid)
 {
 	struct logininfo li;
 
@@ -296,7 +298,7 @@ login_get_lastlog_time(const int uid)
  *  0  on failure (will use OpenSSH's logging facilities for diagnostics)
  */
 struct logininfo *
-login_get_lastlog(struct logininfo *li, const int uid)
+login_get_lastlog(struct logininfo *li, const uid_t uid)
 {
 	struct passwd *pw;
 
@@ -310,7 +312,8 @@ login_get_lastlog(struct logininfo *li, const int uid)
 	 */
 	pw = getpwuid(uid);
 	if (pw == NULL)
-		fatal("%s: Cannot find account for uid %i", __func__, uid);
+		fatal("%s: Cannot find account for uid %ld", __func__,
+		    (long)uid);
 
 	/* No MIN_SIZEOF here - we absolutely *must not* truncate the
 	 * username (XXX - so check for trunc!) */
@@ -334,7 +337,7 @@ login_get_lastlog(struct logininfo *li, const int uid)
  * allocation fails, the program halts.
  */
 struct
-logininfo *login_alloc_entry(int pid, const char *username,
+logininfo *login_alloc_entry(pid_t pid, const char *username,
     const char *hostname, const char *line)
 {
 	struct logininfo *newli;
@@ -362,7 +365,7 @@ login_free_entry(struct logininfo *li)
  * Returns: 1
  */
 int
-login_init_entry(struct logininfo *li, int pid, const char *username,
+login_init_entry(struct logininfo *li, pid_t pid, const char *username,
     const char *hostname, const char *line)
 {
 	struct passwd *pw;
@@ -467,9 +470,9 @@ login_write(struct logininfo *li)
 #endif
 #ifdef SSH_AUDIT_EVENTS
 	if (li->type == LTYPE_LOGIN)
-		audit_session_open(li->line);
+		audit_session_open(li);
 	else if (li->type == LTYPE_LOGOUT)
-		audit_session_close(li->line);
+		audit_session_close(li);
 #endif
 	return (0);
 }
@@ -508,6 +511,14 @@ getlast_entry(struct logininfo *li)
 #ifdef USE_LASTLOG
 	return(lastlog_get_entry(li));
 #else /* !USE_LASTLOG */
+#if defined(USE_UTMPX) && defined(HAVE_SETUTXDB) && \
+    defined(UTXDB_LASTLOGIN) && defined(HAVE_GETUTXUSER)
+	return (utmpx_get_entry(li));
+#endif
+
+#if 1
+	return (utmpx_get_entry(li));
+#endif
 
 #if defined(DISABLE_LASTLOG)
 	/* On some systems we shouldn't even try to obtain last login
@@ -688,8 +699,8 @@ construct_utmp(struct logininfo *li,
 	strncpy(ut->ut_name, li->username,
 	    MIN_SIZEOF(ut->ut_name, li->username));
 # ifdef HAVE_HOST_IN_UTMP
-	realhostname_sa(ut->ut_host, sizeof ut->ut_host,
-	    &li->hostaddr.sa, li->hostaddr.sa.sa_len);
+	strncpy(ut->ut_host, li->hostname,
+	    MIN_SIZEOF(ut->ut_host, li->hostname));
 # endif
 # ifdef HAVE_ADDR_IN_UTMP
 	/* this is just a 32-bit IP address */
@@ -758,8 +769,8 @@ construct_utmpx(struct logininfo *li, struct utmpx *utx)
 	utx->ut_pid = li->pid;
 
 	/* strncpy(): Don't necessarily want null termination */
-	strncpy(utx->ut_name, li->username,
-	    MIN_SIZEOF(utx->ut_name, li->username));
+	strncpy(utx->ut_user, li->username,
+	    MIN_SIZEOF(utx->ut_user, li->username));
 
 	if (li->type == LTYPE_LOGOUT)
 		return;
@@ -867,11 +878,13 @@ utmp_write_direct(struct logininfo *li, struct utmp *ut)
 		pos = (off_t)tty * sizeof(struct utmp);
 		if ((ret = lseek(fd, pos, SEEK_SET)) == -1) {
 			logit("%s: lseek: %s", __func__, strerror(errno));
+			close(fd);
 			return (0);
 		}
 		if (ret != pos) {
 			logit("%s: Couldn't seek to tty %d slot in %s",
 			    __func__, tty, UTMP_FILE);
+			close(fd);
 			return (0);
 		}
 		/*
@@ -887,16 +900,20 @@ utmp_write_direct(struct logininfo *li, struct utmp *ut)
 
 		if ((ret = lseek(fd, pos, SEEK_SET)) == -1) {
 			logit("%s: lseek: %s", __func__, strerror(errno));
+			close(fd);
 			return (0);
 		}
 		if (ret != pos) {
 			logit("%s: Couldn't seek to tty %d slot in %s",
 			    __func__, tty, UTMP_FILE);
+			close(fd);
 			return (0);
 		}
 		if (atomicio(vwrite, fd, ut, sizeof(*ut)) != sizeof(*ut)) {
 			logit("%s: error writing %s: %s", __func__,
 			    UTMP_FILE, strerror(errno));
+			close(fd);
+			return (0);
 		}
 
 		close(fd);
@@ -1200,7 +1217,7 @@ wtmp_get_entry(struct logininfo *li)
 			close (fd);
 			return (0);
 		}
-		if ( wtmp_islogin(li, &ut) ) {
+		if (wtmp_islogin(li, &ut) ) {
 			found = 1;
 			/*
 			 * We've already checked for a time in struct
@@ -1316,8 +1333,8 @@ wtmpx_write_entry(struct logininfo *li)
 static int
 wtmpx_islogin(struct logininfo *li, struct utmpx *utx)
 {
-	if (strncmp(li->username, utx->ut_name,
-	    MIN_SIZEOF(li->username, utx->ut_name)) == 0 ) {
+	if (strncmp(li->username, utx->ut_user,
+	    MIN_SIZEOF(li->username, utx->ut_user)) == 0 ) {
 # ifdef HAVE_TYPE_IN_UTMPX
 		if (utx->ut_type == USER_PROCESS)
 			return (1);
@@ -1456,25 +1473,14 @@ syslogin_write_entry(struct logininfo *li)
  **/
 
 #ifdef USE_LASTLOG
-#define LL_FILE 1
-#define LL_DIR 2
-#define LL_OTHER 3
 
-static void
-lastlog_construct(struct logininfo *li, struct lastlog *last)
-{
-	/* clear the structure */
-	memset(last, '\0', sizeof(*last));
-
-	line_stripname(last->ll_line, li->line, sizeof(last->ll_line));
-	strlcpy(last->ll_host, li->hostname,
-		MIN_SIZEOF(last->ll_host, li->hostname));
-	last->ll_time = li->tv_sec;
-}
-
+#if !defined(LASTLOG_WRITE_PUTUTXLINE) || !defined(HAVE_GETLASTLOGXBYNAME)
+/* open the file (using filemode) and seek to the login entry */
 static int
-lastlog_filetype(char *filename)
+lastlog_openseek(struct logininfo *li, int *fd, int filemode)
 {
+	off_t offset;
+	char lastlog_file[1024];
 	struct stat st;
 
 	if (stat(LASTLOG_FILE, &st) != 0) {
@@ -1482,34 +1488,12 @@ lastlog_filetype(char *filename)
 		    LASTLOG_FILE, strerror(errno));
 		return (0);
 	}
-	if (S_ISDIR(st.st_mode))
-		return (LL_DIR);
-	else if (S_ISREG(st.st_mode))
-		return (LL_FILE);
-	else
-		return (LL_OTHER);
-}
-
-
-/* open the file (using filemode) and seek to the login entry */
-static int
-lastlog_openseek(struct logininfo *li, int *fd, int filemode)
-{
-	off_t offset;
-	int type;
-	char lastlog_file[1024];
-
-	type = lastlog_filetype(LASTLOG_FILE);
-	switch (type) {
-	case LL_FILE:
-		strlcpy(lastlog_file, LASTLOG_FILE,
-		    sizeof(lastlog_file));
-		break;
-	case LL_DIR:
+	if (S_ISDIR(st.st_mode)) {
 		snprintf(lastlog_file, sizeof(lastlog_file), "%s/%s",
 		    LASTLOG_FILE, li->username);
-		break;
-	default:
+	} else if (S_ISREG(st.st_mode)) {
+		strlcpy(lastlog_file, LASTLOG_FILE, sizeof(lastlog_file));
+	} else {
 		logit("%s: %.100s is not a file or directory!", __func__,
 		    LASTLOG_FILE);
 		return (0);
@@ -1522,65 +1506,88 @@ lastlog_openseek(struct logininfo *li, int *fd, int filemode)
 		return (0);
 	}
 
-	if (type == LL_FILE) {
+	if (S_ISREG(st.st_mode)) {
 		/* find this uid's offset in the lastlog file */
-		offset = (off_t) ((long)li->uid * sizeof(struct lastlog));
+		offset = (off_t) ((u_long)li->uid * sizeof(struct lastlog));
 
 		if (lseek(*fd, offset, SEEK_SET) != offset) {
 			logit("%s: %s->lseek(): %s", __func__,
 			    lastlog_file, strerror(errno));
+			close(*fd);
 			return (0);
 		}
 	}
 
 	return (1);
 }
+#endif /* !LASTLOG_WRITE_PUTUTXLINE || !HAVE_GETLASTLOGXBYNAME */
 
-static int
-lastlog_perform_login(struct logininfo *li)
-{
-	struct lastlog last;
-	int fd;
-
-	/* create our struct lastlog */
-	lastlog_construct(li, &last);
-
-	if (!lastlog_openseek(li, &fd, O_RDWR|O_CREAT))
-		return (0);
-
-	/* write the entry */
-	if (atomicio(vwrite, fd, &last, sizeof(last)) != sizeof(last)) {
-		close(fd);
-		logit("%s: Error writing to %s: %s", __func__,
-		    LASTLOG_FILE, strerror(errno));
-		return (0);
-	}
-
-	close(fd);
-	return (1);
-}
-
+#ifdef LASTLOG_WRITE_PUTUTXLINE
 int
 lastlog_write_entry(struct logininfo *li)
 {
 	switch(li->type) {
 	case LTYPE_LOGIN:
-		return (lastlog_perform_login(li));
+		return 1; /* lastlog written by pututxline */
+	default:
+		logit("lastlog_write_entry: Invalid type field");
+		return 0;
+	}
+}
+#else /* LASTLOG_WRITE_PUTUTXLINE */
+int
+lastlog_write_entry(struct logininfo *li)
+{
+	struct lastlog last;
+	int fd;
+
+	switch(li->type) {
+	case LTYPE_LOGIN:
+		/* create our struct lastlog */
+		memset(&last, '\0', sizeof(last));
+		line_stripname(last.ll_line, li->line, sizeof(last.ll_line));
+		strlcpy(last.ll_host, li->hostname,
+		    MIN_SIZEOF(last.ll_host, li->hostname));
+		last.ll_time = li->tv_sec;
+	
+		if (!lastlog_openseek(li, &fd, O_RDWR|O_CREAT))
+			return (0);
+	
+		/* write the entry */
+		if (atomicio(vwrite, fd, &last, sizeof(last)) != sizeof(last)) {
+			close(fd);
+			logit("%s: Error writing to %s: %s", __func__,
+			    LASTLOG_FILE, strerror(errno));
+			return (0);
+		}
+	
+		close(fd);
+		return (1);
 	default:
 		logit("%s: Invalid type field", __func__);
 		return (0);
 	}
 }
+#endif /* LASTLOG_WRITE_PUTUTXLINE */
 
-static void
-lastlog_populate_entry(struct logininfo *li, struct lastlog *last)
+#ifdef HAVE_GETLASTLOGXBYNAME
+int
+lastlog_get_entry(struct logininfo *li)
 {
-	line_fullname(li->line, last->ll_line, sizeof(li->line));
-	strlcpy(li->hostname, last->ll_host,
-	    MIN_SIZEOF(li->hostname, last->ll_host));
-	li->tv_sec = last->ll_time;
-}
+	struct lastlogx l, *ll;
 
+	if ((ll = getlastlogxbyname(li->username, &l)) == NULL) {
+		memset(&l, '\0', sizeof(l));
+		ll = &l;
+	}
+	line_fullname(li->line, ll->ll_line, sizeof(li->line));
+	strlcpy(li->hostname, ll->ll_host,
+		MIN_SIZEOF(li->hostname, ll->ll_host));
+	li->tv_sec = ll->ll_tv.tv_sec;
+	li->tv_usec = ll->ll_tv.tv_usec;
+	return (1);
+}
+#else /* HAVE_GETLASTLOGXBYNAME */
 int
 lastlog_get_entry(struct logininfo *li)
 {
@@ -1598,7 +1605,10 @@ lastlog_get_entry(struct logininfo *li)
 		memset(&last, '\0', sizeof(last));
 		/* FALLTHRU */
 	case sizeof(last):
-		lastlog_populate_entry(li, &last);
+		line_fullname(li->line, last.ll_line, sizeof(li->line));
+		strlcpy(li->hostname, last.ll_host,
+		    MIN_SIZEOF(li->hostname, last.ll_host));
+		li->tv_sec = last.ll_time;
 		return (1);
 	case -1:
 		error("%s: Error reading from %s: %s", __func__,
@@ -1613,7 +1623,34 @@ lastlog_get_entry(struct logininfo *li)
 	/* NOTREACHED */
 	return (0);
 }
+#endif /* HAVE_GETLASTLOGXBYNAME */
 #endif /* USE_LASTLOG */
+
+#if defined(USE_UTMPX) && defined(HAVE_SETUTXDB) && \
+    defined(UTXDB_LASTLOGIN) && defined(HAVE_GETUTXUSER)
+int
+utmpx_get_entry(struct logininfo *li)
+{
+	struct utmpx *utx;
+
+	if (setutxdb(UTXDB_LASTLOGIN, NULL) != 0)
+		return (0);
+	utx = getutxuser(li->username);
+	if (utx == NULL) {
+		endutxent();
+		return (0);
+	}
+
+	line_fullname(li->line, utx->ut_line,
+	    MIN_SIZEOF(li->line, utx->ut_line));
+	strlcpy(li->hostname, utx->ut_host,
+	    MIN_SIZEOF(li->hostname, utx->ut_host));
+	li->tv_sec = utx->ut_tv.tv_sec;
+	li->tv_usec = utx->ut_tv.tv_usec;
+	endutxent();
+	return (1);
+}
+#endif /* USE_UTMPX && HAVE_SETUTXDB && UTXDB_LASTLOGIN && HAVE_GETUTXUSER */
 
 #ifdef USE_BTMP
   /*
@@ -1648,7 +1685,7 @@ record_failed_login(const char *username, const char *hostname,
 		    strerror(errno));
 		goto out;
 	}
-	if((fst.st_mode & (S_IRWXG | S_IRWXO)) || (fst.st_uid != 0)){
+	if((fst.st_mode & (S_IXGRP | S_IRWXO)) || (fst.st_uid != 0)){
 		logit("Excess permission or bad ownership on file %s",
 		    _PATH_BTMP);
 		goto out;

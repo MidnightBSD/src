@@ -39,7 +39,7 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/netnatm/natm_pcb.c 165900 2007-01-08 22:30:39Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -91,7 +91,7 @@ npcb_free(struct natmpcb *npcb, int op)
 		if (npcb->npcb_inq) {
 			npcb->npcb_flags = NPCB_DRAIN;	/* flag for distruct. */
 		} else {
-			FREE(npcb, M_PCB);		/* kill it! */
+			free(npcb, M_PCB);		/* kill it! */
 		}
 	}
 }

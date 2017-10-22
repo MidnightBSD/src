@@ -35,7 +35,7 @@
 static char sccsid[] = "@(#)strstr.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/strnstr.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <string.h>
 
@@ -44,10 +44,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/strnstr.c 165903 2007-01-09 00
  * first slen characters of s.
  */
 char *
-strnstr(s, find, slen)
-	const char *s;
-	const char *find;
-	size_t slen;
+strnstr(const char *s, const char *find, size_t slen)
 {
 	char c, sc;
 	size_t len;

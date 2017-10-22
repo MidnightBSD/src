@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/acpi_button.c 167814 2007-03-22 18:16:43Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -35,7 +35,9 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/acpi_button.c 167814 2007-03-22
 #include <sys/module.h>
 #include <sys/bus.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/accommon.h>
+
 #include <dev/acpica/acpivar.h>
 
 /* Hooks for the ACPI CA debugging infrastructure */
@@ -125,6 +127,7 @@ acpi_button_probe(device_t dev)
 static int
 acpi_button_attach(device_t dev)
 {
+    struct acpi_prw_data	prw;
     struct acpi_button_softc	*sc;
     ACPI_STATUS			status;
     int event;
@@ -162,9 +165,10 @@ acpi_button_attach(device_t dev)
     }
 
     /* Enable the GPE for wake/runtime. */
-    acpi_wake_init(dev, ACPI_GPE_TYPE_WAKE_RUN);
     acpi_wake_set_enable(dev, 1);
-    
+    if (acpi_parse_prw(sc->button_handle, &prw) == 0)
+	AcpiEnableGpe(prw.gpe_handle, prw.gpe_bit);
+
     return_VALUE (0);
 }
 

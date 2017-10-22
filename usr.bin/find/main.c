@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -47,7 +43,7 @@ static char sccsid[] = "@(#)main.c	8.4 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/find/main.c 116333 2003-06-14 13:00:21Z markm $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -124,7 +120,7 @@ main(int argc, char *argv[])
 			break;
 		case '?':
 		default:
-			break;
+			usage();
 		}
 
 	argc -= optind;
@@ -163,7 +159,8 @@ main(int argc, char *argv[])
 static void
 usage(void)
 {
-	(void)fprintf(stderr,
-"usage: find [-H | -L | -P] [-EXdsx] [-f file] [file ...] [expression]\n");
+	(void)fprintf(stderr, "%s\n%s\n",
+"usage: find [-H | -L | -P] [-EXdsx] [-f path] path ... [expression]",
+"       find [-H | -L | -P] [-EXdsx] -f path [path ...] [expression]");
 	exit(1);
 }

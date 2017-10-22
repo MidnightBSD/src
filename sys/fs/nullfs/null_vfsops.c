@@ -32,7 +32,7 @@
  *	@(#)null_vfsops.c	8.2 (Berkeley) 1/21/94
  *
  * @(#)lofs_vfsops.c	1.2 (Berkeley) 6/18/92
- * $FreeBSD: release/7.0.0/sys/fs/nullfs/null_vfsops.c 170093 2007-05-29 11:28:28Z rwatson $
+ * $FreeBSD$
  */
 
 /*
@@ -42,6 +42,7 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/fcntl.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
@@ -49,6 +50,7 @@
 #include <sys/namei.h>
 #include <sys/proc.h>
 #include <sys/vnode.h>
+#include <sys/jail.h>
 
 #include <fs/nullfs/null.h>
 
@@ -68,17 +70,21 @@ static vfs_extattrctl_t	nullfs_extattrctl;
  * Mount null layer
  */
 static int
-nullfs_mount(struct mount *mp, struct thread *td)
+nullfs_mount(struct mount *mp)
 {
 	int error = 0;
 	struct vnode *lowerrootvp, *vp;
 	struct vnode *nullm_rootvp;
 	struct null_mount *xmp;
+	struct thread *td = curthread;
 	char *target;
 	int isvnunlocked = 0, len;
 	struct nameidata nd, *ndp = &nd;
 
 	NULLFSDEBUG("nullfs_mount(mp = %p)\n", (void *)mp);
+
+	if (!prison_allow(td->td_ucred, PR_ALLOW_MOUNT_NULLFS))
+		return (EPERM);
 
 	if (mp->mnt_flag & MNT_ROOTFS)
 		return (EOPNOTSUPP);
@@ -103,25 +109,23 @@ nullfs_mount(struct mount *mp, struct thread *td)
 		return (EINVAL);
 
 	/*
-	 * Unlock lower node to avoid deadlock.
-	 * (XXX) VOP_ISLOCKED is needed?
+	 * Unlock lower node to avoid possible deadlock.
 	 */
 	if ((mp->mnt_vnodecovered->v_op == &null_vnodeops) &&
-		VOP_ISLOCKED(mp->mnt_vnodecovered, NULL)) {
-		VOP_UNLOCK(mp->mnt_vnodecovered, 0, td);
+	    VOP_ISLOCKED(mp->mnt_vnodecovered) == LK_EXCLUSIVE) {
+		VOP_UNLOCK(mp->mnt_vnodecovered, 0);
 		isvnunlocked = 1;
 	}
 	/*
 	 * Find lower node
 	 */
-	NDINIT(ndp, LOOKUP, FOLLOW|LOCKLEAF,
-		UIO_SYSSPACE, target, td);
+	NDINIT(ndp, LOOKUP, FOLLOW|LOCKLEAF, UIO_SYSSPACE, target, curthread);
 	error = namei(ndp);
 	/*
 	 * Re-lock vnode.
 	 */
-	if (isvnunlocked && !VOP_ISLOCKED(mp->mnt_vnodecovered, NULL))
-		vn_lock(mp->mnt_vnodecovered, LK_EXCLUSIVE | LK_RETRY, td);
+	if (isvnunlocked)
+		vn_lock(mp->mnt_vnodecovered, LK_EXCLUSIVE | LK_RETRY);
 
 	if (error)
 		return (error);
@@ -158,9 +162,7 @@ nullfs_mount(struct mount *mp, struct thread *td)
 	 * Make sure the node alias worked
 	 */
 	if (error) {
-		VOP_UNLOCK(vp, 0, td);
-		vrele(lowerrootvp);
-		free(xmp, M_NULLFSMNT);	/* XXX */
+		free(xmp, M_NULLFSMNT);
 		return (error);
 	}
 
@@ -175,7 +177,7 @@ nullfs_mount(struct mount *mp, struct thread *td)
 	/*
 	 * Unlock the node (either the lower or the alias)
 	 */
-	VOP_UNLOCK(vp, 0, td);
+	VOP_UNLOCK(vp, 0);
 
 	if (NULLVPTOLOWERVP(nullm_rootvp)->v_mount->mnt_flag & MNT_LOCAL) {
 		MNT_ILOCK(mp);
@@ -183,9 +185,10 @@ nullfs_mount(struct mount *mp, struct thread *td)
 		MNT_IUNLOCK(mp);
 	}
 	MNT_ILOCK(mp);
-	mp->mnt_kern_flag |= lowerrootvp->v_mount->mnt_kern_flag & MNTK_MPSAFE;
+	mp->mnt_kern_flag |= lowerrootvp->v_mount->mnt_kern_flag &
+	    (MNTK_MPSAFE | MNTK_SHARED_WRITES);
 	MNT_IUNLOCK(mp);
-	mp->mnt_data = (qaddr_t) xmp;
+	mp->mnt_data =  xmp;
 	vfs_getnewfsid(mp);
 
 	vfs_mountedfrom(mp, target);
@@ -199,10 +202,9 @@ nullfs_mount(struct mount *mp, struct thread *td)
  * Free reference to null layer
  */
 static int
-nullfs_unmount(mp, mntflags, td)
+nullfs_unmount(mp, mntflags)
 	struct mount *mp;
 	int mntflags;
-	struct thread *td;
 {
 	void *mntdata;
 	int error;
@@ -214,7 +216,7 @@ nullfs_unmount(mp, mntflags, td)
 		flags |= FORCECLOSE;
 
 	/* There is 1 extra root vnode reference (nullm_rootvp). */
-	error = vflush(mp, 1, flags, td);
+	error = vflush(mp, 1, flags, curthread);
 	if (error)
 		return (error);
 
@@ -228,11 +230,10 @@ nullfs_unmount(mp, mntflags, td)
 }
 
 static int
-nullfs_root(mp, flags, vpp, td)
+nullfs_root(mp, flags, vpp)
 	struct mount *mp;
 	int flags;
 	struct vnode **vpp;
-	struct thread *td;
 {
 	struct vnode *vp;
 
@@ -246,31 +247,26 @@ nullfs_root(mp, flags, vpp, td)
 	vp = MOUNTTONULLMOUNT(mp)->nullm_rootvp;
 	VREF(vp);
 
-#ifdef NULLFS_DEBUG
-	if (VOP_ISLOCKED(vp, NULL))
-		panic("root vnode is locked.\n");
-#endif
-	vn_lock(vp, flags | LK_RETRY, td);
+	ASSERT_VOP_UNLOCKED(vp, "root vnode is locked");
+	vn_lock(vp, flags | LK_RETRY);
 	*vpp = vp;
 	return 0;
 }
 
 static int
-nullfs_quotactl(mp, cmd, uid, arg, td)
+nullfs_quotactl(mp, cmd, uid, arg)
 	struct mount *mp;
 	int cmd;
 	uid_t uid;
 	void *arg;
-	struct thread *td;
 {
-	return VFS_QUOTACTL(MOUNTTONULLMOUNT(mp)->nullm_vfs, cmd, uid, arg, td);
+	return VFS_QUOTACTL(MOUNTTONULLMOUNT(mp)->nullm_vfs, cmd, uid, arg);
 }
 
 static int
-nullfs_statfs(mp, sbp, td)
+nullfs_statfs(mp, sbp)
 	struct mount *mp;
 	struct statfs *sbp;
-	struct thread *td;
 {
 	int error;
 	struct statfs mstat;
@@ -281,7 +277,7 @@ nullfs_statfs(mp, sbp, td)
 
 	bzero(&mstat, sizeof(mstat));
 
-	error = VFS_STATFS(MOUNTTONULLMOUNT(mp)->nullm_vfs, &mstat, td);
+	error = VFS_STATFS(MOUNTTONULLMOUNT(mp)->nullm_vfs, &mstat);
 	if (error)
 		return (error);
 
@@ -299,10 +295,9 @@ nullfs_statfs(mp, sbp, td)
 }
 
 static int
-nullfs_sync(mp, waitfor, td)
+nullfs_sync(mp, waitfor)
 	struct mount *mp;
 	int waitfor;
-	struct thread *td;
 {
 	/*
 	 * XXX - Assumes no data cached at null layer.
@@ -318,6 +313,12 @@ nullfs_vget(mp, ino, flags, vpp)
 	struct vnode **vpp;
 {
 	int error;
+
+	KASSERT((flags & LK_TYPE_MASK) != 0,
+	    ("nullfs_vget: no lock requested"));
+	flags &= ~LK_TYPE_MASK;
+	flags |= LK_EXCLUSIVE;
+
 	error = VFS_VGET(MOUNTTONULLMOUNT(mp)->nullm_vfs, ino, flags, vpp);
 	if (error)
 		return (error);
@@ -326,13 +327,15 @@ nullfs_vget(mp, ino, flags, vpp)
 }
 
 static int
-nullfs_fhtovp(mp, fidp, vpp)
+nullfs_fhtovp(mp, fidp, flags, vpp)
 	struct mount *mp;
 	struct fid *fidp;
+	int flags;
 	struct vnode **vpp;
 {
 	int error;
-	error = VFS_FHTOVP(MOUNTTONULLMOUNT(mp)->nullm_vfs, fidp, vpp);
+	error = VFS_FHTOVP(MOUNTTONULLMOUNT(mp)->nullm_vfs, fidp, LK_EXCLUSIVE,
+	    vpp);
 	if (error)
 		return (error);
 
@@ -340,16 +343,15 @@ nullfs_fhtovp(mp, fidp, vpp)
 }
 
 static int                        
-nullfs_extattrctl(mp, cmd, filename_vp, namespace, attrname, td)
+nullfs_extattrctl(mp, cmd, filename_vp, namespace, attrname)
 	struct mount *mp;
 	int cmd;
 	struct vnode *filename_vp;
 	int namespace;
 	const char *attrname;
-	struct thread *td;            
 {
 	return VFS_EXTATTRCTL(MOUNTTONULLMOUNT(mp)->nullm_vfs, cmd, filename_vp,
-	    namespace, attrname, td);
+	    namespace, attrname);
 }
 
 
@@ -367,4 +369,4 @@ static struct vfsops null_vfsops = {
 	.vfs_vget =		nullfs_vget,
 };
 
-VFS_SET(null_vfsops, nullfs, VFCF_LOOPBACK);
+VFS_SET(null_vfsops, nullfs, VFCF_LOOPBACK | VFCF_JAIL);

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/syscons/scterm.c 119420 2003-08-24 18:17:24Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_syscons.h"
 
@@ -36,7 +36,6 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/syscons/scterm.c 119420 2003-08-24 18:
 #include <sys/consio.h>
 
 #include <dev/syscons/syscons.h>
-#include <dev/syscons/sctermvar.h>
 
 SET_DECLARE(scterm_set, sc_term_sw_t);
 

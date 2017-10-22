@@ -6,7 +6,7 @@
 #
 # Trust me, RUN THIS SCRIPT :)
 #
-# $FreeBSD: release/7.0.0/share/examples/drivers/make_pseudo_driver.sh 161559 2006-08-23 23:51:29Z rik $
+# $FreeBSD$
 #
 #-------cut here------------------
 
@@ -168,7 +168,7 @@ static struct cdevsw ${1}_cdevsw = {
  * device  specific Misc defines
  */
 #define BUFFERSIZE 1024
-#define UNIT(dev) minor(dev)	/* assume one minor number per unit */
+#define UNIT(dev) dev2unit(dev)	/* assume one minor number per unit */
 
 /*
  * One of these per allocated device
@@ -344,7 +344,7 @@ static void
 ${1}_drvinit(void *unused)
 {
 	int	unit;
-	sc_p scp  = sca[unit];
+	sc_p	scp;
 
 	for (unit = 0; unit < N${UPPER}; unit++) {
 		/*
@@ -362,7 +362,7 @@ ${1}_drvinit(void *unused)
 }
 
 SYSINIT(${1}dev, SI_SUB_DRIVERS, SI_ORDER_MIDDLE+CDEV_MAJOR,
-		${1}_drvinit, NULL)
+		${1}_drvinit, NULL);
 DONE
 
 cat >${TOP}/sys/${1}io.h <<DONE

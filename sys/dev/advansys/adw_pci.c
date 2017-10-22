@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/advansys/adw_pci.c 165102 2006-12-11 18:28:31Z mjacob $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -258,9 +258,8 @@ adw_pci_attach(device_t dev)
 	pci_write_config(dev, PCIR_COMMAND, command, /*bytes*/1);
 
 	/* Allocate a dmatag for our transfer DMA maps */
-	/* XXX Should be a child of the PCI bus dma tag */
 	error = bus_dma_tag_create(
-			/* parent	*/ NULL,
+			/* parent	*/ bus_get_dma_tag(dev),
 			/* alignment	*/ 1,
 			/* boundary	*/ 0,
 			/* lowaddr	*/ ADW_PCI_MAX_DMA_ADDR,

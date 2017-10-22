@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -41,7 +37,7 @@ static char sccsid[] = "@(#)net.c	8.4 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/finger/net.c 168632 2007-04-11 19:11:54Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -55,7 +51,7 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.bin/finger/net.c 168632 2007-04-11 19:11:5
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <utmp.h>
+#include <utmpx.h>
 #include "finger.h"
 
 static void cleanup(int sig);
@@ -230,7 +226,7 @@ trying(const struct addrinfo *ai)
 	printf("Trying %s...\n", buf);
 }
 
-void
+static void
 cleanup(int sig __unused)
 {
 #define	ERRSTR	"Timed out.\n"

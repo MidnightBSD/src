@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/contrib/ipfilter/lib/ipft_tx.c 173213 2007-10-31 05:00:38Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2000-2006 by Darren Reed.

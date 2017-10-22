@@ -1,4 +1,4 @@
-/* $OpenBSD: auth2-chall.c,v 1.31 2006/08/05 08:28:24 dtucker Exp $ */
+/* $OpenBSD: auth2-chall.c,v 1.34 2008/12/09 04:32:22 djm Exp $ */
 /*
  * Copyright (c) 2001 Markus Friedl.  All rights reserved.
  * Copyright (c) 2001 Per Allansson.  All rights reserved.
@@ -25,7 +25,6 @@
  */
 
 #include "includes.h"
-__RCSID("$FreeBSD: release/7.0.0/crypto/openssh/auth2-chall.c 172506 2007-10-10 16:59:15Z cvs2svn $");
 
 #include <sys/types.h>
 
@@ -207,7 +206,7 @@ auth2_challenge_stop(Authctxt *authctxt)
 {
 	/* unregister callback */
 	dispatch_set(SSH2_MSG_USERAUTH_INFO_RESPONSE, NULL);
-	if (authctxt->kbdintctxt != NULL)  {
+	if (authctxt->kbdintctxt != NULL) {
 		kbdint_free(authctxt->kbdintctxt);
 		authctxt->kbdintctxt = NULL;
 	}
@@ -282,7 +281,7 @@ input_userauth_info_response(int type, u_int32_t seq, void *ctxt)
 {
 	Authctxt *authctxt = ctxt;
 	KbdintAuthctxt *kbdintctxt;
-	int authenticated = 0, res, len;
+	int authenticated = 0, res;
 	u_int i, nresp;
 	char **response = NULL, *method;
 
@@ -331,11 +330,7 @@ input_userauth_info_response(int type, u_int32_t seq, void *ctxt)
 		break;
 	}
 
-	len = strlen("keyboard-interactive") + 2 +
-		strlen(kbdintctxt->device->name);
-	method = xmalloc(len);
-	snprintf(method, len, "keyboard-interactive/%s",
-	    kbdintctxt->device->name);
+	xasprintf(&method, "keyboard-interactive/%s", kbdintctxt->device->name);
 
 	if (!authctxt->postponed) {
 		if (authenticated) {

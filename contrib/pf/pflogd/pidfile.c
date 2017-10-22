@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/contrib/pf/pflogd/pidfile.c 171176 2007-07-03 14:08:49Z mlaier $ */
+/*	$FreeBSD$ */
 /*	$OpenBSD: pidfile.c,v 1.5 2002/05/26 09:29:02 deraadt Exp $	*/
 /*	$NetBSD: pidfile.c,v 1.4 2001/02/19 22:43:42 cgd Exp $	*/
 

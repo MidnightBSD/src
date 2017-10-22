@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/amd64/include/stdarg.h 162487 2006-09-21 01:37:02Z kan $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_STDARG_H_

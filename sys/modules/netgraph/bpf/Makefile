@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/netgraph/bpf/Makefile 153213 2005-12-07 21:30:47Z jkim $
+# $FreeBSD$
 # $Whistle: Makefile,v 1.1 1999/12/03 01:44:28 archie Exp $
 
 .PATH: ${.CURDIR}/../../../net

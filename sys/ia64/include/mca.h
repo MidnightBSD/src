@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002 Marcel Moolenaar
+ * Copyright (c) 2002-2010 Marcel Moolenaar
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/include/mca.h 139790 2005-01-06 22:18:23Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_MCA_H_
@@ -39,6 +39,7 @@ struct mca_record_header {
 #define	MCA_RH_ERROR_CORRECTED		2
 	uint8_t		rh_flags;
 #define	MCA_RH_FLAGS_PLATFORM_ID	0x01	/* Platform_id present. */
+#define	MCA_RH_FLAGS_TIME_STAMP		0x02	/* Timestamp invalid. */
 	uint32_t	rh_length;		/* Size including header. */
 	uint8_t		rh_time[8];
 #define	MCA_RH_TIME_SEC		0
@@ -239,6 +240,7 @@ struct mca_pcidev_reg {
 #ifdef _KERNEL
 
 void ia64_mca_init(void);
+void ia64_mca_init_ap(void);
 void ia64_mca_save_state(int);
 
 #endif /* _KERNEL */

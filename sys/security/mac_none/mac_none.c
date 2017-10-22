@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/security/mac_none/mac_none.c 166900 2007-02-23 11:21:26Z rwatson $
+ * $FreeBSD$
  */
 
 /*
@@ -48,9 +48,9 @@
 
 #include <security/mac/mac_policy.h>
 
-static struct mac_policy_ops mac_none_ops =
+static struct mac_policy_ops none_ops =
 {
 };
 
-MAC_POLICY_SET(&mac_none_ops, mac_none, "TrustedBSD MAC/None",
+MAC_POLICY_SET(&none_ops, mac_none, "TrustedBSD MAC/None",
     MPC_LOADTIME_FLAG_UNLOADOK, NULL);

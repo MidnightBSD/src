@@ -16,10 +16,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -48,7 +44,7 @@ static char rcsid[] = "$OpenBSD: misc.c,v 1.27 2002/04/26 16:15:16 espie Exp $";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/m4/misc.c 100014 2002-07-15 02:15:12Z jmallett $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <errno.h>

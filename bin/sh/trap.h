@@ -30,18 +30,19 @@
  * SUCH DAMAGE.
  *
  *	@(#)trap.h	8.3 (Berkeley) 6/5/95
- * $FreeBSD: release/7.0.0/bin/sh/trap.h 127958 2004-04-06 20:06:54Z markm $
+ * $FreeBSD$
  */
 
 extern int pendingsigs;
 extern int in_dotrap;
 extern volatile sig_atomic_t gotwinch;
 
-int trapcmd(int, char **);
 void clear_traps(void);
+int have_traps(void);
 void setsignal(int);
 void ignoresig(int);
 void onsig(int);
 void dotrap(void);
 void setinteractive(int);
-void exitshell(int);
+void exitshell(int) __dead2;
+void exitshell_savedstatus(void) __dead2;

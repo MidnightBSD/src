@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/gnu/usr.bin/gdb/kgdb/trgt_amd64.c 171924 2007-08-22 20:28:13Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <machine/pcb.h>
@@ -50,7 +50,7 @@ kgdb_trgt_fetch_registers(int regno __unused)
 	struct kthr *kt;
 	struct pcb pcb;
 
-	kt = kgdb_thr_lookup_tid(ptid_get_tid(inferior_ptid));
+	kt = kgdb_thr_lookup_tid(ptid_get_pid(inferior_ptid));
 	if (kt == NULL)
 		return;
 	if (kvm_read(kvm, kt->pcb, &pcb, sizeof(pcb)) != sizeof(pcb)) {
@@ -66,12 +66,18 @@ kgdb_trgt_fetch_registers(int regno __unused)
 	supply_register(AMD64_R8_REGNUM + 6, (char *)&pcb.pcb_r14);
 	supply_register(AMD64_R15_REGNUM, (char *)&pcb.pcb_r15);
 	supply_register(AMD64_RIP_REGNUM, (char *)&pcb.pcb_rip);
+	amd64_supply_fxsave(current_regcache, -1, (struct fpusave *)(&pcb + 1));
 }
 
 void
 kgdb_trgt_store_registers(int regno __unused)
 {
 	fprintf_unfiltered(gdb_stderr, "XXX: %s\n", __func__);
+}
+
+void
+kgdb_trgt_new_objfile(struct objfile *objfile)
+{
 }
 
 struct kgdb_frame_cache {

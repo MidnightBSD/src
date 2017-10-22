@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/crypto/sha1.h 92756 2002-03-20 05:14:42Z alfred $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: sha1.h,v 1.5 2000/03/27 04:36:23 sumikawa Exp $	*/
 
 /*

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/netncp/ncpio.h 111657 2003-02-28 04:31:29Z tjr $
+ * $FreeBSD$
  */
 
 #ifndef _NETNCP_NCPIO_H_

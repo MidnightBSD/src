@@ -45,8 +45,8 @@
 .L_min_memcpy_size:
 	.word	_C_LABEL(_min_memcpy_size)
 
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/bcopyinout.S 151596 2005-10-23 23:09:14Z cognet $");
-#ifdef __XSCALE__
+__FBSDID("$FreeBSD$");
+#ifdef _ARM_ARCH_5E
 #include <arm/arm/bcopyinout_xscale.S>
 #else
 
@@ -64,7 +64,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/bcopyinout.S 151596 2005-10-23 23:
 #define SAVE_REGS	stmfd	sp!, {r4-r11}
 #define RESTORE_REGS	ldmfd	sp!, {r4-r11}
 		
-#if defined(__XSCALE__)
+#if defined(_ARM_ARCH_5E)
 #define HELLOCPP #
 #define PREFETCH(rx,o)	pld	[ rx , HELLOCPP (o) ]
 #else

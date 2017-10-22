@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/add/futil.c 174854 2007-12-22 06:32:46Z cvs2svn $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include "lib.h"
@@ -31,7 +31,7 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/add/futil.c 174854 2007-1
  */
 
 int
-make_hierarchy(char *dir)
+make_hierarchy(char *dir, Boolean set_perm)
 {
     char *cp1, *cp2;
 
@@ -50,12 +50,13 @@ make_hierarchy(char *dir)
 	    }
 	}
 	else {
-	    if (vsystem("/bin/mkdir %s", dir)) {
+	    if (mkdir(dir, 0777) < 0) {
 		if (cp2)
 		    *cp2 = '/';
 		return FAIL;
 	    }
-	    apply_perms(NULL, dir);
+	    if (set_perm)
+		apply_perms(NULL, dir);
 	}
 	/* Put it back */
 	if (cp2) {

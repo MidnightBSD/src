@@ -29,9 +29,9 @@
 .\"
 .\" * Other names and brands may be claimed as the property of others.
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man4/em.4 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
-.Dd September 15, 2006
+.Dd May 14, 2010
 .Dt EM 4
 .Os
 .Sh NAME
@@ -56,11 +56,17 @@ The
 .Nm
 driver provides support for PCI Gigabit Ethernet adapters based on
 the Intel 82540, 82541ER, 82541PI, 82542, 82543, 82544, 82545, 82546,
-82546EB, 82546GB, 82547, 82571, 81572 and 82573 Ethernet controller chips.
+82546EB, 82546GB, 82547, 82571, 81572, 82573, and 82574 Ethernet
+controller chips.
 The driver supports Transmit/Receive checksum offload
 and Jumbo Frames on all but 82542-based adapters.
 Furthermore it supports TCP segmentation offload (TSO) on all adapters but
 those based on the 82543, 82544 and 82547 controller chips.
+The identification LEDs of the adapters supported by the
+.Nm
+driver can be controlled via the
+.Xr led 4
+API for localization purposes.
 For further hardware information, see the
 .Pa README
 included with the driver.
@@ -135,7 +141,7 @@ The
 .Nm
 driver supports Gigabit Ethernet adapters based on the Intel
 82540, 82541ER, 82541PI, 82542, 82543, 82544, 82545, 82546, 82546EB,
-82546GB, 82547, 82571, 82572 and 82573 controller chips:
+82546GB, 82547, 82571, 82572, 82573, and 82574 controller chips:
 .Pp
 .Bl -bullet -compact
 .It
@@ -162,6 +168,20 @@ Intel PRO/1000 MT Dual Port Server Adapter (82546)
 Intel PRO/1000 MT Quad Port Server Adapter (82546EB)
 .It
 Intel PRO/1000 MT Server Adapter (82545)
+.It
+Intel PRO/1000 PF Dual Port Server Adapter (82571)
+.It
+Intel PRO/1000 PF Quad Port Server Adapter (82571)
+.It
+Intel PRO/1000 PF Server Adapter (82572)
+.It
+Intel PRO/1000 PT Desktop Adapter (82572)
+.It
+Intel PRO/1000 PT Dual Port Server Adapter (82571)
+.It
+Intel PRO/1000 PT Quad Port Server Adapter (82571)
+.It
+Intel PRO/1000 PT Server Adapter (82572)
 .It
 Intel PRO/1000 T Desktop Adapter (82544)
 .It
@@ -207,6 +227,20 @@ If
 is non-zero, this tunable limits the maximum delay in which a transmit
 interrupt is generated.
 .El
+.Sh FILES
+.Bl -tag -width /dev/led/em*
+.It Pa /dev/led/em*
+identification LED device nodes
+.El
+.Sh EXAMPLES
+Make the identification LED of em0 blink:
+.Pp
+.Dl "echo f2 > /dev/led/em0"
+.Pp
+Turn the identification LED of em0 off again:
+.Pp
+.Dl "echo 0 > /dev/led/em0"
+.Pp
 .Sh DIAGNOSTICS
 .Bl -diag
 .It "em%d: Unable to allocate bus resource: memory"
@@ -229,6 +263,8 @@ issue to
 .Sh SEE ALSO
 .Xr altq 4 ,
 .Xr arp 4 ,
+.Xr igb 4 ,
+.Xr led 4 ,
 .Xr netintro 4 ,
 .Xr ng_ether 4 ,
 .Xr polling 4 ,

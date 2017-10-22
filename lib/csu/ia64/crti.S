@@ -23,8 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/csu/ia64/crti.S 85952 2001-11-03 06:31:27Z peter $
+ * $FreeBSD$
  */
+
+#include <machine/asm.h>
+__FBSDID("$FreeBSD$");
 
 /*
  * This file (and its companion crtn.S) form the terminators of the

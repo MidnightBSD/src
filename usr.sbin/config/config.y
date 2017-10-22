@@ -13,6 +13,7 @@
 %token	NODEVICE
 %token	ENV
 %token	EQUALS
+%token	PLUSEQUALS
 %token	HINTS
 %token	IDENT
 %token	MAXUSERS
@@ -31,6 +32,7 @@
 %type	<str>	Save_id
 %type	<str>	Opt_value
 %type	<str>	Dev
+%token	<str>	PATH
 
 %{
 
@@ -46,10 +48,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -67,7 +65,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)config.y	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/7.0.0/usr.sbin/config/config.y 169647 2007-05-17 04:53:52Z imp $
+ * $FreeBSD$
  */
 
 #include <assert.h>
@@ -94,6 +92,12 @@ int	maxusers;
 int include(const char *, int);
 void yyerror(const char *s);
 int yywrap(void);
+
+static void newdev(char *name);
+static void newfile(char *name);
+static void rmdev_schedule(struct device_head *dh, char *name);
+static void newopt(struct opt_head *list, char *name, char *value, int append);
+static void rmopt_schedule(struct opt_head *list, char *name);
 
 static char *
 devopt(char *dev)
@@ -122,14 +126,17 @@ Spec:
 		|
 	Config_spec SEMICOLON
 		|
-	INCLUDE ID SEMICOLON
-	      = {
+	INCLUDE PATH SEMICOLON {
+		if (incignore == 0)
+			include($2, 0);
+		};
+		|
+	INCLUDE ID SEMICOLON {
 	          if (incignore == 0)
 		  	include($2, 0);
 		};
 		|
-	FILES ID SEMICOLON
-	      = { newfile($2); };
+	FILES ID SEMICOLON { newfile($2); };
 	        |
 	SEMICOLON
 		|
@@ -137,16 +144,14 @@ Spec:
 		;
 
 Config_spec:
-	ARCH Save_id
-	    = {
+	ARCH Save_id {
 		if (machinename != NULL && !eq($2, machinename))
 		    errx(1, "%s:%d: only one machine directive is allowed",
 			yyfile, yyline);
 		machinename = $2;
 		machinearch = $2;
 	      } |
-	ARCH Save_id Save_id
-	    = {
+	ARCH Save_id Save_id {
 		if (machinename != NULL &&
 		    !(eq($2, machinename) && eq($3, machinearch)))
 		    errx(1, "%s:%d: only one machine directive is allowed",
@@ -154,15 +159,15 @@ Config_spec:
 		machinename = $2;
 		machinearch = $3;
 	      } |
-	CPU Save_id
-	      = {
+	CPU Save_id {
 		struct cputype *cp =
 		    (struct cputype *)calloc(1, sizeof (struct cputype));
+		if (cp == NULL)
+			err(EXIT_FAILURE, "calloc");
 		cp->cpu_name = $2;
 		SLIST_INSERT_HEAD(&cputype, cp, cpu_next);
 	      } |
-	NOCPU Save_id
-	      = {
+	NOCPU Save_id {
 		struct cputype *cp, *cp2;
 		SLIST_FOREACH_SAFE(cp, &cputype, cpu_next, cp2) {
 			if (eq(cp->cpu_name, $2)) {
@@ -173,46 +178,41 @@ Config_spec:
 	      } |
 	OPTIONS Opt_list
 		|
-	NOOPTION Save_id
-	      = { rmopt_schedule(&opt, $2); } |
+	NOOPTION Save_id { rmopt_schedule(&opt, $2); } |
 	MAKEOPTIONS Mkopt_list
 		|
-	NOMAKEOPTION Save_id
-	      = { rmopt_schedule(&mkopt, $2); } |
-	IDENT ID
-	      = { ident = $2; } |
+	NOMAKEOPTION Save_id { rmopt_schedule(&mkopt, $2); } |
+	IDENT ID { ident = $2; } |
 	System_spec
 		|
-	MAXUSERS NUMBER
-	      = { maxusers = $2; } |
-	PROFILE NUMBER
-	      = { profiling = $2; } |
-	ENV ID
-	      = {
+	MAXUSERS NUMBER { maxusers = $2; } |
+	PROFILE NUMBER { profiling = $2; } |
+	ENV ID {
 		env = $2;
 		envmode = 1;
 		} |
-	HINTS ID
-	      = {
+	HINTS ID {
 		struct hint *hint;
 
 		hint = (struct hint *)calloc(1, sizeof (struct hint));
+		if (hint == NULL)
+			err(EXIT_FAILURE, "calloc");	
 		hint->hint_name = $2;
 		STAILQ_INSERT_TAIL(&hints, hint, hint_next);
 		hintmode = 1;
 	        }
 
 System_spec:
-	CONFIG System_id System_parameter_list
-	  = { errx(1, "%s:%d: root/dump/swap specifications obsolete",
-	      yyfile, yyline);}
+	CONFIG System_id System_parameter_list {
+		errx(1, "%s:%d: root/dump/swap specifications obsolete",
+		      yyfile, yyline);
+		}
 	  |
 	CONFIG System_id
 	  ;
 
 System_id:
-	Save_id
-	      = { newopt(&mkopt, ns("KERNEL"), $1); };
+	Save_id { newopt(&mkopt, ns("KERNEL"), $1, 0); };
 
 System_parameter_list:
 	  System_parameter_list ID
@@ -226,23 +226,19 @@ Opt_list:
 		;
 
 Option:
-	Save_id
-	      = {
-		newopt(&opt, $1, NULL);
+	Save_id {
+		newopt(&opt, $1, NULL, 0);
 		if (strchr($1, '=') != NULL)
 			errx(1, "%s:%d: The `=' in options should not be "
 			    "quoted", yyfile, yyline);
 	      } |
-	Save_id EQUALS Opt_value
-	      = {
-		newopt(&opt, $1, $3);
+	Save_id EQUALS Opt_value {
+		newopt(&opt, $1, $3, 0);
 	      } ;
 
 Opt_value:
-	ID
-		= { $$ = $1; } |
-	NUMBER
-		= {
+	ID { $$ = $1; } |
+	NUMBER {
 			char buf[80];
 
 			(void) snprintf(buf, sizeof(buf), "%d", $1);
@@ -250,8 +246,7 @@ Opt_value:
 		} ;
 
 Save_id:
-	ID
-	      = { $$ = $1; }
+	ID { $$ = $1; }
 	;
 
 Mkopt_list:
@@ -261,14 +256,13 @@ Mkopt_list:
 		;
 
 Mkoption:
-	Save_id
-	      = { newopt(&mkopt, $1, ns("")); } |
-	Save_id EQUALS Opt_value
-	      = { newopt(&mkopt, $1, $3); } ;
+	Save_id { newopt(&mkopt, $1, ns(""), 0); } |
+	Save_id EQUALS { newopt(&mkopt, $1, ns(""), 0); } |
+	Save_id EQUALS Opt_value { newopt(&mkopt, $1, $3, 0); } |
+	Save_id PLUSEQUALS Opt_value { newopt(&mkopt, $1, $3, 1); } ;
 
 Dev:
-	ID
-	      = { $$ = $1; }
+	ID { $$ = $1; }
 	;
 
 Device_spec:
@@ -290,16 +284,14 @@ NoDev_list:
 		;
 
 Device:
-	Dev
-	      = {
-		newopt(&opt, devopt($1), ns("1"));
+	Dev {
+		newopt(&opt, devopt($1), ns("1"), 0);
 		/* and the device part */
 		newdev($1);
 		}
 
 NoDevice:
-	Dev
-	      = {
+	Dev {
 		char *s = devopt($1);
 
 		rmopt_schedule(&opt, s);
@@ -340,6 +332,8 @@ newfile(char *name)
 	struct files_name *nl;
 	
 	nl = (struct files_name *) calloc(1, sizeof *nl);
+	if (nl == NULL)
+		err(EXIT_FAILURE, "calloc");
 	nl->f_name = name;
 	STAILQ_INSERT_TAIL(&fntab, nl, f_next);
 }
@@ -368,11 +362,14 @@ newdev(char *name)
 	struct device *np;
 
 	if (finddev(&dtab, name)) {
-		printf("WARNING: duplicate device `%s' encountered.\n", name);
+		fprintf(stderr,
+		    "WARNING: duplicate device `%s' encountered.\n", name);
 		return;
 	}
 
 	np = (struct device *) calloc(1, sizeof *np);
+	if (np == NULL)
+		err(EXIT_FAILURE, "calloc");
 	np->d_name = name;
 	STAILQ_INSERT_TAIL(&dtab, np, d_next);
 }
@@ -412,9 +409,9 @@ findopt(struct opt_head *list, char *name)
  * Add an option to the list of options.
  */
 static void
-newopt(struct opt_head *list, char *name, char *value)
+newopt(struct opt_head *list, char *name, char *value, int append)
 {
-	struct opt *op;
+	struct opt *op, *op2;
 
 	/*
 	 * Ignore inclusions listed explicitly for configuration files.
@@ -424,16 +421,25 @@ newopt(struct opt_head *list, char *name, char *value)
 		return;
 	}
 
-	if (findopt(list, name)) {
-		printf("WARNING: duplicate option `%s' encountered.\n", name);
+	op2 = findopt(list, name);
+	if (op2 != NULL && !append) {
+		fprintf(stderr,
+		    "WARNING: duplicate option `%s' encountered.\n", name);
 		return;
 	}
 
 	op = (struct opt *)calloc(1, sizeof (struct opt));
+	if (op == NULL)
+		err(EXIT_FAILURE, "calloc");
 	op->op_name = name;
 	op->op_ownfile = 0;
 	op->op_value = value;
-	SLIST_INSERT_HEAD(list, op, op_next);
+	if (op2 != NULL) {
+		while (SLIST_NEXT(op2, op_append) != NULL)
+			op2 = SLIST_NEXT(op2, op_append);
+		SLIST_NEXT(op2, op_append) = op;
+	} else
+		SLIST_INSERT_HEAD(list, op, op_next);
 }
 
 /*

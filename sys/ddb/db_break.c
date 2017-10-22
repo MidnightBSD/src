@@ -33,9 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/ddb/db_break.c 139747 2005-01-06 01:34:41Z imp $");
-
-#include "opt_comconsole.h"
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 

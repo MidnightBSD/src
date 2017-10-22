@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/make/parse.c 168671 2007-04-12 18:14:00Z ru $");
+__FBSDID("$FreeBSD$");
 
 /*-
  * parse.c --
@@ -168,6 +168,7 @@ typedef enum {
 	ExPath,		/* .PATH */
 	Phony,		/* .PHONY */
 	Posix,		/* .POSIX */
+	MakefileDeps,	/* .MAKEFILEDEPS */
 	Precious,	/* .PRECIOUS */
 	ExShell,	/* .SHELL */
 	Silent,		/* .SILENT */
@@ -213,6 +214,7 @@ static const struct keyword {
 	{ ".LIBS",		Libs,		0 },
 	{ ".MAIN",		Main,		0 },
 	{ ".MAKE",		Attribute,	OP_MAKE },
+	{ ".MAKEFILEDEPS",	MakefileDeps,	0 },
 	{ ".MAKEFLAGS",		MFlags,		0 },
 	{ ".MFLAGS",		MFlags,		0 },
 	{ ".NOTMAIN",		Attribute,	OP_NOTMAIN },
@@ -697,6 +699,7 @@ static void
 ParseDoDependency(char *line)
 {
 	char	*cp;	/* our current position */
+	char	*lstart = line;	/* original input line */
 	GNode	*gn;	/* a general purpose temporary node */
 	int	op;	/* the operator on the line */
 	char	savec;	/* a place to save a character */
@@ -800,13 +803,15 @@ ParseDoDependency(char *line)
 			 * merges.
 			 */
 			if (strncmp(line, "<<<<<<", 6) == 0 ||
+			    strncmp(line, "||||||", 6) == 0 ||
 			    strncmp(line, "======", 6) == 0 ||
 			    strncmp(line, ">>>>>>", 6) == 0) {
 				Parse_Error(PARSE_FATAL, "Makefile appears to "
 				    "contain unresolved cvs/rcs/??? merge "
 				    "conflicts");
 			} else
-				Parse_Error(PARSE_FATAL, "Need an operator");
+				Parse_Error(PARSE_FATAL, lstart[0] == '.' ?
+				    "Unknown directive" : "Need an operator");
 			return;
 		}
 		*cp = '\0';
@@ -1026,7 +1031,8 @@ ParseDoDependency(char *line)
 			op = OP_DEPENDS;
 		}
 	} else {
-		Parse_Error(PARSE_FATAL, "Missing dependency operator");
+		Parse_Error(PARSE_FATAL, lstart[0] == '.' ?
+		    "Unknown directive" : "Missing dependency operator");
 		return;
 	}
 
@@ -1069,9 +1075,12 @@ ParseDoDependency(char *line)
 			LST_FOREACH(ln, &paths)
 			Path_Clear(Lst_Datum(ln));
 			break;
+		  case MakefileDeps:
+			mfAutoDeps = TRUE;
+			break;
 		  case Posix:
 			is_posix = TRUE;
-			Var_Set("%POSIX", "1003.2", VAR_GLOBAL);
+			Var_SetGlobal("%POSIX", "1003.2");
 			break;
 		  default:
 			break;
@@ -1528,6 +1537,8 @@ Parse_DoVar(char *line, GNode *ctxt)
 		 */
 		Var_Set(line, cp, ctxt);
 	}
+	if (strcmp(line, MAKE_JOB_PREFIX) == 0)
+		Job_SetPrefix();
 }
 
 /*-

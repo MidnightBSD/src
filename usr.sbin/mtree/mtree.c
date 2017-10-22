@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)mtree.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/mtree/mtree.c 130094 2004-06-04 19:29:28Z ru $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -164,7 +164,7 @@ main(int argc, char *argv[])
 	if (dir && chdir(dir))
 		err(1, "%s", dir);
 
-	if ((cflag || sflag) && !getwd(fullpath))
+	if ((cflag || sflag) && !getcwd(fullpath, sizeof(fullpath)))
 		errx(1, "%s", fullpath);
 
 	if (cflag) {

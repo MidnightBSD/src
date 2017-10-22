@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/contrib/ipfilter/netinet/ipl.h 173213 2007-10-31 05:00:38Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1993-2001, 2003 by Darren Reed.
@@ -6,7 +6,7 @@
  * See the IPFILTER.LICENCE file for details on licencing.
  *
  * @(#)ipl.h	1.21 6/5/96
- * $FreeBSD: release/7.0.0/sys/contrib/ipfilter/netinet/ipl.h 173213 2007-10-31 05:00:38Z darrenr $
+ * $FreeBSD$
  * Id: ipl.h,v 2.52.2.30 2007/10/16 09:41:00 darrenr Exp $
  */
 

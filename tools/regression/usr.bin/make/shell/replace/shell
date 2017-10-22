@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/7.0.0/tools/regression/usr.bin/make/shell/replace/shell 146822 2005-05-31 14:13:07Z harti $
+# $FreeBSD$
 echo $@
 if ! test -t 0 ; then
 	cat

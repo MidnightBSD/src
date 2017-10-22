@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/tools/netrate/http/http.c 161861 2006-09-02 08:25:40Z rwatson $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -300,15 +300,15 @@ main(int argc, char *argv[])
 
 	if (threaded) {
 		if (pthread_barrier_init(&statep->start_barrier, NULL,
-		    numthreads) < 0)
-			err(-1, "pthread_mutex_init");
+		    numthreads) != 0)
+			err(-1, "pthread_barrier_init");
 	}
 
 	for (i = 0; i < numthreads; i++) {
 		statep->hwd[i].hwd_count = 0;
 		if (threaded) {
 			if (pthread_create(&statep->hwd[i].hwd_thread, NULL,
-			    http_worker, &statep->hwd[i]) < 0)
+			    http_worker, &statep->hwd[i]) != 0)
 				err(-1, "pthread_create");
 		} else {
 			curthread = i;
@@ -339,7 +339,7 @@ main(int argc, char *argv[])
 	for (i = 0; i < numthreads; i++) {
 		if (threaded) {
 			if (pthread_join(statep->hwd[i].hwd_thread, NULL)
-			    < 0)
+			    != 0)
 				err(-1, "pthread_join");
 		} else {
 			pid = waitpid(statep->hwd[i].hwd_pid, NULL, 0);

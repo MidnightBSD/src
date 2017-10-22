@@ -50,7 +50,7 @@
  * SUCH DAMAGE.
  *
  *	from:	@(#)fd.c	7.4 (Berkeley) 5/25/91
- * $FreeBSD: release/7.0.0/sys/pc98/cbus/fdc.c 167753 2007-03-21 03:38:37Z nyan $
+ * $FreeBSD$
  */
 
 #include "opt_fdc.h"
@@ -2378,7 +2378,7 @@ fdmisccmd(struct cdev *dev, u_int cmd, void *data)
 
 	/*
 	 * Set up a bio request for fdstrategy().  bio_offset is faked
-	 * so that fdstrategy() will seek to the the requested
+	 * so that fdstrategy() will seek to the requested
 	 * cylinder, and use the desired head.
 	 */
 	bp->bio_cmd = cmd;

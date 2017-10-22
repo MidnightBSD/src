@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/kern/Make.tags.inc 171245 2007-07-05 08:55:14Z bz $
+# $FreeBSD$
 #	@(#)Make.tags.inc	8.1 (Berkeley) 6/11/93
 
 SYS?=	${.CURDIR}/..
@@ -16,7 +16,6 @@ COMM=	${SYS}/dev/advansys/*.[ch] \
 	${SYS}/dev/buslogic/*.[ch] \
 	${SYS}/dev/dpt/*.[ch] \
 	${SYS}/dev/en/*.[ch] \
-	${SYS}/dev/hfa/*.[ch] \
 	${SYS}/dev/iicbus/*.[ch] \
 	${SYS}/dev/isp/*.[ch] \
 	${SYS}/dev/pdq/*.[ch] \
@@ -38,10 +37,10 @@ COMM=	${SYS}/dev/advansys/*.[ch] \
 	${SYS}/fs/smbfs/*.[ch] \
 	${SYS}/fs/udf/*.[ch] \
 	${SYS}/fs/unionfs/*.[ch] \
+	${SYS}/geom/*.[ch] \
 	${SYS}/kern/*.[ch] \
 	${SYS}/net/*.[ch] \
 	${SYS}/netatalk/*.[ch] \
-	${SYS}/netatm/*.[ch] \
 	${SYS}/netinet/*.[ch] \
 	${SYS}/netinet6/*.[ch] \
 	${SYS}/netipsec/*.[ch] \
@@ -57,10 +56,10 @@ COMM=	${SYS}/dev/advansys/*.[ch] \
 	${SYS}/sys/*.[ch]
 
 COMMDIR1= ${SYS}/conf \
+	${SYS}/geom \
 	${SYS}/kern \
 	${SYS}/net \
 	${SYS}/netatalk \
-	${SYS}/netatm \
 	${SYS}/netinet \
 	${SYS}/netinet6 \
 	${SYS}/netipsec \

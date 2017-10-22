@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)symtab.c	8.3 (Berkeley) 4/28/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/sbin/restore/symtab.c 128073 2004-04-09 19:58:40Z markm $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 /*
@@ -443,7 +443,7 @@ dumpsymtable(char *filename, long checkpt)
 	FILE *fd;
 	struct symtableheader hdr;
 
-	vprintf(stdout, "Check pointing the restore\n");
+	vprintf(stdout, "Checkpointing the restore\n");
 	if (Nflag)
 		return;
 	if ((fd = fopen(filename, "w")) == NULL) {

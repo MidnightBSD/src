@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: cert_37.c,v 1.46.18.2 2005/04/29 00:16:30 marka Exp $ */
+/* $Id$ */
 
 /* Reviewed: Wed Mar 15 21:14:32 EST 2000 by tale */
 
@@ -276,5 +276,9 @@ checknames_cert(ARGS_CHECKNAMES) {
 	return (ISC_TRUE);
 }
 
-#endif	/* RDATA_GENERIC_CERT_37_C */
 
+static inline int
+casecompare_cert(ARGS_COMPARE) {
+	return (compare_cert(rdata1, rdata2));
+}
+#endif	/* RDATA_GENERIC_CERT_37_C */

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/arch/sparc64/include/atomic_ops.h 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
 #ifndef	_ATOMIC_OPS_H_
@@ -38,7 +38,7 @@
  * void atomic_swap_long(long *dst, long val, long *res);
  */
 static __inline void
-atomic_swap_long(long *dst, long val, long *res)
+atomic_swap_long(volatile long *dst, long val, long *res)
 {
 	long tmp;
 	long r;
@@ -54,7 +54,7 @@ atomic_swap_long(long *dst, long val, long *res)
 }
 
 static __inline void
-atomic_swap_int(int *dst, int val, int *res)
+atomic_swap_int(volatile int *dst, int val, int *res)
 {
 	int tmp;
 	int r;
@@ -70,6 +70,6 @@ atomic_swap_int(int *dst, int val, int *res)
 }
 
 #define	atomic_swap_ptr(dst, val, res) \
-	atomic_swap_long((long *)dst, (long)val, (long *)res)
+	atomic_swap_long((volatile long *)dst, (long)val, (long *)res)
 
 #endif

@@ -1,10 +1,10 @@
-/* $FreeBSD: release/7.0.0/lib/bind/lwres/lwres/platform.h 170224 2007-06-02 23:24:14Z dougb $ */
+/* $FreeBSD$ */
 
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -17,7 +17,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: platform.h.in,v 1.14.18.5 2005/06/08 02:07:59 marka Exp $ */
+/* $Id: platform.h.in,v 1.21 2007/06/19 23:47:23 tbox Exp $ */
 
 /*! \file */
 

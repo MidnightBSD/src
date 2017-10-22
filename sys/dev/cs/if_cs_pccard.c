@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/cs/if_cs_pccard.c 166901 2007-02-23 12:19:07Z piso $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -58,13 +58,10 @@ static int
 cs_pccard_probe(device_t dev)
 {
 	const struct pccard_product *pp;
-	int		error;
 	uint32_t	fcn = PCCARD_FUNCTION_UNSPEC;
 
 	/* Make sure we're a network function */
-	error = pccard_get_function(dev, &fcn);
-	if (error != 0)
-		return (error);
+	pccard_get_function(dev, &fcn);
 	if (fcn != PCCARD_FUNCTION_NETWORK)
 		return (ENXIO);
 
@@ -87,11 +84,7 @@ cs_pccard_attach(device_t dev)
 	error = cs_cs89x0_probe(dev);
 	if (error != 0)
 		return (error);
-	error = cs_alloc_irq(dev, sc->irq_rid, 0);
-	if (error != 0)
-		goto bad;
-	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-	    NULL, csintr, sc, &sc->irq_handle);
+	error = cs_alloc_irq(dev, sc->irq_rid);
 	if (error != 0)
 		goto bad;
 

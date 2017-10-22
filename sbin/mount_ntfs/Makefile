@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/7.0.0/sbin/mount_ntfs/Makefile 139112 2004-12-21 09:59:45Z ru $
+# $FreeBSD$
 #
 
 PROG=	mount_ntfs
@@ -9,8 +9,7 @@ DPADD=	${LIBKICONV}
 LDADD=	-lkiconv
 
 MOUNT=	${.CURDIR}/../mount
-CFLAGS+=-I${MOUNT}
-WARNS?=	0
+CFLAGS+= -I${MOUNT}
 
 # Needs to be dynamically linked for optional dlopen() access to
 # userland libiconv

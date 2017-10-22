@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)funopen.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/stdio/funopen.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <errno.h>
@@ -42,11 +42,11 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/stdio/funopen.c 165903 2007-01-09 00:
 #include "local.h"
 
 FILE *
-funopen(cookie, readfn, writefn, seekfn, closefn)
-	const void *cookie;
-	int (*readfn)(), (*writefn)();
-	fpos_t (*seekfn)(void *cookie, fpos_t off, int whence);
-	int (*closefn)();
+funopen(const void *cookie,
+	int (*readfn)(void *, char *, int),
+	int (*writefn)(void *, const char *, int),
+	fpos_t (*seekfn)(void *, fpos_t, int),
+	int (*closefn)(void *))
 {
 	FILE *fp;
 	int flags;

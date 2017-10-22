@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/geom/bde/g_bde.c 143418 2005-03-11 15:42:51Z ume $
+ * $FreeBSD$
  *
  */
 
@@ -41,12 +41,15 @@
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/kthread.h>
+#include <sys/sysctl.h>
 
 #include <crypto/rijndael/rijndael-api-fst.h>
 #include <crypto/sha2/sha2.h>
 #include <geom/geom.h>
 #include <geom/bde/g_bde.h>
 #define BDE_CLASS_NAME "BDE"
+
+FEATURE(geom_bde, "GEOM-based Disk Encryption");
 
 static void
 g_bde_start(struct bio *bp)
@@ -183,7 +186,7 @@ g_bde_create_geom(struct gctl_req *req, struct g_class *mp, struct g_provider *p
 		TAILQ_INIT(&sc->worklist);
 		mtx_init(&sc->worklist_mutex, "g_bde_worklist", NULL, MTX_DEF);
 		/* XXX: error check */
-		kthread_create(g_bde_worker, gp, &sc->thread, 0, 0,
+		kproc_create(g_bde_worker, gp, &sc->thread, 0, 0,
 			"g_bde %s", gp->name);
 		pp = g_new_providerf(gp, gp->name);
 #if 0

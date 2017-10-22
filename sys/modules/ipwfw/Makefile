@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/ipwfw/Makefile 167165 2007-03-02 11:42:56Z flz $
+# $FreeBSD$
 
 SUBDIR=	ipw_bss	\
 	ipw_ibss \

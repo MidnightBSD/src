@@ -1,5 +1,6 @@
 
 #------------------------------------------------------------------------------
+# $File: jpeg,v 1.16 2011/01/04 19:29:32 rrt Exp $
 # JPEG images
 # SunOS 5.5.1 had
 #
@@ -9,6 +10,9 @@
 # both of which turn into "JPEG image data" here.
 #
 0	beshort		0xffd8		JPEG image data
+!:mime	image/jpeg
+!:apple	8BIMJPEG
+!:strength +1
 >6	string		JFIF		\b, JFIF standard
 # The following added by Erik Rossen <rossen@freesurf.ch> 1999-09-06
 # in a vain attempt to add image size reporting for JFIF.  Note that these
@@ -123,11 +127,8 @@
 # And if there was some sort of looping construct to do searches, plus a few
 # named accumulators, it would be even more effective...
 # At least we can show a comment if no other segments got inserted before:
->(4.S+5)	byte		0xFE
->>(4.S+8)	string		>\0		\b, comment: "%s"
-#>(4.S+5)	byte		0xFE		\b, comment
-#>>(4.S+6)	beshort		x		\b length=%d
-#>>(4.S+8)	string		>\0		\b, "%s"
+>(4.S+5)	byte		0xFE		\b, comment:
+>>(4.S+6)	pstring/HJ	x		"%s"
 # Or, we can show the encoding type (I've included only the three most common)
 # and image dimensions if we are lucky and the SOFn (image segment) is here:
 >(4.S+5)	byte		0xC0		\b, baseline
@@ -153,3 +154,8 @@
 
 # From: David Santinoli <david@santinoli.com>
 0	string		\x00\x00\x00\x0C\x6A\x50\x20\x20\x0D\x0A\x87\x0A	JPEG 2000 image data
+
+# Type: JPEG 2000 codesream
+# From: Mathieu Malaterre <mathieu.malaterre@gmail.com>
+0	belong		0xff4fff51						JPEG 2000 codestream
+45	beshort		0xff52

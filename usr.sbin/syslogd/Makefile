@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: release/7.0.0/usr.sbin/syslogd/Makefile 160753 2006-07-27 14:52:12Z yar $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -12,7 +12,7 @@ SRCS=	syslogd.c ttymsg.c
 DPADD=	${LIBUTIL}
 LDADD=	-lutil
 
-WARNS?=	1
+WARNS?= 3
 
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+= -DINET6

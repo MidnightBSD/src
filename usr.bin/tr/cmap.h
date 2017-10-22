@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.bin/tr/cmap.h 131846 2004-07-09 02:08:07Z tjr $
+ * $FreeBSD$
  */
 
 #ifndef CMAP_H

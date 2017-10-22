@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/sparc64/sys/__sparc_utrap_gen.S 163967 2006-11-03 23:43:18Z kmacy $");
+__FBSDID("$FreeBSD$");
 
 	.register	%g2, #ignore
 	.register	%g3, #ignore
@@ -38,10 +38,6 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/sparc64/sys/__sparc_utrap_gen.S 16396
 #include "assym.s"
 
 ENTRY(__sparc_utrap_gen)
-#ifdef SUN4V
-	save
-	ta	%xcc, ST_FPEMU_CONTEXT
-#endif	
 	sub	%sp, UF_SIZEOF, %sp
 
 	stx	%o0, [%sp + SPOFF + CCFSZ + UF_TYPE]

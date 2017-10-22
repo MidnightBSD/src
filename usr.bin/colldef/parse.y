@@ -27,8 +27,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/colldef/parse.y 146466 2005-05-21 09:55:10Z ru $");
+__FBSDID("$FreeBSD$");
 
+#include <sys/types.h>
 #include <arpa/inet.h>
 #include <err.h>
 #include <stdarg.h>

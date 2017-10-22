@@ -2,12 +2,11 @@
 #
 # Add additional swap files
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/addswap 168283 2007-04-02 22:53:07Z des $
+# $FreeBSD$
 #
 
 # PROVIDE: addswap
-# REQUIRE: FILESYSTEMS
-# BEFORE: sysctl
+# REQUIRE: FILESYSTEMS kld
 # KEYWORD: nojail
 
 . /etc/rc.subr

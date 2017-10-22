@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/cs/if_cs_isa.c 166901 2007-02-23 12:19:07Z piso $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -48,8 +48,8 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/cs/if_cs_isa.c 166901 2007-02-23 12:19
 #include <dev/cs/if_csvar.h>
 #include <dev/cs/if_csreg.h>
 
-static int		cs_isa_probe	(device_t);
-static int		cs_isa_attach	(device_t);
+static int		cs_isa_probe(device_t);
+static int		cs_isa_attach(device_t);
 
 static struct isa_pnp_id cs_ids[] = {
 	{ 0x4060630e, NULL },		/* CSC6040 */
@@ -63,7 +63,7 @@ static struct isa_pnp_id cs_ids[] = {
 static int
 cs_isa_probe(device_t dev)
 {
-	int error = 0;
+	int error;
 
 	/* Check isapnp ids */
 	error = ISA_PNP_PROBE(device_get_parent(dev), dev, cs_ids);
@@ -72,15 +72,13 @@ cs_isa_probe(device_t dev)
 	if (error == ENXIO)
                 goto end;
 
-        /* If we had some other problem. */
-        if (!(error == 0 || error == ENOENT))
-                goto end;
-
-	error = cs_cs89x0_probe(dev);
+        /* If we've matched, or there's no PNP ID, probe chip */
+	if (error == 0 || error == ENOENT)
+		error = cs_cs89x0_probe(dev);
 end:
 	/* Make sure IRQ is assigned for probe message and available */
 	if (error == 0)
-                error = cs_alloc_irq(dev, 0, 0);
+                error = cs_alloc_irq(dev, 0);
 
         cs_release_resources(dev);
         return (error);
@@ -90,21 +88,10 @@ static int
 cs_isa_attach(device_t dev)
 {
         struct cs_softc *sc = device_get_softc(dev);
-        int error;
         
 	cs_alloc_port(dev, 0, CS_89x0_IO_PORTS);
-	/* XXX mem appears to not be used at all */
-        if (sc->mem_used)
-                cs_alloc_memory(dev, sc->mem_rid, sc->mem_used);
-        cs_alloc_irq(dev, sc->irq_rid, 0);
+        cs_alloc_irq(dev, sc->irq_rid);
                 
-        error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-	    NULL, csintr, sc, &sc->irq_handle);
-        if (error) {
-                cs_release_resources(dev);
-                return (error);
-        }              
-
         return (cs_attach(dev));
 }
 
@@ -112,9 +99,7 @@ static device_method_t cs_isa_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		cs_isa_probe),
 	DEVMETHOD(device_attach,	cs_isa_attach),
-#ifdef CS_HAS_DETACH
 	DEVMETHOD(device_detach,	cs_detach),
-#endif
 
 	{ 0, 0 }
 };

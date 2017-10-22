@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libcam/camlib.h 95331 2002-04-23 23:58:20Z obrien $
+ * $FreeBSD$
  */
 /*
  * Buffer encoding/decoding routines taken from the original FreeBSD SCSI

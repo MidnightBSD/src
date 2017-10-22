@@ -32,16 +32,23 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/arm/include/intr.h 170827 2007-06-16 15:03:33Z cognet $
+ * $FreeBSD$
  *
  */
 
 #ifndef _MACHINE_INTR_H_
 #define _MACHINE_INTR_H_
 
+/* XXX move to std.* files? */
 #ifdef CPU_XSCALE_81342
 #define NIRQ		128
-#elif defined(CPU_ARM9)
+#elif defined(CPU_XSCALE_PXA2X0)
+#include <arm/xscale/pxa/pxareg.h>
+#define	NIRQ		IRQ_GPIO_MAX
+#elif defined(SOC_MV_DISCOVERY)
+#define NIRQ		96
+#elif defined(CPU_ARM9) || defined(SOC_MV_KIRKWOOD) || \
+    defined(CPU_XSCALE_IXP435)
 #define NIRQ		64
 #else
 #define NIRQ		32
@@ -49,10 +56,11 @@
 
 #include <machine/psl.h>
 
-int arm_get_next_irq(void);
+int arm_get_next_irq(int);
 void arm_mask_irq(uintptr_t);
 void arm_unmask_irq(uintptr_t);
 void arm_setup_irqhandler(const char *, int (*)(void*), void (*)(void*), 
     void *, int, int, void **);    
-int arm_remove_irqhandler(void *);
+int arm_remove_irqhandler(int, void *);
+extern void (*arm_post_filter)(void *);
 #endif	/* _MACHINE_INTR_H */

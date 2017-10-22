@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/add/perform.c 174854 2007-12-22 06:32:46Z cvs2svn $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <paths.h>
@@ -52,9 +52,6 @@ pkg_perform(char **pkgs)
     return err_cnt;
 }
 
-static Package Plist;
-static char *Home;
-
 /*
  * This is seriously ugly code following.  Written very fast!
  * [And subsequently made even worse..  Sigh!  This code was just born
@@ -63,10 +60,12 @@ static char *Home;
 static int
 pkg_do(char *pkg)
 {
+    Package Plist;
     char pkg_fullname[FILENAME_MAX];
     char playpen[FILENAME_MAX];
     char extract_contents[FILENAME_MAX];
-    char *where_to, *extract;
+    char *extract;
+    const char *where_to;
     FILE *cfile;
     int code;
     PackingList p;
@@ -79,6 +78,7 @@ pkg_do(char *pkg)
     char pre_arg[FILENAME_MAX], post_arg[FILENAME_MAX];
     char *conflict[2];
     char **matched;
+    int fd;
 
     conflictsfound = 0;
     code = 0;
@@ -86,6 +86,8 @@ pkg_do(char *pkg)
     LogDir[0] = '\0';
     strcpy(playpen, FirstPen);
     inPlace = 0;
+
+    memset(&Plist, '\0', sizeof(Plist));
 
     /* Are we coming in for a second pass, everything already extracted? */
     if (!pkg) {
@@ -102,11 +104,10 @@ pkg_do(char *pkg)
     else {
 	/* Is it an ftp://foo.bar.baz/file.t[bg]z specification? */
 	if (isURL(pkg)) {
-	    if (!(Home = fileGetURL(NULL, pkg, KeepPackage))) {
+	    if (!(where_to = fileGetURL(NULL, pkg, KeepPackage))) {
 		warnx("unable to fetch '%s' by URL", pkg);
 		return 1;
 	    }
-	    where_to = Home;
 	    strcpy(pkg_fullname, pkg);
 	    cfile = fopen(CONTENTS_FNAME, "r");
 	    if (!cfile) {
@@ -135,13 +136,11 @@ pkg_do(char *pkg)
 		extract = NULL;
 		sb.st_size = 100000;	/* Make up a plausible average size */
 	    }
-	    Home = make_playpen(playpen, sb.st_size * 4);
-	    if (!Home)
+	    if (!(where_to = make_playpen(playpen, sb.st_size * 4)))
 		errx(1, "unable to make playpen for %lld bytes", (long long)sb.st_size * 4);
-	    where_to = Home;
 	    /* Since we can call ourselves recursively, keep notes on where we came from */
 	    if (!getenv("_TOP"))
-		setenv("_TOP", Home, 1);
+		setenv("_TOP", where_to, 1);
 	    if (unpack(pkg_fullname, extract)) {
 		warnx(
 	"unable to extract table of contents file from '%s' - not a package?",
@@ -252,6 +251,7 @@ pkg_do(char *pkg)
     }
 
     /* Now check the packing list for conflicts */
+    if (!IgnoreDeps){
     for (p = Plist.head; p != NULL; p = p->next) {
 	if (p->type == PLIST_CONFLICTS) {
 	    int i;
@@ -279,6 +279,48 @@ pkg_do(char *pkg)
 	    warnx("-f specified; proceeding anyway");
     }
 
+#if ENSURE_THAT_ALL_REQUIREMENTS_ARE_MET
+    /*
+     * Before attempting to do the slave mode bit, ensure that we've
+     * downloaded & processed everything we need.
+     * It's possible that we haven't already installed all of our
+     * dependencies if the dependency list was misgenerated due to
+     * other dynamic dependencies or if a dependency was added to a
+     * package without all REQUIRED_BY packages being regenerated.
+     */
+    for (p = pkg ? Plist.head : NULL; p; p = p->next) {
+	const char *ext;
+	char *deporigin;
+
+	if (p->type != PLIST_PKGDEP)
+	    continue;
+	deporigin = (p->next->type == PLIST_DEPORIGIN) ? p->next->name : NULL;
+
+	if (isinstalledpkg(p->name) <= 0 &&
+	    !(deporigin != NULL && matchbyorigin(deporigin, NULL) != NULL)) {
+	    char subpkg[FILENAME_MAX], *sep;
+
+	    strlcpy(subpkg, pkg, sizeof subpkg);
+	    if ((sep = strrchr(subpkg, '/')) != NULL) {
+		*sep = '\0';
+		if ((sep = strrchr(subpkg, '/')) != NULL) {
+		    *sep = '\0';
+		    strlcat(subpkg, "/All/", sizeof subpkg);
+		    strlcat(subpkg, p->name, sizeof subpkg);
+		    if ((ext = strrchr(pkg, '.')) == NULL) {
+			if (getenv("PACKAGESUFFIX"))
+			  ext = getenv("PACKAGESUFFIX");
+			else
+			  ext = ".tbz";
+		    }
+		    strlcat(subpkg, ext, sizeof subpkg);
+		    pkg_do(subpkg);
+		}
+	    }
+	}
+    }
+#endif
+
     /* Now check the packing list for dependencies */
     for (p = Plist.head; p ; p = p->next) {
 	char *deporigin;
@@ -294,7 +336,8 @@ pkg_do(char *pkg)
 	}
 	if (isinstalledpkg(p->name) <= 0 &&
 	    !(deporigin != NULL && matchbyorigin(deporigin, NULL) != NULL)) {
-	    char path[FILENAME_MAX], *cp = NULL;
+	    char path[FILENAME_MAX];
+	    const char *cp = NULL;
 
 	    if (!Fake) {
 		char prefixArg[2 + MAXPATHLEN]; /* "-P" + Prefix */
@@ -306,12 +349,13 @@ pkg_do(char *pkg)
 		    const char *ext;
 
 		    ext = strrchr(pkg_fullname, '.');
-		    if (ext == NULL)
-#if defined(__FreeBSD_version) && __FreeBSD_version >= 500039
-			ext = ".tbz";
-#else
-			ext = ".tgz";
-#endif
+		    if (ext == NULL) {
+			if (getenv("PACKAGESUFFIX")) {
+			  ext = getenv("PACKAGESUFFIX");
+			} else {
+			  ext = ".tbz";
+			}
+		    }
 		    snprintf(path, FILENAME_MAX, "%s/%s%s", getenv("_TOP"), p->name, ext);
 		    if (fexists(path))
 			cp = path;
@@ -336,14 +380,14 @@ pkg_do(char *pkg)
 		}
 		else if ((cp = fileGetURL(pkg, p->name, KeepPackage)) != NULL) {
 		    if (Verbose)
-			printf("Finished loading %s over FTP.\n", p->name);
+			printf("Finished loading %s via a URL\n", p->name);
 		    if (!fexists("+CONTENTS")) {
 			warnx("autoloaded package %s has no +CONTENTS file?",
 				p->name);
 			if (!Force)
 			    ++code;
 		    }
-		    else if (vsystem("(pwd; /bin/cat +CONTENTS) | %s %s %s -S", PkgAddCmd, Verbose ? "-v" : "", PrefixRecursive ? prefixArg : "")) {
+		    else if (vsystem("(pwd; /bin/cat +CONTENTS) | %s %s %s %s -S", PkgAddCmd, Verbose ? "-v" : "", PrefixRecursive ? prefixArg : "", KeepPackage ? "-K" : "")) {
 			warnx("pkg_add of dependency '%s' failed%s",
 				p->name, Force ? " (proceeding anyway)" : "!");
 			if (!Force)
@@ -368,13 +412,16 @@ pkg_do(char *pkg)
 	else if (Verbose)
 	    printf(" - already installed.\n");
     }
+    } /* if (!IgnoreDeps) */
 
     if (code != 0)
 	goto bomb;
 
     /* Look for the requirements file */
-    if (fexists(REQUIRE_FNAME)) {
-	vsystem("/bin/chmod +x %s", REQUIRE_FNAME);	/* be sure */
+    if ((fd = open(REQUIRE_FNAME, O_RDWR)) != -1) {
+	fstat(fd, &sb);
+	fchmod(fd, sb.st_mode | S_IXALL);	/* be sure, chmod a+x */
+	close(fd);
 	if (Verbose)
 	    printf("Running requirements file first for %s..\n", Plist.name);
 	if (!Fake && vsystem("./%s %s INSTALL", REQUIRE_FNAME, Plist.name)) {
@@ -406,8 +453,10 @@ pkg_do(char *pkg)
     }
 
     /* If we're really installing, and have an installation file, run it */
-    if (!NoInstall && fexists(pre_script)) {
-	vsystem("/bin/chmod +x %s", pre_script);	/* make sure */
+    if (!NoInstall && (fd = open(pre_script, O_RDWR)) != -1) {
+	fstat(fd, &sb);
+	fchmod(fd, sb.st_mode | S_IXALL);	/* be sure, chmod a+x */
+	close(fd);
 	if (Verbose)
 	    printf("Running pre-install for %s..\n", Plist.name);
 	if (!Fake && vsystem("./%s %s %s", pre_script, Plist.name, pre_arg)) {
@@ -435,8 +484,10 @@ pkg_do(char *pkg)
     }
 
     /* Run the installation script one last time? */
-    if (!NoInstall && fexists(post_script)) {
-	vsystem("/bin/chmod +x %s", post_script);	/* make sure */
+    if (!NoInstall && (fd = open(post_script, O_RDWR)) != -1) {
+	fstat(fd, &sb);
+	fchmod(fd, sb.st_mode | S_IXALL);	/* be sure, chmod a+x */
+	close(fd);
 	if (Verbose)
 	    printf("Running post-install for %s..\n", Plist.name);
 	if (!Fake && vsystem("./%s %s %s", post_script, Plist.name, post_arg)) {
@@ -450,6 +501,8 @@ pkg_do(char *pkg)
     /* Time to record the deed? */
     if (!NoRecord && !Fake) {
 	char contents[FILENAME_MAX];
+	char **depnames = NULL, **deporigins = NULL, ***depmatches;
+	int i, dep_count = 0;
 	FILE *contfile;
 
 	if (getuid() != 0)
@@ -458,7 +511,7 @@ pkg_do(char *pkg)
 	zapLogDir = 1;
 	if (Verbose)
 	    printf("Attempting to record package into %s..\n", LogDir);
-	if (make_hierarchy(LogDir)) {
+	if (make_hierarchy(LogDir, FALSE)) {
 	    warnx("can't record package into '%s', you're on your own!",
 		   LogDir);
 	    bzero(LogDir, FILENAME_MAX);
@@ -466,7 +519,10 @@ pkg_do(char *pkg)
 	    goto success;	/* close enough for government work */
 	}
 	/* Make sure pkg_info can read the entry */
-	vsystem("/bin/chmod a+rx %s", LogDir);
+	fd = open(LogDir, O_RDWR);
+	fstat(fd, &sb);
+	fchmod(fd, sb.st_mode | S_IRALL | S_IXALL);	/* be sure, chmod a+rx */
+	close(fd);
 	move_file(".", DESC_FNAME, LogDir);
 	move_file(".", COMMENT_FNAME, LogDir);
 	if (fexists(INSTALL_FNAME))
@@ -493,8 +549,7 @@ pkg_do(char *pkg)
 	write_plist(&Plist, contfile);
 	fclose(contfile);
 	for (p = Plist.head; p ; p = p->next) {
-	    char *deporigin, **depnames;
-	    int i;
+	    char *deporigin;
 
 	    if (p->type != PLIST_PKGDEP)
 		continue;
@@ -507,27 +562,70 @@ pkg_do(char *pkg)
 		printf(".\n");
 	    }
 
-	    depnames = (deporigin != NULL) ? matchbyorigin(deporigin, NULL) :
-					     NULL;
-	    if (depnames == NULL) {
-		depnames = alloca(sizeof(*depnames) * 2);
-		depnames[0] = p->name;
-		depnames[1] = NULL;
+	    if (deporigin) {
+		/* Defer to origin lookup */
+		depnames = realloc(depnames, (dep_count + 1) * sizeof(*depnames));
+		depnames[dep_count] = p->name;
+		deporigins = realloc(deporigins, (dep_count + 2) * sizeof(*deporigins));
+		deporigins[dep_count] = deporigin;
+		deporigins[dep_count + 1] = NULL;
+		dep_count++;
+	    } else {
+	       /* No origin recorded, try to register on literal package name */
+	       sprintf(contents, "%s/%s/%s", LOG_DIR, p->name,
+		     REQUIRED_BY_FNAME);
+	       contfile = fopen(contents, "a");
+	       if (!contfile) {
+		  warnx("can't open dependency file '%s'!\n"
+			"dependency registration is incomplete", contents);
+	       } else {
+		  fprintf(contfile, "%s\n", Plist.name);
+		  if (fclose(contfile) == EOF) {
+		     warnx("cannot properly close file %s", contents);
+		  }
+	       }
 	    }
-	    for (i = 0; depnames[i] != NULL; i++) {
-		sprintf(contents, "%s/%s/%s", LOG_DIR, depnames[i],
-			REQUIRED_BY_FNAME);
-		if (strcmp(p->name, depnames[i]) != 0)
-		    warnx("warning: package '%s' requires '%s', but '%s' "
-			  "is installed", Plist.name, p->name, depnames[i]);
-		contfile = fopen(contents, "a");
-		if (!contfile)
-		    warnx("can't open dependency file '%s'!\n"
-			  "dependency registration is incomplete", contents);
-		else {
-		    fprintf(contfile, "%s\n", Plist.name);
-		    if (fclose(contfile) == EOF)
-			warnx("cannot properly close file %s", contents);
+	}
+	if (dep_count > 0) {
+	    depmatches = matchallbyorigin((const char **)deporigins, NULL);
+	    free(deporigins);
+	    if (!IgnoreDeps && depmatches) {
+		for (i = 0; i < dep_count; i++) {
+		    if (depmatches[i]) {
+			int j;
+			char **tmp = depmatches[i];
+			for (j = 0; tmp[j] != NULL; j++) {
+			    /* Origin looked up */
+			    sprintf(contents, "%s/%s/%s", LOG_DIR, tmp[j],
+				REQUIRED_BY_FNAME);
+			    if (depnames[i] && strcmp(depnames[i], tmp[j]) != 0)
+				warnx("warning: package '%s' requires '%s', but '%s' "
+				    "is installed", Plist.name, depnames[i], tmp[j]);
+			    contfile = fopen(contents, "a");
+			    if (!contfile) {
+				warnx("can't open dependency file '%s'!\n"
+				    "dependency registration is incomplete", contents);
+			    } else {
+				fprintf(contfile, "%s\n", Plist.name);
+				if (fclose(contfile) == EOF)
+				    warnx("cannot properly close file %s", contents);
+			    }
+			}
+		    } else if (depnames[i]) {
+			/* No package present with this origin, try literal package name */
+			sprintf(contents, "%s/%s/%s", LOG_DIR, depnames[i],
+			    REQUIRED_BY_FNAME);
+			contfile = fopen(contents, "a");
+			if (!contfile) {
+			    warnx("can't open dependency file '%s'!\n"
+				"dependency registration is incomplete", contents);
+			} else {
+			    fprintf(contfile, "%s\n", Plist.name);
+			    if (fclose(contfile) == EOF) {
+				warnx("cannot properly close file %s", contents);
+			    }
+			}
+		    }
 		}
 	    }
 	}
@@ -603,7 +701,8 @@ cleanup(int sig)
 	    printf("Signal %d received, cleaning up..\n", sig);
     	if (!Fake && zapLogDir && LogDir[0])
 	    vsystem("%s -rf %s", REMOVE_CMD, LogDir);
-    	leave_playpen();
+    	while (leave_playpen())
+	    ;
     }
     if (sig)
 	exit(1);

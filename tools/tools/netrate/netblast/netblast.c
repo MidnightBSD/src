@@ -23,9 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/tools/netrate/netblast/netblast.c 153470 2005-12-16 06:02:44Z scottl $
+ * $FreeBSD$
  */
 
+#include <sys/endian.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -108,11 +109,9 @@ blast_loop(int s, long duration, u_char *packet, u_int packet_len)
 		 * previous send, the error will turn up the current send
 		 * operation, causing the current sequence number also to be
 		 * skipped.
-		 *
-		 * XXXRW: Note alignment assumption.
 		 */
 		if (packet_len >= 4) {
-			*((u_int32_t *)packet) = htonl(counter);
+			be32enc(packet, counter);
 			counter++;
 		}
 		if (send(s, packet, packet_len, 0) < 0)

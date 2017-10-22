@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libc/sparc64/_fpmath.h 143214 2005-03-07 04:55:22Z das $
+ * $FreeBSD$
  */
 
 union IEEEl2bits {
@@ -35,6 +35,11 @@ union IEEEl2bits {
 		unsigned long	manh	:48;
 		unsigned long	manl	:64;
 	} bits;
+	struct {
+		unsigned int	expsign	:16;
+		unsigned long	manh	:48;
+		unsigned long	manl	:64;
+	} xbits;
 };
 
 #define	mask_nbit_l(u)	((void)0)

@@ -1,10 +1,10 @@
-# $FreeBSD: release/7.0.0/share/monetdef/zh_CN.GB18030.src 118174 2003-07-29 16:12:56Z ache $
+# $FreeBSD$
 #
 # WARNING: spaces may be essential at the end of lines
 # WARNING: empty lines are essential too
 #
 # int_curr_symbol (last character always SPACE)
-CNY
+CNY 
 # currency_symbol
 гд
 # mon_decimal_point

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/cam/cam_xpt_sim.h 170872 2007-06-17 05:55:54Z scottl $
+ * $FreeBSD$
  */
 
 #ifndef _CAM_CAM_XPT_SIM_H
@@ -43,9 +43,16 @@ int32_t		xpt_bus_deregister(path_id_t path_id);
 u_int32_t	xpt_freeze_simq(struct cam_sim *sim, u_int count);
 void		xpt_release_simq(struct cam_sim *sim, int run_queue);
 u_int32_t	xpt_freeze_devq(struct cam_path *path, u_int count);
-void		xpt_release_devq(struct cam_path *path, u_int count,
-				 int run_queue);
+u_int32_t	xpt_freeze_devq_rl(struct cam_path *path, cam_rl rl,
+		    u_int count);
+void		xpt_release_devq(struct cam_path *path,
+		    u_int count, int run_queue);
+void		xpt_release_devq_rl(struct cam_path *path, cam_rl rl,
+		    u_int count, int run_queue);
+int		xpt_sim_opened(struct cam_sim *sim);
 void		xpt_done(union ccb *done_ccb);
+void		xpt_batch_start(struct cam_sim *sim);
+void		xpt_batch_done(struct cam_sim *sim);
 #endif
 
 #endif /* _CAM_CAM_XPT_SIM_H */

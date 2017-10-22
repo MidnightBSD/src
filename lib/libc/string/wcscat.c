@@ -32,14 +32,12 @@
 __RCSID("$NetBSD: wcscat.c,v 1.1 2000/12/23 23:14:36 itojun Exp $");
 #endif /* LIBC_SCCS and not lint */
 #endif
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/wcscat.c 103999 2002-09-26 09:28:55Z tjr $");
+__FBSDID("$FreeBSD$");
 
 #include <wchar.h>
 
 wchar_t *
-wcscat(s1, s2)
-	wchar_t * __restrict s1;
-	const wchar_t * __restrict s2;
+wcscat(wchar_t * __restrict s1, const wchar_t * __restrict s2)
 {
 	wchar_t *cp;
 

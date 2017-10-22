@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/binutils/ld/Makefile.i386 160578 2006-07-22 14:37:17Z obrien $
+# $FreeBSD$
 
 NATIVE_EMULATION= elf_i386_fbsd
 
@@ -6,7 +6,7 @@ SRCS+=		e${NATIVE_EMULATION}.c
 CLEANFILES+=	e${NATIVE_EMULATION}.c
 e${NATIVE_EMULATION}.c: emulparams/${NATIVE_EMULATION}.sh emultempl/elf32.em \
     scripttempl/elf.sc genscripts.sh stringify.sed
-	sh ${.CURDIR}/genscripts.sh ${SRCDIR}/ld ${LIBSERACHPATH} \
+	sh ${.CURDIR}/genscripts.sh ${SRCDIR}/ld ${LIBSEARCHPATH} \
 	    ${TOOLS_PREFIX}/usr \
 	    ${HOST} ${TARGET_TUPLE} ${TARGET_TUPLE} \
 	    ${NATIVE_EMULATION} "" no ${NATIVE_EMULATION} ${TARGET_TUPLE}

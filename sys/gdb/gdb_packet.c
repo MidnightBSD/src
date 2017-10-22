@@ -25,12 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/gdb/gdb_packet.c 170473 2007-06-09 21:55:17Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/ctype.h>
 #include <sys/kdb.h>
+#include <sys/ttydefaults.h>
 
 #include <machine/gdb_machdep.h>
 #include <machine/kdb.h>
@@ -60,6 +61,17 @@ gdb_getc(void)
 	do
 		c = gdb_cur->gdb_getc();
 	while (c == -1);
+
+	if (c == CTRL('C')) {
+		printf("Received ^C; trying to switch back to ddb.\n");
+
+		if (kdb_dbbe_select("ddb") != 0)
+			printf("The ddb backend could not be selected.\n");
+		else {
+			printf("using longjmp, hope it works!\n");
+			kdb_reenter();
+		}
+	}
 	return (c);
 }
 

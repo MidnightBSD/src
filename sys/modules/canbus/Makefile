@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/canbus/Makefile 110285 2003-02-03 14:46:26Z nyan $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../pc98/pc98
 KMOD	= canbus

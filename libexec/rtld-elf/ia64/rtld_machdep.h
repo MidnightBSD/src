@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/libexec/rtld-elf/ia64/rtld_machdep.h 161783 2006-08-31 19:42:39Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -31,8 +31,6 @@
 
 #include <sys/types.h>
 #include <machine/atomic.h>
-
-#define	CACHE_LINE_SIZE		128
 
 /*
  * Macros for cracking ia64 function pointers.
@@ -54,6 +52,7 @@ Elf_Addr reloc_jmpslot(Elf_Addr *, Elf_Addr, const struct Struct_Obj_Entry *,
 		       const struct Struct_Obj_Entry *, const Elf_Rel *);
 void *make_function_pointer(const Elf_Sym *, const struct Struct_Obj_Entry *);
 void call_initfini_pointer(const struct Struct_Obj_Entry *, Elf_Addr);
+void call_init_pointer(const struct Struct_Obj_Entry *, Elf_Addr);
 
 #define	TLS_TCB_SIZE	16
 
@@ -66,5 +65,8 @@ void call_initfini_pointer(const struct Struct_Obj_Entry *, Elf_Addr);
 #define calculate_tls_end(off, size) 	((off) + (size))
 
 extern void *__tls_get_addr(unsigned long module, unsigned long offset);
+
+#define	RTLD_DEFAULT_STACK_PF_EXEC	0
+#define	RTLD_DEFAULT_STACK_EXEC		0
 
 #endif

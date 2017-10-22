@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: uuid-private.h,v 1.1 2004/12/09 18:20:26 max Exp $
- * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/sdpd/uuid-private.h 139721 2005-01-05 18:37:37Z emax $
+ * $FreeBSD$
  */
 
 #ifndef _UUID_PRIVATE_H_

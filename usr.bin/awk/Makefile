@@ -1,18 +1,20 @@
-# $FreeBSD: release/7.0.0/usr.bin/awk/Makefile 163695 2006-10-25 21:23:20Z ru $
+# $FreeBSD$
 
 AWKSRC=	${.CURDIR}/../../contrib/one-true-awk
 .PATH: ${AWKSRC}
 
-PROG=	nawk
+PROG=	awk
 SRCS=	awkgram.y b.c lex.c lib.c main.c parse.c proctab.c run.c tran.c ytab.h
 
-CFLAGS+= -DHAS_ISBLANK -I. -I${AWKSRC}
+CFLAGS+= -DHAS_ISBLANK -I. -I${AWKSRC} -DFOPEN_MAX=64
+
+WARNS?=	1
 
 DPADD=	${LIBM}
 LDADD=	-lm
 
-LINKS=	${BINDIR}/nawk ${BINDIR}/awk
-MLINKS=	nawk.1 awk.1
+LINKS=	${BINDIR}/awk ${BINDIR}/nawk
+MLINKS=	awk.1 nawk.1
 
 CLEANFILES= maketab proctab.c ytab.h
 
@@ -24,15 +26,5 @@ proctab.c: maketab
 
 build-tools: maketab
 maketab: ytab.h ${AWKSRC}/maketab.c
-
-CLEANFILES+=	nawk.1
-nawk.1: awk.1
-	cat ${.ALLSRC} > ${.TARGET}
-
-.for f in b.c lib.c main.c run.c tran.c
-${f}: ${AWKSRC}/${f} ${.CURDIR}/${f}.diff
-	patch -s -b .orig -o ${.TARGET} < ${.CURDIR}/${f}.diff ${AWKSRC}/${f}
-CLEANFILES+= ${f}
-.endfor
 
 .include <bsd.prog.mk>

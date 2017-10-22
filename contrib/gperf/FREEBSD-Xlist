@@ -1,4 +1,4 @@
-$FreeBSD: release/7.0.0/contrib/gperf/FREEBSD-Xlist 172506 2007-10-10 16:59:15Z cvs2svn $
+$FreeBSD$
 */*.dvi
 */*.html
 */*.info
@@ -6,3 +6,7 @@ $FreeBSD: release/7.0.0/contrib/gperf/FREEBSD-Xlist 172506 2007-10-10 16:59:15Z 
 */texinfo.tex
 */tests
 */getopt*
+*/*.pdf
+*/*.vms
+*/*.msvc
+*/*.woe32

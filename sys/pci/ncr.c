@@ -40,7 +40,7 @@
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/pci/ncr.c 170872 2007-06-17 05:55:54Z scottl $");
+__FBSDID("$FreeBSD$");
 
 
 #define NCR_DATE "pl30 98/1/1"
@@ -3992,7 +3992,7 @@ ncr_action (struct cam_sim *sim, union ccb *ccb)
 			msgptr[msglen++] = MSG_EXT_SDTR_LEN;
 			msgptr[msglen++] = MSG_EXT_SDTR;
 			msgptr[msglen++] = tp->tinfo.goal.period;
-			msgptr[msglen++] = tp->tinfo.goal.offset;;
+			msgptr[msglen++] = tp->tinfo.goal.offset;
 			if (DEBUG_FLAGS & DEBUG_NEGO) {
 				PRINT_ADDR(ccb);
 				printf ("sync msgout: ");

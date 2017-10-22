@@ -26,6 +26,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <machine/asm.h>
+__FBSDID("$FreeBSD$");
+
  	.file	"crti.S"
 
 	/* The minimum stack frame size (bytes) is:
@@ -52,7 +55,3 @@ _init:
 	.align	4
 _fini:
 	save %sp,-192,%sp
-
-
-	.section .rodata
-.ascii "$FreeBSD: release/7.0.0/lib/csu/sparc64/crti.S 85612 2001-10-28 00:20:34Z obrien $\0"

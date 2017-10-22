@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/label.c 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -61,10 +61,10 @@
 /*
  * Minimum partition sizes
  */
-#if defined(__alpha__) || defined(__ia64__) || defined(__sparc64__) || defined(__amd64__)
-#define ROOT_MIN_SIZE			128
+#if defined(__ia64__) || defined(__sparc64__) || defined(__amd64__)
+#define ROOT_MIN_SIZE			280
 #else
-#define ROOT_MIN_SIZE			118
+#define ROOT_MIN_SIZE			180
 #endif
 #define SWAP_MIN_SIZE			32
 #define USR_MIN_SIZE			160
@@ -82,10 +82,10 @@
  * for this configuration we scale things relative to the NOM vs DEFAULT
  * sizes.  If the disk is larger then /home will get any remaining space.
  */
-#define ROOT_DEFAULT_SIZE		512
+#define ROOT_DEFAULT_SIZE		1024
 #define USR_DEFAULT_SIZE		8192
-#define VAR_DEFAULT_SIZE		1024
-#define TMP_DEFAULT_SIZE		512
+#define VAR_DEFAULT_SIZE		4096
+#define TMP_DEFAULT_SIZE		1024
 #define HOME_DEFAULT_SIZE		USR_DEFAULT_SIZE
 
 /*
@@ -93,9 +93,9 @@
  * when we have insufficient disk space.  If this isn't sufficient we scale
  * down using the MIN sizes instead.
  */
-#define ROOT_NOMINAL_SIZE		256
+#define ROOT_NOMINAL_SIZE		512
 #define USR_NOMINAL_SIZE		1536
-#define VAR_NOMINAL_SIZE		128
+#define VAR_NOMINAL_SIZE		512
 #define TMP_NOMINAL_SIZE		128
 #define HOME_NOMINAL_SIZE		USR_NOMINAL_SIZE
 
@@ -384,11 +384,7 @@ new_part(PartType type, char *mpoint, Boolean newfs)
 	pi->newfs_data.newfs_ufs.acls = FALSE;
 	pi->newfs_data.newfs_ufs.multilabel = FALSE;
 	pi->newfs_data.newfs_ufs.softupdates = strcmp(mpoint, "/");
-#ifdef PC98
-	pi->newfs_data.newfs_ufs.ufs1 = TRUE;
-#else
 	pi->newfs_data.newfs_ufs.ufs1 = FALSE;
-#endif
     }
 
     return pi;
@@ -982,7 +978,7 @@ diskLabel(Device *dev)
 		}
 		if (msg) {
 		    if (req) {
-			msgConfirm(msg);
+			msgConfirm("%s", msg);
 			clear_wins();
 			msg = NULL;
 		    }
@@ -1003,6 +999,7 @@ diskLabel(Device *dev)
 	    else {
 		char *val;
 		daddr_t size;
+		long double dsize;
 		struct chunk *tmp;
 		char osize[80];
 		u_long flags = 0;
@@ -1023,22 +1020,27 @@ diskLabel(Device *dev)
 #endif
 				  "%jd blocks (%jdMB) are free.",
 				  (intmax_t)sz, (intmax_t)sz / ONE_MEG);
-		if (!val || (size = strtoimax(val, &cp, 0)) <= 0) {
+		if (!val || (dsize = strtold(val, &cp)) <= 0) {
 		    clear_wins();
 		    break;
 		}
 
 		if (*cp) {
 		    if (toupper(*cp) == 'M')
-			size *= ONE_MEG;
+			size = (daddr_t) (dsize * ONE_MEG);
 		    else if (toupper(*cp) == 'G')
-			size *= ONE_GIG;
+			size = (daddr_t) (dsize * ONE_GIG);
 #ifndef __ia64__
 		    else if (toupper(*cp) == 'C')
-			size *= (label_chunk_info[here].c->disk->bios_hd * label_chunk_info[here].c->disk->bios_sect);
+			size = (daddr_t) dsize * (label_chunk_info[here].c->disk->bios_hd * label_chunk_info[here].c->disk->bios_sect);
 #endif
+		    else
+			size = (daddr_t) dsize;
+		} else {
+			size = (daddr_t) dsize;
 		}
-		if (size <= FS_MIN_SIZE) {
+
+		if (size < FS_MIN_SIZE) {
 		    msgConfirm("The minimum filesystem size is %dMB", FS_MIN_SIZE / ONE_MEG);
 		    clear_wins();
 		    break;
@@ -1093,27 +1095,6 @@ diskLabel(Device *dev)
 		    clear_wins();
 		    break;
 		}
-
-#ifdef __alpha__
-		/*
-		 * SRM requires that the root partition is at the
-		 * begining of the disk and cannot boot otherwise. 
-		 * Warn Alpha users if they are about to shoot themselves in
-		 * the foot in this way.
-		 *
-		 * Since partitions may not start precisely at offset 0 we
-		 * check for a "close to 0" instead. :-(
-		 */
-		if ((flags & CHUNK_IS_ROOT) && (tmp->offset > 1024)) {
-		    msgConfirm("Your root partition `a' does not seem to be the first\n"
-			       "partition.  The Alpha's firmware can only boot from the\n"
-			       "first partition.  So it is unlikely that your current\n"
-			       "disk layout will be bootable boot after installation.\n"
-			       "\n"
-			       "Please allocate the root partition before allocating\n"
-			       "any others.\n");
-		}
-#endif	/* alpha */
 
 		tmp->private_data = p;
 		tmp->private_free = safe_free;
@@ -1281,7 +1262,7 @@ diskLabel(Device *dev)
 	    if (!variable_cmp(DISK_LABELLED, "written")) {
 		msgConfirm("You've already written out your changes - if you\n"
 			   "wish to overwrite them, you'll have to restart\n"
-			   "sysinstall first.");
+			   "%s first.", ProgName);
 	    }
 	    else if (!msgNoYes("WARNING:  This should only be used when modifying an EXISTING\n"
 			  "installation.  If you are installing FreeBSD for the first time\n"
@@ -1306,7 +1287,7 @@ diskLabel(Device *dev)
 
 #ifndef __ia64__
 	case '|':
-	    if (!msgNoYes("Are you sure you want to go into Wizard mode?\n\n"
+	    if (!msgNoYes("Are you sure you want to go into Expert mode?\n\n"
 			  "This is an entirely undocumented feature which you are not\n"
 			  "expected to understand!")) {
 		int i;
@@ -1410,7 +1391,7 @@ try_auto_label(Device **devs, Device *dev, int perc, int *req)
 #ifdef __ia64__
     AutoEfi = NULL;
     if (EfiChunk == NULL) {
-	sz = 100 * ONE_MEG;
+	sz = 400 * ONE_MEG;
 	AutoEfi = Create_Chunk_DWIM(label_chunk_info[here].c->disk,
 	    label_chunk_info[here].c, sz, efi, 0, 0);
 	if (AutoEfi == NULL) {
@@ -1672,6 +1653,8 @@ diskLabelNonInteractive(Device *dev)
 			pi = tmp->private_data = new_part(PART_FILESYSTEM, mpoint, TRUE);
 			tmp->private_free = safe_free;
 			pi->newfs_data.newfs_ufs.softupdates = soft;
+			if (!strcmp(typ, "ufs1"))
+				pi->newfs_data.newfs_ufs.ufs1 = TRUE;
 		    }
 		}
 	    }

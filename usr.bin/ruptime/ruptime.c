@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -42,7 +38,7 @@ static const char sccsid[] = "@(#)ruptime.c	8.2 (Berkeley) 4/5/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ruptime/ruptime.c 149719 2005-09-02 14:58:26Z ssouhlal $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -191,6 +187,7 @@ ruptime(const char *host, int aflg, int (*cmp)(const void *, const void *))
 	rewinddir(dirp);
 	hsp = NULL;
 	maxloadav = -1;
+	(void)time(&now);
 	for (nhosts = hspace = 0; (dp = readdir(dirp)) != NULL;) {
 		if (dp->d_ino == 0 || strncmp(dp->d_name, "whod.", 5) != 0)
 			continue;
@@ -239,17 +236,16 @@ ruptime(const char *host, int aflg, int (*cmp)(const void *, const void *))
 			warnx("host %s not in %s", host, _PATH_RWHODIR);
 	}
 
-	(void)time(&now);
 	qsort(hs, nhosts, sizeof(hs[0]), cmp);
 	for (i = 0; i < (int)nhosts; i++) {
 		hsp = &hs[i];
 		if (ISDOWN(hsp)) {
-			(void)printf("%-12.12s%s\n", hsp->hs_wd->wd_hostname,
+			(void)printf("%-25.25s%s\n", hsp->hs_wd->wd_hostname,
 			    interval(now - hsp->hs_wd->wd_recvtime, "down"));
 			continue;
 		}
 		(void)printf(
-		    "%-12.12s%s,  %4d user%s  load %*.2f, %*.2f, %*.2f\n",
+		    "%-25.25s%s,  %4d user%s  load %*.2f, %*.2f, %*.2f\n",
 		    hsp->hs_wd->wd_hostname,
 		    interval((time_t)hsp->hs_wd->wd_sendtime -
 			(time_t)hsp->hs_wd->wd_boottime, "  up"),

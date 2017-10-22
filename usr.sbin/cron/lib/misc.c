@@ -17,7 +17,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/usr.sbin/cron/lib/misc.c 149430 2005-08-24 17:51:36Z pjd $";
+  "$FreeBSD$";
 #endif
 
 /* vix 26jan87 [RCS has the rest of the log]
@@ -324,9 +324,7 @@ skip_comments(file)
  *	FALSE otherwise.
  */
 static int
-in_file(string, file)
-	char *string;
-	FILE *file;
+in_file(char *string, FILE *file)
 {
 	char line[MAX_TEMPSTR];
 
@@ -520,11 +518,8 @@ first_word(s, t)
 /* warning:
  *	heavily ascii-dependent.
  */
-void
-mkprint(dst, src, len)
-	register char *dst;
-	register unsigned char *src;
-	register int len;
+static void
+mkprint(register char *dst, register unsigned char *src, register int len)
 {
 	while (len-- > 0)
 	{

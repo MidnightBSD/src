@@ -1,2 +1,2 @@
-.\" $FreeBSD: release/7.0.0/tools/build/options/WITHOUT_GSSAPI 175745 2008-01-28 08:57:11Z dougb $
+.\" $FreeBSD$
 Set to not build libgssapi.

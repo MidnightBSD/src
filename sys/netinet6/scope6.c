@@ -1,6 +1,3 @@
-/*	$FreeBSD: release/7.0.0/sys/netinet6/scope6.c 171259 2007-07-05 16:23:49Z delphij $	*/
-/*	$KAME: scope6.c,v 1.10 2000/07/24 13:29:31 itojun Exp $	*/
-
 /*-
  * Copyright (C) 2000 WIDE Project.
  * All rights reserved.
@@ -28,7 +25,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: scope6.c,v 1.10 2000/07/24 13:29:31 itojun Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -38,18 +40,20 @@
 #include <sys/queue.h>
 #include <sys/syslog.h>
 
-#include <net/route.h>
 #include <net/if.h>
+#include <net/vnet.h>
 
 #include <netinet/in.h>
 
+#include <netinet/ip6.h>
 #include <netinet6/in6_var.h>
+#include <netinet6/ip6_var.h>
 #include <netinet6/scope6_var.h>
 
 #ifdef ENABLE_DEFAULT_SCOPE
-int ip6_use_defzone = 1;
+VNET_DEFINE(int, ip6_use_defzone) = 1;
 #else
-int ip6_use_defzone = 0;
+VNET_DEFINE(int, ip6_use_defzone) = 0;
 #endif
 
 /*
@@ -62,7 +66,9 @@ static struct mtx scope6_lock;
 #define	SCOPE6_UNLOCK()		mtx_unlock(&scope6_lock)
 #define	SCOPE6_LOCK_ASSERT()	mtx_assert(&scope6_lock, MA_OWNED)
 
-static struct scope6_id sid_default;
+static VNET_DEFINE(struct scope6_id, sid_default);
+#define	V_sid_default			VNET(sid_default)
+
 #define SID(ifp) \
 	(((struct in6_ifextra *)(ifp)->if_afdata[AF_INET6])->scope6_id)
 
@@ -70,8 +76,12 @@ void
 scope6_init(void)
 {
 
+	bzero(&V_sid_default, sizeof(V_sid_default));
+
+	if (!IS_DEFAULT_VNET(curvnet))
+		return;
+
 	SCOPE6_LOCK_INIT();
-	bzero(&sid_default, sizeof(sid_default));
 }
 
 struct scope6_id *
@@ -145,7 +155,7 @@ scope6_set(struct ifnet *ifp, struct scope6_id *idlist)
 			}
 
 			if (i == IPV6_ADDR_SCOPE_LINKLOCAL &&
-			    idlist->s6id_list[i] > if_index) {
+			    idlist->s6id_list[i] > V_if_index) {
 				/*
 				 * XXX: theoretically, there should be no
 				 * relationship between link IDs and interface
@@ -261,6 +271,7 @@ in6_addrscope(struct in6_addr *addr)
 void
 scope6_setdefault(struct ifnet *ifp)
 {
+
 	/*
 	 * Currently, this function just sets the default "interfaces"
 	 * and "links" according to the given interface.
@@ -269,13 +280,13 @@ scope6_setdefault(struct ifnet *ifp)
 	 */
 	SCOPE6_LOCK();
 	if (ifp) {
-		sid_default.s6id_list[IPV6_ADDR_SCOPE_INTFACELOCAL] =
+		V_sid_default.s6id_list[IPV6_ADDR_SCOPE_INTFACELOCAL] =
 			ifp->if_index;
-		sid_default.s6id_list[IPV6_ADDR_SCOPE_LINKLOCAL] =
+		V_sid_default.s6id_list[IPV6_ADDR_SCOPE_LINKLOCAL] =
 			ifp->if_index;
 	} else {
-		sid_default.s6id_list[IPV6_ADDR_SCOPE_INTFACELOCAL] = 0;
-		sid_default.s6id_list[IPV6_ADDR_SCOPE_LINKLOCAL] = 0;
+		V_sid_default.s6id_list[IPV6_ADDR_SCOPE_INTFACELOCAL] = 0;
+		V_sid_default.s6id_list[IPV6_ADDR_SCOPE_LINKLOCAL] = 0;
 	}
 	SCOPE6_UNLOCK();
 }
@@ -285,7 +296,7 @@ scope6_get_default(struct scope6_id *idlist)
 {
 
 	SCOPE6_LOCK();
-	*idlist = sid_default;
+	*idlist = V_sid_default;
 	SCOPE6_UNLOCK();
 
 	return (0);
@@ -308,7 +319,7 @@ scope6_addr2default(struct in6_addr *addr)
 	 * not to lock here?
 	 */
 	SCOPE6_LOCK();
-	id = sid_default.s6id_list[in6_addrscope(addr)];
+	id = V_sid_default.s6id_list[in6_addrscope(addr)];
 	SCOPE6_UNLOCK();
 	return (id);
 }
@@ -339,7 +350,7 @@ sa6_embedscope(struct sockaddr_in6 *sin6, int defaultok)
 		 * zone IDs assuming a one-to-one mapping between interfaces
 		 * and links.
 		 */
-		if (if_index < zoneid)
+		if (V_if_index < zoneid)
 			return (ENXIO);
 		ifp = ifnet_byindex(zoneid);
 		if (ifp == NULL) /* XXX: this can happen for some OS */
@@ -377,7 +388,7 @@ sa6_recoverscope(struct sockaddr_in6 *sin6)
 		zoneid = ntohs(sin6->sin6_addr.s6_addr16[1]);
 		if (zoneid) {
 			/* sanity check */
-			if (zoneid < 0 || if_index < zoneid)
+			if (zoneid < 0 || V_if_index < zoneid)
 				return (ENXIO);
 			if (!ifnet_byindex(zoneid))
 				return (ENXIO);
@@ -482,4 +493,17 @@ in6_clearscope(struct in6_addr *in6)
 	}
 
 	return (modified);
+}
+
+/*
+ * Return the scope identifier or zero.
+ */
+uint16_t
+in6_getscope(struct in6_addr *in6)
+{
+
+	if (IN6_IS_SCOPE_LINKLOCAL(in6) || IN6_IS_ADDR_MC_INTFACELOCAL(in6))
+		return (in6->s6_addr16[1]);
+
+	return (0);
 }

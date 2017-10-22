@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/7.0.0/share/syscons/fonts/INDEX.fonts 123682 2003-12-20 11:18:43Z ache $
+# $FreeBSD$
 #
 # database for vidfont(8) 
 #
@@ -49,7 +49,7 @@
 # Language support: MENU, FONT
 #
 MENU:en:Choose your keyboard font
-MENU:de:Wähle Deine Schrift
+MENU:de:Wählen Sie Ihre Schrift
 MENU:fr:Choisissez votre fonte écran
 MENU:pl:Wybierz czcionkê ekranow±
 MENU:es:Escoja el juego de caracteres

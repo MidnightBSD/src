@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/geom/Makefile 175648 2008-01-24 20:28:27Z lulf $
+# $FreeBSD$
 
 SUBDIR=	geom_bde \
 	geom_bsd \
@@ -10,12 +10,17 @@ SUBDIR=	geom_bde \
 	geom_gate \
 	geom_journal \
 	geom_label \
+	geom_linux_lvm \
 	geom_mbr \
 	geom_mirror \
+	geom_mountver \
 	geom_multipath \
 	geom_nop \
+	geom_part \
 	geom_pc98 \
+	geom_raid \
 	geom_raid3 \
+	geom_sched \
 	geom_shsec \
 	geom_stripe \
 	geom_sunlabel \

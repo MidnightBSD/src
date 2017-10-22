@@ -24,28 +24,63 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/include/pcpu.h 170291 2007-06-04 21:38:48Z attilio $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_PCPU_H_
 #define	_MACHINE_PCPU_H_
 
-#ifdef _KERNEL
-
+#include <sys/sysctl.h>
 #include <machine/pcb.h>
 
+struct pcpu_stats {
+	u_long		pcs_nasts;		/* IPI_AST counter. */
+	u_long		pcs_nclks;		/* Clock interrupt counter. */
+	u_long		pcs_nextints;		/* ExtINT counter. */
+	u_long		pcs_nhardclocks;	/* IPI_HARDCLOCK counter. */
+	u_long		pcs_nhighfps;		/* IPI_HIGH_FP counter. */
+	u_long		pcs_nhwints;		/* Hardware int. counter. */
+	u_long		pcs_npreempts;		/* IPI_PREEMPT counter. */
+	u_long		pcs_nrdvs;		/* IPI_RENDEZVOUS counter. */
+	u_long		pcs_nstops;		/* IPI_STOP counter. */
+	u_long		pcs_nstrays;		/* Stray interrupt counter. */
+};
+
+struct pcpu_md {
+	struct pcb	pcb;			/* Used by IPI_STOP */
+	struct pmap	*current_pmap;		/* active pmap */
+	vm_offset_t	vhpt;			/* Address of VHPT */
+	uint64_t	lid;			/* local CPU ID */
+	uint64_t	clock;			/* Clock counter. */
+	uint64_t	clock_load;		/* Clock reload value. */
+	uint32_t	clock_mode;		/* Clock ET mode */
+	uint32_t	awake:1;		/* CPU is awake? */
+	struct pcpu_stats stats;		/* Interrupt stats. */
+#ifdef _KERNEL
+	struct sysctl_ctx_list sysctl_ctx;
+	struct sysctl_oid *sysctl_tree;
+#endif
+};
+
 #define	PCPU_MD_FIELDS							\
-	struct pcb	pc_pcb;			/* Used by IPI_STOP */	\
-	struct pmap	*pc_current_pmap;	/* active pmap */	\
-	uint64_t	pc_lid;			/* local CPU ID */	\
-	uint64_t	pc_clock;		/* Clock counter. */	\
-	uint64_t	pc_clockadj;		/* Clock adjust. */	\
-	uint32_t	pc_awake:1;		/* CPU is awake? */	\
-	uint32_t	pc_acpi_id		/* ACPI CPU id. */
+	uint32_t	pc_acpi_id;		/* ACPI CPU id. */	\
+	struct pcpu_md	pc_md			/* MD fields. */
+
+#ifdef _KERNEL
 
 struct pcpu;
 
-register struct pcpu *pcpup __asm__("r13");
+register struct pcpu * volatile pcpup __asm__("r13");
+
+static __inline __pure2 struct thread *
+__curthread(void)
+{
+	struct thread *td;
+
+	__asm("ld8.acq %0=[r13]" : "=r"(td));
+	return (td);
+}
+#define	curthread	(__curthread())
 
 #define	PCPU_GET(member)	(pcpup->pc_ ## member)
 
@@ -57,8 +92,6 @@ register struct pcpu *pcpup __asm__("r13");
 #define	PCPU_INC(member)	PCPU_ADD(member, 1)
 #define	PCPU_PTR(member)	(&pcpup->pc_ ## member)
 #define	PCPU_SET(member,value)	(pcpup->pc_ ## member = (value))
-
-void pcpu_initclock(void);
 
 #endif	/* _KERNEL */
 

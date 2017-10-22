@@ -1,19 +1,12 @@
 /*
  * David Leonard <d@openbsd.org>, 1999. Public domain.
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_cancel.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+#include "namespace.h"
 #include <sys/errno.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
-
-LT10_COMPAT_PRIVATE(_pthread_cancel);
-LT10_COMPAT_DEFAULT(pthread_cancel);
-LT10_COMPAT_PRIVATE(_pthread_setcancelstate);
-LT10_COMPAT_DEFAULT(pthread_setcancelstate);
-LT10_COMPAT_PRIVATE(_pthread_setcanceltype);
-LT10_COMPAT_DEFAULT(pthread_setcanceltype);
-LT10_COMPAT_PRIVATE(_pthread_testcancel);
-LT10_COMPAT_DEFAULT(pthread_testcancel);
 
 __weak_reference(_pthread_cancel, pthread_cancel);
 __weak_reference(_pthread_setcancelstate, pthread_setcancelstate);
@@ -53,7 +46,7 @@ testcancel(struct pthread *curthread)
 		THR_THREAD_UNLOCK(curthread, curthread);
 
 		_thr_exit_cleanup();
-		pthread_exit(PTHREAD_CANCELED);
+		_pthread_exit(PTHREAD_CANCELED);
 		PANIC("cancel");
 	}
 }
@@ -214,7 +207,7 @@ _pthread_setcancelstate(int state, int *oldstate)
 	THR_THREAD_UNLOCK(curthread, curthread);
 	if (need_exit != 0) {
 		_thr_exit_cleanup();
-		pthread_exit(PTHREAD_CANCELED);
+		_pthread_exit(PTHREAD_CANCELED);
 		PANIC("cancel");
 	}
 	if (ret == 0 && oldstate != NULL)
@@ -252,7 +245,7 @@ _pthread_setcanceltype(int type, int *oldtype)
 	THR_THREAD_UNLOCK(curthread, curthread);
 	if (need_exit != 0) {
 		_thr_exit_cleanup();
-		pthread_exit(PTHREAD_CANCELED);
+		_pthread_exit(PTHREAD_CANCELED);
 		PANIC("cancel");
 	}
 	if (ret == 0 && oldtype != NULL)
@@ -293,7 +286,7 @@ _thr_cancel_leave(struct pthread *thread, int check)
 }
 
 void
-_thr_finish_cancellation(void *arg)
+_thr_finish_cancellation(void *arg __unused)
 {
 	struct pthread	*curthread = _get_curthread();
 
@@ -305,7 +298,7 @@ _thr_finish_cancellation(void *arg)
 		curthread->cancelflags &= ~THR_CANCEL_NEEDED;
 		THR_THREAD_UNLOCK(curthread, curthread);
 		_thr_exit_cleanup();
-		pthread_exit(PTHREAD_CANCELED);
+		_pthread_exit(PTHREAD_CANCELED);
 	}
 	THR_THREAD_UNLOCK(curthread, curthread);
 }

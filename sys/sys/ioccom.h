@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ioccom.h	8.2 (Berkeley) 3/28/94
- * $FreeBSD: release/7.0.0/sys/sys/ioccom.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef	_SYS_IOCCOM_H_
@@ -38,20 +38,21 @@
  * any in or out parameters in the upper word.  The high 3 bits of the
  * upper word are used to encode the in/out status of the parameter.
  */
-#define	IOCPARM_MASK	0x1fff		/* parameter length, at most 13 bits */
+#define	IOCPARM_SHIFT	13		/* number of bits for ioctl size */
+#define	IOCPARM_MASK	((1 << IOCPARM_SHIFT) - 1) /* parameter length mask */
 #define	IOCPARM_LEN(x)	(((x) >> 16) & IOCPARM_MASK)
 #define	IOCBASECMD(x)	((x) & ~(IOCPARM_MASK << 16))
 #define	IOCGROUP(x)	(((x) >> 8) & 0xff)
 
-#define	IOCPARM_MAX	PAGE_SIZE		/* max size of ioctl, mult. of PAGE_SIZE */
+#define	IOCPARM_MAX	(1 << IOCPARM_SHIFT) /* max size of ioctl */
 #define	IOC_VOID	0x20000000	/* no parameters */
 #define	IOC_OUT		0x40000000	/* copy out parameters */
 #define	IOC_IN		0x80000000	/* copy in parameters */
 #define	IOC_INOUT	(IOC_IN|IOC_OUT)
 #define	IOC_DIRMASK	(IOC_VOID|IOC_OUT|IOC_IN)
 
-#define	_IOC(inout,group,num,len) \
-	((unsigned long)(inout | ((len & IOCPARM_MASK) << 16) | ((group) << 8) | (num)))
+#define	_IOC(inout,group,num,len)	((unsigned long) \
+	((inout) | (((len) & IOCPARM_MASK) << 16) | ((group) << 8) | (num)))
 #define	_IO(g,n)	_IOC(IOC_VOID,	(g), (n), 0)
 #define	_IOWINT(g,n)	_IOC(IOC_VOID,	(g), (n), sizeof(int))
 #define	_IOR(g,n,t)	_IOC(IOC_OUT,	(g), (n), sizeof(t))

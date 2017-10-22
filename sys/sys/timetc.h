@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: release/7.0.0/sys/sys/timetc.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_TIMETC_H_
@@ -47,7 +47,7 @@ struct timecounter {
 		 */
 	u_int 			tc_counter_mask;
 		/* This mask should mask off any unimplemented bits. */
-	u_int64_t		tc_frequency;
+	uint64_t		tc_frequency;
 		/* Frequency of the counter in Hz. */
 	char			*tc_name;
 		/* Name of the timecounter. */
@@ -57,6 +57,8 @@ struct timecounter {
 		 * another timecounter higher means better.  Negative
 		 * means "only use at explicit request".
 		 */
+	u_int			tc_flags;
+#define	TC_FLAGS_C3STOP		1	/* Timer dies in C3. */
 
 	void			*tc_priv;
 		/* Pointer to the timecounter's private parts. */
@@ -65,11 +67,16 @@ struct timecounter {
 };
 
 extern struct timecounter *timecounter;
+extern int tc_min_ticktock_freq; /*
+				  * Minimal tc_ticktock() call frequency,
+				  * required to handle counter wraps.
+				  */
 
 u_int64_t tc_getfrequency(void);
 void	tc_init(struct timecounter *tc);
 void	tc_setclock(struct timespec *ts);
-void	tc_ticktock(void);
+void	tc_ticktock(int cnt);
+void	cpu_tick_calibration(void);
 
 #ifdef SYSCTL_DECL
 SYSCTL_DECL(_kern_timecounter);

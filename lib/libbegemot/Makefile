@@ -1,14 +1,12 @@
-# $FreeBSD: release/7.0.0/lib/libbegemot/Makefile 169807 2007-05-21 02:49:08Z deischen $
+# $FreeBSD$
 
 LIBBEGEMOT_DIR=${.CURDIR}/../../contrib/libbegemot
 
 .PATH: ${LIBBEGEMOT_DIR}
 
 LIB=	begemot
-SHLIB_MAJOR= 3
+SHLIB_MAJOR= 4
 SHLIBDIR?= /lib
-
-# WARNS?=	6
 
 CFLAGS+=	-DUSE_SELECT -DQUADFMT='"ll"'
 SRCS=	rpoll.c

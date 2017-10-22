@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2010-2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,12 +15,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: util.h,v 1.24.18.2 2005/04/29 00:17:04 marka Exp $ */
+/* $Id$ */
 
 #ifndef ISC_UTIL_H
 #define ISC_UTIL_H 1
 
-/*! \file util.h
+/*! \file isc/util.h
  * NOTE:
  *
  * This file is not to be included from any <isc/???.h> (or other) library
@@ -47,6 +47,11 @@
  * \endcode
  */
 #define UNUSED(x)      (void)(x)
+
+/*%
+ * The opposite: silent warnings about stored values which are never read.
+ */
+#define POST(x)        (void)(x)
 
 #define ISC_MAX(a, b)  ((a) > (b) ? (a) : (b))
 #define ISC_MIN(a, b)  ((a) < (b) ? (a) : (b))

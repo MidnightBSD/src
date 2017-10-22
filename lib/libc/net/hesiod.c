@@ -49,7 +49,7 @@
 static char *orig_rcsid = "$NetBSD: hesiod.c,v 1.9 1999/02/11 06:16:38 simonb Exp $";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/net/hesiod.c 114443 2003-05-01 19:03:14Z nectar $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -324,6 +324,7 @@ read_config_file(ctx, filename)
 			    ? &ctx->lhs : &ctx->rhs;
 			*which = strdup(data);
 			if (!*which) {
+				fclose(fp);
 				errno = ENOMEM;
 				return -1;
 			}

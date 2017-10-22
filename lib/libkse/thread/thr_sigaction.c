@@ -26,15 +26,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_sigaction.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <signal.h>
 #include <errno.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
-
-LT10_COMPAT_PRIVATE(_sigaction);
-LT10_COMPAT_DEFAULT(sigaction);
 
 __weak_reference(_sigaction, sigaction);
 
@@ -86,7 +86,7 @@ _sigaction(int sig, const struct sigaction * act, struct sigaction * oact)
 				 * Specify the thread kernel signal
 				 * handler:
 				 */
-				newact.sa_handler = (void (*) ())_thr_sig_handler;
+				newact.sa_sigaction = _thr_sig_handler;
 			}
 			/*
 			 * Install libpthread signal handler wrapper
@@ -95,8 +95,7 @@ _sigaction(int sig, const struct sigaction * act, struct sigaction * oact)
 			 * SIG_DFL or SIG_IGN.
 			 */
 			if (sig == SIGINFO && _thr_dump_enabled()) {
-				newact.sa_handler =
-				    (void (*) ())_thr_sig_handler;
+				newact.sa_sigaction = _thr_sig_handler;
 			}
 			/* Change the signal action in the kernel: */
 			if (__sys_sigaction(sig, &newact, NULL) != 0) {

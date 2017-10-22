@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)rec_get.c	8.9 (Berkeley) 8/18/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/db/recno/rec_get.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -58,11 +58,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/db/recno/rec_get.c 165903 2007-01-09 
  *	RET_ERROR, RET_SUCCESS and RET_SPECIAL if the key not found.
  */
 int
-__rec_get(dbp, key, data, flags)
-	const DB *dbp;
-	const DBT *key;
-	DBT *data;
-	u_int flags;
+__rec_get(const DB *dbp, const DBT *key, DBT *data, u_int flags)
 {
 	BTREE *t;
 	EPG *e;
@@ -117,9 +113,7 @@ __rec_get(dbp, key, data, flags)
  *	RET_ERROR, RET_SUCCESS
  */
 int
-__rec_fpipe(t, top)
-	BTREE *t;
-	recno_t top;
+__rec_fpipe(BTREE *t, recno_t top)
 {
 	DBT data;
 	recno_t nrec;
@@ -128,9 +122,7 @@ __rec_fpipe(t, top)
 	u_char *p;
 
 	if (t->bt_rdata.size < t->bt_reclen) {
-		t->bt_rdata.data = t->bt_rdata.data == NULL ?
-		    malloc(t->bt_reclen) :
-		    reallocf(t->bt_rdata.data, t->bt_reclen);
+		t->bt_rdata.data = reallocf(t->bt_rdata.data, t->bt_reclen);
 		if (t->bt_rdata.data == NULL)
 			return (RET_ERROR);
 		t->bt_rdata.size = t->bt_reclen;
@@ -173,9 +165,7 @@ __rec_fpipe(t, top)
  *	RET_ERROR, RET_SUCCESS
  */
 int
-__rec_vpipe(t, top)
-	BTREE *t;
-	recno_t top;
+__rec_vpipe(BTREE *t, recno_t top)
 {
 	DBT data;
 	recno_t nrec;
@@ -201,9 +191,7 @@ __rec_vpipe(t, top)
 			if (sz == 0) {
 				len = p - (u_char *)t->bt_rdata.data;
 				t->bt_rdata.size += (sz = 256);
-				t->bt_rdata.data = t->bt_rdata.data == NULL ?
-				    malloc(t->bt_rdata.size) :
-				    reallocf(t->bt_rdata.data, t->bt_rdata.size);
+				t->bt_rdata.data = reallocf(t->bt_rdata.data, t->bt_rdata.size);
 				if (t->bt_rdata.data == NULL)
 					return (RET_ERROR);
 				p = (u_char *)t->bt_rdata.data + len;
@@ -230,9 +218,7 @@ __rec_vpipe(t, top)
  *	RET_ERROR, RET_SUCCESS
  */
 int
-__rec_fmap(t, top)
-	BTREE *t;
-	recno_t top;
+__rec_fmap(BTREE *t, recno_t top)
 {
 	DBT data;
 	recno_t nrec;
@@ -240,9 +226,7 @@ __rec_fmap(t, top)
 	size_t len;
 
 	if (t->bt_rdata.size < t->bt_reclen) {
-		t->bt_rdata.data = t->bt_rdata.data == NULL ?
-		    malloc(t->bt_reclen) :
-		    reallocf(t->bt_rdata.data, t->bt_reclen);
+		t->bt_rdata.data = reallocf(t->bt_rdata.data, t->bt_reclen);
 		if (t->bt_rdata.data == NULL)
 			return (RET_ERROR);
 		t->bt_rdata.size = t->bt_reclen;
@@ -280,9 +264,7 @@ __rec_fmap(t, top)
  *	RET_ERROR, RET_SUCCESS
  */
 int
-__rec_vmap(t, top)
-	BTREE *t;
-	recno_t top;
+__rec_vmap(BTREE *t, recno_t top)
 {
 	DBT data;
 	u_char *sp, *ep;

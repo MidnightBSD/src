@@ -129,6 +129,9 @@
 extern "C" {
 #endif
 
+/* Signalling cipher suite value: from draft-ietf-tls-renegotiation-03.txt */
+#define SSL3_CK_SCSV				0x030000FF
+
 #define SSL3_CK_RSA_NULL_MD5			0x03000001
 #define SSL3_CK_RSA_NULL_SHA			0x03000002
 #define SSL3_CK_RSA_RC4_40_MD5 			0x03000003
@@ -330,6 +333,17 @@ typedef struct ssl3_buffer_st
 #define SSL3_FLAGS_DELAY_CLIENT_FINISHED	0x0002
 #define SSL3_FLAGS_POP_BUFFER			0x0004
 #define TLS1_FLAGS_TLS_PADDING_BUG		0x0008
+ 
+/* SSL3_FLAGS_SGC_RESTART_DONE is set when we
+ * restart a handshake because of MS SGC and so prevents us
+ * from restarting the handshake in a loop. It's reset on a
+ * renegotiation, so effectively limits the client to one restart
+ * per negotiation. This limits the possibility of a DDoS
+ * attack where the client handshakes in a loop using SGC to
+ * restart. Servers which permit renegotiation can still be
+ * effected, but we can't prevent that.
+ */
+#define SSL3_FLAGS_SGC_RESTART_DONE		0x0040
 
 typedef struct ssl3_state_st
 	{
@@ -440,6 +454,12 @@ typedef struct ssl3_state_st
 		int cert_request;
 		} tmp;
 
+        /* Connection binding to prevent renegotiation attacks */
+        unsigned char previous_client_finished[EVP_MAX_MD_SIZE];
+        unsigned char previous_client_finished_len;
+        unsigned char previous_server_finished[EVP_MAX_MD_SIZE];
+        unsigned char previous_server_finished_len;
+        int send_connection_binding; /* TODOEKR */
 	} SSL3_STATE;
 
 
@@ -481,6 +501,10 @@ typedef struct ssl3_state_st
 #define SSL3_ST_CR_CHANGE_B		(0x1C1|SSL_ST_CONNECT)
 #define SSL3_ST_CR_FINISHED_A		(0x1D0|SSL_ST_CONNECT)
 #define SSL3_ST_CR_FINISHED_B		(0x1D1|SSL_ST_CONNECT)
+#define SSL3_ST_CR_SESSION_TICKET_A	(0x1E0|SSL_ST_CONNECT)
+#define SSL3_ST_CR_SESSION_TICKET_B	(0x1E1|SSL_ST_CONNECT)
+#define SSL3_ST_CR_CERT_STATUS_A	(0x1F0|SSL_ST_CONNECT)
+#define SSL3_ST_CR_CERT_STATUS_B	(0x1F1|SSL_ST_CONNECT)
 
 /* server */
 /* extra state */
@@ -522,10 +546,15 @@ typedef struct ssl3_state_st
 #define SSL3_ST_SW_CHANGE_B		(0x1D1|SSL_ST_ACCEPT)
 #define SSL3_ST_SW_FINISHED_A		(0x1E0|SSL_ST_ACCEPT)
 #define SSL3_ST_SW_FINISHED_B		(0x1E1|SSL_ST_ACCEPT)
+#define SSL3_ST_SW_SESSION_TICKET_A	(0x1F0|SSL_ST_ACCEPT)
+#define SSL3_ST_SW_SESSION_TICKET_B	(0x1F1|SSL_ST_ACCEPT)
+#define SSL3_ST_SW_CERT_STATUS_A	(0x200|SSL_ST_ACCEPT)
+#define SSL3_ST_SW_CERT_STATUS_B	(0x201|SSL_ST_ACCEPT)
 
 #define SSL3_MT_HELLO_REQUEST			0
 #define SSL3_MT_CLIENT_HELLO			1
 #define SSL3_MT_SERVER_HELLO			2
+#define	SSL3_MT_NEWSESSION_TICKET		4
 #define SSL3_MT_CERTIFICATE			11
 #define SSL3_MT_SERVER_KEY_EXCHANGE		12
 #define SSL3_MT_CERTIFICATE_REQUEST		13
@@ -533,6 +562,7 @@ typedef struct ssl3_state_st
 #define SSL3_MT_CERTIFICATE_VERIFY		15
 #define SSL3_MT_CLIENT_KEY_EXCHANGE		16
 #define SSL3_MT_FINISHED			20
+#define SSL3_MT_CERTIFICATE_STATUS		22
 #define DTLS1_MT_HELLO_VERIFY_REQUEST    3
 
 

@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)ftree.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/pax/ftree.c 140097 2005-01-12 03:25:55Z brian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -101,8 +101,8 @@ ftree_start(void)
 	/*
 	 * optional user flags that effect file traversal
 	 * -H command line symlink follow only (half follow)
-	 * -L follow sylinks (logical)
-	 * -P do not follow sylinks (physical). This is the default.
+	 * -L follow symlinks (logical)
+	 * -P do not follow symlinks (physical). This is the default.
 	 * -X do not cross over mount points
 	 * -t preserve access times on files read.
 	 * -n select only the first member of a file tree when a match is found
@@ -219,7 +219,7 @@ ftree_sel(ARCHD *arcn)
  */
 
 void
-ftree_notsel()
+ftree_notsel(void)
 {
 	if (ftent != NULL)
 		(void)fts_set(ftsp, ftent, FTS_SKIP);

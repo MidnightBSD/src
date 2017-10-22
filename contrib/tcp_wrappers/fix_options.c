@@ -4,7 +4,7 @@
   *
   * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
   *
-  * $FreeBSD: release/7.0.0/contrib/tcp_wrappers/fix_options.c 172506 2007-10-10 16:59:15Z cvs2svn $
+  * $FreeBSD$
   */
 
 #ifndef lint
@@ -34,6 +34,7 @@ static char sccsid[] = "@(#) fix_options.c 1.6 97/04/08 02:29:19";
 
 /* fix_options - get rid of IP-level socket options */
 
+void
 fix_options(request)
 struct request_info *request;
 {

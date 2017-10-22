@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2005 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2005, 2010 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -9,12 +9,11 @@
  * forth in the LICENSE file which can be found at the top level of
  * the sendmail distribution.
  *
- * $FreeBSD: release/7.0.0/contrib/sendmail/src/mci.c 172506 2007-10-10 16:59:15Z cvs2svn $
  */
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: mci.c,v 8.218 2006/08/15 23:24:57 ca Exp $")
+SM_RCSID("@(#)$Id: mci.c,v 8.223 2010/03/10 04:35:28 ca Exp $")
 
 #if NETINET || NETINET6
 # include <arpa/inet.h>
@@ -289,6 +288,32 @@ mci_flush(doquit, allbut)
 			mci_uncache(&MciCache[i], doquit);
 	}
 }
+
+/*
+**  MCI_CLR_EXTENSIONS -- clear knowledge about SMTP extensions
+**
+**	Parameters:
+**		mci -- the connection to clear.
+**
+**	Returns:
+**		none.
+*/
+
+void
+mci_clr_extensions(mci)
+	MCI *mci;
+{
+	if (mci == NULL)
+		return;
+
+	mci->mci_flags &= ~MCIF_EXTENS;
+	mci->mci_maxsize = 0;
+	mci->mci_min_by = 0;
+#if SASL
+	mci->mci_saslcap = NULL;
+#endif /* SASL */
+}
+
 /*
 **  MCI_GET -- get information about a particular host
 **
@@ -568,6 +593,7 @@ static struct mcifbits	MciFlags[] =
 	{ MCIF_CVT7TO8,		"CVT7TO8"	},
 	{ MCIF_INMIME,		"INMIME"	},
 	{ MCIF_AUTH,		"AUTH"		},
+	{ MCIF_AUTH2,		"AUTH2"		},
 	{ MCIF_AUTHACT,		"AUTHACT"	},
 	{ MCIF_ENHSTAT,		"ENHSTAT"	},
 	{ MCIF_PIPELINED,	"PIPELINED"	},
@@ -1144,16 +1170,27 @@ mci_traverse_persistent(action, pathname)
 					pathname, sm_errstring(errno));
 			return -1;
 		}
-		len = sizeof(newpath) - MAXNAMLEN - 3;
+
+		/*
+		**  Reserve space for trailing '/', at least one
+		**  character, and '\0'
+		*/
+
+		len = sizeof(newpath) - 3;
 		if (sm_strlcpy(newpath, pathname, len) >= len)
 		{
+			int save_errno = errno;
+
 			if (tTd(56, 2))
 				sm_dprintf("mci_traverse: path \"%s\" too long",
 					pathname);
+			(void) closedir(d);
+			errno = save_errno;
 			return -1;
 		}
 		newptr = newpath + strlen(newpath);
 		*newptr++ = '/';
+		len = sizeof(newpath) - (newptr - newpath);
 
 		/*
 		**  repeat until no file has been removed
@@ -1170,9 +1207,17 @@ mci_traverse_persistent(action, pathname)
 				if (e->d_name[0] == '.')
 					continue;
 
-				(void) sm_strlcpy(newptr, e->d_name,
-					       sizeof(newpath) -
-					       (newptr - newpath));
+				if (sm_strlcpy(newptr, e->d_name, len) >= len)
+				{
+					/* Skip truncated copies */
+					if (tTd(56, 4))
+					{
+						*newptr = '\0';
+						sm_dprintf("mci_traverse: path \"%s%s\" too long",
+							   newpath, e->d_name);
+					}
+					continue;
+				}
 
 				if (StopRequest)
 					stop_sendmail();

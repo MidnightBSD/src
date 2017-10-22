@@ -25,48 +25,46 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sparc64/locore.S 152960 2005-11-30 16:09:10Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <machine/asi.h>
 #include <machine/asmacros.h>
+#include <machine/intr_machdep.h>
 #include <machine/pstate.h>
+#include <machine/wstate.h>
 
 #include "assym.s"
 
 	.register %g2,#ignore
 
 	.globl	kernbase
-	.set	kernbase,KERNBASE
+	.set	kernbase, KERNBASE
 
 /*
  * void _start(caddr_t metadata, u_long o1, u_long o2, u_long o3,
- *	       u_long ofw_vec)
+ *     u_long ofw_vec)
  */
 ENTRY(btext)
 ENTRY(_start)
 	/*
-	 * Initialize misc state to known values.  Interrupts disabled, normal
-	 * globals, windows flushed (cr = 0, cs = nwindows - 1), no clean
-	 * windows, pil 0, and floating point disabled.
+	 * Initialize misc. state to known values: interrupts disabled, normal
+	 * globals, windows flushed (cr = 0, cs = nwindows - 1), PIL_TICK and
+	 * floating point disabled.
+	 * Note that some firmware versions don't implement a clean window
+	 * trap handler so we unfortunately can't clear the windows by setting
+	 * %cleanwin to zero here.
 	 */
 	wrpr	%g0, PSTATE_NORMAL, %pstate
 	flushw
-	wrpr	%g0, 0, %cleanwin
-	wrpr	%g0, 0, %pil
+	wrpr	%g0, PIL_TICK, %pil
 	wr	%g0, 0, %fprs
-	wrpr	%g0, 0, %tick
 
 	/*
-	 * Get onto our per-cpu panic stack, which precedes the struct pcpu in
-	 * the per-cpu page.
+	 * Get onto our per-CPU panic stack, which precedes the struct pcpu in
+	 * the per-CPU page.
 	 */
 	SET(pcpu0 + (PCPU_PAGES * PAGE_SIZE) - PC_SIZEOF, %l1, %l0)
 	sub	%l0, SPOFF + CCFSZ, %sp
-
-	/*
-	 * Enable interrupts.
-	 */
-	wrpr	%g0, PSTATE_KERNEL, %pstate
 
 	/*
 	 * Do initial bootstrap to setup pmap and thread0.
@@ -95,42 +93,42 @@ ENTRY(cpu_setregs)
 	ldx	[%o0 + PC_CURPCB], %o1
 
 	/*
-	 * Disable interrupts, normal globals.
+	 * Ensure we are on normal globals.
 	 */
 	wrpr	%g0, PSTATE_NORMAL, %pstate
 
 	/*
-	 * Normal %g6 points to the current thread's pcb, and %g7 points to
-	 * the per-cpu data structure.
+	 * Normal %g6 points to the current thread's PCB, and %g7 points to
+	 * the per-CPU data structure.
 	 */
 	mov	%o1, PCB_REG
 	mov	%o0, PCPU_REG
 
 	/*
-	 * Alternate globals.
+	 * Switch to alternate globals.
 	 */
 	wrpr	%g0, PSTATE_ALT, %pstate
 
 	/*
-	 * Alternate %g5 points to a per-cpu panic stack, %g6 points to the
-	 * current thread's pcb, and %g7 points to the per-cpu data structure.
+	 * Alternate %g5 points to a per-CPU panic stack, %g6 points to the
+	 * current thread's PCB, and %g7 points to the per-CPU data structure.
 	 */
 	mov	%o0, ASP_REG
 	mov	%o1, PCB_REG
 	mov	%o0, PCPU_REG
 
 	/*
-	 * Interrupt globals.
+	 * Switch to interrupt globals.
 	 */
 	wrpr	%g0, PSTATE_INTR, %pstate
 
 	/*
-	 * Interrupt %g7 points to the per-cpu data structure.
+	 * Interrupt %g7 points to the per-CPU data structure.
 	 */
 	mov	%o0, PCPU_REG
 
 	/*
-	 * Normal globals again.
+	 * Switch to normal globals again.
 	 */
 	wrpr	%g0, PSTATE_NORMAL, %pstate
 
@@ -138,13 +136,12 @@ ENTRY(cpu_setregs)
 	 * Force trap level 1 and take over the trap table.
 	 */
 	SET(tl0_base, %o2, %o1)
+	SET(tba_taken_over, %o3, %o2)
+	mov	1, %o3
+	wrpr	%g0, WSTATE_KERNEL, %wstate
 	wrpr	%g0, 1, %tl
 	wrpr	%o1, 0, %tba
-
-	/*
-	 * Re-enable interrupts.
-	 */
-	wrpr	%g0, PSTATE_KERNEL, %pstate
+	stw	%o3, [%o2]
 
 	retl
 	 nop

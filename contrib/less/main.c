@@ -1,6 +1,6 @@
-/* $FreeBSD: release/7.0.0/contrib/less/main.c 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $FreeBSD$ */
 /*
- * Copyright (C) 1984-2007  Mark Nudelman
+ * Copyright (C) 1984-2011  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -33,7 +33,6 @@ public char *	progname;
 public int	quitting;
 public int	secure;
 public int	dohelp;
-public int	less_is_more;
 
 #if LOGFILE
 public int	logfile = -1;
@@ -56,6 +55,7 @@ extern int	jump_sline;
 static char consoleTitle[256];
 #endif
 
+extern int	less_is_more;
 extern int	missing_cap;
 extern int	know_dumb;
 extern int	quit_if_one_screen;
@@ -121,6 +121,7 @@ main(argc, argv)
 	init_line();
 	init_cmdhist();
 	init_option();
+	init_search();
 
 	/*
 	 * If the name of the executable program is "more",
@@ -414,7 +415,7 @@ quit(status)
 	 */
 	close(2);
 #endif
-#if WIN32
+#ifdef WIN32
 	SetConsoleTitle(consoleTitle);
 #endif
 	close_getchr();

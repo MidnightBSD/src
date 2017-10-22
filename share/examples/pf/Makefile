@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/examples/pf/Makefile 173538 2007-11-11 02:16:00Z mlaier $
+# $FreeBSD$
 
 NO_OBJ=
 

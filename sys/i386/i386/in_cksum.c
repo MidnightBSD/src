@@ -31,11 +31,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/i386/i386/in_cksum.c 173002 2007-10-26 07:15:04Z bz $");
+__FBSDID("$FreeBSD$");
 
-/*
- * MPsafe: alfred
- */
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/mbuf.h>

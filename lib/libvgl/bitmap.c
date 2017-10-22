@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libvgl/bitmap.c 97748 2002-06-02 20:05:59Z schweikh $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <signal.h>

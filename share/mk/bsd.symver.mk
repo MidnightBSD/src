@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/mk/bsd.symver.mk 169822 2007-05-21 09:01:23Z ru $
+# $FreeBSD$
 
 .if !target(__<bsd.symver.mk>__)
 __<bsd.symver.mk>__:
@@ -34,6 +34,9 @@ _vgen=  ${path}/${VERSION_GEN}
 .endif
 .endif
 .endfor
+.if empty(_vgen)
+.error ${VERSION_GEN} not found in the search path.
+.endif
 
 # Run the symbol maps through the C preprocessor before passing
 # them to the symbol version generator.

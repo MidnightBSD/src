@@ -1,4 +1,4 @@
-$FreeBSD: release/7.0.0/contrib/smbfs/FREEBSD-upgrade 172506 2007-10-10 16:59:15Z cvs2svn $
+$FreeBSD$
 
 The smbfs distribution was written with FreeBSD in mind, so the only
 change required before an import is:

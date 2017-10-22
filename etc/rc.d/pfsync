@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/pfsync 168593 2007-04-10 16:42:14Z keramida $
+# $FreeBSD$
 #
 
 # PROVIDE: pfsync
@@ -10,7 +10,7 @@
 . /etc/rc.subr
 
 name="pfsync"
-rcvar=`set_rcvar`
+rcvar="pfsync_enable"
 start_precmd="pfsync_prestart"
 start_cmd="pfsync_start"
 stop_cmd="pfsync_stop"

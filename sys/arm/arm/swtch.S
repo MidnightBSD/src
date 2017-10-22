@@ -83,7 +83,7 @@
 #include <machine/asm.h>
 #include <machine/asmacros.h>
 #include <machine/armreg.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/swtch.S 171780 2007-08-07 18:20:55Z cognet $");
+__FBSDID("$FreeBSD$");
 
 
 /*
@@ -187,7 +187,7 @@ ENTRY(cpu_throw)
 	ldr	pc, [r9, #CF_CONTEXT_SWITCH]
 
 	/* Restore all the save registers */
-#ifndef __XSCALE__
+#ifndef _ARM_ARCH_5E
 	add	r1, r7, #PCB_R8
 	ldmia	r1, {r8-r13}
 #else
@@ -205,8 +205,12 @@ ENTRY(cpu_throw)
 
 	/* Set the new tp */
 	ldr	r6, [r5, #(TD_MD + MD_TP)]
-	mov	r5, #ARM_TP_ADDRESS
-	strt	r6, [r5]
+	ldr	r4, =ARM_TP_ADDRESS
+	str	r6, [r4]
+	ldr	r6, [r5, #(TD_MD + MD_RAS_START)]
+	str	r6, [r4, #4] /* ARM_RAS_START */
+	ldr	r6, [r5, #(TD_MD + MD_RAS_END)]
+	str	r6, [r4, #8] /* ARM_RAS_END */
 
 	/* Hook in a new pcb */
 	ldr	r6, .Lcurpcb
@@ -249,7 +253,7 @@ ENTRY(cpu_switch)
 	mov	r4, r0 /* Save the old thread. */
 
 	/* Save all the registers in the old thread's pcb */
-#ifndef __XSCALE__
+#ifndef _ARM_ARCH_5E
 	add	r7, r2, #(PCB_R8)
 	stmia	r7, {r8-r13}
 #else
@@ -257,19 +261,28 @@ ENTRY(cpu_switch)
 	strd	r10, [r2, #(PCB_R10)]
 	strd	r12, [r2, #(PCB_R12)]
 #endif
+	str	pc, [r2, #(PCB_PC)]
 									   
 	/*
 	 * NOTE: We can now use r8-r13 until it is time to restore
 	 * them for the new process.
 	 */
 	/* Store the old tp */
-	mov	r3, #ARM_TP_ADDRESS
-	ldrt	r9, [r3]
+	ldr	r3, =ARM_TP_ADDRESS
+	ldr	r9, [r3]
 	str	r9, [r0, #(TD_MD + MD_TP)]
+	ldr	r9, [r3, #4]
+	str	r9, [r0, #(TD_MD + MD_RAS_START)]
+	ldr	r9, [r3, #8]
+	str	r9, [r0, #(TD_MD + MD_RAS_END)]
 
 	/* Set the new tp */
 	ldr	r9, [r1, #(TD_MD + MD_TP)]
-	strt	r9, [r3]
+	str	r9, [r3]
+	ldr	r9, [r1, #(TD_MD + MD_RAS_START)]
+	str	r9, [r3, #4]
+	ldr	r9, [r1, #(TD_MD + MD_RAS_END)]
+	str	r9, [r3, #8]
 
 	/* Get the user structure for the new process in r9 */
 	ldr	r9, [r1, #(TD_PCB)]
@@ -419,7 +432,7 @@ ENTRY(cpu_switch)
 
         msr	cpsr_c, r3		/* Restore the old mode */
 	/* Restore all the save registers */
-#ifndef __XSCALE__
+#ifndef _ARM_ARCH_5E
 	add	r7, r9, #PCB_R8
 	ldmia	r7, {r8-r13}
 	sub	r7, r7, #PCB_R8		/* restore PCB pointer */

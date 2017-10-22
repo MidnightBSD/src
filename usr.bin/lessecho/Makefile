@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.bin/lessecho/Makefile 161480 2006-08-20 15:52:17Z delphij $
+# $FreeBSD$
 
 PROG=	lessecho
 SRCS=	lessecho.c version.c

@@ -68,7 +68,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libstand/ufs.c 165906 2007-01-09 01:02:06Z imp $");
+__FBSDID("$FreeBSD$");
 
 /*
  *	Stand-alone file reading package.
@@ -82,10 +82,6 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libstand/ufs.c 165906 2007-01-09 01:02:06Z
 #include <ufs/ffs/fs.h>
 #include "stand.h"
 #include "string.h"
-
-#ifdef __alpha__
-#define COMPAT_UFS		/* DUX has old format file systems */
-#endif
 
 static int	ufs_open(const char *path, struct open_file *f);
 static int	ufs_write(struct open_file *f, void *buf, size_t size, size_t *resid);

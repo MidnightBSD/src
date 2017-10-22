@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -46,7 +42,7 @@ static char sccsid[] = "@(#)ctags.c	8.4 (Berkeley) 2/7/95";
 #include <sys/cdefs.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ctags/ctags.c 160465 2006-07-18 07:29:42Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <limits.h>
@@ -244,7 +240,7 @@ void
 init(void)
 {
 	int		i;
-	const char	*sp;
+	const unsigned char	*sp;
 
 	for (i = 0; i < 256; i++) {
 		_wht[i] = _etk[i] = _itk[i] = _btk[i] = NO;

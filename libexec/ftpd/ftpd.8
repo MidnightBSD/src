@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)ftpd.8	8.2 (Berkeley) 4/19/94
-.\" $FreeBSD: release/7.0.0/libexec/ftpd/ftpd.8 168899 2007-04-20 09:08:20Z trhodes $
+.\" $FreeBSD$
 .\"
 .Dd April 20, 2007
 .Dt FTPD 8
@@ -205,7 +205,7 @@ for more information.
 Note that option is a virtual no-op in
 .Fx 5.0
 and above; both port
-ranges are indentical by default.
+ranges are identical by default.
 .It Fl u
 The default file creation mode mask is set to
 .Ar umask ,
@@ -219,8 +219,7 @@ This option may be overridden by
 A synonym for
 .Fl d .
 .It Fl W
-Do not log FTP sessions to
-.Pa /var/log/wtmp .
+Do not log FTP sessions to the user accounting database.
 .El
 .Pp
 The file
@@ -305,7 +304,6 @@ The following non-standard or
 specific commands are supported
 by the
 SITE request.
-.Pp
 .Bl -column Request -offset indent
 .It Sy Request Ta Sy Description
 .It UMASK Ta change umask, e.g. ``SITE UMASK 002''
@@ -348,7 +346,6 @@ This allows users to utilize the metacharacters
 The
 .Nm
 utility authenticates users according to six rules.
-.Pp
 .Bl -enum -offset indent
 .It
 The login name must be in the password data base

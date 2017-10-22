@@ -1,8 +1,13 @@
-# $FreeBSD: release/7.0.0/sys/modules/ipdivert/Makefile 136714 2004-10-19 21:14:57Z andre $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../netinet
 
 KMOD=   ipdivert
-SRCS=   ip_divert.c
+SRCS=   ip_divert.c opt_inet6.h
+
+.if !defined(KERNBUILDDIR)
+opt_inet6.h:
+	echo "#define INET6 1" > ${.TARGET}
+.endif
 
 .include <bsd.kmod.mk>

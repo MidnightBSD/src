@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/doc/usd/10.exref/Makefile.inc 105925 2002-10-25 09:14:09Z ru $
+# $FreeBSD$
 
 VOLUME=	usd/10.exref
 MACROS=	-ms

@@ -24,7 +24,6 @@
  */
 
 #include "includes.h"
-__RCSID("$FreeBSD: release/7.0.0/crypto/openssh/auth2-kbdint.c 172506 2007-10-10 16:59:15Z cvs2svn $");
 
 #include <sys/types.h>
 
@@ -59,10 +58,6 @@ userauth_kbdint(Authctxt *authctxt)
 
 	xfree(devs);
 	xfree(lang);
-#ifdef HAVE_CYGWIN
-	if (check_nt_auth(0, authctxt->pw) == 0)
-		authenticated = 0;
-#endif
 	return authenticated;
 }
 

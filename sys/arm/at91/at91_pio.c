@@ -10,20 +10,21 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/at91/at91_pio.c 166901 2007-02-23 12:19:07Z piso $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,7 +39,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/at91/at91_pio.c 166901 2007-02-23 12:1
 #include <sys/rman.h>
 #include <machine/bus.h>
 
-#include <arm/at91/at91rm92reg.h>
+#include <arm/at91/at91reg.h>
 #include <arm/at91/at91_pioreg.h>
 #include <arm/at91/at91_piovar.h>
 
@@ -51,30 +52,32 @@ struct at91_pio_softc
 	struct mtx sc_mtx;		/* basically a perimeter lock */
 	struct cdev *cdev;
 	int flags;
-#define OPENED 1
+#define	OPENED 1
 };
 
 static inline uint32_t
 RD4(struct at91_pio_softc *sc, bus_size_t off)
 {
-	return bus_read_4(sc->mem_res, off);
+
+	return (bus_read_4(sc->mem_res, off));
 }
 
 static inline void
 WR4(struct at91_pio_softc *sc, bus_size_t off, uint32_t val)
 {
+
 	bus_write_4(sc->mem_res, off, val);
 }
 
-#define AT91_PIO_LOCK(_sc)		mtx_lock_spin(&(_sc)->sc_mtx)
+#define	AT91_PIO_LOCK(_sc)		mtx_lock_spin(&(_sc)->sc_mtx)
 #define	AT91_PIO_UNLOCK(_sc)		mtx_unlock_spin(&(_sc)->sc_mtx)
-#define AT91_PIO_LOCK_INIT(_sc) \
+#define	AT91_PIO_LOCK_INIT(_sc) \
 	mtx_init(&_sc->sc_mtx, device_get_nameunit(_sc->dev), \
 	    "pio", MTX_SPIN)
-#define AT91_PIO_LOCK_DESTROY(_sc)	mtx_destroy(&_sc->sc_mtx);
-#define AT91_PIO_ASSERT_LOCKED(_sc)	mtx_assert(&_sc->sc_mtx, MA_OWNED);
-#define AT91_PIO_ASSERT_UNLOCKED(_sc) mtx_assert(&_sc->sc_mtx, MA_NOTOWNED);
-#define CDEV2SOFTC(dev)		((dev)->si_drv1)
+#define	AT91_PIO_LOCK_DESTROY(_sc)	mtx_destroy(&_sc->sc_mtx);
+#define	AT91_PIO_ASSERT_LOCKED(_sc)	mtx_assert(&_sc->sc_mtx, MA_OWNED);
+#define	AT91_PIO_ASSERT_UNLOCKED(_sc)	mtx_assert(&_sc->sc_mtx, MA_NOTOWNED);
+#define	CDEV2SOFTC(dev)			((dev)->si_drv1)
 
 static devclass_t at91_pio_devclass;
 
@@ -131,9 +134,10 @@ at91_pio_probe(device_t dev)
 static int
 at91_pio_attach(device_t dev)
 {
-	struct at91_pio_softc *sc = device_get_softc(dev);
+	struct at91_pio_softc *sc;
 	int err;
 
+	sc = device_get_softc(dev);
 	sc->dev = dev;
 	err = at91_pio_activate(dev);
 	if (err)
@@ -145,7 +149,7 @@ at91_pio_attach(device_t dev)
 	AT91_PIO_LOCK_INIT(sc);
 
 	/*
-	 * Activate the interrupt, but disable all interrupts in the hardware
+	 * Activate the interrupt, but disable all interrupts in the hardware.
 	 */
 	WR4(sc, PIO_IDR, 0xffffffff);
 	err = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_MISC,
@@ -161,7 +165,7 @@ at91_pio_attach(device_t dev)
 		goto out;
 	}
 	sc->cdev->si_drv1 = sc;
-out:;
+out:
 	if (err)
 		at91_pio_deactivate(dev);
 	return (err);
@@ -170,6 +174,7 @@ out:;
 static int
 at91_pio_detach(device_t dev)
 {
+
 	return (EBUSY);	/* XXX */
 }
 
@@ -214,7 +219,6 @@ at91_pio_deactivate(device_t dev)
 		bus_release_resource(dev, SYS_RES_IRQ,
 		    rman_get_rid(sc->irq_res), sc->irq_res);
 	sc->irq_res = 0;
-	return;
 }
 
 static int
@@ -224,7 +228,7 @@ at91_pio_intr(void *xsc)
 #if 0
 	uint32_t status;
 
-	/* Reading the status also clears the interrupt */
+	/* Reading the status also clears the interrupt. */
 	status = RD4(sc, PIO_SR);
 	if (status == 0)
 		return;
@@ -235,7 +239,7 @@ at91_pio_intr(void *xsc)
 	return (FILTER_HANDLED);
 }
 
-static int 
+static int
 at91_pio_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 {
 	struct at91_pio_softc *sc;
@@ -245,11 +249,11 @@ at91_pio_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 	if (!(sc->flags & OPENED)) {
 		sc->flags |= OPENED;
 #if 0
-	// Enable interrupts
+	/* Enable interrupts. */
 #endif
 	}
 	AT91_PIO_UNLOCK(sc);
-    	return (0);
+	return (0);
 }
 
 static int
@@ -261,7 +265,7 @@ at91_pio_close(struct cdev *dev, int fflag, int devtype, struct thread *td)
 	AT91_PIO_LOCK(sc);
 	sc->flags &= ~OPENED;
 #if 0
-	// Disable interrupts
+	/* Disable interrupts. */
 #endif
 	AT91_PIO_UNLOCK(sc);
 	return (0);
@@ -271,6 +275,7 @@ static int
 at91_pio_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
     struct thread *td)
 {
+
 	return (ENXIO);
 }
 
@@ -279,10 +284,11 @@ at91_pio_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
  * don't use bus_space, as that isn't yet available when we need to use
  * them.
  */
+
 void
 at91_pio_use_periph_a(uint32_t pio, uint32_t periph_a_mask, int use_pullup)
 {
-	uint32_t *PIO = (uint32_t *)(AT91RM92_BASE + pio);
+	uint32_t *PIO = (uint32_t *)(AT91_BASE + pio);
 
 	PIO[PIO_ASR / 4] = periph_a_mask;
 	PIO[PIO_PDR / 4] = periph_a_mask;
@@ -295,7 +301,7 @@ at91_pio_use_periph_a(uint32_t pio, uint32_t periph_a_mask, int use_pullup)
 void
 at91_pio_use_periph_b(uint32_t pio, uint32_t periph_b_mask, int use_pullup)
 {
-	uint32_t *PIO = (uint32_t *)(AT91RM92_BASE + pio);
+	uint32_t *PIO = (uint32_t *)(AT91_BASE + pio);
 
 	PIO[PIO_BSR / 4] = periph_b_mask;
 	PIO[PIO_PDR / 4] = periph_b_mask;
@@ -308,7 +314,7 @@ at91_pio_use_periph_b(uint32_t pio, uint32_t periph_b_mask, int use_pullup)
 void
 at91_pio_use_gpio(uint32_t pio, uint32_t gpio_mask)
 {
-	uint32_t *PIO = (uint32_t *)(AT91RM92_BASE + pio);
+	uint32_t *PIO = (uint32_t *)(AT91_BASE + pio);
 
 	PIO[PIO_PER / 4] = gpio_mask;
 }
@@ -316,7 +322,7 @@ at91_pio_use_gpio(uint32_t pio, uint32_t gpio_mask)
 void
 at91_pio_gpio_input(uint32_t pio, uint32_t input_enable_mask)
 {
-	uint32_t *PIO = (uint32_t *)(AT91RM92_BASE + pio);
+	uint32_t *PIO = (uint32_t *)(AT91_BASE + pio);
 
 	PIO[PIO_ODR / 4] = input_enable_mask;
 }
@@ -324,7 +330,7 @@ at91_pio_gpio_input(uint32_t pio, uint32_t input_enable_mask)
 void
 at91_pio_gpio_output(uint32_t pio, uint32_t output_enable_mask, int use_pullup)
 {
-	uint32_t *PIO = (uint32_t *)(AT91RM92_BASE + pio);
+	uint32_t *PIO = (uint32_t *)(AT91_BASE + pio);
 
 	PIO[PIO_OER / 4] = output_enable_mask;
 	if (use_pullup)
@@ -336,7 +342,7 @@ at91_pio_gpio_output(uint32_t pio, uint32_t output_enable_mask, int use_pullup)
 void
 at91_pio_gpio_set(uint32_t pio, uint32_t data_mask)
 {
-	uint32_t *PIO = (uint32_t *)(AT91RM92_BASE + pio);
+	uint32_t *PIO = (uint32_t *)(AT91_BASE + pio);
 
 	PIO[PIO_SODR / 4] = data_mask;
 }
@@ -344,9 +350,51 @@ at91_pio_gpio_set(uint32_t pio, uint32_t data_mask)
 void
 at91_pio_gpio_clear(uint32_t pio, uint32_t data_mask)
 {
-	uint32_t *PIO = (uint32_t *)(AT91RM92_BASE + pio);
+	uint32_t *PIO = (uint32_t *)(AT91_BASE + pio);
 
 	PIO[PIO_CODR / 4] = data_mask;
+}
+
+uint8_t
+at91_pio_gpio_get(uint32_t pio, uint32_t data_mask)
+{
+	uint32_t *PIO = (uint32_t *)(AT91_BASE + pio);
+
+	data_mask &= PIO[PIO_PDSR / 4];
+
+	return (data_mask ? 1 : 0);
+}
+
+void
+at91_pio_gpio_set_deglitch(uint32_t pio, uint32_t data_mask, int use_deglitch)
+{
+	uint32_t *PIO = (uint32_t *)(AT91_BASE + pio);
+
+	if (use_deglitch)
+		PIO[PIO_IFER / 4] = data_mask;
+	else
+		PIO[PIO_IFDR / 4] = data_mask;
+}
+
+void
+at91_pio_gpio_set_interrupt(uint32_t pio, uint32_t data_mask,
+	int enable_interrupt)
+{
+	uint32_t *PIO = (uint32_t *)(AT91_BASE + pio);
+
+	if (enable_interrupt)
+		PIO[PIO_IER / 4] = data_mask;
+	else
+		PIO[PIO_IDR / 4] = data_mask;
+}
+
+uint32_t
+at91_pio_gpio_clear_interrupt(uint32_t pio)
+{
+	uint32_t *PIO = (uint32_t *)(AT91_BASE + pio);
+
+	/* Reading this register will clear the interrupts. */
+	return (PIO[PIO_ISR / 4]);
 }
 
 static device_method_t at91_pio_methods[] = {
@@ -355,7 +403,7 @@ static device_method_t at91_pio_methods[] = {
 	DEVMETHOD(device_attach,	at91_pio_attach),
 	DEVMETHOD(device_detach,	at91_pio_detach),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t at91_pio_driver = {
@@ -364,4 +412,5 @@ static driver_t at91_pio_driver = {
 	sizeof(struct at91_pio_softc),
 };
 
-DRIVER_MODULE(at91_pio, atmelarm, at91_pio_driver, at91_pio_devclass, 0, 0);
+DRIVER_MODULE(at91_pio, atmelarm, at91_pio_driver, at91_pio_devclass, NULL,
+    NULL);

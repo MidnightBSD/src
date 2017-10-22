@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/info/perform.c 154145 2006-01-09 18:27:21Z flz $");
+__FBSDID("$FreeBSD$");
 
 #include "lib.h"
 #include "info.h"
@@ -85,8 +85,6 @@ pkg_perform(char **pkgs)
     return err_cnt;
 }
 
-static char *Home;
-
 static int
 pkg_do(char *pkg)
 {
@@ -96,13 +94,16 @@ pkg_do(char *pkg)
     Package plist;
     FILE *fp;
     struct stat sb;
-    char *cp = NULL;
+    const char *cp = NULL;
     int code = 0;
 
     if (isURL(pkg)) {
 	if ((cp = fileGetURL(NULL, pkg, KeepPackage)) != NULL) {
-	    strcpy(fname, cp);
+	    if (!getcwd(fname, FILENAME_MAX))
+		upchuck("getcwd");
 	    isTMP = TRUE;
+	} else {
+	    goto bail;
 	}
     }
     else if (fexists(pkg) && isfile(pkg)) {
@@ -123,22 +124,24 @@ pkg_do(char *pkg)
 	    strncpy(fname, cp, FILENAME_MAX);
     }
     if (cp) {
-	/*
-	 * Apply a crude heuristic to see how much space the package will
-	 * take up once it's unpacked.  I've noticed that most packages
-	 * compress an average of 75%, but we're only unpacking the + files so
-	 * be very optimistic.
-	 */
-	if (stat(fname, &sb) == FAIL) {
-	    warnx("can't stat package file '%s'", fname);
-	    code = 1;
-	    goto bail;
-	}
-	Home = make_playpen(PlayPen, sb.st_size / 2);
-	if (unpack(fname, "'+*'")) {
-	    warnx("error during unpacking, no info for '%s' available", pkg);
-	    code = 1;
-	    goto bail;
+	if (!isURL(pkg)) {
+	    /*
+	     * Apply a crude heuristic to see how much space the package will
+	     * take up once it's unpacked.  I've noticed that most packages
+	     * compress an average of 75%, but we're only unpacking the + files so
+	     * be very optimistic.
+	     */
+	    if (stat(fname, &sb) == FAIL) {
+	        warnx("can't stat package file '%s'", fname);
+	        code = 1;
+	        goto bail;
+	    }
+	    make_playpen(PlayPen, sb.st_size / 2);
+	    if (unpack(fname, "'+*'")) {
+		warnx("error during unpacking, no info for '%s' available", pkg);
+		code = 1;
+		goto bail;
+	    }
 	}
     }
     /* It's not an uninstalled package, try and find it among the installed */

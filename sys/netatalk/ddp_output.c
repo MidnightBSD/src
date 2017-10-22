@@ -21,9 +21,7 @@
  *	netatalk@itd.umich.edu
  */
 
-/* $FreeBSD: release/7.0.0/sys/netatalk/ddp_output.c 165974 2007-01-12 15:07:51Z rwatson $ */
-
-#include "opt_mac.h"
+/* $FreeBSD$ */
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -53,9 +51,7 @@ ddp_output(struct mbuf *m, struct socket *so)
 	struct ddpcb *ddp = sotoddpcb(so);
 
 #ifdef MAC
-	SOCK_LOCK(so);
-	mac_create_mbuf_from_socket(so, m);
-	SOCK_UNLOCK(so);
+	mac_socket_create_mbuf(so, m);
 #endif
 
 	M_PREPEND(m, sizeof(struct ddpehdr), M_DONTWAIT);
@@ -146,12 +142,16 @@ ddp_route(struct mbuf *m, struct route *ro)
 	if ((ro->ro_rt != NULL) && (ro->ro_rt->rt_ifa) &&
 	    (ifp = ro->ro_rt->rt_ifa->ifa_ifp)) {
 		net = ntohs(satosat(ro->ro_rt->rt_gateway)->sat_addr.s_net);
-		for (aa = at_ifaddr_list; aa != NULL; aa = aa->aa_next) {
+		AT_IFADDR_RLOCK();
+		TAILQ_FOREACH(aa, &at_ifaddrhead, aa_link) {
 			if (((net == 0) || (aa->aa_ifp == ifp)) &&
 			    net >= ntohs(aa->aa_firstnet) &&
 			    net <= ntohs(aa->aa_lastnet))
 				break;
 		}
+		if (aa != NULL)
+			ifa_ref(&aa->aa_ifa);
+		AT_IFADDR_RUNLOCK();
 	} else {
 		m_freem(m);
 #ifdef NETATALK_DEBUG
@@ -191,16 +191,25 @@ ddp_route(struct mbuf *m, struct route *ro)
 	 * mbuf without ensuring that the mbuf pointer is aligned.  This is
 	 * bad for transition routing, since phase 1 and phase 2 packets end
 	 * up poorly aligned due to the three byte elap header.
+	 *
+	 * XXXRW: kern/4184 suggests that an m_pullup() of (m) should take
+	 * place here to address possible alignment issues.
+	 *
+	 * XXXRW: This appears not to handle M_PKTHDR properly, as it doesn't
+	 * move the existing header from the old packet to the new one.
+	 * Posibly should call M_MOVE_PKTHDR()?  This would also allow
+	 * removing mac_mbuf_copy().
 	 */
 	if (!(aa->aa_flags & AFA_PHASE2)) {
 		MGET(m0, M_DONTWAIT, MT_DATA);
 		if (m0 == NULL) {
+			ifa_free(&aa->aa_ifa);
 			m_freem(m);
 			printf("ddp_route: no buffers\n");
 			return (ENOBUFS);
 		}
 #ifdef MAC
-		mac_copy_mbuf(m, m0);
+		mac_mbuf_copy(m, m0);
 #endif
 		m0->m_next = m;
 		/* XXX perhaps we ought to align the header? */
@@ -227,8 +236,11 @@ ddp_route(struct mbuf *m, struct route *ro)
 	if ((satosat(&aa->aa_addr)->sat_addr.s_net ==
 	    satosat(&ro->ro_dst)->sat_addr.s_net) &&
 	    (satosat(&aa->aa_addr)->sat_addr.s_node ==
-	    satosat(&ro->ro_dst)->sat_addr.s_node))
+	    satosat(&ro->ro_dst)->sat_addr.s_node)) {
+		ifa_free(&aa->aa_ifa);
 		return (if_simloop(ifp, m, gate.sat_family, 0));
+	}
+	ifa_free(&aa->aa_ifa);
 
 	/* XXX */
 	return ((*ifp->if_output)(ifp, m, (struct sockaddr *)&gate, NULL));

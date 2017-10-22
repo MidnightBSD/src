@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: socket.c,v 1.237.18.29 2007/08/28 07:20:06 tbox Exp $ */
+/* $Id$ */
 
 /*! \file */
 
@@ -25,9 +25,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
-#ifdef ISC_PLATFORM_HAVESYSUNH
-#include <sys/un.h>
-#endif
 #include <sys/time.h>
 #include <sys/uio.h>
 
@@ -53,16 +50,168 @@
 #include <isc/print.h>
 #include <isc/region.h>
 #include <isc/socket.h>
+#include <isc/stats.h>
 #include <isc/strerror.h>
 #include <isc/task.h>
 #include <isc/thread.h>
 #include <isc/util.h>
+#include <isc/xml.h>
+
+#ifdef ISC_PLATFORM_HAVESYSUNH
+#include <sys/un.h>
+#endif
+#ifdef ISC_PLATFORM_HAVEKQUEUE
+#include <sys/event.h>
+#endif
+#ifdef ISC_PLATFORM_HAVEEPOLL
+#include <sys/epoll.h>
+#endif
+#ifdef ISC_PLATFORM_HAVEDEVPOLL
+#if defined(HAVE_SYS_DEVPOLL_H)
+#include <sys/devpoll.h>
+#elif defined(HAVE_DEVPOLL_H)
+#include <devpoll.h>
+#endif
+#endif
 
 #include "errno2result.h"
 
-#ifndef ISC_PLATFORM_USETHREADS
+/* See task.c about the following definition: */
+#ifdef BIND9
+#ifdef ISC_PLATFORM_USETHREADS
+#define USE_WATCHER_THREAD
+#else
+#define USE_SHARED_MANAGER
+#endif	/* ISC_PLATFORM_USETHREADS */
+#endif	/* BIND9 */
+
+#ifndef USE_WATCHER_THREAD
 #include "socket_p.h"
-#endif /* ISC_PLATFORM_USETHREADS */
+#include "../task_p.h"
+#endif /* USE_WATCHER_THREAD */
+
+#if defined(SO_BSDCOMPAT) && defined(__linux__)
+#include <sys/utsname.h>
+#endif
+
+/*%
+ * Choose the most preferable multiplex method.
+ */
+#ifdef ISC_PLATFORM_HAVEKQUEUE
+#define USE_KQUEUE
+#elif defined (ISC_PLATFORM_HAVEEPOLL)
+#define USE_EPOLL
+#elif defined (ISC_PLATFORM_HAVEDEVPOLL)
+#define USE_DEVPOLL
+typedef struct {
+	unsigned int want_read : 1,
+		want_write : 1;
+} pollinfo_t;
+#else
+#define USE_SELECT
+#endif	/* ISC_PLATFORM_HAVEKQUEUE */
+
+#ifndef USE_WATCHER_THREAD
+#if defined(USE_KQUEUE) || defined(USE_EPOLL) || defined(USE_DEVPOLL)
+struct isc_socketwait {
+	int nevents;
+};
+#elif defined (USE_SELECT)
+struct isc_socketwait {
+	fd_set *readset;
+	fd_set *writeset;
+	int nfds;
+	int maxfd;
+};
+#endif	/* USE_KQUEUE */
+#endif /* !USE_WATCHER_THREAD */
+
+/*%
+ * Maximum number of allowable open sockets.  This is also the maximum
+ * allowable socket file descriptor.
+ *
+ * Care should be taken before modifying this value for select():
+ * The API standard doesn't ensure select() accept more than (the system default
+ * of) FD_SETSIZE descriptors, and the default size should in fact be fine in
+ * the vast majority of cases.  This constant should therefore be increased only
+ * when absolutely necessary and possible, i.e., the server is exhausting all
+ * available file descriptors (up to FD_SETSIZE) and the select() function
+ * and FD_xxx macros support larger values than FD_SETSIZE (which may not
+ * always by true, but we keep using some of them to ensure as much
+ * portability as possible).  Note also that overall server performance
+ * may be rather worsened with a larger value of this constant due to
+ * inherent scalability problems of select().
+ *
+ * As a special note, this value shouldn't have to be touched if
+ * this is a build for an authoritative only DNS server.
+ */
+#ifndef ISC_SOCKET_MAXSOCKETS
+#if defined(USE_KQUEUE) || defined(USE_EPOLL) || defined(USE_DEVPOLL)
+#define ISC_SOCKET_MAXSOCKETS 4096
+#elif defined(USE_SELECT)
+#define ISC_SOCKET_MAXSOCKETS FD_SETSIZE
+#endif	/* USE_KQUEUE... */
+#endif	/* ISC_SOCKET_MAXSOCKETS */
+
+#ifdef USE_SELECT
+/*%
+ * Mac OS X needs a special definition to support larger values in select().
+ * We always define this because a larger value can be specified run-time.
+ */
+#ifdef __APPLE__
+#define _DARWIN_UNLIMITED_SELECT
+#endif	/* __APPLE__ */
+#endif	/* USE_SELECT */
+
+#ifdef ISC_SOCKET_USE_POLLWATCH
+/*%
+ * If this macro is defined, enable workaround for a Solaris /dev/poll kernel
+ * bug: DP_POLL ioctl could keep sleeping even if socket I/O is possible for
+ * some of the specified FD.  The idea is based on the observation that it's
+ * likely for a busy server to keep receiving packets.  It specifically works
+ * as follows: the socket watcher is first initialized with the state of
+ * "poll_idle".  While it's in the idle state it keeps sleeping until a socket
+ * event occurs.  When it wakes up for a socket I/O event, it moves to the
+ * poll_active state, and sets the poll timeout to a short period
+ * (ISC_SOCKET_POLLWATCH_TIMEOUT msec).  If timeout occurs in this state, the
+ * watcher goes to the poll_checking state with the same timeout period.
+ * In this state, the watcher tries to detect whether this is a break
+ * during intermittent events or the kernel bug is triggered.  If the next
+ * polling reports an event within the short period, the previous timeout is
+ * likely to be a kernel bug, and so the watcher goes back to the active state.
+ * Otherwise, it moves to the idle state again.
+ *
+ * It's not clear whether this is a thread-related bug, but since we've only
+ * seen this with threads, this workaround is used only when enabling threads.
+ */
+
+typedef enum { poll_idle, poll_active, poll_checking } pollstate_t;
+
+#ifndef ISC_SOCKET_POLLWATCH_TIMEOUT
+#define ISC_SOCKET_POLLWATCH_TIMEOUT 10
+#endif	/* ISC_SOCKET_POLLWATCH_TIMEOUT */
+#endif	/* ISC_SOCKET_USE_POLLWATCH */
+
+/*%
+ * Size of per-FD lock buckets.
+ */
+#ifdef ISC_PLATFORM_USETHREADS
+#define FDLOCK_COUNT		1024
+#define FDLOCK_ID(fd)		((fd) % FDLOCK_COUNT)
+#else
+#define FDLOCK_COUNT		1
+#define FDLOCK_ID(fd)		0
+#endif	/* ISC_PLATFORM_USETHREADS */
+
+/*%
+ * Maximum number of events communicated with the kernel.  There should normally
+ * be no need for having a large number.
+ */
+#if defined(USE_KQUEUE) || defined(USE_EPOLL) || defined(USE_DEVPOLL)
+#ifndef ISC_SOCKET_MAXEVENTS
+#define ISC_SOCKET_MAXEVENTS	64
+#endif
+#endif
 
 /*%
  * Some systems define the socket length argument as an int, some as size_t,
@@ -70,11 +219,6 @@
  */
 #ifndef ISC_SOCKADDR_LEN_T
 #define ISC_SOCKADDR_LEN_T unsigned int
-#endif
-
-
-#if defined(SO_BSDCOMPAT) && defined(__linux__)
-#include <sys/utsname.h>
 #endif
 
 /*%
@@ -114,7 +258,7 @@
 typedef isc_event_t intev_t;
 
 #define SOCKET_MAGIC		ISC_MAGIC('I', 'O', 'i', 'o')
-#define VALID_SOCKET(t)		ISC_MAGIC_VALID(t, SOCKET_MAGIC)
+#define VALID_SOCKET(s)		ISC_MAGIC_VALID(s, SOCKET_MAGIC)
 
 /*!
  * IPv6 control information.  If the socket is an IPv6 socket we want
@@ -139,7 +283,7 @@ typedef isc_event_t intev_t;
 #endif
 
 /*%
- * The size to raise the recieve buffer to (from BIND 8).
+ * The size to raise the receive buffer to (from BIND 8).
  */
 #define RCVBUFSIZE (32*1024)
 
@@ -148,18 +292,26 @@ typedef isc_event_t intev_t;
  */
 #define NRETRIES 10
 
-struct isc_socket {
+typedef struct isc__socket isc__socket_t;
+typedef struct isc__socketmgr isc__socketmgr_t;
+
+#define NEWCONNSOCK(ev) ((isc__socket_t *)(ev)->newsocket)
+
+struct isc__socket {
 	/* Not locked. */
-	unsigned int		magic;
-	isc_socketmgr_t	       *manager;
+	isc_socket_t		common;
+	isc__socketmgr_t	*manager;
 	isc_mutex_t		lock;
 	isc_sockettype_t	type;
+	const isc_statscounter_t	*statsindex;
 
 	/* Locked by socket lock. */
-	ISC_LINK(isc_socket_t)	link;
+	ISC_LINK(isc__socket_t)	link;
 	unsigned int		references;
 	int			fd;
 	int			pf;
+	char				name[16];
+	void *				tag;
 
 	ISC_LIST(isc_socketevent_t)		send_list;
 	ISC_LIST(isc_socketevent_t)		recv_list;
@@ -174,7 +326,7 @@ struct isc_socket {
 	intev_t			readable_ev;
 	intev_t			writable_ev;
 
-	isc_sockaddr_t		address;  /* remote address */
+	isc_sockaddr_t		peer_address;  /* remote address */
 
 	unsigned int		pending_recv : 1,
 				pending_send : 1,
@@ -192,39 +344,79 @@ struct isc_socket {
 	ISC_SOCKADDR_LEN_T	recvcmsgbuflen;
 	char			*sendcmsgbuf;
 	ISC_SOCKADDR_LEN_T	sendcmsgbuflen;
+
+	void			*fdwatcharg;
+	isc_sockfdwatch_t	fdwatchcb;
+	int			fdwatchflags;
+	isc_task_t		*fdwatchtask;
 };
 
 #define SOCKET_MANAGER_MAGIC	ISC_MAGIC('I', 'O', 'm', 'g')
 #define VALID_MANAGER(m)	ISC_MAGIC_VALID(m, SOCKET_MANAGER_MAGIC)
 
-struct isc_socketmgr {
+struct isc__socketmgr {
 	/* Not locked. */
-	unsigned int		magic;
+	isc_socketmgr_t		common;
 	isc_mem_t	       *mctx;
 	isc_mutex_t		lock;
-	/* Locked by manager lock. */
-	ISC_LIST(isc_socket_t)	socklist;
-	fd_set			read_fds;
-	fd_set			write_fds;
-	isc_socket_t	       *fds[FD_SETSIZE];
-	int			fdstate[FD_SETSIZE];
-	int			maxfd;
+	isc_mutex_t		*fdlock;
+	isc_stats_t		*stats;
+#ifdef USE_KQUEUE
+	int			kqueue_fd;
+	int			nevents;
+	struct kevent		*events;
+#endif	/* USE_KQUEUE */
+#ifdef USE_EPOLL
+	int			epoll_fd;
+	int			nevents;
+	struct epoll_event	*events;
+#endif	/* USE_EPOLL */
+#ifdef USE_DEVPOLL
+	int			devpoll_fd;
+	int			nevents;
+	struct pollfd		*events;
+#endif	/* USE_DEVPOLL */
+#ifdef USE_SELECT
+	int			fd_bufsize;
+#endif	/* USE_SELECT */
+	unsigned int		maxsocks;
 #ifdef ISC_PLATFORM_USETHREADS
+	int			pipe_fds[2];
+#endif
+
+	/* Locked by fdlock. */
+	isc__socket_t	       **fds;
+	int			*fdstate;
+#ifdef USE_DEVPOLL
+	pollinfo_t		*fdpollinfo;
+#endif
+
+	/* Locked by manager lock. */
+	ISC_LIST(isc__socket_t)	socklist;
+#ifdef USE_SELECT
+	fd_set			*read_fds;
+	fd_set			*read_fds_copy;
+	fd_set			*write_fds;
+	fd_set			*write_fds_copy;
+	int			maxfd;
+#endif	/* USE_SELECT */
+	int			reserved;	/* unlocked */
+#ifdef USE_WATCHER_THREAD
 	isc_thread_t		watcher;
 	isc_condition_t		shutdown_ok;
-	int			pipe_fds[2];
-#else /* ISC_PLATFORM_USETHREADS */
+#else /* USE_WATCHER_THREAD */
 	unsigned int		refs;
-#endif /* ISC_PLATFORM_USETHREADS */
+#endif /* USE_WATCHER_THREAD */
+	int			maxudp;
 };
 
-#ifndef ISC_PLATFORM_USETHREADS
-static isc_socketmgr_t *socketmgr = NULL;
-#endif /* ISC_PLATFORM_USETHREADS */
+#ifdef USE_SHARED_MANAGER
+static isc__socketmgr_t *socketmgr = NULL;
+#endif /* USE_SHARED_MANAGER */
 
-#define CLOSED		0	/* this one must be zero */
-#define MANAGED		1
-#define CLOSE_PENDING	2
+#define CLOSED			0	/* this one must be zero */
+#define MANAGED			1
+#define CLOSE_PENDING		2
 
 /*
  * send() and recv() iovec counts
@@ -236,21 +428,165 @@ static isc_socketmgr_t *socketmgr = NULL;
 # define MAXSCATTERGATHER_RECV	(ISC_SOCKET_MAXSCATTERGATHER)
 #endif
 
-static void send_recvdone_event(isc_socket_t *, isc_socketevent_t **);
-static void send_senddone_event(isc_socket_t *, isc_socketevent_t **);
-static void free_socket(isc_socket_t **);
-static isc_result_t allocate_socket(isc_socketmgr_t *, isc_sockettype_t,
-				    isc_socket_t **);
-static void destroy(isc_socket_t **);
+static void send_recvdone_event(isc__socket_t *, isc_socketevent_t **);
+static void send_senddone_event(isc__socket_t *, isc_socketevent_t **);
+static void free_socket(isc__socket_t **);
+static isc_result_t allocate_socket(isc__socketmgr_t *, isc_sockettype_t,
+				    isc__socket_t **);
+static void destroy(isc__socket_t **);
 static void internal_accept(isc_task_t *, isc_event_t *);
 static void internal_connect(isc_task_t *, isc_event_t *);
 static void internal_recv(isc_task_t *, isc_event_t *);
 static void internal_send(isc_task_t *, isc_event_t *);
-static void process_cmsg(isc_socket_t *, struct msghdr *, isc_socketevent_t *);
-static void build_msghdr_send(isc_socket_t *, isc_socketevent_t *,
+static void internal_fdwatch_write(isc_task_t *, isc_event_t *);
+static void internal_fdwatch_read(isc_task_t *, isc_event_t *);
+static void process_cmsg(isc__socket_t *, struct msghdr *, isc_socketevent_t *);
+static void build_msghdr_send(isc__socket_t *, isc_socketevent_t *,
 			      struct msghdr *, struct iovec *, size_t *);
-static void build_msghdr_recv(isc_socket_t *, isc_socketevent_t *,
+static void build_msghdr_recv(isc__socket_t *, isc_socketevent_t *,
 			      struct msghdr *, struct iovec *, size_t *);
+#ifdef USE_WATCHER_THREAD
+static isc_boolean_t process_ctlfd(isc__socketmgr_t *manager);
+#endif
+
+/*%
+ * The following can be either static or public, depending on build environment.
+ */
+
+#ifdef BIND9
+#define ISC_SOCKETFUNC_SCOPE
+#else
+#define ISC_SOCKETFUNC_SCOPE static
+#endif
+
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_create(isc_socketmgr_t *manager, int pf, isc_sockettype_t type,
+		   isc_socket_t **socketp);
+ISC_SOCKETFUNC_SCOPE void
+isc__socket_attach(isc_socket_t *sock, isc_socket_t **socketp);
+ISC_SOCKETFUNC_SCOPE void
+isc__socket_detach(isc_socket_t **socketp);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socketmgr_create(isc_mem_t *mctx, isc_socketmgr_t **managerp);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socketmgr_create2(isc_mem_t *mctx, isc_socketmgr_t **managerp,
+		       unsigned int maxsocks);
+ISC_SOCKETFUNC_SCOPE void
+isc__socketmgr_destroy(isc_socketmgr_t **managerp);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_recvv(isc_socket_t *sock, isc_bufferlist_t *buflist,
+		 unsigned int minimum, isc_task_t *task,
+		  isc_taskaction_t action, const void *arg);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_recv(isc_socket_t *sock, isc_region_t *region,
+		 unsigned int minimum, isc_task_t *task,
+		 isc_taskaction_t action, const void *arg);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_recv2(isc_socket_t *sock, isc_region_t *region,
+		  unsigned int minimum, isc_task_t *task,
+		  isc_socketevent_t *event, unsigned int flags);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_send(isc_socket_t *sock, isc_region_t *region,
+		 isc_task_t *task, isc_taskaction_t action, const void *arg);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_sendto(isc_socket_t *sock, isc_region_t *region,
+		   isc_task_t *task, isc_taskaction_t action, const void *arg,
+		   isc_sockaddr_t *address, struct in6_pktinfo *pktinfo);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_sendv(isc_socket_t *sock, isc_bufferlist_t *buflist,
+		  isc_task_t *task, isc_taskaction_t action, const void *arg);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_sendtov(isc_socket_t *sock, isc_bufferlist_t *buflist,
+		    isc_task_t *task, isc_taskaction_t action, const void *arg,
+		    isc_sockaddr_t *address, struct in6_pktinfo *pktinfo);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_sendto2(isc_socket_t *sock, isc_region_t *region,
+		    isc_task_t *task,
+		    isc_sockaddr_t *address, struct in6_pktinfo *pktinfo,
+		    isc_socketevent_t *event, unsigned int flags);
+ISC_SOCKETFUNC_SCOPE void
+isc__socket_cleanunix(isc_sockaddr_t *sockaddr, isc_boolean_t active);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_permunix(isc_sockaddr_t *sockaddr, isc_uint32_t perm,
+		     isc_uint32_t owner, isc_uint32_t group);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_bind(isc_socket_t *sock, isc_sockaddr_t *sockaddr,
+		 unsigned int options);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_filter(isc_socket_t *sock, const char *filter);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_listen(isc_socket_t *sock, unsigned int backlog);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_accept(isc_socket_t *sock,
+		   isc_task_t *task, isc_taskaction_t action, const void *arg);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_connect(isc_socket_t *sock, isc_sockaddr_t *addr,
+		    isc_task_t *task, isc_taskaction_t action,
+		    const void *arg);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_getpeername(isc_socket_t *sock, isc_sockaddr_t *addressp);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_getsockname(isc_socket_t *sock, isc_sockaddr_t *addressp);
+ISC_SOCKETFUNC_SCOPE void
+isc__socket_cancel(isc_socket_t *sock, isc_task_t *task, unsigned int how);
+ISC_SOCKETFUNC_SCOPE isc_sockettype_t
+isc__socket_gettype(isc_socket_t *sock);
+ISC_SOCKETFUNC_SCOPE isc_boolean_t
+isc__socket_isbound(isc_socket_t *sock);
+ISC_SOCKETFUNC_SCOPE void
+isc__socket_ipv6only(isc_socket_t *sock, isc_boolean_t yes);
+#if defined(HAVE_LIBXML2) && defined(BIND9)
+ISC_SOCKETFUNC_SCOPE void
+isc__socketmgr_renderxml(isc_socketmgr_t *mgr0, xmlTextWriterPtr writer);
+#endif
+
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_fdwatchcreate(isc_socketmgr_t *manager, int fd, int flags,
+			  isc_sockfdwatch_t callback, void *cbarg,
+			  isc_task_t *task, isc_socket_t **socketp);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_fdwatchpoke(isc_socket_t *sock, int flags);
+
+static struct {
+	isc_socketmethods_t methods;
+
+	/*%
+	 * The following are defined just for avoiding unused static functions.
+	 */
+#ifndef BIND9
+	void *recvv, *send, *sendv, *sendto2, *cleanunix, *permunix, *filter,
+		*listen, *accept, *getpeername, *isbound;
+#endif
+} socketmethods = {
+	{
+		isc__socket_attach,
+		isc__socket_detach,
+		isc__socket_bind,
+		isc__socket_sendto,
+		isc__socket_connect,
+		isc__socket_recv,
+		isc__socket_cancel,
+		isc__socket_getsockname,
+		isc__socket_gettype,
+		isc__socket_ipv6only,
+		isc__socket_fdwatchpoke
+	}
+#ifndef BIND9
+	,
+	(void *)isc__socket_recvv, (void *)isc__socket_send,
+	(void *)isc__socket_sendv, (void *)isc__socket_sendto2,
+	(void *)isc__socket_cleanunix, (void *)isc__socket_permunix,
+	(void *)isc__socket_filter, (void *)isc__socket_listen,
+	(void *)isc__socket_accept, (void *)isc__socket_getpeername,
+	(void *)isc__socket_isbound
+#endif
+};
+
+static isc_socketmgrmethods_t socketmgrmethods = {
+	isc__socketmgr_destroy,
+	isc__socket_create,
+	isc__socket_fdwatchcreate
+};
 
 #define SELECT_POKE_SHUTDOWN		(-1)
 #define SELECT_POKE_NOTHING		(-2)
@@ -262,12 +598,102 @@ static void build_msghdr_recv(isc_socket_t *, isc_socketevent_t *,
 
 #define SOCK_DEAD(s)			((s)->references == 0)
 
+/*%
+ * Shortcut index arrays to get access to statistics counters.
+ */
+enum {
+	STATID_OPEN = 0,
+	STATID_OPENFAIL = 1,
+	STATID_CLOSE = 2,
+	STATID_BINDFAIL = 3,
+	STATID_CONNECTFAIL = 4,
+	STATID_CONNECT = 5,
+	STATID_ACCEPTFAIL = 6,
+	STATID_ACCEPT = 7,
+	STATID_SENDFAIL = 8,
+	STATID_RECVFAIL = 9
+};
+static const isc_statscounter_t upd4statsindex[] = {
+	isc_sockstatscounter_udp4open,
+	isc_sockstatscounter_udp4openfail,
+	isc_sockstatscounter_udp4close,
+	isc_sockstatscounter_udp4bindfail,
+	isc_sockstatscounter_udp4connectfail,
+	isc_sockstatscounter_udp4connect,
+	-1,
+	-1,
+	isc_sockstatscounter_udp4sendfail,
+	isc_sockstatscounter_udp4recvfail
+};
+static const isc_statscounter_t upd6statsindex[] = {
+	isc_sockstatscounter_udp6open,
+	isc_sockstatscounter_udp6openfail,
+	isc_sockstatscounter_udp6close,
+	isc_sockstatscounter_udp6bindfail,
+	isc_sockstatscounter_udp6connectfail,
+	isc_sockstatscounter_udp6connect,
+	-1,
+	-1,
+	isc_sockstatscounter_udp6sendfail,
+	isc_sockstatscounter_udp6recvfail
+};
+static const isc_statscounter_t tcp4statsindex[] = {
+	isc_sockstatscounter_tcp4open,
+	isc_sockstatscounter_tcp4openfail,
+	isc_sockstatscounter_tcp4close,
+	isc_sockstatscounter_tcp4bindfail,
+	isc_sockstatscounter_tcp4connectfail,
+	isc_sockstatscounter_tcp4connect,
+	isc_sockstatscounter_tcp4acceptfail,
+	isc_sockstatscounter_tcp4accept,
+	isc_sockstatscounter_tcp4sendfail,
+	isc_sockstatscounter_tcp4recvfail
+};
+static const isc_statscounter_t tcp6statsindex[] = {
+	isc_sockstatscounter_tcp6open,
+	isc_sockstatscounter_tcp6openfail,
+	isc_sockstatscounter_tcp6close,
+	isc_sockstatscounter_tcp6bindfail,
+	isc_sockstatscounter_tcp6connectfail,
+	isc_sockstatscounter_tcp6connect,
+	isc_sockstatscounter_tcp6acceptfail,
+	isc_sockstatscounter_tcp6accept,
+	isc_sockstatscounter_tcp6sendfail,
+	isc_sockstatscounter_tcp6recvfail
+};
+static const isc_statscounter_t unixstatsindex[] = {
+	isc_sockstatscounter_unixopen,
+	isc_sockstatscounter_unixopenfail,
+	isc_sockstatscounter_unixclose,
+	isc_sockstatscounter_unixbindfail,
+	isc_sockstatscounter_unixconnectfail,
+	isc_sockstatscounter_unixconnect,
+	isc_sockstatscounter_unixacceptfail,
+	isc_sockstatscounter_unixaccept,
+	isc_sockstatscounter_unixsendfail,
+	isc_sockstatscounter_unixrecvfail
+};
+static const isc_statscounter_t fdwatchstatsindex[] = {
+	-1,
+	-1,
+	isc_sockstatscounter_fdwatchclose,
+	isc_sockstatscounter_fdwatchbindfail,
+	isc_sockstatscounter_fdwatchconnectfail,
+	isc_sockstatscounter_fdwatchconnect,
+	-1,
+	-1,
+	isc_sockstatscounter_fdwatchsendfail,
+	isc_sockstatscounter_fdwatchrecvfail
+};
+
+#if defined(USE_KQUEUE) || defined(USE_EPOLL) || defined(USE_DEVPOLL) || \
+    defined(USE_WATCHER_THREAD)
 static void
-manager_log(isc_socketmgr_t *sockmgr,
+manager_log(isc__socketmgr_t *sockmgr,
 	    isc_logcategory_t *category, isc_logmodule_t *module, int level,
 	    const char *fmt, ...) ISC_FORMAT_PRINTF(5, 6);
 static void
-manager_log(isc_socketmgr_t *sockmgr,
+manager_log(isc__socketmgr_t *sockmgr,
 	    isc_logcategory_t *category, isc_logmodule_t *module, int level,
 	    const char *fmt, ...)
 {
@@ -284,14 +710,15 @@ manager_log(isc_socketmgr_t *sockmgr,
 	isc_log_write(isc_lctx, category, module, level,
 		      "sockmgr %p: %s", sockmgr, msgbuf);
 }
+#endif
 
 static void
-socket_log(isc_socket_t *sock, isc_sockaddr_t *address,
+socket_log(isc__socket_t *sock, isc_sockaddr_t *address,
 	   isc_logcategory_t *category, isc_logmodule_t *module, int level,
 	   isc_msgcat_t *msgcat, int msgset, int message,
 	   const char *fmt, ...) ISC_FORMAT_PRINTF(9, 10);
 static void
-socket_log(isc_socket_t *sock, isc_sockaddr_t *address,
+socket_log(isc__socket_t *sock, isc_sockaddr_t *address,
 	   isc_logcategory_t *category, isc_logmodule_t *module, int level,
 	   isc_msgcat_t *msgcat, int msgset, int message,
 	   const char *fmt, ...)
@@ -319,9 +746,209 @@ socket_log(isc_socket_t *sock, isc_sockaddr_t *address,
 	}
 }
 
+#if defined(_AIX) && defined(ISC_NET_BSD44MSGHDR) && \
+    defined(USE_CMSG) && defined(IPV6_RECVPKTINFO)
+/*
+ * AIX has a kernel bug where IPV6_RECVPKTINFO gets cleared by
+ * setting IPV6_V6ONLY.
+ */
 static void
-wakeup_socket(isc_socketmgr_t *manager, int fd, int msg) {
-	isc_socket_t *sock;
+FIX_IPV6_RECVPKTINFO(isc__socket_t *sock)
+{
+	char strbuf[ISC_STRERRORSIZE];
+	int on = 1;
+
+	if (sock->pf != AF_INET6 || sock->type != isc_sockettype_udp)
+		return;
+
+	if (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_RECVPKTINFO,
+		       (void *)&on, sizeof(on)) < 0) {
+
+		isc__strerror(errno, strbuf, sizeof(strbuf));
+		UNEXPECTED_ERROR(__FILE__, __LINE__,
+				 "setsockopt(%d, IPV6_RECVPKTINFO) "
+				 "%s: %s", sock->fd,
+				 isc_msgcat_get(isc_msgcat,
+						ISC_MSGSET_GENERAL,
+						ISC_MSG_FAILED,
+						"failed"),
+				 strbuf);
+	}
+}
+#else
+#define FIX_IPV6_RECVPKTINFO(sock) (void)0
+#endif
+
+/*%
+ * Increment socket-related statistics counters.
+ */
+static inline void
+inc_stats(isc_stats_t *stats, isc_statscounter_t counterid) {
+	REQUIRE(counterid != -1);
+
+	if (stats != NULL)
+		isc_stats_increment(stats, counterid);
+}
+
+static inline isc_result_t
+watch_fd(isc__socketmgr_t *manager, int fd, int msg) {
+	isc_result_t result = ISC_R_SUCCESS;
+
+#ifdef USE_KQUEUE
+	struct kevent evchange;
+
+	memset(&evchange, 0, sizeof(evchange));
+	if (msg == SELECT_POKE_READ)
+		evchange.filter = EVFILT_READ;
+	else
+		evchange.filter = EVFILT_WRITE;
+	evchange.flags = EV_ADD;
+	evchange.ident = fd;
+	if (kevent(manager->kqueue_fd, &evchange, 1, NULL, 0, NULL) != 0)
+		result = isc__errno2result(errno);
+
+	return (result);
+#elif defined(USE_EPOLL)
+	struct epoll_event event;
+
+	if (msg == SELECT_POKE_READ)
+		event.events = EPOLLIN;
+	else
+		event.events = EPOLLOUT;
+	memset(&event.data, 0, sizeof(event.data));
+	event.data.fd = fd;
+	if (epoll_ctl(manager->epoll_fd, EPOLL_CTL_ADD, fd, &event) == -1 &&
+	    errno != EEXIST) {
+		result = isc__errno2result(errno);
+	}
+
+	return (result);
+#elif defined(USE_DEVPOLL)
+	struct pollfd pfd;
+	int lockid = FDLOCK_ID(fd);
+
+	memset(&pfd, 0, sizeof(pfd));
+	if (msg == SELECT_POKE_READ)
+		pfd.events = POLLIN;
+	else
+		pfd.events = POLLOUT;
+	pfd.fd = fd;
+	pfd.revents = 0;
+	LOCK(&manager->fdlock[lockid]);
+	if (write(manager->devpoll_fd, &pfd, sizeof(pfd)) == -1)
+		result = isc__errno2result(errno);
+	else {
+		if (msg == SELECT_POKE_READ)
+			manager->fdpollinfo[fd].want_read = 1;
+		else
+			manager->fdpollinfo[fd].want_write = 1;
+	}
+	UNLOCK(&manager->fdlock[lockid]);
+
+	return (result);
+#elif defined(USE_SELECT)
+	LOCK(&manager->lock);
+	if (msg == SELECT_POKE_READ)
+		FD_SET(fd, manager->read_fds);
+	if (msg == SELECT_POKE_WRITE)
+		FD_SET(fd, manager->write_fds);
+	UNLOCK(&manager->lock);
+
+	return (result);
+#endif
+}
+
+static inline isc_result_t
+unwatch_fd(isc__socketmgr_t *manager, int fd, int msg) {
+	isc_result_t result = ISC_R_SUCCESS;
+
+#ifdef USE_KQUEUE
+	struct kevent evchange;
+
+	memset(&evchange, 0, sizeof(evchange));
+	if (msg == SELECT_POKE_READ)
+		evchange.filter = EVFILT_READ;
+	else
+		evchange.filter = EVFILT_WRITE;
+	evchange.flags = EV_DELETE;
+	evchange.ident = fd;
+	if (kevent(manager->kqueue_fd, &evchange, 1, NULL, 0, NULL) != 0)
+		result = isc__errno2result(errno);
+
+	return (result);
+#elif defined(USE_EPOLL)
+	struct epoll_event event;
+
+	if (msg == SELECT_POKE_READ)
+		event.events = EPOLLIN;
+	else
+		event.events = EPOLLOUT;
+	memset(&event.data, 0, sizeof(event.data));
+	event.data.fd = fd;
+	if (epoll_ctl(manager->epoll_fd, EPOLL_CTL_DEL, fd, &event) == -1 &&
+	    errno != ENOENT) {
+		char strbuf[ISC_STRERRORSIZE];
+		isc__strerror(errno, strbuf, sizeof(strbuf));
+		UNEXPECTED_ERROR(__FILE__, __LINE__,
+				 "epoll_ctl(DEL), %d: %s", fd, strbuf);
+		result = ISC_R_UNEXPECTED;
+	}
+	return (result);
+#elif defined(USE_DEVPOLL)
+	struct pollfd pfds[2];
+	size_t writelen = sizeof(pfds[0]);
+	int lockid = FDLOCK_ID(fd);
+
+	memset(pfds, 0, sizeof(pfds));
+	pfds[0].events = POLLREMOVE;
+	pfds[0].fd = fd;
+
+	/*
+	 * Canceling read or write polling via /dev/poll is tricky.  Since it
+	 * only provides a way of canceling per FD, we may need to re-poll the
+	 * socket for the other operation.
+	 */
+	LOCK(&manager->fdlock[lockid]);
+	if (msg == SELECT_POKE_READ &&
+	    manager->fdpollinfo[fd].want_write == 1) {
+		pfds[1].events = POLLOUT;
+		pfds[1].fd = fd;
+		writelen += sizeof(pfds[1]);
+	}
+	if (msg == SELECT_POKE_WRITE &&
+	    manager->fdpollinfo[fd].want_read == 1) {
+		pfds[1].events = POLLIN;
+		pfds[1].fd = fd;
+		writelen += sizeof(pfds[1]);
+	}
+
+	if (write(manager->devpoll_fd, pfds, writelen) == -1)
+		result = isc__errno2result(errno);
+	else {
+		if (msg == SELECT_POKE_READ)
+			manager->fdpollinfo[fd].want_read = 0;
+		else
+			manager->fdpollinfo[fd].want_write = 0;
+	}
+	UNLOCK(&manager->fdlock[lockid]);
+
+	return (result);
+#elif defined(USE_SELECT)
+	LOCK(&manager->lock);
+	if (msg == SELECT_POKE_READ)
+		FD_CLR(fd, manager->read_fds);
+	else if (msg == SELECT_POKE_WRITE)
+		FD_CLR(fd, manager->write_fds);
+	UNLOCK(&manager->lock);
+
+	return (result);
+#endif
+}
+
+static void
+wakeup_socket(isc__socketmgr_t *manager, int fd, int msg) {
+	isc_result_t result;
+	int lockid = FDLOCK_ID(fd);
 
 	/*
 	 * This is a wakeup on a socket.  If the socket is not in the
@@ -329,37 +956,65 @@ wakeup_socket(isc_socketmgr_t *manager, int fd, int msg) {
 	 * or writes.
 	 */
 
-	INSIST(fd >= 0 && fd < (int)FD_SETSIZE);
+	INSIST(fd >= 0 && fd < (int)manager->maxsocks);
 
-	if (manager->fdstate[fd] == CLOSE_PENDING) {
+	if (msg == SELECT_POKE_CLOSE) {
+		/* No one should be updating fdstate, so no need to lock it */
+		INSIST(manager->fdstate[fd] == CLOSE_PENDING);
 		manager->fdstate[fd] = CLOSED;
-		FD_CLR(fd, &manager->read_fds);
-		FD_CLR(fd, &manager->write_fds);
+		(void)unwatch_fd(manager, fd, SELECT_POKE_READ);
+		(void)unwatch_fd(manager, fd, SELECT_POKE_WRITE);
 		(void)close(fd);
 		return;
 	}
-	if (manager->fdstate[fd] != MANAGED)
-		return;
 
-	sock = manager->fds[fd];
+	LOCK(&manager->fdlock[lockid]);
+	if (manager->fdstate[fd] == CLOSE_PENDING) {
+		UNLOCK(&manager->fdlock[lockid]);
+
+		/*
+		 * We accept (and ignore) any error from unwatch_fd() as we are
+		 * closing the socket, hoping it doesn't leave dangling state in
+		 * the kernel.
+		 * Note that unwatch_fd() must be called after releasing the
+		 * fdlock; otherwise it could cause deadlock due to a lock order
+		 * reversal.
+		 */
+		(void)unwatch_fd(manager, fd, SELECT_POKE_READ);
+		(void)unwatch_fd(manager, fd, SELECT_POKE_WRITE);
+		return;
+	}
+	if (manager->fdstate[fd] != MANAGED) {
+		UNLOCK(&manager->fdlock[lockid]);
+		return;
+	}
+	UNLOCK(&manager->fdlock[lockid]);
 
 	/*
 	 * Set requested bit.
 	 */
-	if (msg == SELECT_POKE_READ)
-		FD_SET(sock->fd, &manager->read_fds);
-	if (msg == SELECT_POKE_WRITE)
-		FD_SET(sock->fd, &manager->write_fds);
+	result = watch_fd(manager, fd, msg);
+	if (result != ISC_R_SUCCESS) {
+		/*
+		 * XXXJT: what should we do?  Ignoring the failure of watching
+		 * a socket will make the application dysfunctional, but there
+		 * seems to be no reasonable recovery process.
+		 */
+		isc_log_write(isc_lctx, ISC_LOGCATEGORY_GENERAL,
+			      ISC_LOGMODULE_SOCKET, ISC_LOG_ERROR,
+			      "failed to start watching FD (%d): %s",
+			      fd, isc_result_totext(result));
+	}
 }
 
-#ifdef ISC_PLATFORM_USETHREADS
+#ifdef USE_WATCHER_THREAD
 /*
  * Poke the select loop when there is something for us to do.
  * The write is required (by POSIX) to complete.  That is, we
  * will not get partial writes.
  */
 static void
-select_poke(isc_socketmgr_t *mgr, int fd, int msg) {
+select_poke(isc__socketmgr_t *mgr, int fd, int msg) {
 	int cc;
 	int buf[2];
 	char strbuf[ISC_STRERRORSIZE];
@@ -398,7 +1053,7 @@ select_poke(isc_socketmgr_t *mgr, int fd, int msg) {
  * Read a message on the internal fd.
  */
 static void
-select_readmsg(isc_socketmgr_t *mgr, int *fd, int *msg) {
+select_readmsg(isc__socketmgr_t *mgr, int *fd, int *msg) {
 	int buf[2];
 	int cc;
 	char strbuf[ISC_STRERRORSIZE];
@@ -417,7 +1072,7 @@ select_readmsg(isc_socketmgr_t *mgr, int *fd, int *msg) {
 					   "read() failed "
 					   "during watcher poke: %s"),
 			    strbuf);
-		
+
 		return;
 	}
 	INSIST(cc == sizeof(buf));
@@ -425,19 +1080,19 @@ select_readmsg(isc_socketmgr_t *mgr, int *fd, int *msg) {
 	*fd = buf[0];
 	*msg = buf[1];
 }
-#else /* ISC_PLATFORM_USETHREADS */
+#else /* USE_WATCHER_THREAD */
 /*
  * Update the state of the socketmgr when something changes.
  */
 static void
-select_poke(isc_socketmgr_t *manager, int fd, int msg) {
+select_poke(isc__socketmgr_t *manager, int fd, int msg) {
 	if (msg == SELECT_POKE_SHUTDOWN)
 		return;
 	else if (fd >= 0)
 		wakeup_socket(manager, fd, msg);
 	return;
 }
-#endif /* ISC_PLATFORM_USETHREADS */
+#endif /* USE_WATCHER_THREAD */
 
 /*
  * Make a fd non-blocking.
@@ -522,7 +1177,7 @@ cmsg_space(ISC_SOCKADDR_LEN_T len) {
 		return ((char *)cmsgp - (char *)msg.msg_control);
 	else
 		return (0);
-#endif	
+#endif
 }
 #endif /* USE_CMSG */
 
@@ -530,7 +1185,7 @@ cmsg_space(ISC_SOCKADDR_LEN_T len) {
  * Process control messages received on a socket.
  */
 static void
-process_cmsg(isc_socket_t *sock, struct msghdr *msg, isc_socketevent_t *dev) {
+process_cmsg(isc__socket_t *sock, struct msghdr *msg, isc_socketevent_t *dev) {
 #ifdef USE_CMSG
 	struct cmsghdr *cmsgp;
 #ifdef ISC_PLATFORM_HAVEIN6PKTINFO
@@ -596,7 +1251,7 @@ process_cmsg(isc_socket_t *sock, struct msghdr *msg, isc_socketevent_t *dev) {
 				   "interface received on ifindex %u",
 				   dev->pktinfo.ipi6_ifindex);
 			if (IN6_IS_ADDR_MULTICAST(&pktinfop->ipi6_addr))
-				dev->attributes |= ISC_SOCKEVENTATTR_MULTICAST;				
+				dev->attributes |= ISC_SOCKEVENTATTR_MULTICAST;
 			goto next;
 		}
 #endif
@@ -633,7 +1288,7 @@ process_cmsg(isc_socket_t *sock, struct msghdr *msg, isc_socketevent_t *dev) {
  * this transaction can send.
  */
 static void
-build_msghdr_send(isc_socket_t *sock, isc_socketevent_t *dev,
+build_msghdr_send(isc__socket_t *sock, isc_socketevent_t *dev,
 		  struct msghdr *msg, struct iovec *iov, size_t *write_countp)
 {
 	unsigned int iovcount;
@@ -644,7 +1299,7 @@ build_msghdr_send(isc_socket_t *sock, isc_socketevent_t *dev,
 
 	memset(msg, 0, sizeof(*msg));
 
-	if (sock->type == isc_sockettype_udp) {
+	if (!sock->connected) {
 		msg->msg_name = (void *)&dev->address.type.sa;
 		msg->msg_namelen = dev->address.length;
 	} else {
@@ -710,6 +1365,9 @@ build_msghdr_send(isc_socket_t *sock, isc_socketevent_t *dev,
 #if defined(USE_CMSG) && defined(ISC_PLATFORM_HAVEIN6PKTINFO)
 	if ((sock->type == isc_sockettype_udp)
 	    && ((dev->attributes & ISC_SOCKEVENTATTR_PKTINFO) != 0)) {
+#if defined(IPV6_USE_MIN_MTU)
+		int use_min_mtu = 1;	/* -1, 0, 1 */
+#endif
 		struct cmsghdr *cmsgp;
 		struct in6_pktinfo *pktinfop;
 
@@ -728,6 +1386,22 @@ build_msghdr_send(isc_socket_t *sock, isc_socketevent_t *dev,
 		cmsgp->cmsg_len = cmsg_len(sizeof(struct in6_pktinfo));
 		pktinfop = (struct in6_pktinfo *)CMSG_DATA(cmsgp);
 		memcpy(pktinfop, &dev->pktinfo, sizeof(struct in6_pktinfo));
+#if defined(IPV6_USE_MIN_MTU)
+		/*
+		 * Set IPV6_USE_MIN_MTU as a per packet option as FreeBSD
+		 * ignores setsockopt(IPV6_USE_MIN_MTU) when IPV6_PKTINFO
+		 * is used.
+		 */
+		cmsgp = (struct cmsghdr *)(sock->sendcmsgbuf +
+					   msg->msg_controllen);
+		msg->msg_controllen += cmsg_space(sizeof(use_min_mtu));
+		INSIST(msg->msg_controllen <= sock->sendcmsgbuflen);
+
+		cmsgp->cmsg_level = IPPROTO_IPV6;
+		cmsgp->cmsg_type = IPV6_USE_MIN_MTU;
+		cmsgp->cmsg_len = cmsg_len(sizeof(use_min_mtu));
+		memcpy(CMSG_DATA(cmsgp), &use_min_mtu, sizeof(use_min_mtu));
+#endif
 	}
 #endif /* USE_CMSG && ISC_PLATFORM_HAVEIPV6 */
 #else /* ISC_NET_BSD44MSGHDR */
@@ -741,7 +1415,7 @@ build_msghdr_send(isc_socket_t *sock, isc_socketevent_t *dev,
 
 /*
  * Construct an iov array and attach it to the msghdr passed in.  This is
- * the RECV constructor, which will use the avialable region of the buffer
+ * the RECV constructor, which will use the available region of the buffer
  * (if using a buffer list) or will use the internal region (if a single
  * buffer I/O is requested).
  *
@@ -752,7 +1426,7 @@ build_msghdr_send(isc_socket_t *sock, isc_socketevent_t *dev,
  * this transaction can receive.
  */
 static void
-build_msghdr_recv(isc_socket_t *sock, isc_socketevent_t *dev,
+build_msghdr_recv(isc__socket_t *sock, isc_socketevent_t *dev,
 		  struct msghdr *msg, struct iovec *iov, size_t *read_countp)
 {
 	unsigned int iovcount;
@@ -791,7 +1465,7 @@ build_msghdr_recv(isc_socket_t *sock, isc_socketevent_t *dev,
 	} else { /* TCP */
 		msg->msg_name = NULL;
 		msg->msg_namelen = 0;
-		dev->address = sock->address;
+		dev->address = sock->peer_address;
 	}
 
 	buffer = ISC_LIST_HEAD(dev->bufferlist);
@@ -873,17 +1547,17 @@ build_msghdr_recv(isc_socket_t *sock, isc_socketevent_t *dev,
 }
 
 static void
-set_dev_address(isc_sockaddr_t *address, isc_socket_t *sock,
+set_dev_address(isc_sockaddr_t *address, isc__socket_t *sock,
 		isc_socketevent_t *dev)
 {
 	if (sock->type == isc_sockettype_udp) {
 		if (address != NULL)
 			dev->address = *address;
 		else
-			dev->address = sock->address;
+			dev->address = sock->peer_address;
 	} else if (sock->type == isc_sockettype_tcp) {
 		INSIST(address == NULL);
-		dev->address = sock->address;
+		dev->address = sock->peer_address;
 	}
 }
 
@@ -897,7 +1571,7 @@ destroy_socketevent(isc_event_t *event) {
 }
 
 static isc_socketevent_t *
-allocate_socketevent(isc_socket_t *sock, isc_eventtype_t eventtype,
+allocate_socketevent(isc__socket_t *sock, isc_eventtype_t eventtype,
 		     isc_taskaction_t action, const void *arg)
 {
 	isc_socketevent_t *ev;
@@ -910,7 +1584,7 @@ allocate_socketevent(isc_socket_t *sock, isc_eventtype_t eventtype,
 	if (ev == NULL)
 		return (NULL);
 
-	ev->result = ISC_R_UNEXPECTED;
+	ev->result = ISC_R_UNSET;
 	ISC_LINK_INIT(ev, ev_link);
 	ISC_LIST_INIT(ev->bufferlist);
 	ev->region.base = NULL;
@@ -929,15 +1603,17 @@ dump_msg(struct msghdr *msg) {
 	unsigned int i;
 
 	printf("MSGHDR %p\n", msg);
-	printf("\tname %p, namelen %d\n", msg->msg_name, msg->msg_namelen);
-	printf("\tiov %p, iovlen %d\n", msg->msg_iov, msg->msg_iovlen);
+	printf("\tname %p, namelen %ld\n", msg->msg_name,
+	       (long) msg->msg_namelen);
+	printf("\tiov %p, iovlen %ld\n", msg->msg_iov,
+	       (long) msg->msg_iovlen);
 	for (i = 0; i < (unsigned int)msg->msg_iovlen; i++)
-		printf("\t\t%d\tbase %p, len %d\n", i,
+		printf("\t\t%d\tbase %p, len %ld\n", i,
 		       msg->msg_iov[i].iov_base,
-		       msg->msg_iov[i].iov_len);
+		       (long) msg->msg_iov[i].iov_len);
 #ifdef ISC_NET_BSD44MSGHDR
-	printf("\tcontrol %p, controllen %d\n", msg->msg_control,
-	       msg->msg_controllen);
+	printf("\tcontrol %p, controllen %ld\n", msg->msg_control,
+	       (long) msg->msg_controllen);
 #endif
 }
 #endif
@@ -948,7 +1624,7 @@ dump_msg(struct msghdr *msg) {
 #define DOIO_EOF		3	/* EOF, no event sent */
 
 static int
-doio_recv(isc_socket_t *sock, isc_socketevent_t *dev) {
+doio_recv(isc__socket_t *sock, isc_socketevent_t *dev) {
 	int cc;
 	struct iovec iov[MAXSCATTERGATHER_RECV];
 	size_t read_count;
@@ -979,7 +1655,7 @@ doio_recv(isc_socket_t *sock, isc_socketevent_t *dev) {
 			isc__strerror(recv_errno, strbuf, sizeof(strbuf));
 			socket_log(sock, NULL, IOEVENT,
 				   isc_msgcat, ISC_MSGSET_SOCKET,
-				   ISC_MSG_DOIORECV, 
+				   ISC_MSG_DOIORECV,
 				  "doio_recv: recvmsg(%d) %d bytes, err %d/%s",
 				   sock->fd, cc, recv_errno, strbuf);
 		}
@@ -988,6 +1664,8 @@ doio_recv(isc_socket_t *sock, isc_socketevent_t *dev) {
 	if (recv_errno == _system) { \
 		if (sock->connected) { \
 			dev->result = _isc; \
+			inc_stats(sock->manager->stats, \
+				  sock->statsindex[STATID_RECVFAIL]); \
 			return (DOIO_HARD); \
 		} \
 		return (DOIO_SOFT); \
@@ -995,6 +1673,8 @@ doio_recv(isc_socket_t *sock, isc_socketevent_t *dev) {
 #define ALWAYS_HARD(_system, _isc) \
 	if (recv_errno == _system) { \
 		dev->result = _isc; \
+		inc_stats(sock->manager->stats, \
+			  sock->statsindex[STATID_RECVFAIL]); \
 		return (DOIO_HARD); \
 	}
 
@@ -1005,21 +1685,41 @@ doio_recv(isc_socket_t *sock, isc_socketevent_t *dev) {
 		/* HPUX 11.11 can return EADDRNOTAVAIL. */
 		SOFT_OR_HARD(EADDRNOTAVAIL, ISC_R_ADDRNOTAVAIL);
 		ALWAYS_HARD(ENOBUFS, ISC_R_NORESOURCES);
+		/*
+		 * HPUX returns EPROTO and EINVAL on receiving some ICMP/ICMPv6
+		 * errors.
+		 */
+#ifdef EPROTO
+		SOFT_OR_HARD(EPROTO, ISC_R_HOSTUNREACH);
+#endif
+		SOFT_OR_HARD(EINVAL, ISC_R_HOSTUNREACH);
 
 #undef SOFT_OR_HARD
 #undef ALWAYS_HARD
 
 		dev->result = isc__errno2result(recv_errno);
+		inc_stats(sock->manager->stats,
+			  sock->statsindex[STATID_RECVFAIL]);
 		return (DOIO_HARD);
 	}
 
 	/*
-	 * On TCP, zero length reads indicate EOF, while on
-	 * UDP, zero length reads are perfectly valid, although
-	 * strange.
+	 * On TCP and UNIX sockets, zero length reads indicate EOF,
+	 * while on UDP sockets, zero length reads are perfectly valid,
+	 * although strange.
 	 */
-	if ((sock->type == isc_sockettype_tcp) && (cc == 0))
-		return (DOIO_EOF);
+	switch (sock->type) {
+	case isc_sockettype_tcp:
+	case isc_sockettype_unix:
+		if (cc == 0)
+			return (DOIO_EOF);
+		break;
+	case isc_sockettype_udp:
+		break;
+	case isc_sockettype_fdwatch:
+	default:
+		INSIST(0);
+	}
 
 	if (sock->type == isc_sockettype_udp) {
 		dev->address.length = msghdr.msg_namelen;
@@ -1027,11 +1727,17 @@ doio_recv(isc_socket_t *sock, isc_socketevent_t *dev) {
 			if (isc_log_wouldlog(isc_lctx, IOEVENT_LEVEL)) {
 				socket_log(sock, &dev->address, IOEVENT,
 					   isc_msgcat, ISC_MSGSET_SOCKET,
-					   ISC_MSG_ZEROPORT, 
+					   ISC_MSG_ZEROPORT,
 					   "dropping source port zero packet");
 			}
 			return (DOIO_SOFT);
 		}
+		/*
+		 * Simulate a firewall blocking UDP responses bigger than
+		 * 512 bytes.
+		 */
+		if (sock->manager->maxudp != 0 && cc > sock->manager->maxudp)
+			return (DOIO_SOFT);
 	}
 
 	socket_log(sock, &dev->address, IOEVENT,
@@ -1072,6 +1778,7 @@ doio_recv(isc_socket_t *sock, isc_socketevent_t *dev) {
 		} else {
 			isc_buffer_add(buffer, actual_count);
 			actual_count = 0;
+			POST(actual_count);
 			break;
 		}
 		buffer = ISC_LIST_NEXT(buffer, link);
@@ -1108,7 +1815,7 @@ doio_recv(isc_socket_t *sock, isc_socketevent_t *dev) {
  *	No other return values are possible.
  */
 static int
-doio_send(isc_socket_t *sock, isc_socketevent_t *dev) {
+doio_send(isc__socket_t *sock, isc_socketevent_t *dev) {
 	int cc;
 	struct iovec iov[MAXSCATTERGATHER_SEND];
 	size_t write_count;
@@ -1138,6 +1845,8 @@ doio_send(isc_socket_t *sock, isc_socketevent_t *dev) {
 	if (send_errno == _system) { \
 		if (sock->connected) { \
 			dev->result = _isc; \
+			inc_stats(sock->manager->stats, \
+				  sock->statsindex[STATID_SENDFAIL]); \
 			return (DOIO_HARD); \
 		} \
 		return (DOIO_SOFT); \
@@ -1145,6 +1854,8 @@ doio_send(isc_socket_t *sock, isc_socketevent_t *dev) {
 #define ALWAYS_HARD(_system, _isc) \
 	if (send_errno == _system) { \
 		dev->result = _isc; \
+		inc_stats(sock->manager->stats, \
+			  sock->statsindex[STATID_SENDFAIL]); \
 		return (DOIO_HARD); \
 	}
 
@@ -1179,14 +1890,19 @@ doio_send(isc_socket_t *sock, isc_socketevent_t *dev) {
 		UNEXPECTED_ERROR(__FILE__, __LINE__, "internal_send: %s: %s",
 				 addrbuf, strbuf);
 		dev->result = isc__errno2result(send_errno);
+		inc_stats(sock->manager->stats,
+			  sock->statsindex[STATID_SENDFAIL]);
 		return (DOIO_HARD);
 	}
 
-	if (cc == 0)
+	if (cc == 0) {
+		inc_stats(sock->manager->stats,
+			  sock->statsindex[STATID_SENDFAIL]);
 		UNEXPECTED_ERROR(__FILE__, __LINE__,
-				 "internal_send: send() %s 0",
+				 "doio_send: send() %s 0",
 				 isc_msgcat_get(isc_msgcat, ISC_MSGSET_GENERAL,
 						ISC_MSG_RETURNED, "returned"));
+	}
 
 	/*
 	 * If we write less than we expected, update counters, poke.
@@ -1210,9 +1926,73 @@ doio_send(isc_socket_t *sock, isc_socketevent_t *dev) {
  * references exist.
  */
 static void
-destroy(isc_socket_t **sockp) {
-	isc_socket_t *sock = *sockp;
-	isc_socketmgr_t *manager = sock->manager;
+closesocket(isc__socketmgr_t *manager, isc__socket_t *sock, int fd) {
+	isc_sockettype_t type = sock->type;
+	int lockid = FDLOCK_ID(fd);
+
+	/*
+	 * No one has this socket open, so the watcher doesn't have to be
+	 * poked, and the socket doesn't have to be locked.
+	 */
+	LOCK(&manager->fdlock[lockid]);
+	manager->fds[fd] = NULL;
+	if (type == isc_sockettype_fdwatch)
+		manager->fdstate[fd] = CLOSED;
+	else
+		manager->fdstate[fd] = CLOSE_PENDING;
+	UNLOCK(&manager->fdlock[lockid]);
+	if (type == isc_sockettype_fdwatch) {
+		/*
+		 * The caller may close the socket once this function returns,
+		 * and `fd' may be reassigned for a new socket.  So we do
+		 * unwatch_fd() here, rather than defer it via select_poke().
+		 * Note: this may complicate data protection among threads and
+		 * may reduce performance due to additional locks.  One way to
+		 * solve this would be to dup() the watched descriptor, but we
+		 * take a simpler approach at this moment.
+		 */
+		(void)unwatch_fd(manager, fd, SELECT_POKE_READ);
+		(void)unwatch_fd(manager, fd, SELECT_POKE_WRITE);
+	} else
+		select_poke(manager, fd, SELECT_POKE_CLOSE);
+
+	inc_stats(manager->stats, sock->statsindex[STATID_CLOSE]);
+
+	/*
+	 * update manager->maxfd here (XXX: this should be implemented more
+	 * efficiently)
+	 */
+#ifdef USE_SELECT
+	LOCK(&manager->lock);
+	if (manager->maxfd == fd) {
+		int i;
+
+		manager->maxfd = 0;
+		for (i = fd - 1; i >= 0; i--) {
+			lockid = FDLOCK_ID(i);
+
+			LOCK(&manager->fdlock[lockid]);
+			if (manager->fdstate[i] == MANAGED) {
+				manager->maxfd = i;
+				UNLOCK(&manager->fdlock[lockid]);
+				break;
+			}
+			UNLOCK(&manager->fdlock[lockid]);
+		}
+#ifdef ISC_PLATFORM_USETHREADS
+		if (manager->maxfd < manager->pipe_fds[0])
+			manager->maxfd = manager->pipe_fds[0];
+#endif
+	}
+	UNLOCK(&manager->lock);
+#endif	/* USE_SELECT */
+}
+
+static void
+destroy(isc__socket_t **sockp) {
+	int fd;
+	isc__socket_t *sock = *sockp;
+	isc__socketmgr_t *manager = sock->manager;
 
 	socket_log(sock, NULL, CREATION, isc_msgcat, ISC_MSGSET_SOCKET,
 		   ISC_MSG_DESTROYING, "destroying");
@@ -1221,38 +2001,34 @@ destroy(isc_socket_t **sockp) {
 	INSIST(ISC_LIST_EMPTY(sock->recv_list));
 	INSIST(ISC_LIST_EMPTY(sock->send_list));
 	INSIST(sock->connect_ev == NULL);
-	REQUIRE(sock->fd >= 0 && sock->fd < (int)FD_SETSIZE);
+	REQUIRE(sock->fd == -1 || sock->fd < (int)manager->maxsocks);
+
+	if (sock->fd >= 0) {
+		fd = sock->fd;
+		sock->fd = -1;
+		closesocket(manager, sock, fd);
+	}
 
 	LOCK(&manager->lock);
 
-	/*
-	 * No one has this socket open, so the watcher doesn't have to be
-	 * poked, and the socket doesn't have to be locked.
-	 */
-	manager->fds[sock->fd] = NULL;
-	manager->fdstate[sock->fd] = CLOSE_PENDING;
-	select_poke(manager, sock->fd, SELECT_POKE_CLOSE);
 	ISC_LIST_UNLINK(manager->socklist, sock, link);
 
-#ifdef ISC_PLATFORM_USETHREADS
+#ifdef USE_WATCHER_THREAD
 	if (ISC_LIST_EMPTY(manager->socklist))
 		SIGNAL(&manager->shutdown_ok);
-#endif /* ISC_PLATFORM_USETHREADS */
+#endif /* USE_WATCHER_THREAD */
 
-	/*
-	 * XXX should reset manager->maxfd here
-	 */
+	/* can't unlock manager as its memory context is still used */
+	free_socket(sockp);
 
 	UNLOCK(&manager->lock);
-
-	free_socket(sockp);
 }
 
 static isc_result_t
-allocate_socket(isc_socketmgr_t *manager, isc_sockettype_t type,
-		isc_socket_t **socketp)
+allocate_socket(isc__socketmgr_t *manager, isc_sockettype_t type,
+		isc__socket_t **socketp)
 {
-	isc_socket_t *sock;
+	isc__socket_t *sock;
 	isc_result_t result;
 	ISC_SOCKADDR_LEN_T cmsgbuflen;
 
@@ -1261,14 +2037,14 @@ allocate_socket(isc_socketmgr_t *manager, isc_sockettype_t type,
 	if (sock == NULL)
 		return (ISC_R_NOMEMORY);
 
-	result = ISC_R_UNEXPECTED;
-
-	sock->magic = 0;
+	sock->common.magic = 0;
+	sock->common.impmagic = 0;
 	sock->references = 0;
 
 	sock->manager = manager;
 	sock->type = type;
 	sock->fd = -1;
+	sock->statsindex = NULL;
 
 	ISC_LINK_INIT(sock, link);
 
@@ -1280,7 +2056,7 @@ allocate_socket(isc_socketmgr_t *manager, isc_sockettype_t type,
 	 */
 	cmsgbuflen = 0;
 #if defined(USE_CMSG) && defined(ISC_PLATFORM_HAVEIN6PKTINFO)
-	cmsgbuflen = cmsg_space(sizeof(struct in6_pktinfo));
+	cmsgbuflen += cmsg_space(sizeof(struct in6_pktinfo));
 #endif
 #if defined(USE_CMSG) && defined(SO_TIMESTAMP)
 	cmsgbuflen += cmsg_space(sizeof(struct timeval));
@@ -1288,20 +2064,34 @@ allocate_socket(isc_socketmgr_t *manager, isc_sockettype_t type,
 	sock->recvcmsgbuflen = cmsgbuflen;
 	if (sock->recvcmsgbuflen != 0U) {
 		sock->recvcmsgbuf = isc_mem_get(manager->mctx, cmsgbuflen);
-		if (sock->recvcmsgbuf == NULL)
+		if (sock->recvcmsgbuf == NULL) {
+			result = ISC_R_NOMEMORY;
 			goto error;
+		}
 	}
 
 	cmsgbuflen = 0;
 #if defined(USE_CMSG) && defined(ISC_PLATFORM_HAVEIN6PKTINFO)
-	cmsgbuflen = cmsg_space(sizeof(struct in6_pktinfo));
+	cmsgbuflen += cmsg_space(sizeof(struct in6_pktinfo));
+#if defined(IPV6_USE_MIN_MTU)
+	/*
+	 * Provide space for working around FreeBSD's broken IPV6_USE_MIN_MTU
+	 * support.
+	 */
+	cmsgbuflen += cmsg_space(sizeof(int));
+#endif
 #endif
 	sock->sendcmsgbuflen = cmsgbuflen;
 	if (sock->sendcmsgbuflen != 0U) {
 		sock->sendcmsgbuf = isc_mem_get(manager->mctx, cmsgbuflen);
-		if (sock->sendcmsgbuf == NULL)
+		if (sock->sendcmsgbuf == NULL) {
+			result = ISC_R_NOMEMORY;
 			goto error;
+		}
 	}
+
+	memset(sock->name, 0, sizeof(sock->name));
+	sock->tag = NULL;
 
 	/*
 	 * set up list of readers and writers to be initially empty
@@ -1323,7 +2113,8 @@ allocate_socket(isc_socketmgr_t *manager, isc_sockettype_t type,
 	 */
 	result = isc_mutex_init(&sock->lock);
 	if (result != ISC_R_SUCCESS) {
-		sock->magic = 0;
+		sock->common.magic = 0;
+		sock->common.impmagic = 0;
 		goto error;
 	}
 
@@ -1337,7 +2128,8 @@ allocate_socket(isc_socketmgr_t *manager, isc_sockettype_t type,
 		       ISC_EVENTATTR_NOPURGE, NULL, ISC_SOCKEVENT_INTW,
 		       NULL, sock, sock, NULL, NULL);
 
-	sock->magic = SOCKET_MAGIC;
+	sock->common.magic = ISCAPI_SOCKET_MAGIC;
+	sock->common.impmagic = SOCKET_MAGIC;
 	*socketp = sock;
 
 	return (ISC_R_SUCCESS);
@@ -1362,8 +2154,8 @@ allocate_socket(isc_socketmgr_t *manager, isc_sockettype_t type,
  * also close the socket.
  */
 static void
-free_socket(isc_socket_t **socketp) {
-	isc_socket_t *sock = *socketp;
+free_socket(isc__socket_t **socketp) {
+	isc__socket_t *sock = *socketp;
 
 	INSIST(sock->references == 0);
 	INSIST(VALID_SOCKET(sock));
@@ -1383,7 +2175,8 @@ free_socket(isc_socket_t **socketp) {
 		isc_mem_put(sock->manager->mctx, sock->sendcmsgbuf,
 			    sock->sendcmsgbuflen);
 
-	sock->magic = 0;
+	sock->common.magic = 0;
+	sock->common.impmagic = 0;
 
 	DESTROYLOCK(&sock->lock);
 
@@ -1430,18 +2223,12 @@ clear_bsdcompat(void) {
 }
 #endif
 
-/*%
- * Create a new 'type' socket managed by 'manager'.  Events
- * will be posted to 'task' and when dispatched 'action' will be
- * called with 'arg' as the arg value.  The new socket is returned
- * in 'socketp'.
- */
-isc_result_t
-isc_socket_create(isc_socketmgr_t *manager, int pf, isc_sockettype_t type,
-		  isc_socket_t **socketp)
-{
-	isc_socket_t *sock = NULL;
+static isc_result_t
+opensocket(isc__socketmgr_t *manager, isc__socket_t *sock) {
 	isc_result_t result;
+	char strbuf[ISC_STRERRORSIZE];
+	const char *err = "socket";
+	int tries = 0;
 #if defined(USE_CMSG) || defined(SO_BSDCOMPAT)
 	int on = 1;
 #endif
@@ -1449,38 +2236,42 @@ isc_socket_create(isc_socketmgr_t *manager, int pf, isc_sockettype_t type,
 	ISC_SOCKADDR_LEN_T optlen;
 	int size;
 #endif
-	char strbuf[ISC_STRERRORSIZE];
-	const char *err = "socket";
-	int try = 0;
 
-	REQUIRE(VALID_MANAGER(manager));
-	REQUIRE(socketp != NULL && *socketp == NULL);
-
-	result = allocate_socket(manager, type, &sock);
-	if (result != ISC_R_SUCCESS)
-		return (result);
-
-	sock->pf = pf;
  again:
-	switch (type) {
+	switch (sock->type) {
 	case isc_sockettype_udp:
-		sock->fd = socket(pf, SOCK_DGRAM, IPPROTO_UDP);
+		sock->fd = socket(sock->pf, SOCK_DGRAM, IPPROTO_UDP);
 		break;
 	case isc_sockettype_tcp:
-		sock->fd = socket(pf, SOCK_STREAM, IPPROTO_TCP);
+		sock->fd = socket(sock->pf, SOCK_STREAM, IPPROTO_TCP);
 		break;
 	case isc_sockettype_unix:
-		sock->fd = socket(pf, SOCK_STREAM, 0);
+		sock->fd = socket(sock->pf, SOCK_STREAM, 0);
+		break;
+	case isc_sockettype_fdwatch:
+		/*
+		 * We should not be called for isc_sockettype_fdwatch sockets.
+		 */
+		INSIST(0);
 		break;
 	}
-	if (sock->fd == -1 && errno == EINTR && try++ < 42)
+	if (sock->fd == -1 && errno == EINTR && tries++ < 42)
 		goto again;
 
 #ifdef F_DUPFD
 	/*
-	 * Leave a space for stdio to work in.
+	 * Leave a space for stdio and TCP to work in.
 	 */
-	if (sock->fd >= 0 && sock->fd < 20) {
+	if (manager->reserved != 0 && sock->type == isc_sockettype_udp &&
+	    sock->fd >= 0 && sock->fd < manager->reserved) {
+		int new, tmp;
+		new = fcntl(sock->fd, F_DUPFD, manager->reserved);
+		tmp = errno;
+		(void)close(sock->fd);
+		errno = tmp;
+		sock->fd = new;
+		err = "isc_socket_create: fcntl/reserved";
+	} else if (sock->fd >= 0 && sock->fd < 20) {
 		int new, tmp;
 		new = fcntl(sock->fd, F_DUPFD, 20);
 		tmp = errno;
@@ -1491,23 +2282,28 @@ isc_socket_create(isc_socketmgr_t *manager, int pf, isc_sockettype_t type,
 	}
 #endif
 
-	if (sock->fd >= (int)FD_SETSIZE) {
+	if (sock->fd >= (int)manager->maxsocks) {
 		(void)close(sock->fd);
 		isc_log_iwrite(isc_lctx, ISC_LOGCATEGORY_GENERAL,
 			       ISC_LOGMODULE_SOCKET, ISC_LOG_ERROR,
 			       isc_msgcat, ISC_MSGSET_SOCKET,
 			       ISC_MSG_TOOMANYFDS,
-			       "%s: too many open file descriptors", "socket");
-		free_socket(&sock);
+			       "socket: file descriptor exceeds limit (%d/%u)",
+			       sock->fd, manager->maxsocks);
 		return (ISC_R_NORESOURCES);
 	}
-	
-	if (sock->fd < 0) {
-		free_socket(&sock);
 
+	if (sock->fd < 0) {
 		switch (errno) {
 		case EMFILE:
 		case ENFILE:
+			isc__strerror(errno, strbuf, sizeof(strbuf));
+			isc_log_iwrite(isc_lctx, ISC_LOGCATEGORY_GENERAL,
+				       ISC_LOGMODULE_SOCKET, ISC_LOG_ERROR,
+				       isc_msgcat, ISC_MSGSET_SOCKET,
+				       ISC_MSG_TOOMANYFDS,
+				       "%s: %s", err, strbuf);
+			/* fallthrough */
 		case ENOBUFS:
 			return (ISC_R_NORESOURCES);
 
@@ -1534,16 +2330,16 @@ isc_socket_create(isc_socketmgr_t *manager, int pf, isc_sockettype_t type,
 		}
 	}
 
-	if (make_nonblock(sock->fd) != ISC_R_SUCCESS) {
+	result = make_nonblock(sock->fd);
+	if (result != ISC_R_SUCCESS) {
 		(void)close(sock->fd);
-		free_socket(&sock);
-		return (ISC_R_UNEXPECTED);
+		return (result);
 	}
 
 #ifdef SO_BSDCOMPAT
 	RUNTIME_CHECK(isc_once_do(&bsdcompat_once,
 				  clear_bsdcompat) == ISC_R_SUCCESS);
-	if (type != isc_sockettype_unix && bsdcompat &&
+	if (sock->type != isc_sockettype_unix && bsdcompat &&
 	    setsockopt(sock->fd, SOL_SOCKET, SO_BSDCOMPAT,
 		       (void *)&on, sizeof(on)) < 0) {
 		isc__strerror(errno, strbuf, sizeof(strbuf));
@@ -1557,8 +2353,22 @@ isc_socket_create(isc_socketmgr_t *manager, int pf, isc_sockettype_t type,
 	}
 #endif
 
+#ifdef SO_NOSIGPIPE
+	if (setsockopt(sock->fd, SOL_SOCKET, SO_NOSIGPIPE,
+		       (void *)&on, sizeof(on)) < 0) {
+		isc__strerror(errno, strbuf, sizeof(strbuf));
+		UNEXPECTED_ERROR(__FILE__, __LINE__,
+				 "setsockopt(%d, SO_NOSIGPIPE) %s: %s",
+				 sock->fd,
+				 isc_msgcat_get(isc_msgcat, ISC_MSGSET_GENERAL,
+						ISC_MSG_FAILED, "failed"),
+				 strbuf);
+		/* Press on... */
+	}
+#endif
+
 #if defined(USE_CMSG) || defined(SO_RCVBUF)
-	if (type == isc_sockettype_udp) {
+	if (sock->type == isc_sockettype_udp) {
 
 #if defined(USE_CMSG)
 #if defined(SO_TIMESTAMP)
@@ -1568,7 +2378,7 @@ isc_socket_create(isc_socketmgr_t *manager, int pf, isc_sockettype_t type,
 			isc__strerror(errno, strbuf, sizeof(strbuf));
 			UNEXPECTED_ERROR(__FILE__, __LINE__,
 					 "setsockopt(%d, SO_TIMESTAMP) %s: %s",
-					 sock->fd, 
+					 sock->fd,
 					 isc_msgcat_get(isc_msgcat,
 							ISC_MSGSET_GENERAL,
 							ISC_MSG_FAILED,
@@ -1579,7 +2389,7 @@ isc_socket_create(isc_socketmgr_t *manager, int pf, isc_sockettype_t type,
 #endif /* SO_TIMESTAMP */
 
 #if defined(ISC_PLATFORM_HAVEIPV6)
-		if (pf == AF_INET6 && sock->recvcmsgbuflen == 0U) {
+		if (sock->pf == AF_INET6 && sock->recvcmsgbuflen == 0U) {
 			/*
 			 * Warn explicitly because this anomaly can be hidden
 			 * in usual operation (and unexpectedly appear later).
@@ -1591,7 +2401,7 @@ isc_socket_create(isc_socketmgr_t *manager, int pf, isc_sockettype_t type,
 #ifdef ISC_PLATFORM_HAVEIN6PKTINFO
 #ifdef IPV6_RECVPKTINFO
 		/* RFC 3542 */
-		if ((pf == AF_INET6)
+		if ((sock->pf == AF_INET6)
 		    && (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_RECVPKTINFO,
 				   (void *)&on, sizeof(on)) < 0)) {
 			isc__strerror(errno, strbuf, sizeof(strbuf));
@@ -1606,7 +2416,7 @@ isc_socket_create(isc_socketmgr_t *manager, int pf, isc_sockettype_t type,
 		}
 #else
 		/* RFC 2292 */
-		if ((pf == AF_INET6)
+		if ((sock->pf == AF_INET6)
 		    && (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_PKTINFO,
 				   (void *)&on, sizeof(on)) < 0)) {
 			isc__strerror(errno, strbuf, sizeof(strbuf));
@@ -1623,14 +2433,64 @@ isc_socket_create(isc_socketmgr_t *manager, int pf, isc_sockettype_t type,
 #endif /* ISC_PLATFORM_HAVEIN6PKTINFO */
 #ifdef IPV6_USE_MIN_MTU        /* RFC 3542, not too common yet*/
 		/* use minimum MTU */
-		if (pf == AF_INET6) {
+		if (sock->pf == AF_INET6 &&
+		    setsockopt(sock->fd, IPPROTO_IPV6, IPV6_USE_MIN_MTU,
+			       (void *)&on, sizeof(on)) < 0) {
+			isc__strerror(errno, strbuf, sizeof(strbuf));
+			UNEXPECTED_ERROR(__FILE__, __LINE__,
+					 "setsockopt(%d, IPV6_USE_MIN_MTU) "
+					 "%s: %s", sock->fd,
+					 isc_msgcat_get(isc_msgcat,
+							ISC_MSGSET_GENERAL,
+							ISC_MSG_FAILED,
+							"failed"),
+					 strbuf);
+		}
+#endif
+#if defined(IPV6_MTU)
+		/*
+		 * Use minimum MTU on IPv6 sockets.
+		 */
+		if (sock->pf == AF_INET6) {
+			int mtu = 1280;
+			(void)setsockopt(sock->fd, IPPROTO_IPV6, IPV6_MTU,
+					 &mtu, sizeof(mtu));
+		}
+#endif
+#if defined(IPV6_MTU_DISCOVER) && defined(IPV6_PMTUDISC_DONT)
+		/*
+		 * Turn off Path MTU discovery on IPv6/UDP sockets.
+		 */
+		if (sock->pf == AF_INET6) {
+			int action = IPV6_PMTUDISC_DONT;
 			(void)setsockopt(sock->fd, IPPROTO_IPV6,
-					 IPV6_USE_MIN_MTU,
-					 (void *)&on, sizeof(on));
+					 IPV6_MTU_DISCOVER, &action,
+					 sizeof(action));
 		}
 #endif
 #endif /* ISC_PLATFORM_HAVEIPV6 */
 #endif /* defined(USE_CMSG) */
+
+#if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
+		/*
+		 * Turn off Path MTU discovery on IPv4/UDP sockets.
+		 */
+		if (sock->pf == AF_INET) {
+			int action = IP_PMTUDISC_DONT;
+			(void)setsockopt(sock->fd, IPPROTO_IP, IP_MTU_DISCOVER,
+					 &action, sizeof(action));
+		}
+#endif
+#if defined(IP_DONTFRAG)
+		/*
+		 * Turn off Path MTU discovery on IPv4/UDP sockets.
+		 */
+		if (sock->pf == AF_INET) {
+			int off = 0;
+			(void)setsockopt(sock->fd, IPPROTO_IP, IP_DONTFRAG,
+					 &off, sizeof(off));
+		}
+#endif
 
 #if defined(SO_RCVBUF)
 		optlen = sizeof(size);
@@ -1655,22 +2515,83 @@ isc_socket_create(isc_socketmgr_t *manager, int pf, isc_sockettype_t type,
 	}
 #endif /* defined(USE_CMSG) || defined(SO_RCVBUF) */
 
-	sock->references = 1;
-	*socketp = sock;
+	inc_stats(manager->stats, sock->statsindex[STATID_OPEN]);
 
-	LOCK(&manager->lock);
+	return (ISC_R_SUCCESS);
+}
+
+/*%
+ * Create a new 'type' socket managed by 'manager'.  Events
+ * will be posted to 'task' and when dispatched 'action' will be
+ * called with 'arg' as the arg value.  The new socket is returned
+ * in 'socketp'.
+ */
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_create(isc_socketmgr_t *manager0, int pf, isc_sockettype_t type,
+		   isc_socket_t **socketp)
+{
+	isc__socket_t *sock = NULL;
+	isc__socketmgr_t *manager = (isc__socketmgr_t *)manager0;
+	isc_result_t result;
+	int lockid;
+
+	REQUIRE(VALID_MANAGER(manager));
+	REQUIRE(socketp != NULL && *socketp == NULL);
+	REQUIRE(type != isc_sockettype_fdwatch);
+
+	result = allocate_socket(manager, type, &sock);
+	if (result != ISC_R_SUCCESS)
+		return (result);
+
+	switch (sock->type) {
+	case isc_sockettype_udp:
+		sock->statsindex =
+			(pf == AF_INET) ? upd4statsindex : upd6statsindex;
+		break;
+	case isc_sockettype_tcp:
+		sock->statsindex =
+			(pf == AF_INET) ? tcp4statsindex : tcp6statsindex;
+		break;
+	case isc_sockettype_unix:
+		sock->statsindex = unixstatsindex;
+		break;
+	default:
+		INSIST(0);
+	}
+
+	sock->pf = pf;
+	result = opensocket(manager, sock);
+	if (result != ISC_R_SUCCESS) {
+		inc_stats(manager->stats, sock->statsindex[STATID_OPENFAIL]);
+		free_socket(&sock);
+		return (result);
+	}
+
+	sock->common.methods = (isc_socketmethods_t *)&socketmethods;
+	sock->references = 1;
+	*socketp = (isc_socket_t *)sock;
 
 	/*
 	 * Note we don't have to lock the socket like we normally would because
 	 * there are no external references to it yet.
 	 */
 
+	lockid = FDLOCK_ID(sock->fd);
+	LOCK(&manager->fdlock[lockid]);
 	manager->fds[sock->fd] = sock;
 	manager->fdstate[sock->fd] = MANAGED;
+#ifdef USE_DEVPOLL
+	INSIST(sock->manager->fdpollinfo[sock->fd].want_read == 0 &&
+	       sock->manager->fdpollinfo[sock->fd].want_write == 0);
+#endif
+	UNLOCK(&manager->fdlock[lockid]);
+
+	LOCK(&manager->lock);
 	ISC_LIST_APPEND(manager->socklist, sock, link);
+#ifdef USE_SELECT
 	if (manager->maxfd < sock->fd)
 		manager->maxfd = sock->fd;
-
+#endif
 	UNLOCK(&manager->lock);
 
 	socket_log(sock, NULL, CREATION, isc_msgcat, ISC_MSGSET_SOCKET,
@@ -1679,11 +2600,161 @@ isc_socket_create(isc_socketmgr_t *manager, int pf, isc_sockettype_t type,
 	return (ISC_R_SUCCESS);
 }
 
+#ifdef BIND9
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_open(isc_socket_t *sock0) {
+	isc_result_t result;
+	isc__socket_t *sock = (isc__socket_t *)sock0;
+
+	REQUIRE(VALID_SOCKET(sock));
+
+	LOCK(&sock->lock);
+	REQUIRE(sock->references == 1);
+	REQUIRE(sock->type != isc_sockettype_fdwatch);
+	UNLOCK(&sock->lock);
+	/*
+	 * We don't need to retain the lock hereafter, since no one else has
+	 * this socket.
+	 */
+	REQUIRE(sock->fd == -1);
+
+	result = opensocket(sock->manager, sock);
+	if (result != ISC_R_SUCCESS)
+		sock->fd = -1;
+
+	if (result == ISC_R_SUCCESS) {
+		int lockid = FDLOCK_ID(sock->fd);
+
+		LOCK(&sock->manager->fdlock[lockid]);
+		sock->manager->fds[sock->fd] = sock;
+		sock->manager->fdstate[sock->fd] = MANAGED;
+#ifdef USE_DEVPOLL
+		INSIST(sock->manager->fdpollinfo[sock->fd].want_read == 0 &&
+		       sock->manager->fdpollinfo[sock->fd].want_write == 0);
+#endif
+		UNLOCK(&sock->manager->fdlock[lockid]);
+
+#ifdef USE_SELECT
+		LOCK(&sock->manager->lock);
+		if (sock->manager->maxfd < sock->fd)
+			sock->manager->maxfd = sock->fd;
+		UNLOCK(&sock->manager->lock);
+#endif
+	}
+
+	return (result);
+}
+#endif	/* BIND9 */
+
+/*
+ * Create a new 'type' socket managed by 'manager'.  Events
+ * will be posted to 'task' and when dispatched 'action' will be
+ * called with 'arg' as the arg value.  The new socket is returned
+ * in 'socketp'.
+ */
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_fdwatchcreate(isc_socketmgr_t *manager0, int fd, int flags,
+			  isc_sockfdwatch_t callback, void *cbarg,
+			  isc_task_t *task, isc_socket_t **socketp)
+{
+	isc__socketmgr_t *manager = (isc__socketmgr_t *)manager0;
+	isc__socket_t *sock = NULL;
+	isc_result_t result;
+	int lockid;
+
+	REQUIRE(VALID_MANAGER(manager));
+	REQUIRE(socketp != NULL && *socketp == NULL);
+
+	result = allocate_socket(manager, isc_sockettype_fdwatch, &sock);
+	if (result != ISC_R_SUCCESS)
+		return (result);
+
+	sock->fd = fd;
+	sock->fdwatcharg = cbarg;
+	sock->fdwatchcb = callback;
+	sock->fdwatchflags = flags;
+	sock->fdwatchtask = task;
+	sock->statsindex = fdwatchstatsindex;
+
+	sock->common.methods = (isc_socketmethods_t *)&socketmethods;
+	sock->references = 1;
+	*socketp = (isc_socket_t *)sock;
+
+	/*
+	 * Note we don't have to lock the socket like we normally would because
+	 * there are no external references to it yet.
+	 */
+
+	lockid = FDLOCK_ID(sock->fd);
+	LOCK(&manager->fdlock[lockid]);
+	manager->fds[sock->fd] = sock;
+	manager->fdstate[sock->fd] = MANAGED;
+	UNLOCK(&manager->fdlock[lockid]);
+
+	LOCK(&manager->lock);
+	ISC_LIST_APPEND(manager->socklist, sock, link);
+#ifdef USE_SELECT
+	if (manager->maxfd < sock->fd)
+		manager->maxfd = sock->fd;
+#endif
+	UNLOCK(&manager->lock);
+
+	if (flags & ISC_SOCKFDWATCH_READ)
+		select_poke(sock->manager, sock->fd, SELECT_POKE_READ);
+	if (flags & ISC_SOCKFDWATCH_WRITE)
+		select_poke(sock->manager, sock->fd, SELECT_POKE_WRITE);
+
+	socket_log(sock, NULL, CREATION, isc_msgcat, ISC_MSGSET_SOCKET,
+		   ISC_MSG_CREATED, "fdwatch-created");
+
+	return (ISC_R_SUCCESS);
+}
+
+/*
+ * Indicate to the manager that it should watch the socket again.
+ * This can be used to restart watching if the previous event handler
+ * didn't indicate there was more data to be processed.  Primarily
+ * it is for writing but could be used for reading if desired
+ */
+
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_fdwatchpoke(isc_socket_t *sock0, int flags)
+{
+	isc__socket_t *sock = (isc__socket_t *)sock0;
+
+	REQUIRE(VALID_SOCKET(sock));
+
+	/*
+	 * We check both flags first to allow us to get the lock
+	 * once but only if we need it.
+	 */
+
+	if ((flags & (ISC_SOCKFDWATCH_READ | ISC_SOCKFDWATCH_WRITE)) != 0) {
+		LOCK(&sock->lock);
+		if (((flags & ISC_SOCKFDWATCH_READ) != 0) &&
+		    !sock->pending_recv)
+			select_poke(sock->manager, sock->fd,
+				    SELECT_POKE_READ);
+		if (((flags & ISC_SOCKFDWATCH_WRITE) != 0) &&
+		    !sock->pending_send)
+			select_poke(sock->manager, sock->fd,
+				    SELECT_POKE_WRITE);
+		UNLOCK(&sock->lock);
+	}
+
+	socket_log(sock, NULL, TRACE, isc_msgcat, ISC_MSGSET_SOCKET,
+		   ISC_MSG_POKED, "fdwatch-poked flags: %d", flags);
+
+	return (ISC_R_SUCCESS);
+}
+
 /*
  * Attach to a socket.  Caller must explicitly detach when it is done.
  */
-void
-isc_socket_attach(isc_socket_t *sock, isc_socket_t **socketp) {
+ISC_SOCKETFUNC_SCOPE void
+isc__socket_attach(isc_socket_t *sock0, isc_socket_t **socketp) {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
+
 	REQUIRE(VALID_SOCKET(sock));
 	REQUIRE(socketp != NULL && *socketp == NULL);
 
@@ -1691,20 +2762,20 @@ isc_socket_attach(isc_socket_t *sock, isc_socket_t **socketp) {
 	sock->references++;
 	UNLOCK(&sock->lock);
 
-	*socketp = sock;
+	*socketp = (isc_socket_t *)sock;
 }
 
 /*
  * Dereference a socket.  If this is the last reference to it, clean things
  * up by destroying the socket.
  */
-void
-isc_socket_detach(isc_socket_t **socketp) {
-	isc_socket_t *sock;
+ISC_SOCKETFUNC_SCOPE void
+isc__socket_detach(isc_socket_t **socketp) {
+	isc__socket_t *sock;
 	isc_boolean_t kill_socket = ISC_FALSE;
 
 	REQUIRE(socketp != NULL);
-	sock = *socketp;
+	sock = (isc__socket_t *)*socketp;
 	REQUIRE(VALID_SOCKET(sock));
 
 	LOCK(&sock->lock);
@@ -1720,6 +2791,49 @@ isc_socket_detach(isc_socket_t **socketp) {
 	*socketp = NULL;
 }
 
+#ifdef BIND9
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_close(isc_socket_t *sock0) {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
+	int fd;
+	isc__socketmgr_t *manager;
+
+	REQUIRE(VALID_SOCKET(sock));
+
+	LOCK(&sock->lock);
+
+	REQUIRE(sock->references == 1);
+	REQUIRE(sock->type != isc_sockettype_fdwatch);
+	REQUIRE(sock->fd >= 0 && sock->fd < (int)sock->manager->maxsocks);
+
+	INSIST(!sock->connecting);
+	INSIST(!sock->pending_recv);
+	INSIST(!sock->pending_send);
+	INSIST(!sock->pending_accept);
+	INSIST(ISC_LIST_EMPTY(sock->recv_list));
+	INSIST(ISC_LIST_EMPTY(sock->send_list));
+	INSIST(ISC_LIST_EMPTY(sock->accept_list));
+	INSIST(sock->connect_ev == NULL);
+
+	manager = sock->manager;
+	fd = sock->fd;
+	sock->fd = -1;
+	memset(sock->name, 0, sizeof(sock->name));
+	sock->tag = NULL;
+	sock->listener = 0;
+	sock->connected = 0;
+	sock->connecting = 0;
+	sock->bound = 0;
+	isc_sockaddr_any(&sock->peer_address);
+
+	UNLOCK(&sock->lock);
+
+	closesocket(manager, sock, fd);
+
+	return (ISC_R_SUCCESS);
+}
+#endif	/* BIND9 */
+
 /*
  * I/O is possible on a given socket.  Schedule an event to this task that
  * will call an internal function to do the I/O.  This will charge the
@@ -1729,60 +2843,78 @@ isc_socket_detach(isc_socket_t **socketp) {
  * The socket and manager must be locked before calling this function.
  */
 static void
-dispatch_recv(isc_socket_t *sock) {
+dispatch_recv(isc__socket_t *sock) {
 	intev_t *iev;
 	isc_socketevent_t *ev;
+	isc_task_t *sender;
 
 	INSIST(!sock->pending_recv);
 
-	ev = ISC_LIST_HEAD(sock->recv_list);
-	if (ev == NULL)
-		return;
+	if (sock->type != isc_sockettype_fdwatch) {
+		ev = ISC_LIST_HEAD(sock->recv_list);
+		if (ev == NULL)
+			return;
+		socket_log(sock, NULL, EVENT, NULL, 0, 0,
+			   "dispatch_recv:  event %p -> task %p",
+			   ev, ev->ev_sender);
+		sender = ev->ev_sender;
+	} else {
+		sender = sock->fdwatchtask;
+	}
 
 	sock->pending_recv = 1;
 	iev = &sock->readable_ev;
 
-	socket_log(sock, NULL, EVENT, NULL, 0, 0,
-		   "dispatch_recv:  event %p -> task %p", ev, ev->ev_sender);
-
 	sock->references++;
 	iev->ev_sender = sock;
-	iev->ev_action = internal_recv;
+	if (sock->type == isc_sockettype_fdwatch)
+		iev->ev_action = internal_fdwatch_read;
+	else
+		iev->ev_action = internal_recv;
 	iev->ev_arg = sock;
 
-	isc_task_send(ev->ev_sender, (isc_event_t **)&iev);
+	isc_task_send(sender, (isc_event_t **)&iev);
 }
 
 static void
-dispatch_send(isc_socket_t *sock) {
+dispatch_send(isc__socket_t *sock) {
 	intev_t *iev;
 	isc_socketevent_t *ev;
+	isc_task_t *sender;
 
 	INSIST(!sock->pending_send);
 
-	ev = ISC_LIST_HEAD(sock->send_list);
-	if (ev == NULL)
-		return;
+	if (sock->type != isc_sockettype_fdwatch) {
+		ev = ISC_LIST_HEAD(sock->send_list);
+		if (ev == NULL)
+			return;
+		socket_log(sock, NULL, EVENT, NULL, 0, 0,
+			   "dispatch_send:  event %p -> task %p",
+			   ev, ev->ev_sender);
+		sender = ev->ev_sender;
+	} else {
+		sender = sock->fdwatchtask;
+	}
 
 	sock->pending_send = 1;
 	iev = &sock->writable_ev;
 
-	socket_log(sock, NULL, EVENT, NULL, 0, 0,
-		   "dispatch_send:  event %p -> task %p", ev, ev->ev_sender);
-
 	sock->references++;
 	iev->ev_sender = sock;
-	iev->ev_action = internal_send;
+	if (sock->type == isc_sockettype_fdwatch)
+		iev->ev_action = internal_fdwatch_write;
+	else
+		iev->ev_action = internal_send;
 	iev->ev_arg = sock;
 
-	isc_task_send(ev->ev_sender, (isc_event_t **)&iev);
+	isc_task_send(sender, (isc_event_t **)&iev);
 }
 
 /*
  * Dispatch an internal accept event.
  */
 static void
-dispatch_accept(isc_socket_t *sock) {
+dispatch_accept(isc__socket_t *sock) {
 	intev_t *iev;
 	isc_socket_newconnev_t *ev;
 
@@ -1808,7 +2940,7 @@ dispatch_accept(isc_socket_t *sock) {
 }
 
 static void
-dispatch_connect(isc_socket_t *sock) {
+dispatch_connect(isc__socket_t *sock) {
 	intev_t *iev;
 	isc_socket_connev_t *ev;
 
@@ -1838,7 +2970,7 @@ dispatch_connect(isc_socket_t *sock) {
  * Caller must have the socket locked if the event is attached to the socket.
  */
 static void
-send_recvdone_event(isc_socket_t *sock, isc_socketevent_t **dev) {
+send_recvdone_event(isc__socket_t *sock, isc_socketevent_t **dev) {
 	isc_task_t *task;
 
 	task = (*dev)->ev_sender;
@@ -1861,7 +2993,7 @@ send_recvdone_event(isc_socket_t *sock, isc_socketevent_t **dev) {
  * Caller must have the socket locked if the event is attached to the socket.
  */
 static void
-send_senddone_event(isc_socket_t *sock, isc_socketevent_t **dev) {
+send_senddone_event(isc__socket_t *sock, isc_socketevent_t **dev) {
 	isc_task_t *task;
 
 	INSIST(dev != NULL && *dev != NULL);
@@ -1892,8 +3024,8 @@ send_senddone_event(isc_socket_t *sock, isc_socketevent_t **dev) {
  */
 static void
 internal_accept(isc_task_t *me, isc_event_t *ev) {
-	isc_socket_t *sock;
-	isc_socketmgr_t *manager;
+	isc__socket_t *sock;
+	isc__socketmgr_t *manager;
 	isc_socket_newconnev_t *dev;
 	isc_task_t *task;
 	ISC_SOCKADDR_LEN_T addrlen;
@@ -1945,12 +3077,12 @@ internal_accept(isc_task_t *me, isc_event_t *ev) {
 	 * a documented error for accept().  ECONNABORTED has been
 	 * reported for Solaris 8.  The rest are thrown in not because
 	 * we have seen them but because they are ignored by other
-	 * deamons such as BIND 8 and Apache.
+	 * daemons such as BIND 8 and Apache.
 	 */
 
-	addrlen = sizeof(dev->newsocket->address.type);
-	memset(&dev->newsocket->address.type.sa, 0, addrlen);
-	fd = accept(sock->fd, &dev->newsocket->address.type.sa,
+	addrlen = sizeof(NEWCONNSOCK(dev)->peer_address.type);
+	memset(&NEWCONNSOCK(dev)->peer_address.type, 0, addrlen);
+	fd = accept(sock->fd, &NEWCONNSOCK(dev)->peer_address.type.sa,
 		    (void *)&addrlen);
 
 #ifdef F_DUPFD
@@ -1964,7 +3096,7 @@ internal_accept(isc_task_t *me, isc_event_t *ev) {
 		(void)close(fd);
 		errno = tmp;
 		fd = new;
-		err = "fcntl";
+		err = "accept/fcntl";
 	}
 #endif
 
@@ -1972,8 +3104,17 @@ internal_accept(isc_task_t *me, isc_event_t *ev) {
 		if (SOFT_ERROR(errno))
 			goto soft_error;
 		switch (errno) {
-		case ENOBUFS:
 		case ENFILE:
+		case EMFILE:
+			isc_log_iwrite(isc_lctx, ISC_LOGCATEGORY_GENERAL,
+				       ISC_LOGMODULE_SOCKET, ISC_LOG_ERROR,
+				       isc_msgcat, ISC_MSGSET_SOCKET,
+				       ISC_MSG_TOOMANYFDS,
+				       "%s: too many open file descriptors",
+				       err);
+			goto soft_error;
+
+		case ENOBUFS:
 		case ENOMEM:
 		case ECONNRESET:
 		case ECONNABORTED:
@@ -2011,33 +3152,34 @@ internal_accept(isc_task_t *me, isc_event_t *ev) {
 
 			(void)close(fd);
 			goto soft_error;
-		} else if (dev->newsocket->address.type.sa.sa_family !=
+		} else if (NEWCONNSOCK(dev)->peer_address.type.sa.sa_family !=
 			   sock->pf)
 		{
 			UNEXPECTED_ERROR(__FILE__, __LINE__,
 					 "internal_accept(): "
 					 "accept() returned peer address "
-					 "family %u (expected %u)", 
-					 dev->newsocket->address.
+					 "family %u (expected %u)",
+					 NEWCONNSOCK(dev)->peer_address.
 					 type.sa.sa_family,
 					 sock->pf);
 			(void)close(fd);
 			goto soft_error;
-		} else if (fd >= (int)FD_SETSIZE) {
+		} else if (fd >= (int)manager->maxsocks) {
 			isc_log_iwrite(isc_lctx, ISC_LOGCATEGORY_GENERAL,
 				       ISC_LOGMODULE_SOCKET, ISC_LOG_ERROR,
 				       isc_msgcat, ISC_MSGSET_SOCKET,
 				       ISC_MSG_TOOMANYFDS,
-				       "%s: too many open file descriptors",
-				       "accept");
+				       "accept: "
+				       "file descriptor exceeds limit (%d/%u)",
+				       fd, manager->maxsocks);
 			(void)close(fd);
 			goto soft_error;
 		}
 	}
 
 	if (fd != -1) {
-		dev->newsocket->address.length = addrlen;
-		dev->newsocket->pf = sock->pf;
+		NEWCONNSOCK(dev)->peer_address.length = addrlen;
+		NEWCONNSOCK(dev)->pf = sock->pf;
 	}
 
 	/*
@@ -2053,44 +3195,56 @@ internal_accept(isc_task_t *me, isc_event_t *ev) {
 
 	UNLOCK(&sock->lock);
 
-	if (fd != -1 && (make_nonblock(fd) != ISC_R_SUCCESS)) {
-		(void)close(fd);
-		fd = -1;
-		result = ISC_R_UNEXPECTED;
+	if (fd != -1) {
+		result = make_nonblock(fd);
+		if (result != ISC_R_SUCCESS) {
+			(void)close(fd);
+			fd = -1;
+		}
 	}
 
 	/*
 	 * -1 means the new socket didn't happen.
 	 */
 	if (fd != -1) {
-		LOCK(&manager->lock);
-		ISC_LIST_APPEND(manager->socklist, dev->newsocket, link);
+		int lockid = FDLOCK_ID(fd);
 
-		dev->newsocket->fd = fd;
-		dev->newsocket->bound = 1;
-		dev->newsocket->connected = 1;
+		LOCK(&manager->fdlock[lockid]);
+		manager->fds[fd] = NEWCONNSOCK(dev);
+		manager->fdstate[fd] = MANAGED;
+		UNLOCK(&manager->fdlock[lockid]);
+
+		LOCK(&manager->lock);
+		ISC_LIST_APPEND(manager->socklist, NEWCONNSOCK(dev), link);
+
+		NEWCONNSOCK(dev)->fd = fd;
+		NEWCONNSOCK(dev)->bound = 1;
+		NEWCONNSOCK(dev)->connected = 1;
 
 		/*
 		 * Save away the remote address
 		 */
-		dev->address = dev->newsocket->address;
+		dev->address = NEWCONNSOCK(dev)->peer_address;
 
-		manager->fds[fd] = dev->newsocket;
-		manager->fdstate[fd] = MANAGED;
+#ifdef USE_SELECT
 		if (manager->maxfd < fd)
 			manager->maxfd = fd;
+#endif
 
-		socket_log(sock, &dev->newsocket->address, CREATION,
+		socket_log(sock, &NEWCONNSOCK(dev)->peer_address, CREATION,
 			   isc_msgcat, ISC_MSGSET_SOCKET, ISC_MSG_ACCEPTEDCXN,
 			   "accepted connection, new socket %p",
 			   dev->newsocket);
 
 		UNLOCK(&manager->lock);
+
+		inc_stats(manager->stats, sock->statsindex[STATID_ACCEPT]);
 	} else {
-		dev->newsocket->references--;
-		free_socket(&dev->newsocket);
+		inc_stats(manager->stats, sock->statsindex[STATID_ACCEPTFAIL]);
+		NEWCONNSOCK(dev)->references--;
+		free_socket((isc__socket_t **)&dev->newsocket);
 	}
-	
+
 	/*
 	 * Fill in the done event details and send it off.
 	 */
@@ -2104,13 +3258,15 @@ internal_accept(isc_task_t *me, isc_event_t *ev) {
  soft_error:
 	select_poke(sock->manager, sock->fd, SELECT_POKE_ACCEPT);
 	UNLOCK(&sock->lock);
+
+	inc_stats(manager->stats, sock->statsindex[STATID_ACCEPTFAIL]);
 	return;
 }
 
 static void
 internal_recv(isc_task_t *me, isc_event_t *ev) {
 	isc_socketevent_t *dev;
-	isc_socket_t *sock;
+	isc__socket_t *sock;
 
 	INSIST(ev->ev_type == ISC_SOCKEVENT_INTR);
 
@@ -2175,14 +3331,14 @@ internal_recv(isc_task_t *me, isc_event_t *ev) {
 static void
 internal_send(isc_task_t *me, isc_event_t *ev) {
 	isc_socketevent_t *dev;
-	isc_socket_t *sock;
+	isc__socket_t *sock;
 
 	INSIST(ev->ev_type == ISC_SOCKEVENT_INTW);
 
 	/*
 	 * Find out what socket this is and lock it.
 	 */
-	sock = (isc_socket_t *)ev->ev_sender;
+	sock = (isc__socket_t *)ev->ev_sender;
 	INSIST(VALID_SOCKET(sock));
 
 	LOCK(&sock->lock);
@@ -2228,76 +3384,346 @@ internal_send(isc_task_t *me, isc_event_t *ev) {
 }
 
 static void
-process_fds(isc_socketmgr_t *manager, int maxfd,
-	    fd_set *readfds, fd_set *writefds)
-{
-	int i;
-	isc_socket_t *sock;
-	isc_boolean_t unlock_sock;
+internal_fdwatch_write(isc_task_t *me, isc_event_t *ev) {
+	isc__socket_t *sock;
+	int more_data;
 
-	REQUIRE(maxfd <= (int)FD_SETSIZE);
+	INSIST(ev->ev_type == ISC_SOCKEVENT_INTW);
 
 	/*
-	 * Process read/writes on other fds here.  Avoid locking
-	 * and unlocking twice if both reads and writes are possible.
+	 * Find out what socket this is and lock it.
 	 */
-	for (i = 0; i < maxfd; i++) {
-#ifdef ISC_PLATFORM_USETHREADS
-		if (i == manager->pipe_fds[0] || i == manager->pipe_fds[1])
-			continue;
-#endif /* ISC_PLATFORM_USETHREADS */
+	sock = (isc__socket_t *)ev->ev_sender;
+	INSIST(VALID_SOCKET(sock));
 
-		if (manager->fdstate[i] == CLOSE_PENDING) {
-			manager->fdstate[i] = CLOSED;
-			FD_CLR(i, &manager->read_fds);
-			FD_CLR(i, &manager->write_fds);
+	LOCK(&sock->lock);
+	socket_log(sock, NULL, IOEVENT,
+		   isc_msgcat, ISC_MSGSET_SOCKET, ISC_MSG_INTERNALSEND,
+		   "internal_fdwatch_write: task %p got event %p", me, ev);
 
-			(void)close(i);
+	INSIST(sock->pending_send == 1);
 
-			continue;
-		}
+	UNLOCK(&sock->lock);
+	more_data = (sock->fdwatchcb)(me, (isc_socket_t *)sock,
+				      sock->fdwatcharg, ISC_SOCKFDWATCH_WRITE);
+	LOCK(&sock->lock);
 
-		sock = manager->fds[i];
-		unlock_sock = ISC_FALSE;
-		if (FD_ISSET(i, readfds)) {
-			if (sock == NULL) {
-				FD_CLR(i, &manager->read_fds);
-				goto check_write;
-			}
-			unlock_sock = ISC_TRUE;
-			LOCK(&sock->lock);
-			if (!SOCK_DEAD(sock)) {
-				if (sock->listener)
-					dispatch_accept(sock);
-				else
-					dispatch_recv(sock);
-			}
-			FD_CLR(i, &manager->read_fds);
-		}
-	check_write:
-		if (FD_ISSET(i, writefds)) {
-			if (sock == NULL) {
-				FD_CLR(i, &manager->write_fds);
-				continue;
-			}
-			if (!unlock_sock) {
-				unlock_sock = ISC_TRUE;
-				LOCK(&sock->lock);
-			}
-			if (!SOCK_DEAD(sock)) {
-				if (sock->connecting)
-					dispatch_connect(sock);
-				else
-					dispatch_send(sock);
-			}
-			FD_CLR(i, &manager->write_fds);
-		}
-		if (unlock_sock)
-			UNLOCK(&sock->lock);
+	sock->pending_send = 0;
+
+	INSIST(sock->references > 0);
+	sock->references--;  /* the internal event is done with this socket */
+	if (sock->references == 0) {
+		UNLOCK(&sock->lock);
+		destroy(&sock);
+		return;
 	}
+
+	if (more_data)
+		select_poke(sock->manager, sock->fd, SELECT_POKE_WRITE);
+
+	UNLOCK(&sock->lock);
 }
 
-#ifdef ISC_PLATFORM_USETHREADS
+static void
+internal_fdwatch_read(isc_task_t *me, isc_event_t *ev) {
+	isc__socket_t *sock;
+	int more_data;
+
+	INSIST(ev->ev_type == ISC_SOCKEVENT_INTR);
+
+	/*
+	 * Find out what socket this is and lock it.
+	 */
+	sock = (isc__socket_t *)ev->ev_sender;
+	INSIST(VALID_SOCKET(sock));
+
+	LOCK(&sock->lock);
+	socket_log(sock, NULL, IOEVENT,
+		   isc_msgcat, ISC_MSGSET_SOCKET, ISC_MSG_INTERNALRECV,
+		   "internal_fdwatch_read: task %p got event %p", me, ev);
+
+	INSIST(sock->pending_recv == 1);
+
+	UNLOCK(&sock->lock);
+	more_data = (sock->fdwatchcb)(me, (isc_socket_t *)sock,
+				      sock->fdwatcharg, ISC_SOCKFDWATCH_READ);
+	LOCK(&sock->lock);
+
+	sock->pending_recv = 0;
+
+	INSIST(sock->references > 0);
+	sock->references--;  /* the internal event is done with this socket */
+	if (sock->references == 0) {
+		UNLOCK(&sock->lock);
+		destroy(&sock);
+		return;
+	}
+
+	if (more_data)
+		select_poke(sock->manager, sock->fd, SELECT_POKE_READ);
+
+	UNLOCK(&sock->lock);
+}
+
+/*
+ * Process read/writes on each fd here.  Avoid locking
+ * and unlocking twice if both reads and writes are possible.
+ */
+static void
+process_fd(isc__socketmgr_t *manager, int fd, isc_boolean_t readable,
+	   isc_boolean_t writeable)
+{
+	isc__socket_t *sock;
+	isc_boolean_t unlock_sock;
+	isc_boolean_t unwatch_read = ISC_FALSE, unwatch_write = ISC_FALSE;
+	int lockid = FDLOCK_ID(fd);
+
+	/*
+	 * If the socket is going to be closed, don't do more I/O.
+	 */
+	LOCK(&manager->fdlock[lockid]);
+	if (manager->fdstate[fd] == CLOSE_PENDING) {
+		UNLOCK(&manager->fdlock[lockid]);
+
+		(void)unwatch_fd(manager, fd, SELECT_POKE_READ);
+		(void)unwatch_fd(manager, fd, SELECT_POKE_WRITE);
+		return;
+	}
+
+	sock = manager->fds[fd];
+	unlock_sock = ISC_FALSE;
+	if (readable) {
+		if (sock == NULL) {
+			unwatch_read = ISC_TRUE;
+			goto check_write;
+		}
+		unlock_sock = ISC_TRUE;
+		LOCK(&sock->lock);
+		if (!SOCK_DEAD(sock)) {
+			if (sock->listener)
+				dispatch_accept(sock);
+			else
+				dispatch_recv(sock);
+		}
+		unwatch_read = ISC_TRUE;
+	}
+check_write:
+	if (writeable) {
+		if (sock == NULL) {
+			unwatch_write = ISC_TRUE;
+			goto unlock_fd;
+		}
+		if (!unlock_sock) {
+			unlock_sock = ISC_TRUE;
+			LOCK(&sock->lock);
+		}
+		if (!SOCK_DEAD(sock)) {
+			if (sock->connecting)
+				dispatch_connect(sock);
+			else
+				dispatch_send(sock);
+		}
+		unwatch_write = ISC_TRUE;
+	}
+	if (unlock_sock)
+		UNLOCK(&sock->lock);
+
+ unlock_fd:
+	UNLOCK(&manager->fdlock[lockid]);
+	if (unwatch_read)
+		(void)unwatch_fd(manager, fd, SELECT_POKE_READ);
+	if (unwatch_write)
+		(void)unwatch_fd(manager, fd, SELECT_POKE_WRITE);
+
+}
+
+#ifdef USE_KQUEUE
+static isc_boolean_t
+process_fds(isc__socketmgr_t *manager, struct kevent *events, int nevents) {
+	int i;
+	isc_boolean_t readable, writable;
+	isc_boolean_t done = ISC_FALSE;
+#ifdef USE_WATCHER_THREAD
+	isc_boolean_t have_ctlevent = ISC_FALSE;
+#endif
+
+	if (nevents == manager->nevents) {
+		/*
+		 * This is not an error, but something unexpected.  If this
+		 * happens, it may indicate the need for increasing
+		 * ISC_SOCKET_MAXEVENTS.
+		 */
+		manager_log(manager, ISC_LOGCATEGORY_GENERAL,
+			    ISC_LOGMODULE_SOCKET, ISC_LOG_INFO,
+			    "maximum number of FD events (%d) received",
+			    nevents);
+	}
+
+	for (i = 0; i < nevents; i++) {
+		REQUIRE(events[i].ident < manager->maxsocks);
+#ifdef USE_WATCHER_THREAD
+		if (events[i].ident == (uintptr_t)manager->pipe_fds[0]) {
+			have_ctlevent = ISC_TRUE;
+			continue;
+		}
+#endif
+		readable = ISC_TF(events[i].filter == EVFILT_READ);
+		writable = ISC_TF(events[i].filter == EVFILT_WRITE);
+		process_fd(manager, events[i].ident, readable, writable);
+	}
+
+#ifdef USE_WATCHER_THREAD
+	if (have_ctlevent)
+		done = process_ctlfd(manager);
+#endif
+
+	return (done);
+}
+#elif defined(USE_EPOLL)
+static isc_boolean_t
+process_fds(isc__socketmgr_t *manager, struct epoll_event *events, int nevents)
+{
+	int i;
+	isc_boolean_t done = ISC_FALSE;
+#ifdef USE_WATCHER_THREAD
+	isc_boolean_t have_ctlevent = ISC_FALSE;
+#endif
+
+	if (nevents == manager->nevents) {
+		manager_log(manager, ISC_LOGCATEGORY_GENERAL,
+			    ISC_LOGMODULE_SOCKET, ISC_LOG_INFO,
+			    "maximum number of FD events (%d) received",
+			    nevents);
+	}
+
+	for (i = 0; i < nevents; i++) {
+		REQUIRE(events[i].data.fd < (int)manager->maxsocks);
+#ifdef USE_WATCHER_THREAD
+		if (events[i].data.fd == manager->pipe_fds[0]) {
+			have_ctlevent = ISC_TRUE;
+			continue;
+		}
+#endif
+		if ((events[i].events & EPOLLERR) != 0 ||
+		    (events[i].events & EPOLLHUP) != 0) {
+			/*
+			 * epoll does not set IN/OUT bits on an erroneous
+			 * condition, so we need to try both anyway.  This is a
+			 * bit inefficient, but should be okay for such rare
+			 * events.  Note also that the read or write attempt
+			 * won't block because we use non-blocking sockets.
+			 */
+			events[i].events |= (EPOLLIN | EPOLLOUT);
+		}
+		process_fd(manager, events[i].data.fd,
+			   (events[i].events & EPOLLIN) != 0,
+			   (events[i].events & EPOLLOUT) != 0);
+	}
+
+#ifdef USE_WATCHER_THREAD
+	if (have_ctlevent)
+		done = process_ctlfd(manager);
+#endif
+
+	return (done);
+}
+#elif defined(USE_DEVPOLL)
+static isc_boolean_t
+process_fds(isc__socketmgr_t *manager, struct pollfd *events, int nevents) {
+	int i;
+	isc_boolean_t done = ISC_FALSE;
+#ifdef USE_WATCHER_THREAD
+	isc_boolean_t have_ctlevent = ISC_FALSE;
+#endif
+
+	if (nevents == manager->nevents) {
+		manager_log(manager, ISC_LOGCATEGORY_GENERAL,
+			    ISC_LOGMODULE_SOCKET, ISC_LOG_INFO,
+			    "maximum number of FD events (%d) received",
+			    nevents);
+	}
+
+	for (i = 0; i < nevents; i++) {
+		REQUIRE(events[i].fd < (int)manager->maxsocks);
+#ifdef USE_WATCHER_THREAD
+		if (events[i].fd == manager->pipe_fds[0]) {
+			have_ctlevent = ISC_TRUE;
+			continue;
+		}
+#endif
+		process_fd(manager, events[i].fd,
+			   (events[i].events & POLLIN) != 0,
+			   (events[i].events & POLLOUT) != 0);
+	}
+
+#ifdef USE_WATCHER_THREAD
+	if (have_ctlevent)
+		done = process_ctlfd(manager);
+#endif
+
+	return (done);
+}
+#elif defined(USE_SELECT)
+static void
+process_fds(isc__socketmgr_t *manager, int maxfd, fd_set *readfds,
+	    fd_set *writefds)
+{
+	int i;
+
+	REQUIRE(maxfd <= (int)manager->maxsocks);
+
+	for (i = 0; i < maxfd; i++) {
+#ifdef USE_WATCHER_THREAD
+		if (i == manager->pipe_fds[0] || i == manager->pipe_fds[1])
+			continue;
+#endif /* USE_WATCHER_THREAD */
+		process_fd(manager, i, FD_ISSET(i, readfds),
+			   FD_ISSET(i, writefds));
+	}
+}
+#endif
+
+#ifdef USE_WATCHER_THREAD
+static isc_boolean_t
+process_ctlfd(isc__socketmgr_t *manager) {
+	int msg, fd;
+
+	for (;;) {
+		select_readmsg(manager, &fd, &msg);
+
+		manager_log(manager, IOEVENT,
+			    isc_msgcat_get(isc_msgcat, ISC_MSGSET_SOCKET,
+					   ISC_MSG_WATCHERMSG,
+					   "watcher got message %d "
+					   "for socket %d"), msg, fd);
+
+		/*
+		 * Nothing to read?
+		 */
+		if (msg == SELECT_POKE_NOTHING)
+			break;
+
+		/*
+		 * Handle shutdown message.  We really should
+		 * jump out of this loop right away, but
+		 * it doesn't matter if we have to do a little
+		 * more work first.
+		 */
+		if (msg == SELECT_POKE_SHUTDOWN)
+			return (ISC_TRUE);
+
+		/*
+		 * This is a wakeup on a socket.  Look
+		 * at the event queue for both read and write,
+		 * and decide if we need to watch on it now
+		 * or not.
+		 */
+		wakeup_socket(manager, fd, msg);
+	}
+
+	return (ISC_FALSE);
+}
+
 /*
  * This is the thread that will loop forever, always in a select or poll
  * call.
@@ -2307,147 +3733,448 @@ process_fds(isc_socketmgr_t *manager, int maxfd,
  */
 static isc_threadresult_t
 watcher(void *uap) {
-	isc_socketmgr_t *manager = uap;
+	isc__socketmgr_t *manager = uap;
 	isc_boolean_t done;
-	int ctlfd;
 	int cc;
-	fd_set readfds;
-	fd_set writefds;
-	int msg, fd;
+#ifdef USE_KQUEUE
+	const char *fnname = "kevent()";
+#elif defined (USE_EPOLL)
+	const char *fnname = "epoll_wait()";
+#elif defined(USE_DEVPOLL)
+	const char *fnname = "ioctl(DP_POLL)";
+	struct dvpoll dvp;
+#elif defined (USE_SELECT)
+	const char *fnname = "select()";
 	int maxfd;
+	int ctlfd;
+#endif
 	char strbuf[ISC_STRERRORSIZE];
+#ifdef ISC_SOCKET_USE_POLLWATCH
+	pollstate_t pollstate = poll_idle;
+#endif
 
+#if defined (USE_SELECT)
 	/*
 	 * Get the control fd here.  This will never change.
 	 */
-	LOCK(&manager->lock);
 	ctlfd = manager->pipe_fds[0];
-
+#endif
 	done = ISC_FALSE;
 	while (!done) {
 		do {
-			readfds = manager->read_fds;
-			writefds = manager->write_fds;
+#ifdef USE_KQUEUE
+			cc = kevent(manager->kqueue_fd, NULL, 0,
+				    manager->events, manager->nevents, NULL);
+#elif defined(USE_EPOLL)
+			cc = epoll_wait(manager->epoll_fd, manager->events,
+					manager->nevents, -1);
+#elif defined(USE_DEVPOLL)
+			dvp.dp_fds = manager->events;
+			dvp.dp_nfds = manager->nevents;
+#ifndef ISC_SOCKET_USE_POLLWATCH
+			dvp.dp_timeout = -1;
+#else
+			if (pollstate == poll_idle)
+				dvp.dp_timeout = -1;
+			else
+				dvp.dp_timeout = ISC_SOCKET_POLLWATCH_TIMEOUT;
+#endif	/* ISC_SOCKET_USE_POLLWATCH */
+			cc = ioctl(manager->devpoll_fd, DP_POLL, &dvp);
+#elif defined(USE_SELECT)
+			LOCK(&manager->lock);
+			memcpy(manager->read_fds_copy, manager->read_fds,
+			       manager->fd_bufsize);
+			memcpy(manager->write_fds_copy, manager->write_fds,
+			       manager->fd_bufsize);
 			maxfd = manager->maxfd + 1;
-
 			UNLOCK(&manager->lock);
 
-			cc = select(maxfd, &readfds, &writefds, NULL, NULL);
-			if (cc < 0) {
-				if (!SOFT_ERROR(errno)) {
-					isc__strerror(errno, strbuf,
-						      sizeof(strbuf));
-					FATAL_ERROR(__FILE__, __LINE__,
-						    "select() %s: %s",
-						    isc_msgcat_get(isc_msgcat,
-							    ISC_MSGSET_GENERAL,
-							    ISC_MSG_FAILED,
-							    "failed"),
-						    strbuf);
-				}
+			cc = select(maxfd, manager->read_fds_copy,
+				    manager->write_fds_copy, NULL, NULL);
+#endif	/* USE_KQUEUE */
+
+			if (cc < 0 && !SOFT_ERROR(errno)) {
+				isc__strerror(errno, strbuf, sizeof(strbuf));
+				FATAL_ERROR(__FILE__, __LINE__,
+					    "%s %s: %s", fnname,
+					    isc_msgcat_get(isc_msgcat,
+							   ISC_MSGSET_GENERAL,
+							   ISC_MSG_FAILED,
+							   "failed"), strbuf);
 			}
 
-			LOCK(&manager->lock);
+#if defined(USE_DEVPOLL) && defined(ISC_SOCKET_USE_POLLWATCH)
+			if (cc == 0) {
+				if (pollstate == poll_active)
+					pollstate = poll_checking;
+				else if (pollstate == poll_checking)
+					pollstate = poll_idle;
+			} else if (cc > 0) {
+				if (pollstate == poll_checking) {
+					/*
+					 * XXX: We'd like to use a more
+					 * verbose log level as it's actually an
+					 * unexpected event, but the kernel bug
+					 * reportedly happens pretty frequently
+					 * (and it can also be a false positive)
+					 * so it would be just too noisy.
+					 */
+					manager_log(manager,
+						    ISC_LOGCATEGORY_GENERAL,
+						    ISC_LOGMODULE_SOCKET,
+						    ISC_LOG_DEBUG(1),
+						    "unexpected POLL timeout");
+				}
+				pollstate = poll_active;
+			}
+#endif
 		} while (cc < 0);
 
+#if defined(USE_KQUEUE) || defined (USE_EPOLL) || defined (USE_DEVPOLL)
+		done = process_fds(manager, manager->events, cc);
+#elif defined(USE_SELECT)
+		process_fds(manager, maxfd, manager->read_fds_copy,
+			    manager->write_fds_copy);
 
 		/*
 		 * Process reads on internal, control fd.
 		 */
-		if (FD_ISSET(ctlfd, &readfds)) {
-			for (;;) {
-				select_readmsg(manager, &fd, &msg);
-
-				manager_log(manager, IOEVENT,
-					    isc_msgcat_get(isc_msgcat,
-						     ISC_MSGSET_SOCKET,
-						     ISC_MSG_WATCHERMSG,
-						     "watcher got message %d"),
-						     msg);
-
-				/*
-				 * Nothing to read?
-				 */
-				if (msg == SELECT_POKE_NOTHING)
-					break;
-
-				/*
-				 * Handle shutdown message.  We really should
-				 * jump out of this loop right away, but
-				 * it doesn't matter if we have to do a little
-				 * more work first.
-				 */
-				if (msg == SELECT_POKE_SHUTDOWN) {
-					done = ISC_TRUE;
-
-					break;
-				}
-
-				/*
-				 * This is a wakeup on a socket.  Look
-				 * at the event queue for both read and write,
-				 * and decide if we need to watch on it now
-				 * or not.
-				 */
-				wakeup_socket(manager, fd, msg);
-			}
-		}
-
-		process_fds(manager, maxfd, &readfds, &writefds);
+		if (FD_ISSET(ctlfd, manager->read_fds_copy))
+			done = process_ctlfd(manager);
+#endif
 	}
 
-	manager_log(manager, TRACE,
+	manager_log(manager, TRACE, "%s",
 		    isc_msgcat_get(isc_msgcat, ISC_MSGSET_GENERAL,
 				   ISC_MSG_EXITING, "watcher exiting"));
 
-	UNLOCK(&manager->lock);
 	return ((isc_threadresult_t)0);
 }
-#endif /* ISC_PLATFORM_USETHREADS */
+#endif /* USE_WATCHER_THREAD */
+
+#ifdef BIND9
+ISC_SOCKETFUNC_SCOPE void
+isc__socketmgr_setreserved(isc_socketmgr_t *manager0, isc_uint32_t reserved) {
+	isc__socketmgr_t *manager = (isc__socketmgr_t *)manager0;
+
+	REQUIRE(VALID_MANAGER(manager));
+
+	manager->reserved = reserved;
+}
+
+ISC_SOCKETFUNC_SCOPE void
+isc___socketmgr_maxudp(isc_socketmgr_t *manager0, int maxudp) {
+	isc__socketmgr_t *manager = (isc__socketmgr_t *)manager0;
+
+	REQUIRE(VALID_MANAGER(manager));
+
+	manager->maxudp = maxudp;
+}
+#endif	/* BIND9 */
 
 /*
  * Create a new socket manager.
  */
-isc_result_t
-isc_socketmgr_create(isc_mem_t *mctx, isc_socketmgr_t **managerp) {
-	isc_socketmgr_t *manager;
-#ifdef ISC_PLATFORM_USETHREADS
+
+static isc_result_t
+setup_watcher(isc_mem_t *mctx, isc__socketmgr_t *manager) {
+	isc_result_t result;
+#if defined(USE_KQUEUE) || defined(USE_EPOLL) || defined(USE_DEVPOLL)
+	char strbuf[ISC_STRERRORSIZE];
+#endif
+
+#ifdef USE_KQUEUE
+	manager->nevents = ISC_SOCKET_MAXEVENTS;
+	manager->events = isc_mem_get(mctx, sizeof(struct kevent) *
+				      manager->nevents);
+	if (manager->events == NULL)
+		return (ISC_R_NOMEMORY);
+	manager->kqueue_fd = kqueue();
+	if (manager->kqueue_fd == -1) {
+		result = isc__errno2result(errno);
+		isc__strerror(errno, strbuf, sizeof(strbuf));
+		UNEXPECTED_ERROR(__FILE__, __LINE__,
+				 "kqueue %s: %s",
+				 isc_msgcat_get(isc_msgcat, ISC_MSGSET_GENERAL,
+						ISC_MSG_FAILED, "failed"),
+				 strbuf);
+		isc_mem_put(mctx, manager->events,
+			    sizeof(struct kevent) * manager->nevents);
+		return (result);
+	}
+
+#ifdef USE_WATCHER_THREAD
+	result = watch_fd(manager, manager->pipe_fds[0], SELECT_POKE_READ);
+	if (result != ISC_R_SUCCESS) {
+		close(manager->kqueue_fd);
+		isc_mem_put(mctx, manager->events,
+			    sizeof(struct kevent) * manager->nevents);
+		return (result);
+	}
+#endif	/* USE_WATCHER_THREAD */
+#elif defined(USE_EPOLL)
+	manager->nevents = ISC_SOCKET_MAXEVENTS;
+	manager->events = isc_mem_get(mctx, sizeof(struct epoll_event) *
+				      manager->nevents);
+	if (manager->events == NULL)
+		return (ISC_R_NOMEMORY);
+	manager->epoll_fd = epoll_create(manager->nevents);
+	if (manager->epoll_fd == -1) {
+		result = isc__errno2result(errno);
+		isc__strerror(errno, strbuf, sizeof(strbuf));
+		UNEXPECTED_ERROR(__FILE__, __LINE__,
+				 "epoll_create %s: %s",
+				 isc_msgcat_get(isc_msgcat, ISC_MSGSET_GENERAL,
+						ISC_MSG_FAILED, "failed"),
+				 strbuf);
+		isc_mem_put(mctx, manager->events,
+			    sizeof(struct epoll_event) * manager->nevents);
+		return (result);
+	}
+#ifdef USE_WATCHER_THREAD
+	result = watch_fd(manager, manager->pipe_fds[0], SELECT_POKE_READ);
+	if (result != ISC_R_SUCCESS) {
+		close(manager->epoll_fd);
+		isc_mem_put(mctx, manager->events,
+			    sizeof(struct epoll_event) * manager->nevents);
+		return (result);
+	}
+#endif	/* USE_WATCHER_THREAD */
+#elif defined(USE_DEVPOLL)
+	/*
+	 * XXXJT: /dev/poll seems to reject large numbers of events,
+	 * so we should be careful about redefining ISC_SOCKET_MAXEVENTS.
+	 */
+	manager->nevents = ISC_SOCKET_MAXEVENTS;
+	manager->events = isc_mem_get(mctx, sizeof(struct pollfd) *
+				      manager->nevents);
+	if (manager->events == NULL)
+		return (ISC_R_NOMEMORY);
+	/*
+	 * Note: fdpollinfo should be able to support all possible FDs, so
+	 * it must have maxsocks entries (not nevents).
+	 */
+	manager->fdpollinfo = isc_mem_get(mctx, sizeof(pollinfo_t) *
+					  manager->maxsocks);
+	if (manager->fdpollinfo == NULL) {
+		isc_mem_put(mctx, manager->events,
+			    sizeof(struct pollfd) * manager->nevents);
+		return (ISC_R_NOMEMORY);
+	}
+	memset(manager->fdpollinfo, 0, sizeof(pollinfo_t) * manager->maxsocks);
+	manager->devpoll_fd = open("/dev/poll", O_RDWR);
+	if (manager->devpoll_fd == -1) {
+		result = isc__errno2result(errno);
+		isc__strerror(errno, strbuf, sizeof(strbuf));
+		UNEXPECTED_ERROR(__FILE__, __LINE__,
+				 "open(/dev/poll) %s: %s",
+				 isc_msgcat_get(isc_msgcat, ISC_MSGSET_GENERAL,
+						ISC_MSG_FAILED, "failed"),
+				 strbuf);
+		isc_mem_put(mctx, manager->events,
+			    sizeof(struct pollfd) * manager->nevents);
+		isc_mem_put(mctx, manager->fdpollinfo,
+			    sizeof(pollinfo_t) * manager->maxsocks);
+		return (result);
+	}
+#ifdef USE_WATCHER_THREAD
+	result = watch_fd(manager, manager->pipe_fds[0], SELECT_POKE_READ);
+	if (result != ISC_R_SUCCESS) {
+		close(manager->devpoll_fd);
+		isc_mem_put(mctx, manager->events,
+			    sizeof(struct pollfd) * manager->nevents);
+		isc_mem_put(mctx, manager->fdpollinfo,
+			    sizeof(pollinfo_t) * manager->maxsocks);
+		return (result);
+	}
+#endif	/* USE_WATCHER_THREAD */
+#elif defined(USE_SELECT)
+	UNUSED(result);
+
+#if ISC_SOCKET_MAXSOCKETS > FD_SETSIZE
+	/*
+	 * Note: this code should also cover the case of MAXSOCKETS <=
+	 * FD_SETSIZE, but we separate the cases to avoid possible portability
+	 * issues regarding howmany() and the actual representation of fd_set.
+	 */
+	manager->fd_bufsize = howmany(manager->maxsocks, NFDBITS) *
+		sizeof(fd_mask);
+#else
+	manager->fd_bufsize = sizeof(fd_set);
+#endif
+
+	manager->read_fds = NULL;
+	manager->read_fds_copy = NULL;
+	manager->write_fds = NULL;
+	manager->write_fds_copy = NULL;
+
+	manager->read_fds = isc_mem_get(mctx, manager->fd_bufsize);
+	if (manager->read_fds != NULL)
+		manager->read_fds_copy = isc_mem_get(mctx, manager->fd_bufsize);
+	if (manager->read_fds_copy != NULL)
+		manager->write_fds = isc_mem_get(mctx, manager->fd_bufsize);
+	if (manager->write_fds != NULL) {
+		manager->write_fds_copy = isc_mem_get(mctx,
+						      manager->fd_bufsize);
+	}
+	if (manager->write_fds_copy == NULL) {
+		if (manager->write_fds != NULL) {
+			isc_mem_put(mctx, manager->write_fds,
+				    manager->fd_bufsize);
+		}
+		if (manager->read_fds_copy != NULL) {
+			isc_mem_put(mctx, manager->read_fds_copy,
+				    manager->fd_bufsize);
+		}
+		if (manager->read_fds != NULL) {
+			isc_mem_put(mctx, manager->read_fds,
+				    manager->fd_bufsize);
+		}
+		return (ISC_R_NOMEMORY);
+	}
+	memset(manager->read_fds, 0, manager->fd_bufsize);
+	memset(manager->write_fds, 0, manager->fd_bufsize);
+
+#ifdef USE_WATCHER_THREAD
+	(void)watch_fd(manager, manager->pipe_fds[0], SELECT_POKE_READ);
+	manager->maxfd = manager->pipe_fds[0];
+#else /* USE_WATCHER_THREAD */
+	manager->maxfd = 0;
+#endif /* USE_WATCHER_THREAD */
+#endif	/* USE_KQUEUE */
+
+	return (ISC_R_SUCCESS);
+}
+
+static void
+cleanup_watcher(isc_mem_t *mctx, isc__socketmgr_t *manager) {
+#ifdef USE_WATCHER_THREAD
+	isc_result_t result;
+
+	result = unwatch_fd(manager, manager->pipe_fds[0], SELECT_POKE_READ);
+	if (result != ISC_R_SUCCESS) {
+		UNEXPECTED_ERROR(__FILE__, __LINE__,
+				 "epoll_ctl(DEL) %s",
+				 isc_msgcat_get(isc_msgcat, ISC_MSGSET_GENERAL,
+						ISC_MSG_FAILED, "failed"));
+	}
+#endif	/* USE_WATCHER_THREAD */
+
+#ifdef USE_KQUEUE
+	close(manager->kqueue_fd);
+	isc_mem_put(mctx, manager->events,
+		    sizeof(struct kevent) * manager->nevents);
+#elif defined(USE_EPOLL)
+	close(manager->epoll_fd);
+	isc_mem_put(mctx, manager->events,
+		    sizeof(struct epoll_event) * manager->nevents);
+#elif defined(USE_DEVPOLL)
+	close(manager->devpoll_fd);
+	isc_mem_put(mctx, manager->events,
+		    sizeof(struct pollfd) * manager->nevents);
+	isc_mem_put(mctx, manager->fdpollinfo,
+		    sizeof(pollinfo_t) * manager->maxsocks);
+#elif defined(USE_SELECT)
+	if (manager->read_fds != NULL)
+		isc_mem_put(mctx, manager->read_fds, manager->fd_bufsize);
+	if (manager->read_fds_copy != NULL)
+		isc_mem_put(mctx, manager->read_fds_copy, manager->fd_bufsize);
+	if (manager->write_fds != NULL)
+		isc_mem_put(mctx, manager->write_fds, manager->fd_bufsize);
+	if (manager->write_fds_copy != NULL)
+		isc_mem_put(mctx, manager->write_fds_copy, manager->fd_bufsize);
+#endif	/* USE_KQUEUE */
+}
+
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socketmgr_create(isc_mem_t *mctx, isc_socketmgr_t **managerp) {
+	return (isc__socketmgr_create2(mctx, managerp, 0));
+}
+
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socketmgr_create2(isc_mem_t *mctx, isc_socketmgr_t **managerp,
+		       unsigned int maxsocks)
+{
+	int i;
+	isc__socketmgr_t *manager;
+#ifdef USE_WATCHER_THREAD
 	char strbuf[ISC_STRERRORSIZE];
 #endif
 	isc_result_t result;
 
 	REQUIRE(managerp != NULL && *managerp == NULL);
 
-#ifndef ISC_PLATFORM_USETHREADS
+#ifdef USE_SHARED_MANAGER
 	if (socketmgr != NULL) {
+		/* Don't allow maxsocks to be updated */
+		if (maxsocks > 0 && socketmgr->maxsocks != maxsocks)
+			return (ISC_R_EXISTS);
+
 		socketmgr->refs++;
-		*managerp = socketmgr;
+		*managerp = (isc_socketmgr_t *)socketmgr;
 		return (ISC_R_SUCCESS);
 	}
-#endif /* ISC_PLATFORM_USETHREADS */
+#endif /* USE_SHARED_MANAGER */
+
+	if (maxsocks == 0)
+		maxsocks = ISC_SOCKET_MAXSOCKETS;
 
 	manager = isc_mem_get(mctx, sizeof(*manager));
 	if (manager == NULL)
 		return (ISC_R_NOMEMORY);
 
-	manager->magic = SOCKET_MANAGER_MAGIC;
+	/* zero-clear so that necessary cleanup on failure will be easy */
+	memset(manager, 0, sizeof(*manager));
+	manager->maxsocks = maxsocks;
+	manager->reserved = 0;
+	manager->maxudp = 0;
+	manager->fds = isc_mem_get(mctx,
+				   manager->maxsocks * sizeof(isc__socket_t *));
+	if (manager->fds == NULL) {
+		result = ISC_R_NOMEMORY;
+		goto free_manager;
+	}
+	manager->fdstate = isc_mem_get(mctx, manager->maxsocks * sizeof(int));
+	if (manager->fdstate == NULL) {
+		result = ISC_R_NOMEMORY;
+		goto free_manager;
+	}
+	manager->stats = NULL;
+
+	manager->common.methods = &socketmgrmethods;
+	manager->common.magic = ISCAPI_SOCKETMGR_MAGIC;
+	manager->common.impmagic = SOCKET_MANAGER_MAGIC;
 	manager->mctx = NULL;
-	memset(manager->fds, 0, sizeof(manager->fds));
+	memset(manager->fds, 0, manager->maxsocks * sizeof(isc_socket_t *));
 	ISC_LIST_INIT(manager->socklist);
 	result = isc_mutex_init(&manager->lock);
-	if (result != ISC_R_SUCCESS) {
-		isc_mem_put(mctx, manager, sizeof(*manager));
-		return (result);
+	if (result != ISC_R_SUCCESS)
+		goto free_manager;
+	manager->fdlock = isc_mem_get(mctx, FDLOCK_COUNT * sizeof(isc_mutex_t));
+	if (manager->fdlock == NULL) {
+		result = ISC_R_NOMEMORY;
+		goto cleanup_lock;
 	}
-#ifdef ISC_PLATFORM_USETHREADS
+	for (i = 0; i < FDLOCK_COUNT; i++) {
+		result = isc_mutex_init(&manager->fdlock[i]);
+		if (result != ISC_R_SUCCESS) {
+			while (--i >= 0)
+				DESTROYLOCK(&manager->fdlock[i]);
+			isc_mem_put(mctx, manager->fdlock,
+				    FDLOCK_COUNT * sizeof(isc_mutex_t));
+			manager->fdlock = NULL;
+			goto cleanup_lock;
+		}
+	}
+
+#ifdef USE_WATCHER_THREAD
 	if (isc_condition_init(&manager->shutdown_ok) != ISC_R_SUCCESS) {
-		DESTROYLOCK(&manager->lock);
-		isc_mem_put(mctx, manager, sizeof(*manager));
 		UNEXPECTED_ERROR(__FILE__, __LINE__,
 				 "isc_condition_init() %s",
 				 isc_msgcat_get(isc_msgcat, ISC_MSGSET_GENERAL,
 						ISC_MSG_FAILED, "failed"));
-		return (ISC_R_UNEXPECTED);
+		result = ISC_R_UNEXPECTED;
+		goto cleanup_lock;
 	}
 
 	/*
@@ -2455,69 +4182,122 @@ isc_socketmgr_create(isc_mem_t *mctx, isc_socketmgr_t **managerp) {
 	 * select/poll loop when something internal needs to be done.
 	 */
 	if (pipe(manager->pipe_fds) != 0) {
-		DESTROYLOCK(&manager->lock);
-		isc_mem_put(mctx, manager, sizeof(*manager));
 		isc__strerror(errno, strbuf, sizeof(strbuf));
 		UNEXPECTED_ERROR(__FILE__, __LINE__,
 				 "pipe() %s: %s",
 				 isc_msgcat_get(isc_msgcat, ISC_MSGSET_GENERAL,
 						ISC_MSG_FAILED, "failed"),
 				 strbuf);
-
-		return (ISC_R_UNEXPECTED);
+		result = ISC_R_UNEXPECTED;
+		goto cleanup_condition;
 	}
 
 	RUNTIME_CHECK(make_nonblock(manager->pipe_fds[0]) == ISC_R_SUCCESS);
 #if 0
 	RUNTIME_CHECK(make_nonblock(manager->pipe_fds[1]) == ISC_R_SUCCESS);
 #endif
-#else /* ISC_PLATFORM_USETHREADS */
+#endif	/* USE_WATCHER_THREAD */
+
+#ifdef USE_SHARED_MANAGER
 	manager->refs = 1;
-#endif /* ISC_PLATFORM_USETHREADS */
+#endif /* USE_SHARED_MANAGER */
 
 	/*
 	 * Set up initial state for the select loop
 	 */
-	FD_ZERO(&manager->read_fds);
-	FD_ZERO(&manager->write_fds);
-#ifdef ISC_PLATFORM_USETHREADS
-	FD_SET(manager->pipe_fds[0], &manager->read_fds);
-	manager->maxfd = manager->pipe_fds[0];
-#else /* ISC_PLATFORM_USETHREADS */
-	manager->maxfd = 0;
-#endif /* ISC_PLATFORM_USETHREADS */
-	memset(manager->fdstate, 0, sizeof(manager->fdstate));
-
-#ifdef ISC_PLATFORM_USETHREADS
+	result = setup_watcher(mctx, manager);
+	if (result != ISC_R_SUCCESS)
+		goto cleanup;
+	memset(manager->fdstate, 0, manager->maxsocks * sizeof(int));
+#ifdef USE_WATCHER_THREAD
 	/*
 	 * Start up the select/poll thread.
 	 */
 	if (isc_thread_create(watcher, manager, &manager->watcher) !=
 	    ISC_R_SUCCESS) {
-		(void)close(manager->pipe_fds[0]);
-		(void)close(manager->pipe_fds[1]);
-		DESTROYLOCK(&manager->lock);
-		isc_mem_put(mctx, manager, sizeof(*manager));
 		UNEXPECTED_ERROR(__FILE__, __LINE__,
 				 "isc_thread_create() %s",
 				 isc_msgcat_get(isc_msgcat, ISC_MSGSET_GENERAL,
 						ISC_MSG_FAILED, "failed"));
-		return (ISC_R_UNEXPECTED);
+		cleanup_watcher(mctx, manager);
+		result = ISC_R_UNEXPECTED;
+		goto cleanup;
 	}
-#endif /* ISC_PLATFORM_USETHREADS */
+#endif /* USE_WATCHER_THREAD */
 	isc_mem_attach(mctx, &manager->mctx);
 
-#ifndef ISC_PLATFORM_USETHREADS
+#ifdef USE_SHARED_MANAGER
 	socketmgr = manager;
-#endif /* ISC_PLATFORM_USETHREADS */
-	*managerp = manager;
+#endif /* USE_SHARED_MANAGER */
+	*managerp = (isc_socketmgr_t *)manager;
+
+	return (ISC_R_SUCCESS);
+
+cleanup:
+#ifdef USE_WATCHER_THREAD
+	(void)close(manager->pipe_fds[0]);
+	(void)close(manager->pipe_fds[1]);
+#endif	/* USE_WATCHER_THREAD */
+
+#ifdef USE_WATCHER_THREAD
+cleanup_condition:
+	(void)isc_condition_destroy(&manager->shutdown_ok);
+#endif	/* USE_WATCHER_THREAD */
+
+
+cleanup_lock:
+	if (manager->fdlock != NULL) {
+		for (i = 0; i < FDLOCK_COUNT; i++)
+			DESTROYLOCK(&manager->fdlock[i]);
+	}
+	DESTROYLOCK(&manager->lock);
+
+free_manager:
+	if (manager->fdlock != NULL) {
+		isc_mem_put(mctx, manager->fdlock,
+			    FDLOCK_COUNT * sizeof(isc_mutex_t));
+	}
+	if (manager->fdstate != NULL) {
+		isc_mem_put(mctx, manager->fdstate,
+			    manager->maxsocks * sizeof(int));
+	}
+	if (manager->fds != NULL) {
+		isc_mem_put(mctx, manager->fds,
+			    manager->maxsocks * sizeof(isc_socket_t *));
+	}
+	isc_mem_put(mctx, manager, sizeof(*manager));
+
+	return (result);
+}
+
+#ifdef BIND9
+isc_result_t
+isc__socketmgr_getmaxsockets(isc_socketmgr_t *manager0, unsigned int *nsockp) {
+	isc__socketmgr_t *manager = (isc__socketmgr_t *)manager0;
+	REQUIRE(VALID_MANAGER(manager));
+	REQUIRE(nsockp != NULL);
+
+	*nsockp = manager->maxsocks;
 
 	return (ISC_R_SUCCESS);
 }
 
 void
-isc_socketmgr_destroy(isc_socketmgr_t **managerp) {
-	isc_socketmgr_t *manager;
+isc__socketmgr_setstats(isc_socketmgr_t *manager0, isc_stats_t *stats) {
+	isc__socketmgr_t *manager = (isc__socketmgr_t *)manager0;
+
+	REQUIRE(VALID_MANAGER(manager));
+	REQUIRE(ISC_LIST_EMPTY(manager->socklist));
+	REQUIRE(manager->stats == NULL);
+	REQUIRE(isc_stats_ncounters(stats) == isc_sockstatscounter_max);
+
+	isc_stats_attach(stats, &manager->stats);
+}
+#endif
+
+ISC_SOCKETFUNC_SCOPE void
+isc__socketmgr_destroy(isc_socketmgr_t **managerp) {
+	isc__socketmgr_t *manager;
 	int i;
 	isc_mem_t *mctx;
 
@@ -2526,42 +4306,36 @@ isc_socketmgr_destroy(isc_socketmgr_t **managerp) {
 	 */
 
 	REQUIRE(managerp != NULL);
-	manager = *managerp;
+	manager = (isc__socketmgr_t *)*managerp;
 	REQUIRE(VALID_MANAGER(manager));
 
-#ifndef ISC_PLATFORM_USETHREADS
-	if (manager->refs > 1) {
-		manager->refs--;
+#ifdef USE_SHARED_MANAGER
+	manager->refs--;
+	if (manager->refs > 0) {
 		*managerp = NULL;
 		return;
 	}
-#endif /* ISC_PLATFORM_USETHREADS */
+	socketmgr = NULL;
+#endif /* USE_SHARED_MANAGER */
 
 	LOCK(&manager->lock);
 
-#ifdef ISC_PLATFORM_USETHREADS
 	/*
 	 * Wait for all sockets to be destroyed.
 	 */
 	while (!ISC_LIST_EMPTY(manager->socklist)) {
-		manager_log(manager, CREATION,
+#ifdef USE_WATCHER_THREAD
+		manager_log(manager, CREATION, "%s",
 			    isc_msgcat_get(isc_msgcat, ISC_MSGSET_SOCKET,
 					   ISC_MSG_SOCKETSREMAIN,
 					   "sockets exist"));
 		WAIT(&manager->shutdown_ok, &manager->lock);
+#else /* USE_WATCHER_THREAD */
+		UNLOCK(&manager->lock);
+		isc__taskmgr_dispatch(NULL);
+		LOCK(&manager->lock);
+#endif /* USE_WATCHER_THREAD */
 	}
-#else /* ISC_PLATFORM_USETHREADS */
-	/*
-	 * Hope all sockets have been destroyed.
-	 */
-	if (!ISC_LIST_EMPTY(manager->socklist)) {
-		manager_log(manager, CREATION,
-			    isc_msgcat_get(isc_msgcat, ISC_MSGSET_SOCKET,
-					   ISC_MSG_SOCKETSREMAIN,
-					   "sockets exist"));
-		INSIST(0);
-	}
-#endif /* ISC_PLATFORM_USETHREADS */
 
 	UNLOCK(&manager->lock);
 
@@ -2572,7 +4346,7 @@ isc_socketmgr_destroy(isc_socketmgr_t **managerp) {
 	 */
 	select_poke(manager, 0, SELECT_POKE_SHUTDOWN);
 
-#ifdef ISC_PLATFORM_USETHREADS
+#ifdef USE_WATCHER_THREAD
 	/*
 	 * Wait for thread to exit.
 	 */
@@ -2581,33 +4355,54 @@ isc_socketmgr_destroy(isc_socketmgr_t **managerp) {
 				 "isc_thread_join() %s",
 				 isc_msgcat_get(isc_msgcat, ISC_MSGSET_GENERAL,
 						ISC_MSG_FAILED, "failed"));
-#endif /* ISC_PLATFORM_USETHREADS */
+#endif /* USE_WATCHER_THREAD */
 
 	/*
 	 * Clean up.
 	 */
-#ifdef ISC_PLATFORM_USETHREADS
+	cleanup_watcher(manager->mctx, manager);
+
+#ifdef USE_WATCHER_THREAD
 	(void)close(manager->pipe_fds[0]);
 	(void)close(manager->pipe_fds[1]);
 	(void)isc_condition_destroy(&manager->shutdown_ok);
-#endif /* ISC_PLATFORM_USETHREADS */
+#endif /* USE_WATCHER_THREAD */
 
-	for (i = 0; i < (int)FD_SETSIZE; i++)
-		if (manager->fdstate[i] == CLOSE_PENDING)
+	for (i = 0; i < (int)manager->maxsocks; i++)
+		if (manager->fdstate[i] == CLOSE_PENDING) /* no need to lock */
 			(void)close(i);
 
+	isc_mem_put(manager->mctx, manager->fds,
+		    manager->maxsocks * sizeof(isc__socket_t *));
+	isc_mem_put(manager->mctx, manager->fdstate,
+		    manager->maxsocks * sizeof(int));
+
+	if (manager->stats != NULL)
+		isc_stats_detach(&manager->stats);
+
+	if (manager->fdlock != NULL) {
+		for (i = 0; i < FDLOCK_COUNT; i++)
+			DESTROYLOCK(&manager->fdlock[i]);
+		isc_mem_put(manager->mctx, manager->fdlock,
+			    FDLOCK_COUNT * sizeof(isc_mutex_t));
+	}
 	DESTROYLOCK(&manager->lock);
-	manager->magic = 0;
+	manager->common.magic = 0;
+	manager->common.impmagic = 0;
 	mctx= manager->mctx;
 	isc_mem_put(mctx, manager, sizeof(*manager));
 
 	isc_mem_detach(&mctx);
 
 	*managerp = NULL;
+
+#ifdef USE_SHARED_MANAGER
+	socketmgr = NULL;
+#endif
 }
 
 static isc_result_t
-socket_recv(isc_socket_t *sock, isc_socketevent_t *dev, isc_task_t *task,
+socket_recv(isc__socket_t *sock, isc_socketevent_t *dev, isc_task_t *task,
 	    unsigned int flags)
 {
 	int io_state;
@@ -2649,7 +4444,7 @@ socket_recv(isc_socket_t *sock, isc_socketevent_t *dev, isc_task_t *task,
 		 * Enqueue the request.  If the socket was previously not being
 		 * watched, poke the watcher to start paying attention to it.
 		 */
-		if (ISC_LIST_EMPTY(sock->recv_list))
+		if (ISC_LIST_EMPTY(sock->recv_list) && !sock->pending_recv)
 			select_poke(sock->manager, sock->fd, SELECT_POKE_READ);
 		ISC_LIST_ENQUEUE(sock->recv_list, dev, ev_link);
 
@@ -2678,13 +4473,14 @@ socket_recv(isc_socket_t *sock, isc_socketevent_t *dev, isc_task_t *task,
 	return (result);
 }
 
-isc_result_t
-isc_socket_recvv(isc_socket_t *sock, isc_bufferlist_t *buflist,
-		 unsigned int minimum, isc_task_t *task,
-		 isc_taskaction_t action, const void *arg)
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_recvv(isc_socket_t *sock0, isc_bufferlist_t *buflist,
+		  unsigned int minimum, isc_task_t *task,
+		  isc_taskaction_t action, const void *arg)
 {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
 	isc_socketevent_t *dev;
-	isc_socketmgr_t *manager;
+	isc__socketmgr_t *manager;
 	unsigned int iocount;
 	isc_buffer_t *buffer;
 
@@ -2703,9 +4499,8 @@ isc_socket_recvv(isc_socket_t *sock, isc_bufferlist_t *buflist,
 	INSIST(sock->bound);
 
 	dev = allocate_socketevent(sock, ISC_SOCKEVENT_RECVDONE, action, arg);
-	if (dev == NULL) {
+	if (dev == NULL)
 		return (ISC_R_NOMEMORY);
-	}
 
 	/*
 	 * UDP sockets are always partial read
@@ -2732,12 +4527,14 @@ isc_socket_recvv(isc_socket_t *sock, isc_bufferlist_t *buflist,
 	return (socket_recv(sock, dev, task, 0));
 }
 
-isc_result_t
-isc_socket_recv(isc_socket_t *sock, isc_region_t *region, unsigned int minimum,
-		isc_task_t *task, isc_taskaction_t action, const void *arg)
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_recv(isc_socket_t *sock0, isc_region_t *region,
+		 unsigned int minimum, isc_task_t *task,
+		 isc_taskaction_t action, const void *arg)
 {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
 	isc_socketevent_t *dev;
-	isc_socketmgr_t *manager;
+	isc__socketmgr_t *manager;
 
 	REQUIRE(VALID_SOCKET(sock));
 	REQUIRE(action != NULL);
@@ -2751,16 +4548,18 @@ isc_socket_recv(isc_socket_t *sock, isc_region_t *region, unsigned int minimum,
 	if (dev == NULL)
 		return (ISC_R_NOMEMORY);
 
-	return (isc_socket_recv2(sock, region, minimum, task, dev, 0));
+	return (isc__socket_recv2(sock0, region, minimum, task, dev, 0));
 }
 
-isc_result_t
-isc_socket_recv2(isc_socket_t *sock, isc_region_t *region,
-		 unsigned int minimum, isc_task_t *task,
-		 isc_socketevent_t *event, unsigned int flags)
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_recv2(isc_socket_t *sock0, isc_region_t *region,
+		  unsigned int minimum, isc_task_t *task,
+		  isc_socketevent_t *event, unsigned int flags)
 {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
+
 	event->ev_sender = sock;
-	event->result = ISC_R_UNEXPECTED;
+	event->result = ISC_R_UNSET;
 	ISC_LIST_INIT(event->bufferlist);
 	event->region = *region;
 	event->n = 0;
@@ -2783,7 +4582,7 @@ isc_socket_recv2(isc_socket_t *sock, isc_region_t *region,
 }
 
 static isc_result_t
-socket_send(isc_socket_t *sock, isc_socketevent_t *dev, isc_task_t *task,
+socket_send(isc__socket_t *sock, isc_socketevent_t *dev, isc_task_t *task,
 	    isc_sockaddr_t *address, struct in6_pktinfo *pktinfo,
 	    unsigned int flags)
 {
@@ -2846,7 +4645,8 @@ socket_send(isc_socket_t *sock, isc_socketevent_t *dev, isc_task_t *task,
 			 * not being watched, poke the watcher to start
 			 * paying attention to it.
 			 */
-			if (ISC_LIST_EMPTY(sock->send_list))
+			if (ISC_LIST_EMPTY(sock->send_list) &&
+			    !sock->pending_send)
 				select_poke(sock->manager, sock->fd,
 					    SELECT_POKE_WRITE);
 			ISC_LIST_ENQUEUE(sock->send_list, dev, ev_link);
@@ -2873,24 +4673,25 @@ socket_send(isc_socket_t *sock, isc_socketevent_t *dev, isc_task_t *task,
 	return (result);
 }
 
-isc_result_t
-isc_socket_send(isc_socket_t *sock, isc_region_t *region,
-		isc_task_t *task, isc_taskaction_t action, const void *arg)
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_send(isc_socket_t *sock, isc_region_t *region,
+		 isc_task_t *task, isc_taskaction_t action, const void *arg)
 {
 	/*
 	 * REQUIRE() checking is performed in isc_socket_sendto().
 	 */
-	return (isc_socket_sendto(sock, region, task, action, arg, NULL,
-				  NULL));
+	return (isc__socket_sendto(sock, region, task, action, arg, NULL,
+				   NULL));
 }
 
-isc_result_t
-isc_socket_sendto(isc_socket_t *sock, isc_region_t *region,
-		  isc_task_t *task, isc_taskaction_t action, const void *arg,
-		  isc_sockaddr_t *address, struct in6_pktinfo *pktinfo)
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_sendto(isc_socket_t *sock0, isc_region_t *region,
+		   isc_task_t *task, isc_taskaction_t action, const void *arg,
+		   isc_sockaddr_t *address, struct in6_pktinfo *pktinfo)
 {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
 	isc_socketevent_t *dev;
-	isc_socketmgr_t *manager;
+	isc__socketmgr_t *manager;
 
 	REQUIRE(VALID_SOCKET(sock));
 	REQUIRE(region != NULL);
@@ -2903,30 +4704,30 @@ isc_socket_sendto(isc_socket_t *sock, isc_region_t *region,
 	INSIST(sock->bound);
 
 	dev = allocate_socketevent(sock, ISC_SOCKEVENT_SENDDONE, action, arg);
-	if (dev == NULL) {
+	if (dev == NULL)
 		return (ISC_R_NOMEMORY);
-	}
 
 	dev->region = *region;
 
 	return (socket_send(sock, dev, task, address, pktinfo, 0));
 }
 
-isc_result_t
-isc_socket_sendv(isc_socket_t *sock, isc_bufferlist_t *buflist,
-		 isc_task_t *task, isc_taskaction_t action, const void *arg)
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_sendv(isc_socket_t *sock, isc_bufferlist_t *buflist,
+		  isc_task_t *task, isc_taskaction_t action, const void *arg)
 {
-	return (isc_socket_sendtov(sock, buflist, task, action, arg, NULL,
-				   NULL));
+	return (isc__socket_sendtov(sock, buflist, task, action, arg, NULL,
+				    NULL));
 }
 
-isc_result_t
-isc_socket_sendtov(isc_socket_t *sock, isc_bufferlist_t *buflist,
-		   isc_task_t *task, isc_taskaction_t action, const void *arg,
-		   isc_sockaddr_t *address, struct in6_pktinfo *pktinfo)
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_sendtov(isc_socket_t *sock0, isc_bufferlist_t *buflist,
+		    isc_task_t *task, isc_taskaction_t action, const void *arg,
+		    isc_sockaddr_t *address, struct in6_pktinfo *pktinfo)
 {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
 	isc_socketevent_t *dev;
-	isc_socketmgr_t *manager;
+	isc__socketmgr_t *manager;
 	unsigned int iocount;
 	isc_buffer_t *buffer;
 
@@ -2943,9 +4744,8 @@ isc_socket_sendtov(isc_socket_t *sock, isc_bufferlist_t *buflist,
 	REQUIRE(iocount > 0);
 
 	dev = allocate_socketevent(sock, ISC_SOCKEVENT_SENDDONE, action, arg);
-	if (dev == NULL) {
+	if (dev == NULL)
 		return (ISC_R_NOMEMORY);
-	}
 
 	/*
 	 * Move each buffer from the passed in list to our internal one.
@@ -2960,17 +4760,20 @@ isc_socket_sendtov(isc_socket_t *sock, isc_bufferlist_t *buflist,
 	return (socket_send(sock, dev, task, address, pktinfo, 0));
 }
 
-isc_result_t
-isc_socket_sendto2(isc_socket_t *sock, isc_region_t *region,
-		   isc_task_t *task,
-		   isc_sockaddr_t *address, struct in6_pktinfo *pktinfo,
-		   isc_socketevent_t *event, unsigned int flags)
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_sendto2(isc_socket_t *sock0, isc_region_t *region,
+		    isc_task_t *task,
+		    isc_sockaddr_t *address, struct in6_pktinfo *pktinfo,
+		    isc_socketevent_t *event, unsigned int flags)
 {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
+
+	REQUIRE(VALID_SOCKET(sock));
 	REQUIRE((flags & ~(ISC_SOCKFLAG_IMMEDIATE|ISC_SOCKFLAG_NORETRY)) == 0);
 	if ((flags & ISC_SOCKFLAG_NORETRY) != 0)
 		REQUIRE(sock->type == isc_sockettype_udp);
 	event->ev_sender = sock;
-	event->result = ISC_R_UNEXPECTED;
+	event->result = ISC_R_UNSET;
 	ISC_LIST_INIT(event->bufferlist);
 	event->region = *region;
 	event->n = 0;
@@ -2980,8 +4783,8 @@ isc_socket_sendto2(isc_socket_t *sock, isc_region_t *region,
 	return (socket_send(sock, event, task, address, pktinfo, flags));
 }
 
-void
-isc_socket_cleanunix(isc_sockaddr_t *sockaddr, isc_boolean_t active) {
+ISC_SOCKETFUNC_SCOPE void
+isc__socket_cleanunix(isc_sockaddr_t *sockaddr, isc_boolean_t active) {
 #ifdef ISC_PLATFORM_HAVESYSUNH
 	int s;
 	struct stat sb;
@@ -3110,8 +4913,8 @@ isc_socket_cleanunix(isc_sockaddr_t *sockaddr, isc_boolean_t active) {
 #endif
 }
 
-isc_result_t
-isc_socket_permunix(isc_sockaddr_t *sockaddr, isc_uint32_t perm,
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_permunix(isc_sockaddr_t *sockaddr, isc_uint32_t perm,
 		    isc_uint32_t owner, isc_uint32_t group)
 {
 #ifdef ISC_PLATFORM_HAVESYSUNH
@@ -3136,7 +4939,7 @@ isc_socket_permunix(isc_sockaddr_t *sockaddr, isc_uint32_t perm,
 	} else
 		strcpy(path, ".");
 #endif
-	
+
 	if (chmod(path, perm) < 0) {
 		isc__strerror(errno, strbuf, sizeof(strbuf));
 		isc_log_write(isc_lctx, ISC_LOGCATEGORY_GENERAL,
@@ -3164,10 +4967,14 @@ isc_socket_permunix(isc_sockaddr_t *sockaddr, isc_uint32_t perm,
 #endif
 }
 
-isc_result_t
-isc_socket_bind(isc_socket_t *sock, isc_sockaddr_t *sockaddr) {
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_bind(isc_socket_t *sock0, isc_sockaddr_t *sockaddr,
+		 unsigned int options) {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
 	char strbuf[ISC_STRERRORSIZE];
 	int on = 1;
+
+	REQUIRE(VALID_SOCKET(sock));
 
 	LOCK(&sock->lock);
 
@@ -3184,7 +4991,8 @@ isc_socket_bind(isc_socket_t *sock, isc_sockaddr_t *sockaddr) {
 	if (sock->pf == AF_UNIX)
 		goto bind_socket;
 #endif
-	if (isc_sockaddr_getport(sockaddr) != (in_port_t)0 &&
+	if ((options & ISC_SOCKET_REUSEADDRESS) != 0 &&
+	    isc_sockaddr_getport(sockaddr) != (in_port_t)0 &&
 	    setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, (void *)&on,
 		       sizeof(on)) < 0) {
 		UNEXPECTED_ERROR(__FILE__, __LINE__,
@@ -3197,6 +5005,9 @@ isc_socket_bind(isc_socket_t *sock, isc_sockaddr_t *sockaddr) {
  bind_socket:
 #endif
 	if (bind(sock->fd, &sockaddr->type.sa, sockaddr->length) < 0) {
+		inc_stats(sock->manager->stats,
+			  sock->statsindex[STATID_BINDFAIL]);
+
 		UNLOCK(&sock->lock);
 		switch (errno) {
 		case EACCES:
@@ -3223,9 +5034,17 @@ isc_socket_bind(isc_socket_t *sock, isc_sockaddr_t *sockaddr) {
 	return (ISC_R_SUCCESS);
 }
 
-isc_result_t
-isc_socket_filter(isc_socket_t *sock, const char *filter) {
-#ifdef SO_ACCEPTFILTER
+/*
+ * Enable this only for specific OS versions, and only when they have repaired
+ * their problems with it.  Until then, this is is broken and needs to be
+ * diabled by default.  See RT22589 for details.
+ */
+#undef ENABLE_ACCEPTFILTER
+
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_filter(isc_socket_t *sock0, const char *filter) {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
+#if defined(SO_ACCEPTFILTER) && defined(ENABLE_ACCEPTFILTER)
 	char strbuf[ISC_STRERRORSIZE];
 	struct accept_filter_arg afa;
 #else
@@ -3235,7 +5054,7 @@ isc_socket_filter(isc_socket_t *sock, const char *filter) {
 
 	REQUIRE(VALID_SOCKET(sock));
 
-#ifdef SO_ACCEPTFILTER
+#if defined(SO_ACCEPTFILTER) && defined(ENABLE_ACCEPTFILTER)
 	bzero(&afa, sizeof(afa));
 	strncpy(afa.af_name, filter, sizeof(afa.af_name));
 	if (setsockopt(sock->fd, SOL_SOCKET, SO_ACCEPTFILTER,
@@ -3262,8 +5081,9 @@ isc_socket_filter(isc_socket_t *sock, const char *filter) {
  * is a new connection we'll have to allocate a new one anyway, so we might
  * as well keep things simple rather than having to track them.
  */
-isc_result_t
-isc_socket_listen(isc_socket_t *sock, unsigned int backlog) {
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_listen(isc_socket_t *sock0, unsigned int backlog) {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
 	char strbuf[ISC_STRERRORSIZE];
 
 	REQUIRE(VALID_SOCKET(sock));
@@ -3294,16 +5114,17 @@ isc_socket_listen(isc_socket_t *sock, unsigned int backlog) {
 }
 
 /*
- * This should try to do agressive accept() XXXMLG
+ * This should try to do aggressive accept() XXXMLG
  */
-isc_result_t
-isc_socket_accept(isc_socket_t *sock,
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_accept(isc_socket_t *sock0,
 		  isc_task_t *task, isc_taskaction_t action, const void *arg)
 {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
 	isc_socket_newconnev_t *dev;
-	isc_socketmgr_t *manager;
+	isc__socketmgr_t *manager;
 	isc_task_t *ntask = NULL;
-	isc_socket_t *nsock;
+	isc__socket_t *nsock;
 	isc_result_t result;
 	isc_boolean_t do_poke = ISC_FALSE;
 
@@ -3340,10 +5161,18 @@ isc_socket_accept(isc_socket_t *sock,
 	 * Attach to socket and to task.
 	 */
 	isc_task_attach(task, &ntask);
+	if (isc_task_exiting(ntask)) {
+		free_socket(&nsock);
+		isc_task_detach(&ntask);
+		isc_event_free(ISC_EVENT_PTR(&dev));
+		UNLOCK(&sock->lock);
+		return (ISC_R_SHUTTINGDOWN);
+	}
 	nsock->references++;
+	nsock->statsindex = sock->statsindex;
 
 	dev->ev_sender = ntask;
-	dev->newsocket = nsock;
+	dev->newsocket = (isc_socket_t *)nsock;
 
 	/*
 	 * Poke watcher here.  We still have the socket locked, so there
@@ -3362,15 +5191,17 @@ isc_socket_accept(isc_socket_t *sock,
 	return (ISC_R_SUCCESS);
 }
 
-isc_result_t
-isc_socket_connect(isc_socket_t *sock, isc_sockaddr_t *addr,
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_connect(isc_socket_t *sock0, isc_sockaddr_t *addr,
 		   isc_task_t *task, isc_taskaction_t action, const void *arg)
 {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
 	isc_socket_connev_t *dev;
 	isc_task_t *ntask = NULL;
-	isc_socketmgr_t *manager;
+	isc__socketmgr_t *manager;
 	int cc;
 	char strbuf[ISC_STRERRORSIZE];
+	char addrbuf[ISC_SOCKADDR_FORMATSIZE];
 
 	REQUIRE(VALID_SOCKET(sock));
 	REQUIRE(addr != NULL);
@@ -3402,9 +5233,19 @@ isc_socket_connect(isc_socket_t *sock, isc_sockaddr_t *addr,
 	 * Try to do the connect right away, as there can be only one
 	 * outstanding, and it might happen to complete.
 	 */
-	sock->address = *addr;
+	sock->peer_address = *addr;
 	cc = connect(sock->fd, &addr->type.sa, addr->length);
 	if (cc < 0) {
+		/*
+		 * HP-UX "fails" to connect a UDP socket and sets errno to
+		 * EINPROGRESS if it's non-blocking.  We'd rather regard this as
+		 * a success and let the user detect it if it's really an error
+		 * at the time of sending a packet on the socket.
+		 */
+		if (sock->type == isc_sockettype_udp && errno == EINPROGRESS) {
+			cc = 0;
+			goto success;
+		}
 		if (SOFT_ERROR(errno) || errno == EINPROGRESS)
 			goto queue;
 
@@ -3429,9 +5270,13 @@ isc_socket_connect(isc_socket_t *sock, isc_sockaddr_t *addr,
 		sock->connected = 0;
 
 		isc__strerror(errno, strbuf, sizeof(strbuf));
-		UNEXPECTED_ERROR(__FILE__, __LINE__, "%d/%s", errno, strbuf);
+		isc_sockaddr_format(addr, addrbuf, sizeof(addrbuf));
+		UNEXPECTED_ERROR(__FILE__, __LINE__, "connect(%s) %d/%s",
+				 addrbuf, errno, strbuf);
 
 		UNLOCK(&sock->lock);
+		inc_stats(sock->manager->stats,
+			  sock->statsindex[STATID_CONNECTFAIL]);
 		isc_event_free(ISC_EVENT_PTR(&dev));
 		return (ISC_R_UNEXPECTED);
 
@@ -3440,12 +5285,15 @@ isc_socket_connect(isc_socket_t *sock, isc_sockaddr_t *addr,
 		isc_task_send(task, ISC_EVENT_PTR(&dev));
 
 		UNLOCK(&sock->lock);
+		inc_stats(sock->manager->stats,
+			  sock->statsindex[STATID_CONNECTFAIL]);
 		return (ISC_R_SUCCESS);
 	}
 
 	/*
 	 * If connect completed, fire off the done event.
 	 */
+ success:
 	if (cc == 0) {
 		sock->connected = 1;
 		sock->bound = 1;
@@ -3453,6 +5301,10 @@ isc_socket_connect(isc_socket_t *sock, isc_sockaddr_t *addr,
 		isc_task_send(task, ISC_EVENT_PTR(&dev));
 
 		UNLOCK(&sock->lock);
+
+		inc_stats(sock->manager->stats,
+			  sock->statsindex[STATID_CONNECT]);
+
 		return (ISC_R_SUCCESS);
 	}
 
@@ -3486,7 +5338,7 @@ isc_socket_connect(isc_socket_t *sock, isc_sockaddr_t *addr,
  */
 static void
 internal_connect(isc_task_t *me, isc_event_t *ev) {
-	isc_socket_t *sock;
+	isc__socket_t *sock;
 	isc_socket_connev_t *dev;
 	isc_task_t *task;
 	int cc;
@@ -3551,6 +5403,9 @@ internal_connect(isc_task_t *me, isc_event_t *ev) {
 			return;
 		}
 
+		inc_stats(sock->manager->stats,
+			  sock->statsindex[STATID_CONNECTFAIL]);
+
 		/*
 		 * Translate other errors into ISC_R_* flavors.
 		 */
@@ -3573,7 +5428,7 @@ internal_connect(isc_task_t *me, isc_event_t *ev) {
 #undef ERROR_MATCH
 		default:
 			dev->result = ISC_R_UNEXPECTED;
-			isc_sockaddr_format(&sock->address, peerbuf,
+			isc_sockaddr_format(&sock->peer_address, peerbuf,
 					    sizeof(peerbuf));
 			isc__strerror(errno, strbuf, sizeof(strbuf));
 			UNEXPECTED_ERROR(__FILE__, __LINE__,
@@ -3581,6 +5436,8 @@ internal_connect(isc_task_t *me, isc_event_t *ev) {
 					 peerbuf, strbuf);
 		}
 	} else {
+		inc_stats(sock->manager->stats,
+			  sock->statsindex[STATID_CONNECT]);
 		dev->result = ISC_R_SUCCESS;
 		sock->connected = 1;
 		sock->bound = 1;
@@ -3595,8 +5452,9 @@ internal_connect(isc_task_t *me, isc_event_t *ev) {
 	isc_task_sendanddetach(&task, ISC_EVENT_PTR(&dev));
 }
 
-isc_result_t
-isc_socket_getpeername(isc_socket_t *sock, isc_sockaddr_t *addressp) {
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_getpeername(isc_socket_t *sock0, isc_sockaddr_t *addressp) {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
 	isc_result_t result;
 
 	REQUIRE(VALID_SOCKET(sock));
@@ -3605,7 +5463,7 @@ isc_socket_getpeername(isc_socket_t *sock, isc_sockaddr_t *addressp) {
 	LOCK(&sock->lock);
 
 	if (sock->connected) {
-		*addressp = sock->address;
+		*addressp = sock->peer_address;
 		result = ISC_R_SUCCESS;
 	} else {
 		result = ISC_R_NOTCONNECTED;
@@ -3616,8 +5474,9 @@ isc_socket_getpeername(isc_socket_t *sock, isc_sockaddr_t *addressp) {
 	return (result);
 }
 
-isc_result_t
-isc_socket_getsockname(isc_socket_t *sock, isc_sockaddr_t *addressp) {
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_getsockname(isc_socket_t *sock0, isc_sockaddr_t *addressp) {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
 	ISC_SOCKADDR_LEN_T len;
 	isc_result_t result;
 	char strbuf[ISC_STRERRORSIZE];
@@ -3654,8 +5513,9 @@ isc_socket_getsockname(isc_socket_t *sock, isc_sockaddr_t *addressp) {
  * Run through the list of events on this socket, and cancel the ones
  * queued for task "task" of type "how".  "how" is a bitmask.
  */
-void
-isc_socket_cancel(isc_socket_t *sock, isc_task_t *task, unsigned int how) {
+ISC_SOCKETFUNC_SCOPE void
+isc__socket_cancel(isc_socket_t *sock0, isc_task_t *task, unsigned int how) {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
 
 	REQUIRE(VALID_SOCKET(sock));
 
@@ -3734,8 +5594,8 @@ isc_socket_cancel(isc_socket_t *sock, isc_task_t *task, unsigned int how) {
 				ISC_LIST_UNLINK(sock->accept_list, dev,
 						ev_link);
 
-				dev->newsocket->references--;
-				free_socket(&dev->newsocket);
+				NEWCONNSOCK(dev)->references--;
+				free_socket((isc__socket_t **)&dev->newsocket);
 
 				dev->result = ISC_R_CANCELED;
 				dev->ev_sender = sock;
@@ -3774,16 +5634,21 @@ isc_socket_cancel(isc_socket_t *sock, isc_task_t *task, unsigned int how) {
 	UNLOCK(&sock->lock);
 }
 
-isc_sockettype_t
-isc_socket_gettype(isc_socket_t *sock) {
+ISC_SOCKETFUNC_SCOPE isc_sockettype_t
+isc__socket_gettype(isc_socket_t *sock0) {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
+
 	REQUIRE(VALID_SOCKET(sock));
 
 	return (sock->type);
 }
 
-isc_boolean_t
-isc_socket_isbound(isc_socket_t *sock) {
+ISC_SOCKETFUNC_SCOPE isc_boolean_t
+isc__socket_isbound(isc_socket_t *sock0) {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
 	isc_boolean_t val;
+
+	REQUIRE(VALID_SOCKET(sock));
 
 	LOCK(&sock->lock);
 	val = ((sock->bound) ? ISC_TRUE : ISC_FALSE);
@@ -3792,8 +5657,9 @@ isc_socket_isbound(isc_socket_t *sock) {
 	return (val);
 }
 
-void
-isc_socket_ipv6only(isc_socket_t *sock, isc_boolean_t yes) {
+ISC_SOCKETFUNC_SCOPE void
+isc__socket_ipv6only(isc_socket_t *sock0, isc_boolean_t yes) {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
 #if defined(IPV6_V6ONLY)
 	int onoff = yes ? 1 : 0;
 #else
@@ -3805,32 +5671,274 @@ isc_socket_ipv6only(isc_socket_t *sock, isc_boolean_t yes) {
 
 #ifdef IPV6_V6ONLY
 	if (sock->pf == AF_INET6) {
-		(void)setsockopt(sock->fd, IPPROTO_IPV6, IPV6_V6ONLY,
-				 (void *)&onoff, sizeof(onoff));
+		if (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_V6ONLY,
+			       (void *)&onoff, sizeof(int)) < 0) {
+			char strbuf[ISC_STRERRORSIZE];
+			isc__strerror(errno, strbuf, sizeof(strbuf));
+			UNEXPECTED_ERROR(__FILE__, __LINE__,
+					 "setsockopt(%d, IPV6_V6ONLY) "
+					 "%s: %s", sock->fd,
+					 isc_msgcat_get(isc_msgcat,
+							ISC_MSGSET_GENERAL,
+							ISC_MSG_FAILED,
+							"failed"),
+					 strbuf);
+		}
 	}
+	FIX_IPV6_RECVPKTINFO(sock);	/* AIX */
 #endif
 }
 
-#ifndef ISC_PLATFORM_USETHREADS
-void
-isc__socketmgr_getfdsets(fd_set *readset, fd_set *writeset, int *maxfd) {
-	if (socketmgr == NULL)
-		*maxfd = 0;
-	else {
-		*readset = socketmgr->read_fds;
-		*writeset = socketmgr->write_fds;
-		*maxfd = socketmgr->maxfd + 1;
-	}
+#ifndef USE_WATCHER_THREAD
+/*
+ * In our assumed scenario, we can simply use a single static object.
+ * XXX: this is not true if the application uses multiple threads with
+ *      'multi-context' mode.  Fixing this is a future TODO item.
+ */
+static isc_socketwait_t swait_private;
+
+int
+isc__socketmgr_waitevents(isc_socketmgr_t *manager0, struct timeval *tvp,
+			  isc_socketwait_t **swaitp)
+{
+	isc__socketmgr_t *manager = (isc__socketmgr_t *)manager0;
+
+
+	int n;
+#ifdef USE_KQUEUE
+	struct timespec ts, *tsp;
+#endif
+#ifdef USE_EPOLL
+	int timeout;
+#endif
+#ifdef USE_DEVPOLL
+	struct dvpoll dvp;
+#endif
+
+	REQUIRE(swaitp != NULL && *swaitp == NULL);
+
+#ifdef USE_SHARED_MANAGER
+	if (manager == NULL)
+		manager = socketmgr;
+#endif
+	if (manager == NULL)
+		return (0);
+
+#ifdef USE_KQUEUE
+	if (tvp != NULL) {
+		ts.tv_sec = tvp->tv_sec;
+		ts.tv_nsec = tvp->tv_usec * 1000;
+		tsp = &ts;
+	} else
+		tsp = NULL;
+	swait_private.nevents = kevent(manager->kqueue_fd, NULL, 0,
+				       manager->events, manager->nevents,
+				       tsp);
+	n = swait_private.nevents;
+#elif defined(USE_EPOLL)
+	if (tvp != NULL)
+		timeout = tvp->tv_sec * 1000 + (tvp->tv_usec + 999) / 1000;
+	else
+		timeout = -1;
+	swait_private.nevents = epoll_wait(manager->epoll_fd,
+					   manager->events,
+					   manager->nevents, timeout);
+	n = swait_private.nevents;
+#elif defined(USE_DEVPOLL)
+	dvp.dp_fds = manager->events;
+	dvp.dp_nfds = manager->nevents;
+	if (tvp != NULL) {
+		dvp.dp_timeout = tvp->tv_sec * 1000 +
+			(tvp->tv_usec + 999) / 1000;
+	} else
+		dvp.dp_timeout = -1;
+	swait_private.nevents = ioctl(manager->devpoll_fd, DP_POLL, &dvp);
+	n = swait_private.nevents;
+#elif defined(USE_SELECT)
+	memcpy(manager->read_fds_copy, manager->read_fds,  manager->fd_bufsize);
+	memcpy(manager->write_fds_copy, manager->write_fds,
+	       manager->fd_bufsize);
+
+	swait_private.readset = manager->read_fds_copy;
+	swait_private.writeset = manager->write_fds_copy;
+	swait_private.maxfd = manager->maxfd + 1;
+
+	n = select(swait_private.maxfd, swait_private.readset,
+		   swait_private.writeset, NULL, tvp);
+#endif
+
+	*swaitp = &swait_private;
+	return (n);
 }
 
 isc_result_t
-isc__socketmgr_dispatch(fd_set *readset, fd_set *writeset, int maxfd) {
-	isc_socketmgr_t *manager = socketmgr;
+isc__socketmgr_dispatch(isc_socketmgr_t *manager0, isc_socketwait_t *swait) {
+	isc__socketmgr_t *manager = (isc__socketmgr_t *)manager0;
 
+	REQUIRE(swait == &swait_private);
+
+#ifdef USE_SHARED_MANAGER
+	if (manager == NULL)
+		manager = socketmgr;
+#endif
 	if (manager == NULL)
 		return (ISC_R_NOTFOUND);
 
-	process_fds(manager, maxfd, readset, writeset);
+#if defined(USE_KQUEUE) || defined(USE_EPOLL) || defined(USE_DEVPOLL)
+	(void)process_fds(manager, manager->events, swait->nevents);
 	return (ISC_R_SUCCESS);
+#elif defined(USE_SELECT)
+	process_fds(manager, swait->maxfd, swait->readset, swait->writeset);
+	return (ISC_R_SUCCESS);
+#endif
 }
-#endif /* ISC_PLATFORM_USETHREADS */
+#endif /* USE_WATCHER_THREAD */
+
+#ifdef BIND9
+void
+isc__socket_setname(isc_socket_t *socket0, const char *name, void *tag) {
+	isc__socket_t *socket = (isc__socket_t *)socket0;
+
+	/*
+	 * Name 'socket'.
+	 */
+
+	REQUIRE(VALID_SOCKET(socket));
+
+	LOCK(&socket->lock);
+	memset(socket->name, 0, sizeof(socket->name));
+	strncpy(socket->name, name, sizeof(socket->name) - 1);
+	socket->tag = tag;
+	UNLOCK(&socket->lock);
+}
+
+ISC_SOCKETFUNC_SCOPE const char *
+isc__socket_getname(isc_socket_t *socket0) {
+	isc__socket_t *socket = (isc__socket_t *)socket0;
+
+	return (socket->name);
+}
+
+void *
+isc__socket_gettag(isc_socket_t *socket0) {
+	isc__socket_t *socket = (isc__socket_t *)socket0;
+
+	return (socket->tag);
+}
+#endif	/* BIND9 */
+
+#ifdef USE_SOCKETIMPREGISTER
+isc_result_t
+isc__socket_register() {
+	return (isc_socket_register(isc__socketmgr_create));
+}
+#endif
+
+#if defined(HAVE_LIBXML2) && defined(BIND9)
+
+static const char *
+_socktype(isc_sockettype_t type)
+{
+	if (type == isc_sockettype_udp)
+		return ("udp");
+	else if (type == isc_sockettype_tcp)
+		return ("tcp");
+	else if (type == isc_sockettype_unix)
+		return ("unix");
+	else if (type == isc_sockettype_fdwatch)
+		return ("fdwatch");
+	else
+		return ("not-initialized");
+}
+
+ISC_SOCKETFUNC_SCOPE void
+isc_socketmgr_renderxml(isc_socketmgr_t *mgr0, xmlTextWriterPtr writer) {
+	isc__socketmgr_t *mgr = (isc__socketmgr_t *)mgr0;
+	isc__socket_t *sock;
+	char peerbuf[ISC_SOCKADDR_FORMATSIZE];
+	isc_sockaddr_t addr;
+	ISC_SOCKADDR_LEN_T len;
+
+	LOCK(&mgr->lock);
+
+#ifdef USE_SHARED_MANAGER
+	xmlTextWriterStartElement(writer, ISC_XMLCHAR "references");
+	xmlTextWriterWriteFormatString(writer, "%d", mgr->refs);
+	xmlTextWriterEndElement(writer);
+#endif	/* USE_SHARED_MANAGER */
+
+	xmlTextWriterStartElement(writer, ISC_XMLCHAR "sockets");
+	sock = ISC_LIST_HEAD(mgr->socklist);
+	while (sock != NULL) {
+		LOCK(&sock->lock);
+		xmlTextWriterStartElement(writer, ISC_XMLCHAR "socket");
+
+		xmlTextWriterStartElement(writer, ISC_XMLCHAR "id");
+		xmlTextWriterWriteFormatString(writer, "%p", sock);
+		xmlTextWriterEndElement(writer);
+
+		if (sock->name[0] != 0) {
+			xmlTextWriterStartElement(writer, ISC_XMLCHAR "name");
+			xmlTextWriterWriteFormatString(writer, "%s",
+						       sock->name);
+			xmlTextWriterEndElement(writer); /* name */
+		}
+
+		xmlTextWriterStartElement(writer, ISC_XMLCHAR "references");
+		xmlTextWriterWriteFormatString(writer, "%d", sock->references);
+		xmlTextWriterEndElement(writer);
+
+		xmlTextWriterWriteElement(writer, ISC_XMLCHAR "type",
+					  ISC_XMLCHAR _socktype(sock->type));
+
+		if (sock->connected) {
+			isc_sockaddr_format(&sock->peer_address, peerbuf,
+					    sizeof(peerbuf));
+			xmlTextWriterWriteElement(writer,
+						  ISC_XMLCHAR "peer-address",
+						  ISC_XMLCHAR peerbuf);
+		}
+
+		len = sizeof(addr);
+		if (getsockname(sock->fd, &addr.type.sa, (void *)&len) == 0) {
+			isc_sockaddr_format(&addr, peerbuf, sizeof(peerbuf));
+			xmlTextWriterWriteElement(writer,
+						  ISC_XMLCHAR "local-address",
+						  ISC_XMLCHAR peerbuf);
+		}
+
+		xmlTextWriterStartElement(writer, ISC_XMLCHAR "states");
+		if (sock->pending_recv)
+			xmlTextWriterWriteElement(writer, ISC_XMLCHAR "state",
+						ISC_XMLCHAR "pending-receive");
+		if (sock->pending_send)
+			xmlTextWriterWriteElement(writer, ISC_XMLCHAR "state",
+						  ISC_XMLCHAR "pending-send");
+		if (sock->pending_accept)
+			xmlTextWriterWriteElement(writer, ISC_XMLCHAR "state",
+						 ISC_XMLCHAR "pending_accept");
+		if (sock->listener)
+			xmlTextWriterWriteElement(writer, ISC_XMLCHAR "state",
+						  ISC_XMLCHAR "listener");
+		if (sock->connected)
+			xmlTextWriterWriteElement(writer, ISC_XMLCHAR "state",
+						  ISC_XMLCHAR "connected");
+		if (sock->connecting)
+			xmlTextWriterWriteElement(writer, ISC_XMLCHAR "state",
+						  ISC_XMLCHAR "connecting");
+		if (sock->bound)
+			xmlTextWriterWriteElement(writer, ISC_XMLCHAR "state",
+						  ISC_XMLCHAR "bound");
+
+		xmlTextWriterEndElement(writer); /* states */
+
+		xmlTextWriterEndElement(writer); /* socket */
+
+		UNLOCK(&sock->lock);
+		sock = ISC_LIST_NEXT(sock, link);
+	}
+	xmlTextWriterEndElement(writer); /* sockets */
+
+	UNLOCK(&mgr->lock);
+}
+#endif /* HAVE_LIBXML2 */

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/mse/msevar.h 144280 2005-03-29 09:22:40Z imp $
+ * $FreeBSD$
  */
 
 /*-

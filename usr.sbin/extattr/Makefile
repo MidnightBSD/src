@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/extattr/Makefile 102607 2002-08-30 08:53:03Z phk $
+# $FreeBSD$
 
 PROG=	rmextattr
 MAN=	rmextattr.8
@@ -10,7 +10,5 @@ LINKS+=	${BINDIR}/rmextattr ${BINDIR}/lsextattr
 MLINKS+=	rmextattr.8 setextattr.8
 MLINKS+=	rmextattr.8 getextattr.8
 MLINKS+=	rmextattr.8 lsextattr.8
-
-WARNS?=	5
 
 .include <bsd.prog.mk>

@@ -1,5 +1,5 @@
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man4/keyboard.4 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
 .Dd January 8, 1995
 .Dt KEYBOARD 4
@@ -63,7 +63,6 @@ The meaning of every key is programmable via the PIO_KEYMAP ioctl call, that
 takes a structure keymap_t as argument.
 The layout of this structure is as
 follows:
-.Pp
 .Bd -literal -offset indent
 		struct keymap {
 			u_short	n_keys;

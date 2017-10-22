@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/uart/uart_kbd_sun.c 169173 2007-05-01 14:14:52Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 #include "opt_kbd.h"
@@ -739,6 +739,7 @@ sunkbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t data)
 	case KDSETRAD:
 		break;
 	case PIO_KEYMAP:
+	case OPIO_KEYMAP:
 	case PIO_KEYMAPENT:
 	case PIO_DEADKEYMAP:
 	default:

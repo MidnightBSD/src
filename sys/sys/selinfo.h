@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)select.h	8.2 (Berkeley) 1/4/94
- * $FreeBSD: release/7.0.0/sys/sys/selinfo.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_SELINFO_H_
@@ -35,26 +35,27 @@
 
 #include <sys/event.h>		/* for struct klist */
 
+struct selfd;
+TAILQ_HEAD(selfdlist, selfd);
+
 /*
  * Used to maintain information about processes that wish to be
  * notified when I/O becomes possible.
  */
 struct selinfo {
-	TAILQ_ENTRY(selinfo)	si_thrlist;	/* list hung off of thread */
-	struct	thread *si_thread;	/* thread waiting */
-	struct	knlist si_note;	/* kernel note list */
-	short	si_flags;	/* see below */
+	struct selfdlist	si_tdlist;	/* List of sleeping threads. */
+	struct knlist		si_note;	/* kernel note list */
+	struct mtx		*si_mtx;	/* Lock for tdlist. */
 };
-#define	SI_COLL	0x0001		/* collision occurred */
 
-#define	SEL_WAITING(si)	\
-	((si)->si_thread != NULL || ((si)->si_flags & SI_COLL) != 0)
+#define	SEL_WAITING(si)		(!TAILQ_EMPTY(&(si)->si_tdlist))
 
 #ifdef _KERNEL
-void	clear_selinfo_list(struct thread *td);
+void	seldrain(struct selinfo *sip);
 void	selrecord(struct thread *selector, struct selinfo *sip);
 void	selwakeup(struct selinfo *sip);
 void	selwakeuppri(struct selinfo *sip, int pri);
+void	seltdfini(struct thread *td);
 #endif
 
 #endif /* !_SYS_SELINFO_H_ */

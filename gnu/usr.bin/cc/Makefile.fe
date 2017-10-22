@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/cc/Makefile.fe 169718 2007-05-19 04:25:59Z kan $
+# $FreeBSD$
 
 #	Front-end-only bits
 
@@ -19,7 +19,9 @@ CFLAGS+= ${DRIVER_DEFINES}
 
 SRCS=	gcc.c opts-common.c options.c intl.c prefix.c version.c
 
-.if exists(${GCCDIR}/config/${GCC_CPU}/driver-${GCC_CPU}.c)
+# Include -march=native support for native-ish compilers only
+.if (${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64") && \
+    ${GCC_CPU} == "i386"
 SRCS+=  driver-${GCC_CPU}.c
 .endif
 

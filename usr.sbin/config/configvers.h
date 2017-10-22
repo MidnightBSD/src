@@ -1,7 +1,7 @@
 /*-
  * This file is in the public domain
  *
- * $FreeBSD: release/7.0.0/usr.sbin/config/configvers.h 169515 2007-05-13 02:36:41Z wkoszek $
+ * $FreeBSD$
  */
 
 /*
@@ -26,7 +26,7 @@
  * was a huge problem for 'make buildkernel' which was run with the installed
  * /usr/sbin/config, not a cross built one.  We started bumping the version
  * number as a way to trap cases where the previous installworld was not
- * compatable with the new buildkernel.  The buildtools phase and much more
+ * compatible with the new buildkernel.  The buildtools phase and much more
  * comprehensive error code returns solved this original problem.
  *
  * Most end-users will use buildkernel and the build tools from buildworld.
@@ -47,7 +47,7 @@
  *     %VERSREQ field in the Makefile.$ARCH of all the affected makefiles
  *     (typically all of them).
  *
- * $FreeBSD: release/7.0.0/usr.sbin/config/configvers.h 169515 2007-05-13 02:36:41Z wkoszek $
+ * $FreeBSD$
  */
-#define	CONFIGVERS	600006
+#define	CONFIGVERS	600012
 #define	MAJOR_VERS(x)	((x) / 100000)

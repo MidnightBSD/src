@@ -26,20 +26,19 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_sleep.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
+#include "namespace.h"
 #include <unistd.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
 extern unsigned int	__sleep(unsigned int);
 extern int		__usleep(useconds_t);
 
-LT10_COMPAT_PRIVATE(_sleep);
-LT10_COMPAT_DEFAULT(sleep);
-LT10_COMPAT_PRIVATE(_usleep);
-LT10_COMPAT_DEFAULT(usleep);
+unsigned int	_sleep(unsigned int seconds);
 
 __weak_reference(_sleep, sleep);
 __weak_reference(_usleep, usleep);

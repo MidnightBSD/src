@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/getpmac/getpmac.c 140907 2005-01-27 14:44:39Z delphij $
+ * $FreeBSD$
  */
 #include <sys/types.h>
 #include <sys/mac.h>
@@ -103,8 +103,7 @@ main(int argc, char *argv[])
 		error = mac_get_pid(pid, label);
 		if (error)
 			perror("mac_get_pid");
-	}
-	else {
+	} else {
 		error = mac_get_proc(label);
 		if (error)
 			perror("mac_get_proc");
@@ -119,7 +118,8 @@ main(int argc, char *argv[])
 		exit(EX_DATAERR);
 	}
 
-	printf("%s\n", string);
+	if (strlen(string) > 0)
+		printf("%s\n", string);
 		
 	mac_free(label);
 	free(string);

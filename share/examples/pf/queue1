@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/examples/pf/queue1 173538 2007-11-11 02:16:00Z mlaier $
+# $FreeBSD$
 # $OpenBSD: queue1,v 1.4 2006/10/07 04:48:01 mcbride Exp $
 
 ext_if = "dc0"

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libstand/gets.c 165906 2007-01-09 01:02:06Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "stand.h"
 
@@ -74,7 +74,7 @@ ngets(char *buf, int n)
 	    putchar('\n');
 	    break;
 	default:
-	    if ((n < 1) || ((lp - buf) < n)) {
+	    if ((n < 1) || ((lp - buf) < n - 1)) {
 		*lp++ = c;
 		putchar(c);
 	    }

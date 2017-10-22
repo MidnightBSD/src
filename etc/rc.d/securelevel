@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/securelevel 175737 2008-01-28 07:58:32Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: securelevel
@@ -20,7 +20,7 @@ securelevel_start()
 {
 	if [ ${kern_securelevel} -ge 0 ]; then
 		echo 'Raising kernel security level: '
-		${SYSCTL_W} kern.securelevel=${kern_securelevel}
+		${SYSCTL} kern.securelevel=${kern_securelevel}
 	fi
 }
 

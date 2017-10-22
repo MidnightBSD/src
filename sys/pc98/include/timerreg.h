@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/pc98/include/timerreg.h 146721 2005-05-28 13:40:27Z nyan $
+ * $FreeBSD$
  */
 
 /*
@@ -48,17 +48,6 @@
 #define	TIMER_CNTR1	0x3fdb
 #define	TIMER_CNTR2	(IO_TIMER1 + TIMER_REG_CNTR2 * 2)
 #define	TIMER_MODE	(IO_TIMER1 + TIMER_REG_MODE * 2)
-
-#define	timer_spkr_acquire() \
-	acquire_timer1(TIMER_SEL1 | TIMER_SQWAVE | TIMER_16BIT)
-#define	timer_spkr_release() \
-	release_timer1()
-
-#define	spkr_set_pitch(pitch) \
-	do { \
-		outb(TIMER_CNTR1, (pitch) & 0xff); \
-		outb(TIMER_CNTR1, (pitch) >> 8); \
-	} while(0)
 
 #endif /* _KERNEL */
 

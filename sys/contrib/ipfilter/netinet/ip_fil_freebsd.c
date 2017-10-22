@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/contrib/ipfilter/netinet/ip_fil_freebsd.c 174122 2007-12-01 00:53:41Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1993-2003 by Darren Reed.
@@ -62,6 +62,12 @@ static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 2.53.2.50 2007/09/20 12
 #else
 # include <sys/select.h>
 #endif
+#if __FreeBSD_version >= 800044
+# include <netinet/tcp_var.h>
+#else
+#define V_path_mtu_discovery path_mtu_discovery
+#define V_ipforwarding ipforwarding
+#endif
 
 #include <net/if.h>
 #if __FreeBSD_version >= 300000
@@ -115,7 +121,7 @@ static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 2.53.2.50 2007/09/20 12
 #endif
 extern	int	ip_optcopy __P((struct ip *, struct ip *));
 
-#if (__FreeBSD_version > 460000)
+#if (__FreeBSD_version > 460000) && (__FreeBSD_version < 800055)
 extern	int	path_mtu_discovery;
 #endif
 
@@ -147,7 +153,9 @@ struct	selinfo	ipfselwait[IPL_LOGSIZE];
 # include <sys/conf.h>
 # if defined(NETBSD_PF)
 #  include <net/pfil.h>
-#  include <netinet/ipprotosw.h>
+#  if (__FreeBSD_version < 501108)
+#   include <netinet/ipprotosw.h>
+#  endif
 /*
  * We provide the fr_checkp name just to minimize changes later.
  */
@@ -234,7 +242,7 @@ int ipfattach()
 	fr_running = 1;
 
 	if (fr_control_forwarding & 1)
-		ipforwarding = 1;
+		V_ipforwarding = 1;
 
 	SPL_X(s);
 #if (__FreeBSD_version >= 300000)
@@ -257,7 +265,7 @@ int ipfdetach()
 	int s;
 #endif
 	if (fr_control_forwarding & 2)
-		ipforwarding = 0;
+		V_ipforwarding = 0;
 
 	SPL_NET(s);
 
@@ -305,8 +313,10 @@ int iplioctl(dev, cmd, data, mode
 #  if (__FreeBSD_version >= 500024)
 struct thread *p;
 #   if (__FreeBSD_version >= 500043)
+#    define	p_cred	td_ucred
 #    define	p_uid	td_ucred->cr_ruid
 #   else
+#    define	p_cred	t_proc->p_cred
 #    define	p_uid	t_proc->p_cred->p_ruid
 #   endif
 #  else
@@ -329,7 +339,11 @@ int mode;
 	SPL_INT(s);
 
 #if (BSD >= 199306) && defined(_KERNEL)
+# if (__FreeBSD_version >= 500034)
+	if (securelevel_ge(p->p_cred, 3) && (mode & FWRITE))
+# else
 	if ((securelevel >= 3) && (mode & FWRITE))
+# endif
 		return EPERM;
 #endif
 
@@ -341,22 +355,19 @@ int mode;
 		if (unit != IPL_LOGIPF)
 			return EIO;
 		if (cmd != SIOCIPFGETNEXT && cmd != SIOCIPFGET &&
-		    cmd != SIOCIPFSET && cmd != SIOCFRENB && 
+		    cmd != SIOCIPFSET && cmd != SIOCFRENB &&
 		    cmd != SIOCGETFS && cmd != SIOCGETFF)
 			return EIO;
 	}
 
 	SPL_NET(s);
-	READ_ENTER(&ipf_global);
 
 	error = fr_ioctlswitch(unit, data, cmd, mode, p->p_uid, p);
 	if (error != -1) {
-		RWLOCK_EXIT(&ipf_global);
 		SPL_X(s);
 		return error;
 	}
 
-	RWLOCK_EXIT(&ipf_global);
 	SPL_X(s);
 
 	return error;
@@ -655,11 +666,11 @@ mb_t *m, **mpp;
 		ip->ip_tos = oip->ip_tos;
 		ip->ip_id = fin->fin_ip->ip_id;
 #if (__FreeBSD_version > 460000)
-		ip->ip_off = path_mtu_discovery ? IP_DF : 0;
+		ip->ip_off = V_path_mtu_discovery ? IP_DF : 0;
 #else
 		ip->ip_off = 0;
 #endif
-		ip->ip_ttl = ip_defttl;
+		ip->ip_ttl = V_ip_defttl;
 		ip->ip_sum = 0;
 		hlen = sizeof(*oip);
 		break;
@@ -885,13 +896,17 @@ iplinit()
 #endif /* __FreeBSD_version < 300000 */
 
 
+/*
+ * m0 - pointer to mbuf where the IP packet starts
+ * mpp - pointer to the mbuf pointer that is the start of the mbuf chain
+ */
 int fr_fastroute(m0, mpp, fin, fdp)
 mb_t *m0, **mpp;
 fr_info_t *fin;
 frdest_t *fdp;
 {
 	register struct ip *ip, *mhip;
-	register struct mbuf *m = m0;
+	register struct mbuf *m = *mpp;
 	register struct route *ro;
 	int len, off, error = 0, hlen, code;
 	struct ifnet *ifp, *sifp;
@@ -969,7 +984,7 @@ frdest_t *fdp;
 		dst->sin_addr = fdp->fd_ip;
 
 	dst->sin_len = sizeof(*dst);
-	rtalloc(ro);
+	in_rtalloc(ro, 0);
 
 	if ((ifp == NULL) && (ro->ro_rt != NULL))
 		ifp = ro->ro_rt->rt_ifp;
@@ -1016,7 +1031,7 @@ frdest_t *fdp;
 			break;
 		case -1 :
 			error = -1;
-			goto done;
+			goto bad;
 			break;
 		}
 
@@ -1034,7 +1049,7 @@ frdest_t *fdp;
 		if (!ip->ip_sum)
 			ip->ip_sum = in_cksum(m, hlen);
 		error = (*ifp->if_output)(ifp, m, (struct sockaddr *)dst,
-					  ro->ro_rt);
+					  ro);
 		goto done;
 	}
 	/*
@@ -1115,7 +1130,7 @@ sendorfree:
 		m->m_act = 0;
 		if (error == 0)
 			error = (*ifp->if_output)(ifp, m,
-			    (struct sockaddr *)dst, ro->ro_rt);
+			    (struct sockaddr *)dst, ro);
 		else
 			FREE_MB_T(m);
 	}
@@ -1157,7 +1172,7 @@ fr_info_t *fin;
 	dst->sin_len = sizeof(*dst);
 	dst->sin_family = AF_INET;
 	dst->sin_addr = fin->fin_src;
-	rtalloc(&iproute);
+	in_rtalloc(&iproute, 0);
 	if (iproute.ro_rt == NULL)
 		return 0;
 	return (fin->fin_ifp == iproute.ro_rt->rt_ifp);

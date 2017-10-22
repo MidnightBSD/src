@@ -28,12 +28,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/netinet/ip_ipsec.c 174854 2007-12-22 06:32:46Z cvs2svn $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ipsec.h"
+#include "opt_sctp.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/errno.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
@@ -44,6 +46,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/netinet/ip_ipsec.c 174854 2007-12-22 06:32
 
 #include <net/if.h>
 #include <net/route.h>
+#include <net/vnet.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -53,6 +56,9 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/netinet/ip_ipsec.c 174854 2007-12-22 06:32
 #include <netinet/ip_var.h>
 #include <netinet/ip_options.h>
 #include <netinet/ip_ipsec.h>
+#ifdef SCTP
+#include <netinet/sctp_crc32.h>
+#endif
 
 #include <machine/in_cksum.h>
 
@@ -64,6 +70,20 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/netinet/ip_ipsec.c 174854 2007-12-22 06:32
 
 extern	struct protosw inetsw[];
 
+#ifdef IPSEC
+#ifdef IPSEC_FILTERTUNNEL
+static VNET_DEFINE(int, ip4_ipsec_filtertunnel) = 1;
+#else
+static VNET_DEFINE(int, ip4_ipsec_filtertunnel) = 0;
+#endif
+#define	V_ip4_ipsec_filtertunnel VNET(ip4_ipsec_filtertunnel)
+
+SYSCTL_DECL(_net_inet_ipsec);
+SYSCTL_VNET_INT(_net_inet_ipsec, OID_AUTO, filtertunnel,
+	CTLFLAG_RW, &VNET_NAME(ip4_ipsec_filtertunnel), 0,
+	"If set filter packets from an IPsec tunnel.");
+#endif /* IPSEC */
+
 /*
  * Check if we have to jump over firewall processing for this packet.
  * Called from ip_input().
@@ -72,11 +92,13 @@ extern	struct protosw inetsw[];
 int
 ip_ipsec_filtertunnel(struct mbuf *m)
 {
-#if defined(IPSEC) && !defined(IPSEC_FILTERTUNNEL)
+#if defined(IPSEC)
+
 	/*
-	 * Bypass packet filtering for packets from a tunnel.
+	 * Bypass packet filtering for packets previously handled by IPsec.
 	 */
-	if (m_tag_find(m, PACKET_TAG_IPSEC_IN_DONE, NULL) != NULL)
+	if (!V_ip4_ipsec_filtertunnel &&
+	    m_tag_find(m, PACKET_TAG_IPSEC_IN_DONE, NULL) != NULL)
 		return 1;
 #endif
 	return 0;
@@ -120,7 +142,7 @@ ip_ipsec_fwd(struct mbuf *m)
 	KEY_FREESP(&sp);
 	splx(s);
 	if (error) {
-		ipstat.ips_cantforward++;
+		IPSTAT_INC(ips_cantforward);
 		return 1;
 	}
 #endif /* IPSEC */
@@ -137,8 +159,8 @@ ip_ipsec_fwd(struct mbuf *m)
 int
 ip_ipsec_input(struct mbuf *m)
 {
-	struct ip *ip = mtod(m, struct ip *);
 #ifdef IPSEC
+	struct ip *ip = mtod(m, struct ip *);
 	struct m_tag *mtag;
 	struct tdb_ident *tdbi;
 	struct secpolicy *sp;
@@ -190,9 +212,8 @@ ip_ipsec_input(struct mbuf *m)
  * Returns MTU suggestion for ICMP needfrag reply.
  */
 int
-ip_ipsec_mtu(struct mbuf *m)
+ip_ipsec_mtu(struct mbuf *m, int mtu)
 {
-	int mtu = 0;
 	/*
 	 * If the packet is routed over IPsec tunnel, tell the
 	 * originator the tunnel MTU.
@@ -209,9 +230,7 @@ ip_ipsec_mtu(struct mbuf *m)
 				   &ipsecerror);
 	if (sp != NULL) {
 		/* count IPsec header size */
-		ipsechdr = ipsec4_hdrsiz(m,
-					 IPSEC_DIR_OUTBOUND,
-					 NULL);
+		ipsechdr = ipsec_hdrsiz(m, IPSEC_DIR_OUTBOUND, NULL);
 
 		/*
 		 * find the correct route for outer IPv4
@@ -220,7 +239,7 @@ ip_ipsec_mtu(struct mbuf *m)
 		if (sp->req != NULL &&
 		    sp->req->sav != NULL &&
 		    sp->req->sav->sah != NULL) {
-			ro = &sp->req->sav->sah->sa_route;
+			ro = &sp->req->sav->sah->route_cache.sa_route;
 			if (ro->ro_rt && ro->ro_rt->rt_ifp) {
 				mtu =
 				    ro->ro_rt->rt_rmx.rmx_mtu ?
@@ -241,9 +260,7 @@ ip_ipsec_mtu(struct mbuf *m)
  * -1 = packet was reinjected and stop processing packet
  */
 int
-ip_ipsec_output(struct mbuf **m, struct inpcb *inp, int *flags, int *error,
-    struct route **ro, struct route *iproute, struct sockaddr_in **dst,
-    struct in_ifaddr **ia, struct ifnet **ifp)
+ip_ipsec_output(struct mbuf **m, struct inpcb *inp, int *flags, int *error)
 {
 #ifdef IPSEC
 	struct secpolicy *sp = NULL;
@@ -323,12 +340,28 @@ ip_ipsec_output(struct mbuf **m, struct inpcb *inp, int *flags, int *error,
 			in_delayed_cksum(*m);
 			(*m)->m_pkthdr.csum_flags &= ~CSUM_DELAY_DATA;
 		}
-
+#ifdef SCTP
+		if ((*m)->m_pkthdr.csum_flags & CSUM_SCTP) {
+			sctp_delayed_cksum(*m, (uint32_t)(ip->ip_hl << 2));
+			(*m)->m_pkthdr.csum_flags &= ~CSUM_SCTP;
+		}
+#endif
 		ip->ip_len = htons(ip->ip_len);
 		ip->ip_off = htons(ip->ip_off);
 
 		/* NB: callee frees mbuf */
 		*error = ipsec4_process_packet(*m, sp->req, *flags, 0);
+		if (*error == EJUSTRETURN) {
+			/*
+			 * We had a SP with a level of 'use' and no SA. We
+			 * will just continue to process the packet without
+			 * IPsec processing and return without error.
+			 */
+			*error = 0;
+			ip->ip_len = ntohs(ip->ip_len);
+			ip->ip_off = ntohs(ip->ip_off);
+			goto done;
+		}
 		/*
 		 * Preserve KAME behaviour: ENOENT can be returned
 		 * when an SA acquire is in progress.  Don't propagate
@@ -356,19 +389,6 @@ ip_ipsec_output(struct mbuf **m, struct inpcb *inp, int *flags, int *error,
 		} else {
 			/* No IPsec processing for this packet. */
 		}
-#ifdef notyet
-		/*
-		 * If deferred crypto processing is needed, check that
-		 * the interface supports it.
-		 */ 
-		mtag = m_tag_find(*m, PACKET_TAG_IPSEC_OUT_CRYPTO_NEEDED, NULL);
-		if (mtag != NULL && ((*ifp)->if_capenable & IFCAP_IPSEC) == 0) {
-			/* notify IPsec to do its own crypto */
-			ipsp_skipcrypto_unmark((struct tdb_ident *)(mtag + 1));
-			*error = EHOSTUNREACH;
-			goto bad;
-		}
-#endif
 	}
 done:
 	if (sp != NULL)

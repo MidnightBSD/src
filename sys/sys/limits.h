@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sys/limits.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_LIMITS_H_
@@ -88,7 +88,7 @@
 #define	QUAD_MIN	(__QUAD_MIN)	/* min value for a quad_t */
 #endif
 
-#if __XSI_VISIBLE
+#if __XSI_VISIBLE || __POSIX_VISIBLE >= 200809
 #define	LONG_BIT	__LONG_BIT
 #define	WORD_BIT	__WORD_BIT
 #endif

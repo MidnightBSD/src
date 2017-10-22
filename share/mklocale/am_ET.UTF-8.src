@@ -4,7 +4,7 @@
  * ሚካኤል ጥላሁን <mtm@FreeBSD.Org>
  * Last updated Mon Aug 04 02:06:00 EST 2003
  *
- * $FreeBSD: release/7.0.0/share/mklocale/am_ET.UTF-8.src 118461 2003-08-05 06:34:16Z ache $
+ * $FreeBSD$
  */
 
 ENCODING	"UTF-8"

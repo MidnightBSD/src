@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/cc/cc_tools/Makefile 170039 2007-05-28 00:25:07Z kan $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -22,38 +22,46 @@ LIBIBERTY=	libiberty.a
 # The list of headers to go into tm.h
 #
 TARGET_INC+=	options.h
-.if ${TARGET_ARCH} == "amd64"
+.if ${TARGET_CPUARCH} == "amd64"
 TARGET_INC+=	i386/biarch64.h
 .endif
-.if ${TARGET_ARCH} != "arm"
+.if ${TARGET_CPUARCH} != "arm"
 TARGET_INC+=	${GCC_CPU}/${GCC_CPU}.h
 .endif
-.if ${TARGET_ARCH} == "i386" || ${TARGET_ARCH} == "amd64"
+.if ${TARGET_CPUARCH} == "i386" || ${TARGET_CPUARCH} == "amd64"
 TARGET_INC+=	${GCC_CPU}/unix.h
 TARGET_INC+=	${GCC_CPU}/att.h
 .endif
 TARGET_INC+=	dbxelf.h
+TARGET_INC+=	elfos-undef.h
 TARGET_INC+=	elfos.h
 TARGET_INC+=	freebsd-native.h
 TARGET_INC+=	freebsd-spec.h
 TARGET_INC+=	freebsd.h
-.if ${TARGET_ARCH} != "i386" && ${TARGET_ARCH} != "amd64"
-.if exists(${GCCDIR}/config/${GCC_CPU}/sysv4.h)
+.if ${TARGET_CPUARCH} != "i386" && ${TARGET_CPUARCH} != "amd64"
+. if exists(${GCCDIR}/config/${GCC_CPU}/sysv4.h)
 TARGET_INC+=	${GCC_CPU}/sysv4.h
+. endif
 .endif
-.endif
-.if ${TARGET_ARCH} == "amd64"
+.if ${TARGET_CPUARCH} == "amd64"
 TARGET_INC+=	${GCC_CPU}/x86-64.h
-TARGET_INC+=	${GCC_CPU}/freebsd.h
-TARGET_INC+=	${GCC_CPU}/freebsd64.h
-TARGET_INC+=	freebsd64-fix.h
-.elif ${TARGET_ARCH} == "arm"
+.endif
+.if ${TARGET_CPUARCH} == "arm" || ${TARGET_CPUARCH} == "mips"
 TARGET_INC+=	${GCC_CPU}/elf.h
+.endif
+.if ${TARGET_CPUARCH} == "arm"
 TARGET_INC+=	${GCC_CPU}/aout.h
+.endif
+.if ${TARGET_ARCH} == "powerpc64"
+TARGET_INC+=	${GCC_CPU}/biarch64.h
+TARGET_INC+=    ${GCC_CPU}/default64.h
+.endif
 TARGET_INC+=	${GCC_CPU}/freebsd.h
+.if ${TARGET_CPUARCH} == "amd64"
+TARGET_INC+=	${GCC_CPU}/freebsd64.h
+.endif
+.if ${TARGET_CPUARCH} == "arm"
 TARGET_INC+=	${GCC_CPU}/arm.h
-.else
-TARGET_INC+=	${GCC_CPU}/freebsd.h
 .endif
 TARGET_INC+=	defaults.h
 
@@ -122,10 +130,6 @@ GTFILES_LANG_DIR_NAMES=
 GTFILES_LANG_DIR_NAMES+=	cp
 .endif
 
-.if ${MK_OBJC} != "no"
-GTFILES_LANG_DIR_NAMES+=	objc
-.endif
-
 # The list of language specific files for gengtype
 .for L in ${GTFILES_LANG_DIR_NAMES} c
 .if exists(${GCCDIR}/$L-config-lang.in)
@@ -150,10 +154,6 @@ TREE_DEF_FILES=
 TREE_DEF_FILES+=	cp/cp-tree.def
 .endif
 
-.if ${MK_OBJC} != "no"
-TREE_DEF_FILES+=	objc/objc-tree.def
-.endif
-
 #
 # Option files.
 #
@@ -167,11 +167,11 @@ OPT_FILES+=	${GCCDIR}/config/${GCC_CPU}/${GCC_CPU}.opt
 OPT_FILES+=	${.CURDIR}/${GCC_CPU}-freebsd.opt
 .endif
 
-.if ${TARGET_ARCH} == "powerpc"
+.if ${TARGET_CPUARCH} == "powerpc"
 OPT_FILES+=	${GCCDIR}/config/${GCC_CPU}/sysv4.opt
 .endif
 
-.if ${TARGET_ARCH} == "sparc64"
+.if ${TARGET_CPUARCH} == "sparc64"
 OPT_FILES+=	${GCCDIR}/config/${GCC_CPU}/long-double-switch.opt
 .endif
 
@@ -216,15 +216,15 @@ GENSRCS+=	tconfig.h
 CLEANFILES+=	cs-tconfig.h
 # Options
 optionlist: ${OPT_FILES}
-	awk -f ${GCCDIR}/opt-gather.awk ${.ALLSRC} > ${.TARGET}
+	LC_ALL=C awk -f ${GCCDIR}/opt-gather.awk ${.ALLSRC} > ${.TARGET}
 
 options.h:	optionlist
-	awk -f ${GCCDIR}/opt-functions.awk \
+	LC_ALL=C awk -f ${GCCDIR}/opt-functions.awk \
 	    -f ${GCCDIR}/opth-gen.awk \
 		< ${.ALLSRC} > ${.TARGET}
 
 options.c:	optionlist
-	awk -f ${GCCDIR}/opt-functions.awk \
+	LC_ALL=C awk -f ${GCCDIR}/opt-functions.awk \
 	    -f ${GCCDIR}/optc-gen.awk \
 		-v header_name="config.h system.h coretypes.h tm.h" \
 		< ${.ALLSRC} > ${.TARGET}
@@ -299,12 +299,22 @@ GENSRCS+=	gcov-iov.h
 
 # Multilib config file
 multilib.h:
+.if ${TARGET_ARCH} == "powerpc64" || ${TARGET_ARCH} == "amd64"
+	echo 'static const char *const multilib_raw[] = { \
+	    ". !m64 !m32;", \
+	    "64:../lib m64 !m32;", \
+	    "32:../lib32 !m64 m32;", NULL };'			> ${.TARGET}
+	echo 'static const char *multilib_options = "m64/m32";'	>> ${.TARGET}
+	echo 'static const char *const multilib_matches_raw[] = { \
+	    "m64 m64;", "m32 m32;", NULL };'			>> ${.TARGET}
+.else
 	echo 'static const char *const multilib_raw[] = { \
 	    ". ;", NULL };'					> ${.TARGET}
+	echo 'static const char *multilib_options = "";'	>> ${.TARGET}
 	echo 'static const char *const multilib_matches_raw[] = { \
 	    NULL };'						>> ${.TARGET}
+.endif
 	echo 'static const char *multilib_extra = "";'		>> ${.TARGET}
-	echo 'static const char *multilib_options = "";'	>> ${.TARGET}
 	echo 'static const char *const multilib_exclusions_raw[] = { \
 	    NULL };'						>> ${.TARGET}
 
@@ -324,7 +334,6 @@ GENSRCS+=	configargs.h
 # Language spec files
 specs.h:
 	echo '#include "cp/lang-specs.h"'			> ${.TARGET}
-	echo '#include "objc/lang-specs.h"'			>> ${.TARGET}
 
 GENSRCS+=	specs.h
 

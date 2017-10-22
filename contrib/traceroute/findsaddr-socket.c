@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/contrib/traceroute/findsaddr-socket.c 172506 2007-10-10 16:59:15Z cvs2svn $
+ * $FreeBSD$
  */
 
 /* XXX Yes this is WAY too complicated */

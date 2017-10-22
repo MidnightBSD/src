@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/msun/ia64/fenv.c 130329 2004-06-11 02:35:30Z das $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

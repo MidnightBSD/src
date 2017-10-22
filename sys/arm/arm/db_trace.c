@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/db_trace.c 160312 2006-07-12 21:22:44Z jhb $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 
@@ -43,13 +43,12 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/db_trace.c 160312 2006-07-12 21:22
 #include <machine/cpufunc.h>
 #include <machine/db_machdep.h>
 #include <machine/pcb.h>
+#include <machine/stack.h>
 #include <machine/vmparam.h>
 #include <ddb/ddb.h>
 #include <ddb/db_access.h>
 #include <ddb/db_sym.h>
 #include <ddb/db_output.h>
-
-#define INKERNEL(va)	(((vm_offset_t)(va)) >= VM_MIN_KERNEL_ADDRESS)
 
 /*
  * APCS stack frames are awkward beasts, so I don't think even trying to use
@@ -78,11 +77,6 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/db_trace.c 160312 2006-07-12 21:22
  * We have to disassemble it if we want to know which of the optional 
  * fields are actually present.
  */
-
-#define FR_SCP	(0)
-#define FR_RLV	(-1)
-#define FR_RSP	(-2)
-#define FR_RFP	(-3)
 
 static void
 db_stack_trace_cmd(db_expr_t addr, db_expr_t count)
@@ -200,36 +194,18 @@ db_md_set_watchpoint(db_expr_t addr, db_expr_t size)
 int
 db_trace_thread(struct thread *thr, int count)
 {
-	uint32_t addr;
+	struct pcb *ctx;
 
-	if (thr == curthread)
-		addr = (uint32_t)__builtin_frame_address(0);
-	else
-		addr = thr->td_pcb->un_32.pcb32_r11;
-	db_stack_trace_cmd(addr, -1);
+	ctx = kdb_thr_ctx(thr);
+	db_stack_trace_cmd(ctx->un_32.pcb32_r11, -1);
 	return (0);
 }
 
 void
 db_trace_self(void)
 {
-	db_trace_thread(curthread, -1);
-}
+	db_addr_t addr;
 
-void
-stack_save(struct stack *st)
-{
-	vm_offset_t callpc;
-	u_int32_t *frame;
-
-	stack_zero(st);
-	frame = (u_int32_t *)__builtin_frame_address(0);
-	while (1) {
-		if (!INKERNEL(frame))
-			break;
-		callpc = frame[FR_SCP];
-		if (stack_put(st, callpc) == -1)
-			break;
-		frame = (u_int32_t *)(frame[FR_RFP]);
-	}
+	addr = (db_addr_t)__builtin_frame_address(0);
+	db_stack_trace_cmd(addr, -1);
 }

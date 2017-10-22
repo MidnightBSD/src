@@ -1,14 +1,24 @@
-# $FreeBSD: release/7.0.0/sys/boot/pc98/libpc98/Makefile 157668 2006-04-11 20:11:30Z jhb $
+# $FreeBSD$
 #
 LIB=			pc98
 INTERNALLIB=
 
 .PATH:	${.CURDIR}/../../i386/libi386
 
-SRCS=	bioscd.c biosdisk.c biosmem.c biospnp.c biospci.c biossmap.c \
-	bootinfo.c bootinfo32.c comconsole.c devicename.c elf32_freebsd.c \
-	i386_copy.c i386_module.c nullconsole.c pxe.c pxetramp.s \
+SRCS=	bioscd.c biosdisk.c biosmem.c biospnp.c \
+	biospci.c biossmap.c bootinfo.c bootinfo32.c \
+	comconsole.c devicename.c elf32_freebsd.c \
+	i386_copy.c i386_module.c nullconsole.c pc98_sys.c pxe.c pxetramp.s \
 	time.c vidconsole.c
+.PATH:	${.CURDIR}/../../zfs
+SRCS+=	devicename_stubs.c
+
+# Enable PXE TFTP or NFS support, not both.
+.if defined(LOADER_TFTP_SUPPORT)
+CFLAGS+=	-DLOADER_TFTP_SUPPORT
+.else
+CFLAGS+=	-DLOADER_NFS_SUPPORT
+.endif
 
 BOOT_COMCONSOLE_PORT?= 0x238
 CFLAGS+=	-DCOMPORT=${BOOT_COMCONSOLE_PORT}

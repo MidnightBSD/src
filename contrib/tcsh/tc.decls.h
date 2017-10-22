@@ -1,4 +1,4 @@
-/* $Header: /p/tcsh/cvsroot/tcsh/tc.decls.h,v 3.63 2006/02/14 14:07:36 christos Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/tc.decls.h,v 3.65 2010/02/09 20:26:13 christos Exp $ */
 /*
  * tc.decls.h: Function declarations from all the tcsh modules
  */
@@ -259,9 +259,9 @@ extern	void		  sched_run	(void);
  * tc.str.c:
  */
 #ifdef WIDE_STRINGS
-extern	size_t		  one_mbtowc	(wchar_t *, const char *, size_t);
-extern	size_t		  one_wctomb	(char *, wchar_t);
-extern  int		  rt_mbtowc	(wchar_t *, const char *, size_t);
+extern	size_t		  one_mbtowc	(Char *, const char *, size_t);
+extern	size_t		  one_wctomb	(char *, Char);
+extern  int		  rt_mbtowc	(Char *, const char *, size_t);
 #else
 #define one_mbtowc(PWC, S, N) \
 	((void)(N), *(PWC) = (unsigned char)*(S), (size_t)1)
@@ -294,10 +294,13 @@ extern	char		 *caching_strip	(const char *);
 #endif
 extern	char		 *short2qstr	(const Char *);
 
+extern  struct blk_buf   *bb_alloc	(void);
 extern	void		  bb_append	(struct blk_buf *, Char *);
 extern	void		  bb_cleanup	(void *);
 extern	Char		**bb_finish	(struct blk_buf *);
+extern  void 		  bb_free	(void *);
 
+extern	struct strbuf	 *strbuf_alloc(void);
 extern	void		  strbuf_terminate(struct strbuf *);
 extern  void		  strbuf_append1(struct strbuf *, char);
 extern  void		  strbuf_appendn(struct strbuf *, const char *,
@@ -305,6 +308,8 @@ extern  void		  strbuf_appendn(struct strbuf *, const char *,
 extern  void		  strbuf_append (struct strbuf *, const char *);
 extern  char		 *strbuf_finish (struct strbuf *);
 extern	void		  strbuf_cleanup(void *);
+extern	void		  strbuf_free(void *);
+extern	struct Strbuf	 *Strbuf_alloc(void);
 extern	void		  Strbuf_terminate(struct Strbuf *);
 extern  void		  Strbuf_append1(struct Strbuf *, Char);
 extern  void		  Strbuf_appendn(struct Strbuf *, const Char *,
@@ -312,6 +317,7 @@ extern  void		  Strbuf_appendn(struct Strbuf *, const Char *,
 extern  void		  Strbuf_append (struct Strbuf *, const Char *);
 extern  Char		 *Strbuf_finish (struct Strbuf *);
 extern	void		  Strbuf_cleanup(void *);
+extern	void		  Strbuf_free(void *);
 
 
 /*

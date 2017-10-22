@@ -1,6 +1,6 @@
 # Copyright (C) 1999-2000 by Maksim Yevmenkin <m_evmenkin@yahoo.com>
 #
-# $FreeBSD: release/7.0.0/sys/modules/if_tap/Makefile 162711 2006-09-27 19:57:02Z ru $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../net
 
@@ -12,7 +12,7 @@ opt_compat.h:
 	echo "#define COMPAT_FREEBSD6 1" > ${.TARGET}
 
 opt_inet.h:
-	echo "#define INET 1" > opt_inet.h
+	echo "#define INET 1" > ${.TARGET}
 .endif
 
 .include <bsd.kmod.mk>

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/ndiscvt/Makefile 145485 2005-04-24 20:21:22Z wpaul $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../sys/compat/ndis
 
@@ -11,6 +11,7 @@ MAN=	ndiscvt.8
 MAN+=	ndisgen.8
 
 WARNS?=	4
+NO_WCAST_ALIGN=
 
 DPADD=  ${LIBL}
 LDADD=  -ll

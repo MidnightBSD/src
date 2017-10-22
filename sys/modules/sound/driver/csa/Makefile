@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/sound/driver/csa/Makefile 110498 2003-02-07 13:56:33Z nyan $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../../dev/sound/pci
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/fs/hpfs/hpfs_vfsops.c 167497 2007-03-13 01:50:27Z tegge $
+ * $FreeBSD$
  */
 
 
@@ -73,18 +73,19 @@ static int
 hpfs_cmount ( 
 	struct mntarg *ma,
 	void *data,
-	int flags,
-	struct thread *td )
+	uint64_t flags)
 {
 	struct hpfs_args args;
+	struct export_args exp;
 	int error;
 
 	error = copyin(data, (caddr_t)&args, sizeof (struct hpfs_args));
 	if (error)
 		return (error);
+	vfs_oexport_conv(&args.export, &exp);
 
 	ma = mount_argsu(ma, "from", args.fspec, MAXPATHLEN);
-	ma = mount_arg(ma, "export", &args.export, sizeof args.export);
+	ma = mount_arg(ma, "export", &exp, sizeof(exp));
 	ma = mount_argf(ma, "uid", "%d", args.uid);
 	ma = mount_argf(ma, "gid", "%d", args.gid);
 	ma = mount_argf(ma, "mode", "%d", args.mode);
@@ -103,17 +104,16 @@ static const char *hpfs_opts[] = {
 };
 
 static int
-hpfs_mount ( 
-	struct mount *mp,
-	struct thread *td )
+hpfs_mount (struct mount *mp)
 {
 	int		err = 0, error;
 	struct vnode	*devvp;
-	struct hpfsmount *hpmp = 0;
+	struct thread *td;
 	struct nameidata ndp;
 	struct export_args export;
 	char *from;
 
+	td = curthread;
 	dprintf(("hpfs_omount():\n"));
 	/*
 	 ***
@@ -133,8 +133,6 @@ hpfs_mount (
 	 */
 	if (mp->mnt_flag & MNT_UPDATE) {
 		dprintf(("hpfs_omount: MNT_UPDATE: "));
-
-		hpmp = VFSTOHPFS(mp);
 
 		if (from == NULL) {
 			error = vfs_copyopt(mp->mnt_optnew, "export",
@@ -236,7 +234,7 @@ hpfs_mountfs(devvp, mp, td)
 	error = g_vfs_open(devvp, &cp, "hpfs", ronly ? 0 : 1);
 	g_topology_unlock();
 	PICKUP_GIANT();
-	VOP_UNLOCK(devvp, 0, td);
+	VOP_UNLOCK(devvp, 0);
 	if (error)
 		return (error);
 
@@ -281,15 +279,15 @@ hpfs_mountfs(devvp, mp, td)
 		goto failed;
 	}
 
-	mp->mnt_data = (qaddr_t)hpmp;
+	mp->mnt_data = hpmp;
 	hpmp->hpm_devvp = devvp;
 	hpmp->hpm_dev = devvp->v_rdev;
 	hpmp->hpm_mp = mp;
-	if (1 == vfs_scanopt(mp->mnt_optnew, "uid", "%d", &v))
+	if (vfs_scanopt(mp->mnt_optnew, "uid", "%d", &v) == 1)
 		hpmp->hpm_uid = v;
-	if (1 == vfs_scanopt(mp->mnt_optnew, "gid", "%d", &v))
+	if (vfs_scanopt(mp->mnt_optnew, "gid", "%d", &v) == 1)
 		hpmp->hpm_gid = v;
-	if (1 == vfs_scanopt(mp->mnt_optnew, "mode", "%d", &v))
+	if (vfs_scanopt(mp->mnt_optnew, "mode", "%d", &v) == 1)
 		hpmp->hpm_mode = v;
 
 	error = hpfs_bminit(hpmp);
@@ -302,7 +300,7 @@ hpfs_mountfs(devvp, mp, td)
 		goto failed;
 	}
 
-	error = hpfs_root(mp, LK_EXCLUSIVE, &vp, td);
+	error = hpfs_root(mp, LK_EXCLUSIVE, &vp);
 	if (error) {
 		hpfs_cpdeinit(hpmp);
 		hpfs_bmdeinit(hpmp);
@@ -322,23 +320,24 @@ hpfs_mountfs(devvp, mp, td)
 failed:
 	if (bp)
 		brelse (bp);
-	mp->mnt_data = (qaddr_t)NULL;
-	g_vfs_close(cp, td);
+	mp->mnt_data = NULL;
+	DROP_GIANT();
+	g_topology_lock();
+	g_vfs_close(cp);
+	g_topology_unlock();
+	PICKUP_GIANT();
 	return (error);
 }
 
 static int
 hpfs_unmount( 
 	struct mount *mp,
-	int mntflags,
-	struct thread *td)
+	int mntflags)
 {
-	int error, flags, ronly;
+	int error, flags;
 	register struct hpfsmount *hpmp = VFSTOHPFS(mp);
 
 	dprintf(("hpfs_unmount():\n"));
-
-	ronly = (mp->mnt_flag & MNT_RDONLY) != 0;
 
 	flags = 0;
 	if(mntflags & MNT_FORCE)
@@ -346,24 +345,28 @@ hpfs_unmount(
 
 	dprintf(("hpfs_unmount: vflushing...\n"));
 	
-	error = vflush(mp, 0, flags, td);
+	error = vflush(mp, 0, flags, curthread);
 	if (error) {
 		printf("hpfs_unmount: vflush failed: %d\n",error);
 		return (error);
 	}
 
-	vinvalbuf(hpmp->hpm_devvp, V_SAVE, td, 0, 0);
-	g_vfs_close(hpmp->hpm_cp, td);
+	vinvalbuf(hpmp->hpm_devvp, V_SAVE, 0, 0);
+	DROP_GIANT();
+	g_topology_lock();
+	g_vfs_close(hpmp->hpm_cp);
+	g_topology_unlock();
+	PICKUP_GIANT();
 	vrele(hpmp->hpm_devvp);
 
 	dprintf(("hpfs_umount: freeing memory...\n"));
 	hpfs_cpdeinit(hpmp);
 	hpfs_bmdeinit(hpmp);
-	mp->mnt_data = (qaddr_t)0;
+	mp->mnt_data = NULL;
 	MNT_ILOCK(mp);
 	mp->mnt_flag &= ~MNT_LOCAL;
 	MNT_IUNLOCK(mp);
-	FREE(hpmp, M_HPFSMNT);
+	free(hpmp, M_HPFSMNT);
 
 	return (0);
 }
@@ -372,8 +375,7 @@ static int
 hpfs_root(
 	struct mount *mp,
 	int flags,
-	struct vnode **vpp,
-	struct thread *td )
+	struct vnode **vpp)
 {
 	int error = 0;
 	struct hpfsmount *hpmp = VFSTOHPFS(mp);
@@ -391,8 +393,7 @@ hpfs_root(
 static int
 hpfs_statfs(
 	struct mount *mp,
-	struct statfs *sbp,
-	struct thread *td)
+	struct statfs *sbp)
 {
 	struct hpfsmount *hpmp = VFSTOHPFS(mp);
 
@@ -416,6 +417,7 @@ static int
 hpfs_fhtovp(
 	struct mount *mp,
 	struct fid *fhp,
+	int flags,
 	struct vnode **vpp)
 {
 	struct vnode *nvp;
@@ -445,7 +447,6 @@ hpfs_vget(
 	struct hpfsnode *hp;
 	struct buf *bp;
 	int error;
-	struct thread *td;
 
 	dprintf(("hpfs_vget(0x%x): ",ino));
 
@@ -469,13 +470,13 @@ hpfs_vget(
 	 * at that time is little, and anyway - we'll
 	 * check for it).
 	 */
-	MALLOC(hp, struct hpfsnode *, sizeof(struct hpfsnode), 
+	hp = malloc(sizeof(struct hpfsnode), 
 		M_HPFSNO, M_WAITOK);
 
 	error = getnewvnode("hpfs", mp, &hpfs_vnodeops, &vp);
 	if (error) {
 		printf("hpfs_vget: can't get new vnode\n");
-		FREE(hp, M_HPFSNO);
+		free(hp, M_HPFSNO);
 		return (error);
 	}
 
@@ -499,14 +500,13 @@ hpfs_vget(
 	hp->h_mode = hpmp->hpm_mode;
 	hp->h_devvp = hpmp->hpm_devvp;
 
-	td = curthread;
-	lockmgr(vp->v_vnlock, LK_EXCLUSIVE, NULL, td);
+	lockmgr(vp->v_vnlock, LK_EXCLUSIVE, NULL);
 	error = insmntque(vp, mp);
 	if (error != 0) {
 		free(hp, M_HPFSNO);
 		return (error);
 	}
-	error = vfs_hash_insert(vp, ino, flags, td, vpp, NULL, NULL);
+	error = vfs_hash_insert(vp, ino, flags, curthread, vpp, NULL, NULL);
 	if (error || *vpp != NULL)
 		return (error);
 

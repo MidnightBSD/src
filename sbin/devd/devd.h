@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sbin/devd/devd.h 147874 2005-07-10 03:37:15Z imp $
+ * $FreeBSD$
  */
 
 #ifndef DEVD_H

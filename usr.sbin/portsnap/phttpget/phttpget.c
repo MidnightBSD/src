@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/portsnap/phttpget/phttpget.c 176314 2008-02-15 16:17:28Z cperciva $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -317,6 +317,7 @@ main(int argc, char *argv[])
 	int chunked;		/* != if transfer-encoding is chunked */
 	off_t clen;		/* Chunk length */
 	int firstreq = 0;	/* # of first request for this connection */
+	int val;		/* Value used for setsockopt call */
 
 	/* Check that the arguments are sensible */
 	if (argc < 2)
@@ -369,6 +370,11 @@ main(int argc, char *argv[])
 			    (void *)&timo, (socklen_t)sizeof(timo));
 			setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO,
 			    (void *)&timo, (socklen_t)sizeof(timo));
+
+			/* ... disable SIGPIPE generation ... */
+			val = 1;
+			setsockopt(sd, SOL_SOCKET, SO_NOSIGPIPE,
+			    (void *)&val, sizeof(int));
 
 			/* ... and connect to the server. */
 			if(connect(sd, res->ai_addr, res->ai_addrlen)) {

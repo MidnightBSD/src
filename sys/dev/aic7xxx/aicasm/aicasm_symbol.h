@@ -39,14 +39,10 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_symbol.h#17 $
  *
- * $FreeBSD: release/7.0.0/sys/dev/aic7xxx/aicasm/aicasm_symbol.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  */
 
-#ifdef __linux__
-#include "../queue.h"
-#else
 #include <sys/queue.h>
-#endif
 
 typedef enum {
 	UNINITIALIZED,
@@ -190,7 +186,7 @@ void	symtable_open(void);
 void	symtable_close(void);
 
 symbol_t *
-	symtable_get(char *name);
+	symtable_get(const char *name);
 
 symbol_node_t *
 	symlist_search(symlist_t *symlist, char *symname);

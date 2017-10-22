@@ -12,7 +12,7 @@
 #include <support/kdb.h>
 
 #ifdef DDB
-DB_FUNC(xfs, xfs_ddb_cmd, db_cmd_set, CS_MORE, NULL)
+DB_FUNC(xfs, xfs_ddb_cmd, db_cmd_table, CS_MORE, NULL)
 {
 	db_error("No commands registered.\n");
 }
@@ -56,7 +56,7 @@ kdb_getarea_size(void *res, unsigned long addr, size_t size)
 }
 
 int
-db_putarea_size(unsigned long addr, void *res, size_t size)
+kdb_putarea_size(unsigned long addr, void *res, size_t size)
 {
 	return 0;
 }

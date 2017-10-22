@@ -1,5 +1,5 @@
 
-# $FreeBSD: release/7.0.0/sys/modules/aic7xxx/ahd/Makefile 140867 2005-01-26 16:29:07Z imp $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../../dev/aic7xxx
 KMOD=	ahd
@@ -36,3 +36,6 @@ SRCS+= device_if.h bus_if.h pci_if.h
 CLEANFILES= ${GENSRCS}
 
 .include <bsd.kmod.mk>
+
+CWARNFLAGS.ahd_pci.c=	${NO_WCONSTANT_CONVERSION}
+CWARNFLAGS+=		${CWARNFLAGS.${.IMPSRC:T}}

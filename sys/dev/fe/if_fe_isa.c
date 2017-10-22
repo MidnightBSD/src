@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/fe/if_fe_isa.c 147256 2005-06-10 16:49:24Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -32,7 +32,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/fe/if_fe_isa.c 147256 2005-06-10 16:49
 
 #include <sys/bus.h>
 #include <machine/bus.h>
-#include <machine/resource.h>
+#include <sys/rman.h>
 
 #include <net/ethernet.h>
 #include <net/if.h>

@@ -25,8 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: release/7.0.0/sys/netinet6/tcp6_var.h 139826 2005-01-07 02:30:35Z imp $
  */
 
 /*-
@@ -58,7 +56,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_var.h	8.4 (Berkeley) 5/24/95
- * $FreeBSD: release/7.0.0/sys/netinet6/tcp6_var.h 139826 2005-01-07 02:30:35Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_TCP6_VAR_H_
@@ -67,9 +65,10 @@
 #ifdef _KERNEL
 #ifdef SYSCTL_DECL
 SYSCTL_DECL(_net_inet6_tcp6);
-#endif
 
-extern	int tcp_v6mssdflt;	/* XXX */
+VNET_DECLARE(int, tcp_v6mssdflt);	/* XXX */
+#define	V_tcp_v6mssdflt			VNET(tcp_v6mssdflt)
+#endif
 
 struct	ip6_hdr;
 void	tcp6_ctlinput __P((int, struct sockaddr *, void *));

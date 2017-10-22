@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/wpa/wpa_supplicant/Packet32.c 171371 2007-07-11 16:04:08Z sam $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This file implements a small portion of the Winpcap API for the
@@ -44,7 +44,6 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.sbin/wpa/wpa_supplicant/Packet32.c 171371 
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
-#include <sys/socket.h>
 #include <sys/errno.h>
 #include <sys/sysctl.h>
 #include <sys/fcntl.h>
@@ -109,8 +108,7 @@ PacketGetVersion(void)
 }
 
 void *
-PacketOpenAdapter(iface)
-	CHAR			*iface;
+PacketOpenAdapter(CHAR *iface)
 {
 	struct adapter		*a;
 	int			s;
@@ -164,10 +162,7 @@ PacketOpenAdapter(iface)
 }
 
 int
-PacketRequest(iface, set, oid)
-	void			*iface;
-	BOOLEAN			set;
-	PACKET_OID_DATA		*oid;
+PacketRequest(void *iface, BOOLEAN set, PACKET_OID_DATA *oid)
 {
 	struct adapter		*a;
 	uint32_t		retval;
@@ -239,9 +234,7 @@ PacketRequest(iface, set, oid)
 }
 
 int
-PacketGetAdapterNames(namelist, len)
-	CHAR			*namelist;
-	ULONG			*len;
+PacketGetAdapterNames(CHAR *namelist, ULONG *len)
 {
 	int			mib[6];
 	size_t			needed;
@@ -286,7 +279,7 @@ PacketGetAdapterNames(namelist, len)
 		ifm = (struct if_msghdr *)next;
 		if (ifm->ifm_type == RTM_IFINFO) {
 			sdl = (struct sockaddr_dl *)(ifm + 1);
-			if (strnstr(sdl->sdl_data, "ndis", sdl->sdl_nlen)) {
+			if (strnstr(sdl->sdl_data, "wlan", sdl->sdl_nlen)) {
 				if ((spc + sdl->sdl_nlen) > *len) {
 					free(buf);
 					return(FALSE);
@@ -319,7 +312,7 @@ PacketGetAdapterNames(namelist, len)
 		ifm = (struct if_msghdr *)next;
 		if (ifm->ifm_type == RTM_IFINFO) {
 			sdl = (struct sockaddr_dl *)(ifm + 1);
-			if (strnstr(sdl->sdl_data, "ndis", sdl->sdl_nlen)) {
+			if (strnstr(sdl->sdl_data, "wlan", sdl->sdl_nlen)) {
 				if ((spc + sdl->sdl_nlen) > *len) {
 					free(buf);
 					return(FALSE);
@@ -341,8 +334,7 @@ PacketGetAdapterNames(namelist, len)
 }
 
 void
-PacketCloseAdapter(iface)
-	void			*iface;
+PacketCloseAdapter(void *iface)
 {	
 	struct adapter		*a;
 	struct ifreq		ifr;

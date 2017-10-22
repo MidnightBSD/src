@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/geom/geom_disk.h 169285 2007-05-05 17:12:15Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef _GEOM_GEOM_DISK_H_
@@ -49,6 +49,8 @@ struct disk;
 typedef	int	disk_open_t(struct disk *);
 typedef	int	disk_close_t(struct disk *);
 typedef	void	disk_strategy_t(struct bio *bp);
+typedef	int	disk_getattr_t(struct bio *bp);
+typedef	void	disk_gone_t(struct disk *);
 typedef	int	disk_ioctl_t(struct disk *, u_long cmd, void *data,
 			int fflag, struct thread *td);
 		/* NB: disk_ioctl_t SHALL be cast'able to d_ioctl_t */
@@ -75,6 +77,7 @@ struct disk {
 	disk_strategy_t		*d_strategy;
 	disk_ioctl_t		*d_ioctl;
 	dumper_t		*d_dump;
+	disk_getattr_t		*d_getattr;
 
 	/* Info fields from driver to geom_disk.c. Valid when open */
 	u_int			d_sectorsize;
@@ -85,24 +88,35 @@ struct disk {
 	u_int			d_stripeoffset;
 	u_int			d_stripesize;
 	char			d_ident[DISK_IDENT_SIZE];
+	char			d_descr[DISK_IDENT_SIZE];
+	uint16_t		d_hba_vendor;
+	uint16_t		d_hba_device;
+	uint16_t		d_hba_subvendor;
+	uint16_t		d_hba_subdevice;
 
 	/* Fields private to the driver */
 	void			*d_drv1;
+
+	/* new fields in stable - don't use if DISKFLAG_LACKS_GONE is set */
+	disk_gone_t		*d_gone;
 };
 
 #define DISKFLAG_NEEDSGIANT	0x1
 #define DISKFLAG_OPEN		0x2
 #define DISKFLAG_CANDELETE	0x4
 #define DISKFLAG_CANFLUSHCACHE	0x8
+#define DISKFLAG_LACKS_GONE	0x10
 
 struct disk *disk_alloc(void);
 void disk_create(struct disk *disk, int version);
 void disk_destroy(struct disk *disk);
 void disk_gone(struct disk *disk);
+void disk_attr_changed(struct disk *dp, const char *attr, int flag);
 
 #define DISK_VERSION_00		0x58561059
 #define DISK_VERSION_01		0x5856105a
-#define DISK_VERSION		DISK_VERSION_01
+#define DISK_VERSION_02		0x5856105b
+#define DISK_VERSION		DISK_VERSION_02
 
 #endif /* _KERNEL */
 #endif /* _GEOM_GEOM_DISK_H_ */

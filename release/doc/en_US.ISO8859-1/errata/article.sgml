@@ -16,7 +16,6 @@
 
 <!ENTITY % release PUBLIC "-//FreeBSD//ENTITIES Release Specification//EN">
 %release;
-<!ENTITY release.bugfix "5.2.1-RELEASE">
 ]>
 
 <article>
@@ -37,15 +36,10 @@
     The &os; Project
     </corpauthor>
 
-    <pubdate>$FreeBSD: release/7.0.0/release/doc/en_US.ISO8859-1/errata/article.sgml 145264 2005-04-19 09:42:25Z hrs $</pubdate>
+    <pubdate>$FreeBSD$</pubdate>
 
     <copyright>
-      <year>2000</year>
-      <year>2001</year>
-      <year>2002</year>
-      <year>2003</year>
-      <year>2004</year>
-      <year>2005</year>
+      <year>2012</year>
       <holder role="mailto:doc@FreeBSD.org">The &os; Documentation Project</holder>
     </copyright>
 
@@ -130,51 +124,88 @@
   <sect1 id="security">
     <title>Security Advisories</title>
 
-<![ %release.type.release [
-    <para>No advisories.</para>
-]]>
+    <para>Problems described in the following security advisories have
+      been fixed in &release.current;.  For more information, consult
+      the individual advisories available from <ulink
+	url="http://security.FreeBSD.org/"></ulink>.</para>
 
-<![ %release.type.current [
-    <para>No advisories.</para>
-]]>
+    <informaltable frame="none" pgwide="1">
+      <tgroup cols="3">
+	<colspec colwidth="1*">
+	<colspec colwidth="1*">
+	<colspec colwidth="3*">
+	<thead>
+	  <row>
+	    <entry>Advisory</entry>
+	    <entry>Date</entry>
+	    <entry>Topic</entry>
+	  </row>
+	</thead>
 
-<![ %release.type.snapshot [
-    <para>No advisories.</para>
-]]>
+	<tbody>
+	  <row>
+	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:01.openssl.asc"
+		>SA-12:01.openssl</ulink></entry>
+	    <entry>3&nbsp;May&nbsp;2012</entry>
+	    <entry><para>OpenSSL multiple vulnerabilities</para></entry>
+	  </row>
 
-  </sect1>
+	  <row>
+	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:02.crypt.asc"
+		>SA-12:02.crypt</ulink></entry>
+	    <entry>30&nbsp;May&nbsp;2012</entry>
+	    <entry><para>Incorrect <function>crypt()</function> hashing</para></entry>
+	  </row>
 
-  <sect1 id="open-issues">
-    <title>Open Issues</title>
+	  <row>
+	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:03.bind.asc"
+		>SA-12:03.bind</ulink></entry>
+	    <entry>12&nbsp;June&nbsp;2012</entry>
+	    <entry><para>Incorrect handling of zero-length RDATA fields in &man.named.8;</para></entry>
+	  </row>
 
-<![ %release.type.current [
-    <para>No open issues.</para>
-]]>
+	  <row>
+	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:04.sysret.asc"
+		>SA-12:04.sysret</ulink></entry>
+	    <entry>12&nbsp;June&nbsp;2012</entry>
+	    <entry><para>Privilege escalation when returning from kernel</para></entry>
+	  </row>
 
-<![ %release.type.release [
-    <para>No open issues.</para>
-]]>
+	  <row>
+	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:05.bind.asc"
+		>SA-12:05.bind</ulink></entry>
+	    <entry>6&nbsp;August&nbsp;2012</entry>
+	    <entry><para>&man.named.8; DNSSEC validation Denial of Service</para></entry>
+	  </row>
 
-<![ %release.type.snapshot [
-    <para>No open issues.</para>
-]]>
+	  <row>
+	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:06.bind.asc"
+		>SA-12:06.bind</ulink></entry>
+	    <entry>22&nbsp;November&nbsp;2012</entry>
+	    <entry><para>Multiple Denial of Service vulnerabilities with &man.named.8;</para></entry>
+	  </row>
 
+	  <row>
+	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:07.hostapd.asc"
+		>SA-12:07.hostapd</ulink></entry>
+	    <entry>22&nbsp;November&nbsp;2012</entry>
+	    <entry><para>Insufficient message length validation for EAP-TLS messages</para></entry>
+	  </row>
+
+	  <row>
+	    <entry><ulink url="http://security.freebsd.org/advisories/FreeBSD-SA-12:08.linux.asc"
+		>SA-12:08.linux</ulink></entry>
+	    <entry>22&nbsp;November&nbsp;2012</entry>
+	    <entry><para>Linux compatibility layer input validation error</para></entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </informaltable>
   </sect1>
 
   <sect1 id="late-news">
     <title>Late-Breaking News</title>
 
-<![ %release.type.current [
     <para>No news.</para>
-]]>
-
-<![ %release.type.release [
-    <para>No news.</para>
-]]>
-
-<![ %release.type.snapshot [
-    <para>No news.</para>
-]]>
   </sect1>
-
 </article>

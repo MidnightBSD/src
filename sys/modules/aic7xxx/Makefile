@@ -1,5 +1,5 @@
 
-# $FreeBSD: release/7.0.0/sys/modules/aic7xxx/Makefile 101131 2002-08-01 01:36:39Z scottl $
+# $FreeBSD$
 
 SUBDIR= aicasm ahc ahd
 

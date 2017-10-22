@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/gdb/gdb/Makefile 141911 2005-02-14 12:10:14Z obrien $
+# $FreeBSD$
 
 PROG=	gdb${GDB_SUFFIX}
 SRCS=	gdb.c

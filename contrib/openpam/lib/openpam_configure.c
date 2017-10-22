@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2001-2003 Networks Associates Technology, Inc.
+ * Copyright (c) 2004-2007 Dag-Erling Smørgrav
  * All rights reserved.
  *
  * This software was developed for the FreeBSD Project by ThinkSec AS and
@@ -31,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $P4: //depot/projects/openpam/lib/openpam_configure.c#11 $
+ * $Id: openpam_configure.c 408 2007-12-21 11:36:24Z des $
  */
 
 #include <ctype.h>
@@ -283,6 +284,13 @@ openpam_load_chain(pam_handle_t *pamh,
 	char *filename;
 	size_t len;
 	int r;
+
+	/* don't allow to escape from policy_path */
+	if (strchr(service, '/')) {
+		openpam_log(PAM_LOG_ERROR, "invalid service name: %s",
+		    service);
+		return (-PAM_SYSTEM_ERR);
+	}
 
 	for (path = openpam_policy_path; *path != NULL; ++path) {
 		len = strlen(*path);

@@ -1,7 +1,8 @@
-# $FreeBSD: release/7.0.0/tools/regression/tls/ttls2/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
 PROG=	ttls2
-LDADD+= -lpthread
+DPADD=	${LIBPTHREAD}
+LDADD=	-lpthread
 NO_MAN=
 DEBUG_FLAGS= -g
 

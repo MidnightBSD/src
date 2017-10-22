@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/if_bridge/Makefile 160730 2006-07-26 22:15:15Z thompsa $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 

@@ -29,9 +29,8 @@
  * SUCH DAMAGE.
  */
 
-#ident "$Id: iir_pci.c 1.2 2003/08/26 12:29:55 achim Exp $"
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/iir/iir_pci.c 170872 2007-06-17 05:55:54Z scottl $");
+__FBSDID("$FreeBSD$");
 
 /*
  *  iir_pci.c:  PCI Bus Attachment for Intel Integrated RAID Controller driver
@@ -202,7 +201,7 @@ iir_pci_attach(device_t dev)
     rid = 0;
     irq = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid,
                                  RF_ACTIVE | RF_SHAREABLE);
-    if (io == NULL) {
+    if (irq == NULL) {
         device_printf(dev, "can't find IRQ value\n");
         error = ENOMEM;
         goto err;
@@ -318,8 +317,8 @@ iir_pci_attach(device_t dev)
     gdt->sc_test_busy = gdt_mpr_test_busy;
 
     /* Allocate a dmatag representing the capabilities of this attachment */
-    /* XXX Should be a child of the PCI bus dma tag */
-    if (bus_dma_tag_create(/*parent*/NULL, /*alignemnt*/1, /*boundary*/0,
+    if (bus_dma_tag_create(/*parent*/bus_get_dma_tag(dev),
+                           /*alignemnt*/1, /*boundary*/0,
                            /*lowaddr*/BUS_SPACE_MAXADDR_32BIT,
                            /*highaddr*/BUS_SPACE_MAXADDR,
                            /*filter*/NULL, /*filterarg*/NULL,

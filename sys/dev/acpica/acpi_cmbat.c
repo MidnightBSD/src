@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/acpi_cmbat.c 167814 2007-03-22 18:16:43Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -41,7 +41,8 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/acpi_cmbat.c 167814 2007-03-22 
 #include <sys/rman.h>
 #include <sys/malloc.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 #include <dev/acpica/acpiio.h>
 
@@ -277,6 +278,12 @@ acpi_cmbat_get_bst(void *arg)
     if (acpi_PkgInt32(res, 3, &sc->bst.volt) != 0)
 	goto end;
     acpi_cmbat_info_updated(&sc->bst_lastupdated);
+
+    /* Clear out undefined/extended bits that might be set by hardware. */
+    sc->bst.state &= ACPI_BATT_STAT_BST_MASK;
+    if ((sc->bst.state & ACPI_BATT_STAT_INVALID) == ACPI_BATT_STAT_INVALID)
+	ACPI_VPRINT(dev, acpi_device_get_parent_softc(dev),
+	    "battery reports simultaneous charging and discharging\n");
 
     /* XXX If all batteries are critical, perhaps we should suspend. */
     if (sc->bst.state & ACPI_BATT_STAT_CRITICAL) {

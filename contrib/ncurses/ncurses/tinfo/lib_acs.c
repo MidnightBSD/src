@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2005,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2007,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -35,17 +35,18 @@
 #include <curses.priv.h>
 #include <term.h>		/* ena_acs, acs_chars */
 
-MODULE_ID("$Id: lib_acs.c,v 1.30 2006/01/07 21:27:15 tom Exp $")
+MODULE_ID("$Id: lib_acs.c,v 1.36 2008/08/16 19:22:55 tom Exp $")
 
-#if BROKEN_LINKER
+#if BROKEN_LINKER || USE_REENTRANT
+#define MyBuffer _nc_prescreen.real_acs_map
 NCURSES_EXPORT_VAR(chtype *)
 _nc_acs_map(void)
 {
-    static chtype *the_map = 0;
-    if (the_map == 0)
-	the_map = typeCalloc(chtype, ACS_LEN);
-    return the_map;
+    if (MyBuffer == 0)
+	MyBuffer = typeCalloc(chtype, ACS_LEN);
+    return MyBuffer;
 }
+#undef MyBuffer
 #else
 NCURSES_EXPORT_VAR(chtype) acs_map[ACS_LEN] =
 {
@@ -71,7 +72,8 @@ _nc_init_acs(void)
 	for (j = 1; j < ACS_LEN; ++j) {
 	    real_map[j] = 0;
 	    fake_map[j] = A_ALTCHARSET | j;
-	    SP->_screen_acs_map[j] = FALSE;
+	    if (SP)
+		SP->_screen_acs_map[j] = FALSE;
 	}
     } else {
 	for (j = 1; j < ACS_LEN; ++j) {
@@ -116,16 +118,6 @@ _nc_init_acs(void)
     real_map['{'] = '*';	/* should be greek pi */
     real_map['|'] = '!';	/* should be not-equal */
     real_map['}'] = 'f';	/* should be pound-sterling symbol */
-
-#if !USE_WIDEC_SUPPORT
-    if (_nc_unicode_locale() && _nc_locale_breaks_acs()) {
-	acs_chars = NULL;
-	ena_acs = NULL;
-	enter_alt_charset_mode = NULL;
-	exit_alt_charset_mode = NULL;
-	set_attributes = NULL;
-    }
-#endif
 
     if (ena_acs != NULL) {
 	TPUTS_TRACE("ena_acs");
@@ -175,13 +167,13 @@ _nc_init_acs(void)
     /* Show the equivalent mapping, noting if it does not match the
      * given attribute, whether by re-ordering or duplication.
      */
-    if (_nc_tracing & TRACE_CALLS) {
+    if (USE_TRACEF(TRACE_CALLS)) {
 	size_t n, m;
 	char show[ACS_LEN * 2 + 1];
 	for (n = 1, m = 0; n < ACS_LEN; n++) {
 	    if (real_map[n] != 0) {
 		show[m++] = (char) n;
-		show[m++] = ChCharOf(real_map[n]);
+		show[m++] = (char) ChCharOf(real_map[n]);
 	    }
 	}
 	show[m] = 0;
@@ -196,6 +188,7 @@ _nc_init_acs(void)
 		   ? "DIFF"
 		   : "SAME"),
 		_nc_visbuf(show));
+	_nc_unlock_global(tracef);
     }
 #endif /* TRACE */
 }

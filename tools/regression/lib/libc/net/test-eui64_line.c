@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/regression/lib/libc/net/test-eui64_line.c 137587 2004-11-11 19:47:55Z nik $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

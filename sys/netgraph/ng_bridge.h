@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: release/7.0.0/sys/netgraph/ng_bridge.h 151800 2005-10-28 14:41:28Z ru $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_NG_BRIDGE_H_
@@ -149,6 +149,7 @@ enum {
 	NGM_BRIDGE_CLR_STATS,		/* clear link stats */
 	NGM_BRIDGE_GETCLR_STATS,	/* atomically get & clear link stats */
 	NGM_BRIDGE_GET_TABLE,		/* get link table */
+	NGM_BRIDGE_SET_PERSISTENT,	/* set persistent mode */
 };
 
 #endif /* _NETGRAPH_NG_BRIDGE_H_ */

@@ -21,7 +21,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/boot/arm/at91/libat91/lib.h 165399 2006-12-20 18:19:52Z imp $
+ * $FreeBSD$
  */
 
 #ifndef ARM_BOOT_LIB_H
@@ -34,7 +34,7 @@ void printf(const char *fmt,...);
 
 /* The following function write eeprom at ee_addr using data 	*/
 /*  from data_add for size bytes.				*/
-int ReadEEPROM(unsigned eeoff, char *data_addr, unsigned size);
+int ReadEEPROM(unsigned eeoff, unsigned char *data_addr, unsigned size);
 void WriteEEPROM(unsigned eeoff, char *data_addr, unsigned size);
 void InitEEPROM(void);
 

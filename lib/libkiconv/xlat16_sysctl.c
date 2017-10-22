@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkiconv/xlat16_sysctl.c 149415 2005-08-24 12:38:26Z imura $
+ * $FreeBSD$
  */
 
 /*
@@ -70,11 +70,15 @@ kiconv_add_xlat16_table(const char *to, const char *from, const void *data, int 
 
 #else /* statically linked */
 
+#include <sys/types.h>
+#include <sys/iconv.h>
 #include <errno.h>
 
 int
-kiconv_add_xlat16_table(const char *to, const char *from, const void *data, int datalen)
+kiconv_add_xlat16_table(const char *to __unused, const char *from __unused,
+    const void *data __unused, int datalen __unused)
 {
+
 	return (EINVAL);
 }
 

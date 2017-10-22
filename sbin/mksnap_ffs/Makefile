@@ -1,7 +1,13 @@
-# $FreeBSD: release/7.0.0/sbin/mksnap_ffs/Makefile 111716 2003-03-02 01:50:33Z mckusick $
+# $FreeBSD$
+
+.PATH:	${.CURDIR}/../mount
 
 PROG=	mksnap_ffs
+SRCS=	mksnap_ffs.c getmntopts.c
 MAN=	mksnap_ffs.8
+
+WARNS?=	2
+CFLAGS+=-I${.CURDIR}/../mount
 
 .if defined(NOSUID)
 BINMODE=550

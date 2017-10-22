@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/contrib/ipfilter/ipsd/ipsd.c 153881 2005-12-30 11:52:26Z guido $	*/
+/*	$FreeBSD$	*/
 
 /*
  * (C)opyright 1995-1998 Darren Reed.

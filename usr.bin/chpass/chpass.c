@@ -50,7 +50,7 @@ static char sccsid[] = "@(#)chpass.c	8.4 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/chpass/chpass.c 162633 2006-09-25 15:06:24Z marck $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 

@@ -18,26 +18,41 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: release/7.0.0/contrib/tcpdump/print-sunrpc.c 172506 2007-10-10 16:59:15Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /tcpdump/master/tcpdump/print-sunrpc.c,v 1.46.2.1 2005/04/27 21:44:06 guy Exp $ (LBL)";
+    "@(#) $Header: /tcpdump/master/tcpdump/print-sunrpc.c,v 1.47 2005-04-27 21:43:48 guy Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
+/*
+ * At least on HP-UX:
+ *
+ *	1) getrpcbynumber() is declared in <netdb.h>, not any of the RPC
+ *	   header files
+ *
+ * and
+ *
+ *	2) if _XOPEN_SOURCE_EXTENDED is defined, <netdb.h> doesn't declare
+ *	   it
+ *
+ * so we undefine it.
+ */
+#undef _XOPEN_SOURCE_EXTENDED
+
 #include <tcpdump-stdinc.h>
 
-#ifdef HAVE_GETRPCBYNUMBER
+#if defined(HAVE_GETRPCBYNUMBER) && defined(HAVE_RPC_RPC_H)
 #include <rpc/rpc.h>
 #ifdef HAVE_RPC_RPCENT_H
 #include <rpc/rpcent.h>
 #endif /* HAVE_RPC_RPCENT_H */
-#endif /* HAVE_GETRPCBYNUMBER */
+#endif /* defined(HAVE_GETRPCBYNUMBER) && defined(HAVE_RPC_RPC_H) */
 
 #include <stdio.h>
 #include <string.h>
@@ -138,7 +153,7 @@ static char *
 progstr(prog)
 	u_int32_t prog;
 {
-#ifdef HAVE_GETRPCBYNUMBER
+#if defined(HAVE_GETRPCBYNUMBER) && defined(HAVE_RPC_RPC_H)
 	register struct rpcent *rp;
 #endif
 	static char buf[32];
@@ -146,12 +161,12 @@ progstr(prog)
 
 	if (lastprog != 0 && prog == lastprog)
 		return (buf);
-#ifdef HAVE_GETRPCBYNUMBER
+#if defined(HAVE_GETRPCBYNUMBER) && defined(HAVE_RPC_RPC_H)
 	rp = getrpcbynumber(prog);
 	if (rp == NULL)
 #endif
 		(void) snprintf(buf, sizeof(buf), "#%u", prog);
-#ifdef HAVE_GETRPCBYNUMBER
+#if defined(HAVE_GETRPCBYNUMBER) && defined(HAVE_RPC_RPC_H)
 	else
 		strlcpy(buf, rp->r_name, sizeof(buf));
 #endif

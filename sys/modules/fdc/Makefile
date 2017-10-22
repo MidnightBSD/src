@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/fdc/Makefile 159066 2006-05-30 09:38:54Z ru $
+# $FreeBSD$
 
 KMOD=	fdc
 
@@ -9,7 +9,6 @@ SRCS=	fdc.c fdc_cbus.c
 .PATH:  ${.CURDIR}/../../dev/fdc
 SRCS=	fdc.c fdc_isa.c fdc_pccard.c
 .if ${MACHINE} == "i386" || ${MACHINE} == "amd64"
-CFLAGS+= -I${.CURDIR}/../../contrib/dev/acpica
 SRCS+=	opt_acpi.h acpi_if.h fdc_acpi.c
 .endif
 .endif

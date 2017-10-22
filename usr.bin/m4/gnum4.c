@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/m4/gnum4.c 172261 2007-09-21 01:55:11Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 /*
  * functions needed to support gnu-m4 extensions, including a fake freezing
@@ -54,7 +54,7 @@ int mimic_gnu = 0;
 
 /*
  * Support for include path search
- * First search in the the current directory.
+ * First search in the current directory.
  * If not found, and the path is not absolute, include path kicks in.
  * First, -I options, in the order found on the command line.
  * Then M4PATH env variable

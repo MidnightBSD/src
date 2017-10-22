@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)config.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/7.0.0/usr.sbin/config/config.h 169647 2007-05-17 04:53:52Z imp $
+ * $FreeBSD$
  */
 
 /*
@@ -53,6 +53,7 @@ struct file_list {
 	char	*f_depends;		/* additional dependancies */
 	char	*f_clean;		/* File list to add to clean rule */
 	char	*f_warn;		/* warning message */
+	const char *f_objprefix;	/* prefix string for object name */
 };
 
 struct files_name {
@@ -121,6 +122,7 @@ struct opt {
 	char	*op_value;
 	int	op_ownfile;	/* true = own file, false = makefile */
 	SLIST_ENTRY(opt) op_next;
+	SLIST_ENTRY(opt) op_append;
 };
 
 SLIST_HEAD(opt_head, opt) opt, mkopt, rmopts;
@@ -128,6 +130,8 @@ SLIST_HEAD(opt_head, opt) opt, mkopt, rmopts;
 struct opt_list {
 	char *o_name;
 	char *o_file;
+	int o_flags;
+#define OL_ALIAS	1
 	SLIST_ENTRY(opt_list) o_next;
 };
 
@@ -176,6 +180,7 @@ void	makehints(void);
 void	headers(void);
 void	cfgfile_add(const char *);
 void	cfgfile_removeall(void);
+FILE	*open_makefile_template(void);
 
 extern STAILQ_HEAD(device_head, device) dtab;
 

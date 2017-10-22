@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/info/show.c 166552 2007-02-07 19:44:44Z pav $");
+__FBSDID("$FreeBSD$");
 
 #include "lib.h"
 #include "info.h"
@@ -207,6 +207,14 @@ show_plist(const char *title, Package *plist, plist_t type, Boolean showall)
     }
 }
 
+static const char *
+elide_root(const char *dir)
+{
+    if (strcmp(dir, "/") == 0)
+	return "";
+    return dir;
+}
+
 /* Show all files in the packing list (except ignored ones) */
 void
 show_files(const char *title, Package *plist)
@@ -223,7 +231,7 @@ show_files(const char *title, Package *plist)
 	switch(p->type) {
 	case PLIST_FILE:
 	    if (!ign)
-		printf("%s/%s\n", dir, p->name);
+		printf("%s/%s\n", elide_root(dir), p->name);
 	    ign = FALSE;
 	    break;
 
@@ -270,7 +278,7 @@ show_size(const char *title, Package *plist)
 	switch (p->type) {
 	case PLIST_FILE:
 	    if (!ign) {
-		snprintf(tmp, FILENAME_MAX, "%s/%s", dir, p->name);
+		snprintf(tmp, FILENAME_MAX, "%s/%s", elide_root(dir), p->name);
 		if (!lstat(tmp, &sb)) {
 		    size += sb.st_size;
 		    if (Verbose)
@@ -328,7 +336,7 @@ show_cksum(const char *title, Package *plist)
 	    else
 		dir = p->name;
 	} else if (p->type == PLIST_FILE) {
-	    snprintf(tmp, FILENAME_MAX, "%s/%s", dir, p->name);
+	    snprintf(tmp, FILENAME_MAX, "%s/%s", elide_root(dir), p->name);
 	    if (!fexists(tmp))
 		warnx("%s doesn't exist", tmp);
 	    else if (p->next && p->next->type == PLIST_COMMENT &&

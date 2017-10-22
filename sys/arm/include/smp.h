@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/arm/include/smp.h 129198 2004-05-14 11:46:45Z cognet $ */
+/* $FreeBSD$ */
 
 #ifndef _MACHINE_SMP_H_
 #define _MACHINE_SMP_H_

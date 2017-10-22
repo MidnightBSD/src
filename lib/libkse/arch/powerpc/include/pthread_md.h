@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/arch/powerpc/include/pthread_md.h 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
 /*
@@ -90,7 +90,7 @@ struct kcb {
 #define TP_OFFSET	0x7008
 
 static __inline char *
-ppc_get_tp()
+ppc_get_tp(void)
 {
 	register char *r2 __asm__("%r2");
 
@@ -105,7 +105,7 @@ ppc_set_tp(char *tp)
 }
 
 static __inline struct tcb *
-ppc_get_tcb()
+ppc_get_tcb(void)
 {
 	return ((struct tcb *)(ppc_get_tp() - offsetof(struct tcb, tcb_tp)));
 }
@@ -280,7 +280,7 @@ _thread_switch(struct kcb *kcb, struct tcb *tcb, int setmbox)
 		tcb->tcb_tmbx.tm_lwp = kcb->kcb_kmbx.km_lwp;
 		if (setmbox)
 			_ppc32_setcontext(mc, (intptr_t)&tcb->tcb_tmbx,
-			    (intptr_t *)&kcb->kcb_kmbx.km_curthread);
+			    (intptr_t *)(void *)&kcb->kcb_kmbx.km_curthread);
 		else
 			_ppc32_setcontext(mc, 0, NULL);
 	}

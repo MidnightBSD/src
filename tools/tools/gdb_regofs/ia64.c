@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/tools/tools/gdb_regofs/ia64.c 127527 2004-03-28 18:01:15Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <stddef.h>
 #include <machine/reg.h>

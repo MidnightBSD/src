@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/bktr/bktr_os.c 166901 2007-02-23 12:19:07Z piso $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -470,7 +470,7 @@ fail:
 	if (bktr->res_irq)
 		bus_release_resource(dev, SYS_RES_IRQ, bktr->irq_rid, bktr->res_irq);
 	if (bktr->res_mem)
-		bus_release_resource(dev, SYS_RES_IRQ, bktr->mem_rid, bktr->res_mem);
+		bus_release_resource(dev, SYS_RES_MEMORY, bktr->mem_rid, bktr->res_mem);
 	return error;
 
 }
@@ -584,7 +584,7 @@ bktr_open( struct cdev *dev, int flags, int fmt, struct thread *td )
 	int		unit;
 	int		result;
 
-	unit = UNIT( minor(dev) );
+	unit = UNIT( dev2unit(dev) );
 
 	/* Get the device data */
 	bktr = (struct bktr_softc*)devclass_get_softc(bktr_devclass, unit);
@@ -652,7 +652,7 @@ bktr_open( struct cdev *dev, int flags, int fmt, struct thread *td )
 	}
 #endif
 
-	switch ( FUNCTION( minor(dev) ) ) {
+	switch ( FUNCTION( dev2unit(dev) ) ) {
 	case VIDEO_DEV:
 		result = video_open( bktr );
 		break;
@@ -684,7 +684,7 @@ bktr_close( struct cdev *dev, int flags, int fmt, struct thread *td )
 	int		unit;
 	int		result;
 
-	unit = UNIT( minor(dev) );
+	unit = UNIT( dev2unit(dev) );
 
 	/* Get the device data */
 	bktr = (struct bktr_softc*)devclass_get_softc(bktr_devclass, unit);
@@ -693,7 +693,7 @@ bktr_close( struct cdev *dev, int flags, int fmt, struct thread *td )
 		return (ENXIO);
 	}
 
-	switch ( FUNCTION( minor(dev) ) ) {
+	switch ( FUNCTION( dev2unit(dev) ) ) {
 	case VIDEO_DEV:
 		result = video_close( bktr );
 		break;
@@ -722,7 +722,7 @@ bktr_read( struct cdev *dev, struct uio *uio, int ioflag )
 	bktr_ptr_t	bktr;
 	int		unit;
 	
-	unit = UNIT(minor(dev));
+	unit = UNIT(dev2unit(dev));
 
 	/* Get the device data */
 	bktr = (struct bktr_softc*)devclass_get_softc(bktr_devclass, unit);
@@ -731,7 +731,7 @@ bktr_read( struct cdev *dev, struct uio *uio, int ioflag )
 		return (ENXIO);
 	}
 
-	switch ( FUNCTION( minor(dev) ) ) {
+	switch ( FUNCTION( dev2unit(dev) ) ) {
 	case VIDEO_DEV:
 		return( video_read( bktr, unit, dev, uio ) );
 	case VBI_DEV:
@@ -760,7 +760,7 @@ bktr_ioctl( struct cdev *dev, ioctl_cmd_t cmd, caddr_t arg, int flag, struct thr
 	bktr_ptr_t	bktr;
 	int		unit;
 
-	unit = UNIT(minor(dev));
+	unit = UNIT(dev2unit(dev));
 
 	/* Get the device data */
 	bktr = (struct bktr_softc*)devclass_get_softc(bktr_devclass, unit);
@@ -779,7 +779,7 @@ bktr_ioctl( struct cdev *dev, ioctl_cmd_t cmd, caddr_t arg, int flag, struct thr
 		return( ENOMEM );
 #endif
 
-	switch ( FUNCTION( minor(dev) ) ) {
+	switch ( FUNCTION( dev2unit(dev) ) ) {
 	case VIDEO_DEV:
 		return( video_ioctl( bktr, unit, cmd, arg, td ) );
 	case TUNER_DEV:
@@ -794,14 +794,15 @@ bktr_ioctl( struct cdev *dev, ioctl_cmd_t cmd, caddr_t arg, int flag, struct thr
  * 
  */
 static int
-bktr_mmap( struct cdev *dev, vm_offset_t offset, vm_paddr_t *paddr, int nprot )
+bktr_mmap( struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
+    int nprot, vm_memattr_t *memattr )
 {
 	int		unit;
 	bktr_ptr_t	bktr;
 
-	unit = UNIT(minor(dev));
+	unit = UNIT(dev2unit(dev));
 
-	if (FUNCTION(minor(dev)) > 0)	/* only allow mmap on /dev/bktr[n] */
+	if (FUNCTION(dev2unit(dev)) > 0)	/* only allow mmap on /dev/bktr[n] */
 		return( -1 );
 
 	/* Get the device data */
@@ -832,7 +833,7 @@ bktr_poll( struct cdev *dev, int events, struct thread *td)
 	int revents = 0; 
 	DECLARE_INTR_MASK(s);
 
-	unit = UNIT(minor(dev));
+	unit = UNIT(dev2unit(dev));
 
 	/* Get the device data */
 	bktr = (struct bktr_softc*)devclass_get_softc(bktr_devclass, unit);
@@ -846,7 +847,7 @@ bktr_poll( struct cdev *dev, int events, struct thread *td)
 
 	if (events & (POLLIN | POLLRDNORM)) {
 
-		switch ( FUNCTION( minor(dev) ) ) {
+		switch ( FUNCTION( dev2unit(dev) ) ) {
 		case VBI_DEV:
 			if(bktr->vbisize == 0)
 				selrecord(td, &bktr->vbi_select);
@@ -1182,8 +1183,8 @@ free_bktr_mem(bktr, dmap, kva)
 #define TUNER_DEV	0x01
 #define VBI_DEV		0x02
 
-#define UNIT(x)         (minor((x) & 0x0f))
-#define FUNCTION(x)     (minor((x >> 4) & 0x0f))
+#define UNIT(x)         (dev2unit((x) & 0x0f))
+#define FUNCTION(x)     (dev2unit((x >> 4) & 0x0f))
 
 /*
  * 

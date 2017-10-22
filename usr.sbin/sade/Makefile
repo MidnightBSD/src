@@ -1,6 +1,6 @@
-# $FreeBSD: release/7.0.0/usr.sbin/sade/Makefile 161120 2006-08-09 11:25:10Z netchild $
+# $FreeBSD$
 
-.if ${MACHINE_ARCH} != "ia64"
+.if ${MACHINE_CPUARCH} != "ia64"
 _wizard=	wizard.c
 .endif
 
@@ -19,9 +19,9 @@ WARNS?=	3
 .if ${MACHINE} == "pc98"
 CFLAGS+= -DPC98
 .endif
-CFLAGS+= -I${.CURDIR}/../../gnu/lib/libdialog -I.
+CFLAGS+= -I${.CURDIR}/../../gnu/lib/libodialog -I.
 
-DPADD=	${LIBDIALOG} ${LIBNCURSES} ${LIBUTIL} ${LIBDISK} ${LIBFTPIO}
-LDADD=	-ldialog -lncurses -lutil -ldisk -lftpio
+DPADD=	${LIBODIALOG} ${LIBNCURSES} ${LIBUTIL} ${LIBDISK}
+LDADD=	-lodialog -lncurses -lutil -ldisk
 
 .include <bsd.prog.mk>

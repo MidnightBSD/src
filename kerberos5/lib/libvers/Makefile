@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/kerberos5/lib/libvers/Makefile 125491 2004-02-05 18:51:52Z ru $
+# $FreeBSD$
 
 LIB=	vers
 INTERNALLIB=

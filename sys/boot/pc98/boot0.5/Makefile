@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/boot/pc98/boot0.5/Makefile 168466 2007-04-07 13:37:45Z nyan $
+# $FreeBSD$
 
 PROG=	${BOOT}.out
 INTERNALPROG=
@@ -14,7 +14,7 @@ BOOT=	boot0.5
 # unless you are glutton for punishment.
 BOOT_BOOT0_ORG?=	0x0000
 
-LDFLAGS=-N -e start -Ttext ${BOOT_BOOT0_ORG} -Wl,-T,${.CURDIR}/ldscript
+LDFLAGS=-e start -Ttext ${BOOT_BOOT0_ORG} -Wl,-N,-T,${.CURDIR}/ldscript
 
 # The size of boot0.5 must be 7168 bytes
 ${BOOT}: ${BOOT}.bin

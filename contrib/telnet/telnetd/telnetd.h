@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)telnetd.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: release/7.0.0/contrib/telnet/telnetd/telnetd.h 87139 2001-11-30 21:06:38Z markm $
+ * $FreeBSD$
  */
 
 

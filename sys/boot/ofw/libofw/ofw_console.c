@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/ofw/libofw/ofw_console.c 170854 2007-06-17 00:17:15Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -97,10 +97,10 @@ ofw_cons_getchar()
 		return l;
 	}
 
-	while ((l = OF_read(stdin, &ch, 1)) != 1)
-		if (l != -2 && l != 0)
-			return -1;
-	return ch;
+	if (OF_read(stdin, &ch, 1) > 0)
+		return (ch);
+
+	return (-1);
 }
 
 int

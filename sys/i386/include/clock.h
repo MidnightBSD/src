@@ -3,7 +3,7 @@
  * Garrett Wollman, September 1994.
  * This file is in the public domain.
  *
- * $FreeBSD: release/7.0.0/sys/i386/include/clock.h 173161 2007-10-29 22:26:36Z peter $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_CLOCK_H_
@@ -15,13 +15,11 @@
  * XXX large parts of the driver and its interface are misplaced.
  */
 extern int	clkintr_pending;
-extern int	pscnt;
-extern int	psdiv;
-extern int	statclock_disable;
-extern u_int	timer_freq;
-extern int	timer0_max_count;
+extern u_int	i8254_freq;
+extern int	i8254_max_count;
 extern uint64_t	tsc_freq;
-extern int	tsc_is_broken;
+extern int	tsc_is_invariant;
+extern int	tsc_perf_stat;
 
 void	i8254_init(void);
 
@@ -29,14 +27,14 @@ void	i8254_init(void);
  * Driver to clock driver interface.
  */
 
-int	acquire_timer2(int mode);
-int	release_timer2(void);
-int	rtcin(int reg);
-void	writertc(int reg, unsigned char val);
-int	sysbeep(int pitch, int period);
+void	startrtclock(void);
 void	timer_restore(void);
 void	init_TSC(void);
-void	init_TSC_tc(void);
+
+#define	HAS_TIMER_SPKR 1
+int	timer_spkr_acquire(void);
+int	timer_spkr_release(void);
+void	timer_spkr_setfreq(int freq);
 
 #endif /* _KERNEL */
 

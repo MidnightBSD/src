@@ -22,15 +22,29 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/powerpc/include/ofw_machdep.h 160714 2006-07-26 17:12:54Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_OFW_MACHDEP_H_
 #define _MACHINE_OFW_MACHDEP_H_
 
+#include <sys/cdefs.h>
+#include <sys/types.h>
+#include <sys/rman.h>
 #include <sys/bus.h>
+#include <dev/ofw/openfirm.h>
+#include <machine/platform.h>
+
+typedef	uint32_t	cell_t;
 
 int  OF_decode_addr(phandle_t, int, bus_space_tag_t *, bus_space_handle_t *);
 void OF_getetheraddr(device_t dev, u_char *addr);
+
+void OF_initial_setup(void *fdt_ptr, void *junk, int (*openfirm)(void *));
+boolean_t OF_bootstrap(void);
+
+void OF_reboot(void);
+
+void ofw_mem_regions(struct mem_region **, int *, struct mem_region **, int *);
 
 #endif /* _MACHINE_OFW_MACHDEP_H_ */

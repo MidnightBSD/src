@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/src/devices/grops/Makefile 114412 2003-05-01 13:22:21Z ru $
+# $FreeBSD$
 
 PROG_CXX=	grops
 SRCS=		ps.cpp psrm.cpp

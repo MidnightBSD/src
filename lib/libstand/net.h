@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libstand/net.h 165906 2007-01-09 01:02:06Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _KERNEL	/* XXX - see <netinet/in.h> */
@@ -50,7 +50,7 @@
 
 #define MACPY(s, d) bcopy((char *)s, (char *)d, 6)
 
-#define MAXTMO 20	/* seconds */
+#define MAXTMO 120	/* seconds */
 #define MINTMO 2	/* seconds */
 
 #define FNAME_SIZE 128

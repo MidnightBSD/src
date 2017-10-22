@@ -1,4 +1,4 @@
-/* $OpenBSD: canohost.c,v 1.61 2006/08/03 03:34:41 deraadt Exp $ */
+/* $OpenBSD: canohost.c,v 1.66 2010/01/13 01:20:20 dtucker Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -27,13 +27,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <unistd.h>
 
 #include "xmalloc.h"
 #include "packet.h"
 #include "log.h"
 #include "canohost.h"
+#include "misc.h"
 
 static void check_ip_options(int, char *);
+static char *canonical_host_ip = NULL;
+static int cached_port = -1;
 
 /*
  * Return the canonical name of the host at the other end of the socket. The
@@ -88,7 +92,7 @@ get_remote_hostname(int sock, int use_dns)
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_socktype = SOCK_DGRAM;	/*dummy*/
 	hints.ai_flags = AI_NUMERICHOST;
-	if (getaddrinfo(name, "0", &hints, &ai) == 0) {
+	if (getaddrinfo(name, NULL, &hints, &ai) == 0) {
 		logit("Nasty PTR record \"%s\" is set up for %s, ignoring",
 		    name, ntop);
 		freeaddrinfo(ai);
@@ -195,7 +199,7 @@ ipv64_normalise_mapped(struct sockaddr_storage *addr, socklen_t *len)
 	memcpy(&inaddr, ((char *)&a6->sin6_addr) + 12, sizeof(inaddr));
 	port = a6->sin6_port;
 
-	memset(addr, 0, sizeof(*a4));
+	bzero(a4, sizeof(*a4));
 
 	a4->sin_family = AF_INET;
 	*len = sizeof(*a4);
@@ -271,7 +275,7 @@ get_socket_address(int sock, int remote, int flags)
 	if ((r = getnameinfo((struct sockaddr *)&addr, addrlen, ntop,
 	    sizeof(ntop), NULL, 0, flags)) != 0) {
 		error("get_socket_address: getnameinfo %d failed: %s", flags,
-		    r == EAI_SYSTEM ? strerror(errno) : gai_strerror(r));
+		    ssh_gai_strerror(r));
 		return NULL;
 	}
 	return xstrdup(ntop);
@@ -298,9 +302,32 @@ get_local_ipaddr(int sock)
 }
 
 char *
-get_local_name(int sock)
+get_local_name(int fd)
 {
-	return get_socket_address(sock, 0, NI_NAMEREQD);
+	char *host, myname[NI_MAXHOST];
+
+	/* Assume we were passed a socket */
+	if ((host = get_socket_address(fd, 0, NI_NAMEREQD)) != NULL)
+		return host;
+
+	/* Handle the case where we were passed a pipe */
+	if (gethostname(myname, sizeof(myname)) == -1) {
+		verbose("get_local_name: gethostname: %s", strerror(errno));
+	} else {
+		host = xstrdup(myname);
+	}
+
+	return host;
+}
+
+void
+clear_cached_addr(void)
+{
+	if (canonical_host_ip != NULL) {
+		xfree(canonical_host_ip);
+		canonical_host_ip = NULL;
+	}
+	cached_port = -1;
 }
 
 /*
@@ -311,8 +338,6 @@ get_local_name(int sock)
 const char *
 get_remote_ipaddr(void)
 {
-	static char *canonical_host_ip = NULL;
-
 	/* Check whether we have cached the ipaddr. */
 	if (canonical_host_ip == NULL) {
 		if (packet_connection_is_on_socket()) {
@@ -341,7 +366,7 @@ get_remote_name_or_ip(u_int utmp_len, int use_dns)
 
 /* Returns the local/remote port for the socket. */
 
-static int
+int
 get_sock_port(int sock, int local)
 {
 	struct sockaddr_storage from;
@@ -372,7 +397,7 @@ get_sock_port(int sock, int local)
 	if ((r = getnameinfo((struct sockaddr *)&from, fromlen, NULL, 0,
 	    strport, sizeof(strport), NI_NUMERICSERV)) != 0)
 		fatal("get_sock_port: getnameinfo NI_NUMERICSERV failed: %s",
-		    r == EAI_SYSTEM ? strerror(errno) : gai_strerror(r));
+		    ssh_gai_strerror(r));
 	return atoi(strport);
 }
 
@@ -401,13 +426,11 @@ get_peer_port(int sock)
 int
 get_remote_port(void)
 {
-	static int port = -1;
-
 	/* Cache to avoid getpeername() on a dead connection */
-	if (port == -1)
-		port = get_port(0);
+	if (cached_port == -1)
+		cached_port = get_port(0);
 
-	return port;
+	return cached_port;
 }
 
 int

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/at/at.c 172261 2007-09-21 01:55:11Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 #define _USE_BSD 1
 
@@ -179,7 +179,7 @@ static char *cwdname(void)
 }
 
 static long
-nextjob()
+nextjob(void)
 {
     long jobno;
     FILE *fid;
@@ -524,6 +524,7 @@ list_jobs(long *joblist, int len)
 	       jobno);
     }
     PRIV_END
+    closedir(spool);
 }
 
 static void
@@ -594,6 +595,7 @@ process_jobs(int argc, char **argv, int what)
 			while((ch = getc(fp)) != EOF) {
 			    putchar(ch);
 			}
+			fclose(fp);
 		    }
 		    break;
 
@@ -604,6 +606,7 @@ process_jobs(int argc, char **argv, int what)
 	    }
 	}
     }
+    closedir(spool);
 } /* delete_jobs */
 
 #define	ATOI2(ar)	((ar)[0] - '0') * 10 + ((ar)[1] - '0'); (ar) += 2;

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_write.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  *
  */
 #include <sys/types.h>
@@ -37,8 +37,7 @@
 #include <pthread.h>
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(__write);
-LT10_COMPAT_DEFAULT(write);
+__ssize_t __write(int fd, const void *buf, size_t nbytes);
 
 __weak_reference(__write, write);
 

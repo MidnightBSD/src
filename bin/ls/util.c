@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)util.c	8.3 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/ls/util.c 157098 2006-03-24 16:38:02Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -222,9 +222,9 @@ usage(void)
 {
 	(void)fprintf(stderr,
 #ifdef COLORLS
-	"usage: ls [-ABCFGHILPRSTUWZabcdfghiklmnopqrstuwx1]"
+	"usage: ls [-ABCFGHILPRSTUWZabcdfghiklmnopqrstuwx1] [-D format]"
 #else
-	"usage: ls [-ABCFHILPRSTUWZabcdfghiklmnopqrstuwx1]"
+	"usage: ls [-ABCFHILPRSTUWZabcdfghiklmnopqrstuwx1] [-D format]"
 #endif
 		      " [file ...]\n");
 	exit(1);

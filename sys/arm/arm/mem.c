@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/mem.c 166688 2007-02-13 15:35:57Z cognet $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Memory special file
@@ -70,6 +70,8 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/mem.c 166688 2007-02-13 15:35:57Z 
  */
 MALLOC_DEFINE(M_MEMDESC, "memdesc", "memory range descriptors");
 
+struct mem_range_softc mem_range_softc;
+
 /* ARGSUSED */
 int
 memrw(struct cdev *dev, struct uio *uio, int flags)
@@ -91,7 +93,7 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 				panic("memrw");
 			continue;
 		}
-		if (minor(dev) == CDEV_MINOR_MEM) {
+		if (dev2unit(dev) == CDEV_MINOR_MEM) {
 			int i;
 			int address_valid = 0;
 
@@ -116,7 +118,7 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 			pmap_qremove((vm_offset_t)_tmppt, 1);
 			continue;
 		}
-		else if (minor(dev) == CDEV_MINOR_KMEM) {
+		else if (dev2unit(dev) == CDEV_MINOR_KMEM) {
 			c = iov->iov_len;
 
 			/*
@@ -153,18 +155,13 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 /* ARGSUSED */
 
 int
-memmmap(struct cdev *dev, vm_offset_t offset, vm_paddr_t *paddr,
-    int prot __unused)
+memmmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
+    int prot __unused, vm_memattr_t *memattr __unused)
 {
-	if (minor(dev) == CDEV_MINOR_MEM)
+	if (dev2unit(dev) == CDEV_MINOR_MEM)
 		*paddr = offset;
-	else if (minor(dev) == CDEV_MINOR_KMEM)
+	else if (dev2unit(dev) == CDEV_MINOR_KMEM)
         	*paddr = vtophys(offset);
 	/* else panic! */
 	return (0);
-}
-
-void
-dev_mem_md_init(void)
-{
 }

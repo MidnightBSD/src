@@ -47,7 +47,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/assabet_machdep.c 175495 2008-01-19 18:15:07Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_md.h"
 
@@ -77,12 +77,10 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/assabet_machdep.c 175495 2008-0
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
-#include <vm/vm.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 #include <vm/vm_map.h>
-#include <vm/vnode_pager.h>
 #include <machine/pmap.h>
 #include <machine/vmparam.h>
 #include <machine/pcb.h>
@@ -110,11 +108,8 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/assabet_machdep.c 175495 2008-0
 /* Define various stack sizes in pages */
 #define IRQ_STACK_SIZE	1
 #define ABT_STACK_SIZE	1
-#ifdef IPKDB
-#define UND_STACK_SIZE	2
-#else
 #define UND_STACK_SIZE	1
-#endif
+
 #define	KERNEL_VM_BASE		(KERNBASE + 0x00100000)
 #define	KERNEL_VM_SIZE		0x05000000
 
@@ -212,64 +207,31 @@ initarm(void *arg, void *arg2)
 	struct pv_addr  kernel_l1pt;
 	struct pv_addr	md_addr;
 	struct pv_addr	md_bla;
+	struct pv_addr  dpcpu;
 	int loop;
-	u_int kerneldatasize, symbolsize;
 	u_int l1pagetable;
 	vm_offset_t freemempos;
 	vm_offset_t lastalloced;
-	vm_size_t pt_size;
-	int i = 0;
-	uint32_t fake_preload[35];
+	vm_offset_t lastaddr;
 	uint32_t memsize = 32 * 1024 * 1024;
 	sa1110_uart_vaddr = SACOM1_VBASE;
 
 	boothowto = RB_VERBOSE | RB_SINGLE;
 	cninit();
 	set_cpufuncs();
-	fake_preload[i++] = MODINFO_NAME;
-	fake_preload[i++] = strlen("elf kernel") + 1;
-	strcpy((char*)&fake_preload[i++], "elf kernel");
-	i += 2;
-	fake_preload[i++] = MODINFO_TYPE;
-	fake_preload[i++] = strlen("elf kernel") + 1;
-	strcpy((char*)&fake_preload[i++], "elf kernel");
-	i += 2;
-	fake_preload[i++] = MODINFO_ADDR;
-	fake_preload[i++] = sizeof(vm_offset_t);
-	fake_preload[i++] = KERNBASE;
-	fake_preload[i++] = MODINFO_SIZE;
-	fake_preload[i++] = sizeof(uint32_t);
-	fake_preload[i++] = (uint32_t)&end - KERNBASE;
-	fake_preload[i++] = MODINFO_NAME;
-	fake_preload[i++] = strlen("md root") + 1;
-	strcpy((char*)&fake_preload[i++], "md root");
-	i += 1;
-	fake_preload[i++] = MODINFO_TYPE;
-	fake_preload[i++] = strlen("md_image") + 1;
-	strcpy((char*)&fake_preload[i++], "md_image");
-	i += 2;
-	fake_preload[i++] = MODINFO_ADDR;
-	fake_preload[i++] = sizeof(uint32_t);
-	fake_preload[i++] = MDROOT_ADDR;
-	fake_preload[i++] = MODINFO_SIZE;
-	fake_preload[i++] = sizeof(uint32_t);
-	fake_preload[i++] = MD_ROOT_SIZE * 1024;
-	fake_preload[i++] = 0;
-	fake_preload[i] = 0;
-	preload_metadata = (void *)fake_preload;
-
+	lastaddr = fake_preload_metadata();
 	physmem = memsize / PAGE_SIZE;
 	pc = &__pcpu;
 	pcpu_init(pc, 0, sizeof(struct pcpu));
 	PCPU_SET(curthread, &thread0);
 
+	/* Do basic tuning, hz etc */
+	init_param1();
+		
 	physical_start = (vm_offset_t) KERNBASE;
-	physical_end =  (vm_offset_t) &end;
+	physical_end =  lastaddr;
 	physical_freestart = (((vm_offset_t)physical_end) + PAGE_MASK) & ~PAGE_MASK;
 	md_addr.pv_va = md_addr.pv_pa = MDROOT_ADDR;
-#define KERNEL_TEXT_BASE (KERNBASE + 0x00040000)
-	kerneldatasize = (u_int32_t)&end - (u_int32_t)KERNEL_TEXT_BASE;
-	symbolsize = 0;
 	freemempos = (vm_offset_t)round_page(physical_freestart);
 	memset((void *)freemempos, 0, 256*1024);
 		/* Define a macro to simplify memory allocation */
@@ -301,14 +263,16 @@ initarm(void *arg, void *arg2)
 		}
 	}
 
-	valloc_pages(systempage, 1);
-
 	/*
 	 * Allocate a page for the system page mapped to V0x00000000
 	 * This page will just contain the system vectors and can be
 	 * shared by all processes.
 	 */
-	pt_size = round_page(freemempos) - physical_freestart;
+	valloc_pages(systempage, 1);
+
+	/* Allocate dynamic per-cpu area. */
+	valloc_pages(dpcpu, DPCPU_SIZE / PAGE_SIZE);
+	dpcpu_init((void *)dpcpu.pv_va, 0);
 
 	/* Allocate stacks for all modes */
 	valloc_pages(irqstack, IRQ_STACK_SIZE);
@@ -348,7 +312,11 @@ initarm(void *arg, void *arg2)
 		pmap_link_l2pt(l1pagetable, KERNEL_VM_BASE + loop * 0x00100000,
 		    &kernel_pt_table[KERNEL_PT_VMDATA + loop]);
 	pmap_map_chunk(l1pagetable, KERNBASE, KERNBASE,
-	   ((uint32_t)&end - KERNBASE), VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
+	    ((uint32_t)lastaddr - KERNBASE), VM_PROT_READ|VM_PROT_WRITE,
+	    PTE_CACHE);
+	/* Map the DPCPU pages */
+	pmap_map_chunk(l1pagetable, dpcpu.pv_va, dpcpu.pv_pa, DPCPU_SIZE,
+	    VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
 	/* Map the stack pages */
 	pmap_map_chunk(l1pagetable, irqstack.pv_va, irqstack.pv_pa,
 	    IRQ_STACK_SIZE * PAGE_SIZE, VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
@@ -403,8 +371,6 @@ initarm(void *arg, void *arg2)
 	set_stackptr(PSR_UND32_MODE,
 	    undstack.pv_va + UND_STACK_SIZE * PAGE_SIZE);
 
-
-
 	/*
 	 * We must now clean the cache again....
 	 * Cleaning may be done by reading new data to displace any
@@ -412,11 +378,10 @@ initarm(void *arg, void *arg2)
 	 * but since we are boot strapping the addresses used for the read
 	 * may have just been remapped and thus the cache could be out
 	 * of sync. A re-clean after the switch will cure this.
-	 * After booting there are no gross reloations of the kernel thus
+	 * After booting there are no gross relocations of the kernel thus
 	 * this problem will not occur after initarm().
 	 */
 	cpu_idcache_wbinv_all();
-
 
 	bootverbose = 1;
 
@@ -443,11 +408,8 @@ initarm(void *arg, void *arg2)
 	dump_avail[3] = phys_avail[3] = 0;
 					
 	mutex_init();
-	pmap_bootstrap(freemempos, 
-	    0xd0000000, &kernel_l1pt);
+	pmap_bootstrap(freemempos, 0xd0000000, &kernel_l1pt);
 
-	/* Do basic tuning, hz etc */
-	init_param1();
 	init_param2(physmem);
 	kdb_init();
 	return ((void *)(kernelstack.pv_va + USPACE_SVC_STACK_TOP -

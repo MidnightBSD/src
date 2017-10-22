@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/etc/mtree/BSD.include.dist 172422 2007-10-03 05:51:20Z ru $
+# $FreeBSD$
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -76,9 +76,19 @@
             tr1
             ..
         ..
+        v1
+            ext
+            ..
+        ..
     ..
     cam
+        ata
+        ..
         scsi
+        ..
+    ..
+    clang
+        3.1
         ..
     ..
     crypto
@@ -90,6 +100,10 @@
         ..
         bktr
         ..
+        ciss
+        ..
+        filemon
+        ..
         firewire
         ..
         hwpmc
@@ -100,7 +114,15 @@
         ..
         iicbus
         ..
+        io
+        ..
         lmc
+        ..
+        mfi
+        ..
+        mpt
+            mpilib
+            ..
         ..
         ofw
         ..
@@ -123,6 +145,10 @@
         wi
         ..
     ..
+    edit
+        readline
+        ..
+    ..
     fs
         devfs
         ..
@@ -131,6 +157,8 @@
         fifofs
         ..
         msdosfs
+        ..
+        nfs
         ..
         ntfs
         ..
@@ -149,6 +177,10 @@
         unionfs
         ..
     ..
+    gcc
+        4.2
+        ..
+    ..
     geom
         cache
         ..
@@ -164,9 +196,13 @@
         ..
         mirror
         ..
+        mountver
+        ..
         multipath
         ..
         nop
+        ..
+        raid
         ..
         raid3
         ..
@@ -185,7 +221,15 @@
     ..
     gssapi
     ..
-    i4b
+    infiniband
+        complib 
+        ..
+        iba
+        ..
+        opensm
+        ..
+        vendor
+        ..
     ..
     isofs
         cd9660
@@ -197,6 +241,8 @@
     ..
     lwres
     ..
+    lzma
+    ..
     machine
         pc
         ..
@@ -207,17 +253,6 @@
     ..
     netatalk
     ..
-# Disabled in 7.0 as netatm is not MPSAFE.
-#    netatm
-#        ipatm
-#        ..
-#        sigpvc
-#        ..
-#        spans
-#        ..
-#        uni
-#        ..
-#    ..
     netgraph
         atm
         ..
@@ -256,13 +291,13 @@
     ..
     nfsserver
     ..
-    objc
-    ..
     openssl
     ..
-    pccard
+    pcap
     ..
     protocols
+    ..
+    rdma
     ..
     readline
     ..
@@ -295,5 +330,7 @@
         ..
     ..
     vm
+    ..
+    xlocale
     ..
 ..

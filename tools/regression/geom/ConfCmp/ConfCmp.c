@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/regression/geom/ConfCmp/ConfCmp.c 111876 2003-03-04 19:20:52Z phk $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -74,7 +74,7 @@ struct ref {
 	char			*k2;
 };
 
-LIST_HEAD(, ref)		refs = LIST_HEAD_INITIALIZER(&refs);
+LIST_HEAD(, ref)		refs = LIST_HEAD_INITIALIZER(refs);
 
 static struct node *
 new_node(void)
@@ -82,9 +82,9 @@ new_node(void)
 	struct node *np;
 
 	np = calloc(1, sizeof *np);
-	np->cont = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	np->cont = sbuf_new_auto();
 	sbuf_clear(np->cont);
-	np->key = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	np->key = sbuf_new_auto();
 	sbuf_clear(np->key);
 	LIST_INIT(&np->children);
 	return (np);

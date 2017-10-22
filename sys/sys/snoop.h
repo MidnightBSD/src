@@ -12,7 +12,7 @@
  *
  * Snoop stuff.
  *
- * $FreeBSD: release/7.0.0/sys/sys/snoop.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_SNOOP_H_

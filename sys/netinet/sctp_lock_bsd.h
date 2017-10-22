@@ -1,7 +1,7 @@
-#ifndef __sctp_lock_bsd_h__
-#define __sctp_lock_bsd_h__
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2012, by Michael Tuexen. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,6 +29,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
+#ifndef _NETINET_SCTP_LOCK_BSD_H_
+#define _NETINET_SCTP_LOCK_BSD_H_
 
 /*
  * General locking concepts: The goal of our locking is to of course provide
@@ -66,11 +72,8 @@
  * When working with the global SCTP lists we lock and unlock the INP_INFO
  * lock. So when we go to lookup an association we will want to do a
  * SCTP_INP_INFO_RLOCK() and then when we want to add a new association to
- * the sctppcbinfo list's we will do a SCTP_INP_INFO_WLOCK().
+ * the SCTP_BASE_INFO() list's we will do a SCTP_INP_INFO_WLOCK().
  */
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/netinet/sctp_lock_bsd.h 174854 2007-12-22 06:32:46Z cvs2svn $");
-
 
 extern struct sctp_foo_stuff sctp_logoff[];
 extern int sctp_logoff_stuff;
@@ -83,80 +86,116 @@ extern int sctp_logoff_stuff;
 #define SCTP_STATLOG_DESTROY()
 
 #define SCTP_INP_INFO_LOCK_DESTROY() do { \
-        if(rw_wowned(sctppcbinfo.ipi_ep_mtx)) { \
-             rw_wunlock(&sctppcbinfo.ipi_ep_mtx); \
+        if(rw_wowned(&SCTP_BASE_INFO(ipi_ep_mtx))) { \
+             rw_wunlock(&SCTP_BASE_INFO(ipi_ep_mtx)); \
         } \
-        rw_destroy(sctppcbinfo.ipi_ep_mtx); \
+        rw_destroy(&SCTP_BASE_INFO(ipi_ep_mtx)); \
       }  while (0)
 
 #define SCTP_INP_INFO_LOCK_INIT() \
-        rw_init(&sctppcbinfo.ipi_ep_mtx, "sctp-info");
+        rw_init(&SCTP_BASE_INFO(ipi_ep_mtx), "sctp-info");
 
 
 #define SCTP_INP_INFO_RLOCK()	do { 					\
-             rw_rlock(&sctppcbinfo.ipi_ep_mtx);                         \
+             rw_rlock(&SCTP_BASE_INFO(ipi_ep_mtx));                         \
 } while (0)
 
+#define SCTP_MCORE_QLOCK_INIT(cpstr) do { \
+		mtx_init(&(cpstr)->que_mtx,	      \
+			 "sctp-mcore_queue","queue_lock",	\
+			 MTX_DEF|MTX_DUPOK);		\
+} while (0)
+
+#define SCTP_MCORE_QLOCK(cpstr)  do { \
+		mtx_lock(&(cpstr)->que_mtx);	\
+} while (0)
+
+#define SCTP_MCORE_QUNLOCK(cpstr)  do { \
+		mtx_unlock(&(cpstr)->que_mtx);	\
+} while (0)
+
+#define SCTP_MCORE_QDESTROY(cpstr)  do { \
+	if(mtx_owned(&(cpstr)->core_mtx)) {	\
+		mtx_unlock(&(cpstr)->que_mtx);	\
+        } \
+	mtx_destroy(&(cpstr)->que_mtx);	\
+} while (0)
+
+
+#define SCTP_MCORE_LOCK_INIT(cpstr) do { \
+		mtx_init(&(cpstr)->core_mtx,	      \
+			 "sctp-cpulck","cpu_proc_lock",	\
+			 MTX_DEF|MTX_DUPOK);		\
+} while (0)
+
+#define SCTP_MCORE_LOCK(cpstr)  do { \
+		mtx_lock(&(cpstr)->core_mtx);	\
+} while (0)
+
+#define SCTP_MCORE_UNLOCK(cpstr)  do { \
+		mtx_unlock(&(cpstr)->core_mtx);	\
+} while (0)
+
+#define SCTP_MCORE_DESTROY(cpstr)  do { \
+	if(mtx_owned(&(cpstr)->core_mtx)) {	\
+		mtx_unlock(&(cpstr)->core_mtx);	\
+        } \
+	mtx_destroy(&(cpstr)->core_mtx);	\
+} while (0)
 
 #define SCTP_INP_INFO_WLOCK()	do { 					\
-            rw_wlock(&sctppcbinfo.ipi_ep_mtx);                         \
+            rw_wlock(&SCTP_BASE_INFO(ipi_ep_mtx));                         \
 } while (0)
 
 
-#define SCTP_INP_INFO_RUNLOCK()		rw_runlock(&sctppcbinfo.ipi_ep_mtx)
-#define SCTP_INP_INFO_WUNLOCK()		rw_wunlock(&sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_RUNLOCK()		rw_runlock(&SCTP_BASE_INFO(ipi_ep_mtx))
+#define SCTP_INP_INFO_WUNLOCK()		rw_wunlock(&SCTP_BASE_INFO(ipi_ep_mtx))
 
 
-#define SCTP_IPI_ADDR_INIT() \
-        rw_init(&sctppcbinfo.ipi_addr_mtx, "sctp-addr")
-
+#define SCTP_IPI_ADDR_INIT()								\
+        rw_init(&SCTP_BASE_INFO(ipi_addr_mtx), "sctp-addr")
 #define SCTP_IPI_ADDR_DESTROY() do  { \
-        if(rw_wowned(sctppcbinfo.ipi_addr_mtx)) { \
-             rw_wunlock(&sctppcbinfo.ipi_addr_mtx); \
+        if(rw_wowned(&SCTP_BASE_INFO(ipi_addr_mtx))) { \
+             rw_wunlock(&SCTP_BASE_INFO(ipi_addr_mtx)); \
         } \
-	rw_destroy(&sctppcbinfo.ipi_addr_mtx) \
+	rw_destroy(&SCTP_BASE_INFO(ipi_addr_mtx)); \
       }  while (0)
-
-
-
 #define SCTP_IPI_ADDR_RLOCK()	do { 					\
-             rw_rlock(&sctppcbinfo.ipi_addr_mtx);                         \
+             rw_rlock(&SCTP_BASE_INFO(ipi_addr_mtx));                         \
 } while (0)
-
 #define SCTP_IPI_ADDR_WLOCK()	do { 					\
-             rw_wlock(&sctppcbinfo.ipi_addr_mtx);                         \
+             rw_wlock(&SCTP_BASE_INFO(ipi_addr_mtx));                         \
 } while (0)
 
-
-#define SCTP_IPI_ADDR_RUNLOCK()		rw_runlock(&sctppcbinfo.ipi_addr_mtx)
-#define SCTP_IPI_ADDR_WUNLOCK()		rw_wunlock(&sctppcbinfo.ipi_addr_mtx)
+#define SCTP_IPI_ADDR_RUNLOCK()		rw_runlock(&SCTP_BASE_INFO(ipi_addr_mtx))
+#define SCTP_IPI_ADDR_WUNLOCK()		rw_wunlock(&SCTP_BASE_INFO(ipi_addr_mtx))
 
 
 #define SCTP_IPI_ITERATOR_WQ_INIT() \
-        mtx_init(&sctppcbinfo.ipi_iterator_wq_mtx, "sctp-it-wq", "sctp_it_wq", MTX_DEF)
+        mtx_init(&sctp_it_ctl.ipi_iterator_wq_mtx, "sctp-it-wq", "sctp_it_wq", MTX_DEF)
 
 #define SCTP_IPI_ITERATOR_WQ_DESTROY() \
-	mtx_destroy(&sctppcbinfo.ipi_iterator_wq_mtx)
+	mtx_destroy(&sctp_it_ctl.ipi_iterator_wq_mtx)
 
 #define SCTP_IPI_ITERATOR_WQ_LOCK()	do { 					\
-             mtx_lock(&sctppcbinfo.ipi_iterator_wq_mtx);                \
+             mtx_lock(&sctp_it_ctl.ipi_iterator_wq_mtx);                \
 } while (0)
 
-#define SCTP_IPI_ITERATOR_WQ_UNLOCK()		mtx_unlock(&sctppcbinfo.ipi_iterator_wq_mtx)
+#define SCTP_IPI_ITERATOR_WQ_UNLOCK()		mtx_unlock(&sctp_it_ctl.ipi_iterator_wq_mtx)
 
 
 #define SCTP_IP_PKTLOG_INIT() \
-        mtx_init(&sctppcbinfo.ipi_pktlog_mtx, "sctp-pktlog", "packetlog", MTX_DEF)
+        mtx_init(&SCTP_BASE_INFO(ipi_pktlog_mtx), "sctp-pktlog", "packetlog", MTX_DEF)
 
 
 #define SCTP_IP_PKTLOG_LOCK()	do { 			\
-             mtx_lock(&sctppcbinfo.ipi_pktlog_mtx);     \
+             mtx_lock(&SCTP_BASE_INFO(ipi_pktlog_mtx));     \
 } while (0)
 
-#define SCTP_IP_PKTLOG_UNLOCK()	mtx_unlock(&sctppcbinfo.ipi_pktlog_mtx)
+#define SCTP_IP_PKTLOG_UNLOCK()	mtx_unlock(&SCTP_BASE_INFO(ipi_pktlog_mtx))
 
 #define SCTP_IP_PKTLOG_DESTROY() \
-	mtx_destroy(&sctppcbinfo.ipi_pktlog_mtx)
+	mtx_destroy(&SCTP_BASE_INFO(ipi_pktlog_mtx))
 
 
 
@@ -191,18 +230,25 @@ extern int sctp_logoff_stuff;
 #define SCTP_INP_LOCK_DESTROY(_inp) \
 	mtx_destroy(&(_inp)->inp_mtx)
 
+#define SCTP_INP_LOCK_CONTENDED(_inp) ((_inp)->inp_mtx.mtx_lock & MTX_CONTESTED)
+
+#define SCTP_INP_READ_CONTENDED(_inp) ((_inp)->inp_rdata_mtx.mtx_lock & MTX_CONTESTED)
+
+#define SCTP_ASOC_CREATE_LOCK_CONTENDED(_inp) ((_inp)->inp_create_mtx.mtx_lock & MTX_CONTESTED)
+
+
 #define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) \
 	mtx_destroy(&(_inp)->inp_create_mtx)
 
 
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_INP_RLOCK(_inp)	do { 					\
-	if(sctp_logging_level & SCTP_LOCK_LOGGING_ENABLE) sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);\
+	if(SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOCK_LOGGING_ENABLE) sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);\
         mtx_lock(&(_inp)->inp_mtx);                                     \
 } while (0)
 
 #define SCTP_INP_WLOCK(_inp)	do { 					\
-	if(sctp_logging_level & SCTP_LOCK_LOGGING_ENABLE) sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);\
+	if(SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOCK_LOGGING_ENABLE) sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);\
         mtx_lock(&(_inp)->inp_mtx);                                     \
 } while (0)
 
@@ -237,7 +283,7 @@ extern int sctp_logoff_stuff;
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_ASOC_CREATE_LOCK(_inp) \
 	do {								\
-	if(sctp_logging_level & SCTP_LOCK_LOGGING_ENABLE) sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_CREATE); \
+	if(SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOCK_LOGGING_ENABLE) sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_CREATE); \
 		mtx_lock(&(_inp)->inp_create_mtx);			\
 	} while (0)
 #else
@@ -267,7 +313,7 @@ extern int sctp_logoff_stuff;
 
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_TCB_LOCK(_tcb)  do {					\
-	if(sctp_logging_level & SCTP_LOCK_LOGGING_ENABLE)  sctp_log_lock(_tcb->sctp_ep, _tcb, SCTP_LOG_LOCK_TCB);          \
+	if(SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOCK_LOGGING_ENABLE)  sctp_log_lock(_tcb->sctp_ep, _tcb, SCTP_LOG_LOCK_TCB);          \
 	mtx_lock(&(_tcb)->tcb_mtx);                                     \
 } while (0)
 
@@ -300,97 +346,123 @@ extern int sctp_logoff_stuff;
 #endif
 
 #define SCTP_ITERATOR_LOCK_INIT() \
-        mtx_init(&sctppcbinfo.it_mtx, "sctp-it", "iterator", MTX_DEF)
+        mtx_init(&sctp_it_ctl.it_mtx, "sctp-it", "iterator", MTX_DEF)
 
 #ifdef INVARIANTS
 #define SCTP_ITERATOR_LOCK() \
 	do {								\
-		if (mtx_owned(&sctppcbinfo.it_mtx))			\
+		if (mtx_owned(&sctp_it_ctl.it_mtx))			\
 			panic("Iterator Lock");				\
-		mtx_lock(&sctppcbinfo.it_mtx);				\
+		mtx_lock(&sctp_it_ctl.it_mtx);				\
 	} while (0)
 #else
 #define SCTP_ITERATOR_LOCK() \
 	do {								\
-		mtx_lock(&sctppcbinfo.it_mtx);				\
+		mtx_lock(&sctp_it_ctl.it_mtx);				\
 	} while (0)
 
 #endif
 
-#define SCTP_ITERATOR_UNLOCK()	        mtx_unlock(&sctppcbinfo.it_mtx)
-#define SCTP_ITERATOR_LOCK_DESTROY()	mtx_destroy(&sctppcbinfo.it_mtx)
+#define SCTP_ITERATOR_UNLOCK()	        mtx_unlock(&sctp_it_ctl.it_mtx)
+#define SCTP_ITERATOR_LOCK_DESTROY()	mtx_destroy(&sctp_it_ctl.it_mtx)
+
+
+#define SCTP_WQ_ADDR_INIT() do { \
+        mtx_init(&SCTP_BASE_INFO(wq_addr_mtx), "sctp-addr-wq","sctp_addr_wq",MTX_DEF); \
+ } while (0)
+
+#define SCTP_WQ_ADDR_DESTROY() do  { \
+        if(mtx_owned(&SCTP_BASE_INFO(wq_addr_mtx))) { \
+             mtx_unlock(&SCTP_BASE_INFO(wq_addr_mtx)); \
+        } \
+	    mtx_destroy(&SCTP_BASE_INFO(wq_addr_mtx)); \
+      }  while (0)
+
+#define SCTP_WQ_ADDR_LOCK()	do { \
+             mtx_lock(&SCTP_BASE_INFO(wq_addr_mtx));  \
+} while (0)
+#define SCTP_WQ_ADDR_UNLOCK() do { \
+		mtx_unlock(&SCTP_BASE_INFO(wq_addr_mtx)); \
+} while (0)
+
 
 
 #define SCTP_INCR_EP_COUNT() \
                 do { \
-		       atomic_add_int(&sctppcbinfo.ipi_count_ep, 1); \
+		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_ep), 1); \
 	        } while (0)
 
 #define SCTP_DECR_EP_COUNT() \
                 do { \
-		       atomic_subtract_int(&sctppcbinfo.ipi_count_ep, 1); \
+		       atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_ep), 1); \
 	        } while (0)
 
 #define SCTP_INCR_ASOC_COUNT() \
                 do { \
-	               atomic_add_int(&sctppcbinfo.ipi_count_asoc, 1); \
+	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_asoc), 1); \
 	        } while (0)
 
 #define SCTP_DECR_ASOC_COUNT() \
                 do { \
-	               atomic_subtract_int(&sctppcbinfo.ipi_count_asoc, 1); \
+	               atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_asoc), 1); \
 	        } while (0)
 
 #define SCTP_INCR_LADDR_COUNT() \
                 do { \
-	               atomic_add_int(&sctppcbinfo.ipi_count_laddr, 1); \
+	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_laddr), 1); \
 	        } while (0)
 
 #define SCTP_DECR_LADDR_COUNT() \
                 do { \
-	               atomic_subtract_int(&sctppcbinfo.ipi_count_laddr, 1); \
+	               atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_laddr), 1); \
 	        } while (0)
 
 #define SCTP_INCR_RADDR_COUNT() \
                 do { \
- 	               atomic_add_int(&sctppcbinfo.ipi_count_raddr, 1); \
+ 	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_raddr), 1); \
 	        } while (0)
 
 #define SCTP_DECR_RADDR_COUNT() \
                 do { \
- 	               atomic_subtract_int(&sctppcbinfo.ipi_count_raddr,1); \
+ 	               atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_raddr),1); \
 	        } while (0)
 
 #define SCTP_INCR_CHK_COUNT() \
                 do { \
-  	               atomic_add_int(&sctppcbinfo.ipi_count_chunk, 1); \
+  	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_chunk), 1); \
 	        } while (0)
-
+#ifdef INVARIANTS
 #define SCTP_DECR_CHK_COUNT() \
                 do { \
-                       if(sctppcbinfo.ipi_count_chunk == 0) \
+                       if(SCTP_BASE_INFO(ipi_count_chunk) == 0) \
                              panic("chunk count to 0?");    \
-  	               atomic_subtract_int(&sctppcbinfo.ipi_count_chunk, 1); \
+  	               atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_chunk), 1); \
 	        } while (0)
-
+#else
+#define SCTP_DECR_CHK_COUNT() \
+                do { \
+                       if(SCTP_BASE_INFO(ipi_count_chunk) != 0) \
+  	               atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_chunk), 1); \
+	        } while (0)
+#endif
 #define SCTP_INCR_READQ_COUNT() \
                 do { \
-		       atomic_add_int(&sctppcbinfo.ipi_count_readq,1); \
+		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_readq),1); \
 	        } while (0)
 
 #define SCTP_DECR_READQ_COUNT() \
                 do { \
-		       atomic_subtract_int(&sctppcbinfo.ipi_count_readq, 1); \
+		       atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_readq), 1); \
 	        } while (0)
 
 #define SCTP_INCR_STRMOQ_COUNT() \
                 do { \
-		       atomic_add_int(&sctppcbinfo.ipi_count_strmoq, 1); \
+		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_strmoq), 1); \
 	        } while (0)
 
 #define SCTP_DECR_STRMOQ_COUNT() \
                 do { \
-		       atomic_subtract_int(&sctppcbinfo.ipi_count_strmoq, 1); \
+		       atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_strmoq), 1); \
 	        } while (0)
 
 

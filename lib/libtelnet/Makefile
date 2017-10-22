@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.2 (Berkeley) 12/15/93
-# $FreeBSD: release/7.0.0/lib/libtelnet/Makefile 160854 2006-07-31 13:29:36Z yar $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -13,7 +13,7 @@ INTERNALLIB=
 SRCS=		genget.c getent.c misc.c
 CFLAGS+=	-I${TELNETDIR}
 
-WARNS?=		0
+WARNS?=		2
 
 .if !defined(RELEASE_CRUNCH)
 .if ${MK_OPENSSL} != "no"

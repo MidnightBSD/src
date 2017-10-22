@@ -13,13 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -35,22 +28,26 @@
  *
  *	$NetBSD: clock_subr.h,v 1.7 2000/10/03 13:41:07 tsutsui Exp $
  *
- * $FreeBSD: release/7.0.0/sys/sys/clock.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ *
+ * This file is the central clearing-house for calendrical issues.
+ *
+ * In general the kernel does not know about minutes, hours, days, timezones,
+ * daylight savings time, leap-years and such.  All that is theoretically a
+ * matter for userland only.
+ *
+ * Parts of kernel code does however care: badly designed filesystems store
+ * timestamps in local time and RTC chips sometimes track time in a local
+ * timezone instead of UTC and so on.
+ *
+ * All that code should go here for service.
+ *
+ * $FreeBSD$
  */
 
 #ifndef _SYS_CLOCK_H_
 #define _SYS_CLOCK_H_
 
 #ifdef _KERNEL		/* No user serviceable parts */
-
-/*
- * Kernel to clock driver interface.
- */
-void	inittodr(time_t base);
-void	resettodr(void);
-void	startrtclock(void);
-
-extern int	disable_rtc_set;
 
 /*
  * Timezone info from settimeofday(2), usually not used

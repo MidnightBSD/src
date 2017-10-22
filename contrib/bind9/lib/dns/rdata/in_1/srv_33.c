@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: srv_33.c,v 1.41.18.2 2005/04/29 00:16:43 marka Exp $ */
+/* $Id: srv_33.c,v 1.47 2009/12/04 22:06:37 tbox Exp $ */
 
 /* Reviewed: Fri Mar 17 13:01:00 PST 2000 by bwelling */
 
@@ -140,7 +140,7 @@ totext_in_srv(ARGS_TOTEXT) {
 
 static inline isc_result_t
 fromwire_in_srv(ARGS_FROMWIRE) {
-        dns_name_t name;
+	dns_name_t name;
 	isc_region_t sr;
 
 	REQUIRE(type == 33);
@@ -151,7 +151,7 @@ fromwire_in_srv(ARGS_FROMWIRE) {
 
 	dns_decompress_setmethods(dctx, DNS_COMPRESS_NONE);
 
-        dns_name_init(&name, NULL);
+	dns_name_init(&name, NULL);
 
 	/*
 	 * Priority, weight, port.
@@ -368,6 +368,11 @@ checknames_in_srv(ARGS_CHECKNAMES) {
 		return (ISC_FALSE);
 	}
 	return (ISC_TRUE);
+}
+
+static inline int
+casecompare_in_srv(ARGS_COMPARE) {
+	return (compare_in_srv(rdata1, rdata2));
 }
 
 #endif	/* RDATA_IN_1_SRV_33_C */

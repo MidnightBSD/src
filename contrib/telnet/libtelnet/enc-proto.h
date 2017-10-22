@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)enc-proto.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: release/7.0.0/contrib/telnet/libtelnet/enc-proto.h 87155 2001-11-30 22:28:07Z markm $
+ * $FreeBSD$
  */
 
 /*

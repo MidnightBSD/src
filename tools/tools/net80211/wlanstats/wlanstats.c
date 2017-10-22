@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002-2006 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,13 +12,6 @@
  *    similar to the "NO WARRANTY" disclaimer below ("Disclaimer") and any
  *    redistribution must be conditioned upon including a substantially
  *    similar Disclaimer requirement for further binary redistribution.
- * 3. Neither the names of the above-listed copyright holders nor the names
- *    of any contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
  *
  * NO WARRANTY
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -33,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/7.0.0/tools/tools/net80211/wlanstats/wlanstats.c 173558 2007-11-11 17:49:50Z sam $
+ * $FreeBSD$
  */
 
 /*
@@ -120,7 +113,10 @@ static const struct fmt wlanstats[] = {
 		"rx w/ unsupported auth alg" },
 #define	S_RX_AUTH_FAIL		AFTER(S_RX_AUTH_UNSUPPORTED)
 	{ 5,  "rx_auth_fail",	"auth_fail",	"rx sta auth failure" },
-#define	S_RX_AUTH_COUNTERMEASURES	AFTER(S_RX_AUTH_FAIL)
+#define	S_RX_AUTH_FAIL_CODE	AFTER(S_RX_AUTH_FAIL)
+	{ 5,  "rx_auth_fail_code","auth_fail_code",
+		"last rx auth failure reason" },
+#define	S_RX_AUTH_COUNTERMEASURES	AFTER(S_RX_AUTH_FAIL_CODE)
 	{ 5,  "rx_auth_countermeasures",	"auth_countermeasures",
 		"rx sta auth failure 'cuz of TKIP countermeasures" },
 #define	S_RX_ASSOC_BSS		AFTER(S_RX_AUTH_COUNTERMEASURES)
@@ -137,9 +133,16 @@ static const struct fmt wlanstats[] = {
 		"rx assoc w/ bad WPA IE" },
 #define	S_RX_DEAUTH		AFTER(S_RX_ASSOC_BADWPAIE)
 	{ 5,  "rx_deauth",	"deauth",	"rx deauthentication" },
-#define	S_RX_DISASSOC		AFTER(S_RX_DEAUTH)
+#define	S_RX_DEAUTH_CODE	AFTER(S_RX_DEAUTH)
+	{ 5,  "rx_deauth_code","deauth_code",	"last rx deauth reason" },
+#define	S_RX_DISASSOC		AFTER(S_RX_DEAUTH_CODE)
 	{ 5,  "rx_disassoc",	"disassoc",	"rx disassociation" },
-#define	S_RX_BADSUBTYPE		AFTER(S_RX_DISASSOC)
+#define	S_RX_DISASSOC_CODE	AFTER(S_RX_DISASSOC)
+	{ 5,  "rx_disassoc_code","disassoc_code",
+		"last rx disassoc reason" },
+#define	S_BMISS			AFTER(S_RX_DISASSOC_CODE)
+	{ 5,  "bmiss",		"bmiss",	"beacon miss events handled" },
+#define	S_RX_BADSUBTYPE		AFTER(S_BMISS)
 	{ 5,  "rx_badsubtype",	"badsubtype",	"rx frame w/ unknown subtype" },
 #define	S_RX_NOBUF		AFTER(S_RX_BADSUBTYPE)
 	{ 5,  "rx_nobuf",	"nobuf",	"rx failed for lack of mbuf" },
@@ -154,7 +157,7 @@ static const struct fmt wlanstats[] = {
 	{ 5,  "rx_unauth",	"unauth",
 		"rx discard 'cuz port unauthorized" },
 #define	S_RX_BADKEYID		AFTER(S_RX_UNAUTH)
-	{ 5,  "rx_badkeyid",	"badkeyid",	"rx w/ incorrect keyid" },
+	{ 5,  "rx_badkeyid",	"rxkid",	"rx w/ incorrect keyid" },
 #define	S_RX_CCMPREPLAY		AFTER(S_RX_BADKEYID)
 	{ 5,  "rx_ccmpreplay",	"ccmpreplay",	"rx seq# violation (CCMP)" },
 #define	S_RX_CCMPFORMAT		AFTER(S_RX_CCMPREPLAY)
@@ -192,10 +195,12 @@ static const struct fmt wlanstats[] = {
 #define	S_TX_FRAGS		AFTER(S_TX_FRAGFRAMES)
 	{ 5,  "tx_frags",	"frags",		"tx frags generated" },
 #define	S_SCAN_ACTIVE		AFTER(S_TX_FRAGS)
-	{ 5,  "scan_active",	"scan_active",	"active scans started" },
+	{ 5,  "scan_active",	"ascan",	"active scans started" },
 #define	S_SCAN_PASSIVE		AFTER(S_SCAN_ACTIVE)
-	{ 5,  "scan_passive",	"scan_passive",	"passive scans started" },
-#define	S_NODE_TIMEOUT		AFTER(S_SCAN_PASSIVE)
+	{ 5,  "scan_passive",	"pscan",	"passive scans started" },
+#define	S_SCAN_BG		AFTER(S_SCAN_PASSIVE)
+	{ 5,  "scan_bg",	"bgscn",	"background scans started" },
+#define	S_NODE_TIMEOUT		AFTER(S_SCAN_BG)
 	{ 5,  "node_timeout",	"node_timeout",	"nodes timed out for inactivity" },
 #define	S_CRYPTO_NOMEM		AFTER(S_NODE_TIMEOUT)
 	{ 5,  "crypto_nomem",	"crypto_nomem",	"cipher context malloc failed" },
@@ -254,7 +259,7 @@ static const struct fmt wlanstats[] = {
 #define	S_RX_BADBINTVAL		AFTER(S_FF_ENCAPFAIL)
 	{ 5,  "rx_badbintval",	"rx_badbintval","rx frame with bogus beacon interval" },
 #define	S_RX_MGMT		AFTER(S_RX_BADBINTVAL)
-	{ 5,  "rx_mgmt",	"rx_mgmt",	"rx management frames" },
+	{ 8,  "rx_mgmt",	"mgmt",		"rx management frames" },
 #define	S_RX_DEMICFAIL		AFTER(S_RX_MGMT)
 	{ 5,  "rx_demicfail",	"rx_demicfail",	"rx demic failed" },
 #define	S_RX_DEFRAG		AFTER(S_RX_DEMICFAIL)
@@ -317,7 +322,35 @@ static const struct fmt wlanstats[] = {
 	{ 4,  "ht_downgrade",	"ht_downgrade",	"HT station downgraded to legacy operation" },
 #define	S_HT_ASSOC_NORATE	AFTER(S_HT_ASSOC_DOWNGRADE)
 	{ 4,  "ht_norate",	"ht_norate",	"HT station rejected because of HT rate set" },
-#define	S_INPUT			AFTER(S_HT_ASSOC_NORATE)
+#define	S_MESH_WRONGMESH	AFTER(S_HT_ASSOC_NORATE)
+	{ 4,  "mesh_wrong",	"mesh_wrong",	"frame discarded because sender not a mesh sta" },
+#define	S_MESH_NOLINK		AFTER(S_MESH_WRONGMESH)
+	{ 4,  "mesh_nolink",	"mesh_nolink",	"frame discarded because link not established" },
+#define	S_MESH_FWD_TTL		AFTER(S_MESH_NOLINK)
+	{ 4,  "mesh_fwd_ttl",	"mesh_fwd_ttl",	"frame not forwarded because TTL zero" },
+#define	S_MESH_FWD_NOBUF	AFTER(S_MESH_FWD_TTL)
+	{ 4,  "mesh_fwd_nobuf",	"mesh_fwd_nobuf",	"frame not forwarded because mbuf could not be allocated" },
+#define	S_MESH_FWD_TOOSHORT	AFTER(S_MESH_FWD_NOBUF)
+	{ 4,  "mesh_fwd_tooshort",	"mesh_fwd_tooshort",	"frame not forwarded because too short to have 802.11 header" },
+#define	S_MESH_FWD_DISABLED	AFTER(S_MESH_FWD_TOOSHORT)
+	{ 4,  "mesh_fwd_disabled",	"mesh_fwd_disabled",	"frame not forwarded because administratively disabled" },
+#define	S_MESH_FWD_NOPATH	AFTER(S_MESH_FWD_DISABLED)
+	{ 4,  "mesh_fwd_nopath",	"mesh_fwd_nopath",	"frame not forwarded because no path found to destination" },
+#define	S_HWMP_WRONGSEQ		AFTER(S_MESH_FWD_NOPATH)
+	{ 4,  "hwmp_wrongseq",	"hwmp_wrongseq",	"frame discarded because mesh sequence number is invalid" },
+#define	S_HWMP_ROOTREQS		AFTER(S_HWMP_WRONGSEQ)
+	{ 4,  "hwmp_rootreqs",	"hwmp_rootreqs",	"root PREQ frames sent" },
+#define	S_HWMP_ROOTANN		AFTER(S_HWMP_ROOTREQS)
+	{ 4,  "hwmp_rootann",	"hwmp_rootann",	"root RANN frames received" },
+#define	S_MESH_BADAE		AFTER(S_HWMP_ROOTANN)
+	{ 4,  "mesh_badae",	"mesh_badae",	"frame discarded for bad AddressExtension (AE)" },
+#define	S_MESH_RTADDFAILED	AFTER(S_MESH_BADAE)
+	{ 4,  "mesh_rtadd",	"mesh_rtadd",	"mesh route add failed" },
+#define	S_MESH_NOTPROXY		AFTER(S_MESH_RTADDFAILED)
+	{ 8,  "mesh_notproxy",	"mesh_notproxy","frame discarded because station not acting as a proxy" },
+#define	S_RX_BADALIGN		AFTER(S_MESH_NOTPROXY)
+	{ 4,  "rx_badalign",	"rx_badalign","frame discarded because payload re-alignment failed" },
+#define	S_INPUT			AFTER(S_RX_BADALIGN)
 	{ 8,	"input",	"input",	"total data frames received" },
 #define	S_RX_UCAST		AFTER(S_INPUT)
 	{ 8,	"rx_ucast",	"rx_ucast",	"unicast data frames received" },
@@ -330,13 +363,13 @@ static const struct fmt wlanstats[] = {
 #define	S_TX_MCAST		AFTER(S_TX_UCAST)
 	{ 8,	"tx_mcast",	"tx_mcast",	"multicast data frames sent" },
 #define	S_RATE			AFTER(S_TX_MCAST)
-	{ 4,	"rate",		"rate",		"current transmit rate" },
+	{ 5,	"rate",		"rate",		"current transmit rate" },
 #define	S_RSSI			AFTER(S_RATE)
-	{ 4,	"rssi",		"rssi",		"current rssi" },
+	{ 5,	"rssi",		"rssi",		"current rssi" },
 #define	S_NOISE			AFTER(S_RSSI)
-	{ 4,	"noise",	"noise",	"current noise floor (dBm)" },
+	{ 5,	"noise",	"noise",	"current noise floor (dBm)" },
 #define	S_SIGNAL		AFTER(S_NOISE)
-	{ 4,	"signal",	"sig",		"current signal (dBm)" },
+	{ 5,	"signal",	"sig",		"current signal (dBm)" },
 };
 
 struct wlanstatfoo_p {
@@ -385,9 +418,12 @@ wlan_getopmode(struct wlanstatfoo *wf0)
 		strlcpy(ifmr.ifm_name, wf->ifr.ifr_name, sizeof(ifmr.ifm_name));
 		if (ioctl(wf->s, SIOCGIFMEDIA, &ifmr) < 0)
 			err(1, "%s (SIOCGIFMEDIA)", wf->ifr.ifr_name);
-		if (ifmr.ifm_current & IFM_IEEE80211_ADHOC)
-			wf->opmode = IEEE80211_M_IBSS;	/* XXX ahdemo */
-		else if (ifmr.ifm_current & IFM_IEEE80211_HOSTAP)
+		if (ifmr.ifm_current & IFM_IEEE80211_ADHOC) {
+			if (ifmr.ifm_current & IFM_FLAG0)
+				wf->opmode = IEEE80211_M_AHDEMO;
+			else
+				wf->opmode = IEEE80211_M_IBSS;
+		} else if (ifmr.ifm_current & IFM_IEEE80211_HOSTAP)
 			wf->opmode = IEEE80211_M_HOSTAP;
 		else if (ifmr.ifm_current & IFM_IEEE80211_MONITOR)
 			wf->opmode = IEEE80211_M_MONITOR;
@@ -417,25 +453,41 @@ getlladdr(struct wlanstatfoo_p *wf)
 	freeifaddrs(ifp);
 }
 
+static int
+getbssid(struct wlanstatfoo_p *wf)
+{
+	wf->ireq.i_type = IEEE80211_IOC_BSSID;
+	wf->ireq.i_data = wf->mac;
+	wf->ireq.i_len = IEEE80211_ADDR_LEN;
+	return ioctl(wf->s, SIOCG80211, &wf->ireq);
+}
+
 static void
 wlan_setstamac(struct wlanstatfoo *wf0, const uint8_t *mac)
 {
+	static const uint8_t zeromac[IEEE80211_ADDR_LEN];
 	struct wlanstatfoo_p *wf = (struct wlanstatfoo_p *) wf0;
 
 	if (mac == NULL) {
 		switch (wlan_getopmode(wf0)) {
 		case IEEE80211_M_HOSTAP:
 		case IEEE80211_M_MONITOR:
-		case IEEE80211_M_IBSS:
-		case IEEE80211_M_AHDEMO:
 			getlladdr(wf);
 			break;
+		case IEEE80211_M_IBSS:
+		case IEEE80211_M_AHDEMO:
+			/*
+			 * NB: this may not work in which case the
+			 * mac must be specified on the command line
+			 */
+			if (getbssid(wf) < 0 ||
+			    IEEE80211_ADDR_EQ(wf->mac, zeromac))
+				getlladdr(wf);
+			break;
 		case IEEE80211_M_STA:
-			wf->ireq.i_type = IEEE80211_IOC_BSSID;
-			wf->ireq.i_data = wf->mac;
-			wf->ireq.i_len = IEEE80211_ADDR_LEN;
-			if (ioctl(wf->s, SIOCG80211, &wf->ireq) <0)
-				err(1, "%s (IEEE80211_IOC_BSSID)", wf->ireq.i_name);
+			if (getbssid(wf) < 0)
+				err(1, "%s (IEEE80211_IOC_BSSID)",
+				    wf->ireq.i_name);
 			break;
 		}
 	} else
@@ -452,15 +504,18 @@ wlan_collect(struct wlanstatfoo_p *wf,
 	wf->ireq.i_type = IEEE80211_IOC_STA_INFO;
 	wf->ireq.i_data = (caddr_t) &wf->u_info;
 	wf->ireq.i_len = sizeof(wf->u_info);
-	if (ioctl(wf->s, SIOCG80211, &wf->ireq) < 0)
-		err(1, "%s (IEEE80211_IOC_STA_INFO)", wf->ireq.i_name);
+	if (ioctl(wf->s, SIOCG80211, &wf->ireq) < 0) {
+		warn("%s:%s (IEEE80211_IOC_STA_INFO)", wf->ireq.i_name,
+		    ether_ntoa((const struct ether_addr*) wf->mac));
+	}
 
 	IEEE80211_ADDR_COPY(nstats->is_u.macaddr, wf->mac);
 	wf->ireq.i_type = IEEE80211_IOC_STA_STATS;
 	wf->ireq.i_data = (caddr_t) nstats;
 	wf->ireq.i_len = sizeof(*nstats);
 	if (ioctl(wf->s, SIOCG80211, &wf->ireq) < 0)
-		err(1, "%s (IEEE80211_IOC_STA_STATS)", wf->ireq.i_name);
+		warn("%s:%s (IEEE80211_IOC_STA_STATS)", wf->ireq.i_name,
+		    ether_ntoa((const struct ether_addr*) wf->mac));
 
 	wf->ifr.ifr_data = (caddr_t) stats;
 	if (ioctl(wf->s, SIOCG80211STATS, &wf->ifr) < 0)
@@ -492,16 +547,89 @@ wlan_update_tot(struct statfoo *sf)
 	wf->ntotal = wf->ncur;
 }
 
+void
+setreason(char b[], size_t bs, int v)
+{
+#define	N(a)	(sizeof(a)/sizeof(a[0]))
+    static const char *reasons[] = {
+	[IEEE80211_REASON_UNSPECIFIED]		= "unspecified",
+	[IEEE80211_REASON_AUTH_EXPIRE]		= "auth expire",
+	[IEEE80211_REASON_AUTH_LEAVE]		= "auth leave",
+	[IEEE80211_REASON_ASSOC_EXPIRE]		= "assoc expire",
+	[IEEE80211_REASON_ASSOC_TOOMANY]	= "assoc toomany",
+	[IEEE80211_REASON_NOT_AUTHED]		= "not authed",
+	[IEEE80211_REASON_NOT_ASSOCED]		= "not assoced",
+	[IEEE80211_REASON_ASSOC_LEAVE]		= "assoc leave",
+	[IEEE80211_REASON_ASSOC_NOT_AUTHED]	= "assoc not authed",
+	[IEEE80211_REASON_DISASSOC_PWRCAP_BAD]	= "disassoc pwrcap bad",
+	[IEEE80211_REASON_DISASSOC_SUPCHAN_BAD]	= "disassoc supchan bad",
+	[IEEE80211_REASON_IE_INVALID]		= "ie invalid",
+	[IEEE80211_REASON_MIC_FAILURE]		= "mic failure",
+	[IEEE80211_REASON_4WAY_HANDSHAKE_TIMEOUT]= "4-way handshake timeout",
+	[IEEE80211_REASON_GROUP_KEY_UPDATE_TIMEOUT] = "group key update timeout",
+	[IEEE80211_REASON_IE_IN_4WAY_DIFFERS]	= "ie in 4-way differs",
+	[IEEE80211_REASON_GROUP_CIPHER_INVALID]	= "group cipher invalid",
+	[IEEE80211_REASON_PAIRWISE_CIPHER_INVALID]= "pairwise cipher invalid",
+	[IEEE80211_REASON_AKMP_INVALID]		= "akmp invalid",
+	[IEEE80211_REASON_UNSUPP_RSN_IE_VERSION]= "unsupported rsn ie version",
+	[IEEE80211_REASON_INVALID_RSN_IE_CAP]	= "invalid rsn ie cap",
+	[IEEE80211_REASON_802_1X_AUTH_FAILED]	= "802.1x auth failed",
+	[IEEE80211_REASON_CIPHER_SUITE_REJECTED]= "cipher suite rejected",
+    };
+    if (v < N(reasons) && reasons[v] != NULL)
+	    snprintf(b, bs, "%s (%u)", reasons[v], v);
+    else
+	    snprintf(b, bs, "%u", v);
+#undef N
+}
+
+void
+setstatus(char b[], size_t bs, int v)
+{
+#define	N(a)	(sizeof(a)/sizeof(a[0]))
+    static const char *status[] = {
+	[IEEE80211_STATUS_SUCCESS]		= "success",
+	[IEEE80211_STATUS_UNSPECIFIED]		= "unspecified",
+	[IEEE80211_STATUS_CAPINFO]		= "capinfo",
+	[IEEE80211_STATUS_NOT_ASSOCED]		= "not assoced",
+	[IEEE80211_STATUS_OTHER]		= "other",
+	[IEEE80211_STATUS_ALG]			= "algorithm",
+	[IEEE80211_STATUS_SEQUENCE]		= "sequence",
+	[IEEE80211_STATUS_CHALLENGE]		= "challenge",
+	[IEEE80211_STATUS_TIMEOUT]		= "timeout",
+	[IEEE80211_STATUS_TOOMANY]		= "toomany",
+	[IEEE80211_STATUS_BASIC_RATE]		= "basic rate",
+	[IEEE80211_STATUS_SP_REQUIRED]		= "sp required",
+	[IEEE80211_STATUS_PBCC_REQUIRED]	= "pbcc required",
+	[IEEE80211_STATUS_CA_REQUIRED]		= "ca required",
+	[IEEE80211_STATUS_SPECMGMT_REQUIRED]	= "specmgmt required",
+	[IEEE80211_STATUS_PWRCAP_REQUIRED]	= "pwrcap required",
+	[IEEE80211_STATUS_SUPCHAN_REQUIRED]	= "supchan required",
+	[IEEE80211_STATUS_SHORTSLOT_REQUIRED]	= "shortslot required",
+	[IEEE80211_STATUS_DSSSOFDM_REQUIRED]	= "dsssofdm required",
+	[IEEE80211_STATUS_INVALID_IE]		= "invalid ie",
+	[IEEE80211_STATUS_GROUP_CIPHER_INVALID]	= "group cipher invalid",
+	[IEEE80211_STATUS_PAIRWISE_CIPHER_INVALID]= "pairwise cipher invalid",
+	[IEEE80211_STATUS_AKMP_INVALID]		= "akmp invalid",
+	[IEEE80211_STATUS_UNSUPP_RSN_IE_VERSION]= "unsupported rsn ie version",
+	[IEEE80211_STATUS_INVALID_RSN_IE_CAP]	= "invalid rsn ie cap",
+	[IEEE80211_STATUS_CIPHER_SUITE_REJECTED]= "cipher suite rejected",
+    };
+    if (v < N(status) && status[v] != NULL)
+	    snprintf(b, bs, "%s (%u)", status[v], v);
+    else
+	    snprintf(b, bs, "%u", v);
+#undef N
+}
+
 static int
 wlan_getinfo(struct wlanstatfoo_p *wf, int s, char b[], size_t bs)
 {
 	const struct ieee80211req_sta_info *si = &wf->u_info.info.info[0];
-	uint8_t r;
 
 	switch (s) {
 	case S_RATE:
-		r = si->isi_rates[si->isi_txrate];
-		snprintf(b, bs, "%uM", (r &~ 0x80) / 2);
+		snprintf(b, bs, "%uM", si->isi_txmbps/2);
 		return 1;
 	case S_RSSI:
 		snprintf(b, bs, "%d", si->isi_rssi);
@@ -511,6 +639,21 @@ wlan_getinfo(struct wlanstatfoo_p *wf, int s, char b[], size_t bs)
 		return 1;
 	case S_SIGNAL:
 		snprintf(b, bs, "%d", si->isi_rssi + si->isi_noise);
+		return 1;
+	case S_RX_AUTH_FAIL_CODE:
+		if (wf->cur.is_rx_authfail_code == 0)
+			break;
+		setstatus(b, bs, wf->cur.is_rx_authfail_code);
+		return 1;
+	case S_RX_DEAUTH_CODE:
+		if (wf->cur.is_rx_deauth_code == 0)
+			break;
+		setreason(b, bs, wf->cur.is_rx_deauth_code);
+		return 1;
+	case S_RX_DISASSOC_CODE:
+		if (wf->cur.is_rx_disassoc_code == 0)
+			break;
+		setreason(b, bs, wf->cur.is_rx_disassoc_code);
 		return 1;
 	}
 	b[0] = '\0';
@@ -562,6 +705,7 @@ wlan_get_curstat(struct statfoo *sf, int s, char b[], size_t bs)
 	case S_RX_ASSOC_BADWPAIE:	STAT(rx_assoc_badwpaie);
 	case S_RX_DEAUTH:	STAT(rx_deauth);
 	case S_RX_DISASSOC:	STAT(rx_disassoc);
+	case S_BMISS:		STAT(beacon_miss);
 	case S_RX_BADSUBTYPE:	STAT(rx_badsubtype);
 	case S_RX_NOBUF:	STAT(rx_nobuf);
 	case S_RX_DECRYPTCRC:	STAT(rx_decryptcrc);
@@ -589,6 +733,7 @@ wlan_get_curstat(struct statfoo *sf, int s, char b[], size_t bs)
 	case S_TX_FRAGS:	STAT(tx_frags);
 	case S_SCAN_ACTIVE:	STAT(scan_active);
 	case S_SCAN_PASSIVE:	STAT(scan_passive);
+	case S_SCAN_BG:		STAT(scan_bg);
 	case S_NODE_TIMEOUT:	STAT(node_timeout);
 	case S_CRYPTO_NOMEM:	STAT(crypto_nomem);
 	case S_CRYPTO_TKIP:	STAT(crypto_tkip);
@@ -644,9 +789,25 @@ wlan_get_curstat(struct statfoo *sf, int s, char b[], size_t bs)
 	case S_TX_BADSTATE:	STAT(tx_badstate);
 	case S_TX_NOTASSOC:	STAT(tx_notassoc);
 	case S_TX_CLASSIFY:	STAT(tx_classify);
+	case S_DWDS_MCAST:	STAT(dwds_mcast);
+	case S_DWDS_QDROP:	STAT(dwds_qdrop);
 	case S_HT_ASSOC_NOHTCAP:STAT(ht_assoc_nohtcap);
 	case S_HT_ASSOC_DOWNGRADE:STAT(ht_assoc_downgrade);
 	case S_HT_ASSOC_NORATE:	STAT(ht_assoc_norate);
+	case S_MESH_WRONGMESH:	STAT(mesh_wrongmesh);
+	case S_MESH_NOLINK:	STAT(mesh_nolink);
+	case S_MESH_FWD_TTL:	STAT(mesh_fwd_ttl);
+	case S_MESH_FWD_NOBUF:	STAT(mesh_fwd_nobuf);
+	case S_MESH_FWD_TOOSHORT: STAT(mesh_fwd_tooshort);
+	case S_MESH_FWD_DISABLED: STAT(mesh_fwd_disabled);
+	case S_MESH_FWD_NOPATH:	STAT(mesh_fwd_nopath);
+	case S_HWMP_WRONGSEQ:	STAT(hwmp_wrongseq);
+	case S_HWMP_ROOTREQS:	STAT(hwmp_rootreqs);
+	case S_HWMP_ROOTANN:	STAT(hwmp_rootrann);
+	case S_MESH_BADAE:	STAT(mesh_badae);
+	case S_MESH_RTADDFAILED:STAT(mesh_rtaddfailed);
+	case S_MESH_NOTPROXY:	STAT(mesh_notproxy);
+	case S_RX_BADALIGN:	STAT(rx_badalign);
 	case S_INPUT:		NSTAT(rx_data);
 	case S_OUTPUT:		NSTAT(tx_data);
 	case S_RX_UCAST:	NSTAT(rx_ucast);
@@ -702,6 +863,7 @@ wlan_get_totstat(struct statfoo *sf, int s, char b[], size_t bs)
 	case S_RX_ASSOC_BADWPAIE:	STAT(rx_assoc_badwpaie);
 	case S_RX_DEAUTH:	STAT(rx_deauth);
 	case S_RX_DISASSOC:	STAT(rx_disassoc);
+	case S_BMISS:		STAT(beacon_miss);
 	case S_RX_BADSUBTYPE:	STAT(rx_badsubtype);
 	case S_RX_NOBUF:	STAT(rx_nobuf);
 	case S_RX_DECRYPTCRC:	STAT(rx_decryptcrc);
@@ -729,6 +891,7 @@ wlan_get_totstat(struct statfoo *sf, int s, char b[], size_t bs)
 	case S_TX_FRAGS:	STAT(tx_frags);
 	case S_SCAN_ACTIVE:	STAT(scan_active);
 	case S_SCAN_PASSIVE:	STAT(scan_passive);
+	case S_SCAN_BG:		STAT(scan_bg);
 	case S_NODE_TIMEOUT:	STAT(node_timeout);
 	case S_CRYPTO_NOMEM:	STAT(crypto_nomem);
 	case S_CRYPTO_TKIP:	STAT(crypto_tkip);
@@ -784,9 +947,25 @@ wlan_get_totstat(struct statfoo *sf, int s, char b[], size_t bs)
 	case S_TX_BADSTATE:	STAT(tx_badstate);
 	case S_TX_NOTASSOC:	STAT(tx_notassoc);
 	case S_TX_CLASSIFY:	STAT(tx_classify);
+	case S_DWDS_MCAST:	STAT(dwds_mcast);
+	case S_DWDS_QDROP:	STAT(dwds_qdrop);
 	case S_HT_ASSOC_NOHTCAP:STAT(ht_assoc_nohtcap);
 	case S_HT_ASSOC_DOWNGRADE:STAT(ht_assoc_downgrade);
 	case S_HT_ASSOC_NORATE:	STAT(ht_assoc_norate);
+	case S_MESH_WRONGMESH:	STAT(mesh_wrongmesh);
+	case S_MESH_NOLINK:	STAT(mesh_nolink);
+	case S_MESH_FWD_TTL:	STAT(mesh_fwd_ttl);
+	case S_MESH_FWD_NOBUF:	STAT(mesh_fwd_nobuf);
+	case S_MESH_FWD_TOOSHORT: STAT(mesh_fwd_tooshort);
+	case S_MESH_FWD_DISABLED: STAT(mesh_fwd_disabled);
+	case S_MESH_FWD_NOPATH:	STAT(mesh_fwd_nopath);
+	case S_HWMP_WRONGSEQ:	STAT(hwmp_wrongseq);
+	case S_HWMP_ROOTREQS:	STAT(hwmp_rootreqs);
+	case S_HWMP_ROOTANN:	STAT(hwmp_rootrann);
+	case S_MESH_BADAE:	STAT(mesh_badae);
+	case S_MESH_RTADDFAILED:STAT(mesh_rtaddfailed);
+	case S_MESH_NOTPROXY:	STAT(mesh_notproxy);
+	case S_RX_BADALIGN:	STAT(rx_badalign);
 	case S_INPUT:		NSTAT(rx_data);
 	case S_OUTPUT:		NSTAT(tx_data);
 	case S_RX_UCAST:	NSTAT(rx_ucast);

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/release/doc/share/sgml/Makefile 174854 2007-12-22 06:32:46Z cvs2svn $
+# $FreeBSD$
 
 RELN_ROOT?= ${.CURDIR}/../..
 

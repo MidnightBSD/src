@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)chown.c	8.8 (Berkeley) 4/4/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/chown/chown.c 133248 2004-08-07 04:19:37Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -73,14 +73,14 @@ main(int argc, char **argv)
 {
 	FTS *ftsp;
 	FTSENT *p;
-	int Hflag, Lflag, Rflag, fflag, hflag, vflag;
+	int Hflag, Lflag, Rflag, fflag, hflag, vflag, xflag;
 	int ch, fts_options, rval;
 	char *cp;
 
 	ischown = (strcmp(basename(argv[0]), "chown") == 0);
 
-	Hflag = Lflag = Rflag = fflag = hflag = vflag = 0;
-	while ((ch = getopt(argc, argv, "HLPRfhv")) != -1)
+	Hflag = Lflag = Rflag = fflag = hflag = vflag = xflag = 0;
+	while ((ch = getopt(argc, argv, "HLPRfhvx")) != -1)
 		switch (ch) {
 		case 'H':
 			Hflag = 1;
@@ -105,6 +105,9 @@ main(int argc, char **argv)
 		case 'v':
 			vflag++;
 			break;
+		case 'x':
+			xflag = 1;
+			break;
 		case '?':
 		default:
 			usage();
@@ -128,6 +131,8 @@ main(int argc, char **argv)
 		}
 	} else
 		fts_options = hflag ? FTS_PHYSICAL : FTS_LOGICAL;
+	if (xflag)
+		fts_options |= FTS_XDEV;
 
 	uid = (uid_t)-1;
 	gid = (gid_t)-1;
@@ -257,9 +262,7 @@ id(const char *name, const char *type)
 	 */
 	errno = 0;
 	val = strtoul(name, &ep, 10);
-	if (errno)
-		err(1, "%s", name);
-	if (*ep != '\0')
+	if (errno || *ep != '\0')
 		errx(1, "%s: illegal %s name", name, type);
 	return (val);
 }
@@ -269,7 +272,8 @@ chownerr(const char *file)
 {
 	static uid_t euid = -1;
 	static int ngroups = -1;
-	gid_t groups[NGROUPS_MAX];
+	static long ngroups_max;
+	gid_t *groups;
 
 	/* Check for chown without being root. */
 	if (errno != EPERM || (uid != (uid_t)-1 &&
@@ -281,8 +285,12 @@ chownerr(const char *file)
 	/* Check group membership; kernel just returns EPERM. */
 	if (gid != (gid_t)-1 && ngroups == -1 &&
 	    euid == (uid_t)-1 && (euid = geteuid()) != 0) {
-		ngroups = getgroups(NGROUPS_MAX, groups);
+		ngroups_max = sysconf(_SC_NGROUPS_MAX) + 1;
+		if ((groups = malloc(sizeof(gid_t) * ngroups_max)) == NULL)
+			err(1, "malloc");
+		ngroups = getgroups(ngroups_max, groups);
 		while (--ngroups >= 0 && gid != groups[ngroups]);
+		free(groups);
 		if (ngroups < 0) {
 			warnx("you are not a member of group %s", gname);
 			return;
@@ -297,11 +305,11 @@ usage(void)
 
 	if (ischown)
 		(void)fprintf(stderr, "%s\n%s\n",
-		    "usage: chown [-fhv] [-R [-H | -L | -P]] owner[:group]"
+		    "usage: chown [-fhvx] [-R [-H | -L | -P]] owner[:group]"
 		    " file ...",
-		    "       chown [-fhv] [-R [-H | -L | -P]] :group file ...");
+		    "       chown [-fhvx] [-R [-H | -L | -P]] :group file ...");
 	else
 		(void)fprintf(stderr, "%s\n",
-		    "usage: chgrp [-fhv] [-R [-H | -L | -P]] group file ...");
+		    "usage: chgrp [-fhvx] [-R [-H | -L | -P]] group file ...");
 	exit(1);
 }

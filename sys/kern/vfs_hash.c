@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/kern/vfs_hash.c 167497 2007-03-13 01:50:27Z tegge $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,7 +52,7 @@ vfs_hashinit(void *dummy __unused)
 }
 
 /* Must be SI_ORDER_SECOND so desiredvnodes is available */
-SYSINIT(vfs_hash, SI_SUB_VFS, SI_ORDER_SECOND, vfs_hashinit, NULL)
+SYSINIT(vfs_hash, SI_SUB_VFS, SI_ORDER_SECOND, vfs_hashinit, NULL);
 
 static struct vfs_hash_head *
 vfs_hash_index(const struct mount *mp, u_int hash)

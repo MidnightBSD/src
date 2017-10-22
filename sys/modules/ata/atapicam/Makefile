@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/ata/atapicam/Makefile 144645 2005-04-05 02:04:30Z scottl $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../dev/ata
 

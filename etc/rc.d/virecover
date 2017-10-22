@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/virecover 175737 2008-01-28 07:58:32Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: virecover
@@ -12,7 +12,7 @@
 . /etc/rc.subr
 
 name="virecover"
-rcvar="`set_rcvar`"
+rcvar="virecover_enable"
 stop_cmd=":"
 start_cmd="virecover_start"
 

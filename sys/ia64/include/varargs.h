@@ -37,7 +37,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)varargs.h	8.2 (Berkeley) 3/22/94
- * $FreeBSD: release/7.0.0/sys/ia64/include/varargs.h 120540 2003-09-28 05:34:07Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_VARARGS_H_

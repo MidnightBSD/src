@@ -1,7 +1,8 @@
-#$FreeBSD: release/7.0.0/sys/arm/xscale/i80321/files.i80219 161592 2006-08-24 23:51:28Z cognet $
+#$FreeBSD$
 #
 # IOP Specific
 # 
+arm/arm/bus_space_generic.c		standard
 arm/arm/cpufunc_asm_xscale.S		standard
 arm/arm/irq_dispatch.S			standard
 arm/xscale/i80321/i80321.c		standard

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/kern/subr_prof.c 170307 2007-06-05 00:00:57Z jeff $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,7 +52,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/kern/subr_prof.c 170307 2007-06-05 00:00:5
 static MALLOC_DEFINE(M_GPROF, "gprof", "kernel profiling buffer");
 
 static void kmstartup(void *);
-SYSINIT(kmem, SI_SUB_KPROF, SI_ORDER_FIRST, kmstartup, NULL)
+SYSINIT(kmem, SI_SUB_KPROF, SI_ORDER_FIRST, kmstartup, NULL);
 
 struct gmonparam _gmonparam = { GMON_PROF_OFF };
 
@@ -223,8 +223,8 @@ kmstartup(dummy)
 
 	startguprof(p);
 	for (i = 0; i < CALIB_SCALE; i++)
-		MCOUNT_OVERHEAD(profil);
-	mcount_overhead = KCOUNT(p, PC_TO_I(p, profil));
+		MCOUNT_OVERHEAD(sys_profil);
+	mcount_overhead = KCOUNT(p, PC_TO_I(p, sys_profil));
 
 	startguprof(p);
 	for (i = 0; i < CALIB_SCALE; i++)
@@ -404,9 +404,7 @@ struct profil_args {
 #endif
 /* ARGSUSED */
 int
-profil(td, uap)
-	struct thread *td;
-	register struct profil_args *uap;
+sys_profil(struct thread *td, struct profil_args *uap)
 {
 	struct uprof *upp;
 	struct proc *p;
@@ -574,7 +572,7 @@ tcov_init(void *foo __unused)
 	}
 }
 
-SYSINIT(tcov_init, SI_SUB_KPROF, SI_ORDER_SECOND, tcov_init, NULL)
+SYSINIT(tcov_init, SI_SUB_KPROF, SI_ORDER_SECOND, tcov_init, NULL);
 
 /*
  * GCC contains magic to recognize calls to for instance execve() and

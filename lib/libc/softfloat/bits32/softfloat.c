@@ -52,7 +52,7 @@ this code that are retained.
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/softfloat/bits32/softfloat.c 138590 2004-12-08 18:41:42Z cognet $");
+__FBSDID("$FreeBSD$");
 
 #ifdef SOFTFLOAT_FOR_GCC
 #include "softfloat-for-gcc.h"

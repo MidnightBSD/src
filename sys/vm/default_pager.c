@@ -38,12 +38,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/vm/default_pager.c 139825 2005-01-07 02:29:27Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/lock.h>
 #include <sys/proc.h>
+#include <sys/resourcevar.h>
 #include <sys/mutex.h>
 
 #include <vm/vm.h>
@@ -53,7 +54,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/vm/default_pager.c 139825 2005-01-07 02:29
 #include <vm/swap_pager.h>
 
 static vm_object_t default_pager_alloc(void *, vm_ooffset_t, vm_prot_t,
-		vm_ooffset_t);
+    vm_ooffset_t, struct ucred *);
 static void default_pager_dealloc(vm_object_t);
 static int default_pager_getpages(vm_object_t, vm_page_t *, int, int);
 static void default_pager_putpages(vm_object_t, vm_page_t *, int, 
@@ -76,12 +77,26 @@ struct pagerops defaultpagerops = {
  */
 static vm_object_t
 default_pager_alloc(void *handle, vm_ooffset_t size, vm_prot_t prot,
-		    vm_ooffset_t offset)
+    vm_ooffset_t offset, struct ucred *cred)
 {
+	vm_object_t object;
+
 	if (handle != NULL)
 		panic("default_pager_alloc: handle specified");
-
-	return vm_object_allocate(OBJT_DEFAULT, OFF_TO_IDX(round_page(offset + size)));
+	if (cred != NULL) {
+		if (!swap_reserve_by_cred(size, cred))
+			return (NULL);
+		crhold(cred);
+	}
+	object = vm_object_allocate(OBJT_DEFAULT,
+	    OFF_TO_IDX(round_page(offset + size)));
+	if (cred != NULL) {
+		VM_OBJECT_LOCK(object);
+		object->cred = cred;
+		object->charge = size;
+		VM_OBJECT_UNLOCK(object);
+	}
+	return (object);
 }
 
 /*

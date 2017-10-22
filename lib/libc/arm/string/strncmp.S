@@ -30,16 +30,19 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/arm/string/strncmp.S 137464 2004-11-09 16:49:14Z cognet $");
+__FBSDID("$FreeBSD$");
 
 ENTRY(strncmp)
-/* if ((len - 1) < 0) return 0 */
-	subs	r2, r2, #1
-	movmi	r0, #0
-	movmi	pc, lr
+/* if (len == 0) return 0 */
+	cmp	r2, #0
+	moveq	r0, #0
+	moveq	pc, lr
 
 /* ip == last src address to compare */
-	add	ip, r0, r2
+	adds	ip, r0, r2
+/* Use last possible address on overflow. */
+	movcs	ip, #0
+	sub	ip, ip, #1
 1:
 	ldrb	r2, [r0], #1
 	ldrb	r3, [r1], #1

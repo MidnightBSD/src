@@ -51,7 +51,7 @@
 #include <machine/asm.h>
 #include <machine/armreg.h>
 #include <machine/asmacros.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/exception.S 139735 2005-01-05 21:58:49Z imp $");
+__FBSDID("$FreeBSD$");
 
 	.text	
 	.align	0
@@ -233,11 +233,6 @@ ENTRY_NP(undefinedinstruction_bounce)
 
 	.data
 	.align	0
-
-#ifdef IPKDB
-Lipkdb_trap_return_data:
-	.word	0
-#endif
 
 /*
  * Indirection data

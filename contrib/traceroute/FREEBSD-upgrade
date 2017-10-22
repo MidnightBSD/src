@@ -1,4 +1,4 @@
-$FreeBSD: release/7.0.0/contrib/traceroute/FREEBSD-upgrade 172506 2007-10-10 16:59:15Z cvs2svn $
+$FreeBSD$
 
 This directory contains virgin copies of the original distribution files
 on a "vendor" branch.  Do not, under any circumstances, attempt to upgrade

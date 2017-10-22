@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/ia64/gen/signalcontext.c 124191 2004-01-06 19:40:28Z nectar $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/ucontext.h>

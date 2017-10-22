@@ -19,7 +19,7 @@
  * only.
  * END_BLOCK
  *
- * $FreeBSD: release/7.0.0/sys/boot/arm/at91/libat91/spi_flash.c 168012 2007-03-28 22:38:01Z imp $
+ * $FreeBSD$
  *****************************************************************************/
 
 #include "at91rm9200.h"
@@ -256,11 +256,12 @@ SPI_InitFlash(void)
 	value = pSPI->SPI_RDR;
 	value = pSPI->SPI_SR;
 
+	value = GetFlashStatus() & 0xFC;
 #ifdef BOOT_BWCT
-	if (((value = GetFlashStatus()) & 0xFC) != 0xB4)
+	if (value != 0xB4 && value != 0xAC)
 		printf(" Bad SPI status: 0x%x\n", value);
 #else
-	if (((value = GetFlashStatus()) & 0xFC) != 0xBC)
+	if (value != 0xBC)
 		printf(" Bad SPI status: 0x%x\n", value);
 #endif
 }

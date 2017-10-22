@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/advansys/adv_pci.c 166901 2007-02-23 12:19:07Z piso $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -187,9 +187,8 @@ adv_pci_attach(device_t dev)
 	}
 
 	/* Allocate a dmatag for our transfer DMA maps */
-	/* XXX Should be a child of the PCI bus dma tag */
 	error = bus_dma_tag_create(
-			/* parent	*/ NULL,
+			/* parent	*/ bus_get_dma_tag(dev),
 			/* alignment	*/ 1,
 			/* boundary	*/ 0,
 			/* lowaddr	*/ ADV_PCI_MAX_DMA_ADDR,

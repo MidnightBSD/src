@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
-# $FreeBSD: release/7.0.0/bin/dd/Makefile 160218 2006-07-09 21:47:37Z markm $
+# $FreeBSD$
 
 PROG=	dd
 SRCS=	args.c conv.c conv_tab.c dd.c misc.c position.c

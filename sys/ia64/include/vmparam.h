@@ -1,7 +1,3 @@
-/* $FreeBSD: release/7.0.0/sys/ia64/include/vmparam.h 172317 2007-09-25 06:25:06Z alc $ */
-/* From: NetBSD: vmparam.h,v 1.6 1997/09/23 23:23:23 mjacob Exp */
-#ifndef	_MACHINE_VMPARAM_H
-#define	_MACHINE_VMPARAM_H
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1992, 1993
@@ -38,16 +34,12 @@
  * from: Utah $Hdr: vmparam.h 1.16 91/01/18$
  *
  *	@(#)vmparam.h	8.2 (Berkeley) 4/22/94
+ *
+ * $FreeBSD$
  */
 
-/*
- * Machine dependent constants for ia64.
- */
-/*
- * USRSTACK is the top (end) of the user stack.  Immediately above the user
- * stack resides the syscall gateway page.
- */
-#define	USRSTACK	VM_MAX_ADDRESS
+#ifndef	_MACHINE_VMPARAM_H_
+#define	_MACHINE_VMPARAM_H_
 
 /*
  * Virtual memory related constants, all in bytes
@@ -70,40 +62,6 @@
 #ifndef SGROWSIZ
 #define SGROWSIZ	(128UL*1024)		/* amount to grow stack */
 #endif
-
-/*
- * Boundary at which to place first MAPMEM segment if not explicitly
- * specified.  Should be a power of two.  This allows some slop for
- * the data segment to grow underneath the first mapped segment.
- */
-#define MMSEG		0x200000
-
-/*
- * The size of the clock loop.
- */
-#define	LOOPPAGES	(maxfree - firstfree)
-
-/*
- * The time for a process to be blocked before being very swappable.
- * This is a number of seconds which the system takes as being a non-trivial
- * amount of real time.  You probably shouldn't change this;
- * it is used in subtle ways (fractions and multiples of it are, that is, like
- * half of a ``long time'', almost a long time, etc.)
- * It is related to human patience and other factors which don't really
- * change over time.
- */
-#define	MAXSLP 		20
-
-/*
- * A swapped in process is given a small amount of core without being bothered
- * by the page replacement algorithm.  Basically this says that if you are
- * swapped in you deserve some resources.  We protect the last SAFERSS
- * pages against paging and will just swap you out rather than paging you.
- * Note that each process has at least UPAGES pages which are not
- * paged anyways, in addition to SAFERSS.
- */
-#define	SAFERSS		10		/* nominal ``small'' resident set size
-					   protected against replacement */
 
 /*
  * We need region 7 virtual addresses for pagetables.
@@ -145,40 +103,97 @@
 #define	VM_NFREEORDER		16
 
 /*
- * Manipulating region bits of an address.
+ * Only one memory domain.
  */
-#define IA64_RR_BASE(n)         (((u_int64_t) (n)) << 61)
-#define IA64_RR_MASK(x)         ((x) & ((1L << 61) - 1))
-
-#define IA64_PHYS_TO_RR6(x)     ((x) | IA64_RR_BASE(6))
-#define IA64_PHYS_TO_RR7(x)     ((x) | IA64_RR_BASE(7))
-
-/*
- * Page size of the identity mappings in region 7.
- */
-#ifndef LOG2_ID_PAGE_SIZE
-#define	LOG2_ID_PAGE_SIZE	28		/* 256M */
+#ifndef VM_NDOMAIN
+#define	VM_NDOMAIN		1
 #endif
 
-#define	IA64_ID_PAGE_SHIFT	(LOG2_ID_PAGE_SIZE)
-#define	IA64_ID_PAGE_SIZE	(1<<(LOG2_ID_PAGE_SIZE))
-#define	IA64_ID_PAGE_MASK	(IA64_ID_PAGE_SIZE-1)
+/*
+ * Disable superpage reservations.
+ */
+#ifndef	VM_NRESERVLEVEL
+#define	VM_NRESERVLEVEL		0
+#endif
 
-#define	IA64_BACKINGSTORE	IA64_RR_BASE(4)
+#define	IA64_VM_MINKERN_REGION	4
+
+/*
+ * Manipulating region bits of an address.
+ */
+#define IA64_RR_BASE(n)         (((uint64_t) (n)) << 61)
+#define IA64_RR_MASK(x)         ((x) & ((1L << 61) - 1))
+
+#define	IA64_PHYS_TO_RR6(x)	((x) | IA64_RR_BASE(6))
+#define	IA64_PHYS_TO_RR7(x)	((x) | IA64_RR_BASE(7))
+
+/*
+ * The Itanium architecture defines that all implementations support at
+ * least 51 virtual address bits (i.e. IMPL_VA_MSB=50). The unimplemented
+ * bits are sign-extended from VA{IMPL_VA_MSB}. As such, there's a gap in
+ * the virtual address range, which extends at most from 0x0004000000000000
+ * to 0x1ffbffffffffffff. We define the top half of a region in terms of
+ * this worst-case gap.
+ */
+#define	IA64_REGION_GAP_START	0x0004000000000000
+#define	IA64_REGION_GAP_EXTEND	0x1ffc000000000000
+
+/*
+ * Parameters for Pre-Boot Virtual Memory (PBVM).
+ * The kernel, its modules and metadata are loaded in the PBVM by the loader.
+ * The PBVM consists of pages for which the mapping is maintained in a page
+ * table. The page table is at least 1 EFI page large (i.e. 4KB), but can be
+ * larger to accommodate more PBVM. The maximum page table size is 1MB. With
+ * 8 bytes per page table entry, this means that the PBVM has at least 512
+ * pages and at most 128K pages.
+ * The GNU toolchain (in particular GNU ld) does not support an alignment
+ * larger than 64K. This means that we cannot guarantee page alignment for
+ * a page size that's larger than 64K. We do want to have text and data in
+ * different pages, which means that the maximum usable page size is 64KB.
+ * Consequently:
+ * The maximum total PBVM size is 8GB -- enough for a DVD image. A page table
+ * of a single EFI page (4KB) allows for 32MB of PBVM.
+ *
+ * The kernel is given the PA and size of the page table that provides the
+ * mapping of the PBVM. The page table itself is assumed to be mapped at a
+ * known virtual address and using a single translation wired into the CPU.
+ * As such, the page table is assumed to be a power of 2 and naturally aligned.
+ * The kernel also assumes that a good portion of the kernel text is mapped
+ * and wired into the CPU, but does not assume that the mapping covers the
+ * whole of PBVM.
+ */
+#define	IA64_PBVM_RR		IA64_VM_MINKERN_REGION
+#define	IA64_PBVM_BASE		\
+		(IA64_RR_BASE(IA64_PBVM_RR) + IA64_REGION_GAP_EXTEND)
+
+#define	IA64_PBVM_PGTBL_MAXSZ	1048576
+#define	IA64_PBVM_PGTBL		\
+		(IA64_RR_BASE(IA64_PBVM_RR + 1) - IA64_PBVM_PGTBL_MAXSZ)
+
+#define	IA64_PBVM_PAGE_SHIFT	16	/* 64KB */
+#define	IA64_PBVM_PAGE_SIZE	(1 << IA64_PBVM_PAGE_SHIFT)
+#define	IA64_PBVM_PAGE_MASK	(IA64_PBVM_PAGE_SIZE - 1)
 
 /*
  * Mach derived constants
  */
 
 /* user/kernel map constants */
-#define VM_MIN_ADDRESS		0
-#define	VM_MAX_ADDRESS		IA64_RR_BASE(5)
-#define	VM_GATEWAY_SIZE		PAGE_SIZE
-#define	VM_MAXUSER_ADDRESS	(VM_MAX_ADDRESS + VM_GATEWAY_SIZE)
-#define	VM_MIN_KERNEL_ADDRESS	VM_MAXUSER_ADDRESS
-#define VM_MAX_KERNEL_ADDRESS	(IA64_RR_BASE(6) - 1)
+#define	VM_MIN_ADDRESS		0
+#define	VM_MAXUSER_ADDRESS	IA64_RR_BASE(IA64_VM_MINKERN_REGION)
+#define	VM_MIN_KERNEL_ADDRESS	IA64_RR_BASE(IA64_VM_MINKERN_REGION + 1)
+#define	VM_MAX_KERNEL_ADDRESS	\
+		(VM_MIN_KERNEL_ADDRESS + IA64_REGION_GAP_START - 1)
+#define	VM_MAX_ADDRESS		~0UL
 
-#define	KERNBASE		VM_MAX_ADDRESS
+#define	KERNBASE		VM_MAXUSER_ADDRESS
+
+/*
+ * USRSTACK is the top (end) of the user stack.  Immediately above the user
+ * stack resides the syscall gateway page.
+ */
+#define	USRSTACK		VM_MAXUSER_ADDRESS
+#define	IA64_BACKINGSTORE	(USRSTACK - (2 * MAXSSIZ) - PAGE_SIZE)
 
 /* virtual sizes (bytes) for various kernel submaps */
 #ifndef VM_KMEM_SIZE
@@ -200,4 +215,6 @@
 #define	VM_INITIAL_PAGEIN	16
 #endif
 
-#endif	/* !_MACHINE_VMPARAM_H */
+#define	ZERO_REGION_SIZE	(2 * 1024 * 1024)	/* 2MB */
+
+#endif	/* !_MACHINE_VMPARAM_H_ */

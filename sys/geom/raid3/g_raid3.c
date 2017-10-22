@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/geom/raid3/g_raid3.c 170307 2007-06-05 00:00:57Z jeff $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -35,6 +35,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/geom/raid3/g_raid3.c 170307 2007-06-05 00:
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/bio.h>
+#include <sys/sbuf.h>
 #include <sys/sysctl.h>
 #include <sys/malloc.h>
 #include <sys/eventhandler.h>
@@ -45,6 +46,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/geom/raid3/g_raid3.c 170307 2007-06-05 00:
 #include <sys/sched.h>
 #include <geom/raid3/g_raid3.h>
 
+FEATURE(geom_raid3, "GEOM RAID-3 functionality");
 
 static MALLOC_DEFINE(M_RAID3, "raid3_data", "GEOM_RAID3 Data");
 
@@ -183,15 +185,17 @@ static void *
 g_raid3_alloc(struct g_raid3_softc *sc, size_t size, int flags)
 {
 	void *ptr;
+	enum g_raid3_zones zone;
 
-	if (g_raid3_use_malloc)
+	if (g_raid3_use_malloc ||
+	    (zone = g_raid3_zone(size)) == G_RAID3_NUM_ZONES)
 		ptr = malloc(size, M_RAID3, flags);
 	else {
-		ptr = uma_zalloc_arg(sc->sc_zones[g_raid3_zone(size)].sz_zone,
-		   &sc->sc_zones[g_raid3_zone(size)], flags);
-		sc->sc_zones[g_raid3_zone(size)].sz_requested++;
+		ptr = uma_zalloc_arg(sc->sc_zones[zone].sz_zone,
+		   &sc->sc_zones[zone], flags);
+		sc->sc_zones[zone].sz_requested++;
 		if (ptr == NULL)
-			sc->sc_zones[g_raid3_zone(size)].sz_failed++;
+			sc->sc_zones[zone].sz_failed++;
 	}
 	return (ptr);
 }
@@ -199,12 +203,14 @@ g_raid3_alloc(struct g_raid3_softc *sc, size_t size, int flags)
 static void
 g_raid3_free(struct g_raid3_softc *sc, void *ptr, size_t size)
 {
+	enum g_raid3_zones zone;
 
-	if (g_raid3_use_malloc)
+	if (g_raid3_use_malloc ||
+	    (zone = g_raid3_zone(size)) == G_RAID3_NUM_ZONES)
 		free(ptr, M_RAID3);
 	else {
-		uma_zfree_arg(sc->sc_zones[g_raid3_zone(size)].sz_zone,
-		    ptr, &sc->sc_zones[g_raid3_zone(size)]);
+		uma_zfree_arg(sc->sc_zones[zone].sz_zone,
+		    ptr, &sc->sc_zones[zone]);
 	}
 }
 
@@ -227,31 +233,31 @@ g_raid3_uma_dtor(void *mem, int size, void *arg)
 	sz->sz_inuse--;
 }
 
-#define	g_raid3_xor(src1, src2, dst, size)				\
-	_g_raid3_xor((uint64_t *)(src1), (uint64_t *)(src2),		\
+#define	g_raid3_xor(src, dst, size)					\
+	_g_raid3_xor((uint64_t *)(src),					\
 	    (uint64_t *)(dst), (size_t)size)
 static void
-_g_raid3_xor(uint64_t *src1, uint64_t *src2, uint64_t *dst, size_t size)
+_g_raid3_xor(uint64_t *src, uint64_t *dst, size_t size)
 {
 
 	KASSERT((size % 128) == 0, ("Invalid size: %zu.", size));
 	for (; size > 0; size -= 128) {
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
 	}
 }
 
@@ -1045,6 +1051,7 @@ g_raid3_scatter(struct bio *pbp)
 	struct g_raid3_disk *disk;
 	struct bio *bp, *cbp, *tmpbp;
 	off_t atom, cadd, padd, left;
+	int first;
 
 	sc = pbp->bio_to->geom->softc;
 	bp = NULL;
@@ -1075,12 +1082,18 @@ g_raid3_scatter(struct bio *pbp)
 		/*
 		 * Calculate parity.
 		 */
-		bzero(bp->bio_data, bp->bio_length);
+		first = 1;
 		G_RAID3_FOREACH_SAFE_BIO(pbp, cbp, tmpbp) {
 			if (cbp == bp)
 				continue;
-			g_raid3_xor(cbp->bio_data, bp->bio_data, bp->bio_data,
-			    bp->bio_length);
+			if (first) {
+				bcopy(cbp->bio_data, bp->bio_data,
+				    bp->bio_length);
+				first = 0;
+			} else {
+				g_raid3_xor(cbp->bio_data, bp->bio_data,
+				    bp->bio_length);
+			}
 			if ((cbp->bio_cflags & G_RAID3_BIO_CFLAG_NODISK) != 0)
 				g_raid3_destroy_bio(sc, cbp);
 		}
@@ -1212,7 +1225,7 @@ g_raid3_gather(struct bio *pbp)
 		G_RAID3_FOREACH_BIO(pbp, cbp) {
 			if ((cbp->bio_cflags & G_RAID3_BIO_CFLAG_PARITY) != 0)
 				continue;
-			g_raid3_xor(cbp->bio_data, xbp->bio_data, xbp->bio_data,
+			g_raid3_xor(cbp->bio_data, xbp->bio_data,
 			    xbp->bio_length);
 		}
 		xbp->bio_cflags &= ~G_RAID3_BIO_CFLAG_PARITY;
@@ -1260,9 +1273,9 @@ g_raid3_done(struct bio *bp)
 	G_RAID3_LOGREQ(3, bp, "Regular request done (error=%d).", bp->bio_error);
 	mtx_lock(&sc->sc_queue_mtx);
 	bioq_insert_head(&sc->sc_queue, bp);
+	mtx_unlock(&sc->sc_queue_mtx);
 	wakeup(sc);
 	wakeup(&sc->sc_queue);
-	mtx_unlock(&sc->sc_queue_mtx);
 }
 
 static void
@@ -1368,9 +1381,9 @@ g_raid3_sync_done(struct bio *bp)
 	bp->bio_cflags |= G_RAID3_BIO_CFLAG_SYNC;
 	mtx_lock(&sc->sc_queue_mtx);
 	bioq_insert_head(&sc->sc_queue, bp);
+	mtx_unlock(&sc->sc_queue_mtx);
 	wakeup(sc);
 	wakeup(&sc->sc_queue);
-	mtx_unlock(&sc->sc_queue_mtx);
 }
 
 static void
@@ -1448,9 +1461,9 @@ g_raid3_start(struct bio *bp)
 	}
 	mtx_lock(&sc->sc_queue_mtx);
 	bioq_insert_tail(&sc->sc_queue, bp);
+	mtx_unlock(&sc->sc_queue_mtx);
 	G_RAID3_DEBUG(4, "%s: Waking up %p.", __func__, sc);
 	wakeup(sc);
-	mtx_unlock(&sc->sc_queue_mtx);
 }
 
 /*
@@ -1635,7 +1648,7 @@ g_raid3_sync_request(struct bio *bp)
 				bcopy(src, dst, atom);
 				src += atom;
 				for (n = 1; n < sc->sc_ndisks - 1; n++) {
-					g_raid3_xor(src, dst, dst, atom);
+					g_raid3_xor(src, dst, atom);
 					src += atom;
 				}
 				dst += atom;
@@ -2064,7 +2077,7 @@ g_raid3_worker(void *arg)
 				if (g_raid3_try_destroy(sc)) {
 					curthread->td_pflags &= ~TDP_GEOM;
 					G_RAID3_DEBUG(1, "Thread exiting.");
-					kthread_exit(0);
+					kproc_exit(0);
 				}
 			}
 			G_RAID3_DEBUG(5, "%s: I'm here 1.", __func__);
@@ -2088,7 +2101,7 @@ g_raid3_worker(void *arg)
 				if (g_raid3_try_destroy(sc)) {
 					curthread->td_pflags &= ~TDP_GEOM;
 					G_RAID3_DEBUG(1, "Thread exiting.");
-					kthread_exit(0);
+					kproc_exit(0);
 				}
 				mtx_lock(&sc->sc_queue_mtx);
 			}
@@ -2313,6 +2326,8 @@ static void
 g_raid3_launch_provider(struct g_raid3_softc *sc)
 {
 	struct g_provider *pp;
+	struct g_raid3_disk *disk;
+	int n;
 
 	sx_assert(&sc->sc_lock, SX_LOCKED);
 
@@ -2320,6 +2335,18 @@ g_raid3_launch_provider(struct g_raid3_softc *sc)
 	pp = g_new_providerf(sc->sc_geom, "raid3/%s", sc->sc_name);
 	pp->mediasize = sc->sc_mediasize;
 	pp->sectorsize = sc->sc_sectorsize;
+	pp->stripesize = 0;
+	pp->stripeoffset = 0;
+	for (n = 0; n < sc->sc_ndisks; n++) {
+		disk = &sc->sc_disks[n];
+		if (disk->d_consumer && disk->d_consumer->provider &&
+		    disk->d_consumer->provider->stripesize > pp->stripesize) {
+			pp->stripesize = disk->d_consumer->provider->stripesize;
+			pp->stripeoffset = disk->d_consumer->provider->stripeoffset;
+		}
+	}
+	pp->stripesize *= sc->sc_ndisks - 1;
+	pp->stripeoffset *= sc->sc_ndisks - 1;
 	sc->sc_provider = pp;
 	g_error_provider(pp, 0);
 	g_topology_unlock();
@@ -2888,6 +2915,10 @@ g_raid3_read_metadata(struct g_consumer *cp, struct g_raid3_metadata *md)
 		    cp->provider->name);
 		return (error);
 	}
+	if (md->md_sectorsize > MAXPHYS) {
+		G_RAID3_DEBUG(0, "The blocksize is too big.");
+		return (EINVAL);
+	}
 
 	return (0);
 }
@@ -3170,7 +3201,7 @@ g_raid3_create(struct g_class *mp, const struct g_raid3_metadata *md)
 		    sc->sc_zones[G_RAID3_ZONE_4K].sz_failed = 0;
 	}
 
-	error = kthread_create(g_raid3_worker, sc, &sc->sc_worker, 0, 0,
+	error = kproc_create(g_raid3_worker, sc, &sc->sc_worker, 0, 0,
 	    "g_raid3 %s", md->md_name);
 	if (error != 0) {
 		G_RAID3_DEBUG(1, "Cannot create kernel thread for %s.",
@@ -3299,7 +3330,8 @@ g_raid3_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 		return (NULL);
 	gp = NULL;
 
-	if (md.md_provider[0] != '\0' && strcmp(md.md_provider, pp->name) != 0)
+	if (md.md_provider[0] != '\0' &&
+	    !g_compare_names(md.md_provider, pp->name))
 		return (NULL);
 	if (md.md_provsize != 0 && md.md_provsize != pp->mediasize)
 		return (NULL);

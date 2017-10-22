@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/uio_machdep.c 170473 2007-06-09 21:55:17Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -45,15 +45,17 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/uio_machdep.c 170473 2007-
 #include <sys/proc.h>
 #include <sys/systm.h>
 #include <sys/uio.h>
+#include <sys/sf_buf.h>
 
 #include <vm/vm.h>
 #include <vm/vm_page.h>
 
-#include <machine/md_var.h>
+#include <machine/cpu.h>
 #include <machine/vmparam.h>
+#include <machine/md_var.h>
 
 /*
- * Implement uiomove(9) from physical memory using the direct map to
+ * Implement uiomove(9) from physical memory using sf_bufs to
  * avoid the creation and destruction of ephemeral mappings.
  */
 int
@@ -63,14 +65,17 @@ uiomove_fromphys(vm_page_t ma[], vm_offset_t offset, int n, struct uio *uio)
 	struct iovec *iov;
 	void *cp;
 	vm_offset_t page_offset;
+	vm_page_t m;
 	size_t cnt;
 	int error = 0;
 	int save = 0;
+	struct sf_buf *sf;
 
 	KASSERT(uio->uio_rw == UIO_READ || uio->uio_rw == UIO_WRITE,
 	    ("uiomove_fromphys: mode"));
 	KASSERT(uio->uio_segflg != UIO_USERSPACE || uio->uio_td == curthread,
 	    ("uiomove_fromphys proc"));
+
 	save = td->td_pflags & TDP_DEADLKTREAT;
 	td->td_pflags |= TDP_DEADLKTREAT;
 	while (n > 0 && uio->uio_resid) {
@@ -85,31 +90,33 @@ uiomove_fromphys(vm_page_t ma[], vm_offset_t offset, int n, struct uio *uio)
 			cnt = n;
 		page_offset = offset & PAGE_MASK;
 		cnt = min(cnt, PAGE_SIZE - page_offset);
-		cp = (char *)VM_PAGE_TO_PHYS(ma[offset >> PAGE_SHIFT]) +
-		    page_offset;
+
+		m = ma[offset >> PAGE_SHIFT];
+		sf = sf_buf_alloc(m, 0);
+		cp = (char*)sf_buf_kva(sf) + page_offset;
+
 		switch (uio->uio_segflg) {
-		case UIO_USERSPACE:
-			if (ticks - PCPU_GET(switchticks) >= hogticks)
-				uio_yield();
-			if (uio->uio_rw == UIO_READ)
-				error = copyout(cp, iov->iov_base, cnt);
-			else 
-				error = copyin(iov->iov_base, cp, cnt);
-			if (error)
-				goto out;
-			if (uio->uio_rw == UIO_WRITE &&
-			    pmap_page_executable(ma[offset >> PAGE_SHIFT]))
-				__syncicache(cp, cnt);
-			break;
-		case UIO_SYSSPACE:
-			if (uio->uio_rw == UIO_READ)
-				bcopy(cp, iov->iov_base, cnt);
-			else
-				bcopy(iov->iov_base, cp, cnt);
-			break;
-		case UIO_NOCOPY:
-			break;
+			case UIO_USERSPACE:
+				maybe_yield();
+				if (uio->uio_rw == UIO_READ)
+					error = copyout(cp, iov->iov_base, cnt);
+				else
+					error = copyin(iov->iov_base, cp, cnt);
+				if (error) {
+					sf_buf_free(sf);
+					goto out;
+				}
+				break;
+			case UIO_SYSSPACE:
+				if (uio->uio_rw == UIO_READ)
+					bcopy(cp, iov->iov_base, cnt);
+				else
+					bcopy(iov->iov_base, cp, cnt);
+				break;
+			case UIO_NOCOPY:
+				break;
 		}
+		sf_buf_free(sf);
 		iov->iov_base = (char *)iov->iov_base + cnt;
 		iov->iov_len -= cnt;
 		uio->uio_resid -= cnt;

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/utopia/utopia.c 174351 2007-12-06 09:53:42Z philip $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -622,7 +622,7 @@ utopia_daemon(void *arg __unused)
 	}
 	wakeup_one(&utopia_list);
 	UTP_RUNLOCK_LIST();
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 /*
@@ -638,7 +638,7 @@ utopia_mod_init(module_t mod, int what, void *arg)
 
 	  case MOD_LOAD:
 		mtx_init(&utopia_list_mtx, "utopia list mutex", NULL, MTX_DEF);
-		err = kthread_create(utopia_daemon, NULL, &utopia_kproc,
+		err = kproc_create(utopia_daemon, NULL, &utopia_kproc,
 		    RFHIGHPID, 0, "utopia");
 		if (err != 0) {
 			printf("cannot created utopia thread %d\n", err);

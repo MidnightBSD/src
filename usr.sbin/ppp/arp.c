@@ -17,7 +17,7 @@
  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/ppp/arp.c 134789 2004-09-05 01:46:52Z brian $
+ * $FreeBSD$
  *
  */
 
@@ -119,7 +119,7 @@ arp_ProxySub(struct bundle *bundle, struct in_addr addr, int add)
     return 0;
   }
   arpmsg.hdr.rtm_type = add ? RTM_ADD : RTM_DELETE;
-  arpmsg.hdr.rtm_flags = RTF_ANNOUNCE | RTF_HOST | RTF_STATIC;
+  arpmsg.hdr.rtm_flags = RTF_ANNOUNCE | RTF_HOST | RTF_STATIC | RTF_LLDATA;
   arpmsg.hdr.rtm_version = RTM_VERSION;
   arpmsg.hdr.rtm_seq = ++bundle->routing_seq;
   arpmsg.hdr.rtm_addrs = RTA_DST | RTA_GATEWAY;

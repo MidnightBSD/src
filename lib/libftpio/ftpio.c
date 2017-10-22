@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libftpio/ftpio.c 141925 2005-02-14 18:40:31Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -292,7 +292,6 @@ ftpLoginAf(char *host, int af, char *user, char *passwd, int port, int verbose, 
     fp = NULL;
     if (n && ftp_login_session(n, host, af, user, passwd, port, verbose) == SUCCESS) {
 	fp = funopen(n, ftp_read_method, ftp_write_method, NULL, ftp_close_method);	/* BSD 4.4 function! */
-	fp->_file = n->fd_ctrl;
     }
     if (retcode) {
 	if (!n)

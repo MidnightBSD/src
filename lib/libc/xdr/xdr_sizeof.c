@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/xdr/xdr_sizeof.c 111962 2003-03-07 13:19:40Z nectar $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <rpc/types.h>
@@ -94,7 +94,7 @@ x_inline(xdrs, len)
 	if (xdrs->x_op != XDR_ENCODE) {
 		return (NULL);
 	}
-	if (len < (u_int)xdrs->x_base) {
+	if (len < (u_int)(uintptr_t)xdrs->x_base) {
 		/* x_private was already allocated */
 		xdrs->x_handy += len;
 		return ((int32_t *) xdrs->x_private);
@@ -106,7 +106,7 @@ x_inline(xdrs, len)
 			xdrs->x_base = 0;
 			return (NULL);
 		}
-		xdrs->x_base = (caddr_t) len;
+		xdrs->x_base = (caddr_t)(uintptr_t)len;
 		xdrs->x_handy += len;
 		return ((int32_t *) xdrs->x_private);
 	}

@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/main.c 174967 2007-12-29 06:17:04Z kensmith $
+ * $FreeBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -41,6 +41,7 @@
 #include <sys/resource.h>
 
 const char *StartName;		/* Initial contents of argv[0] */
+const char *ProgName = "sysinstall";
 
 static void
 screech(int sig)
@@ -55,12 +56,42 @@ main(int argc, char **argv)
     int choice, scroll, curr, max, status;
     char titlestr[80], *arch, *osrel, *ostype;
     struct rlimit rlim;
-    
+    char *arg;
+    int i;
+    int optionArgs = 0;
+
     /* Record name to be able to restart */
     StartName = argv[0];
 
+    Restarting = FALSE;
+    RunningAsInit = FALSE;
+    Fake = FALSE;
+
+    for (i = 1; i < argc; i++) {
+	arg = argv[i];
+
+	if (arg[0] != '-')
+		break;
+
+	optionArgs++;
+
+	if (!strcmp(arg, "-fake")) {
+		variable_set2(VAR_DEBUG, "YES", 0);
+		Fake = TRUE;
+	} else if (!strcmp(arg, "-restart")) {
+		Restarting = TRUE;
+	} else if (!strcmp(arg, "-fakeInit")) {
+		RunningAsInit = TRUE;
+	}
+	
+	arg = argv[optionArgs+1];
+    }
+
+    if (getpid() == 1)
+	    RunningAsInit = TRUE;
+   
     /* Catch fatal signals and complain about them if running as init */
-    if (getpid() == 1) {
+    if (RunningAsInit) {
 	signal(SIGBUS, screech);
 	signal(SIGSEGV, screech);
     }
@@ -104,13 +135,8 @@ main(int argc, char **argv)
     if (!RunningAsInit)
 	installEnvironment();
 
-    if (argc > 1 && !strcmp(argv[1], "-fake")) {
-	variable_set2(VAR_DEBUG, "YES", 0);
-	Fake = TRUE;
+    if (Fake)
 	msgConfirm("I'll be just faking it from here on out, OK?");
-    }
-    if (argc > 1 && !strcmp(argv[1], "-restart"))
-	Restarting = TRUE;
 
     /* Try to preserve our scroll-back buffer */
     if (OnVTY) {
@@ -128,16 +154,6 @@ main(int argc, char **argv)
 	pvariable_set("modulesInitialize=1");
     }
 
-    /* Initialize PC Card, if we haven't already done so. */
-#ifdef PCCARD_ARCH
-    if (!variable_cmp(VAR_SKIP_PCCARD, "YES") &&
-      variable_get(VAR_SKIP_PCCARD)!=1 &&
-       !pvariable_get("pccardInitialize")) {
-	pccardInitialize();
-	pvariable_set("pccardInitialize=1");
-    }
-#endif
-
     /* Probe for all relevant devices on the system */
     deviceGetAll();
 
@@ -149,19 +165,14 @@ main(int argc, char **argv)
 
     /* First, see if we have any arguments to process (and argv[0] counts if it's not "sysinstall") */
     if (!RunningAsInit) {
-	int i, start_arg;
-
-	if (!strstr(argv[0], "sysinstall"))
-	    start_arg = 0;
-	else if (Fake || Restarting)
-	    start_arg = 2;
-	else
-	    start_arg = 1;
-	for (i = start_arg; i < argc; i++) {
+	for (i = optionArgs+1; i < argc; i++) {
 	    if (DITEM_STATUS(dispatchCommand(argv[i])) != DITEM_SUCCESS)
 		systemShutdown(1);
 	}
-	if (argc > start_arg)
+
+	/* If we were given commands to process on the command line, just exit
+	 * now */
+	if (argc > optionArgs+1)
 	    systemShutdown(0);
     }
     else
@@ -196,12 +207,11 @@ main(int argc, char **argv)
     while (1) {
 	choice = scroll = curr = max = 0;
 	dmenuOpen(&MenuInitial, &choice, &scroll, &curr, &max, TRUE);
-	if (getpid() != 1
-#if defined(__alpha__) || defined(__sparc64__)
+	if (!RunningAsInit
+#if defined(__sparc64__)
 	    || !msgNoYes("Are you sure you wish to exit?  The system will halt.")
 #else
-	    || !msgNoYes("Are you sure you wish to exit?  The system will reboot\n"
-		         "(be sure to remove any floppies/CDs/DVDs from the drives).")
+	    || !msgNoYes("Are you sure you wish to exit?  The system will reboot.")
 #endif
 	    )
 	    break;

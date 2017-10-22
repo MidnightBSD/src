@@ -3,7 +3,7 @@
  * 
  * Made available by Vahe Khachikyan <vahe@khachikyan.de>
  *
- * $FreeBSD: release/7.0.0/share/mklocale/hy_AM.ARMSCII-8.src 117259 2003-07-05 12:03:16Z ache $
+ * $FreeBSD$
  */
 ENCODING	"NONE"
 VARIABLE	Armenian ARMSCII-8 character set by <vahe@khachikyan.de>

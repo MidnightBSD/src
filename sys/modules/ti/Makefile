@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/ti/Makefile 153280 2005-12-10 00:38:33Z scottl $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/ti
 

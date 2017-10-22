@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/vx/if_vx.c 152315 2005-11-11 16:04:59Z ru $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Created from if_ep.c driver by Fred Gray (fgray@rice.edu) to support
@@ -129,7 +129,7 @@ static void vx_init_locked(struct vx_softc *);
 static int vx_ioctl(struct ifnet *, u_long, caddr_t);
 static void vx_start(struct ifnet *);
 static void vx_start_locked(struct ifnet *);
-static void vx_watchdog(struct ifnet *);
+static void vx_watchdog(void *);
 static void vx_reset(struct vx_softc *);
 static void vx_read(struct vx_softc *);
 static struct mbuf *vx_get(struct vx_softc *, u_int);
@@ -157,6 +157,7 @@ vx_attach(device_t dev)
 	mtx_init(&sc->vx_mtx, device_get_nameunit(dev), MTX_NETWORK_LOCK,
 	    MTX_DEF);
 	callout_init_mtx(&sc->vx_callout, &sc->vx_mtx, 0);
+	callout_init_mtx(&sc->vx_watchdog, &sc->vx_mtx, 0);
 	GO_WINDOW(0);
 	CSR_WRITE_2(sc, VX_COMMAND, GLOBAL_RESET);
 	VX_BUSY_WAIT;
@@ -188,19 +189,20 @@ vx_attach(device_t dev)
 	}
 
 	ifp->if_mtu = ETHERMTU;
-	ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
+	ifp->if_snd.ifq_maxlen = ifqmaxlen;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_start = vx_start;
 	ifp->if_ioctl = vx_ioctl;
 	ifp->if_init = vx_init;
-	ifp->if_watchdog = vx_watchdog;
 	ifp->if_softc = sc;
 
 	ether_ifattach(ifp, eaddr);
 
 	sc->vx_tx_start_thresh = 20;	/* probably a good starting point. */
 
+	VX_LOCK(sc);
 	vx_stop(sc);
+	VX_UNLOCK(sc);
 
 	return 1;
 }
@@ -267,6 +269,7 @@ vx_init_locked(struct vx_softc *sc)
 	/* Interface is now `running', with no output active. */
 	ifp->if_drv_flags |= IFF_DRV_RUNNING;
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
+	callout_reset(&sc->vx_watchdog, hz, vx_watchdog, sc);
 
 	/* Attempt to start output, if any. */
 	vx_start_locked(ifp);
@@ -300,7 +303,7 @@ vx_getlink(struct vx_softc *sc)
 		}
 	}
 	if (sc->vx_connectors == 0) {
-		printf("no connectors!");
+		printf("no connectors!\n");
 		return;
 	}
 	GO_WINDOW(3);
@@ -310,9 +313,9 @@ vx_getlink(struct vx_softc *sc)
 	if (sc->vx_connector & 0x10) {
 		sc->vx_connector &= 0x0f;
 		printf("[*%s*]", conn_tab[(int)sc->vx_connector].name);
-		printf(": disable 'auto select' with DOS util!");
+		printf(": disable 'auto select' with DOS util!\n");
 	} else {
-		printf("[*%s*]", conn_tab[(int)sc->vx_connector].name);
+		printf("[*%s*]\n", conn_tab[(int)sc->vx_connector].name);
 	}
 }
 
@@ -472,7 +475,7 @@ startagain:
 		/* not enough room in FIFO - make sure */
 		if (CSR_READ_2(sc, VX_W1_FREE_TX) < len + pad + 4) {
 			ifp->if_drv_flags |= IFF_DRV_OACTIVE;
-			ifp->if_timer = 1;
+			sc->vx_timer = 1;
 			return;
 		}
 	}
@@ -511,7 +514,7 @@ startagain:
 		CSR_WRITE_1(sc, VX_W1_TX_PIO_WR_1, 0);	/* Padding */
 
 	++ifp->if_opackets;
-	ifp->if_timer = 1;
+	sc->vx_timer = 1;
 
 readcheck:
 	if ((CSR_READ_2(sc, VX_W1_RX_STATUS) & ERR_INCOMPLETE) == 0) {
@@ -659,18 +662,18 @@ vx_intr(void *voidsc)
 		if (status & S_RX_COMPLETE)
 			vx_read(sc);
 		if (status & S_TX_AVAIL) {
-			ifp->if_timer = 0;
+			sc->vx_timer = 0;
 			sc->vx_ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 			vx_start_locked(sc->vx_ifp);
 		}
 		if (status & S_CARD_FAILURE) {
 			if_printf(ifp, "adapter failure (%x)\n", status);
-			ifp->if_timer = 0;
+			sc->vx_timer = 0;
 			vx_reset(sc);
 			break;
 		}
 		if (status & S_TX_COMPLETE) {
-			ifp->if_timer = 0;
+			sc->vx_timer = 0;
 			vx_txstat(sc);
 			vx_start_locked(ifp);
 		}
@@ -968,26 +971,32 @@ vx_reset(struct vx_softc *sc)
 }
 
 static void
-vx_watchdog(struct ifnet *ifp)
+vx_watchdog(void *arg)
 {
-	struct vx_softc *sc = ifp->if_softc;
+	struct vx_softc *sc;
+	struct ifnet *ifp;
 
-	VX_LOCK(sc);
+	sc = arg;
+	VX_LOCK_ASSERT(sc);
+	callout_reset(&sc->vx_watchdog, hz, vx_watchdog, sc);
+	if (sc->vx_timer == 0 || --sc->vx_timer > 0)
+		return;
+
+	ifp = sc->vx_ifp;
 	if (ifp->if_flags & IFF_DEBUG)
 		if_printf(ifp, "device timeout\n");
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 	vx_start_locked(ifp);
 	vx_intr(sc);
-	VX_UNLOCK(sc);
 }
 
 void
 vx_stop(struct vx_softc *sc)
 {
-	struct ifnet *ifp = sc->vx_ifp;
 
 	VX_LOCK_ASSERT(sc);
-	ifp->if_timer = 0;
+	sc->vx_timer = 0;
+	callout_stop(&sc->vx_watchdog);
 
 	CSR_WRITE_2(sc, VX_COMMAND, RX_DISABLE);
 	CSR_WRITE_2(sc, VX_COMMAND, RX_DISCARD_TOP_PACK);

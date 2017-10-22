@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/7.0.0/usr.bin/vi/Makefile 136668 2004-10-18 17:16:01Z ru $
+# $FreeBSD$
 #
 
 SRCDIR=		${.CURDIR}/../../contrib/nvi
@@ -8,6 +8,8 @@ CFLAGS+=	-DGTAGS
 
 #if using ncurses:
 CFLAGS+=	-DSYSV_CURSES
+
+WARNS?=	0
 
 VI=	nvi
 EX=	nex

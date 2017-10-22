@@ -1,6 +1,34 @@
 /*-
  * Copyright (c) 1999, 2000 Matthew R. Green
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ *	from: NetBSD: iommu.c,v 1.82 2008/05/30 02:29:37 mrg Exp
+ */
+/*-
+ * Copyright (c) 1999-2002 Eduardo Horvath
  * Copyright (c) 2001-2003 Thomas Moestl
+ * Copyright (c) 2007, 2009 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,81 +53,12 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- */
-/*-
- * Copyright (c) 1998 The NetBSD Foundation, Inc.
- * All rights reserved.
  *
- * This code is derived from software contributed to The NetBSD Foundation
- * by Paul Kranenburg.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
- * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
- * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-/*-
- * Copyright (c) 1992, 1993
- *	The Regents of the University of California.  All rights reserved.
- *
- * This software was developed by the Computer Systems Engineering group
- * at Lawrence Berkeley Laboratory under DARPA contract BG 91-66 and
- * contributed to Berkeley.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- *	from: NetBSD: sbus.c,v 1.13 1999/05/23 07:24:02 mrg Exp
- *	from: @(#)sbus.c	8.1 (Berkeley) 6/11/93
- *	from: NetBSD: iommu.c,v 1.42 2001/08/06 22:02:58 eeh Exp
+ *	from: NetBSD: sbus.c,v 1.50 2002/06/20 18:26:24 eeh Exp
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sparc64/iommu.c 171730 2007-08-05 11:56:44Z marius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * UltraSPARC IOMMU support; used by both the PCI and SBus code.
@@ -107,10 +66,10 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sparc64/iommu.c 171730 2007-08-05 
  * TODO:
  * - Support sub-page boundaries.
  * - Fix alignment handling for small allocations (the possible page offset
- *   of malloc()ed memory is not handled at all). Revise interaction of
+ *   of malloc()ed memory is not handled at all).  Revise interaction of
  *   alignment with the load_mbuf and load_uio functions.
  * - Handle lowaddr and highaddr in some way, and try to work out a way
- *   for filter callbacks to work. Currently, only lowaddr is honored
+ *   for filter callbacks to work.  Currently, only lowaddr is honored
  *   in that no addresses above it are considered at all.
  * - Implement BUS_DMA_ALLOCNOW in bus_dma_tag_create as far as possible.
  * - Check the possible return values and callback error arguments;
@@ -119,8 +78,6 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sparc64/iommu.c 171730 2007-08-05 
  * - When running out of DVMA space, return EINPROGRESS in the non-
  *   BUS_DMA_NOWAIT case and delay the callback until sufficient space
  *   becomes available.
- * - Use the streaming cache unless BUS_DMA_COHERENT is specified; do not
- *   flush the streaming cache when coherent mappings are synced.
  */
 
 #include "opt_iommu.h"
@@ -131,6 +88,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sparc64/iommu.c 171730 2007-08-05 
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/mutex.h>
+#include <sys/pcpu.h>
 #include <sys/proc.h>
 #include <sys/systm.h>
 #include <sys/uio.h>
@@ -139,40 +97,42 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sparc64/iommu.c 171730 2007-08-05 
 #include <vm/pmap.h>
 #include <vm/vm_map.h>
 
+#include <machine/asi.h>
 #include <machine/bus.h>
 #include <machine/bus_private.h>
 #include <machine/iommureg.h>
 #include <machine/pmap.h>
 #include <machine/resource.h>
+#include <machine/ver.h>
 
 #include <sys/rman.h>
 
 #include <machine/iommuvar.h>
 
 /*
- * Tuning constants.
+ * Tuning constants
  */
 #define	IOMMU_MAX_PRE		(32 * 1024)
 #define	IOMMU_MAX_PRE_SEG	3
 
-/* Threshold for using the streaming buffer. */
+/* Threshold for using the streaming buffer */
 #define	IOMMU_STREAM_THRESH	128
 
 MALLOC_DEFINE(M_IOMMU, "dvmamem", "IOMMU DVMA Buffers");
 
 static	int iommu_strbuf_flush_sync(struct iommu_state *);
 #ifdef IOMMU_DIAG
-static 	void iommu_diag(struct iommu_state *, vm_offset_t va);
+static	void iommu_diag(struct iommu_state *, vm_offset_t va);
 #endif
 
 /*
  * Helpers
  */
-#define	IOMMU_READ8(is, reg, off) 					\
-	bus_space_read_8((is)->is_bustag, (is)->is_bushandle, 		\
+#define	IOMMU_READ8(is, reg, off)					\
+	bus_space_read_8((is)->is_bustag, (is)->is_bushandle,		\
 	    (is)->reg + (off))
 #define	IOMMU_WRITE8(is, reg, off, v)					\
-	bus_space_write_8((is)->is_bustag, (is)->is_bushandle, 		\
+	bus_space_write_8((is)->is_bustag, (is)->is_bushandle,		\
 	    (is)->reg + (off), (v))
 
 #define	IOMMU_HAS_SB(is)						\
@@ -208,17 +168,23 @@ static 	void iommu_diag(struct iommu_state *, vm_offset_t va);
 #define	IS_LOCK_ASSERT(is)	mtx_assert(&is->is_mtx, MA_OWNED)
 #define	IS_UNLOCK(is)	mtx_unlock(&is->is_mtx)
 
-/* Flush a page from the TLB. No locking required, since this is atomic. */
+/* Flush a page from the TLB.  No locking required, since this is atomic. */
 static __inline void
 iommu_tlb_flush(struct iommu_state *is, bus_addr_t va)
 {
 
+	if ((is->is_flags & IOMMU_FIRE) != 0)
+		/*
+		 * Direct page flushing is not supported and also not
+		 * necessary due to cache snooping.
+		 */
+		return;
 	IOMMU_WRITE8(is, is_iommu, IMR_FLUSH, va);
 }
 
 /*
- * Flush a page from the streaming buffer. No locking required, since this is
- * atomic.
+ * Flush a page from the streaming buffer.  No locking required, since this
+ * is atomic.
  */
 static __inline void
 iommu_strbuf_flushpg(struct iommu_state *is, bus_addr_t va)
@@ -232,8 +198,8 @@ iommu_strbuf_flushpg(struct iommu_state *is, bus_addr_t va)
 
 /*
  * Flush an address from the streaming buffer(s); this is an asynchronous
- * operation. To make sure that it has completed, iommu_strbuf_sync() needs
- * to be called. No locking required.
+ * operation.  To make sure that it has completed, iommu_strbuf_sync() needs
+ * to be called.  No locking required.
  */
 static __inline void
 iommu_strbuf_flush(struct iommu_state *is, bus_addr_t va)
@@ -283,18 +249,19 @@ iommu_map_remq(struct iommu_state *is, bus_dmamap_t map)
  *	- create a private DVMA map.
  */
 void
-iommu_init(char *name, struct iommu_state *is, int tsbsize, u_int32_t iovabase,
-    int resvpg)
+iommu_init(const char *name, struct iommu_state *is, u_int tsbsize,
+    uint32_t iovabase, u_int resvpg)
 {
 	vm_size_t size;
 	vm_offset_t offs;
-	u_int64_t end;
+	uint64_t end, obpmap, obpptsb, tte;
+	u_int maxtsbsize, obptsbentries, obptsbsize, slot, tsbentries;
 	int i;
 
 	/*
-	 * Setup the iommu.
+	 * Setup the IOMMU.
 	 *
-	 * The sun4u iommu is part of the PCI or SBus controller so we
+	 * The sun4u IOMMU is part of the PCI or SBus controller so we
 	 * will deal with it here..
 	 *
 	 * The IOMMU address space always ends at 0xffffe000, but the starting
@@ -302,16 +269,31 @@ iommu_init(char *name, struct iommu_state *is, int tsbsize, u_int32_t iovabase,
 	 * is->is_tsbsize entries, where each entry is 8 bytes.  The start of
 	 * the map can be calculated by (0xffffe000 << (8 + is->is_tsbsize)).
 	 */
-	is->is_cr = (tsbsize << IOMMUCR_TSBSZ_SHIFT) | IOMMUCR_EN;
+	if ((is->is_flags & IOMMU_FIRE) != 0) {
+		maxtsbsize = IOMMU_TSB512K;
+		/*
+		 * We enable bypass in order to be able to use a physical
+		 * address for the event queue base.
+		 */
+		is->is_cr = IOMMUCR_SE | IOMMUCR_CM_C_TLB_TBW | IOMMUCR_BE;
+	} else {
+		maxtsbsize = IOMMU_TSB128K;
+		is->is_cr = (tsbsize << IOMMUCR_TSBSZ_SHIFT) | IOMMUCR_DE;
+	}
+	if (tsbsize > maxtsbsize)
+		panic("%s: unsupported TSB size	", __func__);
+	tsbentries = IOMMU_TSBENTRIES(tsbsize);
+	is->is_cr |= IOMMUCR_EN;
 	is->is_tsbsize = tsbsize;
 	is->is_dvmabase = iovabase;
 	if (iovabase == -1)
 		is->is_dvmabase = IOTSB_VSTART(is->is_tsbsize);
 
 	size = IOTSB_BASESZ << is->is_tsbsize;
-	printf("%s: DVMA map: %#lx to %#lx\n", name,
+	printf("%s: DVMA map: %#lx to %#lx %d entries%s\n", name,
 	    is->is_dvmabase, is->is_dvmabase +
-	    (size << (IO_PAGE_SHIFT - IOTTE_SHIFT)) - 1);
+	    (size << (IO_PAGE_SHIFT - IOTTE_SHIFT)) - 1, tsbentries,
+	    IOMMU_HAS_SB(is) ? ", streaming buffer" : "");
 
 	/*
 	 * Set up resource mamangement.
@@ -333,10 +315,52 @@ iommu_init(char *name, struct iommu_state *is, int tsbsize, u_int32_t iovabase,
 	 */
 	is->is_tsb = contigmalloc(size, M_DEVBUF, M_NOWAIT, 0, ~0UL,
 	    PAGE_SIZE, 0);
-	if (is->is_tsb == 0)
+	if (is->is_tsb == NULL)
 		panic("%s: contigmalloc failed", __func__);
 	is->is_ptsb = pmap_kextract((vm_offset_t)is->is_tsb);
 	bzero(is->is_tsb, size);
+
+	/*
+	 * Add the PROM mappings to the kernel IOTSB if desired.
+	 * Note that the firmware of certain Darwin boards doesn't set
+	 * the TSB size correctly.
+	 */
+	if ((is->is_flags & IOMMU_FIRE) != 0)
+		obptsbsize = (IOMMU_READ8(is, is_iommu, IMR_TSB) &
+		    IOMMUTB_TSBSZ_MASK) >> IOMMUTB_TSBSZ_SHIFT;
+	else
+		obptsbsize = (IOMMU_READ8(is, is_iommu, IMR_CTL) &
+		    IOMMUCR_TSBSZ_MASK) >> IOMMUCR_TSBSZ_SHIFT;
+	obptsbentries = IOMMU_TSBENTRIES(obptsbsize);
+	if (bootverbose)
+		printf("%s: PROM IOTSB size: %d (%d entries)\n", name,
+		    obptsbsize, obptsbentries);
+	if ((is->is_flags & IOMMU_PRESERVE_PROM) != 0 &&
+	    !(PCPU_GET(impl) == CPU_IMPL_ULTRASPARCIIi && obptsbsize == 7)) {
+		if (obptsbentries > tsbentries)
+			panic("%s: PROM IOTSB entries exceed kernel",
+			    __func__);
+		obpptsb = IOMMU_READ8(is, is_iommu, IMR_TSB) &
+		    IOMMUTB_TB_MASK;
+		for (i = 0; i < obptsbentries; i++) {
+			tte = ldxa(obpptsb + i * 8, ASI_PHYS_USE_EC);
+			if ((tte & IOTTE_V) == 0)
+				continue;
+			slot = tsbentries - obptsbentries + i;
+			if (bootverbose)
+				printf("%s: adding PROM IOTSB slot %d "
+				    "(kernel slot %d) TTE: %#lx\n", name,
+				    i, slot, tte);
+			obpmap = (is->is_dvmabase + slot * IO_PAGE_SIZE) >>
+			    IO_PAGE_SHIFT;
+			if (rman_reserve_resource(&is->is_dvma_rman, obpmap,
+			    obpmap, IO_PAGE_SIZE >> IO_PAGE_SHIFT, RF_ACTIVE,
+			    NULL) == NULL)
+				panic("%s: could not reserve PROM IOTSB slot "
+				    "%d (kernel slot %d)", __func__, i, slot);
+			is->is_tsb[slot] = tte;
+		}
+	}
 
 	/*
 	 * Initialize streaming buffer, if it is there.
@@ -349,7 +373,7 @@ iommu_init(char *name, struct iommu_state *is, int tsbsize, u_int32_t iovabase,
 		offs = roundup2((vm_offset_t)is->is_flush,
 		    STRBUF_FLUSHSYNC_NBYTES);
 		for (i = 0; i < 2; i++, offs += STRBUF_FLUSHSYNC_NBYTES) {
-			is->is_flushva[i] = (int64_t *)offs;
+			is->is_flushva[i] = (uint64_t *)offs;
 			is->is_flushpa[i] = pmap_kextract(offs);
 		}
 	}
@@ -368,38 +392,47 @@ iommu_init(char *name, struct iommu_state *is, int tsbsize, u_int32_t iovabase,
 void
 iommu_reset(struct iommu_state *is)
 {
+	uint64_t tsb;
 	int i;
 
-	IOMMU_WRITE8(is, is_iommu, IMR_TSB, is->is_ptsb);
-	/* Enable IOMMU in diagnostic mode */
-	IOMMU_WRITE8(is, is_iommu, IMR_CTL, is->is_cr | IOMMUCR_DE);
+	tsb = is->is_ptsb;
+	if ((is->is_flags & IOMMU_FIRE) != 0) {
+		tsb |= is->is_tsbsize;
+		IOMMU_WRITE8(is, is_iommu, IMR_CACHE_INVAL, ~0ULL);
+	}
+	IOMMU_WRITE8(is, is_iommu, IMR_TSB, tsb);
+	IOMMU_WRITE8(is, is_iommu, IMR_CTL, is->is_cr);
 
 	for (i = 0; i < 2; i++) {
 		if (is->is_sb[i] != 0) {
-			/* Enable diagnostics mode? */
-			IOMMU_WRITE8(is, is_sb[i], ISR_CTL, STRBUF_EN);
+			IOMMU_WRITE8(is, is_sb[i], ISR_CTL, STRBUF_EN |
+			    ((is->is_flags & IOMMU_RERUN_DISABLE) != 0 ?
+			    STRBUF_RR_DIS : 0));
 
-			/* No streaming buffers? Disable them */
-			if (IOMMU_READ8(is, is_sb[i], ISR_CTL) == 0)
+			/* No streaming buffers?  Disable them. */
+			if ((IOMMU_READ8(is, is_sb[i], ISR_CTL) &
+			    STRBUF_EN) == 0)
 				is->is_sb[i] = 0;
 		}
 	}
+
+	(void)IOMMU_READ8(is, is_iommu, IMR_CTL);
 }
 
 /*
- * Enter a mapping into the TSB. No locking required, since each TSB slot is
+ * Enter a mapping into the TSB.  No locking required, since each TSB slot is
  * uniquely assigned to a single map.
  */
 static void
 iommu_enter(struct iommu_state *is, vm_offset_t va, vm_paddr_t pa,
     int stream, int flags)
 {
-	int64_t tte;
+	uint64_t tte;
 
 	KASSERT(va >= is->is_dvmabase,
-	    ("iommu_enter: va %#lx not in DVMA space", va));
+	    ("%s: va %#lx not in DVMA space", __func__, va));
 	KASSERT(pa <= is->is_pmaxaddr,
-	    ("iommu_enter: XXX: physical address too large (%#lx)", pa));
+	    ("%s: XXX: physical address too large (%#lx)", __func__, pa));
 
 	tte = MAKEIOTTE(pa, !(flags & BUS_DMA_NOWRITE),
 	    !(flags & BUS_DMA_NOCACHE), stream);
@@ -414,22 +447,23 @@ iommu_enter(struct iommu_state *is, vm_offset_t va, vm_paddr_t pa,
 }
 
 /*
- * Remove mappings created by iommu_enter. Flush the streaming buffer, but do
- * not synchronize it. Returns whether a streaming buffer flush was performed.
+ * Remove mappings created by iommu_enter().  Flush the streaming buffer,
+ * but do not synchronize it.  Returns whether a streaming buffer flush
+ * was performed.
  */
 static int
 iommu_remove(struct iommu_state *is, vm_offset_t va, vm_size_t len)
 {
-	int streamed = 0;
+	int slot, streamed = 0;
 
 #ifdef IOMMU_DIAG
 	iommu_diag(is, va);
 #endif
 
 	KASSERT(va >= is->is_dvmabase,
-	    ("iommu_remove: va 0x%lx not in DVMA space", (u_long)va));
+	    ("%s: va 0x%lx not in DVMA space", __func__, (u_long)va));
 	KASSERT(va + len >= va,
-	    ("iommu_remove: va 0x%lx + len 0x%lx wraps", (long)va, (long)len));
+	    ("%s: va 0x%lx + len 0x%lx wraps", __func__, (long)va, (long)len));
 
 	va = trunc_io_page(va);
 	while (len > 0) {
@@ -440,6 +474,12 @@ iommu_remove(struct iommu_state *is, vm_offset_t va, vm_size_t len)
 		len -= ulmin(len, IO_PAGE_SIZE);
 		IOMMU_SET_TTE(is, va, 0);
 		iommu_tlb_flush(is, va);
+		if ((is->is_flags & IOMMU_FLUSH_CACHE) != 0) {
+			slot = IOTSBSLOT(va);
+			if (len <= IO_PAGE_SIZE || slot % 8 == 7)
+				IOMMU_WRITE8(is, is_iommu, IMR_CACHE_FLUSH,
+				    is->is_ptsb + slot * 8);
+		}
 		va += IO_PAGE_SIZE;
 	}
 	return (streamed);
@@ -484,8 +524,7 @@ iommu_strbuf_flush_sync(struct iommu_state *is)
 	 *   3 Store pointer to flag in flushsync
 	 *   4 wait till flushsync becomes 0x1
 	 *
-	 * If it takes more than .5 sec, something
-	 * went wrong.
+	 * If it takes more than .5 sec, something went wrong.
 	 */
 	*is->is_flushva[0] = 1;
 	*is->is_flushva[1] = 1;
@@ -501,7 +540,7 @@ iommu_strbuf_flush_sync(struct iommu_state *is)
 	microuptime(&cur);
 	end.tv_sec = 0;
 	/*
-	 * 0.5s is the recommended timeout from the U2S manual. The actual
+	 * 0.5s is the recommended timeout from the U2S manual.  The actual
 	 * time required should be smaller by at least a factor of 1000.
 	 * We have no choice but to busy-wait.
 	 */
@@ -525,22 +564,13 @@ static __inline int
 iommu_use_streaming(struct iommu_state *is, bus_dmamap_t map, bus_size_t size)
 {
 
-	/*
-	 * This cannot be enabled yet, as many driver are still missing
-	 * bus_dmamap_sync() calls. As soon as there is a BUS_DMA_STREAMING
-	 * flag, this should be reenabled conditionally on it.
-	 */
-#ifdef notyet
 	return (size >= IOMMU_STREAM_THRESH && IOMMU_HAS_SB(is) &&
 	    (map->dm_flags & DMF_COHERENT) == 0);
-#else
-	return (0);
-#endif
 }
 
 /*
- * Allocate DVMA virtual memory for a map. The map may not be on a queue, so
- * that it can be freely modified.
+ * Allocate DVMA virtual memory for a map.  The map may not be on a queue,
+ * so that it can be freely modified.
  */
 static int
 iommu_dvma_valloc(bus_dma_tag_t t, struct iommu_state *is, bus_dmamap_t map,
@@ -550,7 +580,7 @@ iommu_dvma_valloc(bus_dma_tag_t t, struct iommu_state *is, bus_dmamap_t map,
 	struct bus_dmamap_res *bdr;
 	bus_size_t align, sgsize;
 
-	KASSERT(!map->dm_onq, ("iommu_dvma_valloc: map on queue!"));
+	KASSERT(!map->dm_onq, ("%s: map on queue!", __func__));
 	if ((bdr = malloc(sizeof(*bdr), M_IOMMU, M_NOWAIT)) == NULL)
 		return (EAGAIN);
 	/*
@@ -585,7 +615,7 @@ iommu_dvmamap_vunload(struct iommu_state *is, bus_dmamap_t map)
 	struct bus_dmamap_res *r;
 	int streamed = 0;
 
-	IS_LOCK_ASSERT(is);	/* for iommu_strbuf_sync() below. */
+	IS_LOCK_ASSERT(is);	/* for iommu_strbuf_sync() below */
 	SLIST_FOREACH(r, &map->dm_reslist, dr_link) {
 		streamed |= iommu_remove(is, BDR_START(r), r->dr_used);
 		r->dr_used = 0;
@@ -599,7 +629,7 @@ static __inline void
 iommu_dvma_vfree_res(bus_dmamap_t map, struct bus_dmamap_res *r)
 {
 
-	KASSERT(r->dr_used == 0, ("iommu_dvma_vfree_res: resource busy!"));
+	KASSERT(r->dr_used == 0, ("%s: resource busy!", __func__));
 	if (r->dr_res != NULL && rman_release_resource(r->dr_res) != 0)
 		printf("warning: DVMA space lost\n");
 	SLIST_REMOVE(&map->dm_reslist, r, bus_dmamap_res, dr_link);
@@ -650,7 +680,7 @@ iommu_dvma_vfindseg(bus_dmamap_t map, vm_offset_t voffs, bus_size_t size,
 	struct bus_dmamap_res *r;
 	bus_addr_t dvmaddr, dvmend;
 
-	KASSERT(!map->dm_onq, ("iommu_dvma_vfindseg: map on queue!"));
+	KASSERT(!map->dm_onq, ("%s: map on queue!", __func__));
 	SLIST_FOREACH(r, &map->dm_reslist, dr_link) {
 		dvmaddr = round_io_page(BDR_START(r) + r->dr_used);
 		/* Alignment can only work with voffs == 0. */
@@ -707,8 +737,8 @@ iommu_dvma_vallocseg(bus_dma_tag_t dt, struct iommu_state *is, bus_dmamap_t map,
 		if (error != 0)
 			return (error);
 		dvmaddr = iommu_dvma_vfindseg(map, voffs, size, amask);
-		KASSERT(dvmaddr != 0,
-		    ("iommu_dvma_vallocseg: allocation failed unexpectedly!"));
+		KASSERT(dvmaddr != 0, ("%s: allocation failed unexpectedly!",
+		    __func__));
 	}
 	*addr = dvmaddr;
 	return (0);
@@ -743,8 +773,8 @@ iommu_dvmamem_alloc(bus_dma_tag_t dt, void **vaddr, int flags,
 	if ((flags & BUS_DMA_COHERENT) != 0)
 		(*mapp)->dm_flags |= DMF_COHERENT;
 	/*
-	 * Try to preallocate DVMA space. If this fails, it is retried at load
-	 * time.
+	 * Try to preallocate DVMA space.  If this fails, it is retried at
+	 * load time.
 	 */
 	iommu_dvma_valloc(dt, is, *mapp, IOMMU_SIZE_ROUNDUP(dt->dt_maxsize));
 	IS_LOCK(is);
@@ -776,11 +806,11 @@ iommu_dvmamap_create(bus_dma_tag_t dt, int flags, bus_dmamap_t *mapp)
 		(*mapp)->dm_flags |= DMF_COHERENT;
 	/*
 	 * Preallocate DVMA space; if this fails now, it is retried at load
-	 * time. Through bus_dmamap_load_mbuf() and bus_dmamap_load_uio(), it
-	 * is possible to have multiple discontiguous segments in a single map,
-	 * which is handled by allocating additional resources, instead of
-	 * increasing the size, to avoid fragmentation.
-	 * Clamp preallocation to IOMMU_MAX_PRE. In some situations we can
+	 * time.  Through bus_dmamap_load_mbuf() and bus_dmamap_load_uio(),
+	 * it is possible to have multiple discontiguous segments in a single
+	 * map, which is handled by allocating additional resources, instead
+	 * of increasing the size, to avoid fragmentation.
+	 * Clamp preallocation to IOMMU_MAX_PRE.  In some situations we can
 	 * handle more; that case is handled by reallocating at map load time.
 	 */
 	totsz = ulmin(IOMMU_SIZE_ROUNDUP(dt->dt_maxsize), IOMMU_MAX_PRE);
@@ -793,9 +823,6 @@ iommu_dvmamap_create(bus_dma_tag_t dt, int flags, bus_dmamap_t *mapp)
 	 */
 	maxpre = imin(dt->dt_nsegments, IOMMU_MAX_PRE_SEG);
 	presz = dt->dt_maxsize / maxpre;
-	KASSERT(presz != 0, ("iommu_dvmamap_create: bogus preallocation size "
-	    ", nsegments = %d, maxpre = %d, maxsize = %lu", dt->dt_nsegments,
-	    maxpre, dt->dt_maxsize));
 	for (i = 1; i < maxpre && totsz < IOMMU_MAX_PRE; i++) {
 		currsz = round_io_page(ulmin(presz, IOMMU_MAX_PRE - totsz));
 		error = iommu_dvma_valloc(dt, is, *mapp, currsz);
@@ -820,21 +847,22 @@ iommu_dvmamap_destroy(bus_dma_tag_t dt, bus_dmamap_t map)
 }
 
 /*
- * IOMMU DVMA operations, common to PCI and SBus.
+ * IOMMU DVMA operations, common to PCI and SBus
  */
 static int
 iommu_dvmamap_load_buffer(bus_dma_tag_t dt, struct iommu_state *is,
     bus_dmamap_t map, void *buf, bus_size_t buflen, struct thread *td,
     int flags, bus_dma_segment_t *segs, int *segp, int align)
 {
-	bus_addr_t amask, dvmaddr;
+	bus_addr_t amask, dvmaddr, dvmoffs;
 	bus_size_t sgsize, esize;
 	vm_offset_t vaddr, voffs;
 	vm_paddr_t curaddr;
-	int error, sgcnt, firstpg, stream;
 	pmap_t pmap = NULL;
+	int error, firstpg, sgcnt;
+	u_int slot;
 
-	KASSERT(buflen != 0, ("iommu_dvmamap_load_buffer: buflen == 0!"));
+	KASSERT(buflen != 0, ("%s: buflen == 0!", __func__));
 	if (buflen > dt->dt_maxsize)
 		return (EINVAL);
 
@@ -853,7 +881,9 @@ iommu_dvmamap_load_buffer(bus_dma_tag_t dt, struct iommu_state *is,
 
 	sgcnt = *segp;
 	firstpg = 1;
-	stream = iommu_use_streaming(is, map, buflen);
+	map->dm_flags &= ~DMF_STREAMED;
+	map->dm_flags |= iommu_use_streaming(is, map, buflen) != 0 ?
+	    DMF_STREAMED : 0;
 	for (; buflen > 0; ) {
 		/*
 		 * Get the physical address for this page.
@@ -873,8 +903,15 @@ iommu_dvmamap_load_buffer(bus_dma_tag_t dt, struct iommu_state *is,
 		buflen -= sgsize;
 		vaddr += sgsize;
 
-		iommu_enter(is, trunc_io_page(dvmaddr), trunc_io_page(curaddr),
-		    stream, flags);
+		dvmoffs = trunc_io_page(dvmaddr);
+		iommu_enter(is, dvmoffs, trunc_io_page(curaddr),
+		    (map->dm_flags & DMF_STREAMED) != 0, flags);
+		if ((is->is_flags & IOMMU_FLUSH_CACHE) != 0) {
+			slot = IOTSBSLOT(dvmoffs);
+			if (buflen <= 0 || slot % 8 == 7)
+				IOMMU_WRITE8(is, is_iommu, IMR_CACHE_FLUSH,
+				    is->is_ptsb + slot * 8);
+		}
 
 		/*
 		 * Chop the chunk up into segments of at most maxsegsz, but try
@@ -892,11 +929,12 @@ iommu_dvmamap_load_buffer(bus_dma_tag_t dt, struct iommu_state *is,
 			if (sgcnt >= dt->dt_nsegments)
 				return (EFBIG);
 			/*
-			 * No extra alignment here - the common practice in the
-			 * busdma code seems to be that only the first segment
-			 * needs to satisfy the alignment constraints (and that
-			 * only for bus_dmamem_alloc()ed maps). It is assumed
-			 * that such tags have maxsegsize >= maxsize.
+			 * No extra alignment here - the common practice in
+			 * the busdma code seems to be that only the first
+			 * segment needs to satisfy the alignment constraints
+			 * (and that only for bus_dmamem_alloc()ed maps).
+			 * It is assumed that such tags have maxsegsize >=
+			 * maxsize.
 			 */
 			esize = ulmin(sgsize, dt->dt_maxsegsz);
 			segs[sgcnt].ds_addr = dvmaddr;
@@ -1039,11 +1077,12 @@ iommu_dvmamap_load_mbuf_sg(bus_dma_tag_t dt, bus_dmamap_t map, struct mbuf *m0,
 	iommu_map_insq(is, map);
 	if (error != 0) {
 		iommu_dvmamap_vunload(is, map);
+		IS_UNLOCK(is);
 	} else {
+		IS_UNLOCK(is);
 		map->dm_flags |= DMF_LOADED;
 		++*nsegs;
 	}
-	IS_UNLOCK(is);
 	return (error);
 }
 
@@ -1134,19 +1173,20 @@ iommu_dvmamap_sync(bus_dma_tag_t dt, bus_dmamap_t map, bus_dmasync_op_t op)
 
 	if ((map->dm_flags & DMF_LOADED) == 0)
 		return;
-	/* XXX This is probably bogus. */
-	if ((op & BUS_DMASYNC_PREREAD) != 0)
-		membar(Sync);
-	if (IOMMU_HAS_SB(is) &&
+	if ((map->dm_flags & DMF_STREAMED) != 0 &&
 	    ((op & BUS_DMASYNC_POSTREAD) != 0 ||
 	    (op & BUS_DMASYNC_PREWRITE) != 0)) {
 		IS_LOCK(is);
 		SLIST_FOREACH(r, &map->dm_reslist, dr_link) {
 			va = (vm_offset_t)BDR_START(r);
 			len = r->dr_used;
-			/* if we have a streaming buffer, flush it here first */
+			/*
+			 * If we have a streaming buffer, flush it here
+			 * first.
+			 */
 			while (len > 0) {
-				if ((IOMMU_GET_TTE(is, va) & IOTTE_STREAM) != 0) {
+				if ((IOMMU_GET_TTE(is, va) &
+				    IOTTE_STREAM) != 0) {
 					streamed = 1;
 					iommu_strbuf_flush(is, va);
 				}
@@ -1171,8 +1211,10 @@ static void
 iommu_diag(struct iommu_state *is, vm_offset_t va)
 {
 	int i;
-	u_int64_t tag, data;
+	uint64_t data, tag;
 
+	if ((is->is_flags & IOMMU_FIRE) != 0)
+		return;
 	IS_LOCK_ASSERT(is);
 	IOMMU_WRITE8(is, is_dva, 0, trunc_io_page(va));
 	membar(StoreStore | StoreLoad);

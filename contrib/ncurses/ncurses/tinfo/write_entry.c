@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2002,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2007,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -54,7 +54,7 @@
 #define TRACE_OUT(p)		/*nothing */
 #endif
 
-MODULE_ID("$Id: write_entry.c,v 1.68 2006/10/14 20:45:16 tom Exp $")
+MODULE_ID("$Id: write_entry.c,v 1.72 2008/08/03 19:24:00 tom Exp $")
 
 static int total_written;
 
@@ -97,17 +97,16 @@ check_writeable(int code)
     static const char dirnames[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     static bool verified[sizeof(dirnames)];
 
-    char dir[2];
+    char dir[sizeof(LEAF_FMT)];
     char *s = 0;
 
     if (code == 0 || (s = strchr(dirnames, code)) == 0)
-	_nc_err_abort("Illegal terminfo subdirectory \"%c\"", code);
+	_nc_err_abort("Illegal terminfo subdirectory \"" LEAF_FMT "\"", code);
 
     if (verified[s - dirnames])
 	return;
 
-    dir[0] = code;
-    dir[1] = '\0';
+    sprintf(dir, LEAF_FMT, code);
     if (make_db_root(dir) < 0) {
 	_nc_err_abort("%s/%s: permission denied", _nc_tic_dir(0), dir);
     }
@@ -276,6 +275,9 @@ _nc_write_entry(TERMTYPE *const tp)
     char *first_name, *other_names;
     char *ptr;
 
+    assert(strlen(tp->term_names) != 0);
+    assert(strlen(tp->term_names) < sizeof(name_list));
+
     (void) strcpy(name_list, tp->term_names);
     DEBUG(7, ("Name list = '%s'", name_list));
 
@@ -355,10 +357,10 @@ _nc_write_entry(TERMTYPE *const tp)
 	start_time = 0;
     }
 
-    if (strlen(first_name) > sizeof(filename) - 3)
+    if (strlen(first_name) >= sizeof(filename) - 3)
 	_nc_warning("terminal name too long.");
 
-    sprintf(filename, "%c/%s", first_name[0], first_name);
+    sprintf(filename, LEAF_FMT "/%s", first_name[0], first_name);
 
     /*
      * Has this primary name been written since the first call to
@@ -383,6 +385,7 @@ _nc_write_entry(TERMTYPE *const tp)
     }
     while (*other_names != '\0') {
 	ptr = other_names++;
+	assert(ptr < buffer + sizeof(buffer) - 1);
 	while (*other_names != '|' && *other_names != '\0')
 	    other_names++;
 
@@ -399,7 +402,7 @@ _nc_write_entry(TERMTYPE *const tp)
 	}
 
 	check_writeable(ptr[0]);
-	sprintf(linkname, "%c/%s", ptr[0], ptr);
+	sprintf(linkname, LEAF_FMT "/%s", ptr[0], ptr);
 
 	if (strcmp(filename, linkname) == 0) {
 	    _nc_warning("self-synonym ignored");
@@ -502,7 +505,8 @@ compute_offsets(char **Strings, unsigned strmax, short *offsets)
 	} else {
 	    offsets[i] = nextfree;
 	    nextfree += strlen(Strings[i]) + 1;
-	    TRACE_OUT(("put Strings[%d]=%s(%d)", i, _nc_visbuf(Strings[i]), nextfree));
+	    TRACE_OUT(("put Strings[%d]=%s(%d)", (int) i,
+		       _nc_visbuf(Strings[i]), (int) nextfree));
 	}
     }
     return nextfree;
@@ -691,9 +695,17 @@ write_object(TERMTYPE *tp, char *buffer, unsigned *offset, unsigned limit)
 	if (even_boundary(nextfree))
 	    return (ERR);
 
-	nextfree = compute_offsets(tp->Strings + STRCOUNT, tp->ext_Strings, offsets);
+	nextfree = compute_offsets(tp->Strings + STRCOUNT,
+				   tp->ext_Strings,
+				   offsets);
 	TRACE_OUT(("after extended string capabilities, nextfree=%d", nextfree));
-	nextfree += compute_offsets(tp->ext_Names, extcnt, offsets + tp->ext_Strings);
+
+	if (tp->ext_Strings >= SIZEOF(offsets))
+	    return (ERR);
+
+	nextfree += compute_offsets(tp->ext_Names,
+				    extcnt,
+				    offsets + tp->ext_Strings);
 	TRACE_OUT(("after extended capnames, nextfree=%d", nextfree));
 	strmax = tp->ext_Strings + extcnt;
 
@@ -740,7 +752,7 @@ write_object(TERMTYPE *tp, char *buffer, unsigned *offset, unsigned limit)
 	 */
 	for (i = 0; i < tp->ext_Strings; i++) {
 	    if (VALID_STRING(tp->Strings[i + STRCOUNT])) {
-		TRACE_OUT(("WRITE ext_Strings[%d]=%s", i,
+		TRACE_OUT(("WRITE ext_Strings[%d]=%s", (int) i,
 			   _nc_visbuf(tp->Strings[i + STRCOUNT])));
 		if (!WRITE_STRING(tp->Strings[i + STRCOUNT]))
 		    return (ERR);
@@ -751,7 +763,7 @@ write_object(TERMTYPE *tp, char *buffer, unsigned *offset, unsigned limit)
 	 * Write the extended names
 	 */
 	for (i = 0; i < extcnt; i++) {
-	    TRACE_OUT(("WRITE ext_Names[%d]=%s", i, tp->ext_Names[i]));
+	    TRACE_OUT(("WRITE ext_Names[%d]=%s", (int) i, tp->ext_Names[i]));
 	    if (!WRITE_STRING(tp->ext_Names[i]))
 		return (ERR);
 	}

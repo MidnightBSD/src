@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/contrib/ipfilter/ipsend/linux.h 145519 2005-04-25 18:20:15Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1995-1998 by Darren Reed.

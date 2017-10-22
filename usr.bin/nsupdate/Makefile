@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.bin/nsupdate/Makefile 170221 2007-06-02 23:19:58Z dougb $
+# $FreeBSD$
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind9
 LIB_BIND_REL=	../../lib/bind
@@ -14,11 +14,14 @@ SRCS+=		nsupdate.c
 
 CFLAGS+=	-I${SRCDIR}/include
 CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
+CFLAGS+=	-DSESSION_KEYFILE=\"/var/run/named/session.key\"
 
 DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}
 
-MAN=		nsupdate.8
+WARNS?=		1
+
+MAN=		nsupdate.1
 
 MANFILTER=	sed -e "s@/etc/named\.conf@/etc/namedb/named.conf@g" \
 		-e "s@^\.HP [0-9]* @@"

@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/usr.sbin/apmd/contrib/pccardq.c 166509 2007-02-05 07:35:23Z kevlo $ */
+/* $FreeBSD$ */
 
 #include <err.h>
 #include <errno.h>
@@ -20,7 +20,7 @@ const char     *tmp_dir = "/tmp";
 unsigned        slot_map = ~0;
 
 void
-usage()
+usage(void)
 {
     fprintf(stderr, "usage: %s [-a] [-n] [-s slot]\n", prog);
 }
@@ -223,7 +223,7 @@ get_slot_info(int so, int slot, char **manuf, char **version, char
     return rc;
 }
 
-const char     *
+const char *
 strstate(int state)
 {
     switch (state) {

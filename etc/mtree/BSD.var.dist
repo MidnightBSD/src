@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/etc/mtree/BSD.var.dist 161748 2006-08-31 09:51:34Z cperciva $
+# $FreeBSD$
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -22,6 +22,8 @@
 /set gname=wheel
     backups
     ..
+    cache
+    ..
     crash
     ..
     cron
@@ -32,7 +34,7 @@
     db
         entropy         uname=operator gname=operator mode=0700
         ..
-        freebsd-update
+        freebsd-update  mode=0700
         ..
         ipf             mode=0700
         ..
@@ -63,6 +65,8 @@
         named           uname=bind gname=bind
         ..
         ppp             gname=network mode=0770
+        ..
+        wpa_supplicant
         ..
     ..
     rwho            gname=daemon mode=0775

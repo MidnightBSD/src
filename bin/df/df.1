@@ -27,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)df.1	8.3 (Berkeley) 5/8/95
-.\" $FreeBSD: release/7.0.0/bin/df/df.1 167105 2007-02-28 10:29:48Z ru $
+.\" $FreeBSD$
 .\"
-.Dd April 22, 2004
+.Dd March 3, 2012
 .Dt DF 1
 .Os
 .Sh NAME
@@ -38,7 +38,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl b | g | H | h | k | m | P
-.Op Fl aciln
+.Op Fl acilnT
 .Op Fl t Ar type
 .Op Ar file | filesystem ...
 .Sh DESCRIPTION
@@ -63,6 +63,7 @@ The following options are available:
 Show all mount points, including those that were mounted with the
 .Dv MNT_IGNORE
 flag.
+This is implied for file systems specified on the command line.
 .It Fl b
 Use 512-byte blocks rather than the default.
 Note that
@@ -78,15 +79,20 @@ this overrides the
 .Ev BLOCKSIZE
 specification from the environment.
 .It Fl H
-"Human-readable" output.
+.Dq Human-readable
+output.
 Use unit suffixes: Byte, Kilobyte, Megabyte,
 Gigabyte, Terabyte and Petabyte in order to reduce the number of
 digits to four or fewer using base 10 for sizes.
 .It Fl h
-"Human-readable" output.
+.Dq Human-readable
+output.
 Use unit suffixes: Byte, Kilobyte, Megabyte,
 Gigabyte, Terabyte and Petabyte in order to reduce the number of
 digits to four or fewer using base 2 for sizes.
+Inodes statistics, if enabled with
+.Fl i ,
+are always printed in base 10.
 .It Fl i
 Include statistics on the number of free inodes.
 .It Fl k
@@ -140,6 +146,8 @@ The
 .Xr lsvfs 1
 command can be used to find out the types of file systems
 that are available on the system.
+.It Fl T
+Include file system type.
 .El
 .Sh ENVIRONMENT
 .Bl -tag -width BLOCKSIZE
@@ -150,7 +158,9 @@ is set, the block counts will be displayed in units of that size block.
 .El
 .Sh SEE ALSO
 .Xr lsvfs 1 ,
+.Xr pstat 1 ,
 .Xr quota 1 ,
+.Xr swapinfo 1 ,
 .Xr fstatfs 2 ,
 .Xr getfsstat 2 ,
 .Xr statfs 2 ,

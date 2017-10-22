@@ -15,9 +15,9 @@
 .\" * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
 .\" */
 .\"
-.\" $FreeBSD: release/7.0.0/usr.sbin/cron/crontab/crontab.5 148595 2005-07-31 13:41:23Z brueffer $
+.\" $FreeBSD$
 .\"
-.Dd July 31, 2005
+.Dd April 28, 2012
 .Dt CRONTAB 5
 .Os
 .Sh NAME
@@ -118,7 +118,7 @@ is defined (and non-empty), mail is
 sent to the user so named.
 .Ev MAILTO
 may also be used to direct mail to multiple recipients
-by seperating recipient users with a comma.
+by separating recipient users with a comma.
 If
 .Ev MAILTO
 is defined but empty (MAILTO=""), no
@@ -224,7 +224,7 @@ one of eight special strings may appear:
 .Bd -literal -offset indent
 string		meaning
 ------		-------
-@reboot		Run once, at startup.
+@reboot		Run once, at startup of cron.
 @yearly		Run once a year, "0 0 1 1 *".
 @annually	(same as @yearly)
 @monthly	Run once a month, "0 0 1 * *".
@@ -296,12 +296,23 @@ are extensions.
 .An Paul Vixie Aq paul@vix.com
 .Sh BUGS
 If you are in one of the 70-odd countries that observe Daylight
-Savings Time, jobs scheduled during the rollback or advance will be
-affected.
+Savings Time, jobs scheduled during the rollback or advance may be
+affected if
+.Xr cron 8
+is not started with the
+.Fl s
+flag.
 In general, it is not a good idea to schedule jobs during
-this period.
+this period if
+.Xr cron 8
+is not started with the
+.Fl s
+flag, which is enabled by default.
+See
+.Xr cron 8
+for more details.
 .Pp
-For US timezones (except parts of IN, AZ, and HI) the time shift occurs at
+For US timezones (except parts of AZ and HI) the time shift occurs at
 2AM local time.
 For others, the output of the
 .Xr zdump 8

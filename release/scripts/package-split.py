@@ -7,7 +7,7 @@
 #
 # Usage: package-split.py <INDEX> <master INDEX>
 #
-# $FreeBSD: release/7.0.0/release/scripts/package-split.py 175321 2008-01-14 17:31:35Z kensmith $
+# $FreeBSD$
 
 import os
 import sys
@@ -23,94 +23,32 @@ if 'PKG_VERBOSE' in os.environ:
 else:
     verbose = 0
 
-# List of packages for disc1.  This just includes packages sysinstall can
-# install as a distribution
-def disc1_packages():
-    pkgs = ['lang/perl5.8']
-    pkgs.extend(['x11/xorg',
-		 'x11-drivers/xorg-drivers',
-		 'x11-fonts/xorg-fonts',
-		 'x11-servers/xorg-nestserver',
-		 'x11-servers/xorg-vfbserver',
-                 'devel/imake'])
-    if arch == 'i386':
-        pkgs.append('emulators/linux_base-fc4')
-    return pkgs
-
-# List of packages for disc2.  This includes packages that the X desktop
-# menu depends on (if it still exists) and other "nice to have" packages.
-# For architectures that use a separate livefs, this is actually disc3.
-def disc2_packages():
-            # X Desktops
-    if arch == 'ia64':
-	pkgs = ['x11/gnome2-lite',
-		'x11/kde-lite']
-    else:
-	pkgs = ['x11/gnome2',
-		'x11/kde3']
-    return pkgs
-
-def disc3_packages():
-    pkgs = ['x11-wm/afterstep',
-            'x11-wm/windowmaker',
-            'x11-wm/fvwm2',
-            # "Nice to have"
-            'archivers/unzip',
-            'astro/xearth',                 
-            'devel/gmake',
-            'editors/emacs',
-            'editors/vim-lite',
-            'editors/xemacs',
-            'emulators/mtools',
-            'graphics/png',
-            'graphics/xv',
-            'irc/xchat',
-            'lang/php5',
-            'mail/exim',
-            'mail/fetchmail',
-            'mail/mutt',
-            'mail/pine4',
-            'mail/popd',
-            'mail/xfmail',
-            'mail/postfix',
-            'misc/compat5x',
-            'misc/compat6x',
-            'net/cvsup-without-gui',
-            'net/rsync',
-            'net/samba3',
-            'news/slrn',
-            'news/tin',
-            'ports-mgmt/portupgrade',
-            'print/a2ps-letter',
-            'print/apsfilter',
-            'print/ghostscript-gnu-nox11',
-            'print/gv',
-            'print/psutils-letter',
-            'print/teTeX',
-            'shells/bash',
-            'shells/pdksh',
-            'shells/zsh',
-            'security/sudo',
-            'textproc/docproj-jadetex',
-            'www/apache13',
-            'www/apache13-modssl',
-            'www/apache22',
-            'www/links',
-            'www/lynx',
-            'x11/rxvt',
-            # Formerly on disc3
-            'ports-mgmt/portaudit']
-    if arch == 'i386':
-        pkgs.extend(['www/opera',
-            'misc/compat4x'])
+# List of packages for dvd1.
+def dvd1_packages():
+    pkgs = ['archivers/unzip',
+	    'emulators/linux_base-f10',
+	    'lang/perl5.12',
+	    'misc/freebsd-doc-all',
+	    'net/mpd5',
+	    'net/rsync',
+	    'ports-mgmt/portaudit',
+	    'ports-mgmt/portmaster',
+	    'shells/bash',
+	    'shells/zsh',
+	    'security/sudo',
+	    'sysutils/screen',
+	    'www/firefox',
+	    'www/links',
+	    'x11-drivers/xf86-video-vmware',
+	    'x11/gnome2',
+	    'x11/kde4',
+	    'x11/xorg'];
     return pkgs
 
 # The list of desired packages
 def desired_packages():
-    disc1 = disc1_packages()
-    disc2 = disc2_packages()
-    disc3 = disc3_packages()
-    return [disc1, disc2, disc3]
+    dvd1 = dvd1_packages()
+    return [dvd1]
 
 # Suck the entire INDEX file into a two different dictionaries.  The first
 # dictionary maps port names (origins) to package names.  The second

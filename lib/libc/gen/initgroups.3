@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)initgroups.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: release/7.0.0/lib/libc/gen/initgroups.3 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD$
 .\"
 .Dd June 4, 1993
 .Dt INITGROUPS 3
@@ -65,6 +65,13 @@ function may fail and set
 .Va errno
 for any of the errors specified for the library function
 .Xr setgroups 2 .
+It may also return:
+.Bl -tag -width Er
+.It Bq Er ENOMEM
+The
+.Fn initgroups
+function was unable to allocate temporary storage.
+.El
 .Sh SEE ALSO
 .Xr setgroups 2 ,
 .Xr getgrouplist 3

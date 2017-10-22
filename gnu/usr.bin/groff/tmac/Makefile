@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/tmac/Makefile 161282 2006-08-14 13:02:01Z ru $
+# $FreeBSD$
 
 .include <bsd.own.mk>			# SHAREDIR
 

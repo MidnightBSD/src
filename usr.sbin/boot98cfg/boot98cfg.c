@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/boot98cfg/boot98cfg.c 148064 2005-07-15 15:32:52Z nyan $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/diskpc98.h>
@@ -141,7 +141,7 @@ main(int argc, char *argv[])
 			version = strtol(optarg, &endptr, 0);
 			if (errno || *optarg == '\0' || *endptr ||
 			    version < 0 || version > 255)
-				errx(1, "%s: Bad argument to -s option",
+				errx(1, "%s: Bad argument to -v option",
 				    optarg);
 			break;
 		default:

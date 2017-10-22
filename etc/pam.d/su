@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/7.0.0/etc/pam.d/su 117360 2003-07-09 18:40:49Z des $
+# $FreeBSD$
 #
 # PAM configuration for the "su" service
 #
@@ -7,7 +7,7 @@
 # auth
 auth		sufficient	pam_rootok.so		no_warn
 auth		sufficient	pam_self.so		no_warn
-auth		requisite	pam_group.so		no_warn group=wheel root_only fail_safe
+auth		requisite	pam_group.so		no_warn group=wheel root_only fail_safe ruser
 auth		include		system
 
 # account

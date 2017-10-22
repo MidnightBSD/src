@@ -36,7 +36,7 @@
  *
  *	Updated license to APSL 2.0, 2004/7/27 - Jordan Hubbard
  *
- * $FreeBSD: release/7.0.0/tools/regression/fsx/fsx.c 171046 2007-06-26 13:51:53Z delphij $
+ * $FreeBSD$
  *
  */
 
@@ -942,7 +942,7 @@ main(int argc, char **argv)
 	setvbuf(stdout, (char *)0, _IOLBF, 0); /* line buffered stdout */
 
 	while ((ch = getopt(argc, argv, "b:c:dl:m:no:p:qr:s:t:w:D:LN:OP:RS:W"))
-	       != EOF)
+	       != -1)
 		switch (ch) {
 		case 'b':
 			simulatedopcount = getnum(optarg, &endp);

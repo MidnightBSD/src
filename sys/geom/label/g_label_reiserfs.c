@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/geom/label/g_label_reiserfs.c 149395 2005-08-23 18:55:38Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -39,7 +39,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/geom/label/g_label_reiserfs.c 149395 2005-
 #define REISERFS_OLD_DISK_OFFSET 8 * 1024
 #define REISERFS_SUPER_MAGIC	"ReIsEr"
 
-typedef struct resiserfs_sb {
+typedef struct reiserfs_sb {
 	uint8_t		fake1[52];
 	char		s_magic[10];
 	uint8_t		fake2[10];
@@ -111,7 +111,10 @@ exit_free:
 	g_free(fs);
 }
 
-const struct g_label_desc g_label_reiserfs = {
+struct g_label_desc g_label_reiserfs = {
 	.ld_taste = g_label_reiserfs_taste,
-	.ld_dir = "reiserfs"
+	.ld_dir = "reiserfs",
+	.ld_enabled = 1
 };
+
+G_LABEL_INIT(reiserfs, g_label_reiserfs, "Create device nodes for REISERFS volumes");

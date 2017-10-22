@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/i386/isa/spicreg.h 139790 2005-01-06 22:18:23Z imp $
+ * $FreeBSD$
  *
  */
 

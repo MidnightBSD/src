@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/tools/regression/mlock/Makefile 156735 2006-03-15 10:46:38Z ru $
+# $FreeBSD$
 
 PROG=	mlock
 NO_MAN=

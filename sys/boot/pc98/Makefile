@@ -1,5 +1,5 @@
-# $FreeBSD: release/7.0.0/sys/boot/pc98/Makefile 158559 2006-05-14 07:26:02Z nyan $
+# $FreeBSD$
 
-SUBDIR=		btx boot0 boot0.5 boot2 cdboot kgzldr libpc98 loader
+SUBDIR=		boot0 boot0.5 pc98boot btx boot2 cdboot kgzldr libpc98 loader
 
 .include <bsd.subdir.mk>

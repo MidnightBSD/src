@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sbin/ldconfig/elfhints.c 76224 2001-05-02 23:56:21Z obrien $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

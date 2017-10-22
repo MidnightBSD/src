@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/gdb_machdep.c 161588 2006-08-24 21:52:11Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -37,6 +37,10 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/gdb_machdep.c 161588 2006-
 #include <machine/gdb_machdep.h>
 #include <machine/pcb.h>
 #include <machine/reg.h>
+
+#include <machine/hid.h>
+#include <machine/spr.h>
+
 #include <machine/trap.h>
 
 #include <gdb/gdb.h>
@@ -47,8 +51,23 @@ gdb_cpu_getreg(int regnum, size_t *regsz)
 {
 
 	*regsz = gdb_cpu_regsz(regnum);
-	switch (regnum) {
+
+	if (kdb_thread == curthread) {
+		if (regnum == 0 || (regnum >= 2 && regnum <= 31))
+			return (kdb_frame->fixreg + regnum);
+		if (regnum == 64)
+			return (&kdb_frame->srr0);
+		if (regnum == 67)
+			return (&kdb_frame->lr);
 	}
+
+	if (regnum == 1)
+		return (&kdb_thrctx->pcb_sp);
+	if (regnum >= 14 && regnum <= 31)
+		return (kdb_thrctx->pcb_context + (regnum - 14));
+	if (regnum == 64)
+		return (&kdb_thrctx->pcb_lr);
+
 	return (NULL);
 }
 
@@ -65,8 +84,16 @@ gdb_cpu_setreg(int regnum, void *val)
 int
 gdb_cpu_signal(int vector, int dummy __unused)
 {
-
+#ifdef E500
+	if (vector == EXC_DEBUG || vector == EXC_PGM)
+		return (SIGTRAP);
+#else
 	if (vector == EXC_TRC || vector == EXC_RUNMODETRC)
 		return (SIGTRAP);
-	return (vector);
+#endif
+
+	if (vector <= 255)
+		return (vector);
+	else
+		return (SIGEMT);
 }

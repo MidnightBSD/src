@@ -1,12 +1,12 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/usr.sbin/ntp/scripts/mkver 132458 2004-07-20 15:44:32Z roberto $
+# $FreeBSD$
 #
 PROG=${1-UNKNOWN}
 
 ConfStr="$PROG"
 
-ConfStr="$ConfStr 4.2.0"
+ConfStr="$ConfStr 4.2.4p5"
 
 case "$CSET" in
  '') ;;
@@ -22,8 +22,6 @@ case "" in
     ;;
  *)  ConfStr="${ConfStr}-r" ;;
 esac
-
-ConfStr="$ConfStr `LC_ALL=C date`"
 
 if [ ! -f .version ]; then
   echo 0 > .version

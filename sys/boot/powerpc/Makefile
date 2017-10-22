@@ -1,5 +1,5 @@
-# $FreeBSD: release/7.0.0/sys/boot/powerpc/Makefile 67204 2000-10-16 10:46:22Z obrien $
+# $FreeBSD$
 
-SUBDIR=		loader
+SUBDIR=		boot1.chrp ofw ps3 uboot
 
 .include <bsd.subdir.mk>

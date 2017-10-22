@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libelf/libelf_msize.m4 165317 2006-12-18 05:40:01Z jkoshy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/elf32.h>
@@ -49,6 +49,7 @@ divert(-1)
 include(SRCDIR`/elf_types.m4')
 
 define(BYTE_SIZE,	1)
+define(GNUHASH_SIZE,	1)
 define(NOTE_SIZE,	1)
 
 /*

@@ -23,11 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/include/iso646.h 103567 2002-09-18 22:23:59Z mike $
+ * $FreeBSD$
  */
 
 #ifndef _ISO646_H_
 #define	_ISO646_H_
+
+#ifndef __cplusplus
 
 #define	and	&&
 #define	and_eq	&=
@@ -40,5 +42,7 @@
 #define	or_eq	|=
 #define	xor	^
 #define	xor_eq	^=
+
+#endif /* !__cplusplus */
 
 #endif /* !_ISO646_H_ */

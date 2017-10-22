@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/tools/regression/lib/libc/stdio/test-scanfloat.c 165754 2007-01-03 21:28:26Z das $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <fenv.h>
@@ -37,12 +37,11 @@ __FBSDID("$FreeBSD: release/7.0.0/tools/regression/lib/libc/stdio/test-scanfloat
 #include <locale.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define	eq(type, a, b)	_eq(type##_EPSILON, (a), (b))
 static int _eq(long double epsilon, long double a, long double b);
-
-extern int __scanfdebug;
 
 int
 main(int argc, char *argv[])
@@ -51,13 +50,12 @@ main(int argc, char *argv[])
 	long double ld = 0.0;
 	double d = 0.0;
 	float f = 0.0;
+	char *endp;
 
-	printf("1..3\n");
+	printf("1..4\n");
 
 	buf[0] = '\0';
 	assert(setlocale(LC_NUMERIC, ""));
-
-	__scanfdebug = 1;
 
 	/*
 	 * Various tests for normalized numbers
@@ -190,15 +188,8 @@ main(int argc, char *argv[])
 	assert(f != f);
 	assert(d != d);
 	assert(ld != ld);
-#if 0
-	/*
-	 * POSIX says we should only generate quiet NaNs, but the gdtoa
-	 * author convincingly argues that if you ask for a NaN format
-	 * based on some implementation-defined string, you should get
-	 * what you asked for, even if it's a signaling NaN.
-	 */
+	/* POSIX says we should only generate quiet NaNs. */
 	assert(fetestexcept(FE_INVALID) == 0);
-#endif
 
 	printf("ok 2 - scanfloat\n");
 
@@ -278,6 +269,29 @@ main(int argc, char *argv[])
 
 	printf("ok 3 - scanfloat\n");
 
+	/*
+	 * Tests specific to strtod().
+	 */
+
+	assert(strtod("0xy", &endp) == 0);
+	assert(strcmp("xy", endp) == 0);
+
+	/* This used to cause an infinite loop and round the wrong way. */
+	fesetround(FE_DOWNWARD);
+	assert(strtof("3.5e38", &endp) == FLT_MAX);
+	assert(strtod("2e308", &endp) == DBL_MAX);
+	fesetround(FE_UPWARD);
+	assert(strtof("3.5e38", &endp) == INFINITY);
+	assert(strtod("2e308", &endp) == INFINITY);
+	fesetround(FE_TOWARDZERO);
+	assert(strtof("3.5e38", &endp) == FLT_MAX);
+	assert(strtod("2e308", &endp) == DBL_MAX);
+	fesetround(FE_TONEAREST);
+	assert(strtof("3.5e38", &endp) == INFINITY);
+	assert(strtod("2e308", &endp) == INFINITY);
+
+	printf("ok 4 - scanfloat\n");
+
 	return (0);
 }
 
@@ -286,8 +300,6 @@ _eq(long double epsilon, long double a, long double b)
 {
 	long double delta;
 
-	delta = a - b;
-	if (delta < 0)		/* XXX no fabsl() */
-		delta = -delta;
+	delta = fabsl(a - b);
 	return (delta <= epsilon);
 }

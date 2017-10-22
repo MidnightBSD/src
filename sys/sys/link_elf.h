@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sys/link_elf.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 /*
@@ -39,7 +39,7 @@
  */
 
 #ifndef _SYS_LINK_ELF_H_
-#define _SYS_LINK_ELF_H_
+#define	_SYS_LINK_ELF_H_
 
 #include <sys/elf.h>
 
@@ -70,9 +70,9 @@ struct r_debug {
 	void		(*r_brk)(struct r_debug *, struct link_map *);
 						/* pointer to break point */
 	enum {
-	    RT_CONSISTENT,			/* things are stable */
-	    RT_ADD,				/* adding a shared library */
-	    RT_DELETE				/* removing a shared library */
+		RT_CONSISTENT,			/* things are stable */
+		RT_ADD,				/* adding a shared library */
+		RT_DELETE			/* removing a shared library */
 	}		r_state;
 };
 
@@ -90,9 +90,10 @@ struct dl_phdr_info
 
 __BEGIN_DECLS
 
-typedef int (*__dl_iterate_hdr_callback)(struct dl_phdr_info *, size_t,
-    void *);
+typedef int (*__dl_iterate_hdr_callback)(struct dl_phdr_info *, size_t, void *);
 extern int dl_iterate_phdr(__dl_iterate_hdr_callback, void *);
+int _rtld_addr_phdr(const void *, struct dl_phdr_info *);
+int _rtld_get_stack_prot(void);
 
 __END_DECLS
 

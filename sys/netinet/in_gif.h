@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/netinet/in_gif.h 174854 2007-12-22 06:32:46Z cvs2svn $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: in_gif.h,v 1.5 2000/04/14 08:36:02 itojun Exp $	*/
 
 /*-

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/timedef/la_LN.ISO8859-1.src 74570 2001-03-21 13:55:09Z ache $
+# $FreeBSD$
 # This is Latin. The week with seven days was introduced in the
 # Roman Empire 321 AD. (Konstantin I)
 #
@@ -20,7 +20,7 @@ Oct
 Nov
 Dec
 #
-# Long month names
+# Long month names (as in a date)
 #
 Ianuarius
 Februarius
@@ -79,7 +79,7 @@ pm
 #
 %a %e %b %Y %X %Z
 #
-# Long months names (alternative)
+# Long month names (without case ending)
 #
 Ianuarius
 Februarius

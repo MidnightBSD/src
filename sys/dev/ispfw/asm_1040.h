@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/dev/ispfw/asm_1040.h 160212 2006-07-09 17:50:20Z mjacob $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000 Qlogic, Inc.
  * All rights reserved.

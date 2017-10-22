@@ -82,7 +82,7 @@
 #include "opt_ktrace.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/trap.c 171672 2007-07-31 17:09:05Z cognet $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -130,7 +130,6 @@ void undefinedinstruction(trapframe_t *);
 #include <machine/machdep.h>
  
 extern char fusubailout[];
-extern char *syscallnames[];
 
 #ifdef DEBUG
 int last_fault_code;	/* For the benefit of pmap_fault_fixup() */
@@ -262,10 +261,6 @@ data_abort_handler(trapframe_t *tf)
 		td->td_frame = tf;		
 		if (td->td_ucred != td->td_proc->p_ucred)
 			cred_update_thread(td);
-#ifdef KSE
-		if (td->td_pflags & TDP_SA)
-			thread_user_enter(td);
-#endif
 		
 	}
 	/* Grab the current pcb */
@@ -429,8 +424,7 @@ data_abort_handler(trapframe_t *tf)
 		p->p_lock++;
 		PROC_UNLOCK(p);
 	}
-	error = vm_fault(map, va, ftype, (ftype & VM_PROT_WRITE) ? 
-	    VM_FAULT_DIRTY : VM_FAULT_NORMAL);
+	error = vm_fault(map, va, ftype, VM_FAULT_NORMAL);
 	pcb->pcb_onfault = onfault;
 
 	if (map != kernel_map) {
@@ -455,7 +449,7 @@ data_abort_handler(trapframe_t *tf)
 
 	if (error == ENOMEM) {
 		printf("VM: pid %d (%s), uid %d killed: "
-		    "out of swap\n", td->td_proc->p_pid, td->td_proc->p_comm,
+		    "out of swap\n", td->td_proc->p_pid, td->td_name,
 		    (td->td_proc->p_ucred) ?
 		     td->td_proc->p_ucred->cr_uid : -1);
 		ksig.signb = SIGKILL;
@@ -524,7 +518,8 @@ dab_fatal(trapframe_t *tf, u_int fsr, u_int far, struct thread *td, struct ksig 
 	printf(", pc =%08x\n\n", tf->tf_pc);
 
 #ifdef KDB
-	kdb_trap(fsr, 0, tf);
+	if (debugger_on_panic || kdb_active)
+		kdb_trap(fsr, 0, tf);
 #endif
 	panic("Fatal abort");
 	/*NOTREACHED*/
@@ -534,7 +529,7 @@ dab_fatal(trapframe_t *tf, u_int fsr, u_int far, struct thread *td, struct ksig 
  * dab_align() handles the following data aborts:
  *
  *  FAULT_ALIGN_0 - Alignment fault
- *  FAULT_ALIGN_0 - Alignment fault
+ *  FAULT_ALIGN_1 - Alignment fault
  *
  * These faults are fatal if they happen in kernel mode. Otherwise, we
  * deliver a bus error to the process.
@@ -731,10 +726,6 @@ prefetch_abort_handler(trapframe_t *tf)
 		td->td_frame = tf;
 		if (td->td_ucred != td->td_proc->p_ucred)
 			cred_update_thread(td);
-#ifdef KSE
-		if (td->td_proc->p_flag & P_SA)
-			thread_user_enter(td);
-#endif
 	}
 	fault_pc = tf->tf_pc;
 	if (td->td_md.md_spinlock_count == 0) {
@@ -805,7 +796,7 @@ prefetch_abort_handler(trapframe_t *tf)
 
 	if (error == ENOMEM) {
 		printf("VM: pid %d (%s), uid %d killed: "
-		    "out of swap\n", td->td_proc->p_pid, td->td_proc->p_comm,
+		    "out of swap\n", td->td_proc->p_pid, td->td_name,
 		    (td->td_proc->p_ucred) ?
 		     td->td_proc->p_ucred->cr_uid : -1);
 		ksig.signb = SIGKILL;
@@ -870,133 +861,68 @@ badaddr_read(void *addr, size_t size, void *rptr)
 	return (rv);
 }
 
-#define MAXARGS	8
+int
+cpu_fetch_syscall_args(struct thread *td, struct syscall_args *sa)
+{
+	struct proc *p;
+	register_t *ap;
+	int error;
+
+	sa->code = sa->insn & 0x000fffff;
+	ap = &td->td_frame->tf_r0;
+	if (sa->code == SYS_syscall) {
+		sa->code = *ap++;
+		sa->nap--;
+	} else if (sa->code == SYS___syscall) {
+		sa->code = ap[_QUAD_LOWWORD];
+		sa->nap -= 2;
+		ap += 2;
+	}
+	p = td->td_proc;
+	if (p->p_sysent->sv_mask)
+		sa->code &= p->p_sysent->sv_mask;
+	if (sa->code >= p->p_sysent->sv_size)
+		sa->callp = &p->p_sysent->sv_table[0];
+	else
+		sa->callp = &p->p_sysent->sv_table[sa->code];
+	sa->narg = sa->callp->sy_narg;
+	error = 0;
+	memcpy(sa->args, ap, sa->nap * sizeof(register_t));
+	if (sa->narg > sa->nap) {
+		error = copyin((void *)td->td_frame->tf_usr_sp, sa->args +
+		    sa->nap, (sa->narg - sa->nap) * sizeof(register_t));
+	}
+	if (error == 0) {
+		td->td_retval[0] = 0;
+		td->td_retval[1] = 0;
+	}
+	return (error);
+}
+
+#include "../../kern/subr_syscall.c"
+
 static void
 syscall(struct thread *td, trapframe_t *frame, u_int32_t insn)
 {
-	struct proc *p = td->td_proc;
-	int code, error;
-	u_int nap, nargs;
-	register_t *ap, *args, copyargs[MAXARGS];
-	struct sysent *callp;
+	struct syscall_args sa;
+	int error;
 
-	PCPU_INC(cnt.v_syscall);
-	td->td_pticks = 0;
-	if (td->td_ucred != td->td_proc->p_ucred)
-		cred_update_thread(td);
+	td->td_frame = frame;
+	sa.insn = insn;
 	switch (insn & SWI_OS_MASK) {
 	case 0: /* XXX: we need our own one. */
-		nap = 4;
+		sa.nap = 4;
 		break;
 	default:
 		call_trapsignal(td, SIGILL, 0);
 		userret(td, frame);
 		return;
 	}
-	code = insn & 0x000fffff;                
-	td->td_pticks = 0;
-	ap = &frame->tf_r0;
-	if (code == SYS_syscall) {
-		code = *ap++;
-		
-		nap--;
-	} else if (code == SYS___syscall) {
-		code = ap[_QUAD_LOWWORD];
-		nap -= 2;
-		ap += 2;
-	}
-	if (p->p_sysent->sv_mask)
-		code &= p->p_sysent->sv_mask;
-	if (code >= p->p_sysent->sv_size)
-		callp = &p->p_sysent->sv_table[0];
-	else
-		callp = &p->p_sysent->sv_table[code];
-	nargs = callp->sy_narg;
-	memcpy(copyargs, ap, nap * sizeof(register_t));
-	if (nargs > nap) {
-		error = copyin((void *)frame->tf_usr_sp, copyargs + nap,
-		    (nargs - nap) * sizeof(register_t));
-		if (error)
-			goto bad;
-	}
-	args = copyargs;
-	error = 0;
-#ifdef KTRACE
-	if (KTRPOINT(td, KTR_SYSCALL))
-		ktrsyscall(code, nargs, args);
-#endif
-		
-	CTR4(KTR_SYSC, "syscall enter thread %p pid %d proc %s code %d", td,
-	    td->td_proc->p_pid, td->td_proc->p_comm, code);
-	if (error == 0) {
-		td->td_retval[0] = 0;
-		td->td_retval[1] = 0;
-		STOPEVENT(p, S_SCE, callp->sy_narg);
-		PTRACESTOP_SC(p, td, S_PT_SCE);
-		AUDIT_SYSCALL_ENTER(code, td);
-		error = (*callp->sy_call)(td, args);
-		AUDIT_SYSCALL_EXIT(error, td);
-		KASSERT(td->td_ar == NULL, 
-		    ("returning from syscall with td_ar set!"));
-	}
-	switch (error) {
-	case 0: 
-#ifdef __ARMEB__
-		if ((insn & 0x000fffff) == SYS___syscall &&
-		    code != SYS_freebsd6_lseek && code != SYS_lseek) {
-			/*
-			 * 64-bit return, 32-bit syscall. Fixup byte order
-			 */ 
-			frame->tf_r0 = 0;
-			frame->tf_r1 = td->td_retval[0];
-		} else {
-			frame->tf_r0 = td->td_retval[0];
-			frame->tf_r1 = td->td_retval[1];
-		}
-#else
-		frame->tf_r0 = td->td_retval[0];
-	  	frame->tf_r1 = td->td_retval[1];
-#endif
-					      
-		frame->tf_spsr &= ~PSR_C_bit;   /* carry bit */
-		break;
-		
-	case ERESTART:
-		/*
-		 * Reconstruct the pc to point at the swi.
-		 */
-		frame->tf_pc -= INSN_SIZE;
-		break;
-	case EJUSTRETURN:                                       
-		/* nothing to do */  
-		break;
-	default:
-bad:
-		frame->tf_r0 = error;
-		frame->tf_spsr |= PSR_C_bit;    /* carry bit */
-		break;
-	}
 
-	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
-	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
-	KASSERT(td->td_critnest == 0,
-	    ("System call %s returning in a critical section",
-	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???"));
-	KASSERT(td->td_locks == 0,
-	    ("System call %s returning with %d locks held",
-	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???",
-	    td->td_locks));
-
-	userret(td, frame);
-	CTR4(KTR_SYSC, "syscall exit thread %p pid %d proc %s code %d", td,
-	    td->td_proc->p_pid, td->td_proc->p_comm, code);
-	
-	STOPEVENT(p, S_SCX, code);
-	PTRACESTOP_SC(p, td, S_PT_SCX);
-#ifdef KTRACE
-      	if (KTRPOINT(td, KTR_SYSRET))
-		ktrsysret(code, error, td->td_retval[0]);
-#endif
+	error = syscallenter(td, &sa);
+	KASSERT(error != 0 || td->td_ar == NULL,
+	    ("returning from syscall with td_ar set!"));
+	syscallret(td, error, &sa);
 }
 
 void
@@ -1008,10 +934,6 @@ swi_handler(trapframe_t *frame)
 	td->td_frame = frame;
 	
 	td->td_pticks = 0;
-#ifdef KSE
-	if (td->td_proc->p_flag & P_SA)
-		thread_user_enter(td);
-#endif
 	/*
       	 * Make sure the program counter is correctly aligned so we
 	 * don't take an alignment fault trying to read the opcode.

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/cc/protoize/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
 .include "../Makefile.inc"
 

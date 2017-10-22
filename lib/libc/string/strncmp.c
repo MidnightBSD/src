@@ -31,14 +31,12 @@
 static char sccsid[] = "@(#)strncmp.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/strncmp.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <string.h>
 
 int
-strncmp(s1, s2, n)
-	const char *s1, *s2;
-	size_t n;
+strncmp(const char *s1, const char *s2, size_t n)
 {
 
 	if (n == 0)
@@ -47,7 +45,7 @@ strncmp(s1, s2, n)
 		if (*s1 != *s2++)
 			return (*(const unsigned char *)s1 -
 				*(const unsigned char *)(s2 - 1));
-		if (*s1++ == 0)
+		if (*s1++ == '\0')
 			break;
 	} while (--n != 0);
 	return (0);

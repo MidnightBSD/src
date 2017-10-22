@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/chkgrp/chkgrp.c 149463 2005-08-25 17:01:06Z cperciva $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <ctype.h>

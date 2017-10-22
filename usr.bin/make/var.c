@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/make/var.c 160450 2006-07-17 21:05:27Z obrien $");
+__FBSDID("$FreeBSD$");
 
 /**
  * var.c --
@@ -84,7 +84,6 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.bin/make/var.c 160450 2006-07-17 21:05:27Z
  * XXX: There's a lot of duplication in these functions.
  */
 
-#include <assert.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -97,7 +96,6 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.bin/make/var.c 160450 2006-07-17 21:05:27Z
 #include "GNode.h"
 #include "job.h"
 #include "lst.h"
-#include "make.h"
 #include "parse.h"
 #include "str.h"
 #include "targ.h"
@@ -946,12 +944,14 @@ VarFindAny(const char name[], GNode *ctxt)
  *	The name and val arguments are duplicated so they may
  *	safely be freed.
  */
-static void
+static Var *
 VarAdd(const char *name, const char *val, GNode *ctxt)
 {
+	Var *v;
 
-	Lst_AtFront(&ctxt->context, VarCreate(name, val, 0));
+	Lst_AtFront(&ctxt->context, v = VarCreate(name, val, 0));
 	DEBUGF(VAR, ("%s:%s = %s\n", ctxt->name, name, val));
+	return (v);
 }
 
 /**
@@ -1004,28 +1004,20 @@ Var_Set(const char *name, const char *val, GNode *ctxt)
 	n = VarPossiblyExpand(name, ctxt);
 	v = VarFindOnly(n, ctxt);
 	if (v == NULL) {
-		VarAdd(n, val, ctxt);
-		if (ctxt == VAR_CMD) {
-			/*
-			 * Any variables given on the command line
-			 * are automatically exported to the
-			 * environment (as per POSIX standard)
-			 */
-			setenv(n, val, 1);
-		}
+		v = VarAdd(n, val, ctxt);
 	} else {
 		Buf_Clear(v->val);
 		Buf_Append(v->val, val);
-
-		if (ctxt == VAR_CMD || (v->flags & VAR_TO_ENV)) {
-			/*
-			 * Any variables given on the command line
-			 * are automatically exported to the
-			 * environment (as per POSIX standard)
-			 */
-			setenv(n, val, 1);
-		}
 		DEBUGF(VAR, ("%s:%s = %s\n", ctxt->name, n, val));
+	}
+
+	if (ctxt == VAR_CMD || (v->flags & VAR_TO_ENV)) {
+		/*
+		 * Any variables given on the command line
+		 * are automatically exported to the
+		 * environment (as per POSIX standard)
+		 */
+		setenv(n, val, 1);
 	}
 
 	free(n);
@@ -1754,6 +1746,19 @@ ParseModifier(VarParser *vp, char startc, Var *v, Boolean *freeResult)
 		case 'C':
 			newStr = modifier_C(vp, value, v);
 			break;
+		case 't':
+			/* :tl :tu for OSF ODE & NetBSD make compatibility */
+			switch (vp->ptr[1]) {
+			case 'l':
+				vp->ptr++;
+				goto mod_lower;
+				break;
+			case 'u':
+				vp->ptr++;
+				goto mod_upper;
+				break;
+			}
+			/* FALLTHROUGH */
 		default:
 			if (vp->ptr[1] != endc && vp->ptr[1] != ':') {
 #ifdef SUNSHCMD
@@ -1782,6 +1787,7 @@ ParseModifier(VarParser *vp, char startc, Var *v, Boolean *freeResult)
 
 			switch (vp->ptr[0]) {
 			case 'L':
+			mod_lower:
 				{
 				const char	*cp;
 				Buffer		*buf;
@@ -1807,6 +1813,7 @@ ParseModifier(VarParser *vp, char startc, Var *v, Boolean *freeResult)
 				vp->ptr++;
 				break;
 			case 'U':
+			mod_upper:
 				{
 				const char	*cp;
 				Buffer		*buf;
@@ -2586,7 +2593,7 @@ void
 Var_Print(Lst *vlist, Boolean expandVars)
 {
 	LstNode		*n;
-	const char	*name;
+	char		*name;
 
 	LST_FOREACH(n, vlist) {
 		name = Lst_Datum(n);
@@ -2594,13 +2601,17 @@ Var_Print(Lst *vlist, Boolean expandVars)
 			char *value;
 			char *v;
 
-			v = emalloc(strlen(name) + 1 + 3);
-			sprintf(v, "${%s}", name);
-
+			if (*name == '$') {
+				v = name;
+			} else {
+				v = emalloc(strlen(name) + 1 + 3);
+				sprintf(v, "${%s}", name);
+			}
 			value = Buf_Peel(Var_Subst(v, VAR_GLOBAL, FALSE));
 			printf("%s\n", value);
 
-			free(v);
+			if (v != name)
+				free(v);
 			free(value);
 		} else {
 			const char *value = Var_Value(name, VAR_GLOBAL);

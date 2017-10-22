@@ -1,8 +1,11 @@
-# $FreeBSD: release/7.0.0/cddl/lib/Makefile 172500 2007-10-09 23:31:11Z obrien $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
-SUBDIR=	libavl \
+SUBDIR=	${_drti} \
+	libavl \
+	libctf \
+	${_libdtrace} \
 	libnvpair \
 	libumem \
 	libuutil \
@@ -11,9 +14,14 @@ SUBDIR=	libavl \
 
 .if ${MK_ZFS} != "no"
 _libzfs=	libzfs
-.if ${MK_LIBTHR} != "no" || ${MK_LIBKSE} != "no"
+.if ${MK_LIBTHR} != "no"
 _libzpool=	libzpool
 .endif
+.endif
+
+.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
+_drti=		drti
+_libdtrace=	libdtrace
 .endif
 
 .include <bsd.subdir.mk>

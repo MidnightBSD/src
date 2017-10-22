@@ -30,7 +30,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/i386/string/bcopy.S 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #if 0
 	RCSID("$NetBSD: bcopy.S,v 1.6 1996/11/12 00:50:06 jtc Exp $")
@@ -97,3 +97,14 @@ ENTRY(bcopy)
 	popl	%esi
 	cld
 	ret
+#ifdef MEMCOPY
+END(memcpy)
+#else
+#ifdef MEMMOVE
+END(memmove)
+#else
+END(bcopy)
+#endif
+#endif
+
+	.section .note.GNU-stack,"",%progbits

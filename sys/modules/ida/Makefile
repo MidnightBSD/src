@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/ida/Makefile 124367 2004-01-11 07:01:30Z mdodd $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../dev/ida
 

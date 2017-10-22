@@ -23,7 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $Id: sdpcontrol.8,v 1.1 2003/09/08 02:27:27 max Exp $
-.\" $FreeBSD: release/7.0.0/usr.sbin/bluetooth/sdpcontrol/sdpcontrol.8 147869 2005-07-09 19:04:43Z markus $
+.\" $FreeBSD$
 .\"
 .Dd September 7, 2003
 .Dt SDPCONTROL 8
@@ -90,6 +90,13 @@ are:
 .It Cm Browse
 .It Cm Search
 .El
+.Sh EXIT STATUS
+.Ex -std
+.Sh SEE ALSO
+.Xr bluetooth 3 ,
+.Xr sdp 3
+.Sh AUTHORS
+.An Maksim Yevmenkin Aq m_evmenkin@yahoo.com
 .Sh CAVEATS
 The
 .Nm
@@ -109,10 +116,3 @@ Protocol Descriptor List
 .It
 Bluetooth Profile Descriptor List
 .El
-.Sh EXIT STATUS
-.Ex -std
-.Sh SEE ALSO
-.Xr bluetooth 3 ,
-.Xr sdp 3
-.Sh AUTHORS
-.An Maksim Yevmenkin Aq m_evmenkin@yahoo.com

@@ -23,17 +23,20 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/tools/regression/acct/pack.c 169851 2007-05-22 05:52:04Z dds $");
+__FBSDID("$FreeBSD$");
+
+#include <sys/types.h>
 
 #include <assert.h>
 #include <float.h>
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <strings.h>
-
-#include <sys/time.h>
-#include <sys/types.h>
+#include <syslog.h>
+#include <time.h>
 
 #define KASSERT(val, msg) assert(val)
 

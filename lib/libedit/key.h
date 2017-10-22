@@ -31,7 +31,7 @@
  *
  *	@(#)key.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: key.h,v 1.10 2006/03/23 20:22:51 christos Exp $
- * $FreeBSD: release/7.0.0/lib/libedit/key.h 167457 2007-03-11 18:30:22Z stefanf $
+ * $FreeBSD$
  */
 
 /*
@@ -76,8 +76,8 @@ protected int		 key_delete(EditLine *, const char *);
 protected void		 key_print(EditLine *, const char *);
 protected void	         key_kprint(EditLine *, const char *, key_value_t *,
     int);
-protected int		 key__decode_str(const char *, char *, int,
+protected size_t	 key__decode_str(const char *, char *, size_t,
     const char *);
-protected int		 key__decode_char(char *, int, int, int);
+protected size_t	 key__decode_char(char *, size_t, size_t, int);
 
 #endif /* _h_el_key */

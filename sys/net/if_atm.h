@@ -1,5 +1,5 @@
 /*      $NetBSD: if_atm.h,v 1.7 1996/11/09 23:02:27 chuck Exp $       */
-/* $FreeBSD: release/7.0.0/sys/net/if_atm.h 174854 2007-12-22 06:32:46Z cvs2svn $ */
+/* $FreeBSD$ */
 
 /*-
  *
@@ -293,7 +293,7 @@ void	atm_ifdetach(struct ifnet *);
 void	atm_input(struct ifnet *, struct atm_pseudohdr *,
 	    struct mbuf *, void *);
 int	atm_output(struct ifnet *, struct mbuf *, struct sockaddr *, 
-	    struct rtentry *);
+	    struct route *);
 struct atmio_vcctable *atm_getvccs(struct atmio_vcc **, u_int, u_int,
 	    struct mtx *, int);
 

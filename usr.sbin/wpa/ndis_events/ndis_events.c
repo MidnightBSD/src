@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/wpa/ndis_events/ndis_events.c 151541 2005-10-21 16:57:57Z wpaul $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This program simulates the behavior of the ndis_events utility
@@ -42,11 +42,9 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.sbin/wpa/ndis_events/ndis_events.c 151541 
  */
 
 #include <sys/types.h>
-#include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
-#include <sys/socket.h>
 #include <sys/errno.h>
 #include <sys/sysctl.h>
 #include <net/if.h>
@@ -93,7 +91,7 @@ struct ndis_evt {
 
 static int find_ifname(int, char *);
 static int announce_event(char *, int, struct sockaddr_in *);
-static void usage(char *);
+static void usage(void);
 
 static void
 dbgmsg(const char *fmt, ...)
@@ -262,10 +260,9 @@ announce_event(ifname, sock, dst)
 }
 
 static void
-usage(progname)
-	char			*progname;
+usage()
 {
-	fprintf(stderr, "Usage: ndis_events [-a] [-d] [-v]\n", progname);
+	fprintf(stderr, "Usage: ndis_events [-a] [-d] [-v]\n");
 	exit(1);
 }
 
@@ -294,7 +291,7 @@ main(argc, argv)
 			all_events++;
 			break;
 		default:
-			usage(PROGNAME);
+			usage();
 			break;
 		}
 	}

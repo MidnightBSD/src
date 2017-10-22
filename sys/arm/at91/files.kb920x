@@ -1,2 +1,0 @@
-#$FreeBSD: release/7.0.0/sys/arm/at91/files.kb920x 155324 2006-02-04 23:32:13Z imp $
-arm/at91/kb920x_machdep.c	standard

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/regression/ufs/uprintf/ufs_uprintf.c 150332 2005-09-19 16:29:36Z rwatson $
+ * $FreeBSD$
  */
 
 #include <err.h>

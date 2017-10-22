@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)time.h	8.5 (Berkeley) 5/4/95
- * $FreeBSD: release/7.0.0/sys/sys/time.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_TIME_H_
@@ -89,6 +89,25 @@ bintime_sub(struct bintime *bt, const struct bintime *bt2)
 		bt->sec--;
 	bt->sec -= bt2->sec;
 }
+
+static __inline void
+bintime_mul(struct bintime *bt, u_int x)
+{
+	uint64_t p1, p2;
+
+	p1 = (bt->frac & 0xffffffffull) * x;
+	p2 = (bt->frac >> 32) * x + (p1 >> 32);
+	bt->sec *= x;
+	bt->sec += (p2 >> 32);
+	bt->frac = (p2 << 32) | (p1 & 0xffffffffull);
+}
+
+#define	bintime_clear(a)	((a)->sec = (a)->frac = 0)
+#define	bintime_isset(a)	((a)->sec || (a)->frac)
+#define	bintime_cmp(a, b, cmp)						\
+	(((a)->sec == (b)->sec) ?					\
+	    ((a)->frac cmp (b)->frac) :					\
+	    ((a)->sec cmp (b)->sec))
 
 /*-
  * Background information:
@@ -246,6 +265,7 @@ struct clockinfo {
 #define CLOCK_MONOTONIC_PRECISE	11	/* FreeBSD-specific. */
 #define CLOCK_MONOTONIC_FAST	12	/* FreeBSD-specific. */
 #define CLOCK_SECOND	13		/* FreeBSD-specific. */
+#define CLOCK_THREAD_CPUTIME_ID	14
 #endif
 
 #ifndef TIMER_ABSTIME
@@ -254,8 +274,16 @@ struct clockinfo {
 #endif
 
 #ifdef _KERNEL
+
+/*
+ * Kernel to clock driver interface.
+ */
+void	inittodr(time_t base);
+void	resettodr(void);
+
 extern time_t	time_second;
 extern time_t	time_uptime;
+extern struct bintime boottimebin;
 extern struct timeval boottime;
 
 /*
@@ -275,7 +303,7 @@ extern struct timeval boottime;
  *
  * Functions with the "get" prefix returns a less precise result
  * much faster than the functions without "get" prefix and should
- * be used where a precision of 10 msec is acceptable or where
+ * be used where a precision of 1/hz seconds is acceptable or where
  * performance is priority. (NB: "precision", _not_ "resolution" !) 
  * 
  */
@@ -304,47 +332,31 @@ int	ratecheck(struct timeval *, const struct timeval *);
 void	timevaladd(struct timeval *t1, const struct timeval *t2);
 void	timevalsub(struct timeval *t1, const struct timeval *t2);
 int	tvtohz(struct timeval *tv);
-uint64_t	dtrace_gethrtime(void);
-uint64_t	dtrace_gethrestime(void);
 #else /* !_KERNEL */
 #include <time.h>
 
 #include <sys/cdefs.h>
+#include <sys/select.h>
 
 __BEGIN_DECLS
+int	setitimer(int, const struct itimerval *, struct itimerval *);
+int	utimes(const char *, const struct timeval *);
+
+#if __BSD_VISIBLE
 int	adjtime(const struct timeval *, struct timeval *);
 int	futimes(int, const struct timeval *);
+int	futimesat(int, const char *, const struct timeval [2]);
+int	lutimes(const char *, const struct timeval *);
+int	settimeofday(const struct timeval *, const struct timezone *);
+#endif
+
+#if __XSI_VISIBLE
 int	getitimer(int, struct itimerval *);
 int	gettimeofday(struct timeval *, struct timezone *);
-int	lutimes(const char *, const struct timeval *);
-int	setitimer(int, const struct itimerval *, struct itimerval *);
-int	settimeofday(const struct timeval *, const struct timezone *);
-int	utimes(const char *, const struct timeval *);
+#endif
+
 __END_DECLS
 
 #endif /* !_KERNEL */
-
-/*
- * Solaris compatibility definitions.
- */
-#ifdef _SOLARIS_C_SOURCE
-/*
- *  Definitions for commonly used resolutions.
- */
-#define SEC		1
-#define MILLISEC	1000
-#define MICROSEC	1000000
-#define NANOSEC		1000000000
-
-typedef longlong_t	hrtime_t;
-
-#ifndef _KERNEL
-static __inline hrtime_t gethrtime(void) {
-	struct timespec ts;
-	clock_gettime(CLOCK_UPTIME,&ts);
-	return (((u_int64_t) ts.tv_sec) * NANOSEC + ts.tv_nsec);
-}
-#endif
-#endif /* _SOLARIS_C_SOURCE */
 
 #endif /* !_SYS_TIME_H_ */

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/efi/libefi/efinet.c 164010 2006-11-05 22:03:04Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <netinet/in.h>
@@ -262,6 +262,7 @@ efinet_dev_init()
 	int err, i, nifs;
 
 	sz = 0;
+	handles = NULL;
 	status = BS->LocateHandle(ByProtocol, &sn_guid, 0, &sz, 0);
 	if (status == EFI_BUFFER_TOO_SMALL) {
 		handles = (EFI_HANDLE *)malloc(sz);

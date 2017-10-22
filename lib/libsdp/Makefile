@@ -1,5 +1,5 @@
 # $Id: Makefile,v 1.2 2003/09/07 20:34:19 max Exp $
-# $FreeBSD: release/7.0.0/lib/libsdp/Makefile 169807 2007-05-21 02:49:08Z deischen $
+# $FreeBSD$
 
 LIB=		sdp
 MAN=		sdp.3
@@ -7,7 +7,7 @@ MAN=		sdp.3
 WARNS?=		2
 CFLAGS+=	-I${.CURDIR}
 
-SHLIB_MAJOR=	3
+SHLIB_MAJOR=	4
 
 SRCS=		search.c service.c session.c util.c
 INCS=		sdp.h

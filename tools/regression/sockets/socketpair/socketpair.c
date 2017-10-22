@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/regression/sockets/socketpair/socketpair.c 168278 2007-04-02 19:15:47Z jhb $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

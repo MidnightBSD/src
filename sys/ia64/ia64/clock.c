@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005 Marcel Moolenaar
+ * Copyright (c) 2005, 2009-2011 Marcel Moolenaar
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,26 +25,34 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/clock.c 171719 2007-08-04 19:28:19Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
-#include <sys/clock.h>
+#include <sys/bus.h>
+#include <sys/interrupt.h>
+#include <sys/priority.h>
+#include <sys/proc.h>
 #include <sys/queue.h>
 #include <sys/sysctl.h>
 #include <sys/systm.h>
-#include <sys/bus.h>
-#include <sys/clock.h>
+#include <sys/timeet.h>
 #include <sys/timetc.h>
 #include <sys/pcpu.h>
 
-#include <machine/clock.h>
 #include <machine/cpu.h>
 #include <machine/efi.h>
+#include <machine/intr.h>
+#include <machine/intrcnt.h>
+#include <machine/md_var.h>
+#include <machine/smp.h>
 
-uint64_t ia64_clock_reload;
+#define	CLOCK_ET_OFF		0
+#define	CLOCK_ET_PERIODIC	1
+#define	CLOCK_ET_ONESHOT	2
 
-static int clock_initialized = 0;
+static struct eventtimer ia64_clock_et;
+static u_int ia64_clock_xiv;
 
 #ifndef SMP
 static timecounter_get_t ia64_get_timecount;
@@ -57,146 +65,138 @@ static struct timecounter ia64_timecounter = {
 	"ITC"			/* name */
 };
 
-static unsigned
+static u_int
 ia64_get_timecount(struct timecounter* tc)
 {
 	return ia64_get_itc();
 }
 #endif
 
-void
-pcpu_initclock(void)
+static u_int
+ia64_ih_clock(struct thread *td, u_int xiv, struct trapframe *tf)
 {
+	struct eventtimer *et;
+	uint64_t itc, load;
+	uint32_t mode;
 
-	PCPU_SET(clockadj, 0);
-	PCPU_SET(clock, ia64_get_itc());
-	ia64_set_itm(PCPU_GET(clock) + ia64_clock_reload);
-	ia64_set_itv(CLOCK_VECTOR);	/* highest priority class */
+	PCPU_INC(md.stats.pcs_nclks);
+	intrcnt[INTRCNT_CLOCK]++;
+
+	itc = ia64_get_itc();
+	PCPU_SET(md.clock, itc);
+
+	mode = PCPU_GET(md.clock_mode);
+	if (mode == CLOCK_ET_PERIODIC) {
+		load = PCPU_GET(md.clock_load);
+		ia64_set_itm(itc + load);
+	} else
+		ia64_set_itv((1 << 16) | xiv);
+
+	ia64_set_eoi(0);
 	ia64_srlz_d();
+
+	et = &ia64_clock_et;
+	if (et->et_active)
+		et->et_event_cb(et, et->et_arg);
+	return (1);
 }
 
 /*
- * Start the real-time and statistics clocks. We use cr.itc and cr.itm
- * to implement a 1000hz clock.
+ * Event timer start method.
+ */
+static int
+ia64_clock_start(struct eventtimer *et, struct bintime *first,
+    struct bintime *period)
+{
+	u_long itc, load;
+	register_t is;
+
+	if (period != NULL) {
+		PCPU_SET(md.clock_mode, CLOCK_ET_PERIODIC);
+		load = (et->et_frequency * (period->frac >> 32)) >> 32;
+		if (period->sec > 0)
+			load += et->et_frequency * period->sec;
+	} else {
+		PCPU_SET(md.clock_mode, CLOCK_ET_ONESHOT);
+		load = 0;
+	}
+
+	PCPU_SET(md.clock_load, load);
+
+	if (first != NULL) {
+		load = (et->et_frequency * (first->frac >> 32)) >> 32;
+		if (first->sec > 0)
+			load += et->et_frequency * first->sec;
+	}
+
+	is = intr_disable();
+	itc = ia64_get_itc();
+	ia64_set_itm(itc + load);
+	ia64_set_itv(ia64_clock_xiv);
+	ia64_srlz_d();
+	intr_restore(is);
+	return (0);
+}
+
+/*
+ * Event timer stop method.
+ */
+static int
+ia64_clock_stop(struct eventtimer *et)
+{
+
+	ia64_set_itv((1 << 16) | ia64_clock_xiv);
+	ia64_srlz_d();
+	PCPU_SET(md.clock_mode, CLOCK_ET_OFF);
+	PCPU_SET(md.clock_load, 0);
+	return (0);
+}
+
+/*
+ * We call cpu_initclocks() on the APs as well. It allows us to
+ * group common initialization in the same function.
  */
 void
 cpu_initclocks()
 {
 
-	if (itc_frequency == 0)
-		panic("Unknown clock frequency");
+	ia64_clock_stop(NULL);
+	if (PCPU_GET(cpuid) == 0)
+		cpu_initclocks_bsp();
+	else
+		cpu_initclocks_ap();
+}
 
-	stathz = hz;
-	ia64_clock_reload = (itc_frequency + hz/2) / hz;
+static void
+clock_configure(void *dummy)
+{
+	struct eventtimer *et;
+	u_long itc_freq;
+
+	ia64_clock_xiv = ia64_xiv_alloc(PI_REALTIME, IA64_XIV_IPI,
+	    ia64_ih_clock);
+	if (ia64_clock_xiv == 0)
+		panic("No XIV for clock interrupts");
+
+	itc_freq = (u_long)ia64_itc_freq() * 1000000ul;
+
+	et = &ia64_clock_et;
+	et->et_name = "ITC";
+	et->et_flags = ET_FLAGS_PERIODIC | ET_FLAGS_ONESHOT | ET_FLAGS_PERCPU;
+	et->et_quality = 1000;
+	et->et_frequency = itc_freq;
+	et->et_min_period.sec = 0;
+	et->et_min_period.frac = (0x8000000000000000ul / (u_long)(10*hz)) << 1;
+	et->et_max_period.sec = 0xffffffff;
+	et->et_max_period.frac = ((0xfffffffeul << 32) / itc_freq) << 32;
+	et->et_start = ia64_clock_start;
+	et->et_stop = ia64_clock_stop;
+	et->et_priv = NULL;
+	et_register(et);
 
 #ifndef SMP
-	ia64_timecounter.tc_frequency = itc_frequency;
+	ia64_timecounter.tc_frequency = itc_freq;
 	tc_init(&ia64_timecounter);
 #endif
-
-	pcpu_initclock();
 }
-
-void
-cpu_startprofclock(void)
-{
-
-	/* nothing to do */
-}
-
-void
-cpu_stopprofclock(void)
-{
-
-	/* nothing to do */
-}
-
-void
-inittodr(time_t base)
-{
-	long days;
-	struct efi_tm tm;
-	struct timespec ts;
-	struct clocktime ct;
-
-	efi_get_time(&tm);
-
-	/*
-	 * This code was written in 2005, so logically EFI cannot return
-	 * a year smaller than that. Assume the EFI clock is out of whack
-	 * in that case and reset the EFI clock.
-	 */
-	if (tm.tm_year < 2005) {
-		printf("WARNING: CHECK AND RESET THE DATE!\n");
-		memset(&tm, 0, sizeof(tm));
-		tm.tm_year = 2005;
-		tm.tm_mon = tm.tm_mday = 1;
-		if (efi_set_time(&tm))
-			printf("ERROR: COULD NOT RESET EFI CLOCK!\n");
-	}
-
-	ct.nsec = tm.tm_nsec;
-	ct.sec = tm.tm_sec;
-	ct.min = tm.tm_min;
-	ct.hour = tm.tm_hour;
-	ct.day = tm.tm_mday;
-	ct.mon = tm.tm_mon;
-	ct.year = tm.tm_year;
-	ct.dow = -1;
-	if (clock_ct_to_ts(&ct, &ts))
-		printf("Invalid time in clock: check and reset the date!\n");
-	ts.tv_sec += utc_offset();
-
-	/*
-	 * The EFI clock is supposed to be a real-time clock, whereas the
-	 * base argument is coming from a saved (as on disk) time. It's
-	 * impossible for a saved time to represent a time in the future,
-	 * so we expect the EFI clock to be larger. If not, the EFI clock
-	 * may not be reliable and we trust the base.
-	 * Warn if the EFI clock was off by 2 or more days.
-	 */
-	if (ts.tv_sec < base) {
-		days = (base - ts.tv_sec) / (60L * 60L * 24L);
-		if (days >= 2)
-			printf("WARNING: EFI clock lost %ld days!\n", days);
-		ts.tv_sec = base;
-		ts.tv_nsec = 0;
-	}
-
-	tc_setclock(&ts);
-	clock_initialized = 1;
-}
-
-/*
- * Reset the TODR based on the time value; used when the TODR has a
- * preposterous value and also when the time is reset by the stime
- * system call.  Also called when the TODR goes past
- * TODRZERO + 100*(SECYEAR+2*SECDAY) (e.g. on Jan 2 just after midnight)
- * to wrap the TODR around.
- */
-void
-resettodr()
-{
-	struct timespec ts;
-	struct clocktime ct;
-	struct efi_tm tm;
-
-	if (!clock_initialized || disable_rtc_set)
-		return;
-
-	efi_get_time(&tm);
-	getnanotime(&ts);
-	ts.tv_sec -= utc_offset();
-	clock_ts_to_ct(&ts, &ct);
-
-	tm.tm_nsec = ts.tv_nsec;
-	tm.tm_sec = ct.sec;
-	tm.tm_min = ct.min;
-	tm.tm_hour = ct.hour;
-
-	tm.tm_year = ct.year;
-	tm.tm_mon = ct.mon;
-	tm.tm_mday = ct.day;
-	if (efi_set_time(&tm))
-		printf("ERROR: COULD NOT RESET EFI CLOCK!\n");
-}
+SYSINIT(clkcfg, SI_SUB_CONFIGURE, SI_ORDER_SECOND, clock_configure, NULL);

@@ -1,12 +1,12 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: release/7.0.0/sbin/route/Makefile 160747 2006-07-27 13:26:29Z yar $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
 PROG=	route
 MAN=	route.8
 SRCS=	route.c keywords.h
-WARNS?=	0
+WARNS?=	3
 CLEANFILES+=keywords.h _keywords.tmp
 
 CFLAGS+= -DNS

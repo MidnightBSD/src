@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/7.0.0/tools/tools/mfc/mfc.pl 171344 2007-07-10 15:30:15Z flz $
+# $FreeBSD$
 #
 
 # This perl scripts only uses programs that are part of the base system.
@@ -51,6 +51,7 @@ use warnings;
 use Env;
 use Env qw(MFCHOME MFCLOGIN MFCCVSROOT);
 use Getopt::Std;
+use IO::Handle;
 
 my $mfchome = $MFCHOME ? $MFCHOME : "/var/tmp/mfc";
 my $mfclogin = $MFCLOGIN ? $MFCLOGIN : "";
@@ -77,6 +78,10 @@ my $mfc_func = \&mfc_headers;
 
 sub init()
 {
+	# Enable autoflush of output to always show prompts.  Without this,
+	# piping output will fail to display a prompt.
+	autoflush STDOUT 1;
+
 	# Look for pre-requisites.
 	my @reqs = ( "fetch", "cvs", "mkdir", "cat", "chmod", "grep" );
 	my $cmd;

@@ -1,4 +1,4 @@
-$FreeBSD: release/7.0.0/gnu/usr.bin/sdiff/sdiff.c.diff 170758 2007-06-15 07:09:34Z delphij $
+$FreeBSD$
 --- sdiff.c.orig	2004-04-12 15:44:35.000000000 +0800
 +++ sdiff.c	2007-06-15 14:53:08.790433972 +0800
 @@ -455,7 +455,6 @@

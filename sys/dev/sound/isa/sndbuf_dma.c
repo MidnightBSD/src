@@ -24,11 +24,15 @@
  * SUCH DAMAGE.
  */
 
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
+
 #include <dev/sound/pcm/sound.h>
 
 #include <isa/isavar.h>
 
-SND_DECLARE_FILE("$FreeBSD: release/7.0.0/sys/dev/sound/isa/sndbuf_dma.c 139749 2005-01-06 01:43:34Z imp $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 int
 sndbuf_dmasetup(struct snd_dbuf *b, struct resource *drq)

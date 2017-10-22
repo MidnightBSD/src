@@ -1,24 +1,22 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/ntpd 157840 2006-04-18 15:02:24Z flz $
+# $FreeBSD$
 #
 
 # PROVIDE: ntpd
 # REQUIRE: DAEMON ntpdate cleanvar devfs
 # BEFORE:  LOGIN
-# KEYWORD: nojail
+# KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 
-name=ntpd
-rcvar=`set_rcvar`
+name="ntpd"
+rcvar="ntpd_enable"
 command="/usr/sbin/${name}"
 pidfile="/var/run/${name}.pid"
 start_precmd="ntpd_precmd"
 
 load_rc_config $name
-
-required_files="${ntpd_config}"
 
 ntpd_precmd()
 {

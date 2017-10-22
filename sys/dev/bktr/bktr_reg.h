@@ -1,5 +1,5 @@
 /*-
- * $FreeBSD: release/7.0.0/sys/dev/bktr/bktr_reg.h 146587 2005-05-24 20:42:08Z cognet $
+ * $FreeBSD$
  *
  * Copyright (c) 1999 Roger Hardiman
  * Copyright (c) 1998 Amancio Hasty

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/inetd/inetd.h 162305 2006-09-14 08:36:53Z ru $
+ * $FreeBSD$
  */
 
 #include <sys/time.h>
@@ -109,7 +109,7 @@ struct	servtab {
 	u_int	se_rpc_lowvers;		/* RPC low version */
 	u_int	se_rpc_highvers;	/* RPC high version */
 	int	se_count;		/* number started since se_time */
-	struct	timeval se_time;	/* start of se_count */
+	struct	timespec se_time;	/* start of se_count */
 	struct	servtab *se_next;
 	struct se_flags {
 		u_int se_nomapped : 1;

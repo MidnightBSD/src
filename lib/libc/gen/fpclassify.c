@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libc/gen/fpclassify.c 141379 2005-02-06 03:23:31Z das $
+ * $FreeBSD$
  */
 
 #include <sys/endian.h>

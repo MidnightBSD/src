@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/random 167185 2007-03-03 06:39:06Z njl $
+# $FreeBSD$
 #
 
 # PROVIDE: random

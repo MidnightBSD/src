@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/nfe/Makefile 163962 2006-11-03 21:41:19Z ru $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/nfe
 

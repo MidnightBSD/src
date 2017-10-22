@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/fs/ntfs/ntfs_inode.h 130585 2004-06-16 09:47:26Z phk $
+ * $FreeBSD$
  */
 
 /* These flags are kept in i_flag. */

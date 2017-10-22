@@ -23,7 +23,7 @@
 .\" IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man5/portsnap.conf.5 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
 .Dd January 30, 2005
 .Dt PORTSNAP.CONF 5
@@ -47,7 +47,8 @@ specifies the source from which snapshots should be fetched.
 This is equivalent to the
 .Fl s Ar server
 option to
-.Xr portsnap 8 , and will be ignored if the command-line
+.Xr portsnap 8 ,
+and will be ignored if the command-line
 option is used.
 .Pp
 A line of the form
@@ -58,7 +59,8 @@ belonging to an RSA keypair which is trusted to sign updates.
 This is equivalent to the
 .Fl k Ar KEY
 option to
-.Xr portsnap 8 , and will be ignored if the command-line
+.Xr portsnap 8 ,
+and will be ignored if the command-line
 option is used.
 .Pp
 A line of the form
@@ -68,7 +70,8 @@ snapshot of the ports tree.
 This is equivalent to the
 .Fl d Ar workdir
 option to
-.Xr portsnap 8 , and will be ignored if the command-line option
+.Xr portsnap 8 ,
+and will be ignored if the command-line option
 is used.
 .Pp
 A line of the form
@@ -82,12 +85,20 @@ commands.
 This is equivalent to the
 .Fl p Ar portsdir
 option to
-.Xr portsnap 8 , and will be ignored if the command-line option
+.Xr portsnap 8 ,
+and will be ignored if the command-line option
 is used.
 .Pp
 If more than one line of any of the above forms is included in
 .Nm
 then only the last one will take effect.
+.Pp
+A line of the form
+.Dl INDEX INDEXFILE DESCRIBEFILE
+will instruct
+.Xr portsnap 8
+that the specified INDEX file is generated from the specified
+describe file distributed by the portsnap server.
 .Pp
 Finally, a line of the form
 .Dl REFUSE foo bar

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)options.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: release/7.0.0/bin/sh/options.h 127958 2004-04-06 20:06:54Z markm $
+ * $FreeBSD$
  */
 
 struct shparam {
@@ -62,8 +62,9 @@ struct shparam {
 #define	privileged optlist[15].val
 #define	Tflag optlist[16].val
 #define	Pflag optlist[17].val
+#define	hflag optlist[18].val
 
-#define NOPTS	18
+#define NOPTS	19
 
 struct optent {
 	const char *name;
@@ -91,6 +92,7 @@ struct optent optlist[NOPTS] = {
 	{ "privileged",	'p',	0 },
 	{ "trapsasync",	'T',	0 },
 	{ "physical",	'P',	0 },
+	{ "trackall",	'h',	0 },
 };
 #else
 extern struct optent optlist[NOPTS];
@@ -102,14 +104,11 @@ extern char *arg0;		/* $0 */
 extern struct shparam shellparam;  /* $@ */
 extern char **argptr;		/* argument list for builtin commands */
 extern char *shoptarg;		/* set by nextopt */
-extern char *optptr;		/* used by nextopt */
+extern char *nextopt_optptr;	/* used by nextopt */
 
 void procargs(int, char **);
 void optschanged(void);
 void setparam(char **);
 void freeparam(struct shparam *);
-int shiftcmd(int, char **);
-int setcmd(int, char **);
-int getoptscmd(int, char **);
-int nextopt(char *);
+int nextopt(const char *);
 void getoptsreset(const char *);

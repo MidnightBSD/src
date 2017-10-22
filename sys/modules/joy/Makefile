@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/joy/Makefile 129740 2004-05-26 00:53:10Z imp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/joy
 

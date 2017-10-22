@@ -1,5 +1,5 @@
 char rcsid[] =
-  "$FreeBSD: release/7.0.0/gnu/usr.bin/patch/patch.c 105017 2002-10-13 01:18:33Z kris $";
+  "$FreeBSD$";
 
 /* patch - a program to apply diffs to original files
  *
@@ -154,6 +154,11 @@ char **argv;
     setbuf(stderr, serrbuf);
     for (i = 0; i<MAXFILEC; i++)
 	filearg[i] = Nullch;
+
+    buf_size = INITLINELEN;
+    buf = malloc((MEM)(buf_size));
+    if (buf == Nullch)
+	fatal1("out of memory\n");
 
     myuid = getuid();
 

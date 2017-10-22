@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/efi/libefi/libefi.c 163929 2006-11-03 04:19:31Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <efi.h>
 #include <efilib.h>
@@ -92,7 +92,7 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 	BS = ST->BootServices;
 	RS = ST->RuntimeServices;
 
-	heapsize = 512*1024;
+	heapsize = 2 * 1024 * 1024;
 	status = BS->AllocatePages(AllocateAnyPages, EfiLoaderData,
 	    EFI_SIZE_TO_PAGES(heapsize), &heap);
 	if (status != EFI_SUCCESS)

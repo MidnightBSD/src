@@ -26,33 +26,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_spec.c 173922 2007-11-26 02:44:05Z davidxu $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <pthread.h>
-
+#include "un-namespace.h"
 #include "thr_private.h"
 
 
 struct pthread_key _thread_keytable[PTHREAD_KEYS_MAX];
-
-/*
- * XXX - This breaks the linker if LT10_COMPAT_DEFAULT doesn't
- * also include a weak reference to the default symbol.
- */
-LT10_COMPAT_PRIVATE(_thread_keytable);
-
-LT10_COMPAT_PRIVATE(_pthread_key_create);
-LT10_COMPAT_DEFAULT(pthread_key_create);
-LT10_COMPAT_PRIVATE(_pthread_key_delete);
-LT10_COMPAT_DEFAULT(pthread_key_delete);
-LT10_COMPAT_PRIVATE(_pthread_getspecific);
-LT10_COMPAT_DEFAULT(pthread_getspecific);
-LT10_COMPAT_PRIVATE(_pthread_setspecific);
-LT10_COMPAT_DEFAULT(pthread_setspecific);
 
 __weak_reference(_pthread_key_create, pthread_key_create);
 __weak_reference(_pthread_key_delete, pthread_key_delete);
@@ -117,8 +104,8 @@ void
 _thread_cleanupspecific(void)
 {
 	struct pthread	*curthread = _get_curthread();
-	void		(*destructor)( void *);
-	void		*data = NULL;
+	const_key_destructor_t destructor;
+	const void	*data = NULL;
 	int		key;
 	int		i;
 
@@ -137,9 +124,9 @@ _thread_cleanupspecific(void)
 			    (curthread->specific[key].data != NULL)) {
 				if (curthread->specific[key].seqno ==
 				    _thread_keytable[key].seqno) {
-					data = (void *)
-					    curthread->specific[key].data;
-					destructor = _thread_keytable[key].destructor;
+					data = curthread->specific[key].data;
+					destructor = (const_key_destructor_t)
+					    _thread_keytable[key].destructor;
 				}
 				curthread->specific[key].data = NULL;
 				curthread->specific_data_count--;
@@ -201,7 +188,7 @@ _pthread_setspecific(pthread_key_t key, const void *value)
 						pthread->specific_data_count++;
 				} else if (value == NULL)
 					pthread->specific_data_count--;
-				pthread->specific[key].data = value;
+				*(const void **)&pthread->specific[key].data = value;
 				pthread->specific[key].seqno =
 				    _thread_keytable[key].seqno;
 				ret = 0;
@@ -229,7 +216,7 @@ _pthread_getspecific(pthread_key_t key)
 		if (_thread_keytable[key].allocated &&
 		    (pthread->specific[key].seqno == _thread_keytable[key].seqno)) {
 			/* Return the value: */
-			data = (void *) pthread->specific[key].data;
+			data = pthread->specific[key].data;
 		} else {
 			/*
 			 * This key has not been used before, so return NULL

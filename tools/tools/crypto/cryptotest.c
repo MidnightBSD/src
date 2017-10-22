@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/7.0.0/tools/tools/crypto/cryptotest.c 167755 2007-03-21 03:42:51Z sam $
+ * $FreeBSD$
  */
 
 /*
@@ -93,6 +93,7 @@
 #include <sys/mman.h>
 #include <paths.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <sys/sysctl.h>
 #include <sys/time.h>
@@ -249,7 +250,7 @@ runtest(struct alg *alg, int count, int size, u_long cmd, struct timeval *tv)
 	char *cleartext, *ciphertext, *originaltext;
 	struct session2_op sop;
 	struct crypt_op cop;
-	char iv[8];
+	char iv[EALG_MAX_BLOCK_LEN];
 
 	bzero(&sop, sizeof(sop));
 	if (!alg->ishash) {

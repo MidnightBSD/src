@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/bin/csh/iconv_stub.c 155835 2006-02-19 06:40:29Z ume $
+ * $FreeBSD$
  */
 
 #include <dlfcn.h>
@@ -61,9 +61,20 @@ dl_iconv_open(const char *tocode, const char *fromcode)
 		if (iconvlib == NULL)
 			return (iconv_t)-1;
 		iconv_open = (iconv_open_t *)dlfunc(iconvlib, ICONV_OPEN);
+		if (iconv_open == NULL)
+			goto dlfunc_err;
 		dl_iconv = (dl_iconv_t *)dlfunc(iconvlib, ICONV_ENGINE);
+		if (dl_iconv == NULL)
+			goto dlfunc_err;
 		dl_iconv_close = (dl_iconv_close_t *)dlfunc(iconvlib,
 		    ICONV_CLOSE);
+		if (dl_iconv_close == NULL)
+			goto dlfunc_err;
 	}
 	return iconv_open(tocode, fromcode);
+
+dlfunc_err:
+	dlclose(iconvlib);
+	iconvlib = NULL;
+	return (iconv_t)-1;
 }

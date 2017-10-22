@@ -1,17 +1,16 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/ipfilter 175737 2008-01-28 07:58:32Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: ipfilter
 # REQUIRE: FILESYSTEMS
-# BEFORE:  netif
 # KEYWORD: nojail
 
 . /etc/rc.subr
 
 name="ipfilter"
-rcvar=`set_rcvar`
+rcvar="ipfilter_enable"
 load_rc_config $name
 stop_precmd="test -f ${ipfilter_rules} -o -f ${ipv6_ipfilter_rules}"
 
@@ -24,7 +23,7 @@ resync_precmd="$stop_precmd"
 resync_cmd="ipfilter_resync"
 status_precmd="$stop_precmd"
 status_cmd="ipfilter_status"
-extra_commands="reload resync status"
+extra_commands="reload resync"
 required_modules="ipl:ipfilter"
 
 ipfilter_start()

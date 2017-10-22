@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-#	$FreeBSD: release/7.0.0/share/man/man5/Makefile 174854 2007-12-22 06:32:46Z cvs2svn $
+#	$FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -46,15 +46,19 @@ MAN=	acct.5 \
 	networks.5 \
 	nsmb.conf.5 \
 	nsswitch.conf.5 \
+	nullfs.5 \
 	passwd.5 \
 	pbm.5 \
 	periodic.conf.5 \
 	phones.5 \
+	portindex.5 \
 	portsnap.conf.5 \
 	procfs.5 \
 	protocols.5 \
 	quota.user.5 \
 	rc.conf.5 \
+	rctl.conf.5 \
+	regdomain.5 \
 	reiserfs.5 \
 	remote.5 \
 	resolver.5 \
@@ -65,7 +69,6 @@ MAN=	acct.5 \
 	style.Makefile.5 \
 	sysctl.conf.5 \
 	tmpfs.5 \
-	utmp.5 \
 	xfs.5
 
 MLINKS=	dir.5 dirent.5
@@ -76,13 +79,12 @@ MLINKS+=passwd.5 master.passwd.5
 MLINKS+=quota.user.5 quota.group.5
 MLINKS+=rc.conf.5 rc.conf.local.5
 MLINKS+=resolver.5 resolv.conf.5
-MLINKS+=utmp.5 lastlog.5 utmp.5 wtmp.5
 
 .if ${MK_HESIOD} != "no"
 MAN+=	hesiod.conf.5 
 .endif
 
-.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
+.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
 _boot.config.5=	boot.config.5
 .endif
 

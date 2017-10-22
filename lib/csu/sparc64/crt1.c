@@ -30,6 +30,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
 #ifndef lint
 #ifndef __GNUC__
 #error "GCC is needed to compile this file"
@@ -50,8 +53,6 @@ extern int _DYNAMIC;
 extern void _fini(void);
 extern void _init(void);
 extern int main(int, char **, char **);
-extern void _start(char **, void (*)(void), struct Struct_Obj_Entry *,
-    struct ps_strings *);
 extern void __sparc_utrap_setup(void);
 
 #ifdef GCRT
@@ -63,6 +64,9 @@ extern int etext;
 
 char **environ;
 const char *__progname = "";
+
+void _start(char **, void (*)(void), struct Struct_Obj_Entry *,
+    struct ps_strings *);
 
 /* The entry function. */
 /*
@@ -120,5 +124,3 @@ __asm__(".text");
 __asm__("eprol:");
 __asm__(".previous");
 #endif
-
-__asm__(".ident\t\"$FreeBSD: release/7.0.0/lib/csu/sparc64/crt1.c 163118 2006-10-08 02:50:34Z kmacy $\"");

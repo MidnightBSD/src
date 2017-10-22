@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/arm/at91/hints.at91sam9261 155324 2006-02-04 23:32:13Z imp $
+# $FreeBSD$
 #
 
 # These are the wiring for the at91sam9261.  These are the built-in devices

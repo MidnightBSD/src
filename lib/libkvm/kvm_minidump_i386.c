@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libkvm/kvm_minidump_i386.c 159246 2006-06-05 08:51:14Z delphij $");
+__FBSDID("$FreeBSD$");
 
 /*
  * AMD64 machine dependent routines for kvm and minidumps. 
@@ -37,7 +37,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libkvm/kvm_minidump_i386.c 159246 2006-06-
 #include <sys/mman.h>
 #include <sys/fnv_hash.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <unistd.h>
 #include <nlist.h>
 #include <kvm.h>
@@ -138,7 +138,6 @@ _kvm_minidump_freevtop(kvm_t *kd)
 int
 _kvm_minidump_initvtop(kvm_t *kd)
 {
-	u_long pa;
 	struct vmstate *vmst;
 	off_t off;
 
@@ -148,7 +147,6 @@ _kvm_minidump_initvtop(kvm_t *kd)
 		return (-1);
 	}
 	kd->vmst = vmst;
-	bzero(vmst, sizeof(*vmst));
 	vmst->minidump = 1;
 	if (pread(kd->pmfd, &vmst->hdr, sizeof(vmst->hdr), 0) !=
 	    sizeof(vmst->hdr)) {
@@ -174,7 +172,7 @@ _kvm_minidump_initvtop(kvm_t *kd)
 		return (-1);
 	}
 	if (pread(kd->pmfd, vmst->bitmap, vmst->hdr.bitmapsize, off) !=
-	    vmst->hdr.bitmapsize) {
+	    (ssize_t)vmst->hdr.bitmapsize) {
 		_kvm_err(kd, kd->program, "cannot read %d bytes for page bitmap", vmst->hdr.bitmapsize);
 		return (-1);
 	}
@@ -186,7 +184,7 @@ _kvm_minidump_initvtop(kvm_t *kd)
 		return (-1);
 	}
 	if (pread(kd->pmfd, vmst->ptemap, vmst->hdr.ptesize, off) !=
-	    vmst->hdr.ptesize) {
+	    (ssize_t)vmst->hdr.ptesize) {
 		_kvm_err(kd, kd->program, "cannot read %d bytes for ptemap", vmst->hdr.ptesize);
 		return (-1);
 	}
@@ -205,7 +203,6 @@ _kvm_minidump_vatop_pae(kvm_t *kd, u_long va, off_t *pa)
 	uint64_t offset;
 	uint64_t pte;
 	u_long pteindex;
-	int i;
 	uint64_t a;
 	off_t ofs;
 	uint64_t *ptemap;
@@ -246,7 +243,6 @@ _kvm_minidump_vatop(kvm_t *kd, u_long va, off_t *pa)
 	u_long offset;
 	pt_entry_t pte;
 	u_long pteindex;
-	int i;
 	u_long a;
 	off_t ofs;
 	uint32_t *ptemap;

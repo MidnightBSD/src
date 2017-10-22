@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)vmparam.h	5.9 (Berkeley) 5/12/91
- * $FreeBSD: release/7.0.0/sys/i386/include/vmparam.h 172317 2007-09-25 06:25:06Z alc $
+ * $FreeBSD$
  */
 
 
@@ -42,10 +42,6 @@
 /*
  * Machine dependent constants for 386.
  */
-
-#ifndef PAE
-#define VM_PROT_READ_IS_EXEC	/* if you can read -- then you can exec */
-#endif
 
 /*
  * Virtual memory related constants, all in bytes
@@ -66,18 +62,6 @@
 #ifndef SGROWSIZ
 #define SGROWSIZ	(128UL*1024)		/* amount to grow stack */
 #endif
-
-/*
- * The time for a process to be blocked before being very swappable.
- * This is a number of seconds which the system takes as being a non-trivial
- * amount of real time.  You probably shouldn't change this;
- * it is used in subtle ways (fractions and multiples of it are, that is, like
- * half of a ``long time'', almost a long time, etc.)
- * It is related to human patience and other factors which don't really
- * change over time.
- */
-#define	MAXSLP 		20
-
 
 /*
  * The physical address space is densely populated.
@@ -123,11 +107,41 @@
 #endif
 
 /*
+ * Only one memory domain.
+ */
+#ifndef VM_NDOMAIN
+#define	VM_NDOMAIN		1
+#endif
+
+/*
+ * Enable superpage reservations: 1 level.
+ */
+#ifndef	VM_NRESERVLEVEL
+#define	VM_NRESERVLEVEL		1
+#endif
+
+/*
+ * Level 0 reservations consist of 512 pages under PAE and 1024 pages
+ * otherwise.
+ */
+#ifndef	VM_LEVEL_0_ORDER
+#ifdef PAE
+#define	VM_LEVEL_0_ORDER	9
+#else
+#define	VM_LEVEL_0_ORDER	10
+#endif
+#endif
+
+/*
  * Kernel physical load address.
  */
 #ifndef KERNLOAD
+#if defined(XEN) && !defined(XEN_PRIVILEGED_GUEST)
+#define	KERNLOAD		0
+#else
 #define	KERNLOAD		(1 << PDRSHIFT)
 #endif
+#endif /* !defined(KERNLOAD) */
 
 /*
  * Virtual addresses of things.  Derived from the page directory and
@@ -136,7 +150,12 @@
  * messy at times, but hey, we'll do anything to save a page :-)
  */
 
+#ifdef XEN
+#define VM_MAX_KERNEL_ADDRESS	HYPERVISOR_VIRT_START
+#else
 #define VM_MAX_KERNEL_ADDRESS	VADDR(KPTDI+NKPDE-1, NPTEPG-1)
+#endif
+
 #define VM_MIN_KERNEL_ADDRESS	VADDR(PTDPTDI, PTDPTDI)
 
 #define	KERNBASE		VADDR(KPTDI, 0)
@@ -167,15 +186,19 @@
 #endif
 
 /*
- * Ceiling on amount of kmem_map kva space.
+ * Ceiling on the amount of kmem_map KVA space: 40% of the entire KVA space
+ * rounded to the nearest multiple of the superpage size.
  */
 #ifndef VM_KMEM_SIZE_MAX
-#define	VM_KMEM_SIZE_MAX	(320 * 1024 * 1024)
+#define	VM_KMEM_SIZE_MAX	(((((VM_MAX_KERNEL_ADDRESS - \
+    VM_MIN_KERNEL_ADDRESS) >> (PDRSHIFT - 2)) + 5) / 10) << PDRSHIFT)
 #endif
 
 /* initial pagein size of beginning of executable file */
 #ifndef VM_INITIAL_PAGEIN
 #define	VM_INITIAL_PAGEIN	16
 #endif
+
+#define	ZERO_REGION_SIZE	(64 * 1024)	/* 64KB */
 
 #endif /* _MACHINE_VMPARAM_H_ */

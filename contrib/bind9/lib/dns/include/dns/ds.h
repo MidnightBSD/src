@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2002  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ds.h,v 1.3.20.5 2006/02/22 23:50:09 marka Exp $ */
+/* $Id: ds.h,v 1.12 2010/12/23 23:47:08 tbox Exp $ */
 
 #ifndef DNS_DS_H
 #define DNS_DS_H 1
@@ -26,6 +26,11 @@
 
 #define DNS_DSDIGEST_SHA1 (1)
 #define DNS_DSDIGEST_SHA256 (2)
+#define DNS_DSDIGEST_GOST (3)
+
+/* should not be here... */
+
+#define ISC_GOST_DIGESTLENGTH 32U
 
 /*
  * Assuming SHA-256 digest type.

@@ -32,9 +32,9 @@
 .\"
 .\" Author: Archie Cobbs <archie@FreeBSD.org>
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man4/ng_one2many.4 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
-.Dd February 19, 2006
+.Dd March 1, 2011
 .Dt NG_ONE2MANY 4
 .Os
 .Sh NAME
@@ -94,6 +94,10 @@ Packets are delivered out all the
 .Dv many
 hooks.
 Each packet goes out each
+.Dv many
+hook.
+.It Dv NG_ONE2MANY_XMIT_FAILOVER
+Packets are delivered out the first active
 .Dv many
 hook.
 .El

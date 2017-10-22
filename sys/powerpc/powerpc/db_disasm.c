@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/powerpc/powerpc/db_disasm.c 104435 2002-10-04 01:19:18Z grehan $	*/
+/*	$FreeBSD$	*/
 /*	$NetBSD: db_disasm.c,v 1.12 2002/01/05 22:07:26 jhawk Exp $	*/
 /*	$OpenBSD: db_disasm.c,v 1.2 1996/12/28 06:21:48 rahnds Exp $	*/
 

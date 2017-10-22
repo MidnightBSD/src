@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: release/7.0.0/sys/dev/firewire/sbp.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  *
  */
 
@@ -121,7 +121,7 @@ struct sbp_status{
 /*   3: Page size not supported */
 /*   4: Access denied */
 #define STATUS_ACCESS_DENY	4
-/*   5: Logical unit not supported */
+#define STATUS_LUR		5
 /*   6: Maximum payload too small */
 /*   7: Reserved for future standardization */
 /*   8: Resource unavailabe */

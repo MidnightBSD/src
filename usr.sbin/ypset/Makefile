@@ -1,7 +1,9 @@
 #	from: @(#)Makefile	5.8 (Berkeley) 7/28/90
-# $FreeBSD: release/7.0.0/usr.sbin/ypset/Makefile 74816 2001-03-26 14:42:20Z ru $
+# $FreeBSD$
 
 PROG=	ypset
 MAN=	ypset.8
+
+WARNS?=	2
 
 .include <bsd.prog.mk>

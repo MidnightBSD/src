@@ -1,6 +1,9 @@
-# $FreeBSD: release/7.0.0/kerberos5/lib/libkadm5clnt/Makefile 125491 2004-02-05 18:51:52Z ru $
+# $FreeBSD$
 
 LIB=	kadm5clnt
+LDFLAGS=	-Wl,--no-undefined
+LDADD=	-lcom_err -lkrb5 -lroken
+DPADD=	${LIBCOM_ERR} ${LIBKRB5} ${LIBROKEN}
 
 INCS=	admin.h \
 	kadm5-private.h \
@@ -10,7 +13,8 @@ INCS=	admin.h \
 
 INCSDIR=${INCLUDEDIR}/kadm5
 
-SRCS=	chpass_c.c \
+SRCS=	ad.c \
+	chpass_c.c \
 	client_glue.c \
 	common_glue.c \
 	create_c.c \

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/geom/geom_fox.c 152971 2005-11-30 22:15:00Z sobomax $
+ * $FreeBSD$
  */
 
 /* This is a GEOM module for handling path selection for multi-path
@@ -37,6 +37,7 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/conf.h>
 #include <sys/bio.h>
@@ -51,6 +52,8 @@
 
 #define FOX_CLASS_NAME "FOX"
 #define FOX_MAGIC	"GEOM::FOX"
+
+FEATURE(geom_fox, "GEOM FOX redundant path mitigation support");
 
 struct g_fox_softc {
 	off_t			mediasize;

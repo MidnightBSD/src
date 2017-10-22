@@ -27,7 +27,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/regression/priv/main.h 172106 2007-09-09 23:08:39Z rwatson $
+ * $FreeBSD$
  */
 
 #define	UID_ROOT	0
@@ -137,6 +137,18 @@ int	priv_msgbuf_unprivok_setup(int, int, struct test *);
 void	priv_msgbuf_unprivok(int, int, struct test *);
 
 void	priv_msgbuf_cleanup(int, int, struct test *);
+
+void	priv_netinet_ipsec_pfkey(int, int, struct test *);
+int	priv_netinet_ipsec_policy4_bypass_setup(int, int, struct test *);
+void	priv_netinet_ipsec_policy4_bypass(int, int, struct test *);
+int	priv_netinet_ipsec_policy6_bypass_setup(int, int, struct test *);
+void	priv_netinet_ipsec_policy6_bypass(int, int, struct test *);
+void	priv_netinet_ipsec_policy_bypass_cleanup(int, int, struct test *);
+int	priv_netinet_ipsec_policy4_entrust_setup(int, int, struct test *);
+void	priv_netinet_ipsec_policy4_entrust(int, int, struct test *);
+int	priv_netinet_ipsec_policy6_entrust_setup(int, int, struct test *);
+void	priv_netinet_ipsec_policy6_entrust(int, int, struct test *);
+void	priv_netinet_ipsec_policy_entrust_cleanup(int, int, struct test *);
 
 int	priv_netinet_raw_setup(int, int, struct test *);
 void	priv_netinet_raw(int, int, struct test *);

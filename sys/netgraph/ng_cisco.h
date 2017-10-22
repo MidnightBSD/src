@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: release/7.0.0/sys/netgraph/ng_cisco.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD$
  * $Whistle: ng_cisco.h,v 1.6 1999/01/25 01:21:48 archie Exp $
  */
 
@@ -76,8 +76,8 @@ struct ng_cisco_ipaddr {
 }
 
 struct ng_cisco_stats {
-	u_int32_t   seqRetries;		/* # unack'd retries */
-	u_int32_t   keepAlivePeriod;	/* in seconds */
+	uint32_t   seqRetries;		/* # unack'd retries */
+	uint32_t   keepAlivePeriod;	/* in seconds */
 };
 
 /* Keep this in sync with the above structure definition */

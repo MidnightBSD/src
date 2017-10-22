@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/tools/regression/bin/sh/builtins/var-assign.0 157600 2006-04-09 09:38:29Z stefanf $
+# $FreeBSD$
 IFS=,
 
 SPECIAL="break,\
@@ -44,12 +44,12 @@ set -e
 set -- ${SPECIAL}
 for cmd in "$@"
 do
-	sh -c "VAR=1; VAR=0 ${cmd}; exit \${VAR}" >/dev/null 2>&1
+	${SH} -c "VAR=1; VAR=0 ${cmd}; exit \${VAR}" >/dev/null 2>&1
 done
 
 # For other built-ins and utilites they do not.
 set -- ${UTILS}
 for cmd in "$@"
 do
-	sh -c "VAR=0; VAR=1 ${cmd}; exit \${VAR}" >/dev/null 2>&1
+	${SH} -c "VAR=0; VAR=1 ${cmd}; exit \${VAR}" >/dev/null 2>&1
 done

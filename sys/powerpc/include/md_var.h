@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/powerpc/include/md_var.h 173609 2007-11-14 16:41:31Z grehan $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -33,20 +33,23 @@
  * Miscellaneous machine-dependent declarations.
  */
 
-extern	char	sigcode[];
-extern	char	esigcode[];
-extern	int	szsigcode;
+extern	char	sigcode32[];
+extern	int	szsigcode32;
+
+#ifdef __powerpc64__
+extern	char	sigcode64[];
+extern	int	szsigcode64;
+#endif
+
 extern	long	Maxmem;
 extern	int	busdma_swi_pending;
 
 extern	vm_offset_t	kstack0;
 extern	vm_offset_t	kstack0_phys;
 
-extern	u_long	ns_per_tick;
-
-#if defined(_KERNEL) || defined(_STANDALONE)
-#define	CACHELINESIZE	32
-#endif
+extern	int powerpc_pow_enabled;
+extern	int cacheline_size;
+extern  int hw_direct_map;
 
 void	__syncicache(void *, int);
 
@@ -55,11 +58,12 @@ int	is_physical_memory(vm_offset_t addr);
 int	mem_valid(vm_offset_t addr, int len);
 
 void	decr_init(void);
+void	decr_ap_init(void);
 void	decr_tc_init(void);
 
 void	cpu_setup(u_int);
 
-struct trapframe;
+struct	trapframe;
 void	powerpc_interrupt(struct trapframe *);
 
 #endif /* !_MACHINE_MD_VAR_H_ */

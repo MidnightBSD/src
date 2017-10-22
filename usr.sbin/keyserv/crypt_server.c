@@ -44,7 +44,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/usr.sbin/keyserv/crypt_server.c 103436 2002-09-17 01:49:00Z peter $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 /*
@@ -223,8 +223,8 @@ des_crypt_1_svc(desargs *argp, struct svc_req *rqstp)
 
 	bcopy(argp->des_key, dparm.des_key, 8);
 	bcopy(argp->des_ivec, dparm.des_ivec, 8);
-	dparm.des_mode = argp->des_mode;
-	dparm.des_dir = argp->des_dir;
+	dparm.des_mode = (argp->des_mode == CBC_DES) ? CBC : ECB;
+	dparm.des_dir = (argp->des_dir == ENCRYPT_DES) ? ENCRYPT : DECRYPT;
 #ifdef BROKEN_DES
 	dparm.UDES.UDES_buf = argp->desbuf.desbuf_val;
 #endif

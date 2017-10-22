@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/gnu/usr.bin/gdb/arch/ia64/init.c 138383 2004-12-05 06:59:01Z marcel $ */
+/* $FreeBSD$ */
 
 /* Do not modify this file.  */
 /* It is created automatically by the Makefile.  */
@@ -15,6 +15,7 @@ extern initialize_file_ftype _initialize_ser_pipe;
 extern initialize_file_ftype _initialize_ser_tcp;
 extern initialize_file_ftype _initialize_fbsd_proc;
 extern initialize_file_ftype _initialize_gcore;
+extern initialize_file_ftype _initialize_thread_db;
 extern initialize_file_ftype _initialize_ia64_fbsd_nat;
 extern initialize_file_ftype _initialize_kernel_u_addr;
 extern initialize_file_ftype _initialize_infptrace;
@@ -127,6 +128,7 @@ initialize_all_files (void)
 #ifndef CROSS_DEBUGGER
   _initialize_fbsd_proc ();
   _initialize_gcore ();
+  _initialize_thread_db ();
   _initialize_ia64_fbsd_nat ();
   _initialize_kernel_u_addr ();
   _initialize_infptrace ();

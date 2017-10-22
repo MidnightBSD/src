@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/add/extract.c 174854 2007-12-22 06:32:46Z cvs2svn $");
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 #include <err.h>
@@ -225,7 +225,7 @@ extract_plist(const char *home, Package *pkg)
 		printf("extract: CWD to %s\n", p->name);
 	    PUSHOUT(Directory);
 	    if (strcmp(p->name, ".")) {
-		if (!Fake && make_hierarchy(p->name) == FAIL) {
+		if (!Fake && make_hierarchy(p->name, TRUE) == FAIL) {
 		    cleanup(0);
 		    errx(2, "%s: unable to cwd to '%s'", __func__, p->name);
 		}

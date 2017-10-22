@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/geom/geom_event.c 172354 2007-09-27 20:18:34Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -76,6 +76,7 @@ struct g_event {
 #define EV_DONE		0x80000
 #define EV_WAKEUP	0x40000
 #define EV_CANCELED	0x20000
+#define EV_INPROGRESS	0x10000
 
 void
 g_waitidle(void)
@@ -108,6 +109,53 @@ g_waitidlelock(void)
 	mtx_unlock(&g_eventlock);
 }
 #endif
+
+struct g_attrchanged_args {
+	struct g_provider *pp;
+	const char *attr;
+};
+
+static void
+g_attr_changed_event(void *arg, int flag)
+{
+	struct g_attrchanged_args *args;
+	struct g_provider *pp;
+	struct g_consumer *cp;
+	struct g_consumer *next_cp;
+
+	args = arg;
+	pp = args->pp;
+
+	g_topology_assert();
+	if (flag != EV_CANCEL && g_shutdown == 0) {
+
+		/*
+		 * Tell all consumers of the change.
+		 */
+		LIST_FOREACH_SAFE(cp, &pp->consumers, consumers, next_cp) {
+			if (cp->geom->attrchanged != NULL)
+				cp->geom->attrchanged(cp, args->attr);
+		}
+	}
+	g_free(args);
+}
+
+int
+g_attr_changed(struct g_provider *pp, const char *attr, int flag)
+{
+	struct g_attrchanged_args *args;
+	int error;
+
+	args = g_malloc(sizeof *args, flag);
+	if (args == NULL)
+		return (ENOMEM);
+	args->pp = pp;
+	args->attr = attr;
+	error = g_post_event(g_attr_changed_event, args, flag, pp, NULL);
+	if (error != 0)
+		g_free(args);
+	return (error);
+}
 
 void
 g_orphan_provider(struct g_provider *pp, int error)
@@ -182,44 +230,45 @@ one_event(void)
 	struct g_event *ep;
 	struct g_provider *pp;
 
-	g_topology_lock();
-	for (;;) {
-		mtx_lock(&g_eventlock);
-		TAILQ_FOREACH(pp, &g_doorstep, orphan) {
-			if (pp->nstart == pp->nend)
-				break;
-		}
-		if (pp != NULL) {
-			G_VALID_PROVIDER(pp);
-			TAILQ_REMOVE(&g_doorstep, pp, orphan);
-		}
-		mtx_unlock(&g_eventlock);
-		if (pp == NULL)
-			break;
-		g_orphan_register(pp);
-	}
+	g_topology_assert();
 	mtx_lock(&g_eventlock);
+	TAILQ_FOREACH(pp, &g_doorstep, orphan) {
+		if (pp->nstart == pp->nend)
+			break;
+	}
+	if (pp != NULL) {
+		G_VALID_PROVIDER(pp);
+		TAILQ_REMOVE(&g_doorstep, pp, orphan);
+		mtx_unlock(&g_eventlock);
+		g_orphan_register(pp);
+		return (1);
+	}
+
 	ep = TAILQ_FIRST(&g_events);
 	if (ep == NULL) {
 		wakeup(&g_pending_events);
-		mtx_unlock(&g_eventlock);
-		g_topology_unlock();
 		return (0);
 	}
+	if (ep->flag & EV_INPROGRESS) {
+		mtx_unlock(&g_eventlock);
+		return (1);
+	}
+	ep->flag |= EV_INPROGRESS;
 	mtx_unlock(&g_eventlock);
 	g_topology_assert();
 	ep->func(ep->arg, 0);
 	g_topology_assert();
 	mtx_lock(&g_eventlock);
 	TAILQ_REMOVE(&g_events, ep, events);
-	mtx_unlock(&g_eventlock);
+	ep->flag &= ~EV_INPROGRESS;
 	if (ep->flag & EV_WAKEUP) {
 		ep->flag |= EV_DONE;
+		mtx_unlock(&g_eventlock);
 		wakeup(ep);
 	} else {
+		mtx_unlock(&g_eventlock);
 		g_free(ep);
 	}
-	g_topology_unlock();
 	return (1);
 }
 
@@ -228,16 +277,27 @@ g_run_events()
 {
 	int i;
 
-	while (one_event())
-		;
-	g_topology_lock();
-	i = g_wither_work;
-	while (i) {
-		i = g_wither_washer();
-		g_wither_work = i & 1;
-		i &= 2;
+	for (;;) {
+		g_topology_lock();
+		while (one_event())
+			;
+		mtx_assert(&g_eventlock, MA_OWNED);
+		i = g_wither_work;
+		if (i) {
+			mtx_unlock(&g_eventlock);
+			while (i) {
+				i = g_wither_washer();
+				g_wither_work = i & 1;
+				i &= 2;
+			}
+			g_topology_unlock();
+		} else {
+			g_topology_unlock();
+			msleep(&g_wait_event, &g_eventlock, PRIBIO | PDROP,
+			    "-", TAILQ_EMPTY(&g_doorstep) ? 0 : hz / 10);
+		}
 	}
-	g_topology_unlock();
+	/* NOTREACHED */
 }
 
 void
@@ -255,6 +315,8 @@ g_cancel_event(void *ref)
 		break;
 	}
 	TAILQ_FOREACH_SAFE(ep, &g_events, events, epn) {
+		if (ep->flag & EV_INPROGRESS)
+			continue;
 		for (n = 0; n < G_N_EVENTREFS; n++) {
 			if (ep->ref[n] == NULL)
 				break;
@@ -327,9 +389,12 @@ g_post_event(g_event_t *func, void *arg, int flag, ...)
 }
 
 void
-g_do_wither() {
+g_do_wither()
+{
 
+	mtx_lock(&g_eventlock);
 	g_wither_work = 1;
+	mtx_unlock(&g_eventlock);
 	wakeup(&g_wait_event);
 }
 
@@ -355,11 +420,14 @@ g_waitfor_event(g_event_t *func, void *arg, int flag, ...)
 	va_end(ap);
 	if (error)
 		return (error);
-	do 
-		tsleep(ep, PRIBIO, "g_waitfor_event", hz);
-	while (!(ep->flag & EV_DONE));
+
+	mtx_lock(&g_eventlock);
+	while (!(ep->flag & EV_DONE))
+		msleep(ep, &g_eventlock, PRIBIO, "g_waitfor_event", hz);
 	if (ep->flag & EV_CANCELED)
 		error = EAGAIN;
+	mtx_unlock(&g_eventlock);
+
 	g_free(ep);
 	return (error);
 }

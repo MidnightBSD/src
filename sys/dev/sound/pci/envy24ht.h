@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 2006 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
  * Copyright (c) 2001 Katsurajima Naoto <raven@katsurajima.seya.yokohama.jp>
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/sound/pci/envy24ht.h 170031 2007-05-27 19:58:39Z joel $
+ * $FreeBSD$
  */
 
 

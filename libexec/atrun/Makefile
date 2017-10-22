@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/libexec/atrun/Makefile 172402 2007-10-01 18:17:24Z ru $
+# $FreeBSD$
 
 MAINSRC=${.CURDIR}/../../usr.bin/at
 
@@ -13,6 +13,8 @@ CLEANFILES= ${MAN}
 
 CFLAGS+=-I${MAINSRC} -I${.CURDIR}
 CFLAGS+=-DLOGIN_CAP -DPAM
+
+WARNS?=	2
 WFORMAT=0
 
 DPADD=	${LIBPAM} ${LIBUTIL}

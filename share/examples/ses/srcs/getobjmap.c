@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/share/examples/ses/srcs/getobjmap.c 57580 2000-02-29 05:44:19Z mjacob $ */
+/* $FreeBSD$ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.
@@ -39,12 +39,10 @@
 #include <sys/ioctl.h>
 #include SESINC
 
-extern char *geteltnm __P((int));
+#include "eltsub.h"
 
 int
-main(a, v)
-	int a;
-	char **v;
+main(int a, char **v)
 {
 	ses_object *objp;
 	int nobj, fd, i;

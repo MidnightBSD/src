@@ -43,8 +43,10 @@
  */
 
 #include "opt_compat.h"
+#include "opt_ddb.h"
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/machdep.c 170170 2007-05-31 22:52:15Z attilio $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -65,6 +67,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/machdep.c 170170 2007-05-31 22:52:
 #include <sys/pcpu.h>
 #include <sys/ptrace.h>
 #include <sys/signalvar.h>
+#include <sys/syscallsubr.h>
 #include <sys/sysent.h>
 #include <sys/sysproto.h>
 #include <sys/uio.h>
@@ -75,7 +78,6 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/machdep.c 170170 2007-05-31 22:52:
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
-#include <vm/vnode_pager.h>
 
 #include <machine/armreg.h>
 #include <machine/cpu.h>
@@ -100,6 +102,11 @@ int (*_arm_memcpy)(void *, void *, int, int) = NULL;
 int (*_arm_bzero)(void *, int, int) = NULL;
 int _min_memcpy_size = 0;
 int _min_bzero_size = 0;
+
+extern int *end;
+#ifdef DDB
+extern vm_offset_t ksym_start, ksym_end;
+#endif
 
 void
 sendsig(catcher, ksi, mask)
@@ -297,7 +304,6 @@ cpu_startup(void *dummy)
 	    USPACE_SVC_STACK_TOP;
 	vector_page_setprot(VM_PROT_READ);
 	pmap_set_pcb_pagedir(pmap_kernel(), pcb);
-	thread0.td_frame = (struct trapframe *)pcb->un_32.pcb32_sp - 1;
 	pmap_postinit();
 #ifdef ARM_CACHE_LOCK_ENABLE
 	pmap_kenter_user(ARM_TP_ADDRESS, ARM_TP_ADDRESS);
@@ -306,9 +312,23 @@ cpu_startup(void *dummy)
 	m = vm_page_alloc(NULL, 0, VM_ALLOC_NOOBJ | VM_ALLOC_ZERO);
 	pmap_kenter_user(ARM_TP_ADDRESS, VM_PAGE_TO_PHYS(m));
 #endif
+	*(uint32_t *)ARM_RAS_START = 0;
+	*(uint32_t *)ARM_RAS_END = 0xffffffff;
 }
 
-SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL)
+SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL);
+
+/*
+ * Flush the D-cache for non-DMA I/O so that the I-cache can
+ * be made coherent later.
+ */
+void
+cpu_flush_dcache(void *ptr, size_t len)
+{
+
+	cpu_dcache_wb_range((uintptr_t)ptr, len);
+	cpu_l2cache_wb_range((uintptr_t)ptr, len);
+}
 
 /* Get current clock frequency for the given cpu id. */
 int
@@ -319,9 +339,16 @@ cpu_est_clockrate(int cpu_id, uint64_t *rate)
 }
 
 void
-cpu_idle(void)
+cpu_idle(int busy)
 {
 	cpu_sleep(0);
+}
+
+int
+cpu_idle_wakeup(int cpu)
+{
+
+	return (0);
 }
 
 int
@@ -468,11 +495,15 @@ void
 spinlock_enter(void)
 {
 	struct thread *td;
+	register_t cspr;
 
 	td = curthread;
-	if (td->td_md.md_spinlock_count == 0)
-		td->td_md.md_saved_cspr = disable_interrupts(I32_bit | F32_bit);
-	td->td_md.md_spinlock_count++;
+	if (td->td_md.md_spinlock_count == 0) {
+		cspr = disable_interrupts(I32_bit | F32_bit);
+		td->td_md.md_spinlock_count = 1;
+		td->td_md.md_saved_cspr = cspr;
+	} else
+		td->td_md.md_spinlock_count++;
 	critical_enter();
 }
 
@@ -480,27 +511,29 @@ void
 spinlock_exit(void)
 {
 	struct thread *td;
+	register_t cspr;
 
 	td = curthread;
 	critical_exit();
+	cspr = td->td_md.md_saved_cspr;
 	td->td_md.md_spinlock_count--;
 	if (td->td_md.md_spinlock_count == 0)
-		restore_interrupts(td->td_md.md_saved_cspr);
+		restore_interrupts(cspr);
 }
 
 /*
  * Clear registers on exec
  */
 void
-exec_setregs(struct thread *td, u_long entry, u_long stack, u_long ps_strings)
+exec_setregs(struct thread *td, struct image_params *imgp, u_long stack)
 {
 	struct trapframe *tf = td->td_frame;
 
 	memset(tf, 0, sizeof(*tf));
 	tf->tf_usr_sp = stack;
-	tf->tf_usr_lr = entry;
+	tf->tf_usr_lr = imgp->entry_addr;
 	tf->tf_svc_lr = 0x77777777;
-	tf->tf_pc = entry;
+	tf->tf_pc = imgp->entry_addr;
 	tf->tf_spsr = PSR_USR32_MODE;
 }
 
@@ -574,13 +607,12 @@ set_mcontext(struct thread *td, const mcontext_t *mcp)
  * MPSAFE
  */
 int
-sigreturn(td, uap)
+sys_sigreturn(td, uap)
 	struct thread *td;
 	struct sigreturn_args /* {
 		const struct __ucontext *sigcntxp;
 	} */ *uap;
 {
-	struct proc *p = td->td_proc;
 	struct sigframe sf;
 	struct trapframe *tf;
 	int spsr;
@@ -602,11 +634,7 @@ sigreturn(td, uap)
 	set_mcontext(td, &sf.sf_uc.uc_mcontext);
 
 	/* Restore signal mask. */
-	PROC_LOCK(p);
-	td->td_sigmask = sf.sf_uc.uc_sigmask;
-	SIG_CANTMASK(td->td_sigmask);
-	signotify(td);
-	PROC_UNLOCK(p);
+	kern_sigprocmask(td, SIG_SETMASK, &sf.sf_uc.uc_sigmask, NULL, 0);
 
 	return (EJUSTRETURN);
 }
@@ -630,4 +658,54 @@ makectx(struct trapframe *tf, struct pcb *pcb)
 	pcb->un_32.pcb32_pc = tf->tf_pc;
 	pcb->un_32.pcb32_lr = tf->tf_usr_lr;
 	pcb->un_32.pcb32_sp = tf->tf_usr_sp;
+}
+
+/*
+ * Fake up a boot descriptor table
+ */
+vm_offset_t
+fake_preload_metadata(void)
+{
+#ifdef DDB
+	vm_offset_t zstart = 0, zend = 0;
+#endif
+	vm_offset_t lastaddr;
+	int i = 0;
+	static uint32_t fake_preload[35];
+
+	fake_preload[i++] = MODINFO_NAME;
+	fake_preload[i++] = strlen("kernel") + 1;
+	strcpy((char*)&fake_preload[i++], "kernel");
+	i += 1;
+	fake_preload[i++] = MODINFO_TYPE;
+	fake_preload[i++] = strlen("elf kernel") + 1;
+	strcpy((char*)&fake_preload[i++], "elf kernel");
+	i += 2;
+	fake_preload[i++] = MODINFO_ADDR;
+	fake_preload[i++] = sizeof(vm_offset_t);
+	fake_preload[i++] = KERNVIRTADDR;
+	fake_preload[i++] = MODINFO_SIZE;
+	fake_preload[i++] = sizeof(uint32_t);
+	fake_preload[i++] = (uint32_t)&end - KERNVIRTADDR;
+#ifdef DDB
+	if (*(uint32_t *)KERNVIRTADDR == MAGIC_TRAMP_NUMBER) {
+		fake_preload[i++] = MODINFO_METADATA|MODINFOMD_SSYM;
+		fake_preload[i++] = sizeof(vm_offset_t);
+		fake_preload[i++] = *(uint32_t *)(KERNVIRTADDR + 4);
+		fake_preload[i++] = MODINFO_METADATA|MODINFOMD_ESYM;
+		fake_preload[i++] = sizeof(vm_offset_t);
+		fake_preload[i++] = *(uint32_t *)(KERNVIRTADDR + 8);
+		lastaddr = *(uint32_t *)(KERNVIRTADDR + 8);
+		zend = lastaddr;
+		zstart = *(uint32_t *)(KERNVIRTADDR + 4);
+		ksym_start = zstart;
+		ksym_end = zend;
+	} else
+#endif
+		lastaddr = (vm_offset_t)&end;
+	fake_preload[i++] = 0;
+	fake_preload[i] = 0;
+	preload_metadata = (void *)fake_preload;
+
+	return (lastaddr);
 }

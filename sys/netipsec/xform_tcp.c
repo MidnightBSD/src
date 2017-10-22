@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/netipsec/xform_tcp.c 157123 2006-03-25 13:38:52Z gnn $ */
+/*	$FreeBSD$ */
 
 /*-
  * Copyright (c) 2003 Bruce M. Simpson <bms@spc.org>
@@ -48,6 +48,8 @@
 #include <netinet/tcp_var.h>
 
 #include <net/route.h>
+#include <net/vnet.h>
+
 #include <netipsec/ipsec.h>
 #include <netipsec/xform.h>
 
@@ -166,4 +168,4 @@ tcpsignature_attach(void)
 }
 
 SYSINIT(tcpsignature_xform_init, SI_SUB_DRIVERS, SI_ORDER_FIRST,
-    tcpsignature_attach, NULL)
+    tcpsignature_attach, NULL);

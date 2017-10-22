@@ -29,22 +29,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_mutex_prioceiling.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
-
-LT10_COMPAT_PRIVATE(_pthread_mutexattr_getprioceiling);
-LT10_COMPAT_DEFAULT(pthread_mutexattr_getprioceiling);
-LT10_COMPAT_PRIVATE(_pthread_mutexattr_setprioceiling);
-LT10_COMPAT_DEFAULT(pthread_mutexattr_setprioceiling);
-LT10_COMPAT_PRIVATE(_pthread_mutex_getprioceiling);
-LT10_COMPAT_DEFAULT(pthread_mutex_getprioceiling);
-LT10_COMPAT_PRIVATE(_pthread_mutex_setprioceiling);
-LT10_COMPAT_DEFAULT(pthread_mutex_setprioceiling);
 
 __weak_reference(_pthread_mutexattr_getprioceiling, pthread_mutexattr_getprioceiling);
 __weak_reference(_pthread_mutexattr_setprioceiling, pthread_mutexattr_setprioceiling);
@@ -91,10 +85,11 @@ _pthread_mutex_getprioceiling(pthread_mutex_t *mutex,
 		ret = EINVAL;
 	else if ((*mutex)->m_protocol != PTHREAD_PRIO_PROTECT)
 		ret = EINVAL;
-	else
-		ret = (*mutex)->m_prio;
-
-	return(ret);
+	else {
+		*prioceiling = (*mutex)->m_prio;
+		ret = 0;
+	}
+	return (ret);
 }
 
 int
@@ -109,13 +104,13 @@ _pthread_mutex_setprioceiling(pthread_mutex_t *mutex,
 	else if ((*mutex)->m_protocol != PTHREAD_PRIO_PROTECT)
 		ret = EINVAL;
 	/* Lock the mutex: */
-	else if ((ret = pthread_mutex_lock(mutex)) == 0) {
+	else if ((ret = _pthread_mutex_lock(mutex)) == 0) {
 		tmp = (*mutex)->m_prio;
 		/* Set the new ceiling: */
 		(*mutex)->m_prio = prioceiling;
 
 		/* Unlock the mutex: */
-		ret = pthread_mutex_unlock(mutex);
+		ret = _pthread_mutex_unlock(mutex);
 
 		/* Return the old ceiling: */
 		*old_ceiling = tmp;

@@ -48,7 +48,7 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/undefined.c 170291 2007-06-04 21:38:48Z attilio $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -82,11 +82,10 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/undefined.c 170291 2007-06-04 21:3
 
 #ifdef DDB
 #include <ddb/db_output.h>
-#include <machine/db_machdep.h>
 #endif
 
-#ifdef acorn26
-#include <machine/machdep.h>
+#ifdef KDB
+#include <machine/db_machdep.h>
 #endif
 
 static int gdb_trapper(u_int, u_int, struct trapframe *, int);
@@ -106,7 +105,7 @@ install_coproc_handler(int coproc, undef_handler_t handler)
 	KASSERT(handler != NULL, ("handler is NULL")); /* Used to be legal. */
 
 	/* XXX: M_TEMP??? */
-	MALLOC(uh, struct undefined_handler *, sizeof(*uh), M_TEMP, M_WAITOK);
+	uh = malloc(sizeof(*uh), M_TEMP, M_WAITOK);
 	uh->uh_handler = handler;
 	install_coproc_handler_static(coproc, uh);
 	return uh;
@@ -125,7 +124,7 @@ remove_coproc_handler(void *cookie)
 	struct undefined_handler *uh = cookie;
 
 	LIST_REMOVE(uh, uh_link);
-	FREE(uh, M_TEMP);
+	free(uh, M_TEMP);
 }
 
 

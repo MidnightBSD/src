@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/contrib/ipfilter/kmem.h 172506 2007-10-10 16:59:15Z cvs2svn $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1993-2001 by Darren Reed.

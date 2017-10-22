@@ -31,7 +31,7 @@
 
 *******************************************************************************/
 
-/*$FreeBSD: release/7.0.0/sys/dev/ixgb/ixgb_ee.c 129794 2004-05-28 00:23:00Z tackerman $*/
+/*$FreeBSD$*/
 
 #include <dev/ixgb/ixgb_hw.h> 
 #include <dev/ixgb/ixgb_ee.h> 
@@ -325,7 +325,7 @@ ixgb_wait_eeprom_command(struct ixgb_hw *hw)
  * hw - Struct containing variables accessed by shared code
  *
  * Reads the first 64 16 bit words of the EEPROM and sums the values read.
- * If the the sum of the 64 16 bit words is 0xBABA, the EEPROM's checksum is
+ * If the sum of the 64 16 bit words is 0xBABA, the EEPROM's checksum is
  * valid.
  *
  * Returns:

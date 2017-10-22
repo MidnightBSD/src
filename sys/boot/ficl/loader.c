@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/7.0.0/sys/boot/ficl/loader.c 158466 2006-05-12 04:07:42Z jhb $
+ *	$FreeBSD$
  */
 
 /*******************************************************************

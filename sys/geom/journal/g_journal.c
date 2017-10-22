@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/geom/journal/g_journal.c 170307 2007-06-05 00:00:57Z jeff $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,6 +55,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/geom/journal/g_journal.c 170307 2007-06-05
 
 #include <geom/journal/g_journal.h>
 
+FEATURE(geom_journal, "GEOM journaling support");
 
 /*
  * On-disk journal format:
@@ -101,13 +102,13 @@ SYSCTL_UINT(_kern_geom_journal, OID_AUTO, force_switch, CTLFLAG_RW,
     &g_journal_force_switch, 0, "Force switch when journal is N% full");
 SYSCTL_UINT(_kern_geom_journal, OID_AUTO, parallel_flushes, CTLFLAG_RW,
     &g_journal_parallel_flushes, 0,
-    "Number of flush I/O requests send in parallel");
+    "Number of flush I/O requests to send in parallel");
 SYSCTL_UINT(_kern_geom_journal, OID_AUTO, accept_immediately, CTLFLAG_RW,
     &g_journal_accept_immediately, 0,
-    "Number of I/O requests accepted immediatelly");
+    "Number of I/O requests accepted immediately");
 SYSCTL_UINT(_kern_geom_journal, OID_AUTO, parallel_copies, CTLFLAG_RW,
     &g_journal_parallel_copies, 0,
-    "Number of copy I/O requests send in parallel");
+    "Number of copy I/O requests to send in parallel");
 static int
 g_journal_record_entries_sysctl(SYSCTL_HANDLER_ARGS)
 {
@@ -1202,7 +1203,7 @@ g_journal_copy_write_done(struct bio *bp)
 	sc->sc_copy_in_progress--;
 
 	if (bp->bio_error != 0) {
-		GJ_LOGREQ(0, bp, "[copy] Error while writting data (error=%d)",
+		GJ_LOGREQ(0, bp, "[copy] Error while writing data (error=%d)",
 		    bp->bio_error);
 	}
 	GJQ_REMOVE(sc->sc_copy_queue, bp);
@@ -1354,7 +1355,7 @@ g_journal_flush_done(struct bio *bp)
 	sc->sc_flush_in_progress--;
 
 	if (bp->bio_error != 0) {
-		GJ_LOGREQ(0, bp, "[flush] Error while writting data (error=%d)",
+		GJ_LOGREQ(0, bp, "[flush] Error while writing data (error=%d)",
 		    bp->bio_error);
 	}
 	gj_free(bp->bio_data, bp->bio_length);
@@ -2096,7 +2097,6 @@ g_journal_worker(void *arg)
 	gp = sc->sc_geom;
 	g_topology_lock();
 	pp = g_new_providerf(gp, "%s.journal", sc->sc_name);
-	KASSERT(pp != NULL, ("Cannot create %s.journal.", sc->sc_name));
 	pp->mediasize = sc->sc_mediasize;
 	/*
 	 * There could be a problem when data provider and journal providers
@@ -2107,6 +2107,12 @@ g_journal_worker(void *arg)
 	g_error_provider(pp, 0);
 	g_topology_unlock();
 	last_write = time_second;
+
+	if (sc->sc_rootmount != NULL) {
+		GJ_DEBUG(1, "root_mount_rel %p", sc->sc_rootmount);
+		root_mount_rel(sc->sc_rootmount);
+		sc->sc_rootmount = NULL;
+	}
 
 	for (;;) {
 		/* Get first request from the queue. */
@@ -2146,7 +2152,7 @@ try_switch:
 				sc->sc_worker = NULL;
 				wakeup(&sc->sc_worker);
 				mtx_unlock(&sc->sc_mtx);
-				kthread_exit(0);
+				kproc_exit(0);
 			}
 sleep:
 			g_journal_wait(sc, last_write);
@@ -2286,6 +2292,7 @@ g_journal_create(struct g_class *mp, struct g_provider *pp,
 		gp->orphan = g_journal_orphan;
 		gp->access = g_journal_access;
 		gp->softc = sc;
+		gp->flags |= G_GEOM_VOLATILE_BIO;
 		sc->sc_geom = gp;
 
 		mtx_init(&sc->sc_mtx, "gjournal", NULL, MTX_DEF);
@@ -2303,6 +2310,9 @@ g_journal_create(struct g_class *mp, struct g_provider *pp,
 		sc->sc_copy_in_progress = 0;
 		sc->sc_inactive.jj_queue = NULL;
 		sc->sc_active.jj_queue = NULL;
+
+		sc->sc_rootmount = root_mount_hold("GJOURNAL");
+		GJ_DEBUG(1, "root_mount_hold %p", sc->sc_rootmount);
 
 		callout_init(&sc->sc_callout, CALLOUT_MPSAFE);
 		if (md->md_type != GJ_TYPE_COMPLETE) {
@@ -2381,7 +2391,7 @@ g_journal_create(struct g_class *mp, struct g_provider *pp,
 		callout_drain(&sc->sc_callout);
 	}
 
-	error = kthread_create(g_journal_worker, sc, &sc->sc_worker, 0, 0,
+	error = kproc_create(g_journal_worker, sc, &sc->sc_worker, 0, 0,
 	    "g_journal %s", sc->sc_name);
 	if (error != 0) {
 		GJ_DEBUG(0, "Cannot create worker thread for %s.journal.",
@@ -2434,6 +2444,13 @@ g_journal_destroy(struct g_journal_softc *sc)
 	sc->sc_flags |= (GJF_DEVICE_DESTROY | GJF_DEVICE_CLEAN);
 
 	g_topology_unlock();
+
+	if (sc->sc_rootmount != NULL) {
+		GJ_DEBUG(1, "root_mount_rel %p", sc->sc_rootmount);
+		root_mount_rel(sc->sc_rootmount);
+		sc->sc_rootmount = NULL;
+	}
+
 	callout_drain(&sc->sc_callout);
 	mtx_lock(&sc->sc_mtx);
 	wakeup(sc);
@@ -2509,7 +2526,8 @@ g_journal_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 		return (NULL);
 	gp = NULL;
 
-	if (md.md_provider[0] != '\0' && strcmp(md.md_provider, pp->name) != 0)
+	if (md.md_provider[0] != '\0' &&
+	    !g_compare_names(md.md_provider, pp->name))
 		return (NULL);
 	if (md.md_provsize != 0 && md.md_provsize != pp->mediasize)
 		return (NULL);
@@ -2766,7 +2784,7 @@ g_journal_init(struct g_class *mp)
 	    g_journal_lowmem, mp, EVENTHANDLER_PRI_FIRST);
 	if (g_journal_event_lowmem == NULL)
 		GJ_DEBUG(0, "Warning! Cannot register lowmem event.");
-	error = kthread_create(g_journal_switcher, mp, NULL, 0, 0,
+	error = kproc_create(g_journal_switcher, mp, NULL, 0, 0,
 	    "g_journal switcher");
 	KASSERT(error == 0, ("Cannot create switcher thread."));
 }
@@ -2843,7 +2861,7 @@ g_journal_switch_wait(struct g_journal_softc *sc)
 }
 
 static void
-g_journal_do_switch(struct g_class *classp, struct thread *td)
+g_journal_do_switch(struct g_class *classp)
 {
 	struct g_journal_softc *sc;
 	const struct g_journal_desc *desc;
@@ -2851,7 +2869,7 @@ g_journal_do_switch(struct g_class *classp, struct thread *td)
 	struct mount *mp;
 	struct bintime bt;
 	char *mountpoint;
-	int error, vfslocked;
+	int error, save, vfslocked;
 
 	DROP_GIANT();
 	g_topology_lock();
@@ -2879,7 +2897,7 @@ g_journal_do_switch(struct g_class *classp, struct thread *td)
 		desc = g_journal_find_desc(mp->mnt_stat.f_fstypename);
 		if (desc == NULL)
 			continue;
-		if (vfs_busy(mp, LK_NOWAIT, &mountlist_mtx, td))
+		if (vfs_busy(mp, MBF_NOWAIT | MBF_MNTLSTLOCK))
 			continue;
 		/* mtx_unlock(&mountlist_mtx) was done inside vfs_busy() */
 
@@ -2913,17 +2931,14 @@ g_journal_do_switch(struct g_class *classp, struct thread *td)
 			goto next;
 		}
 
-		MNT_ILOCK(mp);
-		mp->mnt_noasync++;
-		mp->mnt_kern_flag &= ~MNTK_ASYNC;
-		MNT_IUNLOCK(mp);
+		save = curthread_pflags_set(TDP_SYNCIO);
 
 		GJ_TIMER_START(1, &bt);
 		vfs_msync(mp, MNT_NOWAIT);
 		GJ_TIMER_STOP(1, &bt, "Msync time of %s", mountpoint);
 
 		GJ_TIMER_START(1, &bt);
-		error = VFS_SYNC(mp, MNT_NOWAIT, curthread);
+		error = VFS_SYNC(mp, MNT_NOWAIT);
 		if (error == 0)
 			GJ_TIMER_STOP(1, &bt, "Sync time of %s", mountpoint);
 		else {
@@ -2931,11 +2946,7 @@ g_journal_do_switch(struct g_class *classp, struct thread *td)
 			    mountpoint, error);
 		}
 
-		MNT_ILOCK(mp);
-		mp->mnt_noasync--;
-		if ((mp->mnt_flag & MNT_ASYNC) != 0 && mp->mnt_noasync == 0)
-			mp->mnt_kern_flag |= MNTK_ASYNC;
-		MNT_IUNLOCK(mp);
+		curthread_pflags_restore(save);
 
 		vn_finished_write(mp);
 
@@ -2973,7 +2984,7 @@ g_journal_do_switch(struct g_class *classp, struct thread *td)
 		vfs_write_resume(mp);
 next:
 		mtx_lock(&mountlist_mtx);
-		vfs_unbusy(mp, td);
+		vfs_unbusy(mp);
 	}
 	mtx_unlock(&mountlist_mtx);
 
@@ -3011,12 +3022,12 @@ next:
 static void
 g_journal_switcher(void *arg)
 {
-	struct thread *td = curthread;
 	struct g_class *mp;
 	struct bintime bt;
 	int error;
 
 	mp = arg;
+	curthread->td_pflags |= TDP_NORUNNINGBUF;
 	for (;;) {
 		g_journal_switcher_wokenup = 0;
 		error = tsleep(&g_journal_switcher_state, PRIBIO, "jsw:wait",
@@ -3025,7 +3036,7 @@ g_journal_switcher(void *arg)
 			g_journal_switcher_state = GJ_SWITCHER_DIED;
 			GJ_DEBUG(1, "Switcher exiting.");
 			wakeup(&g_journal_switcher_state);
-			kthread_exit(0);
+			kproc_exit(0);
 		}
 		if (error == 0 && g_journal_sync_requested == 0) {
 			GJ_DEBUG(1, "Out of cache, force switch (used=%u "
@@ -3033,7 +3044,7 @@ g_journal_switcher(void *arg)
 			    g_journal_cache_limit);
 		}
 		GJ_TIMER_START(1, &bt);
-		g_journal_do_switch(mp, td);
+		g_journal_do_switch(mp);
 		GJ_TIMER_STOP(1, &bt, "Entire switch time");
 		if (g_journal_sync_requested > 0) {
 			g_journal_sync_requested = 0;

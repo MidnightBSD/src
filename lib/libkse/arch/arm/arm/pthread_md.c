@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libkse/arch/arm/arm/pthread_md.c 172491 2007-10-09 13:42:34Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 

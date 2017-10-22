@@ -23,12 +23,19 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_mattr_pshared.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  *
  */
 
+#include "namespace.h"
 #include <errno.h>
+#include "un-namespace.h"
 #include "thr_private.h"
+
+int _pthread_mutexattr_getpshared(const pthread_mutexattr_t *attr,
+	int *pshared);
+int _pthread_mutexattr_setpshared(pthread_mutexattr_t *attr, int pshared);
+
 
 __weak_reference(_pthread_mutexattr_getpshared, pthread_mutexattr_getpshared);
 __weak_reference(_pthread_mutexattr_setpshared, pthread_mutexattr_setpshared);

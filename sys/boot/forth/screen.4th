@@ -1,5 +1,5 @@
 \ Screen manipulation related words.
-\ $FreeBSD: release/7.0.0/sys/boot/forth/screen.4th 115410 2003-05-30 09:29:24Z scottl $
+\ $FreeBSD$
 
 marker task-screen.4th
 

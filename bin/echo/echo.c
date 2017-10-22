@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)echo.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/echo/echo.c 139969 2005-01-10 08:39:26Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/uio.h>
@@ -55,7 +55,7 @@ __FBSDID("$FreeBSD: release/7.0.0/bin/echo/echo.c 139969 2005-01-10 08:39:26Z im
  * Report an error and exit.
  * Use it instead of err(3) to avoid linking-in stdio.
  */
-static void
+static __dead2 void
 errexit(const char *prog, const char *reason)
 {
 	char *errstr = strerror(errno);

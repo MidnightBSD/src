@@ -1,2 +1,2 @@
-.\" $FreeBSD: release/7.0.0/tools/build/options/WITHOUT_SSP 169724 2007-05-19 04:42:59Z kan $
-Set to not build propolice stack smashing protection library.
+.\" $FreeBSD$
+Set to not build world with propolice stack smashing protection.

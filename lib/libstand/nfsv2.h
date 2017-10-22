@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/lib/libstand/nfsv2.h 165906 2007-01-09 01:02:06Z imp $ */
+/* $FreeBSD$ */
 /*	$NetBSD: nfsv2.h,v 1.2 1996/02/26 23:05:23 gwr Exp $	*/
 
 /*

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/digictl/digictl.c 95258 2002-04-22 13:44:47Z des $
+ * $FreeBSD$
  */
 
 #include <errno.h>

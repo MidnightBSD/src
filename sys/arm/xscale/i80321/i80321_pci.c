@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/i80321/i80321_pci.c 172394 2007-09-30 11:05:18Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -174,8 +174,8 @@ i80321_pci_conf_setup(struct i80321_pci_softc *sc, int bus, int slot, int func,
 }
 
 static u_int32_t
-i80321_pci_read_config(device_t dev, int bus, int slot, int func, int reg,
-    int bytes)
+i80321_pci_read_config(device_t dev, u_int bus, u_int slot, u_int func,
+    u_int reg, int bytes)
 {
 	struct i80321_pci_softc *sc = device_get_softc(dev);
 	uint32_t isr;
@@ -215,8 +215,8 @@ i80321_pci_read_config(device_t dev, int bus, int slot, int func, int reg,
 }
 
 static void
-i80321_pci_write_config(device_t dev, int bus, int slot, int func, int reg,
-    u_int32_t data, int bytes)
+i80321_pci_write_config(device_t dev, u_int bus, u_int slot, u_int func,
+    u_int reg, u_int32_t data, int bytes)
 {
 	struct i80321_pci_softc *sc = device_get_softc(dev);
 	uint32_t addr;
@@ -373,7 +373,6 @@ static device_method_t i80321_pci_methods[] = {
 	DEVMETHOD(device_resume,	bus_generic_resume),
 
 	/* Bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
 	DEVMETHOD(bus_read_ivar,	i80321_read_ivar),
 	DEVMETHOD(bus_write_ivar,	i80321_write_ivar),
 	DEVMETHOD(bus_alloc_resource,	i80321_pci_alloc_resource),
@@ -389,7 +388,7 @@ static device_method_t i80321_pci_methods[] = {
 	DEVMETHOD(pcib_write_config,	i80321_pci_write_config),
 	DEVMETHOD(pcib_route_interrupt,	machdep_pci_route_interrupt),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t i80321_pci_driver = {

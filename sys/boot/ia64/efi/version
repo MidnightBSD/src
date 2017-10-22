@@ -1,8 +1,17 @@
-$FreeBSD: release/7.0.0/sys/boot/ia64/efi/version 164010 2006-11-05 22:03:04Z marcel $
+$FreeBSD$
 
 NOTE ANY CHANGES YOU MAKE TO THE BOOTBLOCKS HERE.  The format of this
 file is important.  Make sure the current version number is on line 6.
 
+3.1:	Add the about, reboot and pbvm commands.
+	I-cache coherency is maintained.
+3.0:	Add support for PBVM.
+2.2:	Create direct mapping based on start address instead of mapping
+	first 256M.
+2.1:	Add support for "-dev <part>" argument parsing.
+2.0:	Provide devices based on the block I/O protocol, rather than the
+	simple file services protocol. Use the FreeBSD file system code
+	on top of those devices to access files.
 1.2:	Restructured. Has some user visible differences.
 1.1:	Pass the HCDP table address to the kernel via bootinfo if one
 	is present in the EFI system table.

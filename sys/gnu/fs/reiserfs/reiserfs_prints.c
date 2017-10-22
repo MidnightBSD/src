@@ -4,7 +4,7 @@
  * 
  * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
  * 
- * $FreeBSD: release/7.0.0/sys/gnu/fs/reiserfs/reiserfs_prints.c 147476 2005-06-18 17:10:50Z dumbbell $
+ * $FreeBSD$
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>

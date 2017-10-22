@@ -23,9 +23,9 @@
 .\" IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/usr.sbin/portsnap/portsnap/portsnap.8 162806 2006-09-29 17:57:04Z ru $
+.\" $FreeBSD$
 .\"
-.Dd August 13, 2005
+.Dd September 15, 2008
 .Dt PORTSNAP 8
 .Os FreeBSD
 .Sh NAME
@@ -50,6 +50,15 @@ of the
 .Fx
 ports tree, and extract and update an
 uncompressed ports tree.
+.Pp
+In a normal update operation,
+.Nm
+will routinely restore modified files to their unmodified state and
+delete unrecognized local files.
+This behavior is different to
+.Xr cvs 1
+and
+.Xr cvsup 1 .
 .Sh OPTIONS
 The following options are supported:
 .Bl -tag -width "-f conffile"
@@ -60,7 +69,7 @@ Store working files (e.g.\& downloaded updates) in
 .Pa /var/db/portsnap ,
 or as given in the configuration file.)
 .It Fl f Ar conffile
-Read the configuration from from
+Read the configuration from
 .Ar conffile .
 (default:
 .Pa /etc/portsnap.conf )
@@ -88,7 +97,7 @@ operate on the directory
 or as given in the configuration file.)
 .It Fl s Ar server
 Fetch files from the specified server or server pool.
-(default: portsnap.FreeBSD.org , or as given in the
+(default: portsnap.FreeBSD.org, or as given in the
 configuration file.)
 .It path
 For
@@ -106,7 +115,6 @@ sysutils/portupgrade, etc.)
 The
 .Cm command
 can be any one of the following:
-.Pp
 .Bl -tag -width "-f conffile"
 .It fetch
 Fetch a compressed snapshot of the ports tree, or update

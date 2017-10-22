@@ -28,7 +28,7 @@ SUCH DAMAGE.
 #include <sys/stat.h>
 
 /*
- * $FreeBSD: release/7.0.0/tools/regression/pipe/pipe-wraparound.c 132524 2004-07-22 02:46:25Z silby $
+ * $FreeBSD$
  * This program tests to make sure that wraparound writes and reads
  * are working, assuming that 16K socket buffers are used.  In order
  * to really stress the pipe code with this test, kernel modifications
@@ -44,6 +44,7 @@ struct stat status;
 pid_t new_pid;
 
 buggy = 0;
+total = 0;
 
 error = pipe(desc);
 
@@ -52,7 +53,7 @@ if (error)
 
 buffer[0] = 'A';
 
-for (i = 0; i < 32768; i++) {
+for (i = 1; i < 32768; i++) {
 	buffer[i] = buffer[i - 1] + 1;
 	if (buffer[i] > 'Z')
 		buffer[i] = 'A';

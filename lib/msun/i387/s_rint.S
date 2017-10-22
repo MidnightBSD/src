@@ -34,10 +34,12 @@
  */
 
 #include <machine/asm.h>
-
-RCSID("$FreeBSD: release/7.0.0/lib/msun/i387/s_rint.S 50476 1999-08-28 00:22:10Z peter $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(rint)
 	fldl	4(%esp)
 	frndint
 	ret
+END(rint)
+
+	.section .note.GNU-stack,"",%progbits

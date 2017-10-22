@@ -1,12 +1,10 @@
-# $FreeBSD: release/7.0.0/usr.sbin/ac/Makefile 126751 2004-03-08 20:01:34Z gad $
+# $FreeBSD$
 
 PROG=	ac
 MAN=	ac.8
 
-WARNS?=	4
-
 # Temporary, while tracking down problem wrt 64-bit time_t's on sparc64
-.if ${MACHINE_ARCH} == "sparc64"
+.if ${MACHINE_CPUARCH} == "sparc64"
 CFLAGS+=-DDEBUG
 .endif
 

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libgeom/libgeom.h 169305 2007-05-06 10:00:27Z des $
+ * $FreeBSD$
  */
 #ifndef _LIBGEOM_H_
 #define _LIBGEOM_H_
@@ -123,6 +123,8 @@ struct gprovider {
 	char			*lg_mode;
 	off_t			lg_mediasize;
 	u_int			lg_sectorsize;
+	off_t			lg_stripeoffset;
+	off_t			lg_stripesize;
 	struct gconf		lg_config;
 };
 
@@ -149,11 +151,15 @@ int g_open(const char *, int);
 int g_close(int);
 off_t g_mediasize(int);
 ssize_t g_sectorsize(int);
+off_t g_stripeoffset(int);
+off_t g_stripesize(int);
 int g_flush(int);
 int g_delete(int, off_t, off_t);
 int g_get_ident(int, char *, size_t);
 int g_get_name(const char *, char *, size_t);
 int g_open_by_ident(const char *, int, char *, size_t);
+char *g_device_path(const char *);
+char *g_providername(int);
 
 __END_DECLS
 

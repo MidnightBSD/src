@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/contrib/libreadline/readline.h 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $FreeBSD$ */
 /* Readline.h -- the names of functions callable from within readline. */
 
 /* Copyright (C) 1987-2005 Free Software Foundation, Inc.

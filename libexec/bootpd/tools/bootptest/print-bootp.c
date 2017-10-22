@@ -23,7 +23,7 @@
  * This file was copied from tcpdump-2.1.1 and modified.
  * There is an e-mail list for tcpdump: <tcpdump@ee.lbl.gov>
  *
- * $FreeBSD: release/7.0.0/libexec/bootpd/tools/bootptest/print-bootp.c 84125 2001-09-29 11:37:13Z iedowse $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -310,7 +310,7 @@ rfc1048_print(bp, length)
 		len = *bp++;
 		if (bp + len > ep) {
 			/* truncated option */
-			printf(" |(%d>%d)", len, ep - bp);
+			printf(" |(%d>%td)", len, ep - bp);
 			return;
 		}
 		/* Print the option value(s). */

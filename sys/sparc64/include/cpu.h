@@ -31,7 +31,7 @@
  *
  *	from: @(#)cpu.h 5.4 (Berkeley) 5/9/91
  *	from: FreeBSD: src/sys/i386/include/cpu.h,v 1.62 2001/06/29
- * $FreeBSD: release/7.0.0/sys/sparc64/include/cpu.h 158445 2006-05-11 17:29:25Z phk $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_CPU_H_
@@ -52,10 +52,12 @@
 extern	char btext[];
 extern	char etext[];
 
-void	cpu_halt(void);
-void	cpu_reset(void);
+void	cheetah_init(u_int cpu_impl);
+void	cpu_halt(void) __dead2;
+void	cpu_reset(void) __dead2;
 void	fork_trampoline(void);
 void	swi_vm(void *v);
+void	zeus_init(u_int cpu_impl);
 
 static __inline u_int64_t
 get_cyclecount(void)

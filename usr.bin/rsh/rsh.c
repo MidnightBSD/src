@@ -51,7 +51,7 @@ static const char sccsid[] = "From: @(#)rsh.c	8.3 (Berkeley) 4/6/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/rsh/rsh.c 146466 2005-05-21 09:55:10Z ru $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/signal.h>
@@ -328,7 +328,7 @@ done:
 }
 
 void
-connect_timeout(int sig)
+connect_timeout(int sig __unused)
 {
 	char message[] = "timeout reached before connection completed.\n";
 

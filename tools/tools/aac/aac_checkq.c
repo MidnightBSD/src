@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/tools/tools/aac/aac_checkq.c 152121 2005-11-06 15:47:06Z maxim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/fcntl.h>
@@ -33,6 +33,12 @@ __FBSDID("$FreeBSD: release/7.0.0/tools/tools/aac/aac_checkq.c 152121 2005-11-06
 
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <unistd.h>
+
+void usage(void);
 
 /*
  * Simple program to print out the queue stats on the given queue index.

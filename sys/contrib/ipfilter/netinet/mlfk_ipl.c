@@ -1,9 +1,9 @@
-/*	$FreeBSD: release/7.0.0/sys/contrib/ipfilter/netinet/mlfk_ipl.c 173213 2007-10-31 05:00:38Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2000 by Darren Reed.
  *
- * $FreeBSD: release/7.0.0/sys/contrib/ipfilter/netinet/mlfk_ipl.c 173213 2007-10-31 05:00:38Z darrenr $
+ * $FreeBSD$
  * See the IPFILTER.LICENCE file for details on licencing.
  */
 
@@ -204,7 +204,7 @@ ipf_modload()
 			}
 		if (!c)
 			c = str;
-		ipf_devs[i] = make_dev(&ipl_cdevsw, i, 0, 0, 0600, c);
+		ipf_devs[i] = make_dev(&ipl_cdevsw, i, 0, 0, 0600, "%s", c);
 	}
 
 	error = ipf_pfil_hook();

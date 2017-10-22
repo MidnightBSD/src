@@ -31,7 +31,7 @@
  * owners.  This software is not copyrighted and is intended for reference
  * only.
  *
- * $FreeBSD: release/7.0.0/sys/boot/arm/at91/libat91/putchar.c 163533 2006-10-20 09:12:05Z imp $
+ * $FreeBSD$
  */
 
 #include "at91rm9200.h"

@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/usr.sbin/rtadvd/advcap.h 118784 2003-08-11 15:46:37Z ume $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: advcap.h,v 1.5 2003/06/09 05:40:54 t-momose Exp $	*/
 
 /*
@@ -36,10 +36,10 @@
 
 __BEGIN_DECLS
 
-extern int agetent __P((char *, const char *));
-extern int agetflag __P((const char *));
-extern int64_t agetnum __P((const char *));
-extern char *agetstr __P((const char *, char **));
+extern int agetent(char *, const char *);
+extern int agetflag(const char *);
+extern int64_t agetnum(const char *);
+extern char *agetstr(const char *, char **);
 
 __END_DECLS
 

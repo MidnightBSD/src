@@ -1,7 +1,7 @@
 /*
  *  hrvatski calendar
  *
- * $FreeBSD: release/7.0.0/usr.bin/calendar/calendars/hr_HR.ISO8859-2/calendar.all 78047 2001-06-11 03:08:46Z ache $
+ * $FreeBSD$
  */
 
 #ifndef _hr_HR_ISO8859_2_all

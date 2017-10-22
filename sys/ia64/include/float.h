@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/ia64/include/float.h 139790 2005-01-06 22:18:23Z imp $ */
+/* $FreeBSD$ */
 /* From: NetBSD: float.h,v 1.6 1997/07/17 21:36:03 thorpej Exp */
 
 /*-
@@ -43,7 +43,7 @@ __END_DECLS
 #define FLT_ROUNDS	__flt_rounds()
 #if __ISO_C_VISIBLE >= 1999
 #define	FLT_EVAL_METHOD	0		/* no promotions */
-#define	DECIMAL_DIG	35		/* max precision in decimal digits */
+#define	DECIMAL_DIG	21		/* max precision in decimal digits */
 #endif
 
 #define FLT_MANT_DIG	24		/* p */

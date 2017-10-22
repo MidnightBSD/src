@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002-2006 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/7.0.0/tools/tools/net80211/wlanstats/wlanstats.h 161200 2006-08-10 19:01:16Z sam $
+ * $FreeBSD$
  */
 
 #ifndef _WLANSTATS_H_

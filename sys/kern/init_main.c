@@ -42,24 +42,26 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/kern/init_main.c 174590 2007-12-14 13:41:09Z rrs $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 #include "opt_init_path.h"
-#include "opt_mac.h"
 
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/exec.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
+#include <sys/jail.h>
 #include <sys/ktr.h>
 #include <sys/lock.h>
+#include <sys/loginclass.h>
 #include <sys/mount.h>
 #include <sys/mutex.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysctl.h>
 #include <sys/proc.h>
+#include <sys/racct.h>
 #include <sys/resourcevar.h>
 #include <sys/systm.h>
 #include <sys/signalvar.h>
@@ -73,6 +75,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/kern/init_main.c 174590 2007-12-14 13:41:0
 #include <sys/unistd.h>
 #include <sys/malloc.h>
 #include <sys/conf.h>
+#include <sys/cpuset.h>
 
 #include <machine/cpu.h>
 
@@ -99,16 +102,18 @@ struct	vmspace vmspace0;
 struct	proc *initproc;
 
 int	boothowto = 0;		/* initialized so that it can be patched */
-SYSCTL_INT(_debug, OID_AUTO, boothowto, CTLFLAG_RD, &boothowto, 0, "");
+SYSCTL_INT(_debug, OID_AUTO, boothowto, CTLFLAG_RD, &boothowto, 0,
+	"Boot control flags, passed from loader");
 int	bootverbose;
-SYSCTL_INT(_debug, OID_AUTO, bootverbose, CTLFLAG_RW, &bootverbose, 0, "");
+SYSCTL_INT(_debug, OID_AUTO, bootverbose, CTLFLAG_RW, &bootverbose, 0,
+	"Control the output of verbose kernel messages");
 
 /*
  * This ensures that there is at least one entry so that the sysinit_set
  * symbol is not undefined.  A sybsystem ID of SI_SUB_DUMMY is never
  * executed.
  */
-SYSINIT(placeholder, SI_SUB_DUMMY, SI_ORDER_ANY, NULL, NULL)
+SYSINIT(placeholder, SI_SUB_DUMMY, SI_ORDER_ANY, NULL, NULL);
 
 /*
  * The sysinit table itself.  Items are checked off as the are run.
@@ -153,6 +158,24 @@ sysinit_add(struct sysinit **set, struct sysinit **set_end)
 	newsysinit_end = newset + count;
 }
 
+#if defined (DDB) && defined(VERBOSE_SYSINIT)
+static const char *
+symbol_name(vm_offset_t va, db_strategy_t strategy)
+{
+	const char *name;
+	c_db_sym_t sym;
+	db_expr_t  offset;
+
+	if (va == 0)
+		return (NULL);
+	sym = db_search_symbol(va, strategy, &offset);
+	if (offset != 0)
+		return (NULL);
+	db_symbol_values(sym, &name, NULL);
+	return (name);
+}
+#endif
+
 /*
  * System startup; initialize the world, create process 0, mount root
  * filesystem, and fork to create init and pagedaemon.  Most of the
@@ -176,6 +199,9 @@ mi_startup(void)
 	int last;
 	int verbose;
 #endif
+
+	if (boothowto & RB_VERBOSE)
+		bootverbose++;
 
 	if (sysinit == NULL) {
 		sysinit = SET_BEGIN(sysinit_set);
@@ -230,15 +256,16 @@ restart:
 		}
 		if (verbose) {
 #if defined(DDB)
-			const char *name;
-			c_db_sym_t sym;
-			db_expr_t  offset;
+			const char *func, *data;
 
-			sym = db_search_symbol((vm_offset_t)(*sipp)->func,
-			    DB_STGY_PROC, &offset);
-			db_symbol_values(sym, &name, NULL);
-			if (name != NULL)
-				printf("   %s(%p)... ", name, (*sipp)->udata);
+			func = symbol_name((vm_offset_t)(*sipp)->func,
+			    DB_STGY_PROC);
+			data = symbol_name((vm_offset_t)(*sipp)->udata,
+			    DB_STGY_ANY);
+			if (func != NULL && data != NULL)
+				printf("   %s(&%s)... ", func, data);
+			else if (func != NULL)
+				printf("   %s(%p)... ", func, (*sipp)->udata);
 			else
 #endif
 				printf("   %p(%p)... ", (*sipp)->func,
@@ -283,68 +310,95 @@ restart:
  ***************************************************************************
  */
 static void
-print_caddr_t(void *data __unused)
+print_caddr_t(void *data)
 {
 	printf("%s", (char *)data);
 }
-SYSINIT(announce, SI_SUB_COPYRIGHT, SI_ORDER_FIRST, print_caddr_t, copyright)
-SYSINIT(trademark, SI_SUB_COPYRIGHT, SI_ORDER_SECOND, print_caddr_t, trademark)
-SYSINIT(version, SI_SUB_COPYRIGHT, SI_ORDER_THIRD, print_caddr_t, version)
+
+static void
+print_version(void *data __unused)
+{
+	int len;
+
+	/* Strip a trailing newline from version. */
+	len = strlen(version);
+	while (len > 0 && version[len - 1] == '\n')
+		len--;
+	printf("%.*s %s\n", len, version, machine);
+}
+
+SYSINIT(announce, SI_SUB_COPYRIGHT, SI_ORDER_FIRST, print_caddr_t,
+    copyright);
+SYSINIT(trademark, SI_SUB_COPYRIGHT, SI_ORDER_SECOND, print_caddr_t,
+    trademark);
+SYSINIT(version, SI_SUB_COPYRIGHT, SI_ORDER_THIRD, print_version, NULL);
 
 #ifdef WITNESS
 static char wit_warn[] =
      "WARNING: WITNESS option enabled, expect reduced performance.\n";
 SYSINIT(witwarn, SI_SUB_COPYRIGHT, SI_ORDER_THIRD + 1,
-   print_caddr_t, wit_warn)
+   print_caddr_t, wit_warn);
 SYSINIT(witwarn2, SI_SUB_RUN_SCHEDULER, SI_ORDER_THIRD + 1,
-   print_caddr_t, wit_warn)
+   print_caddr_t, wit_warn);
 #endif
 
 #ifdef DIAGNOSTIC
 static char diag_warn[] =
      "WARNING: DIAGNOSTIC option enabled, expect reduced performance.\n";
 SYSINIT(diagwarn, SI_SUB_COPYRIGHT, SI_ORDER_THIRD + 2,
-    print_caddr_t, diag_warn)
+    print_caddr_t, diag_warn);
 SYSINIT(diagwarn2, SI_SUB_RUN_SCHEDULER, SI_ORDER_THIRD + 2,
-    print_caddr_t, diag_warn)
+    print_caddr_t, diag_warn);
 #endif
 
-static void
-set_boot_verbose(void *data __unused)
+static int
+null_fetch_syscall_args(struct thread *td __unused,
+    struct syscall_args *sa __unused)
 {
 
-	if (boothowto & RB_VERBOSE)
-		bootverbose++;
+	panic("null_fetch_syscall_args");
 }
-SYSINIT(boot_verbose, SI_SUB_TUNABLES, SI_ORDER_ANY, set_boot_verbose, NULL)
+
+static void
+null_set_syscall_retval(struct thread *td __unused, int error __unused)
+{
+
+	panic("null_set_syscall_retval");
+}
 
 struct sysentvec null_sysvec = {
-	0,
-	NULL,
-	0,
-	0,
-	NULL,
-	0,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	"null",
-	NULL,
-	NULL,
-	0,
-	PAGE_SIZE,
-	VM_MIN_ADDRESS,
-	VM_MAXUSER_ADDRESS,
-	USRSTACK,
-	PS_STRINGS,
-	VM_PROT_ALL,
-	NULL,
-	NULL,
-	NULL
+	.sv_size	= 0,
+	.sv_table	= NULL,
+	.sv_mask	= 0,
+	.sv_sigsize	= 0,
+	.sv_sigtbl	= NULL,
+	.sv_errsize	= 0,
+	.sv_errtbl	= NULL,
+	.sv_transtrap	= NULL,
+	.sv_fixup	= NULL,
+	.sv_sendsig	= NULL,
+	.sv_sigcode	= NULL,
+	.sv_szsigcode	= NULL,
+	.sv_prepsyscall	= NULL,
+	.sv_name	= "null",
+	.sv_coredump	= NULL,
+	.sv_imgact_try	= NULL,
+	.sv_minsigstksz	= 0,
+	.sv_pagesize	= PAGE_SIZE,
+	.sv_minuser	= VM_MIN_ADDRESS,
+	.sv_maxuser	= VM_MAXUSER_ADDRESS,
+	.sv_usrstack	= USRSTACK,
+	.sv_psstrings	= PS_STRINGS,
+	.sv_stackprot	= VM_PROT_ALL,
+	.sv_copyout_strings	= NULL,
+	.sv_setregs	= NULL,
+	.sv_fixlimit	= NULL,
+	.sv_maxssiz	= NULL,
+	.sv_flags	= 0,
+	.sv_set_syscall_retval = null_set_syscall_retval,
+	.sv_fetch_syscall_args = null_fetch_syscall_args,
+	.sv_syscallnames = NULL,
+	.sv_schedtail	= NULL,
 };
 
 /*
@@ -365,13 +419,14 @@ static void
 proc0_init(void *dummy __unused)
 {
 	struct proc *p;
-	unsigned i;
 	struct thread *td;
+	vm_paddr_t pageablemem;
+	int i;
 
 	GIANT_REQUIRED;
 	p = &proc0;
 	td = &thread0;
-
+	
 	/*
 	 * Initialize magic number and osrel.
 	 */
@@ -412,28 +467,34 @@ proc0_init(void *dummy __unused)
 
 	pgrp0.pg_session = &session0;
 	mtx_init(&session0.s_mtx, "session", NULL, MTX_DEF);
-	session0.s_count = 1;
+	refcount_init(&session0.s_count, 1);
 	session0.s_leader = p;
 
 	p->p_sysent = &null_sysvec;
 	p->p_flag = P_SYSTEM | P_INMEM;
 	p->p_state = PRS_NORMAL;
-	knlist_init(&p->p_klist, &p->p_mtx, NULL, NULL, NULL);
+	knlist_init_mtx(&p->p_klist, &p->p_mtx);
 	STAILQ_INIT(&p->p_ktr);
 	p->p_nice = NZERO;
+	td->td_tid = PID_MAX + 1;
+	LIST_INSERT_HEAD(TIDHASH(td->td_tid), td, td_hash);
 	td->td_state = TDS_RUNNING;
 	td->td_pri_class = PRI_TIMESHARE;
 	td->td_user_pri = PUSER;
 	td->td_base_user_pri = PUSER;
+	td->td_lend_user_pri = PRI_MAX;
 	td->td_priority = PVM;
-	td->td_base_pri = PUSER;
+	td->td_base_pri = PVM;
 	td->td_oncpu = 0;
-	td->td_flags = TDF_INMEM;
+	td->td_flags = TDF_INMEM|TDP_KTHREAD;
+	td->td_cpuset = cpuset_thread0();
+	prison0.pr_cpuset = cpuset_ref(td->td_cpuset);
 	p->p_peers = 0;
 	p->p_leader = p;
 
 
-	bcopy("swapper", p->p_comm, sizeof ("swapper"));
+	strncpy(p->p_comm, "kernel", sizeof (p->p_comm));
+	strncpy(td->td_name, "swapper", sizeof (td->td_name));
 
 	callout_init(&p->p_itcallout, CALLOUT_MPSAFE);
 	callout_init_mtx(&p->p_limco, &p->p_mtx, 0);
@@ -444,12 +505,13 @@ proc0_init(void *dummy __unused)
 	p->p_ucred->cr_ngroups = 1;	/* group 0 */
 	p->p_ucred->cr_uidinfo = uifind(0);
 	p->p_ucred->cr_ruidinfo = uifind(0);
-	p->p_ucred->cr_prison = NULL;	/* Don't jail it. */
+	p->p_ucred->cr_prison = &prison0;
+	p->p_ucred->cr_loginclass = loginclass_find("default");
 #ifdef AUDIT
 	audit_cred_kproc0(p->p_ucred);
 #endif
 #ifdef MAC
-	mac_create_proc0(p->p_ucred);
+	mac_cred_create_swapper(p->p_ucred);
 #endif
 	td->td_ucred = crhold(p->p_ucred);
 
@@ -472,11 +534,20 @@ proc0_init(void *dummy __unused)
 	    p->p_limit->pl_rlimit[RLIMIT_NOFILE].rlim_max = maxfiles;
 	p->p_limit->pl_rlimit[RLIMIT_NPROC].rlim_cur =
 	    p->p_limit->pl_rlimit[RLIMIT_NPROC].rlim_max = maxproc;
-	i = ptoa(cnt.v_free_count);
-	p->p_limit->pl_rlimit[RLIMIT_RSS].rlim_max = i;
-	p->p_limit->pl_rlimit[RLIMIT_MEMLOCK].rlim_max = i;
-	p->p_limit->pl_rlimit[RLIMIT_MEMLOCK].rlim_cur = i / 3;
+	p->p_limit->pl_rlimit[RLIMIT_DATA].rlim_cur = dfldsiz;
+	p->p_limit->pl_rlimit[RLIMIT_DATA].rlim_max = maxdsiz;
+	p->p_limit->pl_rlimit[RLIMIT_STACK].rlim_cur = dflssiz;
+	p->p_limit->pl_rlimit[RLIMIT_STACK].rlim_max = maxssiz;
+	/* Cast to avoid overflow on i386/PAE. */
+	pageablemem = ptoa((vm_paddr_t)cnt.v_free_count);
+	p->p_limit->pl_rlimit[RLIMIT_RSS].rlim_cur =
+	    p->p_limit->pl_rlimit[RLIMIT_RSS].rlim_max = pageablemem;
+	p->p_limit->pl_rlimit[RLIMIT_MEMLOCK].rlim_cur = pageablemem / 3;
+	p->p_limit->pl_rlimit[RLIMIT_MEMLOCK].rlim_max = pageablemem;
 	p->p_cpulimit = RLIM_INFINITY;
+
+	/* Initialize resource accounting structures. */
+	racct_create(&p->p_racct);
 
 	p->p_stats = pstats_alloc();
 
@@ -484,13 +555,17 @@ proc0_init(void *dummy __unused)
 	pmap_pinit0(vmspace_pmap(&vmspace0));
 	p->p_vmspace = &vmspace0;
 	vmspace0.vm_refcnt = 1;
-	vm_map_init(&vmspace0.vm_map, p->p_sysent->sv_minuser,
-	    p->p_sysent->sv_maxuser);
-	vmspace0.vm_map.pmap = vmspace_pmap(&vmspace0);
-	/*-
-	 * call the init and ctor for the new thread and proc
-	 * we wait to do this until all other structures
-	 * are fairly sane.
+
+	/*
+	 * proc0 is not expected to enter usermode, so there is no special
+	 * handling for sv_minuser here, like is done for exec_new_vmspace().
+	 */
+	vm_map_init(&vmspace0.vm_map, vmspace_pmap(&vmspace0),
+	    p->p_sysent->sv_minuser, p->p_sysent->sv_maxuser);
+
+	/*
+	 * Call the init and ctor for the new thread and proc.  We wait
+	 * to do this until all other structures are fairly sane.
 	 */
 	EVENTHANDLER_INVOKE(process_init, p);
 	EVENTHANDLER_INVOKE(thread_init, td);
@@ -501,8 +576,11 @@ proc0_init(void *dummy __unused)
 	 * Charge root for one process.
 	 */
 	(void)chgproccnt(p->p_ucred->cr_ruidinfo, 1, 0);
+	PROC_LOCK(p);
+	racct_add_force(p, RACCT_NPROC, 1);
+	PROC_UNLOCK(p);
 }
-SYSINIT(p0init, SI_SUB_INTRINSIC, SI_ORDER_FIRST, proc0_init, NULL)
+SYSINIT(p0init, SI_SUB_INTRINSIC, SI_ORDER_FIRST, proc0_init, NULL);
 
 /* ARGSUSED*/
 static void
@@ -511,6 +589,7 @@ proc0_post(void *dummy __unused)
 	struct timespec ts;
 	struct proc *p;
 	struct rusage ru;
+	struct thread *td;
 
 	/*
 	 * Now we can look at the time, having had a chance to verify the
@@ -526,6 +605,9 @@ proc0_post(void *dummy __unused)
 		p->p_rux.rux_uticks = 0;
 		p->p_rux.rux_sticks = 0;
 		p->p_rux.rux_iticks = 0;
+		FOREACH_THREAD_IN_PROC(p, td) {
+			td->td_runtime = 0;
+		}
 	}
 	sx_sunlock(&allproc_lock);
 	PCPU_SET(switchtime, cpu_ticks());
@@ -537,7 +619,20 @@ proc0_post(void *dummy __unused)
 	nanotime(&ts);
 	srandom(ts.tv_sec ^ ts.tv_nsec);
 }
-SYSINIT(p0post, SI_SUB_INTRINSIC_POST, SI_ORDER_FIRST, proc0_post, NULL)
+SYSINIT(p0post, SI_SUB_INTRINSIC_POST, SI_ORDER_FIRST, proc0_post, NULL);
+
+static void
+random_init(void *dummy __unused)
+{
+
+	/*
+	 * After CPU has been started we have some randomness on most
+	 * platforms via get_cyclecount().  For platforms that don't
+	 * we will reseed random(9) in proc0_post() as well.
+	 */
+	srandom(get_cyclecount());
+}
+SYSINIT(random, SI_SUB_RANDOM, SI_ORDER_FIRST, random_init, NULL);
 
 /*
  ***************************************************************************
@@ -579,7 +674,8 @@ SYSCTL_STRING(_kern, OID_AUTO, init_path, CTLFLAG_RD, init_path, 0,
 #endif
 static int init_shutdown_timeout = INIT_SHUTDOWN_TIMEOUT;
 SYSCTL_INT(_kern, OID_AUTO, init_shutdown_timeout,
-	CTLFLAG_RW, &init_shutdown_timeout, 0, "");
+	CTLFLAG_RW, &init_shutdown_timeout, 0, "Shutdown timeout of init(8). "
+	"Unused within kernel, but used to control init(8)");
 
 /*
  * Start the initial user process; try exec'ing each pathname in init_path.
@@ -688,7 +784,7 @@ start_init(void *dummy)
 		 * Otherwise, return via fork_trampoline() all the way
 		 * to user mode as init!
 		 */
-		if ((error = execve(td, &args)) == 0) {
+		if ((error = sys_execve(td, &args)) == 0) {
 			mtx_unlock(&Giant);
 			return;
 		}
@@ -701,7 +797,7 @@ start_init(void *dummy)
 }
 
 /*
- * Like kthread_create(), but runs in it's own address space.
+ * Like kproc_create(), but runs in it's own address space.
  * We do this early to reserve pid 1.
  *
  * Note special case - do not make it runnable yet.  Other work
@@ -713,7 +809,8 @@ create_init(const void *udata __unused)
 	struct ucred *newcred, *oldcred;
 	int error;
 
-	error = fork1(&thread0, RFFDG | RFPROC | RFSTOPPED, 0, &initproc);
+	error = fork1(&thread0, RFFDG | RFPROC | RFSTOPPED, 0, &initproc,
+	    NULL, 0);
 	if (error)
 		panic("cannot fork init: %d\n", error);
 	KASSERT(initproc->p_pid == 1, ("create_init: initproc->p_pid != 1"));
@@ -724,7 +821,7 @@ create_init(const void *udata __unused)
 	oldcred = initproc->p_ucred;
 	crcopy(newcred, oldcred);
 #ifdef MAC
-	mac_create_proc1(newcred);
+	mac_cred_create_init(newcred);
 #endif
 #ifdef AUDIT
 	audit_cred_proc1(newcred);
@@ -735,7 +832,7 @@ create_init(const void *udata __unused)
 	cred_update_thread(FIRST_THREAD_IN_PROC(initproc));
 	cpu_set_fork_handler(FIRST_THREAD_IN_PROC(initproc), start_init, NULL);
 }
-SYSINIT(init, SI_SUB_CREATE_INIT, SI_ORDER_FIRST, create_init, NULL)
+SYSINIT(init, SI_SUB_CREATE_INIT, SI_ORDER_FIRST, create_init, NULL);
 
 /*
  * Make it runnable now.
@@ -751,4 +848,4 @@ kick_init(const void *udata __unused)
 	sched_add(td, SRQ_BORING);
 	thread_unlock(td);
 }
-SYSINIT(kickinit, SI_SUB_KTHREAD_INIT, SI_ORDER_FIRST, kick_init, NULL)
+SYSINIT(kickinit, SI_SUB_KTHREAD_INIT, SI_ORDER_FIRST, kick_init, NULL);

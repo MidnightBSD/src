@@ -10,20 +10,21 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/at91/at91_twi.c 167852 2007-03-23 22:57:24Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,16 +39,16 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/at91/at91_twi.c 167852 2007-03-23 22:5
 #include <sys/rman.h>
 #include <machine/bus.h>
 
-#include <arm/at91/at91rm92reg.h>
 #include <arm/at91/at91_twireg.h>
+#include <arm/at91/at91var.h>
 
 #include <dev/iicbus/iiconf.h>
 #include <dev/iicbus/iicbus.h>
 #include "iicbus_if.h"
 
-#define TWI_SLOW_CLOCK		 1500
-#define TWI_FAST_CLOCK 		45000
-#define TWI_FASTEST_CLOCK	90000
+#define	TWI_SLOW_CLOCK		 1500
+#define	TWI_FAST_CLOCK		45000
+#define	TWI_FASTEST_CLOCK	90000
 
 struct at91_twi_softc
 {
@@ -66,24 +67,26 @@ struct at91_twi_softc
 static inline uint32_t
 RD4(struct at91_twi_softc *sc, bus_size_t off)
 {
+
 	return bus_read_4(sc->mem_res, off);
 }
 
 static inline void
 WR4(struct at91_twi_softc *sc, bus_size_t off, uint32_t val)
 {
+
 	bus_write_4(sc->mem_res, off, val);
 }
 
-#define AT91_TWI_LOCK(_sc)		mtx_lock(&(_sc)->sc_mtx)
+#define	AT91_TWI_LOCK(_sc)		mtx_lock(&(_sc)->sc_mtx)
 #define	AT91_TWI_UNLOCK(_sc)		mtx_unlock(&(_sc)->sc_mtx)
-#define AT91_TWI_LOCK_INIT(_sc) \
+#define	AT91_TWI_LOCK_INIT(_sc) \
 	mtx_init(&_sc->sc_mtx, device_get_nameunit(_sc->dev), \
 	    "twi", MTX_DEF)
-#define AT91_TWI_LOCK_DESTROY(_sc)	mtx_destroy(&_sc->sc_mtx);
-#define AT91_TWI_ASSERT_LOCKED(_sc)	mtx_assert(&_sc->sc_mtx, MA_OWNED);
-#define AT91_TWI_ASSERT_UNLOCKED(_sc) mtx_assert(&_sc->sc_mtx, MA_NOTOWNED);
-#define TWI_DEF_CLK	100000
+#define	AT91_TWI_LOCK_DESTROY(_sc)	mtx_destroy(&_sc->sc_mtx);
+#define	AT91_TWI_ASSERT_LOCKED(_sc)	mtx_assert(&_sc->sc_mtx, MA_OWNED);
+#define	AT91_TWI_ASSERT_UNLOCKED(_sc)	mtx_assert(&_sc->sc_mtx, MA_NOTOWNED);
+#define	TWI_DEF_CLK	100000
 
 static devclass_t at91_twi_devclass;
 
@@ -101,6 +104,7 @@ static void at91_twi_deactivate(device_t dev);
 static int
 at91_twi_probe(device_t dev)
 {
+
 	device_set_desc(dev, "TWI");
 	return (0);
 }
@@ -127,7 +131,7 @@ at91_twi_attach(device_t dev)
 		AT91_TWI_LOCK_DESTROY(sc);
 		goto out;
 	}
-	sc->cwgr = TWI_CWGR_CKDIV(8 * AT91C_MASTER_CLOCK / TWI_FASTEST_CLOCK) |
+	sc->cwgr = TWI_CWGR_CKDIV(8 * at91_master_clock / TWI_FASTEST_CLOCK) |
 	    TWI_CWGR_CHDIV(TWI_CWGR_DIV(TWI_DEF_CLK)) |
 	    TWI_CWGR_CLDIV(TWI_CWGR_DIV(TWI_DEF_CLK));
 	WR4(sc, TWI_CR, TWI_CR_SWRST);
@@ -138,7 +142,7 @@ at91_twi_attach(device_t dev)
 		device_printf(dev, "could not allocate iicbus instance\n");
 	/* probe and attach the iicbus */
 	bus_generic_attach(dev);
-out:;
+out:
 	if (err)
 		at91_twi_deactivate(dev);
 	return (err);
@@ -154,6 +158,8 @@ at91_twi_detach(device_t dev)
 	at91_twi_deactivate(dev);
 	if (sc->iicbus && (rv = device_delete_child(dev, sc->iicbus)) != 0)
 		return (rv);
+
+	AT91_TWI_LOCK_DESTROY(sc);
 
 	return (0);
 }
@@ -192,7 +198,7 @@ at91_twi_deactivate(device_t dev)
 	sc->intrhand = 0;
 	bus_generic_detach(sc->dev);
 	if (sc->mem_res)
-		bus_release_resource(dev, SYS_RES_IOPORT,
+		bus_release_resource(dev, SYS_RES_MEMORY,
 		    rman_get_rid(sc->mem_res), sc->mem_res);
 	sc->mem_res = 0;
 	if (sc->irq_res)
@@ -211,6 +217,7 @@ at91_twi_intr(void *xsc)
 	status = RD4(sc, TWI_SR);
 	if (status == 0)
 		return;
+	AT91_TWI_LOCK(sc);
 	sc->flags |= status & (TWI_SR_OVRE | TWI_SR_UNRE | TWI_SR_NACK);
 	if (status & TWI_SR_RXRDY)
 		sc->flags |= TWI_SR_RXRDY;
@@ -220,6 +227,7 @@ at91_twi_intr(void *xsc)
 		sc->flags |= TWI_SR_TXCOMP;
 	WR4(sc, TWI_IDR, status);
 	wakeup(sc);
+	AT91_TWI_UNLOCK(sc);
 	return;
 }
 
@@ -230,6 +238,7 @@ at91_twi_wait(struct at91_twi_softc *sc, uint32_t bit)
 	int counter = 100000;
 	uint32_t sr;
 
+	AT91_TWI_ASSERT_LOCKED(sc);
 	while (!((sr = RD4(sc, TWI_SR)) & bit) && counter-- > 0 &&
 	    !(sr & TWI_SR_NACK))
 		continue;
@@ -247,6 +256,7 @@ at91_twi_rst_card(device_t dev, u_char speed, u_char addr, u_char *oldaddr)
 	int clk;
 
 	sc = device_get_softc(dev);
+	AT91_TWI_LOCK(sc);
 	if (oldaddr)
 		*oldaddr = sc->twi_addr;
 	sc->twi_addr = addr;
@@ -275,12 +285,13 @@ at91_twi_rst_card(device_t dev, u_char speed, u_char addr, u_char *oldaddr)
 	WR4(sc, TWI_CR, TWI_CR_MSEN | TWI_CR_SVDIS);
 	WR4(sc, TWI_CWGR, sc->cwgr);
 	printf("setting cwgr to %#x\n", sc->cwgr);
+	AT91_TWI_UNLOCK(sc);
 
 	return 0;
 }
 
 static int
-at91_twi_callback(device_t dev, int index, caddr_t *data)
+at91_twi_callback(device_t dev, int index, caddr_t data)
 {
 	int error = 0;
 
@@ -329,7 +340,7 @@ at91_twi_transfer(device_t dev, struct iic_msg *msgs, uint32_t nmsgs)
 			err = EINVAL;
 			goto out;
 		}
-		if (len == 1)
+		if (len == 1 && msgs[i].flags & IIC_M_RD)
 			WR4(sc, TWI_CR, TWI_CR_START | TWI_CR_STOP);
 		else
 			WR4(sc, TWI_CR, TWI_CR_START);
@@ -339,7 +350,7 @@ at91_twi_transfer(device_t dev, struct iic_msg *msgs, uint32_t nmsgs)
 				if ((sr = RD4(sc, TWI_SR)) & TWI_SR_RXRDY) {
 					len--;
 					*buf++ = RD4(sc, TWI_RHR) & 0xff;
-					if (len == 0 && msgs[i].len != 1)
+					if (len == 1)
 						WR4(sc, TWI_CR, TWI_CR_STOP);
 				}
 			}
@@ -349,17 +360,16 @@ at91_twi_transfer(device_t dev, struct iic_msg *msgs, uint32_t nmsgs)
 			}
 		} else {
 			while (len--) {
-				if (len == 0 && msgs[i].len != 1)
-					WR4(sc, TWI_CR, TWI_CR_STOP);
 				if ((err = at91_twi_wait(sc, TWI_SR_TXRDY)))
 					goto out;
 				WR4(sc, TWI_THR, *buf++);
 			}
+			WR4(sc, TWI_CR, TWI_CR_STOP);
 		}
 		if ((err = at91_twi_wait(sc, TWI_SR_TXCOMP)))
 			break;
 	}
-out:;
+out:
 	if (err) {
 		WR4(sc, TWI_CR, TWI_CR_SWRST);
 		WR4(sc, TWI_CR, TWI_CR_MSEN | TWI_CR_SVDIS);
@@ -379,7 +389,7 @@ static device_method_t at91_twi_methods[] = {
 	DEVMETHOD(iicbus_callback,	at91_twi_callback),
 	DEVMETHOD(iicbus_reset,		at91_twi_rst_card),
 	DEVMETHOD(iicbus_transfer,	at91_twi_transfer),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t at91_twi_driver = {
@@ -388,6 +398,7 @@ static driver_t at91_twi_driver = {
 	sizeof(struct at91_twi_softc),
 };
 
-DRIVER_MODULE(at91_twi, atmelarm, at91_twi_driver, at91_twi_devclass, 0, 0);
-DRIVER_MODULE(iicbus, at91_twi, iicbus_driver, iicbus_devclass, 0, 0);
+DRIVER_MODULE(at91_twi, atmelarm, at91_twi_driver, at91_twi_devclass, NULL,
+    NULL);
+DRIVER_MODULE(iicbus, at91_twi, iicbus_driver, iicbus_devclass, NULL, NULL);
 MODULE_DEPEND(at91_twi, iicbus, 1, 1, 1);

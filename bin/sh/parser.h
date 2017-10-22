@@ -30,24 +30,27 @@
  * SUCH DAMAGE.
  *
  *	@(#)parser.h	8.3 (Berkeley) 5/4/95
- * $FreeBSD: release/7.0.0/bin/sh/parser.h 164003 2006-11-05 18:36:05Z stefanf $
+ * $FreeBSD$
  */
 
 /* control characters in argument strings */
-#define CTLESC '\201'
-#define CTLVAR '\202'
-#define CTLENDVAR '\203'
-#define CTLBACKQ '\204'
+#define CTLESC '\300'
+#define CTLVAR '\301'
+#define CTLENDVAR '\371'
+#define CTLBACKQ '\372'
 #define CTLQUOTE 01		/* ored with CTLBACKQ code if in quotes */
 /*	CTLBACKQ | CTLQUOTE == '\205' */
-#define	CTLARI	'\206'
-#define	CTLENDARI '\207'
-#define	CTLQUOTEMARK '\210'
+#define	CTLARI	'\374'
+#define	CTLENDARI '\375'
+#define	CTLQUOTEMARK '\376'
+#define	CTLQUOTEEND '\377' /* only for ${v+-...} */
 
 /* variable substitution byte (follows CTLVAR) */
-#define VSTYPE	0x0f		/* type of variable substitution */
-#define VSNUL	0x10		/* colon--treat the empty string as unset */
-#define VSQUOTE 0x80		/* inside double quotes--suppress splitting */
+#define VSTYPE		0x0f	/* type of variable substitution */
+#define VSNUL		0x10	/* colon--treat the empty string as unset */
+#define VSLINENO	0x20	/* expansion of $LINENO, the line number \
+				   follows immediately */
+#define VSQUOTE		0x80	/* inside double quotes--suppress splitting */
 
 /* values of VSTYPE field */
 #define VSNORMAL	0x1		/* normal variable:  $var or ${var} */
@@ -71,9 +74,12 @@
 extern int tokpushback;
 #define NEOF ((union node *)&tokpushback)
 extern int whichprompt;		/* 1 == PS1, 2 == PS2 */
+extern const char *const parsekwd[];
 
 
 union node *parsecmd(int);
 void fixredir(union node *, const char *, int);
-int goodname(char *);
+int goodname(const char *);
+int isassignment(const char *);
 char *getprompt(void *);
+const char *expandstr(char *);

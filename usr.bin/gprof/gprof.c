@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -44,7 +40,7 @@ static char sccsid[] = "@(#)gprof.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/gprof/gprof.c 131990 2004-07-11 17:37:33Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <limits.h>
@@ -165,7 +161,7 @@ main(argc, argv)
 	 *	get information from the executable file.
 	 */
     if ((Kflag && kernel_getnfile(a_outname, &defaultEs) == -1) ||
-      (elf_getnfile(a_outname, &defaultEs) == -1 &&
+      (!Kflag && elf_getnfile(a_outname, &defaultEs) == -1 &&
       aout_getnfile(a_outname, &defaultEs) == -1))
 	errx(1, "%s: bad format", a_outname);
 	/*

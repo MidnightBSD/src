@@ -36,7 +36,7 @@ static const char sccsid[] = "@(#)local_passwd.c	8.3 (Berkeley) 4/2/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/release/picobsd/tinyware/passwd/local_passwd.c 98514 2002-06-20 21:17:33Z luigi $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>

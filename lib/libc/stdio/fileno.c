@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)fileno.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/stdio/fileno.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/stdio/fileno.c 165903 2007-01-09 00:2
 #include "libc_private.h"
 
 #undef fileno
+#undef fileno_unlocked
 
 int
 fileno(FILE *fp)
@@ -53,4 +54,11 @@ fileno(FILE *fp)
 	FUNLOCKFILE(fp);
 
 	return (fd);
+}
+
+int
+fileno_unlocked(FILE *fp)
+{
+
+	return (__sfileno(fp));
 }

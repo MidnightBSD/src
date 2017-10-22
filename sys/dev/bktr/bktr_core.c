@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/bktr/bktr_core.c 153084 2005-12-04 10:06:06Z ru $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -538,7 +538,7 @@ bktr_store_address(unit, BKTR_MEM_BUF,          buf);
 
 	if ( bootverbose ) {
 		printf("%s: buffer size %d, addr %p\n",
-			bktr_name(bktr), BROOKTREE_ALLOC,
+			bktr_name(bktr), (int)BROOKTREE_ALLOC,
 			(void *)(uintptr_t)vtophys(buf));
 	}
 
@@ -918,7 +918,7 @@ common_bktr_intr( void *arg )
 
 		if (bktr->proc != NULL) {
 			PROC_LOCK(bktr->proc);
-			psignal( bktr->proc, bktr->signal);
+			kern_psignal( bktr->proc, bktr->signal);
 			PROC_UNLOCK(bktr->proc);
 		}
 
@@ -1808,9 +1808,8 @@ video_ioctl( bktr_ptr_t bktr, int unit, ioctl_cmd_t cmd, caddr_t arg, struct thr
 					bktr->bigbuf = buf;
 					bktr->alloc_pages = temp;
 					if (bootverbose)
-						printf(
-				"%s: ioctl: Allocating %d bytes\n",
-							bktr_name(bktr), temp*PAGE_SIZE);
+						printf("%s: ioctl: Allocating %d bytes\n",
+							bktr_name(bktr), (int)(temp*PAGE_SIZE));
 				}
 				else
 					error = ENOMEM;

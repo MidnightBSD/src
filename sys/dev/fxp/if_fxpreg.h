@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/fxp/if_fxpreg.h 145401 2005-04-22 13:05:53Z mux $
+ * $FreeBSD$
  */
 
 #define FXP_VENDORID_INTEL	0x8086
@@ -45,7 +45,9 @@
 #define	FXP_CSR_FLASHCONTROL	12	/* flash control (2 bytes) */
 #define	FXP_CSR_EEPROMCONTROL	14	/* eeprom control (2 bytes) */
 #define	FXP_CSR_MDICONTROL	16	/* mdi control (4 bytes) */
-#define	FXP_CSR_FLOWCONTROL	0x19	/* flow control (2 bytes) */
+#define	FXP_CSR_FC_THRESH	0x19	/* flow control (1 byte) */
+#define	FXP_CSR_FC_STATUS	0x1A	/* flow control status (1 byte) */
+#define	FXP_CSR_PMDR		0x1B	/* power management driver (1 byte) */
 #define	FXP_CSR_GENCONTROL	0x1C	/* general control (1 byte) */
 
 /*
@@ -223,7 +225,7 @@ struct fxp_cb_config {
 
 	/* Bytes 22 - 31 -- i82550 only */
 	u_int		__FXP_BITFIELD3(gamla_rx:1,
-			    vlan_drop_en:1,
+			    vlan_strip_en:1,
 			    :6);
 	uint8_t		pad[9];
 };
@@ -287,12 +289,12 @@ struct fxp_cb_tx {
 	/*
 	 * The following structure isn't actually part of the TxCB,
 	 * unless the extended TxCB feature is being used.  In this
-	 * case, the first two elements of the structure below are 
+	 * case, the first two elements of the structure below are
 	 * fetched along with the TxCB.
 	 */
 	union {
 		struct fxp_ipcb ipcb;
-		struct fxp_tbd tbd[FXP_NTXSEG];
+		struct fxp_tbd tbd[FXP_NTXSEG + 1];
 	} tx_cb_u;
 };
 
@@ -376,6 +378,7 @@ struct fxp_rfa {
 #define FXP_RFA_STATUS_RNR	0x0200	/* no resources */
 #define FXP_RFA_STATUS_ALIGN	0x0400	/* alignment error */
 #define FXP_RFA_STATUS_CRC	0x0800	/* CRC error */
+#define FXP_RFA_STATUS_VLAN	0x1000	/* VLAN tagged frame */
 #define FXP_RFA_STATUS_OK	0x2000	/* packet received okay */
 #define FXP_RFA_STATUS_C	0x8000	/* packet reception complete */
 #define FXP_RFA_CONTROL_SF	0x08	/* simple/flexible memory mode */
@@ -416,11 +419,19 @@ struct fxp_stats {
 	uint32_t rx_overrun_errors;
 	uint32_t rx_cdt_errors;
 	uint32_t rx_shortframes;
+	uint32_t tx_pause;
+	uint32_t rx_pause;
+	uint32_t rx_controls;
+	uint16_t tx_tco;
+	uint16_t rx_tco;
 	uint32_t completion_status;
+	uint32_t reserved0;
+	uint32_t reserved1;
+	uint32_t reserved2;
 };
 #define FXP_STATS_DUMP_COMPLETE	0xa005
 #define FXP_STATS_DR_COMPLETE	0xa007
-	
+
 /*
  * Serial EEPROM control register bits
  */
@@ -435,6 +446,24 @@ struct fxp_stats {
 #define FXP_EEPROM_OPC_ERASE	0x4
 #define FXP_EEPROM_OPC_WRITE	0x5
 #define FXP_EEPROM_OPC_READ	0x6
+
+/*
+ * EEPROM map
+ */
+#define	FXP_EEPROM_MAP_IA0	0x00		/* Station address */
+#define	FXP_EEPROM_MAP_IA1	0x01
+#define	FXP_EEPROM_MAP_IA2	0x02
+#define	FXP_EEPROM_MAP_COMPAT	0x03		/* Compatibility */
+#define	FXP_EEPROM_MAP_CNTR	0x05		/* Controller/connector type */
+#define	FXP_EEPROM_MAP_PRI_PHY	0x06		/* Primary PHY record */
+#define	FXP_EEPROM_MAP_SEC_PHY	0x07		/* Secondary PHY record */
+#define	FXP_EEPROM_MAP_PWA0	0x08		/* Printed wire assembly num. */
+#define	FXP_EEPROM_MAP_PWA1	0x09		/* Printed wire assembly num. */
+#define	FXP_EEPROM_MAP_ID	0x0A		/* EEPROM ID */
+#define	FXP_EEPROM_MAP_SUBSYS	0x0B		/* Subsystem ID */
+#define	FXP_EEPROM_MAP_SUBVEN	0x0C		/* Subsystem vendor ID */
+#define	FXP_EEPROM_MAP_CKSUM64	0x3F		/* 64-word EEPROM checksum */
+#define	FXP_EEPROM_MAP_CKSUM256	0xFF		/* 256-word EEPROM checksum */
 
 /*
  * Management Data Interface opcodes

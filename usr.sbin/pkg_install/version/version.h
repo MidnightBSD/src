@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/usr.sbin/pkg_install/version/version.h 174854 2007-12-22 06:32:46Z cvs2svn $ */
+/* $FreeBSD$ */
 
 /*
  * FreeBSD install - a package for the installation and maintainance
@@ -22,13 +22,6 @@
 
 #ifndef _INST_VERSION_H_INCLUDE
 #define _INST_VERSION_H_INCLUDE
-
-/* Where the ports lives by default */
-#define DEF_PORTS_DIR	"/usr/ports"
-/* just in case we change the environment variable name */
-#define PORTSDIR	"PORTSDIR"
-/* macro to get name of directory where we put logging information */
-#define PORTS_DIR	(getenv(PORTSDIR) ? getenv(PORTSDIR) : DEF_PORTS_DIR)
 
 struct index_entry {
     SLIST_ENTRY(index_entry) next;

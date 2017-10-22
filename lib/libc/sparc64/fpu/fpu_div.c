@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/sparc64/fpu/fpu_div.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Perform an FPU divide (return x / y).
@@ -167,14 +167,16 @@ __fpu_div(fe)
 	 * return it.  Otherwise we have the following cases:
 	 *
 	 *	Inf / Inf = NaN, plus NV exception
-	 *	Inf / num = Inf [i.e., return x]
-	 *	Inf / 0   = Inf [i.e., return x]
-	 *	0 / Inf = 0 [i.e., return x]
-	 *	0 / num = 0 [i.e., return x]
+	 *	Inf / num = Inf [i.e., return x #]
+	 *	Inf / 0   = Inf [i.e., return x #]
+	 *	0 / Inf = 0 [i.e., return x #]
+	 *	0 / num = 0 [i.e., return x #]
 	 *	0 / 0   = NaN, plus NV exception
-	 *	num / Inf = 0
+	 *	num / Inf = 0 #
 	 *	num / num = num (do the divide)
-	 *	num / 0   = Inf, plus DZ exception
+	 *	num / 0   = Inf #, plus DZ exception
+	 *
+	 * # Sign of result is XOR of operand signs.
 	 */
 	if (ISNAN(x) || ISNAN(y)) {
 		ORDER(x, y);
@@ -183,10 +185,10 @@ __fpu_div(fe)
 	if (ISINF(x) || ISZERO(x)) {
 		if (x->fp_class == y->fp_class)
 			return (__fpu_newnan(fe));
+		x->fp_sign ^= y->fp_sign;
 		return (x);
 	}
 
-	/* all results at this point use XOR of operand signs */
 	x->fp_sign ^= y->fp_sign;
 	if (ISINF(y)) {
 		x->fp_class = FPC_ZERO;

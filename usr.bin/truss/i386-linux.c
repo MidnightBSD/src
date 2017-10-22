@@ -1,5 +1,5 @@
 /*
- * Copryight 1997 Sean Eric Fagan
+ * Copyright 1997 Sean Eric Fagan
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/usr.bin/truss/i386-linux.c 171055 2007-06-26 22:42:37Z delphij $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 /*
@@ -124,7 +124,7 @@ i386_linux_syscall_entry(struct trussinfo *trussinfo, int nargs) {
 
   fsc.number = syscall_num;
   fsc.name =
-    (syscall_num < 0 || syscall_num > nsyscalls) ? NULL : linux_syscallnames[syscall_num];
+    (syscall_num < 0 || syscall_num >= nsyscalls) ? NULL : linux_syscallnames[syscall_num];
   if (!fsc.name) {
     fprintf(trussinfo->outfile, "-- UNKNOWN SYSCALL %d --\n", syscall_num);
   }
@@ -164,8 +164,7 @@ i386_linux_syscall_entry(struct trussinfo *trussinfo, int nargs) {
     fsc.nargs = nargs;
   }
 
-  fsc.s_args = malloc((1+fsc.nargs) * sizeof(char*));
-  memset(fsc.s_args, 0, fsc.nargs * sizeof(char*));
+  fsc.s_args = calloc(1, (1+fsc.nargs) * sizeof(char*));
   fsc.sc = sc;
 
   /*
@@ -309,7 +308,7 @@ i386_linux_syscall_exit(struct trussinfo *trussinfo, int syscall_num __unused)
   }
 
   print_syscall_ret(trussinfo, fsc.name, fsc.nargs, fsc.s_args, errorp,
-                    errorp ? i : retval);
+                    errorp ? i : retval, fsc.sc);
   clear_fsc();
 
   return (retval);

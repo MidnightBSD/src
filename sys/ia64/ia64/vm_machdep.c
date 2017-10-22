@@ -38,7 +38,7 @@
  *
  *	from: @(#)vm_machdep.c	7.3 (Berkeley) 5/13/91
  *	Utah $Hdr: vm_machdep.c 1.16.1.1 89/06/23$
- * $FreeBSD: release/7.0.0/sys/ia64/ia64/vm_machdep.c 170305 2007-06-04 23:57:32Z jeff $
+ * $FreeBSD$
  */
 /*-
  * Copyright (c) 1994, 1995, 1996 Carnegie-Mellon University.
@@ -70,9 +70,11 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/proc.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
+#include <sys/sysent.h>
 #include <sys/vnode.h>
 #include <sys/vmmeter.h>
 #include <sys/kernel.h>
@@ -88,17 +90,17 @@
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
-#include <sys/lock.h>
 #include <vm/vm_kern.h>
 #include <vm/vm_page.h>
 #include <vm/vm_map.h>
 #include <vm/vm_extern.h>
 
-#include <i386/include/psl.h>
-
 void
 cpu_thread_exit(struct thread *td)
 {
+
+	/* Throw away the high FP registers. */
+	ia64_highfp_drop(td);
 }
 
 void
@@ -107,7 +109,7 @@ cpu_thread_clean(struct thread *td)
 }
 
 void
-cpu_thread_setup(struct thread *td)
+cpu_thread_alloc(struct thread *td)
 {
 	intptr_t sp;
 
@@ -117,7 +119,11 @@ cpu_thread_setup(struct thread *td)
 	sp -= sizeof(struct trapframe);
 	td->td_frame = (struct trapframe *)sp;
 	td->td_frame->tf_length = sizeof(struct trapframe);
-	mtx_init(&td->td_md.md_highfp_mtx, "High FP lock", NULL, MTX_SPIN);
+}
+
+void
+cpu_thread_free(struct thread *td)
+{
 }
 
 void
@@ -133,10 +139,42 @@ cpu_thread_swapout(struct thread *td)
 }
 
 void
+cpu_set_syscall_retval(struct thread *td, int error)
+{
+	struct proc *p;
+	struct trapframe *tf;
+
+	if (error == EJUSTRETURN)
+		return;
+
+	tf = td->td_frame;
+
+	/*
+	 * Save the "raw" error code in r10. We use this to handle
+	 * syscall restarts (see do_ast()).
+	 */
+	tf->tf_scratch.gr10 = error;
+	if (error == 0) {
+		tf->tf_scratch.gr8 = td->td_retval[0];
+		tf->tf_scratch.gr9 = td->td_retval[1];
+	} else if (error != ERESTART) {
+		p = td->td_proc;
+		if (error < p->p_sysent->sv_errsize)
+			error = p->p_sysent->sv_errtbl[error];
+		/*
+		 * Translated error codes are returned in r8. User
+		 */
+		tf->tf_scratch.gr8 = error;
+	}
+}
+
+void
 cpu_set_upcall(struct thread *td, struct thread *td0)
 {
 	struct pcb *pcb;
 	struct trapframe *tf;
+
+	ia64_highfp_save(td0);
 
 	tf = td->td_frame;
 	KASSERT(tf != NULL, ("foo"));
@@ -154,7 +192,7 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	bcopy(td0->td_pcb, pcb, sizeof(*pcb));
 	pcb->pcb_special.bspstore = td->td_kstack;
 	pcb->pcb_special.pfs = 0;
-	pcb->pcb_current_pmap = vmspace_pmap(td->td_proc->p_vmspace);
+	pcb->pcb_current_pmap = vmspace_pmap(td0->td_proc->p_vmspace);
 	pcb->pcb_special.sp = (uintptr_t)tf - 16;
 	pcb->pcb_special.rp = FDESC_FUNC(fork_trampoline);
 	cpu_set_fork_handler(td, (void (*)(void*))fork_return, td);
@@ -312,10 +350,6 @@ cpu_set_fork_handler(td, func, arg)
 void
 cpu_exit(struct thread *td)
 {
-
-	/* XXX: Should this be in cpu_thread_exit() instead? */
-	/* Throw away the high FP registers. */
-	ia64_highfp_drop(td);
 }
 
 /*
@@ -344,9 +378,8 @@ sf_buf_free(struct sf_buf *sf)
  */   
 void  
 swi_vm(void *dummy) 
-{     
-#if 0
+{
+
 	if (busdma_swi_pending != 0)
 		busdma_swi();
-#endif
 }

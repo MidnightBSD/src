@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/media.c 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -117,8 +117,6 @@ cpioVerbosity()
 
     if (cp && !strcmp(cp, "high"))
 	return "-v";
-    else if (cp && !strcmp(cp, "medium"))
-	return "-V";
     return "";
 }
 
@@ -221,6 +219,53 @@ mediaSetFloppy(dialogMenuItem *self)
 }
 
 static int
+USBHook(dialogMenuItem *self)
+{
+	return genericHook(self, DEVICE_TYPE_USB);
+}
+
+
+/*
+ * Attempt to use USB as the installation media type.
+ */
+int
+mediaSetUSB(dialogMenuItem *self)
+{
+	Device **devs;
+	int cnt;
+
+	mediaClose();
+	devs = deviceFind(NULL, DEVICE_TYPE_USB);
+	cnt = deviceCount(devs);
+
+	if (!cnt) {
+		msgConfirm("No USB devices found (try Options/Re-scan Devices)");
+		return DITEM_FAILURE | DITEM_CONTINUE;
+	}
+	else if (cnt > 1) {
+		DMenu *menu;
+		int status;
+
+		menu = deviceCreateMenu(&MenuMediaUSB, DEVICE_TYPE_USB, USBHook,
+		    NULL);
+		if (!menu)
+			msgFatal("Unable to create USB menu! Something is " \
+			    "seriously wrong.");
+		status = dmenuOpenSimple(menu, FALSE);
+		free(menu);
+		if (!status)
+			return DITEM_FAILURE;
+	}
+	else
+		mediaDevice = devs[0];
+	if (mediaDevice)
+		mediaDevice->private = NULL;
+	if (!variable_get(VAR_NONINTERACTIVE))
+		msgConfirm("Using USB device: %s", mediaDevice->name);
+	return (mediaDevice ? DITEM_LEAVE_MENU : DITEM_FAILURE);
+}
+
+static int
 DOSHook(dialogMenuItem *self)
 {
     return genericHook(self, DEVICE_TYPE_DOS);
@@ -257,61 +302,6 @@ mediaSetDOS(dialogMenuItem *self)
     }
     else
 	mediaDevice = devs[0];
-    return (mediaDevice ? DITEM_LEAVE_MENU : DITEM_FAILURE);
-}
-
-static int
-tapeHook(dialogMenuItem *self)
-{
-    return genericHook(self, DEVICE_TYPE_TAPE);
-}
-
-/*
- * Return 1 if we successfully found and set the installation type to
- * be a tape drive.
- */
-int
-mediaSetTape(dialogMenuItem *self)
-{
-    Device **devs;
-    int cnt;
-
-    mediaClose();
-    devs = deviceFind(NULL, DEVICE_TYPE_TAPE);
-    cnt = deviceCount(devs);
-    if (!cnt) {
-	msgConfirm("No tape drive devices found!  Please check that your system's configuration\n"
-		   "is correct.  For more information, consult the hardware guide in the Doc\n"
-		   "menu.");
-	return DITEM_FAILURE | DITEM_CONTINUE;
-    }
-    else if (cnt > 1) {
-	DMenu *menu;
-	int status;
-
-	menu = deviceCreateMenu(&MenuMediaTape, DEVICE_TYPE_TAPE, tapeHook, NULL);
-	if (!menu)
-	    msgFatal("Unable to create tape drive menu!  Something is seriously wrong.");
-	status = dmenuOpenSimple(menu, FALSE);
-	free(menu);
-	if (!status)
-	    return DITEM_FAILURE;
-    }
-    else
-	mediaDevice = devs[0];
-    if (mediaDevice) {
-	char *val;
-
-	val = msgGetInput("/var/tmp", "Please enter the name of a temporary directory containing\n"
-			  "sufficient space for holding the contents of this tape (or\n"
-			  "tapes).  The contents of this directory will be removed\n"
-			  "after installation, so be sure to specify a directory that\n"
-			  "can be erased afterwards!\n");
-	if (!val)
-	    mediaDevice = NULL;
-	else
-	    mediaDevice->private = strdup(val);
-    }
     return (mediaDevice ? DITEM_LEAVE_MENU : DITEM_FAILURE);
 }
 
@@ -358,7 +348,7 @@ mediaSetFTP(dialogMenuItem *self)
 	}
 	urllen = strlen(cp);
 	if (urllen >= sizeof(ftpDevice.name)) {
-	    msgConfirm("Length of specified URL is %d characters. Allowable maximum is %d.",
+	    msgConfirm("Length of specified URL is %zu characters. Allowable maximum is %zu.",
 			urllen,sizeof(ftpDevice.name)-1);
 	    variable_unset(VAR_FTP_PATH);
 	    return DITEM_FAILURE;
@@ -571,7 +561,7 @@ mediaSetNFS(dialogMenuItem *self)
     }
     pathlen = strlen(hostname);
     if (pathlen >= sizeof(nfsDevice.name)) {
-	msgConfirm("Length of specified NFS path is %d characters. Allowable maximum is %d.",
+	msgConfirm("Length of specified NFS path is %zu characters. Allowable maximum is %zu.",
 		   pathlen,sizeof(nfsDevice.name)-1);
 	variable_unset(VAR_NFS_PATH);
 	return DITEM_FAILURE;
@@ -664,9 +654,9 @@ mediaExtractDistBegin(char *dir, int *fd, int *zpid, int *cpid)
 	    dup2(1, 2);
 	}
 	if (strlen(cpioVerbosity()))
-	    i = execl(cpio, cpio, "-idum", cpioVerbosity(), "--block-size", mediaTapeBlocksize(), (char *)0);
+	    i = execl(cpio, cpio, "-idum", cpioVerbosity(), (char *)0);
 	else
-	    i = execl(cpio, cpio, "-idum", "--block-size", mediaTapeBlocksize(), (char *)0);
+	    i = execl(cpio, cpio, "-idum", (char *)0);
 	if (isDebug())
 	    msgDebug("%s command returns %d status\n", cpio, i);
 	exit(i);
@@ -685,8 +675,7 @@ mediaExtractDistEnd(int zpid, int cpid)
     /* Don't check exit status - gunzip seems to return a bogus one! */
     if (i < 0) {
 	if (isDebug())
-	    msgDebug("wait for %s returned status of %d!\n",
-		USE_GZIP ? "gunzip" : "bunzip2", i);
+	    msgDebug("wait for %s returned status of %d!\n", UNZIPPER, i);
 	return FALSE;
     }
     i = waitpid(cpid, &j, 0);
@@ -753,9 +742,9 @@ mediaExtractDist(char *dir, char *dist, FILE *fp)
 	    dup2(1, 2);
 	}
 	if (strlen(cpioVerbosity()))
-	    i = execl(cpio, cpio, "-idum", cpioVerbosity(), "--block-size", mediaTapeBlocksize(), (char *)0);
+	    i = execl(cpio, cpio, "-idum", cpioVerbosity(), (char *)0);
 	else
-	    i = execl(cpio, cpio, "-idum", "--block-size", mediaTapeBlocksize(), (char *)0);
+	    i = execl(cpio, cpio, "-idum", "--block-size", (char *)0);
 	if (isDebug())
 	    msgDebug("%s command returns %d status\n", cpio, i);
 	exit(i);
@@ -802,8 +791,7 @@ mediaExtractDist(char *dir, char *dist, FILE *fp)
     /* Don't check exit status - gunzip seems to return a bogus one! */
     if (i < 0) {
 	if (isDebug())
-	    msgDebug("wait for %s returned status of %d!\n",
-		USE_GZIP ? "gunzip" : "bunzip2", i);
+	    msgDebug("wait for %s returned status of %d!\n", UNZIPPER, i);
 	return FALSE;
     }
     i = waitpid(cpid, &j, 0);
@@ -858,8 +846,6 @@ mediaSetCPIOVerbosity(dialogMenuItem *self)
     }
     else {
 	if (!strcmp(cp, "low"))
-	    variable_set2(VAR_CPIO_VERBOSITY, "medium", 0);
-	else if (!strcmp(cp, "medium"))
 	    variable_set2(VAR_CPIO_VERBOSITY, "high", 0);
 	else /* must be "high" - wrap around */
 	    variable_set2(VAR_CPIO_VERBOSITY, "low", 0);

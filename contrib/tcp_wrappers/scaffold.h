@@ -3,7 +3,7 @@
   * 
   * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
   *
-  * $FreeBSD: release/7.0.0/contrib/tcp_wrappers/scaffold.h 172506 2007-10-10 16:59:15Z cvs2svn $
+  * $FreeBSD$
   */
 
 #ifdef INET6

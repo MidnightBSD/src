@@ -1,5 +1,7 @@
-# $FreeBSD: release/7.0.0/tools/regression/bin/sh/set-e/elif1.0 149781 2005-09-04 11:59:59Z stefanf $
+# $FreeBSD$
 set -e
 if false; then
+	:
 elif false; then
+	:
 fi

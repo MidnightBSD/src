@@ -1,6 +1,7 @@
 /*-
  * Copyright (c) 1980, 1986, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *	The Regents of the University of California.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_cb.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: release/7.0.0/sys/net/raw_cb.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _NET_RAW_CB_H_
@@ -36,14 +37,12 @@
 #include <sys/queue.h>
 
 /*
- * Raw protocol interface control block.  Used
- * to tie a socket to the generic raw interface.
+ * Raw protocol interface control block.  Used to tie a socket to the generic
+ * raw interface.
  */
 struct rawcb {
 	LIST_ENTRY(rawcb) list;
 	struct	socket *rcb_socket;	/* back pointer to socket */
-	struct	sockaddr *rcb_faddr;	/* destination address */
-	struct	sockaddr *rcb_laddr;	/* socket's address */
 	struct	sockproto rcb_proto;	/* protocol family, protocol */
 };
 
@@ -56,25 +55,34 @@ struct rawcb {
 #define	RAWRCVQ		8192
 
 #ifdef _KERNEL
-extern LIST_HEAD(rawcb_list_head, rawcb) rawcb_list;
+VNET_DECLARE(LIST_HEAD(rawcb_list_head, rawcb), rawcb_list);
+#define	V_rawcb_list	VNET(rawcb_list)
+
 extern struct mtx rawcb_mtx;
 
-/* protosw entries */
+/*
+ * Generic protosw entries for raw socket protocols.
+ */
 pr_ctlinput_t	raw_ctlinput;
 pr_init_t	raw_init;
 
-/* usrreq entries */
+/*
+ * Library routines for raw socket usrreq functions; will always be wrapped
+ * so that protocol-specific functions can be handled.
+ */
+typedef int (*raw_input_cb_fn)(struct mbuf *, struct sockproto *,
+    struct sockaddr *, struct rawcb *);
+
 int	 raw_attach(struct socket *, int);
 void	 raw_detach(struct rawcb *);
-void	 raw_disconnect(struct rawcb *);
+void	 raw_input(struct mbuf *, struct sockproto *, struct sockaddr *);
+void	 raw_input_ext(struct mbuf *, struct sockproto *, struct sockaddr *,
+	    raw_input_cb_fn);
 
-#if 0 /* what the ??? */
-pr_input_t	raw_input;
-#else
-void	 raw_input(struct mbuf *,
-	    struct sockproto *, struct sockaddr *, struct sockaddr *);
-#endif
-
+/*
+ * Generic pr_usrreqs entries for raw socket protocols, usually wrapped so
+ * that protocol-specific functions can be handled.
+ */
 extern	struct pr_usrreqs raw_usrreqs;
 #endif
 

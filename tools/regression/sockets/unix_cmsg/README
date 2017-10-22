@@ -1,4 +1,4 @@
-$FreeBSD: release/7.0.0/tools/regression/sockets/unix_cmsg/README 159045 2006-05-29 18:40:55Z maxim $
+$FreeBSD$
 
 About unix_cmsg
 ================

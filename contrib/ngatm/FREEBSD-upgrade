@@ -1,4 +1,4 @@
-$FreeBSD: release/7.0.0/contrib/ngatm/FREEBSD-upgrade 172506 2007-10-10 16:59:15Z cvs2svn $
+$FreeBSD$
 
 This is the user part of the NgATM stuff. Be careful to feed changes
 back to the maintainer <harti@freebsd.org>, because the code here is

@@ -1,4 +1,4 @@
-/* $OpenBSD: auth-rsa.c,v 1.72 2006/11/06 21:25:27 markus Exp $ */
+/* $OpenBSD: auth-rsa.c,v 1.79 2010/12/03 23:55:27 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -34,11 +34,11 @@
 #include "uidswap.h"
 #include "match.h"
 #include "buffer.h"
-#include "auth-options.h"
 #include "pathnames.h"
 #include "log.h"
 #include "servconf.h"
 #include "key.h"
+#include "auth-options.h"
 #include "hostfile.h"
 #include "auth.h"
 #ifdef GSSAPI
@@ -113,7 +113,7 @@ auth_rsa_verify_response(Key *key, BIGNUM *challenge, u_char response[16])
 	MD5_Final(mdbuf, &md);
 
 	/* Verify that the response is the original challenge. */
-	if (memcmp(response, mdbuf, 16) != 0) {
+	if (timingsafe_bcmp(response, mdbuf, 16) != 0) {
 		/* Wrong answer. */
 		return (0);
 	}
@@ -173,7 +173,6 @@ auth_rsa_key_allowed(struct passwd *pw, BIGNUM *client_n, Key **rkey)
 	u_int bits;
 	FILE *f;
 	u_long linenum = 0;
-	struct stat st;
 	Key *key;
 
 	/* Temporarily use the user's uid. */
@@ -182,27 +181,9 @@ auth_rsa_key_allowed(struct passwd *pw, BIGNUM *client_n, Key **rkey)
 	/* The authorized keys. */
 	file = authorized_keys_file(pw);
 	debug("trying public RSA key file %s", file);
-
-	/* Fail quietly if file does not exist */
-	if (stat(file, &st) < 0) {
-		/* Restore the privileged uid. */
-		restore_uid();
-		xfree(file);
-		return (0);
-	}
-	/* Open the file containing the authorized keys. */
-	f = fopen(file, "r");
+	f = auth_openkeyfile(file, pw, options.strict_modes);
 	if (!f) {
-		/* Restore the privileged uid. */
-		restore_uid();
 		xfree(file);
-		return (0);
-	}
-	if (options.strict_modes &&
-	    secure_filename(f, file, pw, line, sizeof(line)) != 0) {
-		xfree(file);
-		fclose(f);
-		logit("Authentication refused: %s", line);
 		restore_uid();
 		return (0);
 	}
@@ -265,6 +246,10 @@ auth_rsa_key_allowed(struct passwd *pw, BIGNUM *client_n, Key **rkey)
 			    "actual %d vs. announced %d.",
 			    file, linenum, BN_num_bits(key->rsa->n), bits);
 
+		/* Never accept a revoked key */
+		if (auth_key_is_revoked(key))
+			break;
+
 		/* We have found the desired key. */
 		/*
 		 * If our options do not allow this key to be used,
@@ -272,7 +257,8 @@ auth_rsa_key_allowed(struct passwd *pw, BIGNUM *client_n, Key **rkey)
 		 */
 		if (!auth_parse_options(pw, key_options, file, linenum))
 			continue;
-
+		if (key_is_cert_authority)
+			continue;
 		/* break out, this key is allowed */
 		allowed = 1;
 		break;

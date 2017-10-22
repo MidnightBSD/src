@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/include/efi.h 139790 2005-01-06 22:18:23Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_EFI_H_
@@ -151,13 +151,27 @@ struct efi_systbl {
 	uint64_t	st_cfgtbl;
 };
 
+#ifdef _KERNEL
+
+typedef u_long (*ia64_efi_f)(u_long, u_long, u_long, u_long);
+
+u_long ia64_efi_physical(ia64_efi_f, u_long, u_long, u_long, u_long);
+
 void efi_boot_finish(void);
 int efi_boot_minimal(uint64_t);
 void *efi_get_table(struct uuid *);
 void efi_get_time(struct efi_tm *);
+struct efi_md *efi_md_find(vm_paddr_t);
 struct efi_md *efi_md_first(void);
+struct efi_md *efi_md_last(void);
 struct efi_md *efi_md_next(struct efi_md *);
+struct efi_md *efi_md_prev(struct efi_md *);
 void efi_reset_system(void);
-efi_status efi_set_time(struct efi_tm *);
+int efi_set_time(struct efi_tm *);
+int efi_var_get(efi_char *, struct uuid *, uint32_t *, size_t *, void *);
+int efi_var_nextname(size_t *, efi_char *, struct uuid *);
+int efi_var_set(efi_char *, struct uuid *, uint32_t, size_t, void *);
+
+#endif /* _KERNEL */
 
 #endif /* _MACHINE_EFI_H_ */

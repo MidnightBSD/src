@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/tools/netrate/httpd/httpd.c 155891 2006-02-22 02:54:04Z rwatson $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -280,7 +280,7 @@ main(int argc, char *argv[])
 	for (i = 0; i < THREADS; i++) {
 		if (threaded) {
 			if (pthread_create(&statep->hts[i].hts_thread, NULL,
-			    httpd_worker, &statep->hts[i]) < 0)
+			    httpd_worker, &statep->hts[i]) != 0)
 				err(-1, "pthread_create");
 		} else {
 			pid = fork();
@@ -299,7 +299,7 @@ main(int argc, char *argv[])
 	for (i = 0; i < THREADS; i++) {
 		if (threaded) {
 			if (pthread_join(statep->hts[i].hts_thread, NULL)
-			    < 0)
+			    != 0)
 				err(-1, "pthread_join");
 		} else {
 			pid = waitpid(statep->hts[i].hts_pid, NULL, 0);

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/kerberos5/usr.bin/Makefile 125261 2004-01-31 08:15:57Z ru $
+# $FreeBSD$
 
 SUBDIR=	kadmin kdestroy kinit klist kpasswd krb5-config ksu \
 	verify_krb5_conf

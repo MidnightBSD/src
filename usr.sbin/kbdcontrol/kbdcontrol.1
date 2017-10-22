@@ -11,9 +11,9 @@
 .\"    documentation and/or other materials provided with the distribution.
 .\"
 .\"     @(#)kbdcontrol.1
-.\" $FreeBSD: release/7.0.0/usr.sbin/kbdcontrol/kbdcontrol.1 164336 2006-11-16 13:43:05Z ru $
+.\" $FreeBSD$
 .\"
-.Dd November 16, 2006
+.Dd January 29, 2008
 .Dt KBDCONTROL 1
 .Os
 .Sh NAME
@@ -122,6 +122,9 @@ Install keyboard map file from
 .Ar keymap_file .
 You may load the keyboard map file from a menu-driven command,
 .Xr kbdmap 1 .
+The format of keyboard map files is documented in the
+.Xr kbdmap 5
+manual page.
 .It Fl d
 Dump the current keyboard map onto stdout.
 The output may be redirected to a file and can be loaded
@@ -230,15 +233,15 @@ The following command will make the function key 10 emit "telnet myhost".
 .Dl kbdcontrol -f 10 \&"telnet myhost\&"
 .Pp
 In order to get the visual effect for bell, but prevent the screen
-from flushing if the bell is to ring in the background screen,
+from flashing if the bell is to ring in the background screen,
 run the following command.
 .Pp
 .Dl kbdcontrol -b quiet.visual
 .Pp
-To change the default console keyboard to the another keyboard,
+To change the default console keyboard to another keyboard,
 for example the first USB keyboard (see
 .Xr ukbd 4 ) ,
-use the following commands.
+use the following command.
 .Pp
 .Dl kbdcontrol -k /dev/ukbd0 < /dev/console
 .Pp

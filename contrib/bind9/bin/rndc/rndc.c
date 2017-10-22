@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rndc.c,v 1.96.18.17 2006/08/04 03:03:41 marka Exp $ */
+/* $Id: rndc.c,v 1.131.20.3 2011/11/03 22:06:31 each Exp $ */
 
 /*! \file */
 
@@ -61,7 +61,7 @@
 
 #define SERVERADDRS 10
 
-char *progname;
+const char *progname;
 isc_boolean_t verbose;
 
 static const char *admin_conffile;
@@ -79,6 +79,7 @@ static unsigned char databuf[2048];
 static isccc_ccmsg_t ccmsg;
 static isccc_region_t secret;
 static isc_boolean_t failed = ISC_FALSE;
+static isc_boolean_t c_flag = ISC_FALSE;
 static isc_mem_t *mctx;
 static int sends, recvs, connects;
 static char *command;
@@ -89,11 +90,14 @@ static isc_uint32_t serial;
 
 static void rndc_startconnect(isc_sockaddr_t *addr, isc_task_t *task);
 
+ISC_PLATFORM_NORETURN_PRE static void
+usage(int status) ISC_PLATFORM_NORETURN_POST;
+
 static void
 usage(int status) {
 	fprintf(stderr, "\
-Usage: %s [-c config] [-s server] [-p port]\n\
-        [-k key-file ] [-y key] [-V] command\n\
+Usage: %s [-b address] [-c config] [-s server] [-p port]\n\
+	[-k key-file ] [-y key] [-V] command\n\
 \n\
 command is one of the following:\n\
 \n\
@@ -106,17 +110,23 @@ command is one of the following:\n\
 		Retransfer a single zone without checking serial number.\n\
   freeze	Suspend updates to all dynamic zones.\n\
   freeze zone [class [view]]\n\
-  		Suspend updates to a dynamic zone.\n\
+		Suspend updates to a dynamic zone.\n\
   thaw		Enable updates to all dynamic zones and reload them.\n\
   thaw zone [class [view]]\n\
-  		Enable updates to a frozen dynamic zone and reload it.\n\
+		Enable updates to a frozen dynamic zone and reload it.\n\
   notify zone [class [view]]\n\
 		Resend NOTIFY messages for the zone.\n\
   reconfig	Reload configuration file and new zones only.\n\
+  sign zone [class [view]]\n\
+		Update zone keys, and sign as needed.\n\
+  loadkeys zone [class [view]]\n\
+		Update keys without signing immediately.\n\
   stats		Write server statistics to the statistics file.\n\
   querylog	Toggle query logging.\n\
   dumpdb [-all|-cache|-zones] [view ...]\n\
 		Dump cache(s) to the dump file (named_dump.db).\n\
+  secroots [view ...]\n\
+		Write security roots to the secroots file.\n\
   stop		Save pending updates to master files and stop the server.\n\
   stop -p	Save pending updates to master files and stop the server\n\
 		reporting process id.\n\
@@ -132,8 +142,16 @@ command is one of the following:\n\
 		Flush the given name from the server's cache(s)\n\
   status	Display status of the server.\n\
   recursing	Dump the queries that are currently recursing (named.recursing)\n\
+  tsig-list	List all currently active TSIG keys, including both statically\n\
+		configured and TKEY-negotiated keys.\n\
+  tsig-delete keyname [view]	\n\
+		Delete a TKEY-negotiated TSIG key.\n\
   validation newstate [view]\n\
 		Enable / disable DNSSEC validation.\n\
+  addzone [\"file\"] zone [class [view]] { zone-options }\n\
+		Add zone to given view. Requires new-zone-file option.\n\
+  delzone [\"file\"] zone [class [view]]\n\
+		Removes zone from given view. Requires new-zone-file option.\n\
   *restart	Restart the server.\n\
 \n\
 * == not yet implemented\n\
@@ -152,7 +170,7 @@ get_addresses(const char *host, in_port_t port) {
 		result = isc_sockaddr_frompath(&serveraddrs[nserveraddrs],
 					       host);
 		if (result == ISC_R_SUCCESS)
-			nserveraddrs++; 
+			nserveraddrs++;
 	} else {
 		count = SERVERADDRS - nserveraddrs;
 		result = bind9_getaddresses(host, port,
@@ -200,7 +218,7 @@ rndc_recvdone(isc_task_t *task, isc_event_t *event) {
 		      "* the remote server is using an older version of"
 		      " the command protocol,\n"
 		      "* this host is not authorized to connect,\n"
-		      "* the clocks are not syncronized, or\n"
+		      "* the clocks are not synchronized, or\n"
 		      "* the key is invalid.");
 
 	if (ccmsg.result != ISC_R_SUCCESS)
@@ -263,7 +281,7 @@ rndc_recvnonce(isc_task_t *task, isc_event_t *event) {
 		      "* the remote server is using an older version of"
 		      " the command protocol,\n"
 		      "* this host is not authorized to connect,\n"
-		      "* the clocks are not syncronized, or\n"
+		      "* the clocks are not synchronized, or\n"
 		      "* the key is invalid.");
 
 	if (ccmsg.result != ISC_R_SUCCESS)
@@ -369,7 +387,7 @@ rndc_connected(isc_task_t *task, isc_event_t *event) {
 	r.base = databuf;
 
 	isccc_ccmsg_init(mctx, sock, &ccmsg);
-	isccc_ccmsg_setmaxsize(&ccmsg, 1024);
+	isccc_ccmsg_setmaxsize(&ccmsg, 1024 * 1024);
 
 	DO("schedule recv", isccc_ccmsg_readmessage(&ccmsg, task,
 						    rndc_recvnonce, NULL));
@@ -400,10 +418,10 @@ rndc_startconnect(isc_sockaddr_t *addr, isc_task_t *task) {
 	DO("create socket", isc_socket_create(socketmgr, pf, type, &sock));
 	switch (isc_sockaddr_pf(addr)) {
 	case AF_INET:
-		DO("bind socket", isc_socket_bind(sock, &local4));
+		DO("bind socket", isc_socket_bind(sock, &local4, 0));
 		break;
 	case AF_INET6:
-		DO("bind socket", isc_socket_bind(sock, &local6));
+		DO("bind socket", isc_socket_bind(sock, &local6, 0));
 		break;
 	default:
 		break;
@@ -455,6 +473,10 @@ parse_config(isc_mem_t *mctx, isc_log_t *log, const char *keyname,
 			fatal("neither %s nor %s was found",
 			      admin_conffile, admin_keyfile);
 		key_only = ISC_TRUE;
+	} else if (! c_flag && isc_file_exists(admin_keyfile)) {
+		fprintf(stderr, "WARNING: key file (%s) exists, but using "
+			"default configuration file (%s)\n",
+			admin_keyfile, admin_conffile);
 	}
 
 	DO("create parser", cfg_parser_create(mctx, log, pctxp));
@@ -485,7 +507,7 @@ parse_config(isc_mem_t *mctx, isc_log_t *log, const char *keyname,
 		(void)cfg_map_get(config, "server", &servers);
 		if (servers != NULL) {
 			for (elt = cfg_list_first(servers);
-			     elt != NULL; 
+			     elt != NULL;
 			     elt = cfg_list_next(elt))
 			{
 				const char *name;
@@ -521,7 +543,7 @@ parse_config(isc_mem_t *mctx, isc_log_t *log, const char *keyname,
 	else {
 		DO("get config key list", cfg_map_get(config, "key", &keys));
 		for (elt = cfg_list_first(keys);
-		     elt != NULL; 
+		     elt != NULL;
 		     elt = cfg_list_next(elt))
 		{
 			key = cfg_listelt_value(elt);
@@ -599,7 +621,7 @@ parse_config(isc_mem_t *mctx, isc_log_t *log, const char *keyname,
 					get_addresses(name, (in_port_t) myport);
 				else
 					fprintf(stderr, "too many address: "
-					        "%s: dropped\n", name);
+						"%s: dropped\n", name);
 				continue;
 			}
 			sa = *cfg_obj_assockaddr(address);
@@ -690,7 +712,9 @@ main(int argc, char **argv) {
 	if (result != ISC_R_SUCCESS)
 		fatal("isc_app_start() failed: %s", isc_result_totext(result));
 
-	while ((ch = isc_commandline_parse(argc, argv, "b:c:k:Mmp:s:Vy:"))
+	isc_commandline_errprint = ISC_FALSE;
+
+	while ((ch = isc_commandline_parse(argc, argv, "b:c:hk:Mmp:s:Vy:"))
 	       != -1) {
 		switch (ch) {
 		case 'b':
@@ -707,6 +731,7 @@ main(int argc, char **argv) {
 
 		case 'c':
 			admin_conffile = isc_commandline_argument;
+			c_flag = ISC_TRUE;
 			break;
 
 		case 'k':
@@ -739,15 +764,20 @@ main(int argc, char **argv) {
 		case 'y':
 			keyname = isc_commandline_argument;
 			break;
- 
+
 		case '?':
+			if (isc_commandline_option != '?') {
+				fprintf(stderr, "%s: invalid argument -%c\n",
+					program, isc_commandline_option);
+				usage(1);
+			}
+		case 'h':
 			usage(0);
 			break;
-
 		default:
-			fatal("unexpected error parsing command arguments: "
-			      "got %c\n", ch);
-			break;
+			fprintf(stderr, "%s: unhandled option -%c\n",
+				program, isc_commandline_option);
+			exit(1);
 		}
 	}
 
@@ -773,7 +803,7 @@ main(int argc, char **argv) {
 	logdest.file.maximum_size = 0;
 	DO("creating log channel",
 	   isc_log_createchannel(logconfig, "stderr",
-		   		 ISC_LOG_TOFILEDESC, ISC_LOG_INFO, &logdest,
+				 ISC_LOG_TOFILEDESC, ISC_LOG_INFO, &logdest,
 				 ISC_LOG_PRINTTAG|ISC_LOG_PRINTLEVEL));
 	DO("enabling log channel", isc_log_usechannel(logconfig, "stderr",
 						      NULL, NULL));

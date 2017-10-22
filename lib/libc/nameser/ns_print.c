@@ -19,7 +19,7 @@
 static const char rcsid[] = "$Id: ns_print.c,v 1.6.18.4 2005/04/27 05:01:09 sra Exp $";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/nameser/ns_print.c 170244 2007-06-03 17:20:27Z ume $");
+__FBSDID("$FreeBSD$");
 
 /* Import. */
 

@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/netipsec/xform.h 157306 2006-03-30 18:57:04Z bz $	*/
+/*	$FreeBSD$	*/
 /*	$OpenBSD: ip_ipsp.h,v 1.119 2002/03/14 01:27:11 millert Exp $	*/
 /*-
  * The authors of this code are John Ioannidis (ji@tla.org),
@@ -46,6 +46,7 @@
 #include <opencrypto/xform.h>
 
 #define	AH_HMAC_HASHLEN		12	/* 96 bits of authenticator */
+#define	AH_HMAC_MAXHASHLEN	(SHA2_512_HASH_LEN/2)	/* Keep this updated */
 #define	AH_HMAC_INITIAL_RPL	1	/* replay counter initial value */
 
 /*
@@ -57,6 +58,9 @@ struct tdb_ident {
 	u_int32_t spi;
 	union sockaddr_union dst;
 	u_int8_t proto;
+	/* Cache those two for enc(4) in xform_ipip. */
+	u_int8_t alg_auth;
+	u_int8_t alg_enc;
 };
 
 /*
@@ -71,6 +75,7 @@ struct tdb_crypto {
 	int			tc_protoff;	/* current protocol offset */
 	int			tc_skip;	/* data offset */
 	caddr_t			tc_ptr;		/* associated crypto data */
+	struct secasvar 	*tc_sav;	/* related SA */
 };
 
 struct secasvar;

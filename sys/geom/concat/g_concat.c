@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/geom/concat/g_concat.c 163836 2006-10-31 21:23:51Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -34,11 +34,13 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/geom/concat/g_concat.c 163836 2006-10-31 2
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/bio.h>
+#include <sys/sbuf.h>
 #include <sys/sysctl.h>
 #include <sys/malloc.h>
 #include <geom/geom.h>
 #include <geom/concat/g_concat.h>
 
+FEATURE(geom_concat, "GEOM concatenation support");
 
 static MALLOC_DEFINE(M_CONCAT, "concat_data", "GEOM_CONCAT Data");
 
@@ -212,6 +214,39 @@ g_concat_access(struct g_provider *pp, int dr, int dw, int de)
 }
 
 static void
+g_concat_kernel_dump(struct bio *bp)
+{
+	struct g_concat_softc *sc;
+	struct g_concat_disk *disk;
+	struct bio *cbp;
+	struct g_kerneldump *gkd;
+	u_int i;
+
+	sc = bp->bio_to->geom->softc;
+	gkd = (struct g_kerneldump *)bp->bio_data;
+	for (i = 0; i < sc->sc_ndisks; i++) {
+		if (sc->sc_disks[i].d_start <= gkd->offset &&
+		    sc->sc_disks[i].d_end > gkd->offset)
+			break;
+	}
+	if (i == sc->sc_ndisks)
+		g_io_deliver(bp, EOPNOTSUPP);
+	disk = &sc->sc_disks[i];
+	gkd->offset -= disk->d_start;
+	if (gkd->length > disk->d_end - disk->d_start - gkd->offset)
+		gkd->length = disk->d_end - disk->d_start - gkd->offset;
+	cbp = g_clone_bio(bp);
+	if (cbp == NULL) {
+		g_io_deliver(bp, ENOMEM);
+		return;
+	}
+	cbp->bio_done = g_std_done;
+	g_io_request(cbp, disk->d_consumer);
+	G_CONCAT_DEBUG(1, "Kernel dump will go to %s.",
+	    disk->d_consumer->provider->name);
+}
+
+static void
 g_concat_flush(struct g_concat_softc *sc, struct bio *bp)
 {
 	struct bio_queue_head queue;
@@ -280,7 +315,12 @@ g_concat_start(struct bio *bp)
 		g_concat_flush(sc, bp);
 		return;
 	case BIO_GETATTR:
+		if (strcmp("GEOM::kerneldump", bp->bio_attribute) == 0) {
+			g_concat_kernel_dump(bp);
+			return;
+		}
 		/* To which provider it should be delivered? */
+		/* FALLTHROUGH */
 	default:
 		g_io_deliver(bp, EOPNOTSUPP);
 		return;
@@ -347,14 +387,14 @@ static void
 g_concat_check_and_run(struct g_concat_softc *sc)
 {
 	struct g_concat_disk *disk;
+	struct g_provider *pp;
 	u_int no, sectorsize = 0;
 	off_t start;
 
 	if (g_concat_nvalid(sc) != sc->sc_ndisks)
 		return;
 
-	sc->sc_provider = g_new_providerf(sc->sc_geom, "concat/%s",
-	    sc->sc_name);
+	pp = g_new_providerf(sc->sc_geom, "concat/%s", sc->sc_name);
 	start = 0;
 	for (no = 0; no < sc->sc_ndisks; no++) {
 		disk = &sc->sc_disks[no];
@@ -371,10 +411,13 @@ g_concat_check_and_run(struct g_concat_softc *sc)
 			    disk->d_consumer->provider->sectorsize);
 		}
 	}
-	sc->sc_provider->sectorsize = sectorsize;
+	pp->sectorsize = sectorsize;
 	/* We have sc->sc_disks[sc->sc_ndisks - 1].d_end in 'start'. */
-	sc->sc_provider->mediasize = start;
-	g_error_provider(sc->sc_provider, 0);
+	pp->mediasize = start;
+	pp->stripesize = sc->sc_disks[0].d_consumer->provider->stripesize;
+	pp->stripeoffset = sc->sc_disks[0].d_consumer->provider->stripeoffset;
+	sc->sc_provider = pp;
+	g_error_provider(pp, 0);
 
 	G_CONCAT_DEBUG(0, "Device %s activated.", sc->sc_name);
 }
@@ -505,8 +548,6 @@ g_concat_create(struct g_class *mp, const struct g_concat_metadata *md,
 		}
 	}
 	gp = g_new_geomf(mp, "%s", md->md_name);
-	gp->softc = NULL;	/* for a moment */
-
 	sc = malloc(sizeof(*sc), M_CONCAT, M_WAITOK | M_ZERO);
 	gp->start = g_concat_start;
 	gp->spoiled = g_concat_orphan;
@@ -599,6 +640,10 @@ g_concat_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	g_trace(G_T_TOPOLOGY, "%s(%s, %s)", __func__, mp->name, pp->name);
 	g_topology_assert();
 
+	/* Skip providers that are already open for writing. */
+	if (pp->acw > 0)
+		return (NULL);
+
 	G_CONCAT_DEBUG(3, "Tasting %s.", pp->name);
 
 	gp = g_new_geomf(mp, "concat:taste");
@@ -632,7 +677,8 @@ g_concat_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	if (md.md_version < 4)
 		md.md_provsize = pp->mediasize;
 
-	if (md.md_provider[0] != '\0' && strcmp(md.md_provider, pp->name) != 0)
+	if (md.md_provider[0] != '\0' &&
+	    !g_compare_names(md.md_provider, pp->name))
 		return (NULL);
 	if (md.md_provsize != pp->mediasize)
 		return (NULL);
@@ -748,11 +794,15 @@ g_concat_ctl_create(struct gctl_req *req, struct g_class *mp)
 	}
 
 	sc = gp->softc;
-	sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sb = sbuf_new_auto();
 	sbuf_printf(sb, "Can't attach disk(s) to %s:", gp->name);
 	for (attached = 0, no = 1; no < *nargs; no++) {
 		snprintf(param, sizeof(param), "arg%u", no);
 		name = gctl_get_asciiparam(req, param);
+		if (name == NULL) {
+			gctl_error(req, "No 'arg%d' argument.", no);
+			return;
+		}
 		if (strncmp(name, "/dev/", strlen("/dev/")) == 0)
 			name += strlen("/dev/");
 		pp = g_provider_by_name(name);

@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/7.0.0/lib/libelf/Version.map 169092 2007-04-29 14:05:22Z deischen $
+ * $FreeBSD$
  */
 FBSD_1.0 {
 global:
@@ -39,8 +39,11 @@ global:
 	elf_getdata;
 	elf_getident;
 	elf_getscn;
+	elf_getphdrnum;
 	elf_getphnum;
+	elf_getshdrnum;
 	elf_getshnum;
+	elf_getshdrstrndx;
 	elf_getshstrndx;
 	elf_hash;
 	elf_kind;

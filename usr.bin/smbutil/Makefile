@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.bin/smbutil/Makefile 145872 2005-05-04 15:05:46Z takawata $
+# $FreeBSD$
 
 PROG=	smbutil
 SRCS=	smbutil.c dumptree.c login.c lookup.c view.c print.c
@@ -8,6 +8,8 @@ LDADD=	-lsmb -lkiconv
 
 CONTRIBDIR=	${.CURDIR}/../../contrib/smbfs
 CFLAGS+=	-I${CONTRIBDIR}/include
+
+WARNS?=	0
 
 .PATH:	${CONTRIBDIR}/smbutil
 

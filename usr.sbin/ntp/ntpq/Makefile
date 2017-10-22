@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/ntp/ntpq/Makefile 156813 2006-03-17 18:54:44Z ru $
+# $FreeBSD$
 
 NO_MAN=
 
@@ -9,23 +9,22 @@ NO_MAN=
 BINDIR=	/usr/bin
 
 PROG=	ntpq
-SRCS= 	ntpq.c ntpq_ops.c version.c
+SRCS= 	ntpq.c ntpq-opts.c ntpq-subs.c version.c
 
-CFLAGS+= -I${.CURDIR}/../../../contrib/ntp/include -I${.CURDIR}/../
+CFLAGS+= -I${.CURDIR}/../../../contrib/ntp/include -I${.CURDIR}/../ \
+	-I${.CURDIR}/../../../contrib/ntp/libopts
 
-DPADD=	${LIBNTP} ${LIBMD}
-LDADD=	${LIBNTP} -lmd
+DPADD=	${LIBNTP} ${LIBM} ${LIBMD} ${LIBOPTS}
+LDADD=	${LIBNTP} -lm -lmd ${LIBOPTS}
 
-.if ${MK_GNU_SUPPORT} != "no"
-DPADD+=		${LIBREADLINE} ${LIBTERMCAP}
-LDADD+=		-lreadline -ltermcap
-CFLAGS+=	-DHAVE_LIBREADLINE -DHAVE_READLINE_HISTORY_H \
-		-DHAVE_READLINE_READLINE_H
-.endif
+DPADD+=		${LIBEDIT} ${LIBTERMCAP}
+LDADD+=		-ledit -ltermcap
+CFLAGS+=	-DHAVE_LIBEDIT -DHAVE_READLINE_READLINE_H \
+		-I${DESTDIR}/${INCLUDEDIR}/edit
 
 CLEANFILES+= .version version.c
 
-version.c: 
+version.c:
 	sh -e ${.CURDIR}/../scripts/mkver ntpq
 
 .include <bsd.prog.mk>

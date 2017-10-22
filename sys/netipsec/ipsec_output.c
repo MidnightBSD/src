@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/netipsec/ipsec_output.c 171497 2007-07-19 09:57:54Z bz $
+ * $FreeBSD$
  */
 
 /*
@@ -46,6 +46,7 @@
 #include <net/if.h>
 #include <net/pfil.h>
 #include <net/route.h>
+#include <net/vnet.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -82,6 +83,15 @@
 
 #include <machine/in_cksum.h>
 
+#ifdef IPSEC_NAT_T
+#include <netinet/udp.h>
+#endif
+
+#ifdef DEV_ENC
+#include <net/if_enc.h>
+#endif
+
+
 int
 ipsec_process_done(struct mbuf *m, struct ipsecrequest *isr)
 {
@@ -90,8 +100,6 @@ ipsec_process_done(struct mbuf *m, struct ipsecrequest *isr)
 	struct secasvar *sav;
 	struct secasindex *saidx;
 	int error;
-
-	IPSEC_SPLASSERT_SOFTNET(__func__);
 
 	IPSEC_ASSERT(m != NULL, ("null mbuf"));
 	IPSEC_ASSERT(isr != NULL, ("null ISR"));
@@ -156,10 +164,33 @@ ipsec_process_done(struct mbuf *m, struct ipsecrequest *isr)
 	 * doing further processing.
 	 */
 	if (isr->next) {
-		ipsec4stat.ips_out_bundlesa++;
-		return ipsec4_process_packet(m, isr->next, 0, 0);
+		V_ipsec4stat.ips_out_bundlesa++;
+		/* XXX-BZ currently only support same AF bundles. */
+		switch (saidx->dst.sa.sa_family) {
+#ifdef INET
+		case AF_INET:
+			return ipsec4_process_packet(m, isr->next, 0, 0);
+			/* NOTREACHED */
+#endif
+#ifdef notyet
+#ifdef INET6
+		case AF_INET6:
+			/* XXX */
+			ipsec6_output_trans()
+			ipsec6_output_tunnel()
+			/* NOTREACHED */
+#endif /* INET6 */
+#endif
+		default:
+			DPRINTF(("%s: unknown protocol family %u\n", __func__,
+			    saidx->dst.sa.sa_family));
+			error = ENXIO;
+			goto bad;
+		}
 	}
 	key_sa_recordxfer(sav, m);		/* record data transfer */
+
+	m_addr_changed(m);
 
 	/*
 	 * We're done with IPsec processing, transmit the packet using the
@@ -173,6 +204,57 @@ ipsec_process_done(struct mbuf *m, struct ipsecrequest *isr)
 		ip = mtod(m, struct ip *);
 		ip->ip_len = ntohs(ip->ip_len);
 		ip->ip_off = ntohs(ip->ip_off);
+
+#ifdef IPSEC_NAT_T
+		/*
+		 * If NAT-T is enabled, now that all IPsec processing is done
+		 * insert UDP encapsulation header after IP header.
+		 */
+		if (sav->natt_type) {
+#ifdef _IP_VHL
+			const int hlen = IP_VHL_HL(ip->ip_vhl);
+#else
+			const int hlen = (ip->ip_hl << 2);
+#endif
+			int size, off;
+			struct mbuf *mi;
+			struct udphdr *udp;
+
+			size = sizeof(struct udphdr);
+			if (sav->natt_type == UDP_ENCAP_ESPINUDP_NON_IKE) {
+				/*
+				 * draft-ietf-ipsec-nat-t-ike-0[01].txt and
+				 * draft-ietf-ipsec-udp-encaps-(00/)01.txt,
+				 * ignoring possible AH mode
+				 * non-IKE marker + non-ESP marker
+				 * from draft-ietf-ipsec-udp-encaps-00.txt.
+				 */
+				size += sizeof(u_int64_t);
+			}
+			mi = m_makespace(m, hlen, size, &off);
+			if (mi == NULL) {
+				DPRINTF(("%s: m_makespace for udphdr failed\n",
+				    __func__));
+				error = ENOBUFS;
+				goto bad;
+			}
+
+			udp = (struct udphdr *)(mtod(mi, caddr_t) + off);
+			if (sav->natt_type == UDP_ENCAP_ESPINUDP_NON_IKE)
+				udp->uh_sport = htons(UDP_ENCAP_ESPINUDP_PORT);
+			else
+				udp->uh_sport =
+					KEY_PORTFROMSADDR(&sav->sah->saidx.src);
+			udp->uh_dport = KEY_PORTFROMSADDR(&sav->sah->saidx.dst);
+			udp->uh_sum = 0;
+			udp->uh_ulen = htons(m->m_pkthdr.len - hlen);
+			ip->ip_len = m->m_pkthdr.len;
+			ip->ip_p = IPPROTO_UDP;
+
+			if (sav->natt_type == UDP_ENCAP_ESPINUDP_NON_IKE)
+				*(u_int64_t *)(udp + 1) = 0;
+		}
+#endif /* IPSEC_NAT_T */
 
 		return ip_output(m, NULL, NULL, IP_RAWOUTPUT, NULL, NULL);
 #endif /* INET */
@@ -188,7 +270,6 @@ ipsec_process_done(struct mbuf *m, struct ipsecrequest *isr)
 	panic("ipsec_process_done");
 bad:
 	m_freem(m);
-	KEY_FREESAV(&sav);
 	return (error);
 }
 
@@ -205,7 +286,6 @@ ipsec_nextisr(
 			    isr->saidx.proto == IPPROTO_AH ? (y)++ : (z)++)
 	struct secasvar *sav;
 
-	IPSEC_SPLASSERT_SOFTNET(__func__);
 	IPSECREQUEST_LOCK_ASSERT(isr);
 
 	IPSEC_ASSERT(af == AF_INET || af == AF_INET6,
@@ -282,21 +362,23 @@ again:
 		 * this packet because it is responsibility for
 		 * upper layer to retransmit the packet.
 		 */
-		ipsec4stat.ips_out_nosa++;
+		V_ipsec4stat.ips_out_nosa++;
 		goto bad;
 	}
 	sav = isr->sav;
-	if (sav == NULL) {		/* XXX valid return */
+	if (sav == NULL) {
 		IPSEC_ASSERT(ipsec_get_reqlevel(isr) == IPSEC_LEVEL_USE,
 			("no SA found, but required; level %u",
 			ipsec_get_reqlevel(isr)));
 		IPSECREQUEST_UNLOCK(isr);
 		isr = isr->next;
-		if (isr == NULL) {
-			/*XXXstatistic??*/
-			*error = EINVAL;		/*XXX*/
+		/*
+		 * If isr is NULL, we found a 'use' policy w/o SA.
+		 * Return w/o error and w/o isr so we can drop out
+		 * and continue w/o IPsec processing.
+		 */
+		if (isr == NULL)
 			return isr;
-		}
 		IPSECREQUEST_LOCK(isr);
 		goto again;
 	}
@@ -304,13 +386,13 @@ again:
 	/*
 	 * Check system global policy controls.
 	 */
-	if ((isr->saidx.proto == IPPROTO_ESP && !esp_enable) ||
-	    (isr->saidx.proto == IPPROTO_AH && !ah_enable) ||
-	    (isr->saidx.proto == IPPROTO_IPCOMP && !ipcomp_enable)) {
+	if ((isr->saidx.proto == IPPROTO_ESP && !V_esp_enable) ||
+	    (isr->saidx.proto == IPPROTO_AH && !V_ah_enable) ||
+	    (isr->saidx.proto == IPPROTO_IPCOMP && !V_ipcomp_enable)) {
 		DPRINTF(("%s: IPsec outbound packet dropped due"
 			" to policy (check your sysctls)\n", __func__));
-		IPSEC_OSTAT(espstat.esps_pdrops, ahstat.ahs_pdrops,
-		    ipcompstat.ipcomps_pdrops);
+		IPSEC_OSTAT(V_espstat.esps_pdrops, V_ahstat.ahs_pdrops,
+		    V_ipcompstat.ipcomps_pdrops);
 		*error = EHOSTUNREACH;
 		goto bad;
 	}
@@ -321,8 +403,8 @@ again:
 	 */
 	if (sav->tdb_xform == NULL) {
 		DPRINTF(("%s: no transform for SA\n", __func__));
-		IPSEC_OSTAT(espstat.esps_noxform, ahstat.ahs_noxform,
-		    ipcompstat.ipcomps_noxform);
+		IPSEC_OSTAT(V_espstat.esps_noxform, V_ahstat.ahs_noxform,
+		    V_ipcompstat.ipcomps_noxform);
 		*error = EHOSTUNREACH;
 		goto bad;
 	}
@@ -356,14 +438,22 @@ ipsec4_process_packet(
 	IPSECREQUEST_LOCK(isr);		/* insure SA contents don't change */
 
 	isr = ipsec_nextisr(m, isr, AF_INET, &saidx, &error);
-	if (isr == NULL)
-		goto bad;
+	if (isr == NULL) {
+		if (error != 0)
+			goto bad;
+		return EJUSTRETURN;
+	}
 
 	sav = isr->sav;
 
 #ifdef DEV_ENC
+	encif->if_opackets++;
+	encif->if_obytes += m->m_pkthdr.len;
+
+	/* pass the mbuf to enc0 for bpf processing */
+	ipsec_bpf(m, sav, AF_INET, ENC_OUT|ENC_BEFORE);
 	/* pass the mbuf to enc0 for packet filtering */
-	if ((error = ipsec_filter(&m, PFIL_OUT)) != 0)
+	if ((error = ipsec_filter(&m, PFIL_OUT, ENC_OUT|ENC_BEFORE)) != 0)
 		goto bad;
 #endif
 
@@ -382,10 +472,10 @@ ipsec4_process_packet(
 			}
 			ip = mtod(m, struct ip *);
 			/* Honor system-wide control of how to handle IP_DF */
-			switch (ip4_ipsec_dfbit) {
+			switch (V_ip4_ipsec_dfbit) {
 			case 0:			/* clear in outer header */
 			case 1:			/* set in outer header */
-				setdf = ip4_ipsec_dfbit;
+				setdf = V_ip4_ipsec_dfbit;
 				break;
 			default:		/* propagate to outer header */
 				setdf = ntohs(ip->ip_off & IP_DF);
@@ -466,7 +556,10 @@ ipsec4_process_packet(
 
 #ifdef DEV_ENC
 	/* pass the mbuf to enc0 for bpf processing */
-	ipsec_bpf(m, sav, AF_INET);
+	ipsec_bpf(m, sav, AF_INET, ENC_OUT|ENC_AFTER);
+	/* pass the mbuf to enc0 for packet filtering */
+	if ((error = ipsec_filter(&m, PFIL_OUT, ENC_OUT|ENC_AFTER)) != 0)
+		goto bad;
 #endif
 
 	/*
@@ -576,21 +669,24 @@ ipsec6_output_trans(
 	IPSECREQUEST_LOCK(isr);		/* insure SA contents don't change */
 	isr = ipsec_nextisr(m, isr, AF_INET6, &saidx, &error);
 	if (isr == NULL) {
+		if (error != 0) {
 #ifdef notdef
-		/* XXX should notification be done for all errors ? */
-		/*
-		 * Notify the fact that the packet is discarded
-		 * to ourselves. I believe this is better than
-		 * just silently discarding. (jinmei@kame.net)
-		 * XXX: should we restrict the error to TCP packets?
-		 * XXX: should we directly notify sockets via
-		 *      pfctlinputs?
-		 */
-		icmp6_error(m, ICMP6_DST_UNREACH,
-			    ICMP6_DST_UNREACH_ADMIN, 0);
-		m = NULL;	/* NB: icmp6_error frees mbuf */
+			/* XXX should notification be done for all errors ? */
+			/*
+			 * Notify the fact that the packet is discarded
+			 * to ourselves. I believe this is better than
+			 * just silently discarding. (jinmei@kame.net)
+			 * XXX: should we restrict the error to TCP packets?
+			 * XXX: should we directly notify sockets via
+			 *      pfctlinputs?
+			 */
+			icmp6_error(m, ICMP6_DST_UNREACH,
+				    ICMP6_DST_UNREACH_ADMIN, 0);
+			m = NULL;	/* NB: icmp6_error frees mbuf */
 #endif
-		goto bad;
+			goto bad;
+		}
+		return EJUSTRETURN;
 	}
 
 	error = (*isr->sav->tdb_xform->xf_output)(m, isr, NULL,
@@ -658,7 +754,7 @@ ipsec6_encapsulate(struct mbuf *m, struct secasvar *sav)
 
 	/* construct new IPv6 header. see RFC 2401 5.1.2.2 */
 	/* ECN consideration. */
-	ip6_ecn_ingress(ip6_ipsec_ecn, &ip6->ip6_flow, &oip6->ip6_flow);
+	ip6_ecn_ingress(V_ip6_ipsec_ecn, &ip6->ip6_flow, &oip6->ip6_flow);
 	if (plen < IPV6_MAXPACKET - sizeof(struct ip6_hdr))
 		ip6->ip6_plen = htons(plen);
 	else {
@@ -684,7 +780,7 @@ ipsec6_output_tunnel(struct ipsec_output_state *state, struct secpolicy *sp, int
 	struct ipsecrequest *isr;
 	struct secasindex saidx;
 	int error;
-	struct sockaddr_in6* dst6;
+	struct sockaddr_in6 *dst6;
 	struct mbuf *m;
 
 	IPSEC_ASSERT(state != NULL, ("null state"));
@@ -707,8 +803,22 @@ ipsec6_output_tunnel(struct ipsec_output_state *state, struct secpolicy *sp, int
 
 	IPSECREQUEST_LOCK(isr);		/* insure SA contents don't change */
 	isr = ipsec_nextisr(m, isr, AF_INET6, &saidx, &error);
-	if (isr == NULL)
+	if (isr == NULL) {
+		if (error != 0)
+			goto bad;
+		return EJUSTRETURN; 
+	}
+
+#ifdef DEV_ENC
+	encif->if_opackets++;
+	encif->if_obytes += m->m_pkthdr.len;
+
+	/* pass the mbuf to enc0 for bpf processing */
+	ipsec_bpf(m, isr->sav, AF_INET6, ENC_OUT|ENC_BEFORE);
+	/* pass the mbuf to enc0 for packet filtering */
+	if ((error = ipsec_filter(&m, PFIL_OUT, ENC_OUT|ENC_BEFORE)) != 0)
 		goto bad;
+#endif
 
 	/*
 	 * There may be the case that SA status will be changed when
@@ -723,14 +833,14 @@ ipsec6_output_tunnel(struct ipsec_output_state *state, struct secpolicy *sp, int
 			ipseclog((LOG_ERR, "%s: family mismatched between "
 			    "inner and outer, spi=%u\n", __func__,
 			    ntohl(isr->sav->spi)));
-			ipsec6stat.ips_out_inval++;
+			V_ipsec6stat.ips_out_inval++;
 			error = EAFNOSUPPORT;
 			goto bad;
 		}
 
 		m = ipsec6_splithdr(m);
 		if (!m) {
-			ipsec6stat.ips_out_nomem++;
+			V_ipsec6stat.ips_out_nomem++;
 			error = ENOMEM;
 			goto bad;
 		}
@@ -741,7 +851,8 @@ ipsec6_output_tunnel(struct ipsec_output_state *state, struct secpolicy *sp, int
 		}
 		ip6 = mtod(m, struct ip6_hdr *);
 
-		state->ro = &isr->sav->sah->sa_route;
+		state->ro =
+		    (struct route *)&isr->sav->sah->route_cache.sin6_route;
 		state->dst = (struct sockaddr *)&state->ro->ro_dst;
 		dst6 = (struct sockaddr_in6 *)state->dst;
 		if (state->ro->ro_rt
@@ -750,34 +861,41 @@ ipsec6_output_tunnel(struct ipsec_output_state *state, struct secpolicy *sp, int
 			RTFREE(state->ro->ro_rt);
 			state->ro->ro_rt = NULL;
 		}
-		if (state->ro->ro_rt == 0) {
+		if (state->ro->ro_rt == NULL) {
 			bzero(dst6, sizeof(*dst6));
 			dst6->sin6_family = AF_INET6;
 			dst6->sin6_len = sizeof(*dst6);
 			dst6->sin6_addr = ip6->ip6_dst;
-			rtalloc(state->ro);
+			rtalloc_ign_fib(state->ro, 0UL, M_GETFIB(m));
 		}
-		if (state->ro->ro_rt == 0) {
-			ip6stat.ip6s_noroute++;
-			ipsec6stat.ips_out_noroute++;
+		if (state->ro->ro_rt == NULL) {
+			V_ip6stat.ip6s_noroute++;
+			V_ipsec6stat.ips_out_noroute++;
 			error = EHOSTUNREACH;
 			goto bad;
 		}
 
 		/* adjust state->dst if tunnel endpoint is offlink */
-		if (state->ro->ro_rt->rt_flags & RTF_GATEWAY) {
+		if (state->ro->ro_rt->rt_flags & RTF_GATEWAY)
 			state->dst = (struct sockaddr *)state->ro->ro_rt->rt_gateway;
-			dst6 = (struct sockaddr_in6 *)state->dst;
-		}
 	}
 
 	m = ipsec6_splithdr(m);
 	if (!m) {
-		ipsec6stat.ips_out_nomem++;
+		V_ipsec6stat.ips_out_nomem++;
 		error = ENOMEM;
 		goto bad;
 	}
 	ip6 = mtod(m, struct ip6_hdr *);
+
+#ifdef DEV_ENC
+	/* pass the mbuf to enc0 for bpf processing */
+	ipsec_bpf(m, isr->sav, AF_INET6, ENC_OUT|ENC_AFTER);
+	/* pass the mbuf to enc0 for packet filtering */
+	if ((error = ipsec_filter(&m, PFIL_OUT, ENC_OUT|ENC_AFTER)) != 0)
+		goto bad;
+#endif
+
 	error = (*isr->sav->tdb_xform->xf_output)(m, isr, NULL,
 		sizeof (struct ip6_hdr),
 		offsetof(struct ip6_hdr, ip6_nxt));

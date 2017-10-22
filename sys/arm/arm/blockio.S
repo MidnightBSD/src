@@ -48,7 +48,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/blockio.S 139735 2005-01-05 21:58:49Z imp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Read bytes from an I/O address into a block of memory

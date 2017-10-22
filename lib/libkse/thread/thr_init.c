@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_init.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
 /* Allocate space for global thread variables here: */
@@ -65,11 +65,6 @@
 
 #include "libc_private.h"
 #include "thr_private.h"
-
-LT10_COMPAT_PRIVATE(_libkse_debug);
-LT10_COMPAT_PRIVATE(_thread_activated);
-LT10_COMPAT_PRIVATE(_thread_active_threads);
-LT10_COMPAT_PRIVATE(_thread_list);
 
 int	__pthread_cond_wait(pthread_cond_t *, pthread_mutex_t *);
 int	__pthread_mutex_lock(pthread_mutex_t *);
@@ -370,8 +365,8 @@ init_main_thread(struct pthread *thread)
 	 * resource limits, so this stack needs an explicitly mapped
 	 * red zone to protect the thread stack that is just beyond.
 	 */
-	if (mmap((void *)_usrstack - _thr_stack_initial -
-	    _thr_guard_default, _thr_guard_default, 0, MAP_ANON,
+	if (mmap((void *)((uintptr_t)_usrstack - _thr_stack_initial -
+	    _thr_guard_default), _thr_guard_default, 0, MAP_ANON,
 	    -1, 0) == MAP_FAILED)
 		PANIC("Cannot allocate red zone for initial thread");
 
@@ -384,7 +379,8 @@ init_main_thread(struct pthread *thread)
 	 *       actually free() it; it just puts it in the free
 	 *       stack queue for later reuse.
 	 */
-	thread->attr.stackaddr_attr = (void *)_usrstack - _thr_stack_initial;
+	thread->attr.stackaddr_attr = (void *)((uintptr_t)_usrstack -
+	     _thr_stack_initial);
 	thread->attr.stacksize_attr = _thr_stack_initial;
 	thread->attr.guardsize_attr = _thr_guard_default;
 	thread->attr.flags |= THR_STACK_USER;
@@ -495,16 +491,16 @@ init_private(void)
 	 * process signal mask and pending signal sets.
 	 */
 	if (_lock_init(&_thread_signal_lock, LCK_ADAPTIVE,
-	    _kse_lock_wait, _kse_lock_wakeup) != 0)
+	    _kse_lock_wait, _kse_lock_wakeup, calloc) != 0)
 		PANIC("Cannot initialize _thread_signal_lock");
 	if (_lock_init(&_mutex_static_lock, LCK_ADAPTIVE,
-	    _thr_lock_wait, _thr_lock_wakeup) != 0)
+	    _thr_lock_wait, _thr_lock_wakeup, calloc) != 0)
 		PANIC("Cannot initialize mutex static init lock");
 	if (_lock_init(&_rwlock_static_lock, LCK_ADAPTIVE,
-	    _thr_lock_wait, _thr_lock_wakeup) != 0)
+	    _thr_lock_wait, _thr_lock_wakeup, calloc) != 0)
 		PANIC("Cannot initialize rwlock static init lock");
 	if (_lock_init(&_keytable_lock, LCK_ADAPTIVE,
-	    _thr_lock_wait, _thr_lock_wakeup) != 0)
+	    _thr_lock_wait, _thr_lock_wakeup, calloc) != 0)
 		PANIC("Cannot initialize thread specific keytable lock");
 	_thr_spinlock_init();
 

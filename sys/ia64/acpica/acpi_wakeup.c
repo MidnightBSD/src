@@ -23,13 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/acpica/acpi_wakeup.c 150003 2005-09-11 18:39:03Z obrien $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
 #include <sys/bus.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 
 int

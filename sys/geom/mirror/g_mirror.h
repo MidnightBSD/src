@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/geom/mirror/g_mirror.h 163888 2006-11-01 22:51:49Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef	_G_MIRROR_H_
@@ -59,10 +59,12 @@
 #define	G_MIRROR_DISK_FLAG_INACTIVE		0x0000000000000008ULL
 #define	G_MIRROR_DISK_FLAG_HARDCODED		0x0000000000000010ULL
 #define	G_MIRROR_DISK_FLAG_BROKEN		0x0000000000000020ULL
+#define	G_MIRROR_DISK_FLAG_CANDELETE		0x0000000000000040ULL
 #define	G_MIRROR_DISK_FLAG_MASK		(G_MIRROR_DISK_FLAG_DIRTY |	\
 					 G_MIRROR_DISK_FLAG_SYNCHRONIZING | \
 					 G_MIRROR_DISK_FLAG_FORCE_SYNC | \
-					 G_MIRROR_DISK_FLAG_INACTIVE)
+					 G_MIRROR_DISK_FLAG_INACTIVE | \
+					 G_MIRROR_DISK_FLAG_CANDELETE)
 
 #define	G_MIRROR_DEVICE_FLAG_NOAUTOSYNC	0x0000000000000001ULL
 #define	G_MIRROR_DEVICE_FLAG_NOFAILSYNC	0x0000000000000002ULL
@@ -133,8 +135,8 @@ struct g_mirror_disk {
 	struct g_mirror_softc	*d_softc; /* Back-pointer to softc. */
 	int		 d_state;	/* Disk state. */
 	u_int		 d_priority;	/* Disk priority. */
-	struct bintime	 d_delay;	/* Disk delay. */
-	struct bintime	 d_last_used;	/* When disk was last used. */
+	u_int		 load;		/* Averaged queue length */
+	off_t		 d_last_offset;	/* Last read offset */
 	uint64_t	 d_flags;	/* Additional flags. */
 	u_int		 d_genid;	/* Disk's generation ID. */
 	struct g_mirror_disk_sync d_sync;/* Sync information. */
@@ -157,6 +159,7 @@ struct g_mirror_event {
 #define	G_MIRROR_DEVICE_FLAG_DESTROY	0x0100000000000000ULL
 #define	G_MIRROR_DEVICE_FLAG_WAIT	0x0200000000000000ULL
 #define	G_MIRROR_DEVICE_FLAG_DESTROYING	0x0400000000000000ULL
+#define	G_MIRROR_DEVICE_FLAG_TASTING	0x0800000000000000ULL
 
 #define	G_MIRROR_DEVICE_STATE_STARTING		0
 #define	G_MIRROR_DEVICE_STATE_RUNNING		1

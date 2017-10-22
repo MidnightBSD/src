@@ -8,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libdisk/disk.c 158033 2006-04-25 20:42:15Z maxim $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,6 +52,8 @@ const enum platform platform =
 	p_amd64
 #elif defined(__arm__)
 	p_arm
+#elif defined(__mips__)
+	p_mips
 #else
 	IHAVENOIDEA
 #endif
@@ -189,10 +191,10 @@ char **
 Disk_Names()
 {
 	int disk_cnt;
-	static char **disks;
+	char **disks;
 	int error;
 	size_t listsize;
-	char *disklist;
+	char *disklist, *disk1, *disk2;
 
 	error = sysctlbyname("kern.disks", NULL, &listsize, NULL, 0);
 	if (error) {
@@ -206,7 +208,7 @@ Disk_Names()
 	disks = malloc(sizeof *disks * (1 + MAX_NO_DISKS));
 	if (disks == NULL)
 		return NULL;
-	disklist = (char *)malloc(listsize + 1);
+	disk1 = disklist = (char *)malloc(listsize + 1);
 	if (disklist == NULL) {
 		free(disks);
 		return NULL;
@@ -220,11 +222,20 @@ Disk_Names()
 		return NULL;
 	}
 	for (disk_cnt = 0; disk_cnt < MAX_NO_DISKS; disk_cnt++) {
-		disks[disk_cnt] = strsep(&disklist, " ");
-		if (disks[disk_cnt] == NULL)
+		disk2 = strsep(&disk1, " ");
+		if (disk2 == NULL)
 			break;
+		disks[disk_cnt] = strdup(disk2);
+		if (disks[disk_cnt] == NULL) {
+			for (disk_cnt--; disk_cnt >= 0; disk_cnt--)
+				free(disks[disk_cnt]);
+			free(disklist);
+			free(disks);
+			return (NULL);
+		}
 	}
 	qsort(disks, disk_cnt, sizeof(char*), qstrcmp);
+	free(disklist);
 	return disks;
 }
 

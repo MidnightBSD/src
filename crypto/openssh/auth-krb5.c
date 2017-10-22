@@ -2,7 +2,7 @@
 /*
  *    Kerberos v5 authentication and ticket-passing routines.
  *
- * $xFreeBSD: src/crypto/openssh/auth-krb5.c,v 1.6 2001/02/13 16:58:04 assar Exp$
+ * $FreeBSD: src/crypto/openssh/auth-krb5.c,v 1.6 2001/02/13 16:58:04 assar Exp $
  */
 /*
  * Copyright (c) 2002 Daniel Kouril.  All rights reserved.
@@ -29,7 +29,6 @@
  */
 
 #include "includes.h"
-__RCSID("$FreeBSD: release/7.0.0/crypto/openssh/auth-krb5.c 172506 2007-10-10 16:59:15Z cvs2svn $");
 
 #include <sys/types.h>
 #include <pwd.h>
@@ -79,6 +78,11 @@ auth_krb5_password(Authctxt *authctxt, const char *password)
 	krb5_error_code problem;
 	krb5_ccache ccache = NULL;
 	int len;
+	char *client, *platform_client;
+
+	/* get platform-specific kerberos client principal name (if it exists) */
+	platform_client = platform_krb5_get_principal_name(authctxt->pw->pw_name);
+	client = platform_client ? platform_client : authctxt->pw->pw_name;
 
 	temporarily_use_uid(authctxt->pw);
 
@@ -86,7 +90,7 @@ auth_krb5_password(Authctxt *authctxt, const char *password)
 	if (problem)
 		goto out;
 
-	problem = krb5_parse_name(authctxt->krb5_ctx, authctxt->pw->pw_name,
+	problem = krb5_parse_name(authctxt->krb5_ctx, client,
 		    &authctxt->krb5_user);
 	if (problem)
 		goto out;
@@ -142,8 +146,7 @@ auth_krb5_password(Authctxt *authctxt, const char *password)
 	if (problem)
 		goto out;
 
-	if (!krb5_kuserok(authctxt->krb5_ctx, authctxt->krb5_user,
-			  authctxt->pw->pw_name)) {
+	if (!krb5_kuserok(authctxt->krb5_ctx, authctxt->krb5_user, client)) {
 		problem = -1;
 		goto out;
 	}
@@ -177,6 +180,9 @@ auth_krb5_password(Authctxt *authctxt, const char *password)
 
  out:
 	restore_uid();
+	
+	if (platform_client != NULL)
+		xfree(platform_client);
 
 	if (problem) {
 		if (ccache)

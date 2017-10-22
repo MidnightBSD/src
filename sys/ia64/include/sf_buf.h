@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/include/sf_buf.h 128393 2004-04-18 07:11:12Z alc $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SF_BUF_H_
@@ -41,18 +41,20 @@
  */
 struct sf_buf;
 
-static __inline vm_offset_t
-sf_buf_kva(struct sf_buf *sf)
-{
-
-	return (IA64_PHYS_TO_RR7(VM_PAGE_TO_PHYS((vm_page_t)sf)));
-}
-
 static __inline vm_page_t
 sf_buf_page(struct sf_buf *sf)
 {
-
+ 
 	return ((vm_page_t)sf);
+}
+
+static __inline vm_offset_t
+sf_buf_kva(struct sf_buf *sf)
+{
+	vm_page_t m;
+
+	m = sf_buf_page(sf);
+	return (pmap_page_to_va(m));
 }
 
 #endif /* !_MACHINE_SF_BUF_H_ */

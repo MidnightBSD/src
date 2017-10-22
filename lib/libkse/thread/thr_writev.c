@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_writev.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  *
  */
 #include <sys/types.h>
@@ -39,8 +39,7 @@
 #include <pthread.h>
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(__writev);
-LT10_COMPAT_DEFAULT(writev);
+ssize_t __writev(int fd, const struct iovec *iov, int iovcnt);
 
 __weak_reference(__writev, writev);
 

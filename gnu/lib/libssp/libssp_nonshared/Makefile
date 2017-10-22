@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/lib/libssp/libssp_nonshared/Makefile 169718 2007-05-19 04:25:59Z kan $
+# $FreeBSD$
 
 GCCDIR=	${.CURDIR}/../../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../../contrib/gcclibs
@@ -13,6 +13,6 @@ SRCS=	ssp-local.c
 
 CFLAGS+= -DHAVE_CONFIG_H
 CFLAGS+= -I${.CURDIR}/..  -I${GCCLIB}/libssp  -I${GCCLIB}/include
-CFLAGS+= -fPIC -DPIC
+CFLAGS+= -fPIC -DPIC -fvisibility=hidden
 
 .include <bsd.lib.mk>

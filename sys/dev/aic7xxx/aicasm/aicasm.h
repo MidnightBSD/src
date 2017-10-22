@@ -39,14 +39,10 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm.h#14 $
  *
- * $FreeBSD: release/7.0.0/sys/dev/aic7xxx/aicasm/aicasm.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  */
 
-#ifdef __linux__
-#include "../queue.h"
-#else
 #include <sys/queue.h>
-#endif
 
 #ifndef TRUE
 #define TRUE 1

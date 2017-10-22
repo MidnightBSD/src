@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/contrib/smbfs/lib/smb/nls.c 136699 2004-10-19 17:39:15Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/iconv.h>

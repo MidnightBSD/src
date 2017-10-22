@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1997-2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -16,9 +16,9 @@
  */
 
 /*
- * $Id: assertions.h,v 1.18.18.2 2005/04/29 00:16:52 marka Exp $
+ * $Id: assertions.h,v 1.28 2009/09/29 23:48:04 tbox Exp $
  */
-/*! \file assertions.h
+/*! \file isc/assertions.h
  */
 
 #ifndef ISC_ASSERTIONS_H
@@ -40,7 +40,10 @@ typedef enum {
 typedef void (*isc_assertioncallback_t)(const char *, int, isc_assertiontype_t,
 					const char *);
 
-LIBISC_EXTERNAL_DATA extern isc_assertioncallback_t isc_assertion_failed;
+/* coverity[+kill] */
+ISC_PLATFORM_NORETURN_PRE
+void isc_assertion_failed(const char *, int, isc_assertiontype_t,
+			  const char *) ISC_PLATFORM_NORETURN_POST;
 
 void
 isc_assertion_setcallback(isc_assertioncallback_t);
@@ -48,14 +51,14 @@ isc_assertion_setcallback(isc_assertioncallback_t);
 const char *
 isc_assertion_typetotext(isc_assertiontype_t type);
 
-#ifdef ISC_CHECK_ALL
+#if defined(ISC_CHECK_ALL) || defined(__COVERITY__)
 #define ISC_CHECK_REQUIRE		1
 #define ISC_CHECK_ENSURE		1
 #define ISC_CHECK_INSIST		1
 #define ISC_CHECK_INVARIANT		1
 #endif
 
-#ifdef ISC_CHECK_NONE
+#if defined(ISC_CHECK_NONE) && !defined(__COVERITY__)
 #define ISC_CHECK_REQUIRE		0
 #define ISC_CHECK_ENSURE		0
 #define ISC_CHECK_INSIST		0

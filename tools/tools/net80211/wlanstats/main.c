@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002-2006 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,13 +12,6 @@
  *    similar to the "NO WARRANTY" disclaimer below ("Disclaimer") and any
  *    redistribution must be conditioned upon including a substantially
  *    similar Disclaimer requirement for further binary redistribution.
- * 3. Neither the names of the above-listed copyright holders nor the names
- *    of any contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
  *
  * NO WARRANTY
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -33,12 +26,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/7.0.0/tools/tools/net80211/wlanstats/main.c 173556 2007-11-11 17:48:17Z sam $
+ * $FreeBSD$
  */
 
 /*
  * wlanstats [-i interface]
- * (default interface is ath0).
+ * (default interface is wlan0).
  */
 
 #include <sys/types.h>
@@ -46,17 +39,39 @@
 #include <net/ethernet.h>
 #include <net80211/_ieee80211.h>
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
 #include <err.h>
+#include <strings.h>
 
 #include "wlanstats.h"
 
-#define	S_DEFAULT \
-	"input,output,rx_ucast,rx_mcast,tx_ucast,tx_mcast,rssi,rate"
-#define	S_AMPDU \
-	"input,output,ampdu_reorder,ampdu_oor,rx_dup,ampdu_flush,ampdu_move,ampdu_drop,ampdu_bar,ampdu_baroow,ampdu_barmove,rssi,rate"
+static struct {
+	const char *tag;
+	const char *fmt;
+} tags[] = {
+  { "default",
+    "input,rx_mgmt,output,rx_badkeyid,scan_active,scan_bg,bmiss,rssi,noise,rate"
+  },
+  { "ampdu",
+    "input,output,ampdu_reorder,ampdu_oor,rx_dup,ampdu_flush,ampdu_move,"
+    "ampdu_drop,ampdu_bar,ampdu_baroow,ampdu_barmove,rssi,rate"
+  },
+};
+
+static const char *
+getfmt(const char *tag)
+{
+#define	N(a)	(sizeof(a)/sizeof(a[0]))
+	int i;
+	for (i = 0; i < N(tags); i++)
+		if (strcasecmp(tags[i].tag, tag) == 0)
+			return tags[i].fmt;
+	return tag;
+#undef N
+}
 
 static int signalled;
 
@@ -143,10 +158,14 @@ main(int argc, char *argv[])
 	struct wlanstatfoo *wf;
 	struct ether_addr *ea;
 	const uint8_t *mac = NULL;
+	const char *ifname;
 	int allnodes = 0;
 	int c, mode;
 
-	wf = wlanstats_new("ath0", S_DEFAULT);
+	ifname = getenv("WLAN");
+	if (ifname == NULL)
+		ifname = "wlan0";
+	wf = wlanstats_new(ifname, getfmt("default"));
 	while ((c = getopt(argc, argv, "ai:lm:o:")) != -1) {
 		switch (c) {
 		case 'a':
@@ -165,10 +184,7 @@ main(int argc, char *argv[])
 			mac = ea->octet;
 			break;
 		case 'o':
-			if (strcasecmp(optarg, "ampdu") == 0)
-				wf->setfmt(wf, S_AMPDU);
-			else
-				wf->setfmt(wf, optarg);
+			wf->setfmt(wf, getfmt(optarg));
 			break;
 		default:
 			errx(-1, "usage: %s [-a] [-i ifname] [-l] [-o fmt] [interval]\n", argv[0]);

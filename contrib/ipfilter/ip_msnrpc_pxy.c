@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/contrib/ipfilter/ip_msnrpc_pxy.c 172506 2007-10-10 16:59:15Z cvs2svn $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2000-2003 by Darren Reed

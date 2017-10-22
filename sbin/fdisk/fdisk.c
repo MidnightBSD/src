@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sbin/fdisk/fdisk.c 169324 2007-05-06 18:48:30Z andre $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/disk.h>
 #include <sys/disklabel.h>
@@ -49,6 +49,10 @@ __FBSDID("$FreeBSD: release/7.0.0/sbin/fdisk/fdisk.c 169324 2007-05-06 18:48:30Z
 
 int iotest;
 
+#define NO_DISK_SECTORS ((u_int32_t)-1)
+#define NO_TRACK_CYLINDERS 1023
+#define NO_TRACK_HEADS 255
+#define NO_TRACK_SECTORS 63
 #define LBUF 100
 static char lbuf[LBUF];
 
@@ -61,7 +65,7 @@ static char lbuf[LBUF];
  *	Created.
  */
 
-#define Decimal(str, ans, tmp) if (decimal(str, &tmp, ans)) ans = tmp
+#define Decimal(str, ans, tmp, maxval) if (decimal(str, &tmp, ans, maxval)) ans = tmp
 
 #define RoundCyl(x) ((((x) + cylsecs - 1) / cylsecs) * cylsecs)
 
@@ -74,7 +78,6 @@ static char *disk;
 static int cyls, sectors, heads, cylsecs, disksecs;
 
 struct mboot {
-	unsigned char padding[2]; /* force the longs to be long aligned */
 	unsigned char *bootinst;  /* boot code */
 	off_t bootinst_size;
 	struct	dos_partition parts[NDOSPART];
@@ -105,8 +108,9 @@ typedef struct cmd {
     char		cmd;
     int			n_args;
     struct arg {
-	char	argtype;
-	int	arg_val;
+	char		argtype;
+	unsigned long	arg_val;
+	char *		arg_str;
     }			args[MAX_ARGS];
 } CMD;
 
@@ -115,6 +119,7 @@ static int I_flag  = 0;		/* use entire disk for FreeBSD */
 static int a_flag  = 0;		/* set active partition */
 static char *b_flag = NULL;	/* path to boot code */
 static int i_flag  = 0;		/* replace partition data */
+static int q_flag  = 0;		/* Be quiet */
 static int u_flag  = 0;		/* update partition data */
 static int s_flag  = 0;		/* Print a summary and exit */
 static int t_flag  = 0;		/* test only */
@@ -122,102 +127,115 @@ static char *f_flag = NULL;	/* Read config info from file */
 static int v_flag  = 0;		/* Be verbose */
 static int print_config_flag = 0;
 
-static struct part_type
-{
-	unsigned char type;
-	const char *name;
-} part_types[] = {
-	 {0x00, "unused"}
-	,{0x01, "Primary DOS with 12 bit FAT"}
-	,{0x02, "XENIX / file system"}
-	,{0x03, "XENIX /usr file system"}
-	,{0x04, "Primary DOS with 16 bit FAT (< 32MB)"}
-	,{0x05, "Extended DOS"}
-	,{0x06, "Primary 'big' DOS (>= 32MB)"}
-	,{0x07, "OS/2 HPFS, NTFS, QNX-2 (16 bit) or Advanced UNIX"}
-	,{0x08, "AIX file system or SplitDrive"}
-	,{0x09, "AIX boot partition or Coherent"}
-	,{0x0A, "OS/2 Boot Manager, OPUS or Coherent swap"}
-	,{0x0B, "DOS or Windows 95 with 32 bit FAT"}
-	,{0x0C, "DOS or Windows 95 with 32 bit FAT (LBA)"}
-	,{0x0E, "Primary 'big' DOS (>= 32MB, LBA)"}
-	,{0x0F, "Extended DOS (LBA)"}
-	,{0x10, "OPUS"}
-	,{0x11, "OS/2 BM: hidden DOS with 12-bit FAT"}
-	,{0x12, "Compaq diagnostics"}
-	,{0x14, "OS/2 BM: hidden DOS with 16-bit FAT (< 32MB)"}
-	,{0x16, "OS/2 BM: hidden DOS with 16-bit FAT (>= 32MB)"}
-	,{0x17, "OS/2 BM: hidden IFS (e.g. HPFS)"}
-	,{0x18, "AST Windows swapfile"}
-	,{0x24, "NEC DOS"}
-	,{0x3C, "PartitionMagic recovery"}
-	,{0x39, "plan9"}
-	,{0x40, "VENIX 286"}
-	,{0x41, "Linux/MINIX (sharing disk with DRDOS)"}
-	,{0x42, "SFS or Linux swap (sharing disk with DRDOS)"}
-	,{0x43, "Linux native (sharing disk with DRDOS)"}
-	,{0x4D, "QNX 4.2 Primary"}
-	,{0x4E, "QNX 4.2 Secondary"}
-	,{0x4F, "QNX 4.2 Tertiary"}
-	,{0x50, "DM (disk manager)"}
-	,{0x51, "DM6 Aux1 (or Novell)"}
-	,{0x52, "CP/M or Microport SysV/AT"}
-	,{0x53, "DM6 Aux3"}
-	,{0x54, "DM6"}
-	,{0x55, "EZ-Drive (disk manager)"}
-	,{0x56, "Golden Bow (disk manager)"}
-	,{0x5c, "Priam Edisk (disk manager)"} /* according to S. Widlake */
-	,{0x61, "SpeedStor"}
-	,{0x63, "System V/386 (such as ISC UNIX), GNU HURD or Mach"}
-	,{0x64, "Novell Netware/286 2.xx"}
-	,{0x65, "Novell Netware/386 3.xx"}
-	,{0x70, "DiskSecure Multi-Boot"}
-	,{0x75, "PCIX"}
-	,{0x77, "QNX4.x"}
-	,{0x78, "QNX4.x 2nd part"}
-	,{0x79, "QNX4.x 3rd part"}
-	,{0x80, "Minix until 1.4a"}
-	,{0x81, "Minix since 1.4b, early Linux partition or Mitac disk manager"}
-	,{0x82, "Linux swap or Solaris x86"}
-	,{0x83, "Linux native"}
-	,{0x84, "OS/2 hidden C: drive"}
-	,{0x85, "Linux extended"}
-	,{0x86, "NTFS volume set??"}
-	,{0x87, "NTFS volume set??"}
-	,{0x93, "Amoeba file system"}
-	,{0x94, "Amoeba bad block table"}
-	,{0x9F, "BSD/OS"}
-	,{0xA0, "Suspend to Disk"}
-	,{0xA5, "FreeBSD/NetBSD/386BSD"}
-	,{0xA6, "OpenBSD"}
-	,{0xA7, "NeXTSTEP"}
-	,{0xA9, "NetBSD"}
-	,{0xAC, "IBM JFS"}
-	,{0xAF, "HFS+"}
-	,{0xB7, "BSDI BSD/386 file system"}
-	,{0xB8, "BSDI BSD/386 swap"}
-	,{0xBE, "Solaris x86 boot"}
-	,{0xBF, "Solaris x86 (new)"}
-	,{0xC1, "DRDOS/sec with 12-bit FAT"}
-	,{0xC4, "DRDOS/sec with 16-bit FAT (< 32MB)"}
-	,{0xC6, "DRDOS/sec with 16-bit FAT (>= 32MB)"}
-	,{0xC7, "Syrinx"}
-	,{0xDB, "CP/M, Concurrent CP/M, Concurrent DOS or CTOS"}
-	,{0xE1, "DOS access or SpeedStor with 12-bit FAT extended partition"}
-	,{0xE3, "DOS R/O or SpeedStor"}
-	,{0xE4, "SpeedStor with 16-bit FAT extended partition < 1024 cyl."}
-	,{0xEB, "BeOS file system"}
-	,{0xEE, "EFI GPT"}
-	,{0xEF, "EFI System Partition"}
-	,{0xF1, "SpeedStor"}
-	,{0xF2, "DOS 3.3+ Secondary"}
-	,{0xF4, "SpeedStor large partition"}
-	,{0xFE, "SpeedStor >1024 cyl. or LANstep"}
-	,{0xFF, "Xenix bad blocks table"}
+/*
+ * A list of partition types, probably outdated.
+ */
+static const char *const part_types[256] = {
+	[0x00] = "unused",
+	[0x01] = "Primary DOS with 12 bit FAT",
+	[0x02] = "XENIX / file system",
+	[0x03] = "XENIX /usr file system",
+	[0x04] = "Primary DOS with 16 bit FAT (< 32MB)",
+	[0x05] = "Extended DOS",
+	[0x06] = "Primary DOS, 16 bit FAT (>= 32MB)",
+	[0x07] = "NTFS, OS/2 HPFS, QNX-2 (16 bit) or Advanced UNIX",
+	[0x08] = "AIX file system or SplitDrive",
+	[0x09] = "AIX boot partition or Coherent",
+	[0x0A] = "OS/2 Boot Manager, OPUS or Coherent swap",
+	[0x0B] = "DOS or Windows 95 with 32 bit FAT",
+	[0x0C] = "DOS or Windows 95 with 32 bit FAT (LBA)",
+	[0x0E] = "Primary 'big' DOS (>= 32MB, LBA)",
+	[0x0F] = "Extended DOS (LBA)",
+	[0x10] = "OPUS",
+	[0x11] = "OS/2 BM: hidden DOS with 12-bit FAT",
+	[0x12] = "Compaq diagnostics",
+	[0x14] = "OS/2 BM: hidden DOS with 16-bit FAT (< 32MB)",
+	[0x16] = "OS/2 BM: hidden DOS with 16-bit FAT (>= 32MB)",
+	[0x17] = "OS/2 BM: hidden IFS (e.g. HPFS)",
+	[0x18] = "AST Windows swapfile",
+	[0x1b] = "ASUS Recovery partition (NTFS)",
+	[0x24] = "NEC DOS",
+	[0x3C] = "PartitionMagic recovery",
+	[0x39] = "plan9",
+	[0x40] = "VENIX 286",
+	[0x41] = "Linux/MINIX (sharing disk with DRDOS)",
+	[0x42] = "SFS or Linux swap (sharing disk with DRDOS)",
+	[0x43] = "Linux native (sharing disk with DRDOS)",
+	[0x4D] = "QNX 4.2 Primary",
+	[0x4E] = "QNX 4.2 Secondary",
+	[0x4F] = "QNX 4.2 Tertiary",
+	[0x50] = "DM (disk manager)",
+	[0x51] = "DM6 Aux1 (or Novell)",
+	[0x52] = "CP/M or Microport SysV/AT",
+	[0x53] = "DM6 Aux3",
+	[0x54] = "DM6",
+	[0x55] = "EZ-Drive (disk manager)",
+	[0x56] = "Golden Bow (disk manager)",
+	[0x5c] = "Priam Edisk (disk manager)", /* according to S. Widlake */
+	[0x61] = "SpeedStor",
+	[0x63] = "System V/386 (such as ISC UNIX), GNU HURD or Mach",
+	[0x64] = "Novell Netware/286 2.xx",
+	[0x65] = "Novell Netware/386 3.xx",
+	[0x70] = "DiskSecure Multi-Boot",
+	[0x75] = "PCIX",
+	[0x77] = "QNX4.x",
+	[0x78] = "QNX4.x 2nd part",
+	[0x79] = "QNX4.x 3rd part",
+	[0x80] = "Minix until 1.4a",
+	[0x81] = "Minix since 1.4b, early Linux partition or Mitac disk manager",
+	[0x82] = "Linux swap or Solaris x86",
+	[0x83] = "Linux native",
+	[0x84] = "OS/2 hidden C: drive",
+	[0x85] = "Linux extended",
+	[0x86] = "NTFS volume set??",
+	[0x87] = "NTFS volume set??",
+	[0x93] = "Amoeba file system",
+	[0x94] = "Amoeba bad block table",
+	[0x9F] = "BSD/OS",
+	[0xA0] = "Suspend to Disk",
+	[0xA5] = "FreeBSD/NetBSD/386BSD",
+	[0xA6] = "OpenBSD",
+	[0xA7] = "NeXTSTEP",
+	[0xA9] = "NetBSD",
+	[0xAC] = "IBM JFS",
+	[0xAF] = "HFS+",
+	[0xB7] = "BSDI BSD/386 file system",
+	[0xB8] = "BSDI BSD/386 swap",
+	[0xBE] = "Solaris x86 boot",
+	[0xBF] = "Solaris x86 (new)",
+	[0xC1] = "DRDOS/sec with 12-bit FAT",
+	[0xC4] = "DRDOS/sec with 16-bit FAT (< 32MB)",
+	[0xC6] = "DRDOS/sec with 16-bit FAT (>= 32MB)",
+	[0xC7] = "Syrinx",
+	[0xDB] = "CP/M, Concurrent CP/M, Concurrent DOS or CTOS",
+	[0xDE] = "DELL Utilities - FAT filesystem",
+	[0xE1] = "DOS access or SpeedStor with 12-bit FAT extended partition",
+	[0xE3] = "DOS R/O or SpeedStor",
+	[0xE4] = "SpeedStor with 16-bit FAT extended partition < 1024 cyl.",
+	[0xEB] = "BeOS file system",
+	[0xEE] = "EFI GPT",
+	[0xEF] = "EFI System Partition",
+	[0xF1] = "SpeedStor",
+	[0xF2] = "DOS 3.3+ Secondary",
+	[0xF4] = "SpeedStor large partition",
+	[0xFB] = "VMware VMFS",
+	[0xFE] = "SpeedStor >1024 cyl. or LANstep",
+	[0xFF] = "Xenix bad blocks table",
 };
 
-static void print_s0(int which);
-static void print_part(int i);
+static const char *
+get_type(int t)
+{
+	const char *ret;
+
+	ret = (t >= 0 && t <= 255) ? part_types[t] : NULL;
+	return ret ? ret : "unknown";
+}
+
+
+static int geom_class_available(const char *);
+static void print_s0(void);
+static void print_part(const struct dos_partition *);
 static void init_sector0(unsigned long start);
 static void init_boot(void);
 static void change_part(int i);
@@ -234,8 +252,7 @@ static int get_params(void);
 static int read_s0(void);
 static int write_s0(void);
 static int ok(const char *str);
-static int decimal(const char *str, int *num, int deflt);
-static const char *get_type(int type);
+static int decimal(const char *str, int *num, int deflt, uint32_t maxval);
 static int read_config(char *config_file);
 static void reset_boot(void);
 static int sanitize_partition(struct dos_partition *);
@@ -244,12 +261,11 @@ static void usage(void);
 int
 main(int argc, char *argv[])
 {
-	struct	stat sb;
 	int	c, i;
 	int	partition = -1;
 	struct	dos_partition *partp;
 
-	while ((c = getopt(argc, argv, "BIab:f:ipstuv1234")) != -1)
+	while ((c = getopt(argc, argv, "BIab:f:ipqstuv1234")) != -1)
 		switch (c) {
 		case 'B':
 			B_flag = 1;
@@ -271,6 +287,9 @@ main(int argc, char *argv[])
 			break;
 		case 'p':
 			print_config_flag = 1;
+			break;
+		case 'q':
+			q_flag = 1;
 			break;
 		case 's':
 			s_flag = 1;
@@ -303,18 +322,9 @@ main(int argc, char *argv[])
 	if (argc == 0) {
 		disk = get_rootdisk();
 	} else {
-		if (stat(argv[0], &sb) == 0) {
-			/* OK, full pathname given */
-			disk = argv[0];
-		} else if (errno == ENOENT && argv[0][0] != '/') {
-			/* Try prepending "/dev" */
-			asprintf(&disk, "%s%s", _PATH_DEV, argv[0]);
-			if (disk == NULL)
-				errx(1, "out of memory");
-		} else {
-			/* other stat error, let it fail below */
-			disk = argv[0];
-		}
+		disk = g_device_path(argv[0]);
+		if (disk == NULL)
+			err(1, "unable to get correct path for %s", argv[0]);
 	}
 	if (open_disk(u_flag) < 0)
 		err(1, "cannot open disk %s", disk);
@@ -335,7 +345,7 @@ main(int argc, char *argv[])
 		printf("g c%d h%d s%d\n", dos_cyls, dos_heads, dos_sectors);
 
 		for (i = 0; i < NDOSPART; i++) {
-			partp = ((struct dos_partition *)&mboot.parts) + i;
+			partp = &mboot.parts[i];
 
 			if (partp->dp_start == 0 && partp->dp_size == 0)
 				continue;
@@ -356,7 +366,7 @@ main(int argc, char *argv[])
 		    dos_sectors);
 		printf("Part  %11s %11s Type Flags\n", "Start", "Size");
 		for (i = 0; i < NDOSPART; i++) {
-			partp = ((struct dos_partition *) &mboot.parts) + i;
+			partp = &mboot.parts[i];
 			if (partp->dp_start == 0 && partp->dp_size == 0)
 				continue;
 			printf("%4d: %11lu %11lu 0x%02x 0x%02x\n", i + 1,
@@ -372,7 +382,7 @@ main(int argc, char *argv[])
 	if (I_flag) {
 		read_s0();
 		reset_boot();
-		partp = (struct dos_partition *) (&mboot.parts[0]);
+		partp = &mboot.parts[0];
 		partp->dp_typ = DOSPTYP_386BSD;
 		partp->dp_flag = ACTIVE;
 		partp->dp_start = dos_sectors;
@@ -380,7 +390,7 @@ main(int argc, char *argv[])
 		    dos_sectors;
 		dos(partp);
 		if (v_flag)
-			print_s0(-1);
+			print_s0();
 		if (!t_flag)
 			write_s0();
 		exit(0);
@@ -391,7 +401,7 @@ main(int argc, char *argv[])
 	    if (!read_config(f_flag))
 		exit(1);
 	    if (v_flag)
-		print_s0(-1);
+		print_s0();
 	    if (!t_flag)
 		write_s0();
 	} else {
@@ -423,7 +433,7 @@ main(int argc, char *argv[])
 		    printf("\nWe haven't changed the partition table yet.  ");
 		    printf("This is your last chance.\n");
 		}
-		print_s0(-1);
+		print_s0();
 		if (!t_flag) {
 		    if (ok("Should we write new partition table?"))
 			write_s0();
@@ -440,34 +450,30 @@ static void
 usage()
 {
 	fprintf(stderr, "%s%s",
-		"usage: fdisk [-BIaipstu] [-b bootcode] [-1234] [disk]\n",
+		"usage: fdisk [-BIaipqstu] [-b bootcode] [-1234] [disk]\n",
  		"       fdisk -f configfile [-itv] [disk]\n");
         exit(1);
 }
 
 static void
-print_s0(int which)
+print_s0(void)
 {
 	int	i;
 
 	print_params();
 	printf("Information from DOS bootblock is:\n");
-	if (which == -1)
-		for (i = 1; i <= NDOSPART; i++)
-			printf("%d: ", i), print_part(i);
-	else
-		print_part(which);
+	for (i = 1; i <= NDOSPART; i++) {
+		printf("%d: ", i);
+		print_part(&mboot.parts[i - 1]);
+	}
 }
 
 static struct dos_partition mtpart;
 
 static void
-print_part(int i)
+print_part(const struct dos_partition *partp)
 {
-	struct	  dos_partition *partp;
 	u_int64_t part_mb;
-
-	partp = ((struct dos_partition *) &mboot.parts) + i - 1;
 
 	if (!bcmp(partp, &mtpart, sizeof (struct dos_partition))) {
 		printf("<UNUSED>\n");
@@ -535,7 +541,7 @@ init_boot(void)
 static void
 init_sector0(unsigned long start)
 {
-	struct dos_partition *partp = (struct dos_partition *) (&mboot.parts[0]);
+	struct dos_partition *partp = &mboot.parts[0];
 
 	init_boot();
 
@@ -553,27 +559,27 @@ init_sector0(unsigned long start)
 static void
 change_part(int i)
 {
-	struct dos_partition *partp = ((struct dos_partition *) &mboot.parts) + i - 1;
+    struct dos_partition *partp = &mboot.parts[i - 1];
 
     printf("The data for partition %d is:\n", i);
-    print_part(i);
+    print_part(partp);
 
     if (u_flag && ok("Do you want to change it?")) {
 	int tmp;
 
 	if (i_flag) {
-		bzero((char *)partp, sizeof (struct dos_partition));
-		if (i == 1) {
-			init_sector0(1);
-			printf("\nThe static data for the slice 1 has been reinitialized to:\n");
-			print_part(i);
-		}
+	    bzero(partp, sizeof (*partp));
+	    if (i == 1) {
+		init_sector0(1);
+		printf("\nThe static data for the slice 1 has been reinitialized to:\n");
+		print_part(partp);
+	    }
 	}
 
 	do {
-		Decimal("sysid (165=FreeBSD)", partp->dp_typ, tmp);
-		Decimal("start", partp->dp_start, tmp);
-		Decimal("size", partp->dp_size, tmp);
+		Decimal("sysid (165=FreeBSD)", partp->dp_typ, tmp, 255);
+		Decimal("start", partp->dp_start, tmp, NO_DISK_SECTORS);
+		Decimal("size", partp->dp_size, tmp, NO_DISK_SECTORS);
 		if (!sanitize_partition(partp)) {
 			warnx("ERROR: failed to adjust; setting sysid to 0");
 			partp->dp_typ = 0;
@@ -585,9 +591,9 @@ change_part(int i)
 			tcyl = DPCYL(partp->dp_scyl,partp->dp_ssect);
 			thd = partp->dp_shd;
 			tsec = DPSECT(partp->dp_ssect);
-			Decimal("beginning cylinder", tcyl, tmp);
-			Decimal("beginning head", thd, tmp);
-			Decimal("beginning sector", tsec, tmp);
+			Decimal("beginning cylinder", tcyl, tmp, NO_TRACK_CYLINDERS);
+			Decimal("beginning head", thd, tmp, NO_TRACK_HEADS);
+			Decimal("beginning sector", tsec, tmp, NO_TRACK_SECTORS);
 			partp->dp_scyl = DOSCYL(tcyl);
 			partp->dp_ssect = DOSSECT(tsec,tcyl);
 			partp->dp_shd = thd;
@@ -595,16 +601,16 @@ change_part(int i)
 			tcyl = DPCYL(partp->dp_ecyl,partp->dp_esect);
 			thd = partp->dp_ehd;
 			tsec = DPSECT(partp->dp_esect);
-			Decimal("ending cylinder", tcyl, tmp);
-			Decimal("ending head", thd, tmp);
-			Decimal("ending sector", tsec, tmp);
+			Decimal("ending cylinder", tcyl, tmp, NO_TRACK_CYLINDERS);
+			Decimal("ending head", thd, tmp, NO_TRACK_HEADS);
+			Decimal("ending sector", tsec, tmp, NO_TRACK_SECTORS);
 			partp->dp_ecyl = DOSCYL(tcyl);
 			partp->dp_esect = DOSSECT(tsec,tcyl);
 			partp->dp_ehd = thd;
 		} else
 			dos(partp);
 
-		print_part(i);
+		print_part(partp);
 	} while (!ok("Are we happy with this entry?"));
     }
 }
@@ -646,7 +652,7 @@ change_active(int which)
 setactive:
 	do {
 		new = active;
-		Decimal("active partition", new, tmp);
+		Decimal("active partition", new, tmp, 0);
 		if (new < 1 || new > 4) {
 			printf("Active partition number must be in range 1-4."
 					"  Try again.\n");
@@ -676,9 +682,9 @@ get_params_to_use()
 	{
 		do
 		{
-			Decimal("BIOS's idea of #cylinders", dos_cyls, tmp);
-			Decimal("BIOS's idea of #heads", dos_heads, tmp);
-			Decimal("BIOS's idea of #sectors", dos_sectors, tmp);
+			Decimal("BIOS's idea of #cylinders", dos_cyls, tmp, 0);
+			Decimal("BIOS's idea of #heads", dos_heads, tmp, 0);
+			Decimal("BIOS's idea of #sectors", dos_sectors, tmp, 0);
 			dos_cylsecs = dos_heads * dos_sectors;
 			print_params();
 		}
@@ -720,21 +726,14 @@ dos(struct dos_partition *partp)
 static int
 open_disk(int flag)
 {
-	struct stat 	st;
 	int rwmode;
 
-	if (stat(disk, &st) == -1) {
-		if (errno == ENOENT)
-			return -2;
-		warnx("can't get file status of %s", disk);
-		return -1;
-	}
-	if ( !(st.st_mode & S_IFCHR) )
-		warnx("device %s is not character special", disk);
-	rwmode = a_flag || I_flag || B_flag || flag ? O_RDWR : O_RDONLY;
-	fd = open(disk, rwmode);
-	if (fd == -1 && errno == EPERM && rwmode == O_RDWR)
-		fd = open(disk, O_RDONLY);
+	/* Write mode if one of these flags are set. */
+	rwmode = (a_flag || I_flag || B_flag || flag);
+	fd = g_open(disk, rwmode);
+	/* If the mode fails, try read-only if we didn't. */
+	if (fd == -1 && errno == EPERM && rwmode)
+		fd = g_open(disk, 0);
 	if (fd == -1 && errno == ENXIO)
 		return -2;
 	if (fd == -1) {
@@ -770,47 +769,76 @@ read_disk(off_t sector, void *buf)
 }
 
 static int
+geom_class_available(const char *name)
+{
+	struct gclass *class;
+	struct gmesh mesh;
+	int error;
+
+	error = geom_gettree(&mesh);
+	if (error != 0)
+		errc(1, error, "Cannot get GEOM tree");
+
+	LIST_FOREACH(class, &mesh.lg_class, lg_class) {
+		if (strcmp(class->lg_name, name) == 0) {
+			geom_deletetree(&mesh);
+			return (1);
+		}
+	}
+
+	geom_deletetree(&mesh);
+
+	return (0);
+}
+
+static int
 write_disk(off_t sector, void *buf)
 {
-	int error;
 	struct gctl_req *grq;
-	const char *q;
-	char fbuf[BUFSIZ];
-	int i, fdw;
+	const char *errmsg;
+	char *pname;
+	int error;
 
-	grq = gctl_get_handle();
-	gctl_ro_param(grq, "verb", -1, "write MBR");
-	gctl_ro_param(grq, "class", -1, "MBR");
-	q = strrchr(disk, '/');
-	if (q == NULL)
-		q = disk;
-	else
-		q++;
-	gctl_ro_param(grq, "geom", -1, q);
-	gctl_ro_param(grq, "data", secsize, buf);
-	q = gctl_issue(grq);
-	if (q == NULL) {
+	/* Check that GEOM_MBR is available */
+	if (geom_class_available("MBR") != 0) {
+		grq = gctl_get_handle();
+		gctl_ro_param(grq, "verb", -1, "write MBR");
+		gctl_ro_param(grq, "class", -1, "MBR");
+		pname = g_providername(fd);
+		if (pname == NULL) {
+			warn("Error getting providername for %s", disk);
+			return (-1);
+		}
+		gctl_ro_param(grq, "geom", -1, pname);
+		gctl_ro_param(grq, "data", secsize, buf);
+		errmsg = gctl_issue(grq);
+		free(pname);
+		if (errmsg == NULL) {
+			gctl_free(grq);
+			return(0);
+		}
+		if (!q_flag)
+			warnx("GEOM_MBR: %s", errmsg);
 		gctl_free(grq);
-		return(0);
-	}
-	warnx("%s", q);
-	gctl_free(grq);
-	
-	error = pwrite(fd, buf, secsize, (sector * 512));
-	if (error == secsize)
-		return (0);
-
-	for (i = 1; i < 5; i++) {
-		sprintf(fbuf, "%ss%d", disk, i);
-		fdw = open(fbuf, O_RDWR, 0);
-		if (fdw < 0)
-			continue;
-		error = ioctl(fdw, DIOCSMBR, buf);
-		close(fdw);
-		if (error == 0)
+	} else {
+		/*
+		 * Try to write MBR directly. This may help when disk
+		 * is not in use.
+		 * XXX: hardcoded sectorsize
+		 */
+		error = pwrite(fd, buf, secsize, (sector * 512));
+		if (error == secsize)
 			return (0);
 	}
-	warnx("Failed to write sector zero");
+
+	/*
+	 * GEOM_MBR is not available or failed to write MBR.
+	 * Now check that we have GEOM_PART and recommend to use gpart (8).
+	 */
+	if (geom_class_available("PART") != 0)
+		warnx("Failed to write MBR. Try to use gpart(8).");
+	else
+		warnx("Failed to write sector zero");
 	return(EINVAL);
 }
 
@@ -836,21 +864,18 @@ get_params()
 	dos_cylsecs = cylsecs = heads * sectors;
 	disksecs = cyls * heads * sectors;
 
-	error = ioctl(fd, DIOCGSECTORSIZE, &u);
-	if (error != 0 || u == 0)
-		u = 512;
-	else
-		secsize = u;
+	u = g_sectorsize(fd);
+	if (u <= 0)
+		return (-1);
 
-	error = ioctl(fd, DIOCGMEDIASIZE, &o);
-	if (error == 0) {
-		disksecs = o / u;
-		cyls = dos_cyls = o / (u * dos_heads * dos_sectors);
-	}
+	o = g_mediasize(fd);
+	if (o < 0)
+		return (-1);
+	disksecs = o / u;
+	cyls = dos_cyls = o / (u * dos_heads * dos_sectors);
 
 	return (disksecs);
 }
-
 
 static int
 read_s0()
@@ -887,7 +912,7 @@ write_s0()
 	int	sector, i;
 
 	if (iotest) {
-		print_s0(-1);
+		print_s0();
 		return 0;
 	}
 	for(i = 0; i < NDOSPART; i++)
@@ -922,12 +947,14 @@ ok(const char *str)
 }
 
 static int
-decimal(const char *str, int *num, int deflt)
+decimal(const char *str, int *num, int deflt, uint32_t maxval)
 {
-	int acc = 0, c;
+	long long acc;
+	int c;
 	char *cp;
 
 	while (1) {
+		acc = 0;
 		printf("Supply a decimal value for \"%s\" [%d] ", str, deflt);
 		fflush(stdout);
 		if (fgets(lbuf, LBUF, stdin) == NULL)
@@ -942,38 +969,27 @@ decimal(const char *str, int *num, int deflt)
 		if (!c)
 			return 0;
 		while ((c = *cp++)) {
-			if (c <= '9' && c >= '0')
-				acc = acc * 10 + c - '0';
-			else
+			if (c <= '9' && c >= '0') {
+				if (acc <= maxval || maxval == 0)
+					acc = acc * 10 + c - '0';
+			} else
 				break;
 		}
 		if (c == ' ' || c == '\t')
 			while ((c = *cp) && (c == ' ' || c == '\t')) cp++;
 		if (!c) {
+			if (maxval > 0 && acc > maxval) {
+				acc = maxval;
+				printf("%s exceeds maximum value allowed for "
+				  "this field. The value has been reduced "
+				  "to %lld\n", lbuf, acc);
+			}
 			*num = acc;
 			return 1;
 		} else
 			printf("%s is an invalid decimal number.  Try again.\n",
 				lbuf);
 	}
-
-}
-
-static const char *
-get_type(int type)
-{
-	int	numentries = (sizeof(part_types)/sizeof(struct part_type));
-	int	counter = 0;
-	struct	part_type *ptr = part_types;
-
-
-	while(counter < numentries) {
-		if(ptr->type == type)
-			return(ptr->name);
-		ptr++;
-		counter++;
-	}
-	return("unknown");
 }
 
 
@@ -996,16 +1012,23 @@ parse_config_line(char *line, CMD *command)
 	 */
 	    while (1) {
 	    while (isspace(*cp)) ++cp;
+	    if (*cp == '\0')
+		break;		/* eol */
 	    if (*cp == '#')
 		break;		/* found comment */
 	    if (isalpha(*cp))
 		command->args[command->n_args].argtype = *cp++;
-	    if (!isdigit(*cp))
-		break;		/* assume end of line */
 	    end = NULL;
-	    command->args[command->n_args].arg_val = strtol(cp, &end, 0);
-	    if (cp == end)
-		break;		/* couldn't parse number */
+	    command->args[command->n_args].arg_val = strtoul(cp, &end, 0);
+ 	    if (cp == end || (!isspace(*end) && *end != '\0')) {
+ 		char ch;
+ 		end = cp;
+ 		while (!isspace(*end) && *end != '\0') ++end;
+ 		ch = *end; *end = '\0';
+ 		command->args[command->n_args].arg_str = strdup(cp);
+ 		*end = ch;
+ 	    } else
+ 		command->args[command->n_args].arg_str = NULL;
 	    cp = end;
 	    command->n_args++;
 	}
@@ -1104,6 +1127,33 @@ process_geometry(CMD *command)
     return (status);
 }
 
+static u_int32_t
+str2sectors(const char *str)
+{
+	char *end;
+	unsigned long val;
+
+	val = strtoul(str, &end, 0);
+	if (str == end || *end == '\0') {
+		warnx("ERROR line %d: unexpected size: \'%s\'",
+		    current_line_number, str);
+		return NO_DISK_SECTORS;
+	}
+
+	if (*end == 'K') 
+		val *= 1024UL / secsize;
+	else if (*end == 'M')
+		val *= 1024UL * 1024UL / secsize;
+	else if (*end == 'G')
+		val *= 1024UL * 1024UL * 1024UL / secsize;
+	else {
+		warnx("ERROR line %d: unexpected modifier: %c "
+		    "(not K/M/G)", current_line_number, *end);
+		return NO_DISK_SECTORS;
+	}
+
+	return val;
+}
 
 static int
 process_partition(CMD *command)
@@ -1126,21 +1176,61 @@ process_partition(CMD *command)
 		    current_line_number, partition);
 	    break;
 	}
-	partp = ((struct dos_partition *) &mboot.parts) + partition - 1;
-	bzero((char *)partp, sizeof (struct dos_partition));
+	partp = &mboot.parts[partition - 1];
+	bzero(partp, sizeof (*partp));
 	partp->dp_typ = command->args[1].arg_val;
-	partp->dp_start = command->args[2].arg_val;
-	partp->dp_size = command->args[3].arg_val;
+	if (command->args[2].arg_str != NULL) {
+		if (strcmp(command->args[2].arg_str, "*") == 0) {
+			int i;
+			partp->dp_start = dos_sectors;
+			for (i = 1; i < partition; i++) {
+    				struct dos_partition *prev_partp;
+				prev_partp = ((struct dos_partition *)
+				    &mboot.parts) + i - 1;
+				if (prev_partp->dp_typ != 0)
+					partp->dp_start = prev_partp->dp_start +
+					    prev_partp->dp_size;
+			}
+			if (partp->dp_start % dos_sectors != 0) {
+		    		prev_head_boundary = partp->dp_start /
+				    dos_sectors * dos_sectors;
+		    		partp->dp_start = prev_head_boundary +
+				    dos_sectors;
+			}
+		} else {
+			partp->dp_start = str2sectors(command->args[2].arg_str);
+			if (partp->dp_start == NO_DISK_SECTORS)
+				break;
+		}
+	} else
+		partp->dp_start = command->args[2].arg_val;
+
+	if (command->args[3].arg_str != NULL) {
+		if (strcmp(command->args[3].arg_str, "*") == 0)
+			partp->dp_size = ((disksecs / dos_cylsecs) *
+			    dos_cylsecs) - partp->dp_start;
+		else {
+			partp->dp_size = str2sectors(command->args[3].arg_str);
+			if (partp->dp_size == NO_DISK_SECTORS)
+				break;
+		}
+		prev_cyl_boundary = ((partp->dp_start + partp->dp_size) /
+		    dos_cylsecs) * dos_cylsecs;
+		if (prev_cyl_boundary > partp->dp_start)
+			partp->dp_size = prev_cyl_boundary - partp->dp_start;
+	} else
+		partp->dp_size = command->args[3].arg_val;
+
 	max_end = partp->dp_start + partp->dp_size;
 
-		if (partp->dp_typ == 0) {
+	if (partp->dp_typ == 0) {
 	    /*
 	     * Get out, the partition is marked as unused.
 	     */
 	    /*
 	     * Insure that it's unused.
 	     */
-	    bzero((char *)partp, sizeof (struct dos_partition));
+	    bzero(partp, sizeof(*partp));
 	    status = 1;
 	    break;
 	}
@@ -1227,7 +1317,7 @@ process_active(CMD *command)
 	/*
 	 * Reset active partition
 	 */
-	partp = ((struct dos_partition *) &mboot.parts);
+	partp = mboot.parts;
 	for (i = 0; i < NDOSPART; i++)
 	    partp[i].dp_flag = 0;
 	partp[partition-1].dp_flag = ACTIVE;
@@ -1322,9 +1412,9 @@ reset_boot(void)
     struct dos_partition	*partp;
 
     init_boot();
-	for (i = 0; i < 4; ++i) {
-	partp = ((struct dos_partition *) &mboot.parts) + i;
-	bzero((char *)partp, sizeof (struct dos_partition));
+    for (i = 0; i < 4; ++i) {
+	partp = &mboot.parts[i];
+	bzero(partp, sizeof(*partp));
     }
 }
 
@@ -1411,6 +1501,8 @@ sanitize_partition(struct dos_partition *partp)
  *   /dev/ad0s1a     => /dev/ad0
  *   /dev/da0a       => /dev/da0
  *   /dev/vinum/root => /dev/vinum/root
+ * A ".eli" part is removed if it exists (see geli(8)).
+ * A ".journal" ending is removed if it exists (see gjournal(8)).
  */
 static char *
 get_rootdisk(void)
@@ -1419,16 +1511,20 @@ get_rootdisk(void)
 	regex_t re;
 #define NMATCHES 2
 	regmatch_t rm[NMATCHES];
-	char *s;
+	char dev[PATH_MAX], *s;
 	int rv;
 
 	if (statfs("/", &rootfs) == -1)
 		err(1, "statfs(\"/\")");
 
-	if ((rv = regcomp(&re, "^(/dev/[a-z/]+[0-9]+)([sp][0-9]+)?[a-h]?$",
+	if ((rv = regcomp(&re, "^(/dev/[a-z/]+[0-9]*)([sp][0-9]+)?[a-h]?(\\.journal)?$",
 		    REG_EXTENDED)) != 0)
 		errx(1, "regcomp() failed (%d)", rv);
-	if ((rv = regexec(&re, rootfs.f_mntfromname, NMATCHES, rm, 0)) != 0)
+	strlcpy(dev, rootfs.f_mntfromname, sizeof (dev));
+	if ((s = strstr(dev, ".eli")) != NULL)
+	    memmove(s, s+4, strlen(s + 4) + 1);
+
+	if ((rv = regexec(&re, dev, NMATCHES, rm, 0)) != 0)
 		errx(1,
 "mounted root fs resource doesn't match expectations (regexec returned %d)",
 		    rv);

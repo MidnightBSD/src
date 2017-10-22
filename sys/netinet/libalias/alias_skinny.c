@@ -27,7 +27,7 @@
  *
  * Author: Joe Marcus Clarke <marcus@FreeBSD.org>
  *
- * $FreeBSD: release/7.0.0/sys/netinet/libalias/alias_skinny.c 168459 2007-04-07 09:52:36Z piso $
+ * $FreeBSD$
  */
 
 #ifdef _KERNEL
@@ -57,7 +57,7 @@ static void
 AliasHandleSkinny(struct libalias *, struct ip *, struct alias_link *);
 
 static int 
-fingerprint(struct libalias *la, struct ip *pip, struct alias_data *ah)
+fingerprint(struct libalias *la, struct alias_data *ah)
 {
 
 	if (ah->dport == NULL || ah->sport == NULL || ah->lnk == NULL)

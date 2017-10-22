@@ -12,9 +12,8 @@
  *
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: release/7.0.0/lib/msun/src/e_lgamma_r.c 169220 2007-05-02 16:54:22Z bde $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /* __ieee754_lgamma_r(x, signgamp)
  * Reentrant version of the logarithm of the Gamma function 

@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/amd64/amd64/identcpu.c 170135 2007-05-30 14:23:26Z des $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_cpu.h"
 
@@ -61,7 +61,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/amd64/amd64/identcpu.c 170135 2007-05-30 1
 #include <machine/specialreg.h>
 #include <machine/md_var.h>
 
-#include <amd64/isa/icu.h>
+#include <x86/isa/icu.h>
 
 /* XXX - should be in header file: */
 void printcpuinfo(void);
@@ -69,15 +69,37 @@ void identify_cpu(void);
 void earlysetcpuclass(void);
 void panicifcpuunsupported(void);
 
+static u_int find_cpu_vendor_id(void);
 static void print_AMD_info(void);
 static void print_AMD_assoc(int i);
-void setPQL2(int *const size, int *const ways);
-static void setPQL2_AMD(int *const size, int *const ways);
+static void print_via_padlock_info(void);
 
 int	cpu_class;
 char machine[] = "amd64";
-SYSCTL_STRING(_hw, HW_MACHINE, machine, CTLFLAG_RD, 
-    machine, 0, "Machine class");
+
+#ifdef SCTL_MASK32
+extern int adaptive_machine_arch;
+#endif
+
+static int
+sysctl_hw_machine(SYSCTL_HANDLER_ARGS)
+{
+#ifdef SCTL_MASK32
+	static const char machine32[] = "i386";
+#endif
+	int error;
+
+#ifdef SCTL_MASK32
+	if ((req->flags & SCTL_MASK32) != 0 && adaptive_machine_arch)
+		error = SYSCTL_OUT(req, machine32, sizeof(machine32));
+	else
+#endif
+		error = SYSCTL_OUT(req, machine, sizeof(machine));
+	return (error);
+
+}
+SYSCTL_PROC(_hw, HW_MACHINE, machine, CTLTYPE_STRING | CTLFLAG_RD,
+    NULL, 0, sysctl_hw_machine, "A", "Machine class");
 
 static char cpu_model[128];
 SYSCTL_STRING(_hw, HW_MODEL, model, CTLFLAG_RD, 
@@ -86,6 +108,8 @@ SYSCTL_STRING(_hw, HW_MODEL, model, CTLFLAG_RD,
 static int hw_clockrate;
 SYSCTL_INT(_hw, OID_AUTO, clockrate, CTLFLAG_RD, 
     &hw_clockrate, 0, "CPU instruction clock rate");
+
+static eventhandler_tag tsc_post_tag;
 
 static char cpu_brand[48];
 
@@ -97,8 +121,15 @@ static struct {
 	{ "Sledgehammer",	CPUCLASS_K8 },		/* CPU_SLEDGEHAMMER */
 };
 
-extern int pq_l2size;
-extern int pq_l2nways;
+static struct {
+	char	*vendor;
+	u_int	vendor_id;
+} cpu_vendors[] = {
+	{ INTEL_VENDOR_ID,	CPU_VENDOR_INTEL },	/* GenuineIntel */
+	{ AMD_VENDOR_ID,	CPU_VENDOR_AMD },	/* AuthenticAMD */
+	{ CENTAUR_VENDOR_ID,	CPU_VENDOR_CENTAUR },	/* CentaurHauls */
+};
+
 
 void
 printcpuinfo(void)
@@ -120,24 +151,33 @@ printcpuinfo(void)
 		}
 	}
 
-	if (strcmp(cpu_vendor, "GenuineIntel") == 0) {
+	switch (cpu_vendor_id) {
+	case CPU_VENDOR_INTEL:
 		/* Please make up your mind folks! */
 		strcat(cpu_model, "EM64T");
-	} else if (strcmp(cpu_vendor, "AuthenticAMD") == 0) {
+		break;
+	case CPU_VENDOR_AMD:
 		/*
 		 * Values taken from AMD Processor Recognition
 		 * http://www.amd.com/K6/k6docs/pdf/20734g.pdf
 		 * (also describes ``Features'' encodings.
 		 */
 		strcpy(cpu_model, "AMD ");
-		switch (cpu_id & 0xF00) {
-		case 0xf00:
+		if ((cpu_id & 0xf00) == 0xf00)
 			strcat(cpu_model, "AMD64 Processor");
-			break;
-		default:
+		else
 			strcat(cpu_model, "Unknown");
-			break;
-		}
+		break;
+	case CPU_VENDOR_CENTAUR:
+		strcpy(cpu_model, "VIA ");
+		if ((cpu_id & 0xff0) == 0x6f0)
+			strcat(cpu_model, "Nano Processor");
+		else
+			strcat(cpu_model, "Unknown");
+		break;
+	default:
+		strcat(cpu_model, "Unknown");
+		break;
 	}
 
 	/*
@@ -153,26 +193,38 @@ printcpuinfo(void)
 	printf("%s (", cpu_model);
 	switch(cpu_class) {
 	case CPUCLASS_K8:
-		hw_clockrate = (tsc_freq + 5000) / 1000000;
-		printf("%jd.%02d-MHz ",
-		       (intmax_t)(tsc_freq + 4999) / 1000000,
-		       (u_int)((tsc_freq + 4999) / 10000) % 100);
+		if (tsc_freq != 0) {
+			hw_clockrate = (tsc_freq + 5000) / 1000000;
+			printf("%jd.%02d-MHz ",
+			       (intmax_t)(tsc_freq + 4999) / 1000000,
+			       (u_int)((tsc_freq + 4999) / 10000) % 100);
+		}
 		printf("K8");
 		break;
 	default:
 		printf("Unknown");	/* will panic below... */
 	}
 	printf("-class CPU)\n");
-	if(*cpu_vendor)
-		printf("  Origin = \"%s\"",cpu_vendor);
-	if(cpu_id)
+	if (*cpu_vendor)
+		printf("  Origin = \"%s\"", cpu_vendor);
+	if (cpu_id)
 		printf("  Id = 0x%x", cpu_id);
 
-	if (strcmp(cpu_vendor, "GenuineIntel") == 0 ||
-	    strcmp(cpu_vendor, "AuthenticAMD") == 0) {
-		printf("  Stepping = %u", cpu_id & 0xf);
+	if (cpu_vendor_id == CPU_VENDOR_INTEL ||
+	    cpu_vendor_id == CPU_VENDOR_AMD ||
+	    cpu_vendor_id == CPU_VENDOR_CENTAUR) {
+		printf("  Family = %x", CPUID_TO_FAMILY(cpu_id));
+		printf("  Model = %x", CPUID_TO_MODEL(cpu_id));
+		printf("  Stepping = %u", cpu_id & CPUID_STEPPING);
+
+		/*
+		 * AMD CPUID Specification
+		 * http://support.amd.com/us/Embedded_TechDocs/25481.pdf
+		 *
+		 * Intel Processor Identification and CPUID Instruction
+		 * http://www.intel.com/assets/pdf/appnote/241618.pdf
+		 */
 		if (cpu_high > 0) {
-			u_int cmp = 1, htt = 1;
 
 			/*
 			 * Here we should probably set up flags indicating
@@ -222,8 +274,8 @@ printcpuinfo(void)
 				printf("\n  Features2=0x%b", cpu_feature2,
 				"\020"
 				"\001SSE3"	/* SSE3 */
-				"\002<b1>"
-				"\003RSVD2"	/* "Reserved" bit 2 */
+				"\002PCLMULQDQ"	/* Carry-Less Mul Quadword */
+				"\003DTES64"	/* 64-bit Debug Trace */
 				"\004MON"	/* MONITOR/MWAIT Instructions */
 				"\005DS_CPL"	/* CPL Qualified Debug Store */
 				"\006VMX"	/* Virtual Machine Extensions */
@@ -233,38 +285,29 @@ printcpuinfo(void)
 				"\012SSSE3"	/* SSSE3 */
 				"\013CNXT-ID"	/* L1 context ID available */
 				"\014<b11>"
-				"\015<b12>"
+				"\015FMA"	/* Fused Multiply Add */
 				"\016CX16"	/* CMPXCHG16B Instruction */
 				"\017xTPR"	/* Send Task Priority Messages*/
 				"\020PDCM"	/* Perf/Debug Capability MSR */
 				"\021<b16>"
-				"\022<b17>"
+				"\022PCID"	/* Process-context Identifiers*/
 				"\023DCA"	/* Direct Cache Access */
-				"\024<b19>"
-				"\025<b20>"
-				"\026<b21>"
-				"\027<b22>"
-				"\030<b23>"
-				"\031<b24>"
-				"\032<b25>"
-				"\033<b26>"
-				"\034<b27>"
-				"\035<b28>"
-				"\036<b29>"
-				"\037<b30>"
-				"\040<b31>"
+				"\024SSE4.1"	/* SSE 4.1 */
+				"\025SSE4.2"	/* SSE 4.2 */
+				"\026x2APIC"	/* xAPIC Extensions */
+				"\027MOVBE"	/* MOVBE Instruction */
+				"\030POPCNT"	/* POPCNT Instruction */
+				"\031TSCDLT"	/* TSC-Deadline Timer */
+				"\032AESNI"	/* AES Crypto */
+				"\033XSAVE"	/* XSAVE/XRSTOR States */
+				"\034OSXSAVE"	/* OS-Enabled State Management*/
+				"\035AVX"	/* Advanced Vector Extensions */
+				"\036F16C"	/* Half-precision conversions */
+				"\037RDRAND"	/* RDRAND Instruction */
+				"\040HV"	/* Hypervisor */
 				);
 			}
 
-			/*
-			 * AMD64 Architecture Programmer's Manual Volume 3:
-			 * General-Purpose and System Instructions
-			 * http://www.amd.com/us-en/assets/content_type/white_papers_and_tech_docs/24594.pdf
-			 *
-			 * IA-32 Intel Architecture Software Developer's Manual,
-			 * Volume 2A: Instruction Set Reference, A-M
-			 * ftp://download.intel.com/design/Pentium4/manuals/25366617.pdf
-			 */
 			if (amd_feature != 0) {
 				printf("\n  AMD Features=0x%b", amd_feature,
 				"\020"		/* in hex */
@@ -294,7 +337,7 @@ printcpuinfo(void)
 				"\030<s23>"	/* Same */
 				"\031<s24>"	/* Same */
 				"\032FFXSR"	/* Fast FXSAVE/FXRSTOR */
-				"\033<b26>"	/* Undefined */
+				"\033Page1GB"	/* 1-GB large page support */
 				"\034RDTSCP"	/* RDTSCP */
 				"\035<b28>"	/* Undefined */
 				"\036LM"	/* 64 bit long mode */
@@ -311,24 +354,24 @@ printcpuinfo(void)
 				"\003SVM"	/* Secure Virtual Mode */
 				"\004ExtAPIC"	/* Extended APIC register */
 				"\005CR8"	/* CR8 in legacy mode */
-				"\006<b5>"
-				"\007<b6>"
-				"\010<b7>"
+				"\006ABM"	/* LZCNT instruction */
+				"\007SSE4A"	/* SSE4A */
+				"\010MAS"	/* Misaligned SSE mode */
 				"\011Prefetch"	/* 3DNow! Prefetch/PrefetchW */
-				"\012<b9>"
-				"\013<b10>"
-				"\014<b11>"
-				"\015<b12>"
-				"\016<b13>"
+				"\012OSVW"	/* OS visible workaround */
+				"\013IBS"	/* Instruction based sampling */
+				"\014XOP"	/* XOP extended instructions */
+				"\015SKINIT"	/* SKINIT/STGI */
+				"\016WDT"	/* Watchdog timer */
 				"\017<b14>"
-				"\020<b15>"
-				"\021<b16>"
+				"\020LWP"	/* Lightweight Profiling */
+				"\021FMA4"	/* 4-operand FMA instructions */
 				"\022<b17>"
 				"\023<b18>"
-				"\024<b19>"
+				"\024NodeId"	/* NodeId MSR support */
 				"\025<b20>"
-				"\026<b21>"
-				"\027<b22>"
+				"\026TBM"	/* Trailing Bit Manipulation */
+				"\027Topology"	/* Topology Extensions */
 				"\030<b23>"
 				"\031<b24>"
 				"\032<b25>"
@@ -341,30 +384,23 @@ printcpuinfo(void)
 				);
 			}
 
-			if (cpu_feature & CPUID_HTT && strcmp(cpu_vendor,
-			    "AuthenticAMD") == 0)
+			if (via_feature_rng != 0 || via_feature_xcrypt != 0)
+				print_via_padlock_info();
+
+			if ((cpu_feature & CPUID_HTT) &&
+			    cpu_vendor_id == CPU_VENDOR_AMD)
 				cpu_feature &= ~CPUID_HTT;
 
 			/*
-			 * If this CPU supports HTT or CMP then mention the
-			 * number of physical/logical cores it contains.
+			 * If this CPU supports P-state invariant TSC then
+			 * mention the capability.
 			 */
-			if (cpu_feature & CPUID_HTT)
-				htt = (cpu_procinfo & CPUID_HTT_CORES) >> 16;
-			if (strcmp(cpu_vendor, "AuthenticAMD") == 0 &&
-			    (amd_feature2 & AMDID2_CMP))
-				cmp = (cpu_procinfo2 & AMDID_CMP_CORES) + 1;
-			else if (strcmp(cpu_vendor, "GenuineIntel") == 0 &&
-			    (cpu_high >= 4)) {
-				cpuid_count(4, 0, regs);
-				if ((regs[0] & 0x1f) != 0)
-					cmp = ((regs[0] >> 26) & 0x3f) + 1;
+			if (tsc_is_invariant) {
+				printf("\n  TSC: P-state invariant");
+				if (tsc_perf_stat)
+					printf(", performance statistics");
 			}
-			if (cmp > 1)
-				printf("\n  Cores per package: %d", cmp);
-			if ((htt / cmp) > 1)
-				printf("\n  Logical CPUs per core: %d",
-				    htt / cmp);
+
 		}
 	}
 	/* Avoid ugly blank lines: only print newline when we have to. */
@@ -374,7 +410,7 @@ printcpuinfo(void)
 	if (!bootverbose)
 		return;
 
-	if (strcmp(cpu_vendor, "AuthenticAMD") == 0)
+	if (cpu_vendor_id == CPU_VENDOR_AMD)
 		print_AMD_info();
 }
 
@@ -403,8 +439,9 @@ panicifcpuunsupported(void)
 
 /* Update TSC freq with the value indicated by the caller. */
 static void
-tsc_freq_changed(void *arg, const struct cf_level *level, int status)
+tsc_freq_changed(void *arg __unused, const struct cf_level *level, int status)
 {
+
 	/* If there was an error during the transition, don't do anything. */
 	if (status != 0)
 		return;
@@ -413,11 +450,21 @@ tsc_freq_changed(void *arg, const struct cf_level *level, int status)
 	hw_clockrate = level->total_set.freq;
 }
 
-EVENTHANDLER_DEFINE(cpufreq_post_change, tsc_freq_changed, NULL,
-    EVENTHANDLER_PRI_ANY);
+static void
+hook_tsc_freq(void *arg __unused)
+{
+
+	if (tsc_is_invariant)
+		return;
+
+	tsc_post_tag = EVENTHANDLER_REGISTER(cpufreq_post_change,
+	    tsc_freq_changed, NULL, EVENTHANDLER_PRI_ANY);
+}
+
+SYSINIT(hook_tsc_freq, SI_SUB_CONFIGURE, SI_ORDER_ANY, hook_tsc_freq, NULL);
 
 /*
- * Final stage of CPU identification. -- Should I check TI?
+ * Final stage of CPU identification.
  */
 void
 identify_cpu(void)
@@ -430,6 +477,7 @@ identify_cpu(void)
 	((u_int *)&cpu_vendor)[1] = regs[3];
 	((u_int *)&cpu_vendor)[2] = regs[2];
 	cpu_vendor[12] = '\0';
+	cpu_vendor_id = find_cpu_vendor_id();
 
 	do_cpuid(1, regs);
 	cpu_id = regs[0];
@@ -437,8 +485,25 @@ identify_cpu(void)
 	cpu_feature = regs[3];
 	cpu_feature2 = regs[2];
 
-	if (strcmp(cpu_vendor, "GenuineIntel") == 0 ||
-	    strcmp(cpu_vendor, "AuthenticAMD") == 0) {
+	/*
+	 * Clear "Limit CPUID Maxval" bit and get the largest standard CPUID
+	 * function number again if it is set from BIOS.  It is necessary
+	 * for probing correct CPU topology later.
+	 * XXX This is only done on the BSP package.
+	 */
+	if (cpu_vendor_id == CPU_VENDOR_INTEL && cpu_high > 0 && cpu_high < 4) {
+		uint64_t msr;
+		msr = rdmsr(MSR_IA32_MISC_ENABLE);
+		if ((msr & 0x400000ULL) != 0) {
+			wrmsr(MSR_IA32_MISC_ENABLE, msr & ~0x400000ULL);
+			do_cpuid(0, regs);
+			cpu_high = regs[0];
+		}
+	}
+
+	if (cpu_vendor_id == CPU_VENDOR_INTEL ||
+	    cpu_vendor_id == CPU_VENDOR_AMD ||
+	    cpu_vendor_id == CPU_VENDOR_CENTAUR) {
 		do_cpuid(0x80000000, regs);
 		cpu_exthigh = regs[0];
 	}
@@ -447,6 +512,10 @@ identify_cpu(void)
 		amd_feature = regs[3] & ~(cpu_feature & 0x0183f3ff);
 		amd_feature2 = regs[2];
 	}
+	if (cpu_exthigh >= 0x80000007) {
+		do_cpuid(0x80000007, regs);
+		amd_pminfo = regs[3];
+	}
 	if (cpu_exthigh >= 0x80000008) {
 		do_cpuid(0x80000008, regs);
 		cpu_procinfo2 = regs[2];
@@ -454,6 +523,17 @@ identify_cpu(void)
 
 	/* XXX */
 	cpu = CPU_CLAWHAMMER;
+}
+
+static u_int
+find_cpu_vendor_id(void)
+{
+	int	i;
+
+	for (i = 0; i < sizeof(cpu_vendors) / sizeof(cpu_vendors[0]); i++)
+		if (strcmp(cpu_vendor, cpu_vendors[i].vendor) == 0)
+			return (cpu_vendors[i].vendor_id);
+	return (0);
 }
 
 static void
@@ -543,31 +623,35 @@ print_AMD_info(void)
 		printf(", %d lines/tag", (regs[2] >> 8) & 0x0f);
 		print_AMD_l2_assoc((regs[2] >> 12) & 0x0f);	
 	}
+
+	/*
+	 * Opteron Rev E shows a bug as in very rare occasions a read memory 
+	 * barrier is not performed as expected if it is followed by a 
+	 * non-atomic read-modify-write instruction.  
+	 * As long as that bug pops up very rarely (intensive machine usage
+	 * on other operating systems generally generates one unexplainable 
+	 * crash any 2 months) and as long as a model specific fix would be
+	 * impratical at this stage, print out a warning string if the broken
+	 * model and family are identified.
+	 */
+	if (CPUID_TO_FAMILY(cpu_id) == 0xf && CPUID_TO_MODEL(cpu_id) >= 0x20 &&
+	    CPUID_TO_MODEL(cpu_id) <= 0x3f)
+		printf("WARNING: This architecture revision has known SMP "
+		    "hardware bugs which may cause random instability\n");
 }
 
-static void             
-setPQL2_AMD(int *const size, int *const ways)
+static void
+print_via_padlock_info(void)
 {
-	if (cpu_exthigh >= 0x80000006) {
-		u_int regs[4];
+	u_int regs[4];
 
-		do_cpuid(0x80000006, regs);
-		*size = regs[2] >> 16;
-		*ways = (regs[2] >> 12) & 0x0f;
-		switch (*ways) {
-		case 0:				/* disabled/not present */
-		case 15:			/* fully associative */
-		default: *ways = 1; break;	/* reserved configuration */
-		case 4: *ways = 4; break;
-		case 6: *ways = 8; break;
-		case 8: *ways = 16; break;
-		}
-	}
-}
-
-void
-setPQL2(int *const size, int *const ways)
-{
-	if (strcmp(cpu_vendor, "AuthenticAMD") == 0)
-		setPQL2_AMD(size, ways);
+	do_cpuid(0xc0000001, regs);
+	printf("\n  VIA Padlock Features=0x%b", regs[3],
+	"\020"
+	"\003RNG"		/* RNG */
+	"\007AES"		/* ACE */
+	"\011AES-CTR"		/* ACE2 */
+	"\013SHA1,SHA256"	/* PHE */
+	"\015RSA"		/* PMM */
+	);
 }

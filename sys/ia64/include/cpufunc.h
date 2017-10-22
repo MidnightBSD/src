@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/include/cpufunc.h 170507 2007-06-10 16:53:01Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_CPUFUNC_H_
@@ -54,141 +54,15 @@ breakpoint(void)
 #define	HAVE_INLINE_FFS
 #define	ffs(x)	__builtin_ffs(x)
 
-#define	__MEMIO_ADDR(x)		(__volatile void*)(IA64_PHYS_TO_RR6(x))
-extern __volatile void *ia64_ioport_address(u_int);
-#define	__PIO_ADDR(x)		ia64_ioport_address(x)
-
-/*
- * I/O port reads with ia32 semantics.
- */
-static __inline uint8_t
-inb(unsigned int port)
-{
-	__volatile uint8_t *p;
-	uint8_t v;
-	p = __PIO_ADDR(port);
-	ia64_mf();
-	v = *p;
-	ia64_mf_a();
-	ia64_mf();
-	return (v);
-}
-
-static __inline uint16_t
-inw(unsigned int port)
-{
-	__volatile uint16_t *p;
-	uint16_t v;
-	p = __PIO_ADDR(port);
-	ia64_mf();
-	v = *p;
-	ia64_mf_a();
-	ia64_mf();
-	return (v);
-}
-
-static __inline uint32_t
-inl(unsigned int port)
-{
-	volatile uint32_t *p;
-	uint32_t v;
-	p = __PIO_ADDR(port);
-	ia64_mf();
-	v = *p;
-	ia64_mf_a();
-	ia64_mf();
-	return (v);
-}
 
 static __inline void
-insb(unsigned int port, void *addr, size_t count)
-{
-	uint8_t *buf = addr;
-	while (count--)
-		*buf++ = inb(port);
-}
-
-static __inline void
-insw(unsigned int port, void *addr, size_t count)
-{
-	uint16_t *buf = addr;
-	while (count--)
-		*buf++ = inw(port);
-}
-
-static __inline void
-insl(unsigned int port, void *addr, size_t count)
-{
-	uint32_t *buf = addr;
-	while (count--)
-		*buf++ = inl(port);
-}
-
-static __inline void
-outb(unsigned int port, uint8_t data)
-{
-	volatile uint8_t *p;
-	p = __PIO_ADDR(port);
-	ia64_mf();
-	*p = data;
-	ia64_mf_a();
-	ia64_mf();
-}
-
-static __inline void
-outw(unsigned int port, uint16_t data)
-{
-	volatile uint16_t *p;
-	p = __PIO_ADDR(port);
-	ia64_mf();
-	*p = data;
-	ia64_mf_a();
-	ia64_mf();
-}
-
-static __inline void
-outl(unsigned int port, uint32_t data)
-{
-	volatile uint32_t *p;
-	p = __PIO_ADDR(port);
-	ia64_mf();
-	*p = data;
-	ia64_mf_a();
-	ia64_mf();
-}
-
-static __inline void
-outsb(unsigned int port, const void *addr, size_t count)
-{
-	const uint8_t *buf = addr;
-	while (count--)
-		outb(port, *buf++);
-}
-
-static __inline void
-outsw(unsigned int port, const void *addr, size_t count)
-{
-	const uint16_t *buf = addr;
-	while (count--)
-		outw(port, *buf++);
-}
-
-static __inline void
-outsl(unsigned int port, const void *addr, size_t count)
-{
-	const uint32_t *buf = addr;
-	while (count--)
-		outl(port, *buf++);
-}
-
-static __inline void
-disable_intr(void)
+ia64_disable_intr(void)
 {
 	__asm __volatile ("rsm psr.i");
 }
 
 static __inline void
-enable_intr(void)
+ia64_enable_intr(void)
 {
 	__asm __volatile ("ssm psr.i;; srlz.d");
 }
@@ -197,8 +71,9 @@ static __inline register_t
 intr_disable(void)
 {
 	register_t psr;
+
 	__asm __volatile ("mov %0=psr;;" : "=r"(psr));
-	disable_intr();
+	ia64_disable_intr();
 	return ((psr & IA64_PSR_I) ? 1 : 0);
 }
 
@@ -206,7 +81,7 @@ static __inline void
 intr_restore(register_t ie)
 {
 	if (ie)
-		enable_intr();
+		ia64_enable_intr();
 }
 
 #endif /* __GNUCLIKE_ASM */

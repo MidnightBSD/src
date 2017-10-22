@@ -1,11 +1,11 @@
-# $FreeBSD: release/7.0.0/usr.sbin/traceroute/Makefile 161526 2006-08-22 08:03:01Z ru $
+# $FreeBSD$
 
 TRACEROUTE_DISTDIR?= ${.CURDIR}/../../contrib/traceroute
 .PATH: ${TRACEROUTE_DISTDIR}
 
 PROG=	traceroute
 MAN=	traceroute.8
-SRCS=	version.c traceroute.c ifaddrlist.c findsaddr-socket.c
+SRCS=	as.c version.c traceroute.c ifaddrlist.c findsaddr-udp.c
 BINOWN=	root
 BINMODE=4555
 CLEANFILES=	version.c
@@ -29,7 +29,9 @@ DPADD=	${LIBIPSEC}
 LDADD=	-lipsec
 .endif
 
-CFLAGS+= -I${TRACEROUTE_DISTDIR}/lbl
+CFLAGS+= -I${TRACEROUTE_DISTDIR}
+
+WARNS?=	3
 
 version.c: ${TRACEROUTE_DISTDIR}/VERSION
 	@rm -f ${.TARGET}

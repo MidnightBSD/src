@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/netgraph/ng_split.c 149577 2005-08-29 13:47:08Z glebius $
+ * $FreeBSD$
  *
  */
 
@@ -85,9 +85,7 @@ ng_split_constructor(node_p node)
 	priv_p		priv;
 
 	/* Allocate node */
-	MALLOC(priv, priv_p, sizeof(*priv), M_NETGRAPH, M_ZERO | M_NOWAIT);
-	if (priv == NULL)
-		return (ENOMEM);
+	priv = malloc(sizeof(*priv), M_NETGRAPH, M_ZERO | M_WAITOK);
 
 	/* Link together node and private info */
 	NG_NODE_SET_PRIVATE(node, priv);
@@ -155,7 +153,7 @@ ng_split_shutdown(node_p node)
 
 	NG_NODE_SET_PRIVATE(node, NULL);
 	NG_NODE_UNREF(node);
-	FREE(priv, M_NETGRAPH);
+	free(priv, M_NETGRAPH);
 
 	return (0);
 }

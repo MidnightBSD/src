@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ufs/ufs/extattr.h 167259 2007-03-06 08:13:21Z mckusick $
+ * $FreeBSD$
  */
 /*
  * Developed by the TrustedBSD Project.
@@ -113,6 +113,8 @@ struct extattr {
 
 #ifdef _KERNEL
 
+#include <sys/_sx.h>
+
 #ifdef MALLOC_DECLARE
 MALLOC_DECLARE(M_EXTATTR);
 #endif
@@ -127,10 +129,9 @@ struct ufs_extattr_list_entry {
 	struct vnode	*uele_backing_vnode;
 };
 
-struct lock;
 struct ucred;
 struct ufs_extattr_per_mount {
-	struct lock	uepm_lock;
+	struct sx	uepm_lock;
 	struct ufs_extattr_list_head	uepm_list;
 	struct ucred	*uepm_ucred;
 	int	uepm_flags;
@@ -142,7 +143,7 @@ int	ufs_extattr_start(struct mount *mp, struct thread *td);
 int	ufs_extattr_autostart(struct mount *mp, struct thread *td);
 int	ufs_extattr_stop(struct mount *mp, struct thread *td);
 int	ufs_extattrctl(struct mount *mp, int cmd, struct vnode *filename,
-	    int attrnamespace, const char *attrname, struct thread *td);
+	    int attrnamespace, const char *attrname);
 int	ufs_getextattr(struct vop_getextattr_args *ap);
 int	ufs_deleteextattr(struct vop_deleteextattr_args *ap);
 int	ufs_setextattr(struct vop_setextattr_args *ap);

@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/plist.c 167972 2007-03-28 05:33:52Z njl $");
+__FBSDID("$FreeBSD$");
 
 #include "lib.h"
 #include <err.h>
@@ -285,6 +285,11 @@ read_plist(Package *pkg, FILE *fp)
 	}
 	if (*cp == '\0') {
 	    cp = NULL;
+	    if (cmd == PLIST_PKGDEP) {
+		warnx("corrupted record for package %s (pkgdep line without "
+			"argument), ignoring", pkg->name);
+		cmd = FAIL;
+	    }
 	    goto bottom;
 	}
 	if (cmd == PLIST_COMMENT && sscanf(cp, "PKG_FORMAT_REVISION:%d.%d\n",
@@ -547,7 +552,7 @@ delete_hierarchy(const char *dir, Boolean ign_err, Boolean nukedirs)
     char *cp1, *cp2;
 
     cp1 = cp2 = strdup(dir);
-    if (!fexists(dir)) {
+    if (!fexists(dir) && !issymlink(dir)) {
 	if (!ign_err)
 	    warnx("%s '%s' doesn't exist",
 		isdir(dir) ? "directory" : "file", dir);

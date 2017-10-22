@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)from: inetd.c	8.4 (Berkeley) 4/13/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/inetd/inetd.c 171135 2007-07-01 12:08:08Z gnn $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Inetd - Internet super-server
@@ -71,7 +71,7 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.sbin/inetd/inetd.c 171135 2007-07-01 12:08
  *	socket type			stream/dgram/raw/rdm/seqpacket
  *	protocol			tcp[4][6][/faith], udp[4][6], unix
  *	wait/nowait			single-threaded/multi-threaded
- *	user				user to run daemon as
+ *	user[:group][/login-class]	user/group/login-class to run daemon as
  *	server program			full path name
  *	server program arguments	maximum of MAXARGS (20)
  *
@@ -95,7 +95,7 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.sbin/inetd/inetd.c 171135 2007-07-01 12:08
  *	socket type			stream/dgram/raw/rdm/seqpacket
  *	protocol			rpc/tcp[4][6], rpc/udp[4][6]
  *	wait/nowait			single-threaded/multi-threaded
- *	user				user to run daemon as
+ *	user[:group][/login-class]	user/group/login-class to run daemon as
  *	server program			full path name
  *	server program arguments	maximum of MAXARGS
  *
@@ -110,6 +110,7 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.sbin/inetd/inetd.c 171135 2007-07-01 12:08
  */
 #include <sys/param.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -497,6 +498,9 @@ main(int argc, char **argv)
 		}
 	}
 
+	if (madvise(NULL, 0, MADV_PROTECT) != 0)
+		syslog(LOG_WARNING, "madvise() failed: %s", strerror(errno));
+
 	for (i = 0; i < PERIPSIZE; ++i)
 		LIST_INIT(&proctable[i]);
 
@@ -684,11 +688,11 @@ main(int argc, char **argv)
 		     */
 		    if (dofork) {
 			    if (sep->se_count++ == 0)
-				(void)gettimeofday(&sep->se_time, (struct timezone *)NULL);
+				(void)clock_gettime(CLOCK_MONOTONIC_FAST, &sep->se_time);
 			    else if (toomany > 0 && sep->se_count >= toomany) {
-				struct timeval now;
+				struct timespec now;
 
-				(void)gettimeofday(&now, (struct timezone *)NULL);
+				(void)clock_gettime(CLOCK_MONOTONIC_FAST, &now);
 				if (now.tv_sec - sep->se_time.tv_sec >
 				    CNT_INTVL) {
 					sep->se_time = now;
@@ -1393,8 +1397,7 @@ setsockopt(fd, SOL_SOCKET, opt, (char *)&on, sizeof (on))
 
 #ifdef IPSEC
 void
-ipsecsetup(sep)
-	struct servtab *sep;
+ipsecsetup(struct servtab *sep)
 {
 	char *buf;
 	char *policy_in = NULL;

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/include/elf.h 163016 2006-10-04 21:37:10Z jb $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ELF_H_
@@ -43,6 +43,7 @@
 #include <sys/elf_generic.h>
 
 #define	ELF_ARCH	EM_IA_64
+#define	ELF_ARCH32	EM_386
 
 #define	ELF_MACHINE_OK(x) ((x) == EM_IA_64)
 
@@ -82,28 +83,22 @@ __ElfType(Auxinfo);
 #define	AT_BASE		7	/* Interpreter's base address. */
 #define	AT_FLAGS	8	/* Flags (unused for i386). */
 #define	AT_ENTRY	9	/* Where interpreter should transfer control. */
-
-/*
- * The following non-standard values are used for passing information
- * from John Polstra's testbed program to the dynamic linker.  These
- * are expected to go away soon.
- *
- * Unfortunately, these overlap the Linux non-standard values, so they
- * must not be used in the same context.
- */
-#define	AT_BRK		10	/* Starting point for sbrk and brk. */
-#define	AT_DEBUG	11	/* Debugging level. */
-
-/*
- * The following non-standard values are used in Linux ELF binaries.
- */
 #define	AT_NOTELF	10	/* Program is not ELF ?? */
 #define	AT_UID		11	/* Real uid. */
 #define	AT_EUID		12	/* Effective uid. */
 #define	AT_GID		13	/* Real gid. */
 #define	AT_EGID		14	/* Effective gid. */
+#define	AT_EXECPATH	15	/* Path to the executable. */
+#define	AT_CANARY	16	/* Canary for SSP */
+#define	AT_CANARYLEN	17	/* Length of the canary. */
+#define	AT_OSRELDATE	18	/* OSRELDATE. */
+#define	AT_NCPUS	19	/* Number of CPUs. */
+#define	AT_PAGESIZES	20	/* Pagesizes. */
+#define	AT_PAGESIZESLEN	21	/* Number of pagesizes. */
+#define	AT_TIMEKEEP	22	/* Pointer to timehands. */
+#define	AT_STACKPROT	23	/* Initial stack protection. */
 
-#define	AT_COUNT	15	/* Count of defined aux entry types. */
+#define	AT_COUNT	24	/* Count of defined aux entry types. */
 
 /*
  * Values for e_flags.
@@ -154,5 +149,7 @@ __ElfType(Auxinfo);
 /* Processor specific dynmamic section tags. */
 
 #define	DT_IA_64_PLT_RESERVE	0x70000000
+
+#define	ET_DYN_LOAD_ADDR 0x2500000000000000
 
 #endif /* !_MACHINE_ELF_H_ */

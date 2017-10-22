@@ -9,11 +9,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- * 	This product includes software developed by the University of
- * 	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  * 
@@ -33,7 +29,7 @@
 /*%
  *      from nameser.h	8.1 (Berkeley) 6/2/93
  *	$Id: nameser_compat.h,v 1.5.18.3 2006/05/19 02:36:00 marka Exp $
- * $FreeBSD: release/7.0.0/include/arpa/nameser_compat.h 170244 2007-06-03 17:20:27Z ume $
+ * $FreeBSD$
  */
 
 #ifndef _ARPA_NAMESER_COMPAT_

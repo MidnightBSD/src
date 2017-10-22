@@ -25,15 +25,21 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/dump_machdep.c 175834 2008-01-30 21:21:51Z ru $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_watchdog.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
 #include <sys/cons.h>
+#include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/proc.h>
 #include <sys/kerneldump.h>
+#ifdef SW_WATCHDOG
+#include <sys/watchdog.h>
+#endif
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #include <machine/elf.h>
@@ -42,6 +48,11 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/dump_machdep.c 175834 2008-01-30 2
 #include <machine/armreg.h>
 
 CTASSERT(sizeof(struct kerneldumpheader) == 512);
+
+int do_minidump = 1;
+TUNABLE_INT("debug.minidump", &do_minidump);
+SYSCTL_INT(_debug, OID_AUTO, minidump, CTLFLAG_RW, &do_minidump, 0,
+    "Enable mini crash dumps");
 
 /*
  * Don't touch the first SIZEOF_METADATA bytes on the dump device. This
@@ -102,27 +113,6 @@ md_pa_next(struct md_pa *mdp)
 	return (mdp);
 }
 
-/* XXX should be MI */
-static void
-mkdumpheader(struct kerneldumpheader *kdh, uint32_t archver, uint64_t dumplen,
-    uint32_t blksz)
-{
-
-	bzero(kdh, sizeof(*kdh));
-	strncpy(kdh->magic, KERNELDUMPMAGIC, sizeof(kdh->magic));
-	strncpy(kdh->architecture, MACHINE_ARCH, sizeof(kdh->architecture));
-	kdh->version = htod32(KERNELDUMPVERSION);
-	kdh->architectureversion = htod32(archver);
-	kdh->dumplength = htod64(dumplen);
-	kdh->dumptime = htod64(time_second);
-	kdh->blocksize = htod32(blksz);
-	strncpy(kdh->hostname, hostname, sizeof(kdh->hostname));
-	strncpy(kdh->versionstring, version, sizeof(kdh->versionstring));
-	if (panicstr != NULL)
-		strncpy(kdh->panicstring, panicstr, sizeof(kdh->panicstring));
-	kdh->parity = kerneldump_parity(kdh);
-}
-
 static int
 buf_write(struct dumperinfo *di, char *ptr, size_t sz)
 {
@@ -172,15 +162,12 @@ cb_dumpdata(struct md_pa *mdp, int seqnr, void *arg)
 {
 	struct dumperinfo *di = (struct dumperinfo*)arg;
 	vm_paddr_t pa;
-	vm_offset_t va;
 	uint32_t pgs;
 	size_t counter, sz, chunk;
-	int c, error, twiddle;
+	int c, error;
 
 	error = 0;	/* catch case in which chunk size is 0 */
-	counter = 0;	/* Update twiddle every 16MB */
-	twiddle = 0;
-	va = 0;
+	counter = 0;
 	pgs = mdp->md_size / PAGE_SIZE;
 	pa = mdp->md_start;
 
@@ -207,6 +194,9 @@ cb_dumpdata(struct md_pa *mdp, int seqnr, void *arg)
 			cpu_tlb_flushID_SE(0);
 			cpu_cpwait();
 		}
+#ifdef SW_WATCHDOG
+		wdog_kern_pat(WD_LASTVAL);
+#endif
 		error = dump_write(di, 
 		    (void *)(pa - (pa & L1_ADDR_BITS)),0, dumplo, sz);
 		if (error)
@@ -284,7 +274,12 @@ dumpsys(struct dumperinfo *di)
 	off_t hdrgap;
 	size_t hdrsz;
 	int error;
-	
+
+	if (do_minidump) {
+		minidumpsys(di);
+		return;
+	}
+
 	bzero(&ehdr, sizeof(ehdr));
 	ehdr.e_ident[EI_MAG0] = ELFMAG0;
 	ehdr.e_ident[EI_MAG1] = ELFMAG1;
@@ -324,7 +319,7 @@ dumpsys(struct dumperinfo *di)
 	dumplo = di->mediaoffset + di->mediasize - dumpsize;
 	dumplo -= sizeof(kdh) * 2;
 
-	mkdumpheader(&kdh, KERNELDUMP_ARM_VERSION, dumpsize, di->blocksize);
+	mkdumpheader(&kdh, KERNELDUMPMAGIC, KERNELDUMP_ARM_VERSION, dumpsize, di->blocksize);
 
 	printf("Dumping %llu MB (%d chunks)\n", (long long)dumpsize >> 20,
 	    ehdr.e_phnum);

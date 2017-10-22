@@ -23,11 +23,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/include/atomic.h 171662 2007-07-30 22:07:01Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ATOMIC_H_
 #define	_MACHINE_ATOMIC_H_
+
+#define	mb()	__asm __volatile("mf")
+#define	wmb()	mb()
+#define	rmb()	mb()
 
 /*
  * Various simple arithmetic on memory which is atomic in the presence
@@ -42,7 +46,7 @@
 		"mov ar.ccv=%2;;\n\t"					\
 		"cmpxchg" #sz "." #sem " %0=%4,%3,ar.ccv\n\t"		\
 		: "=r" (ret), "=m" (*p)					\
-		: "r" (cmpval), "r" (newval), "m" (*p)			\
+		: "r" ((uint64_t)cmpval), "r" (newval), "m" (*p)	\
 		: "memory")
 
 /*
@@ -350,6 +354,7 @@ atomic_readandclear_64(volatile uint64_t* p)
 
 #define	atomic_readandclear_int		atomic_readandclear_32
 #define	atomic_readandclear_long	atomic_readandclear_64
+#define	atomic_readandclear_ptr		atomic_readandclear_64
 
 /*
  * Atomically add the value of v to the integer pointed to by p and return
@@ -369,5 +374,16 @@ atomic_fetchadd_32(volatile uint32_t *p, uint32_t v)
 }
 
 #define	atomic_fetchadd_int		atomic_fetchadd_32
+
+static __inline u_long
+atomic_fetchadd_long(volatile u_long *p, u_long v)
+{
+	u_long value;
+
+	do {
+		value = *p;
+	} while (!atomic_cmpset_64(p, value, value + v));
+	return (value);
+}
 
 #endif /* ! _MACHINE_ATOMIC_H_ */

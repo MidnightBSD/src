@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)mpool.h	8.2 (Berkeley) 7/14/94
- * $FreeBSD: release/7.0.0/include/mpool.h 93032 2002-03-23 17:24:55Z imp $
+ *	@(#)mpool.h	8.4 (Berkeley) 11/2/95
+ * $FreeBSD$
  */
 
 #ifndef _MPOOL_H_
@@ -47,7 +43,7 @@
  * pool is handed an opaque MPOOL cookie which stores all of this information.
  */
 #define	HASHSIZE	128
-#define	HASHKEY(pgno)	((pgno - 1) % HASHSIZE)
+#define	HASHKEY(pgno)	((pgno - 1 + HASHSIZE) % HASHSIZE)
 
 /* The BKT structures are the elements of the queues. */
 typedef struct _bkt {
@@ -58,6 +54,7 @@ typedef struct _bkt {
 
 #define	MPOOL_DIRTY	0x01		/* page needs to be written */
 #define	MPOOL_PINNED	0x02		/* page is pinned into memory */
+#define	MPOOL_INUSE	0x04		/* page address is valid */
 	u_int8_t flags;			/* flags */
 } BKT;
 
@@ -68,7 +65,7 @@ typedef struct MPOOL {
 	pgno_t	curcache;		/* current number of cached pages */
 	pgno_t	maxcache;		/* max number of cached pages */
 	pgno_t	npages;			/* number of pages in the file */
-	u_long	pagesize;		/* file page size */
+	unsigned long	pagesize;	/* file page size */
 	int	fd;			/* file descriptor */
 					/* page in conversion routine */
 	void    (*pgin)(void *, pgno_t, void *);
@@ -76,25 +73,32 @@ typedef struct MPOOL {
 	void    (*pgout)(void *, pgno_t, void *);
 	void	*pgcookie;		/* cookie for page in/out routines */
 #ifdef STATISTICS
-	u_long	cachehit;
-	u_long	cachemiss;
-	u_long	pagealloc;
-	u_long	pageflush;
-	u_long	pageget;
-	u_long	pagenew;
-	u_long	pageput;
-	u_long	pageread;
-	u_long	pagewrite;
+	unsigned long	cachehit;
+	unsigned long	cachemiss;
+	unsigned long	pagealloc;
+	unsigned long	pageflush;
+	unsigned long	pageget;
+	unsigned long	pagenew;
+	unsigned long	pageput;
+	unsigned long	pageread;
+	unsigned long	pagewrite;
 #endif
 } MPOOL;
+
+#define	MPOOL_IGNOREPIN	0x01		/* Ignore if the page is pinned. */
+#define	MPOOL_PAGE_REQUEST	0x01	/* Allocate a new page with a
+					   specific page number. */
+#define	MPOOL_PAGE_NEXT		0x02	/* Allocate a new page with the next
+					  page number. */
 
 __BEGIN_DECLS
 MPOOL	*mpool_open(void *, int, pgno_t, pgno_t);
 void	 mpool_filter(MPOOL *, void (*)(void *, pgno_t, void *),
 	    void (*)(void *, pgno_t, void *), void *);
-void	*mpool_new(MPOOL *, pgno_t *);
-void	*mpool_get(MPOOL *, pgno_t, u_int);
-int	 mpool_put(MPOOL *, void *, u_int);
+void	*mpool_new(MPOOL *, pgno_t *, unsigned int);
+void	*mpool_get(MPOOL *, pgno_t, unsigned int);
+int	 mpool_delete(MPOOL *, void *);
+int	 mpool_put(MPOOL *, void *, unsigned int);
 int	 mpool_sync(MPOOL *);
 int	 mpool_close(MPOOL *);
 #ifdef STATISTICS

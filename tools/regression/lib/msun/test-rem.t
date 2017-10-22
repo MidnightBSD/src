@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/7.0.0/tools/regression/lib/msun/test-rem.t 144533 2005-04-02 12:50:28Z das $
+# $FreeBSD$
 
 cd `dirname $0`
 

@@ -26,10 +26,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/amr/amr_linux.c 158267 2006-05-03 16:45:15Z ambrisko $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/capability.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
@@ -69,12 +70,12 @@ DEV_MODULE(amr_linux, amr_linux_modevent, NULL);
 MODULE_DEPEND(amr, linux, 1, 1, 1);
 
 static int
-amr_linux_ioctl(d_thread_t *p, struct linux_ioctl_args *args)
+amr_linux_ioctl(struct thread *p, struct linux_ioctl_args *args)
 {
 	struct file *fp;
 	int error;
 
-	if ((error = fget(p, args->fd, &fp)) != 0)
+	if ((error = fget(p, args->fd, CAP_IOCTL, &fp)) != 0)
 		return (error);
 	error = fo_ioctl(fp, args->cmd, (caddr_t)args->arg, p->td_ucred, p);
 	fdrop(fp, p);

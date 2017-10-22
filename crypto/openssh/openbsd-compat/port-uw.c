@@ -25,7 +25,7 @@
 
 #include "includes.h"
 
-#ifdef HAVE_LIBIAF
+#if defined(HAVE_LIBIAF)  &&  !defined(HAVE_SECUREWARE)
 #include <sys/types.h>
 #ifdef HAVE_CRYPT_H
 # include <crypt.h>
@@ -39,10 +39,10 @@
 #include "xmalloc.h"
 #include "packet.h"
 #include "buffer.h"
+#include "key.h"
 #include "auth-options.h"
 #include "log.h"
 #include "servconf.h"
-#include "key.h"
 #include "hostfile.h"
 #include "auth.h"
 #include "ssh.h"
@@ -79,7 +79,7 @@ sys_auth_passwd(Authctxt *authctxt, const char *password)
 #endif /* UNIXWARE_LONG_PASSWORDS */
 		result = (strcmp(xcrypt(password, salt), pw_password) == 0);
 
-#if !defined(BROKEN_LIBIAF)
+#ifdef USE_LIBIAF
 	if (authctxt->valid)
 		free(pw_password);
 #endif
@@ -127,7 +127,7 @@ nischeck(char *namep)
 	functions that call shadow_pw() will need to free
  */
 
-#if !defined(BROKEN_LIBIAF)
+#ifdef USE_LIBIAF
 char *
 get_iaf_password(struct passwd *pw)
 {
@@ -144,6 +144,6 @@ get_iaf_password(struct passwd *pw)
 	else
 		fatal("ia_openinfo: Unable to open the shadow passwd file");
 }
-#endif /* !BROKEN_LIBIAF */
-#endif /* HAVE_LIBIAF */
+#endif /* USE_LIBIAF */
+#endif /* HAVE_LIBIAF and not HAVE_SECUREWARE */
 

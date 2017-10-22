@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/tools/net80211/w00t/prga/prga.c 160996 2006-08-05 05:18:03Z sam $
+ * $FreeBSD$
  */
 #include <sys/endian.h>
 #include <sys/time.h>
@@ -602,7 +602,7 @@ void transmit(struct params *p)
 int main(int argc, char *argv[])
 {
 	struct params p;
-	char *iface = "ath0";
+	char *iface = "wlan0";
 	char *tap = "tap0";
 	int ch;
 

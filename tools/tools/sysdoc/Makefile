@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/tools/tools/sysdoc/Makefile 142871 2005-03-01 05:48:37Z trhodes $
+# $FreeBSD$
 
 MAINTAINER=	trhodes@FreeBSD.org
 

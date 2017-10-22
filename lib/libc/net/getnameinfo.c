@@ -45,13 +45,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/net/getnameinfo.c 167121 2007-02-28 21:18:38Z bms $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <net/if.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
+#include <net/firewire.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
@@ -385,6 +386,7 @@ getnameinfo_link(const struct sockaddr *sa, socklen_t salen,
 {
 	const struct sockaddr_dl *sdl =
 	    (const struct sockaddr_dl *)(const void *)sa;
+	const struct fw_hwaddr *iha;
 	int n;
 
 	if (serv != NULL && servlen > 0)
@@ -400,6 +402,15 @@ getnameinfo_link(const struct sockaddr *sa, socklen_t salen,
 	}
 
 	switch (sdl->sdl_type) {
+	case IFT_IEEE1394:
+		if (sdl->sdl_alen < sizeof(iha->sender_unique_ID_hi) +
+		    sizeof(iha->sender_unique_ID_lo))
+			return EAI_FAMILY;
+		iha = (const struct fw_hwaddr *)(const void *)LLADDR(sdl);
+		return hexname((const u_int8_t *)&iha->sender_unique_ID_hi,
+		    sizeof(iha->sender_unique_ID_hi) +
+		    sizeof(iha->sender_unique_ID_lo),
+		    host, hostlen);
 	/*
 	 * The following have zero-length addresses.
 	 * IFT_ATM	(net/if_atmsubr.c)

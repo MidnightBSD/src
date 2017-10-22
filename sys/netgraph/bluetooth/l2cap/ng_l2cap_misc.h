@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_l2cap_misc.h,v 1.3 2003/09/08 19:11:45 max Exp $
- * $FreeBSD: release/7.0.0/sys/netgraph/bluetooth/l2cap/ng_l2cap_misc.h 149355 2005-08-21 19:15:14Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_L2CAP_MISC_H_
@@ -76,7 +76,7 @@ do { \
 	KASSERT(!callout_pending(&(cmd)->timo), ("Pending callout!")); \
 	NG_FREE_M((cmd)->aux); \
 	bzero((cmd), sizeof(*(cmd))); \
-	FREE((cmd), M_NETGRAPH_L2CAP); \
+	free((cmd), M_NETGRAPH_L2CAP); \
 } while (0)
 
 ng_l2cap_cmd_p ng_l2cap_new_cmd      (ng_l2cap_con_p, ng_l2cap_chan_p,

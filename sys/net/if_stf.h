@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/net/if_stf.h 174854 2007-12-22 06:32:46Z cvs2svn $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: if_stf.h,v 1.5 2001/10/12 10:09:17 keiichi Exp $	*/
 
 /*-

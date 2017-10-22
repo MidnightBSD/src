@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2005,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2007,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -38,14 +38,16 @@
  * Ross Ridge's mytinfo package.
  */
 
+#define USE_LIBTINFO
 #include <progs.priv.h>
 
 #if !PURE_TERMINFO
+#include <dump_entry.h>
 #include <termsort.c>
 #endif
 #include <transform.h>
 
-MODULE_ID("$Id: tput.c,v 1.38 2006/11/26 00:27:47 tom Exp $")
+MODULE_ID("$Id: tput.c,v 1.42 2008/07/13 11:05:12 tom Exp $")
 
 #define PUTS(s)		fputs(s, stdout)
 #define PUTCHAR(c)	putchar(c)
@@ -325,6 +327,7 @@ tput(int argc, char *argv[])
 	    case Num_Str_Str:
 		s = TPARM_3(s, numbers[1], strings[2], strings[3]);
 		break;
+	    case Numbers:
 	    default:
 		(void) _nc_tparm_analyze(s, p_is_s, &popcount);
 #define myParam(n) (p_is_s[n - 1] != 0 ? ((long) strings[n]) : numbers[n])
@@ -363,7 +366,7 @@ main(int argc, char **argv)
 
     term = getenv("TERM");
 
-    while ((c = getopt(argc, argv, "ST:V")) != EOF) {
+    while ((c = getopt(argc, argv, "ST:V")) != -1) {
 	switch (c) {
 	case 'S':
 	    cmdline = FALSE;

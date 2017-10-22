@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/dev/mpt/mpt_cam.h 169293 2007-05-05 20:18:24Z mjacob $ */
+/* $FreeBSD$ */
 /*-
  * LSI MPT Host Adapter FreeBSD Wrapper Definitions (CAM version)
  *
@@ -102,7 +102,6 @@
 #include <cam/cam_sim.h>
 #include <cam/cam_xpt.h>
 #include <cam/cam_periph.h>
-#include <cam/cam_xpt_periph.h>
 #include <cam/cam_xpt_sim.h>
 #include <cam/cam_debug.h>
 #include <cam/scsi/scsi_all.h>

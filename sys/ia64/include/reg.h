@@ -23,13 +23,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/7.0.0/sys/ia64/include/reg.h 127219 2004-03-20 05:27:14Z marcel $
+ *	$FreeBSD$
  */
 
 #ifndef _MACHINE_REG_H_
 #define _MACHINE_REG_H_
 
 #include <machine/_regset.h>
+
+#if defined(_KERNEL) && !defined(_STANDALONE)
+#include "opt_compat.h"
+#endif
 
 struct reg {
 	struct _special		r_special;
@@ -47,6 +51,11 @@ struct dbreg {
 	unsigned long	dbr_data[8];
 	unsigned long	dbr_inst[8];
 };
+
+#ifdef COMPAT_FREEBSD32
+#include <machine/fpu.h>
+#include <compat/ia32/ia32_reg.h>
+#endif
 
 #ifdef _KERNEL
 struct thread;

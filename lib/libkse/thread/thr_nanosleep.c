@@ -26,16 +26,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_nanosleep.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <stdio.h>
 #include <errno.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(__nanosleep);
-LT10_COMPAT_PRIVATE(_nanosleep);
-LT10_COMPAT_DEFAULT(nanosleep);
+int	__nanosleep(const struct timespec *time_to_sleep,
+	    struct timespec *time_remaining);
 
 __weak_reference(__nanosleep, nanosleep);
 

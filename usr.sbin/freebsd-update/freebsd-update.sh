@@ -25,7 +25,7 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# $FreeBSD: release/7.0.0/usr.sbin/freebsd-update/freebsd-update.sh 173823 2007-11-21 14:37:03Z cperciva $
+# $FreeBSD$
 
 #### Usage function -- called from command-line handling code.
 
@@ -56,6 +56,7 @@ Commands:
   upgrade      -- Fetch upgrades to FreeBSD version specified via -r option
   install      -- Install downloaded updates or upgrades
   rollback     -- Uninstall most recently installed updates
+  IDS          -- Compare the system against an index of "known good" files.
 EOF
 	exit 0
 }
@@ -86,7 +87,8 @@ EOF
 
 CONFIGOPTIONS="KEYPRINT WORKDIR SERVERNAME MAILTO ALLOWADD ALLOWDELETE
     KEEPMODIFIEDMETADATA COMPONENTS IGNOREPATHS UPDATEIFUNMODIFIED
-    BASEDIR VERBOSELEVEL TARGETRELEASE STRICTCOMPONENTS MERGECHANGES"
+    BASEDIR VERBOSELEVEL TARGETRELEASE STRICTCOMPONENTS MERGECHANGES
+    IDSIGNOREPATHS BACKUPKERNEL BACKUPKERNELDIR BACKUPKERNELSYMBOLFILES"
 
 # Set all the configuration options to "".
 nullconfig () {
@@ -222,6 +224,13 @@ config_IgnorePaths () {
 	done
 }
 
+# Add to the list of paths which IDS should ignore.
+config_IDSIgnorePaths () {
+	for C in $@; do
+		IDSIGNOREPATHS="${IDSIGNOREPATHS} ${C}"
+	done
+}
+
 # Add to the list of paths within which updates will be performed only if the
 # file on disk has not been modified locally.
 config_UpdateIfUnmodified () {
@@ -275,6 +284,9 @@ config_TargetRelease () {
 	else
 		return 1
 	fi
+	if echo ${TARGETRELEASE} | grep -qE '^[0-9.]+$'; then
+		TARGETRELEASE="${TARGETRELEASE}-RELEASE"
+	fi
 }
 
 # Define what happens to output of utilities
@@ -289,6 +301,70 @@ config_VerboseLevel () {
 			;;
 		[Ss][Tt][Aa][Tt][Ss])
 			VERBOSELEVEL=stats
+			;;
+		*)
+			return 1
+			;;
+		esac
+	else
+		return 1
+	fi
+}
+
+config_BackupKernel () {
+	if [ -z ${BACKUPKERNEL} ]; then
+		case $1 in
+		[Yy][Ee][Ss])
+			BACKUPKERNEL=yes
+			;;
+		[Nn][Oo])
+			BACKUPKERNEL=no
+			;;
+		*)
+			return 1
+			;;
+		esac
+	else
+		return 1
+	fi
+}
+
+config_BackupKernelDir () {
+	if [ -z ${BACKUPKERNELDIR} ]; then
+		if [ -z "$1" ]; then
+			echo "BackupKernelDir set to empty dir"
+			return 1
+		fi
+
+		# We check for some paths which would be extremely odd
+		# to use, but which could cause a lot of problems if
+		# used.
+		case $1 in
+		/|/bin|/boot|/etc|/lib|/libexec|/sbin|/usr|/var)
+			echo "BackupKernelDir set to invalid path $1"
+			return 1
+			;;
+		/*)
+			BACKUPKERNELDIR=$1
+			;;
+		*)
+			echo "BackupKernelDir ($1) is not an absolute path"
+			return 1
+			;;
+		esac
+	else
+		return 1
+	fi
+}
+
+config_BackupKernelSymbolFiles () {
+	if [ -z ${BACKUPKERNELSYMBOLFILES} ]; then
+		case $1 in
+		[Yy][Ee][Ss])
+			BACKUPKERNELSYMBOLFILES=yes
+			;;
+		[Nn][Oo])
+			BACKUPKERNELSYMBOLFILES=no
 			;;
 		*)
 			return 1
@@ -375,7 +451,7 @@ parse_cmdline () {
 			;;
 
 		# Commands
-		cron | fetch | upgrade | install | rollback)
+		cron | fetch | upgrade | install | rollback | IDS)
 			COMMANDS="${COMMANDS} $1"
 			;;
 
@@ -452,6 +528,9 @@ default_params () {
 	config_BaseDir /
 	config_VerboseLevel stats
 	config_StrictComponents no
+	config_BackupKernel yes
+	config_BackupKernelDir /boot/kernel.old
+	config_BackupKernelSymbolFiles no
 
 	# Merge these defaults into the earlier-configured settings
 	mergeconfig
@@ -493,7 +572,7 @@ fetch_setup_verboselevel () {
 # running *-p[0-9]+, strip off the last part; if the
 # user is running -SECURITY, call it -RELEASE.  Chdir
 # into the working directory.
-fetch_check_params () {
+fetchupgrade_check_params () {
 	export HTTP_USER_AGENT="freebsd-update (${COMMAND}, `uname -r`)"
 
 	_SERVERNAME_z=\
@@ -524,6 +603,7 @@ fetch_check_params () {
 		echo ${WORKDIR}
 		exit 1
 	fi
+	chmod 700 ${WORKDIR}
 	cd ${WORKDIR} || exit 1
 
 	# Generate release number.  The s/SECURITY/RELEASE/ bit exists
@@ -575,9 +655,21 @@ fetch_check_params () {
 	BDHASH=`echo ${BASEDIR} | sha256 -q`
 }
 
+# Perform sanity checks etc. before fetching updates.
+fetch_check_params () {
+	fetchupgrade_check_params
+
+	if ! [ -z "${TARGETRELEASE}" ]; then
+		echo -n "`basename $0`: "
+		echo -n "-r option is meaningless with 'fetch' command.  "
+		echo "(Did you mean 'upgrade' instead?)"
+		exit 1
+	fi
+}
+
 # Perform sanity checks etc. before fetching upgrades.
 upgrade_check_params () {
-	fetch_check_params
+	fetchupgrade_check_params
 
 	# Unless set otherwise, we're upgrading to the same kernel config.
 	NKERNCONF=${KERNCONF}
@@ -656,6 +748,14 @@ install_check_params () {
 		echo "Re-run '$0 fetch'."
 		exit 1
 	fi
+
+	# Figure out what directory contains the running kernel
+	BOOTFILE=`sysctl -n kern.bootfile`
+	KERNELDIR=${BOOTFILE%/kernel}
+	if ! [ -d ${KERNELDIR} ]; then
+		echo "Cannot identify running kernel"
+		exit 1
+	fi
 }
 
 # Perform sanity checks and set some final parameters in
@@ -690,6 +790,91 @@ rollback_check_params () {
 		echo "Update manifest is corrupt -- this should never happen."
 		exit 1
 	fi
+}
+
+# Perform sanity checks and set some final parameters
+# in preparation for comparing the system against the
+# published index.  Figure out which index we should
+# compare against: If the user is running *-p[0-9]+,
+# strip off the last part; if the user is running
+# -SECURITY, call it -RELEASE.  Chdir into the working
+# directory.
+IDS_check_params () {
+	export HTTP_USER_AGENT="freebsd-update (${COMMAND}, `uname -r`)"
+
+	_SERVERNAME_z=\
+"SERVERNAME must be given via command line or configuration file."
+	_KEYPRINT_z="Key must be given via -k option or configuration file."
+	_KEYPRINT_bad="Invalid key fingerprint: "
+	_WORKDIR_bad="Directory does not exist or is not writable: "
+
+	if [ -z "${SERVERNAME}" ]; then
+		echo -n "`basename $0`: "
+		echo "${_SERVERNAME_z}"
+		exit 1
+	fi
+	if [ -z "${KEYPRINT}" ]; then
+		echo -n "`basename $0`: "
+		echo "${_KEYPRINT_z}"
+		exit 1
+	fi
+	if ! echo "${KEYPRINT}" | grep -qE "^[0-9a-f]{64}$"; then
+		echo -n "`basename $0`: "
+		echo -n "${_KEYPRINT_bad}"
+		echo ${KEYPRINT}
+		exit 1
+	fi
+	if ! [ -d "${WORKDIR}" -a -w "${WORKDIR}" ]; then
+		echo -n "`basename $0`: "
+		echo -n "${_WORKDIR_bad}"
+		echo ${WORKDIR}
+		exit 1
+	fi
+	cd ${WORKDIR} || exit 1
+
+	# Generate release number.  The s/SECURITY/RELEASE/ bit exists
+	# to provide an upgrade path for FreeBSD Update 1.x users, since
+	# the kernels provided by FreeBSD Update 1.x are always labelled
+	# as X.Y-SECURITY.
+	RELNUM=`uname -r |
+	    sed -E 's,-p[0-9]+,,' |
+	    sed -E 's,-SECURITY,-RELEASE,'`
+	ARCH=`uname -m`
+	FETCHDIR=${RELNUM}/${ARCH}
+	PATCHDIR=${RELNUM}/${ARCH}/bp
+
+	# Figure out what directory contains the running kernel
+	BOOTFILE=`sysctl -n kern.bootfile`
+	KERNELDIR=${BOOTFILE%/kernel}
+	if ! [ -d ${KERNELDIR} ]; then
+		echo "Cannot identify running kernel"
+		exit 1
+	fi
+
+	# Figure out what kernel configuration is running.  We start with
+	# the output of `uname -i`, and then make the following adjustments:
+	# 1. Replace "SMP-GENERIC" with "SMP".  Why the SMP kernel config
+	# file says "ident SMP-GENERIC", I don't know...
+	# 2. If the kernel claims to be GENERIC _and_ ${ARCH} is "amd64"
+	# _and_ `sysctl kern.version` contains a line which ends "/SMP", then
+	# we're running an SMP kernel.  This mis-identification is a bug
+	# which was fixed in 6.2-STABLE.
+	KERNCONF=`uname -i`
+	if [ ${KERNCONF} = "SMP-GENERIC" ]; then
+		KERNCONF=SMP
+	fi
+	if [ ${KERNCONF} = "GENERIC" ] && [ ${ARCH} = "amd64" ]; then
+		if sysctl kern.version | grep -qE '/SMP$'; then
+			KERNCONF=SMP
+		fi
+	fi
+
+	# Define some paths
+	SHA256=/sbin/sha256
+	PHTTPGET=/usr/libexec/phttpget
+
+	# Set up variables relating to VERBOSELEVEL
+	fetch_setup_verboselevel
 }
 
 #### Core functionality -- the actual work gets done here
@@ -1015,7 +1200,7 @@ fetch_metadata_sanity () {
 	# Some aliases to save space later: ${P} is a character which can
 	# appear in a path; ${M} is the four numeric metadata fields; and
 	# ${H} is a sha256 hash.
-	P="[-+./:=_[[:alnum:]]"
+	P="[-+./:=%@_[[:alnum:]]"
 	M="[0-9]+\|[0-9]+\|[0-9]+\|[0-9]+"
 	H="[0-9a-f]{64}"
 
@@ -1285,7 +1470,7 @@ fetch_inspect_system () {
 	    sort -k 3,3 -t '|' > $2.tmp
 	rm filelist
 
-	# Check if an error occured during system inspection
+	# Check if an error occurred during system inspection
 	if [ -f .err ]; then
 		return 1
 	fi
@@ -1690,7 +1875,7 @@ fetch_create_manifest () {
 		echo -n "been downloaded because the files have been "
 		echo "modified locally:"
 		cat modifiedfiles
-	fi | more
+	fi | $PAGER
 	rm modifiedfiles
 
 	# If no files will be updated, tell the user and exit
@@ -1720,7 +1905,7 @@ fetch_create_manifest () {
 		echo -n "The following files will be removed "
 		echo "as part of updating to ${RELNUM}-p${RELPATCHNUM}:"
 		cat files.removed
-	fi | more
+	fi | $PAGER
 	rm files.removed
 
 	# Report added files, if any
@@ -1729,7 +1914,7 @@ fetch_create_manifest () {
 		echo -n "The following files will be added "
 		echo "as part of updating to ${RELNUM}-p${RELPATCHNUM}:"
 		cat files.added
-	fi | more
+	fi | $PAGER
 	rm files.added
 
 	# Report updated files, if any
@@ -1739,7 +1924,7 @@ fetch_create_manifest () {
 		echo "as part of updating to ${RELNUM}-p${RELPATCHNUM}:"
 
 		cat files.updated
-	fi | more
+	fi | $PAGER
 	rm files.updated
 
 	# Create a directory for the install manifest.
@@ -2069,6 +2254,19 @@ upgrade_oldall_to_oldnew () {
 	mv $2 $3
 }
 
+# Helper for upgrade_merge: Return zero true iff the two files differ only
+# in the contents of their $FreeBSD$ tags.
+samef () {
+	X=`sed -E 's/\\$FreeBSD.*\\$/\$FreeBSD\$/' < $1 | ${SHA256}`
+	Y=`sed -E 's/\\$FreeBSD.*\\$/\$FreeBSD\$/' < $2 | ${SHA256}`
+
+	if [ $X = $Y ]; then
+		return 0;
+	else
+		return 1;
+	fi
+}
+
 # From the list of "old" files in $1, merge changes in $2 with those in $3,
 # and update $3 to reflect the hashes of merged files.
 upgrade_merge () {
@@ -2152,6 +2350,14 @@ upgrade_merge () {
 
 		# Ask the user to handle any files which didn't merge.
 		while read F; do
+			# If the installed file differs from the version in
+			# the old release only due to $FreeBSD$ tag expansion
+			# then just use the version in the new release.
+			if samef merge/old/${F} merge/${OLDRELNUM}/${F}; then
+				cp merge/${RELNUM}/${F} merge/new/${F}
+				continue
+			fi
+
 			cat <<-EOF
 
 The following file could not be merged automatically: ${F}
@@ -2166,9 +2372,18 @@ manually...
 		# Ask the user to confirm that he likes how the result
 		# of merging files.
 		while read F; do
-			# Skip files which haven't changed.
-			if [ -f merge/new/${F} ] &&
-			    cmp -s merge/old/${F} merge/new/${F}; then
+			# Skip files which haven't changed except possibly
+			# in their $FreeBSD$ tags.
+			if [ -f merge/old/${F} ] && [ -f merge/new/${F} ] &&
+			    samef merge/old/${F} merge/new/${F}; then
+				continue
+			fi
+
+			# Skip files where the installed file differs from
+			# the old file only due to $FreeBSD$ tags.
+			if [ -f merge/old/${F} ] &&
+			    [ -f merge/${OLDRELNUM}/${F} ] &&
+			    samef merge/old/${F} merge/${OLDRELNUM}/${F}; then
 				continue
 			fi
 
@@ -2196,9 +2411,9 @@ EOF
 
 		# Store merged files.
 		while read F; do
-			V=`${SHA256} -q merge/new/${F}`
-
 			if [ -f merge/new/${F} ]; then
+				V=`${SHA256} -q merge/new/${F}`
+
 				gzip -c < merge/new/${F} > files/${V}.gz
 				echo "${F}|${V}"
 			fi
@@ -2355,6 +2570,10 @@ upgrade_run () {
 	# Leave a note behind to tell the "install" command that the kernel
 	# needs to be installed before the world.
 	touch ${BDHASH}-install/kernelfirst
+
+	# Remind the user that they need to run "freebsd-update install"
+	# to install the downloaded bits, in case they didn't RTFM.
+	echo "To install the downloaded upgrades, run \"$0 install\"."
 }
 
 # Make sure that all the file hashes mentioned in $@ have corresponding
@@ -2398,6 +2617,89 @@ install_unschg () {
 
 	# Clean up
 	rm filelist
+}
+
+# Decide which directory name to use for kernel backups.
+backup_kernel_finddir () {
+	CNT=0
+	while true ; do
+		# Pathname does not exist, so it is OK use that name
+		# for backup directory.
+		if [ ! -e $BACKUPKERNELDIR ]; then
+			return 0
+		fi
+
+		# If directory do exist, we only use if it has our
+		# marker file.
+		if [ -d $BACKUPKERNELDIR -a \
+			-e $BACKUPKERNELDIR/.freebsd-update ]; then
+			return 0
+		fi
+
+		# We could not use current directory name, so add counter to
+		# the end and try again.
+		CNT=$((CNT + 1))
+		if [ $CNT -gt 9 ]; then
+			echo "Could not find valid backup dir ($BACKUPKERNELDIR)"
+			exit 1
+		fi
+		BACKUPKERNELDIR="`echo $BACKUPKERNELDIR | sed -Ee 's/[0-9]\$//'`"
+		BACKUPKERNELDIR="${BACKUPKERNELDIR}${CNT}"
+	done
+}
+
+# Backup the current kernel using hardlinks, if not disabled by user.
+# Since we delete all files in the directory used for previous backups
+# we create a marker file called ".freebsd-update" in the directory so
+# we can determine on the next run that the directory was created by
+# freebsd-update and we then do not accidentally remove user files in
+# the unlikely case that the user has created a directory with a
+# conflicting name.
+backup_kernel () {
+	# Only make kernel backup is so configured.
+	if [ $BACKUPKERNEL != yes ]; then
+		return 0
+	fi
+
+	# Decide which directory name to use for kernel backups.
+	backup_kernel_finddir
+
+	# Remove old kernel backup files.  If $BACKUPKERNELDIR was
+	# "not ours", backup_kernel_finddir would have exited, so
+	# deleting the directory content is as safe as we can make it.
+	if [ -d $BACKUPKERNELDIR ]; then
+		rm -fr $BACKUPKERNELDIR
+	fi
+
+	# Create directories for backup.
+	mkdir -p $BACKUPKERNELDIR
+	mtree -cdn -p "${KERNELDIR}" | \
+	    mtree -Ue -p "${BACKUPKERNELDIR}" > /dev/null
+
+	# Mark the directory as having been created by freebsd-update.
+	touch $BACKUPKERNELDIR/.freebsd-update
+	if [ $? -ne 0 ]; then
+		echo "Could not create kernel backup directory"
+		exit 1
+	fi
+
+	# Disable pathname expansion to be sure *.symbols is not
+	# expanded.
+	set -f
+
+	# Use find to ignore symbol files, unless disabled by user.
+	if [ $BACKUPKERNELSYMBOLFILES = yes ]; then
+		FINDFILTER=""
+	else
+		FINDFILTER=-"a ! -name *.symbols"
+	fi
+
+	# Backup all the kernel files using hardlinks.
+	(cd $KERNELDIR && find . -type f $FINDFILTER -exec \
+	    cp -pl '{}' ${BACKUPKERNELDIR}/'{}' \;)
+
+	# Re-enable patchname expansion.
+	set +f
 }
 
 # Install new files
@@ -2481,6 +2783,9 @@ install_files () {
 		grep -E '^/boot/' $1/INDEX-OLD > INDEX-OLD
 		grep -E '^/boot/' $1/INDEX-NEW > INDEX-NEW
 
+		# Backup current kernel before installing a new one
+		backup_kernel || return 1
+
 		# Install new files
 		install_from_index INDEX-NEW || return 1
 
@@ -2511,14 +2816,14 @@ Kernel updates have been installed.  Please reboot and run
 	if ! [ -f $1/worlddone ]; then
 		# Install new shared libraries next
 		grep -vE '^/boot/' $1/INDEX-NEW |
-		    grep -E '/lib/.*\.so\.[0-9]+' > INDEX-NEW
+		    grep -E '/lib/.*\.so\.[0-9]+\|' > INDEX-NEW
 		install_from_index INDEX-NEW || return 1
 
 		# Deal with everything else
 		grep -vE '^/boot/' $1/INDEX-OLD |
-		    grep -vE '/lib/.*\.so\.[0-9]+' > INDEX-OLD
+		    grep -vE '/lib/.*\.so\.[0-9]+\|' > INDEX-OLD
 		grep -vE '^/boot/' $1/INDEX-NEW |
-		    grep -vE '/lib/.*\.so\.[0-9]+' > INDEX-NEW
+		    grep -vE '/lib/.*\.so\.[0-9]+\|' > INDEX-NEW
 		install_from_index INDEX-NEW || return 1
 		install_delete INDEX-OLD INDEX-NEW || return 1
 
@@ -2539,11 +2844,11 @@ Kernel updates have been installed.  Please reboot and run
 
 		# Do we need to ask the user to portupgrade now?
 		grep -vE '^/boot/' $1/INDEX-NEW |
-		    grep -E '/lib/.*\.so\.[0-9]+' |
+		    grep -E '/lib/.*\.so\.[0-9]+\|' |
 		    cut -f 1 -d '|' |
 		    sort > newfiles
 		if grep -vE '^/boot/' $1/INDEX-OLD |
-		    grep -E '/lib/.*\.so\.[0-9]+' |
+		    grep -E '/lib/.*\.so\.[0-9]+\|' |
 		    cut -f 1 -d '|' |
 		    sort |
 		    join -v 1 - newfiles |
@@ -2563,9 +2868,9 @@ again to finish installing updates.
 
 	# Remove old shared libraries
 	grep -vE '^/boot/' $1/INDEX-NEW |
-	    grep -E '/lib/.*\.so\.[0-9]+' > INDEX-NEW
+	    grep -E '/lib/.*\.so\.[0-9]+\|' > INDEX-NEW
 	grep -vE '^/boot/' $1/INDEX-OLD |
-	    grep -E '/lib/.*\.so\.[0-9]+' > INDEX-OLD
+	    grep -E '/lib/.*\.so\.[0-9]+\|' > INDEX-OLD
 	install_delete INDEX-OLD INDEX-NEW || return 1
 
 	# Remove temporary files
@@ -2631,35 +2936,35 @@ rollback_files () {
 	# Install old shared library files which don't have the same path as
 	# a new shared library file.
 	grep -vE '^/boot/' $1/INDEX-NEW |
-	    grep -E '/lib/.*\.so\.[0-9]+' |
+	    grep -E '/lib/.*\.so\.[0-9]+\|' |
 	    cut -f 1 -d '|' |
 	    sort > INDEX-NEW.libs.flist
 	grep -vE '^/boot/' $1/INDEX-OLD |
-	    grep -E '/lib/.*\.so\.[0-9]+' |
+	    grep -E '/lib/.*\.so\.[0-9]+\|' |
 	    sort -k 1,1 -t '|' - |
 	    join -t '|' -v 1 - INDEX-NEW.libs.flist > INDEX-OLD
 	install_from_index INDEX-OLD || return 1
 
 	# Deal with files which are neither kernel nor shared library
 	grep -vE '^/boot/' $1/INDEX-OLD |
-	    grep -vE '/lib/.*\.so\.[0-9]+' > INDEX-OLD
+	    grep -vE '/lib/.*\.so\.[0-9]+\|' > INDEX-OLD
 	grep -vE '^/boot/' $1/INDEX-NEW |
-	    grep -vE '/lib/.*\.so\.[0-9]+' > INDEX-NEW
+	    grep -vE '/lib/.*\.so\.[0-9]+\|' > INDEX-NEW
 	install_from_index INDEX-OLD || return 1
 	install_delete INDEX-NEW INDEX-OLD || return 1
 
 	# Install any old shared library files which we didn't install above.
 	grep -vE '^/boot/' $1/INDEX-OLD |
-	    grep -E '/lib/.*\.so\.[0-9]+' |
+	    grep -E '/lib/.*\.so\.[0-9]+\|' |
 	    sort -k 1,1 -t '|' - |
 	    join -t '|' - INDEX-NEW.libs.flist > INDEX-OLD
 	install_from_index INDEX-OLD || return 1
 
 	# Delete unneeded shared library files
 	grep -vE '^/boot/' $1/INDEX-OLD |
-	    grep -E '/lib/.*\.so\.[0-9]+' > INDEX-OLD
+	    grep -E '/lib/.*\.so\.[0-9]+\|' > INDEX-OLD
 	grep -vE '^/boot/' $1/INDEX-NEW |
-	    grep -E '/lib/.*\.so\.[0-9]+' > INDEX-NEW
+	    grep -E '/lib/.*\.so\.[0-9]+\|' > INDEX-NEW
 	install_delete INDEX-NEW INDEX-OLD || return 1
 
 	# Deal with kernel files
@@ -2703,6 +3008,157 @@ rollback_run () {
 	rollback_setup_rollback
 
 	echo " done."
+}
+
+# Compare INDEX-ALL and INDEX-PRESENT and print warnings about differences.
+IDS_compare () {
+	# Get all the lines which mismatch in something other than file
+	# flags.  We ignore file flags because sysinstall doesn't seem to
+	# set them when it installs FreeBSD; warning about these adds a
+	# very large amount of noise.
+	cut -f 1-5,7-8 -d '|' $1 > $1.noflags
+	sort -k 1,1 -t '|' $1.noflags > $1.sorted
+	cut -f 1-5,7-8 -d '|' $2 |
+	    comm -13 $1.noflags - |
+	    fgrep -v '|-|||||' |
+	    sort -k 1,1 -t '|' |
+	    join -t '|' $1.sorted - > INDEX-NOTMATCHING
+
+	# Ignore files which match IDSIGNOREPATHS.
+	for X in ${IDSIGNOREPATHS}; do
+		grep -E "^${X}" INDEX-NOTMATCHING
+	done |
+	    sort -u |
+	    comm -13 - INDEX-NOTMATCHING > INDEX-NOTMATCHING.tmp
+	mv INDEX-NOTMATCHING.tmp INDEX-NOTMATCHING
+
+	# Go through the lines and print warnings.
+	while read LINE; do
+		FPATH=`echo "${LINE}" | cut -f 1 -d '|'`
+		TYPE=`echo "${LINE}" | cut -f 2 -d '|'`
+		OWNER=`echo "${LINE}" | cut -f 3 -d '|'`
+		GROUP=`echo "${LINE}" | cut -f 4 -d '|'`
+		PERM=`echo "${LINE}" | cut -f 5 -d '|'`
+		HASH=`echo "${LINE}" | cut -f 6 -d '|'`
+		LINK=`echo "${LINE}" | cut -f 7 -d '|'`
+		P_TYPE=`echo "${LINE}" | cut -f 8 -d '|'`
+		P_OWNER=`echo "${LINE}" | cut -f 9 -d '|'`
+		P_GROUP=`echo "${LINE}" | cut -f 10 -d '|'`
+		P_PERM=`echo "${LINE}" | cut -f 11 -d '|'`
+		P_HASH=`echo "${LINE}" | cut -f 12 -d '|'`
+		P_LINK=`echo "${LINE}" | cut -f 13 -d '|'`
+
+		# Warn about different object types.
+		if ! [ "${TYPE}" = "${P_TYPE}" ]; then
+			echo -n "${FPATH} is a "
+			case "${P_TYPE}" in
+			f)	echo -n "regular file, "
+				;;
+			d)	echo -n "directory, "
+				;;
+			L)	echo -n "symlink, "
+				;;
+			esac
+			echo -n "but should be a "
+			case "${TYPE}" in
+			f)	echo -n "regular file."
+				;;
+			d)	echo -n "directory."
+				;;
+			L)	echo -n "symlink."
+				;;
+			esac
+			echo
+
+			# Skip other tests, since they don't make sense if
+			# we're comparing different object types.
+			continue
+		fi
+
+		# Warn about different owners.
+		if ! [ "${OWNER}" = "${P_OWNER}" ]; then
+			echo -n "${FPATH} is owned by user id ${P_OWNER}, "
+			echo "but should be owned by user id ${OWNER}."
+		fi
+
+		# Warn about different groups.
+		if ! [ "${GROUP}" = "${P_GROUP}" ]; then
+			echo -n "${FPATH} is owned by group id ${P_GROUP}, "
+			echo "but should be owned by group id ${GROUP}."
+		fi
+
+		# Warn about different permissions.  We do not warn about
+		# different permissions on symlinks, since some archivers
+		# don't extract symlink permissions correctly and they are
+		# ignored anyway.
+		if ! [ "${PERM}" = "${P_PERM}" ] &&
+		    ! [ "${TYPE}" = "L" ]; then
+			echo -n "${FPATH} has ${P_PERM} permissions, "
+			echo "but should have ${PERM} permissions."
+		fi
+
+		# Warn about different file hashes / symlink destinations.
+		if ! [ "${HASH}" = "${P_HASH}" ]; then
+			if [ "${TYPE}" = "L" ]; then
+				echo -n "${FPATH} is a symlink to ${P_HASH}, "
+				echo "but should be a symlink to ${HASH}."
+			fi
+			if [ "${TYPE}" = "f" ]; then
+				echo -n "${FPATH} has SHA256 hash ${P_HASH}, "
+				echo "but should have SHA256 hash ${HASH}."
+			fi
+		fi
+
+		# We don't warn about different hard links, since some
+		# some archivers break hard links, and as long as the
+		# underlying data is correct they really don't matter.
+	done < INDEX-NOTMATCHING
+
+	# Clean up
+	rm $1 $1.noflags $1.sorted $2 INDEX-NOTMATCHING
+}
+
+# Do the work involved in comparing the system to a "known good" index
+IDS_run () {
+	workdir_init || return 1
+
+	# Prepare the mirror list.
+	fetch_pick_server_init && fetch_pick_server
+
+	# Try to fetch the public key until we run out of servers.
+	while ! fetch_key; do
+		fetch_pick_server || return 1
+	done
+ 
+	# Try to fetch the metadata index signature ("tag") until we run
+	# out of available servers; and sanity check the downloaded tag.
+	while ! fetch_tag; do
+		fetch_pick_server || return 1
+	done
+	fetch_tagsanity || return 1
+
+	# Fetch INDEX-OLD and INDEX-ALL.
+	fetch_metadata INDEX-OLD INDEX-ALL || return 1
+
+	# Generate filtered INDEX-OLD and INDEX-ALL files containing only
+	# the components we want and without anything marked as "Ignore".
+	fetch_filter_metadata INDEX-OLD || return 1
+	fetch_filter_metadata INDEX-ALL || return 1
+
+	# Merge the INDEX-OLD and INDEX-ALL files into INDEX-ALL.
+	sort INDEX-OLD INDEX-ALL > INDEX-ALL.tmp
+	mv INDEX-ALL.tmp INDEX-ALL
+	rm INDEX-OLD
+
+	# Translate /boot/${KERNCONF} to ${KERNELDIR}
+	fetch_filter_kernel_names INDEX-ALL ${KERNCONF}
+
+	# Inspect the system and generate an INDEX-PRESENT file.
+	fetch_inspect_system INDEX-ALL INDEX-PRESENT /dev/null || return 1
+
+	# Compare INDEX-ALL and INDEX-PRESENT and print warnings about any
+	# differences.
+	IDS_compare INDEX-ALL INDEX-PRESENT
 }
 
 #### Main functions -- call parameter-handling and core functions
@@ -2765,10 +3221,21 @@ cmd_rollback () {
 	rollback_run || exit 1
 }
 
+# Compare system against a "known good" index.
+cmd_IDS () {
+	IDS_check_params
+	IDS_run || exit 1
+}
+
 #### Entry point
 
 # Make sure we find utilities from the base system
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:${PATH}
+
+# Set a pager if the user doesn't
+if [ -z "$PAGER" ]; then
+	PAGER=/usr/bin/more
+fi
 
 # Set LC_ALL in order to avoid problems with character ranges like [A-Z].
 export LC_ALL=C

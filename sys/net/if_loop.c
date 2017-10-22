@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_loop.c	8.2 (Berkeley) 1/9/95
- * $FreeBSD: release/7.0.0/sys/net/if_loop.c 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 /*
@@ -42,7 +42,6 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
-#include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/module.h>
 #include <machine/bus.h>
@@ -57,7 +56,7 @@
 #include <net/netisr.h>
 #include <net/route.h>
 #include <net/bpf.h>
-#include <net/bpfdesc.h>
+#include <net/vnet.h>
 
 #ifdef	INET
 #include <netinet/in.h>
@@ -82,6 +81,8 @@
 #include <netatalk/at_var.h>
 #endif
 
+#include <security/mac/mac_framework.h>
+
 #ifdef TINY_LOMTU
 #define	LOMTU	(1024+512)
 #elif defined(LARGE_LOMTU)
@@ -90,64 +91,53 @@
 #define LOMTU	16384
 #endif
 
-#define LONAME	"lo"
-
-struct lo_softc {
-	struct	ifnet *sc_ifp;
-	LIST_ENTRY(lo_softc) sc_next;
-};
+#define	LO_CSUM_FEATURES	(CSUM_IP | CSUM_TCP | CSUM_UDP | CSUM_SCTP)
+#define	LO_CSUM_FEATURES6	(CSUM_TCP_IPV6 | CSUM_UDP_IPV6 | CSUM_SCTP_IPV6)
+#define	LO_CSUM_SET		(CSUM_DATA_VALID | CSUM_DATA_VALID_IPV6 | \
+				    CSUM_PSEUDO_HDR | \
+				    CSUM_IP_CHECKED | CSUM_IP_VALID | \
+				    CSUM_SCTP_VALID)
 
 int		loioctl(struct ifnet *, u_long, caddr_t);
 static void	lortrequest(int, struct rtentry *, struct rt_addrinfo *);
 int		looutput(struct ifnet *ifp, struct mbuf *m,
-		    struct sockaddr *dst, struct rtentry *rt);
+		    struct sockaddr *dst, struct route *ro);
 static int	lo_clone_create(struct if_clone *, int, caddr_t);
 static void	lo_clone_destroy(struct ifnet *);
 
-struct ifnet *loif = NULL;			/* Used externally */
+VNET_DEFINE(struct ifnet *, loif);	/* Used externally */
 
-static MALLOC_DEFINE(M_LO, LONAME, "Loopback Interface");
-
-static struct mtx lo_mtx;
-static LIST_HEAD(lo_list, lo_softc) lo_list;
+#ifdef VIMAGE
+static VNET_DEFINE(struct ifc_simple_data, lo_cloner_data);
+static VNET_DEFINE(struct if_clone, lo_cloner);
+#define	V_lo_cloner_data	VNET(lo_cloner_data)
+#define	V_lo_cloner		VNET(lo_cloner)
+#endif
 
 IFC_SIMPLE_DECLARE(lo, 1);
 
 static void
-lo_clone_destroy(ifp)
-	struct ifnet *ifp;
+lo_clone_destroy(struct ifnet *ifp)
 {
-	struct lo_softc *sc;
-	
-	sc = ifp->if_softc;
 
+#ifndef VIMAGE
 	/* XXX: destroying lo0 will lead to panics. */
-	KASSERT(loif != ifp, ("%s: destroying lo0", __func__));
+	KASSERT(V_loif != ifp, ("%s: destroying lo0", __func__));
+#endif
 
-	mtx_lock(&lo_mtx);
-	LIST_REMOVE(sc, sc_next);
-	mtx_unlock(&lo_mtx);
 	bpfdetach(ifp);
 	if_detach(ifp);
 	if_free(ifp);
-	free(sc, M_LO);
 }
 
 static int
-lo_clone_create(ifc, unit, params)
-	struct if_clone *ifc;
-	int unit;
-	caddr_t params;
+lo_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 {
 	struct ifnet *ifp;
-	struct lo_softc *sc;
 
-	MALLOC(sc, struct lo_softc *, sizeof(*sc), M_LO, M_WAITOK | M_ZERO);
-	ifp = sc->sc_ifp = if_alloc(IFT_LOOP);
-	if (ifp == NULL) {
-		free(sc, M_LO);
+	ifp = if_alloc(IFT_LOOP);
+	if (ifp == NULL)
 		return (ENOSPC);
-	}
 
 	if_initname(ifp, ifc->ifc_name, unit);
 	ifp->if_mtu = LOMTU;
@@ -155,54 +145,92 @@ lo_clone_create(ifc, unit, params)
 	ifp->if_ioctl = loioctl;
 	ifp->if_output = looutput;
 	ifp->if_snd.ifq_maxlen = ifqmaxlen;
-	ifp->if_softc = sc;
+	ifp->if_capabilities = ifp->if_capenable =
+	    IFCAP_HWCSUM | IFCAP_HWCSUM_IPV6;
+	ifp->if_hwassist = LO_CSUM_FEATURES | LO_CSUM_FEATURES6;
 	if_attach(ifp);
 	bpfattach(ifp, DLT_NULL, sizeof(u_int32_t));
-	mtx_lock(&lo_mtx);
-	LIST_INSERT_HEAD(&lo_list, sc, sc_next);
-	mtx_unlock(&lo_mtx);
-	if (loif == NULL)
-		loif = ifp;
+	if (V_loif == NULL)
+		V_loif = ifp;
 
 	return (0);
 }
 
+static void
+vnet_loif_init(const void *unused __unused)
+{
+
+#ifdef VIMAGE
+	V_lo_cloner = lo_cloner;
+	V_lo_cloner_data = lo_cloner_data;
+	V_lo_cloner.ifc_data = &V_lo_cloner_data;
+	if_clone_attach(&V_lo_cloner);
+#else
+	if_clone_attach(&lo_cloner);
+#endif
+}
+VNET_SYSINIT(vnet_loif_init, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_ANY,
+    vnet_loif_init, NULL);
+
+#ifdef VIMAGE
+static void
+vnet_loif_uninit(const void *unused __unused)
+{
+
+	if_clone_detach(&V_lo_cloner);
+	V_loif = NULL;
+}
+VNET_SYSUNINIT(vnet_loif_uninit, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_ANY,
+    vnet_loif_uninit, NULL);
+#endif
+
 static int
-loop_modevent(module_t mod, int type, void *data) 
-{ 
-	switch (type) { 
-	case MOD_LOAD: 
-		mtx_init(&lo_mtx, "lo_mtx", NULL, MTX_DEF);
-		LIST_INIT(&lo_list);
-		if_clone_attach(&lo_cloner);
-		break; 
-	case MOD_UNLOAD: 
-		printf("loop module unload - not possible for this module type\n"); 
-		return EINVAL; 
+loop_modevent(module_t mod, int type, void *data)
+{
+
+	switch (type) {
+	case MOD_LOAD:
+		break;
+
+	case MOD_UNLOAD:
+		printf("loop module unload - not possible for this module type\n");
+		return (EINVAL);
+
 	default:
-		return EOPNOTSUPP;
-	} 
-	return 0; 
-} 
+		return (EOPNOTSUPP);
+	}
+	return (0);
+}
 
-static moduledata_t loop_mod = { 
-	"loop", 
-	loop_modevent, 
+static moduledata_t loop_mod = {
+	"if_lo",
+	loop_modevent,
 	0
-}; 
+};
 
-DECLARE_MODULE(loop, loop_mod, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_ANY);
+DECLARE_MODULE(if_lo, loop_mod, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_ANY);
 
 int
-looutput(ifp, m, dst, rt)
-	struct ifnet *ifp;
-	register struct mbuf *m;
-	struct sockaddr *dst;
-	register struct rtentry *rt;
+looutput(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
+    struct route *ro)
 {
 	u_int32_t af;
+	struct rtentry *rt = NULL;
+#ifdef MAC
+	int error;
+#endif
 
 	M_ASSERTPKTHDR(m); /* check if we have the packet header */
+
+	if (ro != NULL)
+		rt = ro->ro_rt;
+#ifdef MAC
+	error = mac_ifnet_check_transmit(ifp, m);
+	if (error) {
+		m_freem(m);
+		return (error);
+	}
+#endif
 
 	if (rt && rt->rt_flags & (RTF_REJECT|RTF_BLACKHOLE)) {
 		m_freem(m);
@@ -222,7 +250,29 @@ looutput(ifp, m, dst, rt)
 #if 1	/* XXX */
 	switch (dst->sa_family) {
 	case AF_INET:
+		if (ifp->if_capenable & IFCAP_RXCSUM) {
+			m->m_pkthdr.csum_data = 0xffff;
+			m->m_pkthdr.csum_flags = LO_CSUM_SET;
+		}
+		m->m_pkthdr.csum_flags &= ~LO_CSUM_FEATURES;
+		break;
 	case AF_INET6:
+#if 0
+		/*
+		 * XXX-BZ for now always claim the checksum is good despite
+		 * any interface flags.   This is a workaround for 9.1-R and
+		 * a proper solution ought to be sought later.
+		 */
+		if (ifp->if_capenable & IFCAP_RXCSUM_IPV6) {
+			m->m_pkthdr.csum_data = 0xffff;
+			m->m_pkthdr.csum_flags = LO_CSUM_SET;
+		}
+#else
+		m->m_pkthdr.csum_data = 0xffff;
+		m->m_pkthdr.csum_flags = LO_CSUM_SET;
+#endif
+		m->m_pkthdr.csum_flags &= ~LO_CSUM_FEATURES6;
+		break;
 	case AF_IPX:
 	case AF_APPLETALK:
 		break;
@@ -232,7 +282,7 @@ looutput(ifp, m, dst, rt)
 		return (EAFNOSUPPORT);
 	}
 #endif
-	return(if_simloop(ifp, m, dst->sa_family, 0));
+	return (if_simloop(ifp, m, dst->sa_family, 0));
 }
 
 /*
@@ -245,13 +295,8 @@ looutput(ifp, m, dst, rt)
  *
  * This function expects the packet to include the media header of length hlen.
  */
-
 int
-if_simloop(ifp, m, af, hlen)
-	struct ifnet *ifp;
-	struct mbuf *m;
-	int af;
-	int hlen;
+if_simloop(struct ifnet *ifp, struct mbuf *m, int af, int hlen)
 {
 	int isr;
 
@@ -259,9 +304,13 @@ if_simloop(ifp, m, af, hlen)
 	m_tag_delete_nonpersistent(m);
 	m->m_pkthdr.rcvif = ifp;
 
+#ifdef MAC
+	mac_ifnet_create_mbuf(ifp, m);
+#endif
+
 	/*
 	 * Let BPF see incoming packet in the following manner:
-	 *  - Emulated packet loopback for a simplex interface 
+	 *  - Emulated packet loopback for a simplex interface
 	 *    (net/if_ethersubr.c)
 	 *	-> passes it to ifp's BPF
 	 *  - IPv4/v6 multicast packet loopback (netinet(6)/ip(6)_output.c)
@@ -274,15 +323,15 @@ if_simloop(ifp, m, af, hlen)
 			bpf_mtap(ifp->if_bpf, m);
 		}
 	} else {
-		if (bpf_peers_present(loif->if_bpf)) {
-			if ((m->m_flags & M_MCAST) == 0 || loif == ifp) {
+		if (bpf_peers_present(V_loif->if_bpf)) {
+			if ((m->m_flags & M_MCAST) == 0 || V_loif == ifp) {
 				/* XXX beware sizeof(af) != 4 */
-				u_int32_t af1 = af;	
+				u_int32_t af1 = af;
 
 				/*
 				 * We need to prepend the address family.
 				 */
-				bpf_mtap2(loif->if_bpf, &af1, sizeof(af1), m);
+				bpf_mtap2(V_loif->if_bpf, &af1, sizeof(af1), m);
 			}
 		}
 	}
@@ -297,8 +346,8 @@ if_simloop(ifp, m, af, hlen)
 		 */
 		if (mtod(m, vm_offset_t) & 3) {
 			KASSERT(hlen >= 3, ("if_simloop: hlen too small"));
-			bcopy(m->m_data, 
-			    (char *)(mtod(m, vm_offset_t) 
+			bcopy(m->m_data,
+			    (char *)(mtod(m, vm_offset_t)
 				- (mtod(m, vm_offset_t) & 3)),
 			    m->m_len);
 			m->m_data -= (mtod(m,vm_offset_t) & 3);
@@ -342,11 +391,9 @@ if_simloop(ifp, m, af, hlen)
 
 /* ARGSUSED */
 static void
-lortrequest(cmd, rt, info)
-	int cmd;
-	struct rtentry *rt;
-	struct rt_addrinfo *info;
+lortrequest(int cmd, struct rtentry *rt, struct rt_addrinfo *info)
 {
+
 	RT_LOCK_ASSERT(rt);
 	rt->rt_rmx.rmx_mtu = rt->rt_ifp->if_mtu;
 }
@@ -356,17 +403,13 @@ lortrequest(cmd, rt, info)
  */
 /* ARGSUSED */
 int
-loioctl(ifp, cmd, data)
-	register struct ifnet *ifp;
-	u_long cmd;
-	caddr_t data;
+loioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 {
-	register struct ifaddr *ifa;
-	register struct ifreq *ifr = (struct ifreq *)data;
-	register int error = 0;
+	struct ifaddr *ifa;
+	struct ifreq *ifr = (struct ifreq *)data;
+	int error = 0, mask;
 
 	switch (cmd) {
-
 	case SIOCSIFADDR:
 		ifp->if_flags |= IFF_UP;
 		ifp->if_drv_flags |= IFF_DRV_RUNNING;
@@ -405,6 +448,37 @@ loioctl(ifp, cmd, data)
 		break;
 
 	case SIOCSIFFLAGS:
+		break;
+
+	case SIOCSIFCAP:
+		mask = ifp->if_capenable ^ ifr->ifr_reqcap;
+		if ((mask & IFCAP_RXCSUM) != 0)
+			ifp->if_capenable ^= IFCAP_RXCSUM;
+		if ((mask & IFCAP_TXCSUM) != 0)
+			ifp->if_capenable ^= IFCAP_TXCSUM;
+		if ((mask & IFCAP_RXCSUM_IPV6) != 0) {
+#if 0
+			ifp->if_capenable ^= IFCAP_RXCSUM_IPV6;
+#else
+			error = EOPNOTSUPP;
+			break;
+#endif
+		}
+		if ((mask & IFCAP_TXCSUM_IPV6) != 0) {
+#if 0
+			ifp->if_capenable ^= IFCAP_TXCSUM_IPV6;
+#else
+			error = EOPNOTSUPP;
+			break;
+#endif
+		}
+		ifp->if_hwassist = 0;
+		if (ifp->if_capenable & IFCAP_TXCSUM)
+			ifp->if_hwassist = LO_CSUM_FEATURES;
+#if 0
+		if (ifp->if_capenable & IFCAP_TXCSUM_IPV6)
+			ifp->if_hwassist |= LO_CSUM_FEATURES6;
+#endif
 		break;
 
 	default:

@@ -5,7 +5,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/amd64/string/memset.S 144730 2005-04-07 03:56:03Z alc $");
+__FBSDID("$FreeBSD$");
 
 #if 0
 	RCSID("$NetBSD: memset.S,v 1.3 2004/02/26 20:50:06 drochner Exp $")
@@ -58,3 +58,6 @@ L1:	rep
 	movq	%r11,%rax
 
 	ret
+END(memset)
+
+	.section .note.GNU-stack,"",%progbits

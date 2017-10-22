@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/mk/bsd.compat.mk 172906 2007-10-23 15:36:41Z ru $
+# $FreeBSD$
 
 .if !defined(BURN_BRIDGES)
 .for oldnew in \

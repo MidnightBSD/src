@@ -1,5 +1,5 @@
 # From:	@(#)Makefile	8.1 (Berkeley) 7/19/93
-# $FreeBSD: release/7.0.0/release/picobsd/tinyware/login/Makefile 173814 2007-11-21 07:20:11Z luigi $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 

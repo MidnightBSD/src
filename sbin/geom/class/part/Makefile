@@ -1,9 +1,10 @@
-# $FreeBSD: release/7.0.0/sbin/geom/class/part/Makefile 169586 2007-05-15 20:25:18Z marcel $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../misc
 
-CLASS=	part
+GEOM_CLASS=	part
 
-WARNS?=	4
+DPADD=	${LIBUTIL}
+LDADD=	-lutil
 
 .include <bsd.lib.mk>

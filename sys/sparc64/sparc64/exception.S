@@ -54,7 +54,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sparc64/exception.S 172066 2007-09-06 19:16:30Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
@@ -75,8 +75,12 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sparc64/exception.S 172066 2007-09
 
 #include "assym.s"
 
-#define	TSB_KERNEL_MASK	0x0
-#define	TSB_KERNEL	0x0
+#define	TSB_ASI			0x0
+#define	TSB_KERNEL		0x0
+#define	TSB_KERNEL_MASK		0x0
+#define	TSB_KERNEL_PHYS		0x0
+#define	TSB_KERNEL_PHYS_END	0x0
+#define	TSB_QUAD_LDD		0x0
 
 	.register %g2,#ignore
 	.register %g3,#ignore
@@ -84,19 +88,19 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sparc64/exception.S 172066 2007-09
 	.register %g7,#ignore
 
 /*
- * Atomically set the reference bit in a tte.
+ * Atomically set a bit in a TTE.
  */
-#define	TTE_SET_BIT(r1, r2, r3, bit) \
+#define	TTE_SET_BIT(r1, r2, r3, bit, a, asi) \
 	add	r1, TTE_DATA, r1 ; \
-	ldx	[r1], r2 ; \
+	LD(x, a) [r1] asi, r2 ; \
 9:	or	r2, bit, r3 ; \
-	casxa	[r1] ASI_N, r2, r3 ; \
+	CAS(x, a) [r1] asi, r2, r3 ; \
 	cmp	r2, r3 ; \
 	bne,pn	%xcc, 9b ; \
 	 mov	r3, r2
 
-#define	TTE_SET_REF(r1, r2, r3)		TTE_SET_BIT(r1, r2, r3, TD_REF)
-#define	TTE_SET_W(r1, r2, r3)		TTE_SET_BIT(r1, r2, r3, TD_W)
+#define	TTE_SET_REF(r1, r2, r3, a, asi)	TTE_SET_BIT(r1, r2, r3, TD_REF, a, asi)
+#define	TTE_SET_W(r1, r2, r3, a, asi)	TTE_SET_BIT(r1, r2, r3, TD_W, a, asi)
 
 /*
  * Macros for spilling and filling live windows.
@@ -147,7 +151,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sparc64/exception.S 172066 2007-09
 #define	KSTACK_SLOP	1024
 
 /*
- * Sanity check the kernel stack and bail out if its wrong.
+ * Sanity check the kernel stack and bail out if it's wrong.
  * XXX: doesn't handle being on the panic stack.
  */
 #define	KSTACK_CHECK \
@@ -235,7 +239,7 @@ END(tl1_kstack_fault)
 
 /*
  * Magic to resume from a spill or fill trap.  If we get an alignment or an
- * mmu fault during a spill or a fill, this macro will detect the fault and
+ * MMU fault during a spill or a fill, this macro will detect the fault and
  * resume at a set instruction offset in the trap handler.
  *
  * To check if the previous trap was a spill/fill we convert the trapped pc
@@ -287,7 +291,7 @@ END(tl1_kstack_fault)
 	inc	16, ASP_REG
 
 /*
- * For certain faults we need to clear the sfsr mmu register before returning.
+ * For certain faults we need to clear the SFSR MMU register before returning.
  */
 #define	RSF_CLR_SFSR \
 	wr	%g0, ASI_DMMU, %asi ; \
@@ -314,15 +318,6 @@ END(tl1_kstack_fault)
  * user mode.
  */
 #define	RSF_FILL_INC	tl0_ret_fill_end - tl0_ret_fill
-
-/*
- * Retry a spill or fill with a different wstate due to an alignment fault.
- * We may just be using the wrong stack offset.
- */
-#define	RSF_ALIGN_RETRY(ws) \
-	wrpr	%g0, (ws), %wstate ; \
-	retry ; \
-	.align	16
 
 /*
  * Generate a T_SPILL or T_FILL trap if the window operation fails.
@@ -374,11 +369,21 @@ ENTRY(rsf_fatal)
 	sir
 END(rsf_fatal)
 
-	.comm	intrnames, IV_NAMLEN
-	.comm	eintrnames, 0
+	.data
+	_ALIGN_DATA
+	.globl	intrnames, sintrnames
+intrnames:
+	.space	(IV_MAX + PIL_MAX) * (MAXCOMLEN + 1)
+sintrnames:
+	.quad	(IV_MAX + PIL_MAX) * (MAXCOMLEN + 1)
 
-	.comm	intrcnt, IV_MAX * 8
-	.comm	eintrcnt, 0
+	.globl	intrcnt, sintrcnt
+intrcnt:
+	.space	(IV_MAX + PIL_MAX) * 8
+sintrcnt:
+	.quad	(IV_MAX + PIL_MAX) * 8
+
+	.text
 
 /*
  * Trap table and associated macros
@@ -386,7 +391,7 @@ END(rsf_fatal)
  * Due to its size a trap table is an inherently hard thing to represent in
  * code in a clean way.  There are approximately 1024 vectors, of 8 or 32
  * instructions each, many of which are identical.  The way that this is
- * layed out is the instructions (8 or 32) for the actual trap vector appear
+ * laid out is the instructions (8 or 32) for the actual trap vector appear
  * as an AS macro.  In general this code branches to tl0_trap or tl1_trap,
  * but if not supporting code can be placed just after the definition of the
  * macro.  The macros are then instantiated in a different section (.trap),
@@ -429,8 +434,8 @@ END(rsf_fatal)
 	 * user stack, and with its live registers, so we must save soon.  We
 	 * are on alternate globals so we do have some registers.  Set the
 	 * transitional window state, and do the save.  If this traps we
-	 * we attempt to spill a window to the user stack.  If this fails,
-	 * we spill the window to the pcb and continue.  Spilling to the pcb
+	 * attempt to spill a window to the user stack.  If this fails, we
+	 * spill the window to the pcb and continue.  Spilling to the pcb
 	 * must not fail.
 	 *
 	 * NOTE: Must be called with alternate globals and clobbers %g1.
@@ -498,6 +503,11 @@ END(rsf_fatal)
 	wr	%g0, ASI_IMMU, %asi
 	rdpr	%tpc, %g3
 	ldxa	[%g0 + AA_IMMU_SFSR] %asi, %g4
+	/*
+	 * XXX in theory, a store to AA_IMMU_SFSR must be immediately
+	 * followed by a DONE, FLUSH or RETRY for USIII.  In practice,
+	 * this triggers a RED state exception though.
+	 */
 	stxa	%g0, [%g0 + AA_IMMU_SFSR] %asi
 	membar	#Sync
 	ba	%xcc, tl0_sfsr_trap
@@ -550,7 +560,7 @@ END(tl0_sfsr_trap)
 	tl ## traplvl ## _intr	level, 1 << level
 
 #define	TICK(traplvl) \
-	tl ## traplvl ## _intr	PIL_TICK, 1
+	tl ## traplvl ## _intr	PIL_TICK, 0x10001
 
 #define	INTR_LEVEL(tl)							\
 	INTR(1, tl) ;							\
@@ -578,13 +588,14 @@ END(tl0_sfsr_trap)
 	andcc	%g1, IRSR_BUSY, %g0
 	bnz,a,pt %xcc, intr_vector
 	 nop
-	sir
+	ba,a,pt	%xcc, intr_vector_stray
+	 nop
 	.align	32
 	.endm
 
 	.macro	tl0_immu_miss
 	/*
-	 * Load the virtual page number and context from the tag access
+	 * Load the context and the virtual page number from the tag access
 	 * register.  We ignore the context.
 	 */
 	wr	%g0, ASI_IMMU, %asi
@@ -614,7 +625,7 @@ END(tl0_sfsr_trap)
 	srlx	%g1, %g3, %g3
 
 	/*
-	 * Compute the tte bucket address.
+	 * Compute the TTE bucket address.
 	 */
 	ldxa	[%g0 + AA_IMMU_TSB] %asi, %g5
 	and	%g3, TSB_BUCKET_MASK, %g4
@@ -622,17 +633,17 @@ END(tl0_sfsr_trap)
 	add	%g4, %g5, %g4
 
 	/*
-	 * Compute the tte tag target.
+	 * Compute the TTE tag target.
 	 */
 	sllx	%g3, TV_SIZE_BITS, %g3
 	or	%g3, %g2, %g3
 
 	/*
-	 * Loop over the ttes in this bucket
+	 * Loop over the TTEs in this bucket.
 	 */
 
 	/*
-	 * Load the tte.  Note that this instruction may fault, clobbering
+	 * Load the TTE.  Note that this instruction may fault, clobbering
 	 * the contents of the tag access register, %g5, %g6, and %g7.  We
 	 * do not use %g5, and %g6 and %g7 are not used until this instruction
 	 * completes successfully.
@@ -640,7 +651,7 @@ END(tl0_sfsr_trap)
 2:	ldda	[%g4] ASI_NUCLEUS_QUAD_LDD, %g6 /*, %g7 */
 
 	/*
-	 * Check that its valid and executable and that the tte tags match.
+	 * Check that it's valid and executable and that the TTE tags match.
 	 */
 	brgez,pn %g7, 3f
 	 andcc	%g7, TD_EXEC, %g0
@@ -650,7 +661,7 @@ END(tl0_sfsr_trap)
 	 EMPTY
 
 	/*
-	 * We matched a tte, load the tlb.
+	 * We matched a TTE, load the TLB.
 	 */
 
 	/*
@@ -661,14 +672,14 @@ END(tl0_sfsr_trap)
 	 nop
 
 	/*
-	 * Load the tte tag and data into the tlb and retry the instruction.
+	 * Load the TTE tag and data into the TLB and retry the instruction.
 	 */
 	stxa	%g1, [%g0 + AA_IMMU_TAR] %asi
 	stxa	%g7, [%g0] ASI_ITLB_DATA_IN_REG
 	retry
 
 	/*
-	 * Advance to the next tte in this bucket, and check the low bits
+	 * Advance to the next TTE in this bucket, and check the low bits
 	 * of the bucket pointer to see if we've finished the bucket.
 	 */
 3:	add	%g4, 1 << TTE_SHIFT, %g4
@@ -685,7 +696,7 @@ END(tl0_sfsr_trap)
 	 add	%g2, 1, %g2
 
 	/*
-	 * Not in user tsb, call c code.
+	 * Not in user TSB, call C code.
 	 */
 	ba,a	%xcc, tl0_immu_miss_trap
 	.align	128
@@ -695,7 +706,7 @@ ENTRY(tl0_immu_miss_set_ref)
 	/*
 	 * Set the reference bit.
 	 */
-	TTE_SET_REF(%g4, %g2, %g3)
+	TTE_SET_REF(%g4, %g2, %g3, a, ASI_N)
 
 	/*
 	 * May have become invalid during casxa, in which case start over.
@@ -704,7 +715,7 @@ ENTRY(tl0_immu_miss_set_ref)
 	 nop
 
 	/*
-	 * Load the tte tag and data into the tlb and retry the instruction.
+	 * Load the TTE tag and data into the TLB and retry the instruction.
 	 */
 	stxa	%g1, [%g0 + AA_IMMU_TAR] %asi
 	stxa	%g2, [%g0] ASI_ITLB_DATA_IN_REG
@@ -716,8 +727,9 @@ ENTRY(tl0_immu_miss_trap)
 	 * Put back the contents of the tag access register, in case we
 	 * faulted.
 	 */
+	sethi	%hi(KERNBASE), %g2
 	stxa	%g1, [%g0 + AA_IMMU_TAR] %asi
-	membar	#Sync
+	flush	%g2
 
 	/*
 	 * Switch to alternate globals.
@@ -742,7 +754,7 @@ END(tl0_immu_miss_trap)
 
 	.macro	tl0_dmmu_miss
 	/*
-	 * Load the virtual page number and context from the tag access
+	 * Load the context and the virtual page number from the tag access
 	 * register.  We ignore the context.
 	 */
 	wr	%g0, ASI_DMMU, %asi
@@ -773,7 +785,7 @@ tl1_dmmu_miss_user:
 	srlx	%g1, %g3, %g3
 
 	/*
-	 * Compute the tte bucket address.
+	 * Compute the TTE bucket address.
 	 */
 	ldxa	[%g0 + AA_DMMU_TSB] %asi, %g5
 	and	%g3, TSB_BUCKET_MASK, %g4
@@ -781,17 +793,17 @@ tl1_dmmu_miss_user:
 	add	%g4, %g5, %g4
 
 	/*
-	 * Compute the tte tag target.
+	 * Compute the TTE tag target.
 	 */
 	sllx	%g3, TV_SIZE_BITS, %g3
 	or	%g3, %g2, %g3
 
 	/*
-	 * Loop over the ttes in this bucket
+	 * Loop over the TTEs in this bucket.
 	 */
 
 	/*
-	 * Load the tte.  Note that this instruction may fault, clobbering
+	 * Load the TTE.  Note that this instruction may fault, clobbering
 	 * the contents of the tag access register, %g5, %g6, and %g7.  We
 	 * do not use %g5, and %g6 and %g7 are not used until this instruction
 	 * completes successfully.
@@ -799,7 +811,7 @@ tl1_dmmu_miss_user:
 2:	ldda	[%g4] ASI_NUCLEUS_QUAD_LDD, %g6 /*, %g7 */
 
 	/*
-	 * Check that its valid and that the virtual page numbers match.
+	 * Check that it's valid and that the virtual page numbers match.
 	 */
 	brgez,pn %g7, 3f
 	 cmp	%g3, %g6
@@ -807,7 +819,7 @@ tl1_dmmu_miss_user:
 	 EMPTY
 
 	/*
-	 * We matched a tte, load the tlb.
+	 * We matched a TTE, load the TLB.
 	 */
 
 	/*
@@ -818,14 +830,14 @@ tl1_dmmu_miss_user:
 	 nop
 
 	/*
-	 * Load the tte tag and data into the tlb and retry the instruction.
+	 * Load the TTE tag and data into the TLB and retry the instruction.
 	 */
 	stxa	%g1, [%g0 + AA_DMMU_TAR] %asi
 	stxa	%g7, [%g0] ASI_DTLB_DATA_IN_REG
 	retry
 
 	/*
-	 * Advance to the next tte in this bucket, and check the low bits
+	 * Advance to the next TTE in this bucket, and check the low bits
 	 * of the bucket pointer to see if we've finished the bucket.
 	 */
 3:	add	%g4, 1 << TTE_SHIFT, %g4
@@ -842,7 +854,7 @@ tl1_dmmu_miss_user:
 	 add	%g2, 1, %g2
 
 	/*
-	 * Not in user tsb, call c code.
+	 * Not in user TSB, call C code.
 	 */
 	ba,a	%xcc, tl0_dmmu_miss_trap
 	.align	128
@@ -852,7 +864,7 @@ ENTRY(tl0_dmmu_miss_set_ref)
 	/*
 	 * Set the reference bit.
 	 */
-	TTE_SET_REF(%g4, %g2, %g3)
+	TTE_SET_REF(%g4, %g2, %g3, a, ASI_N)
 
 	/*
 	 * May have become invalid during casxa, in which case start over.
@@ -861,7 +873,7 @@ ENTRY(tl0_dmmu_miss_set_ref)
 	 nop
 
 	/*
-	 * Load the tte tag and data into the tlb and retry the instruction.
+	 * Load the TTE tag and data into the TLB and retry the instruction.
 	 */
 	stxa	%g1, [%g0 + AA_DMMU_TAR] %asi
 	stxa	%g2, [%g0] ASI_DTLB_DATA_IN_REG
@@ -930,7 +942,7 @@ END(tl0_dmmu_miss_trap)
 
 ENTRY(tl0_dmmu_prot_1)
 	/*
-	 * Load the virtual page number and context from the tag access
+	 * Load the context and the virtual page number from the tag access
 	 * register.  We ignore the context.
 	 */
 	wr	%g0, ASI_DMMU, %asi
@@ -961,7 +973,7 @@ tl1_dmmu_prot_user:
 	srlx	%g1, %g3, %g3
 
 	/*
-	 * Compute the tte bucket address.
+	 * Compute the TTE bucket address.
 	 */
 	ldxa	[%g0 + AA_DMMU_TSB] %asi, %g5
 	and	%g3, TSB_BUCKET_MASK, %g4
@@ -969,17 +981,17 @@ tl1_dmmu_prot_user:
 	add	%g4, %g5, %g4
 
 	/*
-	 * Compute the tte tag target.
+	 * Compute the TTE tag target.
 	 */
 	sllx	%g3, TV_SIZE_BITS, %g3
 	or	%g3, %g2, %g3
 
 	/*
-	 * Loop over the ttes in this bucket
+	 * Loop over the TTEs in this bucket.
 	 */
 
 	/*
-	 * Load the tte.  Note that this instruction may fault, clobbering
+	 * Load the TTE.  Note that this instruction may fault, clobbering
 	 * the contents of the tag access register, %g5, %g6, and %g7.  We
 	 * do not use %g5, and %g6 and %g7 are not used until this instruction
 	 * completes successfully.
@@ -987,7 +999,7 @@ tl1_dmmu_prot_user:
 2:	ldda	[%g4] ASI_NUCLEUS_QUAD_LDD, %g6 /*, %g7 */
 
 	/*
-	 * Check that its valid and writable and that the virtual page
+	 * Check that it's valid and writable and that the virtual page
 	 * numbers match.
 	 */
 	brgez,pn %g7, 4f
@@ -1000,10 +1012,10 @@ tl1_dmmu_prot_user:
 	/*
 	 * Set the hardware write bit.
 	 */
-	TTE_SET_W(%g4, %g2, %g3)
+	TTE_SET_W(%g4, %g2, %g3, a, ASI_N)
 
 	/*
-	 * Delete the old TLB entry and clear the sfsr.
+	 * Delete the old TLB entry and clear the SFSR.
 	 */
 	srlx	%g1, PAGE_SHIFT, %g3
 	sllx	%g3, PAGE_SHIFT, %g3
@@ -1018,7 +1030,7 @@ tl1_dmmu_prot_user:
 	 or	%g2, TD_W, %g2
 
 	/*
-	 * Load the tte data into the tlb and retry the instruction.
+	 * Load the TTE data into the TLB and retry the instruction.
 	 */
 	stxa	%g1, [%g0 + AA_DMMU_TAR] %asi
 	stxa	%g2, [%g0] ASI_DTLB_DATA_IN_REG
@@ -1041,7 +1053,7 @@ tl1_dmmu_prot_user:
 	 add	%g2, 1, %g2
 
 	/*
-	 * Not in user tsb, call c code.
+	 * Not in user TSB, call C code.
 	 */
 	ba,a	%xcc, tl0_dmmu_prot_trap
 	 nop
@@ -1069,7 +1081,7 @@ ENTRY(tl0_dmmu_prot_trap)
 	 nop
 
 	/*
-	 * Load the tar, sfar and sfsr.
+	 * Load the SFAR, SFSR and TAR.
 	 */
 	ldxa	[%g0 + AA_DMMU_TAR] %asi, %g2
 	ldxa	[%g0 + AA_DMMU_SFAR] %asi, %g3
@@ -1078,7 +1090,7 @@ ENTRY(tl0_dmmu_prot_trap)
 	membar	#Sync
 
 	/*
-	 * Save the mmu registers and call common trap code.
+	 * Save the MMU registers and call common trap code.
 	 */
 	tl0_split
 	clr	%o1
@@ -1095,7 +1107,7 @@ ENTRY(tl0_dmmu_prot_trap)
 1:	RESUME_SPILLFILL_MMU_CLR_SFSR
 
 	/*
-	 * Load the sfar, sfsr and tar.  Clear the sfsr.
+	 * Load the SFAR, SFSR and TAR.  Clear the SFSR.
 	 */
 	ldxa	[%g0 + AA_DMMU_TAR] %asi, %g2
 	ldxa	[%g0 + AA_DMMU_SFAR] %asi, %g3
@@ -1213,6 +1225,11 @@ END(tl0_fp_restore)
 	wr	%g0, ASI_IMMU, %asi
 	rdpr	%tpc, %g3
 	ldxa	[%g0 + AA_IMMU_SFSR] %asi, %g4
+	/*
+	 * XXX in theory, a store to AA_IMMU_SFSR must be immediately
+	 * followed by a DONE, FLUSH or RETRY for USIII.  In practice,
+	 * this triggers a RED state exception though.
+	 */
 	stxa	%g0, [%g0 + AA_IMMU_SFSR] %asi
 	membar	#Sync
 	ba	%xcc, tl1_insn_exceptn_trap
@@ -1274,6 +1291,7 @@ ENTRY(tl1_data_excptn_trap)
 END(tl1_data_excptn_trap)
 
 	.macro	tl1_align
+	wrpr	%g0, PSTATE_ALT, %pstate
 	ba,a	%xcc, tl1_align_trap
 	 nop
 	.align	32
@@ -1283,7 +1301,7 @@ ENTRY(tl1_align_trap)
 	RESUME_SPILLFILL_ALIGN
 	ba	%xcc, tl1_sfsr_trap
 	 mov	T_MEM_ADDRESS_NOT_ALIGNED | T_KERNEL, %g2
-END(tl1_data_excptn_trap)
+END(tl1_align_trap)
 
 ENTRY(tl1_sfsr_trap)
 	wr	%g0, ASI_DMMU, %asi
@@ -1322,14 +1340,20 @@ END(tl1_sfsr_trap)
 	ldxa	[%g0 + AA_IMMU_TAR] %asi, %g5
 
 	/*
-	 * Compute the address of the tte.  The tsb mask and address of the
-	 * tsb are patched at startup.
+	 * Compute the address of the TTE.  The TSB mask and address of the
+	 * TSB are patched at startup.
 	 */
-	.globl	tl1_immu_miss_patch_1
-tl1_immu_miss_patch_1:
+	.globl	tl1_immu_miss_patch_tsb_1
+tl1_immu_miss_patch_tsb_1:
+	sethi	%uhi(TSB_KERNEL), %g6
+	or	%g6, %ulo(TSB_KERNEL), %g6
+	sllx	%g6, 32, %g6
+	sethi	%hi(TSB_KERNEL), %g7
+	or	%g7, %g6, %g7
+	.globl	tl1_immu_miss_patch_tsb_mask_1
+tl1_immu_miss_patch_tsb_mask_1:
 	sethi	%hi(TSB_KERNEL_MASK), %g6
 	or	%g6, %lo(TSB_KERNEL_MASK), %g6
-	sethi	%hi(TSB_KERNEL), %g7
 
 	srlx	%g5, TAR_VPN_SHIFT, %g5
 	and	%g5, %g6, %g6
@@ -1337,12 +1361,14 @@ tl1_immu_miss_patch_1:
 	add	%g6, %g7, %g6
 
 	/*
-	 * Load the tte.
+	 * Load the TTE.
 	 */
-	ldda	[%g6] ASI_NUCLEUS_QUAD_LDD, %g6 /*, %g7 */
+	.globl	tl1_immu_miss_patch_quad_ldd_1
+tl1_immu_miss_patch_quad_ldd_1:
+	ldda	[%g6] TSB_QUAD_LDD, %g6 /*, %g7 */
 
 	/*
-	 * Check that its valid and executable and that the virtual page
+	 * Check that it's valid and executable and that the virtual page
 	 * numbers match.
 	 */
 	brgez,pn %g7, tl1_immu_miss_trap
@@ -1354,14 +1380,14 @@ tl1_immu_miss_patch_1:
 	 EMPTY
 
 	/*
-	 * Set the reference bit if its currently clear.
+	 * Set the reference bit if it's currently clear.
 	 */
 	 andcc	%g7, TD_REF, %g0
 	bz,a,pn	%xcc, tl1_immu_miss_set_ref
 	 nop
 
 	/*
-	 * Load the tte data into the TLB and retry the instruction.
+	 * Load the TTE data into the TLB and retry the instruction.
 	 */
 	stxa	%g7, [%g0] ASI_ITLB_DATA_IN_REG
 	retry
@@ -1370,14 +1396,20 @@ tl1_immu_miss_patch_1:
 
 ENTRY(tl1_immu_miss_set_ref)
 	/*
-	 * Recompute the tte address, which we clobbered loading the tte.  The
-	 * tsb mask and address of the tsb are patched at startup.
+	 * Recompute the TTE address, which we clobbered loading the TTE.
+	 * The TSB mask and address of the TSB are patched at startup.
 	 */
-	.globl	tl1_immu_miss_patch_2
-tl1_immu_miss_patch_2:
+	.globl	tl1_immu_miss_patch_tsb_2
+tl1_immu_miss_patch_tsb_2:
+	sethi	%uhi(TSB_KERNEL), %g6
+	or	%g6, %ulo(TSB_KERNEL), %g6
+	sllx	%g6, 32, %g6
+	sethi	%hi(TSB_KERNEL), %g7
+	or	%g7, %g6, %g7
+	.globl	tl1_immu_miss_patch_tsb_mask_2
+tl1_immu_miss_patch_tsb_mask_2:
 	sethi	%hi(TSB_KERNEL_MASK), %g6
 	or	%g6, %lo(TSB_KERNEL_MASK), %g6
-	sethi	%hi(TSB_KERNEL), %g7
 
 	and	%g5, %g6, %g5
 	sllx	%g5, TTE_SHIFT, %g5
@@ -1386,7 +1418,10 @@ tl1_immu_miss_patch_2:
 	/*
 	 * Set the reference bit.
 	 */
-	TTE_SET_REF(%g5, %g6, %g7)
+	.globl	tl1_immu_miss_patch_asi_1
+tl1_immu_miss_patch_asi_1:
+	wr	%g0, TSB_ASI, %asi
+	TTE_SET_REF(%g5, %g6, %g7, a, %asi)
 
 	/*
 	 * May have become invalid during casxa, in which case start over.
@@ -1395,7 +1430,7 @@ tl1_immu_miss_patch_2:
 	 nop
 
 	/*
-	 * Load the tte data into the TLB and retry the instruction.
+	 * Load the TTE data into the TLB and retry the instruction.
 	 */
 	stxa	%g6, [%g0] ASI_ITLB_DATA_IN_REG
 1:	retry
@@ -1427,7 +1462,7 @@ END(tl1_immu_miss_trap)
 
 	/*
 	 * Extract the context from the contents of the tag access register.
-	 * If its non-zero this is a fault on a user address.  Note that the
+	 * If it's non-zero this is a fault on a user address.  Note that the
 	 * faulting address is passed in %g1.
 	 */
 	sllx	%g5, 64 - TAR_VPN_SHIFT, %g6
@@ -1442,14 +1477,20 @@ END(tl1_immu_miss_trap)
 	 EMPTY
 
 	/*
-	 * Compute the address of the tte.  The tsb mask and address of the
-	 * tsb are patched at startup.
+	 * Compute the address of the TTE.  The TSB mask and address of the
+	 * TSB are patched at startup.
 	 */
-	.globl	tl1_dmmu_miss_patch_1
-tl1_dmmu_miss_patch_1:
+	.globl	tl1_dmmu_miss_patch_tsb_1
+tl1_dmmu_miss_patch_tsb_1:
+	sethi	%uhi(TSB_KERNEL), %g6
+	or	%g6, %ulo(TSB_KERNEL), %g6
+	sllx	%g6, 32, %g6
+	sethi	%hi(TSB_KERNEL), %g7
+	or	%g7, %g6, %g7
+	.globl	tl1_dmmu_miss_patch_tsb_mask_1
+tl1_dmmu_miss_patch_tsb_mask_1:
 	sethi	%hi(TSB_KERNEL_MASK), %g6
 	or	%g6, %lo(TSB_KERNEL_MASK), %g6
-	sethi	%hi(TSB_KERNEL), %g7
 
 	srlx	%g5, TAR_VPN_SHIFT, %g5
 	and	%g5, %g6, %g6
@@ -1457,12 +1498,14 @@ tl1_dmmu_miss_patch_1:
 	add	%g6, %g7, %g6
 
 	/*
-	 * Load the tte.
+	 * Load the TTE.
 	 */
-	ldda	[%g6] ASI_NUCLEUS_QUAD_LDD, %g6 /*, %g7 */
+	.globl	tl1_dmmu_miss_patch_quad_ldd_1
+tl1_dmmu_miss_patch_quad_ldd_1:
+	ldda	[%g6] TSB_QUAD_LDD, %g6 /*, %g7 */
 
 	/*
-	 * Check that its valid and that the virtual page numbers match.
+	 * Check that it's valid and that the virtual page numbers match.
 	 */
 	brgez,pn %g7, tl1_dmmu_miss_trap
 	 srlx	%g6, TV_SIZE_BITS, %g6
@@ -1471,14 +1514,14 @@ tl1_dmmu_miss_patch_1:
 	 EMPTY
 
 	/*
-	 * Set the reference bit if its currently clear.
+	 * Set the reference bit if it's currently clear.
 	 */
 	 andcc	%g7, TD_REF, %g0
 	bz,a,pt	%xcc, tl1_dmmu_miss_set_ref
 	 nop
 
 	/*
-	 * Load the tte data into the TLB and retry the instruction.
+	 * Load the TTE data into the TLB and retry the instruction.
 	 */
 	stxa	%g7, [%g0] ASI_DTLB_DATA_IN_REG
 	retry
@@ -1487,14 +1530,20 @@ tl1_dmmu_miss_patch_1:
 
 ENTRY(tl1_dmmu_miss_set_ref)
 	/*
-	 * Recompute the tte address, which we clobbered loading the tte.  The
-	 * tsb mask and address of the tsb are patched at startup.
+	 * Recompute the TTE address, which we clobbered loading the TTE.
+	 * The TSB mask and address of the TSB are patched at startup.
 	 */
-	.globl	tl1_dmmu_miss_patch_2
-tl1_dmmu_miss_patch_2:
+	.globl	tl1_dmmu_miss_patch_tsb_mask_2
+tl1_dmmu_miss_patch_tsb_2:
+	sethi	%uhi(TSB_KERNEL), %g6
+	or	%g6, %ulo(TSB_KERNEL), %g6
+	sllx	%g6, 32, %g6
+	sethi	%hi(TSB_KERNEL), %g7
+	or	%g7, %g6, %g7
+	.globl	tl1_dmmu_miss_patch_tsb_2
+tl1_dmmu_miss_patch_tsb_mask_2:
 	sethi	%hi(TSB_KERNEL_MASK), %g6
 	or	%g6, %lo(TSB_KERNEL_MASK), %g6
-	sethi	%hi(TSB_KERNEL), %g7
 
 	and	%g5, %g6, %g5
 	sllx	%g5, TTE_SHIFT, %g5
@@ -1503,7 +1552,10 @@ tl1_dmmu_miss_patch_2:
 	/*
 	 * Set the reference bit.
 	 */
-	TTE_SET_REF(%g5, %g6, %g7)
+	.globl	tl1_dmmu_miss_patch_asi_1
+tl1_dmmu_miss_patch_asi_1:
+	wr	%g0, TSB_ASI, %asi
+	TTE_SET_REF(%g5, %g6, %g7, a, %asi)
 
 	/*
 	 * May have become invalid during casxa, in which case start over.
@@ -1512,7 +1564,7 @@ tl1_dmmu_miss_patch_2:
 	 nop
 
 	/*
-	 * Load the tte data into the TLB and retry the instruction.
+	 * Load the TTE data into the TLB and retry the instruction.
 	 */
 	stxa	%g6, [%g0] ASI_DTLB_DATA_IN_REG
 1:	retry
@@ -1539,19 +1591,46 @@ END(tl1_dmmu_miss_trap)
 ENTRY(tl1_dmmu_miss_direct)
 	/*
 	 * Mask off the high bits of the virtual address to get the physical
-	 * address, and or in the tte bits.  The virtual address bits that
-	 * correspond to the tte valid and page size bits are left set, so
-	 * they don't have to be included in the tte bits below.  We know they
+	 * address, and or in the TTE bits.  The virtual address bits that
+	 * correspond to the TTE valid and page size bits are left set, so
+	 * they don't have to be included in the TTE bits below.  We know they
 	 * are set because the virtual address is in the upper va hole.
+	 * NB: if we are taking advantage of the ASI_ATOMIC_QUAD_LDD_PHYS
+	 * and we get a miss on the directly accessed kernel TSB we must not
+	 * set TD_CV in order to access it uniformly bypassing the D$.
 	 */
+	setx	TLB_DIRECT_ADDRESS_MASK, %g7, %g4
+	and	%g5, %g4, %g4
 	setx	TLB_DIRECT_TO_TTE_MASK, %g7, %g6
 	and	%g5, %g6, %g5
-	or	%g5, TD_CP | TD_CV | TD_W, %g5
+	.globl	tl1_dmmu_miss_direct_patch_tsb_phys_1
+tl1_dmmu_miss_direct_patch_tsb_phys_1:
+	sethi	%uhi(TSB_KERNEL_PHYS), %g3
+	or	%g3, %ulo(TSB_KERNEL_PHYS), %g3
+	sllx	%g3, 32, %g3
+	sethi	%hi(TSB_KERNEL_PHYS), %g3
+	or	%g7, %g3, %g7
+	cmp	%g4, %g7
+	bl,pt	%xcc, 1f
+	 or	%g5, TD_CP | TD_W, %g5
+	.globl	tl1_dmmu_miss_direct_patch_tsb_phys_end_1
+tl1_dmmu_miss_direct_patch_tsb_phys_end_1:
+	sethi	%uhi(TSB_KERNEL_PHYS_END), %g3
+	or	%g3, %ulo(TSB_KERNEL_PHYS_END), %g3
+	sllx	%g3, 32, %g3
+	sethi	%hi(TSB_KERNEL_PHYS_END), %g7
+	or	%g7, %g3, %g7
+	cmp	%g4, %g7
+	bg,a,pt	%xcc, 1f
+	 nop
+	ba,pt	%xcc, 2f
+	 nop
+1:	or	%g5, TD_CV, %g5
 
 	/*
-	 * Load the tte data into the TLB and retry the instruction.
+	 * Load the TTE data into the TLB and retry the instruction.
 	 */
-	stxa	%g5, [%g0] ASI_DTLB_DATA_IN_REG
+2:	stxa	%g5, [%g0] ASI_DTLB_DATA_IN_REG
 	retry
 END(tl1_dmmu_miss_direct)
 
@@ -1571,7 +1650,7 @@ ENTRY(tl1_dmmu_prot_1)
 
 	/*
 	 * Extract the context from the contents of the tag access register.
-	 * If its non-zero this is a fault on a user address.  Note that the
+	 * If it's non-zero this is a fault on a user address.  Note that the
 	 * faulting address is passed in %g1.
 	 */
 	sllx	%g5, 64 - TAR_VPN_SHIFT, %g6
@@ -1579,14 +1658,20 @@ ENTRY(tl1_dmmu_prot_1)
 	 mov	%g5, %g1
 
 	/*
-	 * Compute the address of the tte.  The tsb mask and address of the
-	 * tsb are patched at startup.
+	 * Compute the address of the TTE.  The TSB mask and address of the
+	 * TSB are patched at startup.
 	 */
-	.globl	tl1_dmmu_prot_patch_1
-tl1_dmmu_prot_patch_1:
+	.globl	tl1_dmmu_prot_patch_tsb_1
+tl1_dmmu_prot_patch_tsb_1:
+	sethi	%uhi(TSB_KERNEL), %g6
+	or	%g6, %ulo(TSB_KERNEL), %g6
+	sllx	%g6, 32, %g6
+	sethi	%hi(TSB_KERNEL), %g7
+	or	%g7, %g6, %g7
+	.globl	tl1_dmmu_prot_patch_tsb_mask_1
+tl1_dmmu_prot_patch_tsb_mask_1:
 	sethi	%hi(TSB_KERNEL_MASK), %g6
 	or	%g6, %lo(TSB_KERNEL_MASK), %g6
-	sethi	%hi(TSB_KERNEL), %g7
 
 	srlx	%g5, TAR_VPN_SHIFT, %g5
 	and	%g5, %g6, %g6
@@ -1594,12 +1679,14 @@ tl1_dmmu_prot_patch_1:
 	add	%g6, %g7, %g6
 
 	/*
-	 * Load the tte.
+	 * Load the TTE.
 	 */
-	ldda	[%g6] ASI_NUCLEUS_QUAD_LDD, %g6 /*, %g7 */
+	.globl	tl1_dmmu_prot_patch_quad_ldd_1
+tl1_dmmu_prot_patch_quad_ldd_1:
+	ldda	[%g6] TSB_QUAD_LDD, %g6 /*, %g7 */
 
 	/*
-	 * Check that its valid and writeable and that the virtual page
+	 * Check that it's valid and writeable and that the virtual page
 	 * numbers match.
 	 */
 	brgez,pn %g7, tl1_dmmu_prot_trap
@@ -1611,7 +1698,7 @@ tl1_dmmu_prot_patch_1:
 	 EMPTY
 
 	/*
-	 * Delete the old TLB entry and clear the sfsr.
+	 * Delete the old TLB entry and clear the SFSR.
 	 */
 	 sllx	%g5, TAR_VPN_SHIFT, %g6
 	or	%g6, TLB_DEMAP_NUCLEUS, %g6
@@ -1620,15 +1707,20 @@ tl1_dmmu_prot_patch_1:
 	membar	#Sync
 
 	/*
-	 * Recompute the tte address, which we clobbered loading the tte.  The
-	 * tsb mask and address of the tsb are patched at startup.
+	 * Recompute the TTE address, which we clobbered loading the TTE.
+	 * The TSB mask and address of the TSB are patched at startup.
 	 */
-	.globl	tl1_dmmu_prot_patch_2
-tl1_dmmu_prot_patch_2:
+	.globl	tl1_dmmu_prot_patch_tsb_2
+tl1_dmmu_prot_patch_tsb_2:
+	sethi	%uhi(TSB_KERNEL), %g6
+	or	%g6, %ulo(TSB_KERNEL), %g6
+	sllx	%g6, 32, %g6
+	sethi	%hi(TSB_KERNEL), %g7
+	or	%g7, %g6, %g7
+	.globl	tl1_dmmu_prot_patch_tsb_mask_2
+tl1_dmmu_prot_patch_tsb_mask_2:
 	sethi	%hi(TSB_KERNEL_MASK), %g6
 	or	%g6, %lo(TSB_KERNEL_MASK), %g6
-	sethi	%hi(TSB_KERNEL), %g7
-
 	and	%g5, %g6, %g5
 	sllx	%g5, TTE_SHIFT, %g5
 	add	%g5, %g7, %g5
@@ -1636,7 +1728,10 @@ tl1_dmmu_prot_patch_2:
 	/*
 	 * Set the hardware write bit.
 	 */
-	TTE_SET_W(%g5, %g6, %g7)
+	.globl	tl1_dmmu_prot_patch_asi_1
+tl1_dmmu_prot_patch_asi_1:
+	wr	%g0, TSB_ASI, %asi
+	TTE_SET_W(%g5, %g6, %g7, a, %asi)
 
 	/*
 	 * May have become invalid during casxa, in which case start over.
@@ -1645,7 +1740,7 @@ tl1_dmmu_prot_patch_2:
 	 or	%g6, TD_W, %g6
 
 	/*
-	 * Load the tte data into the TLB and retry the instruction.
+	 * Load the TTE data into the TLB and retry the instruction.
 	 */
 	stxa	%g6, [%g0] ASI_DTLB_DATA_IN_REG
 1:	retry
@@ -1658,7 +1753,7 @@ ENTRY(tl1_dmmu_prot_trap)
 	wrpr	%g0, PSTATE_ALT, %pstate
 
 	/*
-	 * Load the sfar, sfsr and tar.  Clear the sfsr.
+	 * Load the SFAR, SFSR and TAR.  Clear the SFSR.
 	 */
 	ldxa	[%g0 + AA_DMMU_TAR] %asi, %g2
 	ldxa	[%g0 + AA_DMMU_SFAR] %asi, %g3
@@ -1703,6 +1798,19 @@ END(tl1_dmmu_prot_trap)
 	.align	32
 	RSF_SPILL_TOPCB
 	RSF_SPILL_TOPCB
+	.endm
+
+	.macro	tl1_spill_7_n
+	btst	1, %sp
+	bnz,a,pn %xcc, tl1_spill_0_n
+	 nop
+	srl	%sp, 0, %sp
+	SPILL(stw, %sp, 4, EMPTY)
+	saved
+	retry
+	.align	32
+	RSF_FATAL(T_SPILL)
+	RSF_FATAL(T_SPILL)
 	.endm
 
 	.macro	tl1_spill_0_o
@@ -1757,6 +1865,19 @@ END(tl1_dmmu_prot_trap)
 	.align 32
 	RSF_FILL_MAGIC
 	RSF_FILL_MAGIC
+	.endm
+
+	.macro	tl1_fill_7_n
+	btst	1, %sp
+	bnz,a,pt %xcc, tl1_fill_0_n
+	 nop
+	srl	%sp, 0, %sp
+	FILL(lduw, %sp, 4, EMPTY)
+	restored
+	retry
+	.align	32
+	RSF_FATAL(T_FILL)
+	RSF_FATAL(T_FILL)
 	.endm
 
 /*
@@ -2005,8 +2126,10 @@ tl1_spill_0_n:
 tl1_spill_2_n:
 	tl1_spill_2_n					! 0x288
 tl1_spill_3_n:
-	tl1_spill_3_n					! 0x29c
-	tl1_spill_bad	4				! 0x290-0x29f
+	tl1_spill_3_n					! 0x28c
+	tl1_spill_bad	3				! 0x290-0x29b
+tl1_spill_7_n:
+	tl1_spill_7_n					! 0x29c
 tl1_spill_0_o:
 	tl1_spill_0_o					! 0x2a0
 tl1_spill_1_o:
@@ -2018,10 +2141,13 @@ tl1_fill_0_n:
 	tl1_fill_0_n					! 0x2c0
 	tl1_fill_bad	1				! 0x2c4
 tl1_fill_2_n:
-	tl1_fill_2_n					! 0x2d0
+	tl1_fill_2_n					! 0x2c8
 tl1_fill_3_n:
-	tl1_fill_3_n					! 0x2d4
-	tl1_fill_bad	12				! 0x2d8-0x2ff
+	tl1_fill_3_n					! 0x2cc
+	tl1_fill_bad	3				! 0x2d0-0x2db
+tl1_fill_7_n:
+	tl1_fill_7_n					! 0x2dc
+	tl1_fill_bad	8				! 0x2e0-0x2ff
 	tl1_reserved	1				! 0x300
 tl1_breakpoint:
 	tl1_gen		T_BREAKPOINT			! 0x301
@@ -2034,10 +2160,10 @@ tl_trap_end:
 	nop
 
 /*
- * User trap entry point.
+ * User trap entry point
  *
  * void tl0_utrap(u_long type, u_long o1, u_long o2, u_long tar, u_long sfar,
- *                u_long sfsr)
+ *     u_long sfsr)
  *
  * This handles redirecting a trap back to usermode as a user trap.  The user
  * program must have first registered a trap handler with the kernel using
@@ -2080,7 +2206,7 @@ ENTRY(tl0_utrap)
 	 * user traps, which implies that the condition that caused the trap
 	 * in the first place is still valid, so it will occur again when we
 	 * re-execute the trapping instruction.
-	 */	
+	 */
 	ldx	[PCB_REG + PCB_NSAVED], %l1
 	brnz,a,pn %l1, tl0_trap
 	 mov	T_SPILL, %o0
@@ -2138,10 +2264,10 @@ ENTRY(tl0_utrap)
 END(tl0_utrap)
 
 /*
- * (Real) User trap entry point.
+ * (Real) User trap entry point
  *
- * void tl0_trap(u_int type, u_long o1, u_long o2, u_long tar, u_long sfar,
- *		 u_int sfsr)
+ * void tl0_trap(u_int type, u_long o1, u_long o2, u_long tar, u_long sfsr,
+ *     u_int sfsr)
  *
  * The following setup has been performed:
  *	- the windows have been split and the active user window has been saved
@@ -2370,10 +2496,10 @@ END(tl0_intr)
 ENTRY(tl0_ret)
 	/*
 	 * Check for pending asts atomically with returning.  We must raise
-	 * the pil before checking, and if no asts are found the pil must
+	 * the PIL before checking, and if no asts are found the PIL must
 	 * remain raised until the retry is executed, or we risk missing asts
-	 * caused by interrupts occuring after the test.  If the pil is lowered,
-	 * as it is when we call ast, the check must be re-executed.
+	 * caused by interrupts occurring after the test.  If the PIL is
+	 * lowered, as it is when we call ast, the check must be re-executed.
 	 */
 	wrpr	%g0, PIL_TICK, %pil
 	ldx	[PCPU(CURTHREAD)], %l0
@@ -2384,7 +2510,7 @@ ENTRY(tl0_ret)
 	 nop
 
 	/*
-	 * We have an ast.  Re-enable interrupts and handle it, then restart
+	 * We have an AST.  Re-enable interrupts and handle it, then restart
 	 * the return sequence.
 	 */
 	wrpr	%g0, 0, %pil
@@ -2501,9 +2627,9 @@ ENTRY(tl0_ret)
 	andn	%l4, TSTATE_CWP_MASK, %g2
 
 	/*
-	 * Restore %y.  Could also be below if we had more alternate globals.
+	 * Save %y in an alternate global.
 	 */
-	wr	%l5, 0, %y
+	mov	%l5, %g4
 
 	/*
 	 * Setup %wstate for return.  We need to restore the user window state
@@ -2548,8 +2674,8 @@ tl0_ret_fill:
 	 * Fixup %tstate so the saved %cwp points to the current window and
 	 * restore it.
 	 */
-	rdpr	%cwp, %g4
-	wrpr	%g2, %g4, %tstate
+	rdpr	%cwp, %g1
+	wrpr	%g2, %g1, %tstate
 
 	/*
 	 * Restore the user window state.  The transition bit was set above
@@ -2559,18 +2685,23 @@ tl0_ret_fill:
 
 #if KTR_COMPILE & KTR_TRAP
 	CATR(KTR_TRAP, "tl0_ret: td=%#lx pil=%#lx pc=%#lx npc=%#lx sp=%#lx"
-	    , %g2, %g3, %g4, 7, 8, 9)
-	ldx	[PCPU(CURTHREAD)], %g3
-	stx	%g3, [%g2 + KTR_PARM1]
-	rdpr	%pil, %g3
-	stx	%g3, [%g2 + KTR_PARM2]
-	rdpr	%tpc, %g3
-	stx	%g3, [%g2 + KTR_PARM3]
-	rdpr	%tnpc, %g3
-	stx	%g3, [%g2 + KTR_PARM4]
-	stx	%sp, [%g2 + KTR_PARM5]
+	    , %g1, %g2, %g3, 7, 8, 9)
+	ldx	[PCPU(CURTHREAD)], %g2
+	stx	%g2, [%g1 + KTR_PARM1]
+	rdpr	%pil, %g2
+	stx	%g2, [%g1 + KTR_PARM2]
+	rdpr	%tpc, %g2
+	stx	%g2, [%g1 + KTR_PARM3]
+	rdpr	%tnpc, %g2
+	stx	%g2, [%g1 + KTR_PARM4]
+	stx	%sp, [%g1 + KTR_PARM5]
 9:
 #endif
+
+	/*
+	 * Restore %y.  Note that the CATR above clobbered it.
+	 */
+	wr	%g4, 0, %y
 
 	/*
 	 * Return to usermode.
@@ -2583,9 +2714,14 @@ tl0_ret_fill_end:
 	    , %l0, %l1, %l2, 7, 8, 9)
 	rdpr	%pstate, %l1
 	stx	%l1, [%l0 + KTR_PARM1]
-	stx	%l5, [%l0 + KTR_PARM2]
+	stx	%l6, [%l0 + KTR_PARM2]
 	stx	%sp, [%l0 + KTR_PARM3]
 9:
+
+	/*
+	 * Restore %y clobbered by the CATR.  This was saved in %l5 above.
+	 */
+	wr	%l5, 0, %y
 #endif
 
 	/*
@@ -2638,7 +2774,7 @@ END(tl0_ret)
  * Kernel trap entry point
  *
  * void tl1_trap(u_int type, u_long o1, u_long o2, u_long tar, u_long sfar,
- *		 u_int sfsr)
+ *     u_int sfsr)
  *
  * This is easy because the stack is already setup and the windows don't need
  * to be split.  We build a trapframe and call trap(), the same as above, but
@@ -2738,6 +2874,10 @@ ENTRY(tl1_ret)
 	cmp	%l1, %l5
 	bl,a,pt	%xcc, 1f
 	 nop
+	set	VM_MAX_PROM_ADDRESS, %l5
+	cmp	%l1, %l5
+	bg,a,pt	%xcc, 1f
+	 nop
 
 	wrpr	%g0, PSTATE_NORMAL, %pstate
 
@@ -2749,33 +2889,35 @@ ENTRY(tl1_ret)
 	andn	%l0, TSTATE_CWP_MASK, %g1
 	mov	%l1, %g2
 	mov	%l2, %g3
+	mov	%l4, %g4
 
 	wrpr	%l3, 0, %pil
-	wr	%l4, 0, %y
 
 	restore
 
 	wrpr	%g0, 2, %tl
 
-	rdpr	%cwp, %g4
-	wrpr	%g1, %g4, %tstate
 	wrpr	%g2, 0, %tpc
 	wrpr	%g3, 0, %tnpc
+	rdpr	%cwp, %g2
+	wrpr	%g1, %g2, %tstate
 
 #if KTR_COMPILE & KTR_TRAP
 	CATR(KTR_TRAP, "tl1_ret: td=%#lx pil=%#lx ts=%#lx pc=%#lx sp=%#lx"
-	    , %g2, %g3, %g4, 7, 8, 9)
-	ldx	[PCPU(CURTHREAD)], %g3
-	stx	%g3, [%g2 + KTR_PARM1]
-	rdpr	%pil, %g3
-	stx	%g3, [%g2 + KTR_PARM2]
-	rdpr	%tstate, %g3
-	stx	%g3, [%g2 + KTR_PARM3]
-	rdpr	%tpc, %g3
-	stx	%g3, [%g2 + KTR_PARM4]
-	stx	%sp, [%g2 + KTR_PARM5]
+	    , %g1, %g2, %g3, 7, 8, 9)
+	ldx	[PCPU(CURTHREAD)], %g2
+	stx	%g2, [%g1 + KTR_PARM1]
+	rdpr	%pil, %g2
+	stx	%g2, [%g1 + KTR_PARM2]
+	rdpr	%tstate, %g2
+	stx	%g2, [%g1 + KTR_PARM3]
+	rdpr	%tpc, %g2
+	stx	%g2, [%g1 + KTR_PARM4]
+	stx	%sp, [%g1 + KTR_PARM5]
 9:
 #endif
+
+	wr	%g4, 0, %y
 
 	retry
 END(tl1_ret)
@@ -2877,32 +3019,34 @@ ENTRY(tl1_intr)
 	andn	%l0, TSTATE_CWP_MASK, %g1
 	mov	%l1, %g2
 	mov	%l2, %g3
+	mov	%l4, %g4
 	wrpr	%l3, 0, %pil
-	wr	%l4, 0, %y
 
 	restore
 
 	wrpr	%g0, 2, %tl
 
-	rdpr	%cwp, %g4
-	wrpr	%g1, %g4, %tstate
 	wrpr	%g2, 0, %tpc
 	wrpr	%g3, 0, %tnpc
+	rdpr	%cwp, %g2
+	wrpr	%g1, %g2, %tstate
 
 #if KTR_COMPILE & KTR_INTR
 	CATR(KTR_INTR, "tl1_intr: td=%#x pil=%#lx ts=%#lx pc=%#lx sp=%#lx"
-	    , %g2, %g3, %g4, 7, 8, 9)
-	ldx	[PCPU(CURTHREAD)], %g3
-	stx	%g3, [%g2 + KTR_PARM1]
-	rdpr	%pil, %g3
-	stx	%g3, [%g2 + KTR_PARM2]
-	rdpr	%tstate, %g3
-	stx	%g3, [%g2 + KTR_PARM3]
-	rdpr	%tpc, %g3
-	stx	%g3, [%g2 + KTR_PARM4]
-	stx	%sp, [%g2 + KTR_PARM5]
+	    , %g1, %g2, %g3, 7, 8, 9)
+	ldx	[PCPU(CURTHREAD)], %g2
+	stx	%g2, [%g1 + KTR_PARM1]
+	rdpr	%pil, %g2
+	stx	%g2, [%g1 + KTR_PARM2]
+	rdpr	%tstate, %g2
+	stx	%g2, [%g1 + KTR_PARM3]
+	rdpr	%tpc, %g2
+	stx	%g2, [%g1 + KTR_PARM4]
+	stx	%sp, [%g1 + KTR_PARM5]
 9:
 #endif
+
+	wr	%g4, 0, %y
 
 	retry
 END(tl1_intr)

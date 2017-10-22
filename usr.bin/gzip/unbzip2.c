@@ -1,4 +1,4 @@
-/*	$NetBSD: unbzip2.c,v 1.10 2006/10/03 08:20:03 simonb Exp $	*/
+/*	$NetBSD: unbzip2.c,v 1.13 2009/12/05 03:23:37 mrg Exp $	*/
 
 /*-
  * Copyright (c) 2006 The NetBSD Foundation, Inc.
@@ -15,13 +15,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -35,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.bin/gzip/unbzip2.c 166255 2007-01-26 10:19:08Z delphij $
+ * $FreeBSD$
  */
 
 /* This file is #included by gzip.c */
@@ -43,7 +36,7 @@
 static off_t
 unbzip2(int in, int out, char *pre, size_t prelen, off_t *bytes_in)
 {
-	int		ret, end_of_file;
+	int		ret, end_of_file, cold = 0;
 	off_t		bytes_out = 0;
 	bz_stream	bzs;
 	static char	*inbuf, *outbuf;
@@ -71,7 +64,7 @@ unbzip2(int in, int out, char *pre, size_t prelen, off_t *bytes_in)
 	if (bytes_in)
 		*bytes_in = prelen;
 
-	while (ret >= BZ_OK && ret != BZ_STREAM_END) {
+	while (ret == BZ_OK) {
 	        if (bzs.avail_in == 0 && !end_of_file) {
 			ssize_t	n;
 
@@ -93,9 +86,19 @@ unbzip2(int in, int out, char *pre, size_t prelen, off_t *bytes_in)
 	        switch (ret) {
 	        case BZ_STREAM_END:
 	        case BZ_OK:
-	                if (ret == BZ_OK && end_of_file)
-	                        maybe_err("read");
-	                if (!tflag) {
+	                if (ret == BZ_OK && end_of_file) {
+				/*
+				 * If we hit this after a stream end, consider
+				 * it as the end of the whole file and don't
+				 * bail out.
+				 */
+				if (cold == 1)
+					ret = BZ_STREAM_END;
+				else
+					maybe_errx("truncated file");
+			}
+			cold = 0;
+	                if (!tflag && bzs.avail_out != BUFLEN) {
 				ssize_t	n;
 
 	                        n = write(out, outbuf, BUFLEN - bzs.avail_out);
@@ -103,7 +106,14 @@ unbzip2(int in, int out, char *pre, size_t prelen, off_t *bytes_in)
 	                                maybe_err("write");
 	                	bytes_out += n;
 	                }
-	                break;
+			if (ret == BZ_STREAM_END && !end_of_file) {
+				if (BZ2_bzDecompressEnd(&bzs) != BZ_OK ||
+				    BZ2_bzDecompressInit(&bzs, 0, 0) != BZ_OK)
+					maybe_errx("bzip2 re-init");
+				cold = 1;
+				ret = BZ_OK;
+			}
+			break;
 
 	        case BZ_DATA_ERROR:
 	                maybe_warnx("bzip2 data integrity error");
@@ -116,7 +126,10 @@ unbzip2(int in, int out, char *pre, size_t prelen, off_t *bytes_in)
 	        case BZ_MEM_ERROR:
 	                maybe_warnx("bzip2 out of memory");
 			break;
-
+		
+		default:	
+			maybe_warnx("unknown bzip2 error: %d", ret);
+			break;
 	        }
 	}
 

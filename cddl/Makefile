@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/cddl/Makefile 168792 2007-04-16 21:20:26Z ru $
+# $FreeBSD$
 
 SUBDIR=	lib sbin usr.bin usr.sbin
 

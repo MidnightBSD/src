@@ -21,7 +21,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/snapinfo/snapinfo.c 167633 2007-03-16 12:36:54Z pjd $
+ * $FreeBSD$
  *
  */
 
@@ -140,7 +140,7 @@ find_snapshot(struct statfs *sfs)
 
 int
 compare_function(const char *path, const struct stat *st, int flags,
-struct FTW * ftwv)
+    struct FTW * ftwv __unused)
 {
 
 	if (flags == FTW_F && st->st_ino == inode) {

@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: release/7.0.0/sys/dev/led/led.h 168974 2007-04-23 12:42:15Z phk $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_LED_H
@@ -17,5 +17,7 @@ typedef	void led_t(void *, int);
 struct cdev *led_create_state(led_t *, void *, char const *, int);
 struct cdev *led_create(led_t *, void *, char const *);
 void	led_destroy(struct cdev *);
+
+int	led_set(char const *, char const *);
 
 #endif

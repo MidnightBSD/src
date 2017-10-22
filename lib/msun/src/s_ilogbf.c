@@ -13,9 +13,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: release/7.0.0/lib/msun/src/s_ilogbf.c 136332 2004-10-09 17:14:28Z stefanf $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <limits.h>
 

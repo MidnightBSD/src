@@ -57,20 +57,24 @@
  *	from: @(#)isa.c	7.2 (Berkeley) 5/13/91
  *	form: src/sys/i386/isa/intr_machdep.c,v 1.57 2001/07/20
  *
- * $FreeBSD: release/7.0.0/sys/powerpc/powerpc/intr_machdep.c 173943 2007-11-26 16:14:45Z scottl $
+ * $FreeBSD$
  */
+
+#include "opt_isa.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/queue.h>
 #include <sys/bus.h>
+#include <sys/cpuset.h>
 #include <sys/interrupt.h>
 #include <sys/ktr.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/pcpu.h>
+#include <sys/smp.h>
 #include <sys/syslog.h>
 #include <sys/vmmeter.h>
 #include <sys/proc.h>
@@ -78,6 +82,7 @@
 #include <machine/frame.h>
 #include <machine/intr_machdep.h>
 #include <machine/md_var.h>
+#include <machine/smp.h>
 #include <machine/trap.h>
 
 #include "pic_if.h"
@@ -90,134 +95,390 @@ struct powerpc_intr {
 	struct intr_event *event;
 	long	*cntp;
 	u_int	irq;
+	device_t pic;
+	u_int	intline;
+	u_int	vector;
+	u_int	cntindex;
+	cpuset_t cpu;
+	enum intr_trigger trig;
+	enum intr_polarity pol;
 };
 
+struct pic {
+	device_t dev;
+	uint32_t node;
+	u_int	irqs;
+	u_int	ipis;
+	int	base;
+};
+
+static u_int intrcnt_index = 0;
+static struct mtx intr_table_lock;
 static struct powerpc_intr *powerpc_intrs[INTR_VECTORS];
+static struct pic piclist[MAX_PICS];
 static u_int nvectors;		/* Allocated vectors */
+static u_int npics;		/* PICs registered */
+#ifdef DEV_ISA
+static u_int nirqs = 16;	/* Allocated IRQS (ISA pre-allocated). */
+#else
+static u_int nirqs = 0;		/* Allocated IRQs. */
+#endif
 static u_int stray_count;
 
-device_t pic;
+device_t root_pic;
 
-static void
-intrcnt_setname(const char *name, int index)
-{
-	snprintf(intrnames + (MAXCOMLEN + 1) * index, MAXCOMLEN + 1, "%-*s",
-	    MAXCOMLEN, name);
-}
-
-#ifdef INTR_FILTER
-static void
-powerpc_intr_eoi(void *arg)
-{
-	u_int irq = (uintptr_t)arg;
-
-	PIC_EOI(pic, irq);
-}
-
-static void
-powerpc_intr_mask(void *arg)
-{
-	u_int irq = (uintptr_t)arg;
-
-	PIC_MASK(pic, irq);
-}
+#ifdef SMP
+static void *ipi_cookie;
 #endif
 
 static void
-powerpc_intr_unmask(void *arg)
-{
-	u_int irq = (uintptr_t)arg;
-
-	PIC_UNMASK(pic, irq);
-}
-
-void
-powerpc_register_pic(device_t dev)
+intr_init(void *dummy __unused)
 {
 
-	pic = dev;
+	mtx_init(&intr_table_lock, "intr sources lock", NULL, MTX_DEF);
 }
+SYSINIT(intr_init, SI_SUB_INTR, SI_ORDER_FIRST, intr_init, NULL);
 
-int
-powerpc_enable_intr(void)
+#ifdef SMP
+static void
+smp_intr_init(void *dummy __unused)
 {
 	struct powerpc_intr *i;
 	int vector;
 
 	for (vector = 0; vector < nvectors; vector++) {
 		i = powerpc_intrs[vector];
+		if (i != NULL && i->pic == root_pic)
+			PIC_BIND(i->pic, i->intline, i->cpu);
+	}
+}
+SYSINIT(smp_intr_init, SI_SUB_SMP, SI_ORDER_ANY, smp_intr_init, NULL);
+#endif
+
+static void
+intrcnt_setname(const char *name, int index)
+{
+
+	snprintf(intrnames + (MAXCOMLEN + 1) * index, MAXCOMLEN + 1, "%-*s",
+	    MAXCOMLEN, name);
+}
+
+void
+intrcnt_add(const char *name, u_long **countp)
+{
+	int idx;
+
+	idx = atomic_fetchadd_int(&intrcnt_index, 1);
+	*countp = &intrcnt[idx];
+	intrcnt_setname(name, idx);
+}
+
+static struct powerpc_intr *
+intr_lookup(u_int irq)
+{
+	char intrname[8];
+	struct powerpc_intr *i, *iscan;
+	int vector;
+
+	mtx_lock(&intr_table_lock);
+	for (vector = 0; vector < nvectors; vector++) {
+		i = powerpc_intrs[vector];
+		if (i != NULL && i->irq == irq) {
+			mtx_unlock(&intr_table_lock);
+			return (i);
+		}
+	}
+
+	i = malloc(sizeof(*i), M_INTR, M_NOWAIT);
+	if (i == NULL) {
+		mtx_unlock(&intr_table_lock);
+		return (NULL);
+	}
+
+	i->event = NULL;
+	i->cntp = NULL;
+	i->trig = INTR_TRIGGER_CONFORM;
+	i->pol = INTR_POLARITY_CONFORM;
+	i->irq = irq;
+	i->pic = NULL;
+	i->vector = -1;
+
+#ifdef SMP
+	i->cpu = all_cpus;
+#else
+	CPU_SETOF(0, &i->cpu);
+#endif
+
+	for (vector = 0; vector < INTR_VECTORS && vector <= nvectors;
+	    vector++) {
+		iscan = powerpc_intrs[vector];
+		if (iscan != NULL && iscan->irq == irq)
+			break;
+		if (iscan == NULL && i->vector == -1)
+			i->vector = vector;
+		iscan = NULL;
+	}
+
+	if (iscan == NULL && i->vector != -1) {
+		powerpc_intrs[i->vector] = i;
+		i->cntindex = atomic_fetchadd_int(&intrcnt_index, 1);
+		i->cntp = &intrcnt[i->cntindex];
+		sprintf(intrname, "irq%u:", i->irq);
+		intrcnt_setname(intrname, i->cntindex);
+		nvectors++;
+	}
+	mtx_unlock(&intr_table_lock);
+
+	if (iscan != NULL || i->vector == -1) {
+		free(i, M_INTR);
+		i = iscan;
+	}
+
+	return (i);
+}
+
+static int
+powerpc_map_irq(struct powerpc_intr *i)
+{
+	struct pic *p;
+	u_int cnt;
+	int idx;
+
+	for (idx = 0; idx < npics; idx++) {
+		p = &piclist[idx];
+		cnt = p->irqs + p->ipis;
+		if (i->irq >= p->base && i->irq < p->base + cnt)
+			break;
+	}
+	if (idx == npics)
+		return (EINVAL);
+
+	i->intline = i->irq - p->base;
+	i->pic = p->dev;
+
+	/* Try a best guess if that failed */
+	if (i->pic == NULL)
+		i->pic = root_pic;
+
+	return (0);
+}
+
+static void
+powerpc_intr_eoi(void *arg)
+{
+	struct powerpc_intr *i = arg;
+
+	PIC_EOI(i->pic, i->intline);
+}
+
+static void
+powerpc_intr_pre_ithread(void *arg)
+{
+	struct powerpc_intr *i = arg;
+
+	PIC_MASK(i->pic, i->intline);
+	PIC_EOI(i->pic, i->intline);
+}
+
+static void
+powerpc_intr_post_ithread(void *arg)
+{
+	struct powerpc_intr *i = arg;
+
+	PIC_UNMASK(i->pic, i->intline);
+}
+
+static int
+powerpc_assign_intr_cpu(void *arg, u_char cpu)
+{
+#ifdef SMP
+	struct powerpc_intr *i = arg;
+
+	if (cpu == NOCPU)
+		i->cpu = all_cpus;
+	else
+		CPU_SETOF(cpu, &i->cpu);
+
+	if (!cold && i->pic != NULL && i->pic == root_pic)
+		PIC_BIND(i->pic, i->intline, i->cpu);
+
+	return (0);
+#else
+	return (EOPNOTSUPP);
+#endif
+}
+
+void
+powerpc_register_pic(device_t dev, uint32_t node, u_int irqs, u_int ipis,
+    u_int atpic)
+{
+	struct pic *p;
+	u_int irq;
+	int idx;
+
+	mtx_lock(&intr_table_lock);
+
+	/* XXX see powerpc_get_irq(). */
+	for (idx = 0; idx < npics; idx++) {
+		p = &piclist[idx];
+		if (p->node != node)
+			continue;
+		if (node != 0 || p->dev == dev)
+			break;
+	}
+	p = &piclist[idx];
+
+	p->dev = dev;
+	p->node = node;
+	p->irqs = irqs;
+	p->ipis = ipis;
+	if (idx == npics) {
+#ifdef DEV_ISA
+		p->base = (atpic) ? 0 : nirqs;
+#else
+		p->base = nirqs;
+#endif
+		irq = p->base + irqs + ipis;
+		nirqs = MAX(nirqs, irq);
+		npics++;
+	}
+
+	mtx_unlock(&intr_table_lock);
+}
+
+u_int
+powerpc_get_irq(uint32_t node, u_int pin)
+{
+	int idx;
+
+	if (node == 0)
+		return (pin);
+
+	mtx_lock(&intr_table_lock);
+	for (idx = 0; idx < npics; idx++) {
+		if (piclist[idx].node == node) {
+			mtx_unlock(&intr_table_lock);
+			return (piclist[idx].base + pin);
+		}
+	}
+
+	/*
+	 * XXX we should never encounter an unregistered PIC, but that
+	 * can only be done when we properly support bus enumeration
+	 * using multiple passes. Until then, fake an entry and give it
+	 * some adhoc maximum number of IRQs and IPIs.
+	 */
+	piclist[idx].dev = NULL;
+	piclist[idx].node = node;
+	piclist[idx].irqs = 124;
+	piclist[idx].ipis = 4;
+	piclist[idx].base = nirqs;
+	nirqs += 128;
+	npics++;
+
+	mtx_unlock(&intr_table_lock);
+
+	return (piclist[idx].base + pin);
+}
+
+int
+powerpc_enable_intr(void)
+{
+	struct powerpc_intr *i;
+	int error, vector;
+#ifdef SMP
+	int n;
+#endif
+
+	if (npics == 0)
+		panic("no PIC detected\n");
+
+	if (root_pic == NULL)
+		root_pic = piclist[0].dev;
+
+#ifdef SMP
+	/* Install an IPI handler. */
+	if (mp_ncpus > 1) {
+		for (n = 0; n < npics; n++) {
+			if (piclist[n].dev != root_pic)
+				continue;
+
+			KASSERT(piclist[n].ipis != 0,
+			    ("%s: SMP root PIC does not supply any IPIs",
+			    __func__));
+			error = powerpc_setup_intr("IPI",
+			    MAP_IRQ(piclist[n].node, piclist[n].irqs),
+			    powerpc_ipi_handler, NULL, NULL,
+			    INTR_TYPE_MISC | INTR_EXCL, &ipi_cookie);
+			if (error) {
+				printf("unable to setup IPI handler\n");
+				return (error);
+			}
+		}
+	}
+#endif
+
+	for (vector = 0; vector < nvectors; vector++) {
+		i = powerpc_intrs[vector];
 		if (i == NULL)
 			continue;
 
-		PIC_ENABLE(pic, i->irq, vector);
+		error = powerpc_map_irq(i);
+		if (error)
+			continue;
+
+		if (i->trig != INTR_TRIGGER_CONFORM ||
+		    i->pol != INTR_POLARITY_CONFORM)
+			PIC_CONFIG(i->pic, i->intline, i->trig, i->pol);
+
+		if (i->event != NULL)
+			PIC_ENABLE(i->pic, i->intline, vector);
 	}
 
 	return (0);
 }
 
 int
-powerpc_setup_intr(const char *name, u_int irq, driver_filter_t filter, 
+powerpc_setup_intr(const char *name, u_int irq, driver_filter_t filter,
     driver_intr_t handler, void *arg, enum intr_type flags, void **cookiep)
 {
 	struct powerpc_intr *i;
-	u_int vector;
-	int error;
+	int error, enable = 0;
 
-	/* XXX lock */
+	i = intr_lookup(irq);
+	if (i == NULL)
+		return (ENOMEM);
 
-	i = NULL;
-	for (vector = 0; vector < nvectors; vector++) {
-		i = powerpc_intrs[vector];
-		if (i == NULL)
-			continue;
-		if (i->irq == irq)
-			break;
-		i = NULL;
-	}
-
-	if (i == NULL) {
-		if (nvectors >= INTR_VECTORS) {
-			/* XXX unlock */
-			return (ENOENT);
-		}
-
-		i = malloc(sizeof(*i), M_INTR, M_NOWAIT);
-		if (i == NULL) {
-			/* XXX unlock */
-			return (ENOMEM);
-		}
-		error = intr_event_create(&i->event, (void *)irq, 0,
-		    powerpc_intr_unmask,
-#ifdef INTR_FILTER
-		    powerpc_intr_eoi, powerpc_intr_mask,
-#endif
-		    "irq%u:", irq);
-		if (error) {
-			/* XXX unlock */
-			free(i, M_INTR);
+	if (i->event == NULL) {
+		error = intr_event_create(&i->event, (void *)i, 0, irq,
+		    powerpc_intr_pre_ithread, powerpc_intr_post_ithread,
+		    powerpc_intr_eoi, powerpc_assign_intr_cpu, "irq%u:", irq);
+		if (error)
 			return (error);
-		}
 
-		vector = nvectors++;
-		powerpc_intrs[vector] = i;
-
-		i->irq = irq;
-
-		/* XXX unlock */
-
-		i->cntp = &intrcnt[vector];
-		intrcnt_setname(i->event->ie_fullname, vector);
-
-		if (!cold)
-			PIC_ENABLE(pic, i->irq, vector);
-	} else {
-		/* XXX unlock */
+		enable = 1;
 	}
 
 	error = intr_event_add_handler(i->event, name, filter, handler, arg,
 	    intr_priority(flags), flags, cookiep);
-	if (!error)
-		intrcnt_setname(i->event->ie_fullname, vector);
+
+	mtx_lock(&intr_table_lock);
+	intrcnt_setname(i->event->ie_fullname, i->cntindex);
+	mtx_unlock(&intr_table_lock);
+
+	if (!cold) {
+		error = powerpc_map_irq(i);
+
+		if (!error && (i->trig != INTR_TRIGGER_CONFORM ||
+		    i->pol != INTR_POLARITY_CONFORM))
+			PIC_CONFIG(i->pic, i->intline, i->trig, i->pol);
+
+		if (!error && i->pic == root_pic)
+			PIC_BIND(i->pic, i->intline, i->cpu);
+
+		if (!error && enable)
+			PIC_ENABLE(i->pic, i->intline, i->vector);
+	}
 	return (error);
 }
 
@@ -228,15 +489,43 @@ powerpc_teardown_intr(void *cookie)
 	return (intr_event_remove_handler(cookie));
 }
 
+#ifdef SMP
+int
+powerpc_bind_intr(u_int irq, u_char cpu)
+{
+	struct powerpc_intr *i;
+
+	i = intr_lookup(irq);
+	if (i == NULL)
+		return (ENOMEM);
+
+	return (intr_event_bind(i->event, cpu));
+}
+#endif
+
+int
+powerpc_config_intr(int irq, enum intr_trigger trig, enum intr_polarity pol)
+{
+	struct powerpc_intr *i;
+
+	i = intr_lookup(irq);
+	if (i == NULL)
+		return (ENOMEM);
+
+	i->trig = trig;
+	i->pol = pol;
+
+	if (!cold && i->pic != NULL)
+		PIC_CONFIG(i->pic, i->intline, trig, pol);
+
+	return (0);
+}
+
 void
 powerpc_dispatch_intr(u_int vector, struct trapframe *tf)
 {
 	struct powerpc_intr *i;
 	struct intr_event *ie;
-#ifndef INTR_FILTER
-	struct intr_handler *ih;
-	int error, sched, ret;
-#endif
 
 	i = powerpc_intrs[vector];
 	if (i == NULL)
@@ -247,60 +536,20 @@ powerpc_dispatch_intr(u_int vector, struct trapframe *tf)
 	ie = i->event;
 	KASSERT(ie != NULL, ("%s: interrupt without an event", __func__));
 
-#ifdef INTR_FILTER
 	if (intr_event_handle(ie, tf) != 0) {
-		PIC_MASK(pic, i->irq);
-		log(LOG_ERR, "stray irq%u\n", i->irq);
-	}
-#else
-	if (TAILQ_EMPTY(&ie->ie_handlers))
 		goto stray;
-
-	/*
-	 * Execute all fast interrupt handlers directly without Giant.  Note
-	 * that this means that any fast interrupt handler must be MP safe.
-	 */
-	ret = 0;
-	sched = 0;
-	critical_enter();
-	TAILQ_FOREACH(ih, &ie->ie_handlers, ih_next) {
-		if (ih->ih_filter == NULL) {
-			sched = 1;
-			continue;
-		}
-		CTR4(KTR_INTR, "%s: exec %p(%p) for %s", __func__,
-		    ih->ih_filter, ih->ih_argument, ih->ih_name);
-		ret = ih->ih_filter(ih->ih_argument);
-		/*
-		 * Wrapper handler special case: see
-		 * i386/intr_machdep.c::intr_execute_handlers()
-		 */
-		if (!sched) {
-			if (ret == FILTER_SCHEDULE_THREAD)
-				sched = 1;
-		}
 	}
-
-	if (sched) {
-		PIC_MASK(pic, i->irq);
-		error = intr_event_schedule_thread(ie);
-		KASSERT(error == 0, ("%s: impossible stray interrupt",
-		    __func__));
-	} else
-		PIC_EOI(pic, i->irq);
-	critical_exit();
-#endif
 	return;
 
 stray:
 	stray_count++;
 	if (stray_count <= MAX_STRAY_LOG) {
-		printf("stray irq %d\n", i->irq);
+		printf("stray irq %d\n", i ? i->irq : -1);
 		if (stray_count >= MAX_STRAY_LOG) {
 			printf("got %d stray interrupts, not logging anymore\n",
 			    MAX_STRAY_LOG);
 		}
 	}
 	if (i != NULL)
-		PIC_MASK(pic, i->irq);
+		PIC_MASK(i->pic, i->intline);
 }

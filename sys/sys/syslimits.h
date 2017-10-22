@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)syslimits.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: release/7.0.0/sys/sys/syslimits.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_SYSLIMITS_H_
@@ -54,7 +54,9 @@
 #define	MAX_CANON		  255	/* max bytes in term canon input line */
 #define	MAX_INPUT		  255	/* max bytes in terminal input */
 #define	NAME_MAX		  255	/* max bytes in a file name */
-#define	NGROUPS_MAX		   16	/* max supplemental group id's */
+#ifndef NGROUPS_MAX
+#define	NGROUPS_MAX	 	 1023	/* max supplemental group id's */
+#endif
 #ifndef OPEN_MAX
 #define	OPEN_MAX		   64	/* max open files per process */
 #endif

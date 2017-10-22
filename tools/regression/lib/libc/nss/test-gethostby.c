@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/tools/regression/lib/libc/nss/test-gethostby.c 171016 2007-06-24 06:14:18Z bushman $");
+__FBSDID("$FreeBSD$");
 
 #include <arpa/inet.h>
 #include <sys/socket.h>

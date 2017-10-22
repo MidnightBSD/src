@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/geom/zero/g_zero.c 155174 2006-02-01 12:06:01Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -104,7 +104,7 @@ g_zero_destroy_geom(struct gctl_req *req __unused, struct g_class *mp __unused,
 	if (pp->acr > 0 || pp->acw > 0 || pp->ace > 0)
 		return (EBUSY);
 	g_wither_geom(gp, ENXIO);
-	return (EBUSY);
+	return (0);
 }
 
 static struct g_class g_zero_class = {

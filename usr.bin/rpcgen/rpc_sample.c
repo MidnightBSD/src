@@ -30,7 +30,7 @@
 /* #pragma ident	"@(#)rpc_sample.c	1.9	94/04/25 SMI" */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/rpcgen/rpc_sample.c 152398 2005-11-13 21:17:24Z dwmalone $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpc_sample.c, Sample client-server code outputter for the RPC protocol compiler

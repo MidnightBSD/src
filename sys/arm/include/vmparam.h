@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/arm/include/vmparam.h 172317 2007-09-25 06:25:06Z alc $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_VMPARAM_H_
@@ -85,11 +85,32 @@
  */
 #define	VM_NFREEORDER		9
 
+/*
+ * Only one memory domain.
+ */
+#ifndef VM_NDOMAIN
+#define	VM_NDOMAIN		1
+#endif
+
+/*
+ * Disable superpage reservations.
+ */
+#ifndef	VM_NRESERVLEVEL
+#define	VM_NRESERVLEVEL		0
+#endif
+
 #define UPT_MAX_ADDRESS		VADDR(UPTPTDI + 3, 0)
 #define UPT_MIN_ADDRESS		VADDR(UPTPTDI, 0)
 
 #define VM_MIN_ADDRESS          (0x00001000)
 #ifdef ARM_USE_SMALL_ALLOC
+/* 
+ * ARM_KERN_DIRECTMAP is used to make sure there's enough space between
+ * VM_MAXUSER_ADDRESS and KERNBASE to map the whole memory.
+ * It has to be a compile-time constant, even if arm_init_smallalloc(),
+ * which will do the mapping, gets the real amount of memory at runtime,
+ * because VM_MAXUSER_ADDRESS is a constant.
+ */
 #ifndef ARM_KERN_DIRECTMAP
 #define ARM_KERN_DIRECTMAP 512 * 1024 * 1024 /* 512 MB */
 #endif
@@ -125,11 +146,11 @@
 #define DFLSSIZ         (2*1024*1024)
 #define MAXSSIZ         (8*1024*1024)
 #define SGROWSIZ        (128*1024)
-#define MAXSLP		20
-
-#define VM_PROT_READ_IS_EXEC
 
 #ifdef ARM_USE_SMALL_ALLOC
 #define UMA_MD_SMALL_ALLOC
 #endif /* ARM_USE_SMALL_ALLOC */
+
+#define	ZERO_REGION_SIZE	(64 * 1024)	/* 64KB */
+
 #endif	/* _MACHINE_VMPARAM_H_ */

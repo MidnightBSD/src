@@ -1,9 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/initrandom 169924 2007-05-24 05:58:20Z rse $
+# $FreeBSD$
 #
 
 # PROVIDE: initrandom
+# REQUIRE: dumpon ddb
 # BEFORE: disks
 # KEYWORD: nojail
 
@@ -28,24 +29,26 @@ initrandom_start()
 
 	if [ \! -z "${soft_random_generator}" ] ; then
 
-		if checkyesno harvest_interrupt; then
-			if [ -w /dev/random ]; then
-				${SYSCTL_W} kern.random.sys.harvest.interrupt=1 >/dev/null
+		if [ -w /dev/random ]; then
+			if checkyesno harvest_interrupt; then
+				${SYSCTL} kern.random.sys.harvest.interrupt=1 >/dev/null
 				echo -n ' interrupts'
+			else
+				${SYSCTL} kern.random.sys.harvest.interrupt=0 >/dev/null
 			fi
-		fi
 
-		if checkyesno harvest_ethernet; then
-			if [ -w /dev/random ]; then
-				${SYSCTL_W} kern.random.sys.harvest.ethernet=1 >/dev/null
+			if checkyesno harvest_ethernet; then
+				${SYSCTL} kern.random.sys.harvest.ethernet=1 >/dev/null
 				echo -n ' ethernet'
+			else
+				${SYSCTL} kern.random.sys.harvest.ethernet=0 >/dev/null
 			fi
-		fi
 
-		if checkyesno harvest_p_to_p; then
-			if [ -w /dev/random ]; then
-			${SYSCTL_W} kern.random.sys.harvest.point_to_point=1 >/dev/null
+			if checkyesno harvest_p_to_p; then
+				${SYSCTL} kern.random.sys.harvest.point_to_point=1 >/dev/null
 				echo -n ' point_to_point'
+			else
+				${SYSCTL} kern.random.sys.harvest.point_to_point=0 >/dev/null
 			fi
 		fi
 

@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 #	@(#)rc	5.27 (Berkeley) 6/5/91
-# $FreeBSD: release/7.0.0/etc/rc 168283 2007-04-02 22:53:07Z des $
+# $FreeBSD$
 #
 
 # System startup script run by init on autoboot
@@ -38,7 +38,7 @@
 # first before contemplating any changes here.  If you do need to change
 # this file for some reason, we would like to know about it.
 
-stty status '^T'
+stty status '^T' 2> /dev/null
 
 # Set shell to ignore SIGINT (2), but not children;
 # shell catches SIGQUIT (3) and returns to single user.
@@ -56,7 +56,7 @@ if [ "$1" = autoboot ]; then
 	rc_fast=yes        # run_rc_command(): do fast booting
 else
 	autoboot=no
-	_boot="start"
+	_boot="quietstart"
 fi
 
 dlv=`/sbin/sysctl -n vfs.nfs.diskless_valid 2> /dev/null`
@@ -69,7 +69,6 @@ fi
 # and to make the configuration file variables available to rc itself.
 #
 . /etc/rc.subr
-echo "Loading configuration files."
 load_rc_config 'XXX'
 
 skip="-s nostart"
@@ -85,8 +84,10 @@ fi
 #
 files=`rcorder ${skip} /etc/rc.d/* 2>/dev/null`
 
+_rc_elem_done=' '
 for _rc_elem in ${files}; do
 	run_rc_script ${_rc_elem} ${_boot}
+	_rc_elem_done="${_rc_elem_done}${_rc_elem} "
 
 	case "$_rc_elem" in
 	*/${early_late_divider})	break ;;
@@ -104,14 +105,9 @@ case ${local_startup} in
 esac
 
 files=`rcorder ${skip} /etc/rc.d/* ${local_rc} 2>/dev/null`
-_skip_early=1
 for _rc_elem in ${files}; do
-	case "$_skip_early" in
-	1)	case "$_rc_elem" in
-		*/${early_late_divider})	_skip_early=0 ;;
-		esac
-		continue
-		;;
+	case "$_rc_elem_done" in
+	*" $_rc_elem "*)	continue ;;
 	esac
 
 	run_rc_script ${_rc_elem} ${_boot}

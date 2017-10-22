@@ -1,6 +1,8 @@
 #	@(#)Makefile	5.2 (Berkeley) 12/28/90
 #	$Id: Makefile,v 1.6 1994/06/30 05:33:39 cgd Exp $
-# $FreeBSD: release/7.0.0/usr.bin/make/Makefile 158452 2006-05-11 18:08:44Z ru $
+# $FreeBSD$
+
+.include <bsd.own.mk>
 
 PROG=	make
 CFLAGS+=-I${.CURDIR}
@@ -8,15 +10,12 @@ SRCS=	arch.c buf.c cond.c dir.c for.c hash.c hash_tables.c job.c	\
 	lst.c main.c make.c parse.c proc.c shell.c str.c suff.c targ.c	\
 	util.c var.c
 
-NO_WERROR=
-WARNS?=	6
+.if !defined(MK_SHARED_TOOLCHAIN) || ${MK_SHARED_TOOLCHAIN} == "no"
 NO_SHARED?=	YES
-
-CFLAGS+=-DOLD_JOKE=1
-CFLAGS+=-DMAKE_VERSION=\"5200408120\"
-.if defined(_UPGRADING)
-CFLAGS+=-D__FBSDID=__RCSID
 .endif
+
+# Version has the RYYYYMMDDX format, where R is from RELENG_<R>
+CFLAGS+=-DMAKE_VERSION=\"9201120530\"
 
 # There is no obvious performance improvement currently.
 # CFLAGS+=-DUSE_KQUEUE

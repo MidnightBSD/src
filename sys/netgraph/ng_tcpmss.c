@@ -29,7 +29,7 @@
  * This software includes fragments of the following programs:
  *	tcpmssd		Ruslan Ermilov <ru@FreeBSD.org>
  *
- * $FreeBSD: release/7.0.0/sys/netgraph/ng_tcpmss.c 166018 2007-01-15 05:01:31Z glebius $
+ * $FreeBSD$
  */
 
 /*
@@ -47,6 +47,7 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/endian.h>
 #include <sys/errno.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
@@ -159,7 +160,7 @@ ng_tcpmss_newhook(node_p node, hook_p hook, const char *name)
 {
 	hpriv_p priv;
 
-	MALLOC(priv, hpriv_p, sizeof(*priv), M_NETGRAPH, M_NOWAIT | M_ZERO);
+	priv = malloc(sizeof(*priv), M_NETGRAPH, M_NOWAIT | M_ZERO);
 	if (priv == NULL)
 		return (ENOMEM);
 
@@ -371,7 +372,7 @@ ng_tcpmss_disconnect(hook_p hook)
 			priv->outHook = NULL;
 	}
 
-	FREE(NG_HOOK_PRIVATE(hook), M_NETGRAPH);
+	free(NG_HOOK_PRIVATE(hook), M_NETGRAPH);
 
 	if (NG_NODE_NUMHOOKS(NG_HOOK_NODE(hook)) == 0)
 		ng_rmnode_self(NG_HOOK_NODE(hook));
@@ -410,9 +411,9 @@ correct_mss(struct tcphdr *tc, int hlen, uint16_t maxmss, int flags)
 {
 	int olen, optlen;
 	u_char *opt;
-	uint16_t *mss;
 	int accumulate;
 	int res = 0;
+	uint16_t sum;
 
 	for (olen = hlen - sizeof(struct tcphdr), opt = (u_char *)(tc + 1);
 	     olen > 0; olen -= optlen, opt += optlen) {
@@ -427,13 +428,15 @@ correct_mss(struct tcphdr *tc, int hlen, uint16_t maxmss, int flags)
 			if (*opt == TCPOPT_MAXSEG) {
 				if (optlen != TCPOLEN_MAXSEG)
 					continue;
-				mss = (uint16_t *)(opt + 2);
-				if (ntohs(*mss) > maxmss) {
-					accumulate = *mss;
-					*mss = htons(maxmss);
-					accumulate -= *mss;
-					if ((flags & CSUM_TCP) == 0)
-						TCPMSS_ADJUST_CHECKSUM(accumulate, tc->th_sum);
+				accumulate = be16dec(opt + 2);
+				if (accumulate > maxmss) {
+					if ((flags & CSUM_TCP) == 0) {
+						accumulate -= maxmss;
+						sum = be16dec(&tc->th_sum);
+						TCPMSS_ADJUST_CHECKSUM(accumulate, sum);
+						be16enc(&tc->th_sum, sum);
+					}
+					be16enc(opt + 2, maxmss);
 					res = 1;
 				}
 			}

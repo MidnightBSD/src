@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rp_17.c,v 1.38.18.2 2005/04/29 00:16:39 marka Exp $ */
+/* $Id: rp_17.c,v 1.44 2009/12/04 22:06:37 tbox Exp $ */
 
 /* RFC1183 */
 
@@ -93,8 +93,8 @@ totext_rp(ARGS_TOTEXT) {
 
 static inline isc_result_t
 fromwire_rp(ARGS_FROMWIRE) {
-        dns_name_t rmail;
-        dns_name_t email;
+	dns_name_t rmail;
+	dns_name_t email;
 
 	REQUIRE(type == 17);
 
@@ -103,11 +103,11 @@ fromwire_rp(ARGS_FROMWIRE) {
 
 	dns_decompress_setmethods(dctx, DNS_COMPRESS_NONE);
 
-        dns_name_init(&rmail, NULL);
-        dns_name_init(&email, NULL);
+	dns_name_init(&rmail, NULL);
+	dns_name_init(&email, NULL);
 
-        RETERR(dns_name_fromwire(&rmail, source, dctx, options, target));
-        return (dns_name_fromwire(&email, source, dctx, options, target));
+	RETERR(dns_name_fromwire(&rmail, source, dctx, options, target));
+	return (dns_name_fromwire(&email, source, dctx, options, target));
 }
 
 static inline isc_result_t
@@ -311,4 +311,8 @@ checknames_rp(ARGS_CHECKNAMES) {
 	return (ISC_TRUE);
 }
 
+static inline int
+casecompare_rp(ARGS_COMPARE) {
+	return (compare_rp(rdata1, rdata2));
+}
 #endif	/* RDATA_GENERIC_RP_17_C */

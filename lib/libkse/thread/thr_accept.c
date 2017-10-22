@@ -25,15 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libkse/thread/thr_accept.c 172491 2007-10-09 13:42:34Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <pthread.h>
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(__accept);
-LT10_COMPAT_DEFAULT(accept);
+int __accept(int s, struct sockaddr *addr, socklen_t *addrlen);
 
 __weak_reference(__accept, accept);
 

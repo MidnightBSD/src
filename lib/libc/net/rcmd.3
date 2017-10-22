@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)rcmd.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: release/7.0.0/lib/libc/net/rcmd.3 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD$
 .\"
 .Dd March 3, 2000
 .Dt RCMD 3
@@ -238,6 +238,14 @@ For
 .Fn rcmd_af ,
 .Dv PF_UNSPEC
 is also allowed.
+.Sh ENVIRONMENT
+.Bl -tag -width RSH
+.It Ev RSH
+When using the
+.Fn rcmd
+function, this variable is used as the program to run instead of
+.Xr rsh 1 .
+.El
 .Sh DIAGNOSTICS
 The
 .Fn rcmd

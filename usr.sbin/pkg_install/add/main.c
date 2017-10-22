@@ -19,15 +19,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/add/main.c 174862 2007-12-22 13:45:15Z kensmith $");
+__FBSDID("$FreeBSD$");
 
-#include <err.h>
 #include <sys/param.h>
-#include <sys/utsname.h>
+#include <sys/sysctl.h>
+#include <err.h>
+#include <getopt.h>
+
 #include "lib.h"
 #include "add.h"
-
-static char Options[] = "hvIRfFnrp:P:SMt:C:K";
 
 char	*Prefix		= NULL;
 Boolean	PrefixRecursive	= FALSE;
@@ -37,6 +37,7 @@ Boolean	NoRecord	= FALSE;
 Boolean Remote		= FALSE;
 Boolean KeepPackage	= FALSE;
 Boolean FailOnAlreadyInstalled	= TRUE;
+Boolean IgnoreDeps	= FALSE;
 
 char	*Mode		= NULL;
 char	*Owner		= NULL;
@@ -77,13 +78,27 @@ struct {
 	{ 601000, 601099, "/packages-6.1-release" },
 	{ 602000, 602099, "/packages-6.2-release" },
 	{ 603000, 603099, "/packages-6.3-release" },
+	{ 604000, 604099, "/packages-6.4-release" },
 	{ 700000, 700099, "/packages-7.0-release" },
+	{ 701000, 701099, "/packages-7.1-release" },
+	{ 702000, 702099, "/packages-7.2-release" },
+	{ 703000, 703099, "/packages-7.3-release" },
+	{ 704000, 704099, "/packages-7.4-release" },
+	{ 800000, 800499, "/packages-8.0-release" },
+	{ 801000, 801499, "/packages-8.1-release" },
+	{ 802000, 802499, "/packages-8.2-release" },
+	{ 803000, 803499, "/packages-8.3-release" },
+	{ 900000, 900499, "/packages-9.0-release" },
+	{ 901000, 901499, "/packages-9.1-release" },
 	{ 300000, 399000, "/packages-3-stable" },
 	{ 400000, 499000, "/packages-4-stable" },
 	{ 502100, 502128, "/packages-5-current" },
 	{ 503100, 599000, "/packages-5-stable" },
 	{ 600100, 699000, "/packages-6-stable" },
-	{ 700000, 799000, "/packages-7-stable" },
+	{ 700100, 799000, "/packages-7-stable" },
+	{ 800500, 899000, "/packages-8-stable" },
+	{ 900500, 999000, "/packages-9-stable" },
+	{ 1000000, 1099000, "/packages-10-current" },
 	{ 0, 9999999, "/packages-current" },
 	{ 0, 0, NULL }
 };
@@ -91,7 +106,26 @@ struct {
 static char *getpackagesite(void);
 int getosreldate(void);
 
-static void usage __P((void));
+static void usage(void);
+
+static char opts[] = "hviIRfFnrp:P:SMt:C:K";
+static struct option longopts[] = {
+	{ "chroot",	required_argument,	NULL,		'C' },
+	{ "dry-run",	no_argument,		NULL,		'n' },
+	{ "force",	no_argument,		NULL,		'f' },
+	{ "help",	no_argument,		NULL,		'h' },
+	{ "keep",	no_argument,		NULL,		'K' },
+	{ "master",	no_argument,		NULL,		'M' },
+	{ "no-deps",	no_argument,		NULL,		'i' },
+	{ "no-record",	no_argument,		NULL,		'R' },
+	{ "no-script",	no_argument,		NULL,		'I' },
+	{ "prefix",	required_argument,	NULL,		'p' },
+	{ "remote",	no_argument,		NULL,		'r' },
+	{ "template",	required_argument,	NULL,		't' },
+	{ "slave",	no_argument,		NULL,		'S' },
+	{ "verbose",	no_argument,		NULL,		'v' },
+	{ NULL,		0,			NULL,		0 }
+};
 
 int
 main(int argc, char **argv)
@@ -108,7 +142,7 @@ main(int argc, char **argv)
 	PkgAddCmd = argv[0];
 
     start = argv;
-    while ((ch = getopt(argc, argv, Options)) != -1) {
+    while ((ch = getopt_long(argc, argv, opts, longopts, NULL)) != -1) {
 	switch(ch) {
 	case 'v':
 	    Verbose++;
@@ -169,8 +203,11 @@ main(int argc, char **argv)
 	    Chroot = optarg;
 	    break;
 
+	case 'i':
+	    IgnoreDeps = TRUE;
+	    break;
+
 	case 'h':
-	case '?':
 	default:
 	    usage();
 	    break;
@@ -196,17 +233,19 @@ main(int argc, char **argv)
 		    >= sizeof(temppackageroot))
 		    errx(1, "package name too long");
 		remotepkg = temppackageroot;
-		if (!((ptr = strrchr(remotepkg, '.')) && ptr[1] == 't' && 
-			(ptr[2] == 'b' || ptr[2] == 'g') && ptr[3] == 'z' &&
-			!ptr[4]))
-		    if (strlcat(remotepkg,
-#if defined(__FreeBSD_version) && __FreeBSD_version >= 500039
-			".tbz",
-#else
-			".tgz",
-#endif
-			sizeof(temppackageroot)) >= sizeof(temppackageroot))
-			errx(1, "package name too long");
+		if (!((ptr = strrchr(remotepkg, '.')) && ptr[1] == 't' &&
+			(ptr[2] == 'b' || ptr[2] == 'g' || ptr[2] == 'x') &&
+			ptr[3] == 'z' && !ptr[4])) {
+    		    if (getenv("PACKAGESUFFIX")) {
+		       if (strlcat(remotepkg, getenv("PACKAGESUFFIX"),
+			   sizeof(temppackageroot)) >= sizeof(temppackageroot))
+			   errx(1, "package name too long");
+		    } else {
+		       if (strlcat(remotepkg, ".tbz",
+			   sizeof(temppackageroot)) >= sizeof(temppackageroot))
+			   errx(1, "package name too long");
+		    }
+		}
     	    }
 	    if (!strcmp(*argv, "-"))	/* stdin? */
 		pkgs[ch] = (char *)"-";
@@ -240,7 +279,7 @@ main(int argc, char **argv)
 	}
     }
     /* If no packages, yelp */
-    else if (!ch) {
+    if (!ch) {
 	warnx("missing package name(s)");
 	usage();
     }
@@ -255,7 +294,7 @@ main(int argc, char **argv)
     }
     /* Make sure the sub-execs we invoke get found */
     setenv("PATH", 
-	   "/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/X11R6/bin",
+	   "/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin",
 	   1);
 
     /* Set a reasonable umask */
@@ -275,7 +314,9 @@ getpackagesite(void)
 {
     int reldate, i;
     static char sitepath[MAXPATHLEN];
-    struct utsname u;
+    int archmib[] = { CTL_HW, HW_MACHINE_ARCH };
+    char arch[64];
+    size_t archlen = sizeof(arch);
 
     if (getenv("PACKAGESITE")) {
 	if (strlcpy(sitepath, getenv("PACKAGESITE"), sizeof(sitepath))
@@ -298,8 +339,10 @@ getpackagesite(void)
 	>= sizeof(sitepath))
 	return NULL;
 
-    uname(&u);
-    if (strlcat(sitepath, u.machine, sizeof(sitepath)) >= sizeof(sitepath))
+    if (sysctl(archmib, 2, arch, &archlen, NULL, 0) == -1)
+	return NULL;
+    arch[archlen-1] = 0;
+    if (strlcat(sitepath, arch, sizeof(sitepath)) >= sizeof(sitepath))
 	return NULL;
 
     reldate = getosreldate();
@@ -320,10 +363,10 @@ getpackagesite(void)
 }
 
 static void
-usage()
+usage(void)
 {
     fprintf(stderr, "%s\n%s\n",
-	"usage: pkg_add [-vInfFrRMSK] [-t template] [-p prefix] [-P prefix] [-C chrootdir]",
+	"usage: pkg_add [-viInfFrRMSK] [-t template] [-p prefix] [-P prefix] [-C chrootdir]",
 	"               pkg-name [pkg-name ...]");
     exit(1);
 }

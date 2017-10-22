@@ -25,7 +25,7 @@
 #ifndef _DEFINES_H
 #define _DEFINES_H
 
-/* $Id: defines.h,v 1.138 2006/09/21 13:13:30 dtucker Exp $ */
+/* $Id: defines.h,v 1.165 2011/05/05 01:19:15 djm Exp $ */
 
 
 /* Constants */
@@ -42,6 +42,11 @@ enum
 # define SHUT_RDWR SHUT_RDWR
 #endif
 
+/*
+ * Definitions for IP type of service (ip_tos)
+ */
+#include <netinet/in_systm.h>
+#include <netinet/ip.h>
 #ifndef IPTOS_LOWDELAY
 # define IPTOS_LOWDELAY          0x10
 # define IPTOS_THROUGHPUT        0x08
@@ -49,6 +54,38 @@ enum
 # define IPTOS_LOWCOST           0x02
 # define IPTOS_MINCOST           IPTOS_LOWCOST
 #endif /* IPTOS_LOWDELAY */
+
+/*
+ * Definitions for DiffServ Codepoints as per RFC2474
+ */
+#ifndef IPTOS_DSCP_AF11
+# define	IPTOS_DSCP_AF11		0x28
+# define	IPTOS_DSCP_AF12		0x30
+# define	IPTOS_DSCP_AF13		0x38
+# define	IPTOS_DSCP_AF21		0x48
+# define	IPTOS_DSCP_AF22		0x50
+# define	IPTOS_DSCP_AF23		0x58
+# define	IPTOS_DSCP_AF31		0x68
+# define	IPTOS_DSCP_AF32		0x70
+# define	IPTOS_DSCP_AF33		0x78
+# define	IPTOS_DSCP_AF41		0x88
+# define	IPTOS_DSCP_AF42		0x90
+# define	IPTOS_DSCP_AF43		0x98
+# define	IPTOS_DSCP_EF		0xb8
+#endif /* IPTOS_DSCP_AF11 */
+#ifndef IPTOS_DSCP_CS0
+# define	IPTOS_DSCP_CS0		0x00
+# define	IPTOS_DSCP_CS1		0x20
+# define	IPTOS_DSCP_CS2		0x40
+# define	IPTOS_DSCP_CS3		0x60
+# define	IPTOS_DSCP_CS4		0x80
+# define	IPTOS_DSCP_CS5		0xa0
+# define	IPTOS_DSCP_CS6		0xc0
+# define	IPTOS_DSCP_CS7		0xe0
+#endif /* IPTOS_DSCP_CS0 */
+#ifndef IPTOS_DSCP_EF
+# define	IPTOS_DSCP_EF		0xb8
+#endif /* IPTOS_DSCP_EF */
 
 #ifndef MAXPATHLEN
 # ifdef PATH_MAX
@@ -68,7 +105,7 @@ enum
 # endif
 #endif
 
-#ifndef MAXSYMLINKS
+#if defined(HAVE_DECL_MAXSYMLINKS) && HAVE_DECL_MAXSYMLINKS == 0
 # define MAXSYMLINKS 5
 #endif
 
@@ -256,6 +293,10 @@ typedef unsigned int size_t;
 # define SIZE_T_MAX UINT_MAX
 #endif /* HAVE_SIZE_T */
 
+#ifndef SIZE_MAX
+#define SIZE_MAX SIZE_T_MAX
+#endif
+
 #ifndef HAVE_SSIZE_T
 typedef int ssize_t;
 # define HAVE_SSIZE_T
@@ -300,6 +341,9 @@ struct	sockaddr_un {
 #ifndef HAVE_IN_ADDR_T
 typedef u_int32_t	in_addr_t;
 #endif
+#ifndef HAVE_IN_PORT_T
+typedef u_int16_t	in_port_t;
+#endif
 
 #if defined(BROKEN_SYS_TERMIO_H) && !defined(_STRUCT_WINSIZE)
 #define _STRUCT_WINSIZE
@@ -320,12 +364,6 @@ struct winsize {
 
 #ifndef _PATH_BSHELL
 # define _PATH_BSHELL "/bin/sh"
-#endif
-#ifndef _PATH_CSHELL
-# define _PATH_CSHELL "/bin/csh"
-#endif
-#ifndef _PATH_SHELLS
-# define _PATH_SHELLS "/etc/shells"
 #endif
 
 #ifdef USER_PATH
@@ -437,16 +475,16 @@ struct winsize {
 # define __attribute__(x)
 #endif /* !defined(__GNUC__) || (__GNUC__ < 2) */
 
-#ifndef __dead
-# define __dead	__attribute__((noreturn))
-#endif
-
 #if !defined(HAVE_ATTRIBUTE__SENTINEL__) && !defined(__sentinel__)
 # define __sentinel__
 #endif
 
 #if !defined(HAVE_ATTRIBUTE__BOUNDED__) && !defined(__bounded__)
 # define __bounded__(x, y, z)
+#endif
+
+#if !defined(HAVE_ATTRIBUTE__NONNULL__) && !defined(__nonnull__)
+# define __nonnull__(x)
 #endif
 
 /* *-*-nto-qnx doesn't define this macro in the system headers */
@@ -487,7 +525,7 @@ struct winsize {
 	 (struct cmsghdr *)NULL)
 #endif /* CMSG_FIRSTHDR */
 
-#ifndef offsetof
+#if defined(HAVE_DECL_OFFSETOF) && HAVE_DECL_OFFSETOF == 0
 # define offsetof(type, member) ((size_t) &((type *)0)->member)
 #endif
 
@@ -542,6 +580,10 @@ struct winsize {
 # undef HAVE_UPDWTMPX
 #endif
 
+#if defined(BROKEN_SHADOW_EXPIRE) && defined(HAS_SHADOW_EXPIRE)
+# undef HAS_SHADOW_EXPIRE
+#endif
+
 #if defined(HAVE_OPENLOG_R) && defined(SYSLOG_DATA_INIT) && \
     defined(SYSLOG_R_SAFE_IN_SIGHAND)
 # define DO_LOG_SAFE_IN_SIGHAND
@@ -565,9 +607,9 @@ struct winsize {
 # define CUSTOM_SSH_AUDIT_EVENTS
 #endif
 
-/* OPENSSL_free() is Free() in versions before OpenSSL 0.9.6 */
-#if !defined(OPENSSL_VERSION_NUMBER) || (OPENSSL_VERSION_NUMBER < 0x0090600f)
-# define OPENSSL_free(x) Free(x)
+#ifdef USE_LINUX_AUDIT
+# define SSH_AUDIT_EVENTS
+# define CUSTOM_SSH_AUDIT_EVENTS
 #endif
 
 #if !defined(HAVE___func__) && defined(HAVE___FUNCTION__)
@@ -591,6 +633,19 @@ struct winsize {
 # define SSH_SYSFDMAX sysconf(_SC_OPEN_MAX)
 #else
 # define SSH_SYSFDMAX 10000
+#endif
+
+#ifdef FSID_HAS_VAL
+/* encode f_fsid into a 64 bit value  */
+#define FSID_TO_ULONG(f) \
+	((((u_int64_t)(f).val[0] & 0xffffffffUL) << 32) | \
+	    ((f).val[1] & 0xffffffffUL))
+#elif defined(FSID_HAS___VAL)
+#define FSID_TO_ULONG(f) \
+	((((u_int64_t)(f).__val[0] & 0xffffffffUL) << 32) | \
+	    ((f).__val[1] & 0xffffffffUL))
+#else
+# define FSID_TO_ULONG(f) ((f))
 #endif
 
 #if defined(__Lynx__)
@@ -665,7 +720,7 @@ struct winsize {
 #else
 /* Simply select your favourite login types. */
 /* Can't do if-else because some systems use several... <sigh> */
-#  if defined(UTMPX_FILE) && !defined(DISABLE_UTMPX)
+#  if !defined(DISABLE_UTMPX)
 #    define USE_UTMPX
 #  endif
 #  if defined(UTMP_FILE) && !defined(DISABLE_UTMP)
@@ -696,8 +751,11 @@ struct winsize {
 # define CUSTOM_SYS_AUTH_PASSWD 1
 #endif
 
-#ifdef HAVE_LIBIAF
+#if defined(HAVE_LIBIAF) && defined(HAVE_SET_ID) && !defined(HAVE_SECUREWARE)
 # define CUSTOM_SYS_AUTH_PASSWD 1
+#endif
+#if defined(HAVE_LIBIAF) && defined(HAVE_SET_ID) && !defined(BROKEN_LIBIAF)
+# define USE_LIBIAF
 #endif
 
 /* HP-UX 11.11 */
@@ -726,6 +784,26 @@ struct winsize {
 #  define	IOV_MAX		DEF_IOV_MAX
 # else
 #  define	IOV_MAX		16
+# endif
+#endif
+
+#ifndef EWOULDBLOCK
+# define EWOULDBLOCK EAGAIN
+#endif
+
+#ifndef INET6_ADDRSTRLEN	/* for non IPv6 machines */
+#define INET6_ADDRSTRLEN 46
+#endif
+
+#ifndef SSH_IOBUFSZ
+# define SSH_IOBUFSZ 8192
+#endif
+
+#ifndef _NSIG
+# ifdef NSIG
+#  define _NSIG NSIG
+# else
+#  define _NSIG 128
 # endif
 #endif
 

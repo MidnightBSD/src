@@ -1,9 +1,9 @@
-# $FreeBSD: release/7.0.0/usr.sbin/rndc-confgen/Makefile 170221 2007-06-02 23:19:58Z dougb $
+# $FreeBSD$
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind9
 LIB_BIND_REL=	../../lib/bind
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
-SRCDIR=		${BIND_DIR}/bin/rndc
+SRCDIR=		${BIND_DIR}/bin/confgen
 
 .include	"${LIB_BIND_DIR}/config.mk"
 
@@ -13,9 +13,11 @@ PROG=		rndc-confgen
 SRCS+=		os.c
 
 .PATH: ${SRCDIR}
-SRCS+=		rndc-confgen.c util.c
+SRCS+=		rndc-confgen.c keygen.c util.c
 
 CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include -I${LIB_BIND_DIR}
+
+WARNS?=		3
 
 DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}

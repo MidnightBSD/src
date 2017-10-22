@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/cdrom.c 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -43,6 +43,7 @@
 #include <sys/errno.h>
 #include <sys/param.h>
 #include <sys/wait.h>
+#include <sys/cdio.h>
 #include <unistd.h>
 #include <grp.h>
 #include <fcntl.h>
@@ -57,6 +58,8 @@ static Boolean cdromMounted;
 static Boolean previouslyMounted; /* Was the disc already mounted? */
 static char mountpoint[MAXPATHLEN] = "/dist";
 int CDROMInitQuiet;
+
+static void mediaEjectCDROM(Device *dev);
 
 static properties
 read_props(char *name)
@@ -142,7 +145,7 @@ mediaInitCDROM(Device *dev)
 	else {
 	    if (variable_cmp(VAR_RELNAME, cp) &&
 		variable_cmp(VAR_RELNAME, "any") &&
-		variable_cmp(cp, "any") &&
+		strcmp(cp, "any") &&
 		!bogusCDOK) {
 		msgConfirm("Warning: The version of the FreeBSD disc currently in the drive\n"
 			   "(%s) does not match the version of the boot floppy\n"
@@ -164,9 +167,7 @@ mediaInitCDROM(Device *dev)
 	    }
 	    if ((cp = property_find(cd_attr, "CD_MACHINE_ARCH")) != NULL) {
 		if (strcmp(cp, "any") &&
-#ifdef __alpha__
-		  strcmp(cp, "alpha")) {
-#elif defined(PC98)
+#if defined(PC98)
 		  strcmp(cp, "pc98")) {
 #elif defined(__sparc64__)
 		  strcmp(cp, "sparc64")) {
@@ -220,4 +221,24 @@ mediaShutdownCDROM(Device *dev)
 	msgConfirm("Could not unmount the CDROM/DVD from %s: %s", mountpoint, strerror(errno));
     else
 	cdromMounted = FALSE;
+
+    mediaEjectCDROM(dev);
+}
+
+static void
+mediaEjectCDROM(Device *dev)
+{
+	int fd = -1;
+
+	msgDebug("Ejecting CDROM/DVD at %s", dev->devname);
+
+	fd = open(dev->devname, O_RDONLY);
+	
+	if (fd < 0)
+		msgDebug("Could not eject the CDROM/DVD from %s: %s", dev->devname, strerror(errno));
+	else {
+		ioctl(fd, CDIOCALLOW);
+		ioctl(fd, CDIOCEJECT);
+		close(fd);
+	}
 }

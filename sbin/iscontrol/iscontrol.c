@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005 Daniel Braniss <danny@cs.huji.ac.il>
+ * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sbin/iscontrol/iscontrol.c 171568 2007-07-24 15:35:02Z scottl $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -53,16 +53,11 @@ __FBSDID("$FreeBSD: release/7.0.0/sbin/iscontrol/iscontrol.c 171568 2007-07-24 1
 #include <time.h>
 #include <camlib.h>
 
-#include "iscsi.h"
+#include <dev/iscsi/initiator/iscsi.h>
 #include "iscontrol.h"
-//#include "pdu.h"
 
-#define USAGE "[-v] [-d] [-c config] [-n name] [-t target] "
-#define OPTIONS	"vdc:t:n:"
-
-#ifndef DEBUG
-//int	vflag;
-#endif
+#define USAGE "[-v] [-d] [-c config] [-n name] [-t target] [-p pidfile]"
+#define OPTIONS	"vdc:t:n:p:"
 
 token_t AuthMethods[] = {
      {"None",	NONE},
@@ -71,14 +66,14 @@ token_t AuthMethods[] = {
      {"SPKM2",	SPKM2},
      {"SRP",	SRP},
      {"CHAP",	CHAP},
-     {0}
+     {0, 0}
 };
 
 token_t	DigestMethods[] = {
      {"None",	0},
      {"CRC32",	1},
      {"CRC32C",	1},
-     {0}
+     {0, 0}
 };
 
 u_char	isid[6 + 6];
@@ -129,7 +124,7 @@ int
 main(int cc, char **vv)
 {
      int	ch, disco;
-     char	*pname, *p, *ta, *kw;
+     char	*pname, *pidfile, *p, *q, *ta, *kw;
      isc_opt_t	*op;
      FILE	*fd;
 
@@ -142,6 +137,7 @@ main(int cc, char **vv)
 
      kw = ta = 0;
      disco = 0;
+     pidfile = NULL;
 
      while((ch = getopt(cc, vv, OPTIONS)) != -1) {
 	  switch(ch) {
@@ -163,6 +159,9 @@ main(int cc, char **vv)
 	       break;
 	  case 'n':
 	       kw = optarg;
+	       break;
+	  case 'p':
+	       pidfile = optarg;
 	       break;
 	  default:
 	  badu:
@@ -191,12 +190,18 @@ main(int cc, char **vv)
 	  fprintf(stderr, "No target!\n");
 	  goto badu;
      }
-     if((p = strchr(op->targetAddress, ':')) != NULL) {
+     q = op->targetAddress;
+     if(*q == '[' && (q = strchr(q, ']')) != NULL) {
+	  *q++ = '\0';
+	  op->targetAddress++;
+     } else
+	  q = op->targetAddress;
+     if((p = strchr(q, ':')) != NULL) {
 	  *p++ = 0;
 	  op->port = atoi(p);
 	  p = strchr(p, ',');
      }
-     if(p || ((p = strchr(op->targetAddress, ',')) != NULL)) {
+     if(p || ((p = strchr(q, ',')) != NULL)) {
 	  *p++ = 0;
 	  op->targetPortalGroupTag = atoi(p);
      }
@@ -220,7 +225,7 @@ main(int cc, char **vv)
 	  op->sessionType = "Discovery";
 	  op->targetName = 0;
      }
-
+     op->pidfile = pidfile;
      fsm(op);
 
      exit(0);

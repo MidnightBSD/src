@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/kern/uipc_domain.c 171744 2007-08-06 14:26:03Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -43,6 +43,9 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/kern/uipc_domain.c 171744 2007-08-06 14:26
 #include <sys/mutex.h>
 #include <sys/socketvar.h>
 #include <sys/systm.h>
+
+#include <net/vnet.h>
+
 #include <vm/uma.h>
 
 /*
@@ -58,11 +61,11 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/kern/uipc_domain.c 171744 2007-08-06 14:26
  */
 
 static void domaininit(void *);
-SYSINIT(domain, SI_SUB_PROTO_DOMAIN, SI_ORDER_FIRST, domaininit, NULL)
+SYSINIT(domain, SI_SUB_PROTO_DOMAININIT, SI_ORDER_ANY, domaininit, NULL);
 
 static void domainfinalize(void *);
 SYSINIT(domainfin, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_FIRST, domainfinalize,
-    NULL)
+    NULL);
 
 static struct callout pffast_callout;
 static struct callout pfslow_callout;
@@ -72,7 +75,7 @@ static void	pfslowtimo(void *);
 
 struct domain *domains;		/* registered protocol domains */
 int domain_init_status = 0;
-struct mtx dom_mtx;		/* domain list lock */
+static struct mtx dom_mtx;		/* domain list lock */
 MTX_SYSINIT(domain, &dom_mtx, "domain list", MTX_DEF);
 
 /*
@@ -110,15 +113,42 @@ protosw_init(struct protosw *pr)
 	    pr->pr_domain->dom_name,
 	    (int)(pr - pr->pr_domain->dom_protosw)));
 
+	/*
+	 * Protocol switch methods fall into three categories: mandatory,
+	 * mandatory but protosw_init() provides a default, and optional.
+	 *
+	 * For true protocols (i.e., pru_attach != NULL), KASSERT truly
+	 * mandatory methods with no defaults, and initialize defaults for
+	 * other mandatory methods if the protocol hasn't defined an
+	 * implementation (NULL function pointer).
+	 */
+#if 0
+	if (pu->pru_attach != NULL) {
+		KASSERT(pu->pru_abort != NULL,
+		    ("protosw_init: %ssw[%d] pru_abort NULL",
+		    pr->pr_domain->dom_name,
+		    (int)(pr - pr->pr_domain->dom_protosw)));
+		KASSERT(pu->pru_send != NULL,
+		    ("protosw_init: %ssw[%d] pru_send NULL",
+		    pr->pr_domain->dom_name,
+		    (int)(pr - pr->pr_domain->dom_protosw)));
+	}
+#endif
+
 #define DEFAULT(foo, bar)	if ((foo) == NULL)  (foo) = (bar)
 	DEFAULT(pu->pru_accept, pru_accept_notsupp);
+	DEFAULT(pu->pru_bind, pru_bind_notsupp);
 	DEFAULT(pu->pru_connect, pru_connect_notsupp);
 	DEFAULT(pu->pru_connect2, pru_connect2_notsupp);
 	DEFAULT(pu->pru_control, pru_control_notsupp);
+	DEFAULT(pu->pru_disconnect, pru_disconnect_notsupp);
 	DEFAULT(pu->pru_listen, pru_listen_notsupp);
+	DEFAULT(pu->pru_peeraddr, pru_peeraddr_notsupp);
 	DEFAULT(pu->pru_rcvd, pru_rcvd_notsupp);
 	DEFAULT(pu->pru_rcvoob, pru_rcvoob_notsupp);
 	DEFAULT(pu->pru_sense, pru_sense_null);
+	DEFAULT(pu->pru_shutdown, pru_shutdown_notsupp);
+	DEFAULT(pu->pru_sockaddr, pru_sockaddr_notsupp);
 	DEFAULT(pu->pru_sosend, sosend_generic);
 	DEFAULT(pu->pru_soreceive, soreceive_generic);
 	DEFAULT(pu->pru_sopoll, sopoll_generic);
@@ -132,9 +162,10 @@ protosw_init(struct protosw *pr)
  * Note: you cant unload it again because a socket may be using it.
  * XXX can't fail at this time.
  */
-static void
-net_init_domain(struct domain *dp)
+void
+domain_init(void *arg)
 {
+	struct domain *dp = arg;
 	struct protosw *pr;
 
 	if (dp->dom_init)
@@ -150,13 +181,36 @@ net_init_domain(struct domain *dp)
 		panic("%s: max_datalen < 1", __func__);
 }
 
+#ifdef VIMAGE
+void
+vnet_domain_init(void *arg)
+{
+
+	/* Virtualized case is no different -- call init functions. */
+	domain_init(arg);
+}
+
+void
+vnet_domain_uninit(void *arg)
+{
+	struct domain *dp = arg;
+	struct protosw *pr;
+
+	for (pr = dp->dom_protosw; pr < dp->dom_protoswNPROTOSW; pr++)
+		if (pr->pr_destroy)
+			(*pr->pr_destroy)();
+	if (dp->dom_destroy)
+		(*dp->dom_destroy)();
+}
+#endif
+
 /*
  * Add a new protocol domain to the list of supported domains
  * Note: you cant unload it again because a socket may be using it.
  * XXX can't fail at this time.
  */
 void
-net_add_domain(void *data)
+domain_add(void *data)
 {
 	struct domain *dp;
 
@@ -166,24 +220,23 @@ net_add_domain(void *data)
 	domains = dp;
 
 	KASSERT(domain_init_status >= 1,
-	    ("attempt to net_add_domain(%s) before domaininit()",
+	    ("attempt to domain_add(%s) before domaininit()",
 	    dp->dom_name));
 #ifndef INVARIANTS
 	if (domain_init_status < 1)
-		printf("WARNING: attempt to net_add_domain(%s) before "
+		printf("WARNING: attempt to domain_add(%s) before "
 		    "domaininit()\n", dp->dom_name);
 #endif
 #ifdef notyet
 	KASSERT(domain_init_status < 2,
-	    ("attempt to net_add_domain(%s) after domainfinalize()",
+	    ("attempt to domain_add(%s) after domainfinalize()",
 	    dp->dom_name));
 #else
 	if (domain_init_status >= 2)
-		printf("WARNING: attempt to net_add_domain(%s) after "
+		printf("WARNING: attempt to domain_add(%s) after "
 		    "domainfinalize()\n", dp->dom_name);
 #endif
 	mtx_unlock(&dom_mtx);
-	net_init_domain(dp);
 }
 
 static void
@@ -283,6 +336,7 @@ found:
 int
 pf_proto_register(int family, struct protosw *npr)
 {
+	VNET_ITERATOR_DECL(vnet_iter);
 	struct domain *dp;
 	struct protosw *pr, *fpr;
 
@@ -311,13 +365,13 @@ found:
 	 * Protect us against races when two protocol registrations for
 	 * the same protocol happen at the same time.
 	 */
-	mtx_lock(&Giant);
+	mtx_lock(&dom_mtx);
 
 	/* The new protocol must not yet exist. */
 	for (pr = dp->dom_protosw; pr < dp->dom_protoswNPROTOSW; pr++) {
 		if ((pr->pr_type == npr->pr_type) &&
 		    (pr->pr_protocol == npr->pr_protocol)) {
-			mtx_unlock(&Giant);
+			mtx_unlock(&dom_mtx);
 			return (EEXIST);	/* XXX: Check only protocol? */
 		}
 		/* While here, remember the first free spacer. */
@@ -327,7 +381,7 @@ found:
 
 	/* If no free spacer is found we can't add the new protocol. */
 	if (fpr == NULL) {
-		mtx_unlock(&Giant);
+		mtx_unlock(&dom_mtx);
 		return (ENOMEM);
 	}
 
@@ -335,10 +389,16 @@ found:
 	bcopy(npr, fpr, sizeof(*fpr));
 
 	/* Job is done, no more protection required. */
-	mtx_unlock(&Giant);
+	mtx_unlock(&dom_mtx);
 
 	/* Initialize and activate the protocol. */
-	protosw_init(fpr);
+	VNET_LIST_RLOCK();
+	VNET_FOREACH(vnet_iter) {
+		CURVNET_SET_QUIET(vnet_iter);
+		protosw_init(fpr);
+		CURVNET_RESTORE();
+	}
+	VNET_LIST_RUNLOCK();
 
 	return (0);
 }
@@ -371,13 +431,13 @@ found:
 	dpr = NULL;
 
 	/* Lock out everyone else while we are manipulating the protosw. */
-	mtx_lock(&Giant);
+	mtx_lock(&dom_mtx);
 
 	/* The protocol must exist and only once. */
 	for (pr = dp->dom_protosw; pr < dp->dom_protoswNPROTOSW; pr++) {
 		if ((pr->pr_type == type) && (pr->pr_protocol == protocol)) {
 			if (dpr != NULL) {
-				mtx_unlock(&Giant);
+				mtx_unlock(&dom_mtx);
 				return (EMLINK);   /* Should not happen! */
 			} else
 				dpr = pr;
@@ -386,7 +446,7 @@ found:
 
 	/* Protocol does not exist. */
 	if (dpr == NULL) {
-		mtx_unlock(&Giant);
+		mtx_unlock(&dom_mtx);
 		return (EPROTONOSUPPORT);
 	}
 
@@ -399,7 +459,6 @@ found:
 	dpr->pr_output = NULL;
 	dpr->pr_ctlinput = NULL;
 	dpr->pr_ctloutput = NULL;
-	dpr->pr_ousrreq = NULL;
 	dpr->pr_init = NULL;
 	dpr->pr_fasttimo = NULL;
 	dpr->pr_slowtimo = NULL;
@@ -407,7 +466,7 @@ found:
 	dpr->pr_usrreqs = &nousrreqs;
 
 	/* Job is done, not more protection required. */
-	mtx_unlock(&Giant);
+	mtx_unlock(&dom_mtx);
 
 	return (0);
 }

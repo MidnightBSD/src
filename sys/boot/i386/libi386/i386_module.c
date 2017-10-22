@@ -25,18 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/i386/libi386/i386_module.c 119482 2003-08-25 23:28:32Z obrien $");
+__FBSDID("$FreeBSD$");
 
 /*
  * i386-specific module functionality.
  *
  */
-
-#include <stand.h>
-#include <string.h>
-
-#include "bootstrap.h"
-#include "libi386.h"
 
 /*
  * Use voodoo to load modules required by current hardware.
@@ -44,25 +38,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/boot/i386/libi386/i386_module.c 119482 200
 int
 i386_autoload(void)
 {
-    int		error;
-    int		disabled;
-    char	*rv;
 
     /* XXX use PnP to locate stuff here */
-
-    /* autoload ACPI support */
-    /* XXX should be in 4th keyed off acpi_load */
-    disabled = 0;
-    rv = getenv("hint.acpi.0.disabled");
-    if (rv != NULL && strncmp(rv, "0", 1) != 0) {
-	disabled = 1;
-    }
-
-    if (getenv("acpi_load") && (!disabled)) {
-	error = mod_load("acpi", NULL, 0, NULL);
-	if (error != 0)
-	    printf("ACPI autoload failed - %s\n", strerror(error));
-    }
-
     return(0);
 }

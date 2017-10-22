@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 2003 Dag-Erling SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/msun/src/s_fabsl.c 121513 2003-10-25 19:53:28Z des $
+ * $FreeBSD$
  */
 
 #include <math.h>

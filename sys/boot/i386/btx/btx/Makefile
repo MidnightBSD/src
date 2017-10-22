@@ -1,13 +1,9 @@
-# $FreeBSD: release/7.0.0/sys/boot/i386/btx/btx/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
 PROG=	btx
 INTERNALPROG=
 NO_MAN=
 SRCS=	btx.S
-
-.if defined(PAGING)
-CFLAGS+=-DPAGING
-.endif
 
 .if defined(BOOT_BTX_NOHANG)
 BOOT_BTX_FLAGS=0x1
@@ -16,6 +12,7 @@ BOOT_BTX_FLAGS=0x0
 .endif
 
 CFLAGS+=-DBTX_FLAGS=${BOOT_BTX_FLAGS}
+CFLAGS+=-I${.CURDIR}/../../common
 
 .if defined(BTX_SERIAL)
 BOOT_COMCONSOLE_PORT?= 0x3f8
@@ -28,6 +25,10 @@ CFLAGS+=-DBTX_SERIAL -DSIOPRT=${BOOT_COMCONSOLE_PORT} \
 
 ORG=	0x9000
 
-LDFLAGS=-N -e start -Ttext ${ORG} -Wl,-S,--oformat,binary
+LDFLAGS=-e start -Ttext ${ORG} -Wl,-N,-S,--oformat,binary
 
 .include <bsd.prog.mk>
+
+# XXX: clang integrated-as doesn't grok .codeNN directives yet
+CFLAGS.btx.S=		${CLANG_NO_IAS}
+CFLAGS+=		${CFLAGS.${.IMPSRC:T}}

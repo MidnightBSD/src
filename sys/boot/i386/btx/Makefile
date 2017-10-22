@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/boot/i386/btx/Makefile 50477 1999-08-28 01:08:13Z peter $
+# $FreeBSD$
 
 SUBDIR=	btx btxldr lib
 

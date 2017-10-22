@@ -1,9 +1,13 @@
-# $FreeBSD: release/7.0.0/lib/libsbuf/Makefile 119071 2003-08-18 15:25:39Z obrien $
+# $FreeBSD$
 
-LIB=	sbuf
-SHLIBDIR?= /lib
-SRCS=	subr_sbuf.c 
-WARNS?= 2
+LIB=		sbuf
+SHLIBDIR?= 	/lib
+SRCS=		subr_sbuf.c 
+
+SHLIB_MAJOR	= 6
+
+SYMBOL_MAPS=    ${.CURDIR}/Symbol.map
+VERSION_DEF=	${.CURDIR}/Version.def
 
 .PATH:	${.CURDIR}/../../sys/kern
 

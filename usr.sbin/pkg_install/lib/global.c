@@ -20,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/global.c 159554 2006-06-12 22:39:32Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include "lib.h"
 

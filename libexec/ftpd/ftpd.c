@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)ftpd.c	8.4 (Berkeley) 4/16/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/libexec/ftpd/ftpd.c 168849 2007-04-18 22:43:39Z yar $");
+__FBSDID("$FreeBSD$");
 
 /*
  * FTP server.
@@ -104,9 +104,6 @@ __FBSDID("$FreeBSD: release/7.0.0/libexec/ftpd/ftpd.c 168849 2007-04-18 22:43:39
 
 static char version[] = "Version 6.00LS";
 #undef main
-
-extern	off_t restart_point;
-extern	char cbuf[];
 
 union sockunion ctrl_addr;
 union sockunion data_source;
@@ -176,8 +173,7 @@ static struct ftphost {
 char	remotehost[NI_MAXHOST];
 char	*ident = NULL;
 
-static char	ttyline[20];
-char		*tty = ttyline;		/* for klogin */
+static char	wtmpid[20];
 
 #ifdef USE_PAM
 static int	auth_pam(struct passwd**, const char*);
@@ -248,7 +244,7 @@ static void	 sigurg(int);
 static void	 maskurg(int);
 static void	 flagxfer(int);
 static int	 myoob(void);
-static int	 checkuser(char *, char *, int, char **);
+static int	 checkuser(char *, char *, int, char **, int *);
 static FILE	*dataconn(char *, off_t, char *);
 static void	 dolog(struct sockaddr *);
 static void	 end_login(void);
@@ -587,8 +583,7 @@ gotchild:
 
 	data_source.su_port = htons(ntohs(ctrl_addr.su_port) - 1);
 
-	/* set this here so klogin can use it... */
-	(void)snprintf(ttyline, sizeof(ttyline), "ftp%d", getpid());
+	(void)snprintf(wtmpid, sizeof(wtmpid), "%xftpd", getpid());
 
 	/* Try to handle urgent data inline */
 #ifdef SO_OOBINLINE
@@ -1001,6 +996,7 @@ static char curname[MAXLOGNAME];	/* current USER name */
 void
 user(char *name)
 {
+	int ecode;
 	char *cp, *shell;
 
 	if (logged_in) {
@@ -1021,8 +1017,11 @@ user(char *name)
 	pw = sgetpwnam("ftp");
 #endif
 	if (strcmp(name, "ftp") == 0 || strcmp(name, "anonymous") == 0) {
-		if (checkuser(_PATH_FTPUSERS, "ftp", 0, NULL) ||
-		    checkuser(_PATH_FTPUSERS, "anonymous", 0, NULL))
+		if (checkuser(_PATH_FTPUSERS, "ftp", 0, NULL, &ecode) ||
+		    (ecode != 0 && ecode != ENOENT))
+			reply(530, "User %s access denied.", name);
+		else if (checkuser(_PATH_FTPUSERS, "anonymous", 0, NULL, &ecode) ||
+		    (ecode != 0 && ecode != ENOENT))
 			reply(530, "User %s access denied.", name);
 		else if (pw != NULL) {
 			guest = 1;
@@ -1050,7 +1049,9 @@ user(char *name)
 				break;
 		endusershell();
 
-		if (cp == NULL || checkuser(_PATH_FTPUSERS, name, 1, NULL)) {
+		if (cp == NULL || 
+		    (checkuser(_PATH_FTPUSERS, name, 1, NULL, &ecode) ||
+		    (ecode != 0 && ecode != ENOENT))) {
 			reply(530, "User %s access denied.", name);
 			if (logging)
 				syslog(LOG_NOTICE,
@@ -1092,13 +1093,15 @@ user(char *name)
  * of the matching line in "residue" if not NULL.
  */
 static int
-checkuser(char *fname, char *name, int pwset, char **residue)
+checkuser(char *fname, char *name, int pwset, char **residue, int *ecode)
 {
 	FILE *fd;
 	int found = 0;
 	size_t len;
 	char *line, *mp, *p;
 
+	if (ecode != NULL)
+		*ecode = 0;
 	if ((fd = fopen(fname, "r")) != NULL) {
 		while (!found && (line = fgetln(fd, &len)) != NULL) {
 			/* skip comments */
@@ -1167,7 +1170,8 @@ nextline:
 				free(mp);
 		}
 		(void) fclose(fd);
-	}
+	} else if (ecode != NULL)
+		*ecode = errno;
 	return (found);
 }
 
@@ -1184,12 +1188,12 @@ end_login(void)
 
 	(void) seteuid(0);
 	if (logged_in && dowtmp)
-		ftpd_logwtmp(ttyline, "", NULL);
+		ftpd_logwtmp(wtmpid, NULL, NULL);
 	pw = NULL;
 #ifdef	LOGIN_CAP
-	setusercontext(NULL, getpwuid(0), 0,
-		       LOGIN_SETPRIORITY|LOGIN_SETRESOURCES|LOGIN_SETUMASK|
-		       LOGIN_SETMAC);
+	setusercontext(NULL, getpwuid(0), 0, LOGIN_SETALL & ~(LOGIN_SETLOGIN |
+		       LOGIN_SETUSER | LOGIN_SETGROUP | LOGIN_SETPATH |
+		       LOGIN_SETENV));
 #endif
 #ifdef USE_PAM
 	if (pamh) {
@@ -1364,7 +1368,7 @@ auth_pam(struct passwd **ppw, const char *pass)
 void
 pass(char *passwd)
 {
-	int rval;
+	int rval, ecode;
 	FILE *fd;
 #ifdef	LOGIN_CAP
 	login_cap_t *lc = NULL;
@@ -1461,9 +1465,8 @@ skip:
 			return;
 		}
 	}
-	setusercontext(lc, pw, 0,
-		LOGIN_SETLOGIN|LOGIN_SETGROUP|LOGIN_SETPRIORITY|
-		LOGIN_SETRESOURCES|LOGIN_SETUMASK|LOGIN_SETMAC);
+	setusercontext(lc, pw, 0, LOGIN_SETALL &
+		       ~(LOGIN_SETUSER | LOGIN_SETPATH | LOGIN_SETENV));
 #else
 	setlogin(pw->pw_name);
 	(void) initgroups(pw->pw_name, pw->pw_gid);
@@ -1479,9 +1482,29 @@ skip:
 	}
 #endif
 
-	/* open wtmp before chroot */
+	dochroot =
+		checkuser(_PATH_FTPCHROOT, pw->pw_name, 1, &residue, &ecode)
+#ifdef	LOGIN_CAP	/* Allow login.conf configuration as well */
+		|| login_getcapbool(lc, "ftp-chroot", 0)
+#endif
+	;
+	/*
+	 * It is possible that checkuser() failed to open the chroot file.
+	 * If this is the case, report that logins are un-available, since we
+	 * have no way of checking whether or not the user should be chrooted.
+	 * We ignore ENOENT since it is not required that this file be present.
+	 */
+	if (ecode != 0 && ecode != ENOENT) {
+		reply(530, "Login not available right now.");
+		return;
+	}
+	chrootdir = NULL;
+
+	/* Disable wtmp logging when chrooting. */
+	if (dochroot || guest)
+		dowtmp = 0;
 	if (dowtmp)
-		ftpd_logwtmp(ttyline, pw->pw_name,
+		ftpd_logwtmp(wtmpid, pw->pw_name,
 		    (struct sockaddr *)&his_addr);
 	logged_in = 1;
 
@@ -1494,13 +1517,6 @@ skip:
 		if (statfd < 0)
 			stats = 0;
 
-	dochroot =
-		checkuser(_PATH_FTPCHROOT, pw->pw_name, 1, &residue)
-#ifdef	LOGIN_CAP	/* Allow login.conf configuration as well */
-		|| login_getcapbool(lc, "ftp-chroot", 0)
-#endif
-	;
-	chrootdir = NULL;
 	/*
 	 * For a chrooted local user,
 	 * a) see whether ftpchroot(5) specifies a chroot directory,
@@ -1546,6 +1562,7 @@ skip:
 			reply(550, "Can't change root.");
 			goto bad;
 		}
+		__FreeBSD_libc_enter_restricted_mode();
 	} else	/* real user w/o chroot */
 		homedir = pw->pw_dir;
 	/*
@@ -2136,7 +2153,7 @@ send_data(FILE *instr, FILE *outstr, size_t blksize, off_t filesize, int isreg)
 				}
 			}
 			ENDXFER;
-			reply(226, msg);
+			reply(226, "%s", msg);
 			return (0);
 		}
 
@@ -2333,6 +2350,10 @@ statfilecmd(char *filename)
 	code = lstat(filename, &st) == 0 && S_ISDIR(st.st_mode) ? 212 : 213;
 	(void)snprintf(line, sizeof(line), _PATH_LS " -lgA %s", filename);
 	fin = ftpd_popen(line, "r");
+	if (fin == NULL) {
+		perror_reply(551, filename);
+		return;
+	}
 	lreply(code, "Status of %s:", filename);
 	atstart = 1;
 	while ((c = getc(fin)) != EOF) {
@@ -2737,7 +2758,7 @@ dologout(int status)
 
 	if (logged_in && dowtmp) {
 		(void) seteuid(0);
-		ftpd_logwtmp(ttyline, "", NULL);
+		ftpd_logwtmp(wtmpid, NULL, NULL);
 	}
 	/* beware of flushing buffers after a SIGPIPE */
 	_exit(status);
@@ -2794,15 +2815,20 @@ static int
 myoob(void)
 {
 	char *cp;
+	int ret;
 
 	if (!transflag) {
 		syslog(LOG_ERR, "Internal: myoob() while no transfer");
 		return (0);
 	}
 	cp = tmpline;
-	if (getline(cp, 7, stdin) == NULL) {
+	ret = getline(cp, 7, stdin);
+	if (ret == -1) {
 		reply(221, "You could at least say goodbye.");
 		dologout(0);
+	} else if (ret == -2) {
+		/* Ignore truncated command. */
+		return (0);
 	}
 	upper(cp);
 	if (strcmp(cp, "ABOR\r\n") == 0) {

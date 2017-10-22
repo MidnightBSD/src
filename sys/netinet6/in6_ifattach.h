@@ -1,6 +1,3 @@
-/*	$FreeBSD: release/7.0.0/sys/netinet6/in6_ifattach.h 151539 2005-10-21 16:23:01Z suz $	*/
-/*	$KAME: in6_ifattach.h,v 1.14 2001/02/08 12:48:39 jinmei Exp $	*/
-
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -28,6 +25,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: in6_ifattach.h,v 1.14 2001/02/08 12:48:39 jinmei Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET6_IN6_IFATTACH_H_

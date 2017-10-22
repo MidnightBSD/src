@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libutil/pty.c 175335 2008-01-14 22:57:45Z cperciva $");
+__FBSDID("$FreeBSD$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -49,98 +49,44 @@ static char sccsid[] = "@(#)pty.c	8.3 (Berkeley) 5/16/94";
 #include <termios.h>
 #include <unistd.h>
 
-#if 0
-int __use_pts(void);
-
-static int
-new_openpty(int *amaster, int *aslave, char *name, struct termios *termp,
+int
+openpty(int *amaster, int *aslave, char *name, struct termios *termp,
     struct winsize *winp)
 {
+	const char *slavename;
 	int master, slave;
 
-	master = posix_openpt(O_RDWR);
+	master = posix_openpt(O_RDWR|O_NOCTTY);
 	if (master == -1)
 		return (-1);
 
-	if (grantpt(master) == -1) {
-		close(master);
-		return (-1);
-	}
+	if (grantpt(master) == -1)
+		goto bad;
 
-	slave = open(ptsname(master), O_RDWR);
-	if (slave == -1) {
-		close(master);
-		return (-1);
-	}
+	if (unlockpt(master) == -1)
+		goto bad;
 
-	if (unlockpt(master) == -1) {
-		close(master);
-		close(slave);
-		return (-1);
-	}
+	slavename = ptsname(master);
+	if (slavename == NULL)
+		goto bad;
+
+	slave = open(slavename, O_RDWR);
+	if (slave == -1)
+		goto bad;
 
 	*amaster = master;
 	*aslave = slave;
 
 	if (name)
-		strcpy(name, ptsname(master));
+		strcpy(name, slavename);
 	if (termp)
 		tcsetattr(slave, TCSAFLUSH, termp);
 	if (winp)
 		ioctl(slave, TIOCSWINSZ, (char *)winp);
 
 	return (0);
-}
-#endif
 
-int
-openpty(int *amaster, int *aslave, char *name, struct termios *termp, struct winsize *winp)
-{
-	char line[] = "/dev/ptyXX";
-	const char *cp1, *cp2;
-	int master, slave, ttygid;
-	struct group *gr;
-
-#if 0
-	if (__use_pts())
-		return (new_openpty(amaster, aslave, name, termp, winp));
-#endif
-
-	if ((gr = getgrnam("tty")) != NULL)
-		ttygid = gr->gr_gid;
-	else
-		ttygid = -1;
-
-	for (cp1 = "pqrsPQRSlmnoLMNO"; *cp1; cp1++) {
-		line[8] = *cp1;
-		for (cp2 = "0123456789abcdefghijklmnopqrstuv"; *cp2; cp2++) {
-			line[5] = 'p';
-			line[9] = *cp2;
-			if ((master = open(line, O_RDWR, 0)) == -1) {
-				if (errno == ENOENT)
-					break; /* try the next pty group */
-			} else {
-				line[5] = 't';
-				(void) grantpt(master);
-				(void) revoke(line);
-				if ((slave = open(line, O_RDWR, 0)) != -1) {
-					*amaster = master;
-					*aslave = slave;
-					if (name)
-						strcpy(name, line);
-					if (termp)
-						(void) tcsetattr(slave,
-							TCSAFLUSH, termp);
-					if (winp)
-						(void) ioctl(slave, TIOCSWINSZ,
-							(char *)winp);
-					return (0);
-				}
-				(void) close(master);
-			}
-		}
-	}
-	errno = ENOENT;	/* out of ptys */
+bad:	close(master);
 	return (-1);
 }
 

@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: release/7.0.0/contrib/telnet/libtelnet/encrypt.c 98884 2002-06-26 17:06:14Z markm $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 #if 0
@@ -720,6 +720,9 @@ encrypt_keyid(struct key_info *kp, unsigned char *keyid, int len)
 	Encryptions *ep;
 	int dir = kp->dir;
 	int ret = 0;
+
+	if (len > MAXKEYLEN)
+		len = MAXKEYLEN;
 
 	if (!(ep = (*kp->getcrypt)(*kp->modep))) {
 		if (len == 0)

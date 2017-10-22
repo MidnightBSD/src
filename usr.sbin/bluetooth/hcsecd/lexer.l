@@ -27,14 +27,14 @@
  * SUCH DAMAGE.
  *
  * $Id: lexer.l,v 1.1 2002/11/24 20:22:39 max Exp $
- * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/hcsecd/lexer.l 114879 2003-05-10 21:50:37Z julian $
+ * $FreeBSD$
  */
 
 #include <string.h>
 #include "parser.h"
 %}
 
-%option yylineno noyywrap nounput
+%option yylineno noyywrap nounput noinput
 
 delim		[ \t\n]
 ws		{delim}+

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/ia64/efi/conf.c 164010 2006-11-05 22:03:04Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include <efi.h>
@@ -49,32 +49,22 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/boot/ia64/efi/conf.c 164010 2006-11-05 22:
 
 /* Exported for libstand */
 struct devsw *devsw[] = {
-	&efifs_dev,
+	&efipart_dev,
 	&efinet_dev,
 	NULL
 };
 
 struct fs_ops *file_system[] = {
-	&efifs_fsops,
-	&nfs_fsops,
+	&dosfs_fsops,
 	&ufs_fsops,
+	&cd9660_fsops,
+	&nfs_fsops,
 	&gzipfs_fsops,
 	NULL
 };
 
 struct netif_driver *netif_drivers[] = {
 	&efinetif,
-	NULL
-};
-
-/* 
- * Sort formats so that those that can detect based on arguments
- * rather than reading the file go first.
- */
-extern struct file_format ia64_elf;
-
-struct file_format *file_formats[] = {
-	&ia64_elf,
 	NULL
 };
 

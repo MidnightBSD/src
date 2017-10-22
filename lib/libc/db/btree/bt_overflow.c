@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)bt_overflow.c	8.5 (Berkeley) 7/16/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/db/btree/bt_overflow.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -75,12 +75,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/db/btree/bt_overflow.c 165903 2007-01
  *	RET_ERROR, RET_SUCCESS
  */
 int
-__ovfl_get(t, p, ssz, buf, bufsz)
-	BTREE *t;
-	void *p;
-	size_t *ssz;
-	void **buf;
-	size_t *bufsz;
+__ovfl_get(BTREE *t, void *p, size_t *ssz, void **buf, size_t *bufsz)
 {
 	PAGE *h;
 	pgno_t pg;
@@ -97,7 +92,7 @@ __ovfl_get(t, p, ssz, buf, bufsz)
 #endif
 	/* Make the buffer bigger as necessary. */
 	if (*bufsz < sz) {
-		*buf = (char *)(*buf == NULL ? malloc(sz) : reallocf(*buf, sz));
+		*buf = reallocf(*buf, sz);
 		if (*buf == NULL)
 			return (RET_ERROR);
 		*bufsz = sz;
@@ -134,10 +129,7 @@ __ovfl_get(t, p, ssz, buf, bufsz)
  *	RET_ERROR, RET_SUCCESS
  */
 int
-__ovfl_put(t, dbt, pg)
-	BTREE *t;
-	const DBT *dbt;
-	pgno_t *pg;
+__ovfl_put(BTREE *t, const DBT *dbt, pgno_t *pg)
 {
 	PAGE *h, *last;
 	void *p;
@@ -188,9 +180,7 @@ __ovfl_put(t, dbt, pg)
  *	RET_ERROR, RET_SUCCESS
  */
 int
-__ovfl_delete(t, p)
-	BTREE *t;
-	void *p;
+__ovfl_delete(BTREE *t, void *p)
 {
 	PAGE *h;
 	pgno_t pg;

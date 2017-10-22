@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/netgraph/ng_car.h 169577 2007-05-15 16:09:23Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_NG_CAR_H_
@@ -115,6 +115,7 @@ enum {
 
 /* mode options (opt) */
 #define NG_CAR_COLOR_AWARE	1
+#define NG_CAR_COUNT_PACKETS	2
 
 /* Bulk config */
 struct ng_car_bulkconf {

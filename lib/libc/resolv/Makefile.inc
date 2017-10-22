@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/lib/libc/resolv/Makefile.inc 158787 2006-05-21 11:19:36Z ume $
+# $FreeBSD$
 
 # resolv sources
 .PATH: ${.CURDIR}/resolv

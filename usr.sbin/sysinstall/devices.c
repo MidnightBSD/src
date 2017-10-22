@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/devices.c 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -57,8 +57,6 @@ static int numDevs;
 
 #define	CDROM(name, descr, max)					\
 	DEVICE_ENTRY(DEVICE_TYPE_CDROM, name, descr, max)
-#define	TAPE(name, descr, max)						\
-	DEVICE_ENTRY(DEVICE_TYPE_TAPE, name, descr, max)
 #define	DISK(name, descr, max)						\
 	DEVICE_ENTRY(DEVICE_TYPE_DISK, name, descr, max)
 #define	FLOPPY(name, descr, max)					\
@@ -67,6 +65,8 @@ static int numDevs;
 	DEVICE_ENTRY(DEVICE_TYPE_NETWORK, name, descr, 0)
 #define	SERIAL(name, descr, max)					\
 	DEVICE_ENTRY(DEVICE_TYPE_NETWORK, name, descr, max)
+#define	USB(name, descr, max)						\
+	DEVICE_ENTRY(DEVICE_TYPE_USB, name, descr, max)
 
 static struct _devname {
     DeviceType type;
@@ -78,10 +78,9 @@ static struct _devname {
     CDROM("mcd%d",	"Mitsumi (old model) CDROM drive",	4),
     CDROM("scd%d",	"Sony CDROM drive - CDU31/33A type",	4),
     CDROM("acd%d",	"ATAPI/IDE CDROM",			4),
-    TAPE("sa%d",	"SCSI tape drive",			4),
-    TAPE("rwt%d",	"Wangtek tape drive",			4),
     DISK("da%d",	"SCSI disk device",			16),
     DISK("ad%d",	"ATA/IDE disk device",			16),
+    DISK("ada%d",	"SATA disk device",			16),
     DISK("ar%d",	"ATA/IDE RAID device",			16),
     DISK("afd%d",	"ATAPI/IDE floppy device",		4),
     DISK("mlxd%d",	"Mylex RAID disk",			4),
@@ -92,7 +91,12 @@ static struct _devname {
     DISK("ipsd%d",	"IBM ServeRAID RAID array",		4),
     DISK("mfid%d",	"LSI MegaRAID SAS array",		4),
     FLOPPY("fd%d",	"floppy drive unit A",			4),
-    SERIAL("cuad%d",	"%s on device %s (COM%d)",		16),
+    SERIAL("cuau%d",	"%s on device %s (COM%d)",		16),
+    USB("da%da",	"USB Mass Storage Device",		16),
+    NETWORK("ae",	"Attansic/Atheros L2 Fast Ethernet"),
+    NETWORK("age",	"Attansic/Atheros L1 Gigabit Ethernet"),
+    NETWORK("alc",	"Atheros AR8131/AR8132 PCIe Ethernet"),
+    NETWORK("ale",	"Atheros AR8121/AR8113/AR8114 PCIe Ethernet"),
     NETWORK("an",	"Aironet 4500/4800 802.11 wireless adapter"),
     NETWORK("ath",	"Atheros IEEE 802.11 wireless adapter"),
     NETWORK("aue",	"ADMtek USB Ethernet adapter"),
@@ -100,8 +104,13 @@ static struct _devname {
     NETWORK("bce",	"Broadcom NetXtreme II Gigabit Ethernet card"),
     NETWORK("bfe",	"Broadcom BCM440x PCI Ethernet card"),
     NETWORK("bge",	"Broadcom BCM570x PCI Gigabit Ethernet card"),
+    NETWORK("bm",	"Apple BMAC Built-in Ethernet"),
+    NETWORK("bwn",	"Broadcom BCM43xx IEEE 802.11 wireless adapter"),
+    NETWORK("bxe",	"Broadcom NetXtreme II 10Gb Ethernet card"),
+    NETWORK("cas",	"Sun Cassini/Cassini+ or NS DP83065 Saturn Ethernet"),
     NETWORK("cue",	"CATC USB Ethernet adapter"),
     NETWORK("cxgb",	"Chelsio T3 10Gb Ethernet card"),
+    NETWORK("cxgbe",	"Chelsio T4 10Gb Ethernet card"),
     NETWORK("fpa",	"DEC DEFPA PCI FDDI card"),
     NETWORK("sr",	"SDL T1/E1 sync serial PCI card"),
     NETWORK("cc3i",	"SDL HSSI sync serial PCI card"),
@@ -112,26 +121,38 @@ static struct _devname {
     NETWORK("ed",	"Novell NE1000/2000; 3C503; NE2000-compatible PCMCIA"),
     NETWORK("ep",	"3Com 3C509 Ethernet card/3C589 PCMCIA"),
     NETWORK("em",	"Intel(R) PRO/1000 Ethernet card"),
+    NETWORK("et",	"Agere ET1310 based PCI Express Gigabit Ethernet card"),
     NETWORK("ex",	"Intel EtherExpress Pro/10 Ethernet card"),
     NETWORK("fe",	"Fujitsu MB86960A/MB86965A Ethernet card"),
     NETWORK("gem",	"Apple GMAC or Sun ERI/GEM Ethernet adapter"),
     NETWORK("hme",	"Sun HME (Happy Meal Ethernet) Ethernet adapter"),
     NETWORK("ie",	"AT&T StarLAN 10 and EN100; 3Com 3C507; NI5210"),
+    NETWORK("igb",	"Intel(R) PRO/1000 PCI Express Gigabit Ethernet card"),
+    NETWORK("ipw",	"Intel PRO/Wireless 2100 IEEE 802.11 adapter"),
+    NETWORK("iwi",	"Intel PRO/Wireless 2200BG/2225BG/2915ABG adapter"),
+    NETWORK("iwn",	"Intel Wireless WiFi Link 4965AGN IEEE 802.11n adapter"),
     NETWORK("ixgb",	"Intel(R) PRO/10Gb Ethernet card"),
+    NETWORK("ixgbe",	"Intel(R) PRO/10Gb Ethernet card"),
+    NETWORK("jme",	"JMicron JMC250 Gigabit/JMC260 Fast Ethernet"),
     NETWORK("kue",	"Kawasaki LSI USB Ethernet adapter"),
     NETWORK("le",	"AMD Am7900 LANCE or Am79C9xx PCnet Ethernet adapter"),
     NETWORK("lge",	"Level 1 LXT1001 Gigabit Ethernet card"),
+    NETWORK("malo",	"Marvell Libertas 88W8335 802.11 wireless adapter"),
     NETWORK("msk",	"Marvell/SysKonnect Yukon II Gigabit Ethernet"),
     NETWORK("mxge",	"Myricom Myri10GE 10Gb Ethernet card"),
     NETWORK("nfe",	"NVIDIA nForce MCP Ethernet"),
     NETWORK("nge",	"NatSemi PCI Gigabit Ethernet card"),
     NETWORK("nve",	"NVIDIA nForce MCP Ethernet"),
+    NETWORK("nxge",	"Neterion Xframe 10GbE Server/Storage adapter"),
     NETWORK("pcn",	"AMD Am79c79x PCI Ethernet card"),
+    NETWORK("ral",	"Ralink Technology IEEE 802.11 wireless adapter"),
     NETWORK("ray",	"Raytheon Raylink 802.11 wireless adapter"),
     NETWORK("re",	"RealTek 8139C+/8169/8169S/8110S PCI Ethernet card"),
     NETWORK("rl",	"RealTek 8129/8139 PCI Ethernet card"),
     NETWORK("rue",	"RealTek USB Ethernet card"),
+    NETWORK("rum",	"Ralink Technology USB IEEE 802.11 wireless adapter"),
     NETWORK("sf",	"Adaptec AIC-6915 PCI Ethernet card"),
+    NETWORK("sge",	"Silicon Integrated Systems SiS190/191 Ethernet"),
     NETWORK("sis",	"SiS 900/SiS 7016 PCI Ethernet card"),
 #ifdef PC98
     NETWORK("snc",	"SONIC Ethernet card"),
@@ -144,14 +165,21 @@ static struct _devname {
     NETWORK("txp",	"3Com 3cR990 Ethernet card"),
     NETWORK("ti",	"Alteon Networks PCI Gigabit Ethernet card"),
     NETWORK("tl",	"Texas Instruments ThunderLAN PCI Ethernet card"),
+    NETWORK("uath",	"Atheros AR5005UG and AR5005UX USB wireless adapter"),
+    NETWORK("upgt",	"Conexant/Intersil PrismGT USB wireless adapter"),
+    NETWORK("ural",	"Ralink Technology RT2500USB 802.11 wireless adapter"),
+    NETWORK("urtw",	"Realtek 8187L USB wireless adapter"),
     NETWORK("vge",	"VIA VT612x PCI Gigabit Ethernet card"),
     NETWORK("vr",	"VIA VT3043/VT86C100A Rhine PCI Ethernet card"),
+    NETWORK("vte",	"DM&P Vortex86 RDC R6040 Fast Ethernet"),
     NETWORK("vlan",	"IEEE 802.1Q VLAN network interface"),
     NETWORK("vx",	"3COM 3c590 / 3c595 Ethernet card"),
     NETWORK("wb",	"Winbond W89C840F PCI Ethernet card"),
     NETWORK("wi",	"Lucent WaveLAN/IEEE 802.11 wireless adapter"),
+    NETWORK("wpi",	"Intel 3945ABG IEEE 802.11 wireless adapter"),
     NETWORK("xe",	"Xircom/Intel EtherExpress Pro100/16 Ethernet card"),
     NETWORK("xl",	"3COM 3c90x / 3c90xB PCI Ethernet card"),
+    NETWORK("zyd",	"ZyDAS ZD1211/ZD1211B USB 802.11 wireless adapter"),
     NETWORK("fwe",	"FireWire Ethernet emulation"),
     NETWORK("fwip",	"IP over FireWire"),
     NETWORK("plip",	"Parallel Port IP (PLIP) peer connection"),
@@ -270,6 +298,8 @@ deviceGetAll(void)
 
     msgNotify("Probing devices, please wait (this can take a while)...");
     /* First go for the network interfaces.  Stolen shamelessly from ifconfig! */
+    memset(&ifc, 0, sizeof(ifc));
+    memset(buffer, 0, INTERFACE_MAX * sizeof(struct ifreq));
     ifc.ifc_len = sizeof(buffer);
     ifc.ifc_buf = buffer;
 
@@ -294,14 +324,6 @@ deviceGetAll(void)
 	if (!strncmp(ifptr->ifr_name, "lo", 2))
 	    goto loopend;
 
-	/* If we have a slip device, don't register it */
-	if (!strncmp(ifptr->ifr_name, "sl", 2)) {
-	    goto loopend;
-	}
-	/* And the same for ppp */
-	if (!strncmp(ifptr->ifr_name, "tun", 3) || !strncmp(ifptr->ifr_name, "ppp", 3)) {
-	    goto loopend;
-	}
 	/* Try and find its description */
 	for (i = 0, descr = NULL; device_names[i].name; i++) {
 	    int len = strlen(device_names[i].name);
@@ -346,25 +368,11 @@ skipif:
 
 		    if (fd >= 0) close(fd);
 		    snprintf(n, sizeof n, device_names[i].name, j);
-		    deviceRegister(strdup(n), device_names[i].description, strdup(try),
+		    deviceRegister(n, device_names[i].description, strdup(try),
 					 DEVICE_TYPE_CDROM, TRUE, mediaInitCDROM, mediaGetCDROM,
 					 mediaShutdownCDROM, NULL);
 		    if (isDebug())
 			msgDebug("Found a CDROM device for %s\n", try);
-		}
-		break;
-
-	    case DEVICE_TYPE_TAPE:
-		fd = deviceTry(device_names[i], try, j);
-		if (fd >= 0) {
-		    char n[BUFSIZ];
-
-		    close(fd);
-		    snprintf(n, sizeof n, device_names[i].name, j);
-		    deviceRegister(strdup(n), device_names[i].description, strdup(try),
-				   DEVICE_TYPE_TAPE, TRUE, mediaInitTape, mediaGetTape, mediaShutdownTape, NULL);
-		    if (isDebug())
-			msgDebug("Found a TAPE device for %s\n", try);
 		}
 		break;
 
@@ -379,7 +387,7 @@ skipif:
 
 		    close(fd);
 		    snprintf(n, sizeof n, device_names[i].name, j);
-		    deviceRegister(strdup(n), device_names[i].description, strdup(try),
+		    deviceRegister(n, device_names[i].description, strdup(try),
 				   DEVICE_TYPE_FLOPPY, TRUE, mediaInitFloppy, mediaGetFloppy,
 				   mediaShutdownFloppy, NULL);
 		    if (isDebug())
@@ -387,26 +395,19 @@ skipif:
 		}
 		break;
 
-	    case DEVICE_TYPE_NETWORK:
+	    case DEVICE_TYPE_USB:
 		fd = deviceTry(device_names[i], try, j);
-		/* The only network devices that you can open this way are serial ones */
 		if (fd >= 0) {
-		    char *newdesc, *cp;
+			char n[BUFSIZ];
 
-		    close(fd);
-		    cp = device_names[i].description;
-		    /* Serial devices get a slip and ppp device each, if supported */
-		    newdesc = safe_malloc(strlen(cp) + 40);
-		    sprintf(newdesc, cp, "SLIP interface", try, j + 1);
-		    deviceRegister("sl0", newdesc, strdup(try), DEVICE_TYPE_NETWORK, TRUE, mediaInitNetwork,
-				   NULL, mediaShutdownNetwork, NULL);
-		    msgDebug("Add mapping for %s to sl0\n", try);
-		    newdesc = safe_malloc(strlen(cp) + 50);
-		    sprintf(newdesc, cp, "PPP interface", try, j + 1);
-		    deviceRegister("ppp0", newdesc, strdup(try), DEVICE_TYPE_NETWORK, TRUE, mediaInitNetwork,
-				   NULL, mediaShutdownNetwork, NULL);
-		    if (isDebug())
-			msgDebug("Add mapping for %s to ppp0\n", try);
+			close(fd);
+			snprintf(n, sizeof(n), device_names[i].name, j);
+			deviceRegister(n, device_names[i].description,
+			    strdup(try), DEVICE_TYPE_USB, TRUE, mediaInitUSB,
+			    mediaGetUSB, mediaShutdownUSB, NULL);
+
+			if (isDebug())
+				msgDebug("Found a USB disk for %s\n", try);
 		}
 		break;
 
@@ -416,7 +417,7 @@ skipif:
 	}
     }
 
-    /* Finally, go get the disks and look for DOS partitions to register */
+    /* Finally, go get the disks and look for partitions to register */
     if ((names = Disk_Names()) != NULL) {
 	int i;
 
@@ -453,7 +454,11 @@ skipif:
 	    if (isDebug())
 		msgDebug("Found a disk device named %s\n", names[i]);
 
-	    /* Look for existing DOS partitions to register as "DOS media devices" */
+	    /* Look for existing DOS partitions to register as "DOS media devices"
+	     * XXX: libdisks handling of extended partitions is too
+	     * simplistic - it does not handle them containing (for
+	     * example) UFS partitions
+	     */
 	    for (c1 = d->chunks->part; c1; c1 = c1->next) {
 		if (c1->type == fat || c1->type == efi || c1->type == extended) {
 		    Device *dev;
@@ -465,8 +470,25 @@ skipif:
 					 mediaInitDOS, mediaGetDOS, mediaShutdownDOS, NULL);
 		    dev->private = c1;
 		    if (isDebug())
-			msgDebug("Found a DOS partition %s on drive %s\n", c1->name, d->name);
+			msgDebug("Found a DOS partition %s\n", c1->name);
+		} else if (c1->type == freebsd) {
+		    Device *dev;
+		    char devname[80];
+		    Chunk *c2;
+			
+		    for (c2 = c1->part; c2; c2 = c2->next) {
+			if (c2->type != part || c2->subtype != 7)
+			    continue;
+			/* Got one! */
+			snprintf(devname, sizeof devname, "/dev/%s", c1->name);
+			dev = deviceRegister(c2->name, c2->name, strdup(devname), DEVICE_TYPE_UFS, TRUE,
+					     mediaInitUFS, mediaGetUFS, mediaShutdownUFS, NULL);
+			dev->private = c2;
+			if (isDebug())
+			    msgDebug("Found a UFS sub-partition %s\n", c2->name);
+		    }
 		}
+		
 	    }
 	}
 	free(names);

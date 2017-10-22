@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/libexec/pppoed/pppoed.c 171195 2007-07-04 00:00:41Z scf $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -570,8 +570,8 @@ main(int argc, char *argv[])
     }
     exec = (char *)alloca(sizeof DEFAULT_EXEC_PREFIX + strlen(label));
     if (exec == NULL) {
-      fprintf(stderr, "%s: Cannot allocate %d bytes\n", prog,
-              (int)(sizeof DEFAULT_EXEC_PREFIX) + strlen(label));
+      fprintf(stderr, "%s: Cannot allocate %zu bytes\n", prog,
+              sizeof DEFAULT_EXEC_PREFIX + strlen(label));
       return EX_OSERR;
     }
     strcpy(exec, DEFAULT_EXEC_PREFIX);

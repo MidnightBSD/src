@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: release/7.0.0/sys/ia64/ia64/sscdisk.c 151897 2005-10-31 15:41:29Z rwatson $
+ * $FreeBSD$
  *
  */
 
@@ -74,11 +74,9 @@ ssc(u_int64_t in0, u_int64_t in1, u_int64_t in2, u_int64_t in3, int which)
 
 MALLOC_DEFINE(M_SSC, "ssc_disk", "Simulator Disk");
 
-static int sscrootready;
-
 static d_strategy_t sscstrategy;
 
-static LIST_HEAD(, ssc_s) ssc_softc_list = LIST_HEAD_INITIALIZER(&ssc_softc_list);
+static LIST_HEAD(, ssc_s) ssc_softc_list = LIST_HEAD_INITIALIZER(ssc_softc_list);
 
 struct ssc_s {
 	int unit;
@@ -167,7 +165,7 @@ ssccreate(int unit)
 		if (sc->unit == unit)
 			return (NULL);
 	}
-	MALLOC(sc, struct ssc_s *,sizeof(*sc), M_SSC, M_WAITOK | M_ZERO);
+	sc = malloc(sizeof(*sc), M_SSC, M_WAITOK | M_ZERO);
 	LIST_INSERT_HEAD(&ssc_softc_list, sc, list);
 	sc->unit = unit;
 	bioq_init(&sc->bio_queue);
@@ -186,7 +184,7 @@ ssccreate(int unit)
 	disk_create(sc->disk, DISK_VERSION);
 	sc->fd = fd;
 	if (sc->unit == 0) 
-		sscrootready = 1;
+		rootdevnames[0] = "ufs:/dev/sscdisk0";
 	return (sc);
 }
 
@@ -196,13 +194,4 @@ ssc_drvinit(void *unused)
 	ssccreate(-1);
 }
 
-SYSINIT(sscdev,SI_SUB_DRIVERS,SI_ORDER_MIDDLE, ssc_drvinit,NULL)
-
-static void
-ssc_takeroot(void *junk)
-{
-	if (sscrootready)
-		rootdevnames[0] = "ufs:/dev/sscdisk0";
-}
-
-SYSINIT(ssc_root, SI_SUB_MOUNT_ROOT, SI_ORDER_FIRST, ssc_takeroot, NULL);
+SYSINIT(sscdev,SI_SUB_DRIVERS,SI_ORDER_MIDDLE, ssc_drvinit,NULL);

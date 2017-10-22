@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/7.0.0/tools/regression/sockets/unix_cmsg/unix_cmsg.t 159045 2006-05-29 18:40:55Z maxim $
+# $FreeBSD$
 
 cd `dirname $0`
 cmd="./`basename $0 .t`"

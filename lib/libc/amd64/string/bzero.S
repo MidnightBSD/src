@@ -5,7 +5,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/amd64/string/bzero.S 144733 2005-04-07 05:46:46Z alc $");
+__FBSDID("$FreeBSD$");
 
 #if 0
 	RCSID("$NetBSD: bzero.S,v 1.2 2003/07/26 19:24:38 salo Exp $")
@@ -41,3 +41,6 @@ L1:	movq	%rsi,%rcx		/* zero remainder by bytes */
 	stosb
 
 	ret
+END(bzero)
+
+	.section .note.GNU-stack,"",%progbits

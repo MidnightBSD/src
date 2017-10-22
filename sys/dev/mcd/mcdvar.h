@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/7.0.0/sys/dev/mcd/mcdvar.h 130585 2004-06-16 09:47:26Z phk $
+ * $FreeBSD$
  */
 
 struct mcd_mbx {

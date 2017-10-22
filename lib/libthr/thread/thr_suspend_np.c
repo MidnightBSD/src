@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libthr/thread/thr_suspend_np.c 165967 2007-01-12 07:26:21Z imp $
+ * $FreeBSD$
  */
 
 #include "namespace.h"
@@ -76,7 +76,7 @@ _pthread_suspend_all_np(void)
 	struct pthread *thread;
 	int ret;
 
-	THREAD_LIST_LOCK(curthread);
+	THREAD_LIST_RDLOCK(curthread);
 
 	TAILQ_FOREACH(thread, &_thread_list, tle) {
 		if (thread != curthread) {
@@ -96,13 +96,15 @@ restart:
 			THR_THREAD_LOCK(curthread, thread);
 			ret = suspend_common(curthread, thread, 0);
 			if (ret == 0) {
-				/* Can not suspend, try to wait */
-				thread->refcount++;
 				THREAD_LIST_UNLOCK(curthread);
+				/* Can not suspend, try to wait */
+				THR_REF_ADD(curthread, thread);
 				suspend_common(curthread, thread, 1);
-				THR_THREAD_UNLOCK(curthread, thread);
-				THREAD_LIST_LOCK(curthread);
-				_thr_ref_delete_unlocked(curthread, thread);
+				THR_REF_DEL(curthread, thread);
+				_thr_try_gc(curthread, thread);
+				/* thread lock released */
+
+				THREAD_LIST_RDLOCK(curthread);
 				/*
 				 * Because we were blocked, things may have
 				 * been changed, we have to restart the
@@ -121,16 +123,16 @@ static int
 suspend_common(struct pthread *curthread, struct pthread *thread,
 	int waitok)
 {
-	umtx_t tmp;
+	long tmp;
 
 	while (thread->state != PS_DEAD &&
 	      !(thread->flags & THR_FLAGS_SUSPENDED)) {
 		thread->flags |= THR_FLAGS_NEED_SUSPEND;
 		tmp = thread->cycle;
-		THR_THREAD_UNLOCK(curthread, thread);
 		_thr_send_sig(thread, SIGCANCEL);
+		THR_THREAD_UNLOCK(curthread, thread);
 		if (waitok) {
-			_thr_umtx_wait(&thread->cycle, tmp, NULL);
+			_thr_umtx_wait_uint(&thread->cycle, tmp, NULL, 0);
 			THR_THREAD_LOCK(curthread, thread);
 		} else {
 			THR_THREAD_LOCK(curthread, thread);

@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,17 +15,18 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: error.h,v 1.14.18.2 2005/04/29 00:16:54 marka Exp $ */
+/* $Id: error.h,v 1.22 2009/09/29 23:48:04 tbox Exp $ */
 
 #ifndef ISC_ERROR_H
 #define ISC_ERROR_H 1
 
-/*! \file */
+/*! \file isc/error.h */
 
 #include <stdarg.h>
 
 #include <isc/formatcheck.h>
 #include <isc/lang.h>
+#include <isc/platform.h>
 
 ISC_LANG_BEGINDECLS
 
@@ -45,9 +46,9 @@ isc_error_unexpected(const char *, int, const char *, ...)
      ISC_FORMAT_PRINTF(3, 4);
 
 /*% fatal error */
-void
+ISC_PLATFORM_NORETURN_PRE void
 isc_error_fatal(const char *, int, const char *, ...)
-     ISC_FORMAT_PRINTF(3, 4);
+ISC_FORMAT_PRINTF(3, 4) ISC_PLATFORM_NORETURN_POST;
 
 /*% runtimecheck error */
 void

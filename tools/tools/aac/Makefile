@@ -1,7 +1,8 @@
-# $FreeBSD: release/7.0.0/tools/tools/aac/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
 PROG=	aac_checkq
 NO_MAN=
+WARNS?=6
 BINDIR?=/usr/local/bin
 
 .include <bsd.prog.mk>

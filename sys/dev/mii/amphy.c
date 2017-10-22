@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/mii/amphy.c 165985 2007-01-12 22:27:46Z marius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * driver for AMD AM79c873 PHYs
@@ -66,7 +66,7 @@ static device_method_t amphy_methods[] = {
 	DEVMETHOD(device_attach,	amphy_attach),
 	DEVMETHOD(device_detach,	mii_phy_detach),
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static devclass_t amphy_devclass;
@@ -83,10 +83,16 @@ static int	amphy_service(struct mii_softc *, struct mii_data *, int);
 static void	amphy_status(struct mii_softc *);
 
 static const struct mii_phydesc amphys[] = {
-	MII_PHY_DESC(DAVICOM, DM9102),
-	MII_PHY_DESC(xxAMD, 79C873),
+	MII_PHY_DESC(xxDAVICOM, DM9102),
 	MII_PHY_DESC(xxDAVICOM, DM9101),
+	MII_PHY_DESC(yyDAVICOM, DM9101),
 	MII_PHY_END
+};
+
+static const struct mii_phy_funcs amphy_funcs = {
+	amphy_service,
+	amphy_status,
+	mii_phy_reset
 };
 
 static int
@@ -99,68 +105,20 @@ amphy_probe(device_t dev)
 static int
 amphy_attach(device_t dev)
 {
-	struct mii_softc *sc;
-	struct mii_attach_args *ma;
-	struct mii_data *mii;
 
-	sc = device_get_softc(dev);
-	ma = device_get_ivars(dev);
-	sc->mii_dev = device_get_parent(dev);
-	mii = device_get_softc(sc->mii_dev);
-	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
-
-	sc->mii_inst = mii->mii_instance;
-	sc->mii_phy = ma->mii_phyno;
-	sc->mii_service = amphy_service;
-	sc->mii_pdata = mii;
-
-	mii->mii_instance++;
-
-#define	ADD(m, c)	ifmedia_add(&mii->mii_media, (m), (c), NULL)
-
-#if 0
-	ADD(IFM_MAKEWORD(IFM_ETHER, IFM_100_TX, IFM_LOOP, sc->mii_inst),
-	    MII_MEDIA_100_TX);
-#endif
-
-	mii_phy_reset(sc);
-
-	sc->mii_capabilities =
-	    PHY_READ(sc, MII_BMSR) & ma->mii_capmask;
-	device_printf(dev, " ");
-	mii_phy_add_media(sc);
-	printf("\n");
-#undef ADD
-	MIIBUS_MEDIAINIT(sc->mii_dev);
+	mii_phy_dev_attach(dev, MIIF_NOMANPAUSE, &amphy_funcs, 1);
 	return (0);
 }
 
 static int
 amphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 {
-	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
-	int reg;
 
 	switch (cmd) {
 	case MII_POLLSTAT:
-		/*
-		 * If we're not polling our PHY instance, just return.
-		 */
-		if (IFM_INST(ife->ifm_media) != sc->mii_inst)
-			return (0);
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the media indicates a different PHY instance,
-		 * isolate ourselves.
-		 */
-		if (IFM_INST(ife->ifm_media) != sc->mii_inst) {
-			reg = PHY_READ(sc, MII_BMCR);
-			PHY_WRITE(sc, MII_BMCR, reg | BMCR_ISO);
-			return (0);
-		}
-
 		/*
 		 * If the interface is not up, don't do anything.
 		 */
@@ -171,18 +129,13 @@ amphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		break;
 
 	case MII_TICK:
-		/*
-		 * If we're not currently selected, just return.
-		 */
-		if (IFM_INST(ife->ifm_media) != sc->mii_inst)
-			return (0);
 		if (mii_phy_tick(sc) == EJUSTRETURN)
 			return (0);
 		break;
 	}
 
 	/* Update the media status. */
-	amphy_status(sc);
+	PHY_STATUS(sc);
 
 	/* Callback if something changed. */
 	mii_phy_update(sc, cmd);
@@ -216,7 +169,7 @@ amphy_status(struct mii_softc *sc)
 
 	if (bmcr & BMCR_AUTOEN) {
 		/*
-		 * The PAR status bits are only valid of autonegotiation
+		 * The PAR status bits are only valid if autonegotiation
 		 * has completed (or it's disabled).
 		 */
 		if ((bmsr & BMSR_ACOMP) == 0) {
@@ -228,16 +181,16 @@ amphy_status(struct mii_softc *sc)
 		if (PHY_READ(sc, MII_ANER) & ANER_LPAN) {
 			anlpar = PHY_READ(sc, MII_ANAR) &
 			    PHY_READ(sc, MII_ANLPAR);
-			if (anlpar & ANLPAR_T4)
-				mii->mii_media_active |= IFM_100_T4;
-			else if (anlpar & ANLPAR_TX_FD)
+			if (anlpar & ANLPAR_TX_FD)
 				mii->mii_media_active |= IFM_100_TX|IFM_FDX;
+			else if (anlpar & ANLPAR_T4)
+				mii->mii_media_active |= IFM_100_T4|IFM_HDX;
 			else if (anlpar & ANLPAR_TX)
-				mii->mii_media_active |= IFM_100_TX;
+				mii->mii_media_active |= IFM_100_TX|IFM_HDX;
 			else if (anlpar & ANLPAR_10_FD)
 				mii->mii_media_active |= IFM_10_T|IFM_FDX;
 			else if (anlpar & ANLPAR_10)
-				mii->mii_media_active |= IFM_10_T;
+				mii->mii_media_active |= IFM_10_T|IFM_HDX;
 			else
 				mii->mii_media_active |= IFM_NONE;
 			return;
@@ -250,11 +203,13 @@ amphy_status(struct mii_softc *sc)
 		if (par & DSCSR_100FDX)
 			mii->mii_media_active |= IFM_100_TX|IFM_FDX;
 		else if (par & DSCSR_100HDX)
-			mii->mii_media_active |= IFM_100_TX;
+			mii->mii_media_active |= IFM_100_TX|IFM_HDX;
 		else if (par & DSCSR_10FDX)
 			mii->mii_media_active |= IFM_10_T|IFM_HDX;
 		else if (par & DSCSR_10HDX)
-			mii->mii_media_active |= IFM_10_T;
+			mii->mii_media_active |= IFM_10_T|IFM_HDX;
+		if ((mii->mii_media_active & IFM_FDX) != 0)
+			mii->mii_media_active |= mii_phy_flowstatus(sc);
 	} else
 		mii->mii_media_active = ife->ifm_media;
 }

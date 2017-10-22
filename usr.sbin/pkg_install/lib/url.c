@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/url.c 167972 2007-03-28 05:33:52Z njl $");
+__FBSDID("$FreeBSD$");
 
 #include "lib.h"
 #include <err.h>
@@ -32,10 +32,11 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/url.c 167972 2007-03-
  * Try and fetch a file by URL, returning the directory name for where
  * it's unpacked, if successful.
  */
-char *
+const char *
 fileGetURL(const char *base, const char *spec, int keep_package)
 {
-    char *cp, *rp, *tmp;
+    const char *rp;
+    char *cp, *tmp;
     char fname[FILENAME_MAX];
     char pen[FILENAME_MAX];
     char pkg[FILENAME_MAX];
@@ -72,11 +73,10 @@ fileGetURL(const char *base, const char *spec, int keep_package)
 		*(cp + 1) = '\0';
 		strcat(cp, "All/");
 		strcat(cp, spec);
-#if defined(__FreeBSD_version) && __FreeBSD_version >= 500039
-		strcat(cp, ".tbz");
-#else
-		strcat(cp, ".tgz");
-#endif
+		if (getenv("PACKAGESUFFIX"))
+		   strcat(cp, getenv("PACKAGESUFFIX"));
+                else
+		   strcat(cp, ".tbz");
 	    }
 	    else
 		return NULL;
@@ -88,11 +88,10 @@ fileGetURL(const char *base, const char *spec, int keep_package)
 	     */
 	    strcpy(fname, hint);
 	    strcat(fname, spec);
-#if defined(__FreeBSD_version) && __FreeBSD_version >= 500039
-	    strcat(fname, ".tbz");
-#else
-	    strcat(fname, ".tgz");
-#endif
+	    if (getenv("PACKAGESUFFIX"))
+	       strcat(fname, getenv("PACKAGESUFFIX"));
+            else
+	       strcat(fname, ".tbz");
 	}
     }
     else
@@ -113,8 +112,12 @@ fileGetURL(const char *base, const char *spec, int keep_package)
 
     fetchDebug = (Verbose > 0);
     if ((ftp = fetchGetURL(fname, Verbose ? "v" : NULL)) == NULL) {
-	printf("Error: FTP Unable to get %s: %s\n",
+	printf("Error: Unable to get %s: %s\n",
 	       fname, fetchLastErrString);
+	/* If the fetch fails, yank the package. */
+	if (keep_package && unlink(pkg) < 0 && Verbose) {
+	    warnx("failed to remove partially fetched package: %s", pkg);
+	}
 	return NULL;
     }
 
@@ -141,11 +144,7 @@ fileGetURL(const char *base, const char *spec, int keep_package)
 	for (fd = getdtablesize() - 1; fd >= 3; --fd)
 	    close(fd);
 	execl("/usr/bin/tar", "tar",
-#if defined(__FreeBSD_version) && __FreeBSD_version >= 500039
 	    Verbose ? "-xpjvf" : "-xpjf",
-#else
-	    Verbose ? "-xpzvf" : "-xpzf",
-#endif
 	    "-", (char *)0);
 	_exit(2);
     }

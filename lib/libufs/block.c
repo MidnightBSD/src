@@ -26,10 +26,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libufs/block.c 120874 2003-10-07 07:12:22Z phk $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
+#include <sys/disk.h>
 #include <sys/disklabel.h>
 #include <sys/stat.h>
 
@@ -63,8 +64,10 @@ bread(struct uufsd *disk, ufs2_daddr_t blockno, void *data, size_t size)
 	 */
 	if (((intptr_t)data) & 0x3f) {
 		p2 = malloc(size);
-		if (p2 == NULL)
+		if (p2 == NULL) {
 			ERROR(disk, "allocate bounce buffer");
+			goto fail;
+		}
 	}
 	cnt = pread(disk->d_fd, p2, size, (off_t)(blockno * disk->d_bsize));
 	if (cnt == -1) {
@@ -114,8 +117,10 @@ bwrite(struct uufsd *disk, ufs2_daddr_t blockno, const void *data, size_t size)
 	 */
 	if (((intptr_t)data) & 0x3f) {
 		p2 = malloc(size);
-		if (p2 == NULL)
+		if (p2 == NULL) {
 			ERROR(disk, "allocate bounce buffer");
+			return (-1);
+		}
 		memcpy(p2, data, size);
 		data = p2;
 	}
@@ -132,4 +137,22 @@ bwrite(struct uufsd *disk, ufs2_daddr_t blockno, const void *data, size_t size)
 	}
 
 	return (cnt);
+}
+
+int
+berase(struct uufsd *disk, ufs2_daddr_t blockno, ufs2_daddr_t size)
+{
+	off_t ioarg[2];
+	int rv;
+
+	ERROR(disk, NULL);
+	rv = ufs_disk_write(disk);
+	if (rv == -1) {
+		ERROR(disk, "failed to open disk for writing");
+		return(rv);
+	}
+	ioarg[0] = blockno * disk->d_bsize;
+	ioarg[1] = size;
+	rv = ioctl(disk->d_fd, DIOCGDELETE, ioarg);
+	return (rv);
 }

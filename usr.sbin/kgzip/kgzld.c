@@ -23,7 +23,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/kgzip/kgzld.c 130927 2004-06-22 17:05:39Z obrien $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

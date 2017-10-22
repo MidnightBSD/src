@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/lib/libc/isc/Makefile.inc 156956 2006-03-21 15:37:16Z ume $
+# $FreeBSD$
 
 # isc sources
 .PATH: ${.CURDIR}/isc

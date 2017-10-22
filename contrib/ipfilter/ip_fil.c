@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/contrib/ipfilter/ip_fil.c 173213 2007-10-31 05:00:38Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1993-2001 by Darren Reed.
@@ -801,3 +801,20 @@ int ipfsync()
 {
 	return 0;
 }
+
+
+#ifndef ipf_random
+u_32_t ipf_random()
+{
+	static int seeded = 0;
+
+	/*
+	 * Choose a non-random seed so that "randomness" can be "tested."
+	 */
+	if (seeded == 0) {
+		srand(0);
+		seeded = 1;
+	}
+	return rand();
+}
+#endif

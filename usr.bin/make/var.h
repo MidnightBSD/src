@@ -36,7 +36,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.bin/make/var.h 146581 2005-05-24 16:05:51Z harti $
+ * $FreeBSD$
  */
 
 #ifndef var_h_9cccafce

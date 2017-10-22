@@ -1,6 +1,6 @@
 /*-
- * Copyright (c) 2002 - 2003 NetGroup, Politecnico di Torino (Italy)
- * Copyright (c) 2005 Jung-uk Kim <jkim@FreeBSD.org>
+ * Copyright (C) 2002-2003 NetGroup, Politecnico di Torino (Italy)
+ * Copyright (C) 2005-2009 Jung-uk Kim <jkim@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,18 +23,20 @@
  * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
  * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
  * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS intERRUPTION) HOWEVER CAUSED AND ON ANY
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/net/bpf_jitter.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _NET_BPF_JITTER_H_
 #define _NET_BPF_JITTER_H_
 
+#ifdef _KERNEL
 MALLOC_DECLARE(M_BPFJIT);
+#endif
 
 extern int bpf_jitter_enable;
 
@@ -51,8 +53,7 @@ typedef u_int (*bpf_filter_func)(u_char *, u_int, u_int);
 typedef struct bpf_jit_filter {
 	/* The native filtering binary, in the form of a bpf_filter_func. */
 	bpf_filter_func	func;
-
-	int		*mem;
+	size_t		size;
 } bpf_jit_filter;
 
 /*

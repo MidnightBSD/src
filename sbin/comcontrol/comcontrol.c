@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sbin/comcontrol/comcontrol.c 118671 2003-08-08 19:51:01Z johan $");
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 #include <err.h>
@@ -43,7 +43,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sbin/comcontrol/comcontrol.c 118671 2003-08-08
 static void usage(void);
 
 static void
-usage()
+usage(void)
 {
 	fprintf(stderr,
 	"usage: comcontrol <filename> [dtrwait <n>] [drainwait <n>]\n");

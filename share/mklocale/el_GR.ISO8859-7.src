@@ -1,7 +1,7 @@
 /*
  * LOCALE_CTYPE for Greek/ISO8859-7 set
  *
- * $FreeBSD: release/7.0.0/share/mklocale/el_GR.ISO8859-7.src 87108 2001-11-30 05:05:53Z ache $
+ * $FreeBSD$
  */
 
 ENCODING	"NONE"

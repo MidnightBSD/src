@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/7.0.0/usr.sbin/mlxcontrol/command.c 59159 2000-04-11 23:04:17Z msmith $
+ *	$FreeBSD$
  */
 
 #include <fcntl.h>
@@ -628,7 +628,7 @@ cmd_rebuild(int argc, char *argv[])
 	    warnx("drive rebuild or consistency check is already in progress on this controller");
 	    break;
 	default:
-	    warn("ioctl MLXD_CHECKASYNC");
+	    warn("ioctl MLXD_REBUILDASYNC");
 	}
     }
     return(0);

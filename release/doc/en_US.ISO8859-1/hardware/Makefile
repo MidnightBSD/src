@@ -1,6 +1,7 @@
-# $FreeBSD: release/7.0.0/release/doc/en_US.ISO8859-1/hardware/Makefile 166821 2007-02-19 02:46:12Z bmah $
+# $FreeBSD$
 
 RELN_ROOT?= ${.CURDIR}/../..
+LANGCODE=	en_US.ISO8859-1
 
 .ifdef NO_LANGCODE_IN_DESTDIR
 DESTDIR?=	${DOCDIR}/hardware

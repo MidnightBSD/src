@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -36,7 +32,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/tail/read.c 174068 2007-11-29 03:54:56Z avatar $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 static const char sccsid[] = "@(#)read.c	8.1 (Berkeley) 6/6/93";
@@ -66,7 +62,7 @@ static const char sccsid[] = "@(#)read.c	8.1 (Berkeley) 6/6/93";
  * the end.
  */
 int
-bytes(FILE *fp, off_t off)
+bytes(FILE *fp, const char *fn, off_t off)
 {
 	int ch, len, tlen;
 	char *ep, *p, *t;
@@ -84,7 +80,7 @@ bytes(FILE *fp, off_t off)
 		}
 	}
 	if (ferror(fp)) {
-		ierr();
+		ierr(fn);
 		free(sp);
 		return 1;
 	}
@@ -136,7 +132,7 @@ bytes(FILE *fp, off_t off)
  * the end.
  */
 int
-lines(FILE *fp, off_t off)
+lines(FILE *fp, const char *fn, off_t off)
 {
 	struct {
 		int blen;
@@ -150,7 +146,7 @@ lines(FILE *fp, off_t off)
 	if ((llines = malloc(off * sizeof(*llines))) == NULL)
 		err(1, "malloc");
 	bzero(llines, off * sizeof(*llines));
-	sp = NULL;
+	p = sp = NULL;
 	blen = cnt = recno = wrap = 0;
 	rc = 0;
 
@@ -178,7 +174,7 @@ lines(FILE *fp, off_t off)
 		}
 	}
 	if (ferror(fp)) {
-		ierr();
+		ierr(fn);
 		rc = 1;
 		goto done;
 	}

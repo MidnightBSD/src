@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/gnu/lib/libstdc++/config.h 169718 2007-05-19 04:25:59Z kan $ */
+/* $FreeBSD$ */
 #ifndef __ISO_C_VISIBLE
 #include <sys/cdefs.h>
 #endif
@@ -371,7 +371,7 @@
 /* #undef HAVE_TANL */
 
 /* Define to 1 if the target supports thread-local storage. */
-#if !defined(__sparc64__) && !defined(__arm__)
+#if !defined(__mips__)
 #define HAVE_TLS 1
 #endif
 
@@ -671,7 +671,7 @@
 /* #undef VERSION */
 
 /* Define if builtin atomic operations are supported on this host. */
-#if defined(__amd64__)
+#if defined(__amd64__) || (defined(__i386__) && !defined(__tune_i386__))
 #define _GLIBCXX_ATOMIC_BUILTINS 1
 #endif
 

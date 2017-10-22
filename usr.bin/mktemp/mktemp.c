@@ -43,7 +43,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-	"$FreeBSD: release/7.0.0/usr.bin/mktemp/mktemp.c 92921 2002-03-22 01:33:25Z imp $";
+	"$FreeBSD$";
 #endif /* not lint */
 
 static void usage(void);
@@ -143,7 +143,7 @@ main(int argc, char **argv)
 }
 
 static void
-usage()
+usage(void)
 {
 	fprintf(stderr,
 		"usage: mktemp [-d] [-q] [-t prefix] [-u] template ...\n");

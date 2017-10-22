@@ -37,7 +37,7 @@
 static char sccsid[] = "@(#)regexec.c	8.3 (Berkeley) 3/20/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/regex/regexec.c 170528 2007-06-11 03:05:54Z delphij $");
+__FBSDID("$FreeBSD$");
 
 /*
  * the outer shell of regexec()

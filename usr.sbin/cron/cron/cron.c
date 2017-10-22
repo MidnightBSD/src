@@ -17,13 +17,14 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/usr.sbin/cron/cron/cron.c 160521 2006-07-20 09:11:08Z stefanf $";
+  "$FreeBSD$";
 #endif
 
 #define	MAIN_PROGRAM
 
 
 #include "cron.h"
+#include <sys/mman.h>
 #include <sys/signal.h>
 #if SYS_TIME_H
 # include <sys/time.h>
@@ -32,17 +33,17 @@ static const char rcsid[] =
 #endif
 
 
-static	void	usage __P((void)),
-		run_reboot_jobs __P((cron_db *)),
-		cron_tick __P((cron_db *)),
-		cron_sync __P((void)),
-		cron_sleep __P((cron_db *)),
-		cron_clean __P((cron_db *)),
+static	void	usage(void),
+		run_reboot_jobs(cron_db *),
+		cron_tick(cron_db *),
+		cron_sync(void),
+		cron_sleep(cron_db *),
+		cron_clean(cron_db *),
 #ifdef USE_SIGCHLD
-		sigchld_handler __P((int)),
+		sigchld_handler(int),
 #endif
-		sighup_handler __P((int)),
-		parse_args __P((int c, char *v[]));
+		sighup_handler(int),
+		parse_args(int c, char *v[]);
 
 static time_t	last_time = 0;
 static int	dst_enabled = 0;
@@ -53,7 +54,7 @@ usage() {
     char **dflags;
 
 	fprintf(stderr, "usage: cron [-j jitter] [-J rootjitter] "
-			"[-s] [-o] [-x debugflag[,...]]\n");
+			"[-m mailto] [-s] [-o] [-x debugflag[,...]]\n");
 	fprintf(stderr, "\ndebugflags: ");
 
         for(dflags = DebugFlagNames; *dflags; dflags++) {
@@ -133,6 +134,9 @@ main(argc, argv)
 			exit(0);
 		}
 	}
+
+	if (madvise(NULL, 0, MADV_PROTECT) != 0)
+		log_it("CRON", getpid(), "WARNING", "madvise() failed");
 
 	pidfile_write(pfh);
 	database.head = NULL;
@@ -443,7 +447,7 @@ parse_args(argc, argv)
 	int	argch;
 	char	*endp;
 
-	while ((argch = getopt(argc, argv, "j:J:osx:")) != -1) {
+	while ((argch = getopt(argc, argv, "j:J:m:osx:")) != -1) {
 		switch (argch) {
 		case 'j':
 			Jitter = strtoul(optarg, &endp, 10);
@@ -456,6 +460,9 @@ parse_args(argc, argv)
 			if (*optarg == '\0' || *endp != '\0' || RootJitter > 60)
 				errx(ERROR_EXIT,
 				     "bad value for root jitter: %s", optarg);
+			break;
+		case 'm':
+			defmailto = optarg;
 			break;
 		case 'o':
 			dst_enabled = 0;

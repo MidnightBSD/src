@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/i386/include/vm86.h 106542 2002-11-07 01:34:23Z davidxu $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_VM86_H_
@@ -93,13 +93,14 @@ struct vm86frame {
 #define vmf_ds		ds.r_w.r_x
 #define vmf_es		es.r_w.r_x
 #define vmf_ss		ss.r_w.r_x
+#define vmf_bp		ebp.r_w.r_x
 #define vmf_sp		esp.r_w.r_x
 #define vmf_ip		eip.r_w.r_x
 #define vmf_flags	eflags.r_w.r_x
 #define vmf_eflags	eflags.r_ex
 };
 
-#define VM86_PMAPSIZE	3
+#define VM86_PMAPSIZE	24
 #define VMAP_MALLOC	1	/* page was malloced by us */
 
 struct vm86context {

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998-2004 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 1998-2011 Dag-Erling SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,12 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libfetch/file.c 135546 2004-09-21 18:35:21Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -50,13 +51,14 @@ fetchXGetFile(struct url *u, struct url_stat *us, const char *flags)
 	f = fopen(u->doc, "r");
 
 	if (f == NULL)
-		_fetch_syserr();
+		fetch_syserr();
 
 	if (u->offset && fseeko(f, u->offset, SEEK_SET) == -1) {
 		fclose(f);
-		_fetch_syserr();
+		fetch_syserr();
 	}
 
+	fcntl(fileno(f), F_SETFD, FD_CLOEXEC);
 	return (f);
 }
 
@@ -77,25 +79,26 @@ fetchPutFile(struct url *u, const char *flags)
 		f = fopen(u->doc, "w+");
 
 	if (f == NULL)
-		_fetch_syserr();
+		fetch_syserr();
 
 	if (u->offset && fseeko(f, u->offset, SEEK_SET) == -1) {
 		fclose(f);
-		_fetch_syserr();
+		fetch_syserr();
 	}
 
+	fcntl(fileno(f), F_SETFD, FD_CLOEXEC);
 	return (f);
 }
 
 static int
-_fetch_stat_file(const char *fn, struct url_stat *us)
+fetch_stat_file(const char *fn, struct url_stat *us)
 {
 	struct stat sb;
 
 	us->size = -1;
 	us->atime = us->mtime = 0;
 	if (stat(fn, &sb) == -1) {
-		_fetch_syserr();
+		fetch_syserr();
 		return (-1);
 	}
 	us->size = sb.st_size;
@@ -107,7 +110,7 @@ _fetch_stat_file(const char *fn, struct url_stat *us)
 int
 fetchStatFile(struct url *u, struct url_stat *us, const char *flags __unused)
 {
-	return (_fetch_stat_file(u->doc, us));
+	return (fetch_stat_file(u->doc, us));
 }
 
 struct url_ent *
@@ -122,7 +125,7 @@ fetchListFile(struct url *u, const char *flags __unused)
 	int l;
 
 	if ((dir = opendir(u->doc)) == NULL) {
-		_fetch_syserr();
+		fetch_syserr();
 		return (NULL);
 	}
 
@@ -136,10 +139,10 @@ fetchListFile(struct url *u, const char *flags __unused)
 	while ((de = readdir(dir)) != NULL) {
 		strncpy(p, de->d_name, l - 1);
 		p[l - 1] = 0;
-		if (_fetch_stat_file(fn, &us) == -1)
+		if (fetch_stat_file(fn, &us) == -1)
 			/* should I return a partial result, or abort? */
 			break;
-		_fetch_add_entry(&ue, &size, &len, de->d_name, &us);
+		fetch_add_entry(&ue, &size, &len, de->d_name, &us);
 	}
 
 	return (ue);

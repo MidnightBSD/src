@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/src/preproc/html/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
 PROG_CXX=	pre-grohtml
 SRCS=		pre-html.cpp pushback.cpp

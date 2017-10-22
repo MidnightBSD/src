@@ -26,19 +26,21 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_open.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  *
  */
+
+#include "namespace.h"
 #include <stdarg.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
 #include <errno.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(__open);
-LT10_COMPAT_DEFAULT(open);
+int	__open(const char *path, int flags,...);
 
 __weak_reference(__open, open);
 

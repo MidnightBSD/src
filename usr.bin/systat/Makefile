@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: release/7.0.0/usr.bin/systat/Makefile 164695 2006-11-27 21:30:38Z yar $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -14,7 +14,9 @@ SRCS+=	icmp6.c ip6.c
 CFLAGS+= -DINET6
 .endif
 
-DPADD=	${LIBCURSES} ${LIBM} ${LIBDEVSTAT} ${LIBKVM}
-LDADD=	-lcurses -lm -ldevstat -lkvm
+WARNS?=	0
+
+DPADD=	${LIBNCURSESW} ${LIBM} ${LIBDEVSTAT} ${LIBKVM}
+LDADD=	-lncursesw -lm -ldevstat -lkvm
 
 .include <bsd.prog.mk>

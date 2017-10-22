@@ -27,7 +27,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/regression/priv/main.c 172106 2007-09-09 23:08:39Z rwatson $
+ * $FreeBSD$
  */
 
 /*
@@ -134,6 +134,32 @@ static struct test tests[] = {
 
 	{ "priv_msgbuf_unprivok", priv_msgbuf_unprivok_setup,
 	   priv_msgbuf_unprivok, priv_msgbuf_cleanup },
+
+	{ "priv_netinet_ipsec_pfkey", NULL, priv_netinet_ipsec_pfkey, NULL },
+
+	{ "priv_netinet_ipsec_policy4_bypass",
+	    priv_netinet_ipsec_policy4_bypass_setup,
+	    priv_netinet_ipsec_policy4_bypass,
+	    priv_netinet_ipsec_policy_bypass_cleanup },
+
+#ifdef INET6
+	{ "priv_netinet_ipsec_policy6_bypass",
+	    priv_netinet_ipsec_policy6_bypass_setup,
+	    priv_netinet_ipsec_policy6_bypass,
+	    priv_netinet_ipsec_policy_bypass_cleanup },
+#endif
+
+	{ "priv_netinet_ipsec_policy4_entrust",
+	    priv_netinet_ipsec_policy4_entrust_setup,
+	    priv_netinet_ipsec_policy4_entrust,
+	    priv_netinet_ipsec_policy_entrust_cleanup },
+
+#ifdef INET6
+	{ "priv_netinet_ipsec_policy6_entrust",
+	    priv_netinet_ipsec_policy6_entrust_setup,
+	    priv_netinet_ipsec_policy6_entrust,
+	    priv_netinet_ipsec_policy_entrust_cleanup },
+#endif
 
 	{ "priv_netinet_raw", priv_netinet_raw_setup, priv_netinet_raw,
 	    priv_netinet_raw_cleanup },
@@ -398,12 +424,23 @@ static void
 enter_jail(const char *test)
 {
 	struct jail j;
+	struct in_addr ia4;
+#ifdef INET6
+	struct in6_addr ia6 = IN6ADDR_LOOPBACK_INIT;
+#endif
 
 	bzero(&j, sizeof(j));
-	j.version = 0;
+	j.version = JAIL_API_VERSION;
 	j.path = "/";
 	j.hostname = "test";
-	j.ip_number = htonl(INADDR_LOOPBACK);
+	j.jailname = "regressions/priv";
+	ia4.s_addr = htonl(INADDR_LOOPBACK);
+	j.ip4s = 1;
+	j.ip4 = &ia4;
+#ifdef INET6
+	j.ip6s = 1;
+	j.ip6 = &ia6;
+#endif
 	if (jail(&j) < 0)
 		err(-1, "test %s: jail", test);
 }

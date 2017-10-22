@@ -15,11 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -39,7 +35,7 @@
  */
 
 /*
- * $FreeBSD: release/7.0.0/include/time.h 157766 2006-04-15 03:08:55Z jb $
+ * $FreeBSD$
  */
 
 #ifndef _TIME_H_
@@ -108,6 +104,7 @@ typedef	__timer_t	timer_t;
 #define CLOCK_MONOTONIC_PRECISE	11	/* FreeBSD-specific. */
 #define CLOCK_MONOTONIC_FAST	12	/* FreeBSD-specific. */
 #define CLOCK_SECOND	13		/* FreeBSD-specific. */
+#define CLOCK_THREAD_CPUTIME_ID	14
 #endif /* !defined(CLOCK_REALTIME) && __POSIX_VISIBLE >= 200112 */
 
 #if !defined(TIMER_ABSTIME) && __POSIX_VISIBLE >= 200112
@@ -186,6 +183,10 @@ void tzsetwall(void);
 time_t timelocal(struct tm * const);
 time_t timegm(struct tm * const);
 #endif /* __BSD_VISIBLE */
+
+#if __POSIX_VISIBLE >= 200809 || defined(_XLOCALE_H_)
+#include <xlocale/_time.h>
+#endif
 __END_DECLS
 
 #endif /* !_TIME_H_ */

@@ -31,7 +31,7 @@
  *
  *	from: @(#)isa.c	7.2 (Berkeley) 5/13/91
  *	from: isa_dma.c,v 1.3 1999/05/09 23:56:00 peter Exp $
- * $FreeBSD: release/7.0.0/sys/ia64/isa/isa_dma.c 171312 2007-07-09 04:58:16Z marcel $
+ * $FreeBSD$
  */
 
 /*
@@ -106,7 +106,7 @@ isa_dma_init(int chan, u_int bouncebufsize, int flag __unused)
 			       /*filter*/NULL, /*filterarg*/NULL,
 			       /*maxsize*/bouncebufsize,
 			       /*nsegments*/1, /*maxsegz*/0x3ffff,
-			       /*flags*/BUS_DMA_ISA,
+			       /*flags*/0,
 			       /*lockfunc*/busdma_lock_mutex,
 			       /*lockarg*/&Giant,
 			       &dma_tag[chan]) != 0) {

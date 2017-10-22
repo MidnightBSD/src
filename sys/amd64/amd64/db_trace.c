@@ -25,7 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/amd64/amd64/db_trace.c 173828 2007-11-21 16:41:51Z jhb $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_compat.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,6 +40,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/amd64/amd64/db_trace.c 173828 2007-11-21 1
 #include <machine/md_var.h>
 #include <machine/pcb.h>
 #include <machine/reg.h>
+#include <machine/stack.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -66,12 +69,10 @@ static db_varfcn_t db_ss;
 #define	DB_OFFSET(x)	(db_expr_t *)offsetof(struct trapframe, x)
 struct db_variable db_regs[] = {
 	{ "cs",		DB_OFFSET(tf_cs),	db_frame },
-#if 0
 	{ "ds",		DB_OFFSET(tf_ds),	db_frame },
 	{ "es",		DB_OFFSET(tf_es),	db_frame },
 	{ "fs",		DB_OFFSET(tf_fs),	db_frame },
 	{ "gs",		DB_OFFSET(tf_gs),	db_frame },
-#endif
 	{ "ss",		NULL,			db_ss },
 	{ "rax",	DB_OFFSET(tf_rax),	db_frame },
 	{ "rcx",        DB_OFFSET(tf_rcx),	db_frame },
@@ -91,7 +92,7 @@ struct db_variable db_regs[] = {
 	{ "r15",	DB_OFFSET(tf_r15),	db_frame },
 	{ "rip",	DB_OFFSET(tf_rip),	db_frame },
 	{ "rflags",	DB_OFFSET(tf_rflags),	db_frame },
-#define	DB_N_SHOW_REGS	20	/* Don't show registers after here. */
+#define	DB_N_SHOW_REGS	24	/* Don't show registers after here. */
 	{ "dr0",	NULL,			db_dr0 },
 	{ "dr1",	NULL,			db_dr1 },
 	{ "dr2",	NULL,			db_dr2 },
@@ -176,18 +177,6 @@ db_ss(struct db_variable *vp, db_expr_t *valuep, int op)
 		kdb_frame->tf_ss = *valuep;
 	return (1);
 }
-
-/*
- * Stack trace.
- */
-#define	INKERNEL(va) (((va) >= DMAP_MIN_ADDRESS && (va) < DMAP_MAX_ADDRESS) \
-	    || ((va) >= KERNBASE && (va) < VM_MAX_KERNEL_ADDRESS))
-
-struct amd64_frame {
-	struct amd64_frame	*f_frame;
-	long			f_retaddr;
-	long			f_arg0;
-};
 
 #define NORMAL		0
 #define	TRAP		1
@@ -325,13 +314,19 @@ db_nextframe(struct amd64_frame **fp, db_addr_t *ip, struct thread *td)
 		    strcmp(name, "Xtimerint") == 0 ||
 		    strcmp(name, "Xipi_intr_bitmap_handler") == 0 ||
 		    strcmp(name, "Xcpustop") == 0 ||
+		    strcmp(name, "Xcpususpend") == 0 ||
 		    strcmp(name, "Xrendezvous") == 0)
 			frame_type = INTERRUPT;
 		else if (strcmp(name, "Xfast_syscall") == 0)
 			frame_type = SYSCALL;
+#ifdef COMPAT_FREEBSD32
+		else if (strcmp(name, "Xint0x80_syscall") == 0)
+			frame_type = SYSCALL;
+#endif
 		/* XXX: These are interrupts with trap frames. */
 		else if (strcmp(name, "Xtimerint") == 0 ||
 		    strcmp(name, "Xcpustop") == 0 ||
+		    strcmp(name, "Xcpususpend") == 0 ||
 		    strcmp(name, "Xrendezvous") == 0 ||
 		    strcmp(name, "Xipi_intr_bitmap_handler") == 0)
 			frame_type = TRAP_INTERRUPT;
@@ -360,7 +355,7 @@ db_nextframe(struct amd64_frame **fp, db_addr_t *ip, struct thread *td)
 		rbp = tf->tf_rbp;
 		switch (frame_type) {
 		case TRAP:
-			db_printf("--- trap %#lr", tf->tf_trapno);
+			db_printf("--- trap %#r", tf->tf_trapno);
 			break;
 		case SYSCALL:
 			db_printf("--- syscall");
@@ -503,32 +498,6 @@ db_trace_thread(struct thread *thr, int count)
 	ctx = kdb_thr_ctx(thr);
 	return (db_backtrace(thr, NULL, (struct amd64_frame *)ctx->pcb_rbp,
 		    ctx->pcb_rip, count));
-}
-
-void
-stack_save(struct stack *st)
-{
-	struct amd64_frame *frame;
-	vm_offset_t callpc;
-	register_t rbp;
-
-	stack_zero(st);
-	__asm __volatile("movq %%rbp,%0" : "=r" (rbp));
-	frame = (struct amd64_frame *)rbp;
-	while (1) {
-		if (!INKERNEL((long)frame))
-			break;
-		callpc = frame->f_retaddr;
-		if (!INKERNEL(callpc))
-			break;
-		if (stack_put(st, callpc) == -1)
-			break;
-		if (frame->f_frame <= frame ||
-		    (vm_offset_t)frame->f_frame >=
-		    (vm_offset_t)rbp + KSTACK_PAGES * PAGE_SIZE)
-			break;
-		frame = frame->f_frame;
-	}
 }
 
 int

@@ -1,20 +1,41 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/binutils/libiberty/Makefile 141911 2005-02-14 12:10:14Z obrien $
+# $FreeBSD$
 
 .include "../Makefile.inc0"
 
 .PATH: ${SRCDIR}/libiberty
 
 LIB=	iberty
-SRCS=	argv.c concat.c choose-temp.c cp-demangle.c cp-demint.c		\
-	cplus-dem.c dyn-string.c getpwd.c getruntime.c floatformat.c	\
-	hashtab.c hex.c lbasename.c lrealpath.c make-relative-prefix.c	\
-	make-temp-file.c objalloc.c obstack.c safe-ctype.c xatexit.c	\
-	xexit.c xmalloc.c xstrdup.c xstrerror.c
+SRCS=	argv.c \
+	concat.c \
+	choose-temp.c \
+	cp-demangle.c \
+	cp-demint.c \
+	cplus-dem.c \
+	dyn-string.c \
+	getpwd.c \
+	getruntime.c \
+	filename_cmp.c \
+	floatformat.c \
+	hashtab.c \
+	hex.c \
+	lbasename.c \
+	lrealpath.c \
+	make-relative-prefix.c \
+	make-temp-file.c \
+	objalloc.c \
+	obstack.c \
+	safe-ctype.c \
+	unlink-if-ordinary.c \
+	xatexit.c \
+	xexit.c \
+	xmalloc.c \
+	xstrdup.c \
+	xstrerror.c
 
 # The following files are needed by gdb(1)
 SRCS+=	splay-tree.c
 
-WARNS?=	1
+WARNS?=	2
 CFLAGS+=	-DHAVE_CONFIG_H
 INTERNALLIB=
 

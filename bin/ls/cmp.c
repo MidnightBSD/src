@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)cmp.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/ls/cmp.c 157098 2006-03-24 16:38:02Z jhb $");
+__FBSDID("$FreeBSD$");
 
 
 #include <sys/types.h>
@@ -66,17 +66,17 @@ int
 modcmp(const FTSENT *a, const FTSENT *b)
 {
 
-	if (b->fts_statp->st_mtimespec.tv_sec >
-	    a->fts_statp->st_mtimespec.tv_sec)
+	if (b->fts_statp->st_mtim.tv_sec >
+	    a->fts_statp->st_mtim.tv_sec)
 		return (1);
-	if (b->fts_statp->st_mtimespec.tv_sec <
-	    a->fts_statp->st_mtimespec.tv_sec)
+	if (b->fts_statp->st_mtim.tv_sec <
+	    a->fts_statp->st_mtim.tv_sec)
 		return (-1);
-	if (b->fts_statp->st_mtimespec.tv_nsec >
-	    a->fts_statp->st_mtimespec.tv_nsec)
+	if (b->fts_statp->st_mtim.tv_nsec >
+	    a->fts_statp->st_mtim.tv_nsec)
 		return (1);
-	if (b->fts_statp->st_mtimespec.tv_nsec <
-	    a->fts_statp->st_mtimespec.tv_nsec)
+	if (b->fts_statp->st_mtim.tv_nsec <
+	    a->fts_statp->st_mtim.tv_nsec)
 		return (-1);
 	return (strcoll(a->fts_name, b->fts_name));
 }
@@ -92,17 +92,17 @@ int
 acccmp(const FTSENT *a, const FTSENT *b)
 {
 
-	if (b->fts_statp->st_atimespec.tv_sec >
-	    a->fts_statp->st_atimespec.tv_sec)
+	if (b->fts_statp->st_atim.tv_sec >
+	    a->fts_statp->st_atim.tv_sec)
 		return (1);
-	if (b->fts_statp->st_atimespec.tv_sec <
-	    a->fts_statp->st_atimespec.tv_sec)
+	if (b->fts_statp->st_atim.tv_sec <
+	    a->fts_statp->st_atim.tv_sec)
 		return (-1);
-	if (b->fts_statp->st_atimespec.tv_nsec >
-	    a->fts_statp->st_atimespec.tv_nsec)
+	if (b->fts_statp->st_atim.tv_nsec >
+	    a->fts_statp->st_atim.tv_nsec)
 		return (1);
-	if (b->fts_statp->st_atimespec.tv_nsec <
-	    a->fts_statp->st_atimespec.tv_nsec)
+	if (b->fts_statp->st_atim.tv_nsec <
+	    a->fts_statp->st_atim.tv_nsec)
 		return (-1);
 	return (strcoll(a->fts_name, b->fts_name));
 }
@@ -118,17 +118,17 @@ int
 birthcmp(const FTSENT *a, const FTSENT *b)
 {
 
-	if (b->fts_statp->st_birthtimespec.tv_sec >
-	    a->fts_statp->st_birthtimespec.tv_sec)
+	if (b->fts_statp->st_birthtim.tv_sec >
+	    a->fts_statp->st_birthtim.tv_sec)
 		return (1);
-	if (b->fts_statp->st_birthtimespec.tv_sec <
-	    a->fts_statp->st_birthtimespec.tv_sec)
+	if (b->fts_statp->st_birthtim.tv_sec <
+	    a->fts_statp->st_birthtim.tv_sec)
 		return (-1);
-	if (b->fts_statp->st_birthtimespec.tv_nsec >
-	    a->fts_statp->st_birthtimespec.tv_nsec)
+	if (b->fts_statp->st_birthtim.tv_nsec >
+	    a->fts_statp->st_birthtim.tv_nsec)
 		return (1);
-	if (b->fts_statp->st_birthtimespec.tv_nsec <
-	    a->fts_statp->st_birthtimespec.tv_nsec)
+	if (b->fts_statp->st_birthtim.tv_nsec <
+	    a->fts_statp->st_birthtim.tv_nsec)
 		return (-1);
 	return (strcoll(a->fts_name, b->fts_name));
 }
@@ -144,17 +144,17 @@ int
 statcmp(const FTSENT *a, const FTSENT *b)
 {
 
-	if (b->fts_statp->st_ctimespec.tv_sec >
-	    a->fts_statp->st_ctimespec.tv_sec)
+	if (b->fts_statp->st_ctim.tv_sec >
+	    a->fts_statp->st_ctim.tv_sec)
 		return (1);
-	if (b->fts_statp->st_ctimespec.tv_sec <
-	    a->fts_statp->st_ctimespec.tv_sec)
+	if (b->fts_statp->st_ctim.tv_sec <
+	    a->fts_statp->st_ctim.tv_sec)
 		return (-1);
-	if (b->fts_statp->st_ctimespec.tv_nsec >
-	    a->fts_statp->st_ctimespec.tv_nsec)
+	if (b->fts_statp->st_ctim.tv_nsec >
+	    a->fts_statp->st_ctim.tv_nsec)
 		return (1);
-	if (b->fts_statp->st_ctimespec.tv_nsec <
-	    a->fts_statp->st_ctimespec.tv_nsec)
+	if (b->fts_statp->st_ctim.tv_nsec <
+	    a->fts_statp->st_ctim.tv_nsec)
 		return (-1);
 	return (strcoll(a->fts_name, b->fts_name));
 }

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/examples/pf/spamd 173538 2007-11-11 02:16:00Z mlaier $
+# $FreeBSD$
 # $OpenBSD: spamd,v 1.2 2005/08/06 19:52:37 jmc Exp $
 
 # spamd-setup puts addresses to be redirected into table <spamd>.

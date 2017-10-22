@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998-2004 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 1998-2004 Dag-Erling SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libfetch/fetch.h 135546 2004-09-21 18:35:21Z des $
+ * $FreeBSD$
  */
 
 #ifndef _FETCH_H_INCLUDED
@@ -46,6 +46,7 @@ struct url {
 	char		*doc;
 	off_t		 offset;
 	size_t		 length;
+	time_t		 ims_time;
 };
 
 struct url_stat {

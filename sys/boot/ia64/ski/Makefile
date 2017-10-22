@@ -1,8 +1,9 @@
-# $FreeBSD: release/7.0.0/sys/boot/ia64/ski/Makefile 164010 2006-11-05 22:03:04Z marcel $
+# $FreeBSD$
 
 NO_MAN=
 
 .include <bsd.own.mk>
+MK_SSP=		no
 
 PROG=		skiload
 STRIP=		# We must not strip skiload at install time.
@@ -16,10 +17,10 @@ CFLAGS+=	-I${.CURDIR}/../../common
 CFLAGS+=	-I${.CURDIR}/../../..
 CFLAGS+=	-I${.CURDIR}/../../../../lib/libstand
 
-LDSCRIPT=	${.CURDIR}/ldscript.${MACHINE_ARCH}
+LDSCRIPT=	${.CURDIR}/ldscript.${MACHINE_CPUARCH}
 LDFLAGS=	-Wl,-T${LDSCRIPT}
 
-NEWVERSWHAT=	"SKI boot" ${MACHINE_ARCH}
+NEWVERSWHAT=	"SKI boot" ${MACHINE_CPUARCH}
 
 vers.c: ${.CURDIR}/../../common/newvers.sh ${.CURDIR}/version
 	sh ${.CURDIR}/../../common/newvers.sh ${.CURDIR}/version ${NEWVERSWHAT}

@@ -28,7 +28,7 @@
 #include <unistd.h>
 #include <pwd.h>
 
-# ifdef HAVE_CRYPT_H
+# if defined(HAVE_CRYPT_H) && !defined(HAVE_SECUREWARE)
 #  include <crypt.h>
 # endif
 
@@ -98,7 +98,7 @@ shadow_pw(struct passwd *pw)
 		pw_password = spw->sp_pwdp;
 # endif
 
-#if defined(HAVE_LIBIAF)  &&  !defined(BROKEN_LIBIAF)
+#ifdef USE_LIBIAF
 	return(get_iaf_password(pw));
 #endif
 

@@ -1,5 +1,5 @@
 #	@(#)README	8.1 (Berkeley) 5/31/93
-# $FreeBSD: release/7.0.0/games/fortune/README 103904 2002-09-24 19:00:52Z schweikh $
+# $FreeBSD$
 
 The potentially offensive fortunes are installed by default on FreeBSD
 systems.  If you're absolutely, *positively*, without-a-shadow-of-a-doubt

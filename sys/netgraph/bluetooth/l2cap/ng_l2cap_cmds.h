@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_l2cap_cmds.h,v 1.4 2003/04/01 18:15:26 max Exp $
- * $FreeBSD: release/7.0.0/sys/netgraph/bluetooth/l2cap/ng_l2cap_cmds.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_L2CAP_CMDS_H_
@@ -379,7 +379,7 @@ do {									\
 		break;							\
 									\
 	c = mtod((_m), struct _info_rsp *);				\
-	c->hdr.code = NG_L2CAP_INFO_REQ;				\
+	c->hdr.code = NG_L2CAP_INFO_RSP;				\
 	c->hdr.ident = (_ident);					\
 	c->hdr.length = sizeof(c->param);				\
 									\

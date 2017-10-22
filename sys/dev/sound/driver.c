@@ -23,8 +23,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/sound/driver.c 166364 2007-01-31 08:53:45Z joel $
+ * $FreeBSD$
  */
+
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
 
 #include <dev/sound/pcm/sound.h>
 
@@ -38,7 +42,7 @@ snd_modevent(module_t mod, int type, void *data)
 	case MOD_UNLOAD:
 		break;
 	default:
-		return (EOPNOTSUPP);
+		return (ENOTSUP);
 		break;
 	}
 	return 0;

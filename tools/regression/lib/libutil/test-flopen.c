@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 2007-2009 Dag-Erling CoÃ¯dan SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,17 +23,16 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: release/7.0.0/tools/regression/lib/libutil/test-flopen.c 171707 2007-08-03 11:29:49Z des $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/tools/regression/lib/libutil/test-flopen.c 171707 2007-08-03 11:29:49Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/fcntl.h>
 
 #include <errno.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -95,7 +94,7 @@ test_flopen_open(void)
 const char *
 test_flopen_lock_self(void)
 {
-	const char *fn = "test_flopen_lock";
+	const char *fn = "test_flopen_lock_self";
 	const char *result = NULL;
 	int fd1, fd2;
 
@@ -121,7 +120,7 @@ test_flopen_lock_self(void)
 const char *
 test_flopen_lock_other(void)
 {
-	const char *fn = "test_flopen_lock";
+	const char *fn = "test_flopen_lock_other";
 	const char *result = NULL;
 	volatile int fd1, fd2;
 
@@ -146,6 +145,40 @@ test_flopen_lock_other(void)
 	return (result);
 }
 
+/*
+ * Test that child processes inherit the lock
+ */
+const char *
+test_flopen_lock_child(void)
+{
+	const char *fn = "test_flopen_lock_child";
+	const char *result = NULL;
+	pid_t pid;
+	volatile int fd1, fd2;
+
+	unlink(fn);
+	fd1 = flopen(fn, O_RDWR|O_CREAT, 0640);
+	if (fd1 < 0) {
+		result = strerror(errno);
+	} else {
+		pid = fork();
+		if (pid == -1) {
+			result = strerror(errno);
+		} else if (pid == 0) {
+			select(0, 0, 0, 0, 0);
+			_exit(0);
+		}
+		close(fd1);
+		if ((fd2 = flopen(fn, O_RDWR|O_NONBLOCK)) != -1) {
+			result = "second open succeeded";
+			close(fd2);
+		}
+		kill(pid, SIGINT);
+	}
+	unlink(fn);
+	return (result);
+}
+
 static struct test {
 	const char *name;
 	const char *(*func)(void);
@@ -154,6 +187,7 @@ static struct test {
 	{ "flopen_open", test_flopen_open },
 	{ "flopen_lock_self", test_flopen_lock_self },
 	{ "flopen_lock_other", test_flopen_lock_other },
+	{ "flopen_lock_child", test_flopen_lock_child },
 };
 
 int

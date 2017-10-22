@@ -29,7 +29,7 @@
  *
  *	This module implements a general bitmap allocator/deallocator.  The
  *	allocator eats around 2 bits per 'block'.  The module does not 
- *	try to interpret the meaning of a 'block' other then to return 
+ *	try to interpret the meaning of a 'block' other than to return 
  *	SWAPBLK_NONE on an allocation failure.
  *
  *	A radix tree is used to maintain the bitmap.  Two radix constants are
@@ -57,7 +57,7 @@
  *	the memory subsystem.  In contrast, the rlist code may allocate memory 
  *	on an rlist_free() call.  The non-blocking features of the blist code
  *	are used to great advantage in the swap code (vm/nswap_pager.c).  The
- *	rlist code uses a little less overall memory then the blist code (but
+ *	rlist code uses a little less overall memory than the blist code (but
  *	due to swap interleaving not all that much less), but the blist code 
  *	scales much, much better.
  *
@@ -72,7 +72,7 @@
  *	to cover the number of blocks requested at creation time even if it
  *	must be encompassed in larger root-node radix.
  *
- *	NOTE: the allocator cannot currently allocate more then 
+ *	NOTE: the allocator cannot currently allocate more than 
  *	BLIST_BMAP_RADIX blocks per call.  It will panic with 'allocation too 
  *	large' if you try.  This is an area that could use improvement.  The 
  *	radix is large enough that this restriction does not effect the swap 
@@ -84,7 +84,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/kern/subr_blist.c 130049 2004-06-04 04:03:26Z alc $");
+__FBSDID("$FreeBSD$");
 
 #ifdef _KERNEL
 
@@ -152,14 +152,15 @@ static MALLOC_DEFINE(M_SWAP, "SWAP", "Swap space");
  * blist_create() - create a blist capable of handling up to the specified
  *		    number of blocks
  *
- *	blocks must be greater then 0
+ *	blocks - must be greater than 0
+ * 	flags  - malloc flags
  *
  *	The smallest blist consists of a single leaf node capable of 
  *	managing BLIST_BMAP_RADIX blocks.
  */
 
 blist_t 
-blist_create(daddr_t blocks)
+blist_create(daddr_t blocks, int flags)
 {
 	blist_t bl;
 	int radix;
@@ -175,14 +176,14 @@ blist_create(daddr_t blocks)
 		skip = (skip + 1) * BLIST_META_RADIX;
 	}
 
-	bl = malloc(sizeof(struct blist), M_SWAP, M_WAITOK | M_ZERO);
+	bl = malloc(sizeof(struct blist), M_SWAP, flags | M_ZERO);
 
 	bl->bl_blocks = blocks;
 	bl->bl_radix = radix;
 	bl->bl_skip = skip;
 	bl->bl_rootblks = 1 +
 	    blst_radix_init(NULL, bl->bl_radix, bl->bl_skip, blocks);
-	bl->bl_root = malloc(sizeof(blmeta_t) * bl->bl_rootblks, M_SWAP, M_WAITOK);
+	bl->bl_root = malloc(sizeof(blmeta_t) * bl->bl_rootblks, M_SWAP, flags);
 
 #if defined(BLIST_DEBUG)
 	printf(
@@ -280,9 +281,9 @@ blist_fill(blist_t bl, daddr_t blkno, daddr_t count)
  */
 
 void
-blist_resize(blist_t *pbl, daddr_t count, int freenew)
+blist_resize(blist_t *pbl, daddr_t count, int freenew, int flags)
 {
-    blist_t newbl = blist_create(count);
+    blist_t newbl = blist_create(count, flags);
     blist_t save = *pbl;
 
     *pbl = newbl;
@@ -553,7 +554,7 @@ blst_meta_free(
 	int next_skip = ((u_int)skip / BLIST_META_RADIX);
 
 #if 0
-	printf("FREE (%llx,%lld) FROM (%llx,%lld)\n",
+	printf("free (%llx,%lld) FROM (%llx,%lld)\n",
 	    (long long)freeBlk, (long long)count,
 	    (long long)blk, (long long)radix
 	);
@@ -840,7 +841,7 @@ blst_meta_fill(
  *
  *	Initialize our meta structures and bitmaps and calculate the exact
  *	amount of space required to manage 'count' blocks - this space may
- *	be considerably less then the calculated radix due to the large
+ *	be considerably less than the calculated radix due to the large
  *	RADIX values we use.
  */
 
@@ -1014,7 +1015,7 @@ main(int ac, char **av)
 		fprintf(stderr, "Bad option: %s\n", ptr - 2);
 		exit(1);
 	}
-	bl = blist_create(size);
+	bl = blist_create(size, M_WAITOK);
 	blist_free(bl, 0, size);
 
 	for (;;) {

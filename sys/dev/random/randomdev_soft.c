@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2000-2004 Mark R V Murray
+ * Copyright (c) 2000-2009 Mark R V Murray
  * Copyright (c) 2004 Robert N. M. Watson
  * All rights reserved.
  *
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/random/randomdev_soft.c 170067 2007-05-28 18:20:15Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -56,11 +56,12 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/random/randomdev_soft.c 170067 2007-05
 #define RANDOM_FIFO_MAX	256	/* How many events to queue up */
 
 static void random_kthread(void *);
-static void 
+static void
 random_harvest_internal(u_int64_t, const void *, u_int,
     u_int, u_int, enum esource);
 static int random_yarrow_poll(int event,struct thread *td);
 static int random_yarrow_block(int flag);
+static void random_yarrow_flush_reseed(void);
 
 struct random_systat random_yarrow = {
 	.ident = "Software, Yarrow",
@@ -70,7 +71,7 @@ struct random_systat random_yarrow = {
 	.read = random_yarrow_read,
 	.write = random_yarrow_write,
 	.poll = random_yarrow_poll,
-	.reseed = random_yarrow_reseed,
+	.reseed = random_yarrow_flush_reseed,
 	.seeded = 1,
 };
 
@@ -96,7 +97,7 @@ static struct entropyfifo emptyfifo;
 /* Harvested entropy */
 static struct entropyfifo harvestfifo[ENTROPYSOURCE];
 
-/* <0 to end the kthread, 0 to let it run */
+/* <0 to end the kthread, 0 to let it run, 1 to flush the harvest queues */
 static int random_kthread_control = 0;
 
 static struct proc *random_kthread_proc;
@@ -181,7 +182,7 @@ random_yarrow_init(void)
 	mtx_init(&harvest_mtx, "entropy harvest mutex", NULL, MTX_SPIN);
 
 	/* Start the hash/reseed thread */
-	error = kthread_create(random_kthread, NULL,
+	error = kproc_create(random_kthread, NULL,
 	    &random_kthread_proc, RFHIGHPID, 0, "yarrow");
 	if (error != 0)
 		panic("Cannot create entropy maintenance thread.");
@@ -234,16 +235,14 @@ random_kthread(void *arg __unused)
 {
 	STAILQ_HEAD(, harvest) local_queue;
 	struct harvest *event = NULL;
-	int active, local_count;
+	int local_count;
 	enum esource source;
 
 	STAILQ_INIT(&local_queue);
 	local_count = 0;
 
 	/* Process until told to stop */
-	for (; random_kthread_control == 0;) {
-
-		active = 0;
+	for (; random_kthread_control >= 0;) {
 
 		/* Cycle through all the entropy sources */
 		mtx_lock_spin(&harvest_mtx);
@@ -276,9 +275,15 @@ random_kthread(void *arg __unused)
 		KASSERT(local_count == 0, ("random_kthread: local_count %d",
 		    local_count));
 
-		/* Found nothing, so don't belabour the issue */
-		if (!active)
-			pause("-", hz / 10);
+		/*
+		 * If a queue flush was commanded, it has now happened,
+		 * and we can mark this by resetting the command.
+		 */
+		if (random_kthread_control == 1)
+			random_kthread_control = 0;
+
+		/* Work done, so don't belabour the issue */
+		pause("-", hz / 10);
 
 	}
 
@@ -342,7 +347,7 @@ random_yarrow_write(void *buf, int count)
 
 	/*
 	 * Break the input up into HARVESTSIZE chunks. The writer has too
-	 * much control here, so "estimate" the the entropy as zero.
+	 * much control here, so "estimate" the entropy as zero.
 	 */
 	for (i = 0; i < count; i += HARVESTSIZE) {
 		chunk = HARVESTSIZE;
@@ -373,7 +378,7 @@ random_yarrow_poll(int events, struct thread *td)
 		revents = events & (POLLIN | POLLRDNORM);
 	else
 		selrecord(td, &random_systat.rsel);
-	
+
 	mtx_unlock(&random_reseed_mtx);
 	return revents;
 }
@@ -399,4 +404,16 @@ random_yarrow_block(int flag)
 	mtx_unlock(&random_reseed_mtx);
 
 	return error;
-}	
+}
+
+/* Helper routine to perform explicit reseeds */
+static void
+random_yarrow_flush_reseed(void)
+{
+	/* Command a entropy queue flush and wait for it to finish */
+	random_kthread_control = 1;
+	while (random_kthread_control)
+		pause("-", hz / 10);
+
+	random_yarrow_reseed();
+}

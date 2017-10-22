@@ -1,5 +1,5 @@
 .\" Startup file for troff.
-.\" $FreeBSD: release/7.0.0/contrib/groff/tmac/troffrc 172506 2007-10-10 16:59:15Z cvs2svn $
+.\" $FreeBSD$
 .
 .\" This is tested by pic.
 .nr 0p 0
@@ -49,13 +49,5 @@ troffrc!X100 troffrc!X100-12 troffrc!lj4 troff!lbp troffrc!html
 .
 .\" Handle paper formats
 .do mso papersize.tmac
-.
-.\" Disable SGR support in grotty(1).
-.if n \{\
-.  do nop \X'tty: sgr 0'
-.  sp -1
-.  nr nl 0-1
-.  nr % -1
-.\}
 .
 .\" Don't let blank lines creep in here.

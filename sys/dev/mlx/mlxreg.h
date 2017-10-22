@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/7.0.0/sys/dev/mlx/mlxreg.h 138090 2004-11-25 12:15:49Z scottl $
+ *	$FreeBSD$
  */
 
 #define MLX_BLKSIZE	512		/* fixed feature */

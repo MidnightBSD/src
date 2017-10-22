@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.bin/opiekey/Makefile 88857 2002-01-03 21:20:29Z ache $
+# $FreeBSD$
 #
 OPIE_DIST?=	${.CURDIR}/../../contrib/opie
 
@@ -7,6 +7,8 @@ PROG=	opiekey
 CFLAGS+=-I${.CURDIR}/../../lib/libopie
 CFLAGS+=-I${OPIE_DIST}
 CFLAGS+=-DINSECURE_OVERRIDE
+
+WARNS?=	0
 
 DPADD=	${LIBOPIE} ${LIBMD}
 LDADD=	-lopie -lmd

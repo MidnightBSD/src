@@ -1,18 +1,18 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/sdpd 165683 2006-12-31 10:37:18Z yar $
+# $FreeBSD$
 #
 
 # PROVIDE: sdpd
 # REQUIRE: DAEMON
 # BEFORE: LOGIN
-# KEYWORD: nojail
+# KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 
 name="sdpd"
 command="/usr/sbin/${name}"
-rcvar=`set_rcvar`
+rcvar="sdpd_enable"
 required_modules="ng_btsocket"
 
 load_rc_config $name

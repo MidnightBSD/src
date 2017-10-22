@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/boot/pc98/boot0/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
 PROG=	${BOOT}.out
 INTERNALPROG=
@@ -13,7 +13,7 @@ BOOT=	boot0
 # unless you are glutton for punishment.
 BOOT_BOOT0_ORG?=	0x0000
 
-LDFLAGS=-N -e start -Ttext ${BOOT_BOOT0_ORG}
+LDFLAGS=-e start -Ttext ${BOOT_BOOT0_ORG} -Wl,-N
 
 ${BOOT}: ${BOOT}.out
 	objcopy -S -O binary ${BOOT}.out ${.TARGET}

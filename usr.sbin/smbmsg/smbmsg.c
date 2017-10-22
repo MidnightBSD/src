@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/smbmsg/smbmsg.c 129779 2004-05-27 13:31:16Z joerg $
+ * $FreeBSD$
  */
 
 /*

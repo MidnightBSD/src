@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_h4.c,v 1.10 2005/10/31 17:57:43 max Exp $
- * $FreeBSD: release/7.0.0/sys/netgraph/bluetooth/drivers/h4/ng_h4.c 171818 2007-08-13 17:19:28Z emax $
+ * $FreeBSD$
  * 
  * Based on:
  * ---------
@@ -161,7 +161,7 @@ ng_h4_open(struct cdev *dev, struct tty *tp)
 		return (error);
 
 	/* Initialize private struct */
-	MALLOC(sc, ng_h4_info_p, sizeof(*sc), M_NETGRAPH_H4, M_NOWAIT|M_ZERO);
+	sc = malloc(sizeof(*sc), M_NETGRAPH_H4, M_NOWAIT|M_ZERO);
 	if (sc == NULL)
 		return (ENOMEM);
 
@@ -187,7 +187,7 @@ ng_h4_open(struct cdev *dev, struct tty *tp)
 
 		mtx_destroy(&sc->outq.ifq_mtx);
 		bzero(sc, sizeof(*sc));
-		FREE(sc, M_NETGRAPH_H4);
+		free(sc, M_NETGRAPH_H4);
 
 		return (error);
 	}
@@ -204,7 +204,7 @@ ng_h4_open(struct cdev *dev, struct tty *tp)
 		NG_NODE_UNREF(sc->node);
 		mtx_destroy(&sc->outq.ifq_mtx);
 		bzero(sc, sizeof(*sc));
-		FREE(sc, M_NETGRAPH_H4);
+		free(sc, M_NETGRAPH_H4);
 
 		return (error);
 	}
@@ -765,7 +765,7 @@ ng_h4_shutdown(node_p node)
 	NG_NODE_UNREF(node);
 	mtx_destroy(&sc->outq.ifq_mtx);
 	bzero(sc, sizeof(*sc));
-	FREE(sc, M_NETGRAPH_H4);
+	free(sc, M_NETGRAPH_H4);
 
 	return (0);
 } /* ng_h4_shutdown */

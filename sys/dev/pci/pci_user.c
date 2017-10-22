@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/pci/pci_user.c 175644 2008-01-24 18:53:29Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_bus.h"	/* XXX trim includes */
 #include "opt_compat.h"
@@ -307,7 +307,9 @@ pci_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *t
 	struct pci_conf_io *cio;
 	struct pci_devinfo *dinfo;
 	struct pci_io *io;
+	struct pci_bar_io *bio;
 	struct pci_match_conf *pattern_buf;
+	struct pci_map *pm;
 	size_t confsz, iolen, pbufsz;
 	int error, ionum, i, num_patterns;
 #ifdef PRE7_COMPAT
@@ -319,11 +321,11 @@ pci_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *t
 	io_old = NULL;
 	pattern_buf_old = NULL;
 
-	if (!(flag & FWRITE) &&
-	    (cmd != PCIOCGETCONF && cmd != PCIOCGETCONF_OLD))
+	if (!(flag & FWRITE) && cmd != PCIOCGETBAR &&
+	    cmd != PCIOCGETCONF && cmd != PCIOCGETCONF_OLD)
 		return EPERM;
 #else
-	if (!(flag & FWRITE) && cmd != PCIOCGETCONF)
+	if (!(flag & FWRITE) && cmd != PCIOCGETBAR && cmd != PCIOCGETCONF)
 		return EPERM;
 #endif
 
@@ -602,9 +604,8 @@ getconfexit:
 		case 4:
 		case 2:
 		case 1:
-			/* Make sure register is in bounds and aligned. */
+			/* Make sure register is not negative and aligned. */
 			if (io->pi_reg < 0 ||
-			    io->pi_reg + io->pi_width > PCI_REGMAX + 1 ||
 			    io->pi_reg & (io->pi_width - 1)) {
 				error = EINVAL;
 				break;
@@ -669,6 +670,40 @@ getconfexit:
 		}
 		break;
 
+	case PCIOCGETBAR:
+		bio = (struct pci_bar_io *)data;
+
+		/*
+		 * Assume that the user-level bus number is
+		 * in fact the physical PCI bus number.
+		 */
+		pcidev = pci_find_dbsf(bio->pbi_sel.pc_domain,
+		    bio->pbi_sel.pc_bus, bio->pbi_sel.pc_dev,
+		    bio->pbi_sel.pc_func);
+		if (pcidev == NULL) {
+			error = ENODEV;
+			break;
+		}
+		pm = pci_find_bar(pcidev, bio->pbi_reg);
+		if (pm == NULL) {
+			error = EINVAL;
+			break;
+		}
+		bio->pbi_base = pm->pm_value;
+		bio->pbi_length = (pci_addr_t)1 << pm->pm_size;
+		bio->pbi_enabled = pci_bar_enabled(pcidev, pm);
+		error = 0;
+		break;
+	case PCIOCATTACHED:
+		error = 0;
+		io = (struct pci_io *)data;
+		pcidev = pci_find_dbsf(io->pi_sel.pc_domain, io->pi_sel.pc_bus,
+				       io->pi_sel.pc_dev, io->pi_sel.pc_func);
+		if (pcidev != NULL)
+			io->pi_data = device_is_attached(pcidev);
+		else
+			error = ENODEV;
+		break;
 	default:
 		error = ENOTTY;
 		break;

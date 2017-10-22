@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/boot/common/isapnp.h 92766 2002-03-20 08:00:54Z alfred $
+ * $FreeBSD$
  */
 
 #ifndef _I386_ISA_PNP_H_

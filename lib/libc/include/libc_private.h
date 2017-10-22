@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libc/include/libc_private.h 171219 2007-07-04 23:27:38Z peter $
+ * $FreeBSD$
  *
  * Private definitions for libc, libc_r and libpthread.
  *
@@ -34,6 +34,7 @@
 
 #ifndef _LIBC_PRIVATE_H_
 #define _LIBC_PRIVATE_H_
+#include <sys/_pthreadtypes.h>
 
 /*
  * This global flag is non-zero when a process has created one
@@ -41,6 +42,26 @@
  * when they are not required.
  */
 extern int	__isthreaded;
+
+/*
+ * Elf_Auxinfo *__elf_aux_vector, the pointer to the ELF aux vector
+ * provided by kernel. Either set for us by rtld, or found at runtime
+ * on stack for static binaries.
+ *
+ * Type is void to avoid polluting whole libc with ELF types.
+ */
+extern void	*__elf_aux_vector;
+
+/*
+ * libc should use libc_dlopen internally, which respects a global
+ * flag where loading of new shared objects can be restricted.
+ */
+void *libc_dlopen(const char *, int);
+
+/*
+ * For dynamic linker.
+ */
+void _rtld_error(const char *fmt, ...);
 
 /*
  * File lock contention is difficult to diagnose without knowing
@@ -59,6 +80,19 @@ extern int	__isthreaded;
  */
 #define	FLOCKFILE(fp)		if (__isthreaded) _FLOCKFILE(fp)
 #define	FUNLOCKFILE(fp)		if (__isthreaded) _funlockfile(fp)
+
+struct _spinlock;
+extern struct _spinlock __stdio_thread_lock;
+#define STDIO_THREAD_LOCK()				\
+do {							\
+	if (__isthreaded)				\
+		_SPINLOCK(&__stdio_thread_lock);	\
+} while (0)
+#define STDIO_THREAD_UNLOCK()				\
+do {							\
+	if (__isthreaded)				\
+		_SPINUNLOCK(&__stdio_thread_lock);	\
+} while (0)
 
 /*
  * Indexes into the pthread jump table.
@@ -126,6 +160,10 @@ typedef enum {
 	PJT_SETSPECIFIC,
 	PJT_SIGMASK,
 	PJT_TESTCANCEL,
+	PJT_CLEANUP_POP_IMP,
+	PJT_CLEANUP_PUSH_IMP,
+	PJT_CANCEL_ENTER,
+	PJT_CANCEL_LEAVE,
 	PJT_MAX
 } pjt_index_t;
 
@@ -147,6 +185,12 @@ int _yp_check(char **);
 void _init_tls(void);
 
 /*
+ * Provides pthread_once()-like functionality for both single-threaded
+ * and multi-threaded applications.
+ */
+int _once(pthread_once_t *, void (*)(void));
+
+/*
  * Set the TLS thread pointer
  */
 void _set_tp(void *tp);
@@ -156,6 +200,12 @@ void _set_tp(void *tp);
  * by getprogname() and setprogname().
  */
 extern const char *__progname;
+
+/*
+ * This function is used by the threading libraries to notify malloc that a
+ * thread is exiting.
+ */
+void _malloc_thread_cleanup(void);
 
 /*
  * These functions are used by the threading libraries in order to protect
@@ -191,5 +241,19 @@ extern int	__sys_freebsd6_truncate(const char *, int, __off_t);
 extern __ssize_t __sys_freebsd6_pread(int, void *, __size_t, int, __off_t);
 extern __ssize_t __sys_freebsd6_pwrite(int, const void *, __size_t, int, __off_t);
 extern void *	__sys_freebsd6_mmap(void *, __size_t, int, int, int, int, __off_t);
+
+/* Without back-compat translation */
+extern int	__sys_fcntl(int, int, ...);
+
+/* execve() with PATH processing to implement posix_spawnp() */
+int _execvpe(const char *, char * const *, char * const *);
+
+int _elf_aux_info(int aux, void *buf, int buflen);
+struct dl_phdr_info;
+int __elf_phdr_match_addr(struct dl_phdr_info *, void *);
+void __init_elf_aux_vector(void);
+
+void	_pthread_cancel_enter(int);
+void	_pthread_cancel_leave(int);
 
 #endif /* _LIBC_PRIVATE_H_ */

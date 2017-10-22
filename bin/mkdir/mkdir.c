@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)mkdir.c	8.2 (Berkeley) 1/25/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/mkdir/mkdir.c 163213 2006-10-10 20:18:20Z ru $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>

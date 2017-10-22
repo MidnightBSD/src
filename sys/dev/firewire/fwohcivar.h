@@ -31,17 +31,11 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: release/7.0.0/sys/dev/firewire/fwohcivar.h 170374 2007-06-06 14:31:36Z simokawa $
+ * $FreeBSD$
  *
  */
 
 #include <sys/taskqueue.h>
-
-#if defined(__DragonFly__) ||  __FreeBSD_version < 700043
-#define FWOHCI_INTFILT	0
-#else
-#define FWOHCI_INTFILT	1
-#endif
 
 typedef struct fwohci_softc {
 	struct firewire_comm fc;
@@ -84,7 +78,6 @@ typedef struct fwohci_softc {
 } fwohci_softc_t;
 
 void fwohci_intr (void *arg);
-int fwohci_filt (void *arg);
 int fwohci_init (struct fwohci_softc *, device_t);
 void fwohci_poll (struct firewire_comm *, int, int);
 void fwohci_reset (struct fwohci_softc *, device_t);

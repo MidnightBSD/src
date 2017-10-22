@@ -1,11 +1,11 @@
 # $Id: Makefile,v 1.5 2004/09/08 08:27:12 bright Exp $
-# $FreeBSD: release/7.0.0/share/examples/autofs/driver/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
-PROG=autodriver
+PROG=		autodriver
+NO_MAN=
 
 SRCS=		autodriver.c
-NO_MAN=
-WARNS=		4
+WARNS?=		4
 CFLAGS+=	-g
 BINDIR?=	/sbin
 

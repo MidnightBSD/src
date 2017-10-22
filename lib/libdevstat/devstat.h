@@ -25,13 +25,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libdevstat/devstat.h 148297 2005-07-22 17:19:05Z kensmith $
+ * $FreeBSD$
  */
 
 #ifndef _DEVSTAT_H
 #define _DEVSTAT_H
 #include <sys/cdefs.h>
 #include <sys/devicestat.h>
+#include <sys/resource.h>
 
 #include <kvm.h>
 

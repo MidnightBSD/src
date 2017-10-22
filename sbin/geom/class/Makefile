@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sbin/geom/class/Makefile 172302 2007-09-23 07:34:23Z pjd $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -10,10 +10,13 @@ SUBDIR+=eli
 SUBDIR+=journal
 SUBDIR+=label
 SUBDIR+=mirror
+SUBDIR+=mountver
 SUBDIR+=multipath
 SUBDIR+=nop
 SUBDIR+=part
+SUBDIR+=raid
 SUBDIR+=raid3
+SUBDIR+=sched
 SUBDIR+=shsec
 SUBDIR+=stripe
 SUBDIR+=virstor

@@ -36,7 +36,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)make.h	8.3 (Berkeley) 6/13/95
- * $FreeBSD: release/7.0.0/usr.bin/make/make.h 167330 2007-03-08 09:16:11Z fjoe $
+ * $FreeBSD$
  */
 
 #ifndef make_h_a91074b9
@@ -48,6 +48,8 @@
  */
 
 #include "util.h"
+
+#define	MAKE_JOB_PREFIX	".MAKE.JOB.PREFIX"
 
 struct GNode;
 struct Lst;

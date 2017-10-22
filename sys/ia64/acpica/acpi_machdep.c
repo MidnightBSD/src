@@ -23,15 +23,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/acpica/acpi_machdep.c 150003 2005-09-11 18:39:03Z obrien $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
 #include <sys/bus.h>
-
-#include <contrib/dev/acpica/acpi.h>
-#include <dev/acpica/acpivar.h>
+#include <machine/md_var.h>
 #include <machine/pal.h>
+
+#include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/actables.h>
+#include <dev/acpica/acpivar.h>
 
 int
 acpi_machdep_init(device_t dev)
@@ -54,5 +56,46 @@ acpi_machdep_quirks(int *quirks)
 void
 acpi_cpu_c1()
 {
+#ifdef INVARIANTS
+	register_t ie;
+
+	ie = intr_disable();
+	KASSERT(ie == 0, ("%s called with interrupts enabled\n", __func__));
+#endif
 	ia64_call_pal_static(PAL_HALT_LIGHT, 0, 0, 0);
+	ia64_enable_intr();
+}
+
+void *
+acpi_find_table(const char *sig)
+{
+	ACPI_PHYSICAL_ADDRESS rsdp_ptr;
+	ACPI_TABLE_RSDP *rsdp;
+	ACPI_TABLE_XSDT *xsdt;
+	ACPI_TABLE_HEADER *table;
+	UINT64 addr;
+	u_int i, count;
+
+	if ((rsdp_ptr = AcpiOsGetRootPointer()) == 0)
+		return (NULL);
+
+	rsdp = (ACPI_TABLE_RSDP *)IA64_PHYS_TO_RR7(rsdp_ptr);
+	xsdt = (ACPI_TABLE_XSDT *)IA64_PHYS_TO_RR7(rsdp->XsdtPhysicalAddress);
+
+	count = (UINT64 *)((char *)xsdt + xsdt->Header.Length) -
+	    xsdt->TableOffsetEntry;
+
+	for (i = 0; i < count; i++) {
+		addr = xsdt->TableOffsetEntry[i];
+		table = (ACPI_TABLE_HEADER *)IA64_PHYS_TO_RR7(addr);
+
+		if (strncmp(table->Signature, sig, ACPI_NAME_SIZE) != 0)
+			continue;
+		if (ACPI_FAILURE(AcpiTbChecksum((void *)table, table->Length)))
+			continue;
+
+		return (table);
+	}
+
+	return (NULL);
 }

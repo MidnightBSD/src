@@ -67,7 +67,7 @@
  *
  * OpenBSD: if_bridge.h,v 1.14 2001/03/22 03:48:29 jason Exp
  *
- * $FreeBSD: release/7.0.0/sys/net/if_bridgevar.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 /*
@@ -114,6 +114,7 @@
 					 * (ifbpstpconf) */
 #define	BRDGSPROTO		28	/* set protocol (ifbrparam) */
 #define	BRDGSTXHC		29	/* set tx hold count (ifbrparam) */
+#define	BRDGSIFAMAX		30	/* set max interface addrs (ifbreq) */
 
 /*
  * Generic bridge control request.
@@ -128,7 +129,10 @@ struct ifbreq {
 	uint8_t		ifbr_proto;		/* member if STP protocol */
 	uint8_t		ifbr_role;		/* member if STP role */
 	uint8_t		ifbr_state;		/* member if STP state */
-	uint8_t		pad[44];
+	uint32_t	ifbr_addrcnt;		/* member if addr number */
+	uint32_t	ifbr_addrmax;		/* member if addr max */
+	uint32_t	ifbr_addrexceeded;	/* member if addr violations */
+	uint8_t		pad[32];
 };
 
 /* BRDGGIFFLAGS, BRDGSIFFLAGS */

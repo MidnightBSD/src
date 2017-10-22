@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/match.c 150530 2005-09-24 21:41:47Z krion $");
+__FBSDID("$FreeBSD$");
 
 #include "lib.h"
 #include <err.h>
@@ -237,19 +237,12 @@ pattern_match(match_t MatchType, char *pattern, const char *pkgname)
  * Synopsis is similar to matchinstalled(), but use origin
  * as a key for matching packages.
  */
-char **
-matchbyorigin(const char *origin, int *retval)
+char ***
+matchallbyorigin(const char **origins, int *retval)
 {
-    char **installed;
-    int i;
-    static struct store *store = NULL;
-
-    store = storecreate(store);
-    if (store == NULL) {
-	if (retval != NULL)
-	    *retval = 1;
-	return NULL;
-    }
+    char **installed, **allorigins = NULL;
+    char ***matches = NULL;
+    int i, j;
 
     if (retval != NULL)
 	*retval = 0;
@@ -258,10 +251,14 @@ matchbyorigin(const char *origin, int *retval)
     if (installed == NULL)
 	return NULL;
 
+    /* Gather origins for all installed packages */
     for (i = 0; installed[i] != NULL; i++) {
 	FILE *fp;
-	char *cp, tmp[PATH_MAX];
+	char *buf, *cp, tmp[PATH_MAX];
 	int cmd;
+
+	allorigins = realloc(allorigins, (i + 1) * sizeof(*allorigins));
+	allorigins[i] = NULL;
 
 	snprintf(tmp, PATH_MAX, "%s/%s", LOG_DIR, installed[i]);
 	/*
@@ -270,7 +267,7 @@ matchbyorigin(const char *origin, int *retval)
 	 */
 	if (isemptydir(tmp))
 	    continue;
-	snprintf(tmp, PATH_MAX, "%s/%s", tmp, CONTENTS_FNAME);
+	strncat(tmp, "/" CONTENTS_FNAME, PATH_MAX);
 	fp = fopen(tmp, "r");
 	if (fp == NULL) {
 	    warnx("the package info for package '%s' is corrupt", installed[i]);
@@ -290,8 +287,8 @@ matchbyorigin(const char *origin, int *retval)
 		continue;
 	    cmd = plist_cmd(tmp + 1, &cp);
 	    if (cmd == PLIST_ORIGIN) {
-		if (csh_match(origin, cp, FNM_PATHNAME) == 0)
-		    storeappend(store, installed[i]);
+		asprintf(&buf, "%s", cp);
+		allorigins[i] = buf;
 		break;
 	    }
 	}
@@ -300,11 +297,66 @@ matchbyorigin(const char *origin, int *retval)
 	fclose(fp);
     }
 
-    if (store->used == 0)
-	return NULL;
-    else
-	return store->store;
+    /* Resolve origins into package names, retaining the sequence */
+    for (i = 0; origins[i] != NULL; i++) {
+	matches = realloc(matches, (i + 1) * sizeof(*matches));
+	struct store *store = NULL;
+	store = storecreate(store);
+
+	for (j = 0; installed[j] != NULL; j++) {
+	    if (allorigins[j]) {
+		if (csh_match(origins[i], allorigins[j], FNM_PATHNAME) == 0) {
+		    storeappend(store, installed[j]);
+		}
+	    }
+	}
+	if (store->used == 0)
+	    matches[i] = NULL;
+	else
+	    matches[i] = store->store;
+    }
+
+    if (allorigins) {
+	for (i = 0; installed[i] != NULL; i++)
+	    if (allorigins[i])
+		free(allorigins[i]);
+	free(allorigins);
+    }
+
+    return matches;
 }
+
+/*
+ * Synopsis is similar to matchinstalled(), but use origin
+ * as a key for matching packages.
+ */
+char **
+matchbyorigin(const char *origin, int *retval)
+{
+   const char *origins[2];
+   char ***tmp;
+
+   origins[0] = origin;
+   origins[1] = NULL;
+
+   tmp = matchallbyorigin(origins, retval);
+   if (tmp && tmp[0]) {
+	return tmp[0];
+   } else {
+	return NULL;
+   }
+}
+
+/*
+ * Small linked list to memoize results of isinstalledpkg().  A hash table
+ * would be faster but for n ~= 1000 may be overkill.
+ */
+struct iip_memo {
+	LIST_ENTRY(iip_memo) iip_link;
+	char	*iip_name;
+	int	 iip_result;
+};
+LIST_HEAD(, iip_memo) iip_memo = LIST_HEAD_INITIALIZER(iip_memo);
 
 /*
  * 
@@ -314,18 +366,53 @@ matchbyorigin(const char *origin, int *retval)
 int
 isinstalledpkg(const char *name)
 {
-    char buf[FILENAME_MAX];
-    char buf2[FILENAME_MAX];
+    int result;
+    char *buf, *buf2;
+    struct iip_memo *memo;
 
-    snprintf(buf, sizeof(buf), "%s/%s", LOG_DIR, name);
-    if (!isdir(buf) || access(buf, R_OK) == FAIL)
-	return 0;
+    LIST_FOREACH(memo, &iip_memo, iip_link) {
+	if (strcmp(memo->iip_name, name) == 0)
+	    return memo->iip_result;
+    }
+    
+    buf2 = NULL;
+    asprintf(&buf, "%s/%s", LOG_DIR, name);
+    if (buf == NULL)
+	goto errout;
+    if (!isdir(buf) || access(buf, R_OK) == FAIL) {
+	result = 0;
+    } else {
+	asprintf(&buf2, "%s/%s", buf, CONTENTS_FNAME);
+	if (buf2 == NULL)
+	    goto errout;
 
-    snprintf(buf2, sizeof(buf2), "%s/%s", buf, CONTENTS_FNAME);
-    if (!isfile(buf2) || access(buf2, R_OK) == FAIL)
-	return -1;
+	if (!isfile(buf2) || access(buf2, R_OK) == FAIL)
+	    result = -1;
+	else
+	    result = 1;
+    }
 
-    return 1;
+    free(buf);
+    buf = strdup(name);
+    if (buf == NULL)
+	goto errout;
+    free(buf2);
+    buf2 = NULL;
+
+    memo = malloc(sizeof *memo);
+    if (memo == NULL)
+	goto errout;
+    memo->iip_name = buf;
+    memo->iip_result = result;
+    LIST_INSERT_HEAD(&iip_memo, memo, iip_link);
+    return result;
+
+errout:
+    if (buf != NULL)
+	free(buf);
+    if (buf2 != NULL)
+	free(buf2);
+    return -1;
 }
 
 /*

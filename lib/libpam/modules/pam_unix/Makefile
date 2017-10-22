@@ -32,7 +32,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/7.0.0/lib/libpam/modules/pam_unix/Makefile 172907 2007-10-23 15:41:34Z ru $
+# $FreeBSD$
 
 NO_PROFILE=
 NO_INSTALLLIB=

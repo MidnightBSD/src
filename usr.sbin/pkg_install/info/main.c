@@ -20,13 +20,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/info/main.c 159554 2006-06-12 22:39:32Z obrien $");
+__FBSDID("$FreeBSD$");
+
+#include <getopt.h>
+#include <err.h>
 
 #include "lib.h"
 #include "info.h"
-#include <err.h>
-
-static char Options[] = "abcdDe:EfgGhiIjkKl:LmoO:pPqQrRst:vVW:xX";
 
 int	Flags		= 0;
 match_t	MatchType	= MATCH_GLOB;
@@ -39,7 +39,27 @@ char *LookUpOrigin	= NULL;
 Boolean KeepPackage	= FALSE;
 struct which_head *whead;
 
-static void usage __P((void));
+static void usage(void);
+
+static char opts[] = "abcdDe:EfgGhiIjkKl:LmoO:pPqQrRst:vVW:xX";
+static struct option longopts[] = {
+	{ "all",	no_argument,		NULL,		'a' },
+	{ "blocksize",	no_argument,		NULL,		'b' },
+	{ "exist",	required_argument,	NULL,		'X' },
+	{ "exists",	required_argument,	NULL,		'X' },
+	{ "extended",	no_argument,		NULL,		'e' },
+	{ "help",	no_argument,		NULL,		'h' },
+	{ "keep",	no_argument,		NULL,		'K' },
+	{ "no-glob",	no_argument,		NULL,		'G' },
+	{ "origin",	required_argument,	NULL,		'O' },
+	{ "quiet",	no_argument,		NULL,		'q' },
+	{ "regex",	no_argument,		NULL,		'x' },
+	{ "template",	required_argument,	NULL,		't' },
+	{ "verbose",	no_argument,		NULL,		'v' },
+	{ "version",	no_argument,		NULL,		'P' },
+	{ "which",	required_argument,	NULL,		'W' },
+	{ NULL,		0,			NULL,		0 }
+};
 
 int
 main(int argc, char **argv)
@@ -58,7 +78,7 @@ main(int argc, char **argv)
 	MatchType = MATCH_ALL;
 	Flags = SHOW_INDEX;
     }
-    else while ((ch = getopt(argc, argv, Options)) != -1) {
+    else while ((ch = getopt_long(argc, argv, opts, longopts, NULL)) != -1) {
 	switch(ch) {
 	case 'a':
 	    MatchType = MATCH_ALL;
@@ -209,7 +229,6 @@ main(int argc, char **argv)
 	    break;
 
 	case 'h':
-	case '?':
 	default:
 	    usage();
 	    break;
@@ -236,7 +255,7 @@ main(int argc, char **argv)
 	 * Don't try to apply heuristics if arguments are regexs or if
 	 * the argument refers to an existing file.
 	 */
-	if (MatchType != MATCH_REGEX && MatchType != MATCH_EREGEX && !isfile(*argv))
+	if (MatchType != MATCH_REGEX && MatchType != MATCH_EREGEX && !isfile(*argv) && !isURL(*argv))
 	    while ((pkgs_split = strrchr(*argv, (int)'/')) != NULL) {
 		*pkgs_split++ = '\0';
 		/*
@@ -263,7 +282,7 @@ main(int argc, char **argv)
 }
 
 static void
-usage()
+usage(void)
 {
     fprintf(stderr, "%s\n%s\n%s\n%s\n%s\n",
 	"usage: pkg_info [-bcdDEfgGiIjkKLmopPqQrRsvVxX] [-e package] [-l prefix]",

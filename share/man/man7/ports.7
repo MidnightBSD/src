@@ -23,9 +23,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man7/ports.7 175619 2008-01-24 07:11:29Z brueffer $
+.\" $FreeBSD$
 .\"
-.Dd January 21, 2008
+.Dd February 9, 2012
 .Dt PORTS 7
 .Os
 .Sh NAME
@@ -111,11 +111,6 @@ Configure
 .Va OPTIONS
 for this port using
 .Xr dialog 1 .
-.It Cm config-recursive
-Configure
-.Va OPTIONS
-for this port and all its dependencies using
-.Xr dialog 1 .
 .It Cm fetch
 Fetch all of the files needed to build this port from the sites
 listed in
@@ -129,6 +124,8 @@ and
 .It Cm checksum
 Verify that the fetched distfile's checksum matches the one the port was
 tested against.
+If the distfile's checksum does not match, it also fetches the distfiles
+which are missing or failed the checksum calculation.
 Defining
 .Va NO_CHECKSUM
 will skip this step.
@@ -189,6 +186,11 @@ config for this port and all its dependencies.
 Skip the ports which have already had their
 .Va OPTIONS
 configured.
+.It Cm config-recursive
+Configure
+.Va OPTIONS
+for this port and all its dependencies using
+.Xr dialog 1 .
 .It Cm fetch-list
 Show list of files to be fetched in order to build the port.
 .It Cm fetch-recursive
@@ -196,9 +198,14 @@ Fetch the distfiles of the port and all its dependencies.
 .It Cm fetch-recursive-list
 Show list of files that would be retrieved by
 .Cm fetch-recursive .
+.It Cm run-depends-list , build-depends-list
+Print a list of all the compile and run dependencies, and dependencies
+of those dependencies, by port directory.
+.It Cm all-depends-list
+Print a list of all dependencies for the port.
 .It Cm pretty-print-run-depends-list , pretty-print-build-depends-list
 Print a list of all the compile and run dependencies, and dependencies
-of those dependencies.
+of those dependencies, by port name and version.
 .It Cm missing
 Print a list of missing dependencies to be installed for the port.
 .It Cm clean
@@ -249,6 +256,8 @@ and
 Like
 .Cm package ,
 but makes a package for each depending port as well.
+.It Cm package-name
+Prints the name with version of the port.
 .It Cm readmes
 Create a port's
 .Pa README.html .
@@ -320,7 +329,7 @@ To find ports that contain
 in either of the name, path, info
 fields, ignore the rest of the record.
 .Pp
-By default the search is not case-nsensitive.
+By default the search is not case-sensitive.
 In order to make it case-sensitive you can use the
 .Va icase
 variable:
@@ -399,10 +408,13 @@ Directory to put the package in.
 .It Va PKGFILE
 The full path to the package.
 .El
-.It Va PREFIX
-Where to install things in general
-(usually
+.It Va LOCALBASE
+Where existing things are installed and where to search for files when
+resolving dependencies (usually
 .Pa /usr/local ) .
+.It Va PREFIX
+Where to install this port (usually set to the same as
+.Va LOCALBASE ) .
 .It Va MASTER_SITES
 Primary sites for distribution files if not found locally.
 .It Va PATCH_SITES
@@ -470,6 +482,11 @@ Of course, these ports may not work as expected, but if you really know
 what you are doing and are sure about installing a forbidden port, then
 .Va NO_IGNORE
 lets you do it.
+.It Va NO_CHECKSUM
+If defined, skip verifying the port's checksum.
+.It Va TRYBROKEN
+If defined, attempt to build a port even if it is marked as
+.Aq Va BROKEN .
 .It Va PORT_DBDIR
 Directory where the results of configuring
 .Va OPTIONS

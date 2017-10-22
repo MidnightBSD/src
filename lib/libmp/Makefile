@@ -1,14 +1,16 @@
-# $FreeBSD: release/7.0.0/lib/libmp/Makefile 169807 2007-05-21 02:49:08Z deischen $
+# $FreeBSD$
 
 LIB=		mp
-SHLIB_MAJOR=	6
+SHLIB_MAJOR=	7
 DPADD=		${LIBCRYPTO}
 LDADD=		-lcrypto
 MAN=		libmp.3
 INCS=		mp.h
 SRCS=		mpasbn.c
 
-WARNS?=		0
 CFLAGS+=	-I${.CURDIR}/../../crypto
+
+VERSION_DEF=	${.CURDIR}/../libc/Versions.def
+SYMBOL_MAPS=	${.CURDIR}/Symbol.map
 
 .include <bsd.lib.mk>

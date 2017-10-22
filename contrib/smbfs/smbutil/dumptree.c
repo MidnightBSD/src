@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/contrib/smbfs/smbutil/dumptree.c 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $FreeBSD$ */
 
 #include <sys/param.h>
 #include <sys/time.h>

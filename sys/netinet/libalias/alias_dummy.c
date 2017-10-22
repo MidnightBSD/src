@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/netinet/libalias/alias_dummy.c 162674 2006-09-26 23:26:53Z piso $");
+__FBSDID("$FreeBSD$");
 
 /* 
  * Alias_dummy is just an empty skeleton used to demostrate how to write
@@ -60,7 +60,7 @@ static void
 AliasHandleDummy(struct libalias *la, struct ip *ip, struct alias_data *ah);
 
 static int 
-fingerprint(struct libalias *la, struct ip *pip, struct alias_data *ah)
+fingerprint(struct libalias *la, struct alias_data *ah)
 {
 
 	/* 

@@ -1,4 +1,4 @@
-#	$FreeBSD: release/7.0.0/sbin/ipf/Makefile 145524 2005-04-25 18:55:52Z darrenr $
+#	$FreeBSD$
 
 #.WAIT
 SUBDIR=		libipf

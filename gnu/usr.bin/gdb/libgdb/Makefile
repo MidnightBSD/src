@@ -1,6 +1,14 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/gdb/libgdb/Makefile 157626 2006-04-10 09:00:19Z ru $
+# $FreeBSD$
 
-TARGET_ARCH?= ${MACHINE_ARCH}
+# These assignments duplicate much of the functionality of
+# MACHINE_CPUARCH, but there's no easy way to export make functions...
+
+.if defined(TARGET_ARCH)
+TARGET_CPUARCH=${TARGET_ARCH:C/mips.*e[bl]/mips/:C/armeb/arm/:C/powerpc64/powerpc/}
+.else
+TARGET_CPUARCH=${MACHINE_CPUARCH}
+.endif
+TARGET_ARCH?=	${MACHINE_ARCH}
 
 LIB=	gdb
 INTERNALLIB=

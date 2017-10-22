@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/nsswitch 165664 2006-12-30 22:53:20Z yar $
+# $FreeBSD$
 #
 
 # PROVIDE: nsswitch
@@ -77,10 +77,10 @@ generate_host_conf()
 	nis)
 		echo "nis" >> $host_conf
 		;;
-	*=*)
+	cache | *=*)
 		;;
 	*)
-		printf "Warning: unrecognized source [%s]", $_s > "/dev/stderr"
+		echo "Warning: unrecognized source [$_s]" >&2
 		;;
 	esac
     done

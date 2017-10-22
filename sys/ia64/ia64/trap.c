@@ -25,10 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/trap.c 170291 2007-06-04 21:38:48Z attilio $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
-#include "opt_ktrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -67,11 +66,6 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/trap.c 170291 2007-06-04 21:38:4
 #include <machine/smp.h>
 #endif
 
-#ifdef KTRACE
-#include <sys/uio.h>
-#include <sys/ktrace.h>
-#endif
-
 #include <security/audit/audit.h>
 
 #include <ia64/disasm/disasm.h>
@@ -86,8 +80,6 @@ static void break_syscall(struct trapframe *tf);
  * EFI-Provided FPSWA interface (Floating Point SoftWare Assist)
  */
 extern struct fpswa_iface *fpswa_iface;
-
-extern char *syscallnames[];
 
 static const char *ia64_vector_names[] = {
 	"VHPT Translation",			/* 0 */
@@ -279,7 +271,7 @@ printtrap(int vector, struct trapframe *tf, int isfatal, int user)
 	printf("    curthread   = %p\n", curthread);
 	if (curthread != NULL)
 		printf("        pid = %d, comm = %s\n",
-		       curthread->td_proc->p_pid, curthread->td_proc->p_comm);
+		       curthread->td_proc->p_pid, curthread->td_name);
 	printf("\n");
 }
 
@@ -334,11 +326,11 @@ int
 do_ast(struct trapframe *tf)
 {
 
-	disable_intr();
+	ia64_disable_intr();
 	while (curthread->td_flags & (TDF_ASTPENDING|TDF_NEEDRESCHED)) {
-		enable_intr();
+		ia64_enable_intr();
 		ast(tf);
-		disable_intr();
+		ia64_disable_intr();
 	}
 	/*
 	 * Keep interrupts disabled. We return r10 as a favor to the EPC
@@ -414,11 +406,9 @@ trap(int vector, struct trapframe *tf)
 
 	case IA64_VEC_NESTED_DTLB:
 		/*
-		 * We never call trap() with this vector. We may want to
-		 * do that in the future in case the nested TLB handler
-		 * could not find the translation it needs. In that case
-		 * we could switch to a special (hardwired) stack and
-		 * come here to produce a nice panic().
+		 * When the nested TLB handler encounters an unexpected
+		 * condition, it'll switch to the backup stack and transfer
+		 * here. All we need to do is panic.
 		 */
 		trap_panic(vector, tf);
 		break;
@@ -542,7 +532,7 @@ trap(int vector, struct trapframe *tf)
 		rv = 0;
 		va = trunc_page(tf->tf_special.ifa);
 
-		if (va >= VM_MAX_ADDRESS) {
+		if (va >= VM_MAXUSER_ADDRESS) {
 			/*
 			 * Don't allow user-mode faults for kernel virtual
 			 * addresses, including the gateway page.
@@ -574,8 +564,7 @@ trap(int vector, struct trapframe *tf)
 			PROC_UNLOCK(p);
 
 			/* Fault in the user page: */
-			rv = vm_fault(map, va, ftype, (ftype & VM_PROT_WRITE)
-			    ? VM_FAULT_DIRTY : VM_FAULT_NORMAL);
+			rv = vm_fault(map, va, ftype, VM_FAULT_NORMAL);
 
 			PROC_LOCK(p);
 			--p->p_lock;
@@ -652,66 +641,10 @@ trap(int vector, struct trapframe *tf)
 		break;
 
 	case IA64_VEC_DISABLED_FP: {
-		struct pcpu *pcpu;
-		struct pcb *pcb;
-		struct thread *thr;
-
-		/* Always fatal in kernel. Should never happen. */
-		if (!user)
+		if (user)
+			ia64_highfp_enable(td, tf);
+		else
 			trap_panic(vector, tf);
-
-		sched_pin();
-		thr = PCPU_GET(fpcurthread);
-		if (thr == td) {
-			/*
-			 * Short-circuit handling the trap when this CPU
-			 * already holds the high FP registers for this
-			 * thread.  We really shouldn't get the trap in the
-			 * first place, but since it's only a performance
-			 * issue and not a correctness issue, we emit a
-			 * message for now, enable the high FP registers and
-			 * return.
-			 */
-			printf("XXX: bogusly disabled high FP regs\n");
-			tf->tf_special.psr &= ~IA64_PSR_DFH;
-			sched_unpin();
-			goto out;
-		} else if (thr != NULL) {
-			mtx_lock_spin(&thr->td_md.md_highfp_mtx);
-			pcb = thr->td_pcb;
-			save_high_fp(&pcb->pcb_high_fp);
-			pcb->pcb_fpcpu = NULL;
-			PCPU_SET(fpcurthread, NULL);
-			mtx_unlock_spin(&thr->td_md.md_highfp_mtx);
-			thr = NULL;
-		}
-
-		mtx_lock_spin(&td->td_md.md_highfp_mtx);
-		pcb = td->td_pcb;
-		pcpu = pcb->pcb_fpcpu;
-
-#ifdef SMP
-		if (pcpu != NULL) {
-			mtx_unlock_spin(&td->td_md.md_highfp_mtx);
-			ipi_send(pcpu, IPI_HIGH_FP);
-			while (pcb->pcb_fpcpu == pcpu)
-				DELAY(100);
-			mtx_lock_spin(&td->td_md.md_highfp_mtx);
-			pcpu = pcb->pcb_fpcpu;
-			thr = PCPU_GET(fpcurthread);
-		}
-#endif
-
-		if (thr == NULL && pcpu == NULL) {
-			restore_high_fp(&pcb->pcb_high_fp);
-			PCPU_SET(fpcurthread, td);
-			pcb->pcb_fpcpu = pcpup;
-			tf->tf_special.psr &= ~IA64_PSR_MFH;
-			tf->tf_special.psr &= ~IA64_PSR_DFH;
-		}
-
-		mtx_unlock_spin(&td->td_md.md_highfp_mtx);
-		sched_unpin();
 		goto out;
 	}
 
@@ -862,7 +795,7 @@ trap(int vector, struct trapframe *tf)
 		 * out of the gateway page we'll get back into the kernel
 		 * and then we enable single stepping.
 		 * Since this a rather round-about way of enabling single
-		 * stepping, don't make things complicated even more by
+		 * stepping, don't make things even more complicated by
 		 * calling userret() and do_ast(). We do that later...
 		 */
 		tf->tf_special.psr &= ~IA64_PSR_LP;
@@ -873,13 +806,14 @@ trap(int vector, struct trapframe *tf)
 		/*
 		 * Don't assume there aren't any branches other than the
 		 * branch that takes us out of the gateway page. Check the
-		 * iip and raise SIGTRAP only when it's an user address.
+		 * iip and enable single stepping only when it's an user
+		 * address.
 		 */
-		if (tf->tf_special.iip >= VM_MAX_ADDRESS)
+		if (tf->tf_special.iip >= VM_MAXUSER_ADDRESS)
 			return;
 		tf->tf_special.psr &= ~IA64_PSR_TB;
-		sig = SIGTRAP;
-		break;
+		tf->tf_special.psr |= IA64_PSR_SS;
+		return;
 
 	case IA64_VEC_IA32_EXCEPTION:
 	case IA64_VEC_IA32_INTERCEPT:
@@ -957,6 +891,46 @@ break_syscall(struct trapframe *tf)
 	do_ast(tf);
 }
 
+int
+cpu_fetch_syscall_args(struct thread *td, struct syscall_args *sa)
+{
+	struct proc *p;
+	struct trapframe *tf;
+
+	p = td->td_proc;
+	tf = td->td_frame;
+
+	sa->code = tf->tf_scratch.gr15;
+	sa->args = &tf->tf_scratch.gr16;
+
+	/*
+	 * syscall() and __syscall() are handled the same on
+	 * the ia64, as everything is 64-bit aligned, anyway.
+	 */
+	if (sa->code == SYS_syscall || sa->code == SYS___syscall) {
+		/*
+		 * Code is first argument, followed by actual args.
+		 */
+		sa->code = sa->args[0];
+		sa->args++;
+	}
+
+ 	if (p->p_sysent->sv_mask)
+ 		sa->code &= p->p_sysent->sv_mask;
+ 	if (sa->code >= p->p_sysent->sv_size)
+ 		sa->callp = &p->p_sysent->sv_table[0];
+ 	else
+		sa->callp = &p->p_sysent->sv_table[sa->code];
+	sa->narg = sa->callp->sy_narg;
+
+	td->td_retval[0] = 0;
+	td->td_retval[1] = 0;
+
+	return (0);
+}
+
+#include "../../kern/subr_syscall.c"
+
 /*
  * Process a system call.
  *
@@ -967,130 +941,18 @@ break_syscall(struct trapframe *tf)
 int
 syscall(struct trapframe *tf)
 {
-	struct sysent *callp;
-	struct proc *p;
+	struct syscall_args sa;
 	struct thread *td;
-	uint64_t *args;
-	int code, error;
-
-	ia64_set_fpsr(IA64_FPSR_DEFAULT);
-
-	code = tf->tf_scratch.gr15;
-	args = &tf->tf_scratch.gr16;
-
-	PCPU_INC(cnt.v_syscall);
+	int error;
 
 	td = curthread;
 	td->td_frame = tf;
-	p = td->td_proc;
 
-	td->td_pticks = 0;
-	if (td->td_ucred != p->p_ucred)
-		cred_update_thread(td);
-#ifdef KSE
-	if (p->p_flag & P_SA)
-		thread_user_enter(td);
-#endif
-
-	if (p->p_sysent->sv_prepsyscall) {
-		/* (*p->p_sysent->sv_prepsyscall)(tf, args, &code, &params); */
-		panic("prepsyscall");
-	} else {
-		/*
-		 * syscall() and __syscall() are handled the same on
-		 * the ia64, as everything is 64-bit aligned, anyway.
-		 */
-		if (code == SYS_syscall || code == SYS___syscall) {
-			/*
-			 * Code is first argument, followed by actual args.
-			 */
-			code = args[0];
-			args++;
-		}
-	}
-
- 	if (p->p_sysent->sv_mask)
- 		code &= p->p_sysent->sv_mask;
-
- 	if (code >= p->p_sysent->sv_size)
- 		callp = &p->p_sysent->sv_table[0];
-  	else
- 		callp = &p->p_sysent->sv_table[code];
-
-#ifdef KTRACE
-	if (KTRPOINT(td, KTR_SYSCALL))
-		ktrsyscall(code, callp->sy_narg, args);
-#endif
-	CTR4(KTR_SYSC, "syscall enter thread %p pid %d proc %s code %d", td,
-	    td->td_proc->p_pid, td->td_proc->p_comm, code);
-
-	td->td_retval[0] = 0;
-	td->td_retval[1] = 0;
+	ia64_set_fpsr(IA64_FPSR_DEFAULT);
 	tf->tf_scratch.gr10 = EJUSTRETURN;
 
-	STOPEVENT(p, S_SCE, callp->sy_narg);
-
-	PTRACESTOP_SC(p, td, S_PT_SCE);
-
-	AUDIT_SYSCALL_ENTER(code, td);
-	error = (*callp->sy_call)(td, args);
-	AUDIT_SYSCALL_EXIT(error, td);
-
-	if (error != EJUSTRETURN) {
-		/*
-		 * Save the "raw" error code in r10. We use this to handle
-		 * syscall restarts (see do_ast()).
-		 */
-		tf->tf_scratch.gr10 = error;
-		if (error == 0) {
-			tf->tf_scratch.gr8 = td->td_retval[0];
-			tf->tf_scratch.gr9 = td->td_retval[1];
-		} else if (error != ERESTART) {
-			if (error < p->p_sysent->sv_errsize)
-				error = p->p_sysent->sv_errtbl[error];
-			/*
-			 * Translated error codes are returned in r8. User
-			 * processes use the translated error code.
-			 */
-			tf->tf_scratch.gr8 = error;
-		}
-	}
-
-	td->td_syscalls++;
-
-	/*
-	 * Check for misbehavior.
-	 */
-	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
-	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
-	KASSERT(td->td_critnest == 0,
-	    ("System call %s returning in a critical section",
-	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???"));
-	KASSERT(td->td_locks == 0,
-	    ("System call %s returning with %d locks held",
-	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???",
-	    td->td_locks));
-
-	/*
-	 * Handle reschedule and other end-of-syscall issues
-	 */
-	userret(td, tf);
-
-	CTR4(KTR_SYSC, "syscall exit thread %p pid %d proc %s code %d", td,
-	    td->td_proc->p_pid, td->td_proc->p_comm, code);
-#ifdef KTRACE
-	if (KTRPOINT(td, KTR_SYSRET))
-		ktrsysret(code, error, td->td_retval[0]);
-#endif
-
-	/*
-	 * This works because errno is findable through the
-	 * register set.  If we ever support an emulation where this
-	 * is not the case, this code will need to be revisited.
-	 */
-	STOPEVENT(p, S_SCX, code);
-
-	PTRACESTOP_SC(p, td, S_PT_SCX);
+	error = syscallenter(td, &sa);
+	syscallret(td, error, &sa);
 
 	return (error);
 }

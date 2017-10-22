@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)mkinit.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/sh/mkinit.c 149019 2005-08-13 08:38:02Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This program scans all the source files for code to handle various
@@ -55,7 +55,6 @@ __FBSDID("$FreeBSD: release/7.0.0/bin/sh/mkinit.c 149019 2005-08-13 08:38:02Z st
  */
 
 
-#include <sys/cdefs.h>
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,7 +74,7 @@ __FBSDID("$FreeBSD: release/7.0.0/bin/sh/mkinit.c 149019 2005-08-13 08:38:02Z st
 
 
 /*
- * A text structure is basicly just a string that grows as more characters
+ * A text structure is basically just a string that grows as more characters
  * are added onto the end of it.  It is implemented as a linked list of
  * blocks of characters.  The routines addstr and addchar append a string
  * or a single character, respectively, to a text structure.  Writetext
@@ -102,9 +101,9 @@ struct block {
  */
 
 struct event {
-	char *name;		/* name of event (e.g. INIT) */
-	char *routine;		/* name of routine called on event */
-	char *comment;		/* comment describing routine */
+	const char *name;	/* name of event (e.g. INIT) */
+	const char *routine;	/* name of routine called on event */
+	const char *comment;	/* comment describing routine */
 	struct text code;	/* code for handling event */
 };
 
@@ -126,21 +125,15 @@ char reset[] = "\
  * interactive shell and control is returned to the main command loop.\n\
  */\n";
 
-char shellproc[] = "\
-/*\n\
- * This routine is called to initialize the shell to run a shell procedure.\n\
- */\n";
-
 
 struct event event[] = {
 	{ "INIT", "init", init, { NULL, 0, NULL, NULL } },
 	{ "RESET", "reset", reset, { NULL, 0, NULL, NULL } },
-	{ "SHELLPROC", "initshellproc", shellproc, { NULL, 0, NULL, NULL } },
 	{ NULL, NULL, NULL, { NULL, 0, NULL, NULL } }
 };
 
 
-char *curfile;				/* current file */
+const char *curfile;			/* current file */
 int linno;				/* current line */
 char *header_files[200];		/* list of header files */
 struct text defines;			/* #define statements */
@@ -148,20 +141,20 @@ struct text decls;			/* declarations */
 int amiddecls;				/* for formatting */
 
 
-void readfile(char *);
-int match(char *, char *);
-int gooddefine(char *);
-void doevent(struct event *, FILE *, char *);
+void readfile(const char *);
+int match(const char *, const char *);
+int gooddefine(const char *);
+void doevent(struct event *, FILE *, const char *);
 void doinclude(char *);
 void dodecl(char *, FILE *);
 void output(void);
-void addstr(char *, struct text *);
+void addstr(const char *, struct text *);
 void addchar(int, struct text *);
 void writetext(struct text *, FILE *);
-FILE *ckfopen(char *, char *);
-void *ckmalloc(int);
-char *savestr(char *);
-void error(char *);
+FILE *ckfopen(const char *, const char *);
+void *ckmalloc(size_t);
+char *savestr(const char *);
+void error(const char *);
 
 #define equal(s1, s2)	(strcmp(s1, s2) == 0)
 
@@ -170,9 +163,9 @@ main(int argc __unused, char *argv[])
 {
 	char **ap;
 
-	header_files[0] = "\"shell.h\"";
-	header_files[1] = "\"mystring.h\"";
-	header_files[2] = "\"init.h\"";
+	header_files[0] = savestr("\"shell.h\"");
+	header_files[1] = savestr("\"mystring.h\"");
+	header_files[2] = savestr("\"init.h\"");
 	for (ap = argv + 1 ; *ap ; ap++)
 		readfile(*ap);
 	output();
@@ -186,7 +179,7 @@ main(int argc __unused, char *argv[])
  */
 
 void
-readfile(char *fname)
+readfile(const char *fname)
 {
 	FILE *fp;
 	char line[1024];
@@ -230,9 +223,9 @@ readfile(char *fname)
 
 
 int
-match(char *name, char *line)
+match(const char *name, const char *line)
 {
-	char *p, *q;
+	const char *p, *q;
 
 	p = name, q = line;
 	while (*p) {
@@ -246,9 +239,9 @@ match(char *name, char *line)
 
 
 int
-gooddefine(char *line)
+gooddefine(const char *line)
 {
-	char *p;
+	const char *p;
 
 	if (! match("#define", line))
 		return 0;			/* not a define */
@@ -269,11 +262,11 @@ gooddefine(char *line)
 
 
 void
-doevent(struct event *ep, FILE *fp, char *fname)
+doevent(struct event *ep, FILE *fp, const char *fname)
 {
 	char line[1024];
 	int indent;
-	char *p;
+	const char *p;
 
 	sprintf(line, "\n      /* from %s: */\n", fname);
 	addstr(line, &ep->code);
@@ -407,7 +400,7 @@ output(void)
  */
 
 void
-addstr(char *s, struct text *text)
+addstr(const char *s, struct text *text)
 {
 	while (*s) {
 		if (--text->nleft < 0)
@@ -452,7 +445,7 @@ writetext(struct text *text, FILE *fp)
 }
 
 FILE *
-ckfopen(char *file, char *mode)
+ckfopen(const char *file, const char *mode)
 {
 	FILE *fp;
 
@@ -464,7 +457,7 @@ ckfopen(char *file, char *mode)
 }
 
 void *
-ckmalloc(int nbytes)
+ckmalloc(size_t nbytes)
 {
 	char *p;
 
@@ -474,7 +467,7 @@ ckmalloc(int nbytes)
 }
 
 char *
-savestr(char *s)
+savestr(const char *s)
 {
 	char *p;
 
@@ -484,7 +477,7 @@ savestr(char *s)
 }
 
 void
-error(char *msg)
+error(const char *msg)
 {
 	if (curfile != NULL)
 		fprintf(stderr, "%s:%d: ", curfile, linno);

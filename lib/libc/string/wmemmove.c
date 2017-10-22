@@ -32,17 +32,13 @@
 __RCSID("$NetBSD: wmemmove.c,v 1.1 2000/12/23 23:14:37 itojun Exp $");
 #endif /* LIBC_SCCS and not lint */
 #endif
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/wmemmove.c 103724 2002-09-21 00:29:23Z tjr $");
+__FBSDID("$FreeBSD$");
 
 #include <string.h>
 #include <wchar.h>
 
 wchar_t *
-wmemmove(d, s, n)
-	wchar_t *d;
-	const wchar_t *s;
-	size_t n;
+wmemmove(wchar_t *d, const wchar_t *s, size_t n)
 {
-
 	return (wchar_t *)memmove(d, s, n * sizeof(wchar_t));
 }

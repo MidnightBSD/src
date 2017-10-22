@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.bin/alias/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
 SCRIPTS=generic.sh
 SCRIPTSNAME=alias
@@ -10,8 +10,11 @@ LINKS=	${BINDIR}/alias ${BINDIR}/bg \
 	${BINDIR}/alias ${BINDIR}/fc \
 	${BINDIR}/alias ${BINDIR}/fg \
 	${BINDIR}/alias ${BINDIR}/getopts \
+	${BINDIR}/alias ${BINDIR}/hash \
 	${BINDIR}/alias ${BINDIR}/jobs \
 	${BINDIR}/alias ${BINDIR}/read \
+	${BINDIR}/alias ${BINDIR}/type \
+	${BINDIR}/alias ${BINDIR}/ulimit \
 	${BINDIR}/alias ${BINDIR}/umask \
 	${BINDIR}/alias ${BINDIR}/unalias \
 	${BINDIR}/alias ${BINDIR}/wait

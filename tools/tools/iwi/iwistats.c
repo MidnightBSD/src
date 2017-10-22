@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/tools/tools/iwi/iwistats.c 151069 2005-10-07 18:27:21Z damien $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2005
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/tools/tools/iwi/iwistats.c 151069 2005-10-07 18:27:21Z damien $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -113,16 +113,17 @@ get_statistics(const char *iface)
 	static uint32_t stats[256];
 	const struct statistic *stat;
 	char oid[32];
-	int ifaceno, len;
+	size_t len;
+	int ifaceno;
 
 	if (sscanf(iface, "iwi%u", &ifaceno) != 1)
 		errx(EX_DATAERR, "Invalid interface name '%s'", iface);
 
-	len = sizeof stats;
-	(void)snprintf(oid, sizeof oid, "dev.iwi.%u.stats", ifaceno);
+	len = sizeof(stats);
+	(void)snprintf(oid, sizeof(oid), "dev.iwi.%u.stats", ifaceno);
 	if (sysctlbyname(oid, stats, &len, NULL, 0) == -1)
 		err(EX_OSERR, "Can't retrieve statistics");
 
 	for (stat = tbl; stat->index != -1; stat++)
-		(void)printf("%-60s[%lu]\n", stat->desc, stats[stat->index]);
+		(void)printf("%-60s[%u]\n", stat->desc, stats[stat->index]);
 }

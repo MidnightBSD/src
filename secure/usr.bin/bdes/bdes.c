@@ -81,7 +81,7 @@ static char sccsid[] = "@(#)bdes.c	8.1 (Berkeley) 6/6/93";
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/secure/usr.bin/bdes/bdes.c 141651 2005-02-10 14:47:06Z ru $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -170,16 +170,16 @@ main(int argc, char *argv[])
 	int i;				/* counter in a for loop */
 	char *p;			/* used to obtain the key */
 	DES_cblock msgbuf;		/* I/O buffer */
-	int kflag;			/* command-line encryptiooon key */
+	int kflag;			/* command-line encryption key */
 
 	setproctitle("-");		/* Hide command-line arguments */
 
-	/* initialize the initialization vctor */
+	/* initialize the initialization vector */
 	MEMZERO(ivec, 8);
 
 	/* process the argument list */
 	kflag = 0;
-	while ((i = getopt(argc, argv, "abdF:f:k:m:o:pv:")) != EOF)
+	while ((i = getopt(argc, argv, "abdF:f:k:m:o:pv:")) != -1)
 		switch(i) {
 		case 'a':		/* key is ASCII */
 			keybase = KEY_ASCII;

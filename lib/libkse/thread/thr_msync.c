@@ -3,16 +3,17 @@
  *
  * $OpenBSD: uthread_msync.c,v 1.2 1999/06/09 07:16:17 d Exp $
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_msync.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
+#include "namespace.h"
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(__msync);
-LT10_COMPAT_DEFAULT(msync);
+int __msync(void *addr, size_t len, int flags);
 
 __weak_reference(__msync, msync);
 
@@ -32,5 +33,5 @@ __msync(void *addr, size_t len, int flags)
 	ret = __sys_msync(addr, len, flags);
 	_thr_cancel_leave(curthread, 1);
 
-	return ret;
+	return (ret);
 }

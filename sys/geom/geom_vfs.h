@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/geom/geom_vfs.h 141624 2005-02-10 12:10:35Z phk $
+ * $FreeBSD$
  */
 
 #ifndef _GEOM_GEOM_VFS_H_
@@ -37,6 +37,6 @@ extern struct buf_ops *g_vfs_bufops;
 
 void g_vfs_strategy(struct bufobj *bo, struct buf *bp);
 int g_vfs_open(struct vnode *vp, struct g_consumer **cpp, const char *fsname, int wr);
-void g_vfs_close(struct g_consumer *cp, struct thread *td);
+void g_vfs_close(struct g_consumer *cp);
 
 #endif /* _GEOM_GEOM_VFS_H_ */

@@ -1,4 +1,4 @@
-/* $OpenBSD: auth-passwd.c,v 1.40 2006/08/03 03:34:41 deraadt Exp $ */
+/* $OpenBSD: auth-passwd.c,v 1.43 2007/09/21 08:15:29 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -37,7 +37,6 @@
  */
 
 #include "includes.h"
-__RCSID("$FreeBSD: release/7.0.0/crypto/openssh/auth-passwd.c 172506 2007-10-10 16:59:15Z cvs2svn $");
 
 #include <sys/types.h>
 
@@ -103,7 +102,7 @@ auth_password(Authctxt *authctxt, const char *password)
 	}
 #endif
 #ifdef HAVE_CYGWIN
-	if (is_winnt) {
+	{
 		HANDLE hToken = cygwin_logon_user(pw, password);
 
 		if (hToken == INVALID_HANDLE_VALUE)

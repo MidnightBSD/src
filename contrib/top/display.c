@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $FreeBSD: release/7.0.0/contrib/top/display.c 172506 2007-10-10 16:59:15Z cvs2svn $
+ * $FreeBSD$
  */
 
 /*
@@ -78,14 +78,39 @@ static int *lcpustates;
 static int *lmemory;
 static int *lswap;
 
+static int num_cpus;
 static int *cpustate_columns;
 static int cpustate_total_length;
+static int cpustates_column;
 
 static enum { OFF, ON, ERASE } header_status = ON;
 
 static int string_count();
 static void summary_format();
 static void line_update();
+
+int  x_lastpid =	10;
+int  y_lastpid =	0;
+int  x_loadave =	33;
+int  x_loadave_nompid =	15;
+int  y_loadave =	0;
+int  x_procstate =	0;
+int  y_procstate =	1;
+int  x_brkdn =		15;
+int  y_brkdn =		1;
+int  x_mem =		5;
+int  y_mem =		3;
+int  x_swap =		6;
+int  y_swap =		4;
+int  y_message =	5;
+int  x_header =		0;
+int  y_header =		6;
+int  x_idlecursor =	0;
+int  y_idlecursor =	5;
+int  y_procs =		7;
+
+int  y_cpustates =	2;
+int  Header_lines =	7;
 
 int display_resize()
 
@@ -126,6 +151,38 @@ int display_resize()
     return(smart_terminal ? lines : Largest);
 }
 
+int display_updatecpus(statics)
+
+struct statics *statics;
+
+{
+    register int *lp;
+    register int lines;
+    register int i;
+    
+    /* call resize to do the dirty work */
+    lines = display_resize();
+    if (pcpu_stats)
+	num_cpus = statics->ncpus;
+    else
+	num_cpus = 1;
+    cpustates_column = 5;	/* CPU: */
+    if (num_cpus != 1)
+    cpustates_column += 2;	/* CPU 0: */
+    for (i = num_cpus; i > 9; i /= 10)
+	cpustates_column++;
+
+    /* fill the "last" array with all -1s, to insure correct updating */
+    lp = lcpustates;
+    i = num_cpustates * num_cpus;
+    while (--i >= 0)
+    {
+	*lp++ = -1;
+    }
+    
+    return(lines);
+}
+    
 int display_init(statics)
 
 struct statics *statics;
@@ -136,8 +193,7 @@ struct statics *statics;
     register int *ip;
     register int i;
 
-    /* call resize to do the dirty work */
-    lines = display_resize();
+    lines = display_updatecpus(statics);
 
     /* only do the rest if we need to */
     if (lines > -1)
@@ -153,7 +209,7 @@ struct statics *statics;
 	num_swap = string_count(swap_names);
 	lswap = (int *)malloc(num_swap * sizeof(int));
 	num_cpustates = string_count(cpustate_names);
-	lcpustates = (int *)malloc(num_cpustates * sizeof(int));
+	lcpustates = (int *)malloc(num_cpustates * sizeof(int) * statics->ncpus);
 	cpustate_columns = (int *)malloc(num_cpustates * sizeof(int));
 
 	memory_names = statics->memory_names;
@@ -365,13 +421,12 @@ int *brkdn;
     }
 }
 
+#ifdef no_more
 /*
  *  *_cpustates(states, names) - print the cpu state percentages
  *
  *  Assumptions:  cursor is on the PREVIOUS line
  */
-
-static int cpustates_column;
 
 /* cpustates_tag() calculates the correct tag to use to label the line */
 
@@ -398,6 +453,7 @@ char *cpustates_tag()
     cpustates_column = strlen(use);
     return(use);
 }
+#endif
 
 i_cpustates(states)
 
@@ -406,11 +462,21 @@ register int *states;
 {
     register int i = 0;
     register int value;
-    register char **names = cpustate_names;
+    register char **names;
     register char *thisname;
+    int cpu;
+
+for (cpu = 0; cpu < num_cpus; cpu++) {
+    names = cpustate_names;
 
     /* print tag and bump lastline */
-    printf("\n%s", cpustates_tag());
+    if (num_cpus == 1)
+	printf("\nCPU: ");
+    else {
+	value = printf("\nCPU %d: ", cpu);
+	while (value++ <= cpustates_column)
+		printf(" ");
+    }
     lastline++;
 
     /* now walk thru the names and print the line */
@@ -423,14 +489,15 @@ register int *states;
 
 	    /* if percentage is >= 1000, print it as 100% */
 	    printf((value >= 1000 ? "%s%4.0f%% %s" : "%s%4.1f%% %s"),
-		   i++ == 0 ? "" : ", ",
+		   (i++ % num_cpustates) == 0 ? "" : ", ",
 		   ((float)value)/10.,
 		   thisname);
 	}
     }
+}
 
     /* copy over values into "last" array */
-    memcpy(lcpustates, states, num_cpustates * sizeof(int));
+    memcpy(lcpustates, states, num_cpustates * sizeof(int) * num_cpus);
 }
 
 u_cpustates(states)
@@ -439,14 +506,18 @@ register int *states;
 
 {
     register int value;
-    register char **names = cpustate_names;
+    register char **names;
     register char *thisname;
     register int *lp;
     register int *colp;
+    int cpu;
 
-    Move_to(cpustates_column, y_cpustates);
-    lastline = y_cpustates;
-    lp = lcpustates;
+for (cpu = 0; cpu < num_cpus; cpu++) {
+    names = cpustate_names;
+
+    Move_to(cpustates_column, y_cpustates + cpu);
+    lastline = y_cpustates + cpu;
+    lp = lcpustates + (cpu * num_cpustates);
     colp = cpustate_columns;
 
     /* we could be much more optimal about this */
@@ -458,8 +529,8 @@ register int *states;
 	    if (*lp != *states)
 	    {
 		/* yes, move and change */
-		Move_to(cpustates_column + *colp, y_cpustates);
-		lastline = y_cpustates;
+		Move_to(cpustates_column + *colp, y_cpustates + cpu);
+		lastline = y_cpustates + cpu;
 
 		/* retrieve value and remember it */
 		value = *states;
@@ -479,30 +550,42 @@ register int *states;
 	colp++;
     }
 }
+}
 
 z_cpustates()
 
 {
     register int i = 0;
-    register char **names = cpustate_names;
+    register char **names;
     register char *thisname;
     register int *lp;
+    int cpu, value;
+
+for (cpu = 0; cpu < num_cpus; cpu++) {
+    names = cpustate_names;
 
     /* show tag and bump lastline */
-    printf("\n%s", cpustates_tag());
+    if (num_cpus == 1)
+	printf("\nCPU: ");
+    else {
+	value = printf("\nCPU %d: ", cpu);
+	while (value++ <= cpustates_column)
+		printf(" ");
+    }
     lastline++;
 
     while ((thisname = *names++) != NULL)
     {
 	if (*thisname != '\0')
 	{
-	    printf("%s    %% %s", i++ == 0 ? "" : ", ", thisname);
+	    printf("%s    %% %s", (i++ % num_cpustates) == 0 ? "" : ", ", thisname);
 	}
     }
+}
 
     /* fill the "last" array with all -1s, to insure correct updating */
     lp = lcpustates;
-    i = num_cpustates;
+    i = num_cpustates * num_cpus;
     while (--i >= 0)
     {
 	*lp++ = -1;
@@ -1219,7 +1302,6 @@ time_t *tod;
 
     if (bt->tv_sec != -1) {
 	uptime = *tod - bt->tv_sec;
-	uptime += 30;
 	days = uptime / 86400;
 	uptime %= 86400;
 	hrs = uptime / 3600;

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/tools/tools/ncpus/Makefile 156362 2006-03-06 21:51:27Z sam $
+# $FreeBSD$
 
 PROG=	ncpus
 NO_MAN=

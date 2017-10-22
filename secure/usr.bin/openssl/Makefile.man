@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/secure/usr.bin/openssl/Makefile.man 167616 2007-03-15 20:15:15Z simon $
+# $FreeBSD$
 # DO NOT EDIT: generated from man-makefile-update target
 MAN+= CA.pl.1
 MAN+= asn1parse.1

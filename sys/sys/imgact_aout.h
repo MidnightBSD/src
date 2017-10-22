@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)exec.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: release/7.0.0/sys/sys/imgact_aout.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef	_IMGACT_AOUT_H_
@@ -119,7 +119,7 @@ struct exec {
      uint32_t	a_trsize;	/* text relocation size */
      uint32_t	a_drsize;	/* data relocation size */
 };
-#define a_magic a_midmag /* XXX Hack to work with current kern_execve.c */
+#define a_magic a_midmag /* XXX Hack to work with imgact_{aout,gzip}.c */
 
 /* a_magic */
 #define	OMAGIC		0407	/* old impure format */
@@ -150,7 +150,8 @@ struct exec {
 struct thread;
 struct vnode;
 
-int	aout_coredump(struct thread *td, struct vnode *vp, off_t limit);
+int	aout_coredump(struct thread *td, struct vnode *vp, off_t limit,
+    int flags);
 #endif
 
 #endif /* !_IMGACT_AOUT_H_ */

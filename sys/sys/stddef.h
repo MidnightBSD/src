@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sys/stddef.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_STDDEF_H_
@@ -33,7 +33,10 @@
 #include <sys/_null.h>
 #include <machine/_types.h>
 
+#ifndef _PTRDIFF_T_DECLARED
 typedef	__ptrdiff_t	ptrdiff_t;
+#define	_PTRDIFF_T_DECLARED
+#endif
 
 #define	offsetof(type, field)	__offsetof(type, field)
 

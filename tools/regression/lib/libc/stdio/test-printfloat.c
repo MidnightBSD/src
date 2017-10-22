@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002, 2005 David Schultz <das@FreeBSD.org>
+ * Copyright (c) 2002-2009 David Schultz <das@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/tools/regression/lib/libc/stdio/test-printfloat.c 142842 2005-03-01 01:43:05Z das $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <err.h>
@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: release/7.0.0/tools/regression/lib/libc/stdio/test-printfloa
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 
 #define	testfmt(result, fmt, ...)	\
 	_testfmt((result), __LINE__, #__VA_ARGS__, fmt, __VA_ARGS__)
@@ -53,7 +54,7 @@ main(int argc, char *argv[])
 {
 
 	printf("1..11\n");
-	assert(setlocale(LC_NUMERIC, ""));
+	assert(setlocale(LC_NUMERIC, "C"));
 
 	/*
 	 * Basic tests of decimal output functionality.
@@ -91,12 +92,15 @@ main(int argc, char *argv[])
 	testfmt("NAN", "%F", NAN);
 	testfmt("nan", "%g", NAN);
 	testfmt("NAN", "%LE", (long double)NAN);
+	testfmt("  nan", "%05e", NAN);
 
 	testfmt("INF", "%E", HUGE_VAL);
 	testfmt("-inf", "%f", -HUGE_VAL);
 	testfmt("+inf", "%+g", HUGE_VAL);
 	testfmt(" inf", "%4.2Le", HUGE_VALL);
 	testfmt("-inf", "%Lf", -HUGE_VALL);
+	testfmt("  inf", "%05e", HUGE_VAL);
+	testfmt(" -inf", "%05e", -HUGE_VAL);
 
 	printf("ok 2 - printfloat\n");
 
@@ -141,7 +145,7 @@ main(int argc, char *argv[])
 	testfmt("1.234,00", "%'.2f", 1234.00);
 	testfmt("123.456,789", "%'.3f", 123456.789);
 
-	assert(setlocale(LC_NUMERIC, ""));
+	assert(setlocale(LC_NUMERIC, "C"));
 	testfmt("12345678.062500", "%'f", 12345678.0625);
 	testfmt("9000.000000", "%'f", 9000.0);
 
@@ -210,18 +214,26 @@ main(int argc, char *argv[])
 	fesetround(FE_DOWNWARD);
 	testfmt("4.437", "%.3f", 4.4375);
 	testfmt("-4.438", "%.3f", -4.4375);
+	testfmt("4.437", "%.3Lf", 4.4375L);
+	testfmt("-4.438", "%.3Lf", -4.4375L);
 
 	fesetround(FE_UPWARD);
 	testfmt("4.438", "%.3f", 4.4375);
 	testfmt("-4.437", "%.3f", -4.4375);
+	testfmt("4.438", "%.3Lf", 4.4375L);
+	testfmt("-4.437", "%.3Lf", -4.4375L);
 
 	fesetround(FE_TOWARDZERO);
 	testfmt("4.437", "%.3f", 4.4375);
 	testfmt("-4.437", "%.3f", -4.4375);
+	testfmt("4.437", "%.3Lf", 4.4375L);
+	testfmt("-4.437", "%.3Lf", -4.4375L);
 
 	fesetround(FE_TONEAREST);
 	testfmt("4.438", "%.3f", 4.4375);
 	testfmt("-4.438", "%.3f", -4.4375);
+	testfmt("4.438", "%.3Lf", 4.4375L);
+	testfmt("-4.438", "%.3Lf", -4.4375L);
 
 	printf("ok 9 - printfloat\n");
 
@@ -245,9 +257,9 @@ main(int argc, char *argv[])
 	testfmt("0x1.2345p-1024", "%a", 0x1.2345p-1024);
 
 #if (LDBL_MANT_DIG == 64) && !defined(__i386__)
-	testfmt("0xc.90fdaa22168c234p-2", "%La", 0x3.243f6a8885a308dp0L);
-	testfmt("0x8p-16448", "%La", 0x1p-16445L);
-	testfmt("0x9.8765p-16384", "%La", 0x9.8765p-16384L);
+	testfmt("0x1.921fb54442d18468p+1", "%La", 0x3.243f6a8885a308dp0L);
+	testfmt("0x1p-16445", "%La", 0x1p-16445L);
+	testfmt("0x1.30ecap-16381", "%La", 0x9.8765p-16384L);
 #elif (LDBL_MANT_DIG == 113)
 	testfmt("0x1.921fb54442d18469898cc51701b8p+1", "%La",
 	    0x3.243f6a8885a308d313198a2e037p0L);
@@ -291,9 +303,10 @@ main(int argc, char *argv[])
 	testfmt("-0x1.23456p+0", "%.5a", -0x1.23456789abcdep0);
 	testfmt("0x1.23456p+0", "%.5a", 0x1.23456789abcdep0);
 	testfmt("0x1.234568p+0", "%.6a", 0x1.23456789abcdep0);
-	testfmt("-0x1.234566p+0", "%.6a", -0x1.23456689abcdep0);
-	testfmt("0x2.00p-1030", "%.2a", 0x1.fffp-1030);
-	testfmt("0x2.00p-1027", "%.2a", 0xf.fffp-1030);
+	testfmt("-0x1.234567p+0", "%.6a", -0x1.23456689abcdep0);
+	testfmt("0x1.00p-1029", "%.2a", 0x1.fffp-1030);
+	testfmt("0x1.00p-1026", "%.2a", 0xf.fffp-1030);
+	testfmt("0x1.83p+0", "%.2a", 1.51);
 
 	printf("ok 11 - printfloat\n");
 
@@ -314,10 +327,13 @@ smash_stack(void)
 void
 _testfmt(const char *result, int line, const char *argstr, const char *fmt,...)
 {
-	char s[100];
-	va_list ap;
+#define	BUF	100
+	wchar_t ws[BUF], wfmt[BUF], wresult[BUF];
+	char s[BUF];
+	va_list ap, ap2;
 
 	va_start(ap, fmt);
+	va_copy(ap2, ap);
 	smash_stack();
 	vsnprintf(s, sizeof(s), fmt, ap);
 	if (strcmp(result, s) != 0) {
@@ -326,4 +342,16 @@ _testfmt(const char *result, int line, const char *argstr, const char *fmt,...)
 		    line, fmt, argstr, s, result);
 		abort();
 	}
+
+	smash_stack();
+	mbstowcs(ws, s, BUF - 1);
+	mbstowcs(wfmt, fmt, BUF - 1);
+	mbstowcs(wresult, result, BUF - 1);
+	vswprintf(ws, sizeof(ws) / sizeof(ws[0]), wfmt, ap2);
+	if (wcscmp(wresult, ws) != 0) {
+		fprintf(stderr,
+		    "%d: wprintf(\"%ls\", %s) ==> [%ls], expected [%ls]\n",
+		    line, wfmt, argstr, ws, wresult);
+		abort();
+	}	
 }

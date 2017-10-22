@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/tools/tools/net80211/wlanstats/Makefile 161200 2006-08-10 19:01:16Z sam $
+# $FreeBSD$
 
 PROG=	wlanstats
 BINDIR=	/usr/local/bin

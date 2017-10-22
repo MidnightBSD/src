@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997 - 2001 Kungliga Tekniska Högskolan
+ * Copyright (c) 1997 - 2006 Kungliga Tekniska Högskolan
  * (Royal Institute of Technology, Stockholm, Sweden). 
  * All rights reserved. 
  *
@@ -32,8 +32,8 @@
  */
 
 /* 
- * $Id: headers.h,v 1.15 2002/09/10 20:04:46 joda Exp $ 
- * $FreeBSD: release/7.0.0/crypto/heimdal/kdc/headers.h 172506 2007-10-10 16:59:15Z cvs2svn $ 
+ * $Id: headers.h 19658 2007-01-04 00:15:34Z lha $ 
+ * $FreeBSD$ 
  */
 
 #ifndef __HEADERS_H__
@@ -73,6 +73,9 @@
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
+#ifdef HAVE_SYS_WAIT_H
+#include <sys/wait.h>
+#endif
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
@@ -89,16 +92,14 @@
 #include <parse_units.h>
 #include <krb5.h>
 #include <krb5_locl.h>
+#include <digest_asn1.h>
+#include <kx509_asn1.h>
 #include <hdb.h>
 #include <hdb_err.h>
-#include <der.h> /* copy_octet_string */
+#include <der.h>
 
-#ifdef KRB4
-#include <krb.h>
-#include <prot.h>
-#define Principal Principal4
-#include <krb_db.h>
-#endif
+#include <heimntlm.h>
+#include <windc_plugin.h>
 
 #undef ALLOC
 #define ALLOC(X) ((X) = malloc(sizeof(*(X))))

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)psl.h	5.2 (Berkeley) 1/18/91
- * $FreeBSD: release/7.0.0/sys/amd64/include/psl.h 127914 2004-04-05 21:29:41Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PSL_H_

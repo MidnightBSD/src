@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)print.c	8.6 (Berkeley) 4/16/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/stty/print.c 146636 2005-05-26 06:57:57Z ache $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -43,8 +43,6 @@ __FBSDID("$FreeBSD: release/7.0.0/bin/stty/print.c 146636 2005-05-26 06:57:57Z a
 
 #include "stty.h"
 #include "extern.h"
-
-#include <sys/ioctl_compat.h>	/* XXX NTTYDISC is too well hidden */
 
 static void  binit(const char *);
 static void  bput(const char *);
@@ -64,9 +62,6 @@ print(struct termios *tp, struct winsize *wp, int ldisc, enum FMT fmt)
 	/* Line discipline. */
 	if (ldisc != TTYDISC) {
 		switch(ldisc) {
-		case NTTYDISC:
-			cnt += printf("new tty disc; ");
-			break;
 		case SLIPDISC:
 			cnt += printf("slip disc; ");
 			break;
@@ -141,7 +136,14 @@ print(struct termios *tp, struct winsize *wp, int ldisc, enum FMT fmt)
 	put("-opost", OPOST, 1);
 	put("-onlcr", ONLCR, 1);
 	put("-ocrnl", OCRNL, 0);
-	put("-oxtabs", OXTABS, 1);
+	switch(tmp&TABDLY) {
+	case TAB0:
+		bput("tab0");
+		break;
+	case TAB3:
+		bput("tab3");
+		break;
+	}
 	put("-onocr", ONOCR, 0);
 	put("-onlret", ONLRET, 0);
 

@@ -31,16 +31,12 @@
 static char sccsid[] = "@(#)memccpy.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/memccpy.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <string.h>
 
 void *
-memccpy(t, f, c, n)
-	void *t;
-	const void *f;
-	int c;
-	size_t n;
+memccpy(void *t, const void *f, int c, size_t n)
 {
 
 	if (n) {

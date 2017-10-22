@@ -26,13 +26,14 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/i386/stdlib/div.S 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 ENTRY(div)
         movl    4(%esp),%eax
         movl    8(%esp),%ecx
         cdq
         idiv    %ecx
-        movl    %eax,4(%esp)
-        movl    %edx,8(%esp)
         ret
+END(div)
+
+	.section .note.GNU-stack,"",%progbits

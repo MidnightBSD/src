@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/gnu/usr.bin/patch/pch.h 95601 2002-04-28 01:33:45Z gad $
+/* $FreeBSD$
  *
  * $Log: pch.h,v $
  * Revision 2.0.1.1  87/01/30  22:47:16  lwall
@@ -32,5 +32,5 @@ LINENUM	 pch_context(void);
 LINENUM	 pch_hunk_beg(void);
 char	 pch_char(LINENUM _line);
 char	*pfetch(LINENUM _line);
-char	*pgets(char *_bf, int _sz, FILE *_fp);
+size_t	 pgets(bool _do_indent);
 void	 do_ed_script(void);

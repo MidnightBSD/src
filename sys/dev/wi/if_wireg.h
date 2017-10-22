@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/wi/if_wireg.h 160991 2006-08-05 04:58:25Z sam $
+ * $FreeBSD$
  */
 
 #define WI_DELAY	5
@@ -51,7 +51,8 @@
 #define WI_LOCAL_INTEN		0x40
 #define WI_HFA384X_SWSUPPORT0_OFF	0x28
 #define WI_PRISM2STA_MAGIC		0x4A2D
-#define WI_HFA384X_PCICOR_OFF		0x26
+#define WI_PCICOR_OFF		0x26
+#define WI_PCICOR_RESET		0x0080
 
 /* Default port: 0 (only 0 exists on stations) */
 #define WI_DEFAULT_PORT	WI_PORT0
@@ -330,7 +331,7 @@
 #define WI_HCR_HOLD		0x000f
 #define WI_HCR_EEHOLD		0x00ce
 
-#define WI_COR_OFFSET	0x3e0	/* OK for PCI, must be bogus for pccard */
+#define WI_COR_OFFSET	0x3e0	/* OK for PCI, default COR for Prism PC Card */
 #define WI_COR_VALUE	0x41
 
 /*
@@ -429,6 +430,10 @@ struct wi_ver {
 #define	WI_NIC_P3_PCMCIA_ATL_ID		0x801C
 #define	WI_NIC_P3_PCMCIA_ATS_ID		0x801D
 #define	WI_NIC_P3_PCMCIA_STR		"RF:PRISM3(PCMCIA)"
+
+#define WI_NIC_P3_USB_AMD_ID		0x801E
+#define WI_NIC_P3_USB_SST_ID		0x801F
+#define	WI_NIC_P3_USB_ATL_ID		0x8020
 
 #define	WI_NIC_P3_MINI_AMD_ID		0x8021	/* Prism3 Mini-PCI */
 #define	WI_NIC_P3_MINI_SST_ID		0x8022
@@ -686,7 +691,8 @@ struct wi_frame {
  * Radio capture format for Prism.
  */
 #define WI_RX_RADIOTAP_PRESENT \
-	((1 << IEEE80211_RADIOTAP_FLAGS) | \
+	((1 << IEEE80211_RADIOTAP_TSFT) | \
+	 (1 << IEEE80211_RADIOTAP_FLAGS) | \
 	 (1 << IEEE80211_RADIOTAP_RATE) | \
 	 (1 << IEEE80211_RADIOTAP_CHANNEL) | \
 	 (1 << IEEE80211_RADIOTAP_DB_ANTSIGNAL) | \
@@ -694,6 +700,7 @@ struct wi_frame {
 
 struct wi_rx_radiotap_header {
 	struct ieee80211_radiotap_header wr_ihdr;
+	u_int64_t	wr_tsf;
 	u_int8_t	wr_flags;
 	u_int8_t	wr_rate;
 	u_int16_t	wr_chan_freq;

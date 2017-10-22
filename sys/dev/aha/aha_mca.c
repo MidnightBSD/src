@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/aha/aha_mca.c 166906 2007-02-23 15:55:37Z piso $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -162,7 +162,7 @@ aha_mca_attach (device_t dev)
 	isa_dmacascade(rman_get_start(sc->drq));
 
 	error = bus_dma_tag_create(
-				/* parent	*/ NULL,
+				/* parent	*/ bus_get_dma_tag(dev),
 				/* alignemnt	*/ 1,
 				/* boundary	*/ 0,
 				/* lowaddr	*/ BUS_SPACE_MAXADDR_24BIT,

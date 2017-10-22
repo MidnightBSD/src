@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)mksyntax.c	8.2 (Berkeley) 5/4/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/sh/mksyntax.c 149026 2005-08-13 15:47:13Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This program creates syntax.h and syntax.c.
@@ -55,8 +55,8 @@ __FBSDID("$FreeBSD: release/7.0.0/bin/sh/mksyntax.c 149026 2005-08-13 15:47:13Z 
 
 
 struct synclass {
-	char *name;
-	char *comment;
+	const char *name;
+	const char *comment;
 };
 
 /* Syntax classes */
@@ -64,6 +64,7 @@ struct synclass synclass[] = {
 	{ "CWORD",	"character is nothing special" },
 	{ "CNL",	"newline character" },
 	{ "CBACK",	"a backslash character" },
+	{ "CSBACK",	"a backslash character in single quotes" },
 	{ "CSQUOTE",	"single quote" },
 	{ "CDQUOTE",	"double quote" },
 	{ "CENDQUOTE",	"a terminating quote" },
@@ -75,6 +76,7 @@ struct synclass synclass[] = {
 	{ "CEOF",	"end of file" },
 	{ "CCTL",	"like CWORD, except it must be escaped" },
 	{ "CSPCL",	"these terminate a word" },
+	{ "CIGN",       "character should be ignored" },
 	{ NULL,		NULL }
 };
 
@@ -101,16 +103,16 @@ static char writer[] = "\
 
 static FILE *cfile;
 static FILE *hfile;
-static char *syntax[513];
+static const char *syntax[513];
 static int base;
 static int size;	/* number of values which a char variable can have */
 static int nbits;	/* number of bits in a character */
 static int digit_contig;/* true if digits are contiguous */
 
-static void filltable(char *);
+static void filltable(const char *);
 static void init(void);
-static void add(char *, char *);
-static void print(char *);
+static void add(const char *, const char *);
+static void print(const char *);
 static void output_type_macros(void);
 static void digit_convert(void);
 
@@ -139,10 +141,7 @@ main(int argc __unused, char **argv __unused)
 
 	/* Determine the characteristics of chars. */
 	c = -1;
-	if (c < 0)
-		sign = 1;
-	else
-		sign = 0;
+	sign = (c > 0) ? 0 : 1;
 	for (nbits = 1 ; ; nbits++) {
 		d = (1 << nbits) - 1;
 		if (d == c)
@@ -226,6 +225,7 @@ main(int argc __unused, char **argv __unused)
 	init();
 	fputs("\n/* syntax table used when in single quotes */\n", cfile);
 	add("\n", "CNL");
+	add("\\", "CSBACK");
 	add("'", "CENDQUOTE");
 	/* ':/' for tilde expansion, '-' for [a\-x] pattern ranges */
 	add("!*?[=~:/-", "CCTL");
@@ -235,8 +235,7 @@ main(int argc __unused, char **argv __unused)
 	add("\n", "CNL");
 	add("\\", "CBACK");
 	add("`", "CBQUOTE");
-	add("'", "CSQUOTE");
-	add("\"", "CDQUOTE");
+	add("\"", "CIGN");
 	add("$", "CVAR");
 	add("}", "CENDVAR");
 	add("(", "CLP");
@@ -245,8 +244,8 @@ main(int argc __unused, char **argv __unused)
 	filltable("0");
 	fputs("\n/* character classification table */\n", cfile);
 	add("0123456789", "ISDIGIT");
-	add("abcdefghijklmnopqrstucvwxyz", "ISLOWER");
-	add("ABCDEFGHIJKLMNOPQRSTUCVWXYZ", "ISUPPER");
+	add("abcdefghijklmnopqrstuvwxyz", "ISLOWER");
+	add("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "ISUPPER");
 	add("_", "ISUNDER");
 	add("#?$!-*@", "ISSPECL");
 	print("is_type");
@@ -262,7 +261,7 @@ main(int argc __unused, char **argv __unused)
  */
 
 static void
-filltable(char *dftval)
+filltable(const char *dftval)
 {
 	int i;
 
@@ -288,6 +287,7 @@ init(void)
 	syntax[base + CTLARI] = "CCTL";
 	syntax[base + CTLENDARI] = "CCTL";
 	syntax[base + CTLQUOTEMARK] = "CCTL";
+	syntax[base + CTLQUOTEEND] = "CCTL";
 }
 
 
@@ -296,7 +296,7 @@ init(void)
  */
 
 static void
-add(char *p, char *type)
+add(const char *p, const char *type)
 {
 	while (*p)
 		syntax[*p++ + base] = type;
@@ -309,7 +309,7 @@ add(char *p, char *type)
  */
 
 static void
-print(char *name)
+print(const char *name)
 {
 	int i;
 	int col;
@@ -341,23 +341,23 @@ print(char *name)
  * contiguous, we can test for them quickly.
  */
 
-static char *macro[] = {
-	"#define is_digit(c)\t((is_type+SYNBASE)[c] & ISDIGIT)",
+static const char *macro[] = {
+	"#define is_digit(c)\t((is_type+SYNBASE)[(int)c] & ISDIGIT)",
 	"#define is_eof(c)\t((c) == PEOF)",
-	"#define is_alpha(c)\t(((c) < CTLESC || (c) > CTLQUOTEMARK) && isalpha((unsigned char) (c)))",
-	"#define is_name(c)\t(((c) < CTLESC || (c) > CTLQUOTEMARK) && ((c) == '_' || isalpha((unsigned char) (c))))",
-	"#define is_in_name(c)\t(((c) < CTLESC || (c) > CTLQUOTEMARK) && ((c) == '_' || isalnum((unsigned char) (c))))",
-	"#define is_special(c)\t((is_type+SYNBASE)[c] & (ISSPECL|ISDIGIT))",
+	"#define is_alpha(c)\t((is_type+SYNBASE)[(int)c] & (ISUPPER|ISLOWER))",
+	"#define is_name(c)\t((is_type+SYNBASE)[(int)c] & (ISUPPER|ISLOWER|ISUNDER))",
+	"#define is_in_name(c)\t((is_type+SYNBASE)[(int)c] & (ISUPPER|ISLOWER|ISUNDER|ISDIGIT))",
+	"#define is_special(c)\t((is_type+SYNBASE)[(int)c] & (ISSPECL|ISDIGIT))",
 	NULL
 };
 
 static void
 output_type_macros(void)
 {
-	char **pp;
+	const char **pp;
 
 	if (digit_contig)
-		macro[0] = "#define is_digit(c)\t((unsigned)((c) - '0') <= 9)";
+		macro[0] = "#define is_digit(c)\t((unsigned int)((c) - '0') <= 9)";
 	for (pp = macro ; *pp ; pp++)
 		fprintf(hfile, "%s\n", *pp);
 	if (digit_contig)

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)resource.h	8.4 (Berkeley) 1/9/95
- * $FreeBSD: release/7.0.0/sys/sys/resource.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_RESOURCE_H_
@@ -56,6 +56,7 @@
 
 #define	RUSAGE_SELF	0
 #define	RUSAGE_CHILDREN	-1
+#define	RUSAGE_THREAD	1
 
 struct rusage {
 	struct timeval ru_utime;	/* user time used */
@@ -91,10 +92,12 @@ struct rusage {
 #define	RLIMIT_NPROC	7		/* number of processes */
 #define	RLIMIT_NOFILE	8		/* number of open files */
 #define	RLIMIT_SBSIZE	9		/* maximum size of all socket buffers */
-#define RLIMIT_VMEM	10		/* virtual process size (inclusive of mmap) */
+#define	RLIMIT_VMEM	10		/* virtual process size (incl. mmap) */
 #define	RLIMIT_AS	RLIMIT_VMEM	/* standard name for RLIMIT_VMEM */
+#define	RLIMIT_NPTS	11		/* pseudo-terminals */
+#define	RLIMIT_SWAP	12		/* swap used */
 
-#define	RLIM_NLIMITS	11		/* number of resource limits */
+#define	RLIM_NLIMITS	13		/* number of resource limits */
 
 #define	RLIM_INFINITY	((rlim_t)(((uint64_t)1 << 63) - 1))
 /* XXX Missing: RLIM_SAVED_MAX, RLIM_SAVED_CUR */
@@ -105,7 +108,7 @@ struct rusage {
  */
 
 #ifdef _RLIMIT_IDENT
-static char *rlimit_ident[] = {
+static const char *rlimit_ident[RLIM_NLIMITS] = {
 	"cpu",
 	"fsize",
 	"data",
@@ -117,6 +120,8 @@ static char *rlimit_ident[] = {
 	"nofile",
 	"sbsize",
 	"vmem",
+	"npts",
+	"swap",
 };
 #endif
 
@@ -154,7 +159,7 @@ struct loadavg {
 #ifdef _KERNEL
 
 extern struct loadavg averunnable;
-extern long cp_time[CPUSTATES];
+void	read_cpu_time(long *cp_time);	/* Writes array of CPUSTATES */
 
 #else
 

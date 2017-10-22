@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/pppoed 165664 2006-12-30 22:53:20Z yar $
+# $FreeBSD$
 #
 
 # PROVIDE: pppoed
@@ -11,7 +11,7 @@
 . /etc/rc.subr
 
 name="pppoed"
-rcvar="`set_rcvar`"
+rcvar="pppoed_enable"
 start_cmd="pppoed_start"
 # XXX stop_cmd will not be straightforward
 stop_cmd=":"

@@ -35,11 +35,11 @@
  * THIS SOFTWARE, EVEN IF SANDVINE IS ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * Author: Dave Chapeskie <dchapeskie@sandvine.com>
+ * Author: Dave Chapeskie
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/netgraph/ng_source.c 167168 2007-03-02 14:36:19Z emaste $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This node is used for high speed packet geneneration.  It queues
@@ -68,6 +68,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/netgraph/ng_source.c 167168 2007-03-02 14:
 #include <sys/syslog.h>
 #include <net/if.h>
 #include <net/if_var.h>
+#include <net/vnet.h>
 #include <netgraph/ng_message.h>
 #include <netgraph/netgraph.h>
 #include <netgraph/ng_parse.h>
@@ -272,9 +273,7 @@ ng_source_constructor(node_p node)
 {
 	sc_p sc;
 
-	sc = malloc(sizeof(*sc), M_NETGRAPH, M_NOWAIT | M_ZERO);
-	if (sc == NULL)
-		return (ENOMEM);
+	sc = malloc(sizeof(*sc), M_NETGRAPH, M_WAITOK | M_ZERO);
 
 	NG_NODE_SET_PRIVATE(node, sc);
 	sc->node = node;
@@ -603,7 +602,7 @@ ng_source_disconnect(hook_p hook)
 }
 
 /*
- * Set sc->output_ifp to point to the the struct ifnet of the interface
+ * Set sc->output_ifp to point to the struct ifnet of the interface
  * reached via our output hook.
  */
 static int
@@ -615,7 +614,7 @@ ng_source_store_output_ifp(sc_p sc, char *ifname)
 	ifp = ifunit(ifname);
 
 	if (ifp == NULL) {
-		printf("%s: can't find interface %d\n", __func__, if_index);
+		printf("%s: can't find interface %s\n", __func__, ifname);
 		return (EINVAL);
 	}
 	sc->output_ifp = ifp;

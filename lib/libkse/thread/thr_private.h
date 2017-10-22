@@ -28,7 +28,7 @@
  *
  * Private thread definitions for the uthread kernel.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_private.h 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
 #ifndef _THR_PRIVATE_H
@@ -56,39 +56,6 @@
 #include "pthread_md.h"
 #endif
 
-/*
- * Unfortunately, libpthread had symbol versioning before libc.
- * But now libc has symbol versioning, we need to occupy the
- * same version namespace in order to override some libc functions.
- * So in order to avoid breaking binaries requiring symbols from
- * LIBTHREAD_1_0, we need to provide a compatible interface for
- * those symbols.
- */
-#if 0
-#define	SYM_LT10(sym)			__CONCAT(sym, _lt10)
-#define	SYM_FB10(sym)			__CONCAT(sym, _fb10)
-#define	SYM_FBP10(sym)			__CONCAT(sym, _fbp10)
-#define	WEAK_REF(sym, alias)		__weak_reference(sym, alias)
-#define	SYM_COMPAT(sym, impl, ver)	__sym_compat(sym, impl, ver)
-#define	SYM_DEFAULT(sym, impl, ver)	__sym_default(sym, impl, ver)
-
-#define	LT10_COMPAT(sym)				\
-	WEAK_REF(sym, SYM_LT10(sym));			\
-	SYM_COMPAT(sym, SYM_LT10(sym), LIBTHREAD_1_0)
-
-#define	LT10_COMPAT_DEFAULT(sym)			\
-	LT10_COMPAT(sym);				\
-	WEAK_REF(sym, SYM_FB10(sym));			\
-	SYM_DEFAULT(sym, SYM_FB10(sym), FBSD_1.0)
-
-#define	LT10_COMPAT_PRIVATE(sym)			\
-	LT10_COMPAT(sym);				\
-	WEAK_REF(sym, SYM_FBP10(sym));			\
-	SYM_DEFAULT(sym, SYM_FBP10(sym), FBSDprivate_1.0)
-#else
-#define	LT10_COMPAT_DEFAULT(sym)
-#define	LT10_COMPAT_PRIVATE(sym)
-#endif
 
 /*
  * Evaluate the storage class specifier.
@@ -637,15 +604,18 @@ struct join_status {
 };
 
 struct pthread_specific_elem {
-	const void	*data;
-	int		seqno;
+	void	*data;
+	int	seqno;
 };
+
+typedef void (*const_key_destructor_t)(const void *);
+typedef void (*key_destructor_t)(void *);
 
 struct pthread_key {
 	volatile int	allocated;
 	volatile int	count;
 	int		seqno;
-	void            (*destructor) (void *);
+	key_destructor_t destructor;
 };
 
 #define	MAX_THR_LOCKLEVEL	5	
@@ -867,7 +837,7 @@ struct pthread {
 
 	/* Cleanup handlers Link List */
 	struct pthread_cleanup *cleanup;
-	char			*fname;	/* Ptr to source file name  */
+	const char		*fname;	/* Ptr to source file name  */
 	int			lineno;	/* Source line number.      */
 };
 
@@ -1110,9 +1080,9 @@ SCLASS struct lock	_mutex_static_lock;
 SCLASS struct lock	_rwlock_static_lock;
 SCLASS struct lock	_keytable_lock;
 SCLASS struct lock	_thread_list_lock;
-SCLASS int		_thr_guard_default;
-SCLASS int		_thr_stack_default;
-SCLASS int		_thr_stack_initial;
+SCLASS size_t		_thr_guard_default;
+SCLASS size_t		_thr_stack_default;
+SCLASS size_t		_thr_stack_initial;
 SCLASS int		_thr_page_size;
 SCLASS pthread_t	_thr_sig_daemon;
 SCLASS int		_thr_debug_flags	SCLASS_PRESET(0);
@@ -1173,7 +1143,7 @@ void	_pthread_yield(void);
 void	_pthread_cleanup_push(void (*routine) (void *), void *routine_arg);
 void	_pthread_cleanup_pop(int execute);
 struct pthread *_thr_alloc(struct pthread *);
-void	_thr_exit(char *, int, char *);
+void	_thr_exit(const char *, int, const char *) __dead2;
 void	_thr_exit_cleanup(void);
 void	_thr_lock_wait(struct lock *lock, struct lockuser *lu);
 void	_thr_lock_wakeup(struct lock *lock, struct lockuser *lu);
@@ -1201,7 +1171,7 @@ void	_thr_sched_switch(struct pthread *);
 void	_thr_sched_switch_unlocked(struct pthread *);
 void    _thr_set_timeout(const struct timespec *);
 void	_thr_seterrno(struct pthread *, int);
-void    _thr_sig_handler(int, siginfo_t *, ucontext_t *);
+void    _thr_sig_handler(int, siginfo_t *, void *);
 void    _thr_sig_check_pending(struct pthread *);
 void	_thr_sig_rundown(struct pthread *, ucontext_t *);
 void	_thr_sig_send(struct pthread *pthread, int sig);
@@ -1301,7 +1271,7 @@ ssize_t __sys_read(int, void *, size_t);
 ssize_t __sys_write(int, const void *, size_t);
 void	__sys_exit(int);
 int	__sys_sigwait(const sigset_t *, int *);
-int	__sys_sigtimedwait(sigset_t *, siginfo_t *, struct timespec *);
+int	__sys_sigtimedwait(const sigset_t *, siginfo_t *, const struct timespec *);
 #endif
 
 /* #include <poll.h> */

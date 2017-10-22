@@ -7,7 +7,7 @@
  * See the LICENSE file for redistribution information.
  */
 
-/* $FreeBSD: release/7.0.0/contrib/nvi/ex/ex.c 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $FreeBSD$ */
 
 #include "config.h"
 

@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/enigma/enigma.c 160681 2006-07-25 22:20:05Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 

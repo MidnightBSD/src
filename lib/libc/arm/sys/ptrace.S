@@ -32,7 +32,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/arm/sys/ptrace.S 164109 2006-11-09 01:28:16Z cognet $");
+__FBSDID("$FreeBSD$");
 #include "SYS.h"
 
 ENTRY(ptrace)

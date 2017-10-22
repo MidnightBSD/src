@@ -24,13 +24,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/7.0.0/sys/ia64/include/pcb.h 133879 2004-08-16 19:05:08Z marcel $
+ *	$FreeBSD$
  */
 
 #ifndef _MACHINE_PCB_H_
 #define _MACHINE_PCB_H_
 
+#ifndef _MACHINE_REGSET_H_
 #include <machine/_regset.h>
+#endif
 
 /*
  * PCB: process control block
@@ -63,10 +65,10 @@ struct trapframe;
 
 void makectx(struct trapframe *, struct pcb *);
 void restorectx(struct pcb *) __dead2;
-int swapctx(struct pcb *old, struct pcb *new);
+int swapctx(struct pcb *old, struct pcb *new) __returns_twice;
 
 void ia32_restorectx(struct pcb *);
-void ia32_savectx(struct pcb *);
+void ia32_savectx(struct pcb *) __returns_twice;
 
 #endif
 

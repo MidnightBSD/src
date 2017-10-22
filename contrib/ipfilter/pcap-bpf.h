@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/contrib/ipfilter/pcap-bpf.h 172506 2007-10-10 16:59:15Z cvs2svn $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997

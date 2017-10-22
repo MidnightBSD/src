@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)trap.h	5.4 (Berkeley) 5/9/91
- * $FreeBSD: release/7.0.0/sys/i386/include/trap.h 151306 2005-10-14 03:01:14Z davidxu $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_TRAP_H_
@@ -62,6 +62,8 @@
 #define	T_MCHK		28	/* machine check trap */
 #define	T_XMMFLT	29	/* SIMD floating-point exception */
 #define	T_RESERVED	30	/* reserved (unknown) */
+#define	T_DTRACE_RET	32	/* DTrace pid return */
+#define	T_DTRACE_PROBE	33	/* DTrace fasttrap probe */
 
 /* XXX most of the following codes aren't used, but could be. */
 

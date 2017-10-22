@@ -1,16 +1,16 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/moused 175737 2008-01-28 07:58:32Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: moused
 # REQUIRE: DAEMON cleanvar
-# KEYWORD: nojail
+# KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 
-name=moused
-rcvar=`set_rcvar`
+name="moused"
+rcvar="moused_enable"
 command="/usr/sbin/${name}"
 start_cmd="moused_start"
 pidprefix="/var/run/moused"
@@ -23,7 +23,7 @@ load_rc_config $name
 #
 if [ -n "$2" ]; then
 	eval moused_$2_enable=\${moused_$2_enable-${moused_nondefault_enable}}
-	rcvar=`set_rcvar moused_$2`
+	rcvar="moused_${2}_enable"
 	pidfile="${pidprefix}.$2.pid"
 	pidarg="-I $pidfile"
 fi
@@ -51,15 +51,15 @@ moused_start()
 		mytype="$moused_type"
 	fi
 
-	echo -n "Starting ${ms} moused:"
+	check_startmsgs && echo -n "Starting ${ms} moused"
 	/usr/sbin/moused ${myflags} -p ${myport} -t ${mytype} ${pidarg}
+	check_startmsgs && echo '.'
 
 	mousechar_arg=
 	case ${mousechar_start} in
 	[Nn][Oo] | '')
 		;;
 	*)
-		echo -n ' mousechar_start'
 		mousechar_arg="-M ${mousechar_start}"
 		;;
 	esac
@@ -67,7 +67,6 @@ moused_start()
 	for ttyv in /dev/ttyv* ; do
 		vidcontrol < ${ttyv} ${mousechar_arg} -m on
 	done
-	echo '.'
 }
 
 run_rc_command $*

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/7.0.0/lib/libgssapi/cred.h 153838 2005-12-29 14:40:22Z dfr $
+ *	$FreeBSD$
  */
 
 #include <sys/queue.h>
@@ -37,7 +37,6 @@ struct _gss_mechanism_cred {
 SLIST_HEAD(_gss_mechanism_cred_list, _gss_mechanism_cred);
 
 struct _gss_cred {
-	gss_cred_usage_t gc_usage;
 	struct _gss_mechanism_cred_list gc_mc;
 };
 

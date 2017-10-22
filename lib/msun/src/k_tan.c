@@ -11,9 +11,8 @@
  */
 
 /* INDENT OFF */
-#ifndef lint
-static char rcsid[] = "$FreeBSD: release/7.0.0/lib/msun/src/k_tan.c 151969 2005-11-02 14:01:45Z bde $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /* __kernel_tan( x, y, k )
  * kernel tan function on ~[-pi/4, pi/4] (except on -0), pi/4 ~ 0.7854

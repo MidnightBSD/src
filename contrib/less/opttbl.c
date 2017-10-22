@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2007  Mark Nudelman
+ * Copyright (C) 1984-2011  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -41,6 +41,7 @@ public int force_open;		/* Open the file even if not regular file */
 public int swindow;		/* Size of scrolling window */
 public int jump_sline;		/* Screen line of "jump target" */
 public long jump_sline_fraction = -1;
+public long shift_count_fraction = -1;
 public int chopline;		/* Truncate displayed lines at screen width */
 public int no_init;		/* Disable sending ti/te termcap strings */
 public int no_keypad;		/* Disable sending ks/ke termcap strings */
@@ -132,11 +133,11 @@ static struct optname follow_optname = { "follow-name",          NULL };
 static struct loption option[] =
 {
 	{ 'a', &a_optname,
-		BOOL, OPT_OFF, &how_search, NULL,
+		TRIPLE, OPT_ONPLUS, &how_search, NULL,
 		{
 			"Search includes displayed screen",
 			"Search skips displayed screen",
-			NULL
+			"Search includes all of displayed screen"
 		}
 	},
 
@@ -236,7 +237,7 @@ static struct loption option[] =
 		STRING, 0, NULL, opt_j,
 		{
 			"Target line: ",
-			"0123456789.",
+			"0123456789.-",
 			NULL
 		}
 	},
@@ -261,10 +262,6 @@ static struct loption option[] =
 			"Interrupt (ctrl-C) exits less",
 			NULL
 		}
-	},
-	{ 'l', NULL,
-		STRING|NO_TOGGLE|NO_QUERY, 0, NULL, opt_l,
-		{ NULL, NULL, NULL }
 	},
 	{ 'L', &L__optname,
 		BOOL, OPT_ON, &use_lessopen, NULL,
@@ -419,14 +416,14 @@ static struct loption option[] =
 		{ NULL, NULL, NULL }
 	},
 	{ '#', &pound_optname,
-		NUMBER, 0, &shift_count, NULL,
+		STRING, 0, NULL, opt_shift,
 		{
 			"Horizontal shift: ",
-			"Horizontal shift %d positions",
+			"0123456789.",
 			NULL
 		}
 	},
-	{ '.', &keypad_optname,
+	{ OLETTER_NONE, &keypad_optname,
 		BOOL|NO_TOGGLE, OPT_OFF, &no_keypad, NULL,
 		{
 			"Use keypad mode",
@@ -434,7 +431,7 @@ static struct loption option[] =
 			NULL
 		}
 	},
-	{ '.', &oldbot_optname,
+	{ OLETTER_NONE, &oldbot_optname,
 		BOOL, OPT_OFF, &oldbot, NULL,
 		{
 			"Use new bottom of screen behavior",
@@ -442,11 +439,11 @@ static struct loption option[] =
 			NULL
 		}
 	},
-	{ '.', &follow_optname,
+	{ OLETTER_NONE, &follow_optname,
 		BOOL, FOLLOW_DESC, &follow_mode, NULL,
 		{
-			"F command Follows file descriptor",
-			"F command Follows file name",
+			"F command follows file descriptor",
+			"F command follows file name",
 			NULL
 		}
 	},

@@ -1,5 +1,12 @@
-# $FreeBSD: release/7.0.0/usr.bin/ipcrm/Makefile 90415 2002-02-08 22:31:43Z markm $
+# $FreeBSD$
 
 PROG=	ipcrm
+SRCS=	ipcrm.c ipc.c
+DPADD=	${LIBKVM}
+LDADD=	-lkvm
+CFLAGS+=-I${.CURDIR}/../ipcs
+.PATH:  ${.CURDIR}/../ipcs
+
+WARNS?=	0
 
 .include <bsd.prog.mk>

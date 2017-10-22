@@ -29,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/i386/string/ffs.S 97748 2002-06-02 20:05:59Z schweikh $");
+__FBSDID("$FreeBSD$");
 
 /*
  * ffs(value)
@@ -51,3 +51,6 @@ ENTRY(ffs)
 	.align 2
 L1:	xorl	%eax,%eax		/* clear result */
 	ret
+END(ffs)
+
+	.section .note.GNU-stack,"",%progbits

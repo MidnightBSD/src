@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/ieee488/ugpib.h 141777 2005-02-12 23:52:44Z phk $
+ * $FreeBSD$
  *
  */
 

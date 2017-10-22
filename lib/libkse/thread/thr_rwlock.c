@@ -23,39 +23,19 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_rwlock.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
+#include "namespace.h"
 #include <errno.h>
 #include <limits.h>
 #include <stdlib.h>
-
-#include "namespace.h"
 #include <pthread.h>
 #include "un-namespace.h"
 #include "thr_private.h"
 
 /* maximum number of times a read lock may be obtained */
 #define	MAX_READ_LOCKS		(INT_MAX - 1)
-
-LT10_COMPAT_PRIVATE(_pthread_rwlock_destroy);
-LT10_COMPAT_DEFAULT(pthread_rwlock_destroy);
-LT10_COMPAT_PRIVATE(_pthread_rwlock_init);
-LT10_COMPAT_DEFAULT(pthread_rwlock_init);
-LT10_COMPAT_PRIVATE(_pthread_rwlock_rdlock);
-LT10_COMPAT_DEFAULT(pthread_rwlock_rdlock);
-LT10_COMPAT_PRIVATE(_pthread_rwlock_timedrdlock);
-LT10_COMPAT_DEFAULT(pthread_rwlock_timedrdlock);
-LT10_COMPAT_PRIVATE(_pthread_rwlock_tryrdlock);
-LT10_COMPAT_DEFAULT(pthread_rwlock_tryrdlock);
-LT10_COMPAT_PRIVATE(_pthread_rwlock_trywrlock);
-LT10_COMPAT_DEFAULT(pthread_rwlock_trywrlock);
-LT10_COMPAT_PRIVATE(_pthread_rwlock_unlock);
-LT10_COMPAT_DEFAULT(pthread_rwlock_unlock);
-LT10_COMPAT_PRIVATE(_pthread_rwlock_wrlock);
-LT10_COMPAT_DEFAULT(pthread_rwlock_wrlock);
-LT10_COMPAT_PRIVATE(_pthread_rwlock_timedwrlock);
-LT10_COMPAT_DEFAULT(pthread_rwlock_timedwrlock);
 
 __weak_reference(_pthread_rwlock_destroy, pthread_rwlock_destroy);
 __weak_reference(_pthread_rwlock_init, pthread_rwlock_init);
@@ -115,7 +95,8 @@ _pthread_rwlock_destroy (pthread_rwlock_t *rwlock)
 }
 
 int
-_pthread_rwlock_init (pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr)
+_pthread_rwlock_init (pthread_rwlock_t *rwlock,
+    const pthread_rwlockattr_t *attr __unused)
 {
 	pthread_rwlock_t prwlock;
 	int ret;

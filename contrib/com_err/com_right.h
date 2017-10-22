@@ -31,8 +31,8 @@
  * SUCH DAMAGE. 
  */
 
-/* $Id: com_right.h,v 1.11 2000/07/31 01:11:08 assar Exp $ */
-/* $FreeBSD: release/7.0.0/contrib/com_err/com_right.h 127807 2004-04-03 21:17:01Z nectar $ */
+/* $Id: com_right.h 14551 2005-02-03 08:45:13Z lha $ */
+/* $FreeBSD$ */
 
 #ifndef __COM_RIGHT_H__
 #define __COM_RIGHT_H__
@@ -51,8 +51,8 @@ struct et_list {
 };
 extern struct et_list *_et_list;
 
-const char *com_right __P((struct et_list *list, long code));
-void initialize_error_table_r __P((struct et_list **, const char **, int, long));
-void free_error_table __P((struct et_list *));
+const char *com_right (struct et_list *list, long code);
+void initialize_error_table_r (struct et_list **, const char **, int, long);
+void free_error_table (struct et_list *);
 
 #endif /* __COM_RIGHT_H__ */

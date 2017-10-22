@@ -32,7 +32,7 @@
  *
  *	@(#)fbio.h	8.2 (Berkeley) 10/30/93
  *
- * $FreeBSD: release/7.0.0/sys/sys/fbio.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_FBIO_H_
@@ -269,6 +269,7 @@ struct video_info {
 #define V_INFO_GRAPHICS	(1 << 1)
 #define V_INFO_LINEAR	(1 << 2)
 #define V_INFO_VESA	(1 << 3)
+#define	V_INFO_NONVGA	(1 << 4)
     int			vi_width;
     int			vi_height;
     int			vi_cwidth;
@@ -331,6 +332,7 @@ struct video_adapter {
 #define V_ADP_INITIALIZED (1 << 17)
 #define V_ADP_REGISTERED (1 << 18)
 #define V_ADP_ATTACHED	(1 << 19)
+#define	V_ADP_DAC8	(1 << 20)
     vm_offset_t		va_io_base;
     int			va_io_size;
     vm_offset_t		va_crtc_addr;

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/regression/netinet/udpconnectjail/udpconnectjail.c 148327 2005-07-23 05:40:17Z pjd $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -77,6 +77,7 @@ main(int argc, __unused char *argv[])
 {
 	struct sockaddr_in sin;
 	struct jail thejail;
+	struct in_addr ia4;
 
 	if (argc != 1)
 		usage();
@@ -94,12 +95,18 @@ main(int argc, __unused char *argv[])
 
 	/*
 	 * Now re-run in a jail.
+	 * XXX-BZ should switch to jail_set(2).
 	 */
+	ia4.s_addr = htonl(INADDR_LOOPBACK);
+
 	bzero(&thejail, sizeof(thejail));
-	thejail.version = 0;
+	thejail.version = JAIL_API_VERSION;
 	thejail.path = "/";
 	thejail.hostname = "jail";
-	thejail.ip_number = INADDR_LOOPBACK;
+	thejail.jailname = "udpconnectjail";
+	thejail.ip4s = 1;
+	thejail.ip4 = &ia4;
+	
 	if (jail(&thejail) < 0)
 		errx(-1, "jail: %s", strerror(errno));
 	test("in jail", &sin);

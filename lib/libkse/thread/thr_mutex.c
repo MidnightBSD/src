@@ -26,14 +26,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_mutex.c 173604 2007-11-14 09:54:48Z kris $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/param.h>
 #include <sys/queue.h>
 #include <pthread.h>
+#include <pthread_np.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
 #if defined(_PTHREADS_INVARIANTS)
@@ -73,7 +77,7 @@
  */
 static struct kse_mailbox *mutex_handoff(struct pthread *,
 			    struct pthread_mutex *);
-static inline int	mutex_self_trylock(struct pthread *, pthread_mutex_t);
+static inline int	mutex_self_trylock(pthread_mutex_t);
 static inline int	mutex_self_lock(struct pthread *, pthread_mutex_t);
 static int		mutex_unlock_common(pthread_mutex_t *, int);
 static void		mutex_priority_adjust(struct pthread *, pthread_mutex_t);
@@ -84,26 +88,19 @@ static inline void	mutex_queue_remove(pthread_mutex_t, pthread_t);
 static inline void	mutex_queue_enq(pthread_mutex_t, pthread_t);
 static void		mutex_lock_backout(void *arg);
 
+int	__pthread_mutex_init(pthread_mutex_t *mutex,
+	    const pthread_mutexattr_t *mutex_attr);
+int	__pthread_mutex_trylock(pthread_mutex_t *mutex);
+int	__pthread_mutex_lock(pthread_mutex_t *m);
+int	__pthread_mutex_timedlock(pthread_mutex_t *m,
+	    const struct timespec *abs_timeout);
+int	_pthread_mutex_init_calloc_cb(pthread_mutex_t *mutex,
+	    void *(calloc_cb)(size_t, size_t));
+
+
 static struct pthread_mutex_attr	static_mutex_attr =
     PTHREAD_MUTEXATTR_STATIC_INITIALIZER;
 static pthread_mutexattr_t		static_mattr = &static_mutex_attr;
-
-LT10_COMPAT_PRIVATE(__pthread_mutex_init);
-LT10_COMPAT_PRIVATE(_pthread_mutex_init);
-LT10_COMPAT_DEFAULT(pthread_mutex_init);
-LT10_COMPAT_PRIVATE(__pthread_mutex_lock);
-LT10_COMPAT_PRIVATE(_pthread_mutex_lock);
-LT10_COMPAT_DEFAULT(pthread_mutex_lock);
-LT10_COMPAT_PRIVATE(__pthread_mutex_timedlock);
-LT10_COMPAT_PRIVATE(_pthread_mutex_timedlock);
-LT10_COMPAT_DEFAULT(pthread_mutex_timedlock);
-LT10_COMPAT_PRIVATE(__pthread_mutex_trylock);
-LT10_COMPAT_PRIVATE(_pthread_mutex_trylock);
-LT10_COMPAT_DEFAULT(pthread_mutex_trylock);
-LT10_COMPAT_PRIVATE(_pthread_mutex_destroy);
-LT10_COMPAT_DEFAULT(pthread_mutex_destroy);
-LT10_COMPAT_PRIVATE(_pthread_mutex_unlock);
-LT10_COMPAT_DEFAULT(pthread_mutex_unlock);
 
 /* Single underscore versions provided for libc internal usage: */
 __weak_reference(__pthread_mutex_init, pthread_mutex_init);
@@ -114,12 +111,11 @@ __weak_reference(__pthread_mutex_trylock, pthread_mutex_trylock);
 /* No difference between libc and application usage of these: */
 __weak_reference(_pthread_mutex_destroy, pthread_mutex_destroy);
 __weak_reference(_pthread_mutex_unlock, pthread_mutex_unlock);
+__weak_reference(_pthread_mutex_isowned_np, pthread_mutex_isowned_np);
 
-
-
-int
-__pthread_mutex_init(pthread_mutex_t *mutex,
-    const pthread_mutexattr_t *mutex_attr)
+static int
+thr_mutex_init(pthread_mutex_t *mutex,
+    const pthread_mutexattr_t *mutex_attr, void *(calloc_cb)(size_t, size_t))
 {
 	struct pthread_mutex *pmutex;
 	enum pthread_mutextype type;
@@ -163,10 +159,10 @@ __pthread_mutex_init(pthread_mutex_t *mutex,
 	/* Check no errors so far: */
 	if (ret == 0) {
 		if ((pmutex = (pthread_mutex_t)
-		    malloc(sizeof(struct pthread_mutex))) == NULL)
+		    calloc_cb(1, sizeof(struct pthread_mutex))) == NULL)
 			ret = ENOMEM;
 		else if (_lock_init(&pmutex->m_lock, LCK_ADAPTIVE,
-		    _thr_lock_wait, _thr_lock_wakeup) != 0) {
+		    _thr_lock_wait, _thr_lock_wakeup, calloc_cb) != 0) {
 			free(pmutex);
 			*mutex = NULL;
 			ret = ENOMEM;
@@ -222,6 +218,14 @@ __pthread_mutex_init(pthread_mutex_t *mutex,
 }
 
 int
+__pthread_mutex_init(pthread_mutex_t *mutex,
+    const pthread_mutexattr_t *mutex_attr)
+{
+
+	return (thr_mutex_init(mutex, mutex_attr, calloc));
+}
+
+int
 _pthread_mutex_init(pthread_mutex_t *mutex,
     const pthread_mutexattr_t *mutex_attr)
 {
@@ -235,6 +239,23 @@ _pthread_mutex_init(pthread_mutex_t *mutex,
 		mattrp = &mattr;
 		return (__pthread_mutex_init(mutex, &mattrp));
 	}
+}
+
+/* This function is used internally by malloc. */
+int
+_pthread_mutex_init_calloc_cb(pthread_mutex_t *mutex,
+    void *(calloc_cb)(size_t, size_t))
+{
+	static const struct pthread_mutex_attr attr = {
+		.m_type = PTHREAD_MUTEX_NORMAL,
+		.m_protocol = PTHREAD_PRIO_NONE,
+		.m_ceiling = 0,
+		.m_flags = 0
+	};
+	static const struct pthread_mutex_attr *pattr = &attr;
+
+	return (thr_mutex_init(mutex, (pthread_mutexattr_t *)&pattr,
+	    calloc_cb));
 }
 
 void
@@ -305,7 +326,7 @@ init_static(struct pthread *thread, pthread_mutex_t *mutex)
 	THR_LOCK_ACQUIRE(thread, &_mutex_static_lock);
 
 	if (*mutex == NULL)
-		ret = pthread_mutex_init(mutex, NULL);
+		ret = _pthread_mutex_init(mutex, NULL);
 	else
 		ret = 0;
 
@@ -322,7 +343,7 @@ init_static_private(struct pthread *thread, pthread_mutex_t *mutex)
 	THR_LOCK_ACQUIRE(thread, &_mutex_static_lock);
 
 	if (*mutex == NULL)
-		ret = pthread_mutex_init(mutex, &static_mattr);
+		ret = _pthread_mutex_init(mutex, &static_mattr);
 	else
 		ret = 0;
 
@@ -368,7 +389,7 @@ mutex_trylock_common(struct pthread *curthread, pthread_mutex_t *mutex)
 			TAILQ_INSERT_TAIL(&curthread->mutexq,
 			    (*mutex), m_qe);
 		} else if ((*mutex)->m_owner == curthread)
-			ret = mutex_self_trylock(curthread, *mutex);
+			ret = mutex_self_trylock(*mutex);
 		else
 			/* Return a busy error: */
 			ret = EBUSY;
@@ -400,7 +421,7 @@ mutex_trylock_common(struct pthread *curthread, pthread_mutex_t *mutex)
 			TAILQ_INSERT_TAIL(&curthread->mutexq,
 			    (*mutex), m_qe);
 		} else if ((*mutex)->m_owner == curthread)
-			ret = mutex_self_trylock(curthread, *mutex);
+			ret = mutex_self_trylock(*mutex);
 		else
 			/* Return a busy error: */
 			ret = EBUSY;
@@ -437,7 +458,7 @@ mutex_trylock_common(struct pthread *curthread, pthread_mutex_t *mutex)
 			TAILQ_INSERT_TAIL(&curthread->mutexq,
 			    (*mutex), m_qe);
 		} else if ((*mutex)->m_owner == curthread)
-			ret = mutex_self_trylock(curthread, *mutex);
+			ret = mutex_self_trylock(*mutex);
 		else
 			/* Return a busy error: */
 			ret = EBUSY;
@@ -964,7 +985,7 @@ _mutex_cv_lock(pthread_mutex_t *m)
 }
 
 static inline int
-mutex_self_trylock(struct pthread *curthread, pthread_mutex_t m)
+mutex_self_trylock(pthread_mutex_t m)
 {
 	int	ret = 0;
 
@@ -1578,7 +1599,7 @@ _mutex_unlock_private(pthread_t pthread)
 	for (m = TAILQ_FIRST(&pthread->mutexq); m != NULL; m = m_next) {
 		m_next = TAILQ_NEXT(m, m_qe);
 		if ((m->m_flags & MUTEX_FLAGS_PRIVATE) != 0)
-			pthread_mutex_unlock(&m);
+			_pthread_mutex_unlock(&m);
 	}
 }
 
@@ -1830,3 +1851,12 @@ mutex_queue_enq(pthread_mutex_t mutex, pthread_t pthread)
 	}
 	pthread->sflags |= THR_FLAGS_IN_SYNCQ;
 }
+
+int
+_pthread_mutex_isowned_np(pthread_mutex_t *mutex)
+{
+	struct pthread	*curthread = _get_curthread();
+
+	return ((*mutex)->m_owner == curthread);
+}
+

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: mount_smbfs.c,v 1.17 2002/04/10 04:17:51 bp Exp $
- * $FreeBSD: release/7.0.0/contrib/smbfs/mount_smbfs/mount_smbfs.c 152523 2005-11-16 12:33:04Z ru $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -295,7 +295,7 @@ usage(void)
 	"usage: mount_smbfs [-E cs1:cs2] [-I host] [-L locale] [-M crights:srights]",
 	"                   [-N] [-O cowner:cgroup/sowner:sgroup] [-R retrycount]",
 	"                   [-T timeout] [-W workgroup] [-c case] [-d mode] [-f mode]",
-	"                   [-g gid] [-n opt] [-u uid] //user@server/share node");
+	"                   [-g gid] [-n opt] [-u uid] [-U username] //user@server/share node");
 
 	exit (1);
 }

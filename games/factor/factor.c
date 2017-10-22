@@ -13,11 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -35,18 +31,20 @@
  */
 
 #ifndef lint
-static const char copyright[] =
-"@(#) Copyright (c) 1989, 1993\n\
-	The Regents of the University of California.  All rights reserved.\n";
-#endif /* not lint */
-
-#ifndef lint
-#if 0
-static char sccsid[] = "@(#)factor.c	8.4 (Berkeley) 5/4/95";
-__RCSID("$NetBSD: factor.c,v 1.13 2002/06/18 23:07:36 simonb Exp $");
+#include <sys/cdefs.h>
+#ifdef __COPYRIGHT
+__COPYRIGHT("@(#) Copyright (c) 1989, 1993\
+	The Regents of the University of California.  All rights reserved.");
 #endif
-static const char rcsid[] =
- "$FreeBSD: release/7.0.0/games/factor/factor.c 104722 2002-10-09 19:55:04Z fanf $";
+#ifdef __SCCSID
+__SCCSID("@(#)factor.c	8.4 (Berkeley) 5/4/95");
+#endif
+#ifdef __RCSID
+__RCSID("$NetBSD: factor.c,v 1.19 2009/08/12 05:54:31 dholland Exp $");
+#endif
+#ifdef __FBSDID
+__FBSDID("$FreeBSD$");
+#endif
 #endif /* not lint */
 
 /*
@@ -63,7 +61,7 @@ static const char rcsid[] =
  *
  *	number: factor1 factor1 factor2 factor3 factor3 factor3 ...
  *
- * where factor1 < factor2 < factor3 < ...
+ * where factor1 <= factor2 <= factor3 <= ...
  *
  * If no args are given, the list of numbers are read from stdin.
  */
@@ -213,8 +211,11 @@ pr_fact(BIGNUM *val)
 
 			bnfact = BN_new();
 			BN_set_word(bnfact, *(fact - 1));
-			BN_sqr(bnfact, bnfact, ctx);
-			if (BN_cmp(bnfact, val) > 0)
+			if (!BN_sqr(bnfact, bnfact, ctx))
+				errx(1, "error in BN_sqr()");
+			if (BN_cmp(bnfact, val) > 0 ||
+			    BN_is_prime(val, PRIME_CHECKS,
+					NULL, NULL, NULL) == 1)
 				pr_print(val);
 			else
 				pollard_pminus1(val);
@@ -257,26 +258,34 @@ usage(void)
 
 #ifdef HAVE_OPENSSL
 
-/* pollard rho, algorithm from Jim Gillogly, May 2000 */
+/* pollard p-1, algorithm from Jim Gillogly, May 2000 */
 static void
 pollard_pminus1(BIGNUM *val)
 {
-	BIGNUM *base, *num, *i, *x;
+	BIGNUM *base, *rbase, *num, *i, *x;
 
 	base = BN_new();
+	rbase = BN_new();
 	num = BN_new();
 	i = BN_new();
 	x = BN_new();
 
+	BN_set_word(rbase, 1);
+newbase:
+	if (!BN_add_word(rbase, 1))
+		errx(1, "error in BN_add_word()");
 	BN_set_word(i, 2);
-	BN_set_word(base, 2);
+	BN_copy(base, rbase);
 
 	for (;;) {
 		BN_mod_exp(base, base, i, val, ctx);
+		if (BN_is_one(base))
+			goto newbase;
 
 		BN_copy(x, base);
 		BN_sub_word(x, 1);
-		BN_gcd(x, x, val, ctx);
+		if (!BN_gcd(x, x, val, ctx))
+			errx(1, "error in BN_gcd()");
 
 		if (!BN_is_one(x)) {
 			if (BN_is_prime(x, PRIME_CHECKS, NULL, NULL,
@@ -297,7 +306,8 @@ pollard_pminus1(BIGNUM *val)
 			}
 			BN_copy(val, num);
 		}
-		BN_add_word(i, 1);
+		if (!BN_add_word(i, 1))
+			errx(1, "error in BN_add_word()");
 	}
 }
 
@@ -312,7 +322,7 @@ BN_print_dec_fp(FILE *fp, const BIGNUM *num)
 	buf = BN_bn2dec(num);
 	if (buf == NULL)
 		return;	/* XXX do anything here? */
-	fprintf(fp, buf);
+	fprintf(fp, "%s", buf);
 	free(buf);
 }
 

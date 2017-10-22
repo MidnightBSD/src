@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sbin/pfctl/missing/altq/altq_priq.h 126385 2004-02-28 21:50:50Z mlaier $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: altq_priq.h,v 1.5 2003/07/10 12:07:48 kjc Exp $	*/
 /*
  * Copyright (C) 2000-2003

@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/gnu/usr.bin/gdb/arch/arm/armfbsd-nat.c 174179 2007-12-02 14:38:21Z cognet $ */
+/* $FreeBSD$ */
 
  /* Native-dependent code for BSD Unix running on ARM's, for GDB.
    Copyright 1988, 1989, 1991, 1992, 1994, 1996, 1999, 2002
@@ -32,8 +32,8 @@
 #include "arm-tdep.h"
 
 #include <sys/types.h>
-#include <sys/ptrace.h>
 #ifndef CROSS_DEBUGGER
+#include <sys/ptrace.h>
 #include <machine/reg.h>
 #include <machine/frame.h>
 #endif

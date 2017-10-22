@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2009, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: client.h,v 1.69.18.9 2006/06/06 00:11:41 marka Exp $ */
+/* $Id: client.h,v 1.91.278.2 2012/01/31 23:46:39 tbox Exp $ */
 
 #ifndef NAMED_CLIENT_H
 #define NAMED_CLIENT_H 1
@@ -24,7 +24,7 @@
  ***** Module Info
  *****/
 
-/*! \file 
+/*! \file
  * \brief
  * This module defines two objects, ns_client_t and ns_clientmgr_t.
  *
@@ -97,6 +97,13 @@ struct ns_client {
 	int			nupdates;
 	int			nctls;
 	int			references;
+	isc_boolean_t		needshutdown; 	/*
+						 * Used by clienttest to get
+						 * the client to go from
+						 * inactive to free state
+						 * by shutting down the
+						 * client's task.
+						 */
 	unsigned int		attributes;
 	isc_task_t *		task;
 	dns_view_t *		view;
@@ -131,8 +138,12 @@ struct ns_client {
 	ns_interface_t		*interface;
 	isc_sockaddr_t		peeraddr;
 	isc_boolean_t		peeraddr_valid;
+	isc_netaddr_t		destaddr;
 	struct in6_pktinfo	pktinfo;
 	isc_event_t		ctlevent;
+#ifdef ALLOW_FILTER_AAAA_ON_V4
+	dns_v4_aaaa_t		filter_aaaa;
+#endif
 	/*%
 	 * Information about recent FORMERR response(s), for
 	 * FORMERR loop avoidance.  This is separate for each
@@ -155,10 +166,15 @@ struct ns_client {
 #define NS_CLIENT_VALID(c)		ISC_MAGIC_VALID(c, NS_CLIENT_MAGIC)
 
 #define NS_CLIENTATTR_TCP		0x01
-#define NS_CLIENTATTR_RA		0x02 /*%< Client gets recusive service */
+#define NS_CLIENTATTR_RA		0x02 /*%< Client gets recursive service */
 #define NS_CLIENTATTR_PKTINFO		0x04 /*%< pktinfo is valid */
 #define NS_CLIENTATTR_MULTICAST		0x08 /*%< recv'd from multicast */
 #define NS_CLIENTATTR_WANTDNSSEC	0x10 /*%< include dnssec records */
+#define NS_CLIENTATTR_WANTNSID          0x20 /*%< include nameserver ID */
+#ifdef ALLOW_FILTER_AAAA_ON_V4
+#define NS_CLIENTATTR_FILTER_AAAA	0x40 /*%< suppress AAAAs */
+#define NS_CLIENTATTR_FILTER_AAAA_RC	0x80 /*%< recursing for A against AAAA */
+#endif
 
 extern unsigned int ns_client_requests;
 
@@ -266,14 +282,16 @@ ns_client_getsockaddr(ns_client_t *client);
  */
 
 isc_result_t
-ns_client_checkaclsilent(ns_client_t  *client,dns_acl_t *acl,
-			 isc_boolean_t default_allow);
+ns_client_checkaclsilent(ns_client_t *client, isc_netaddr_t *netaddr,
+			 dns_acl_t *acl, isc_boolean_t default_allow);
 
 /*%
  * Convenience function for client request ACL checking.
  *
  * Check the current client request against 'acl'.  If 'acl'
  * is NULL, allow the request iff 'default_allow' is ISC_TRUE.
+ * If netaddr is NULL, check the ACL against client->peeraddr;
+ * otherwise check it against netaddr.
  *
  * Notes:
  *\li	This is appropriate for checking allow-update,
@@ -284,28 +302,30 @@ ns_client_checkaclsilent(ns_client_t  *client,dns_acl_t *acl,
  *
  * Requires:
  *\li	'client' points to a valid client.
+ *\li	'netaddr' points to a valid address, or is NULL.
  *\li	'acl' points to a valid ACL, or is NULL.
  *
  * Returns:
  *\li	ISC_R_SUCCESS	if the request should be allowed
- * \li	ISC_R_REFUSED	if the request should be denied
+ * \li	DNS_R_REFUSED	if the request should be denied
  *\li	No other return values are possible.
  */
 
 isc_result_t
 ns_client_checkacl(ns_client_t  *client,
+		   isc_sockaddr_t *sockaddr,
 		   const char *opname, dns_acl_t *acl,
 		   isc_boolean_t default_allow,
 		   int log_level);
 /*%
- * Like ns_client_checkacl, but also logs the outcome of the
- * check at log level 'log_level' if denied, and at debug 3
- * if approved.  Log messages will refer to the request as
- * an 'opname' request.
+ * Like ns_client_checkaclsilent, except the outcome of the check is
+ * logged at log level 'log_level' if denied, and at debug 3 if approved.
+ * Log messages will refer to the request as an 'opname' request.
  *
  * Requires:
- *\li	Those of ns_client_checkaclsilent(), and:
- *
+ *\li	'client' points to a valid client.
+ *\li	'sockaddr' points to a valid address, or is NULL.
+ *\li	'acl' points to a valid ACL, or is NULL.
  *\li	'opname' points to a null-terminated string.
  */
 
@@ -352,8 +372,8 @@ ns_client_qnamereplace(ns_client_t *client, dns_name_t *name);
 
 isc_boolean_t
 ns_client_isself(dns_view_t *myview, dns_tsigkey_t *mykey,
-                 isc_sockaddr_t *srcaddr, isc_sockaddr_t *destaddr,
-                 dns_rdataclass_t rdclass, void *arg);
+		 isc_sockaddr_t *srcaddr, isc_sockaddr_t *destaddr,
+		 dns_rdataclass_t rdclass, void *arg);
 /*%
  * Isself callback.
  */

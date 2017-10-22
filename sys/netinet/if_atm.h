@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/netinet/if_atm.h 174854 2007-12-22 06:32:46Z cvs2svn $ */
+/* $FreeBSD$ */
 /*      $NetBSD: if_atm.h,v 1.2 1996/07/03 17:17:17 chuck Exp $       */
 
 /*-

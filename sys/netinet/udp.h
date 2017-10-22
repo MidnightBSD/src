@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)udp.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: release/7.0.0/sys/netinet/udp.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_UDP_H_
@@ -44,5 +44,24 @@ struct udphdr {
 	u_short	uh_ulen;		/* udp length */
 	u_short	uh_sum;			/* udp checksum */
 };
+
+/* 
+ * User-settable options (used with setsockopt).
+ */
+#define	UDP_ENCAP			0x01
+
+
+/*
+ * UDP Encapsulation of IPsec Packets options.
+ */
+/* Encapsulation types. */
+#define	UDP_ENCAP_ESPINUDP_NON_IKE	1 /* draft-ietf-ipsec-nat-t-ike-00/01 */
+#define	UDP_ENCAP_ESPINUDP		2 /* draft-ietf-ipsec-udp-encaps-02+ */
+
+/* Default ESP in UDP encapsulation port. */
+#define	UDP_ENCAP_ESPINUDP_PORT		500
+
+/* Maximum UDP fragment size for ESP over UDP. */
+#define	UDP_ENCAP_ESPINUDP_MAXFRAGLEN	552
 
 #endif

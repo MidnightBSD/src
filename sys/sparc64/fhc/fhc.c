@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/fhc/fhc.c 172066 2007-09-06 19:16:30Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -69,12 +69,14 @@ static bus_print_child_t fhc_print_child;
 static bus_probe_nomatch_t fhc_probe_nomatch;
 static bus_setup_intr_t fhc_setup_intr;
 static bus_alloc_resource_t fhc_alloc_resource;
+static bus_adjust_resource_t fhc_adjust_resource;
 static bus_get_resource_list_t fhc_get_resource_list;
 static ofw_bus_get_devinfo_t fhc_get_devinfo;
 
 static void fhc_intr_enable(void *);
 static void fhc_intr_disable(void *);
-static void fhc_intr_eoi(void *);
+static void fhc_intr_assign(void *);
+static void fhc_intr_clear(void *);
 static void fhc_led_func(void *, int);
 static int fhc_print_res(struct fhc_devinfo *);
 
@@ -89,14 +91,16 @@ static device_method_t fhc_methods[] = {
 	/* Bus interface */
 	DEVMETHOD(bus_print_child,	fhc_print_child),
 	DEVMETHOD(bus_probe_nomatch,	fhc_probe_nomatch),
-	DEVMETHOD(bus_setup_intr,	fhc_setup_intr),
-	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
 	DEVMETHOD(bus_alloc_resource,	fhc_alloc_resource),
-	DEVMETHOD(bus_release_resource,	bus_generic_rl_release_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
 	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
-	DEVMETHOD(bus_get_resource_list, fhc_get_resource_list),
+	DEVMETHOD(bus_adjust_resource,	fhc_adjust_resource),
+	DEVMETHOD(bus_release_resource,	bus_generic_rl_release_resource),
+	DEVMETHOD(bus_setup_intr,	fhc_setup_intr),
+	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
 	DEVMETHOD(bus_get_resource,	bus_generic_rl_get_resource),
+	DEVMETHOD(bus_get_resource_list, fhc_get_resource_list),
+	DEVMETHOD(bus_child_pnpinfo_str, ofw_bus_gen_child_pnpinfo_str),
 
 	/* ofw_bus interface */
 	DEVMETHOD(ofw_bus_get_devinfo,	fhc_get_devinfo),
@@ -106,7 +110,7 @@ static device_method_t fhc_methods[] = {
 	DEVMETHOD(ofw_bus_get_node,	ofw_bus_gen_get_node),
 	DEVMETHOD(ofw_bus_get_type,	ofw_bus_gen_get_type),
 
-	{ NULL, NULL }
+	DEVMETHOD_END
 };
 
 static driver_t fhc_driver = {
@@ -117,13 +121,19 @@ static driver_t fhc_driver = {
 
 static devclass_t fhc_devclass;
 
-DRIVER_MODULE(fhc, central, fhc_driver, fhc_devclass, 0, 0);
-DRIVER_MODULE(fhc, nexus, fhc_driver, fhc_devclass, 0, 0);
+EARLY_DRIVER_MODULE(fhc, central, fhc_driver, fhc_devclass, 0, 0,
+    BUS_PASS_BUS);
+MODULE_DEPEND(fhc, central, 1, 1, 1);
+EARLY_DRIVER_MODULE(fhc, nexus, fhc_driver, fhc_devclass, 0, 0,
+    BUS_PASS_BUS);
+MODULE_DEPEND(fhc, nexus, 1, 1, 1);
+MODULE_VERSION(fhc, 1);
 
 static const struct intr_controller fhc_ic = {
 	fhc_intr_enable,
 	fhc_intr_disable,
-	fhc_intr_eoi
+	fhc_intr_assign,
+	fhc_intr_clear
 };
 
 struct fhc_icarg {
@@ -161,9 +171,7 @@ fhc_attach(device_t dev)
 	int central;
 	int error;
 	int i;
-	int nintr;
-	int nreg;
-	int rid;
+	int j;
 
 	sc = device_get_softc(dev);
 	node = ofw_bus_get_node(dev);
@@ -173,9 +181,9 @@ fhc_attach(device_t dev)
 		central = 1;
 
 	for (i = 0; i < FHC_NREG; i++) {
-		rid = i;
+		j = i;
 		sc->sc_memres[i] = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
-		    &rid, RF_ACTIVE);
+		    &j, RF_ACTIVE);
 		if (sc->sc_memres[i] == NULL) {
 			device_printf(dev, "cannot allocate resource %d\n", i);
 			error = ENXIO;
@@ -202,7 +210,7 @@ fhc_attach(device_t dev)
 		printf("model unknown\n");
 
 	for (i = FHC_FANFAIL; i <= FHC_TOD; i++) {
-		bus_write_4(sc->sc_memres[i], FHC_ICLR, 0x0);
+		bus_write_4(sc->sc_memres[i], FHC_ICLR, INTCLR_IDLE);
 		(void)bus_read_4(sc->sc_memres[i], FHC_ICLR);
 	}
 
@@ -235,7 +243,8 @@ fhc_attach(device_t dev)
 		/*
 		 * Hunt through all the interrupt mapping regs and register
 		 * our interrupt controller for the corresponding interrupt
-		 * vectors.
+		 * vectors.  We do this early in order to be able to catch
+		 * stray interrupts.
 		 */
 		for (i = FHC_FANFAIL; i <= FHC_TOD; i++) {
 			fica = malloc(sizeof(*fica), M_DEVBUF, M_NOWAIT);
@@ -255,11 +264,13 @@ fhc_attach(device_t dev)
 			 * the IGN and the IGN is constant for all devices
 			 * on that FireHose controller.
 			 */
-			if (intr_controller_register(INTMAP_VEC(sc->sc_ign,
+			j = intr_controller_register(INTMAP_VEC(sc->sc_ign,
 			    INTINO(bus_read_4(fica->fica_memres, FHC_IMAP))),
-			    &fhc_ic, fica) != 0)
-				panic("%s: could not register interrupt "
-				    "controller for map %d", __func__, i);
+			    &fhc_ic, fica);
+			if (j != 0)
+				device_printf(dev, "could not register "
+				    "interrupt controller for map %d (%d)\n",
+				    i, j);
 		}
 	} else {
 		snprintf(ledname, sizeof(ledname), "board%d", board);
@@ -272,9 +283,9 @@ fhc_attach(device_t dev)
 			free(fdi, M_DEVBUF);
 			continue;
 		}
-		nreg = OF_getprop_alloc(child, "reg", sizeof(*reg),
+		i = OF_getprop_alloc(child, "reg", sizeof(*reg),
 		    (void **)&reg);
-		if (nreg == -1) {
+		if (i == -1) {
 			device_printf(dev, "<%s>: incomplete\n",
 			    fdi->fdi_obdinfo.obd_name);
 			ofw_bus_gen_destroy_devinfo(&fdi->fdi_obdinfo);
@@ -282,19 +293,19 @@ fhc_attach(device_t dev)
 			continue;
 		}
 		resource_list_init(&fdi->fdi_rl);
-		for (i = 0; i < nreg; i++)
-			resource_list_add(&fdi->fdi_rl, SYS_RES_MEMORY, i,
-			    reg[i].sbr_offset, reg[i].sbr_offset +
-			    reg[i].sbr_size, reg[i].sbr_size);
+		for (j = 0; j < i; j++)
+			resource_list_add(&fdi->fdi_rl, SYS_RES_MEMORY, j,
+			    reg[j].sbr_offset, reg[j].sbr_offset +
+			    reg[j].sbr_size, reg[j].sbr_size);
 		free(reg, M_OFWPROP);
 		if (central == 1) {
-			nintr = OF_getprop_alloc(child, "interrupts",
+			i = OF_getprop_alloc(child, "interrupts",
 			    sizeof(*intr), (void **)&intr);
-			if (nintr != -1) {
-				for (i = 0; i < nintr; i++) {
-					iv = INTMAP_VEC(sc->sc_ign, intr[i]);
+			if (i != -1) {
+				for (j = 0; j < i; j++) {
+					iv = INTMAP_VEC(sc->sc_ign, intr[j]);
 					resource_list_add(&fdi->fdi_rl,
-					    SYS_RES_IRQ, i, iv, iv, 1);
+					    SYS_RES_IRQ, j, iv, iv, 1);
 				}
 				free(intr, M_OFWPROP);
 			}
@@ -318,7 +329,7 @@ fhc_attach(device_t dev)
 		if (sc->sc_memres[i] != NULL)
 			bus_release_resource(dev, SYS_RES_MEMORY,
 			    rman_get_rid(sc->sc_memres[i]), sc->sc_memres[i]);
- 	return (error);
+	return (error);
 }
 
 static int
@@ -366,12 +377,23 @@ fhc_intr_disable(void *arg)
 }
 
 static void
-fhc_intr_eoi(void *arg)
+fhc_intr_assign(void *arg)
 {
 	struct intr_vector *iv = arg;
 	struct fhc_icarg *fica = iv->iv_icarg;
 
-	bus_write_4(fica->fica_memres, FHC_ICLR, 0x0);
+	bus_write_4(fica->fica_memres, FHC_IMAP, INTMAP_TID(
+	    bus_read_4(fica->fica_memres, FHC_IMAP), iv->iv_mid));
+	(void)bus_read_4(fica->fica_memres, FHC_IMAP);
+}
+
+static void
+fhc_intr_clear(void *arg)
+{
+	struct intr_vector *iv = arg;
+	struct fhc_icarg *fica = iv->iv_icarg;
+
+	bus_write_4(fica->fica_memres, FHC_ICLR, INTCLR_IDLE);
 	(void)bus_read_4(fica->fica_memres, FHC_ICLR);
 }
 
@@ -386,12 +408,12 @@ fhc_setup_intr(device_t bus, device_t child, struct resource *r, int flags,
 	/*
 	 * Make sure the vector is fully specified and we registered
 	 * our interrupt controller for it.
- 	 */
+	 */
 	vec = rman_get_start(r);
 	if (INTIGN(vec) != sc->sc_ign || intr_vectors[vec].iv_ic != &fhc_ic) {
 		device_printf(bus, "invalid interrupt vector 0x%lx\n", vec);
- 		return (EINVAL);
- 	}
+		return (EINVAL);
+	}
 	return (bus_generic_setup_intr(bus, child, r, flags, filt, func,
 	    arg, cookiep));
 }
@@ -453,6 +475,15 @@ fhc_alloc_resource(device_t bus, device_t child, int type, int *rid,
 		break;
 	}
 	return (res);
+}
+
+static int
+fhc_adjust_resource(device_t bus __unused, device_t child __unused,
+    int type __unused, struct resource *r __unused, u_long start __unused,
+    u_long end __unused)
+{
+
+	return (ENXIO);
 }
 
 static struct resource_list *

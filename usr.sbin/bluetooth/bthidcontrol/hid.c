@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: hid.c,v 1.3 2004/02/17 22:14:57 max Exp $
- * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/bthidcontrol/hid.c 163811 2006-10-31 00:26:58Z markus $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>

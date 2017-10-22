@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)proc.h	7.1 (Berkeley) 5/15/91
- * $FreeBSD: release/7.0.0/sys/i386/include/proc.h 169802 2007-05-20 22:03:57Z jeff $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PROC_H_
@@ -51,20 +51,39 @@ struct proc_ldt {
 struct mdthread {
 	int	md_spinlock_count;	/* (k) */
 	register_t md_saved_flags;	/* (k) */
+	register_t md_spurflt_addr;	/* (k) Spurious page fault address. */
 };
 
 struct mdproc {
 	struct proc_ldt *md_ldt;	/* (t) per-process ldt */
 };
 
+#define	KINFO_PROC_SIZE 768
+
 #ifdef	_KERNEL
+
+/* Get the current kernel thread stack usage. */
+#define GET_STACK_USAGE(total, used) do {				\
+	struct thread	*td = curthread;				\
+	(total) = td->td_kstack_pages * PAGE_SIZE;			\
+	(used) = (char *)td->td_kstack +				\
+	    td->td_kstack_pages * PAGE_SIZE -				\
+	    (char *)&td;						\
+} while (0)
 
 void 	set_user_ldt(struct mdproc *);
 struct 	proc_ldt *user_ldt_alloc(struct mdproc *, int);
 void 	user_ldt_free(struct thread *);
+void	user_ldt_deref(struct proc_ldt *pldt);
 
 extern struct mtx dt_lock;
 
+struct syscall_args {
+	u_int code;
+	struct sysent *callp;
+	register_t args[8];
+	int narg;
+};
 #endif	/* _KERNEL */
 
 #endif /* !_MACHINE_PROC_H_ */

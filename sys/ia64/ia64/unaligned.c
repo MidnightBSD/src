@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/ia64/unaligned.c 150663 2005-09-28 07:03:03Z rwatson $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -109,7 +109,7 @@ greg_ptr(mcontext_t *mc, int gr)
 static uint64_t
 rdreg(uint64_t *addr)
 {
-	if ((uintptr_t)addr < VM_MAX_ADDRESS)
+	if ((uintptr_t)addr < VM_MAXUSER_ADDRESS)
 		return (fuword(addr));
 	return (*addr);
 }
@@ -117,7 +117,7 @@ rdreg(uint64_t *addr)
 static void
 wrreg(uint64_t *addr, uint64_t val)
 {
-	if ((uintptr_t)addr < VM_MAX_ADDRESS)
+	if ((uintptr_t)addr < VM_MAXUSER_ADDRESS)
 		suword(addr, val);
 	else
 		*addr = val;

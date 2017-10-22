@@ -13,7 +13,7 @@ char *copyright =
  *  Copyright (c) 1994, 1995, William LeFebvre, Argonne National Laboratory
  *  Copyright (c) 1996, William LeFebvre, Group sys Consulting
  *
- * $FreeBSD: release/7.0.0/contrib/top/top.c 172506 2007-10-10 16:59:15Z cvs2svn $
+ * $FreeBSD$
  */
 
 /*
@@ -66,10 +66,10 @@ extern char *optarg;
 extern int overstrike;
 
 static int fmt_flags = 0;
+int pcpu_stats = No;
 
 /* signal handling routines */
 sigret_t leave();
-sigret_t onalrm();
 sigret_t tstop();
 #ifdef SIGWINCH
 sigret_t winch();
@@ -195,9 +195,9 @@ char *argv[];
     fd_set readfds;
 
 #ifdef ORDER
-    static char command_chars[] = "\f qh?en#sdkriIutHmSCajo";
+    static char command_chars[] = "\f qh?en#sdkriIutHmSCajzPo";
 #else
-    static char command_chars[] = "\f qh?en#sdkriIutHmSCaj";
+    static char command_chars[] = "\f qh?en#sdkriIutHmSCajzP";
 #endif
 /* these defines enumerate the "strchr"s of the commands in command_chars */
 #define CMD_redraw	0
@@ -223,8 +223,10 @@ char *argv[];
 #define	CMD_wcputog	19
 #define	CMD_showargs	20
 #define	CMD_jidtog	21
+#define CMD_kidletog	22
+#define CMD_pcputog	23
 #ifdef ORDER
-#define CMD_order       22
+#define CMD_order       24
 #endif
 
     /* set the buffer for stdout */
@@ -257,6 +259,7 @@ char *argv[];
     ps.thread  = No;
     ps.wcpu    = 1;
     ps.jail    = No;
+    ps.kidle   = Yes;
     ps.command = NULL;
 
     /* get preset options from the environment */
@@ -282,7 +285,7 @@ char *argv[];
 	    optind = 1;
 	}
 
-	while ((i = getopt(ac, av, "CSIHabijnquvs:d:U:m:o:t")) != EOF)
+	while ((i = getopt(ac, av, "CSIHPabijnquvzs:d:U:m:o:t")) != EOF)
 	{
 	    switch(i)
 	    {
@@ -407,10 +410,18 @@ char *argv[];
 		ps.jail = !ps.jail;
 		break;
 
+	      case 'P':
+		pcpu_stats = !pcpu_stats;
+		break;
+
+	      case 'z':
+		ps.kidle = !ps.kidle;
+		break;
+
 	      default:
 		fprintf(stderr,
 "Top version %s\n"
-"Usage: %s [-abCHIijnqStuv] [-d count] [-m io | cpu] [-o field] [-s time]\n"
+"Usage: %s [-abCHIijnPqStuvz] [-d count] [-m io | cpu] [-o field] [-s time]\n"
 "       [-U username] [number]\n",
 			version_string(), myname);
 		exit(1);
@@ -450,7 +461,7 @@ char *argv[];
     }
 
     /* initialize the kernel memory interface */
-    if (machine_init(&statics) == -1)
+    if (machine_init(&statics, do_unames) == -1)
     {
 	exit(1);
     }
@@ -711,12 +722,11 @@ restart:
 	    no_command = Yes;
 	    if (!interactive)
 	    {
-		/* set up alarm */
-		(void) signal(SIGALRM, onalrm);
-		(void) alarm((unsigned)delay);
-    
-		/* wait for the rest of it .... */
-		pause();
+		sleep(delay);
+		if (leaveflag) {
+		    end_screen();
+		    exit(0);
+		}
 	    }
 	    else while (no_command)
 	    {
@@ -1008,7 +1018,7 @@ restart:
 			    case CMD_thrtog:
 				ps.thread = !ps.thread;
 				new_message(MT_standout | MT_delayed,
-				    "Displaying threads %s",
+				    " Displaying threads %s",
 				    ps.thread ? "separately" : "as a count");
 				header_text = format_header(uname_field);
 				reset_display();
@@ -1017,8 +1027,8 @@ restart:
 			    case CMD_wcputog:
 				ps.wcpu = !ps.wcpu;
 				new_message(MT_standout | MT_delayed,
-				    "Displaying %sCPU",
-				    ps.wcpu ? "W" : "");
+				    " Displaying %s CPU",
+				    ps.wcpu ? "weighted" : "raw");
 				header_text = format_header(uname_field);
 				reset_display();
 				putchar('\r');
@@ -1070,7 +1080,23 @@ restart:
 				reset_display();
 				putchar('\r');
 				break;
-	    
+			    case CMD_kidletog:
+				ps.kidle = !ps.kidle;
+				new_message(MT_standout | MT_delayed,
+				    " %sisplaying system idle process.",
+				    ps.kidle ? "D" : "Not d");
+				putchar('\r');
+				break;
+			    case CMD_pcputog:
+				pcpu_stats = !pcpu_stats;
+				new_message(MT_standout | MT_delayed,
+				    " Displaying %sCPU statistics.",
+				    pcpu_stats ? "per-" : "global ");
+				toggle_pcpustats();
+				max_topn = display_updatecpus(&statics);
+				reset_display();
+				putchar('\r');
+				break;
 			    default:
 				new_message(MT_standout, " BAD CASE IN SWITCH!");
 				putchar('\r');
@@ -1146,11 +1172,3 @@ int status;
     exit(status);
     /*NOTREACHED*/
 }
-
-sigret_t onalrm()	/* SIGALRM handler */
-
-{
-    /* this is only used in batch mode to break out of the pause() */
-    /* return; */
-}
-

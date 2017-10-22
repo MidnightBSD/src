@@ -31,15 +31,14 @@
 static char sccsid[] = "@(#)strdup.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/strdup.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
 char *
-strdup(str)
-	const char *str;
+strdup(const char *str)
 {
 	size_t len;
 	char *copy;

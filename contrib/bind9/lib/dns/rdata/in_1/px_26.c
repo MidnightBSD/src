@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: px_26.c,v 1.39.18.2 2005/04/29 00:16:43 marka Exp $ */
+/* $Id: px_26.c,v 1.45 2009/12/04 22:06:37 tbox Exp $ */
 
 /* Reviewed: Mon Mar 20 10:44:27 PST 2000 */
 
@@ -115,7 +115,7 @@ totext_in_px(ARGS_TOTEXT) {
 
 static inline isc_result_t
 fromwire_in_px(ARGS_FROMWIRE) {
-        dns_name_t name;
+	dns_name_t name;
 	isc_region_t sregion;
 
 	REQUIRE(type == 26);
@@ -126,7 +126,7 @@ fromwire_in_px(ARGS_FROMWIRE) {
 
 	dns_decompress_setmethods(dctx, DNS_COMPRESS_NONE);
 
-        dns_name_init(&name, NULL);
+	dns_name_init(&name, NULL);
 
 	/*
 	 * Preference.
@@ -369,6 +369,11 @@ checknames_in_px(ARGS_CHECKNAMES) {
 	UNUSED(bad);
 
 	return (ISC_TRUE);
+}
+
+static inline int
+casecompare_in_px(ARGS_COMPARE) {
+	return (compare_in_px(rdata1, rdata2));
 }
 
 #endif	/* RDATA_IN_1_PX_26_C */

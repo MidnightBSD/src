@@ -28,25 +28,25 @@
 # SUCH DAMAGE.
 #
 #	@(#)newvers.sh	8.1 (Berkeley) 4/20/94
-# $FreeBSD: release/7.0.0/sys/conf/newvers.sh 176505 2008-02-24 05:45:16Z kensmith $
+# $FreeBSD$
 
 TYPE="FreeBSD"
-REVISION="7.0"
+REVISION="9.1"
 BRANCH="RELEASE"
 if [ "X${BRANCH_OVERRIDE}" != "X" ]; then
 	BRANCH=${BRANCH_OVERRIDE}
 fi
 RELEASE="${REVISION}-${BRANCH}"
 VERSION="${TYPE} ${RELEASE}"
+SYSDIR=$(dirname $0)/..
 
 if [ "X${PARAMFILE}" != "X" ]; then
 	RELDATE=$(awk '/__FreeBSD_version.*propagated to newvers/ {print $3}' \
 		${PARAMFILE})
 else
 	RELDATE=$(awk '/__FreeBSD_version.*propagated to newvers/ {print $3}' \
-		$(dirname $0)/../sys/param.h)
+		${SYSDIR}/sys/param.h)
 fi
-
 
 b=share/examples/etc/bsd-style-copyright
 year=`date '+%Y'`
@@ -86,10 +86,57 @@ fi
 touch version
 v=`cat version` u=${USER:-root} d=`pwd` h=${HOSTNAME:-`hostname`} t=`date`
 i=`${MAKE:-make} -V KERN_IDENT`
+
+for dir in /bin /usr/bin /usr/local/bin; do
+	if [ -x "${dir}/svnversion" ] ; then
+		svnversion=${dir}/svnversion
+		break
+	fi
+done
+if [ -d "${SYSDIR}/../.git" ] ; then
+	for dir in /bin /usr/bin /usr/local/bin; do
+		if [ -x "${dir}/git" ] ; then
+			git_cmd="${dir}/git --git-dir=${SYSDIR}/../.git"
+			break
+		fi
+	done
+fi
+
+if [ -n "$svnversion" ] ; then
+	echo "$svnversion"
+	svn=`cd ${SYSDIR} && $svnversion`
+	case "$svn" in
+	[0-9]*)	svn=" r${svn}" ;;
+	*)	unset svn ;;
+	esac
+fi
+
+if [ -n "$git_cmd" ] ; then
+	git=`$git_cmd rev-parse --verify --short HEAD 2>/dev/null`
+	svn=`$git_cmd svn find-rev $git 2>/dev/null`
+	if [ -n "$svn" ] ; then
+		svn=" r${svn}"
+		git="=${git}"
+	else
+		svn=`$git_cmd log | fgrep 'git-svn-id:' | head -1 | \
+		     sed -n 's/^.*@\([0-9][0-9]*\).*$/\1/p'`
+		if [ -n $svn ] ; then
+			svn=" r${svn}"
+			git="+${git}"
+		else
+			git=" ${git}"
+		fi
+	fi
+	if $git_cmd --work-tree=${SYSDIR}/.. diff-index \
+	    --name-only HEAD | read dummy; then
+		git="${git}-dirty"
+	fi
+fi
+
 cat << EOF > vers.c
 $COPYRIGHT
-#define SCCSSTR "@(#)${VERSION} #${v}: ${t}"
-#define VERSTR "${VERSION} #${v}: ${t}\\n    ${u}@${h}:${d}\\n"
+#define SCCSSTR "@(#)${VERSION} #${v}${svn}${git}: ${t}"
+#define VERSTR "${VERSION} #${v}${svn}${git}: ${t}\\n    ${u}@${h}:${d}\\n"
 #define RELSTR "${RELEASE}"
 
 char sccs[sizeof(SCCSSTR) > 128 ? sizeof(SCCSSTR) : 128] = SCCSSTR;
@@ -100,4 +147,4 @@ int osreldate = ${RELDATE};
 char kern_ident[] = "${i}";
 EOF
 
-echo `expr ${v} + 1` > version
+echo $((v + 1)) > version

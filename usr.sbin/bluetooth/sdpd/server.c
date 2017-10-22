@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: server.c,v 1.6 2004/01/13 01:54:39 max Exp $
- * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/sdpd/server.c 166915 2007-02-23 19:37:47Z emax $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -73,7 +73,7 @@ server_init(server_p srv, char const *control)
 	assert(srv != NULL);
 	assert(control != NULL);
 
-	memset(srv, 0, sizeof(srv));
+	memset(srv, 0, sizeof(*srv));
 
 	/* Open control socket */
 	if (unlink(control) < 0 && errno != ENOENT) {

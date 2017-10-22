@@ -15,10 +15,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *      This product includes software developed by the University of
- *      California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -37,9 +33,8 @@
  *
  *	from: @(#)vmparam.h     5.9 (Berkeley) 5/12/91
  *	from: FreeBSD: src/sys/i386/include/vmparam.h,v 1.33 2000/03/30
- * $FreeBSD: release/7.0.0/sys/sparc64/include/vmparam.h 172317 2007-09-25 06:25:06Z alc $
+ * $FreeBSD$
  */
-
 
 #ifndef	_MACHINE_VMPARAM_H_
 #define	_MACHINE_VMPARAM_H_
@@ -67,17 +62,6 @@
 #endif
 
 /*
- * The time for a process to be blocked before being very swappable.
- * This is a number of seconds which the system takes as being a non-trivial
- * amount of real time.  You probably shouldn't change this;
- * it is used in subtle ways (fractions and multiples of it are, that is, like
- * half of a ``long time'', almost a long time, etc.)
- * It is related to human patience and other factors which don't really
- * change over time.
- */
-#define	MAXSLP			20
-
-/*
  * The physical address space is sparsely populated.
  */
 #define	VM_PHYSSEG_SPARSE
@@ -86,7 +70,7 @@
  * The number of PHYSSEG entries must be one greater than the number
  * of phys_avail entries because the phys_avail entry that spans the
  * largest physical address that is accessible by ISA DMA is split
- * into two PHYSSEG entries. 
+ * into two PHYSSEG entries.
  */
 #define	VM_PHYSSEG_MAX		64
 
@@ -122,6 +106,27 @@
 #define	VM_NFREEORDER		12
 
 /*
+ * Only one memory domain.
+ */
+#ifndef VM_NDOMAIN
+#define	VM_NDOMAIN		1
+#endif
+
+/*
+ * Enable superpage reservations: 1 level.
+ */
+#ifndef	VM_NRESERVLEVEL
+#define	VM_NRESERVLEVEL		1
+#endif
+
+/*
+ * Level 0 reservations consist of 512 pages.
+ */
+#ifndef	VM_LEVEL_0_ORDER
+#define	VM_LEVEL_0_ORDER	9
+#endif
+
+/*
  * Address space layout.
  *
  * UltraSPARC I and II implement a 44 bit virtual address space.  The address
@@ -131,13 +136,13 @@
  * 43 bits of user address space is considered to be "enough", so we ignore it.
  *
  * Upper region:	0xffffffffffffffff
- * 			0xfffff80000000000
- * 
+ *			0xfffff80000000000
+ *
  * Hole:		0xfffff7ffffffffff
- * 			0x0000080000000000
+ *			0x0000080000000000
  *
  * Lower region:	0x000007ffffffffff
- * 			0x0000000000000000
+ *			0x0000000000000000
  *
  * In general we ignore the upper region, and use the lower region as mappable
  * space.
@@ -187,7 +192,7 @@
 #define	VM_MAX_KERNEL_ADDRESS	(vm_max_kernel_address)
 
 #define	VM_MIN_PROM_ADDRESS	(0x00000000f0000000UL)
-#define	VM_MAX_PROM_ADDRESS	(0x00000000ffffe000UL)
+#define	VM_MAX_PROM_ADDRESS	(0x00000000ffffffffUL)
 
 #define	VM_MIN_USER_ADDRESS	(0x0000000000000000UL)
 #define	VM_MAX_USER_ADDRESS	(0x000007fe00000000UL)
@@ -196,6 +201,7 @@
 #define	VM_MAXUSER_ADDRESS	(VM_MAX_USER_ADDRESS)
 
 #define	KERNBASE		(VM_MIN_KERNEL_ADDRESS)
+#define	PROMBASE		(VM_MIN_PROM_ADDRESS)
 #define	USRSTACK		(VM_MAX_USER_ADDRESS)
 
 /*
@@ -212,7 +218,15 @@
  * is the total KVA space allocated for kmem_map.
  */
 #ifndef VM_KMEM_SIZE_SCALE
-#define	VM_KMEM_SIZE_SCALE	(3)
+#define	VM_KMEM_SIZE_SCALE	(tsb_kernel_ldd_phys == 0 ? 3 : 2)
+#endif
+
+/*
+ * Ceiling on amount of kmem_map kva space.
+ */
+#ifndef VM_KMEM_SIZE_MAX
+#define	VM_KMEM_SIZE_MAX	((VM_MAX_KERNEL_ADDRESS - \
+    VM_MIN_KERNEL_ADDRESS + 1) * 3 / 5)
 #endif
 
 /*
@@ -224,6 +238,14 @@
 
 #define	UMA_MD_SMALL_ALLOC
 
+extern u_int tsb_kernel_ldd_phys;
 extern vm_offset_t vm_max_kernel_address;
+
+/*
+ * Older sparc64 machines have a virtually indexed L1 data cache of 16KB.
+ * Consequently, mapping the same physical page multiple times may have
+ * caching disabled.
+ */
+#define	ZERO_REGION_SIZE	PAGE_SIZE
 
 #endif /* !_MACHINE_VMPARAM_H_ */

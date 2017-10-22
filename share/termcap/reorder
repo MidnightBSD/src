@@ -1,4 +1,4 @@
-" $FreeBSD: release/7.0.0/share/termcap/reorder 103096 2002-09-08 12:47:22Z ache $
+" $FreeBSD$
 /# << EOH -/k a
 /^adm12|/;.,/^[^	]/-m'a
 /^pcplot/;.,/^[^	]/-m'a

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/mac_seeotheruids/Makefile 101172 2002-08-01 17:41:27Z rwatson $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../security/mac_seeotheruids
 

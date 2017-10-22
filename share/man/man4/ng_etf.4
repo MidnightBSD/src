@@ -24,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man4/ng_etf.4 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
 .Dd May 16, 2006
 .Dt NG_ETF 4
@@ -135,7 +135,6 @@ nghook -a etf: newproto &
 # Filter two random ethertypes to that hook.
 ngctl 'msg etf: setfilter { matchhook="newproto" ethertype=${MATCH1} }
 ngctl 'msg etf: setfilter { matchhook="newproto" ethertype=${MATCH2} }
-DONE
 .Ed
 .Sh SHUTDOWN
 This node shuts down upon receipt of a

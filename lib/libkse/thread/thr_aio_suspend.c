@@ -26,15 +26,17 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_aio_suspend.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
 #include <aio.h>
 #include <pthread.h>
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(_aio_suspend);
-LT10_COMPAT_DEFAULT(aio_suspend);
+
+int
+_aio_suspend(const struct aiocb * const iocbs[], int niocb, const struct
+    timespec *timeout);
 
 __weak_reference(_aio_suspend, aio_suspend);
 

@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: lan.c,v 1.5 2004/01/13 01:54:39 max Exp $
- * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/sdpd/lan.c 124758 2004-01-20 20:48:26Z emax $
+ * $FreeBSD$
  */
 
 #include <arpa/inet.h>
@@ -102,13 +102,8 @@ lan_profile_create_service_availability(
 	provider_p		provider = (provider_p) data;
 	sdp_lan_profile_p	lan = (sdp_lan_profile_p) provider->data;
 
-	if (buf + 2 > eob)
-		return (-1);
-
-	SDP_PUT8(SDP_DATA_UINT8, buf);
-	SDP_PUT8(lan->load_factor, buf);
-
-	return (2);
+	return (common_profile_create_service_availability(buf, eob,
+			&lan->load_factor, 1));
 }
 
 static int32_t

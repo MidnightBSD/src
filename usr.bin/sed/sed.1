@@ -29,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)sed.1	8.2 (Berkeley) 12/30/93
-.\" $FreeBSD: release/7.0.0/usr.bin/sed/sed.1 171206 2007-07-04 16:42:41Z ssouhlal $
+.\" $FreeBSD$
 .\"
-.Dd April 21, 2007
+.Dd May 24, 2009
 .Dt SED 1
 .Os
 .Sh NAME
@@ -39,11 +39,11 @@
 .Nd stream editor
 .Sh SYNOPSIS
 .Nm
-.Op Fl Ealn
+.Op Fl Ealnr
 .Ar command
 .Op Ar
 .Nm
-.Op Fl Ealn
+.Op Fl Ealnr
 .Op Fl e Ar command
 .Op Fl f Ar command_file
 .Op Fl I Ar extension
@@ -144,6 +144,10 @@ all of the commands have been applied to it.
 The
 .Fl n
 option suppresses this behavior.
+.It Fl r
+Same as
+.Fl E
+for compatibility with GNU sed.
 .El
 .Pp
 The form of a
@@ -191,7 +195,7 @@ option was specified);
 .It
 a context address
 that consists of a regular expression preceded and followed by a
-delimiter. The closing delimiter can also optionally be followed by the 
+delimiter. The closing delimiter can also optionally be followed by the
 .Dq I
 character, to indicate that the regular expression is to be matched
 in a case-insensitive way.
@@ -211,6 +215,9 @@ that matches the second address.
 If the second address is a number
 less than or equal to the line number first selected, only that
 line is selected.
+The number in the second address may be prefixed with a
+.Pq Dq \&+
+to specify the number of lines to match after the first pattern.
 In the case when the second address is a context
 address,
 .Nm
@@ -243,10 +250,17 @@ has the following two additions to regular expressions:
 In a context address, any character other than a backslash
 .Pq Dq \e
 or newline character may be used to delimit the regular expression.
+The opening delimiter needs to be preceded by a backslash
+unless it is a slash.
+For example, the context address
+.Li \exabcx
+is equivalent to
+.Li /abc/ .
 Also, putting a backslash character before the delimiting character
-causes the character to be treated literally.
-For example, in the context address \exabc\exdefx, the RE delimiter
-is an
+within the regular expression causes the character to be treated literally.
+For example, in the context address
+.Li \exabc\exdefx ,
+the RE delimiter is an
 .Dq x
 and the second
 .Dq x
@@ -329,7 +343,7 @@ can be preceded by white space and can be followed by white space.
 The function can be preceded by white space.
 The terminating
 .Dq }
-must be preceded by a newline or optional white space.
+must be preceded by a newline, and may also be preceded by white space.
 .Pp
 .Bl -tag -width "XXXXXX" -compact
 .It [2addr] function-list
@@ -587,7 +601,10 @@ The
 .Fl E , I , a
 and
 .Fl i
-options, as well as the
+options, the prefixing
+.Dq \&+
+in the second member of an address range,
+as well as the
 .Dq I
 flag to the address regular expression and substitution command are
 non-standard

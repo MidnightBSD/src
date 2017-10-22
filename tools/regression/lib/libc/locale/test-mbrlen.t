@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/7.0.0/tools/regression/lib/libc/locale/test-mbrlen.t 137587 2004-11-11 19:47:55Z nik $
+# $FreeBSD$
 
 cd `dirname $0`
 

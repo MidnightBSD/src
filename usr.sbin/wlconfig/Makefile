@@ -1,7 +1,9 @@
-# $FreeBSD: release/7.0.0/usr.sbin/wlconfig/Makefile 124787 2004-01-21 14:01:29Z ru $
+# $FreeBSD$
 
 PROG=	wlconfig
 MAN=	wlconfig.8
 MANSUBDIR= /i386
+
+WARNS?=	2
 
 .include <bsd.prog.mk>

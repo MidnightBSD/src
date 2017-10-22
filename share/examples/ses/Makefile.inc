@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/examples/ses/Makefile.inc 153291 2005-12-10 12:09:54Z ru $
+# $FreeBSD$
 #
 # Copyright (c) 2000 by Matthew Jacob
 # All rights reserved.

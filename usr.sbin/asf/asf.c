@@ -26,7 +26,7 @@
 /* $Id: asf.c,v 1.4 2003/05/04 02:55:20 grog Exp grog $ */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/asf/asf.c 165372 2006-12-20 06:20:04Z yar $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/queue.h>

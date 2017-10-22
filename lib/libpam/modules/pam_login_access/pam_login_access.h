@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libpam/modules/pam_login_access/pam_login_access.h 92297 2002-03-14 23:27:59Z des $
+ * $FreeBSD$
  */
 
 extern int login_access(const char *, const char *);

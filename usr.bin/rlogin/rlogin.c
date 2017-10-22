@@ -51,7 +51,7 @@ static const char sccsid[] = "@(#)rlogin.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/rlogin/rlogin.c 152397 2005-11-13 21:03:56Z dwmalone $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rlogin - remote login
@@ -72,7 +72,6 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.bin/rlogin/rlogin.c 152397 2005-11-13 21:0
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <libutil.h>
 #include <netdb.h>
 #include <paths.h>
 #include <pwd.h>
@@ -485,18 +484,18 @@ sigwinch(int signo __unused)
 void
 sendwindow(void)
 {
-	struct winsize *wp;
+	struct winsize ws;
 	char obuf[4 + sizeof (struct winsize)];
 
-	wp = (struct winsize *)(obuf+4);
 	obuf[0] = 0377;
 	obuf[1] = 0377;
 	obuf[2] = 's';
 	obuf[3] = 's';
-	wp->ws_row = htons(winsize.ws_row);
-	wp->ws_col = htons(winsize.ws_col);
-	wp->ws_xpixel = htons(winsize.ws_xpixel);
-	wp->ws_ypixel = htons(winsize.ws_ypixel);
+	ws.ws_row = htons(winsize.ws_row);
+	ws.ws_col = htons(winsize.ws_col);
+	ws.ws_xpixel = htons(winsize.ws_xpixel);
+	ws.ws_ypixel = htons(winsize.ws_ypixel);
+	bcopy(&ws, obuf + 4, sizeof(ws));
 
 	(void)write(rem, obuf, sizeof(obuf));
 }

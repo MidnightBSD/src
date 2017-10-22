@@ -2,7 +2,7 @@
 #
 # Common code used run regression tests for usr.bin/make.
 #
-# $FreeBSD: release/7.0.0/tools/regression/usr.bin/make/common.sh 146855 2005-06-01 11:25:38Z harti $
+# $FreeBSD$
 
 #
 # Output a message and exit with an error.
@@ -233,6 +233,12 @@ reset_test()
 #
 eval_clean()
 {
+	#
+	# If you have special cleaning needs, provide a 'cleanup' shell script.
+	#
+	if [ -n "${TEST_CLEANUP}" ] ; then
+		. ${SRC_DIR}/cleanup
+	fi
 	rm -rf ${WORK_DIR}
 	rm -rf ${OUTPUT_DIR}
 }

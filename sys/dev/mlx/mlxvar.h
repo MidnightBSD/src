@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/7.0.0/sys/dev/mlx/mlxvar.h 130585 2004-06-16 09:47:26Z phk $
+ *	$FreeBSD$
  */
 
 /*
@@ -47,6 +47,7 @@
  * making that fit cleanly without crossing page boundaries requires rounding up
  * to the next power of two.
  */
+#define MLX_MAXPHYS	(128 * 1024)
 #define MLX_NSEG	64
 
 #define MLX_NSLOTS	256		/* max number of command slots */

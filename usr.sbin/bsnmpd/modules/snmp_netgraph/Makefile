@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/bsnmpd/modules/snmp_netgraph/Makefile 152269 2005-11-10 10:14:57Z harti $
+# $FreeBSD$
 #
 # Author: Harti Brandt <harti@freebsd.org>
 

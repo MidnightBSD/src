@@ -58,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/aha/aha.c 170872 2007-06-17 05:55:54Z scottl $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -121,7 +121,7 @@ ahanextoutbox(struct aha_softc *aha)
 #define aha_a24tou(s3) \
 	(((s3)[0] << 16) | ((s3)[1] << 8) | (s3)[2])
 
-/* CCB Mangement functions */
+/* CCB Management functions */
 static __inline uint32_t		ahaccbvtop(struct aha_softc *aha,
 						  struct aha_ccb *accb);
 static __inline struct aha_ccb*		ahaccbptov(struct aha_softc *aha,

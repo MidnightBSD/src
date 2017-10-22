@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/sk/Makefile 158061 2006-04-27 00:14:02Z yongari $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/sk
 

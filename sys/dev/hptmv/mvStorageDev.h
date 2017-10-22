@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/hptmv/mvStorageDev.h 149871 2005-09-07 23:33:26Z scottl $
+ * $FreeBSD$
  */
 #ifndef __INCmvStorageDevh
 #define __INCmvStorageDevh
@@ -206,6 +206,9 @@ MV_BOOLEAN HPTLIBAPI mvStorageDevATAFlushWriteCache(MV_SATA_ADAPTER *pAdapter,
 
 MV_BOOLEAN HPTLIBAPI mvStorageDevATASoftResetDevice(MV_SATA_ADAPTER *pAdapter,
 										  MV_U8 channelIndex);
+
+MV_BOOLEAN HPTLIBAPI mvStorageDevWaitStat(MV_SATA_CHANNEL *pSataChannel,
+								MV_U8 good, MV_U8 bad, MV_U32 loops, MV_U32 delay);
 
 MV_BOOLEAN HPTLIBAPI mvReadWrite(MV_SATA_CHANNEL *pSataChannel, LBA_T Lba, UCHAR Cmd, void *tmpBuffer);
 

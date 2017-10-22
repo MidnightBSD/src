@@ -23,7 +23,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/sio/sio_isa.c 146734 2005-05-29 04:42:30Z nyan $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_sio.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -167,4 +169,6 @@ sio_isa_attach(dev)
 }
 
 DRIVER_MODULE(sio, isa, sio_isa_driver, sio_devclass, 0, 0);
+#ifndef COM_NO_ACPI
 DRIVER_MODULE(sio, acpi, sio_isa_driver, sio_devclass, 0, 0);
+#endif

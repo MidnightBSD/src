@@ -32,7 +32,7 @@
  *
  * $Id: //depot/aic7xxx/freebsd/dev/aic7xxx/aic_osm_lib.h#5 $
  *
- * $FreeBSD: release/7.0.0/sys/dev/aic7xxx/aic_osm_lib.h 168807 2007-04-17 06:26:25Z scottl $
+ * $FreeBSD$
  */
 
 /******************************** OS Includes *********************************/
@@ -126,8 +126,13 @@ aic_wakeup_recovery_thread(struct aic_softc *aic)
 
 /****************************** Kernel Threads ********************************/
 #if __FreeBSD_version > 500005
+#if __FreeBSD_version > 800001
+#define	aic_kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg) \
+	kproc_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg)
+#else
 #define	aic_kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg) \
 	kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg)
+#endif
 #else
 #define	aic_kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg) \
 	kthread_create(func, farg, proc_ptr, fmtstr, arg)

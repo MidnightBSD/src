@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/tr/cset.c 132142 2004-07-14 08:33:14Z tjr $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <stdbool.h>

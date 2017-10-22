@@ -1,8 +1,14 @@
-# $FreeBSD: release/7.0.0/sys/modules/wlan_tkip/Makefile 138573 2004-12-08 17:38:38Z sam $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../net80211
 
 KMOD=	wlan_tkip
 SRCS=	ieee80211_crypto_tkip.c
+SRCS+=	opt_wlan.h
+
+.if !defined(KERNBUILDDIR)
+opt_wlan.h:
+	echo "#define IEEE80211_DEBUG 1" > ${.TARGET}
+.endif
 
 .include <bsd.kmod.mk>

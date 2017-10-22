@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/cksum/crc32.c 112212 2003-03-13 23:32:28Z robert $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 

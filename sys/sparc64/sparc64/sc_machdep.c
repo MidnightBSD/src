@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/sparc64/sparc64/sc_machdep.c 167308 2007-03-07 21:13:51Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -57,7 +57,7 @@ static device_method_t sc_methods[] = {
 	DEVMETHOD(device_probe,		sc_probe),
 	DEVMETHOD(device_attach,	sc_attach),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t sc_driver = {

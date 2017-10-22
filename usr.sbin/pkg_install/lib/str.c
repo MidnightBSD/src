@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/str.c 115325 2003-05-26 17:12:22Z lioux $");
+__FBSDID("$FreeBSD$");
 
 #include "lib.h"
 

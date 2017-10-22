@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2005,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2007,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -42,7 +42,7 @@
 #include <tic.h>
 #include <term_entry.h>
 
-MODULE_ID("$Id: read_entry.c,v 1.99 2006/08/19 15:58:50 tom Exp $")
+MODULE_ID("$Id: read_entry.c,v 1.102 2008/08/03 19:33:04 tom Exp $")
 
 #define TYPE_CALLOC(type,elts) typeCalloc(type, (unsigned)(elts))
 
@@ -73,7 +73,7 @@ convert_strings(char *buf, char **Strings, int count, int size, char *table)
 	    Strings[i] = ABSENT_STRING;
 	} else if (IS_NEG2(buf + 2 * i)) {
 	    Strings[i] = CANCELLED_STRING;
-	} else if (LOW_MSB(buf + 2 * i) > size) {
+	} else if ((int) LOW_MSB(buf + 2 * i) > size) {
 	    Strings[i] = ABSENT_STRING;
 	} else {
 	    Strings[i] = (LOW_MSB(buf + 2 * i) + table);
@@ -313,6 +313,8 @@ _nc_read_termtype(TERMTYPE *ptr, char *buffer, int limit)
 	}
 
 	if (need) {
+	    if (ext_str_count >= (MAX_ENTRY_SIZE * 2))
+		  return (TGETENT_NO);
 	    if ((ptr->ext_Names = TYPE_CALLOC(char *, need)) == 0)
 		  return (TGETENT_NO);
 	    TR(TRACE_DATABASE,
@@ -409,7 +411,7 @@ _nc_read_tic_entry(char *filename,
 	unsigned need = 4 + strlen(path) + strlen(name);
 
 	if (need <= limit) {
-	    (void) sprintf(filename, "%s/%c/%s", path, *name, name);
+	    (void) sprintf(filename, "%s/" LEAF_FMT "/%s", path, *name, name);
 	    result = _nc_read_file_entry(filename, tp);
 	}
     }

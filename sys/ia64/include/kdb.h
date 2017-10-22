@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/include/kdb.h 170473 2007-06-09 21:55:17Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_KDB_H_
@@ -33,7 +33,7 @@
 #include <machine/frame.h>
 #include <machine/ia64_cpu.h>
 
-#define	KDB_STOPPEDPCB(pc)	(&(pc)->pc_pcb)
+#define	KDB_STOPPEDPCB(pc)	(&(pc)->pc_md.pcb)
 
 static __inline void
 kdb_cpu_clear_singlestep(void)

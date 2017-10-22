@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.bin/make/globals.h 167330 2007-03-08 09:16:11Z fjoe $
+ * $FreeBSD$
  */
 
 #ifndef globals_h_1c1edb96
@@ -44,9 +44,6 @@
 /*
  * Global Variables
  */
-
-#include <time.h>
-#include <stdint.h>
 
 #include "lst.h"
 #include "util.h"
@@ -70,14 +67,18 @@ extern struct Path parseIncPath;
 extern struct Path sysIncPath;
 
 extern int	jobLimit;	/* -j argument: maximum number of jobs */
+extern int	makeErrors;	/* Number of targets not remade due to errors */
 extern Boolean	jobsRunning;	/* True if jobs are running */
 extern Boolean	compatMake;	/* True if we are make compatible */
 extern Boolean	ignoreErrors;	/* True if should ignore all errors */
 extern Boolean	beSilent;	/* True if should print no commands */
 extern Boolean	beVerbose;	/* True if should print extra cruft */
+extern Boolean	beQuiet;	/* True if want quiet headers with -j */
 extern Boolean	noExecute;	/* True if should execute nothing */
 extern Boolean	allPrecious;	/* True if every target is precious */
 extern Boolean	is_posix;	/* .POSIX target seen */
+extern Boolean	mfAutoDeps;	/* .MAKEFILEDEPS target seen */
+extern Boolean	remakingMakefiles; /* True if remaking makefiles is in progress */
 
 /* True if should continue on unaffected portions of the graph
  * when have an error in one portion */

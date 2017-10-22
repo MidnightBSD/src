@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/7.0.0/sys/sys/agpio.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ *	$FreeBSD$
  */
 
 #ifndef _SYS_AGPIO_H_
@@ -88,6 +88,7 @@
 #define AGPIOC_DEALLOCATE _IOW (AGPIOC_BASE, 7, int)
 #define AGPIOC_BIND       _IOW (AGPIOC_BASE, 8, agp_bind)
 #define AGPIOC_UNBIND     _IOW (AGPIOC_BASE, 9, agp_unbind)
+#define AGPIOC_CHIPSET_FLUSH _IO (AGPIOC_BASE, 10)
 
 typedef struct _agp_version {
 	u_int16_t major;

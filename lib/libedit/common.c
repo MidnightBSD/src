@@ -36,7 +36,7 @@
 static char sccsid[] = "@(#)common.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libedit/common.c 167457 2007-03-11 18:30:22Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 /*
  * common.c: Common Editor functions
@@ -163,15 +163,12 @@ ed_delete_next_char(EditLine *el, int c)
 				return (CC_ERROR);
 #endif
 			}
-		} else {
-			if (el->el_line.cursor != el->el_line.buffer)
-				el->el_line.cursor--;
-			else
-				return (CC_ERROR);
-		}
+		} else
+			return (CC_ERROR);
 	}
 	c_delafter(el, el->el_state.argument);	/* delete after dot */
-	if (el->el_line.cursor >= el->el_line.lastchar &&
+	if (el->el_map.type == MAP_VI &&
+	    el->el_line.cursor >= el->el_line.lastchar &&
 	    el->el_line.cursor > el->el_line.buffer)
 			/* bounds check */
 		el->el_line.cursor = el->el_line.lastchar - 1;
@@ -908,7 +905,7 @@ ed_command(EditLine *el, int c __unused)
 	int tmplen;
 
 	tmplen = c_gets(el, tmpbuf, "\n: ");
-	term__putc('\n');
+	term__putc(el, '\n');
 
 	if (tmplen < 0 || (tmpbuf[tmplen] = 0, parse_line(el, tmpbuf)) == -1)
 		term_beep(el);

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/cvs/contrib/Makefile 146929 2005-06-03 15:08:30Z imp $
+# $FreeBSD$
 
 .include "../Makefile.inc"
 
@@ -19,13 +19,17 @@ CLEANFILES+=	$(SCRIPTS)
 
 .SUFFIXES: .sh .pl .in
 
+# Prevent Makefile.in from overwriting Makefile through the suffix rules.
+Makefile:
+	@:
+
 .sh:
-	cp $< $@
+	cp -f ${.IMPSRC} ${.TARGET}
 
 .pl:
-	sed -e 's,xPERL_PATHx,$(PERLPATH),' $< > $@
+	sed -e 's,xPERL_PATHx,$(PERLPATH),' ${.IMPSRC} > ${.TARGET}
 
 .in:
-	sed -e 's,@CSH@,/bin/csh,' -e 's,@PERL@,$(PERLPATH),' $< > $@
+	sed -e 's,@CSH@,/bin/csh,' -e 's,@PERL@,$(PERLPATH),' ${.IMPSRC} > ${.TARGET}
 
 .include <bsd.prog.mk>

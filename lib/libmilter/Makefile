@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/lib/libmilter/Makefile 168521 2007-04-09 01:45:30Z gshapiro $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -8,6 +8,7 @@ SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 CFLAGS+=-I${SENDMAIL_DIR}/src -I${SENDMAIL_DIR}/include -I.
 CFLAGS+=-DNOT_SENDMAIL -Dsm_snprintf=snprintf
 CFLAGS+=-D_THREAD_SAFE
+CFLAGS+=-DSM_CONF_POLL
 
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=-DNETINET6
@@ -25,6 +26,8 @@ SRCS+=	sm_os.h
 SRCS+=	main.c engine.c listener.c handler.c comm.c monitor.c smfi.c \
 	signal.c sm_gethost.c errstring.c strl.c worker.c
 CLEANFILES+=sm_os.h
+
+WARNS?=	0
 
 sm_os.h:
 	ln -sf ${SENDMAIL_DIR}/include/sm/os/sm_os_freebsd.h sm_os.h

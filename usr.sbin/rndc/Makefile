@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/rndc/Makefile 170221 2007-06-02 23:19:58Z dougb $
+# $FreeBSD$
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind9
 LIB_BIND_REL=	../../lib/bind
@@ -9,13 +9,13 @@ SRCDIR=		${BIND_DIR}/bin/rndc
 
 PROG=		rndc
 
-.PATH: ${SRCDIR}/unix
-SRCS+=		os.c
-
 .PATH: ${SRCDIR}
 SRCS+=		rndc.c util.c
 
-CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include -I${LIB_BIND_DIR}
+CFLAGS+=	-I${SRCDIR}/include -I${LIB_BIND_DIR}
+CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
+
+WARNS?=		3
 
 DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}

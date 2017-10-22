@@ -1,5 +1,31 @@
+/*-
+ * Copyright (c) 2005 Ruslan Ermilov
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/pci/nfsmb.c 173614 2007-11-14 19:40:56Z remko $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -38,6 +64,11 @@ static int nfsmb_debug = 0;
 #define	NFSMB_DEVICEID_NF4_51_SMB	0x0264
 #define	NFSMB_DEVICEID_NF4_55_SMB	0x0368
 #define	NFSMB_DEVICEID_NF4_61_SMB	0x03eb
+#define	NFSMB_DEVICEID_NF4_65_SMB	0x0446
+#define	NFSMB_DEVICEID_NF4_67_SMB	0x0542
+#define	NFSMB_DEVICEID_NF4_73_SMB	0x07d8
+#define	NFSMB_DEVICEID_NF4_78S_SMB	0x0752
+#define	NFSMB_DEVICEID_NF4_79_SMB	0x0aa2
 
 /* PCI Configuration space registers */
 #define	NF2PCI_SMBASE_1		PCIR_BAR(4)
@@ -85,8 +116,6 @@ static int nfsmb_debug = 0;
 struct nfsmb_softc {
 	int rid;
 	struct resource *res;
-	bus_space_tag_t smbst;
-	bus_space_handle_t smbsh;
 	device_t smbus;
 	device_t subdev;
 	struct mtx lock;
@@ -97,9 +126,9 @@ struct nfsmb_softc {
 #define	NFSMB_LOCK_ASSERT(nfsmb)	mtx_assert(&(nfsmb)->lock, MA_OWNED)
 
 #define	NFSMB_SMBINB(nfsmb, register)					\
-	(bus_space_read_1(nfsmb->smbst, nfsmb->smbsh, register))
+	(bus_read_1(nfsmb->res, register))
 #define	NFSMB_SMBOUTB(nfsmb, register, value) \
-	(bus_space_write_1(nfsmb->smbst, nfsmb->smbsh, register, value))
+	(bus_write_1(nfsmb->res, register, value))
 
 static int	nfsmb_detach(device_t dev);
 static int	nfsmbsub_detach(device_t dev);
@@ -132,6 +161,11 @@ nfsmb_probe(device_t dev)
 		case NFSMB_DEVICEID_NF4_51_SMB:
 		case NFSMB_DEVICEID_NF4_55_SMB:
 		case NFSMB_DEVICEID_NF4_61_SMB:
+		case NFSMB_DEVICEID_NF4_65_SMB:
+		case NFSMB_DEVICEID_NF4_67_SMB:
+		case NFSMB_DEVICEID_NF4_73_SMB:
+		case NFSMB_DEVICEID_NF4_78S_SMB:
+		case NFSMB_DEVICEID_NF4_79_SMB:
 			device_set_desc(dev, "nForce2/3/4 MCP SMBus Controller");
 			return (BUS_PROBE_DEFAULT);
 		}
@@ -162,8 +196,6 @@ nfsmbsub_attach(device_t dev)
 			return (ENXIO);
 		}
 	}
-	nfsmbsub_sc->smbst = rman_get_bustag(nfsmbsub_sc->res);
-	nfsmbsub_sc->smbsh = rman_get_bushandle(nfsmbsub_sc->res);
 	mtx_init(&nfsmbsub_sc->lock, device_get_nameunit(dev), "nfsmb",
 	    MTX_DEF);
 
@@ -200,8 +232,6 @@ nfsmb_attach(device_t dev)
 		}
 	}
 
-	nfsmb_sc->smbst = rman_get_bustag(nfsmb_sc->res);
-	nfsmb_sc->smbsh = rman_get_bushandle(nfsmb_sc->res);
 	mtx_init(&nfsmb_sc->lock, device_get_nameunit(dev), "nfsmb", MTX_DEF);
 
 	/* Allocate a new smbus device */
@@ -222,6 +252,11 @@ nfsmb_attach(device_t dev)
 	case NFSMB_DEVICEID_NF4_51_SMB:
 	case NFSMB_DEVICEID_NF4_55_SMB:
 	case NFSMB_DEVICEID_NF4_61_SMB:
+	case NFSMB_DEVICEID_NF4_65_SMB:
+	case NFSMB_DEVICEID_NF4_67_SMB:
+	case NFSMB_DEVICEID_NF4_73_SMB:
+	case NFSMB_DEVICEID_NF4_78S_SMB:
+	case NFSMB_DEVICEID_NF4_79_SMB:
 		/* Trying to add secondary device as slave */
 		nfsmb_sc->subdev = device_add_child(dev, "nfsmb", -1);
 		if (!nfsmb_sc->subdev) {

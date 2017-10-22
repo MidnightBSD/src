@@ -13,9 +13,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: release/7.0.0/lib/msun/src/e_fmodf.c 97407 2002-05-28 17:03:12Z alfred $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /*
  * __ieee754_fmodf(x,y)

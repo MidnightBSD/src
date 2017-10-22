@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2002,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2007,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -29,12 +29,14 @@
 /****************************************************************************
  *  Author: Zeyd M. Ben-Halim <zmbenhal@netcom.com> 1992,1995               *
  *     and: Eric S. Raymond <esr@snark.thyrsus.com>                         *
- *     and: Thomas E. Dickey 1996 on                                        *
+ *     and: Thomas E. Dickey                        1996 on                 *
  ****************************************************************************/
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_screen.c,v 1.29 2006/05/27 19:21:38 tom Exp $")
+MODULE_ID("$Id: lib_screen.c,v 1.31 2008/08/16 19:05:37 tom Exp $")
+
+#define MAX_SIZE 0x3fff		/* 16k is big enough for a window or pad */
 
 NCURSES_EXPORT(WINDOW *)
 getwin(FILE *filep)
@@ -46,7 +48,11 @@ getwin(FILE *filep)
 
     clearerr(filep);
     (void) fread(&tmp, sizeof(WINDOW), 1, filep);
-    if (ferror(filep))
+    if (ferror(filep)
+	|| tmp._maxy == 0
+	|| tmp._maxy > MAX_SIZE
+	|| tmp._maxx == 0
+	|| tmp._maxx > MAX_SIZE)
 	returnWin(0);
 
     if (tmp._flags & _ISPAD) {
@@ -115,7 +121,7 @@ putwin(WINDOW *win, FILE *filep)
     T((T_CALLED("putwin(%p,%p)"), win, filep));
 
     if (win != 0) {
-	size_t len = (win->_maxx + 1);
+	size_t len = (size_t) (win->_maxx + 1);
 
 	clearerr(filep);
 	if (fwrite(win, sizeof(WINDOW), 1, filep) != 1
@@ -146,7 +152,10 @@ scr_restore(const char *file)
 	returnCode(ERR);
     } else {
 	delwin(newscr);
-	SP->_newscr = newscr = getwin(fp);
+	SP->_newscr = getwin(fp);
+#if !USE_REENTRANT
+	newscr = SP->_newscr;
+#endif
 	(void) fclose(fp);
 	returnCode(OK);
     }
@@ -184,7 +193,10 @@ scr_init(const char *file)
 	returnCode(ERR);
     } else {
 	delwin(curscr);
-	SP->_curscr = curscr = getwin(fp);
+	SP->_curscr = getwin(fp);
+#if !USE_REENTRANT
+	curscr = SP->_curscr;
+#endif
 	(void) fclose(fp);
 	returnCode(OK);
     }
@@ -199,7 +211,10 @@ scr_set(const char *file)
 	returnCode(ERR);
     } else {
 	delwin(newscr);
-	SP->_newscr = newscr = dupwin(curscr);
+	SP->_newscr = dupwin(curscr);
+#if !USE_REENTRANT
+	newscr = SP->_newscr;
+#endif
 	returnCode(OK);
     }
 }

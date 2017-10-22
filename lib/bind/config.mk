@@ -1,6 +1,7 @@
-# $FreeBSD: release/7.0.0/lib/bind/config.mk 174398 2007-12-07 08:31:23Z dougb $
+# $FreeBSD$
 
 .include <bsd.own.mk>
+.include <bsd.endian.mk>
 
 # BIND version number
 .if defined(BIND_DIR) && exists(${BIND_DIR}/version)
@@ -45,7 +46,7 @@ CFLAGS+=	-DOPENSSL
 CFLAGS+=	-DUSE_MD5
 
 # Endianness
-.if ${MACHINE_ARCH} == "powerpc" || ${MACHINE_ARCH} == "sparc64"
+.if ${TARGET_ENDIANNESS} == 4321
 CFLAGS+=	-DWORDS_BIGENDIAN
 .endif
 
@@ -66,8 +67,18 @@ CFLAGS+=	-I${LIB_BIND_DIR}
 # Use the right version of the atomic.h file from lib/isc
 .if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
 ISC_ATOMIC_ARCH=	x86_32
+.elif ${MACHINE_ARCH} == "ia64"
+ISC_ATOMIC_ARCH=	ia64
 .else
-ISC_ATOMIC_ARCH=	${MACHINE_ARCH}
+ISC_ATOMIC_ARCH=	noatomic
+.endif
+
+# Optional features
+.if ${MK_BIND_LARGE_FILE} == "yes"
+CFLAGS+=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+.endif
+.if ${MK_BIND_SIGCHASE} == "yes"
+CFLAGS+=	-DDIG_SIGCHASE
 .endif
 
 # Link against BIND libraries
@@ -96,6 +107,13 @@ BIND_DPADD=	${LIBBIND9} ${LIBDNS} ${LIBISCCC} ${LIBISCCFG} \
 		${LIBISC} ${LIBLWRES}
 .if ${MK_BIND_LIBS} != "no"
 BIND_LDADD=	-lbind9 -ldns -lisccc -lisccfg -lisc -llwres
+CFLAGS+=	-I${BIND_DIR}/lib/isc/include
+CFLAGS+=	-I${BIND_DIR}/lib/isc/unix/include
+CFLAGS+=	-I${BIND_DIR}/lib/isc/pthreads/include
+CFLAGS+=	-I${.CURDIR}/../dns
+CFLAGS+=	-I${BIND_DIR}/lib/dns/include
+CFLAGS+=	-I${BIND_DIR}/lib/isccfg/include
+CFLAGS+=	-I${.CURDIR}/../isc
 .else
 BIND_LDADD=	${BIND_DPADD}
 .endif
@@ -106,6 +124,16 @@ CRYPTO_DPADD=	${LIBCRYPTO}
 CRYPTO_LDADD=	-lcrypto
 .endif
 
+.if ${MK_BIND_XML} == "yes"
+CFLAGS+=	-DHAVE_LIBXML2
+CFLAGS+=	-I/usr/local/include -I/usr/local/include/libxml2
+.if ${MK_BIND_LIBS} != "no"
+BIND_LDADD+=	-L/usr/local/lib -lxml2 -lz -liconv -lm
+.else
+BIND_DPADD+=	/usr/local/lib/libxml2.a ${LIBZ} 
+BIND_DPADD+=	/usr/local/lib/libiconv.a ${LIBM}
+.endif
+.endif
+
 PTHREAD_DPADD=	${LIBPTHREAD}
 PTHREAD_LDADD=	-lpthread
-

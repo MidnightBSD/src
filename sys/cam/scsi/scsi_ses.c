@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/cam/scsi/scsi_ses.c 169605 2007-05-16 16:54:23Z scottl $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -144,9 +144,9 @@ struct ses_softc {
 	encvec		ses_vec;	/* vector to handlers */
 	void *		ses_private;	/* per-type private data */
 	encobj *	ses_objmap;	/* objects */
-	u_int32_t	ses_nobjects;	/* number of objects */
+	uint32_t	ses_nobjects;	/* number of objects */
 	ses_encstat	ses_encstat;	/* overall status */
-	u_int8_t	ses_flags;
+	uint8_t	ses_flags;
 	union ccb	ses_saved_ccb;
 	struct cdev *ses_dev;
 	struct cam_periph *periph;
@@ -154,8 +154,6 @@ struct ses_softc {
 #define	SES_FLAG_INVALID	0x01
 #define	SES_FLAG_OPEN		0x02
 #define	SES_FLAG_INITIALIZED	0x04
-
-#define SESUNIT(x)       (minor((x)))
 
 static	d_open_t	sesopen;
 static	d_close_t	sesclose;
@@ -166,9 +164,9 @@ static	periph_oninv_t	sesoninvalidate;
 static  periph_dtor_t   sescleanup;
 static  periph_start_t  sesstart;
 
-static void sesasync(void *, u_int32_t, struct cam_path *, void *);
+static void sesasync(void *, uint32_t, struct cam_path *, void *);
 static void sesdone(struct cam_periph *, union ccb *);
-static int seserror(union ccb *, u_int32_t, u_int32_t);
+static int seserror(union ccb *, uint32_t, uint32_t);
 
 static struct periph_driver sesdriver = {
 	sesinit, "ses",
@@ -227,14 +225,15 @@ sescleanup(struct cam_periph *periph)
 
 	softc = (struct ses_softc *)periph->softc;
 
-	destroy_dev(softc->ses_dev);
-
 	xpt_print(periph->path, "removing device entry\n");
+	cam_periph_unlock(periph);
+	destroy_dev(softc->ses_dev);
+	cam_periph_lock(periph);
 	free(softc, M_SCSISES);
 }
 
 static void
-sesasync(void *callback_arg, u_int32_t code, struct cam_path *path, void *arg)
+sesasync(void *callback_arg, uint32_t code, struct cam_path *path, void *arg)
 {
 	struct cam_periph *periph;
 
@@ -251,6 +250,9 @@ sesasync(void *callback_arg, u_int32_t code, struct cam_path *path, void *arg)
 		if (arg == NULL) {
 			break;
 		}
+
+		if (cgd->protocol != PROTO_SCSI)
+			break;
 
 		inq_len = cgd->inq_data.additional_length + 4;
 
@@ -303,7 +305,7 @@ sesregister(struct cam_periph *periph, void *arg)
 		return (CAM_REQ_CMP_ERR);
 	}
 
-	softc = malloc(sizeof (struct ses_softc), M_SCSISES, M_NOWAIT);
+	softc = SES_MALLOC(sizeof (struct ses_softc));
 	if (softc == NULL) {
 		printf("sesregister: Unable to probe new device. "
 		       "Unable to allocate softc\n");				
@@ -343,7 +345,7 @@ sesregister(struct cam_periph *periph, void *arg)
 	}
 
 	cam_periph_unlock(periph);
-	softc->ses_dev = make_dev(&ses_cdevsw, unit2minor(periph->unit_number),
+	softc->ses_dev = make_dev(&ses_cdevsw, periph->unit_number,
 	    UID_ROOT, GID_OPERATOR, 0600, "%s%d",
 	    periph->periph_name, periph->unit_number);
 	cam_periph_lock(periph);
@@ -472,7 +474,7 @@ sesdone(struct cam_periph *periph, union ccb *dccb)
 }
 
 static int
-seserror(union ccb *ccb, u_int32_t cflags, u_int32_t sflags)
+seserror(union ccb *ccb, uint32_t cflags, uint32_t sflags)
 {
 	struct ses_softc *softc;
 	struct cam_periph *periph;
@@ -489,7 +491,7 @@ sesioctl(struct cdev *dev, u_long cmd, caddr_t arg_addr, int flag, struct thread
 	struct cam_periph *periph;
 	ses_encstat tmp;
 	ses_objstat objs;
-	ses_object obj, *uobj;
+	ses_object *uobj;
 	struct ses_softc *ssc;
 	void *addr;
 	int error, i;
@@ -511,12 +513,15 @@ sesioctl(struct cdev *dev, u_long cmd, caddr_t arg_addr, int flag, struct thread
 
 	/*
 	 * Now check to see whether we're initialized or not.
+	 * This actually should never fail as we're not supposed
+	 * to get past ses_open w/o successfully initializing
+	 * things.
 	 */
 	if ((ssc->ses_flags & SES_FLAG_INITIALIZED) == 0) {
 		cam_periph_unlock(periph);
 		return (ENXIO);
 	}
-	cam_periph_lock(periph);
+	cam_periph_unlock(periph);
 
 	error = 0;
 
@@ -526,6 +531,14 @@ sesioctl(struct cdev *dev, u_long cmd, caddr_t arg_addr, int flag, struct thread
 	/*
 	 * If this command can change the device's state,
 	 * we must have the device open for writing.
+	 *
+	 * For commands that get information about the
+	 * device- we don't need to lock the peripheral
+	 * if we aren't running a command. The number
+	 * of objects and the contents will stay stable
+	 * after the first open that does initialization.
+	 * The periph also can't go away while a user
+	 * process has it open.
 	 */
 	switch (cmd) {
 	case SESIOC_GETNOBJ:
@@ -546,23 +559,16 @@ sesioctl(struct cdev *dev, u_long cmd, caddr_t arg_addr, int flag, struct thread
 		break;
 		
 	case SESIOC_GETOBJMAP:
-		/*
-		 * XXX Dropping the lock while copying multiple segments is
-		 * bogus.
-		 */
-		cam_periph_lock(periph);
-		for (uobj = addr, i = 0; i != ssc->ses_nobjects; i++, uobj++) {
-			obj.obj_id = i;
-			obj.subencid = ssc->ses_objmap[i].subenclosure;
-			obj.object_type = ssc->ses_objmap[i].enctype;
-			cam_periph_lock(periph);
-			error = copyout(&obj, uobj, sizeof (ses_object));
-			cam_periph_lock(periph);
+		for (uobj = addr, i = 0; i != ssc->ses_nobjects; i++) {
+			ses_object kobj;
+			kobj.obj_id = i;
+			kobj.subencid = ssc->ses_objmap[i].subenclosure;
+			kobj.object_type = ssc->ses_objmap[i].enctype;
+			error = copyout(&kobj, &uobj[i], sizeof (ses_object));
 			if (error) {
 				break;
 			}
 		}
-		cam_periph_lock(periph);
 		break;
 
 	case SESIOC_GETENCSTAT:
@@ -673,8 +679,6 @@ ses_runcmd(struct ses_softc *ssc, char *cdb, int cdbl, char *dptr, int *dlenp)
 	bcopy(cdb, ccb->csio.cdb_io.cdb_bytes, cdbl);
 
 	error = cam_periph_runccb(ccb, seserror, SES_CFLAGS, SES_FLAGS, NULL);
-	if ((ccb->ccb_h.status & CAM_DEV_QFRZN) != 0)
-		cam_release_devq(ccb->ccb_h.path, 0, 0, 0, FALSE);
 	if (error) {
 		if (dptr) {
 			*dlenp = dlen;
@@ -708,7 +712,7 @@ ses_log(struct ses_softc *ssc, const char *fmt, ...)
 /*
  * Is this a device that supports enclosure services?
  *
- * It's a a pretty simple ruleset- if it is device type 0x0D (13), it's
+ * It's a pretty simple ruleset- if it is device type 0x0D (13), it's
  * an SES device. If it happens to be an old UNISYS SEN device, we can
  * handle that too.
  */
@@ -1549,7 +1553,7 @@ ses_encode(char *b, int amt, uint8_t *ep, int elt, int elm, SesComStat *sp)
  */
 
 static int safte_getconfig(ses_softc_t *);
-static int safte_rdstat(ses_softc_t *, int);;
+static int safte_rdstat(ses_softc_t *, int);
 static int set_objstat_sel(ses_softc_t *, ses_objstat *, int);
 static int wrbuf16(ses_softc_t *, uint8_t, uint8_t, uint8_t, uint8_t, int);
 static void wrslot_stat(ses_softc_t *, int);
@@ -2251,7 +2255,7 @@ safte_rdstat(ses_softc_t *ssc, int slpflg)
 		ssc->ses_objmap[oid].encstat[0] = SES_OBJSTAT_NOTAVAIL;
 		ssc->ses_objmap[oid].encstat[1] = 0;
 		ssc->ses_objmap[oid].encstat[2] = sdata[r];
-		ssc->ses_objmap[oid].encstat[3] = 0;;
+		ssc->ses_objmap[oid].encstat[3] = 0;
 		ssc->ses_objmap[oid++].svalid = 1;
 		r++;
 	}

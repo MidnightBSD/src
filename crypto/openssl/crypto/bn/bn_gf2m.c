@@ -294,7 +294,8 @@ int	BN_GF2m_add(BIGNUM *r, const BIGNUM *a, const BIGNUM *b)
 	if (a->top < b->top) { at = b; bt = a; }
 	else { at = a; bt = b; }
 
-	bn_wexpand(r, at->top);
+	if(bn_wexpand(r, at->top) == NULL)
+		return 0;
 
 	for (i = 0; i < bt->top; i++)
 		{
@@ -384,7 +385,11 @@ int BN_GF2m_mod_arr(BIGNUM *r, const BIGNUM *a, const unsigned int p[])
 		if (zz == 0) break;
 		d1 = BN_BITS2 - d0;
 		
-		if (d0) z[dN] = (z[dN] << d1) >> d1; /* clear up the top d1 bits */
+		/* clear up the top d1 bits */
+		if (d0)
+			z[dN] = (z[dN] << d1) >> d1;
+		else
+			z[dN] = 0;
 		z[0] ^= zz; /* reduction t^0 component */
 
 		for (k = 1; p[k] != 0; k++)
@@ -602,6 +607,7 @@ int BN_GF2m_mod_inv(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
 		{
 		while (!BN_is_odd(u))
 			{
+			if (BN_is_zero(u)) goto err;
 			if (!BN_rshift1(u, u)) goto err;
 			if (BN_is_odd(b))
 				{

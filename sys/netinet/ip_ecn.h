@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/netinet/ip_ecn.h 174854 2007-12-22 06:32:46Z cvs2svn $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: ip_ecn.h,v 1.8 2002/01/07 11:34:47 kjc Exp $	*/
 
 /*-

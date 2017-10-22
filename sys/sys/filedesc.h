@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)filedesc.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: release/7.0.0/sys/sys/filedesc.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_FILEDESC_H_
@@ -111,7 +111,10 @@ struct thread;
 int	closef(struct file *fp, struct thread *td);
 int	dupfdopen(struct thread *td, struct filedesc *fdp, int indx, int dfd,
 	    int mode, int error);
-int	falloc(struct thread *td, struct file **resultfp, int *resultfd);
+int	falloc(struct thread *td, struct file **resultfp, int *resultfd,
+	    int flags);
+int	falloc_noinstall(struct thread *td, struct file **resultfp);
+int	finstall(struct thread *td, struct file *fp, int *resultfp, int flags);
 int	fdalloc(struct thread *td, int minfd, int *result);
 int	fdavail(struct thread *td, int n);
 int	fdcheckstd(struct thread *td);
@@ -125,10 +128,15 @@ struct	filedesc *fdshare(struct filedesc *fdp);
 struct filedesc_to_leader *
 	filedesc_to_leader_alloc(struct filedesc_to_leader *old,
 	    struct filedesc *fdp, struct proc *leader);
-int	getvnode(struct filedesc *fdp, int fd, struct file **fpp);
+int	getvnode(struct filedesc *fdp, int fd, cap_rights_t rights,
+	    struct file **fpp);
 void	mountcheckdirs(struct vnode *olddp, struct vnode *newdp);
 void	setugidsafety(struct thread *td);
 
+/* Return a referenced file from an unlocked descriptor. */
+struct file *fget_unlocked(struct filedesc *fdp, int fd);
+
+/* Requires a FILEDESC_{S,X}LOCK held and returns without a ref. */
 static __inline struct file *
 fget_locked(struct filedesc *fdp, int fd)
 {

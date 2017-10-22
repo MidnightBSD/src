@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/drm/mga_warp.c 152909 2005-11-28 23:13:57Z anholt $");
+__FBSDID("$FreeBSD$");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -96,7 +96,7 @@ unsigned int mga_warp_microcode_size(const drm_mga_private_t * dev_priv)
 
 static int mga_warp_install_g400_microcode(drm_mga_private_t * dev_priv)
 {
-	unsigned char *vcbase = dev_priv->warp->handle;
+	unsigned char *vcbase = dev_priv->warp->virtual;
 	unsigned long pcbase = dev_priv->warp->offset;
 
 	memset(dev_priv->warp_pipe_phys, 0, sizeof(dev_priv->warp_pipe_phys));
@@ -124,7 +124,7 @@ static int mga_warp_install_g400_microcode(drm_mga_private_t * dev_priv)
 
 static int mga_warp_install_g200_microcode(drm_mga_private_t * dev_priv)
 {
-	unsigned char *vcbase = dev_priv->warp->handle;
+	unsigned char *vcbase = dev_priv->warp->virtual;
 	unsigned long pcbase = dev_priv->warp->offset;
 
 	memset(dev_priv->warp_pipe_phys, 0, sizeof(dev_priv->warp_pipe_phys));
@@ -149,7 +149,7 @@ int mga_warp_install_microcode(drm_mga_private_t * dev_priv)
 	if (size > dev_priv->warp->size) {
 		DRM_ERROR("microcode too large! (%u > %lu)\n",
 			  size, dev_priv->warp->size);
-		return DRM_ERR(ENOMEM);
+		return -ENOMEM;
 	}
 
 	switch (dev_priv->chipset) {
@@ -159,7 +159,7 @@ int mga_warp_install_microcode(drm_mga_private_t * dev_priv)
 	case MGA_CARD_TYPE_G200:
 		return mga_warp_install_g200_microcode(dev_priv);
 	default:
-		return DRM_ERR(EINVAL);
+		return -EINVAL;
 	}
 }
 
@@ -185,7 +185,7 @@ int mga_warp_init(drm_mga_private_t * dev_priv)
 		MGA_WRITE(MGA_WVRTXSZ, 7);
 		break;
 	default:
-		return DRM_ERR(EINVAL);
+		return -EINVAL;
 	}
 
 	MGA_WRITE(MGA_WMISC, (MGA_WUCODECACHE_ENABLE |
@@ -194,7 +194,7 @@ int mga_warp_init(drm_mga_private_t * dev_priv)
 	if (wmisc != WMISC_EXPECTED) {
 		DRM_ERROR("WARP engine config failed! 0x%x != 0x%x\n",
 			  wmisc, WMISC_EXPECTED);
-		return DRM_ERR(EINVAL);
+		return -EINVAL;
 	}
 
 	return 0;

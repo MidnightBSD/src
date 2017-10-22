@@ -28,7 +28,7 @@
 
 /* $Header: /home/daffy/u0/vern/flex/RCS/ecs.c,v 2.9 93/12/07 10:18:20 vern Exp $ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/lex/ecs.c 99112 2002-06-30 05:25:07Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include "flexdef.h"
 
@@ -144,7 +144,7 @@ int lenccl, fwd[], bck[], llsiz, NUL_mapping;
 			{ /* look for the symbol in the character class */
 			for ( ; j < lenccl; ++j )
 				{
-				register int ccl_char;
+				int ccl_char;
 
 				if ( NUL_mapping && ccls[j] == 0 )
 					ccl_char = NUL_mapping;

@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/opencrypto/crypto.c 167755 2007-03-21 03:42:51Z sam $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Cryptographic Subsystem.
@@ -57,6 +57,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/opencrypto/crypto.c 167755 2007-03-21 03:4
 #define	CRYPTO_TIMING				/* enable timing support */
 
 #include "opt_ddb.h"
+#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -68,6 +69,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/opencrypto/crypto.c 167755 2007-03-21 03:4
 #include <sys/mutex.h>
 #include <sys/malloc.h>
 #include <sys/proc.h>
+#include <sys/sdt.h>
 #include <sys/sysctl.h>
 
 #include <ddb/ddb.h>
@@ -79,6 +81,12 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/opencrypto/crypto.c 167755 2007-03-21 03:4
 #include <sys/kobj.h>
 #include <sys/bus.h>
 #include "cryptodev_if.h"
+
+#if defined(__i386__) || defined(__amd64__)
+#include <machine/pcb.h>
+#endif
+
+SDT_PROVIDER_DEFINE(opencrypto);
 
 /*
  * Crypto drivers register themselves by allocating a slot in the
@@ -216,7 +224,7 @@ crypto_init(void)
 		goto bad;
 	}
 
-	error = kthread_create((void (*)(void *)) crypto_proc, NULL,
+	error = kproc_create((void (*)(void *)) crypto_proc, NULL,
 		    &cryptoproc, 0, 0, "crypto");
 	if (error) {
 		printf("crypto_init: cannot start crypto thread; error %d",
@@ -224,7 +232,7 @@ crypto_init(void)
 		goto bad;
 	}
 
-	error = kthread_create((void (*)(void *)) crypto_ret_proc, NULL,
+	error = kproc_create((void (*)(void *)) crypto_ret_proc, NULL,
 		    &cryptoretproc, 0, 0, "crypto returns");
 	if (error) {
 		printf("crypto_init: cannot start cryptoret thread; error %d",
@@ -1222,7 +1230,7 @@ crypto_finis(void *chan)
 	CRYPTO_DRIVER_LOCK();
 	wakeup_one(chan);
 	CRYPTO_DRIVER_UNLOCK();
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 /*
@@ -1236,6 +1244,10 @@ crypto_proc(void)
 	struct cryptocap *cap;
 	u_int32_t hid;
 	int result, hint;
+
+#if defined(__i386__) || defined(__amd64__)
+	fpu_kern_thread(FPU_KERN_NORMAL);
+#endif
 
 	CRYPTO_Q_LOCK();
 	for (;;) {

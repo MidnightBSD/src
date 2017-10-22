@@ -1,13 +1,15 @@
-# $FreeBSD: release/7.0.0/kerberos5/lib/libroken/Makefile 158794 2006-05-21 15:15:21Z ume $
+# $FreeBSD$
 
 LIB=	roken
-SHLIB_MAJOR=	9
+LDADD=	-lcrypt
+DPADD=	${LIBCRYPT}
 INCS=	roken.h roken-common.h
 
 SRCS=	base64.c \
 	bswap.c \
 	concat.c \
 	copyhostent.c \
+	dumpdata.c \
 	ecalloc.c \
 	emalloc.c \
 	environment.c \
@@ -21,6 +23,7 @@ SRCS=	base64.c \
 	getaddrinfo_hostspec.c \
 	getarg.c \
 	getnameinfo_verified.c \
+	hex.c \
 	hostent_find_fqdn.c \
 	issuid.c \
 	k_getpwnam.c \
@@ -43,6 +46,7 @@ SRCS=	base64.c \
 	strlwr.c \
 	strndup.c \
 	strnlen.c \
+	strpool.c \
 	strsep_copy.c \
 	strupr.c \
 	timeval.c \

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/sparc64/sys/__sparc_utrap.c 124722 2004-01-19 16:14:58Z nectar $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -122,7 +122,7 @@ __utrap_write(const char *str)
 }
 
 void
-__utrap_kill_self(sig)
+__utrap_kill_self(int sig)
 {
 	int berrno;
 

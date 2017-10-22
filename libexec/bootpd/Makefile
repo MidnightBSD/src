@@ -1,9 +1,11 @@
 # bootpd/Makefile
-# $FreeBSD: release/7.0.0/libexec/bootpd/Makefile 74814 2001-03-26 14:22:12Z ru $
+# $FreeBSD$
 
 PROG=	bootpd
 CFLAGS+= -DETC_ETHERS
 CFLAGS+= -DSYSLOG -DDEBUG -DVEND_CMU
+
+WARNS?=	2
 
 SUBDIR= bootpgw tools
 

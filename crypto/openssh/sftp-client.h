@@ -1,4 +1,4 @@
-/* $OpenBSD: sftp-client.h,v 1.14 2005/04/26 12:59:02 jmc Exp $ */
+/* $OpenBSD: sftp-client.h,v 1.20 2010/12/04 00:18:01 djm Exp $ */
 
 /*
  * Copyright (c) 2001-2004 Damien Miller <djm@openbsd.org>
@@ -30,10 +30,28 @@ struct SFTP_DIRENT {
 };
 
 /*
+ * Used for statvfs responses on the wire from the server, because the
+ * server's native format may be larger than the client's.
+ */
+struct sftp_statvfs {
+	u_int64_t f_bsize;
+	u_int64_t f_frsize;
+	u_int64_t f_blocks;
+	u_int64_t f_bfree;
+	u_int64_t f_bavail;
+	u_int64_t f_files;
+	u_int64_t f_ffree;
+	u_int64_t f_favail;
+	u_int64_t f_fsid;
+	u_int64_t f_flag;
+	u_int64_t f_namemax;
+};
+
+/*
  * Initialise a SSH filexfer connection. Returns NULL on error or
  * a pointer to a initialized sftp_conn struct on success.
  */
-struct sftp_conn *do_init(int, int, u_int, u_int);
+struct sftp_conn *do_init(int, int, u_int, u_int, u_int64_t);
 
 u_int sftp_proto_version(struct sftp_conn *);
 
@@ -50,7 +68,7 @@ void free_sftp_dirents(SFTP_DIRENT **);
 int do_rm(struct sftp_conn *, char *);
 
 /* Create directory 'path' */
-int do_mkdir(struct sftp_conn *, char *, Attrib *);
+int do_mkdir(struct sftp_conn *, char *, Attrib *, int);
 
 /* Remove directory 'path' */
 int do_rmdir(struct sftp_conn *, char *);
@@ -61,9 +79,6 @@ Attrib *do_stat(struct sftp_conn *, char *, int);
 /* Get file attributes of 'path' (does not follow symlinks) */
 Attrib *do_lstat(struct sftp_conn *, char *, int);
 
-/* Get file attributes of open file 'handle' */
-Attrib *do_fstat(struct sftp_conn *, char *, u_int, int);
-
 /* Set file attributes of 'path' */
 int do_setstat(struct sftp_conn *, char *, Attrib *);
 
@@ -73,14 +88,17 @@ int do_fsetstat(struct sftp_conn *, char *, u_int, Attrib *);
 /* Canonicalise 'path' - caller must free result */
 char *do_realpath(struct sftp_conn *, char *);
 
+/* Get statistics for filesystem hosting file at "path" */
+int do_statvfs(struct sftp_conn *, const char *, struct sftp_statvfs *, int);
+
 /* Rename 'oldpath' to 'newpath' */
 int do_rename(struct sftp_conn *, char *, char *);
 
+/* Link 'oldpath' to 'newpath' */
+int do_hardlink(struct sftp_conn *, char *, char *);
+
 /* Rename 'oldpath' to 'newpath' */
 int do_symlink(struct sftp_conn *, char *, char *);
-
-/* Return target of symlink 'path' - caller must free result */
-char *do_readlink(struct sftp_conn *, char *);
 
 /* XXX: add callbacks to do_download/do_upload so we can do progress meter */
 
@@ -88,12 +106,27 @@ char *do_readlink(struct sftp_conn *, char *);
  * Download 'remote_path' to 'local_path'. Preserve permissions and times
  * if 'pflag' is set
  */
-int do_download(struct sftp_conn *, char *, char *, int);
+int do_download(struct sftp_conn *, char *, char *, Attrib *, int);
+
+/*
+ * Recursively download 'remote_directory' to 'local_directory'. Preserve 
+ * times if 'pflag' is set
+ */
+int download_dir(struct sftp_conn *, char *, char *, Attrib *, int, int);
 
 /*
  * Upload 'local_path' to 'remote_path'. Preserve permissions and times
  * if 'pflag' is set
  */
 int do_upload(struct sftp_conn *, char *, char *, int);
+
+/*
+ * Recursively upload 'local_directory' to 'remote_directory'. Preserve 
+ * times if 'pflag' is set
+ */
+int upload_dir(struct sftp_conn *, char *, char *, int, int);
+
+/* Concatenate paths, taking care of slashes. Caller must free result. */
+char *path_append(char *, char *);
 
 #endif

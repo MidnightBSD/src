@@ -27,24 +27,26 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_sigwait.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <signal.h>
 #include <sys/param.h>
 #include <sys/signalvar.h>
 #include <errno.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(__sigwait);
-LT10_COMPAT_PRIVATE(_sigwait);
-LT10_COMPAT_DEFAULT(sigwait);
-LT10_COMPAT_PRIVATE(__sigtimedwait);
-LT10_COMPAT_PRIVATE(_sigtimedwait);
-LT10_COMPAT_DEFAULT(sigtimedwait);
-LT10_COMPAT_PRIVATE(__sigwaitinfo);
-LT10_COMPAT_PRIVATE(_sigwaitinfo);
-LT10_COMPAT_DEFAULT(sigwaitinfo);
+int	__sigtimedwait(const sigset_t *set, siginfo_t *info,
+	    const struct timespec *timeout);
+int	__sigwaitinfo(const sigset_t *set, siginfo_t *info);
+int	__sigwait(const sigset_t *set, int *sig);
+int	_sigtimedwait(const sigset_t *set, siginfo_t *info,
+	    const struct timespec *timeout);
+int	_sigwaitinfo(const sigset_t *set, siginfo_t *info);
+int	_sigwait(const sigset_t *set, int *sig);
 
 __weak_reference(__sigwait, sigwait);
 __weak_reference(__sigtimedwait, sigtimedwait);
@@ -52,7 +54,7 @@ __weak_reference(__sigwaitinfo, sigwaitinfo);
 
 static int
 lib_sigtimedwait(const sigset_t *set, siginfo_t *info,
-	const struct timespec * timeout)
+	const struct timespec *timeout)
 {
 	struct pthread	*curthread = _get_curthread();
 	int		ret = 0;
@@ -65,8 +67,7 @@ lib_sigtimedwait(const sigset_t *set, siginfo_t *info,
 	if (curthread->attr.flags & PTHREAD_SCOPE_SYSTEM) {
 		if (info == NULL)
 			info = &siginfo;
-		return (__sys_sigtimedwait((sigset_t *)set, info,
-			(struct timespec *)timeout));
+		return (__sys_sigtimedwait(set, info, timeout));
 	}
 
 	/*

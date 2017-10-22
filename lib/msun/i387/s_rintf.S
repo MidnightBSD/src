@@ -5,10 +5,13 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: release/7.0.0/lib/msun/i387/s_rintf.S 140195 2005-01-13 18:58:25Z das $");
+__FBSDID("$FreeBSD$");
 /* RCSID("$NetBSD: s_rintf.S,v 1.3 1995/05/09 00:17:22 jtc Exp $") */
 
 ENTRY(rintf)
 	flds	4(%esp)
 	frndint
 	ret
+END(rintf)
+
+	.section .note.GNU-stack,"",%progbits

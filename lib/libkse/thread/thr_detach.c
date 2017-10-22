@@ -26,16 +26,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_detach.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+#include "namespace.h"
 #include <sys/types.h>
 #include <machine/atomic.h>
 #include <errno.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
-
-LT10_COMPAT_PRIVATE(_pthread_detach);
-LT10_COMPAT_DEFAULT(pthread_detach);
 
 __weak_reference(_pthread_detach, pthread_detach);
 

@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: sdb.h,v 1.15.18.2 2005/04/29 00:16:21 marka Exp $ */
+/* $Id$ */
 
 #ifndef DNS_SDB_H
 #define DNS_SDB_H 1
@@ -24,7 +24,7 @@
  ***** Module Info
  *****/
 
-/*! \file
+/*! \file dns/sdb.h
  * \brief
  * Simple database API.
  */
@@ -59,6 +59,9 @@ typedef struct dns_sdballnodes dns_sdballnodes_t;
 typedef isc_result_t
 (*dns_sdblookupfunc_t)(const char *zone, const char *name, void *dbdata,
 		       dns_sdblookup_t *);
+typedef isc_result_t
+(*dns_sdblookup2func_t)(const dns_name_t *zone, const dns_name_t *name,
+			void *dbdata, dns_sdblookup_t *lookup);
 
 typedef isc_result_t
 (*dns_sdbauthorityfunc_t)(const char *zone, void *dbdata, dns_sdblookup_t *);
@@ -81,6 +84,7 @@ typedef struct dns_sdbmethods {
 	dns_sdballnodesfunc_t	allnodes;
 	dns_sdbcreatefunc_t	create;
 	dns_sdbdestroyfunc_t	destroy;
+	dns_sdblookup2func_t	lookup2;
 } dns_sdbmethods_t;
 
 /***
@@ -92,6 +96,7 @@ ISC_LANG_BEGINDECLS
 #define DNS_SDBFLAG_RELATIVEOWNER 0x00000001U
 #define DNS_SDBFLAG_RELATIVERDATA 0x00000002U
 #define DNS_SDBFLAG_THREADSAFE 0x00000004U
+#define DNS_SDBFLAG_DNS64 0x00000008U
 
 isc_result_t
 dns_sdb_register(const char *drivername, const dns_sdbmethods_t *methods,
@@ -127,12 +132,12 @@ dns_sdb_register(const char *drivername, const dns_sdbmethods_t *methods,
  * The allnodes function, if non-NULL, fills in an opaque structure to be
  * used by a database iterator.  This allows the zone to be transferred.
  * This may use a considerable amount of memory for large zones, and the
- * zone transfer may not be fully RFC1035 compliant if the zone is 
+ * zone transfer may not be fully RFC1035 compliant if the zone is
  * frequently changed.
  *
  * The create function will be called for each zone configured
  * into the name server using this database type.  It can be used
- * to create a "database object" containg zone specific data,
+ * to create a "database object" containing zone specific data,
  * which can make use of the database arguments specified in the
  * name server configuration.
  *

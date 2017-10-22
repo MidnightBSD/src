@@ -28,7 +28,7 @@ static const char rcsid[] =
     "@(#)$Id: traceroute.c,v 1.68 2000/12/14 08:04:33 leres Exp $ (LBL)";
 #endif
 static const char rcsid[] =
-    "$FreeBSD: release/7.0.0/contrib/traceroute/traceroute.c 172506 2007-10-10 16:59:15Z cvs2svn $";
+    "$FreeBSD$";
 #endif
 
 /*
@@ -220,7 +220,6 @@ static const char rcsid[] =
 #include <netinet/ip_var.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/udp.h>
-#include <netinet/udp_var.h>
 #include <netinet/tcp.h>
 #include <netinet/tcpip.h>
 
@@ -245,11 +244,6 @@ static const char rcsid[] =
 #include <string.h>
 #include <unistd.h>
 
-#include "gnuc.h"
-#ifdef HAVE_OS_PROTO_H
-#include "os-proto.h"
-#endif
-
 /* rfc1716 */
 #ifndef ICMP_UNREACH_FILTER_PROHIB
 #define ICMP_UNREACH_FILTER_PROHIB	13	/* admin prohibited filter */
@@ -263,6 +257,7 @@ static const char rcsid[] =
 
 #include "findsaddr.h"
 #include "ifaddrlist.h"
+#include "as.h"
 #include "traceroute.h"
 
 /* Maximum number of gateways (include room for one noop) */
@@ -350,6 +345,9 @@ int options;			/* socket options */
 int verbose;
 int waittime = 5;		/* time to wait for response (in seconds) */
 int nflag;			/* print addresses numerically */
+int as_path;			/* print as numbers for each hop */
+char *as_server = NULL;
+void *asn;
 #ifdef CANT_HACK_IPCKSUM
 int doipcksum = 0;		/* don't calculate ip checksums by default */
 #else
@@ -511,7 +509,10 @@ main(int argc, char **argv)
 			sockerrno = errno;
 	}
 
-	setuid(getuid());
+	if (setuid(getuid()) != 0) {
+		perror("setuid()");
+		exit(1);
+	}
 
 #ifdef IPCTL_DEFTTL
 	{
@@ -535,9 +536,17 @@ main(int argc, char **argv)
 		prog = argv[0];
 
 	opterr = 0;
-	while ((op = getopt(argc, argv, "edDFInrSvxf:g:i:M:m:P:p:q:s:t:w:z:")) != EOF)
+	while ((op = getopt(argc, argv, "aA:edDFInrSvxf:g:i:M:m:P:p:q:s:t:w:z:")) != EOF)
 		switch (op) {
-
+		case 'a':
+			as_path = 1;
+			break;
+			
+		case 'A':
+			as_path = 1;
+			as_server = optarg;
+			break;
+			    
 		case 'd':
 			options |= SO_DEBUG;
 			break;
@@ -913,6 +922,16 @@ main(int argc, char **argv)
 		exit (1);
 	}
 
+	if (as_path) {
+		asn = as_setup(as_server);
+		if (asn == NULL) {
+			Fprintf(stderr, "%s: as_setup failed, AS# lookups"
+			    " disabled\n", prog);
+			(void)fflush(stderr);
+			as_path = 0;
+		}
+	}
+	
 #if	defined(IPSEC) && defined(IPSEC_POLICY_IPSEC)
 	if (setpolicy(sndsock, "in bypass") < 0)
 		errx(1, "%s", ipsec_strerror());
@@ -940,7 +959,6 @@ main(int argc, char **argv)
 		for (probe = 0, loss = 0; probe < nprobes; ++probe) {
 			register int cc;
 			struct timeval t1, t2;
-			struct timezone tz;
 			register struct ip *ip;
 			struct outdata outdata;
 
@@ -951,7 +969,7 @@ main(int argc, char **argv)
 			outdata.ttl = ttl;
 
 			/* Avoid alignment problems by copying bytewise: */
-			(void)gettimeofday(&t1, &tz);
+			(void)gettimeofday(&t1, NULL);
 			memcpy(&outdata.tv, &t1, sizeof(outdata.tv));
 
 			/* Finalize and send packet */
@@ -964,7 +982,7 @@ main(int argc, char **argv)
 				double T;
 				int precis;
 
-				(void)gettimeofday(&t2, &tz);
+				(void)gettimeofday(&t2, NULL);
 				i = packet_ok(packet, cc, from, seq);
 				/* Skip short packet */
 				if (i == 0)
@@ -1118,6 +1136,8 @@ main(int argc, char **argv)
 		    (unreachable > 0 && unreachable >= nprobes - 1))
 			break;
 	}
+	if (as_path)
+		as_shutdown(asn);
 	exit(0);
 }
 
@@ -1128,7 +1148,6 @@ wait_for_reply(register int sock, register struct sockaddr_in *fromp,
 	fd_set *fdsp;
 	size_t nfds;
 	struct timeval now, wait;
-	struct timezone tz;
 	register int cc = 0;
 	register int error;
 	int fromlen = sizeof(*fromp);
@@ -1141,7 +1160,7 @@ wait_for_reply(register int sock, register struct sockaddr_in *fromp,
 
 	wait.tv_sec = tp->tv_sec + waittime;
 	wait.tv_usec = tp->tv_usec;
-	(void)gettimeofday(&now, &tz);
+	(void)gettimeofday(&now, NULL);
 	tvsub(&wait, &now);
 	if (wait.tv_sec < 0) {
 		wait.tv_sec = 0;
@@ -1387,8 +1406,7 @@ tcp_prep(struct outdata *outdata)
 
 	tcp->th_sport = htons(ident);
 	tcp->th_dport = htons(port + (fixedPort ? 0 : outdata->seq));
-	tcp->th_seq = (tcp->th_sport << 16) | (tcp->th_dport +
-	    (fixedPort ? outdata->seq : 0));
+	tcp->th_seq = (tcp->th_sport << 16) | tcp->th_dport;
 	tcp->th_ack = 0;
 	tcp->th_off = 5;
 	tcp->th_flags = TH_SYN;
@@ -1406,8 +1424,8 @@ tcp_check(const u_char *data, int seq)
 	struct tcphdr *const tcp = (struct tcphdr *) data;
 
 	return (ntohs(tcp->th_sport) == ident
-	    && ntohs(tcp->th_dport) == port + (fixedPort ? 0 : seq))
-	    && tcp->th_seq == (ident << 16) | (port + seq);
+	    && ntohs(tcp->th_dport) == port + (fixedPort ? 0 : seq)
+	    && tcp->th_seq == (tcp_seq)((tcp->th_sport << 16) | tcp->th_dport));
 }
 
 void
@@ -1453,16 +1471,21 @@ print(register u_char *buf, register int cc, register struct sockaddr_in *from)
 {
 	register struct ip *ip;
 	register int hlen;
+	char addr[INET_ADDRSTRLEN];
 
 	ip = (struct ip *) buf;
 	hlen = ip->ip_hl << 2;
 	cc -= hlen;
 
+	strlcpy(addr, inet_ntoa(from->sin_addr), sizeof(addr));
+
+	if (as_path)
+		Printf(" [AS%u]", as_lookup(asn, addr, AF_INET));
+
 	if (nflag)
-		Printf(" %s", inet_ntoa(from->sin_addr));
+		Printf(" %s", addr);
 	else
-		Printf(" %s (%s)", inetname(from->sin_addr),
-		    inet_ntoa(from->sin_addr));
+		Printf(" %s (%s)", inetname(from->sin_addr), addr);
 
 	if (verbose)
 		Printf(" %d bytes to %s", cc, inet_ntoa (ip->ip_dst));
@@ -1475,19 +1498,17 @@ u_short
 p_cksum(struct ip *ip, u_short *data, int len)
 {
 	static struct ipovly ipo;
-	u_short sumh, sumd;
-	u_long sumt;
+	u_short sum[2];
 
 	ipo.ih_pr = ip->ip_p;
 	ipo.ih_len = htons(len);
 	ipo.ih_src = ip->ip_src;
 	ipo.ih_dst = ip->ip_dst;
 
-	sumh = in_cksum((u_short*)&ipo, sizeof(ipo)); /* pseudo ip hdr cksum */
-	sumd = in_cksum((u_short*)data, len);	      /* payload data cksum */
-	sumt = (sumh << 16) | (sumd);
+	sum[1] = in_cksum((u_short*)&ipo, sizeof(ipo)); /* pseudo ip hdr cksum */
+	sum[0] = in_cksum(data, len);                   /* payload data cksum */
 
-	return ~in_cksum((u_short*)&sumt, sizeof(sumt));
+	return ~in_cksum(sum, sizeof(sum));
 }
 
 /*
@@ -1596,7 +1617,7 @@ gethostinfo(register char *hostname)
 	register char **p;
 	register u_int32_t addr, *ap;
 
-	if (strlen(hostname) > 64) {
+	if (strlen(hostname) >= MAXHOSTNAMELEN) {
 		Fprintf(stderr, "%s: hostname \"%.32s...\" is too long\n",
 		    prog, hostname);
 		exit(1);
@@ -1764,8 +1785,8 @@ usage(void)
 
 	Fprintf(stderr, "Version %s\n", version);
 	Fprintf(stderr,
-	    "Usage: %s [-dDeFInrSvx] [-f first_ttl] [-g gateway] [-i iface]\n"
+	    "Usage: %s [-adDeFInrSvx] [-f first_ttl] [-g gateway] [-i iface]\n"
 	    "\t[-m max_ttl] [-p port] [-P proto] [-q nqueries] [-s src_addr]\n"
-	    "\t[-t tos] [-w waittime] [-z pausemsecs] host [packetlen]\n", prog);
+	    "\t[-t tos] [-w waittime] [-A as_server] [-z pausemsecs] host [packetlen]\n", prog);
 	exit(1);
 }

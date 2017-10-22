@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/fs/hpfs/hpfs_alsubr.c 111856 2003-03-04 00:04:44Z jeff $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

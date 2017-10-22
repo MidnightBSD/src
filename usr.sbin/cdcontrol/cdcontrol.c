@@ -16,10 +16,23 @@
  * 11-Oct-1995: Serge V.Vakulenko <vak@cronyx.ru>
  *              New eject algorithm.
  *              Some code style reformatting.
+ * 
+ * 13-Dec-1999: Knut A. Syed <kas@kas.no>
+ * 		Volume-command modified.  If used with only one
+ * 		parameter it now sets both channels.  If used without
+ * 		parameters it will print volume-info.
+ * 		Version 2.0.1
+ *
+ * 27-Jun-2008  Pietro Cerutti <gahr@FreeBSD.org>
+ * 		Further enhancement to volume. Values not in range 0-255
+ * 		are now reduced to be in range. This prevents overflow in
+ * 		the uchar storing the volume (256 -> 0, -20 -> 236, ...).
+ * 		Version 2.0.2
+ *
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/cdcontrol/cdcontrol.c 151471 2005-10-19 15:37:43Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/cdio.h>
 #include <sys/cdrio.h>
@@ -39,7 +52,7 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.sbin/cdcontrol/cdcontrol.c 151471 2005-10-
 #include <unistd.h>
 #include <vis.h>
 
-#define VERSION "2.0"
+#define VERSION "2.0.2"
 
 #define ASTS_INVALID	0x00  /* Audio status byte not valid */
 #define ASTS_PLAYING	0x11  /* Audio play operation in progress */
@@ -100,7 +113,7 @@ struct cmdtab {
 { CMD_STATUS,	"status",	1, "[audio | media | volume]" },
 { CMD_STOP,	"stop",		3, "" },
 { CMD_VOLUME,	"volume",	1,
-      "<l> <r> | left | right | mute | mono | stereo" },
+      "<l&r> <l> <r> | left | right | mute | mono | stereo" },
 { CMD_CDID,	"cdid",		2, "" },
 { CMD_SPEED,	"speed",	2, "speed" },
 { 0,		NULL,		0, NULL }
@@ -139,7 +152,7 @@ __const char	*strstatus(int);
 static u_int	 dbprog_discid(void);
 __const char	*cdcontrol_prompt(void);
 
-void help ()
+void help (void)
 {
 	struct cmdtab *c;
 	const char *s;
@@ -165,7 +178,7 @@ void help ()
 	printf ("\tThe plain target address is taken as a synonym for play.\n");
 }
 
-void usage ()
+void usage (void)
 {
 	fprintf (stderr, "usage: cdcontrol [-sv] [-f device] [command ...]\n");
 	exit (1);
@@ -190,7 +203,7 @@ int main (int argc, char **argv)
 
 	for (;;) {
 		switch (getopt (argc, argv, "svhf:")) {
-		case EOF:
+		case -1:
 			break;
 		case 's':
 			verbose = 0;
@@ -228,7 +241,7 @@ int main (int argc, char **argv)
 
 	if (argc > 0) {
 		char buf[80], *p;
-		int len;
+		int len, rc;
 
 		for (p=buf; argc-->0; ++argv) {
 			len = strlen (*argv);
@@ -244,7 +257,11 @@ int main (int argc, char **argv)
 		}
 		*p = 0;
 		arg = parse (buf, &cmd);
-		return (run (cmd, arg));
+		rc = run (cmd, arg);
+		if (rc < 0 && verbose)
+			warn(NULL);
+
+		return (rc);
 	}
 
 	if (verbose == 1)
@@ -270,7 +287,7 @@ int main (int argc, char **argv)
 int run (int cmd, char *arg)
 {
 	long speed;
-	int l, r, rc;
+	int l, r, rc, count;
 
 	switch (cmd) {
 
@@ -396,6 +413,12 @@ int run (int cmd, char *arg)
 		if (fd < 0 && !open_cd ())
 			return (0);
 
+		if (! strlen (arg)) {
+			char volume[] = "volume";
+
+		    	return pstatus (volume);
+		}
+
 		if (! strncasecmp (arg, "left", strlen(arg)))
 			return ioctl (fd, CDIOCSETLEFT);
 
@@ -411,12 +434,13 @@ int run (int cmd, char *arg)
 		if (! strncasecmp (arg, "mute", strlen(arg)))
 			return ioctl (fd, CDIOCSETMUTE);
 
-		if (2 != sscanf (arg, "%d %d", &l, &r)) {
-			warnx("invalid command arguments");
-			return (0);
-		}
-
-		return setvol (l, r);
+		count = sscanf (arg, "%d %d", &l, &r);
+		if (count == 1)
+		    return setvol (l, l);
+		if (count == 2)
+		    return setvol (l, r);
+		warnx("invalid command arguments");
+		return (0);
 
 	case CMD_SPEED:
 		if (fd < 0 && ! open_cd ())
@@ -878,7 +902,7 @@ dbprog_sum(int n)
  *	The integer disc ID.
  */
 static u_int
-dbprog_discid()
+dbprog_discid(void)
 {
 	struct	ioc_toc_header h;
 	int	rc;
@@ -909,7 +933,7 @@ dbprog_discid()
 	return((n % 0xff) << 24 | t << 8 | ntr);
 }
 
-int cdid ()
+int cdid (void)
 {
 	u_int	id;
 
@@ -1039,6 +1063,9 @@ int setvol (int left, int right)
 {
 	struct ioc_vol  v;
 
+	left  = left  < 0 ? 0 : left  > 255 ? 255 : left;
+	right = right < 0 ? 0 : right > 255 ? 255 : right;
+
 	v.vol[0] = left;
 	v.vol[1] = right;
 	v.vol[2] = 0;
@@ -1106,7 +1133,7 @@ int status (int *trk, int *min, int *sec, int *frame)
 }
 
 const char *
-cdcontrol_prompt()
+cdcontrol_prompt(void)
 {
 	return ("cdcontrol> ");
 }
@@ -1225,7 +1252,7 @@ char *parse (char *buf, int *cmd)
 	return p;
 }
 
-int open_cd ()
+int open_cd (void)
 {
 	char devbuf[MAXPATHLEN];
 	const char *dev;

@@ -26,9 +26,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_seterrno.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
 /*
@@ -39,6 +42,8 @@
 #undef errno;
 #endif
 extern int      errno;
+
+void	_thread_seterrno(pthread_t thread, int error);
 
 void
 _thread_seterrno(pthread_t thread, int error)

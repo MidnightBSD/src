@@ -1,5 +1,5 @@
 /*	$NetBSD: if_media.c,v 1.1 1997/03/17 02:55:15 thorpej Exp $	*/
-/* $FreeBSD: release/7.0.0/sys/net/if_media.c 174854 2007-12-22 06:32:46Z cvs2svn $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 1997
@@ -235,7 +235,7 @@ ifmedia_ioctl(ifp, ifr, ifm, cmd)
 		/*
 		 * If no change, we're done.
 		 * XXX Automedia may invole software intervention.
-		 *     Keep going in case the the connected media changed.
+		 *     Keep going in case the connected media changed.
 		 *     Similarly, if best match changed (kernel debugger?).
 		 */
 		if ((IFM_SUBTYPE(newmedia) != IFM_AUTO) &&

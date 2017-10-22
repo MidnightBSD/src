@@ -1,5 +1,5 @@
 /*	$OpenBSD: libgen.h,v 1.4 1999/05/28 22:00:22 espie Exp $	*/
-/*	$FreeBSD: release/7.0.0/include/libgen.h 93032 2002-03-23 17:24:55Z imp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (c) 1997 Todd C. Miller <Todd.Miller@courtesan.com>
@@ -36,6 +36,7 @@
 __BEGIN_DECLS
 
 char	*basename(const char *);
+char	*basename_r(const char *, char *);
 char	*dirname(const char *);
 #if 0
 char	*regcmp(const char *, ...);

@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/7.0.0/tools/regression/geom_gate/Makefile 128883 2004-05-03 18:29:54Z pjd $
+# $FreeBSD$
 #
 # Regression tests for geom_gate.
 #

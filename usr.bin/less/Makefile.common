@@ -1,9 +1,10 @@
-# $FreeBSD: release/7.0.0/usr.bin/less/Makefile.common 115898 2003-06-06 13:46:55Z kuriyama $
+# $FreeBSD$
 
 LSDIR=	${.CURDIR}/../../contrib/less
 .PATH:	${LSDIR}
 
 CFLAGS+=-I${.CURDIR}/../less -I${LSDIR}
+WARNS?=	1
 
 .SUFFIXES: .nro .1
 

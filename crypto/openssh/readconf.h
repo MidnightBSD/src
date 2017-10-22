@@ -1,4 +1,5 @@
-/* $OpenBSD: readconf.h,v 1.71 2006/08/03 03:34:42 deraadt Exp $ */
+/* $OpenBSD: readconf.h,v 1.88 2010/11/13 23:27:50 djm Exp $ */
+/* $FreeBSD$ */
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -20,9 +21,10 @@
 
 typedef struct {
 	char	 *listen_host;		/* Host (address) to listen on. */
-	u_short	  listen_port;		/* Port to forward. */
+	int	  listen_port;		/* Port to forward. */
 	char	 *connect_host;		/* Host to connect. */
-	u_short	  connect_port;		/* Port to connect on connect_host. */
+	int	  connect_port;		/* Port to connect on connect_host. */
+	int	  allocated_port;	/* Dynamically allocated listen port */
 }       Forward;
 /* Data structure for representing option data. */
 
@@ -31,6 +33,7 @@ typedef struct {
 typedef struct {
 	int     forward_agent;	/* Forward authentication agent. */
 	int     forward_x11;	/* Forward X11 display. */
+	int     forward_x11_timeout;	/* Expiration for Cookies */
 	int     forward_x11_trusted;	/* Trust Forward X11 display. */
 	int     exit_on_forward_failure;	/* Exit if bind(2) fails for -L/-R */
 	char   *xauth_location;	/* Location for xauth program */
@@ -49,6 +52,7 @@ typedef struct {
 						 * authentication. */
 	int     kbd_interactive_authentication; /* Try keyboard-interactive auth. */
 	char	*kbd_interactive_devices; /* Keyboard-interactive auth devices. */
+	int     zero_knowledge_password_authentication;	/* Try jpake */
 	int     batch_mode;	/* Batch mode: do not ask for passwords. */
 	int     check_host_ip;	/* Also keep track of keys for IP address */
 	int     strict_host_key_checking;	/* Strict host key checking. */
@@ -56,6 +60,8 @@ typedef struct {
 	int     compression_level;	/* Compression level 1 (fast) to 9
 					 * (best). */
 	int     tcp_keep_alive;	/* Set SO_KEEPALIVE. */
+	int	ip_qos_interactive;	/* IP ToS/DSCP/class for interactive */
+	int	ip_qos_bulk;		/* IP ToS/DSCP/class for bulk traffic */
 	LogLevel log_level;	/* Level for logging. */
 
 	int     port;		/* Port to connect. */
@@ -70,6 +76,7 @@ typedef struct {
 	char   *ciphers;	/* SSH2 ciphers in order of preference. */
 	char   *macs;		/* SSH2 macs in order of preference. */
 	char   *hostkeyalgorithms;	/* SSH2 server key types in order of preference. */
+	char   *kex_algorithms;	/* SSH2 kex methods in order of preference. */
 	int	protocol;	/* Protocol in order of preference. */
 	char   *hostname;	/* Real host to connect. */
 	char   *host_key_alias;	/* hostname alias for .ssh/known_hosts */
@@ -83,7 +90,7 @@ typedef struct {
 	char   *user_hostfile2;
 	char   *preferred_authentications;
 	char   *bind_address;	/* local socket address for connection to sshd */
-	char   *smartcard_device; /* Smartcard reader device */
+	char   *pkcs11_provider; /* PKCS#11 provider */
 	int	verify_host_key_dns;	/* Verify host key using DNS */
 
 	int     num_identity_files;	/* Number of files for RSA/DSA identities. */
@@ -92,15 +99,15 @@ typedef struct {
 
 	/* Local TCP/IP forward requests. */
 	int     num_local_forwards;
-	Forward local_forwards[SSH_MAX_FORWARDS_PER_DIRECTION];
+	Forward *local_forwards;
 
 	/* Remote TCP/IP forward requests. */
 	int     num_remote_forwards;
-	Forward remote_forwards[SSH_MAX_FORWARDS_PER_DIRECTION];
+	Forward *remote_forwards;
 	int	clear_forwardings;
 
 	int	enable_ssh_keysign;
-	int	rekey_limit;
+	int64_t rekey_limit;
 	int	no_host_authentication_for_localhost;
 	int	identities_only;
 	int	server_alive_interval;
@@ -111,6 +118,8 @@ typedef struct {
 
 	char	*control_path;
 	int	control_master;
+	int     control_persist; /* ControlPersist flag */
+	int     control_persist_timeout; /* ControlPersist timeout (seconds) */
 
 	int	hash_known_hosts;
 
@@ -120,7 +129,21 @@ typedef struct {
 
 	char	*local_command;
 	int	permit_local_command;
+	int	visual_host_key;
 
+	int	use_roaming;
+
+	int	hpn_disabled;	/* Switch to disable HPN buffer management. */
+	int	hpn_buffer_size;	/* User definable size for HPN buffer
+					 * window. */
+	int	tcp_rcv_buf_poll;	/* Option to poll recv buf every window
+					 * transfer. */
+	int	tcp_rcv_buf;	/* User switch to set tcp recv buffer. */
+
+#ifdef	NONE_CIPHER_ENABLED
+	int	none_enabled;	/* Allow none to be used */
+	int	none_switch;	/* Use none cipher */
+#endif
 }       Options;
 
 #define SSHCTL_MASTER_NO	0
@@ -132,7 +155,7 @@ typedef struct {
 void     initialize_options(Options *);
 void     fill_default_options(Options *);
 int	 read_config_file(const char *, const char *, Options *, int);
-int	 parse_forward(Forward *, const char *);
+int	 parse_forward(Forward *, const char *, int, int);
 
 int
 process_config_line(Options *, const char *, char *, const char *, int, int *);

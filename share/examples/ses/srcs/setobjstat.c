@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/share/examples/ses/srcs/setobjstat.c 57580 2000-02-29 05:44:19Z mjacob $ */
+/* $FreeBSD$ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.
@@ -40,9 +40,7 @@
 #include SESINC
 
 int
-main(a, v)
-	int a;
-	char **v;
+main(int a, char **v)
 {
 	int fd;
 	int i;

@@ -1,4 +1,4 @@
-$FreeBSD: release/7.0.0/gnu/usr.bin/diff/context.c.diff 170857 2007-06-17 00:43:50Z delphij $
+$FreeBSD$
 --- context.c.orig	2004-04-12 15:44:35.000000000 +0800
 +++ context.c	2007-06-16 22:25:11.705063242 +0800
 @@ -29,7 +29,7 @@
@@ -15,7 +15,7 @@ $FreeBSD: release/7.0.0/gnu/usr.bin/diff/context.c.diff 170857 2007-06-17 00:43:
  		    INT_STRLEN_BOUND (time_t) + 11)];
        struct tm const *tm = localtime (&inf->stat.st_mtime);
 -      int nsec = TIMESPEC_NS (inf->stat.st_mtim);
-+      long nsec = TIMESPEC_NS (inf->stat.st_mtimespec);
++      long nsec = TIMESPEC_NS (inf->stat.st_mtim);
        if (! (tm && nstrftime (buf, sizeof buf, time_format, tm, 0, nsec)))
  	{
 -	  long int sec = inf->stat.st_mtime;

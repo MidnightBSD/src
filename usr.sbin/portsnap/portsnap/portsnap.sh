@@ -25,7 +25,7 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# $FreeBSD: release/7.0.0/usr.sbin/portsnap/portsnap/portsnap.sh 171691 2007-08-02 02:05:23Z cperciva $
+# $FreeBSD$
 
 #### Usage function -- called from command-line handling code.
 
@@ -140,8 +140,11 @@ parse_cmdline() {
 			if [ ! -z "${SERVERNAME}" ]; then usage; fi
 			shift; SERVERNAME="$1"
 			;;
-		cron | extract | fetch | update)
+		cron | extract | fetch | update | alfred)
 			COMMANDS="${COMMANDS} $1"
+			;;
+		up)
+			COMMANDS="${COMMANDS} update"
 			;;
 		*)
 			if [ $# -gt 1 ]; then usage; fi
@@ -198,6 +201,12 @@ parse_conffile() {
 				grep -E "^REFUSE[[:space:]]" "${CONFFILE}" |
 				    cut -c 7- | xargs echo | tr ' ' '|'
 				`)"
+		fi
+
+		if grep -qE "^INDEX[[:space:]]" ${CONFFILE}; then
+			INDEXPAIRS="`
+				grep -E "^INDEX[[:space:]]" "${CONFFILE}" |
+				    cut -c 7- | tr ' ' '|' | xargs echo`"
 		fi
 	fi
 }
@@ -530,9 +539,9 @@ fetch_metadata() {
 	rm -f ${SNAPSHOTHASH} tINDEX.new
 
 	echo ${NDEBUG} "Fetching snapshot metadata... "
-	fetch ${QUIETFLAG} http://${SERVERNAME}/t/${SNAPSHOTHASH}
+	fetch ${QUIETFLAG} http://${SERVERNAME}/t/${SNAPSHOTHASH} \
 	    2>${QUIETREDIR} || return
-	if [ `${SHA256} -q ${SNAPSHOTHASH}` != ${SNAPSHOTHASH} ]; then
+	if [ "`${SHA256} -q ${SNAPSHOTHASH}`" != ${SNAPSHOTHASH} ]; then
 		echo "snapshot metadata corrupt."
 		return 1
 	fi
@@ -600,7 +609,7 @@ fetch_index_sanity() {
 # Verify a list of files
 fetch_snapshot_verify() {
 	while read F; do
-		if [ `gunzip -c snap/${F} | ${SHA256} -q` != ${F} ]; then
+		if [ "`gunzip -c snap/${F} | ${SHA256} -q`" != ${F} ]; then
 			echo "snapshot corrupt."
 			return 1
 		fi
@@ -626,7 +635,7 @@ fetch_snapshot() {
 	fetch -r http://${SERVERNAME}/s/${SNAPSHOTHASH}.tgz || return 1
 
 	echo -n "Extracting snapshot... "
-	tar -xzf ${SNAPSHOTHASH}.tgz snap/ || return 1
+	tar -xz --numeric-owner -f ${SNAPSHOTHASH}.tgz snap/ || return 1
 	rm ${SNAPSHOTHASH}.tgz
 	echo "done."
 
@@ -829,19 +838,25 @@ fetch_run() {
 
 # Build a ports INDEX file
 extract_make_index() {
+	if ! look $1 ${WORKDIR}/tINDEX > /dev/null; then
+		echo -n "$1 not provided by portsnap server; "
+		echo "$2 not being generated."
+	else
 	gunzip -c "${WORKDIR}/files/`look $1 ${WORKDIR}/tINDEX |
 	    cut -f 2 -d '|'`.gz" |
 	    cat - ${LOCALDESC} |
 	    ${MKINDEX} /dev/stdin > ${PORTSDIR}/$2
+	fi
 }
 
 # Create INDEX, INDEX-5, INDEX-6
 extract_indices() {
 	echo -n "Building new INDEX files... "
-	extract_make_index DESCRIBE.4 INDEX || return 1
-	extract_make_index DESCRIBE.5 INDEX-5 || return 1
-	extract_make_index DESCRIBE.6 INDEX-6 || return 1
-	extract_make_index DESCRIBE.7 INDEX-7 || return 1
+	for PAIR in ${INDEXPAIRS}; do
+		INDEXFILE=`echo ${PAIR} | cut -f 1 -d '|'`
+		DESCRIBEFILE=`echo ${PAIR} | cut -f 2 -d '|'`
+		extract_make_index ${DESCRIBEFILE} ${INDEXFILE} || return 1
+	done
 	echo "done."
 }
 
@@ -884,12 +899,12 @@ extract_run() {
 		*/)
 			rm -rf ${PORTSDIR}/${FILE%/}
 			mkdir -p ${PORTSDIR}/${FILE}
-			tar -xzf ${WORKDIR}/files/${HASH}.gz	\
+			tar -xz --numeric-owner -f ${WORKDIR}/files/${HASH}.gz \
 			    -C ${PORTSDIR}/${FILE}
 			;;
 		*)
 			rm -f ${PORTSDIR}/${FILE}
-			tar -xzf ${WORKDIR}/files/${HASH}.gz	\
+			tar -xz --numeric-owner -f ${WORKDIR}/files/${HASH}.gz \
 			    -C ${PORTSDIR} ${FILE}
 			;;
 		esac
@@ -954,11 +969,11 @@ update_run() {
 		case ${FILE} in
 		*/)
 			mkdir -p ${PORTSDIR}/${FILE}
-			tar -xzf ${WORKDIR}/files/${HASH}.gz	\
+			tar -xz --numeric-owner -f ${WORKDIR}/files/${HASH}.gz \
 			    -C ${PORTSDIR}/${FILE}
 			;;
 		*)
-			tar -xzf ${WORKDIR}/files/${HASH}.gz	\
+			tar -xz --numeric-owner -f ${WORKDIR}/files/${HASH}.gz \
 			    -C ${PORTSDIR} ${FILE}
 			;;
 		esac
@@ -1026,6 +1041,22 @@ cmd_extract() {
 cmd_update() {
 	update_check_params
 	update_run || exit 1
+}
+
+# Alfred command.  Run 'fetch' or 'cron' depending on
+# whether stdin is a terminal; then run 'update' or
+# 'extract' depending on whether ${PORTSDIR} exists.
+cmd_alfred() {
+	if [ -t 0 ]; then
+		cmd_fetch
+	else
+		cmd_cron
+	fi
+	if [ -d ${PORTSDIR} ]; then
+		cmd_update
+	else
+		cmd_extract
+	fi
 }
 
 #### Entry point

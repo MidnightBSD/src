@@ -1,5 +1,5 @@
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/amd64/string/bcmp.S 144868 2005-04-10 18:12:07Z alc $");
+__FBSDID("$FreeBSD$");
 
 #if 0
 	RCSID("$NetBSD: bcmp.S,v 1.1 2001/06/19 00:25:04 fvdl Exp $")
@@ -22,3 +22,6 @@ L1:
 	setne	%al
 	movsbl	%al,%eax
 	ret
+END(bcmp)
+
+	.section .note.GNU-stack,"",%progbits

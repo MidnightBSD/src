@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (C) 1995-1997, 1999 Wolfgang Solfrank.
  * Copyright (C) 1995-1997, 1999 TooLs GmbH.
  * All rights reserved.
@@ -33,7 +33,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/lib/libc/powerpc/gen/syncicache.c 170506 2007-06-10 16:32:08Z marcel $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -47,17 +47,16 @@ static const char rcsid[] =
 #include <machine/cpu.h>
 #include <machine/md_var.h>
 
-#if	defined(_KERNEL) || defined(_STANDALONE)
-#ifndef	CACHELINESIZE
-#error "Must know the size of a cache line"
+#ifdef _STANDALONE
+int cacheline_size = 32;
 #endif
-#else
+
+#if	!defined(_KERNEL) && !defined(_STANDALONE)
 #include <stdlib.h>
 
-static void getcachelinesize(void);
+int cacheline_size = 0;
 
-static int _cachelinesize;
-#define	CACHELINESIZE	_cachelinesize
+static void getcachelinesize(void);
 
 static void
 getcachelinesize()
@@ -65,10 +64,10 @@ getcachelinesize()
 	static int	cachemib[] = { CTL_MACHDEP, CPU_CACHELINE };
 	int		clen;
 
-	clen = sizeof(_cachelinesize);
+	clen = sizeof(cacheline_size);
 
 	if (sysctl(cachemib, sizeof(cachemib) / sizeof(cachemib[0]),
-	    &_cachelinesize, &clen, NULL, 0) < 0 || !_cachelinesize) {
+	    &cacheline_size, &clen, NULL, 0) < 0 || !cacheline_size) {
 		abort();
 	}
 }
@@ -81,21 +80,24 @@ __syncicache(void *from, int len)
 	char	*p;
 
 #if	!defined(_KERNEL) && !defined(_STANDALONE)
-	if (!_cachelinesize)
+	if (!cacheline_size)
 		getcachelinesize();
 #endif	
-	off = (u_int)from & (CACHELINESIZE - 1);
+
+	off = (u_int)from & (cacheline_size - 1);
 	l = len += off;
 	p = (char *)from - off;
+
 	do {
 		__asm __volatile ("dcbst 0,%0" :: "r"(p));
-		p += CACHELINESIZE;
-	} while ((l -= CACHELINESIZE) > 0);
+		p += cacheline_size;
+	} while ((l -= cacheline_size) > 0);
 	__asm __volatile ("sync");
 	p = (char *)from - off;
 	do {
 		__asm __volatile ("icbi 0,%0" :: "r"(p));
-		p += CACHELINESIZE;
-	} while ((len -= CACHELINESIZE) > 0);
+		p += cacheline_size;
+	} while ((len -= cacheline_size) > 0);
 	__asm __volatile ("sync; isync");
 }
+

@@ -1,5 +1,3 @@
-# $FreeBSD: release/7.0.0/lib/libthr/arch/sparc64/Makefile.inc 144518 2005-04-02 01:20:00Z davidxu $
+# $FreeBSD$
 
-.PATH:	${.CURDIR}/arch/${MACHINE_ARCH}/${MACHINE_ARCH}
-
-SRCS+=	pthread_md.c
+SRCS+=	_umtx_op_err.S pthread_md.c

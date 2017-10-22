@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libelf/gelf_ehdr.c 164190 2006-11-11 17:16:35Z jkoshy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/limits.h>
 
@@ -137,6 +137,8 @@ gelf_update_ehdr(Elf *e, GElf_Ehdr *s)
 	if ((ehdr = _libelf_ehdr(e, ec, 0)) == NULL)
 		return (0);
 
+	(void) elf_flagehdr(e, ELF_C_SET, ELF_F_DIRTY);
+
 	if (ec == ELFCLASS64) {
 		eh64 = (Elf64_Ehdr *) ehdr;
 		*eh64 = *s;
@@ -160,8 +162,6 @@ gelf_update_ehdr(Elf *e, GElf_Ehdr *s)
 	eh32->e_shentsize = s->e_shentsize;
 	eh32->e_shnum     = s->e_shnum;
 	eh32->e_shstrndx  = s->e_shstrndx;
-
-	(void) elf_flagehdr(e, ELF_C_SET, ELF_F_DIRTY);
 
 	return (1);
 }

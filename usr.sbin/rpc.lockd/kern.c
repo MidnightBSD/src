@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/rpc.lockd/kern.c 161394 2006-08-17 05:55:20Z maxim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -53,9 +53,8 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.sbin/rpc.lockd/kern.c 161394 2006-08-17 05
 #include <netdb.h>
 
 #include "nlm_prot.h"
-#include <nfs/rpcv2.h>
 #include <nfs/nfsproto.h>
-#include <nfsclient/nfs_lock.h>
+#include <nfs/nfs_lock.h>
 
 #include "lockd.h"
 #include "lockd_lock.h"

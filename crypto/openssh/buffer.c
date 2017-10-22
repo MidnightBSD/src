@@ -1,4 +1,5 @@
-/* $OpenBSD: buffer.c,v 1.31 2006/08/03 03:34:41 deraadt Exp $ */
+/* $OpenBSD: buffer.c,v 1.32 2010/02/09 03:56:28 djm Exp $ */
+/* $FreeBSD$ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -25,7 +26,7 @@
 #include "log.h"
 
 #define	BUFFER_MAX_CHUNK	0x100000
-#define	BUFFER_MAX_LEN		0xa00000
+#define	BUFFER_MAX_LEN		0x4000000	/* 64MB */
 #define	BUFFER_ALLOCSZ		0x008000
 
 /* Initializes the buffer structure. */
@@ -160,9 +161,16 @@ buffer_check_alloc(Buffer *buffer, u_int len)
 /* Returns the number of bytes of data in the buffer. */
 
 u_int
-buffer_len(Buffer *buffer)
+buffer_len(const Buffer *buffer)
 {
 	return buffer->end - buffer->offset;
+}
+
+/* Returns the maximum number of bytes of data that may be in the buffer. */
+u_int
+buffer_get_max_len(void)
+{
+	return (BUFFER_MAX_LEN);
 }
 
 /* Gets data from the beginning of the buffer. */
@@ -228,7 +236,7 @@ buffer_consume_end(Buffer *buffer, u_int bytes)
 /* Returns a pointer to the first used byte in the buffer. */
 
 void *
-buffer_ptr(Buffer *buffer)
+buffer_ptr(const Buffer *buffer)
 {
 	return buffer->buf + buffer->offset;
 }
@@ -236,7 +244,7 @@ buffer_ptr(Buffer *buffer)
 /* Dumps the contents of the buffer to stderr. */
 
 void
-buffer_dump(Buffer *buffer)
+buffer_dump(const Buffer *buffer)
 {
 	u_int i;
 	u_char *ucp = buffer->buf;

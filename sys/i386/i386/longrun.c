@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/i386/i386/longrun.c 138722 2004-12-12 05:53:57Z njl $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_cpu.h"
 
@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/i386/i386/longrun.c 138722 2004-12-12 05:5
 #include <sys/sysctl.h>
 #include <sys/types.h>
 
+#include <machine/cputypes.h>
 #include <machine/md_var.h>
 #include <machine/specialreg.h>
 
@@ -83,12 +84,11 @@ static u_int32_t longrun_modes[LONGRUN_MODE_MAX][3] = {
 static u_int
 tmx86_get_longrun_mode(void)
 {
-	u_long		eflags;
+	register_t	saveintr;
 	union msrinfo	msrinfo;
 	u_int		low, high, flags, mode;
 
-	eflags = read_eflags();
-	disable_intr();
+	saveintr = intr_disable();
 
 	msrinfo.msr = rdmsr(MSR_TMx86_LONGRUN);
 	low = LONGRUN_MODE_MASK(msrinfo.regs[0]);
@@ -104,40 +104,38 @@ tmx86_get_longrun_mode(void)
 	}
 	mode = LONGRUN_MODE_UNKNOWN;
 out:
-	write_eflags(eflags);
+	intr_restore(saveintr);
 	return (mode);
 }
 
 static u_int
 tmx86_get_longrun_status(u_int * frequency, u_int * voltage, u_int * percentage)
 {
-	u_long		eflags;
+	register_t	saveintr;
 	u_int		regs[4];
 
-	eflags = read_eflags();
-	disable_intr();
+	saveintr = intr_disable();
 
 	do_cpuid(0x80860007, regs);
 	*frequency = regs[0];
 	*voltage = regs[1];
 	*percentage = regs[2];
 
-	write_eflags(eflags);
+	intr_restore(saveintr);
 	return (1);
 }
 
 static u_int
 tmx86_set_longrun_mode(u_int mode)
 {
-	u_long		eflags;
+	register_t	saveintr;
 	union msrinfo	msrinfo;
 
 	if (mode >= LONGRUN_MODE_UNKNOWN) {
 		return (0);
 	}
 
-	eflags = read_eflags();
-	disable_intr();
+	saveintr = intr_disable();
 
 	/* Write LongRun mode values to Model Specific Register. */
 	msrinfo.msr = rdmsr(MSR_TMx86_LONGRUN);
@@ -152,7 +150,7 @@ tmx86_set_longrun_mode(u_int mode)
 	msrinfo.regs[0] = (msrinfo.regs[0] & ~0x01) | longrun_modes[mode][2];
 	wrmsr(MSR_TMx86_LONGRUN_FLAGS, msrinfo.msr);
 
-	write_eflags(eflags);
+	intr_restore(saveintr);
 	return (1);
 }
 
@@ -262,8 +260,8 @@ tmx86_longrun_profile_sysctl(SYSCTL_HANDLER_ARGS)
 static void
 setup_tmx86_longrun(void *dummy __unused)
 {
-	if (strcmp(cpu_vendor, "GenuineTMx86") != 0 &&
-	    strcmp(cpu_vendor, "TransmetaCPU") != 0)
+
+	if (cpu_vendor_id != CPU_VENDOR_TRANSMETA)
 		return;
 
 	crusoe_longrun = tmx86_get_longrun_mode();

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/bsdiff/bsdiff/bsdiff.c 164922 2006-12-05 20:22:14Z cperciva $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -272,7 +272,7 @@ int main(int argc,char *argv[])
 	/* Compute the differences, writing ctrl as we go */
 	if ((pfbz2 = BZ2_bzWriteOpen(&bz2err, pf, 9, 0, 0)) == NULL)
 		errx(1, "BZ2_bzWriteOpen, bz2err = %d", bz2err);
-	scan=0;len=0;
+	scan=0;len=0;pos=0;
 	lastscan=0;lastpos=0;lastoffset=0;
 	while(scan<newsize) {
 		oldscore=0;

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/contrib/diff/FREEBSD-upgrade 172506 2007-10-10 16:59:15Z cvs2svn $
+# $FreeBSD$
 Import of GNU diff 2.8.7
 
 Original source available as ftp://alpha.gnu.org/pub/gnu/diffutils/diffutils-2.8.7.tar.gz

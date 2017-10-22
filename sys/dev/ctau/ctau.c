@@ -17,7 +17,7 @@
  * Cronyx Id: ctau.c,v 1.1.2.4 2003/12/11 17:33:43 rik Exp $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/ctau/ctau.c 139749 2005-01-06 01:43:34Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/cx/machdep.h>
 #include <dev/ctau/ctddk.h>
@@ -1734,7 +1734,7 @@ ct_board_opt_t ct_board_opt_dflt = {
 	0,			/* board control register 2 */
 	{			/* DMA priority control register */
 		PCR_PRIO_ROTATE,
-		0,		/* all channels share the the bus hold */
+		0,		/* all channels share the bus hold */
 		0,		/* hold the bus until all transfers done */
 	},
 	CFG_A,			/* E1/G.703 config: two independent channels */

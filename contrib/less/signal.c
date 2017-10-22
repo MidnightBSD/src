@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2007  Mark Nudelman
+ * Copyright (C) 1984-2011  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -8,7 +8,7 @@
  * contact the author, see the README file.
  */
 
-/* $FreeBSD: release/7.0.0/contrib/less/signal.c 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $FreeBSD$ */
 
 /*
  * Routines dealing with signals.
@@ -46,6 +46,7 @@ extern long jump_sline_fraction;
 u_interrupt(type)
 	int type;
 {
+	bell();
 #if OS2
 	LSIGNAL(SIGINT, SIG_ACK);
 #endif
@@ -63,7 +64,7 @@ u_interrupt(type)
 	if (less_is_more)
 		quit(0);
 	if (reading)
-		intread();
+		intread(); /* May longjmp */
 }
 
 #ifdef SIGTSTP
@@ -247,6 +248,7 @@ psignals()
 		{
 			wscroll = (sc_height + 1) / 2;
 			calc_jump_sline();
+			calc_shift_count();
 			screen_trashed = 1;
 		}
 	}
@@ -254,25 +256,6 @@ psignals()
 	if (tsignals & S_INTERRUPT)
 	{
 		if (quit_on_intr)
-			quit(QUIT_OK);
-		bell();
-		/*
-		 * {{ You may wish to replace the bell() with 
-		 *    error("Interrupt", NULL_PARG); }}
-		 */
-
-		/*
-		 * If we were interrupted while in the "calculating 
-		 * line numbers" loop, turn off line numbers.
-		 */
-		if (lnloop)
-		{
-			lnloop = 0;
-			if (linenums == 2)
-				screen_trashed = 1;
-			linenums = 0;
-			error("Line numbers turned off", NULL_PARG);
-		}
-
+			quit(QUIT_INTERRUPT);
 	}
 }

@@ -1,8 +1,8 @@
-# $FreeBSD: release/7.0.0/sys/modules/mmcsd/Makefile 163519 2006-10-20 06:52:59Z imp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/mmc
 
 KMOD=	mmcsd
-SRCS=	mmcsd.c mmcbus_if.h device_if.h bus_if.h
+SRCS=	bus_if.h device_if.h mmcbr_if.h mmcbus_if.h mmcsd.c
 
 .include <bsd.kmod.mk>

@@ -9,7 +9,7 @@
 .\"
 .\" This file is in the public domain.
 .\"
-.\" $FreeBSD: release/7.0.0/lib/libufs/ufs_disk_close.3 140566 2005-01-21 10:35:40Z ru $
+.\" $FreeBSD$
 .\"
 .Dd June 4, 2003
 .Dt UFS_DISK_CLOSE 3
@@ -53,7 +53,7 @@ and populate the structure pointed to by
 The disk is opened read-only.
 The specified
 .Fa name
-may be either a mountpoint, or a device name.
+may be either a mountpoint, a device name or a filesystem image.
 The
 .Fn ufs_disk_fillout
 function assumes there is a valid superblock and will fail if not,

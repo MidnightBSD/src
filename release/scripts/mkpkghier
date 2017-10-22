@@ -1,6 +1,6 @@
 #! /bin/sh
 #
-# $FreeBSD: release/7.0.0/release/scripts/mkpkghier 107681 2002-12-08 18:31:03Z murray $
+# $FreeBSD$
 
 usage()
 {

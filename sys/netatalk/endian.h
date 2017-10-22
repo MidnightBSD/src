@@ -20,7 +20,7 @@
  *	+1-313-763-0525
  *	netatalk@itd.umich.edu
  *
- * $FreeBSD: release/7.0.0/sys/netatalk/endian.h 139827 2005-01-07 02:35:34Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _ATALK_ENDIAN_H_

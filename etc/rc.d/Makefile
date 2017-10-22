@@ -1,38 +1,38 @@
-# $FreeBSD: release/7.0.0/etc/rc.d/Makefile 175783 2008-01-29 00:22:33Z dougb $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
 FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	abi accounting addswap adjkerntz amd \
-	apm apmd archdep atm1 atm2 atm3 auditd auto_linklocal \
+	apm apmd archdep atm1 atm2 atm3 auditd \
 	bgfsck bluetooth bootparams bridge bsnmpd bthidd \
 	ccd cleanvar cleartmp cron \
-	devd devfs dhclient \
+	ddb defaultroute devd devfs dhclient \
 	dmesg dumpon \
-	early.sh encswap \
-	fsck ftp-proxy ftpd \
-	gbde geli geli2 \
-	hcsecd \
-	hostapd hostid hostname \
-	idmapd inetd initrandom \
-	ip6addrctl ip6fw ipfilter ipfs ipfw ipmon \
-	ipnat ipsec ipxrouted isdnd \
+	encswap \
+	faith fsck ftp-proxy ftpd \
+	gbde geli geli2 gptboot gssd \
+	hastd hcsecd \
+	hostapd hostid hostid_save hostname \
+	inetd initrandom \
+	ip6addrctl ipfilter ipfs ipfw ipmon \
+	ipnat ipsec \
 	jail \
-	kadmind kerberos kernel keyserv kldxref kpasswdd \
+	kadmind kerberos keyserv kld kldxref kpasswdd \
 	ldconfig local localpkg lockd lpd \
 	mixer motd mountcritlocal mountcritremote mountlate \
 	mdconfig mdconfig2 mountd moused mroute6d mrouted msgs \
-	named natd netif netoptions \
-	network_ipv6 newsyslog nfsclient nfsd \
-	nfsserver nisdomain nsswitch ntpd ntpdate \
+	named natd netif netoptions netwait \
+	newsyslog nfsclient nfscbd nfsd \
+	nfsuserd nisdomain nsswitch ntpd ntpdate \
 	othermta \
 	pf pflog pfsync \
 	powerd power_profile ppp pppoed pwcheck \
 	quota \
-	random rarpd resolv root \
-	route6d routed routing rpcbind rtadvd rwho \
+	random rarpd rctl resolv rfcomm_pppd_server root \
+	route6d routed routing rpcbind rtadvd rtsold rwho \
 	savecore sdpd securelevel sendmail \
-	serial sppp statd swap1 \
+	serial sppp statd static_arp static_ndp stf swap1 \
 	syscons sysctl syslogd \
 	timed tmp \
 	ugidfw \
@@ -40,7 +40,15 @@ FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	watchdogd wpa_supplicant \
 	ypbind yppasswdd ypserv \
 	ypset ypupdated ypxfrd \
-	zfs
+	zfs zvol
+
+.if ${MK_IPX} != "no"
+FILES+=	ipxrouted
+.endif
+
+.if ${MK_OFED} != "no"
+FILES+= opensm
+.endif
 
 .if ${MK_OPENSSH} != "no"
 FILES+=	sshd
@@ -48,6 +56,10 @@ FILES+=	sshd
 
 .if ${MK_NS_CACHING} != "no"
 FILES+= nscd
+.endif
+
+.if ${MK_BLUETOOTH} != "no"
+FILES+=	ubthidhci
 .endif
 
 FILESDIR=	/etc/rc.d

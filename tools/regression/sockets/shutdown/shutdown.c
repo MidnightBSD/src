@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/regression/sockets/shutdown/shutdown.c 150156 2005-09-15 13:20:39Z maxim $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

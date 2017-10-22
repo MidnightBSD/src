@@ -1,9 +1,8 @@
-# $FreeBSD: release/7.0.0/usr.bin/csup/Makefile 156704 2006-03-14 03:53:50Z mux $
-
-.PATH: ${.CURDIR}/../../contrib/csup
+# $FreeBSD$
 
 PROG=	csup
 SRCS=	attrstack.c \
+	auth.c \
 	config.c \
 	detailer.c \
 	diff.c \
@@ -13,6 +12,7 @@ SRCS=	attrstack.c \
 	globtree.c \
 	idcache.c \
 	keyword.c \
+	lex.rcs.c \
 	lister.c \
 	main.c \
 	misc.c \
@@ -20,17 +20,23 @@ SRCS=	attrstack.c \
 	parse.y \
 	pathcomp.c \
 	proto.c \
+	rcsfile.c \
+	rcsparse.c \
+	rsyncfile.c \
 	status.c \
 	stream.c \
 	threads.c \
 	token.l \
 	updater.c
 
-CFLAGS+= -I. -I${.CURDIR}/../../contrib/csup
+CFLAGS+= -I. -I${.CURDIR}
 CFLAGS+= -DHAVE_FFLAGS -DNDEBUG
-WARNS?=	6
+WARNS?=	1
 
-DPADD=	${LIBCRYPTO} ${LIBZ} ${LIBPTHREAD}
-LDADD=	-lcrypto -lz -lpthread
+DPADD=	${LIBMD} ${LIBZ} ${LIBPTHREAD}
+LDADD=	-lmd -lz -lpthread
+
+SCRIPTS=	cpasswd.sh
+MAN=		csup.1 cpasswd.1
 
 .include <bsd.prog.mk>

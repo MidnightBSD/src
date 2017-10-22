@@ -23,11 +23,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/games/random/randomize_fd.h 110928 2003-02-15 10:26:10Z seanc $
+ * $FreeBSD$
  */
 
 #ifndef __RANDOMIZE_FD__
 #define __RANDOMIZE_FD__
+
+/*
+ * The random() function is defined to return values between 0 and
+ * 2^31 - 1 inclusive in random(3).
+ */
+#define	RANDOM_MAX_PLUS1	0x80000000UL
 
 #define RANDOM_TYPE_UNSET 0
 #define RANDOM_TYPE_LINES 1

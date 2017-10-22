@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/ia64/ski/conf.c 158467 2006-05-12 04:09:53Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 
@@ -57,18 +57,6 @@ struct fs_ops *file_system[] = {
 	&ski_fsops,
 	&ufs_fsops,
 	&gzipfs_fsops,
-	NULL
-};
-
-/* Exported for ia64 only */
-/* 
- * Sort formats so that those that can detect based on arguments
- * rather than reading the file go first.
- */
-extern struct file_format ia64_elf;
-
-struct file_format *file_formats[] = {
-	&ia64_elf,
 	NULL
 };
 

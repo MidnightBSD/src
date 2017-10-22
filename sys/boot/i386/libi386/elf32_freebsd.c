@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/i386/libi386/elf32_freebsd.c 163914 2006-11-02 17:28:38Z ru $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -59,7 +59,7 @@ elf32_exec(struct preloaded_file *fp)
     int				boothowto, err, bootdev;
 
     if ((md = file_findmetadata(fp, MODINFOMD_ELFHDR)) == NULL)
-	return(EFTYPE);			/* XXX actually EFUCKUP */
+	return(EFTYPE);
     ehdr = (Elf_Ehdr *)&(md->md_data);
 
     err = bi_load32(fp->f_args, &boothowto, &bootdev, &bootinfop, &modulep, &kernend);

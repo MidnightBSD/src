@@ -32,7 +32,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/sbin/mount_msdosfs/mount_msdosfs.c 166326 2007-01-29 01:49:08Z rodrigc $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -218,15 +218,18 @@ main(int argc, char **argv)
 	build_iovec_argf(&iov, &iovlen, "mask", "%u", mask);
 	build_iovec_argf(&iov, &iovlen, "dirmask", "%u", dirmask);
 
-	if (nmount(iov, iovlen, mntflags) < 0)
-		err(1, "%s: %s", dev, errmsg);
+	if (nmount(iov, iovlen, mntflags) < 0) {
+		if (errmsg[0])
+			err(1, "%s: %s", dev, errmsg);
+		else
+			err(1, "%s", dev);
+	}
 
 	exit (0);
 }
 
 gid_t
-a_gid(s)
-	char *s;
+a_gid(char *s)
 {
 	struct group *gr;
 	char *gname;
@@ -245,8 +248,7 @@ a_gid(s)
 }
 
 uid_t
-a_uid(s)
-	char *s;
+a_uid(char *s)
 {
 	struct passwd *pw;
 	char *uname;
@@ -265,8 +267,7 @@ a_uid(s)
 }
 
 mode_t
-a_mask(s)
-	char *s;
+a_mask(char *s)
 {
 	int done, rv;
 	char *ep;
@@ -283,7 +284,7 @@ a_mask(s)
 }
 
 void
-usage()
+usage(void)
 {
 	fprintf(stderr, "%s\n%s\n%s\n",
 	"usage: mount_msdosfs [-9ls] [-D DOS_codepage] [-g gid] [-L locale]",

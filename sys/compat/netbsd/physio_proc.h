@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/compat/netbsd/physio_proc.h 139743 2005-01-05 22:34:37Z imp $	*/
+/*	$FreeBSD$	*/
 /*	$NecBSD: physio_proc.h,v 3.4 1999/07/23 20:47:03 honda Exp $	*/
 /*	$NetBSD$	*/
 

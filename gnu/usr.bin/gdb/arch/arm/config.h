@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/gnu/usr.bin/gdb/arch/arm/config.h 162298 2006-09-14 06:49:34Z imp $ */
+/* $FreeBSD$ */
 
 /* config.h.  Generated automatically by configure.  */
 /* config.in.  Generated automatically from configure.in by autoheader.  */

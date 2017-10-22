@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/7.0.0/ObsoleteFiles.inc 175831 2008-01-30 18:12:35Z brueffer $
+# $FreeBSD$
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -13,19 +13,1246 @@
 #
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
+# Before you commit changes to this file please check if any entries in
+# tools/build/mk/OptionalObsoleteFiles.inc can be removed. The following
+# command tells which files are listed more than once regardless of some
+# architecture specific conditionals, so you can not blindly trust the
+# output:
+# ( grep '+=' /usr/src/ObsoleteFiles.inc | sort -u ; \
+# grep '+=' /usr/src/tools/build/mk/OptionalObsoleteFiles.inc | sort -u) | \
+# sort | uniq -d
+#
+# To find regular duplicates not dependant on optional components, you can
+# also use something that will not give you false positives, e.g.:
+# for t in `make -V TARGETS universe`; do
+#   __MAKE_CONF=/dev/null make -f Makefile.inc1 TARGET=$t \
+#   -V OLD_FILES -V OLD_LIBS -V OLD_DIRS check-old | \
+#   xargs -n1 | sort | uniq -d;
+# done
+#
+# For optional components, you can use the following to see if some entries
+# in OptionalObsoleteFiles.inc have been obsoleted by ObsoleteFiles.inc
+# for o in tools/build/options/WITH*; do
+#   __MAKE_CONF=/dev/null make -f Makefile.inc1 -D${o##*/} \
+#   -V OLD_FILES -V OLD_LIBS -V OLD_DIRS check-old | \
+#   xargs -n1 | sort | uniq -d;
+# done
 
+# 20120713: auth.conf removed
+OLD_FILES+=etc/auth.conf
+OLD_FILES+=usr/share/examples/etc/auth.conf
+OLD_FILES+=usr/share/man/man3/auth.3.gz
+OLD_FILES+=usr/share/man/man5/auth.conf.5.gz
+# 20120415: new clang import which bumps version from 3.0 to 3.1
+OLD_FILES+=usr/include/clang/3.0/altivec.h
+OLD_FILES+=usr/include/clang/3.0/avxintrin.h
+OLD_FILES+=usr/include/clang/3.0/emmintrin.h
+OLD_FILES+=usr/include/clang/3.0/immintrin.h
+OLD_FILES+=usr/include/clang/3.0/mm3dnow.h
+OLD_FILES+=usr/include/clang/3.0/mm_malloc.h
+OLD_FILES+=usr/include/clang/3.0/mmintrin.h
+OLD_FILES+=usr/include/clang/3.0/nmmintrin.h
+OLD_FILES+=usr/include/clang/3.0/pmmintrin.h
+OLD_FILES+=usr/include/clang/3.0/smmintrin.h
+OLD_FILES+=usr/include/clang/3.0/tmmintrin.h
+OLD_FILES+=usr/include/clang/3.0/wmmintrin.h
+OLD_FILES+=usr/include/clang/3.0/x86intrin.h
+OLD_FILES+=usr/include/clang/3.0/xmmintrin.h
+OLD_DIRS+=usr/include/clang/3.0
+# 20110915: rename congestion control manpages
+OLD_FILES+=usr/share/man/man4/cc.4.gz
+OLD_FILES+=usr/share/man/man9/cc.9.gz
+# 20110831: atomic page flags operations
+OLD_FILES+=usr/share/man/man9/vm_page_flag.9.gz
+OLD_FILES+=usr/share/man/man9/vm_page_flag_clear.9.gz
+OLD_FILES+=usr/share/man/man9/vm_page_flag_set.9.gz
+# 20110828: library version bump for 9.0
+OLD_LIBS+=lib/libcam.so.5
+OLD_LIBS+=lib/libpcap.so.7
+OLD_LIBS+=lib/libufs.so.5
+OLD_LIBS+=usr/lib/libbsnmp.so.5
+OLD_LIBS+=usr/lib/libdwarf.so.2
+OLD_LIBS+=usr/lib/libopie.so.6
+OLD_LIBS+=usr/lib/librtld_db.so.1
+OLD_LIBS+=usr/lib/libtacplus.so.4
+OLD_LIBS+=usr/lib32/libcam.so.5
+OLD_LIBS+=usr/lib32/libpcap.so.7
+OLD_LIBS+=usr/lib32/libufs.so.5
+OLD_LIBS+=usr/lib32/libbsnmp.so.5
+OLD_LIBS+=usr/lib32/libdwarf.so.2
+OLD_LIBS+=usr/lib32/libopie.so.6
+OLD_LIBS+=usr/lib32/librtld_db.so.1
+OLD_LIBS+=usr/lib32/libtacplus.so.4
+# 20110817: no more acd.4, ad.4, afd.4 and ast.4
+OLD_FILES+=usr/share/man/man4/acd.4.gz
+OLD_FILES+=usr/share/man/man4/ad.4.gz
+OLD_FILES+=usr/share/man/man4/afd.4.gz
+OLD_FILES+=usr/share/man/man4/ast.4.gz
+# 20110718: no longer useful in the age of rc.d
+OLD_FILES+=usr/sbin/named.reconfig
+OLD_FILES+=usr/sbin/named.reload
+OLD_FILES+=usr/share/man/man8/named.reconfig.8.gz
+OLD_FILES+=usr/share/man/man8/named.reload.8.gz
+# 20110716: bind 9.8.0 import
+OLD_LIBS+=usr/lib/liblwres.so.50
+OLD_FILES+=usr/share/doc/bind9/KNOWN-DEFECTS
+OLD_FILES+=usr/share/doc/bind9/NSEC3-NOTES
+OLD_FILES+=usr/share/doc/bind9/README.idnkit
+OLD_FILES+=usr/share/doc/bind9/README.pkcs11
+# 20110709: vm_map_clean.9 -> vm_map_sync.9
+OLD_FILES+=usr/share/man/man9/vm_map_clean.9.gz
+# 20110709: Catch up with removal of these functions.
+OLD_FILES+=usr/share/man/man9/vm_page_copy.9.gz
+OLD_FILES+=usr/share/man/man9/vm_page_protect.9.gz
+OLD_FILES+=usr/share/man/man9/vm_page_zero_fill.9.gz
+# 20110707: script no longer needed by /etc/rc.d/nfsd
+OLD_FILES+=etc/rc.d/nfsserver
+# 20110705: files moved so both NFS clients can share them
+OLD_FILES+=usr/include/nfsclient/krpc.h
+OLD_FILES+=usr/include/nfsclient/nfsdiskless.h
+# 20110705: the switch of default NFS client to the new one
+OLD_FILES+=sbin/mount_newnfs
+OLD_FILES+=usr/share/man/man8/mount_newnfs.8.gz
+OLD_FILES+=usr/include/nfsclient/nfs_kdtrace.h
+# 20110628: calendar.msk removed
+OLD_FILES+=usr/share/calendar/ru_RU.KOI8-R/calendar.msk
+# 20110517: libpkg removed
+OLD_FILES+=usr/include/pkg.h
+OLD_FILES+=usr/lib/libpkg.a
+OLD_FILES+=usr/lib/libpkg.so
+OLD_LIBS+=usr/lib/libpkg.so.0
+OLD_FILES+=usr/lib/libpkg_p.a
+OLD_FILES+=usr/lib32/libpkg.a
+OLD_FILES+=usr/lib32/libpkg.so
+OLD_LIBS+=usr/lib32/libpkg.so.0
+OLD_FILES+=usr/lib32/libpkg_p.a
+# 20110517: libsbuf version bump
+OLD_LIBS+=lib/libsbuf.so.5
+OLD_LIBS+=usr/lib32/libsbuf.so.5
+# 20110502: new clang import which bumps version from 2.9 to 3.0
+OLD_FILES+=usr/include/clang/2.9/emmintrin.h
+OLD_FILES+=usr/include/clang/2.9/mm_malloc.h
+OLD_FILES+=usr/include/clang/2.9/mmintrin.h
+OLD_FILES+=usr/include/clang/2.9/pmmintrin.h
+OLD_FILES+=usr/include/clang/2.9/tmmintrin.h
+OLD_FILES+=usr/include/clang/2.9/xmmintrin.h
+OLD_DIRS+=usr/include/clang/2.9
+# 20110417: removal of Objective-C support
+OLD_FILES+=usr/include/objc/encoding.h
+OLD_FILES+=usr/include/objc/hash.h
+OLD_FILES+=usr/include/objc/NXConstStr.h
+OLD_FILES+=usr/include/objc/objc-api.h
+OLD_FILES+=usr/include/objc/objc-decls.h
+OLD_FILES+=usr/include/objc/objc-list.h
+OLD_FILES+=usr/include/objc/objc.h
+OLD_FILES+=usr/include/objc/Object.h
+OLD_FILES+=usr/include/objc/Protocol.h
+OLD_FILES+=usr/include/objc/runtime.h
+OLD_FILES+=usr/include/objc/sarray.h
+OLD_FILES+=usr/include/objc/thr.h
+OLD_FILES+=usr/include/objc/typedstream.h
+OLD_FILES+=usr/lib/libobjc.a
+OLD_FILES+=usr/lib/libobjc.so
+OLD_FILES+=usr/lib/libobjc_p.a
+OLD_FILES+=usr/libexec/cc1obj
+OLD_LIBS+=usr/lib/libobjc.so.4
+OLD_DIRS+=usr/include/objc
+OLD_FILES+=usr/lib32/libobjc.a
+OLD_FILES+=usr/lib32/libobjc.so
+OLD_FILES+=usr/lib32/libobjc_p.a
+OLD_LIBS+=usr/lib32/libobjc.so.4
+# 20110331: firmware.img created at build time
+OLD_FILES+=usr/share/examples/kld/firmware/fwimage/firmware.img
+# 20110224: sticky.8 -> sticky.7
+OLD_FILES+=usr/share/man/man8/sticky.8.gz
+# 20110220: new clang import which bumps version from 2.8 to 2.9
+OLD_FILES+=usr/include/clang/2.8/emmintrin.h
+OLD_FILES+=usr/include/clang/2.8/mm_malloc.h
+OLD_FILES+=usr/include/clang/2.8/mmintrin.h
+OLD_FILES+=usr/include/clang/2.8/pmmintrin.h
+OLD_FILES+=usr/include/clang/2.8/tmmintrin.h
+OLD_FILES+=usr/include/clang/2.8/xmmintrin.h
+OLD_DIRS+=usr/include/clang/2.8
+# 20110119: netinet/sctp_cc_functions.h removed
+OLD_FILES+=usr/include/netinet/sctp_cc_functions.h
+# 20110119: Remove SYSCTL_*X* sysctl additions.
+OLD_FILES+=usr/share/man/man9/SYSCTL_XINT.9.gz \
+    usr/share/man/man9/SYSCTL_XLONG.9.gz
+
+# 20110112: Update dialog to new version, rename old libdialog to libodialog,
+#     removing associated man pages and header files.
+OLD_FILES+=usr/share/man/man3/draw_shadow.3.gz \
+    usr/share/man/man3/draw_box.3.gz usr/share/man/man3/line_edit.3.gz \
+    usr/share/man/man3/strheight.3.gz usr/share/man/man3/strwidth.3.gz \
+    usr/share/man/man3/dialog_create_rc.3.gz \
+    usr/share/man/man3/dialog_yesno.3.gz usr/share/man/man3/dialog_noyes.3.gz \
+    usr/share/man/man3/dialog_prgbox.3.gz \
+    usr/share/man/man3/dialog_textbox.3.gz usr/share/man/man3/dialog_menu.3.gz \
+    usr/share/man/man3/dialog_checklist.3.gz \
+    usr/share/man/man3/dialog_radiolist.3.gz \
+    usr/share/man/man3/dialog_inputbox.3.gz \
+    usr/share/man/man3/dialog_clear_norefresh.3.gz \
+    usr/share/man/man3/dialog_clear.3.gz usr/share/man/man3/dialog_update.3.gz \
+    usr/share/man/man3/dialog_fselect.3.gz \
+    usr/share/man/man3/dialog_notify.3.gz \
+    usr/share/man/man3/dialog_mesgbox.3.gz \
+    usr/share/man/man3/dialog_gauge.3.gz usr/share/man/man3/init_dialog.3.gz \
+    usr/share/man/man3/end_dialog.3.gz usr/share/man/man3/use_helpfile.3.gz \
+    usr/share/man/man3/use_helpline.3.gz usr/share/man/man3/get_helpline.3.gz \
+    usr/share/man/man3/restore_helpline.3.gz \
+    usr/share/man/man3/dialog_msgbox.3.gz \
+    usr/share/man/man3/dialog_ftree.3.gz usr/share/man/man3/dialog_tree.3.gz \
+    usr/share/examples/dialog/README usr/share/examples/dialog/checklist \
+    usr/share/examples/dialog/ftreebox usr/share/examples/dialog/infobox \
+    usr/share/examples/dialog/inputbox usr/share/examples/dialog/menubox \
+    usr/share/examples/dialog/msgbox usr/share/examples/dialog/prgbox \
+    usr/share/examples/dialog/radiolist usr/share/examples/dialog/textbox \
+    usr/share/examples/dialog/treebox usr/share/examples/dialog/yesno \
+    usr/share/examples/libdialog/Makefile usr/share/examples/libdialog/check1.c\
+    usr/share/examples/libdialog/check2.c usr/share/examples/libdialog/check3.c\
+    usr/share/examples/libdialog/dselect.c \
+    usr/share/examples/libdialog/fselect.c \
+    usr/share/examples/libdialog/ftree1.c \
+    usr/share/examples/libdialog/ftree1.test \
+    usr/share/examples/libdialog/ftree2.c \
+    usr/share/examples/libdialog/ftree2.test \
+    usr/share/examples/libdialog/gauge.c usr/share/examples/libdialog/input1.c \
+    usr/share/examples/libdialog/input2.c usr/share/examples/libdialog/menu1.c \
+    usr/share/examples/libdialog/menu2.c usr/share/examples/libdialog/menu3.c \
+    usr/share/examples/libdialog/msg.c usr/share/examples/libdialog/prgbox.c \
+    usr/share/examples/libdialog/radio1.c usr/share/examples/libdialog/radio2.c\
+    usr/share/examples/libdialog/radio3.c usr/share/examples/libdialog/text.c \
+    usr/share/examples/libdialog/tree.c usr/share/examples/libdialog/yesno.c
+OLD_DIRS+=usr/share/examples/libdialog usr/share/examples/dialog
+# 20101114: Remove long-obsolete MAKEDEV.8
+OLD_FILES+=usr/share/man/man8/MAKEDEV.8.gz
+# 20101112: vgonel(9) has gone to private API a while ago
+OLD_FILES+=usr/share/man/man9/vgonel.9.gz
+# 20101112: removed gasp.info
+OLD_FILES+=usr/share/info/gasp.info.gz
+# 20101109: machine/mutex.h removed
+OLD_FILES+=usr/include/machine/mutex.h
+# 20101109: headers moved from machine/ to x86/
+.if ${TARGET_ARCH} == "amd64" || ${TARGET_ARCH} == "i386"
+OLD_FILES+=usr/include/machine/mptable.h
+.endif
+# 20101101: headers moved from machine/ to x86/
+.if ${TARGET_ARCH} == "amd64" || ${TARGET_ARCH} == "i386"
+OLD_FILES+=usr/include/machine/apicreg.h
+OLD_FILES+=usr/include/machine/mca.h
+.endif
+# 20101020: catch up with vm_page_sleep_if_busy rename
+OLD_FILES+=usr/share/man/man9/vm_page_sleep_busy.9.gz
+# 20101018: taskqueue(9) updates
+OLD_FILES+=usr/share/man/man9/taskqueue_find.9.gz
+# 20101011: removed subblock.h from liblzma
+OLD_FILES+=usr/include/lzma/subblock.h
+# 20101002: removed manpath.config
+OLD_FILES+=etc/manpath.config
+OLD_FILES+=usr/share/examples/etc/manpath.config
+# 20100910: renamed sbuf_overflowed to sbuf_error
+OLD_FILES+=usr/share/man/man9/sbuf_overflowed.9.gz
+# 20100815: retired last traces of chooseproc(9)
+OLD_FILES+=usr/share/man/man9/chooseproc.9.gz
+# 20100806: removal of unused libcompat routines
+OLD_FILES+=usr/share/man/man3/ascftime.3.gz
+OLD_FILES+=usr/share/man/man3/cfree.3.gz
+OLD_FILES+=usr/share/man/man3/cftime.3.gz
+OLD_FILES+=usr/share/man/man3/getpw.3.gz
+# 20100801: tzdata2010k import
+OLD_FILES+=usr/share/zoneinfo/Pacific/Ponape
+OLD_FILES+=usr/share/zoneinfo/Pacific/Truk
+# 20100725: acpi_aiboost(4) removal.
+OLD_FILES+=usr/share/man/man4/acpi_aiboost.4.gz
+# 20100724: nfsclient/nfs_lock.h moved to nfs/nfs_lock.h
+OLD_FILES+=usr/include/nfsclient/nfs_lock.h
+# 20100720: new clang import which bumps version from 2.0 to 2.8
+OLD_FILES+=usr/include/clang/2.0/emmintrin.h
+OLD_FILES+=usr/include/clang/2.0/mm_malloc.h
+OLD_FILES+=usr/include/clang/2.0/mmintrin.h
+OLD_FILES+=usr/include/clang/2.0/pmmintrin.h
+OLD_FILES+=usr/include/clang/2.0/tmmintrin.h
+OLD_FILES+=usr/include/clang/2.0/xmmintrin.h
+OLD_DIRS+=usr/include/clang/2.0
+# 20100706: removed pc-sysinstall's detect-vmware.sh
+OLD_FILES+=usr/share/pc-sysinstall/backend-query/detect-vmware.sh
+# 20100701: [powerpc] removed <machine/intr.h>
+.if ${TARGET_ARCH} == "powerpc"
+OLD_FILES+=usr/include/machine/intr.h
+.endif
+# 20100514: library version bump for versioned symbols for liblzma
+OLD_LIBS+=usr/lib/liblzma.so.0
+OLD_LIBS+=usr/lib32/liblzma.so.0
+# 20100511: move GCC-specific headers to /usr/include/gcc
+.if ${TARGET_ARCH} == "amd64" || ${TARGET_ARCH} == "i386"
+OLD_FILES+=usr/include/emmintrin.h
+OLD_FILES+=usr/include/mm_malloc.h
+OLD_FILES+=usr/include/pmmintrin.h
+OLD_FILES+=usr/include/xmmintrin.h
+.endif
+.if ${TARGET_ARCH} == "amd64" || ${TARGET_ARCH} == "i386" || ${TARGET_ARCH} == "arm"
+OLD_FILES+=usr/include/mmintrin.h
+.endif
+.if ${TARGET_ARCH} == "ia64"
+OLD_FILES+=usr/include/ia64intrin.h
+.endif
+.if ${TARGET_ARCH} == "powerpc"
+OLD_FILES+=usr/include/altivec.h
+OLD_FILES+=usr/include/ppc-asm.h
+OLD_FILES+=usr/include/spe.h
+.endif
+# 20100416: [mips] removed <machine/psl.h>
+.if ${TARGET_ARCH} == "mips"
+OLD_FILES+=usr/include/machine/psl.h
+.endif
+# 20100415: [mips] removed unused headers
+.if ${TARGET_ARCH} == "mips"
+OLD_FILES+=usr/include/machine/archtype.h
+OLD_FILES+=usr/include/machine/segments.h
+OLD_FILES+=usr/include/machine/rm7000.h
+OLD_FILES+=usr/include/machine/defs.h
+OLD_FILES+=usr/include/machine/queue.h
+.endif
+# 20100326: [ia64] removed <machine/nexusvar.h>
+.if ${TARGET_ARCH} == "ia64"
+OLD_FILES+=usr/include/machine/nexusvar.h
+.endif
+# 20100326: gcpio removal
+OLD_FILES+=usr/bin/gcpio
+OLD_FILES+=usr/share/info/cpio.info.gz
+OLD_FILES+=usr/share/man/man1/gcpio.1.gz
+# 20100322: libz update
+OLD_LIBS+=lib/libz.so.5
+OLD_LIBS+=usr/lib32/libz.so.5
+# 20100314: removal of regexp.h
+OLD_FILES+=usr/include/regexp.h
+OLD_FILES+=usr/share/man/man3/regexp.3.gz
+OLD_FILES+=usr/share/man/man3/regsub.3.gz
+# 20100303: actual removal of utmp.h
+OLD_FILES+=usr/include/utmp.h
+# 20100227: [ia64] removed <machine/sapicreg.h> and <machine/sapicvar.h>
+.if ${TARGET_ARCH} == "ia64"
+OLD_FILES+=usr/include/machine/sapicreg.h
+OLD_FILES+=usr/include/machine/sapicvar.h
+.endif
+# 20100208: man pages moved
+.if ${TARGET_ARCH} == "i386"
+OLD_FILES+=usr/share/man/man4/i386/alpm.4.gz
+OLD_FILES+=usr/share/man/man4/i386/amdpm.4.gz
+OLD_FILES+=usr/share/man/man4/i386/mcd.4.gz
+OLD_FILES+=usr/share/man/man4/i386/padlock.4.gz
+OLD_FILES+=usr/share/man/man4/i386/pcf.4.gz
+OLD_FILES+=usr/share/man/man4/i386/scd.4.gz
+OLD_FILES+=usr/share/man/man4/i386/viapm.4.gz
+.endif
+# 20100122: move BSDL bc/dc USD documents to /usr/share/doc/usd
+OLD_FILES+=usr/share/doc/papers/bc.ascii.gz
+OLD_FILES+=usr/share/doc/papers/dc.ascii.gz
+# 20100120: replacing GNU bc/dc with BSDL versions
+OLD_FILES+=usr/share/examples/bc/ckbook.b
+OLD_FILES+=usr/share/examples/bc/pi.b
+OLD_FILES+=usr/share/examples/bc/primes.b
+OLD_FILES+=usr/share/examples/bc/twins.b
+OLD_FILES+=usr/share/info/dc.info.gz
+OLD_DIRS+=usr/share/examples/bc
+# 20100114: removal of ttyslot(3)
+OLD_FILES+=usr/share/man/man3/ttyslot.3.gz
+# 20100113: remove utmp.h, replace it by utmpx.h
+OLD_FILES+=usr/share/man/man3/login.3.gz
+OLD_FILES+=usr/share/man/man3/logout.3.gz
+OLD_FILES+=usr/share/man/man3/logwtmp.3.gz
+OLD_FILES+=usr/share/man/man3/ulog_endutxent.3.gz
+OLD_FILES+=usr/share/man/man3/ulog_getutxent.3.gz
+OLD_FILES+=usr/share/man/man3/ulog_getutxline.3.gz
+OLD_FILES+=usr/share/man/man3/ulog_getutxuser.3.gz
+OLD_FILES+=usr/share/man/man3/ulog_pututxline.3.gz
+OLD_FILES+=usr/share/man/man3/ulog_setutxent.3.gz
+OLD_FILES+=usr/share/man/man3/ulog_setutxfile.3.gz
+OLD_FILES+=usr/share/man/man5/lastlog.5.gz
+OLD_FILES+=usr/share/man/man5/utmp.5.gz
+OLD_FILES+=usr/share/man/man5/wtmp.5.gz
+OLD_LIBS+=lib/libutil.so.8
+OLD_LIBS+=usr/lib32/libutil.so.8
+# 20100105: new userland semaphore implementation
+OLD_FILES+=usr/include/sys/semaphore.h
+# 20100103: ntptrace(8) removed
+OLD_FILES+=usr/sbin/ntptrace
+OLD_FILES+=usr/share/man/man8/ntptrace.8.gz
+# 20091229: remove no longer relevant examples
+OLD_FILES+=usr/share/examples/pppd/auth-down.sample
+OLD_FILES+=usr/share/examples/pppd/auth-up.sample
+OLD_FILES+=usr/share/examples/pppd/chap-secrets.sample
+OLD_FILES+=usr/share/examples/pppd/chat.sh.sample
+OLD_FILES+=usr/share/examples/pppd/ip-down.sample
+OLD_FILES+=usr/share/examples/pppd/ip-up.sample
+OLD_FILES+=usr/share/examples/pppd/options.sample
+OLD_FILES+=usr/share/examples/pppd/pap-secrets.sample
+OLD_FILES+=usr/share/examples/pppd/ppp.deny.sample
+OLD_FILES+=usr/share/examples/pppd/ppp.shells.sample
+OLD_DIRS+=usr/share/examples/pppd
+OLD_FILES+=usr/share/examples/slattach/unit-command.sh
+OLD_DIRS+=usr/share/examples/slattach
+OLD_FILES+=usr/share/examples/sliplogin/slip.hosts
+OLD_FILES+=usr/share/examples/sliplogin/slip.login
+OLD_FILES+=usr/share/examples/sliplogin/slip.logout
+OLD_FILES+=usr/share/examples/sliplogin/slip.slparms
+OLD_DIRS+=usr/share/examples/sliplogin
+OLD_FILES+=usr/share/examples/startslip/sldown.sh
+OLD_FILES+=usr/share/examples/startslip/slip.sh
+OLD_FILES+=usr/share/examples/startslip/slup.sh
+OLD_DIRS+=usr/share/examples/startslip
+# 20091202: unify rc.firewall and rc.firewall6.
+OLD_FILES+=etc/rc.d/ip6fw
+OLD_FILES+=etc/rc.firewall6
+OLD_FILES+=usr/share/examples/etc/rc.firewall6
+# 20091117: removal of rc.early(8) link
+OLD_FILES+=usr/share/man/man8/rc.early.8.gz
+# 20091117: usr/share/zoneinfo/GMT link removed
+OLD_FILES+=usr/share/zoneinfo/GMT
+# 20091027: pselect.3 implemented as syscall
+OLD_FILES+=usr/share/man/man3/pselect.3.gz
+# 20091005: fusword.9 and susword.9 removed
+OLD_FILES+=usr/share/man/man9/fusword.9.gz
+OLD_FILES+=usr/share/man/man9/susword.9.gz
+# 20090909: vesa and dpms promoted to be i386/amd64 common
+OLD_FILES+=usr/include/machine/pc/vesa.h
+OLD_FILES+=usr/share/man/man4/i386/dpms.4.gz
+# 20090904: remove lukemftpd
+OLD_FILES+=usr/libexec/lukemftpd
+OLD_FILES+=usr/share/man/man5/ftpd.conf.5.gz
+OLD_FILES+=usr/share/man/man5/ftpusers.5.gz
+OLD_FILES+=usr/share/man/man8/lukemftpd.8.gz
+# 20090902: BSD.{x11,x11-4}.dist are dead and BSD.local.dist lives in ports/
+OLD_FILES+=etc/mtree/BSD.local.dist
+OLD_FILES+=etc/mtree/BSD.x11.dist
+OLD_FILES+=etc/mtree/BSD.x11-4.dist
+# 20090812: net80211 documentation overhaul
+OLD_FILES+=usr/share/man/man9/ieee80211_add_rates.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_add_xrates.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_alloc_node.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_attach.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_begin_scan.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_cfgget.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_cfgset.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_chan2ieee.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_chan2mode.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_create_ibss.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_crypto_attach.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_crypto_detach.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_decap.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_dump_pkt.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_dup_bss.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_encap.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_end_scan.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_find_node.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_fix_rate.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_free_allnodes.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_ieee2mhz.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_ioctl.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_lookup_node.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_media2rate.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_media_change.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_media_init.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_media_status.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_mhz2ieee.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_next_scan.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_node_attach.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_node_detach.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_node_lateattach.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_print_essid.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_proto_attach.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_proto_detach.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_rate2media.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_recv_mgmt.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_send_mgmt.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_setmode.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_timeout_nodes.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_watchdog.9.gz
+OLD_FILES+=usr/share/man/man9/ieee80211_wep_crypt.9.gz
+# 20090801: vimage.h removed in favour of vnet.h
+OLD_FILES+=usr/include/sys/vimage.h
+# 20101208: libbsnmp was moved to usr/lib
+OLD_LIBS+=lib/libbsnmp.so.5
+# 20090719: library version bump for 8.0
+OLD_LIBS+=lib/libalias.so.6
+OLD_LIBS+=lib/libavl.so.1
+OLD_LIBS+=lib/libbegemot.so.3
+OLD_LIBS+=lib/libbsdxml.so.3
+OLD_LIBS+=lib/libbsnmp.so.4
+OLD_LIBS+=lib/libcam.so.4
+OLD_LIBS+=lib/libcrypt.so.4
+OLD_LIBS+=lib/libcrypto.so.5
+OLD_LIBS+=lib/libctf.so.1
+OLD_LIBS+=lib/libdevstat.so.6
+OLD_LIBS+=lib/libdtrace.so.1
+OLD_LIBS+=lib/libedit.so.6
+OLD_LIBS+=lib/libgeom.so.4
+OLD_LIBS+=lib/libipsec.so.3
+OLD_LIBS+=lib/libipx.so.4
+OLD_LIBS+=lib/libkiconv.so.3
+OLD_LIBS+=lib/libkvm.so.4
+OLD_LIBS+=lib/libmd.so.4
+OLD_LIBS+=lib/libncurses.so.7
+OLD_LIBS+=lib/libncursesw.so.7
+OLD_LIBS+=lib/libnvpair.so.1
+OLD_LIBS+=lib/libpcap.so.6
+OLD_LIBS+=lib/libreadline.so.7
+OLD_LIBS+=lib/libsbuf.so.4
+OLD_LIBS+=lib/libufs.so.4
+OLD_LIBS+=lib/libumem.so.1
+OLD_LIBS+=lib/libutil.so.7
+OLD_LIBS+=lib/libuutil.so.1
+OLD_LIBS+=lib/libz.so.4
+OLD_LIBS+=lib/libzfs.so.1
+OLD_LIBS+=lib/libzpool.so.1
+OLD_LIBS+=usr/lib/libarchive.so.4
+OLD_LIBS+=usr/lib/libauditd.so.4
+OLD_LIBS+=usr/lib/libbluetooth.so.3
+OLD_LIBS+=usr/lib/libbsm.so.2
+OLD_LIBS+=usr/lib/libbz2.so.3
+OLD_LIBS+=usr/lib/libcalendar.so.4
+OLD_LIBS+=usr/lib/libcom_err.so.4
+OLD_LIBS+=usr/lib/libdevinfo.so.4
+OLD_LIBS+=usr/lib/libdialog.so.6
+OLD_LIBS+=usr/lib/libdwarf.so.1
+OLD_LIBS+=usr/lib/libfetch.so.5
+OLD_LIBS+=usr/lib/libform.so.4
+OLD_LIBS+=usr/lib/libformw.so.4
+OLD_LIBS+=usr/lib/libftpio.so.7
+OLD_LIBS+=usr/lib/libgnuregex.so.4
+OLD_LIBS+=usr/lib/libgpib.so.2
+OLD_LIBS+=usr/lib/libhistory.so.7
+OLD_LIBS+=usr/lib/libmagic.so.3
+OLD_LIBS+=usr/lib/libmemstat.so.2
+OLD_LIBS+=usr/lib/libmenu.so.4
+OLD_LIBS+=usr/lib/libmenuw.so.4
+OLD_LIBS+=usr/lib/libmilter.so.4
+OLD_LIBS+=usr/lib/libncp.so.3
+OLD_LIBS+=usr/lib/libnetgraph.so.3
+OLD_LIBS+=usr/lib/libngatm.so.3
+OLD_LIBS+=usr/lib/libobjc.so.3
+OLD_LIBS+=usr/lib/libopie.so.5
+OLD_LIBS+=usr/lib/libpam.so.4
+OLD_LIBS+=usr/lib/libpanel.so.4
+OLD_LIBS+=usr/lib/libpanelw.so.4
+OLD_LIBS+=usr/lib/libpmc.so.4
+OLD_LIBS+=usr/lib/libproc.so.1
+OLD_LIBS+=usr/lib/libradius.so.3
+OLD_LIBS+=usr/lib/librpcsvc.so.4
+OLD_LIBS+=usr/lib/libsdp.so.3
+OLD_LIBS+=usr/lib/libsmb.so.3
+OLD_LIBS+=usr/lib/libssh.so.4
+OLD_LIBS+=usr/lib/libssl.so.5
+OLD_LIBS+=usr/lib/libtacplus.so.3
+OLD_LIBS+=usr/lib/libugidfw.so.3
+OLD_LIBS+=usr/lib/libusb.so.1
+OLD_LIBS+=usr/lib/libusbhid.so.3
+OLD_LIBS+=usr/lib/libvgl.so.5
+OLD_LIBS+=usr/lib/libwrap.so.5
+OLD_LIBS+=usr/lib/libypclnt.so.3
+OLD_LIBS+=usr/lib/pam_chroot.so.4
+OLD_LIBS+=usr/lib/pam_deny.so.4
+OLD_LIBS+=usr/lib/pam_echo.so.4
+OLD_LIBS+=usr/lib/pam_exec.so.4
+OLD_LIBS+=usr/lib/pam_ftpusers.so.4
+OLD_LIBS+=usr/lib/pam_group.so.4
+OLD_LIBS+=usr/lib/pam_guest.so.4
+OLD_LIBS+=usr/lib/pam_krb5.so.4
+OLD_LIBS+=usr/lib/pam_ksu.so.4
+OLD_LIBS+=usr/lib/pam_lastlog.so.4
+OLD_LIBS+=usr/lib/pam_login_access.so.4
+OLD_LIBS+=usr/lib/pam_nologin.so.4
+OLD_LIBS+=usr/lib/pam_opie.so.4
+OLD_LIBS+=usr/lib/pam_opieaccess.so.4
+OLD_LIBS+=usr/lib/pam_passwdqc.so.4
+OLD_LIBS+=usr/lib/pam_permit.so.4
+OLD_LIBS+=usr/lib/pam_radius.so.4
+OLD_LIBS+=usr/lib/pam_rhosts.so.4
+OLD_LIBS+=usr/lib/pam_rootok.so.4
+OLD_LIBS+=usr/lib/pam_securetty.so.4
+OLD_LIBS+=usr/lib/pam_self.so.4
+OLD_LIBS+=usr/lib/pam_ssh.so.4
+OLD_LIBS+=usr/lib/pam_tacplus.so.4
+OLD_LIBS+=usr/lib/pam_unix.so.4
+OLD_LIBS+=usr/lib/snmp_atm.so.5
+OLD_LIBS+=usr/lib/snmp_bridge.so.5
+OLD_LIBS+=usr/lib/snmp_hostres.so.5
+OLD_LIBS+=usr/lib/snmp_mibII.so.5
+OLD_LIBS+=usr/lib/snmp_netgraph.so.5
+OLD_LIBS+=usr/lib/snmp_pf.so.5
+OLD_LIBS+=usr/lib/libwrap.so.5
+OLD_LIBS+=usr/lib32/libalias.so.6
+OLD_LIBS+=usr/lib32/libarchive.so.4
+OLD_LIBS+=usr/lib32/libauditd.so.4
+OLD_LIBS+=usr/lib32/libavl.so.1
+OLD_LIBS+=usr/lib32/libbegemot.so.3
+OLD_LIBS+=usr/lib32/libbluetooth.so.3
+OLD_LIBS+=usr/lib32/libbsdxml.so.3
+OLD_LIBS+=usr/lib32/libbsm.so.2
+OLD_LIBS+=usr/lib32/libbsnmp.so.4
+OLD_LIBS+=usr/lib32/libbz2.so.3
+OLD_LIBS+=usr/lib32/libcalendar.so.4
+OLD_LIBS+=usr/lib32/libcam.so.4
+OLD_LIBS+=usr/lib32/libcom_err.so.4
+OLD_LIBS+=usr/lib32/libcrypt.so.4
+OLD_LIBS+=usr/lib32/libcrypto.so.5
+OLD_LIBS+=usr/lib32/libctf.so.1
+OLD_LIBS+=usr/lib32/libdevinfo.so.4
+OLD_LIBS+=usr/lib32/libdevstat.so.6
+OLD_LIBS+=usr/lib32/libdialog.so.6
+OLD_LIBS+=usr/lib32/libdtrace.so.1
+OLD_LIBS+=usr/lib32/libdwarf.so.1
+OLD_LIBS+=usr/lib32/libedit.so.6
+OLD_LIBS+=usr/lib32/libfetch.so.5
+OLD_LIBS+=usr/lib32/libform.so.4
+OLD_LIBS+=usr/lib32/libformw.so.4
+OLD_LIBS+=usr/lib32/libftpio.so.7
+OLD_LIBS+=usr/lib32/libgeom.so.4
+OLD_LIBS+=usr/lib32/libgnuregex.so.4
+OLD_LIBS+=usr/lib32/libgpib.so.2
+OLD_LIBS+=usr/lib32/libhistory.so.7
+OLD_LIBS+=usr/lib32/libipsec.so.3
+OLD_LIBS+=usr/lib32/libipx.so.4
+OLD_LIBS+=usr/lib32/libkiconv.so.3
+OLD_LIBS+=usr/lib32/libkvm.so.4
+OLD_LIBS+=usr/lib32/libmagic.so.3
+OLD_LIBS+=usr/lib32/libmd.so.4
+OLD_LIBS+=usr/lib32/libmemstat.so.2
+OLD_LIBS+=usr/lib32/libmenu.so.4
+OLD_LIBS+=usr/lib32/libmenuw.so.4
+OLD_LIBS+=usr/lib32/libmilter.so.4
+OLD_LIBS+=usr/lib32/libncp.so.3
+OLD_LIBS+=usr/lib32/libncurses.so.7
+OLD_LIBS+=usr/lib32/libncursesw.so.7
+OLD_LIBS+=usr/lib32/libnetgraph.so.3
+OLD_LIBS+=usr/lib32/libngatm.so.3
+OLD_LIBS+=usr/lib32/libnvpair.so.1
+OLD_LIBS+=usr/lib32/libobjc.so.3
+OLD_LIBS+=usr/lib32/libopie.so.5
+OLD_LIBS+=usr/lib32/libpam.so.4
+OLD_LIBS+=usr/lib32/libpanel.so.4
+OLD_LIBS+=usr/lib32/libpanelw.so.4
+OLD_LIBS+=usr/lib32/libpcap.so.6
+OLD_LIBS+=usr/lib32/libpmc.so.4
+OLD_LIBS+=usr/lib32/libproc.so.1
+OLD_LIBS+=usr/lib32/libradius.so.3
+OLD_LIBS+=usr/lib32/libreadline.so.7
+OLD_LIBS+=usr/lib32/librpcsvc.so.4
+OLD_LIBS+=usr/lib32/libsbuf.so.4
+OLD_LIBS+=usr/lib32/libsdp.so.3
+OLD_LIBS+=usr/lib32/libsmb.so.3
+OLD_LIBS+=usr/lib32/libssh.so.4
+OLD_LIBS+=usr/lib32/libssl.so.5
+OLD_LIBS+=usr/lib32/libtacplus.so.3
+OLD_LIBS+=usr/lib32/libufs.so.4
+OLD_LIBS+=usr/lib32/libugidfw.so.3
+OLD_LIBS+=usr/lib32/libumem.so.1
+OLD_LIBS+=usr/lib32/libusb.so.1
+OLD_LIBS+=usr/lib32/libusbhid.so.3
+OLD_LIBS+=usr/lib32/libutil.so.7
+OLD_LIBS+=usr/lib32/libuutil.so.1
+OLD_LIBS+=usr/lib32/libvgl.so.5
+OLD_LIBS+=usr/lib32/libwrap.so.5
+OLD_LIBS+=usr/lib32/libypclnt.so.3
+OLD_LIBS+=usr/lib32/libz.so.4
+OLD_LIBS+=usr/lib32/libzfs.so.1
+OLD_LIBS+=usr/lib32/libzpool.so.1
+OLD_LIBS+=usr/lib32/pam_chroot.so.4
+OLD_LIBS+=usr/lib32/pam_deny.so.4
+OLD_LIBS+=usr/lib32/pam_echo.so.4
+OLD_LIBS+=usr/lib32/pam_exec.so.4
+OLD_LIBS+=usr/lib32/pam_ftpusers.so.4
+OLD_LIBS+=usr/lib32/pam_group.so.4
+OLD_LIBS+=usr/lib32/pam_guest.so.4
+OLD_LIBS+=usr/lib32/pam_krb5.so.4
+OLD_LIBS+=usr/lib32/pam_ksu.so.4
+OLD_LIBS+=usr/lib32/pam_lastlog.so.4
+OLD_LIBS+=usr/lib32/pam_login_access.so.4
+OLD_LIBS+=usr/lib32/pam_nologin.so.4
+OLD_LIBS+=usr/lib32/pam_opie.so.4
+OLD_LIBS+=usr/lib32/pam_opieaccess.so.4
+OLD_LIBS+=usr/lib32/pam_passwdqc.so.4
+OLD_LIBS+=usr/lib32/pam_permit.so.4
+OLD_LIBS+=usr/lib32/pam_radius.so.4
+OLD_LIBS+=usr/lib32/pam_rhosts.so.4
+OLD_LIBS+=usr/lib32/pam_rootok.so.4
+OLD_LIBS+=usr/lib32/pam_securetty.so.4
+OLD_LIBS+=usr/lib32/pam_self.so.4
+OLD_LIBS+=usr/lib32/pam_ssh.so.4
+OLD_LIBS+=usr/lib32/pam_tacplus.so.4
+OLD_LIBS+=usr/lib32/pam_unix.so.4
+# 20090718: the gdm pam.d file is no longer required.
+OLD_FILES+=etc/pam.d/gdm
+# 20090714: net_add_domain(9) renamed to domain_add(9)
+OLD_FILES+=usr/share/man/man9/net_add_domain.9.gz
+# 20090713: vimage container structs removed.
+OLD_FILES+=usr/include/netinet/vinet.h
+OLD_FILES+=usr/include/netinet6/vinet6.h
+OLD_FILES+=usr/include/netipsec/vipsec.h
+# 20090712: ieee80211.4 -> net80211.4
+OLD_FILES+=usr/share/man/man4/ieee80211.4.gz
+# 20090711: typo fixed, kproc_resume,.9 -> kproc_resume.9
+OLD_FILES+=usr/share/man/man9/kproc_resume,.9.gz
+# 20090709: msgctl.3 msgget.3 msgrcv.3 msgsnd.3 manual pages moved
+OLD_FILES+=usr/share/man/man3/msgctl.3.gz
+OLD_FILES+=usr/share/man/man3/msgget.3.gz
+OLD_FILES+=usr/share/man/man3/msgrcv.3.gz
+OLD_FILES+=usr/share/man/man3/msgsnd.3.gz
+# 20090630: old kernel RPC implementation removal
+OLD_FILES+=usr/include/nfs/rpcv2.h
+# 20090624: update usbdi(9)
+OLD_FILES+=usr/share/man/man9/usbd_abort_default_pipe.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_abort_pipe.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_alloc_buffer.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_alloc_xfer.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_clear_endpoint_stall.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_clear_endpoint_stall_async.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_clear_endpoint_toggle.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_close_pipe.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_device2interface_handle.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_do_request_async.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_do_request_flags_pipe.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_endpoint_count.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_find_edesc.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_find_idesc.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_free_buffer.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_free_xfer.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_buffer.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_config.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_config_desc.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_config_desc_full.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_config_descriptor.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_device_descriptor.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_endpoint_descriptor.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_interface_altindex.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_interface_descriptor.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_no_alts.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_quirks.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_speed.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_string.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_string_desc.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_get_xfer_status.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_interface2device_handle.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_interface2endpoint_descriptor.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_interface_count.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_open_pipe.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_open_pipe_intr.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_pipe2device_handle.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_set_config_index.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_set_config_no.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_set_interface.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_setup_default_xfer.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_setup_isoc_xfer.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_setup_xfer.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_sync_transfer.9.gz
+OLD_FILES+=usr/share/man/man9/usbd_transfer.9.gz
+OLD_FILES+=usr/share/man/man9/usb_find_desc.9.gz
+# 20090623: number of headers needed for a usb driver reduced
+OLD_FILES+=usr/include/dev/usb/usb_defs.h
+OLD_FILES+=usr/include/dev/usb/usb_error.h
+OLD_FILES+=usr/include/dev/usb/usb_handle_request.h
+OLD_FILES+=usr/include/dev/usb/usb_hid.h
+OLD_FILES+=usr/include/dev/usb/usb_lookup.h
+OLD_FILES+=usr/include/dev/usb/usb_mfunc.h
+OLD_FILES+=usr/include/dev/usb/usb_parse.h
+OLD_FILES+=usr/include/dev/usb/usb_revision.h
+# 20090609: devclass_add_driver is no longer public
+OLD_FILES+=usr/share/man/man9/devclass_add_driver.9.gz
+OLD_FILES+=usr/share/man/man9/devclass_delete_driver.9.gz
+OLD_FILES+=usr/share/man/man9/devclass_find_driver.9.gz
+# 20090605: removal of clists
+OLD_FILES+=usr/include/sys/clist.h
+# 20090602: removal of window(1)
+OLD_FILES+=usr/bin/window
+OLD_FILES+=usr/share/man/man1/window.1.gz
+# 20090531: bind 9.6.1rc1 import
+OLD_LIBS+=usr/lib/liblwres.so.30
+# 20090530: removal of early.sh
+OLD_FILES+=etc/rc.d/early.sh
+# 20090527: renaming of S{LIST,TAILQ}_REMOVE_NEXT() to _REMOVE_AFTER()
+OLD_FILES+=usr/share/man/man3/SLIST_REMOVE_NEXT.3.gz
+OLD_FILES+=usr/share/man/man3/STAILQ_REMOVE_NEXT.3.gz
+# 20090527: removal of legacy USB stack
+OLD_FILES+=usr/include/legacy/dev/usb/dsbr100io.h
+OLD_FILES+=usr/include/legacy/dev/usb/ehcireg.h
+OLD_FILES+=usr/include/legacy/dev/usb/ehcivar.h
+OLD_FILES+=usr/include/legacy/dev/usb/hid.h
+OLD_FILES+=usr/include/legacy/dev/usb/if_urtwreg.h
+OLD_FILES+=usr/include/legacy/dev/usb/if_urtwvar.h
+OLD_FILES+=usr/include/legacy/dev/usb/ohcireg.h
+OLD_FILES+=usr/include/legacy/dev/usb/ohcivar.h
+OLD_FILES+=usr/include/legacy/dev/usb/rio500_usb.h
+OLD_FILES+=usr/include/legacy/dev/usb/rt2573_ucode.h
+OLD_FILES+=usr/include/legacy/dev/usb/sl811hsreg.h
+OLD_FILES+=usr/include/legacy/dev/usb/sl811hsvar.h
+OLD_FILES+=usr/include/legacy/dev/usb/ubser.h
+OLD_FILES+=usr/include/legacy/dev/usb/ucomvar.h
+OLD_FILES+=usr/include/legacy/dev/usb/udbp.h
+OLD_FILES+=usr/include/legacy/dev/usb/uftdireg.h
+OLD_FILES+=usr/include/legacy/dev/usb/ugraphire_rdesc.h
+OLD_FILES+=usr/include/legacy/dev/usb/uhcireg.h
+OLD_FILES+=usr/include/legacy/dev/usb/uhcivar.h
+OLD_FILES+=usr/include/legacy/dev/usb/usb.h
+OLD_FILES+=usr/include/legacy/dev/usb/usb_mem.h
+OLD_FILES+=usr/include/legacy/dev/usb/usb_port.h
+OLD_FILES+=usr/include/legacy/dev/usb/usb_quirks.h
+OLD_FILES+=usr/include/legacy/dev/usb/usbcdc.h
+OLD_FILES+=usr/include/legacy/dev/usb/usbdi.h
+OLD_FILES+=usr/include/legacy/dev/usb/usbdi_util.h
+OLD_FILES+=usr/include/legacy/dev/usb/usbdivar.h
+OLD_FILES+=usr/include/legacy/dev/usb/usbhid.h
+OLD_FILES+=usr/include/legacy/dev/usb/uxb360gp_rdesc.h
+OLD_DIRS+=usr/include/legacy/dev/usb
+OLD_DIRS+=usr/include/legacy/dev
+OLD_DIRS+=usr/include/legacy
+# 20090526: removal of makekey(8)
+OLD_FILES+=usr/libexec/makekey
+OLD_FILES+=usr/share/man/man8/makekey.8.gz
+# 20090522: removal of University of Michigan NFSv4 client
+OLD_FILES+=etc/rc.d/idmapd
+OLD_FILES+=sbin/idmapd
+OLD_FILES+=sbin/mount_nfs4
+OLD_FILES+=usr/share/man/man8/idmapd.8.gz
+OLD_FILES+=usr/share/man/man8/mount_nfs4.8.gz
+# 20090513: removal of legacy versions of USB network interface drivers
+OLD_FILES+=usr/include/legacy/dev/usb/if_upgtvar.h
+OLD_FILES+=usr/include/legacy/dev/usb/usb_ethersubr.h
+# 20090417: removal of legacy versions of USB network interface drivers
+OLD_FILES+=usr/include/legacy/dev/usb/if_auereg.h
+OLD_FILES+=usr/include/legacy/dev/usb/if_axereg.h
+OLD_FILES+=usr/include/legacy/dev/usb/if_cdcereg.h
+OLD_FILES+=usr/include/legacy/dev/usb/if_cuereg.h
+OLD_FILES+=usr/include/legacy/dev/usb/if_kuereg.h
+OLD_FILES+=usr/include/legacy/dev/usb/if_ruereg.h
+OLD_FILES+=usr/include/legacy/dev/usb/if_rumreg.h
+OLD_FILES+=usr/include/legacy/dev/usb/if_rumvar.h
+OLD_FILES+=usr/include/legacy/dev/usb/if_udavreg.h
+OLD_FILES+=usr/include/legacy/dev/usb/if_uralreg.h
+OLD_FILES+=usr/include/legacy/dev/usb/if_uralvar.h
+OLD_FILES+=usr/include/legacy/dev/usb/if_zydfw.h
+OLD_FILES+=usr/include/legacy/dev/usb/if_zydreg.h
+OLD_FILES+=usr/include/legacy/dev/usb/kue_fw.h
+# 20090416: removal of ar(4), ray(4), sr(4), raycontrol(8)
+OLD_FILES+=usr/sbin/raycontrol
+OLD_FILES+=usr/share/man/man4/i386/ar.4.gz
+OLD_FILES+=usr/share/man/man4/i386/ray.4.gz
+OLD_FILES+=usr/share/man/man4/i386/sr.4.gz
+OLD_FILES+=usr/share/man/man8/raycontrol.8.gz
+# 20090410: VOP_LEASE.9 removed
+OLD_FILES+=usr/share/man/man9/VOP_LEASE.9.gz
+# 20090406: usb_sw_transfer.h removed
+OLD_FILES+=usr/include/dev/usb/usb_sw_transfer.h
+# 20090405: removal of if_ppp(4) and if_sl(4)
+OLD_FILES+=sbin/slattach rescue/slattach
+OLD_FILES+=sbin/startslip rescue/startslip
+OLD_FILES+=usr/include/net/if_ppp.h
+OLD_FILES+=usr/include/net/if_pppvar.h
+OLD_FILES+=usr/include/net/if_slvar.h
+OLD_FILES+=usr/include/net/ppp_comp.h
+OLD_FILES+=usr/include/net/slip.h
+OLD_FILES+=usr/sbin/sliplogin
+OLD_FILES+=usr/sbin/slstat
+OLD_FILES+=usr/sbin/pppd
+OLD_FILES+=usr/sbin/pppstats
+OLD_FILES+=usr/share/man/man1/startslip.1.gz
+OLD_FILES+=usr/share/man/man4/if_ppp.4.gz
+OLD_FILES+=usr/share/man/man4/if_sl.4.gz
+OLD_FILES+=usr/share/man/man4/ppp.4.gz
+OLD_FILES+=usr/share/man/man4/sl.4.gz
+OLD_FILES+=usr/share/man/man8/pppd.8.gz
+OLD_FILES+=usr/share/man/man8/pppstats.8.gz
+OLD_FILES+=usr/share/man/man8/slattach.8.gz
+OLD_FILES+=usr/share/man/man8/slip.8.gz
+OLD_FILES+=usr/share/man/man8/sliplogin.8.gz
+OLD_FILES+=usr/share/man/man8/slstat.8.gz
+# 20090321: libpcap upgraded to 1.0.0
+OLD_LIBS+=lib/libpcap.so.5
+OLD_LIBS+=usr/lib32/libpcap.so.5
+# 20090319: uscanner(4) has been removed
+OLD_FILES+=usr/share/man/man4/uscanner.4.gz
+# 20090313: k8temp(4) renamed to amdtemp(4)
+OLD_FILES+=usr/share/man/man4/k8temp.4.gz
+# 20090308: libusb.so.1 renamed
+OLD_LIBS+=usr/lib/libusb20.so.1
+OLD_FILES+=usr/lib/libusb20.a
+OLD_FILES+=usr/lib/libusb20.so
+OLD_FILES+=usr/lib/libusb20_p.a
+OLD_FILES+=usr/include/libusb20_compat01.h
+OLD_FILES+=usr/include/libusb20_compat10.h
+OLD_LIBS+=usr/lib32/libusb20.so.1
+OLD_FILES+=usr/lib32/libusb20.a
+OLD_FILES+=usr/lib32/libusb20.so
+OLD_FILES+=usr/lib32/libusb20_p.a
+# 20090226: libmp(3) functions renamed
+OLD_LIBS+=usr/lib/libmp.so.6
+OLD_LIBS+=usr/lib32/libmp.so.6
+# 20090223: changeover of USB stacks
+OLD_FILES+=usr/include/dev/usb2/include/ufm2_ioctl.h
+OLD_FILES+=usr/include/dev/usb2/include/urio2_ioctl.h
+OLD_FILES+=usr/include/dev/usb2/include/usb2_cdc.h
+OLD_FILES+=usr/include/dev/usb2/include/usb2_defs.h
+OLD_FILES+=usr/include/dev/usb2/include/usb2_devid.h
+OLD_FILES+=usr/include/dev/usb2/include/usb2_devtable.h
+OLD_FILES+=usr/include/dev/usb2/include/usb2_endian.h
+OLD_FILES+=usr/include/dev/usb2/include/usb2_error.h
+OLD_FILES+=usr/include/dev/usb2/include/usb2_hid.h
+OLD_FILES+=usr/include/dev/usb2/include/usb2_ioctl.h
+OLD_FILES+=usr/include/dev/usb2/include/usb2_mfunc.h
+OLD_FILES+=usr/include/dev/usb2/include/usb2_revision.h
+OLD_FILES+=usr/include/dev/usb2/include/usb2_standard.h
+OLD_DIRS+=usr/include/dev/usb2/include
+OLD_DIRS+=usr/include/dev/usb2
+OLD_FILES+=usr/include/dev/usb/dsbr100io.h
+OLD_FILES+=usr/include/dev/usb/ehcireg.h
+OLD_FILES+=usr/include/dev/usb/ehcivar.h
+OLD_FILES+=usr/include/dev/usb/hid.h
+OLD_FILES+=usr/include/dev/usb/if_auereg.h
+OLD_FILES+=usr/include/dev/usb/if_axereg.h
+OLD_FILES+=usr/include/dev/usb/if_cdcereg.h
+OLD_FILES+=usr/include/dev/usb/if_cuereg.h
+OLD_FILES+=usr/include/dev/usb/if_kuereg.h
+OLD_FILES+=usr/include/dev/usb/if_ruereg.h
+OLD_FILES+=usr/include/dev/usb/if_rumreg.h
+OLD_FILES+=usr/include/dev/usb/if_rumvar.h
+OLD_FILES+=usr/include/dev/usb/if_udavreg.h
+OLD_FILES+=usr/include/dev/usb/if_upgtvar.h
+OLD_FILES+=usr/include/dev/usb/if_uralreg.h
+OLD_FILES+=usr/include/dev/usb/if_uralvar.h
+OLD_FILES+=usr/include/dev/usb/if_urtwreg.h
+OLD_FILES+=usr/include/dev/usb/if_urtwvar.h
+OLD_FILES+=usr/include/dev/usb/if_zydfw.h
+OLD_FILES+=usr/include/dev/usb/if_zydreg.h
+OLD_FILES+=usr/include/dev/usb/kue_fw.h
+OLD_FILES+=usr/include/dev/usb/ohcireg.h
+OLD_FILES+=usr/include/dev/usb/ohcivar.h
+OLD_FILES+=usr/include/dev/usb/rio500_usb.h
+OLD_FILES+=usr/include/dev/usb/rt2573_ucode.h
+OLD_FILES+=usr/include/dev/usb/sl811hsreg.h
+OLD_FILES+=usr/include/dev/usb/sl811hsvar.h
+OLD_FILES+=usr/include/dev/usb/ubser.h
+OLD_FILES+=usr/include/dev/usb/ucomvar.h
+OLD_FILES+=usr/include/dev/usb/udbp.h
+OLD_FILES+=usr/include/dev/usb/uftdireg.h
+OLD_FILES+=usr/include/dev/usb/ugraphire_rdesc.h
+OLD_FILES+=usr/include/dev/usb/uhcireg.h
+OLD_FILES+=usr/include/dev/usb/uhcivar.h
+OLD_FILES+=usr/include/dev/usb/usb_ethersubr.h
+OLD_FILES+=usr/include/dev/usb/usb_mem.h
+OLD_FILES+=usr/include/dev/usb/usb_port.h
+OLD_FILES+=usr/include/dev/usb/usb_quirks.h
+OLD_FILES+=usr/include/dev/usb/usbcdc.h
+OLD_FILES+=usr/include/dev/usb/usbdivar.h
+OLD_FILES+=usr/include/dev/usb/uxb360gp_rdesc.h
+OLD_FILES+=usr/sbin/usbdevs
+OLD_FILES+=usr/share/man/man8/usbdevs.8.gz
+# 20090203: removal of pccard header files
+OLD_FILES+=usr/include/pccard/cardinfo.h
+OLD_FILES+=usr/include/pccard/cis.h
+OLD_DIRS+=usr/include/pccard
+# 20090203: adding_user.8 moved to adding_user.7
+OLD_FILES+=usr/share/man/man8/adding_user.8.gz
+# 20090122: tzdata2009a import
+OLD_FILES+=usr/share/zoneinfo/Asia/Katmandu
+# 20090102: file 4.26 import
+OLD_FILES+=usr/share/misc/magic.mime
+OLD_FILES+=usr/share/misc/magic.mime.mgc
+# 20081223: bind 9.4.3 import, nsupdate.8 moved to nsupdate.1
+OLD_FILES+=usr/share/man/man8/nsupdate.8.gz
+# 20081223: ipprotosw.h removed
+OLD_FILES+=usr/include/netinet/ipprotosw.h
+# 20081123: vfs_mountedon.9 removed
+OLD_FILES+=usr/share/man/man9/vfs_mountedon.9.gz
+# 20081023: FREE.9 and MALLOC.9 removed
+OLD_FILES+=usr/share/man/man9/FREE.9.gz
+OLD_FILES+=usr/share/man/man9/MALLOC.9.gz
+# 20080928: removal of inaccurate device_ids(9) manual page
+OLD_FILES+=usr/share/man/man9/device_ids.9.gz
+OLD_FILES+=usr/share/man/man9/major.9.gz
+OLD_FILES+=usr/share/man/man9/minor.9.gz
+OLD_FILES+=usr/share/man/man9/umajor.9.gz
+OLD_FILES+=usr/share/man/man9/uminor.9.gz
+# 20080917: removal of manpage for axed kernel primitive suser(9)
+OLD_FILES+=usr/share/man/man9/suser.9.gz
+OLD_FILES+=usr/share/man/man9/suser_cred.9.gz
+# 20080913: pax removed from rescue
+OLD_FILES+=rescue/pax
+# 20080823: removal of unneeded pt_chown, to implement grantpt(3)
+OLD_FILES+=usr/libexec/pt_chown
+# 20080822: ntp 4.2.4p5 import
+OLD_FILES+=usr/share/doc/ntp/driver23.html
+OLD_FILES+=usr/share/doc/ntp/driver24.html
+# 20080821: several man pages moved from man4.i386 to man4
+.if ${TARGET_ARCH} == "i386"
+OLD_FILES+=usr/share/man/man4/i386/acpi_aiboost.4.gz
+OLD_FILES+=usr/share/man/man4/i386/acpi_asus.4.gz
+OLD_FILES+=usr/share/man/man4/i386/acpi_fujitsu.4.gz
+OLD_FILES+=usr/share/man/man4/i386/acpi_ibm.4.gz
+OLD_FILES+=usr/share/man/man4/i386/acpi_panasonic.4.gz
+OLD_FILES+=usr/share/man/man4/i386/acpi_sony.4.gz
+OLD_FILES+=usr/share/man/man4/i386/acpi_toshiba.4.gz
+OLD_FILES+=usr/share/man/man4/i386/ichwd.4.gz
+OLD_FILES+=usr/share/man/man4/i386/if_ndis.4.gz
+OLD_FILES+=usr/share/man/man4/i386/io.4.gz
+OLD_FILES+=usr/share/man/man4/i386/linux.4.gz
+OLD_FILES+=usr/share/man/man4/i386/ndis.4.gz
+.endif
+# 20080820: MPSAFE TTY layer integrated
+OLD_FILES+=usr/include/sys/linedisc.h
+OLD_FILES+=usr/share/man/man3/posix_openpt.3.gz
+# 20080725: sgtty.h removed
+OLD_FILES+=usr/include/sgtty.h
+# 20080719: sade(8) removed on all but amd64, i386 and sparc64
+.if ${TARGET_ARCH} != "amd64" && ${TARGET_ARCH} != "i386" && \
+    ${TARGET_ARCH} != "sparc64"
+OLD_FILES+=usr/sbin/sade
+OLD_FILES+=usr/share/man/man8/sade.8.gz
+.endif
+# 20080706: bsdlabel(8) removed on powerpc
+.if ${TARGET_ARCH} == "powerpc"
+OLD_FILES+=sbin/bsdlabel
+OLD_FILES+=usr/share/man/man8/bsdlabel.8.gz
+.endif
+# 20080704: sbsh(4) removed
+OLD_FILES+=usr/share/man/man4/if_sbsh.4.gz
+OLD_FILES+=usr/share/man/man4/sbsh.4.gz
+# 20080704: cnw(4) removed
+OLD_FILES+=usr/share/man/man4/if_cnw.4.gz
+OLD_FILES+=usr/share/man/man4/cnw.4.gz
+# 20080704: oltr(4) removed
+.if ${TARGET_ARCH} == "i386"
+OLD_FILES+=usr/share/man/man4/i386/if_oltr.4.gz
+OLD_FILES+=usr/share/man/man4/i386/oltr.4.gz
+.endif
+# 20080704: arl(4) removed
+.if ${TARGET_ARCH} == "i386"
+OLD_FILES+=usr/sbin/arlcontrol
+OLD_FILES+=usr/share/man/man4/i386/arl.4.gz
+OLD_FILES+=usr/share/man/man8/arlcontrol.8.gz
+.endif
+# 20080703: sunlabel only for sparc64
+.if ${TARGET_ARCH} != "sparc64"
+OLD_FILES+=sbin/sunlabel
+OLD_FILES+=usr/share/man/man8/sunlabel.8.gz
+.endif
+# 20080703: bsdlabel & fdisk removed on ia64
+.if ${TARGET_ARCH} == "ia64"
+OLD_FILES+=sbin/bsdlabel
+OLD_FILES+=usr/share/man/man8/bsdlabel.8.gz
+OLD_FILES+=usr/share/man/man8/disklabel.8.gz
+OLD_FILES+=sbin/fdisk
+OLD_FILES+=usr/share/man/man8/fdisk.8.gz
+.endif
+# 20080701: wpa_supplicant.conf moved to share/examples/etc/
+OLD_FILES+=usr/share/examples/wpa_supplicant/wpa_supplicant.conf
+OLD_DIRS+=usr/share/examples/wpa_supplicant
+# 20080614: pecoff image activator removed
+.if ${TARGET_ARCH} == "i386"
+OLD_FILES+=usr/include/machine/pecoff_machdep.h
+.endif
+# 20080614: sgtty removed
+OLD_FILES+=usr/include/sys/ttychars.h
+OLD_FILES+=usr/include/sys/ttydev.h
+OLD_FILES+=usr/share/man/man3/gtty.3.gz
+OLD_FILES+=usr/share/man/man3/stty.3.gz
+# 20080609: gpt(8) removed
+OLD_FILES+=sbin/gpt
+OLD_FILES+=usr/share/man/man8/gpt.8.gz
+# 20080525: I4B removed
+OLD_FILES+=etc/isdn/answer
+OLD_FILES+=etc/isdn/isdntel
+OLD_FILES+=etc/isdn/record
+OLD_FILES+=etc/isdn/tell
+OLD_FILES+=etc/isdn/tell-record
+OLD_FILES+=etc/isdn/unknown_incoming
+OLD_FILES+=etc/isdn/holidays.D
+OLD_FILES+=etc/isdn/isdnd.rates.A
+OLD_FILES+=etc/isdn/isdnd.rates.D
+OLD_FILES+=etc/isdn/isdnd.rates.F
+OLD_FILES+=etc/isdn/isdnd.rates.L
+OLD_FILES+=etc/isdn/isdnd.rates.UK.BT
+OLD_FILES+=etc/isdn/isdnd.rc.sample
+OLD_FILES+=etc/isdn/isdntel.alias.sample
+OLD_DIRS+=etc/isdn
+OLD_FILES+=etc/rc.d/isdnd
+OLD_FILES+=usr/include/i4b/i4b_cause.h
+OLD_FILES+=usr/include/i4b/i4b_debug.h
+OLD_FILES+=usr/include/i4b/i4b_ioctl.h
+OLD_FILES+=usr/include/i4b/i4b_rbch_ioctl.h
+OLD_FILES+=usr/include/i4b/i4b_tel_ioctl.h
+OLD_FILES+=usr/include/i4b/i4b_trace.h
+OLD_DIRS+=usr/include/i4b
+OLD_FILES+=usr/sbin/dtmfdecode
+OLD_FILES+=usr/sbin/g711conv
+OLD_FILES+=usr/sbin/isdnd
+OLD_FILES+=usr/sbin/isdndebug
+OLD_FILES+=usr/sbin/isdndecode
+OLD_FILES+=usr/sbin/isdnmonitor
+OLD_FILES+=usr/sbin/isdnphone
+OLD_FILES+=usr/sbin/isdntel
+OLD_FILES+=usr/sbin/isdntelctl
+OLD_FILES+=usr/sbin/isdntrace
+OLD_FILES+=usr/share/isdn/0.al
+OLD_FILES+=usr/share/isdn/1.al
+OLD_FILES+=usr/share/isdn/2.al
+OLD_FILES+=usr/share/isdn/3.al
+OLD_FILES+=usr/share/isdn/4.al
+OLD_FILES+=usr/share/isdn/5.al
+OLD_FILES+=usr/share/isdn/6.al
+OLD_FILES+=usr/share/isdn/7.al
+OLD_FILES+=usr/share/isdn/8.al
+OLD_FILES+=usr/share/isdn/9.al
+OLD_FILES+=usr/share/isdn/beep.al
+OLD_FILES+=usr/share/isdn/msg.al
+OLD_DIRS+=usr/share/isdn
+OLD_FILES+=usr/share/man/man1/dtmfdecode.1.gz
+OLD_FILES+=usr/share/man/man1/g711conv.1.gz
+OLD_FILES+=usr/share/man/man4/i4b.4.gz
+OLD_FILES+=usr/share/man/man4/i4bcapi.4.gz
+OLD_FILES+=usr/share/man/man4/i4bctl.4.gz
+OLD_FILES+=usr/share/man/man4/i4bing.4.gz
+OLD_FILES+=usr/share/man/man4/i4bipr.4.gz
+OLD_FILES+=usr/share/man/man4/i4bisppp.4.gz
+OLD_FILES+=usr/share/man/man4/i4bq921.4.gz
+OLD_FILES+=usr/share/man/man4/i4bq931.4.gz
+OLD_FILES+=usr/share/man/man4/i4brbch.4.gz
+OLD_FILES+=usr/share/man/man4/i4btel.4.gz
+OLD_FILES+=usr/share/man/man4/i4btrc.4.gz
+OLD_FILES+=usr/share/man/man4/iavc.4.gz
+OLD_FILES+=usr/share/man/man4/isic.4.gz
+OLD_FILES+=usr/share/man/man4/ifpi.4.gz
+OLD_FILES+=usr/share/man/man4/ifpi2.4.gz
+OLD_FILES+=usr/share/man/man4/ifpnp.4.gz
+OLD_FILES+=usr/share/man/man4/ihfc.4.gz
+OLD_FILES+=usr/share/man/man4/itjc.4.gz
+OLD_FILES+=usr/share/man/man4/iwic.4.gz
+OLD_FILES+=usr/share/man/man5/isdnd.rc.5.gz
+OLD_FILES+=usr/share/man/man5/isdnd.rates.5.gz
+OLD_FILES+=usr/share/man/man5/isdnd.acct.5.gz
+OLD_FILES+=usr/share/man/man8/isdnd.8.gz
+OLD_FILES+=usr/share/man/man8/isdndebug.8.gz
+OLD_FILES+=usr/share/man/man8/isdndecode.8.gz
+OLD_FILES+=usr/share/man/man8/isdnmonitor.8.gz
+OLD_FILES+=usr/share/man/man8/isdnphone.8.gz
+OLD_FILES+=usr/share/man/man8/isdntel.8.gz
+OLD_FILES+=usr/share/man/man8/isdntelctl.8.gz
+OLD_FILES+=usr/share/man/man8/isdntrace.8.gz
+OLD_FILES+=usr/share/examples/isdn/contrib/README
+OLD_FILES+=usr/share/examples/isdn/contrib/anleitung.ppp
+OLD_FILES+=usr/share/examples/isdn/contrib/answer.c
+OLD_FILES+=usr/share/examples/isdn/contrib/answer.sh
+OLD_FILES+=usr/share/examples/isdn/contrib/convert.sh
+OLD_FILES+=usr/share/examples/isdn/contrib/hplay.c
+OLD_FILES+=usr/share/examples/isdn/contrib/i4b-ppp-newbie.txt
+OLD_FILES+=usr/share/examples/isdn/contrib/isdnctl
+OLD_FILES+=usr/share/examples/isdn/contrib/isdnd_acct
+OLD_FILES+=usr/share/examples/isdn/contrib/isdnd_acct.pl
+OLD_FILES+=usr/share/examples/isdn/contrib/isdntelmux.c
+OLD_FILES+=usr/share/examples/isdn/contrib/mrtg-isp0.sh
+OLD_FILES+=usr/share/examples/isdn/i4brunppp/Makefile
+OLD_FILES+=usr/share/examples/isdn/i4brunppp/README
+OLD_FILES+=usr/share/examples/isdn/i4brunppp/i4brunppp-isdnd.rc
+OLD_FILES+=usr/share/examples/isdn/i4brunppp/i4brunppp.8
+OLD_FILES+=usr/share/examples/isdn/i4brunppp/i4brunppp.c
+OLD_FILES+=usr/share/examples/isdn/v21/Makefile
+OLD_FILES+=usr/share/examples/isdn/v21/README
+OLD_FILES+=usr/share/examples/isdn/v21/v21modem.c
+OLD_FILES+=usr/share/examples/isdn/FAQ
+OLD_FILES+=usr/share/examples/isdn/KERNEL
+OLD_FILES+=usr/share/examples/isdn/Overview
+OLD_FILES+=usr/share/examples/isdn/README
+OLD_FILES+=usr/share/examples/isdn/ROADMAP
+OLD_FILES+=usr/share/examples/isdn/ReleaseNotes
+OLD_FILES+=usr/share/examples/isdn/Resources
+OLD_FILES+=usr/share/examples/isdn/SupportedCards
+OLD_FILES+=usr/share/examples/isdn/ThankYou
+OLD_DIRS+=usr/share/examples/isdn/contrib
+OLD_DIRS+=usr/share/examples/isdn/i4brunppp
+OLD_DIRS+=usr/share/examples/isdn/v21
+OLD_DIRS+=usr/share/examples/isdn
+OLD_FILES+=usr/share/examples/ppp/isdnd.rc
+OLD_FILES+=usr/share/examples/ppp/ppp.conf.isdn
+# 20080525: ng_atmpif removed
+OLD_FILES+=usr/include/netgraph/atm/ng_atmpif.h
+OLD_FILES+=usr/share/man/man4/ng_atmpif.4.gz
+# 20080522: pmap_addr_hint removed
+OLD_FILES+=usr/share/man/man9/pmap_addr_hint.9.gz
+# 20080517: ipsec_osdep.h removed
+OLD_FILES+=usr/include/netipsec/ipsec_osdep.h
+# 20080507: heimdal 1.1 import
+OLD_LIBS+=usr/lib/libasn1.so.9
+OLD_LIBS+=usr/lib/libgssapi.so.9
+OLD_LIBS+=usr/lib/libgssapi_krb5.so.9
+OLD_LIBS+=usr/lib/libhdb.so.9
+OLD_LIBS+=usr/lib/libkadm5clnt.so.9
+OLD_LIBS+=usr/lib/libkadm5srv.so.9
+OLD_LIBS+=usr/lib/libkafs5.so.9
+OLD_LIBS+=usr/lib/libkrb5.so.9
+OLD_LIBS+=usr/lib/libroken.so.9
+OLD_LIBS+=usr/lib32/libgssapi.so.9
+# 20080420: Symbol card support dropped
+OLD_FILES+=usr/include/dev/wi/spectrum24t_cf.h
+# 20080420: awi removal
+OLD_FILES+=usr/share/man/man4/awi.4.gz
+OLD_FILES+=usr/share/man/man4/if_awi.4.gz
+# 20080331: pkg_sign has been removed
+OLD_FILES+=usr/sbin/pkg_check
+OLD_FILES+=usr/sbin/pkg_sign
+OLD_FILES+=usr/share/man/man1/pkg_check.1.gz
+OLD_FILES+=usr/share/man/man1/pkg_sign.1.gz
+# 20080325: tzdata2008b import
+OLD_FILES+=usr/share/zoneinfo/Asia/Calcutta
+OLD_FILES+=usr/share/zoneinfo/Asia/Saigon
+# 20080314: stack_print(9) mlink fixed
+OLD_FILES+=usr/share/man/man9/stack_printf.9.gz
+# 20080312: libkse removal
+OLD_FILES+=usr/include/sys/kse.h
+OLD_FILES+=usr/lib/libkse.so
+OLD_LIBS+=usr/lib/libkse.so.3
+OLD_FILES+=usr/share/man/man2/kse.2.gz
+OLD_FILES+=usr/share/man/man2/kse_create.2.gz
+OLD_FILES+=usr/share/man/man2/kse_exit.2.gz
+OLD_FILES+=usr/share/man/man2/kse_release.2.gz
+OLD_FILES+=usr/share/man/man2/kse_switchin.2.gz
+OLD_FILES+=usr/share/man/man2/kse_thr_interrupt.2.gz
+OLD_FILES+=usr/share/man/man2/kse_wakeup.2.gz
+OLD_FILES+=usr/lib32/libkse.so
+OLD_LIBS+=usr/lib32/libkse.so.3
+# 20080220: geom_lvm rename to geom_linux_lvm
+OLD_FILES+=usr/share/man/man4/geom_lvm.4.gz
 # 20080126: oldcard.4 removal
 OLD_FILES+=usr/share/man/man4/card.4.gz
 OLD_FILES+=usr/share/man/man4/oldcard.4.gz
+# 20080122: Removed from the tree
+OLD_FILES+=usr/share/man/man9/BUF_REFCNT.9.gz
+# 20080108: Moved to section 2
+OLD_FILES+=usr/share/man/man3/shm_open.3.gz
+OLD_FILES+=usr/share/man/man3/shm_unlink.3.gz
 # 20071207: Merged with fortunes-o.real
 OLD_FILES+=usr/share/games/fortune/fortunes2-o
 OLD_FILES+=usr/share/games/fortune/fortunes2-o.dat
-# 20071206: Disabled static versions of libkse by default
-.if ${DEFAULT_THREAD_LIB} != "libkse" && ${MK_LIBTHR} != "no"
+# 20071201: Removal of XRPU driver
+OLD_FILES+=usr/include/sys/xrpuio.h
+# 20071129: Disabled static versions of libkse by default
 OLD_FILES+=usr/lib/libkse.a
 OLD_FILES+=usr/lib/libkse_p.a
 OLD_FILES+=usr/lib/libkse_pic.a
+OLD_FILES+=usr/lib32/libkse.a
+OLD_FILES+=usr/lib32/libkse_p.a
+OLD_FILES+=usr/lib32/libkse_pic.a
+# 20071129: Removed a Solaris compatibility header
+OLD_FILES+=usr/include/sys/_elf_solaris.h
+# 20071125: Renamed to pmc_get_msr()
+OLD_FILES+=usr/share/man/man3/pmc_x86_get_msr.3.gz
+# 20071108: Removed very crunch OLDCARD support file
+OLD_FILES+=etc/defaults/pccard.conf
+# 20071104: Removed bsdlabel, fdisk and gpt from rescue on ia64.
+.if ${TARGET_ARCH} == "ia64"
+OLD_FILES+=rescue/bsdlabel
+OLD_FILES+=rescue/fdisk
+OLD_FILES+=rescue/gpt
 .endif
+# 20071025: rc.d/nfslocking superceeded by rc.d/lockd and rc.d/statd
+OLD_FILES+=etc/rc.d/nfslocking
 # 20070930: rename of cached to nscd
 OLD_FILES+=etc/cached.conf
 OLD_FILES+=etc/rc.d/cached
@@ -38,7 +1265,7 @@ OLD_FILES+=usr/include/machine/interruptvar.h
 .endif
 # 20070801: fast_ipsec.4 gone
 OLD_FILES+=usr/share/man/man4/fast_ipsec.4.gz
-# 20070715: netatm temporarily disconnected
+# 20070715: netatm temporarily disconnected (removed 20080525)
 OLD_FILES+=rescue/atm
 OLD_FILES+=rescue/fore_dnld
 OLD_FILES+=rescue/ilmid
@@ -111,6 +1338,10 @@ OLD_DIRS+=usr/include/netatm/ipatm
 OLD_DIRS+=usr/include/netatm/uni
 OLD_DIRS+=usr/include/netatm
 OLD_DIRS+=usr/share/examples/atm
+OLD_FILES+=usr/lib32/libatm.a
+OLD_FILES+=usr/lib32/libatm.so
+OLD_LIBS+=usr/lib32/libatm.so.5
+OLD_FILES+=usr/lib32/libatm_p.a
 # 20070705: I4B headers repo-copied to include/i4b/
 .if ${TARGET_ARCH} == "i386"
 OLD_FILES+=usr/include/machine/i4b_cause.h
@@ -119,12 +1350,6 @@ OLD_FILES+=usr/include/machine/i4b_ioctl.h
 OLD_FILES+=usr/include/machine/i4b_rbch_ioctl.h
 OLD_FILES+=usr/include/machine/i4b_tel_ioctl.h
 OLD_FILES+=usr/include/machine/i4b_trace.h
-.endif
-# 20070704: I4B 'modules' temporary disconnected
-.if ${TARGET_ARCH} == "i386"
-OLD_FILES+=usr/share/man/man4/i4bing.4.gz
-OLD_FILES+=usr/share/man/man4/i4bipr.4.gz
-OLD_FILES+=usr/share/man/man4/i4bisppp.4.gz
 .endif
 # 20070703: pf 4.1 import
 OLD_FILES+=usr/libexec/ftp-proxy
@@ -201,12 +1426,46 @@ OLD_LIBS+=usr/lib/snmp_hostres.so.4
 OLD_LIBS+=usr/lib/snmp_mibII.so.4
 OLD_LIBS+=usr/lib/snmp_netgraph.so.4
 OLD_LIBS+=usr/lib/snmp_pf.so.4
+OLD_LIBS+=usr/lib32/libalias.so.5
+OLD_LIBS+=usr/lib32/libbsnmp.so.3
+OLD_LIBS+=usr/lib32/libdialog.so.5
+OLD_LIBS+=usr/lib32/libgnuregex.so.3
+OLD_LIBS+=usr/lib32/libhistory.so.6
+OLD_LIBS+=usr/lib32/libncurses.so.6
+OLD_LIBS+=usr/lib32/libncursesw.so.6
+OLD_LIBS+=usr/lib32/libpam.so.3
+OLD_LIBS+=usr/lib32/libreadline.so.6
+OLD_LIBS+=usr/lib32/libssh.so.3
+OLD_LIBS+=usr/lib32/pam_chroot.so.3
+OLD_LIBS+=usr/lib32/pam_deny.so.3
+OLD_LIBS+=usr/lib32/pam_echo.so.3
+OLD_LIBS+=usr/lib32/pam_exec.so.3
+OLD_LIBS+=usr/lib32/pam_ftpusers.so.3
+OLD_LIBS+=usr/lib32/pam_group.so.3
+OLD_LIBS+=usr/lib32/pam_guest.so.3
+OLD_LIBS+=usr/lib32/pam_krb5.so.3
+OLD_LIBS+=usr/lib32/pam_ksu.so.3
+OLD_LIBS+=usr/lib32/pam_lastlog.so.3
+OLD_LIBS+=usr/lib32/pam_login_access.so.3
+OLD_LIBS+=usr/lib32/pam_nologin.so.3
+OLD_LIBS+=usr/lib32/pam_opie.so.3
+OLD_LIBS+=usr/lib32/pam_opieaccess.so.3
+OLD_LIBS+=usr/lib32/pam_passwdqc.so.3
+OLD_LIBS+=usr/lib32/pam_permit.so.3
+OLD_LIBS+=usr/lib32/pam_radius.so.3
+OLD_LIBS+=usr/lib32/pam_rhosts.so.3
+OLD_LIBS+=usr/lib32/pam_rootok.so.3
+OLD_LIBS+=usr/lib32/pam_securetty.so.3
+OLD_LIBS+=usr/lib32/pam_self.so.3
+OLD_LIBS+=usr/lib32/pam_ssh.so.3
+OLD_LIBS+=usr/lib32/pam_tacplus.so.3
+OLD_LIBS+=usr/lib32/pam_unix.so.3
 # 20070613: IPX over IP tunnel removal
 OLD_FILES+=usr/include/netipx/ipx_ip.h
 # 20070605: sched_core removal
 OLD_FILES+=usr/share/man/man4/sched_core.4.gz
 # 20070603: BIND 9.4.1 import
-OLD_LIBS+=lib/liblwres.so.10
+OLD_LIBS+=usr/lib/liblwres.so.10
 # 20070521: shared library version bump
 OLD_LIBS+=lib/libatm.so.4
 OLD_LIBS+=lib/libbegemot.so.2
@@ -268,13 +1527,8 @@ OLD_LIBS+=usr/lib/libusbhid.so.2
 OLD_LIBS+=usr/lib/libvgl.so.4
 OLD_LIBS+=usr/lib/libwrap.so.4
 OLD_LIBS+=usr/lib/libypclnt.so.2
-OLD_LIBS+=usr/lib/snmp_atm.so.3
 OLD_LIBS+=usr/lib/snmp_bridge.so.3
 OLD_LIBS+=usr/lib/snmp_hostres.so.3
-OLD_LIBS+=usr/lib/snmp_mibII.so.3
-OLD_LIBS+=usr/lib/snmp_netgraph.so.3
-OLD_LIBS+=usr/lib/snmp_pf.so.3
-.if ${TARGET_ARCH} == "amd64"
 OLD_LIBS+=usr/lib32/libatm.so.4
 OLD_LIBS+=usr/lib32/libbegemot.so.2
 OLD_LIBS+=usr/lib32/libbluetooth.so.2
@@ -333,7 +1587,6 @@ OLD_LIBS+=usr/lib32/libvgl.so.4
 OLD_LIBS+=usr/lib32/libwrap.so.4
 OLD_LIBS+=usr/lib32/libypclnt.so.2
 OLD_LIBS+=usr/lib32/libz.so.3
-.endif
 # 20070519: GCC 4.2
 OLD_FILES+=usr/bin/f77
 OLD_FILES+=usr/bin/protoize
@@ -569,7 +1822,7 @@ OLD_DIRS+=usr/include/c++/3.4
 OLD_FILES+=usr/sbin/zfs
 OLD_FILES+=usr/sbin/zpool
 # 20070423: rc.bluetooth (examples) removed
-OLD_FILES+=usr/share/examples/netgraph/bluetooth/rc.bluetooth 
+OLD_FILES+=usr/share/examples/netgraph/bluetooth/rc.bluetooth
 # 20070421: worm.4 removed
 OLD_FILES+=usr/share/man/man4/worm.4.gz
 # 20070417: trunk(4) renamed to lagg(4)
@@ -580,6 +1833,7 @@ OLD_FILES+=usr/bin/uuidgen
 OLD_FILES+=usr/share/info/bzip2.info.gz
 # 20070303: libarchive 2.0
 OLD_LIBS+=usr/lib/libarchive.so.3
+OLD_LIBS+=usr/lib32/libarchive.so.3
 # 20070301: remove addr2ascii and ascii2addr
 OLD_FILES+=usr/share/man/man3/addr2ascii.3.gz
 OLD_FILES+=usr/share/man/man3/ascii2addr.3.gz
@@ -596,14 +1850,12 @@ OLD_FILES+=usr/lib/libmytinfo_p.a
 OLD_FILES+=usr/lib/libmytinfow.a
 OLD_FILES+=usr/lib/libmytinfow.so
 OLD_FILES+=usr/lib/libmytinfow_p.a
-.if ${TARGET_ARCH} == "amd64"
 OLD_FILES+=usr/lib32/libmytinfo.a
 OLD_FILES+=usr/lib32/libmytinfo.so
 OLD_FILES+=usr/lib32/libmytinfo_p.a
 OLD_FILES+=usr/lib32/libmytinfow.a
 OLD_FILES+=usr/lib32/libmytinfow.so
 OLD_FILES+=usr/lib32/libmytinfow_p.a
-.endif
 # 20070128: remove vnconfig
 OLD_FILES+=usr/sbin/vnconfig
 # 20070127: remove bpf_compat.h
@@ -837,9 +2089,9 @@ OLD_FILES+=usr/share/man/man5/ipsend.5.gz
 OLD_FILES+=usr/bin/gtar
 OLD_FILES+=usr/share/man/man1/gtar.1.gz
 # 200503XX
-OLD_FILES+=share/man/man3/exp10.3.gz
-OLD_FILES+=share/man/man3/exp10f.3.gz
-OLD_FILES+=share/man/man3/fpsetsticky.3.gz
+OLD_FILES+=usr/share/man/man3/exp10.3.gz
+OLD_FILES+=usr/share/man/man3/exp10f.3.gz
+OLD_FILES+=usr/share/man/man3/fpsetsticky.3.gz
 # 20050324: updated release infrastructure
 OLD_FILES+=usr/share/man/man5/drivers.conf.5.gz
 # 20050317: removed from BIND 9 distribution
@@ -1022,12 +2274,17 @@ OLD_FILES+=lib/geom/geom_concat.so.1
 OLD_FILES+=lib/geom/geom_label.so.1
 OLD_FILES+=lib/geom/geom_nop.so.1
 OLD_FILES+=lib/geom/geom_stripe.so.1
+# 20040713: fla(4) removed.
+OLD_FILES+=usr/share/man/man4/fla.4.gz
 # 200407XX
 OLD_FILES+=usr/sbin/kernbb
 OLD_FILES+=usr/sbin/ntp-genkeys
 OLD_FILES+=usr/sbin/ntptimeset
 OLD_FILES+=usr/share/man/man8/kernbb.8.gz
 OLD_FILES+=usr/share/man/man8/ntp-genkeys.8.gz
+# 20040627: usbdevs.h and usbdevs_data.h removal
+OLD_FILES+=usr/include/dev/usb/usbdevs.h
+OLD_FILES+=usr/include/dev/usb/usbdevs_data.h
 # 200406XX
 OLD_FILES+=usr/bin/gasp
 OLD_FILES+=usr/bin/gdbreplay
@@ -1082,6 +2339,8 @@ OLD_FILES+=lib/libz.so
 OLD_FILES+=bin/cxconfig
 OLD_FILES+=sbin/cxconfig
 OLD_FILES+=usr/share/man/man8/cxconfig.8.gz
+# 20031016: MULTI_DRIVER_MODULE macro removed
+OLD_FILES+=usr/share/man/man9/MULTI_DRIVER_MODULE.9.gz
 # 200309XX
 OLD_FILES+=usr/bin/symorder
 OLD_FILES+=usr/share/man/man1/symorder.1.gz
@@ -1245,7 +2504,6 @@ OLD_FILES+=usr/sbin/kenv
 OLD_FILES+=usr/bin/kenv
 OLD_FILES+=usr/sbin/elf2aout
 # 200210XX
-OLD_FILES+=usr/include/libusb.h
 OLD_FILES+=usr/include/libusbhid.h
 OLD_FILES+=usr/share/man/man3/All_FreeBSD.3.gz
 OLD_FILES+=usr/share/man/man3/CheckRules.3.gz
@@ -1322,7 +2580,7 @@ OLD_FILES+=usr/lib/libpam_ssh.a
 OLD_FILES+=usr/lib/libpam_ssh_p.a
 OLD_FILES+=usr/bin/help
 OLD_FILES+=usr/bin/sccs
-.if ${TARGET_ARCH} != "i386"
+.if ${TARGET_ARCH} != "amd64" && ${TARGET_ARCH} != "arm" && ${TARGET_ARCH} != "i386" && ${TARGET_ARCH} != "powerpc"
 OLD_FILES+=usr/bin/gdbserver
 .endif
 OLD_FILES+=usr/bin/ssh-keysign
@@ -1355,9 +2613,6 @@ OLD_FILES+=usr/lib/libss.a
 OLD_FILES+=usr/lib/libss_p.a
 OLD_FILES+=usr/lib/libtelnet.a
 OLD_FILES+=usr/lib/libtelnet_p.a
-OLD_FILES+=usr/lib/libusb.a
-OLD_FILES+=usr/lib/libusb.so
-OLD_FILES+=usr/lib/libusb_p.a
 OLD_FILES+=usr/sbin/diskpart
 # 200202XX
 OLD_FILES+=usr/bin/gprof4
@@ -3473,11 +4728,7 @@ OLD_FILES+=usr/games/worm
 OLD_FILES+=usr/games/worms
 OLD_FILES+=usr/games/wump
 OLD_FILES+=sbin/mount_reiserfs
-OLD_FILES+=usr/bin/hesinfo
-OLD_FILES+=usr/include/c++/3.4/ext/demangle.h
 OLD_FILES+=usr/include/cam/cam_extend.h
-OLD_FILES+=usr/include/dev/usb/usbdevs.h
-OLD_FILES+=usr/include/dev/usb/usbdevs_data.h
 OLD_FILES+=usr/include/dev/wi/wi_hostap.h
 OLD_FILES+=usr/include/disktab.h
 OLD_FILES+=usr/include/g++/FlexLexer.h
@@ -3710,9 +4961,7 @@ OLD_FILES+=usr/include/netns/spidp.h
 OLD_FILES+=usr/include/netns/spp_debug.h
 OLD_FILES+=usr/include/netns/spp_timer.h
 OLD_FILES+=usr/include/netns/spp_var.h
-OLD_FILES+=usr/include/nfs/krpc.h
 OLD_FILES+=usr/include/nfs/nfs.h
-OLD_FILES+=usr/include/nfs/nfsdiskless.h
 OLD_FILES+=usr/include/nfs/nfsm_subs.h
 OLD_FILES+=usr/include/nfs/nfsmount.h
 OLD_FILES+=usr/include/nfs/nfsnode.h
@@ -3739,7 +4988,6 @@ OLD_FILES+=usr/include/posix4/posix4.h
 OLD_FILES+=usr/include/posix4/sched.h
 OLD_FILES+=usr/include/posix4/semaphore.h
 OLD_DIRS+=usr/include/posix4
-OLD_FILES+=usr/include/rune.h
 OLD_FILES+=usr/include/security/_pam_compat.h
 OLD_FILES+=usr/include/security/_pam_macros.h
 OLD_FILES+=usr/include/security/_pam_types.h
@@ -3885,46 +5133,21 @@ OLD_FILES+=usr/share/doc/ntp/release.htm
 OLD_FILES+=usr/share/doc/ntp/tickadj.htm
 OLD_FILES+=usr/share/doc/papers/nqnfs.ascii.gz
 OLD_FILES+=usr/share/doc/papers/px.ascii.gz
-OLD_FILES+=usr/share/man/man1/hesinfo.1.gz
-OLD_FILES+=usr/share/man/man3/mbrune.3.gz
-OLD_FILES+=usr/share/man/man3/rune.3.gz
-OLD_FILES+=usr/share/man/man3/hesiod.3.gz
-OLD_FILES+=usr/share/man/man3/mac_is_present_np.3.gz
-OLD_FILES+=usr/share/man/man3/fpsetsticky.3.gz
-OLD_FILES+=usr/share/man/man3/gss_krb5_copy_ccache.3.gz
-OLD_FILES+=usr/share/man/man3/gss_krb5_compat_des3_mic.3.gz
-OLD_FILES+=usr/share/man/man3/exp10f.3.gz
 OLD_FILES+=usr/share/man/man3/exp10.3.gz
-OLD_FILES+=usr/share/man/man3/mbrrune.3.gz
-OLD_FILES+=usr/share/man/man3/mbmb.3.gz
-OLD_FILES+=usr/share/man/man3/sputrune.3.gz
-OLD_FILES+=usr/share/man/man3/sgetrune.3.gz
-OLD_FILES+=usr/share/man/man3/setrunelocale.3.gz
-OLD_FILES+=usr/share/man/man3/setinvalidrune.3.gz
-OLD_FILES+=usr/share/man/man3/mbrune.3.gz
-OLD_FILES+=usr/share/man/man3/rune.3.gz
-OLD_FILES+=usr/share/man/man3/hesiod.3.gz
-OLD_FILES+=usr/share/man/man3/mac_is_present_np.3.gz
-OLD_FILES+=usr/share/man/man3/fpsetsticky.3.gz
-OLD_FILES+=usr/share/man/man3/gss_krb5_copy_ccache.3.gz
-OLD_FILES+=usr/share/man/man3/gss_krb5_compat_des3_mic.3.gz
 OLD_FILES+=usr/share/man/man3/exp10f.3.gz
-OLD_FILES+=usr/share/man/man3/exp10.3.gz
-OLD_FILES+=usr/share/man/man3/mbrrune.3.gz
+OLD_FILES+=usr/share/man/man3/fpsetsticky.3.gz
+OLD_FILES+=usr/share/man/man3/gss_krb5_compat_des3_mic.3.gz
+OLD_FILES+=usr/share/man/man3/gss_krb5_copy_ccache.3.gz
+OLD_FILES+=usr/share/man/man3/mac_is_present_np.3.gz
 OLD_FILES+=usr/share/man/man3/mbmb.3.gz
-OLD_FILES+=usr/share/man/man3/sputrune.3.gz
-OLD_FILES+=usr/share/man/man3/sgetrune.3.gz
 OLD_FILES+=usr/share/man/man3/setrunelocale.3.gz
-OLD_FILES+=usr/share/man/man3/setinvalidrune.3.gz
-OLD_FILES+=usr/share/man/man3/fungetrune.3.gz
-OLD_FILES+=usr/share/man/man3/fputrune.3.gz
-OLD_FILES+=usr/share/man/man3/fgetrune.3.gz
-OLD_FILES+=usr/share/man/man5/hesiod.conf.5.gz
 OLD_FILES+=usr/share/man/man5/usbd.conf.5.gz
 .if ${TARGET_ARCH} != "i386" && ${TARGET_ARCH} != "amd64"
 OLD_FILES+=usr/share/man/man8/boot_i386.8.gz
 .endif
+.if ${TARGET_ARCH} != "powerpc" && ${TARGET_ARCH} != "powerpc64" && ${TARGET_ARCH} != "sparc64"
 OLD_FILES+=usr/share/man/man8/ofwdump.8.gz
+.endif
 OLD_FILES+=usr/share/man/man8/mount_reiserfs.8.gz
 OLD_FILES+=usr/share/man/man9/VFS_START.9.gz
 OLD_FILES+=usr/share/man/man9/cpu_critical_exit.9.gz
@@ -3976,63 +5199,49 @@ OLD_LIBS+=usr/lib/libkadm5srv.so.8
 OLD_LIBS+=usr/lib/libkafs5.so.8
 OLD_LIBS+=usr/lib/libkrb5.so.8
 OLD_LIBS+=usr/lib/libobjc.so.2
-.if ${TARGET_ARCH} == "amd64"
 OLD_LIBS+=usr/lib32/libgssapi.so.8
 OLD_LIBS+=usr/lib32/libobjc.so.2
-.endif
 # 20070519: GCC 4.2
 OLD_LIBS+=usr/lib/libg2c.a
 OLD_LIBS+=usr/lib/libg2c.so
 OLD_LIBS+=usr/lib/libg2c.so.2
 OLD_LIBS+=usr/lib/libg2c_p.a
 OLD_LIBS+=usr/lib/libgcc_pic.a
-.if ${TARGET_ARCH} == "amd64"
 OLD_LIBS+=usr/lib32/libg2c.a
 OLD_LIBS+=usr/lib32/libg2c.so
 OLD_LIBS+=usr/lib32/libg2c.so.2
 OLD_LIBS+=usr/lib32/libg2c_p.a
 OLD_LIBS+=usr/lib32/libgcc_pic.a
-.endif
 # 20060729: OpenSSL 0.9.7e -> 0.9.8b upgrade
 OLD_LIBS+=lib/libcrypto.so.4
 OLD_LIBS+=usr/lib/libssl.so.4
-.if ${TARGET_ARCH} == "amd64"
 OLD_LIBS+=usr/lib32/libcrypto.so.4
 OLD_LIBS+=usr/lib32/libssl.so.4
-.endif
 # 20060521: gethostbyaddr(3) ABI change
 OLD_LIBS+=usr/lib/libroken.so.8
 OLD_LIBS+=lib/libatm.so.3
 OLD_LIBS+=lib/libc.so.6
 OLD_LIBS+=lib/libutil.so.5
-.if ${TARGET_ARCH} == "amd64"
 OLD_LIBS+=usr/lib32/libatm.so.3
 OLD_LIBS+=usr/lib32/libc.so.6
 OLD_LIBS+=usr/lib32/libutil.so.5
-.endif
 # 20060413: shared library moved to /usr/lib
 OLD_LIBS+=lib/libgpib.so.1
 # 20060413: libpcap.so.4 moved to /lib/
 OLD_LIBS+=usr/lib/libpcap.so.4
 # 20060412: libpthread.so.2 moved to /lib/
-.if ${TARGET_ARCH} != "sparc64"
 OLD_LIBS+=usr/lib/libpthread.so.2
-.else
-OLD_LIBS+=usr/lib/libthr.so.2
-.endif
 # 20060127: revert libdisk to static-only
 OLD_LIBS+=usr/lib/libdisk.so.3
-# 20051027: libc_r discontinued
+# 20051027: libc_r discontinued (removed 20101113)
 OLD_LIBS+=usr/lib/libc_r.a
 OLD_LIBS+=usr/lib/libc_r.so
 OLD_LIBS+=usr/lib/libc_r.so.7
 OLD_LIBS+=usr/lib/libc_r_p.a
-.if ${TARGET_ARCH} == "amd64"
 OLD_LIBS+=usr/lib32/libc_r.a
 OLD_LIBS+=usr/lib32/libc_r.so
 OLD_LIBS+=usr/lib32/libc_r.so.7
 OLD_LIBS+=usr/lib32/libc_r_p.a
-.endif
 # 20050722: bump for 6.0-RELEASE
 OLD_LIBS+=lib/libalias.so.4
 OLD_LIBS+=lib/libatm.so.2
@@ -4138,8 +5347,6 @@ OLD_LIBS+=usr/lib/snmp_atm.so.3
 OLD_LIBS+=usr/lib/snmp_mibII.so.3
 OLD_LIBS+=usr/lib/snmp_netgraph.so.3
 OLD_LIBS+=usr/lib/snmp_pf.so.3
-# 20050603: network related ABI change on 64bit systems
-OLD_LIBS+=usr/lib/libpcap.so.3
 # 200505XX: ?
 OLD_LIBS+=usr/lib/snmp_atm.so.2
 OLD_LIBS+=usr/lib/snmp_mibII.so.2
@@ -4160,10 +5367,6 @@ OLD_LIBS+=usr/lib/libpcap.so.2
 OLD_LIBS+=usr/lib/libisc.so.1
 # 200408XX
 OLD_LIBS+=usr/lib/snmp_netgraph.so.1
-.if ${TARGET_ARCH} != "sparc64"
-# 20040130: libkse renamed to libpthread
-OLD_LIBS+=usr/lib/libkse.so.1
-.endif
 # 200404XX
 OLD_LIBS+=usr/lib/libsnmp.so.1
 OLD_LIBS+=usr/lib/snmp_mibII.so.1
@@ -4250,10 +5453,8 @@ OLD_LIBS+=usr/lib/libc_r.so.3
 OLD_LIBS+=usr/lib/libarchive.so.2
 OLD_LIBS+=usr/lib/libbsnmp.so.1
 OLD_LIBS+=usr/lib/libc_r.so.6
-.if ${TARGET_ARCH} == "amd64"
 OLD_LIBS+=usr/lib32/libarchive.so.2
 OLD_LIBS+=usr/lib32/libc_r.so.6
-.endif
 OLD_LIBS+=usr/lib/libcipher.so.2
 OLD_LIBS+=usr/lib/libgssapi.so.6
 OLD_LIBS+=usr/lib/libkse.so.1

@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/conf/ldscript.arm 174854 2007-12-22 06:32:46Z cvs2svn $ */
+/* $FreeBSD$ */
 OUTPUT_FORMAT("elf32-littlearm", "elf32-bigarm", "elf32-littlearm")
 OUTPUT_ARCH(arm)
 ENTRY(_start)

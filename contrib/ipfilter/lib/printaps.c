@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/contrib/ipfilter/lib/printaps.c 170268 2007-06-04 02:54:36Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2002-2004 by Darren Reed.

@@ -23,7 +23,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/fdformat/fdformat.c 134081 2004-08-20 15:14:25Z phk $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -75,8 +75,7 @@ format_track(int fd, int cyl, int secs, int head, int rate,
 		f.fd_formb_secno(i) = il[i+1];
 		f.fd_formb_secsize(i) = secsize;
 	}
-	if(ioctl(fd, FD_FORM, (caddr_t)&f) < 0)
-		err(EX_OSERR, "ioctl(FD_FORM)");
+	(void)ioctl(fd, FD_FORM, (caddr_t)&f);
 }
 
 static int
@@ -146,7 +145,7 @@ main(int argc, char **argv)
 	struct fdc_status fdcs[MAXPRINTERRS];
 	int format, fill, quiet, verify, verify_only, confirm;
 	int fd, c, i, track, error, tracks_per_dot, bytes_per_track, errs;
-	int fdopts, flags;
+	int flags;
 	char *fmtstring, *device;
 	const char *name, *descr;
 
@@ -250,11 +249,6 @@ main(int argc, char **argv)
 		errx(EX_OSERR, "not a floppy disk: %s", device);
 	if (ioctl(fd, FD_GDTYPE, &type) == -1)
 		err(EX_OSERR, "ioctl(FD_GDTYPE)");
-	if (ioctl(fd, FD_GOPTS, &fdopts) == -1)
-		err(EX_OSERR, "ioctl(FD_GOPTS)");
-	fdopts |= FDOPT_NOERRLOG;
-	if (ioctl(fd, FD_SOPTS, &fdopts) == -1)
-		err(EX_OSERR, "ioctl(FD_SOPTS, FDOPT_NOERRLOG)");
 	if (format) {
 		getname(type, &name, &descr);
 		fdtp = get_fmt(format, type);

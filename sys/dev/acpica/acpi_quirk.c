@@ -25,12 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/acpi_quirk.c 167814 2007-03-22 18:16:43Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 
 enum ops_t {
@@ -149,9 +150,9 @@ acpi_table_quirks(int *quirks)
     if (ACPI_FAILURE(AcpiGetTableHeader(ACPI_SIG_FADT, 0, &fadt)))
 	bzero(&fadt, sizeof(fadt));
     if (ACPI_FAILURE(AcpiGetTableHeader(ACPI_SIG_DSDT, 0, &dsdt)))
-	bzero(&fadt, sizeof(dsdt));
+	bzero(&dsdt, sizeof(dsdt));
     if (ACPI_FAILURE(AcpiGetTableHeader(ACPI_SIG_XSDT, 0, &xsdt)))
-	bzero(&fadt, sizeof(xsdt));
+	bzero(&xsdt, sizeof(xsdt));
 
     /* Then, override the quirks with any matched from table signatures. */
     for (entry = acpi_quirks_table; entry->match; entry++) {

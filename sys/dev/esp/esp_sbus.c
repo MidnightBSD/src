@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2004 Scott Long
+ * Copyright (c) 2005 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +26,7 @@
  *
  */
 
-/*	$NetBSD: esp_sbus.c,v 1.31 2005/02/27 00:27:48 perry Exp $	*/
+/*	$NetBSD: esp_sbus.c,v 1.51 2009/09/17 16:28:12 tsutsui Exp $	*/
 
 /*-
  * Copyright (c) 1997, 1998 The NetBSD Foundation, Inc.
@@ -43,13 +44,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the NetBSD
- *	Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -65,24 +59,27 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/esp/esp_sbus.c 166901 2007-02-23 12:19:07Z piso $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/module.h>
-#include <sys/resource.h>
+#include <sys/mutex.h>
+#include <sys/rman.h>
 
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/openfirm.h>
 #include <machine/bus.h>
+#include <machine/ofw_machdep.h>
 #include <machine/resource.h>
-#include <sys/rman.h>
 
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>
 #include <cam/scsi/scsi_all.h>
+#include <cam/scsi/scsi_message.h>
 
 #include <sparc64/sbus/lsi64854reg.h>
 #include <sparc64/sbus/lsi64854var.h>
@@ -95,21 +92,15 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/esp/esp_sbus.c 166901 2007-02-23 12:19
 
 struct esp_softc {
 	struct ncr53c9x_softc	sc_ncr53c9x;	/* glue to MI code */
-	struct device		*sc_dev;
+	device_t		sc_dev;
 
-	int			sc_rid;
 	struct resource		*sc_res;
-	bus_space_handle_t	sc_regh;
-	bus_space_tag_t		sc_regt;
 
-	int			sc_irqrid;
 	struct resource		*sc_irqres;
 	void			*sc_irq;
 
 	struct lsi64854_softc	*sc_dma;	/* pointer to my DMA */
 };
-
-static devclass_t	esp_devclass;
 
 static int	esp_probe(device_t);
 static int	esp_dma_attach(device_t);
@@ -125,7 +116,8 @@ static device_method_t esp_dma_methods[] = {
 	DEVMETHOD(device_detach,	esp_dma_detach),
 	DEVMETHOD(device_suspend,	esp_suspend),
 	DEVMETHOD(device_resume,	esp_resume),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t esp_dma_driver = {
@@ -143,7 +135,8 @@ static device_method_t esp_sbus_methods[] = {
 	DEVMETHOD(device_detach,	esp_sbus_detach),
 	DEVMETHOD(device_suspend,	esp_suspend),
 	DEVMETHOD(device_resume,	esp_resume),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t esp_sbus_driver = {
@@ -155,24 +148,24 @@ static driver_t esp_sbus_driver = {
 DRIVER_MODULE(esp, sbus, esp_sbus_driver, esp_devclass, 0, 0);
 MODULE_DEPEND(esp, sbus, 1, 1, 1);
 
-MODULE_DEPEND(esp, cam, 1, 1, 1);
-
 /*
- * Functions and the switch for the MI code.
+ * Functions and the switch for the MI code
  */
-static u_char	esp_read_reg(struct ncr53c9x_softc *, int);
-static void	esp_write_reg(struct ncr53c9x_softc *, int, u_char);
-static int	esp_dma_isintr(struct ncr53c9x_softc *);
-static void	esp_dma_reset(struct ncr53c9x_softc *);
-static int	esp_dma_intr(struct ncr53c9x_softc *);
-static int	esp_dma_setup(struct ncr53c9x_softc *, caddr_t *, size_t *,
-			      int, size_t *);
-static void	esp_dma_go(struct ncr53c9x_softc *);
-static void	esp_dma_stop(struct ncr53c9x_softc *);
-static int	esp_dma_isactive(struct ncr53c9x_softc *);
-static int	espattach(struct esp_softc *, struct ncr53c9x_glue *);
+static uint8_t	esp_read_reg(struct ncr53c9x_softc *sc, int reg);
+static void	esp_write_reg(struct ncr53c9x_softc *sc, int reg, uint8_t v);
+static int	esp_dma_isintr(struct ncr53c9x_softc *sc);
+static void	esp_dma_reset(struct ncr53c9x_softc *sc);
+static int	esp_dma_intr(struct ncr53c9x_softc *sc);
+static int	esp_dma_setup(struct ncr53c9x_softc *sc, void **addr,
+		    size_t *len, int datain, size_t *dmasize);
+static void	esp_dma_go(struct ncr53c9x_softc *sc);
+static void	esp_dma_stop(struct ncr53c9x_softc *sc);
+static int	esp_dma_isactive(struct ncr53c9x_softc *sc);
+static int	espattach(struct esp_softc *esc,
+		    const struct ncr53c9x_glue *gluep);
+static int	espdetach(struct esp_softc *esc);
 
-static struct ncr53c9x_glue esp_sbus_glue = {
+static const struct ncr53c9x_glue const esp_sbus_glue = {
 	esp_read_reg,
 	esp_write_reg,
 	esp_dma_isintr,
@@ -182,7 +175,6 @@ static struct ncr53c9x_glue esp_sbus_glue = {
 	esp_dma_go,
 	esp_dma_stop,
 	esp_dma_isactive,
-	NULL,			/* gl_clear_latched_intr */
 };
 
 static int
@@ -209,29 +201,16 @@ esp_sbus_attach(device_t dev)
 	struct ncr53c9x_softc *sc;
 	struct lsi64854_softc *lsc;
 	device_t *children;
-	const char *name;
-	phandle_t node;
-	int burst, error, i, nchildren, slot;
+	int error, i, nchildren;
 
 	esc = device_get_softc(dev);
-	bzero(esc, sizeof(struct esp_softc));
 	sc = &esc->sc_ncr53c9x;
 
 	lsc = NULL;
 	esc->sc_dev = dev;
-	name = ofw_bus_get_name(dev);
-	node = ofw_bus_get_node(dev);
-	if (OF_getprop(node, "initiator-id", &sc->sc_id,
-	    sizeof(sc->sc_id)) == -1)
-		sc->sc_id = 7;
 	sc->sc_freq = sbus_get_clockfreq(dev);
 
-#ifdef ESP_SBUS_DEBUG
-	device_printf(dev, "%s: sc_id %d, freq %d\n", __func__, sc->sc_id,
-	    sc->sc_freq);
-#endif
-
-	if (strcmp(name, "SUNW,fas") == 0) {
+	if (strcmp(ofw_bus_get_name(dev), "SUNW,fas") == 0) {
 		/*
 		 * Allocate space for DMA, in SUNW,fas there are no
 		 * separate DMA devices.
@@ -250,26 +229,24 @@ esp_sbus_attach(device_t dev)
 		 */
 
 		/* Allocate DMA registers. */
-		lsc->sc_rid = 0;
+		i = 0;
 		if ((lsc->sc_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
-		    &lsc->sc_rid, RF_ACTIVE)) == NULL) {
+		    &i, RF_ACTIVE)) == NULL) {
 			device_printf(dev, "cannot allocate DMA registers\n");
 			error = ENXIO;
 			goto fail_sbus_lsc;
 		}
-		lsc->sc_regt = rman_get_bustag(lsc->sc_res);
-		lsc->sc_regh = rman_get_bushandle(lsc->sc_res);
 
 		/* Create a parent DMA tag based on this bus. */
 		error = bus_dma_tag_create(
 		    bus_get_dma_tag(dev),	/* parent */
-		    PAGE_SIZE, 0,		/* alignment, boundary */
+		    1, 0,			/* alignment, boundary */
 		    BUS_SPACE_MAXADDR,		/* lowaddr */
 		    BUS_SPACE_MAXADDR,		/* highaddr */
 		    NULL, NULL,			/* filter, filterarg */
-		    BUS_SPACE_MAXSIZE_32BIT,	/* maxsize */
-		    0,				/* nsegments */
-		    BUS_SPACE_MAXSIZE_32BIT,	/* maxsegsize */
+		    BUS_SPACE_MAXSIZE,		/* maxsize */
+		    BUS_SPACE_UNRESTRICTED,	/* nsegments */
+		    BUS_SPACE_MAXSIZE,		/* maxsegsize */
 		    0,				/* flags */
 		    NULL, NULL,			/* no locking */
 		    &lsc->sc_parent_dmat);
@@ -277,41 +254,34 @@ esp_sbus_attach(device_t dev)
 			device_printf(dev, "cannot allocate parent DMA tag\n");
 			goto fail_sbus_lres;
 		}
-		burst = sbus_get_burstsz(dev);
+
+		i = sbus_get_burstsz(dev);
 
 #ifdef ESP_SBUS_DEBUG
-		printf("%s: burst 0x%x\n", __func__, burst);
+		printf("%s: burst 0x%x\n", __func__, i);
 #endif
 
-		lsc->sc_burst = (burst & SBUS_BURST_32) ? 32 :
-		    (burst & SBUS_BURST_16) ? 16 : 0;
+		lsc->sc_burst = (i & SBUS_BURST_32) ? 32 :
+		    (i & SBUS_BURST_16) ? 16 : 0;
 
 		lsc->sc_channel = L64854_CHANNEL_SCSI;
 		lsc->sc_client = sc;
 		lsc->sc_dev = dev;
 
-		error = lsi64854_attach(lsc);
-		if (error != 0) {
-			device_printf(dev, "lsi64854_attach failed\n");
-			goto fail_sbus_lpdma;
-		}
-
 		/*
 		 * Allocate SCSI core registers.
 		 */
-		esc->sc_rid = 1;
+		i = 1;
 		if ((esc->sc_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
-		    &esc->sc_rid, RF_ACTIVE)) == NULL) {
+		    &i, RF_ACTIVE)) == NULL) {
 			device_printf(dev,
 			    "cannot allocate SCSI core registers\n");
 			error = ENXIO;
-			goto fail_sbus_lsi;
+			goto fail_sbus_lpdma;
 		}
-		esc->sc_regt = rman_get_bustag(esc->sc_res);
-		esc->sc_regh = rman_get_bushandle(esc->sc_res);
 	} else {
 		/*
-		 * Search accompanying DMA engine. It should have been
+		 * Search accompanying DMA engine.  It should have been
 		 * already attached otherwise there isn't much we can do.
 		 */
 		if (device_get_children(device_get_parent(dev), &children,
@@ -319,11 +289,12 @@ esp_sbus_attach(device_t dev)
 			device_printf(dev, "cannot determine siblings\n");
 			return (ENXIO);
 		}
-		slot = sbus_get_slot(dev);
 		for (i = 0; i < nchildren; i++) {
 			if (device_is_attached(children[i]) &&
-			    sbus_get_slot(children[i]) == slot &&
-			    strcmp(ofw_bus_get_name(children[i]), "dma") == 0) {
+			    sbus_get_slot(children[i]) ==
+			    sbus_get_slot(dev) &&
+			    strcmp(ofw_bus_get_name(children[i]),
+			    "dma") == 0) {
 				/* XXX hackery */
 				esc->sc_dma = (struct lsi64854_softc *)
 				    device_get_softc(children[i]);
@@ -340,15 +311,13 @@ esp_sbus_attach(device_t dev)
 		/*
 		 * Allocate SCSI core registers.
 		 */
-		esc->sc_rid = 0;
+		i = 0;
 		if ((esc->sc_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
-		    &esc->sc_rid, RF_ACTIVE)) == NULL) {
+		    &i, RF_ACTIVE)) == NULL) {
 			device_printf(dev,
 			    "cannot allocate SCSI core registers\n");
 			return (ENXIO);
 		}
-		esc->sc_regt = rman_get_bustag(esc->sc_res);
-		esc->sc_regh = rman_get_bushandle(esc->sc_res);
 	}
 
 	error = espattach(esc, &esp_sbus_glue);
@@ -360,15 +329,15 @@ esp_sbus_attach(device_t dev)
 	return (0);
 
  fail_sbus_eres:
-	bus_release_resource(dev, SYS_RES_MEMORY, esc->sc_rid, esc->sc_res);
-	if (strcmp(name, "SUNW,fas") != 0)
+	bus_release_resource(dev, SYS_RES_MEMORY, rman_get_rid(esc->sc_res),
+	    esc->sc_res);
+	if (strcmp(ofw_bus_get_name(dev), "SUNW,fas") != 0)
 		return (error);
- fail_sbus_lsi:
-	lsi64854_detach(lsc);
  fail_sbus_lpdma:
 	bus_dma_tag_destroy(lsc->sc_parent_dmat);
  fail_sbus_lres:
-	bus_release_resource(dev, SYS_RES_MEMORY, lsc->sc_rid, lsc->sc_res);
+	bus_release_resource(dev, SYS_RES_MEMORY, rman_get_rid(lsc->sc_res),
+	    lsc->sc_res);
  fail_sbus_lsc:
 	free(lsc, M_DEVBUF);
 	return (error);
@@ -378,28 +347,22 @@ static int
 esp_sbus_detach(device_t dev)
 {
 	struct esp_softc *esc;
-	struct ncr53c9x_softc *sc;
 	struct lsi64854_softc *lsc;
 	int error;
 
 	esc = device_get_softc(dev);
-	sc = &esc->sc_ncr53c9x;
 	lsc = esc->sc_dma;
 
-	bus_teardown_intr(esc->sc_dev, esc->sc_irqres, esc->sc_irq);
-	error = ncr53c9x_detach(sc);
+	error = espdetach(esc);
 	if (error != 0)
 		return (error);
-	bus_release_resource(esc->sc_dev, SYS_RES_IRQ, esc->sc_irqrid,
-	    esc->sc_irqres);
-	bus_release_resource(dev, SYS_RES_MEMORY, esc->sc_rid, esc->sc_res);
+	bus_release_resource(dev, SYS_RES_MEMORY, rman_get_rid(esc->sc_res),
+		esc->sc_res);
 	if (strcmp(ofw_bus_get_name(dev), "SUNW,fas") != 0)
 		return (0);
-	error = lsi64854_detach(lsc);
-	if (error != 0)
-		return (error);
 	bus_dma_tag_destroy(lsc->sc_parent_dmat);
-	bus_release_resource(dev, SYS_RES_MEMORY, lsc->sc_rid, lsc->sc_res);
+	bus_release_resource(dev, SYS_RES_MEMORY, rman_get_rid(lsc->sc_res),
+	    lsc->sc_res);
 	free(lsc, M_DEVBUF);
 
 	return (0);
@@ -410,28 +373,17 @@ esp_dma_attach(device_t dev)
 {
 	struct esp_softc *esc;
 	struct ncr53c9x_softc *sc;
-	phandle_t node;
-	int error;
+	int error, i;
 
 	esc = device_get_softc(dev);
-	bzero(esc, sizeof(struct esp_softc));
 	sc = &esc->sc_ncr53c9x;
 
 	esc->sc_dev = dev;
-	node = ofw_bus_get_node(dev);
-	if (OF_getprop(node, "initiator-id", &sc->sc_id,
-	    sizeof(sc->sc_id)) == -1)
-		sc->sc_id = 7;
-	if (OF_getprop(node, "clock-frequency", &sc->sc_freq,
-	    sizeof(sc->sc_freq)) == -1) {
+	if (OF_getprop(ofw_bus_get_node(dev), "clock-frequency",
+	    &sc->sc_freq, sizeof(sc->sc_freq)) == -1) {
 		printf("failed to query OFW for clock-frequency\n");
 		return (ENXIO);
 	}
-
-#ifdef ESP_SBUS_DEBUG
-	device_printf(dev, "%s: sc_id %d, freq %d\n", __func__, sc->sc_id,
-	    sc->sc_freq);
-#endif
 
 	/* XXX hackery */
 	esc->sc_dma = (struct lsi64854_softc *)
@@ -441,14 +393,12 @@ esp_dma_attach(device_t dev)
 	/*
 	 * Allocate SCSI core registers.
 	 */
-	esc->sc_rid = 0;
+	i = 0;
 	if ((esc->sc_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
-	    &esc->sc_rid, RF_ACTIVE)) == NULL) {
+	    &i, RF_ACTIVE)) == NULL) {
 		device_printf(dev, "cannot allocate SCSI core registers\n");
 		return (ENXIO);
 	}
-	esc->sc_regt = rman_get_bustag(esc->sc_res);
-	esc->sc_regh = rman_get_bushandle(esc->sc_res);
 
 	error = espattach(esc, &esp_sbus_glue);
 	if (error != 0) {
@@ -459,7 +409,8 @@ esp_dma_attach(device_t dev)
 	return (0);
 
  fail_dma_eres:
-	bus_release_resource(dev, SYS_RES_MEMORY, esc->sc_rid, esc->sc_res);
+	bus_release_resource(dev, SYS_RES_MEMORY, rman_get_rid(esc->sc_res),
+	    esc->sc_res);
 	return (error);
 }
 
@@ -467,19 +418,15 @@ static int
 esp_dma_detach(device_t dev)
 {
 	struct esp_softc *esc;
-	struct ncr53c9x_softc *sc;
 	int error;
 
 	esc = device_get_softc(dev);
-	sc = &esc->sc_ncr53c9x;
 
-	bus_teardown_intr(esc->sc_dev, esc->sc_irqres, esc->sc_irq);
-	error = ncr53c9x_detach(sc);
+	error = espdetach(esc);
 	if (error != 0)
 		return (error);
-	bus_release_resource(esc->sc_dev, SYS_RES_IRQ, esc->sc_irqrid,
-	    esc->sc_irqres);
-	bus_release_resource(dev, SYS_RES_MEMORY, esc->sc_rid, esc->sc_res);
+	bus_release_resource(dev, SYS_RES_MEMORY, rman_get_rid(esc->sc_res),
+	    esc->sc_res);
 
 	return (0);
 }
@@ -498,15 +445,21 @@ esp_resume(device_t dev)
 	return (ENXIO);
 }
 
-/*
- * Attach this instance, and then all the sub-devices
- */
 static int
-espattach(struct esp_softc *esc, struct ncr53c9x_glue *gluep)
+espattach(struct esp_softc *esc, const struct ncr53c9x_glue *gluep)
 {
 	struct ncr53c9x_softc *sc = &esc->sc_ncr53c9x;
 	unsigned int uid = 0;
-	int error;
+	int error, i;
+
+	NCR_LOCK_INIT(sc);
+
+	sc->sc_id = OF_getscsinitid(esc->sc_dev);
+
+#ifdef ESP_SBUS_DEBUG
+	device_printf(esc->sc_dev, "%s: sc_id %d, freq %d\n",
+	    __func__, sc->sc_id, sc->sc_freq);
+#endif
 
 	/*
 	 * The `ESC' DMA chip must be reset before we can access
@@ -530,7 +483,7 @@ espattach(struct esp_softc *esc, struct ncr53c9x_glue *gluep)
 	 */
 
 	/*
-	 * Read the part-unique ID code of the SCSI chip. The contained
+	 * Read the part-unique ID code of the SCSI chip.  The contained
 	 * value is only valid if all of the following conditions are met:
 	 * - After power-up or chip reset.
 	 * - Before any value is written to this register.
@@ -557,9 +510,9 @@ espattach(struct esp_softc *esc, struct ncr53c9x_glue *gluep)
 	NCR_WRITE_REG(sc, NCR_CFG2, sc->sc_cfg2);
 
 	if ((NCR_READ_REG(sc, NCR_CFG2) & ~NCRCFG2_RSVD) !=
-	    (NCRCFG2_SCSI2 | NCRCFG2_RPE)) {
+	    (NCRCFG2_SCSI2 | NCRCFG2_RPE))
 		sc->sc_rev = NCR_VARIANT_ESP100;
-	} else {
+	else {
 		sc->sc_cfg2 = NCRCFG2_SCSI2;
 		NCR_WRITE_REG(sc, NCR_CFG2, sc->sc_cfg2);
 		sc->sc_cfg3 = 0;
@@ -567,10 +520,10 @@ espattach(struct esp_softc *esc, struct ncr53c9x_glue *gluep)
 		sc->sc_cfg3 = (NCRCFG3_CDB | NCRCFG3_FCLK);
 		NCR_WRITE_REG(sc, NCR_CFG3, sc->sc_cfg3);
 		if (NCR_READ_REG(sc, NCR_CFG3) !=
-		    (NCRCFG3_CDB | NCRCFG3_FCLK)) {
+		    (NCRCFG3_CDB | NCRCFG3_FCLK))
 			sc->sc_rev = NCR_VARIANT_ESP100A;
-		} else {
-			/* NCRCFG2_FE enables > 64K transfers */
+		else {
+			/* NCRCFG2_FE enables > 64K transfers. */
 			sc->sc_cfg2 |= NCRCFG2_FE;
 			sc->sc_cfg3 = 0;
 			NCR_WRITE_REG(sc, NCR_CFG3, sc->sc_cfg3);
@@ -581,15 +534,20 @@ espattach(struct esp_softc *esc, struct ncr53c9x_glue *gluep)
 				case 0x00:
 					sc->sc_rev = NCR_VARIANT_FAS100A;
 					break;
+
 				case 0x02:
 					if ((uid & 0x07) == 0x02)
-						sc->sc_rev = NCR_VARIANT_FAS216;
+						sc->sc_rev =
+						    NCR_VARIANT_FAS216;
 					else
-						sc->sc_rev = NCR_VARIANT_FAS236;
+						sc->sc_rev =
+						    NCR_VARIANT_FAS236;
 					break;
+
 				case 0x0a:
 					sc->sc_rev = NCR_VARIANT_FAS366;
 					break;
+
 				default:
 					/*
 					 * We could just treat unknown chips
@@ -598,7 +556,8 @@ espattach(struct esp_softc *esc, struct ncr53c9x_glue *gluep)
 					 */
 					device_printf(esc->sc_dev,
 					    "Unknown chip\n");
-					return (ENXIO);
+					error = ENXIO;
+					goto fail_lock;
 				}
 			}
 		}
@@ -607,12 +566,6 @@ espattach(struct esp_softc *esc, struct ncr53c9x_glue *gluep)
 #ifdef ESP_SBUS_DEBUG
 	printf("%s: revision %d, uid 0x%x\n", __func__, sc->sc_rev, uid);
 #endif
-
-	/*
-	 * XXX minsync and maxxfer _should_ be set up in MI code,
-	 * XXX but it appears to have some dependency on what sort
-	 * XXX of DMA we're hooked up to, etc.
-	 */
 
 	/*
 	 * This is the value used to start sync negotiations
@@ -625,31 +578,27 @@ espattach(struct esp_softc *esc, struct ncr53c9x_glue *gluep)
 	 */
 	sc->sc_minsync = 1000 / sc->sc_freq;
 
+	/*
+	 * Except for some variants the maximum transfer size is 64k.
+	 */
+	sc->sc_maxxfer = 64 * 1024;
 	sc->sc_maxoffset = 15;
 	sc->sc_extended_geom = 1;
 
 	/*
 	 * Alas, we must now modify the value a bit, because it's
-	 * only valid when can switch on FASTCLK and FASTSCSI bits
-	 * in config register 3...
+	 * only valid when we can switch on FASTCLK and FASTSCSI bits
+	 * in the config register 3...
 	 */
 	switch (sc->sc_rev) {
 	case NCR_VARIANT_ESP100:
-		sc->sc_maxwidth = 0;
-		sc->sc_maxxfer = 64 * 1024;
+		sc->sc_maxwidth = MSG_EXT_WDTR_BUS_8_BIT;
 		sc->sc_minsync = 0;	/* No synch on old chip? */
 		break;
 
 	case NCR_VARIANT_ESP100A:
-		sc->sc_maxwidth = 0;
-		sc->sc_maxxfer = 64 * 1024;
-		/* Min clocks/byte is 5 */
-		sc->sc_minsync = ncr53c9x_cpb2stp(sc, 5);
-		break;
-
 	case NCR_VARIANT_ESP200:
-		sc->sc_maxwidth = 0;
-		sc->sc_maxxfer = 16 * 1024 * 1024;
+		sc->sc_maxwidth = MSG_EXT_WDTR_BUS_8_BIT;
 		/* Min clocks/byte is 5 */
 		sc->sc_minsync = ncr53c9x_cpb2stp(sc, 5);
 		break;
@@ -660,44 +609,55 @@ espattach(struct esp_softc *esc, struct ncr53c9x_glue *gluep)
 		/*
 		 * The onboard SCSI chips in Sun Ultra 1 are actually
 		 * documented to be NCR53C9X which use NCRCFG3_FCLK and
-		 * NCRCFG3_FSCSI. BSD/OS however probes these chips as
+		 * NCRCFG3_FSCSI.  BSD/OS however probes these chips as
 		 * FAS100A and uses NCRF9XCFG3_FCLK and NCRF9XCFG3_FSCSI
 		 * instead which seems to be correct as otherwise sync
-		 * negotiation just doesn't work. Using NCRF9XCFG3_FCLK
+		 * negotiation just doesn't work.  Using NCRF9XCFG3_FCLK
 		 * and NCRF9XCFG3_FSCSI with these chips in fact also
 		 * yields Fast-SCSI speed.
 		 */
 		sc->sc_features = NCR_F_FASTSCSI;
 		sc->sc_cfg3 = NCRF9XCFG3_FCLK;
 		sc->sc_cfg3_fscsi = NCRF9XCFG3_FSCSI;
-		sc->sc_maxwidth = 0;
+		sc->sc_maxwidth = MSG_EXT_WDTR_BUS_8_BIT;
 		sc->sc_maxxfer = 16 * 1024 * 1024;
 		break;
 
 	case NCR_VARIANT_FAS366:
-		sc->sc_maxwidth = 1;
+		sc->sc_maxwidth = MSG_EXT_WDTR_BUS_16_BIT;
 		sc->sc_maxxfer = 16 * 1024 * 1024;
 		break;
 	}
 
-	/* Limit minsync due to unsolved performance issues. */
-	sc->sc_maxsync = sc->sc_minsync;
+	/*
+	 * Given that we allocate resources based on sc->sc_maxxfer it doesn't
+	 * make sense to supply a value higher than the maximum actually used.
+	 */
+	sc->sc_maxxfer = min(sc->sc_maxxfer, MAXPHYS);
 
-	/* Establish interrupt channel */
-	esc->sc_irqrid = 0;
+	/* Attach the DMA engine. */
+	error = lsi64854_attach(esc->sc_dma);
+	if (error != 0) {
+		device_printf(esc->sc_dev, "lsi64854_attach failed\n");
+		goto fail_lock;
+	}
+
+	/* Establish interrupt channel. */
+	i = 0;
 	if ((esc->sc_irqres = bus_alloc_resource_any(esc->sc_dev, SYS_RES_IRQ,
-	    &esc->sc_irqrid, RF_SHAREABLE|RF_ACTIVE)) == NULL) {
+	    &i, RF_SHAREABLE|RF_ACTIVE)) == NULL) {
 		device_printf(esc->sc_dev, "cannot allocate interrupt\n");
-		return (ENXIO);
+		goto fail_lsi;
 	}
 	if (bus_setup_intr(esc->sc_dev, esc->sc_irqres,
-	    INTR_TYPE_BIO|INTR_MPSAFE, NULL, ncr53c9x_intr, sc, &esc->sc_irq)) {
+	    INTR_MPSAFE | INTR_TYPE_CAM, NULL, ncr53c9x_intr, sc,
+	    &esc->sc_irq)) {
 		device_printf(esc->sc_dev, "cannot set up interrupt\n");
 		error = ENXIO;
 		goto fail_ires;
 	}
 
-	/* Turn on target selection using the `DMA' method */
+	/* Turn on target selection using the `DMA' method. */
 	if (sc->sc_rev != NCR_VARIANT_FAS366)
 		sc->sc_features |= NCR_F_DMASELECT;
 
@@ -714,22 +674,46 @@ espattach(struct esp_softc *esc, struct ncr53c9x_glue *gluep)
  fail_intr:
 	bus_teardown_intr(esc->sc_dev, esc->sc_irqres, esc->sc_irq);
  fail_ires:
-	bus_release_resource(esc->sc_dev, SYS_RES_IRQ, esc->sc_irqrid,
-	    esc->sc_irqres);
+	bus_release_resource(esc->sc_dev, SYS_RES_IRQ,
+	    rman_get_rid(esc->sc_irqres), esc->sc_irqres);
+ fail_lsi:
+	lsi64854_detach(esc->sc_dma);
+ fail_lock:
+	NCR_LOCK_DESTROY(sc);
 	return (error);
 }
 
+static int
+espdetach(struct esp_softc *esc)
+{
+	struct ncr53c9x_softc *sc = &esc->sc_ncr53c9x;
+	int error;
+
+	bus_teardown_intr(esc->sc_dev, esc->sc_irqres, esc->sc_irq);
+	error = ncr53c9x_detach(sc);
+	if (error != 0)
+		return (error);
+	error = lsi64854_detach(esc->sc_dma);
+	if (error != 0)
+		return (error);
+	NCR_LOCK_DESTROY(sc);
+	bus_release_resource(esc->sc_dev, SYS_RES_IRQ,
+	    rman_get_rid(esc->sc_irqres), esc->sc_irqres);
+
+	return (0);
+}
+
 /*
- * Glue functions.
+ * Glue functions
  */
 
 #ifdef ESP_SBUS_DEBUG
-int esp_sbus_debug = 0;
+static int esp_sbus_debug = 0;
 
-static struct {
-	char *r_name;
-	int   r_flag;
-} esp__read_regnames [] = {
+static const struct {
+	const char *r_name;
+	int r_flag;
+} const esp__read_regnames [] = {
 	{ "TCL", 0},			/* 0/00 */
 	{ "TCM", 0},			/* 1/04 */
 	{ "FIFO", 0},			/* 2/08 */
@@ -748,10 +732,10 @@ static struct {
 	{ "TCX", 1},			/* f/3c */
 };
 
-static struct {
-	char *r_name;
-	int   r_flag;
-} esp__write_regnames[] = {
+static const const struct {
+	const char *r_name;
+	int r_flag;
+} const esp__write_regnames[] = {
 	{ "TCL", 1},			/* 0/00 */
 	{ "TCM", 1},			/* 1/04 */
 	{ "FIFO", 0},			/* 2/08 */
@@ -771,32 +755,35 @@ static struct {
 };
 #endif
 
-static u_char
+static uint8_t
 esp_read_reg(struct ncr53c9x_softc *sc, int reg)
 {
 	struct esp_softc *esc = (struct esp_softc *)sc;
-	u_char v;
+	uint8_t v;
 
-	v = bus_space_read_1(esc->sc_regt, esc->sc_regh, reg * 4);
+	v = bus_read_1(esc->sc_res, reg * 4);
+
 #ifdef ESP_SBUS_DEBUG
 	if (esp_sbus_debug && (reg < 0x10) && esp__read_regnames[reg].r_flag)
-		printf("RD:%x <%s> %x\n", reg * 4,
-		    ((unsigned)reg < 0x10) ? esp__read_regnames[reg].r_name : "<***>", v);
+		printf("RD:%x <%s> %x\n", reg * 4, ((unsigned)reg < 0x10) ?
+		    esp__read_regnames[reg].r_name : "<***>", v);
 #endif
-	return v;
+
+	return (v);
 }
 
 static void
-esp_write_reg(struct ncr53c9x_softc *sc, int reg, u_char v)
+esp_write_reg(struct ncr53c9x_softc *sc, int reg, uint8_t v)
 {
 	struct esp_softc *esc = (struct esp_softc *)sc;
 
 #ifdef ESP_SBUS_DEBUG
 	if (esp_sbus_debug && (reg < 0x10) && esp__write_regnames[reg].r_flag)
-		printf("WR:%x <%s> %x\n", reg * 4,
-		    ((unsigned)reg < 0x10) ? esp__write_regnames[reg].r_name : "<***>", v);
+		printf("WR:%x <%s> %x\n", reg * 4, ((unsigned)reg < 0x10) ?
+		    esp__write_regnames[reg].r_name : "<***>", v);
 #endif
-	bus_space_write_1(esc->sc_regt, esc->sc_regh, reg * 4, v);
+
+	bus_write_1(esc->sc_res, reg * 4, v);
 }
 
 static int
@@ -824,8 +811,8 @@ esp_dma_intr(struct ncr53c9x_softc *sc)
 }
 
 static int
-esp_dma_setup(struct ncr53c9x_softc *sc, caddr_t *addr, size_t *len,
-	      int datain, size_t *dmasize)
+esp_dma_setup(struct ncr53c9x_softc *sc, void **addr, size_t *len,
+    int datain, size_t *dmasize)
 {
 	struct esp_softc *esc = (struct esp_softc *)sc;
 
@@ -844,11 +831,8 @@ static void
 esp_dma_stop(struct ncr53c9x_softc *sc)
 {
 	struct esp_softc *esc = (struct esp_softc *)sc;
-	uint32_t csr;
 
-	csr = L64854_GCSR(esc->sc_dma);
-	csr &= ~D_EN_DMA;
-	L64854_SCSR(esc->sc_dma, csr);
+	L64854_SCSR(esc->sc_dma, L64854_GCSR(esc->sc_dma) & ~D_EN_DMA);
 }
 
 static int

@@ -1,10 +1,12 @@
-# $FreeBSD: release/7.0.0/usr.sbin/wpa/wpa_passphrase/Makefile 171371 2007-07-11 16:04:08Z sam $
+# $FreeBSD$
 
-WPA_SUPPLICANT_DISTDIR?= ${.CURDIR}/../../../contrib/wpa_supplicant
-.PATH: ${WPA_SUPPLICANT_DISTDIR}
+.include "${.CURDIR}/../Makefile.inc"
+
+.PATH.c:${WPA_SUPPLICANT_DISTDIR}
 
 PROG=	wpa_passphrase
-SRCS=	wpa_passphrase.c sha1.c md5.c
+SRCS=	wpa_passphrase.c sha1.c sha1-internal.c sha1-pbkdf2.c \
+	md5.c md5-internal.c
 
 CFLAGS+= -DINTERNAL_SHA1
 CFLAGS+= -DINTERNAL_MD5

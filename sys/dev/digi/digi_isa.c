@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/digi/digi_isa.c 129879 2004-05-30 20:08:47Z phk $");
+__FBSDID("$FreeBSD$");
 
 /*-
  * TODO:

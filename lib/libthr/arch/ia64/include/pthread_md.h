@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libthr/arch/ia64/include/pthread_md.h 165241 2006-12-15 11:52:01Z davidxu $
+ * $FreeBSD$
  */
 
 #ifndef _PTHREAD_MD_H_
@@ -32,6 +32,8 @@
 #include <stddef.h>
 
 #define	CPU_SPINWAIT
+
+#define	HAS__UMTX_OP_ERR	1
 
 #define	DTV_OFFSET		offsetof(struct tcb, tcb_dtv)
 

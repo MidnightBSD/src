@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)telnet.c	8.4 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/contrib/telnet/telnet/telnet.c 144231 2005-03-28 14:45:12Z nectar $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -146,7 +146,6 @@ unsigned char telopt_environ = TELOPT_NEW_ENVIRON;
 #endif
 
 jmp_buf	toplevel;
-jmp_buf	peerdied;
 
 int	flushline;
 int	linemode;

@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/7.0.0/sbin/mount_msdosfs/Makefile 152363 2005-11-13 03:25:39Z rodrigc $
+# $FreeBSD$
 #
 
 PROG=	mount_msdosfs
@@ -10,7 +10,6 @@ LDADD=	-lkiconv
 
 MOUNT=	${.CURDIR}/../mount
 CFLAGS+= -I${MOUNT}
-WARNS?=	6
 
 # Needs to be dynamically linked for optional dlopen() access to
 # userland libiconv

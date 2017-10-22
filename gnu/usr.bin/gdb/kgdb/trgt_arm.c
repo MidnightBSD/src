@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/gnu/usr.bin/gdb/kgdb/trgt_arm.c 163440 2006-10-16 20:07:23Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #ifndef CROSS_DEBUGGER
@@ -55,7 +55,7 @@ kgdb_trgt_fetch_registers(int regno __unused)
 	struct pcb pcb;
 	int i, reg;
 
-	kt = kgdb_thr_lookup_tid(ptid_get_tid(inferior_ptid));
+	kt = kgdb_thr_lookup_tid(ptid_get_pid(inferior_ptid));
 	if (kt == NULL)
 		return;
 	if (kvm_read(kvm, kt->pcb, &pcb, sizeof(pcb)) != sizeof(pcb)) {
@@ -87,6 +87,11 @@ void
 kgdb_trgt_store_registers(int regno __unused)
 {
 	fprintf_unfiltered(gdb_stderr, "XXX: %s\n", __func__);
+}
+
+void
+kgdb_trgt_new_objfile(struct objfile *objfile)
+{
 }
 
 #ifndef CROSS_DEBUGGER

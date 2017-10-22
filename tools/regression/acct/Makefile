@@ -1,22 +1,22 @@
 #
-# $FreeBSD: release/7.0.0/tools/regression/acct/Makefile 169851 2007-05-22 05:52:04Z dds $
+# $FreeBSD$
 #
-# "make" will compile what is needed and run the regression tests.
+# "make" will compile the acct test programs
 #
+
 PROG=	pack
+SRCS=	pack.c
 NO_MAN=
+CFLAGS+= -I${.OBJDIR}
 
-all: regress
+pack.o:	convert.c
 
-pack: pack.c convert.c
-
+CLEANFILES+= convert.c
 convert.c: ../../../sys/kern/kern_acct.c
-	sed -n '/FLOAT_CONVERSION_START/,/FLOAT_CONVERSION_END/p' $? >$@
+	sed -n -e 's/log(/syslog(/g' \
+	       -e '/FLOAT_CONVERSION_START/,/FLOAT_CONVERSION_END/p' $? >$@
 
 regress: pack regress.t
-	./regress.t
-
-clean:
-	rm -f $(PROG) convert.c
+	${.CURDIR}/regress.t
 
 .include <bsd.prog.mk>

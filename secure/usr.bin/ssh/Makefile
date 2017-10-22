@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/secure/usr.bin/ssh/Makefile 158529 2006-05-13 21:38:16Z des $
+# $FreeBSD$
 #
 
 .include <bsd.own.mk>
@@ -10,8 +10,11 @@ MAN=	ssh.1 ssh_config.5
 MLINKS=	ssh.1 slogin.1
 
 SRCS=	ssh.c readconf.c clientloop.c sshtty.c \
-	sshconnect.c sshconnect1.c sshconnect2.c \
-	gss-genr.c
+	sshconnect.c sshconnect1.c sshconnect2.c mux.c \
+	roaming_common.c roaming_client.c
+
+# gss-genr.c really belongs in libssh; see src/secure/lib/libssh/Makefile
+SRCS+=	gss-genr.c
 
 DPADD=	${LIBSSH} ${LIBUTIL} ${LIBZ}
 LDADD=	-lssh -lutil -lz
@@ -22,12 +25,12 @@ DPADD+=	 ${LIBGSSAPI}
 LDADD+=	 -lgssapi
 .endif
 
-.if defined(X11BASE)
-CFLAGS+= -DXAUTH_PATH=\"${X11BASE}/bin/xauth\"
-.endif
-
 DPADD+=	${LIBCRYPT} ${LIBCRYPTO}
 LDADD+=	-lcrypt -lcrypto
+
+.if defined(LOCALBASE)
+CFLAGS+= -DXAUTH_PATH=\"${LOCALBASE}/bin/xauth\"
+.endif
 
 .include <bsd.prog.mk>
 

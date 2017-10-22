@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: release/7.0.0/sys/netgraph/ng_one2many.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_NG_ONE2MANY_H_
@@ -61,6 +61,7 @@
 /* Algorithms for outgoing packet distribution (XXX only one so far) */
 #define NG_ONE2MANY_XMIT_ROUNDROBIN	1	/* round-robin delivery */
 #define NG_ONE2MANY_XMIT_ALL		2	/* send packets to all many hooks */
+#define	NG_ONE2MANY_XMIT_FAILOVER	3	/* send packets to first active "many" */
 
 /* Algorithms for detecting link failure (XXX only one so far) */
 #define NG_ONE2MANY_FAIL_MANUAL		1	/* use enabledLinks[] array */

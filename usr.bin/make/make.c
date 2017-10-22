@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/make/make.c 168893 2007-04-20 06:33:25Z fjoe $");
+__FBSDID("$FreeBSD$");
 
 /*
  * make.c
@@ -71,8 +71,6 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.bin/make/make.c 168893 2007-04-20 06:33:25
  *	Make_HandleUse	See if a child is a .USE node for a parent
  *			and perform the .USE actions if so.
  */
-
-#include <stdlib.h>
 
 #include "arch.h"
 #include "config.h"
@@ -211,11 +209,15 @@ Make_OODate(GNode *gn)
 		} else {
 			DEBUGF(MAKE, (".EXEC node..."));
 		}
-		oodate = TRUE;
 
-	} else if ((gn->mtime < gn->cmtime) ||
-	    ((gn->cmtime == 0) &&
-	    ((gn->mtime==0) || (gn->type & OP_DOUBLEDEP)))) {
+		if (remakingMakefiles) {
+			DEBUGF(MAKE, ("skipping (remaking makefiles)..."));
+			oodate = FALSE;
+		} else {
+			oodate = TRUE;
+		}
+	} else if (gn->mtime < gn->cmtime ||
+	    (gn->cmtime == 0 && (gn->mtime == 0 || (gn->type & OP_DOUBLEDEP)))) {
 		/*
 		 * A node whose modification time is less than that of its
 		 * youngest child or that has no children (cmtime == 0) and
@@ -226,12 +228,24 @@ Make_OODate(GNode *gn)
 		if (gn->mtime < gn->cmtime) {
 			DEBUGF(MAKE, ("modified before source (%s)...",
 			    gn->cmtime_gn ? gn->cmtime_gn->path : "???"));
+			oodate = TRUE;
 		} else if (gn->mtime == 0) {
 			DEBUGF(MAKE, ("non-existent and no sources..."));
+			if (remakingMakefiles && Lst_IsEmpty(&gn->commands)) {
+				DEBUGF(MAKE, ("skipping (no commands and remaking makefiles)..."));
+				oodate = FALSE;
+			} else {
+				oodate = TRUE;
+			}
 		} else {
 			DEBUGF(MAKE, (":: operator and no sources..."));
+			if (remakingMakefiles) {
+				DEBUGF(MAKE, ("skipping (remaking makefiles)..."));
+				oodate = FALSE;
+			} else {
+				oodate = TRUE;
+			}
 		}
-		oodate = TRUE;
 	} else
 		oodate = FALSE;
 
@@ -713,7 +727,6 @@ Make_Run(Lst *targs)
 	GNode	*gn;		/* a temporary pointer */
 	GNode	*cgn;
 	Lst	examine;	/* List of targets to examine */
-	int	errors;		/* Number of errors the Job module reports */
 	LstNode	*ln;
 
 	Lst_Init(&examine);
@@ -793,15 +806,14 @@ Make_Run(Lst *targs)
 		MakeStartJobs();
 	}
 
-	errors = Job_Finish();
+	Job_Finish();
 
 	/*
 	 * Print the final status of each target. E.g. if it wasn't made
 	 * because some inferior reported an error.
 	 */
-	errors = ((errors == 0) && (numNodes != 0));
 	LST_FOREACH(ln, targs)
-		MakePrintStatus(Lst_Datum(ln), errors);
+		MakePrintStatus(Lst_Datum(ln), (makeErrors == 0) && (numNodes != 0));
 
 	return (TRUE);
 }

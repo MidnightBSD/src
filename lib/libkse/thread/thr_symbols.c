@@ -26,33 +26,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_symbols.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
+#include "namespace.h"
 #include <sys/types.h>
 #include <stddef.h>
 #include <pthread.h>
 #include <rtld.h>
+#include "un-namespace.h"
 
 #include "thr_private.h"
-
-LT10_COMPAT_PRIVATE(_thread_off_tcb);
-LT10_COMPAT_PRIVATE(_thread_off_tmbx);
-LT10_COMPAT_PRIVATE(_thread_off_next);
-LT10_COMPAT_PRIVATE(_thread_off_attr_flags);
-LT10_COMPAT_PRIVATE(_thread_off_kse);
-LT10_COMPAT_PRIVATE(_thread_off_kse_locklevel);
-LT10_COMPAT_PRIVATE(_thread_off_thr_locklevel);
-LT10_COMPAT_PRIVATE(_thread_off_linkmap);
-LT10_COMPAT_PRIVATE(_thread_off_tlsindex);
-LT10_COMPAT_PRIVATE(_thread_size_key);
-LT10_COMPAT_PRIVATE(_thread_off_key_allocated);
-LT10_COMPAT_PRIVATE(_thread_off_key_destructor);
-LT10_COMPAT_PRIVATE(_thread_max_keys);
-LT10_COMPAT_PRIVATE(_thread_off_dtv);
-LT10_COMPAT_PRIVATE(_thread_off_state);
-LT10_COMPAT_PRIVATE(_thread_state_running);
-LT10_COMPAT_PRIVATE(_thread_state_zoombie);
 
 /* A collection of symbols needed by debugger */
 

@@ -1,12 +1,14 @@
-/* $FreeBSD: release/7.0.0/tools/regression/sigqueue/sigqtest1/sigqtest1.c 152155 2005-11-07 14:10:33Z davidxu $ */
-#include <signal.h>
-#include <stdio.h>
+/* $FreeBSD$ */
 #include <err.h>
 #include <errno.h>
+#include <signal.h>
+#include <stdio.h>
+#include <unistd.h>
 
 int received;
 
-void handler(int sig, siginfo_t *si, void *ctx)
+void
+handler(int sig, siginfo_t *si, void *ctx)
 {
 	if (si->si_code != SI_QUEUE)
 		errx(1, "si_code != SI_QUEUE");
@@ -15,7 +17,8 @@ void handler(int sig, siginfo_t *si, void *ctx)
 	received++;
 }
 
-int main()
+int
+main()
 {
 	struct sigaction sa;
 	union sigval val;

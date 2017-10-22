@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/i386/ibcs2/ibcs2_signal.c 141815 2005-02-13 17:37:20Z sobomax $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -437,5 +437,5 @@ ibcs2_kill(td, uap)
 		return (EINVAL);
 	ka.pid = uap->pid;
 	ka.signum = ibcs2_to_bsd_sig[_SIG_IDX(uap->signo)];
-	return kill(td, &ka);
+	return sys_kill(td, &ka);
 }

@@ -33,7 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/arm/gen/sigsetjmp.S 137461 2004-11-09 16:44:57Z cognet $");
+__FBSDID("$FreeBSD$");
 
 /*
  * C library -- sigsetjmp, siglongjmp

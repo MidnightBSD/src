@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/modules.c 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #include "sysinstall.h"
@@ -32,7 +32,6 @@
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/linker.h>
-#include <fcntl.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <fnmatch.h>
@@ -123,30 +122,26 @@ driverFloppyCheck(void)
 int
 kldBrowser(dialogMenuItem *self)
 {
-    DMenu	*menu;
+    DMenu	*menu = NULL;
     int		i, what = DITEM_SUCCESS, msize, count;
     DIR		*dir;
     struct dirent *de;
     char	*err;
     
     err = NULL;
+    count = 0;
     
     if (DITEM_STATUS(mediaSetFloppy(NULL)) == DITEM_FAILURE) {
-	msgConfirm("Unable to set media device to floppy.");
-	what |= DITEM_FAILURE;
-	mediaClose();
-	return what;
+	err = "Unable to set media device to floppy.";
+	goto errout;
     }
 
     if (!DEVICE_INIT(mediaDevice)) {
-	msgConfirm("Unable to mount floppy filesystem.");
-	what |= DITEM_FAILURE;
-	mediaClose();
-	return what;
+	err = "Unable to mount floppy filesystem.";
+	goto errout;
     }
 
     msize = sizeof(DMenu) + (sizeof(dialogMenuItem) * 2);
-    count = 0;
     if ((menu = malloc(msize)) == NULL) {
 	err = "Failed to allocate memory for menu";
 	goto errout;
@@ -191,11 +186,10 @@ kldBrowser(dialogMenuItem *self)
     
     dmenuOpenSimple(menu, FALSE);
     
-    mediaClose();
-
     deviceRescan();
     
   errout:    
+    mediaClose();
     for (i = 0; i < count; i++)
 	free(menu->items[i].prompt);
     
@@ -204,7 +198,7 @@ kldBrowser(dialogMenuItem *self)
     if (err != NULL) {
 	what |= DITEM_FAILURE;
 	if (!variable_get(VAR_NO_ERROR))
-	    msgConfirm(err);
+	    msgConfirm("%s", err);
     }
     
     return (what);

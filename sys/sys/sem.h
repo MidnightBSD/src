@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/sys/sem.h 174854 2007-12-22 06:32:46Z cvs2svn $ */
+/* $FreeBSD$ */
 /*	$NetBSD: sem.h,v 1.5 1994/06/29 06:45:15 cgd Exp $	*/
 
 /*
@@ -27,8 +27,10 @@ typedef	__time_t	time_t;
 #define	_TIME_T_DECLARED
 #endif
 
-struct semid_ds {
-	struct ipc_perm	sem_perm;	/* operation permission struct */
+#if defined(COMPAT_FREEBSD4) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD7)
+struct semid_ds_old {
+	struct ipc_perm_old sem_perm;	/* operation permission struct */
 	struct sem	*sem_base;	/* pointer to first semaphore in set */
 	unsigned short	sem_nsems;	/* number of sems in set */
 	time_t		sem_otime;	/* last operation time */
@@ -38,6 +40,17 @@ struct semid_ds {
     					/* 00:00:00 GMT, Jan. 1, 1970 */
 	long		sem_pad2;	/* SVABI/386 says I need this here */
 	long		sem_pad3[4];	/* SVABI/386 says I need this here */
+};
+#endif
+
+struct semid_ds {
+	struct ipc_perm	sem_perm;	/* operation permission struct */
+	struct sem	*sem_base;	/* pointer to first semaphore in set */
+	unsigned short	sem_nsems;	/* number of sems in set */
+	time_t		sem_otime;	/* last operation time */
+	time_t		sem_ctime;	/* last change time */
+    					/* Times measured in secs since */
+    					/* 00:00:00 GMT, Jan. 1, 1970 */
 };
 
 /*
@@ -49,6 +62,16 @@ struct sembuf {
 	short		sem_flg;	/* operation flags */
 };
 #define SEM_UNDO	010000
+
+#if defined(COMPAT_FREEBSD4) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD7) || \
+    defined(_WANT_SEMUN_OLD)
+union semun_old {
+	int		val;		/* value for SETVAL */
+	struct		semid_ds_old *buf; /* buffer for IPC_STAT & IPC_SET */
+	unsigned short	*array;		/* array for GETALL & SETALL */
+};
+#endif
 
 /*
  * semctl's arg parameter structure
@@ -84,8 +107,7 @@ union semun {
  * semaphore info struct
  */
 struct seminfo {
-	int	semmap,		/* # of entries in semaphore map */
-		semmni,		/* # of semaphore identifiers */
+	int	semmni,		/* # of semaphore identifiers */
 		semmns,		/* # of semaphores in system */
 		semmnu,		/* # of undo structures in system */
 		semmsl,		/* max # of semaphores per id */
@@ -103,6 +125,7 @@ extern struct seminfo	seminfo;
 struct semid_kernel {
 	struct	semid_ds u;
 	struct	label *label;	/* MAC framework label */
+	struct	ucred *cred;	/* creator's credentials */
 };
 
 /* internal "mode" bits */
@@ -117,7 +140,9 @@ void	semexit(struct proc *p);
 #else /* ! _KERNEL */
 
 __BEGIN_DECLS
+#if __BSD_VISIBLE
 int semsys(int, ...);
+#endif
 int semctl(int, int, int, ...);
 int semget(key_t, int, int);
 int semop(int, struct sembuf *, size_t);

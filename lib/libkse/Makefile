@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/lib/libkse/Makefile 174365 2007-12-06 16:22:18Z brooks $
+# $FreeBSD$
 #
 # All library objects contain FreeBSD revision strings by default; they may be
 # excluded as a space-saving measure.  To produce a library that does
@@ -10,29 +10,21 @@
 
 .include <bsd.own.mk>
 
-.if ${DEFAULT_THREAD_LIB} == "libkse" || ${MK_LIBTHR} == "no"
-LIB=kse
-.if ${SHLIBDIR} == "/usr/lib"
-SHLIBDIR= /lib
-.endif
-.else
 SHLIB=kse
-.endif
-
-SHLIB_MAJOR= 3
+SHLIB_MAJOR= 4
 CFLAGS+=-DPTHREAD_KERNEL
 CFLAGS+=-I${.CURDIR}/../libc/include -I${.CURDIR}/thread \
 	-I${.CURDIR}/../../include
-CFLAGS+=-I${.CURDIR}/arch/${MACHINE_ARCH}/include
+CFLAGS+=-I${.CURDIR}/arch/${MACHINE_CPUARCH}/include
 CFLAGS+=-I${.CURDIR}/sys
 CFLAGS+=-I${.CURDIR}/../../libexec/rtld-elf
-CFLAGS+=-I${.CURDIR}/../../libexec/rtld-elf/${MACHINE_ARCH}
+CFLAGS+=-I${.CURDIR}/../../libexec/rtld-elf/${MACHINE_CPUARCH}
 CFLAGS+=-fno-builtin
 
 # Uncomment this if you want libkse to contain debug information for
 # thread locking.
 CFLAGS+=-D_LOCK_DEBUG
-WARNS?=2
+WARNS?=3
 
 # Uncomment this if you want to build a 1:1 threading mode library
 # however it is no longer strictly conformed to POSIX
@@ -41,23 +33,16 @@ WARNS?=2
 # Enable extra internal consistancy checks.
 CFLAGS+=-D_PTHREADS_INVARIANTS -Wall
 
-VERSION_MAP=${.CURDIR}/kse.map
+VERSION_DEF=${.CURDIR}/../libc/Versions.def
+SYMBOL_MAPS=${.CURDIR}/kse.map
 
 PRECIOUSLIB=
 
-.include "${.CURDIR}/arch/${MACHINE_ARCH}/Makefile.inc"
+.path: ${.CURDIR}/arch/${MACHINE_CPUARCH}/${MACHINE_CPUARCH}
+
+.include "${.CURDIR}/arch/${MACHINE_CPUARCH}/Makefile.inc"
 .include "${.CURDIR}/support/Makefile.inc"
 .include "${.CURDIR}/sys/Makefile.inc"
 .include "${.CURDIR}/thread/Makefile.inc"
-
-.if ${DEFAULT_THREAD_LIB} == "libkse" || ${MK_LIBTHR} == "no"
-SYMLINKS+=lib${LIB}.a ${LIBDIR}/libpthread.a
-.if !defined(NO_PIC)
-SYMLINKS+=lib${LIB}.so ${LIBDIR}/libpthread.so
-.endif
-.if ${MK_PROFILE} != "no"
-SYMLINKS+=lib${LIB}_p.a ${LIBDIR}/libpthread_p.a
-.endif
-.endif
 
 .include <bsd.lib.mk>

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/ed/io.c 172506 2007-10-10 16:59:15Z cvs2svn $");
+__FBSDID("$FreeBSD$");
 
 #include "ed.h"
 
@@ -53,7 +53,8 @@ read_file(char *fn, long n)
 		errmsg = "cannot close input file";
 		return ERR;
 	}
-	fprintf(stdout, !scripted ? "%lu\n" : "", size);
+	if (!scripted)
+		fprintf(stdout, "%lu\n", size);
 	return current_addr - n;
 }
 
@@ -161,7 +162,8 @@ write_file(char *fn, const char *mode, long n, long m)
 		errmsg = "cannot close output file";
 		return ERR;
 	}
-	fprintf(stdout, !scripted ? "%lu\n" : "", size);
+	if (!scripted)
+		fprintf(stdout, "%lu\n", size);
 	return n ? m - n + 1 : 0;
 }
 

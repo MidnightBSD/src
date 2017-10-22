@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/examples/Makefile 174854 2007-12-22 06:32:46Z cvs2svn $
+# $FreeBSD$
 #
 # Doing a make install builds /usr/share/examples
 
@@ -8,14 +8,17 @@ LDIRS=	BSD_daemon \
 	FreeBSD_version \
 	IPv6 \
 	bootforth \
+	csh \
 	cvsup \
 	diskless \
 	drivers \
 	etc \
 	find_interface \
+	hast \
 	ibcs2 \
+	indent \
 	ipfw \
-	isdn \
+	jails \
 	kld \
 	libvgl \
 	mdoc \
@@ -25,17 +28,10 @@ LDIRS=	BSD_daemon \
 	portal \
 	ppi \
 	ppp \
-	pppd \
 	printing \
 	ses \
 	scsi_target \
-	slattach \
-	sliplogin \
-	startslip \
 	sunrpc
-
-# Disabled in 7.0 as netatm is not MPSAFE.
-#LDIRS+=	atm
 
 XFILES=	BSD_daemon/FreeBSD.pfa \
 	BSD_daemon/README \
@@ -54,6 +50,7 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	bootforth/menu.4th \
 	bootforth/menuconf.4th \
 	bootforth/screen.4th \
+	csh/dot.cshrc \
 	cvsup/README \
 	cvsup/cvs-supfile \
 	cvsup/doc-supfile \
@@ -77,38 +74,16 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	find_interface/Makefile \
 	find_interface/README \
 	find_interface/find_interface.c \
+	hast/ucarp.sh \
+	hast/ucarp_down.sh \
+	hast/ucarp_up.sh \
+	hast/vip-down.sh \
+	hast/vip-up.sh \
 	ibcs2/README \
 	ibcs2/hello.uu \
+	indent/indent.pro \
 	ipfw/change_rules.sh \
-	isdn/FAQ \
-	isdn/KERNEL \
-	isdn/Overview \
-	isdn/README \
-	isdn/ROADMAP \
-	isdn/ReleaseNotes \
-	isdn/Resources \
-	isdn/SupportedCards \
-	isdn/ThankYou \
-	isdn/contrib/README \
-	isdn/contrib/anleitung.ppp \
-	isdn/contrib/answer.c \
-	isdn/contrib/answer.sh \
-	isdn/contrib/convert.sh \
-	isdn/contrib/hplay.c \
-	isdn/contrib/i4b-ppp-newbie.txt \
-	isdn/contrib/isdnctl \
-	isdn/contrib/isdnd_acct \
-	isdn/contrib/isdnd_acct.pl \
-	isdn/contrib/isdntelmux.c \
-	isdn/contrib/mrtg-isp0.sh \
-	isdn/i4brunppp/Makefile \
-	isdn/i4brunppp/README \
-	isdn/i4brunppp/i4brunppp-isdnd.rc \
-	isdn/i4brunppp/i4brunppp.8 \
-	isdn/i4brunppp/i4brunppp.c \
-	isdn/v21/Makefile \
-	isdn/v21/README \
-	isdn/v21/v21modem.c \
+	jails/README \
 	kld/Makefile \
 	kld/cdev/Makefile \
 	kld/cdev/README \
@@ -121,6 +96,15 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	kld/dyn_sysctl/Makefile \
 	kld/dyn_sysctl/README \
 	kld/dyn_sysctl/dyn_sysctl.c \
+	kld/firmware/Makefile \
+	kld/firmware/README \
+	kld/firmware/fwconsumer/Makefile \
+	kld/firmware/fwconsumer/fw_consumer.c \
+	kld/firmware/fwimage/Makefile \
+	kld/firmware/fwimage/firmware.img.uu \
+	kld/khelp/Makefile \
+	kld/khelp/README \
+	kld/khelp/h_example.c \
 	kld/syscall/Makefile \
 	kld/syscall/module/Makefile \
 	kld/syscall/module/syscall.c \
@@ -139,6 +123,8 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	netgraph/ngctl \
 	netgraph/raw \
 	netgraph/udp.tunnel \
+	netgraph/virtual.chain \
+	netgraph/virtual.lan \
 	nwclient/dot.nwfsrc \
 	nwclient/nwfs.sh.sample \
 	perfmon/Makefile \
@@ -149,9 +135,7 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	ppi/Makefile \
 	ppi/ppilcd.c \
 	ppp/chap-auth \
-	ppp/isdnd.rc \
 	ppp/login-auth \
-	ppp/ppp.conf.isdn \
 	ppp/ppp.conf.sample \
 	ppp/ppp.conf.span-isp \
 	ppp/ppp.conf.span-isp.working \
@@ -164,16 +148,6 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	ppp/ppp.secret.sample \
 	ppp/ppp.secret.span-isp \
 	ppp/ppp.secret.span-isp.working \
-	pppd/auth-down.sample \
-	pppd/auth-up.sample \
-	pppd/chap-secrets.sample \
-	pppd/chat.sh.sample \
-	pppd/ip-down.sample \
-	pppd/ip-up.sample \
-	pppd/options.sample \
-	pppd/pap-secrets.sample \
-	pppd/ppp.deny.sample \
-	pppd/ppp.shells.sample \
 	printing/README \
 	printing/diablo-if-net \
 	printing/hpdf \
@@ -203,6 +177,7 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	ses/setobjstat/setobjstat.0 \
 	ses/srcs/chpmon.c \
 	ses/srcs/eltsub.c \
+	ses/srcs/eltsub.h \
 	ses/srcs/getencstat.c \
 	ses/srcs/getnobj.c \
 	ses/srcs/getobjmap.c \
@@ -216,14 +191,6 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	scsi_target/scsi_target.h \
 	scsi_target/scsi_target.8 \
 	scsi_target/scsi_cmds.c \
-	slattach/unit-command.sh \
-	sliplogin/slip.hosts \
-	sliplogin/slip.login \
-	sliplogin/slip.logout \
-	sliplogin/slip.slparms \
-	startslip/sldown.sh \
-	startslip/slip.sh \
-	startslip/slup.sh \
 	sunrpc/Makefile \
 	sunrpc/dir/Makefile \
 	sunrpc/dir/dir.x \
@@ -238,17 +205,6 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	sunrpc/sort/rsort.c \
 	sunrpc/sort/sort.x \
 	sunrpc/sort/sort_proc.c
-
-# Disabled in 7.0 as netatm is not MPSAFE.
-#XFILES+=	atm/NOTES \
-#	atm/README \
-#	atm/Startup \
-#	atm/atm-config.sh \
-#	atm/atm-sockets.txt \
-#	atm/cpcs-design.txt \
-#	atm/fore-microcode.txt \
-#	atm/sscf-design.txt \
-#	atm/sscop-design.txt
 
 BINDIR= ${SHAREDIR}/examples
 

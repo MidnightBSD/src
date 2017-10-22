@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/7.0.0/tools/regression/sockets/shutdown/Makefile 156735 2006-03-15 10:46:38Z ru $
+# $FreeBSD$
 #
 
 PROG=	shutdown

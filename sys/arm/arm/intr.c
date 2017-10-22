@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/intr.c 171616 2007-07-27 14:26:42Z cognet $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/syslog.h> 
@@ -50,6 +50,8 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/intr.c 171616 2007-07-27 14:26:42Z
 #include <machine/intr.h>
 #include <machine/cpu.h>
 
+typedef void (*mask_fn)(void *);
+
 static struct intr_event *intr_events[NIRQ];
 static int intrcnt_tab[NIRQ];
 static int intrcnt_index = 0;
@@ -57,26 +59,7 @@ static int last_printed = 0;
 
 void	arm_handler_execute(struct trapframe *, int);
 
-#ifdef INTR_FILTER
-static void
-intr_disab_eoi_src(void *arg)
-{
-	uintptr_t nb;
-
-	nb = (uintptr_t)arg;
-	arm_mask_irq(nb);
-}
-
-static void
-intr_eoi_src(void *arg)
-{
-	uintptr_t nb;
-
-	nb = (uintptr_t)arg;
-	arm_unmask_irq(nb);
-}
-
-#endif
+void (*arm_post_filter)(void *) = NULL;
 
 void
 arm_setup_irqhandler(const char *name, driver_filter_t *filt, 
@@ -89,14 +72,9 @@ arm_setup_irqhandler(const char *name, driver_filter_t *filt,
 		return;
 	event = intr_events[irq];
 	if (event == NULL) {
-#ifdef INTR_FILTER
-		error = intr_event_create(&event, (void *)irq, 0,
-		    (void (*)(void *))arm_unmask_irq, intr_eoi_src,
-		    intr_disab_eoi_src, "intr%d:", irq);
-#else
-		error = intr_event_create(&event, (void *)irq, 0,
-		    (void (*)(void *))arm_unmask_irq, "intr%d:", irq);
-#endif
+		error = intr_event_create(&event, (void *)irq, 0, irq,
+		    (mask_fn)arm_mask_irq, (mask_fn)arm_unmask_irq,
+		    arm_post_filter, NULL, "intr%d:", irq);
 		if (error)
 			return;
 		intr_events[irq] = event;
@@ -114,9 +92,19 @@ arm_setup_irqhandler(const char *name, driver_filter_t *filt,
 }
 
 int
-arm_remove_irqhandler(void *cookie)
+arm_remove_irqhandler(int irq, void *cookie)
 {
-	return (intr_event_remove_handler(cookie));
+	struct intr_event *event;
+	int error;
+
+	event = intr_events[irq];
+	arm_mask_irq(irq);
+	
+	error = intr_event_remove_handler(cookie);
+
+	if (!TAILQ_EMPTY(&event->ie_handlers))
+		arm_unmask_irq(irq);
+	return (error);
 }
 
 void dosoftints(void);
@@ -129,58 +117,16 @@ void
 arm_handler_execute(struct trapframe *frame, int irqnb)
 {
 	struct intr_event *event;
-	struct thread *td = curthread;
-#ifdef INTR_FILTER
 	int i;
-#else
-	int i, thread, ret;
-	struct intr_handler *ih;
-#endif
 
 	PCPU_INC(cnt.v_intr);
-	td->td_intr_nesting_level++;
-	while ((i = arm_get_next_irq()) != -1) {
-#ifndef INTR_FILTER
-		arm_mask_irq(i);
-#endif
+	i = -1;
+	while ((i = arm_get_next_irq(i)) != -1) {
 		intrcnt[intrcnt_tab[i]]++;
 		event = intr_events[i];
-		if (!event || TAILQ_EMPTY(&event->ie_handlers)) {
-#ifdef INTR_FILTER
+		if (intr_event_handle(event, frame) != 0) {
+			/* XXX: Log stray IRQs */
 			arm_mask_irq(i);
-#endif
-			continue;
 		}
-
-#ifdef INTR_FILTER
-		intr_event_handle(event, frame);
-		/* XXX: Log stray IRQs */
-#else
-		/* Execute fast handlers. */
-		ret = 0;
-		thread = 0;
-		TAILQ_FOREACH(ih, &event->ie_handlers, ih_next) {
-			if (ih->ih_filter == NULL)
-				thread = 1;
-			else
-				ret = ih->ih_filter(ih->ih_argument ?
-				    ih->ih_argument : frame);
-			/*
-			 * Wrapper handler special case: see
-			 * i386/intr_machdep.c::intr_execute_handlers()
-			 */
-			if (!thread) {
-				if (ret == FILTER_SCHEDULE_THREAD)
-					thread = 1;
-			}
-		}
-
-		/* Schedule thread if needed. */
-		if (thread)
-			intr_event_schedule_thread(event);
-		else
-			arm_unmask_irq(i);
-#endif
 	}
-	td->td_intr_nesting_level--;
 }

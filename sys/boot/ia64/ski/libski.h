@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/boot/ia64/ski/libski.h 164010 2006-11-05 22:03:04Z marcel $
+ * $FreeBSD$
  */
 
 #define	MAXDEV	31	/* maximum number of distinct devices */
@@ -46,7 +46,6 @@ extern int		ski_boot(void);
 
 struct bootinfo;
 struct preloaded_file;
-extern int		bi_load(struct bootinfo *, struct preloaded_file *);
 
 #define SSC_CONSOLE_INIT		20
 #define SSC_GETCHAR			21

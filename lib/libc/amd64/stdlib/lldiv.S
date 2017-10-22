@@ -6,10 +6,13 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/amd64/stdlib/lldiv.S 168336 2007-04-04 01:19:54Z jkim $");
+__FBSDID("$FreeBSD$");
 
 ENTRY(lldiv)
 	movq	%rdi,%rax
 	cqto
 	idivq	%rsi
 	ret
+END(lldiv)
+
+	.section .note.GNU-stack,"",%progbits

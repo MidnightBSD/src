@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/amd64/amd64/cpu_switch.S 171916 2007-08-22 05:06:14Z jkoshy $
+ * $FreeBSD$
  */
 
 #include <machine/asmacros.h>
@@ -69,16 +69,15 @@
  * %rsi = newtd
  */
 ENTRY(cpu_throw)
-	movl	PCPU(CPUID), %eax
-	testq	%rdi,%rdi			/* no thread? */
+	movl	PCPU(CPUID),%eax
+	testq	%rdi,%rdi
 	jz	1f
 	/* release bit from old pm_active */
-	movq	TD_PROC(%rdi), %rdx		/* oldtd->td_proc */
-	movq	P_VMSPACE(%rdx), %rdx		/* proc->p_vmspace */
-	LK btrl	%eax, VM_PMAP+PM_ACTIVE(%rdx)	/* clear old */
+	movq	PCPU(CURPMAP),%rdx
+	LK btrl	%eax,PM_ACTIVE(%rdx)		/* clear old */
 1:
-	movq	TD_PCB(%rsi),%rdx		/* newtd->td_proc */
-	movq	PCB_CR3(%rdx),%rdx
+	movq	TD_PCB(%rsi),%r8		/* newtd->td_proc */
+	movq	PCB_CR3(%r8),%rdx
 	movq	%rdx,%cr3			/* new address space */
 	jmp	swact
 END(cpu_throw)
@@ -95,58 +94,43 @@ END(cpu_throw)
 ENTRY(cpu_switch)
 	/* Switch to new thread.  First, save context. */
 	movq	TD_PCB(%rdi),%r8
+	orl	$PCB_FULL_IRET,PCB_FLAGS(%r8)
 
 	movq	(%rsp),%rax			/* Hardware registers */
-	movq	%rax,PCB_RIP(%r8)
-	movq	%rbx,PCB_RBX(%r8)
-	movq	%rsp,PCB_RSP(%r8)
-	movq	%rbp,PCB_RBP(%r8)
-	movq	%r12,PCB_R12(%r8)
-	movq	%r13,PCB_R13(%r8)
-	movq	%r14,PCB_R14(%r8)
 	movq	%r15,PCB_R15(%r8)
+	movq	%r14,PCB_R14(%r8)
+	movq	%r13,PCB_R13(%r8)
+	movq	%r12,PCB_R12(%r8)
+	movq	%rbp,PCB_RBP(%r8)
+	movq	%rsp,PCB_RSP(%r8)
+	movq	%rbx,PCB_RBX(%r8)
+	movq	%rax,PCB_RIP(%r8)
 
-	testl	$PCB_32BIT,PCB_FLAGS(%r8)
-	jz	1f				/* no, skip over */
-
-	/* Save userland %gs */
-	movl	%gs,PCB_GS(%r8)
-	movq	PCB_GS32P(%r8),%rax
-	movq	(%rax),%rax
-	movq	%rax,PCB_GS32SD(%r8)
-
-1:
-	/* Test if debug registers should be saved. */
 	testl	$PCB_DBREGS,PCB_FLAGS(%r8)
-	jz	1f				/* no, skip over */
-	movq	%dr7,%rax			/* yes, do the save */
-	movq	%rax,PCB_DR7(%r8)
-	andq	$0x0000fc00, %rax		/* disable all watchpoints */
-	movq	%rax,%dr7
-	movq	%dr6,%rax
-	movq	%rax,PCB_DR6(%r8)
-	movq	%dr3,%rax
-	movq	%rax,PCB_DR3(%r8)
-	movq	%dr2,%rax
-	movq	%rax,PCB_DR2(%r8)
-	movq	%dr1,%rax
-	movq	%rax,PCB_DR1(%r8)
-	movq	%dr0,%rax
-	movq	%rax,PCB_DR0(%r8)
-1:
+	jnz	store_dr			/* static predict not taken */
+done_store_dr:
 
 	/* have we used fp, and need a save? */
 	cmpq	%rdi,PCPU(FPCURTHREAD)
-	jne	1f
-	addq	$PCB_SAVEFPU,%r8
+	jne	3f
+	movq	PCB_SAVEFPU(%r8),%r8
 	clts
+	cmpl	$0,use_xsave
+	jne	1f
 	fxsave	(%r8)
-	smsw	%ax
+	jmp	2f
+1:	movq	%rdx,%rcx
+	movl	xsave_mask,%eax
+	movl	xsave_mask+4,%edx
+/*	xsave	(%r8) */
+	.byte	0x41,0x0f,0xae,0x20
+	movq	%rcx,%rdx
+2:	smsw	%ax
 	orb	$CR0_TS,%al
 	lmsw	%ax
 	xorl	%eax,%eax
 	movq	%rax,PCPU(FPCURTHREAD)
-1:
+3:
 
 	/* Save is done.  Now fire up new thread. Leave old vmspace. */
 	movq	TD_PCB(%rsi),%r8
@@ -162,15 +146,16 @@ swinact:
 	movq	%rcx,%cr3			/* new address space */
 	movl	PCPU(CPUID), %eax
 	/* Release bit from old pmap->pm_active */
-	movq	TD_PROC(%rdi), %rcx		/* oldproc */
-	movq	P_VMSPACE(%rcx), %rcx
-	LK btrl	%eax, VM_PMAP+PM_ACTIVE(%rcx)	/* clear old */
+	movq	PCPU(CURPMAP),%rcx
+	LK btrl	%eax,PM_ACTIVE(%rcx)		/* clear old */
 	SETLK	%rdx, TD_LOCK(%rdi)		/* Release the old thread */
 swact:
 	/* Set bit in new pmap->pm_active */
 	movq	TD_PROC(%rsi),%rdx		/* newproc */
 	movq	P_VMSPACE(%rdx), %rdx
-	LK btsl	%eax, VM_PMAP+PM_ACTIVE(%rdx)	/* set new */
+	addq	$VM_PMAP,%rdx
+	LK btsl	%eax,PM_ACTIVE(%rdx)		/* set new */
+	movq	%rdx,PCPU(CURPMAP)
 
 sw1:
 #if defined(SCHED_ULE) && defined(SMP)
@@ -181,139 +166,216 @@ sw1:
 	cmpq	%rcx, %rdx
 	pause
 	je	1b
-	lfence
 #endif
 	/*
 	 * At this point, we've switched address spaces and are ready
 	 * to load up the rest of the next context.
 	 */
-	movq	TD_PCB(%rsi),%r8
 
-	/* Restore userland %fs */
-	movl	$MSR_FSBASE,%ecx
+	/* Skip loading user fsbase/gsbase for kthreads */
+	testl	$TDP_KTHREAD,TD_PFLAGS(%rsi)
+	jnz	do_kthread
+
+	/*
+	 * Load ldt register
+	 */
+	movq	TD_PROC(%rsi),%rcx
+	cmpq	$0, P_MD+MD_LDT(%rcx)
+	jne	do_ldt
+	xorl	%eax,%eax
+ld_ldt:	lldt	%ax
+
+	/* Restore fs base in GDT */
 	movl	PCB_FSBASE(%r8),%eax
-	movl	PCB_FSBASE+4(%r8),%edx
-	wrmsr
+	movq	PCPU(FS32P),%rdx
+	movw	%ax,2(%rdx)
+	shrl	$16,%eax
+	movb	%al,4(%rdx)
+	shrl	$8,%eax
+	movb	%al,7(%rdx)
 
-	/* Restore userland %gs */
-	movl	$MSR_KGSBASE,%ecx
+	/* Restore gs base in GDT */
 	movl	PCB_GSBASE(%r8),%eax
-	movl	PCB_GSBASE+4(%r8),%edx
-	wrmsr
+	movq	PCPU(GS32P),%rdx
+	movw	%ax,2(%rdx)
+	shrl	$16,%eax
+	movb	%al,4(%rdx)
+	shrl	$8,%eax
+	movb	%al,7(%rdx)
 
+do_kthread:
+	/* Do we need to reload tss ? */
+	movq	PCPU(TSSP),%rax
+	movq	PCB_TSSP(%r8),%rdx
+	testq	%rdx,%rdx
+	cmovzq	PCPU(COMMONTSSP),%rdx
+	cmpq	%rax,%rdx
+	jne	do_tss
+done_tss:
+	movq	%r8,PCPU(RSP0)
+	movq	%r8,PCPU(CURPCB)
 	/* Update the TSS_RSP0 pointer for the next interrupt */
-	movq	PCPU(TSSP), %rax
-	addq	$COMMON_TSS_RSP0, %rax
-	leaq	-16(%r8), %rbx
-	movq	%rbx, (%rax)
-	movq	%rbx, PCPU(RSP0)
-
-	movq	%r8, PCPU(CURPCB)
-	movq	%rsi, PCPU(CURTHREAD)		/* into next thread */
-
-	testl	$PCB_32BIT,PCB_FLAGS(%r8)
-	jz	1f				/* no, skip over */
-
-	/* Restore userland %gs while preserving kernel gsbase */
-	movq	PCB_GS32P(%r8),%rax
-	movq	PCB_GS32SD(%r8),%rbx
-	movq	%rbx,(%rax)
-	movl	$MSR_GSBASE,%ecx
-	rdmsr
-	movl	PCB_GS(%r8),%gs
-	wrmsr
-
-1:
-	/* Restore context. */
-	movq	PCB_RBX(%r8),%rbx
-	movq	PCB_RSP(%r8),%rsp
-	movq	PCB_RBP(%r8),%rbp
-	movq	PCB_R12(%r8),%r12
-	movq	PCB_R13(%r8),%r13
-	movq	PCB_R14(%r8),%r14
-	movq	PCB_R15(%r8),%r15
-	movq	PCB_RIP(%r8),%rax
-	movq	%rax,(%rsp)
+	movq	%r8,COMMON_TSS_RSP0(%rdx)
+	movq	%rsi,PCPU(CURTHREAD)		/* into next thread */
 
 	/* Test if debug registers should be restored. */
 	testl	$PCB_DBREGS,PCB_FLAGS(%r8)
-	jz	1f
-	movq	PCB_DR6(%r8),%rax
-	movq	%rax,%dr6
-	movq	PCB_DR3(%r8),%rax
-	movq	%rax,%dr3
-	movq	PCB_DR2(%r8),%rax
-	movq	%rax,%dr2
-	movq	PCB_DR1(%r8),%rax
-	movq	%rax,%dr1
-	movq	PCB_DR0(%r8),%rax
-	movq	%rax,%dr0
-	/* But preserve reserved bits in %dr7 */
-	movq	%dr7,%rax
-	andq	$0x0000fc00,%rax
-	movq	PCB_DR7(%r8),%rcx
-	andq	$~0x0000fc00,%rcx
-	orq	%rcx,%rax
-	movq	%rax,%dr7
-1:
+	jnz	load_dr				/* static predict not taken */
+done_load_dr:
+
+	/* Restore context. */
+	movq	PCB_R15(%r8),%r15
+	movq	PCB_R14(%r8),%r14
+	movq	PCB_R13(%r8),%r13
+	movq	PCB_R12(%r8),%r12
+	movq	PCB_RBP(%r8),%rbp
+	movq	PCB_RSP(%r8),%rsp
+	movq	PCB_RBX(%r8),%rbx
+	movq	PCB_RIP(%r8),%rax
+	movq	%rax,(%rsp)
 	ret
+
+	/*
+	 * We order these strangely for several reasons.
+	 * 1: I wanted to use static branch prediction hints
+	 * 2: Most athlon64/opteron cpus don't have them.  They define
+	 *    a forward branch as 'predict not taken'.  Intel cores have
+	 *    the 'rep' prefix to invert this.
+	 * So, to make it work on both forms of cpu we do the detour.
+	 * We use jumps rather than call in order to avoid the stack.
+	 */
+
+store_dr:
+	movq	%dr7,%rax			/* yes, do the save */
+	movq	%dr0,%r15
+	movq	%dr1,%r14
+	movq	%dr2,%r13
+	movq	%dr3,%r12
+	movq	%dr6,%r11
+	movq	%r15,PCB_DR0(%r8)
+	movq	%r14,PCB_DR1(%r8)
+	movq	%r13,PCB_DR2(%r8)
+	movq	%r12,PCB_DR3(%r8)
+	movq	%r11,PCB_DR6(%r8)
+	movq	%rax,PCB_DR7(%r8)
+	andq	$0x0000fc00, %rax		/* disable all watchpoints */
+	movq	%rax,%dr7
+	jmp	done_store_dr
+
+load_dr:
+	movq	%dr7,%rax
+	movq	PCB_DR0(%r8),%r15
+	movq	PCB_DR1(%r8),%r14
+	movq	PCB_DR2(%r8),%r13
+	movq	PCB_DR3(%r8),%r12
+	movq	PCB_DR6(%r8),%r11
+	movq	PCB_DR7(%r8),%rcx
+	movq	%r15,%dr0
+	movq	%r14,%dr1
+	/* Preserve reserved bits in %dr7 */
+	andq	$0x0000fc00,%rax
+	andq	$~0x0000fc00,%rcx
+	movq	%r13,%dr2
+	movq	%r12,%dr3
+	orq	%rcx,%rax
+	movq	%r11,%dr6
+	movq	%rax,%dr7
+	jmp	done_load_dr
+
+do_tss:	movq	%rdx,PCPU(TSSP)
+	movq	%rdx,%rcx
+	movq	PCPU(TSS),%rax
+	movw	%cx,2(%rax)
+	shrq	$16,%rcx
+	movb	%cl,4(%rax)
+	shrq	$8,%rcx
+	movb	%cl,7(%rax)
+	shrq	$8,%rcx
+	movl	%ecx,8(%rax)
+	movb	$0x89,5(%rax)	/* unset busy */
+	movl	$TSSSEL,%eax
+	ltr	%ax
+	jmp	done_tss
+
+do_ldt:	movq	PCPU(LDT),%rax
+	movq	P_MD+MD_LDT_SD(%rcx),%rdx
+	movq	%rdx,(%rax)
+	movq	P_MD+MD_LDT_SD+8(%rcx),%rdx
+	movq	%rdx,8(%rax)
+	movl	$LDTSEL,%eax
+	jmp	ld_ldt
 END(cpu_switch)
-	
+
 /*
  * savectx(pcb)
  * Update pcb, saving current processor state.
  */
 ENTRY(savectx)
-	/* Fetch PCB. */
-	movq	%rdi,%rcx
-
 	/* Save caller's return address. */
 	movq	(%rsp),%rax
-	movq	%rax,PCB_RIP(%rcx)
+	movq	%rax,PCB_RIP(%rdi)
 
+	movq	%rbx,PCB_RBX(%rdi)
+	movq	%rsp,PCB_RSP(%rdi)
+	movq	%rbp,PCB_RBP(%rdi)
+	movq	%r12,PCB_R12(%rdi)
+	movq	%r13,PCB_R13(%rdi)
+	movq	%r14,PCB_R14(%rdi)
+	movq	%r15,PCB_R15(%rdi)
+
+	movq	%cr0,%rsi
+	movq	%rsi,PCB_CR0(%rdi)
+	movq	%cr2,%rax
+	movq	%rax,PCB_CR2(%rdi)
 	movq	%cr3,%rax
-	movq	%rax,PCB_CR3(%rcx)
+	movq	%rax,PCB_CR3(%rdi)
+	movq	%cr4,%rax
+	movq	%rax,PCB_CR4(%rdi)
 
-	movq	%rbx,PCB_RBX(%rcx)
-	movq	%rsp,PCB_RSP(%rcx)
-	movq	%rbp,PCB_RBP(%rcx)
-	movq	%r12,PCB_R12(%rcx)
-	movq	%r13,PCB_R13(%rcx)
-	movq	%r14,PCB_R14(%rcx)
-	movq	%r15,PCB_R15(%rcx)
+	movq	%dr0,%rax
+	movq	%rax,PCB_DR0(%rdi)
+	movq	%dr1,%rax
+	movq	%rax,PCB_DR1(%rdi)
+	movq	%dr2,%rax
+	movq	%rax,PCB_DR2(%rdi)
+	movq	%dr3,%rax
+	movq	%rax,PCB_DR3(%rdi)
+	movq	%dr6,%rax
+	movq	%rax,PCB_DR6(%rdi)
+	movq	%dr7,%rax
+	movq	%rax,PCB_DR7(%rdi)
 
-	/*
-	 * If fpcurthread == NULL, then the fpu h/w state is irrelevant and the
-	 * state had better already be in the pcb.  This is true for forks
-	 * but not for dumps (the old book-keeping with FP flags in the pcb
-	 * always lost for dumps because the dump pcb has 0 flags).
-	 *
-	 * If fpcurthread != NULL, then we have to save the fpu h/w state to
-	 * fpcurthread's pcb and copy it to the requested pcb, or save to the
-	 * requested pcb and reload.  Copying is easier because we would
-	 * have to handle h/w bugs for reloading.  We used to lose the
-	 * parent's fpu state for forks by forgetting to reload.
-	 */
-	pushfq
-	cli
-	movq	PCPU(FPCURTHREAD),%rax
-	testq	%rax,%rax
-	je	1f
+	movl	$MSR_FSBASE,%ecx
+	rdmsr
+	movl	%eax,PCB_FSBASE(%rdi)
+	movl	%edx,PCB_FSBASE+4(%rdi)
+	movl	$MSR_GSBASE,%ecx
+	rdmsr
+	movl	%eax,PCB_GSBASE(%rdi)
+	movl	%edx,PCB_GSBASE+4(%rdi)
+	movl	$MSR_KGSBASE,%ecx
+	rdmsr
+	movl	%eax,PCB_KGSBASE(%rdi)
+	movl	%edx,PCB_KGSBASE+4(%rdi)
 
-	movq	TD_PCB(%rax),%rdi
-	leaq	PCB_SAVEFPU(%rdi),%rdi
-	clts
-	fxsave	(%rdi)
-	smsw	%ax
-	orb	$CR0_TS,%al
-	lmsw	%ax
+	sgdt	PCB_GDT(%rdi)
+	sidt	PCB_IDT(%rdi)
+	sldt	PCB_LDT(%rdi)
+	str	PCB_TR(%rdi)
 
-	movq	$PCB_SAVEFPU_SIZE,%rdx	/* arg 3 */
-	leaq	PCB_SAVEFPU(%rcx),%rsi	/* arg 2 */
-	/* arg 1 (%rdi) already loaded */
-	call	bcopy
-1:
-	popfq
+2:	movq	%rsi,%cr0	/* The previous %cr0 is saved in %rsi. */
 
+	movl	$1,%eax
 	ret
 END(savectx)
+
+/*
+ * Wrapper around fpusave to care about TS0_CR.
+ */
+ENTRY(ctx_fpusave)
+	movq	%cr0,%rsi
+	clts
+	call	fpusave
+	movq	%rsi,%cr0
+	ret
+END(ctx_fpusave)

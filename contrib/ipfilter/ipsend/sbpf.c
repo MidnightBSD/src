@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/contrib/ipfilter/ipsend/sbpf.c 161357 2006-08-16 12:23:02Z guido $ */
+/* $FreeBSD$ */
 /*
  * (C)opyright 1995-1998 Darren Reed. (from tcplog)
  *
@@ -9,7 +9,6 @@
 #include <sys/types.h>
 #include <sys/mbuf.h>
 #include <sys/time.h>
-#include <sys/timeb.h>
 #include <sys/socket.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
@@ -28,9 +27,6 @@
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/ip_var.h>
-#include <netinet/udp.h>
-#include <netinet/udp_var.h>
-#include <netinet/tcp.h>
 
 #include <stdio.h>
 #include <netdb.h>

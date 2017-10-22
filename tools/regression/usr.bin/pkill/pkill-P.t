@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/7.0.0/tools/regression/usr.bin/pkill/pkill-P.t 143880 2005-03-20 12:38:08Z pjd $
+# $FreeBSD$
 
 base=`basename $0`
 

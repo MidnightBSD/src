@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/contrib/ipfilter/netinet/fil.c 174122 2007-12-01 00:53:41Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1993-2003 by Darren Reed.
@@ -155,7 +155,7 @@ struct file;
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)fil.c	1.36 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$FreeBSD: release/7.0.0/sys/contrib/ipfilter/netinet/fil.c 174122 2007-12-01 00:53:41Z darrenr $";
+static const char rcsid[] = "@(#)$FreeBSD$";
 /* static const char rcsid[] = "@(#)$Id: fil.c,v 2.243.2.125 2007/10/10 09:27:20 darrenr Exp $"; */
 #endif
 
@@ -2513,7 +2513,7 @@ int out;
 	} else
 #endif
 	{
-#if (defined(OpenBSD) && OpenBSD >= 200311) && defined(_KERNEL)
+#if (defined(OpenBSD) && (OpenBSD >= 200311)) && defined(_KERNEL)
 		ip->ip_len = ntohs(ip->ip_len);
 		ip->ip_off = ntohs(ip->ip_off);
 #endif
@@ -2777,7 +2777,7 @@ finished:
 	RWLOCK_EXIT(&ipf_global);
 
 #ifdef _KERNEL
-# if defined(OpenBSD) && OpenBSD >= 200311    
+# if (defined(OpenBSD) && (OpenBSD >= 200311))
 	if (FR_ISPASS(pass) && (v == 4)) {
 		ip = fin->fin_ip;
 		ip->ip_len = ntohs(ip->ip_len);
@@ -7024,7 +7024,6 @@ void *ctx;
 				break;
 			}
 
-			RWLOCK_EXIT(&ipf_global);
 			WRITE_ENTER(&ipf_global);
 			if (tmp) {
 				if (fr_running > 0)
@@ -7040,6 +7039,7 @@ void *ctx;
 				if (error == 0)
 					fr_running = -1;
 			}
+			RWLOCK_EXIT(&ipf_global);
 		}
 		break;
 
@@ -7181,7 +7181,6 @@ void *ctx;
 		if (!(mode & FWRITE))
 			error = EPERM;
 		else {
-			RWLOCK_EXIT(&ipf_global);
 			WRITE_ENTER(&ipf_global);
 #ifdef MENTAT
 			error = ipfsync();
@@ -7189,6 +7188,7 @@ void *ctx;
 			frsync(NULL);
 			error = 0;
 #endif
+			RWLOCK_EXIT(&ipf_global);
 
 		}
 		break;

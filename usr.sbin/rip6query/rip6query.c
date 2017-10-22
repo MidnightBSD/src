@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/rip6query/rip6query.c 162489 2006-09-21 01:41:03Z kan $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -62,15 +62,13 @@ struct rip6	*ripbuf;
 
 #define	RIPSIZE(n)	(sizeof(struct rip6) + (n-1) * sizeof(struct netinfo6))
 
-int main __P((int, char **));
-static void usage __P((void));
-static const char *sa_n2a __P((struct sockaddr *));
-static const char *inet6_n2a __P((struct in6_addr *));
+int main(int, char **);
+static void usage(void);
+static const char *sa_n2a(struct sockaddr *);
+static const char *inet6_n2a(struct in6_addr *);
 
 int
-main(argc, argv)
-	int argc;
-	char **argv;
+main(int argc, char *argv[])
 {
 	struct netinfo6 *np;
 	struct sockaddr_in6 fsock;
@@ -175,15 +173,14 @@ main(argc, argv)
 }
 
 static void
-usage()
+usage(void)
 {
 	fprintf(stderr, "usage: rip6query [-I iface] address\n");
 }
 
 /* getnameinfo() is preferred as we may be able to show ifindex as ifname */
 static const char *
-sa_n2a(sa)
-	struct sockaddr *sa;
+sa_n2a(struct sockaddr *sa)
 {
 	static char buf[NI_MAXHOST];
 
@@ -195,8 +192,7 @@ sa_n2a(sa)
 }
 
 static const char *
-inet6_n2a(addr)
-	struct in6_addr *addr;
+inet6_n2a(struct in6_addr *addr)
 {
 	static char buf[NI_MAXHOST];
 

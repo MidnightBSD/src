@@ -23,25 +23,25 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/arch/ia64/include/atomic_ops.h 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
 #ifndef	_ATOMIC_OPS_H_
 #define	_ATOMIC_OPS_H_
 
 static inline void
-atomic_swap_int(int *dst, int val, int *res)
+atomic_swap_int(volatile int *dst, int val, int *res)
 {
 	__asm("xchg4	%0=[%2],%1" : "=r"(*res) : "r"(val), "r"(dst));
 }
 
 static inline void
-atomic_swap_long(long *dst, long val, long *res)
+atomic_swap_long(volatile long *dst, long val, long *res)
 {
 	__asm("xchg8	%0=[%2],%1" : "=r"(*res) : "r"(val), "r"(dst));
 }
 
 #define	atomic_swap_ptr(d,v,r)		\
-	atomic_swap_long((long*)d, (long)v, (long*)r)
+	atomic_swap_long((volatile long *)d, (long)v, (long *)r)
 
 #endif /* _ATOMIC_OPS_H_ */

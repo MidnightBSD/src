@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/ia64/include/cpu.h 158459 2006-05-11 22:49:31Z marcel $ */
+/* $FreeBSD$ */
 /* From: NetBSD: cpu.h,v 1.18 1997/09/23 23:17:49 mjacob Exp */
 
 /*-

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/sn/if_sn_pccard.c 150106 2005-09-13 19:25:30Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -271,8 +271,6 @@ sn_pccard_megahertz_activate(device_t dev)
 		sn_deactivate(dev);
 		return ENOMEM;
 	}
-	sc->bst = rman_get_bustag(sc->port_res);
-	sc->bsh = rman_get_bushandle(sc->port_res);
 	return 0;
 }
 

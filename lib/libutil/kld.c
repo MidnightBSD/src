@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2006 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 2006 Dag-Erling CoÃ¯dan SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libutil/kld.c 158907 2006-05-25 04:01:04Z delphij $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

@@ -1,5 +1,5 @@
 /* $NetBSD: softfloat-for-gcc.h,v 1.6 2003/07/26 19:24:51 salo Exp $ */
-/* $FreeBSD: release/7.0.0/lib/libc/softfloat/softfloat-for-gcc.h 129203 2004-05-14 12:13:06Z cognet $ */
+/* $FreeBSD$ */
 
 /*
  * Move private identifiers with external linkage into implementation

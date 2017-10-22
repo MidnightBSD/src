@@ -1,8 +1,8 @@
-$FreeBSD: release/7.0.0/MAINTAINERS 174854 2007-12-22 06:32:46Z cvs2svn $
+$FreeBSD$
 
 Please note that the content of this file is strictly advisory.
 No locks listed here are valid.  The only strict review requirements
-are granted by core.  These are documented in src/LOCKS and enforced
+are granted by core.  These are documented in head/LOCKS and enforced
 by CVSROOT/approvers.
 
 The source tree is a community effort.  However, some folks go to the
@@ -29,17 +29,13 @@ MAC Framework	rwatson	Pre-commit review requested.
 MAC Modules	rwatson	Pre-commit review requested.
 contrib/openbsm	rwatson	Pre-commit review requested.
 sys/security/audit	rwatson	Pre-commit review requested.
-ATA/IDE		sos	Pre-commit review requested.
 ahc(4)		gibbs	Pre-commit review requested.
 ahd(4)		gibbs	Pre-commit review requested.
 NEWCARD		imp	Pre-commit review requested.
-OLDCARD		imp	Pre-commit review requested.
 pci bus		imp,jhb	Pre-commit review requested.
 cdboot		jhb	Pre-commit review requested.
 pxeboot		jhb	Pre-commit review requested.
 witness		jhb	Pre-commit review requested.
-twe		aradford@amcc.com	Pre-commit review requested
-twa		aradford@amcc.com	Pre-commit review requested
 CAM		gibbs,
 		ken	Pre-commit review requested. send to scsi@freebsd.org
 devstat(9)	ken	Pre-commit review requested.
@@ -50,8 +46,8 @@ iostat(8)	ken	Pre-commit review requested.
 cd(4)		ken	Pre-commit review requested.
 pass(4)		ken	Pre-commit review requested.
 ch(4)		ken	Pre-commit review requested.
-isp(4)		mjacob	Pre-commit review requested.
 em(4)		jfv	Pre-commit review requested.
+bxe(4)		davidch	Pre-commit review requested.
 tdfx(4)		cokane  Just keep me informed of changes, try not to break it.
 sendmail	gshapiro	Pre-commit review requested.
 etc/mail	gshapiro	Pre-commit review requested.
@@ -62,28 +58,20 @@ libfetch	des	Advance notification requested.
 fetch		des	Advance notification requested.
 libpam		des	Pre-commit review requested.
 openssh		des	Pre-commit review requested.
-pseudofs	des	Advance notification requested.
-procfs		des	Advance notification requested.
-linprocfs	des	Advance notification requested.
+pseudofs	des	Pre-commit review requested.
+procfs		des	Pre-commit review requested.
+linprocfs	des	Pre-commit review requested.
 lpr		gad	Pre-commit review requested, particularly for
 			lpd/recvjob.c and lpd/printjob.c.
 newsyslog(8)	gad	Heads-up appreciated.  I'm going thru the PR's for it.
-pkill		gad	Heads-up appreciated.
-ps		gad	I am working on a number of changes to this.  Would
-			like advance notice of major changes planned to it.
 cvs		peter	Heads-up appreciated, try not to break it.
-ncurses		peter	Heads-up appreciated, try not to break it.
 nvi		peter	Try not to break it.
 libz		peter	Try not to break it.
-pppd/chat	peter	Try not to break it.
 groff		ru	Recommends pre-commit review.
 share/mk	ru	This is a vital component of the build system, so I
 			offer a pre-commit review for anything non-trivial.
 ipfw		ipfw	Pre-commit review preferred. send to ipfw@freebsd.org
-drm		anholt	Just keep me informed of changes, try not to break it.
-libufs		jmallett	Willing to handle problems, help with work.
-fdc(4)		joerg	Just keep me informed of changes, try not to break it.
-sppp(4)		joerg	Just keep me informed of changes, try not to break it.
+drm		rnoland	Just keep me informed of changes, try not to break it.
 unifdef(1)	fanf	Pre-commit review requested.
 ntp         	roberto	Pre-commit review requested.
 inetd		dwmalone	Recommends pre-commit review.
@@ -115,20 +103,30 @@ truss		alfred	Will be happy to review code, but not mandatory.
 rpc		alfred	Pre-commit review requested.
 xfs		kan@FreeBSD.org,rodrigc@FreeBSD.org,cattelan@xfs.org
 			Pre-commit review preferred.
-pkg_install	krion	Pre-commit review or approval from portmgr@ requested.
+pkg_install	portmgr	Pre-commit review or approval from portmgr@ requested.
 linux emul	emulation	Please discuss changes here.
 bs{diff,patch}	cperciva	Pre-commit review requested.
 portsnap	cperciva	Pre-commit review requested.
 freebsd-update	cperciva	Pre-commit review requested.
-openssl		simon		Pre-commit review requested.
+openssl		benl		Pre-commit review requested.
 sys/netgraph/bluetooth	emax	Pre-commit review preferred.
 lib/libbluetooth	emax	Pre-commit review preferred.
 lib/libsdp		emax	Pre-commit review preferred.
 usr.bin/bluetooth	emax	Pre-commit review preferred.
 usr.sbin/bluetooth	emax	Pre-commit review preferred.
 gnu/usr.bin/send-pr	bugmaster	Pre-commit review requested.
-BSD.{local,x11*}.dist	portmgr	Pre-commit review requested, since these files interface with ports.
-usb		core	Please contact core@ before any major changes
+*env(3)		secteam	Due to the problematic security history of this
+			code, please have patches reviewed by secteam.
+share/zoneinfo		edwin	Heads-up appreciated, since our data is coming
+				from a third party source.
+usr.sbin/zic		edwin   Heads-up appreciated, since this code is
+				maintained by a third party source.
+lib/libc/stdtime	edwin   Heads-up appreciated, since parts of this code
+				is maintained by a third party source.
+sysinstall	randi	Please contact about any major changes so that
+			they can be co-ordinated.
+sbin/routed	bms	Pre-commit review; notify vendor at rhyolite.com
+isci(4)		jimharris	Pre-commit review requested.
 
 Following are the entries from the Makefiles, and a few other sources.
 Please remove stale entries from both their origin, and this file.
@@ -142,4 +140,3 @@ $ cd /usr/src; find */* -type f|xargs egrep 'MAINTAINER[ <tab>]*='
 sys/modules/3dfx/Makefile:MAINTAINER=	cokane@FreeBSD.org
 sys/modules/urio/Makefile:MAINTAINER=	Iwasa Kazmi <kzmi@ca2.so-net.ne.jp>
 tools/tools/sysdoc/Makefile:MAINTAINER=	trhodes@FreeBSD.org
-usr.sbin/zic/Makefile:MAINTAINER=	wollman@FreeBSD.org

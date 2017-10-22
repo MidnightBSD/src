@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)wsetup.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/stdio/wsetup.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <stdio.h>
@@ -60,6 +60,7 @@ __swsetup(fp)
 	if ((fp->_flags & __SWR) == 0) {
 		if ((fp->_flags & __SRW) == 0) {
 			errno = EBADF;
+			fp->_flags |= __SERR;
 			return (EOF);
 		}
 		if (fp->_flags & __SRD) {

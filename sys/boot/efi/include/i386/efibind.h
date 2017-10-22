@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/boot/efi/include/i386/efibind.h 163898 2006-11-02 02:42:48Z marcel $ */
+/* $FreeBSD$ */
 /*++
 
 Copyright (c)  1999 - 2003 Intel Corporation. All rights reserved

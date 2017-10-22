@@ -48,7 +48,7 @@ License Agreement applies to this software.
 
 	        There is some really, really ugly code in here.
 
-$FreeBSD: release/7.0.0/contrib/opie/opieftpd.c 172506 2007-10-10 16:59:15Z cvs2svn $
+$FreeBSD$
 */
 /*
  * Copyright (c) 1985, 1988, 1990 Regents of the University of California.

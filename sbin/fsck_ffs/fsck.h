@@ -57,8 +57,11 @@
  * SUCH DAMAGE.
  *
  *	@(#)fsck.h	8.4 (Berkeley) 5/9/95
- * $FreeBSD: release/7.0.0/sbin/fsck_ffs/fsck.h 163845 2006-10-31 22:06:56Z pjd $
+ * $FreeBSD$
  */
+
+#ifndef _FSCK_H_
+#define	_FSCK_H_
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -265,11 +268,15 @@ char	snapname[BUFSIZ];	/* when doing snapshots, the name of the file */
 char	*cdevname;		/* name of device being checked */
 long	dev_bsize;		/* computed value of DEV_BSIZE */
 long	secsize;		/* actual disk sector size */
+u_int	real_dev_bsize;		/* actual disk sector size, not overriden */
 char	nflag;			/* assume a no response */
 char	yflag;			/* assume a yes response */
 int	bkgrdflag;		/* use a snapshot to run on an active system */
 int	bflag;			/* location of alternate super block */
 int	debug;			/* output debugging info */
+int	Eflag;			/* zero out empty data blocks */
+int	inoopt;			/* trim out unused inodes */
+char	ckclean;		/* only do work if not cleanly unmounted */
 int	cvtlevel;		/* convert to newer file system format */
 int	bkgrdcheck;		/* determine if background check is possible */
 int	bkgrdsumadj;		/* whether the kernel have ability to adjust superblock summary */
@@ -295,8 +302,8 @@ int	lfmode;			/* lost & found directory creation mode */
 ufs2_daddr_t n_blks;		/* number of blocks in use */
 ino_t n_files;			/* number of files in use */
 
-int	got_siginfo;		/* received a SIGINFO */
-int	got_sigalarm;		/* received a SIGALRM */
+volatile sig_atomic_t	got_siginfo;	/* received a SIGINFO */
+volatile sig_atomic_t	got_sigalarm;	/* received a SIGALRM */
 
 #define	clearinode(dp) \
 	if (sblock.fs_magic == FS_UFS1_MAGIC) { \
@@ -331,10 +338,12 @@ char	       *blockcheck(char *name);
 int		blread(int fd, char *buf, ufs2_daddr_t blk, long size);
 void		bufinit(void);
 void		blwrite(int fd, char *buf, ufs2_daddr_t blk, long size);
+void		blerase(int fd, ufs2_daddr_t blk, long size);
 void		cacheino(union dinode *dp, ino_t inumber);
 void		catch(int);
 void		catchquit(int);
 int		changeino(ino_t dir, const char *name, ino_t newnum);
+int		check_cgmagic(int cg, struct cg *cgp);
 int		chkrange(ufs2_daddr_t blk, int cnt);
 void		ckfini(int markclean);
 int		ckinode(union dinode *dp, struct inodesc *);
@@ -344,10 +353,6 @@ void		direrror(ino_t ino, const char *errmesg);
 int		dirscan(struct inodesc *);
 int		dofix(struct inodesc *, const char *msg);
 int		eascan(struct inodesc *, struct ufs2_dinode *dp);
-void		ffs_clrblock(struct fs *, u_char *, ufs1_daddr_t);
-void		ffs_fragacct(struct fs *, int, int32_t [], int);
-int		ffs_isblock(struct fs *, u_char *, ufs1_daddr_t);
-void		ffs_setblock(struct fs *, u_char *, ufs1_daddr_t);
 void		fileerror(ino_t cwd, ino_t ino, const char *errmesg);
 int		findino(struct inodesc *);
 int		findname(struct inodesc *);
@@ -359,7 +364,7 @@ int		ftypeok(union dinode *dp);
 void		getblk(struct bufarea *bp, ufs2_daddr_t blk, long size);
 struct bufarea *getdatablk(ufs2_daddr_t blkno, long size);
 struct inoinfo *getinoinfo(ino_t inumber);
-union dinode   *getnextinode(ino_t inumber);
+union dinode   *getnextinode(ino_t inumber, int rebuildcg);
 void		getpathname(char *namebuf, ino_t curdir, ino_t ino);
 union dinode   *ginode(ino_t inumber);
 void		infohandler(int sig);
@@ -389,3 +394,7 @@ void		sblock_init(void);
 void		setinodebuf(ino_t);
 int		setup(char *dev);
 void		gjournal_check(const char *filesys);
+int		suj_check(const char *filesys);
+void		update_maps(struct cg *, struct cg*, int);
+
+#endif	/* !_FSCK_H_ */

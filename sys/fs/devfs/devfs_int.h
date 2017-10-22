@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/fs/devfs/devfs_int.h 171181 2007-07-03 17:42:37Z kib $
+ * $FreeBSD$
  */
 
 /*
@@ -38,6 +38,14 @@
 #ifdef _KERNEL
 
 struct devfs_dirent;
+struct devfs_mount;
+
+struct cdev_privdata {
+	struct file		*cdpd_fp;
+	void			*cdpd_data;
+	void			(*cdpd_dtr)(void *);
+	LIST_ENTRY(cdev_privdata) cdpd_list;
+};
 
 struct cdev_priv {
 	struct cdev		cdp_c;
@@ -57,17 +65,29 @@ struct cdev_priv {
 	TAILQ_ENTRY(cdev_priv)	cdp_dtr_list;
 	void			(*cdp_dtr_cb)(void *);
 	void			*cdp_dtr_cb_arg;
+
+	LIST_HEAD(, cdev_privdata) cdp_fdpriv;
 };
 
-struct cdev *devfs_alloc(void);
-void devfs_free(struct cdev *);
-void devfs_create(struct cdev *dev);
-void devfs_destroy(struct cdev *dev);
+#define	cdev2priv(c)	member2struct(cdev_priv, cdp_c, c)
+
+struct cdev	*devfs_alloc(int);
+int	devfs_dev_exists(const char *);
+void	devfs_free(struct cdev *);
+void	devfs_create(struct cdev *);
+void	devfs_destroy(struct cdev *);
+void	devfs_destroy_cdevpriv(struct cdev_privdata *);
+
+int	devfs_dir_find(const char *);
+void	devfs_dir_ref_de(struct devfs_mount *, struct devfs_dirent *);
+void	devfs_dir_unref_de(struct devfs_mount *, struct devfs_dirent *);
+int	devfs_pathpath(const char *, const char *);
 
 extern struct unrhdr *devfs_inos;
 extern struct mtx devmtx;
 extern struct mtx devfs_de_interlock;
 extern struct sx clone_drain_lock;
+extern struct mtx cdevpriv_mtx;
 extern TAILQ_HEAD(cdev_priv_list, cdev_priv) cdevp_list;
 
 #endif /* _KERNEL */

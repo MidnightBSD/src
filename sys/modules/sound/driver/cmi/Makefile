@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/sound/driver/cmi/Makefile 158979 2006-05-27 16:32:05Z netchild $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../../dev/sound/pci
 

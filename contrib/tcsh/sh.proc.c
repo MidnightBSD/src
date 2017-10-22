@@ -1,4 +1,4 @@
-/* $Header: /p/tcsh/cvsroot/tcsh/sh.proc.c,v 3.104 2006/09/27 16:59:04 mitr Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/sh.proc.c,v 3.121 2012/01/25 15:34:41 christos Exp $ */
 /*
  * sh.proc.c: Job manipulations
  */
@@ -32,7 +32,7 @@
  */
 #include "sh.h"
 
-RCSID("$tcsh: sh.proc.c,v 3.104 2006/09/27 16:59:04 mitr Exp $")
+RCSID("$tcsh: sh.proc.c,v 3.121 2012/01/25 15:34:41 christos Exp $")
 
 #include "ed.h"
 #include "tc.h"
@@ -47,8 +47,10 @@ RCSID("$tcsh: sh.proc.c,v 3.104 2006/09/27 16:59:04 mitr Exp $")
 # define HZ 16
 #endif /* aiws */
 
-#if defined(_BSD) || (defined(IRIS4D) && __STDC__) || defined(__lucid) || defined(linux) || defined(__GNU__) || defined(__GLIBC__)
-# define BSDWAIT
+#if defined(_BSD) || (defined(IRIS4D) && __STDC__) || defined(__lucid) || defined(__linux__) || defined(__GNU__) || defined(__GLIBC__)
+# if !defined(__ANDROID__)
+#  define BSDWAIT
+# endif
 #endif /* _BSD || (IRIS4D && __STDC__) || __lucid || glibc */
 #ifndef WTERMSIG
 # define WTERMSIG(w)	(((union wait *) &(w))->w_termsig)
@@ -126,6 +128,7 @@ static	void		 pflushall	(void);
 static	void		 pflush		(struct process *);
 static	void		 pfree		(struct process *);
 static	void		 pclrcurr	(struct process *);
+static	void		 morecommand	(size_t);
 static	void		 padd		(struct command *);
 static	int		 pprint		(struct process *, int);
 static	void		 ptprint	(struct process *);
@@ -187,7 +190,7 @@ loop:
         (setintr && (intty || insource) ? WNOHANG | WUNTRACED : WNOHANG), &ru);
 #   else
     /* both a wait3 and rusage */
-#    if !defined(BSDWAIT) || defined(NeXT) || defined(MACH) || defined(linux) || defined(__GNU__) || defined(__GLIBC__) || (defined(IRIS4D) && SYSVREL <= 3) || defined(__lucid) || defined(__osf__)
+#    if !defined(BSDWAIT) || defined(NeXT) || defined(MACH) || defined(__linux__) || defined(__GNU__) || defined(__GLIBC__) || (defined(IRIS4D) && SYSVREL <= 3) || defined(__lucid) || defined(__osf__)
     pid = wait3(&w,
        (setintr && (intty || insource) ? WNOHANG | WUNTRACED : WNOHANG), &ru);
 #    else /* BSDWAIT */
@@ -220,7 +223,11 @@ loop:
 #   ifdef hpux
     pid = wait3(&w.w_status, WNOHANG, 0);
 #   else	/* !hpux */
+#     ifndef BSDWAIT
+    pid = wait3(&w, WNOHANG, &ru);
+#     else
     pid = wait3(&w.w_status, WNOHANG, &ru);
+#     endif /* BSDWAIT */
 #   endif /* !hpux */
 #  else /* !BSDTIMES */
 #   ifdef ODT  /* For Sco Unix 3.2.0 or ODT 1.0 */
@@ -259,7 +266,7 @@ loop:
     jobdebug_flush();
 
     if ((pid == 0) || (pid == -1)) {
-	handle_pending_signals();
+	(void)handle_pending_signals();
 	jobdebug_xprintf(("errno == %d\n", errno));
 	if (errno == EINTR)
 	    goto loop;
@@ -366,6 +373,7 @@ found:
 #ifdef notdef
 		jobflags & PAEXITED ||
 #endif /* notdef */
+		fp->p_cwd == NULL ||
 		!eq(dcwd->di_name, fp->p_cwd->di_name))) {
 	    /* PWP: print a newline after ^C */
 		if (jobflags & PINTERRUPTED) {
@@ -485,7 +493,7 @@ pjwait(struct process *pp)
 
     do {
 	if ((fp->p_flags & (PFOREGND | PRUNNING)) == PRUNNING)
-	  xprintf(CGETS(17, 1, "BUG: waiting for background job!\n"));
+	  xprintf("%s", CGETS(17, 1, "BUG: waiting for background job!\n"));
     } while ((fp = fp->p_friends) != pp);
     /*
      * Now keep pausing as long as we are not interrupted (SIGINT), and the
@@ -500,7 +508,7 @@ pjwait(struct process *pp)
     pause_mask = oset;
     sigdelset(&pause_mask, SIGCHLD);
     for (;;) {
-	handle_pending_signals();
+	(void)handle_pending_signals();
 	jobflags = 0;
 	do
 	    jobflags |= fp->p_flags;
@@ -518,7 +526,7 @@ pjwait(struct process *pp)
 	(void) tcsetpgrp(FSHTTY, tpgrp);
 #endif /* BSDJOBS */
     if ((jobflags & (PSIGNALED | PSTOPPED | PTIME)) ||
-	!eq(dcwd->di_name, fp->p_cwd->di_name)) {
+	fp->p_cwd == NULL || !eq(dcwd->di_name, fp->p_cwd->di_name)) {
 	if (jobflags & PSTOPPED) {
 	    xputchar('\n');
 	    if (adrof(STRlistjobs)) {
@@ -550,6 +558,11 @@ pjwait(struct process *pp)
     reason = 0;
     fp = pp;
     do {
+	/* In case of pipelines only the result of the last
+	 * command should be taken in account */
+	if (!anyerror && !(fp->p_flags & PBRACE)
+		&& ((fp->p_flags & PPOU) || (fp->p_flags & PBACKQ)))
+	    continue;
 	if (fp->p_reason)
 	    reason = fp->p_flags & (PSIGNALED | PINTERRUPTED) ?
 		fp->p_reason | META : fp->p_reason;
@@ -561,7 +574,7 @@ pjwait(struct process *pp)
     if ((reason != 0) && (adrof(STRprintexitvalue)) && 
 	(pp->p_flags & PBACKQ) == 0)
 	xprintf(CGETS(17, 2, "Exit %d\n"), reason);
-    reason_str = putn(reason);
+    reason_str = putn((tcsh_number_t)reason);
     cleanup_push(reason_str, xfree);
     setv(STRstatus, reason_str, VAR_READWRITE);
     cleanup_ignore(reason_str);
@@ -581,6 +594,7 @@ dowait(Char **v, struct command *c)
 {
     struct process *pp;
     sigset_t pause_mask;
+    int opintr_disabled, gotsig;
 
     USE(c);
     USE(v);
@@ -593,9 +607,14 @@ loop:
     for (pp = proclist.p_next; pp; pp = pp->p_next)
 	if (pp->p_procid &&	/* pp->p_procid == pp->p_jobid && */
 	    pp->p_flags & PRUNNING) {
-	    handle_pending_signals();
+	    (void)handle_pending_signals();
 	    sigsuspend(&pause_mask);
-	    handle_pending_signals();
+	    opintr_disabled = pintr_disabled;
+	    pintr_disabled = 0;
+	    gotsig = handle_pending_signals();
+	    pintr_disabled = opintr_disabled;
+	    if (gotsig)
+		break;
 	    goto loop;
 	}
     pjobs = 0;
@@ -626,7 +645,7 @@ pflush(struct process *pp)
     int idx;
 
     if (pp->p_procid == 0) {
-	xprintf(CGETS(17, 3, "BUG: process flushed twice"));
+	xprintf("%s", CGETS(17, 3, "BUG: process flushed twice"));
 	return;
     }
     while (pp->p_procid != pp->p_jobid)
@@ -670,9 +689,25 @@ pclrcurr(struct process *pp)
 }
 
 /* +4 here is 1 for '\0', 1 ea for << >& >> */
-static Char command[PMAXLEN + 4];
+static Char *cmdstr;
+static size_t cmdmax;
 static size_t cmdlen;
 static Char *cmdp;
+#define CMD_INIT 1024
+#define CMD_INCR 64
+
+static void
+morecommand(size_t s)
+{
+    Char *ncmdstr;
+    ptrdiff_t d;
+
+    cmdmax += s;
+    ncmdstr = xrealloc(cmdstr, cmdmax * sizeof(*cmdstr));
+    d = ncmdstr - cmdstr;
+    cmdstr = ncmdstr;
+    cmdp += d;
+}
 
 /* GrP
  * unparse - Export padd() functionality 
@@ -680,11 +715,13 @@ static Char *cmdp;
 Char *
 unparse(struct command *t)
 {
-    cmdp = command;
+    if (cmdmax == 0)
+	morecommand(CMD_INIT);
+    cmdp = cmdstr;
     cmdlen = 0;
     padd(t);
     *cmdp++ = '\0';
-    return Strsave(command);
+    return Strsave(cmdstr);
 }
 
 
@@ -700,6 +737,7 @@ palloc(pid_t pid, struct command *t)
 
     pp = xcalloc(1, sizeof(struct process));
     pp->p_procid = pid;
+    pp->p_parentid = shpgrp;
     pp->p_flags = ((t->t_dflg & F_AMPERSAND) ? 0 : PFOREGND) | PRUNNING;
     if (t->t_dflg & F_TIME)
 	pp->p_flags |= PPTIME;
@@ -707,7 +745,11 @@ palloc(pid_t pid, struct command *t)
 	pp->p_flags |= PBACKQ;
     if (t->t_dflg & F_HUP)
 	pp->p_flags |= PHUP;
-    cmdp = command;
+    if (t->t_dcom && t->t_dcom[0] && (*t->t_dcom[0] == '{'))
+	pp->p_flags |= PBRACE;
+    if (cmdmax == 0)
+	morecommand(CMD_INIT);
+    cmdp = cmdstr;
     cmdlen = 0;
     padd(t);
     *cmdp++ = 0;
@@ -716,7 +758,7 @@ palloc(pid_t pid, struct command *t)
 	if (t->t_dflg & F_STDERR)
 	    pp->p_flags |= PDIAG;
     }
-    pp->p_command = Strsave(command);
+    pp->p_command = Strsave(cmdstr);
     if (pcurrjob) {
 	struct process *fp;
 
@@ -839,7 +881,7 @@ padd(struct command *t)
 static void
 pads(Char *cp)
 {
-    size_t i;
+    size_t i, len;
 
     /*
      * Avoid the Quoted Space alias hack! Reported by:
@@ -850,14 +892,9 @@ pads(Char *cp)
 
     i = Strlen(cp);
 
-    if (cmdlen >= PMAXLEN)
-	return;
-    if (cmdlen + i >= PMAXLEN) {
-	(void) Strcpy(cmdp, STRsp3dots);
-	cmdlen = PMAXLEN;
-	cmdp += 4;
-	return;
-    }
+    len = cmdlen + i + CMD_INCR;
+    if (len >= cmdmax)
+	morecommand(len);
     (void) Strcpy(cmdp, cp);
     cmdp += i;
     cmdlen += i;
@@ -894,6 +931,7 @@ pendjob(void)
 
     if (pcurrjob && (pcurrjob->p_flags & (PFOREGND | PSTOPPED)) == 0) {
 	pp = pcurrjob;
+	pcurrjob = NULL;
 	while (pp->p_procid != pp->p_jobid)
 	    pp = pp->p_friends;
 	xprintf("[%d]", pp->p_index);
@@ -1074,13 +1112,13 @@ prcomd:
 		xprintf("&");
 	}
 	if (flag & (REASON | AREASON) && pp->p_flags & PDUMPED)
-	    xprintf(CGETS(17, 9, " (core dumped)"));
+	    xprintf("%s", CGETS(17, 9, " (core dumped)"));
 	if (tp == pp->p_friends) {
 	    if (flag & AMPERSAND)
 		xprintf(" &");
 	    if (flag & JOBDIR &&
 		!eq(tp->p_cwd->di_name, dcwd->di_name)) {
-		xprintf(CGETS(17, 10, " (wd: "));
+		xprintf("%s", CGETS(17, 10, " (wd: "));
 		dtildepr(tp->p_cwd->di_name);
 		xprintf(")");
 	    }
@@ -1111,7 +1149,7 @@ prcomd:
 	    if (linp != linbuf)
 		xputchar('\n');
 	    if (flag & SHELLDIR && !eq(tp->p_cwd->di_name, dcwd->di_name)) {
-		xprintf(CGETS(17, 11, "(wd now: "));
+		xprintf("%s", CGETS(17, 11, "(wd now: "));
 		dtildepr(dcwd->di_name);
 		xprintf(")\n");
 	    }
@@ -1854,7 +1892,7 @@ pfork(struct command *t, int wanttty)
 	    sigdelset(&pause_mask, SIGCHLD);
 	    sigdelset(&pause_mask, SIGSYNCH);
 	    sigsuspend(&pause_mask);
-	    handle_pending_signals();
+	    (void)handle_pending_signals();
 	    if (sigaction(SIGSYNCH, &osa, NULL))
 		stderror(ERR_SYSTEM, "pfork parent: sigaction restore",
 			 strerror(errno));

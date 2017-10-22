@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.4 (Berkeley) 6/10/97
-# $FreeBSD: release/7.0.0/usr.sbin/makemap/Makefile 147225 2005-06-10 06:12:53Z des $
+# $FreeBSD$
 
 SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 .PATH: ${SENDMAIL_DIR}/makemap
@@ -10,6 +10,8 @@ MAN=	makemap.8
 
 CFLAGS+= -I${SENDMAIL_DIR}/src -I${SENDMAIL_DIR}/include -I.
 CFLAGS+= -DNEWDB -DNOT_SENDMAIL
+
+WARNS?=	2
 
 LIBSMDIR=	${.OBJDIR}/../../lib/libsm
 LIBSM=		${LIBSMDIR}/libsm.a

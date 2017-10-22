@@ -37,7 +37,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)lst.h	8.2 (Berkeley) 4/28/95
- * $FreeBSD: release/7.0.0/usr.bin/make/lst.h 146338 2005-05-18 06:50:39Z harti $
+ * $FreeBSD$
  */
 
 #ifndef lst_h_38f3ead1
@@ -47,8 +47,6 @@
  * lst.h --
  *	Header for using the list library
  */
-
-#include "util.h"
 
 /*
  * Structure of a list node.

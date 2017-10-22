@@ -1,4 +1,4 @@
-#	$FreeBSD: release/7.0.0/sbin/ipf/ipmon/Makefile 162199 2006-09-10 08:58:47Z obrien $
+#	$FreeBSD$
 
 PROG=		ipmon
 SRCS=		${GENHDRS} ipmon.c ipmon_y.c ipmon_l.c

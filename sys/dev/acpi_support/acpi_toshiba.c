@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpi_support/acpi_toshiba.c 150003 2005-09-11 18:39:03Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -34,7 +34,8 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpi_support/acpi_toshiba.c 150003 200
 #include <sys/module.h>
 #include <sys/bus.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 
 #define _COMPONENT	ACPI_OEM

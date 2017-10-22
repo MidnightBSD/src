@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.bin/atm/sscop/Makefile 135771 2004-09-24 22:10:34Z trhodes $
+# $FreeBSD$
 
 CONTRIB= ${.CURDIR}/../../../contrib/ngatm/sscop
 
@@ -6,7 +6,6 @@ CONTRIB= ${.CURDIR}/../../../contrib/ngatm/sscop
 
 PROG=	sscop
 SRCS=	common.c sscop_main.c
-WARNS?=	6
 CFLAGS+= -I${CONTRIB} -DUSE_LIBBEGEMOT
 
 DPADD=	${LIBBEGEMOT} ${LIBNETGRAPH} ${LIBNGATM}

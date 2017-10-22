@@ -1,5 +1,5 @@
 /*  @(#)des.h	2.2 88/08/10 4.0 RPCSRC; from 2.7 88/02/08 SMI  */
-/* $FreeBSD: release/7.0.0/include/rpc/des.h 93032 2002-03-23 17:24:55Z imp $ */
+/* $FreeBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape

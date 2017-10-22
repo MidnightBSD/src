@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/file.c 132799 2004-07-28 16:03:13Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 #include "lib.h"
 #include <err.h>
@@ -31,10 +31,13 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/file.c 132799 2004-07
 Boolean
 fexists(const char *fname)
 {
-    struct stat dummy;
-    if (!lstat(fname, &dummy))
-	return TRUE;
-    return FALSE;
+    int fd;
+
+    if ((fd = open(fname, O_RDONLY)) == -1)
+	return FALSE;
+
+    close(fd);
+    return TRUE;
 }
 
 /* Quick check to see if something is a directory or symlink to a directory */
@@ -137,7 +140,7 @@ fileFindByPath(const char *base, const char *fname)
 {
     static char tmp[FILENAME_MAX];
     char *cp;
-    const char *suffixes[] = {".tbz", ".tgz", ".tar", NULL};
+    const char *suffixes[] = {".tbz", ".tgz", ".tar", ".txz", NULL};
     int i;
 
     if (fexists(fname) && isfile(fname)) {
@@ -279,17 +282,23 @@ copy_file(const char *dir, const char *fname, const char *to)
 }
 
 void
-move_file(const char *dir, const char *fname, const char *to)
+move_file(const char *dir, const char *fname, const char *tdir)
 {
-    char cmd[FILENAME_MAX];
+    char from[FILENAME_MAX];
+    char to[FILENAME_MAX];
 
     if (fname[0] == '/')
-	snprintf(cmd, FILENAME_MAX, "/bin/mv %s %s", fname, to);
+	strncpy(from, fname, FILENAME_MAX);
     else
-	snprintf(cmd, FILENAME_MAX, "/bin/mv %s/%s %s", dir, fname, to);
-    if (vsystem(cmd)) {
-	cleanup(0);
-	errx(2, "%s: could not perform '%s'", __func__, cmd);
+	snprintf(from, FILENAME_MAX, "%s/%s", dir, fname);
+
+    snprintf(to, FILENAME_MAX, "%s/%s", tdir, fname);
+
+    if (rename(from, to) == -1) {
+        if (vsystem("/bin/mv %s %s", from, to)) {
+	    cleanup(0);
+	    errx(2, "%s: could not move '%s' to '%s'", __func__, from, to);
+	}
     }
 }
 
@@ -350,11 +359,7 @@ unpack(const char *pkg, const char *flist)
 	}
     }
     else
-#if defined(__FreeBSD_version) && __FreeBSD_version >= 500039
 	comp = "-j";
-#else
-	comp = "-z";
-#endif
     if (vsystem("/usr/bin/tar -xp %s -f '%s' %s", comp, pkg, flist ? flist : "")) {
 	warnx("tar extract of %s failed!", pkg);
 	return 1;

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/ia64/efi/main.c 164010 2006-11-05 22:03:04Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include <string.h>
@@ -50,7 +50,6 @@ extern char bootprog_rev[];
 extern char bootprog_date[];
 extern char bootprog_maker[];
 
-struct devdesc currdev;		/* our current device */
 struct arch_switch archsw;	/* MI/MD interface boundary */
 
 extern u_int64_t	ia64_pal_entry;
@@ -101,10 +100,49 @@ find_pal_proc(void)
 	return;
 }
 
+static int
+usc2cmp(CHAR16 *s1, CHAR16 *s2)
+{
+
+	while (*s1 == *s2++) {
+		if (*s1++ == 0)
+			return (0);
+	}
+	return (*s1 - *(s2 - 1));
+}
+
+static char *
+get_dev_option(int argc, CHAR16 *argv[])
+{
+	static char dev[32];
+	CHAR16 *arg;
+	char *devp;
+	int i, j;
+
+	devp = NULL;
+	for (i = 0; i < argc; i++) {
+		if (usc2cmp(argv[i], L"-dev") == 0 && i < argc - 1) {
+			arg = argv[i + 1];
+			j = 0;
+			while (j < sizeof(dev) && *arg != 0)
+				dev[j++] = *arg++;
+			if (j == sizeof(dev))
+				j--;
+			dev[j] = '\0';
+			devp = dev;
+			break;
+		}
+	}
+
+	return (devp);
+}
+
 EFI_STATUS
 main(int argc, CHAR16 *argv[])
 {
+	struct devdesc currdev;
 	EFI_LOADED_IMAGE *img;
+	char *dev;
 	int i;
 
 	/* 
@@ -115,6 +153,8 @@ main(int argc, CHAR16 *argv[])
 	 */
 	cons_probe();
 
+	printf("\n%s, Revision %s\n", bootprog_name, bootprog_rev);
+
 	find_pal_proc();
 
 	/*
@@ -123,18 +163,6 @@ main(int argc, CHAR16 *argv[])
 	for (i = 0; devsw[i] != NULL; i++)
 		if (devsw[i]->dv_init != NULL)
 			(devsw[i]->dv_init)();
-
-	/* Get our loaded image protocol interface structure. */
-	BS->HandleProtocol(IH, &imgid, (VOID**)&img);
-
-	printf("Image base: 0x%016lx\n", (u_long)img->ImageBase);
-
-	printf("\n");
-	printf("%s, Revision %s\n", bootprog_name, bootprog_rev);
-	printf("(%s, %s)\n", bootprog_maker, bootprog_date);
-
-	efi_handle_lookup(img->DeviceHandle, &currdev.d_dev, &currdev.d_unit);
-	currdev.d_type = currdev.d_dev->dv_type;
 
 	/*
 	 * Disable the watchdog timer. By default the boot manager sets
@@ -147,17 +175,30 @@ main(int argc, CHAR16 *argv[])
 	 */
 	BS->SetWatchdogTimer(0, 0, 0, NULL);
 
-	env_setenv("currdev", EV_VOLATILE, ia64_fmtdev(&currdev),
-	    ia64_setcurrdev, env_nounset);
+	/* Get our loaded image protocol interface structure. */
+	BS->HandleProtocol(IH, &imgid, (VOID**)&img);
+
+	bzero(&currdev, sizeof(currdev));
+	efi_handle_lookup(img->DeviceHandle, &currdev.d_dev, &currdev.d_unit);
+	currdev.d_type = currdev.d_dev->dv_type;
+
 	env_setenv("loaddev", EV_VOLATILE, ia64_fmtdev(&currdev), env_noset,
 	    env_nounset);
 
+	dev = get_dev_option(argc, argv);
+	if (dev == NULL)
+		dev = ia64_fmtdev(&currdev);
+
+	env_setenv("currdev", EV_VOLATILE, dev, ia64_setcurrdev, env_nounset);
+
 	setenv("LINES", "24", 1);	/* optional */
-    
+
 	archsw.arch_autoload = ia64_autoload;
-	archsw.arch_getdev = ia64_getdev;
 	archsw.arch_copyin = ia64_copyin;
 	archsw.arch_copyout = ia64_copyout;
+	archsw.arch_getdev = ia64_getdev;
+	archsw.arch_loadaddr = ia64_loadaddr;
+	archsw.arch_loadseg = ia64_loadseg;
 	archsw.arch_readin = ia64_readin;
 
 	interact();			/* doesn't return */
@@ -171,6 +212,18 @@ static int
 command_quit(int argc, char *argv[])
 {
 	exit(0);
+	/* NOTREACHED */
+	return (CMD_OK);
+}
+
+COMMAND_SET(reboot, "reboot", "reboot the system", command_reboot);
+ 
+static int
+command_reboot(int argc, char *argv[])
+{
+
+	RS->ResetSystem(EfiResetWarm, EFI_SUCCESS, 0, NULL);
+	/* NOTREACHED */
 	return (CMD_OK);
 }
 
@@ -541,4 +594,25 @@ command_hcdp(int argc, char *argv[])
 	}
 	printf("<EOT>\n");
 	return (CMD_OK);
+}
+
+COMMAND_SET(about, "about", "about the loader", command_about);
+
+extern uint64_t _start_plabel[];
+
+static int
+command_about(int argc, char *argv[])
+{
+	EFI_LOADED_IMAGE *img;
+
+	printf("%s\n", bootprog_name);
+	printf("revision %s\n", bootprog_rev);
+	printf("built by %s\n", bootprog_maker);
+	printf("built on %s\n", bootprog_date);
+
+	printf("\n");
+
+	BS->HandleProtocol(IH, &imgid, (VOID**)&img);
+	printf("image loaded at %p\n", img->ImageBase);
+	printf("entry at %#lx (%#lx)\n", _start_plabel[0], _start_plabel[1]);
 }

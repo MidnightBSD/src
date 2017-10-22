@@ -37,7 +37,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)job.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/7.0.0/usr.bin/make/job.h 167330 2007-03-08 09:16:11Z fjoe $
+ * $FreeBSD$
  */
 
 #ifndef job_h_4678dfd1
@@ -64,9 +64,10 @@ void Job_Make(struct GNode *);
 void Job_Init(int);
 Boolean Job_Full(void);
 Boolean Job_Empty(void);
-int Job_Finish(void);
+void Job_Finish(void);
 void Job_Wait(void);
 void Job_AbortAll(void);
+void Job_SetPrefix(void);
 
 void Proc_Init(void);
 

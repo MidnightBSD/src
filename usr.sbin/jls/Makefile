@@ -1,7 +1,17 @@
-# $FreeBSD: release/7.0.0/usr.sbin/jls/Makefile 113277 2003-04-09 03:04:12Z mike $
+# $FreeBSD$
+
+.include <bsd.own.mk>
 
 PROG=	jls
 MAN=	jls.8
-WARNS?=	6
+DPADD=	${LIBJAIL}
+LDADD=	-ljail
+
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+= -DINET6
+.endif
+.if ${MK_INET_SUPPORT} != "no"
+CFLAGS+= -DINET
+.endif
 
 .include <bsd.prog.mk>

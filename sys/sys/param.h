@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.3 (Berkeley) 4/4/95
- * $FreeBSD: release/7.0.0/sys/sys/param.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_PARAM_H_
@@ -53,11 +53,34 @@
  *	doc/en_US.ISO8859-1/books/porters-handbook/book.sgml
  *
  * scheme is:  <major><two digit minor>Rxx
- *		'R' is 0 if release branch or x.0-CURRENT before RELENG_*_0
- *		is created, otherwise 1.
+ *		'R' is in the range 0 to 4 if this is a release branch or
+ *		x.0-CURRENT before RELENG_*_0 is created, otherwise 'R' is
+ *		in the range 5 to 9.
  */
 #undef __FreeBSD_version
-#define __FreeBSD_version 700055	/* Master, propagated to newvers */
+#define __FreeBSD_version 901000	/* Master, propagated to newvers */
+
+/*
+ * __FreeBSD_kernel__ indicates that this system uses the kernel of FreeBSD,
+ * which by definition is always true on FreeBSD. This macro is also defined
+ * on other systems that use the kernel of FreeBSD, such as GNU/kFreeBSD.
+ *
+ * It is tempting to use this macro in userland code when we want to enable
+ * kernel-specific routines, and in fact it's fine to do this in code that
+ * is part of FreeBSD itself.  However, be aware that as presence of this
+ * macro is still not widespread (e.g. older FreeBSD versions, 3rd party
+ * compilers, etc), it is STRONGLY DISCOURAGED to check for this macro in
+ * external applications without also checking for __FreeBSD__ as an
+ * alternative.
+ */
+#undef __FreeBSD_kernel__
+#define __FreeBSD_kernel__
+
+#ifdef _KERNEL
+#define	P_OSREL_SIGWAIT		700000
+#define	P_OSREL_SIGSEGV		700004
+#define	P_OSREL_MAP_ANON	800104
+#endif
 
 #ifndef LOCORE
 #include <sys/types.h>
@@ -68,16 +91,15 @@
  * Redefined constants are from POSIX 1003.1 limits file.
  *
  * MAXCOMLEN should be >= sizeof(ac_comm) (see <acct.h>)
- * MAXLOGNAME should be == UT_NAMESIZE+1 (see <utmp.h>)
  */
 #include <sys/syslimits.h>
 
 #define	MAXCOMLEN	19		/* max command name remembered */
-#define	MAXINTERP	32		/* max interpreter file name length */
+#define	MAXINTERP	PATH_MAX	/* max interpreter file name length */
 #define	MAXLOGNAME	17		/* max login name length (incl. NUL) */
 #define	MAXUPRC		CHILD_MAX	/* max simultaneous processes */
 #define	NCARGS		ARG_MAX		/* max bytes for an exec function */
-#define	NGROUPS		NGROUPS_MAX	/* max number groups */
+#define	NGROUPS		(NGROUPS_MAX+1)	/* max number groups */
 #define	NOFILE		OPEN_MAX	/* max open files per process */
 #define	NOGROUP		65535		/* marker for empty group set member */
 #define MAXHOSTNAMELEN	256		/* max hostname size */
@@ -92,8 +114,12 @@
 #include <sys/priority.h>
 #endif
 
+#ifndef FALSE
 #define	FALSE	0
+#endif
+#ifndef TRUE
 #define	TRUE	1
+#endif
 #endif
 
 #ifndef _KERNEL
@@ -106,8 +132,6 @@
 #ifndef _KERNEL
 #include <sys/limits.h>
 #endif
-
-#ifndef _NO_NAMESPACE_POLLUTION
 
 #ifndef DEV_BSHIFT
 #define	DEV_BSHIFT	9		/* log2(DEV_BSIZE) */
@@ -141,7 +165,14 @@
 
 #define MCLBYTES	(1 << MCLSHIFT)	/* size of an mbuf cluster */
 
-#define	MJUMPAGESIZE	PAGE_SIZE	/* jumbo cluster 4k */
+#if PAGE_SIZE < 2048
+#define	MJUMPAGESIZE	MCLBYTES
+#elif PAGE_SIZE <= 8192
+#define	MJUMPAGESIZE	PAGE_SIZE
+#else
+#define	MJUMPAGESIZE	(8 * 1024)
+#endif
+
 #define	MJUM9BYTES	(9 * 1024)	/* jumbo cluster 9k */
 #define	MJUM16BYTES	(16 * 1024)	/* jumbo cluster 16k */
 
@@ -177,11 +208,10 @@
 	((off_t)(db) << DEV_BSHIFT)
 #endif
 
-#endif /* _NO_NAMESPACE_POLLUTION */
-
 #define	PRIMASK	0x0ff
 #define	PCATCH	0x100		/* OR'd with pri for tsleep to check signals */
 #define	PDROP	0x200	/* OR'd with pri to stop re-entry of interlock mutex */
+#define	PBDRY	0x400	/* for PCATCH stop is done on the user boundary */
 
 #define	NZERO	0		/* default "nice" */
 
@@ -191,12 +221,6 @@
 #define	CMASK	022		/* default file mask: S_IWGRP|S_IWOTH */
 
 #define	NODEV	(dev_t)(-1)	/* non-existent device */
-
-#define	CBLOCK	128		/* Clist block size, must be a power of 2. */
-#define CBQSIZE	(CBLOCK/NBBY)	/* Quote bytes/cblock - can do better. */
-				/* Data chars/clist. */
-#define	CBSIZE	(CBLOCK - sizeof(struct cblock *) - CBQSIZE)
-#define	CROUND	(CBLOCK - 1)	/* Clist rounding. */
 
 /*
  * File system parameters and macros.
@@ -249,6 +273,7 @@
 #ifndef howmany
 #define	howmany(x, y)	(((x)+((y)-1))/(y))
 #endif
+#define	nitems(x)	(sizeof((x)) / sizeof((x)[0]))
 #define	rounddown(x, y)	(((x)/(y))*(y))
 #define	roundup(x, y)	((((x)+((y)-1))/(y))*(y))  /* to any y */
 #define	roundup2(x, y)	(((x)+((y)-1))&(~((y)-1))) /* if y is powers of two */
@@ -306,19 +331,16 @@ __END_DECLS
 	((db) << (PAGE_SHIFT - DEV_BSHIFT))
 
 /*
- * Solaris compatibility definitions.
+ * Given the pointer x to the member m of the struct s, return
+ * a pointer to the containing structure.
  */
-#ifdef _SOLARIS_C_SOURCE
-#define	PAGESIZE	PAGE_SIZE
+#define	member2struct(s, m, x)						\
+	((struct s *)(void *)((char *)(x) - offsetof(struct s, m)))
 
 /*
- * The OpenSolaris version is set according to the version last imported
- * from http://dlc.sun.com/osol/on/downloads/current/. In FreeBSD header
- * files it can be used to determine the level of compatibility that the
- * FreeBSD headers provide to OpenSolaris code. Perhaps one day there
- * will be a really, really Single Unix Specification.
+ * Access a variable length array that has been declared as a fixed
+ * length array.
  */
-#define __OpenSolaris_version 20060731
-#endif
+#define __PAST_END(array, offset) (((__typeof__(*(array)) *)(array))[offset])
 
 #endif	/* _SYS_PARAM_H_ */

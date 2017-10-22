@@ -1,5 +1,5 @@
 
-# $FreeBSD: release/7.0.0/sys/modules/aic7xxx/ahc/ahc_pci/Makefile 101131 2002-08-01 01:36:39Z scottl $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../../../dev/aic7xxx
 KMOD=	ahc_pci
@@ -14,3 +14,6 @@ SRCS+=	opt_scsi.h opt_cam.h opt_aic7xxx.h
 CFLAGS+= -I${.CURDIR}/../../../../dev/aic7xxx -I..
 
 .include <bsd.kmod.mk>
+
+CWARNFLAGS.ahc_pci.c=	${NO_WCONSTANT_CONVERSION}
+CWARNFLAGS+=		${CWARNFLAGS.${.IMPSRC:T}}

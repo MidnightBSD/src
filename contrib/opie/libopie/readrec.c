@@ -15,7 +15,7 @@ you didn't get a copy, you may request one from <license@inner.net>.
                 records. Set read flag.
 	Created by cmetz for OPIE 2.3.
 
-$FreeBSD: release/7.0.0/contrib/opie/libopie/readrec.c 172506 2007-10-10 16:59:15Z cvs2svn $
+$FreeBSD$
 */
 #include "opie_cfg.h"
 
@@ -141,10 +141,8 @@ int __opiereadrec FUNCTION((opie), struct opie *opie)
     
     if (c = strchr(opie->opie_principal, ':'))
       *c = 0;
-    if (strlen(opie->opie_principal) > OPIE_PRINCIPAL_MAX)
-      (opie->opie_principal)[OPIE_PRINCIPAL_MAX] = 0;
     
-    strcpy(principal, opie->opie_principal);
+    strlcpy(principal, opie->opie_principal, sizeof(principal));
     
     do {
       if ((opie->opie_recstart = ftell(f)) < 0)

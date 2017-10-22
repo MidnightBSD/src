@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/fs/ntfs/ntfs_compr.c 86927 2001-11-26 23:45:12Z jhb $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

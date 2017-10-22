@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/cc/cc_int/Makefile 172234 2007-09-18 23:34:42Z cognet $
+# $FreeBSD$
 
 .include "../Makefile.inc"
 .include "../Makefile.ver"
@@ -74,10 +74,6 @@ OBJS-md+= ${GCC_CPU}-c.o
 
 # Target specific, C specific object file
 C_TARGET_OBJS=
-
-.if ${TARGET_ARCH} == "arm" && defined(TARGET_BIG_ENDIAN)
-CFLAGS += -DTARGET_ENDIAN_DEFAULT=MASK_BIG_END
-.endif
 
 # Language-specific object files for C and Objective C.
 C_AND_OBJC_OBJS = attribs.o c-errors.o c-lex.o c-pragma.o c-decl.o c-typeck.o \

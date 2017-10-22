@@ -1,12 +1,23 @@
-# $FreeBSD: release/7.0.0/cddl/usr.bin/Makefile 172500 2007-10-09 23:31:11Z obrien $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
-SUBDIR=	${_ztest}
+SUBDIR= \
+	ctfconvert \
+	ctfdump \
+	ctfmerge \
+	sgsmsg \
+	${_zinject} \
+	${_zlook} \
+	${_zstreamdump} \
+	${_ztest}
 
 .if ${MK_ZFS} != "no"
-.if ${MK_LIBTHR} != "no" || ${MK_LIBKSE} != "no"
+_zinject= zinject
+#_zlook= zlook
+.if ${MK_LIBTHR} != "no"
 _ztest=	ztest
+_zstreamdump = zstreamdump
 .endif
 .endif
 

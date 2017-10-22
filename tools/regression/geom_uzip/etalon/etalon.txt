@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/7.0.0/tools/regression/geom_uzip/etalon/etalon.txt 133641 2004-08-13 09:53:52Z fjoe $
+# $FreeBSD$
 #
 
 JABBERWOCKY

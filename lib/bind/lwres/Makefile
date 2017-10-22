@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/lib/bind/lwres/Makefile 174398 2007-12-07 08:31:23Z dougb $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -21,7 +21,8 @@ SRCS+=		context.c gai_strerror.c getaddrinfo.c gethost.c \
 		getipnode.c getnameinfo.c getrrset.c herror.c \
 		lwbuffer.c lwconfig.c lwpacket.c lwresutil.c \
 		lwres_gabn.c lwres_gnba.c lwres_grbn.c lwres_noop.c \
-		lwinetaton.c lwinetpton.c lwinetntop.c print.c
+		lwinetaton.c lwinetpton.c lwinetntop.c print.c \
+		strtoul.c
 
 CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include
 CFLAGS+=	-I${.CURDIR}

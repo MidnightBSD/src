@@ -34,11 +34,13 @@
  */
 
 #include <machine/asm.h>
-
-RCSID("$FreeBSD: release/7.0.0/lib/msun/i387/s_logb.S 61335 2000-06-06 12:12:36Z bde $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(logb)
 	fldl	4(%esp)
 	fxtract
 	fstp	%st
 	ret
+END(logb)
+
+	.section .note.GNU-stack,"",%progbits

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/include/uuid.h 139601 2005-01-03 02:56:15Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _UUID_H_
@@ -54,6 +54,10 @@ void	uuid_from_string(const char *, uuid_t *, uint32_t *);
 uint16_t uuid_hash(const uuid_t *, uint32_t *);
 int32_t	uuid_is_nil(const uuid_t *, uint32_t *);
 void	uuid_to_string(const uuid_t *, char **, uint32_t *);
+void	uuid_enc_le(void *, const uuid_t *);
+void	uuid_dec_le(const void *, uuid_t *);
+void	uuid_enc_be(void *, const uuid_t *);
+void	uuid_dec_be(const void *, uuid_t *);
 __END_DECLS
 
 #endif	/* _UUID_H_ */

@@ -34,7 +34,7 @@
  */
 
 /* $Header: /home/daffy/u0/vern/flex/RCS/parse.y,v 2.28 95/04/21 11:51:51 vern Exp $ */
-/* $FreeBSD: release/7.0.0/usr.bin/lex/parse.y 52555 1999-10-27 07:56:49Z obrien $ */
+/* $FreeBSD$ */
 
 
 /* Some versions of bison are broken in that they use alloca() but don't
@@ -782,7 +782,7 @@ string		:  string CHAR
 
 void build_eof_action()
 	{
-	register int i;
+	int i;
 	char action_text[MAXLINE];
 
 	for ( i = 1; i <= scon_stk_ptr; ++i )

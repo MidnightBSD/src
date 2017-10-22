@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/netinet/ip_encap.h 174854 2007-12-22 06:32:46Z cvs2svn $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: ip_encap.h,v 1.7 2000/03/25 07:23:37 sumikawa Exp $	*/
 
 /*-

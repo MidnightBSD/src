@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: tsigconf.h,v 1.10.18.4 2006/03/02 00:37:21 marka Exp $ */
+/* $Id: tsigconf.h,v 1.18 2009/06/11 23:47:55 tbox Exp $ */
 
 #ifndef NS_TSIGCONF_H
 #define NS_TSIGCONF_H 1
@@ -36,8 +36,9 @@ ns_tsigkeyring_fromconfig(const cfg_obj_t *config, const cfg_obj_t *vconfig,
  *
  *	Requires:
  *	\li	'config' is not NULL.
+ *	\li	'vconfig' is not NULL.
  *	\li	'mctx' is not NULL
- *	\li	'ring' is not NULL, and '*ring' is NULL
+ *	\li	'ringp' is not NULL, and '*ringp' is NULL
  *
  *	Returns:
  *	\li	ISC_R_SUCCESS

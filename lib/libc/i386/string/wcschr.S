@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/i386/string/wcschr.S 113103 2003-04-05 04:17:05Z tjr $");
+__FBSDID("$FreeBSD$");
 
 /*
  * wchar_t *
@@ -74,3 +74,6 @@ found0: popl	%ebx
 no:	popl	%ebx
 	xorl	%eax,%eax
 	ret
+END(wcschr)
+
+	.section .note.GNU-stack,"",%progbits

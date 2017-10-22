@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: query.c,v 1.257.18.40 2007/09/26 03:08:14 each Exp $ */
+/* $Id: query.c,v 1.353.8.24 2012/02/07 01:14:39 marka Exp $ */
 
 /*! \file */
 
@@ -23,19 +23,21 @@
 
 #include <string.h>
 
+#include <isc/hex.h>
 #include <isc/mem.h>
+#include <isc/stats.h>
 #include <isc/util.h>
 
 #include <dns/adb.h>
 #include <dns/byaddr.h>
 #include <dns/db.h>
-#ifdef DLZ
 #include <dns/dlz.h>
-#endif
+#include <dns/dns64.h>
 #include <dns/dnssec.h>
 #include <dns/events.h>
 #include <dns/message.h>
 #include <dns/ncache.h>
+#include <dns/nsec3.h>
 #include <dns/order.h>
 #include <dns/rdata.h>
 #include <dns/rdataclass.h>
@@ -53,10 +55,22 @@
 #include <dns/zt.h>
 
 #include <named/client.h>
+#include <named/globals.h>
 #include <named/log.h>
 #include <named/server.h>
 #include <named/sortlist.h>
 #include <named/xfrout.h>
+
+#if 0
+/*
+ * It has been recommended that DNS64 be changed to return excluded
+ * AAAA addresses if DNS64 synthesis does not occur.  This minimises
+ * the impact on the lookup results.  While most DNS AAAA lookups are
+ * done to send IP packets to a host, not all of them are and filtering
+ * excluded addresses has a negative impact on those uses.
+ */
+#define dns64_bis_return_excluded_addresses 1
+#endif
 
 /*% Partial answer? */
 #define PARTIALANSWER(c)	(((c)->query.attributes & \
@@ -88,6 +102,16 @@
 /*% Secure? */
 #define SECURE(c)		(((c)->query.attributes & \
 				  NS_QUERYATTR_SECURE) != 0)
+/*% DNS64 A lookup? */
+#define DNS64(c)		(((c)->query.attributes & \
+				  NS_QUERYATTR_DNS64) != 0)
+
+#define DNS64EXCLUDE(c)		(((c)->query.attributes & \
+				  NS_QUERYATTR_DNS64EXCLUDE) != 0)
+
+/*% No QNAME Proof? */
+#define NOQNAME(r)		(((r)->attributes & \
+				  DNS_RDATASETATTR_NOQNAME) != 0)
 
 #if 0
 #define CTRACE(m)       isc_log_write(ns_g_lctx, \
@@ -108,74 +132,108 @@
 #define DNS_GETDB_NOEXACT 0x01U
 #define DNS_GETDB_NOLOG 0x02U
 #define DNS_GETDB_PARTIAL 0x04U
+#define DNS_GETDB_IGNOREACL 0x08U
+
+#define PENDINGOK(x)	(((x) & DNS_DBFIND_PENDINGOK) != 0)
 
 typedef struct client_additionalctx {
 	ns_client_t *client;
 	dns_rdataset_t *rdataset;
 } client_additionalctx_t;
 
-static void
+static isc_result_t
 query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype);
 
 static isc_boolean_t
 validate(ns_client_t *client, dns_db_t *db, dns_name_t *name,
 	 dns_rdataset_t *rdataset, dns_rdataset_t *sigrdataset);
 
+static void
+query_findclosestnsec3(dns_name_t *qname, dns_db_t *db,
+		       dns_dbversion_t *version, ns_client_t *client,
+		       dns_rdataset_t *rdataset, dns_rdataset_t *sigrdataset,
+		       dns_name_t *fname, isc_boolean_t exact,
+		       dns_name_t *found);
+
+static inline void
+log_queryerror(ns_client_t *client, isc_result_t result, int line, int level);
+
+static void
+rpz_st_clear(ns_client_t *client);
+
 /*%
  * Increment query statistics counters.
  */
 static inline void
-inc_stats(ns_client_t *client, dns_statscounter_t counter) {
+inc_stats(ns_client_t *client, isc_statscounter_t counter) {
 	dns_zone_t *zone = client->query.authzone;
 
-	REQUIRE(counter < DNS_STATS_NCOUNTERS);
-
-	ns_g_server->querystats[counter]++;
+	isc_stats_increment(ns_g_server->nsstats, counter);
 
 	if (zone != NULL) {
-		isc_uint64_t *zonestats = dns_zone_getstatscounters(zone);
+		isc_stats_t *zonestats = dns_zone_getrequeststats(zone);
 		if (zonestats != NULL)
-			zonestats[counter]++;
+			isc_stats_increment(zonestats, counter);
 	}
 }
 
 static void
 query_send(ns_client_t *client) {
-	dns_statscounter_t counter;
+	isc_statscounter_t counter;
+	if ((client->message->flags & DNS_MESSAGEFLAG_AA) == 0)
+		inc_stats(client, dns_nsstatscounter_nonauthans);
+	else
+		inc_stats(client, dns_nsstatscounter_authans);
 	if (client->message->rcode == dns_rcode_noerror) {
 		if (ISC_LIST_EMPTY(client->message->sections[DNS_SECTION_ANSWER])) {
 			if (client->query.isreferral) {
-				counter = dns_statscounter_referral;
+				counter = dns_nsstatscounter_referral;
 			} else {
-				counter = dns_statscounter_nxrrset;
+				counter = dns_nsstatscounter_nxrrset;
 			}
 		} else {
-			counter = dns_statscounter_success;
+			counter = dns_nsstatscounter_success;
 		}
 	} else if (client->message->rcode == dns_rcode_nxdomain) {
-		counter = dns_statscounter_nxdomain;
+		counter = dns_nsstatscounter_nxdomain;
 	} else {
 		/* We end up here in case of YXDOMAIN, and maybe others */
-		counter = dns_statscounter_failure;
+		counter = dns_nsstatscounter_failure;
 	}
 	inc_stats(client, counter);
 	ns_client_send(client);
 }
 
 static void
-query_error(ns_client_t *client, isc_result_t result) {
-	inc_stats(client, dns_statscounter_failure);
+query_error(ns_client_t *client, isc_result_t result, int line) {
+	int loglevel = ISC_LOG_DEBUG(3);
+
+	switch (result) {
+	case DNS_R_SERVFAIL:
+		loglevel = ISC_LOG_DEBUG(1);
+		inc_stats(client, dns_nsstatscounter_servfail);
+		break;
+	case DNS_R_FORMERR:
+		inc_stats(client, dns_nsstatscounter_formerr);
+		break;
+	default:
+		inc_stats(client, dns_nsstatscounter_failure);
+		break;
+	}
+
+	log_queryerror(client, result, line, loglevel);
+
 	ns_client_error(client, result);
 }
 
 static void
 query_next(ns_client_t *client, isc_result_t result) {
 	if (result == DNS_R_DUPLICATE)
-		inc_stats(client, dns_statscounter_duplicate);
+		inc_stats(client, dns_nsstatscounter_duplicate);
 	else if (result == DNS_R_DROP)
-		inc_stats(client, dns_statscounter_dropped);
+		inc_stats(client, dns_nsstatscounter_dropped);
 	else
-		inc_stats(client, dns_statscounter_failure);
+		inc_stats(client, dns_nsstatscounter_failure);
 	ns_client_next(client, result);
 }
 
@@ -214,6 +272,19 @@ ns_query_cancel(ns_client_t *client) {
 }
 
 static inline void
+query_putrdataset(ns_client_t *client, dns_rdataset_t **rdatasetp) {
+	dns_rdataset_t *rdataset = *rdatasetp;
+
+	CTRACE("query_putrdataset");
+	if (rdataset != NULL) {
+		if (dns_rdataset_isassociated(rdataset))
+			dns_rdataset_disassociate(rdataset);
+		dns_message_puttemprdataset(client->message, rdatasetp);
+	}
+	CTRACE("query_putrdataset: done");
+}
+
+static inline void
 query_reset(ns_client_t *client, isc_boolean_t everything) {
 	isc_buffer_t *dbuf, *dbuf_next;
 	ns_dbversion_t *dbversion, *dbversion_next;
@@ -247,6 +318,18 @@ query_reset(ns_client_t *client, isc_boolean_t everything) {
 	if (client->query.authzone != NULL)
 		dns_zone_detach(&client->query.authzone);
 
+	if (client->query.dns64_aaaa != NULL)
+		query_putrdataset(client, &client->query.dns64_aaaa);
+	if (client->query.dns64_sigaaaa != NULL)
+		query_putrdataset(client, &client->query.dns64_sigaaaa);
+	if (client->query.dns64_aaaaok != NULL) {
+		isc_mem_put(client->mctx, client->query.dns64_aaaaok,
+			    client->query.dns64_aaaaoklen *
+			    sizeof(isc_boolean_t));
+		client->query.dns64_aaaaok =  NULL;
+		client->query.dns64_aaaaoklen =  0;
+	}
+
 	query_freefreeversions(client, everything);
 
 	for (dbuf = ISC_LIST_HEAD(client->query.namebufs);
@@ -272,13 +355,22 @@ query_reset(ns_client_t *client, isc_boolean_t everything) {
 				    NS_QUERYATTR_SECURE);
 	client->query.restarts = 0;
 	client->query.timerset = ISC_FALSE;
+	if (client->query.rpz_st != NULL) {
+		rpz_st_clear(client);
+		if (everything) {
+			isc_mem_put(client->mctx, client->query.rpz_st,
+				    sizeof(*client->query.rpz_st));
+			client->query.rpz_st = NULL;
+		}
+	}
 	client->query.origqname = NULL;
-	client->query.qname = NULL;
 	client->query.dboptions = 0;
 	client->query.fetchoptions = 0;
 	client->query.gluedb = NULL;
 	client->query.authdbset = ISC_FALSE;
 	client->query.isreferral = ISC_FALSE;
+	client->query.dns64_options = 0;
+	client->query.dns64_ttl = ISC_UINT32_MAX;
 }
 
 static void
@@ -435,20 +527,6 @@ query_newrdataset(ns_client_t *client) {
 	return (rdataset);
 }
 
-static inline void
-query_putrdataset(ns_client_t *client, dns_rdataset_t **rdatasetp) {
-	dns_rdataset_t *rdataset = *rdatasetp;
-
-	CTRACE("query_putrdataset");
-	if (rdataset != NULL) {
-		if (dns_rdataset_isassociated(rdataset))
-			dns_rdataset_disassociate(rdataset);
-		dns_message_puttemprdataset(client->message, rdatasetp);
-	}
-	CTRACE("query_putrdataset: done");
-}
-
-
 static inline isc_result_t
 query_newdbversion(ns_client_t *client, unsigned int n) {
 	unsigned int i;
@@ -502,6 +580,7 @@ ns_query_init(ns_client_t *client) {
 	ISC_LIST_INIT(client->query.freeversions);
 	client->query.restarts = 0;
 	client->query.timerset = ISC_FALSE;
+	client->query.rpz_st = NULL;
 	client->query.qname = NULL;
 	result = isc_mutex_init(&client->query.fetchlock);
 	if (result != ISC_R_SUCCESS)
@@ -511,6 +590,10 @@ ns_query_init(ns_client_t *client) {
 	client->query.authzone = NULL;
 	client->query.authdbset = ISC_FALSE;
 	client->query.isreferral = ISC_FALSE;
+	client->query.dns64_aaaa = NULL;
+	client->query.dns64_sigaaaa = NULL;
+	client->query.dns64_aaaaok = NULL;
+	client->query.dns64_aaaaoklen = 0;
 	query_reset(client, ISC_FALSE);
 	result = query_newdbversion(client, 3);
 	if (result != ISC_R_SUCCESS) {
@@ -525,8 +608,7 @@ ns_query_init(ns_client_t *client) {
 }
 
 static inline ns_dbversion_t *
-query_findversion(ns_client_t *client, dns_db_t *db,
-		  isc_boolean_t *newzonep)
+query_findversion(ns_client_t *client, dns_db_t *db)
 {
 	ns_dbversion_t *dbversion;
 
@@ -552,12 +634,11 @@ query_findversion(ns_client_t *client, dns_db_t *db,
 			return (NULL);
 		dns_db_attach(db, &dbversion->db);
 		dns_db_currentversion(db, &dbversion->version);
+		dbversion->acl_checked = ISC_FALSE;
 		dbversion->queryok = ISC_FALSE;
 		ISC_LIST_APPEND(client->query.activeversions,
 				dbversion, link);
-		*newzonep = ISC_TRUE;
-	} else
-		*newzonep = ISC_FALSE;
+	}
 
 	return (dbversion);
 }
@@ -569,7 +650,6 @@ query_validatezonedb(ns_client_t *client, dns_name_t *name,
 		     dns_dbversion_t **versionp)
 {
 	isc_result_t result;
-	isc_boolean_t check_acl, new_zone;
 	dns_acl_t *queryacl;
 	ns_dbversion_t *dbversion;
 
@@ -585,7 +665,17 @@ query_validatezonedb(ns_client_t *client, dns_name_t *name,
 	if (!client->view->additionalfromauth &&
 	    client->query.authdbset &&
 	    db != client->query.authdb)
-		goto refuse;
+		return (DNS_R_REFUSED);
+
+	/*
+	 * Non recursive query to a static-stub zone is prohibited; its
+	 * zone content is not public data, but a part of local configuration
+	 * and should not be disclosed.
+	 */
+	if (dns_zone_gettype(zone) == dns_zone_staticstub &&
+	    !RECURSIONOK(client)) {
+		return (DNS_R_REFUSED);
+	}
 
 	/*
 	 * If the zone has an ACL, we'll check it, otherwise
@@ -595,23 +685,19 @@ query_validatezonedb(ns_client_t *client, dns_name_t *name,
 	 * Also, get the database version to use.
 	 */
 
-	check_acl = ISC_TRUE;	/* Keep compiler happy. */
-	queryacl = NULL;
-
 	/*
 	 * Get the current version of this database.
 	 */
-	dbversion = query_findversion(client, db, &new_zone);
-	if (dbversion == NULL) {
-		result = DNS_R_SERVFAIL;
-		goto fail;
-	}
-	if (new_zone) {
-		check_acl = ISC_TRUE;
-	} else if (!dbversion->queryok) {
-		goto refuse;
-	} else {
-		check_acl = ISC_FALSE;
+	dbversion = query_findversion(client, db);
+	if (dbversion == NULL)
+		return (DNS_R_SERVFAIL);
+
+	if ((options & DNS_GETDB_IGNOREACL) != 0)
+		goto approved;
+	if (dbversion->acl_checked) {
+		if (!dbversion->queryok)
+			return (DNS_R_REFUSED);
+		goto approved;
 	}
 
 	queryacl = dns_zone_getqueryacl(zone);
@@ -625,87 +711,69 @@ query_validatezonedb(ns_client_t *client, dns_name_t *name,
 			 * allowed to make queries, otherwise the query should
 			 * be refused.
 			 */
-			check_acl = ISC_FALSE;
+			dbversion->acl_checked = ISC_TRUE;
 			if ((client->query.attributes &
-			     NS_QUERYATTR_QUERYOK) == 0)
-				goto refuse;
-		} else {
-			/*
-			 * We haven't evaluated the view's queryacl yet.
-			 */
-			check_acl = ISC_TRUE;
+			     NS_QUERYATTR_QUERYOK) == 0) {
+				dbversion->queryok = ISC_FALSE;
+				return (DNS_R_REFUSED);
+			}
+			dbversion->queryok = ISC_TRUE;
+			goto approved;
 		}
 	}
 
-	if (check_acl) {
-		isc_boolean_t log = ISC_TF((options & DNS_GETDB_NOLOG) == 0);
-
-		result = ns_client_checkaclsilent(client, queryacl, ISC_TRUE);
-		if (log) {
-			char msg[NS_CLIENT_ACLMSGSIZE("query")];
-			if (result == ISC_R_SUCCESS) {
-				if (isc_log_wouldlog(ns_g_lctx,
-						     ISC_LOG_DEBUG(3)))
-				{
-					ns_client_aclmsg("query", name, qtype,
-							 client->view->rdclass,
-							 msg, sizeof(msg));
-					ns_client_log(client,
-						      DNS_LOGCATEGORY_SECURITY,
-						      NS_LOGMODULE_QUERY,
-						      ISC_LOG_DEBUG(3),
-						      "%s approved", msg);
-				}
-			} else {
+	result = ns_client_checkaclsilent(client, NULL, queryacl, ISC_TRUE);
+	if ((options & DNS_GETDB_NOLOG) == 0) {
+		char msg[NS_CLIENT_ACLMSGSIZE("query")];
+		if (result == ISC_R_SUCCESS) {
+			if (isc_log_wouldlog(ns_g_lctx, ISC_LOG_DEBUG(3))) {
 				ns_client_aclmsg("query", name, qtype,
 						 client->view->rdclass,
 						 msg, sizeof(msg));
-				ns_client_log(client, DNS_LOGCATEGORY_SECURITY,
-					      NS_LOGMODULE_QUERY, ISC_LOG_INFO,
-					      "%s denied", msg);
+				ns_client_log(client,
+					      DNS_LOGCATEGORY_SECURITY,
+					      NS_LOGMODULE_QUERY,
+					      ISC_LOG_DEBUG(3),
+					      "%s approved", msg);
 			}
+		} else {
+			ns_client_aclmsg("query", name, qtype,
+					 client->view->rdclass,
+					 msg, sizeof(msg));
+			ns_client_log(client, DNS_LOGCATEGORY_SECURITY,
+				      NS_LOGMODULE_QUERY, ISC_LOG_INFO,
+				      "%s denied", msg);
 		}
-
-		if (queryacl == client->view->queryacl) {
-			if (result == ISC_R_SUCCESS) {
-				/*
-				 * We were allowed by the default
-				 * "allow-query" ACL.  Remember this so we
-				 * don't have to check again.
-				 */
-				client->query.attributes |=
-					NS_QUERYATTR_QUERYOK;
-			}
-			/*
-			 * We've now evaluated the view's query ACL, and
-			 * the NS_QUERYATTR_QUERYOK attribute is now valid.
-			 */
-			client->query.attributes |= NS_QUERYATTR_QUERYOKVALID;
-		}
-
-		if (result != ISC_R_SUCCESS)
-			goto refuse;
 	}
 
-	/* Approved. */
+	if (queryacl == client->view->queryacl) {
+		if (result == ISC_R_SUCCESS) {
+			/*
+			 * We were allowed by the default
+			 * "allow-query" ACL.  Remember this so we
+			 * don't have to check again.
+			 */
+			client->query.attributes |= NS_QUERYATTR_QUERYOK;
+		}
+		/*
+		 * We've now evaluated the view's query ACL, and
+		 * the NS_QUERYATTR_QUERYOK attribute is now valid.
+		 */
+		client->query.attributes |= NS_QUERYATTR_QUERYOKVALID;
+	}
 
-	/*
-	 * Remember the result of the ACL check so we
-	 * don't have to check again.
-	 */
+	dbversion->acl_checked = ISC_TRUE;
+	if (result != ISC_R_SUCCESS) {
+		dbversion->queryok = ISC_FALSE;
+		return (DNS_R_REFUSED);
+	}
 	dbversion->queryok = ISC_TRUE;
 
+ approved:
 	/* Transfer ownership, if necessary. */
 	if (versionp != NULL)
 		*versionp = dbversion->version;
-
 	return (ISC_R_SUCCESS);
-
- refuse:
-	return (DNS_R_REFUSED);
-
- fail:
-	return (result);
 }
 
 static inline isc_result_t
@@ -761,6 +829,79 @@ query_getzonedb(ns_client_t *client, dns_name_t *name, dns_rdatatype_t qtype,
 	return (result);
 }
 
+static void
+rpz_log_rewrite(ns_client_t *client, const char *disabled,
+		dns_rpz_policy_t policy, dns_rpz_type_t type,
+		dns_name_t *rpz_qname) {
+	char qname_buf[DNS_NAME_FORMATSIZE];
+	char rpz_qname_buf[DNS_NAME_FORMATSIZE];
+
+	if (!isc_log_wouldlog(ns_g_lctx, DNS_RPZ_INFO_LEVEL))
+		return;
+
+	dns_name_format(client->query.qname, qname_buf, sizeof(qname_buf));
+	dns_name_format(rpz_qname, rpz_qname_buf, sizeof(rpz_qname_buf));
+
+	ns_client_log(client, DNS_LOGCATEGORY_RPZ, NS_LOGMODULE_QUERY,
+		      DNS_RPZ_INFO_LEVEL, "%srpz %s %s rewrite %s via %s",
+		      disabled,
+		      dns_rpz_type2str(type), dns_rpz_policy2str(policy),
+		      qname_buf, rpz_qname_buf);
+}
+
+static void
+rpz_log_fail(ns_client_t *client, int level,
+	     dns_rpz_type_t rpz_type, dns_name_t *name,
+	     const char *str, isc_result_t result)
+{
+	char namebuf1[DNS_NAME_FORMATSIZE];
+	char namebuf2[DNS_NAME_FORMATSIZE];
+
+	if (!isc_log_wouldlog(ns_g_lctx, level))
+		return;
+
+	dns_name_format(client->query.qname, namebuf1, sizeof(namebuf1));
+	dns_name_format(name, namebuf2, sizeof(namebuf2));
+	ns_client_log(client, NS_LOGCATEGORY_QUERY_EERRORS,
+		      NS_LOGMODULE_QUERY, level,
+		      "rpz %s rewrite %s via %s %sfailed: %s",
+		      dns_rpz_type2str(rpz_type),
+		      namebuf1, namebuf2, str, isc_result_totext(result));
+}
+
+/*
+ * Get a policy rewrite zone database.
+ */
+static isc_result_t
+rpz_getdb(ns_client_t *client, dns_rpz_type_t rpz_type, dns_name_t *rpz_qname,
+	  dns_zone_t **zonep, dns_db_t **dbp, dns_dbversion_t **versionp)
+{
+	char namebuf1[DNS_NAME_FORMATSIZE];
+	char namebuf2[DNS_NAME_FORMATSIZE];
+	dns_dbversion_t *rpz_version = NULL;
+	isc_result_t result;
+
+	result = query_getzonedb(client, rpz_qname, dns_rdatatype_any,
+				 DNS_GETDB_IGNOREACL, zonep, dbp, &rpz_version);
+	if (result == ISC_R_SUCCESS) {
+		if (isc_log_wouldlog(ns_g_lctx, DNS_RPZ_DEBUG_LEVEL2)) {
+			dns_name_format(client->query.qname, namebuf1,
+					sizeof(namebuf1));
+			dns_name_format(rpz_qname, namebuf2, sizeof(namebuf2));
+			ns_client_log(client, DNS_LOGCATEGORY_RPZ,
+				      NS_LOGMODULE_QUERY, DNS_RPZ_DEBUG_LEVEL2,
+				      "try rpz %s rewrite %s via %s",
+				      dns_rpz_type2str(rpz_type),
+				      namebuf1, namebuf2);
+		}
+		*versionp = rpz_version;
+		return (ISC_R_SUCCESS);
+	}
+	rpz_log_fail(client, DNS_RPZ_ERROR_LEVEL, rpz_type, rpz_qname,
+		     "query_getzonedb() ", result);
+	return (result);
+}
+
 static inline isc_result_t
 query_getcachedb(ns_client_t *client, dns_name_t *name, dns_rdatatype_t qtype,
 		 dns_db_t **dbp, unsigned int options)
@@ -781,17 +922,15 @@ query_getcachedb(ns_client_t *client, dns_name_t *name, dns_rdatatype_t qtype,
 		return (DNS_R_REFUSED);
 	dns_db_attach(client->view->cachedb, &db);
 
-	if ((client->query.attributes &
-	     NS_QUERYATTR_QUERYOKVALID) != 0) {
+	if ((client->query.attributes & NS_QUERYATTR_CACHEACLOKVALID) != 0) {
 		/*
-		 * We've evaluated the view's queryacl already.  If
-		 * NS_QUERYATTR_QUERYOK is set, then the client is
+		 * We've evaluated the view's cacheacl already.  If
+		 * NS_QUERYATTR_CACHEACLOK is set, then the client is
 		 * allowed to make queries, otherwise the query should
 		 * be refused.
 		 */
 		check_acl = ISC_FALSE;
-		if ((client->query.attributes &
-		     NS_QUERYATTR_QUERYOK) == 0)
+		if ((client->query.attributes & NS_QUERYATTR_CACHEACLOK) == 0)
 			goto refuse;
 	} else {
 		/*
@@ -804,17 +943,16 @@ query_getcachedb(ns_client_t *client, dns_name_t *name, dns_rdatatype_t qtype,
 		isc_boolean_t log = ISC_TF((options & DNS_GETDB_NOLOG) == 0);
 		char msg[NS_CLIENT_ACLMSGSIZE("query (cache)")];
 
-		result = ns_client_checkaclsilent(client,
-						  client->view->queryacl,
+		result = ns_client_checkaclsilent(client, NULL,
+						  client->view->cacheacl,
 						  ISC_TRUE);
 		if (result == ISC_R_SUCCESS) {
 			/*
-			 * We were allowed by the default
-			 * "allow-query" ACL.  Remember this so we
-			 * don't have to check again.
+			 * We were allowed by the "allow-query-cache" ACL.
+			 * Remember this so we don't have to check again.
 			 */
 			client->query.attributes |=
-				NS_QUERYATTR_QUERYOK;
+				NS_QUERYATTR_CACHEACLOK;
 			if (log && isc_log_wouldlog(ns_g_lctx,
 						     ISC_LOG_DEBUG(3)))
 			{
@@ -837,9 +975,9 @@ query_getcachedb(ns_client_t *client, dns_name_t *name, dns_rdatatype_t qtype,
 		}
 		/*
 		 * We've now evaluated the view's query ACL, and
-		 * the NS_QUERYATTR_QUERYOK attribute is now valid.
+		 * the NS_QUERYATTR_CACHEACLOKVALID attribute is now valid.
 		 */
-		client->query.attributes |= NS_QUERYATTR_QUERYOKVALID;
+		client->query.attributes |= NS_QUERYATTR_CACHEACLOKVALID;
 
 		if (result != ISC_R_SUCCESS)
 			goto refuse;
@@ -869,7 +1007,6 @@ query_getdb(ns_client_t *client, dns_name_t *name, dns_rdatatype_t qtype,
 {
 	isc_result_t result;
 
-#ifdef DLZ
 	isc_result_t tresult;
 	unsigned int namelabels;
 	unsigned int zonelabels;
@@ -935,16 +1072,10 @@ query_getdb(ns_client_t *client, dns_name_t *name, dns_rdatatype_t qtype,
 			result = tresult;
 		}
 	}
-#else
-	result = query_getzonedb(client, name, qtype, options,
-				 zonep, dbp, versionp);
-#endif
 
-	/* If successfull, Transfer ownership of zone. */
+	/* If successful, Transfer ownership of zone. */
 	if (result == ISC_R_SUCCESS) {
-#ifdef DLZ
 		*zonep = zone;
-#endif
 		/*
 		 * If neither attempt above succeeded, return the cache instead
 		 */
@@ -988,14 +1119,8 @@ query_isduplicate(ns_client_t *client, dns_name_t *name,
 		mname = NULL;
 	}
 
-	/*
-	 * If the dns_name_t we're looking up is already in the message,
-	 * we don't want to trigger the caller's name replacement logic.
-	 */
-	if (name == mname)
-		mname = NULL;
-
-	*mnamep = mname;
+	if (mnamep != NULL)
+		*mnamep = mname;
 
 	CTRACE("query_isduplicate: false: done");
 	return (ISC_FALSE);
@@ -1086,8 +1211,12 @@ query_addadditional(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 	result = dns_db_find(db, name, version, type, client->query.dboptions,
 			     client->now, &node, fname, rdataset,
 			     sigrdataset);
-	if (result == ISC_R_SUCCESS)
+	if (result == ISC_R_SUCCESS) {
+		if (sigrdataset != NULL && !dns_db_issecure(db) &&
+		    dns_rdataset_isassociated(sigrdataset))
+			dns_rdataset_disassociate(sigrdataset);
 		goto found;
+	}
 
 	if (dns_rdataset_isassociated(rdataset))
 		dns_rdataset_disassociate(rdataset);
@@ -1118,7 +1247,8 @@ query_addadditional(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 			goto cleanup;
 	}
 	result = dns_db_find(db, name, version, type,
-			     client->query.dboptions | DNS_DBFIND_GLUEOK,
+			     client->query.dboptions |
+			     DNS_DBFIND_GLUEOK | DNS_DBFIND_ADDITIONALOK,
 			     client->now, &node, fname, rdataset,
 			     sigrdataset);
 	if (result == DNS_R_GLUE &&
@@ -1157,7 +1287,7 @@ query_addadditional(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 		goto cleanup;
 
 	/*
-	 * Don't poision caches using the bailiwick protection model.
+	 * Don't poison caches using the bailiwick protection model.
 	 */
 	if (!dns_name_issubdomain(name, dns_db_origin(client->query.gluedb)))
 		goto cleanup;
@@ -1187,6 +1317,7 @@ query_addadditional(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 	if (dns_rdataset_isassociated(rdataset) &&
 	    !query_isduplicate(client, fname, type, &mname)) {
 		if (mname != NULL) {
+			INSIST(mname != fname);
 			query_releasename(client, &fname);
 			fname = mname;
 		} else
@@ -1209,6 +1340,10 @@ query_addadditional(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 	}
 
 	if (qtype == dns_rdatatype_a) {
+#ifdef ALLOW_FILTER_AAAA_ON_V4
+		isc_boolean_t have_a = ISC_FALSE;
+#endif
+
 		/*
 		 * We now go looking for A and AAAA records, along with
 		 * their signatures.
@@ -1231,6 +1366,8 @@ query_addadditional(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 			if (sigrdataset == NULL)
 				goto addname;
 		}
+		if (query_isduplicate(client, fname, dns_rdatatype_a, NULL))
+			goto aaaa_lookup;
 		result = dns_db_findrdataset(db, node, version,
 					     dns_rdatatype_a, 0,
 					     client->now, rdataset,
@@ -1239,21 +1376,24 @@ query_addadditional(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 			goto addname;
 		if (result == DNS_R_NCACHENXRRSET) {
 			dns_rdataset_disassociate(rdataset);
-			/*
-			 * Negative cache entries don't have sigrdatasets.
-			 */
-			INSIST(sigrdataset == NULL ||
-			       ! dns_rdataset_isassociated(sigrdataset));
+			if (sigrdataset != NULL &&
+			    dns_rdataset_isassociated(sigrdataset))
+				dns_rdataset_disassociate(sigrdataset);
 		}
 		if (result == ISC_R_SUCCESS) {
 			mname = NULL;
+#ifdef ALLOW_FILTER_AAAA_ON_V4
+			have_a = ISC_TRUE;
+#endif
 			if (!query_isduplicate(client, fname,
 					       dns_rdatatype_a, &mname)) {
-				if (mname != NULL) {
-					query_releasename(client, &fname);
-					fname = mname;
-				} else
-					need_addname = ISC_TRUE;
+				if (mname != fname) {
+					if (mname != NULL) {
+						query_releasename(client, &fname);
+						fname = mname;
+					} else
+						need_addname = ISC_TRUE;
+				}
 				ISC_LIST_APPEND(fname->list, rdataset, link);
 				added_something = ISC_TRUE;
 				if (sigrdataset != NULL &&
@@ -1276,6 +1416,9 @@ query_addadditional(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 					dns_rdataset_disassociate(sigrdataset);
 			}
 		}
+  aaaa_lookup:
+		if (query_isduplicate(client, fname, dns_rdatatype_aaaa, NULL))
+			goto addname;
 		result = dns_db_findrdataset(db, node, version,
 					     dns_rdatatype_aaaa, 0,
 					     client->now, rdataset,
@@ -1284,18 +1427,32 @@ query_addadditional(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 			goto addname;
 		if (result == DNS_R_NCACHENXRRSET) {
 			dns_rdataset_disassociate(rdataset);
-			INSIST(sigrdataset == NULL ||
-			       ! dns_rdataset_isassociated(sigrdataset));
+			if (sigrdataset != NULL &&
+			    dns_rdataset_isassociated(sigrdataset))
+				dns_rdataset_disassociate(sigrdataset);
 		}
 		if (result == ISC_R_SUCCESS) {
 			mname = NULL;
+			/*
+			 * There's an A; check whether we're filtering AAAA
+			 */
+#ifdef ALLOW_FILTER_AAAA_ON_V4
+			if (have_a &&
+			    (client->filter_aaaa == dns_v4_aaaa_break_dnssec ||
+			    (client->filter_aaaa == dns_v4_aaaa_filter &&
+			     (!WANTDNSSEC(client) || sigrdataset == NULL ||
+			      !dns_rdataset_isassociated(sigrdataset)))))
+				goto addname;
+#endif
 			if (!query_isduplicate(client, fname,
 					       dns_rdatatype_aaaa, &mname)) {
-				if (mname != NULL) {
-					query_releasename(client, &fname);
-					fname = mname;
-				} else
-					need_addname = ISC_TRUE;
+				if (mname != fname) {
+					if (mname != NULL) {
+						query_releasename(client, &fname);
+						fname = mname;
+					} else
+						need_addname = ISC_TRUE;
+				}
 				ISC_LIST_APPEND(fname->list, rdataset, link);
 				added_something = ISC_TRUE;
 				if (sigrdataset != NULL &&
@@ -1440,7 +1597,13 @@ query_addadditional2(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 	dns_rdatatype_t type;
 	dns_rdatasetadditional_t additionaltype;
 
-	if (qtype != dns_rdatatype_a) {
+	/*
+	 * If we don't have an additional cache call query_addadditional.
+	 */
+	client = additionalctx->client;
+	REQUIRE(NS_CLIENT_VALID(client));
+
+	if (qtype != dns_rdatatype_a || client->view->acache == NULL) {
 		/*
 		 * This function is optimized for "address" types.  For other
 		 * types, use a generic routine.
@@ -1454,8 +1617,6 @@ query_addadditional2(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 	 * Initialization.
 	 */
 	rdataset_base = additionalctx->rdataset;
-	client = additionalctx->client;
-	REQUIRE(NS_CLIENT_VALID(client));
 	eresult = ISC_R_SUCCESS;
 	fname = NULL;
 	rdataset = NULL;
@@ -1470,6 +1631,7 @@ query_addadditional2(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 	need_addname = ISC_FALSE;
 	zone = NULL;
 	needadditionalcache = ISC_FALSE;
+	POST(needadditionalcache);
 	additionaltype = dns_rdatasetadditional_fromauth;
 	dns_name_init(&cfname, NULL);
 
@@ -1603,7 +1765,8 @@ query_addadditional2(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 		goto try_glue;
 
 	result = dns_db_find(db, name, version, type,
-			     client->query.dboptions | DNS_DBFIND_GLUEOK,
+			     client->query.dboptions |
+			     DNS_DBFIND_GLUEOK | DNS_DBFIND_ADDITIONALOK,
 			     client->now, &node, fname, NULL, NULL);
 	if (result == ISC_R_SUCCESS)
 		goto found;
@@ -1631,7 +1794,7 @@ query_addadditional2(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 		goto cleanup;
 
 	/*
-	 * Don't poision caches using the bailiwick protection model.
+	 * Don't poison caches using the bailiwick protection model.
 	 */
 	if (!dns_name_issubdomain(name, dns_db_origin(client->query.gluedb)))
 		goto cleanup;
@@ -1706,6 +1869,9 @@ query_addadditional2(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 	if (sigrdataset == NULL)
 		goto cleanup;
 
+	if (additionaltype == dns_rdatasetadditional_fromcache &&
+	    query_isduplicate(client, fname, dns_rdatatype_a, NULL))
+		goto aaaa_lookup;
 	/*
 	 * Find A RRset with sig RRset.  Even if we don't find a sig RRset
 	 * for a client using DNSSEC, we'll continue the process to make a
@@ -1721,8 +1887,8 @@ query_addadditional2(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 	 */
 	if (result == ISC_R_SUCCESS &&
 	    additionaltype == dns_rdatasetadditional_fromcache &&
-	    (rdataset->trust == dns_trust_pending ||
-	     rdataset->trust == dns_trust_glue) &&
+	    (DNS_TRUST_PENDING(rdataset->trust) ||
+	     DNS_TRUST_GLUE(rdataset->trust)) &&
 	    !validate(client, db, fname, rdataset, sigrdataset)) {
 		dns_rdataset_disassociate(rdataset);
 		if (dns_rdataset_isassociated(sigrdataset))
@@ -1733,10 +1899,8 @@ query_addadditional2(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 		goto setcache;
 	if (result == DNS_R_NCACHENXRRSET) {
 		dns_rdataset_disassociate(rdataset);
-		/*
-		 * Negative cache entries don't have sigrdatasets.
-		 */
-		INSIST(! dns_rdataset_isassociated(sigrdataset));
+		if (dns_rdataset_isassociated(sigrdataset))
+			dns_rdataset_disassociate(sigrdataset);
 	}
 	if (result == ISC_R_SUCCESS) {
 		/* Remember the result as a cache */
@@ -1752,6 +1916,10 @@ query_addadditional2(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 		}
 	}
 
+ aaaa_lookup:
+	if (additionaltype == dns_rdatasetadditional_fromcache &&
+	    query_isduplicate(client, fname, dns_rdatatype_aaaa, NULL))
+		goto foundcache;
 	/* Find AAAA RRset with sig RRset */
 	result = dns_db_findrdataset(db, node, version, dns_rdatatype_aaaa,
 				     0, client->now, rdataset, sigrdataset);
@@ -1761,8 +1929,8 @@ query_addadditional2(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 	 */
 	if (result == ISC_R_SUCCESS &&
 	    additionaltype == dns_rdatasetadditional_fromcache &&
-	    (rdataset->trust == dns_trust_pending ||
-	     rdataset->trust == dns_trust_glue) &&
+	    (DNS_TRUST_PENDING(rdataset->trust) ||
+	     DNS_TRUST_GLUE(rdataset->trust)) &&
 	    !validate(client, db, fname, rdataset, sigrdataset)) {
 		dns_rdataset_disassociate(rdataset);
 		if (dns_rdataset_isassociated(sigrdataset))
@@ -1807,22 +1975,24 @@ query_addadditional2(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 		    crdataset->type == dns_rdatatype_aaaa) {
 			if (!query_isduplicate(client, fname, crdataset->type,
 					       &mname)) {
-				if (mname != NULL) {
-					/*
-					 * A different type of this name is
-					 * already stored in the additional
-					 * section.  We'll reuse the name.
-					 * Note that this should happen at most
-					 * once.  Otherwise, fname->link could
-					 * leak below.
-					 */
-					INSIST(mname0 == NULL);
+				if (mname != fname) {
+					if (mname != NULL) {
+						/*
+						 * A different type of this name is
+						 * already stored in the additional
+						 * section.  We'll reuse the name.
+						 * Note that this should happen at most
+						 * once.  Otherwise, fname->link could
+						 * leak below.
+						 */
+						INSIST(mname0 == NULL);
 
-					query_releasename(client, &fname);
-					fname = mname;
-					mname0 = mname;
-				} else
-					need_addname = ISC_TRUE;
+						query_releasename(client, &fname);
+						fname = mname;
+						mname0 = mname;
+					} else
+						need_addname = ISC_TRUE;
+				}
 				ISC_LIST_UNLINK(cfname.list, crdataset, link);
 				ISC_LIST_APPEND(fname->list, crdataset, link);
 				added_something = ISC_TRUE;
@@ -1916,6 +2086,323 @@ query_addrdataset(ns_client_t *client, dns_name_t *fname,
 	CTRACE("query_addrdataset: done");
 }
 
+static isc_result_t
+query_dns64(ns_client_t *client, dns_name_t **namep, dns_rdataset_t *rdataset,
+	    dns_rdataset_t *sigrdataset, isc_buffer_t *dbuf,
+	    dns_section_t section)
+{
+	dns_name_t *name, *mname;
+	dns_rdata_t *dns64_rdata;
+	dns_rdata_t rdata = DNS_RDATA_INIT;
+	dns_rdatalist_t *dns64_rdatalist;
+	dns_rdataset_t *dns64_rdataset;
+	dns_rdataset_t *mrdataset;
+	isc_buffer_t *buffer;
+	isc_region_t r;
+	isc_result_t result;
+	dns_view_t *view = client->view;
+	isc_netaddr_t netaddr;
+	dns_dns64_t *dns64;
+	unsigned int flags = 0;
+
+	/*%
+	 * To the current response for 'client', add the answer RRset
+	 * '*rdatasetp' and an optional signature set '*sigrdatasetp', with
+	 * owner name '*namep', to section 'section', unless they are
+	 * already there.  Also add any pertinent additional data.
+	 *
+	 * If 'dbuf' is not NULL, then '*namep' is the name whose data is
+	 * stored in 'dbuf'.  In this case, query_addrrset() guarantees that
+	 * when it returns the name will either have been kept or released.
+	 */
+	CTRACE("query_dns64");
+	name = *namep;
+	mname = NULL;
+	mrdataset = NULL;
+	buffer = NULL;
+	dns64_rdata = NULL;
+	dns64_rdataset = NULL;
+	dns64_rdatalist = NULL;
+	result = dns_message_findname(client->message, section,
+				      name, dns_rdatatype_aaaa,
+				      rdataset->covers,
+				      &mname, &mrdataset);
+	if (result == ISC_R_SUCCESS) {
+		/*
+		 * We've already got an RRset of the given name and type.
+		 * There's nothing else to do;
+		 */
+		CTRACE("query_dns64: dns_message_findname succeeded: done");
+		if (dbuf != NULL)
+			query_releasename(client, namep);
+		return (ISC_R_SUCCESS);
+	} else if (result == DNS_R_NXDOMAIN) {
+		/*
+		 * The name doesn't exist.
+		 */
+		if (dbuf != NULL)
+			query_keepname(client, name, dbuf);
+		dns_message_addname(client->message, name, section);
+		*namep = NULL;
+		mname = name;
+	} else {
+		RUNTIME_CHECK(result == DNS_R_NXRRSET);
+		if (dbuf != NULL)
+			query_releasename(client, namep);
+	}
+
+	if (rdataset->trust != dns_trust_secure &&
+	    (section == DNS_SECTION_ANSWER ||
+	     section == DNS_SECTION_AUTHORITY))
+		client->query.attributes &= ~NS_QUERYATTR_SECURE;
+
+	isc_netaddr_fromsockaddr(&netaddr, &client->peeraddr);
+
+	result = isc_buffer_allocate(client->mctx, &buffer, view->dns64cnt *
+				     16 * dns_rdataset_count(rdataset));
+	if (result != ISC_R_SUCCESS)
+		goto cleanup;
+	result = dns_message_gettemprdataset(client->message, &dns64_rdataset);
+	if (result != ISC_R_SUCCESS)
+		goto cleanup;
+	result = dns_message_gettemprdatalist(client->message,
+					      &dns64_rdatalist);
+	if (result != ISC_R_SUCCESS)
+		goto cleanup;
+
+	dns_rdataset_init(dns64_rdataset);
+	dns_rdatalist_init(dns64_rdatalist);
+	dns64_rdatalist->rdclass = dns_rdataclass_in;
+	dns64_rdatalist->type = dns_rdatatype_aaaa;
+	if (client->query.dns64_ttl != ISC_UINT32_MAX)
+		dns64_rdatalist->ttl = ISC_MIN(rdataset->ttl,
+					       client->query.dns64_ttl);
+	else
+		dns64_rdatalist->ttl = ISC_MIN(rdataset->ttl, 600);
+
+	if (RECURSIONOK(client))
+		flags |= DNS_DNS64_RECURSIVE;
+
+	/*
+	 * We use the signatures from the A lookup to set DNS_DNS64_DNSSEC
+	 * as this provides a easy way to see if the answer was signed.
+	 */
+	if (sigrdataset != NULL && dns_rdataset_isassociated(sigrdataset))
+		flags |= DNS_DNS64_DNSSEC;
+
+	for (result = dns_rdataset_first(rdataset);
+	     result == ISC_R_SUCCESS;
+	     result = dns_rdataset_next(rdataset)) {
+		for (dns64 = ISC_LIST_HEAD(client->view->dns64);
+		     dns64 != NULL; dns64 = dns_dns64_next(dns64)) {
+
+			dns_rdataset_current(rdataset, &rdata);
+			isc__buffer_availableregion(buffer, &r);
+			INSIST(r.length >= 16);
+			result = dns_dns64_aaaafroma(dns64, &netaddr,
+						     client->signer,
+						     &ns_g_server->aclenv,
+						     flags, rdata.data, r.base);
+			if (result != ISC_R_SUCCESS) {
+				dns_rdata_reset(&rdata);
+				continue;
+			}
+			isc_buffer_add(buffer, 16);
+			isc_buffer_remainingregion(buffer, &r);
+			isc_buffer_forward(buffer, 16);
+			result = dns_message_gettemprdata(client->message,
+							  &dns64_rdata);
+			if (result != ISC_R_SUCCESS)
+				goto cleanup;
+			dns_rdata_init(dns64_rdata);
+			dns_rdata_fromregion(dns64_rdata, dns_rdataclass_in,
+					     dns_rdatatype_aaaa, &r);
+			ISC_LIST_APPEND(dns64_rdatalist->rdata, dns64_rdata,
+					link);
+			dns64_rdata = NULL;
+			dns_rdata_reset(&rdata);
+		}
+	}
+	if (result != ISC_R_NOMORE)
+		goto cleanup;
+
+	if (ISC_LIST_EMPTY(dns64_rdatalist->rdata))
+		goto cleanup;
+
+	result = dns_rdatalist_tordataset(dns64_rdatalist, dns64_rdataset);
+	if (result != ISC_R_SUCCESS)
+		goto cleanup;
+	client->query.attributes |= NS_QUERYATTR_NOADDITIONAL;
+	dns64_rdataset->trust = rdataset->trust;
+	query_addrdataset(client, mname, dns64_rdataset);
+	dns64_rdataset = NULL;
+	dns64_rdatalist = NULL;
+	dns_message_takebuffer(client->message, &buffer);
+	result = ISC_R_SUCCESS;
+
+ cleanup:
+	if (buffer != NULL)
+		isc_buffer_free(&buffer);
+
+	if (dns64_rdata != NULL)
+		dns_message_puttemprdata(client->message, &dns64_rdata);
+
+	if (dns64_rdataset != NULL)
+		dns_message_puttemprdataset(client->message, &dns64_rdataset);
+
+	if (dns64_rdatalist != NULL) {
+		for (dns64_rdata = ISC_LIST_HEAD(dns64_rdatalist->rdata);
+		     dns64_rdata != NULL;
+		     dns64_rdata = ISC_LIST_HEAD(dns64_rdatalist->rdata))
+		{
+			ISC_LIST_UNLINK(dns64_rdatalist->rdata,
+					dns64_rdata, link);
+			dns_message_puttemprdata(client->message, &dns64_rdata);
+		}
+		dns_message_puttemprdatalist(client->message, &dns64_rdatalist);
+	}
+
+	CTRACE("query_dns64: done");
+	return (result);
+}
+
+static void
+query_filter64(ns_client_t *client, dns_name_t **namep,
+	       dns_rdataset_t *rdataset, isc_buffer_t *dbuf,
+	       dns_section_t section)
+{
+	dns_name_t *name, *mname;
+	dns_rdata_t *myrdata;
+	dns_rdata_t rdata = DNS_RDATA_INIT;
+	dns_rdatalist_t *myrdatalist;
+	dns_rdataset_t *myrdataset;
+	isc_buffer_t *buffer;
+	isc_region_t r;
+	isc_result_t result;
+	unsigned int i;
+
+	CTRACE("query_filter64");
+
+	INSIST(client->query.dns64_aaaaok != NULL);
+	INSIST(client->query.dns64_aaaaoklen == dns_rdataset_count(rdataset));
+
+	name = *namep;
+	mname = NULL;
+	buffer = NULL;
+	myrdata = NULL;
+	myrdataset = NULL;
+	myrdatalist = NULL;
+	result = dns_message_findname(client->message, section,
+				      name, dns_rdatatype_aaaa,
+				      rdataset->covers,
+				      &mname, &myrdataset);
+	if (result == ISC_R_SUCCESS) {
+		/*
+		 * We've already got an RRset of the given name and type.
+		 * There's nothing else to do;
+		 */
+		CTRACE("query_filter64: dns_message_findname succeeded: done");
+		if (dbuf != NULL)
+			query_releasename(client, namep);
+		return;
+	} else if (result == DNS_R_NXDOMAIN) {
+		mname = name;
+		*namep = NULL;
+	} else {
+		RUNTIME_CHECK(result == DNS_R_NXRRSET);
+		if (dbuf != NULL)
+			query_releasename(client, namep);
+		dbuf = NULL;
+	}
+
+	if (rdataset->trust != dns_trust_secure &&
+	    (section == DNS_SECTION_ANSWER ||
+	     section == DNS_SECTION_AUTHORITY))
+		client->query.attributes &= ~NS_QUERYATTR_SECURE;
+
+	result = isc_buffer_allocate(client->mctx, &buffer,
+				     16 * dns_rdataset_count(rdataset));
+	if (result != ISC_R_SUCCESS)
+		goto cleanup;
+	result = dns_message_gettemprdataset(client->message, &myrdataset);
+	if (result != ISC_R_SUCCESS)
+		goto cleanup;
+	result = dns_message_gettemprdatalist(client->message, &myrdatalist);
+	if (result != ISC_R_SUCCESS)
+		goto cleanup;
+
+	dns_rdataset_init(myrdataset);
+	dns_rdatalist_init(myrdatalist);
+	myrdatalist->rdclass = dns_rdataclass_in;
+	myrdatalist->type = dns_rdatatype_aaaa;
+	myrdatalist->ttl = rdataset->ttl;
+
+	i = 0;
+	for (result = dns_rdataset_first(rdataset);
+	     result == ISC_R_SUCCESS;
+	     result = dns_rdataset_next(rdataset)) {
+		if (!client->query.dns64_aaaaok[i++])
+			continue;
+		dns_rdataset_current(rdataset, &rdata);
+		INSIST(rdata.length == 16);
+		isc_buffer_putmem(buffer, rdata.data, rdata.length);
+		isc_buffer_remainingregion(buffer, &r);
+		isc_buffer_forward(buffer, rdata.length);
+		result = dns_message_gettemprdata(client->message, &myrdata);
+		if (result != ISC_R_SUCCESS)
+			goto cleanup;
+		dns_rdata_init(myrdata);
+		dns_rdata_fromregion(myrdata, dns_rdataclass_in,
+				     dns_rdatatype_aaaa, &r);
+		ISC_LIST_APPEND(myrdatalist->rdata, myrdata, link);
+		myrdata = NULL;
+		dns_rdata_reset(&rdata);
+	}
+	if (result != ISC_R_NOMORE)
+		goto cleanup;
+
+	result = dns_rdatalist_tordataset(myrdatalist, myrdataset);
+	if (result != ISC_R_SUCCESS)
+		goto cleanup;
+	client->query.attributes |= NS_QUERYATTR_NOADDITIONAL;
+	if (mname == name) {
+		if (dbuf != NULL)
+			query_keepname(client, name, dbuf);
+		dns_message_addname(client->message, name, section);
+		dbuf = NULL;
+	}
+	myrdataset->trust = rdataset->trust;
+	query_addrdataset(client, mname, myrdataset);
+	myrdataset = NULL;
+	myrdatalist = NULL;
+	dns_message_takebuffer(client->message, &buffer);
+
+ cleanup:
+	if (buffer != NULL)
+		isc_buffer_free(&buffer);
+
+	if (myrdata != NULL)
+		dns_message_puttemprdata(client->message, &myrdata);
+
+	if (myrdataset != NULL)
+		dns_message_puttemprdataset(client->message, &myrdataset);
+
+	if (myrdatalist != NULL) {
+		for (myrdata = ISC_LIST_HEAD(myrdatalist->rdata);
+		     myrdata != NULL;
+		     myrdata = ISC_LIST_HEAD(myrdatalist->rdata))
+		{
+			ISC_LIST_UNLINK(myrdatalist->rdata, myrdata, link);
+			dns_message_puttemprdata(client->message, &myrdata);
+		}
+		dns_message_puttemprdatalist(client->message, &myrdatalist);
+	}
+	if (dbuf != NULL)
+		query_releasename(client, &name);
+
+	CTRACE("query_filter64: done");
+}
+
 static void
 query_addrrset(ns_client_t *client, dns_name_t **namep,
 	       dns_rdataset_t **rdatasetp, dns_rdataset_t **sigrdatasetp,
@@ -1994,7 +2481,7 @@ query_addrrset(ns_client_t *client, dns_name_t **namep,
 
 static inline isc_result_t
 query_addsoa(ns_client_t *client, dns_db_t *db, dns_dbversion_t *version,
-	     isc_boolean_t zero_ttl)
+	     unsigned int override_ttl, isc_boolean_t isassociated)
 {
 	dns_name_t *name;
 	dns_dbnode_t *node;
@@ -2012,6 +2499,12 @@ query_addsoa(ns_client_t *client, dns_db_t *db, dns_dbversion_t *version,
 	node = NULL;
 
 	/*
+	 * Don't add the SOA record for test which set "-T nosoa".
+	 */
+	if (ns_g_nosoa && (!WANTDNSSEC(client) || !isassociated))
+		return (ISC_R_SUCCESS);
+
+	/*
 	 * Get resources and make 'name' be the database origin.
 	 */
 	result = dns_message_gettempname(client->message, &name);
@@ -2024,7 +2517,7 @@ query_addsoa(ns_client_t *client, dns_db_t *db, dns_dbversion_t *version,
 		eresult = DNS_R_SERVFAIL;
 		goto cleanup;
 	}
-	if (WANTDNSSEC(client)) {
+	if (WANTDNSSEC(client) && dns_db_issecure(db)) {
 		sigrdataset = query_newrdataset(client);
 		if (sigrdataset == NULL) {
 			eresult = DNS_R_SERVFAIL;
@@ -2071,10 +2564,11 @@ query_addsoa(ns_client_t *client, dns_db_t *db, dns_dbversion_t *version,
 		if (result != ISC_R_SUCCESS)
 			goto cleanup;
 
-		if (zero_ttl) {
-			rdataset->ttl = 0;
+		if (override_ttl != ISC_UINT32_MAX &&
+		    override_ttl < rdataset->ttl) {
+			rdataset->ttl = override_ttl;
 			if (sigrdataset != NULL)
-				sigrdataset->ttl = 0;
+				sigrdataset->ttl = override_ttl;
 		}
 
 		/*
@@ -2142,7 +2636,7 @@ query_addns(ns_client_t *client, dns_db_t *db, dns_dbversion_t *version) {
 		eresult = DNS_R_SERVFAIL;
 		goto cleanup;
 	}
-	if (WANTDNSSEC(client)) {
+	if (WANTDNSSEC(client) && dns_db_issecure(db)) {
 		sigrdataset = query_newrdataset(client);
 		if (sigrdataset == NULL) {
 			CTRACE("query_addns: query_newrdataset failed");
@@ -2198,51 +2692,63 @@ query_addns(ns_client_t *client, dns_db_t *db, dns_dbversion_t *version) {
 	return (eresult);
 }
 
-static inline isc_result_t
-query_addcnamelike(ns_client_t *client, dns_name_t *qname, dns_name_t *tname,
-		   dns_trust_t trust, dns_name_t **anamep, dns_rdatatype_t type)
+static isc_result_t
+query_add_cname(ns_client_t *client, dns_name_t *qname, dns_name_t *tname,
+		dns_trust_t trust, dns_ttl_t ttl)
 {
 	dns_rdataset_t *rdataset;
 	dns_rdatalist_t *rdatalist;
 	dns_rdata_t *rdata;
-	isc_result_t result;
 	isc_region_t r;
+	dns_name_t *aname;
+	isc_result_t result;
 
 	/*
 	 * We assume the name data referred to by tname won't go away.
 	 */
 
-	REQUIRE(anamep != NULL);
-
-	rdatalist = NULL;
-	result = dns_message_gettemprdatalist(client->message, &rdatalist);
+	aname = NULL;
+	result = dns_message_gettempname(client->message, &aname);
 	if (result != ISC_R_SUCCESS)
 		return (result);
-	rdata = NULL;
-	result = dns_message_gettemprdata(client->message, &rdata);
-	if (result != ISC_R_SUCCESS)
-		return (result);
-	rdataset = NULL;
-	result = dns_message_gettemprdataset(client->message, &rdataset);
-	if (result != ISC_R_SUCCESS)
-		return (result);
-	dns_rdataset_init(rdataset);
-	result = dns_name_dup(qname, client->mctx, *anamep);
+	result = dns_name_dup(qname, client->mctx, aname);
 	if (result != ISC_R_SUCCESS) {
-		dns_message_puttemprdataset(client->message, &rdataset);
+		dns_message_puttempname(client->message, &aname);
 		return (result);
 	}
 
-	rdatalist->type = type;
+	rdatalist = NULL;
+	result = dns_message_gettemprdatalist(client->message, &rdatalist);
+	if (result != ISC_R_SUCCESS) {
+		dns_message_puttempname(client->message, &aname);
+		return (result);
+	}
+	rdata = NULL;
+	result = dns_message_gettemprdata(client->message, &rdata);
+	if (result != ISC_R_SUCCESS) {
+		dns_message_puttempname(client->message, &aname);
+		dns_message_puttemprdatalist(client->message, &rdatalist);
+		return (result);
+	}
+	rdataset = NULL;
+	result = dns_message_gettemprdataset(client->message, &rdataset);
+	if (result != ISC_R_SUCCESS) {
+		dns_message_puttempname(client->message, &aname);
+		dns_message_puttemprdatalist(client->message, &rdatalist);
+		dns_message_puttemprdata(client->message, &rdata);
+		return (result);
+	}
+	dns_rdataset_init(rdataset);
+	rdatalist->type = dns_rdatatype_cname;
 	rdatalist->covers = 0;
 	rdatalist->rdclass = client->message->rdclass;
-	rdatalist->ttl = 0;
+	rdatalist->ttl = ttl;
 
 	dns_name_toregion(tname, &r);
 	rdata->data = r.base;
 	rdata->length = r.length;
 	rdata->rdclass = client->message->rdclass;
-	rdata->type = type;
+	rdata->type = dns_rdatatype_cname;
 
 	ISC_LIST_INIT(rdatalist->rdata);
 	ISC_LIST_APPEND(rdatalist->rdata, rdata, link);
@@ -2250,14 +2756,15 @@ query_addcnamelike(ns_client_t *client, dns_name_t *qname, dns_name_t *tname,
 		      == ISC_R_SUCCESS);
 	rdataset->trust = trust;
 
-	query_addrrset(client, anamep, &rdataset, NULL, NULL,
+	query_addrrset(client, &aname, &rdataset, NULL, NULL,
 		       DNS_SECTION_ANSWER);
-
 	if (rdataset != NULL) {
 		if (dns_rdataset_isassociated(rdataset))
 			dns_rdataset_disassociate(rdataset);
 		dns_message_puttemprdataset(client->message, &rdataset);
 	}
+	if (aname != NULL)
+		dns_message_puttempname(client->message, &aname);
 
 	return (ISC_R_SUCCESS);
 }
@@ -2268,7 +2775,8 @@ query_addcnamelike(ns_client_t *client, dns_name_t *qname, dns_name_t *tname,
  */
 static void
 mark_secure(ns_client_t *client, dns_db_t *db, dns_name_t *name,
-	    dns_rdataset_t *rdataset, dns_rdataset_t *sigrdataset)
+	    isc_uint32_t ttl, dns_rdataset_t *rdataset,
+	    dns_rdataset_t *sigrdataset)
 {
 	isc_result_t result;
 	dns_dbnode_t *node = NULL;
@@ -2282,6 +2790,18 @@ mark_secure(ns_client_t *client, dns_db_t *db, dns_name_t *name,
 	result = dns_db_findnode(db, name, ISC_TRUE, &node);
 	if (result != ISC_R_SUCCESS)
 		return;
+	/*
+	 * Bound the validated ttls then minimise.
+	 */
+	if (sigrdataset->ttl > ttl)
+		sigrdataset->ttl = ttl;
+	if (rdataset->ttl > ttl)
+		rdataset->ttl = ttl;
+	if (rdataset->ttl > sigrdataset->ttl)
+		rdataset->ttl = sigrdataset->ttl;
+	else
+		sigrdataset->ttl = rdataset->ttl;
+
 	(void)dns_db_addrdataset(db, node, NULL, client->now, rdataset,
 				 0, NULL);
 	(void)dns_db_addrdataset(db, node, NULL, client->now, sigrdataset,
@@ -2291,14 +2811,14 @@ mark_secure(ns_client_t *client, dns_db_t *db, dns_name_t *name,
 
 /*
  * Find the secure key that corresponds to rrsig.
- * Note: 'keyrdataset' maintains state between sucessive calls,
+ * Note: 'keyrdataset' maintains state between successive calls,
  * there may be multiple keys with the same keyid.
  * Return ISC_FALSE if we have exhausted all the possible keys.
  */
 static isc_boolean_t
 get_key(ns_client_t *client, dns_db_t *db, dns_rdata_rrsig_t *rrsig,
 	dns_rdataset_t *keyrdataset, dst_key_t **keyp)
-{ 
+{
 	isc_result_t result;
 	dns_dbnode_t *node = NULL;
 	isc_boolean_t secure = ISC_FALSE;
@@ -2331,12 +2851,12 @@ get_key(ns_client_t *client, dns_db_t *db, dns_rdata_rrsig_t *rrsig,
 		isc_buffer_init(&b, rdata.data, rdata.length);
 		isc_buffer_add(&b, rdata.length);
 		result = dst_key_fromdns(&rrsig->signer, rdata.rdclass, &b,
-                                         client->mctx, keyp);
+					 client->mctx, keyp);
 		if (result != ISC_R_SUCCESS)
 			continue;
 		if (rrsig->algorithm == (dns_secalg_t)dst_key_alg(*keyp) &&
-                    rrsig->keyid == (dns_keytag_t)dst_key_id(*keyp) &&
-                    dst_key_iszonekey(*keyp)) {
+		    rrsig->keyid == (dns_keytag_t)dst_key_id(*keyp) &&
+		    dst_key_iszonekey(*keyp)) {
 			secure = ISC_TRUE;
 			break;
 		}
@@ -2354,7 +2874,7 @@ verify(dst_key_t *key, dns_name_t *name, dns_rdataset_t *rdataset,
 	isc_boolean_t ignore = ISC_FALSE;
 
 	dns_fixedname_init(&fixed);
-	
+
 again:
 	result = dns_dnssec_verify2(name, rdataset, key, ignore, mctx,
 				    rdata, NULL);
@@ -2382,7 +2902,7 @@ validate(ns_client_t *client, dns_db_t *db, dns_name_t *name,
 
 	if (sigrdataset == NULL || !dns_rdataset_isassociated(sigrdataset))
 		return (ISC_FALSE);
-	
+
 	for (result = dns_rdataset_first(sigrdataset);
 	     result == ISC_R_SUCCESS;
 	     result = dns_rdataset_next(sigrdataset)) {
@@ -2405,8 +2925,9 @@ validate(ns_client_t *client, dns_db_t *db, dns_name_t *name,
 				   client->view->acceptexpired)) {
 				dst_key_free(&key);
 				dns_rdataset_disassociate(&keyrdataset);
-				mark_secure(client, db, name, rdataset,
-					    sigrdataset);
+				mark_secure(client, db, name,
+					    rrsig.originalttl,
+					    rdataset, sigrdataset);
 				return (ISC_TRUE);
 			}
 			dst_key_free(&key);
@@ -2547,14 +3068,14 @@ query_addbestns(ns_client_t *client) {
 	/*
 	 * Attempt to validate RRsets that are pending or that are glue.
 	 */
-	if ((rdataset->trust == dns_trust_pending ||
-	     (sigrdataset != NULL && sigrdataset->trust == dns_trust_pending))
+	if ((DNS_TRUST_PENDING(rdataset->trust) ||
+	     (sigrdataset != NULL && DNS_TRUST_PENDING(sigrdataset->trust)))
 	    && !validate(client, db, fname, rdataset, sigrdataset) &&
-	    (client->query.dboptions & DNS_DBFIND_PENDINGOK) == 0)
+	    !PENDINGOK(client->query.dboptions))
 		goto cleanup;
 
-	if ((rdataset->trust == dns_trust_glue ||
-	     (sigrdataset != NULL && sigrdataset->trust == dns_trust_glue)) &&
+	if ((DNS_TRUST_GLUE(rdataset->trust) ||
+	     (sigrdataset != NULL && DNS_TRUST_GLUE(sigrdataset->trust))) &&
 	    !validate(client, db, fname, rdataset, sigrdataset) &&
 	    SECURE(client) && WANTDNSSEC(client))
 		goto cleanup;
@@ -2592,12 +3113,36 @@ query_addbestns(ns_client_t *client) {
 }
 
 static void
-query_addds(ns_client_t *client, dns_db_t *db, dns_dbnode_t *node,
-	    dns_dbversion_t *version)
+fixrdataset(ns_client_t *client, dns_rdataset_t **rdataset) {
+	if (*rdataset == NULL)
+		*rdataset = query_newrdataset(client);
+	else  if (dns_rdataset_isassociated(*rdataset))
+		dns_rdataset_disassociate(*rdataset);
+}
+
+static void
+fixfname(ns_client_t *client, dns_name_t **fname, isc_buffer_t **dbuf,
+	 isc_buffer_t *nbuf)
 {
+	if (*fname == NULL) {
+		*dbuf = query_getnamebuf(client);
+		if (*dbuf == NULL)
+			return;
+		*fname = query_newname(client, *dbuf, nbuf);
+	}
+}
+
+static void
+query_addds(ns_client_t *client, dns_db_t *db, dns_dbnode_t *node,
+	    dns_dbversion_t *version, dns_name_t *name)
+{
+	dns_fixedname_t fixed;
+	dns_name_t *fname = NULL;
 	dns_name_t *rname;
 	dns_rdataset_t *rdataset, *sigrdataset;
+	isc_buffer_t *dbuf, b;
 	isc_result_t result;
+	unsigned int count;
 
 	CTRACE("query_addds");
 	rname = NULL;
@@ -2618,16 +3163,17 @@ query_addds(ns_client_t *client, dns_db_t *db, dns_dbnode_t *node,
 	result = dns_db_findrdataset(db, node, version, dns_rdatatype_ds, 0,
 				     client->now, rdataset, sigrdataset);
 	/*
-	 * If we didn't find it, look for an NSEC. */
+	 * If we didn't find it, look for an NSEC.
+	 */
 	if (result == ISC_R_NOTFOUND)
 		result = dns_db_findrdataset(db, node, version,
 					     dns_rdatatype_nsec, 0, client->now,
 					     rdataset, sigrdataset);
 	if (result != ISC_R_SUCCESS && result != ISC_R_NOTFOUND)
-		goto cleanup;
+		goto addnsec3;
 	if (!dns_rdataset_isassociated(rdataset) ||
 	    !dns_rdataset_isassociated(sigrdataset))
-		goto cleanup;
+		goto addnsec3;
 
 	/*
 	 * We've already added the NS record, so if the name's not there,
@@ -2649,18 +3195,66 @@ query_addds(ns_client_t *client, dns_db_t *db, dns_dbnode_t *node,
 	ISC_LIST_APPEND(rname->list, sigrdataset, link);
 	rdataset = NULL;
 	sigrdataset = NULL;
+	return;
+
+   addnsec3:
+	if (!dns_db_iszone(db))
+		goto cleanup;
+	/*
+	 * Add the NSEC3 which proves the DS does not exist.
+	 */
+	dbuf = query_getnamebuf(client);
+	if (dbuf == NULL)
+		goto cleanup;
+	fname = query_newname(client, dbuf, &b);
+	dns_fixedname_init(&fixed);
+	if (dns_rdataset_isassociated(rdataset))
+		dns_rdataset_disassociate(rdataset);
+	if (dns_rdataset_isassociated(sigrdataset))
+		dns_rdataset_disassociate(sigrdataset);
+	query_findclosestnsec3(name, db, version, client, rdataset,
+			       sigrdataset, fname, ISC_TRUE,
+			       dns_fixedname_name(&fixed));
+	if (!dns_rdataset_isassociated(rdataset))
+		goto cleanup;
+	query_addrrset(client, &fname, &rdataset, &sigrdataset, dbuf,
+		       DNS_SECTION_AUTHORITY);
+	/*
+	 * Did we find the closest provable encloser instead?
+	 * If so add the nearest to the closest provable encloser.
+	 */
+	if (!dns_name_equal(name, dns_fixedname_name(&fixed))) {
+		count = dns_name_countlabels(dns_fixedname_name(&fixed)) + 1;
+		dns_name_getlabelsequence(name,
+					  dns_name_countlabels(name) - count,
+					  count, dns_fixedname_name(&fixed));
+		fixfname(client, &fname, &dbuf, &b);
+		fixrdataset(client, &rdataset);
+		fixrdataset(client, &sigrdataset);
+		if (fname == NULL || rdataset == NULL || sigrdataset == NULL)
+				goto cleanup;
+		query_findclosestnsec3(dns_fixedname_name(&fixed), db, version,
+				       client, rdataset, sigrdataset, fname,
+				       ISC_FALSE, NULL);
+		if (!dns_rdataset_isassociated(rdataset))
+			goto cleanup;
+		query_addrrset(client, &fname, &rdataset, &sigrdataset, dbuf,
+			       DNS_SECTION_AUTHORITY);
+	}
 
  cleanup:
 	if (rdataset != NULL)
 		query_putrdataset(client, &rdataset);
 	if (sigrdataset != NULL)
 		query_putrdataset(client, &sigrdataset);
+	if (fname != NULL)
+		query_releasename(client, &fname);
 }
 
 static void
 query_addwildcardproof(ns_client_t *client, dns_db_t *db,
 		       dns_dbversion_t *version, dns_name_t *name,
-		       isc_boolean_t ispositive)
+		       isc_boolean_t ispositive, isc_boolean_t nodata)
 {
 	isc_buffer_t *dbuf, b;
 	dns_name_t *fname;
@@ -2669,12 +3263,14 @@ query_addwildcardproof(ns_client_t *client, dns_db_t *db,
 	dns_name_t *wname;
 	dns_dbnode_t *node;
 	unsigned int options;
-	unsigned int olabels, nlabels;
+	unsigned int olabels, nlabels, labels;
 	isc_result_t result;
 	dns_rdata_t rdata = DNS_RDATA_INIT;
 	dns_rdata_nsec_t nsec;
 	isc_boolean_t have_wname;
 	int order;
+	dns_fixedname_t cfixed;
+	dns_name_t *cname;
 
 	CTRACE("query_addwildcardproof");
 	fname = NULL;
@@ -2683,7 +3279,7 @@ query_addwildcardproof(ns_client_t *client, dns_db_t *db,
 	node = NULL;
 
 	/*
-	 * Get the NOQNAME proof then if !ispositve
+	 * Get the NOQNAME proof then if !ispositive
 	 * get the NOWILDCARD proof.
 	 *
 	 * DNS_DBFIND_NOWILD finds the NSEC records that covers the
@@ -2722,7 +3318,7 @@ query_addwildcardproof(ns_client_t *client, dns_db_t *db,
 	 *  j.example -> z.i.example NSEC example
 	 *	owner common example
 	 *	next common example
-	 *	wild *.f.example
+	 *	wild *.example
 	 */
 	options = client->query.dboptions | DNS_DBFIND_NOWILD;
 	dns_fixedname_init(&wfixed);
@@ -2745,7 +3341,121 @@ query_addwildcardproof(ns_client_t *client, dns_db_t *db,
 			     0, &node, fname, rdataset, sigrdataset);
 	if (node != NULL)
 		dns_db_detachnode(db, &node);
-	if (result == DNS_R_NXDOMAIN) {
+
+	if (!dns_rdataset_isassociated(rdataset)) {
+		/*
+		 * No NSEC proof available, return NSEC3 proofs instead.
+		 */
+		dns_fixedname_init(&cfixed);
+		cname = dns_fixedname_name(&cfixed);
+		/*
+		 * Find the closest encloser.
+		 */
+		dns_name_copy(name, cname, NULL);
+		while (result == DNS_R_NXDOMAIN) {
+			labels = dns_name_countlabels(cname) - 1;
+			/*
+			 * Sanity check.
+			 */
+			if (labels == 0U)
+				goto cleanup;
+			dns_name_split(cname, labels, NULL, cname);
+			result = dns_db_find(db, cname, version,
+					     dns_rdatatype_nsec,
+					     options, 0, NULL, fname,
+					     NULL, NULL);
+		}
+		/*
+		 * Add closest (provable) encloser NSEC3.
+		 */
+		query_findclosestnsec3(cname, db, NULL, client, rdataset,
+				       sigrdataset, fname, ISC_TRUE, cname);
+		if (!dns_rdataset_isassociated(rdataset))
+			goto cleanup;
+		if (!ispositive)
+			query_addrrset(client, &fname, &rdataset, &sigrdataset,
+				       dbuf, DNS_SECTION_AUTHORITY);
+
+		/*
+		 * Replace resources which were consumed by query_addrrset.
+		 */
+		if (fname == NULL) {
+			dbuf = query_getnamebuf(client);
+			if (dbuf == NULL)
+				goto cleanup;
+			fname = query_newname(client, dbuf, &b);
+		}
+
+		if (rdataset == NULL)
+			rdataset = query_newrdataset(client);
+		else if (dns_rdataset_isassociated(rdataset))
+			dns_rdataset_disassociate(rdataset);
+
+		if (sigrdataset == NULL)
+			sigrdataset = query_newrdataset(client);
+		else if (dns_rdataset_isassociated(sigrdataset))
+			dns_rdataset_disassociate(sigrdataset);
+
+		if (fname == NULL || rdataset == NULL || sigrdataset == NULL)
+			goto cleanup;
+		/*
+		 * Add no qname proof.
+		 */
+		labels = dns_name_countlabels(cname) + 1;
+		if (dns_name_countlabels(name) == labels)
+			dns_name_copy(name, wname, NULL);
+		else
+			dns_name_split(name, labels, NULL, wname);
+
+		query_findclosestnsec3(wname, db, NULL, client, rdataset,
+				       sigrdataset, fname, ISC_FALSE, NULL);
+		if (!dns_rdataset_isassociated(rdataset))
+			goto cleanup;
+		query_addrrset(client, &fname, &rdataset, &sigrdataset,
+			       dbuf, DNS_SECTION_AUTHORITY);
+
+		if (ispositive)
+			goto cleanup;
+
+		/*
+		 * Replace resources which were consumed by query_addrrset.
+		 */
+		if (fname == NULL) {
+			dbuf = query_getnamebuf(client);
+			if (dbuf == NULL)
+				goto cleanup;
+			fname = query_newname(client, dbuf, &b);
+		}
+
+		if (rdataset == NULL)
+			rdataset = query_newrdataset(client);
+		else if (dns_rdataset_isassociated(rdataset))
+			dns_rdataset_disassociate(rdataset);
+
+		if (sigrdataset == NULL)
+			sigrdataset = query_newrdataset(client);
+		else if (dns_rdataset_isassociated(sigrdataset))
+			dns_rdataset_disassociate(sigrdataset);
+
+		if (fname == NULL || rdataset == NULL || sigrdataset == NULL)
+			goto cleanup;
+		/*
+		 * Add the no wildcard proof.
+		 */
+		result = dns_name_concatenate(dns_wildcardname,
+					      cname, wname, NULL);
+		if (result != ISC_R_SUCCESS)
+			goto cleanup;
+
+		query_findclosestnsec3(wname, db, NULL, client, rdataset,
+				       sigrdataset, fname, nodata, NULL);
+		if (!dns_rdataset_isassociated(rdataset))
+			goto cleanup;
+		query_addrrset(client, &fname, &rdataset, &sigrdataset,
+			       dbuf, DNS_SECTION_AUTHORITY);
+
+		goto cleanup;
+	} else if (result == DNS_R_NXDOMAIN) {
 		if (!ispositive)
 			result = dns_rdataset_first(rdataset);
 		if (result == ISC_R_SUCCESS) {
@@ -2757,6 +3467,13 @@ query_addwildcardproof(ns_client_t *client, dns_db_t *db,
 						   &olabels);
 			(void)dns_name_fullcompare(name, &nsec.next, &order,
 						   &nlabels);
+			/*
+			 * Check for a pathological condition created when
+			 * serving some malformed signed zones and bail out.
+			 */
+			if (dns_name_countlabels(name) == nlabels)
+				goto cleanup;
+
 			if (olabels > nlabels)
 				dns_name_split(name, olabels, NULL, wname);
 			else
@@ -2815,6 +3532,7 @@ query_addnxrrsetnsec(ns_client_t *client, dns_db_t *db,
 
 	if (sigrdatasetp == NULL)
 		return;
+
 	sigrdataset = *sigrdatasetp;
 	if (sigrdataset == NULL || !dns_rdataset_isassociated(sigrdataset))
 		return;
@@ -2833,7 +3551,7 @@ query_addnxrrsetnsec(ns_client_t *client, dns_db_t *db,
 
 	/* XXX */
 	query_addwildcardproof(client, db, version, client->query.qname,
-			       ISC_TRUE);
+			       ISC_TRUE, ISC_FALSE);
 
 	/*
 	 * We'll need some resources...
@@ -2855,8 +3573,12 @@ query_addnxrrsetnsec(ns_client_t *client, dns_db_t *db,
 static void
 query_resume(isc_task_t *task, isc_event_t *event) {
 	dns_fetchevent_t *devent = (dns_fetchevent_t *)event;
+	dns_fetch_t *fetch;
 	ns_client_t *client;
-	isc_boolean_t fetch_cancelled, client_shuttingdown;
+	isc_boolean_t fetch_canceled, client_shuttingdown;
+	isc_result_t result;
+	isc_logcategory_t *logcategory = NS_LOGCATEGORY_QUERY_EERRORS;
+	int errorloglevel;
 
 	/*
 	 * Resume a query after recursion.
@@ -2877,30 +3599,31 @@ query_resume(isc_task_t *task, isc_event_t *event) {
 		 */
 		INSIST(devent->fetch == client->query.fetch);
 		client->query.fetch = NULL;
-		fetch_cancelled = ISC_FALSE;
+		fetch_canceled = ISC_FALSE;
 		/*
 		 * Update client->now.
 		 */
 		isc_stdtime_get(&client->now);
 	} else {
 		/*
-		 * This is a fetch completion event for a cancelled fetch.
+		 * This is a fetch completion event for a canceled fetch.
 		 * Clean up and don't resume the find.
 		 */
-		fetch_cancelled = ISC_TRUE;
+		fetch_canceled = ISC_TRUE;
 	}
 	UNLOCK(&client->query.fetchlock);
 	INSIST(client->query.fetch == NULL);
 
 	client->query.attributes &= ~NS_QUERYATTR_RECURSING;
-	dns_resolver_destroyfetch(&devent->fetch);
+	fetch = devent->fetch;
+	devent->fetch = NULL;
 
 	/*
 	 * If this client is shutting down, or this transaction
 	 * has timed out, do not resume the find.
 	 */
 	client_shuttingdown = ns_client_shuttingdown(client);
-	if (fetch_cancelled || client_shuttingdown) {
+	if (fetch_canceled || client_shuttingdown) {
 		if (devent->node != NULL)
 			dns_db_detachnode(devent->db, &devent->node);
 		if (devent->db != NULL)
@@ -2909,8 +3632,8 @@ query_resume(isc_task_t *task, isc_event_t *event) {
 		if (devent->sigrdataset != NULL)
 			query_putrdataset(client, &devent->sigrdataset);
 		isc_event_free(&event);
-		if (fetch_cancelled)
-			query_error(client, DNS_R_SERVFAIL);
+		if (fetch_canceled)
+			query_error(client, DNS_R_SERVFAIL, __LINE__);
 		else
 			query_next(client, ISC_R_CANCELED);
 		/*
@@ -2918,19 +3641,35 @@ query_resume(isc_task_t *task, isc_event_t *event) {
 		 */
 		ns_client_detach(&client);
 	} else {
-		query_find(client, devent, 0);
+		result = query_find(client, devent, 0);
+		if (result != ISC_R_SUCCESS) {
+			if (result == DNS_R_SERVFAIL)
+				errorloglevel = ISC_LOG_DEBUG(2);
+			else
+				errorloglevel = ISC_LOG_DEBUG(4);
+			if (isc_log_wouldlog(ns_g_lctx, errorloglevel)) {
+				dns_resolver_logfetch(fetch, ns_g_lctx,
+						      logcategory,
+						      NS_LOGMODULE_QUERY,
+						      errorloglevel, ISC_FALSE);
+			}
+		}
 	}
+
+	dns_resolver_destroyfetch(&fetch);
 }
 
 static isc_result_t
-query_recurse(ns_client_t *client, dns_rdatatype_t qtype, dns_name_t *qdomain,
-	      dns_rdataset_t *nameservers)
+query_recurse(ns_client_t *client, dns_rdatatype_t qtype, dns_name_t *qname,
+	      dns_name_t *qdomain, dns_rdataset_t *nameservers,
+	      isc_boolean_t resuming)
 {
 	isc_result_t result;
 	dns_rdataset_t *rdataset, *sigrdataset;
 	isc_sockaddr_t *peeraddr;
 
-	inc_stats(client, dns_statscounter_recursion);
+	if (!resuming)
+		inc_stats(client, dns_nsstatscounter_recursion);
 
 	/*
 	 * We are about to recurse, which means that this client will
@@ -2955,7 +3694,11 @@ query_recurse(ns_client_t *client, dns_rdatatype_t qtype, dns_name_t *qdomain,
 					      NS_LOGMODULE_QUERY,
 					      ISC_LOG_WARNING,
 					      "recursive-clients soft limit "
-					      "exceeded, aborting oldest query");
+					      "exceeded (%d/%d/%d), "
+					      "aborting oldest query",
+					      client->recursionquota->used,
+					      client->recursionquota->soft,
+					      client->recursionquota->max);
 			}
 			ns_client_killoldestquery(client);
 			result = ISC_R_SUCCESS;
@@ -2968,7 +3711,11 @@ query_recurse(ns_client_t *client, dns_rdatatype_t qtype, dns_name_t *qdomain,
 				ns_client_log(client, NS_LOGCATEGORY_CLIENT,
 					      NS_LOGMODULE_QUERY,
 					      ISC_LOG_WARNING,
-					      "no more recursive clients: %s",
+					      "no more recursive clients "
+					      "(%d/%d/%d): %s",
+					      ns_g_server->recursionquota.used,
+					      ns_g_server->recursionquota.soft,
+					      ns_g_server->recursionquota.max,
 					      isc_result_totext(result));
 			}
 			ns_client_killoldestquery(client);
@@ -3015,8 +3762,7 @@ query_recurse(ns_client_t *client, dns_rdatatype_t qtype, dns_name_t *qdomain,
 	else
 		peeraddr = NULL;
 	result = dns_resolver_createfetch2(client->view->resolver,
-					   client->query.qname,
-					   qtype, qdomain, nameservers,
+					   qname, qtype, qdomain, nameservers,
 					   NULL, peeraddr, client->message->id,
 					   client->query.fetchoptions,
 					   client->task,
@@ -3039,12 +3785,947 @@ query_recurse(ns_client_t *client, dns_rdatatype_t qtype, dns_name_t *qdomain,
 	return (result);
 }
 
+static inline void
+rpz_clean(dns_zone_t **zonep, dns_db_t **dbp, dns_dbnode_t **nodep,
+	  dns_rdataset_t **rdatasetp)
+{
+	if (nodep != NULL && *nodep != NULL) {
+		REQUIRE(dbp != NULL && *dbp != NULL);
+		dns_db_detachnode(*dbp, nodep);
+	}
+	if (dbp != NULL && *dbp != NULL)
+		dns_db_detach(dbp);
+	if (zonep != NULL && *zonep != NULL)
+		dns_zone_detach(zonep);
+	if (rdatasetp != NULL && *rdatasetp != NULL &&
+	    dns_rdataset_isassociated(*rdatasetp))
+		dns_rdataset_disassociate(*rdatasetp);
+}
+
+static inline isc_result_t
+rpz_ready(ns_client_t *client, dns_zone_t **zonep, dns_db_t **dbp,
+	  dns_dbnode_t **nodep, dns_rdataset_t **rdatasetp)
+{
+	REQUIRE(rdatasetp != NULL);
+
+	rpz_clean(zonep, dbp, nodep, rdatasetp);
+	if (*rdatasetp == NULL) {
+		*rdatasetp = query_newrdataset(client);
+		if (*rdatasetp == NULL)
+			return (DNS_R_SERVFAIL);
+	}
+	return (ISC_R_SUCCESS);
+}
+
+static void
+rpz_st_clear(ns_client_t *client) {
+	dns_rpz_st_t *st = client->query.rpz_st;
+
+	rpz_clean(&st->m.zone, &st->m.db, &st->m.node, NULL);
+	st->m.version = NULL;
+	if (st->m.rdataset != NULL)
+		query_putrdataset(client, &st->m.rdataset);
+
+	rpz_clean(NULL, &st->r.db, NULL, NULL);
+	if (st->r.ns_rdataset != NULL)
+		query_putrdataset(client, &st->r.ns_rdataset);
+	if (st->r.r_rdataset != NULL)
+		query_putrdataset(client, &st->r.r_rdataset);
+
+	rpz_clean(&st->q.zone, &st->q.db, &st->q.node, NULL);
+	if (st->q.rdataset != NULL)
+		query_putrdataset(client, &st->q.rdataset);
+	if (st->q.sigrdataset != NULL)
+		query_putrdataset(client, &st->q.sigrdataset);
+	st->state = 0;
+	st->m.type = DNS_RPZ_TYPE_BAD;
+	st->m.policy = DNS_RPZ_POLICY_MISS;
+}
+
+/*
+ * Get NS, A, or AAAA rrset for response policy zone checks.
+ */
+static isc_result_t
+rpz_rrset_find(ns_client_t *client, dns_rpz_type_t rpz_type,
+	       dns_name_t *name, dns_rdatatype_t type,
+	       dns_db_t **dbp, dns_dbversion_t *version,
+	       dns_rdataset_t **rdatasetp, isc_boolean_t resuming)
+{
+	dns_rpz_st_t *st;
+	isc_boolean_t is_zone;
+	dns_dbnode_t *node;
+	dns_fixedname_t fixed;
+	dns_name_t *found;
+	isc_result_t result;
+
+	st = client->query.rpz_st;
+	if ((st->state & DNS_RPZ_RECURSING) != 0) {
+		INSIST(st->r.r_type == type);
+		INSIST(dns_name_equal(name, st->r_name));
+		INSIST(*rdatasetp == NULL ||
+		       !dns_rdataset_isassociated(*rdatasetp));
+		st->state &= ~DNS_RPZ_RECURSING;
+		*dbp = st->r.db;
+		st->r.db = NULL;
+		if (*rdatasetp != NULL)
+			query_putrdataset(client, rdatasetp);
+		*rdatasetp = st->r.r_rdataset;
+		st->r.r_rdataset = NULL;
+		result = st->r.r_result;
+		if (result == DNS_R_DELEGATION) {
+			rpz_log_fail(client, DNS_RPZ_ERROR_LEVEL,
+				     rpz_type, name,
+				     "rpz_rrset_find(1) ", result);
+			st->m.policy = DNS_RPZ_POLICY_ERROR;
+			result = DNS_R_SERVFAIL;
+		}
+		return (result);
+	}
+
+	result = rpz_ready(client, NULL, NULL, NULL, rdatasetp);
+	if (result != ISC_R_SUCCESS) {
+		st->m.policy = DNS_RPZ_POLICY_ERROR;
+		return (result);
+	}
+	if (*dbp != NULL) {
+		is_zone = ISC_FALSE;
+	} else {
+		dns_zone_t *zone;
+
+		version = NULL;
+		zone = NULL;
+		result = query_getdb(client, name, type, 0, &zone, dbp,
+				     &version, &is_zone);
+		if (result != ISC_R_SUCCESS) {
+			rpz_log_fail(client, DNS_RPZ_ERROR_LEVEL,
+				     rpz_type, name,
+				     "rpz_rrset_find(2) ", result);
+			st->m.policy = DNS_RPZ_POLICY_ERROR;
+			if (zone != NULL)
+				dns_zone_detach(&zone);
+			return (result);
+		}
+		if (zone != NULL)
+			dns_zone_detach(&zone);
+	}
+
+	node = NULL;
+	dns_fixedname_init(&fixed);
+	found = dns_fixedname_name(&fixed);
+	result = dns_db_find(*dbp, name, version, type, DNS_DBFIND_GLUEOK,
+			     client->now, &node, found, *rdatasetp, NULL);
+	if (result == DNS_R_DELEGATION && is_zone && USECACHE(client)) {
+		/*
+		 * Try the cache if we're authoritative for an
+		 * ancestor but not the domain itself.
+		 */
+		rpz_clean(NULL, dbp, &node, rdatasetp);
+		version = NULL;
+		dns_db_attach(client->view->cachedb, dbp);
+		result = dns_db_find(*dbp, name, version, dns_rdatatype_ns,
+				     0, client->now, &node, found,
+				     *rdatasetp, NULL);
+	}
+	rpz_clean(NULL, dbp, &node, NULL);
+	if (result == DNS_R_DELEGATION) {
+		rpz_clean(NULL, NULL, NULL, rdatasetp);
+		/*
+		 * Recurse for NS rrset or A or AAAA rrset for an NS.
+		 * Do not recurse for addresses for the query name.
+		 */
+		if (rpz_type == DNS_RPZ_TYPE_IP) {
+			result = DNS_R_NXRRSET;
+		} else {
+			dns_name_copy(name, st->r_name, NULL);
+			result = query_recurse(client, type, st->r_name,
+					       NULL, NULL, resuming);
+			if (result == ISC_R_SUCCESS) {
+				st->state |= DNS_RPZ_RECURSING;
+				result = DNS_R_DELEGATION;
+			}
+		}
+	}
+	return (result);
+}
+
+/*
+ * Check the IP address in an A or AAAA rdataset against
+ * the IP or NSIP response policy rules of a view.
+ */
+static isc_result_t
+rpz_rewrite_ip(ns_client_t *client, dns_rdataset_t *rdataset,
+	       dns_rpz_type_t rpz_type)
+{
+	dns_rpz_st_t *st;
+	dns_dbversion_t *version;
+	dns_zone_t *zone;
+	dns_db_t *db;
+	dns_rpz_zone_t *rpz;
+	isc_result_t result;
+
+	st = client->query.rpz_st;
+	if (st->m.rdataset == NULL) {
+		st->m.rdataset = query_newrdataset(client);
+		if (st->m.rdataset == NULL)
+			return (DNS_R_SERVFAIL);
+	}
+	zone = NULL;
+	db = NULL;
+	for (rpz = ISC_LIST_HEAD(client->view->rpz_zones);
+	     rpz != NULL;
+	     rpz = ISC_LIST_NEXT(rpz, link)) {
+		/*
+		 * Do not check policy zones that cannot replace a policy
+		 * already known to match.
+		 */
+		if (st->m.policy != DNS_RPZ_POLICY_MISS) {
+			if (st->m.rpz->num < rpz->num)
+				break;
+			if (st->m.rpz->num == rpz->num &&
+			    st->m.type < rpz_type)
+				continue;
+		}
+
+		/*
+		 * Find the database for this policy zone to get its radix tree.
+		 */
+		version = NULL;
+		result = rpz_getdb(client, rpz_type, &rpz->origin,
+				   &zone, &db, &version);
+		if (result != ISC_R_SUCCESS) {
+			rpz_clean(&zone, &db, NULL, NULL);
+			continue;
+		}
+		/*
+		 * Look for a better (e.g. longer prefix) hit for an IP address
+		 * in this rdataset in this radix tree than than the previous
+		 * hit, if any.  Note the domain name and quality of the
+		 * best hit.
+		 */
+		(void)dns_db_rpz_findips(rpz, rpz_type, zone, db, version,
+					 rdataset, st,
+					 client->query.rpz_st->qname);
+		rpz_clean(&zone, &db, NULL, NULL);
+	}
+	return (ISC_R_SUCCESS);
+}
+
+/*
+ * Look for an A or AAAA rdataset
+ * and check for IP or NSIP rewrite policy rules.
+ */
+static isc_result_t
+rpz_rewrite_rrset(ns_client_t *client, dns_rpz_type_t rpz_type,
+		  dns_rdatatype_t type, dns_name_t *name,
+		  dns_db_t **dbp, dns_dbversion_t *version,
+		  dns_rdataset_t **rdatasetp, isc_boolean_t resuming)
+{
+	isc_result_t result;
+
+	result = rpz_rrset_find(client, rpz_type, name, type, dbp, version,
+				rdatasetp, resuming);
+	switch (result) {
+	case ISC_R_SUCCESS:
+		result = rpz_rewrite_ip(client, *rdatasetp, rpz_type);
+		break;
+	case DNS_R_EMPTYNAME:
+	case DNS_R_EMPTYWILD:
+	case DNS_R_NXDOMAIN:
+	case DNS_R_NCACHENXDOMAIN:
+	case DNS_R_NXRRSET:
+	case DNS_R_NCACHENXRRSET:
+	case ISC_R_NOTFOUND:
+		result = ISC_R_SUCCESS;
+		break;
+	case DNS_R_DELEGATION:
+	case DNS_R_DUPLICATE:
+	case DNS_R_DROP:
+		break;
+	case DNS_R_CNAME:
+	case DNS_R_DNAME:
+		rpz_log_fail(client, DNS_RPZ_DEBUG_LEVEL1, rpz_type,
+			     name, "NS address rewrite rrset ", result);
+		result = ISC_R_SUCCESS;
+		break;
+	default:
+		if (client->query.rpz_st->m.policy != DNS_RPZ_POLICY_ERROR) {
+			client->query.rpz_st->m.policy = DNS_RPZ_POLICY_ERROR;
+			rpz_log_fail(client, DNS_RPZ_ERROR_LEVEL, rpz_type,
+				     name, "NS address rewrite rrset ", result);
+		}
+		break;
+	}
+	return (result);
+}
+
+/*
+ * Look for both A and AAAA rdatasets
+ * and check for IP or NSIP rewrite policy rules.
+ * Look only for addresses that will be in the ANSWER section
+ * when checking for IP rules.
+ */
+static isc_result_t
+rpz_rewrite_rrsets(ns_client_t *client, dns_rpz_type_t rpz_type,
+		   dns_name_t *name, dns_rdatatype_t type,
+		   dns_rdataset_t **rdatasetp, isc_boolean_t resuming)
+{
+	dns_rpz_st_t *st;
+	dns_dbversion_t *version;
+	dns_db_t *ipdb;
+	isc_result_t result;
+
+	st = client->query.rpz_st;
+	version = NULL;
+	ipdb = NULL;
+	if ((st->state & DNS_RPZ_DONE_IPv4) == 0 &&
+	    ((rpz_type == DNS_RPZ_TYPE_NSIP) ?
+	     (st->state & DNS_RPZ_HAVE_NSIPv4) :
+	     (st->state & DNS_RPZ_HAVE_IP)) != 0 &&
+	    (type == dns_rdatatype_any || type == dns_rdatatype_a)) {
+		result = rpz_rewrite_rrset(client, rpz_type, dns_rdatatype_a,
+					   name, &ipdb, version, rdatasetp,
+					   resuming);
+		if (result == ISC_R_SUCCESS)
+			st->state |= DNS_RPZ_DONE_IPv4;
+	} else {
+		result = ISC_R_SUCCESS;
+	}
+	if (result == ISC_R_SUCCESS &&
+	    ((rpz_type == DNS_RPZ_TYPE_NSIP) ?
+	     (st->state & DNS_RPZ_HAVE_NSIPv6) :
+	     (st->state & DNS_RPZ_HAVE_IP)) != 0 &&
+	    (type == dns_rdatatype_any || type == dns_rdatatype_aaaa)) {
+		result = rpz_rewrite_rrset(client, rpz_type, dns_rdatatype_aaaa,
+					   name, &ipdb, version, rdatasetp,
+					   resuming);
+	}
+	if (ipdb != NULL)
+		dns_db_detach(&ipdb);
+	return (result);
+}
+
+/*
+ * Get the rrset from a response policy zone.
+ */
+static isc_result_t
+rpz_find(ns_client_t *client, dns_rdatatype_t qtype, dns_name_t *qnamef,
+	 dns_name_t *sname, dns_rpz_type_t rpz_type, dns_zone_t **zonep,
+	 dns_db_t **dbp, dns_dbversion_t **versionp,
+	 dns_dbnode_t **nodep, dns_rdataset_t **rdatasetp,
+	 dns_rpz_policy_t *policyp)
+{
+	dns_rpz_policy_t policy;
+	dns_fixedname_t fixed;
+	dns_name_t *found;
+	isc_result_t result;
+
+	result = rpz_ready(client, zonep, dbp, nodep, rdatasetp);
+	if (result != ISC_R_SUCCESS) {
+		*policyp = DNS_RPZ_POLICY_ERROR;
+		return (result);
+	}
+
+	/*
+	 * Try to get either a CNAME or the type of record demanded by the
+	 * request from the policy zone.
+	 */
+	*versionp = NULL;
+	result = rpz_getdb(client, rpz_type, qnamef, zonep, dbp, versionp);
+	if (result != ISC_R_SUCCESS) {
+		*policyp = DNS_RPZ_POLICY_MISS;
+		return (DNS_R_NXDOMAIN);
+	}
+
+	dns_fixedname_init(&fixed);
+	found = dns_fixedname_name(&fixed);
+	result = dns_db_find(*dbp, qnamef, *versionp, dns_rdatatype_any, 0,
+			     client->now, nodep, found, *rdatasetp, NULL);
+	if (result == ISC_R_SUCCESS) {
+		dns_rdatasetiter_t *rdsiter;
+
+		rdsiter = NULL;
+		result = dns_db_allrdatasets(*dbp, *nodep, *versionp, 0,
+					     &rdsiter);
+		if (result != ISC_R_SUCCESS) {
+			dns_db_detachnode(*dbp, nodep);
+			rpz_log_fail(client, DNS_RPZ_ERROR_LEVEL, rpz_type,
+				     qnamef, "allrdatasets()", result);
+			*policyp = DNS_RPZ_POLICY_ERROR;
+			return (DNS_R_SERVFAIL);
+		}
+		for (result = dns_rdatasetiter_first(rdsiter);
+		     result == ISC_R_SUCCESS;
+		     result = dns_rdatasetiter_next(rdsiter)) {
+			dns_rdatasetiter_current(rdsiter, *rdatasetp);
+			if ((*rdatasetp)->type == dns_rdatatype_cname ||
+			    (*rdatasetp)->type == qtype)
+				break;
+			dns_rdataset_disassociate(*rdatasetp);
+		}
+		dns_rdatasetiter_destroy(&rdsiter);
+		if (result != ISC_R_SUCCESS) {
+			if (result != ISC_R_NOMORE) {
+				rpz_log_fail(client, DNS_RPZ_ERROR_LEVEL,
+					     rpz_type, qnamef, "rdatasetiter",
+					     result);
+				*policyp = DNS_RPZ_POLICY_ERROR;
+				return (DNS_R_SERVFAIL);
+			}
+			/*
+			 * Ask again to get the right DNS_R_DNAME/NXRRSET/...
+			 * result if there is neither a CNAME nor target type.
+			 */
+			if (dns_rdataset_isassociated(*rdatasetp))
+				dns_rdataset_disassociate(*rdatasetp);
+			dns_db_detachnode(*dbp, nodep);
+
+			if (qtype == dns_rdatatype_rrsig ||
+			    qtype == dns_rdatatype_sig)
+				result = DNS_R_NXRRSET;
+			else
+				result = dns_db_find(*dbp, qnamef, *versionp,
+						     qtype, 0, client->now,
+						     nodep, found, *rdatasetp,
+						     NULL);
+		}
+	}
+	switch (result) {
+	case ISC_R_SUCCESS:
+		if ((*rdatasetp)->type != dns_rdatatype_cname) {
+			policy = DNS_RPZ_POLICY_RECORD;
+		} else {
+			policy = dns_rpz_decode_cname(*rdatasetp, sname);
+			if ((policy == DNS_RPZ_POLICY_RECORD ||
+			     policy == DNS_RPZ_POLICY_WILDCNAME) &&
+			    qtype != dns_rdatatype_cname &&
+			    qtype != dns_rdatatype_any)
+				result = DNS_R_CNAME;
+		}
+		break;
+	case DNS_R_DNAME:
+		/*
+		 * DNAME policy RRs have very few if any uses that are not
+		 * better served with simple wildcards.  Making the work would
+		 * require complications to get the number of labels matched
+		 * in the name or the found name to the main DNS_R_DNAME case
+		 * in query_find(). So fall through to treat them as NODATA.
+		 */
+	case DNS_R_NXRRSET:
+		policy = DNS_RPZ_POLICY_NODATA;
+		break;
+	case DNS_R_NXDOMAIN:
+	case DNS_R_EMPTYNAME:
+		/*
+		 * If we don't get a qname hit,
+		 * see if it is worth looking for other types.
+		 */
+		dns_db_rpz_enabled(*dbp, client->query.rpz_st);
+		dns_db_detach(dbp);
+		dns_zone_detach(zonep);
+		policy = DNS_RPZ_POLICY_MISS;
+		break;
+	default:
+		dns_db_detach(dbp);
+		dns_zone_detach(zonep);
+		rpz_log_fail(client, DNS_RPZ_ERROR_LEVEL, rpz_type, qnamef,
+			     "", result);
+		policy = DNS_RPZ_POLICY_ERROR;
+		result = DNS_R_SERVFAIL;
+		break;
+	}
+
+	*policyp = policy;
+	return (result);
+}
+
+/*
+ * Build and look for a QNAME or NSDNAME owner name in a response policy zone.
+ */
+static isc_result_t
+rpz_rewrite_name(ns_client_t *client, dns_rdatatype_t qtype, dns_name_t *qname,
+		 dns_rpz_type_t rpz_type, dns_rdataset_t **rdatasetp)
+{
+	dns_rpz_st_t *st;
+	dns_rpz_zone_t *rpz;
+	dns_fixedname_t prefixf, rpz_qnamef;
+	dns_name_t *prefix, *suffix, *rpz_qname;
+	dns_zone_t *zone;
+	dns_db_t *db;
+	dns_dbversion_t *version;
+	dns_dbnode_t *node;
+	dns_rpz_policy_t policy;
+	unsigned int labels;
+	isc_result_t result;
+
+	st = client->query.rpz_st;
+	zone = NULL;
+	db = NULL;
+	node = NULL;
+
+	for (rpz = ISC_LIST_HEAD(client->view->rpz_zones);
+	     rpz != NULL;
+	     rpz = ISC_LIST_NEXT(rpz, link)) {
+		/*
+		 * Do not check policy zones that cannot replace a policy
+		 * already known to match.
+		 */
+		if (st->m.policy != DNS_RPZ_POLICY_MISS) {
+			if (st->m.rpz->num < rpz->num)
+				break;
+			if (st->m.rpz->num == rpz->num &&
+			    st->m.type < rpz_type)
+				continue;
+		}
+		/*
+		 * Construct the policy's owner name.
+		 */
+		dns_fixedname_init(&prefixf);
+		prefix = dns_fixedname_name(&prefixf);
+		dns_name_split(qname, 1, prefix, NULL);
+		if (rpz_type == DNS_RPZ_TYPE_NSDNAME)
+			suffix = &rpz->nsdname;
+		else
+			suffix = &rpz->origin;
+		dns_fixedname_init(&rpz_qnamef);
+		rpz_qname = dns_fixedname_name(&rpz_qnamef);
+		for (;;) {
+			result = dns_name_concatenate(prefix, suffix,
+						      rpz_qname, NULL);
+			if (result == ISC_R_SUCCESS)
+				break;
+			INSIST(result == DNS_R_NAMETOOLONG);
+			labels = dns_name_countlabels(prefix);
+			if (labels < 2) {
+				rpz_log_fail(client, DNS_RPZ_ERROR_LEVEL,
+					     rpz_type, suffix,
+					     "concatentate() ", result);
+				return (ISC_R_SUCCESS);
+			}
+			if (labels+1 == dns_name_countlabels(qname)) {
+				rpz_log_fail(client, DNS_RPZ_DEBUG_LEVEL1,
+					     rpz_type, suffix,
+					     "concatentate() ", result);
+			}
+			dns_name_split(prefix, labels - 1, NULL, prefix);
+		}
+
+		/*
+		 * See if the policy record exists.
+		 */
+		result = rpz_find(client, qtype, rpz_qname, qname, rpz_type,
+				  &zone, &db, &version, &node, rdatasetp,
+				  &policy);
+		switch (result) {
+		case DNS_R_NXDOMAIN:
+		case DNS_R_EMPTYNAME:
+			break;
+		case DNS_R_SERVFAIL:
+			rpz_clean(&zone, &db, &node, rdatasetp);
+			st->m.policy = DNS_RPZ_POLICY_ERROR;
+			return (DNS_R_SERVFAIL);
+		default:
+			/*
+			 * We are dealing with names here.
+			 * With more than one applicable policy, prefer
+			 * the earliest configured policy,
+			 * QNAME over IP over NSDNAME over NSIP,
+			 * and the smallest name.
+			 * Because of the testing above,
+			 * we known st->m.rpz->num >= rpz->num  and either
+			 * st->m.rpz->num > rpz->num or st->m.type >= rpz_type
+			 */
+			if (st->m.policy != DNS_RPZ_POLICY_MISS &&
+			    rpz->num == st->m.rpz->num &&
+			    (st->m.type < rpz_type ||
+			     (st->m.type == rpz_type &&
+			      0 >= dns_name_compare(rpz_qname, st->qname))))
+				continue;
+
+			/*
+			 * Merely log DNS_RPZ_POLICY_DISABLED hits.
+			 */
+			if (rpz->policy == DNS_RPZ_POLICY_DISABLED) {
+				rpz_log_rewrite(client, "disabled ",
+						policy, rpz_type, rpz_qname);
+				continue;
+			}
+
+			rpz_clean(&st->m.zone, &st->m.db, &st->m.node,
+				  &st->m.rdataset);
+			st->m.rpz = rpz;
+			st->m.type = rpz_type;
+			st->m.prefix = 0;
+			st->m.policy = policy;
+			st->m.result = result;
+			dns_name_copy(rpz_qname, st->qname, NULL);
+			if (*rdatasetp != NULL &&
+			    dns_rdataset_isassociated(*rdatasetp)) {
+				dns_rdataset_t *trdataset;
+
+				trdataset = st->m.rdataset;
+				st->m.rdataset = *rdatasetp;
+				*rdatasetp = trdataset;
+				st->m.ttl = st->m.rdataset->ttl;
+			} else {
+				st->m.ttl = DNS_RPZ_TTL_DEFAULT;
+			}
+			st->m.node = node;
+			node = NULL;
+			st->m.db = db;
+			db = NULL;
+			st->m.version = version;
+			st->m.zone = zone;
+			zone = NULL;
+		}
+	}
+
+	rpz_clean(&zone, &db, &node, rdatasetp);
+	return (ISC_R_SUCCESS);
+}
+
+static void
+rpz_rewrite_ns_skip(ns_client_t *client, dns_name_t *nsname,
+		    isc_result_t result, int level, const char *str)
+{
+	dns_rpz_st_t *st;
+
+	st = client->query.rpz_st;
+
+	if (str != NULL)
+		rpz_log_fail(client, level, DNS_RPZ_TYPE_NSIP, nsname,
+			     str, result);
+	if (st->r.ns_rdataset != NULL &&
+	    dns_rdataset_isassociated(st->r.ns_rdataset))
+		dns_rdataset_disassociate(st->r.ns_rdataset);
+
+	st->r.label--;
+}
+
+/*
+ * Look for response policy zone QNAME, NSIP, and NSDNAME rewriting.
+ */
+static isc_result_t
+rpz_rewrite(ns_client_t *client, dns_rdatatype_t qtype, isc_result_t qresult,
+	    isc_boolean_t resuming)
+{
+	dns_rpz_st_t *st;
+	dns_rdataset_t *rdataset;
+	dns_fixedname_t nsnamef;
+	dns_name_t *nsname;
+	isc_boolean_t ck_ip;
+	isc_result_t result;
+
+	st = client->query.rpz_st;
+	if (st == NULL) {
+		st = isc_mem_get(client->mctx, sizeof(*st));
+		if (st == NULL)
+			return (ISC_R_NOMEMORY);
+		st->state = 0;
+		memset(&st->m, 0, sizeof(st->m));
+		st->m.type = DNS_RPZ_TYPE_BAD;
+		st->m.policy = DNS_RPZ_POLICY_MISS;
+		memset(&st->r, 0, sizeof(st->r));
+		memset(&st->q, 0, sizeof(st->q));
+		dns_fixedname_init(&st->_qnamef);
+		dns_fixedname_init(&st->_r_namef);
+		dns_fixedname_init(&st->_fnamef);
+		st->qname = dns_fixedname_name(&st->_qnamef);
+		st->r_name = dns_fixedname_name(&st->_r_namef);
+		st->fname = dns_fixedname_name(&st->_fnamef);
+		client->query.rpz_st = st;
+	}
+
+	/*
+	 * There is nothing to rewrite if the main query failed.
+	 */
+	switch (qresult) {
+	case ISC_R_SUCCESS:
+	case DNS_R_GLUE:
+	case DNS_R_ZONECUT:
+		ck_ip = ISC_TRUE;
+		break;
+	case DNS_R_EMPTYNAME:
+	case DNS_R_NXRRSET:
+	case DNS_R_NXDOMAIN:
+	case DNS_R_EMPTYWILD:
+	case DNS_R_NCACHENXDOMAIN:
+	case DNS_R_NCACHENXRRSET:
+	case DNS_R_CNAME:
+	case DNS_R_DNAME:
+		ck_ip = ISC_FALSE;
+		break;
+	case DNS_R_DELEGATION:
+	case ISC_R_NOTFOUND:
+		return (ISC_R_SUCCESS);
+	case ISC_R_FAILURE:
+	case ISC_R_TIMEDOUT:
+	case DNS_R_BROKENCHAIN:
+		rpz_log_fail(client, DNS_RPZ_DEBUG_LEVEL3, DNS_RPZ_TYPE_QNAME,
+			     client->query.qname,
+			     "stop on qresult in rpz_rewrite()",
+			     qresult);
+		return (ISC_R_SUCCESS);
+	default:
+		rpz_log_fail(client, DNS_RPZ_DEBUG_LEVEL1, DNS_RPZ_TYPE_QNAME,
+			     client->query.qname,
+			     "stop on unrecognized qresult in rpz_rewrite()",
+			     qresult);
+		return (ISC_R_SUCCESS);
+	}
+
+	rdataset = NULL;
+	if ((st->state & DNS_RPZ_DONE_QNAME) == 0) {
+		/*
+		 * Check rules for the query name if this it the first time
+		 * for the current qname, i.e. we've not been recursing.
+		 * There is a first time for each name in a CNAME chain.
+		 */
+		result = rpz_rewrite_name(client, qtype, client->query.qname,
+					  DNS_RPZ_TYPE_QNAME, &rdataset);
+		if (result != ISC_R_SUCCESS)
+			goto cleanup;
+
+		st->r.label = dns_name_countlabels(client->query.qname);
+
+		st->state &= ~(DNS_RPZ_DONE_QNAME_IP | DNS_RPZ_DONE_IPv4);
+		st->state |= DNS_RPZ_DONE_QNAME;
+	}
+
+	/*
+	 * Check known IP addresses for the query name.
+	 * Any recursion required for the query has already happened.
+	 * Do not check addresses that will not be in the ANSWER section.
+	 */
+	if ((st->state & DNS_RPZ_DONE_QNAME_IP) == 0 &&
+	    (st->state & DNS_RPZ_HAVE_IP) != 0 && ck_ip) {
+		result = rpz_rewrite_rrsets(client, DNS_RPZ_TYPE_IP,
+					    client->query.qname, qtype,
+					    &rdataset, resuming);
+		if (result != ISC_R_SUCCESS)
+			goto cleanup;
+		st->state &= ~DNS_RPZ_DONE_IPv4;
+		st->state |= DNS_RPZ_DONE_QNAME_IP;
+	}
+
+	/*
+	 * Stop looking for rules if there are none of the other kinds.
+	 */
+	if ((st->state & (DNS_RPZ_HAVE_NSIPv4 | DNS_RPZ_HAVE_NSIPv6 |
+			  DNS_RPZ_HAVE_NSDNAME)) == 0) {
+		result = ISC_R_SUCCESS;
+		goto cleanup;
+	}
+
+	dns_fixedname_init(&nsnamef);
+	dns_name_clone(client->query.qname, dns_fixedname_name(&nsnamef));
+	while (st->r.label > 1) {
+		/*
+		 * Get NS rrset for each domain in the current qname.
+		 */
+		if (st->r.label == dns_name_countlabels(client->query.qname)) {
+			nsname = client->query.qname;
+		} else {
+			nsname = dns_fixedname_name(&nsnamef);
+			dns_name_split(client->query.qname, st->r.label,
+				       NULL, nsname);
+		}
+		if (st->r.ns_rdataset == NULL ||
+		    !dns_rdataset_isassociated(st->r.ns_rdataset)) {
+			dns_db_t *db = NULL;
+			result = rpz_rrset_find(client, DNS_RPZ_TYPE_NSDNAME,
+						nsname, dns_rdatatype_ns,
+						&db, NULL, &st->r.ns_rdataset,
+						resuming);
+			if (db != NULL)
+				dns_db_detach(&db);
+			if (st->m.policy == DNS_RPZ_POLICY_ERROR)
+				goto cleanup;
+			switch (result) {
+			case ISC_R_SUCCESS:
+				result = dns_rdataset_first(st->r.ns_rdataset);
+				if (result != ISC_R_SUCCESS)
+					goto cleanup;
+				st->state &= ~(DNS_RPZ_DONE_NSDNAME |
+					       DNS_RPZ_DONE_IPv4);
+				break;
+			case DNS_R_DELEGATION:
+				goto cleanup;
+			case DNS_R_EMPTYNAME:
+			case DNS_R_NXRRSET:
+			case DNS_R_EMPTYWILD:
+			case DNS_R_NXDOMAIN:
+			case DNS_R_NCACHENXDOMAIN:
+			case DNS_R_NCACHENXRRSET:
+			case ISC_R_NOTFOUND:
+			case DNS_R_CNAME:
+			case DNS_R_DNAME:
+				rpz_rewrite_ns_skip(client, nsname, result,
+						    0, NULL);
+				continue;
+			case ISC_R_TIMEDOUT:
+			case DNS_R_BROKENCHAIN:
+			case ISC_R_FAILURE:
+				rpz_rewrite_ns_skip(client, nsname, result,
+						DNS_RPZ_DEBUG_LEVEL3,
+						"NS db_find() ");
+				continue;
+			default:
+				rpz_rewrite_ns_skip(client, nsname, result,
+						DNS_RPZ_INFO_LEVEL,
+						"unrecognized NS db_find() ");
+				continue;
+			}
+		}
+		/*
+		 * Check all NS names.
+		 */
+		do {
+			dns_rdata_ns_t ns;
+			dns_rdata_t nsrdata = DNS_RDATA_INIT;
+
+			dns_rdataset_current(st->r.ns_rdataset, &nsrdata);
+			result = dns_rdata_tostruct(&nsrdata, &ns, NULL);
+			dns_rdata_reset(&nsrdata);
+			if (result != ISC_R_SUCCESS) {
+				rpz_log_fail(client, DNS_RPZ_ERROR_LEVEL,
+					     DNS_RPZ_TYPE_NSIP, nsname,
+					     "rdata_tostruct() ", result);
+				st->m.policy = DNS_RPZ_POLICY_ERROR;
+				goto cleanup;
+			}
+			/*
+			 * Do nothing about "NS ."
+			 */
+			if (dns_name_equal(&ns.name, dns_rootname)) {
+				dns_rdata_freestruct(&ns);
+				result = dns_rdataset_next(st->r.ns_rdataset);
+				continue;
+			}
+			/*
+			 * Check this NS name if we did not handle it
+			 * during a previous recursion.
+			 */
+			if ((st->state & DNS_RPZ_DONE_NSDNAME) == 0 &&
+			    (st->state & DNS_RPZ_HAVE_NSDNAME) != 0) {
+				result = rpz_rewrite_name(client, qtype,
+							&ns.name,
+							DNS_RPZ_TYPE_NSDNAME,
+							&rdataset);
+				if (result != ISC_R_SUCCESS) {
+					dns_rdata_freestruct(&ns);
+					goto cleanup;
+				}
+				st->state |= DNS_RPZ_DONE_NSDNAME;
+			}
+			/*
+			 * Check all IP addresses for this NS name.
+			 */
+			result = rpz_rewrite_rrsets(client, DNS_RPZ_TYPE_NSIP,
+						    &ns.name, dns_rdatatype_any,
+						    &rdataset, resuming);
+			dns_rdata_freestruct(&ns);
+			if (result != ISC_R_SUCCESS)
+				goto cleanup;
+			st->state &= ~(DNS_RPZ_DONE_NSDNAME |
+				       DNS_RPZ_DONE_IPv4);
+			result = dns_rdataset_next(st->r.ns_rdataset);
+		} while (result == ISC_R_SUCCESS);
+		dns_rdataset_disassociate(st->r.ns_rdataset);
+		st->r.label--;
+	}
+
+	/*
+	 * Use the best, if any, hit.
+	 */
+	result = ISC_R_SUCCESS;
+
+cleanup:
+	if (st->m.policy != DNS_RPZ_POLICY_MISS &&
+	    st->m.policy != DNS_RPZ_POLICY_ERROR &&
+	    st->m.rpz->policy != DNS_RPZ_POLICY_GIVEN)
+		st->m.policy = st->m.rpz->policy;
+	if (st->m.policy == DNS_RPZ_POLICY_MISS ||
+	    st->m.policy == DNS_RPZ_POLICY_PASSTHRU ||
+	    st->m.policy == DNS_RPZ_POLICY_ERROR) {
+		if (st->m.policy == DNS_RPZ_POLICY_PASSTHRU)
+			rpz_log_rewrite(client, "", st->m.policy, st->m.type,
+					st->qname);
+		rpz_clean(&st->m.zone, &st->m.db, &st->m.node, &st->m.rdataset);
+	}
+	if (st->m.policy == DNS_RPZ_POLICY_ERROR) {
+		st->m.type = DNS_RPZ_TYPE_BAD;
+		result = DNS_R_SERVFAIL;
+	}
+	query_putrdataset(client, &rdataset);
+	if ((st->state & DNS_RPZ_RECURSING) == 0)
+		rpz_clean(NULL, &st->r.db, NULL, &st->r.ns_rdataset);
+
+	return (result);
+}
+
+/*
+ * Add a CNAME to the query response, including translating foo.evil.com and
+ *	*.evil.com CNAME *.example.com
+ * to
+ *	foo.evil.com CNAME foo.evil.com.example.com
+ */
+static isc_result_t
+rpz_add_cname(ns_client_t *client, dns_rpz_st_t *st,
+	      dns_name_t *cname, dns_name_t *fname, isc_buffer_t *dbuf)
+{
+	dns_fixedname_t prefix, suffix;
+	unsigned int labels;
+	isc_result_t result;
+
+	labels = dns_name_countlabels(cname);
+	if (labels > 2 && dns_name_iswildcard(cname)) {
+		dns_fixedname_init(&prefix);
+		dns_name_split(client->query.qname, 1,
+			       dns_fixedname_name(&prefix), NULL);
+		dns_fixedname_init(&suffix);
+		dns_name_split(cname, labels-1,
+			       NULL, dns_fixedname_name(&suffix));
+		result = dns_name_concatenate(dns_fixedname_name(&prefix),
+					      dns_fixedname_name(&suffix),
+					      fname, NULL);
+		if (result == DNS_R_NAMETOOLONG)
+			client->message->rcode = dns_rcode_yxdomain;
+	} else {
+		result = dns_name_copy(cname, fname, NULL);
+		RUNTIME_CHECK(result == ISC_R_SUCCESS);
+	}
+	if (result != ISC_R_SUCCESS)
+		return (result);
+	query_keepname(client, fname, dbuf);
+	result = query_add_cname(client, client->query.qname,
+				 fname, dns_trust_authanswer, st->m.ttl);
+	if (result != ISC_R_SUCCESS)
+		return (result);
+	rpz_log_rewrite(client, "", st->m.policy, st->m.type, st->qname);
+	ns_client_qnamereplace(client, fname);
+	/*
+	 * Turn off DNSSEC because the results of a
+	 * response policy zone cannot verify.
+	 */
+	client->attributes &= ~NS_CLIENTATTR_WANTDNSSEC;
+	return (ISC_R_SUCCESS);
+}
+
 #define MAX_RESTARTS 16
 
 #define QUERY_ERROR(r) \
 do { \
 	eresult = r; \
 	want_restart = ISC_FALSE; \
+	line = __LINE__; \
+} while (0)
+
+#define RECURSE_ERROR(r) \
+do { \
+	if ((r) == DNS_R_DUPLICATE || (r) == DNS_R_DROP) \
+		QUERY_ERROR(r); \
+	else \
+		QUERY_ERROR(DNS_R_SERVFAIL); \
 } while (0)
 
 /*
@@ -3136,37 +4817,62 @@ static void
 query_addnoqnameproof(ns_client_t *client, dns_rdataset_t *rdataset) {
 	isc_buffer_t *dbuf, b;
 	dns_name_t *fname;
-	dns_rdataset_t *nsec, *nsecsig;
+	dns_rdataset_t *neg, *negsig;
 	isc_result_t result = ISC_R_NOMEMORY;
 
 	CTRACE("query_addnoqnameproof");
 
 	fname = NULL;
-	nsec = NULL;
-	nsecsig = NULL;
+	neg = NULL;
+	negsig = NULL;
 
 	dbuf = query_getnamebuf(client);
 	if (dbuf == NULL)
 		goto cleanup;
 	fname = query_newname(client, dbuf, &b);
-	nsec = query_newrdataset(client);
-	nsecsig = query_newrdataset(client);
-	if (fname == NULL || nsec == NULL || nsecsig == NULL)
+	neg = query_newrdataset(client);
+	negsig = query_newrdataset(client);
+	if (fname == NULL || neg == NULL || negsig == NULL)
 		goto cleanup;
 
-	result = dns_rdataset_getnoqname(rdataset, fname, nsec, nsecsig);
+	result = dns_rdataset_getnoqname(rdataset, fname, neg, negsig);
 	RUNTIME_CHECK(result == ISC_R_SUCCESS);
 
-	query_addrrset(client, &fname, &nsec, &nsecsig, dbuf,
+	query_addrrset(client, &fname, &neg, &negsig, dbuf,
+		       DNS_SECTION_AUTHORITY);
+
+	if ((rdataset->attributes & DNS_RDATASETATTR_CLOSEST) == 0)
+		goto cleanup;
+
+	if (fname == NULL) {
+		dbuf = query_getnamebuf(client);
+		if (dbuf == NULL)
+			goto cleanup;
+		fname = query_newname(client, dbuf, &b);
+	}
+	if (neg == NULL)
+		neg = query_newrdataset(client);
+	else if (dns_rdataset_isassociated(neg))
+		dns_rdataset_disassociate(neg);
+	if (negsig == NULL)
+		negsig = query_newrdataset(client);
+	else if (dns_rdataset_isassociated(negsig))
+		dns_rdataset_disassociate(negsig);
+	if (fname == NULL || neg == NULL || negsig == NULL)
+		goto cleanup;
+	result = dns_rdataset_getclosest(rdataset, fname, neg, negsig);
+	RUNTIME_CHECK(result == ISC_R_SUCCESS);
+
+	query_addrrset(client, &fname, &neg, &negsig, dbuf,
 		       DNS_SECTION_AUTHORITY);
 
  cleanup:
-	if (nsec != NULL)
-                query_putrdataset(client, &nsec);
-        if (nsecsig != NULL)
-                query_putrdataset(client, &nsecsig);
-        if (fname != NULL)
-                query_releasename(client, &fname);
+	if (neg != NULL)
+		query_putrdataset(client, &neg);
+	if (negsig != NULL)
+		query_putrdataset(client, &negsig);
+	if (fname != NULL)
+		query_releasename(client, &fname);
 }
 
 static inline void
@@ -3269,12 +4975,12 @@ warn_rfc1918(ns_client_t *client, dns_name_t *fname, dns_rdataset_t *rdataset) {
 	dns_rdata_soa_t soa;
 	dns_rdataset_t found;
 	isc_result_t result;
-	
+
 	for (i = 0; i < (sizeof(rfc1918names)/sizeof(*rfc1918names)); i++) {
 		if (dns_name_issubdomain(fname, &rfc1918names[i])) {
 			dns_rdataset_init(&found);
 			result = dns_ncache_getrdataset(rdataset,
-						        &rfc1918names[i],
+							&rfc1918names[i],
 							dns_rdatatype_soa,
 							&found);
 			if (result != ISC_R_SUCCESS)
@@ -3284,8 +4990,7 @@ warn_rfc1918(ns_client_t *client, dns_name_t *fname, dns_rdataset_t *rdataset) {
 			RUNTIME_CHECK(result == ISC_R_SUCCESS);
 			dns_rdataset_current(&found, &rdata);
 			result = dns_rdata_tostruct(&rdata, &soa, NULL);
-			if (result != ISC_R_SUCCESS)
-				return;
+			RUNTIME_CHECK(result == ISC_R_SUCCESS);
 			if (dns_name_equal(&soa.origin, &prisoner) &&
 			    dns_name_equal(&soa.contact, &hostmaster)) {
 				char buf[DNS_NAME_FORMATSIZE];
@@ -3302,12 +5007,196 @@ warn_rfc1918(ns_client_t *client, dns_name_t *fname, dns_rdataset_t *rdataset) {
 	}
 }
 
+static void
+query_findclosestnsec3(dns_name_t *qname, dns_db_t *db,
+		       dns_dbversion_t *version, ns_client_t *client,
+		       dns_rdataset_t *rdataset, dns_rdataset_t *sigrdataset,
+		       dns_name_t *fname, isc_boolean_t exact,
+		       dns_name_t *found)
+{
+	unsigned char salt[256];
+	size_t salt_length;
+	isc_uint16_t iterations;
+	isc_result_t result;
+	unsigned int dboptions;
+	dns_fixedname_t fixed;
+	dns_hash_t hash;
+	dns_name_t name;
+	int order;
+	unsigned int count;
+	dns_rdata_nsec3_t nsec3;
+	dns_rdata_t rdata = DNS_RDATA_INIT;
+	isc_boolean_t optout;
+
+	salt_length = sizeof(salt);
+	result = dns_db_getnsec3parameters(db, version, &hash, NULL,
+					   &iterations, salt, &salt_length);
+	if (result != ISC_R_SUCCESS)
+		return;
+
+	dns_name_init(&name, NULL);
+	dns_name_clone(qname, &name);
+
+	/*
+	 * Map unknown algorithm to known value.
+	 */
+	if (hash == DNS_NSEC3_UNKNOWNALG)
+		hash = 1;
+
+ again:
+	dns_fixedname_init(&fixed);
+	result = dns_nsec3_hashname(&fixed, NULL, NULL, &name,
+				    dns_db_origin(db), hash,
+				    iterations, salt, salt_length);
+	if (result != ISC_R_SUCCESS)
+		return;
+
+	dboptions = client->query.dboptions | DNS_DBFIND_FORCENSEC3;
+	result = dns_db_find(db, dns_fixedname_name(&fixed), version,
+			     dns_rdatatype_nsec3, dboptions, client->now,
+			     NULL, fname, rdataset, sigrdataset);
+
+	if (result == DNS_R_NXDOMAIN) {
+		if (!dns_rdataset_isassociated(rdataset)) {
+			return;
+		}
+		result = dns_rdataset_first(rdataset);
+		INSIST(result == ISC_R_SUCCESS);
+		dns_rdataset_current(rdataset, &rdata);
+		dns_rdata_tostruct(&rdata, &nsec3, NULL);
+		dns_rdata_reset(&rdata);
+		optout = ISC_TF((nsec3.flags & DNS_NSEC3FLAG_OPTOUT) != 0);
+		if (found != NULL && optout &&
+		    dns_name_fullcompare(&name, dns_db_origin(db), &order,
+					 &count) == dns_namereln_subdomain) {
+			dns_rdataset_disassociate(rdataset);
+			if (dns_rdataset_isassociated(sigrdataset))
+				dns_rdataset_disassociate(sigrdataset);
+			count = dns_name_countlabels(&name) - 1;
+			dns_name_getlabelsequence(&name, 1, count, &name);
+			ns_client_log(client, DNS_LOGCATEGORY_DNSSEC,
+				      NS_LOGMODULE_QUERY, ISC_LOG_DEBUG(3),
+				      "looking for closest provable encloser");
+			goto again;
+		}
+		if (exact)
+			ns_client_log(client, DNS_LOGCATEGORY_DNSSEC,
+				      NS_LOGMODULE_QUERY, ISC_LOG_WARNING,
+				      "expected a exact match NSEC3, got "
+				      "a covering record");
+
+	} else if (result != ISC_R_SUCCESS) {
+		return;
+	} else if (!exact)
+		ns_client_log(client, DNS_LOGCATEGORY_DNSSEC,
+			      NS_LOGMODULE_QUERY, ISC_LOG_WARNING,
+			      "expected covering NSEC3, got an exact match");
+	if (found != NULL)
+		dns_name_copy(&name, found, NULL);
+	return;
+}
+
+#ifdef ALLOW_FILTER_AAAA_ON_V4
+static isc_boolean_t
+is_v4_client(ns_client_t *client) {
+	if (isc_sockaddr_pf(&client->peeraddr) == AF_INET)
+		return (ISC_TRUE);
+	if (isc_sockaddr_pf(&client->peeraddr) == AF_INET6 &&
+	    IN6_IS_ADDR_V4MAPPED(&client->peeraddr.type.sin6.sin6_addr))
+		return (ISC_TRUE);
+	return (ISC_FALSE);
+}
+#endif
+
+static isc_uint32_t
+dns64_ttl(dns_db_t *db, dns_dbversion_t *version) {
+	dns_dbnode_t *node = NULL;
+	dns_rdata_soa_t soa;
+	dns_rdata_t rdata = DNS_RDATA_INIT;
+	dns_rdataset_t rdataset;
+	isc_result_t result;
+	isc_uint32_t ttl = ISC_UINT32_MAX;
+
+	result = dns_db_getoriginnode(db, &node);
+	if (result != ISC_R_SUCCESS)
+		goto cleanup;
+	dns_rdataset_init(&rdataset);
+	result = dns_db_findrdataset(db, node, version, dns_rdatatype_soa,
+				     0, 0, &rdataset, NULL);
+	if (result != ISC_R_SUCCESS)
+		goto cleanup;
+	result = dns_rdataset_first(&rdataset);
+	if (result != ISC_R_SUCCESS)
+		goto cleanup;
+
+	dns_rdataset_current(&rdataset, &rdata);
+	result = dns_rdata_tostruct(&rdata, &soa, NULL);
+	RUNTIME_CHECK(result == ISC_R_SUCCESS);
+	ttl = ISC_MIN(rdataset.ttl, soa.minimum);
+
+cleanup:
+	if (dns_rdataset_isassociated(&rdataset))
+		dns_rdataset_disassociate(&rdataset);
+	if (node != NULL)
+		dns_db_detachnode(db, &node);
+	return (ttl);
+}
+
+static isc_boolean_t
+dns64_aaaaok(ns_client_t *client, dns_rdataset_t *rdataset,
+	     dns_rdataset_t *sigrdataset)
+{
+	isc_netaddr_t netaddr;
+	dns_dns64_t *dns64 = ISC_LIST_HEAD(client->view->dns64);
+	unsigned int flags = 0;
+	unsigned int i, count;
+	isc_boolean_t *aaaaok;
+
+	INSIST(client->query.dns64_aaaaok == NULL);
+	INSIST(client->query.dns64_aaaaoklen == 0);
+	INSIST(client->query.dns64_aaaa == NULL);
+	INSIST(client->query.dns64_sigaaaa == NULL);
+
+	if (dns64 == NULL)
+		return (ISC_TRUE);
+
+	if (RECURSIONOK(client))
+		flags |= DNS_DNS64_RECURSIVE;
+
+	if (sigrdataset != NULL && dns_rdataset_isassociated(sigrdataset))
+		flags |= DNS_DNS64_DNSSEC;
+
+	count = dns_rdataset_count(rdataset);
+	aaaaok = isc_mem_get(client->mctx, sizeof(isc_boolean_t) * count);
+
+	isc_netaddr_fromsockaddr(&netaddr, &client->peeraddr);
+	if (dns_dns64_aaaaok(dns64, &netaddr, client->signer,
+			     &ns_g_server->aclenv, flags, rdataset,
+			     aaaaok, count)) {
+		for (i = 0; i < count; i++) {
+			if (aaaaok != NULL && !aaaaok[i]) {
+				client->query.dns64_aaaaok = aaaaok;
+				client->query.dns64_aaaaoklen = count;
+				break;
+			}
+		}
+		if (i == count && aaaaok != NULL)
+			isc_mem_put(client->mctx, aaaaok,
+				    sizeof(isc_boolean_t) * count);
+		return (ISC_TRUE);
+	}
+	if (aaaaok != NULL)
+		isc_mem_put(client->mctx, aaaaok,
+			    sizeof(isc_boolean_t) * count);
+	return (ISC_FALSE);
+}
+
 /*
  * Do the bulk of query processing for the current query of 'client'.
  * If 'event' is non-NULL, we are returning from recursion and 'qtype'
  * is ignored.  Otherwise, 'qtype' is the query type.
  */
-static void
+static isc_result_t
 query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 {
 	dns_db_t *db, *zdb;
@@ -3320,6 +5209,7 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 	dns_rdata_t rdata = DNS_RDATA_INIT;
 	dns_rdatasetiter_t *rdsiter;
 	isc_boolean_t want_restart, authoritative, is_zone, need_wildcardproof;
+	isc_boolean_t is_staticstub_zone;
 	unsigned int n, nlabels;
 	dns_namereln_t namereln;
 	int order;
@@ -3328,13 +5218,17 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 	isc_result_t result, eresult;
 	dns_fixedname_t fixed;
 	dns_fixedname_t wildcardname;
-	dns_dbversion_t *version;
+	dns_dbversion_t *version, *zversion;
 	dns_zone_t *zone;
 	dns_rdata_cname_t cname;
 	dns_rdata_dname_t dname;
 	unsigned int options;
 	isc_boolean_t empty_wild;
 	dns_rdataset_t *noqname;
+	dns_rpz_st_t *rpz_st;
+	isc_boolean_t resuming;
+	int line = -1;
+	isc_boolean_t dns64_exclude, dns64;
 
 	CTRACE("query_find");
 
@@ -3352,6 +5246,7 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 	zrdataset = NULL;
 	sigrdataset = NULL;
 	zsigrdataset = NULL;
+	zversion = NULL;
 	node = NULL;
 	db = NULL;
 	zdb = NULL;
@@ -3359,27 +5254,65 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 	zone = NULL;
 	need_wildcardproof = ISC_FALSE;
 	empty_wild = ISC_FALSE;
+	dns64_exclude = dns64 = ISC_FALSE;
 	options = 0;
+	resuming = ISC_FALSE;
+	is_zone = ISC_FALSE;
+	is_staticstub_zone = ISC_FALSE;
 
 	if (event != NULL) {
 		/*
 		 * We're returning from recursion.  Restore the query context
 		 * and resume.
 		 */
-
 		want_restart = ISC_FALSE;
-		authoritative = ISC_FALSE;
-		is_zone = ISC_FALSE;
 
-		qtype = event->qtype;
+		rpz_st = client->query.rpz_st;
+		if (rpz_st != NULL &&
+		    (rpz_st->state & DNS_RPZ_RECURSING) != 0) {
+			is_zone = rpz_st->q.is_zone;
+			authoritative = rpz_st->q.authoritative;
+			zone = rpz_st->q.zone;
+			rpz_st->q.zone = NULL;
+			node = rpz_st->q.node;
+			rpz_st->q.node = NULL;
+			db = rpz_st->q.db;
+			rpz_st->q.db = NULL;
+			rdataset = rpz_st->q.rdataset;
+			rpz_st->q.rdataset = NULL;
+			sigrdataset = rpz_st->q.sigrdataset;
+			rpz_st->q.sigrdataset = NULL;
+			qtype = rpz_st->q.qtype;
+
+			rpz_st->r.db = event->db;
+			if (event->node != NULL)
+				dns_db_detachnode(event->db, &event->node);
+			rpz_st->r.r_type = event->qtype;
+			rpz_st->r.r_rdataset = event->rdataset;
+			query_putrdataset(client, &event->sigrdataset);
+		} else {
+			authoritative = ISC_FALSE;
+
+			qtype = event->qtype;
+			db = event->db;
+			node = event->node;
+			rdataset = event->rdataset;
+			sigrdataset = event->sigrdataset;
+		}
+
 		if (qtype == dns_rdatatype_rrsig || qtype == dns_rdatatype_sig)
 			type = dns_rdatatype_any;
 		else
 			type = qtype;
-		db = event->db;
-		node = event->node;
-		rdataset = event->rdataset;
-		sigrdataset = event->sigrdataset;
+
+		if (DNS64(client)) {
+			client->query.attributes &= ~NS_QUERYATTR_DNS64;
+			dns64 = ISC_TRUE;
+		}
+		if (DNS64EXCLUDE(client)) {
+			client->query.attributes &= ~NS_QUERYATTR_DNS64EXCLUDE;
+			dns64_exclude = ISC_TRUE;
+		}
 
 		/*
 		 * We'll need some resources...
@@ -3394,15 +5327,26 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			QUERY_ERROR(DNS_R_SERVFAIL);
 			goto cleanup;
 		}
-		tname = dns_fixedname_name(&event->foundname);
+		if (rpz_st != NULL &&
+		    (rpz_st->state & DNS_RPZ_RECURSING) != 0) {
+			tname = rpz_st->fname;
+		} else {
+			tname = dns_fixedname_name(&event->foundname);
+		}
 		result = dns_name_copy(tname, fname, NULL);
 		if (result != ISC_R_SUCCESS) {
 			QUERY_ERROR(DNS_R_SERVFAIL);
 			goto cleanup;
 		}
-
-		result = event->result;
-
+		if (rpz_st != NULL &&
+		    (rpz_st->state & DNS_RPZ_RECURSING) != 0) {
+			rpz_st->r.r_result = event->result;
+			result = rpz_st->q.result;
+			isc_event_free(ISC_EVENT_PTR(&event));
+		} else {
+			result = event->result;
+		}
+		resuming = ISC_TRUE;
 		goto resume;
 	}
 
@@ -3489,6 +5433,11 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 	}
 	if (result != ISC_R_SUCCESS) {
 		if (result == DNS_R_REFUSED) {
+			if (WANTRECURSION(client)) {
+				inc_stats(client,
+					  dns_nsstatscounter_recurserej);
+			} else
+				inc_stats(client, dns_nsstatscounter_authrej);
 			if (!PARTIALANSWER(client))
 				QUERY_ERROR(DNS_R_REFUSED);
 		} else
@@ -3496,22 +5445,23 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		goto cleanup;
 	}
 
-	if (is_zone)
+	is_staticstub_zone = ISC_FALSE;
+	if (is_zone) {
 		authoritative = ISC_TRUE;
+		if (zone != NULL &&
+		    dns_zone_gettype(zone) == dns_zone_staticstub)
+			is_staticstub_zone = ISC_TRUE;
+	}
 
 	if (event == NULL && client->query.restarts == 0) {
 		if (is_zone) {
-#ifdef DLZ
 			if (zone != NULL) {
 				/*
 				 * if is_zone = true, zone = NULL then this is
 				 * a DLZ zone.  Don't attempt to attach zone.
 				 */
-#endif
 				dns_zone_attach(zone, &client->query.authzone);
-#ifdef DLZ
 			}
-#endif
 			dns_db_attach(db, &client->query.authdb);
 		}
 		client->query.authdbset = ISC_TRUE;
@@ -3533,7 +5483,7 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		QUERY_ERROR(DNS_R_SERVFAIL);
 		goto cleanup;
 	}
-	if (WANTDNSSEC(client)) {
+	if (WANTDNSSEC(client) && (!is_zone || dns_db_issecure(db))) {
 		sigrdataset = query_newrdataset(client);
 		if (sigrdataset == NULL) {
 			QUERY_ERROR(DNS_R_SERVFAIL);
@@ -3550,6 +5500,134 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 
  resume:
 	CTRACE("query_find: resume");
+
+	if (!ISC_LIST_EMPTY(client->view->rpz_zones) &&
+	    RECURSIONOK(client) && !RECURSING(client) &&
+	    (!WANTDNSSEC(client) || sigrdataset == NULL ||
+	     !dns_rdataset_isassociated(sigrdataset)) &&
+	    (client->query.rpz_st == NULL ||
+	     (client->query.rpz_st->state & DNS_RPZ_REWRITTEN) == 0) &&
+	    !dns_name_equal(client->query.qname, dns_rootname)) {
+		isc_result_t rresult;
+
+		rresult = rpz_rewrite(client, qtype, result, resuming);
+		rpz_st = client->query.rpz_st;
+		switch (rresult) {
+		case ISC_R_SUCCESS:
+			break;
+		case DNS_R_DELEGATION:
+			/*
+			 * recursing for NS names or addresses,
+			 * so save the main query state
+			 */
+			rpz_st->q.qtype = qtype;
+			rpz_st->q.is_zone = is_zone;
+			rpz_st->q.authoritative = authoritative;
+			rpz_st->q.zone = zone;
+			zone = NULL;
+			rpz_st->q.db = db;
+			db = NULL;
+			rpz_st->q.node = node;
+			node = NULL;
+			rpz_st->q.rdataset = rdataset;
+			rdataset = NULL;
+			rpz_st->q.sigrdataset = sigrdataset;
+			sigrdataset = NULL;
+			dns_name_copy(fname, rpz_st->fname, NULL);
+			rpz_st->q.result = result;
+			client->query.attributes |= NS_QUERYATTR_RECURSING;
+			goto cleanup;
+		default:
+			RECURSE_ERROR(rresult);
+			goto cleanup;
+		}
+		if (rpz_st->m.policy != DNS_RPZ_POLICY_MISS)
+			rpz_st->state |= DNS_RPZ_REWRITTEN;
+		if (rpz_st->m.policy != DNS_RPZ_POLICY_MISS &&
+		    rpz_st->m.policy != DNS_RPZ_POLICY_PASSTHRU &&
+		    rpz_st->m.policy != DNS_RPZ_POLICY_ERROR) {
+			if (rpz_st->m.type == DNS_RPZ_TYPE_QNAME) {
+				result = dns_name_copy(client->query.qname,
+						       fname, NULL);
+				RUNTIME_CHECK(result == ISC_R_SUCCESS);
+			}
+			rpz_clean(&zone, &db, &node, NULL);
+			if (rpz_st->m.rdataset != NULL) {
+				query_putrdataset(client, &rdataset);
+				rdataset = rpz_st->m.rdataset;
+				rpz_st->m.rdataset = NULL;
+			} else if (rdataset != NULL &&
+				   dns_rdataset_isassociated(rdataset)) {
+				dns_rdataset_disassociate(rdataset);
+			}
+			node = rpz_st->m.node;
+			rpz_st->m.node = NULL;
+			db = rpz_st->m.db;
+			rpz_st->m.db = NULL;
+			version = rpz_st->m.version;
+			rpz_st->m.version = NULL;
+			zone = rpz_st->m.zone;
+			rpz_st->m.zone = NULL;
+
+			switch (rpz_st->m.policy) {
+			case DNS_RPZ_POLICY_NXDOMAIN:
+				result = DNS_R_NXDOMAIN;
+				break;
+			case DNS_RPZ_POLICY_NODATA:
+				result = DNS_R_NXRRSET;
+				break;
+			case DNS_RPZ_POLICY_RECORD:
+				result = rpz_st->m.result;
+				if (type == dns_rdatatype_any &&
+				    result != DNS_R_CNAME &&
+				    dns_rdataset_isassociated(rdataset))
+					dns_rdataset_disassociate(rdataset);
+				break;
+			case DNS_RPZ_POLICY_WILDCNAME:
+				result = dns_rdataset_first(rdataset);
+				RUNTIME_CHECK(result == ISC_R_SUCCESS);
+				dns_rdataset_current(rdataset, &rdata);
+				result = dns_rdata_tostruct(&rdata, &cname,
+							    NULL);
+				RUNTIME_CHECK(result == ISC_R_SUCCESS);
+				dns_rdata_reset(&rdata);
+				result = rpz_add_cname(client, rpz_st,
+						       &cname.cname,
+						       fname, dbuf);
+				if (result != ISC_R_SUCCESS)
+					goto cleanup;
+				fname = NULL;
+				want_restart = ISC_TRUE;
+				goto cleanup;
+			case DNS_RPZ_POLICY_CNAME:
+				/*
+				 * Add overridding CNAME from a named.conf
+				 * response-policy statement
+				 */
+				result = rpz_add_cname(client, rpz_st,
+						       &rpz_st->m.rpz->cname,
+						       fname, dbuf);
+				if (result != ISC_R_SUCCESS)
+					goto cleanup;
+				fname = NULL;
+				want_restart = ISC_TRUE;
+				goto cleanup;
+			default:
+				INSIST(0);
+			}
+
+			/*
+			 * Turn off DNSSEC because the results of a
+			 * response policy zone cannot verify.
+			 */
+			client->attributes &= ~NS_CLIENTATTR_WANTDNSSEC;
+			query_putrdataset(client, &sigrdataset);
+			is_zone = ISC_TRUE;
+			rpz_log_rewrite(client, "", rpz_st->m.policy,
+					rpz_st->m.type, rpz_st->qname);
+		}
+	}
+
 	switch (result) {
 	case ISC_R_SUCCESS:
 		/*
@@ -3602,18 +5680,19 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			 */
 			if (RECURSIONOK(client)) {
 				result = query_recurse(client, qtype,
-						       NULL, NULL);
-				if (result == ISC_R_SUCCESS)
+						       client->query.qname,
+						       NULL, NULL, resuming);
+				if (result == ISC_R_SUCCESS) {
 					client->query.attributes |=
 						NS_QUERYATTR_RECURSING;
-				else if (result == DNS_R_DUPLICATE ||
-					 result == DNS_R_DROP) {
-					/* Duplicate query. */
-					QUERY_ERROR(result);
-				} else {
-					/* Unable to recurse. */
-					QUERY_ERROR(DNS_R_SERVFAIL);
-				}
+					if (dns64)
+						client->query.attributes |=
+							NS_QUERYATTR_DNS64;
+					if (dns64_exclude)
+						client->query.attributes |=
+						      NS_QUERYATTR_DNS64EXCLUDE;
+				} else
+					RECURSE_ERROR(result);
 				goto cleanup;
 			} else {
 				/* Unable to give root server referral. */
@@ -3674,6 +5753,12 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			 * We're authoritative for an ancestor of QNAME.
 			 */
 			if (!USECACHE(client) || !RECURSIONOK(client)) {
+				dns_fixedname_t fixed;
+
+				dns_fixedname_init(&fixed);
+				dns_name_copy(fname,
+					      dns_fixedname_name(&fixed), NULL);
+
 				/*
 				 * If we don't have a cache, this is the best
 				 * answer.
@@ -3707,8 +5792,9 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 					       &rdataset, sigrdatasetp,
 					       dbuf, DNS_SECTION_AUTHORITY);
 				client->query.gluedb = NULL;
-				if (WANTDNSSEC(client) && dns_db_issecure(db))
-					query_addds(client, db, node, version);
+				if (WANTDNSSEC(client))
+					query_addds(client, db, node, version,
+						   dns_fixedname_name(&fixed));
 			} else {
 				/*
 				 * We might have a better answer or delegation
@@ -3727,6 +5813,7 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 				zsigrdataset = sigrdataset;
 				sigrdataset = NULL;
 				dns_db_detachnode(db, &node);
+				zversion = version;
 				version = NULL;
 				db = NULL;
 				dns_db_attach(client->view->cachedb, &db);
@@ -3735,12 +5822,22 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			}
 		} else {
 			if (zfname != NULL &&
-			    !dns_name_issubdomain(fname, zfname)) {
+			    (!dns_name_issubdomain(fname, zfname) ||
+			     (is_staticstub_zone &&
+			      dns_name_equal(fname, zfname)))) {
 				/*
-				 * We've already got a delegation from
-				 * authoritative data, and it is better
-				 * than what we found in the cache.  Use
-				 * it instead of the cache delegation.
+				 * In the following cases use "authoritative"
+				 * data instead of the cache delegation:
+				 * 1. We've already got a delegation from
+				 *    authoritative data, and it is better
+				 *    than what we found in the cache.
+				 * 2. The query name matches the origin name
+				 *    of a static-stub zone.  This needs to be
+				 *    considered for the case where the NS of
+				 *    the static-stub zone and the cached NS
+				 *    are different.  We still need to contact
+				 *    the nameservers configured in the
+				 *    static-stub zone.
 				 */
 				query_releasename(client, &fname);
 				fname = zfname;
@@ -3760,6 +5857,8 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 				zrdataset = NULL;
 				sigrdataset = zsigrdataset;
 				zsigrdataset = NULL;
+				version = zversion;
+				zversion = NULL;
 				/*
 				 * We don't clean up zdb here because we
 				 * may still need it.  It will get cleaned
@@ -3773,19 +5872,39 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 				 */
 				if (dns_rdatatype_atparent(type))
 					result = query_recurse(client, qtype,
-							       NULL, NULL);
+							 client->query.qname,
+							 NULL, NULL, resuming);
+				else if (dns64)
+					result = query_recurse(client,
+							 dns_rdatatype_a,
+							 client->query.qname,
+							 NULL, NULL, resuming);
 				else
 					result = query_recurse(client, qtype,
-							       fname, rdataset);
-				if (result == ISC_R_SUCCESS)
+							 client->query.qname,
+							 fname, rdataset,
+							 resuming);
+
+				if (result == ISC_R_SUCCESS) {
 					client->query.attributes |=
 						NS_QUERYATTR_RECURSING;
-				else if (result == DNS_R_DUPLICATE ||
+					if (dns64)
+						client->query.attributes |=
+							NS_QUERYATTR_DNS64;
+					if (dns64_exclude)
+						client->query.attributes |=
+						      NS_QUERYATTR_DNS64EXCLUDE;
+				} else if (result == DNS_R_DUPLICATE ||
 					 result == DNS_R_DROP)
 					QUERY_ERROR(result);
 				else
-					QUERY_ERROR(DNS_R_SERVFAIL);
+					RECURSE_ERROR(result);
 			} else {
+				dns_fixedname_t fixed;
+
+				dns_fixedname_init(&fixed);
+				dns_name_copy(fname,
+					      dns_fixedname_name(&fixed), NULL);
 				/*
 				 * This is the best answer.
 				 */
@@ -3812,15 +5931,151 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 				client->query.attributes &=
 					~NS_QUERYATTR_CACHEGLUEOK;
 				if (WANTDNSSEC(client))
-					query_addds(client, db, node, version);
+					query_addds(client, db, node, version,
+						   dns_fixedname_name(&fixed));
 			}
 		}
 		goto cleanup;
+
 	case DNS_R_EMPTYNAME:
-		result = DNS_R_NXRRSET;
-		/* FALLTHROUGH */
 	case DNS_R_NXRRSET:
+	iszone_nxrrset:
 		INSIST(is_zone);
+
+#ifdef dns64_bis_return_excluded_addresses
+		if (dns64)
+#else
+		if (dns64 && !dns64_exclude)
+#endif
+		{
+			/*
+			 * Restore the answers from the previous AAAA lookup.
+			 */
+			if (rdataset != NULL)
+				query_putrdataset(client, &rdataset);
+			if (sigrdataset != NULL)
+				query_putrdataset(client, &sigrdataset);
+			rdataset = client->query.dns64_aaaa;
+			sigrdataset = client->query.dns64_sigaaaa;
+			client->query.dns64_aaaa = NULL;
+			client->query.dns64_sigaaaa = NULL;
+			if (fname == NULL) {
+				dbuf = query_getnamebuf(client);
+				if (dbuf == NULL) {
+					QUERY_ERROR(DNS_R_SERVFAIL);
+					goto cleanup;
+				}
+				fname = query_newname(client, dbuf, &b);
+				if (fname == NULL) {
+					QUERY_ERROR(DNS_R_SERVFAIL);
+					goto cleanup;
+				}
+			}
+			dns_name_copy(client->query.qname, fname, NULL);
+			dns64 = ISC_FALSE;
+#ifdef dns64_bis_return_excluded_addresses
+			/*
+			 * Resume the diverted processing of the AAAA response?
+			 */
+			if (dns64_excluded)
+				break;
+#endif
+		} else if (result == DNS_R_NXRRSET &&
+			   !ISC_LIST_EMPTY(client->view->dns64) &&
+			   client->message->rdclass == dns_rdataclass_in &&
+			   qtype == dns_rdatatype_aaaa)
+		{
+			/*
+			 * Look to see if there are A records for this
+			 * name.
+			 */
+			INSIST(client->query.dns64_aaaa == NULL);
+			INSIST(client->query.dns64_sigaaaa == NULL);
+			client->query.dns64_aaaa = rdataset;
+			client->query.dns64_sigaaaa = sigrdataset;
+			client->query.dns64_ttl = dns64_ttl(db, version);
+			query_releasename(client, &fname);
+			dns_db_detachnode(db, &node);
+			rdataset = NULL;
+			sigrdataset = NULL;
+			type = qtype = dns_rdatatype_a;
+			dns64 = ISC_TRUE;
+			goto db_find;
+		}
+
+		/*
+		 * Look for a NSEC3 record if we don't have a NSEC record.
+		 */
+ nxrrset_rrsig:
+		if (!dns_rdataset_isassociated(rdataset) &&
+		     WANTDNSSEC(client)) {
+			if ((fname->attributes & DNS_NAMEATTR_WILDCARD) == 0) {
+				dns_name_t *found;
+				dns_name_t *qname;
+
+				dns_fixedname_init(&fixed);
+				found = dns_fixedname_name(&fixed);
+				qname = client->query.qname;
+
+				query_findclosestnsec3(qname, db, version,
+						       client, rdataset,
+						       sigrdataset, fname,
+						       ISC_TRUE, found);
+				/*
+				 * Did we find the closest provable encloser
+				 * instead? If so add the nearest to the
+				 * closest provable encloser.
+				 */
+				if (dns_rdataset_isassociated(rdataset) &&
+				    !dns_name_equal(qname, found)) {
+					unsigned int count;
+					unsigned int skip;
+
+					/*
+					 * Add the closest provable encloser.
+					 */
+					query_addrrset(client, &fname,
+						       &rdataset, &sigrdataset,
+						       dbuf,
+						       DNS_SECTION_AUTHORITY);
+
+					count = dns_name_countlabels(found)
+							 + 1;
+					skip = dns_name_countlabels(qname) -
+							 count;
+					dns_name_getlabelsequence(qname, skip,
+								  count,
+								  found);
+
+					fixfname(client, &fname, &dbuf, &b);
+					fixrdataset(client, &rdataset);
+					fixrdataset(client, &sigrdataset);
+					if (fname == NULL ||
+					    rdataset == NULL ||
+					    sigrdataset == NULL) {
+						QUERY_ERROR(DNS_R_SERVFAIL);
+						goto cleanup;
+					}
+					/*
+					 * 'nearest' doesn't exist so
+					 * 'exist' is set to ISC_FALSE.
+					 */
+					query_findclosestnsec3(found, db,
+							       version,
+							       client,
+							       rdataset,
+							       sigrdataset,
+							       fname,
+							       ISC_FALSE,
+							       NULL);
+				}
+			} else {
+				query_releasename(client, &fname);
+				query_addwildcardproof(client, db, version,
+						       client->query.qname,
+						       ISC_FALSE, ISC_TRUE);
+			}
+		}
 		if (dns_rdataset_isassociated(rdataset)) {
 			/*
 			 * If we've got a NSEC record, we need to save the
@@ -3828,7 +6083,7 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			 * below, and it needs to use the name buffer.
 			 */
 			query_keepname(client, fname, dbuf);
-		} else {
+		} else if (fname != NULL) {
 			/*
 			 * We're not going to use fname, and need to release
 			 * our hold on the name buffer so query_addsoa()
@@ -3839,7 +6094,8 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		/*
 		 * Add SOA.
 		 */
-		result = query_addsoa(client, db, version, ISC_FALSE);
+		result = query_addsoa(client, db, version, ISC_UINT32_MAX,
+				      dns_rdataset_isassociated(rdataset));
 		if (result != ISC_R_SUCCESS) {
 			QUERY_ERROR(result);
 			goto cleanup;
@@ -3854,9 +6110,11 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 						     &sigrdataset);
 		}
 		goto cleanup;
+
 	case DNS_R_EMPTYWILD:
 		empty_wild = ISC_TRUE;
 		/* FALLTHROUGH */
+
 	case DNS_R_NXDOMAIN:
 		INSIST(is_zone);
 		if (dns_rdataset_isassociated(rdataset)) {
@@ -3866,7 +6124,7 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			 * below, and it needs to use the name buffer.
 			 */
 			query_keepname(client, fname, dbuf);
-		} else {
+		} else if (fname != NULL) {
 			/*
 			 * We're not going to use fname, and need to release
 			 * our hold on the name buffer so query_addsoa()
@@ -3874,6 +6132,7 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			 */
 			query_releasename(client, &fname);
 		}
+
 		/*
 		 * Add SOA.  If the query was for a SOA record force the
 		 * ttl to zero so that it is possible for clients to find
@@ -3881,30 +6140,32 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		 * resolver and not have it cached.
 		 */
 		if (qtype == dns_rdatatype_soa &&
-#ifdef DLZ
 		    zone != NULL &&
-#endif
 		    dns_zone_getzeronosoattl(zone))
-			result = query_addsoa(client, db, version, ISC_TRUE);
+			result = query_addsoa(client, db, version, 0,
+					  dns_rdataset_isassociated(rdataset));
 		else
-			result = query_addsoa(client, db, version, ISC_FALSE);
+			result = query_addsoa(client, db, version,
+					      ISC_UINT32_MAX,
+					  dns_rdataset_isassociated(rdataset));
 		if (result != ISC_R_SUCCESS) {
 			QUERY_ERROR(result);
 			goto cleanup;
 		}
-		/*
-		 * Add NSEC record if we found one.
-		 */
-		if (dns_rdataset_isassociated(rdataset)) {
-			if (WANTDNSSEC(client)) {
+
+		if (WANTDNSSEC(client)) {
+			/*
+			 * Add NSEC record if we found one.
+			 */
+			if (dns_rdataset_isassociated(rdataset))
 				query_addrrset(client, &fname, &rdataset,
 					       &sigrdataset,
 					       NULL, DNS_SECTION_AUTHORITY);
-				query_addwildcardproof(client, db, version,
-						       client->query.qname,
-						       ISC_FALSE);
-			}
+			query_addwildcardproof(client, db, version,
+					       client->query.qname, ISC_FALSE,
+					       ISC_FALSE);
 		}
+
 		/*
 		 * Set message rcode.
 		 */
@@ -3913,8 +6174,10 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		else
 			client->message->rcode = dns_rcode_nxdomain;
 		goto cleanup;
+
 	case DNS_R_NCACHENXDOMAIN:
 	case DNS_R_NCACHENXRRSET:
+	ncache_nxrrset:
 		INSIST(!is_zone);
 		authoritative = ISC_FALSE;
 		/*
@@ -3930,6 +6193,74 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		    client->message->rdclass == dns_rdataclass_in &&
 		    dns_name_countlabels(fname) == 7)
 			warn_rfc1918(client, fname, rdataset);
+
+#ifdef dns64_bis_return_excluded_addresses
+		if (dns64)
+#else
+		if (dns64 && !dns64_exclude)
+#endif
+		{
+			/*
+			 * Restore the answers from the previous AAAA lookup.
+			 */
+			if (rdataset != NULL)
+				query_putrdataset(client, &rdataset);
+			if (sigrdataset != NULL)
+				query_putrdataset(client, &sigrdataset);
+			rdataset = client->query.dns64_aaaa;
+			sigrdataset = client->query.dns64_sigaaaa;
+			client->query.dns64_aaaa = NULL;
+			client->query.dns64_sigaaaa = NULL;
+			if (fname == NULL) {
+				dbuf = query_getnamebuf(client);
+				if (dbuf == NULL) {
+					QUERY_ERROR(DNS_R_SERVFAIL);
+					goto cleanup;
+				}
+				fname = query_newname(client, dbuf, &b);
+				if (fname == NULL) {
+					QUERY_ERROR(DNS_R_SERVFAIL);
+					goto cleanup;
+				}
+			}
+			dns_name_copy(client->query.qname, fname, NULL);
+			dns64 = ISC_FALSE;
+#ifdef dns64_bis_return_excluded_addresses
+			if (dns64_excluded)
+				break;
+#endif
+		} else if (result == DNS_R_NCACHENXRRSET &&
+			   !ISC_LIST_EMPTY(client->view->dns64) &&
+			   client->message->rdclass == dns_rdataclass_in &&
+			   qtype == dns_rdatatype_aaaa)
+		{
+			/*
+			 * Look to see if there are A records for this
+			 * name.
+			 */
+			INSIST(client->query.dns64_aaaa == NULL);
+			INSIST(client->query.dns64_sigaaaa == NULL);
+			client->query.dns64_aaaa = rdataset;
+			client->query.dns64_sigaaaa = sigrdataset;
+			/*
+			 * If the ttl is zero we need to workout if we have just
+			 * decremented to zero or if there was no negative cache
+			 * ttl in the answer.
+			 */
+			if (rdataset->ttl != 0)
+				client->query.dns64_ttl = rdataset->ttl;
+			else if (dns_rdataset_first(rdataset) == ISC_R_SUCCESS)
+				client->query.dns64_ttl = 0;
+			query_releasename(client, &fname);
+			dns_db_detachnode(db, &node);
+			rdataset = NULL;
+			sigrdataset = NULL;
+			fname = NULL;
+			type = qtype = dns_rdatatype_a;
+			dns64 = ISC_TRUE;
+			goto db_find;
+		}
+
 		/*
 		 * We don't call query_addrrset() because we don't need any
 		 * of its extra features (and things would probably break!).
@@ -3941,6 +6272,7 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		fname = NULL;
 		rdataset = NULL;
 		goto cleanup;
+
 	case DNS_R_CNAME:
 		/*
 		 * Keep a copy of the rdataset.  We have to do this because
@@ -3963,8 +6295,7 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 				      NULL);
 			need_wildcardproof = ISC_TRUE;
 		}
-		if ((rdataset->attributes & DNS_RDATASETATTR_NOQNAME) != 0 &&
-		     WANTDNSSEC(client))
+		if (NOQNAME(rdataset) && WANTDNSSEC(client))
 			noqname = rdataset;
 		else
 			noqname = NULL;
@@ -4066,11 +6397,11 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			dns_message_puttempname(client->message, &tname);
 			goto cleanup;
 		}
-		dns_name_init(tname, NULL);
 		dns_name_clone(&dname.dname, tname);
 		dns_rdata_freestruct(&dname);
 		/*
-		 * Construct the new qname.
+		 * Construct the new qname consisting of
+		 * <found name prefix>.<dname target>
 		 */
 		dns_fixedname_init(&fixed);
 		prefix = dns_fixedname_name(&fixed);
@@ -4087,25 +6418,26 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			goto cleanup;
 		}
 		result = dns_name_concatenate(prefix, tname, fname, NULL);
-		if (result != ISC_R_SUCCESS) {
-			dns_message_puttempname(client->message, &tname);
-			if (result == ISC_R_NOSPACE) {
-				/*
-				 * RFC2672, section 4.1, subsection 3c says
-				 * we should return YXDOMAIN if the constructed
-				 * name would be too long.
-				 */
-				client->message->rcode = dns_rcode_yxdomain;
-			}
+		dns_message_puttempname(client->message, &tname);
+
+		/*
+		 * RFC2672, section 4.1, subsection 3c says
+		 * we should return YXDOMAIN if the constructed
+		 * name would be too long.
+		 */
+		if (result == DNS_R_NAMETOOLONG)
+			client->message->rcode = dns_rcode_yxdomain;
+		if (result != ISC_R_SUCCESS)
 			goto cleanup;
-		}
+
 		query_keepname(client, fname, dbuf);
 		/*
-		 * Synthesize a CNAME for this DNAME.
+		 * Synthesize a CNAME consisting of
+		 *   <old qname> <dname ttl> CNAME <new qname>
+		 *	    with <dname trust value>
 		 *
-		 * We want to synthesize a CNAME since if we don't
-		 * then older software that doesn't understand DNAME
-		 * will not chain like it should.
+		 * Synthesize a CNAME so old old clients that don't understand
+		 * DNAME can chain.
 		 *
 		 * We do not try to synthesize a signature because we hope
 		 * that security aware servers will understand DNAME.  Also,
@@ -4113,12 +6445,10 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		 * on-the-fly is costly, and not really legitimate anyway
 		 * since the synthesized CNAME is NOT in the zone.
 		 */
-		dns_name_init(tname, NULL);
-		(void)query_addcnamelike(client, client->query.qname, fname,
-					 trdataset->trust, &tname,
-					 dns_rdatatype_cname);
-		if (tname != NULL)
-			dns_message_puttempname(client->message, &tname);
+		result = query_add_cname(client, client->query.qname, fname,
+					 trdataset->trust, trdataset->ttl);
+		if (result != ISC_R_SUCCESS)
+			goto cleanup;
 		/*
 		 * Switch to the new qname and restart.
 		 */
@@ -4144,7 +6474,33 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		need_wildcardproof = ISC_TRUE;
 	}
 
+#ifdef ALLOW_FILTER_AAAA_ON_V4
+	if (client->view->v4_aaaa != dns_v4_aaaa_ok &&
+	    is_v4_client(client) &&
+	    ns_client_checkaclsilent(client, NULL,
+				     client->view->v4_aaaa_acl,
+				     ISC_TRUE) == ISC_R_SUCCESS)
+		client->filter_aaaa = client->view->v4_aaaa;
+	else
+		client->filter_aaaa = dns_v4_aaaa_ok;
+
+#endif
+
 	if (type == dns_rdatatype_any) {
+#ifdef ALLOW_FILTER_AAAA_ON_V4
+		isc_boolean_t have_aaaa, have_a, have_sig;
+
+		/*
+		 * The filter-aaaa-on-v4 option should
+		 * suppress AAAAs for IPv4 clients if there is an A.
+		 * If we are not authoritative, assume there is a A
+		 * even in if it is not in our cache.  This assumption could
+		 * be wrong but it is a good bet.
+		 */
+		have_aaaa = ISC_FALSE;
+		have_a = !authoritative;
+		have_sig = ISC_FALSE;
+#endif
 		/*
 		 * XXXRTH  Need to handle zonecuts with special case
 		 * code.
@@ -4156,6 +6512,7 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			QUERY_ERROR(DNS_R_SERVFAIL);
 			goto cleanup;
 		}
+
 		/*
 		 * Calling query_addrrset() with a non-NULL dbuf is going
 		 * to either keep or release the name.  We don't want it to
@@ -4172,17 +6529,48 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		result = dns_rdatasetiter_first(rdsiter);
 		while (result == ISC_R_SUCCESS) {
 			dns_rdatasetiter_current(rdsiter, rdataset);
-			if ((qtype == dns_rdatatype_any ||
+#ifdef ALLOW_FILTER_AAAA_ON_V4
+			/*
+			 * Notice the presence of A and AAAAs so
+			 * that AAAAs can be hidden from IPv4 clients.
+			 */
+			if (client->filter_aaaa != dns_v4_aaaa_ok) {
+				if (rdataset->type == dns_rdatatype_aaaa)
+					have_aaaa = ISC_TRUE;
+				else if (rdataset->type == dns_rdatatype_a)
+					have_a = ISC_TRUE;
+			}
+#endif
+			if (is_zone && qtype == dns_rdatatype_any &&
+			    !dns_db_issecure(db) &&
+			    dns_rdatatype_isdnssec(rdataset->type)) {
+				/*
+				 * The zone is transitioning from insecure
+				 * to secure. Hide the dnssec records from
+				 * ANY queries.
+				 */
+				dns_rdataset_disassociate(rdataset);
+			} else if ((qtype == dns_rdatatype_any ||
 			     rdataset->type == qtype) && rdataset->type != 0) {
+#ifdef ALLOW_FILTER_AAAA_ON_V4
+				if (dns_rdatatype_isdnssec(rdataset->type))
+					have_sig = ISC_TRUE;
+#endif
+				if (NOQNAME(rdataset) && WANTDNSSEC(client))
+					noqname = rdataset;
+				else
+					noqname = NULL;
 				query_addrrset(client,
 					       fname != NULL ? &fname : &tname,
 					       &rdataset, NULL,
 					       NULL, DNS_SECTION_ANSWER);
+				if (noqname != NULL)
+					query_addnoqnameproof(client, noqname);
 				n++;
 				INSIST(tname != NULL);
 				/*
-				 * rdataset is non-NULL only in certain pathological
-				 * cases involving DNAMEs.
+				 * rdataset is non-NULL only in certain
+				 * pathological cases involving DNAMEs.
 				 */
 				if (rdataset != NULL)
 					query_putrdataset(client, &rdataset);
@@ -4198,55 +6586,57 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			result = dns_rdatasetiter_next(rdsiter);
 		}
 
+#ifdef ALLOW_FILTER_AAAA_ON_V4
+		/*
+		 * Filter AAAAs if there is an A and there is no signature
+		 * or we are supposed to break DNSSEC.
+		 */
+		if (client->filter_aaaa == dns_v4_aaaa_break_dnssec)
+			client->attributes |= NS_CLIENTATTR_FILTER_AAAA;
+		else if (client->filter_aaaa != dns_v4_aaaa_ok &&
+			 have_aaaa && have_a &&
+			 (!have_sig || !WANTDNSSEC(client)))
+			  client->attributes |= NS_CLIENTATTR_FILTER_AAAA;
+#endif
 		if (fname != NULL)
 			dns_message_puttempname(client->message, &fname);
 
 		if (n == 0) {
 			/*
-			 * We didn't match any rdatasets.
+			 * No matching rdatasets found in cache. If we were
+			 * searching for RRSIG/SIG, that's probably okay;
+			 * otherwise this is an error condition.
 			 */
-			if (qtype == dns_rdatatype_rrsig &&
+			if ((qtype == dns_rdatatype_rrsig ||
+			     qtype == dns_rdatatype_sig) &&
 			    result == ISC_R_NOMORE) {
-				/*
-				 * XXXRTH  If this is a secure zone and we
-				 * didn't find any SIGs, we should generate
-				 * an error unless we were searching for
-				 * glue.  Ugh.
-				 */
 				if (!is_zone) {
 					authoritative = ISC_FALSE;
 					dns_rdatasetiter_destroy(&rdsiter);
-					if (RECURSIONOK(client)) {
-						result = query_recurse(client,
-								       qtype,
-								       NULL,
-								       NULL);
-						if (result == ISC_R_SUCCESS)
-						    client->query.attributes |=
-							NS_QUERYATTR_RECURSING;
-						else
-						    QUERY_ERROR(DNS_R_SERVFAIL);					}
+					client->attributes &= ~NS_CLIENTATTR_RA;
 					goto addauth;
 				}
-				/*
-				 * We were searching for SIG records in
-				 * a nonsecure zone.  Send a "no error,
-				 * no data" response.
-				 */
-				/*
-				 * Add SOA.
-				 */
-				result = query_addsoa(client, db, version,
-						      ISC_FALSE);
-				if (result == ISC_R_SUCCESS)
-					result = ISC_R_NOMORE;
-			} else {
-				/*
-				 * Something went wrong.
-				 */
+
+				if (dns_db_issecure(db)) {
+					char namebuf[DNS_NAME_FORMATSIZE];
+					dns_name_format(client->query.qname,
+							namebuf,
+							sizeof(namebuf));
+					ns_client_log(client,
+						      DNS_LOGCATEGORY_DNSSEC,
+						      NS_LOGMODULE_QUERY,
+						      ISC_LOG_WARNING,
+						      "missing signature "
+						      "for %s", namebuf);
+				}
+
+				dns_rdatasetiter_destroy(&rdsiter);
+				fname = query_newname(client, dbuf, &b);
+				goto nxrrset_rrsig;
+			} else
 				result = DNS_R_SERVFAIL;
-			}
 		}
+
 		dns_rdatasetiter_destroy(&rdsiter);
 		if (result != ISC_R_NOMORE) {
 			QUERY_ERROR(DNS_R_SERVFAIL);
@@ -4257,12 +6647,121 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		 * This is the "normal" case -- an ordinary question to which
 		 * we know the answer.
 		 */
+
+#ifdef ALLOW_FILTER_AAAA_ON_V4
+		/*
+		 * Optionally hide AAAAs from IPv4 clients if there is an A.
+		 * We add the AAAAs now, but might refuse to render them later
+		 * after DNSSEC is figured out.
+		 * This could be more efficient, but the whole idea is
+		 * so fundamentally wrong, unavoidably inaccurate, and
+		 * unneeded that it is best to keep it as short as possible.
+		 */
+		if (client->filter_aaaa == dns_v4_aaaa_break_dnssec ||
+		    (client->filter_aaaa == dns_v4_aaaa_filter &&
+		     (!WANTDNSSEC(client) || sigrdataset == NULL ||
+		     !dns_rdataset_isassociated(sigrdataset))))
+		{
+			if (qtype == dns_rdatatype_aaaa) {
+				trdataset = query_newrdataset(client);
+				result = dns_db_findrdataset(db, node, version,
+							dns_rdatatype_a, 0,
+							client->now,
+							trdataset, NULL);
+				if (dns_rdataset_isassociated(trdataset))
+					dns_rdataset_disassociate(trdataset);
+				query_putrdataset(client, &trdataset);
+
+				/*
+				 * We have an AAAA but the A is not in our cache.
+				 * Assume any result other than DNS_R_DELEGATION
+				 * or ISC_R_NOTFOUND means there is no A and
+				 * so AAAAs are ok.
+				 * Assume there is no A if we can't recurse
+				 * for this client, although that could be
+				 * the wrong answer. What else can we do?
+				 * Besides, that we have the AAAA and are using
+				 * this mechanism suggests that we care more
+				 * about As than AAAAs and would have cached
+				 * the A if it existed.
+				 */
+				if (result == ISC_R_SUCCESS) {
+					client->attributes |=
+						    NS_CLIENTATTR_FILTER_AAAA;
+
+				} else if (authoritative ||
+					   !RECURSIONOK(client) ||
+					   (result != DNS_R_DELEGATION &&
+					    result != ISC_R_NOTFOUND)) {
+					client->attributes &=
+						    ~NS_CLIENTATTR_FILTER_AAAA;
+				} else {
+					/*
+					 * This is an ugly kludge to recurse
+					 * for the A and discard the result.
+					 *
+					 * Continue to add the AAAA now.
+					 * We'll make a note to not render it
+					 * if the recursion for the A succeeds.
+					 */
+					result = query_recurse(client,
+							dns_rdatatype_a,
+							client->query.qname,
+							NULL, NULL, resuming);
+					if (result == ISC_R_SUCCESS) {
+					    client->attributes |=
+						    NS_CLIENTATTR_FILTER_AAAA_RC;
+					    client->query.attributes |=
+							NS_QUERYATTR_RECURSING;
+					}
+				}
+
+			} else if (qtype == dns_rdatatype_a &&
+				   (client->attributes &
+					    NS_CLIENTATTR_FILTER_AAAA_RC) != 0) {
+				client->attributes &=
+					    ~NS_CLIENTATTR_FILTER_AAAA_RC;
+				client->attributes |=
+					    NS_CLIENTATTR_FILTER_AAAA;
+				dns_rdataset_disassociate(rdataset);
+				if (sigrdataset != NULL &&
+				    dns_rdataset_isassociated(sigrdataset))
+					dns_rdataset_disassociate(sigrdataset);
+				goto cleanup;
+			}
+		}
+#endif
+		/*
+		 * Check to see if the AAAA RRset has non-excluded addresses
+		 * in it.  If not look for a A RRset.
+		 */
+		INSIST(client->query.dns64_aaaaok == NULL);
+
+		if (qtype == dns_rdatatype_aaaa && !dns64_exclude &&
+		    !ISC_LIST_EMPTY(client->view->dns64) &&
+		    client->message->rdclass == dns_rdataclass_in &&
+		    !dns64_aaaaok(client, rdataset, sigrdataset)) {
+			/*
+			 * Look to see if there are A records for this
+			 * name.
+			 */
+			client->query.dns64_aaaa = rdataset;
+			client->query.dns64_sigaaaa = sigrdataset;
+			client->query.dns64_ttl = rdataset->ttl;
+			query_releasename(client, &fname);
+			dns_db_detachnode(db, &node);
+			rdataset = NULL;
+			sigrdataset = NULL;
+			type = qtype = dns_rdatatype_a;
+			dns64_exclude = dns64 = ISC_TRUE;
+			goto db_find;
+		}
+
 		if (sigrdataset != NULL)
 			sigrdatasetp = &sigrdataset;
 		else
 			sigrdatasetp = NULL;
-		if ((rdataset->attributes & DNS_RDATASETATTR_NOQNAME) != 0 &&
-		     WANTDNSSEC(client))
+		if (NOQNAME(rdataset) && WANTDNSSEC(client))
 			noqname = rdataset;
 		else
 			noqname = NULL;
@@ -4273,8 +6772,42 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		    dns_name_equal(client->query.qname, dns_rootname))
 			client->query.attributes &= ~NS_QUERYATTR_NOADDITIONAL;
 
-		query_addrrset(client, &fname, &rdataset, sigrdatasetp, dbuf,
-			       DNS_SECTION_ANSWER);
+		if (dns64) {
+			qtype = type = dns_rdatatype_aaaa;
+			result = query_dns64(client, &fname, rdataset,
+					     sigrdataset, dbuf,
+					     DNS_SECTION_ANSWER);
+			dns_rdataset_disassociate(rdataset);
+			dns_message_puttemprdataset(client->message, &rdataset);
+			if (result == ISC_R_NOMORE) {
+#ifndef dns64_bis_return_excluded_addresses
+				if (dns64_exclude) {
+					if (!is_zone)
+						goto cleanup;
+					/*
+					 * Add a fake SOA record.
+					 */
+					(void)query_addsoa(client, db, version,
+							   600, ISC_FALSE);
+					goto cleanup;
+				}
+#endif
+				if (is_zone)
+					goto iszone_nxrrset;
+				else
+					goto ncache_nxrrset;
+			} else if (result != ISC_R_SUCCESS) {
+				eresult = result;
+				goto cleanup;
+			}
+		} else if (client->query.dns64_aaaaok != NULL) {
+			query_filter64(client, &fname, rdataset, dbuf,
+				       DNS_SECTION_ANSWER);
+			query_putrdataset(client, &rdataset);
+		} else
+			query_addrrset(client, &fname, &rdataset,
+				       sigrdatasetp, dbuf, DNS_SECTION_ANSWER);
+
 		if (noqname != NULL)
 			query_addnoqnameproof(client, noqname);
 		/*
@@ -4311,12 +6844,18 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 	if (need_wildcardproof && dns_db_issecure(db))
 		query_addwildcardproof(client, db, version,
 				       dns_fixedname_name(&wildcardname),
-				       ISC_TRUE);
+				       ISC_TRUE, ISC_FALSE);
  cleanup:
 	CTRACE("query_find: cleanup");
 	/*
 	 * General cleanup.
 	 */
+	rpz_st = client->query.rpz_st;
+	if (rpz_st != NULL && (rpz_st->state & DNS_RPZ_RECURSING) == 0) {
+		rpz_clean(&rpz_st->m.zone, &rpz_st->m.db, &rpz_st->m.node,
+			  &rpz_st->m.rdataset);
+		rpz_st->state &= ~DNS_RPZ_DONE_QNAME;
+	}
 	if (rdataset != NULL)
 		query_putrdataset(client, &rdataset);
 	if (sigrdataset != NULL)
@@ -4374,7 +6913,8 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			 * or if the client requested recursion and thus wanted
 			 * the complete answer, send an error response.
 			 */
-			query_error(client, eresult);
+			INSIST(line >= 0);
+			query_error(client, eresult, line);
 		}
 		ns_client_detach(&client);
 	} else if (!RECURSING(client)) {
@@ -4391,7 +6931,7 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		 * is in the glue sort it to the start of the additional
 		 * section.
 		 */
-		if (client->message->counts[DNS_SECTION_ANSWER] == 0 &&
+		if (ISC_LIST_EMPTY(client->message->sections[DNS_SECTION_ANSWER]) &&
 		    client->message->rcode == dns_rcode_noerror &&
 		    (qtype == dns_rdatatype_a || qtype == dns_rdatatype_aaaa))
 			answer_in_glue(client, qtype);
@@ -4400,17 +6940,30 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		    client->view->auth_nxdomain == ISC_TRUE)
 			client->message->flags |= DNS_MESSAGEFLAG_AA;
 
+		/*
+		 * If the response is somehow unexpected for the client and this
+		 * is a result of recursion, return an error to the caller
+		 * to indicate it may need to be logged.
+		 */
+		if (resuming &&
+		    (ISC_LIST_EMPTY(client->message->sections[DNS_SECTION_ANSWER]) ||
+		     client->message->rcode != dns_rcode_noerror))
+			eresult = ISC_R_FAILURE;
+
 		query_send(client);
 		ns_client_detach(&client);
 	}
 	CTRACE("query_find: done");
+
+	return (eresult);
 }
 
 static inline void
-log_query(ns_client_t *client) {
+log_query(ns_client_t *client, unsigned int flags, unsigned int extflags) {
 	char namebuf[DNS_NAME_FORMATSIZE];
 	char typename[DNS_RDATATYPE_FORMATSIZE];
 	char classname[DNS_RDATACLASS_FORMATSIZE];
+	char onbuf[ISC_NETADDR_FORMATSIZE];
 	dns_rdataset_t *rdataset;
 	int level = ISC_LOG_INFO;
 
@@ -4422,12 +6975,60 @@ log_query(ns_client_t *client) {
 	dns_name_format(client->query.qname, namebuf, sizeof(namebuf));
 	dns_rdataclass_format(rdataset->rdclass, classname, sizeof(classname));
 	dns_rdatatype_format(rdataset->type, typename, sizeof(typename));
+	isc_netaddr_format(&client->destaddr, onbuf, sizeof(onbuf));
 
 	ns_client_log(client, NS_LOGCATEGORY_QUERIES, NS_LOGMODULE_QUERY,
-		      level, "query: %s %s %s %s%s%s", namebuf, classname,
-		      typename, WANTRECURSION(client) ? "+" : "-",
+		      level, "query: %s %s %s %s%s%s%s%s%s (%s)", namebuf,
+		      classname, typename, WANTRECURSION(client) ? "+" : "-",
 		      (client->signer != NULL) ? "S": "",
-		      (client->opt != NULL) ? "E" : "");
+		      (client->opt != NULL) ? "E" : "",
+		      ((client->attributes & NS_CLIENTATTR_TCP) != 0) ?
+				 "T" : "",
+		      ((extflags & DNS_MESSAGEEXTFLAG_DO) != 0) ? "D" : "",
+		      ((flags & DNS_MESSAGEFLAG_CD) != 0) ? "C" : "",
+		      onbuf);
+}
+
+static inline void
+log_queryerror(ns_client_t *client, isc_result_t result, int line, int level) {
+	char namebuf[DNS_NAME_FORMATSIZE];
+	char typename[DNS_RDATATYPE_FORMATSIZE];
+	char classname[DNS_RDATACLASS_FORMATSIZE];
+	const char *namep, *typep, *classp, *sep1, *sep2;
+	dns_rdataset_t *rdataset;
+
+	if (!isc_log_wouldlog(ns_g_lctx, level))
+		return;
+
+	namep = typep = classp = sep1 = sep2 = "";
+
+	/*
+	 * Query errors can happen for various reasons.  In some cases we cannot
+	 * even assume the query contains a valid question section, so we should
+	 * expect exceptional cases.
+	 */
+	if (client->query.origqname != NULL) {
+		dns_name_format(client->query.origqname, namebuf,
+				sizeof(namebuf));
+		namep = namebuf;
+		sep1 = " for ";
+
+		rdataset = ISC_LIST_HEAD(client->query.origqname->list);
+		if (rdataset != NULL) {
+			dns_rdataclass_format(rdataset->rdclass, classname,
+					      sizeof(classname));
+			classp = classname;
+			dns_rdatatype_format(rdataset->type, typename,
+					     sizeof(typename));
+			typep = typename;
+			sep2 = "/";
+		}
+	}
+
+	ns_client_log(client, NS_LOGCATEGORY_QUERY_EERRORS, NS_LOGMODULE_QUERY,
+		      level, "query failed (%s)%s%s%s%s%s%s at %s:%d",
+		      isc_result_totext(result), sep1, namep, sep2,
+		      classp, sep2, typep, __FILE__, line);
 }
 
 void
@@ -4437,8 +7038,17 @@ ns_query_start(ns_client_t *client) {
 	dns_rdataset_t *rdataset;
 	ns_client_t *qclient;
 	dns_rdatatype_t qtype;
+	unsigned int saved_extflags = client->extflags;
+	unsigned int saved_flags = client->message->flags;
+	isc_boolean_t want_ad;
 
 	CTRACE("ns_query_start");
+
+	/*
+	 * Test only.
+	 */
+	if (ns_g_clienttest && (client->attributes & NS_CLIENTATTR_TCP) == 0)
+		RUNTIME_CHECK(ns_client_replace(client) == ISC_R_SUCCESS);
 
 	/*
 	 * Ensure that appropriate cleanups occur.
@@ -4489,7 +7099,7 @@ ns_query_start(ns_client_t *client) {
 	 */
 	result = dns_message_firstname(message, DNS_SECTION_QUESTION);
 	if (result != ISC_R_SUCCESS) {
-		query_error(client, result);
+		query_error(client, result, __LINE__);
 		return;
 	}
 	dns_message_currentname(message, DNS_SECTION_QUESTION,
@@ -4502,20 +7112,20 @@ ns_query_start(ns_client_t *client) {
 			 * There's more than one QNAME in the question
 			 * section.
 			 */
-			query_error(client, DNS_R_FORMERR);
+			query_error(client, DNS_R_FORMERR, __LINE__);
 		} else
-			query_error(client, result);
+			query_error(client, result, __LINE__);
 		return;
 	}
 
 	if (ns_g_server->log_queries)
-		log_query(client);
+		log_query(client, saved_flags, saved_extflags);
 
 	/*
 	 * Check for multiple question queries, since edns1 is dead.
 	 */
 	if (message->counts[DNS_SECTION_QUESTION] > 1) {
-		query_error(client, DNS_R_FORMERR);
+		query_error(client, DNS_R_FORMERR, __LINE__);
 		return;
 	}
 
@@ -4525,6 +7135,7 @@ ns_query_start(ns_client_t *client) {
 	rdataset = ISC_LIST_HEAD(client->query.qname->list);
 	INSIST(rdataset != NULL);
 	qtype = rdataset->type;
+	dns_rdatatypestats_increment(ns_g_server->rcvquerystats, qtype);
 	if (dns_rdatatype_ismeta(qtype)) {
 		switch (qtype) {
 		case dns_rdatatype_any:
@@ -4535,7 +7146,7 @@ ns_query_start(ns_client_t *client) {
 			return;
 		case dns_rdatatype_maila:
 		case dns_rdatatype_mailb:
-			query_error(client, DNS_R_NOTIMP);
+			query_error(client, DNS_R_NOTIMP, __LINE__);
 			return;
 		case dns_rdatatype_tkey:
 			result = dns_tkey_processquery(client->message,
@@ -4544,13 +7155,28 @@ ns_query_start(ns_client_t *client) {
 			if (result == ISC_R_SUCCESS)
 				query_send(client);
 			else
-				query_error(client, result);
+				query_error(client, result, __LINE__);
 			return;
 		default: /* TSIG, etc. */
-			query_error(client, DNS_R_FORMERR);
+			query_error(client, DNS_R_FORMERR, __LINE__);
 			return;
 		}
 	}
+
+	/*
+	 * Turn on minimal response for DNSKEY and DS queries.
+	 */
+	if (qtype == dns_rdatatype_dnskey || qtype == dns_rdatatype_ds)
+		client->query.attributes |= (NS_QUERYATTR_NOAUTHORITY |
+					     NS_QUERYATTR_NOADDITIONAL);
+
+	/*
+	 * Turn on minimal responses for EDNS/UDP bufsize 512 queries.
+	 */
+	if (client->opt != NULL && client->udpsize <= 512U &&
+	    (client->attributes & NS_CLIENTATTR_TCP) == 0)
+		client->query.attributes |= (NS_QUERYATTR_NOAUTHORITY |
+					     NS_QUERYATTR_NOADDITIONAL);
 
 	/*
 	 * If the client has requested that DNSSEC checking be disabled,
@@ -4576,6 +7202,15 @@ ns_query_start(ns_client_t *client) {
 		client->query.attributes &= ~NS_QUERYATTR_SECURE;
 
 	/*
+	 * Set 'want_ad' if the client has set AD in the query.
+	 * This allows AD to be returned on queries without DO set.
+	 */
+	if ((message->flags & DNS_MESSAGEFLAG_AD) != 0)
+		want_ad = ISC_TRUE;
+	else
+		want_ad = ISC_FALSE;
+
+	/*
 	 * This is an ordinary query.
 	 */
 	result = dns_message_reply(message, ISC_TRUE);
@@ -4587,17 +7222,21 @@ ns_query_start(ns_client_t *client) {
 	/*
 	 * Assume authoritative response until it is known to be
 	 * otherwise.
+	 *
+	 * If "-T noaa" has been set on the command line don't set
+	 * AA on authoritative answers.
 	 */
-	message->flags |= DNS_MESSAGEFLAG_AA;
+	if (!ns_g_noaa)
+		message->flags |= DNS_MESSAGEFLAG_AA;
 
 	/*
 	 * Set AD.  We must clear it if we add non-validated data to a
 	 * response.
 	 */
-	if (WANTDNSSEC(client))
+	if (WANTDNSSEC(client) || want_ad)
 		message->flags |= DNS_MESSAGEFLAG_AD;
 
 	qclient = NULL;
 	ns_client_attach(client, &qclient);
-	query_find(qclient, NULL, qtype);
+	(void)query_find(qclient, NULL, qtype);
 }

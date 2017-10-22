@@ -1,17 +1,17 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/powerd 161667 2006-08-27 11:04:39Z cperciva $
+# $FreeBSD$
 #
 
 # PROVIDE: powerd
 # REQUIRE: DAEMON
 # BEFORE: LOGIN
-# KEYWORD: nojail
+# KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 
 name="powerd"
-rcvar=`set_rcvar`
+rcvar="powerd_enable"
 command="/usr/sbin/${name}"
 stop_postcmd=powerd_poststop
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/regression/gaithrstress/gaithrstress.c 126085 2004-02-21 22:42:54Z green $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -241,7 +241,7 @@ usage:
 	fflush(stdout);
 	for (i = 0; i < nworkers; i++) {
 		if (pthread_create(&workers[i].w_thread, NULL, work,
-		    &workers[i]) == -1)
+		    &workers[i]) != 0)
 			err(1, "creating worker %u", i);
 		printf("%u%s", i, i == nworkers - 1 ? ".\n" : ", ");
 		fflush(stdout);

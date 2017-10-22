@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/usr.sbin/sysinstall/sysinstall.8 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
 .Dd February 18, 2007
 .Dt SYSINSTALL 8
@@ -187,7 +187,6 @@ When and where a function depends on the settings of one or more variables
 will be noted in the following table:
 .Pp
 .Sy "Function Glossary" :
-.Pp
 .Bl -tag -width indent
 .It configAnonFTP
 Invoke the Anonymous FTP configuration menu.
@@ -218,10 +217,10 @@ Configure host as a user of the Network Time Protocol.
 .Pp
 .Sy Variables :
 .Bl -tag -width indent
-.It ntpdate_flags
-The flags to
-.Xr ntpdate 8 ,
-that is to say the name of the server to sync from.
+.It ntpdate_hosts
+Whitespace-separated list of
+.Xr ntpdate 8
+servers to sync from.
 .El
 .It configPCNFSD
 Configure host to support PC NFS.
@@ -249,6 +248,12 @@ Invokes the disk partition (MBR) editor.
 .Bl -tag -width findx
 .It geometry
 The disk geometry, as a cyls/heads/sectors formatted string.
+The word "sane" instructs
+.Nm
+to calculate a safe (not necessarily optimal) geometry if the
+current one has more than 65535 cylinders, more than 256 heads or
+more than 63 sectors per track (255 sectors on the PC98
+architecture).
 Default: no
 change to geometry.
 .It partition
@@ -405,10 +410,8 @@ Possible distribution values are:
 .Bl -tag -width indentxx
 .It Li base
 The base binary distribution.
-.It Li generic
+.It Li GENERIC
 The GENERIC kernel.
-.It Li smp
-A kernel suitable for multiple processor systems.
 .It Li doc
 Miscellaneous documentation
 .It Li games
@@ -424,7 +427,7 @@ Dictionary information (for tools like spell).
 .It Li info
 GNU info files and other extra docs.
 .It Li lib32
-(amd64 only)
+(amd64 and powerpc64 only)
 32-bit runtime compatibility libraries.
 .It Li ports
 The ports collection.
@@ -470,38 +473,6 @@ The ports collection.
 /usr/src/usr.bin
 .It Li susbin
 /usr/src/usr.sbin
-.It Li Xbin
-X.Org client applications.
-.It Li Xlib
-X.Org libraries.
-.It Li Xman
-X.Org manual pages.
-.It Li Xdoc
-X.Org protocol and library documentation.
-.It Li Xprog
-X.Org imake distribution.
-.It Li Xsrv
-X.Org X server.
-.It Li Xnest
-X.Org nested X server.
-.It Li Xprt
-X.Org print server.
-.It Li Xvfb
-X.Org virtual frame-buffer X server.
-.It Li Xfmsc
-X.Org miscellaneous font set.
-.It Li Xf75
-X.Org 75DPI font set.
-.It Li Xf100
-X.Org 100DPI font set.
-.It Li Xfcyr
-X.Org Cyrillic font set.
-.It Li Xft1
-X.Org Type 1 font set.
-.It Li Xftt
-X.Org TrueType font set.
-.It Li Xfs
-X.Org font server.
 .It Li local
 Local additions collection.
 .El
@@ -511,23 +482,8 @@ Selects the standard Developer's distribution set.
 .Pp
 .Sy Variables :
 None
-.It distSetXDeveloper
-Selects the standard X Developer's distribution set.
-.Pp
-.Sy Variables :
-None
-.It distSetKernDeveloper
-Selects the standard kernel Developer's distribution set.
-.Pp
-.Sy Variables :
-None
 .It distSetUser
 Selects the standard user distribution set.
-.Pp
-.Sy Variables :
-None
-.It distSetXUser
-Selects the standard X user's distribution set.
 .Pp
 .Sy Variables :
 None
@@ -543,11 +499,6 @@ Selects the full whack - all available distributions.
 None
 .It distSetSrc
 Interactively select source subcomponents.
-.Pp
-.Sy Variables :
-None
-.It distSetXOrg
-Interactively select X.Org subcomponents.
 .Pp
 .Sy Variables :
 None
@@ -580,6 +531,15 @@ functions.
 .Pp
 .Sy Variables :
 None
+.It installConfigure
+Commit any rc.conf changes to disk.
+.Pp
+.Sy Variables :
+.Bl -tag -width indent
+.It keeprcconf
+Preserve existing rc.conf parameters.
+This is useful if you have a post-install script which modifies rc.conf.
+.El
 .It installExpress
 Start an "express" installation, asking few questions of
 the user.
@@ -667,11 +627,6 @@ The first primary partition found is used (e.g.\& C:).
 .Pp
 .Sy Variables :
 None
-.It mediaSetTape
-Select a tape device as the installation media.
-.Pp
-.Sy Variables :
-None
 .It mediaSetFTP
 Select an FTP site as the installation media.
 .Pp
@@ -684,12 +639,10 @@ The domain name of the host being installed (optional).
 .It defaultrouter
 The default router for this host (non-optional).
 .It netDev
-Which host interface to use
-.Ar ( ed0
-or
-.Ar ep0 ,
-for example.
-Non-optional).
+Which network interface to use. 
+Multiple network interfaces may be specified using a comma delimited list. 
+If netDev is set to ANY, all available network interfaces will be probed and the
+first interface found to have a link will be used. (non-optional).
 .It netInteractive
 If set, bring up the interactive network setup form even
 if all relevant configuration variables are already set (optional).
@@ -791,8 +744,7 @@ Default: user@host
 .Sy Variables :
 .Bl -tag -width indent
 .It cpioVerbose
-Can be used to set the verbosity of cpio extractions to low, medium or
-high.
+Can be used to set the verbosity of cpio extractions to low or high.
 .El
 .It mediaGetType
 Interactively get the user to specify some type of media.
@@ -878,9 +830,9 @@ This property is normally only used with
 .Fx
 products that contain
 CDs for different architectures, to provide better error messages if
-users try to install Alpha packages on an i386 machine.
+users try to install packages built for the wrong architecture.
 For example,
-.Dq Li "CD_MACHINE_ARCH = alpha" .
+.Dq Li "CD_MACHINE_ARCH = amd64" .
 .It Va CD_VOLUME
 In a multi-volume collection (such as the
 .Fx
@@ -943,5 +895,5 @@ and
 .Xr bsdlabel 8
 for these tasks.
 .Pp
-This utility is a prototype which lasted several years past
-its expiration date and is greatly in need of death.
+There are a (great) number of undocumented variables.
+UTSL.

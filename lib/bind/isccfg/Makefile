@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/lib/bind/isccfg/Makefile 170221 2007-06-02 23:19:58Z dougb $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 

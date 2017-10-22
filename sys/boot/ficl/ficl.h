@@ -41,7 +41,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: release/7.0.0/sys/boot/ficl/ficl.h 167850 2007-03-23 22:26:01Z jkim $ */
+/* $FreeBSD$ */
 
 #if !defined (__FICL_H__)
 #define __FICL_H__
@@ -757,6 +757,7 @@ void        dictAppendUNS  (FICL_DICT *pDict, FICL_UNS u);
 int         dictCellsAvail (FICL_DICT *pDict);
 int         dictCellsUsed  (FICL_DICT *pDict);
 void        dictCheck      (FICL_DICT *pDict, FICL_VM *pVM, int n);
+void        dictCheckThreshold(FICL_DICT* dp);
 FICL_DICT  *dictCreate(unsigned nCELLS);
 FICL_DICT  *dictCreateHashed(unsigned nCells, unsigned nHash);
 FICL_HASH  *dictCreateWordlist(FICL_DICT *dp, int nBuckets);

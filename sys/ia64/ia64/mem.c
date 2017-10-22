@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/mem.c 133023 2004-08-02 18:37:55Z marcel $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Memory special file
@@ -94,7 +94,7 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 			continue;
 		}
 
-		if (minor(dev) == CDEV_MINOR_MEM) {
+		if (dev2unit(dev) == CDEV_MINOR_MEM) {
 			v = uio->uio_offset;
 kmemphys:
 			/* Allow reads only in RAM. */
@@ -111,7 +111,7 @@ kmemphys:
 			error = uiomove((caddr_t)IA64_PHYS_TO_RR7(v), c, uio);
 			continue;
 		}
-		else if (minor(dev) == CDEV_MINOR_KMEM) {
+		else if (dev2unit(dev) == CDEV_MINOR_KMEM) {
 			v = uio->uio_offset;
 
 			if (v >= IA64_RR_BASE(6)) {
@@ -148,7 +148,8 @@ kmemphys:
  * instead of going through read/write
  */
 int
-memmmap(struct cdev *dev, vm_offset_t offset, vm_paddr_t *paddr, int prot)
+memmmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
+    int prot, vm_memattr_t *memattr)
 {
 	/*
 	 * /dev/mem is the only one that makes sense through this
@@ -156,7 +157,7 @@ memmmap(struct cdev *dev, vm_offset_t offset, vm_paddr_t *paddr, int prot)
 	 * could be transient and hence incorrect or invalid at
 	 * a later time.
 	 */
-	if (minor(dev) != CDEV_MINOR_MEM)
+	if (dev2unit(dev) != CDEV_MINOR_MEM)
 		return (-1);
 
 	/*
@@ -166,9 +167,4 @@ memmmap(struct cdev *dev, vm_offset_t offset, vm_paddr_t *paddr, int prot)
 		return (-1);
 	*paddr = IA64_PHYS_TO_RR7(offset);
 	return (0);
-}
-
-void
-dev_mem_md_init(void)
-{
 }

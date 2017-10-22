@@ -33,7 +33,7 @@
  *
  *	From: @(#)ansi.h	8.2 (Berkeley) 1/4/94
  *	From: @(#)types.h	8.3 (Berkeley) 1/5/94
- * $FreeBSD: release/7.0.0/sys/i386/include/_types.h 154128 2006-01-09 06:05:57Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE__TYPES_H_
@@ -54,30 +54,24 @@ typedef	short			__int16_t;
 typedef	unsigned short		__uint16_t;
 typedef	int			__int32_t;
 typedef	unsigned int		__uint32_t;
-
-#if defined(lint)
-/* LONGLONG */
-typedef	long long		__int64_t;
-/* LONGLONG */
-typedef	unsigned long long	__uint64_t;
-#elif defined(__GNUCLIKE_ATTRIBUTE_MODE_DI)
-typedef	int __attribute__((__mode__(__DI__)))		__int64_t;
-typedef	unsigned int __attribute__((__mode__(__DI__)))	__uint64_t;
-#else
-/* LONGLONG */
-typedef	long long		__int64_t;
-/* LONGLONG */
-typedef	unsigned long long	__uint64_t;
+#ifndef lint
+__extension__
 #endif
+/* LONGLONG */
+typedef	long long		__int64_t;
+#ifndef lint
+__extension__
+#endif
+/* LONGLONG */
+typedef	unsigned long long	__uint64_t;
 
 /*
  * Standard type definitions.
  */
 typedef	unsigned long	__clock_t;		/* clock()... */
-typedef	unsigned int	__cpumask_t;
 typedef	__int32_t	__critical_t;
-typedef	double		__double_t;
-typedef	double		__float_t;
+typedef	long double	__double_t;
+typedef	long double	__float_t;
 typedef	__int32_t	__intfptr_t;
 typedef	__int64_t	__intmax_t;
 typedef	__int32_t	__intptr_t;

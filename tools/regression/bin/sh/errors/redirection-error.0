@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/tools/regression/bin/sh/errors/redirection-error.0 157415 2006-04-02 19:02:49Z stefanf $
+# $FreeBSD$
 IFS=,
 
 SPECIAL="break,\
@@ -42,12 +42,12 @@ UTILS="alias,\
 set -- ${SPECIAL}
 for cmd in "$@"
 do
-	sh -c "${cmd} > /; exit 0" 2>/dev/null && exit 1
+	${SH} -c "${cmd} > /; exit 0" 2>/dev/null && exit 1
 done
 
 # Other utilities must not abort.
 set -- ${UTILS}
 for cmd in "$@"
 do
-	sh -c "${cmd} > /; exit 0" 2>/dev/null || exit 1
+	${SH} -c "${cmd} > /; exit 0" 2>/dev/null || exit 1
 done

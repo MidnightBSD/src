@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002-2006 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/7.0.0/tools/tools/net80211/wlanstats/statfoo.h 161200 2006-08-10 19:01:16Z sam $
+ * $FreeBSD$
  */
 
 #ifndef _STATFOO_H_
@@ -79,6 +79,7 @@ struct statfoo {
 	const char *name;		/* statistics name, e.g. wlanstats */
 	const struct fmt *stats;	/* statistics in class */
 	int nstats;			/* number of stats */
+	int fields[128];		/* index of field referenced in fmts */
 	unsigned char fmts[4096];	/* private: compiled stats to display */
 
 	STATFOO_DECL_METHODS(struct statfoo *);

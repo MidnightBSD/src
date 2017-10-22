@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/create/perform.c 154102 2006-01-07 22:10:58Z krion $");
+__FBSDID("$FreeBSD$");
 
 #include "lib.h"
 #include "create.h"
@@ -28,6 +28,8 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/create/perform.c 154102 2
 #include <libgen.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/syslimits.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -37,11 +39,10 @@ static void make_dist(const char *, const char *, const char *, Package *);
 static int create_from_installed_recursive(const char *, const char *);
 static int create_from_installed(const char *, const char *, const char *);
 
-static char *home;
-
 int
 pkg_perform(char **pkgs)
 {
+    static const char *home;
     char *pkg = *pkgs;		/* Only one arg to create */
     char *cp;
     FILE *pkg_in, *fp;
@@ -66,6 +67,10 @@ pkg_perform(char **pkgs)
 	    Zipper = GZIP;
 	    pkg[len - 4] = '\0';
 	}
+	else if (!strcmp(&pkg[len - 4], ".txz")) {
+	    Zipper = XZ;
+	    pkg[len - 4] = '\0';
+	}
 	else if (!strcmp(&pkg[len - 4], ".tar")) {
 	    Zipper = NONE;
 	    pkg[len - 4] = '\0';
@@ -77,6 +82,8 @@ pkg_perform(char **pkgs)
     } else if (Zipper == GZIP) {
 	suf = "tgz";
 	setenv("GZIP", "-9", 0);
+    } else if (Zipper == XZ) {
+	suf = "txz";
     } else
 	suf = "tar";
 
@@ -207,8 +214,12 @@ pkg_perform(char **pkgs)
     read_plist(&plist, pkg_in);
 
     /* Prefix should add an @cwd to the packing list */
-    if (Prefix)
-	add_plist_top(&plist, PLIST_CWD, Prefix);
+    if (Prefix) {
+        char resolved_prefix[PATH_MAX];
+        if (realpath(Prefix, resolved_prefix) == NULL)
+	    err(EXIT_FAILURE, "couldn't resolve path for prefix: %s", Prefix);
+	add_plist_top(&plist, PLIST_CWD, resolved_prefix);
+    }
 
     /* Add the origin if asked, at the top */
     if (Origin)
@@ -253,7 +264,9 @@ pkg_perform(char **pkgs)
     /* mark_plist(&plist); */
 
     /* Now put the release specific items in */
-    add_plist(&plist, PLIST_CWD, ".");
+    if (!Prefix) {
+	add_plist(&plist, PLIST_CWD, ".");
+    }
     write_file(COMMENT_FNAME, Comment);
     add_plist(&plist, PLIST_IGNORE, NULL);
     add_plist(&plist, PLIST_FILE, COMMENT_FNAME);
@@ -336,6 +349,7 @@ pkg_perform(char **pkgs)
 static void
 make_dist(const char *homedir, const char *pkg, const char *suff, Package *plist)
 {
+    struct stat sb;
     char tball[FILENAME_MAX];
     PackingList p;
     int ret;
@@ -355,6 +369,16 @@ make_dist(const char *homedir, const char *pkg, const char *suff, Package *plist
     else
 	snprintf(tball, FILENAME_MAX, "%s/%s.%s", homedir, pkg, suff);
 
+    /*
+     * If the package tarball exists already, and we are running in `no
+     * clobber' mode, skip this package.
+     */
+    if (stat(tball, &sb) == 0 && Regenerate == FALSE) {
+	if (Verbose)
+	    printf("Skipping package '%s'.  It already exists.\n", tball);
+	return;
+    }
+
     args[nargs++] = "-c";
     args[nargs++] = "-f";
     args[nargs++] = tball;
@@ -362,6 +386,10 @@ make_dist(const char *homedir, const char *pkg, const char *suff, Package *plist
 	if (Zipper == BZIP2) {
 	    args[nargs++] = "-j";
 	    cname = "bzip'd ";
+	}
+	else if (Zipper == XZ) {
+	    args[nargs++] = "-J";
+	    cname = "xz'd ";
 	}
 	else {
 	    args[nargs++] = "-z";

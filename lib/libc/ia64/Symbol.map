@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/7.0.0/lib/libc/ia64/Symbol.map 170154 2007-05-31 13:01:34Z deischen $
+ * $FreeBSD$
  */
 
 /*
@@ -35,7 +35,6 @@ FBSD_1.0 {
 	vfork;
 	brk;
 	exect;
-	fork;
 	sbrk;
 };
 
@@ -69,7 +68,5 @@ FBSDprivate_1.0 {
 	_end;
 	minbrk;
 	.cerror;
-	__sys_fork;
-	_fork;
 	curbrk;
 };

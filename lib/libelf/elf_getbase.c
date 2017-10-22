@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libelf/elf_getbase.c 164190 2006-11-11 17:16:35Z jkoshy $");
+__FBSDID("$FreeBSD$");
 
 #include <libelf.h>
 
@@ -34,11 +34,13 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libelf/elf_getbase.c 164190 2006-11-11 17:
 off_t
 elf_getbase(Elf *e)
 {
-	if (e == NULL ||
-	    e->e_parent == NULL) {
+	if (e == NULL) {
 		LIBELF_SET_ERROR(ARGUMENT, 0);
-		return (off_t) -1;
+		return ((off_t) -1);
 	}
+
+	if (e->e_parent == NULL)
+		return ((off_t) 0);
 
 	return ((off_t) ((uintptr_t) e->e_rawfile -
 	    (uintptr_t) e->e_parent->e_rawfile));

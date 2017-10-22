@@ -23,15 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/acpica/madt.c 167814 2007-03-22 18:16:43Z jkim $
+ * $FreeBSD$
  */
 
-#include <contrib/dev/acpica/acpi.h>
-#include <contrib/dev/acpica/actables.h>
+#include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/actables.h>
 
 #include <machine/md_var.h>
-
-extern u_int64_t ia64_lapic_address;
 
 struct sapic *sapic_create(int, int, u_int64_t);
 
@@ -150,7 +148,7 @@ ia64_probe_sapics(void)
 		/* Save the address of the processor interrupt block. */
 		if (bootverbose)
 			printf("\tLocal APIC address=0x%x\n", table->Address);
-		ia64_lapic_address = table->Address;
+		ia64_lapic_addr = table->Address;
 
 		end = (char *)table + table->Header.Length;
 		p = (char *)(table + 1);
@@ -172,7 +170,7 @@ ia64_probe_sapics(void)
 			case ACPI_MADT_TYPE_LOCAL_APIC_OVERRIDE: {
 				ACPI_MADT_LOCAL_APIC_OVERRIDE *lapic =
 				    (ACPI_MADT_LOCAL_APIC_OVERRIDE *)entry;
-				ia64_lapic_address = lapic->Address;
+				ia64_lapic_addr = lapic->Address;
 				break;
 			}
 

@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)rpc_svcout.c 1.29 89/03/30 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/rpcgen/rpc_svcout.c 171932 2007-08-23 09:39:40Z delphij $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpc_svcout.c, Server-skeleton outputter for the RPC protocol compiler
@@ -349,7 +349,7 @@ write_real_program(definition *def)
 			f_print(fout, "(");
 			/* arg name */
 			if (proc->arg_num > 1)
-				f_print(fout, proc->args.argname);
+				fputs(proc->args.argname, fout);
 			else
 				ptype(proc->args.decls->decl.prefix,
 				      proc->args.decls->decl.type, 0);
@@ -433,6 +433,9 @@ write_program(definition *def, const char *storage)
 		if (mtflag) {
 			f_print(fout, "\tunion {\n");
 			for (proc = vp->procs; proc != NULL; proc = proc->next) {
+				if (streq(proc->res_type, "void")) {
+					continue;
+				}
 				f_print(fout, "\t\t");
 				ptype(proc->res_prefix, proc->res_type, 0);
 				pvname(proc->proc_name, vp->vers_num);

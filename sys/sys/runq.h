@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sys/runq.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef	_RUNQ_H_
@@ -31,7 +31,7 @@
 
 #include <machine/runq.h>
 
-struct td_sched;
+struct thread;
 
 /*
  * Run queue parameters.
@@ -43,7 +43,7 @@ struct td_sched;
 /*
  * Head of run queues.
  */
-TAILQ_HEAD(rqhead, td_sched);
+TAILQ_HEAD(rqhead, thread);
 
 /*
  * Bit array which maintains the status of a run queue.  When a queue is
@@ -62,13 +62,14 @@ struct runq {
 	struct	rqhead rq_queues[RQ_NQS];
 };
 
-void	runq_add(struct runq *, struct td_sched *, int);
-void	runq_add_pri(struct runq *, struct td_sched *, u_char, int);
+void	runq_add(struct runq *, struct thread *, int);
+void	runq_add_pri(struct runq *, struct thread *, u_char, int);
 int	runq_check(struct runq *);
-struct	td_sched *runq_choose(struct runq *);
-struct	td_sched *runq_choose_from(struct runq *, u_char);
+struct	thread *runq_choose(struct runq *);
+struct	thread *runq_choose_from(struct runq *, u_char);
+struct	thread *runq_choose_fuzz(struct runq *, int);
 void	runq_init(struct runq *);
-void	runq_remove(struct runq *, struct td_sched *);
-void	runq_remove_idx(struct runq *, struct td_sched *, u_char *);
+void	runq_remove(struct runq *, struct thread *);
+void	runq_remove_idx(struct runq *, struct thread *, u_char *);
 
 #endif

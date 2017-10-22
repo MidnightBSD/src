@@ -1,20 +1,22 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/mountcritlocal 175737 2008-01-28 07:58:32Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: mountcritlocal
-# REQUIRE: root
-# KEYWORD: nojail
+# REQUIRE: root hostid_save mdconfig
+# KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 
 name="mountcritlocal"
 start_cmd="mountcritlocal_start"
-stop_cmd=":"
+stop_cmd=sync
 
 mountcritlocal_start()
 {
+	local err
+
 	# Set up the list of network filesystem types for which mounting
 	# should be delayed until after network initialization.
 	case ${extra_netfs_types} in
@@ -26,7 +28,7 @@ mountcritlocal_start()
 	esac
 
 	# Mount everything except nfs filesystems.
-	echo -n 'Mounting local file systems:'
+	check_startmsgs && echo -n 'Mounting local file systems:'
 	mount_excludes='no'
 	for i in ${netfs_types}; do
 		fstype=${i%:*}
@@ -34,9 +36,10 @@ mountcritlocal_start()
 	done
 	mount_excludes=${mount_excludes%,}
 	mount -a -t ${mount_excludes}
-	echo '.'
+	err=$?
+	check_startmsgs && echo '.'
 
-	case $? in
+	case ${err} in
 	0)
 		;;
 	*)

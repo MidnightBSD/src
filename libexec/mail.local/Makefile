@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 7/19/93
-# $FreeBSD: release/7.0.0/libexec/mail.local/Makefile 147225 2005-06-10 06:12:53Z des $
+# $FreeBSD$
 
 SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/mail.local
@@ -8,7 +8,14 @@ PROG=	mail.local
 SRCS=	mail.local.c
 MAN=	mail.local.8
 CFLAGS+=-I${SENDMAIL_DIR}/include -I.
+
+WARNS?=	2
 WFORMAT=0
+
+# Unfortunately, clang gives warnings about sendmail code that cannot
+# be turned off yet.  Since this is contrib code, and we don't really
+# care about the warnings, just make them non-fatal for now.
+NO_WERROR.clang=
 
 LIBSMDIR=	${.OBJDIR}/../../lib/libsm
 LIBSM=		${LIBSMDIR}/libsm.a

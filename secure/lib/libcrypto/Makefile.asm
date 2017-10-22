@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/secure/lib/libcrypto/Makefile.asm 142429 2005-02-25 06:04:12Z nectar $
+# $FreeBSD$
 # Use this to help generate the asm *.s files after an import.  It is not
 # perfect by any means, but does what is needed.
 # Do a 'make -f Makefile.asm all' and it will generate *.s.  Move them

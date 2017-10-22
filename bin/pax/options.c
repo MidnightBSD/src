@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)options.c	8.2 (Berkeley) 4/18/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/pax/options.c 127958 2004-04-06 20:06:54Z markm $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -887,7 +887,7 @@ tar_options(int argc, char **argv)
 					sawpat = 1;
 			}
 			/*
-			 * if patterns were added, we are doing	chdir()
+			 * if patterns were added, we are doing chdir()
 			 * on a file-by-file basis, else, just one
 			 * global chdir (if any) after opening input.
 			 */

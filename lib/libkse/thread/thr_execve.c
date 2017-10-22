@@ -26,16 +26,15 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_execve.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
+#include "namespace.h"
 #include <errno.h>
 #include <pthread.h>
 #include <unistd.h>
+#include "un-namespace.h"
 #include "thr_private.h"
-
-LT10_COMPAT_PRIVATE(_execve);
-LT10_COMPAT_DEFAULT(execve);
 
 __weak_reference(_execve, execve);
 

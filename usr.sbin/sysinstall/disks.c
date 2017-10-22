@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/disks.c 175876 2008-02-01 20:33:40Z jkim $
+ * $FreeBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -79,7 +79,6 @@ static struct chunk *chunk_info[CHUNK_INFO_ENTRIES];
 static int current_chunk;
 
 static void	diskPartitionNonInteractive(Device *dev);
-static u_char *	bootalloc(char *name, size_t *size);
 
 static void
 record_chunks(Disk *d)
@@ -106,6 +105,46 @@ record_chunks(Disk *d)
 static daddr_t Total;
 
 static void
+check_geometry(Disk *d)
+{
+    int sg;
+
+#ifdef PC98
+    if (d->bios_cyl >= 65536 || d->bios_hd > 256 || d->bios_sect >= 256)
+#else
+    if (d->bios_cyl > 65536 || d->bios_hd > 256 || d->bios_sect >= 64)
+#endif
+    {
+	dialog_clear_norefresh();
+	sg = msgYesNo("WARNING:  It is safe to use a geometry of %lu/%lu/%lu for %s on\n"
+		      "computers with modern BIOS versions.  If this disk is to be used\n"
+		      "on an old machine it is recommended that it does not have more\n"
+		      "than 65535 cylinders, more than 255 heads, or more than\n"
+#ifdef PC98
+		      "255"
+#else
+		      "63"
+#endif
+		      " sectors per track.\n"
+		      "\n"
+		      "Would you like to keep using the current geometry?\n",
+		      d->bios_cyl, d->bios_hd, d->bios_sect, d->name);
+	if (sg == 1) {
+	    Sanitize_Bios_Geom(d);
+	    msgConfirm("A geometry of %lu/%lu/%lu was calculated for %s.\n"
+		       "\n"
+		       "If you are not sure about this, please consult the Hardware Guide\n"
+		       "in the Documentation submenu or use the (G)eometry command to\n"
+		       "change it.  Remember: you need to enter whatever your BIOS thinks\n"
+		       "the geometry is!  For IDE, it's what you were told in the BIOS\n"
+		       "setup.  For SCSI, it's the translation mode your controller is\n"
+		       "using.  Do NOT use a ``physical geometry''.\n",
+		       d->bios_cyl, d->bios_hd, d->bios_sect, d->name);
+	}
+    }
+}
+
+static void
 print_chunks(Disk *d, int u)
 {
     int row;
@@ -119,24 +158,6 @@ print_chunks(Disk *d, int u)
     Total = 0;
     for (i = 0; chunk_info[i]; i++)
 	Total += chunk_info[i]->size;
-#ifdef PC98
-    if (d->bios_cyl >= 65536 || d->bios_hd > 256 || d->bios_sect >= 256) {
-#else
-    if (d->bios_cyl > 65536 || d->bios_hd > 256 || d->bios_sect >= 64) {
-#endif
-	dialog_clear_norefresh();
-	msgConfirm("WARNING:  A geometry of %lu/%lu/%lu for %s is incorrect.  Using\n"
-		   "a more likely geometry.  If this geometry is incorrect or you\n"
-		   "are unsure as to whether or not it's correct, please consult\n"
-		   "the Hardware Guide in the Documentation submenu or use the\n"
-		   "(G)eometry command to change it now.\n\n"
-		   "Remember: you need to enter whatever your BIOS thinks the\n"
-		   "geometry is!  For IDE, it's what you were told in the BIOS\n"
-		   "setup. For SCSI, it's the translation mode your controller is\n"
-		   "using.  Do NOT use a ``physical geometry''.",
-	  d->bios_cyl, d->bios_hd, d->bios_sect, d->name);
-	Sanitize_Bios_Geom(d);
-    }
     attrset(A_NORMAL);
     mvaddstr(0, 0, "Disk name:\t");
     clrtobot();
@@ -183,15 +204,55 @@ static void
 print_command_summary(void)
 {
     mvprintw(14, 0, "The following commands are supported (in upper or lower case):");
-    mvprintw(16, 0, "A = Use Entire Disk   G = set Drive Geometry   C = Create Slice   F = `DD' mode");
-    mvprintw(17, 0, "D = Delete Slice      Z = Toggle Size Units    S = Set Bootable   | = Wizard m.");
-    mvprintw(18, 0, "T = Change Type       U = Undo All Changes     Q = Finish");
+    mvprintw(16, 0, "A = Use Entire Disk   G = set Drive Geometry   C = Create Slice");
+    mvprintw(17, 0, "D = Delete Slice      Z = Toggle Size Units    S = Set Bootable   | = Expert m.");
+    mvprintw(18, 0, "T = Change Type       U = Undo All Changes");
+
     if (!RunningAsInit)
-	mvprintw(18, 47, "W = Write Changes");
+	mvprintw(18, 47, "W = Write Changes  Q = Finish");
+    else
+	mvprintw(18, 47, "Q = Finish");
     mvprintw(21, 0, "Use F1 or ? to get more help, arrow keys to select.");
     move(0, 0);
 }
+#endif /* WITH_SLICES */
 
+#if !defined(__ia64__)
+static u_char *
+bootalloc(char *name, size_t *size)
+{
+    char buf[FILENAME_MAX];
+    struct stat sb;
+
+    snprintf(buf, sizeof buf, "/boot/%s", name);
+    if (stat(buf, &sb) != -1) {
+	int fd;
+
+	fd = open(buf, O_RDONLY);
+	if (fd != -1) {
+	    u_char *cp;
+
+	    cp = malloc(sb.st_size);
+	    if (read(fd, cp, sb.st_size) != sb.st_size) {
+		free(cp);
+		close(fd);
+		msgDebug("bootalloc: couldn't read %ld bytes from %s\n", (long)sb.st_size, buf);
+		return NULL;
+	    }
+	    close(fd);
+	    if (size != NULL)
+		*size = sb.st_size;
+	    return cp;
+	}
+	msgDebug("bootalloc: couldn't open %s\n", buf);
+    }
+    else
+	msgDebug("bootalloc: can't stat %s\n", buf);
+    return NULL;
+}
+#endif /* !defined(__ia64__) */
+
+#ifdef WITH_SLICES
 #ifdef PC98
 static void
 getBootMgr(char *dname, u_char **bootipl, size_t *bootipl_size,
@@ -311,7 +372,7 @@ diskGetSelectCount(Device ***devs)
 void
 diskPartition(Device *dev)
 {
-    char *cp, *p;
+    char *p;
     int rv, key = 0;
     int i;
     Boolean chunking;
@@ -340,6 +401,9 @@ diskPartition(Device *dev)
 
     /* Set up the chunk array */
     record_chunks(d);
+
+    /* Give the user a chance to sanitize the disk geometry, if necessary */
+    check_geometry(d);
 
     while (chunking) {
 	char *val, geometry[80];
@@ -398,24 +462,10 @@ diskPartition(Device *dev)
 	    break;
 
 	case 'A':
-	case 'F':	/* Undocumented magic Dangerously Dedicated mode */
 #if !defined(__i386__) && !defined(__amd64__)
 	    rv = 1;
 #else	    /* The rest is only relevant on x86 */
-	    cp = variable_get(VAR_DEDICATE_DISK);
-	    if (cp && !strcasecmp(cp, "always"))
-		rv = 1;
-	    else if (toupper(key) == 'A')
-		rv = 0;
-	    else {
-		rv = msgYesNo("Do you want to do this with a true partition entry\n"
-			      "so as to remain cooperative with any future possible\n"
-			      "operating systems on the drive(s)?\n"
-			      "(See also the section about ``dangerously dedicated''\n"
-			      "disks in the FreeBSD FAQ.)");
-		if (rv == -1)
-		    rv = 0;
-	    }
+	    rv = 0;
 #endif
 	    All_FreeBSD(d, rv);
 	    variable_set2(DISK_PARTITIONED, "yes", 0);
@@ -429,6 +479,7 @@ diskPartition(Device *dev)
 	    else {
 		char *val, tmp[20], name[16], *cp;
 		daddr_t size;
+		long double dsize;
 		int subtype;
 		chunk_e partitiontype;
 #ifdef PC98
@@ -443,11 +494,20 @@ diskPartition(Device *dev)
 		snprintf(tmp, 20, "%jd", (intmax_t)chunk_info[current_chunk]->size);
 		val = msgGetInput(tmp, "Please specify the size for new FreeBSD slice in blocks\n"
 				  "or append a trailing `M' for megabytes (e.g. 20M).");
-		if (val && (size = strtoimax(val, &cp, 0)) > 0) {
+		if (val && (dsize = strtold(val, &cp)) > 0 && dsize < UINT32_MAX) {
 		    if (*cp && toupper(*cp) == 'M')
-			size *= ONE_MEG;
+			size = (daddr_t) (dsize * ONE_MEG);
 		    else if (*cp && toupper(*cp) == 'G')
-			size *= ONE_GIG;
+			size = (daddr_t) (dsize * ONE_GIG);
+		    else
+			size = (daddr_t) dsize;
+
+		    if (size < ONE_MEG) {
+			msgConfirm("The minimum slice size is 1MB");
+			break;
+		    }
+
+
 		    sprintf(tmp, "%d", SUBTYPE_FREEBSD);
 		    val = msgGetInput(tmp, "Enter type of partition to create:\n\n"
 			"Pressing Enter will choose the default, a native FreeBSD\n"
@@ -633,7 +693,7 @@ diskPartition(Device *dev)
 	    break;
 
 	case '|':
-	    if (!msgNoYes("Are you SURE you want to go into Wizard mode?\n"
+	    if (!msgNoYes("Are you SURE you want to go into Expert mode?\n"
 			  "No seat belts whatsoever are provided!")) {
 		clear();
 		refresh();
@@ -717,39 +777,6 @@ diskPartition(Device *dev)
     restorescr(w);
 }
 #endif /* WITH_SLICES */
-
-static u_char *
-bootalloc(char *name, size_t *size)
-{
-    char buf[FILENAME_MAX];
-    struct stat sb;
-
-    snprintf(buf, sizeof buf, "/boot/%s", name);
-    if (stat(buf, &sb) != -1) {
-	int fd;
-
-	fd = open(buf, O_RDONLY);
-	if (fd != -1) {
-	    u_char *cp;
-
-	    cp = malloc(sb.st_size);
-	    if (read(fd, cp, sb.st_size) != sb.st_size) {
-		free(cp);
-		close(fd);
-		msgDebug("bootalloc: couldn't read %ld bytes from %s\n", (long)sb.st_size, buf);
-		return NULL;
-	    }
-	    close(fd);
-	    if (size != NULL)
-		*size = sb.st_size;
-	    return cp;
-	}
-	msgDebug("bootalloc: couldn't open %s\n", buf);
-    }
-    else
-	msgDebug("bootalloc: can't stat %s\n", buf);
-    return NULL;
-}
 
 #ifdef WITH_SLICES 
 static int
@@ -860,7 +887,9 @@ diskPartitionWrite(dialogMenuItem *self)
 	msgDebug("diskPartitionWrite: Examining %d devices\n", deviceCount(devs));
     for (i = 0; devs[i]; i++) {
 	Disk *d = (Disk *)devs[i]->private;
+#if !defined(__ia64__)
 	static u_char *boot1;
+#endif
 #if defined(__i386__) || defined(__amd64__)
 	static u_char *boot2;
 #endif
@@ -901,7 +930,8 @@ diskPartitionNonInteractive(Device *dev)
 {
     char *cp;
     int i, all_disk = 0;
-    daddr_t sz;
+    daddr_t size;
+    long double dsize;
 #ifdef PC98
     u_char *bootipl;
     size_t bootipl_size;
@@ -916,21 +946,24 @@ diskPartitionNonInteractive(Device *dev)
     record_chunks(d);
     cp = variable_get(VAR_GEOMETRY);
     if (cp) {
-	msgDebug("Setting geometry from script to: %s\n", cp);
-	d->bios_cyl = strtol(cp, &cp, 0);
-	d->bios_hd = strtol(cp + 1, &cp, 0);
-	d->bios_sect = strtol(cp + 1, 0, 0);
-    } else {
+	if (!strcasecmp(cp, "sane")) {
 #ifdef PC98
-	if (d->bios_cyl >= 65536 || d->bios_hd > 256 || d->bios_sect >= 256) {
+	    if (d->bios_cyl >= 65536 || d->bios_hd > 256 || d->bios_sect >= 256)
 #else
-	if (d->bios_cyl > 65536 || d->bios_hd > 256 || d->bios_sect >= 64) {
+	    if (d->bios_cyl > 65536 || d->bios_hd > 256 || d->bios_sect >= 64)
 #endif
-	    msgDebug("Warning:  A geometry of %lu/%lu/%lu for %s is incorrect.\n",
-		d->bios_cyl, d->bios_hd, d->bios_sect, d->name);
-	    Sanitize_Bios_Geom(d);
-	    msgDebug("Sanitized geometry for %s is %lu/%lu/%lu.\n",
-		d->name, d->bios_cyl, d->bios_hd, d->bios_sect);
+	    {
+		msgDebug("Warning:  A geometry of %lu/%lu/%lu for %s is incorrect.\n",
+		    d->bios_cyl, d->bios_hd, d->bios_sect, d->name);
+		Sanitize_Bios_Geom(d);
+		msgDebug("Sanitized geometry for %s is %lu/%lu/%lu.\n",
+		    d->name, d->bios_cyl, d->bios_hd, d->bios_sect);
+	    }
+	} else {
+	    msgDebug("Setting geometry from script to: %s\n", cp);
+	    d->bios_cyl = strtol(cp, &cp, 0);
+	    d->bios_hd = strtol(cp + 1, &cp, 0);
+	    d->bios_sect = strtol(cp + 1, 0, 0);
 	}
     }
 
@@ -942,7 +975,7 @@ diskPartitionNonInteractive(Device *dev)
 		/* If a chunk is at least 10MB in size, use it. */
 		if (chunk_info[i]->type == unused && chunk_info[i]->size > (10 * ONE_MEG)) {
 		    Create_Chunk(d, chunk_info[i]->offset, chunk_info[i]->size,
-				 freebsd, 3,
+				 freebsd, SUBTYPE_FREEBSD,
 				 (chunk_info[i]->flags & CHUNK_ALIGN),
 				 "FreeBSD");
 		    variable_set2(DISK_PARTITIONED, "yes", 0);
@@ -966,16 +999,19 @@ diskPartitionNonInteractive(Device *dev)
 
 	    All_FreeBSD(d, all_disk = TRUE);
 	}
-	else if ((sz = strtoimax(cp, &cp, 0))) {
-	    /* Look for sz bytes free */
+	else if ((dsize = strtold(cp, &cp))) {
 	    if (*cp && toupper(*cp) == 'M')
-		sz *= ONE_MEG;
+		size *= (daddr_t) (dsize * ONE_MEG);
 	    else if (*cp && toupper(*cp) == 'G')
-		sz *= ONE_GIG;
+		size = (daddr_t) (dsize * ONE_GIG);
+	    else
+		size = (daddr_t) dsize;
+
+	    /* Look for size bytes free */
 	    for (i = 0; chunk_info[i]; i++) {
 		/* If a chunk is at least sz MB, use it. */
-		if (chunk_info[i]->type == unused && chunk_info[i]->size >= sz) {
-		    Create_Chunk(d, chunk_info[i]->offset, sz, freebsd, 3,
+		if (chunk_info[i]->type == unused && chunk_info[i]->size >= size) {
+		    Create_Chunk(d, chunk_info[i]->offset, size, freebsd, SUBTYPE_FREEBSD,
 				 (chunk_info[i]->flags & CHUNK_ALIGN),
 				 "FreeBSD");
 		    variable_set2(DISK_PARTITIONED, "yes", 0);
@@ -984,7 +1020,7 @@ diskPartitionNonInteractive(Device *dev)
 	    }
 	    if (!chunk_info[i]) {
 		    msgConfirm("Unable to find %jd free blocks on this disk!",
-			(intmax_t)sz);
+			(intmax_t)size);
 		return;
 	    }
 	}

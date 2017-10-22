@@ -1,4 +1,4 @@
-.\" $FreeBSD: release/7.0.0/libexec/atrun/atrun.man 170881 2007-06-17 14:02:31Z yar $
+.\" $FreeBSD$
 .Dd June 17, 2007
 .Dt ATRUN 8
 .Os

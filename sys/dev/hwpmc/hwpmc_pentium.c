@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/hwpmc/hwpmc_pentium.c 147191 2005-06-09 19:45:09Z jkoshy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -44,8 +44,14 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/hwpmc/hwpmc_pentium.c 147191 2005-06-0
  */
 
 int
-pmc_initialize_p5(struct pmc_mdep *pmc_mdep)
+pmc_p5_initialize(struct pmc_mdep *pmc_mdep, int ncpus)
+{
+	(void) pmc_mdep; (void) ncpus;
+	return (ENOSYS);		/* nothing here yet */
+}
+
+void
+pmc_p5_finalize(struct pmc_mdep *pmc_mdep)
 {
 	(void) pmc_mdep;
-	return ENOSYS;		/* nothing here yet */
 }

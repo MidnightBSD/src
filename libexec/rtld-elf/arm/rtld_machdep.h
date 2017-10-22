@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/libexec/rtld-elf/arm/rtld_machdep.h 144764 2005-04-07 22:04:49Z cognet $
+ * $FreeBSD$
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -31,8 +31,6 @@
 
 #include <sys/types.h>
 #include <machine/atomic.h>
-
-#define CACHE_LINE_SIZE	  32
 
 struct Struct_Obj_Entry;
 
@@ -50,19 +48,22 @@ Elf_Addr reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
 #define call_initfini_pointer(obj, target) \
 	(((InitFunc)(target))())
 	
+#define call_init_pointer(obj, target) \
+	(((InitArrFunc)(target))(main_argc, main_argv, environ))
+
+#define	TLS_TCB_SIZE	8
 typedef struct {
 	unsigned long ti_module;
 	unsigned long ti_offset;
 } tls_index;
 
 #define round(size, align) \
-	(((size) + (align) - 1) & ~((align) - 1))
+    (((size) + (align) - 1) & ~((align) - 1))
 #define calculate_first_tls_offset(size, align) \
-	round(size, align)                                     
+    round(8, align)
 #define calculate_tls_offset(prev_offset, prev_size, size, align) \
-	    round(prev_offset + prev_size, align)
+    round(prev_offset + prev_size, align)
 #define calculate_tls_end(off, size)    ((off) + (size))
-	
 	
 /*
  * Lazy binding entry point, called via PLT.
@@ -70,5 +71,8 @@ typedef struct {
 void _rtld_bind_start(void);
 
 extern void *__tls_get_addr(tls_index *ti);
+
+#define	RTLD_DEFAULT_STACK_PF_EXEC	PF_X
+#define	RTLD_DEFAULT_STACK_EXEC		PROT_EXEC
 
 #endif

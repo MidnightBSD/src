@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007-2009, 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2002  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dst_openssl.h,v 1.1.4.3 2005/04/29 00:15:52 marka Exp $ */
+/* $Id$ */
 
 #ifndef DST_OPENSSL_H
 #define DST_OPENSSL_H 1
@@ -23,10 +23,28 @@
 #include <isc/lang.h>
 #include <isc/result.h>
 
+#include <openssl/err.h>
+#include <openssl/rand.h>
+#include <openssl/evp.h>
+#include <openssl/conf.h>
+#include <openssl/crypto.h>
+
+#if !defined(OPENSSL_NO_ENGINE) && defined(CRYPTO_LOCK_ENGINE) && \
+    (OPENSSL_VERSION_NUMBER >= 0x0090707f)
+#define USE_ENGINE 1
+#endif
+
 ISC_LANG_BEGINDECLS
 
 isc_result_t
 dst__openssl_toresult(isc_result_t fallback);
+
+#ifdef USE_ENGINE
+ENGINE *
+dst__openssl_getengine(const char *engine);
+#else
+#define dst__openssl_getengine(x) NULL
+#endif
 
 ISC_LANG_ENDDECLS
 

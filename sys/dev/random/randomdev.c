@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/random/randomdev.c 164033 2006-11-06 13:42:10Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -90,6 +90,7 @@ random_close(struct cdev *dev __unused, int flags, int fmt __unused,
 	    && (securelevel_gt(td->td_ucred, 0) == 0)) {
 		(*random_systat.reseed)();
 		random_systat.seeded = 1;
+		arc4rand(NULL, 0, 1);	/* Reseed arc4random as well. */
 	}
 
 	return (0);
@@ -194,8 +195,8 @@ random_modevent(module_t mod __unused, int type, void *data __unused)
 			printf("random: <entropy source, %s>\n",
 			    random_systat.ident);
 
-		random_dev = make_dev(&random_cdevsw, RANDOM_MINOR,
-		    UID_ROOT, GID_WHEEL, 0666, "random");
+		random_dev = make_dev_credf(MAKEDEV_ETERNAL_KLD, &random_cdevsw,
+		    RANDOM_MINOR, NULL, UID_ROOT, GID_WHEEL, 0666, "random");
 		make_dev_alias(random_dev, "urandom");	/* XXX Deprecated */
 
 		break;

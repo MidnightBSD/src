@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/etc/mtree/BSD.root.dist 168509 2007-04-08 23:59:39Z pjd $
+# $FreeBSD$
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -28,11 +28,11 @@
         ..
         defaults
         ..
+        devd
+        ..
         gnats
         ..
         gss
-        ..
-        isdn            mode=0700
         ..
         mail
         ..
@@ -72,6 +72,8 @@
         ..
     ..
     libexec
+        resolvconf
+        ..
     ..
     media
     ..

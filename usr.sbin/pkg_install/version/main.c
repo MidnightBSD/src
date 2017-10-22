@@ -19,13 +19,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/version/main.c 174854 2007-12-22 06:32:46Z cvs2svn $");
+__FBSDID("$FreeBSD$");
+
+
+#include <getopt.h>
+#include <err.h>
 
 #include "lib.h"
 #include "version.h"
-#include <err.h>
-
-static char Options[] = "dIhl:L:qs:XtTO:ov";
 
 char	*LimitChars = NULL;
 char	*PreventChars = NULL;
@@ -35,7 +36,22 @@ Boolean RegexExtended = FALSE;
 Boolean UseINDEXOnly = FALSE;
 Boolean ShowOrigin = FALSE;
 
-static void usage __P((void));
+static void usage(void);
+
+static char opts[] = "dIhl:L:qs:XtTO:ov";
+static struct option longopts[] = {
+	{ "extended",	no_argument,		NULL,		'X' },
+	{ "help",	no_argument,		NULL,		'h' },
+	{ "match",	required_argument,	NULL,		's' },
+	{ "no-status",	required_argument,	NULL,		'L' },
+	{ "origin",	required_argument,	NULL,		'O' },
+	{ "quiet",	no_argument,		NULL,		'q' },
+	{ "show-origin",no_argument,		NULL,		'o' },
+	{ "status",	required_argument,	NULL,		'l' },
+	{ "index-only",	no_argument,		NULL,		'I' },
+	{ "verbose",	no_argument,		NULL,		'v' },
+	{ NULL,		0,			NULL,		0 }
+};
 
 int
 main(int argc, char **argv)
@@ -51,7 +67,7 @@ main(int argc, char **argv)
 	cmp = version_match(argv[3], argv[2]);
 	exit(cmp == 1 ? 0 : 1);
     }
-    else while ((ch = getopt(argc, argv, Options)) != -1) {
+    else while ((ch = getopt_long(argc, argv, opts, longopts, NULL)) != -1) {
 	switch(ch) {
 	case 'v':
 	    Verbose++;
@@ -98,7 +114,6 @@ main(int argc, char **argv)
 	    break;
 
 	case 'h':
-	case '?':
 	default:
 	    usage();
 	    break;
@@ -112,7 +127,7 @@ main(int argc, char **argv)
 }
 
 static void
-usage()
+usage(void)
 {
     fprintf(stderr, "%s\n%s\n%s\n",
 	"usage: pkg_version [-hIoqv] [-l limchar] [-L limchar] [[-X] -s string] [-O origin] [index]",

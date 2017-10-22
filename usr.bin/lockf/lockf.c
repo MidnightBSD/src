@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/lockf/lockf.c 172828 2007-10-20 15:07:56Z csjp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -151,7 +151,7 @@ main(int argc, char **argv)
 	signal(SIGTERM, killed);
 	if (waitpid(child, &status, 0) == -1)
 		err(EX_OSERR, "waitpid failed");
-	return (WIFEXITED(status) ? WEXITSTATUS(status) : 1);
+	return (WIFEXITED(status) ? WEXITSTATUS(status) : EX_SOFTWARE);
 }
 
 /*

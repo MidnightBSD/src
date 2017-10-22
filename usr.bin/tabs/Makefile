@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.bin/tabs/Makefile 97033 2002-05-21 02:33:25Z tjr $
+# $FreeBSD$
 
 PROG=	tabs
 DPADD=	${LIBTERMCAP}

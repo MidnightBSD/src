@@ -57,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/secure/lib/libcrypt/crypt-des.c 91754 2002-03-06 17:18:09Z markm $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -606,7 +606,7 @@ crypt_des(const char *key, const char *setting)
 	q = (u_char *)keybuf;
 	while (q - (u_char *)keybuf - 8) {
 		*q++ = *key << 1;
-		if (*(q - 1))
+		if (*key != '\0')
 			key++;
 	}
 	if (des_setkey((char *)keybuf))

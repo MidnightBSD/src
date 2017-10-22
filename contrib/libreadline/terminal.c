@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/contrib/libreadline/terminal.c 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $FreeBSD$ */
 /* terminal.c -- controlling the terminal with termcap. */
 
 /* Copyright (C) 1996-2006 Free Software Foundation, Inc.

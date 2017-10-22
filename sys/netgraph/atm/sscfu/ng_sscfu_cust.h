@@ -28,7 +28,7 @@
  *
  * Customisation of the SSCFU code to ng_sscfu.
  *
- * $FreeBSD: release/7.0.0/sys/netgraph/atm/sscfu/ng_sscfu_cust.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/types.h>
@@ -70,13 +70,13 @@
 #define	MEMZALLOC(PTR, CAST, SIZE)					\
 	((PTR) = (CAST)malloc((SIZE), M_NG_SSCFU_INS, M_NOWAIT | M_ZERO))
 #define	MEMFREE(PTR)							\
-	FREE(PTR, M_NG_SSCFU_INS)
+	free(PTR, M_NG_SSCFU_INS)
 
 #define	SIG_ALLOC(PTR)							\
 	((PTR) = malloc(sizeof(struct sscfu_sig),			\
 	    M_NG_SSCFU_SIG, M_NOWAIT | M_ZERO))
 #define	SIG_FREE(PTR)							\
-	FREE(PTR, M_NG_SSCFU_SIG)
+	free(PTR, M_NG_SSCFU_SIG)
 
 #endif
 

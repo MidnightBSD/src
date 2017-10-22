@@ -36,7 +36,7 @@
 .\" 
 .\"	@(#)iosys	8.1 (Berkeley) 6/8/93
 .\"
-.\" $FreeBSD: release/7.0.0/share/doc/psd/03.iosys/iosys 96923 2002-05-19 06:03:06Z grog $
+.\" $FreeBSD$
 .EH 'PSD:3-%''The UNIX I/O System'
 .OH 'The UNIX I/O System''PSD:3-%'
 .TL
@@ -813,7 +813,7 @@ which have a separate argument
 which indicates read or write.
 .IP B_DONE 10
 This bit is set
-to 0 when a block is handed to the the device strategy
+to 0 when a block is handed to the device strategy
 routine and is turned on when the operation completes,
 whether normally as the result of an error.
 It is also used as part of the return argument of

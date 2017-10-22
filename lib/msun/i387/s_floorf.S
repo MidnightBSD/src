@@ -5,7 +5,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: release/7.0.0/lib/msun/i387/s_floorf.S 145969 2005-05-06 15:44:20Z deischen $");
+__FBSDID("$FreeBSD$");
 /* RCSID("$NetBSD: s_floorf.S,v 1.3 1995/05/09 00:04:32 jtc Exp $") */
 
 ENTRY(floorf)
@@ -27,3 +27,6 @@ ENTRY(floorf)
 
 	leave
 	ret
+END(floorf)
+
+	.section .note.GNU-stack,"",%progbits

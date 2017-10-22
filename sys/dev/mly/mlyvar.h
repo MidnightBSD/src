@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/7.0.0/sys/dev/mly/mlyvar.h 148853 2005-08-08 12:23:27Z scottl $
+ *	$FreeBSD$
  */
 
 /********************************************************************************

@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)cp.c	8.2 (Berkeley) 4/1/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/cp/cp.c 163233 2006-10-11 10:26:34Z trhodes $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Cp copies source files to target files.
@@ -101,8 +101,9 @@ main(int argc, char *argv[])
 	int Hflag, Lflag, Pflag, ch, fts_options, r, have_trailing_slash;
 	char *target;
 
+	fts_options = FTS_NOCHDIR | FTS_PHYSICAL;
 	Hflag = Lflag = Pflag = 0;
-	while ((ch = getopt(argc, argv, "HLPRfilnprv")) != -1)
+	while ((ch = getopt(argc, argv, "HLPRafilnprvx")) != -1)
 		switch (ch) {
 		case 'H':
 			Hflag = 1;
@@ -118,6 +119,12 @@ main(int argc, char *argv[])
 			break;
 		case 'R':
 			Rflag = 1;
+			break;
+		case 'a':
+			Pflag = 1;
+			pflag = 1;
+			Rflag = 1;
+			Hflag = Lflag = 0;
 			break;
 		case 'f':
 			fflag = 1;
@@ -144,6 +151,9 @@ main(int argc, char *argv[])
 		case 'v':
 			vflag = 1;
 			break;
+		case 'x':
+			fts_options |= FTS_XDEV;
+			break;
 		default:
 			usage();
 			break;
@@ -154,7 +164,6 @@ main(int argc, char *argv[])
 	if (argc < 2)
 		usage();
 
-	fts_options = FTS_NOCHDIR | FTS_PHYSICAL;
 	if (Rflag && rflag)
 		errx(1, "the -R and -r options may not be specified together");
 	if (rflag)
@@ -210,10 +219,9 @@ main(int argc, char *argv[])
 		/*
 		 * Case (1).  Target is not a directory.
 		 */
-		if (argc > 1) {
-			usage();
-			exit(1);
-		}
+		if (argc > 1)
+			errx(1, "%s is not a directory", to.p_path);
+
 		/*
 		 * Need to detect the case:
 		 *	cp -R dir foo
@@ -458,6 +466,7 @@ copy(char *argv[], enum op type, int fts_options)
 		case S_IFSOCK:
 			warnx("%s is a socket (not copied).",
 				    curr->fts_path);
+			break;
 		case S_IFIFO:
 			if (Rflag) {
 				if (copy_fifo(curr->fts_statp, !dne))

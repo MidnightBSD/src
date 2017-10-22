@@ -26,11 +26,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/nscd/protocol.c 172344 2007-09-27 12:30:12Z bushman $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "debug.h"
 #include "log.h"
 #include "protocol.h"

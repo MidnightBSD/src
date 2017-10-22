@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/system.c 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  *
  * Jordan Hubbard
  *
@@ -59,13 +59,20 @@ static int
 intr_restart(dialogMenuItem *self)
 {
     int ret, fd, fdmax;
+    char *arg;
 
     mediaClose();
     free_variables();
     fdmax = getdtablesize();
     for (fd = 3; fd < fdmax; fd++)
 	close(fd);
-    ret = execl(StartName, StartName, "-restart", (char *)NULL);
+    
+    if (RunningAsInit)
+	    arg = "-restart -fakeInit";
+    else
+	    arg = "-restart";
+
+    ret = execl(StartName, StartName, arg, NULL);
     msgDebug("execl failed (%s)\n", strerror(errno));
     /* NOTREACHED */
     return -1;
@@ -114,7 +121,7 @@ reap_children(int sig)
 static char *
 expand(char *fname)
 {
-    char *gunzip = RunningAsInit ? "/stand/gunzip" : "/usr/bin/gunzip";
+    char *unzipper = RunningAsInit ? "/stand/" UNZIPPER : "/usr/bin/" UNZIPPER;
 
     if (!directory_exists(DOC_TMP_DIR)) {
 	Mkdir(DOC_TMP_DIR);
@@ -125,7 +132,8 @@ expand(char *fname)
     }
     else
 	unlink(DOC_TMP_FILE);
-    if (!file_readable(fname) || vsystem("%s < %s > %s", gunzip, fname, DOC_TMP_FILE))
+    if (!file_readable(fname) || vsystem("%s < %s > %s", unzipper, fname,
+	DOC_TMP_FILE))
 	return NULL;
     return DOC_TMP_FILE;
 }
@@ -147,11 +155,10 @@ systemInitialize(int argc, char **argv)
 	variable_set2(VAR_DEBUG, "YES", 0);
 
     /* Are we running as init? */
-    if (getpid() == 1) {
+    if (RunningAsInit) {
 	struct ufs_args ufs_args;
 	int fd;
 
-	RunningAsInit = 1;
 	setsid();
 	close(0);
 	fd = open("/dev/ttyv0", O_RDWR);
@@ -186,13 +193,9 @@ systemInitialize(int argc, char **argv)
 	printf("%s running as init on %s\n", argv[0], OnVTY ? "vty0" : "serial console");
 	ioctl(0, TIOCSCTTY, (char *)NULL);
 	setlogin("root");
-	setenv("PATH", "/stand:/bin:/sbin:/usr/sbin:/usr/bin:/mnt/bin:/mnt/sbin:/mnt/usr/sbin:/mnt/usr/bin:/usr/X11R6/bin", 1);
+	setenv("PATH", "/stand:/bin:/sbin:/usr/sbin:/usr/bin:/mnt/bin:/mnt/sbin:/mnt/usr/sbin:/mnt/usr/bin", 1);
 	setbuf(stdin, 0);
 	setbuf(stderr, 0);
-#ifdef __alpha__
-	i = 0;
-	sysctlbyname("machdep.unaligned_print", NULL, 0, &i, sizeof(i));
-#endif
 #if 0
 	signal(SIGCHLD, reap_children);
 #endif
@@ -238,8 +241,13 @@ void
 systemShutdown(int status)
 {
     /* If some media is open, close it down */
-    if (status >=0)
-	mediaClose();
+    if (status >=0) {
+	if (mediaDevice != NULL && mediaDevice->type == DEVICE_TYPE_CDROM) {
+	    mediaClose();
+	    msgConfirm("Be sure to remove the media from the drive.");
+	} else
+	    mediaClose();
+    }
 
     /* write out any changes to rc.conf .. */
     configRC_conf();
@@ -260,7 +268,7 @@ systemShutdown(int status)
     if (RunningAsInit) {
 	/* Put the console back */
 	ioctl(0, VT_ACTIVATE, 2);
-#if defined(__alpha__) || defined(__sparc64__)
+#if defined(__sparc64__)
 	reboot(RB_HALT);
 #else
 	reboot(RB_AUTOBOOT);
@@ -364,10 +372,12 @@ systemHelpFile(char *file, char *buf)
     snprintf(buf, FILENAME_MAX, "/stand/help/%s.TXT", file);
     if (file_readable(buf)) 
 	return expand(buf);
-    snprintf(buf, FILENAME_MAX, "/usr/src/usr.sbin/sysinstall/help/%s.hlp", file);
+    snprintf(buf, FILENAME_MAX, "/usr/src/usr.sbin/%s/help/%s.hlp", ProgName,
+	file);
     if (file_readable(buf))
 	return buf;
-    snprintf(buf, FILENAME_MAX, "/usr/src/usr.sbin/sysinstall/help/%s.TXT", file);
+    snprintf(buf, FILENAME_MAX, "/usr/src/usr.sbin/%s/help/%s.TXT", ProgName,
+	file);
     if (file_readable(buf))
 	return buf;
     return NULL;
@@ -520,7 +530,7 @@ systemCreateHoloshell(void)
 	        printf("Type ``exit'' in this fixit shell to resume sysinstall.\n\n");
 		fflush(stdout);
 	    }
-	    execlp("sh", "-sh", 0);
+	    execlp("sh", "-sh", NULL);
 	    msgDebug("Was unable to execute sh for Holographic shell!\n");
 	    exit(1);
 	}

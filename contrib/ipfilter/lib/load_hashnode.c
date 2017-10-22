@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/contrib/ipfilter/lib/load_hashnode.c 170268 2007-06-04 02:54:36Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2003-2005 by Darren Reed.

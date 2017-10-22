@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/pc98/pc98/pc98_machdep.c 161129 2006-08-09 18:25:07Z imp $
+ * $FreeBSD$
  */
 
 #include "opt_pc98.h"
@@ -36,14 +36,22 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 
-#include <cam/cam.h>
-#include <cam/cam_ccb.h>
 #include <sys/bio.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
+#include <sys/kernel.h>
+#include <sys/sysctl.h>
+#include <cam/cam.h>
+#include <cam/cam_ccb.h>
 #include <geom/geom_disk.h>
 #include <machine/md_var.h>
 #include <pc98/pc98/pc98_machdep.h>
+
+static	int	ad_geom_method = AD_GEOM_ADJUST_COMPATIDE;
+
+TUNABLE_INT("machdep.ad_geom_method", &ad_geom_method);
+SYSCTL_INT(_machdep, OID_AUTO, ad_geom_method, CTLFLAG_RW, &ad_geom_method, 0,
+    "IDE disk geometry conversion method");
 
 /*
  * Initialize DMA controller
@@ -198,18 +206,68 @@ scsi_da_bios_params(struct ccb_calc_geometry *ccg)
 }
 
 /*
- * Get the geometry of the ATA HDD from the BIOS work area.
- *
- * XXX for now, we hack it
+ * Adjust the geometry of the IDE HDD.
  */
-void
-pc98_ad_firmware_geom_adjust(device_t dev, struct disk *disk)
+
+/* IDE BIOS compatible mode. */
+static	void
+pc98_ata_disk_geom_adjust_idebios(struct disk *disk)
+{
+
+	if (disk->d_mediasize < MEDIASIZE_4_3G) {
+		disk->d_fwsectors = 17;
+		disk->d_fwheads = 8;
+	} else if (disk->d_mediasize < MEDIASIZE_29_5G) {
+		disk->d_fwsectors = 63;
+		if (disk->d_fwheads != 15)	/* Allow 15H63S. */
+			disk->d_fwheads = 16;
+	} else if (disk->d_mediasize < MEDIASIZE_31_5G) {
+		disk->d_fwsectors = 63;
+		disk->d_fwheads = 16;
+	} else if (disk->d_mediasize < MEDIASIZE_127G) {
+		disk->d_fwsectors = 255;
+		disk->d_fwheads = 16;
+	} else {
+		/* XXX */
+		disk->d_fwsectors = 255;
+		disk->d_fwheads = 255;
+	}
+}
+
+/* SCSI BIOS compatible mode. */
+static	void
+pc98_ata_disk_geom_adjust_scsibios(struct disk *disk)
+{
+
+	if (disk->d_mediasize < MEDIASIZE_8G) {
+		disk->d_fwsectors = 32;
+		disk->d_fwheads = 8;
+	} else if (disk->d_mediasize < MEDIASIZE_32G) {
+		disk->d_fwsectors = 128;
+		disk->d_fwheads = 8;
+	} else if (disk->d_mediasize < MEDIASIZE_60G) {
+		/* Compatible with IFC-USP 1.2. */
+		disk->d_fwsectors = 128;
+		disk->d_fwheads = 15;
+	} else if (disk->d_mediasize < MEDIASIZE_120G) {
+		disk->d_fwsectors = 255;
+		disk->d_fwheads = 15;
+	} else {
+		/* XXX */
+		disk->d_fwsectors = 255;
+		disk->d_fwheads = 255;
+	}
+}
+
+/* Compatible with the revision 1.28. */
+static	void
+pc98_ata_disk_geom_adjust_cyl16bit(struct disk *disk)
 {
 	off_t totsec = disk->d_mediasize / disk->d_sectorsize;
 	off_t cyl = totsec / disk->d_fwsectors / disk->d_fwheads;
-    
+
 	/*
-	 * It is impossible to have more than 65535 cylendars, so if
+	 * It is impossible to have more than 65535 cylinders, so if
 	 * we have more then try to adjust.  This is lame, but it is
 	 * only POC.
 	 */
@@ -228,4 +286,36 @@ pc98_ad_firmware_geom_adjust(device_t dev, struct disk *disk)
 			disk->d_fwheads = 255;
 		}
 	}
+}
+
+void
+pc98_ata_disk_firmware_geom_adjust(struct disk *disk)
+{
+	u_int	oldsectors, oldheads;
+
+	oldsectors = disk->d_fwsectors;
+	oldheads = disk->d_fwheads;
+
+	switch (ad_geom_method) {
+	case AD_GEOM_ADJUST_COMPATIDE:
+		pc98_ata_disk_geom_adjust_idebios(disk);
+		break;
+	case AD_GEOM_ADJUST_COMPATSCSI:
+		pc98_ata_disk_geom_adjust_scsibios(disk);
+		break;
+	case AD_GEOM_ADJUST_COMPATCYL16:
+		pc98_ata_disk_geom_adjust_cyl16bit(disk);
+		break;
+	default:
+		/* Do nothing. */
+		break;
+	}
+
+	if (bootverbose &&
+	    (oldsectors != disk->d_fwsectors || oldheads != disk->d_fwheads))
+		printf(
+		    "%s%d: geometry adjusted from [%dH/%dS] to [%dH/%dS]\n",
+		    disk->d_name, disk->d_unit,
+		    oldheads, oldsectors,
+		    disk->d_fwheads, disk->d_fwsectors);
 }

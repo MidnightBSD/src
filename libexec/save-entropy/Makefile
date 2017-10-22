@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/libexec/save-entropy/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
 SCRIPTS=	save-entropy.sh
 NO_OBJ=

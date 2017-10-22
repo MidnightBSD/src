@@ -26,13 +26,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_setprio.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(_pthread_setprio);
-LT10_COMPAT_DEFAULT(pthread_setprio);
+int	_pthread_setprio(pthread_t pthread, int prio);
 
 __weak_reference(_pthread_setprio, pthread_setprio);
 
@@ -42,9 +44,9 @@ _pthread_setprio(pthread_t pthread, int prio)
 	int ret, policy;
 	struct sched_param param;
 
-	if ((ret = pthread_getschedparam(pthread, &policy, &param)) == 0) {
+	if ((ret = _pthread_getschedparam(pthread, &policy, &param)) == 0) {
 		param.sched_priority = prio;
-		ret = pthread_setschedparam(pthread, policy, &param);
+		ret = _pthread_setschedparam(pthread, policy, &param);
 	}
 
 	/* Return the error status: */

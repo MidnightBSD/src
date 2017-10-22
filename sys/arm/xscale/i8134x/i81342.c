@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/i8134x/i81342.c 172297 2007-09-22 16:25:43Z cognet $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -295,7 +295,7 @@ arm_unmask_irq(uintptr_t nb)
 }
 
 int
-arm_get_next_irq(void)
+arm_get_next_irq(int last __unused)
 {
 	uint32_t val;
 	val = intpnd0_read() & intr_enabled0;

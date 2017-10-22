@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)getfh.2	8.1 (Berkeley) 6/9/93
-.\" $FreeBSD: release/7.0.0/lib/libc/sys/getfh.2 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD$
 .\"
-.Dd April 6, 2004
+.Dd April 14, 2011
 .Dt GETFH 2
 .Os
 .Sh NAME
@@ -69,7 +69,7 @@ These system calls are restricted to the superuser.
 The
 .Fn getfh
 and
-.Fn lgetfgh
+.Fn lgetfh
 system calls
 fail if one or more of the following are true:
 .Bl -tag -width Er
@@ -104,6 +104,10 @@ An
 .Tn I/O
 error occurred while reading from or writing to the file system.
 .El
+.Sh SEE ALSO
+.Xr fhopen 2 ,
+.Xr open 2 ,
+.Xr stat 2
 .Sh HISTORY
 The
 .Fn getfh

@@ -26,12 +26,20 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/exception.S 171739 2007-08-06 05:11:01Z marcel $");
+__FBSDID("$FreeBSD$");
 
-#include <opt_xtrace.h>
+#include "opt_xtrace.h"
 
 #include <machine/pte.h>
 #include <assym.s>
+
+/*
+ * Nested TLB restart tokens. These are used by the
+ * nested TLB handler for jumping back to the code
+ * where the nested TLB was caused.
+ */
+#define	NTLBRT_SAVE	0x12c12c
+#define	NTLBRT_RESTORE  0x12c12d
 
 /*
  * ar.k7 = kernel memory stack
@@ -40,9 +48,13 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/exception.S 171739 2007-08-06 05
  * ar.k4 = PCPU data
  */
 
+	.section .ivt.data, "aw"
+
+	.global ia64_kptdir
+ia64_kptdir:	data8	0
+
 #ifdef EXCEPTION_TRACING
 
-	.data
 	.global xtrace, xhead
 xtrace:	.space	1024*5*8
 xhead:	data8	xtrace
@@ -81,10 +93,10 @@ xhead:	data8	xtrace
 	addl	r29=1024*5*8,r0 ;;		\
 (p15)	sub	r27=r28,r29 ;;			\
 } ;						\
-{	.mib ;					\
+{	.mmi ;					\
 	st8	[r28]=r27 ;			\
-	mov	pr=r25,0x1ffff ;		\
-	nop	0 ;;				\
+	nop	0 ;				\
+	mov	pr=r25,0x1ffff ;;		\
 }
 
 #else
@@ -93,7 +105,7 @@ xhead:	data8	xtrace
 
 #endif
 
-	.text
+	.section .ivt.text, "ax"
 
 /*
  * exception_save: save interrupted state
@@ -121,7 +133,7 @@ ENTRY_NOPROFILE(exception_save, 0)
 	;;
 }
 {	.mmi
-	cmp.le		p14,p15=5,r31
+	cmp.le		p14,p15=IA64_VM_MINKERN_REGION,r31
 	;;
 (p15)	mov		r23=ar.k7		// kernel memory stack
 (p14)	mov		r23=sp
@@ -136,42 +148,57 @@ ENTRY_NOPROFILE(exception_save, 0)
 }
 {	.mmi
 	mov		ar.rsc=0
-	sub		r19=r23,r30
-	add		r31=8,r30
-	;;
-}
-{	.mlx
 	mov		r22=cr.iip
-	movl		r26=exception_save_restart
+	addl		r29=NTLBRT_SAVE,r0	// 22-bit restart token.
 	;;
 }
 
 	/*
-	 * We have a 1KB aligned trapframe, pointed to by sp. If we write
-	 * to the trapframe, we may trigger a data nested TLB fault. By
-	 * aligning the trapframe on a 1KB boundary, we guarantee that if
-	 * we get a data nested TLB fault, it will be on the very first
-	 * write. Since the data nested TLB fault does not preserve any
-	 * state, we have to be careful what we clobber. Consequently, we
-	 * have to be careful what we use here. Below a list of registers
-	 * that are currently alive:
+	 * We have a 1KB aligned trapframe, pointed to by r30. We can't
+	 * reliably write to the trapframe using virtual addressing, due
+	 * to the fact that TC entries we depend on can be removed by:
+	 * 1.  ptc.g instructions issued by other threads/cores/CPUs, or
+	 * 2.  TC modifications in another thread on the same core.
+	 * When our TC entry gets removed, we get nested TLB faults and
+	 * since no state is saved, we can only deal with those when
+	 * explicitly coded and expected.
+	 * As such, we switch to physical addressing and account for the
+	 * fact that the tpa instruction can cause a nested TLB fault.
+	 * Since the data nested TLB fault does not preserve any state,
+	 * we have to be careful what we clobber. Consequently, we have
+	 * to be careful what we use here. Below a list of registers that
+	 * are considered alive:
 	 *	r16,r17=arguments
 	 *	r18=pr, r19=length, r20=unat, r21=rsc, r22=iip, r23=TOS
-	 *	r26=restart point
-	 *	r30,r31=trapframe pointers
+	 *	r29=restart token
+	 *	r30=trapframe pointers
 	 *	p14,p15=memory stack switch
 	 */
 exception_save_restart:
+	tpa		r24=r30			// Nested TLB fault possible
+	sub		r19=r23,r30
+	nop		0
+	;;
+
+	rsm		psr.dt
+	add		r29=16,r19		// Clobber restart token
+	mov		r30=r24
+	;;
+	srlz.d
+	add		r31=8,r24
+	;;
+
+	// r18=pr, r19=length, r20=unat, r21=rsc, r22=iip, r23=TOS
+	// r29=delta
 {	.mmi
 	st8		[r30]=r19,16		// length
 	st8		[r31]=r0,16		// flags
-	add		r19=16,r19
 	;;
 }
 {	.mmi
 	st8.spill	[r30]=sp,16		// sp
 	st8		[r31]=r20,16		// unat
-	sub		sp=r23,r19
+	sub		sp=r23,r29
 	;;
 }
 {	.mmi
@@ -181,6 +208,7 @@ exception_save_restart:
 	;;
 }
 	// r18=pr, r19=rnat, r20=bspstore, r21=rsc, r22=iip, r23=rp
+	// r24=pfs
 {	.mmi
 	st8		[r30]=r23,16		// rp
 	st8		[r31]=r18,16		// pr
@@ -203,7 +231,7 @@ exception_save_restart:
 {	.mmi
 	st8		[r30]=r19,16		// rnat
 	st8		[r31]=r0,16		// __spare
-	cmp.le		p12,p13=5,r24
+	cmp.le		p12,p13=IA64_VM_MINKERN_REGION,r24
 	;;
 }
 {	.mmi
@@ -219,7 +247,7 @@ exception_save_restart:
 (p13)	dep		r20=r20,r21,0,9		// align dirty registers
 	;;
 }
-	// r20=bspstore, r22=iip, r23=ipsr
+	// r19=rnat, r20=bspstore, r22=iip, r23=ipsr
 {	.mmi
 	st8		[r31]=r23,16		// psr
 (p13)	mov		ar.bspstore=r20
@@ -227,35 +255,34 @@ exception_save_restart:
 	;;
 }
 {	.mmi
+(p13)	mov		ar.rnat=r19
 	mov		r18=ar.bsp
+	nop		0
 	;;
+}
+{	.mmi
 	mov		r19=cr.ifs
+	st8.spill	[r30]=gp,16		// gp
 	sub		r18=r18,r20
 	;;
 }
+	// r18=ndirty, r19=ifs, r22=iip
 {	.mmi
-	st8.spill	[r30]=gp,16		// gp
 	st8		[r31]=r18,16		// ndirty
-	nop		0
-	;;
-}
-	// r19=ifs, r22=iip
-{	.mmi
 	st8		[r30]=r19,16		// cfm
-	st8		[r31]=r22,16		// iip
 	nop		0
 	;;
 }
 {	.mmi
-	st8		[r30]=r17		// ifa
 	mov		r18=cr.isr
+	st8		[r31]=r22,16		// iip
 	add		r29=16,r30
 	;;
 }
 {	.mmi
-	st8		[r31]=r18		// isr
-	add		r30=8,r29
-	add		r31=16,r29
+	st8		[r30]=r17,24		// ifa
+	st8		[r31]=r18,24		// isr
+	nop		0
 	;;
 }
 {	.mmi
@@ -395,11 +422,11 @@ exception_save_restart:
 	;;
 }
 {	.mlx
-	ssm		psr.ic|psr.dfh
+	ssm		psr.dt|psr.ic|psr.dfh
 	movl		gp=__gp
 	;;
 }
-{	.mfb
+{	.mib
 	srlz.d
 	nop		0
 	br.sptk		b7
@@ -416,34 +443,52 @@ END(exception_save)
 ENTRY_NOPROFILE(exception_restore, 0)
 {	.mmi
 	rsm		psr.i
-	add		r3=SIZEOF_TRAPFRAME-16,sp
-	add		r2=SIZEOF_TRAPFRAME,sp
-	;;
-}
-{	.mmi
-	srlz.d
-	add		r8=SIZEOF_SPECIAL+32,sp
+	add		sp=16,sp
 	nop		0
 	;;
 }
-	// The next load can trap. Let it be...
-	ldf.fill	f15=[r2],-32		// f15
-	ldf.fill	f14=[r3],-32		// f14
-	add		sp=16,sp
+
+	// The next instruction can fault. Let it be...
+	tpa		r9=sp
 	;;
-	ldf.fill	f13=[r2],-32		// f13
-	ldf.fill	f12=[r3],-32		// f12
+	rsm		psr.dt|psr.ic
+	add		r8=SIZEOF_SPECIAL+16,r9
 	;;
-	ldf.fill	f11=[r2],-32		// f11
-	ldf.fill	f10=[r3],-32		// f10
-	;;
-	ldf.fill	f9=[r2],-32		// f9
-	ldf.fill	f8=[r3],-32		// f8
-	;;
-	ldf.fill	f7=[r2],-24		// f7
-	ldf.fill	f6=[r3],-16		// f6
+	srlz.d
+	add		r2=SIZEOF_TRAPFRAME-16,r9
+	add		r3=SIZEOF_TRAPFRAME-32,r9
 	;;
 
+{	.mmi
+	ldf.fill	f15=[r2],-32		// f15
+	ldf.fill	f14=[r3],-32		// f14
+	nop		0
+	;;
+}
+{	.mmi
+	ldf.fill	f13=[r2],-32		// f13
+	ldf.fill	f12=[r3],-32		// f12
+	nop		0
+	;;
+}
+{	.mmi
+	ldf.fill	f11=[r2],-32		// f11
+	ldf.fill	f10=[r3],-32		// f10
+	nop		0
+	;;
+}
+{	.mmi
+	ldf.fill	f9=[r2],-32		// f9
+	ldf.fill	f8=[r3],-32		// f8
+	nop		0
+	;;
+}
+{	.mmi
+	ldf.fill	f7=[r2],-24		// f7
+	ldf.fill	f6=[r3],-16		// f6
+	nop		0
+	;;
+}
 {	.mmi
 	ld8		r8=[r8]			// unat (after)
 	;;
@@ -500,53 +545,53 @@ ENTRY_NOPROFILE(exception_restore, 0)
 	bsw.0
 	;;
 }
+{	.mii
+	ld8		r16=[r9]		// tf_length
+	add		r31=16,r9
+	add		r30=24,r9
+}
 {	.mmi
 	ld8.fill	r15=[r3],-16		// r15
 	ld8.fill	r14=[r2],-16		// r14
-	add		r31=16,sp
+	nop		0
 	;;
 }
 {	.mmi
-	ld8		r16=[sp]		// tf_length
 	ld8.fill	r11=[r3],-16		// r11
-	add		r30=24,sp
-	;;
-}
-{	.mmi
 	ld8.fill	r10=[r2],-16		// r10
-	ld8.fill	r9=[r3],-16		// r9
 	add		r16=r16,sp		// ar.k7
 	;;
 }
 {	.mmi
+	ld8.fill	r9=[r3],-16		// r9
 	ld8.fill	r8=[r2],-16		// r8
-	ld8.fill	r3=[r3]			// r3
+	nop		0
 	;;
 }
-	// We want nested TLB faults from here on...
-	rsm		psr.ic|psr.i
+{	.mmi
+	ld8.fill	r3=[r3]			// r3
 	ld8.fill	r2=[r2]			// r2
 	nop		0
 	;;
-	srlz.d
-	ld8.fill	sp=[r31],16		// sp
-	nop		0
-	;;
+}
 
+	ld8.fill	sp=[r31],16		// sp
 	ld8		r17=[r30],16		// unat
-	ld8		r29=[r31],16		// rp
 	;;
+	ld8		r29=[r31],16		// rp
 	ld8		r18=[r30],16		// pr
+	;;
 	ld8		r28=[r31],16		// pfs
+	ld8		r20=[r30],24		// bspstore
 	mov		rp=r29
 	;;
-	ld8		r20=[r30],24		// bspstore
 	ld8		r21=[r31],24		// rnat
 	mov		ar.pfs=r28
 	;;
-	ld8.fill	r29=[r30],16		// tp
+	ld8.fill	r26=[r30],16		// tp
 	ld8		r22=[r31],16		// rsc
 	;;
+
 {	.mmi
 	ld8		r23=[r30],16		// fpsr
 	ld8		r24=[r31],16		// psr
@@ -555,21 +600,21 @@ ENTRY_NOPROFILE(exception_restore, 0)
 }
 {	.mmi
 	ld8.fill	r1=[r30],16		// gp
-	ld8		r25=[r31],16		// ndirty
-	cmp.le		p14,p15=5,r28
+	ld8		r27=[r31],16		// ndirty
+	cmp.le		p14,p15=IA64_VM_MINKERN_REGION,r28
 	;;
 }
-{	.mmb
-	ld8		r26=[r30]		// cfm
+{	.mmi
+	ld8		r25=[r30]		// cfm
 	ld8		r19=[r31]		// ip
 	nop		0
 	;;
 }
-{	.mib
+{	.mii
 	// Switch register stack
 	alloc		r30=ar.pfs,0,0,0,0	// discard current frame
-	shl		r31=r25,16		// value for ar.rsc
-	nop		0
+	shl		r31=r27,16		// value for ar.rsc
+(p15)	mov		r13=r26
 	;;
 }
 	// The loadrs can fault if the backing store is not currently
@@ -580,15 +625,20 @@ ENTRY_NOPROFILE(exception_restore, 0)
 {	.mmi
 	mov		ar.rsc=r31		// setup for loadrs
 	mov		ar.k7=r16
-(p15)	mov		r13=r29
+	addl		r29=NTLBRT_RESTORE,r0	// 22-bit restart token 
 	;;
 }
+
+	ssm		psr.dt
+	;;
+	srlz.d
+
 exception_restore_restart:
 {	.mmi
 	mov		r30=ar.bspstore
 	;;
 	loadrs					// load user regs
-	nop		0
+	mov		r29=0			// Clobber restart token
 	;;
 }
 {	.mmi
@@ -598,20 +648,20 @@ exception_restore_restart:
 	dep		r31=0,r31,0,13		// 8KB aligned
 	;;
 }
-{	.mmb
+{	.mmi
 	mov		ar.k6=r31
 	mov		ar.rnat=r21
 	nop		0
 	;;
 }
-{	.mmb
+{	.mmi
 	mov		ar.unat=r17
 	mov		cr.iip=r19
 	nop		0
 }
 {	.mmi
 	mov		cr.ipsr=r24
-	mov		cr.ifs=r26
+	mov		cr.ifs=r25
 	mov		pr=r18,0x1ffff
 	;;
 }
@@ -648,7 +698,7 @@ END(exception_restore)
 	add		out1=16,sp ;		\
 	br.call.sptk	rp=_func_ ;;		\
 } ;						\
-{	.mfb ;					\
+{	.mib ;					\
 	nop		0 ;			\
 	nop		0 ;			\
 	br.sptk		exception_restore ;;	\
@@ -668,7 +718,7 @@ ivt_##name:					\
 #define	IVT_END(name)				\
 	.endp	ivt_##name
 
-#ifdef COMPAT_IA32
+#ifdef COMPAT_FREEBSD32
 #define	IA32_TRAP	ia32_trap
 #else
 #define	IA32_TRAP	trap
@@ -679,7 +729,7 @@ ivt_##name:					\
  * bundles per vector and 48 slots with 16 bundles per vector.
  */
 
-	.section .text.ivt,"ax"
+	.section .ivt, "ax"
 
 	.align	32768
 	.global ia64_vector_table
@@ -729,7 +779,12 @@ IVT_ENTRY(Instruction_TLB, 0x0400)
 	cmp.ne	p15,p0=r21,r19		// compare tags
 (p15)	br.cond.sptk.few 3f		// if not, read next in chain
 	;;
-	ld8	r21=[r20],8		// read pte
+	ld8	r21=[r20]		// read pte
+	mov	r22=PTE_ACCESSED
+	;;
+	or	r21=r21,r22
+	;;
+	st8	[r20]=r21,8
 	;; 
 	ld8	r22=[r20]		// read rest of pte
 	;;
@@ -761,7 +816,7 @@ IVT_ENTRY(Instruction_TLB, 0x0400)
 3:	add	r20=24,r20		// next in chain
 	;;
 	ld8	r20=[r20]		// read chain
-	br.cond.sptk.few 2b		// loop
+	br.sptk	2b			// loop
 	;;
 9:	ssm	psr.dt
 	mov	pr=r17,0x1ffff		// restore predicates
@@ -810,7 +865,12 @@ IVT_ENTRY(Data_TLB, 0x0800)
 	cmp.ne	p15,p0=r21,r19		// compare tags
 (p15)	br.cond.sptk.few 3f		// if not, read next in chain
 	;;
-	ld8	r21=[r20],8		// read pte
+	ld8	r21=[r20]		// read pte
+	mov	r22=PTE_ACCESSED
+	;;
+	or	r21=r21,r22
+	;;
+	st8	[r20]=r21,8
 	;; 
 	ld8	r22=[r20]		// read rest of pte
 	;;
@@ -842,7 +902,7 @@ IVT_ENTRY(Data_TLB, 0x0800)
 3:	add	r20=24,r20		// next in chain
 	;;
 	ld8	r20=[r20]		// read chain
-	br.cond.sptk.few 2b		// loop
+	br.sptk	2b			// loop
 	;;
 9:	ssm	psr.dt
 	mov	pr=r17,0x1ffff		// restore predicates
@@ -857,24 +917,39 @@ IVT_ENTRY(Alternate_Instruction_TLB, 0x0c00)
 	mov	r18=pr			// save predicates
 	;;
 	extr.u	r17=r16,61,3		// get region number
+	mov	r19=PTE_PRESENT+PTE_ACCESSED+PTE_DIRTY+PTE_PL_KERN+PTE_AR_RWX
+	;;
+	cmp.eq	p13,p0=IA64_PBVM_RR,r17		// RR4?
+(p13)	br.cond.sptk.few	4f
 	;;
 	cmp.ge	p13,p0=5,r17		// RR0-RR5?
-	cmp.eq	p15,p14=7,r17		// RR7->p15, RR6->p14
-(p13)	br.spnt	9f
+	cmp.eq	p14,p15=7,r17		// RR7?
+(p13)	br.cond.spnt.few	9f
 	;;
-(p15)	movl	r17=PTE_PRESENT+PTE_MA_WB+PTE_ACCESSED+PTE_DIRTY+PTE_PL_KERN+ \
-			PTE_AR_RX+PTE_ED
-(p14)	movl	r17=PTE_PRESENT+PTE_MA_UC+PTE_ACCESSED+PTE_DIRTY+PTE_PL_KERN+ \
-			PTE_AR_RX
+(p14)	add	r19=PTE_MA_WB,r19
+(p15)	add	r19=PTE_MA_UC,r19
+	dep	r17=0,r16,50,14		// clear bits above PPN
 	;;
-	dep	r16=0,r16,50,14		// clear bits above PPN
-	;;
-	dep	r16=r17,r16,0,12	// put pte bits in 0..11
+1:	dep	r16=r19,r17,0,12	// put pte bits in 0..11
 	;;
 	itc.i	r16
 	mov	pr=r18,0x1ffff		// restore predicates
 	;;
 	rfi
+	;;
+4:
+	add	r19=PTE_MA_WB,r19
+	movl	r17=IA64_PBVM_BASE
+	;;
+	sub	r17=r16,r17
+	movl	r16=IA64_PBVM_PGTBL
+	;;
+	extr.u	r17=r17,IA64_PBVM_PAGE_SHIFT,61-IA64_PBVM_PAGE_SHIFT
+	;;
+	shladd	r16=r17,3,r16
+	;;
+	ld8	r17=[r16]
+	br.sptk	1b
 	;;
 9:	mov	pr=r18,0x1ffff		// restore predicates
 	CALL(trap, 3, cr.ifa)
@@ -885,24 +960,39 @@ IVT_ENTRY(Alternate_Data_TLB, 0x1000)
 	mov	r18=pr			// save predicates
 	;;
 	extr.u	r17=r16,61,3		// get region number
+	mov	r19=PTE_PRESENT+PTE_ACCESSED+PTE_DIRTY+PTE_PL_KERN+PTE_AR_RWX
+	;;
+	cmp.eq	p13,p0=IA64_PBVM_RR,r17		// RR4?
+(p13)	br.cond.sptk.few	4f
 	;;
 	cmp.ge	p13,p0=5,r17		// RR0-RR5?
-	cmp.eq	p15,p14=7,r17		// RR7->p15, RR6->p14
-(p13)	br.spnt	9f
+	cmp.eq	p14,p15=7,r17		// RR7?
+(p13)	br.cond.spnt.few	9f
 	;;
-(p15)	movl	r17=PTE_PRESENT+PTE_MA_WB+PTE_ACCESSED+PTE_DIRTY+PTE_PL_KERN+ \
-			PTE_AR_RW+PTE_ED
-(p14)	movl	r17=PTE_PRESENT+PTE_MA_UC+PTE_ACCESSED+PTE_DIRTY+PTE_PL_KERN+ \
-			PTE_AR_RW
+(p14)	add	r19=PTE_MA_WB,r19
+(p15)	add	r19=PTE_MA_UC,r19
+	dep	r17=0,r16,50,14		// clear bits above PPN
 	;;
-	dep	r16=0,r16,50,14		// clear bits above PPN
-	;;
-	dep	r16=r17,r16,0,12	// put pte bits in 0..11
+1:	dep	r16=r19,r17,0,12	// put pte bits in 0..11
 	;;
 	itc.d	r16
 	mov	pr=r18,0x1ffff		// restore predicates
 	;;
 	rfi
+	;;
+4:
+	add	r19=PTE_MA_WB,r19
+	movl	r17=IA64_PBVM_BASE
+	;;
+	sub	r17=r16,r17
+	movl	r16=IA64_PBVM_PGTBL
+	;;
+	extr.u	r17=r17,IA64_PBVM_PAGE_SHIFT,61-IA64_PBVM_PAGE_SHIFT
+	;;
+	shladd	r16=r17,3,r16
+	;;
+	ld8	r17=[r16]
+	br.sptk	1b
 	;;
 9:	mov	pr=r18,0x1ffff		// restore predicates
 	CALL(trap, 4, cr.ifa)
@@ -921,21 +1011,40 @@ IVT_ENTRY(Data_Nested_TLB, 0x1400)
 	// double nested faults. Since all virtual addresses we encounter
 	// here are direct mapped region 7 addresses, we have no problem
 	// constructing physical addresses.
+
+{	.mmi
+	mov		cr.ifa=r30
+	mov		r26=rr[r30]
+	extr.u		r27=r30,61,3
+	;;
+}
+{	.mii
+	nop		0
+	dep		r26=0,r26,0,2
+	cmp.eq		p12,p13=7,r27
+	;;
+}
+{	.mii
+	mov		cr.itir=r26
+(p12)	dep		r28=0,r30,61,3
+(p13)	extr.u		r28=r30,3*PAGE_SHIFT-8, PAGE_SHIFT-3	// dir L0 index
+	;;
+}
 {	.mlx
+(p12)	add		r28=PTE_PRESENT+PTE_ACCESSED+PTE_DIRTY+PTE_PL_KERN+PTE_AR_RWX+PTE_MA_WB,r28
+(p13)	movl		r27=ia64_kptdir
+	;;
+}
+{	.mib
+(p13)	ld8		r27=[r27]
+(p13)	extr.u		r26=r30,2*PAGE_SHIFT-5, PAGE_SHIFT-3	// dir L1 index
+(p12)	br.cond.spnt.few 1f
+	;;
+}
+{	.mmi
 	rsm		psr.dt
-	movl		r27=ia64_kptdir
 	;;
-}
-{	.mii
 	srlz.d
-	dep		r27=0,r27,61,3
-	;;
-	extr.u		r28=r30,3*PAGE_SHIFT-8, PAGE_SHIFT-3	// dir L0 index
-}
-{	.mii
-	ld8		r27=[r27]				// dir L0 page
-	extr.u		r29=r30,2*PAGE_SHIFT-5, PAGE_SHIFT-3	// dir L1 index
-	;;
 	dep		r27=0,r27,61,3
 	;;
 }
@@ -946,51 +1055,71 @@ IVT_ENTRY(Data_Nested_TLB, 0x1400)
 	extr.u		r28=r30,PAGE_SHIFT,PAGE_SHIFT-5		// pte index
 	;;
 }
-{	.mmi
-	shladd		r27=r29,3,r27
+{	.mii
+	shladd		r27=r26,3,r27
+	shl		r28=r28,5
 	;;
-	mov		r29=rr[r30]
 	dep		r27=0,r27,61,3
 	;;
 }
-{	.mii
 	ld8		r27=[r27]				// pte page
-	shl		r28=r28,5
-	dep		r29=0,r29,0,2
 	;;
-}
-{	.mmi
 	add		r27=r28,r27
 	;;
-	mov		cr.ifa=r30
 	dep		r27=0,r27,61,3
 	;;
-}
-{	.mmi
-	ld8		r28=[r27]		// pte
+	ld8		r28=[r27]				// pte
 	;;
-	mov		cr.itir=r29
 	or		r28=PTE_DIRTY+PTE_ACCESSED,r28
 	;;
-}
-{	.mlx
 	st8		[r27]=r28
-	movl		r29=exception_save_restart
 	;;
-}
+	ssm		psr.dt
+	;;
+1:
 {	.mmi
 	itc.d		r28
 	;;
-	ssm		psr.dt
-	cmp.eq		p12,p13=r26,r29
+	addl		r26=NTLBRT_SAVE,r0
+	addl		r27=NTLBRT_RESTORE,r0
+	;;
+}
+{	.mmi
+	srlz.d
+	cmp.eq		p12,p0=r29,r26
+	cmp.eq		p13,p0=r29,r27
 	;;
 }
 {	.mbb
-	srlz.d
-(p12)	br.sptk		exception_save_restart
-(p13)	br.sptk		exception_restore_restart
+	nop		0
+(p12)	br.cond.sptk.few	exception_save_restart
+(p13)	br.cond.sptk.few	exception_restore_restart
 	;;
 }
+
+{	.mlx
+	mov		r26=ar.bsp
+	movl		r29=kstack
+	;;
+}
+{	.mlx
+	mov		r28=sp
+	movl		r27=kstack_top
+	;;
+}
+{	.mmi
+	add		sp=-16,r27
+	;;
+	mov		r27=ar.bspstore
+	nop		0
+	;;
+}
+	mov		ar.rsc=0
+	dep		r29=r27,r29,0,9
+	;;
+	mov		ar.bspstore=r29
+	;;
+	CALL(trap, 5, r30)
 IVT_END(Data_Nested_TLB)
 
 IVT_ENTRY(Instruction_Key_Miss, 0x1800)
@@ -1065,7 +1194,7 @@ IVT_ENTRY(Dirty_Bit, 0x2000)
 2:	add	r20=24,r20		// next in chain
 	;;
 	ld8	r20=[r20]		// read chain
-	br.cond.sptk.few 1b		// loop
+	br.sptk	1b			// loop
 	;;
 9:	ssm	psr.dt
 	mov	pr=r17,0x1ffff		// restore predicates
@@ -1139,7 +1268,7 @@ IVT_ENTRY(Instruction_Access_Bit, 0x2400)
 2:	add	r20=24,r20		// next in chain
 	;;
 	ld8	r20=[r20]		// read chain
-	br.cond.sptk.few 1b		// loop
+	br.sptk	1b			// loop
 	;;
 9:	ssm	psr.dt
 	mov	pr=r17,0x1ffff		// restore predicates
@@ -1213,7 +1342,7 @@ IVT_ENTRY(Data_Access_Bit, 0x2800)
 2:	add	r20=24,r20		// next in chain
 	;;
 	ld8	r20=[r20]		// read chain
-	br.cond.sptk.few 1b		// loop
+	br.sptk	1b			// loop
 	;;
 9:	ssm	psr.dt
 	mov	pr=r17,0x1ffff		// restore predicates
@@ -1243,13 +1372,13 @@ IVT_ENTRY(Break_Instruction, 0x2c00)
 (p11)	srlz.d
 	add		out1=16,sp
 }
-{	.mfb
+{	.mib
 	nop		0
 	nop		0
 	br.call.sptk	rp=trap
 	;;
 }
-{	.mfb
+{	.mib
 	nop		0
 	nop		0
 	br.sptk		exception_restore
@@ -1259,24 +1388,24 @@ IVT_END(Break_Instruction)
 
 IVT_ENTRY(External_Interrupt, 0x3000)
 {	.mib
-	mov		r17=cr.ivr	// Put the vector in the trap frame.
+	mov		r17=ar.itc	// Put the ITC in the trapframe.
 	mov		r16=ip
 	br.sptk		exception_save
 	;;
 }
-{	.mfb
+{	.mmi
 	alloc		r15=ar.pfs,0,0,1,0
 	nop		0
 	nop		0
 	;;
 }
-{	.mfb
+{	.mib
 	add		out0=16,sp
 	nop		0
-	br.call.sptk	rp=interrupt
+	br.call.sptk	rp=ia64_handle_intr
 	;;
 }
-{	.mfb
+{	.mib
 	nop		0
 	nop		0
 	br.sptk		exception_restore

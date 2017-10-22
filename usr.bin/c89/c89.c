@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/c89/c89.c 146466 2005-05-21 09:55:10Z ru $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <stdio.h>

@@ -1,10 +1,10 @@
-# $FreeBSD: release/7.0.0/sys/modules/arcnet/Makefile 155433 2006-02-07 18:13:56Z yar $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../net
 
 KMOD=	arcnet
 SRCS=	if_arcsubr.c
-SRCS+=	opt_inet.h opt_inet6.h opt_ipx.h
+SRCS+=	opt_inet.h opt_inet6.h opt_ipx.h opt_ofed.h
 
 EXPORT_SYMS=	arc_frag_init	\
 		arc_frag_next	\

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/ntp/ntpdate/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../contrib/ntp/ntpdate
 
@@ -8,8 +8,8 @@ SRCS=	ntpdate.c version.c
 
 CFLAGS+= -I${.CURDIR}/../../../contrib/ntp/include -I${.CURDIR}/../
 
-DPADD=	${LIBNTP} ${LIBMD}
-LDADD=	${LIBNTP} -lmd
+DPADD=	${LIBNTP} ${LIBM} ${LIBMD} ${LIBRT}
+LDADD=	${LIBNTP} -lm -lmd -lrt
 
 CLEANFILES+= .version version.c
 

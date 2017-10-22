@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/pc98/cbus/gdc.c 153165 2005-12-06 11:19:37Z ru $
+ * $FreeBSD$
  */
 
 #include "opt_gdc.h"
@@ -69,7 +69,7 @@
 
 /* cdev driver declaration */
 
-#define GDC_UNIT(dev)	minor(dev)
+#define GDC_UNIT(dev)	dev2unit(dev)
 #define GDC_MKMINOR(unit) (unit)
 
 typedef struct gdc_softc {
@@ -177,7 +177,7 @@ gdc_attach(device_t dev)
 #endif /* FB_INSTALL_CDEV */
 
 	if (bootverbose)
-		(*vidsw[sc->adp->va_index]->diag)(sc->adp, bootverbose);
+		vidd_diag(sc->adp, bootverbose);
 
 	return 0;
 }
@@ -395,12 +395,13 @@ gdcioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, struct thread *td)
 }
 
 static int
-gdcmmap(struct cdev *dev, vm_offset_t offset, vm_paddr_t *paddr, int prot)
+gdcmmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
+    int prot, vm_memattr_t *memattr)
 {
     gdc_softc_t *sc;
 
     sc = GDC_SOFTC(GDC_UNIT(dev));
-    return genfbmmap(&sc->gensc, sc->adp, offset, paddr, prot);
+    return genfbmmap(&sc->gensc, sc->adp, offset, paddr, prot, memattr);
 }
 
 #endif /* FB_INSTALL_CDEV */
@@ -1147,7 +1148,7 @@ gdc_set_mode(video_adapter_t *adp, int mode)
     bcopy(&info, &adp->va_info, sizeof(info));
 
     /* move hardware cursor out of the way */
-    (*vidsw[adp->va_index]->set_hw_cursor)(adp, -1, -1);
+    vidd_set_hw_cursor(adp, -1, -1);
 
     return 0;
 }
@@ -1337,8 +1338,8 @@ gdc_blank_display(video_adapter_t *adp, int mode)
  * Mmap frame buffer.
  */
 static int
-gdc_mmap_buf(video_adapter_t *adp, vm_offset_t offset, vm_offset_t *paddr,
-	     int prot)
+gdc_mmap_buf(video_adapter_t *adp, vm_ooffset_t offset, vm_offset_t *paddr,
+	     int prot, vm_memattr_t *memattr)
 {
     /* FIXME: is this correct? XXX */
     if (offset > VIDEO_BUF_SIZE - PAGE_SIZE)
@@ -1374,7 +1375,7 @@ packed_fill(video_adapter_t *adp, int val)
     length = adp->va_line_width*adp->va_info.vi_height;
     while (length > 0) {
 	l = imin(length, adp->va_window_size);
-	(*vidsw[adp->va_index]->set_win_org)(adp, at);
+	vidd_set_win_org(adp, at);
 	bzero_io(adp->va_window, l);
 	length -= l;
 	at += l;

@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/ugidfw 175737 2008-01-28 07:58:32Z dougb $
+# $FreeBSD$
 
 # PROVIDE: ugidfw
 # BEFORE: LOGIN
-# KEYWORD: nojail
+# KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 

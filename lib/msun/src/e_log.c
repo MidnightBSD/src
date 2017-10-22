@@ -11,9 +11,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: release/7.0.0/lib/msun/src/e_log.c 170707 2007-06-14 05:57:13Z bde $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /* __ieee754_log(x)
  * Return the logrithm of x
@@ -108,8 +107,14 @@ __ieee754_log(double x)
 	k += (i>>20);
 	f = x-1.0;
 	if((0x000fffff&(2+hx))<3) {	/* -2**-20 <= f < 2**-20 */
-	    if(f==zero) if(k==0) return zero;  else {dk=(double)k;
-				 return dk*ln2_hi+dk*ln2_lo;}
+	    if(f==zero) {
+		if(k==0) {
+		    return zero;
+		} else {
+		    dk=(double)k;
+		    return dk*ln2_hi+dk*ln2_lo;
+		}
+	    }
 	    R = f*f*(0.5-0.33333333333333333*f);
 	    if(k==0) return f-R; else {dk=(double)k;
 	    	     return dk*ln2_hi-((R-dk*ln2_lo)-f);}

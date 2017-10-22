@@ -1,4 +1,4 @@
-dnl $FreeBSD: release/7.0.0/usr.bin/m4/TEST/math.m4 172506 2007-10-10 16:59:15Z cvs2svn $
+dnl $FreeBSD$
 dnl A regression test for m4 C operators		(ksb,petef)
 dnl If you think you have a short-circuiting m4, run us m4 -DSHORCIRCUIT=yes
 dnl

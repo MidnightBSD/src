@@ -13,10 +13,9 @@ divert(-1)
 #  This is the FreeBSD configuration for a set-group-ID sm-msp sendmail
 #  that acts as a initial mail submission program.
 #
-#
 
 divert(0)dnl
-VERSIONID(`$FreeBSD: release/7.0.0/etc/sendmail/freebsd.submit.mc 173844 2007-11-22 16:19:40Z gshapiro $')
+VERSIONID(`$FreeBSD$')
 define(`confCF_VERSION', `Submit')dnl
 define(`__OSTYPE__',`')dnl dirty hack to keep proto.m4 from complaining
 define(`_USE_DECNET_SYNTAX_', `1')dnl support DECnet

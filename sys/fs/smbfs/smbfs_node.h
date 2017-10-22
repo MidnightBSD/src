@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2000-2001, Boris Popov
+ * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -29,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/fs/smbfs/smbfs_node.h 139776 2005-01-06 18:10:42Z imp $
+ * $FreeBSD$
  */
 #ifndef _FS_SMBFS_NODE_H_
 #define _FS_SMBFS_NODE_H_
@@ -66,7 +60,6 @@ struct smbnode {
 	u_char *		n_name;
 	struct smbfs_fctx *	n_dirseq;	/* ff context */
 	long			n_dirofs;	/* last ff offset */
-	struct lockf *		n_lockf;	/* Locking records of file */
 	LIST_ENTRY(smbnode)	n_hash;
 };
 

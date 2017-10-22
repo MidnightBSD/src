@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/buslogic/bt.c 170872 2007-06-17 05:55:54Z scottl $");
+__FBSDID("$FreeBSD$");
 
  /*
   * Special thanks to Leonard N. Zubkoff for writing such a complete and
@@ -975,7 +975,7 @@ bt_find_probe_range(int ioport, int *port_index, int *max_port_index)
 int
 bt_iop_from_bio(isa_compat_io_t bio_index)
 {
-	if (bio_index >= 0 && bio_index < BT_NUM_ISAPORTS)
+	if (bio_index < BT_NUM_ISAPORTS)
 		return (bt_board_ports[bio_index]);
 	return (-1);
 }

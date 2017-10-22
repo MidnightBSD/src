@@ -1,5 +1,7 @@
-#	$FreeBSD: release/7.0.0/tools/tools/ath/Makefile 153317 2005-12-11 23:13:54Z sam $
+#	$FreeBSD$
 
-SUBDIR=	athstats athdebug
+SUBDIR=	arcode athdebug athdecode athkey athpoke athprom athrd athregs
+SUBDIR+=	athstats ath_ee_v14_print ath_prom_read ath_ee_v4k_print
+SUBDIR+=	athradar
 
 .include <bsd.subdir.mk>

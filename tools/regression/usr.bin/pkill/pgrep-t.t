@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/7.0.0/tools/regression/usr.bin/pkill/pgrep-t.t 152158 2005-11-07 16:56:16Z pjd $
+# $FreeBSD$
 
 base=`basename $0`
 
@@ -11,7 +11,10 @@ if [ "$tty" = "??" ]; then
 	tty="-"
 	ttyshort="-"
 else
-	ttyshort=`echo $tty | cut -c 4-`
+	case $tty in
+	pts/*)	ttyshort=`echo $tty | cut -c 5-` ;;
+	*)	ttyshort=`echo $tty | cut -c 4-` ;;
+	esac
 fi
 sleep=`mktemp /tmp/$base.XXXXXX` || exit 1
 ln -sf /bin/sleep $sleep

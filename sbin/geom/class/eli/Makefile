@@ -1,8 +1,8 @@
-# $FreeBSD: release/7.0.0/sbin/geom/class/eli/Makefile 148507 2005-07-29 10:06:57Z pjd $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../misc ${.CURDIR}/../../../../sys/geom/eli ${.CURDIR}/../../../../sys/crypto/sha2
 
-CLASS=	eli
+GEOM_CLASS=	eli
 SRCS=	g_eli_crypto.c
 SRCS+=	g_eli_key.c
 SRCS+=	pkcs5v2.c

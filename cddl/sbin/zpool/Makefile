@@ -1,27 +1,33 @@
-# $FreeBSD: release/7.0.0/cddl/sbin/zpool/Makefile 172402 2007-10-01 18:17:24Z ru $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../contrib/opensolaris/cmd/zpool
+.PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/cmd/zpool
+.PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/cmd/stat/common
+.PATH: ${.CURDIR}/../../../sys/cddl/contrib/opensolaris/common/zfs
 
 PROG=	zpool
 MAN=	zpool.8
-SRCS=	zpool_main.c zpool_vdev.c zpool_iter.c zpool_util.c
+SRCS=	zpool_main.c zpool_vdev.c zpool_iter.c zpool_util.c zfs_comutil.c
+SRCS+=	timestamp.c
 
-CFLAGS+= -I${.CURDIR}/../../../contrib/opensolaris/lib/libzpool/common
-CFLAGS+= -I${.CURDIR}/../../../compat/opensolaris/include
-CFLAGS+= -I${.CURDIR}/../../../compat/opensolaris/lib/libumem
-CFLAGS+= -I${.CURDIR}/../../../sys/compat/opensolaris
-CFLAGS+= -I${.CURDIR}/../../../contrib/opensolaris/head
-CFLAGS+= -I${.CURDIR}/../../../contrib/opensolaris/lib/libuutil/common
-CFLAGS+= -I${.CURDIR}/../../../contrib/opensolaris/lib/libumem/common
-CFLAGS+= -I${.CURDIR}/../../../contrib/opensolaris/lib/libzfs/common
-CFLAGS+= -I${.CURDIR}/../../../contrib/opensolaris/lib/libnvpair
-CFLAGS+= -I${.CURDIR}/../../../sys/contrib/opensolaris/uts/common
-CFLAGS+= -I${.CURDIR}/../../../sys/contrib/opensolaris/uts/common/fs/zfs
-CFLAGS+= -I${.CURDIR}/../../../sys/contrib/opensolaris/uts/common/sys
+WARNS?=	0
+CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libzpool/common
+CFLAGS+= -I${.CURDIR}/../../../cddl/compat/opensolaris/include
+CFLAGS+= -I${.CURDIR}/../../../cddl/compat/opensolaris/lib/libumem
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/compat/opensolaris
+CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/head
+CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libuutil/common
+CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libumem/common
+CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libzfs/common
+CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libnvpair
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/common/zfs
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/fs/zfs
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/sys
+CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libzpool/common
+CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/cmd/stat/common
 
-DPADD=	${LIBAVL} ${LIBZFS} ${LIBGEOM} ${LIBBSDXML} ${LIBSBUF} \
-	${LIBM} ${LIBNVPAIR} ${LIBUUTIL} ${LIBUTIL}
-LDADD=	-lavl -lzfs -lgeom -lbsdxml -lsbuf \
-	-lm -lnvpair -luutil -lutil
+DPADD=	${LIBAVL} ${LIBBSDXML} ${LIBGEOM} ${LIBM} ${LIBNVPAIR} ${LIBSBUF} \
+	${LIBUMEM} ${LIBUTIL} ${LIBUUTIL} ${LIBZFS}
+LDADD=	-lavl -lbsdxml -lgeom -lm -lnvpair -lsbuf -lumem -lutil -luutil -lzfs
 
 .include <bsd.prog.mk>

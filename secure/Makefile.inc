@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/secure/Makefile.inc 156813 2006-03-17 18:54:44Z ru $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -15,3 +15,5 @@ CFLAGS+= -DNO_IDEA
 .if ${MK_OPENSSH} != "no"
 SSHDIR=		${.CURDIR}/../../../crypto/openssh
 .endif
+
+WARNS?=		0

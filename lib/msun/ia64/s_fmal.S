@@ -25,10 +25,11 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/msun/ia64/s_fmal.S 143207 2005-03-07 04:53:11Z das $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(fmal, 3)
 {
 	fma		f8 = f8, f9, f10
 	br.ret.sptk	b0
 }
+END(fmal)

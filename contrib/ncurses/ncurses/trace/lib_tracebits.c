@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2002,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2007,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -35,7 +35,7 @@
 #include <curses.priv.h>
 #include <term.h>		/* cur_term */
 
-MODULE_ID("$Id: lib_tracebits.c,v 1.13 2006/12/10 01:33:00 tom Exp $")
+MODULE_ID("$Id: lib_tracebits.c,v 1.17 2008/08/03 16:09:26 tom Exp $")
 
 #if SVR4_TERMIO && !defined(_POSIX_SOURCE)
 #define _POSIX_SOURCE
@@ -53,8 +53,25 @@ MODULE_ID("$Id: lib_tracebits.c,v 1.13 2006/12/10 01:33:00 tom Exp $")
 #ifndef TOSTOP
 #define TOSTOP 0
 #endif
+
 #ifndef IEXTEN
 #define IEXTEN 0
+#endif
+
+#ifndef ONLCR
+#define ONLCR 0
+#endif
+
+#ifndef OCRNL
+#define OCRNL 0
+#endif
+
+#ifndef ONOCR
+#define ONOCR 0
+#endif
+
+#ifndef ONLRET
+#define ONLRET 0
 #endif
 
 #ifdef TRACE
@@ -108,8 +125,12 @@ _nc_trace_ttymode(TTY * tty)
     {
 	{OPOST, "OPOST"},
 	{OFLAGS_TABS, "XTABS"},
+	{ONLCR, "ONLCR"},
+	{OCRNL, "OCRNL"},
+	{ONOCR, "ONOCR"},
+	{ONLRET, "ONLRET"},
 	{0, NULL}
-#define ALLOUT	(OPOST)
+#define ALLOUT	(OPOST|OFLAGS_TABS|ONLCR|OCRNL|ONOCR|ONLRET)
     }, cflags[] =
     {
 	{CLOCAL, "CLOCAL"},
@@ -144,58 +165,52 @@ _nc_trace_ttymode(TTY * tty)
 			8 + sizeof(cflags) +
 			8 + sizeof(lflags) +
 			8);
+    if (buf != 0) {
 
-    if (tty->c_iflag & ALLIN)
-	lookup_bits(buf, iflags, "iflags", tty->c_iflag);
+	if (tty->c_iflag & ALLIN)
+	    lookup_bits(buf, iflags, "iflags", tty->c_iflag);
 
-    if (tty->c_oflag & ALLOUT)
-	lookup_bits(buf, oflags, "oflags", tty->c_oflag);
+	if (tty->c_oflag & ALLOUT)
+	    lookup_bits(buf, oflags, "oflags", tty->c_oflag);
 
-    if (tty->c_cflag & ALLCTRL)
-	lookup_bits(buf, cflags, "cflags", tty->c_cflag);
+	if (tty->c_cflag & ALLCTRL)
+	    lookup_bits(buf, cflags, "cflags", tty->c_cflag);
 
 #if defined(CS5) && defined(CS8)
-    {
-	static struct {
-	    const char *name;
-	    int value;
-	} csizes[] = {
-	    {
-		"CS5 ", CS5
-	    },
+	{
+	    static struct {
+		int value;
+		const char *name;
+	    } csizes[] = {
+#define CS_DATA(name) { name, #name " " }
+		CS_DATA(CS5),
 #ifdef CS6
-	    {
-		"CS6 ", CS6
-	    },
+		    CS_DATA(CS6),
 #endif
 #ifdef CS7
-	    {
-		"CS7 ", CS7
-	    },
+		    CS_DATA(CS7),
 #endif
-	    {
-		"CS8 ", CS8
-	    },
-	};
-	const char *result = "CSIZE? ";
-	int value = (tty->c_cflag & CSIZE);
-	unsigned n;
+		    CS_DATA(CS8),
+	    };
+	    const char *result = "CSIZE? ";
+	    int value = (tty->c_cflag & CSIZE);
+	    unsigned n;
 
-	if (value != 0) {
-	    for (n = 0; n < SIZEOF(csizes); n++) {
-		if (csizes[n].value == value) {
-		    result = csizes[n].name;
-		    break;
+	    if (value != 0) {
+		for (n = 0; n < SIZEOF(csizes); n++) {
+		    if (csizes[n].value == value) {
+			result = csizes[n].name;
+			break;
+		    }
 		}
 	    }
+	    strcat(buf, result);
 	}
-	strcat(buf, result);
-    }
 #endif
 
-    if (tty->c_lflag & ALLLOCAL)
-	lookup_bits(buf, lflags, "lflags", tty->c_lflag);
-
+	if (tty->c_lflag & ALLLOCAL)
+	    lookup_bits(buf, lflags, "lflags", tty->c_lflag);
+    }
 #else
     /* reference: ttcompat(4M) on SunOS 4.1 */
 #ifndef EVENP
@@ -232,9 +247,10 @@ _nc_trace_ttymode(TTY * tty)
 
     buf = _nc_trace_buf(0,
 			8 + sizeof(cflags));
-
-    if (tty->sg_flags & ALLCTRL) {
-	lookup_bits(buf, cflags, "cflags", tty->sg_flags);
+    if (buf != 0) {
+	if (tty->sg_flags & ALLCTRL) {
+	    lookup_bits(buf, cflags, "cflags", tty->sg_flags);
+	}
     }
 #endif
     return (buf);
@@ -246,5 +262,5 @@ _nc_tracebits(void)
     return _nc_trace_ttymode(&(cur_term->Nttyb));
 }
 #else
-empty_module(_nc_tracebits)
+EMPTY_MODULE(_nc_tracebits)
 #endif /* TRACE */

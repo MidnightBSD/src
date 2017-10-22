@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/i80321/i80321_timer.c 171627 2007-07-27 14:52:04Z cognet $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -66,8 +66,6 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/i80321/i80321_timer.c 171627 20
 			       definitions overrides the ones from i80321reg.h
 			       */
 #endif
-#include <arm/xscale/xscalevar.h>
-
 #include "opt_timer.h"
 
 void (*i80321_hardclock_hook)(void) = NULL;

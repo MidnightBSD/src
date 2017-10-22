@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -34,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)find.h	8.1 (Berkeley) 6/6/93
- *	$FreeBSD: release/7.0.0/usr.bin/find/find.h 158572 2006-05-14 20:23:01Z krion $
+ *	$FreeBSD$
  */
 
 #include <regex.h>
@@ -74,6 +70,7 @@ typedef	struct _plandata *creat_f(struct _option *, char ***);
 #define F_EXECPLUS	0x00020000	/* -exec ... {} + */
 #define	F_TIME_B	0x00040000	/* one of -Btime, -Bnewer, -newerB* */
 #define	F_TIME2_B	0x00080000	/* one of -newer?B */
+#define F_LINK		0x00100000	/* lname or ilname */
 
 /* node definition */
 typedef struct _plandata {

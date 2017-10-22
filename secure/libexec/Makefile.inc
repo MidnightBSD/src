@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/secure/libexec/Makefile.inc 114283 2003-04-30 07:54:39Z ru $
+# $FreeBSD$
 
 BINDIR?=	/usr/libexec
 

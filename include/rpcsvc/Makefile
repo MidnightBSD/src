@@ -1,9 +1,9 @@
 #	from: @(#)Makefile	2.3 88/08/11 4.0 RPCSRC
-# $FreeBSD: release/7.0.0/include/rpcsvc/Makefile 96462 2002-05-12 16:01:00Z ru $
+# $FreeBSD$
 
 .SUFFIXES: .x
 
-RPCCOM = rpcgen -C
+RPCCOM=	RPCGEN_CPP=${CPP:Q} rpcgen -C
 
 HDRS= key_prot.h klm_prot.h mount.h nfs_prot.h nlm_prot.h rex.h rnusers.h \
       rquota.h rstat.h rwall.h sm_inter.h spray.h yppasswd.h yp.h \

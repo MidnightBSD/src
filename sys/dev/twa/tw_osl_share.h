@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/7.0.0/sys/dev/twa/tw_osl_share.h 172496 2007-10-09 17:43:57Z scottl $
+ *	$FreeBSD$
  */
 
 /*
@@ -75,7 +75,7 @@
 #define TW_OSL_ENCLOSURE_SUPPORT
 #endif
 
-#define TW_OSL_DRIVER_VERSION_STRING	"3.70.05.001"
+#define TW_OSL_DRIVER_VERSION_STRING	"3.80.06.003"
 
 #define	TW_OSL_CAN_SLEEP
 

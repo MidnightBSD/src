@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rt_21.c,v 1.41.18.3 2005/04/27 05:01:52 sra Exp $ */
+/* $Id: rt_21.c,v 1.48 2009/12/04 22:06:37 tbox Exp $ */
 
 /* reviewed: Thu Mar 16 15:02:31 PST 2000 by brister */
 
@@ -90,7 +90,7 @@ totext_rt(ARGS_TOTEXT) {
 
 static inline isc_result_t
 fromwire_rt(ARGS_FROMWIRE) {
-        dns_name_t name;
+	dns_name_t name;
 	isc_region_t sregion;
 	isc_region_t tregion;
 
@@ -101,7 +101,7 @@ fromwire_rt(ARGS_FROMWIRE) {
 
 	dns_decompress_setmethods(dctx, DNS_COMPRESS_NONE);
 
-        dns_name_init(&name, NULL);
+	dns_name_init(&name, NULL);
 
 	isc_buffer_activeregion(source, &sregion);
 	isc_buffer_availableregion(target, &tregion);
@@ -306,6 +306,11 @@ checknames_rt(ARGS_CHECKNAMES) {
 		return (ISC_FALSE);
 	}
 	return (ISC_TRUE);
+}
+
+static inline int
+casecompare_rt(ARGS_COMPARE) {
+	return (compare_rt(rdata1, rdata2));
 }
 
 #endif	/* RDATA_GENERIC_RT_21_C */

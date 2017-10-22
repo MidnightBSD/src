@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/nsp/nsp_pccard.c 166901 2007-02-23 12:19:07Z piso $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -200,11 +200,13 @@ nsp_pccard_attach(device_t dev)
 	return(0);
 }
 
-static void
+static int
 nsp_pccard_detach(device_t dev)
 {
 	nsp_card_unload(dev);
 	nsp_release_resource(dev);
+
+	return (0);
 }
 
 static device_method_t nsp_pccard_methods[] = {

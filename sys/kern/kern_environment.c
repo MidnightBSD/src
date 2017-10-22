@@ -35,9 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/kern/kern_environment.c 167232 2007-03-05 13:10:58Z rwatson $");
-
-#include "opt_mac.h"
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -62,6 +60,8 @@ static MALLOC_DEFINE(M_KENV, "kenv", "kernel environment");
 
 /* pointer to the static environment */
 char		*kern_envp;
+static int	env_len;
+static int	env_pos;
 static char	*kernenv_next(char *);
 
 /* dynamic environment variables */
@@ -77,7 +77,7 @@ int	dynamic_kenv = 0;
 			    panic("%s: called before SI_SUB_KMEM", __func__)
 
 int
-kenv(td, uap)
+sys_kenv(td, uap)
 	struct thread *td;
 	struct kenv_args /* {
 		int what;
@@ -87,7 +87,7 @@ kenv(td, uap)
 	} */ *uap;
 {
 	char *name, *value, *buffer = NULL;
-	size_t len, done, needed;
+	size_t len, done, needed, buflen;
 	int error, i;
 
 	KASSERT(dynamic_kenv, ("kenv: dynamic_kenv = 0"));
@@ -95,18 +95,22 @@ kenv(td, uap)
 	error = 0;
 	if (uap->what == KENV_DUMP) {
 #ifdef MAC
-		error = mac_check_kenv_dump(td->td_ucred);
+		error = mac_kenv_check_dump(td->td_ucred);
 		if (error)
 			return (error);
 #endif
 		done = needed = 0;
+		buflen = uap->len;
+		if (buflen > KENV_SIZE * (KENV_MNAMELEN + KENV_MVALLEN + 2))
+			buflen = KENV_SIZE * (KENV_MNAMELEN +
+			    KENV_MVALLEN + 2);
 		if (uap->len > 0 && uap->value != NULL)
-			buffer = malloc(uap->len, M_TEMP, M_WAITOK|M_ZERO);
+			buffer = malloc(buflen, M_TEMP, M_WAITOK|M_ZERO);
 		mtx_lock(&kenv_lock);
 		for (i = 0; kenvp[i] != NULL; i++) {
 			len = strlen(kenvp[i]) + 1;
 			needed += len;
-			len = min(len, uap->len - done);
+			len = min(len, buflen - done);
 			/*
 			 * If called with a NULL or insufficiently large
 			 * buffer, just keep computing the required size.
@@ -148,7 +152,7 @@ kenv(td, uap)
 	switch (uap->what) {
 	case KENV_GET:
 #ifdef MAC
-		error = mac_check_kenv_get(td->td_ucred, name);
+		error = mac_kenv_check_get(td->td_ucred, name);
 		if (error)
 			goto done;
 #endif
@@ -181,7 +185,7 @@ kenv(td, uap)
 			goto done;
 		}
 #ifdef MAC
-		error = mac_check_kenv_set(td->td_ucred, name, value);
+		error = mac_kenv_check_set(td->td_ucred, name, value);
 		if (error == 0)
 #endif
 			setenv(name, value);
@@ -189,7 +193,7 @@ kenv(td, uap)
 		break;
 	case KENV_UNSET:
 #ifdef MAC
-		error = mac_check_kenv_unset(td->td_ucred, name);
+		error = mac_kenv_check_unset(td->td_ucred, name);
 		if (error)
 			goto done;
 #endif
@@ -206,6 +210,14 @@ done:
 	return (error);
 }
 
+void
+init_static_kenv(char *buf, size_t len)
+{
+	kern_envp = buf;
+	env_len = len;
+	env_pos = 0;
+}
+
 /*
  * Setup the dynamic kernel environment.
  */
@@ -213,13 +225,19 @@ static void
 init_dynamic_kenv(void *data __unused)
 {
 	char *cp;
-	int len, i;
+	size_t len;
+	int i;
 
 	kenvp = malloc((KENV_SIZE + 1) * sizeof(char *), M_KENV,
 		M_WAITOK | M_ZERO);
 	i = 0;
 	for (cp = kern_envp; cp != NULL; cp = kernenv_next(cp)) {
 		len = strlen(cp) + 1;
+		if (len > KENV_MNAMELEN + 1 + KENV_MVALLEN + 1) {
+			printf("WARNING: too long kenv string, ignoring %s\n",
+			    cp);
+			continue;
+		}
 		if (i < KENV_SIZE) {
 			kenvp[i] = malloc(len, M_KENV, M_WAITOK);
 			strcpy(kenvp[i++], cp);
@@ -309,6 +327,8 @@ getenv(const char *name)
 		} else {
 			mtx_unlock(&kenv_lock);
 			ret = NULL;
+			WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, NULL,
+			    "getenv");
 		}
 	} else
 		ret = _getenv_static(name);
@@ -334,6 +354,26 @@ testenv(const char *name)
 	return (0);
 }
 
+static int
+setenv_static(const char *name, const char *value)
+{
+	int len;
+
+	if (env_pos >= env_len)
+		return (-1);
+
+	/* Check space for x=y and two nuls */
+	len = strlen(name) + strlen(value);
+	if (len + 3 < env_len - env_pos) {
+		len = sprintf(&kern_envp[env_pos], "%s=%s", name, value);
+		env_pos += len+1;
+		kern_envp[env_pos] = '\0';
+		return (0);
+	} else
+		return (-1);
+
+}
+
 /*
  * Set an environment variable by name.
  */
@@ -342,6 +382,9 @@ setenv(const char *name, const char *value)
 {
 	char *buf, *cp, *oldenv;
 	int namelen, vallen, i;
+
+	if (dynamic_kenv == 0 && env_len > 0)
+		return (setenv_static(name, value));
 
 	KENV_CHECK;
 
@@ -439,13 +482,28 @@ getenv_int(const char *name, int *data)
 }
 
 /*
+ * Return an unsigned integer value from an environment variable.
+ */
+int
+getenv_uint(const char *name, unsigned int *data)
+{
+	quad_t tmp;
+	int rval;
+
+	rval = getenv_quad(name, &tmp);
+	if (rval)
+		*data = (unsigned int) tmp;
+	return (rval);
+}
+
+/*
  * Return a long value from an environment variable.
  */
-long
+int
 getenv_long(const char *name, long *data)
 {
 	quad_t tmp;
-	long rval;
+	int rval;
 
 	rval = getenv_quad(name, &tmp);
 	if (rval)
@@ -456,11 +514,11 @@ getenv_long(const char *name, long *data)
 /*
  * Return an unsigned long value from an environment variable.
  */
-unsigned long
+int
 getenv_ulong(const char *name, unsigned long *data)
 {
 	quad_t tmp;
-	long rval;
+	int rval;
 
 	rval = getenv_quad(name, &tmp);
 	if (rval)
@@ -546,6 +604,14 @@ tunable_ulong_init(void *data)
 	struct tunable_ulong *d = (struct tunable_ulong *)data;
 
 	TUNABLE_ULONG_FETCH(d->path, d->var);
+}
+
+void
+tunable_quad_init(void *data)
+{
+	struct tunable_quad *d = (struct tunable_quad *)data;
+
+	TUNABLE_QUAD_FETCH(d->path, d->var);
 }
 
 void

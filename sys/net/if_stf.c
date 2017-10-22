@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/net/if_stf.c 174854 2007-12-22 06:32:46Z cvs2svn $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: if_stf.c,v 1.73 2001/12/03 11:08:30 keiichi Exp $	*/
 
 /*-
@@ -76,7 +76,6 @@
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
-#include "opt_mac.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -87,7 +86,9 @@
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/protosw.h>
+#include <sys/proc.h>
 #include <sys/queue.h>
+#include <sys/sysctl.h>
 #include <machine/cpu.h>
 
 #include <sys/malloc.h>
@@ -98,6 +99,7 @@
 #include <net/netisr.h>
 #include <net/if_types.h>
 #include <net/if_stf.h>
+#include <net/vnet.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -118,6 +120,13 @@
 
 #include <security/mac/mac_framework.h>
 
+SYSCTL_DECL(_net_link);
+SYSCTL_NODE(_net_link, IFT_STF, stf, CTLFLAG_RW, 0, "6to4 Interface");
+
+static int stf_route_cache = 1;
+SYSCTL_INT(_net_link_stf, OID_AUTO, route_cache, CTLFLAG_RW,
+    &stf_route_cache, 0, "Caching of IPv4 routes for 6to4 Output");
+
 #define STFNAME		"stf"
 #define STFUNIT		0
 
@@ -136,14 +145,15 @@ struct stf_softc {
 		struct route_in6 __sc_ro6; /* just for safety */
 	} __sc_ro46;
 #define sc_ro	__sc_ro46.__sc_ro4
+	struct mtx	sc_ro_mtx;
+	u_int	sc_fibnum;
 	const struct encaptab *encap_cookie;
 };
 #define STF2IFP(sc)	((sc)->sc_ifp)
 
 /*
- * XXXRW: Note that mutable fields in the softc are not currently locked:
- * in particular, sc_ro needs to be protected from concurrent entrance
- * of stf_output().
+ * Note that mutable fields in the softc are not currently locked.
+ * We do lock sc_ro in stf_output though.
  */
 static MALLOC_DEFINE(M_STF, STFNAME, "6to4 Tunnel Interface");
 static const int ip_stf_ttl = 40;
@@ -166,7 +176,7 @@ static int stfmodevent(module_t, int, void *);
 static int stf_encapcheck(const struct mbuf *, int, int, void *);
 static struct in6_ifaddr *stf_getsrcifa6(struct ifnet *);
 static int stf_output(struct ifnet *, struct mbuf *, struct sockaddr *,
-	struct rtentry *);
+	struct route *);
 static int isrfc1918addr(struct in_addr *);
 static int stf_checkaddr4(struct stf_softc *, struct in_addr *,
 	struct ifnet *);
@@ -219,6 +229,7 @@ stf_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 		return (ENOSPC);
 	}
 	ifp->if_softc = sc;
+	sc->sc_fibnum = curthread->td_proc->p_fibnum;
 
 	/*
 	 * Set the name manually rather then using if_initname because
@@ -228,6 +239,7 @@ stf_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 	ifp->if_dname = ifc->ifc_name;
 	ifp->if_dunit = IF_DUNIT_NONE;
 
+	mtx_init(&(sc)->sc_ro_mtx, "stf ro", NULL, MTX_DEF);
 	sc->encap_cookie = encap_attach_func(AF_INET, IPPROTO_IPV6,
 	    stf_encapcheck, &in_stf_protosw, sc);
 	if (sc->encap_cookie == NULL) {
@@ -240,7 +252,7 @@ stf_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 	ifp->if_mtu    = IPV6_MMTU;
 	ifp->if_ioctl  = stf_ioctl;
 	ifp->if_output = stf_output;
-	ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
+	ifp->if_snd.ifq_maxlen = ifqmaxlen;
 	if_attach(ifp);
 	bpfattach(ifp, DLT_NULL, sizeof(u_int32_t));
 	return (0);
@@ -254,6 +266,7 @@ stf_clone_destroy(struct if_clone *ifc, struct ifnet *ifp)
 
 	err = encap_detach(sc->encap_cookie);
 	KASSERT(err == 0, ("Unexpected error detaching encap_cookie"));
+	mtx_destroy(&(sc)->sc_ro_mtx);
 	bpfdetach(ifp);
 	if_detach(ifp);
 	if_free(ifp);
@@ -335,8 +348,10 @@ stf_encapcheck(m, off, proto, arg)
 	 * success on: dst = 10.1.1.1, ia6->ia_addr = 2002:0a01:0101:...
 	 */
 	if (bcmp(GET_V4(&ia6->ia_addr.sin6_addr), &ip.ip_dst,
-	    sizeof(ip.ip_dst)) != 0)
+	    sizeof(ip.ip_dst)) != 0) {
+		ifa_free(&ia6->ia_ifa);
 		return 0;
+	}
 
 	/*
 	 * check if IPv4 src matches the IPv4 address derived from the
@@ -347,6 +362,7 @@ stf_encapcheck(m, off, proto, arg)
 	bzero(&a, sizeof(a));
 	bcopy(GET_V4(&ia6->ia_addr.sin6_addr), &a, sizeof(a));
 	bcopy(GET_V4(&ia6->ia_prefixmask.sin6_addr), &mask, sizeof(mask));
+	ifa_free(&ia6->ia_ifa);
 	a.s_addr &= mask.s_addr;
 	b = ip.ip_src;
 	b.s_addr &= mask.s_addr;
@@ -366,7 +382,8 @@ stf_getsrcifa6(ifp)
 	struct sockaddr_in6 *sin6;
 	struct in_addr in;
 
-	TAILQ_FOREACH(ia, &ifp->if_addrlist, ifa_list) {
+	if_addr_rlock(ifp);
+	TAILQ_FOREACH(ia, &ifp->if_addrhead, ifa_link) {
 		if (ia->ifa_addr->sa_family != AF_INET6)
 			continue;
 		sin6 = (struct sockaddr_in6 *)ia->ifa_addr;
@@ -380,21 +397,25 @@ stf_getsrcifa6(ifp)
 		if (ia4 == NULL)
 			continue;
 
+		ifa_ref(ia);
+		if_addr_runlock(ifp);
 		return (struct in6_ifaddr *)ia;
 	}
+	if_addr_runlock(ifp);
 
 	return NULL;
 }
 
 static int
-stf_output(ifp, m, dst, rt)
+stf_output(ifp, m, dst, ro)
 	struct ifnet *ifp;
 	struct mbuf *m;
 	struct sockaddr *dst;
-	struct rtentry *rt;
+	struct route *ro;
 {
 	struct stf_softc *sc;
 	struct sockaddr_in6 *dst6;
+	struct route *cached_route;
 	struct in_addr in4;
 	caddr_t ptr;
 	struct sockaddr_in *dst4;
@@ -403,10 +424,10 @@ stf_output(ifp, m, dst, rt)
 	struct ip6_hdr *ip6;
 	struct in6_ifaddr *ia6;
 	u_int32_t af;
-#ifdef MAC
 	int error;
 
-	error = mac_check_ifnet_transmit(ifp, m);
+#ifdef MAC
+	error = mac_ifnet_check_transmit(ifp, m);
 	if (error) {
 		m_freem(m);
 		return (error);
@@ -438,6 +459,7 @@ stf_output(ifp, m, dst, rt)
 	if (m->m_len < sizeof(*ip6)) {
 		m = m_pullup(m, sizeof(*ip6));
 		if (!m) {
+			ifa_free(&ia6->ia_ifa);
 			ifp->if_oerrors++;
 			return ENOBUFS;
 		}
@@ -464,6 +486,7 @@ stf_output(ifp, m, dst, rt)
 	else if (IN6_IS_ADDR_6TO4(&dst6->sin6_addr))
 		ptr = GET_V4(&dst6->sin6_addr);
 	else {
+		ifa_free(&ia6->ia_ifa);
 		m_freem(m);
 		ifp->if_oerrors++;
 		return ENETUNREACH;
@@ -486,6 +509,7 @@ stf_output(ifp, m, dst, rt)
 	if (m && m->m_len < sizeof(struct ip))
 		m = m_pullup(m, sizeof(struct ip));
 	if (m == NULL) {
+		ifa_free(&ia6->ia_ifa);
 		ifp->if_oerrors++;
 		return ENOBUFS;
 	}
@@ -495,6 +519,7 @@ stf_output(ifp, m, dst, rt)
 
 	bcopy(GET_V4(&((struct sockaddr_in6 *)&ia6->ia_addr)->sin6_addr),
 	    &ip->ip_src, sizeof(ip->ip_src));
+	ifa_free(&ia6->ia_ifa);
 	bcopy(&in4, &ip->ip_dst, sizeof(ip->ip_dst));
 	ip->ip_p = IPPROTO_IPV6;
 	ip->ip_ttl = ip_stf_ttl;
@@ -504,9 +529,15 @@ stf_output(ifp, m, dst, rt)
 	else
 		ip_ecn_ingress(ECN_NOCARE, &ip->ip_tos, &tos);
 
+	if (!stf_route_cache) {
+		cached_route = NULL;
+		goto sendit;
+	}
+
 	/*
-	 * XXXRW: Locking of sc_ro required.
+	 * Do we have a cached route?
 	 */
+	mtx_lock(&(sc)->sc_ro_mtx);
 	dst4 = (struct sockaddr_in *)&sc->sc_ro.ro_dst;
 	if (dst4->sin_family != AF_INET ||
 	    bcmp(&dst4->sin_addr, &ip->ip_dst, sizeof(ip->ip_dst)) != 0) {
@@ -521,16 +552,24 @@ stf_output(ifp, m, dst, rt)
 	}
 
 	if (sc->sc_ro.ro_rt == NULL) {
-		rtalloc(&sc->sc_ro);
+		rtalloc_fib(&sc->sc_ro, sc->sc_fibnum);
 		if (sc->sc_ro.ro_rt == NULL) {
 			m_freem(m);
+			mtx_unlock(&(sc)->sc_ro_mtx);
 			ifp->if_oerrors++;
 			return ENETUNREACH;
 		}
 	}
+	cached_route = &sc->sc_ro;
 
+sendit:
+	M_SETFIB(m, sc->sc_fibnum);
 	ifp->if_opackets++;
-	return ip_output(m, NULL, &sc->sc_ro, 0, NULL, NULL);
+	error = ip_output(m, NULL, cached_route, 0, NULL, NULL);
+
+	if (cached_route != NULL)
+		mtx_unlock(&(sc)->sc_ro_mtx);
+	return error;
 }
 
 static int
@@ -578,15 +617,19 @@ stf_checkaddr4(sc, in, inifp)
 	/*
 	 * reject packets with broadcast
 	 */
-	for (ia4 = TAILQ_FIRST(&in_ifaddrhead);
+	IN_IFADDR_RLOCK();
+	for (ia4 = TAILQ_FIRST(&V_in_ifaddrhead);
 	     ia4;
 	     ia4 = TAILQ_NEXT(ia4, ia_link))
 	{
 		if ((ia4->ia_ifa.ifa_ifp->if_flags & IFF_BROADCAST) == 0)
 			continue;
-		if (in->s_addr == ia4->ia_broadaddr.sin_addr.s_addr)
+		if (in->s_addr == ia4->ia_broadaddr.sin_addr.s_addr) {
+			IN_IFADDR_RUNLOCK();
 			return -1;
+		}
 	}
+	IN_IFADDR_RUNLOCK();
 
 	/*
 	 * perform ingress filter
@@ -599,7 +642,8 @@ stf_checkaddr4(sc, in, inifp)
 		sin.sin_family = AF_INET;
 		sin.sin_len = sizeof(struct sockaddr_in);
 		sin.sin_addr = *in;
-		rt = rtalloc1((struct sockaddr *)&sin, 0, 0UL);
+		rt = rtalloc1_fib((struct sockaddr *)&sin, 0,
+		    0UL, sc->sc_fibnum);
 		if (!rt || rt->rt_ifp != inifp) {
 #if 0
 			log(LOG_WARNING, "%s: packet from 0x%x dropped "
@@ -674,7 +718,7 @@ in_stf_input(m, off)
 	ifp = STF2IFP(sc);
 
 #ifdef MAC
-	mac_create_mbuf_from_ifnet(ifp, m);
+	mac_ifnet_create_mbuf(ifp, m);
 #endif
 
 	/*
@@ -737,6 +781,7 @@ in_stf_input(m, off)
 	 */
 	ifp->if_ipackets++;
 	ifp->if_ibytes += m->m_pkthdr.len;
+	M_SETFIB(m, ifp->if_fib);
 	netisr_dispatch(NETISR_IPV6, m);
 }
 

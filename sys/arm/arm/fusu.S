@@ -37,7 +37,7 @@
 #include <machine/asmacros.h>
 #include <machine/armreg.h>
 #include "assym.s"
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/fusu.S 163449 2006-10-17 02:24:47Z davidxu $");
+__FBSDID("$FreeBSD$");
 
 #ifdef MULTIPROCESSOR
 .Lcpu_info:

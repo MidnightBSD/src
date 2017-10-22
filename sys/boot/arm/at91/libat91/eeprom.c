@@ -18,7 +18,7 @@
  * only.
  * END_BLOCK
  *
- * $FreeBSD: release/7.0.0/sys/boot/arm/at91/libat91/eeprom.c 165399 2006-12-20 18:19:52Z imp $
+ * $FreeBSD$
  *****************************************************************************/
 
 #include "at91rm9200_lowlevel.h"
@@ -83,7 +83,7 @@ InitEEPROM(void)
  * .KB_C_FN_DEFINITION_END
  */
 int
-ReadEEPROM(unsigned ee_off, char *data_addr, unsigned size)
+ReadEEPROM(unsigned ee_off, unsigned char *data_addr, unsigned size)
 {
 	const AT91PS_TWI 	twiPtr = AT91C_BASE_TWI;
 	unsigned int status;
@@ -145,7 +145,7 @@ WriteEEPROM(unsigned ee_off, char *data_addr, unsigned size)
 {
 	const AT91PS_TWI 	twiPtr = AT91C_BASE_TWI;
 	unsigned		status;
-	char			test_data;
+	unsigned char		test_data;
 
 	while (size--) {
 		if (!(ee_off & 0x3f))

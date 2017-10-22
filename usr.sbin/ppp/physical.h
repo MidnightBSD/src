@@ -16,7 +16,7 @@
  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/ppp/physical.h 134789 2004-09-05 01:46:52Z brian $
+ * $FreeBSD$
  *
  */
 
@@ -97,7 +97,7 @@ struct physical {
     char *base;
   } name;
 
-  time_t Utmp;                 /* Are we in utmp ? */
+  int Utmp;                    /* Are we in utmp ? */
   pid_t session_owner;         /* HUP this when closing the link */
 
   struct device *handler;      /* device specific handler */
@@ -116,7 +116,7 @@ struct physical {
 };
 
 #define field2phys(fp, name) \
-  ((struct physical *)((char *)fp - (int)(&((struct physical *)0)->name)))
+  ((struct physical *)((char *)fp - (uintptr_t)(&((struct physical *)0)->name)))
 
 #define link2physical(l) \
   ((l)->type == PHYSICAL_LINK ? field2phys(l, link) : NULL)

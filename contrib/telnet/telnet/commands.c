@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)commands.c	8.4 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/contrib/telnet/telnet/commands.c 142790 2005-02-28 12:46:53Z tobez $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/un.h>
@@ -2491,8 +2491,7 @@ tn(int argc, char *argv[])
 	env_export("USER");
     }
     (void) call(status, "status", "notmuch", 0);
-    if (setjmp(peerdied) == 0)
-	telnet(user);
+    telnet(user); 
     (void) NetClose(net);
     ExitString("Connection closed by foreign host.\n",1);
     /*NOTREACHED*/

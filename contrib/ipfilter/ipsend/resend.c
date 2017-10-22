@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/contrib/ipfilter/ipsend/resend.c 170268 2007-06-04 02:54:36Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * resend.c (C) 1995-1998 Darren Reed

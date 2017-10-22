@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005 Daniel Braniss <danny@cs.huji.ac.il>
+ * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sbin/iscontrol/iscontrol.h 171568 2007-07-24 15:35:02Z scottl $
+ * $FreeBSD$
  */
 /*
  | $Id: iscontrol.h,v 2.3 2007/04/27 08:36:49 danny Exp danny $
@@ -45,6 +45,12 @@ int vflag;
 
 typedef int auth_t(void *sess);
 
+typedef struct {
+     char      *address;
+     int       port;
+     int       pgt;
+} target_t;
+
 typedef struct isess {
      int	flags;
 #define SESS_CONNECTED		BIT(0)
@@ -61,6 +67,7 @@ typedef struct isess {
 
 
      isc_opt_t	*op;		// operational values
+     target_t  target;         // the Original target address
      int	fd;		// the session fd
      int	soc;		// the socket
      iscsi_cam_t	cam;
@@ -137,7 +144,6 @@ int	addText(pdu_t *pp, char *fmt, ...);
 void	freePDU(pdu_t *pp);
 int	xmitpdu(isess_t *sess, pdu_t *pp);
 int	recvpdu(isess_t *sess, pdu_t *pp);
-void	pukeText(char *it, pdu_t *pp);
 
 int	lookup(token_t *tbl, char *m);
 
@@ -148,7 +154,7 @@ void	parseArgs(int nargs, char **args, isc_opt_t *op);
 void	parseConfig(FILE *fd, char *key, isc_opt_t *op);
 
 char	*chapDigest(char *ap, char id, char *cp, char *chapSecret);
-char	*genChapChallenge(char *encoding, int len);
+char	*genChapChallenge(char *encoding, uint len);
 
 int	str2bin(char *str, char **rsp);
 char	*bin2str(char *fmt, unsigned char *md, int blen);

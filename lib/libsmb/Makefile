@@ -1,10 +1,10 @@
-# $FreeBSD: release/7.0.0/lib/libsmb/Makefile 169807 2007-05-21 02:49:08Z deischen $
+# $FreeBSD$
 
 CONTRIBDIR=	${.CURDIR}/../../contrib/smbfs
 .PATH: ${CONTRIBDIR}/lib/smb
 
 LIB=	smb
-SHLIB_MAJOR=	3
+SHLIB_MAJOR=	4
 DPADD=	${LIBKICONV}
 LDADD=	-lkiconv
 

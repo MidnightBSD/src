@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/cvs/Makefile.inc 147225 2005-06-10 06:12:53Z des $
+# $FreeBSD$
 
 .if !defined(CVSDIR)
 

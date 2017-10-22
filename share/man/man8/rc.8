@@ -33,9 +33,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)rc.8	8.2 (Berkeley) 12/11/93
-.\" $FreeBSD: release/7.0.0/share/man/man8/rc.8 171562 2007-07-24 06:41:07Z delphij $
+.\" $FreeBSD$
 .\"
-.Dd May 18, 2007
+.Dd November 17, 2009
 .Dt RC 8
 .Os
 .Sh NAME
@@ -253,7 +253,7 @@ The boot does not stop if such a script terminates with a non-zero status,
 but a script can stop the boot if necessary by invoking the
 .Fn stop_boot
 function (from
-.Xr rc.subr 8 ).
+.Xr rc.subr 8 ) .
 .El
 .Pp
 Each script should contain
@@ -326,7 +326,6 @@ section).
 .Pp
 The following key points apply to old-style scripts in
 .Pa /usr/local/etc/rc.d/ :
-.Pp
 .Bl -bullet
 .It
 Scripts are only executed if their
@@ -394,20 +393,6 @@ is not set, when going from single-user to multi-user mode for example,
 the script does not do anything.
 .Pp
 The
-.Nm rc.early
-script is run very early in the startup process, immediately before the
-file system check.
-The
-.Nm rc.early
-script is deprecated.
-Any commands in this
-file should be separated out into
-.Nm rc.d/
-style scripts and integrated into the
-.Nm
-system.
-.Pp
-The
 .Pa /etc/rc.d/local
 script can execute scripts from multiple
 .Nm rc.d/
@@ -467,7 +452,7 @@ before starting the daemon.
 Following tradition, all startup files reside in
 .Pa /etc .
 .Sh FILES
-.Bl -tag -compact
+.Bl -tag -compact -width Pa
 .It Pa /etc/rc
 .It Pa /etc/rc.conf
 .It Pa /etc/rc.conf.local

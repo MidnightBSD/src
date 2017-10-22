@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/cc/Makefile 169718 2007-05-19 04:25:59Z kan $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -13,10 +13,6 @@ SUBDIR+= cpp
 
 .if ${MK_CXX} != "no"
 SUBDIR+= cc1plus c++ c++filt
-.endif
-
-.if ${MK_OBJC} != "no"
-SUBDIR+= cc1obj
 .endif
 
 .if ${MK_GCOV} != "no"

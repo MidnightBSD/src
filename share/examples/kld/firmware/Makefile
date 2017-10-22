@@ -1,4 +1,4 @@
-#	$FreeBSD: release/7.0.0/share/examples/kld/firmware/Makefile 154974 2006-01-29 02:52:42Z mlaier $
+#	$FreeBSD$
 
 SUBDIR= fwimage fwconsumer
 

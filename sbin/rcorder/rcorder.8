@@ -29,9 +29,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/sbin/rcorder/rcorder.8 172506 2007-10-10 16:59:15Z cvs2svn $
+.\" $FreeBSD$
 .\"
-.Dd July 17, 2000
+.Dd August 5, 2011
 .Dt RCORDER 8
 .Os
 .Sh NAME
@@ -89,6 +89,9 @@ and
 lines may appear, but all such lines must appear in a sequence without
 any intervening lines, as once a line that does not follow the format
 is reached, parsing stops.
+.\" Note that for historical reasons REQUIRES, PROVIDES, and KEYWORDS
+.\" are also accepted in addition to the above, but not documented so
+.\" that they can be deprecated at some point in the future.
 .Pp
 The options are as follows:
 .Bl -tag -width indent
@@ -165,3 +168,22 @@ Written by
 .An Perry E. Metzger Aq perry@piermont.com
 and
 .An Matthew R. Green Aq mrg@eterna.com.au .
+.Sh BUGS
+The
+.Dq Li REQUIRE
+keyword is misleading:
+It doesn't describe which daemons have to be running before a script
+will be started.
+It describes which scripts must be placed before it in
+the dependency ordering.
+For example,
+if your script has a
+.Dq Li REQUIRE
+on
+.Dq Li named ,
+it means the script must be placed after the
+.Dq Li named
+script in the dependency ordering,
+not necessarily that it requires
+.Xr named 8
+to be started or enabled.

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/mac_portacl/Makefile 139435 2004-12-30 13:49:01Z rwatson $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../security/mac_portacl
 

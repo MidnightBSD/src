@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/dc/Makefile 151438 2005-10-18 06:11:08Z imp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/dc
 

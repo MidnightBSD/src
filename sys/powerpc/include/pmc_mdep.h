@@ -1,11 +1,13 @@
 /*-
  * This file is in the public domain.
  *
- * $FreeBSD: release/7.0.0/sys/powerpc/include/pmc_mdep.h 147191 2005-06-09 19:45:09Z jkoshy $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PMC_MDEP_H_
 #define	_MACHINE_PMC_MDEP_H_
+
+#define PMC_MDEP_CLASS_INDEX_PPC7450	1
 
 union pmc_md_op_pmcallocate {
 	uint64_t		__pad[4];
@@ -17,8 +19,17 @@ union pmc_md_op_pmcallocate {
 
 #if	_KERNEL
 
-union pmc_md_pmc {
+struct pmc_md_powerpc_pmc {
+	uint32_t	pm_powerpc_evsel;
 };
+
+union pmc_md_pmc {
+	struct pmc_md_powerpc_pmc	pm_powerpc;
+};
+
+#define	PMC_TRAPFRAME_TO_PC(TF)	(0)	/* Stubs */
+#define	PMC_TRAPFRAME_TO_FP(TF)	(0)
+#define	PMC_TRAPFRAME_TO_SP(TF)	(0)
 
 #endif
 

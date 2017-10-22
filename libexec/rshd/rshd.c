@@ -51,7 +51,7 @@ static const char sccsid[] = "@(#)rshd.c	8.2 (Berkeley) 4/6/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/libexec/rshd/rshd.c 146074 2005-05-11 02:41:39Z jmallett $");
+__FBSDID("$FreeBSD$");
 
 /*
  * remote shell server:
@@ -317,7 +317,7 @@ doit(struct sockaddr *fromp)
 	}
 
 	if ((pam_err = pam_set_item(pamh, PAM_RUSER, ruser)) != PAM_SUCCESS ||
-	    (pam_err = pam_set_item(pamh, PAM_RHOST, rhost) != PAM_SUCCESS)) {
+	    (pam_err = pam_set_item(pamh, PAM_RHOST, rhost)) != PAM_SUCCESS) {
 		syslog(LOG_ERR|LOG_AUTH, "pam_set_item(): %s",
 		    pam_strerror(pamh, pam_err));
 		rshd_errx(1, "Login incorrect.");

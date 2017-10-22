@@ -13,7 +13,7 @@
 # purpose.
 #
 
-# $FreeBSD: release/7.0.0/sys/boot/pc98/btx/lib/btxsys.s 50477 1999-08-28 01:08:13Z peter $
+# $FreeBSD$
 
 #
 # BTX system calls.

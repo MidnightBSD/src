@@ -922,7 +922,7 @@ xfs_setattr(
 STATIC int
 xfs_access(
 	bhv_desc_t	*bdp,
-	int		mode,
+	accmode_t	accmode,
 	cred_t		*credp)
 {
 	xfs_inode_t	*ip;
@@ -933,7 +933,7 @@ xfs_access(
 
 	ip = XFS_BHVTOI(bdp);
 	xfs_ilock(ip, XFS_ILOCK_SHARED);
-	error = xfs_iaccess(ip, mode, credp);
+	error = xfs_iaccess(ip, accmode, credp);
 	xfs_iunlock(ip, XFS_ILOCK_SHARED);
 	return error;
 }
@@ -4506,7 +4506,7 @@ xfs_free_file_space(
 int
 xfs_change_file_space(
 	bhv_desc_t	*bdp,
-	int		cmd,
+	u_long		cmd,
 	xfs_flock64_t	*bf,
 	xfs_off_t	offset,
 	cred_t		*credp,
@@ -4538,7 +4538,7 @@ xfs_change_file_space(
 
 	xfs_ilock(ip, XFS_ILOCK_SHARED);
 
-	if ((error = xfs_iaccess(ip, S_IWUSR, credp))) {
+	if ((error = xfs_iaccess(ip, VWRITE, credp))) {
 		xfs_iunlock(ip, XFS_ILOCK_SHARED);
 		return error;
 	}

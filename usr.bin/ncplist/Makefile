@@ -1,6 +1,9 @@
-# $FreeBSD: release/7.0.0/usr.bin/ncplist/Makefile 52712 1999-10-31 08:58:29Z bp $
+# $FreeBSD$
 
 PROG=	ncplist
+NO_WCAST_ALIGN=
+
+WARNS?=	0
 
 DPADD=	${LIBNCP} ${LIBIPX}
 LDADD=	-lncp -lipx

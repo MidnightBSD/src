@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/sys/__error.c 165968 2007-01-12 07:31:30Z imp $");
+__FBSDID("$FreeBSD$");
 
 extern int errno;
 
@@ -39,7 +39,7 @@ extern int errno;
 __weak_reference(__error_unthreaded, __error);
 
 int *
-__error_unthreaded()
+__error_unthreaded(void)
 {
 	return(&errno);
 }

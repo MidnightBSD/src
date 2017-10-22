@@ -1,4 +1,5 @@
-/* $OpenBSD: kex.h,v 1.44 2006/08/03 03:34:42 deraadt Exp $ */
+/* $OpenBSD: kex.h,v 1.52 2010/09/22 05:01:29 djm Exp $ */
+/* $FreeBSD$ */
 
 /*
  * Copyright (c) 2000, 2001 Markus Friedl.  All rights reserved.
@@ -28,11 +29,20 @@
 
 #include <signal.h>
 #include <openssl/evp.h>
+#include <openssl/hmac.h>
+#ifdef OPENSSL_HAS_ECC
+#include <openssl/ec.h>
+#endif
+
+#define KEX_COOKIE_LEN	16
 
 #define	KEX_DH1			"diffie-hellman-group1-sha1"
 #define	KEX_DH14		"diffie-hellman-group14-sha1"
 #define	KEX_DHGEX_SHA1		"diffie-hellman-group-exchange-sha1"
 #define	KEX_DHGEX_SHA256	"diffie-hellman-group-exchange-sha256"
+#define	KEX_RESUME		"resume@appgate.com"
+/* The following represents the family of ECDH methods */
+#define	KEX_ECDH_SHA2_STEM	"ecdh-sha2-"
 
 #define COMP_NONE	0
 #define COMP_ZLIB	1
@@ -63,6 +73,7 @@ enum kex_exchange {
 	KEX_DH_GRP14_SHA1,
 	KEX_DH_GEX_SHA1,
 	KEX_DH_GEX_SHA256,
+	KEX_ECDH_SHA2,
 	KEX_MAX
 };
 
@@ -86,10 +97,13 @@ struct Enc {
 struct Mac {
 	char	*name;
 	int	enabled;
-	const EVP_MD	*md;
 	u_int	mac_len;
 	u_char	*key;
 	u_int	key_len;
+	int	type;
+	const EVP_MD	*evp_md;
+	HMAC_CTX	evp_ctx;
+	struct umac_ctx *umac_ctx;
 };
 struct Comp {
 	int	type;
@@ -110,6 +124,7 @@ struct Kex {
 	char	*name;
 	int	hostkey_type;
 	int	kex_type;
+	int	roaming;
 	Buffer	my;
 	Buffer	peer;
 	sig_atomic_t done;
@@ -118,10 +133,17 @@ struct Kex {
 	char	*client_version_string;
 	char	*server_version_string;
 	int	(*verify_host_key)(Key *);
-	Key	*(*load_host_key)(int);
+	Key	*(*load_host_public_key)(int);
+	Key	*(*load_host_private_key)(int);
 	int	(*host_key_index)(Key *);
 	void	(*kex[KEX_MAX])(Kex *);
 };
+
+int	 kex_names_valid(const char *);
+
+#ifdef	NONE_CIPHER_ENABLED
+void	 kex_prop2buf(Buffer *, char *[PROPOSAL_MAX]);
+#endif
 
 Kex	*kex_setup(char *[PROPOSAL_MAX]);
 void	 kex_finish(Kex *);
@@ -136,6 +158,8 @@ void	 kexdh_client(Kex *);
 void	 kexdh_server(Kex *);
 void	 kexgex_client(Kex *);
 void	 kexgex_server(Kex *);
+void	 kexecdh_client(Kex *);
+void	 kexecdh_server(Kex *);
 
 void
 kex_dh_hash(char *, char *, char *, int, char *, int, u_char *, int,
@@ -144,11 +168,22 @@ void
 kexgex_hash(const EVP_MD *, char *, char *, char *, int, char *,
     int, u_char *, int, int, int, int, BIGNUM *, BIGNUM *, BIGNUM *,
     BIGNUM *, BIGNUM *, u_char **, u_int *);
+#ifdef OPENSSL_HAS_ECC
+void
+kex_ecdh_hash(const EVP_MD *, const EC_GROUP *, char *, char *, char *, int,
+    char *, int, u_char *, int, const EC_POINT *, const EC_POINT *,
+    const BIGNUM *, u_char **, u_int *);
+int	kex_ecdh_name_to_nid(const char *);
+const EVP_MD *kex_ecdh_name_to_evpmd(const char *);
+#else
+# define kex_ecdh_name_to_nid(x) (-1)
+# define kex_ecdh_name_to_evpmd(x) (NULL)
+#endif
 
 void
 derive_ssh1_session_id(BIGNUM *, BIGNUM *, u_int8_t[8], u_int8_t[16]);
 
-#if defined(DEBUG_KEX) || defined(DEBUG_KEXDH)
+#if defined(DEBUG_KEX) || defined(DEBUG_KEXDH) || defined(DEBUG_KEXECDH)
 void	dump_digest(char *, u_char *, int);
 #endif
 

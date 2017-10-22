@@ -32,7 +32,7 @@
 /* XXX use __SCCSID */
 static char sccsid[] __unused = "@(#)rec_seq.c	8.3 (Berkeley) 7/14/94";
 #endif /* not lint */
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/db/recno/rec_seq.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -57,10 +57,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/db/recno/rec_seq.c 165903 2007-01-09 
  *	RET_ERROR, RET_SUCCESS or RET_SPECIAL if there's no next key.
  */
 int
-__rec_seq(dbp, key, data, flags)
-	const DB *dbp;
-	DBT *key, *data;
-	u_int flags;
+__rec_seq(const DB *dbp, DBT *key, DBT *data, u_int flags)
 {
 	BTREE *t;
 	EPG *e;
@@ -106,7 +103,7 @@ __rec_seq(dbp, key, data, flags)
 einval:		errno = EINVAL;
 		return (RET_ERROR);
 	}
-	
+
 	if (t->bt_nrecs == 0 || nrec > t->bt_nrecs) {
 		if (!F_ISSET(t, R_EOF | R_INMEM) &&
 		    (status = t->bt_irec(t, nrec)) != RET_SUCCESS)

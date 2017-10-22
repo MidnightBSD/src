@@ -24,6 +24,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
 #ifndef lint
 #ifndef __GNUC__
 #error "GCC is needed to compile this file"
@@ -43,7 +46,6 @@ typedef void (*fptr)(void);
 extern void _fini(void);
 extern void _init(void);
 extern int main(int, char **, char **);
-extern void _start(char **, void (*)(void));
 
 #ifdef GCRT
 extern void _mcleanup(void);
@@ -54,6 +56,8 @@ extern int etext;
 
 char **environ;
 const char *__progname = "";
+
+void _start(char **, void (*)(void));
 
 /* The entry function. */
 void
@@ -91,5 +95,3 @@ __asm__("eprol:");
 	_init();
 	exit( main(argc, argv, env) );
 }
-
-__asm__(".ident\t\"$FreeBSD: release/7.0.0/lib/csu/amd64/crt1.c 151072 2005-10-07 22:13:17Z bde $\"");

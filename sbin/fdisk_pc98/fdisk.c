@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sbin/fdisk_pc98/fdisk.c 168934 2007-04-21 22:47:35Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/disk.h>
 #include <sys/disklabel.h>
@@ -83,8 +83,6 @@ struct mboot {
 
 static struct mboot mboot;
 static int fd;
-
-#define ACTIVE 0x80
 
 static uint dos_cyls;
 static uint dos_heads;
@@ -520,7 +518,7 @@ change_active(int which)
 
 	active = -1;
 	for (i = 0; i < NDOSPART; i++) {
-		if ((partp[i].dp_sid & ACTIVE) == 0)
+		if ((partp[i].dp_sid & PC98_SID_ACTIVE) == 0)
 			continue;
 		printf("Partition %d is marked active\n", i + 1);
 		if (active == -1)
@@ -545,7 +543,7 @@ setactive:
 		active = new;
 	} while (!ok("Are you happy with this choice"));
 	if (active > 0 && active <= 8)
-		partp[active-1].dp_sid |= ACTIVE;
+		partp[active-1].dp_sid |= PC98_SID_ACTIVE;
 }
 
 static void

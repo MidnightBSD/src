@@ -1,26 +1,28 @@
-# $FreeBSD: release/7.0.0/secure/lib/libssh/Makefile 170925 2007-06-18 18:47:54Z rafan $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
 LIB=	ssh
-SHLIB_MAJOR=	4
+SHLIB_MAJOR=	5
 SRCS=	acss.c authfd.c authfile.c bufaux.c bufbn.c buffer.c \
 	canohost.c channels.c cipher.c cipher-acss.c cipher-aes.c \
 	cipher-bf1.c cipher-ctr.c cipher-3des1.c cleanup.c \
 	compat.c compress.c crc32.c deattack.c fatal.c hostfile.c \
 	log.c match.c md-sha256.c moduli.c nchan.c packet.c \
-	readpass.c rsa.c ttymodes.c xmalloc.c \
+	readpass.c rsa.c ttymodes.c xmalloc.c addrmatch.c \
 	atomicio.c key.c dispatch.c kex.c mac.c uidswap.c uuencode.c misc.c \
-	monitor_fdpass.c rijndael.c ssh-dss.c ssh-rsa.c dh.c kexdh.c \
-	kexgex.c kexdhc.c kexgexc.c scard.c msg.c progressmeter.c dns.c \
-	entropy.c scard-opensc.c
+	monitor_fdpass.c rijndael.c ssh-dss.c ssh-ecdsa.c ssh-rsa.c dh.c \
+	kexdh.c kexgex.c kexdhc.c kexgexc.c bufec.c kexecdh.c kexecdhc.c \
+	msg.c progressmeter.c dns.c entropy.c umac.c jpake.c \
+	schnorr.c ssh-pkcs11.c
 
 # gss-genr.c should be in $SRCS but causes linking problems, so it is
 # compiled directly into sshd instead.
 
 # Portability layer
-SRCS+=	bsd-closefrom.c bsd-misc.c getrrsetbyname.c \
-	port-tun.c strtonum.c vis.c xcrypt.c xmmap.c
+SRCS+=	bsd-misc.c fmt_scaled.c getrrsetbyname.c glob.c \
+	openssl-compat.c port-tun.c strtonum.c timingsafe_bcmp.c \
+	vis.c xcrypt.c xmmap.c
 # FreeBSD additions
 SRCS+=	version.c
 
@@ -34,8 +36,8 @@ LDADD=	-lz
 
 .if ${MK_KERBEROS_SUPPORT} != "no"
 CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DKRB5 -DHEIMDAL
-DPADD+=	${LIBGSSAPI} ${LIBKRB5} ${LIBASN1} ${LIBCOM_ERR} ${LIBMD} ${LIBROKEN}
-LDADD+=	-lgssapi -lkrb5 -lasn1 -lcom_err -lmd -lroken
+DPADD+=	${LIBGSSAPI} ${LIBKRB5} ${LIBHX509} ${LIBASN1} ${LIBCOM_ERR} ${LIBMD} ${LIBROKEN}
+LDADD+=	-lgssapi -lkrb5 -lhx509 -lasn1 -lcom_err -lmd -lroken
 .endif
 
 NO_LINT=

@@ -28,7 +28,7 @@
 
 /* $Header: /home/daffy/u0/vern/flex/RCS/ccl.c,v 2.9 93/09/16 20:32:14 vern Exp $ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/lex/ccl.c 99112 2002-06-30 05:25:07Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include "flexdef.h"
 
@@ -122,7 +122,7 @@ void list_character_set( file, cset )
 FILE *file;
 int cset[];
 	{
-	register int i;
+	int i;
 
 	putc( '[', file );
 
@@ -130,7 +130,7 @@ int cset[];
 		{
 		if ( cset[i] )
 			{
-			register int start_char = i;
+			int start_char = i;
 
 			putc( ' ', file );
 

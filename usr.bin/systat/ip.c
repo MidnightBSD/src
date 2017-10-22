@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/systat/ip.c 158161 2006-04-30 04:47:23Z bde $");
+__FBSDID("$FreeBSD$");
 
 #ifdef lint
 static const char sccsid[] = "@(#)mbufs.c	8.1 (Berkeley) 6/6/93";
@@ -103,8 +99,7 @@ openip(void)
 }
 
 void
-closeip(w)
-	WINDOW *w;
+closeip(WINDOW *w)
 {
 	if (w == NULL)
 		return;

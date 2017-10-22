@@ -14,13 +14,16 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: release/7.0.0/lib/msun/src/s_tanf.c 152870 2005-11-28 05:35:32Z bde $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
+#include <float.h>
 
 #include "math.h"
 #define	INLINE_KERNEL_TANDF
+#define INLINE_REM_PIO2F
 #include "math_private.h"
+#include "e_rem_pio2f.c"
 #include "k_tanf.c"
 
 /* Small multiples of pi/2 rounded to double precision. */
@@ -33,7 +36,7 @@ t4pio2 = 4*M_PI_2;			/* 0x401921FB, 0x54442D18 */
 float
 tanf(float x)
 {
-	float y[2];
+	double y;
 	int32_t n, hx, ix;
 
 	GET_FLOAT_WORD(hx,x);
@@ -62,8 +65,8 @@ tanf(float x)
 
     /* general argument reduction needed */
 	else {
-	    n = __ieee754_rem_pio2f(x,y);
+	    n = __ieee754_rem_pio2f(x,&y);
 	    /* integer parameter: 1 -- n even; -1 -- n odd */
-	    return __kernel_tandf((double)y[0]+y[1],1-((n&1)<<1));
+	    return __kernel_tandf(y,1-((n&1)<<1));
 	}
 }

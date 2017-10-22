@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/mly/Makefile 79695 2001-07-14 00:12:23Z msmith $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/mly
 

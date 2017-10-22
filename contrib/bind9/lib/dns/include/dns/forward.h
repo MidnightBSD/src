@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,12 +15,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: forward.h,v 1.3.18.3 2005/04/27 05:01:33 sra Exp $ */
+/* $Id: forward.h,v 1.13 2009/09/02 23:48:02 tbox Exp $ */
 
 #ifndef DNS_FORWARD_H
 #define DNS_FORWARD_H 1
 
-/*! \file */
+/*! \file dns/forward.h */
 
 #include <isc/lang.h>
 #include <isc/result.h>
@@ -64,6 +64,21 @@ dns_fwdtable_add(dns_fwdtable_t *fwdtable, dns_name_t *name,
  * Returns:
  * \li	#ISC_R_SUCCESS
  * \li	#ISC_R_NOMEMORY
+ */
+
+isc_result_t
+dns_fwdtable_delete(dns_fwdtable_t *fwdtable, dns_name_t *name);
+/*%<
+ * Removes an entry for 'name' from the forwarding table.  If an entry
+ * that exactly matches 'name' does not exist, ISC_R_NOTFOUND will be returned.
+ *
+ * Requires:
+ * \li	fwdtable is a valid forwarding table.
+ * \li	name is a valid name
+ *
+ * Returns:
+ * \li	#ISC_R_SUCCESS
+ * \li	#ISC_R_NOTFOUND
  */
 
 isc_result_t

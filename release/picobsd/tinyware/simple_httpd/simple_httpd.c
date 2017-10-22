@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/release/picobsd/tinyware/simple_httpd/simple_httpd.c 133836 2004-08-16 09:38:34Z dwmalone $
+ * $FreeBSD$
  */
 
 #include <sys/stat.h>
@@ -42,6 +42,7 @@
 #include <netdb.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -278,7 +279,7 @@ http_request(void)
                /*printf("HTTP/1.0 200 OK\nContent-type: text/html\n\n\n");*/
 	       printf("HTTP/1.0 200 OK\r\n");
                /* Plug in environment variable, others in log_line */
-	       putenv("SERVER_SOFTWARE=FreeBSD/PicoBSD");
+	       setenv("SERVER_SOFTWARE", "FreeBSD/PicoBSD", 1);
 
 	       execlp (filename,filename,par,(char *)0);
               } 
@@ -331,7 +332,7 @@ http_request(void)
 	http_output(httpd_server_ident);
 	http_date();
 
-	sprintf(buff, "Content-length: %lld\r\n", file_status.st_size);
+	sprintf(buff, "Content-length: %jd\r\n", (intmax_t)file_status.st_size);
 	write(con_sock, buff, strlen(buff));
 
 	strcpy(buff, "Content-type: ");

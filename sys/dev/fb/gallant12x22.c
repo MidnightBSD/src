@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/fb/gallant12x22.c 170840 2007-06-16 21:48:50Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 

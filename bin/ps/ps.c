@@ -47,7 +47,7 @@ static char sccsid[] = "@(#)ps.c	8.4 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/ps/ps.c 173636 2007-11-15 15:56:59Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -99,13 +99,12 @@ time_t	 now;			/* Current time(3) value */
 int	 rawcpu;		/* -C */
 int	 sumrusage;		/* -S */
 int	 termwidth;		/* Width of the screen (0 == infinity). */
-int	 totwidth;		/* Calculated-width of requested variables. */
+int	 showthreads;		/* will threads be shown? */
 
 struct velisthead varlist = STAILQ_HEAD_INITIALIZER(varlist);
 
 static int	 forceuread = DEF_UREAD; /* Do extra work to get u-area. */
 static kvm_t	*kd;
-static KINFO	*kinfo;
 static int	 needcomm;	/* -o "command" */
 static int	 needenv;	/* -e */
 static int	 needuser;	/* -o "user" */
@@ -131,13 +130,13 @@ struct listinfo {
 	} l;
 };
 
-static int	 check_procfs(void);
 static int	 addelem_gid(struct listinfo *, const char *);
 static int	 addelem_pid(struct listinfo *, const char *);
 static int	 addelem_tty(struct listinfo *, const char *);
 static int	 addelem_uid(struct listinfo *, const char *);
 static void	 add_list(struct listinfo *, const char *);
-static void	 dynsizevars(KINFO *);
+static void	 descendant_sort(KINFO *, int);
+static void	 format_output(KINFO *);
 static void	*expand_list(struct listinfo *);
 static const char *
 		 fmt(char **(*)(kvm_t *, const struct kinfo_proc *, int),
@@ -162,7 +161,7 @@ static char vfmt[] = "pid,state,time,sl,re,pagein,vsz,rss,lim,tsiz,"
 			"%cpu,%mem,command";
 static char Zfmt[] = "label";
 
-#define	PS_ARGS	"AaCce" OPT_LAZY_f "G:gHhjLlM:mN:O:o:p:rSTt:U:uvwXxZ"
+#define	PS_ARGS	"AaCcde" OPT_LAZY_f "G:gHhjLlM:mN:O:o:p:rSTt:U:uvwXxZ"
 
 int
 main(int argc, char *argv[])
@@ -170,14 +169,15 @@ main(int argc, char *argv[])
 	struct listinfo gidlist, pgrplist, pidlist;
 	struct listinfo ruidlist, sesslist, ttylist, uidlist;
 	struct kinfo_proc *kp;
-	KINFO *next_KINFO;
+	KINFO *kinfo = NULL, *next_KINFO;
+	KINFO_STR *ks;
 	struct varent *vent;
 	struct winsize ws;
-	const char *nlistf, *memf;
+	const char *nlistf, *memf, *fmtstr, *str;
 	char *cols;
-	int all, ch, elem, flag, _fmt, i, lineno;
-	int nentries, nkept, nselectors;
-	int prtheader, showthreads, wflag, what, xkeep, xkeep_implied;
+	int all, ch, elem, flag, _fmt, i, lineno, linelen, left;
+	int descendancy, nentries, nkept, nselectors;
+	int prtheader, wflag, what, xkeep, xkeep_implied;
 	char errbuf[_POSIX2_LINE_MAX];
 
 	(void) setlocale(LC_ALL, "");
@@ -200,7 +200,7 @@ main(int argc, char *argv[])
 	if (argc > 1)
 		argv[1] = kludge_oldps_options(PS_ARGS, argv[1], argv[2]);
 
-	all = _fmt = nselectors = optfatal = 0;
+	all = descendancy = _fmt = nselectors = optfatal = 0;
 	prtheader = showthreads = wflag = xkeep_implied = 0;
 	xkeep = -1;			/* Neither -x nor -X. */
 	init_list(&gidlist, addelem_gid, sizeof(gid_t), "group");
@@ -210,13 +210,14 @@ main(int argc, char *argv[])
 	init_list(&sesslist, addelem_pid, sizeof(pid_t), "session id");
 	init_list(&ttylist, addelem_tty, sizeof(dev_t), "tty");
 	init_list(&uidlist, addelem_uid, sizeof(uid_t), "user");
-	memf = nlistf = _PATH_DEVNULL;
+	memf = _PATH_DEVNULL;
+	nlistf = NULL;
 	while ((ch = getopt(argc, argv, PS_ARGS)) != -1)
-		switch ((char)ch) {
+		switch (ch) {
 		case 'A':
 			/*
 			 * Exactly the same as `-ax'.   This has been
-			 * added for compatability with SUSv3, but for
+			 * added for compatibility with SUSv3, but for
 			 * now it will not be described in the man page.
 			 */
 			nselectors++;
@@ -231,6 +232,9 @@ main(int argc, char *argv[])
 			break;
 		case 'c':
 			cflag = 1;
+			break;
+		case 'd':
+			descendancy = 1;
 			break;
 		case 'e':			/* XXX set ufmt */
 			needenv = 1;
@@ -406,14 +410,6 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	/*
-	 * If the user specified ps -e then they want a copy of the process
-	 * environment kvm_getenvv(3) attempts to open /proc/<pid>/mem.
-	 * Check to make sure that procfs is mounted on /proc, otherwise
-	 * print a warning informing the user that output will be incomplete.
-	 */
-	if (needenv == 1 && check_procfs() == 0)
-		warnx("Process environment requires procfs(5)");
-	/*
 	 * If there arguments after processing all the options, attempt
 	 * to treat them as a list of process ids.
 	 */
@@ -574,38 +570,89 @@ main(int argc, char *argv[])
 		keepit:
 			next_KINFO = &kinfo[nkept];
 			next_KINFO->ki_p = kp;
+			next_KINFO->ki_d.level = 0;
+			next_KINFO->ki_d.prefix = NULL;
 			next_KINFO->ki_pcpu = getpcpu(next_KINFO);
 			if (sortby == SORTMEM)
 				next_KINFO->ki_memsize = kp->ki_tsize +
 				    kp->ki_dsize + kp->ki_ssize;
 			if (needuser)
 				saveuser(next_KINFO);
-			dynsizevars(next_KINFO);
 			nkept++;
 		}
 	}
 
 	sizevars();
 
-	/*
-	 * print header
-	 */
-	printheader();
-	if (nkept == 0)
+	if (nkept == 0) {
+		printheader();
 		exit(1);
+	}
 
 	/*
 	 * sort proc list
 	 */
 	qsort(kinfo, nkept, sizeof(KINFO), pscomp);
+
 	/*
-	 * For each process, call each variable output function.
+	 * We want things in descendant order
+	 */
+	if (descendancy)
+		descendant_sort(kinfo, nkept);
+
+
+	/*
+	 * Prepare formatted output.
+	 */
+	for (i = 0; i < nkept; i++)
+		format_output(&kinfo[i]);
+
+	/*
+	 * Print header.
+	 */
+	printheader();
+
+	/*
+	 * Output formatted lines.
 	 */
 	for (i = lineno = 0; i < nkept; i++) {
+		linelen = 0;
 		STAILQ_FOREACH(vent, &varlist, next_ve) {
-			(vent->var->oproc)(&kinfo[i], vent);
-			if (STAILQ_NEXT(vent, next_ve) != NULL)
+	        	if (vent->var->flag & LJUST)
+				fmtstr = "%-*s";
+			else
+				fmtstr = "%*s";
+
+			ks = STAILQ_FIRST(&kinfo[i].ki_ks);
+			STAILQ_REMOVE_HEAD(&kinfo[i].ki_ks, ks_next);
+			/* Truncate rightmost column if neccessary.  */
+			if (STAILQ_NEXT(vent, next_ve) == NULL &&
+			   termwidth != UNLIMITED && ks->ks_str != NULL) {
+				left = termwidth - linelen;
+				if (left > 0 && left < (int)strlen(ks->ks_str))
+					ks->ks_str[left] = '\0';
+			}
+			str = ks->ks_str;
+			if (str == NULL)
+				str = "-";
+			/* No padding for the last column, if it's LJUST. */
+			if (STAILQ_NEXT(vent, next_ve) == NULL &&
+			    vent->var->flag & LJUST)
+				linelen += printf(fmtstr, 0, str);
+			else
+				linelen += printf(fmtstr, vent->var->width, str);
+
+			if (ks->ks_str != NULL) {
+				free(ks->ks_str);
+				ks->ks_str = NULL;
+			}
+			free(ks);
+			ks = NULL;
+
+			if (STAILQ_NEXT(vent, next_ve) != NULL) {
 				(void)putchar(' ');
+				linelen++;
+			}
 		}
 		(void)putchar('\n');
 		if (prtheader && lineno++ == prtheader - 4) {
@@ -621,6 +668,9 @@ main(int argc, char *argv[])
 	free_list(&sesslist);
 	free_list(&ttylist);
 	free_list(&uidlist);
+	for (i = 0; i < nkept; i++)
+		free(kinfo[i].ki_d.prefix);
+	free(kinfo);
 
 	exit(eval);
 }
@@ -747,7 +797,7 @@ addelem_tty(struct listinfo *inf, const char *elem)
 		strlcat(pathbuf2, elem, sizeof(pathbuf2));
 		if (stat(pathbuf2, &sb) == 0 && S_ISCHR(sb.st_mode)) {
 			/* No need to repeat stat() && S_ISCHR() checks */
-			ttypath = NULL;	
+			ttypath = NULL;
 			break;
 		}
 		/* Check to see if /dev/pts/${elem} exists */
@@ -755,7 +805,7 @@ addelem_tty(struct listinfo *inf, const char *elem)
 		strlcat(pathbuf3, elem, sizeof(pathbuf3));
 		if (stat(pathbuf3, &sb) == 0 && S_ISCHR(sb.st_mode)) {
 			/* No need to repeat stat() && S_ISCHR() checks */
-			ttypath = NULL;	
+			ttypath = NULL;
 			break;
 		}
 		break;
@@ -889,6 +939,115 @@ add_list(struct listinfo *inf, const char *argp)
 	}
 }
 
+static void
+descendant_sort(KINFO *ki, int items)
+{
+	int dst, lvl, maxlvl, n, ndst, nsrc, siblings, src;
+	unsigned char *path;
+	KINFO kn;
+
+	/*
+	 * First, sort the entries by descendancy, tracking the descendancy
+	 * depth in the ki_d.level field.
+	 */
+	src = 0;
+	maxlvl = 0;
+	while (src < items) {
+		if (ki[src].ki_d.level) {
+			src++;
+			continue;
+		}
+		for (nsrc = 1; src + nsrc < items; nsrc++)
+			if (!ki[src + nsrc].ki_d.level)
+				break;
+
+		for (dst = 0; dst < items; dst++) {
+			if (ki[dst].ki_p->ki_pid == ki[src].ki_p->ki_pid)
+				continue;
+			if (ki[dst].ki_p->ki_pid == ki[src].ki_p->ki_ppid)
+				break;
+		}
+
+		if (dst == items) {
+			src += nsrc;
+			continue;
+		}
+
+		for (ndst = 1; dst + ndst < items; ndst++)
+			if (ki[dst + ndst].ki_d.level <= ki[dst].ki_d.level)
+				break;
+
+		for (n = src; n < src + nsrc; n++) {
+			ki[n].ki_d.level += ki[dst].ki_d.level + 1;
+			if (maxlvl < ki[n].ki_d.level)
+				maxlvl = ki[n].ki_d.level;
+		}
+
+		while (nsrc) {
+			if (src < dst) {
+				kn = ki[src];
+				memmove(ki + src, ki + src + 1,
+				    (dst - src + ndst - 1) * sizeof *ki);
+				ki[dst + ndst - 1] = kn;
+				nsrc--;
+				dst--;
+				ndst++;
+			} else if (src != dst + ndst) {
+				kn = ki[src];
+				memmove(ki + dst + ndst + 1, ki + dst + ndst,
+				    (src - dst - ndst) * sizeof *ki);
+				ki[dst + ndst] = kn;
+				ndst++;
+				nsrc--;
+				src++;
+			} else {
+				ndst += nsrc;
+				src += nsrc;
+				nsrc = 0;
+			}
+		}
+	}
+
+	/*
+	 * Now populate ki_d.prefix (instead of ki_d.level) with the command
+	 * prefix used to show descendancies.
+	 */
+	path = malloc((maxlvl + 7) / 8);
+	memset(path, '\0', (maxlvl + 7) / 8);
+	for (src = 0; src < items; src++) {
+		if ((lvl = ki[src].ki_d.level) == 0) {
+			ki[src].ki_d.prefix = NULL;
+			continue;
+		}
+		if ((ki[src].ki_d.prefix = malloc(lvl * 2 + 1)) == NULL)
+			errx(1, "malloc failed");
+		for (n = 0; n < lvl - 2; n++) {
+			ki[src].ki_d.prefix[n * 2] =
+			    path[n / 8] & 1 << (n % 8) ? '|' : ' ';
+			ki[src].ki_d.prefix[n * 2 + 1] = ' ';
+		}
+		if (n == lvl - 2) {
+			/* Have I any more siblings? */
+			for (siblings = 0, dst = src + 1; dst < items; dst++) {
+				if (ki[dst].ki_d.level > lvl)
+					continue;
+				if (ki[dst].ki_d.level == lvl)
+					siblings = 1;
+				break;
+			}
+			if (siblings)
+				path[n / 8] |= 1 << (n % 8);
+			else
+				path[n / 8] &= ~(1 << (n % 8));
+			ki[src].ki_d.prefix[n * 2] = siblings ? '|' : '`';
+			ki[src].ki_d.prefix[n * 2 + 1] = '-';
+			n++;
+		}
+		strcpy(ki[src].ki_d.prefix + n * 2, "- ");
+	}
+	free(path);
+}
+
 static void *
 expand_list(struct listinfo *inf)
 {
@@ -951,10 +1110,6 @@ scanvars(void)
 
 	STAILQ_FOREACH(vent, &varlist, next_ve) {
 		v = vent->var;
-		if (v->flag & DSIZ) {
-			v->dwidth = v->width;
-			v->width = 0;
-		}
 		if (v->flag & USER)
 			needuser = 1;
 		if (v->flag & COMM)
@@ -963,21 +1118,29 @@ scanvars(void)
 }
 
 static void
-dynsizevars(KINFO *ki)
+format_output(KINFO *ki)
 {
 	struct varent *vent;
 	VAR *v;
-	int i;
+	KINFO_STR *ks;
+	char *str;
+	int len;
 
+	STAILQ_INIT(&ki->ki_ks);
 	STAILQ_FOREACH(vent, &varlist, next_ve) {
 		v = vent->var;
-		if (!(v->flag & DSIZ))
-			continue;
-		i = (v->sproc)( ki);
-		if (v->width < i)
-			v->width = i;
-		if (v->width > v->dwidth)
-			v->width = v->dwidth;
+		str = (v->oproc)(ki, vent);
+		ks = malloc(sizeof(*ks));
+		if (ks == NULL)
+			errx(1, "malloc failed");
+		ks->ks_str = str;
+		STAILQ_INSERT_TAIL(&ki->ki_ks, ks, ks_next);
+		if (str != NULL) {
+			len = strlen(str);
+		} else
+			len = 1; /* "-" */
+		if (v->width < len)
+			v->width = len;
 	}
 }
 
@@ -993,9 +1156,7 @@ sizevars(void)
 		i = strlen(vent->header);
 		if (v->width < i)
 			v->width = i;
-		totwidth += v->width + 1;	/* +1 for space */
 	}
-	totwidth--;
 }
 
 static const char *
@@ -1190,22 +1351,10 @@ kludge_oldps_options(const char *optlist, char *origval, const char *nextarg)
 	return (newopts);
 }
 
-static int
-check_procfs(void)
-{
-	struct statfs mnt;
-
-	if (statfs("/proc", &mnt) < 0)
-		return (0);
-	if (strcmp(mnt.f_fstypename, "procfs") != 0)
-		return (0);
-	return (1);
-}
-
 static void
 usage(void)
 {
-#define	SINGLE_OPTS	"[-aCce" OPT_LAZY_f "HhjlmrSTuvwXxZ]"
+#define	SINGLE_OPTS	"[-aCcde" OPT_LAZY_f "HhjlmrSTuvwXxZ]"
 
 	(void)fprintf(stderr, "%s\n%s\n%s\n%s\n",
 	    "usage: ps " SINGLE_OPTS " [-O fmt | -o fmt] [-G gid[,gid...]]",

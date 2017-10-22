@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)socket.h	8.4 (Berkeley) 2/21/94
- * $FreeBSD: release/7.0.0/sys/sys/socket.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_SOCKET_H_
@@ -36,9 +36,7 @@
 #include <sys/cdefs.h>
 #include <sys/_types.h>
 #include <sys/_iovec.h>
-#define _NO_NAMESPACE_POLLUTION
-#include <machine/param.h>
-#undef _NO_NAMESPACE_POLLUTION
+#include <machine/_align.h>
 
 /*
  * Definitions related to sockets: types, address families, options.
@@ -118,6 +116,8 @@ typedef	__uid_t		uid_t;
 #define	SO_ACCEPTFILTER	0x1000		/* there is an accept filter */
 #define	SO_BINTIME	0x2000		/* timestamp received dgram traffic */
 #endif
+#define	SO_NO_OFFLOAD	0x4000		/* socket cannot be offloaded */
+#define	SO_NO_DDP	0x8000		/* disable direct data placement */
 
 /*
  * Additional options, not kept in so_options.
@@ -136,6 +136,10 @@ typedef	__uid_t		uid_t;
 #define	SO_LISTENQLIMIT	0x1011		/* socket's backlog limit */
 #define	SO_LISTENQLEN	0x1012		/* socket's complete queue length */
 #define	SO_LISTENINCQLEN	0x1013	/* socket's incomplete queue length */
+#define	SO_SETFIB	0x1014		/* use this FIB to route */
+#define	SO_USER_COOKIE	0x1015		/* user cookie (dummynet etc.) */
+#define	SO_PROTOCOL	0x1016		/* get socket protocol (Linux name) */
+#define	SO_PROTOTYPE	SO_PROTOCOL	/* alias for SO_PROTOCOL (SunOS name) */
 #endif
 
 /*
@@ -287,26 +291,7 @@ struct sockproto {
 };
 #endif
 
-#ifndef	_STRUCT_SOCKADDR_STORAGE_DECLARED
-/*
- * RFC 2553: protocol-independent placeholder for socket addresses
- */
-#define	_SS_MAXSIZE	128U
-#define	_SS_ALIGNSIZE	(sizeof(__int64_t))
-#define	_SS_PAD1SIZE	(_SS_ALIGNSIZE - sizeof(unsigned char) - \
-			    sizeof(sa_family_t))
-#define	_SS_PAD2SIZE	(_SS_MAXSIZE - sizeof(unsigned char) - \
-			    sizeof(sa_family_t) - _SS_PAD1SIZE - _SS_ALIGNSIZE)
-
-struct sockaddr_storage {
-	unsigned char	ss_len;		/* address length */
-	sa_family_t	ss_family;	/* address family */
-	char		__ss_pad1[_SS_PAD1SIZE];
-	__int64_t	__ss_align;	/* force desired struct alignment */
-	char		__ss_pad2[_SS_PAD2SIZE];
-};
-#define	_STRUCT_SOCKADDR_STORAGE_DECLARED
-#endif
+#include <sys/_sockaddr_storage.h>
 
 #if __BSD_VISIBLE
 /*
@@ -413,7 +398,9 @@ struct sockaddr_storage {
 #define NET_RT_FLAGS	2		/* by flags, e.g. RESOLVING */
 #define NET_RT_IFLIST	3		/* survey interface list */
 #define	NET_RT_IFMALIST	4		/* return multicast address list */
-#define	NET_RT_MAXID	5
+#define	NET_RT_IFLISTL	5		/* Survey interface list, using 'l'en
+					 * versions of msghdr structs. */
+#define	NET_RT_MAXID	6
 
 #define CTL_NET_RT_NAMES { \
 	{ 0, 0 }, \
@@ -421,6 +408,7 @@ struct sockaddr_storage {
 	{ "flags", CTLTYPE_STRUCT }, \
 	{ "iflist", CTLTYPE_STRUCT }, \
 	{ "ifmalist", CTLTYPE_STRUCT }, \
+	{ "iflistl", CTLTYPE_STRUCT }, \
 }
 #endif /* __BSD_VISIBLE */
 
@@ -480,8 +468,8 @@ struct cmsghdr {
 #if __BSD_VISIBLE
 /*
  * While we may have more groups than this, the cmsgcred struct must
- * be able to fit in an mbuf, and NGROUPS_MAX is too large to allow
- * this.
+ * be able to fit in an mbuf and we have historically supported a
+ * maximum of 16 groups.
 */
 #define CMGROUP_MAX 16
 
@@ -532,7 +520,7 @@ struct sockcred {
 	  _ALIGN(sizeof(struct cmsghdr)) > \
 	    (char *)(mhdr)->msg_control + (mhdr)->msg_controllen) ? \
 	    (struct cmsghdr *)0 : \
-	    (struct cmsghdr *)((char *)(cmsg) + \
+	    (struct cmsghdr *)(void *)((char *)(cmsg) + \
 	    _ALIGN(((struct cmsghdr *)(cmsg))->cmsg_len)))
 
 /*
@@ -591,6 +579,12 @@ struct omsghdr {
 #define	SHUT_WR		1		/* shut down the writing side */
 #define	SHUT_RDWR	2		/* shut down both sides */
 
+/* we cheat and use the SHUT_XX defines for these */
+#define PRU_FLUSH_RD     SHUT_RD
+#define PRU_FLUSH_WR     SHUT_WR
+#define PRU_FLUSH_RDWR   SHUT_RDWR
+
+
 #if __BSD_VISIBLE
 /*
  * sendfile(2) header/trailer struct
@@ -607,6 +601,7 @@ struct sf_hdtr {
  */
 #define	SF_NODISKIO     0x00000001
 #define	SF_MNOWAIT	0x00000002
+#define	SF_SYNC		0x00000004
 #endif
 
 #ifndef	_KERNEL
@@ -630,6 +625,7 @@ ssize_t	sendto(int, const void *,
 ssize_t	sendmsg(int, const struct msghdr *, int);
 #if __BSD_VISIBLE
 int	sendfile(int, int, off_t, size_t, struct sf_hdtr *, off_t *, int);
+int	setfib(int);
 #endif
 int	setsockopt(int, int, int, const void *, socklen_t);
 int	shutdown(int, int);
@@ -639,5 +635,42 @@ int	socketpair(int, int, int, int *);
 __END_DECLS
 
 #endif /* !_KERNEL */
+
+#ifdef _KERNEL
+struct socket;
+
+struct tcpcb *so_sototcpcb(struct socket *so);
+struct inpcb *so_sotoinpcb(struct socket *so);
+struct sockbuf *so_sockbuf_snd(struct socket *);
+struct sockbuf *so_sockbuf_rcv(struct socket *);
+
+int so_state_get(const struct socket *);
+void so_state_set(struct socket *, int);
+
+int so_options_get(const struct socket *);
+void so_options_set(struct socket *, int);
+
+int so_error_get(const struct socket *);
+void so_error_set(struct socket *, int);
+
+int so_linger_get(const struct socket *);
+void so_linger_set(struct socket *, int);
+
+struct protosw *so_protosw_get(const struct socket *);
+void so_protosw_set(struct socket *, struct protosw *);
+
+void so_sorwakeup_locked(struct socket *so);
+void so_sowwakeup_locked(struct socket *so);
+
+void so_sorwakeup(struct socket *so);
+void so_sowwakeup(struct socket *so);
+
+void so_lock(struct socket *so);
+void so_unlock(struct socket *so);
+
+void so_listeners_apply_all(struct socket *so, void (*func)(struct socket *, void *), void *arg);
+
+#endif
+
 
 #endif /* !_SYS_SOCKET_H_ */

@@ -1,4 +1,4 @@
-@c $FreeBSD: release/7.0.0/gnu/usr.bin/send-pr/doc/fields.texi 102587 2002-08-29 22:59:22Z keramida $
+@c $FreeBSD$
 
 @node Fields
 @section Problem Report format

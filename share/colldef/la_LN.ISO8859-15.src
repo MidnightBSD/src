@@ -1,6 +1,6 @@
 # latin1 (backward compatible with ASCII)
 #
-# $FreeBSD: release/7.0.0/share/colldef/la_LN.ISO8859-15.src 77980 2001-06-10 13:43:47Z ache $
+# $FreeBSD$
 #
 charmap map.ISO8859-15
 order \

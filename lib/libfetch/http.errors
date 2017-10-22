@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/lib/libfetch/http.errors 77056 2001-05-23 18:52:02Z des $
+# $FreeBSD$
 #
 # This list is taken from RFC 2068.
 #

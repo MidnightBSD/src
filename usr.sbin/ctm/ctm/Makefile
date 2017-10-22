@@ -5,7 +5,7 @@
 # this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 # ----------------------------------------------------------------------------
 #
-# $FreeBSD: release/7.0.0/usr.sbin/ctm/ctm/Makefile 113091 2003-04-04 17:49:21Z obrien $
+# $FreeBSD$
 
 PROG=	ctm
 MAN=	ctm.1 ctm.5
@@ -16,6 +16,8 @@ NOTYET=	ctm_ed.c
 
 LDADD=	-lmd
 DPADD=	${LIBMD}
+
+WARNS?=	2
 
 .if exists(${.CURDIR}/../../Makefile.inc)
 .include "${.CURDIR}/../../Makefile.inc"

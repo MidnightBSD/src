@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007-2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: os.h,v 1.22.18.3 2005/04/29 00:15:39 marka Exp $ */
+/* $Id: os.h,v 1.31 2009/08/05 23:47:43 tbox Exp $ */
 
 #ifndef NS_OS_H
 #define NS_OS_H 1
@@ -46,7 +46,13 @@ void
 ns_os_changeuser(void);
 
 void
+ns_os_adjustnofile(void);
+
+void
 ns_os_minprivs(void);
+
+FILE *
+ns_os_openfile(const char *filename, mode_t mode, isc_boolean_t switch_user);
 
 void
 ns_os_writepidfile(const char *filename, isc_boolean_t first_time);

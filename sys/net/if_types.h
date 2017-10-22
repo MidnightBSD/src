@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_types.h	8.3 (Berkeley) 4/28/95
- * $FreeBSD: release/7.0.0/sys/net/if_types.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  * $NetBSD: if_types.h,v 1.16 2000/04/19 06:30:53 itojun Exp $
  */
 
@@ -238,6 +238,7 @@
 #define	IFT_ATMVCIENDPT		   0xc2 /* ATM VCI End Point */
 #define	IFT_OPTICALCHANNEL	   0xc3 /* Optical Channel */
 #define	IFT_OPTICALTRANSPORT	   0xc4 /* Optical Transport */
+#define	IFT_INFINIBAND		   0xc7	/* Infiniband */
 #define	IFT_BRIDGE		   0xd1 /* Transparent bridge interface */
 
 #define	IFT_STF			   0xd7	/* 6to4 interface */

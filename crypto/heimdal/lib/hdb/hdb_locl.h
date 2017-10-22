@@ -31,8 +31,8 @@
  * SUCH DAMAGE. 
  */
 
-/* $Id: hdb_locl.h,v 1.18.4.1 2003/09/10 22:04:39 lha Exp $ */
-/* $FreeBSD: release/7.0.0/crypto/heimdal/lib/hdb/hdb_locl.h 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $Id: hdb_locl.h 22209 2007-12-07 19:03:41Z lha $ */
+/* $FreeBSD$ */
 
 #ifndef __HDB_LOCL_H__
 #define __HDB_LOCL_H__
@@ -64,5 +64,8 @@
 #include <krb5.h>
 #include <hdb.h>
 #include <hdb-private.h>
+
+#define HDB_DEFAULT_DB HDB_DB_DIR "/heimdal"
+#define HDB_DB_FORMAT_ENTRY "hdb/db-format"
 
 #endif /* __HDB_LOCL_H__ */

@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)ungetc.c	8.2 (Berkeley) 11/3/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/stdio/ungetc.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -158,7 +158,7 @@ __ungetc(int c, FILE *fp)
 	 * Initially, we will use the `reserve' buffer.
 	 */
 	fp->_ur = fp->_r;
-	fp->_extra->_up = fp->_p;
+	fp->_up = fp->_p;
 	fp->_ub._base = fp->_ubuf;
 	fp->_ub._size = sizeof(fp->_ubuf);
 	fp->_ubuf[sizeof(fp->_ubuf) - 1] = c;

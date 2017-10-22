@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)profile.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: release/7.0.0/sys/i386/include/profile.h 163735 2006-10-28 11:03:03Z bde $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PROFILE_H_
@@ -77,17 +77,17 @@
 #error
 #endif /* !__GNUCLIKE_ASM */
 #else /* !GUPROF */
-#define	MCOUNT_DECL(s)	u_long s;
+#define	MCOUNT_DECL(s)	register_t s;
 #ifdef SMP
 extern int	mcount_lock;
-#define	MCOUNT_ENTER(s)	{ s = read_eflags(); disable_intr(); \
+#define	MCOUNT_ENTER(s)	{ s = intr_disable(); \
  			  while (!atomic_cmpset_acq_int(&mcount_lock, 0, 1)) \
 			  	/* nothing */ ; }
 #define	MCOUNT_EXIT(s)	{ atomic_store_rel_int(&mcount_lock, 0); \
-			  write_eflags(s); }
+			  intr_restore(s); }
 #else
-#define	MCOUNT_ENTER(s)	{ s = read_eflags(); disable_intr(); }
-#define	MCOUNT_EXIT(s)	(write_eflags(s))
+#define	MCOUNT_ENTER(s)	{ s = intr_disable(); }
+#define	MCOUNT_EXIT(s)	(intr_restore(s))
 #endif
 #endif /* GUPROF */
 
@@ -115,7 +115,15 @@ void user(void);
 void									\
 mcount()								\
 {									\
-	uintfptr_t selfpc, frompc;					\
+	uintfptr_t selfpc, frompc, ecx;					\
+	/*								\
+	 * In gcc 4.2, ecx might be used in the caller as the arg	\
+	 * pointer if the stack realignment option is set (-mstackrealign) \
+	 * or if the caller has the force_align_arg_pointer attribute	\
+	 * (stack realignment is ALWAYS on for main).  Preserve ecx	\
+	 * here.							\
+	 */								\
+	__asm("" : "=c" (ecx));						\
 	/*								\
 	 * Find the return address for mcount,				\
 	 * and the return address for mcount's caller.			\
@@ -132,6 +140,7 @@ mcount()								\
 	__asm("movl (%%ebp),%0" : "=r" (frompc));			\
 	frompc = ((uintfptr_t *)frompc)[1];				\
 	_mcount(frompc, selfpc);					\
+	__asm("" : : "c" (ecx));					\
 }
 #else /* !__GNUCLIKE_ASM */
 #define	MCOUNT

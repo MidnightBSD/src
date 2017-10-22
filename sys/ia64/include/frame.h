@@ -23,13 +23,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/7.0.0/sys/ia64/include/frame.h 115084 2003-05-16 21:26:42Z marcel $
+ *	$FreeBSD$
  */
 
 #ifndef _MACHINE_FRAME_H_
 #define	_MACHINE_FRAME_H_
 
+#ifndef _MACHINE_REGSET_H_
 #include <machine/_regset.h>
+#endif
 
 /*
  * Software trap, exception, and syscall frame.

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/amd64/include/pcpu.h 170291 2007-06-04 21:38:48Z attilio $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PCPU_H_
@@ -33,7 +33,23 @@
 #error "sys/cdefs.h is a prerequisite for this file"
 #endif
 
-#ifdef _KERNEL
+#if defined(XEN) || defined(XENHVM)
+#ifndef NR_VIRQS
+#define	NR_VIRQS	24
+#endif
+#ifndef NR_IPIS
+#define	NR_IPIS		2
+#endif
+#endif
+
+#ifdef XENHVM
+#define PCPU_XEN_FIELDS							\
+	;								\
+	unsigned int pc_last_processed_l1i;				\
+	unsigned int pc_last_processed_l2i
+#else
+#define PCPU_XEN_FIELDS
+#endif
 
 /*
  * The SMP parts are setup in pmap.c and locore.s for the BSP, and
@@ -43,13 +59,27 @@
  * other processors"
  */
 #define	PCPU_MD_FIELDS							\
+	char	pc_monitorbuf[128] __aligned(128); /* cache line */	\
 	struct	pcpu *pc_prvspace;	/* Self-reference */		\
 	struct	pmap *pc_curpmap;					\
-	struct	amd64tss *pc_tssp;					\
+	struct	amd64tss *pc_tssp;	/* TSS segment active on CPU */	\
+	struct	amd64tss *pc_commontssp;/* Common TSS for the CPU */	\
 	register_t pc_rsp0;						\
 	register_t pc_scratch_rsp;	/* User %rsp in syscall */	\
 	u_int	pc_apic_id;						\
-	u_int   pc_acpi_id		/* ACPI CPU id */
+	u_int   pc_acpi_id;		/* ACPI CPU id */		\
+	/* Pointer to the CPU %fs descriptor */				\
+	struct user_segment_descriptor	*pc_fs32p;			\
+	/* Pointer to the CPU %gs descriptor */				\
+	struct user_segment_descriptor	*pc_gs32p;			\
+	/* Pointer to the CPU LDT descriptor */				\
+	struct system_segment_descriptor *pc_ldt;			\
+	/* Pointer to the CPU TSS descriptor */				\
+	struct system_segment_descriptor *pc_tss;			\
+	u_int	pc_cmci_mask		/* MCx banks for CMCI */	\
+	PCPU_XEN_FIELDS
+
+#ifdef _KERNEL
 
 #ifdef lint
 
@@ -186,15 +216,17 @@ extern struct pcpu *pcpup;
 #define	PCPU_PTR(member)	__PCPU_PTR(pc_ ## member)
 #define	PCPU_SET(member, val)	__PCPU_SET(pc_ ## member, val)
 
-static __inline struct thread *
+static __inline __pure2 struct thread *
 __curthread(void)
 {
 	struct thread *td;
 
-	__asm __volatile("movq %%gs:0,%0" : "=r" (td));
+	__asm("movq %%gs:0,%0" : "=r" (td));
 	return (td);
 }
 #define	curthread		(__curthread())
+
+#define	IS_BSP()	(PCPU_GET(cpuid) == 0)
 
 #else /* !lint || defined(__GNUCLIKE_ASM) && defined(__GNUCLIKE___TYPEOF) */
 

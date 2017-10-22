@@ -1,4 +1,4 @@
-/* $OpenBSD: sshlogin.c,v 1.25 2006/08/03 03:34:42 deraadt Exp $ */
+/* $OpenBSD: sshlogin.c,v 1.27 2011/01/11 06:06:09 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -86,20 +86,26 @@ get_last_login_time(uid_t uid, const char *logname,
 static void
 store_lastlog_message(const char *user, uid_t uid)
 {
+#ifndef NO_SSH_LASTLOG
 	char *time_string, hostname[MAXHOSTNAMELEN] = "", buf[512];
 	time_t last_login_time;
 
-#ifndef NO_SSH_LASTLOG
 	if (!options.print_lastlog)
 		return;
 
+# ifdef CUSTOM_SYS_AUTH_GET_LASTLOGIN_MSG
+	time_string = sys_auth_get_lastlogin_msg(user, uid);
+	if (time_string != NULL) {
+		buffer_append(&loginmsg, time_string, strlen(time_string));
+		xfree(time_string);
+	}
+# else
 	last_login_time = get_last_login_time(uid, user, hostname,
 	    sizeof(hostname));
 
 	if (last_login_time != 0) {
 		time_string = ctime(&last_login_time);
-		if (strchr(time_string, '\n'))
-		    *strchr(time_string, '\n') = '\0';
+		time_string[strcspn(time_string, "\n")] = '\0';
 		if (strcmp(hostname, "") == 0)
 			snprintf(buf, sizeof(buf), "Last login: %s\r\n",
 			    time_string);
@@ -108,6 +114,7 @@ store_lastlog_message(const char *user, uid_t uid)
 			    time_string, hostname);
 		buffer_append(&loginmsg, buf, strlen(buf));
 	}
+# endif /* CUSTOM_SYS_AUTH_GET_LASTLOGIN_MSG */
 #endif /* NO_SSH_LASTLOG */
 }
 

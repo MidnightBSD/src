@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/mii/mlphy.c 164830 2006-12-02 19:36:25Z marius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * driver for Micro Linear 6692 PHYs
@@ -70,6 +70,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/mii/mlphy.c 164830 2006-12-02 19:36:25
 
 struct mlphy_softc	{
 	struct mii_softc	ml_mii;
+	device_t		ml_dev;
 	int			ml_state;
 	int			ml_linked;
 };
@@ -83,7 +84,7 @@ static device_method_t mlphy_methods[] = {
 	DEVMETHOD(device_attach,	mlphy_attach),
 	DEVMETHOD(device_detach,	mii_phy_detach),
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static devclass_t mlphy_devclass;
@@ -96,19 +97,24 @@ static driver_t mlphy_driver = {
 
 DRIVER_MODULE(mlphy, miibus, mlphy_driver, mlphy_devclass, 0, 0);
 
+static struct mii_softc *mlphy_find_other(struct mlphy_softc *);
 static int	mlphy_service(struct mii_softc *, struct mii_data *, int);
 static void	mlphy_reset(struct mii_softc *);
 static void	mlphy_status(struct mii_softc *);
+
+static const struct mii_phy_funcs mlphy_funcs = {
+	mlphy_service,
+	mlphy_status,
+	mlphy_reset
+};
 
 static int
 mlphy_probe(dev)
 	device_t		dev;
 {
 	struct mii_attach_args	*ma;
-	device_t		parent;
 
 	ma = device_get_ivars(dev);
-	parent = device_get_parent(device_get_parent(dev));
 
 	/*
 	 * Micro Linear PHY reports oui == 0 model == 0
@@ -122,7 +128,8 @@ mlphy_probe(dev)
 	 * encountered the 6692 on an Olicom card with a ThunderLAN
 	 * controller chip.
 	 */
-	if (strcmp(device_get_name(parent), "tl") != 0)
+	if (strcmp(device_get_name(device_get_parent(device_get_parent(dev))),
+	    "tl") != 0)
 		return (ENXIO);
 
 	device_set_desc(dev, "Micro Linear 6692 media interface");
@@ -136,45 +143,43 @@ mlphy_attach(dev)
 {
 	struct mlphy_softc *msc;
 	struct mii_softc *sc;
-	struct mii_attach_args *ma;
-	struct mii_data *mii;
 
 	msc = device_get_softc(dev);
 	sc = &msc->ml_mii;
-	ma = device_get_ivars(dev);
-	sc->mii_dev = device_get_parent(dev);
-	mii = device_get_softc(sc->mii_dev);
-	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
+	msc->ml_dev = dev;
+	mii_phy_dev_attach(dev, MIIF_NOMANPAUSE, &mlphy_funcs, 0);
 
-	sc->mii_inst = mii->mii_instance;
-	sc->mii_phy = ma->mii_phyno;
-	sc->mii_service = mlphy_service;
-	sc->mii_pdata = mii;
+	PHY_RESET(sc);
 
-	mii->mii_instance++;
-
-#define	ADD(m, c)	ifmedia_add(&mii->mii_media, (m), (c), NULL)
-
-#if 0 /* See above. */
-	ADD(IFM_MAKEWORD(IFM_ETHER, IFM_NONE, 0, sc->mii_inst),
-	    BMCR_ISO);
-#endif
-	ADD(IFM_MAKEWORD(IFM_ETHER, IFM_100_TX, IFM_LOOP, sc->mii_inst),
-	    BMCR_LOOP|BMCR_S100);
-
-	sc->mii_flags &= ~MIIF_NOISOLATE;
-	mii_phy_reset(sc);
-	sc->mii_flags |= MIIF_NOISOLATE;
-
-	sc->mii_capabilities =
-	    PHY_READ(sc, MII_BMSR) & ma->mii_capmask;
-	ma->mii_capmask = ~sc->mii_capabilities;
+	sc->mii_capabilities = PHY_READ(sc, MII_BMSR) & sc->mii_capmask;
+	/* Let the companion PHY (if any) only handle the media we don't. */
+	sc->mii_capmask = ~sc->mii_capabilities;
 	device_printf(dev, " ");
-	mii_add_media(sc);
+	mii_phy_add_media(sc);
 	printf("\n");
-#undef ADD
+
 	MIIBUS_MEDIAINIT(sc->mii_dev);
 	return (0);
+}
+
+static struct mii_softc *
+mlphy_find_other(struct mlphy_softc *msc)
+{
+	device_t		*devlist;
+	struct mii_softc *retval;
+	int i, devs;
+
+	retval = NULL;
+	if (device_get_children(msc->ml_mii.mii_dev, &devlist, &devs) != 0)
+		return (NULL);
+	for (i = 0; i < devs; i++) {
+		if (devlist[i] != msc->ml_dev) {
+			retval = device_get_softc(devlist[i]);
+			break;
+		}
+	}
+	free(devlist, M_TEMP);
+	return (retval);
 }
 
 static int
@@ -187,42 +192,19 @@ mlphy_service(xsc, mii, cmd)
 	struct mii_softc	*other = NULL;
 	struct mlphy_softc	*msc = (struct mlphy_softc *)xsc;
 	struct mii_softc	*sc = (struct mii_softc *)&msc->ml_mii;
-	device_t		*devlist;
-	int			devs, i, other_inst, reg;
+	int			other_inst, reg;
 
 	/*
 	 * See if there's another PHY on this bus with us.
 	 * If so, we may need it for 10Mbps modes.
 	 */
-	device_get_children(msc->ml_mii.mii_dev, &devlist, &devs);
-	for (i = 0; i < devs; i++) {
-		if (strcmp(device_get_name(devlist[i]), "mlphy")) {
-			other = device_get_softc(devlist[i]);
-			break;
-		}
-	}
-	free(devlist, M_TEMP);
+	other = mlphy_find_other(msc);
 
 	switch (cmd) {
 	case MII_POLLSTAT:
-		/*
-		 * If we're not polling our PHY instance, just return.
-		 */
-		if (IFM_INST(ife->ifm_media) != sc->mii_inst)
-			return (0);
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the media indicates a different PHY instance,
-		 * isolate ourselves.
-		 */
-		if (IFM_INST(ife->ifm_media) != sc->mii_inst) {
-			reg = PHY_READ(sc, MII_BMCR);
-			PHY_WRITE(sc, MII_BMCR, reg | BMCR_ISO);
-			return (0);
-		}
-
 		/*
 		 * If the interface is not up, don't do anything.
 		 */
@@ -238,10 +220,10 @@ mlphy_service(xsc, mii, cmd)
 			 */
 			msc->ml_state = ML_STATE_AUTO_SELF;
 			if (other != NULL) {
-				mii_phy_reset(other);
+				PHY_RESET(other);
 				PHY_WRITE(other, MII_BMCR, BMCR_ISO);
 			}
-			(void) mii_phy_auto(sc);
+			(void)mii_phy_auto(sc);
 			msc->ml_linked = 0;
 			return (0);
 		case IFM_10_T:
@@ -255,11 +237,10 @@ mlphy_service(xsc, mii, cmd)
 			 * BMCR data is stored in the ifmedia entry.
 			 */
 			if (other != NULL) {
-				mii_phy_reset(other);
+				PHY_RESET(other);
 				PHY_WRITE(other, MII_BMCR, ife->ifm_data);
 			}
-			PHY_WRITE(sc, MII_ANAR, mii_anar(ife->ifm_media));
-			PHY_WRITE(sc, MII_BMCR, ife->ifm_data);
+			mii_phy_setmedia(sc);
 			msc->ml_state = 0;
 			break;
 		case IFM_100_TX:
@@ -271,31 +252,19 @@ mlphy_service(xsc, mii, cmd)
 			 * BMCR data is stored in the ifmedia entry.
 			 */
 			if (other != NULL) {
-				mii_phy_reset(other);
+				PHY_RESET(other);
 				PHY_WRITE(other, MII_BMCR, BMCR_ISO);
 			}
-			PHY_WRITE(sc, MII_ANAR, mii_anar(ife->ifm_media));
-			PHY_WRITE(sc, MII_BMCR, ife->ifm_data);
+			mii_phy_setmedia(sc);
 			msc->ml_state = 0;
 			break;
-		case IFM_100_T4:
-			/*
-			 * XXX Not supported as a manual setting right now.
-			 */
-			return (EINVAL);
 		default:
-			break;
+			return (EINVAL);
 
 		}
 		break;
 
 	case MII_TICK:
-		/*
-		 * If we're not currently selected, just return.
-		 */
-		if (IFM_INST(ife->ifm_media) != sc->mii_inst)
-			return (0);
-
 		/*
 		 * Is the interface even up?
 		 */
@@ -328,7 +297,7 @@ mlphy_service(xsc, mii, cmd)
 		if (reg & BMSR_LINK) {
 			if (!msc->ml_linked) {
 				msc->ml_linked = 1;
-				mlphy_status(sc);
+				PHY_STATUS(sc);
 			}
 			break;
 		}
@@ -342,10 +311,10 @@ mlphy_service(xsc, mii, cmd)
 		sc->mii_ticks = 0;
 		msc->ml_linked = 0;
 		mii->mii_media_active = IFM_NONE;
-		mii_phy_reset(sc);
+		PHY_RESET(sc);
 		msc->ml_state = ML_STATE_AUTO_SELF;
 		if (other != NULL) {
-			mii_phy_reset(other);
+			PHY_RESET(other);
 			PHY_WRITE(other, MII_BMCR, BMCR_ISO);
 		}
 		mii_phy_auto(sc);
@@ -357,7 +326,8 @@ mlphy_service(xsc, mii, cmd)
 	if (msc->ml_state == ML_STATE_AUTO_OTHER) {
 		other_inst = other->mii_inst;
 		other->mii_inst = sc->mii_inst;
-		(void) (*other->mii_service)(other, mii, MII_POLLSTAT);
+		if (IFM_INST(ife->ifm_media) == other->mii_inst)
+			(void)PHY_SERVICE(other, mii, MII_POLLSTAT);
 		other->mii_inst = other_inst;
 		sc->mii_media_active = other->mii_media_active;
 		sc->mii_media_status = other->mii_media_status;
@@ -396,19 +366,9 @@ mlphy_status(sc)
 	struct mlphy_softc	*msc = (struct mlphy_softc *)sc;
 	struct mii_data		*mii = msc->ml_mii.mii_pdata;
 	struct mii_softc	*other = NULL;
-	device_t		*devlist;
-	int			devs, i;
 
 	/* See if there's another PHY on the bus with us. */
-	device_get_children(msc->ml_mii.mii_dev, &devlist, &devs);
-	for (i = 0; i < devs; i++) {
-		if (strcmp(device_get_name(devlist[i]), "mlphy")) {
-			other = device_get_softc(devlist[i]);
-			break;
-		}
-	}
-	free(devlist, M_TEMP);
-
+	other = mlphy_find_other(msc);
 	if (other == NULL)
 		return;
 
@@ -416,15 +376,15 @@ mlphy_status(sc)
 
 	if (IFM_SUBTYPE(mii->mii_media_active) != IFM_10_T) {
 		msc->ml_state = ML_STATE_AUTO_SELF;
-		mii_phy_reset(other);
+		PHY_RESET(other);
 		PHY_WRITE(other, MII_BMCR, BMCR_ISO);
 	}
 
 	if (IFM_SUBTYPE(mii->mii_media_active) == IFM_10_T) {
 		msc->ml_state = ML_STATE_AUTO_OTHER;
-		mlphy_reset(&msc->ml_mii);
+		PHY_RESET(&msc->ml_mii);
 		PHY_WRITE(&msc->ml_mii, MII_BMCR, BMCR_ISO);
-		mii_phy_reset(other);
+		PHY_RESET(other);
 		mii_phy_auto(other);
 	}
 }

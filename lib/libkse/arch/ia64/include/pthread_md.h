@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/arch/ia64/include/pthread_md.h 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
 #ifndef _PTHREAD_MD_H_
@@ -73,7 +73,7 @@ struct kcb {
 };
 
 static __inline struct tcb *
-ia64_get_tcb()
+ia64_get_tcb(void)
 {
 	register char *tp __asm("%r13");
 

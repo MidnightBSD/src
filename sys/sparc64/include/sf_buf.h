@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sparc64/include/sf_buf.h 122780 2003-11-16 06:11:26Z alc $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SF_BUF_H_

@@ -1,4 +1,4 @@
-$FreeBSD: release/7.0.0/contrib/gdb/FREEBSD-upgrade 172506 2007-10-10 16:59:15Z cvs2svn $
+$FreeBSD$
 
 To strip down a new version of gdb for import, extract the files like this:
 

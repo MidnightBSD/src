@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/kern/kern_time.c 170472 2007-06-09 21:48:44Z attilio $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -74,7 +74,6 @@ static uma_zone_t	itimer_zone = NULL;
 
 static int	settime(struct thread *, struct timeval *);
 static void	timevalfix(struct timeval *);
-static void	no_lease_updatetime(int);
 
 static void	itimer_start(void);
 static int	itimer_init(void *, int, int);
@@ -105,14 +104,6 @@ int		itimespecfix(struct timespec *ts);
 
 SYSINIT(posix_timer, SI_SUB_P1003_1B, SI_ORDER_FIRST+4, itimer_start, NULL);
 
-
-static void 
-no_lease_updatetime(deltat)
-	int deltat;
-{
-}
-
-void (*lease_updatetime)(int)  = no_lease_updatetime;
 
 static int
 settime(struct thread *td, struct timeval *tv)
@@ -168,9 +159,6 @@ settime(struct thread *td, struct timeval *tv)
 	ts.tv_nsec = tv->tv_usec * 1000;
 	mtx_lock(&Giant);
 	tc_setclock(&ts);
-	(void) splsoftclock();
-	lease_updatetime(delta.tv_sec);
-	splx(s);
 	resettodr();
 	mtx_unlock(&Giant);
 	return (0);
@@ -184,7 +172,7 @@ struct clock_gettime_args {
 #endif
 /* ARGSUSED */
 int
-clock_gettime(struct thread *td, struct clock_gettime_args *uap)
+sys_clock_gettime(struct thread *td, struct clock_gettime_args *uap)
 {
 	struct timespec ats;
 	int error;
@@ -201,6 +189,7 @@ kern_clock_gettime(struct thread *td, clockid_t clock_id, struct timespec *ats)
 {
 	struct timeval sys, user;
 	struct proc *p;
+	uint64_t runtime, curtime, switchtime;
 
 	p = td->td_proc;
 	switch (clock_id) {
@@ -242,6 +231,16 @@ kern_clock_gettime(struct thread *td, clockid_t clock_id, struct timespec *ats)
 		ats->tv_sec = time_second;
 		ats->tv_nsec = 0;
 		break;
+	case CLOCK_THREAD_CPUTIME_ID:
+		critical_enter();
+		switchtime = PCPU_GET(switchtime);
+		curtime = cpu_ticks();
+		runtime = td->td_runtime;
+		critical_exit();
+		runtime = cputick2usec(runtime + curtime - switchtime);
+		ats->tv_sec = runtime / 1000000;
+		ats->tv_nsec = runtime % 1000000 * 1000;
+		break;
 	default:
 		return (EINVAL);
 	}
@@ -256,7 +255,7 @@ struct clock_settime_args {
 #endif
 /* ARGSUSED */
 int
-clock_settime(struct thread *td, struct clock_settime_args *uap)
+sys_clock_settime(struct thread *td, struct clock_settime_args *uap)
 {
 	struct timespec ats;
 	int error;
@@ -291,7 +290,7 @@ struct clock_getres_args {
 };
 #endif
 int
-clock_getres(struct thread *td, struct clock_getres_args *uap)
+sys_clock_getres(struct thread *td, struct clock_getres_args *uap)
 {
 	struct timespec ts;
 	int error;
@@ -335,6 +334,12 @@ kern_clock_getres(struct thread *td, clockid_t clock_id, struct timespec *ts)
 	case CLOCK_SECOND:
 		ts->tv_sec = 1;
 		ts->tv_nsec = 0;
+		break;
+	case CLOCK_THREAD_CPUTIME_ID:
+		/* sync with cputick2usec */
+		ts->tv_nsec = 1000000 / cpu_tickrate();
+		if (ts->tv_nsec == 0)
+			ts->tv_nsec = 1000;
 		break;
 	default:
 		return (EINVAL);
@@ -389,7 +394,7 @@ struct nanosleep_args {
 #endif
 /* ARGSUSED */
 int
-nanosleep(struct thread *td, struct nanosleep_args *uap)
+sys_nanosleep(struct thread *td, struct nanosleep_args *uap)
 {
 	struct timespec rmt, rqt;
 	int error;
@@ -420,7 +425,7 @@ struct gettimeofday_args {
 #endif
 /* ARGSUSED */
 int
-gettimeofday(struct thread *td, struct gettimeofday_args *uap)
+sys_gettimeofday(struct thread *td, struct gettimeofday_args *uap)
 {
 	struct timeval atv;
 	struct timezone rtz;
@@ -446,7 +451,7 @@ struct settimeofday_args {
 #endif
 /* ARGSUSED */
 int
-settimeofday(struct thread *td, struct settimeofday_args *uap)
+sys_settimeofday(struct thread *td, struct settimeofday_args *uap)
 {
 	struct timeval atv, *tvp;
 	struct timezone atz, *tzp;
@@ -518,7 +523,7 @@ struct getitimer_args {
 };
 #endif
 int
-getitimer(struct thread *td, struct getitimer_args *uap)
+sys_getitimer(struct thread *td, struct getitimer_args *uap)
 {
 	struct itimerval aitv;
 	int error;
@@ -570,14 +575,14 @@ struct setitimer_args {
 };
 #endif
 int
-setitimer(struct thread *td, struct setitimer_args *uap)
+sys_setitimer(struct thread *td, struct setitimer_args *uap)
 {
 	struct itimerval aitv, oitv;
 	int error;
 
 	if (uap->itv == NULL) {
 		uap->itv = uap->oitv;
-		return (getitimer(td, (struct getitimer_args *)uap));
+		return (sys_getitimer(td, (struct getitimer_args *)uap));
 	}
 
 	if ((error = copyin(uap->itv, &aitv, sizeof(struct itimerval))))
@@ -655,7 +660,7 @@ realitexpire(void *arg)
 
 	p = (struct proc *)arg;
 	PROC_LOCK(p);
-	psignal(p, SIGALRM);
+	kern_psignal(p, SIGALRM);
 	if (!timevalisset(&p->p_realtimer.it_interval)) {
 		timevalclear(&p->p_realtimer.it_value);
 		if (p->p_flag & P_WEXIT)
@@ -918,7 +923,7 @@ struct ktimer_create_args {
 };
 #endif
 int
-ktimer_create(struct thread *td, struct ktimer_create_args *uap)
+sys_ktimer_create(struct thread *td, struct ktimer_create_args *uap)
 {
 	struct sigevent *evp1, ev;
 	int id;
@@ -1057,7 +1062,7 @@ struct ktimer_delete_args {
 };
 #endif
 int
-ktimer_delete(struct thread *td, struct ktimer_delete_args *uap)
+sys_ktimer_delete(struct thread *td, struct ktimer_delete_args *uap)
 {
 	return (kern_timer_delete(td, uap->timerid));
 }
@@ -1068,7 +1073,8 @@ itimer_find(struct proc *p, int timerid)
 	struct itimer *it;
 
 	PROC_LOCK_ASSERT(p, MA_OWNED);
-	if ((p->p_itimers == NULL) || (timerid >= TIMER_MAX) ||
+	if ((p->p_itimers == NULL) ||
+	    (timerid < 0) || (timerid >= TIMER_MAX) ||
 	    (it = p->p_itimers->its_timers[timerid]) == NULL) {
 		return (NULL);
 	}
@@ -1121,7 +1127,7 @@ struct ktimer_settime_args {
 };
 #endif
 int
-ktimer_settime(struct thread *td, struct ktimer_settime_args *uap)
+sys_ktimer_settime(struct thread *td, struct ktimer_settime_args *uap)
 {
 	struct proc *p = td->td_proc;
 	struct itimer *it;
@@ -1162,7 +1168,7 @@ struct ktimer_gettime_args {
 };
 #endif
 int
-ktimer_gettime(struct thread *td, struct ktimer_gettime_args *uap)
+sys_ktimer_gettime(struct thread *td, struct ktimer_gettime_args *uap)
 {
 	struct proc *p = td->td_proc;
 	struct itimer *it;
@@ -1193,7 +1199,7 @@ struct timer_getoverrun_args {
 };
 #endif
 int
-ktimer_getoverrun(struct thread *td, struct ktimer_getoverrun_args *uap)
+sys_ktimer_getoverrun(struct thread *td, struct ktimer_getoverrun_args *uap)
 {
 	struct proc *p = td->td_proc;
 	struct itimer *it;
@@ -1225,6 +1231,12 @@ realtimer_delete(struct itimer *it)
 {
 	mtx_assert(&it->it_mtx, MA_OWNED);
 	
+	/*
+	 * clear timer's value and interval to tell realtimer_expire
+	 * to not rearm the timer.
+	 */
+	timespecclear(&it->it_time.it_value);
+	timespecclear(&it->it_time.it_interval);
 	ITIMER_UNLOCK(it);
 	callout_drain(&it->it_callout);
 	ITIMER_LOCK(it);
@@ -1344,10 +1356,8 @@ realtimer_expire(void *arg)
 	struct timespec cts, ts;
 	struct timeval tv;
 	struct itimer *it;
-	struct proc *p;
 
 	it = (struct itimer *)arg;
-	p = it->it_proc;
 
 	realtimer_clocktime(it->it_clockid, &cts);
 	/* Only fire if time is reached. */
@@ -1374,9 +1384,11 @@ realtimer_expire(void *arg)
 			callout_reset(&it->it_callout, tvtohz(&tv),
 				 realtimer_expire, it);
 		}
+		itimer_enter(it);
 		ITIMER_UNLOCK(it);
 		itimer_fire(it);
 		ITIMER_LOCK(it);
+		itimer_leave(it);
 	} else if (timespecisset(&it->it_time.it_value)) {
 		ts = it->it_time.it_value;
 		timespecsub(&ts, &cts);
@@ -1390,28 +1402,22 @@ void
 itimer_fire(struct itimer *it)
 {
 	struct proc *p = it->it_proc;
-	int ret;
+	struct thread *td;
 
 	if (it->it_sigev.sigev_notify == SIGEV_SIGNAL ||
 	    it->it_sigev.sigev_notify == SIGEV_THREAD_ID) {
-		PROC_LOCK(p);
+		if (sigev_findtd(p, &it->it_sigev, &td) != 0) {
+			ITIMER_LOCK(it);
+			timespecclear(&it->it_time.it_value);
+			timespecclear(&it->it_time.it_interval);
+			callout_stop(&it->it_callout);
+			ITIMER_UNLOCK(it);
+			return;
+		}
 		if (!KSI_ONQ(&it->it_ksi)) {
 			it->it_ksi.ksi_errno = 0;
-			ret = psignal_event(p, &it->it_sigev, &it->it_ksi);
-			if (__predict_false(ret != 0)) {
-				it->it_overrun++;
-				/*
-				 * Broken userland code, thread went
-				 * away, disarm the timer.
-				 */
-				if (ret == ESRCH) {
-					ITIMER_LOCK(it);
-					timespecclear(&it->it_time.it_value);
-					timespecclear(&it->it_time.it_interval);
-					callout_stop(&it->it_callout);
-					ITIMER_UNLOCK(it);
-				}
-			}
+			ksiginfo_set_sigev(&it->it_ksi, &it->it_sigev);
+			tdsendsignal(p, td, it->it_ksi.ksi_signo, &it->it_ksi);
 		} else {
 			if (it->it_overrun < INT_MAX)
 				it->it_overrun++;

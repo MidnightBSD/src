@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/contrib/ipfilter/lib/printnat.c 173213 2007-10-31 05:00:38Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2002-2005 by Darren Reed.
@@ -217,6 +217,8 @@ int opts;
 			putchar(' ');
 			printproto(pr, np->in_p, np);
 		}
+		if (np->in_flags & IPN_SEQUENTIAL)
+			printf(" sequential");
 		printf("\n");
 		if (opts & OPT_DEBUG) {
 			struct in_addr nip;

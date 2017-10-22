@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/powerpc/powerpc/in_cksum.c 139825 2005-01-07 02:29:27Z imp $ */
+/* $FreeBSD$ */
 /* $NetBSD: in_cksum.c,v 1.7 1997/09/02 13:18:15 thorpej Exp $ */
 
 /*-
@@ -228,7 +228,7 @@ skip_start:
 		if (len < mlen)
 			mlen = len;
 
-		if ((clen ^ (int) addr) & 1)
+		if ((clen ^ (long) addr) & 1)
 		    sum += in_cksumdata(addr, mlen) << 8;
 		else
 		    sum += in_cksumdata(addr, mlen);

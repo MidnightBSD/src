@@ -1,5 +1,10 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/getopt/getopt.c 102944 2002-09-04 23:29:10Z dwmalone $");
+__FBSDID("$FreeBSD$");
+
+/*
+ * This material, written by Henry Spencer, was released by him
+ * into the public domain and is thus not subject to any copyright.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>

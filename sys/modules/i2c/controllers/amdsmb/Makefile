@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/i2c/controllers/amdsmb/Makefile 153618 2005-12-21 15:49:51Z ru $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../../pci
 

@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/gnu/usr.bin/patch/util.h 95601 2002-04-28 01:33:45Z gad $
+/* $FreeBSD$
  *
  * $Log: util.h,v $
  * Revision 2.0  86/09/17  15:40:06  lwall

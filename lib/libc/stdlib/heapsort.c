@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)heapsort.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/stdlib/heapsort.c 174854 2007-12-22 06:32:46Z cvs2svn $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <stddef.h>
@@ -141,7 +141,7 @@ heapsort(vbase, nmemb, size, compar)
 	size_t nmemb, size;
 	int (*compar)(const void *, const void *);
 {
-	int cnt, i, j, l;
+	size_t cnt, i, j, l;
 	char tmp, *tmp1, *tmp2;
 	char *base, *k, *p, *t;
 

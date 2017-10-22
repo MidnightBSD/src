@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/regression/lib/libc/nss/testutil.h 168754 2007-04-15 11:02:31Z bushman $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>

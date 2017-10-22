@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/make/suff.c 146580 2005-05-24 15:58:35Z harti $");
+__FBSDID("$FreeBSD$");
 
 /*-
  * suff.c --
@@ -514,6 +514,7 @@ Suff_AddTransform(char *line)
 	Suff	*s;	/* source suffix */
 	Suff	*t;	/* target suffix */
 
+	s = t = NULL;	/* silence gcc */
 	gn = SuffTransFind(line);
 	if (gn == NULL) {
 		/*
@@ -785,11 +786,11 @@ Suff_DoPaths(void)
 	}
 
 	ptr = Path_MakeFlags("-I", &inIncludes);
-	Var_Set(".INCLUDES", ptr, VAR_GLOBAL);
+	Var_SetGlobal(".INCLUDES", ptr);
 	free(ptr);
 
 	ptr = Path_MakeFlags("-L", &inLibs);
-	Var_Set(".LIBS", ptr, VAR_GLOBAL);
+	Var_SetGlobal(".LIBS", ptr);
 	free(ptr);
 
 	Path_Clear(&inIncludes);

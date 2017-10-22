@@ -4,7 +4,7 @@
  * See the IPFILTER.LICENCE file for details on licencing.
  *
  * @(#)ip_fil.h	1.35 6/5/96
- * $FreeBSD: release/7.0.0/sys/contrib/ipfilter/netinet/ip_fil.h 173213 2007-10-31 05:00:38Z darrenr $
+ * $FreeBSD$
  * Id: ip_fil.h,v 2.170.2.51 2007/10/10 09:48:03 darrenr Exp $
  */
 
@@ -1523,6 +1523,12 @@ extern	void		ipf_freetoken __P((ipftoken_t *));
 extern	int		ipf_deltoken __P((int,int, void *));
 extern	int		ipfsync __P((void));
 extern	int		ipf_genericiter __P((void *, int, void *));
+#ifndef ipf_random
+extern	u_32_t		ipf_random __P((void));
+#endif
+#ifdef NEED_LOCAL_RAND
+extern	void		ipf_rand_push __P((void *, int));
+#endif
 
 extern	int	fr_running;
 extern	u_long	fr_frouteok[2];

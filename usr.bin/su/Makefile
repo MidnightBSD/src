@@ -1,9 +1,11 @@
 #	@(#)Makefile	8.1 (Berkeley) 7/19/93
-# $FreeBSD: release/7.0.0/usr.bin/su/Makefile 161815 2006-09-01 13:39:02Z csjp $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
 PROG=	su
+
+WARNS?=	5
 
 DPADD=	${LIBUTIL} ${LIBPAM}
 LDADD=	-lutil ${MINUSLPAM}

@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/lib/libexpat/expat_config.h 168998 2007-04-24 06:29:27Z phk $ */
+/* $FreeBSD$ */
 
 #include <machine/endian.h>
 

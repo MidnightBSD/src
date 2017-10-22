@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2009, 2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: interfacemgr.c,v 1.76.18.8 2006/07/20 01:10:30 marka Exp $ */
+/* $Id: interfacemgr.c,v 1.95.426.2 2011/03/12 04:59:14 tbox Exp $ */
 
 /*! \file */
 
@@ -90,7 +90,7 @@ ns_interfacemgr_create(isc_mem_t *mctx, isc_taskmgr_t *taskmgr,
 	mgr->generation = 1;
 	mgr->listenon4 = NULL;
 	mgr->listenon6 = NULL;
-	
+
 	ISC_LIST_INIT(mgr->interfaces);
 	ISC_LIST_INIT(mgr->listenon);
 
@@ -304,10 +304,12 @@ ns_interface_accepttcp(ns_interface_t *ifp) {
 				 isc_result_totext(result));
 		goto tcp_socket_failure;
 	}
+	isc_socket_setname(ifp->tcpsocket, "dispatcher", NULL);
 #ifndef ISC_ALLOW_MAPPED
 	isc_socket_ipv6only(ifp->tcpsocket, ISC_TRUE);
 #endif
-	result = isc_socket_bind(ifp->tcpsocket, &ifp->addr);
+	result = isc_socket_bind(ifp->tcpsocket, &ifp->addr,
+				 ISC_SOCKET_REUSEADDRESS);
 	if (result != ISC_R_SUCCESS) {
 		isc_log_write(IFMGR_COMMON_LOGARGS, ISC_LOG_ERROR,
 				 "binding TCP socket: %s",
@@ -322,7 +324,7 @@ ns_interface_accepttcp(ns_interface_t *ifp) {
 		goto tcp_listen_failure;
 	}
 
-	/* 
+	/*
 	 * If/when there a multiple filters listen to the
 	 * result.
 	 */
@@ -377,7 +379,7 @@ ns_interface_setup(ns_interfacemgr_t *mgr, isc_sockaddr_t *addr,
 		}
 	}
 	*ifpret = ifp;
-	return (ISC_R_SUCCESS);
+	return (result);
 
  cleanup_interface:
 	ISC_LIST_UNLINK(ifp->mgr->interfaces, ifp, link);
@@ -482,7 +484,7 @@ static isc_result_t
 clearacl(isc_mem_t *mctx, dns_acl_t **aclp) {
 	dns_acl_t *newacl = NULL;
 	isc_result_t result;
-	result = dns_acl_create(mctx, 10, &newacl);
+	result = dns_acl_create(mctx, 0, &newacl);
 	if (result != ISC_R_SUCCESS)
 		return (result);
 	dns_acl_detach(aclp);
@@ -493,36 +495,31 @@ clearacl(isc_mem_t *mctx, dns_acl_t **aclp) {
 
 static isc_boolean_t
 listenon_is_ip6_any(ns_listenelt_t *elt) {
-	if (elt->acl->length != 1)
-		return (ISC_FALSE);
-	if (elt->acl->elements[0].negative == ISC_FALSE &&
-	    elt->acl->elements[0].type == dns_aclelementtype_any)
-		return (ISC_TRUE);  /* listen-on-v6 { any; } */
-	return (ISC_FALSE); /* All others */
+	REQUIRE(elt && elt->acl);
+	return dns_acl_isany(elt->acl);
 }
 
 static isc_result_t
 setup_locals(ns_interfacemgr_t *mgr, isc_interface_t *interface) {
 	isc_result_t result;
-	dns_aclelement_t elt;
-	unsigned int family;
 	unsigned int prefixlen;
+	isc_netaddr_t *netaddr;
 
-	family = interface->address.family;
-	
-	elt.type = dns_aclelementtype_ipprefix;
-	elt.negative = ISC_FALSE;
-	elt.u.ip_prefix.address = interface->address;
-	elt.u.ip_prefix.prefixlen = (family == AF_INET) ? 32 : 128;
-	result = dns_acl_appendelement(mgr->aclenv.localhost, &elt);
+	netaddr = &interface->address;
+
+	/* First add localhost address */
+	prefixlen = (netaddr->family == AF_INET) ? 32 : 128;
+	result = dns_iptable_addprefix(mgr->aclenv.localhost->iptable,
+				       netaddr, prefixlen, ISC_TRUE);
 	if (result != ISC_R_SUCCESS)
 		return (result);
 
+	/* Then add localnets prefix */
 	result = isc_netaddr_masktoprefixlen(&interface->netmask,
 					     &prefixlen);
 
-	/* Non contigious netmasks not allowed by IPv6 arch. */
-	if (result != ISC_R_SUCCESS && family == AF_INET6)
+	/* Non contiguous netmasks not allowed by IPv6 arch. */
+	if (result != ISC_R_SUCCESS && netaddr->family == AF_INET6)
 		return (result);
 
 	if (result != ISC_R_SUCCESS) {
@@ -532,16 +529,13 @@ setup_locals(ns_interfacemgr_t *mgr, isc_interface_t *interface) {
 			      "localnets ACL: %s",
 			      interface->name,
 			      isc_result_totext(result));
-	} else {
-		elt.u.ip_prefix.prefixlen = prefixlen;
-		if (dns_acl_elementmatch(mgr->aclenv.localnets, &elt,
-					 NULL) == ISC_R_NOTFOUND) {
-			result = dns_acl_appendelement(mgr->aclenv.localnets,
-						       &elt);
-			if (result != ISC_R_SUCCESS)
-				return (result);
-		}
+		return (ISC_R_SUCCESS);
 	}
+
+	result = dns_iptable_addprefix(mgr->aclenv.localnets->iptable,
+				       netaddr, prefixlen, ISC_TRUE);
+	if (result != ISC_R_SUCCESS)
+		return (result);
 
 	return (ISC_R_SUCCESS);
 }
@@ -549,7 +543,7 @@ setup_locals(ns_interfacemgr_t *mgr, isc_interface_t *interface) {
 static void
 setup_listenon(ns_interfacemgr_t *mgr, isc_interface_t *interface,
 	       in_port_t port)
-{ 
+{
 	isc_sockaddr_t *addr;
 	isc_sockaddr_t *old;
 
@@ -563,7 +557,7 @@ setup_listenon(ns_interfacemgr_t *mgr, isc_interface_t *interface,
 	     old != NULL;
 	     old = ISC_LIST_NEXT(old, link))
 		if (isc_sockaddr_equal(addr, old))
-			break;	
+			break;
 
 	if (old != NULL)
 		isc_mem_put(mgr->mctx, addr, sizeof(*addr));
@@ -699,7 +693,7 @@ do_scan(ns_interfacemgr_t *mgr, ns_listenlist_t *ext_listen,
 	{
 		isc_interface_t interface;
 		ns_listenlist_t *ll;
-		unsigned int family; 
+		unsigned int family;
 
 		result = isc_interfaceiter_current(iter, &interface);
 		if (result != ISC_R_SUCCESS)
@@ -802,7 +796,9 @@ do_scan(ns_interfacemgr_t *mgr, ns_listenlist_t *ext_listen,
 					(void)dns_acl_match(&listen_netaddr,
 							    NULL, ele->acl,
 							    NULL, &match, NULL);
-					if (match > 0 && ele->port == le->port)
+					if (match > 0 &&
+					    (ele->port == le->port ||
+					    ele->port == 0))
 						break;
 					else
 						match = 0;
@@ -881,7 +877,7 @@ do_scan(ns_interfacemgr_t *mgr, ns_listenlist_t *ext_listen,
 		UNEXPECTED_ERROR(__FILE__, __LINE__,
 				 "interface iteration failed: %s",
 				 isc_result_totext(result));
-	else 
+	else
 		result = ISC_R_SUCCESS;
  cleanup_iter:
 	isc_interfaceiter_destroy(&iter);
@@ -912,7 +908,7 @@ ns_interfacemgr_scan0(ns_interfacemgr_t *mgr, ns_listenlist_t *ext_listen,
 
 	/*
 	 * Warn if we are not listening on any interface, unless
-	 * we're in lwresd-only mode, in which case that is to 
+	 * we're in lwresd-only mode, in which case that is to
 	 * be expected.
 	 */
 	if (ext_listen == NULL &&
@@ -968,7 +964,6 @@ isc_boolean_t
 ns_interfacemgr_listeningon(ns_interfacemgr_t *mgr, isc_sockaddr_t *addr) {
 	isc_sockaddr_t *old;
 
-	old = ISC_LIST_HEAD(mgr->listenon);
 	for (old = ISC_LIST_HEAD(mgr->listenon);
 	     old != NULL;
 	     old = ISC_LIST_NEXT(old, link))

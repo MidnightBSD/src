@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/pci/viapm.c 171693 2007-08-02 04:29:19Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_isa.h"
 
@@ -70,12 +70,13 @@ static int viapm_debug = 0;
 #define VIA_8233_PMU_ID		0x30741106
 #define	VIA_8233A_PMU_ID	0x31471106
 #define	VIA_8235_PMU_ID		0x31771106
+#define	VIA_8237_PMU_ID		0x32271106
 #define	VIA_CX700_PMU_ID	0x83241106
 
 #define VIAPM_INB(port) \
-	((u_char)bus_space_read_1(viapm->st, viapm->sh, port))
+	((u_char)bus_read_1(viapm->iores, port))
 #define VIAPM_OUTB(port,val) \
-	(bus_space_write_1(viapm->st, viapm->sh, port, (u_char)(val)))
+	(bus_write_1(viapm->iores, port, (u_char)(val)))
 
 #define VIAPM_TYP_UNKNOWN	0
 #define VIAPM_TYP_586B_3040E	1
@@ -91,8 +92,6 @@ static int viapm_debug = 0;
 struct viapm_softc {
 	int type;
 	u_int32_t base;
-        bus_space_tag_t st;
-        bus_space_handle_t sh;
 	int iorid;
 	int irqrid;
 	struct resource *iores;
@@ -287,6 +286,12 @@ viapm_pro_probe(device_t dev)
 		base_cfgreg = VIAPM_8233_BASE;
 		goto viapro;
 
+	case VIA_8237_PMU_ID:
+		desc = "VIA VT8237 Power Management Unit";
+		viapm->type = VIAPM_TYP_UNKNOWN;
+		base_cfgreg = VIAPM_8233_BASE;
+		goto viapro;
+
 	case VIA_CX700_PMU_ID:
 		desc = "VIA CX700 Power Management Unit";
 		viapm->type = VIAPM_TYP_UNKNOWN;
@@ -347,8 +352,6 @@ viapm_pro_attach(device_t dev)
 		device_printf(dev, "could not allocate bus space\n");
 		goto error;
 	}
-	viapm->st = rman_get_bustag(viapm->iores);
-	viapm->sh = rman_get_bushandle(viapm->iores);
 
 #ifdef notyet
 	/* force irq 9 */
@@ -363,7 +366,7 @@ viapm_pro_attach(device_t dev)
 		goto error;
 	}
 
-	if (bus_setup_intr(dev, viapm->irqres, INTR_TYPE_MISC,
+	if (bus_setup_intr(dev, viapm->irqres, INTR_TYPE_MISC | INTR_MPSAFE,
 			(driver_intr_t *) viasmb_intr, viapm, &viapm->irqih)) {
 		device_printf(dev, "could not setup irq\n");
 		goto error;
@@ -423,8 +426,6 @@ viapm_586b_attach(device_t dev)
 		device_printf(dev, "could not allocate bus resource\n");
 		goto error;
 	}
-	viapm->st = rman_get_bustag(viapm->iores);
-	viapm->sh = rman_get_bushandle(viapm->iores);
 
 	VIAPM_OUTB(GPIO_DIR, VIAPM_INB(GPIO_DIR) | VIAPM_SCL | VIAPM_SDA);
 
@@ -483,7 +484,7 @@ viapm_pro_detach(device_t dev)
 }
 
 static int
-viabb_callback(device_t dev, int index, caddr_t *data)
+viabb_callback(device_t dev, int index, caddr_t data)
 {
 	return 0;
 }
@@ -640,7 +641,7 @@ viapm_wait(struct viapm_softc *viapm)
 }
 
 static int
-viasmb_callback(device_t dev, int index, caddr_t *data)
+viasmb_callback(device_t dev, int index, void *data)
 {
 	int error = 0;
 
@@ -953,7 +954,6 @@ static device_method_t viapm_methods[] = {
 	DEVMETHOD(iicbb_reset,		viabb_reset),
 
 	/* Bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
 	DEVMETHOD(bus_alloc_resource,	bus_generic_alloc_resource),
 	DEVMETHOD(bus_release_resource,	bus_generic_release_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
@@ -961,7 +961,7 @@ static device_method_t viapm_methods[] = {
 	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
 	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t viapm_driver = {
@@ -989,7 +989,6 @@ static device_method_t viapropm_methods[] = {
 	DEVMETHOD(smbus_bread,		viasmb_bread),
 	
 	/* Bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
 	DEVMETHOD(bus_alloc_resource,	bus_generic_alloc_resource),
 	DEVMETHOD(bus_release_resource,	bus_generic_release_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
@@ -997,7 +996,7 @@ static device_method_t viapropm_methods[] = {
 	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
 	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t viapropm_driver = {
@@ -1008,6 +1007,7 @@ static driver_t viapropm_driver = {
 
 DRIVER_MODULE(viapm, pci, viapm_driver, viapm_devclass, 0, 0);
 DRIVER_MODULE(viapropm, pci, viapropm_driver, viapropm_devclass, 0, 0);
+DRIVER_MODULE(iicbb, viapm, iicbb_driver, iicbb_devclass, 0, 0);
 DRIVER_MODULE(smbus, viapropm, smbus_driver, smbus_devclass, 0, 0);
 
 MODULE_DEPEND(viapm, pci, 1, 1, 1);

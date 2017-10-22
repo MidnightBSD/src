@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/7.0.0/sys/dev/ath/ath_rate/amrr/amrr.h 139530 2004-12-31 22:42:38Z sam $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_ATH_RATE_AMRR_H
@@ -43,11 +43,13 @@
 /* per-device state */
 struct amrr_softc {
 	struct ath_ratectrl arc;	/* base state */
-	struct callout timer;		/* periodic timer */
 };
 
 /* per-node state */
 struct amrr_node {
+	int		amn_rix;	/* current rate index */
+	int		amn_ticks;	/* time of last update */
+	int		amn_interval;	/* update interval (ticks) */
   	/* AMRR statistics for this node */
   	u_int           amn_tx_try0_cnt;
   	u_int           amn_tx_try1_cnt;

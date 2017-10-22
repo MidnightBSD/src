@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sbin/ccdconfig/ccdconfig.c 157740 2006-04-13 20:35:31Z cracauer $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -177,11 +177,10 @@ do_single(int argc, char **argv, int action)
 	 */
 	if (action == CCD_UNCONFIG || action == CCD_UNCONFIGALL) {
 		ex = 0;
-		for (i = 0; argc != 0; ) {
+		for (; argc != 0;) {
 			cp = *argv++; --argc;
 			if ((ccd = resolve_ccdname(cp)) < 0) {
 				warnx("invalid ccd name: %s", cp);
-				i = 1;
 				continue;
 			}
 			grq = gctl_get_handle();

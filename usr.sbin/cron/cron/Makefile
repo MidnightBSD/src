@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/cron/cron/Makefile 172402 2007-10-01 18:17:24Z ru $
+# $FreeBSD$
 
 PROG=	cron
 MAN=	cron.8
@@ -8,5 +8,7 @@ CFLAGS+= -DLOGIN_CAP -DPAM
 
 DPADD=	${LIBCRON} ${LIBPAM} ${LIBUTIL}
 LDADD=	${LIBCRON} ${MINUSLPAM} -lutil
+
+WARNS?=	2
 
 .include <bsd.prog.mk>

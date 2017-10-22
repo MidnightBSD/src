@@ -27,7 +27,7 @@
  *
  *	@(#)endian.h	8.1 (Berkeley) 6/10/93
  * $NetBSD: endian.h,v 1.7 1999/08/21 05:53:51 simonb Exp $
- * $FreeBSD: release/7.0.0/sys/arm/include/endian.h 172104 2007-09-09 11:58:38Z cognet $
+ * $FreeBSD$
  */
 
 #ifndef _ENDIAN_H_
@@ -94,7 +94,7 @@ __bswap32_var(__uint32_t v)
 			 : "+r" (v), "=r" (t1));
 	
 	return (v);
- }
+}
 
 static __inline __uint16_t
 __bswap16_var(__uint16_t v)

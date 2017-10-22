@@ -22,7 +22,10 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-	
+
+#include <machine/asm.h>
+__FBSDID("$FreeBSD$");
+
 	.section .init,"ax",@progbits
 	.align	2
 	.globl	_init
@@ -45,6 +48,4 @@ _fini:
 	stw 0,20(1)
 	mr 31,1
 
-
-	.section .rodata
-.ascii "$FreeBSD: release/7.0.0/lib/csu/powerpc/crti.S 96632 2002-05-15 04:19:49Z obrien $\0"
+	.section .note.GNU-stack,"",%progbits

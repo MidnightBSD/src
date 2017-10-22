@@ -1,4 +1,4 @@
-/* $OpenBSD: uuencode.c,v 1.24 2006/08/03 03:34:42 deraadt Exp $ */
+/* $OpenBSD: uuencode.c,v 1.26 2010/08/31 11:54:45 djm Exp $ */
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  *
@@ -33,6 +33,12 @@
 #include "xmalloc.h"
 #include "uuencode.h"
 
+/*
+ * Encode binary 'src' of length 'srclength', writing base64-encoded text
+ * to 'target' of size 'targsize'. Will always nul-terminate 'target'.
+ * Returns the number of bytes stored in 'target' or -1 on error (inc.
+ * 'targsize' too small).
+ */
 int
 uuencode(const u_char *src, u_int srclength,
     char *target, size_t targsize)
@@ -40,6 +46,11 @@ uuencode(const u_char *src, u_int srclength,
 	return __b64_ntop(src, srclength, target, targsize);
 }
 
+/*
+ * Decode base64-encoded 'src' into buffer 'target' of 'targsize' bytes.
+ * Will skip leading and trailing whitespace. Returns the number of bytes
+ * stored in 'target' or -1 on error (inc. targsize too small).
+ */
 int
 uudecode(const char *src, u_char *target, size_t targsize)
 {
@@ -61,7 +72,7 @@ uudecode(const char *src, u_char *target, size_t targsize)
 }
 
 void
-dump_base64(FILE *fp, u_char *data, u_int len)
+dump_base64(FILE *fp, const u_char *data, u_int len)
 {
 	char *buf;
 	int i, n;

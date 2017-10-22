@@ -33,7 +33,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/usr.sbin/vidcontrol/vidcontrol.c 162671 2006-09-26 21:46:12Z ru $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -185,8 +185,8 @@ usage(void)
 "usage: vidcontrol [-CdHLPpx] [-b color] [-c appearance] [-f [size] file]",
 "                  [-g geometry] [-h size] [-i adapter | mode] [-l screen_map]",
 "                  [-M char] [-m on | off] [-r foreground background]",
-"                  [-S on | off] [-s number] [-t N | off] [mode]",
-"                  [foreground [background]] [show]");
+"                  [-S on | off] [-s number] [-T xterm | cons25] [-t N | off]",
+"                  [mode] [foreground [background]] [show]");
 	exit(1);
 }
 
@@ -950,10 +950,11 @@ show_adapter_info(void)
 static void
 show_mode_info(void)
 {
-	struct video_info _info;
 	char buf[80];
-	int mode;
+	struct video_info _info;
 	int c;
+	int mm;
+	int mode;
 
 	printf("    mode#     flags   type    size       "
 	       "font      window      linear buffer\n");
@@ -972,9 +973,35 @@ show_mode_info(void)
 		if (_info.vi_flags & V_INFO_GRAPHICS) {
 			c = 'G';
 
-			snprintf(buf, sizeof(buf), "%dx%dx%d %d",
-				 _info.vi_width, _info.vi_height, 
-				 _info.vi_depth, _info.vi_planes);
+			if (_info.vi_mem_model == V_INFO_MM_PLANAR)
+				snprintf(buf, sizeof(buf), "%dx%dx%d %d",
+				    _info.vi_width, _info.vi_height, 
+				    _info.vi_depth, _info.vi_planes);
+			else {
+				switch (_info.vi_mem_model) {
+				case V_INFO_MM_PACKED:
+					mm = 'P';
+					break;
+				case V_INFO_MM_DIRECT:
+					mm = 'D';
+					break;
+				case V_INFO_MM_CGA:
+					mm = 'C';
+					break;
+				case V_INFO_MM_HGC:
+					mm = 'H';
+					break;
+				case V_INFO_MM_VGAX:
+					mm = 'V';
+					break;
+				default:
+					mm = ' ';
+					break;
+				}
+				snprintf(buf, sizeof(buf), "%dx%dx%d %c",
+				    _info.vi_width, _info.vi_height, 
+				    _info.vi_depth, mm);
+			}
 		} else {
 			c = 'T';
 
@@ -1159,11 +1186,21 @@ clear_history(void)
 	}
 }
 
+static void
+set_terminal_mode(char *arg)
+{
+
+	if (strcmp(arg, "xterm") == 0)
+		fprintf(stderr, "\033[=T");
+	else if (strcmp(arg, "cons25") == 0)
+		fprintf(stderr, "\033[=1T");
+}
+
 
 int
 main(int argc, char **argv)
 {
-	char	*font, *type;
+	char    *font, *type, *termmode;
 	int	dumpmod, dumpopt, opt;
 	int	reterr;
 
@@ -1175,7 +1212,9 @@ main(int argc, char **argv)
 		err(1, "must be on a virtual console");
 	dumpmod = 0;
 	dumpopt = DUMP_FBF;
-	while((opt = getopt(argc, argv, "b:Cc:df:g:h:Hi:l:LM:m:pPr:S:s:t:x")) != -1)
+	termmode = NULL;
+	while ((opt = getopt(argc, argv,
+	    "b:Cc:df:g:h:Hi:l:LM:m:pPr:S:s:T:t:x")) != -1)
 		switch(opt) {
 		case 'b':
 			set_border_color(optarg);
@@ -1244,6 +1283,12 @@ main(int argc, char **argv)
 		case 's':
 			set_console(optarg);
 			break;
+		case 'T':
+			if (strcmp(optarg, "xterm") != 0 &&
+			    strcmp(optarg, "cons25") != 0)
+				usage();
+			termmode = optarg;
+			break;
 		case 't':
 			set_screensaver_timeout(optarg);
 			break;
@@ -1265,6 +1310,8 @@ main(int argc, char **argv)
 	}
 
 	video_mode(argc, argv, &optind);
+	if (termmode != NULL)
+		set_terminal_mode(termmode);
 
 	get_normal_colors(argc, argv, &optind);
 

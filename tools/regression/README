@@ -1,4 +1,4 @@
-$FreeBSD: release/7.0.0/tools/regression/README 169852 2007-05-22 06:11:44Z dds $
+$FreeBSD$
 
 This directory is for regression test programs.
 
@@ -86,3 +86,4 @@ sysvmsg 	SysV IPC Message Queue Regression Utility
 sysvsem 	SysV IPC Semaphore Regression Utility
 sysvshm 	SysV IPC Shared Memory Regression Utility
 gaithrstress	General threaded getaddrinfo(3) exerciser
+date		Date(1) + format string regression test

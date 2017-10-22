@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/iwifw/iwi_ibss/Makefile 167165 2007-03-02 11:42:56Z flz $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../contrib/dev/iwi
 

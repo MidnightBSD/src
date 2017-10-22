@@ -25,15 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libkse/thread/thr_connect.c 172491 2007-10-09 13:42:34Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <pthread.h>
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(__connect);
-LT10_COMPAT_DEFAULT(connect);
+int __connect(int fd, const struct sockaddr *name, socklen_t namelen);
 
 __weak_reference(__connect, connect);
 

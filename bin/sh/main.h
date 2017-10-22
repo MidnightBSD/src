@@ -30,13 +30,11 @@
  * SUCH DAMAGE.
  *
  *	@(#)main.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: release/7.0.0/bin/sh/main.h 127958 2004-04-06 20:06:54Z markm $
+ * $FreeBSD$
  */
 
 extern int rootpid;	/* pid of main shell */
 extern int rootshell;	/* true if we aren't a child of the main shell */
+extern struct jmploc main_handler;	/* top level exception handler */
 
-void readcmdfile(char *);
-void cmdloop(int);
-int dotcmd(int, char **);
-int exitcmd(int, char **);
+void readcmdfile(const char *);

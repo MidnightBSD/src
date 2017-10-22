@@ -26,15 +26,16 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_raise.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
-#include <pthread.h>
+#include "namespace.h"
 #include <errno.h>
+#include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(_raise);
-LT10_COMPAT_DEFAULT(raise);
+int	_raise(int sig);
 
 __weak_reference(_raise, raise);
 
@@ -46,7 +47,7 @@ _raise(int sig)
 	if (!_kse_isthreaded())
 		ret = kill(getpid(), sig);
 	else {
-		ret = pthread_kill(pthread_self(), sig);
+		ret = _pthread_kill(_pthread_self(), sig);
 		if (ret != 0) {
 			errno = ret;
 			ret = -1;

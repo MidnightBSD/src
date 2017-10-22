@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/geom/eli/pkcs5v2.c 155174 2006-02-01 12:06:01Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #ifdef _KERNEL

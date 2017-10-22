@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/5/93
- * $FreeBSD: release/7.0.0/usr.sbin/mountd/pathnames.h 133249 2004-08-07 04:28:56Z imp $
+ * $FreeBSD$
  */
 #include <paths.h>
 

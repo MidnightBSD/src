@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libthr/arch/arm/include/pthread_md.h 165241 2006-12-15 11:52:01Z davidxu $
+ * $FreeBSD$
  */
 
 /*
@@ -43,10 +43,8 @@
  * Variant II tcb, first two members are required by rtld.
  */
 struct tcb {
-	struct tcb              *tcb_self;	/* required by rtld */
-	void                    *tcb_dtv;	/* required by rtld */
-	struct pthread          *tcb_thread;	/* our hook */
-	void			*tcb_spare[1];
+	void			*tcb_dtv;	/* required by rtld */
+	struct pthread		*tcb_thread;	/* our hook */
 };
 
 /*

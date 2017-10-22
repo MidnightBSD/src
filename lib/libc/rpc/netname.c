@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)netname.c 1.8 91/03/11 Copyr 1986 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/rpc/netname.c 136581 2004-10-16 06:11:35Z obrien $");
+__FBSDID("$FreeBSD$");
 
 /*
  * netname utility routines
@@ -60,9 +60,6 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/rpc/netname.c 136581 2004-10-16 06:11
 
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 256
-#endif
-#ifndef NGROUPS
-#define NGROUPS 16
 #endif
 
 #define TYPE_BIT(type)  (sizeof (type) * CHAR_BIT)

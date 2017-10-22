@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: resolver.h,v 1.40.18.11 2006/02/01 22:39:17 marka Exp $ */
+/* $Id$ */
 
 #ifndef DNS_RESOLVER_H
 #define DNS_RESOLVER_H 1
@@ -24,7 +24,7 @@
  ***** Module Info
  *****/
 
-/*! \file
+/*! \file dns/resolver.h
  *
  * \brief
  * This is the BIND 9 resolver, the module responsible for resolving DNS
@@ -81,6 +81,7 @@ typedef struct dns_fetchevent {
 	dns_fixedname_t			foundname;
 	isc_sockaddr_t *		client;
 	dns_messageid_t			id;
+	isc_result_t			vresult;
 } dns_fetchevent_t;
 
 /*
@@ -93,11 +94,27 @@ typedef struct dns_fetchevent {
 #define DNS_FETCHOPT_FORWARDONLY	0x10	     /*%< Only use forwarders. */
 #define DNS_FETCHOPT_NOVALIDATE		0x20	     /*%< Disable validation. */
 #define DNS_FETCHOPT_EDNS512		0x40	     /*%< Advertise a 512 byte
-						          UDP buffer. */
+							  UDP buffer. */
+#define DNS_FETCHOPT_WANTNSID           0x80         /*%< Request NSID */
 
 #define	DNS_FETCHOPT_EDNSVERSIONSET	0x00800000
 #define	DNS_FETCHOPT_EDNSVERSIONMASK	0xff000000
 #define	DNS_FETCHOPT_EDNSVERSIONSHIFT	24
+
+/*
+ * Upper bounds of class of query RTT (ms).  Corresponds to
+ * dns_resstatscounter_queryrttX statistics counters.
+ */
+#define DNS_RESOLVER_QRYRTTCLASS0	10
+#define DNS_RESOLVER_QRYRTTCLASS0STR	"10"
+#define DNS_RESOLVER_QRYRTTCLASS1	100
+#define DNS_RESOLVER_QRYRTTCLASS1STR	"100"
+#define DNS_RESOLVER_QRYRTTCLASS2	500
+#define DNS_RESOLVER_QRYRTTCLASS2STR	"500"
+#define DNS_RESOLVER_QRYRTTCLASS3	800
+#define DNS_RESOLVER_QRYRTTCLASS3STR	"800"
+#define DNS_RESOLVER_QRYRTTCLASS4	1600
+#define DNS_RESOLVER_QRYRTTCLASS4STR	"1600"
 
 /*
  * XXXRTH  Should this API be made semi-private?  (I.e.
@@ -125,8 +142,6 @@ dns_resolver_create(dns_view_t *view,
  *
  *\li	Generally, applications should not create a resolver directly, but
  *	should instead call dns_view_createresolver().
- *
- *\li	No options are currently defined.
  *
  * Requires:
  *
@@ -165,7 +180,7 @@ dns_resolver_freeze(dns_resolver_t *res);
  *
  * Requires:
  *
- *\li	'res' is a valid, unfrozen resolver.
+ *\li	'res' is a valid resolver.
  *
  * Ensures:
  *
@@ -348,6 +363,23 @@ dns_resolver_destroyfetch(dns_fetch_t **fetchp);
  *\li	*fetchp == NULL.
  */
 
+void
+dns_resolver_logfetch(dns_fetch_t *fetch, isc_log_t *lctx,
+		      isc_logcategory_t *category, isc_logmodule_t *module,
+		      int level, isc_boolean_t duplicateok);
+/*%<
+ * Dump a log message on internal state at the completion of given 'fetch'.
+ * 'lctx', 'category', 'module', and 'level' are used to write the log message.
+ * By default, only one log message is written even if the corresponding fetch
+ * context serves multiple clients; if 'duplicateok' is true the suppression
+ * is disabled and the message can be written every time this function is
+ * called.
+ *
+ * Requires:
+ *
+ *\li	'fetch' is a valid fetch, and has completed.
+ */
+
 dns_dispatchmgr_t *
 dns_resolver_dispatchmgr(dns_resolver_t *resolver);
 
@@ -460,6 +492,27 @@ dns_resolver_setmustbesecure(dns_resolver_t *resolver, dns_name_t *name,
 isc_boolean_t
 dns_resolver_getmustbesecure(dns_resolver_t *resolver, dns_name_t *name);
 
+
+void
+dns_resolver_settimeout(dns_resolver_t *resolver, unsigned int seconds);
+/*%<
+ * Set the length of time the resolver will work on a query, in seconds.
+ *
+ * If timeout is 0, the default timeout will be applied.
+ *
+ * Requires:
+ * \li  resolver to be valid.
+ */
+
+unsigned int
+dns_resolver_gettimeout(dns_resolver_t *resolver);
+/*%<
+ * Get the current length of time the resolver will work on a query, in seconds.
+ *
+ * Requires:
+ * \li  resolver to be valid.
+ */
+
 void
 dns_resolver_setclientsperquery(dns_resolver_t *resolver,
 				isc_uint32_t min, isc_uint32_t max);
@@ -470,9 +523,54 @@ dns_resolver_getclientsperquery(dns_resolver_t *resolver, isc_uint32_t *cur,
 
 isc_boolean_t
 dns_resolver_getzeronosoattl(dns_resolver_t *resolver);
- 
+
 void
 dns_resolver_setzeronosoattl(dns_resolver_t *resolver, isc_boolean_t state);
+
+unsigned int
+dns_resolver_getoptions(dns_resolver_t *resolver);
+
+void
+dns_resolver_addbadcache(dns_resolver_t *resolver, dns_name_t *name,
+			 dns_rdatatype_t type, isc_time_t *expire);
+/*%<
+ * Add a entry to the bad cache for <name,type> that will expire at 'expire'.
+ *
+ * Requires:
+ * \li	resolver to be valid.
+ * \li	name to be valid.
+ */
+
+isc_boolean_t
+dns_resolver_getbadcache(dns_resolver_t *resolver, dns_name_t *name,
+			 dns_rdatatype_t type, isc_time_t *now);
+/*%<
+ * Check to see if there is a unexpired entry in the bad cache for
+ * <name,type>.
+ *
+ * Requires:
+ * \li	resolver to be valid.
+ * \li	name to be valid.
+ */
+
+void
+dns_resolver_flushbadcache(dns_resolver_t *resolver, dns_name_t *name);
+/*%<
+ * Flush the bad cache of all entries at 'name' if 'name' is non NULL.
+ * Flush the entire bad cache if 'name' is NULL.
+ *
+ * Requires:
+ * \li	resolver to be valid.
+ */
+
+void
+dns_resolver_printbadcache(dns_resolver_t *resolver, FILE *fp);
+/*%
+ * Print out the contents of the bad cache to 'fp'.
+ *
+ * Requires:
+ * \li	resolver to be valid.
+ */
 
 ISC_LANG_ENDDECLS
 

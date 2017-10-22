@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -46,7 +42,7 @@ static char sccsid[] = "@(#)look.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/look/look.c 160467 2006-07-18 10:19:46Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 /*
  * look -- find lines in a sorted list.
@@ -140,6 +136,10 @@ main(int argc, char *argv[])
 			err(2, "%s", file);
 		if (sb.st_size > SIZE_T_MAX)
 			errx(2, "%s: %s", file, strerror(EFBIG));
+		if (sb.st_size == 0) {
+			close(fd);
+			continue;
+		}
 		if ((front = mmap(NULL, (size_t)sb.st_size, PROT_READ, MAP_SHARED, fd, (off_t)0)) == MAP_FAILED)
 			err(2, "%s", file);
 		back = front + sb.st_size;

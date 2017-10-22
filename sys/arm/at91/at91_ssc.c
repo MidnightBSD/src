@@ -10,20 +10,21 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/at91/at91_ssc.c 166901 2007-02-23 12:19:07Z piso $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -149,7 +150,7 @@ at91_ssc_attach(device_t dev)
 	WR4(sc, SSC_TFMR,
 	    0x1f | SSC_TFMR_DATDEF | SSC_TFMR_MSFBF | SSC_TFMR_FSOS_NEG_PULSE);
 
-out:;
+out:
 	if (err)
 		at91_ssc_deactivate(dev);
 	return (err);
@@ -209,16 +210,6 @@ static void
 at91_ssc_intr(void *xsc)
 {
 	struct at91_ssc_softc *sc = xsc;
-#if 0
-	uint32_t status;
-
-	/* Reading the status also clears the interrupt */
-	status = RD4(sc, SSC_SR);
-	if (status == 0)
-		return;
-	AT91_SSC_LOCK(sc);
-	AT91_SSC_UNLOCK(sc);
-#endif
 	wakeup(sc);
 	return;
 }
@@ -232,9 +223,6 @@ at91_ssc_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 	AT91_SSC_LOCK(sc);
 	if (!(sc->flags & OPENED)) {
 		sc->flags |= OPENED;
-#if 0
-	// Enable interrupts
-#endif
 	}
 	AT91_SSC_UNLOCK(sc);
     	return (0);
@@ -248,9 +236,6 @@ at91_ssc_close(struct cdev *dev, int fflag, int devtype, struct thread *td)
 	sc = CDEV2SOFTC(dev);
 	AT91_SSC_LOCK(sc);
 	sc->flags &= ~OPENED;
-#if 0
-	// Disable interrupts
-#endif
 	AT91_SSC_UNLOCK(sc);
 	return (0);
 }

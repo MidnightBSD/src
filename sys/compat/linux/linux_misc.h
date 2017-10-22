@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/compat/linux/linux_misc.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_MISC_H_
@@ -37,9 +37,41 @@
 					 * Second arg is a ptr to return the
 					 * signal.
 					 */
+#define	LINUX_PR_GET_KEEPCAPS	7	/* Get drop capabilities on setuid */
+#define	LINUX_PR_SET_KEEPCAPS	8	/* Set drop capabilities on setuid */
 #define	LINUX_PR_SET_NAME	15	/* Set process name. */
 #define	LINUX_PR_GET_NAME	16	/* Get process name. */
 
 #define	LINUX_MAX_COMM_LEN	16	/* Maximum length of the process name. */
+
+#define	LINUX_MREMAP_MAYMOVE	1
+#define	LINUX_MREMAP_FIXED	2
+
+extern const char *linux_platform;
+
+/*
+ * Non-standard aux entry types used in Linux ELF binaries.
+ */
+
+#define	LINUX_AT_PLATFORM	15	/* String identifying CPU */
+#define	LINUX_AT_HWCAP		16	/* CPU capabilities */
+#define	LINUX_AT_CLKTCK		17	/* frequency at which times() increments */
+#define	LINUX_AT_SECURE		23	/* secure mode boolean */
+#define	LINUX_AT_BASE_PLATFORM	24	/* string identifying real platform, may
+					 * differ from AT_PLATFORM.
+					 */
+#define	LINUX_AT_EXECFN		31	/* filename of program */
+
+/* Linux sets the i387 to extended precision. */
+#if defined(__i386__) || defined(__amd64__)
+#define	__LINUX_NPXCW__		0x37f
+#endif
+
+extern int stclohz;
+
+#define __WCLONE 0x80000000
+
+int linux_common_wait(struct thread *td, int pid, int *status,
+			int options, struct rusage *ru);
 
 #endif	/* _LINUX_MISC_H_ */

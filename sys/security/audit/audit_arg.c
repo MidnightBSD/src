@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 1999-2005 Apple Computer, Inc.
+/*-
+ * Copyright (c) 1999-2005 Apple Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -25,9 +25,10 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: release/7.0.0/sys/security/audit/audit_arg.c 171066 2007-06-27 17:01:15Z csjp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/filedesc.h>
@@ -97,6 +98,32 @@ audit_arg_len(int len)
 
 	ar->k_ar.ar_arg_len = len;
 	ARG_SET_VALID(ar, ARG_LEN);
+}
+
+void
+audit_arg_atfd1(int atfd)
+{
+	struct kaudit_record *ar;
+
+	ar = currecord();
+	if (ar == NULL)
+		return;
+
+	ar->k_ar.ar_arg_atfd1 = atfd;
+	ARG_SET_VALID(ar, ARG_ATFD1);
+}
+
+void
+audit_arg_atfd2(int atfd)
+{
+	struct kaudit_record *ar;
+
+	ar = currecord();
+	if (ar == NULL)
+		return;
+
+	ar->k_ar.ar_arg_atfd2 = atfd;
+	ARG_SET_VALID(ar, ARG_ATFD2);
 }
 
 void
@@ -232,12 +259,19 @@ audit_arg_suid(uid_t suid)
 void
 audit_arg_groupset(gid_t *gidset, u_int gidset_size)
 {
-	int i;
+	u_int i;
 	struct kaudit_record *ar;
+
+	KASSERT(gidset_size <= ngroups_max + 1,
+	    ("audit_arg_groupset: gidset_size > (kern.ngroups + 1)"));
 
 	ar = currecord();
 	if (ar == NULL)
 		return;
+
+	if (ar->k_ar.ar_arg_groups.gidset == NULL)
+		ar->k_ar.ar_arg_groups.gidset = malloc(
+		    sizeof(gid_t) * gidset_size, M_AUDITGIDSET, M_WAITOK);
 
 	for (i = 0; i < gidset_size; i++)
 		ar->k_ar.ar_arg_groups.gidset[i] = gidset[i];
@@ -355,6 +389,7 @@ void
 audit_arg_process(struct proc *p)
 {
 	struct kaudit_record *ar;
+	struct ucred *cred;
 
 	KASSERT(p != NULL, ("audit_arg_process: p == NULL"));
 
@@ -364,13 +399,14 @@ audit_arg_process(struct proc *p)
 	if (ar == NULL)
 		return;
 
-	ar->k_ar.ar_arg_auid = p->p_ucred->cr_audit.ai_auid;
-	ar->k_ar.ar_arg_euid = p->p_ucred->cr_uid;
-	ar->k_ar.ar_arg_egid = p->p_ucred->cr_groups[0];
-	ar->k_ar.ar_arg_ruid = p->p_ucred->cr_ruid;
-	ar->k_ar.ar_arg_rgid = p->p_ucred->cr_rgid;
-	ar->k_ar.ar_arg_asid = p->p_ucred->cr_audit.ai_asid;
-	ar->k_ar.ar_arg_termid_addr = p->p_ucred->cr_audit.ai_termid;
+	cred = p->p_ucred;
+	ar->k_ar.ar_arg_auid = cred->cr_audit.ai_auid;
+	ar->k_ar.ar_arg_euid = cred->cr_uid;
+	ar->k_ar.ar_arg_egid = cred->cr_groups[0];
+	ar->k_ar.ar_arg_ruid = cred->cr_ruid;
+	ar->k_ar.ar_arg_rgid = cred->cr_rgid;
+	ar->k_ar.ar_arg_asid = cred->cr_audit.ai_asid;
+	ar->k_ar.ar_arg_termid_addr = cred->cr_audit.ai_termid;
 	ar->k_ar.ar_arg_pid = p->p_pid;
 	ARG_SET_VALID(ar, ARG_AUID | ARG_EUID | ARG_EGID | ARG_RUID |
 	    ARG_RGID | ARG_ASID | ARG_TERMID_ADDR | ARG_PID | ARG_PROCESS);
@@ -427,8 +463,7 @@ audit_arg_sockaddr(struct thread *td, struct sockaddr *sa)
 		break;
 
 	case AF_UNIX:
-		audit_arg_upath(td, ((struct sockaddr_un *)sa)->sun_path,
-				ARG_UPATH1);
+		audit_arg_upath1(td, ((struct sockaddr_un *)sa)->sun_path);
 		ARG_SET_VALID(ar, ARG_SADDRUNIX);
 		break;
 	/* XXXAUDIT: default:? */
@@ -630,9 +665,9 @@ audit_arg_file(struct proc *p, struct file *fp)
 		 */
 		vp = fp->f_vnode;
 		vfslocked = VFS_LOCK_GIANT(vp->v_mount);
-		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, curthread);
-		audit_arg_vnode(vp, ARG_VNODE1);
-		VOP_UNLOCK(vp, 0, curthread);
+		vn_lock(vp, LK_SHARED | LK_RETRY);
+		audit_arg_vnode1(vp);
+		VOP_UNLOCK(vp, 0);
 		VFS_UNLOCK_GIANT(vfslocked);
 		break;
 
@@ -648,7 +683,7 @@ audit_arg_file(struct proc *p, struct file *fp)
 			    so->so_proto->pr_protocol;
 			SOCK_UNLOCK(so);
 			pcb = (struct inpcb *)so->so_pcb;
-			INP_LOCK(pcb);
+			INP_RLOCK(pcb);
 			ar->k_ar.ar_arg_sockinfo.so_raddr =
 			    pcb->inp_faddr.s_addr;
 			ar->k_ar.ar_arg_sockinfo.so_laddr =
@@ -657,7 +692,7 @@ audit_arg_file(struct proc *p, struct file *fp)
 			    pcb->inp_fport;
 			ar->k_ar.ar_arg_sockinfo.so_lport =
 			    pcb->inp_lport;
-			INP_UNLOCK(pcb);
+			INP_RUNLOCK(pcb);
 			ARG_SET_VALID(ar, ARG_SOCKINFO);
 		}
 		break;
@@ -670,41 +705,43 @@ audit_arg_file(struct proc *p, struct file *fp)
 
 /*
  * Store a path as given by the user process for auditing into the audit
- * record stored on the user thread. This function will allocate the memory
- * to store the path info if not already available. This memory will be freed
- * when the audit record is freed.
- *
- * XXXAUDIT: Possibly assert that the memory isn't already allocated?
+ * record stored on the user thread.  This function will allocate the memory
+ * to store the path info if not already available.  This memory will be
+ * freed when the audit record is freed.
  */
+static void
+audit_arg_upath(struct thread *td, char *upath, char **pathp)
+{
+
+	if (*pathp == NULL)
+		*pathp = malloc(MAXPATHLEN, M_AUDITPATH, M_WAITOK);
+	audit_canon_path(td, upath, *pathp);
+}
+
 void
-audit_arg_upath(struct thread *td, char *upath, u_int64_t flag)
+audit_arg_upath1(struct thread *td, char *upath)
 {
 	struct kaudit_record *ar;
-	char **pathp;
-
-	KASSERT(td != NULL, ("audit_arg_upath: td == NULL"));
-	KASSERT(upath != NULL, ("audit_arg_upath: upath == NULL"));
 
 	ar = currecord();
 	if (ar == NULL)
 		return;
 
-	KASSERT((flag == ARG_UPATH1) || (flag == ARG_UPATH2),
-	    ("audit_arg_upath: flag %llu", (unsigned long long)flag));
-	KASSERT((flag != ARG_UPATH1) || (flag != ARG_UPATH2),
-	    ("audit_arg_upath: flag %llu", (unsigned long long)flag));
+	audit_arg_upath(td, upath, &ar->k_ar.ar_arg_upath1);
+	ARG_SET_VALID(ar, ARG_UPATH1);
+}
 
-	if (flag == ARG_UPATH1)
-		pathp = &ar->k_ar.ar_arg_upath1;
-	else
-		pathp = &ar->k_ar.ar_arg_upath2;
+void
+audit_arg_upath2(struct thread *td, char *upath)
+{
+	struct kaudit_record *ar;
 
-	if (*pathp == NULL)
-		*pathp = malloc(MAXPATHLEN, M_AUDITPATH, M_WAITOK);
+	ar = currecord();
+	if (ar == NULL)
+		return;
 
-	canon_path(td, upath, *pathp);
-
-	ARG_SET_VALID(ar, flag);
+	audit_arg_upath(td, upath, &ar->k_ar.ar_arg_upath2);
+	ARG_SET_VALID(ar, ARG_UPATH2);
 }
 
 /*
@@ -725,17 +762,11 @@ audit_arg_upath(struct thread *td, char *upath, u_int64_t flag)
  *
  * XXXAUDIT: Possibly KASSERT the path pointer is NULL?
  */
-void
-audit_arg_vnode(struct vnode *vp, u_int64_t flags)
+static int
+audit_arg_vnode(struct vnode *vp, struct vnode_au_info *vnp)
 {
-	struct kaudit_record *ar;
 	struct vattr vattr;
 	int error;
-	struct vnode_au_info *vnp;
-
-	KASSERT(vp != NULL, ("audit_arg_vnode: vp == NULL"));
-	KASSERT((flags == ARG_VNODE1) || (flags == ARG_VNODE2),
-	    ("audit_arg_vnode: flags %jd", (intmax_t)flags));
 
 	/*
 	 * Assume that if the caller is calling audit_arg_vnode() on a
@@ -744,27 +775,10 @@ audit_arg_vnode(struct vnode *vp, u_int64_t flags)
 	VFS_ASSERT_GIANT(vp->v_mount);
 	ASSERT_VOP_LOCKED(vp, "audit_arg_vnode");
 
-	ar = currecord();
-	if (ar == NULL)
-		return;
-
-	/*
-	 * XXXAUDIT: The below clears, and then resets the flags for valid
-	 * arguments.  Ideally, either the new vnode is used, or the old one
-	 * would be.
-	 */
-	if (flags & ARG_VNODE1) {
-		ar->k_ar.ar_valid_arg &= (ARG_ALL ^ ARG_VNODE1);
-		vnp = &ar->k_ar.ar_arg_vnode1;
-	} else {
-		ar->k_ar.ar_valid_arg &= (ARG_ALL ^ ARG_VNODE2);
-		vnp = &ar->k_ar.ar_arg_vnode2;
-	}
-
-	error = VOP_GETATTR(vp, &vattr, curthread->td_ucred, curthread);
+	error = VOP_GETATTR(vp, &vattr, curthread->td_ucred);
 	if (error) {
 		/* XXX: How to handle this case? */
-		return;
+		return (error);
 	}
 
 	vnp->vn_mode = vattr.va_mode;
@@ -774,9 +788,38 @@ audit_arg_vnode(struct vnode *vp, u_int64_t flags)
 	vnp->vn_fsid = vattr.va_fsid;
 	vnp->vn_fileid = vattr.va_fileid;
 	vnp->vn_gen = vattr.va_gen;
-	if (flags & ARG_VNODE1)
+	return (0);
+}
+
+void
+audit_arg_vnode1(struct vnode *vp)
+{
+	struct kaudit_record *ar;
+	int error;
+
+	ar = currecord();
+	if (ar == NULL)
+		return;
+
+	ARG_CLEAR_VALID(ar, ARG_VNODE1);
+	error = audit_arg_vnode(vp, &ar->k_ar.ar_arg_vnode1);
+	if (error == 0)
 		ARG_SET_VALID(ar, ARG_VNODE1);
-	else
+}
+
+void
+audit_arg_vnode2(struct vnode *vp)
+{
+	struct kaudit_record *ar;
+	int error;
+
+	ar = currecord();
+	if (ar == NULL)
+		return;
+
+	ARG_CLEAR_VALID(ar, ARG_VNODE2);
+	error = audit_arg_vnode(vp, &ar->k_ar.ar_arg_vnode2);
+	if (error == 0)
 		ARG_SET_VALID(ar, ARG_VNODE2);
 }
 
@@ -822,6 +865,19 @@ audit_arg_envv(char *envv, int envc, int length)
 	ARG_SET_VALID(ar, ARG_ENVV);
 }
 
+void
+audit_arg_rights(cap_rights_t rights)
+{
+	struct kaudit_record *ar;
+
+	ar = currecord();
+	if (ar == NULL)
+		return;
+
+	ar->k_ar.ar_arg_rights = rights;
+	ARG_SET_VALID(ar, ARG_RIGHTS);
+}
+
 /*
  * The close() system call uses it's own audit call to capture the path/vnode
  * information because those pieces are not easily obtained within the system
@@ -843,14 +899,14 @@ audit_sysclose(struct thread *td, int fd)
 
 	audit_arg_fd(fd);
 
-	if (getvnode(td->td_proc->p_fd, fd, &fp) != 0)
+	if (getvnode(td->td_proc->p_fd, fd, 0, &fp) != 0)
 		return;
 
 	vp = fp->f_vnode;
 	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
-	audit_arg_vnode(vp, ARG_VNODE1);
-	VOP_UNLOCK(vp, 0, td);
+	vn_lock(vp, LK_SHARED | LK_RETRY);
+	audit_arg_vnode1(vp);
+	VOP_UNLOCK(vp, 0);
 	VFS_UNLOCK_GIANT(vfslocked);
 	fdrop(fp, td);
 }

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/yppush/Makefile 80029 2001-07-20 06:20:32Z obrien $
+# $FreeBSD$
 
 RPCDIR=	${.CURDIR}/../../include/rpcsvc
 .PATH: ${RPCDIR} ${.CURDIR}/../../usr.sbin/ypserv \
@@ -12,7 +12,9 @@ GENSRCS=yp.h yp_clnt.c yppush_svc.c
 
 CFLAGS+= -I. -I${.CURDIR}/../../libexec/ypxfr
 
-RPCGEN= rpcgen -C
+WARNS?=	2
+
+RPCGEN= RPCGEN_CPP=${CPP:Q} rpcgen -C
 
 CLEANFILES= ${GENSRCS}
 

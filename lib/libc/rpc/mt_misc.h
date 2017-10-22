@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libc/rpc/mt_misc.h 156103 2006-02-28 07:36:25Z delphij $
+ * $FreeBSD$
  */
 #ifndef _MT_MISC_H
 #define	_MT_MISC_H
@@ -42,7 +42,6 @@
 #define	proglst_lock		__proglst_lock
 #define	rpcsoc_lock		__rpcsoc_lock
 #define	svcraw_lock		__svcraw_lock
-#define	tsd_lock		__tsd_lock
 #define	xprtlist_lock		__xprtlist_lock
 
 extern pthread_rwlock_t	svc_lock;

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_systm.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: release/7.0.0/sys/netinet/in_systm.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_IN_SYSTM_H_
@@ -52,7 +52,7 @@ typedef u_int32_t n_long;		/* long as received from the net */
 typedef	u_int32_t n_time;		/* ms since 00:00 GMT, byte rev */
 
 #ifdef _KERNEL
-n_time	 iptime(void);
+uint32_t	 iptime(void);
 #endif
 
 #endif

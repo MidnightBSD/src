@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/aic7xxx/aic_osm_lib.c 171675 2007-07-31 20:11:03Z scottl $");
+__FBSDID("$FreeBSD$");
 
 static void	aic_recovery_thread(void *arg);
 
@@ -125,7 +125,7 @@ aic_recovery_thread(void *arg)
 	aic->platform_data->recovery_thread = NULL;
 	wakeup(aic->platform_data);
 	aic_unlock(aic);
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 void

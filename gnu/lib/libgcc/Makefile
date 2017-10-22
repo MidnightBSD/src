@@ -1,13 +1,23 @@
-# $FreeBSD: release/7.0.0/gnu/lib/libgcc/Makefile 171846 2007-08-14 20:49:57Z kan $
+# $FreeBSD$
+
 GCCDIR=	${.CURDIR}/../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
 
-LIB=		gcc
 SHLIB_NAME=	libgcc_s.so.1
 SHLIBDIR?=	/lib
 
 .include <bsd.own.mk>
+#
+# libgcc is linked in last and thus cannot depend on ssp symbols coming
+# from earlier libraries. Disable stack protection for this library.
+#
+MK_SSP=	no
+
 .include "${.CURDIR}/../../usr.bin/cc/Makefile.tgt"
+
+.if ${TARGET_CPUARCH} == "mips"
+LIB=		gcc
+.endif
 
 .PATH: ${GCCDIR}/config/${GCC_CPU} ${GCCDIR}/config ${GCCDIR}
 
@@ -20,7 +30,7 @@ CFLAGS+=	-DIN_GCC -DIN_LIBGCC2 -D__GCC_FLOAT_NOT_NEEDED \
 LDFLAGS+=	-nodefaultlibs
 LDADD+=		-lc
 
-OBJS=		# added to below in various ways depending on TARGET_ARCH
+OBJS=		# added to below in various ways depending on TARGET_CPUARCH
 
 #---------------------------------------------------------------------------
 #
@@ -93,7 +103,7 @@ LIB2_DIVMOD_FUNCS = _divdi3 _moddi3 _udivdi3 _umoddi3 _udiv_w_sdiv _udivmoddi4
 #	Platform specific bits.
 #	When upgrading GCC, get the following definitions from config/<cpu>/t-*
 #
-.if ${TARGET_ARCH} == "arm"
+.if ${TARGET_CPUARCH} == "arm"
 #	from config/arm/t-strongarm-elf
 CFLAGS+=	-Dinhibit_libc -fno-inline
 LIB1ASMSRC =	lib1funcs.asm
@@ -109,7 +119,18 @@ LIB2FUNCS_EXTRA = floatunsidf.c floatunsisf.c
 #	_fixsfsi _fixunssfsi _floatdidf _floatdisf
 .endif
 
-.if ${TARGET_ARCH} == "ia64"
+.if ${TARGET_CPUARCH} == mips
+LIB2FUNCS_EXTRA = floatunsidf.c floatunsisf.c
+# ABIs other than o32 need this
+.if ${TARGET_ARCH:Mmipse[lb]} == ""
+LIB2FUNCS_EXTRA+= floatdidf.c fixunsdfsi.c
+LIB2FUNCS_EXTRA+= floatdisf.c floatundidf.c
+LIB2FUNCS_EXTRA+= fixsfdi.c floatundisf.c
+LIB2FUNCS_EXTRA+= fixdfdi.c fixunssfsi.c
+.endif
+.endif
+
+.if ${TARGET_CPUARCH} == "ia64"
 #	from config/ia64/t-ia64
 LIB1ASMSRC   = lib1funcs.asm
 LIB1ASMFUNCS = __divxf3 __divdf3 __divsf3 \
@@ -122,11 +143,16 @@ LIB2ADDEH = unwind-ia64.c unwind-sjlj.c unwind-c.c
 
 .if ${TARGET_ARCH} == "powerpc"
 #	from config/rs6000/t-ppccomm
-LIB2FUNCS_EXTRA = tramp.asm darwin-ldouble.c
+LIB2FUNCS_EXTRA = tramp.asm
 LIB2FUNCS_STATIC_EXTRA = eabi.asm
 .endif
 
-.if ${TARGET_ARCH} == "sparc64"
+.if ${TARGET_ARCH} == "powerpc64"
+#	from config/rs6000/t-ppccomm
+LIB2FUNCS_EXTRA = tramp.asm
+.endif
+
+.if ${TARGET_CPUARCH} == "sparc64"
 #	from config/sparc/t-elf
 LIB1ASMSRC =   lb1spc.asm
 LIB1ASMFUNCS = _mulsi3 _divsi3 _modsi3
@@ -173,8 +199,8 @@ OBJ_GRPS =	STD DIV
 #
 # Floating point emulation functions
 #
-.if ${TARGET_ARCH} == "armNOT_YET" || ${TARGET_ARCH} == "powerpc" || \
-    ${TARGET_ARCH} == "sparc64"
+.if ${TARGET_CPUARCH} == "armNOT_YET" || \
+    ${TARGET_CPUARCH} == "powerpc" || ${TARGET_CPUARCH} == "sparc64"
 
 FPBIT_CFLAGS =	-DFINE_GRAINED_LIBRARIES -DFLOAT
 DPBIT_CFLAGS =	-DFINE_GRAINED_LIBRARIES
@@ -291,7 +317,7 @@ CLEANFILES += cs-*.h option*
 
 #-----------------------------------------------------------------------
 #
-# Build additional static libgcc_eh[_p].a librarries.
+# Build symbol version map
 #
 SHLIB_MKMAP      = ${GCCDIR}/mkmap-symver.awk
 SHLIB_MKMAP_OPTS =
@@ -310,36 +336,38 @@ CLEANFILES +=	libgcc.map
 
 #-----------------------------------------------------------------------
 #
-# Build additional static libgcc_eh[_p].a librarries.
+# Build additional static libgcc_eh[_p].a libraries.
 #
-lib${LIB}_eh.a:	${EH_OBJS_T}
-	@${ECHO} building static ${LIB}_eh library
+libgcc_eh.a:	${EH_OBJS_T}
+	@${ECHO} building static gcc_eh library
 	@rm -f ${.TARGET}
 	@${AR} cq ${.TARGET} `lorder ${EH_OBJS_T} | tsort -q`
 	${RANLIB} ${.TARGET}
 
-all:	lib${LIB}_eh.a
+all:	libgcc_eh.a
 
 .if ${MK_PROFILE} != "no"
-lib${LIB}_eh_p.a:	${EH_OBJS_P}
-	@${ECHO} building profiled ${LIB}_eh library
+libgcc_eh_p.a:	${EH_OBJS_P}
+	@${ECHO} building profiled gcc_eh library
 	@rm -f ${.TARGET}
 	@${AR} cq ${.TARGET} `lorder ${EH_OBJS_P} | tsort -q`
 	${RANLIB} ${.TARGET}
-all:	lib${LIB}_eh_p.a
+all:	libgcc_eh_p.a
 .endif
 
 _libinstall: _lib-eh-install
 
 _lib-eh-install:
+.if ${MK_INSTALLLIB} != "no"
 	${INSTALL} -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
-		${_INSTALLFLAGS} lib${LIB}_eh.a ${DESTDIR}${LIBDIR}
+		${_INSTALLFLAGS} libgcc_eh.a ${DESTDIR}${LIBDIR}
+.endif
 .if ${MK_PROFILE} != "no"
 	${INSTALL} -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
-		${_INSTALLFLAGS} lib${LIB}_eh_p.a ${DESTDIR}${LIBDIR}
+		${_INSTALLFLAGS} libgcc_eh_p.a ${DESTDIR}${LIBDIR}
 .endif
 
-CLEANFILES+=	lib${LIB}_eh.a lib${LIB}_eh_p.a ${EH_OBJS_T} ${EH_OBJS_P}
+CLEANFILES+=	libgcc_eh.a libgcc_eh_p.a ${EH_OBJS_T} ${EH_OBJS_P}
 
 .include <bsd.lib.mk>
 

@@ -31,12 +31,15 @@
  *
  *	@(#)fdesc.h	8.5 (Berkeley) 1/21/94
  *
- * $FreeBSD: release/7.0.0/sys/fs/fdescfs/fdesc.h 141622 2005-02-10 12:09:15Z phk $
+ * $FreeBSD$
  */
 
 #ifdef _KERNEL
+/* Private mount flags for fdescfs. */
+#define FMNT_UNMOUNTF 0x01
 struct fdescmount {
 	struct vnode	*f_root;	/* Root node */
+	int flags;
 };
 
 #define FD_ROOT		1
@@ -55,10 +58,12 @@ struct fdescnode {
 	int		fd_ix;		/* filesystem index */
 };
 
+extern struct mtx fdesc_hashmtx;
 #define VFSTOFDESC(mp)	((struct fdescmount *)((mp)->mnt_data))
 #define	VTOFDESC(vp) ((struct fdescnode *)(vp)->v_data)
 
 extern vfs_init_t fdesc_init;
-extern int fdesc_allocvp(fdntype, int, struct mount *, struct vnode **,
-			      struct thread *);
+extern vfs_uninit_t fdesc_uninit;
+extern int fdesc_allocvp(fdntype, unsigned, int, struct mount *,
+    struct vnode **);
 #endif /* _KERNEL */

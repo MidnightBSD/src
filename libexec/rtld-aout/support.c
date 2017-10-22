@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *-
- * $FreeBSD: release/7.0.0/libexec/rtld-aout/support.c 140072 2005-01-11 16:40:29Z trhodes $
+ * $FreeBSD$
  */
 #include <sys/types.h>
 #include <string.h>
@@ -38,8 +38,7 @@
 #include "support.h"
 
 char *
-concat(s1, s2, s3)
-	const char *s1, *s2, *s3;
+concat(const char *s1, const char *s2, const char *s3)
 {
 	int len = 1;
 	char *s;
@@ -61,8 +60,7 @@ concat(s1, s2, s3)
 }
 
 void *
-xmalloc(n)
-	size_t n;
+xmalloc(size_t n)
 {
 	char *p = malloc(n);
 
@@ -73,9 +71,7 @@ xmalloc(n)
 }
 
 void *
-xrealloc(p, n)
-	void *p;
-	size_t n;
+xrealloc(void *p, size_t n)
 {
 	p = realloc(p, n);
 

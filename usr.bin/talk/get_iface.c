@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/talk/get_iface.c 143415 2005-03-11 14:17:12Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 /*
  * From:
@@ -38,6 +38,7 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.bin/talk/get_iface.c 143415 2005-03-11 14:
 
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "talk.h"
 
@@ -47,9 +48,7 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.bin/talk/get_iface.c 143415 2005-03-11 14:
  */
 
 int
-get_iface(dst, iface)
-	struct in_addr *dst;
-	struct in_addr *iface;
+get_iface(struct in_addr *dst, struct in_addr *iface)
 {
 	static struct sockaddr_in local;
 	struct sockaddr_in remote;

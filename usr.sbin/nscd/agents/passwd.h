@@ -23,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/nscd/agents/passwd.h 172344 2007-09-27 12:30:12Z bushman $
+ * $FreeBSD$
  */
 
 #include "../agent.h"
 
-extern struct agent *init_passwd_agent();
-extern struct agent *init_passwd_mp_agent();
+struct agent *init_passwd_agent(void);
+struct agent *init_passwd_mp_agent(void);

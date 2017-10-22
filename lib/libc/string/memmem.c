@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/memmem.c 149466 2005-08-25 18:26:58Z andre $");
+__FBSDID("$FreeBSD$");
 
 #include <string.h>
 
@@ -36,9 +36,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/memmem.c 149466 2005-08-25 18:
  */
 
 void *
-memmem(l, l_len, s, s_len)
-	const void *l; size_t l_len;
-	const void *s; size_t s_len;
+memmem(const void *l, size_t l_len, const void *s, size_t s_len)
 {
 	register char *cur, *last;
 	const char *cl = (const char *)l;

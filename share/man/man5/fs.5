@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)fs.5	8.2 (Berkeley) 4/19/94
-.\" $FreeBSD: release/7.0.0/share/man/man5/fs.5 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
 .Dd October 31, 2006
 .Dt FS 5
@@ -408,10 +408,10 @@ Each macro takes a pointer to an extattr structure.
 Returns a pointer to the next extended attribute following
 .Fa eap .
 .It Dv EXTATTR_CONTENT(eap)
-Returns a pointer to the extended attribute content referenced by 
+Returns a pointer to the extended attribute content referenced by
 .Fa eap .
 .It Dv EXTATTR_CONTENT_SIZE(eap)
-Returns the size of the extended attribute content referenced by 
+Returns the size of the extended attribute content referenced by
 .Fa eap .
 .It Dv EXTATTR_SET_LENGTHS(eap, size)
 Called with the size of the attribute content after initializing

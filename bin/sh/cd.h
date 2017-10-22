@@ -26,9 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/bin/sh/cd.h 127958 2004-04-06 20:06:54Z markm $
+ * $FreeBSD$
  */
 
-char	*getpwd(void);
-int	 cdcmd (int, char **);
-int	 pwdcmd(int, char **);
+void	 pwd_init(int);

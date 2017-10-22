@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/i80321/iq80321.c 166901 2007-02-23 12:19:07Z piso $");
+__FBSDID("$FreeBSD$");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
@@ -139,7 +139,7 @@ iq80321_attach(device_t dev)
 		    device_get_name(dev));
 
 	/*
-	 * We have mapped the the PCI I/O windows in the early
+	 * We have mapped the PCI I/O windows in the early
 	 * bootstrap phase.
 	 */
 	sc->sc_iow_vaddr = IQ80321_IOW_VBASE;

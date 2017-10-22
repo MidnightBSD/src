@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/lib/libsmdb/Makefile 136910 2004-10-24 15:33:08Z ru $
+# $FreeBSD$
 
 SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/libsmdb
@@ -8,6 +8,8 @@ CFLAGS+=-DNEWDB -DNOT_SENDMAIL
 
 # User customizations to the sendmail build environment
 CFLAGS+=${SENDMAIL_CFLAGS}
+
+WARNS?=	3
 
 LIB=	smdb
 

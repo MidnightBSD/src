@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/binutils/readelf/Makefile 130575 2004-06-16 07:09:44Z obrien $
+# $FreeBSD$
 
 .include "../Makefile.inc0"
 
@@ -9,7 +9,6 @@ BINDIR=/usr/bin
 
 PROG=	readelf
 SRCS=	${PROG}.c
-WARNS?=	0
 CFLAGS+= -D_GNU_SOURCE
 CFLAGS+= -I${.CURDIR}/${RELTOP}/libbinutils -I${SRCDIR}/binutils
 

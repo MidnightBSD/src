@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/wpa_supplicant 151489 2005-10-19 22:26:47Z jkim $
+# $FreeBSD$
 #
 
 # PROVIDE: wpa_supplicant
@@ -12,27 +12,35 @@
 
 name="wpa_supplicant"
 rcvar=
-command="/usr/sbin/${name}"
-conf_file="/etc/wpa_supplicant.conf"
 
 ifn="$2"
 if [ -z "$ifn" ]; then
 	return 1
 fi
 
-case ${ifn} in
-ndis*)
+is_ndis_interface()
+{
+	case `sysctl -n net.wlan.${1#wlan}.%parent 2>/dev/null` in
+		ndis*) true ;;
+		*) false ;;
+	esac
+}
+
+if is_wired_interface ${ifn} ; then
+	driver="wired"
+elif is_ndis_interface ${ifn} ; then
 	driver="ndis"
-	;;
-*)
+else
 	driver="bsd"
-	;;
-esac
+fi
 
 load_rc_config $name
 
-pid_file="/var/run/${name}/${ifn}.pid"
-command_args="-B -q -i $ifn -c $conf_file -D $driver -P $pid_file"
+command=${wpa_supplicant_program}
+conf_file=${wpa_supplicant_conf_file}
+pidfile="/var/run/${name}/${ifn}.pid"
+command_args="-B -i $ifn -c $conf_file -D $driver -P $pidfile"
 required_files=$conf_file
+required_modules="wlan_wep wlan_tkip wlan_ccmp"
 
 run_rc_command "$1"

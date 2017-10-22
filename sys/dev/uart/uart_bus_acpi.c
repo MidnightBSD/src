@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/uart/uart_bus_acpi.c 139749 2005-01-06 01:43:34Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -59,6 +59,7 @@ static driver_t uart_acpi_driver = {
 static struct isa_pnp_id acpi_ns8250_ids[] = {
 	{0x0005d041, "Standard PC COM port"},		/* PNP0500 */
 	{0x0105d041, "16550A-compatible COM port"},	/* PNP0501 */
+	{0x04f0235c, "Wacom Tablet PC Screen"},		/* WACF004 */
 	{0}
 };
 

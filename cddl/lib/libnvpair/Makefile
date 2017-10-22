@@ -1,7 +1,7 @@
-# $FreeBSD: release/7.0.0/cddl/lib/libnvpair/Makefile 168792 2007-04-16 21:20:26Z ru $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../contrib/opensolaris/lib/libnvpair
-.PATH: ${.CURDIR}/../../../sys/contrib/opensolaris/common/nvpair
+.PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libnvpair
+.PATH: ${.CURDIR}/../../../sys/cddl/contrib/opensolaris/common/nvpair
 
 LIB=	nvpair
 
@@ -10,8 +10,10 @@ SRCS=	libnvpair.c \
 	nvpair_alloc_fixed.c \
 	nvpair.c
 
-CFLAGS+= -I${.CURDIR}/../../../sys/compat/opensolaris
-CFLAGS+= -I${.CURDIR}/../../../include		# XXX
-CFLAGS+= -I${.CURDIR}/../../../sys/contrib/opensolaris/uts/common
+WARNS?=	0
+CFLAGS+= -I${.CURDIR}/../../../cddl/compat/opensolaris/include
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/compat/opensolaris
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common
+CFLAGS+= -I${.CURDIR}/../../../sys
 
 .include <bsd.lib.mk>

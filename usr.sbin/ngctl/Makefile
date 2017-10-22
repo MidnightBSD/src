@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/ngctl/Makefile 172500 2007-10-09 23:31:11Z obrien $
+# $FreeBSD$
 # $Whistle: Makefile,v 1.3 1999/01/16 00:10:11 archie Exp $
 
 .include <bsd.own.mk>
@@ -13,7 +13,7 @@ WARNS?=	3
 NGCTL_NO_LIBEDIT=
 .endif
 
-.if ${MK_LIBTHR} == "no" && ${MK_LIBKSE} == "no"
+.if ${MK_LIBTHR} == "no"
 NGCTL_NO_LIBEDIT=
 .endif
 

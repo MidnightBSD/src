@@ -1,3 +1,4 @@
+/*	$FreeBSD$	*/
 /*	$NetBSD: ealloc.c,v 1.1.1.1 1999/11/19 04:30:56 mrg Exp $	*/
 
 /*
@@ -50,14 +51,14 @@ __RCSID("$NetBSD: ealloc.c,v 1.1.1.1 1999/11/19 04:30:56 mrg Exp $");
 
 #include "ealloc.h"
 
-static void enomem __P((void));
+static void enomem(void);
 
 /*
  * enomem --
  *	die when out of memory.
  */
 static void
-enomem()
+enomem(void)
 {
 	errx(2, "Cannot allocate memory.");
 }
@@ -67,8 +68,7 @@ enomem()
  *	malloc, but die on error.
  */
 void *
-emalloc(len)
-	size_t len;
+emalloc(size_t len)
 {
 	void *p;
 
@@ -82,8 +82,7 @@ emalloc(len)
  *	strdup, but die on error.
  */
 char *
-estrdup(str)
-	const char *str;
+estrdup(const char *str)
 {
 	char *p;
 
@@ -97,9 +96,7 @@ estrdup(str)
  *	realloc, but die on error.
  */
 void *
-erealloc(ptr, size)
-	void *ptr;
-	size_t size;
+erealloc(void *ptr, size_t size)
 {
 	if ((ptr = realloc(ptr, size)) == NULL)
 		enomem();
@@ -111,9 +108,7 @@ erealloc(ptr, size)
  *	calloc, but die on error.
  */
 void *
-ecalloc(nmemb, size)
-	size_t nmemb;
-	size_t size;
+ecalloc(size_t nmemb, size_t size)
 {
 	void	*ptr;
 

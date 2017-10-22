@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)opendir.c	8.8 (Berkeley) 5/1/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/gen/opendir.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -47,32 +47,38 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/gen/opendir.c 165903 2007-01-09 00:28
 #include "un-namespace.h"
 
 #include "telldir.h"
+
+static DIR * __opendir_common(int, const char *, int);
+
 /*
  * Open a directory.
  */
 DIR *
-opendir(name)
-	const char *name;
+opendir(const char *name)
 {
 
 	return (__opendir2(name, DTF_HIDEW|DTF_NODUP));
 }
 
+/*
+ * Open a directory with existing file descriptor.
+ */
 DIR *
-__opendir2(name, flags)
-	const char *name;
-	int flags;
+fdopendir(int fd)
 {
-	DIR *dirp;
+
+	return (__opendir_common(fd, NULL, DTF_HIDEW|DTF_NODUP));
+}
+
+DIR *
+__opendir2(const char *name, int flags)
+{
 	int fd;
-	int incr;
-	int saved_errno;
-	int unionstack;
 	struct stat statb;
 
 	/*
 	 * stat() before _open() because opening of special files may be
-	 * harmful.  _fstat() after open because the file may have changed.
+	 * harmful.
 	 */
 	if (stat(name, &statb) != 0)
 		return (NULL);
@@ -80,9 +86,34 @@ __opendir2(name, flags)
 		errno = ENOTDIR;
 		return (NULL);
 	}
-	if ((fd = _open(name, O_RDONLY | O_NONBLOCK)) == -1)
+	if ((fd = _open(name, O_RDONLY | O_NONBLOCK | O_DIRECTORY)) == -1)
 		return (NULL);
+
+	return __opendir_common(fd, name, flags);
+}
+
+static int
+opendir_compar(const void *p1, const void *p2)
+{
+
+	return (strcmp((*(const struct dirent **)p1)->d_name,
+	    (*(const struct dirent **)p2)->d_name));
+}
+
+/*
+ * Common routine for opendir(3), __opendir2(3) and fdopendir(3).
+ */
+static DIR *
+__opendir_common(int fd, const char *name, int flags)
+{
+	DIR *dirp;
+	int incr;
+	int saved_errno;
+	int unionstack;
+	struct stat statb;
+
 	dirp = NULL;
+	/* _fstat() the open handler because the file may have changed.  */
 	if (_fstat(fd, &statb) != 0)
 		goto fail;
 	if (!S_ISDIR(statb.st_mode)) {
@@ -169,7 +200,7 @@ __opendir2(name, flags)
 		 */
 		if (flags & DTF_REWIND) {
 			(void)_close(fd);
-			if ((fd = _open(name, O_RDONLY)) == -1) {
+			if ((fd = _open(name, O_RDONLY | O_DIRECTORY)) == -1) {
 				saved_errno = errno;
 				free(buf);
 				free(dirp);
@@ -217,7 +248,8 @@ __opendir2(name, flags)
 				/*
 				 * This sort must be stable.
 				 */
-				mergesort(dpv, n, sizeof(*dpv), alphasort);
+				mergesort(dpv, n, sizeof(*dpv),
+				    opendir_compar);
 
 				dpv[n] = NULL;
 				xp = NULL;

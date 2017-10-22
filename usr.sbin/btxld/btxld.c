@@ -26,7 +26,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/usr.sbin/btxld/btxld.c 154711 2006-01-23 13:55:32Z delphij $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -336,6 +336,8 @@ gethdr(int fd, struct hdr *hdr)
     if (sb.st_size > MAXU32)
 	errx(1, "%s: Too big", fname);
     hdr->size = sb.st_size;
+    if (!hdr->size)
+	return;
     if ((p = mmap(NULL, hdr->size, PROT_READ, MAP_SHARED, fd,
 		  0)) == MAP_FAILED)
 	err(2, "%s", fname);
@@ -405,7 +407,7 @@ puthdr(int fd, struct hdr *hdr)
     switch (hdr->fmt) {
     case F_AOUT:
 	memset(&ex, 0, sizeof(ex));
-	N_SETMAGIC(ex, ZMAGIC, MID_ZERO, 0);
+	N_SETMAGIC(ex, ZMAGIC, MID_I386, 0);
 	hdr->text = N_ALIGN(ex, hdr->text);
 	ex.a_text = htole32(hdr->text);
 	hdr->data = N_ALIGN(ex, hdr->data);

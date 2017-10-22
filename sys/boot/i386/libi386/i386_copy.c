@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/i386/libi386/i386_copy.c 153589 2005-12-21 02:17:58Z sobomax $");
+__FBSDID("$FreeBSD$");
 
 /*
  * MD primitives supporting placement of module data 

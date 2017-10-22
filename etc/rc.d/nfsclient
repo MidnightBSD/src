@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/nfsclient 165683 2006-12-31 10:37:18Z yar $
+# $FreeBSD$
 #
 
 # PROVIDE: nfsclient
@@ -13,7 +13,7 @@ name="nfsclient"
 rcvar="nfs_client_enable"
 start_cmd="nfsclient_start"
 stop_cmd="unmount_all"
-required_modules="nfsclient:nfs"
+required_modules="nfscl:nfs"
 
 nfsclient_start()
 {
@@ -22,11 +22,16 @@ nfsclient_start()
 	#
 
 	if [ -n "${nfs_access_cache}" ]; then
-		echo "NFS access cache time=${nfs_access_cache}"
-		sysctl vfs.nfs.access_cache_timeout=${nfs_access_cache} >/dev/null
+		check_startmsgs &&
+			echo "NFS access cache time=${nfs_access_cache}"
+		if ! sysctl vfs.nfs.access_cache_timeout=${nfs_access_cache} >/dev/null; then
+			warn "failed to set access cache timeout"
+		fi
 	fi
 	if [ -n "${nfs_bufpackets}" ]; then
-		 sysctl vfs.nfs.bufpackets=${nfs_bufpackets} > /dev/null
+		if ! sysctl vfs.nfs.bufpackets=${nfs_bufpackets} > /dev/null; then
+			warn "failed to set vfs.nfs.bufpackets"
+		fi
 	fi
 
 	unmount_all

@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/libkern/ia64/byte_swap_2.S 139815 2005-01-07 00:24:33Z imp $ */
+/* $FreeBSD$ */
 /*	$NetBSD: byte_swap_2.S,v 1.2 1996/10/17 03:08:08 cgd Exp $	*/
 
 /*-

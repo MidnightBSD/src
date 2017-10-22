@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/adjkerntz 168283 2007-04-02 22:53:07Z des $
+# $FreeBSD$
 #
 
 # PROVIDE: adjkerntz

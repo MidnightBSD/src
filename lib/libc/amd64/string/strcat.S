@@ -4,7 +4,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/amd64/string/strcat.S 144872 2005-04-10 18:58:49Z alc $");
+__FBSDID("$FreeBSD$");
 
 #if 0
 	RCSID("$NetBSD: strcat.S,v 1.4 2004/07/26 18:51:21 drochner Exp $")
@@ -163,3 +163,6 @@ ENTRY(strcat)
 
 .Ldone:
 	ret
+END(strcat)
+
+	.section .note.GNU-stack,"",%progbits

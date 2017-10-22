@@ -1,7 +1,7 @@
-# $FreeBSD: release/7.0.0/sys/modules/io/Makefile 139398 2004-12-29 08:44:30Z imp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/io
-.PATH: ${.CURDIR}/../../${MACHINE_ARCH}/${MACHINE_ARCH}
+.PATH: ${.CURDIR}/../../${MACHINE_CPUARCH}/${MACHINE_CPUARCH}
 
 KMOD=	io
 SRCS=	iodev.c io.c

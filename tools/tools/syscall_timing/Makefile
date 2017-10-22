@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/7.0.0/tools/tools/syscall_timing/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 #
 
 PROG=	syscall_timing

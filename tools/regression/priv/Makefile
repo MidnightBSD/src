@@ -1,6 +1,8 @@
 #
-# $FreeBSD: release/7.0.0/tools/regression/priv/Makefile 172106 2007-09-09 23:08:39Z rwatson $
+# $FreeBSD$
 #
+
+.include <bsd.own.mk>
 
 PROG=	priv
 SRCS=	main.c				\
@@ -16,6 +18,7 @@ SRCS=	main.c				\
 	priv_kenv_set.c			\
 	priv_kenv_unset.c		\
 	priv_msgbuf.c			\
+	priv_netinet_ipsec.c		\
 	priv_netinet_raw.c		\
 	priv_proc_setlogin.c		\
 	priv_proc_setrlimit.c		\
@@ -43,6 +46,13 @@ SRCS=	main.c				\
 	priv_vm_munlock.c
 
 NO_MAN=
-WARNS=	3
+WARNS?=	3
+
+DPADD+= ${LIBIPSEC}
+LDADD+= -lipsec
+
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+= -DINET6
+.endif
 
 .include <bsd.prog.mk>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/ppp/chat.h 58028 2000-03-14 01:46:09Z brian $
+ * $FreeBSD$
  */
 
 #define CHAT_EXPECT 0

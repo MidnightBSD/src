@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: release/7.0.0/sys/sys/smp.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_SMP_H_
@@ -16,7 +16,7 @@
 
 #ifndef LOCORE
 
-#ifdef SMP
+#include <sys/cpuset.h>
 
 /*
  * Topology of a NUMA or HTT system.
@@ -32,26 +32,51 @@
  */
 
 struct cpu_group {
-	cpumask_t cg_mask;		/* Mask of cpus in this group. */
-	int	cg_count;		/* Count of cpus in this group. */
-	int	cg_children;		/* Number of children groups. */
-	struct cpu_group *cg_child;	/* Optional child group. */
+	struct cpu_group *cg_parent;	/* Our parent group. */
+	struct cpu_group *cg_child;	/* Optional children groups. */
+	cpuset_t	cg_mask;	/* Mask of cpus in this group. */
+	int32_t		cg_count;	/* Count of cpus in this group. */
+	int16_t		cg_children;	/* Number of children groups. */
+	int8_t		cg_level;	/* Shared cache level. */
+	int8_t		cg_flags;	/* Traversal modifiers. */
 };
 
-struct cpu_top {
-	int	ct_count;		/* Count of groups. */
-	struct cpu_group *ct_group;	/* Array of pointers to cpu groups. */
-};
+typedef struct cpu_group *cpu_group_t;
 
-extern struct cpu_top *smp_topology;
+/*
+ * Defines common resources for CPUs in the group.  The highest level
+ * resource should be used when multiple are shared.
+ */
+#define	CG_SHARE_NONE	0
+#define	CG_SHARE_L1	1
+#define	CG_SHARE_L2	2
+#define	CG_SHARE_L3	3
+
+/*
+ * Behavior modifiers for load balancing and affinity.
+ */
+#define	CG_FLAG_HTT	0x01		/* Schedule the alternate core last. */
+#define	CG_FLAG_SMT	0x02		/* New age htt, less crippled. */
+#define	CG_FLAG_THREAD	(CG_FLAG_HTT | CG_FLAG_SMT)	/* Any threading. */
+
+/*
+ * Convenience routines for building topologies.
+ */
+#ifdef SMP
+struct cpu_group *smp_topo(void);
+struct cpu_group *smp_topo_none(void);
+struct cpu_group *smp_topo_1level(int l1share, int l1count, int l1flags);
+struct cpu_group *smp_topo_2level(int l2share, int l2count, int l1share,
+    int l1count, int l1flags);
+struct cpu_group *smp_topo_find(struct cpu_group *top, int cpu);
+
 extern void (*cpustop_restartfunc)(void);
 extern int smp_active;
 extern int smp_cpus;
-extern volatile cpumask_t started_cpus;
-extern volatile cpumask_t stopped_cpus;
-extern cpumask_t idle_cpus_mask;
-extern cpumask_t hlt_cpus_mask;
-extern cpumask_t logical_cpus_mask;
+extern volatile cpuset_t started_cpus;
+extern volatile cpuset_t stopped_cpus;
+extern cpuset_t hlt_cpus_mask;
+extern cpuset_t logical_cpus_mask;
 #endif /* SMP */
 
 extern u_int mp_maxid;
@@ -59,14 +84,52 @@ extern int mp_maxcpus;
 extern int mp_ncpus;
 extern volatile int smp_started;
 
-extern cpumask_t all_cpus;
+extern cpuset_t all_cpus;
 
 /*
  * Macro allowing us to determine whether a CPU is absent at any given
  * time, thus permitting us to configure sparse maps of cpuid-dependent
  * (per-CPU) structures.
  */
-#define	CPU_ABSENT(x_cpu)	((all_cpus & (1 << (x_cpu))) == 0)
+#define	CPU_ABSENT(x_cpu)	(!CPU_ISSET(x_cpu, &all_cpus))
+
+/*
+ * Macros to iterate over non-absent CPUs.  CPU_FOREACH() takes an
+ * integer iterator and iterates over the available set of CPUs.
+ * CPU_FIRST() returns the id of the first non-absent CPU.  CPU_NEXT()
+ * returns the id of the next non-absent CPU.  It will wrap back to
+ * CPU_FIRST() once the end of the list is reached.  The iterators are
+ * currently implemented via inline functions.
+ */
+#define	CPU_FOREACH(i)							\
+	for ((i) = 0; (i) <= mp_maxid; (i)++)				\
+		if (!CPU_ABSENT((i)))
+
+static __inline int
+cpu_first(void)
+{
+	int i;
+
+	for (i = 0;; i++)
+		if (!CPU_ABSENT(i))
+			return (i);
+}
+
+static __inline int
+cpu_next(int i)
+{
+
+	for (;;) {
+		i++;
+		if (i > mp_maxid)
+			i = 0;
+		if (!CPU_ABSENT(i))
+			return (i);
+	}
+}
+
+#define	CPU_FIRST()	cpu_first()
+#define	CPU_NEXT(i)	cpu_next((i))
 
 #ifdef SMP
 /*
@@ -90,20 +153,30 @@ extern cpumask_t all_cpus;
  */
 struct thread;
 
+struct cpu_group *cpu_topo(void);
 void	cpu_mp_announce(void);
 int	cpu_mp_probe(void);
 void	cpu_mp_setmaxid(void);
 void	cpu_mp_start(void);
 
 void	forward_signal(struct thread *);
-void	forward_roundrobin(void);
-int	restart_cpus(cpumask_t);
-int	stop_cpus(cpumask_t);
+int	restart_cpus(cpuset_t);
+int	stop_cpus(cpuset_t);
+int	stop_cpus_hard(cpuset_t);
+#if defined(__amd64__) || defined(__i386__)
+int	suspend_cpus(cpuset_t);
+#endif
 void	smp_rendezvous_action(void);
 extern	struct mtx smp_ipi_mtx;
 
 #endif /* SMP */
+void	smp_no_rendevous_barrier(void *);
 void	smp_rendezvous(void (*)(void *), 
+		       void (*)(void *),
+		       void (*)(void *),
+		       void *arg);
+void	smp_rendezvous_cpus(cpuset_t,
+		       void (*)(void *), 
 		       void (*)(void *),
 		       void (*)(void *),
 		       void *arg);

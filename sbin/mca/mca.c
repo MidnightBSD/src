@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sbin/mca/mca.c 106284 2002-11-01 06:34:35Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -53,10 +53,12 @@ __FBSDID("$FreeBSD: release/7.0.0/sbin/mca/mca.c 106284 2002-11-01 06:34:35Z mar
 
 #define	BCD(x)	((x >> 4) * 10 + (x & 15))
 
-static char hw_mca_count[] = "hw.mca.count";
-static char hw_mca_first[] = "hw.mca.first";
-static char hw_mca_last[] = "hw.mca.last";
-static char hw_mca_recid[] = "hw.mca.%d";
+#define	HW_MCA_MAX_CPUID	255
+
+static const char hw_mca_count[] = "hw.mca.count";
+static const char hw_mca_first[] = "hw.mca.first";
+static const char hw_mca_last[] = "hw.mca.last";
+static const char hw_mca_recid[] = "hw.mca.%d.%u";
 
 static char default_dumpfile[] = "/var/log/mca.log";
 
@@ -160,7 +162,9 @@ show_cpu(struct mca_cpu_record *cpu)
 	char var[16];
 	struct mca_cpu_mod *mod;
 	struct mca_cpu_cpuid *cpuid;
+#ifdef notyet
 	struct mca_cpu_psi *psi;
+#endif
 	int i, n;
 
 	printf("    <cpu>\n");
@@ -198,8 +202,10 @@ show_cpu(struct mca_cpu_record *cpu)
 		show_value(6, var, "0x%016llx", (long long)cpuid->cpuid[i]);
 	}
 
-	psi = (struct mca_cpu_psi*)(cpuid + 1);
-	/* TODO: Dump PSI */
+#ifdef notyet
+	 psi = (struct mca_cpu_psi*)(cpuid + 1);
+#endif
+	 /* TODO: Dump PSI */
 
 	printf("    </cpu>\n");
 }
@@ -372,9 +378,12 @@ show_section(struct mca_section_header *sh)
 }
 
 static void
-show(char *data)
+show(char *data, const char *mib)
 {
 	size_t reclen, seclen;
+
+	if (mib != NULL)
+		printf("<!-- MIB: %s -->\n", mib);
 
 	printf("<record>\n");
 	reclen = show_header((void*)data) - sizeof(struct mca_record_header);
@@ -402,7 +411,7 @@ showall(char *buf, size_t buflen)
 		if (buflen < reclen)
 			return;
 
-		show(buf);
+		show(buf, NULL);
 
 		buf += reclen;
 		buflen -= reclen;
@@ -442,7 +451,7 @@ main(int argc, char **argv)
 	char *buf;
 	size_t len;
 	int ch, error, fd;
-	int count, first, last;
+	int count, first, last, cpuid;
 
 	while ((ch = getopt(argc, argv, "df:")) != -1) {
 		switch(ch) {
@@ -464,50 +473,59 @@ main(int argc, char **argv)
 
 	if (file == NULL || fl_dump) {
 		len = sizeof(count);
-		error = sysctlbyname(hw_mca_count, &count, &len, NULL, 0);
-		if (error)
+		if (sysctlbyname(hw_mca_count, &count, &len, NULL, 0) == -1)
 			err(1, hw_mca_count);
 
 		if (count == 0)
 			errx(0, "no error records found");
 
 		len = sizeof(first);
-		error = sysctlbyname(hw_mca_first, &first, &len, NULL, 0);
-		if (error)
+		if (sysctlbyname(hw_mca_first, &first, &len, NULL, 0) == -1)
 			err(1, hw_mca_first);
 
 		len = sizeof(last);
-		error = sysctlbyname(hw_mca_last, &last, &len, NULL, 0);
-		if (error)
+		if (sysctlbyname(hw_mca_last, &last, &len, NULL, 0) == -1)
 			err(1, hw_mca_last);
 
+		cpuid = 0;
+		error = 0;
 		while (count && first <= last) {
-			sprintf(mib, hw_mca_recid, first);
-			len = 0;
-			error = sysctlbyname(mib, NULL, &len, NULL, 0);
-			if (error == ENOENT) {
+			do {
+				sprintf(mib, hw_mca_recid, first, cpuid);
+				len = 0;
+				ch = sysctlbyname(mib, NULL, &len, NULL, 0);
+				error = (ch == -1) ? errno : 0;
+				if (error != ENOENT)
+					break;
+				cpuid++;
+			} while (cpuid <= HW_MCA_MAX_CPUID);
+			if (error == ENOENT && cpuid > HW_MCA_MAX_CPUID) {
 				first++;
+				cpuid = 0;
 				continue;
 			}
 			if (error)
-				err(1, "%s(1)", mib);
+				errc(1, error, "%s(1)", mib);
 
 			buf = malloc(len);
 			if (buf == NULL)
 				err(1, "buffer");
 
-			error = sysctlbyname(mib, buf, &len, NULL, 0);
-			if (error)
+			if (sysctlbyname(mib, buf, &len, NULL, 0) == -1)
 				err(1, "%s(2)", mib);
 
 			if (fl_dump)
 				dump(buf);
 			else
-				show(buf);
+				show(buf, mib);
 
 			free(buf);
-			first++;
 			count--;
+			if (cpuid == HW_MCA_MAX_CPUID) {
+				first++;
+				cpuid = 0;
+			} else
+				cpuid++;
 		}
 	} else {
 		fd = open(file, O_RDONLY);

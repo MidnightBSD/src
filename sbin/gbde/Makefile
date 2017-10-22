@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sbin/gbde/Makefile 121169 2003-10-17 19:52:07Z phk $
+# $FreeBSD$
 
 PROG=	gbde
 SRCS=	gbde.c template.c
@@ -7,13 +7,9 @@ SRCS+=	rijndael-api-fst.c
 SRCS+=	sha2.c
 SRCS+=	g_bde_lock.c
 
-# rijndael-fst.c does evil casting things which results in warnings on
-# 64 bit machines, the test-vectors check out however, so it works right.
-.if ${MACHINE_ARCH} == "i386"
-WARNS?=	5
-.else
-WARNS?=	3
-.endif
+# rijndael-fst.c does evil casting things which can results in warnings,
+# the test-vectors check out however, so it works right.
+NO_WCAST_ALIGN=
 
 CFLAGS+= -I${.CURDIR}/../../sys
 .PATH:	${.CURDIR}/../../sys/geom/bde \

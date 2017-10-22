@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile,v 1.4 2006/11/09 15:25:37 jmmv Exp $
-# $FreeBSD: release/7.0.0/tools/regression/tmpfs/Makefile 171030 2007-06-25 18:47:09Z delphij $
+# $FreeBSD$
 
 tests=	t_mount
 tests+=	t_statvfs
@@ -31,7 +31,7 @@ regress: ${tests}
 
 PROG=	h_tools
 NO_MAN=	# defined
-WARNS=	4
+WARNS?=	4
 
 t_sizes t_sockets t_statvfs: h_tools
 

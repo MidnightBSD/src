@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/msun/powerpc/fenv.h 143708 2005-03-16 19:03:46Z das $
+ * $FreeBSD$
  */
 
 #ifndef	_FENV_H_
@@ -82,8 +82,13 @@ extern const fenv_t	__fe_dfl_env;
 #define	_ENABLE_MASK	((FE_DIVBYZERO | FE_INEXACT | FE_INVALID | \
 			 FE_OVERFLOW | FE_UNDERFLOW) >> _FPUSW_SHIFT)
 
+#ifndef _SOFT_FLOAT
 #define	__mffs(__env)	__asm __volatile("mffs %0" : "=f" (*(__env)))
 #define	__mtfsf(__env)	__asm __volatile("mtfsf 255,%0" : : "f" (__env))
+#else
+#define	__mffs(__env)
+#define	__mtfsf(__env)
+#endif
 
 union __fpscr {
 	double __d;

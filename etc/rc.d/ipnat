@@ -1,17 +1,16 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/ipnat 175737 2008-01-28 07:58:32Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: ipnat
 # REQUIRE: ipfilter
-# BEFORE:  DAEMON netif
 # KEYWORD: nojail
 
 . /etc/rc.subr
 
 name="ipnat"
-rcvar=`set_rcvar`
+rcvar="ipnat_enable"
 load_rc_config $name
 start_cmd="ipnat_start"
 stop_cmd="${ipnat_program} -F -C"

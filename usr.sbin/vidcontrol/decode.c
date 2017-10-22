@@ -28,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/usr.sbin/vidcontrol/decode.c 140159 2005-01-13 03:59:44Z delphij $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <stdio.h>

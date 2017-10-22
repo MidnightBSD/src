@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/i386/xbox/xbox.c 161340 2006-08-15 20:10:49Z pav $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -82,4 +82,4 @@ xbox_init(void)
  * This must be called before the drivers, as the if_nve(4) driver will fail
  * if we do not do this in advance.
  */
-SYSINIT(xbox, SI_SUB_DRIVERS, SI_ORDER_FIRST, xbox_init, NULL)
+SYSINIT(xbox, SI_SUB_DRIVERS, SI_ORDER_FIRST, xbox_init, NULL);

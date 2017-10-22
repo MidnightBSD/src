@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)isa.h	5.7 (Berkeley) 5/9/91
- * $FreeBSD: release/7.0.0/sys/isa/isareg.h 146214 2005-05-14 10:14:56Z nyan $
+ * $FreeBSD$
  */
 
 #ifdef PC98

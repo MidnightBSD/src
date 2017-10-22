@@ -1,5 +1,5 @@
 # From:	@(#)Makefile	8.3 (Berkeley) 4/2/94
-# $FreeBSD: release/7.0.0/release/picobsd/tinyware/passwd/Makefile 139126 2004-12-21 12:49:24Z ru $
+# $FreeBSD$
 
 # Only NO_PAM is used by PicoBSD and supported here
 
@@ -26,7 +26,7 @@ CFLAGS+= -DLOGIN_CAP -DCRYPT -I. -I${.CURDIR} \
 
 CLEANFILES= ${GENSRCS}
 
-RPCGEN= rpcgen -C
+RPCGEN=	RPCGEN_CPP=${CPP:Q} rpcgen -C
 RPCSRC= ${DESTDIR}/usr/include/rpcsvc/yp.x
 RPCSRC_PW= ${DESTDIR}/usr/include/rpcsvc/yppasswd.x
 RPCSRC_PRIV= ${.CURDIR}/../../usr.sbin/rpc.yppasswdd/yppasswd_private.x

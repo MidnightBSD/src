@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libelf/libelf_xlate.c 165523 2006-12-24 09:45:10Z jkoshy $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <libelf.h>
@@ -48,6 +48,7 @@ Elf_Data *
 _libelf_xlate(Elf_Data *dst, const Elf_Data *src, unsigned int encoding,
     int elfclass, int direction)
 {
+	int byteswap;
 	size_t cnt, dsz, fsz, msz;
 	uintptr_t sb, se, db, de;
 
@@ -68,8 +69,7 @@ _libelf_xlate(Elf_Data *dst, const Elf_Data *src, unsigned int encoding,
 		return (NULL);
 	}
 
-	if  (src->d_buf == NULL || dst->d_buf == NULL ||
-	    src->d_size == 0) {
+	if  (src->d_buf == NULL || dst->d_buf == NULL) {
 		LIBELF_SET_ERROR(DATA, 0);
 		return (NULL);
 	}
@@ -79,8 +79,8 @@ _libelf_xlate(Elf_Data *dst, const Elf_Data *src, unsigned int encoding,
 		return (NULL);
 	}
 
-	if ((fsz = (elfclass == ELFCLASS32 ? elf32_fsize : elf64_fsize)(src->d_type,
-		 (size_t) 1, src->d_version)) == 0)
+	if ((fsz = (elfclass == ELFCLASS32 ? elf32_fsize : elf64_fsize)
+	    (src->d_type, (size_t) 1, src->d_version)) == 0)
 		return (NULL);
 
 	msz = _libelf_msize(src->d_type, elfclass, src->d_version);
@@ -133,12 +133,17 @@ _libelf_xlate(Elf_Data *dst, const Elf_Data *src, unsigned int encoding,
 	dst->d_type = src->d_type;
 	dst->d_size = dsz;
 
-	if (db == sb && encoding == LIBELF_PRIVATE(byteorder) &&
-	    fsz == msz)
+	byteswap = encoding != LIBELF_PRIVATE(byteorder);
+
+	if (src->d_size == 0 ||
+	    (db == sb && !byteswap && fsz == msz))
 		return (dst);	/* nothing more to do */
 
-	(_libelf_get_translator(src->d_type, direction, elfclass))(dst->d_buf,
-	    src->d_buf, cnt, encoding != LIBELF_PRIVATE(byteorder));
+	if (!(_libelf_get_translator(src->d_type, direction, elfclass))
+	    (dst->d_buf, dsz, src->d_buf, cnt, byteswap)) {
+		LIBELF_SET_ERROR(DATA, 0);
+		return (NULL);
+	}
 
 	return (dst);
 }

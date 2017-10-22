@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/digi/digi/Makefile 162711 2006-09-27 19:57:02Z ru $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../../dev/digi
 KMOD=	digi
@@ -9,8 +9,8 @@ SRCS+=	opt_compat.h
 
 .if !defined(KERNBUILDDIR)
 opt_compat.h:
-	echo "#define COMPAT_43 1" > opt_compat.h
-	echo "#define COMPAT_FREEBSD6 1" >> opt_compat.h
+	echo "#define COMPAT_43 1" > ${.TARGET}
+	echo "#define COMPAT_FREEBSD6 1" >> ${.TARGET}
 .endif
 
 .include <bsd.kmod.mk>

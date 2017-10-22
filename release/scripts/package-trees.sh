@@ -5,9 +5,9 @@
 # contains the master INDEX, it's assigned list of packages, and the
 # appropriate tree of category symlinks.
 #
-# Usage: package-tress.sh <copy method> <INDEX> <package tree> <destination>
+# Usage: package-trees.sh <copy method> <INDEX> <package tree> <destination>
 #
-# $FreeBSD: release/7.0.0/release/scripts/package-trees.sh 145813 2005-05-03 04:19:07Z marcel $
+# $FreeBSD$
 
 # Verify the command line
 if [ $# -ne 4 ]; then

@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 9/21/96
-# $FreeBSD: release/7.0.0/usr.sbin/praliases/Makefile 147225 2005-06-10 06:12:53Z des $
+# $FreeBSD$
 
 SENDMAIL_DIR=	${.CURDIR}/../../contrib/sendmail
 .PATH: ${SENDMAIL_DIR}/praliases
@@ -10,6 +10,8 @@ MAN=	praliases.8
 
 CFLAGS+= -I${SENDMAIL_DIR}/src -I${SENDMAIL_DIR}/include -I.
 CFLAGS+= -DNEWDB -DNOT_SENDMAIL
+
+WARNS?=	2
 
 LIBSMDIR=	${.OBJDIR}/../../lib/libsm
 LIBSM=		${LIBSMDIR}/libsm.a

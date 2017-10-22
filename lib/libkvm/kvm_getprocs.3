@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)kvm_getprocs.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: release/7.0.0/lib/libkvm/kvm_getprocs.3 165888 2007-01-08 17:35:36Z imp $
+.\" $FreeBSD$
 .\"
-.Dd September 27, 2003
+.Dd November 22, 2011
 .Dt KVM_GETPROCS 3
 .Os
 .Sh NAME
@@ -172,10 +172,3 @@ on failure.
 .Xr kvm_write 3
 .Sh BUGS
 These routines do not belong in the kvm interface.
-.Pp
-In order for
-.Xr kvm_getenvv 3
-to function correctly,
-.Xr procfs 5
-must be mounted on
-.Pa /proc .

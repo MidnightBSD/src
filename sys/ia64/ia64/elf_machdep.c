@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/ia64/elf_machdep.c 169846 2007-05-22 02:22:58Z kan $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -54,56 +54,64 @@ Elf_Addr link_elf_get_gp(linker_file_t);
 extern Elf_Addr fptr_storage[];
 
 struct sysentvec elf64_freebsd_sysvec = {
-	SYS_MAXSYSCALL,
-	sysent,
-	0,
-	0,
-	NULL,
-	0,
-	NULL,
-	NULL,
-	__elfN(freebsd_fixup),
-	sendsig,
-	NULL,		/* sigcode */
-	NULL,		/* &szsigcode */
-	NULL,
-	"FreeBSD ELF64",
-	__elfN(coredump),
-	NULL,
-	MINSIGSTKSZ,
-	PAGE_SIZE,
-	VM_MIN_ADDRESS,
-	VM_MAXUSER_ADDRESS,
-	USRSTACK,
-	PS_STRINGS,
-	VM_PROT_READ|VM_PROT_WRITE,
-	exec_copyout_strings,
-	exec_setregs,
-	NULL
+	.sv_size	= SYS_MAXSYSCALL,
+	.sv_table	= sysent,
+	.sv_mask	= 0,
+	.sv_sigsize	= 0,
+	.sv_sigtbl	= NULL,
+	.sv_errsize	= 0,
+	.sv_errtbl	= NULL,
+	.sv_transtrap	= NULL,
+	.sv_fixup	= __elfN(freebsd_fixup),
+	.sv_sendsig	= sendsig,
+	.sv_sigcode	= NULL,
+	.sv_szsigcode	= NULL,
+	.sv_prepsyscall	= NULL,
+	.sv_name	= "FreeBSD ELF64",
+	.sv_coredump	= __elfN(coredump),
+	.sv_imgact_try	= NULL,
+	.sv_minsigstksz	= MINSIGSTKSZ,
+	.sv_pagesize	= PAGE_SIZE,
+	.sv_minuser	= VM_MIN_ADDRESS,
+	.sv_maxuser	= VM_MAXUSER_ADDRESS,
+	.sv_usrstack	= USRSTACK,
+	.sv_psstrings	= PS_STRINGS,
+	.sv_stackprot	= VM_PROT_READ|VM_PROT_WRITE,
+	.sv_copyout_strings = exec_copyout_strings,
+	.sv_setregs	= exec_setregs,
+	.sv_fixlimit	= NULL,
+	.sv_maxssiz	= NULL,
+	.sv_flags	= SV_ABI_FREEBSD | SV_LP64,
+	.sv_set_syscall_retval = cpu_set_syscall_retval,
+	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
+	.sv_syscallnames = syscallnames,
+	.sv_schedtail	= NULL,
 };
 
 static Elf64_Brandinfo freebsd_brand_info = {
-	ELFOSABI_FREEBSD,
-	EM_IA_64,
-	"FreeBSD",
-	NULL,
-	"/libexec/ld-elf.so.1",
-	&elf64_freebsd_sysvec,
-	NULL,
-	BI_CAN_EXEC_DYN,
+	.brand		= ELFOSABI_FREEBSD,
+	.machine	= EM_IA_64,
+	.compat_3_brand	= "FreeBSD",
+	.emul_path	= NULL,
+	.interp_path	= "/libexec/ld-elf.so.1",
+	.sysvec		= &elf64_freebsd_sysvec,
+	.interp_newpath	= NULL,
+	.brand_note	= &elf64_freebsd_brandnote,
+	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE
 };
-SYSINIT(elf64, SI_SUB_EXEC, SI_ORDER_ANY,
+SYSINIT(elf64, SI_SUB_EXEC, SI_ORDER_FIRST,
     (sysinit_cfunc_t)elf64_insert_brand_entry, &freebsd_brand_info);
 
 static Elf64_Brandinfo freebsd_brand_oinfo = {
-	ELFOSABI_FREEBSD,
-	EM_IA_64,
-	"FreeBSD",
-	NULL,
-	"/usr/libexec/ld-elf.so.1",
-	&elf64_freebsd_sysvec,
-	NULL,
-	BI_CAN_EXEC_DYN,
+	.brand		= ELFOSABI_FREEBSD,
+	.machine	= EM_IA_64,
+	.compat_3_brand	= "FreeBSD",
+	.emul_path	= NULL,
+	.interp_path	= "/usr/libexec/ld-elf.so.1",
+	.sysvec		= &elf64_freebsd_sysvec,
+	.interp_newpath	= NULL,
+	.brand_note	= &elf64_freebsd_brandnote,
+	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE
 };
 SYSINIT(oelf64, SI_SUB_EXEC, SI_ORDER_ANY,
     (sysinit_cfunc_t)elf64_insert_brand_entry, &freebsd_brand_oinfo);
@@ -207,7 +215,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 
 	if (local) {
 		if (rtype == R_IA_64_REL64LSB)
-			*where = relocbase + addend;
+			*where = elf_relocaddr(lf, relocbase + addend);
 		return (0);
 	}
 
@@ -295,6 +303,13 @@ elf_cpu_load_file(linker_file_t lf)
 		}
 		++ph;
 	}
+
+	/*
+	 * Make the I-cache coherent, but don't worry obout the kernel
+	 * itself because the loader needs to do that.
+	 */
+	if (lf->id != 1)
+		ia64_sync_icache((uintptr_t)lf->address, lf->size);
 
 	return (0);
 }

@@ -50,7 +50,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/geom/geom_ccd.c 157740 2006-04-13 20:35:31Z cracauer $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -58,6 +58,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/geom/geom_ccd.c 157740 2006-04-13 20:35:31
 #include <sys/module.h>
 #include <sys/bio.h>
 #include <sys/malloc.h>
+#include <sys/sbuf.h>
 #include <geom/geom.h>
 
 /*
@@ -709,8 +710,20 @@ g_ccd_create(struct gctl_req *req, struct g_class *mp)
 
 	g_topology_assert();
 	unit = gctl_get_paraml(req, "unit", sizeof (*unit));
+	if (unit == NULL) {
+		gctl_error(req, "unit parameter not given");
+		return;
+	}
 	ileave = gctl_get_paraml(req, "ileave", sizeof (*ileave));
+	if (ileave == NULL) {
+		gctl_error(req, "ileave parameter not given");
+		return;
+	}
 	nprovider = gctl_get_paraml(req, "nprovider", sizeof (*nprovider));
+	if (nprovider == NULL) {
+		gctl_error(req, "nprovider parameter not given");
+		return;
+	}
 
 	/* Check for duplicate unit */
 	LIST_FOREACH(gp, &mp->geom, geom) {
@@ -790,7 +803,7 @@ g_ccd_create(struct gctl_req *req, struct g_class *mp)
 	pp->sectorsize = sc->sc_secsize;
 	g_error_provider(pp, 0);
 
-	sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sb = sbuf_new_auto();
 	sbuf_printf(sb, "ccd%d: %d components ", sc->sc_unit, *nprovider);
 	for (i = 0; i < *nprovider; i++) {
 		sbuf_printf(sb, "%s%s",
@@ -838,9 +851,13 @@ g_ccd_list(struct gctl_req *req, struct g_class *mp)
 	struct g_geom *gp;
 	int i, unit, *up;
 
-	up = gctl_get_paraml(req, "unit", sizeof (int));
+	up = gctl_get_paraml(req, "unit", sizeof (*up));
+	if (up == NULL) {
+		gctl_error(req, "unit parameter not given");
+		return;
+	}
 	unit = *up;
-	sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sb = sbuf_new_auto();
 	LIST_FOREACH(gp, &mp->geom, geom) {
 		cs = gp->softc;
 		if (cs == NULL || (unit >= 0 && unit != cs->sc_unit))

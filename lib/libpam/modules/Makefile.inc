@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/lib/libpam/modules/Makefile.inc 156872 2006-03-19 08:52:49Z ru $
+# $FreeBSD$
 
 PAMDIR=		${.CURDIR}/../../../../contrib/openpam
 
@@ -6,7 +6,6 @@ NO_INSTALLLIB=
 NO_PROFILE=
 
 CFLAGS+= -I${PAMDIR}/include -I${.CURDIR}/../../libpam
-WARNS?=	4
 
 # This is nasty.
 # For the static case, libpam.a depends on the modules.

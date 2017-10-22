@@ -31,7 +31,7 @@
 .\"
 .\"	@(#)ms.diffs	8.1 (Berkeley) 6/8/93
 .\"
-.\"	$FreeBSD: release/7.0.0/share/doc/usd/18.msdiffs/ms.diffs 148617 2005-08-01 12:10:14Z phk $
+.\"	$FreeBSD$
 .\"
 .nr LL 6.5i
 .nr FL 6.0i

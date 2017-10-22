@@ -30,7 +30,7 @@
  *
  *	from: @(#)pmap_prot.h 1.14 88/02/08 SMI 
  *	from: @(#)pmap_prot.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: release/7.0.0/include/rpc/pmap_prot.h 93032 2002-03-23 17:24:55Z imp $
+ * $FreeBSD$
  */
 
 /*

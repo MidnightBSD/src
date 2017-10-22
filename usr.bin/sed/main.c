@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/sed/main.c 170608 2007-06-12 12:05:24Z yar $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 static const char copyright[] =
@@ -112,7 +112,7 @@ const char *fname;		/* File name. */
 const char *outfname;		/* Output file name */
 static char oldfname[PATH_MAX];	/* Old file name (for in-place editing) */
 static char tmpfname[PATH_MAX];	/* Temporary file name (for in-place editing) */
-const char *inplace;		/* Inplace edit file extension. */
+static const char *inplace;	/* Inplace edit file extension. */
 u_long linenum;
 
 static void add_compunit(enum e_cut, char *);
@@ -130,8 +130,9 @@ main(int argc, char *argv[])
 	fflag = 0;
 	inplace = NULL;
 
-	while ((c = getopt(argc, argv, "EI:ae:f:i:ln")) != -1)
+	while ((c = getopt(argc, argv, "EI:ae:f:i:lnr")) != -1)
 		switch (c) {
+		case 'r':		/* Gnu sed compat */
 		case 'E':
 			rflags = REG_EXTENDED;
 			break;
@@ -232,7 +233,7 @@ again:
 			state = ST_FILE;
 			goto again;
 		case CU_STRING:
-			if ((snprintf(string_ident,
+			if (((size_t)snprintf(string_ident,
 			    sizeof(string_ident), "\"%s\"", script->s)) >=
 			    sizeof(string_ident) - 1)
 				(void)strcpy(string_ident +
@@ -337,18 +338,35 @@ mf_fgets(SPACE *sp, enum e_spflag spflag)
 		if (infile != NULL) {
 			fclose(infile);
 			if (*oldfname != '\0') {
-				if (rename(fname, oldfname) != 0) {
+				/* if there was a backup file, remove it */
+				unlink(oldfname);
+				/*
+				 * Backup the original.  Note that hard links
+				 * are not supported on all filesystems.
+				 */
+				if ((link(fname, oldfname) != 0) &&
+				   (rename(fname, oldfname) != 0)) {
 					warn("rename()");
-					unlink(tmpfname);
+					if (*tmpfname)
+						unlink(tmpfname);
 					exit(1);
 				}
 				*oldfname = '\0';
 			}
 			if (*tmpfname != '\0') {
 				if (outfile != NULL && outfile != stdout)
-					fclose(outfile);
+					if (fclose(outfile) != 0) {
+						warn("fclose()");
+						unlink(tmpfname);
+						exit(1);
+					}
 				outfile = NULL;
-				rename(tmpfname, fname);
+				if (rename(tmpfname, fname) != 0) {
+					/* this should not happen really! */
+					warn("rename()");
+					unlink(tmpfname);
+					exit(1);
+				}
 				*tmpfname = '\0';
 			}
 			outfname = NULL;

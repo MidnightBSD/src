@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/ofwdump/ofwdump.c 129589 2004-05-22 16:51:11Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/ofw/openfirm.h>
 #include <dev/ofw/openfirmio.h>

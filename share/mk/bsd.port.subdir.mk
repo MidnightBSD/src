@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/mk/bsd.port.subdir.mk 131482 2004-07-02 20:47:18Z eik $
+# $FreeBSD$
 
 PORTSDIR?=	/usr/ports
 BSDPORTSUBDIRMK?=	${PORTSDIR}/Mk/bsd.port.subdir.mk

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/include/gssapi/Makefile 153838 2005-12-29 14:40:22Z dfr $
+# $FreeBSD$
 
 NO_OBJ=
 INCS= gssapi.h

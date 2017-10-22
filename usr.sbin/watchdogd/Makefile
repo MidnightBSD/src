@@ -1,9 +1,8 @@
-# $FreeBSD: release/7.0.0/usr.sbin/watchdogd/Makefile 149434 2005-08-24 19:28:33Z pjd $
+# $FreeBSD$
 
 PROG=	watchdogd
 LINKS=	${BINDIR}/watchdogd ${BINDIR}/watchdog
 MAN=	watchdogd.8 watchdog.8
-WARNS?=	6
 
 LDADD=	-lm -lutil
 DPADD=	${LIBM} ${LIBUTIL}

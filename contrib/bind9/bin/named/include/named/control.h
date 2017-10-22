@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009, 2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2001-2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: control.h,v 1.14.18.8 2006/03/09 23:46:20 marka Exp $ */
+/* $Id: control.h,v 1.31 2010/08/16 22:21:06 marka Exp $ */
 
 #ifndef NAMED_CONTROL_H
 #define NAMED_CONTROL_H 1
@@ -42,11 +42,14 @@
 #define NS_COMMAND_DUMPSTATS	"stats"
 #define NS_COMMAND_QUERYLOG	"querylog"
 #define NS_COMMAND_DUMPDB	"dumpdb"
+#define NS_COMMAND_SECROOTS	"secroots"
 #define NS_COMMAND_TRACE	"trace"
 #define NS_COMMAND_NOTRACE	"notrace"
 #define NS_COMMAND_FLUSH	"flush"
 #define NS_COMMAND_FLUSHNAME	"flushname"
 #define NS_COMMAND_STATUS	"status"
+#define NS_COMMAND_TSIGLIST	"tsig-list"
+#define NS_COMMAND_TSIGDELETE	"tsig-delete"
 #define NS_COMMAND_FREEZE	"freeze"
 #define NS_COMMAND_UNFREEZE	"unfreeze"
 #define NS_COMMAND_THAW		"thaw"
@@ -55,6 +58,10 @@
 #define NS_COMMAND_NULL		"null"
 #define NS_COMMAND_NOTIFY	"notify"
 #define NS_COMMAND_VALIDATION	"validation"
+#define NS_COMMAND_SIGN 	"sign"
+#define NS_COMMAND_LOADKEYS 	"loadkeys"
+#define NS_COMMAND_ADDZONE	"addzone"
+#define NS_COMMAND_DELZONE	"delzone"
 
 isc_result_t
 ns_controls_create(ns_server_t *server, ns_controls_t **ctrlsp);

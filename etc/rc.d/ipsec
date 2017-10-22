@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/ipsec 175737 2008-01-28 07:58:32Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: ipsec
@@ -11,7 +11,7 @@
 . /etc/rc.subr
 
 name="ipsec"
-rcvar=`set_rcvar`
+rcvar="ipsec_enable"
 start_precmd="ipsec_prestart"
 start_cmd="ipsec_start"
 stop_precmd="test -f $ipsec_file"
@@ -41,9 +41,9 @@ ipsec_stop()
 {
 	echo "Clearing ipsec manual keys/policies."
 
-	# still not 100% sure if we would like to do this.
-	# it is very questionable to do this during shutdown session, since
-	# it can hang any of remaining IPv4/v6 session.
+	# Still not 100% sure if we would like to do this.
+	# It is very questionable to do this during shutdown session
+	# since it can hang any of the remaining IPv4/v6 sessions.
 	#
 	${ipsec_program} -F
 	${ipsec_program} -FP

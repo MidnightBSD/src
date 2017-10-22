@@ -26,22 +26,23 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libkse/thread/thr_pselect.c 172491 2007-10-09 13:42:34Z obrien $");
+__FBSDID("$FreeBSD$");
 
+#include "namespace.h"
 #include <sys/select.h>
 #include <sys/time.h>
-
 #include <errno.h>
 #include <signal.h>
 #include <pthread.h>
+#include "un-namespace.h"
 
 #include "thr_private.h"
 
-extern int __pselect(int count, fd_set *rfds, fd_set *wfds, fd_set *efds, 
-		const struct timespec *timo, const sigset_t *mask);
+extern int	__pselect(int count, fd_set *rfds, fd_set *wfds, fd_set *efds, 
+		    const struct timespec *timo, const sigset_t *mask);
 
-LT10_COMPAT_PRIVATE(_pselect);
-LT10_COMPAT_DEFAULT(pselect);
+int 		_pselect(int count, fd_set *rfds, fd_set *wfds, fd_set *efds, 
+		    const struct timespec *timo, const sigset_t *mask);
 
 __weak_reference(_pselect, pselect);
 

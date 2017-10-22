@@ -1,9 +1,10 @@
-# $FreeBSD: release/7.0.0/sbin/devd/Makefile 155073 2006-01-30 22:50:13Z pjd $
+# $FreeBSD$
 
 PROG_CXX=devd
 SRCS=	devd.cc token.l parse.y y.tab.h
 MAN=	devd.8 devd.conf.5
-WARNS?=	4
+
+WARNS?=	3
 
 NO_SHARED?=YES
 

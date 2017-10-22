@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/usr.sbin/config/main.c 169647 2007-05-17 04:53:52Z imp $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -90,6 +90,7 @@ static void get_srcdir(void);
 static void usage(void);
 static void cleanheaders(char *);
 static void kernconfdump(const char *);
+static void checkversion(void);
 
 struct hdr_list {
 	char *h_name;
@@ -107,20 +108,24 @@ main(int argc, char **argv)
 	struct stat buf;
 	int ch, len;
 	char *p;
-	char xxx[MAXPATHLEN];
 	char *kernfile;
+	int printmachine;
 
+	printmachine = 0;
 	kernfile = NULL;
-	while ((ch = getopt(argc, argv, "Cd:gpVx:")) != -1)
+	while ((ch = getopt(argc, argv, "Cd:gmpVx:")) != -1)
 		switch (ch) {
 		case 'C':
 			filebased = 1;
+			break;
+		case 'm':
+			printmachine = 1;
 			break;
 		case 'd':
 			if (*destdir == '\0')
 				strlcpy(destdir, optarg, sizeof(destdir));
 			else
-				errx(2, "directory already set");
+				errx(EXIT_FAILURE, "directory already set");
 			break;
 		case 'g':
 			debugging++;
@@ -150,6 +155,8 @@ main(int argc, char **argv)
 		usage();
 
 	PREFIX = *argv;
+	if (stat(PREFIX, &buf) != 0 || !S_ISREG(buf.st_mode))
+		err(2, "%s", PREFIX);
 	if (freopen("DEFAULTS", "r", stdin) != NULL) {
 		found_defaults = 1;
 		yyfile = "DEFAULTS";
@@ -167,13 +174,6 @@ main(int argc, char **argv)
 		strlcpy(destdir, CDIR, sizeof(destdir));
 		strlcat(destdir, PREFIX, sizeof(destdir));
 	}
-
-	p = path((char *)NULL);
-	if (stat(p, &buf)) {
-		if (mkdir(p, 0777))
-			err(2, "%s", p);
-	} else if (!S_ISDIR(buf.st_mode))
-		errx(2, "%s isn't a directory", p);
 
 	SLIST_INIT(&cputype);
 	SLIST_INIT(&mkopt);
@@ -202,33 +202,21 @@ main(int argc, char **argv)
 		printf("cpu type must be specified\n");
 		exit(1);
 	}
+	checkversion();
 
-	/*
-	 * make symbolic links in compilation directory
-	 * for "sys" (to make genassym.c work along with #include <sys/xxx>)
-	 * and similarly for "machine".
-	 */
-	if (*srcdir == '\0')
-		(void)snprintf(xxx, sizeof(xxx), "../../include");
-	else
-		(void)snprintf(xxx, sizeof(xxx), "%s/%s/include",
-		    srcdir, machinename);
-	(void) unlink(path("machine"));
-	(void) symlink(xxx, path("machine"));
-	if (strcmp(machinename, machinearch) != 0) {
-		/*
-		 * make symbolic links in compilation directory for
-		 * machinearch, if it is different than machinename.
-		 */
-		if (*srcdir == '\0')
-			(void)snprintf(xxx, sizeof(xxx), "../../../%s/include",
-			    machinearch);
-		else
-			(void)snprintf(xxx, sizeof(xxx), "%s/%s/include",
-			    srcdir, machinearch);
-		(void) unlink(path(machinearch));
-		(void) symlink(xxx, path(machinearch));
+	if (printmachine) {
+		printf("%s\t%s\n",machinename,machinearch);
+		exit(0);
 	}
+
+	/* Make compile directory */
+	p = path((char *)NULL);
+	if (stat(p, &buf)) {
+		if (mkdir(p, 0777))
+			err(2, "%s", p);
+	} else if (!S_ISDIR(buf.st_mode))
+		errx(EXIT_FAILURE, "%s isn't a directory", p);
+
 	configfile();			/* put config file into kernel*/
 	options();			/* make options .h files */
 	makefile();			/* build Makefile */
@@ -249,16 +237,34 @@ main(int argc, char **argv)
 static void
 get_srcdir(void)
 {
+	struct stat lg, phy;
+	char *p, *pwd;
+	int i;
 
 	if (realpath("../..", srcdir) == NULL)
-		errx(2, "Unable to find root of source tree");
+		err(EXIT_FAILURE, "Unable to find root of source tree");
+	if ((pwd = getenv("PWD")) != NULL && *pwd == '/' &&
+	    (pwd = strdup(pwd)) != NULL) {
+		/* Remove the last two path components. */
+		for (i = 0; i < 2; i++) {
+			if ((p = strrchr(pwd, '/')) == NULL) {
+				free(pwd);
+				return;
+			}
+			*p = '\0';
+		}
+		if (stat(pwd, &lg) != -1 && stat(srcdir, &phy) != -1 &&
+		    lg.st_dev == phy.st_dev && lg.st_ino == phy.st_ino)
+			strlcpy(srcdir, pwd, MAXPATHLEN);
+		free(pwd);
+	}
 }
 
 static void
 usage(void)
 {
 
-	fprintf(stderr, "usage: config [-CgpV] [-d destdir] sysname\n");
+	fprintf(stderr, "usage: config [-CgmpV] [-d destdir] sysname\n");
 	fprintf(stderr, "       config -x kernel\n");
 	exit(EX_USAGE);
 }
@@ -446,6 +452,11 @@ configfile_filebased(struct sbuf *sb)
 	struct cfgfile *cf;
 	int i;
 
+	/*
+	 * Try to read all configuration files. Since those will be present as
+	 * C string in the macro, we have to slash their ends then the line
+	 * wraps.
+	 */
 	STAILQ_FOREACH(cf, &cfgfiles, cfg_next) {
 		cff = fopen(cf->cfg_path, "r");
 		if (cff == NULL) {
@@ -480,11 +491,6 @@ configfile(void)
 	sb = sbuf_new(NULL, NULL, 2048, SBUF_AUTOEXTEND);
 	assert(sb != NULL);
 	sbuf_clear(sb);
-	/*
-	 * Try to read all configuration files. Since those will be present as
-	 * C string in the macro, we have to slash their ends then the line
-	 * wraps.
-	 */
 	if (filebased) {
 		/* Is needed, can be used for backward compatibility. */
 		configfile_filebased(sb);
@@ -493,7 +499,7 @@ configfile(void)
 	}
 	sbuf_finish(sb);
 	/* 
-	 * We print first part of the tamplate, replace our tag with
+	 * We print first part of the template, replace our tag with
 	 * configuration files content and later continue writing our
 	 * template.
 	 */
@@ -545,9 +551,6 @@ moveifchanged(const char *from_name, const char *to_name)
 
 	if (!changed) {
 		p = mmap(NULL, tsize, PROT_READ, MAP_SHARED, from_fd, (off_t)0);
-#ifndef MAP_FAILED
-#define MAP_FAILED ((caddr_t) -1)
-#endif
 		if (p == MAP_FAILED)
 			err(EX_OSERR, "mmap %s", from_name);
 		q = mmap(NULL, tsize, PROT_READ, MAP_SHARED, to_fd, (off_t)0);
@@ -574,7 +577,7 @@ cleanheaders(char *p)
 	struct dirent *dp;
 	struct file_list *fl;
 	struct hdr_list *hl;
-	int i;
+	size_t len;
 
 	remember("y.tab.h");
 	remember("setdefs.h");
@@ -588,12 +591,13 @@ cleanheaders(char *p)
 	if ((dirp = opendir(p)) == NULL)
 		err(EX_OSERR, "opendir %s", p);
 	while ((dp = readdir(dirp)) != NULL) {
-		i = dp->d_namlen - 2;
+		len = strlen(dp->d_name);
 		/* Skip non-headers */
-		if (dp->d_name[i] != '.' || dp->d_name[i + 1] != 'h')
+		if (len < 2 || dp->d_name[len - 2] != '.' ||
+		    dp->d_name[len - 1] != 'h')
 			continue;
 		/* Skip special stuff, eg: bus_if.h, but check opt_*.h */
-		if (index(dp->d_name, '_') &&
+		if (strchr(dp->d_name, '_') &&
 		    strncmp(dp->d_name, "opt_", 4) != 0)
 			continue;
 		/* Check if it is a target file */
@@ -633,6 +637,8 @@ remember(const char *file)
 		}
 	}
 	hl = calloc(1, sizeof(*hl));
+	if (hl == NULL)
+		err(EXIT_FAILURE, "calloc");
 	hl->h_name = s;
 	hl->h_next = htab;
 	htab = hl;
@@ -649,27 +655,27 @@ kernconfdump(const char *file)
 	struct stat st;
 	FILE *fp, *pp;
 	int error, len, osz, r;
-	unsigned int off, size;
+	unsigned int i, off, size, t1, t2, align;
 	char *cmd, *o;
 
 	r = open(file, O_RDONLY);
 	if (r == -1)
-		errx(EXIT_FAILURE, "Couldn't open file '%s'", file);
+		err(EXIT_FAILURE, "Couldn't open file '%s'", file);
 	error = fstat(r, &st);
 	if (error == -1)
-		errx(EXIT_FAILURE, "fstat() failed");
+		err(EXIT_FAILURE, "fstat() failed");
 	if (S_ISDIR(st.st_mode))
 		errx(EXIT_FAILURE, "'%s' is a directory", file);
 	fp = fdopen(r, "r");
 	if (fp == NULL)
-		errx(EXIT_FAILURE, "fdopen() failed");
+		err(EXIT_FAILURE, "fdopen() failed");
 	osz = 1024;
 	o = calloc(1, osz);
 	if (o == NULL)
-		errx(EXIT_FAILURE, "Couldn't allocate memory");
+		err(EXIT_FAILURE, "Couldn't allocate memory");
 	/* ELF note section header. */
-	asprintf(&cmd, "/usr/bin/elfdump -c %s | grep -A 5 kern_conf"
-	    "| tail -2 | cut -d ' ' -f 2 | paste - - -", file);
+	asprintf(&cmd, "/usr/bin/elfdump -c %s | grep -A 8 kern_conf"
+	    "| tail -5 | cut -d ' ' -f 2 | paste - - - - -", file);
 	if (cmd == NULL)
 		errx(EXIT_FAILURE, "asprintf() failed");
 	pp = popen(cmd, "r");
@@ -678,16 +684,69 @@ kernconfdump(const char *file)
 	free(cmd);
 	len = fread(o, osz, 1, pp);
 	pclose(pp);
-	r = sscanf(o, "%d\t%d", &off, &size);
+	r = sscanf(o, "%d%d%d%d%d", &off, &size, &t1, &t2, &align);
 	free(o);
-	if (r != 2)
+	if (r != 5)
 		errx(EXIT_FAILURE, "File %s doesn't contain configuration "
 		    "file. Either unsupported, or not compiled with "
 		    "INCLUDE_CONFIG_FILE", file);
 	r = fseek(fp, off, SEEK_CUR);
 	if (r != 0)
-		errx(EXIT_FAILURE, "fseek() failed");
-	while ((r = fgetc(fp)) != EOF && size-- > 0)
+		err(EXIT_FAILURE, "fseek() failed");
+	for (i = 0; i < size; i++) {
+		r = fgetc(fp);
+		if (r == EOF)
+			break;
+		/* 
+		 * If '\0' is present in the middle of the configuration
+		 * string, this means something very weird is happening.
+		 * Make such case very visible.  However, some architectures
+		 * pad the length of the section with NULs to a multiple of
+		 * sh_addralign, allow a NUL in that part of the section.
+		 */
+		if (r == '\0' && (size - i) < align)
+			break;
+		assert(r != '\0' && ("Char present in the configuration "
+		    "string mustn't be equal to 0"));
 		fputc(r, stdout);
+	}
 	fclose(fp);
+}
+
+static void 
+badversion(int versreq)
+{
+	fprintf(stderr, "ERROR: version of config(8) does not match kernel!\n");
+	fprintf(stderr, "config version = %d, ", CONFIGVERS);
+	fprintf(stderr, "version required = %d\n\n", versreq);
+	fprintf(stderr, "Make sure that /usr/src/usr.sbin/config is in sync\n");
+	fprintf(stderr, "with your /usr/src/sys and install a new config binary\n");
+	fprintf(stderr, "before trying this again.\n\n");
+	fprintf(stderr, "If running the new config fails check your config\n");
+	fprintf(stderr, "file against the GENERIC or LINT config files for\n");
+	fprintf(stderr, "changes in config syntax, or option/device naming\n");
+	fprintf(stderr, "conventions\n\n");
+	exit(1);
+}
+
+static void
+checkversion(void)
+{
+	FILE *ifp;
+	char line[BUFSIZ];
+	int versreq;
+
+	ifp = open_makefile_template();
+	while (fgets(line, BUFSIZ, ifp) != 0) {
+		if (*line != '%')
+			continue;
+		if (strncmp(line, "%VERSREQ=", 9) != 0)
+			continue;
+		versreq = atoi(line + 9);
+		if (MAJOR_VERS(versreq) == MAJOR_VERS(CONFIGVERS) &&
+		    versreq <= CONFIGVERS)
+			continue;
+		badversion(versreq);
+	}
+	fclose(ifp);
 }

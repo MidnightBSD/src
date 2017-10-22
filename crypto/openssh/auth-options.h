@@ -1,4 +1,4 @@
-/* $OpenBSD: auth-options.h,v 1.16 2006/08/03 03:34:41 deraadt Exp $ */
+/* $OpenBSD: auth-options.h,v 1.20 2010/05/07 11:30:29 djm Exp $ */
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -26,11 +26,15 @@ extern int no_port_forwarding_flag;
 extern int no_agent_forwarding_flag;
 extern int no_x11_forwarding_flag;
 extern int no_pty_flag;
+extern int no_user_rc;
 extern char *forced_command;
 extern struct envstring *custom_environment;
 extern int forced_tun_device;
+extern int key_is_cert_authority;
+extern char *authorized_principals;
 
 int	auth_parse_options(struct passwd *, char *, char *, u_long);
 void	auth_clear_options(void);
+int	auth_cert_options(Key *, struct passwd *);
 
 #endif

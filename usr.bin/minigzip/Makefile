@@ -1,8 +1,13 @@
-# $FreeBSD: release/7.0.0/usr.bin/minigzip/Makefile 125503 2004-02-05 22:44:25Z ru $
+# $FreeBSD$
+
+SRCDIR=	${.CURDIR}/../../lib/libz/test
+.PATH:	${SRCDIR}
 
 PROG=	minigzip
-LDADD=	-lz
+
+WARNS?=	5
+CFLAGS+=-DUSE_MMAP
 DPADD=	${LIBZ}
-.PATH:	${.CURDIR}/../../lib/libz
+LDADD=	-lz
 
 .include <bsd.prog.mk>

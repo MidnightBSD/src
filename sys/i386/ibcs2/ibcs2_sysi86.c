@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/i386/ibcs2/ibcs2_sysi86.c 164033 2006-11-06 13:42:10Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -60,9 +60,10 @@ ibcs2_sysi86(struct thread *td, struct ibcs2_sysi86_args *args)
 	case SI86_FPHW: {	/* Floating Point information */
 		int val, error;
 
-		if (hw_float) val = IBCS2_FP_387;	/* FPU hardware */
-		else val = IBCS2_FP_SW;			/* FPU emulator */
-			
+		if (hw_float)
+			val = IBCS2_FP_387;
+		else
+			val = IBCS2_FP_NO;
 		if ((error = copyout(&val, args->arg, sizeof(val))) != 0)
 			return error;
 		return 0;
@@ -74,15 +75,11 @@ ibcs2_sysi86(struct thread *td, struct ibcs2_sysi86_args *args)
 
 	case SETNAME:  {  /* set hostname given string w/ len <= 7 chars */
 	        int name[2];
-	        int error;
 
 		name[0] = CTL_KERN;
 		name[1] = KERN_HOSTNAME;
-		mtx_lock(&Giant);
-		error = userland_sysctl(td, name, 2, 0, 0, 0, 
-		    args->arg, 7, 0, 0);
-		mtx_unlock(&Giant);
-		return (error);
+		return (userland_sysctl(td, name, 2, 0, 0, 0, 
+		    args->arg, 7, 0, 0));
 	}
 
 	case SI86_MEM:	/* size of physical memory */

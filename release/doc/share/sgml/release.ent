@@ -1,46 +1,40 @@
 <!-- -*- sgml -*-
 
-     $FreeBSD: release/7.0.0/release/doc/share/sgml/release.ent 174942 2007-12-27 19:34:32Z bmah $
+     $FreeBSD$
 
      OS Release Information -->
 
 <!-- Version of the OS we're describing.  This needs to be updated
      with each new release. -->
-<!ENTITY release.current "7.0-RELEASE">
+<!ENTITY release.current "9.1-RELEASE">
 
 <!-- The previous version used for comparison in the "What's New"
      section.  For -CURRENT, we might point back to the last
      branchpoint. -->
-<!ENTITY release.prev "6.0-RELEASE">
-
-<!-- The previous stable release, useful for pointing user's at the
-     release they SHOULD be running if they don't want the bleeding
-     edge. -->
-<!ENTITY release.prev.stable "6.2-RELEASE">
+<!ENTITY release.prev "9.0-RELEASE">
 
 <!-- The next version to be released, usually used for snapshots. -->
-<!ENTITY release.next "7.1-RELEASE">
+<!ENTITY release.next "9.2-RELEASE">
 
 <!-- The name of this branch. -->
-<!ENTITY release.branch "7-STABLE">
+<!ENTITY release.branch "9.1-STABLE">
 
 <!-- The URL for obtaining this version of FreeBSD. -->
-<!ENTITY release.url "http://www.FreeBSD.org/snapshots/">
+<!ENTITY release.url "http://www.FreeBSD.org/releases/">
 
 <!-- The type of release (usually this will be either "snapshot"
      or "release" -->
-<!ENTITY release.type "snapshot">
+<!ENTITY release.type "release">
 <!ENTITY % release.type.current  "IGNORE">
 <!ENTITY % release.type.snapshot "IGNORE">
 <!ENTITY % release.type.release "INCLUDE">
 
 <!-- The manpaths for man page references -->
 <!ENTITY release.man.url "http://www.FreeBSD.org/cgi/man.cgi">
-<!ENTITY release.manpath.xfree86       "4.5.0">
-<!ENTITY release.manpath.xorg          "7.2">
-<!ENTITY release.manpath.netbsd        "3.0">
+<!ENTITY release.manpath.xorg          "7.5.2">
+<!ENTITY release.manpath.netbsd        "6.0">
 <!ENTITY release.manpath.freebsd-ports "Ports">
-<!ENTITY release.manpath.freebsd       "7.0-RELEASE">
+<!ENTITY release.manpath.freebsd       "9.1-RELEASE">
 
 <!-- Text constants which probably don't need to be changed.-->
 
@@ -54,8 +48,7 @@
 <!ENTITY arch.arm "arm">
 <!ENTITY arch.i386 "i386">
 <!ENTITY arch.ia64 "ia64">
+<!ENTITY arch.mips "mips">
 <!ENTITY arch.pc98 "pc98">
 <!ENTITY arch.powerpc "powerpc">
 <!ENTITY arch.sparc64 "sparc64">
-<!ENTITY arch.sun4v "sun4v">
-

@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/syscons/logo/logo_saver.c 166868 2007-02-21 12:27:12Z philip $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -45,7 +45,7 @@
 #define SET_ORIGIN(adp, o) do {				\
 	int oo = o;					\
 	if (oo != last_origin)				\
-	    set_origin(adp, last_origin = oo);		\
+	    vidd_set_win_org(adp, last_origin = oo);	\
 	} while (0)
 
 extern unsigned int	 logo_w;
@@ -114,15 +114,15 @@ logo_saver(video_adapter_t *adp, int blank)
 		/* switch to graphics mode */
 		if (blanked <= 0) {
 			pl = splhigh();
-			set_video_mode(adp, scrmode);
-			load_palette(adp, logo_pal);
-			set_border(adp, 0);
+			vidd_set_mode(adp, scrmode);
+			vidd_load_palette(adp, logo_pal);
+			vidd_set_border(adp, 0);
 			blanked++;
 			vid = (u_char *)adp->va_window;
 			banksize = adp->va_window_size;
 			bpsl = adp->va_line_width;
 			splx(pl);
-			(*vidsw[adp->va_index]->clear)(adp);
+			vidd_clear(adp);
 		}
 		logo_update(adp);
 	} else {
@@ -136,13 +136,13 @@ logo_init(video_adapter_t *adp)
 {
 	video_info_t info;
 	
-	if (!get_mode_info(adp, M_VESA_CG800x600, &info)) {
+	if (!vidd_get_info(adp, M_VESA_CG800x600, &info)) {
 		scrmode = M_VESA_CG800x600;
-	} else if (!get_mode_info(adp, M_VGA_CG320, &info)) {
+	} else if (!vidd_get_info(adp, M_VGA_CG320, &info)) {
 		scrmode = M_VGA_CG320;
-	} else if (!get_mode_info(adp, M_PC98_PEGC640x480, &info)) {
+	} else if (!vidd_get_info(adp, M_PC98_PEGC640x480, &info)) {
 		scrmode = M_PC98_PEGC640x480;
-	} else if (!get_mode_info(adp, M_PC98_PEGC640x400, &info)) {
+	} else if (!vidd_get_info(adp, M_PC98_PEGC640x400, &info)) {
 		scrmode = M_PC98_PEGC640x400;
 	} else {
 		log(LOG_NOTICE,
@@ -171,4 +171,8 @@ static scrn_saver_t logo_module = {
 	NULL
 };
 
+#ifdef BEASTIE_LOGO
+SAVER_MODULE(beastie_saver, logo_module);
+#else
 SAVER_MODULE(logo_saver, logo_module);
+#endif

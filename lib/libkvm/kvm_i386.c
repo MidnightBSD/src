@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libkvm/kvm_i386.c 170772 2007-06-15 11:35:11Z simokawa $");
+__FBSDID("$FreeBSD$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -51,6 +51,7 @@ static char sccsid[] = "@(#)kvm_hp300.c	8.1 (Berkeley) 6/4/93";
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <nlist.h>
 #include <kvm.h>
@@ -152,7 +153,7 @@ _kvm_freevtop(kvm_t *kd)
 int
 _kvm_initvtop(kvm_t *kd)
 {
-	struct nlist nlist[2];
+	struct nlist nl[2];
 	u_long pa;
 	u_long kernbase;
 	char		*PTD;
@@ -182,21 +183,21 @@ _kvm_initvtop(kvm_t *kd)
 			return (-1);
 	}
 
-	nlist[0].n_name = "kernbase";
-	nlist[1].n_name = 0;
+	nl[0].n_name = "kernbase";
+	nl[1].n_name = 0;
 
-	if (kvm_nlist(kd, nlist) != 0)
+	if (kvm_nlist(kd, nl) != 0)
 		kernbase = KERNBASE;	/* for old kernels */
 	else
-		kernbase = nlist[0].n_value;
+		kernbase = nl[0].n_value;
 
-	nlist[0].n_name = "IdlePDPT";
-	nlist[1].n_name = 0;
+	nl[0].n_name = "IdlePDPT";
+	nl[1].n_name = 0;
 
-	if (kvm_nlist(kd, nlist) == 0) {
+	if (kvm_nlist(kd, nl) == 0) {
 		uint64_t pa64;
 
-		if (kvm_read(kd, (nlist[0].n_value - kernbase), &pa,
+		if (kvm_read(kd, (nl[0].n_value - kernbase), &pa,
 		    sizeof(pa)) != sizeof(pa)) {
 			_kvm_err(kd, kd->program, "cannot read IdlePDPT");
 			return (-1);
@@ -219,14 +220,14 @@ _kvm_initvtop(kvm_t *kd)
 		kd->vmst->PTD = PTD;
 		kd->vmst->pae = 1;
 	} else {
-		nlist[0].n_name = "IdlePTD";
-		nlist[1].n_name = 0;
+		nl[0].n_name = "IdlePTD";
+		nl[1].n_name = 0;
 
-		if (kvm_nlist(kd, nlist) != 0) {
+		if (kvm_nlist(kd, nl) != 0) {
 			_kvm_err(kd, kd->program, "bad namelist");
 			return (-1);
 		}
-		if (kvm_read(kd, (nlist[0].n_value - kernbase), &pa,
+		if (kvm_read(kd, (nl[0].n_value - kernbase), &pa,
 		    sizeof(pa)) != sizeof(pa)) {
 			_kvm_err(kd, kd->program, "cannot read IdlePTD");
 			return (-1);
@@ -294,9 +295,9 @@ _kvm_vatop(kvm_t *kd, u_long va, off_t *pa)
 #define	PG_FRAME4M	(~PAGE4M_MASK)
 		pde_pa = ((u_long)pde & PG_FRAME4M) + (va & PAGE4M_MASK);
 		s = _kvm_pa2off(kd, pde_pa, &ofs);
-		if (s < sizeof pde) {
-			_kvm_syserr(kd, kd->program,
-			    "_kvm_vatop: pde_pa not found");
+		if (s == 0) {
+			_kvm_err(kd, kd->program,
+			    "_kvm_vatop: 4MB page address not in dump");
 			goto invalid;
 		}
 		*pa = ofs;
@@ -390,9 +391,9 @@ _kvm_vatop_pae(kvm_t *kd, u_long va, off_t *pa)
 #define	PG_FRAME2M	(~PAGE2M_MASK)
 		pde_pa = ((u_long)pde & PG_FRAME2M) + (va & PAGE2M_MASK);
 		s = _kvm_pa2off(kd, pde_pa, &ofs);
-		if (s < sizeof pde) {
-			_kvm_syserr(kd, kd->program,
-			    "_kvm_vatop_pae: pde_pa not found");
+		if (s == 0) {
+			_kvm_err(kd, kd->program,
+			    "_kvm_vatop: 2MB page address not in dump");
 			goto invalid;
 		}
 		*pa = ofs;

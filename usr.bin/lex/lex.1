@@ -1,4 +1,4 @@
-.\" $FreeBSD: release/7.0.0/usr.bin/lex/lex.1 131764 2004-07-07 21:27:44Z keramida $
+.\" $FreeBSD$
 .\"
 .TH FLEX 1 "April 1995" "Version 2.5"
 .SH NAME
@@ -945,7 +945,7 @@ the following is one way to eat up C comments:
 
     %%
     "/*"        {
-                register int c;
+                int c;
 
                 for ( ; ; )
                     {

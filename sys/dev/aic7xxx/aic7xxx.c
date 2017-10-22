@@ -46,7 +46,7 @@
 #include "aicasm/aicasm_insformat.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/aic7xxx/aic7xxx.c 171675 2007-07-31 20:11:03Z scottl $");
+__FBSDID("$FreeBSD$");
 #include <dev/aic7xxx/aic7xxx_osm.h>
 #include <dev/aic7xxx/aic7xxx_inline.h>
 #include <dev/aic7xxx/aicasm/aicasm_insformat.h>
@@ -4381,7 +4381,8 @@ ahc_init_scbdata(struct ahc_softc *ahc)
 	/* Allocation for our hscbs */
 	if (aic_dmamem_alloc(ahc, scb_data->hscb_dmat,
 			     (void **)&scb_data->hscbs,
-			     BUS_DMA_NOWAIT, &scb_data->hscb_dmamap) != 0) {
+			     BUS_DMA_NOWAIT | BUS_DMA_COHERENT,
+			     &scb_data->hscb_dmamap) != 0) {
 		goto error_exit;
 	}
 
@@ -4549,7 +4550,8 @@ ahc_alloc_scbs(struct ahc_softc *ahc)
 	/* Allocate S/G space for the next batch of SCBS */
 	if (aic_dmamem_alloc(ahc, scb_data->sg_dmat,
 			     (void **)&sg_map->sg_vaddr,
-			     BUS_DMA_NOWAIT, &sg_map->sg_dmamap) != 0) {
+			     BUS_DMA_NOWAIT | BUS_DMA_COHERENT,
+			     &sg_map->sg_dmamap) != 0) {
 		free(sg_map, M_DEVBUF);
 		return (0);
 	}
@@ -4941,7 +4943,8 @@ ahc_init(struct ahc_softc *ahc)
 	/* Allocation of driver data */
 	if (aic_dmamem_alloc(ahc, ahc->shared_data_dmat,
 			     (void **)&ahc->qoutfifo,
-			     BUS_DMA_NOWAIT, &ahc->shared_data_dmamap) != 0) {
+			     BUS_DMA_NOWAIT | BUS_DMA_COHERENT,
+			     &ahc->shared_data_dmamap) != 0) {
 		return (ENOMEM);
 	}
 
@@ -6365,7 +6368,7 @@ void
 ahc_send_lstate_events(struct ahc_softc *ahc, struct ahc_tmode_lstate *lstate)
 {
 	struct ccb_hdr *ccbh;
-	struct ccb_immed_notify *inot;
+	struct ccb_immediate_notify *inot;
 
 	while (lstate->event_r_idx != lstate->event_w_idx
 	    && (ccbh = SLIST_FIRST(&lstate->immed_notifies)) != NULL) {
@@ -6373,19 +6376,18 @@ ahc_send_lstate_events(struct ahc_softc *ahc, struct ahc_tmode_lstate *lstate)
 
 		event = &lstate->event_buffer[lstate->event_r_idx];
 		SLIST_REMOVE_HEAD(&lstate->immed_notifies, sim_links.sle);
-		inot = (struct ccb_immed_notify *)ccbh;
+		inot = (struct ccb_immediate_notify *)ccbh;
 		switch (event->event_type) {
 		case EVENT_TYPE_BUS_RESET:
 			ccbh->status = CAM_SCSI_BUS_RESET|CAM_DEV_QFRZN;
 			break;
 		default:
 			ccbh->status = CAM_MESSAGE_RECV|CAM_DEV_QFRZN;
-			inot->message_args[0] = event->event_type;
-			inot->message_args[1] = event->event_arg;
+			inot->arg = event->event_type;
+			inot->seq_id = event->event_arg;
 			break;
 		}
 		inot->initiator_id = event->initiator_id;
-		inot->sense_len = 0;
 		xpt_done((union ccb *)inot);
 		lstate->event_r_idx++;
 		if (lstate->event_r_idx == AHC_TMODE_EVENT_BUFFER_SIZE)

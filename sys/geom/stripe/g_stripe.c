@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/geom/stripe/g_stripe.c 170289 2007-06-04 18:25:08Z dwmalone $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -34,14 +34,15 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/geom/stripe/g_stripe.c 170289 2007-06-04 1
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/bio.h>
+#include <sys/sbuf.h>
 #include <sys/sysctl.h>
 #include <sys/malloc.h>
 #include <vm/uma.h>
 #include <geom/geom.h>
 #include <geom/stripe/g_stripe.h>
 
+FEATURE(geom_stripe, "GEOM striping support");
 
-#define	MAX_IO_SIZE	(DFLTPHYS * 2)
 static MALLOC_DEFINE(M_STRIPE, "stripe_data", "GEOM_STRIPE Data");
 
 static uma_zone_t g_stripe_zone;
@@ -87,7 +88,7 @@ g_sysctl_stripe_fast(SYSCTL_HANDLER_ARGS)
 }
 SYSCTL_PROC(_kern_geom_stripe, OID_AUTO, fast, CTLTYPE_INT | CTLFLAG_RW,
     NULL, 0, g_sysctl_stripe_fast, "I", "Fast, but memory-consuming, mode");
-static u_int g_stripe_maxmem = MAX_IO_SIZE * 100;
+static u_int g_stripe_maxmem = MAXPHYS * 100;
 TUNABLE_INT("kern.geom.stripe.maxmem", &g_stripe_maxmem);
 SYSCTL_UINT(_kern_geom_stripe, OID_AUTO, maxmem, CTLFLAG_RD, &g_stripe_maxmem,
     0, "Maximum memory that can be allocated in \"fast\" mode (in bytes)");
@@ -125,10 +126,10 @@ static void
 g_stripe_init(struct g_class *mp __unused)
 {
 
-	g_stripe_zone = uma_zcreate("g_stripe_zone", MAX_IO_SIZE, NULL, NULL,
+	g_stripe_zone = uma_zcreate("g_stripe_zone", MAXPHYS, NULL, NULL,
 	    NULL, NULL, 0, 0);
-	g_stripe_maxmem -= g_stripe_maxmem % MAX_IO_SIZE;
-	uma_zone_set_max(g_stripe_zone, g_stripe_maxmem / MAX_IO_SIZE);
+	g_stripe_maxmem -= g_stripe_maxmem % MAXPHYS;
+	uma_zone_set_max(g_stripe_zone, g_stripe_maxmem / MAXPHYS);
 }
 
 static void
@@ -613,14 +614,14 @@ g_stripe_start(struct bio *bp)
 	 * Do use "fast" mode when:
 	 * 1. "Fast" mode is ON.
 	 * and
-	 * 2. Request size is less than or equal to MAX_IO_SIZE (128kB),
+	 * 2. Request size is less than or equal to MAXPHYS,
 	 *    which should always be true.
 	 * and
 	 * 3. Request size is bigger than stripesize * ndisks. If it isn't,
 	 *    there will be no need to send more than one I/O request to
 	 *    a provider, so there is nothing to optmize.
 	 */
-	if (g_stripe_fast && bp->bio_length <= MAX_IO_SIZE &&
+	if (g_stripe_fast && bp->bio_length <= MAXPHYS &&
 	    bp->bio_length >= stripesize * sc->sc_ndisks) {
 		fast = 1;
 	}
@@ -634,7 +635,7 @@ g_stripe_start(struct bio *bp)
 	 * Do use "economic" when:
 	 * 1. "Economic" mode is ON.
 	 * or
-	 * 2. "Fast" mode failed. It can only failed if there is no memory.
+	 * 2. "Fast" mode failed. It can only fail if there is no memory.
 	 */
 	if (!fast || error != 0)
 		error = g_stripe_start_economic(bp, no, offset, length);
@@ -676,6 +677,8 @@ g_stripe_check_and_run(struct g_stripe_softc *sc)
 	}
 	sc->sc_provider->sectorsize = sectorsize;
 	sc->sc_provider->mediasize = mediasize * sc->sc_ndisks;
+	sc->sc_provider->stripesize = sc->sc_stripesize;
+	sc->sc_provider->stripeoffset = 0;
 	g_error_provider(sc->sc_provider, 0);
 
 	G_STRIPE_DEBUG(0, "Device %s activated.", sc->sc_name);
@@ -817,8 +820,6 @@ g_stripe_create(struct g_class *mp, const struct g_stripe_metadata *md,
 		}
 	}
 	gp = g_new_geomf(mp, "%s", md->md_name);
-	gp->softc = NULL;	/* for a moment */
-
 	sc = malloc(sizeof(*sc), M_STRIPE, M_WAITOK | M_ZERO);
 	gp->start = g_stripe_start;
 	gp->spoiled = g_stripe_orphan;
@@ -913,6 +914,10 @@ g_stripe_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	g_trace(G_T_TOPOLOGY, "%s(%s, %s)", __func__, mp->name, pp->name);
 	g_topology_assert();
 
+	/* Skip providers that are already open for writing. */
+	if (pp->acw > 0)
+		return (NULL);
+
 	G_STRIPE_DEBUG(3, "Tasting %s.", pp->name);
 
 	gp = g_new_geomf(mp, "stripe:taste");
@@ -946,7 +951,8 @@ g_stripe_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	if (md.md_version < 3)
 		md.md_provsize = pp->mediasize;
 
-	if (md.md_provider[0] != '\0' && strcmp(md.md_provider, pp->name) != 0)
+	if (md.md_provider[0] != '\0' &&
+	    !g_compare_names(md.md_provider, pp->name))
 		return (NULL);
 	if (md.md_provsize != pp->mediasize)
 		return (NULL);
@@ -1069,7 +1075,7 @@ g_stripe_ctl_create(struct gctl_req *req, struct g_class *mp)
 	}
 
 	sc = gp->softc;
-	sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sb = sbuf_new_auto();
 	sbuf_printf(sb, "Can't attach disk(s) to %s:", gp->name);
 	for (attached = 0, no = 1; no < *nargs; no++) {
 		snprintf(param, sizeof(param), "arg%u", no);

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/netinet/libalias/alias_mod.h 162674 2006-09-26 23:26:53Z piso $
+ * $FreeBSD$
  */
 
 /*
@@ -80,10 +80,10 @@ struct proto_handler {
 	u_int pri;                                              /* Handler priority. */
         int16_t dir;                                            /* Flow direction. */
 	uint8_t proto;                                          /* Working protocol. */	
-	int (*fingerprint)(struct libalias *la,                 /* Fingerprint * function. */
-		 struct ip *pip, struct alias_data *ah);
-	int (*protohandler)(struct libalias *la,                /* Aliasing * function. */
-		 struct ip *pip, struct alias_data *ah);                 
+	int (*fingerprint)(struct libalias *,                   /* Fingerprint * function. */
+	    struct alias_data *);                
+	int (*protohandler)(struct libalias *,                  /* Aliasing * function. */
+	    struct ip *, struct alias_data *);                 
 	LIST_ENTRY(proto_handler) entries;
 };
 

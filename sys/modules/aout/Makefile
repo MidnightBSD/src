@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/aout/Makefile 103226 2002-09-11 18:03:03Z peter $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../kern
 

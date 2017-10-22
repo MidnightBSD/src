@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_bt3c_pccard.c,v 1.5 2003/04/01 18:15:21 max Exp $
- * $FreeBSD: release/7.0.0/sys/netgraph/bluetooth/drivers/bt3c/ng_bt3c_pccard.c 166901 2007-02-23 12:19:07Z piso $
+ * $FreeBSD$
  *
  * XXX XXX XX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX 
  *

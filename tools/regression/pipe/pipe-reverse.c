@@ -28,7 +28,7 @@ SUCH DAMAGE.
 #include <sys/stat.h>
 
 /*
- * $FreeBSD: release/7.0.0/tools/regression/pipe/pipe-reverse.c 132524 2004-07-22 02:46:25Z silby $
+ * $FreeBSD$
  * This program simply tests writing through the reverse direction of
  * a pipe.  Nothing too fancy, it's only needed because most pipe-using
  * programs never touch the reverse direction (it doesn't exist on
@@ -44,6 +44,7 @@ struct stat status;
 pid_t new_pid;
 
 buggy = 0;
+total = 0;
 
 error = pipe(desc);
 
@@ -52,7 +53,7 @@ if (error)
 
 buffer[0] = 'A';
 
-for (i = 0; i < 65535; i++) {
+for (i = 1; i < 65535; i++) {
 	buffer[i] = buffer[i - 1] + 1;
 	if (buffer[i] > 'Z')
 		buffer[i] = 'A';

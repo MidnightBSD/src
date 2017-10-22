@@ -13,11 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -46,7 +42,7 @@ static const char sccsid[] = "@(#)random.c	8.5 (Berkeley) 4/5/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/games/random/random.c 157758 2006-04-14 17:32:27Z ache $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -63,12 +59,6 @@ __FBSDID("$FreeBSD: release/7.0.0/games/random/random.c 157758 2006-04-14 17:32:
 
 #include "randomize_fd.h"
 
-/*
- * The random() function is defined to return values between 0 and
- * 2^31 - 1 inclusive in random(3).
- */
-#define	RANDOM_MAX	0x7fffffffL
-
 static void usage(void);
 
 int
@@ -83,7 +73,7 @@ main(int argc, char *argv[])
 	denom = 0;
 	filename = "/dev/fd/0";
 	random_type = RANDOM_TYPE_UNSET;
-	random_exit = randomize_lines = random_type = unbuffer_output = 0;
+	random_exit = randomize_lines = unbuffer_output = 0;
 	unique_output = 1;
 
 	(void)setlocale(LC_CTYPE, "");
@@ -137,8 +127,8 @@ main(int argc, char *argv[])
 			err(1, "%s", *argv);
 		if (denom <= 0 || *ep != '\0')
 			errx(1, "denominator is not valid.");
-		if (random_exit && denom > 255)
-			errx(1, "denominator must be <= 255 for random exit.");
+		if (random_exit && denom > 256)
+			errx(1, "denominator must be <= 256 for random exit.");
 		break;
 	default:
 		usage();
@@ -168,7 +158,7 @@ main(int argc, char *argv[])
 
 	/* Compute a random exit status between 0 and denom - 1. */
 	if (random_exit)
-		return (int)((denom * random()) / RANDOM_MAX);
+		return (int)(denom * random() / RANDOM_MAX_PLUS1);
 
 	/*
 	 * Select whether to print the first line.  (Prime the pump.)
@@ -176,7 +166,7 @@ main(int argc, char *argv[])
 	 * 0 (which has a 1 / denom chance of being true), we select the
 	 * line.
 	 */
-	selected = (int)(denom * random() / RANDOM_MAX) == 0;
+	selected = (int)(denom * random() / RANDOM_MAX_PLUS1) == 0;
 	while ((ch = getchar()) != EOF) {
 		if (selected)
 			(void)putchar(ch);
@@ -186,7 +176,8 @@ main(int argc, char *argv[])
 				err(2, "stdout");
 
 			/* Now see if the next line is to be printed. */
-			selected = (int)(denom * random() / RANDOM_MAX) == 0;
+			selected = (int)(denom * random() /
+				RANDOM_MAX_PLUS1) == 0;
 		}
 	}
 	if (ferror(stdin))

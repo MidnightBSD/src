@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/netnatm/natm_proto.c 165900 2007-01-08 22:30:39Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -88,8 +88,14 @@ static struct domain natmdomain = {
 	.dom_protoswNPROTOSW =	&natmsw[sizeof(natmsw)/sizeof(natmsw[0])],
 };
 
-static int natmqmaxlen = 1000 /* IFQ_MAXLEN */;	/* max # of packets on queue */
-static struct ifqueue natmintrq;
+static struct netisr_handler natm_nh = {
+	.nh_name = "natm",
+	.nh_handler = natmintr,
+	.nh_proto = NETISR_NATM,
+	.nh_qlimit = 1000,
+	.nh_policy = NETISR_POLICY_SOURCE,
+};
+
 #ifdef NATM_STAT
 u_int natm_sodropcnt;		/* # mbufs dropped due to full sb */
 u_int natm_sodropbytes;		/* # of bytes dropped */
@@ -101,11 +107,8 @@ static void
 natm_init(void)
 {
 	LIST_INIT(&natm_pcbs);
-	bzero(&natmintrq, sizeof(natmintrq));
-	natmintrq.ifq_maxlen = natmqmaxlen;
 	NATM_LOCK_INIT();
-	mtx_init(&natmintrq.ifq_mtx, "natm_inq", NULL, MTX_DEF);
-	netisr_register(NETISR_NATM, natmintr, &natmintrq, NETISR_MPSAFE);
+	netisr_register(&natm_nh);
 }
 
 DOMAIN_SET(natm);

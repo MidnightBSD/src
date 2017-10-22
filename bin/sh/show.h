@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)show.h	1.1 (Berkeley) 5/4/95
- * $FreeBSD: release/7.0.0/bin/sh/show.h 127958 2004-04-06 20:06:54Z markm $
+ * $FreeBSD$
  */
 
 void showtree(union node *);
@@ -35,6 +35,6 @@ void showtree(union node *);
 void sh_trace(const char *, ...) __printflike(1, 2);
 void trargs(char **);
 void trputc(int);
-void trputs(char *);
+void trputs(const char *);
 void opentrace(void);
 #endif

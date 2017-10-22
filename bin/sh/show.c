@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)show.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/sh/show.c 157750 2006-04-14 13:59:03Z schweikh $");
+__FBSDID("$FreeBSD$");
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -274,7 +274,7 @@ indent(int amount, char *pfx, FILE *fp)
 
 FILE *tracefile;
 
-#if DEBUG == 2
+#if DEBUG >= 2
 int debug = 1;
 #else
 int debug = 0;
@@ -307,7 +307,7 @@ sh_trace(const char *fmt, ...)
 
 
 void
-trputs(char *s)
+trputs(const char *s)
 {
 	if (tracefile == NULL)
 		return;

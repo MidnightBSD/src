@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/nwfs/Makefile 154865 2006-01-26 19:21:27Z alc $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../fs/nwfs
 

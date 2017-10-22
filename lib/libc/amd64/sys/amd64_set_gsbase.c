@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/amd64/sys/amd64_set_gsbase.c 124296 2004-01-09 16:52:09Z nectar $");
+__FBSDID("$FreeBSD$");
 
 #include <machine/sysarch.h>
 

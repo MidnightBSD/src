@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/pc98/pc98/busiosubr.c 139825 2005-01-07 02:29:27Z imp $ */
+/* $FreeBSD$ */
 /*	$NecBSD: busiosubr.c,v 1.30.4.4 1999/08/28 02:25:35 honda Exp $	*/
 /*	$NetBSD$	*/
 
@@ -63,7 +63,7 @@ _BUS_SPACE_CALL_FUNCS_PROTO(SBUS_RA_mem,u_int16_t,2)
 _BUS_SPACE_CALL_FUNCS_PROTO(SBUS_RA_mem,u_int32_t,4)
 
 struct bus_space_tag SBUS_io_space_tag = {
-	BUS_SPACE_IO,
+	BUS_SPACE_TAG_IO,
 
 	/* direct bus access methods */
 	{
@@ -81,7 +81,7 @@ struct bus_space_tag SBUS_io_space_tag = {
 };
 
 struct bus_space_tag SBUS_mem_space_tag = {
-	BUS_SPACE_MEM,
+	BUS_SPACE_TAG_MEM,
 
 	/* direct bus access methods */
 	{
@@ -109,7 +109,7 @@ _BUS_SPACE_CALL_FUNCS_PROTO(NEPC_RA_io,u_int16_t,2)
 _BUS_SPACE_CALL_FUNCS_PROTO(NEPC_RA_io,u_int32_t,4)
 
 struct bus_space_tag NEPC_io_space_tag = {
-	BUS_SPACE_IO,
+	BUS_SPACE_TAG_IO,
 
 	/* direct bus access methods */
 	{
@@ -127,7 +127,7 @@ struct bus_space_tag NEPC_io_space_tag = {
 };
 
 struct bus_space_tag NEPC_mem_space_tag = {
-	BUS_SPACE_MEM,
+	BUS_SPACE_TAG_MEM,
 
 	/* direct bus access methods */
 	{
@@ -221,6 +221,31 @@ i386_memio_free(bus_space_tag_t t, bus_space_handle_t bsh, bus_size_t size)
 }
 
 int
+i386_memio_map_load(bus_space_tag_t t, bus_space_handle_t bsh,
+		    bus_size_t size, bus_space_iat_t iat, u_int flags __unused)
+{
+	int i;
+
+	if (size > bsh->bsh_maxiatsz) {
+		printf("i386_memio_map_load: map size too large\n");
+		return EINVAL;
+	}
+
+	for (i = 0; i < bsh->bsh_maxiatsz; i++) {
+		if (i < size)
+			bsh->bsh_iat[i] = iat[i];
+		else
+			bsh->bsh_iat[i] = 0;
+		bsh->bsh_iat[i] += bsh->bsh_base;
+	}
+
+	bsh->bsh_iatsz = size;
+	bsh->bsh_bam = t->bs_ra;	/* relocate access */
+
+	return 0;
+}
+
+int
 i386_memio_subregion(bus_space_tag_t t, bus_space_handle_t pbsh,
 		     bus_size_t offset, bus_size_t size,
 		     bus_space_handle_t *tbshp)
@@ -231,7 +256,7 @@ i386_memio_subregion(bus_space_tag_t t, bus_space_handle_t pbsh,
 
 	pbase = pbsh->bsh_base + offset;
 	switch (t->bs_tag) {
-	case BUS_SPACE_IO:
+	case BUS_SPACE_TAG_IO:
 		if (pbsh->bsh_iatsz > 0) {
 			if (offset >= pbsh->bsh_iatsz || 
 			    offset + size > pbsh->bsh_iatsz)
@@ -240,7 +265,7 @@ i386_memio_subregion(bus_space_tag_t t, bus_space_handle_t pbsh,
 		}
 		break;
 
-	case BUS_SPACE_MEM:
+	case BUS_SPACE_TAG_MEM:
 		if (pbsh->bsh_iatsz > 0)
 			return EINVAL;
 		if (offset > pbsh->bsh_sz || offset + size > pbsh->bsh_sz)
@@ -257,7 +282,7 @@ i386_memio_subregion(bus_space_tag_t t, bus_space_handle_t pbsh,
 		return error;
 
 	switch (t->bs_tag) {
-	case BUS_SPACE_IO:
+	case BUS_SPACE_TAG_IO:
 		if (pbsh->bsh_iatsz > 0) {
 			for (i = 0; i < size; i ++)
 				bsh->bsh_iat[i] = pbsh->bsh_iat[i + offset];
@@ -270,7 +295,7 @@ i386_memio_subregion(bus_space_tag_t t, bus_space_handle_t pbsh,
 		}
 		break;
 
-	case BUS_SPACE_MEM:
+	case BUS_SPACE_TAG_MEM:
 		break;
 	}
 
@@ -278,4 +303,29 @@ i386_memio_subregion(bus_space_tag_t t, bus_space_handle_t pbsh,
 		bsh->bsh_bam = t->bs_ra;	/* relocate access */
 	*tbshp = bsh;
 	return error;
+}
+
+int
+i386_memio_compare(bus_space_tag_t t1, bus_space_handle_t bsh1,
+		   bus_space_tag_t t2, bus_space_handle_t bsh2)
+{
+	int i;
+
+	if (t1->bs_tag != t2->bs_tag)
+		return (1);
+	if (bsh1->bsh_base != bsh2->bsh_base)
+		return (1);
+	if (bsh1->bsh_sz != bsh2->bsh_sz)
+		return (1);
+	if (bsh1->bsh_bam.bs_read_1 != bsh2->bsh_bam.bs_read_1)	/* XXX */
+		return (1);
+
+	if (bsh1->bsh_iatsz != bsh2->bsh_iatsz)
+		return (1);
+	for (i = 0; i < bsh1->bsh_iatsz; i++) {
+		if (bsh1->bsh_iat[i] != bsh2->bsh_iat[i])
+			return (1);
+	}
+
+	return (0);
 }

@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -44,7 +40,7 @@ static char sccsid[] = "@(#)rev.c	8.3 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/rev/rev.c 160834 2006-07-30 07:41:28Z maxim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -57,7 +53,7 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.bin/rev/rev.c 160834 2006-07-30 07:41:28Z 
 #include <unistd.h>
 #include <wchar.h>
 
-void usage(void);
+static void usage(void);
 
 int
 main(int argc, char *argv[])

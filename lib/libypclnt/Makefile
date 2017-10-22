@@ -1,7 +1,7 @@
-# $FreeBSD: release/7.0.0/lib/libypclnt/Makefile 169807 2007-05-21 02:49:08Z deischen $
+# $FreeBSD$
 
 LIB=	ypclnt
-SHLIB_MAJOR= 3
+SHLIB_MAJOR= 4
 SRCS=	ypclnt_connect.c \
 	ypclnt_error.c \
 	ypclnt_free.c \
@@ -12,7 +12,6 @@ CLEANFILES+= ${GENSRCS}
 INCS= ypclnt.h
 
 CFLAGS+= -I.
-WARNS?=	5
 
 GENSRCS=yp.h \
 	yp_clnt.c \
@@ -23,7 +22,7 @@ GENSRCS=yp.h \
 	yppasswd_private_clnt.c \
 	yppasswd_private_xdr.c
 
-RPCGEN=	rpcgen -C
+RPCGEN=	RPCGEN_CPP=${CPP:Q} rpcgen -C
 RPCSRC=	${.CURDIR}/../../include/rpcsvc/yp.x
 RPCSRC_PW=	${.CURDIR}/../../include/rpcsvc/yppasswd.x
 RPCSRC_PRIV=	${.CURDIR}/../../usr.sbin/rpc.yppasswdd/yppasswd_private.x

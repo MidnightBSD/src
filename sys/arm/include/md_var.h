@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/i386/include/md_var.h,v 1.40 2001/07/12
- * $FreeBSD: release/7.0.0/sys/arm/include/md_var.h 166063 2007-01-17 00:53:05Z cognet $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_MD_VAR_H_
@@ -35,6 +35,8 @@
 
 extern char sigcode[];
 extern int szsigcode;
+extern uint32_t *vm_page_dump;
+extern int vm_page_dump_size;
 
 extern int (*_arm_memcpy)(void *, void *, int, int);
 extern int (*_arm_bzero)(void *, int, int);
@@ -46,7 +48,32 @@ extern int _min_bzero_size;
 #define SRC_IS_USER	0x2
 #define IS_PHYSICAL	0x4
 
+enum cpu_class {
+	CPU_CLASS_NONE,
+	CPU_CLASS_ARM2,
+	CPU_CLASS_ARM2AS,
+	CPU_CLASS_ARM3,
+	CPU_CLASS_ARM6,
+	CPU_CLASS_ARM7,
+	CPU_CLASS_ARM7TDMI,
+	CPU_CLASS_ARM8,
+	CPU_CLASS_ARM9TDMI,
+	CPU_CLASS_ARM9ES,
+	CPU_CLASS_ARM9EJS,
+	CPU_CLASS_ARM10E,
+	CPU_CLASS_ARM10EJ,
+	CPU_CLASS_SA1,
+	CPU_CLASS_XSCALE,
+	CPU_CLASS_ARM11J,
+	CPU_CLASS_MARVELL
+};
+extern enum cpu_class cpu_class;
+
+struct dumperinfo;
 extern int busdma_swi_pending;
 void busdma_swi(void);
+void dump_add_page(vm_paddr_t);
+void dump_drop_page(vm_paddr_t);
+void minidumpsys(struct dumperinfo *);
 
 #endif /* !_MACHINE_MD_VAR_H_ */

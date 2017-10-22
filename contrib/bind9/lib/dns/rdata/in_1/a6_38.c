@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: a6_38.c,v 1.52 2004/03/05 05:10:23 marka Exp $ */
+/* $Id: a6_38.c,v 1.56 2009/12/04 22:06:37 tbox Exp $ */
 
 /* RFC2874 */
 
@@ -456,6 +456,11 @@ checknames_in_a6(ARGS_CHECKNAMES) {
 		return (ISC_FALSE);
 	}
 	return (ISC_TRUE);
+}
+
+static inline int
+casecompare_in_a6(ARGS_COMPARE) {
+	return (compare_in_a6(rdata1, rdata2));
 }
 
 #endif	/* RDATA_IN_1_A6_38_C */

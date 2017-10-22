@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libipsec/ipsec_dump_policy.c 171135 2007-07-01 12:08:08Z gnn $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -162,7 +162,8 @@ ipsec_dump_policy(policy, delimiter)
 			return NULL;
 		}
 		buf = newbuf;
-		snprintf(buf, buflen, "%s%s%s", buf, delimiter, isrbuf);
+		snprintf(buf + strlen(buf), buflen - strlen(buf),
+		    "%s%s", delimiter, isrbuf);
 
 		off += xisr->sadb_x_ipsecrequest_len;
 	}

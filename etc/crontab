@@ -1,10 +1,9 @@
 # /etc/crontab - root's crontab for FreeBSD
 #
-# $FreeBSD: release/7.0.0/etc/crontab 107171 2002-11-22 16:13:39Z tom $
+# $FreeBSD$
 #
 SHELL=/bin/sh
 PATH=/etc:/bin:/sbin:/usr/bin:/usr/sbin
-HOME=/var/log
 #
 #minute	hour	mday	month	wday	who	command
 #

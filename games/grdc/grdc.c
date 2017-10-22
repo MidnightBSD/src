@@ -11,25 +11,22 @@
  * modified 03-25-03 for 12 hour option
  *     - Samy Al Bahra <samy@kerneled.com>
  *
- * $FreeBSD: release/7.0.0/games/grdc/grdc.c 116740 2003-06-23 16:02:40Z will $
+ * $FreeBSD$
  */
 
 #include <err.h>
-#include <time.h>
-#include <signal.h>
 #include <ncurses.h>
+#include <signal.h>
 #include <stdlib.h>
-#ifndef NONPOSIX
+#include <time.h>
 #include <unistd.h>
-#endif
 
 #define YBASE	10
 #define XBASE	10
 #define XLENGTH 58
 #define YDEPTH  7
 
-/* it won't be */
-time_t now; /* yeah! */
+struct timespec now;
 struct tm *tm;
 
 short disp[11] = {
@@ -48,23 +45,23 @@ void movto(int, int);
 void sighndl(int);
 void usage(void);
 
-void sighndl(signo)
-int signo;
+void
+sighndl(int signo)
 {
 	sigtermed=signo;
 }
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char *argv[])
 {
-long t, a;
-int i, j, s, k;
-int n;
-int ch;
-int scrol;
-int t12;
+	struct timespec delay;
+	time_t prev_sec;
+	long t, a;
+	int i, j, s, k;
+	int n;
+	int ch;
+	int scrol;
+	int t12;
 
 	t12 = scrol = 0;
 
@@ -89,9 +86,14 @@ int t12;
 		/* NOTREACHED */
 	}
 
-	if (argc > 0)
-		n = atoi(*argv);
-	else
+	if (argc > 0) {
+		n = atoi(*argv) + 1;
+		if (n < 1) {
+			warnx("number of seconds is out of range");
+			usage();
+			/* NOTREACHED */
+		}
+	} else
 		n = 0;
 
 	initscr();
@@ -136,10 +138,11 @@ int t12;
 
 		attrset(COLOR_PAIR(2));
 	}
+	clock_gettime(CLOCK_REALTIME_FAST, &now);
+	prev_sec = now.tv_sec;
 	do {
 		mask = 0;
-		time(&now);
-		tm = localtime(&now);
+		tm = localtime(&now.tv_sec);
 		set(tm->tm_sec%10, 0);
 		set(tm->tm_sec/10, 4);
 		set(tm->tm_min%10, 10);
@@ -193,7 +196,20 @@ int t12;
 		}
 		movto(6, 0);
 		refresh();
-		sleep(1);
+		clock_gettime(CLOCK_REALTIME_FAST, &now);
+		if (now.tv_sec == prev_sec) {
+			if (delay.tv_nsec > 0) {
+				delay.tv_sec = 0;
+				delay.tv_nsec = 1000000000 - now.tv_nsec;
+			} else {
+				delay.tv_sec = 1;
+				delay.tv_nsec = 0;
+			}
+			nanosleep(&delay, NULL);
+			clock_gettime(CLOCK_REALTIME_FAST, &now);
+		}
+		n -= now.tv_sec - prev_sec;
+		prev_sec = now.tv_sec;
 		if (sigtermed) {
 			standend();
 			clear();
@@ -201,7 +217,7 @@ int t12;
 			endwin();
 			errx(1, "terminated by signal %d", (int)sigtermed);
 		}
-	} while(--n);
+	} while (n);
 	standend();
 	clear();
 	refresh();
@@ -212,7 +228,7 @@ int t12;
 void
 set(int t, int n)
 {
-int i, m;
+	int i, m;
 
 	m = 7<<n;
 	for(i=0; i<5; i++) {

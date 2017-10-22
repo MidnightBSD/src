@@ -1,8 +1,11 @@
-# $FreeBSD: release/7.0.0/secure/usr.bin/sftp/Makefile 163089 2006-10-07 17:32:05Z ru $
+# $FreeBSD$
 
 PROG=	sftp
 SRCS=   sftp.c sftp-client.c sftp-common.c sftp-glob.c progressmeter.c
 CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
+
+# required when linking with a dynamic libssh 
+SRCS+=	roaming_dummy.c
 
 DPADD=	${LIBSSH} ${LIBCRYPT} ${LIBCRYPTO} ${LIBZ} ${LIBEDIT} ${LIBNCURSES}
 LDADD=	-lssh -lcrypt -lcrypto -lz -ledit -lncurses

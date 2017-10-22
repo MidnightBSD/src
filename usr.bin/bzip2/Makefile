@@ -1,10 +1,12 @@
-# $FreeBSD: release/7.0.0/usr.bin/bzip2/Makefile 167979 2007-03-28 07:48:03Z delphij $
+# $FreeBSD$
 
 BZ2DIR=	${.CURDIR}/../../contrib/bzip2
 .PATH: ${BZ2DIR}
 
 PROG=	bzip2
 CFLAGS+= -D_FILE_OFFSET_BITS=64
+
+WARNS?=	3
 
 DPADD=	${LIBBZ2}
 LDADD=	-lbz2

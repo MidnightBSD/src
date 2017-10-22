@@ -1,10 +1,11 @@
-# $FreeBSD: release/7.0.0/libexec/pppoed/Makefile 140941 2005-01-28 16:08:11Z ru $
+# $FreeBSD$
 
 PROG=	pppoed
 DPADD=	${LIBNETGRAPH}
 LDADD=	-lnetgraph
 MAN=	pppoed.8
 
+WARNS?=	1
 WFORMAT=0
 
 .include <bsd.prog.mk>

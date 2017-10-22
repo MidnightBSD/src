@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/gnu/usr.bin/gdb/arch/sparc64/config.h 138383 2004-12-05 06:59:01Z marcel $ */
+/* $FreeBSD$ */
 
 /* config.h.  Generated automatically by configure.  */
 /* config.in.  Generated automatically from configure.in by autoheader.  */

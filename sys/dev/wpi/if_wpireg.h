@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/dev/wpi/if_wpireg.h 174446 2007-12-08 12:44:59Z benjsc $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2006,2007
@@ -44,6 +44,7 @@
 #define WPI_GPIO_CTL		0x024
 #define WPI_EEPROM_CTL		0x02c
 #define WPI_EEPROM_STATUS	0x030
+#define WPI_UCODE_SET		0x058
 #define WPI_UCODE_CLR		0x05c
 #define WPI_TEMPERATURE		0x060
 #define WPI_CHICKEN		0x100
@@ -201,6 +202,7 @@ struct wpi_rx_desc {
 #define WPI_RX_DONE		 27
 #define WPI_TX_DONE		 28
 #define WPI_START_SCAN		130
+#define WPI_SCAN_RESULTS	131
 #define WPI_STOP_SCAN		132
 #define WPI_STATE_CHANGED	161
 #define WPI_MISSED_BEACON	162
@@ -233,12 +235,10 @@ struct wpi_rx_head {
 
 struct wpi_rx_tail {
 	uint32_t	flags;
-#if 0
 #define WPI_RX_NO_CRC_ERR	(1 << 0)
 #define WPI_RX_NO_OVFL_ERR	(1 << 1)
 /* shortcut for the above */
 #define WPI_RX_NOERROR		(WPI_RX_NO_CRC_ERR | WPI_RX_NO_OVFL_ERR)
-#endif
 	uint64_t	tstamp;
 	uint32_t	tbeacon;
 } __packed;

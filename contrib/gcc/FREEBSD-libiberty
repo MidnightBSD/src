@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# $FreeBSD: release/7.0.0/contrib/gcc/FREEBSD-libiberty 174854 2007-12-22 06:32:46Z cvs2svn $
+# $FreeBSD$
 
 for F in \
 	choose-temp.c	\

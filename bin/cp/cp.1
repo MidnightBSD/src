@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)cp.1	8.3 (Berkeley) 4/18/94
-.\" $FreeBSD: release/7.0.0/bin/cp/cp.1 163919 2006-11-02 19:10:05Z ceri $
+.\" $FreeBSD$
 .\"
-.Dd October 27, 2006
+.Dd January 17, 2010
 .Dt CP 1
 .Os
 .Sh NAME
@@ -45,7 +45,7 @@
 .Op Fl H | Fl L | Fl P
 .Oc
 .Op Fl f | i | n
-.Op Fl lpv
+.Op Fl alpvx
 .Ar source_file target_file
 .Nm
 .Oo
@@ -53,7 +53,7 @@
 .Op Fl H | Fl L | Fl P
 .Oc
 .Op Fl f | i | n
-.Op Fl lpv
+.Op Fl alpvx
 .Ar source_file ... target_directory
 .Sh DESCRIPTION
 In the first synopsis form, the
@@ -116,6 +116,10 @@ If you need to preserve hard links, consider using
 or
 .Xr pax 1
 instead.
+.It Fl a
+Archive mode.
+Same as
+.Fl RpP .
 .It Fl f
 For each existing destination pathname, remove it and
 create a new file, without prompting for confirmation
@@ -179,6 +183,8 @@ permissions.
 Cause
 .Nm
 to be verbose, showing files as they are copied.
+.It Fl x
+File system mount points are not traversed.
 .El
 .Pp
 For each destination file that already exists, its contents are

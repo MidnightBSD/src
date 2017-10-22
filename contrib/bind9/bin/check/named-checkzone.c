@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: named-checkzone.c,v 1.29.18.19 2007/08/28 07:19:55 tbox Exp $ */
+/* $Id: named-checkzone.c,v 1.61.62.2 2011/12/22 23:45:54 tbox Exp $ */
 
 /*! \file */
 
@@ -70,16 +70,23 @@ static enum { progmode_check, progmode_compile } progmode;
 		} \
 	} while (0)
 
+ISC_PLATFORM_NORETURN_PRE static void
+usage(void) ISC_PLATFORM_NORETURN_POST;
+
 static void
 usage(void) {
 	fprintf(stderr,
-		"usage: %s [-djqvD] [-c class] [-o output] "
+		"usage: %s [-djqvD] [-c class] "
 		"[-f inputformat] [-F outputformat] "
 		"[-t directory] [-w directory] [-k (ignore|warn|fail)] "
 		"[-n (ignore|warn|fail)] [-m (ignore|warn|fail)] "
-		"[-i (full|local|none)] [-M (ignore|warn|fail)] "
-		"[-S (ignore|warn|fail)] [-W (ignore|warn)] "
-		"zonename filename\n", prog_name);
+		"[-r (ignore|warn|fail)] "
+		"[-i (full|full-sibling|local|local-sibling|none)] "
+		"[-M (ignore|warn|fail)] [-S (ignore|warn|fail)] "
+		"[-W (ignore|warn)] "
+		"%s zonename filename\n",
+		prog_name,
+		progmode == progmode_check ? "[-o filename]" : "-o filename");
 	exit(1);
 }
 
@@ -105,6 +112,8 @@ main(int argc, char **argv) {
 	const char *outputformatstr = NULL;
 	dns_masterformat_t inputformat = dns_masterformat_text;
 	dns_masterformat_t outputformat = dns_masterformat_text;
+	isc_boolean_t logdump = ISC_FALSE;
+	FILE *errout = stdout;
 
 	outputstyle = &dns_master_style_full;
 
@@ -121,9 +130,13 @@ main(int argc, char **argv) {
 	 */
 	if (strncmp(prog_name, "lt-", 3) == 0)
 		prog_name += 3;
-	if (strcmp(prog_name, "named-checkzone") == 0)
+
+#define PROGCMP(X) \
+	(strcasecmp(prog_name, X) == 0 || strcasecmp(prog_name, X ".exe") == 0)
+
+	if (PROGCMP("named-checkzone"))
 		progmode = progmode_check;
-	else if (strcmp(prog_name, "named-compilezone") == 0)
+	else if (PROGCMP("named-compilezone"))
 		progmode = progmode_compile;
 	else
 		INSIST(0);
@@ -132,15 +145,19 @@ main(int argc, char **argv) {
 	if (progmode == progmode_compile) {
 		zone_options |= (DNS_ZONEOPT_CHECKNS |
 				 DNS_ZONEOPT_FATALNS |
+				 DNS_ZONEOPT_CHECKDUPRR |
 				 DNS_ZONEOPT_CHECKNAMES |
 				 DNS_ZONEOPT_CHECKNAMESFAIL |
 				 DNS_ZONEOPT_CHECKWILDCARD);
-	}
+	} else
+		zone_options |= DNS_ZONEOPT_CHECKDUPRR;
 
 #define ARGCMP(X) (strcmp(isc_commandline_argument, X) == 0)
 
+	isc_commandline_errprint = ISC_FALSE;
+
 	while ((c = isc_commandline_parse(argc, argv,
-					  "c:df:i:jk:m:n:qs:t:o:vw:DF:M:S:W:"))
+				       "c:df:hi:jk:m:n:qr:s:t:o:vw:DF:M:S:W:"))
 	       != EOF) {
 		switch (c) {
 		case 'c':
@@ -227,7 +244,7 @@ main(int argc, char **argv) {
 				zone_options &= ~DNS_ZONEOPT_FATALNS;
 			} else if (ARGCMP("fail")) {
 				zone_options |= DNS_ZONEOPT_CHECKNS|
-					        DNS_ZONEOPT_FATALNS;
+						DNS_ZONEOPT_FATALNS;
 			} else {
 				fprintf(stderr, "invalid argument to -n: %s\n",
 					isc_commandline_argument);
@@ -252,22 +269,27 @@ main(int argc, char **argv) {
 			}
 			break;
 
+		case 'o':
+			output_filename = isc_commandline_argument;
+			break;
+
 		case 'q':
 			quiet++;
 			break;
 
-		case 't':
-			result = isc_dir_chroot(isc_commandline_argument);
-			if (result != ISC_R_SUCCESS) {
-				fprintf(stderr, "isc_dir_chroot: %s: %s\n",
-					isc_commandline_argument,
-					isc_result_totext(result));
-				exit(1);
-			}
-			result = isc_dir_chdir("/");
-			if (result != ISC_R_SUCCESS) {
-				fprintf(stderr, "isc_dir_chdir: %s\n",
-					isc_result_totext(result));
+		case 'r':
+			if (ARGCMP("warn")) {
+				zone_options |= DNS_ZONEOPT_CHECKDUPRR;
+				zone_options &= ~DNS_ZONEOPT_CHECKDUPRRFAIL;
+			} else if (ARGCMP("fail")) {
+				zone_options |= DNS_ZONEOPT_CHECKDUPRR |
+						DNS_ZONEOPT_CHECKDUPRRFAIL;
+			} else if (ARGCMP("ignore")) {
+				zone_options &= ~(DNS_ZONEOPT_CHECKDUPRR |
+						  DNS_ZONEOPT_CHECKDUPRRFAIL);
+			} else {
+				fprintf(stderr, "invalid argument to -r: %s\n",
+					isc_commandline_argument);
 				exit(1);
 			}
 			break;
@@ -285,8 +307,14 @@ main(int argc, char **argv) {
 			}
 			break;
 
-		case 'o':
-			output_filename = isc_commandline_argument;
+		case 't':
+			result = isc_dir_chroot(isc_commandline_argument);
+			if (result != ISC_R_SUCCESS) {
+				fprintf(stderr, "isc_dir_chroot: %s: %s\n",
+					isc_commandline_argument,
+					isc_result_totext(result));
+				exit(1);
+			}
 			break;
 
 		case 'v':
@@ -342,17 +370,17 @@ main(int argc, char **argv) {
 				zone_options &= ~DNS_ZONEOPT_CHECKWILDCARD;
 			break;
 
-		default:
+		case '?':
+			if (isc_commandline_option != '?')
+				fprintf(stderr, "%s: invalid argument -%c\n",
+					prog_name, isc_commandline_option);
+		case 'h':
 			usage();
-		}
-	}
 
-	if (progmode == progmode_compile) {
-		dumpzone = 1;	/* always dump */
-		if (output_filename == NULL) {
-			fprintf(stderr,
-				"output file required, but not specified\n");
-			usage();
+		default:
+			fprintf(stderr, "%s: unhandled option -%c\n",
+				prog_name, isc_commandline_option);
+			exit(1);
 		}
 	}
 
@@ -389,12 +417,43 @@ main(int argc, char **argv) {
 		}
 	}
 
-	if (isc_commandline_index + 2 > argc)
+	if (progmode == progmode_compile) {
+		dumpzone = 1;	/* always dump */
+		logdump = !quiet;
+		if (output_filename == NULL) {
+			fprintf(stderr,
+				"output file required, but not specified\n");
+			usage();
+		}
+	}
+
+	if (output_filename != NULL)
+		dumpzone = 1;
+
+	/*
+	 * If we are outputing to stdout then send the informational
+	 * output to stderr.
+	 */
+	if (dumpzone &&
+	    (output_filename == NULL ||
+	     strcmp(output_filename, "-") == 0 ||
+	     strcmp(output_filename, "/dev/fd/1") == 0 ||
+	     strcmp(output_filename, "/dev/stdout") == 0)) {
+		errout = stderr;
+		logdump = ISC_FALSE;
+	}
+
+	if (isc_commandline_index + 2 != argc)
 		usage();
+
+#ifdef _WIN32
+	InitSockets();
+#endif
 
 	RUNTIME_CHECK(isc_mem_create(0, 0, &mctx) == ISC_R_SUCCESS);
 	if (!quiet)
-		RUNTIME_CHECK(setup_logging(mctx, &lctx) == ISC_R_SUCCESS);
+		RUNTIME_CHECK(setup_logging(mctx, errout, &lctx)
+			      == ISC_R_SUCCESS);
 	RUNTIME_CHECK(isc_entropy_create(mctx, &ectx) == ISC_R_SUCCESS);
 	RUNTIME_CHECK(isc_hash_create(mctx, ectx, DNS_NAME_MAXWIRE)
 		      == ISC_R_SUCCESS);
@@ -407,23 +466,26 @@ main(int argc, char **argv) {
 			   &zone);
 
 	if (result == ISC_R_SUCCESS && dumpzone) {
-		if (!quiet && progmode == progmode_compile) {
-			fprintf(stdout, "dump zone to %s...", output_filename);
-			fflush(stdout);
+		if (logdump) {
+			fprintf(errout, "dump zone to %s...", output_filename);
+			fflush(errout);
 		}
 		result = dump_zone(origin, zone, output_filename,
 				   outputformat, outputstyle);
-		if (!quiet && progmode == progmode_compile)
-			fprintf(stdout, "done\n");
+		if (logdump)
+			fprintf(errout, "done\n");
 	}
 
 	if (!quiet && result == ISC_R_SUCCESS)
-		fprintf(stdout, "OK\n");
+		fprintf(errout, "OK\n");
 	destroy();
 	if (lctx != NULL)
 		isc_log_destroy(&lctx);
 	isc_hash_destroy();
 	isc_entropy_detach(&ectx);
 	isc_mem_destroy(&mctx);
+#ifdef _WIN32
+	DestroySockets();
+#endif
 	return ((result == ISC_R_SUCCESS) ? 0 : 1);
 }

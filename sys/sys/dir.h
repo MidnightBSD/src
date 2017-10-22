@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)dir.h	8.2 (Berkeley) 1/4/94
- * $FreeBSD: release/7.0.0/sys/sys/dir.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_DIR_H_

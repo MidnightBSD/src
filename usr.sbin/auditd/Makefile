@@ -1,15 +1,19 @@
 #
-# $FreeBSD: release/7.0.0/usr.sbin/auditd/Makefile 155213 2006-02-02 10:15:30Z rwatson $
+# $FreeBSD$
 #
 
 OPENBSMDIR=${.CURDIR}/../../contrib/openbsm
 .PATH: ${OPENBSMDIR}/bin/auditd
 
+CFLAGS+=	-I${OPENBSMDIR}
+
 PROG=	auditd
-SRCS=	auditd.c audit_warn.c
+SRCS=	auditd.c audit_warn.c auditd_fbsd.c
 MAN=	auditd.8
 
-DPADD=	${LIBBSM}
-LDADD=	-lbsm
+DPADD=	${LIBAUDITD} ${LIBBSM}
+LDADD=	-lauditd -lbsm
+
+WARNS?=	3
 
 .include <bsd.prog.mk>

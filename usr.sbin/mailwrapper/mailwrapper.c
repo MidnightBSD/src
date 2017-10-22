@@ -1,4 +1,4 @@
-/*	$OpenBSD: mailwrapper.c,v 1.16 2004/07/06 03:38:14 millert Exp $	*/
+/*	$OpenBSD: mailwrapper.c,v 1.18 2007/11/06 14:39:19 otto Exp $	*/
 /*	$NetBSD: mailwrapper.c,v 1.9 2003/03/09 08:10:43 mjl Exp $	*/
 
 /*
@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/mailwrapper/mailwrapper.c 161038 2006-08-07 10:29:18Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <stdio.h>
@@ -61,8 +61,8 @@ initarg(struct arglist *al)
 {
 	al->argc = 0;
 	al->maxc = 10;
-	if ((al->argv = malloc(al->maxc * sizeof(char *))) == NULL)
-		err(EX_TEMPFAIL, "malloc");
+	if ((al->argv = calloc(al->maxc, sizeof(char *))) == NULL)
+		err(EX_TEMPFAIL, "calloc");
 }
 
 static void
@@ -126,7 +126,7 @@ main(int argc, char *argv[], char *envp[])
 			continue;
 		}
 
-		if ((from = strsep(&cp, WS)) == NULL)
+		if ((from = strsep(&cp, WS)) == NULL || cp == NULL)
 			goto parse_error;
 
 		cp += strspn(cp, WS);

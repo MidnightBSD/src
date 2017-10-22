@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/periodic/daily/406.status-gmirror 154304 2006-01-13 18:07:52Z wollman $
+# $FreeBSD$
 #
 
 # If there is a global system configuration file, suck it in.

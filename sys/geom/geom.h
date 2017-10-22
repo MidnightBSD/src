@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/geom/geom.h 169283 2007-05-05 16:35:22Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef _GEOM_GEOM_H_
@@ -43,7 +43,7 @@
 #include <sys/sx.h>
 #include <sys/queue.h>
 #include <sys/ioccom.h>
-#include <sys/sbuf.h>
+#include <sys/conf.h>
 #include <sys/module.h>
 
 struct g_class;
@@ -75,6 +75,8 @@ typedef void g_orphan_t (struct g_consumer *);
 
 typedef void g_start_t (struct bio *);
 typedef void g_spoiled_t (struct g_consumer *);
+typedef void g_attrchanged_t (struct g_consumer *, const char *attr);
+typedef void g_provgone_t (struct g_provider *);
 typedef void g_dumpconf_t (struct sbuf *, const char *indent, struct g_geom *,
     struct g_consumer *, struct g_provider *);
 
@@ -88,6 +90,7 @@ typedef void g_dumpconf_t (struct sbuf *, const char *indent, struct g_geom *,
 struct g_class {
 	const char		*name;
 	u_int			version;
+	u_int			spare0;
 	g_taste_t		*taste;
 	g_config_t		*config;
 	g_ctl_req_t		*ctlreq;
@@ -99,10 +102,13 @@ struct g_class {
 	 */
 	g_start_t		*start;
 	g_spoiled_t		*spoiled;
+	g_attrchanged_t		*attrchanged;
 	g_dumpconf_t		*dumpconf;
 	g_access_t		*access;
 	g_orphan_t		*orphan;
 	g_ioctl_t		*ioctl;
+	g_provgone_t		*providergone;
+	void			*spare2;
 	/*
 	 * The remaining elements are private
 	 */
@@ -127,13 +133,17 @@ struct g_geom {
 	int			rank;
 	g_start_t		*start;
 	g_spoiled_t		*spoiled;
+	g_attrchanged_t		*attrchanged;
 	g_dumpconf_t		*dumpconf;
 	g_access_t		*access;
 	g_orphan_t		*orphan;
 	g_ioctl_t		*ioctl;
+	g_provgone_t		*providergone;
+	void			*spare1;
 	void			*softc;
 	unsigned		flags;
 #define	G_GEOM_WITHER		1
+#define	G_GEOM_VOLATILE_BIO	2
 };
 
 /*
@@ -195,9 +205,27 @@ struct g_provider {
 	u_int			index;
 };
 
+/*
+ * Descriptor of a classifier. We can register a function and
+ * an argument, which is called by g_io_request() on bio's
+ * that are not previously classified.
+ */
+struct g_classifier_hook {
+	TAILQ_ENTRY(g_classifier_hook) link;
+	int			(*func)(void *arg, struct bio *bp);
+	void			*arg;
+};
+
+/* BIO_GETATTR("GEOM::setstate") argument values. */
+#define G_STATE_FAILED		0
+#define G_STATE_REBUILD		1
+#define G_STATE_RESYNC		2
+#define G_STATE_ACTIVE		3
+
 /* geom_dev.c */
 struct cdev;
 void g_dev_print(void);
+void g_dev_physpath_changed(void);
 struct g_provider *g_dev_getprovider(struct cdev *dev);
 
 /* geom_dump.c */
@@ -213,12 +241,14 @@ typedef void g_event_t(void *, int flag);
 int g_post_event(g_event_t *func, void *arg, int flag, ...);
 int g_waitfor_event(g_event_t *func, void *arg, int flag, ...);
 void g_cancel_event(void *ref);
+int g_attr_changed(struct g_provider *pp, const char *attr, int flag);
 void g_orphan_provider(struct g_provider *pp, int error);
 void g_waitidlelock(void);
 
 /* geom_subr.c */
 int g_access(struct g_consumer *cp, int nread, int nwrite, int nexcl);
 int g_attach(struct g_consumer *cp, struct g_provider *pp);
+int g_compare_names(const char *namea, const char *nameb);
 void g_destroy_consumer(struct g_consumer *cp);
 void g_destroy_geom(struct g_geom *pp);
 void g_destroy_provider(struct g_provider *pp);
@@ -227,13 +257,15 @@ void g_error_provider(struct g_provider *pp, int error);
 struct g_provider *g_provider_by_name(char const *arg);
 int g_getattr__(const char *attr, struct g_consumer *cp, void *var, int len);
 #define g_getattr(a, c, v) g_getattr__((a), (c), (v), sizeof *(v))
-int g_handleattr(struct bio *bp, const char *attribute, void *val, int len);
+int g_handleattr(struct bio *bp, const char *attribute, const void *val,
+    int len);
 int g_handleattr_int(struct bio *bp, const char *attribute, int val);
 int g_handleattr_off_t(struct bio *bp, const char *attribute, off_t val);
-int g_handleattr_str(struct bio *bp, const char *attribute, char *str);
+int g_handleattr_str(struct bio *bp, const char *attribute, const char *str);
 struct g_consumer * g_new_consumer(struct g_geom *gp);
 struct g_geom * g_new_geomf(struct g_class *mp, const char *fmt, ...);
 struct g_provider * g_new_providerf(struct g_geom *gp, const char *fmt, ...);
+int g_retaste(struct g_class *mp);
 void g_spoil(struct g_provider *pp, struct g_consumer *cp);
 int g_std_access(struct g_provider *pp, int dr, int dw, int de);
 void g_std_done(struct bio *bp);
@@ -270,6 +302,8 @@ void g_destroy_bio(struct bio *);
 void g_io_deliver(struct bio *bp, int error);
 int g_io_getattr(const char *attr, struct g_consumer *cp, int *len, void *ptr);
 int g_io_flush(struct g_consumer *cp);
+int g_register_classifier(struct g_classifier_hook *hook);
+void g_unregister_classifier(struct g_classifier_hook *hook);
 void g_io_request(struct bio *bp, struct g_consumer *cp);
 struct bio *g_new_bio(void);
 struct bio *g_alloc_bio(void);
@@ -287,6 +321,7 @@ extern struct sx topology_lock;
 struct g_kerneldump {
 	off_t		offset;
 	off_t		length;
+	struct dumperinfo di;
 };
 
 MALLOC_DECLARE(M_GEOM);
@@ -336,6 +371,9 @@ g_free(void *ptr)
 	do {							\
 		sx_assert(&topology_lock, SX_UNLOCKED);		\
 	} while (0)
+
+#define g_topology_sleep(chan, timo)				\
+	sx_sleep(chan, &topology_lock, 0, "gtopol", timo)
 
 #define DECLARE_GEOM_CLASS(class, name) 			\
 	static moduledata_t name##_mod = {			\

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2004-2009 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sbin/geom/class/mirror/geom_mirror.c 169586 2007-05-15 20:25:18Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -41,13 +41,12 @@ __FBSDID("$FreeBSD: release/7.0.0/sbin/geom/class/mirror/geom_mirror.c 169586 20
 #include <core/geom.h>
 #include <misc/subr.h>
 
-
 uint32_t lib_version = G_LIB_VERSION;
 uint32_t version = G_MIRROR_VERSION;
 
-static char label_balance[] = "split", configure_balance[] = "none";
-static intmax_t label_slice = 4096, configure_slice = -1;
-static intmax_t insert_priority = 0;
+#define	GMIRROR_BALANCE		"load"
+#define	GMIRROR_SLICE		"4096"
+#define	GMIRROR_PRIORITY	"0"
 
 static void mirror_main(struct gctl_req *req, unsigned flags);
 static void mirror_activate(struct gctl_req *req);
@@ -56,59 +55,61 @@ static void mirror_dump(struct gctl_req *req);
 static void mirror_label(struct gctl_req *req);
 
 struct g_command class_commands[] = {
-	{ "activate", G_FLAG_VERBOSE, mirror_main, G_NULL_OPTS, NULL,
+	{ "activate", G_FLAG_VERBOSE, mirror_main, G_NULL_OPTS,
 	    "[-v] name prov ..."
 	},
-	{ "clear", G_FLAG_VERBOSE, mirror_main, G_NULL_OPTS, NULL,
+	{ "clear", G_FLAG_VERBOSE, mirror_main, G_NULL_OPTS,
 	    "[-v] prov ..."
 	},
 	{ "configure", G_FLAG_VERBOSE, NULL,
 	    {
 		{ 'a', "autosync", NULL, G_TYPE_BOOL },
-		{ 'b', "balance", configure_balance, G_TYPE_STRING },
+		{ 'b', "balance", "", G_TYPE_STRING },
 		{ 'd', "dynamic", NULL, G_TYPE_BOOL },
 		{ 'f', "failsync", NULL, G_TYPE_BOOL },
 		{ 'F', "nofailsync", NULL, G_TYPE_BOOL },
 		{ 'h', "hardcode", NULL, G_TYPE_BOOL },
 		{ 'n', "noautosync", NULL, G_TYPE_BOOL },
-		{ 's', "slice", &configure_slice, G_TYPE_NUMBER },
+		{ 'p', "priority", "-1", G_TYPE_NUMBER },
+		{ 's', "slice", "-1", G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    NULL, "[-adfFhnv] [-b balance] [-s slice] name"
+	    "[-adfFhnv] [-b balance] [-s slice] name\n"
+	    "[-v] -p priority name prov"
 	},
-	{ "deactivate", G_FLAG_VERBOSE, NULL, G_NULL_OPTS, NULL,
+	{ "deactivate", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
 	    "[-v] name prov ..."
 	},
-	{ "dump", 0, mirror_main, G_NULL_OPTS, NULL,
+	{ "dump", 0, mirror_main, G_NULL_OPTS,
 	    "prov ..."
 	},
-	{ "forget", G_FLAG_VERBOSE, NULL, G_NULL_OPTS, NULL,
+	{ "forget", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
 	    "name ..."
 	},
 	{ "label", G_FLAG_VERBOSE, mirror_main,
 	    {
-		{ 'b', "balance", label_balance, G_TYPE_STRING },
+		{ 'b', "balance", GMIRROR_BALANCE, G_TYPE_STRING },
 		{ 'F', "nofailsync", NULL, G_TYPE_BOOL },
 		{ 'h', "hardcode", NULL, G_TYPE_BOOL },
 		{ 'n', "noautosync", NULL, G_TYPE_BOOL },
-		{ 's', "slice", &label_slice, G_TYPE_NUMBER },
+		{ 's', "slice", GMIRROR_SLICE, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    NULL, "[-Fhnv] [-b balance] [-s slice] name prov ..."
+	    "[-Fhnv] [-b balance] [-s slice] name prov ..."
 	},
 	{ "insert", G_FLAG_VERBOSE, NULL,
 	    {
 		{ 'h', "hardcode", NULL, G_TYPE_BOOL },
 		{ 'i', "inactive", NULL, G_TYPE_BOOL },
-		{ 'p', "priority", &insert_priority, G_TYPE_NUMBER },
+		{ 'p', "priority", GMIRROR_PRIORITY, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    NULL, "[-hiv] [-p priority] name prov ..."
+	    "[-hiv] [-p priority] name prov ..."
 	},
-	{ "rebuild", G_FLAG_VERBOSE, NULL, G_NULL_OPTS, NULL,
+	{ "rebuild", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
 	    "[-v] name prov ..."
 	},
-	{ "remove", G_FLAG_VERBOSE, NULL, G_NULL_OPTS, NULL,
+	{ "remove", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
 	    "[-v] name prov ..."
 	},
 	{ "stop", G_FLAG_VERBOSE, NULL,
@@ -116,7 +117,7 @@ struct g_command class_commands[] = {
 		{ 'f', "force", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    NULL, "[-fv] name ..."
+	    "[-fv] name ..."
 	},
 	G_CMD_SENTINEL
 };
@@ -246,8 +247,8 @@ mirror_label(struct gctl_req *req)
 		if (!hardcode)
 			bzero(md.md_provider, sizeof(md.md_provider));
 		else {
-			if (strncmp(str, _PATH_DEV, strlen(_PATH_DEV)) == 0)
-				str += strlen(_PATH_DEV);
+			if (strncmp(str, _PATH_DEV, sizeof(_PATH_DEV) - 1) == 0)
+				str += sizeof(_PATH_DEV) - 1;
 			strlcpy(md.md_provider, str, sizeof(md.md_provider));
 		}
 		mirror_metadata_encode(&md, sector);

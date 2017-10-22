@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)make.1	8.8 (Berkeley) 6/13/95
-.\" $FreeBSD: release/7.0.0/usr.bin/make/make.1 167339 2007-03-08 14:05:45Z fjoe $
+.\" $FreeBSD$
 .\"
-.Dd April 8, 2006
+.Dd May 30, 2012
 .Dt MAKE 1
 .Os
 .Sh NAME
@@ -40,7 +40,7 @@
 .Nd maintain program dependencies
 .Sh SYNOPSIS
 .Nm
-.Op Fl ABPSXeiknqrstv
+.Op Fl ABPSXeiknpqrstv
 .Op Fl C Ar directory
 .Op Fl D Ar variable
 .Op Fl d Ar flags
@@ -198,6 +198,13 @@ Multiple
 .Fl f
 options can be supplied,
 and the makefiles will be read in that order.
+Unlike the other command-line options,
+.Fl f
+is neither stored in
+.Va .MAKEFLAGS
+nor pushed down to sub-makes via
+.Ev MAKEFLAGS .
+See below for more details on these variables.
 .It Fl I Ar directory
 Specify a directory in which to search for makefiles and included makefiles.
 Multiple
@@ -233,6 +240,36 @@ The system include path will always be appended to the search path used
 for "..."-style inclusions and makefile searches (see the
 .Fl I
 option).
+.Pp
+If a file or directory name in the
+.Fl m
+argument (or the
+.Ev MAKESYSPATH
+environment variable) starts with the string
+.Qq \&.../
+then
+.Nm
+will search for the specified file or directory named in the remaining part
+of the argument string.
+The search starts with the current directory of the Makefile and then works
+upward towards the root of the filesystem.
+If the search is successful,
+then the resulting directory replaces the
+.Qq \&.../
+specification in the
+.Fl m
+argument.
+If used, this feature allows
+.Nm
+to easily search in the current source tree for customized sys.mk files
+(e.g. by using
+.Qq \&.../mk/sys.mk
+as an argument).
+Note that a
+.Fl C
+that are earlier on the command line affect where
+.Fl m Qq \&.../
+searches.
 .It Fl n
 Display the commands that would have been executed, but do not actually
 execute them.
@@ -242,6 +279,18 @@ instead of mixing the output of parallel jobs together.
 This option has no effect unless
 .Fl j
 is used too.
+.It Fl p
+Only print the input graph, not executing any commands.
+The output is the same as
+.Fl d Ar g1 .
+When combined with
+.Fl f Pa /dev/null ,
+only the builtin rules of
+.Nm
+are displayed.
+.It Fl Q
+Be extra quiet.
+For multi-job makes, this will cause file banners not to be generated.
 .It Fl q
 Do not execute any commands, but exit 0 if the specified targets are
 up-to-date and 1, otherwise.
@@ -271,9 +320,14 @@ Do not build any targets.
 Multiple instances of this option may be specified;
 the variables will be printed one per line,
 with a blank line for each null or undefined variable.
+If
+.Ar variable
+contains a
+.Sq Ic $
+then the value will be expanded before printing.
 .It Fl v
 Be extra verbose.
-For multi-job makes, this will cause file banners to be generated.
+Print any extra information.
 .It Fl X
 When using the
 .Fl V
@@ -466,7 +520,21 @@ environment variable or the
 target.
 .It Local variables
 Variables that are defined specific to a certain target.
-The seven local variables are as follows:
+.El
+.Pp
+If the name of an environment variable appears in a makefile
+on the left-hand side of an assignment,
+a global variable with the same name is created, and the latter
+shadows the former as per their relative precedences.
+The environment is not changed in this case, and the change
+is not exported to programs executed by
+.Nm .
+However, a command-line variable actually replaces
+the environment variable of the same name if the latter exists,
+which is visible to child programs.
+.Pp
+There are seven local variables in
+.Nm :
 .Bl -tag -width ".ARCHIVE"
 .It Va .ALLSRC
 The list of all sources for this target; also known as
@@ -528,7 +596,6 @@ These variables are
 .Va .ARCHIVE ,
 and
 .Va .MEMBER .
-.El
 .Pp
 In addition,
 .Nm
@@ -569,7 +636,7 @@ The following directories are tried in order:
 .Pp
 .Bl -enum -compact
 .It
-${MAKEOBJDIRPREFIX}/`pwd`
+${MAKEOBJDIRPREFIX}/`pwd -P`
 .It
 ${MAKEOBJDIR}
 .It
@@ -577,7 +644,7 @@ obj.${MACHINE}
 .It
 obj
 .It
-/usr/obj/`pwd`
+/usr/obj/`pwd -P`
 .El
 .Pp
 The first directory that
@@ -625,36 +692,51 @@ They are added right before
 .Nm
 begins to parse them, so that the name of the current makefile is the
 last word in this variable.
-.It Va .MAKEFLAGS
+.It Ev MAKEFLAGS
 The environment variable
 .Ev MAKEFLAGS
-may contain anything that
+may initially contain anything that
 may be specified on
 .Nm Ns 's
-command line.
-Its contents are stored in
+command line,
+including
+.Fl f
+option(s).
+After processing, its contents are stored in the
+.Va .MAKEFLAGS
+global variable, although any
+.Fl f
+options are omitted.
+Then all options and variable assignments specified on
 .Nm Ns 's
+command line, except for
+.Fl f ,
+are appended to the
 .Va .MAKEFLAGS
 variable.
-All options and variable assignments specified on
-.Nm Ns 's
-command line are appended to the
-.Va .MAKEFLAGS
-variable which is then
-entered into the environment as
+.Pp
+Whenever
+.Nm
+executes a program, it sets
 .Ev MAKEFLAGS
-for all programs which
-.Nm
-executes.
-By modifying the contents of the
+in the program's environment to the current value of the
 .Va .MAKEFLAGS
-variable, makefile can alter the contents of the
-.Va MAKEFLAGS
-environment variable made available for all programs which
+global variable.
+Thus, if
+.Ev MAKEFLAGS
+in
+.Nm Ns 's
+environment contains any
+.Fl f
+options, they will not be pushed down to child programs automatically.
+The
 .Nm
-executes; compare with the
-.Ic .MAKEFLAGS
-special target below.
+utility effectively filters out
+.Fl f
+options from the environment and command line although it
+passes the rest of its options down to sub-makes via
+.Ev MAKEFLAGS
+by default.
 .Pp
 When passing macro definitions and flag arguments in the
 .Ev MAKEFLAGS
@@ -669,6 +751,49 @@ without causing a word break.
 Any other occurrences of a backslash are retained.
 Groups of unquoted space, tab and newline characters cause word
 breaking.
+.It Va .MAKEFLAGS
+Initially, this global variable contains
+.Nm Ns 's
+current run-time options from the environment
+and command line as described above, under
+.Ev MAKEFLAGS .
+By modifying the contents of the
+.Va .MAKEFLAGS
+global variable, the makefile can alter the contents of the
+.Ev MAKEFLAGS
+environment variable made available for all programs which
+.Nm
+executes.
+This includes adding
+.Fl f
+option(s).
+The current value of
+.Va .MAKEFLAGS
+is just copied verbatim to
+.Ev MAKEFLAGS
+in the environment of child programs.
+.Pp
+Note that any options entered to
+.Va .MAKEFLAGS
+neither affect the current instance of
+.Nm
+nor show up in its own copy of
+.Ev MAKEFLAGS
+instantly.
+However, they do show up in the
+.Ev MAKEFLAGS
+environment variable of programs executed by
+.Nm .
+On the other hand, a direct assignment to
+.Ev MAKEFLAGS
+neither affects the current instance of
+.Nm
+nor is passed down to
+.Nm Ns 's
+children.
+Compare with the
+.Ic .MAKEFLAGS
+special target below.
 .It Va MFLAGS
 This variable is provided for backward compatibility and
 contains all the options from the
@@ -676,6 +801,31 @@ contains all the options from the
 environment variable plus any options specified on
 .Nm Ns 's
 command line.
+.It Va .MAKE.PID
+The process-id of
+.Nm .
+.It Va .MAKE.PPID
+The parent process-id of
+.Nm .
+.It Va .MAKE.JOB.PREFIX
+If
+.Nm
+is run with
+.Fl j Fl v
+then output for each target is prefixed with a token
+.Ql --- target ---
+the first part of which can be controlled via
+.Va .MAKE.JOB.PREFIX .
+.br
+For example:
+.Li .MAKE.JOB.PREFIX=${.newline}---${MAKE:T}[${.MAKE.PID}]
+would produce tokens like
+.Ql ---make[1234] target ---
+or
+.Li .MAKE.JOB.PREFIX=---pid[${.MAKE.PID}],ppid[${.MAKE.PPID}]
+would produce tokens like
+.Ql ---pid[56789],ppid[1234] target ---
+making it easier to track the degree of parallelism being achieved.
 .It Va .TARGETS
 List of targets
 .Nm
@@ -707,7 +857,7 @@ These directories will be searched for source files by
 .Nm
 after it has finished parsing all input makefiles.
 .El
-.Pp
+.Ss Variable Modifiers
 Variable expansion may be modified to select or modify each word of the
 variable (where a
 .Dq word
@@ -722,7 +872,7 @@ The colon may be escaped with a backslash
 .Pq Ql \e .
 .Bl -tag -width Cm
 .Sm off
-.It Cm C No / Ar pattern Xo
+.It Cm :C No / Ar pattern Xo
 .No / Ar replacement
 .No / Op Cm 1g
 .Xc
@@ -751,13 +901,14 @@ and
 are orthogonal; the former specifies whether multiple words are
 potentially affected, the latter whether multiple substitutions can
 potentially occur within each affected word.
-.It Cm E
+.It Cm :E
 Replaces each word in the variable with its suffix.
-.It Cm H
+.It Cm :H
 Replaces each word in the variable with everything but the last component.
-.It Cm L
+.It Cm :L
 Converts variable to lower-case letters.
-.It Cm M Ns Ar pattern
+(deprecated)
+.It Cm :M Ns Ar pattern
 Select only those words that match the rest of the modifier.
 The standard shell wildcard characters
 .Pf ( Ql * ,
@@ -768,21 +919,21 @@ may
 be used.
 The wildcard characters may be escaped with a backslash
 .Pq Ql \e .
-.It Cm N Ns Ar pattern
+.It Cm :N Ns Ar pattern
 This is identical to
-.Cm M ,
+.Cm :M ,
 but selects all words which do not match
 the rest of the modifier.
-.It Cm O
+.It Cm :O
 Order every word in the variable alphabetically.
-.It Cm Q
+.It Cm :Q
 Quotes every shell meta-character in the variable, so that it can be passed
 safely through recursive invocations of
 .Nm .
-.It Cm R
+.It Cm :R
 Replaces each word in the variable with everything but its suffix.
 .Sm off
-.It Cm S No / Ar old_string Xo
+.It Cm :S No / Ar old_string Xo
 .No / Ar new_string
 .No / Op Cm g
 .Xc
@@ -826,7 +977,7 @@ with the single exception that a backslash is used to prevent the expansion
 of a dollar sign
 .Pq Ql $ ,
 not a preceding dollar sign as is usual.
-.It Ar old_string=new_string
+.It Ar :old_string=new_string
 This is the
 .At V
 style variable substitution.
@@ -845,12 +996,17 @@ Otherwise
 is the substring of
 .Ar old_string
 to be replaced in
-.Ar new_string
-.It Cm T
+.Ar new_string .
+.It Cm :T
 Replaces each word in the variable with its last component.
-.It Cm U
+.It Cm :tl
+Converts variable to lower-case letters.
+.It Cm :tu
 Converts variable to upper-case letters.
-.It Cm u
+.It Cm :U
+Converts variable to upper-case letters.
+(deprecated)
+.It Cm :u
 Remove adjacent duplicate words (like
 .Xr uniq 1 ) .
 .El
@@ -993,7 +1149,7 @@ The
 may be any one of the following:
 .Bl -tag -width "Cm XX"
 .It Cm ||
-logical
+Logical
 .Tn OR
 .It Cm &&
 Logical
@@ -1043,24 +1199,34 @@ has been defined.
 .Pp
 An
 .Ar expression
-may also be an arithmetic or string comparison, with the left-hand side
-being a variable expansion.
-Variable expansion is
-performed on both sides of the comparison, after which the integral
+may also be a numeric or string comparison:
+in this case, the left-hand side
+.Ar must be
+a variable expansion, whereas the right-hand side can be a
+constant or a variable expansion.
+Variable expansion is performed on both sides, after which the resulting
 values are compared.
 A value is interpreted as hexadecimal if it is
 preceded by 0x, otherwise it is decimal; octal numbers are not supported.
-The standard C relational operators are all supported.
-If after
-variable expansion, either the left or right hand side of a
+.Pp
+String comparison can only use the
 .Sq Ic ==
 or
 .Sq Ic !=
-operator is not an integral value, then
-string comparison is performed between the expanded
-variables.
-If no relational operator is given, it is assumed that the expanded
-variable is being compared against 0.
+operators, whereas numeric values (both integer and floating point)
+can also be compared using the
+.Sq Ic > ,
+.Sq Ic >= ,
+.Sq Ic <
+and
+.Sq Ic <=
+operators.
+.Pp
+If no relational operator (and right-hand value) are given, an implicit
+.Sq Ic != 0
+is used.
+However be very careful in using this feature especially
+when the left-hand side variable expansion returns a string.
 .Pp
 When
 .Nm
@@ -1173,7 +1339,7 @@ made before the sources that succeed it in the line.
 Loops are not being
 detected and targets that form loops will be silently ignored.
 .El
-.Sh "SPECIAL TARGETS"
+.Sh SPECIAL TARGETS
 Special targets may not be included with other targets, i.e., they must be
 the only target specified.
 .Bl -tag -width Ic
@@ -1234,6 +1400,12 @@ explicitly, or implicitly when
 .Nm
 selects the default target, to give the user a way to refer to the default
 target on the command line.
+.It Ic .MAKEFILEDEPS
+Enable the
+.Dq Remaking Makefiles
+functionality, as explained in the
+.Sx REMAKING MAKEFILES
+section below.
 .It Ic .MAKEFLAGS
 This target provides a way to specify flags for
 .Nm
@@ -1303,6 +1475,15 @@ Apply the
 attribute to any specified sources.
 Targets with this attribute are always
 considered to be out of date.
+.It Ic .POSIX
+Adjust
+.Nm Ap s
+behavior to match the applicable
+.Tn POSIX
+specifications.
+(Note this disables the
+.Dq Remaking Makefiles
+feature.)
 .It Ic .PRECIOUS
 Apply the
 .Ic .PRECIOUS
@@ -1450,7 +1631,7 @@ command in the file.
 .It Ic .SUFFIXES
 Each source specifies a suffix to
 .Nm .
-If no sources are specified, any previous specified suffices are deleted.
+If no sources are specified, any previous specified suffixes are deleted.
 .It Ic .WARN
 Each source specifies a warning flag as previously described for the
 .Fl x
@@ -1463,9 +1644,16 @@ environment variables so that a warning flag specified on the command
 line will influence all sub-makes.
 Several flags can be specified on a single
 .Ic .WARN
-target by seperating them with blanks.
+target by separating them with blanks.
 .El
 .Sh REMAKING MAKEFILES
+If the special target
+.Ic .MAKEFILEDEPS
+exists in the Makefile,
+.Nm
+enables the
+.Dq Remaking Makefiles
+feature.
 After reading Makefile and all the files that are included using
 .Ic .include
 or
@@ -1482,7 +1670,7 @@ To prevent infinite loops the following source Makefile targets are ignored:
 .Bl -bullet
 .It
 .Ic ::
-targets that have no prerequisites but have commands
+targets that have no prerequisites
 .It
 .Ic !
 targets
@@ -1518,8 +1706,9 @@ utility uses the following environment variables, if they exist:
 .Ev MAKE ,
 .Ev MAKEFLAGS ,
 .Ev MAKEOBJDIR ,
+.Ev MAKEOBJDIRPREFIX ,
 and
-.Ev MAKEOBJDIRPREFIX .
+.Ev MAKESYSPATH .
 .Sh FILES
 .Bl -tag -width /usr/share/doc/psd/12.make -compact
 .It Pa .depend
@@ -1555,12 +1744,27 @@ used
 .Ev MAKE
 instead of
 .Ev MAKEFLAGS .
-This was removed for POSIX compatibility.
+This was removed for
+.Tn POSIX
+compatibility.
 The internal variable
 .Va MAKE
 is set to the same value as
 .Va .MAKE ;
 support for this may be removed in the future.
+.Pp
+The use of the
+.Cm :L
+and
+.Cm :U
+modifiers will be deprecated
+in
+.Fx 10.0
+and the more portable (among Pmake decedents)
+.Cm :tl
+and
+.Cm :tu
+should be used instead.
 .Pp
 Most of the more esoteric features of
 .Nm
@@ -1599,7 +1803,7 @@ The evaluation of
 .Ar expression
 in a test is very simple-minded.
 Currently, the only form that works is
-.Ql .if ${VAR} op something
+.Ql .if ${VAR} op something .
 For instance, you should write tests as
 .Ql .if ${VAR} == "string"
 not the other way around, which would give you an error.

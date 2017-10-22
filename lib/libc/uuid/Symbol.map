@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/7.0.0/lib/libc/uuid/Symbol.map 169092 2007-04-29 14:05:22Z deischen $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {
@@ -11,4 +11,11 @@ FBSD_1.0 {
 	uuid_create_nil;
 	uuid_create;
 	uuid_compare;
+};
+
+FBSD_1.1 {
+	uuid_enc_le;
+	uuid_dec_le;
+	uuid_enc_be;
+	uuid_dec_be;
 };

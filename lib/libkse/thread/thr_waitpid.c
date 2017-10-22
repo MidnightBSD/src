@@ -26,7 +26,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_waitpid.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -34,10 +34,9 @@
 #include <pthread.h>
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(_waitpid);
-LT10_COMPAT_DEFAULT(waitpid);
-
 extern int __waitpid(pid_t, int *, int);
+
+pid_t _waitpid(pid_t wpid, int *status, int options);
 
 __weak_reference(_waitpid, waitpid);
 
@@ -51,5 +50,5 @@ _waitpid(pid_t wpid, int *status, int options)
 	ret = __waitpid(wpid, status, options);
 	_thr_cancel_leave(curthread, 1);
 	
-	return ret;
+	return (ret);
 }

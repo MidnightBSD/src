@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/bin/ed/Makefile 172506 2007-10-10 16:59:15Z cvs2svn $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -10,7 +10,6 @@ MLINKS=	ed.1 red.1
 .if !defined(RELEASE_CRUNCH)
 .if ${MK_OPENSSL} != "no"
 CFLAGS+=-DDES
-WARNS?=	2
 DPADD=	${LIBCRYPTO}
 LDADD=	-lcrypto
 .endif

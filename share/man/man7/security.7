@@ -21,9 +21,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man7/security.7 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
-.Dd September 8, 2006
+.Dd February 8, 2012
 .Dt SECURITY 7
 .Os
 .Sh NAME
@@ -88,7 +88,7 @@ incur on the system under adverse conditions.
 Brute-force network attacks are harder to deal with.
 A spoofed-packet attack, for example, is
 nearly impossible to stop short of cutting your system off from the Internet.
-It may not be able to take your machine down, but it can fill up Internet
+It may not be able to take your machine down, but it can fill up your Internet
 pipe.
 .Pp
 A user account compromise is even more common than a DoS attack.
@@ -138,7 +138,7 @@ This gives you a convenient way to detect the attacker.
 Making
 it impossible for an attacker to install a backdoor may actually be detrimental
 to your security because it will not close off the hole the attacker used to
-break in in the first place.
+break in originally.
 .Pp
 Security remedies should always be implemented with a multi-layered
 .Dq onion peel
@@ -175,7 +175,7 @@ outside of the console or possibly even with a
 .Xr su 1
 utility.
 For example, make sure that your PTYs are specified as being
-.Dq Li unsecure
+.Dq Li insecure
 in the
 .Pa /etc/ttys
 file
@@ -573,7 +573,7 @@ configuration cannot be adjusted.
 .El
 .Pp
 The security level can be configured with variables documented in
-.Xr rc.conf 8 .
+.Xr rc.conf 5 .
 .Sh CHECKING FILE INTEGRITY: BINARIES, CONFIG FILES, ETC
 When it comes right down to it, you can only protect your core system
 configuration and control files so much before the convenience factor

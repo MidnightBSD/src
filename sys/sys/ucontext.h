@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sys/ucontext.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_UCONTEXT_H_
@@ -71,11 +71,17 @@ struct ucontext4 {
 
 __BEGIN_DECLS
 
-int	getcontext(ucontext_t *);
+int	getcontext(ucontext_t *) __returns_twice;
+ucontext_t *getcontextx(void);
 int	setcontext(const ucontext_t *);
 void	makecontext(ucontext_t *, void (*)(void), int, ...);
 int	signalcontext(ucontext_t *, int, __sighandler_t *);
 int	swapcontext(ucontext_t *, const ucontext_t *);
+
+#if __BSD_VISIBLE
+int __getcontextx_size(void);
+int __fillcontextx(char *ctx);
+#endif
 
 __END_DECLS
 

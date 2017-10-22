@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/mk/bsd.nls.mk 156813 2006-03-17 18:54:44Z ru $
+# $FreeBSD$
 #
 # This include file <bsd.nls.mk> handles building and installing Native
 # Language Support (NLS) catalogs

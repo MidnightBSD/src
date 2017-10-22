@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/lib.h 167972 2007-03-28 05:33:52Z njl $ */
+/* $FreeBSD$ */
 
 /*
  * FreeBSD install - a package for the installation and maintainance
@@ -28,6 +28,7 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/queue.h>
+#include <sys/utsname.h>
 #include <ctype.h>
 #include <dirent.h>
 #include <stdarg.h>
@@ -51,11 +52,23 @@
 #define YES		2
 #define NO		1
 
+/* Some more stat macros. */
+#define S_IRALL		0000444
+#define S_IWALL		0000222
+#define S_IXALL		0000111
+
 /* Usually "rm", but often "echo" during debugging! */
 #define REMOVE_CMD	"/bin/rm"
 
 /* Usually "rm", but often "echo" during debugging! */
 #define RMDIR_CMD	"/bin/rmdir"
+
+/* Where the ports lives by default */
+#define DEF_PORTS_DIR   "/usr/ports"
+/* just in case we change the environment variable name */
+#define PORTSDIR    "PORTSDIR"
+/* macro to get name of directory where the ports lives */
+#define PORTS_DIR       (getenv(PORTSDIR) ? getenv(PORTSDIR) : DEF_PORTS_DIR)
 
 /* Where we put logging information by default, else ${PKG_DBDIR} if set */
 #define DEF_LOG_DIR	"/var/db/pkg"
@@ -77,26 +90,16 @@
 #define DISPLAY_FNAME		"+DISPLAY"
 #define MTREE_FNAME		"+MTREE_DIRS"
 
-#if defined(__FreeBSD_version) && __FreeBSD_version >= 700000
-#define INDEX_FNAME		"INDEX-7"
-#elif defined(__FreeBSD_version) && __FreeBSD_version >= 600000
-#define INDEX_FNAME		"INDEX-6"
-#elif defined(__FreeBSD_version) && __FreeBSD_version >= 500036
-#define INDEX_FNAME		"INDEX-5"
-#else
-#define INDEX_FNAME		"INDEX"
-#endif
-
 #define CMD_CHAR		'@'	/* prefix for extended PLIST cmd */
 
 /* The name of the "prefix" environment variable given to scripts */
 #define PKG_PREFIX_VNAME	"PKG_PREFIX"
 
 /*
- * Version of the package tools - increase only when some
- * functionality used by bsd.port.mk is changed, added or removed
+ * Version of the package tools - increase whenever you make a change
+ * in the code that is not cosmetic only.
  */
-#define PKG_INSTALL_VERSION	20040629
+#define PKG_INSTALL_VERSION	20120913
 
 #define PKG_WRAPCONF_FNAME	"/var/db/pkg_install.conf"
 #define main(argc, argv)	real_main(argc, argv)
@@ -150,9 +153,9 @@ STAILQ_HEAD(reqr_by_head, reqr_by_entry);
 int		vsystem(const char *, ...);
 char		*vpipe(const char *, ...);
 void		cleanup(int);
-char		*make_playpen(char *, off_t);
+const char	*make_playpen(char *, off_t);
 char		*where_playpen(void);
-void		leave_playpen(void);
+int		leave_playpen(void);
 off_t		min_free(const char *);
 
 /* String */
@@ -174,7 +177,7 @@ Boolean		isfile(const char *);
 Boolean		isempty(const char *);
 Boolean		issymlink(const char *);
 Boolean		isURL(const char *);
-char		*fileGetURL(const char *, const char *, int);
+const char	*fileGetURL(const char *, const char *, int);
 char		*fileFindByPath(const char *, const char *);
 char		*fileGetContents(const char *);
 void		write_file(const char *, const char *);
@@ -216,6 +219,7 @@ int		real_main(int, char **);
 /* Query installed packages */
 char		**matchinstalled(match_t, char **, int *);
 char		**matchbyorigin(const char *, int *);
+char		***matchallbyorigin(const char **, int *);
 int		isinstalledpkg(const char *name);
 int		pattern_match(match_t MatchType, char *pattern, const char *pkgname);
 

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/ndiscvt/inf-token.l 124401 2004-01-11 21:10:35Z mdodd $");
+__FBSDID("$FreeBSD$");
 
 #include <regex.h>
 #include <ctype.h>
@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.sbin/ndiscvt/inf-token.l 124401 2004-01-11
 
 int lineno = 1;
 #define YY_NO_UNPUT
+#define YY_NO_INPUT
 
 int yylex(void);
 void yyerror(const char *);

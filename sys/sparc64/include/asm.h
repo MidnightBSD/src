@@ -31,7 +31,7 @@
  *
  *	from: @(#)DEFS.h	5.1 (Berkeley) 4/23/90
  *	from: FreeBSD: src/sys/i386/include/asm.h,v 1.7 2000/01/25
- * $FreeBSD: release/7.0.0/sys/sparc64/include/asm.h 127977 2004-04-07 05:00:01Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -76,7 +76,7 @@
 	_ALIGN_TEXT
 
 /*
- * Define a function entry point.
+ * Define function entry and alternate entry points.
  *
  * The compiler produces #function for the .type pseudo-op, but the '#'
  * character has special meaning in cpp macros, so we use @function like
@@ -86,12 +86,19 @@
  * value.  Since this is difficult to predict and its expected that
  * assembler code is already optimized, we leave it out.
  */
+
+#define	_ALTENTRY(x) \
+	.globl	CNAME(x) ; \
+	.type	CNAME(x),@function ; \
+CNAME(x):
+
 #define	_ENTRY(x) \
 	_START_ENTRY ; \
 	.globl	CNAME(x) ; \
 	.type	CNAME(x),@function ; \
 CNAME(x):
 
+#define	ALTENTRY(x)	_ALTENTRY(x)
 #define	ENTRY(x)	_ENTRY(x)
 #define	END(x)		.size x, . - x
 

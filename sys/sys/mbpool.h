@@ -34,7 +34,7 @@
  * interfaces on 64bit machines). This assists network interfaces that may need
  * huge numbers of mbufs.
  *
- * $FreeBSD: release/7.0.0/sys/sys/mbpool.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 #ifndef _SYS_MBPOOL_H_
 #define	_SYS_MBPOOL_H_

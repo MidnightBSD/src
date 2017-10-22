@@ -9,9 +9,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: release/7.0.0/lib/msun/src/s_nexttowardf.c 143218 2005-03-07 04:57:38Z das $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <float.h>
 
@@ -51,8 +50,8 @@ nexttowardf(float x, long double y)
 	if(ix<0x00800000) {		/* underflow */
 	    t = x*x;
 	    if(t!=x) {		/* raise underflow flag */
-	        SET_FLOAT_WORD(y,hx);
-		return y;
+	        SET_FLOAT_WORD(x,hx);
+		return x;
 	    }
 	}
 	SET_FLOAT_WORD(x,hx);

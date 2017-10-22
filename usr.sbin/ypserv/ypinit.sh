@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/7.0.0/usr.sbin/ypserv/ypinit.sh 108470 2002-12-30 21:18:15Z schweikh $
+# $FreeBSD$
 #
 # ypinit.sh - setup a master or slave server.
 # (Taken from OpenBSD and modified for FreeBSD.)
@@ -298,7 +298,7 @@ do
 		echo "Update the list of hosts running YP servers in domain ${DOMAIN}."
 		echo "Master for this domain is ${MASTER_NAME}."
 		echo ""
-		echo "First verify old servers, type \\ to remove a server."
+		echo "First verify old servers, type \\\\ to remove a server."
 		echo "Then add new servers, one per line. When done type a <control D>."
 		echo ""
 		echo "	master server   :  ${HOST}"

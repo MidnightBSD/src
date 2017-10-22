@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/usr.sbin/jexec/jexec.8 162806 2006-09-29 17:57:04Z ru $
+.\" $FreeBSD$
 .\"
-.Dd April 19, 2006
+.Dd May 27, 2009
 .Dt JEXEC 8
 .Os
 .Sh NAME
@@ -34,14 +34,15 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl u Ar username | Fl U Ar username
-.Ar jid command ...
+.Ar jail command ...
 .Sh DESCRIPTION
 The
 .Nm
 utility executes
 .Ar command
-inside the jail identified by
-.Ar jid .
+inside the
+.Ar jail
+identified by its jid or name.
 .Pp
 The following options are available:
 .Bl -tag -width indent
@@ -63,3 +64,13 @@ The
 .Nm
 utility was added in
 .Fx 5.1 .
+.Sh BUGS
+If the jail is not identified by
+.Ar jid
+there is a possible race in between the lookup of the jail
+and executing the command inside the jail.
+Giving a
+.Ar jid
+has a similar race as another process can stop the jail and
+start another one after the user looked up the
+.Ar jid .

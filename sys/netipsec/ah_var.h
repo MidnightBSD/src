@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/netipsec/ah_var.h 139823 2005-01-07 01:45:51Z imp $	*/
+/*	$FreeBSD$	*/
 /*	$OpenBSD: ip_ah.h,v 1.29 2002/06/09 16:26:10 itojun Exp $	*/
 /*-
  * The authors of this code are John Ioannidis (ji@tla.org),
@@ -71,8 +71,12 @@ struct ahstat {
 };
 
 #ifdef _KERNEL
-extern	int ah_enable;
-extern	int ah_cleartos;
-extern	struct ahstat ahstat;
+VNET_DECLARE(int, ah_enable);
+VNET_DECLARE(int, ah_cleartos);
+VNET_DECLARE(struct ahstat, ahstat);
+
+#define	V_ah_enable		VNET(ah_enable)
+#define	V_ah_cleartos		VNET(ah_cleartos)
+#define	V_ahstat		VNET(ahstat)
 #endif /* _KERNEL */
 #endif /*_NETIPSEC_AH_VAR_H_*/

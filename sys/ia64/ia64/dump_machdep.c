@@ -25,7 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/dump_machdep.c 175834 2008-01-30 21:21:51Z ru $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_watchdog.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -33,8 +35,12 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/dump_machdep.c 175834 2008-01-30
 #include <sys/cons.h>
 #include <sys/kernel.h>
 #include <sys/kerneldump.h>
+#ifdef SW_WATCHDOG
+#include <sys/watchdog.h>
+#endif
 #include <vm/vm.h>
 #include <vm/pmap.h>
+#include <machine/bootinfo.h>
 #include <machine/efi.h>
 #include <machine/elf.h>
 #include <machine/md_var.h>
@@ -58,27 +64,6 @@ static off_t dumplo, fileofs;
 /* Handle buffered writes. */
 static char buffer[DEV_BSIZE];
 static size_t fragsz;
-
-/* XXX should be MI */
-static void
-mkdumpheader(struct kerneldumpheader *kdh, uint32_t archver, uint64_t dumplen,
-    uint32_t blksz)
-{
-
-	bzero(kdh, sizeof(*kdh));
-	strncpy(kdh->magic, KERNELDUMPMAGIC, sizeof(kdh->magic));
-	strncpy(kdh->architecture, MACHINE_ARCH, sizeof(kdh->architecture));
-	kdh->version = htod32(KERNELDUMPVERSION);
-	kdh->architectureversion = htod32(archver);
-	kdh->dumplength = htod64(dumplen);
-	kdh->dumptime = htod64(time_second);
-	kdh->blocksize = htod32(blksz);
-	strncpy(kdh->hostname, hostname, sizeof(kdh->hostname));
-	strncpy(kdh->versionstring, version, sizeof(kdh->versionstring));
-	if (panicstr != NULL)
-		strncpy(kdh->panicstring, panicstr, sizeof(kdh->panicstring));
-	kdh->parity = kerneldump_parity(kdh);
-}
 
 static int
 buf_write(struct dumperinfo *di, char *ptr, size_t sz)
@@ -146,6 +131,9 @@ cb_dumpdata(struct efi_md *mdp, int seqnr, void *arg)
 			printf("%c\b", "|/-\\"[twiddle++ & 3]);
 			counter &= (1<<24) - 1;
 		}
+#ifdef SW_WATCHDOG
+		wdog_kern_pat(WD_LASTVAL);
+#endif
 		error = dump_write(di, (void*)pa, 0, dumplo, sz);
 		if (error)
 			break;
@@ -204,7 +192,8 @@ foreach_chunk(callback_t cb, void *arg)
 	seqnr = 0;
 	mdp = efi_md_first();
 	while (mdp != NULL) {
-		if (mdp->md_type == EFI_MD_TYPE_FREE) {
+		if (mdp->md_type == EFI_MD_TYPE_FREE ||
+		    mdp->md_type == EFI_MD_TYPE_DATA) {
 			error = (*cb)(mdp, seqnr++, arg);
 			if (error)
 				return (-error);
@@ -238,6 +227,7 @@ dumpsys(struct dumperinfo *di)
 	ehdr.e_ident[EI_OSABI] = ELFOSABI_STANDALONE;	/* XXX big picture? */
 	ehdr.e_type = ET_CORE;
 	ehdr.e_machine = EM_IA_64;
+	ehdr.e_entry = ia64_tpa((uintptr_t)bootinfo);
 	ehdr.e_phoff = sizeof(ehdr);
 	ehdr.e_flags = EF_IA_64_ABSOLUTE;		/* XXX misuse? */
 	ehdr.e_ehsize = sizeof(ehdr);
@@ -260,7 +250,7 @@ dumpsys(struct dumperinfo *di)
 	dumplo = di->mediaoffset + di->mediasize - dumpsize;
 	dumplo -= sizeof(kdh) * 2;
 
-	mkdumpheader(&kdh, KERNELDUMP_IA64_VERSION, dumpsize, di->blocksize);
+	mkdumpheader(&kdh, KERNELDUMPMAGIC, KERNELDUMP_IA64_VERSION, dumpsize, di->blocksize);
 
 	printf("Dumping %llu MB (%d chunks)\n", (long long)dumpsize >> 20,
 	    ehdr.e_phnum);

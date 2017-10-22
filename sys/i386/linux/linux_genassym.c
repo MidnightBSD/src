@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/i386/linux/linux_genassym.c 115705 2003-06-02 16:56:40Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/assym.h>
@@ -13,3 +13,4 @@ ASSYM(LINUX_SC_GS, offsetof(struct l_sigcontext, sc_gs));
 ASSYM(LINUX_SC_EFLAGS, offsetof(struct l_sigcontext, sc_eflags));
 ASSYM(LINUX_RT_SIGF_HANDLER, offsetof(struct l_rt_sigframe, sf_handler));
 ASSYM(LINUX_RT_SIGF_UC, offsetof(struct l_rt_sigframe, sf_sc));
+ASSYM(LINUX_RT_SIGF_SC, offsetof(struct l_ucontext, uc_mcontext));

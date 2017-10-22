@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)sys_bsd.c	8.4 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/contrib/telnet/telnet/sys_bsd.c 114630 2003-05-04 02:54:49Z obrien $");
+__FBSDID("$FreeBSD$");
 
 /*
  * The following routines try to encapsulate what is system dependent
@@ -809,14 +809,6 @@ NetNonblockingIO(int fd, int onoff)
  */
 
 /* ARGSUSED */
-static SIG_FUNC_RET
-deadpeer(int sig __unused)
-{
-	setcommandmode();
-	longjmp(peerdied, -1);
-}
-
-/* ARGSUSED */
 SIG_FUNC_RET
 intr(int sig __unused)
 {
@@ -884,7 +876,7 @@ sys_telnet_init(void)
 {
     (void) signal(SIGINT, intr);
     (void) signal(SIGQUIT, intr2);
-    (void) signal(SIGPIPE, deadpeer);
+    (void) signal(SIGPIPE, SIG_IGN);
 #ifdef	SIGWINCH
     (void) signal(SIGWINCH, sendwin);
 #endif

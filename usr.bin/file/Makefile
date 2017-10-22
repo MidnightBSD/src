@@ -1,6 +1,6 @@
-# $FreeBSD: release/7.0.0/usr.bin/file/Makefile 137887 2004-11-19 04:04:14Z obrien $
+# $FreeBSD$
 # Makefile for file(1) cmd.
-# Copyright (c) David E. O'Brien, 2000-2004
+# Copyright (c) David E. O'Brien, 2000-2004, 2009
 # Copyright (c) Ian F. Darwin 86/09/01 - see LEGAL.NOTICE.
 #
 # This software is not subject to any license of the American Telephone
@@ -28,9 +28,21 @@ PROG=	file
 MAGICPATH?=	/usr/share/misc
 
 CFLAGS+= -DMAGIC='"${MAGICPATH}/magic"' -DHAVE_CONFIG_H
-CFLAGS+= -I${.CURDIR}
+CFLAGS+= -I${.CURDIR}/../../lib/libmagic
 
 DPADD=	${LIBMAGIC} ${LIBZ}
 LDADD=	-lmagic -lz
 
+FILEVER!= awk '$$1 == "\#define" && $$2 == "VERSION" { print $$3; exit }' \
+			${.CURDIR}/../../lib/libmagic/config.h
+
+CLEANFILES+=	${MAN}
+
 .include <bsd.prog.mk>
+
+.for mp in ${MAN}
+${mp}: ${mp:C/[0-9]/man/}
+	sed -e 's/__FSECTION__/5/g' -e 's/__CSECTION__/1/g' \
+		-e 's/__VERSION__/${FILEVER}/g' \
+		-e 's,__MAGIC__,${MAGICPATH}/magic,g' ${.ALLSRC} > ${.TARGET}
+.endfor

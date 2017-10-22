@@ -1,4 +1,4 @@
-/*      $FreeBSD: release/7.0.0/sys/dev/ipw/if_ipwreg.h 172733 2007-10-18 01:32:58Z thompsa $	*/
+/*      $FreeBSD$	*/
 
 /*-
  * Copyright (c) 2004-2006

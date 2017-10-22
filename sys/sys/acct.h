@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)acct.h	8.4 (Berkeley) 1/9/95
- * $FreeBSD: release/7.0.0/sys/sys/acct.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_ACCT_H_

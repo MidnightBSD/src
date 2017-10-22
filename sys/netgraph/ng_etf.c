@@ -30,7 +30,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: release/7.0.0/sys/netgraph/ng_etf.c 143607 2005-03-14 20:49:48Z glebius $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -180,10 +180,7 @@ ng_etf_constructor(node_p node)
 	int i;
 
 	/* Initialize private descriptor */
-	MALLOC(privdata, etf_p, sizeof(*privdata), M_NETGRAPH_ETF,
-		M_NOWAIT | M_ZERO);
-	if (privdata == NULL)
-		return (ENOMEM);
+	privdata = malloc(sizeof(*privdata), M_NETGRAPH_ETF, M_WAITOK | M_ZERO);
 	for (i = 0; i < HASHSIZE; i++) {
 		LIST_INIT((privdata->hashtable + i));
 	}
@@ -217,7 +214,7 @@ ng_etf_newhook(node_p node, hook_p hook, const char *name)
 		 * Any other hook name is valid and can
 		 * later be associated with a filter rule.
 		 */
-		MALLOC(hpriv, struct ETF_hookinfo *, sizeof(*hpriv),
+		hpriv = malloc(sizeof(*hpriv),
 			M_NETGRAPH_ETF, M_NOWAIT | M_ZERO);
 		if (hpriv == NULL) {
 			return (ENOMEM);
@@ -317,7 +314,7 @@ ng_etf_rcvmsg(node_p node, item_p item, hook_p lasthook)
 				 * Ok, make the filter and put it in the 
 				 * hashtable ready for matching.
 				 */
-				MALLOC(fil, struct filter *, sizeof(*fil),
+				fil = malloc(sizeof(*fil),
 					M_NETGRAPH_ETF, M_NOWAIT | M_ZERO);
 				if (fil == NULL) {
 					error = ENOMEM;
@@ -440,7 +437,7 @@ ng_etf_shutdown(node_p node)
 
 	NG_NODE_SET_PRIVATE(node, NULL);
 	NG_NODE_UNREF(privdata->node);
-	FREE(privdata, M_NETGRAPH_ETF);
+	free(privdata, M_NETGRAPH_ETF);
 	return (0);
 }
 
@@ -463,7 +460,7 @@ ng_etf_disconnect(hook_p hook)
 			fil2 = LIST_NEXT(fil1, next);
 			if (fil1->match_hook == hook) {
 				LIST_REMOVE(fil1, next);
-				FREE(fil1, M_NETGRAPH_ETF);
+				free(fil1, M_NETGRAPH_ETF);
 			}
 			fil1 = fil2;
 		}
@@ -476,7 +473,7 @@ ng_etf_disconnect(hook_p hook)
 		etfp->nomatch_hook.hook = NULL;
 	} else {
 		if (NG_HOOK_PRIVATE(hook)) /* Paranoia */
-			FREE(NG_HOOK_PRIVATE(hook), M_NETGRAPH_ETF);
+			free(NG_HOOK_PRIVATE(hook), M_NETGRAPH_ETF);
 	}
 
 	NG_HOOK_SET_PRIVATE(hook, NULL);

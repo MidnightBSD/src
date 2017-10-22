@@ -1,8 +1,9 @@
 #
-# $FreeBSD: release/7.0.0/rescue/librescue/Makefile 160744 2006-07-27 12:28:05Z yar $
+# $FreeBSD$
 #
 
 .include <bsd.own.mk>
+MK_SSP=		no
 
 # Certain library entries have hard-coded references to
 # /bin, /sbin, etc, that require those entries to be

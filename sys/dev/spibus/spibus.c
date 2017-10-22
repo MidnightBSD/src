@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/spibus/spibus.c 163527 2006-10-20 07:11:52Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -112,7 +112,7 @@ spibus_child_pnpinfo_str(device_t bus, device_t child, char *buf,
 }
 
 static int
-spibus_read_ivar(device_t bus, device_t child, int which, u_char *result)
+spibus_read_ivar(device_t bus, device_t child, int which, u_int *result)
 {
 	struct spibus_ivar *devi = SPIBUS_IVAR(child);
 
@@ -127,7 +127,7 @@ spibus_read_ivar(device_t bus, device_t child, int which, u_char *result)
 }
 
 static device_t
-spibus_add_child(device_t dev, int order, const char *name, int unit)
+spibus_add_child(device_t dev, u_int order, const char *name, int unit)
 {
 	device_t child;
 	struct spibus_ivar *devi;
@@ -173,7 +173,6 @@ static device_method_t spibus_methods[] = {
 	/* Bus interface */
 	DEVMETHOD(bus_add_child,	spibus_add_child),
 	DEVMETHOD(bus_print_child,	spibus_print_child),
-	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
 	DEVMETHOD(bus_probe_nomatch,	spibus_probe_nomatch),
 	DEVMETHOD(bus_read_ivar,	spibus_read_ivar),
 	DEVMETHOD(bus_child_pnpinfo_str, spibus_child_pnpinfo_str),
@@ -183,7 +182,7 @@ static device_method_t spibus_methods[] = {
 	/* spibus interface */
 	DEVMETHOD(spibus_transfer,	spibus_transfer_impl),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t spibus_driver = {
@@ -194,5 +193,5 @@ static driver_t spibus_driver = {
 
 devclass_t	spibus_devclass;
 
-DRIVER_MODULE(spibus, at91_spi, spibus_driver, spibus_devclass, 0, 0);
+DRIVER_MODULE(spibus, spi, spibus_driver, spibus_devclass, 0, 0);
 MODULE_VERSION(spibus, 1);

@@ -1,7 +1,7 @@
-# $FreeBSD: release/7.0.0/tools/regression/lib/libutil/Makefile 171707 2007-08-03 11:29:49Z des $
+# $FreeBSD$
 
-TESTS=	test-trimdomain test-trimdomain-nodomain test-flopen
-CFLAGS+= -g -Wall -lutil
+TESTS=	test-trimdomain test-trimdomain-nodomain test-flopen test-grp test-pidfile
+CFLAGS+= -g -Wall -Wextra -Werror -lutil
 
 .PHONY: tests
 tests: ${TESTS}

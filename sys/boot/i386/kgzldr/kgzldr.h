@@ -23,7 +23,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/boot/i386/kgzldr/kgzldr.h 50477 1999-08-28 01:08:13Z peter $
+ * $FreeBSD$
  */
 
 #define KGZ_CRT	 0x1		/* Video console */

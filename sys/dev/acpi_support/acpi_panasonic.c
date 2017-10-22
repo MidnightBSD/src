@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpi_support/acpi_panasonic.c 170871 2007-06-17 04:40:33Z mjacob $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -37,7 +37,8 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpi_support/acpi_panasonic.c 170871 2
 #include <sys/bus.h>
 #include <sys/power.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 
 #define _COMPONENT	ACPI_OEM
@@ -79,11 +80,11 @@ typedef int hkey_fn_t(ACPI_HANDLE, int, UINT32 *);
 static int	acpi_panasonic_probe(device_t dev);
 static int	acpi_panasonic_attach(device_t dev);
 static int	acpi_panasonic_detach(device_t dev);
-static void	acpi_panasonic_shutdown(device_t dev);
+static int	acpi_panasonic_shutdown(device_t dev);
 static int	acpi_panasonic_sysctl(SYSCTL_HANDLER_ARGS);
-static ACPI_INTEGER acpi_panasonic_sinf(ACPI_HANDLE h, ACPI_INTEGER index);
-static void	acpi_panasonic_sset(ACPI_HANDLE h, ACPI_INTEGER index,
-		    ACPI_INTEGER val);
+static UINT64	acpi_panasonic_sinf(ACPI_HANDLE h, UINT64 index);
+static void	acpi_panasonic_sset(ACPI_HANDLE h, UINT64 index,
+		    UINT64 val);
 static int	acpi_panasonic_hkey_event(struct acpi_panasonic_softc *sc,
 		    ACPI_HANDLE h, UINT32 *arg);
 static void	acpi_panasonic_hkey_action(struct acpi_panasonic_softc *sc,
@@ -220,7 +221,7 @@ acpi_panasonic_detach(device_t dev)
 	return (0);
 }
 
-static void
+static int
 acpi_panasonic_shutdown(device_t dev)
 {
 	struct acpi_panasonic_softc *sc;
@@ -230,6 +231,7 @@ acpi_panasonic_shutdown(device_t dev)
 	sc = device_get_softc(dev);
 	mute = 1;
 	hkey_sound_mute(sc->handle, HKEY_SET, &mute);
+	return (0);
 }
 
 static int
@@ -263,12 +265,12 @@ out:
 	return (error);
 }
 
-static ACPI_INTEGER
-acpi_panasonic_sinf(ACPI_HANDLE h, ACPI_INTEGER index)
+static UINT64
+acpi_panasonic_sinf(ACPI_HANDLE h, UINT64 index)
 {
 	ACPI_BUFFER buf;
 	ACPI_OBJECT *res;
-	ACPI_INTEGER ret;
+	UINT64 ret;
 
 	ACPI_SERIAL_ASSERT(panasonic);
 	ret = -1;
@@ -284,7 +286,7 @@ acpi_panasonic_sinf(ACPI_HANDLE h, ACPI_INTEGER index)
 }
 
 static void
-acpi_panasonic_sset(ACPI_HANDLE h, ACPI_INTEGER index, ACPI_INTEGER val)
+acpi_panasonic_sset(ACPI_HANDLE h, UINT64 index, UINT64 val)
 {
 	ACPI_OBJECT_LIST args;
 	ACPI_OBJECT obj[2];
@@ -392,7 +394,7 @@ acpi_panasonic_hkey_event(struct acpi_panasonic_softc *sc, ACPI_HANDLE h,
 {
 	ACPI_BUFFER buf;
 	ACPI_OBJECT *res;
-	ACPI_INTEGER val;
+	UINT64 val;
 	int status;
 
 	ACPI_SERIAL_ASSERT(panasonic);

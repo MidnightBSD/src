@@ -25,7 +25,7 @@
  *
  *	$OpenBSD: db_machdep.h,v 1.2 1997/03/21 00:48:48 niklas Exp $
  *	$NetBSD: db_machdep.h,v 1.4.22.1 2000/08/05 11:10:43 wiz Exp $
- * $FreeBSD: release/7.0.0/sys/powerpc/include/db_machdep.h 139825 2005-01-07 02:29:27Z imp $
+ * $FreeBSD$
  */
 
 /*
@@ -35,14 +35,15 @@
 #define	_POWERPC_DB_MACHDEP_H_
 
 #include <vm/vm_param.h>
+#include <machine/elf.h>
 
 #define	DB_ELF_SYMBOLS
-#define	DB_ELFSIZE	32
+#define	DB_ELFSIZE	__ELF_WORD_SIZE
 
 #define BYTE_MSF        (1)
 
 typedef	vm_offset_t	db_addr_t;	/* address - unsigned */
-typedef	int		db_expr_t;	/* expression - signed */
+typedef	intptr_t	db_expr_t;	/* expression - signed */
 
 #define	PC_REGS(regs)	((db_addr_t)kdb_thrctx->pcb_lr)
 

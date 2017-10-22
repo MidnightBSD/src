@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/doc/legal/intel_ipw/Makefile 167177 2007-03-02 18:10:55Z flz $
+# $FreeBSD$
 
 NO_OBJ=
 FILES=		${.CURDIR}/../../../../sys/contrib/dev/ipw/LICENSE

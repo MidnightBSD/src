@@ -23,12 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/i386/include/sf_buf.h 141784 2005-02-13 06:23:13Z alc $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SF_BUF_H_
 #define _MACHINE_SF_BUF_H_
 
+#include <sys/_cpuset.h>
 #include <sys/queue.h>
 
 struct vm_page;
@@ -40,7 +41,7 @@ struct sf_buf {
 	vm_offset_t	kva;		/* va of mapping */
 	int		ref_count;	/* usage of this mapping */
 #ifdef SMP
-	cpumask_t	cpumask;	/* cpus on which mapping is valid */
+	cpuset_t	cpumask;	/* cpus on which mapping is valid */
 #endif
 };
 
@@ -57,5 +58,7 @@ sf_buf_page(struct sf_buf *sf)
 
 	return (sf->m);
 }
+
+boolean_t sf_buf_invalidate_cache(vm_page_t m);
 
 #endif /* !_MACHINE_SF_BUF_H_ */

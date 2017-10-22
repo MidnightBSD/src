@@ -1,5 +1,5 @@
 
-# $FreeBSD: release/7.0.0/sys/modules/aic7xxx/ahc/ahc_isa/Makefile 133912 2004-08-17 02:32:30Z gibbs $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../../../dev/aic7xxx
 KMOD=		ahc_isa

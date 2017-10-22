@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)externs.h	8.3 (Berkeley) 5/30/95
- *	$FreeBSD: release/7.0.0/contrib/telnet/telnet/externs.h 171135 2007-07-01 12:08:08Z gnn $
+ *	$FreeBSD$
  */
 
 #ifndef	BSD
@@ -57,7 +57,7 @@
 #include <errno.h>
 #ifdef	USE_TERMIO
 # ifndef	VINTR
-#  include <sys/termios.h>
+#  include <termios.h>
 # endif
 # define termio termios
 #endif
@@ -233,7 +233,6 @@ extern void
     SetNetTrace(char *);	/* Function to change where debugging goes */
 
 extern jmp_buf
-    peerdied,
     toplevel;		/* For error conditions. */
 
 extern void

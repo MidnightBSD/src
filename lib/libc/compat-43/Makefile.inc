@@ -1,8 +1,8 @@
 #	@(#)Makefile.inc	8.1 (Berkeley) 6/2/93
-# $FreeBSD: release/7.0.0/lib/libc/compat-43/Makefile.inc 156613 2006-03-13 01:15:01Z deischen $
+# $FreeBSD$
 
 # compat-43 sources
-.PATH: ${.CURDIR}/${MACHINE_ARCH}/compat-43 ${.CURDIR}/compat-43
+.PATH: ${.CURDIR}/${LIBC_ARCH}/compat-43 ${.CURDIR}/compat-43
 
 SRCS+=	creat.c gethostid.c getwd.c killpg.c sethostid.c setpgrp.c \
 	setrgid.c setruid.c sigcompat.c
@@ -13,6 +13,11 @@ MAN+=	creat.2 killpg.2 sigpause.2 sigsetmask.2 sigvec.2
 MAN+=	gethostid.3 setruid.3
 
 MLINKS+=gethostid.3 sethostid.3
+MLINKS+=sigpause.2 sighold.2
+MLINKS+=sigpause.2 sigignore.2
+MLINKS+=sigpause.2 sigrelse.2
+MLINKS+=sigpause.2 sigset.2
+MLINKS+=sigpause.2 xsi_sigpause.2
 MLINKS+=setruid.3 setrgid.3
 
 MLINKS+=sigsetmask.2 sigblock.2

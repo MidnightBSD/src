@@ -1,61 +1,57 @@
-# $FreeBSD: release/7.0.0/lib/libarchive/Makefile 171459 2007-07-15 19:10:34Z kientzle $
+# $FreeBSD$
+.include <bsd.own.mk>
+
+LIBARCHIVEDIR=	${.CURDIR}/../../contrib/libarchive
 
 LIB=	archive
-DPADD=	${LIBBZ2} ${LIBZ}
-LDADD=	-lbz2 -lz
+DPADD=	${LIBZ}
+LDADD=	-lz
 
-# The libarchive version stamp.
-# Version is three numbers:
-#  Major: Bumped ONLY when API/ABI breakage happens (see SHLIB_MAJOR)
-#  Minor: Bumped when significant new features are added
-#  Revision: Bumped on any notable change
-VERSION= 2.2.4
+DPADD+= ${LIBBZ2}
+LDADD+= -lbz2
+CFLAGS+= -DHAVE_BZLIB_H=1
 
-ARCHIVE_API_MAJOR!=	echo ${VERSION} | sed -e 's/[^0-9]/./g' -e 's/\..*//'
-ARCHIVE_API_MINOR!=	echo ${VERSION} | sed -e 's/[^0-9]/./g' -e 's/[0-9]*\.//' -e 's/\..*//'
-ARCHIVE_API_REV!=	echo ${VERSION} | sed -e 's/[^0-9]/./g' -e 's/.*\.//'
+DPADD+= ${LIBLZMA}
+LDADD+= -llzma
+CFLAGS+= -DHAVE_LIBLZMA=1 -DHAVE_LZMA_H=1
 
-# Can't use /usr/bin/printf to format the version stamp here, because
-# that's not available during installworld.  Fortunately, awk is.
-ARCHIVE_VERSION_STAMP!=	echo ${ARCHIVE_API_MAJOR} ${ARCHIVE_API_MINOR} ${ARCHIVE_API_REV} | awk '{printf("%d%03d%03d",$$1,$$2,$$3)}'
+DPADD+= ${LIBBSDXML}
+LDADD+= -lbsdxml
 
 # FreeBSD SHLIB_MAJOR value is managed as part of the FreeBSD system.
-# It has no real relation to the version number above.
-SHLIB_MAJOR= 4
+# It has no real relation to the libarchive version number.
+SHLIB_MAJOR= 5
 
-CFLAGS+=	-DPACKAGE_NAME=\"lib${LIB}\"
-CFLAGS+=	-DPACKAGE_VERSION=\"${VERSION}\"
-CFLAGS+=	-DPLATFORM_CONFIG_H=\"config_freebsd.h\"
+CFLAGS+=	-DPLATFORM_CONFIG_H=\"${.CURDIR}/config_freebsd.h\"
 CFLAGS+=	-I${.OBJDIR}
 
-WARNS?=	6
+.if ${MK_OPENSSL} != "no"
+CFLAGS+=	-DWITH_OPENSSL
+DPADD+=	${LIBCRYPTO}
+LDADD+=	-lcrypto
+.else
+DPADD+=	${LIBMD}
+LDADD+=	-lmd
+.endif
+
+.PATH: ${LIBARCHIVEDIR}/libarchive
 
 # Headers to be installed in /usr/include
 INCS=	archive.h archive_entry.h
 
-# Build archive.h from archive.h.in by substituting version information.
-# Note: FreeBSD has inttypes.h, so enable that include in archive.h.in
-archive.h:	archive.h.in Makefile
-	cat ${.CURDIR}/archive.h.in | sed				\
-		-e 's/@ARCHIVE_VERSION@/${VERSION}/g'	 		\
-		-e 's/@SHLIB_MAJOR@/${SHLIB_MAJOR}/g'			\
-		-e 's/@ARCHIVE_API_MAJOR@/${ARCHIVE_API_MAJOR}/g'	\
-		-e 's/@ARCHIVE_API_MINOR@/${ARCHIVE_API_MINOR}/g'	\
-		-e 's/@ARCHIVE_VERSION_STAMP@/${ARCHIVE_VERSION_STAMP}/g' \
-		-e 's|@ARCHIVE_H_INCLUDE_INTTYPES_H@|#include <inttypes.h>  /* For int64_t */|g' \
-		> archive.h
-
-# archive.h needs to be cleaned
-CLEANFILES+=	archive.h
-
 # Sources to be compiled.
-SRCS=	archive.h					\
-	archive_check_magic.c				\
+SRCS=	archive_check_magic.c				\
 	archive_entry.c					\
 	archive_entry_copy_stat.c			\
 	archive_entry_stat.c				\
+	archive_entry_strmode.c				\
+	archive_entry_link_resolver.c			\
+	archive_entry_xattr.c				\
 	archive_read.c					\
 	archive_read_data_into_fd.c			\
+	archive_read_disk.c				\
+	archive_read_disk_entry_from_file.c		\
+	archive_read_disk_set_standard_lookup.c		\
 	archive_read_extract.c				\
 	archive_read_open_fd.c				\
 	archive_read_open_file.c			\
@@ -67,12 +63,18 @@ SRCS=	archive.h					\
 	archive_read_support_compression_gzip.c		\
 	archive_read_support_compression_none.c		\
 	archive_read_support_compression_program.c	\
+	archive_read_support_compression_rpm.c		\
+	archive_read_support_compression_uu.c		\
+	archive_read_support_compression_xz.c		\
 	archive_read_support_format_all.c		\
 	archive_read_support_format_ar.c		\
 	archive_read_support_format_cpio.c		\
 	archive_read_support_format_empty.c		\
 	archive_read_support_format_iso9660.c		\
+	archive_read_support_format_mtree.c		\
+	archive_read_support_format_raw.c		\
 	archive_read_support_format_tar.c		\
+	archive_read_support_format_xar.c		\
 	archive_read_support_format_zip.c		\
 	archive_string.c				\
 	archive_string_sprintf.c			\
@@ -86,25 +88,31 @@ SRCS=	archive.h					\
 	archive_write_open_filename.c			\
 	archive_write_open_memory.c			\
 	archive_write_set_compression_bzip2.c		\
+	archive_write_set_compression_compress.c	\
 	archive_write_set_compression_gzip.c		\
 	archive_write_set_compression_none.c		\
 	archive_write_set_compression_program.c		\
+	archive_write_set_compression_xz.c		\
 	archive_write_set_format.c			\
 	archive_write_set_format_ar.c			\
 	archive_write_set_format_by_name.c		\
 	archive_write_set_format_cpio.c			\
 	archive_write_set_format_cpio_newc.c		\
+	archive_write_set_format_mtree.c		\
 	archive_write_set_format_pax.c			\
 	archive_write_set_format_shar.c			\
 	archive_write_set_format_ustar.c		\
+	archive_write_set_format_zip.c			\
 	filter_fork.c
 
 # Man pages to be installed.
 MAN=	archive_entry.3					\
 	archive_read.3					\
+	archive_read_disk.3				\
 	archive_util.3					\
 	archive_write.3					\
 	archive_write_disk.3				\
+	cpio.5						\
 	libarchive.3					\
 	libarchive-formats.5				\
 	tar.5
@@ -120,10 +128,13 @@ MLINKS+=	archive_entry.3 archive_entry_acl_reset.3
 MLINKS+=	archive_entry.3 archive_entry_acl_text_w.3
 MLINKS+=	archive_entry.3 archive_entry_clear.3
 MLINKS+=	archive_entry.3 archive_entry_clone.3
+MLINKS+=	archive_entry.3 archive_entry_copy_fflags_text.3
 MLINKS+=	archive_entry.3 archive_entry_copy_fflags_text_w.3
 MLINKS+=	archive_entry.3 archive_entry_copy_gname.3
 MLINKS+=	archive_entry.3 archive_entry_copy_gname_w.3
 MLINKS+=	archive_entry.3 archive_entry_copy_hardlink_w.3
+MLINKS+=	archive_entry.3 archive_entry_copy_link.3
+MLINKS+=	archive_entry.3 archive_entry_copy_link_w.3
 MLINKS+=	archive_entry.3 archive_entry_copy_pathname_w.3
 MLINKS+=	archive_entry.3 archive_entry_copy_stat.3
 MLINKS+=	archive_entry.3 archive_entry_copy_symlink_w.3
@@ -189,6 +200,7 @@ MLINKS+=	archive_read.3 archive_read_extract_set_skip_file.3
 MLINKS+=	archive_read.3 archive_read_finish.3
 MLINKS+=	archive_read.3 archive_read_new.3
 MLINKS+=	archive_read.3 archive_read_next_header.3
+MLINKS+=	archive_read.3 archive_read_next_header2.3
 MLINKS+=	archive_read.3 archive_read_open.3
 MLINKS+=	archive_read.3 archive_read_open2.3
 MLINKS+=	archive_read.3 archive_read_open_FILE.3
@@ -200,21 +212,39 @@ MLINKS+=	archive_read.3 archive_read_support_compression_all.3
 MLINKS+=	archive_read.3 archive_read_support_compression_bzip2.3
 MLINKS+=	archive_read.3 archive_read_support_compression_compress.3
 MLINKS+=	archive_read.3 archive_read_support_compression_gzip.3
+MLINKS+=	archive_read.3 archive_read_support_compression_lzma.3
 MLINKS+=	archive_read.3 archive_read_support_compression_none.3
 MLINKS+=	archive_read.3 archive_read_support_compression_program.3
+MLINKS+=	archive_read.3 archive_read_support_compression_program_signature.3
+MLINKS+=	archive_read.3 archive_read_support_compression_xz.3
 MLINKS+=	archive_read.3 archive_read_support_format_all.3
+MLINKS+=	archive_read.3 archive_read_support_format_ar.3
 MLINKS+=	archive_read.3 archive_read_support_format_cpio.3
+MLINKS+=	archive_read.3 archive_read_support_format_empty.3
 MLINKS+=	archive_read.3 archive_read_support_format_iso9660.3
+MLINKS+=	archive_read.3 archive_read_support_format_raw.3
 MLINKS+=	archive_read.3 archive_read_support_format_tar.3
 MLINKS+=	archive_read.3 archive_read_support_format_zip.3
+MLINKS+=	archive_read_disk.3 archive_read_disk_entry_from_file.3
+MLINKS+=	archive_read_disk.3 archive_read_disk_gname.3
+MLINKS+=	archive_read_disk.3 archive_read_disk_new.3
+MLINKS+=	archive_read_disk.3 archive_read_disk_set_gname_lookup.3
+MLINKS+=	archive_read_disk.3 archive_read_disk_set_standard_lookup.3
+MLINKS+=	archive_read_disk.3 archive_read_disk_set_symlink_hybrid.3
+MLINKS+=	archive_read_disk.3 archive_read_disk_set_symlink_logical.3
+MLINKS+=	archive_read_disk.3 archive_read_disk_set_symlink_physical.3
+MLINKS+=	archive_read_disk.3 archive_read_disk_set_uname_lookup.3
+MLINKS+=	archive_read_disk.3 archive_read_disk_uname.3
 MLINKS+=	archive_util.3 archive_clear_error.3
 MLINKS+=	archive_util.3 archive_compression.3
 MLINKS+=	archive_util.3 archive_compression_name.3
 MLINKS+=	archive_util.3 archive_errno.3
 MLINKS+=	archive_util.3 archive_error_string.3
+MLINKS+=	archive_util.3 archive_file_count.3
 MLINKS+=	archive_util.3 archive_format.3
 MLINKS+=	archive_util.3 archive_format_name.3
 MLINKS+=	archive_util.3 archive_set_error.3
+MLINKS+=	archive_write.3 archive_write_close.3
 MLINKS+=	archive_write.3 archive_write_data.3
 MLINKS+=	archive_write.3 archive_write_finish.3
 MLINKS+=	archive_write.3 archive_write_finish_entry.3
@@ -232,6 +262,7 @@ MLINKS+=	archive_write.3 archive_write_set_bytes_in_last_block.3
 MLINKS+=	archive_write.3 archive_write_set_bytes_per_block.3
 MLINKS+=	archive_write.3 archive_write_set_callbacks.3
 MLINKS+=	archive_write.3 archive_write_set_compression_bzip2.3
+MLINKS+=	archive_write.3 archive_write_set_compression_compress.3
 MLINKS+=	archive_write.3 archive_write_set_compression_gzip.3
 MLINKS+=	archive_write.3 archive_write_set_compression_none.3
 MLINKS+=	archive_write.3 archive_write_set_compression_program.3
@@ -246,7 +277,11 @@ MLINKS+=	archive_write_disk.3 archive_write_disk_set_standard_lookup.3
 MLINKS+=	archive_write_disk.3 archive_write_disk_set_user_lookup.3
 MLINKS+=	libarchive.3 archive.3
 
-test:
-	cd ${.CURDIR}/test && make test
+.PHONY: check test clean-test
+check test:
+	cd ${.CURDIR}/test && make obj && make test
+
+clean-test:
+	cd ${.CURDIR}/test && make clean
 
 .include <bsd.lib.mk>

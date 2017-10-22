@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/net/zlib.h 174854 2007-12-22 06:32:46Z cvs2svn $	*/
+/* $FreeBSD$	*/
 
 /*
  * This file is derived from zlib.h and zconf.h from the zlib-1.0.4
@@ -1009,6 +1009,13 @@ extern int EXPORT inflateInit2_ OF((z_streamp strm, int  windowBits,
 #endif
 
 uLongf *get_crc_table OF((void)); /* can be used by asm versions of crc32() */
+
+#ifdef _KERNEL
+struct vnode;
+extern gzFile gz_open     OF((const char *path, const char *mode,
+	                              struct vnode *vp));
+#endif
+
 
 #ifdef __cplusplus
 }

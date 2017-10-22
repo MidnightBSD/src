@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/named/Makefile 170221 2007-06-02 23:19:58Z dougb $
+# $FreeBSD$
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind9
 LIB_BIND_REL=	../../lib/bind
@@ -9,18 +9,40 @@ SRCDIR=		${BIND_DIR}/bin/named
 
 PROG=		named
 
+CONFIGARGS='--prefix=/usr' '--infodir=/usr/share/info' '--mandir=/usr/share/man' '--enable-threads' '--enable-getifaddrs' '--disable-linux-caps' '--with-openssl=/usr' '--with-randomdev=/dev/random'
+
+# Optional features
+.if ${MK_BIND_LARGE_FILE} == "yes"
+CONFIGARGS+='--enable-largefile'
+.endif
+.if ${MK_BIND_SIGCHASE} == "yes"
+CONFIGARGS+='STD_CDEFINES=-DDIG_SIGCHASE=1'
+.endif
+.if ${MK_BIND_IDN} == "yes"
+CONFIGARGS+='--with-idn=/usr/local'
+.else
+CONFIGARGS+='--without-idn'
+.endif
+.if ${MK_BIND_XML} == "yes"
+CONFIGARGS+='--with-libxml2=/usr/local'
+.else
+CONFIGARGS+='--without-libxml2'
+.endif
+
 .PATH: ${SRCDIR}/unix
-SRCS+=		os.c
+SRCS+=		os.c dlz_dlopen_driver.c
 
 .PATH: ${SRCDIR}
 SRCS+=		builtin.c client.c config.c control.c \
 		controlconf.c interfacemgr.c \
 		listenlist.c log.c logconf.c main.c notify.c \
-		query.c server.c sortlist.c \
+		query.c server.c sortlist.c statschannel.c \
 		tkeyconf.c tsigconf.c update.c xfrout.c \
 		zoneconf.c \
 		lwaddr.c lwresd.c lwdclient.c lwderror.c lwdgabn.c \
 		lwdgnba.c lwdgrbn.c lwdnoop.c lwsearch.c
+
+CFLAGS+=	-DCONFIGARGS="\"${CONFIGARGS}\""
 
 CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include -I${LIB_BIND_DIR}
 CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
@@ -28,12 +50,15 @@ CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
 # Remove the date stamp to make it more obvious when real changes happen
 CFLAGS+=	-U__DATE__
 
+WARNS?=		0
+
 DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}
 
 MAN=		named.8 lwresd.8 named.conf.5
 
-MANFILTER=	sed -e "s@/etc/named\.conf@/etc/namedb/named.conf@g"
+MANFILTER=	sed -e "s@/etc/named\.conf@/etc/namedb/named.conf@g" \
+		-e "s@/var\/run\/named\/named.pid@/var/run/named/pid@"
 
 LINKS=		${BINDIR}/named ${BINDIR}/lwresd
 

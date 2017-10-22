@@ -25,7 +25,7 @@
  *
  * Author: Ruslan Ermilov <ru@FreeBSD.org>
  *
- * $FreeBSD: release/7.0.0/sys/netgraph/ng_vlan.c 170561 2007-06-11 15:29:02Z imp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -161,9 +161,7 @@ ng_vlan_constructor(node_p node)
 	priv_p priv;
 	int i;
 
-	MALLOC(priv, priv_p, sizeof(*priv), M_NETGRAPH, M_NOWAIT | M_ZERO);
-	if (priv == NULL)
-		return (ENOMEM);
+	priv = malloc(sizeof(*priv), M_NETGRAPH, M_WAITOK | M_ZERO);
 	for (i = 0; i < HASHSIZE; i++)
 		LIST_INIT(&priv->hashtable[i]);
 	NG_NODE_SET_PRIVATE(node, priv);
@@ -241,7 +239,7 @@ ng_vlan_rcvmsg(node_p node, item_p item, hook_p lasthook)
 				break;
 			}
 			/* Create filter. */
-			MALLOC(f, struct filter *, sizeof(*f),
+			f = malloc(sizeof(*f),
 			    M_NETGRAPH, M_NOWAIT | M_ZERO);
 			if (f == NULL) {
 				error = ENOMEM;
@@ -273,7 +271,7 @@ ng_vlan_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			NG_HOOK_SET_PRIVATE(hook, NULL);
 			LIST_REMOVE(f, next);
 			priv->nent--;
-			FREE(f, M_NETGRAPH);
+			free(f, M_NETGRAPH);
 			break;
 		case NGM_VLAN_GET_TABLE:
 			NG_MKRESPONSE(resp, msg, sizeof(*t) +
@@ -438,7 +436,7 @@ ng_vlan_shutdown(node_p node)
 
 	NG_NODE_SET_PRIVATE(node, NULL);
 	NG_NODE_UNREF(node);
-	FREE(priv, M_NETGRAPH);
+	free(priv, M_NETGRAPH);
 	return (0);
 }
 
@@ -457,7 +455,7 @@ ng_vlan_disconnect(hook_p hook)
 		if ((f = NG_HOOK_PRIVATE(hook)) != NULL) {
 			LIST_REMOVE(f, next);
 			priv->nent--;
-			FREE(f, M_NETGRAPH);
+			free(f, M_NETGRAPH);
 		}
 	}
 	NG_HOOK_SET_PRIVATE(hook, NULL);

@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/7.0.0/tools/regression/sockets/accept_fd_leak/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 #
 
 PROG=	accept_fd_leak

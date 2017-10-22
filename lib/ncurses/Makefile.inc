@@ -1,5 +1,7 @@
-# $FreeBSD: release/7.0.0/lib/ncurses/Makefile.inc 167358 2007-03-09 09:54:07Z rafan $
+# $FreeBSD$
 
 # This is to include src/lib/Makefile.inc
+
+WARNS?=	3
 
 .include "../Makefile.inc"

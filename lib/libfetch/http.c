@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2000-2004 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 2000-2011 Dag-Erling SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libfetch/http.c 169386 2007-05-08 19:28:03Z des $");
+__FBSDID("$FreeBSD$");
 
 /*
  * The following copyright applies to the base64 code:
@@ -63,6 +63,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libfetch/http.c 169386 2007-05-08 19:28:03
 
 #include <sys/param.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 
 #include <ctype.h>
 #include <err.h>
@@ -75,6 +76,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libfetch/http.c 169386 2007-05-08 19:28:03
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <md5.h>
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -92,6 +94,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libfetch/http.c 169386 2007-05-08 19:28:03
 #define HTTP_MOVED_PERM		301
 #define HTTP_MOVED_TEMP		302
 #define HTTP_SEE_OTHER		303
+#define HTTP_NOT_MODIFIED	304
 #define HTTP_TEMP_REDIRECT	307
 #define HTTP_NEED_AUTH		401
 #define HTTP_NEED_PROXY_AUTH	407
@@ -130,27 +133,27 @@ struct httpio
  * Get next chunk header
  */
 static int
-_http_new_chunk(struct httpio *io)
+http_new_chunk(struct httpio *io)
 {
 	char *p;
 
-	if (_fetch_getln(io->conn) == -1)
+	if (fetch_getln(io->conn) == -1)
 		return (-1);
 
-	if (io->conn->buflen < 2 || !ishexnumber(*io->conn->buf))
+	if (io->conn->buflen < 2 || !isxdigit((unsigned char)*io->conn->buf))
 		return (-1);
 
-	for (p = io->conn->buf; *p && !isspace(*p); ++p) {
+	for (p = io->conn->buf; *p && !isspace((unsigned char)*p); ++p) {
 		if (*p == ';')
 			break;
-		if (!ishexnumber(*p))
+		if (!isxdigit((unsigned char)*p))
 			return (-1);
-		if (isdigit(*p)) {
+		if (isdigit((unsigned char)*p)) {
 			io->chunksize = io->chunksize * 16 +
 			    *p - '0';
 		} else {
 			io->chunksize = io->chunksize * 16 +
-			    10 + tolower(*p) - 'a';
+			    10 + tolower((unsigned char)*p) - 'a';
 		}
 	}
 
@@ -173,7 +176,7 @@ _http_new_chunk(struct httpio *io)
  * Grow the input buffer to at least len bytes
  */
 static inline int
-_http_growbuf(struct httpio *io, size_t len)
+http_growbuf(struct httpio *io, size_t len)
 {
 	char *tmp;
 
@@ -191,26 +194,29 @@ _http_growbuf(struct httpio *io, size_t len)
  * Fill the input buffer, do chunk decoding on the fly
  */
 static int
-_http_fillbuf(struct httpio *io, size_t len)
+http_fillbuf(struct httpio *io, size_t len)
 {
+	ssize_t nbytes;
+
 	if (io->error)
 		return (-1);
 	if (io->eof)
 		return (0);
 
 	if (io->chunked == 0) {
-		if (_http_growbuf(io, len) == -1)
+		if (http_growbuf(io, len) == -1)
 			return (-1);
-		if ((io->buflen = _fetch_read(io->conn, io->buf, len)) == -1) {
-			io->error = 1;
+		if ((nbytes = fetch_read(io->conn, io->buf, len)) == -1) {
+			io->error = errno;
 			return (-1);
 		}
+		io->buflen = nbytes;
 		io->bufpos = 0;
 		return (io->buflen);
 	}
 
 	if (io->chunksize == 0) {
-		switch (_http_new_chunk(io)) {
+		switch (http_new_chunk(io)) {
 		case -1:
 			io->error = 1;
 			return (-1);
@@ -222,18 +228,19 @@ _http_fillbuf(struct httpio *io, size_t len)
 
 	if (len > io->chunksize)
 		len = io->chunksize;
-	if (_http_growbuf(io, len) == -1)
+	if (http_growbuf(io, len) == -1)
 		return (-1);
-	if ((io->buflen = _fetch_read(io->conn, io->buf, len)) == -1) {
-		io->error = 1;
+	if ((nbytes = fetch_read(io->conn, io->buf, len)) == -1) {
+		io->error = errno;
 		return (-1);
 	}
+	io->buflen = nbytes;
 	io->chunksize -= io->buflen;
 
 	if (io->chunksize == 0) {
 		char endl[2];
 
-		if (_fetch_read(io->conn, endl, 2) != 2 ||
+		if (fetch_read(io->conn, endl, 2) != 2 ||
 		    endl[0] != '\r' || endl[1] != '\n')
 			return (-1);
 	}
@@ -247,7 +254,7 @@ _http_fillbuf(struct httpio *io, size_t len)
  * Read function
  */
 static int
-_http_readfn(void *v, char *buf, int len)
+http_readfn(void *v, char *buf, int len)
 {
 	struct httpio *io = (struct httpio *)v;
 	int l, pos;
@@ -260,17 +267,20 @@ _http_readfn(void *v, char *buf, int len)
 	for (pos = 0; len > 0; pos += l, len -= l) {
 		/* empty buffer */
 		if (!io->buf || io->bufpos == io->buflen)
-			if (_http_fillbuf(io, len) < 1)
+			if (http_fillbuf(io, len) < 1)
 				break;
 		l = io->buflen - io->bufpos;
 		if (len < l)
 			l = len;
-		bcopy(io->buf + io->bufpos, buf + pos, l);
+		memcpy(buf + pos, io->buf + io->bufpos, l);
 		io->bufpos += l;
 	}
 
-	if (!pos && io->error)
+	if (!pos && io->error) {
+		if (io->error == EINTR)
+			io->error = 0;
 		return (-1);
+	}
 	return (pos);
 }
 
@@ -278,23 +288,23 @@ _http_readfn(void *v, char *buf, int len)
  * Write function
  */
 static int
-_http_writefn(void *v, const char *buf, int len)
+http_writefn(void *v, const char *buf, int len)
 {
 	struct httpio *io = (struct httpio *)v;
 
-	return (_fetch_write(io->conn, buf, len));
+	return (fetch_write(io->conn, buf, len));
 }
 
 /*
  * Close function
  */
 static int
-_http_closefn(void *v)
+http_closefn(void *v)
 {
 	struct httpio *io = (struct httpio *)v;
 	int r;
 
-	r = _fetch_close(io->conn);
+	r = fetch_close(io->conn);
 	if (io->buf)
 		free(io->buf);
 	free(io);
@@ -305,20 +315,20 @@ _http_closefn(void *v)
  * Wrap a file descriptor up
  */
 static FILE *
-_http_funopen(conn_t *conn, int chunked)
+http_funopen(conn_t *conn, int chunked)
 {
 	struct httpio *io;
 	FILE *f;
 
 	if ((io = calloc(1, sizeof(*io))) == NULL) {
-		_fetch_syserr();
+		fetch_syserr();
 		return (NULL);
 	}
 	io->conn = conn;
 	io->chunked = chunked;
-	f = funopen(io, _http_readfn, _http_writefn, NULL, _http_closefn);
+	f = funopen(io, http_readfn, http_writefn, NULL, http_closefn);
 	if (f == NULL) {
-		_fetch_syserr();
+		fetch_syserr();
 		free(io);
 		return (NULL);
 	}
@@ -341,7 +351,8 @@ typedef enum {
 	hdr_last_modified,
 	hdr_location,
 	hdr_transfer_encoding,
-	hdr_www_authenticate
+	hdr_www_authenticate,
+	hdr_proxy_authenticate,
 } hdr_t;
 
 /* Names of interesting headers */
@@ -355,6 +366,7 @@ static struct {
 	{ hdr_location,			"Location" },
 	{ hdr_transfer_encoding,	"Transfer-Encoding" },
 	{ hdr_www_authenticate,		"WWW-Authenticate" },
+	{ hdr_proxy_authenticate,	"Proxy-Authenticate" },
 	{ hdr_unknown,			NULL },
 };
 
@@ -362,7 +374,7 @@ static struct {
  * Send a formatted line; optionally echo to terminal
  */
 static int
-_http_cmd(conn_t *conn, const char *fmt, ...)
+http_cmd(conn_t *conn, const char *fmt, ...)
 {
 	va_list ap;
 	size_t len;
@@ -375,15 +387,15 @@ _http_cmd(conn_t *conn, const char *fmt, ...)
 
 	if (msg == NULL) {
 		errno = ENOMEM;
-		_fetch_syserr();
+		fetch_syserr();
 		return (-1);
 	}
 
-	r = _fetch_putln(conn, msg, len);
+	r = fetch_putln(conn, msg, len);
 	free(msg);
 
 	if (r == -1) {
-		_fetch_syserr();
+		fetch_syserr();
 		return (-1);
 	}
 
@@ -394,11 +406,11 @@ _http_cmd(conn_t *conn, const char *fmt, ...)
  * Get and parse status line
  */
 static int
-_http_get_reply(conn_t *conn)
+http_get_reply(conn_t *conn)
 {
 	char *p;
 
-	if (_fetch_getln(conn) == -1)
+	if (fetch_getln(conn) == -1)
 		return (-1);
 	/*
 	 * A valid status line looks like "HTTP/m.n xyz reason" where m
@@ -417,7 +429,10 @@ _http_get_reply(conn_t *conn)
 			return (HTTP_PROTOCOL_ERROR);
 		p += 4;
 	}
-	if (*p != ' ' || !isdigit(p[1]) || !isdigit(p[2]) || !isdigit(p[3]))
+	if (*p != ' ' ||
+	    !isdigit((unsigned char)p[1]) ||
+	    !isdigit((unsigned char)p[2]) ||
+	    !isdigit((unsigned char)p[3]))
 		return (HTTP_PROTOCOL_ERROR);
 
 	conn->err = (p[1] - '0') * 100 + (p[2] - '0') * 10 + (p[3] - '0');
@@ -429,32 +444,126 @@ _http_get_reply(conn_t *conn)
  * to the beginning of the value.
  */
 static const char *
-_http_match(const char *str, const char *hdr)
+http_match(const char *str, const char *hdr)
 {
-	while (*str && *hdr && tolower(*str++) == tolower(*hdr++))
+	while (*str && *hdr &&
+	    tolower((unsigned char)*str++) == tolower((unsigned char)*hdr++))
 		/* nothing */;
 	if (*str || *hdr != ':')
 		return (NULL);
-	while (*hdr && isspace(*++hdr))
+	while (*hdr && isspace((unsigned char)*++hdr))
 		/* nothing */;
 	return (hdr);
 }
 
-/*
- * Get the next header and return the appropriate symbolic code.
- */
-static hdr_t
-_http_next_header(conn_t *conn, const char **p)
-{
-	int i;
 
-	if (_fetch_getln(conn) == -1)
-		return (hdr_syserror);
-	while (conn->buflen && isspace(conn->buf[conn->buflen - 1]))
+/*
+ * Get the next header and return the appropriate symbolic code.  We
+ * need to read one line ahead for checking for a continuation line
+ * belonging to the current header (continuation lines start with
+ * white space).
+ *
+ * We get called with a fresh line already in the conn buffer, either
+ * from the previous http_next_header() invocation, or, the first
+ * time, from a fetch_getln() performed by our caller.
+ *
+ * This stops when we encounter an empty line (we dont read beyond the header
+ * area).
+ *
+ * Note that the "headerbuf" is just a place to return the result. Its
+ * contents are not used for the next call. This means that no cleanup
+ * is needed when ie doing another connection, just call the cleanup when
+ * fully done to deallocate memory.
+ */
+
+/* Limit the max number of continuation lines to some reasonable value */
+#define HTTP_MAX_CONT_LINES 10
+
+/* Place into which to build a header from one or several lines */
+typedef struct {
+	char	*buf;		/* buffer */
+	size_t	 bufsize;	/* buffer size */
+	size_t	 buflen;	/* length of buffer contents */
+} http_headerbuf_t;
+
+static void
+init_http_headerbuf(http_headerbuf_t *buf)
+{
+	buf->buf = NULL;
+	buf->bufsize = 0;
+	buf->buflen = 0;
+}
+
+static void
+clean_http_headerbuf(http_headerbuf_t *buf)
+{
+	if (buf->buf)
+		free(buf->buf);
+	init_http_headerbuf(buf);
+}
+
+/* Remove whitespace at the end of the buffer */
+static void
+http_conn_trimright(conn_t *conn)
+{
+	while (conn->buflen &&
+	       isspace((unsigned char)conn->buf[conn->buflen - 1]))
 		conn->buflen--;
 	conn->buf[conn->buflen] = '\0';
+}
+
+static hdr_t
+http_next_header(conn_t *conn, http_headerbuf_t *hbuf, const char **p)
+{
+	unsigned int i, len;
+
+	/*
+	 * Have to do the stripping here because of the first line. So
+	 * it's done twice for the subsequent lines. No big deal
+	 */
+	http_conn_trimright(conn);
 	if (conn->buflen == 0)
 		return (hdr_end);
+
+	/* Copy the line to the headerbuf */
+	if (hbuf->bufsize < conn->buflen + 1) {
+		if ((hbuf->buf = realloc(hbuf->buf, conn->buflen + 1)) == NULL)
+			return (hdr_syserror);
+		hbuf->bufsize = conn->buflen + 1;
+	}
+	strcpy(hbuf->buf, conn->buf);
+	hbuf->buflen = conn->buflen;
+
+	/*
+	 * Fetch possible continuation lines. Stop at 1st non-continuation
+	 * and leave it in the conn buffer
+	 */
+	for (i = 0; i < HTTP_MAX_CONT_LINES; i++) {
+		if (fetch_getln(conn) == -1)
+			return (hdr_syserror);
+
+		/*
+		 * Note: we carry on the idea from the previous version
+		 * that a pure whitespace line is equivalent to an empty
+		 * one (so it's not continuation and will be handled when
+		 * we are called next)
+		 */
+		http_conn_trimright(conn);
+		if (conn->buf[0] != ' ' && conn->buf[0] != "\t"[0])
+			break;
+
+		/* Got a continuation line. Concatenate to previous */
+		len = hbuf->buflen + conn->buflen;
+		if (hbuf->bufsize < len + 1) {
+			len *= 2;
+			if ((hbuf->buf = realloc(hbuf->buf, len + 1)) == NULL)
+				return (hdr_syserror);
+			hbuf->bufsize = len + 1;
+		}
+		strcpy(hbuf->buf + hbuf->buflen, conn->buf);
+		hbuf->buflen += conn->buflen;
+	}
+
 	/*
 	 * We could check for malformed headers but we don't really care.
 	 * A valid header starts with a token immediately followed by a
@@ -462,16 +571,295 @@ _http_next_header(conn_t *conn, const char **p)
 	 * characters except "()<>@,;:\\\"{}".
 	 */
 	for (i = 0; hdr_names[i].num != hdr_unknown; i++)
-		if ((*p = _http_match(hdr_names[i].name, conn->buf)) != NULL)
+		if ((*p = http_match(hdr_names[i].name, hbuf->buf)) != NULL)
 			return (hdr_names[i].num);
+
 	return (hdr_unknown);
 }
+
+/**************************
+ * [Proxy-]Authenticate header parsing
+ */
+
+/*
+ * Read doublequote-delimited string into output buffer obuf (allocated
+ * by caller, whose responsibility it is to ensure that it's big enough)
+ * cp points to the first char after the initial '"'
+ * Handles \ quoting
+ * Returns pointer to the first char after the terminating double quote, or
+ * NULL for error.
+ */
+static const char *
+http_parse_headerstring(const char *cp, char *obuf)
+{
+	for (;;) {
+		switch (*cp) {
+		case 0: /* Unterminated string */
+			*obuf = 0;
+			return (NULL);
+		case '"': /* Ending quote */
+			*obuf = 0;
+			return (++cp);
+		case '\\':
+			if (*++cp == 0) {
+				*obuf = 0;
+				return (NULL);
+			}
+			/* FALLTHROUGH */
+		default:
+			*obuf++ = *cp++;
+		}
+	}
+}
+
+/* Http auth challenge schemes */
+typedef enum {HTTPAS_UNKNOWN, HTTPAS_BASIC,HTTPAS_DIGEST} http_auth_schemes_t;
+
+/* Data holder for a Basic or Digest challenge. */
+typedef struct {
+	http_auth_schemes_t scheme;
+	char	*realm;
+	char	*qop;
+	char	*nonce;
+	char	*opaque;
+	char	*algo;
+	int	 stale;
+	int	 nc; /* Nonce count */
+} http_auth_challenge_t;
+
+static void
+init_http_auth_challenge(http_auth_challenge_t *b)
+{
+	b->scheme = HTTPAS_UNKNOWN;
+	b->realm = b->qop = b->nonce = b->opaque = b->algo = NULL;
+	b->stale = b->nc = 0;
+}
+
+static void
+clean_http_auth_challenge(http_auth_challenge_t *b)
+{
+	if (b->realm)
+		free(b->realm);
+	if (b->qop)
+		free(b->qop);
+	if (b->nonce)
+		free(b->nonce);
+	if (b->opaque)
+		free(b->opaque);
+	if (b->algo)
+		free(b->algo);
+	init_http_auth_challenge(b);
+}
+
+/* Data holder for an array of challenges offered in an http response. */
+#define MAX_CHALLENGES 10
+typedef struct {
+	http_auth_challenge_t *challenges[MAX_CHALLENGES];
+	int	count; /* Number of parsed challenges in the array */
+	int	valid; /* We did parse an authenticate header */
+} http_auth_challenges_t;
+
+static void
+init_http_auth_challenges(http_auth_challenges_t *cs)
+{
+	int i;
+	for (i = 0; i < MAX_CHALLENGES; i++)
+		cs->challenges[i] = NULL;
+	cs->count = cs->valid = 0;
+}
+
+static void
+clean_http_auth_challenges(http_auth_challenges_t *cs)
+{
+	int i;
+	/* We rely on non-zero pointers being allocated, not on the count */
+	for (i = 0; i < MAX_CHALLENGES; i++) {
+		if (cs->challenges[i] != NULL) {
+			clean_http_auth_challenge(cs->challenges[i]);
+			free(cs->challenges[i]);
+		}
+	}
+	init_http_auth_challenges(cs);
+}
+
+/*
+ * Enumeration for lexical elements. Separators will be returned as their own
+ * ascii value
+ */
+typedef enum {HTTPHL_WORD=256, HTTPHL_STRING=257, HTTPHL_END=258,
+	      HTTPHL_ERROR = 259} http_header_lex_t;
+
+/*
+ * Determine what kind of token comes next and return possible value
+ * in buf, which is supposed to have been allocated big enough by
+ * caller. Advance input pointer and return element type.
+ */
+static int
+http_header_lex(const char **cpp, char *buf)
+{
+	size_t l;
+	/* Eat initial whitespace */
+	*cpp += strspn(*cpp, " \t");
+	if (**cpp == 0)
+		return (HTTPHL_END);
+
+	/* Separator ? */
+	if (**cpp == ',' || **cpp == '=')
+		return (*((*cpp)++));
+
+	/* String ? */
+	if (**cpp == '"') {
+		*cpp = http_parse_headerstring(++*cpp, buf);
+		if (*cpp == NULL)
+			return (HTTPHL_ERROR);
+		return (HTTPHL_STRING);
+	}
+
+	/* Read other token, until separator or whitespace */
+	l = strcspn(*cpp, " \t,=");
+	memcpy(buf, *cpp, l);
+	buf[l] = 0;
+	*cpp += l;
+	return (HTTPHL_WORD);
+}
+
+/*
+ * Read challenges from http xxx-authenticate header and accumulate them
+ * in the challenges list structure.
+ *
+ * Headers with multiple challenges are specified by rfc2617, but
+ * servers (ie: squid) often send them in separate headers instead,
+ * which in turn is forbidden by the http spec (multiple headers with
+ * the same name are only allowed for pure comma-separated lists, see
+ * rfc2616 sec 4.2).
+ *
+ * We support both approaches anyway
+ */
+static int
+http_parse_authenticate(const char *cp, http_auth_challenges_t *cs)
+{
+	int ret = -1;
+	http_header_lex_t lex;
+	char *key = malloc(strlen(cp) + 1);
+	char *value = malloc(strlen(cp) + 1);
+	char *buf = malloc(strlen(cp) + 1);
+
+	if (key == NULL || value == NULL || buf == NULL) {
+		fetch_syserr();
+		goto out;
+	}
+
+	/* In any case we've seen the header and we set the valid bit */
+	cs->valid = 1;
+
+	/* Need word first */
+	lex = http_header_lex(&cp, key);
+	if (lex != HTTPHL_WORD)
+		goto out;
+
+	/* Loop on challenges */
+	for (; cs->count < MAX_CHALLENGES; cs->count++) {
+		cs->challenges[cs->count] =
+			malloc(sizeof(http_auth_challenge_t));
+		if (cs->challenges[cs->count] == NULL) {
+			fetch_syserr();
+			goto out;
+		}
+		init_http_auth_challenge(cs->challenges[cs->count]);
+		if (!strcasecmp(key, "basic")) {
+			cs->challenges[cs->count]->scheme = HTTPAS_BASIC;
+		} else if (!strcasecmp(key, "digest")) {
+			cs->challenges[cs->count]->scheme = HTTPAS_DIGEST;
+		} else {
+			cs->challenges[cs->count]->scheme = HTTPAS_UNKNOWN;
+			/*
+			 * Continue parsing as basic or digest may
+			 * follow, and the syntax is the same for
+			 * all. We'll just ignore this one when
+			 * looking at the list
+			 */
+		}
+
+		/* Loop on attributes */
+		for (;;) {
+			/* Key */
+			lex = http_header_lex(&cp, key);
+			if (lex != HTTPHL_WORD)
+				goto out;
+
+			/* Equal sign */
+			lex = http_header_lex(&cp, buf);
+			if (lex != '=')
+				goto out;
+
+			/* Value */
+			lex = http_header_lex(&cp, value);
+			if (lex != HTTPHL_WORD && lex != HTTPHL_STRING)
+				goto out;
+
+			if (!strcasecmp(key, "realm"))
+				cs->challenges[cs->count]->realm =
+					strdup(value);
+			else if (!strcasecmp(key, "qop"))
+				cs->challenges[cs->count]->qop =
+					strdup(value);
+			else if (!strcasecmp(key, "nonce"))
+				cs->challenges[cs->count]->nonce =
+					strdup(value);
+			else if (!strcasecmp(key, "opaque"))
+				cs->challenges[cs->count]->opaque =
+					strdup(value);
+			else if (!strcasecmp(key, "algorithm"))
+				cs->challenges[cs->count]->algo =
+					strdup(value);
+			else if (!strcasecmp(key, "stale"))
+				cs->challenges[cs->count]->stale =
+					strcasecmp(value, "no");
+			/* Else ignore unknown attributes */
+
+			/* Comma or Next challenge or End */
+			lex = http_header_lex(&cp, key);
+			/*
+			 * If we get a word here, this is the beginning of the
+			 * next challenge. Break the attributes loop
+			 */
+			if (lex == HTTPHL_WORD)
+				break;
+
+			if (lex == HTTPHL_END) {
+				/* End while looking for ',' is normal exit */
+				cs->count++;
+				ret = 0;
+				goto out;
+			}
+			/* Anything else is an error */
+			if (lex != ',')
+				goto out;
+
+		} /* End attributes loop */
+	} /* End challenge loop */
+
+	/*
+	 * Challenges max count exceeded. This really can't happen
+	 * with normal data, something's fishy -> error
+	 */
+
+out:
+	if (key)
+		free(key);
+	if (value)
+		free(value);
+	if (buf)
+		free(buf);
+	return (ret);
+}
+
 
 /*
  * Parse a last-modified header
  */
 static int
-_http_parse_mtime(const char *p, time_t *mtime)
+http_parse_mtime(const char *p, time_t *mtime)
 {
 	char locale[64], *r;
 	struct tm tm;
@@ -495,11 +883,11 @@ _http_parse_mtime(const char *p, time_t *mtime)
  * Parse a content-length header
  */
 static int
-_http_parse_length(const char *p, off_t *length)
+http_parse_length(const char *p, off_t *length)
 {
 	off_t len;
 
-	for (len = 0; *p && isdigit(*p); ++p)
+	for (len = 0; *p && isdigit((unsigned char)*p); ++p)
 		len = len * 10 + (*p - '0');
 	if (*p)
 		return (-1);
@@ -513,7 +901,7 @@ _http_parse_length(const char *p, off_t *length)
  * Parse a content-range header
  */
 static int
-_http_parse_range(const char *p, off_t *offset, off_t *length, off_t *size)
+http_parse_range(const char *p, off_t *offset, off_t *length, off_t *size)
 {
 	off_t first, last, len;
 
@@ -524,16 +912,16 @@ _http_parse_range(const char *p, off_t *offset, off_t *length, off_t *size)
 		first = last = -1;
 		++p;
 	} else {
-		for (first = 0; *p && isdigit(*p); ++p)
+		for (first = 0; *p && isdigit((unsigned char)*p); ++p)
 			first = first * 10 + *p - '0';
 		if (*p != '-')
 			return (-1);
-		for (last = 0, ++p; *p && isdigit(*p); ++p)
+		for (last = 0, ++p; *p && isdigit((unsigned char)*p); ++p)
 			last = last * 10 + *p - '0';
 	}
 	if (first > last || *p != '/')
 		return (-1);
-	for (len = 0, ++p; *p && isdigit(*p); ++p)
+	for (len = 0, ++p; *p && isdigit((unsigned char)*p); ++p)
 		len = len * 10 + *p - '0';
 	if (*p || len < last - first + 1)
 		return (-1);
@@ -560,7 +948,7 @@ _http_parse_range(const char *p, off_t *offset, off_t *length, off_t *size)
  * Base64 encoding
  */
 static char *
-_http_base64(const char *src)
+http_base64(const char *src)
 {
 	static const char base64[] =
 	    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -612,56 +1000,357 @@ _http_base64(const char *src)
 	return (str);
 }
 
+
+/*
+ * Extract authorization parameters from environment value.
+ * The value is like scheme:realm:user:pass
+ */
+typedef struct {
+	char	*scheme;
+	char	*realm;
+	char	*user;
+	char	*password;
+} http_auth_params_t;
+
+static void
+init_http_auth_params(http_auth_params_t *s)
+{
+	s->scheme = s->realm = s->user = s->password = 0;
+}
+
+static void
+clean_http_auth_params(http_auth_params_t *s)
+{
+	if (s->scheme)
+		free(s->scheme);
+	if (s->realm)
+		free(s->realm);
+	if (s->user)
+		free(s->user);
+	if (s->password)
+		free(s->password);
+	init_http_auth_params(s);
+}
+
+static int
+http_authfromenv(const char *p, http_auth_params_t *parms)
+{
+	int ret = -1;
+	char *v, *ve;
+	char *str = strdup(p);
+
+	if (str == NULL) {
+		fetch_syserr();
+		return (-1);
+	}
+	v = str;
+
+	if ((ve = strchr(v, ':')) == NULL)
+		goto out;
+
+	*ve = 0;
+	if ((parms->scheme = strdup(v)) == NULL) {
+		fetch_syserr();
+		goto out;
+	}
+	v = ve + 1;
+
+	if ((ve = strchr(v, ':')) == NULL)
+		goto out;
+
+	*ve = 0;
+	if ((parms->realm = strdup(v)) == NULL) {
+		fetch_syserr();
+		goto out;
+	}
+	v = ve + 1;
+
+	if ((ve = strchr(v, ':')) == NULL)
+		goto out;
+
+	*ve = 0;
+	if ((parms->user = strdup(v)) == NULL) {
+		fetch_syserr();
+		goto out;
+	}
+	v = ve + 1;
+
+
+	if ((parms->password = strdup(v)) == NULL) {
+		fetch_syserr();
+		goto out;
+	}
+	ret = 0;
+out:
+	if (ret == -1)
+		clean_http_auth_params(parms);
+	if (str)
+		free(str);
+	return (ret);
+}
+
+
+/*
+ * Digest response: the code to compute the digest is taken from the
+ * sample implementation in RFC2616
+ */
+#define IN const
+#define OUT
+
+#define HASHLEN 16
+typedef char HASH[HASHLEN];
+#define HASHHEXLEN 32
+typedef char HASHHEX[HASHHEXLEN+1];
+
+static const char *hexchars = "0123456789abcdef";
+static void
+CvtHex(IN HASH Bin, OUT HASHHEX Hex)
+{
+	unsigned short i;
+	unsigned char j;
+
+	for (i = 0; i < HASHLEN; i++) {
+		j = (Bin[i] >> 4) & 0xf;
+		Hex[i*2] = hexchars[j];
+		j = Bin[i] & 0xf;
+		Hex[i*2+1] = hexchars[j];
+	};
+	Hex[HASHHEXLEN] = '\0';
+};
+
+/* calculate H(A1) as per spec */
+static void
+DigestCalcHA1(
+	IN char * pszAlg,
+	IN char * pszUserName,
+	IN char * pszRealm,
+	IN char * pszPassword,
+	IN char * pszNonce,
+	IN char * pszCNonce,
+	OUT HASHHEX SessionKey
+	)
+{
+	MD5_CTX Md5Ctx;
+	HASH HA1;
+
+	MD5Init(&Md5Ctx);
+	MD5Update(&Md5Ctx, pszUserName, strlen(pszUserName));
+	MD5Update(&Md5Ctx, ":", 1);
+	MD5Update(&Md5Ctx, pszRealm, strlen(pszRealm));
+	MD5Update(&Md5Ctx, ":", 1);
+	MD5Update(&Md5Ctx, pszPassword, strlen(pszPassword));
+	MD5Final(HA1, &Md5Ctx);
+	if (strcasecmp(pszAlg, "md5-sess") == 0) {
+
+		MD5Init(&Md5Ctx);
+		MD5Update(&Md5Ctx, HA1, HASHLEN);
+		MD5Update(&Md5Ctx, ":", 1);
+		MD5Update(&Md5Ctx, pszNonce, strlen(pszNonce));
+		MD5Update(&Md5Ctx, ":", 1);
+		MD5Update(&Md5Ctx, pszCNonce, strlen(pszCNonce));
+		MD5Final(HA1, &Md5Ctx);
+	};
+	CvtHex(HA1, SessionKey);
+}
+
+/* calculate request-digest/response-digest as per HTTP Digest spec */
+static void
+DigestCalcResponse(
+	IN HASHHEX HA1,           /* H(A1) */
+	IN char * pszNonce,       /* nonce from server */
+	IN char * pszNonceCount,  /* 8 hex digits */
+	IN char * pszCNonce,      /* client nonce */
+	IN char * pszQop,         /* qop-value: "", "auth", "auth-int" */
+	IN char * pszMethod,      /* method from the request */
+	IN char * pszDigestUri,   /* requested URL */
+	IN HASHHEX HEntity,       /* H(entity body) if qop="auth-int" */
+	OUT HASHHEX Response      /* request-digest or response-digest */
+	)
+{
+/*	DEBUG(fprintf(stderr,
+		      "Calc: HA1[%s] Nonce[%s] qop[%s] method[%s] URI[%s]\n",
+		      HA1, pszNonce, pszQop, pszMethod, pszDigestUri));*/
+	MD5_CTX Md5Ctx;
+	HASH HA2;
+	HASH RespHash;
+	HASHHEX HA2Hex;
+
+	// calculate H(A2)
+	MD5Init(&Md5Ctx);
+	MD5Update(&Md5Ctx, pszMethod, strlen(pszMethod));
+	MD5Update(&Md5Ctx, ":", 1);
+	MD5Update(&Md5Ctx, pszDigestUri, strlen(pszDigestUri));
+	if (strcasecmp(pszQop, "auth-int") == 0) {
+		MD5Update(&Md5Ctx, ":", 1);
+		MD5Update(&Md5Ctx, HEntity, HASHHEXLEN);
+	};
+	MD5Final(HA2, &Md5Ctx);
+	CvtHex(HA2, HA2Hex);
+
+	// calculate response
+	MD5Init(&Md5Ctx);
+	MD5Update(&Md5Ctx, HA1, HASHHEXLEN);
+	MD5Update(&Md5Ctx, ":", 1);
+	MD5Update(&Md5Ctx, pszNonce, strlen(pszNonce));
+	MD5Update(&Md5Ctx, ":", 1);
+	if (*pszQop) {
+		MD5Update(&Md5Ctx, pszNonceCount, strlen(pszNonceCount));
+		MD5Update(&Md5Ctx, ":", 1);
+		MD5Update(&Md5Ctx, pszCNonce, strlen(pszCNonce));
+		MD5Update(&Md5Ctx, ":", 1);
+		MD5Update(&Md5Ctx, pszQop, strlen(pszQop));
+		MD5Update(&Md5Ctx, ":", 1);
+	};
+	MD5Update(&Md5Ctx, HA2Hex, HASHHEXLEN);
+	MD5Final(RespHash, &Md5Ctx);
+	CvtHex(RespHash, Response);
+}
+
+/*
+ * Generate/Send a Digest authorization header
+ * This looks like: [Proxy-]Authorization: credentials
+ *
+ *  credentials      = "Digest" digest-response
+ *  digest-response  = 1#( username | realm | nonce | digest-uri
+ *                      | response | [ algorithm ] | [cnonce] |
+ *                      [opaque] | [message-qop] |
+ *                          [nonce-count]  | [auth-param] )
+ *  username         = "username" "=" username-value
+ *  username-value   = quoted-string
+ *  digest-uri       = "uri" "=" digest-uri-value
+ *  digest-uri-value = request-uri   ; As specified by HTTP/1.1
+ *  message-qop      = "qop" "=" qop-value
+ *  cnonce           = "cnonce" "=" cnonce-value
+ *  cnonce-value     = nonce-value
+ *  nonce-count      = "nc" "=" nc-value
+ *  nc-value         = 8LHEX
+ *  response         = "response" "=" request-digest
+ *  request-digest = <"> 32LHEX <">
+ */
+static int
+http_digest_auth(conn_t *conn, const char *hdr, http_auth_challenge_t *c,
+		 http_auth_params_t *parms, struct url *url)
+{
+	int r;
+	char noncecount[10];
+	char cnonce[40];
+	char *options = 0;
+
+	if (!c->realm || !c->nonce) {
+		DEBUG(fprintf(stderr, "realm/nonce not set in challenge\n"));
+		return(-1);
+	}
+	if (!c->algo)
+		c->algo = strdup("");
+
+	if (asprintf(&options, "%s%s%s%s",
+		     *c->algo? ",algorithm=" : "", c->algo,
+		     c->opaque? ",opaque=" : "", c->opaque?c->opaque:"")== -1)
+		return (-1);
+
+	if (!c->qop) {
+		c->qop = strdup("");
+		*noncecount = 0;
+		*cnonce = 0;
+	} else {
+		c->nc++;
+		sprintf(noncecount, "%08x", c->nc);
+		/* We don't try very hard with the cnonce ... */
+		sprintf(cnonce, "%x%lx", getpid(), (unsigned long)time(0));
+	}
+
+	HASHHEX HA1;
+	DigestCalcHA1(c->algo, parms->user, c->realm,
+		      parms->password, c->nonce, cnonce, HA1);
+	DEBUG(fprintf(stderr, "HA1: [%s]\n", HA1));
+	HASHHEX digest;
+	DigestCalcResponse(HA1, c->nonce, noncecount, cnonce, c->qop,
+			   "GET", url->doc, "", digest);
+
+	if (c->qop[0]) {
+		r = http_cmd(conn, "%s: Digest username=\"%s\",realm=\"%s\","
+			     "nonce=\"%s\",uri=\"%s\",response=\"%s\","
+			     "qop=\"auth\", cnonce=\"%s\", nc=%s%s",
+			     hdr, parms->user, c->realm,
+			     c->nonce, url->doc, digest,
+			     cnonce, noncecount, options);
+	} else {
+		r = http_cmd(conn, "%s: Digest username=\"%s\",realm=\"%s\","
+			     "nonce=\"%s\",uri=\"%s\",response=\"%s\"%s",
+			     hdr, parms->user, c->realm,
+			     c->nonce, url->doc, digest, options);
+	}
+	if (options)
+		free(options);
+	return (r);
+}
+
 /*
  * Encode username and password
  */
 static int
-_http_basic_auth(conn_t *conn, const char *hdr, const char *usr, const char *pwd)
+http_basic_auth(conn_t *conn, const char *hdr, const char *usr, const char *pwd)
 {
 	char *upw, *auth;
 	int r;
 
-	DEBUG(fprintf(stderr, "usr: [%s]\n", usr));
-	DEBUG(fprintf(stderr, "pwd: [%s]\n", pwd));
+	DEBUG(fprintf(stderr, "basic: usr: [%s]\n", usr));
+	DEBUG(fprintf(stderr, "basic: pwd: [%s]\n", pwd));
 	if (asprintf(&upw, "%s:%s", usr, pwd) == -1)
 		return (-1);
-	auth = _http_base64(upw);
+	auth = http_base64(upw);
 	free(upw);
 	if (auth == NULL)
 		return (-1);
-	r = _http_cmd(conn, "%s: Basic %s", hdr, auth);
+	r = http_cmd(conn, "%s: Basic %s", hdr, auth);
 	free(auth);
 	return (r);
 }
 
 /*
- * Send an authorization header
+ * Chose the challenge to answer and call the appropriate routine to
+ * produce the header.
  */
 static int
-_http_authorize(conn_t *conn, const char *hdr, const char *p)
+http_authorize(conn_t *conn, const char *hdr, http_auth_challenges_t *cs,
+	       http_auth_params_t *parms, struct url *url)
 {
-	/* basic authorization */
-	if (strncasecmp(p, "basic:", 6) == 0) {
-		char *user, *pwd, *str;
-		int r;
+	http_auth_challenge_t *basic = NULL;
+	http_auth_challenge_t *digest = NULL;
+	int i;
 
-		/* skip realm */
-		for (p += 6; *p && *p != ':'; ++p)
-			/* nothing */ ;
-		if (!*p || strchr(++p, ':') == NULL)
-			return (-1);
-		if ((str = strdup(p)) == NULL)
-			return (-1); /* XXX */
-		user = str;
-		pwd = strchr(str, ':');
-		*pwd++ = '\0';
-		r = _http_basic_auth(conn, hdr, user, pwd);
-		free(str);
-		return (r);
+	/* If user or pass are null we're not happy */
+	if (!parms->user || !parms->password) {
+		DEBUG(fprintf(stderr, "NULL usr or pass\n"));
+		return (-1);
 	}
-	return (-1);
-}
 
+	/* Look for a Digest and a Basic challenge */
+	for (i = 0; i < cs->count; i++) {
+		if (cs->challenges[i]->scheme == HTTPAS_BASIC)
+			basic = cs->challenges[i];
+		if (cs->challenges[i]->scheme == HTTPAS_DIGEST)
+			digest = cs->challenges[i];
+	}
+
+	/* Error if "Digest" was specified and there is no Digest challenge */
+	if (!digest && (parms->scheme &&
+			!strcasecmp(parms->scheme, "digest"))) {
+		DEBUG(fprintf(stderr,
+			      "Digest auth in env, not supported by peer\n"));
+		return (-1);
+	}
+	/*
+	 * If "basic" was specified in the environment, or there is no Digest
+	 * challenge, do the basic thing. Don't need a challenge for this,
+	 * so no need to check basic!=NULL
+	 */
+	if (!digest || (parms->scheme && !strcasecmp(parms->scheme,"basic")))
+		return (http_basic_auth(conn,hdr,parms->user,parms->password));
+
+	/* Else, prefer digest. We just checked that it's not NULL */
+	return (http_digest_auth(conn, hdr, digest, parms, url));
+}
 
 /*****************************************************************************
  * Helper functions for connecting to a server or proxy
@@ -671,7 +1360,7 @@ _http_authorize(conn_t *conn, const char *hdr, const char *p)
  * Connect to the correct HTTP server or proxy.
  */
 static conn_t *
-_http_connect(struct url *URL, struct url *purl, const char *flags)
+http_connect(struct url *URL, struct url *purl, const char *flags)
 {
 	conn_t *conn;
 	int verbose;
@@ -699,15 +1388,15 @@ _http_connect(struct url *URL, struct url *purl, const char *flags)
 		return (NULL);
 	}
 
-	if ((conn = _fetch_connect(URL->host, URL->port, af, verbose)) == NULL)
-		/* _fetch_connect() has already set an error code */
+	if ((conn = fetch_connect(URL->host, URL->port, af, verbose)) == NULL)
+		/* fetch_connect() has already set an error code */
 		return (NULL);
 	if (strcasecmp(URL->scheme, SCHEME_HTTPS) == 0 &&
-	    _fetch_ssl(conn, verbose) == -1) {
-		_fetch_close(conn);
+	    fetch_ssl(conn, verbose) == -1) {
+		fetch_close(conn);
 		/* grrr */
 		errno = EAUTH;
-		_fetch_syserr();
+		fetch_syserr();
 		return (NULL);
 	}
 
@@ -718,19 +1407,21 @@ _http_connect(struct url *URL, struct url *purl, const char *flags)
 }
 
 static struct url *
-_http_get_proxy(const char *flags)
+http_get_proxy(struct url * url, const char *flags)
 {
 	struct url *purl;
 	char *p;
 
 	if (flags != NULL && strchr(flags, 'd') != NULL)
 		return (NULL);
+	if (fetch_no_proxy_match(url->host))
+		return (NULL);
 	if (((p = getenv("HTTP_PROXY")) || (p = getenv("http_proxy"))) &&
 	    *p && (purl = fetchParseURL(p))) {
 		if (!*purl->scheme)
 			strcpy(purl->scheme, SCHEME_HTTP);
 		if (!purl->port)
-			purl->port = _fetch_default_proxy_port(purl->scheme);
+			purl->port = fetch_default_proxy_port(purl->scheme);
 		if (strcasecmp(purl->scheme, SCHEME_HTTP) == 0)
 			return (purl);
 		fetchFreeURL(purl);
@@ -739,7 +1430,7 @@ _http_get_proxy(const char *flags)
 }
 
 static void
-_http_print_html(FILE *out, FILE *in)
+http_print_html(FILE *out, FILE *in)
 {
 	size_t len;
 	char *line, *p, *q;
@@ -747,7 +1438,7 @@ _http_print_html(FILE *out, FILE *in)
 
 	comment = tag = 0;
 	while ((line = fgetln(in, &len)) != NULL) {
-		while (len && isspace(line[len - 1]))
+		while (len && isspace((unsigned char)line[len - 1]))
 			--len;
 		for (p = q = line; q < line + len; ++q) {
 			if (comment && *q == '-') {
@@ -788,23 +1479,34 @@ _http_print_html(FILE *out, FILE *in)
  * XXX off into a separate function.
  */
 FILE *
-_http_request(struct url *URL, const char *op, struct url_stat *us,
-    struct url *purl, const char *flags)
+http_request(struct url *URL, const char *op, struct url_stat *us,
+	struct url *purl, const char *flags)
 {
+	char timebuf[80];
+	char hbuf[MAXHOSTNAMELEN + 7], *host;
 	conn_t *conn;
 	struct url *url, *new;
-	int chunked, direct, need_auth, noredirect, verbose;
+	int chunked, direct, ims, noredirect, verbose;
 	int e, i, n, val;
 	off_t offset, clength, length, size;
 	time_t mtime;
 	const char *p;
 	FILE *f;
 	hdr_t h;
-	char hbuf[MAXHOSTNAMELEN + 7], *host;
+	struct tm *timestruct;
+	http_headerbuf_t headerbuf;
+	http_auth_challenges_t server_challenges;
+	http_auth_challenges_t proxy_challenges;
+
+	/* The following calls don't allocate anything */
+	init_http_headerbuf(&headerbuf);
+	init_http_auth_challenges(&server_challenges);
+	init_http_auth_challenges(&proxy_challenges);
 
 	direct = CHECK_FLAG('d');
 	noredirect = CHECK_FLAG('A');
 	verbose = CHECK_FLAG('v');
+	ims = CHECK_FLAG('i');
 
 	if (direct && purl) {
 		fetchFreeURL(purl);
@@ -819,7 +1521,6 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 	i = 0;
 
 	e = HTTP_PROTOCOL_ERROR;
-	need_auth = 0;
 	do {
 		new = NULL;
 		chunked = 0;
@@ -831,18 +1532,18 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 
 		/* check port */
 		if (!url->port)
-			url->port = _fetch_default_port(url->scheme);
+			url->port = fetch_default_port(url->scheme);
 
 		/* were we redirected to an FTP URL? */
 		if (purl == NULL && strcmp(url->scheme, SCHEME_FTP) == 0) {
 			if (strcmp(op, "GET") == 0)
-				return (_ftp_request(url, "RETR", us, purl, flags));
+				return (ftp_request(url, "RETR", us, purl, flags));
 			else if (strcmp(op, "HEAD") == 0)
-				return (_ftp_request(url, "STAT", us, purl, flags));
+				return (ftp_request(url, "STAT", us, purl, flags));
 		}
 
 		/* connect to server or proxy */
-		if ((conn = _http_connect(url, purl, flags)) == NULL)
+		if ((conn = http_connect(url, purl, flags)) == NULL)
 			goto ouch;
 
 		host = url->host;
@@ -852,7 +1553,7 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 			host = hbuf;
 		}
 #endif
-		if (url->port != _fetch_default_port(url->scheme)) {
+		if (url->port != fetch_default_port(url->scheme)) {
 			if (host != hbuf) {
 				strcpy(hbuf, host);
 				host = hbuf;
@@ -863,58 +1564,106 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 
 		/* send request */
 		if (verbose)
-			_fetch_info("requesting %s://%s%s",
+			fetch_info("requesting %s://%s%s",
 			    url->scheme, host, url->doc);
 		if (purl) {
-			_http_cmd(conn, "%s %s://%s%s HTTP/1.1",
+			http_cmd(conn, "%s %s://%s%s HTTP/1.1",
 			    op, url->scheme, host, url->doc);
 		} else {
-			_http_cmd(conn, "%s %s HTTP/1.1",
+			http_cmd(conn, "%s %s HTTP/1.1",
 			    op, url->doc);
 		}
 
+		if (ims && url->ims_time) {
+			timestruct = gmtime((time_t *)&url->ims_time);
+			(void)strftime(timebuf, 80, "%a, %d %b %Y %T GMT",
+			    timestruct);
+			if (verbose)
+				fetch_info("If-Modified-Since: %s", timebuf);
+			http_cmd(conn, "If-Modified-Since: %s", timebuf);
+		}
 		/* virtual host */
-		_http_cmd(conn, "Host: %s", host);
+		http_cmd(conn, "Host: %s", host);
 
-		/* proxy authorization */
-		if (purl) {
-			if (*purl->user || *purl->pwd)
-				_http_basic_auth(conn, "Proxy-Authorization",
-				    purl->user, purl->pwd);
-			else if ((p = getenv("HTTP_PROXY_AUTH")) != NULL && *p != '\0')
-				_http_authorize(conn, "Proxy-Authorization", p);
+		/*
+		 * Proxy authorization: we only send auth after we received
+		 * a 407 error. We do not first try basic anyway (changed
+		 * when support was added for digest-auth)
+		 */
+		if (purl && proxy_challenges.valid) {
+			http_auth_params_t aparams;
+			init_http_auth_params(&aparams);
+			if (*purl->user || *purl->pwd) {
+				aparams.user = purl->user ?
+					strdup(purl->user) : strdup("");
+				aparams.password = purl->pwd?
+					strdup(purl->pwd) : strdup("");
+			} else if ((p = getenv("HTTP_PROXY_AUTH")) != NULL &&
+				   *p != '\0') {
+				if (http_authfromenv(p, &aparams) < 0) {
+					http_seterr(HTTP_NEED_PROXY_AUTH);
+					goto ouch;
+				}
+			}
+			http_authorize(conn, "Proxy-Authorization",
+				       &proxy_challenges, &aparams, url);
+			clean_http_auth_params(&aparams);
 		}
 
-		/* server authorization */
-		if (need_auth || *url->user || *url->pwd) {
-			if (*url->user || *url->pwd)
-				_http_basic_auth(conn, "Authorization", url->user, url->pwd);
-			else if ((p = getenv("HTTP_AUTH")) != NULL && *p != '\0')
-				_http_authorize(conn, "Authorization", p);
-			else if (fetchAuthMethod && fetchAuthMethod(url) == 0) {
-				_http_basic_auth(conn, "Authorization", url->user, url->pwd);
+		/*
+		 * Server authorization: we never send "a priori"
+		 * Basic auth, which used to be done if user/pass were
+		 * set in the url. This would be weird because we'd send the
+		 * password in the clear even if Digest is finally to be
+		 * used (it would have made more sense for the
+		 * pre-digest version to do this when Basic was specified
+		 * in the environment)
+		 */
+		if (server_challenges.valid) {
+			http_auth_params_t aparams;
+			init_http_auth_params(&aparams);
+			if (*url->user || *url->pwd) {
+				aparams.user = url->user ?
+					strdup(url->user) : strdup("");
+				aparams.password = url->pwd ?
+					strdup(url->pwd) : strdup("");
+			} else if ((p = getenv("HTTP_AUTH")) != NULL &&
+				   *p != '\0') {
+				if (http_authfromenv(p, &aparams) < 0) {
+					http_seterr(HTTP_NEED_AUTH);
+					goto ouch;
+				}
+			} else if (fetchAuthMethod &&
+				   fetchAuthMethod(url) == 0) {
+				aparams.user = url->user ?
+					strdup(url->user) : strdup("");
+				aparams.password = url->pwd ?
+					strdup(url->pwd) : strdup("");
 			} else {
-				_http_seterr(HTTP_NEED_AUTH);
+				http_seterr(HTTP_NEED_AUTH);
 				goto ouch;
 			}
+			http_authorize(conn, "Authorization",
+				       &server_challenges, &aparams, url);
+			clean_http_auth_params(&aparams);
 		}
 
 		/* other headers */
 		if ((p = getenv("HTTP_REFERER")) != NULL && *p != '\0') {
 			if (strcasecmp(p, "auto") == 0)
-				_http_cmd(conn, "Referer: %s://%s%s",
+				http_cmd(conn, "Referer: %s://%s%s",
 				    url->scheme, host, url->doc);
 			else
-				_http_cmd(conn, "Referer: %s", p);
+				http_cmd(conn, "Referer: %s", p);
 		}
 		if ((p = getenv("HTTP_USER_AGENT")) != NULL && *p != '\0')
-			_http_cmd(conn, "User-Agent: %s", p);
+			http_cmd(conn, "User-Agent: %s", p);
 		else
-			_http_cmd(conn, "User-Agent: %s " _LIBFETCH_VER, getprogname());
+			http_cmd(conn, "User-Agent: %s " _LIBFETCH_VER, getprogname());
 		if (url->offset > 0)
-			_http_cmd(conn, "Range: bytes=%lld-", (long long)url->offset);
-		_http_cmd(conn, "Connection: close");
-		_http_cmd(conn, "");
+			http_cmd(conn, "Range: bytes=%lld-", (long long)url->offset);
+		http_cmd(conn, "Connection: close");
+		http_cmd(conn, "");
 
 		/*
 		 * Force the queued request to be dispatched.  Normally, one
@@ -931,9 +1680,10 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 			   sizeof(val));
 
 		/* get reply */
-		switch (_http_get_reply(conn)) {
+		switch (http_get_reply(conn)) {
 		case HTTP_OK:
 		case HTTP_PARTIAL:
+		case HTTP_NOT_MODIFIED:
 			/* fine */
 			break;
 		case HTTP_MOVED_PERM:
@@ -945,26 +1695,31 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 			 */
 			break;
 		case HTTP_NEED_AUTH:
-			if (need_auth) {
+			if (server_challenges.valid) {
 				/*
 				 * We already sent out authorization code,
 				 * so there's nothing more we can do.
 				 */
-				_http_seterr(conn->err);
+				http_seterr(conn->err);
 				goto ouch;
 			}
 			/* try again, but send the password this time */
 			if (verbose)
-				_fetch_info("server requires authorization");
+				fetch_info("server requires authorization");
 			break;
 		case HTTP_NEED_PROXY_AUTH:
-			/*
-			 * If we're talking to a proxy, we already sent
-			 * our proxy authorization code, so there's
-			 * nothing more we can do.
-			 */
-			_http_seterr(conn->err);
-			goto ouch;
+			if (proxy_challenges.valid) {
+				/*
+				 * We already sent our proxy
+				 * authorization code, so there's
+				 * nothing more we can do. */
+				http_seterr(conn->err);
+				goto ouch;
+			}
+			/* try again, but send the password this time */
+			if (verbose)
+				fetch_info("proxy requires authorization");
+			break;
 		case HTTP_BAD_RANGE:
 			/*
 			 * This can happen if we ask for 0 bytes because
@@ -975,32 +1730,36 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 		case HTTP_PROTOCOL_ERROR:
 			/* fall through */
 		case -1:
-			_fetch_syserr();
+			fetch_syserr();
 			goto ouch;
 		default:
-			_http_seterr(conn->err);
+			http_seterr(conn->err);
 			if (!verbose)
 				goto ouch;
 			/* fall through so we can get the full error message */
 		}
 
-		/* get headers */
+		/* get headers. http_next_header expects one line readahead */
+		if (fetch_getln(conn) == -1) {
+		    fetch_syserr();
+		    goto ouch;
+		}
 		do {
-			switch ((h = _http_next_header(conn, &p))) {
+		    switch ((h = http_next_header(conn, &headerbuf, &p))) {
 			case hdr_syserror:
-				_fetch_syserr();
+				fetch_syserr();
 				goto ouch;
 			case hdr_error:
-				_http_seterr(HTTP_PROTOCOL_ERROR);
+				http_seterr(HTTP_PROTOCOL_ERROR);
 				goto ouch;
 			case hdr_content_length:
-				_http_parse_length(p, &clength);
+				http_parse_length(p, &clength);
 				break;
 			case hdr_content_range:
-				_http_parse_range(p, &offset, &length, &size);
+				http_parse_range(p, &offset, &length, &size);
 				break;
 			case hdr_last_modified:
-				_http_parse_mtime(p, &mtime);
+				http_parse_mtime(p, &mtime);
 				break;
 			case hdr_location:
 				if (!HTTP_REDIRECT(conn->err))
@@ -1008,7 +1767,7 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 				if (new)
 					free(new);
 				if (verbose)
-					_fetch_info("%d redirect to %s", conn->err, p);
+					fetch_info("%d redirect to %s", conn->err, p);
 				if (*p == '/')
 					/* absolute path */
 					new = fetchMakeURL(url->scheme, url->host, url->port, p,
@@ -1020,7 +1779,9 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 					DEBUG(fprintf(stderr, "failed to parse new URL\n"));
 					goto ouch;
 				}
-				if (!*new->user && !*new->pwd) {
+
+				/* Only copy credentials if the host matches */
+				if (!strcmp(new->host, url->host) && !*new->user && !*new->pwd) {
 					strcpy(new->user, url->user);
 					strcpy(new->pwd, url->pwd);
 				}
@@ -1034,7 +1795,14 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 			case hdr_www_authenticate:
 				if (conn->err != HTTP_NEED_AUTH)
 					break;
-				/* if we were smarter, we'd check the method and realm */
+				if (http_parse_authenticate(p, &server_challenges) == 0)
+					++n;
+				break;
+			case hdr_proxy_authenticate:
+				if (conn->err != HTTP_NEED_PROXY_AUTH)
+					break;
+				if (http_parse_authenticate(p, &proxy_challenges) == 0)
+					++n;
 				break;
 			case hdr_end:
 				/* fall through */
@@ -1045,10 +1813,18 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 		} while (h > hdr_end);
 
 		/* we need to provide authentication */
-		if (conn->err == HTTP_NEED_AUTH) {
+		if (conn->err == HTTP_NEED_AUTH ||
+		    conn->err == HTTP_NEED_PROXY_AUTH) {
 			e = conn->err;
-			need_auth = 1;
-			_fetch_close(conn);
+			if ((conn->err == HTTP_NEED_AUTH &&
+			     !server_challenges.valid) ||
+			    (conn->err == HTTP_NEED_PROXY_AUTH &&
+			     !proxy_challenges.valid)) {
+				/* 401/7 but no www/proxy-authenticate ?? */
+				DEBUG(fprintf(stderr, "401/7 and no auth header\n"));
+				goto ouch;
+			}
+			fetch_close(conn);
 			conn = NULL;
 			continue;
 		}
@@ -1058,22 +1834,26 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 			if (url->offset == size && url->length == 0) {
 				/* asked for 0 bytes; fake it */
 				offset = url->offset;
+				clength = -1;
 				conn->err = HTTP_OK;
 				break;
 			} else {
-				_http_seterr(conn->err);
+				http_seterr(conn->err);
 				goto ouch;
 			}
 		}
 
 		/* we have a hit or an error */
-		if (conn->err == HTTP_OK || conn->err == HTTP_PARTIAL || HTTP_ERROR(conn->err))
+		if (conn->err == HTTP_OK
+		    || conn->err == HTTP_NOT_MODIFIED
+		    || conn->err == HTTP_PARTIAL
+		    || HTTP_ERROR(conn->err))
 			break;
 
 		/* all other cases: we got a redirect */
 		e = conn->err;
-		need_auth = 0;
-		_fetch_close(conn);
+		clean_http_auth_challenges(&server_challenges);
+		fetch_close(conn);
 		conn = NULL;
 		if (!new) {
 			DEBUG(fprintf(stderr, "redirect with no new location\n"));
@@ -1086,7 +1866,7 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 
 	/* we failed, or ran out of retries */
 	if (conn == NULL) {
-		_http_seterr(e);
+		http_seterr(e);
 		goto ouch;
 	}
 
@@ -1095,9 +1875,14 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 		  (long long)offset, (long long)length,
 		  (long long)size, (long long)clength));
 
+	if (conn->err == HTTP_NOT_MODIFIED) {
+		http_seterr(HTTP_NOT_MODIFIED);
+		return (NULL);
+	}
+
 	/* check for inconsistencies */
 	if (clength != -1 && length != -1 && clength != length) {
-		_http_seterr(HTTP_PROTOCOL_ERROR);
+		http_seterr(HTTP_PROTOCOL_ERROR);
 		goto ouch;
 	}
 	if (clength == -1)
@@ -1105,7 +1890,7 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 	if (clength != -1)
 		length = offset + clength;
 	if (length != -1 && size != -1 && length != size) {
-		_http_seterr(HTTP_PROTOCOL_ERROR);
+		http_seterr(HTTP_PROTOCOL_ERROR);
 		goto ouch;
 	}
 	if (size == -1)
@@ -1119,7 +1904,7 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 
 	/* too far? */
 	if (URL->offset > 0 && offset > URL->offset) {
-		_http_seterr(HTTP_PROTOCOL_ERROR);
+		http_seterr(HTTP_PROTOCOL_ERROR);
 		goto ouch;
 	}
 
@@ -1128,8 +1913,8 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 	URL->length = clength;
 
 	/* wrap it up in a FILE */
-	if ((f = _http_funopen(conn, chunked)) == NULL) {
-		_fetch_syserr();
+	if ((f = http_funopen(conn, chunked)) == NULL) {
+		fetch_syserr();
 		goto ouch;
 	}
 
@@ -1139,11 +1924,13 @@ _http_request(struct url *URL, const char *op, struct url_stat *us,
 		fetchFreeURL(purl);
 
 	if (HTTP_ERROR(conn->err)) {
-		_http_print_html(stderr, f);
+		http_print_html(stderr, f);
 		fclose(f);
 		f = NULL;
 	}
-
+	clean_http_headerbuf(&headerbuf);
+	clean_http_auth_challenges(&server_challenges);
+	clean_http_auth_challenges(&proxy_challenges);
 	return (f);
 
 ouch:
@@ -1152,7 +1939,10 @@ ouch:
 	if (purl)
 		fetchFreeURL(purl);
 	if (conn != NULL)
-		_fetch_close(conn);
+		fetch_close(conn);
+	clean_http_headerbuf(&headerbuf);
+	clean_http_auth_challenges(&server_challenges);
+	clean_http_auth_challenges(&proxy_challenges);
 	return (NULL);
 }
 
@@ -1167,7 +1957,7 @@ ouch:
 FILE *
 fetchXGetHTTP(struct url *URL, struct url_stat *us, const char *flags)
 {
-	return (_http_request(URL, "GET", us, _http_get_proxy(flags), flags));
+	return (http_request(URL, "GET", us, http_get_proxy(URL, flags), flags));
 }
 
 /*
@@ -1197,7 +1987,7 @@ fetchStatHTTP(struct url *URL, struct url_stat *us, const char *flags)
 {
 	FILE *f;
 
-	f = _http_request(URL, "HEAD", us, _http_get_proxy(flags), flags);
+	f = http_request(URL, "HEAD", us, http_get_proxy(URL, flags), flags);
 	if (f == NULL)
 		return (-1);
 	fclose(f);

@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libstand/udp.c 165906 2007-01-09 01:02:06Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -48,6 +48,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libstand/udp.c 165906 2007-01-09 01:02:06Z
 #include <netinet/if_ether.h>
 #include <netinet/in_systm.h>
 
+#include <netinet/in_pcb.h>
 #include <netinet/ip.h>
 #include <netinet/ip_var.h>
 #include <netinet/udp.h>
@@ -90,7 +91,7 @@ sendudp(d, pkt, len)
 	ip->ip_hl = sizeof(*ip) >> 2;		/* half-char */
 	ip->ip_len = htons(len);
 	ip->ip_p = IPPROTO_UDP;			/* char */
-	ip->ip_ttl = IP_TTL;			/* char */
+	ip->ip_ttl = IPDEFTTL;			/* char */
 	ip->ip_src = d->myip;
 	ip->ip_dst = d->destip;
 	ip->ip_sum = in_cksum(ip, sizeof(*ip));	 /* short, but special */

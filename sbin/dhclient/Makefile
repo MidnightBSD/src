@@ -1,5 +1,5 @@
 # $OpenBSD: Makefile,v 1.9 2004/05/04 12:52:05 henning Exp $
-# $FreeBSD: release/7.0.0/sbin/dhclient/Makefile 147596 2005-06-25 11:03:06Z ru $
+# $FreeBSD$
 #
 # Copyright (c) 1996, 1997 The Internet Software Consortium.
 # All rights reserved.
@@ -39,5 +39,9 @@ PROG=	dhclient
 SCRIPTS=dhclient-script
 MAN=	dhclient.8 dhclient.conf.5 dhclient.leases.5 dhcp-options.5 \
 	dhclient-script.8
+DPADD=	${LIBUTIL}
+LDADD=	-lutil
+
+WARNS?=	2
 
 .include <bsd.prog.mk>

@@ -32,7 +32,7 @@
 # SUCH DAMAGE.
 #
 #	@(#)builtins.def	8.4 (Berkeley) 5/4/95
-# $FreeBSD: release/7.0.0/bin/sh/builtins.def 157413 2006-04-02 18:43:33Z stefanf $
+# $FreeBSD$
 
 #
 # This file lists all the builtin commands.  The first column is the name
@@ -60,7 +60,7 @@ echocmd		echo
 evalcmd		-s eval
 execcmd		-s exec
 exitcmd		-s exit
-expcmd		exp let
+letcmd		let
 exportcmd	-s export -s readonly
 #exprcmd		expr
 falsecmd	false
@@ -70,8 +70,9 @@ hashcmd		hash
 histcmd -h	fc
 jobidcmd	jobid
 jobscmd		jobs
+killcmd		kill
 localcmd	local
-#printfcmd	printf
+printfcmd	printf
 pwdcmd		pwd
 readcmd		read
 returncmd	-s return

@@ -61,7 +61,7 @@
  *
  *	@(#)ipx_pcb.h
  *
- * $FreeBSD: release/7.0.0/sys/netipx/ipx_pcb.h 169463 2007-05-11 10:38:34Z rwatson $
+ * $FreeBSD$
  */
 
 #ifndef _NETIPX_IPX_PCB_H_

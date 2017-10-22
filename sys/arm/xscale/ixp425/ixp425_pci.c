@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/ixp425/ixp425_pci.c 172394 2007-09-30 11:05:18Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -89,8 +89,7 @@ static pcib_route_interrupt_t ixppcib_route_interrupt;
 static int
 ixppcib_probe(device_t dev)
 {
-
-	device_set_desc(dev, "IXP425 PCI Bus");
+	device_set_desc(dev, "IXP4XX PCI Bus");
         return (0);
 }
 
@@ -98,10 +97,8 @@ static void
 ixp425_pci_conf_reg_write(struct ixppcib_softc *sc, uint32_t reg,
     uint32_t data)
 {
-	PCI_CSR_WRITE_4(sc,
-	    PCI_CRP_AD_CBE, ((reg & ~3) | COMMAND_CRP_WRITE));
-	PCI_CSR_WRITE_4(sc,
-	    PCI_CRP_AD_WDATA, data);
+	PCI_CSR_WRITE_4(sc, PCI_CRP_AD_CBE, ((reg & ~3) | COMMAND_CRP_WRITE));
+	PCI_CSR_WRITE_4(sc, PCI_CRP_AD_WDATA, data);
 }
 
 static int
@@ -130,8 +127,8 @@ ixppcib_attach(device_t dev)
 	if (sc->sc_mem == NULL)
 		panic("cannot allocate PCI MEM space");
 
-#define	AHB_OFFSET	0x10000000UL
-	if (bus_dma_tag_create(NULL, 1, 0, AHB_OFFSET + 64 * 1024 * 1024,
+	/* NB: PCI dma window is 64M so anything above must be bounced */
+	if (bus_dma_tag_create(NULL, 1, 0, IXP425_AHB_OFFSET + 64 * 1024 * 1024,
 	    BUS_SPACE_MAXADDR, NULL, NULL,  0xffffffff, 0xff, 0xffffffff, 0, 
 	    NULL, NULL, &sc->sc_dmat))
 		panic("couldn't create the PCI dma tag !");
@@ -153,7 +150,7 @@ ixppcib_attach(device_t dev)
 
 	/* Initialize memory and i/o rmans. */
 	sc->sc_io_rman.rm_type = RMAN_ARRAY;
-	sc->sc_io_rman.rm_descr = "IXP425 PCI I/O Ports";
+	sc->sc_io_rman.rm_descr = "IXP4XX PCI I/O Ports";
 	if (rman_init(&sc->sc_io_rman) != 0 ||
 		rman_manage_region(&sc->sc_io_rman, 0, 
 	    	    IXP425_PCI_IO_SIZE) != 0) {
@@ -161,7 +158,7 @@ ixppcib_attach(device_t dev)
 	}
 
 	sc->sc_mem_rman.rm_type = RMAN_ARRAY;
-	sc->sc_mem_rman.rm_descr = "IXP425 PCI Memory";
+	sc->sc_mem_rman.rm_descr = "IXP4XX PCI Memory";
 	if (rman_init(&sc->sc_mem_rman) != 0 ||
 		rman_manage_region(&sc->sc_mem_rman, IXP425_PCI_MEM_HWBASE,
 		    IXP425_PCI_MEM_HWBASE + IXP425_PCI_MEM_SIZE) != 0) {
@@ -173,20 +170,20 @@ ixppcib_attach(device_t dev)
 	 * 	begin at the physical memory start + OFFSET
 	 */
 	PCI_CSR_WRITE_4(sc, PCI_AHBMEMBASE,
-	    (AHB_OFFSET & 0xFF000000) +
-	    ((AHB_OFFSET & 0xFF000000) >> 8) +
-	    ((AHB_OFFSET & 0xFF000000) >> 16) +
-	    ((AHB_OFFSET & 0xFF000000) >> 24) +
+	    (IXP425_AHB_OFFSET & 0xFF000000) +
+	    ((IXP425_AHB_OFFSET & 0xFF000000) >> 8) +
+	    ((IXP425_AHB_OFFSET & 0xFF000000) >> 16) +
+	    ((IXP425_AHB_OFFSET & 0xFF000000) >> 24) +
 	    0x00010203);
 	
 #define IXPPCIB_WRITE_CONF(sc, reg, val) \
 	ixp425_pci_conf_reg_write(sc, reg, val)
 	/* Write Mapping registers PCI Configuration Registers */
 	/* Base Address 0 - 3 */
-	IXPPCIB_WRITE_CONF(sc, PCI_MAPREG_BAR0, AHB_OFFSET + 0x00000000);
-	IXPPCIB_WRITE_CONF(sc, PCI_MAPREG_BAR1, AHB_OFFSET + 0x01000000);
-	IXPPCIB_WRITE_CONF(sc, PCI_MAPREG_BAR2, AHB_OFFSET + 0x02000000);
-	IXPPCIB_WRITE_CONF(sc, PCI_MAPREG_BAR3, AHB_OFFSET + 0x03000000);
+	IXPPCIB_WRITE_CONF(sc, PCI_MAPREG_BAR0, IXP425_AHB_OFFSET + 0x00000000);
+	IXPPCIB_WRITE_CONF(sc, PCI_MAPREG_BAR1, IXP425_AHB_OFFSET + 0x01000000);
+	IXPPCIB_WRITE_CONF(sc, PCI_MAPREG_BAR2, IXP425_AHB_OFFSET + 0x02000000);
+	IXPPCIB_WRITE_CONF(sc, PCI_MAPREG_BAR3, IXP425_AHB_OFFSET + 0x03000000);
 	
 	/* Base Address 4 */
 	IXPPCIB_WRITE_CONF(sc, PCI_MAPREG_BAR4, 0xffffffff);
@@ -279,12 +276,10 @@ static struct resource *
 ixppcib_alloc_resource(device_t bus, device_t child, int type, int *rid,
     u_long start, u_long end, u_long count, u_int flags)
 {
-	bus_space_tag_t tag;
 	struct ixppcib_softc *sc = device_get_softc(bus);
 	struct rman *rmanp;
 	struct resource *rv;
 
-	tag = NULL; /* shut up stupid gcc */
 	rv = NULL;
 	switch (type) {
 	case SYS_RES_IRQ:
@@ -293,28 +288,25 @@ ixppcib_alloc_resource(device_t bus, device_t child, int type, int *rid,
 
 	case SYS_RES_IOPORT:
 		rmanp = &sc->sc_io_rman;
-		tag = &sc->sc_pci_iot;
 		break;
 
 	case SYS_RES_MEMORY:
 		rmanp = &sc->sc_mem_rman;
-		tag = &sc->sc_pci_memt;
 		break;
 
 	default:
 		return (rv);
 	}
 
-	rv = rman_reserve_resource(rmanp, start, end, count, flags, child);
-	if (rv != NULL) {
-		rman_set_rid(rv, *rid);
-		if (type == SYS_RES_IOPORT) {
-			rman_set_bustag(rv, tag);
-			rman_set_bushandle(rv, rman_get_start(rv));
-		} else if (type == SYS_RES_MEMORY) {
-			rman_set_bustag(rv, tag);
-			rman_set_bushandle(rv, rman_get_bushandle(sc->sc_mem) +
-			    (rman_get_start(rv) - IXP425_PCI_MEM_HWBASE));
+	rv = rman_reserve_resource(rmanp, start, end, count, flags & ~RF_ACTIVE,
+	    child);
+	if (rv == NULL)
+		return (NULL);
+	rman_set_rid(rv, *rid);
+	if (flags & RF_ACTIVE) {
+		if (bus_activate_resource(child, type, *rid, rv)) {
+			rman_release_resource(rv);
+			return (NULL);
 		}
 	}
 
@@ -326,8 +318,21 @@ ixppcib_activate_resource(device_t bus, device_t child, int type, int rid,
     struct resource *r) 
 {
 
-	device_printf(bus, "%s called activate_resource\n", device_get_nameunit(child));
-	return (ENXIO);
+	struct ixppcib_softc *sc = device_get_softc(bus);
+  
+	switch (type) {
+	case SYS_RES_IOPORT:
+		rman_set_bustag(r, &sc->sc_pci_iot);
+		rman_set_bushandle(r, rman_get_start(r));
+		break;
+	case SYS_RES_MEMORY:
+		rman_set_bustag(r, &sc->sc_pci_memt);
+		rman_set_bushandle(r, rman_get_bushandle(sc->sc_mem) +
+		    (rman_get_start(r) - IXP425_PCI_MEM_HWBASE));
+		break;
+	}
+		
+	return (rman_activate_resource(r));
 }
 
 static int
@@ -335,7 +340,8 @@ ixppcib_deactivate_resource(device_t bus, device_t child, int type, int rid,
     struct resource *r) 
 {
 
-	device_printf(bus, "%s called deactivate_resource\n", device_get_nameunit(child));
+	device_printf(bus, "%s called deactivate_resource (unexpected)\n",
+	    device_get_nameunit(child));
 	return (ENXIO);
 }
 
@@ -344,7 +350,8 @@ ixppcib_release_resource(device_t bus, device_t child, int type, int rid,
     struct resource *r)
 {
 
-	device_printf(bus, "%s called release_resource\n", device_get_nameunit(child));
+	device_printf(bus, "%s called release_resource (unexpected)\n",
+	    device_get_nameunit(child));
 	return (ENXIO);
 }
 
@@ -353,21 +360,15 @@ ixppcib_conf_setup(struct ixppcib_softc *sc, int bus, int slot, int func,
     int reg)
 {
 	if (bus == 0) {
-		if (slot == 0 && func == 0) {
-			PCI_CSR_WRITE_4(sc, PCI_NP_AD, (reg & ~3));
-		} else {
-			bus &= 0xff;
-			slot &= 0x1f;
-			func &= 0x07;
-			/* configuration type 0 */
-			PCI_CSR_WRITE_4(sc, PCI_NP_AD, (1U << (32 - slot)) |
-				(func << 8) | (reg & ~3));
-		}
-	} else {
-			/* configuration type 1 */
+		/* configuration type 0 */
 		PCI_CSR_WRITE_4(sc, PCI_NP_AD,
-			(bus << 16) | (slot << 11) |
-			(func << 8) | (reg & ~3) | 1);
+		    (1U << (32 - (slot & 0x1f))) |
+		    ((func & 0x7) << 8) | (reg & ~3));
+	} else {
+		/* configuration type 1 */
+		PCI_CSR_WRITE_4(sc, PCI_NP_AD,
+		    (bus << 16) | (slot << 11) |
+		    (func << 8) | (reg & ~3) | 1);
 	}
 
 }
@@ -393,9 +394,9 @@ ixppcib_read_config(device_t dev, u_int bus, u_int slot, u_int func, u_int reg,
 	ret >>= (reg & 3) * 8;
 	ret &= 0xffffffff >> ((4 - bytes) * 8);
 #if 0
-	device_printf(dev, "read config: %u:%u:%u %#x(%d) = %#x\n", bus, slot, func, reg, bytes, ret);
+	device_printf(dev, "%s: %u:%u:%u %#x(%d) = %#x\n",
+	    __func__, bus, slot, func, reg, bytes, ret);
 #endif
-
 	/* check & clear PCI abort */
 	data = PCI_CSR_READ_4(sc, PCI_ISR);
 	if (data & ISR_PFE) {
@@ -415,9 +416,9 @@ ixppcib_write_config(device_t dev, u_int bus, u_int slot, u_int func, u_int reg,
 	u_int32_t data;
 
 #if 0
-	device_printf(dev, "write config: %u:%u:%u %#x(%d) = %#x\n", bus, slot, func, reg, bytes, val);
+	device_printf(dev, "%s: %u:%u:%u %#x(%d) = %#x\n",
+	    __func__, bus, slot, func, reg, bytes, val);
 #endif
-
 	ixppcib_conf_setup(sc, bus, slot, func, reg & ~3);
 
 	/* Byte enables are active low, so not them first */
@@ -444,7 +445,6 @@ static device_method_t ixppcib_methods[] = {
 	DEVMETHOD(device_attach,		ixppcib_attach),
 
 	/* Bus interface */
-	DEVMETHOD(bus_print_child,		bus_generic_print_child),
 	DEVMETHOD(bus_read_ivar,		ixppcib_read_ivar),
 	DEVMETHOD(bus_write_ivar,		ixppcib_write_ivar),
 	DEVMETHOD(bus_setup_intr,		ixppcib_setup_intr),
@@ -461,7 +461,7 @@ static device_method_t ixppcib_methods[] = {
 	DEVMETHOD(pcib_write_config,		ixppcib_write_config),
 	DEVMETHOD(pcib_route_interrupt,		ixppcib_route_interrupt),
 
-	{0, 0},
+	DEVMETHOD_END
 };
 
 static driver_t ixppcib_driver = {

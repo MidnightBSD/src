@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002 Marcel Moolenaar
+ * Copyright (c) 2002-2010 Marcel Moolenaar
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,11 +23,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/ia64/mca.c 169757 2007-05-19 12:50:12Z marcel $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
@@ -36,17 +37,29 @@
 #include <sys/uuid.h>
 #include <vm/vm.h>
 #include <vm/vm_kern.h>
+#include <machine/intr.h>
 #include <machine/mca.h>
+#include <machine/pal.h>
 #include <machine/sal.h>
 #include <machine/smp.h>
 
 MALLOC_DEFINE(M_MCA, "MCA", "Machine Check Architecture");
 
-int64_t		mca_info_size[SAL_INFO_TYPES];
-vm_offset_t	mca_info_block;
-struct mtx	mca_info_block_lock;
+struct mca_info {
+	STAILQ_ENTRY(mca_info) mi_link;
+	u_long	mi_seqnr;
+	u_int	mi_cpuid;
+	size_t	mi_recsz;
+	char	mi_record[0];
+};
 
-SYSCTL_NODE(_hw, OID_AUTO, mca, CTLFLAG_RW, 0, "MCA container");
+STAILQ_HEAD(mca_info_list, mca_info);
+
+static int64_t		mca_info_size[SAL_INFO_TYPES];
+static vm_offset_t	mca_info_block;
+static struct mtx	mca_info_block_lock;
+
+SYSCTL_NODE(_hw, OID_AUTO, mca, CTLFLAG_RW, NULL, "MCA container");
 
 static int mca_count;		/* Number of records stored. */
 static int mca_first;		/* First (lowest) record ID. */
@@ -58,6 +71,39 @@ SYSCTL_INT(_hw_mca, OID_AUTO, first, CTLFLAG_RD, &mca_first, 0,
     "First record id");
 SYSCTL_INT(_hw_mca, OID_AUTO, last, CTLFLAG_RD, &mca_last, 0,
     "Last record id");
+
+static struct mtx mca_sysctl_lock;
+
+static u_int mca_xiv_cmc;
+
+static int
+mca_sysctl_inject(SYSCTL_HANDLER_ARGS)
+{
+	struct ia64_pal_result res;
+	u_int val;
+	int error;
+
+	val = 0;
+	error = sysctl_wire_old_buffer(req, sizeof(u_int));
+	if (!error)
+		error = sysctl_handle_int(oidp, &val, 0, req);
+
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+
+	/*
+	 * Example values for injecting PAL determined machine checks:
+	 *	corrected	9
+	 *	recoverable	73
+	 *	fatal		137
+	 */
+	res = ia64_call_pal_stacked(PAL_MC_ERROR_INJECT, val, 0, 0);
+	printf("%s: %#lx, %#lx, %#lx, %#lx\n", __func__, res.pal_status,
+	    res.pal_result[0], res.pal_result[1], res.pal_result[2]);
+	return (0);
+}
+SYSCTL_PROC(_hw_mca, OID_AUTO, inject, CTLTYPE_INT | CTLFLAG_RW, NULL, 0,
+    mca_sysctl_inject, "I", "set to trigger a MCA");
 
 static int
 mca_sysctl_handler(SYSCTL_HANDLER_ARGS)
@@ -75,15 +121,14 @@ mca_sysctl_handler(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
-void
-ia64_mca_save_state(int type)
+static void
+ia64_mca_collect_state(int type, struct mca_info_list *reclst)
 {
 	struct ia64_sal_result result;
 	struct mca_record_header *hdr;
-	struct sysctl_oid *oidp;
-	char *name, *state;
+	struct mca_info *rec;
 	uint64_t seqnr;
-	size_t recsz, totsz;
+	size_t recsz;
 
 	/*
 	 * Don't try to get the state if we couldn't get the size of
@@ -97,12 +142,11 @@ ia64_mca_save_state(int type)
 
 	while (1) {
 		mtx_lock_spin(&mca_info_block_lock);
-
 		result = ia64_sal_entry(SAL_GET_STATE_INFO, type, 0,
 		    mca_info_block, 0, 0, 0, 0);
 		if (result.sal_status < 0) {
 			mtx_unlock_spin(&mca_info_block_lock);
-			return;
+			break;
 		}
 
 		hdr = (struct mca_record_header *)mca_info_block;
@@ -111,11 +155,14 @@ ia64_mca_save_state(int type)
 
 		mtx_unlock_spin(&mca_info_block_lock);
 
-		totsz = sizeof(struct sysctl_oid) + recsz + 32;
-		oidp = malloc(totsz, M_MCA, M_NOWAIT|M_ZERO);
-		state = (char*)(oidp + 1);
-		name = state + recsz;
-		sprintf(name, "%lld", (long long)seqnr);
+		rec = malloc(sizeof(struct mca_info) + recsz, M_MCA,
+		    M_NOWAIT | M_ZERO);
+		if (rec == NULL)
+			/* XXX: Not sure what to do. */
+			break;
+
+		rec->mi_seqnr = seqnr;
+		rec->mi_cpuid = PCPU_GET(cpuid);
 
 		mtx_lock_spin(&mca_info_block_lock);
 
@@ -133,34 +180,13 @@ ia64_mca_save_state(int type)
 			    mca_info_block, 0, 0, 0, 0);
 			if (seqnr != hdr->rh_seqnr) {
 				mtx_unlock_spin(&mca_info_block_lock);
-				free(oidp, M_MCA);
+				free(rec, M_MCA);
 				continue;
 			}
 		}
 
-		bcopy((char*)mca_info_block, state, recsz);
-
-		oidp->oid_parent = &sysctl__hw_mca_children;
-		oidp->oid_number = OID_AUTO;
-		oidp->oid_kind = CTLTYPE_OPAQUE|CTLFLAG_RD|CTLFLAG_DYN;
-		oidp->oid_arg1 = state;
-		oidp->oid_arg2 = recsz;
-		oidp->oid_name = name;
-		oidp->oid_handler = mca_sysctl_handler;
-		oidp->oid_fmt = "S,MCA";
-		oidp->oid_descr = "Error record";
-
-		sysctl_register_oid(oidp);
-
-		if (mca_count > 0) {
-			if (seqnr < mca_first)
-				mca_first = seqnr;
-			else if (seqnr > mca_last)
-				mca_last = seqnr;
-		} else
-			mca_first = mca_last = seqnr;
-
-		mca_count++;
+		rec->mi_recsz = recsz;
+		bcopy((char*)mca_info_block, rec->mi_record, recsz);
 
 		/*
 		 * Clear the state so that we get any other records when
@@ -170,7 +196,64 @@ ia64_mca_save_state(int type)
 		    0, 0, 0);
 
 		mtx_unlock_spin(&mca_info_block_lock);
+
+		STAILQ_INSERT_TAIL(reclst, rec, mi_link);
 	}
+}
+
+void
+ia64_mca_save_state(int type)
+{
+	char name[64];
+	struct mca_info_list reclst = STAILQ_HEAD_INITIALIZER(reclst);
+	struct mca_info *rec;
+	struct sysctl_oid *oid;
+
+	ia64_mca_collect_state(type, &reclst);
+
+	STAILQ_FOREACH(rec, &reclst, mi_link) {
+		sprintf(name, "%lu", rec->mi_seqnr);
+		oid = SYSCTL_ADD_NODE(NULL, SYSCTL_STATIC_CHILDREN(_hw_mca),
+		    OID_AUTO, name, CTLFLAG_RW, NULL, name);
+		if (oid == NULL)
+			continue;
+
+		mtx_lock(&mca_sysctl_lock);
+		if (mca_count > 0) {
+			if (rec->mi_seqnr < mca_first)
+				mca_first = rec->mi_seqnr;
+			else if (rec->mi_seqnr > mca_last)
+				mca_last = rec->mi_seqnr;
+		} else
+			mca_first = mca_last = rec->mi_seqnr;
+		mca_count++;
+		mtx_unlock(&mca_sysctl_lock);
+
+		sprintf(name, "%u", rec->mi_cpuid);
+		SYSCTL_ADD_PROC(NULL, SYSCTL_CHILDREN(oid), rec->mi_cpuid,
+		    name, CTLTYPE_OPAQUE | CTLFLAG_RD, rec->mi_record,
+		    rec->mi_recsz, mca_sysctl_handler, "S,MCA", "MCA record");
+	}
+}
+
+static u_int
+ia64_mca_intr(struct thread *td, u_int xiv, struct trapframe *tf)
+{
+
+	if (xiv == mca_xiv_cmc) {
+		printf("MCA: corrected machine check (CMC) interrupt\n");
+		return (0);
+	}
+
+	return (0);
+}
+
+void
+ia64_mca_init_ap(void)
+{
+
+	if (mca_xiv_cmc != 0)
+		ia64_set_cmcv(mca_xiv_cmc);
 }
 
 void
@@ -219,7 +302,14 @@ ia64_mca_init(void)
 	 * should be rare. On top of that, performance is not an issue when
 	 * dealing with machine checks...
 	 */
-	mtx_init(&mca_info_block_lock, "MCA spin lock", NULL, MTX_SPIN);
+	mtx_init(&mca_info_block_lock, "MCA info lock", NULL, MTX_SPIN);
+
+	/*
+	 * Serialize sysctl operations with a sleep lock. Note that this
+	 * implies that we update the sysctl tree in a context that allows
+	 * sleeping.
+	 */
+	mtx_init(&mca_sysctl_lock, "MCA sysctl lock", NULL, MTX_DEF);
 
 	/*
 	 * Get and save any processor and platfom error records. Note that in
@@ -228,4 +318,14 @@ ia64_mca_init(void)
 	 */
 	for (i = 0; i < SAL_INFO_TYPES; i++)
 		ia64_mca_save_state(i);
+
+	/*
+	 * Allocate a XIV for CMC interrupts, so that we can collect and save
+	 * the corrected processor checks.
+	 */
+	mca_xiv_cmc = ia64_xiv_alloc(PI_SOFT, IA64_XIV_PLAT, ia64_mca_intr);
+	if (mca_xiv_cmc != 0)
+		ia64_set_cmcv(mca_xiv_cmc);
+	else
+		printf("MCA: CMC vector could not be allocated\n");
 }

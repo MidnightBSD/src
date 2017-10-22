@@ -45,11 +45,8 @@
  * Created      : 17/09/94
  */
 
-#include "opt_msgbuf.h"
-#include "opt_ddb.h"
-
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/i80321/ep80219_machdep.c 175495 2008-01-19 18:15:07Z kib $");
+__FBSDID("$FreeBSD$");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
@@ -110,11 +107,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/i80321/ep80219_machdep.c 175495
 /* Define various stack sizes in pages */
 #define IRQ_STACK_SIZE	1
 #define ABT_STACK_SIZE	1
-#ifdef IPKDB
-#define UND_STACK_SIZE	2
-#else
 #define UND_STACK_SIZE	1
-#endif
 
 extern u_int data_abort_handler_address;
 extern u_int prefetch_abort_handler_address;
@@ -134,7 +127,6 @@ struct pcpu *pcpup = &__pcpu;
 vm_paddr_t phys_avail[10];
 vm_paddr_t dump_avail[4];
 vm_offset_t physical_pages;
-vm_offset_t clean_sva, clean_eva;
 
 struct pv_addr systempage;
 struct pv_addr msgbufpv;
@@ -186,73 +178,27 @@ static const struct pmap_devmap ep80219_devmap[] = {
 	}
 };
 
-#ifdef DDB
-extern vm_offset_t ksym_start, ksym_end;
-#endif
-
 extern vm_offset_t xscale_cache_clean_addr;
 
 void *
 initarm(void *arg, void *arg2)
 {
 	struct pv_addr  kernel_l1pt;
-	int loop;
+	struct pv_addr  dpcpu;
+	int loop, i;
 	u_int l1pagetable;
 	vm_offset_t freemempos;
 	vm_offset_t freemem_pt;
 	vm_offset_t afterkern;
 	vm_offset_t freemem_after;
 	vm_offset_t lastaddr;
-#ifdef DDB
-	vm_offset_t zstart = 0, zend = 0;
-#endif
-	int i = 0;
-	uint32_t fake_preload[35];
 	uint32_t memsize, memstart;
 
-	i = 0;
-
 	set_cpufuncs();
-	fake_preload[i++] = MODINFO_NAME;
-	fake_preload[i++] = strlen("elf kernel") + 1;
-	strcpy((char*)&fake_preload[i++], "elf kernel");
-	i += 2;
-	fake_preload[i++] = MODINFO_TYPE;
-	fake_preload[i++] = strlen("elf kernel") + 1;
-	strcpy((char*)&fake_preload[i++], "elf kernel");
-	i += 2;
-	fake_preload[i++] = MODINFO_ADDR;
-	fake_preload[i++] = sizeof(vm_offset_t);
-	fake_preload[i++] = KERNBASE + 0x00200000;
-	fake_preload[i++] = MODINFO_SIZE;
-	fake_preload[i++] = sizeof(uint32_t);
-	fake_preload[i++] = (uint32_t)&end - KERNBASE - 0x00200000;
-#ifdef DDB
-	if (*(uint32_t *)KERNVIRTADDR == MAGIC_TRAMP_NUMBER) {
-		fake_preload[i++] = MODINFO_METADATA|MODINFOMD_SSYM;
-		fake_preload[i++] = sizeof(vm_offset_t);
-		fake_preload[i++] = *(uint32_t *)(KERNVIRTADDR + 4);
-		fake_preload[i++] = MODINFO_METADATA|MODINFOMD_ESYM;
-		fake_preload[i++] = sizeof(vm_offset_t);
-		fake_preload[i++] = *(uint32_t *)(KERNVIRTADDR + 8);
-		lastaddr = *(uint32_t *)(KERNVIRTADDR + 8);
-		zend = lastaddr;
-		zstart = *(uint32_t *)(KERNVIRTADDR + 4);
-		ksym_start = zstart;
-		ksym_end = zend;
-	} else
-#endif
-		lastaddr = (vm_offset_t)&end;
-	
-	fake_preload[i++] = 0;
-	fake_preload[i] = 0;
-	preload_metadata = (void *)fake_preload;
-
-
+	lastaddr = fake_preload_metadata();
 	pcpu_init(pcpup, 0, sizeof(struct pcpu));
 	PCPU_SET(curthread, &thread0);
 
-#define KERNEL_TEXT_BASE (KERNBASE + 0x00200000)
 	freemempos = 0xa0200000;
 	/* Define a macro to simplify memory allocation */
 #define	valloc_pages(var, np)			\
@@ -263,6 +209,9 @@ initarm(void *arg, void *arg2)
 	freemempos -= (np * PAGE_SIZE);		\
 	(var) = freemempos;		\
 	memset((char *)(var), 0, ((np) * PAGE_SIZE));
+
+	/* Do basic tuning, hz etc */
+	init_param1();
 
 	while (((freemempos - L1_TABLE_SIZE) & (L1_TABLE_SIZE - 1)) != 0)
 		freemempos -= PAGE_SIZE;
@@ -289,13 +238,17 @@ initarm(void *arg, void *arg2)
 	 */
 	valloc_pages(systempage, 1);
 
+	/* Allocate dynamic per-cpu area. */
+	valloc_pages(dpcpu, DPCPU_SIZE / PAGE_SIZE);
+	dpcpu_init((void *)dpcpu.pv_va, 0);
+
 	/* Allocate stacks for all modes */
 	valloc_pages(irqstack, IRQ_STACK_SIZE);
 	valloc_pages(abtstack, ABT_STACK_SIZE);
 	valloc_pages(undstack, UND_STACK_SIZE);
 	valloc_pages(kernelstack, KSTACK_PAGES);
 	alloc_pages(minidataclean.pv_pa, 1);
-	valloc_pages(msgbufpv, round_page(MSGBUF_SIZE) / PAGE_SIZE);
+	valloc_pages(msgbufpv, round_page(msgbufsize) / PAGE_SIZE);
 #ifdef ARM_USE_SMALL_ALLOC
 	freemempos -= PAGE_SIZE;
 	freemem_pt = trunc_page(freemem_pt);
@@ -405,7 +358,7 @@ initarm(void *arg, void *arg2)
 	 * but since we are boot strapping the addresses used for the read
 	 * may have just been remapped and thus the cache could be out
 	 * of sync. A re-clean after the switch will cure this.
-	 * After booting there are no gross reloations of the kernel thus
+	 * After booting there are no gross relocations of the kernel thus
 	 * this problem will not occur after initarm().
 	 */
 	cpu_idcache_wbinv_all();
@@ -437,9 +390,6 @@ initarm(void *arg, void *arg2)
 	/* Enable MMU, I-cache, D-cache, write buffer. */
 
 	arm_vector_init(ARM_VECTORS_HIGH, ARM_VEC_ALL);
-
-
-
 	pmap_curmaxkvaddr = afterkern + PAGE_SIZE;
 	dump_avail[0] = 0xa0000000;
 	dump_avail[1] = 0xa0000000 + memsize;
@@ -448,7 +398,7 @@ initarm(void *arg, void *arg2)
 	pmap_bootstrap(pmap_curmaxkvaddr, 
 	    0xd0000000, &kernel_l1pt);
 	msgbufp = (void*)msgbufpv.pv_va;
-	msgbufinit(msgbufp, MSGBUF_SIZE);
+	msgbufinit(msgbufp, msgbufsize);
 	mutex_init();
 	
 	i = 0;
@@ -464,8 +414,6 @@ initarm(void *arg, void *arg2)
 	phys_avail[i++] = 0;
 	phys_avail[i] = 0;
 	
-	/* Do basic tuning, hz etc */
-	init_param1();
 	init_param2(physmem);
 	kdb_init();
 	return ((void *)(kernelstack.pv_va + USPACE_SVC_STACK_TOP -

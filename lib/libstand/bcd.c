@@ -4,7 +4,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libstand/bcd.c 84221 2001-09-30 22:28:01Z dillon $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 

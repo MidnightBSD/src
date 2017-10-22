@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/twa/Makefile 169400 2007-05-09 04:16:32Z scottl $
+# $FreeBSD$
 #
 # Copyright (c) 2004-06 Applied Micro Circuits Corporation.
 # All rights reserved.

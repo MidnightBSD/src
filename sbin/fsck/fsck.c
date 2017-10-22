@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sbin/fsck/fsck.c 141611 2005-02-10 09:19:34Z ru $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -103,7 +103,7 @@ main(int argc, char *argv[])
 	TAILQ_INIT(&selhead);
 	TAILQ_INIT(&opthead);
 
-	while ((i = getopt(argc, argv, "BdvpfFnyl:t:T:")) != -1)
+	while ((i = getopt(argc, argv, "BCdvpfFnyl:t:T:")) != -1)
 		switch (i) {
 		case 'B':
 			if (flags & CHECK_BACKGRD)
@@ -127,6 +127,9 @@ main(int argc, char *argv[])
 
 		case 'p':
 			flags |= CHECK_PREEN;
+			/*FALLTHROUGH*/
+		case 'C':
+			flags |= CHECK_CLEAN;
 			/*FALLTHROUGH*/
 		case 'n':
 		case 'y':
@@ -540,8 +543,10 @@ getfslab(const char *str)
 	if ((fd = open(str, O_RDONLY)) == -1)
 		err(1, "cannot open `%s'", str);
 
-	if (ioctl(fd, DIOCGDINFO, &dl) == -1)
+	if (ioctl(fd, DIOCGDINFO, &dl) == -1) {
+		(void) close(fd);
 		return(NULL);
+	}
 
 	(void) close(fd);
 
@@ -566,7 +571,7 @@ static void
 usage(void)
 {
 	static const char common[] =
-	    "[-dfnpvy] [-B | -F] [-T fstype:fsoptions] [-t fstype]";
+	    "[-Cdfnpvy] [-B | -F] [-T fstype:fsoptions] [-t fstype]";
 
 	(void)fprintf(stderr, "usage: %s %s [special | node] ...\n",
 	    getprogname(), common);

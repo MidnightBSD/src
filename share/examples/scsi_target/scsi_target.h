@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/share/examples/scsi_target/scsi_target.h 162704 2006-09-27 15:38:13Z mjacob $
+ * $FreeBSD$
  */
 
 #ifndef _SCSI_TARGET_H
@@ -35,7 +35,7 @@
  * Maximum number of parallel commands to accept,
  * 1024 for Fibre Channel (SPI is 16).
  */
-#define MAX_INITIATORS		1024
+#define MAX_INITIATORS		8
 #define	SECTOR_SIZE		512
 #define MAX_EVENTS		(MAX_INITIATORS + 5)
 				/* kqueue for AIO, signals */

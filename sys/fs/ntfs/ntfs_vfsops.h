@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/fs/ntfs/ntfs_vfsops.h 141623 2005-02-10 12:09:49Z phk $
+ * $FreeBSD$
  */
 #define VG_DONTLOADIN	0x0001	/* Tells ntfs_vgetex to do not call */
 				/* ntfs_loadntnode() on ntnode, even if */

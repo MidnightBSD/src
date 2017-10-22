@@ -29,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/i386/string/strcmp.S 97748 2002-06-02 20:05:59Z schweikh $");
+__FBSDID("$FreeBSD$");
 
 /*
  * strcmp(s1, s2)
@@ -117,3 +117,6 @@ L3:     movzbl  (%eax),%eax             /* unsigned comparison */
 	movzbl  (%edx),%edx
 	subl	%edx,%eax
 	ret
+END(strcmp)
+
+	.section .note.GNU-stack,"",%progbits

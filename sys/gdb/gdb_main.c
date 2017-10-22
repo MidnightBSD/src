@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/gdb/gdb_main.c 158949 2006-05-26 11:52:59Z phk $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/gdb/gdb_main.c 158949 2006-05-26 11:52:59Z
 static dbbe_init_f gdb_init;
 static dbbe_trap_f gdb_trap;
 
-KDB_BACKEND(gdb, gdb_init, NULL, gdb_trap);
+KDB_BACKEND(gdb, gdb_init, NULL, NULL, gdb_trap);
 
 static struct gdb_dbgport null_gdb_dbgport;
 DATA_SET(gdb_dbgport_set, null_gdb_dbgport);
@@ -95,7 +95,17 @@ gdb_init(void)
 static int
 gdb_trap(int type, int code)
 {
+	jmp_buf jb;
 	struct thread *thr_iter;
+	void *prev_jb;
+
+	prev_jb = kdb_jmpbuf(jb);
+	if (setjmp(jb) != 0) {
+		printf("%s bailing, hopefully back to ddb!\n", __func__);
+		gdb_listening = 0;
+		(void)kdb_jmpbuf(prev_jb);
+		return (1);
+	}
 
 	gdb_listening = 0;
 	/*
@@ -143,6 +153,11 @@ gdb_trap(int type, int code)
 			}
 			kdb_cpu_clear_singlestep();
 			gdb_listening = 1;
+			return (1);
+		}
+		case 'D': {     /* Detach */
+			gdb_tx_ok();
+			kdb_cpu_clear_singlestep();
 			return (1);
 		}
 		case 'g': {	/* Read registers. */
@@ -286,5 +301,6 @@ gdb_trap(int type, int code)
 			break;
 		}
 	}
+	(void)kdb_jmpbuf(prev_jb);
 	return (0);
 }

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/ida/idareg.h 144992 2005-04-13 05:09:49Z mdodd $
+ * $FreeBSD$
  */
 
 /*

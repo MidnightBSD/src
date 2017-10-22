@@ -35,7 +35,7 @@
  *
  * Define the interface structure required by the disassembler.
  *
- * $FreeBSD: release/7.0.0/sys/arm/include/disassem.h 139735 2005-01-05 21:58:49Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_DISASSEM_H_
@@ -43,7 +43,7 @@
 typedef struct {
 	u_int	(*di_readword)(u_int);
 	void	(*di_printaddr)(u_int);	
-	void	(*di_printf)(const char *, ...) __printflike(1, 2);
+	int	(*di_printf)(const char *, ...) __printflike(1, 2);
 } disasm_interface_t;
 
 /* Prototypes for callable functions */

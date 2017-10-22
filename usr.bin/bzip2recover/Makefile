@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.bin/bzip2recover/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
 BZ2DIR=	${.CURDIR}/../../contrib/bzip2
 .PATH: ${BZ2DIR}

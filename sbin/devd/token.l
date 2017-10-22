@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sbin/devd/token.l 147874 2005-07-10 03:37:15Z imp $
+ * $FreeBSD$
  */
 
 #include <ctype.h>
@@ -38,6 +38,7 @@
 
 int lineno = 1;
 #define YY_NO_UNPUT
+#define YY_NO_INPUT
 
 static void
 update_lineno(const char *cp)
@@ -61,10 +62,10 @@ update_lineno(const char *cp)
 \}			{ return ENDBLOCK; }
 [0-9]+			{ yylval.i = atoi(yytext); return NUMBER; }
 \"[^"]+\"		{
-				update_lineno(yytext);
 				int len = strlen(yytext) - 2;
 				char *walker;
 				int i;
+				update_lineno(yytext);
 				if ((yylval.str = (char *) malloc(len + 1)) == NULL)
 					goto out;
 				walker = yylval.str;

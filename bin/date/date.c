@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)date.c	8.2 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/date/date.c 139969 2005-01-10 08:39:26Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -48,12 +48,12 @@ __FBSDID("$FreeBSD: release/7.0.0/bin/date/date.c 139969 2005-01-10 08:39:26Z im
 #include <ctype.h>
 #include <err.h>
 #include <locale.h>
-#include <libutil.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <utmpx.h>
 
 #include "extern.h"
 #include "vary.h"
@@ -181,13 +181,16 @@ main(int argc, char *argv[])
 static void
 setthetime(const char *fmt, const char *p, int jflag, int nflag)
 {
+	struct utmpx utx;
 	struct tm *lt;
 	struct timeval tv;
 	const char *dot, *t;
 	int century;
 
+	lt = localtime(&tval);
+	lt->tm_isdst = -1;		/* divine correct DST */
+
 	if (fmt != NULL) {
-		lt = localtime(&tval);
 		t = strptime(p, fmt, lt);
 		if (t == NULL) {
 			fprintf(stderr, "Failed conversion of ``%s''"
@@ -207,8 +210,6 @@ setthetime(const char *fmt, const char *p, int jflag, int nflag)
 			}
 			badformat();
 		}
-
-		lt = localtime(&tval);
 
 		if (dot != NULL) {			/* .ss */
 			dot++; /* *dot++ = '\0'; */
@@ -264,9 +265,6 @@ setthetime(const char *fmt, const char *p, int jflag, int nflag)
 		}
 	}
 
-	/* Let mktime() decide whether summer time is in effect. */
-	lt->tm_isdst = -1;
-
 	/* convert broken-down time to GMT clock time */
 	if ((tval = mktime(lt)) == -1)
 		errx(1, "nonexistent time");
@@ -274,12 +272,16 @@ setthetime(const char *fmt, const char *p, int jflag, int nflag)
 	if (!jflag) {
 		/* set the time */
 		if (nflag || netsettime(tval)) {
-			logwtmp("|", "date", "");
+			utx.ut_type = OLD_TIME;
+			gettimeofday(&utx.ut_tv, NULL);
+			pututxline(&utx);
 			tv.tv_sec = tval;
 			tv.tv_usec = 0;
 			if (settimeofday(&tv, (struct timezone *)NULL))
 				err(1, "settimeofday (timeval)");
-			logwtmp("{", "date", "");
+			utx.ut_type = NEW_TIME;
+			gettimeofday(&utx.ut_tv, NULL);
+			pututxline(&utx);
 		}
 
 		if ((p = getlogin()) == NULL)

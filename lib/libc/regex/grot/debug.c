@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/regex/grot/debug.c 132388 2004-07-19 08:28:53Z tjr $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <string.h>

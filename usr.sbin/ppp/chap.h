@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/ppp/chap.h 98311 2002-06-17 01:12:38Z brian $
+ * $FreeBSD$
  */
 
 struct mbuf;
@@ -61,7 +61,7 @@ struct chap {
 #define descriptor2chap(d) \
   ((d)->type == CHAP_DESCRIPTOR ? (struct chap *)(d) : NULL)
 #define auth2chap(a) \
-  ((struct chap *)((char *)a - (int)&((struct chap *)0)->auth))
+  ((struct chap *)((char *)a - (uintptr_t)&((struct chap *)0)->auth))
 
 struct MSCHAPv2_resp {		/* rfc2759 */
   char PeerChallenge[16];

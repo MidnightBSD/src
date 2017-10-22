@@ -18,12 +18,12 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: release/7.0.0/contrib/tcpdump/print-fddi.c 172786 2007-10-19 03:04:02Z mlaier $
+ * $FreeBSD$
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /tcpdump/master/tcpdump/print-fddi.c,v 1.64.2.2 2005/11/13 12:12:59 guy Exp $ (LBL)";
+    "@(#) $Header: /tcpdump/master/tcpdump/print-fddi.c,v 1.66 2005-11-13 12:12:41 guy Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H

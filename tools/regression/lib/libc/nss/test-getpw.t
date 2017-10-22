@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/7.0.0/tools/regression/lib/libc/nss/test-getpw.t 168754 2007-04-15 11:02:31Z bushman $
+# $FreeBSD$
 
 do_test() {
 	number=$1

@@ -29,7 +29,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$FreeBSD: release/7.0.0/lib/libcompat/4.1/ftime.c 50476 1999-08-28 00:22:10Z peter $";
+static char rcsid[] = "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -37,18 +37,17 @@ static char rcsid[] = "$FreeBSD: release/7.0.0/lib/libcompat/4.1/ftime.c 50476 1
 #include <sys/timeb.h>
 
 int
-ftime(tbp)
-        struct timeb *tbp;
+ftime(struct timeb *tbp)
 {
-        struct timezone tz;
-        struct timeval t;
+	struct timezone tz;
+	struct timeval t;
 
-        if (gettimeofday(&t, &tz) < 0)
-                return (-1);
-        tbp->millitm = t.tv_usec / 1000;
-        tbp->time = t.tv_sec;
-        tbp->timezone = tz.tz_minuteswest;
-        tbp->dstflag = tz.tz_dsttime;
+	if (gettimeofday(&t, &tz) < 0)
+		return (-1);
+	tbp->millitm = t.tv_usec / 1000;
+	tbp->time = t.tv_sec;
+	tbp->timezone = tz.tz_minuteswest;
+	tbp->dstflag = tz.tz_dsttime;
 
 	return (0);
 }

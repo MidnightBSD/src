@@ -1,8 +1,10 @@
-# $FreeBSD: release/7.0.0/usr.bin/keylogin/Makefile 50477 1999-08-28 01:08:13Z peter $
+# $FreeBSD$
 
 PROG=	keylogin
 
 DPADD=	${LIBRPCSVC}
 LDADD=	-lrpcsvc
+
+WARNS?=	0
 
 .include <bsd.prog.mk>

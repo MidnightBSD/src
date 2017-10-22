@@ -16,13 +16,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *      This product includes software developed by Mark Brinicombe
- *      for the NetBSD Project.
- * 4. The name of the company nor the name of the author may be used to
- *    endorse or promote products derived from this software without specific
- *    prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -43,7 +36,7 @@
 #include <machine/armreg.h>
 #include <machine/asmacros.h>
 #include <arm/sa11x0/sa11x0_reg.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/sa11x0_irq.S 139735 2005-01-05 21:58:49Z imp $");
+__FBSDID("$FreeBSD$");
 Lcurrent_intr_depth:
 	.word	_C_LABEL(current_intr_depth)
 
@@ -125,16 +118,11 @@ ENTRY(sa11x0_activateirqs)
 	mov	r1, #0xffffffff
 	str	r1, [r0, #(SAIPIC_MR)]
 	mov	pc, lr
-#ifdef IRQSTATS
-Lintrcnt:
-	.word	_C_LABEL(intrcnt)
-#endif
 
-	.global _C_LABEL(intrnames), _C_LABEL(eintrnames)
-	.global _C_LABEL(eintrcnt)
+	.global _C_LABEL(intrnames), _C_LABEL(sintrnames)
 _C_LABEL(intrnames): 
-_C_LABEL(eintrnames):
-_C_LABEL(eintrcnt):
+_C_LABEL(sintrnames):
+	.int	0
 
 	.globl	_C_LABEL(intrcnt), _C_LABEL(sintrcnt)
 
@@ -142,4 +130,4 @@ _C_LABEL(intrcnt):
 	.space	ICU_LEN*4  /* XXX Should be linked to number of interrupts */
 
 _C_LABEL(sintrcnt):
-	.space 32*4
+	.word	ICU_LEN*4

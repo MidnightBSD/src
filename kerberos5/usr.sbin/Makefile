@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/kerberos5/usr.sbin/Makefile 112049 2003-03-09 21:56:55Z markm $
+# $FreeBSD$
 
 SUBDIR=	kstash ktutil
 

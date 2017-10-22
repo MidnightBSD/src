@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: bthidcontrol.h,v 1.1 2004/02/12 23:25:51 max Exp $
- * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/bthidcontrol/bthidcontrol.h 128080 2004-04-10 00:18:00Z emax $
+ * $FreeBSD$
  */
 
 #ifndef __BTHIDCONTROL_H__

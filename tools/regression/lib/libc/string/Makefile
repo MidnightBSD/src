@@ -1,10 +1,10 @@
-# $FreeBSD: release/7.0.0/tools/regression/lib/libc/string/Makefile 141097 2005-02-01 09:26:34Z nik $
+# $FreeBSD$
 
 CFLAGS+=	-I/usr/local/include 
 LDFLAGS+=	-L/usr/local/lib
 LDLIBS=		-ltap
 
-TESTS=	test-strerror
+TESTS=	test-stpncpy test-strerror test-wcscasecmp test-wcsnlen
 
 .PHONY: tests
 tests: ${TESTS}

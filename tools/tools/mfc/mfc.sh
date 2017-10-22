@@ -2,7 +2,7 @@
 #
 # Merge an entire directory from HEAD to a given branch
 #
-# $FreeBSD: release/7.0.0/tools/tools/mfc/mfc.sh 135743 2004-09-24 15:24:12Z des $
+# $FreeBSD$
 #
 
 if [ $# -eq 1 -a -f CVS/Tag ] ; then

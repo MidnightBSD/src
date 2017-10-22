@@ -27,7 +27,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/usr.sbin/sa/sa.8 169670 2007-05-18 12:36:10Z dds $
+.\" $FreeBSD$
 .\"
 .Dd May 18, 2007
 .Dt SA 8
@@ -234,6 +234,8 @@ per-user accounting summary database
 .Xr acct 5 ,
 .Xr ac 8 ,
 .Xr accton 8
+.Sh AUTHORS
+.An Chris G. Demetriou Aq cgd@postgres.berkeley.edu
 .Sh CAVEATS
 While the behavior of the options in this version of
 .Nm
@@ -251,8 +253,6 @@ The formats of the summary files created by this version of
 are very different from the those used by the original version.
 This is not considered a problem, however, because the accounting record
 format has changed as well (since user ids are now 32 bits).
-.Sh AUTHORS
-.An Chris G. Demetriou Aq cgd@postgres.berkeley.edu
 .Sh BUGS
 The number of options to this program is absurd, especially considering
 that there is not much logic behind their lettering.

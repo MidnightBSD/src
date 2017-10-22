@@ -27,11 +27,12 @@
  * SUCH DAMAGE.
  *
  *	@(#)arith.h	1.1 (Berkeley) 5/4/95
- * $FreeBSD: release/7.0.0/bin/sh/arith.h 149013 2005-08-13 07:59:46Z stefanf $
+ * $FreeBSD$
  */
 
-extern char *arith_buf, *arith_startbuf;
+#include "shell.h"
 
-int arith(char *);
+#define DIGITS(var) (3 + (2 + CHAR_BIT * sizeof((var))) / 3)
+
+arith_t arith(const char *);
 void arith_lex_reset(void);
-int expcmd(int, char **);

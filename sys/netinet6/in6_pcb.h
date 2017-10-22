@@ -1,6 +1,3 @@
-/*	$FreeBSD: release/7.0.0/sys/netinet6/in6_pcb.h 169462 2007-05-11 10:20:51Z rwatson $	*/
-/*	$KAME: in6_pcb.h,v 1.13 2001/02/06 09:16:53 itojun Exp $	*/
-
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -29,6 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ *	$KAME: in6_pcb.h,v 1.13 2001/02/06 09:16:53 itojun Exp $
  */
 
 /*-
@@ -60,6 +58,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_pcb.h	8.1 (Berkeley) 6/10/93
+ * $FreeBSD$
  */
 
 #ifndef _NETINET6_IN6_PCB_H_
@@ -70,22 +69,40 @@
 #define	sin6tosa(sin6)	((struct sockaddr *)(sin6))
 #define	ifatoia6(ifa)	((struct in6_ifaddr *)(ifa))
 
+struct	inpcbgroup *
+	in6_pcbgroup_byhash(struct inpcbinfo *, u_int, uint32_t);
+struct	inpcbgroup *
+	in6_pcbgroup_byinpcb __P((struct inpcb *));
+struct inpcbgroup *
+	in6_pcbgroup_bymbuf(struct inpcbinfo *, struct mbuf *);
+struct	inpcbgroup *
+	in6_pcbgroup_bytuple __P((struct inpcbinfo *, const struct in6_addr *,
+	    u_short, const struct in6_addr *, u_short));
+
 void	in6_pcbpurgeif0 __P((struct inpcbinfo *, struct ifnet *));
 void	in6_losing __P((struct inpcb *));
 int	in6_pcbbind __P((struct inpcb *, struct sockaddr *, struct ucred *));
 int	in6_pcbconnect __P((struct inpcb *, struct sockaddr *, struct ucred *));
-void	in6_pcbdetach __P((struct inpcb *));
+int	in6_pcbconnect_mbuf __P((struct inpcb *, struct sockaddr *,
+	    struct ucred *, struct mbuf *));
 void	in6_pcbdisconnect __P((struct inpcb *));
-void	in6_pcbfree __P((struct inpcb *));
-int	in6_pcbladdr __P((struct inpcb *, struct sockaddr *,
-			  struct in6_addr **));
+int	in6_pcbladdr(struct inpcb *, struct sockaddr *, struct in6_addr *);
 struct	inpcb *
 	in6_pcblookup_local __P((struct inpcbinfo *,
-				 struct in6_addr *, u_int, int));
+				 struct in6_addr *, u_short, int,
+				 struct ucred *));
 struct	inpcb *
-	in6_pcblookup_hash __P((struct inpcbinfo *,
-				struct in6_addr *, u_int, struct in6_addr *,
-				u_int, int, struct ifnet *));
+	in6_pcblookup __P((struct inpcbinfo *, struct in6_addr *,
+			   u_int, struct in6_addr *, u_int, int,
+			   struct ifnet *));
+struct	inpcb *
+	in6_pcblookup_hash_locked __P((struct inpcbinfo *, struct in6_addr *,
+			   u_int, struct in6_addr *, u_int, int,
+			   struct ifnet *));
+struct	inpcb *
+	in6_pcblookup_mbuf __P((struct inpcbinfo *, struct in6_addr *,
+			   u_int, struct in6_addr *, u_int, int,
+			   struct ifnet *ifp, struct mbuf *));
 void	in6_pcbnotify __P((struct inpcbinfo *, struct sockaddr *,
 			   u_int, const struct sockaddr *, u_int, int, void *,
 			   struct inpcb *(*)(struct inpcb *, int)));

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/sort/Makefile 133549 2004-08-12 06:02:28Z tjr $
+# $FreeBSD$
 
 SORTDIR= ${.CURDIR}/../../../contrib/gnu-sort
 .PATH: ${SORTDIR}/lib ${SORTDIR}/src ${SORTDIR}/man
@@ -29,7 +29,7 @@ SRCS=   sort.c \
 	xstrtoul.c \
 	xstrtoumax.c
 
-CFLAGS+=-I${.CURDIR} -I${SORTDIR}/lib -DHAVE_CONFIG_H \
-	-DHAVE_LANGINFO_H=1 -DHAVE_NL_LANGINFO=1
+CFLAGS+=-DHAVE_CONFIG_H -DHAVE_LANGINFO_H=1 -DHAVE_NL_LANGINFO=1 \
+	-I${.CURDIR} -I${SORTDIR}/lib
 
 .include <bsd.prog.mk>

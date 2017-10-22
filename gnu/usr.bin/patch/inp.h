@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/gnu/usr.bin/patch/inp.h 95601 2002-04-28 01:33:45Z gad $
+/* $FreeBSD$
  *
  * $Log: inp.h,v $
  * Revision 2.0  86/09/17  15:37:25  lwall

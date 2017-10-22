@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/extattrctl/extattrctl.c 95018 2002-04-19 01:42:55Z rwatson $
+ * $FreeBSD$
  */
 /*
  * Developed by the TrustedBSD Project.
@@ -54,7 +54,7 @@ long num_inodes_by_path(char *path);
 void usage(void);
 
 void
-usage()
+usage(void)
 {
 
 	fprintf(stderr,
@@ -144,9 +144,11 @@ initattr(int argc, char *argv[])
 	if (error == -1) {
 		perror(argv[1]);
 		unlink(argv[1]);
+		close(i);
 		return (-1);
 	}
 
+	close(i);
 	return (0);
 }
 
@@ -168,21 +170,25 @@ showattr(int argc, char *argv[])
 	i = read(fd, &uef, sizeof(uef));
 	if (i == -1) {
 		perror(argv[0]);
+		close(fd);
 		return (-1);
 	}
 	if (i != sizeof(uef)) {
 		fprintf(stderr, "%s: invalid file header\n", argv[0]);
+		close(fd);
 		return (-1);
 	}
 
 	if (uef.uef_magic != UFS_EXTATTR_MAGIC) {
 		fprintf(stderr, "%s: bad magic\n", argv[0]);
+		close(fd);
 		return (-1);
 	}
 
 	printf("%s: version %d, size %d\n", argv[0], uef.uef_version,
 	    uef.uef_size);
 
+	close(fd);
 	return (0);
 }
 

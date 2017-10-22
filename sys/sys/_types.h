@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sys/_types.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS__TYPES_H_
@@ -38,6 +38,7 @@
 typedef	__uint32_t	__blksize_t;	/* file block size */
 typedef	__int64_t	__blkcnt_t;	/* file block count */
 typedef	__int32_t	__clockid_t;	/* clock_gettime()... */
+typedef	__uint64_t	__cap_rights_t;	/* capability rights */
 typedef	__uint32_t	__fflags_t;	/* file flags */
 typedef	__uint64_t	__fsblkcnt_t;
 typedef	__uint64_t	__fsfilcnt_t;
@@ -47,6 +48,7 @@ typedef	__uint32_t	__ino_t;	/* inode number */
 typedef	long		__key_t;	/* IPC key (for Sys V IPC) */
 typedef	__int32_t	__lwpid_t;	/* Thread ID (a.k.a. LWP) */
 typedef	__uint16_t	__mode_t;	/* permissions */
+typedef	int		__accmode_t;	/* access permissions */
 typedef	int		__nl_item;
 typedef	__uint16_t	__nlink_t;	/* link count */
 typedef	__int64_t	__off_t;	/* file offset */
@@ -61,6 +63,9 @@ typedef	struct __timer	*__timer_t;	/* timer_gettime()... */
 typedef	struct __mq	*__mqd_t;	/* mq_open()... */
 typedef	__uint32_t	__uid_t;
 typedef	unsigned int	__useconds_t;	/* microseconds (unsigned) */
+typedef	int		__cpuwhich_t;	/* which parameter for cpuset. */
+typedef	int		__cpulevel_t;	/* level parameter for cpuset. */
+typedef int		__cpusetid_t;	/* cpuset identifier. */
 
 /*
  * Unusual type definitions.

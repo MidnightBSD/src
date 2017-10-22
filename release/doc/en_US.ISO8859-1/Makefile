@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/release/doc/en_US.ISO8859-1/Makefile 171847 2007-08-15 03:02:22Z bmah $
+# $FreeBSD$
 
 RELN_ROOT?= ${.CURDIR}/..
 
@@ -6,6 +6,7 @@ SUBDIR = relnotes
 SUBDIR+= hardware
 SUBDIR+= readme
 SUBDIR+= errata
+SUBDIR+= installation
 
 COMPAT_SYMLINK = en
 

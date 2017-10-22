@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2006 nCircle Network Security, Inc.
+ * Copyright (c) 2009 Robert N. M. Watson
  * All rights reserved.
  *
  * This software was developed by Robert N. M. Watson for the TrustedBSD
@@ -25,17 +26,19 @@
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: release/7.0.0/sys/kern/kern_priv.c 171156 2007-07-02 14:03:29Z rwatson $
  */
 
-#include "opt_mac.h"
+#include "opt_kdtrace.h"
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/jail.h>
 #include <sys/kernel.h>
 #include <sys/priv.h>
 #include <sys/proc.h>
+#include <sys/sdt.h>
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 
@@ -56,6 +59,10 @@ SYSCTL_INT(_security_bsd, OID_AUTO, suser_enabled, CTLFLAG_RW,
     &suser_enabled, 0, "processes with uid 0 have privilege");
 TUNABLE_INT("security.bsd.suser_enabled", &suser_enabled);
 
+SDT_PROVIDER_DEFINE(priv);
+SDT_PROBE_DEFINE1(priv, kernel, priv_check, priv_ok, priv-ok, "int");
+SDT_PROBE_DEFINE1(priv, kernel, priv_check, priv_err, priv-err, "int");
+
 /*
  * Check a credential for privilege.  Lots of good reasons to deny privilege;
  * only a few to grant it.
@@ -75,7 +82,7 @@ priv_check_cred(struct ucred *cred, int priv, int flags)
 #ifdef MAC
 	error = mac_priv_check(cred, priv);
 	if (error)
-		return (error);
+		goto out;
 #endif
 
 	/*
@@ -84,7 +91,7 @@ priv_check_cred(struct ucred *cred, int priv, int flags)
 	 */
 	error = prison_priv_check(cred, priv);
 	if (error)
-		return (error);
+		goto out;
 
 	/*
 	 * Having determined if privilege is restricted by various policies,
@@ -102,13 +109,17 @@ priv_check_cred(struct ucred *cred, int priv, int flags)
 		case PRIV_MAXFILES:
 		case PRIV_MAXPROC:
 		case PRIV_PROC_LIMIT:
-			if (cred->cr_ruid == 0)
-				return (0);
+			if (cred->cr_ruid == 0) {
+				error = 0;
+				goto out;
+			}
 			break;
 
 		default:
-			if (cred->cr_uid == 0)
-				return (0);
+			if (cred->cr_uid == 0) {
+				error = 0;
+				goto out;
+			}
 			break;
 		}
 	}
@@ -118,10 +129,26 @@ priv_check_cred(struct ucred *cred, int priv, int flags)
 	 * privilege.
 	 */
 #ifdef MAC
-	if (mac_priv_grant(cred, priv) == 0)
-		return (0);
+	if (mac_priv_grant(cred, priv) == 0) {
+		error = 0;
+		goto out;
+	}
 #endif
-	return (EPERM);
+
+	/*
+	 * The default is deny, so if no policies have granted it, reject
+	 * with a privilege error here.
+	 */
+	error = EPERM;
+out:
+	if (error) {
+		SDT_PROBE(priv, kernel, priv_check, priv_err, priv, 0, 0, 0,
+		    0);
+	} else {
+		SDT_PROBE(priv, kernel, priv_check, priv_ok, priv, 0, 0, 0,
+		    0);
+	}
+	return (error);
 }
 
 int
@@ -131,25 +158,4 @@ priv_check(struct thread *td, int priv)
 	KASSERT(td == curthread, ("priv_check: td != curthread"));
 
 	return (priv_check_cred(td->td_ucred, priv, 0));
-}
-
-/*
- * Historical suser() wrapper functions, which now simply request PRIV_ROOT.
- * These will be removed in the near future, and exist solely because
- * the kernel and modules are not yet fully adapted to the new model.
- */
-int
-suser_cred(struct ucred *cred, int flags)
-{
-
-	return (priv_check_cred(cred, PRIV_ROOT, flags));
-}
-
-int
-suser(struct thread *td)
-{
-
-	KASSERT(td == curthread, ("suser: td != curthread"));
-
-	return (suser_cred(td->td_ucred, 0));
 }

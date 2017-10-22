@@ -29,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/i386/string/swab.S 108533 2003-01-01 18:49:04Z schweikh $");
+__FBSDID("$FreeBSD$");
 
 /*
  * void
@@ -97,3 +97,6 @@ L3:	lodsw
 L4:	popl	%edi
 	popl	%esi
 	ret
+END(swab)
+
+	.section .note.GNU-stack,"",%progbits

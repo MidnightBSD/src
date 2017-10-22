@@ -31,8 +31,8 @@
  * SUCH DAMAGE.
  */
 
-/* $Id: ftp_locl.h,v 1.37 2002/09/10 20:03:46 joda Exp $ */
-/* $FreeBSD: release/7.0.0/crypto/heimdal/appl/ftp/ftp/ftp_locl.h 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $Id: ftp_locl.h 11444 2002-09-10 20:03:49Z joda $ */
+/* $FreeBSD$ */
 
 #ifndef __FTP_LOCL_H__
 #define __FTP_LOCL_H__

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/usr.sbin/sysinstall/menus.c 175658 2008-01-25 10:54:40Z mnag $";
+  "$FreeBSD$";
 #endif
 
 #include "sysinstall.h"
@@ -72,6 +72,15 @@ clearKernel(dialogMenuItem *self)
     return DITEM_SUCCESS | DITEM_REDRAW;
 }
 
+static int
+setDocAll(dialogMenuItem *self)
+{
+    Dists |= DIST_DOC;
+    DocDists = DIST_DOC_ALL;
+    return DITEM_SUCCESS | DITEM_REDRAW;
+}
+
+
 #define _IS_SET(dist, set) (((dist) & (set)) == (set))
 
 #define IS_DEVELOPER(dist, extra) (_IS_SET(dist, _DIST_DEVELOPER | extra) || \
@@ -87,33 +96,15 @@ checkDistDeveloper(dialogMenuItem *self)
 }
 
 static int
-checkDistXDeveloper(dialogMenuItem *self)
-{
-    return IS_DEVELOPER(Dists, DIST_XORG) && _IS_SET(SrcDists, DIST_SRC_ALL);
-}
-
-static int
 checkDistKernDeveloper(dialogMenuItem *self)
 {
     return IS_DEVELOPER(Dists, 0) && _IS_SET(SrcDists, DIST_SRC_SYS);
 }
 
 static int
-checkDistXKernDeveloper(dialogMenuItem *self)
-{
-    return IS_DEVELOPER(Dists, DIST_XORG) && _IS_SET(SrcDists, DIST_SRC_SYS);
-}
-
-static int
 checkDistUser(dialogMenuItem *self)
 {
     return IS_USER(Dists, 0);
-}
-
-static int
-checkDistXUser(dialogMenuItem *self)
-{
-    return IS_USER(Dists, DIST_XORG);
 }
 
 static int
@@ -126,8 +117,8 @@ static int
 checkDistEverything(dialogMenuItem *self)
 {
     return Dists == DIST_ALL &&
+	_IS_SET(DocDists, DIST_DOC_ALL) &&
 	_IS_SET(SrcDists, DIST_SRC_ALL) &&
-	_IS_SET(XOrgDists, DIST_XORG_ALL) &&
 	_IS_SET(KernelDists, DIST_KERNEL_ALL);
 }
 
@@ -138,20 +129,15 @@ srcFlagCheck(dialogMenuItem *item)
 }
 
 static int
-x11FlagCheck(dialogMenuItem *item)
-{
-    if (XOrgDists != 0)
-	Dists |= DIST_XORG;
-    else
-	Dists &= ~DIST_XORG;
-
-    return Dists & DIST_XORG;
-}
-
-static int
 kernelFlagCheck(dialogMenuItem *item)
 {
     return KernelDists;
+}
+
+static int
+docFlagCheck(dialogMenuItem *item)
+{
+    return DocDists;
 }
 
 static int
@@ -182,21 +168,22 @@ DMenu MenuIndex = {
       { " Console settings",	"Customize system console behavior.",	NULL, dmenuSubmenu, NULL, &MenuSyscons },
 #endif
       { " Configure",		"The system configuration menu.",	NULL, dmenuSubmenu, NULL, &MenuConfigure },
-      { " Defaults, Load",	"Load default settings.",		NULL, dispatch_load_floppy },
+      { " Defaults, Load (FDD)","Load default settings from floppy.",	NULL, dispatch_load_floppy },
+      { " Defaults, Load (CD)",	"Load default settings from CDROM.",	NULL, dispatch_load_cdrom },
+      { " Defaults, Load",	"Load default settings (all devices).",	NULL, dispatch_load_menu },
 #ifdef WITH_MICE
       { " Device, Mouse",	"The mouse configuration menu.",	NULL, dmenuSubmenu, NULL, &MenuMouse },
 #endif
-      { " Disklabel",		"The disk Label editor",		NULL, diskLabelEditor },
+      { " Disklabel",		"The disk label editor",		NULL, diskLabelEditor },
       { " Dists, All",		"Root of the distribution tree.",	NULL, dmenuSubmenu, NULL, &MenuDistributions },
       { " Dists, Basic",		"Basic FreeBSD distribution menu.",	NULL, dmenuSubmenu, NULL, &MenuSubDistributions },
       { " Dists, Developer",	"Select developer's distribution.",	checkDistDeveloper, distSetDeveloper },
       { " Dists, Src",		"Src distribution menu.",		NULL, dmenuSubmenu, NULL, &MenuSrcDistributions },
-      { " Dists, X Developer",	"Select X developer's distribution.",	checkDistXDeveloper, distSetXDeveloper },
       { " Dists, Kern Developer", "Select kernel developer's distribution.", checkDistKernDeveloper, distSetKernDeveloper },
       { " Dists, User",		"Select average user distribution.",	checkDistUser, distSetUser },
-      { " Dists, X User",	"Select average X user distribution.",	checkDistXUser, distSetXUser },
       { " Distributions, Adding", "Installing additional distribution sets", NULL, distExtractAll },
       { " Documentation",	"Installation instructions, README, etc.", NULL, dmenuSubmenu, NULL, &MenuDocumentation },
+      { " Documentation Installation",	"Installation of FreeBSD documentation set", NULL, distSetDocMenu },
       { " Doc, README",		"The distribution README file.",	NULL, dmenuDisplayFile, NULL, "README" },
       { " Doc, Errata",		"The distribution errata.",	NULL, dmenuDisplayFile, NULL, "ERRATA" },
       { " Doc, Hardware",	"The distribution hardware guide.",	NULL, dmenuDisplayFile,	NULL, "HARDWARE" },
@@ -218,15 +205,15 @@ DMenu MenuIndex = {
       { " Install, Custom",	"The custom installation menu",		NULL, dmenuSubmenu, NULL, &MenuInstallCustom },
       { " Label",		"The disk Label editor",		NULL, diskLabelEditor },
       { " Media",		"Top level media selection menu.",	NULL, dmenuSubmenu, NULL, &MenuMedia },
-      { " Media, Tape",		"Select tape installation media.",	NULL, mediaSetTape },
       { " Media, NFS",		"Select NFS installation media.",	NULL, mediaSetNFS },
       { " Media, Floppy",	"Select floppy installation media.",	NULL, mediaSetFloppy },
       { " Media, CDROM/DVD",	"Select CDROM/DVD installation media.",	NULL, mediaSetCDROM },
+      { " Media, USB",		"Select USB installation media.",	NULL, mediaSetUSB },
       { " Media, DOS",		"Select DOS installation media.",	NULL, mediaSetDOS },
       { " Media, UFS",		"Select UFS installation media.",	NULL, mediaSetUFS },
       { " Media, FTP",		"Select FTP installation media.",	NULL, mediaSetFTP },
       { " Media, FTP Passive",	"Select passive FTP installation media.", NULL, mediaSetFTPPassive },
-      { " Media, HTTP",		"Select FTP via HTTP proxy installation media.", NULL, mediaSetHTTP },
+      { " Media, HTTP",		"Select FTP via HTTP proxy install media.", NULL, mediaSetHTTP },
       { " Network Interfaces",	"Configure network interfaces",		NULL, tcpMenuSelect },
       { " Networking Services",	"The network services menu.",		NULL, dmenuSubmenu, NULL, &MenuNetworking },
       { " NFS, client",		"Set NFS client flag.",			dmenuVarCheck, dmenuToggleVariable, NULL, "nfs_client_enable=YES" },
@@ -235,7 +222,7 @@ DMenu MenuIndex = {
       { " Options",		"The options editor.",			NULL, optionsEditor },
       { " Packages",		"The packages collection",		NULL, configPackages },
 #ifdef WITH_SLICES
-      { " Partition",		"The disk Slice (PC-style partition) Editor",	NULL, diskPartitionEditor },
+      { " Partition",		"The disk slice (PC-style partition) editor",	NULL, diskPartitionEditor },
 #endif
       { " PCNFSD",		"Run authentication server for PC-NFS.", dmenuVarCheck, configPCNFSD, NULL, "pcnfsd" },
       { " Root Password",	"Set the system manager's password.",   NULL, dmenuSystemCommand, NULL, "passwd root" },
@@ -289,7 +276,7 @@ DMenu MenuInitial = {
       { "Options",	"View/Set various installation options",	NULL, optionsEditor },
       { "Fixit",	"Repair mode with CDROM/DVD/floppy or start shell",	NULL, dmenuSubmenu, NULL, &MenuFixit },
       { "Upgrade",	"Upgrade an existing system",			NULL, installUpgrade },
-      { "Load Config","Load default install configuration",		NULL, dispatch_load_floppy },
+      { "Load Config..","Load default install configuration",		NULL, dispatch_load_menu },
       { "Index",	"Glossary of functions",			NULL, dmenuSubmenu, NULL, &MenuIndex },
       { NULL } },
 };
@@ -313,6 +300,62 @@ DMenu MenuDocumentation = {
       { "5 Release"	,"The release notes for this version of FreeBSD.", NULL, dmenuDisplayFile, NULL, "RELNOTES" },
       { "6 Shortcuts",	"Creating shortcuts to sysinstall.",		NULL, dmenuDisplayFile, NULL, "shortcuts" },
       { "7 HTML Docs",	"Go to the HTML documentation menu (post-install).", NULL, docBrowser },
+      { NULL } },
+};
+
+/* The FreeBSD documentation installation menu */
+DMenu MenuDocInstall = {
+    DMENU_CHECKLIST_TYPE | DMENU_SELECTION_RETURNS,
+    "FreeBSD Documentation Installation Menu",
+    "This menu will allow you to install the whole documentation set\n"
+    "from the FreeBSD Documentation Project: Handbook, FAQ and articles.\n\n"
+    "Please select the language versions you wish to install.  At minimum,\n"
+    "you should install the English version, this is the original version\n"
+    "of the documentation.",
+    NULL,
+    NULL,
+    { { "X Exit",	"Exit this menu (returning to previous)",
+	      checkTrue,      dmenuExit, NULL, NULL, '<', '<', '<' },
+      { "All",		"Select all below",
+	      NULL,	      setDocAll, NULL, NULL, ' ', ' ', ' ' },
+      { " bn", 	"Bengali Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_BN },
+      { " da", 	"Danish Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_DA },
+      { " de", 	"German Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_DE },
+      { " el", 	"Greek Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_EL },
+      { " en", 	"English Documentation (recommended)",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_EN },
+      { " es", 	"Spanish Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_ES },
+      { " fr", 	"French Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_FR },
+      { " hu", 	"Hungarian Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_HU },
+      { " it", 	"Italian Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_IT },
+      { " ja", 	"Japanese Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_JA },
+      { " mn", 	"Mongolian Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_MN },
+      { " nl", 	"Dutch Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_NL },
+      { " pl", 	"Polish Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_PL },
+      { " pt", 	"Portuguese Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_PT },
+      { " ru", 	"Russian Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_RU },
+      { " sr", 	"Serbian Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_SR },
+      { " tr", 	"Turkish Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_TR },
+      { " zh_cn", 	"Simplified Chinese Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_ZH_CN },
+      { " zh_tw", 	"Traditional Chinese Documentation",
+	      dmenuFlagCheck, dmenuSetFlag, NULL, &DocDists, '[', 'X', ']', DIST_DOC_ZH_TW },
       { NULL } },
 };
 
@@ -383,10 +426,10 @@ DMenu MenuMousePort = {
     {
       { "1 BusMouse",	"PC-98x1 bus mouse (/dev/mse0)", 
 	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/mse0" },
-      { "2 COM1",	"Serial mouse on COM1 (/dev/cuad0)",
-	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuad0" },
-      { "3 COM2",	"Serial mouse on COM2 (/dev/cuad1)",
-	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuad1" },
+      { "2 COM1",	"Serial mouse on COM1 (/dev/cuau0)",
+	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuau0" },
+      { "3 COM2",	"Serial mouse on COM2 (/dev/cuau1)",
+	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuau1" },
       { NULL } },
 };
 #else
@@ -399,14 +442,14 @@ DMenu MenuMousePort = {
     NULL,
     { { "1 PS/2",	"PS/2 style mouse (/dev/psm0)", 
 	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/psm0" },
-      { "2 COM1",	"Serial mouse on COM1 (/dev/cuad0)",
-	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuad0" },
-      { "3 COM2",	"Serial mouse on COM2 (/dev/cuad1)",
-	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuad1" },
-      { "4 COM3",	"Serial mouse on COM3 (/dev/cuad2)",
-	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuad2" },
-      { "5 COM4",	"Serial mouse on COM4 (/dev/cuad3)", 
-	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuad3" },
+      { "2 COM1",	"Serial mouse on COM1 (/dev/cuau0)",
+	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuau0" },
+      { "3 COM2",	"Serial mouse on COM2 (/dev/cuau1)",
+	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuau1" },
+      { "4 COM3",	"Serial mouse on COM3 (/dev/cuau2)",
+	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuau2" },
+      { "5 COM4",	"Serial mouse on COM4 (/dev/cuau3)", 
+	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuau3" },
       { "6 BusMouse",	"Logitech, ATI or MS bus mouse (/dev/mse0)", 
 	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/mse0" },
       { NULL } },
@@ -457,6 +500,16 @@ DMenu MenuMediaFloppy = {
     NULL,
     NULL,
     { { NULL } },
+};
+
+DMenu MenuMediaUSB = {
+	DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
+	"Choose a USB drive",
+	"You have more than one USB drive. Please choose which drive\n"
+	"you would like to use.",
+	NULL,
+	NULL,
+	{ { NULL } },
 };
 
 DMenu MenuMediaDOS = {
@@ -625,9 +678,6 @@ DMenu MenuMediaFTP = {
       { " Greece #2",	"ftp2.gr.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp2.gr.freebsd.org" },
 
-      { "Hong Kong",	"ftp.hk.super.net", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.hk.super.net" },
-
       { "Hungary",     "ftp.hu.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp.hu.freebsd.org" },
 
@@ -641,7 +691,7 @@ DMenu MenuMediaFTP = {
       { " Ireland #3",	"ftp3.ie.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp3.ie.freebsd.org" },
 
-      { "Isreal",	"ftp.il.freebsd.org", NULL, dmenuSetVariable, NULL,
+      { "Israel",	"ftp.il.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp.il.freebsd.org" },
 
       { "Italy",	"ftp.it.freebsd.org", NULL, dmenuSetVariable, NULL,
@@ -743,6 +793,8 @@ DMenu MenuMediaFTP = {
 	VAR_FTP_PATH "=ftp://ftp2.se.freebsd.org" },
       { " Sweden #3",	"ftp3.se.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp3.se.freebsd.org" },
+      { " Sweden #4",	"ftp4.se.freebsd.org", NULL, dmenuSetVariable, NULL,
+	VAR_FTP_PATH "=ftp://ftp4.se.freebsd.org" },
       { " Sweden #5",	"ftp5.se.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp5.se.freebsd.org" },
 
@@ -767,7 +819,7 @@ DMenu MenuMediaFTP = {
       { "Turkey",	"ftp.tr.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp.tr.freebsd.org" },
       { " Turkey #2",	"ftp2.tr.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.tr.freebsd.org" },
+	VAR_FTP_PATH "=ftp://ftp2.tr.freebsd.org" },
 
       { "UK",		"ftp.uk.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp.uk.freebsd.org" },
@@ -829,30 +881,11 @@ DMenu MenuMediaFTP = {
       { NULL } }
 };
 
-DMenu MenuMediaTape = {
-    DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
-    "Choose a tape drive type",
-    "FreeBSD can be installed from tape drive, though this installation\n"
-    "method requires a certain amount of temporary storage in addition\n"
-    "to the space required by the distribution itself (tape drives make\n"
-    "poor random-access devices, so we extract _everything_ on the tape\n"
-    "in one pass).  If you have sufficient space for this, then you should\n"
-    "select one of the following tape devices detected on your system.",
-    NULL,
-    NULL,
-    { { NULL } },
-};
-
 DMenu MenuNetworkDevice = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "Network interface information required",
-    "If you are using PPP over a serial device, as opposed to a direct\n"
-    "ethernet connection, then you may first need to dial your Internet\n"
-    "Service Provider using the ppp utility we provide for that purpose.\n"
-    "If you're using SLIP over a serial device then the expectation is\n"
-    "that you have a HARDWIRED connection.\n\n"
-    "You can also install over a parallel port using a special \"laplink\"\n"
-    "cable to another machine running FreeBSD.",
+    "Please select the ethernet or PLIP device to configure.\n\n"
+    "",
     "Press F1 to read network configuration manual",
     "network_device",
     { { NULL } },
@@ -863,6 +896,17 @@ DMenu MenuKLD = {
     DMENU_NORMAL_TYPE,
     "KLD Menu",
     "Load a KLD from a floppy\n",
+    NULL,
+    NULL,
+    { { NULL } },
+};
+
+/* Prototype config file load menu */
+DMenu MenuConfig = {
+    DMENU_NORMAL_TYPE,
+    "Config Menu",
+    "Please select the device to load your configuration file from.\n"
+    "Note that a USB key will show up as daNs1.",
     NULL,
     NULL,
     { { NULL } },
@@ -887,7 +931,7 @@ DMenu MenuMedia = {
       { "6 NFS",		"Install over NFS",			NULL, mediaSetNFS },
       { "7 File System",	"Install from an existing filesystem",	NULL, mediaSetUFS },
       { "8 Floppy",		"Install from a floppy disk set",	NULL, mediaSetFloppy },
-      { "9 Tape",		"Install from SCSI or QIC tape",	NULL, mediaSetTape },
+      { "9 USB",		"Install from a USB drive",		NULL, mediaSetUSB },
       { "X Options",		"Go to the Options screen",		NULL, optionsEditor },
       { NULL } },
 };
@@ -907,25 +951,19 @@ DMenu MenuDistributions = {
     "distributions",
     { { "X Exit", "Exit this menu (returning to previous)",
 	checkTrue, dmenuExit, NULL, NULL, '<', '<', '<' },
-      { "All",			"All system sources, binaries and X Window System",
+      { "All",			"All system sources and binaries",
 	checkDistEverything,	distSetEverything, NULL, NULL, ' ', ' ', ' ' },
       { "Reset",		"Reset selected distribution list to nothing",
 	NULL,			distReset, NULL, NULL, ' ', ' ', ' ' },
       { "4 Developer",		"Full sources, binaries and doc but no games", 
 	checkDistDeveloper,	distSetDeveloper },
-      { "5 X-Developer",	"Same as above + X Window System",
-	checkDistXDeveloper,	distSetXDeveloper },
-      { "6 Kern-Developer",	"Full binaries and doc, kernel sources only",
+      { "5 Kern-Developer",	"Full binaries and doc, kernel sources only",
 	checkDistKernDeveloper, distSetKernDeveloper },
-      { "7 X-Kern-Developer",	"Same as above + X Window System",
-	checkDistXKernDeveloper, distSetXKernDeveloper },
-      { "8 User",		"Average user - binaries and doc only",
+      { "6 User",		"Average user - binaries and doc only",
 	checkDistUser,		distSetUser },
-      { "9 X-User",		"Same as above + X Window System",
-	checkDistXUser,		distSetXUser },
-      { "A Minimal",		"The smallest configuration possible",
+      { "7 Minimal",		"The smallest configuration possible",
 	checkDistMinimum,	distSetMinimum },
-      { "B Custom",		"Specify your own distribution set",
+      { "8 Custom",		"Specify your own distribution set",
 	NULL,			dmenuSubmenu, NULL, &MenuSubDistributions, '>', '>', '>' },
       { NULL } },
 };
@@ -939,7 +977,7 @@ DMenu MenuSubDistributions = {
     NULL,
     { { "X Exit", "Exit this menu (returning to previous)",
 	checkTrue, dmenuExit, NULL, NULL, '<', '<', '<' },
-      { "All",		"All system sources, binaries and X Window System",
+      { "All",		"All system sources and binaries",
 	NULL, distSetEverything, NULL, NULL, ' ', ' ', ' ' },
       { "Reset",	"Reset all of the below",
 	NULL, distReset, NULL, NULL, ' ', ' ', ' ' },
@@ -949,13 +987,15 @@ DMenu MenuSubDistributions = {
 	kernelFlagCheck,distSetKernel },
       { " dict",	"Spelling checker dictionary files",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_DICT },
-      { " doc",		"Miscellaneous FreeBSD online docs",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_DOC },
+      { " doc",		"FreeBSD Documentation set",
+	docFlagCheck,	distSetDoc },
+      { " docuser",		"Miscellaneous userland docs",
+	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_DOCUSERLAND },
       { " games",	"Games (non-commercial)",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_GAMES },
       { " info",	"GNU info files",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_INFO },
-#ifdef __amd64__
+#if defined(__amd64__) || defined(__powerpc64__)
       { " lib32",	"32-bit runtime compatibility libraries",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_LIB32 },
 #endif
@@ -971,8 +1011,6 @@ DMenu MenuSubDistributions = {
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_PORTS },
       { " local",	"Local additions collection",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_LOCAL},
-      { " X.Org",	"The X.Org distribution",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_XORG },
       { NULL } },
 };
 
@@ -990,10 +1028,6 @@ DMenu MenuKernelDistributions = {
 	NULL,		clearKernel, NULL, NULL, ' ', ' ', ' ' },
       { " GENERIC",	"GENERIC kernel configuration",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &KernelDists, '[', 'X', ']', DIST_KERNEL_GENERIC },
-#ifdef WITH_SMP
-      { " SMP",		"GENERIC symmetric multiprocessor kernel configuration",
-	dmenuFlagCheck,	dmenuSetFlag,	NULL, &KernelDists, '[', 'X', ']', DIST_KERNEL_SMP },
-#endif
       { NULL } },
 };
 
@@ -1014,8 +1048,6 @@ DMenu MenuSrcDistributions = {
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &SrcDists, '[', 'X', ']', DIST_SRC_BASE },
       { " cddl",	"/usr/src/cddl (software from Sun)",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &SrcDists, '[', 'X', ']', DIST_SRC_CDDL },
-      { " compat",	"/usr/src/compat (compatibility software)",
-	dmenuFlagCheck,	dmenuSetFlag,	NULL, &SrcDists, '[', 'X', ']', DIST_SRC_COMPAT },
       { " contrib",	"/usr/src/contrib (contributed software)",
 	dmenuFlagCheck,	dmenuSetFlag,	NULL, &SrcDists, '[', 'X', ']', DIST_SRC_CONTRIB },
       { " crypto",	"/usr/src/crypto (contrib encryption sources)",
@@ -1135,22 +1167,21 @@ DMenu MenuIPLType = {
 DMenu MenuMBRType = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "overwrite me",		/* will be disk specific label */
-    "FreeBSD comes with a boot selector that allows you to easily\n"
+    "FreeBSD comes with a boot manager that allows you to easily\n"
     "select between FreeBSD and any other operating systems on your machine\n"
     "at boot time.  If you have more than one drive and want to boot\n"
-    "from the second one, the boot selector will also make it possible\n"
+    "from the second one, the boot manager will also make it possible\n"
     "to do so (limitations in the PC BIOS usually prevent this otherwise).\n"
-    "If you do not want a boot selector, or wish to replace an existing\n"
-    "one, select \"standard\".  If you would prefer your Master Boot\n"
-    "Record to remain untouched then select \"None\".\n\n"
-    "  NOTE:  PC-DOS users will almost certainly require \"None\"!",
-    "Press F1 to read about drive setup",
+    "If you have other operating systems installed and would like a choice when\n"
+    "booting, choose \"BootMgr\". If you would prefer to keep your existing\n"
+    "boot manager, select \"None\".\n\n",
+    "",    
     "drives",
-    { { "BootMgr",	"Install the FreeBSD Boot Manager",
-	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr },
-      { "Standard",	"Install a standard MBR (no boot manager)",
+    { { "Standard",	"Install a standard MBR (non-interactive boot manager)",
 	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr, '(', '*', ')', 1 },
-      { "None",		"Leave the Master Boot Record untouched",
+      { "BootMgr",	"Install the FreeBSD Boot Manager",
+	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr, '(', '*', ')', 0 },
+      { "None",		"Do not install a boot manager",
 	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr, '(', '*', ')', 2 },
       { NULL } },
 };
@@ -1171,15 +1202,17 @@ DMenu MenuConfigure = {
 	NULL,	dmenuExit },
       { " Distributions", "Install additional distribution sets",
 	NULL, distExtractAll },
+      { " Documentation installation", "Install FreeBSD Documentation set",
+	NULL, distSetDocMenu },
       { " Packages",	"Install pre-packaged software for FreeBSD",
 	NULL, configPackages },
       { " Root Password", "Set the system manager's password",
 	NULL,	dmenuSystemCommand, NULL, "passwd root" },
 #ifdef WITH_SLICES
-      { " Fdisk",	"The disk Slice (PC-style partition) Editor",
+      { " Fdisk",	"The disk slice (PC-style partition) editor",
 	NULL, diskPartitionEditor },
 #endif
-      { " Label",	"The disk Label editor",
+      { " Label",	"The disk label editor",
 	NULL, diskLabelEditor },
       { " User Management",	"Add user and group information",
 	NULL, dmenuSubmenu, NULL, &MenuUsermgmt },
@@ -1226,14 +1259,6 @@ DMenu MenuStartup = {
       { " APM",		"Auto-power management services (typically laptops)",
 	dmenuVarCheck,	dmenuToggleVariable, NULL, "apm_enable=YES" },
 #endif
-#ifdef PCCARD_ARCH
-      { " pccard",	"Enable PCCARD (AKA PCMCIA) services (also laptops)",
-	dmenuVarCheck, dmenuToggleVariable, NULL, "pccard_enable=YES" },
-      { " pccard mem",	"Set PCCARD memory address (if enabled)",
-	dmenuVarCheck, dmenuISetVariable, NULL, "pccard_mem" },
-      { " pccard ifconfig",	"List of PCCARD ethernet devices to configure",
-	dmenuVarCheck, dmenuISetVariable, NULL, "pccard_ifconfig" },
-#endif
       { " ",		" -- ", NULL,	NULL, NULL, NULL, ' ', ' ', ' ' },
       { " Startup dirs",	"Set the list of dirs to look for startup scripts",
 	dmenuVarCheck, dmenuISetVariable, NULL, "local_startup" },
@@ -1252,22 +1277,12 @@ DMenu MenuStartup = {
 	dmenuVarCheck, dmenuToggleVariable, NULL, "accounting_enable=YES" },
       { " lpd",		"This host has a printer and wants to run lpd.",
 	dmenuVarCheck, dmenuToggleVariable, NULL, "lpd_enable=YES" },
-#ifdef WITH_LINUX
-      { " Linux",	"This host wants to be able to run Linux binaries.",
-	dmenuVarCheck, configLinux, NULL, VAR_LINUX_ENABLE "=YES" },
-#endif
 #ifdef __i386__
       { " SCO",		"This host wants to be able to run IBCS2 binaries.",
 	dmenuVarCheck, dmenuToggleVariable, NULL, "ibcs2_enable=YES" },
       { " SVR4",	"This host wants to be able to run SVR4 binaries.",
 	dmenuVarCheck, dmenuToggleVariable, NULL, "svr4_enable=YES" },
 #endif
-#ifdef __alpha__
-      { " OSF/1",	"This host wants to be able to run DEC OSF/1 binaries.",
-	dmenuVarCheck, configOSF1, NULL, VAR_OSF1_ENABLE "=YES" },
-#endif
-      { " quotas",	"This host wishes to check quotas on startup.",
-	dmenuVarCheck, dmenuToggleVariable, NULL, "check_quotas=YES" },
       { NULL } },
 };
 
@@ -1300,7 +1315,7 @@ DMenu MenuNetworking = {
 	dmenuVarCheck,	dmenuToggleVariable, NULL, "nfs_client_enable=YES" },
       { " NFS server",	"This machine will be an NFS server",
 	dmenuVarCheck,	configNFSServer, NULL, "nfs_server_enable=YES" },
-      { " Ntpdate",	"Select a clock-synchronization server",
+      { " Ntpdate",	"Select a clock synchronization server",
 	dmenuVarCheck,	dmenuSubmenu, NULL, &MenuNTP, '[', 'X', ']',
 	(uintptr_t)"ntpdate_enable=YES" },
       { " PCNFSD",	"Run authentication server for clients with PC-NFS.",
@@ -1359,456 +1374,456 @@ DMenu MenuNTP = {
     NULL,
     { { "None",		        "No NTP server",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=NO,ntpdate_flags=none" },
+	"ntpdate_enable=NO,ntpdate_hosts=none" },
       { "Other",		"Select a site not on this list",
 	dmenuVarsCheck, configNTP, NULL, NULL },
       { "Worldwide",		"pool.ntp.org",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=pool.ntp.org" },
       { "Asia",		"asia.pool.ntp.org",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=asia.pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=asia.pool.ntp.org" },
       { "Europe",		"europe.pool.ntp.org",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=europe.pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=europe.pool.ntp.org" },
       { "Oceania",		"oceania.pool.ntp.org",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=oceania.pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=oceania.pool.ntp.org" },
       { "North America",	"north-america.pool.ntp.org",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=north-america.pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=north-america.pool.ntp.org" },
       { "Argentina",		"tick.nap.com.ar",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=tick.nap.com.ar" },
+	"ntpdate_enable=YES,ntpdate_hosts=tick.nap.com.ar" },
       { "Argentina #2",		"time.sinectis.com.ar",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=time.sinectis.com.ar" },
+	"ntpdate_enable=YES,ntpdate_hosts=time.sinectis.com.ar" },
       { "Argentina #3",		"tock.nap.com.ar",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=tock.nap.com.ar" },
+	"ntpdate_enable=YES,ntpdate_hosts=tock.nap.com.ar" },
       { "Australia",		"au.pool.ntp.org",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=au.pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=au.pool.ntp.org" },
       { "Australia #2",		"augean.eleceng.adelaide.edu.au",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=augean.eleceng.adelaide.edu.au" },
+	"ntpdate_enable=YES,ntpdate_hosts=augean.eleceng.adelaide.edu.au" },
       { "Australia #3",		"ntp.adelaide.edu.au",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp.adelaide.edu.au" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.adelaide.edu.au" },
       { "Australia #4",		"ntp.saard.net",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp.saard.net" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.saard.net" },
       { "Australia #5",		"time.deakin.edu.au",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=time.deakin.edu.au" },
+	"ntpdate_enable=YES,ntpdate_hosts=time.deakin.edu.au" },
       { "Belgium",		"ntp1.belbone.be",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp1.belbone.be" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp1.belbone.be" },
       { "Belgium #2",		"ntp2.belbone.be",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp2.belbone.be" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp2.belbone.be" },
       { "Brazil",		"a.ntp.br",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=a.ntp.br" },
+	"ntpdate_enable=YES,ntpdate_hosts=a.ntp.br" },
       { "Brazil #2",		"b.ntp.br",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=b.ntp.br" },
+	"ntpdate_enable=YES,ntpdate_hosts=b.ntp.br" },
       { "Brazil #3",		"c.ntp.br",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=c.ntp.br" },
+	"ntpdate_enable=YES,ntpdate_hosts=c.ntp.br" },
       { "Brazil #4",		"ntp.cais.rnp.br",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.cais.rnp.br" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.cais.rnp.br" },
       { "Brazil #5",		"ntp1.pucpr.br",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp1.pucpr.br" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp1.pucpr.br" },
       { "Canada",		"ca.pool.ntp.org",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ca.pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=ca.pool.ntp.org" },
       { "Canada #2",		"ntp.cpsc.ucalgary.ca",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp.cpsc.ucalgary.ca" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.cpsc.ucalgary.ca" },
       { "Canada #3",		"ntp1.cmc.ec.gc.ca",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp1.cmc.ec.gc.ca" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp1.cmc.ec.gc.ca" },
       { "Canada #4",		"ntp2.cmc.ec.gc.ca",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp2.cmc.ec.gc.ca" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp2.cmc.ec.gc.ca" },
       { "Canada #5",		"tick.utoronto.ca",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=tick.utoronto.ca" },
+	"ntpdate_enable=YES,ntpdate_hosts=tick.utoronto.ca" },
       { "Canada #6",		"time.chu.nrc.ca",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=time.chu.nrc.ca" },
+	"ntpdate_enable=YES,ntpdate_hosts=time.chu.nrc.ca" },
       { "Canada #7",		"time.nrc.ca",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=time.nrc.ca" },
+	"ntpdate_enable=YES,ntpdate_hosts=time.nrc.ca" },
       { "Canada #8",		"timelord.uregina.ca",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=timelord.uregina.ca" },
+	"ntpdate_enable=YES,ntpdate_hosts=timelord.uregina.ca" },
       { "Canada #9",		"tock.utoronto.ca",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=tock.utoronto.ca" },
+	"ntpdate_enable=YES,ntpdate_hosts=tock.utoronto.ca" },
       { "Czech",		"ntp.karpo.cz",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.karpo.cz" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.karpo.cz" },
       { "Czech #2",		"ntp.cgi.cz",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.cgi.cz" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.cgi.cz" },
       { "Denmark",		"clock.netcetera.dk",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=clock.netcetera.dk" },
+	"ntpdate_enable=YES,ntpdate_hosts=clock.netcetera.dk" },
       { "Denmark",		"clock2.netcetera.dk",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=clock2.netcetera.dk" },
+	"ntpdate_enable=YES,ntpdate_hosts=clock2.netcetera.dk" },
       { "Spain",		"slug.ctv.es",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=slug.ctv.es" },
+	"ntpdate_enable=YES,ntpdate_hosts=slug.ctv.es" },
       { "Finland",		"tick.keso.fi",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=tick.keso.fi" },
+	"ntpdate_enable=YES,ntpdate_hosts=tick.keso.fi" },
       { "Finland #2",		"tock.keso.fi",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=tock.keso.fi" },
+	"ntpdate_enable=YES,ntpdate_hosts=tock.keso.fi" },
       { "France",		"ntp.obspm.fr",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp.obspm.fr" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.obspm.fr" },
       { "France #2",		"ntp.univ-lyon1.fr",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.univ-lyon1.fr" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.univ-lyon1.fr" },
       { "France #3",		"ntp.via.ecp.fr",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.via.ecp.fr" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.via.ecp.fr" },
       { "Croatia",		"zg1.ntp.carnet.hr",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=zg1.ntp.carnet.hr" },
+	"ntpdate_enable=YES,ntpdate_hosts=zg1.ntp.carnet.hr" },
       { "Croatia #2",		"zg2.ntp.carnet.hr",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=zg2.ntp.carnet.hr" },
+	"ntpdate_enable=YES,ntpdate_hosts=zg2.ntp.carnet.hr" },
       { "Croatia #3",		"st.ntp.carnet.hr",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=st.ntp.carnet.hr" },
+	"ntpdate_enable=YES,ntpdate_hosts=st.ntp.carnet.hr" },
       { "Croatia #4",		"ri.ntp.carnet.hr",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ri.ntp.carnet.hr" },
+	"ntpdate_enable=YES,ntpdate_hosts=ri.ntp.carnet.hr" },
       { "Croatia #5",		"os.ntp.carnet.hr",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=os.ntp.carnet.hr" },
+	"ntpdate_enable=YES,ntpdate_hosts=os.ntp.carnet.hr" },
       { "Hungary",		"time.kfki.hu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=time.kfki.hu" },
+	"ntpdate_enable=YES,ntpdate_hosts=time.kfki.hu" },
       { "Indonesia",		"ntp.kim.lipi.go.id",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.kim.lipi.go.id" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.kim.lipi.go.id" },
       { "Ireland",		"ntp.maths.tcd.ie",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.maths.tcd.ie" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.maths.tcd.ie" },
       { "Italy",		"it.pool.ntp.org",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=it.pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=it.pool.ntp.org" },
       { "Japan",		"ntp.jst.mfeed.ad.jp",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.jst.mfeed.ad.jp" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.jst.mfeed.ad.jp" },
       { "Japan IPv6",		"ntp1.v6.mfeed.ad.jp",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp1.v6.mfeed.ad.jp" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp1.v6.mfeed.ad.jp" },
       { "Korea",		"time.nuri.net",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=time.nuri.net" },
+	"ntpdate_enable=YES,ntpdate_hosts=time.nuri.net" },
       { "Mexico",		"mx.pool.ntp.org",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=mx.pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=mx.pool.ntp.org" },
       { "Netherlands",		"ntp0.nl.net",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp0.nl.net" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp0.nl.net" },
       { "Netherlands #2",	"ntp1.nl.net",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp1.nl.net" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp1.nl.net" },
       { "Netherlands #3",	"ntp2.nl.net",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp2.nl.net" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp2.nl.net" },
       { "Norway",		"fartein.ifi.uio.no",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=fartein.ifi.uio.no" },
+	"ntpdate_enable=YES,ntpdate_hosts=fartein.ifi.uio.no" },
       { "Norway #2",		"time.alcanet.no",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=time.alcanet.no" },
+	"ntpdate_enable=YES,ntpdate_hosts=time.alcanet.no" },
       { "New Zealand",		"ntp.massey.ac.nz",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.massey.ac.nz" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.massey.ac.nz" },
       { "New Zealand #2",	"ntp.public.otago.ac.nz",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.public.otago.ac.nz" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.public.otago.ac.nz" },
       { "New Zealand #3",	"tk1.ihug.co.nz",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=tk1.ihug.co.nz" },
+	"ntpdate_enable=YES,ntpdate_hosts=tk1.ihug.co.nz" },
       { "New Zealand #4",	"ntp.waikato.ac.nz",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.waikato.ac.nz" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.waikato.ac.nz" },
       { "Poland",		"info.cyf-kr.edu.pl",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=info.cyf-kr.edu.pl" },
+	"ntpdate_enable=YES,ntpdate_hosts=info.cyf-kr.edu.pl" },
       { "Romania",		"ticks.roedu.net",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ticks.roedu.net" },
+	"ntpdate_enable=YES,ntpdate_hosts=ticks.roedu.net" },
       { "Russia",		"ru.pool.ntp.org",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ru.pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=ru.pool.ntp.org" },
       { "Russia #2",		"ntp.psn.ru",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.psn.ru" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.psn.ru" },
       { "Sweden",		"se.pool.ntp.org",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=se.pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=se.pool.ntp.org" },
       { "Sweden #2",		"ntp.lth.se",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp.lth.se" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.lth.se" },
       { "Sweden #3",		"ntp1.sp.se",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp1.sp.se" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp1.sp.se" },
       { "Sweden #4",		"ntp2.sp.se",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp2.sp.se" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp2.sp.se" },
       { "Sweden #5",		"ntp.kth.se",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp.kth.se" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.kth.se" },
       { "Singapore",		"sg.pool.ntp.org",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=sg.pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=sg.pool.ntp.org" },
       { "Slovenia",		"si.pool.ntp.org",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=si.pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=si.pool.ntp.org" },
       { "Slovenia #2",		"sizif.mf.uni-lj.si",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=sizif.mf.uni-lj.si" },
+	"ntpdate_enable=YES,ntpdate_hosts=sizif.mf.uni-lj.si" },
       { "Slovenia #3",		"ntp1.arnes.si",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp1.arnes.si" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp1.arnes.si" },
       { "Slovenia #4",		"ntp2.arnes.si",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp2.arnes.si" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp2.arnes.si" },
       { "Slovenia #5",		"time.ijs.si",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=time.ijs.si" },
+	"ntpdate_enable=YES,ntpdate_hosts=time.ijs.si" },
       { "Scotland",		"ntp.cs.strath.ac.uk",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.cs.strath.ac.uk" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.cs.strath.ac.uk" },
       { "Taiwan",              "time.stdtime.gov.tw",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=time.stdtime.gov.tw" },
+	"ntpdate_enable=YES,ntpdate_hosts=time.stdtime.gov.tw" },
       { "Taiwan #2",           "clock.stdtime.gov.tw",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=clock.stdtime.gov.tw" },
+	"ntpdate_enable=YES,ntpdate_hosts=clock.stdtime.gov.tw" },
       { "Taiwan #3",           "tick.stdtime.gov.tw",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=tick.stdtime.gov.tw" },
+	"ntpdate_enable=YES,ntpdate_hosts=tick.stdtime.gov.tw" },
       { "Taiwan #4",           "tock.stdtime.gov.tw",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=tock.stdtime.gov.tw" },
+	"ntpdate_enable=YES,ntpdate_hosts=tock.stdtime.gov.tw" },
       { "Taiwan #5",           "watch.stdtime.gov.tw",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=watch.stdtime.gov.tw" },
+	"ntpdate_enable=YES,ntpdate_hosts=watch.stdtime.gov.tw" },
       { "United Kingdom",	"uk.pool.ntp.org",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=uk.pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=uk.pool.ntp.org" },
       { "United Kingdom #2",	"ntp.exnet.com",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.exnet.com" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.exnet.com" },
       { "United Kingdom #3",	"ntp0.uk.uu.net",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp0.uk.uu.net" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp0.uk.uu.net" },
       { "United Kingdom #4",	"ntp1.uk.uu.net",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp1.uk.uu.net" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp1.uk.uu.net" },
       { "United Kingdom #5",	"ntp2.uk.uu.net",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp2.uk.uu.net" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp2.uk.uu.net" },
       { "United Kingdom #6",	"ntp2a.mcc.ac.uk",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp2a.mcc.ac.uk" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp2a.mcc.ac.uk" },
       { "United Kingdom #7",	"ntp2b.mcc.ac.uk",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp2b.mcc.ac.uk" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp2b.mcc.ac.uk" },
       { "United Kingdom #8",	"ntp2c.mcc.ac.uk",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp2c.mcc.ac.uk" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp2c.mcc.ac.uk" },
       { "United Kingdom #9",	"ntp2d.mcc.ac.uk",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp2d.mcc.ac.uk" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp2d.mcc.ac.uk" },
       { "U.S.",	"us.pool.ntp.org",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=us.pool.ntp.org" },
+	"ntpdate_enable=YES,ntpdate_hosts=us.pool.ntp.org" },
       { "U.S. AR",	"sushi.lyon.edu",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=sushi.compsci.lyon.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=sushi.compsci.lyon.edu" },
       { "U.S. AZ",	"ntp.drydog.com",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp.drydog.com" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.drydog.com" },
       { "U.S. CA",	"ntp.ucsd.edu",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp.ucsd.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.ucsd.edu" },
       { "U.S. CA #2",	"ntp1.mainecoon.com",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp1.mainecoon.com" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp1.mainecoon.com" },
       { "U.S. CA #3",	"ntp2.mainecoon.com",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp2.mainecoon.com" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp2.mainecoon.com" },
       { "U.S. CA #4",	"reloj.kjsl.com",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=reloj.kjsl.com" },
+	"ntpdate_enable=YES,ntpdate_hosts=reloj.kjsl.com" },
       { "U.S. CA #5",	"time.five-ten-sg.com",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=time.five-ten-sg.com" },
+	"ntpdate_enable=YES,ntpdate_hosts=time.five-ten-sg.com" },
       { "U.S. DE",	"louie.udel.edu",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=louie.udel.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=louie.udel.edu" },
       { "U.S. GA",		"ntp.shorty.com",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=ntp.shorty.com" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.shorty.com" },
       { "U.S. GA #2",		"rolex.usg.edu",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=rolex.usg.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=rolex.usg.edu" },
       { "U.S. GA #3",		"timex.usg.edu",
 	dmenuVarsCheck,	dmenuSetVariables, NULL, 
-	"ntpdate_enable=YES,ntpdate_flags=timex.usg.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=timex.usg.edu" },
       { "U.S. IL",	"ntp-0.cso.uiuc.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp-0.cso.uiuc.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp-0.cso.uiuc.edu" },
       { "U.S. IL #2",	"ntp-1.cso.uiuc.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp-1.cso.uiuc.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp-1.cso.uiuc.edu" },
       { "U.S. IL #3",	"ntp-1.mcs.anl.gov",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp-1.mcs.anl.gov" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp-1.mcs.anl.gov" },
       { "U.S. IL #4",	"ntp-2.cso.uiuc.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp-2.cso.uiuc.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp-2.cso.uiuc.edu" },
       { "U.S. IL #5",	"ntp-2.mcs.anl.gov",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp-2.mcs.anl.gov" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp-2.mcs.anl.gov" },
       { "U.S. IN",	"gilbreth.ecn.purdue.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=gilbreth.ecn.purdue.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=gilbreth.ecn.purdue.edu" },
       { "U.S. IN #2",	"harbor.ecn.purdue.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=harbor.ecn.purdue.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=harbor.ecn.purdue.edu" },
       { "U.S. IN #3",	"molecule.ecn.purdue.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=molecule.ecn.purdue.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=molecule.ecn.purdue.edu" },
       { "U.S. KS",	"ntp1.kansas.net",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp1.kansas.net" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp1.kansas.net" },
       { "U.S. KS #2",	"ntp2.kansas.net",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp2.kansas.net" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp2.kansas.net" },
       { "U.S. MA",	"ntp.ourconcord.net",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.ourconcord.net" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.ourconcord.net" },
       { "U.S. MA #2",	"timeserver.cs.umb.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=timeserver.cs.umb.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=timeserver.cs.umb.edu" },
       { "U.S. MN",	"ns.nts.umn.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ns.nts.umn.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=ns.nts.umn.edu" },
       { "U.S. MN #2",	"nss.nts.umn.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=nss.nts.umn.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=nss.nts.umn.edu" },
       { "U.S. MO",	"time-ext.missouri.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=time-ext.missouri.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=time-ext.missouri.edu" },
       { "U.S. MT",	"chronos1.umt.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=chronos1.umt.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=chronos1.umt.edu" },
       { "U.S. MT #2",	"chronos2.umt.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=chronos2.umt.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=chronos2.umt.edu" },
       { "U.S. MT #3",	"chronos3.umt.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=chronos3.umt.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=chronos3.umt.edu" },
       { "U.S. NC",	"clock1.unc.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=clock1.unc.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=clock1.unc.edu" },
       { "U.S. NV",	"cuckoo.nevada.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=cuckoo.nevada.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=cuckoo.nevada.edu" },
       { "U.S. NV #2",	"tick.cs.unlv.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=tick.cs.unlv.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=tick.cs.unlv.edu" },
       { "U.S. NV #3",	"tock.cs.unlv.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=tock.cs.unlv.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=tock.cs.unlv.edu" },
       { "U.S. NY",	"ntp0.cornell.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp0.cornell.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp0.cornell.edu" },
       { "U.S. NY #2",	"sundial.columbia.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=sundial.columbia.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=sundial.columbia.edu" },
       { "U.S. NY #3",	"timex.cs.columbia.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=timex.cs.columbia.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=timex.cs.columbia.edu" },
       { "U.S. PA",	"clock-1.cs.cmu.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=clock-1.cs.cmu.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=clock-1.cs.cmu.edu" },
       { "U.S. PA #2",	"clock-2.cs.cmu.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=clock-2.cs.cmu.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=clock-2.cs.cmu.edu" },
       { "U.S. PA #3",	"clock.psu.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=clock.psu.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=clock.psu.edu" },
       { "U.S. PA #4",	"fuzz.psc.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=fuzz.psc.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=fuzz.psc.edu" },
       { "U.S. PA #5",	"ntp-1.ece.cmu.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp-1.ece.cmu.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp-1.ece.cmu.edu" },
       { "U.S. PA #6",	"ntp-2.ece.cmu.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp-2.ece.cmu.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp-2.ece.cmu.edu" },
       { "U.S. TX",	"ntp.fnbhs.com",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.fnbhs.com" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.fnbhs.com" },
       { "U.S. TX #2",	"ntp.tmc.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.tmc.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.tmc.edu" },
       { "U.S. TX #3",	"ntp5.tamu.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp5.tamu.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp5.tamu.edu" },
       { "U.S. TX #4",	"tick.greyware.com",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=tick.greyware.com" },
+	"ntpdate_enable=YES,ntpdate_hosts=tick.greyware.com" },
       { "U.S. TX #5",	"tock.greyware.com",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=tock.greyware.com" },
+	"ntpdate_enable=YES,ntpdate_hosts=tock.greyware.com" },
       { "U.S. VA",	"ntp-1.vt.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp-1.vt.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp-1.vt.edu" },
       { "U.S. VA #2",	"ntp-2.vt.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp-2.vt.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp-2.vt.edu" },
       { "U.S. VA #3",	"ntp.cmr.gov",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.cmr.gov" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.cmr.gov" },
       { "U.S. VT",	"ntp0.state.vt.us",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp0.state.vt.us" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp0.state.vt.us" },
       { "U.S. VT #2",	"ntp1.state.vt.us",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp1.state.vt.us" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp1.state.vt.us" },
       { "U.S. VT #3",	"ntp2.state.vt.us",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp2.state.vt.us" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp2.state.vt.us" },
       { "U.S. WA",	"ntp.tcp-udp.net",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.tcp-udp.net" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.tcp-udp.net" },
       { "U.S. WI",	"ntp1.cs.wisc.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp1.cs.wisc.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp1.cs.wisc.edu" },
       { "U.S. WI #2",	"ntp3.cs.wisc.edu",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp3.cs.wisc.edu" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp3.cs.wisc.edu" },
       { "South Africa",	"ntp.cs.unp.ac.za",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.cs.unp.ac.za" },
+	"ntpdate_enable=YES,ntpdate_hosts=ntp.cs.unp.ac.za" },
       { NULL } },
 };
 
@@ -1816,9 +1831,8 @@ DMenu MenuNTP = {
 DMenu MenuSyscons = {
     DMENU_NORMAL_TYPE,
     "System Console Configuration",
-    "The default system console driver for FreeBSD (syscons) has a\n"
-    "number of configuration options which may be set according to\n"
-    "your preference.\n\n"
+    "The system console driver for FreeBSD has a number of configuration\n"
+    "options which may be set according to your preference.\n\n"
     "When you are done setting configuration options, select Cancel.",
     "Configure your system console settings",
     NULL,
@@ -1842,12 +1856,9 @@ DMenu MenuSyscons = {
 DMenu MenuSysconsKeymap = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "System Console Keymap",
-    "The default system console driver for FreeBSD (syscons) defaults\n"
-    "to a standard \"PC-98x1\" keyboard map.  Users may wish to choose\n"
-    "one of the other keymaps below.\n"
-    "Note that sysinstall itself only uses the part of the keyboard map\n"
-    "which is required to generate the ANSI character subset, but your\n"
-    "choice of keymap will also be saved for later (fuller) use.",
+    "The system console driver for FreeBSD defaults to a standard\n"
+    "\"PC-98x1\" keyboard map.  Users may wish to choose one of the\n"
+    "other keymaps below.",
     "Choose a keyboard map",
     NULL,
     { { "Japanese PC-98x1",		"Japanese PC-98x1 keymap",  dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=jp.pc98" },
@@ -1858,13 +1869,9 @@ DMenu MenuSysconsKeymap = {
 DMenu MenuSysconsKeymap = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "System Console Keymap",
-    "The default system console driver for FreeBSD (syscons) defaults\n"
-    "to a standard \"American\" keyboard map.  Users in other countries\n"
-    "(or with different keyboard preferences) may wish to choose one of\n"
-    "the other keymaps below.\n"
-    "Note that sysinstall itself only uses the part of the keyboard map\n"
-    "which is required to generate the ANSI character subset, but your\n"
-    "choice of keymap will also be saved for later (fuller) use.",
+    "The system console driver for FreeBSD defaults to a standard\n"
+    "\"US\" keyboard map.  Users may wish to choose one of the\n"
+    "other keymaps below.",
     "Choose a keyboard map",
     NULL,
     { { "Belgian",	"Belgian ISO keymap",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=be.iso" },
@@ -1885,6 +1892,7 @@ DMenu MenuSysconsKeymap = {
       { " Finnish ISO",  "Finnish ISO keymap",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=finnish.iso" },
       { " French ISO (accent)", "French ISO keymap (accent keys)",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=fr.iso.acc" },
       { " French ISO",	"French ISO keymap",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=fr.iso" },
+      { " French ISO/Macbook",	"French ISO keymap on macbook",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=fr.macbook.acc" },
       { "German CP850",	"German Code Page 850 keymap",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=german.cp850"	},
       { " German ISO",	"German ISO keymap",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=german.iso" },
       { " Greek 101",	"Greek ISO keymap (101 keys)",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=gr.us101.acc" },
@@ -1941,7 +1949,7 @@ DMenu MenuSysconsKeyrate = {
       { "Normal", "\"Normal\" keyboard repeat rate",	dmenuVarCheck,	dmenuSetVariable, NULL, "keyrate=normal" },
       { "Fast",	"Fast keyboard repeat rate",	dmenuVarCheck,	dmenuSetVariable, NULL, "keyrate=fast" },
       { "Default", "Use default keyboard repeat rate",	dmenuVarCheck,	dmenuSetVariable, NULL, "keyrate=NO" },
-      { NULL } },
+      { NULL } }
 };
 
 DMenu MenuSysconsSaver = {
@@ -1955,29 +1963,33 @@ DMenu MenuSysconsSaver = {
     NULL,
     { { "1 Blank",	"Simply blank the screen",
 	dmenuVarCheck, configSaver, NULL, "saver=blank" },
-      { "2 Daemon",	"\"BSD Daemon\" animated screen saver (text)",
+      { "2 Beastie",	"\"BSD Daemon\" animated screen saver (graphics)",
+	dmenuVarCheck, configSaver, NULL, "saver=beastie" },
+      { "3 Daemon",	"\"BSD Daemon\" animated screen saver (text)",
 	dmenuVarCheck, configSaver, NULL, "saver=daemon" },
-      { "3 Fade",	"Fade out effect screen saver",
-	dmenuVarCheck, configSaver, NULL, "saver=fade" },
-      { "4 Fire",	"Flames effect screen saver",
-	dmenuVarCheck, configSaver, NULL, "saver=fire" },
-      { "5 Green",	"\"Green\" power saving mode (if supported by monitor)",
-	dmenuVarCheck, configSaver, NULL, "saver=green" },
-      { "6 Logo",	"\"BSD Daemon\" animated screen saver (graphics)",
-	dmenuVarCheck, configSaver, NULL, "saver=logo" },
-      { "7 Rain",	"Rain drops screen saver",
-	dmenuVarCheck, configSaver, NULL, "saver=rain" },
-      { "8 Snake",	"Draw a FreeBSD \"snake\" on your screen",
-	dmenuVarCheck, configSaver, NULL, "saver=snake" },
-      { "9 Star",	"A \"twinkling stars\" effect",
-	dmenuVarCheck, configSaver, NULL, "saver=star" },
-      { "Warp",	"A \"stars warping\" effect",
-	dmenuVarCheck, configSaver, NULL, "saver=warp" },
-      { "Dragon", "Dragon screensaver (graphics)",
+      { "4 Dragon",	"Dragon screensaver (graphics)",
 	dmenuVarCheck, configSaver, NULL, "saver=dragon" },
+      { "5 Fade",	"Fade out effect screen saver",
+	dmenuVarCheck, configSaver, NULL, "saver=fade" },
+      { "6 Fire",	"Flames effect screen saver",
+	dmenuVarCheck, configSaver, NULL, "saver=fire" },
+      { "7 Green",	"\"Green\" power saving mode (if supported by monitor)",
+	dmenuVarCheck, configSaver, NULL, "saver=green" },
+      { "8 Logo",	"FreeBSD \"logo\" animated screen saver (graphics)",
+	dmenuVarCheck, configSaver, NULL, "saver=logo" },
+      { "9 Rain",	"Rain drops screen saver",
+	dmenuVarCheck, configSaver, NULL, "saver=rain" },
+      { "a Snake",	"Draw a FreeBSD \"snake\" on your screen",
+	dmenuVarCheck, configSaver, NULL, "saver=snake" },
+      { "b Star",	"A \"twinkling stars\" effect",
+	dmenuVarCheck, configSaver, NULL, "saver=star" },
+      { "c Warp",	"A \"stars warping\" effect",
+	dmenuVarCheck, configSaver, NULL, "saver=warp" },
+      { "d None",	"Disable the screensaver",
+        dmenuVarCheck, configSaver, NULL, "saver=NO" },
       { "Timeout",	"Set the screen saver timeout interval",
 	NULL, configSaverTimeout, NULL, NULL, ' ', ' ', ' ' },
-      { NULL } },
+      { NULL } }
 };
 
 #ifndef PC98
@@ -2144,8 +2156,9 @@ DMenu MenuFixit = {
     "Press F1 for more detailed repair instructions",
     "fixit",
 { { "X Exit",		"Exit this menu (returning to previous)",	NULL, dmenuExit },
-  { "2 CDROM/DVD",	"Use the \"live\" filesystem CDROM/DVD",	NULL, installFixitCDROM },
-  { "3 Floppy",		"Use a floppy generated from the fixit image",	NULL, installFixitFloppy },
-  { "4 Shell",		"Start an Emergency Holographic Shell",		NULL, installFixitHoloShell },
+  { "2 CDROM/DVD",	"Use the live filesystem CDROM/DVD",		NULL, installFixitCDROM },
+  { "3 USB",		"Use the live filesystem from a USB drive",	NULL, installFixitUSB },
+  { "4 Floppy",	"Use a floppy generated from the fixit image",	NULL, installFixitFloppy },
+  { "5 Shell",		"Start an Emergency Holographic Shell",		NULL, installFixitHoloShell },
   { NULL } },
 };

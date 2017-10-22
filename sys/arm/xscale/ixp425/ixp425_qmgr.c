@@ -57,7 +57,7 @@
  * SUCH DAMAGE.
 */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/ixp425/ixp425_qmgr.c 166996 2007-02-25 22:17:54Z cognet $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Intel XScale Queue Manager support.
@@ -133,9 +133,14 @@ struct ixpqmgr_softc {
 	device_t		sc_dev;
 	bus_space_tag_t		sc_iot;
 	bus_space_handle_t	sc_ioh;
-	struct resource		*sc_irq;	/* IRQ resource */
-	void			*sc_ih;		/* interrupt handler */
-	int			sc_rid;		/* resource id for irq */
+
+	struct resource		*sc_irq1;	/* IRQ resource */
+	void			*sc_ih1;	/* interrupt handler */
+	int			sc_rid1;	/* resource id for irq */
+
+	struct resource		*sc_irq2;
+	void			*sc_ih2;
+	int			sc_rid2;
 
 	struct qmgrInfo		qinfo[IX_QMGR_MAX_NUM_QUEUES];
 	/*
@@ -156,7 +161,7 @@ struct ixpqmgr_softc {
 
 static int qmgr_debug = 0;
 SYSCTL_INT(_debug, OID_AUTO, qmgr, CTLFLAG_RW, &qmgr_debug,
-	   0, "IXP425 Q-Manager debug msgs");
+	   0, "IXP4XX Q-Manager debug msgs");
 TUNABLE_INT("debug.qmgr", &qmgr_debug);
 #define	DPRINTF(dev, fmt, ...) do {					\
 	if (qmgr_debug) printf(fmt, __VA_ARGS__);			\
@@ -199,16 +204,16 @@ aqm_reg_write(struct ixpqmgr_softc *sc, bus_size_t off, uint32_t val)
 static int
 ixpqmgr_probe(device_t dev)
 {
-	device_set_desc(dev, "IXP425 Q-Manager");
+	device_set_desc(dev, "IXP4XX Q-Manager");
 	return 0;
 }
 
-static void
+static int
 ixpqmgr_attach(device_t dev)
 {
 	struct ixpqmgr_softc *sc = device_get_softc(dev);
 	struct ixp425_softc *sa = device_get_softc(device_get_parent(dev));
-	int i;
+	int i, err;
 
 	ixpqmgr_sc = sc;
 
@@ -219,13 +224,32 @@ ixpqmgr_attach(device_t dev)
 		panic("%s: Cannot map registers", device_get_name(dev));
 
 	/* NB: we only use the lower 32 q's */
-	sc->sc_irq = bus_alloc_resource(dev, SYS_RES_IRQ, &sc->sc_rid,
-	    IXP425_INT_QUE1_32, IXP425_INT_QUE33_64, 2, RF_ACTIVE);
-	if (!sc->sc_irq)
+
+	/* Set up QMGR interrupts */
+	sc->sc_rid1 = 0;
+	sc->sc_irq1 = bus_alloc_resource(dev, SYS_RES_IRQ, &sc->sc_rid1,
+	    IXP425_INT_QUE1_32, IXP425_INT_QUE1_32, 1, RF_ACTIVE);
+	sc->sc_rid2 = 1;
+	sc->sc_irq2 = bus_alloc_resource(dev, SYS_RES_IRQ, &sc->sc_rid2,
+	    IXP425_INT_QUE33_64, IXP425_INT_QUE33_64, 1, RF_ACTIVE);
+
+	if (sc->sc_irq1 == NULL || sc->sc_irq2 == NULL)
 		panic("Unable to allocate the qmgr irqs.\n");
-	/* XXX could be a source of entropy */
-	bus_setup_intr(dev, sc->sc_irq, INTR_TYPE_NET | INTR_MPSAFE,
-		NULL, ixpqmgr_intr, NULL, &sc->sc_ih);
+
+	err = bus_setup_intr(dev, sc->sc_irq1, INTR_TYPE_NET | INTR_MPSAFE,
+	    NULL, ixpqmgr_intr, NULL, &sc->sc_ih1);
+	if (err) {
+		device_printf(dev, "failed to set up qmgr irq=%d\n",
+		   IXP425_INT_QUE1_32);
+		return (ENXIO);
+	}
+	err = bus_setup_intr(dev, sc->sc_irq2, INTR_TYPE_NET | INTR_MPSAFE,
+	    NULL, ixpqmgr_intr, NULL, &sc->sc_ih2);
+	if (err) {
+		device_printf(dev, "failed to set up qmgr irq=%d\n",
+		   IXP425_INT_QUE33_64);
+		return (ENXIO);
+	}
 
 	/* NB: softc is pre-zero'd */
 	for (i = 0; i < IX_QMGR_MAX_NUM_QUEUES; i++) {
@@ -293,24 +317,28 @@ ixpqmgr_attach(device_t dev)
 	
 	sc->aqmFreeSramAddress = 0x100;	/* Q buffer space starts at 0x2100 */
 
-	ixpqmgr_rebuild(sc);		/* build inital priority table */
+	ixpqmgr_rebuild(sc);		/* build initial priority table */
 	aqm_reset(sc);			/* reset h/w */
+	return (0);
 }
 
-static void
+static int
 ixpqmgr_detach(device_t dev)
 {
 	struct ixpqmgr_softc *sc = device_get_softc(dev);
 
 	aqm_reset(sc);		/* disable interrupts */
-	bus_teardown_intr(dev, sc->sc_irq, sc->sc_ih);
-	bus_release_resource(dev, SYS_RES_IRQ, sc->sc_rid, sc->sc_irq);
+	bus_teardown_intr(dev, sc->sc_irq1, sc->sc_ih1);
+	bus_teardown_intr(dev, sc->sc_irq2, sc->sc_ih2);
+	bus_release_resource(dev, SYS_RES_IRQ, sc->sc_rid1, sc->sc_irq1);
+	bus_release_resource(dev, SYS_RES_IRQ, sc->sc_rid2, sc->sc_irq2);
 	bus_space_unmap(sc->sc_iot, sc->sc_ioh, IXP425_QMGR_SIZE);
+	return (0);
 }
 
 int
 ixpqmgr_qconfig(int qId, int qEntries, int ne, int nf, int srcSel,
-    void (*cb)(int, void *), void *cbarg)
+    qconfig_hand_t *cb, void *cbarg)
 {
 	struct ixpqmgr_softc *sc = ixpqmgr_sc;
 	struct qmgrInfo *qi = &sc->qinfo[qId];
@@ -341,7 +369,7 @@ ixpqmgr_qconfig(int qId, int qEntries, int ne, int nf, int srcSel,
 	 */
 	sc->aqmFreeSramAddress += (qi->qSizeInWords * sizeof(uint32_t));
 
-	/* Set the interupt source if this queue is in the range 0-31 */
+	/* Set the interrupt source if this queue is in the range 0-31 */
 	if (qId < IX_QMGR_MIN_QUEUPP_QID)
 	    aqm_srcsel_write(sc, qId, srcSel);
 
@@ -604,7 +632,7 @@ ixpqmgr_notify_enable(int qId, int srcSel)
 	/* Calculate the checkMask and checkValue for this q */
 	aqm_calc_statuscheck(sc, qId, srcSel);
 #endif
-	/* Set the interupt source if this queue is in the range 0-31 */
+	/* Set the interrupt source if this queue is in the range 0-31 */
 	if (qId < IX_QMGR_MIN_QUEUPP_QID)
 	    aqm_srcsel_write(sc, qId, srcSel);
 
@@ -747,7 +775,7 @@ ixpqmgr_intr(void *arg)
 		      *
 		      * The search will end when all the bits of the interrupt
 		      * register are cleared. There is no need to maintain
-		      * a seperate value and test it at each iteration.
+		      * a separate value and test it at each iteration.
 		      */
 		     if (intRegVal & sc->lowPriorityTableFirstHalfMask) {
 			 priorityTableIndex = 0;

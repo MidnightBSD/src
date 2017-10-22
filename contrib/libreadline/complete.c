@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/contrib/libreadline/complete.c 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $FreeBSD$ */
 /* complete.c -- filename completion for readline. */
 
 /* Copyright (C) 1987-2005 Free Software Foundation, Inc.
@@ -429,7 +429,7 @@ get_y_or_n (for_pager)
 	return (1);
       if (c == 'n' || c == 'N' || c == RUBOUT)
 	return (0);
-      if (c == ABORT_CHAR)
+      if (c == ABORT_CHAR || c < 0)
 	_rl_abort_internal ();
       if (for_pager && (c == NEWLINE || c == RETURN))
 	return (2);

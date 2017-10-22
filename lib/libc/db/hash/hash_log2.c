@@ -34,15 +34,15 @@
 static char sccsid[] = "@(#)hash_log2.c	8.2 (Berkeley) 5/31/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/db/hash/hash_log2.c 165903 2007-01-09 00:28:16Z imp $");
-
-#include <sys/types.h>
+__FBSDID("$FreeBSD$");
 
 #include <db.h>
+#include "hash.h"
+#include "page.h"
+#include "extern.h"
 
 u_int32_t
-__log2(num)
-	u_int32_t num;
+__log2(u_int32_t num)
 {
 	u_int32_t i, limit;
 

@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/i386/include/bootinfo.h 173255 2007-11-01 18:19:19Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_BOOTINFO_H_
@@ -65,6 +65,13 @@ struct bootinfo {
 	u_int32_t	bi_kernend;		/* end of kernel space */
 	u_int32_t	bi_envp;		/* environment */
 	u_int32_t	bi_modulep;		/* preloaded modules */
+	uint32_t	bi_memdesc_version;	/* EFI memory desc version */
+	uint64_t	bi_memdesc_size;	/* sizeof EFI memory desc */
+	uint64_t	bi_memmap;		/* pa of EFI memory map */
+	uint64_t	bi_memmap_size;		/* size of EFI memory map */
+	uint64_t	bi_hcdp;		/* DIG64 HCDP table */
+	uint64_t	bi_fpswa;		/* FPSWA interface */
+	uint64_t	bi_systab;		/* pa of EFI system table */
 };
 
 #ifdef _KERNEL

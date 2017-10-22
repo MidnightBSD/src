@@ -34,7 +34,7 @@
 	.asciz "@(#)pipe.s	5.1 (Berkeley) 4/23/90"
 #endif /* SYSLIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/i386/sys/pipe.S 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "SYS.h"
 
@@ -44,3 +44,6 @@ SYSCALL(pipe)
 	movl	%edx,4(%ecx)
 	movl	$0,%eax
 	ret
+END(__sys_pipe)
+
+	.section .note.GNU-stack,"",%progbits

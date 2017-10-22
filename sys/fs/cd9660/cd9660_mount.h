@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)cd9660_mount.h	8.1 (Berkeley) 5/24/95
- * $FreeBSD: release/7.0.0/sys/fs/cd9660/cd9660_mount.h 166639 2007-02-11 13:54:25Z rodrigc $
+ * $FreeBSD$
  */
 
 /*
@@ -40,7 +40,7 @@
  */
 struct iso_args {
 	char	*fspec;			/* block special device to mount */
-	struct	export_args export;	/* network export info */
+	struct	oexport_args export;	/* network export info */
 	int	flags;			/* mounting flags, see below */
 	int	ssector;		/* starting sector, 0 for 1st session */
 	char	*cs_disk;		/* disk charset for Joliet cs conversion */

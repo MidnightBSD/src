@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/pc98/cbus/scterm-sck.c 153110 2005-12-05 11:58:35Z ru $
+ * $FreeBSD$
  */
 
 #include "opt_syscons.h"
@@ -37,9 +37,7 @@
 #include <machine/pc/display.h>
 
 #include <dev/syscons/syscons.h>
-#include <dev/syscons/sctermvar.h>
-
-#ifndef SC_DUMB_TERMINAL
+#include <pc98/cbus/sctermvar.h>
 
 #define MAX_ESC_PAR	5
 
@@ -96,15 +94,16 @@ typedef struct {
 	color_t		dflt_rev_color;		/* default reverse color */
 } term_stat;
 
-static sc_term_init_t	scterm_init;
-static sc_term_term_t	scterm_term;
-static sc_term_puts_t	scterm_puts;
-static sc_term_ioctl_t	scterm_ioctl;
-static sc_term_reset_t	scterm_reset;
+static sc_term_init_t		scterm_init;
+static sc_term_term_t		scterm_term;
+static sc_term_puts_t		scterm_puts;
+static sc_term_ioctl_t		scterm_ioctl;
+static sc_term_reset_t		scterm_reset;
 static sc_term_default_attr_t	scterm_default_attr;
-static sc_term_clear_t	scterm_clear;
-static sc_term_notify_t	scterm_notify;
-static sc_term_input_t	scterm_input;
+static sc_term_clear_t		scterm_clear;
+static sc_term_notify_t		scterm_notify;
+static sc_term_input_t		scterm_input;
+static sc_term_fkeystr_t	scterm_fkeystr;
 
 static sc_term_sw_t sc_term_sc = {
 	{ NULL, NULL },
@@ -122,6 +121,7 @@ static sc_term_sw_t sc_term_sc = {
 	scterm_clear,
 	scterm_notify,
 	scterm_input,
+	scterm_fkeystr,
 };
 
 SCTERM_MODULE(sc, sc_term_sc);
@@ -909,18 +909,24 @@ scterm_scan_esc(scr_stat *scp, term_stat *tcp, u_char c)
 }
 
 static void
-scterm_puts(scr_stat *scp, u_char *buf, int len)
+scterm_puts(scr_stat *scp, u_char *buf, int len, int kernel)
 {
 	term_stat *tcp;
 	u_char *ptr;
 #ifdef KANJI
 	u_short kanji_code;
 #endif
+	color_t backup;
 
 	tcp = scp->ts;
 	ptr = buf;
 outloop:
 	scp->sc->write_in_progress++;
+	backup = tcp->cur_color;
+	if (kernel) {
+		tcp->cur_color.fg = SC_KERNEL_CONS_ATTR & 0x0f;
+		tcp->cur_color.bg = (SC_KERNEL_CONS_ATTR >> 4) & 0x0f;
+	}
 
 	if (tcp->esc) {
 		scterm_scan_esc(scp, tcp, *ptr++);
@@ -1103,6 +1109,8 @@ ascii_end:
 
 	sc_term_gen_scroll(scp, scp->sc->scr_map[0x20], tcp->cur_attr);
 
+	if (kernel)
+		tcp->cur_color = backup;
 	scp->sc->write_in_progress--;
 	if (len)
 		goto outloop;
@@ -1110,7 +1118,7 @@ ascii_end:
 
 static int
 scterm_ioctl(scr_stat *scp, struct tty *tp, u_long cmd, caddr_t data,
-	     int flag, struct thread *td)
+	     struct thread *td)
 {
 	term_stat *tcp = scp->ts;
 	vid_info_t *vi;
@@ -1185,6 +1193,13 @@ scterm_input(scr_stat *scp, int c, struct tty *tp)
 	return FALSE;
 }
 
+static const char *
+scterm_fkeystr(scr_stat *scp, int c)
+{
+
+	return (NULL);
+}
+
 /*
  * Calculate hardware attributes word using logical attributes mask and
  * hardware colors
@@ -1212,5 +1227,3 @@ mask2attr(term_stat *tcp)
 
 	return (attr << 8);
 }
-
-#endif /* SC_DUMB_TERMINAL */

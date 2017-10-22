@@ -1,9 +1,8 @@
-# $FreeBSD: release/7.0.0/usr.sbin/jexec/Makefile 157864 2006-04-19 10:12:10Z delphij $
+# $FreeBSD$
 
 PROG=	jexec
 MAN=	jexec.8
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
-WARNS?=	6
+DPADD=	${LIBJAIL} ${LIBUTIL}
+LDADD=	-ljail -lutil
 
 .include <bsd.prog.mk>

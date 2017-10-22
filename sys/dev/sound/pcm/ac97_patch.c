@@ -24,11 +24,15 @@
  * SUCH DAMAGE.
  */
 
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
+
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/pcm/ac97.h>
 #include <dev/sound/pcm/ac97_patch.h>
 
-SND_DECLARE_FILE("$FreeBSD: release/7.0.0/sys/dev/sound/pcm/ac97_patch.c 173149 2007-10-29 18:47:27Z ariff $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 void ad1886_patch(struct ac97_info* codec)
 {

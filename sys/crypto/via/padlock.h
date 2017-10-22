@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/crypto/via/padlock.h 160784 2006-07-28 14:46:19Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef _PADLOCK_H_
@@ -31,6 +31,12 @@
 
 #include <opencrypto/cryptodev.h>
 #include <crypto/rijndael/rijndael.h>
+
+#if defined(__i386__)
+#include <machine/npx.h>
+#elif defined(__amd64__)
+#include <machine/fpu.h>
+#endif
 
 union padlock_cw {
 	uint64_t raw;
@@ -70,6 +76,7 @@ struct padlock_session {
 	int		ses_used;
 	uint32_t	ses_id;
 	TAILQ_ENTRY(padlock_session) ses_next;
+	struct fpu_kern_ctx *ses_fpu_ctx;
 };
 
 #define	PADLOCK_ALIGN(p)	(void *)(roundup2((uintptr_t)(p), 16))

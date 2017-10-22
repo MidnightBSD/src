@@ -1,6 +1,6 @@
-/* $FreeBSD: release/7.0.0/sys/dev/mpt/mpilib/mpi_lan.h 154603 2006-01-21 00:29:52Z mjacob $ */
+/* $FreeBSD$ */
 /*-
- * Copyright (c) 2000-2005, LSI Logic Corporation and its contributors.
+ * Copyright (c) 2000-2010, LSI Logic Corporation and its contributors.
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without

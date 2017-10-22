@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002, 2005, 2006, 2007 Marcel Moolenaar
+ * Copyright (c) 2002, 2005-2009 Marcel Moolenaar
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/geom/part/g_part.c 173125 2007-10-29 00:11:40Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -39,45 +39,91 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/geom/part/g_part.c 173125 2007-10-29 00:11
 #include <sys/mutex.h>
 #include <sys/queue.h>
 #include <sys/sbuf.h>
+#include <sys/sysctl.h>
 #include <sys/systm.h>
 #include <sys/uuid.h>
 #include <geom/geom.h>
 #include <geom/geom_ctl.h>
+#include <geom/geom_int.h>
 #include <geom/part/g_part.h>
 
 #include "g_part_if.h"
+
+#ifndef _PATH_DEV
+#define _PATH_DEV "/dev/"
+#endif
 
 static kobj_method_t g_part_null_methods[] = {
 	{ 0, 0 }
 };
 
 static struct g_part_scheme g_part_null_scheme = {
-	"n/a",
+	"(none)",
 	g_part_null_methods,
 	sizeof(struct g_part_table),
 };
-G_PART_SCHEME_DECLARE(g_part_null_scheme);
 
-SET_DECLARE(g_part_scheme_set, struct g_part_scheme);
+TAILQ_HEAD(, g_part_scheme) g_part_schemes =
+    TAILQ_HEAD_INITIALIZER(g_part_schemes);
 
 struct g_part_alias_list {
 	const char *lexeme;
 	enum g_part_alias alias;
 } g_part_alias_list[G_PART_ALIAS_COUNT] = {
+	{ "apple-boot", G_PART_ALIAS_APPLE_BOOT },
+	{ "apple-hfs", G_PART_ALIAS_APPLE_HFS },
+	{ "apple-label", G_PART_ALIAS_APPLE_LABEL },
+	{ "apple-raid", G_PART_ALIAS_APPLE_RAID },
+	{ "apple-raid-offline", G_PART_ALIAS_APPLE_RAID_OFFLINE },
+	{ "apple-tv-recovery", G_PART_ALIAS_APPLE_TV_RECOVERY },
+	{ "apple-ufs", G_PART_ALIAS_APPLE_UFS },
+	{ "bios-boot", G_PART_ALIAS_BIOS_BOOT },
+	{ "ebr", G_PART_ALIAS_EBR },
 	{ "efi", G_PART_ALIAS_EFI },
+	{ "fat32", G_PART_ALIAS_MS_FAT32 },
 	{ "freebsd", G_PART_ALIAS_FREEBSD },
+	{ "freebsd-boot", G_PART_ALIAS_FREEBSD_BOOT },
 	{ "freebsd-swap", G_PART_ALIAS_FREEBSD_SWAP },
 	{ "freebsd-ufs", G_PART_ALIAS_FREEBSD_UFS },
 	{ "freebsd-vinum", G_PART_ALIAS_FREEBSD_VINUM },
 	{ "freebsd-zfs", G_PART_ALIAS_FREEBSD_ZFS },
-	{ "mbr", G_PART_ALIAS_MBR }
+	{ "linux-data", G_PART_ALIAS_LINUX_DATA },
+	{ "linux-lvm", G_PART_ALIAS_LINUX_LVM },
+	{ "linux-raid", G_PART_ALIAS_LINUX_RAID },
+	{ "linux-swap", G_PART_ALIAS_LINUX_SWAP },
+	{ "mbr", G_PART_ALIAS_MBR },
+	{ "ms-basic-data", G_PART_ALIAS_MS_BASIC_DATA },
+	{ "ms-ldm-data", G_PART_ALIAS_MS_LDM_DATA },
+	{ "ms-ldm-metadata", G_PART_ALIAS_MS_LDM_METADATA },
+	{ "ms-reserved", G_PART_ALIAS_MS_RESERVED },
+	{ "ntfs", G_PART_ALIAS_MS_NTFS },
+	{ "netbsd-ccd", G_PART_ALIAS_NETBSD_CCD },
+	{ "netbsd-cgd", G_PART_ALIAS_NETBSD_CGD },
+	{ "netbsd-ffs", G_PART_ALIAS_NETBSD_FFS },
+	{ "netbsd-lfs", G_PART_ALIAS_NETBSD_LFS },
+	{ "netbsd-raid", G_PART_ALIAS_NETBSD_RAID },
+	{ "netbsd-swap", G_PART_ALIAS_NETBSD_SWAP },
+	{ "vmware-vmfs", G_PART_ALIAS_VMFS },
+	{ "vmware-vmkdiag", G_PART_ALIAS_VMKDIAG },
+	{ "vmware-reserved", G_PART_ALIAS_VMRESERVED },
 };
+
+SYSCTL_DECL(_kern_geom);
+SYSCTL_NODE(_kern_geom, OID_AUTO, part, CTLFLAG_RW, 0,
+    "GEOM_PART stuff");
+static u_int check_integrity = 1;
+TUNABLE_INT("kern.geom.part.check_integrity", &check_integrity);
+SYSCTL_UINT(_kern_geom_part, OID_AUTO, check_integrity,
+    CTLFLAG_RW | CTLFLAG_TUN, &check_integrity, 1,
+    "Enable integrity checking");
 
 /*
  * The GEOM partitioning class.
  */
 static g_ctl_req_t g_part_ctlreq;
 static g_ctl_destroy_geom_t g_part_destroy_geom;
+static g_fini_t g_part_fini;
+static g_init_t g_part_init;
 static g_taste_t g_part_taste;
 
 static g_access_t g_part_access;
@@ -92,6 +138,8 @@ static struct g_class g_part_class = {
 	/* Class methods. */
 	.ctlreq = g_part_ctlreq,
 	.destroy_geom = g_part_destroy_geom,
+	.fini = g_part_fini,
+	.init = g_part_init,
 	.taste = g_part_taste,
 	/* Geom methods. */
 	.access = g_part_access,
@@ -102,20 +150,7 @@ static struct g_class g_part_class = {
 };
 
 DECLARE_GEOM_CLASS(g_part_class, g_part);
-
-enum g_part_ctl {
-	G_PART_CTL_NONE,
-	G_PART_CTL_ADD,
-	G_PART_CTL_COMMIT,
-	G_PART_CTL_CREATE,
-	G_PART_CTL_DELETE,
-	G_PART_CTL_DESTROY,
-	G_PART_CTL_MODIFY,
-	G_PART_CTL_MOVE,
-	G_PART_CTL_RECOVER,
-	G_PART_CTL_RESIZE,
-	G_PART_CTL_UNDO
-};
+MODULE_VERSION(g_part, 0);
 
 /*
  * Support functions.
@@ -172,10 +207,8 @@ g_part_geometry(struct g_part_table *table, struct g_consumer *cp,
 	u_int heads, sectors;
 	int idx;
 
-	if (g_getattr("GEOM::fwsectors", cp, &sectors) != 0 ||
-	    sectors < 1 || sectors > 63 ||
-	    g_getattr("GEOM::fwheads", cp, &heads) != 0 ||
-	    heads < 1 || heads > 255) {
+	if (g_getattr("GEOM::fwsectors", cp, &sectors) != 0 || sectors == 0 ||
+	    g_getattr("GEOM::fwheads", cp, &heads) != 0 || heads == 0) {
 		table->gpt_fixgeom = 0;
 		table->gpt_heads = 0;
 		table->gpt_sectors = 0;
@@ -212,6 +245,123 @@ g_part_geometry(struct g_part_table *table, struct g_consumer *cp,
 	}
 }
 
+#define	DPRINTF(...)	if (bootverbose) {	\
+	printf("GEOM_PART: " __VA_ARGS__);	\
+}
+
+static int
+g_part_check_integrity(struct g_part_table *table, struct g_consumer *cp)
+{
+	struct g_part_entry *e1, *e2;
+	struct g_provider *pp;
+	off_t offset;
+	int failed;
+
+	failed = 0;
+	pp = cp->provider;
+	if (table->gpt_last < table->gpt_first) {
+		DPRINTF("last LBA is below first LBA: %jd < %jd\n",
+		    (intmax_t)table->gpt_last, (intmax_t)table->gpt_first);
+		failed++;
+	}
+	if (table->gpt_last > pp->mediasize / pp->sectorsize - 1) {
+		DPRINTF("last LBA extends beyond mediasize: "
+		    "%jd > %jd\n", (intmax_t)table->gpt_last,
+		    (intmax_t)pp->mediasize / pp->sectorsize - 1);
+		failed++;
+	}
+	LIST_FOREACH(e1, &table->gpt_entry, gpe_entry) {
+		if (e1->gpe_deleted || e1->gpe_internal)
+			continue;
+		if (e1->gpe_start < table->gpt_first) {
+			DPRINTF("partition %d has start offset below first "
+			    "LBA: %jd < %jd\n", e1->gpe_index,
+			    (intmax_t)e1->gpe_start,
+			    (intmax_t)table->gpt_first);
+			failed++;
+		}
+		if (e1->gpe_start > table->gpt_last) {
+			DPRINTF("partition %d has start offset beyond last "
+			    "LBA: %jd > %jd\n", e1->gpe_index,
+			    (intmax_t)e1->gpe_start,
+			    (intmax_t)table->gpt_last);
+			failed++;
+		}
+		if (e1->gpe_end < e1->gpe_start) {
+			DPRINTF("partition %d has end offset below start "
+			    "offset: %jd < %jd\n", e1->gpe_index,
+			    (intmax_t)e1->gpe_end,
+			    (intmax_t)e1->gpe_start);
+			failed++;
+		}
+		if (e1->gpe_end > table->gpt_last) {
+			DPRINTF("partition %d has end offset beyond last "
+			    "LBA: %jd > %jd\n", e1->gpe_index,
+			    (intmax_t)e1->gpe_end,
+			    (intmax_t)table->gpt_last);
+			failed++;
+		}
+		if (pp->stripesize > 0) {
+			offset = e1->gpe_start * pp->sectorsize;
+			if (e1->gpe_offset > offset)
+				offset = e1->gpe_offset;
+			if ((offset + pp->stripeoffset) % pp->stripesize) {
+				DPRINTF("partition %d is not aligned on %u "
+				    "bytes\n", e1->gpe_index, pp->stripesize);
+				/* Don't treat this as a critical failure */
+			}
+		}
+		e2 = e1;
+		while ((e2 = LIST_NEXT(e2, gpe_entry)) != NULL) {
+			if (e2->gpe_deleted || e2->gpe_internal)
+				continue;
+			if (e1->gpe_start >= e2->gpe_start &&
+			    e1->gpe_start <= e2->gpe_end) {
+				DPRINTF("partition %d has start offset inside "
+				    "partition %d: start[%d] %jd >= start[%d] "
+				    "%jd <= end[%d] %jd\n",
+				    e1->gpe_index, e2->gpe_index,
+				    e2->gpe_index, (intmax_t)e2->gpe_start,
+				    e1->gpe_index, (intmax_t)e1->gpe_start,
+				    e2->gpe_index, (intmax_t)e2->gpe_end);
+				failed++;
+			}
+			if (e1->gpe_end >= e2->gpe_start &&
+			    e1->gpe_end <= e2->gpe_end) {
+				DPRINTF("partition %d has end offset inside "
+				    "partition %d: start[%d] %jd >= end[%d] "
+				    "%jd <= end[%d] %jd\n",
+				    e1->gpe_index, e2->gpe_index,
+				    e2->gpe_index, (intmax_t)e2->gpe_start,
+				    e1->gpe_index, (intmax_t)e1->gpe_end,
+				    e2->gpe_index, (intmax_t)e2->gpe_end);
+				failed++;
+			}
+			if (e1->gpe_start < e2->gpe_start &&
+			    e1->gpe_end > e2->gpe_end) {
+				DPRINTF("partition %d contains partition %d: "
+				    "start[%d] %jd > start[%d] %jd, end[%d] "
+				    "%jd < end[%d] %jd\n",
+				    e1->gpe_index, e2->gpe_index,
+				    e1->gpe_index, (intmax_t)e1->gpe_start,
+				    e2->gpe_index, (intmax_t)e2->gpe_start,
+				    e2->gpe_index, (intmax_t)e2->gpe_end,
+				    e1->gpe_index, (intmax_t)e1->gpe_end);
+				failed++;
+			}
+		}
+	}
+	if (failed != 0) {
+		printf("GEOM_PART: integrity check failed (%s, %s)\n",
+		    pp->name, table->gpt_scheme->name);
+		if (check_integrity != 0)
+			return (EINVAL);
+		table->gpt_corrupt = 1;
+	}
+	return (0);
+}
+#undef	DPRINTF
+
 struct g_part_entry *
 g_part_new_entry(struct g_part_table *table, int index, quad_t start,
     quad_t end)
@@ -236,7 +386,8 @@ g_part_new_entry(struct g_part_table *table, int index, quad_t start,
 			LIST_INSERT_HEAD(&table->gpt_entry, entry, gpe_entry);
 		else
 			LIST_INSERT_AFTER(last, entry, gpe_entry);
-	}
+	} else
+		entry->gpe_offset = 0;
 	entry->gpe_start = start;
 	entry->gpe_end = end;
 	return (entry);
@@ -246,146 +397,233 @@ static void
 g_part_new_provider(struct g_geom *gp, struct g_part_table *table,
     struct g_part_entry *entry)
 {
-	char buf[32];
 	struct g_consumer *cp;
 	struct g_provider *pp;
+	struct sbuf *sb;
+	off_t offset;
 
 	cp = LIST_FIRST(&gp->consumer);
 	pp = cp->provider;
 
-	entry->gpe_offset = entry->gpe_start * pp->sectorsize;
+	offset = entry->gpe_start * pp->sectorsize;
+	if (entry->gpe_offset < offset)
+		entry->gpe_offset = offset;
 
 	if (entry->gpe_pp == NULL) {
-		entry->gpe_pp = g_new_providerf(gp, "%s%s", gp->name,
-		    G_PART_NAME(table, entry, buf, sizeof(buf)));
+		sb = sbuf_new_auto();
+		G_PART_FULLNAME(table, entry, sb, gp->name);
+		sbuf_finish(sb);
+		entry->gpe_pp = g_new_providerf(gp, "%s", sbuf_data(sb));
+		sbuf_delete(sb);
 		entry->gpe_pp->private = entry;		/* Close the circle. */
 	}
 	entry->gpe_pp->index = entry->gpe_index - 1;	/* index is 1-based. */
 	entry->gpe_pp->mediasize = (entry->gpe_end - entry->gpe_start + 1) *
 	    pp->sectorsize;
+	entry->gpe_pp->mediasize -= entry->gpe_offset - offset;
 	entry->gpe_pp->sectorsize = pp->sectorsize;
 	entry->gpe_pp->flags = pp->flags & G_PF_CANDELETE;
-	if (pp->stripesize > 0) {
-		entry->gpe_pp->stripesize = pp->stripesize;
-		entry->gpe_pp->stripeoffset = (pp->stripeoffset +
-		    entry->gpe_offset) % pp->stripesize;
-	}
+	entry->gpe_pp->stripesize = pp->stripesize;
+	entry->gpe_pp->stripeoffset = pp->stripeoffset + entry->gpe_offset;
+	if (pp->stripesize > 0)
+		entry->gpe_pp->stripeoffset %= pp->stripesize;
 	g_error_provider(entry->gpe_pp, 0);
 }
 
-static int
-g_part_parm_geom(const char *p, struct g_geom **v)
+static struct g_geom*
+g_part_find_geom(const char *name)
 {
 	struct g_geom *gp;
-
 	LIST_FOREACH(gp, &g_part_class.geom, geom) {
-		if (!strcmp(p, gp->name))
+		if (!strcmp(name, gp->name))
 			break;
 	}
-	if (gp == NULL)
+	return (gp);
+}
+
+static int
+g_part_parm_geom(struct gctl_req *req, const char *name, struct g_geom **v)
+{
+	struct g_geom *gp;
+	const char *gname;
+
+	gname = gctl_get_asciiparam(req, name);
+	if (gname == NULL)
+		return (ENOATTR);
+	if (strncmp(gname, _PATH_DEV, sizeof(_PATH_DEV) - 1) == 0)
+		gname += sizeof(_PATH_DEV) - 1;
+	gp = g_part_find_geom(gname);
+	if (gp == NULL) {
+		gctl_error(req, "%d %s '%s'", EINVAL, name, gname);
 		return (EINVAL);
+	}
+	if ((gp->flags & G_GEOM_WITHER) != 0) {
+		gctl_error(req, "%d %s", ENXIO, gname);
+		return (ENXIO);
+	}
 	*v = gp;
 	return (0);
 }
 
 static int
-g_part_parm_provider(const char *p, struct g_provider **v)
+g_part_parm_provider(struct gctl_req *req, const char *name,
+    struct g_provider **v)
 {
 	struct g_provider *pp;
+	const char *pname;
 
-	pp = g_provider_by_name(p);
-	if (pp == NULL)
+	pname = gctl_get_asciiparam(req, name);
+	if (pname == NULL)
+		return (ENOATTR);
+	if (strncmp(pname, _PATH_DEV, sizeof(_PATH_DEV) - 1) == 0)
+		pname += sizeof(_PATH_DEV) - 1;
+	pp = g_provider_by_name(pname);
+	if (pp == NULL) {
+		gctl_error(req, "%d %s '%s'", EINVAL, name, pname);
 		return (EINVAL);
+	}
 	*v = pp;
 	return (0);
 }
 
 static int
-g_part_parm_quad(const char *p, quad_t *v)
+g_part_parm_quad(struct gctl_req *req, const char *name, quad_t *v)
 {
+	const char *p;
 	char *x;
 	quad_t q;
 
+	p = gctl_get_asciiparam(req, name);
+	if (p == NULL)
+		return (ENOATTR);
 	q = strtoq(p, &x, 0);
-	if (*x != '\0' || q < 0)
+	if (*x != '\0' || q < 0) {
+		gctl_error(req, "%d %s '%s'", EINVAL, name, p);
 		return (EINVAL);
+	}
 	*v = q;
 	return (0);
 }
 
 static int
-g_part_parm_scheme(const char *p, struct g_part_scheme **v)
+g_part_parm_scheme(struct gctl_req *req, const char *name,
+    struct g_part_scheme **v)
 {
-	struct g_part_scheme **iter, *s;
+	struct g_part_scheme *s;
+	const char *p;
 
-	s = NULL;
-	SET_FOREACH(iter, g_part_scheme_set) {
-		if ((*iter)->name == NULL)
+	p = gctl_get_asciiparam(req, name);
+	if (p == NULL)
+		return (ENOATTR);
+	TAILQ_FOREACH(s, &g_part_schemes, scheme_list) {
+		if (s == &g_part_null_scheme)
 			continue;
-		if (!strcasecmp((*iter)->name, p)) {
-			s = *iter;
+		if (!strcasecmp(s->name, p))
 			break;
-		}
 	}
-	if (s == NULL)
+	if (s == NULL) {
+		gctl_error(req, "%d %s '%s'", EINVAL, name, p);
 		return (EINVAL);
+	}
 	*v = s;
 	return (0);
 }
 
 static int
-g_part_parm_str(const char *p, const char **v)
+g_part_parm_str(struct gctl_req *req, const char *name, const char **v)
 {
+	const char *p;
 
-	if (p[0] == '\0')
+	p = gctl_get_asciiparam(req, name);
+	if (p == NULL)
+		return (ENOATTR);
+	/* An empty label is always valid. */
+	if (strcmp(name, "label") != 0 && p[0] == '\0') {
+		gctl_error(req, "%d %s '%s'", EINVAL, name, p);
 		return (EINVAL);
+	}
 	*v = p;
 	return (0);
 }
 
 static int
-g_part_parm_uint(const char *p, u_int *v)
+g_part_parm_intmax(struct gctl_req *req, const char *name, u_int *v)
 {
-	char *x;
-	long l;
+	const intmax_t *p;
+	int size;
 
-	l = strtol(p, &x, 0);
-	if (*x != '\0' || l < 0 || l > INT_MAX)
+	p = gctl_get_param(req, name, &size);
+	if (p == NULL)
+		return (ENOATTR);
+	if (size != sizeof(*p) || *p < 0 || *p > INT_MAX) {
+		gctl_error(req, "%d %s '%jd'", EINVAL, name, *p);
 		return (EINVAL);
-	*v = (unsigned int)l;
+	}
+	*v = (u_int)*p;
+	return (0);
+}
+
+static int
+g_part_parm_uint32(struct gctl_req *req, const char *name, u_int *v)
+{
+	const uint32_t *p;
+	int size;
+
+	p = gctl_get_param(req, name, &size);
+	if (p == NULL)
+		return (ENOATTR);
+	if (size != sizeof(*p) || *p > INT_MAX) {
+		gctl_error(req, "%d %s '%u'", EINVAL, name, (unsigned int)*p);
+		return (EINVAL);
+	}
+	*v = (u_int)*p;
+	return (0);
+}
+
+static int
+g_part_parm_bootcode(struct gctl_req *req, const char *name, const void **v,
+    unsigned int *s)
+{
+	const void *p;
+	int size;
+
+	p = gctl_get_param(req, name, &size);
+	if (p == NULL)
+		return (ENOATTR);
+	*v = p;
+	*s = size;
 	return (0);
 }
 
 static int
 g_part_probe(struct g_geom *gp, struct g_consumer *cp, int depth)
 {
-	struct g_part_scheme **iter, *scheme;
+	struct g_part_scheme *iter, *scheme;
 	struct g_part_table *table;
 	int pri, probe;
 
 	table = gp->softc;
-	scheme = (table != NULL) ? table->gpt_scheme : &g_part_null_scheme;
-	pri = (scheme != &g_part_null_scheme) ? G_PART_PROBE(table, cp) :
-	    INT_MIN;
+	scheme = (table != NULL) ? table->gpt_scheme : NULL;
+	pri = (scheme != NULL) ? G_PART_PROBE(table, cp) : INT_MIN;
 	if (pri == 0)
 		goto done;
 	if (pri > 0) {	/* error */
-		scheme = &g_part_null_scheme;
+		scheme = NULL;
 		pri = INT_MIN;
 	}
 
-	SET_FOREACH(iter, g_part_scheme_set) {
-		if ((*iter) == &g_part_null_scheme)
+	TAILQ_FOREACH(iter, &g_part_schemes, scheme_list) {
+		if (iter == &g_part_null_scheme)
 			continue;
-		table = (void *)kobj_create((kobj_class_t)(*iter), M_GEOM,
+		table = (void *)kobj_create((kobj_class_t)iter, M_GEOM,
 		    M_WAITOK);
 		table->gpt_gp = gp;
-		table->gpt_scheme = *iter;
+		table->gpt_scheme = iter;
 		table->gpt_depth = depth;
 		probe = G_PART_PROBE(table, cp);
 		if (probe <= 0 && probe > pri) {
 			pri = probe;
-			scheme = *iter;
+			scheme = iter;
 			if (gp->softc != NULL)
 				kobj_delete((kobj_t)gp->softc, M_GEOM);
 			gp->softc = table;
@@ -396,7 +634,7 @@ g_part_probe(struct g_geom *gp, struct g_consumer *cp, int depth)
 	}
 
 done:
-	return ((scheme == &g_part_null_scheme) ? ENXIO : 0);
+	return ((scheme == NULL) ? ENXIO : 0);
 }
 
 /*
@@ -406,7 +644,6 @@ done:
 static int
 g_part_ctl_add(struct gctl_req *req, struct g_part_parms *gpp)
 {
-	char buf[32];
 	struct g_geom *gp;
 	struct g_provider *pp;
 	struct g_part_entry *delent, *last, *entry;
@@ -448,10 +685,12 @@ g_part_ctl_add(struct gctl_req *req, struct g_part_parms *gpp)
 				delent = entry;
 			continue;
 		}
-		if (entry->gpe_index == index) {
+		if (entry->gpe_index == index)
 			index = entry->gpe_index + 1;
+		if (entry->gpe_index < index)
 			last = entry;
-		}
+		if (entry->gpe_internal)
+			continue;
 		if (gpp->gpp_start >= entry->gpe_start &&
 		    gpp->gpp_start <= entry->gpe_end) {
 			gctl_error(req, "%d start '%jd'", ENOSPC,
@@ -471,6 +710,10 @@ g_part_ctl_add(struct gctl_req *req, struct g_part_parms *gpp)
 	if (gpp->gpp_index > 0 && index != gpp->gpp_index) {
 		gctl_error(req, "%d index '%d'", EEXIST, gpp->gpp_index);
 		return (EEXIST);
+	}
+	if (index > table->gpt_entries) {
+		gctl_error(req, "%d index '%d'", ENOSPC, index);
+		return (ENOSPC);
 	}
 
 	entry = (delent == NULL) ? g_malloc(table->gpt_scheme->gps_entrysz,
@@ -499,14 +742,60 @@ g_part_ctl_add(struct gctl_req *req, struct g_part_parms *gpp)
 
 	/* Provide feedback if so requested. */
 	if (gpp->gpp_parms & G_PART_PARM_OUTPUT) {
-		sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
-		sbuf_printf(sb, "%s%s added\n", gp->name,
-		    G_PART_NAME(table, entry, buf, sizeof(buf)));
+		sb = sbuf_new_auto();
+		G_PART_FULLNAME(table, entry, sb, gp->name);
+		if (pp->stripesize > 0 && entry->gpe_pp->stripeoffset != 0)
+			sbuf_printf(sb, " added, but partition is not "
+			    "aligned on %u bytes\n", pp->stripesize);
+		else
+			sbuf_cat(sb, " added\n");
 		sbuf_finish(sb);
 		gctl_set_param(req, "output", sbuf_data(sb), sbuf_len(sb) + 1);
 		sbuf_delete(sb);
 	}
 	return (0);
+}
+
+static int
+g_part_ctl_bootcode(struct gctl_req *req, struct g_part_parms *gpp)
+{
+	struct g_geom *gp;
+	struct g_part_table *table;
+	struct sbuf *sb;
+	int error, sz;
+
+	gp = gpp->gpp_geom;
+	G_PART_TRACE((G_T_TOPOLOGY, "%s(%s)", __func__, gp->name));
+	g_topology_assert();
+
+	table = gp->softc;
+	sz = table->gpt_scheme->gps_bootcodesz;
+	if (sz == 0) {
+		error = ENODEV;
+		goto fail;
+	}
+	if (gpp->gpp_codesize > sz) {
+		error = EFBIG;
+		goto fail;
+	}
+
+	error = G_PART_BOOTCODE(table, gpp);
+	if (error)
+		goto fail;
+
+	/* Provide feedback if so requested. */
+	if (gpp->gpp_parms & G_PART_PARM_OUTPUT) {
+		sb = sbuf_new_auto();
+		sbuf_printf(sb, "bootcode written to %s\n", gp->name);
+		sbuf_finish(sb);
+		gctl_set_param(req, "output", sbuf_data(sb), sbuf_len(sb) + 1);
+		sbuf_delete(sb);
+	}
+	return (0);
+
+ fail:
+	gctl_error(req, "%d", error);
+	return (error);
 }
 
 static int
@@ -529,6 +818,8 @@ g_part_ctl_commit(struct gctl_req *req, struct g_part_parms *gpp)
 		gctl_error(req, "%d", EPERM);
 		return (EPERM);
 	}
+
+	g_topology_unlock();
 
 	cp = LIST_FIRST(&gp->consumer);
 	if ((table->gpt_smhead | table->gpt_smtail) != 0) {
@@ -558,6 +849,7 @@ g_part_ctl_commit(struct gctl_req *req, struct g_part_parms *gpp)
 	}
 
 	if (table->gpt_scheme == &g_part_null_scheme) {
+		g_topology_lock();
 		g_access(cp, -1, -1, -1);
 		g_part_wither(gp, ENXIO);
 		return (0);
@@ -578,10 +870,13 @@ g_part_ctl_commit(struct gctl_req *req, struct g_part_parms *gpp)
 	}
 	table->gpt_created = 0;
 	table->gpt_opened = 0;
+
+	g_topology_lock();
 	g_access(cp, -1, -1, -1);
 	return (0);
 
 fail:
+	g_topology_lock();
 	gctl_error(req, "%d", error);
 	return (error);
 }
@@ -603,8 +898,8 @@ g_part_ctl_create(struct gctl_req *req, struct g_part_parms *gpp)
 	g_topology_assert();
 
 	/* Check that there isn't already a g_part geom on the provider. */
-	error = g_part_parm_geom(pp->name, &gp);
-	if (!error) {
+	gp = g_part_find_geom(pp->name);
+	if (gp != NULL) {
 		null = gp->softc;
 		if (null->gpt_scheme != &g_part_null_scheme) {
 			gctl_error(req, "%d geom '%s'", EEXIST, pp->name);
@@ -692,7 +987,7 @@ g_part_ctl_create(struct gctl_req *req, struct g_part_parms *gpp)
 
 	/* Provide feedback if so requested. */
 	if (gpp->gpp_parms & G_PART_PARM_OUTPUT) {
-		sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+		sb = sbuf_new_auto();
 		sbuf_printf(sb, "%s created\n", gp->name);
 		sbuf_finish(sb);
 		gctl_set_param(req, "output", sbuf_data(sb), sbuf_len(sb) + 1);
@@ -716,7 +1011,6 @@ fail:
 static int
 g_part_ctl_delete(struct gctl_req *req, struct g_part_parms *gpp)
 {
-	char buf[32];
 	struct g_geom *gp;
 	struct g_provider *pp;
 	struct g_part_entry *entry;
@@ -730,7 +1024,7 @@ g_part_ctl_delete(struct gctl_req *req, struct g_part_parms *gpp)
 	table = gp->softc;
 
 	LIST_FOREACH(entry, &table->gpt_entry, gpe_entry) {
-		if (entry->gpe_deleted)
+		if (entry->gpe_deleted || entry->gpe_internal)
 			continue;
 		if (entry->gpe_index == gpp->gpp_index)
 			break;
@@ -741,13 +1035,29 @@ g_part_ctl_delete(struct gctl_req *req, struct g_part_parms *gpp)
 	}
 
 	pp = entry->gpe_pp;
-	if (pp->acr > 0 || pp->acw > 0 || pp->ace > 0) {
-		gctl_error(req, "%d", EBUSY);
-		return (EBUSY);
+	if (pp != NULL) {
+		if (pp->acr > 0 || pp->acw > 0 || pp->ace > 0) {
+			gctl_error(req, "%d", EBUSY);
+			return (EBUSY);
+		}
+
+		pp->private = NULL;
+		entry->gpe_pp = NULL;
 	}
 
-	pp->private = NULL;
-	entry->gpe_pp = NULL;
+	if (pp != NULL)
+		g_wither_provider(pp, ENXIO);
+
+	/* Provide feedback if so requested. */
+	if (gpp->gpp_parms & G_PART_PARM_OUTPUT) {
+		sb = sbuf_new_auto();
+		G_PART_FULLNAME(table, entry, sb, gp->name);
+		sbuf_cat(sb, " deleted\n");
+		sbuf_finish(sb);
+		gctl_set_param(req, "output", sbuf_data(sb), sbuf_len(sb) + 1);
+		sbuf_delete(sb);
+	}
+
 	if (entry->gpe_created) {
 		LIST_REMOVE(entry, gpe_entry);
 		g_free(entry);
@@ -755,25 +1065,16 @@ g_part_ctl_delete(struct gctl_req *req, struct g_part_parms *gpp)
 		entry->gpe_modified = 0;
 		entry->gpe_deleted = 1;
 	}
-	g_wither_provider(pp, ENXIO);
-
-	/* Provide feedback if so requested. */
-	if (gpp->gpp_parms & G_PART_PARM_OUTPUT) {
-		sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
-		sbuf_printf(sb, "%s%s deleted\n", gp->name,
-		    G_PART_NAME(table, entry, buf, sizeof(buf)));
-		sbuf_finish(sb);
-		gctl_set_param(req, "output", sbuf_data(sb), sbuf_len(sb) + 1);
-		sbuf_delete(sb);
-	}
 	return (0);
 }
 
 static int
 g_part_ctl_destroy(struct gctl_req *req, struct g_part_parms *gpp)
 {
+	struct g_consumer *cp;
 	struct g_geom *gp;
-	struct g_part_entry *entry;
+	struct g_provider *pp;
+	struct g_part_entry *entry, *tmp;
 	struct g_part_table *null, *table;
 	struct sbuf *sb;
 	int error;
@@ -783,11 +1084,32 @@ g_part_ctl_destroy(struct gctl_req *req, struct g_part_parms *gpp)
 	g_topology_assert();
 
 	table = gp->softc;
+	/* Check for busy providers. */
 	LIST_FOREACH(entry, &table->gpt_entry, gpe_entry) {
-		if (entry->gpe_deleted)
+		if (entry->gpe_deleted || entry->gpe_internal)
 			continue;
+		if (gpp->gpp_force) {
+			pp = entry->gpe_pp;
+			if (pp == NULL)
+				continue;
+			if (pp->acr == 0 && pp->acw == 0 && pp->ace == 0)
+				continue;
+		}
 		gctl_error(req, "%d", EBUSY);
 		return (EBUSY);
+	}
+
+	if (gpp->gpp_force) {
+		/* Destroy all providers. */
+		LIST_FOREACH_SAFE(entry, &table->gpt_entry, gpe_entry, tmp) {
+			pp = entry->gpe_pp;
+			if (pp != NULL) {
+				pp->private = NULL;
+				g_wither_provider(pp, ENXIO);
+			}
+			LIST_REMOVE(entry, gpe_entry);
+			g_free(entry);
+		}
 	}
 
 	error = G_PART_DESTROY(table, gpp);
@@ -802,6 +1124,11 @@ g_part_ctl_destroy(struct gctl_req *req, struct g_part_parms *gpp)
 	null->gpt_gp = gp;
 	null->gpt_scheme = &g_part_null_scheme;
 	LIST_INIT(&null->gpt_entry);
+
+	cp = LIST_FIRST(&gp->consumer);
+	pp = cp->provider;
+	null->gpt_last = pp->mediasize / pp->sectorsize - 1;
+
 	null->gpt_depth = table->gpt_depth;
 	null->gpt_opened = table->gpt_opened;
 	null->gpt_smhead = table->gpt_smhead;
@@ -815,7 +1142,7 @@ g_part_ctl_destroy(struct gctl_req *req, struct g_part_parms *gpp)
 
 	/* Provide feedback if so requested. */
 	if (gpp->gpp_parms & G_PART_PARM_OUTPUT) {
-		sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+		sb = sbuf_new_auto();
 		sbuf_printf(sb, "%s destroyed\n", gp->name);
 		sbuf_finish(sb);
 		gctl_set_param(req, "output", sbuf_data(sb), sbuf_len(sb) + 1);
@@ -827,7 +1154,6 @@ g_part_ctl_destroy(struct gctl_req *req, struct g_part_parms *gpp)
 static int
 g_part_ctl_modify(struct gctl_req *req, struct g_part_parms *gpp)
 {
-	char buf[32];
 	struct g_geom *gp;
 	struct g_part_entry *entry;
 	struct g_part_table *table;
@@ -841,7 +1167,7 @@ g_part_ctl_modify(struct gctl_req *req, struct g_part_parms *gpp)
 	table = gp->softc;
 
 	LIST_FOREACH(entry, &table->gpt_entry, gpe_entry) {
-		if (entry->gpe_deleted)
+		if (entry->gpe_deleted || entry->gpe_internal)
 			continue;
 		if (entry->gpe_index == gpp->gpp_index)
 			break;
@@ -862,9 +1188,9 @@ g_part_ctl_modify(struct gctl_req *req, struct g_part_parms *gpp)
 
 	/* Provide feedback if so requested. */
 	if (gpp->gpp_parms & G_PART_PARM_OUTPUT) {
-		sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
-		sbuf_printf(sb, "%s%s modified\n", gp->name,
-		    G_PART_NAME(table, entry, buf, sizeof(buf)));
+		sb = sbuf_new_auto();
+		G_PART_FULLNAME(table, entry, sb, gp->name);
+		sbuf_cat(sb, " modified\n");
 		sbuf_finish(sb);
 		gctl_set_param(req, "output", sbuf_data(sb), sbuf_len(sb) + 1);
 		sbuf_delete(sb);
@@ -877,21 +1203,178 @@ g_part_ctl_move(struct gctl_req *req, struct g_part_parms *gpp)
 {
 	gctl_error(req, "%d verb 'move'", ENOSYS);
 	return (ENOSYS);
-} 
+}
 
 static int
 g_part_ctl_recover(struct gctl_req *req, struct g_part_parms *gpp)
 {
-	gctl_error(req, "%d verb 'recover'", ENOSYS);
-	return (ENOSYS);
+	struct g_part_table *table;
+	struct g_geom *gp;
+	struct sbuf *sb;
+	int error, recovered;
+
+	gp = gpp->gpp_geom;
+	G_PART_TRACE((G_T_TOPOLOGY, "%s(%s)", __func__, gp->name));
+	g_topology_assert();
+	table = gp->softc;
+	error = recovered = 0;
+
+	if (table->gpt_corrupt) {
+		error = G_PART_RECOVER(table);
+		if (error == 0)
+			error = g_part_check_integrity(table,
+			    LIST_FIRST(&gp->consumer));
+		if (error) {
+			gctl_error(req, "%d recovering '%s' failed",
+			    error, gp->name);
+			return (error);
+		}
+		recovered = 1;
+	}
+	/* Provide feedback if so requested. */
+	if (gpp->gpp_parms & G_PART_PARM_OUTPUT) {
+		sb = sbuf_new_auto();
+		if (recovered)
+			sbuf_printf(sb, "%s recovered\n", gp->name);
+		else
+			sbuf_printf(sb, "%s recovering is not needed\n",
+			    gp->name);
+		sbuf_finish(sb);
+		gctl_set_param(req, "output", sbuf_data(sb), sbuf_len(sb) + 1);
+		sbuf_delete(sb);
+	}
+	return (0);
 }
 
 static int
 g_part_ctl_resize(struct gctl_req *req, struct g_part_parms *gpp)
 {
-	gctl_error(req, "%d verb 'resize'", ENOSYS);
-	return (ENOSYS);
-} 
+	struct g_geom *gp;
+	struct g_provider *pp;
+	struct g_part_entry *pe, *entry;
+	struct g_part_table *table;
+	struct sbuf *sb;
+	quad_t end;
+	int error;
+
+	gp = gpp->gpp_geom;
+	G_PART_TRACE((G_T_TOPOLOGY, "%s(%s)", __func__, gp->name));
+	g_topology_assert();
+	table = gp->softc;
+
+	/* check gpp_index */
+	LIST_FOREACH(entry, &table->gpt_entry, gpe_entry) {
+		if (entry->gpe_deleted || entry->gpe_internal)
+			continue;
+		if (entry->gpe_index == gpp->gpp_index)
+			break;
+	}
+	if (entry == NULL) {
+		gctl_error(req, "%d index '%d'", ENOENT, gpp->gpp_index);
+		return (ENOENT);
+	}
+
+	/* check gpp_size */
+	end = entry->gpe_start + gpp->gpp_size - 1;
+	if (gpp->gpp_size < 1 || end > table->gpt_last) {
+		gctl_error(req, "%d size '%jd'", EINVAL,
+		    (intmax_t)gpp->gpp_size);
+		return (EINVAL);
+	}
+
+	LIST_FOREACH(pe, &table->gpt_entry, gpe_entry) {
+		if (pe->gpe_deleted || pe->gpe_internal || pe == entry)
+			continue;
+		if (end >= pe->gpe_start && end <= pe->gpe_end) {
+			gctl_error(req, "%d end '%jd'", ENOSPC,
+			    (intmax_t)end);
+			return (ENOSPC);
+		}
+		if (entry->gpe_start < pe->gpe_start && end > pe->gpe_end) {
+			gctl_error(req, "%d size '%jd'", ENOSPC,
+			    (intmax_t)gpp->gpp_size);
+			return (ENOSPC);
+		}
+	}
+
+	pp = entry->gpe_pp;
+	if ((g_debugflags & 16) == 0 &&
+	    (pp->acr > 0 || pp->acw > 0 || pp->ace > 0)) {
+		gctl_error(req, "%d", EBUSY);
+		return (EBUSY);
+	}
+
+	error = G_PART_RESIZE(table, entry, gpp);
+	if (error) {
+		gctl_error(req, "%d", error);
+		return (error);
+	}
+
+	if (!entry->gpe_created)
+		entry->gpe_modified = 1;
+
+	/* update mediasize of changed provider */
+	pp->mediasize = (entry->gpe_end - entry->gpe_start + 1) *
+		pp->sectorsize;
+
+	/* Provide feedback if so requested. */
+	if (gpp->gpp_parms & G_PART_PARM_OUTPUT) {
+		sb = sbuf_new_auto();
+		G_PART_FULLNAME(table, entry, sb, gp->name);
+		sbuf_cat(sb, " resized\n");
+		sbuf_finish(sb);
+		gctl_set_param(req, "output", sbuf_data(sb), sbuf_len(sb) + 1);
+		sbuf_delete(sb);
+	}
+	return (0);
+}
+
+static int
+g_part_ctl_setunset(struct gctl_req *req, struct g_part_parms *gpp,
+    unsigned int set)
+{
+	struct g_geom *gp;
+	struct g_part_entry *entry;
+	struct g_part_table *table;
+	struct sbuf *sb;
+	int error;
+
+	gp = gpp->gpp_geom;
+	G_PART_TRACE((G_T_TOPOLOGY, "%s(%s)", __func__, gp->name));
+	g_topology_assert();
+
+	table = gp->softc;
+
+	LIST_FOREACH(entry, &table->gpt_entry, gpe_entry) {
+		if (entry->gpe_deleted || entry->gpe_internal)
+			continue;
+		if (entry->gpe_index == gpp->gpp_index)
+			break;
+	}
+	if (entry == NULL) {
+		gctl_error(req, "%d index '%d'", ENOENT, gpp->gpp_index);
+		return (ENOENT);
+	}
+
+	error = G_PART_SETUNSET(table, entry, gpp->gpp_attrib, set);
+	if (error) {
+		gctl_error(req, "%d attrib '%s'", error, gpp->gpp_attrib);
+		return (error);
+	}
+
+	/* Provide feedback if so requested. */
+	if (gpp->gpp_parms & G_PART_PARM_OUTPUT) {
+		sb = sbuf_new_auto();
+		sbuf_printf(sb, "%s %sset on ", gpp->gpp_attrib,
+		    (set) ? "" : "un");
+		G_PART_FULLNAME(table, entry, sb, gp->name);
+		sbuf_printf(sb, "\n");
+		sbuf_finish(sb);
+		gctl_set_param(req, "output", sbuf_data(sb), sbuf_len(sb) + 1);
+		sbuf_delete(sb);
+	}
+	return (0);
+}
 
 static int
 g_part_ctl_undo(struct gctl_req *req, struct g_part_parms *gpp)
@@ -918,9 +1401,11 @@ g_part_ctl_undo(struct gctl_req *req, struct g_part_parms *gpp)
 		entry->gpe_modified = 0;
 		if (entry->gpe_created) {
 			pp = entry->gpe_pp;
-			pp->private = NULL;
-			entry->gpe_pp = NULL;
-			g_wither_provider(pp, ENXIO);
+			if (pp != NULL) {
+				pp->private = NULL;
+				entry->gpe_pp = NULL;
+				g_wither_provider(pp, ENXIO);
+			}
 			entry->gpe_deleted = 1;
 		}
 		if (entry->gpe_deleted) {
@@ -935,9 +1420,15 @@ g_part_ctl_undo(struct gctl_req *req, struct g_part_parms *gpp)
 	    table->gpt_created) ? 1 : 0;
 
 	if (reprobe) {
-		if (!LIST_EMPTY(&table->gpt_entry)) {
+		LIST_FOREACH(entry, &table->gpt_entry, gpe_entry) {
+			if (entry->gpe_internal)
+				continue;
 			error = EBUSY;
 			goto fail;
+		}
+		while ((entry = LIST_FIRST(&table->gpt_entry)) != NULL) {
+			LIST_REMOVE(entry, gpe_entry);
+			g_free(entry);
 		}
 		error = g_part_probe(gp, cp, table->gpt_depth);
 		if (error) {
@@ -947,16 +1438,29 @@ g_part_ctl_undo(struct gctl_req *req, struct g_part_parms *gpp)
 			return (0);
 		}
 		table = gp->softc;
+
+		/*
+		 * Synthesize a disk geometry. Some partitioning schemes
+		 * depend on it and since some file systems need it even
+		 * when the partitition scheme doesn't, we do it here in
+		 * scheme-independent code.
+		 */
+		pp = cp->provider;
+		g_part_geometry(table, cp, pp->mediasize / pp->sectorsize);
 	}
 
 	error = G_PART_READ(table, cp);
 	if (error)
 		goto fail;
+	error = g_part_check_integrity(table, cp);
+	if (error)
+		goto fail;
 
 	g_topology_lock();
-
-	LIST_FOREACH(entry, &table->gpt_entry, gpe_entry)
-		g_part_new_provider(gp, table, entry);
+	LIST_FOREACH(entry, &table->gpt_entry, gpe_entry) {
+		if (!entry->gpe_internal)
+			g_part_new_provider(gp, table, entry);
+	}
 
 	table->gpt_opened = 0;
 	g_access(cp, -1, -1, -1);
@@ -976,6 +1480,7 @@ g_part_wither(struct g_geom *gp, int error)
 
 	table = gp->softc;
 	if (table != NULL) {
+		G_PART_DESTROY(table, NULL);
 		while ((entry = LIST_FIRST(&table->gpt_entry)) != NULL) {
 			LIST_REMOVE(entry, gpe_entry);
 			g_free(entry);
@@ -998,7 +1503,6 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 	struct g_part_parms gpp;
 	struct g_part_table *table;
 	struct gctl_req_arg *ap;
-	const char *p;
 	enum g_part_ctl ctlreq;
 	unsigned int i, mparms, oparms, parm;
 	int auto_commit, close_on_error;
@@ -1020,6 +1524,12 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 			oparms |= G_PART_PARM_INDEX | G_PART_PARM_LABEL;
 		}
 		break;
+	case 'b':
+		if (!strcmp(verb, "bootcode")) {
+			ctlreq = G_PART_CTL_BOOTCODE;
+			mparms |= G_PART_PARM_GEOM | G_PART_PARM_BOOTCODE;
+		}
+		break;
 	case 'c':
 		if (!strcmp(verb, "commit")) {
 			ctlreq = G_PART_CTL_COMMIT;
@@ -1038,6 +1548,7 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 		} else if (!strcmp(verb, "destroy")) {
 			ctlreq = G_PART_CTL_DESTROY;
 			mparms |= G_PART_PARM_GEOM;
+			oparms |= G_PART_PARM_FORCE;
 		}
 		break;
 	case 'm':
@@ -1056,7 +1567,15 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 			mparms |= G_PART_PARM_GEOM;
 		} else if (!strcmp(verb, "resize")) {
 			ctlreq = G_PART_CTL_RESIZE;
-			mparms |= G_PART_PARM_GEOM | G_PART_PARM_INDEX;
+			mparms |= G_PART_PARM_GEOM | G_PART_PARM_INDEX |
+			    G_PART_PARM_SIZE;
+		}
+		break;
+	case 's':
+		if (!strcmp(verb, "set")) {
+			ctlreq = G_PART_CTL_SET;
+			mparms |= G_PART_PARM_ATTRIB | G_PART_PARM_GEOM |
+			    G_PART_PARM_INDEX;
 		}
 		break;
 	case 'u':
@@ -1064,6 +1583,10 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 			ctlreq = G_PART_CTL_UNDO;
 			mparms |= G_PART_PARM_GEOM;
 			modifies = 0;
+		} else if (!strcmp(verb, "unset")) {
+			ctlreq = G_PART_CTL_UNSET;
+			mparms |= G_PART_PARM_ATTRIB | G_PART_PARM_GEOM |
+			    G_PART_PARM_INDEX;
 		}
 		break;
 	}
@@ -1077,6 +1600,18 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 		ap = &req->arg[i];
 		parm = 0;
 		switch (ap->name[0]) {
+		case 'a':
+			if (!strcmp(ap->name, "arg0")) {
+				parm = mparms &
+				    (G_PART_PARM_GEOM | G_PART_PARM_PROVIDER);
+			}
+			if (!strcmp(ap->name, "attrib"))
+				parm = G_PART_PARM_ATTRIB;
+			break;
+		case 'b':
+			if (!strcmp(ap->name, "bootcode"))
+				parm = G_PART_PARM_BOOTCODE;
+			break;
 		case 'c':
 			if (!strcmp(ap->name, "class"))
 				continue;
@@ -1088,10 +1623,8 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 		case 'f':
 			if (!strcmp(ap->name, "flags"))
 				parm = G_PART_PARM_FLAGS;
-			break;
-		case 'g':
-			if (!strcmp(ap->name, "geom"))
-				parm = G_PART_PARM_GEOM;
+			else if (!strcmp(ap->name, "force"))
+				parm = G_PART_PARM_FORCE;
 			break;
 		case 'i':
 			if (!strcmp(ap->name, "index"))
@@ -1104,10 +1637,6 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 		case 'o':
 			if (!strcmp(ap->name, "output"))
 				parm = G_PART_PARM_OUTPUT;
-			break;
-		case 'p':
-			if (!strcmp(ap->name, "provider"))
-				parm = G_PART_PARM_PROVIDER;
 			break;
 		case 's':
 			if (!strcmp(ap->name, "scheme"))
@@ -1132,58 +1661,71 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 			gctl_error(req, "%d param '%s'", EINVAL, ap->name);
 			return;
 		}
-		p = gctl_get_asciiparam(req, ap->name);
-		if (p == NULL) {
-			gctl_error(req, "%d param '%s'", ENOATTR, ap->name);
-			return;
-		}
 		switch (parm) {
+		case G_PART_PARM_ATTRIB:
+			error = g_part_parm_str(req, ap->name,
+			    &gpp.gpp_attrib);
+			break;
+		case G_PART_PARM_BOOTCODE:
+			error = g_part_parm_bootcode(req, ap->name,
+			    &gpp.gpp_codeptr, &gpp.gpp_codesize);
+			break;
 		case G_PART_PARM_ENTRIES:
-			error = g_part_parm_uint(p, &gpp.gpp_entries);
+			error = g_part_parm_intmax(req, ap->name,
+			    &gpp.gpp_entries);
 			break;
 		case G_PART_PARM_FLAGS:
-			if (p[0] == '\0')
-				continue;
-			error = g_part_parm_str(p, &gpp.gpp_flags);
+			error = g_part_parm_str(req, ap->name, &gpp.gpp_flags);
+			break;
+		case G_PART_PARM_FORCE:
+			error = g_part_parm_uint32(req, ap->name,
+			    &gpp.gpp_force);
 			break;
 		case G_PART_PARM_GEOM:
-			error = g_part_parm_geom(p, &gpp.gpp_geom);
+			error = g_part_parm_geom(req, ap->name, &gpp.gpp_geom);
 			break;
 		case G_PART_PARM_INDEX:
-			error = g_part_parm_uint(p, &gpp.gpp_index);
+			error = g_part_parm_intmax(req, ap->name,
+			    &gpp.gpp_index);
 			break;
 		case G_PART_PARM_LABEL:
-			/* An empty label is always valid. */
-			gpp.gpp_label = p;
-			error = 0;
+			error = g_part_parm_str(req, ap->name, &gpp.gpp_label);
 			break;
 		case G_PART_PARM_OUTPUT:
 			error = 0;	/* Write-only parameter */
 			break;
 		case G_PART_PARM_PROVIDER:
-			error = g_part_parm_provider(p, &gpp.gpp_provider);
+			error = g_part_parm_provider(req, ap->name,
+			    &gpp.gpp_provider);
 			break;
 		case G_PART_PARM_SCHEME:
-			error = g_part_parm_scheme(p, &gpp.gpp_scheme);
+			error = g_part_parm_scheme(req, ap->name,
+			    &gpp.gpp_scheme);
 			break;
 		case G_PART_PARM_SIZE:
-			error = g_part_parm_quad(p, &gpp.gpp_size);
+			error = g_part_parm_quad(req, ap->name, &gpp.gpp_size);
 			break;
 		case G_PART_PARM_START:
-			error = g_part_parm_quad(p, &gpp.gpp_start);
+			error = g_part_parm_quad(req, ap->name,
+			    &gpp.gpp_start);
 			break;
 		case G_PART_PARM_TYPE:
-			error = g_part_parm_str(p, &gpp.gpp_type);
+			error = g_part_parm_str(req, ap->name, &gpp.gpp_type);
 			break;
 		case G_PART_PARM_VERSION:
-			error = g_part_parm_uint(p, &gpp.gpp_version);
+			error = g_part_parm_uint32(req, ap->name,
+			    &gpp.gpp_version);
 			break;
 		default:
 			error = EDOOFUS;
+			gctl_error(req, "%d %s", error, ap->name);
 			break;
 		}
-		if (error) {
-			gctl_error(req, "%d %s '%s'", error, ap->name, p);
+		if (error != 0) {
+			if (error == ENOATTR) {
+				gctl_error(req, "%d param '%s'", error,
+				    ap->name);
+			}
 			return;
 		}
 		gpp.gpp_parms |= parm;
@@ -1196,9 +1738,16 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 
 	/* Obtain permissions if possible/necessary. */
 	close_on_error = 0;
-	table = NULL;	/* Suppress uninit. warning. */
+	table = NULL;
 	if (modifies && (gpp.gpp_parms & G_PART_PARM_GEOM)) {
 		table = gpp.gpp_geom->softc;
+		if (table != NULL && table->gpt_corrupt &&
+		    ctlreq != G_PART_CTL_DESTROY &&
+		    ctlreq != G_PART_CTL_RECOVER) {
+			gctl_error(req, "%d table '%s' is corrupt",
+			    EPERM, gpp.gpp_geom->name);
+			return;
+		}
 		if (table != NULL && !table->gpt_opened) {
 			error = g_access(LIST_FIRST(&gpp.gpp_geom->consumer),
 			    1, 1, 1);
@@ -1212,12 +1761,24 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 		}
 	}
 
-	error = EDOOFUS;	/* Prevent bogus  uninit. warning. */
+	/* Allow the scheme to check or modify the parameters. */
+	if (table != NULL) {
+		error = G_PART_PRECHECK(table, ctlreq, &gpp);
+		if (error) {
+			gctl_error(req, "%d pre-check failed", error);
+			goto out;
+		}
+	} else
+		error = EDOOFUS;	/* Prevent bogus uninit. warning. */
+
 	switch (ctlreq) {
 	case G_PART_CTL_NONE:
 		panic("%s", __func__);
 	case G_PART_CTL_ADD:
 		error = g_part_ctl_add(req, &gpp);
+		break;
+	case G_PART_CTL_BOOTCODE:
+		error = g_part_ctl_bootcode(req, &gpp);
 		break;
 	case G_PART_CTL_COMMIT:
 		error = g_part_ctl_commit(req, &gpp);
@@ -1243,8 +1804,14 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 	case G_PART_CTL_RESIZE:
 		error = g_part_ctl_resize(req, &gpp);
 		break;
+	case G_PART_CTL_SET:
+		error = g_part_ctl_setunset(req, &gpp, 1);
+		break;
 	case G_PART_CTL_UNDO:
 		error = g_part_ctl_undo(req, &gpp);
+		break;
+	case G_PART_CTL_UNSET:
+		error = g_part_ctl_setunset(req, &gpp, 0);
 		break;
 	}
 
@@ -1254,11 +1821,13 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 		    (gpp.gpp_parms & G_PART_PARM_FLAGS) &&
 		    strchr(gpp.gpp_flags, 'C') != NULL) ? 1 : 0;
 		if (auto_commit) {
-			KASSERT(gpp.gpp_parms & G_PART_PARM_GEOM, (__func__));
+			KASSERT(gpp.gpp_parms & G_PART_PARM_GEOM, ("%s",
+			    __func__));
 			error = g_part_ctl_commit(req, &gpp);
 		}
 	}
 
+ out:
 	if (error && close_on_error) {
 		g_access(LIST_FIRST(&gpp.gpp_geom->consumer), -1, -1, -1);
 		table->gpt_opened = 0;
@@ -1284,11 +1853,16 @@ g_part_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	struct g_geom *gp;
 	struct g_part_entry *entry;
 	struct g_part_table *table;
+	struct root_hold_token *rht;
 	int attr, depth;
 	int error;
 
 	G_PART_TRACE((G_T_TOPOLOGY, "%s(%s,%s)", __func__, mp->name, pp->name));
 	g_topology_assert();
+
+	/* Skip providers that are already open for writing. */
+	if (pp->acw > 0)
+		return (NULL);
 
 	/*
 	 * Create a GEOM with consumer and hook it up to the provider.
@@ -1305,6 +1879,7 @@ g_part_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 		return (NULL);
 	}
 
+	rht = root_mount_hold(mp->name);
 	g_topology_unlock();
 
 	/*
@@ -1330,7 +1905,7 @@ g_part_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 		goto fail;
 
 	table = gp->softc;
-	
+
 	/*
 	 * Synthesize a disk geometry. Some partitioning schemes
 	 * depend on it and since some file systems need it even
@@ -1342,16 +1917,23 @@ g_part_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	error = G_PART_READ(table, cp);
 	if (error)
 		goto fail;
+	error = g_part_check_integrity(table, cp);
+	if (error)
+		goto fail;
 
 	g_topology_lock();
-	LIST_FOREACH(entry, &table->gpt_entry, gpe_entry)
-		g_part_new_provider(gp, table, entry);
+	LIST_FOREACH(entry, &table->gpt_entry, gpe_entry) {
+		if (!entry->gpe_internal)
+			g_part_new_provider(gp, table, entry);
+	}
 
+	root_mount_rel(rht);
 	g_access(cp, -1, 0, 0);
 	return (gp);
 
  fail:
 	g_topology_lock();
+	root_mount_rel(rht);
 	g_access(cp, -1, 0, 0);
 	g_part_wither(gp, error);
 	return (NULL);
@@ -1383,24 +1965,35 @@ g_part_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 	struct g_part_entry *entry;
 	struct g_part_table *table;
 
-	KASSERT(sb != NULL && gp != NULL, (__func__));
+	KASSERT(sb != NULL && gp != NULL, ("%s", __func__));
 	table = gp->softc;
 
 	if (indent == NULL) {
-		KASSERT(cp == NULL && pp != NULL, (__func__));
+		KASSERT(cp == NULL && pp != NULL, ("%s", __func__));
 		entry = pp->private;
 		if (entry == NULL)
 			return;
 		sbuf_printf(sb, " i %u o %ju ty %s", entry->gpe_index,
 		    (uintmax_t)entry->gpe_offset,
 		    G_PART_TYPE(table, entry, buf, sizeof(buf)));
+		/*
+		 * libdisk compatibility quirk - the scheme dumps the
+		 * slicer name and partition type in a way that is
+		 * compatible with libdisk. When libdisk is not used
+		 * anymore, this should go away.
+		 */
+		G_PART_DUMPCONF(table, entry, sb, indent);
 	} else if (cp != NULL) {	/* Consumer configuration. */
-		KASSERT(pp == NULL, (__func__));
+		KASSERT(pp == NULL, ("%s", __func__));
 		/* none */
 	} else if (pp != NULL) {	/* Provider configuration. */
 		entry = pp->private;
 		if (entry == NULL)
 			return;
+		sbuf_printf(sb, "%s<start>%ju</start>\n", indent,
+		    (uintmax_t)entry->gpe_start);
+		sbuf_printf(sb, "%s<end>%ju</end>\n", indent,
+		    (uintmax_t)entry->gpe_end);
 		sbuf_printf(sb, "%s<index>%u</index>\n", indent,
 		    entry->gpe_index);
 		sbuf_printf(sb, "%s<type>%s</type>\n", indent,
@@ -1423,6 +2016,10 @@ g_part_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 		    table->gpt_sectors);
 		sbuf_printf(sb, "%s<fwheads>%u</fwheads>\n", indent,
 		    table->gpt_heads);
+		sbuf_printf(sb, "%s<state>%s</state>\n", indent,
+		    table->gpt_corrupt ? "CORRUPT": "OK");
+		sbuf_printf(sb, "%s<modified>%s</modified>\n", indent,
+		    table->gpt_opened ? "true": "false");
 		G_PART_DUMPCONF(table, NULL, sb, indent);
 	}
 }
@@ -1431,13 +2028,17 @@ static void
 g_part_orphan(struct g_consumer *cp)
 {
 	struct g_provider *pp;
+	struct g_part_table *table;
 
 	pp = cp->provider;
-	KASSERT(pp != NULL, (__func__));
+	KASSERT(pp != NULL, ("%s", __func__));
 	G_PART_TRACE((G_T_TOPOLOGY, "%s(%s)", __func__, pp->name));
 	g_topology_assert();
 
-	KASSERT(pp->error != 0, (__func__));
+	KASSERT(pp->error != 0, ("%s", __func__));
+	table = cp->geom->softc;
+	if (table != NULL && table->gpt_opened)
+		g_access(cp, -1, -1, -1);
 	g_part_wither(cp->geom, pp->error);
 }
 
@@ -1461,6 +2062,7 @@ g_part_start(struct bio *bp)
 	struct g_part_table *table;
 	struct g_kerneldump *gkd;
 	struct g_provider *pp;
+	char buf[64];
 
 	pp = bp->bio_to;
 	gp = pp->geom;
@@ -1506,14 +2108,26 @@ g_part_start(struct bio *bp)
 			return;
 		if (g_handleattr_int(bp, "PART::depth", table->gpt_depth))
 			return;
+		if (g_handleattr_str(bp, "PART::scheme",
+		    table->gpt_scheme->name))
+			return;
+		if (g_handleattr_str(bp, "PART::type",
+		    G_PART_TYPE(table, entry, buf, sizeof(buf))))
+			return;
 		if (!strcmp("GEOM::kerneldump", bp->bio_attribute)) {
 			/*
 			 * Check that the partition is suitable for kernel
 			 * dumps. Typically only swap partitions should be
-			 * used.
+			 * used. If the request comes from the nested scheme
+			 * we allow dumping there as well.
 			 */
-			if (!G_PART_DUMPTO(table, entry)) {
-				g_io_deliver(bp, ENXIO);
+			if ((bp->bio_from == NULL ||
+			    bp->bio_from->geom->class != &g_part_class) &&
+			    G_PART_DUMPTO(table, entry) == 0) {
+				g_io_deliver(bp, ENODEV);
+				printf("GEOM_PART: Partition '%s' not suitable"
+				    " for kernel dumps (wrong type?)\n",
+				    pp->name);
 				return;
 			}
 			gkd = (struct g_kerneldump *)bp->bio_data;
@@ -1538,4 +2152,99 @@ g_part_start(struct bio *bp)
 	}
 	bp2->bio_done = g_std_done;
 	g_io_request(bp2, cp);
+}
+
+static void
+g_part_init(struct g_class *mp)
+{
+
+	TAILQ_INSERT_HEAD(&g_part_schemes, &g_part_null_scheme, scheme_list);
+}
+
+static void
+g_part_fini(struct g_class *mp)
+{
+
+	TAILQ_REMOVE(&g_part_schemes, &g_part_null_scheme, scheme_list);
+}
+
+static void
+g_part_unload_event(void *arg, int flag)
+{
+	struct g_consumer *cp;
+	struct g_geom *gp;
+	struct g_provider *pp;
+	struct g_part_scheme *scheme;
+	struct g_part_table *table;
+	uintptr_t *xchg;
+	int acc, error;
+
+	if (flag == EV_CANCEL)
+		return;
+
+	xchg = arg;
+	error = 0;
+	scheme = (void *)(*xchg);
+
+	g_topology_assert();
+
+	LIST_FOREACH(gp, &g_part_class.geom, geom) {
+		table = gp->softc;
+		if (table->gpt_scheme != scheme)
+			continue;
+
+		acc = 0;
+		LIST_FOREACH(pp, &gp->provider, provider)
+			acc += pp->acr + pp->acw + pp->ace;
+		LIST_FOREACH(cp, &gp->consumer, consumer)
+			acc += cp->acr + cp->acw + cp->ace;
+
+		if (!acc)
+			g_part_wither(gp, ENOSYS);
+		else
+			error = EBUSY;
+	}
+
+	if (!error)
+		TAILQ_REMOVE(&g_part_schemes, scheme, scheme_list);
+
+	*xchg = error;
+}
+
+int
+g_part_modevent(module_t mod, int type, struct g_part_scheme *scheme)
+{
+	struct g_part_scheme *iter;
+	uintptr_t arg;
+	int error;
+
+	error = 0;
+	switch (type) {
+	case MOD_LOAD:
+		TAILQ_FOREACH(iter, &g_part_schemes, scheme_list) {
+			if (scheme == iter) {
+				printf("GEOM_PART: scheme %s is already "
+				    "registered!\n", scheme->name);
+				break;
+			}
+		}
+		if (iter == NULL) {
+			TAILQ_INSERT_TAIL(&g_part_schemes, scheme,
+			    scheme_list);
+			g_retaste(&g_part_class);
+		}
+		break;
+	case MOD_UNLOAD:
+		arg = (uintptr_t)scheme;
+		error = g_waitfor_event(g_part_unload_event, &arg, M_WAITOK,
+		    NULL);
+		if (error == 0)
+			error = arg;
+		break;
+	default:
+		error = EOPNOTSUPP;
+		break;
+	}
+
+	return (error);
 }

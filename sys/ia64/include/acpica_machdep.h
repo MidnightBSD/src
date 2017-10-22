@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/include/acpica_machdep.h 167814 2007-03-22 18:16:43Z jkim $
+ * $FreeBSD$
  */
 
 /******************************************************************************
@@ -56,8 +56,8 @@
 
 #define	ACPI_ASM_MACROS
 #define	BREAKPOINT3
-#define	ACPI_DISABLE_IRQS() disable_intr()
-#define	ACPI_ENABLE_IRQS()  enable_intr()
+#define	ACPI_DISABLE_IRQS()	ia64_disable_intr()
+#define	ACPI_ENABLE_IRQS()	ia64_enable_intr()
 
 #define	ACPI_FLUSH_CPU_CACHE()	/* XXX ia64_fc()? */
 

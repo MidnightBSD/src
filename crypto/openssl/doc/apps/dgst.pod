@@ -18,6 +18,7 @@ B<openssl> B<dgst>
 [B<-verify filename>]
 [B<-prverify filename>]
 [B<-signature filename>]
+[B<-hmac key>]
 [B<file...>]
 
 [B<md5|md4|md2|sha1|sha|mdc2|ripemd160>]
@@ -67,7 +68,7 @@ see the B<PASS PHRASE ARGUMENTS> section in L<openssl(1)|openssl(1)>.
 
 =item B<-verify filename>
 
-verify the signature using the the public key in "filename".
+verify the signature using the public key in "filename".
 The output is either "Verification OK" or "Verification Failure".
 
 =item B<-prverify filename>
@@ -77,6 +78,10 @@ verify the signature using the  the private key in "filename".
 =item B<-signature filename>
 
 the actual signature to verify.
+
+=item B<-hmac key>
+
+create a hashed MAC using "key".
 
 =item B<-rand file(s)>
 

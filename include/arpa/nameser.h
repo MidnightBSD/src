@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- * 	This product includes software developed by the University of
- * 	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  * 
@@ -49,8 +45,8 @@
  */
 
 /*
- *	$Id: nameser.h,v 1.7.18.1 2005/04/27 05:00:50 sra Exp $
- * $FreeBSD: release/7.0.0/include/arpa/nameser.h 170244 2007-06-03 17:20:27Z ume $
+ *	$Id: nameser.h,v 1.7.18.2 2008/04/03 23:15:15 marka Exp $
+ * $FreeBSD$
  */
 
 #ifndef _ARPA_NAMESER_H_
@@ -424,9 +420,10 @@ typedef enum __ns_cert_types {
 #define NS_NXT_MAX 127
 
 /*%
- * EDNS0 extended flags, host order.
+ * EDNS0 extended flags and option codes, host order.
  */
 #define NS_OPT_DNSSEC_OK	0x8000U
+#define NS_OPT_NSID             3
 
 /*%
  * Inline versions of get/put short/long.  Pointer is advanced.

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/kern/uipc_sockbuf.c 175891 2008-02-02 12:44:14Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_param.h"
 
@@ -61,13 +61,12 @@ void	(*aio_swake)(struct socket *, struct sockbuf *);
 
 u_long	sb_max = SB_MAX;
 u_long sb_max_adj =
-       SB_MAX * MCLBYTES / (MSIZE + MCLBYTES); /* adjusted sb_max */
+       (quad_t)SB_MAX * MCLBYTES / (MSIZE + MCLBYTES); /* adjusted sb_max */
 
 static	u_long sb_efficiency = 8;	/* parameter for sbreserve() */
 
 static void	sbdrop_internal(struct sockbuf *sb, int len);
 static void	sbflush_internal(struct sockbuf *sb);
-static void	sbrelease_internal(struct sockbuf *sb, struct socket *so);
 
 /*
  * Socantsendmore indicates that no more data will be sent on the socket; it
@@ -176,23 +175,34 @@ sbunlock(struct sockbuf *sb)
 void
 sowakeup(struct socket *so, struct sockbuf *sb)
 {
+	int ret;
 
 	SOCKBUF_LOCK_ASSERT(sb);
 
 	selwakeuppri(&sb->sb_sel, PSOCK);
-	sb->sb_flags &= ~SB_SEL;
+	if (!SEL_WAITING(&sb->sb_sel))
+		sb->sb_flags &= ~SB_SEL;
 	if (sb->sb_flags & SB_WAIT) {
 		sb->sb_flags &= ~SB_WAIT;
 		wakeup(&sb->sb_cc);
 	}
 	KNOTE_LOCKED(&sb->sb_sel.si_note, 0);
-	SOCKBUF_UNLOCK(sb);
-	if ((so->so_state & SS_ASYNC) && so->so_sigio != NULL)
-		pgsigio(&so->so_sigio, SIGIO, 0);
-	if (sb->sb_flags & SB_UPCALL)
-		(*so->so_upcall)(so, so->so_upcallarg, M_DONTWAIT);
+	if (sb->sb_upcall != NULL) {
+		ret = sb->sb_upcall(so, sb->sb_upcallarg, M_DONTWAIT);
+		if (ret == SU_ISCONNECTED) {
+			KASSERT(sb == &so->so_rcv,
+			    ("SO_SND upcall returned SU_ISCONNECTED"));
+			soupcall_clear(so, SO_RCV);
+		}
+	} else
+		ret = SU_OK;
 	if (sb->sb_flags & SB_AIO)
 		aio_swake(so, sb);
+	SOCKBUF_UNLOCK(sb);
+	if (ret == SU_ISCONNECTED)
+		soisconnected(so);
+	if ((so->so_state & SS_ASYNC) && so->so_sigio != NULL)
+		pgsigio(&so->so_sigio, SIGIO, 0);
 	mtx_assert(SOCKBUF_MTX(sb), MA_NOTOWNED);
 }
 
@@ -284,10 +294,11 @@ sbreserve_locked(struct sockbuf *sb, u_long cc, struct socket *so,
 	SOCKBUF_LOCK_ASSERT(sb);
 
 	/*
-	 * td will only be NULL when we're in an interrupt (e.g. in
-	 * tcp_input()).
-	 *
-	 * XXXRW: This comment needs updating, as might the code.
+	 * When a thread is passed, we take into account the thread's socket
+	 * buffer size limit.  The caller will generally pass curthread, but
+	 * in the TCP input path, NULL will be passed to indicate that no
+	 * appropriate thread resource limits are available.  In that case,
+	 * we don't apply a process limit.
 	 */
 	if (cc > sb_max_adj)
 		return (0);
@@ -321,7 +332,7 @@ sbreserve(struct sockbuf *sb, u_long cc, struct socket *so,
 /*
  * Free mbufs held by a socket, and reserved mbuf space.
  */
-static void
+void
 sbrelease_internal(struct sockbuf *sb, struct socket *so)
 {
 
@@ -576,10 +587,6 @@ sbappendrecord_locked(struct sockbuf *sb, struct mbuf *m0)
 
 	if (m0 == 0)
 		return;
-	m = sb->sb_mb;
-	if (m)
-		while (m->m_nextpkt)
-			m = m->m_nextpkt;
 	/*
 	 * Put the first mbuf on the queue.  Note this permits zero length
 	 * records.
@@ -587,16 +594,14 @@ sbappendrecord_locked(struct sockbuf *sb, struct mbuf *m0)
 	sballoc(sb, m0);
 	SBLASTRECORDCHK(sb);
 	SBLINKRECORD(sb, m0);
-	if (m)
-		m->m_nextpkt = m0;
-	else
-		sb->sb_mb = m0;
+	sb->sb_mbtail = m0;
 	m = m0->m_next;
 	m0->m_next = 0;
 	if (m && (m0->m_flags & M_EOR)) {
 		m0->m_flags &= ~M_EOR;
 		m->m_flags |= M_EOR;
 	}
+	/* always call sbcompress() so it can do SBLASTMBUFCHK() */
 	sbcompress(sb, m, m0);
 }
 
@@ -764,6 +769,7 @@ sbcompress(struct sockbuf *sb, struct mbuf *m, struct mbuf *n)
 		}
 		if (n && (n->m_flags & M_EOR) == 0 &&
 		    M_WRITABLE(n) &&
+		    ((sb->sb_flags & SB_NOCOALESCE) == 0) &&
 		    m->m_len <= MCLBYTES / 4 && /* XXX: Don't copy too much */
 		    m->m_len <= M_TRAILINGSPACE(n) &&
 		    n->m_type == m->m_type) {
@@ -936,11 +942,13 @@ sbsndptr(struct sockbuf *sb, u_int off, u_int len, u_int *moff)
 
 	/* Advance by len to be as close as possible for the next transmit. */
 	for (off = off - sb->sb_sndptroff + len - 1;
-	     off > 0 && off >= m->m_len;
+	     off > 0 && m != NULL && off >= m->m_len;
 	     m = m->m_next) {
 		sb->sb_sndptroff += m->m_len;
 		off -= m->m_len;
 	}
+	if (off > 0 && m == NULL)
+		panic("%s: sockbuf %p and mbuf %p clashing", __func__, sb, ret);
 	sb->sb_sndptr = m;
 
 	return (ret);
@@ -1026,6 +1034,8 @@ sbtoxsockbuf(struct sockbuf *sb, struct xsockbuf *xsb)
 	xsb->sb_cc = sb->sb_cc;
 	xsb->sb_hiwat = sb->sb_hiwat;
 	xsb->sb_mbcnt = sb->sb_mbcnt;
+	xsb->sb_mcnt = sb->sb_mcnt;	
+	xsb->sb_ccnt = sb->sb_ccnt;
 	xsb->sb_mbmax = sb->sb_mbmax;
 	xsb->sb_lowat = sb->sb_lowat;
 	xsb->sb_flags = sb->sb_flags;

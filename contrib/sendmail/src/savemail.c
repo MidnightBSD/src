@@ -9,13 +9,11 @@
  * forth in the LICENSE file which can be found at the top level of
  * the sendmail distribution.
  *
- *	$FreeBSD: release/7.0.0/contrib/sendmail/src/savemail.c 172506 2007-10-10 16:59:15Z cvs2svn $
- *
  */
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: savemail.c,v 8.313 2006/11/29 00:20:41 ca Exp $")
+SM_RCSID("@(#)$Id: savemail.c,v 8.314 2009/12/18 17:08:01 ca Exp $")
 
 static bool	errbody __P((MCI *, ENVELOPE *, char *));
 static bool	pruneroute __P((char *));
@@ -707,7 +705,7 @@ returntosender(msg, returnq, flags, e)
 	sendall(ee, SM_DELIVER);
 
 	/* restore state */
-	dropenvelope(ee, true, false);
+	(void) dropenvelope(ee, true, false);
 	sm_rpool_free(ee->e_rpool);
 	CurEnv = oldcur;
 	returndepth--;

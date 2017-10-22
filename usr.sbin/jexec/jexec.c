@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2003 Mike Barcroft <mike@FreeBSD.org>
+ * Copyright (c) 2008 Bjoern A. Zeeb <bz@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,17 +24,25 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/jexec/jexec.c 162801 2006-09-29 17:04:03Z ru $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
 #include <sys/jail.h>
+#include <sys/socket.h>
+#include <sys/sysctl.h>
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 #include <err.h>
 #include <errno.h>
+#include <jail.h>
+#include <limits.h>
 #include <login_cap.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <pwd.h>
 #include <unistd.h>
 
@@ -50,7 +59,7 @@ static void	usage(void);
 	lcap = login_getpwclass(pwd);					\
 	if (lcap == NULL)						\
 		err(1, "getpwclass: %s", username);			\
-	ngroups = NGROUPS;						\
+	ngroups = ngroups_max;						\
 	if (getgrouplist(username, pwd->pw_gid, groups, &ngroups) != 0)	\
 		err(1, "getgrouplist: %s", username);			\
 } while (0)
@@ -61,14 +70,22 @@ main(int argc, char *argv[])
 	int jid;
 	login_cap_t *lcap = NULL;
 	struct passwd *pwd = NULL;
-	gid_t groups[NGROUPS];
+	gid_t *groups = NULL;
 	int ch, ngroups, uflag, Uflag;
+	long ngroups_max;
 	char *username;
+
 	ch = uflag = Uflag = 0;
 	username = NULL;
+	ngroups_max = sysconf(_SC_NGROUPS_MAX) + 1;
+	if ((groups = malloc(sizeof(gid_t) * ngroups_max)) == NULL)
+		err(1, "malloc");
 
-	while ((ch = getopt(argc, argv, "u:U:")) != -1) {
+	while ((ch = getopt(argc, argv, "nu:U:")) != -1) {
 		switch (ch) {
+		case 'n':
+			/* Specified name, now unused */
+			break;
 		case 'u':
 			username = optarg;
 			uflag = 1;
@@ -89,9 +106,11 @@ main(int argc, char *argv[])
 		usage();
 	if (uflag)
 		GET_USER_INFO;
-	jid = (int)strtol(argv[0], NULL, 10);
+	jid = jail_getid(argv[0]);
+	if (jid < 0)
+		errx(1, "%s", jail_errmsg);
 	if (jail_attach(jid) == -1)
-		err(1, "jail_attach(): %d", jid);
+		err(1, "jail_attach(%d)", jid);
 	if (chdir("/") == -1)
 		err(1, "chdir(): /");
 	if (username != NULL) {
@@ -115,8 +134,7 @@ static void
 usage(void)
 {
 
-	fprintf(stderr, "%s%s\n",
-		"usage: jexec [-u username | -U username]",
-		" jid command ...");
+	fprintf(stderr, "%s\n",
+		"usage: jexec [-u username | -U username] jail command ...");
 	exit(1); 
 }

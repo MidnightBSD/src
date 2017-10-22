@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/netinet/pim_var.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_PIM_VAR_H_
@@ -58,6 +58,11 @@ struct pimstat {
 	u_quad_t pims_snd_registers_msgs;  /* sent regs. msgs (data only)    */
 	u_quad_t pims_snd_registers_bytes; /* sent regs. bytes (data only)   */
 };
+
+#ifdef _KERNEL
+#define	PIMSTAT_ADD(name, val)	V_pimstat.name += (val)
+#define	PIMSTAT_INC(name)	PIMSTAT_ADD(name, 1)
+#endif
 
 /*
  * Names for PIM sysctl objects

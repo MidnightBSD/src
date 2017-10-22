@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sparc64/include/trap.h 154419 2006-01-16 01:35:25Z kris $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_TRAP_H_
@@ -90,7 +90,8 @@
 #define	T_KERNEL			64
 
 #ifndef LOCORE
-extern const char *trap_msg[];
+void sun4u_set_traptable(void *tba_addr);
+extern const char *const trap_msg[];
 #endif
 
 #endif

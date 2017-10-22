@@ -10,13 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by Martin Husemann
- *	and Wolfgang Solfrank.
- * 4. Neither the name of the University nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -35,12 +28,11 @@
 #ifndef lint
 __RCSID("$NetBSD: main.c,v 1.10 1997/10/01 02:18:14 enami Exp $");
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/sbin/fsck_msdosfs/main.c 141612 2005-02-10 09:39:51Z ru $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
@@ -74,8 +66,10 @@ main(int argc, char **argv)
 	int ch;
 
 	skipclean = 1;
-	while ((ch = getopt(argc, argv, "fFnpy")) != -1) {
+	while ((ch = getopt(argc, argv, "CfFnpy")) != -1) {
 		switch (ch) {
+		case 'C': /* for fsck_ffs compatibility */
+			break;
 		case 'f':
 			skipclean = 0;
 			break;

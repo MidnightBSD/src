@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)telnet.h	8.2 (Berkeley) 12/15/93
- * $FreeBSD: release/7.0.0/include/arpa/telnet.h 109467 2003-01-18 06:13:57Z billf $
+ * $FreeBSD$
  */
 
 #ifndef _ARPA_TELNET_H_
@@ -140,8 +136,8 @@ const char *telopts[NTELOPTS+1] = {
 	"TACACS UID", "OUTPUT MARKING", "TTYLOC",
 	"3270 REGIME", "X.3 PAD", "NAWS", "TSPEED", "LFLOW",
 	"LINEMODE", "XDISPLOC", "OLD-ENVIRON", "AUTHENTICATION",
-	"ENCRYPT", "NEW-ENVIRON", "TN3270E", "CHARSET", "COM-PORT",
-	"KERMIT",
+	"ENCRYPT", "NEW-ENVIRON", "TN3270E", "XAUTH", "CHARSET",
+	"RSP", "COM-PORT", "SLE", "STARTTLS", "KERMIT",
 	0
 };
 #define	TELOPT_FIRST	TELOPT_BINARY

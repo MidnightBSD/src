@@ -24,7 +24,7 @@
 # SUCH DAMAGE.
 #
 
-# $FreeBSD: release/7.0.0/sys/modules/ispfw/isp_2400/Makefile 161648 2006-08-26 18:40:25Z mjacob $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../dev/ispfw
 

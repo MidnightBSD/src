@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/usr.sbin/pkg_install/add/add.h 174854 2007-12-22 06:32:46Z cvs2svn $ */
+/* $FreeBSD$ */
 
 /*
  * FreeBSD install - a package for the installation and maintainance
@@ -31,6 +31,7 @@ extern Boolean	NoInstall;
 extern Boolean	NoRecord;
 extern Boolean	FailOnAlreadyInstalled;
 extern Boolean	KeepPackage;
+extern Boolean	IgnoreDeps;
 extern char	*Mode;
 extern char	*Owner;
 extern char	*Group;
@@ -40,7 +41,7 @@ extern char	*PkgAddCmd;
 extern char	FirstPen[];
 extern add_mode_t AddMode;
 
-int		make_hierarchy(char *);
+int		make_hierarchy(char *, Boolean);
 void		extract_plist(const char *, Package *);
 void		apply_perms(const char *, const char *);
 

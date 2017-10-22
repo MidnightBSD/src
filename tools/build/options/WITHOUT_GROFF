@@ -1,3 +1,7 @@
-.\" $FreeBSD: release/7.0.0/tools/build/options/WITHOUT_GROFF 156932 2006-03-21 07:50:50Z ru $
+.\" $FreeBSD$
 Set to not build
-.Xr groff 1 .
+.Xr groff 1
+and
+.Xr vgrind 1 .
+You should consider installing the textproc/groff port to not break
+.Xr man 1 .

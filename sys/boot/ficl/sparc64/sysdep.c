@@ -7,7 +7,7 @@
 **
 *******************************************************************/
 
-/* $FreeBSD: release/7.0.0/sys/boot/ficl/sparc64/sysdep.c 96962 2002-05-19 23:20:56Z jake $ */
+/* $FreeBSD$ */
 
 #ifdef TESTMAIN
 #include <stdio.h>

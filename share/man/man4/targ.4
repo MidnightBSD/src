@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man4/targ.4 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
 .Dd November 15, 2002
 .Dt TARG 4
@@ -31,7 +31,12 @@
 .Nm targ
 .Nd SCSI target emulator driver
 .Sh SYNOPSIS
-.Cd device targ
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device targ"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -128,7 +133,7 @@ are the control devices.
 .Xr scsi 4
 .Rs
 .%T "FreeBSD Target Information"
-.%O http://www.root.org/~nate/freebsd/
+.%U http://www.root.org/~nate/freebsd/
 .Re
 .Sh AUTHORS
 .An -nosplit

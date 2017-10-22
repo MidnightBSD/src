@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/compat/freebsd32/freebsd32_signal.h 163019 2006-10-05 01:58:08Z davidxu $
+ * $FreeBSD$
  */
 
 #ifndef _COMPAT_FREEBSD32_SIGNAL_H_
@@ -36,6 +36,9 @@ struct sigaltstack32 {
 };
 
 union sigval32 {
+	int			sival_int;
+	u_int32_t		sival_ptr;
+	/* 6.0 compatibility */
 	int			sigval_int;
 	u_int32_t		sigval_ptr;
 };
@@ -70,6 +73,30 @@ struct siginfo32 {
 	} _reason;
 };
 
-void siginfo_to_siginfo32(siginfo_t *src, struct siginfo32 *dst);
+struct osigevent32 {
+	int	sigev_notify;		/* Notification type */
+	union {
+		int	__sigev_signo;	/* Signal number */
+		int	__sigev_notify_kqueue;
+	} __sigev_u;
+	union sigval32 sigev_value;	/* Signal value */
+};
+
+struct sigevent32 {
+	int	sigev_notify;		/* Notification type */
+	int	sigev_signo;		/* Signal number */
+	union sigval32 sigev_value;	/* Signal value */
+	union {
+		__lwpid_t	_threadid;
+		struct {
+			uint32_t _function;
+			uint32_t _attribute;
+		} _sigev_thread;
+		unsigned short	_kevent_flags;
+		uint32_t __spare__[8];
+	} _sigev_un;
+};
+
+void siginfo_to_siginfo32(const siginfo_t *src, struct siginfo32 *dst);
 
 #endif /* !_COMPAT_FREEBSD32_SIGNAL_H_ */

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/i8134x/i81342_pci.c 172394 2007-09-30 11:05:18Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -185,7 +185,7 @@ i81342_pci_attach(device_t dev)
 		IOP34X_PCIE_OIOBAR_VADDR,
 		(sc->sc_is_atux ? IOP34X_PCIX_OIOBAR_VADDR :
 		IOP34X_PCIE_OIOBAR_VADDR) + IOP34X_OIOBAR_SIZE) != 0) {
-		panic("i80321_pci_probe: failed to set up I/O rman");
+		panic("i81342_pci_probe: failed to set up I/O rman");
 	}
 	sc->sc_mem_rman.rm_type = RMAN_ARRAY;
 	sc->sc_mem_rman.rm_descr = "I81342 PCI Memory";
@@ -516,7 +516,6 @@ static device_method_t i81342_pci_methods[] = {
 	DEVMETHOD(device_resume,	bus_generic_resume),
 
 	/* Bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
 	DEVMETHOD(bus_read_ivar,	i81342_read_ivar),
 	DEVMETHOD(bus_write_ivar,	i81342_write_ivar),
 	DEVMETHOD(bus_alloc_resource,	i81342_pci_alloc_resource),
@@ -532,7 +531,7 @@ static device_method_t i81342_pci_methods[] = {
 	DEVMETHOD(pcib_write_config,	i81342_pci_write_config),
 	DEVMETHOD(pcib_route_interrupt,	i81342_pci_route_interrupt),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t i81342_pci_driver = {

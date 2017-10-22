@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/kbdmap/kbdmap.c 171996 2007-08-27 21:56:42Z murray $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -226,6 +226,7 @@ get_font(void)
 				}
 			}
 		}
+		fclose(fp);
 	} else
 		fprintf(stderr, "Could not open %s for reading\n", sysconfig);
 
@@ -288,7 +289,7 @@ do_kbdcontrol(struct keymap *km)
 	if (!x11)
 		system(kbd_cmd);
 
-	fprintf(stderr, "keymap=%s\n", km->keym);
+	fprintf(stderr, "keymap=\"%s\"\n", km->keym);
 	free(kbd_cmd);
 }
 
@@ -326,7 +327,6 @@ show_dialog(struct keymap **km_sorted, int num_keymaps)
 	FILE *fp;
 	char *cmd, *dialog;
 	char tmp_name[] = "/tmp/_kbd_lang.XXXX";
-	const char *ext;
 	int fd, i, size;
 
 	fd = mkstemp(tmp_name);
@@ -336,9 +336,7 @@ show_dialog(struct keymap **km_sorted, int num_keymaps)
 		exit(1);
 	}
 	asprintf(&dialog, "/usr/bin/dialog --clear --title \"Keyboard Menu\" "
-			  "--menu \"%s\" -1 -1 10", menu);
-
-	ext = extract_name(dir);
+			  "--menu \"%s\" 0 0 0", menu);
 
 	/* start right font, assume that current font is equal
 	 * to default font in /etc/rc.conf

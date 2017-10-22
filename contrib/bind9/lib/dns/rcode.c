@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rcode.c,v 1.2.18.2 2006/01/27 23:57:44 marka Exp $ */
+/* $Id$ */
 
 #include <config.h>
 #include <ctype.h>
@@ -66,7 +66,7 @@
 #define ERCODENAMES \
 	/* extended rcodes */ \
 	{ dns_rcode_badvers, "BADVERS", 0}, \
-	{ 0, NULL, 0 } 
+	{ 0, NULL, 0 }
 
 #define TSIGRCODENAMES \
 	/* extended rcodes */ \
@@ -79,12 +79,17 @@
 	{ dns_tsigerror_badtrunc, "BADTRUNC", 0}, \
 	{ 0, NULL, 0 }
 
-/* RFC2538 section 2.1 */
+/* RFC4398 section 2.1 */
 
 #define CERTNAMES \
 	{ 1, "PKIX", 0}, \
 	{ 2, "SPKI", 0}, \
 	{ 3, "PGP", 0}, \
+	{ 4, "IPKIX", 0}, \
+	{ 5, "ISPKI", 0}, \
+	{ 6, "IPGP", 0}, \
+	{ 7, "ACPKIX", 0}, \
+	{ 8, "IACPKIX", 0}, \
 	{ 253, "URI", 0}, \
 	{ 254, "OID", 0}, \
 	{ 0, NULL, 0}
@@ -96,8 +101,13 @@
 	{ DNS_KEYALG_RSAMD5, "RSA", 0 }, \
 	{ DNS_KEYALG_DH, "DH", 0 }, \
 	{ DNS_KEYALG_DSA, "DSA", 0 }, \
+	{ DNS_KEYALG_NSEC3DSA, "NSEC3DSA", 0 }, \
 	{ DNS_KEYALG_ECC, "ECC", 0 }, \
 	{ DNS_KEYALG_RSASHA1, "RSASHA1", 0 }, \
+	{ DNS_KEYALG_NSEC3RSASHA1, "NSEC3RSASHA1", 0 }, \
+	{ DNS_KEYALG_RSASHA256, "RSASHA256", 0 }, \
+	{ DNS_KEYALG_RSASHA512, "RSASHA512", 0 }, \
+	{ DNS_KEYALG_ECCGOST, "ECCGOST", 0 }, \
 	{ DNS_KEYALG_INDIRECT, "INDIRECT", 0 }, \
 	{ DNS_KEYALG_PRIVATEDNS, "PRIVATEDNS", 0 }, \
 	{ DNS_KEYALG_PRIVATEOID, "PRIVATEOID", 0 }, \
@@ -114,6 +124,10 @@
 	{ 255,    "ALL", 0 }, \
 	{ 0, NULL, 0}
 
+#define HASHALGNAMES \
+	{ 1, "SHA-1", 0 }, \
+	{ 0, NULL, 0 }
+
 struct tbl {
 	unsigned int    value;
 	const char      *name;
@@ -125,6 +139,7 @@ static struct tbl tsigrcodes[] = { RCODENAMES TSIGRCODENAMES };
 static struct tbl certs[] = { CERTNAMES };
 static struct tbl secalgs[] = { SECALGNAMES };
 static struct tbl secprotos[] = { SECPROTONAMES };
+static struct tbl hashalgs[] = { HASHALGNAMES };
 
 static struct keyflag {
 	const char *name;
@@ -238,7 +253,7 @@ dns_mnemonic_fromtext(unsigned int *valuep, isc_textregion_t *source,
 
 static isc_result_t
 dns_mnemonic_totext(unsigned int value, isc_buffer_t *target,
-		    struct tbl *table) 
+		    struct tbl *table)
 {
 	int i = 0;
 	char buf[sizeof("4294967296")];
@@ -271,7 +286,7 @@ dns_tsigrcode_fromtext(dns_rcode_t *rcodep, isc_textregion_t *source) {
 	RETERR(dns_mnemonic_fromtext(&value, source, tsigrcodes, 0xffff));
 	*rcodep = value;
 	return (ISC_R_SUCCESS);
-} 
+}
 
 isc_result_t
 dns_tsigrcode_totext(dns_rcode_t rcode, isc_buffer_t *target) {
@@ -304,6 +319,21 @@ dns_secalg_totext(dns_secalg_t secalg, isc_buffer_t *target) {
 	return (dns_mnemonic_totext(secalg, target, secalgs));
 }
 
+void
+dns_secalg_format(dns_secalg_t alg, char *cp, unsigned int size) {
+	isc_buffer_t b;
+	isc_region_t r;
+	isc_result_t result;
+
+	REQUIRE(cp != NULL && size > 0);
+	isc_buffer_init(&b, cp, size - 1);
+	result = dns_secalg_totext(alg, &b);
+	isc_buffer_usedregion(&b, &r);
+	r.base[r.length] = 0;
+	if (result != ISC_R_SUCCESS)
+		r.base[0] = 0;
+}
+
 isc_result_t
 dns_secproto_fromtext(dns_secproto_t *secprotop, isc_textregion_t *source) {
 	unsigned int value;
@@ -315,6 +345,14 @@ dns_secproto_fromtext(dns_secproto_t *secprotop, isc_textregion_t *source) {
 isc_result_t
 dns_secproto_totext(dns_secproto_t secproto, isc_buffer_t *target) {
 	return (dns_mnemonic_totext(secproto, target, secprotos));
+}
+
+isc_result_t
+dns_hashalg_fromtext(unsigned char *hashalg, isc_textregion_t *source) {
+	unsigned int value;
+	RETERR(dns_mnemonic_fromtext(&value, source, hashalgs, 0xff));
+	*hashalg = value;
+	return (ISC_R_SUCCESS);
 }
 
 isc_result_t
@@ -456,6 +494,9 @@ dns_rdataclass_format(dns_rdataclass_t rdclass,
 	isc_result_t result;
 	isc_buffer_t buf;
 
+	if (size == 0U)
+		return;
+
 	isc_buffer_init(&buf, array, size);
 	result = dns_rdataclass_totext(rdclass, &buf);
 	/*
@@ -467,8 +508,6 @@ dns_rdataclass_format(dns_rdataclass_t rdclass,
 		else
 			result = ISC_R_NOSPACE;
 	}
-	if (result != ISC_R_SUCCESS) {
-		snprintf(array, size, "<unknown>");
-		array[size - 1] = '\0';
-	}
+	if (result != ISC_R_SUCCESS)
+		strlcpy(array, "<unknown>", size);
 }

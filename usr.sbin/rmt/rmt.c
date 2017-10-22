@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)rmt.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/rmt/rmt.c 133249 2004-08-07 04:28:56Z imp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rmt
@@ -206,8 +206,7 @@ ioerror:
 }
 
 void
-getstring(bp)
-	char *bp;
+getstring(char *bp)
 {
 	int i;
 	char *cp = bp;
@@ -222,9 +221,7 @@ getstring(bp)
 }
 
 char *
-checkbuf(rec, size)
-	char *rec;
-	int size;
+checkbuf(char *rec, int size)
 {
 
 	if (size <= maxrecsize)
@@ -244,8 +241,7 @@ checkbuf(rec, size)
 }
 
 void
-error(num)
-	int num;
+error(int num)
 {
 
 	DEBUG2("rmtd: E %d (%s)\n", num, strerror(num));

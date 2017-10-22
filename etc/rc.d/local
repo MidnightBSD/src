@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/local 175737 2008-01-28 07:58:32Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: local
@@ -16,20 +16,20 @@ stop_cmd="local_stop"
 
 local_start()
 {
-	echo -n 'Starting local daemons:'
 	if [ -f /etc/rc.local ]; then
+		echo -n 'Starting local daemons:'
 		. /etc/rc.local
+		echo '.'
 	fi
-	echo '.'
 }
 
 local_stop()
 {
-	echo -n 'Shutting down local daemons:'
 	if [ -f /etc/rc.shutdown.local ]; then
+		echo -n 'Shutting down local daemons:'
 		. /etc/rc.shutdown.local
+		echo '.'
 	fi
-	echo '.'
 }
 
 load_rc_config $name

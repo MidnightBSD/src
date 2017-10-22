@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/powerpc/powermac/maciovar.h 153050 2005-12-03 11:59:26Z marius $
+ * $FreeBSD$
  */
 
 #ifndef _MACIO_MACIOVAR_H_
@@ -38,6 +38,16 @@
 #define MACIO_REG_SIZE  0x7ffff
 
 /*
+ * Feature Control Registers (FCR)
+ */
+#define HEATHROW_FCR	0x38
+#define KEYLARGO_FCR0	0x38
+#define KEYLARGO_FCR1	0x3c
+
+#define FCR_ENET_ENABLE	0x60000000
+#define FCR_ENET_RESET	0x80000000
+
+/*
  * Format of a macio reg property entry.
  */
 struct macio_reg {
@@ -49,7 +59,7 @@ struct macio_reg {
  * Per macio device structure.
  */
 struct macio_devinfo {
-	int        mdi_interrupts[5];
+	int        mdi_interrupts[6];
 	int	   mdi_ninterrupts;
 	int        mdi_base;
 	struct ofw_bus_devinfo mdi_obdinfo;

@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_l2cap_misc.c,v 1.5 2003/09/08 19:11:45 max Exp $
- * $FreeBSD: release/7.0.0/sys/netgraph/bluetooth/l2cap/ng_l2cap_misc.c 149679 2005-08-31 18:13:23Z emax $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -104,7 +104,7 @@ ng_l2cap_new_con(ng_l2cap_p l2cap, bdaddr_p bdaddr)
 	ng_l2cap_con_p	con = NULL;
 
 	/* Create new connection descriptor */
-	MALLOC(con, ng_l2cap_con_p, sizeof(*con), M_NETGRAPH_L2CAP,
+	con = malloc(sizeof(*con), M_NETGRAPH_L2CAP,
 		M_NOWAIT|M_ZERO);
 	if (con == NULL)
 		return (NULL);
@@ -284,7 +284,7 @@ ng_l2cap_free_con(ng_l2cap_con_p con)
 	LIST_REMOVE(con, next);
 
 	bzero(con, sizeof(*con));
-	FREE(con, M_NETGRAPH_L2CAP);
+	free(con, M_NETGRAPH_L2CAP);
 } /* ng_l2cap_free_con */
 
 /*
@@ -329,7 +329,7 @@ ng_l2cap_new_chan(ng_l2cap_p l2cap, ng_l2cap_con_p con, u_int16_t psm)
 {
 	ng_l2cap_chan_p	ch = NULL;
 
-	MALLOC(ch, ng_l2cap_chan_p, sizeof(*ch), M_NETGRAPH_L2CAP,
+	ch = malloc(sizeof(*ch), M_NETGRAPH_L2CAP,
 		M_NOWAIT|M_ZERO);
 	if (ch == NULL)
 		return (NULL);
@@ -357,7 +357,7 @@ ng_l2cap_new_chan(ng_l2cap_p l2cap, ng_l2cap_con_p con, u_int16_t psm)
 		ng_l2cap_con_ref(con);
 	} else {
 		bzero(ch, sizeof(*ch));
-		FREE(ch, M_NETGRAPH_L2CAP);
+		free(ch, M_NETGRAPH_L2CAP);
 		ch = NULL;
 	}
 
@@ -408,7 +408,7 @@ ng_l2cap_free_chan(ng_l2cap_chan_p ch)
 	ng_l2cap_con_unref(ch->con);
 
 	bzero(ch, sizeof(*ch));
-	FREE(ch, M_NETGRAPH_L2CAP);
+	free(ch, M_NETGRAPH_L2CAP);
 } /* ng_l2cap_free_chan */
 
 /*
@@ -425,7 +425,7 @@ ng_l2cap_new_cmd(ng_l2cap_con_p con, ng_l2cap_chan_p ch, u_int8_t ident,
 ("%s: %s - invalid channel pointer!\n",
 		__func__, NG_NODE_NAME(con->l2cap->node)));
 
-	MALLOC(cmd, ng_l2cap_cmd_p, sizeof(*cmd), M_NETGRAPH_L2CAP,
+	cmd = malloc(sizeof(*cmd), M_NETGRAPH_L2CAP,
 		M_NOWAIT|M_ZERO);
 	if (cmd == NULL)
 		return (NULL);

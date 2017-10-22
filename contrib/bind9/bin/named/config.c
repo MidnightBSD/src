@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2001-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: config.c,v 1.47.18.32 2007/09/13 05:04:01 each Exp $ */
+/* $Id: config.c,v 1.113.16.2 2011/02/28 01:19:58 tbox Exp $ */
 
 /*! \file */
 
@@ -42,8 +42,12 @@
 #include <dns/tsig.h>
 #include <dns/zone.h>
 
+#include <dst/dst.h>
+
 #include <named/config.h>
 #include <named/globals.h>
+
+#include "bind.keys.h"
 
 /*% default configuration */
 static char defaultconf[] = "\
@@ -52,10 +56,13 @@ options {\n\
 #ifndef WIN32
 "	coresize default;\n\
 	datasize default;\n\
-	files default;\n\
+	files unlimited;\n\
 	stacksize default;\n"
 #endif
-"	deallocate-on-exit true;\n\
+"#	session-keyfile \"" NS_LOCALSTATEDIR "/run/named/session.key\";\n\
+	session-keyname local-ddns;\n\
+	session-keyalg hmac-sha256;\n\
+	deallocate-on-exit true;\n\
 #	directory <none>\n\
 	dump-file \"named_dump.db\";\n\
 	fake-iquery no;\n\
@@ -69,9 +76,11 @@ options {\n\
 	memstatistics-file \"named.memstats\";\n\
 	multiple-cnames no;\n\
 #	named-xfer <obsolete>;\n\
-#	pid-file \"" NS_LOCALSTATEDIR "/named.pid\"; /* or /lwresd.pid */\n\
+#	pid-file \"" NS_LOCALSTATEDIR "/run/named/named.pid\"; /* or /lwresd.pid */\n\
+	bindkeys-file \"" NS_SYSCONFDIR "/bind.keys\";\n\
 	port 53;\n\
 	recursing-file \"named.recursing\";\n\
+	secroots-file \"named.secroots\";\n\
 "
 #ifdef PATH_RANDOMDEV
 "\
@@ -80,6 +89,7 @@ options {\n\
 #endif
 "\
 	recursive-clients 1000;\n\
+	resolver-query-timeout 30;\n\
 	rrset-order {type NS order random; order cyclic; };\n\
 	serial-queries 20;\n\
 	serial-query-rate 20;\n\
@@ -99,12 +109,19 @@ options {\n\
 	use-ixfr true;\n\
 	edns-udp-size 4096;\n\
 	max-udp-size 4096;\n\
+	request-nsid false;\n\
+	reserved-sockets 512;\n\
+\n\
+	/* DLV */\n\
+	dnssec-lookaside . trust-anchor dlv.isc.org;\n\
 \n\
 	/* view */\n\
 	allow-notify {none;};\n\
 	allow-update-forwarding {none;};\n\
 	allow-query-cache { localnets; localhost; };\n\
+	allow-query-cache-on { any; };\n\
 	allow-recursion { localnets; localhost; };\n\
+	allow-recursion-on { any; };\n\
 #	allow-v6-synthesis <obsolete>;\n\
 #	sortlist <none>\n\
 #	topology <none>\n\
@@ -121,7 +138,7 @@ options {\n\
 	query-source-v6 address *;\n\
 	notify-source *;\n\
 	notify-source-v6 *;\n\
-	cleaning-interval 60;\n\
+	cleaning-interval 0;  /* now meaningless */\n\
 	min-roots 2;\n\
 	lame-ttl 600;\n\
 	max-ncache-ttl 10800; /* 3 hours */\n\
@@ -131,24 +148,34 @@ options {\n\
 	check-names master fail;\n\
 	check-names slave warn;\n\
 	check-names response ignore;\n\
+	check-dup-records warn;\n\
 	check-mx warn;\n\
 	acache-enable no;\n\
 	acache-cleaning-interval 60;\n\
-	max-acache-size 0;\n\
+	max-acache-size 16M;\n\
 	dnssec-enable yes;\n\
-	dnssec-validation no; /* Make yes for 9.5. */ \n\
+	dnssec-validation yes; \n\
 	dnssec-accept-expired no;\n\
 	clients-per-query 10;\n\
 	max-clients-per-query 100;\n\
 	zero-no-soa-ttl-cache no;\n\
+	nsec3-test-zone no;\n\
+	allow-new-zones no;\n\
 "
+#ifdef ALLOW_FILTER_AAAA_ON_V4
+"	filter-aaaa-on-v4 no;\n\
+	filter-aaaa { any; };\n\
+"
+#endif
 
 "	/* zone */\n\
 	allow-query {any;};\n\
+	allow-query-on {any;};\n\
 	allow-transfer {any;};\n\
 	notify yes;\n\
 #	also-notify <none>\n\
 	notify-delay 5;\n\
+	notify-to-soa no;\n\
 	dialup no;\n\
 #	forward <none>\n\
 #	forwarders <none>\n\
@@ -167,7 +194,11 @@ options {\n\
 	max-refresh-time 2419200; /* 4 weeks */\n\
 	min-refresh-time 300;\n\
 	multi-master no;\n\
+	dnssec-secure-to-insecure no;\n\
 	sig-validity-interval 30; /* days */\n\
+	sig-signing-nodes 100;\n\
+	sig-signing-signatures 10;\n\
+	sig-signing-type 65534;\n\
 	zone-statistics false;\n\
 	max-journal-size unlimited;\n\
 	ixfr-from-differences false;\n\
@@ -178,6 +209,8 @@ options {\n\
 	check-srv-cname warn;\n\
 	zero-no-soa-ttl yes;\n\
 	update-check-ksk yes;\n\
+	dnssec-dnskey-kskonly no;\n\
+	try-tcp-refresh yes; /* BIND 8 compat */\n\
 };\n\
 "
 
@@ -187,6 +220,7 @@ options {\n\
 view \"_bind\" chaos {\n\
 	recursion no;\n\
 	notify no;\n\
+	allow-new-zones no;\n\
 \n\
 	zone \"version.bind\" chaos {\n\
 		type master;\n\
@@ -202,11 +236,24 @@ view \"_bind\" chaos {\n\
 		type master;\n\
 		database \"_builtin authors\";\n\
 	};\n\
+\n\
 	zone \"id.server\" chaos {\n\
 		type master;\n\
 		database \"_builtin id\";\n\
 	};\n\
 };\n\
+"
+"#\n\
+#  Default trusted key(s) for builtin DLV support\n\
+#  (used if \"dnssec-lookaside auto;\" is set and\n\
+#  sysconfdir/bind.keys doesn't exist).\n\
+#\n\
+# BEGIN MANAGED KEYS\n"
+
+/* Imported from bind.keys.h: */
+MANAGED_KEYS
+
+"# END MANAGED KEYS\n\
 ";
 
 isc_result_t
@@ -328,6 +375,8 @@ ns_config_getzonetype(const cfg_obj_t *zonetypeobj) {
 		ztype = dns_zone_slave;
 	else if (strcasecmp(str, "stub") == 0)
 		ztype = dns_zone_stub;
+	else if (strcasecmp(str, "static-stub") == 0)
+		ztype = dns_zone_staticstub;
 	else
 		INSIST(0);
 	return (ztype);
@@ -402,7 +451,7 @@ ns_config_putiplist(isc_mem_t *mctx, isc_sockaddr_t **addrsp,
 
 static isc_result_t
 get_masters_def(const cfg_obj_t *cctx, const char *name,
-	        const cfg_obj_t **ret)
+		const cfg_obj_t **ret)
 {
 	isc_result_t result;
 	const cfg_obj_t *masters = NULL;
@@ -520,7 +569,7 @@ ns_config_getipandkeylist(const cfg_obj_t *config, const cfg_obj_t *list,
 			tresult = get_masters_def(config, listname, &list);
 			if (tresult == ISC_R_NOTFOUND) {
 				cfg_obj_log(addr, ns_g_lctx, ISC_LOG_ERROR,
-                                    "masters \"%s\" not found", listname);
+				    "masters \"%s\" not found", listname);
 
 				result = tresult;
 				goto cleanup;
@@ -598,13 +647,13 @@ ns_config_getipandkeylist(const cfg_obj_t *config, const cfg_obj_t *list,
 		if (keys[i] == NULL)
 			goto cleanup;
 		dns_name_init(keys[i], NULL);
-		
+
 		keystr = cfg_obj_asstring(key);
 		isc_buffer_init(&b, keystr, strlen(keystr));
 		isc_buffer_add(&b, strlen(keystr));
 		dns_fixedname_init(&fname);
 		result = dns_name_fromtext(dns_fixedname_name(&fname), &b,
-					   dns_rootname, ISC_FALSE, NULL);
+					   dns_rootname, 0, NULL);
 		if (result != ISC_R_SUCCESS)
 			goto cleanup;
 		result = dns_name_dup(dns_fixedname_name(&fname), mctx,
@@ -654,7 +703,7 @@ ns_config_getipandkeylist(const cfg_obj_t *config, const cfg_obj_t *list,
 		isc_mem_put(mctx, lists, listcount * sizeof(*lists));
 	if (stack != NULL)
 		isc_mem_put(mctx, stack, stackcount * sizeof(*stack));
-	
+
 	INSIST(keycount == addrcount);
 
 	*addrsp = addrs;
@@ -736,22 +785,30 @@ struct keyalgorithms {
 	const char *str;
 	enum { hmacnone, hmacmd5, hmacsha1, hmacsha224,
 	       hmacsha256, hmacsha384, hmacsha512 } hmac;
+	unsigned int type;
 	isc_uint16_t size;
 } algorithms[] = {
-	{ "hmac-md5", hmacmd5, 128 },
-	{ "hmac-md5.sig-alg.reg.int", hmacmd5, 0 },
-	{ "hmac-md5.sig-alg.reg.int.", hmacmd5, 0 },
-	{ "hmac-sha1", hmacsha1, 160 },
-	{ "hmac-sha224", hmacsha224, 224 },
-	{ "hmac-sha256", hmacsha256, 256 },
-	{ "hmac-sha384", hmacsha384, 384 },
-	{ "hmac-sha512", hmacsha512, 512 },
-	{  NULL, hmacnone, 0 }
+	{ "hmac-md5", hmacmd5, DST_ALG_HMACMD5, 128 },
+	{ "hmac-md5.sig-alg.reg.int", hmacmd5, DST_ALG_HMACMD5, 0 },
+	{ "hmac-md5.sig-alg.reg.int.", hmacmd5, DST_ALG_HMACMD5, 0 },
+	{ "hmac-sha1", hmacsha1, DST_ALG_HMACSHA1, 160 },
+	{ "hmac-sha224", hmacsha224, DST_ALG_HMACSHA224, 224 },
+	{ "hmac-sha256", hmacsha256, DST_ALG_HMACSHA256, 256 },
+	{ "hmac-sha384", hmacsha384, DST_ALG_HMACSHA384, 384 },
+	{ "hmac-sha512", hmacsha512, DST_ALG_HMACSHA512, 512 },
+	{  NULL, hmacnone, DST_ALG_UNKNOWN, 0 }
 };
 
 isc_result_t
 ns_config_getkeyalgorithm(const char *str, dns_name_t **name,
 			  isc_uint16_t *digestbits)
+{
+	return (ns_config_getkeyalgorithm2(str, name, NULL, digestbits));
+}
+
+isc_result_t
+ns_config_getkeyalgorithm2(const char *str, dns_name_t **name,
+			   unsigned int *typep, isc_uint16_t *digestbits)
 {
 	int i;
 	size_t len = 0;
@@ -790,6 +847,8 @@ ns_config_getkeyalgorithm(const char *str, dns_name_t **name,
 			INSIST(0);
 		}
 	}
+	if (typep != NULL)
+		*typep = algorithms[i].type;
 	if (digestbits != NULL)
 		*digestbits = bits;
 	return (ISC_R_SUCCESS);

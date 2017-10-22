@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/etc/mtree/BIND.include.dist 135848 2004-09-27 08:16:29Z dougb $
+# $FreeBSD$
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #

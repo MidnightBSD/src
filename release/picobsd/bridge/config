@@ -1,7 +1,6 @@
 # configuration for picobsd build script.
-# $FreeBSD: release/7.0.0/release/picobsd/bridge/config 155140 2006-01-31 20:36:01Z luigi $
+# $FreeBSD$
 # it should only contain variable definitions -- it is sourced
 # by the shell much like rc.conf* files
 
-o_no_devfs="" # we have devfs.
-fd_size="2880"
+fd_size="4096"

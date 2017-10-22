@@ -50,7 +50,7 @@ static char sccsid[] = "@(#)lpr.c	8.4 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/lpr/lpr/lpr.c 117621 2003-07-15 08:40:31Z gad $");
+__FBSDID("$FreeBSD$");
 
 /*
  *      lpr -- off line print
@@ -386,7 +386,7 @@ main(int argc, char *argv[])
 			continue;	/* file unreasonable */
 
 		if (sflag && (cp = linked(arg)) != NULL) {
-			(void) snprintf(buf, sizeof(buf), "%d %d", statb.st_dev,
+			(void) snprintf(buf, sizeof(buf), "%u %u", statb.st_dev,
 				statb.st_ino);
 			card('S', buf);
 			if (format == 'p')
@@ -846,7 +846,7 @@ mktemps(const struct printer *pp)
 
 	(void) snprintf(buf, sizeof(buf), "%s/.seq", pp->spool_dir);
 	seteuid(euid);
-	if ((fd = open(buf, O_RDWR|O_CREAT, 0661)) < 0) {
+	if ((fd = open(buf, O_RDWR|O_CREAT, 0664)) < 0) {
 		printf("%s: cannot create %s\n", progname, buf);
 		exit(1);
 	}

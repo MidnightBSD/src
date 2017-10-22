@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)swab.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/swab.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <unistd.h>
 
@@ -45,6 +45,8 @@ swab(const void * __restrict from, void * __restrict to, ssize_t len)
 	int n;
 	char *fp, *tp;
 
+	if (len <= 0)
+		return;
 	n = len >> 1;
 	fp = (char *)from;
 	tp = (char *)to;

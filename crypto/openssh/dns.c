@@ -1,4 +1,4 @@
-/* $OpenBSD: dns.c,v 1.23 2006/08/03 03:34:42 deraadt Exp $ */
+/* $OpenBSD: dns.c,v 1.27 2010/08/31 11:54:45 djm Exp $ */
 
 /*
  * Copyright (c) 2003 Wesley Griffin. All rights reserved.
@@ -75,7 +75,7 @@ dns_result_totext(unsigned int res)
  */
 static int
 dns_read_key(u_int8_t *algorithm, u_int8_t *digest_type,
-    u_char **digest, u_int *digest_len, const Key *key)
+    u_char **digest, u_int *digest_len, Key *key)
 {
 	int success = 0;
 
@@ -86,6 +86,7 @@ dns_read_key(u_int8_t *algorithm, u_int8_t *digest_type,
 	case KEY_DSA:
 		*algorithm = SSHFP_KEY_DSA;
 		break;
+	/* XXX KEY_ECDSA */
 	default:
 		*algorithm = SSHFP_KEY_RESERVED; /* 0 */
 	}
@@ -145,11 +146,20 @@ is_numeric_hostname(const char *hostname)
 {
 	struct addrinfo hints, *ai;
 
+	/*
+	 * We shouldn't ever get a null host but if we do then log an error
+	 * and return -1 which stops DNS key fingerprint processing.
+	 */
+	if (hostname == NULL) {
+		error("is_numeric_hostname called with NULL hostname");
+		return -1;
+	}
+
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = AI_NUMERICHOST;
 
-	if (getaddrinfo(hostname, "0", &hints, &ai) == 0) {
+	if (getaddrinfo(hostname, NULL, &hints, &ai) == 0) {
 		freeaddrinfo(ai);
 		return -1;
 	}
@@ -163,7 +173,7 @@ is_numeric_hostname(const char *hostname)
  */
 int
 verify_host_key_dns(const char *hostname, struct sockaddr *address,
-    const Key *hostkey, int *flags)
+    Key *hostkey, int *flags)
 {
 	u_int counter;
 	int result;
@@ -217,7 +227,7 @@ verify_host_key_dns(const char *hostname, struct sockaddr *address,
 	if (fingerprints->rri_nrdatas)
 		*flags |= DNS_VERIFY_FOUND;
 
-	for (counter = 0; counter < fingerprints->rri_nrdatas; counter++)  {
+	for (counter = 0; counter < fingerprints->rri_nrdatas; counter++) {
 		/*
 		 * Extract the key from the answer. Ignore any badly
 		 * formatted fingerprints.
@@ -262,7 +272,7 @@ verify_host_key_dns(const char *hostname, struct sockaddr *address,
  * Export the fingerprint of a key as a DNS resource record
  */
 int
-export_dns_rr(const char *hostname, const Key *key, FILE *f, int generic)
+export_dns_rr(const char *hostname, Key *key, FILE *f, int generic)
 {
 	u_int8_t rdata_pubkey_algorithm = 0;
 	u_int8_t rdata_digest_type = SSHFP_HASH_SHA1;

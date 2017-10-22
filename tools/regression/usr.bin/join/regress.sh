@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/tools/regression/usr.bin/join/regress.sh 137587 2004-11-11 19:47:55Z nik $
+# $FreeBSD$
 
 echo 1..1
 

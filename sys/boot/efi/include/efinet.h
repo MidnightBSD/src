@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/boot/efi/include/efinet.h 163898 2006-11-02 02:42:48Z marcel $ */
+/* $FreeBSD$ */
 #ifndef _EFINET_H
 #define _EFINET_H
 

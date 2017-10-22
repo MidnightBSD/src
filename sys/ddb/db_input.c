@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/ddb/db_input.c 139747 2005-01-06 01:34:41Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -250,7 +250,7 @@ db_inputchar(c)
 		}
 
 	    hist_redraw:
-		db_putnchars(BACKUP, db_le - db_lbuf_start);
+		db_putnchars(BACKUP, db_lc - db_lbuf_start);
 		db_putnchars(BLANK, db_le - db_lbuf_start);
 		db_putnchars(BACKUP, db_le - db_lbuf_start);
 		db_le = index(db_lbuf_start, '\0');
@@ -302,6 +302,9 @@ db_readline(lstart, lsize)
 	char *	lstart;
 	int	lsize;
 {
+
+	if (lsize < 2)
+		return (0);
 	if (lsize != db_lhistlsize) {
 		/*
 		 * (Re)initialize input line history.  Throw away any
@@ -316,13 +319,14 @@ db_readline(lstart, lsize)
 	db_force_whitespace();	/* synch output position */
 
 	db_lbuf_start = lstart;
-	db_lbuf_end   = lstart + lsize;
+	db_lbuf_end   = lstart + lsize - 2;	/* Will append NL and NUL. */
 	db_lc = lstart;
 	db_le = lstart;
 
 	while (!db_inputchar(cngetc()))
 	    continue;
 
+	db_capture_write(lstart, db_le - db_lbuf_start);
 	db_printf("\n");	/* synch output position */
 	*db_le = 0;
 

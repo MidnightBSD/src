@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/gnu/fs/xfs/FreeBSD/xfs_buf.c 159451 2006-06-09 06:04:06Z rodrigc $
+ * $FreeBSD$
  */
 
 #include "xfs.h"
@@ -81,13 +81,12 @@ xfs_buf_get_empty(size_t size,  xfs_buftarg_t *target)
 {
 	struct buf *bp;
 
-	bp = geteblk(0);
+	bp = geteblk(0, 0);
 	if (bp != NULL) {
 		bp->b_bufsize = size;
 		bp->b_bcount = size;
 
-		KASSERT(BUF_REFCNT(bp) == 1,
-			("xfs_buf_get_empty: bp %p not locked",bp));
+		BUF_ASSERT_HELD(bp);
 
 		xfs_buf_set_target(bp, target);
 	}
@@ -101,10 +100,9 @@ xfs_buf_get_noaddr(size_t len, xfs_buftarg_t *target)
 	if (len >= MAXPHYS)
 		return (NULL);
 
-	bp = geteblk(len);
+	bp = geteblk(len, 0);
 	if (bp != NULL) {
-		KASSERT(BUF_REFCNT(bp) == 1,
-			("xfs_buf_get_empty: bp %p not locked",bp));
+		BUF_ASSERT_HELD(bp);
 
 		xfs_buf_set_target(bp, target);
 	}
@@ -163,7 +161,7 @@ XFS_bwrite(xfs_buf_t *bp)
 		if ((bp->b_flags & B_ASYNC) == 0) {
 			error = bufwait(bp);
 #if 0
-			if (BUF_REFCNT(bp) > 1)
+			if (BUF_LOCKRECURSED(bp))
 				BUF_UNLOCK(bp);
 			else
 				brelse(bp);
@@ -268,7 +266,7 @@ xfs_flush_buftarg(
 {
 	int error = 0;
 
-	error = vinvalbuf(btp->specvp, V_SAVE|V_NORMAL, curthread, 0, 0);
+	error = vinvalbuf(btp->specvp, V_SAVE | V_NORMAL, 0, 0);
 	return error;
 }
 

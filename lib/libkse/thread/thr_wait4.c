@@ -26,11 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_wait4.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
-#include <sys/types.h>
 
 #include "namespace.h"
+#include <sys/types.h>
 #include <errno.h>
 #include <sys/wait.h>
 #include <pthread.h>
@@ -38,8 +38,7 @@
 
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(__wait4);
-LT10_COMPAT_DEFAULT(wait4);
+pid_t __wait4(pid_t pid, int *istat, int options, struct rusage *rusage);
 
 __weak_reference(__wait4, wait4);
 

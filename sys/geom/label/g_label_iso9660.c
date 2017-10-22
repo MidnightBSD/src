@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/geom/label/g_label_iso9660.c 155174 2006-02-01 12:06:01Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -78,7 +78,10 @@ g_label_iso9660_taste(struct g_consumer *cp, char *label, size_t size)
 	}
 }
 
-const struct g_label_desc g_label_iso9660 = {
+struct g_label_desc g_label_iso9660 = {
 	.ld_taste = g_label_iso9660_taste,
-	.ld_dir = G_LABEL_ISO9660_DIR
+	.ld_dir = G_LABEL_ISO9660_DIR,
+	.ld_enabled = 1
 };
+
+G_LABEL_INIT(iso9660, g_label_iso9660, "Create device nodes for ISO9660 volume names");

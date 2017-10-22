@@ -1,9 +1,12 @@
-# $FreeBSD: release/7.0.0/sys/modules/mac_bsdextended/Makefile 101172 2002-08-01 17:41:27Z rwatson $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../security/mac_bsdextended
 
 KMOD=	mac_bsdextended
 SRCS=	vnode_if.h \
-	mac_bsdextended.c
+	mac_bsdextended.h \
+	mac_bsdextended.c \
+	ugidfw_system.c \
+	ugidfw_vnode.c
 
 .include <bsd.kmod.mk>

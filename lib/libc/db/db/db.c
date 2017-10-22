@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)db.c	8.4 (Berkeley) 2/21/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/db/db/db.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -42,18 +42,16 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/db/db/db.c 165903 2007-01-09 00:28:16
 
 #include <db.h>
 
+static int __dberr(void);
+
 DB *
-dbopen(fname, flags, mode, type, openinfo)
-	const char *fname;
-	int flags, mode;
-	DBTYPE type;
-	const void *openinfo;
+dbopen(const char *fname, int flags, int mode, DBTYPE type, const void *openinfo)
 {
 
 #define	DB_FLAGS	(DB_LOCK | DB_SHMEM | DB_TXN)
 #define	USE_OPEN_FLAGS							\
-	(O_CREAT | O_EXCL | O_EXLOCK | O_NONBLOCK | O_RDONLY |		\
-	 O_RDWR | O_SHLOCK | O_TRUNC)
+	(O_CREAT | O_EXCL | O_EXLOCK | O_NOFOLLOW | O_NONBLOCK | 	\
+	 O_RDONLY | O_RDWR | O_SHLOCK | O_SYNC | O_TRUNC)
 
 	if ((flags & ~(USE_OPEN_FLAGS | DB_FLAGS)) == 0)
 		switch (type) {
@@ -72,7 +70,7 @@ dbopen(fname, flags, mode, type, openinfo)
 }
 
 static int
-__dberr()
+__dberr(void)
 {
 	return (RET_ERROR);
 }
@@ -84,14 +82,13 @@ __dberr()
  *	dbp:	pointer to the DB structure.
  */
 void
-__dbpanic(dbp)
-	DB *dbp;
+__dbpanic(DB *dbp)
 {
 	/* The only thing that can succeed is a close. */
-	dbp->del = (int (*)())__dberr;
-	dbp->fd = (int (*)())__dberr;
-	dbp->get = (int (*)())__dberr;
-	dbp->put = (int (*)())__dberr;
-	dbp->seq = (int (*)())__dberr;
-	dbp->sync = (int (*)())__dberr;
+	dbp->del = (int (*)(const struct __db *, const DBT*, u_int))__dberr;
+	dbp->fd = (int (*)(const struct __db *))__dberr;
+	dbp->get = (int (*)(const struct __db *, const DBT*, DBT *, u_int))__dberr;
+	dbp->put = (int (*)(const struct __db *, DBT *, const DBT *, u_int))__dberr;
+	dbp->seq = (int (*)(const struct __db *, DBT *, DBT *, u_int))__dberr;
+	dbp->sync = (int (*)(const struct __db *, u_int))__dberr;
 }

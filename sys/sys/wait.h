@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)wait.h	8.2 (Berkeley) 7/10/94
- * $FreeBSD: release/7.0.0/sys/sys/wait.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_WAIT_H_
@@ -72,11 +72,14 @@
  * indicates that the caller should receive status about untraced children
  * which stop due to signals.  If children are stopped and a wait without
  * this option is done, it is as though they were still running... nothing
- * about them is returned.
+ * about them is returned. WNOWAIT only request information about zombie,
+ * leaving the proc around, available for later waits.
  */
 #define	WNOHANG		1	/* Don't hang in wait. */
 #define	WUNTRACED	2	/* Tell about stopped, untraced children. */
+#define	WSTOPPED	WUNTRACED   /* SUS compatibility */
 #define	WCONTINUED	4	/* Report a job control continued process. */
+#define	WNOWAIT		8	/* Poll only. Don't delete the proc entry. */
 
 #if __BSD_VISIBLE
 #define	WLINUXCLONE 0x80000000	/* Wait for kthread spawned from linux_clone. */

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/random/Makefile 128120 2004-04-11 15:40:18Z marcel $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/random
 .PATH: ${.CURDIR}/../../crypto/rijndael
@@ -6,7 +6,7 @@
 
 KMOD=	random
 SRCS=	randomdev.c probe.c
-.if ${MACHINE} == "i386"
+.if ${MACHINE} == "amd64" || ${MACHINE} == "i386"
 SRCS+=	nehemiah.c
 .endif
 SRCS+=	randomdev_soft.c yarrow.c hash.c

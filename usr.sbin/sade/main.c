@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/7.0.0/usr.sbin/sade/main.c 171195 2007-07-04 00:00:41Z scf $
+ * $FreeBSD$
  *
  * Copyright (c) 1995
  *     Jordan Hubbard.  All rights reserved.
@@ -34,6 +34,7 @@
 #include <sys/fcntl.h>
 
 const char *StartName;		/* Initial contents of argv[0] */
+const char *ProgName = "sade";
 
 int
 main(int argc, char **argv)

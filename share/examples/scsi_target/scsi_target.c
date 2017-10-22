@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/share/examples/scsi_target/scsi_target.c 162704 2006-09-27 15:38:13Z mjacob $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -88,7 +88,7 @@ static void		handle_read(void);
 /* static int		work_atio(struct ccb_accept_tio *); */
 static void		queue_io(struct ccb_scsiio *);
 static int		run_queue(struct ccb_accept_tio *);
-static int		work_inot(struct ccb_immed_notify *);
+static int		work_inot(struct ccb_immediate_notify *);
 static struct ccb_scsiio *
 			get_ctio(void);
 /* static void		free_ccb(union ccb *); */
@@ -226,7 +226,7 @@ main(int argc, char *argv[])
 	/* Open backing store for IO */
 	file_fd = open(file_name, O_RDWR);
 	if (file_fd < 0)
-		err(1, "open backing store file");
+		errx(EX_NOINPUT, "open backing store file");
 
 	/* Check backing store size or use the size user gave us */
 	if (user_size == 0) {
@@ -291,7 +291,9 @@ main(int argc, char *argv[])
 	} while (targ_fd < 0 && errno == EBUSY);
 
 	if (targ_fd < 0)
-    	    err(1, "Tried to open %d devices, none available", unit);
+    	    errx(1, "Tried to open %d devices, none available", unit);
+	else
+	    warnx("opened %s", targname);
 
 	/* The first three are handled by kevent() later */
 	signal(SIGHUP, SIG_IGN);
@@ -318,6 +320,7 @@ main(int argc, char *argv[])
 	/* Set up inquiry data according to what SIM supports */
 	if (get_sim_flags(&sim_flags) != CAM_REQ_CMP)
 		errx(1, "get_sim_flags");
+
 	if (tcmd_init(req_flags, sim_flags) != 0)
 		errx(1, "Initializing tcmd subsystem failed");
 
@@ -327,6 +330,7 @@ main(int argc, char *argv[])
 
 	if (debug)
 		warnx("main loop beginning");
+
 	request_loop();
 
 	exit(0);
@@ -389,7 +393,7 @@ init_ccbs()
 			warn("malloc INOT");
 			return (-1);
 		}
-		inot->ccb_h.func_code = XPT_IMMED_NOTIFY;
+		inot->ccb_h.func_code = XPT_IMMEDIATE_NOTIFY;
 		send_ccb((union ccb *)inot, /*priority*/1);
 	}
 
@@ -497,8 +501,8 @@ request_loop()
 				/* Start one more transfer. */
 				retval = work_atio(&ccb->atio);
 				break;
-			case XPT_IMMED_NOTIFY:
-				retval = work_inot(&ccb->cin);
+			case XPT_IMMEDIATE_NOTIFY:
+				retval = work_inot(&ccb->cin1);
 				break;
 			default:
 				warnx("Unhandled ccb type %#x on workq",
@@ -647,13 +651,13 @@ work_atio(struct ccb_accept_tio *atio)
 	 * receiving this ATIO.
 	 */
 	if (atio->sense_len != 0) {
-		struct scsi_sense_data *sense;
+		struct scsi_sense_data_fixed *sense;
 
 		if (debug) {
 			warnx("ATIO with %u bytes sense received",
 			      atio->sense_len);
 		}
-		sense = &atio->sense_data;
+		sense = (struct scsi_sense_data_fixed *)&atio->sense_data;
 		tcmd_sense(ctio->init_id, ctio, sense->flags,
 			   sense->add_sense_code, sense->add_sense_code_qual);
 		send_ccb((union ccb *)ctio, /*priority*/1);
@@ -774,16 +778,14 @@ run_queue(struct ccb_accept_tio *atio)
 }
 
 static int
-work_inot(struct ccb_immed_notify *inot)
+work_inot(struct ccb_immediate_notify *inot)
 {
 	cam_status status;
-	int sense;
 
 	if (debug)
 		warnx("Working on INOT %p", inot);
 
 	status = inot->ccb_h.status;
-	sense = (status & CAM_AUTOSNS_VALID) != 0;
 	status &= CAM_STATUS_MASK;
 
 	switch (status) {
@@ -796,7 +798,7 @@ work_inot(struct ccb_immed_notify *inot)
 		abort_all_pending();
 		break;
 	case CAM_MESSAGE_RECV:
-		switch (inot->message_args[0]) {
+		switch (inot->arg) {
 		case MSG_TASK_COMPLETE:
 		case MSG_INITIATOR_DET_ERR:
 		case MSG_ABORT_TASK_SET:
@@ -807,7 +809,7 @@ work_inot(struct ccb_immed_notify *inot)
 		case MSG_ABORT_TASK:
 		case MSG_CLEAR_TASK_SET:
 		default:
-			warnx("INOT message %#x", inot->message_args[0]);
+			warnx("INOT message %#x", inot->arg);
 			break;
 		}
 		break;
@@ -817,17 +819,6 @@ work_inot(struct ccb_immed_notify *inot)
 	default:
 		warnx("Unhandled INOT status %#x", status);
 		break;
-	}
-
-	/* If there is sense data, use it */
-	if (sense != 0) {
-		struct scsi_sense_data *sense;
-
-		sense = &inot->sense_data;
-		tcmd_sense(inot->initiator_id, NULL, sense->flags,
-			   sense->add_sense_code, sense->add_sense_code_qual);
-		if (debug)
-			warnx("INOT has sense: %#x", sense->flags);
 	}
 
 	/* Requeue on SIM */

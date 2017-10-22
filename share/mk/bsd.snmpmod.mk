@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/mk/bsd.snmpmod.mk 152277 2005-11-10 12:07:12Z harti $
+# $FreeBSD$
 
 INCSDIR=	${INCLUDEDIR}/bsnmp
 
@@ -7,7 +7,7 @@ SRCS+=		${MOD}_oid.h ${MOD}_tree.c ${MOD}_tree.h
 CLEANFILES+=	${MOD}_oid.h ${MOD}_tree.c ${MOD}_tree.h
 CFLAGS+=	-I.
 
-${MOD}_oid.h: ${MOD}_tree.def ${EXTRAMIBDEFS}
+${MOD}_oid.h: ${MOD}_tree.def ${EXTRAMIBDEFS} ${EXTRAMIBSYMS}
 	cat ${.ALLSRC} | gensnmptree -e ${XSYM} > ${.TARGET}
 
 .ORDER: ${MOD}_tree.c ${MOD}_tree.h

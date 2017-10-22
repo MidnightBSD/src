@@ -36,7 +36,7 @@
 static char sccsid[] = "@(#)table.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/libexec/talkd/table.c 112998 2003-04-03 05:13:27Z jmallett $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 /*
@@ -66,7 +66,6 @@ static const char rcsid[] =
 
 extern	int debug;
 struct	timeval tp;
-struct	timezone txp;
 
 typedef struct table_entry TABLE_ENTRY;
 
@@ -91,7 +90,7 @@ find_match(CTL_MSG *request)
 	TABLE_ENTRY *ptr;
 	time_t current_time;
 
-	gettimeofday(&tp, &txp);
+	gettimeofday(&tp, NULL);
 	current_time = tp.tv_sec;
 	if (debug)
 		print_request("find_match", request);
@@ -124,7 +123,7 @@ find_request(CTL_MSG *request)
 	TABLE_ENTRY *ptr;
 	time_t current_time;
 
-	gettimeofday(&tp, &txp);
+	gettimeofday(&tp, NULL);
 	current_time = tp.tv_sec;
 	/*
 	 * See if this is a repeated message, and check for
@@ -161,7 +160,7 @@ insert_table(CTL_MSG *request, CTL_RESPONSE *response)
 	TABLE_ENTRY *ptr;
 	time_t current_time;
 
-	gettimeofday(&tp, &txp);
+	gettimeofday(&tp, NULL);
 	current_time = tp.tv_sec;
 	request->id_num = new_id();
 	response->id_num = htonl(request->id_num);

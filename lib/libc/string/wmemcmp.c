@@ -32,15 +32,12 @@
 __RCSID("$NetBSD: wmemcmp.c,v 1.1 2000/12/23 23:14:37 itojun Exp $");
 #endif /* LIBC_SCCS and not lint */
 #endif
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/wmemcmp.c 103724 2002-09-21 00:29:23Z tjr $");
+__FBSDID("$FreeBSD$");
 
 #include <wchar.h>
 
 int
-wmemcmp(s1, s2, n)
-	const wchar_t *s1;
-	const wchar_t *s2;
-	size_t n;
+wmemcmp(const wchar_t *s1, const wchar_t *s2, size_t n)
 {
 	size_t i;
 

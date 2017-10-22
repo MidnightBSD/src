@@ -44,7 +44,8 @@ while (@ARGV) {
 }
 
 if($recurse) {
-	@source = (<crypto/*.c>, <crypto/*/*.c>, <ssl/*.c>);
+	@source = ( <crypto/*.c>, <crypto/*/*.c>, <ssl/*.c>,
+			<fips/*.c>, <fips/*/*.c>);
 } else {
 	@source = @ARGV;
 }
@@ -312,7 +313,7 @@ foreach $lib (keys %csrc)
 	} else {
 	    push @out,
 "/* ====================================================================\n",
-" * Copyright (c) 2001-2005 The OpenSSL Project.  All rights reserved.\n",
+" * Copyright (c) 2001-2011 The OpenSSL Project.  All rights reserved.\n",
 " *\n",
 " * Redistribution and use in source and binary forms, with or without\n",
 " * modification, are permitted provided that the following conditions\n",
@@ -486,7 +487,7 @@ EOF
 	print OUT <<"EOF";
 /* $cfile */
 /* ====================================================================
- * Copyright (c) 1999-2005 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1999-2011 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -679,7 +680,7 @@ EOF
 	undef %err_reason_strings;
 }
 
-if($debug && defined(%notrans)) {
+if($debug && %notrans) {
 	print STDERR "The following function codes were not translated:\n";
 	foreach(sort keys %notrans)
 	{

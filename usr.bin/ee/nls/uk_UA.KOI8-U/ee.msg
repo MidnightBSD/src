@@ -3,7 +3,7 @@ $ ee.i18n.guide for more information
 $ 
 $ For ee patchlevel 3
 $ 
-$ $FreeBSD: release/7.0.0/usr.bin/ee/nls/uk_UA.KOI8-U/ee.msg 74947 2001-03-28 16:51:02Z sobomax $
+$ $FreeBSD$
 $ 
 $ 
 $set 1
@@ -110,7 +110,7 @@ $quote "
 100 "           ...пошук"
 101 "рядок \"%s\" не знайдено"
 102 "що шукати: "
-103 "не можу виконати %s"
+103 "не можу виконати %s\n"
 104 "натисн╕ть <enter> для продовження..."
 105 "Esc - в╕дм╕на"
 106 "меню завелике для екрану"

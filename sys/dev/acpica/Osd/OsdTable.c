@@ -29,15 +29,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/Osd/OsdTable.c 167814 2007-03-22 18:16:43Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/endian.h>
 #include <sys/kernel.h>
 #include <sys/linker.h>
 
-#include <contrib/dev/acpica/acpi.h>
-#include <contrib/dev/acpica/actables.h>
+#include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/actables.h>
 
 #undef _COMPONENT
 #define	_COMPONENT      ACPI_TABLES
@@ -67,17 +67,32 @@ ACPI_STATUS
 AcpiOsTableOverride(ACPI_TABLE_HEADER *ExistingTable,
     ACPI_TABLE_HEADER **NewTable)
 {
-    caddr_t acpi_dsdt, p;
+    char modname[] = "acpi_dsdt";
+    caddr_t acpi_table;
+    ACPI_TABLE_HEADER *hdr;
+    size_t sz;
 
     if (ExistingTable == NULL || NewTable == NULL)
 	return (AE_BAD_PARAMETER);
 
+    *NewTable = NULL;
+#ifdef notyet
+    for (int i = 0; i < ACPI_NAME_SIZE; i++)
+	modname[i + 5] = tolower(ExistingTable->Signature[i]);
+#else
     /* If we're not overriding the DSDT, just return. */
-    if ((acpi_dsdt = preload_search_by_type("acpi_dsdt")) == NULL ||
-	(p = preload_search_info(acpi_dsdt, MODINFO_ADDR)) == NULL) {
-	*NewTable = NULL;
-    } else
-	*NewTable = *(ACPI_TABLE_HEADER **)p;
+    if (strncmp(ExistingTable->Signature, ACPI_SIG_DSDT, ACPI_NAME_SIZE) != 0)
+	return (AE_OK);
+#endif
+
+    acpi_table = preload_search_by_type(modname);
+    if (acpi_table == NULL)
+	return (AE_OK);
+
+    hdr = preload_fetch_addr(acpi_table);
+    sz = preload_fetch_size(acpi_table);
+    if (hdr != NULL && sz != 0)
+	*NewTable = hdr;
 
     return (AE_OK);
 }

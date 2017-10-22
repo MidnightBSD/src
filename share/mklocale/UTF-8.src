@@ -6,7 +6,7 @@
  * WARNING: UCS-4 used here as the internal representation, not UTF-8.
  * See lib/libc/locale/utf8.c.
  *
- * $FreeBSD: release/7.0.0/share/mklocale/UTF-8.src 172929 2007-10-24 14:32:33Z rafan $
+ * $FreeBSD$
  */
 
 /*

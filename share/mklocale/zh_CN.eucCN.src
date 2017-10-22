@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/share/mklocale/zh_CN.eucCN.src 156056 2006-02-27 06:11:58Z delphij $
+ * $FreeBSD$
  */
 
 ENCODING	"EUC"

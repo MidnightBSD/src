@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)pass4.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sbin/fsck_ffs/pass4.c 136281 2004-10-08 20:44:47Z truckman $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -97,6 +97,9 @@ pass4(void)
 				break;
 
 			case DCLEAR:
+				/* if on snapshot, already cleared */
+				if (cursnapshot != 0)
+					break;
 				dp = ginode(inumber);
 				if (DIP(dp, di_size) == 0) {
 					clri(&idesc, "ZERO LENGTH", 1);

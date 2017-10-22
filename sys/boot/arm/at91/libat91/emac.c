@@ -19,7 +19,7 @@
  * only.
  * END_BLOCK
  * 
- * $FreeBSD: release/7.0.0/sys/boot/arm/at91/libat91/emac.c 171426 2007-07-13 14:27:05Z imp $
+ * $FreeBSD$
  ******************************************************************************/
 
 #include "at91rm9200.h"
@@ -199,7 +199,7 @@ TFTP_RequestFile(char *filename)
  * .KB_C_FN_DEFINITION_END
  */
 static void
-TFTP_ACK_Data(char *data, unsigned short block_num, unsigned short len)
+TFTP_ACK_Data(unsigned char *data, unsigned short block_num, unsigned short len)
 {
 	tftp_header_t	tftpHeader;
 

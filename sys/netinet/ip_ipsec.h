@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/netinet/ip_ipsec.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_IP_IPSEC_H_
@@ -35,8 +35,6 @@
 int	ip_ipsec_filtertunnel(struct mbuf *);
 int	ip_ipsec_fwd(struct mbuf *);
 int	ip_ipsec_input(struct mbuf *);
-int	ip_ipsec_mtu(struct mbuf *);
-int	ip_ipsec_output(struct mbuf **, struct inpcb *, int *, int *,
-		struct route **, struct route *, struct sockaddr_in **,
-		struct in_ifaddr **, struct ifnet **);
+int	ip_ipsec_mtu(struct mbuf *, int);
+int	ip_ipsec_output(struct mbuf **, struct inpcb *, int *, int *);
 #endif

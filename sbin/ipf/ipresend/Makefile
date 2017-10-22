@@ -1,4 +1,4 @@
-#	$FreeBSD: release/7.0.0/sbin/ipf/ipresend/Makefile 145630 2005-04-28 16:26:35Z darrenr $
+#	$FreeBSD$
 
 PROG=		ipresend
 SRCS=		ipresend.c ip.c resend.c sbpf.c sock.c 44arp.c

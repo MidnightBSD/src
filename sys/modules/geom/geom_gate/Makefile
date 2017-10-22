@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/geom/geom_gate/Makefile 128761 2004-04-30 16:09:28Z pjd $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../geom/gate
 

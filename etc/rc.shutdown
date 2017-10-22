@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/7.0.0/etc/rc.shutdown 153027 2005-12-02 20:06:07Z dougb $
+# $FreeBSD$
 #
 
 # Site-specific closing actions for daemons run by init on shutdown,
@@ -32,7 +32,7 @@
 # Output and errors are directed to console by init, and the
 # console is the controlling terminal.
 
-stty status '^T'
+stty status '^T' 2> /dev/null
 
 # Set shell to ignore SIGINT (2), but not children;
 # shell catches SIGQUIT (3) and returns to single user after fsck.
@@ -98,7 +98,7 @@ done
 # Terminate the background watchdog timer (if it is running)
 #
 if [ -n "$_rcshutdown_watchdog" ]; then
-	kill -TERM $_rcshutdown_watchdog >/dev/null 2>&1
+	pkill -TERM -P $_rcshutdown_watchdog >/dev/null 2>&1
 fi
 
 # Insert other shutdown procedures here

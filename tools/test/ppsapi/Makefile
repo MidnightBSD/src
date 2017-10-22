@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/tools/test/ppsapi/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
 PROG=	ppsapitest
 NO_MAN=

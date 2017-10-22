@@ -39,22 +39,23 @@ static char sccsid[] = "@(#)reboot.c	8.1 (Berkeley) 6/5/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sbin/reboot/reboot.c 160916 2006-08-02 13:05:38Z bms $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/reboot.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #include <signal.h>
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <libutil.h>
 #include <pwd.h>
 #include <syslog.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <utmpx.h>
 
 static void usage(void);
 static u_int get_pageins(void);
@@ -64,8 +65,9 @@ int dohalt;
 int
 main(int argc, char *argv[])
 {
+	struct utmpx utx;
 	const struct passwd *pw;
-	int ch, howto, i, fd, lflag, nflag, qflag, pflag, sverrno;
+	int ch, howto, i, fd, lflag, nflag, qflag, sverrno;
 	u_int pageins;
 	const char *p, *user, *kernel = NULL;
 
@@ -91,7 +93,6 @@ main(int argc, char *argv[])
 			howto |= RB_NOSYNC;
 			break;
 		case 'p':
-			pflag = 1;
 			howto |= RB_POWEROFF;
 			break;
 		case 'q':
@@ -141,7 +142,9 @@ main(int argc, char *argv[])
 			syslog(LOG_CRIT, "rebooted by %s", user);
 		}
 	}
-	logwtmp("~", "shutdown", "");
+	utx.ut_type = SHUTDOWN_TIME;
+	gettimeofday(&utx.ut_tv, NULL);
+	pututxline(&utx);
 
 	/*
 	 * Do a sync early on, so disks start transfers while we're off
@@ -217,15 +220,17 @@ restart:
 }
 
 static void
-usage()
+usage(void)
 {
-	(void)fprintf(stderr, "usage: %s [-%slnpq] [-k kernel]\n",
-	    getprogname(), dohalt ? "" : "d");
+
+	(void)fprintf(stderr, dohalt ?
+	    "usage: halt [-lnpq] [-k kernel]\n" :
+	    "usage: reboot [-dlnpq] [-k kernel]\n");
 	exit(1);
 }
 
 static u_int
-get_pageins()
+get_pageins(void)
 {
 	u_int pageins;
 	size_t len;

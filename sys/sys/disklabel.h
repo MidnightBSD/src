@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)disklabel.h	8.2 (Berkeley) 7/10/94
- * $FreeBSD: release/7.0.0/sys/sys/disklabel.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_DISKLABEL_H_
@@ -52,7 +52,7 @@
 
 /* XXX these should be defined per controller (or drive) elsewhere, not here! */
 #if defined(__i386__) || defined(__amd64__) || defined(__arm__) || \
-    defined(__ia64__)
+    defined(__ia64__) || defined(__powerpc__) || defined(__mips__)
 #define LABELSECTOR	1			/* sector containing label */
 #define LABELOFFSET	0			/* offset of label in sector */
 #endif
@@ -224,7 +224,14 @@ static const char *dktypenames[] = {
 #define	FS_BOOT		13		/* partition contains bootstrap */
 #define	FS_VINUM	14		/* Vinum drive */
 #define	FS_RAID		15		/* RAIDFrame drive */
+#define	FS_FILECORE	16		/* Acorn Filecore Filing System */
+#define	FS_EXT2FS	17		/* ext2fs */
+#define	FS_NTFS		18		/* Windows/NT file system */
+#define	FS_CCD		20		/* concatenated disk component */
 #define	FS_JFS2		21		/* IBM JFS2 */
+#define	FS_UDF		24		/* UDF */
+#define	FS_EFS		26		/* SGI's Extent File system */
+#define	FS_ZFS		27		/* Sun's ZFS */
 
 #ifdef	FSTYPENAMES
 static const char *fstypenames[] = {
@@ -244,11 +251,18 @@ static const char *fstypenames[] = {
 	"boot",
 	"vinum",
 	"raid",
+	"Filecore",
+	"EXT2FS",
+	"NTFS",
 	"?",
-	"?",
-	"?",
-	"?",
+	"ccd",
 	"jfs",
+	"?",
+	"?",
+	"UDF",
+	"?",
+	"EFS",
+	"ZFS",
 	NULL
 };
 #define FSMAXTYPES	(sizeof(fstypenames) / sizeof(fstypenames[0]) - 1)

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/release/scripts/split-file.sh 134353 2004-08-26 19:15:20Z ru $
+# $FreeBSD$
 #
 
 # Bail if things fail and be verbose about what we are doing

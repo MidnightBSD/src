@@ -29,14 +29,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$NetBSD: tty.c,v 1.24 2006/03/18 09:07:05 christos Exp $
+ *	$NetBSD: tty.c,v 1.25 2006/03/18 09:09:41 christos Exp $
  */
 
 #if !defined(lint) && !defined(SCCSID)
 static char sccsid[] = "@(#)tty.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libedit/tty.c 167464 2007-03-11 21:47:40Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 /*
  * tty.c: tty interface stuff

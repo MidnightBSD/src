@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/syscons/keymaps/uk.iso.kbd 94227 2002-04-08 19:16:01Z asmodai $
+# $FreeBSD$
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state

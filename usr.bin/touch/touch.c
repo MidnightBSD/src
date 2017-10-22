@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/touch/touch.c 168571 2007-04-10 07:22:30Z grog $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 static const char copyright[] =
@@ -164,6 +160,11 @@ main(int argc, char *argv[])
 	for (rval = 0; *argv; ++argv) {
 		/* See if the file exists. */
 		if (stat_f(*argv, &sb) != 0) {
+			if (errno != ENOENT) {
+				rval = 1;
+				warn("%s", *argv);
+				continue;
+			}
 			if (!cflag) {
 				/* Create the file. */
 				fd = open(*argv,
@@ -182,9 +183,9 @@ main(int argc, char *argv[])
 		}
 
 		if (!aflag)
-			TIMESPEC_TO_TIMEVAL(&tv[0], &sb.st_atimespec);
+			TIMESPEC_TO_TIMEVAL(&tv[0], &sb.st_atim);
 		if (!mflag)
-			TIMESPEC_TO_TIMEVAL(&tv[1], &sb.st_mtimespec);
+			TIMESPEC_TO_TIMEVAL(&tv[1], &sb.st_mtim);
 
 		/*
 		 * We're adjusting the times based on the file times, not a
@@ -192,11 +193,11 @@ main(int argc, char *argv[])
 		 */
 		if (Aflag) {
 			if (aflag) {
-				TIMESPEC_TO_TIMEVAL(&tv[0], &sb.st_atimespec);
+				TIMESPEC_TO_TIMEVAL(&tv[0], &sb.st_atim);
 				tv[0].tv_sec += Aflag;
 			}
 			if (mflag) {
-				TIMESPEC_TO_TIMEVAL(&tv[1], &sb.st_mtimespec);
+				TIMESPEC_TO_TIMEVAL(&tv[1], &sb.st_mtim);
 				tv[1].tv_sec += Aflag;
 			}
 		}
@@ -206,7 +207,7 @@ main(int argc, char *argv[])
 			continue;
 
 		/* If the user specified a time, nothing else we can do. */
-		if (timeset) {
+		if (timeset || Aflag) {
 			rval = 1;
 			warn("%s", *argv);
 			continue;
@@ -222,11 +223,13 @@ main(int argc, char *argv[])
 			continue;
 
 		/* Try reading/writing. */
-		if (!S_ISLNK(sb.st_mode) && !S_ISDIR(sb.st_mode) &&
-		    rw(*argv, &sb, fflag))
+		if (!S_ISLNK(sb.st_mode) && !S_ISDIR(sb.st_mode)) {
+			if (rw(*argv, &sb, fflag))
+				rval = 1;
+		} else {
 			rval = 1;
-		else
 			warn("%s", *argv);
+		}
 	}
 	exit(rval);
 }
@@ -361,8 +364,8 @@ stime_file(char *fname, struct timeval *tvp)
 
 	if (stat(fname, &sb))
 		err(1, "%s", fname);
-	TIMESPEC_TO_TIMEVAL(tvp, &sb.st_atimespec);
-	TIMESPEC_TO_TIMEVAL(tvp + 1, &sb.st_mtimespec);
+	TIMESPEC_TO_TIMEVAL(tvp, &sb.st_atim);
+	TIMESPEC_TO_TIMEVAL(tvp + 1, &sb.st_mtim);
 }
 
 int

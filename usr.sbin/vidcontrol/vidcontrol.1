@@ -11,7 +11,7 @@
 .\"    documentation and/or other materials provided with the distribution.
 .\"
 .\"     @(#)vidcontrol.1
-.\" $FreeBSD: release/7.0.0/usr.sbin/vidcontrol/vidcontrol.1 165467 2006-12-22 23:23:59Z ru $
+.\" $FreeBSD$
 .\"
 .Dd December 23, 2006
 .Dt VIDCONTROL 1
@@ -38,6 +38,7 @@
 .Op Fl r Ar foreground Ar background
 .Op Fl S Cm on | off
 .Op Fl s Ar number
+.Op Fl T Cm xterm | cons25
 .Op Fl t Ar N | Cm off
 .Op Ar mode
 .Op Ar foreground Op Ar background
@@ -243,6 +244,8 @@ is supposed to be physically secure.
 .It Fl s Ar number
 Set the current vty to
 .Ar number .
+.It Fl T Cm xterm | cons25
+Switch between xterm and cons25 style terminal emulation.
 .It Fl t Ar N | Cm off
 Set the screensaver timeout to
 .Ar N
@@ -324,7 +327,6 @@ In each tuple, the first byte will be the character code,
 and the second byte is the character's color attribute.
 .Pp
 The VGA color attribute byte looks like this:
-.Pp
 .Bl -column "X:X" "<00000000>" "width" "bright foreground color"
 .Sy "bits#		width	meaning"
 .Li "7	<X0000000>	1	character blinking"

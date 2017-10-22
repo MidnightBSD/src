@@ -22,11 +22,11 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man4/auditpipe.4 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
 .Dd May 5, 2006
-.Os
 .Dt AUDITPIPE 4
+.Os
 .Sh NAME
 .Nm auditpipe
 .Nd "pseudo-device for live audit event tracking"
@@ -185,7 +185,7 @@ The ioctl argument should be of type
 .It Dv AUDITPIPE_GET_PRESELECT_AUID
 Query the current preselection masks for a specific auid on the pipe.
 The ioctl argument should be of type
-.Vt "struct auditpipe_preselect" .
+.Vt "struct auditpipe_ioctl_preselect" .
 The auid to query is specified via the
 .Va ap_auid
 field of type

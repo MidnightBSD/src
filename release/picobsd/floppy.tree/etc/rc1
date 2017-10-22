@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/7.0.0/release/picobsd/floppy.tree/etc/rc1 99229 2002-07-01 21:30:39Z luigi $
+# $FreeBSD$
 ### rc1, next stage 'rc' for PicoBSD -- THIS IS NOT THE NORMAL /etc/rc 
 
 . /etc/rc.conf.defaults		# Load default procedures
@@ -45,7 +45,6 @@ mount -a -t nfs
 [ -n "$network_pass2_done" ] && network_pass3
 
 pwd_mkdb -p ./master.passwd
-dev_mkdb
 
 [ -f /etc/syslog.conf -a -f /stand/syslogd ] && \
 	{ echo "Starting syslogd."; syslogd ${syslogd_flags} ; }

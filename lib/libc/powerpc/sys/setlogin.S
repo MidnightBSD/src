@@ -26,7 +26,7 @@
 /*      $NetBSD: setlogin.S,v 1.3 1998/11/24 11:14:57 tsubai Exp $      */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/powerpc/sys/setlogin.S 107571 2002-12-04 07:25:14Z grehan $");
+__FBSDID("$FreeBSD$");
 	
 #include "SYS.h"
 
@@ -47,3 +47,5 @@ SYSCALL(setlogin)
 	stw	%r5,CNAME(_logname_valid)@l(%r4)
 #endif
 	blr
+
+	.section .note.GNU-stack,"",%progbits

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/powerpc/include/sf_buf.h 128395 2004-04-18 08:10:04Z alc $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SF_BUF_H_
@@ -32,27 +32,46 @@
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/vm_page.h>
+#include <machine/md_var.h>
+#include <sys/queue.h>
+
+struct vm_page;
+
+struct sf_buf {
+	LIST_ENTRY(sf_buf) list_entry;	/* list of buffers */
+	TAILQ_ENTRY(sf_buf) free_entry;	/* list of buffers */
+	struct		vm_page *m;	/* currently mapped page */
+	vm_offset_t	kva;		/* va of mapping */
+	int		ref_count;	/* usage of this mapping */
+};
 
 /*
- * On this machine, the only purpose for which sf_buf is used is to implement
+ * On 32-bit OEA, the only purpose for which sf_buf is used is to implement
  * an opaque pointer required by the machine-independent parts of the kernel.
  * That pointer references the vm_page that is "mapped" by the sf_buf.  The
  * actual mapping is provided by the direct virtual-to-physical mapping.  
+ *
+ * On OEA64 and Book-E, we need to do something a little more complicated. Use
+ * the runtime-detected hw_direct_map to pick between the two cases. Our
+ * friends in vm_machdep.c will do the same to ensure nothing gets confused.
  */
-struct sf_buf;
 
 static __inline vm_offset_t
 sf_buf_kva(struct sf_buf *sf)
 {
+	if (hw_direct_map)
+		return (VM_PAGE_TO_PHYS((vm_page_t)sf));
 
-	return (VM_PAGE_TO_PHYS((vm_page_t)sf));
+	return (sf->kva);
 }
 
-static __inline vm_page_t
+static __inline struct vm_page *
 sf_buf_page(struct sf_buf *sf)
 {
+	if (hw_direct_map)
+		return ((vm_page_t)sf);
 
-	return ((vm_page_t)sf);
+	return (sf->m);
 }
 
 #endif /* !_MACHINE_SF_BUF_H_ */

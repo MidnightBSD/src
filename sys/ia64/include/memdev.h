@@ -23,10 +23,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/include/memdev.h 132965 2004-08-01 18:51:44Z markm $
+ * $FreeBSD$
  */
 
-#define CDEV_MAJOR	2
+#ifndef _MACHINE_MEMDEV_H_
+#define	_MACHINE_MEMDEV_H_
+
 #define	CDEV_MINOR_MEM	0
 #define	CDEV_MINOR_KMEM	1
 
@@ -35,4 +37,4 @@ d_read_t	memrw;
 #define		memioctl	(d_ioctl_t *)NULL
 d_mmap_t	memmmap;
 
-void		dev_mem_md_init(void);
+#endif /* _MACHINE_MEMDEV_H_ */

@@ -15,7 +15,7 @@ Front-Cover Texts, and with no Back-Cover Texts.
 A copy of the Free Documentation License is included as a file called
 FDL in the main directory of the groff source package.
 
-$FreeBSD: release/7.0.0/contrib/groff/src/roff/groff/groff.man 172506 2007-10-10 16:59:15Z cvs2svn $
+$FreeBSD$
 
 ..
 .

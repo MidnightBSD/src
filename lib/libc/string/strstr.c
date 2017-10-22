@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)strstr.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/strstr.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <string.h>
 
@@ -42,17 +42,16 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/strstr.c 165903 2007-01-09 00:
  * Find the first occurrence of find in s.
  */
 char *
-strstr(s, find)
-	const char *s, *find;
+strstr(const char *s, const char *find)
 {
 	char c, sc;
 	size_t len;
 
-	if ((c = *find++) != 0) {
+	if ((c = *find++) != '\0') {
 		len = strlen(find);
 		do {
 			do {
-				if ((sc = *s++) == 0)
+				if ((sc = *s++) == '\0')
 					return (NULL);
 			} while (sc != c);
 		} while (strncmp(s, find, len) != 0);

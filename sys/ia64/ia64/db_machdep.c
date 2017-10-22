@@ -27,9 +27,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/db_machdep.c 171665 2007-07-30 22:42:33Z marcel $");
+__FBSDID("$FreeBSD$");
 
-#include <opt_xtrace.h>
+#include "opt_xtrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -48,7 +48,6 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/db_machdep.c 171665 2007-07-30 2
 #include <machine/frame.h>
 #include <machine/kdb.h>
 #include <machine/md_var.h>
-#include <machine/mutex.h>
 #include <machine/pcb.h>
 #include <machine/setjmp.h>
 #include <machine/unwind.h>
@@ -261,7 +260,7 @@ db_backtrace(struct thread *td, struct pcb *pcb, int count)
 		sym = db_search_symbol(ip, DB_STGY_ANY, &offset);
 		db_symbol_values(sym, &name, NULL);
 		db_printf("%s(", name);
-		if (bsp >= IA64_RR_BASE(5)) {
+		if (bsp >= VM_MAXUSER_ADDRESS) {
 			for (i = 0; i < args; i++) {
 				if ((bsp & 0x1ff) == 0x1f8)
 					bsp += 8;
@@ -280,12 +279,12 @@ db_backtrace(struct thread *td, struct pcb *pcb, int count)
 
 		if (error != ERESTART)
 			continue;
-		if (sp < IA64_RR_BASE(5))
+		if (sp < VM_MAXUSER_ADDRESS)
 			break;
 
 		tf = (struct trapframe *)(sp + 16);
 		if ((tf->tf_flags & FRAME_SYSCALL) != 0 ||
-		    tf->tf_special.iip < IA64_RR_BASE(5))
+		    tf->tf_special.iip < VM_MAXUSER_ADDRESS)
 			break;
 
 		/* XXX ask if we should unwind across the trapframe. */
@@ -410,6 +409,8 @@ db_disasm(db_addr_t loc, boolean_t altfmt)
 			db_printf(buf);
 			n++;
 		}
+		if (tmpl[1] == ';')
+			db_printf(" ;;");
 	} else {
 		tmpl = NULL;
 		slot = 2;
@@ -575,6 +576,15 @@ db_write_bytes(vm_offset_t addr, size_t size, char *data)
 void
 db_show_mdpcpu(struct pcpu *pc)
 {
+	struct pcpu_md *md = &pc->pc_md;
+
+	db_printf("MD: vhpt       = %#lx\n", md->vhpt);
+	db_printf("MD: lid        = %#lx\n", md->lid);
+	db_printf("MD: clock      = %#lx\n", md->clock);
+	db_printf("MD: clock_mode = %u\n", md->clock_mode);
+	db_printf("MD: clock_load = %#lx\n", md->clock_load);
+	db_printf("MD: stats      = %p\n", &md->stats);
+	db_printf("MD: pmap       = %p\n", md->current_pmap);
 }
 
 void
@@ -593,18 +603,6 @@ db_trace_thread(struct thread *td, int count)
 
 	ctx = kdb_thr_ctx(td);
 	return (db_backtrace(td, ctx, count));
-}
-
-void
-stack_save(struct stack *st)
-{
-
-	stack_zero(st);
-	/*
-	 * Nothing for now.
-	 * Is libuwx reentrant?
-	 * Can unw_create* sleep?
-	 */
 }
 
 #ifdef EXCEPTION_TRACING

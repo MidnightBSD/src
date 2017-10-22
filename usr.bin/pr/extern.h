@@ -35,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *      @(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/7.0.0/usr.bin/pr/extern.h 102944 2002-09-04 23:29:10Z dwmalone $
+ * $FreeBSD$
  */
 
 extern int eoptind;

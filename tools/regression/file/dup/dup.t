@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/7.0.0/tools/regression/file/dup/dup.t 164191 2006-11-11 18:32:50Z maxim $
+# $FreeBSD$
 
 cd `dirname $0`
 

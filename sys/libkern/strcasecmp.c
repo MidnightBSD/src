@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 1987, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/libkern/strcasecmp.c 148865 2005-08-08 19:38:00Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/ctype.h>

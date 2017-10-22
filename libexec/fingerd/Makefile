@@ -1,12 +1,12 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: release/7.0.0/libexec/fingerd/Makefile 127560 2004-03-29 09:29:51Z pjd $
+# $FreeBSD$
 
 PROG=	fingerd
 DPADD=	${LIBUTIL}
 LDADD=	-lutil
 MAN=	fingerd.8
-WARNS?=	2
 
+WARNS?=	2
 WFORMAT=0
 
 .include <bsd.prog.mk>

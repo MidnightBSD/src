@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/games/fortune/datfiles/startrek.sp.ok 108666 2003-01-04 17:08:23Z schweikh $
+# $FreeBSD$
 Adonais
 Amanda
 Apella
@@ -14,7 +14,6 @@ Corbomite
 Corby
 Daystrom
 Deela
-Dehaver
 Elaan
 Eleen
 Eneg

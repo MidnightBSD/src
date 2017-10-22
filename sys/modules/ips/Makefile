@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/ips/Makefile 114902 2003-05-11 06:36:49Z scottl $
+# $FreeBSD$
 
 .PATH:		${.CURDIR}/../../dev/ips
 KMOD		= ips

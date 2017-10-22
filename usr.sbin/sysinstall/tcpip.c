@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/tcpip.c 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  *
  * Copyright (c) 1995
  *      Gary J Palmer. All rights reserved.
@@ -40,10 +40,17 @@
 #include "sysinstall.h"
 #include <sys/param.h>
 #include <sys/sysctl.h>
+#include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/sockio.h>
+
 #include <netinet/in.h>
+#include <net/if.h>
+#include <net/if_media.h>
+
 #include <netdb.h>
 #include <paths.h>
+#include <ifaddrs.h>
 
 /* The help file for the TCP/IP setup screen */
 #define TCP_HELPFILE		"tcp"
@@ -65,12 +72,12 @@ static char	ipv6addr[INET6_ADDRSTRLEN];
 static Layout layout[] = {
 #define LAYOUT_HOSTNAME		0
     { 1, 2, 25, HOSTNAME_FIELD_LEN - 1,
-      "Host:", "Your fully-qualified hostname, e.g. foo.bar.com",
+      "Host:", "Your fully-qualified hostname, e.g. foo.example.com",
       hostname, STRINGOBJ, NULL },
 #define LAYOUT_DOMAINNAME	1
     { 1, 35, 20, HOSTNAME_FIELD_LEN - 1,
       "Domain:",
-      "The name of the domain that your machine is in, e.g. bar.com",
+      "The name of the domain that your machine is in, e.g. example.com",
       domainname, STRINGOBJ, NULL },
 #define LAYOUT_GATEWAY		2
     { 5, 2, 18, IPADDR_FIELD_LEN - 1,
@@ -567,9 +574,6 @@ netconfig:
     if (!cancel) {
 	DevInfo *di;
 	char temp[512], ifn[255];
-#ifdef PCCARD_ARCH
-	char *pccard;
-#endif
 	int ipv4_enable = FALSE;
 
 	if (hostname[0]) {
@@ -610,12 +614,6 @@ netconfig:
 			ipaddr, extras, netmask);
 	    variable_set2(ifn, temp, 1);
 	}
-#ifdef PCCARD_ARCH
-	pccard = variable_get("_pccard_install");
-	if (pccard && strcmp(pccard, "YES") == 0 && ipv4_enable) {
-	    variable_set2("pccard_ifconfig", temp, 1);
-	}
-#endif
 	if (use_rtsol)
 	    variable_set2(VAR_IPV6_ENABLE, "YES", 1);
 	if (!use_dhcp)
@@ -645,37 +643,104 @@ netHook(dialogMenuItem *self)
     return devs ? DITEM_LEAVE_MENU : DITEM_FAILURE;
 }
 
+static char *
+tcpDeviceScan(void)
+{
+	int s;
+	struct ifmediareq ifmr;
+	struct ifaddrs *ifap, *ifa;
+	char *network_dev;
+
+	if ((s = socket(AF_LOCAL, SOCK_DGRAM, 0)) < 0)
+		return (NULL);
+
+	if (getifaddrs(&ifap) < 0)
+		return (NULL);
+
+	for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
+		memset(&ifmr, 0, sizeof(ifmr));
+		strlcpy(ifmr.ifm_name, ifa->ifa_name, sizeof(ifmr.ifm_name));
+
+		if (ioctl(s, SIOCGIFMEDIA, (caddr_t)&ifmr) < 0)
+			continue;	/* some devices don't support this */ 
+
+		if ((ifmr.ifm_status & IFM_AVALID) == 0)
+			continue;	/* not active */
+
+		if (IFM_TYPE(ifmr.ifm_active) != IFM_ETHER)
+			continue;	/* not an ethernet device */
+
+		if (ifmr.ifm_status & IFM_ACTIVE) {
+			network_dev = strdup(ifa->ifa_name);
+			freeifaddrs(ifap);
+
+			if (!variable_get(VAR_NONINTERACTIVE)) 
+				msgConfirm("Using interface %s", network_dev);
+
+			msgDebug("tcpDeviceScan found %s", network_dev);
+			return (network_dev);
+		}
+	}
+
+	close(s);
+
+	freeifaddrs(ifap);
+
+	return (NULL);
+}
+
 /* Get a network device */
 Device *
 tcpDeviceSelect(void)
 {
     DMenu *menu;
     Device **devs, *rval;
+    char *dev, *network_dev;
     int cnt;
 
-    devs = deviceFind(variable_get(VAR_NETWORK_DEVICE), DEVICE_TYPE_NETWORK);
-    cnt = deviceCount(devs);
     rval = NULL;
 
-    if (!cnt) {
-	msgConfirm("No network devices available!");
-	return NULL;
+    if (variable_get(VAR_NETWORK_DEVICE)) {
+	network_dev = variable_get(VAR_NETWORK_DEVICE);
+
+	/* 
+	 * netDev can be set to several types of values.
+	 * If netDev is set to ANY, scan all network devices
+	 * looking for a valid link, and go with the first
+	 * device found. netDev can also be specified as a
+	 * comma delimited list, with each network device
+	 * tried in order. netDev can also be set to a single
+	 * network device.
+	 */
+	if (!strcmp(network_dev, "ANY")) 
+		network_dev = strdup(tcpDeviceScan()); 
+
+	while ((dev = strsep(&network_dev, ",")) != NULL) {
+	    devs = deviceFind(dev, DEVICE_TYPE_NETWORK);
+	    cnt = deviceCount(devs);
+
+	    if (cnt) {
+		if (DITEM_STATUS(tcpOpenDialog(devs[0])) == DITEM_SUCCESS) 
+		    return (devs[0]);
+	    }
+	}
+
+	if (!variable_get(VAR_NONINTERACTIVE))
+		msgConfirm("No network devices available!");
+
+	return (NULL);
     }
-    else if ((!RunningAsInit) && (variable_check("NETWORK_CONFIGURED=NO") != TRUE)) {
+
+    devs = deviceFind(NULL, DEVICE_TYPE_NETWORK);
+    cnt = deviceCount(devs); 
+
+    if ((!RunningAsInit) && (variable_check("NETWORK_CONFIGURED=NO") != TRUE)) {
 	if (!msgYesNo("Running multi-user, assume that the network is already configured?"))
 	    return devs[0];
     }
     if (cnt == 1) {
 	if (DITEM_STATUS(tcpOpenDialog(devs[0]) == DITEM_SUCCESS))
 	    rval = devs[0];
-    }
-    else if (variable_get(VAR_NONINTERACTIVE) && variable_get(VAR_NETWORK_DEVICE)) {
-	devs = deviceFind(variable_get(VAR_NETWORK_DEVICE), DEVICE_TYPE_NETWORK);
-	cnt = deviceCount(devs);
-	if (cnt) {
-	    if (DITEM_STATUS(tcpOpenDialog(devs[0]) == DITEM_SUCCESS))
-		rval = devs[0];
-	}
     }
     else {
 	int status;

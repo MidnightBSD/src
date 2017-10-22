@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/kern/subr_fattime.c 163646 2006-10-24 10:27:23Z phk $
+ * $FreeBSD$
  *
  * Convert MS-DOS FAT format timestamps to and from unix timespecs
  *
@@ -135,7 +135,7 @@ static const struct {
 
 
 void
-timespec2fattime(struct timespec *tsp, int utc, u_int16_t *ddp, u_int16_t *dtp, u_int8_t *dhp)
+timespec2fattime(struct timespec *tsp, int utc, uint16_t *ddp, uint16_t *dtp, uint8_t *dhp)
 {
 	time_t t1;
 	unsigned t2, l, m;
@@ -263,8 +263,8 @@ main(int argc __unused, char **argv __unused)
 	struct timespec ts;
 	struct tm tm;
 	double a;
-	u_int16_t d, t;
-	u_int8_t p;
+	uint16_t d, t;
+	uint8_t p;
 	char buf[100];
 
 	for (i = 0; i < 10000; i++) {

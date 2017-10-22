@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/sys/lock.c 175976 2008-02-04 20:03:36Z julian $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -54,11 +54,12 @@ _lock_destroy(struct lock *lck)
 
 int
 _lock_init(struct lock *lck, enum lock_type ltype,
-    lock_handler_t *waitfunc, lock_handler_t *wakeupfunc)
+    lock_handler_t *waitfunc, lock_handler_t *wakeupfunc,
+    void *(calloc_cb)(size_t, size_t))
 {
 	if (lck == NULL)
 		return (-1);
-	else if ((lck->l_head = malloc(sizeof(struct lockreq))) == NULL)
+	else if ((lck->l_head = calloc_cb(1, sizeof(struct lockreq))) == NULL)
 		return (-1);
 	else {
 		lck->l_type = ltype;
@@ -80,7 +81,7 @@ _lock_reinit(struct lock *lck, enum lock_type ltype,
 	if (lck == NULL)
 		return (-1);
 	else if (lck->l_head == NULL)
-		return (_lock_init(lck, ltype, waitfunc, wakeupfunc));
+		return (_lock_init(lck, ltype, waitfunc, wakeupfunc, calloc));
 	else {
 		lck->l_head->lr_locked = 0;
 		lck->l_head->lr_watcher = NULL;
@@ -117,7 +118,6 @@ _lockuser_reinit(struct lockuser *lu, void *priv)
 {
 	if (lu == NULL)
 		return (-1);
-
 	if (lu->lu_watchreq != NULL) {
 		/*
 		 * In this case the lock is active.  All lockusers
@@ -128,8 +128,8 @@ _lockuser_reinit(struct lockuser *lu, void *priv)
 		 */
 		lu->lu_myreq = lu->lu_watchreq;
 		lu->lu_watchreq = NULL;
-       }
-       if (lu->lu_myreq == NULL)
+	}
+	if (lu->lu_myreq == NULL)
 		/*
 		 * Oops, something isn't quite right.  Try to
 		 * allocate one.
@@ -186,11 +186,12 @@ _lock_acquire(struct lock *lck, struct lockuser *lu, int prio)
 	 * Atomically swap the head of the lock request with
 	 * this request.
 	 */
-	atomic_swap_ptr(&lck->l_head, lu->lu_myreq, &lu->lu_watchreq);
+	atomic_swap_ptr((void *)&lck->l_head, lu->lu_myreq,
+	    (void *)&lu->lu_watchreq);
 
 	if (lu->lu_watchreq->lr_locked != 0) {
 		atomic_store_rel_ptr
-		    ((volatile uintptr_t *)&lu->lu_watchreq->lr_watcher,
+		    ((volatile uintptr_t *)(void *)&lu->lu_watchreq->lr_watcher,
 		    (uintptr_t)lu);
 		if ((lck->l_wait == NULL) ||
 		    ((lck->l_type & LCK_ADAPTIVE) == 0)) {
@@ -222,7 +223,7 @@ _lock_acquire(struct lock *lck, struct lockuser *lu, int prio)
 				if (lu->lu_watchreq->lr_active == 0)
 					break;
 			}
-			atomic_swap_int((int *)&lu->lu_watchreq->lr_locked,
+			atomic_swap_int(&lu->lu_watchreq->lr_locked,
 			    2, &lval);
 			if (lval == 0)
 				lu->lu_watchreq->lr_locked = 0;
@@ -261,18 +262,19 @@ _lock_release(struct lock *lck, struct lockuser *lu)
 
 		/* Update tail if our request is last. */
 		if (lu->lu_watchreq->lr_owner == NULL) {
-			atomic_store_rel_ptr((volatile uintptr_t *)&lck->l_tail,
+			atomic_store_rel_ptr((volatile uintptr_t *)
+			    (void *)&lck->l_tail,
 			    (uintptr_t)lu->lu_myreq);
-			atomic_store_rel_ptr
-			    ((volatile uintptr_t *)&lu->lu_myreq->lr_owner,
+			atomic_store_rel_ptr((volatile uintptr_t *)
+			    (void *)&lu->lu_myreq->lr_owner,
 			    (uintptr_t)NULL);
 		} else {
 			/* Remove ourselves from the list. */
 			atomic_store_rel_ptr((volatile uintptr_t *)
-			    &lu->lu_myreq->lr_owner,
+			    (void *)&lu->lu_myreq->lr_owner,
 			    (uintptr_t)lu->lu_watchreq->lr_owner);
 			atomic_store_rel_ptr((volatile uintptr_t *)
-			    &lu->lu_watchreq->lr_owner->lu_myreq,
+			    (void *)&lu->lu_watchreq->lr_owner->lu_myreq,
 			    (uintptr_t)lu->lu_myreq);
 		}
 		/*
@@ -301,7 +303,7 @@ _lock_release(struct lock *lck, struct lockuser *lu)
 			/* Give the lock to the highest priority user. */
 			if (lck->l_wakeup != NULL) {
 				atomic_swap_int(
-				    (int *)&lu_h->lu_watchreq->lr_locked,
+				    &lu_h->lu_watchreq->lr_locked,
 				    0, &lval);
 				if (lval == 2)
 					/* Notify the sleeper */
@@ -313,7 +315,7 @@ _lock_release(struct lock *lck, struct lockuser *lu)
 				    &lu_h->lu_watchreq->lr_locked, 0);
 		} else {
 			if (lck->l_wakeup != NULL) {
-				atomic_swap_int((int *)&myreq->lr_locked,
+				atomic_swap_int(&myreq->lr_locked,
 				    0, &lval);
 				if (lval == 2)
 					/* Notify the sleeper */
@@ -334,7 +336,7 @@ _lock_release(struct lock *lck, struct lockuser *lu)
 		lu->lu_watchreq = NULL;
 		lu->lu_myreq->lr_locked = 1;
 		if (lck->l_wakeup) {
-			atomic_swap_int((int *)&myreq->lr_locked, 0, &lval);
+			atomic_swap_int(&myreq->lr_locked, 0, &lval);
 			if (lval == 2)
 				/* Notify the sleeper */
 				lck->l_wakeup(lck, myreq->lr_watcher);
@@ -347,7 +349,7 @@ _lock_release(struct lock *lck, struct lockuser *lu)
 }
 
 void
-_lock_grant(struct lock *lck /* unused */, struct lockuser *lu)
+_lock_grant(struct lock *lck __unused /* unused */, struct lockuser *lu)
 {
 	atomic_store_rel_int(&lu->lu_watchreq->lr_locked, 3);
 }

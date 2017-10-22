@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/7.0.0/lib/libc/arm/Symbol.map 170154 2007-05-31 13:01:34Z deischen $
+ * $FreeBSD$
  */
 
 /*
@@ -31,7 +31,6 @@ FBSD_1.0 {
 	vfork;
 	brk;
 	cerror;		/* XXX - Should this be .cerror (see sys/cerror.S)? */
-	fork;
 	sbrk;
 };
 
@@ -42,6 +41,7 @@ FBSDprivate_1.0 {
 	__sys_exit;
 
 	_set_tp;
+	__aeabi_read_tp;
 	___longjmp;
 	__umodsi3;
 	__modsi3;
@@ -58,9 +58,6 @@ FBSDprivate_1.0 {
 	_end;
 	curbrk;
 	minbrk;
-	_brk;
-	__sys_fork;
-	_fork;
 	_sbrk;
 
 	/* softfloat */
@@ -74,12 +71,8 @@ FBSDprivate_1.0 {
 	__divdf3;
 	__floatsisf;
 	__floatsidf;
-	__floatdisf;
-	__floatdidf;
 	__fixsfsi;
 	__fixdfsi;
-	__fixsfdi;
-	__fixdfdi;
 	__fixunssfsi;
 	__fixunsdfsi;
 	__extendsfdf2;

@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: proc.h,v 1.2 1997/04/16 22:57:48 thorpej Exp $
- * $FreeBSD: release/7.0.0/sys/powerpc/include/proc.h 144637 2005-04-04 21:53:56Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PROC_H_
@@ -45,5 +45,21 @@ struct mdthread {
 
 struct mdproc {
 };
+
+#ifdef __powerpc64__
+#define	KINFO_PROC_SIZE 1088
+#define	KINFO_PROC32_SIZE 768
+#else
+#define	KINFO_PROC_SIZE 768
+#endif
+
+#ifdef _KERNEL
+struct syscall_args {
+	u_int code;
+	struct sysent *callp;
+	register_t args[10];
+	int narg;
+};
+#endif
 
 #endif /* !_MACHINE_PROC_H_ */

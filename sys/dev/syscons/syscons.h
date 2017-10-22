@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/syscons/syscons.h 172250 2007-09-20 04:05:59Z simokawa $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_SYSCONS_SYSCONS_H_
@@ -102,9 +102,9 @@
  */
 #define SC_DRIVER_NAME	"syscons"
 #endif
-#define SC_VTY(dev)	minor(dev)
+#define SC_VTY(dev)	(((sc_ttysoftc *)tty_softc(tp))->st_index)
 #define SC_DEV(sc, vty)	((sc)->dev[(vty) - (sc)->first_vty])
-#define SC_STAT(dev)	(*((scr_stat **)&(dev)->si_drv1))
+#define SC_STAT(tp)	(*((scr_stat **)&((sc_ttysoftc *)tty_softc(tp))->st_stat))
 
 /* printable chars */
 #ifndef PRINTABLE
@@ -191,7 +191,7 @@ struct tty;
 typedef struct sc_softc {
 	int		unit;			/* unit # */
 	int		config;			/* configuration flags */
-#define SC_VESA800X600	(1 << 7)
+#define SC_VESAMODE	(1 << 7)
 #define SC_AUTODETECT_KBD (1 << 8)
 #define SC_KERNEL_CONSOLE (1 << 9)
 
@@ -220,7 +220,7 @@ typedef struct sc_softc {
 
 	int		first_vty;
 	int		vtys;
-	struct cdev **dev;
+	struct tty **dev;
 	struct scr_stat	*cur_scp;
 	struct scr_stat	*new_scp;
 	struct scr_stat	*old_scp;
@@ -245,7 +245,10 @@ typedef struct sc_softc {
 #endif
 
 #ifndef SC_NO_PALETTE_LOADING
-	u_char        	palette[256*3];
+	u_char		palette[256 * 3];
+#ifdef SC_PIXEL_MODE
+	u_char		palette2[256 * 3];
+#endif
 #endif
 
 #ifndef SC_NO_FONT_LOADING
@@ -263,6 +266,9 @@ typedef struct sc_softc {
 	u_char		cursor_char;
 	u_char		mouse_char;
 
+#ifdef KDB
+	int		sc_altbrk;
+#endif
 } sc_softc_t;
 
 /* virtual screen */
@@ -295,7 +301,9 @@ typedef struct scr_stat {
 	void		*ts;
 
 	int	 	status;			/* status (bitfield) */
+	int		grabbed;
 	int		kbd_mode;		/* keyboard I/O mode */
+	int		kbd_prev_mode;		/* keyboard I/O mode */
 
 	int		cursor_pos;		/* cursor buffer position */
 	int		cursor_oldpos;		/* cursor old buffer position */
@@ -314,6 +322,7 @@ typedef struct scr_stat {
 	short		mouse_buttons;		/* mouse buttons */
 	int		mouse_cut_start;	/* mouse cut start pos */
 	int		mouse_cut_end;		/* mouse cut end pos */
+	int		mouse_level;		/* xterm mouse protocol */
 	struct proc 	*mouse_proc;		/* proc* of controlling proc */
 	pid_t 		mouse_pid;		/* pid of controlling proc */
 	int		mouse_signal;		/* signal # to report with */
@@ -339,6 +348,12 @@ typedef struct scr_stat {
 #endif
 } scr_stat;
 
+/* TTY softc. */
+typedef struct sc_ttysoftc {
+	int		st_index;
+	scr_stat	*st_stat;
+} sc_ttysoftc;
+
 #ifndef SC_NORM_ATTR
 #define SC_NORM_ATTR		(FG_LIGHTGREY | BG_BLACK)
 #endif
@@ -362,9 +377,9 @@ typedef int	sc_term_init_t(scr_stat *scp, void **tcp, int code);
 #define SC_TE_COLD_INIT	0
 #define SC_TE_WARM_INIT	1
 typedef int	sc_term_term_t(scr_stat *scp, void **tcp);
-typedef void	sc_term_puts_t(scr_stat *scp, u_char *buf, int len);
+typedef void	sc_term_puts_t(scr_stat *scp, u_char *buf, int len, int kernel);
 typedef int	sc_term_ioctl_t(scr_stat *scp, struct tty *tp, u_long cmd,
-				caddr_t data, int flag, struct thread *td);
+				caddr_t data, struct thread *td);
 typedef int	sc_term_reset_t(scr_stat *scp, int code);
 #define SC_TE_HARD_RESET 0
 #define SC_TE_SOFT_RESET 1
@@ -374,6 +389,7 @@ typedef void	sc_term_notify_t(scr_stat *scp, int event);
 #define SC_TE_NOTIFY_VTSWITCH_IN	0
 #define SC_TE_NOTIFY_VTSWITCH_OUT	1
 typedef int	sc_term_input_t(scr_stat *scp, int c, struct tty *tp);
+typedef const char *sc_term_fkeystr_t(scr_stat *scp, int c);
 
 typedef struct sc_term_sw {
 	LIST_ENTRY(sc_term_sw)	link;
@@ -391,6 +407,7 @@ typedef struct sc_term_sw {
 	sc_term_clear_t		*te_clear;
 	sc_term_notify_t	*te_notify;
 	sc_term_input_t		*te_input;
+	sc_term_fkeystr_t	*te_fkeystr;
 } sc_term_sw_t;
 
 #define SCTERM_MODULE(name, sw)					\
@@ -516,28 +533,9 @@ typedef struct {
 
 #define ISSIGVALID(sig)	((sig) > 0 && (sig) < NSIG)
 
-#define kbd_read_char(kbd, wait)					\
-		(*kbdsw[(kbd)->kb_index]->read_char)((kbd), (wait))
-#define kbd_check_char(kbd)						\
-		(*kbdsw[(kbd)->kb_index]->check_char)((kbd))
-#define kbd_enable(kbd)							\
-		(*kbdsw[(kbd)->kb_index]->enable)((kbd))
-#define kbd_disable(kbd)						\
-		(*kbdsw[(kbd)->kb_index]->disable)((kbd))
-#define kbd_lock(kbd, lockf)						\
-		(*kbdsw[(kbd)->kb_index]->lock)((kbd), (lockf))
-#define kbd_ioctl(kbd, cmd, arg)					\
-	    (((kbd) == NULL) ?						\
-		ENODEV : (*kbdsw[(kbd)->kb_index]->ioctl)((kbd), (cmd), (arg)))
-#define kbd_clear_state(kbd)						\
-		(*kbdsw[(kbd)->kb_index]->clear_state)((kbd))
-#define kbd_get_fkeystr(kbd, fkey, len)					\
-		(*kbdsw[(kbd)->kb_index]->get_fkeystr)((kbd), (fkey), (len))
-#define kbd_poll(kbd, on)						\
-		(*kbdsw[(kbd)->kb_index]->poll)((kbd), (on))
-
 #define SC_VIDEO_LOCKINIT(sc)						\
-		mtx_init(&(sc)->video_mtx, "syscons video lock", NULL,MTX_SPIN);
+		mtx_init(&(sc)->video_mtx, "syscons video lock", NULL,	\
+		    MTX_SPIN | MTX_RECURSE);
 #define SC_VIDEO_LOCK(sc)						\
 		do {							\
 			if (!cold)					\
@@ -550,8 +548,8 @@ typedef struct {
 		} while(0)
 
 /* syscons.c */
-extern int 	(*sc_user_ioctl)(struct cdev *dev, u_long cmd, caddr_t data,
-				 int flag, struct thread *td);
+extern int 	(*sc_user_ioctl)(struct tty *tp, u_long cmd, caddr_t data,
+				 struct thread *td);
 
 int		sc_probe_unit(int unit, int flags);
 int		sc_attach_unit(int unit, int flags);
@@ -566,7 +564,6 @@ void		sc_save_font(scr_stat *scp, int page, int size, int width,
 void		sc_show_font(scr_stat *scp, int page);
 
 void		sc_touch_scrn_saver(void);
-void		sc_puts(scr_stat *scp, u_char *buf, int len);
 void		sc_draw_cursor_image(scr_stat *scp);
 void		sc_remove_cursor_image(scr_stat *scp);
 void		sc_set_cursor_image(scr_stat *scp);
@@ -576,7 +573,9 @@ int		sc_clean_up(scr_stat *scp);
 int		sc_switch_scr(sc_softc_t *sc, u_int next_scr);
 void		sc_alloc_scr_buffer(scr_stat *scp, int wait, int discard);
 int		sc_init_emulator(scr_stat *scp, char *name);
-void		sc_paste(scr_stat *scp, u_char *p, int count);
+void		sc_paste(scr_stat *scp, const u_char *p, int count);
+void		sc_respond(scr_stat *scp, const u_char *p,
+			   int count, int wakeup);
 void		sc_bell(scr_stat *scp, int pitch, int duration);
 
 /* schistory.c */
@@ -593,7 +592,7 @@ void		sc_hist_end(scr_stat *scp);
 int		sc_hist_up_line(scr_stat *scp);
 int		sc_hist_down_line(scr_stat *scp);
 int		sc_hist_ioctl(struct tty *tp, u_long cmd, caddr_t data,
-			      int flag, struct thread *td);
+			      struct thread *td);
 #endif /* SC_NO_HISTORY */
 
 /* scmouse.c */
@@ -618,7 +617,7 @@ void		sc_mouse_paste(scr_stat *scp);
 #ifndef SC_NO_SYSMOUSE
 void		sc_mouse_move(scr_stat *scp, int x, int y);
 int		sc_mouse_ioctl(struct tty *tp, u_long cmd, caddr_t data,
-			       int flag, struct thread *td);
+			       struct thread *td);
 #endif /* SC_NO_SYSMOUSE */
 
 /* scvidctl.c */
@@ -628,7 +627,8 @@ int		sc_set_text_mode(scr_stat *scp, struct tty *tp, int mode,
 int		sc_set_graphics_mode(scr_stat *scp, struct tty *tp, int mode);
 int		sc_set_pixel_mode(scr_stat *scp, struct tty *tp, int xsize,
 				  int ysize, int fontsize, int font_width);
-int		sc_vid_ioctl(struct tty *tp, u_long cmd, caddr_t data, int flag,
+int		sc_support_pixel_mode(void *arg);
+int		sc_vid_ioctl(struct tty *tp, u_long cmd, caddr_t data,
 			     struct thread *td);
 
 int		sc_render_add(sc_renderer_t *rndr);

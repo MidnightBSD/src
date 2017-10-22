@@ -12,10 +12,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -33,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)wc.1	8.2 (Berkeley) 4/19/94
-.\" $FreeBSD: release/7.0.0/usr.bin/wc/wc.1 165455 2006-12-21 22:59:07Z ru $
+.\" $FreeBSD$
 .\"
-.Dd February 23, 2005
+.Dd December 6, 2008
 .Dt WC 1
 .Os
 .Sh NAME
@@ -43,7 +39,7 @@
 .Nd word, line, character, and byte count
 .Sh SYNOPSIS
 .Nm
-.Op Fl clmw
+.Op Fl Lclmw
 .Op Ar
 .Sh DESCRIPTION
 The
@@ -71,6 +67,15 @@ the last file.
 .Pp
 The following options are available:
 .Bl -tag -width indent
+.It Fl L
+The number of characters in the longest input line
+is written to the standard output.
+When more then one
+.Ar file
+argument is specified, the longest input line of
+.Em all
+files is reported as the value of the final
+.Dq total .
 .It Fl c
 The number of bytes in each input file
 is written to the standard output.
@@ -129,6 +134,10 @@ and
 as well as the totals for both:
 .Pp
 .Dl "wc -mlw report1 report2"
+.Pp
+Find the longest line in a list of files:
+.Pp
+.Dl "wc -L file1 file2 file3 | fgrep total"
 .Sh COMPATIBILITY
 Historically, the
 .Nm
@@ -154,6 +163,16 @@ in terms of the
 .Xr iswspace 3
 function, as required by
 .St -p1003.2 .
+.Pp
+The
+.Fl L
+option is a non-standard
+.Fx
+extension, compatible with the
+.Fl L
+option of the GNU
+.Nm
+utility.
 .Sh SEE ALSO
 .Xr iswspace 3
 .Sh STANDARDS

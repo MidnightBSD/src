@@ -18,7 +18,7 @@
  * 5. Modifications may be freely made to this file if the above conditions
  *    are met.
  *
- * $FreeBSD: release/7.0.0/sys/sys/pipe.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_PIPE_H_
@@ -56,7 +56,7 @@
 /*
  * See sys_pipe.c for info on what these limits mean. 
  */
-extern int	maxpipekva;
+extern long	maxpipekva;
 
 /*
  * Pipe buffer information.
@@ -112,7 +112,15 @@ struct pipe {
 	u_int	pipe_state;		/* pipe status info */
 	int	pipe_busy;		/* busy flag, mostly to handle rundown sanely */
 	int	pipe_present;		/* still present? */
+	ino_t	pipe_ino;		/* fake inode for stat(2) */
 };
+
+/*
+ * Values for the pipe_present.
+ */
+#define PIPE_ACTIVE		1
+#define	PIPE_CLOSING		2
+#define	PIPE_FINALIZED		3
 
 /*
  * Container structure to hold the two pipe endpoints, mutex, and label

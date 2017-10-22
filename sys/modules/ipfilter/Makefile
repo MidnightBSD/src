@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/ipfilter/Makefile 156813 2006-03-17 18:54:44Z ru $ 
+# $FreeBSD$ 
 
 .include <bsd.own.mk>
 
@@ -26,3 +26,8 @@ CFLAGS+= -DIPFILTER=1 -DIPFILTER_LKM -DIPFILTER_LOG -DIPFILTER_LOOKUP
 #
 
 .include <bsd.kmod.mk>
+
+CWARNFLAGS.fil.c=		${NO_WSELF_ASSIGN}
+CWARNFLAGS.ip_proxy.c=		${NO_WSELF_ASSIGN}
+CWARNFLAGS.ip_lookup.c=		${NO_WSELF_ASSIGN}
+CWARNFLAGS+=			${CWARNFLAGS.${.IMPSRC:T}}

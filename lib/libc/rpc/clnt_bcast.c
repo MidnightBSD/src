@@ -37,7 +37,7 @@
 static char sccsid[] = "@(#)clnt_bcast.c 1.15 89/04/21 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/rpc/clnt_bcast.c 162189 2006-09-09 22:14:42Z mbr $");
+__FBSDID("$FreeBSD$");
 
 
 /*
@@ -461,7 +461,7 @@ rpc_broadcast_exp(prog, vers, proc, xargs, argsp, xresults, resultsp,
 #ifdef RPC_DEBUG
 						perror("sendto");
 #endif
-						warnx("clnt_bcast: cannot send"
+						warnx("clnt_bcast: cannot send "
 						      "broadcast packet");
 						stat = RPC_CANTSEND;
 						continue;

@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sys/kerneldump.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_KERNELDUMP_H
@@ -60,17 +60,21 @@
 struct kerneldumpheader {
 	char		magic[20];
 #define	KERNELDUMPMAGIC		"FreeBSD Kernel Dump"
+#define	TEXTDUMPMAGIC		"FreeBSD Text Dump"
 #define	KERNELDUMPMAGIC_CLEARED	"Cleared Kernel Dump"
 	char		architecture[12];
 	uint32_t	version;
 #define	KERNELDUMPVERSION	1
 	uint32_t	architectureversion;
 #define	KERNELDUMP_ALPHA_VERSION	1
-#define	KERNELDUMP_I386_VERSION	2
-#define	KERNELDUMP_IA64_VERSION	1
-#define	KERNELDUMP_SPARC64_VERSION	1
 #define	KERNELDUMP_AMD64_VERSION	2
-#define KERNELDUMP_ARM_VERSION	1
+#define	KERNELDUMP_ARM_VERSION		1
+#define	KERNELDUMP_I386_VERSION		2
+#define	KERNELDUMP_IA64_VERSION		1
+#define	KERNELDUMP_MIPS_VERSION		1
+#define	KERNELDUMP_POWERPC_VERSION	1
+#define	KERNELDUMP_SPARC64_VERSION	1
+#define	KERNELDUMP_TEXT_VERSION		1
 	uint64_t	dumplength;		/* excl headers */
 	uint64_t	dumptime;
 	uint32_t	blocksize;
@@ -96,5 +100,9 @@ kerneldump_parity(struct kerneldumpheader *kdhp)
 	return (parity);
 }
 
+#ifdef _KERNEL
+void mkdumpheader(struct kerneldumpheader *kdh, char *magic, uint32_t archver,
+    uint64_t dumplen, uint32_t blksz);
+#endif
 
 #endif /* _SYS_KERNELDUMP_H */

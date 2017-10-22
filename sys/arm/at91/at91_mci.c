@@ -1,6 +1,7 @@
 /*-
  * Copyright (c) 2006 Bernd Walter.  All rights reserved.
  * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
+ * Copyright (c) 2010 Greg Ansley.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -11,20 +12,21 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/at91/at91_mci.c 172195 2007-09-16 07:48:58Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,6 +43,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/at91/at91_mci.c 172195 2007-09-16 07:4
 #include <sys/queue.h>
 #include <sys/resource.h>
 #include <sys/rman.h>
+#include <sys/sysctl.h>
 #include <sys/time.h>
 #include <sys/timetc.h>
 #include <sys/watchdog.h>
@@ -51,22 +54,29 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/at91/at91_mci.c 172195 2007-09-16 07:4
 #include <machine/resource.h>
 #include <machine/frame.h>
 #include <machine/intr.h>
-#include <arm/at91/at91rm92reg.h>
+
 #include <arm/at91/at91var.h>
 #include <arm/at91/at91_mcireg.h>
 #include <arm/at91/at91_pdcreg.h>
+
 #include <dev/mmc/bridge.h>
 #include <dev/mmc/mmcreg.h>
 #include <dev/mmc/mmcbrvar.h>
 
 #include "mmcbr_if.h"
 
+#include "opt_at91.h"
+
 #define BBSZ	512
 
 struct at91_mci_softc {
 	void *intrhand;			/* Interrupt handle */
 	device_t dev;
+	int sc_cap;
+#define	CAP_HAS_4WIRE		1	/* Has 4 wire bus */
+#define	CAP_NEEDS_BYTESWAP	2	/* broken hardware needing bounce */
 	int flags;
+	int has_4wire;
 #define CMD_STARTED	1
 #define STOP_STARTED	2
 	struct resource *irq_res;	/* IRQ resource */
@@ -76,7 +86,6 @@ struct at91_mci_softc {
 	bus_dmamap_t map;
 	int mapped;
 	struct mmc_host host;
-	int wire4;
 	int bus_busy;
 	struct mmc_request *req;
 	struct mmc_command *curcmd;
@@ -86,7 +95,7 @@ struct at91_mci_softc {
 static inline uint32_t
 RD4(struct at91_mci_softc *sc, bus_size_t off)
 {
-	return bus_read_4(sc->mem_res, off);
+	return (bus_read_4(sc->mem_res, off));
 }
 
 static inline void
@@ -104,6 +113,7 @@ static void at91_mci_intr(void *);
 /* helper routines */
 static int at91_mci_activate(device_t dev);
 static void at91_mci_deactivate(device_t dev);
+static int at91_mci_is_mci1rev2xx(void);
 
 #define AT91_MCI_LOCK(_sc)		mtx_lock(&(_sc)->sc_mtx)
 #define	AT91_MCI_UNLOCK(_sc)		mtx_unlock(&(_sc)->sc_mtx)
@@ -132,12 +142,23 @@ static void
 at91_mci_init(device_t dev)
 {
 	struct at91_mci_softc *sc = device_get_softc(dev);
+	uint32_t val;
 
 	WR4(sc, MCI_CR, MCI_CR_MCIEN);		/* Enable controller */
 	WR4(sc, MCI_IDR, 0xffffffff);		/* Turn off interrupts */
 	WR4(sc, MCI_DTOR, MCI_DTOR_DTOMUL_1M | 1);
-	WR4(sc, MCI_MR, 0x834a);	// XXX GROSS HACK FROM LINUX
+	val = MCI_MR_PDCMODE;
+	val |= 0x34a;				/* PWSDIV = 3; CLKDIV = 74 */
+	if (at91_mci_is_mci1rev2xx())
+		val |= MCI_MR_RDPROOF | MCI_MR_WRPROOF;
+	WR4(sc, MCI_MR, val);
+#ifndef  AT91_MCI_SLOT_B
 	WR4(sc, MCI_SDCR, 0);			/* SLOT A, 1 bit bus */
+#else
+	/* XXX Really should add second "unit" but nobody using using 
+	 * a two slot card that we know of. XXX */
+	WR4(sc, MCI_SDCR, 1);			/* SLOT B, 1 bit bus */
+#endif
 }
 
 static void
@@ -162,10 +183,16 @@ static int
 at91_mci_attach(device_t dev)
 {
 	struct at91_mci_softc *sc = device_get_softc(dev);
-	int err;
+	struct sysctl_ctx_list *sctx;
+	struct sysctl_oid *soid;
 	device_t child;
+	int err;
 
 	sc->dev = dev;
+
+	sc->sc_cap = 0;
+	if (at91_is_rm92())
+		sc->sc_cap |= CAP_NEEDS_BYTESWAP;
 	err = at91_mci_activate(dev);
 	if (err)
 		goto out;
@@ -175,9 +202,9 @@ at91_mci_attach(device_t dev)
 	/*
 	 * Allocate DMA tags and maps
 	 */
-	err = bus_dma_tag_create(NULL, 1, 0, BUS_SPACE_MAXADDR_32BIT,
-	    BUS_SPACE_MAXADDR, NULL, NULL, MAXPHYS, 1, MAXPHYS,
-	    BUS_DMA_ALLOCNOW, NULL, NULL, &sc->dmatag);
+	err = bus_dma_tag_create(bus_get_dma_tag(dev), 1, 0,
+	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL, MAXPHYS, 1,
+	    MAXPHYS, BUS_DMA_ALLOCNOW, NULL, NULL, &sc->dmatag);
 	if (err != 0)
 		goto out;
 
@@ -197,14 +224,32 @@ at91_mci_attach(device_t dev)
 		AT91_MCI_LOCK_DESTROY(sc);
 		goto out;
 	}
+
+	sctx = device_get_sysctl_ctx(dev);
+	soid = device_get_sysctl_tree(dev);
+	SYSCTL_ADD_UINT(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "4wire",
+	    CTLFLAG_RW, &sc->has_4wire, 0, "has 4 wire SD Card bus");
+
+#ifdef AT91_MCI_HAS_4WIRE
+	sc->has_4wire = 1;
+#endif
+	if (sc->has_4wire)
+		sc->sc_cap |= CAP_HAS_4WIRE;
+
+	sc->host.f_min = at91_master_clock / 512;
 	sc->host.f_min = 375000;
-	sc->host.f_max = 30000000;
+	sc->host.f_max = at91_master_clock / 2;
+	if (sc->host.f_max > 50000000)	
+		sc->host.f_max = 50000000;	/* Limit to 50MHz */
+
 	sc->host.host_ocr = MMC_OCR_320_330 | MMC_OCR_330_340;
-	sc->host.caps = MMC_CAP_4_BIT_DATA;
+	sc->host.caps = 0;
+	if (sc->sc_cap & CAP_HAS_4WIRE)
+		sc->host.caps |= MMC_CAP_4_BIT_DATA;
 	child = device_add_child(dev, "mmc", 0);
 	device_set_ivars(dev, &sc->host);
 	err = bus_generic_attach(dev);
-out:;
+out:
 	if (err)
 		at91_mci_deactivate(dev);
 	return (err);
@@ -230,11 +275,13 @@ at91_mci_activate(device_t dev)
 	    RF_ACTIVE);
 	if (sc->mem_res == NULL)
 		goto errout;
+
 	rid = 0;
 	sc->irq_res = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid,
 	    RF_ACTIVE);
 	if (sc->irq_res == NULL)
 		goto errout;
+
 	return (0);
 errout:
 	at91_mci_deactivate(dev);
@@ -262,6 +309,29 @@ at91_mci_deactivate(device_t dev)
 	return;
 }
 
+static int
+at91_mci_is_mci1rev2xx(void)
+{
+
+	switch (AT91_CPU(at91_chip_id)) {
+	case AT91_CPU_SAM9260:
+	case AT91_CPU_SAM9263:
+#ifdef notyet
+	case AT91_CPU_CAP9:
+#endif
+	case AT91_CPU_SAM9G10:
+	case AT91_CPU_SAM9G20:
+#ifdef notyet
+	case AT91_CPU_SAM9RL:
+#endif
+	case AT91_CPU_SAM9XE128:
+	case AT91_CPU_SAM9XE256:
+	case AT91_CPU_SAM9XE512:
+		return(1);
+	}
+	return (0);
+}
+
 static void
 at91_mci_getaddr(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 {
@@ -273,7 +343,6 @@ at91_mci_getaddr(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 static int
 at91_mci_update_ios(device_t brdev, device_t reqdev)
 {
-	uint32_t at91_master_clock = AT91C_MASTER_CLOCK;
 	struct at91_mci_softc *sc;
 	struct mmc_host *host;
 	struct mmc_ios *ios;
@@ -293,38 +362,34 @@ at91_mci_update_ios(device_t brdev, device_t reqdev)
 		else
 			clkdiv = (at91_master_clock / ios->clock) / 2;
 	}
-	if (ios->bus_width == bus_width_4 && sc->wire4)
+	if (ios->bus_width == bus_width_4)
 		WR4(sc, MCI_SDCR, RD4(sc, MCI_SDCR) | MCI_SDCR_SDCBUS);
 	else
 		WR4(sc, MCI_SDCR, RD4(sc, MCI_SDCR) & ~MCI_SDCR_SDCBUS);
 	WR4(sc, MCI_MR, (RD4(sc, MCI_MR) & ~MCI_MR_CLKDIV) | clkdiv);
-#if 0
-	if (sc->vcc_pin) {
-		if (sc->power_mode == MMC_POWER_OFF)
-			gpio_set(sc->vcc_pin, 0);
-		else
-			gpio_set(sc->vcc_pin, 1);
-	}
-#endif
+	/* Do we need a settle time here? */
+	/* XXX We need to turn the device on/off here with a GPIO pin */
 	return (0);
 }
 
 static void
 at91_mci_start_cmd(struct at91_mci_softc *sc, struct mmc_command *cmd)
 {
+	size_t len;
 	uint32_t cmdr, ier = 0, mr;
 	uint32_t *src, *dst;
 	int i;
 	struct mmc_data *data;
-	struct mmc_request *req;
-	size_t block_size = 1 << 9;	// Fixed, per mmc/sd spec for 2GB cards
 	void *vaddr;
 	bus_addr_t paddr;
 
 	sc->curcmd = cmd;
 	data = cmd->data;
 	cmdr = cmd->opcode;
-	req = cmd->mrq;
+
+	/* XXX Upper layers don't always set this */
+	cmd->mrq = sc->req;
+
 	if (MMC_RSP(cmd->flags) == MMC_RSP_NONE)
 		cmdr |= MCI_CMDR_RSPTYP_NO;
 	else {
@@ -359,42 +424,58 @@ at91_mci_start_cmd(struct at91_mci_softc *sc, struct mmc_command *cmd)
 	// Set block size and turn on PDC mode for dma xfer and disable
 	// PDC until we're ready.
 	mr = RD4(sc, MCI_MR) & ~MCI_MR_BLKLEN;
-	WR4(sc, MCI_MR, mr | (block_size << 16) | MCI_MR_PDCMODE);
+	WR4(sc, MCI_MR, mr | (data->len << 16) | MCI_MR_PDCMODE);
 	WR4(sc, PDC_PTCR, PDC_PTCR_RXTDIS | PDC_PTCR_TXTDIS);
 	if (cmdr & MCI_CMDR_TRCMD_START) {
+		len = data->len;
 		if (cmdr & MCI_CMDR_TRDIR)
 			vaddr = cmd->data->data;
 		else {
-			if (data->len != BBSZ)
-				panic("Write multiblock write support");
+			/* Use bounce buffer even if we don't need
+			 * byteswap, since buffer may straddle a page
+			 * boundry, and we don't handle multi-segment
+			 * transfers in hardware.
+			 * (page issues seen from 'bsdlabel -w' which
+			 * uses raw geom access to the volume).
+			 * Greg Ansley (gja (at) ansley.com)
+			 */
 			vaddr = sc->bounce_buffer;
 			src = (uint32_t *)cmd->data->data;
 			dst = (uint32_t *)vaddr;
-			for (i = 0; i < data->len / 4; i++)
-				dst[i] = bswap32(src[i]);
+			/*
+			 * If this is MCI1 revision 2xx controller, apply
+			 * a work-around for the "Data Write Operation and
+			 * number of bytes" erratum.
+			 */
+			if (at91_mci_is_mci1rev2xx() && data->len < 12) {
+				len = 12;
+				memset(dst, 0, 12);
+			}
+			if (sc->sc_cap & CAP_NEEDS_BYTESWAP) {
+				for (i = 0; i < data->len / 4; i++)
+					dst[i] = bswap32(src[i]);
+			} else
+				memcpy(dst, src, data->len);
 		}
 		data->xfer_len = 0;
-		if (bus_dmamap_load(sc->dmatag, sc->map, vaddr, data->len,
+		if (bus_dmamap_load(sc->dmatag, sc->map, vaddr, len,
 		    at91_mci_getaddr, &paddr, 0) != 0) {
-			if (req->cmd->flags & STOP_STARTED)
-				req->stop->error = MMC_ERR_NO_MEMORY;
-			else
-				req->cmd->error = MMC_ERR_NO_MEMORY;
+			cmd->error = MMC_ERR_NO_MEMORY;
 			sc->req = NULL;
 			sc->curcmd = NULL;
-			req->done(req);
+			cmd->mrq->done(cmd->mrq);
 			return;
 		}
 		sc->mapped++;
 		if (cmdr & MCI_CMDR_TRDIR) {
 			bus_dmamap_sync(sc->dmatag, sc->map, BUS_DMASYNC_PREREAD);
 			WR4(sc, PDC_RPR, paddr);
-			WR4(sc, PDC_RCR, data->len / 4);
+			WR4(sc, PDC_RCR, len / 4);
 			ier = MCI_SR_ENDRX;
 		} else {
 			bus_dmamap_sync(sc->dmatag, sc->map, BUS_DMASYNC_PREWRITE);
 			WR4(sc, PDC_TPR, paddr);
-			WR4(sc, PDC_TCR, data->len / 4);
+			WR4(sc, PDC_TCR, len / 4);
 			ier = MCI_SR_TXBUFE;
 		}
 	}
@@ -450,7 +531,7 @@ at91_mci_request(device_t brdev, device_t reqdev, struct mmc_request *req)
 	// XXX maybe the idea is naive...
 	if (sc->req != NULL) {
 		AT91_MCI_UNLOCK(sc);
-		return EBUSY;
+		return (EBUSY);
 	}
 	sc->req = req;
 	sc->flags = 0;
@@ -462,7 +543,7 @@ at91_mci_request(device_t brdev, device_t reqdev, struct mmc_request *req)
 static int
 at91_mci_get_ro(device_t brdev, device_t reqdev)
 {
-	return (-1);
+	return (0);
 }
 
 static int
@@ -502,10 +583,12 @@ at91_mci_read_done(struct at91_mci_softc *sc)
 	bus_dmamap_sync(sc->dmatag, sc->map, BUS_DMASYNC_POSTREAD);
 	bus_dmamap_unload(sc->dmatag, sc->map);
 	sc->mapped--;
-	walker = (uint32_t *)cmd->data->data;
-	len = cmd->data->len / 4;
-	for (i = 0; i < len; i++)
-		walker[i] = bswap32(walker[i]);
+	if (sc->sc_cap & CAP_NEEDS_BYTESWAP) {
+		walker = (uint32_t *)cmd->data->data;
+		len = cmd->data->len / 4;
+		for (i = 0; i < len; i++)
+			walker[i] = bswap32(walker[i]);
+	}
 	// Finish up the sequence...
 	WR4(sc, MCI_IDR, MCI_SR_ENDRX);
 	WR4(sc, MCI_IER, MCI_SR_RXBUFF);
@@ -609,7 +692,7 @@ at91_mci_intr(void *arg)
 }
 
 static int
-at91_mci_read_ivar(device_t bus, device_t child, int which, u_char *result)
+at91_mci_read_ivar(device_t bus, device_t child, int which, uintptr_t *result)
 {
 	struct at91_mci_softc *sc = device_get_softc(bus);
 
@@ -649,6 +732,19 @@ at91_mci_read_ivar(device_t bus, device_t child, int which, u_char *result)
 	case MMCBR_IVAR_VDD:
 		*(int *)result = sc->host.ios.vdd;
 		break;
+	case MMCBR_IVAR_CAPS:
+		if (sc->has_4wire) {
+			sc->sc_cap |= CAP_HAS_4WIRE;
+			sc->host.caps |= MMC_CAP_4_BIT_DATA;
+		} else {
+			sc->sc_cap &= ~CAP_HAS_4WIRE;
+			sc->host.caps &= ~MMC_CAP_4_BIT_DATA;
+		}
+		*(int *)result = sc->host.caps;
+		break;
+	case MMCBR_IVAR_MAX_DATA:
+		*(int *)result = 1;
+		break;
 	}
 	return (0);
 }
@@ -685,9 +781,12 @@ at91_mci_write_ivar(device_t bus, device_t child, int which, uintptr_t value)
 	case MMCBR_IVAR_VDD:
 		sc->host.ios.vdd = value;
 		break;
+	/* These are read-only */
+	case MMCBR_IVAR_CAPS:
 	case MMCBR_IVAR_HOST_OCR:
 	case MMCBR_IVAR_F_MIN:
 	case MMCBR_IVAR_F_MAX:
+	case MMCBR_IVAR_MAX_DATA:
 		return (EINVAL);
 	}
 	return (0);
@@ -710,7 +809,7 @@ static device_method_t at91_mci_methods[] = {
 	DEVMETHOD(mmcbr_acquire_host, at91_mci_acquire_host),
 	DEVMETHOD(mmcbr_release_host, at91_mci_release_host),
 
-	{0, 0},
+	DEVMETHOD_END
 };
 
 static driver_t at91_mci_driver = {
@@ -718,7 +817,8 @@ static driver_t at91_mci_driver = {
 	at91_mci_methods,
 	sizeof(struct at91_mci_softc),
 };
+
 static devclass_t at91_mci_devclass;
 
-
-DRIVER_MODULE(at91_mci, atmelarm, at91_mci_driver, at91_mci_devclass, 0, 0);
+DRIVER_MODULE(at91_mci, atmelarm, at91_mci_driver, at91_mci_devclass, NULL,
+    NULL);

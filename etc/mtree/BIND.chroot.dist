@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/etc/mtree/BIND.chroot.dist 137182 2004-11-04 05:24:29Z gshapiro $
+# $FreeBSD$
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -14,6 +14,8 @@
             master
             ..
             slave   uname=bind
+            ..
+            working uname=bind
             ..
         ..
     ..

@@ -17,7 +17,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/usr.sbin/cron/lib/entry.c 170890 2007-06-17 17:25:53Z yar $";
+  "$FreeBSD$";
 #endif
 
 /* vix 26jan87 [RCS'd; rest of log is in RCS file]
@@ -41,10 +41,10 @@ typedef	enum ecode {
 #endif
 } ecode_e;
 
-static char	get_list __P((bitstr_t *, int, int, char *[], int, FILE *)),
-		get_range __P((bitstr_t *, int, int, char *[], int, FILE *)),
-		get_number __P((int *, int, char *[], int, FILE *));
-static int	set_element __P((bitstr_t *, int, int, int));
+static char	get_list(bitstr_t *, int, int, char *[], int, FILE *),
+		get_range(bitstr_t *, int, int, char *[], int, FILE *),
+		get_number(int *, int, char *[], int, FILE *);
+static int	set_element(bitstr_t *, int, int, int);
 
 static char *ecodes[] =
 	{
@@ -87,7 +87,7 @@ free_entry(e)
 entry *
 load_entry(file, error_func, pw, envp)
 	FILE		*file;
-	void		(*error_func)();
+	void		(*error_func)(char *);
 	struct passwd	*pw;
 	char		**envp;
 {

@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 3/27/94
-# $FreeBSD: release/7.0.0/share/me/Makefile 172506 2007-10-10 16:59:15Z cvs2svn $
+# $FreeBSD$
 
 MELIB=	${BINDIR}/me
 TMLIB=	${BINDIR}/tmac

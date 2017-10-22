@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)SYS.h	5.5 (Berkeley) 5/7/91
- * $FreeBSD: release/7.0.0/lib/libc/i386/SYS.h 171217 2007-07-04 23:18:38Z peter $
+ * $FreeBSD$
  */
 
 #include <sys/syscall.h>
@@ -44,13 +44,14 @@
 			.set CNAME(__CONCAT(_,x)),CNAME(__CONCAT(__sys_,x)); \
 			mov __CONCAT($SYS_,x),%eax; KERNCALL; jb 2b
 
-#define	RSYSCALL(x)	SYSCALL(x); ret
+#define	RSYSCALL(x)	SYSCALL(x); ret; END(__CONCAT(__sys_,x))
 
 #define	PSEUDO(x)	2: PIC_PROLOGUE; jmp PIC_PLT(HIDENAME(cerror)); \
 			ENTRY(__CONCAT(__sys_,x));			\
 			.weak CNAME(__CONCAT(_,x));			\
 			.set CNAME(__CONCAT(_,x)),CNAME(__CONCAT(__sys_,x)); \
-			mov __CONCAT($SYS_,x),%eax; KERNCALL; jb 2b; ret
+			mov __CONCAT($SYS_,x),%eax; KERNCALL; jb 2b; ret; \
+			END(__CONCAT(__sys_,x))
 
 /* gas messes up offset -- although we don't currently need it, do for BCS */
 #define	LCALL(x,y)	.byte 0x9a ; .long y; .word x

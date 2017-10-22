@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/i386/sys/getcontext.S 119724 2003-09-04 00:20:40Z peter $");
+__FBSDID("$FreeBSD$");
 
 #include <SYS.h>
 
@@ -48,3 +48,6 @@ ENTRY(__sys_getcontext)
 1:
 	PIC_PROLOGUE
 	jmp	PIC_PLT(HIDENAME(cerror))
+END(__sys_getcontext)
+
+	.section .note.GNU-stack,"",%progbits

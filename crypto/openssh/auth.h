@@ -1,5 +1,4 @@
-/* $OpenBSD: auth.h,v 1.58 2006/08/18 09:15:20 markus Exp $ */
-/* $FreeBSD: release/7.0.0/crypto/openssh/auth.h 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $OpenBSD: auth.h,v 1.66 2010/05/07 11:30:29 djm Exp $ */
 
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
@@ -60,6 +59,7 @@ struct Authctxt {
 	struct passwd	*pw;		/* set if 'valid' */
 	char		*style;
 	void		*kbdintctxt;
+	void		*jpake_ctx;
 #ifdef BSD_AUTH
 	auth_session_t	*as;
 #endif
@@ -157,6 +157,9 @@ int	bsdauth_respond(void *, u_int, char **);
 int	skey_query(void *, char **, char **, u_int *, char ***, u_int **);
 int	skey_respond(void *, u_int, char **);
 
+void	auth2_jpake_get_pwdata(Authctxt *, BIGNUM **, char **, char **);
+void	auth2_jpake_stop(Authctxt *);
+
 int	allowed_user(struct passwd *);
 struct passwd * getpwnamallow(const char *user);
 
@@ -166,9 +169,11 @@ void	abandon_challenge_response(Authctxt *);
 
 char	*authorized_keys_file(struct passwd *);
 char	*authorized_keys_file2(struct passwd *);
+char	*authorized_principals_file(struct passwd *);
 
-int
-secure_filename(FILE *, const char *, struct passwd *, char *, size_t);
+FILE	*auth_openkeyfile(const char *, struct passwd *, int);
+FILE	*auth_openprincipals(const char *, struct passwd *, int);
+int	 auth_key_is_revoked(Key *);
 
 HostStatus
 check_key_in_hostfiles(struct passwd *, Key *, const char *,
@@ -176,7 +181,8 @@ check_key_in_hostfiles(struct passwd *, Key *, const char *,
 
 /* hostkey handling */
 Key	*get_hostkey_by_index(int);
-Key	*get_hostkey_by_type(int);
+Key	*get_hostkey_public_by_type(int);
+Key	*get_hostkey_private_by_type(int);
 int	 get_hostkey_index(Key *);
 int	 ssh1_session_key(BIGNUM *);
 
@@ -191,17 +197,10 @@ int	 sys_auth_passwd(Authctxt *, const char *);
 
 #define AUTH_FAIL_MSG "Too many authentication failures for %.100s"
 
-#ifdef SKEY
-#ifdef OPIE
-#define SKEY_PROMPT "\nOPIE Password: "
-#else
 #define SKEY_PROMPT "\nS/Key Password: "
 
 #if defined(KRB5) && !defined(HEIMDAL)
 #include <krb5.h>
 krb5_error_code ssh_krb5_cc_gen(krb5_context, krb5_ccache *);
 #endif
-#endif
-#endif
-
 #endif

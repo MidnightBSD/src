@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/cc/f77/Makefile 167471 2007-03-12 00:28:06Z kan $
+# $FreeBSD$
 
 .include "../Makefile.inc"
 .include "../Makefile.fe"

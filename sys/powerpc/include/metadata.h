@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/powerpc/include/metadata.h 139825 2005-01-07 02:29:27Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_METADATA_H_
@@ -32,5 +32,7 @@
 #define	MODINFOMD_ENVP		0x1001
 #define	MODINFOMD_HOWTO		0x1002
 #define	MODINFOMD_KERNEND	0x1003
+#define	MODINFOMD_BOOTINFO	0x1004
+#define	MODINFOMD_DTBP		0x1005
 
 #endif /* !_MACHINE_METADATA_H_ */

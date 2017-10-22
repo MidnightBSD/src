@@ -33,7 +33,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libkse/thread/thr_kern.c 175976 2008-02-04 20:03:36Z julian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/kse.h>
@@ -176,7 +176,7 @@ static void	thread_gc(struct pthread *thread);
 static void	kse_gc(struct pthread *thread);
 static void	kseg_gc(struct pthread *thread);
 
-static void __inline
+static __inline void
 thr_accounting(struct pthread *thread)
 {
 	if ((thread->slice_usec != -1) &&
@@ -352,7 +352,6 @@ _kse_single_thread(struct pthread *curthread)
 	_lock_reinit(&_thread_signal_lock, LCK_ADAPTIVE, _kse_lock_wait,
 	    _kse_lock_wakeup);
 
- 
 	_thr_spinlock_init();
 	if (__isthreaded) {
 		_thr_rtld_fini();
@@ -374,7 +373,6 @@ _kse_single_thread(struct pthread *curthread)
 	 */
 	_kcb_set(curthread->kse->k_kcb);
 	_tcb_set(curthread->kse->k_kcb, curthread->tcb);
- 
 
 	/* After a fork(), there child should have no pending signals. */
 	sigemptyset(&curthread->sigpend);
@@ -403,13 +401,13 @@ _kse_init(void)
 		TAILQ_INIT(&free_threadq);
 		TAILQ_INIT(&gc_ksegq);
 		if (_lock_init(&kse_lock, LCK_ADAPTIVE,
-		    _kse_lock_wait, _kse_lock_wakeup) != 0)
+		    _kse_lock_wait, _kse_lock_wakeup, calloc) != 0)
 			PANIC("Unable to initialize free KSE queue lock");
 		if (_lock_init(&thread_lock, LCK_ADAPTIVE,
-		    _kse_lock_wait, _kse_lock_wakeup) != 0)
+		    _kse_lock_wait, _kse_lock_wakeup, calloc) != 0)
 			PANIC("Unable to initialize free thread queue lock");
 		if (_lock_init(&_thread_list_lock, LCK_ADAPTIVE,
-		    _kse_lock_wait, _kse_lock_wakeup) != 0)
+		    _kse_lock_wait, _kse_lock_wakeup, calloc) != 0)
 			PANIC("Unable to initialize thread list lock");
 		_pthread_mutex_init(&_tcb_mutex, NULL);
 		active_kse_count = 0;
@@ -499,7 +497,7 @@ _kse_setthreaded(int threaded)
  * queue, you would just end up blocking again.
  */
 void
-_kse_lock_wait(struct lock *lock, struct lockuser *lu)
+_kse_lock_wait(struct lock *lock __unused, struct lockuser *lu)
 {
 	struct kse *curkse = (struct kse *)_LCK_GET_PRIVATE(lu);
 	struct timespec ts;
@@ -556,7 +554,7 @@ _kse_lock_wakeup(struct lock *lock, struct lockuser *lu)
  * (defined in its structure), and condition variable and mutex locks.
  */
 void
-_thr_lock_wait(struct lock *lock, struct lockuser *lu)
+_thr_lock_wait(struct lock *lock __unused, struct lockuser *lu)
 {
 	struct pthread *curthread = (struct pthread *)lu->lu_private;
 
@@ -568,7 +566,7 @@ _thr_lock_wait(struct lock *lock, struct lockuser *lu)
 }
 
 void
-_thr_lock_wakeup(struct lock *lock, struct lockuser *lu)
+_thr_lock_wakeup(struct lock *lock __unused, struct lockuser *lu)
 {
 	struct pthread *thread;
 	struct pthread *curthread;
@@ -1129,7 +1127,8 @@ kse_sched_multi(struct kse_mailbox *kmbx)
 }
 
 static void
-thr_resume_wrapper(int sig, siginfo_t *siginfo, ucontext_t *ucp)
+thr_resume_wrapper(int sig __unused, siginfo_t *siginfo __unused,
+    ucontext_t *ucp)
 {
 	struct pthread *curthread = _get_curthread();
 	struct kse *curkse;
@@ -2145,7 +2144,7 @@ kseg_init(struct kse_group *kseg)
 {
 	kseg_reinit(kseg);
 	_lock_init(&kseg->kg_lock, LCK_ADAPTIVE, _kse_lock_wait,
-	    _kse_lock_wakeup);
+	    _kse_lock_wakeup, calloc);
 }
 
 static void
@@ -2415,7 +2414,7 @@ _thr_alloc(struct pthread *curthread)
 		 * enter critical region before doing this!
 		 */
 		if (_lock_init(&thread->lock, LCK_ADAPTIVE,
-		    _thr_lock_wait, _thr_lock_wakeup) != 0)
+		    _thr_lock_wait, _thr_lock_wakeup, calloc) != 0)
 			PANIC("Cannot initialize thread lock");
 		for (i = 0; i < MAX_THR_LOCKLEVEL; i++) {
 			_lockuser_init(&thread->lockusers[i], (void *)thread);

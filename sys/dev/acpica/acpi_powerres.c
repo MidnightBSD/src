@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/acpi_powerres.c 157947 2006-04-21 19:06:29Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -33,7 +33,9 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/acpi_powerres.c 157947 2006-04-
 #include <sys/malloc.h>
 #include <sys/bus.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/accommon.h>
+
 #include <dev/acpica/acpivar.h>
 
 /*
@@ -86,8 +88,8 @@ struct acpi_powerresource {
     TAILQ_ENTRY(acpi_powerresource)	ap_link;
     TAILQ_HEAD(,acpi_powerreference)	ap_references;
     ACPI_HANDLE				ap_resource;
-    ACPI_INTEGER			ap_systemlevel;
-    ACPI_INTEGER			ap_order;
+    UINT64				ap_systemlevel;
+    UINT64				ap_order;
     int					ap_state;
 };
 

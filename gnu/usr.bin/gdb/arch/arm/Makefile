@@ -1,8 +1,11 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/gdb/arch/arm/Makefile 174179 2007-12-02 14:38:21Z cognet $
+# $FreeBSD$
 
 GENSRCS+= xm.h
 LIBSRCS+= armfbsd-nat.c
-LIBSRCS+= arm-tdep.c armfbsd-tdep.c solib.c solib-svr4.c fbsd-threads.c
+LIBSRCS+= arm-tdep.c armfbsd-tdep.c solib.c solib-svr4.c
+.if !defined(GDB_CROSS_DEBUGGER)
+LIBSRCS+= fbsd-threads.c
+.endif
 
 nm.h:
 #XXX this should be arm/nm-fbsd.h but won't until it's merged into the gdb repo

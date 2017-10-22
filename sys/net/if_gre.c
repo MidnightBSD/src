@@ -1,5 +1,5 @@
 /*	$NetBSD: if_gre.c,v 1.49 2003/12/11 00:22:29 itojun Exp $ */
-/*	 $FreeBSD: release/7.0.0/sys/net/if_gre.c 174854 2007-12-22 06:32:46Z cvs2svn $ */
+/*	 $FreeBSD$ */
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -18,13 +18,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -53,11 +46,14 @@
 #include "opt_inet6.h"
 
 #include <sys/param.h>
+#include <sys/jail.h>
 #include <sys/kernel.h>
+#include <sys/libkern.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mbuf.h>
 #include <sys/priv.h>
+#include <sys/proc.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
@@ -69,6 +65,7 @@
 #include <net/if_clone.h>
 #include <net/if_types.h>
 #include <net/route.h>
+#include <net/vnet.h>
 
 #ifdef INET
 #include <netinet/in.h>
@@ -95,6 +92,14 @@
 
 #define GRENAME	"gre"
 
+#define	MTAG_COOKIE_GRE		1307983903
+#define	MTAG_GRE_NESTING	1
+struct mtag_gre_nesting {
+	uint16_t	count;
+	uint16_t	max;
+	struct ifnet	*ifp[];
+};
+
 /*
  * gre_mtx protects all global variables in if_gre.c.
  * XXX: gre_softc data not protected yet.
@@ -108,7 +113,7 @@ static int	gre_clone_create(struct if_clone *, int, caddr_t);
 static void	gre_clone_destroy(struct ifnet *);
 static int	gre_ioctl(struct ifnet *, u_long, caddr_t);
 static int	gre_output(struct ifnet *, struct mbuf *, struct sockaddr *,
-		    struct rtentry *rt);
+		    struct route *ro);
 
 IFC_SIMPLE_DECLARE(gre, 0);
 
@@ -189,7 +194,7 @@ gre_clone_create(ifc, unit, params)
 	GRE2IFP(sc)->if_softc = sc;
 	if_initname(GRE2IFP(sc), ifc->ifc_name, unit);
 
-	GRE2IFP(sc)->if_snd.ifq_maxlen = IFQ_MAXLEN;
+	GRE2IFP(sc)->if_snd.ifq_maxlen = ifqmaxlen;
 	GRE2IFP(sc)->if_addrlen = 0;
 	GRE2IFP(sc)->if_hdrlen = 24; /* IP + GRE */
 	GRE2IFP(sc)->if_mtu = GREMTU;
@@ -200,8 +205,9 @@ gre_clone_create(ifc, unit, params)
 	sc->g_proto = IPPROTO_GRE;
 	GRE2IFP(sc)->if_flags |= IFF_LINK0;
 	sc->encap = NULL;
-	sc->called = 0;
+	sc->gre_fibnum = curthread->td_proc->p_fibnum;
 	sc->wccp_ver = WCCP_V1;
+	sc->key = 0;
 	if_attach(GRE2IFP(sc));
 	bpfattach(GRE2IFP(sc), DLT_NULL, sizeof(u_int32_t));
 	mtx_lock(&gre_mtx);
@@ -236,28 +242,83 @@ gre_clone_destroy(ifp)
  */
 static int
 gre_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
-	   struct rtentry *rt)
+	   struct route *ro)
 {
 	int error = 0;
 	struct gre_softc *sc = ifp->if_softc;
 	struct greip *gh;
 	struct ip *ip;
-	u_short ip_id = 0;
-	uint8_t ip_tos = 0;
+	struct m_tag *mtag;
+	struct mtag_gre_nesting *gt;
+	size_t len;
+	u_short gre_ip_id = 0;
+	uint8_t gre_ip_tos = 0;
 	u_int16_t etype = 0;
 	struct mobile_h mob_h;
 	u_int32_t af;
+	int extra = 0, max;
 
 	/*
-	 * gre may cause infinite recursion calls when misconfigured.
-	 * We'll prevent this by introducing upper limit.
+	 * gre may cause infinite recursion calls when misconfigured.  High
+	 * nesting level may cause stack exhaustion.  We'll prevent this by
+	 * detecting loops and by introducing upper limit.
 	 */
-	if (++(sc->called) > max_gre_nesting) {
-		printf("%s: gre_output: recursively called too many "
-		       "times(%d)\n", if_name(GRE2IFP(sc)), sc->called);
-		m_freem(m);
-		error = EIO;    /* is there better errno? */
-		goto end;
+	mtag = m_tag_locate(m, MTAG_COOKIE_GRE, MTAG_GRE_NESTING, NULL);
+	if (mtag != NULL) {
+		struct ifnet **ifp2;
+
+		gt = (struct mtag_gre_nesting *)(mtag + 1);
+		gt->count++;
+		if (gt->count > min(gt->max,max_gre_nesting)) {
+			printf("%s: hit maximum recursion limit %u on %s\n",
+				__func__, gt->count - 1, ifp->if_xname);
+			m_freem(m);
+			error = EIO;	/* is there better errno? */
+			goto end;
+		}
+
+		ifp2 = gt->ifp;
+		for (max = gt->count - 1; max > 0; max--) {
+			if (*ifp2 == ifp)
+				break;
+			ifp2++;
+		}
+		if (*ifp2 == ifp) {
+			printf("%s: detected loop with nexting %u on %s\n",
+				__func__, gt->count-1, ifp->if_xname);
+			m_freem(m);
+			error = EIO;	/* is there better errno? */
+			goto end;
+		}
+		*ifp2 = ifp;
+
+	} else {
+		/*
+		 * Given that people should NOT increase max_gre_nesting beyond
+		 * their real needs, we allocate once per packet rather than
+		 * allocating an mtag once per passing through gre.
+		 *
+		 * Note: the sysctl does not actually check for saneness, so we
+		 * limit the maximum numbers of possible recursions here.
+		 */
+		max = imin(max_gre_nesting, 256);
+		/* If someone sets the sysctl <= 0, we want at least 1. */
+		max = imax(max, 1);
+		len = sizeof(struct mtag_gre_nesting) +
+		    max * sizeof(struct ifnet *);
+		mtag = m_tag_alloc(MTAG_COOKIE_GRE, MTAG_GRE_NESTING, len,
+		    M_NOWAIT);
+		if (mtag == NULL) {
+			m_freem(m);
+			error = ENOMEM;
+			goto end;
+		}
+		gt = (struct mtag_gre_nesting *)(mtag + 1);
+		bzero(gt, len);
+		gt->count = 1;
+		gt->max = max;
+		*gt->ifp = ifp;
+		m_tag_prepend(m, mtag);
 	}
 
 	if (!((ifp->if_flags & IFF_UP) &&
@@ -360,13 +421,18 @@ gre_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 		switch (dst->sa_family) {
 		case AF_INET:
 			ip = mtod(m, struct ip *);
-			ip_tos = ip->ip_tos;
-			ip_id = ip->ip_id;
-			etype = ETHERTYPE_IP;
+			gre_ip_tos = ip->ip_tos;
+			gre_ip_id = ip->ip_id;
+			if (sc->wccp_ver == WCCP_V2) {
+				extra = sizeof(uint32_t);
+				etype =  WCCP_PROTOCOL_TYPE;
+			} else {
+				etype = ETHERTYPE_IP;
+			}
 			break;
 #ifdef INET6
 		case AF_INET6:
-			ip_id = ip_newid();
+			gre_ip_id = ip_newid();
 			etype = ETHERTYPE_IPV6;
 			break;
 #endif
@@ -381,7 +447,12 @@ gre_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 			error = EAFNOSUPPORT;
 			goto end;
 		}
-		M_PREPEND(m, sizeof(struct greip), M_DONTWAIT);
+			
+		/* Reserve space for GRE header + optional GRE key */
+		int hdrlen = sizeof(struct greip) + extra;
+		if (sc->key)
+			hdrlen += sizeof(uint32_t);
+		M_PREPEND(m, hdrlen, M_DONTWAIT);
 	} else {
 		_IF_DROP(&ifp->if_snd);
 		m_freem(m);
@@ -395,11 +466,22 @@ gre_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 		goto end;
 	}
 
+	M_SETFIB(m, sc->gre_fibnum); /* The envelope may use a different FIB */
+
 	gh = mtod(m, struct greip *);
 	if (sc->g_proto == IPPROTO_GRE) {
-		/* we don't have any GRE flags for now */
-		memset((void *)gh, 0, sizeof(struct greip));
+		uint32_t *options = gh->gi_options;
+
+		memset((void *)gh, 0, sizeof(struct greip) + extra);
 		gh->gi_ptype = htons(etype);
+		gh->gi_flags = 0;
+
+		/* Add key option */
+		if (sc->key)
+		{
+			gh->gi_flags |= htons(GRE_KP);
+			*(options++) = htonl(sc->key);
+		}
 	}
 
 	gh->gi_pr = sc->g_proto;
@@ -409,8 +491,8 @@ gre_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 		((struct ip*)gh)->ip_v = IPPROTO_IPV4;
 		((struct ip*)gh)->ip_hl = (sizeof(struct ip)) >> 2;
 		((struct ip*)gh)->ip_ttl = GRE_TTL;
-		((struct ip*)gh)->ip_tos = ip_tos;
-		((struct ip*)gh)->ip_id = ip_id;
+		((struct ip*)gh)->ip_tos = gre_ip_tos;
+		((struct ip*)gh)->ip_id = gre_ip_id;
 		gh->gi_len = m->m_pkthdr.len;
 	}
 
@@ -424,7 +506,6 @@ gre_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 	error = ip_output(m, NULL, &sc->route, IP_FORWARDING,
 	    (struct ip_moptions *)NULL, (struct inpcb *)NULL);
   end:
-	sc->called = 0;
 	if (error)
 		ifp->if_oerrors++;
 	return (error);
@@ -440,10 +521,12 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	int s;
 	struct sockaddr_in si;
 	struct sockaddr *sa = NULL;
-	int error;
+	int error, adj;
 	struct sockaddr_in sp, sm, dp, dm;
+	uint32_t key;
 
 	error = 0;
+	adj = 0;
 
 	s = splnet();
 	switch (cmd) {
@@ -615,6 +698,9 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		si.sin_len = sizeof(struct sockaddr_in);
 		si.sin_addr.s_addr = sc->g_src.s_addr;
 		sa = sintosa(&si);
+		error = prison_if(curthread->td_ucred, sa);
+		if (error != 0)
+			break;
 		ifr->ifr_addr = *sa;
 		break;
 	case GREGADDRD:
@@ -623,6 +709,9 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		si.sin_len = sizeof(struct sockaddr_in);
 		si.sin_addr.s_addr = sc->g_dst.s_addr;
 		sa = sintosa(&si);
+		error = prison_if(curthread->td_ucred, sa);
+		if (error != 0)
+			break;
 		ifr->ifr_addr = *sa;
 		break;
 	case SIOCSIFPHYADDR:
@@ -686,8 +775,14 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		si.sin_family = AF_INET;
 		si.sin_len = sizeof(struct sockaddr_in);
 		si.sin_addr.s_addr = sc->g_src.s_addr;
+		error = prison_if(curthread->td_ucred, (struct sockaddr *)&si);
+		if (error != 0)
+			break;
 		memcpy(&lifr->addr, &si, sizeof(si));
 		si.sin_addr.s_addr = sc->g_dst.s_addr;
+		error = prison_if(curthread->td_ucred, (struct sockaddr *)&si);
+		if (error != 0)
+			break;
 		memcpy(&lifr->dstaddr, &si, sizeof(si));
 		break;
 	case SIOCGIFPSRCADDR:
@@ -702,6 +797,9 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		si.sin_family = AF_INET;
 		si.sin_len = sizeof(struct sockaddr_in);
 		si.sin_addr.s_addr = sc->g_src.s_addr;
+		error = prison_if(curthread->td_ucred, (struct sockaddr *)&si);
+		if (error != 0)
+			break;
 		bcopy(&si, &ifr->ifr_addr, sizeof(ifr->ifr_addr));
 		break;
 	case SIOCGIFPDSTADDR:
@@ -716,8 +814,35 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		si.sin_family = AF_INET;
 		si.sin_len = sizeof(struct sockaddr_in);
 		si.sin_addr.s_addr = sc->g_dst.s_addr;
+		error = prison_if(curthread->td_ucred, (struct sockaddr *)&si);
+		if (error != 0)
+			break;
 		bcopy(&si, &ifr->ifr_addr, sizeof(ifr->ifr_addr));
 		break;
+	case GRESKEY:
+		error = priv_check(curthread, PRIV_NET_GRE);
+		if (error)
+			break;
+		error = copyin(ifr->ifr_data, &key, sizeof(key));
+		if (error)
+			break;
+		/* adjust MTU for option header */
+		if (key == 0 && sc->key != 0)		/* clear */
+			adj += sizeof(key);
+		else if (key != 0 && sc->key == 0)	/* set */
+			adj -= sizeof(key);
+
+		if (ifp->if_mtu + adj < 576) {
+			error = EINVAL;
+			break;
+		}
+		ifp->if_mtu += adj;
+		sc->key = key;
+		break;
+	case GREGKEY:
+		error = copyout(&sc->key, ifr->ifr_data, sizeof(sc->key));
+		break;
+
 	default:
 		error = EINVAL;
 		break;
@@ -742,7 +867,6 @@ static int
 gre_compute_route(struct gre_softc *sc)
 {
 	struct route *ro;
-	u_int32_t a, b, c;
 
 	ro = &sc->route;
 
@@ -755,16 +879,11 @@ gre_compute_route(struct gre_softc *sc)
 	 * toggle last bit, so our interface is not found, but a less
 	 * specific route. I'd rather like to specify a shorter mask,
 	 * but this is not possible. Should work though. XXX
-	 * there is a simpler way ...
+	 * XXX MRT Use a different FIB for the tunnel to solve this problem.
 	 */
 	if ((GRE2IFP(sc)->if_flags & IFF_LINK1) == 0) {
-		a = ntohl(sc->g_dst.s_addr);
-		b = a & 0x01;
-		c = a & 0xfffffffe;
-		b = b ^ 0x01;
-		a = b | c;
-		((struct sockaddr_in *)&ro->ro_dst)->sin_addr.s_addr
-		    = htonl(a);
+		((struct sockaddr_in *)&ro->ro_dst)->sin_addr.s_addr ^=
+		    htonl(0x01);
 	}
 
 #ifdef DIAGNOSTIC
@@ -772,7 +891,7 @@ gre_compute_route(struct gre_softc *sc)
 	    inet_ntoa(((struct sockaddr_in *)&ro->ro_dst)->sin_addr));
 #endif
 
-	rtalloc(ro);
+	rtalloc_fib(ro, sc->gre_fibnum);
 
 	/*
 	 * check if this returned a route at all and this route is no

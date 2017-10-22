@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/arch/arm/include/atomic_ops.h 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
 #ifndef	_ATOMIC_OPS_H_
@@ -39,15 +39,15 @@
  * void atomic_swap32(intptr_t *dst, intptr_t val, intptr_t *res);
  */
 static inline void
-atomic_swap32(intptr_t *dst, intptr_t val, intptr_t *res)
+atomic_swap32(volatile intptr_t *dst, intptr_t val, intptr_t *res)
 {
 	*res = __swp(val, dst);
 }
 
 #define	atomic_swap_ptr(d, v, r) \
-	atomic_swap32((intptr_t *)d, (intptr_t)v, (intptr_t *)r)
+	atomic_swap32((volatile intptr_t *)d, (intptr_t)v, (intptr_t *)r)
 
 #define	atomic_swap_int(d, v, r) \
-	atomic_swap32((intptr_t *)d, (intptr_t)v, (intptr_t *)r)
+	atomic_swap32((volatile intptr_t *)d, (intptr_t)v, (intptr_t *)r)
 #endif
 

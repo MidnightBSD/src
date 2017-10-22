@@ -1,6 +1,10 @@
-# $FreeBSD: release/7.0.0/secure/lib/libcrypto/Makefile.inc 169425 2007-05-09 19:37:02Z gnn $
+# $FreeBSD$
 
 .include <bsd.own.mk>
+
+# OpenSSL version used for manual page generation
+OPENSSL_VER=	0.9.8x
+OPENSSL_DATE=	2012-05-10
 
 LCRYPTO_SRC=	${.CURDIR}/../../../crypto/openssl
 LCRYPTO_DOC=	${.CURDIR}/../../../crypto/openssl/doc
@@ -34,7 +38,8 @@ man-update:
 	@(sec=${manpage:E}; \
 	pod=${manpage:R}.pod; \
 	cp ${LCRYPTO_DOC}/${_docs}/$$pod .; \
-	pod2man --section=$$sec --release="0.9.8e" --center="OpenSSL" \
+	pod2man --section=$$sec --release="${OPENSSL_VER}" \
+	  --date="${OPENSSL_DATE}" --center="OpenSSL"  \
 	  $$pod > ${.CURDIR}/man/${manpage}; \
 	rm -f $$pod; \
 	${ECHO} ${manpage})

@@ -26,15 +26,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_yield.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 #include <pthread.h>
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(_sched_yield);
-LT10_COMPAT_DEFAULT(sched_yield);
-LT10_COMPAT_PRIVATE(_pthread_yield);
-LT10_COMPAT_DEFAULT(pthread_yield);
+int _sched_yield(void);
 
 __weak_reference(_sched_yield, sched_yield);
 __weak_reference(_pthread_yield, pthread_yield);

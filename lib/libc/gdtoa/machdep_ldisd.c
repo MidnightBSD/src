@@ -2,6 +2,11 @@
  * Copyright (c) 2003 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
  *
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
+ * Portions of this software were developed by David Chisnall
+ * under sponsorship from the FreeBSD Foundation.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -31,13 +36,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/gdtoa/machdep_ldisd.c 112163 2003-03-12 20:30:00Z das $");
+__FBSDID("$FreeBSD$");
 
 #include "gdtoaimp.h"
+#undef strtold_l
 
 long double
-strtold(const char * __restrict s, char ** __restrict sp)
+strtold_l(const char * __restrict s, char ** __restrict sp, locale_t locale)
 {
 
-	return strtod(s, sp);
+	return strtod_l(s, sp, locale);
 }

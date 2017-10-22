@@ -24,7 +24,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-		.ident		"$FreeBSD: release/7.0.0/lib/csu/ia64/crt1.S 133989 2004-08-18 23:06:47Z marcel $"
+#include <machine/asm.h>
+__FBSDID("$FreeBSD$");
 
 		.text
 

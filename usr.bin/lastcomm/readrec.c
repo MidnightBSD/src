@@ -26,20 +26,16 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/lastcomm/readrec.c 169857 2007-05-22 06:51:38Z dds $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/acct.h>
 
-#include <ctype.h>
-#include <err.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 int	 readrec_forward(FILE *f, struct acctv2 *av2);

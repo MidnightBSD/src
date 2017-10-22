@@ -30,11 +30,12 @@
  * SUCH DAMAGE.
  *
  *	@(#)eval.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: release/7.0.0/bin/sh/eval.h 153091 2005-12-04 18:44:21Z stefanf $
+ * $FreeBSD$
  */
 
 extern char *commandname;	/* currently executing command */
 extern int exitstatus;		/* exit status of last command */
+extern int oexitstatus;		/* saved exit status */
 extern struct strlist *cmdenviron;  /* environment for builtin command */
 
 
@@ -45,24 +46,21 @@ struct backcmd {		/* result of evalbackcmd */
 	struct job *jp;		/* job structure for command */
 };
 
-int evalcmd(int, char **);
-void evalstring(char *);
+/* flags in argument to evaltree/evalstring */
+#define EV_EXIT 01		/* exit after evaluating tree */
+#define EV_TESTED 02		/* exit status is checked; ignore -e flag */
+#define EV_BACKCMD 04		/* command executing within back quotes */
+
+void evalstring(char *, int);
 union node;	/* BLETCH for ansi C */
 void evaltree(union node *, int);
 void evalbackcmd(union node *, struct backcmd *);
-int bltincmd(int, char **);
-int breakcmd(int, char **);
-int returncmd(int, char **);
-int falsecmd(int, char **);
-int truecmd(int, char **);
-int execcmd(int, char **);
-int timescmd(int, char **);
-int commandcmd(int, char **);
 
 /* in_function returns nonzero if we are currently evaluating a function */
 #define in_function()	funcnest
 extern int funcnest;
 extern int evalskip;
+extern int skipcount;
 
 /* reasons for skipping commands (see comment on breakcmd routine) */
 #define SKIPBREAK	1

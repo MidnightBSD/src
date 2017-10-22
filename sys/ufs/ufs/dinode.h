@@ -62,7 +62,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)dinode.h	8.3 (Berkeley) 1/21/94
- * $FreeBSD: release/7.0.0/sys/ufs/ufs/dinode.h 158802 2006-05-21 21:55:29Z maxim $
+ * $FreeBSD$
  */
 
 #ifndef _UFS_UFS_DINODE_H_
@@ -145,7 +145,9 @@ struct ufs2_dinode {
 	ufs2_daddr_t	di_extb[NXADDR];/*  96: External attributes block. */
 	ufs2_daddr_t	di_db[NDADDR];	/* 112: Direct disk blocks. */
 	ufs2_daddr_t	di_ib[NIADDR];	/* 208: Indirect disk blocks. */
-	int64_t		di_spare[3];	/* 232: Reserved; currently unused */
+	u_int64_t	di_modrev;	/* 232: i_modrev for NFSv4 */
+	ino_t		di_freelink;	/* 240: SUJ: Next unlinked inode. */
+	uint32_t	di_spare[3];	/* 244: Reserved; currently unused */
 };
 
 /*
@@ -166,9 +168,7 @@ struct ufs2_dinode {
 struct ufs1_dinode {
 	u_int16_t	di_mode;	/*   0: IFMT, permissions; see below. */
 	int16_t		di_nlink;	/*   2: File link count. */
-	union {
-		u_int16_t oldids[2];	/*   4: Ffs: old user and group ids. */
-	} di_u;
+	ino_t		di_freelink;	/*   4: SUJ: Next unlinked inode. */
 	u_int64_t	di_size;	/*   8: File byte count. */
 	int32_t		di_atime;	/*  16: Last access time. */
 	int32_t		di_atimensec;	/*  20: Last access time. */
@@ -183,9 +183,7 @@ struct ufs1_dinode {
 	int32_t		di_gen;		/* 108: Generation number. */
 	u_int32_t	di_uid;		/* 112: File owner. */
 	u_int32_t	di_gid;		/* 116: File group. */
-	int32_t		di_spare[2];	/* 120: Reserved; currently unused */
+	u_int64_t	di_modrev;	/* 120: i_modrev for NFSv4 */
 };
-#define	di_ogid		di_u.oldids[1]
-#define	di_ouid		di_u.oldids[0]
 
 #endif /* _UFS_UFS_DINODE_H_ */

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/cc/cc_tools/Makefile.dep 169718 2007-05-19 04:25:59Z kan $
+# $FreeBSD$
 
 errors.o: bconfig.h auto-host.h
 

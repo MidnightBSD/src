@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/contrib/libreadline/shell.c 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $FreeBSD$ */
 /* shell.c -- readline utility functions that are normally provided by
 	      bash when readline is linked as part of the shell. */
 

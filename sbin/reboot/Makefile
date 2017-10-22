@@ -1,10 +1,7 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: release/7.0.0/sbin/reboot/Makefile 152544 2005-11-17 09:39:36Z ru $
+# $FreeBSD$
 
 PROG=	reboot
-WARNS?=	6
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
 MAN=	reboot.8 nextboot.8
 MLINKS=	reboot.8 halt.8 reboot.8 fastboot.8 reboot.8 fasthalt.8
 

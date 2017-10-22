@@ -37,7 +37,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/cpufunc_asm_sa11x0.S 139735 2005-01-05 21:58:49Z imp $");
+__FBSDID("$FreeBSD$");
 
 	.data
 	.global	_C_LABEL(sa11x0_idle_mem)

@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 1999-2005 Apple Computer, Inc.
+/*-
+ * Copyright (c) 1999-2005 Apple Inc.
  * Copyright (c) 2006-2007 Robert N. M. Watson
  * All rights reserved.
  *
@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,9 +26,10 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: release/7.0.0/sys/security/audit/audit.c 173279 2007-11-02 09:53:32Z rwatson $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/condvar.h>
@@ -71,11 +72,14 @@
 
 #include <vm/uma.h>
 
+FEATURE(audit, "BSM audit support");
+
 static uma_zone_t	audit_record_zone;
 static MALLOC_DEFINE(M_AUDITCRED, "audit_cred", "Audit cred storage");
 MALLOC_DEFINE(M_AUDITDATA, "audit_data", "Audit data storage");
 MALLOC_DEFINE(M_AUDITPATH, "audit_path", "Audit path storage");
 MALLOC_DEFINE(M_AUDITTEXT, "audit_text", "Audit text storage");
+MALLOC_DEFINE(M_AUDITGIDSET, "audit_gidset", "Audit GID set storage");
 
 SYSCTL_NODE(_security, OID_AUTO, audit, CTLFLAG_RW, 0,
     "TrustedBSD audit controls");
@@ -157,6 +161,48 @@ struct cv		audit_watermark_cv;
 static struct cv	audit_fail_cv;
 
 /*
+ * Kernel audit information.  This will store the current audit address
+ * or host information that the kernel will use when it's generating
+ * audit records.  This data is modified by the A_GET{SET}KAUDIT auditon(2)
+ * command.
+ */
+static struct auditinfo_addr	audit_kinfo;
+static struct rwlock		audit_kinfo_lock;
+
+#define	KINFO_LOCK_INIT()	rw_init(&audit_kinfo_lock, \
+				    "audit_kinfo_lock")
+#define	KINFO_RLOCK()		rw_rlock(&audit_kinfo_lock)
+#define	KINFO_WLOCK()		rw_wlock(&audit_kinfo_lock)
+#define	KINFO_RUNLOCK()		rw_runlock(&audit_kinfo_lock)
+#define	KINFO_WUNLOCK()		rw_wunlock(&audit_kinfo_lock)
+
+void
+audit_set_kinfo(struct auditinfo_addr *ak)
+{
+
+	KASSERT(ak->ai_termid.at_type == AU_IPv4 ||
+	    ak->ai_termid.at_type == AU_IPv6,
+	    ("audit_set_kinfo: invalid address type"));
+
+	KINFO_WLOCK();
+	audit_kinfo = *ak;
+	KINFO_WUNLOCK();
+}
+
+void
+audit_get_kinfo(struct auditinfo_addr *ak)
+{
+
+	KASSERT(audit_kinfo.ai_termid.at_type == AU_IPv4 ||
+	    audit_kinfo.ai_termid.at_type == AU_IPv6,
+	    ("audit_set_kinfo: invalid address type"));
+
+	KINFO_RLOCK();
+	*ak = audit_kinfo;
+	KINFO_RUNLOCK();
+}
+
+/*
  * Construct an audit record for the passed thread.
  */
 static int
@@ -164,6 +210,7 @@ audit_record_ctor(void *mem, int size, void *arg, int flags)
 {
 	struct kaudit_record *ar;
 	struct thread *td;
+	struct ucred *cred;
 
 	KASSERT(sizeof(*ar) == size, ("audit_record_ctor: wrong size"));
 
@@ -176,15 +223,16 @@ audit_record_ctor(void *mem, int size, void *arg, int flags)
 	/*
 	 * Export the subject credential.
 	 */
-	cru2x(td->td_ucred, &ar->k_ar.ar_subj_cred);
-	ar->k_ar.ar_subj_ruid = td->td_ucred->cr_ruid;
-	ar->k_ar.ar_subj_rgid = td->td_ucred->cr_rgid;
-	ar->k_ar.ar_subj_egid = td->td_ucred->cr_groups[0];
-	ar->k_ar.ar_subj_auid = td->td_ucred->cr_audit.ai_auid;
-	ar->k_ar.ar_subj_asid = td->td_ucred->cr_audit.ai_asid;
+	cred = td->td_ucred;
+	cru2x(cred, &ar->k_ar.ar_subj_cred);
+	ar->k_ar.ar_subj_ruid = cred->cr_ruid;
+	ar->k_ar.ar_subj_rgid = cred->cr_rgid;
+	ar->k_ar.ar_subj_egid = cred->cr_groups[0];
+	ar->k_ar.ar_subj_auid = cred->cr_audit.ai_auid;
+	ar->k_ar.ar_subj_asid = cred->cr_audit.ai_asid;
 	ar->k_ar.ar_subj_pid = td->td_proc->p_pid;
-	ar->k_ar.ar_subj_amask = td->td_ucred->cr_audit.ai_mask;
-	ar->k_ar.ar_subj_term_addr = td->td_ucred->cr_audit.ai_termid;
+	ar->k_ar.ar_subj_amask = cred->cr_audit.ai_mask;
+	ar->k_ar.ar_subj_term_addr = cred->cr_audit.ai_termid;
 	return (0);
 }
 
@@ -208,6 +256,8 @@ audit_record_dtor(void *mem, int size, void *arg)
 		free(ar->k_ar.ar_arg_argv, M_AUDITTEXT);
 	if (ar->k_ar.ar_arg_envv != NULL)
 		free(ar->k_ar.ar_arg_envv, M_AUDITTEXT);
+	if (ar->k_ar.ar_arg_groups.gidset != NULL)
+		free(ar->k_ar.ar_arg_groups.gidset, M_AUDITGIDSET);
 }
 
 /*
@@ -240,7 +290,11 @@ audit_init(void)
 	audit_qctrl.aq_bufsz = AQ_BUFSZ;
 	audit_qctrl.aq_minfree = AU_FS_MINFREE;
 
+	audit_kinfo.ai_termid.at_type = AU_IPv4;
+	audit_kinfo.ai_termid.at_addr[0] = INADDR_ANY;
+
 	mtx_init(&audit_mtx, "audit_mtx", NULL, MTX_DEF);
+	KINFO_LOCK_INIT();
 	cv_init(&audit_worker_cv, "audit_worker_cv");
 	cv_init(&audit_watermark_cv, "audit_watermark_cv");
 	cv_init(&audit_fail_cv, "audit_fail_cv");
@@ -262,12 +316,15 @@ audit_init(void)
 	audit_worker_init();
 }
 
-SYSINIT(audit_init, SI_SUB_AUDIT, SI_ORDER_FIRST, audit_init, NULL)
+SYSINIT(audit_init, SI_SUB_AUDIT, SI_ORDER_FIRST, audit_init, NULL);
 
 /*
  * Drain the audit queue and close the log at shutdown.  Note that this can
  * be called both from the system shutdown path and also from audit
  * configuration syscalls, so 'arg' and 'howto' are ignored.
+ *
+ * XXXRW: In FreeBSD 7.x and 8.x, this fails to wait for the record queue to
+ * drain before returning, which could lead to lost records on shutdown.
  */
 void
 audit_shutdown(void *arg, int howto)
@@ -354,19 +411,24 @@ audit_commit(struct kaudit_record *ar, int error, int retval)
 	else
 		sorf = AU_PRS_SUCCESS;
 
+	/*
+	 * syscalls.master sometimes contains a prototype event number, which
+	 * we will transform into a more specific event number now that we
+	 * have more complete information gathered during the system call.
+	 */
 	switch(ar->k_ar.ar_event) {
 	case AUE_OPEN_RWTC:
-		/*
-		 * The open syscall always writes a AUE_OPEN_RWTC event;
-		 * change it to the proper type of event based on the flags
-		 * and the error value.
-		 */
-		ar->k_ar.ar_event = flags_and_error_to_openevent(
+		ar->k_ar.ar_event = audit_flags_and_error_to_openevent(
+		    ar->k_ar.ar_arg_fflags, error);
+		break;
+
+	case AUE_OPENAT_RWTC:
+		ar->k_ar.ar_event = audit_flags_and_error_to_openatevent(
 		    ar->k_ar.ar_arg_fflags, error);
 		break;
 
 	case AUE_SYSCTL:
-		ar->k_ar.ar_event = ctlname_to_sysctlevent(
+		ar->k_ar.ar_event = audit_ctlname_to_sysctlevent(
 		    ar->k_ar.ar_arg_ctlname, ar->k_ar.ar_valid_arg);
 		break;
 
@@ -440,6 +502,8 @@ audit_syscall_enter(unsigned short code, struct thread *td)
 	au_id_t auid;
 
 	KASSERT(td->td_ar == NULL, ("audit_syscall_enter: td->td_ar != NULL"));
+	KASSERT((td->td_pflags & TDP_AUDITREC) == 0,
+	    ("audit_syscall_enter: TDP_AUDITREC set"));
 
 	/*
 	 * In FreeBSD, each ABI has its own system call table, and hence
@@ -490,9 +554,13 @@ audit_syscall_enter(unsigned short code, struct thread *td)
 			panic("audit_failing_stop: thread continued");
 		}
 		td->td_ar = audit_new(event, td);
-	} else if (audit_pipe_preselect(auid, event, class, AU_PRS_BOTH, 0))
+		if (td->td_ar != NULL)
+			td->td_pflags |= TDP_AUDITREC;
+	} else if (audit_pipe_preselect(auid, event, class, AU_PRS_BOTH, 0)) {
 		td->td_ar = audit_new(event, td);
-	else
+		if (td->td_ar != NULL)
+			td->td_pflags |= TDP_AUDITREC;
+	} else
 		td->td_ar = NULL;
 }
 
@@ -520,6 +588,7 @@ audit_syscall_exit(int error, struct thread *td)
 
 	audit_commit(td->td_ar, error, retval);
 	td->td_ar = NULL;
+	td->td_pflags &= ~TDP_AUDITREC;
 }
 
 void
@@ -551,6 +620,7 @@ audit_cred_kproc0(struct ucred *cred)
 {
 
 	cred->cr_audit.ai_auid = AU_DEFAUDITID;
+	cred->cr_audit.ai_termid.at_type = AU_IPv4;
 }
 
 void
@@ -558,6 +628,7 @@ audit_cred_proc1(struct ucred *cred)
 {
 
 	cred->cr_audit.ai_auid = AU_DEFAUDITID;
+	cred->cr_audit.ai_termid.at_type = AU_IPv4;
 }
 
 void
@@ -572,4 +643,60 @@ audit_thread_free(struct thread *td)
 {
 
 	KASSERT(td->td_ar == NULL, ("audit_thread_free: td_ar != NULL"));
+	KASSERT((td->td_pflags & TDP_AUDITREC) == 0,
+	    ("audit_thread_free: TDP_AUDITREC set"));
+}
+
+void
+audit_proc_coredump(struct thread *td, char *path, int errcode)
+{
+	struct kaudit_record *ar;
+	struct au_mask *aumask;
+	struct ucred *cred;
+	au_class_t class;
+	int ret, sorf;
+	char **pathp;
+	au_id_t auid;
+
+	ret = 0;
+
+	/*
+	 * Make sure we are using the correct preselection mask.
+	 */
+	cred = td->td_ucred;
+	auid = cred->cr_audit.ai_auid;
+	if (auid == AU_DEFAUDITID)
+		aumask = &audit_nae_mask;
+	else
+		aumask = &cred->cr_audit.ai_mask;
+	/*
+	 * It's possible for coredump(9) generation to fail.  Make sure that
+	 * we handle this case correctly for preselection.
+	 */
+	if (errcode != 0)
+		sorf = AU_PRS_FAILURE;
+	else
+		sorf = AU_PRS_SUCCESS;
+	class = au_event_class(AUE_CORE);
+	if (au_preselect(AUE_CORE, class, aumask, sorf) == 0 &&
+	    audit_pipe_preselect(auid, AUE_CORE, class, sorf, 0) == 0)
+		return;
+
+	/*
+	 * If we are interested in seeing this audit record, allocate it.
+	 * Where possible coredump records should contain a pathname and arg32
+	 * (signal) tokens.
+	 */
+	ar = audit_new(AUE_CORE, td);
+	if (path != NULL) {
+		pathp = &ar->k_ar.ar_arg_upath1;
+		*pathp = malloc(MAXPATHLEN, M_AUDITPATH, M_WAITOK);
+		audit_canon_path(td, path, *pathp);
+		ARG_SET_VALID(ar, ARG_UPATH1);
+	}
+	ar->k_ar.ar_arg_signum = td->td_proc->p_sig;
+	ARG_SET_VALID(ar, ARG_SIGNUM);
+	if (errcode != 0)
+		ret = 1;
+	audit_commit(ar, errcode, ret);
 }

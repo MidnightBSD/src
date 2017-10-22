@@ -1,11 +1,13 @@
-# $FreeBSD: release/7.0.0/usr.sbin/tzsetup/Makefile 113091 2003-04-04 17:49:21Z obrien $
+# $FreeBSD$
 
 PROG=	tzsetup
 MAN=	tzsetup.8
 
-CFLAGS+= -I${.CURDIR}
+CFLAGS+= -I${.CURDIR}/../../gnu/lib/libodialog -I.
 
-DPADD=	${LIBDIALOG} ${LIBNCURSES}
-LDADD=	-ldialog -lncurses
+WARNS?=	3
+
+DPADD=	${LIBODIALOG} ${LIBNCURSES}
+LDADD=	-lodialog -lncurses
 
 .include <bsd.prog.mk>

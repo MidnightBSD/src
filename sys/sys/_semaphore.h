@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/7.0.0/sys/sys/_semaphore.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ *	$FreeBSD$
  */
 #ifndef __SEMAPHORE_H_
 #define __SEMAPHORE_H_
@@ -31,26 +31,9 @@
 typedef intptr_t semid_t;
 struct timespec;
 
+#define SEM_VALUE_MAX  __INT_MAX
+
 #ifndef _KERNEL
-
-#include <sys/cdefs.h>
-
-/*
- * Semaphore definitions.
- */
-struct sem {
-#define SEM_MAGIC       ((u_int32_t) 0x09fa4012)
-        u_int32_t       magic;
-        pthread_mutex_t lock;
-        pthread_cond_t  gtzero;
-        u_int32_t       count;
-        u_int32_t       nwaiters;
-#define SEM_USER        (NULL)
-        semid_t         semid;  /* semaphore id if kernel (shared) semaphore */
-        int             syssem; /* 1 if kernel (shared) semaphore */
-        LIST_ENTRY(sem) entry;
-        struct sem      **backpointer;
-};
 
 __BEGIN_DECLS
 

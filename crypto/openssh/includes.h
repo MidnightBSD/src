@@ -1,5 +1,4 @@
 /* $OpenBSD: includes.h,v 1.54 2006/07/22 20:48:23 stevesk Exp $ */
-/* $FreeBSD: release/7.0.0/crypto/openssh/includes.h 172506 2007-10-10 16:59:15Z cvs2svn $	*/
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -31,8 +30,9 @@
 # include <bstring.h>
 #endif
 #if defined(HAVE_GLOB_H) && defined(GLOB_HAS_ALTDIRFUNC) && \
-    defined(GLOB_HAS_GL_MATCHC) && \
-    defined(HAVE_DECL_GLOB_NOMATCH) &&  HAVE_DECL_GLOB_NOMATCH != 0
+    defined(GLOB_HAS_GL_MATCHC) && defined(GLOB_HAS_GL_STATV) && \
+    defined(HAVE_DECL_GLOB_NOMATCH) &&  HAVE_DECL_GLOB_NOMATCH != 0 && \
+    !defined(BROKEN_GLOB)
 # include <glob.h>
 #endif
 #ifdef HAVE_ENDIAN_H
@@ -50,7 +50,7 @@
 #ifdef HAVE_NEXT
 # include <libc.h>
 #endif
-#ifdef HAVE_PATHS
+#ifdef HAVE_PATHS_H
 # include <paths.h>
 #endif
 
@@ -149,6 +149,8 @@
 #if defined(HAVE_SYS_SYSLOG_H)
 # include <sys/syslog.h>
 #endif
+
+#include <errno.h>
 
 /*
  * On HP-UX 11.11, shadow.h and prot.h provide conflicting declarations

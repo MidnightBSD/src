@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/lpr/Makefile.inc 160753 2006-07-27 14:52:12Z yar $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 

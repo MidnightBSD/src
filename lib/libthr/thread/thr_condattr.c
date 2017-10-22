@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libthr/thread/thr_condattr.c 165967 2007-01-12 07:26:21Z imp $
+ * $FreeBSD$
  */
 
 #include "namespace.h"
@@ -79,8 +79,7 @@ _pthread_condattr_destroy(pthread_condattr_t *attr)
 }
 
 int
-_pthread_condattr_getclock(const pthread_condattr_t *attr,
-       clockid_t *clock_id)
+_pthread_condattr_getclock(const pthread_condattr_t *attr, clockid_t *clock_id)
 {
 	if (attr == NULL || *attr == NULL)
 		return (EINVAL);
@@ -89,8 +88,7 @@ _pthread_condattr_getclock(const pthread_condattr_t *attr,
 }
 
 int
-_pthread_condattr_setclock(pthread_condattr_t *attr,
-       clockid_t clock_id)
+_pthread_condattr_setclock(pthread_condattr_t *attr, clockid_t clock_id)
 {
 	if (attr == NULL || *attr == NULL)
 		return (EINVAL);
@@ -105,13 +103,12 @@ _pthread_condattr_setclock(pthread_condattr_t *attr,
 }
 
 int
-_pthread_condattr_getpshared(const pthread_condattr_t *attr,
-	int *pshared)
+_pthread_condattr_getpshared(const pthread_condattr_t *attr, int *pshared)
 {
 	if (attr == NULL || *attr == NULL)
 		return (EINVAL);
 
-	pshared = PTHREAD_PROCESS_PRIVATE;
+	*pshared = PTHREAD_PROCESS_PRIVATE;
 	return (0);
 }
 

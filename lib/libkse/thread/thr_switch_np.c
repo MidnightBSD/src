@@ -29,29 +29,27 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_switch_np.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <errno.h>
 #include <pthread.h>
 #include <pthread_np.h>
+#include "un-namespace.h"
 #include "thr_private.h"
-
-LT10_COMPAT_PRIVATE(_pthread_switch_add_np);
-LT10_COMPAT_DEFAULT(pthread_switch_add_np);
-LT10_COMPAT_PRIVATE(_pthread_switch_delete_np);
-LT10_COMPAT_DEFAULT(pthread_switch_delete_np);
 
 __weak_reference(_pthread_switch_add_np, pthread_switch_add_np);
 __weak_reference(_pthread_switch_delete_np, pthread_switch_delete_np);
 
 int
-_pthread_switch_add_np(pthread_switch_routine_t routine)
+_pthread_switch_add_np(pthread_switch_routine_t routine __unused)
 {
 	return (ENOTSUP);
 }
 
 int
-_pthread_switch_delete_np(pthread_switch_routine_t routine)
+_pthread_switch_delete_np(pthread_switch_routine_t routine __unused)
 {
 	return (ENOTSUP);
 }

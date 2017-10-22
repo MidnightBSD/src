@@ -29,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)chgrp.1	8.3 (Berkeley) 3/31/94
-.\" $FreeBSD: release/7.0.0/usr.sbin/chown/chgrp.1 141846 2005-02-13 22:25:33Z ru $
+.\" $FreeBSD$
 .\"
-.Dd April 25, 2003
+.Dd February 21, 2010
 .Dt CHGRP 1
 .Os
 .Sh NAME
@@ -39,7 +39,7 @@
 .Nd change group
 .Sh SYNOPSIS
 .Nm
-.Op Fl fhv
+.Op Fl fhvx
 .Oo
 .Fl R
 .Op Fl H | Fl L | Fl P
@@ -61,7 +61,7 @@ The following options are available:
 If the
 .Fl R
 option is specified, symbolic links on the command line are followed.
-(Symbolic links encountered in the tree traversal are not followed).
+(Symbolic links encountered in the tree traversal are not followed.)
 .It Fl L
 If the
 .Fl R
@@ -89,6 +89,8 @@ If the
 flag is specified more than once,
 .Nm
 will print the filename, followed by the old and new numeric group ID.
+.It Fl x
+File system mount points are not traversed.
 .El
 .Pp
 The
@@ -125,7 +127,9 @@ In previous versions of this system, symbolic links did not have groups.
 .Pp
 The
 .Fl v
-option is non-standard and its use in scripts is not recommended.
+and
+.Fl x
+options are non-standard and their use in scripts is not recommended.
 .Sh SEE ALSO
 .Xr chown 2 ,
 .Xr fts 3 ,

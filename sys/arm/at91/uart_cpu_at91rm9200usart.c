@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2003 Marcel Moolenaar
+ * Copyright (c) 2006 M. Warner Losh
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,33 +13,38 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/at91/uart_cpu_at91rm9200usart.c 170286 2007-06-04 17:53:42Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/cons.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 #include <machine/bus.h>
 
 #include <dev/uart/uart.h>
+#include <dev/uart/uart_bus.h>
 #include <dev/uart/uart_cpu.h>
 
 #include <arm/at91/at91rm92reg.h>
+#include <arm/at91/at91var.h>
 
 bus_space_tag_t uart_bus_space_io;
 bus_space_tag_t uart_bus_space_mem;
@@ -58,20 +64,17 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 	struct uart_class *class;
 
 	class = &at91_usart_class;
+	if (class->uc_rclk == 0 && at91_master_clock != 0)
+		class->uc_rclk = at91_master_clock;
 	di->ops = uart_getops(class);
 	di->bas.chan = 0;
 	di->bas.bst = &at91_bs_tag;
 	/* 
-	 * XXX: Not pretty, but will work because we map VA == PA early
-	 * for the last 1MB of memory.
+	 * XXX: Not pretty, but will work because we map the needed addresses
+	 * early.
 	 */
-#ifdef SKYEYE_WORKAROUNDS
-	di->bas.bsh = AT91RM92_BASE + AT91RM92_USART0_BASE;
-	di->baudrate = 38400;
-#else
-	di->bas.bsh = AT91RM92_BASE + AT91RM92_SYS_BASE + DBGU;
+	di->bas.bsh = AT91RM92_BASE + AT91RM92_DBGU_BASE;
 	di->baudrate = 115200;
-#endif
 	di->bas.regshft = 0;
 	di->bas.rclk = 0;
 	di->databits = 8;

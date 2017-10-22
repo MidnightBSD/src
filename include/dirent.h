@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)dirent.h	8.2 (Berkeley) 7/28/94
- * $FreeBSD: release/7.0.0/include/dirent.h 123257 2003-12-07 21:10:06Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _DIRENT_H_
@@ -60,6 +56,7 @@
 #define	DIRBLKSIZ	1024
 
 struct _telldir;		/* see telldir.h */
+struct pthread_mutex;
 
 /* structure describing an open directory. */
 typedef struct _dirdesc {
@@ -71,7 +68,7 @@ typedef struct _dirdesc {
 	long	dd_seek;	/* magic cookie returned by getdirentries */
 	long	dd_rewind;	/* magic cookie for rewinding */
 	int	dd_flags;	/* flags for readdir */
-	void	*dd_lock;	/* hack to avoid including <pthread.h> */
+	struct pthread_mutex	*dd_lock;	/* lock */
 	struct _telldir *dd_td;	/* telldir position recording */
 } DIR;
 
@@ -92,22 +89,26 @@ typedef	void *	DIR;
 #ifndef _KERNEL
 
 __BEGIN_DECLS
+#if __POSIX_VISIBLE >= 200809 || __XSI_VISIBLE >= 700
+int	 alphasort(const struct dirent **, const struct dirent **);
+#endif
 #if __BSD_VISIBLE
 DIR	*__opendir2(const char *, int);
-int	 alphasort(const void *, const void *);
 int	 getdents(int, char *, int);
 int	 getdirentries(int, char *, int, long *);
 #endif
 DIR	*opendir(const char *);
+DIR	*fdopendir(int);
 struct dirent *
 	 readdir(DIR *);
 #if __POSIX_VISIBLE >= 199506 || __XSI_VISIBLE >= 500
 int	 readdir_r(DIR *, struct dirent *, struct dirent **);
 #endif
 void	 rewinddir(DIR *);
-#if __BSD_VISIBLE
+#if __POSIX_VISIBLE >= 200809 || __XSI_VISIBLE >= 700
 int	 scandir(const char *, struct dirent ***,
-	    int (*)(struct dirent *), int (*)(const void *, const void *));
+	    int (*)(const struct dirent *), int (*)(const struct dirent **,
+	    const struct dirent **));
 #endif
 #if __XSI_VISIBLE
 void	 seekdir(DIR *, long);

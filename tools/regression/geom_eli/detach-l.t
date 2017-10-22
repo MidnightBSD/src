@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/7.0.0/tools/regression/geom_eli/detach-l.t 148459 2005-07-27 22:27:30Z pjd $
+# $FreeBSD$
 
 base=`basename $0`
 no=45
@@ -11,7 +11,7 @@ echo "1..4"
 
 dd if=/dev/random of=${keyfile} bs=512 count=16 >/dev/null 2>&1
 
-geli init -P -K $keyfile md${no}
+geli init -B none -P -K $keyfile md${no}
 geli attach -p -k $keyfile md${no}
 if [ -c /dev/md${no}.eli ]; then
 	echo "ok 1"

@@ -33,7 +33,7 @@
 __RCSID("$NetBSD: wcslcpy.c,v 1.1 2000/12/23 23:14:36 itojun Exp $");
 #endif /* LIBC_SCCS and not lint */
 #endif
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/wcslcpy.c 103724 2002-09-21 00:29:23Z tjr $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <wchar.h>
@@ -44,10 +44,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/string/wcslcpy.c 103724 2002-09-21 00
  * Returns wcslen(src); if retval >= siz, truncation occurred.
  */
 size_t
-wcslcpy(dst, src, siz)
-	wchar_t *dst;
-	const wchar_t *src;
-	size_t siz;
+wcslcpy(wchar_t *dst, const wchar_t *src, size_t siz)
 {
 	wchar_t *d = dst;
 	const wchar_t *s = src;

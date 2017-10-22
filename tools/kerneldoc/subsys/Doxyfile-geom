@@ -1,6 +1,6 @@
-# Doxyfile 1.4.1
+# Doxyfile 1.5.2
 
-# $FreeBSD: release/7.0.0/tools/kerneldoc/subsys/Doxyfile-geom 160171 2006-07-08 12:31:33Z netchild $
+# $FreeBSD$
 
 #---------------------------------------------------------------------------
 # Project related configuration options

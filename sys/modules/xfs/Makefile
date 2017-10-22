@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/xfs/Makefile 159453 2006-06-09 06:10:17Z rodrigc $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../gnu/fs/xfs \
 	${.CURDIR}/../../gnu/fs/xfs/FreeBSD \
@@ -54,9 +54,6 @@ SRCS =  vnode_if.h \
 	xfs_iget.c \
 	xfs_attr_leaf.c \
 	xfs_attr.c \
-	xfsrtstubs.c \
-	xfsquotasstubs.c \
-	xfsdmapistubs.c \
 	xfs_dmops.c \
 	xfs_qmops.c \
 	xfs_mountops.c \
@@ -89,8 +86,5 @@ CFLAGS+= -I${.CURDIR}/../../gnu/fs/xfs/FreeBSD \
 	 -I${.CURDIR}/../../gnu/fs/xfs/FreeBSD/support \
 	 -I${.CURDIR}/../../gnu/fs/xfs
 
-#
-# XFS sources trigger missing-prototypes warnings.
-# Disable them here.
-#
-CWARNFLAGS+= -Wno-missing-prototypes
+CWARNFLAGS.xfs_ioctl.c=		${NO_WSELF_ASSIGN}
+CWARNFLAGS+=			${CWARNFLAGS.${.IMPSRC:T}}

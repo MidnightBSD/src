@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/contrib/ipfilter/netinet/ip_auth.c 174122 2007-12-01 00:53:41Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1998-2003 by Darren Reed & Guido van Rooij.
@@ -53,7 +53,7 @@ struct file;
 # include <sys/kmem.h>
 #endif
 #if (defined(_BSDI_VERSION) && _BSDI_VERSION >= 199802) || \
-    (__FreeBSD_version >= 400000)
+    (defined(__FreeBSD_version) &&(__FreeBSD_version >= 400000))
 # include <sys/queue.h>
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__) || defined(bsdi)
@@ -120,7 +120,7 @@ extern struct ifqueue   ipintrq;		/* ip packet input queue */
 /* END OF INCLUDES */
 
 #if !defined(lint)
-static const char rcsid[] = "@(#)$FreeBSD: release/7.0.0/sys/contrib/ipfilter/netinet/ip_auth.c 174122 2007-12-01 00:53:41Z darrenr $";
+static const char rcsid[] = "@(#)$FreeBSD$";
 /* static const char rcsid[] = "@(#)$Id: ip_auth.c,v 2.73.2.24 2007/09/09 11:32:04 darrenr Exp $"; */
 #endif
 

@@ -27,7 +27,7 @@
  * This node presents a /dev/ngd%d device that interfaces to an other
  * netgraph node.
  *
- * $FreeBSD: release/7.0.0/sys/netgraph/ng_device.c 163915 2006-11-02 17:37:22Z andre $
+ * $FreeBSD$
  *
  */
 
@@ -163,9 +163,7 @@ ng_device_constructor(node_p node)
 
 	DBG;
 
-	MALLOC(priv, priv_p, sizeof(*priv), M_NETGRAPH, M_NOWAIT | M_ZERO);
-	if (priv == NULL)
-		return (ENOMEM);
+	priv = malloc(sizeof(*priv), M_NETGRAPH, M_WAITOK | M_ZERO);
 
 	/* Allocate unit number */
 	priv->unit = alloc_unr(ngd_unit);
@@ -179,14 +177,14 @@ ng_device_constructor(node_p node)
 	NG_NODE_SET_PRIVATE(node, priv);
 	priv->node = node;
 
-	priv->ngddev = make_dev(&ngd_cdevsw, unit2minor(priv->unit), UID_ROOT,
+	priv->ngddev = make_dev(&ngd_cdevsw, priv->unit, UID_ROOT,
 	    GID_WHEEL, 0600, NG_DEVICE_DEVNAME "%d", priv->unit);
 	if(priv->ngddev == NULL) {
 		printf("%s(): make_dev() failed\n",__func__);
 		mtx_destroy(&priv->ngd_mtx);
 		mtx_destroy(&priv->readq.ifq_mtx);
 		free_unr(ngd_unit, priv->unit);
-		FREE(priv, M_NETGRAPH);
+		free(priv, M_NETGRAPH);
 		return(EINVAL);
 	}
 	/* XXX: race here? */
@@ -205,6 +203,7 @@ ng_device_rcvmsg(node_p node, item_p item, hook_p lasthook)
 	const priv_p priv = NG_NODE_PRIVATE(node);
 	struct ng_mesg *msg;
 	struct ng_mesg *resp = NULL;
+	const char *dn;
 	int error = 0;
 
 	NGI_GET_MSG(item, msg);
@@ -219,8 +218,8 @@ ng_device_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			if (resp == NULL)
 				ERROUT(ENOMEM);
 
-			strlcpy((char *)resp->data, priv->ngddev->si_name,
-			    strlen(priv->ngddev->si_name) + 1);
+			dn = devtoname(priv->ngddev);
+			strlcpy((char *)resp->data, dn, strlen(dn) + 1);
 			break;
 
 		default:
@@ -307,7 +306,7 @@ ng_device_disconnect(hook_p hook)
 
 	free_unr(ngd_unit, priv->unit);
 
-	FREE(priv, M_NETGRAPH);
+	free(priv, M_NETGRAPH);
 
 	ng_rmnode_self(NG_HOOK_NODE(hook));
 

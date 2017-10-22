@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/acpi_pcib.c 153066 2005-12-03 21:17:17Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -34,7 +34,9 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/acpi_pcib.c 153066 2005-12-03 2
 #include <sys/malloc.h>
 #include <sys/kernel.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/accommon.h>
+
 #include <dev/acpica/acpivar.h>
 #include <dev/acpica/acpi_pcibvar.h>
 
@@ -127,7 +129,6 @@ prt_attach_devices(ACPI_PCI_ROUTING_TABLE *entry, void *arg)
 int
 acpi_pcib_attach(device_t dev, ACPI_BUFFER *prt, int busno)
 {
-    device_t			child;
     ACPI_STATUS			status;
 
     ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
@@ -157,7 +158,7 @@ acpi_pcib_attach(device_t dev, ACPI_BUFFER *prt, int busno)
     /*
      * Attach the PCI bus proper.
      */
-    if ((child = device_add_child(dev, "pci", busno)) == NULL) {
+    if (device_add_child(dev, "pci", busno) == NULL) {
 	device_printf(device_get_parent(dev), "couldn't attach pci bus\n");
 	return_VALUE(ENXIO);
     }
@@ -168,13 +169,6 @@ acpi_pcib_attach(device_t dev, ACPI_BUFFER *prt, int busno)
     prt_walk_table(prt, prt_attach_devices, dev);
 
     return_VALUE (bus_generic_attach(dev));
-}
-
-int
-acpi_pcib_resume(device_t dev)
-{
-
-    return (bus_generic_resume(dev));
 }
 
 static void
@@ -281,3 +275,14 @@ out:
 
     return_VALUE (interrupt);
 }
+
+int
+acpi_pcib_power_for_sleep(device_t pcib, device_t dev, int *pstate)
+{
+    device_t acpi_dev;
+
+    acpi_dev = devclass_get_device(devclass_find("acpi"), 0);
+    acpi_device_pwr_for_sleep(acpi_dev, dev, pstate);
+    return (0);
+}
+

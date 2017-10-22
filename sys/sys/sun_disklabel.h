@@ -34,7 +34,7 @@
  *	@(#)sun_disklabel.h	8.1 (Berkeley) 6/11/93
  *	$NetBSD: disklabel.h,v 1.2 1998/08/22 14:55:28 mrg Exp $
  *
- * $FreeBSD: release/7.0.0/sys/sys/sun_disklabel.h 174854 2007-12-22 06:32:46Z cvs2svn $ 
+ * $FreeBSD$ 
  */
 
 #ifndef _SYS_SUN_DISKLABEL_H_

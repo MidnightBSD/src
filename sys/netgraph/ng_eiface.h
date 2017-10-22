@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/netgraph/ng_eiface.h 141193 2005-02-03 11:52:42Z ru $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_NG_EIFACE_H_
@@ -46,7 +46,7 @@
 
 /* MTU bounds */
 #define NG_EIFACE_MTU_MIN		72
-#define NG_EIFACE_MTU_MAX		2312
+#define NG_EIFACE_MTU_MAX		ETHER_MAX_LEN_JUMBO
 #define NG_EIFACE_MTU_DEFAULT		1500
 
 /* Netgraph commands */

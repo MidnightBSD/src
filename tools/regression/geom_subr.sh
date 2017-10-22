@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/7.0.0/tools/regression/geom_subr.sh 153184 2005-12-07 01:20:18Z pjd $
+# $FreeBSD$
 
 kldstat -q -m g_${class} || g${class} load || exit 1
 

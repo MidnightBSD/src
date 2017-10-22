@@ -1,7 +1,10 @@
-# $FreeBSD: release/7.0.0/usr.bin/make/Makefile.dist 146571 2005-05-24 13:19:40Z harti $
-# a very simple makefile...
+# $FreeBSD$
+# a simple makefile to help builds on !FreeBSD systems
 pmake:
 	@echo 'make started.'
-	cc -DDEFSHELLNAME=\"sh\" -I. -c *.c
+	cc -D__dead2="" -D__unused="" -Darc4random=random -D__FBSDID="static const char *id=" -DDEFSHELLNAME=\"sh\" -I. -c *.c
 	cc *.o -o pmake
 	@echo 'make completed.'
+
+clean:
+	@rm -f *.o pmake

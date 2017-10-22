@@ -1,4 +1,4 @@
-#	$FreeBSD: release/7.0.0/sbin/ipf/ipsend/Makefile 145630 2005-04-28 16:26:35Z darrenr $
+#	$FreeBSD$
 
 NOGCCERROR=	# defined
 

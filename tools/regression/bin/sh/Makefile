@@ -1,4 +1,7 @@
-# $FreeBSD: release/7.0.0/tools/regression/bin/sh/Makefile 149781 2005-09-04 11:59:59Z stefanf $
+# $FreeBSD$
+
+# Allow one to specify the 'sh' to regress.
+SH?=	/bin/sh
 
 all:
-	sh regress.sh
+	env SH=${SH} ${SH} regress.sh

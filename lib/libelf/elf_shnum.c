@@ -25,15 +25,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libelf/elf_shnum.c 165535 2006-12-25 02:22:22Z jkoshy $");
+__FBSDID("$FreeBSD$");
 
 #include <ar.h>
 #include <libelf.h>
 
 #include "_libelf.h"
 
-int
-elf_getshnum(Elf *e, size_t *shnum)
+static int
+_libelf_getshdrnum(Elf *e, size_t *shnum)
 {
 	void *eh;
 	int ec;
@@ -41,13 +41,26 @@ elf_getshnum(Elf *e, size_t *shnum)
 	if (e == NULL || e->e_kind != ELF_K_ELF ||
 	    ((ec = e->e_class) != ELFCLASS32 && ec != ELFCLASS64)) {
 		LIBELF_SET_ERROR(ARGUMENT, 0);
-		return (0);
+		return (-1);
 	}
 
 	if ((eh = _libelf_ehdr(e, ec, 0)) == NULL)
-		return (0);
+		return (-1);
 
 	*shnum = e->e_u.e_elf.e_nscn;
 
-	return (1);
+	return (0);
+}
+
+int
+elf_getshdrnum(Elf *e, size_t *shnum)
+{
+	return (_libelf_getshdrnum(e, shnum));
+}
+
+/* Deprecated API. */
+int
+elf_getshnum(Elf *e, size_t *shnum)
+{
+	return (_libelf_getshdrnum(e, shnum) >= 0);
 }

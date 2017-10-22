@@ -25,9 +25,9 @@
 .\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man4/ifmib.4 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
-.Dd November 15, 1996
+.Dd October 28, 2009
 .Dt IFMIB 4
 .Os
 .Sh NAME
@@ -165,12 +165,6 @@ interfaces, the structure is called
 and implements a superset of the
 .Tn "RFC 1650"
 MIB for Ethernet-like networks.
-.\" This will eventually be defined in an ethermib(4) page.
-For
-.Dv IFT_SLIP ,
-the structure is a
-.Dq Li struct sl_softc
-.Pq In net/if_slvar.h .
 .Sh SEE ALSO
 .Xr sysctl 3 ,
 .Xr intro 4 ,

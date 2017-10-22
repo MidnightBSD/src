@@ -1,5 +1,5 @@
 # $Id: Makefile,v 1.5 2003/07/22 18:38:04 max Exp $
-# $FreeBSD: release/7.0.0/lib/libbluetooth/Makefile 169807 2007-05-21 02:49:08Z deischen $
+# $FreeBSD$
 
 LIB=		bluetooth
 MAN=		bluetooth.3
@@ -7,9 +7,9 @@ MAN=		bluetooth.3
 WARNS?=		2
 CFLAGS+=	-I${.CURDIR} -I${.CURDIR}/../../sys
 
-SHLIB_MAJOR=	3
+SHLIB_MAJOR=	4
 
-SRCS=		bluetooth.c
+SRCS=		bluetooth.c dev.c hci.c
 INCS=		bluetooth.h
 
 MLINKS+=	bluetooth.3 bt_gethostbyname.3
@@ -26,5 +26,28 @@ MLINKS+=	bluetooth.3 bt_endprotoent.3
 
 MLINKS+=	bluetooth.3 bt_ntoa.3
 MLINKS+=	bluetooth.3 bt_aton.3
+
+MLINKS+=	bluetooth.3 bt_devaddr.3
+MLINKS+=	bluetooth.3 bt_devname.3
+
+MLINKS+=	bluetooth.3 bt_devinfo.3
+MLINKS+=	bluetooth.3 bt_devenum.3
+
+MLINKS+=	bluetooth.3 bt_devopen.3
+MLINKS+=	bluetooth.3 bt_devclose.3
+MLINKS+=	bluetooth.3 bt_devsend.3
+MLINKS+=	bluetooth.3 bt_devreq.3
+MLINKS+=	bluetooth.3 bt_devfilter.3
+MLINKS+=	bluetooth.3 bt_devfilter_pkt_set.3
+MLINKS+=	bluetooth.3 bt_devfilter_pkt_clr.3
+MLINKS+=	bluetooth.3 bt_devfilter_pkt_tst.3
+MLINKS+=	bluetooth.3 bt_devfilter_evt_set.3
+MLINKS+=	bluetooth.3 bt_devfilter_evt_clr.3
+MLINKS+=	bluetooth.3 bt_devfilter_evt_tst.3
+MLINKS+=	bluetooth.3 bt_devinquiry.3
+
+MLINKS+=	bluetooth.3 bdaddr_same.3
+MLINKS+=	bluetooth.3 bdaddr_any.3
+MLINKS+=	bluetooth.3 bdaddr_copy.3
 
 .include <bsd.lib.mk>

@@ -27,8 +27,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_create.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,11 +40,9 @@
 #include <sys/time.h>
 #include <machine/reg.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 #include "libc_private.h"
-
-LT10_COMPAT_PRIVATE(_pthread_create);
-LT10_COMPAT_DEFAULT(pthread_create);
 
 static void free_thread(struct pthread *curthread, struct pthread *thread);
 static int  create_stack(struct pthread_attr *pattr);
@@ -334,11 +334,11 @@ free_stack(struct pthread_attr *pattr)
 }
 
 static void
-thread_start(struct pthread *curthread, void *(*start_routine) (void *),
+thread_start(struct pthread *curthread __unused, void *(*start_routine) (void *),
     void *arg)
 {
 	/* Run the current thread's start routine with argument: */
-	pthread_exit(start_routine(arg));
+	_pthread_exit(start_routine(arg));
 
 	/* This point should never be reached. */
 	PANIC("Thread has resumed after exit");

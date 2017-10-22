@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libdevstat/devstat.c 150948 2005-10-04 22:00:35Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -1014,11 +1014,12 @@ devstat_buildmatch(char *match_str, struct devstat_match **matches,
 	 * Break the (comma delimited) input string out into separate strings.
 	 */
 	for (tempstr = tstr, num_args  = 0; 
-	     (*tempstr = strsep(&match_str, ",")) != NULL && (num_args < 5); 
-	     num_args++)
-		if (**tempstr != '\0')
+	     (*tempstr = strsep(&match_str, ",")) != NULL && (num_args < 5);)
+		if (**tempstr != '\0') {
+			num_args++;
 			if (++tempstr >= &tstr[5])
 				break;
+		}
 
 	/* The user gave us too many type arguments */
 	if (num_args > 3) {

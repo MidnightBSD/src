@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/ixp425/avila_led.c 164508 2006-11-22 12:57:17Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -37,36 +37,35 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/ixp425/avila_led.c 164508 2006-
 #include <dev/led/led.h>
 
 #define	GPIO_LED_STATUS	3
-#define	  GPIO_LED_STATUS_BIT	(1U << GPIO_LED_STATUS)
-
-static struct cdev *gpioled;
+#define	GPIO_LED_STATUS_BIT	(1U << GPIO_LED_STATUS)
 
 struct led_avila_softc {
 	device_t		sc_dev;
 	bus_space_tag_t		sc_iot;
 	bus_space_handle_t	sc_gpio_ioh;
+	struct cdev		*sc_led;
 };
 
-static struct led_avila_softc *led_avila_sc = NULL;
-
 static void
-led_func(void *unused, int onoff)
+led_func(void *arg, int onoff)
 {
-	struct led_avila_softc *sc = led_avila_sc;
+	struct led_avila_softc *sc = arg;
 	uint32_t reg;
 
+	IXP4XX_GPIO_LOCK();
 	reg = GPIO_CONF_READ_4(sc, IXP425_GPIO_GPOUTR);
 	if (onoff)
 		reg &= ~GPIO_LED_STATUS_BIT;
 	else
 		reg |= GPIO_LED_STATUS_BIT;
 	GPIO_CONF_WRITE_4(sc, IXP425_GPIO_GPOUTR, reg);
+	IXP4XX_GPIO_UNLOCK();
 }
 
 static int
 led_avila_probe(device_t dev)
 {
-	device_set_desc(dev, "Gateworks Avila GPIO connected LED");
+	device_set_desc(dev, "Gateworks Avila Front Panel LED");
 	return (0);
 }
 
@@ -75,31 +74,36 @@ led_avila_attach(device_t dev)
 {
 	struct led_avila_softc *sc = device_get_softc(dev);
 	struct ixp425_softc *sa = device_get_softc(device_get_parent(dev));
-	void *led = NULL;
-	uint32_t reg;
-
-	led_avila_sc = sc;
 
 	sc->sc_dev = dev;
 	sc->sc_iot = sa->sc_iot;
 	sc->sc_gpio_ioh = sa->sc_gpio_ioh;
 
 	/* Configure LED GPIO pin as output */
-	reg = GPIO_CONF_READ_4(sc, IXP425_GPIO_GPOER);
-	reg &= ~GPIO_LED_STATUS_BIT;
-	GPIO_CONF_WRITE_4(sc, IXP425_GPIO_GPOER, reg);
+	GPIO_CONF_WRITE_4(sc, IXP425_GPIO_GPOER,
+	    GPIO_CONF_READ_4(sc, IXP425_GPIO_GPOER) &~ GPIO_LED_STATUS_BIT);
 
-	gpioled = led_create(led_func, led, "gpioled");
+	sc->sc_led = led_create(led_func, sc, "gpioled");
 
-	/* Turn on LED */
-	led_func(led, 1);
+	led_func(sc, 1);		/* Turn on LED */
 
+	return (0);
+}
+
+static int
+led_avila_detach(device_t dev)
+{
+	struct led_avila_softc *sc = device_get_softc(dev);
+
+	if (sc->sc_led != NULL)
+		led_destroy(sc->sc_led);
 	return (0);
 }
 
 static device_method_t led_avila_methods[] = {
 	DEVMETHOD(device_probe,		led_avila_probe),
 	DEVMETHOD(device_attach,	led_avila_attach),
+	DEVMETHOD(device_detach,	led_avila_detach),
 
 	{0, 0},
 };

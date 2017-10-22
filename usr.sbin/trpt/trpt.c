@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)trpt.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/trpt/trpt.c 160752 2006-07-27 14:49:51Z yar $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -301,17 +301,8 @@ done:	if (follow) {
  */
 /*ARGSUSED*/
 void
-tcp_trace(act, ostate, tp, family, ip, th, req)
-	short act, ostate;
-	struct tcpcb *tp;
-#ifdef INET6
-	int family;
-#else
-	int family __unused;
-#endif
-	void *ip;
-	struct tcphdr *th;
-	int req;
+tcp_trace(short act, short ostate, struct tcpcb *tp, int family __unused,
+    void *ip, struct tcphdr *th, int req)
 {
 	tcp_seq seq, ack;
 	int flags, len, win, timer;

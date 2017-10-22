@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  * 
  * $Id: dcons.c,v 1.65 2003/10/24 03:24:55 simokawa Exp $
- * $FreeBSD: release/7.0.0/sys/dev/dcons/dcons.c 169972 2007-05-25 05:00:39Z simokawa $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

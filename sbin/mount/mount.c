@@ -31,15 +31,13 @@
 static const char copyright[] =
 "@(#) Copyright (c) 1980, 1989, 1993, 1994\n\
 	The Regents of the University of California.  All rights reserved.\n";
-#endif /* not lint */
-
-#ifndef lint
 #if 0
 static char sccsid[] = "@(#)mount.c	8.25 (Berkeley) 5/8/95";
 #endif
-static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/sbin/mount/mount.c 171023 2007-06-25 05:06:57Z rafan $";
 #endif /* not lint */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -70,24 +68,30 @@ static const char rcsid[] =
 
 int debug, fstab_style, verbose;
 
+struct cpa {
+	char	**a;
+	ssize_t	sz;
+	int	c;
+};
+
 char   *catopt(char *, const char *);
 struct statfs *getmntpt(const char *);
 int	hasopt(const char *, const char *);
 int	ismounted(struct fstab *, struct statfs *, int);
 int	isremountable(const char *);
-void	mangle(char *, int *, char *[]);
+void	mangle(char *, struct cpa *);
 char   *update_options(char *, char *, int);
 int	mountfs(const char *, const char *, const char *,
 			int, const char *, const char *);
 void	remopt(char *, const char *);
 void	prmount(struct statfs *);
-void	putfsent(const struct statfs *);
+void	putfsent(struct statfs *);
 void	usage(void);
 char   *flags2opts(int);
 
 /* Map from mount options to printable formats. */
 static struct opt {
-	int o_opt;
+	uint64_t o_opt;
 	const char *o_name;
 } optnames[] = {
 	{ MNT_ASYNC,		"asynchronous" },
@@ -105,8 +109,10 @@ static struct opt {
 	{ MNT_NOCLUSTERW,	"noclusterw" },
 	{ MNT_SUIDDIR,		"suiddir" },
 	{ MNT_SOFTDEP,		"soft-updates" },
+	{ MNT_SUJ,		"journaled soft-updates" },
 	{ MNT_MULTILABEL,	"multilabel" },
 	{ MNT_ACLS,		"acls" },
+	{ MNT_NFS4ACLS,		"nfsv4acls" },
 	{ MNT_GJOURNAL,		"gjournal" },
 	{ 0, NULL }
 };
@@ -125,6 +131,8 @@ remountable_fs_names[] = {
 static const char userquotaeq[] = "userquota=";
 static const char groupquotaeq[] = "groupquota=";
 
+static char *mountprog = NULL;
+
 static int
 use_mountprog(const char *vfstype)
 {
@@ -134,16 +142,19 @@ use_mountprog(const char *vfstype)
 	 */
 	unsigned int i;
 	const char *fs[] = {
-	"cd9660", "mfs", "msdosfs", "nfs", "nfs4", "ntfs",
-	"nwfs", "nullfs", "portalfs", "smbfs", "udf", "unionfs",
+	"cd9660", "mfs", "msdosfs", "nfs", "ntfs",
+	"nwfs", "nullfs", "oldnfs", "portalfs", "smbfs", "udf", "unionfs",
 	NULL
 	};
+
+	if (mountprog != NULL)
+		return (1);
 
 	for (i = 0; fs[i] != NULL; ++i) {
 		if (strcmp(vfstype, fs[i]) == 0)
 			return (1);
 	}
-	
+
 	return (0);
 }
 
@@ -161,8 +172,10 @@ exec_mountprog(const char *name, const char *execname, char *const argv[])
 		/* Go find an executable. */
 		execvP(execname, _PATH_SYSPATH, argv);
 		if (errno == ENOENT) {
-			warn("exec %s not found in %s", execname,
-			    _PATH_SYSPATH);
+			warn("exec %s not found", execname);
+			if (execname[0] != '/') {
+				warnx("in path: %s", _PATH_SYSPATH);
+			}
 		}
 		exit(1);
 	default:				/* Parent. */
@@ -208,7 +221,7 @@ static void
 restart_mountd(void)
 {
 	struct pidfh *pfh;
-	pid_t mountdpid; 
+	pid_t mountdpid;
 
 	pfh = pidfile_open(_PATH_MOUNTDPID, 0600, &mountdpid);
 	if (pfh != NULL) {
@@ -231,7 +244,7 @@ main(int argc, char *argv[])
 	const char *mntfromname, **vfslist, *vfstype;
 	struct fstab *fs;
 	struct statfs *mntbuf;
-	int all, ch, i, init_flags, late, mntsize, rval, have_fstab, ro;
+	int all, ch, i, init_flags, late, failok, mntsize, rval, have_fstab, ro;
 	char *cp, *ep, *options;
 
 	all = init_flags = late = 0;
@@ -300,7 +313,7 @@ main(int argc, char *argv[])
 
 	if ((init_flags & MNT_UPDATE) && (ro == 0))
 		options = catopt(options, "noro");
- 
+
 	rval = 0;
 	switch (argc) {
 	case 0:
@@ -316,6 +329,10 @@ main(int argc, char *argv[])
 					continue;
 				if (hasopt(fs->fs_mntops, "late") && !late)
 					continue;
+				if (hasopt(fs->fs_mntops, "failok"))
+					failok = 1;
+				else
+					failok = 0;
 				if (!(init_flags & MNT_UPDATE) &&
 				    ismounted(fs, mntbuf, mntsize))
 					continue;
@@ -323,7 +340,7 @@ main(int argc, char *argv[])
 				    mntbuf->f_flags);
 				if (mountfs(fs->fs_vfstype, fs->fs_spec,
 				    fs->fs_file, init_flags, options,
-				    fs->fs_mntops))
+				    fs->fs_mntops) && !failok)
 					rval = 1;
 			}
 		} else if (fstab_style) {
@@ -336,6 +353,9 @@ main(int argc, char *argv[])
 			for (i = 0; i < mntsize; i++) {
 				if (checkvfsname(mntbuf[i].f_fstypename,
 				    vfslist))
+					continue;
+				if (!verbose &&
+				    (mntbuf[i].f_flags & MNT_IGNORE) != 0)
 					continue;
 				prmount(&mntbuf[i]);
 			}
@@ -497,14 +517,26 @@ hasopt(const char *mntopts, const char *option)
 	return (found);
 }
 
+static void
+append_arg(struct cpa *sa, char *arg)
+{
+	if (sa->c + 1 == sa->sz) {
+		sa->sz = sa->sz == 0 ? 8 : sa->sz * 2;
+		sa->a = realloc(sa->a, sizeof(sa->a) * sa->sz);
+		if (sa->a == NULL)
+			errx(1, "realloc failed");
+	}
+	sa->a[++sa->c] = arg;
+}
+
 int
 mountfs(const char *vfstype, const char *spec, const char *name, int flags,
 	const char *options, const char *mntopts)
 {
-	char *argv[100];
 	struct statfs sf;
-	int argc, i, ret;
+	int i, ret;
 	char *optbuf, execname[PATH_MAX], mntpath[PATH_MAX];
+	static struct cpa mnt_argv;
 
 	/* resolve the mountpoint with realpath(3) */
 	(void)checkpath(name, mntpath);
@@ -539,31 +571,39 @@ mountfs(const char *vfstype, const char *spec, const char *name, int flags,
 	/* Construct the name of the appropriate mount command */
 	(void)snprintf(execname, sizeof(execname), "mount_%s", vfstype);
 
-	argc = 0;
-	argv[argc++] = execname;
-	mangle(optbuf, &argc, argv);
-	argv[argc++] = strdup(spec);
-	argv[argc++] = strdup(name);
-	argv[argc] = NULL;
+	mnt_argv.c = -1;
+	append_arg(&mnt_argv, execname);
+	mangle(optbuf, &mnt_argv);
+	if (mountprog != NULL)
+		strcpy(execname, mountprog);
+
+	append_arg(&mnt_argv, strdup(spec));
+	append_arg(&mnt_argv, strdup(name));
+	append_arg(&mnt_argv, NULL);
 
 	if (debug) {
 		if (use_mountprog(vfstype))
-			printf("exec: mount_%s", vfstype);
+			printf("exec: %s", execname);
 		else
 			printf("mount -t %s", vfstype);
-		for (i = 1; i < argc; i++)
-			(void)printf(" %s", argv[i]);
+		for (i = 1; i < mnt_argv.c; i++)
+			(void)printf(" %s", mnt_argv.a[i]);
 		(void)printf("\n");
+		free(optbuf);
+		free(mountprog);
+		mountprog = NULL;
 		return (0);
 	}
 
 	if (use_mountprog(vfstype)) {
-		ret = exec_mountprog(name, execname, argv);
+		ret = exec_mountprog(name, execname, mnt_argv.a);
 	} else {
-		ret = mount_fs(vfstype, argc, argv); 
+		ret = mount_fs(vfstype, mnt_argv.c, mnt_argv.a);
 	}
 
 	free(optbuf);
+	free(mountprog);
+	mountprog = NULL;
 
 	if (verbose) {
 		if (statfs(name, &sf) < 0) {
@@ -576,13 +616,13 @@ mountfs(const char *vfstype, const char *spec, const char *name, int flags,
 			prmount(&sf);
 	}
 
-	return (0);
+	return (ret);
 }
 
 void
 prmount(struct statfs *sfp)
 {
-	int flags;
+	uint64_t flags;
 	unsigned int i;
 	struct opt *o;
 	struct passwd *pw;
@@ -591,7 +631,7 @@ prmount(struct statfs *sfp)
 	    sfp->f_fstypename);
 
 	flags = sfp->f_flags & MNT_VISFLAGMASK;
-	for (o = optnames; flags && o->o_opt; o++)
+	for (o = optnames; flags != 0 && o->o_opt != 0; o++)
 		if (flags & o->o_opt) {
 			(void)printf(", %s", o->o_name);
 			flags &= ~o->o_opt;
@@ -663,12 +703,10 @@ catopt(char *s0, const char *s1)
 }
 
 void
-mangle(char *options, int *argcp, char *argv[])
+mangle(char *options, struct cpa *a)
 {
-	char *p, *s;
-	int argc;
+	char *p, *s, *val;
 
-	argc = *argcp;
 	for (s = options; (p = strsep(&s, ",")) != NULL;)
 		if (*p != '\0') {
 			if (strcmp(p, "noauto") == 0) {
@@ -689,6 +727,30 @@ mangle(char *options, int *argcp, char *argv[])
 				 * before mountd starts.
 				 */
 				continue;
+			} else if (strcmp(p, "failok") == 0) {
+				/*
+				 * "failok" is used to prevent certain file
+				 * systems from being causing the system to
+				 * drop into single user mode in the boot
+				 * cycle, and is not a real mount option.
+				 */
+				continue;
+			} else if (strncmp(p, "mountprog", 9) == 0) {
+				/*
+				 * "mountprog" is used to force the use of
+				 * userland mount programs.
+				 */
+				val = strchr(p, '=');
+                        	if (val != NULL) {
+                                	++val;
+					if (*val != '\0')
+						mountprog = strdup(val);
+				}
+
+				if (mountprog == NULL) {
+					errx(1, "Need value for -o mountprog");
+				}
+				continue;
 			} else if (strcmp(p, "userquota") == 0) {
 				continue;
 			} else if (strncmp(p, userquotaeq,
@@ -700,19 +762,17 @@ mangle(char *options, int *argcp, char *argv[])
 			    sizeof(groupquotaeq) - 1) == 0) {
 				continue;
 			} else if (*p == '-') {
-				argv[argc++] = p;
+				append_arg(a, p);
 				p = strchr(p, '=');
 				if (p != NULL) {
 					*p = '\0';
-					argv[argc++] = p+1;
+					append_arg(a, p + 1);
 				}
 			} else {
-				argv[argc++] = strdup("-o");
-				argv[argc++] = p;
+				append_arg(a, strdup("-o"));
+				append_arg(a, p);
 			}
 		}
-
-	*argcp = argc;
 }
 
 
@@ -805,18 +865,28 @@ usage(void)
 }
 
 void
-putfsent(const struct statfs *ent)
+putfsent(struct statfs *ent)
 {
 	struct fstab *fst;
-	char *opts;
+	char *opts, *rw;
 	int l;
 
-	opts = flags2opts(ent->f_flags);
+	opts = NULL;
+	/* flags2opts() doesn't return the "rw" option. */
+	if ((ent->f_flags & MNT_RDONLY) != 0)
+		rw = NULL;
+	else
+		rw = catopt(NULL, "rw");
 
-	/*
-	 * "rw" is not a real mount option; this is why we print NULL as "rw"
-	 * if opts is still NULL here.
-	 */
+	opts = flags2opts(ent->f_flags);
+	opts = catopt(rw, opts);
+
+	if (strncmp(ent->f_mntfromname, "<below>", 7) == 0 ||
+	    strncmp(ent->f_mntfromname, "<above>", 7) == 0) {
+		strcpy(ent->f_mntfromname, (strnstr(ent->f_mntfromname, ":", 8)
+		    +1));
+	}
+
 	l = strlen(ent->f_mntfromname);
 	printf("%s%s%s%s", ent->f_mntfromname,
 	    l < 8 ? "\t" : "",
@@ -828,13 +898,9 @@ putfsent(const struct statfs *ent)
 	    l < 16 ? "\t" : "",
 	    l < 24 ? "\t" : " ");
 	printf("%s\t", ent->f_fstypename);
-	if (opts == NULL) {
-		printf("%s\t", "rw");
-	} else {
-		l = strlen(opts);
-		printf("%s%s", opts,
-		    l < 8 ? "\t" : " ");
-	}
+	l = strlen(opts);
+	printf("%s%s", opts,
+	    l < 8 ? "\t" : " ");
 	free(opts);
 
 	if ((fst = getfsspec(ent->f_mntfromname)))
@@ -871,7 +937,7 @@ flags2opts(int flags)
 	if (flags & MNT_SUIDDIR)	res = catopt(res, "suiddir");
 	if (flags & MNT_MULTILABEL)	res = catopt(res, "multilabel");
 	if (flags & MNT_ACLS)		res = catopt(res, "acls");
-	if (flags & MNT_GJOURNAL)	res = catopt(res, "gjournal");
+	if (flags & MNT_NFS4ACLS)	res = catopt(res, "nfsv4acls");
 
 	return (res);
 }

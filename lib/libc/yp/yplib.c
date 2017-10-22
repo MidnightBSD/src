@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/yp/yplib.c 171563 2007-07-24 13:06:08Z simon $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include "reentrant.h"
@@ -241,7 +241,7 @@ static bool_t
 ypmatch_cache_lookup(struct dom_binding *ypdb, char *map, keydat *key,
     valdat *val)
 {
-	struct ypmatch_ent	*c = ypdb->cache;
+	struct ypmatch_ent	*c;
 
 	ypmatch_cache_expire(ypdb);
 

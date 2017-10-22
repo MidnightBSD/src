@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/doc.c 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #include "sysinstall.h"
@@ -101,12 +101,12 @@ docShowDocument(dialogMenuItem *self)
 	    strcpy(target, where);
     }
     else if (strstr(str, "FAQ")) {
-	where = strcpy(target, "/usr/share/doc/faq/index.html");
+	where = strcpy(target, "/usr/local/share/doc/freebsd/faq/index.html");
 	if (!file_readable(target))
 	    where = strcpy(target, "http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq");
     }
     else if (strstr(str, "Handbook")) {
-	where = strcpy(target, "/usr/share/doc/handbook/index.html");
+	where = strcpy(target, "/usr/local/share/doc/freebsd/handbook/index.html");
 	if (!file_readable(target))
 	    where = strcpy(target, "http://www.freebsd.org/doc/en_US.ISO8859-1/books/handbook");
     }
@@ -117,7 +117,7 @@ docShowDocument(dialogMenuItem *self)
     }
     else {
 	msgConfirm("Hmmmmm!  I can't seem to access the documentation you selected!\n"
-		   "Have you loaded the base distribution?  Is your network connected?");
+		   "Have you installed the english documentation?  Is your network connected?");
 	return DITEM_FAILURE;
     }
 }

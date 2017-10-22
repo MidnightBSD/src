@@ -8,7 +8,7 @@
 #include "prutil.h"
 
 /*
- * $FreeBSD: release/7.0.0/tools/regression/p1003_1b/prutil.c 57257 2000-02-16 14:28:42Z dufault $
+ * $FreeBSD$
  */
 void quit(const char *text)
 {

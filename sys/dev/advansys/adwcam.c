@@ -1,5 +1,5 @@
 /*-
- * CAM SCSI interface for the the Advanced Systems Inc.
+ * CAM SCSI interface for the Advanced Systems Inc.
  * Second Generation SCSI controllers.
  *
  * Product specific probe and attach routines can be found in:
@@ -44,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/advansys/adwcam.c 170872 2007-06-17 05:55:54Z scottl $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

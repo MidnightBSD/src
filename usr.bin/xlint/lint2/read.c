@@ -36,7 +36,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: read.c,v 1.12 2002/01/21 19:49:52 tv Exp $");
 #endif
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/xlint/lint2/read.c 148723 2005-08-05 09:07:42Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 #include <err.h>
@@ -696,8 +696,6 @@ inptype(const char *cp, const char **epp)
 	case SIGNED:
 	case NOTSPEC:
 		break;
-	case NTSPEC:
-		abort();
 	}
 
 	*epp = cp;
@@ -901,8 +899,6 @@ gettlen(const char *cp, const char **epp)
 	case UQUAD:
 	case LONG:
 		break;
-	case NTSPEC:
-		abort();
 	}
 
 	*epp = cp;

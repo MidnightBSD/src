@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/7.0.0/tools/regression/geom_uzip/test-1.img.uzip.uue 150734 2005-09-29 22:41:20Z fjoe $
+# $FreeBSD$
 #
 
 begin 755 test-1.img.uzip

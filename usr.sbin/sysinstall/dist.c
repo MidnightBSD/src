@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/dist.c 175324 2008-01-14 19:28:43Z kensmith $
+ * $FreeBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -44,8 +44,8 @@
 #include <libutil.h>
 
 unsigned int Dists;
+unsigned int DocDists;
 unsigned int SrcDists;
-unsigned int XOrgDists;
 unsigned int KernelDists;
 
 enum _disttype { DT_TARBALL, DT_SUBDIST, DT_PACKAGE };
@@ -61,9 +61,9 @@ typedef struct _dist {
     } my_data;
 } Distribution;
 
+static Distribution DocDistTable[];
 static Distribution KernelDistTable[];
 static Distribution SrcDistTable[];
-static Distribution XOrgDistTable[];
 
 #define	DTE_TARBALL(name, mask, flag, directory)			\
 	{ name, mask, DIST_ ## flag, DT_TARBALL, { directory } }
@@ -79,29 +79,26 @@ static Distribution XOrgDistTable[];
 static Distribution DistTable[] = {
     DTE_TARBALL("base",	    &Dists, BASE,     "/"),
     DTE_SUBDIST("kernels",  &Dists, KERNEL,   KernelDistTable),
-    DTE_TARBALL("doc",	    &Dists, DOC,      "/"),
+    DTE_TARBALL("doc",	    &Dists, DOCUSERLAND,      "/"),
+    DTE_SUBDIST("docproj",  &Dists, DOC,      DocDistTable),
     DTE_TARBALL("games",    &Dists, GAMES,    "/"),
     DTE_TARBALL("manpages", &Dists, MANPAGES, "/"),
     DTE_TARBALL("catpages", &Dists, CATPAGES, "/"),
     DTE_TARBALL("proflibs", &Dists, PROFLIBS, "/"),
     DTE_TARBALL("dict",	    &Dists, DICT,     "/"),
     DTE_TARBALL("info",	    &Dists, INFO,     "/"),
-#ifdef __amd64__
+#if defined(__amd64__) || defined(__powerpc64__)
     DTE_TARBALL("lib32",    &Dists, LIB32,    "/"),
 #endif
     DTE_SUBDIST("src",	    &Dists, SRC,      SrcDistTable),
     DTE_TARBALL("ports",    &Dists, PORTS,    "/usr"),
     DTE_TARBALL("local",    &Dists, LOCAL,    "/"),
-    DTE_PACKAGE("X.Org",    &Dists, XORG,     "xorg"),
     DTE_END,
 };
 
 /* The kernel distributions */
 static Distribution KernelDistTable[] = {
-    DTE_TARBALL("GENERIC",  &KernelDists, KERNEL_GENERIC, "/boot"),
-#ifdef WITH_SMP
-    DTE_TARBALL("SMP", 	    &KernelDists, KERNEL_SMP,	  "/boot"),
-#endif
+    DTE_TARBALL(GENERIC_KERNEL_NAME,  &KernelDists, KERNEL_GENERIC, "/boot"),
     DTE_END,
 };
 
@@ -109,7 +106,6 @@ static Distribution KernelDistTable[] = {
 static Distribution SrcDistTable[] = {
     DTE_TARBALL("sbase",    &SrcDists, SRC_BASE,    "/usr/src"),
     DTE_TARBALL("scddl",    &SrcDists, SRC_CDDL,    "/usr/src"),
-    DTE_TARBALL("scompat",  &SrcDists, SRC_COMPAT,  "/usr/src"),
     DTE_TARBALL("scontrib", &SrcDists, SRC_CONTRIB, "/usr/src"),
     DTE_TARBALL("scrypto",  &SrcDists, SRC_SCRYPTO, "/usr/src"),
     DTE_TARBALL("sgnu",	    &SrcDists, SRC_GNU,	    "/usr/src"),
@@ -132,6 +128,30 @@ static Distribution SrcDistTable[] = {
     DTE_END,
 };
 
+/* The Documentation distribution */
+static Distribution DocDistTable[] = {
+    DTE_PACKAGE("Bengali Documentation",		&DocDists, DOC_BN,	"bn-freebsd-doc"),
+    DTE_PACKAGE("Danish Documentation",			&DocDists, DOC_DA,	"da-freebsd-doc"),
+    DTE_PACKAGE("German Documentation",			&DocDists, DOC_DE,	"de-freebsd-doc"),
+    DTE_PACKAGE("Greek Documentation",			&DocDists, DOC_EL,	"el-freebsd-doc"),
+    DTE_PACKAGE("English Documentation",		&DocDists, DOC_EN,	"en-freebsd-doc"),
+    DTE_PACKAGE("Spanish Documentation",		&DocDists, DOC_ES,	"es-freebsd-doc"),
+    DTE_PACKAGE("French Documentation",			&DocDists, DOC_FR,	"fr-freebsd-doc"),
+    DTE_PACKAGE("Hungarian Documentation",		&DocDists, DOC_HU,	"hu-freebsd-doc"),
+    DTE_PACKAGE("Italian Documentation",		&DocDists, DOC_IT,	"it-freebsd-doc"),
+    DTE_PACKAGE("Japanese Documentation",		&DocDists, DOC_JA,	"ja-freebsd-doc"),
+    DTE_PACKAGE("Mongolian Documentation",		&DocDists, DOC_MN,	"mn-freebsd-doc"),
+    DTE_PACKAGE("Dutch Documentation",			&DocDists, DOC_NL,	"nl-freebsd-doc"),
+    DTE_PACKAGE("Polish Documentation",			&DocDists, DOC_PL,	"pl-freebsd-doc"),
+    DTE_PACKAGE("Portuguese Documentation",		&DocDists, DOC_PT,	"pt-freebsd-doc"),
+    DTE_PACKAGE("Russian Documentation",		&DocDists, DOC_RU,	"ru-freebsd-doc"),
+    DTE_PACKAGE("Serbian Documentation",		&DocDists, DOC_SR,	"sr-freebsd-doc"),
+    DTE_PACKAGE("Turkish Documentation",		&DocDists, DOC_TR,	"tr-freebsd-doc"),
+    DTE_PACKAGE("Simplified Chinese Documentation",	&DocDists, DOC_ZH_CN,	"zh_cn-freebsd-doc"),
+    DTE_PACKAGE("Traditional Chinese Documentation",	&DocDists, DOC_ZH_TW,	"zh_tw-freebsd-doc"),
+    DTE_END,
+};
+
 static int	distMaybeSetPorts(dialogMenuItem *self);
 
 static void
@@ -139,23 +159,21 @@ distVerifyFlags(void)
 {
     if (SrcDists)
 	Dists |= DIST_SRC;
-    if (XOrgDists)
-	Dists |= DIST_XORG;
     if (KernelDists)
 	Dists |= DIST_KERNEL;
-    if (isDebug()) {
-	msgDebug("Dist Masks: Dists: %0x, Srcs: %0x Kernels: %0x\n", Dists,
-	    SrcDists, KernelDists);
-	msgDebug("XServer: %0x\n", XOrgDists);
-    }
+    if (DocDists)
+	Dists |= DIST_DOC;
+    if (isDebug())
+	msgDebug("Dist Masks: Dists: %0x, Srcs: %0x Kernels: %0x Docs: %0x\n", Dists,
+	    SrcDists, KernelDists, DocDists);
 }
 
 int
 distReset(dialogMenuItem *self)
 {
     Dists = 0;
+    DocDists = 0;
     SrcDists = 0;
-    XOrgDists = 0;
     KernelDists = 0;
     return DITEM_SUCCESS | DITEM_REDRAW;
 }
@@ -170,11 +188,11 @@ distConfig(dialogMenuItem *self)
     if ((cp = variable_get(VAR_DIST_MAIN)) != NULL)
 	Dists = atoi(cp);
 
+    if ((cp = variable_get(VAR_DIST_DOC)) != NULL)
+	DocDists = atoi(cp);
+
     if ((cp = variable_get(VAR_DIST_SRC)) != NULL)
 	SrcDists = atoi(cp);
-
-    if ((cp = variable_get(VAR_DIST_X11)) != NULL)
-	XOrgDists = atoi(cp);
 
     if ((cp = variable_get(VAR_DIST_KERNEL)) != NULL)
 	KernelDists = atoi(cp);
@@ -183,23 +201,10 @@ distConfig(dialogMenuItem *self)
     return DITEM_SUCCESS | DITEM_REDRAW;
 }
 
-static int
-distSetX(void)
-{
-    Dists |= DIST_XORG;
-    XOrgDists = DIST_XORG_ALL;
-    return DITEM_SUCCESS;
-}
-
 int
 selectKernel(void)
 {
-#ifdef WITH_SMP
-    /* select default kernel based on deduced cpu count */
-    return NCpus > 1 ? DIST_KERNEL_SMP : DIST_KERNEL_GENERIC;
-#else
     return DIST_KERNEL_GENERIC;
-#endif
 }
 
 int
@@ -211,18 +216,8 @@ distSetDeveloper(dialogMenuItem *self)
     Dists = _DIST_DEVELOPER;
     SrcDists = DIST_SRC_ALL;
     KernelDists = selectKernel();
-    i = distMaybeSetPorts(self);
-    distVerifyFlags();
-    return i;
-}
-
-int
-distSetXDeveloper(dialogMenuItem *self)
-{
-    int i;
-
-    i = distSetDeveloper(self);
-    i |= distSetX();
+    i = distSetDoc(self);
+    i |= distMaybeSetPorts(self);
     distVerifyFlags();
     return i;
 }
@@ -236,18 +231,8 @@ distSetKernDeveloper(dialogMenuItem *self)
     Dists = _DIST_DEVELOPER;
     SrcDists = DIST_SRC_SYS | DIST_SRC_BASE;
     KernelDists = selectKernel();
-    i = distMaybeSetPorts(self);
-    distVerifyFlags();
-    return i;
-}
-
-int
-distSetXKernDeveloper(dialogMenuItem *self)
-{
-    int i;
-
-    i = distSetKernDeveloper(self);
-    i |= distSetX();
+    i = distSetDoc(self);
+    i |= distMaybeSetPorts(self);
     distVerifyFlags();
     return i;
 }
@@ -260,18 +245,8 @@ distSetUser(dialogMenuItem *self)
     distReset(NULL);
     Dists = _DIST_USER;
     KernelDists = selectKernel();
-    i = distMaybeSetPorts(self);
-    distVerifyFlags();
-    return i;
-}
-
-int
-distSetXUser(dialogMenuItem *self)
-{
-    int i;
-
-    i = distSetUser(self);
-    i |= distSetX();
+    i = distSetDoc(self);
+    i |= distMaybeSetPorts(self);
     distVerifyFlags();
     return i;
 }
@@ -293,8 +268,8 @@ distSetEverything(dialogMenuItem *self)
 
     Dists = DIST_ALL;
     SrcDists = DIST_SRC_ALL;
-    XOrgDists = DIST_XORG_ALL;
     KernelDists = DIST_KERNEL_ALL;
+    DocDists = DIST_DOC_ALL;
     i = distMaybeSetPorts(self);
     distVerifyFlags();
     return i | DITEM_REDRAW;
@@ -305,8 +280,8 @@ distMaybeSetPorts(dialogMenuItem *self)
 {
     dialog_clear_norefresh();
     if (!msgYesNo("Would you like to install the FreeBSD ports collection?\n\n"
-		  "This will give you ready access to over 17,000 ported software packages,\n"
-		  "at a cost of around 400MB of disk space when \"clean\" and possibly\n"
+		  "This will give you ready access to over 19,000 ported software packages,\n"
+		  "at a cost of around 445MB of disk space when \"clean\" and possibly\n"
 		  "much more than that when a lot of the distribution tarballs are loaded\n"
 		  "(unless you have the extra discs available from a FreeBSD CD/DVD distribution\n"
 		  "and can mount them on /cdrom, in which case this is far less of a problem).\n\n"
@@ -630,7 +605,7 @@ getinfo:
 	    if (fp == NULL)
 		msgConfirm("Failed to find %s on this media.  Reinitializing media.", fname);
 	    else
-		msgConfirm("Failed to retreive piece file %s.\n"
+		msgConfirm("Failed to retrieve piece file %s.\n"
 			   "%s: Reinitializing media.",
 			   fname, !intr ? "I/O error" : "User interrupt");
 	    DEVICE_SHUTDOWN(mediaDevice);
@@ -726,6 +701,7 @@ distExtract(char *parent, Distribution *me)
     char *path, *dist;
     WINDOW *w = savescr();
     struct sigaction old, new;
+    int canceled = 0;
 
     status = TRUE;
     if (isDebug())
@@ -740,7 +716,7 @@ distExtract(char *parent, Distribution *me)
     sigaction(SIGINT, &new, &old);
 
     /* Loop through to see if we're in our parent's plans */
-    for (i = 0; me[i].my_name; i++) {
+    for (i = 0; me[i].my_name && canceled == 0; i++) {
 	dist = me[i].my_name;
 	path = parent ? parent : dist;
 
@@ -775,9 +751,15 @@ distExtract(char *parent, Distribution *me)
 		    status = msgYesNo("Unable to transfer the %s distribution from\n%s.\n\n"
 			              "Do you want to try to retrieve it again?",
 				      me[i].my_name, mediaDevice->name);
-		    if (!status)
+		    if (status == 0)
 			--i;
+		    else
+			canceled = 1;	
+
 		    status = FALSE;
+		} else {
+			// ignore any failures with DIST_LOCAL
+			status = TRUE;
 		}
 	    }
 	    break;
@@ -790,9 +772,69 @@ distExtract(char *parent, Distribution *me)
 	if (status)
 	    *(me[i].my_mask) &= ~(me[i].my_bit);
     }
+
     sigaction(SIGINT, &old, NULL);	/* Restore signal handler */
     restorescr(w);
     return status;
+}
+
+int
+distSetDoc(dialogMenuItem *self)
+{
+    int i;
+
+    /* Assume no docs for non-interactive installs. */
+    if (variable_get(VAR_NONINTERACTIVE))
+	return DITEM_SUCCESS | DITEM_RESTORE;
+
+    dialog_clear_norefresh();
+    if (!dmenuOpenSimple(&MenuDocInstall, FALSE))
+	i = DITEM_FAILURE;
+    else
+	i = DITEM_SUCCESS;
+
+    distVerifyFlags();
+
+    return i | DITEM_RESTORE;
+}
+
+int
+distSetDocMenu(dialogMenuItem *self)
+{
+    int i, status;
+    WINDOW *w;
+
+    if (RunningAsInit && !strstr(variable_get(SYSTEM_STATE), "install")) {
+	    msgConfirm("This option may only be used after the system is installed, sorry!");
+	    return DITEM_FAILURE;
+    }
+
+    dialog_clear_norefresh();
+    if (!dmenuOpenSimple(&MenuDocInstall, FALSE))
+	i = DITEM_FAILURE;
+    else
+	i = DITEM_SUCCESS;
+
+    distVerifyFlags();
+
+    dialog_clear_norefresh();
+    w = savescr();
+    msgNotify("Attempting to install all selected documentations...");
+
+    for (i = 0; DocDistTable[i].my_name; i++) {
+	    if (!(DocDistTable[i].my_bit & *(DocDistTable[i].my_mask)))
+		    continue;
+	     dialog_clear_norefresh();
+	     msgNotify("Installing %s distribution...", DocDistTable[i].my_name);
+	     status = (package_add(DocDistTable[i].my_data.my_string) == DITEM_SUCCESS);
+	     if (!status)
+		     break;
+    }
+
+    dialog_clear_norefresh();
+
+    restorescr(w);
+    return (status ? DITEM_SUCCESS : DITEM_FAILURE);
 }
 
 static void
@@ -823,8 +865,9 @@ printSelected(char *buf, int selected, Distribution *me, int *col)
 int
 distExtractAll(dialogMenuItem *self)
 {
-    int old_dists, old_kernel, retries = 0, status = DITEM_SUCCESS;
+    int old_dists, old_kernel, status = DITEM_SUCCESS;
     char buf[512];
+    int extract_status = TRUE;
     WINDOW *w;
 
     /* paranoia */
@@ -844,9 +887,7 @@ distExtractAll(dialogMenuItem *self)
     w = savescr();
     msgNotify("Attempting to install all selected distributions..");
 
-    /* Try for 3 times around the loop, then give up. */
-    while (Dists && ++retries < 3)
-	distExtract(NULL, DistTable);
+    extract_status = distExtract(NULL, DistTable);
 
     dialog_clear_norefresh();
     /* Only do base fixup if base dist was successfully extracted */
@@ -873,5 +914,9 @@ distExtractAll(dialogMenuItem *self)
 	}
     }
     restorescr(w);
+
+    if (extract_status == FALSE)
+	status = FALSE;
+
     return status;
 }

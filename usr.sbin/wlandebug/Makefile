@@ -1,6 +1,8 @@
-# $FreeBSD: release/7.0.0/usr.sbin/wlandebug/Makefile 171635 2007-07-28 00:12:21Z thompsa $
+# $FreeBSD$
 
 PROG=	wlandebug
 MAN=	wlandebug.8
+
+WARNS?=	2
 
 .include <bsd.prog.mk>

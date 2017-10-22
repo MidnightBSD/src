@@ -26,13 +26,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_self.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
-#include <pthread.h>
-#include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(_pthread_self);
-LT10_COMPAT_DEFAULT(pthread_self);
+#include "namespace.h"
+#include <pthread.h>
+#include "un-namespace.h"
+#include "thr_private.h"
 
 __weak_reference(_pthread_self, pthread_self);
 

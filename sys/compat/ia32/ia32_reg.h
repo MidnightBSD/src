@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)reg.h	5.5 (Berkeley) 1/18/91
- * $FreeBSD: release/7.0.0/sys/compat/ia32/ia32_reg.h 147692 2005-06-30 07:49:22Z peter $
+ * $FreeBSD$
  */
 
 #ifndef _COMPAT_IA32_IA32_REG_H_
@@ -103,29 +103,6 @@ struct save87 {
 	struct	fpacc87 sv_ac[8];	/* accumulator contents, 0-7 */
 	u_char	sv_pad0[4];	/* padding for (now unused) saved status word */
 	u_char	sv_pad[64];	/* padding; used by emulators */
-};
-
-
-/*
- * Alternative layouts for <sys/procfs.h>
- * Used in core dumps, the reason for this file existing.
- */
-struct prstatus32 {
-	int	pr_version;
-	u_int	pr_statussz;
-	u_int	pr_gregsetsz;
-	u_int	pr_fpregsetsz;
-	int	pr_osreldate;
-	int	pr_cursig;
-	pid_t	pr_pid;
-	struct reg32 pr_reg;
-};
-
-struct prpsinfo32 {
-	int	pr_version;
-	u_int	pr_psinfosz;
-	char	pr_fname[PRFNAMESZ+1];
-	char	pr_psargs[PRARGSZ+1];
 };
 
 /*

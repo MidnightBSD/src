@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/tools/regression/lib/msun/test-lround.c 140089 2005-01-11 23:13:36Z das $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <fenv.h>
@@ -37,9 +37,14 @@ __FBSDID("$FreeBSD: release/7.0.0/tools/regression/lib/msun/test-lround.c 140089
 #include <math.h>
 #include <stdio.h>
 
+/*
+ * XXX The volatile here is to avoid gcc's bogus constant folding and work
+ *     around the lack of support for the FENV_ACCESS pragma.
+ */
 #define	test(func, x, result, excepts)	do {				\
+	volatile double _d = x;						\
 	assert(feclearexcept(FE_ALL_EXCEPT) == 0);			\
-	assert((func)(x) == (result) || fetestexcept(FE_INVALID));	\
+	assert((func)(_d) == (result) || fetestexcept(FE_INVALID));	\
 	assert(fetestexcept(FE_ALL_EXCEPT) == (excepts));		\
 } while (0)
 

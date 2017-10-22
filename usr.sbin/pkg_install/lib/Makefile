@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/Makefile 136910 2004-10-24 15:33:08Z ru $
+# $FreeBSD$
 
 LIB=	install
 INTERNALLIB=

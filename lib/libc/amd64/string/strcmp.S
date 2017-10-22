@@ -4,7 +4,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/amd64/string/strcmp.S 144847 2005-04-09 20:47:08Z alc $");
+__FBSDID("$FreeBSD$");
 
 #if 0
 	RCSID("$NetBSD: strcmp.S,v 1.3 2004/07/19 20:04:41 drochner Exp $")
@@ -71,3 +71,6 @@ ENTRY(strcmp)
 	movzbq	%dl,%rdx
 	subq	%rdx,%rax
 	ret
+END(strcmp)
+
+	.section .note.GNU-stack,"",%progbits

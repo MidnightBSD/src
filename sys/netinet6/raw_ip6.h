@@ -1,6 +1,3 @@
-/*	$FreeBSD: release/7.0.0/sys/netinet6/raw_ip6.h 139826 2005-01-07 02:30:35Z imp $	*/
-/*	$KAME: raw_ip6.h,v 1.2 2001/05/27 13:28:35 itojun Exp $	*/
-
 /*-
  * Copyright (C) 2001 WIDE Project.
  * All rights reserved.
@@ -28,6 +25,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: raw_ip6.h,v 1.2 2001/05/27 13:28:35 itojun Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET6_RAW_IP6_H_
@@ -48,7 +48,8 @@ struct rip6stat {
 };
 
 #ifdef _KERNEL
-extern struct rip6stat rip6stat;
+VNET_DECLARE(struct rip6stat, rip6stat);
+#define	V_rip6stat			VNET(rip6stat)
 #endif
 
 #endif

@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/pc98/include/bus.h 153110 2005-12-05 11:58:35Z ru $
+ * $FreeBSD$
  */
 
 /*	$NecBSD: busio.h,v 3.25.4.2.2.1 2000/06/12 03:53:08 honda Exp $	*/
@@ -92,7 +92,13 @@
 
 #define BUS_SPACE_UNRESTRICTED	(~0)
 
+/*
+ * address relocation table
+ */
 #define BUS_SPACE_IAT_MAXSIZE	33
+typedef bus_addr_t *bus_space_iat_t;
+
+#define BUS_SPACE_IAT_SZ(IOTARRAY) (sizeof(IOTARRAY)/sizeof(bus_addr_t))
 
 /*
  * Access methods for bus resources and address space.
@@ -152,8 +158,8 @@ struct bus_space_access_methods {
  * Access methods for bus resources and address space.
  */
 struct bus_space_tag {
-#define	BUS_SPACE_IO	0
-#define	BUS_SPACE_MEM	1
+#define	BUS_SPACE_TAG_IO	0
+#define	BUS_SPACE_TAG_MEM	1
 	u_int	bs_tag;			/* bus space flags */
 
 	struct bus_space_access_methods bs_da;	/* direct access */
@@ -186,8 +192,8 @@ struct bus_space_handle {
 extern struct bus_space_tag SBUS_io_space_tag;
 extern struct bus_space_tag SBUS_mem_space_tag;
 
-#define I386_BUS_SPACE_IO	(&SBUS_io_space_tag)
-#define I386_BUS_SPACE_MEM	(&SBUS_mem_space_tag)
+#define X86_BUS_SPACE_IO	(&SBUS_io_space_tag)
+#define X86_BUS_SPACE_MEM	(&SBUS_mem_space_tag)
 
 /*
  * Allocate/Free bus_space_handle
@@ -224,6 +230,19 @@ void i386_memio_unmap(bus_space_tag_t t, bus_space_handle_t bsh,
 	i386_memio_unmap((t), (h), (s))
 
 /*
+ *      int bus_space_map_load (bus_space_tag_t t, bus_space_handle_t bsh,
+ *          bus_size_t size, bus_space_iat_t iat, u_int flags);
+ *
+ * Load I/O address table of bus space.
+ */
+
+int i386_memio_map_load(bus_space_tag_t t, bus_space_handle_t bsh,
+			bus_size_t size, bus_space_iat_t iat, u_int flags);
+
+#define bus_space_map_load(t, h, s, iat, f)				\
+	i386_memio_map_load((t), (h), (s), (iat), (f))
+
+/*
  *      int bus_space_subregion (bus_space_tag_t t,
  *          bus_space_handle_t bsh, bus_size_t offset, bus_size_t size,
  *          bus_space_handle_t *nbshp);
@@ -250,6 +269,18 @@ void i386_memio_free(bus_space_tag_t t, bus_space_handle_t bsh,
 
 #define bus_space_free(t, h, s)						\
 	i386_memio_free((t), (h), (s))
+
+/*
+ *      int bus_space_compare (bus_space_tag_t t1, bus_space_handle_t bsh1,
+ *          bus_space_tag_t t2, bus_space_handle_t bsh2);
+ *
+ * Compare two resources.
+ */
+int i386_memio_compare(bus_space_tag_t t1, bus_space_handle_t bsh1,
+		       bus_space_tag_t t2, bus_space_handle_t bsh2);
+
+#define bus_space_compare(t1, h1, t2, h2)				\
+	i386_memio_compare((t1), (h1), (t2), (h2))
 
 /*
  * Access methods for bus resources and address space.

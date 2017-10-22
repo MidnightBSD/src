@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/acpi_battery.c 175582 2008-01-23 00:15:22Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -36,7 +36,8 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/acpi_battery.c 175582 2008-01-2
 #include <sys/ioccom.h>
 #include <sys/sysctl.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 #include <dev/acpica/acpiio.h>
 
@@ -101,8 +102,9 @@ acpi_battery_get_info_expire(void)
 int
 acpi_battery_bst_valid(struct acpi_bst *bst)
 {
-    return (bst->state < ACPI_BATT_STAT_MAX && bst->cap != ACPI_BATT_UNKNOWN &&
-	bst->volt != ACPI_BATT_UNKNOWN);
+
+    return (bst->state != ACPI_BATT_STAT_NOT_PRESENT &&
+	bst->cap != ACPI_BATT_UNKNOWN && bst->volt != ACPI_BATT_UNKNOWN);
 }
 
 /* Check _BIF results for validity. */
@@ -197,11 +199,19 @@ acpi_battery_get_battinfo(device_t dev, struct acpi_battinfo *battinfo)
 	 * is 0 (due to some error reading the battery), skip this
 	 * conversion.
 	 */
-	if (bif->units == ACPI_BIF_UNITS_MA && bif->dvol != 0) {
+	if (bif->units == ACPI_BIF_UNITS_MA && bif->dvol != 0 && dev == NULL) {
 	    bst[i].rate = (bst[i].rate * bif->dvol) / 1000;
 	    bst[i].cap = (bst[i].cap * bif->dvol) / 1000;
 	    bif->lfcap = (bif->lfcap * bif->dvol) / 1000;
 	}
+
+	/*
+	 * The calculation above may set bif->lfcap to zero. This was
+	 * seen on a laptop with a broken battery. The result of the
+	 * division was rounded to zero.
+	 */
+	if (!acpi_battery_bif_valid(bif))
+	    continue;
 
 	/* Calculate percent capacity remaining. */
 	bi[i].cap = (100 * bst[i].cap) / bif->lfcap;

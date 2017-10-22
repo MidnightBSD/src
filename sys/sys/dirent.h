@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)dirent.h	8.3 (Berkeley) 8/10/94
- * $FreeBSD: release/7.0.0/sys/sys/dirent.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef	_SYS_DIRENT_H_

@@ -29,7 +29,7 @@
 #
 # Inspired on spkrtest.pl, rewritten from scratch to remove perl dependency
 # $VER: spkrtest 0.3 (9.5.2002) Riccardo "VIC" Torrini <riccardo@torrini.org>
-# $FreeBSD: release/7.0.0/usr.sbin/spkrtest/spkrtest.sh 96748 2002-05-16 18:51:57Z markm $
+# $FreeBSD$
 #
 
 cleanExit() {
@@ -53,7 +53,7 @@ fi
 
 /usr/bin/dialog --title "Speaker test" --checklist \
 	"Please select the melodies you wish to play (space for select)" \
-	-1 -1 10 \
+	0 0 0 \
 	reveille "Reveille" OFF \
 	contact "Contact theme from Close Encounters" OFF \
 	dance "Lord of the Dance (aka Simple Gifts)" OFF \

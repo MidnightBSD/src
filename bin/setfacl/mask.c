@@ -14,18 +14,18 @@
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR THE VOICES IN HIS HEAD BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/setfacl/mask.c 139969 2005-01-10 08:39:26Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/acl.h>
@@ -40,7 +40,7 @@ __FBSDID("$FreeBSD: release/7.0.0/bin/setfacl/mask.c 139969 2005-01-10 08:39:26Z
 
 /* set the appropriate mask the given ACL's */
 int
-set_acl_mask(acl_t *prev_acl)
+set_acl_mask(acl_t *prev_acl, const char *filename)
 {
 	acl_entry_t entry;
 	acl_t acl;
@@ -59,7 +59,7 @@ set_acl_mask(acl_t *prev_acl)
 
 	acl = acl_dup(*prev_acl);
 	if (acl == NULL)
-		err(1, "acl_dup() failed");
+		err(1, "%s: acl_dup() failed", filename);
 
 	if (n_flag == 0) {
 		/*
@@ -70,7 +70,7 @@ set_acl_mask(acl_t *prev_acl)
 		 * class in the resulting ACL
 		 */
 		if (acl_calc_mask(&acl)) {
-			warn("acl_calc_mask() failed");
+			warn("%s: acl_calc_mask() failed", filename);
 			acl_free(acl);
 			return (-1);
 		}
@@ -86,7 +86,8 @@ set_acl_mask(acl_t *prev_acl)
 		while (acl_get_entry(acl, entry_id, &entry) == 1) {
 			entry_id = ACL_NEXT_ENTRY;
 			if (acl_get_tag_type(entry, &tag) == -1)
-				err(1, "acl_get_tag_type() failed");
+				err(1, "%s: acl_get_tag_type() failed",
+				    filename);
 
 			if (tag == ACL_MASK) {
 				acl_free(acl);
@@ -100,7 +101,7 @@ set_acl_mask(acl_t *prev_acl)
 		 * file, then write an error message to standard error and
 		 * continue with the next file.
 		 */
-		warnx("warning: no mask entry");
+		warnx("%s: warning: no mask entry", filename);
 		acl_free(acl);
 		return (0);
 	}

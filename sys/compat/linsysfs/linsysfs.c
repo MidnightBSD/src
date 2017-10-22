@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/compat/linsysfs/linsysfs.c 167482 2007-03-12 12:16:52Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -182,8 +182,8 @@ linsysfs_run_bus(device_t dev, struct pfs_node *dir, struct pfs_node *scsi, char
 					sprintf(host, "host%d", host_number++);
 					strcat(new_path, "/");
 					strcat(new_path, host);
-					sub_dir = pfs_create_dir(dir,
-					    host, NULL, NULL, NULL, 0);
+					pfs_create_dir(dir, host,
+					    NULL, NULL, NULL, 0);
 					scsi_host = malloc(sizeof(
 					    struct scsi_host_queue),
 					    M_DEVBUF, M_NOWAIT);
@@ -280,5 +280,5 @@ linsysfs_uninit(PFS_INIT_ARGS)
 	return (0);
 }
 
-PSEUDOFS(linsysfs, 1);
+PSEUDOFS(linsysfs, 1, 0);
 MODULE_DEPEND(linsysfs, linux, 1, 1, 1);

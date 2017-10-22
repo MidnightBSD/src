@@ -23,21 +23,21 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/amd64/include/minidump.h 157908 2006-04-21 04:24:50Z peter $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_MINIDUMP_H_
 #define	_MACHINE_MINIDUMP_H_ 1
 
 #define	MINIDUMP_MAGIC		"minidump FreeBSD/amd64"
-#define	MINIDUMP_VERSION	1
+#define	MINIDUMP_VERSION	2
 
 struct minidumphdr {
 	char magic[24];
 	uint32_t version;
 	uint32_t msgbufsize;
 	uint32_t bitmapsize;
-	uint32_t ptesize;
+	uint32_t pmapsize;
 	uint64_t kernbase;
 	uint64_t dmapbase;
 	uint64_t dmapend;

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/i386/i386/db_interface.c 139724 2005-01-05 19:10:48Z imp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Interface to new debugger.

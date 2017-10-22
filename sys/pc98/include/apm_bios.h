@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/pc98/include/apm_bios.h 144611 2005-04-03 23:27:11Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _PC98_INCLUDE_APM_BIOS_H_
@@ -32,7 +32,7 @@
  * PC98 machines implement APM bios in nearly the same was as i386 machines,
  * so include the i386 version and note the changes here.
  */
-#include <i386/apm_bios.h>
+#include <x86/apm_bios.h>
 
 /*
  * APM BIOS and interrupt are different on pc98

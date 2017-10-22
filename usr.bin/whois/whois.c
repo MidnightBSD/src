@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -44,7 +40,7 @@ static char sccsid[] = "@(#)whois.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/whois/whois.c 168721 2007-04-14 14:32:48Z ache $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -63,7 +59,6 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.bin/whois/whois.c 168721 2007-04-14 14:32:
 #define	ABUSEHOST	"whois.abuse.net"
 #define	NICHOST		"whois.crsnic.net"
 #define	INICHOST	"whois.networksolutions.com"
-#define	DNICHOST	"whois.nic.mil"
 #define	GNICHOST	"whois.nic.gov"
 #define	ANICHOST	"whois.arin.net"
 #define	LNICHOST	"whois.lacnic.net"
@@ -72,7 +67,6 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.bin/whois/whois.c 168721 2007-04-14 14:32:
 #define	PNICHOST	"whois.apnic.net"
 #define	MNICHOST	"whois.ra.net"
 #define	QNICHOST_TAIL	".whois-servers.net"
-#define	SNICHOST	"whois.6bone.net"
 #define	BNICHOST	"whois.registro.br"
 #define NORIDHOST	"whois.norid.no"
 #define	IANAHOST	"whois.iana.org"
@@ -110,7 +104,7 @@ main(int argc, char *argv[])
 
 	country = host = qnichost = NULL;
 	flags = use_qnichost = 0;
-	while ((ch = getopt(argc, argv, "aAbc:dfgh:iIklmp:QrR6")) != -1) {
+	while ((ch = getopt(argc, argv, "aAbc:fgh:iIklmp:QrR6")) != -1) {
 		switch (ch) {
 		case 'a':
 			host = ANICHOST;
@@ -123,9 +117,6 @@ main(int argc, char *argv[])
 			break;
 		case 'c':
 			country = optarg;
-			break;
-		case 'd':
-			host = DNICHOST;
 			break;
 		case 'f':
 			host = FNICHOST;
@@ -164,8 +155,10 @@ main(int argc, char *argv[])
 			warnx("-R is deprecated; use '-c ru' instead");
 			country = "ru";
 			break;
+		/* Remove in FreeBSD 10 */
 		case '6':
-			host = SNICHOST;
+			errx(EX_USAGE,
+				"-6 is deprecated; use -[aAflr] instead");
 			break;
 		case '?':
 		default:
@@ -218,6 +211,10 @@ choose_server(char *domain)
 {
 	char *pos, *retval;
 
+	if (strchr(domain, ':')) {
+		s_asprintf(&retval, "%s", ANICHOST);
+		return (retval);
+	}
 	for (pos = strchr(domain, '\0'); pos > domain && *--pos == '.';)
 		*pos = '\0';
 	if (*domain == '\0')
@@ -363,7 +360,7 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: whois [-aAbdfgiIklmQrR6] [-c country-code | -h hostname] "
+	    "usage: whois [-aAbfgiIklmQrR6] [-c country-code | -h hostname] "
 	    "[-p port] name ...\n");
 	exit(EX_USAGE);
 }

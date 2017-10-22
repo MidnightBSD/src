@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/sed/process.c 170609 2007-06-12 12:17:25Z yar $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 static const char sccsid[] = "@(#)process.c	8.6 (Berkeley) 4/20/94";
@@ -229,7 +229,7 @@ redirect:
 				    O_WRONLY|O_APPEND|O_CREAT|O_TRUNC,
 				    DEFFILEMODE)) == -1)
 					err(1, "%s", cp->t);
-				if (write(cp->u.fd, ps, psl) != psl ||
+				if (write(cp->u.fd, ps, psl) != (ssize_t)psl ||
 				    write(cp->u.fd, "\n", 1) != 1)
 					err(1, "%s", cp->t);
 				break;
@@ -275,8 +275,8 @@ new:		if (!nflag && !pd)
 	    (a)->type == AT_LINE ? linenum == (a)->u.l : lastline())
 
 /*
- * Return TRUE if the command applies to the current line.  Sets the inrange
- * flag to process ranges.  Interprets the non-select (``!'') flag.
+ * Return TRUE if the command applies to the current line.  Sets the start
+ * line for process ranges.  Interprets the non-select (``!'') flag.
  */
 static __inline int
 applies(struct s_command *cp)
@@ -287,18 +287,22 @@ applies(struct s_command *cp)
 	if (cp->a1 == NULL && cp->a2 == NULL)
 		r = 1;
 	else if (cp->a2)
-		if (cp->inrange) {
+		if (cp->startline > 0) {
 			if (MATCH(cp->a2)) {
-				cp->inrange = 0;
+				cp->startline = 0;
 				lastaddr = 1;
 				r = 1;
-			} else if (cp->a2->type == AT_LINE &&
-				   linenum > cp->a2->u.l) {
+			} else if (linenum - cp->startline <= cp->a2->u.l)
+				r = 1;
+			else if ((cp->a2->type == AT_LINE &&
+				   linenum > cp->a2->u.l) ||
+				   (cp->a2->type == AT_RELLINE &&
+				   linenum - cp->startline > cp->a2->u.l)) {
 				/*
 				 * We missed the 2nd address due to a branch,
 				 * so just close the range and return false.
 				 */
-				cp->inrange = 0;
+				cp->startline = 0;
 				r = 0;
 			} else
 				r = 1;
@@ -308,12 +312,15 @@ applies(struct s_command *cp)
 			 * equal to the line number first selected, only
 			 * one line shall be selected.
 			 *	-- POSIX 1003.2
+			 * Likewise if the relative second line address is zero.
 			 */
-			if (cp->a2->type == AT_LINE &&
-			    linenum >= cp->a2->u.l)
+			if ((cp->a2->type == AT_LINE &&
+			    linenum >= cp->a2->u.l) ||
+			    (cp->a2->type == AT_RELLINE && cp->a2->u.l == 0))
 				lastaddr = 1;
-			else
-				cp->inrange = 1;
+			else {
+				cp->startline = linenum;
+			}
 			r = 1;
 		} else
 			r = 0;
@@ -331,11 +338,11 @@ resetstate(void)
 	struct s_command *cp;
 
 	/*
-	 * Reset all inrange markers.
+	 * Reset all in-range markers.
 	 */
 	for (cp = prog; cp; cp = cp->code == '{' ? cp->u.c : cp->next)
 		if (cp->a2)
-			cp->inrange = 0;
+			cp->startline = 0;
 
 	/*
 	 * Clear out the hold space.
@@ -363,7 +370,7 @@ substitute(struct s_command *cp)
 	if (re == NULL) {
 		if (defpreg != NULL && cp->u.s->maxbref > defpreg->re_nsub) {
 			linenum = cp->u.s->linenum;
-			errx(1, "%lu: %s: \\%d not defined in the RE",
+			errx(1, "%lu: %s: \\%u not defined in the RE",
 					linenum, fname, cp->u.s->maxbref);
 		}
 	}
@@ -449,7 +456,7 @@ substitute(struct s_command *cp)
 		if (cp->u.s->wfd == -1 && (cp->u.s->wfd = open(cp->u.s->wfile,
 		    O_WRONLY|O_APPEND|O_CREAT|O_TRUNC, DEFFILEMODE)) == -1)
 			err(1, "%s", cp->u.s->wfile);
-		if (write(cp->u.s->wfd, ps, psl) != psl ||
+		if (write(cp->u.s->wfd, ps, psl) != (ssize_t)psl ||
 		    write(cp->u.s->wfd, "\n", 1) != 1)
 			err(1, "%s", cp->u.s->wfile);
 	}
@@ -554,7 +561,7 @@ lputs(char *s, size_t len)
 {
 	static const char escapes[] = "\\\a\b\f\r\t\v";
 	int c, col, width;
-	char *p;
+	const char *p;
 	struct winsize win;
 	static int termwidth = -1;
 	size_t clen, i;
@@ -572,6 +579,8 @@ lputs(char *s, size_t len)
 		else
 			termwidth = 60;
 	}
+	if (termwidth <= 0)
+		termwidth = 1;
 
 	memset(&mbs, 0, sizeof(mbs));
 	col = 0;
@@ -607,7 +616,7 @@ lputs(char *s, size_t len)
 			fprintf(outfile, "\\%c", "\\abfrtv"[p - escapes]);
 			col += 2;
 		} else {
-			if (col + 4 * clen >= termwidth) {
+			if (col + 4 * clen >= (unsigned)termwidth) {
 				fprintf(outfile, "\\\n");
 				col = 0;
 			}

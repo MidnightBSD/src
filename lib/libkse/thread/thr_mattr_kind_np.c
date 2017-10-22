@@ -26,20 +26,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_mattr_kind_np.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
+
+#include "namespace.h"
 #include <errno.h>
 #include <pthread.h>
+#include "un-namespace.h"
 #include "thr_private.h"
 
-LT10_COMPAT_PRIVATE(_pthread_mutexattr_setkind_np);
-LT10_COMPAT_DEFAULT(pthread_mutexattr_setkind_np);
-LT10_COMPAT_PRIVATE(_pthread_mutexattr_getkind_np);
-LT10_COMPAT_DEFAULT(pthread_mutexattr_getkind_np);
-LT10_COMPAT_PRIVATE(_pthread_mutexattr_gettype);
-LT10_COMPAT_DEFAULT(pthread_mutexattr_gettype);
-LT10_COMPAT_PRIVATE(_pthread_mutexattr_settype);
-LT10_COMPAT_DEFAULT(pthread_mutexattr_settype);
+int _pthread_mutexattr_setkind_np(pthread_mutexattr_t *attr, int kind);
+int _pthread_mutexattr_getkind_np(pthread_mutexattr_t attr);
 
 __weak_reference(_pthread_mutexattr_setkind_np, pthread_mutexattr_setkind_np);
 __weak_reference(_pthread_mutexattr_getkind_np, pthread_mutexattr_getkind_np);

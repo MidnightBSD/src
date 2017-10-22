@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: string.c,v 1.10.18.7 2006/10/03 23:50:51 marka Exp $ */
+/* $Id$ */
 
 /*! \file */
 
@@ -165,14 +165,15 @@ isc_string_printf(char *target, size_t size, const char *format, ...) {
 }
 
 void
-isc_string_printf_truncate(char *target, size_t size, const char *format, ...) {
+isc_string_printf_truncate(char *target, size_t size, const char *format, ...)
+{
 	va_list args;
-	size_t n;
 
 	REQUIRE(size > 0U);
 
 	va_start(args, format);
-	n = vsnprintf(target, size, format, args);
+	/* check return code? */
+	(void)vsnprintf(target, size, format, args);
 	va_end(args);
 
 	ENSURE(strlen(target) < size);

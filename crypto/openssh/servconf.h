@@ -1,5 +1,5 @@
-/* $OpenBSD: servconf.h,v 1.79 2006/08/14 12:40:25 dtucker Exp $ */
-/* $FreeBSD: release/7.0.0/crypto/openssh/servconf.h 172506 2007-10-10 16:59:15Z cvs2svn $	*/
+/* $OpenBSD: servconf.h,v 1.95 2010/11/13 23:27:50 djm Exp $ */
+/* $FreeBSD$ */
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -25,6 +25,7 @@
 #define MAX_DENY_GROUPS		256	/* Max # groups on deny list. */
 #define MAX_SUBSYSTEMS		256	/* Max # subsystems. */
 #define MAX_HOSTKEYS		256	/* Max # hostkeys. */
+#define MAX_HOSTCERTS		256	/* Max # host certificates. */
 #define MAX_ACCEPT_ENV		256	/* Max # of env vars. */
 #define MAX_MATCH_GROUPS	256	/* Max # of groups for Match. */
 
@@ -36,16 +37,22 @@
 #define	PERMIT_YES		3
 
 #define DEFAULT_AUTH_FAIL_MAX	6	/* Default for MaxAuthTries */
+#define DEFAULT_SESSIONS_MAX	10	/* Default for MaxSessions */
+
+/* Magic name for internal sftp-server */
+#define INTERNAL_SFTP_NAME	"internal-sftp"
 
 typedef struct {
-	u_int num_ports;
-	u_int ports_from_cmdline;
-	u_short ports[MAX_PORTS];	/* Port number to listen on. */
+	u_int	num_ports;
+	u_int	ports_from_cmdline;
+	int	ports[MAX_PORTS];	/* Port number to listen on. */
 	char   *listen_addr;		/* Address on which the server listens. */
 	struct addrinfo *listen_addrs;	/* Addresses on which the server listens. */
 	int     address_family;		/* Address family used by the server. */
 	char   *host_key_files[MAX_HOSTKEYS];	/* Files containing host keys. */
 	int     num_host_key_files;     /* Number of files for host keys. */
+	char   *host_cert_files[MAX_HOSTCERTS];	/* Files containing host certs. */
+	int     num_host_cert_files;     /* Number of files for host certs. */
 	char   *pid_file;	/* Where to put our pid */
 	int     server_key_bits;/* Size of the server key. */
 	int     login_grace_time;	/* Disconnect if no auth in this time
@@ -64,8 +71,11 @@ typedef struct {
 	char   *xauth_location;	/* Location of xauth program */
 	int     strict_modes;	/* If true, require string home dir modes. */
 	int     tcp_keep_alive;	/* If true, set SO_KEEPALIVE. */
+	int	ip_qos_interactive;	/* IP ToS/DSCP/class for interactive */
+	int	ip_qos_bulk;		/* IP ToS/DSCP/class for bulk traffic */
 	char   *ciphers;	/* Supported SSH2 ciphers. */
 	char   *macs;		/* Supported SSH2 macs. */
+	char   *kex_algorithms;	/* SSH2 kex methods in order of preference. */
 	int	protocol;	/* Supported protocol versions. */
 	int     gateway_ports;	/* If true, allow remote connects to forwarded ports. */
 	SyslogFacility log_facility;	/* Facility for system logging. */
@@ -93,12 +103,15 @@ typedef struct {
 						 * authentication. */
 	int     kbd_interactive_authentication;	/* If true, permit */
 	int     challenge_response_authentication;
+	int     zero_knowledge_password_authentication;
+					/* If true, permit jpake auth */
 	int     permit_empty_passwd;	/* If false, do not permit empty
 					 * passwords. */
 	int     permit_user_env;	/* If true, read ~/.ssh/environment */
 	int     use_login;	/* If true, login(1) is used */
 	int     compression;	/* If true, compression is allowed */
 	int	allow_tcp_forwarding;
+	int	allow_agent_forwarding;
 	u_int num_allow_users;
 	char   *allow_users[MAX_ALLOW_USERS];
 	u_int num_deny_users;
@@ -120,6 +133,7 @@ typedef struct {
 	int	max_startups_rate;
 	int	max_startups;
 	int	max_authtries;
+	int	max_sessions;
 	char   *banner;			/* SSH-2 banner message */
 	int	use_dns;
 	int	client_alive_interval;	/*
@@ -142,6 +156,20 @@ typedef struct {
 	int	permit_tun;
 
 	int	num_permitted_opens;
+
+	char   *chroot_directory;
+	char   *revoked_keys_file;
+	char   *trusted_user_ca_keys;
+	char   *authorized_principals_file;
+
+	int	hpn_disabled;		/* Disable HPN functionality. */
+	int	hpn_buffer_size;	/* Set HPN buffer size - default 2MB.*/
+	int	tcp_rcv_buf_poll;	/* Poll TCP rcv window in autotuning
+					 * kernels. */
+
+#ifdef	NONE_CIPHER_ENABLED
+	int	none_enabled;		/* Enable NONE cipher switch. */
+#endif
 }       ServerOptions;
 
 void	 initialize_server_options(ServerOptions *);
@@ -153,6 +181,8 @@ void	 parse_server_config(ServerOptions *, const char *, Buffer *,
 	     const char *, const char *, const char *);
 void	 parse_server_match_config(ServerOptions *, const char *, const char *,
 	     const char *);
-void	 copy_set_server_options(ServerOptions *, ServerOptions *);
+void	 copy_set_server_options(ServerOptions *, ServerOptions *, int);
+void	 dump_config(ServerOptions *);
+char	*derelativise_path(const char *);
 
 #endif				/* SERVCONF_H */

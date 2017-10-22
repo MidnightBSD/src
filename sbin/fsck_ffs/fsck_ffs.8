@@ -27,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)fsck.8	8.4 (Berkeley) 5/9/95
-.\" $FreeBSD: release/7.0.0/sbin/fsck_ffs/fsck_ffs.8 150365 2005-09-20 08:02:38Z delphij $
+.\" $FreeBSD$
 .\"
-.Dd April 24, 2001
+.Dd April 27, 2011
 .Dt FSCK_FFS 8
 .Os
 .Sh NAME
@@ -38,7 +38,7 @@
 .Nd file system consistency check and interactive repair
 .Sh SYNOPSIS
 .Nm
-.Op Fl BFpfny
+.Op Fl BEFfnpry
 .Op Fl b Ar block
 .Op Fl c Ar level
 .Op Fl m Ar mode
@@ -46,9 +46,9 @@
 .Ar ...
 .Sh DESCRIPTION
 The specified disk partitions and/or file systems are checked.
-In "preen" mode the clean flag of each file system's superblock is examined
-and only those file systems that
-are not marked clean are checked.
+In "preen" or "check clean" mode the clean flag of each file system's
+superblock is examined and only those file systems that are not marked clean
+are checked.
 File systems are marked clean when they are unmounted,
 when they have been mounted read-only, or when
 .Nm
@@ -139,6 +139,34 @@ action.
 The following flags are interpreted by
 .Nm :
 .Bl -tag -width indent
+.It Fl B
+A check is done on the specified and possibly active file system.
+The set of corrections that can be done is limited to those done
+when running in preen mode (see the
+.Fl p
+flag).
+If unexpected errors are found,
+the file system is marked as needing a foreground check and
+.Nm
+exits without attempting any further cleaning.
+.It Fl E
+Clear unallocated blocks, notifying the underlying device that they
+are not used and that their contents may be discarded.
+This is useful for filesystems which have been mounted on systems
+without TRIM support, or with TRIM support disabled, as well as
+filesystems which have been copied from one device to another.
+.Pp
+See the
+.Fl E
+and
+.Fl t
+flags of
+.Xr newfs 8 ,
+and
+the
+.Fl t
+flag of
+.Xr tunefs 8 .
 .It Fl F
 Determine whether the file system needs to be cleaned immediately
 in foreground, or if its cleaning can be deferred to background.
@@ -160,21 +188,19 @@ The only thing that
 .Nm
 does is to determine whether a foreground or background
 check is needed and exit with an appropriate status code.
-.It Fl B
-A check is done on the specified and possibly active file system.
-The set of corrections that can be done is limited to those done
-when running in preen mode (see the
-.Fl p
-flag).
-If unexpected errors are found,
-the file system is marked as needing a foreground check and
-.Nm
-exits without attempting any further cleaning.
 .It Fl b
 Use the block specified immediately after the flag as
 the super block for the file system.
 An alternate super block is usually located at block 32 for UFS1,
 and block 160 for UFS2.
+.It Fl C
+Check if file system was dismounted cleanly.
+If so, skip file system checks (like "preen").
+However, if the file system was not cleanly dismounted, do full checks,
+as if
+.Nm
+was invoked without
+.Fl C .
 .It Fl c
 Convert the file system to the specified level.
 Note that the level of a file system can only be raised.
@@ -208,6 +234,10 @@ are being converted at once.
 The format of a file system can be determined from the
 first line of output from
 .Xr dumpfs 8 .
+.Pp
+This option implies the
+.Fl f
+flag.
 .It Fl f
 Force
 .Nm
@@ -231,6 +261,15 @@ which is assumed to be affirmative;
 do not open the file system for writing.
 .It Fl p
 Preen file systems (see above).
+.It Fl r
+Free up excess unused inodes.
+Decreasing the number of preallocated inodes reduces the
+running time of future runs of
+.Nm
+and frees up space that can allocated to files.
+The
+.Fl r
+option is ignored when running in preen mode.
 .It Fl y
 Assume a yes response to all questions asked by
 .Nm ;
@@ -294,6 +333,15 @@ If the
 .Pa lost+found
 directory does not exist, it is created.
 If there is insufficient space its size is increased.
+.Pp
+The full foreground
+.Nm
+checks for many more problems that may occur after an
+unrecoverable disk write error.
+Thus, it is recommended that you perform foreground
+.Nm
+on your systems periodically and whenever you encounter
+unrecoverable disk write errors or file-system\-related panics.
 .Sh FILES
 .Bl -tag -width /etc/fstab -compact
 .It Pa /etc/fstab
@@ -301,6 +349,12 @@ contains default list of file systems to check.
 .El
 .Sh EXIT STATUS
 .Ex -std
+.Pp
+If the option
+.Fl F
+is used,
+.Nm
+exits 7 if the file system is clean.
 .Sh DIAGNOSTICS
 The diagnostics produced by
 .Nm

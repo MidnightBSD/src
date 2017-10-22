@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/bin/csh/config_p.h 169626 2007-05-16 21:22:38Z mp $ */
+/* $FreeBSD$ */
 /*
  * config.h -- configure various defines for tcsh
  *
@@ -85,6 +85,7 @@
 /* Use LC_MESSAGES locale category to open the message catalog */
 #define MCLoadBySet NL_CAT_LOCALE
 #define BUFSIZE 8192
+#define UTMPX_FILE "/var/run/utx.active"
 #endif
 
 #if defined(__bsdi__)
@@ -105,9 +106,6 @@
 
 #elif defined(__APPLE__)
 # define SYSMALLOC
-
-#else
-# define NLS_CATALOGS
 #endif
 
 #endif /* _h_config */

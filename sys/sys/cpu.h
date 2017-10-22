@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sys/cpu.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_CPU_H_
@@ -36,12 +36,22 @@
  */
 
 #define CPU_IVAR_PCPU		1
+#define CPU_IVAR_NOMINAL_MHZ	2
 
 static __inline struct pcpu *cpu_get_pcpu(device_t dev)
 {
 	uintptr_t v = 0;
 	BUS_READ_IVAR(device_get_parent(dev), dev, CPU_IVAR_PCPU, &v);
 	return ((struct pcpu *)v);
+}
+
+static __inline int32_t cpu_get_nominal_mhz(device_t dev)
+{
+	uintptr_t v = 0;
+	if (BUS_READ_IVAR(device_get_parent(dev), dev,
+	    CPU_IVAR_NOMINAL_MHZ, &v) != 0)
+		return (-1);
+	return ((int32_t)v);
 }
 
 /*

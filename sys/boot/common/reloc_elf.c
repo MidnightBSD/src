@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/common/reloc_elf.c 153504 2005-12-18 04:52:37Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <machine/elf.h>
@@ -78,7 +78,7 @@ __elfN(reloc)(struct elf_file *ef, symaddr_fn *symaddr, const void *reldata,
 	}
 
 	return (0);
-#elif defined(__i386__) && __ELF_WORD_SIZE == 64
+#elif (defined(__i386__) || defined(__amd64__)) && __ELF_WORD_SIZE == 64
 	Elf64_Addr *where, val;
 	Elf_Addr addend, addr;
 	Elf_Size rtype, symidx;

@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -36,7 +32,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/tail/tail.c 160049 2006-06-30 08:19:26Z ru $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 static const char copyright[] =
@@ -61,7 +57,6 @@ static const char sccsid[] = "@(#)tail.c	8.1 (Berkeley) 6/6/93";
 #include "extern.h"
 
 int Fflag, fflag, qflag, rflag, rval, no_files;
-const char *fname;
 
 file_info_t *files;
 
@@ -72,6 +67,7 @@ int
 main(int argc, char *argv[])
 {
 	struct stat sb;
+	const char *fn;
 	FILE *fp;
 	off_t off;
 	enum STYLE style;
@@ -114,6 +110,7 @@ main(int argc, char *argv[])
 
 	obsolete(argv);
 	style = NOTSET;
+	off = 0;
 	while ((ch = getopt(argc, argv, "Fb:c:fn:qr")) != -1)
 		switch(ch) {
 		case 'F':	/* -F is superset of (and implies) -f */
@@ -174,20 +171,23 @@ main(int argc, char *argv[])
 	}
 
 	if (*argv && fflag) {
-		files = (struct file_info *) malloc(no_files * sizeof(struct file_info));
-		if (! files)
+		files = (struct file_info *) malloc(no_files *
+		    sizeof(struct file_info));
+		if (!files)
 			err(1, "Couldn't malloc space for file descriptors.");
 
-		for (file = files; (fname = *argv++); file++) {
-			file->file_name = malloc(strlen(fname)+1);
+		for (file = files; (fn = *argv++); file++) {
+			file->file_name = strdup(fn);
 			if (! file->file_name)
 				errx(1, "Couldn't malloc space for file name.");
-			strncpy(file->file_name, fname, strlen(fname)+1);
 			if ((file->fp = fopen(file->file_name, "r")) == NULL ||
 			    fstat(fileno(file->fp), &file->st)) {
-				file->fp = NULL;
-				ierr();
-				continue;
+				if (file->fp != NULL) {
+					fclose(file->fp);
+					file->fp = NULL;
+				}
+				if (!Fflag || errno != ENOENT)
+					ierr(file->file_name);
 			}
 		}
 		follow(files, style, off);
@@ -196,29 +196,29 @@ main(int argc, char *argv[])
 		}
 		free(files);
 	} else if (*argv) {
-		for (first = 1; (fname = *argv++);) {
-			if ((fp = fopen(fname, "r")) == NULL ||
+		for (first = 1; (fn = *argv++);) {
+			if ((fp = fopen(fn, "r")) == NULL ||
 			    fstat(fileno(fp), &sb)) {
-				ierr();
+				ierr(fn);
 				continue;
 			}
 			if (argc > 1 && !qflag) {
 				(void)printf("%s==> %s <==\n",
-				    first ? "" : "\n", fname);
+				    first ? "" : "\n", fn);
 				first = 0;
 				(void)fflush(stdout);
 			}
 
 			if (rflag)
-				reverse(fp, style, off, &sb);
+				reverse(fp, fn, style, off, &sb);
 			else
-				forward(fp, style, off, &sb);
+				forward(fp, fn, style, off, &sb);
 		}
 	} else {
-		fname = "stdin";
+		fn = "stdin";
 
 		if (fstat(fileno(stdin), &sb)) {
-			ierr();
+			ierr(fn);
 			exit(1);
 		}
 
@@ -233,9 +233,9 @@ main(int argc, char *argv[])
 		}
 
 		if (rflag)
-			reverse(stdin, style, off, &sb);
+			reverse(stdin, fn, style, off, &sb);
 		else
-			forward(stdin, style, off, &sb);
+			forward(stdin, fn, style, off, &sb);
 	}
 	exit(rval);
 }

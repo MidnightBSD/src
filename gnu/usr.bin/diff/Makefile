@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/diff/Makefile 170758 2007-06-15 07:09:34Z delphij $
+# $FreeBSD$
 
 DIFFSRC=${.CURDIR}/../../../contrib/diff/src
 .PATH: ${DIFFSRC} \
@@ -15,12 +15,12 @@ SRCS=   analyze.c context.c diff.c dir.c ed.c ifdef.c io.c \
 # Important for ctype macros!
 CFLAGS+=-funsigned-char
 
+CFLAGS+=-DHAVE_CONFIG_H
+CFLAGS+=-DPR_PROGRAM=\"/usr/bin/pr\"
 CFLAGS+=-I${DESTDIR}/usr/include/gnu
 CFLAGS+=-I${.CURDIR}/../../../contrib/diff
 CFLAGS+=-I${.CURDIR}/../../../contrib/diff/src
 CFLAGS+=-I${.CURDIR}/../../../contrib/diff/lib
-CFLAGS+=-DHAVE_CONFIG_H
-CFLAGS+=-DPR_PROGRAM=\"/usr/bin/pr\"
 
 SUBDIR+=doc
 
@@ -29,7 +29,7 @@ LDADD=	-lgnuregex
 
 .for f in diff.c context.c
 ${f}: ${DIFFSRC}/${f} ${.CURDIR}/${f}.diff
-	patch -s -b .orig -o ${.TARGET} < ${.CURDIR}/${f}.diff ${DIFFSRC}/${f}
+	patch -s -o ${.TARGET} < ${.CURDIR}/${f}.diff ${DIFFSRC}/${f}
 CLEANFILES+= ${f}
 .endfor
 

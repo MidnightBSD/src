@@ -1,10 +1,15 @@
-/* $FreeBSD: release/7.0.0/tools/regression/mqueue/mqtest3/mqtest3.c 165829 2007-01-06 11:32:15Z davidxu $ */
-#include <stdio.h>
-#include <mqueue.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <unistd.h>
+/* $FreeBSD$ */
+
+#include <sys/types.h>
 #include <sys/select.h>
+#include <sys/wait.h>
+#include <err.h>
+#include <fcntl.h>
+#include <mqueue.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #define MQNAME	"/mytstqueue3"
 #define LOOPS	1000

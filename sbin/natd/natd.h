@@ -9,13 +9,16 @@
  *
  * Ari Suutari <suutari@iki.fi>
  *
- * $FreeBSD: release/7.0.0/sbin/natd/natd.h 131567 2004-07-04 12:53:54Z phk $
+ * $FreeBSD$
  */
 
 #define PIDFILE	"/var/run/natd.pid"
 #define	INPUT		1
 #define	OUTPUT		2
 #define	DONT_KNOW	3
+
+#define EXIT_DELAY	10000
+#define MAX_EXIT_DELAY	999999
 
 extern void Quit (const char* msg);
 extern void Warn (const char* msg);

@@ -12,7 +12,7 @@
  * all derivative works or modified versions.
  *
  * Cronyx Id: csigma.c,v 1.1.2.1 2003/11/12 17:13:41 rik Exp $
- * $FreeBSD: release/7.0.0/sys/dev/cx/csigma.c 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  */
 #include <dev/cx/machdep.h>
 #include <dev/cx/cxddk.h>

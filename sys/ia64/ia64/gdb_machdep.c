@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/gdb_machdep.c 139790 2005-01-06 22:18:23Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -177,7 +177,7 @@ gdb_cpu_query(void)
 	 * kernel stack address. See also ptrace_machdep().
 	 */
 	bspstore = kdb_frame->tf_special.bspstore;
-	kstack = (bspstore >= IA64_RR_BASE(5)) ? (uint64_t*)bspstore :
+	kstack = (bspstore >= VM_MAXUSER_ADDRESS) ? (uint64_t*)bspstore :
 	    (uint64_t*)(kdb_thread->td_kstack + (bspstore & 0x1ffUL));
 	gdb_tx_begin('\0');
 	gdb_tx_mem((void*)(kstack + slot), 8);

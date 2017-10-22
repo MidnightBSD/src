@@ -1,5 +1,5 @@
-# $FreeBSD: release/7.0.0/lib/bind/Makefile 135549 2004-09-21 19:01:48Z des $
+# $FreeBSD$
 
-SUBDIR=		bind bind9 dns isc isccc isccfg lwres
+SUBDIR=		isc isccc dns isccfg bind9 lwres
 
 .include <bsd.subdir.mk>

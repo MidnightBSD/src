@@ -20,7 +20,7 @@
 
 ; See the GCC internals manual for a description of this file's format.
 
-; $FreeBSD: release/7.0.0/contrib/gcc/c.opt 174854 2007-12-22 06:32:46Z cvs2svn $
+; $FreeBSD$
 ; Please try to keep this file in ASCII collating order.
 
 Language
@@ -403,6 +403,10 @@ Do not suppress warnings from system headers
 Wtraditional
 C ObjC Var(warn_traditional)
 Warn about features not present in traditional C
+
+Wtrampolines
+Common Var(warn_trampolines)
+Warn when trampolines are emitted
 
 Wtrigraphs
 C ObjC C++ ObjC++

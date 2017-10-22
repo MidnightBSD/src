@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/sparc64/fpu/fpu_sqrt.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Perform an FPU square root (return sqrt(x)).
@@ -334,7 +334,7 @@ __fpu_sqrt(fe)
 	FPU_SUBC(d0, x0, t0);
 	if ((int)d0 >= 0) {
 		x0 = d0, x1 = d1, x2 = d2;
-		q |= bit;
+		q = bit;
 		y1 |= 1;		/* now t1, y1 are set in concrete */
 	}
 	ODD_DOUBLE;
@@ -366,12 +366,12 @@ __fpu_sqrt(fe)
 	FPU_SUBCS(d2, x2, t2);
 	FPU_SUBCS(d1, x1, t1);
 	FPU_SUBC(d0, x0, t0);
-	ODD_DOUBLE;
 	if ((int)d0 >= 0) {
-		x0 = d0, x1 = d1, x2 = d2;
-		q |= bit;
+		x0 = d0, x1 = d1, x2 = d2; x3 = d3;
+		q = bit;
 		y2 |= 1;
 	}
+	ODD_DOUBLE;
 	while ((bit >>= 1) != 0) {
 		EVEN_DOUBLE;
 		t3 = y3 | bit;
@@ -380,7 +380,7 @@ __fpu_sqrt(fe)
 		FPU_SUBCS(d1, x1, t1);
 		FPU_SUBC(d0, x0, t0);
 		if ((int)d0 >= 0) {
-			x0 = d0, x1 = d1, x2 = d2;
+			x0 = d0, x1 = d1, x2 = d2; x3 = d3;
 			q |= bit;
 			y3 |= bit << 1;
 		}

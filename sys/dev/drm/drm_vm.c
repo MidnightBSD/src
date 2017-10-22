@@ -22,42 +22,40 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/drm/drm_vm.c 152909 2005-11-28 23:13:57Z anholt $");
+__FBSDID("$FreeBSD$");
+
+/** @file drm_vm.c
+ * Support code for mmaping of DRM maps.
+ */
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500102
-int drm_mmap(struct cdev *kdev, vm_offset_t offset, vm_paddr_t *paddr,
-    int prot)
-#elif defined(__FreeBSD__)
-int drm_mmap(dev_t kdev, vm_offset_t offset, int prot)
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
-paddr_t drm_mmap(dev_t kdev, off_t offset, int prot)
-#endif
+int drm_mmap(struct cdev *kdev, vm_ooffset_t offset, vm_paddr_t *paddr,
+    int prot, vm_memattr_t *memattr)
 {
-	DRM_DEVICE;
+	struct drm_device *dev = drm_get_device_from_kdev(kdev);
+	struct drm_file *file_priv = NULL;
 	drm_local_map_t *map;
-	drm_file_t *priv;
-	drm_map_type_t type;
-#ifdef __FreeBSD__
+	enum drm_map_type type;
 	vm_paddr_t phys;
-#else
-	paddr_t phys;
-#endif
+	int error;
 
-	DRM_LOCK();
-	priv = drm_find_file_by_proc(dev, DRM_CURPROC);
-	DRM_UNLOCK();
-	if (priv == NULL) {
-		DRM_ERROR("can't find authenticator\n");
+	/* d_mmap gets called twice, we can only reference file_priv during
+	 * the first call.  We need to assume that if error is EBADF the
+	 * call was succesful and the client is authenticated.
+	 */
+	error = devfs_get_cdevpriv((void **)&file_priv);
+	if (error == ENOENT) {
+		DRM_ERROR("Could not find authenticator!\n");
 		return EINVAL;
 	}
 
-	if (!priv->authenticated)
-		return DRM_ERR(EACCES);
+	if (file_priv && !file_priv->authenticated)
+		return EACCES;
 
-	if (dev->dma && offset >= 0 && offset < ptoa(dev->dma->page_count)) {
+	DRM_DEBUG("called with offset %016jx\n", offset);
+	if (dev->dma && offset < ptoa(dev->dma->page_count)) {
 		drm_device_dma_t *dma = dev->dma;
 
 		DRM_SPINLOCK(&dev->dma_lock);
@@ -66,39 +64,40 @@ paddr_t drm_mmap(dev_t kdev, off_t offset, int prot)
 			unsigned long page = offset >> PAGE_SHIFT;
 			unsigned long phys = dma->pagelist[page];
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500102
-			*paddr = phys;
 			DRM_SPINUNLOCK(&dev->dma_lock);
+			*paddr = phys;
 			return 0;
-#else
-			return atop(phys);
-#endif
 		} else {
 			DRM_SPINUNLOCK(&dev->dma_lock);
 			return -1;
 		}
-		DRM_SPINUNLOCK(&dev->dma_lock);
 	}
 
-				/* A sequential search of a linked list is
-				   fine here because: 1) there will only be
-				   about 5-10 entries in the list and, 2) a
-				   DRI client only has to do this mapping
-				   once, so it doesn't have to be optimized
-				   for performance, even if the list was a
-				   bit longer. */
+	/* A sequential search of a linked list is
+	   fine here because: 1) there will only be
+	   about 5-10 entries in the list and, 2) a
+	   DRI client only has to do this mapping
+	   once, so it doesn't have to be optimized
+	   for performance, even if the list was a
+	   bit longer.
+	*/
 	DRM_LOCK();
 	TAILQ_FOREACH(map, &dev->maplist, link) {
-		if (offset >= map->offset && offset < map->offset + map->size)
+		if (offset >> DRM_MAP_HANDLE_SHIFT ==
+		    (unsigned long)map->handle >> DRM_MAP_HANDLE_SHIFT)
 			break;
 	}
 
 	if (map == NULL) {
+		DRM_DEBUG("Can't find map, request offset = %016jx\n", offset);
+		TAILQ_FOREACH(map, &dev->maplist, link) {
+			DRM_DEBUG("map offset = %016lx, handle = %016lx\n",
+			    map->offset, (unsigned long)map->handle);
+		}
 		DRM_UNLOCK();
-		DRM_DEBUG("can't find map\n");
 		return -1;
 	}
-	if (((map->flags&_DRM_RESTRICTED) && !DRM_SUSER(DRM_CURPROC))) {
+	if (((map->flags & _DRM_RESTRICTED) && !DRM_SUSER(DRM_CURPROC))) {
 		DRM_UNLOCK();
 		DRM_DEBUG("restricted map\n");
 		return -1;
@@ -106,29 +105,29 @@ paddr_t drm_mmap(dev_t kdev, off_t offset, int prot)
 	type = map->type;
 	DRM_UNLOCK();
 
+	offset = offset & ((1ULL << DRM_MAP_HANDLE_SHIFT) - 1);
+
 	switch (type) {
 	case _DRM_FRAME_BUFFER:
-	case _DRM_REGISTERS:
 	case _DRM_AGP:
-		phys = offset;
-		break;
-	case _DRM_CONSISTENT:
-		phys = vtophys((char *)map->handle + (offset - map->offset));
+		*memattr = VM_MEMATTR_WRITE_COMBINING;
+		/* FALLTHROUGH */
+	case _DRM_REGISTERS:
+		phys = map->offset + offset;
 		break;
 	case _DRM_SCATTER_GATHER:
+		*memattr = VM_MEMATTR_WRITE_COMBINING;
+		/* FALLTHROUGH */
+	case _DRM_CONSISTENT:
 	case _DRM_SHM:
-		phys = vtophys(offset);
+		phys = vtophys((char *)map->virtual + offset);
 		break;
 	default:
 		DRM_ERROR("bad map type %d\n", type);
 		return -1;	/* This should never happen. */
 	}
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500102
 	*paddr = phys;
 	return 0;
-#else
-	return atop(phys);
-#endif
 }
 

@@ -22,11 +22,11 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/usr.bin/lockf/lockf.1 173613 2007-11-14 19:25:05Z ru $
+.\" $FreeBSD$
 .\"
 .Dd July 7, 1998
-.Os
 .Dt LOCKF 1
+.Os
 .Sh NAME
 .Nm lockf
 .Nd execute a command while holding a file lock
@@ -138,6 +138,11 @@ command line.
 A system call (e.g.,
 .Xr fork 2 )
 failed unexpectedly.
+.It Dv EX_SOFTWARE
+The
+.Ar command
+did not exit normally,
+but may have been signaled or stopped.
 .El
 .Sh SEE ALSO
 .Xr flock 2 ,

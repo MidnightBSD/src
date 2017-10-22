@@ -1,13 +1,25 @@
-/* $FreeBSD: release/7.0.0/secure/lib/libcrypto/opensslconf-i386.h 169425 2007-05-09 19:37:02Z gnn $ */
+/* $FreeBSD$ */
 /* opensslconf.h */
 /* WARNING: Generated automatically from opensslconf.h.in by Configure. */
 
 /* OpenSSL was configured with the following options: */
 #ifndef OPENSSL_DOING_MAKEDEPEND
 
+/* Disabled by default in OpenSSL 0.9.8. */
+#ifndef OPENSSL_NO_CMS
+# define OPENSSL_NO_CMS
+#endif
+/* Disabled by default in OpenSSL 0.9.8. */
+#ifndef OPENSSL_NO_SEED
+# define OPENSSL_NO_SEED
+#endif
 /* libgmp is not in the FreeBSD base system. */
 #ifndef OPENSSL_NO_GMP
 # define OPENSSL_NO_GMP
+#endif
+/* jpake is marked experimental in OpenSSL 0.9.8. */
+#ifndef OPENSSL_NO_JPAKE
+# define OPENSSL_NO_JPAKE
 #endif
 /* The Kerberos 5 support is MIT-specific. */
 #ifndef OPENSSL_NO_KRB5

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/pci/intpm.c 173060 2007-10-27 13:27:02Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -53,6 +53,8 @@ struct intsmb_softc {
 	void			*irq_hand;
 	device_t		smbus;
 	int			isbusy;
+	int			cfg_irq9;
+	int			poll;
 	struct mtx		lock;
 };
 
@@ -96,6 +98,16 @@ intsmb_probe(device_t dev)
 #endif
 		device_set_desc(dev, "Intel PIIX4 SMBUS Interface");
 		break;
+	case 0x43721002:
+		device_set_desc(dev, "ATI IXP400 SMBus Controller");
+		break;
+	case 0x43851002:
+		/* SB800 and newer can not be configured in a compatible way. */
+		if (pci_get_revid(dev) >= 0x40)
+			return (ENXIO);
+		device_set_desc(dev, "AMD SB600/700/710/750 SMBus Controller");
+		/* XXX Maybe force polling right here? */
+		break;
 	default:
 		return (ENXIO);
 	}
@@ -108,9 +120,23 @@ intsmb_attach(device_t dev)
 {
 	struct intsmb_softc *sc = device_get_softc(dev);
 	int error, rid, value;
+	int intr;
 	char *str;
 
+	sc->dev = dev;
+
 	mtx_init(&sc->lock, device_get_nameunit(dev), "intsmb", MTX_DEF);
+
+	sc->cfg_irq9 = 0;
+#ifndef NO_CHANGE_PCICONF
+	switch (pci_get_devid(dev)) {
+	case 0x71138086:	/* Intel 82371AB */
+	case 0x719b8086:	/* Intel 82443MX */
+		/* Changing configuration is allowed. */
+		sc->cfg_irq9 = 1;
+		break;
+	}
+#endif
 
 	rid = PCI_BASE_ADDR_SMB;
 	sc->io_res = bus_alloc_resource_any(dev, SYS_RES_IOPORT, &rid,
@@ -121,27 +147,42 @@ intsmb_attach(device_t dev)
 		goto fail;
 	}
 
-#ifndef NO_CHANGE_PCICONF
-	pci_write_config(dev, PCIR_INTLINE, 0x9, 1);
-	pci_write_config(dev, PCI_HST_CFG_SMB,
-	    PCI_INTR_SMB_IRQ9 | PCI_INTR_SMB_ENABLE, 1);
-#endif
+	if (sc->cfg_irq9) {
+		pci_write_config(dev, PCIR_INTLINE, 0x9, 1);
+		pci_write_config(dev, PCI_HST_CFG_SMB,
+		    PCI_INTR_SMB_IRQ9 | PCI_INTR_SMB_ENABLE, 1);
+	}
 	value = pci_read_config(dev, PCI_HST_CFG_SMB, 1);
-	switch (value & 0xe) {
+	sc->poll = (value & PCI_INTR_SMB_ENABLE) == 0;
+	intr = value & PCI_INTR_SMB_MASK;
+	switch (intr) {
 	case PCI_INTR_SMB_SMI:
 		str = "SMI";
 		break;
 	case PCI_INTR_SMB_IRQ9:
 		str = "IRQ 9";
 		break;
+	case PCI_INTR_SMB_IRQ_PCI:
+		str = "PCI IRQ";
+		break;
 	default:
 		str = "BOGUS";
 	}
+
 	device_printf(dev, "intr %s %s ", str,
-	    (value & 1) ? "enabled" : "disabled");
+	    sc->poll == 0 ? "enabled" : "disabled");
 	printf("revision %d\n", pci_read_config(dev, PCI_REVID_SMB, 1));
 
-	if ((value & 0xe) != PCI_INTR_SMB_IRQ9) {
+	if (!sc->poll && intr == PCI_INTR_SMB_SMI) {
+		device_printf(dev,
+		    "using polling mode when configured interrupt is SMI\n");
+		sc->poll = 1;
+	}
+
+	if (sc->poll)
+	    goto no_intr;
+
+	if (intr != PCI_INTR_SMB_IRQ9 && intr != PCI_INTR_SMB_IRQ_PCI) {
 		device_printf(dev, "Unsupported interrupt mode\n");
 		error = ENXIO;
 		goto fail;
@@ -149,7 +190,9 @@ intsmb_attach(device_t dev)
 
 	/* Force IRQ 9. */
 	rid = 0;
-	bus_set_resource(dev, SYS_RES_IRQ, rid, 9, 1);
+	if (sc->cfg_irq9)
+		bus_set_resource(dev, SYS_RES_IRQ, rid, 9, 1);
+
 	sc->irq_res = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid,
 	    RF_SHAREABLE | RF_ACTIVE);
 	if (sc->irq_res == NULL) {
@@ -158,17 +201,14 @@ intsmb_attach(device_t dev)
 		goto fail;
 	}
 
-	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_MISC, NULL, 
-	    intsmb_rawintr, sc, &sc->irq_hand);
+	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_MISC | INTR_MPSAFE,
+	    NULL, intsmb_rawintr, sc, &sc->irq_hand);
 	if (error) {
 		device_printf(dev, "Failed to map intr\n");
 		goto fail;
 	}
 
-	value = pci_read_config(dev, PCI_BASE_ADDR_PM, 4);
-	device_printf(dev, "PM %s %x\n", (value & 1) ? "I/O mapped" : "Memory",
-	    value & 0xfffe);
-
+no_intr:
 	sc->isbusy = 0;
 	sc->smbus = device_add_child(dev, "smbus", -1);
 	if (sc->smbus == NULL) {
@@ -235,7 +275,7 @@ intsmb_callback(device_t dev, int index, void *data)
 	case SMB_RELEASE_BUS:
 		break;
 	default:
-		error = EINVAL;
+		error = SMB_EINVAL;
 	}
 
 	return (error);
@@ -363,13 +403,13 @@ intsmb_start(struct intsmb_softc *sc, unsigned char cmd, int nointr)
 	tmp |= PIIX4_SMBHSTCNT_START;
 
 	/* While not in autoconfiguration enable interrupts. */
-	if (!cold || !nointr)
+	if (!sc->poll && !cold && !nointr)
 		tmp |= PIIX4_SMBHSTCNT_INTREN;
 	bus_write_1(sc->io_res, PIIX4_SMBHSTCNT, tmp);
 }
 
 static int
-intsmb_error(int status)
+intsmb_error(device_t dev, int status)
 {
 	int error = 0;
 
@@ -379,6 +419,10 @@ intsmb_error(int status)
 		error |= SMB_ECOLLI;
 	if (status & PIIX4_SMBHSTSTAT_FAIL)
 		error |= SMB_ENOACK;
+
+	if (error != 0 && bootverbose)
+		device_printf(dev, "error = %d, status = %#x\n", error, status);
+
 	return (error);
 }
 
@@ -408,9 +452,7 @@ intsmb_stop_poll(struct intsmb_softc *sc)
 		status = bus_read_1(sc->io_res, PIIX4_SMBHSTSTS);
 		if (!(status & PIIX4_SMBHSTSTAT_BUSY)) {
 			sc->isbusy = 0;
-			error = intsmb_error(status);
-			if (error == 0 && !(status & PIIX4_SMBHSTSTAT_INTR))
-				device_printf(sc->dev, "unknown cause why?");
+			error = intsmb_error(sc->dev, status);
 			return (error);
 		}
 	}
@@ -432,7 +474,7 @@ intsmb_stop(struct intsmb_softc *sc)
 
 	INTSMB_LOCK_ASSERT(sc);
 
-	if (cold)
+	if (sc->poll || cold)
 		/* So that it can use device during device probe on SMBus. */
 		return (intsmb_stop_poll(sc));
 
@@ -440,7 +482,7 @@ intsmb_stop(struct intsmb_softc *sc)
 	if (error == 0) {
 		status = bus_read_1(sc->io_res, PIIX4_SMBHSTSTS);
 		if (!(status & PIIX4_SMBHSTSTAT_BUSY)) {
-			error = intsmb_error(status);
+			error = intsmb_error(sc->dev, status);
 			if (error == 0 && !(status & PIIX4_SMBHSTSTAT_INTR))
 				device_printf(sc->dev, "unknown cause why?\n");
 #ifdef ENABLE_ALART
@@ -480,7 +522,7 @@ intsmb_quick(device_t dev, u_char slave, int how)
 		data |= LSB;
 		break;
 	default:
-		return (EINVAL);
+		return (SMB_EINVAL);
 	}
 
 	INTSMB_LOCK(sc);
@@ -735,7 +777,7 @@ intsmb_bread(device_t dev, u_char slave, char cmd, u_char *count, char *buf)
 			}
 			*count = nread;
 		} else
-			error = EIO;
+			error = SMB_EBUSERR;
 	}
 	INTSMB_UNLOCK(sc);
 	return (error);
@@ -748,9 +790,6 @@ static device_method_t intsmb_methods[] = {
 	DEVMETHOD(device_probe,		intsmb_probe),
 	DEVMETHOD(device_attach,	intsmb_attach),
 	DEVMETHOD(device_detach,	intsmb_detach),
-
-	/* Bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
 
 	/* SMBus interface */
 	DEVMETHOD(smbus_callback,	intsmb_callback),
@@ -765,7 +804,7 @@ static device_method_t intsmb_methods[] = {
 	DEVMETHOD(smbus_bwrite,		intsmb_bwrite),
 	DEVMETHOD(smbus_bread,		intsmb_bread),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t intsmb_driver = {

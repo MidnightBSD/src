@@ -1,4 +1,4 @@
-/* $OpenBSD: ssh2.h,v 1.10 2006/03/25 22:22:43 djm Exp $ */
+/* $OpenBSD: ssh2.h,v 1.14 2010/08/31 11:54:45 djm Exp $ */
 
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
@@ -98,6 +98,10 @@
 #define SSH2_MSG_KEX_DH_GEX_REPLY			33
 #define SSH2_MSG_KEX_DH_GEX_REQUEST			34
 
+/* ecdh */
+#define SSH2_MSG_KEX_ECDH_INIT				30
+#define SSH2_MSG_KEX_ECDH_REPLY				31
+
 /* user authentication: generic */
 
 #define SSH2_MSG_USERAUTH_REQUEST			50
@@ -111,6 +115,12 @@
 #define SSH2_MSG_USERAUTH_PASSWD_CHANGEREQ		60
 #define SSH2_MSG_USERAUTH_INFO_REQUEST			60
 #define SSH2_MSG_USERAUTH_INFO_RESPONSE			61
+#define SSH2_MSG_USERAUTH_JPAKE_CLIENT_STEP1		60
+#define SSH2_MSG_USERAUTH_JPAKE_SERVER_STEP1		61
+#define SSH2_MSG_USERAUTH_JPAKE_CLIENT_STEP2		62
+#define SSH2_MSG_USERAUTH_JPAKE_SERVER_STEP2		63
+#define SSH2_MSG_USERAUTH_JPAKE_CLIENT_CONFIRM		64
+#define SSH2_MSG_USERAUTH_JPAKE_SERVER_CONFIRM		65
 
 /* connection protocol: generic */
 
@@ -159,3 +169,14 @@
 #define SSH2_OPEN_RESOURCE_SHORTAGE			4
 
 #define SSH2_EXTENDED_DATA_STDERR			1
+
+/* kex messages for resume@appgate.com */
+#define SSH2_MSG_KEX_ROAMING_RESUME			30
+#define SSH2_MSG_KEX_ROAMING_AUTH_REQUIRED		31
+#define SSH2_MSG_KEX_ROAMING_AUTH			32
+#define SSH2_MSG_KEX_ROAMING_AUTH_OK			33
+#define SSH2_MSG_KEX_ROAMING_AUTH_FAIL			34
+
+/* Certificate types for OpenSSH certificate keys extension */
+#define SSH2_CERT_TYPE_USER				1
+#define SSH2_CERT_TYPE_HOST				2

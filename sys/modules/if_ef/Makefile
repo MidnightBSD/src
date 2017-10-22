@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/if_ef/Makefile 161283 2006-08-14 13:28:53Z des $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../net
 

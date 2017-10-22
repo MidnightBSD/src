@@ -1,5 +1,5 @@
 .\"-
-.\" Copyright (c) 2000-2004 Dag-Erling Coïdan Smørgrav
+.\" Copyright (c) 2000-2012 Dag-Erling SmÃ¸rgrav
 .\" All rights reserved.
 .\" Portions Copyright (c) 1999 Massachusetts Institute of Technology; used
 .\" by permission.
@@ -27,9 +27,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/usr.bin/fetch/fetch.1 157953 2006-04-22 03:04:24Z jkoshy $
+.\" $FreeBSD$
 .\"
-.Dd March 11, 2003
+.Dd February 28, 2012
 .Dt FETCH 1
 .Os
 .Sh NAME
@@ -37,17 +37,25 @@
 .Nd retrieve a file by Uniform Resource Locator
 .Sh SYNOPSIS
 .Nm
-.Op Fl 146AFMPRUadlmnpqrsv
+.Op Fl 146AadFlMmnPpqRrsUv
 .Op Fl B Ar bytes
-.Op Fl S Ar bytes
-.Op Fl T Ar seconds
+.Op Fl i Ar file
 .Op Fl N Ar file
 .Op Fl o Ar file
+.Op Fl S Ar bytes
+.Op Fl T Ar seconds
 .Op Fl w Ar seconds
-.Op Fl h Ar host
-.Op Fl c Ar dir
-.Op Fl f Ar file
-.Op Ar URL ...
+.Ar URL ...
+.Nm
+.Op Fl 146AadFlMmnPpqRrsUv
+.Op Fl B Ar bytes
+.Op Fl i Ar file
+.Op Fl N Ar file
+.Op Fl o Ar file
+.Op Fl S Ar bytes
+.Op Fl T Ar seconds
+.Op Fl w Ar seconds
+.Fl h Ar host Fl f Ar file Oo Fl c Ar dir Oc
 .Sh DESCRIPTION
 The
 .Nm
@@ -59,7 +67,7 @@ command line.
 .Pp
 The following options are available:
 .Bl -tag -width Fl
-.It Fl \&1
+.It Fl 1
 Stop and return exit code 0 at the first successfully retrieved file.
 .It Fl 4
 Forces
@@ -110,6 +118,12 @@ The file to retrieve is located on the host
 .Ar host .
 This option is deprecated and is provided for backward compatibility
 only.
+.It Fl i Ar file
+If-Modified-Since mode: the remote file will only be retrieved if it
+is newer than
+.Ar file
+on the local host.
+(HTTP only)
 .It Fl l
 If the target is a file-scheme URL, make a symbolic link to the target
 rather than trying to copy it.
@@ -151,11 +165,13 @@ directory, with name(s) selected as in the default behaviour.
 .It Fl P
 .It Fl p
 Use passive FTP.
-This is useful if you are behind a firewall which blocks incoming
-connections.
-Try this flag if
-.Nm
-seems to hang when retrieving FTP URLs.
+These flags have no effect, since passive FTP is the default, but are
+provided for compatibility with earlier versions where active FTP was
+the default.
+To force active mode, set the
+.Ev FTP_PASSIVE_MODE
+environment variable to
+.Ql NO .
 .It Fl q
 Quiet mode.
 .It Fl R
@@ -198,6 +214,11 @@ When the
 flag is specified, wait this many seconds between successive retries.
 .El
 .Pp
+.Ar URL
+.Bd -literal
+    <scheme>:(//(<user>(:<pwd>)?@)?<host>(:<port>)?)?/(<document>)?
+.Ed
+.Pp
 If
 .Nm
 receives a
@@ -212,19 +233,29 @@ message.
 .Sh ENVIRONMENT
 .Bl -tag -width HTTP_TIMEOUT
 .It Ev FTP_TIMEOUT
-maximum time, in seconds, to wait before aborting an FTP connection.
+Maximum time, in seconds, to wait before aborting an FTP connection.
 .It Ev HTTP_TIMEOUT
-maximum time, in seconds, to wait before aborting an HTTP connection.
+Maximum time, in seconds, to wait before aborting an HTTP connection.
 .El
 .Pp
-All environment variables mentioned in the documentation for the
+See
 .Xr fetch 3
-library are supported.
-A number of these are quite important to the proper operation of
-.Nm ;
-you are strongly encouraged to read
-.Xr fetch 3
-as well.
+for a description of additional environment variables, including
+.Ev FETCH_BIND_ADDRESS ,
+.Ev FTP_LOGIN ,
+.Ev FTP_PASSIVE_MODE ,
+.Ev FTP_PASSWORD ,
+.Ev FTP_PROXY ,
+.Ev ftp_proxy ,
+.Ev HTTP_AUTH ,
+.Ev HTTP_PROXY ,
+.Ev http_proxy ,
+.Ev HTTP_PROXY_AUTH ,
+.Ev HTTP_REFERER ,
+.Ev HTTP_USER_AGENT ,
+.Ev NETRC ,
+.Ev NO_PROXY No and
+.Ev no_proxy .
 .Sh EXIT STATUS
 The
 .Nm
@@ -233,6 +264,12 @@ If multiple URLs are listed on the command line,
 .Nm
 will attempt to retrieve each one of them in turn, and will return
 zero only if they were all successfully retrieved.
+.Pp
+If the
+.Fl i
+argument is used and the remote file is not newer than the
+specified file then the command will still return success,
+although no file is transferred.
 .Sh SEE ALSO
 .Xr fetch 3
 .Sh HISTORY

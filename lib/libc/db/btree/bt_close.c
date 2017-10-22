@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)bt_close.c	8.7 (Berkeley) 8/17/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/db/btree/bt_close.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -61,8 +61,7 @@ static int bt_meta(BTREE *);
  *	RET_ERROR, RET_SUCCESS
  */
 int
-__bt_close(dbp)
-	DB *dbp;
+__bt_close(DB *dbp)
 {
 	BTREE *t;
 	int fd;
@@ -116,9 +115,7 @@ __bt_close(dbp)
  *	RET_SUCCESS, RET_ERROR.
  */
 int
-__bt_sync(dbp, flags)
-	const DB *dbp;
-	u_int flags;
+__bt_sync(const DB *dbp, u_int flags)
 {
 	BTREE *t;
 	int status;
@@ -159,8 +156,7 @@ __bt_sync(dbp, flags)
  *	RET_ERROR, RET_SUCCESS
  */
 static int
-bt_meta(t)
-	BTREE *t;
+bt_meta(BTREE *t)
 {
 	BTMETA m;
 	void *p;

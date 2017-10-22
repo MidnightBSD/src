@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/mii/rgephyreg.h 173350 2007-11-05 01:39:25Z yongari $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_MII_RGEPHYREG_H_
@@ -66,7 +66,7 @@
 #define RGEPHY_BMSR_EXTSTS	0x0100	/* Extended status present */
 #define RGEPHY_BMSR_PRESUB	0x0040	/* Preamble surpression */
 #define RGEPHY_BMSR_ACOMP	0x0020	/* Autoneg complete */
-#define RGEPHY_BMSR_RFAULT	0x0010	/* Remote fault condition occured */
+#define RGEPHY_BMSR_RFAULT	0x0010	/* Remote fault condition occurred */
 #define RGEPHY_BMSR_ANEG	0x0008	/* Autoneg capable */
 #define RGEPHY_BMSR_LINK	0x0004	/* Link status */
 #define RGEPHY_BMSR_JABBER	0x0002	/* Jabber detected */
@@ -137,7 +137,7 @@
 #define RGEPHY_EXTSTS_T_FD_CAP	0x2000	/* 1000base-T FD capable */
 #define RGEPHY_EXTSTS_T_HD_CAP	0x1000	/* 1000base-T HD capable */
 
-/* RTL8211B(L) */
+/* RTL8211B(L)/RTL8211C(L) */
 #define RGEPHY_MII_SSR		0x11	/* PHY Specific status register */
 #define	RGEPHY_SSR_S1000	0x8000	/* 1000Mbps */
 #define	RGEPHY_SSR_S100		0x4000	/* 100Mbps */
@@ -148,6 +148,7 @@
 #define	RGEPHY_SSR_SPD_DPLX_RESOLVED	0x0800	/* speed/duplex resolved */
 #define	RGEPHY_SSR_LINK		0x0400	/* link up */
 #define	RGEPHY_SSR_MDI_XOVER	0x0040	/* MDI crossover */
+#define	RGEPHY_SSR_ALDPS	0x0008	/* RTL8211C(L) only */
 #define	RGEPHY_SSR_JABBER	0x0001	/* Jabber */
 
 #endif /* _DEV_RGEPHY_MIIREG_H_ */

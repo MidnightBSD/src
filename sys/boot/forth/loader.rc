@@ -1,5 +1,5 @@
 \ Loader.rc
-\ $FreeBSD: release/7.0.0/sys/boot/forth/loader.rc 138427 2004-12-06 05:30:31Z imp $
+\ $FreeBSD$
 \
 \ Includes additional commands
 include /boot/loader.4th

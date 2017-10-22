@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libc/gen/isinf.c 131898 2004-07-10 15:52:26Z marcel $
+ * $FreeBSD$
  */
 
 #include <math.h>

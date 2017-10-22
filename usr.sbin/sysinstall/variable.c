@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/variable.c 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -243,12 +243,12 @@ dump_variables(dialogMenuItem *unused)
     Variable *vp;
 
     if (isDebug())
-	msgDebug("Writing sysinstall variables to file..\n");
+	msgDebug("Writing %s variables to file..\n", ProgName);
 
     fp = fopen("/etc/sysinstall.vars", "w");
     if (!fp) {
-	msgConfirm("Unable to write to /etc/sysinstall.vars: %s",
-		   strerror(errno));
+	msgConfirm("Unable to write to /etc/%s.vars: %s",
+		   ProgName, strerror(errno));
 	return DITEM_FAILURE;
     }
 

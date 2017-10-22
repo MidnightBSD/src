@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/authpf/Makefile 162530 2006-09-21 18:16:22Z kan $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../contrib/pf/authpf
 .PATH:	${.CURDIR}/../../contrib/pf/pfctl
@@ -18,5 +18,7 @@ CFLAGS+= -DENABLE_ALTQ
 
 LDADD+= -lm -lmd -lutil
 DPADD+= ${LIBM} ${LIBMD} ${LIBUTIL}
+
+WARNS?=	3
 
 .include <bsd.prog.mk>

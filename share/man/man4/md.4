@@ -1,13 +1,13 @@
 .\" ----------------------------------------------------------------------------
 .\" "THE BEER-WARE LICENSE" (Revision 42):
-.\" <phk@FreeBSD.ORG> wrote this file.  As long as you retain this notice you
+.\" <phk@FreeBSD.org> wrote this file.  As long as you retain this notice you
 .\" can do whatever you want with this stuff. If we meet some day, and you think
 .\" this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 .\" ----------------------------------------------------------------------------
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man4/md.4 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
-.Dd November 24, 2006
+.Dd October 30, 2007
 .Dt MD 4
 .Os
 .Sh NAME
@@ -65,22 +65,22 @@ For more information, please see
 .Sh EXAMPLES
 To create a kernel with a ramdisk or MD file system, your kernel config
 needs the following options:
-.Bd -literal -ofset indent
-options 	MD_ROOT			#MD is a potential root device
+.Bd -literal -offset indent
+options 	MD_ROOT			# MD is a potential root device
 options		MD_ROOT_SIZE=8192	# 8MB ram disk
 makeoptions	MFS_IMAGE=/h/foo/ARM-MD
-options 	ROOTDEVNAME=\"ufs:md0\"
+options 	ROOTDEVNAME=\\"ufs:md0\\"
 .Ed
+.Pp
 The image in
 .Pa /h/foo/ARM-MD
 will be loaded as the initial image each boot.
 To create the image to use, please follow the steps to create a file-backed
-disk found in the 
+disk found in the
 .Xr mdconfig 8
 man page.
 Other tools will also create these images, such as NanoBSD.
 .Sh SEE ALSO
-.Xr disklabel 5 ,
 .Xr disklabel 8 ,
 .Xr fdisk 8 ,
 .Xr loader 8 ,

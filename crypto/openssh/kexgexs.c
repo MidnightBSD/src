@@ -1,4 +1,4 @@
-/* $OpenBSD: kexgexs.c,v 1.10 2006/11/06 21:25:28 markus Exp $ */
+/* $OpenBSD: kexgexs.c,v 1.14 2010/11/10 01:33:07 djm Exp $ */
 /*
  * Copyright (c) 2000 Niels Provos.  All rights reserved.
  * Copyright (c) 2001 Markus Friedl.  All rights reserved.
@@ -33,6 +33,8 @@
 #include <string.h>
 #include <signal.h>
 
+#include <openssl/dh.h>
+
 #include "xmalloc.h"
 #include "buffer.h"
 #include "key.h"
@@ -52,43 +54,52 @@ void
 kexgex_server(Kex *kex)
 {
 	BIGNUM *shared_secret = NULL, *dh_client_pub = NULL;
-	Key *server_host_key;
+	Key *server_host_public, *server_host_private;
 	DH *dh;
 	u_char *kbuf, *hash, *signature = NULL, *server_host_key_blob = NULL;
 	u_int sbloblen, klen, slen, hashlen;
-	int min = -1, max = -1, nbits = -1, type, kout;
+	int omin = -1, min = -1, omax = -1, max = -1, onbits = -1, nbits = -1;
+	int type, kout;
 
-	if (kex->load_host_key == NULL)
+	if (kex->load_host_public_key == NULL ||
+	    kex->load_host_private_key == NULL)
 		fatal("Cannot load hostkey");
-	server_host_key = kex->load_host_key(kex->hostkey_type);
-	if (server_host_key == NULL)
+	server_host_public = kex->load_host_public_key(kex->hostkey_type);
+	if (server_host_public == NULL)
 		fatal("Unsupported hostkey type %d", kex->hostkey_type);
+	server_host_private = kex->load_host_private_key(kex->hostkey_type);
+	if (server_host_private == NULL)
+		fatal("Missing private key for hostkey type %d",
+		    kex->hostkey_type);
+
 
 	type = packet_read();
 	switch (type) {
 	case SSH2_MSG_KEX_DH_GEX_REQUEST:
 		debug("SSH2_MSG_KEX_DH_GEX_REQUEST received");
-		min = packet_get_int();
-		nbits = packet_get_int();
-		max = packet_get_int();
+		omin = min = packet_get_int();
+		onbits = nbits = packet_get_int();
+		omax = max = packet_get_int();
 		min = MAX(DH_GRP_MIN, min);
 		max = MIN(DH_GRP_MAX, max);
+		nbits = MAX(DH_GRP_MIN, nbits);
+		nbits = MIN(DH_GRP_MAX, nbits);
 		break;
 	case SSH2_MSG_KEX_DH_GEX_REQUEST_OLD:
 		debug("SSH2_MSG_KEX_DH_GEX_REQUEST_OLD received");
-		nbits = packet_get_int();
-		min = DH_GRP_MIN;
-		max = DH_GRP_MAX;
+		onbits = nbits = packet_get_int();
 		/* unused for old GEX */
+		omin = min = DH_GRP_MIN;
+		omax = max = DH_GRP_MAX;
 		break;
 	default:
 		fatal("protocol error during kex, no DH_GEX_REQUEST: %d", type);
 	}
 	packet_check_eom();
 
-	if (max < min || nbits < min || max < nbits)
+	if (omax < omin || onbits < omin || omax < onbits)
 		fatal("DH_GEX_REQUEST, bad parameters: %d !< %d !< %d",
-		    min, nbits, max);
+		    omin, onbits, omax);
 
 	/* Contact privileged parent */
 	dh = PRIVSEP(choose_dh(min, nbits, max));
@@ -146,10 +157,10 @@ kexgex_server(Kex *kex)
 	memset(kbuf, 0, klen);
 	xfree(kbuf);
 
-	key_to_blob(server_host_key, &server_host_key_blob, &sbloblen);
+	key_to_blob(server_host_public, &server_host_key_blob, &sbloblen);
 
 	if (type == SSH2_MSG_KEX_DH_GEX_REQUEST_OLD)
-		min = max = -1;
+		omin = min = omax = max = -1;
 
 	/* calc H */
 	kexgex_hash(
@@ -159,7 +170,7 @@ kexgex_server(Kex *kex)
 	    buffer_ptr(&kex->peer), buffer_len(&kex->peer),
 	    buffer_ptr(&kex->my), buffer_len(&kex->my),
 	    server_host_key_blob, sbloblen,
-	    min, nbits, max,
+	    omin, onbits, omax,
 	    dh->p, dh->g,
 	    dh_client_pub,
 	    dh->pub_key,
@@ -176,7 +187,9 @@ kexgex_server(Kex *kex)
 	}
 
 	/* sign H */
-	PRIVSEP(key_sign(server_host_key, &signature, &slen, hash, hashlen));
+	if (PRIVSEP(key_sign(server_host_private, &signature, &slen, hash,
+	    hashlen)) < 0)
+		fatal("kexgex_server: key_sign failed");
 
 	/* destroy_sensitive_data(); */
 

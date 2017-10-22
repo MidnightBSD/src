@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/rpc.yppasswdd/yppasswdd_main.c 145803 2005-05-02 14:02:43Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -48,7 +48,6 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.sbin/rpc.yppasswdd/yppasswdd_main.c 145803
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h> /* getenv, exit */
-#include <string.h>
 #include <string.h> /* strcmp */
 #include <syslog.h>
 #include <unistd.h>
@@ -165,6 +164,7 @@ main(int argc, char *argv[])
 	struct sockaddr_in saddr;
 	socklen_t asize = sizeof (saddr);
 	struct netconfig *nconf;
+	struct sigaction sa;
 	void *localhandle;
 	int ch;
 	char *mastername;
@@ -268,6 +268,9 @@ the %s domain -- aborting", yppasswd_domain);
 		}
 	}
 	openlog("rpc.yppasswdd", LOG_PID, LOG_DAEMON);
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_flags = SA_NOCLDWAIT;
+	sigaction(SIGCHLD, &sa, NULL);
 
 	rpcb_unset(YPPASSWDPROG, YPPASSWDVERS, NULL);
 	rpcb_unset(MASTER_YPPASSWDPROG, MASTER_YPPASSWDVERS, NULL);

@@ -16,7 +16,7 @@
  * works or modified versions.
  *
  * $Cronyx: cpddk.h,v 1.8.4.20 2004/12/06 16:21:06 rik Exp $
- * $FreeBSD: release/7.0.0/sys/dev/cp/cpddk.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  */
 #define NBRD		6	/* the maximum number of installed boards */
 #define NCHAN		4	/* the number of channels on the board */
@@ -205,6 +205,7 @@ typedef struct _cp_chan_t {
 	void *tag [NTBUF];		/* system dependent data per buffer */
 	void *sys;			/* system dependent data per channel */
 	unsigned char debug;		/* debug level, 0..2 */
+	unsigned char debug_shadow;	/* debug shadow */
 
 	void (*transmit) (struct _cp_chan_t *c, void *tag, int len);
 	void (*receive) (struct _cp_chan_t *c, unsigned char *data, int len);

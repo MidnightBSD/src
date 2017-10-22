@@ -26,7 +26,7 @@
  * Bridge MIB implementation for SNMPd.
  * Bridge interface objects.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_if.c 165642 2006-12-29 19:23:38Z bz $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>

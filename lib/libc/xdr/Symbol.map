@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/7.0.0/lib/libc/xdr/Symbol.map 169092 2007-04-29 14:05:22Z deischen $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {
@@ -42,6 +42,15 @@ FBSD_1.0 {
 	xdrrec_endofrecord;
 	xdr_reference;
 	xdr_pointer;
-	/* xdr_sizeof; */ /* Why is xdr_sizeof.c not included in Makefileinc? */
 	xdrstdio_create;
+};
+
+FBSD_1.1 {
+	xdr_uint16_t;
+	xdr_uint32_t;
+	xdr_uint64_t;
+};
+
+FBSD_1.2 {
+	xdr_sizeof;
 };

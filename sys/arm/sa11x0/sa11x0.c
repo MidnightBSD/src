@@ -14,13 +14,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *      This product includes software developed by the NetBSD
- *      Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  */
 /*-
  * Copyright (c) 1999
@@ -57,7 +50,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/sa11x0.c 167262 2007-03-06 10:56:54Z piso $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -65,7 +58,6 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/sa11x0.c 167262 2007-03-06 10:5
 #include <sys/kernel.h>
 #include <sys/reboot.h>
 #include <sys/malloc.h>
-#include <sys/bus.h>
 #include <sys/interrupt.h>
 #include <sys/module.h>
 #include <sys/rman.h>
@@ -81,7 +73,6 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/sa11x0.c 167262 2007-03-06 10:5
 #include <arm/sa11x0/sa11x0_dmacreg.h>
 #include <arm/sa11x0/sa11x0_ppcreg.h>
 #include <arm/sa11x0/sa11x0_gpioreg.h>
-#include <machine/bus.h>
 
 extern void sa11x0_activateirqs(void);
 

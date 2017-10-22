@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)restore.h	8.3 (Berkeley) 9/13/94
- * $FreeBSD: release/7.0.0/sbin/restore/restore.h 167011 2007-02-26 08:15:56Z mckusick $
+ * $FreeBSD$
  */
 
 /*
@@ -41,7 +41,7 @@
 extern int	bflag;		/* set input block size */
 extern int	dflag;		/* print out debugging info */
 extern int	Dflag;		/* degraded mode - try hard to get stuff back */
-extern int	hflag;		/* restore heirarchies */
+extern int	hflag;		/* restore hierarchies */
 extern int	mflag;		/* restore by name instead of inode number */
 extern int	Nflag;		/* do not write the disk */
 extern int	uflag;		/* unlink symlink targets */

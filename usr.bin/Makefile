@@ -1,52 +1,40 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
-# $FreeBSD: release/7.0.0/usr.bin/Makefile 172500 2007-10-09 23:31:11Z obrien $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
 # XXX MISSING:		deroff diction graph learn plot
 #			spell spline struct xsend
-# XXX Use GNU versions: apropos bc dc diff grep ld man patch whatis
+# XXX Use GNU versions: diff ld patch
 # Moved to secure: bdes
 #
 
 SUBDIR=	alias \
 	apply \
 	asa \
-	at \
-	${_atm} \
 	awk \
 	banner \
 	basename \
-	biff \
-	${_bluetooth} \
 	brandelf \
 	bsdiff \
 	bzip2 \
 	bzip2recover \
-	${_c89} \
-	${_c99} \
-	${_calendar} \
 	cap_mkdb \
-	${_catman} \
 	chat \
-	checknr \
-	${_chkey} \
 	chpass \
 	cksum \
+	${_clang} \
 	cmp \
 	col \
-	colcrt \
 	colldef \
 	colrm \
 	column \
 	comm \
-	compile_et \
 	compress \
+	cpuset \
 	csplit \
-	${_csup} \
-	ctags \
+	ctlstat \
 	cut \
-	${_dig} \
 	dirname \
 	du \
 	ee \
@@ -58,12 +46,10 @@ SUBDIR=	alias \
 	false \
 	fetch \
 	file \
-	file2c \
 	find \
 	finger \
 	fmt \
 	fold \
-	from \
 	fstat \
 	fsync \
 	ftp \
@@ -72,14 +58,12 @@ SUBDIR=	alias \
 	getconf \
 	getent \
 	getopt \
-	${_gprof} \
+	grep \
 	gzip \
 	head \
-	${_hesinfo} \
 	hexdump \
-	${_host} \
+	${_iconv} \
 	id \
-	indent \
 	ipcrm \
 	ipcs \
 	join \
@@ -91,17 +75,14 @@ SUBDIR=	alias \
 	ktrace \
 	ktrdump \
 	lam \
-	last \
 	lastcomm \
 	ldd \
 	leave \
 	less \
 	lessecho \
 	lesskey \
-	${_lex} \
 	limits \
 	locale \
-	locate \
 	lock \
 	lockf \
 	logger \
@@ -111,33 +92,29 @@ SUBDIR=	alias \
 	look \
 	lorder \
 	lsvfs \
+	lzmainfo \
 	m4 \
-	mail \
-	make \
-	makewhatis \
+	${_makewhatis} \
+	${_man} \
 	mesg \
 	minigzip \
+	ministat \
+	${_mkcsmapper} \
 	mkdep \
+	${_mkesdb} \
 	mkfifo \
 	mklocale \
-	mkstr \
 	mktemp \
+	mkulzma \
 	mkuzip \
-	msgs \
 	mt \
-	${_nc} \
 	ncal \
-	${_ncplist} \
-	${_ncplogin} \
 	netstat \
 	newgrp \
-	${_newkey} \
 	nfsstat \
 	nice \
 	nl \
 	nohup \
-	${_nslookup} \
-	${_nsupdate} \
 	opieinfo \
 	opiekey \
 	opiepasswd \
@@ -145,31 +122,29 @@ SUBDIR=	alias \
 	passwd \
 	paste \
 	pathchk \
-	pkill \
+	perror \
 	pr \
 	printenv \
 	printf \
-	quota \
+	procstat \
+	rctl \
 	renice \
 	rev \
-	${_rlogin} \
-	rpcgen \
+	revoke \
 	rpcinfo \
 	rs \
-	${_rsh} \
 	rup \
-	ruptime \
 	rusers \
 	rwall \
-	rwho \
 	script \
 	sed \
+	seq \
 	shar \
 	showmount \
-	${_smbutil} \
 	sockstat \
 	split \
 	stat \
+	stdbuf \
 	su \
 	systat \
 	tabs \
@@ -178,7 +153,6 @@ SUBDIR=	alias \
 	tar \
 	tcopy \
 	tee \
-	telnet \
 	tftp \
 	time \
 	tip \
@@ -188,25 +162,18 @@ SUBDIR=	alias \
 	tr \
 	true \
 	truncate \
-	${_truss} \
+	truss \
 	tset \
 	tsort \
 	tty \
-	ul \
 	uname \
 	unexpand \
-	unifdef \
 	uniq \
+	unzip \
 	units \
 	unvis \
-	${_usbhidaction} \
-	${_usbhidctl} \
-	users \
 	uudecode \
 	uuencode \
-	uuidgen \
-	${_vacation} \
-	vgrind \
 	vi \
 	vis \
 	vmstat \
@@ -216,114 +183,170 @@ SUBDIR=	alias \
 	what \
 	whereis \
 	which \
-	who \
 	whois \
-	window \
 	write \
 	xargs \
 	xinstall \
 	${_xlint} \
-	xstr \
+	${_xstr} \
+	xz \
+	xzdec \
 	${_yacc} \
 	yes \
 	${_ypcat} \
 	${_ypmatch} \
 	${_ypwhich}
 
-.if ${MACHINE_ARCH} != "arm"
-_truss=		truss
+# NB: keep these sorted by MK_* knobs
+
+.if ${MK_AT} != "no"
+SUBDIR+=	at
 .endif
 
 .if ${MK_ATM} != "no"
-_atm=		atm
+SUBDIR+=	atm
 .endif
 
-.if ${MK_MAN} != "no"
-_catman=	catman
+.if ${MK_MAN_UTILS} != "no"
+SUBDIR+=	catman
 .endif
 
 .if ${MK_BIND_UTILS} != "no"
-_dig=		dig
-_host=		host
-_nslookup=	nslookup
-_nsupdate=	nsupdate
+SUBDIR+=	dig
+SUBDIR+=	host
+SUBDIR+=	nslookup
+SUBDIR+=	nsupdate
 .endif
 
 .if ${MK_BLUETOOTH} != "no"
-_bluetooth=	bluetooth
+SUBDIR+=	bluetooth
+.endif
+
+.if ${MK_BSD_CPIO} != "no"
+SUBDIR+=	cpio
 .endif
 
 .if ${MK_CALENDAR} != "no"
-_calendar=	calendar
+SUBDIR+=	calendar
 .endif
 
-.if ${MK_OPENSSL} != "no"
-_chkey=		chkey
-_newkey=	newkey
-.if ${MK_LIBTHR} != "no" || ${MK_LIBKSE} != "no"
-_csup=		csup
-.endif
+.if ${MK_CLANG} != "no"
+_clang=		clang
 .endif
 
 .if ${MK_HESIOD} != "no"
-_hesinfo=	hesinfo
+SUBDIR+=	hesinfo
+.endif
+
+.if ${MK_ICONV} != "no"
+_iconv=		iconv
+_mkcsmapper=	mkcsmapper
+_mkesdb=	mkesdb
+.endif
+
+.if ${MK_GROFF} != "no"
+SUBDIR+=	vgrind
+.endif
+
+.if ${MK_OPENSSL} != "no"
+SUBDIR+=	bc
+SUBDIR+=	chkey
+SUBDIR+=	dc
+SUBDIR+=	newkey
+.endif
+
+.if ${MK_LIBTHR} != "no"
+SUBDIR+=	csup
+.endif
+
+.if ${MK_LOCATE} != "no"
+SUBDIR+=	locate
+.endif
+
+# XXX msgs?
+.if ${MK_MAIL} != "no"
+SUBDIR+=	biff
+SUBDIR+=	from
+SUBDIR+=	mail
+SUBDIR+=	msgs
+.endif
+
+.if ${MK_MAKE} != "no"
+SUBDIR+=	make
+.endif
+
+.if ${MK_MAN_UTILS} != "no"
+_makewhatis=	makewhatis
+_man=		man
 .endif
 
 .if ${MK_NETCAT} != "no"
-_nc=		nc
+SUBDIR+=	nc
 .endif
 
 .if ${MK_NIS} != "no"
-_ypcat=		ypcat
-_ypmatch=	ypmatch
-_ypwhich=	ypwhich
+SUBDIR+=	ypcat
+SUBDIR+=	ypmatch
+SUBDIR+=	ypwhich
+.endif
+
+.if ${MK_QUOTAS} != "no"
+SUBDIR+=	quota
 .endif
 
 .if ${MK_RCMDS} != "no"
-_rlogin=	rlogin
-_rsh=		rsh
+SUBDIR+=	rlogin
+SUBDIR+=	rsh
+SUBDIR+=	ruptime
+SUBDIR+=	rwho
 .endif
 
 .if ${MK_SENDMAIL} != "no"
-_vacation=	vacation
+SUBDIR+=	vacation
+.endif
+
+.if ${MK_TELNET} != "no"
+SUBDIR+=	telnet
+.endif
+
+.if ${MK_TEXTPROC} != "no"
+SUBDIR+=	checknr
+SUBDIR+=	colcrt
+SUBDIR+=	ul
 .endif
 
 .if ${MK_TOOLCHAIN} != "no"
-_c89=		c89
-_c99=		c99
-_gprof=		gprof
-_lex=		lex
-_xlint=		xlint
-_yacc=		yacc
+SUBDIR+=	ar
+SUBDIR+=	c89
+SUBDIR+=	c99
+SUBDIR+=	compile_et
+SUBDIR+=	ctags
+SUBDIR+=	file2c
+SUBDIR+=	gprof
+SUBDIR+=	indent
+SUBDIR+=	lex
+SUBDIR+=	mkstr
+SUBDIR+=	rpcgen
+SUBDIR+=	unifdef
+SUBDIR+=	xlint
+SUBDIR+=	xstr
+SUBDIR+=	yacc
 .endif
 
 .if ${MK_USB} != "no"
-_usbhidaction=	usbhidaction
-_usbhidctl=	usbhidctl
+SUBDIR+=	usbhidaction
+SUBDIR+=	usbhidctl
 .endif
 
-.if ${MACHINE_ARCH} == "i386"
-.if ${MK_NCP} != "no"
-_ncplist=	ncplist
-_ncplogin=	ncplogin
-.endif
-_smbutil=	smbutil
-.endif
-
-.if ${MACHINE_ARCH} == "ia64"
-_smbutil=	smbutil
+.if ${MK_UTMPX} != "no"
+SUBDIR+=	last
+SUBDIR+=	users
+SUBDIR+=	who
+SUBDIR+=	wtmpcvt
 .endif
 
-.if ${MACHINE_ARCH} == "amd64"
-.if ${MK_NCP} != "no"
-_ncplist=	ncplist
-_ncplogin=	ncplogin
-.endif
-_smbutil=	smbutil
-.endif
+.include <bsd.arch.inc.mk>
 
-.if ${MACHINE_ARCH} == "powerpc"
-_smbutil=	smbutil
-.endif
+SUBDIR:=	${SUBDIR:O}
 
 .include <bsd.subdir.mk>

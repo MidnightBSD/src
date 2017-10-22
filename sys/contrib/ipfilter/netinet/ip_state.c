@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/contrib/ipfilter/netinet/ip_state.c 173213 2007-10-31 05:00:38Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1995-2003 by Darren Reed.
@@ -195,6 +195,9 @@ ipstate_t *ips_list = NULL;
 /* ------------------------------------------------------------------------ */
 int fr_stateinit()
 {
+#if defined(NEED_LOCAL_RAND) || !defined(_KERNEL)
+	struct timeval tv;
+#endif
 	int i;
 
 	KMALLOCS(ips_table, ipstate_t **, fr_statesize * sizeof(ipstate_t *));
@@ -205,20 +208,27 @@ int fr_stateinit()
 	KMALLOCS(ips_seed, u_long *, fr_statesize * sizeof(*ips_seed));
 	if (ips_seed == NULL)
 		return -2;
+#if defined(NEED_LOCAL_RAND) || !defined(_KERNEL)
+	tv.tv_sec = 0;
+	GETKTIME(&tv);
+#endif
 	for (i = 0; i < fr_statesize; i++) {
 		/*
 		 * XXX - ips_seed[X] should be a random number of sorts.
 		 */
-#if  (__FreeBSD_version >= 400000)
+#if !defined(NEED_LOCAL_RAND) && defined(_KERNEL)
 		ips_seed[i] = arc4random();
 #else
 		ips_seed[i] = ((u_long)ips_seed + i) * fr_statesize;
-		ips_seed[i] ^= 0xa5a55a5a;
+		ips_seed[i] += tv.tv_sec;
 		ips_seed[i] *= (u_long)ips_seed;
 		ips_seed[i] ^= 0x5a5aa5a5;
 		ips_seed[i] *= fr_statemax;
 #endif
 	}
+#if defined(NEED_LOCAL_RAND) && defined(_KERNEL)
+	ipf_rand_push(ips_seed, fr_statesize * sizeof(*ips_seed));
+#endif
 
 	/* fill icmp reply type table */
 	for (i = 0; i <= ICMP_MAXTYPE; i++)
@@ -655,10 +665,12 @@ caddr_t data;
 	if (error != 0)
 		return error;
 
+	READ_ENTER(&ipf_state);
 	isn = ips.ips_next;
 	if (isn == NULL) {
 		isn = ips_list;
 		if (isn == NULL) {
+			RWLOCK_EXIT(&ipf_state);
 			if (ips.ips_next == NULL)
 				return ENOENT;
 			return 0;
@@ -672,8 +684,10 @@ caddr_t data;
 		for (is = ips_list; is; is = is->is_next)
 			if (is == isn)
 				break;
-		if (!is)
+		if (is == NULL) {
+			RWLOCK_EXIT(&ipf_state);
 			return ESRCH;
+		}
 	}
 	ips.ips_next = isn->is_next;
 	bcopy((char *)isn, (char *)&ips.ips_is, sizeof(ips.ips_is));
@@ -681,6 +695,7 @@ caddr_t data;
 	if (isn->is_rule != NULL)
 		bcopy((char *)isn->is_rule, (char *)&ips.ips_fr,
 		      sizeof(ips.ips_fr));
+	RWLOCK_EXIT(&ipf_state);
 	error = fr_outobj(data, &ips, IPFOBJ_STATESAVE);
 	return error;
 }
@@ -3022,6 +3037,10 @@ int why;
 		is->is_rule->fr_statecnt--;
 		(void) fr_derefrule(&is->is_rule);
 	}
+
+#if defined(NEED_LOCAL_RAND) && defined(_KERNEL)
+	ipf_rand_push(is, sizeof(*is));
+#endif
 
 	MUTEX_DESTROY(&is->is_lock);
 	KFREE(is);

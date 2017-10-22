@@ -1,11 +1,14 @@
-# $FreeBSD: release/7.0.0/lib/libkiconv/Makefile 169807 2007-05-21 02:49:08Z deischen $
+# $FreeBSD$
+
+SHLIBDIR?=	/lib
+
+.include <bsd.own.mk>
 
 LIB=		kiconv
-SHLIBDIR?=	/lib
-SRCS=		xlat16_iconv.c xlat16_sysctl.c
+SRCS=		kiconv_sysctl.c xlat16_iconv.c xlat16_sysctl.c
 SRCS+=		quirks.c
 
-SHLIB_MAJOR=	3
+SHLIB_MAJOR=	4
 
 MAN=		kiconv.3
 
@@ -14,5 +17,11 @@ MLINKS+=	kiconv.3 kiconv_add_xlat16_cspair.3 \
 		kiconv.3 kiconv_add_xlat16_table.3
 
 CFLAGS+=	-I${.CURDIR}/../../sys
+
+WARNS?=		1
+
+.if ${MK_ICONV} == "no"
+CFLAGS+=	-DICONV_DLOPEN
+.endif
 
 .include <bsd.lib.mk>

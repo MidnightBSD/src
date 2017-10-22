@@ -33,7 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/arm/gen/_setjmp.S 137464 2004-11-09 16:49:14Z cognet $");
+__FBSDID("$FreeBSD$");
 
 /*
  * C library -- _setjmp, _longjmp
@@ -51,7 +51,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/arm/gen/_setjmp.S 137464 2004-11-09 1
 ENTRY(_setjmp)
 	ldr	r1, .L_setjmp_magic
 	str	r1, [r0], #4
-#ifdef SOFTFLOAT
+#ifdef __SOFTFP__
 	add	r0, r0, #52
 #else
 	/* Store fp registers */
@@ -59,7 +59,7 @@ ENTRY(_setjmp)
 	/* Store fpsr */
 	rfs	r1
 	str	r1, [r0], #0x0004
-#endif	/* SOFTFLOAT */
+#endif	/* __SOFTFP__ */
 	/* Store integer registers */
         stmia	r0, {r4-r14}
 
@@ -76,7 +76,7 @@ ENTRY(_longjmp)
 	teq	r2, r3
 	bne	botch
 
-#ifdef SOFTFLOAT
+#ifdef __SOFTFP__
 	add	r0, r0, #52
 #else
 	/* Restore fp registers */
@@ -84,7 +84,7 @@ ENTRY(_longjmp)
 	/* Restore fpsr */
 	ldr	r4, [r0], #0x0004
 	wfs	r4
-#endif	/* SOFTFLOAT */
+#endif	/* __SOFTFP__ */
        	/* Restore integer registers */
         ldmia	r0, {r4-r14}
 
@@ -101,6 +101,10 @@ ENTRY(_longjmp)
 
 	/* validation failed, die die die. */
 botch:
+#if !defined(_STANDALONE)
 	bl	PIC_SYM(_C_LABEL(longjmperror), PLT)
 	bl	PIC_SYM(_C_LABEL(abort), PLT)
 	b	. - 8		/* Cannot get here */
+#else
+	b	.
+#endif

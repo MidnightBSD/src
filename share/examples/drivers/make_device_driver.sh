@@ -20,7 +20,7 @@
 #   o generate foo_isa.c, foo_pci.c, foo_pccard.c, foo_cardbus.c, and foovar.h
 #   o Put pccard stuff in here.
 #
-# $FreeBSD: release/7.0.0/share/examples/drivers/make_device_driver.sh 161118 2006-08-09 10:53:26Z rik $"
+# $FreeBSD$"
 #
 #
 if [ "X${1}" = "X" ]; then
@@ -261,7 +261,7 @@ static device_method_t ${1}_methods[] = {
 	DEVMETHOD(device_probe,		${1}_isa_probe),
 	DEVMETHOD(device_attach,	${1}_isa_attach),
 	DEVMETHOD(device_detach,	${1}_isa_detach),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t ${1}_isa_driver = {
@@ -485,7 +485,7 @@ ${1}_isa_probe (device_t device)
 				/*rid*/0, membase, memsize);
 			/*
 			 * We found one, return non-positive numbers..
-			 * Return -N if we cant handle it, but not well.
+			 * Return -N if we can't handle it, but not well.
 			 * Return -2 if we would LIKE the device.
 			 * Return -1 if we want it a lot.
 			 * Return 0 if we MUST get the device.

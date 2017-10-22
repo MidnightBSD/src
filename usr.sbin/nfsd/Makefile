@@ -1,9 +1,7 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: release/7.0.0/usr.sbin/nfsd/Makefile 137319 2004-11-06 18:15:44Z delphij $
+# $FreeBSD$
 
 PROG=	nfsd
-MAN=	nfsd.8
-
-WARNS?=	6
+MAN=	nfsd.8 nfsv4.4 stablerestart.5
 
 .include <bsd.prog.mk>

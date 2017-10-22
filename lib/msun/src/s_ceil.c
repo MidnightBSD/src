@@ -10,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: release/7.0.0/lib/msun/src/s_ceil.c 117912 2003-07-23 04:53:47Z peter $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /*
  * ceil(x)
@@ -22,6 +21,8 @@ static char rcsid[] = "$FreeBSD: release/7.0.0/lib/msun/src/s_ceil.c 117912 2003
  * Exception:
  *	Inexact flag raised if x not equal to ceil(x).
  */
+
+#include <float.h>
 
 #include "math.h"
 #include "math_private.h"
@@ -70,3 +71,7 @@ ceil(double x)
 	INSERT_WORDS(x,i0,i1);
 	return x;
 }
+
+#if LDBL_MANT_DIG == 53
+__weak_reference(ceil, ceill);
+#endif

@@ -26,11 +26,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libthread_db/arch/amd64/libpthread_md.c 169985 2007-05-25 13:43:14Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/procfs.h>
 #include <string.h>
+#include <thread_db.h>
 #include <ucontext.h>
+
+#include "libpthread_db.h"
 
 void
 pt_reg_to_ucontext(const struct reg *r, ucontext_t *uc)
@@ -89,18 +92,21 @@ pt_ucontext_to_reg(const ucontext_t *uc, struct reg *r)
 void
 pt_fpreg_to_ucontext(const struct fpreg* r, ucontext_t *uc)
 {
-	memcpy(&uc->uc_mcontext.mc_fpstate, r, sizeof(r));
+
+	memcpy(&uc->uc_mcontext.mc_fpstate, r, sizeof(*r));
 }
 
 void
 pt_ucontext_to_fpreg(const ucontext_t *uc, struct fpreg *r)
 {
-	memcpy(r, &uc->uc_mcontext.mc_fpstate, sizeof(r));
+
+	memcpy(r, &uc->uc_mcontext.mc_fpstate, sizeof(*r));
 }
 
 void
 pt_md_init(void)
 {
+
 	/* Nothing to do */
 }
 

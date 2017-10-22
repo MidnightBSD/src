@@ -26,7 +26,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkse/thread/thr_wait.c 172491 2007-10-09 13:42:34Z obrien $
+ * $FreeBSD$
  */
 
 #include <pthread.h>
@@ -34,8 +34,7 @@
 
 extern int __wait(int *);
 
-LT10_COMPAT_PRIVATE(_wait);
-LT10_COMPAT_DEFAULT(wait);
+pid_t _wait(int *istat);
 
 __weak_reference(_wait, wait);
 

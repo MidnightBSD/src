@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/contrib/altq/altq/altq.h 130368 2004-06-12 00:57:20Z mlaier $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: altq.h,v 1.10 2003/07/10 12:07:47 kjc Exp $	*/
 
 /*

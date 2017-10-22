@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.bin/nc/Makefile 141443 2005-02-07 08:44:34Z ru $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../contrib/netcat
 
@@ -8,5 +8,7 @@ SRCS=	netcat.c atomicio.c socks.c
 CFLAGS+=-DIPSEC
 LDADD=	-lipsec
 DPADD=	${LIBIPSEC}
+
+WARNS?=	2
 
 .include <bsd.prog.mk>

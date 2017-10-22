@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/7.0.0/sys/arm/xscale/ixp425/if_npereg.h 164426 2006-11-19 23:55:23Z sam $
+ * $FreeBSD$
  */
 
 /*
@@ -84,13 +84,6 @@ struct npehwbuf {
 	} ix_ne[NPE_MAXSEG];
 };
 
-/* NPE ID's */
-#define	NPE_A		0
-#define	NPE_B		1
-#define	NPE_C		2
-#define	NPE_MAX		(NPE_C+1)
-
-#define NPE_PORTS_MAX		2	/* logical ports */
 #define NPE_FRAME_SIZE_DEFAULT	1536
 #define NPE_FRAME_SIZE_MAX	(65536-64)
 #define NPE_FRAME_SIZE_MIN	64

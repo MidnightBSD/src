@@ -15,8 +15,11 @@
  *
  * Sep, 1994	Implemented on FreeBSD 1.1.5.1R (Toshiba AVS001WD)
  *
- * $FreeBSD: release/7.0.0/sys/i386/bios/apm.h 158922 2006-05-25 23:06:38Z imp $
+ * $FreeBSD$
  */
+
+#ifndef __APM_H__
+#define	__APM_H__
 
 #define APM_NEVENTS 16
 #define APM_NPMEV   13
@@ -51,3 +54,4 @@ struct apm_softc {
 	u_char	event_filter[APM_NPMEV];
 };
 
+#endif /* !__APM_H__ */

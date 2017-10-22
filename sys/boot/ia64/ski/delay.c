@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/ia64/ski/delay.c 135696 2004-09-24 03:53:50Z marcel $");
+__FBSDID("$FreeBSD$");
 
 void
 delay(int usecs)

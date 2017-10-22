@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)sel_subs.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/pax/sel_subs.c 169993 2007-05-25 17:53:38Z brian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -376,7 +376,7 @@ trng_add(char *str)
 	}
 
 	/*
-	 * by default we only will check file mtime, but usee can specify
+	 * by default we only will check file mtime, but the user can specify
 	 * mtime, ctime (inode change time) or both.
 	 */
 	if ((flgpt == NULL) || (*flgpt == '\0'))
@@ -396,6 +396,7 @@ trng_add(char *str)
 			default:
 				paxwarn(1, "Bad option %c with time range %s",
 				    *flgpt, str);
+				free(pt);
 				goto out;
 			}
 			++flgpt;

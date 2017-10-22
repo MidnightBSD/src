@@ -2,7 +2,7 @@
  * from: FreeBSD: src/sys/tools/fw_stub.awk,v 1.6 2007/03/02 11:42:53 flz
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/mxge/mxge_eth_z8e.c 171500 2007-07-19 16:16:00Z gallatin $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/errno.h>
 #include <sys/kernel.h>

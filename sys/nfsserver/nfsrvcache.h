@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsrvcache.h	8.3 (Berkeley) 3/30/95
- * $FreeBSD: release/7.0.0/sys/nfsserver/nfsrvcache.h 159871 2006-06-23 00:42:26Z mohans $
+ * $FreeBSD$
  */
 
 #ifndef _NFSSERVER_NFSRVCACHE_H_
@@ -43,43 +43,5 @@
  */
 #define NFSRVCACHE_MAX_SIZE	2048
 #define NFSRVCACHE_MIN_SIZE	  64
-
-struct nfsrvcache {
-	TAILQ_ENTRY(nfsrvcache) rc_lru;		/* LRU chain */
-	LIST_ENTRY(nfsrvcache) rc_hash;		/* Hash chain */
-	u_int32_t rc_xid;			/* rpc id number */
-	union {
-		struct mbuf *ru_repmb;		/* Reply mbuf list OR */
-		int ru_repstat;			/* Reply status */
-	} rc_un;
-	union nethostaddr rc_haddr;		/* Host address */
-	u_int32_t rc_proc;			/* rpc proc number */
-	u_char	rc_state;		/* Current state of request */
-	u_char	rc_flag;		/* Flag bits */
-};
-
-#define	rc_reply	rc_un.ru_repmb
-#define	rc_status	rc_un.ru_repstat
-#define	rc_inetaddr	rc_haddr.had_inetaddr
-#define	rc_nam		rc_haddr.had_nam
-
-/* Cache entry states */
-#define	RC_UNUSED	0
-#define	RC_INPROG	1
-#define	RC_DONE		2
-
-/* Return values */
-#define	RC_DROPIT	0
-#define	RC_REPLY	1
-#define	RC_DOIT		2
-
-/* Flag bits */
-#define	RC_LOCKED	0x01
-#define	RC_WANTED	0x02
-#define	RC_REPSTATUS	0x04
-#define	RC_REPMBUF	0x08
-/* free 0x10 */
-#define	RC_INETADDR	0x20
-#define	RC_NAM		0x40
 
 #endif

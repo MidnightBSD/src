@@ -1,17 +1,16 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/ipfs 175737 2008-01-28 07:58:32Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: ipfs
 # REQUIRE: ipnat
-# BEFORE:  netif
 # KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 
 name="ipfs"
-rcvar=`set_rcvar`
+rcvar="ipfs_enable"
 start_cmd="ipfs_start"
 stop_cmd="ipfs_stop"
 start_precmd="ipfs_prestart"

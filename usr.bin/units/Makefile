@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.bin/units/Makefile 88064 2001-12-17 16:02:15Z ru $
+# $FreeBSD$
 
 PROG=	units
 FILES=	units.lib

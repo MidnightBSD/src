@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/syscons/dragon/Makefile 106762 2002-11-11 10:11:59Z mux $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../../dev/syscons/dragon
 

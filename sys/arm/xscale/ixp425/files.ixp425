@@ -1,4 +1,5 @@
-#$FreeBSD: release/7.0.0/sys/arm/xscale/ixp425/files.ixp425 172358 2007-09-27 22:39:49Z cognet $
+#$FreeBSD$
+arm/arm/bus_space_generic.c		standard
 arm/arm/cpufunc_asm_xscale.S		standard
 arm/arm/irq_dispatch.S			standard
 arm/xscale/ixp425/ixp425.c		standard
@@ -14,6 +15,8 @@ arm/xscale/ixp425/uart_cpu_ixp425.c	optional	uart
 arm/xscale/ixp425/uart_bus_ixp425.c	optional	uart
 arm/xscale/ixp425/ixp425_a4x_space.c	optional	uart
 arm/xscale/ixp425/ixp425_a4x_io.S	optional	uart
+dev/cfi/cfi_bus_ixp4xx.c		optional	cfi
+dev/hwpmc/hwpmc_xscale.c		optional	hwpmc
 dev/uart/uart_dev_ns8250.c		optional	uart
 #
 # NPE-based Ethernet support (requires qmgr also).
@@ -35,7 +38,7 @@ IxNpeMicrocode.fwo			optional npe_fw			\
 	no-implicit-rule						\
 	clean		"IxNpeMicrocode.fwo"
 IxNpeMicrocode.dat			optional npe_fw			\
-	dependency	".PHONY"					\
+	dependency	"$S/contrib/dev/npe/IxNpeMicrocode.dat.uu"	\
 	compile-with	"uudecode < $S/contrib/dev/npe/IxNpeMicrocode.dat.uu" \
 	no-obj no-implicit-rule						\
 	clean		"IxNpeMicrocode.dat"
@@ -43,3 +46,5 @@ IxNpeMicrocode.dat			optional npe_fw			\
 # Q-Manager support
 #
 arm/xscale/ixp425/ixp425_qmgr.c		optional qmgr
+#
+dev/usb/controller/ehci_ixp4xx.c	optional ehci usb

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/nxge/xgell-version.h 173269 2007-11-02 00:52:34Z rwatson $
+ * $FreeBSD$
  */
 
 #ifndef XGELL_VERSION_H

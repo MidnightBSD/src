@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libelf/libelf_allocate.c 166863 2007-02-21 08:14:22Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/errno.h>
 

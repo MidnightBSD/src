@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/pc98/pc98/canbus.c 158651 2006-05-16 14:37:58Z phk $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -82,7 +82,7 @@ static int	canbus_detach(device_t);
 
 /* Bus interface methods */
 static int	canbus_print_child(device_t, device_t);
-static device_t	canbus_add_child(device_t, int, const char *, int);
+static device_t	canbus_add_child(device_t, u_int, const char *, int);
 static struct resource *	canbus_alloc_resource(
     device_t, device_t, int, int *, u_long, u_long, u_long, u_int);
 static int	canbus_activate_resource(
@@ -235,7 +235,7 @@ canbus_print_child(device_t dev, device_t child)
 }
 
 static device_t
-canbus_add_child(device_t bus, int order, const char *name, int unit)
+canbus_add_child(device_t bus, u_int order, const char *name, int unit)
 {
 	device_t child;
 	struct canbus_device *cbdev;

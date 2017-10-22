@@ -24,7 +24,7 @@
  * the rights to redistribute these changes.
  *
  *	from: FreeBSD: src/sys/i386/include/db_machdep.h,v 1.16 1999/10/04
- * $FreeBSD: release/7.0.0/sys/arm/include/db_machdep.h 160740 2006-07-27 11:41:37Z cognet $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_DB_MACHDEP_H_
@@ -73,7 +73,10 @@ typedef int		db_expr_t;
 					    0000000f  register */
 
 #define	inst_branch(ins)	(((ins) & 0x0f000000) == 0x0a000000 || \
-				 ((ins) & 0x0fdffff0) == 0x079ff100)
+				 ((ins) & 0x0fdffff0) == 0x079ff100 || \
+				 ((ins) & 0x0cf0f000) == 0x0490f000 || \
+				 ((ins) & 0x0ffffff0) == 0x012fff30 || /* blx */ \
+				 ((ins) & 0x0de0f000) == 0x0080f000)
 
 #define	inst_load(ins)		(0)
 #define	inst_store(ins)		(0)

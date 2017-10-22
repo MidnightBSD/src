@@ -26,7 +26,7 @@
 /*      $NetBSD: sbrk.S,v 1.8 2000/06/26 06:25:44 kleink Exp $  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/powerpc/sys/sbrk.S 107571 2002-12-04 07:25:14Z grehan $");
+__FBSDID("$FreeBSD$");
 
 #include "SYS.h"
 
@@ -68,3 +68,5 @@ ENTRY(sbrk)
 	blr
 2:
 	b	PIC_PLT(HIDENAME(cerror))
+
+	.section .note.GNU-stack,"",%progbits

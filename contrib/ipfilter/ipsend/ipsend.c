@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/contrib/ipfilter/ipsend/ipsend.c 161357 2006-08-16 12:23:02Z guido $ */
+/* $FreeBSD$ */
 /*
  * ipsend.c (C) 1995-1998 Darren Reed
  *

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/powerpc/include/mmuvar.h 152179 2005-11-08 06:48:08Z grehan $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_MMUVAR_H_
@@ -31,7 +31,8 @@
 
 /*
  * A PowerPC MMU implementation is declared with a kernel object and
- * an associated method table, similar to a device driver.
+ * an associated method table. The MMU_DEF macro is used to declare
+ * the class, and also links it to the global MMU class list.
  *
  * e.g.
  *
@@ -44,13 +45,12 @@
  *	{ 0, 0 }
  * };
  *
- * static mmu_def_t ppc8xx_mmu = {
- * 	"ppc8xx",
- *	ppc8xx_methods,
- *	sizeof(ppc8xx_mmu_softc),	// or 0 if no softc
- * };
+ * MMU_DEF(ppc8xx, MMU_TYPE_8xx, ppc8xx_methods, sizeof(ppc8xx_mmu_softc));
  *
- * MMU_DEF(ppc8xx_mmu);
+ * A single level of inheritance is supported in a similar fashion to
+ * kobj inheritance e.g.
+ *
+ * MMU_DEF_1(ppc860c, MMU_TYPE_860c, ppc860c_methods, 0, ppc8xx);
  */
 
 #include <sys/kobj.h>
@@ -84,11 +84,34 @@ typedef struct kobj_class	mmu_def_t;
 
 #define MMUMETHOD	KOBJMETHOD
 
-#define MMU_DEF(name)	DATA_SET(mmu_set, name)
+#define MMU_DEF(name, ident, methods, size)	\
+						\
+mmu_def_t name = {				\
+	ident, methods, size, NULL		\
+};						\
+DATA_SET(mmu_set, name)
+
+#define MMU_DEF_INHERIT(name, ident, methods, size, base1)	\
+						\
+static kobj_class_t name ## _baseclasses[] =	\
+       	{ &base1, NULL };			\
+mmu_def_t name = {                              \
+	ident, methods, size, name ## _baseclasses	\
+};                                              \
+DATA_SET(mmu_set, name)
+
+
+#if 0
+mmu_def_t name = {				\
+	ident, methods, size, name ## _baseclasses	\
+};						
+DATA_SET(mmu_set, name)
+#endif
 
 /*
  * Known MMU names
  */
+#define MMU_TYPE_BOOKE	"mmu_booke"	/* Book-E MMU specification */
 #define MMU_TYPE_OEA	"mmu_oea"	/* 32-bit OEA */
 #define MMU_TYPE_G5	"mmu_g5"	/* 64-bit bridge (ibm 970) */
 #define MMU_TYPE_8xx	"mmu_8xx"	/* 8xx quicc TLB */

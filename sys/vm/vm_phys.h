@@ -28,7 +28,7 @@
  * WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/vm/vm_phys.h 172317 2007-09-25 06:25:06Z alc $
+ * $FreeBSD$
  */
 
 /*
@@ -38,16 +38,33 @@
 #ifndef	_VM_PHYS_H_
 #define	_VM_PHYS_H_
 
+#ifdef _KERNEL
+
+/* Domains must be dense (non-sparse) and zero-based. */
+struct mem_affinity {
+	vm_paddr_t start;
+	vm_paddr_t end;
+	int domain;
+};
+
+extern struct mem_affinity *mem_affinity;
+
 void vm_phys_add_page(vm_paddr_t pa);
 vm_page_t vm_phys_alloc_contig(unsigned long npages,
     vm_paddr_t low, vm_paddr_t high,
     unsigned long alignment, unsigned long boundary);
+vm_page_t vm_phys_alloc_freelist_pages(int flind, int pool, int order);
 vm_page_t vm_phys_alloc_pages(int pool, int order);
 vm_paddr_t vm_phys_bootstrap_alloc(vm_size_t size, unsigned long alignment);
+int vm_phys_fictitious_reg_range(vm_paddr_t start, vm_paddr_t end,
+    vm_memattr_t memattr);
+void vm_phys_fictitious_unreg_range(vm_paddr_t start, vm_paddr_t end);
+vm_page_t vm_phys_fictitious_to_vm_page(vm_paddr_t pa);
 void vm_phys_free_pages(vm_page_t m, int order);
 void vm_phys_init(void);
 void vm_phys_set_pool(int pool, vm_page_t m, int order);
-void vm_phys_unfree_page(vm_page_t m);
+boolean_t vm_phys_unfree_page(vm_page_t m);
 boolean_t vm_phys_zero_pages_idle(void);
 
+#endif	/* _KERNEL */
 #endif	/* !_VM_PHYS_H_ */

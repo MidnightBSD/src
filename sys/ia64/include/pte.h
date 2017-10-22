@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/include/pte.h 137978 2004-11-21 21:40:08Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PTE_H_

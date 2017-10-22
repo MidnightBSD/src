@@ -29,51 +29,76 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: vmparam.h,v 1.11 2000/02/11 19:25:16 thorpej Exp $
- * $FreeBSD: release/7.0.0/sys/powerpc/include/vmparam.h 172317 2007-09-25 06:25:06Z alc $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_VMPARAM_H_
 #define	_MACHINE_VMPARAM_H_
 
-#define	USRSTACK	VM_MAXUSER_ADDRESS
+#define	USRSTACK	SHAREDPAGE
 
 #ifndef	MAXTSIZ
-#define	MAXTSIZ		(16*1024*1024)		/* max text size */
+#define	MAXTSIZ		(64*1024*1024)		/* max text size */
 #endif
 
 #ifndef	DFLDSIZ
-#define	DFLDSIZ		(32*1024*1024)		/* default data size */
+#define	DFLDSIZ		(128*1024*1024)		/* default data size */
 #endif
 
 #ifndef	MAXDSIZ
-#define	MAXDSIZ		(512*1024*1024)		/* max data size */
+#define	MAXDSIZ		(1*1024*1024*1024)	/* max data size */
 #endif
 
 #ifndef	DFLSSIZ
-#define	DFLSSIZ		(1*1024*1024)		/* default stack size */
+#define	DFLSSIZ		(8*1024*1024)		/* default stack size */
 #endif
 
 #ifndef	MAXSSIZ
-#define	MAXSSIZ		(32*1024*1024)		/* max stack size */
+#define	MAXSSIZ		(64*1024*1024)		/* max stack size */
+#endif
+
+#ifdef AIM
+#define	VM_MAXUSER_ADDRESS32	((vm_offset_t)0xfffff000)
+#else
+#define	VM_MAXUSER_ADDRESS32	((vm_offset_t)0x7ffff000)
 #endif
 
 /*
- * Size of shared memory map
+ * Would like to have MAX addresses = 0, but this doesn't (currently) work
  */
-#ifndef	SHMMAXPGS
-#define	SHMMAXPGS	1024
+#if !defined(LOCORE)
+#ifdef __powerpc64__
+#define	VM_MIN_ADDRESS		(0x0000000000000000UL)
+#define	VM_MAXUSER_ADDRESS	(0xfffffffffffff000UL)
+#define	VM_MAX_ADDRESS		(0xffffffffffffffffUL)
+#else
+#define	VM_MIN_ADDRESS		((vm_offset_t)0)
+#define	VM_MAXUSER_ADDRESS	VM_MAXUSER_ADDRESS32
+#define	VM_MAX_ADDRESS		((vm_offset_t)0xffffffff)
 #endif
+#define	SHAREDPAGE		(VM_MAXUSER_ADDRESS - PAGE_SIZE)
+#else /* LOCORE */
+#if !defined(__powerpc64__) && defined(E500)
+#define	VM_MIN_ADDRESS		0
+#define	VM_MAXUSER_ADDRESS	0x7ffff000
+#endif
+#endif /* LOCORE */
 
-/*
- * The time for a process to be blocked before being very swappable.
- * This is a number of seconds which the system takes as being a non-trivial
- * amount of real time.  You probably shouldn't change this;
- * it is used in subtle ways (fractions and multiples of it are, that is, like
- * half of a ``long time'', almost a long time, etc.)
- * It is related to human patience and other factors which don't really
- * change over time.
- */
-#define	MAXSLP 		20
+#define	FREEBSD32_SHAREDPAGE	(VM_MAXUSER_ADDRESS32 - PAGE_SIZE)
+#define	FREEBSD32_USRSTACK	FREEBSD32_SHAREDPAGE
+
+#ifdef AIM
+#define	KERNBASE		0x00100000UL	/* start of kernel virtual */
+
+#ifdef __powerpc64__
+#define	VM_MIN_KERNEL_ADDRESS		0xc000000000000000UL
+#define	VM_MAX_KERNEL_ADDRESS		0xc0000001c7ffffffUL
+#define	VM_MAX_SAFE_KERNEL_ADDRESS	VM_MAX_KERNEL_ADDRESS
+#else
+#define	VM_MIN_KERNEL_ADDRESS	((vm_offset_t)KERNEL_SR << ADDR_SR_SHFT)
+#define	VM_MAX_SAFE_KERNEL_ADDRESS (VM_MIN_KERNEL_ADDRESS + 2*SEGMENT_LENGTH -1)
+#define	VM_MAX_KERNEL_ADDRESS	(VM_MIN_KERNEL_ADDRESS + 3*SEGMENT_LENGTH - 1)
+#endif
 
 /*
  * Use the direct-mapped BAT registers for UMA small allocs. This
@@ -81,33 +106,44 @@
  */
 #define UMA_MD_SMALL_ALLOC
 
-/*
- * Would like to have MAX addresses = 0, but this doesn't (currently) work
- */
-#define	VM_MIN_ADDRESS		((vm_offset_t)0)
-#define	VM_MAXUSER_ADDRESS	((vm_offset_t)0x7ffff000)
-#define	VM_MAX_ADDRESS		VM_MAXUSER_ADDRESS
-#define	VM_MIN_KERNEL_ADDRESS	((vm_offset_t)(KERNEL_SR << ADDR_SR_SHFT))
-#define	VM_MAX_KERNEL_ADDRESS	(VM_MIN_KERNEL_ADDRESS + 2*SEGMENT_LENGTH - 1)
+#else /* Book-E */
 
-#define	KERNBASE	0x100000	/* start of kernel virtual */
+/*
+ * Kernel CCSRBAR location. We make this the reset location.
+ */
+#define	CCSRBAR_VA		0xfef00000
+#define	CCSRBAR_SIZE		0x00100000
+
+#define	KERNBASE		0xc0000000	/* start of kernel virtual */
+
+#define	VM_MIN_KERNEL_ADDRESS	KERNBASE
+#define	VM_MAX_KERNEL_ADDRESS	0xf8000000
+
+#endif /* AIM/E500 */
 
 /* XXX max. amount of KVM to be used by buffers. */
 #ifndef VM_MAX_KERNEL_BUF
 #define	VM_MAX_KERNEL_BUF	(SEGMENT_LENGTH * 7 / 10)
 #endif
 
+#if !defined(LOCORE)
 struct pmap_physseg {
 	struct pv_entry *pvent;
 	char *attrs;
 };
+#endif
 
 #define	VM_PHYSSEG_MAX		16	/* 1? */
 
 /*
- * The physical address space is densely populated.
+ * The physical address space is densely populated on 32-bit systems,
+ * but may not be on 64-bit ones.
  */
+#ifdef __powerpc64__
+#define	VM_PHYSSEG_SPARSE
+#else
 #define	VM_PHYSSEG_DENSE
+#endif
 
 /*
  * Create three free page pools: VM_FREEPOOL_DEFAULT is the default pool
@@ -131,6 +167,20 @@ struct pmap_physseg {
  */
 #define	VM_NFREEORDER		11
 
+/*
+ * Only one memory domain.
+ */
+#ifndef VM_NDOMAIN
+#define	VM_NDOMAIN		1
+#endif
+
+/*
+ * Disable superpage reservations.
+ */
+#ifndef	VM_NRESERVLEVEL
+#define	VM_NRESERVLEVEL		0
+#endif
+
 #ifndef VM_INITIAL_PAGEIN
 #define	VM_INITIAL_PAGEIN	16
 #endif
@@ -142,5 +192,17 @@ struct pmap_physseg {
 #ifndef VM_KMEM_SIZE
 #define	VM_KMEM_SIZE		(12 * 1024 * 1024)
 #endif
+
+#ifdef __powerpc64__
+#ifndef VM_KMEM_SIZE_SCALE
+#define VM_KMEM_SIZE_SCALE      (3)
+#endif
+
+#ifndef VM_KMEM_SIZE_MAX
+#define VM_KMEM_SIZE_MAX        0x1c0000000  /* 7 GB */
+#endif
+#endif
+
+#define	ZERO_REGION_SIZE	(64 * 1024)	/* 64KB */
 
 #endif /* _MACHINE_VMPARAM_H_ */

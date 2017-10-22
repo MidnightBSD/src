@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/gen/sysctlnametomib.c 108628 2003-01-04 00:11:11Z tjr $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -48,8 +48,8 @@ sysctlnametomib(const char *name, int *mibp, size_t *sizep)
 	oid[0] = 0;
 	oid[1] = 3;
 
-	*sizep *= sizeof (int);
-	error = sysctl(oid, 2, mibp, sizep, (void *)name, strlen(name));
-	*sizep /= sizeof (int);
+	*sizep *= sizeof(int);
+	error = sysctl(oid, 2, mibp, sizep, name, strlen(name));
+	*sizep /= sizeof(int);
 	return (error);
 }

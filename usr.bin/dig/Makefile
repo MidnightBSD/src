@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.bin/dig/Makefile 170221 2007-06-02 23:19:58Z dougb $
+# $FreeBSD$
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind9
 LIB_BIND_REL=	../../lib/bind
@@ -14,6 +14,13 @@ SRCS+=		dig.c dighost.c
 
 CFLAGS+=	-I${SRCDIR}/include
 CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
+
+.if ${MK_BIND_IDN} == "yes"
+CFLAGS+=	-DWITH_IDN -I/usr/local/include
+CFLAGS+=	-L/usr/local/lib -lidnkit -R/usr/local/lib -liconv
+.endif
+
+WARNS?=		1
 
 DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}

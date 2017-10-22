@@ -41,7 +41,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)mount_null.c	8.6 (Berkeley) 4/26/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/sbin/mount_nullfs/mount_nullfs.c 152670 2005-11-21 22:51:16Z rodrigc $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -116,9 +116,7 @@ main(int argc, char *argv[])
 }
 
 int
-subdir(p, dir)
-	const char *p;
-	const char *dir;
+subdir(const char *p, const char *dir)
 {
 	int l;
 
@@ -133,7 +131,7 @@ subdir(p, dir)
 }
 
 static void
-usage()
+usage(void)
 {
 	(void)fprintf(stderr,
 		"usage: mount_nullfs [-o options] target mount-point\n");

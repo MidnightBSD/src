@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/sys/dev/bktr/CHANGELOG.TXT 160964 2006-08-04 07:56:35Z yar $ */
+/* $FreeBSD$ */
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)

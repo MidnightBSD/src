@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/gnu/usr.bin/gdb/kgdb/trgt_i386.c 173829 2007-11-21 16:47:15Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -47,13 +47,15 @@ __FBSDID("$FreeBSD: release/7.0.0/gnu/usr.bin/gdb/kgdb/trgt_i386.c 173829 2007-1
 
 #include "kgdb.h"
 
+static int ofs_fix;
+
 void
 kgdb_trgt_fetch_registers(int regno __unused)
 {
 	struct kthr *kt;
 	struct pcb pcb;
 
-	kt = kgdb_thr_lookup_tid(ptid_get_tid(inferior_ptid));
+	kt = kgdb_thr_lookup_tid(ptid_get_pid(inferior_ptid));
 	if (kt == NULL)
 		return;
 	if (kvm_read(kvm, kt->pcb, &pcb, sizeof(pcb)) != sizeof(pcb)) {
@@ -72,6 +74,23 @@ void
 kgdb_trgt_store_registers(int regno __unused)
 {
 	fprintf_unfiltered(gdb_stderr, "XXX: %s\n", __func__);
+}
+
+void
+kgdb_trgt_new_objfile(struct objfile *objfile)
+{
+
+	/*
+	 * In revision 1.117 of i386/i386/exception.S trap handlers
+	 * were changed to pass trapframes by reference rather than
+	 * by value.  Detect this by seeing if the first instruction
+	 * at the 'calltrap' label is a "push %esp" which has the
+	 * opcode 0x54.
+	 */
+	if (kgdb_parse("((char *)calltrap)[0]") == 0x54)
+		ofs_fix = 4;
+	else
+		ofs_fix = 0;
 }
 
 struct kgdb_tss_cache {
@@ -113,11 +132,11 @@ kgdb_trgt_fetch_tss(void)
 	struct segment_descriptor sd;
 	uintptr_t addr, cpu0prvpage, tss;
 
-	kt = kgdb_thr_lookup_tid(ptid_get_tid(inferior_ptid));
+	kt = kgdb_thr_lookup_tid(ptid_get_pid(inferior_ptid));
 	if (kt == NULL || kt->cpu == NOCPU)
 		return (0);
 
-	addr = kgdb_lookup("_gdt");
+	addr = kgdb_lookup("gdt");
 	if (addr == 0)
 		return (0);
 	addr += (kt->cpu * NGDT + GPROC0_SEL) * sizeof(sd);
@@ -140,7 +159,7 @@ kgdb_trgt_fetch_tss(void)
 	 * change it to be relative to cpu0prvpage instead.
 	 */ 
 	if (trunc_page(tss) == 0xffc00000) {
-		addr = kgdb_lookup("_cpu0prvpage");
+		addr = kgdb_lookup("cpu0prvpage");
 		if (addr == 0)
 			return (0);
 		if (kvm_read(kvm, addr, &cpu0prvpage, sizeof(cpu0prvpage)) !=
@@ -221,10 +240,14 @@ static const struct frame_unwind kgdb_trgt_dblfault_unwind = {
 };
 
 struct kgdb_frame_cache {
-	int		intrframe;
+	int		frame_type;
 	CORE_ADDR	pc;
 	CORE_ADDR	sp;
 };
+#define	FT_NORMAL		1
+#define	FT_INTRFRAME		2
+#define	FT_INTRTRAPFRAME	3
+#define	FT_TIMERFRAME		4
 
 static int kgdb_trgt_frame_offset[15] = {
 	offsetof(struct trapframe, tf_eax),
@@ -257,7 +280,17 @@ kgdb_trgt_frame_cache(struct frame_info *next_frame, void **this_cache)
 		*this_cache = cache;
 		cache->pc = frame_func_unwind(next_frame);
 		find_pc_partial_function(cache->pc, &pname, NULL, NULL);
-		cache->intrframe = (pname[0] == 'X') ? 1 : 0;
+		if (pname[0] != 'X')
+			cache->frame_type = FT_NORMAL;
+		else if (strcmp(pname, "Xtimerint") == 0)
+			cache->frame_type = FT_TIMERFRAME;
+		else if (strcmp(pname, "Xcpustop") == 0 ||
+		    strcmp(pname, "Xrendezvous") == 0 ||
+		    strcmp(pname, "Xipi_intr_bitmap_handler") == 0 ||
+		    strcmp(pname, "Xlazypmap") == 0)
+			cache->frame_type = FT_INTRTRAPFRAME;
+		else
+			cache->frame_type = FT_INTRFRAME;
 		frame_unwind_register(next_frame, SP_REGNUM, buf);
 		cache->sp = extract_unsigned_integer(buf,
 		    register_size(current_gdbarch, SP_REGNUM));
@@ -283,8 +316,6 @@ kgdb_trgt_trapframe_prev_register(struct frame_info *next_frame,
 	char dummy_valuep[MAX_REGISTER_SIZE];
 	struct kgdb_frame_cache *cache;
 	int ofs, regsz;
-	static int ofs_fix = 0;
-	static int ofs_fixed = 0;
 
 	regsz = register_size(current_gdbarch, regnum);
 
@@ -296,32 +327,29 @@ kgdb_trgt_trapframe_prev_register(struct frame_info *next_frame,
 	*lvalp = not_lval;
 	*realnump = -1;
 
-	if (!ofs_fixed) {
-		uintptr_t calltrap_addr;
-		char calltrap[1];
-
-		calltrap_addr = kgdb_lookup("calltrap");
-		if (calltrap_addr != 0) {
-			if (kvm_read(kvm, calltrap_addr, calltrap,
-				     sizeof(calltrap)) != sizeof(calltrap)) {
-				warnx("kvm_read: %s", kvm_geterr(kvm));
-			} else if (calltrap[0] == 0x54) /* push %esp */ {
-				/*
-				 * To accomodate for rev. 1.117 of
-				 * i386/i386/exception.s
-				 */
-				ofs_fix = 4;
-			}
-		}
-		ofs_fixed = 1;
-	}
 	ofs = (regnum >= I386_EAX_REGNUM && regnum <= I386_FS_REGNUM)
 	    ? kgdb_trgt_frame_offset[regnum] + ofs_fix : -1;
 	if (ofs == -1)
 		return;
 
 	cache = kgdb_trgt_frame_cache(next_frame, this_cache);
-	*addrp = cache->sp + ofs + (cache->intrframe ? 4 : 0);
+	switch (cache->frame_type) {
+	case FT_NORMAL:
+		break;
+	case FT_INTRFRAME:
+		ofs += 4;
+		break;
+	case FT_TIMERFRAME:
+		break;
+	case FT_INTRTRAPFRAME:
+		ofs -= ofs_fix;
+		break;
+	default:
+		fprintf_unfiltered(gdb_stderr, "Correct FT_XXX frame offsets "
+		   "for %d\n", cache->frame_type);
+		break;
+	}
+	*addrp = cache->sp + ofs;
 	*lvalp = lval_memory;
 	target_read_memory(*addrp, valuep, regsz);
 }

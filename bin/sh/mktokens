@@ -32,7 +32,7 @@
 # SUCH DAMAGE.
 #
 #	@(#)mktokens	8.1 (Berkeley) 5/31/93
-# $FreeBSD: release/7.0.0/bin/sh/mktokens 139969 2005-01-10 08:39:26Z imp $
+# $FreeBSD$
 
 # The following is a list of tokens.  The second column is nonzero if the
 # token marks the end of a list.  The third column is the name to print in
@@ -50,7 +50,7 @@ TPIPE	0	"|"
 TLP	0	"("
 TRP	1	")"
 TENDCASE 1	";;"
-TENDBQUOTE 1	"`"
+TFALLTHRU 1	";&"
 TREDIR	0	redirection
 TWORD	0	word
 TIF	0	"if"

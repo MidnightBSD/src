@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/nve/Makefile 143451 2005-03-12 08:02:06Z obrien $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/nve
 
@@ -7,6 +7,7 @@ SRCS=	if_nve.c if_nvereg.h miidevs.h \
 	device_if.h bus_if.h pci_if.h miibus_if.h \
 	os+%DIKED-nve.h
 OBJS+=	nvenetlib.o
+WERROR=
 
 CLEANFILES+=	nvenetlib.o os+%DIKED-nve.h
 nvenetlib.o: ${.CURDIR}/../../contrib/dev/nve/${MACHINE}/${.TARGET}.bz2.uu

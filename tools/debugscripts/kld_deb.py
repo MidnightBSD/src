@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/7.0.0/tools/debugscripts/kld_deb.py 143864 2005-03-20 02:08:21Z jmg $
+# $FreeBSD$
 
 import sys
 import os

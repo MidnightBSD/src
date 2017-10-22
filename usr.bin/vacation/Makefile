@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.bin/vacation/Makefile 147225 2005-06-10 06:12:53Z des $
+# $FreeBSD$
 
 SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/vacation
@@ -8,6 +8,13 @@ SRCS=	vacation.c
 CFLAGS+=-I${SENDMAIL_DIR}/src -I${SENDMAIL_DIR}/include -I.
 CFLAGS+=-DNEWDB -DNOT_SENDMAIL
 CFLAGS+=-D_FFR_LISTDB -D_FFR_DEBUG
+
+WARNS?=	2
+
+# Unfortunately, clang gives warnings about sendmail code that cannot
+# be turned off yet.  Since this is contrib code, and we don't really
+# care about the warnings, just make them non-fatal for now.
+NO_WERROR.clang=
 
 LIBSMDIR=	${.OBJDIR}/../../lib/libsm
 LIBSM=		${LIBSMDIR}/libsm.a

@@ -56,12 +56,13 @@
 #include "config.h"
 #endif
 
-#if defined(SYS_WINNT)
-#undef close
-#define close closesocket
-#endif
-
 #if defined(REFCLOCK) && (defined(PALISADE) || defined(CLOCK_PALISADE))
+
+#ifdef SYS_WINNT
+extern int async_write(int, const void *, unsigned int);
+#undef write
+#define write(fd, data, octets)	async_write(fd, data, octets)
+#endif
 
 #include "refclock_palisade.h"
 /* Table to get from month to day of the year */
@@ -494,7 +495,7 @@ if (debug > 1) {
 			return 0;
 		}
 
-		pp->nsec = (long) (getdbl((u_char *) &mb(3)) * 1000000);
+		pp->nsec = (long) (getdbl((u_char *) &mb(3)) * 1000000000);
 
 		if ((pp->day = day_of_year(&mb(14))) < 0) 
 			break;

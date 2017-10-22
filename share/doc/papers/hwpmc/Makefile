@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/doc/papers/hwpmc/Makefile 145256 2005-04-19 04:01:25Z jkoshy $
+# $FreeBSD$
 
 VOLUME=	papers
 DOC=	hwpmc

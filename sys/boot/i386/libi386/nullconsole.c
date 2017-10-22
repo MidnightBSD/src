@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/i386/libi386/nullconsole.c 119482 2003-08-25 23:28:32Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include <bootstrap.h>

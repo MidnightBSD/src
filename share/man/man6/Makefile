@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/man/man6/Makefile 74856 2001-03-27 13:48:25Z ru $
+# $FreeBSD$
 
 MAN=	intro.6
 

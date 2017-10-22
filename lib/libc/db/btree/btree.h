@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)btree.h	8.11 (Berkeley) 8/17/94
- * $FreeBSD: release/7.0.0/lib/libc/db/btree/btree.h 165903 2007-01-09 00:28:16Z imp $
+ * $FreeBSD$
  */
 
 /* Macros to set/clear/test flags. */
@@ -309,8 +309,8 @@ typedef struct _btree {
 	CURSOR	  bt_cursor;		/* cursor */
 
 #define	BT_PUSH(t, p, i) {						\
-	t->bt_sp->pgno = p; 						\
-	t->bt_sp->index = i; 						\
+	t->bt_sp->pgno = p;						\
+	t->bt_sp->index = i;						\
 	++t->bt_sp;							\
 }
 #define	BT_POP(t)	(t->bt_sp == t->bt_stack ? NULL : --t->bt_sp)

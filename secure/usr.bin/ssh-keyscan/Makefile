@@ -1,6 +1,7 @@
-# $FreeBSD: release/7.0.0/secure/usr.bin/ssh-keyscan/Makefile 158529 2006-05-13 21:38:16Z des $
+# $FreeBSD$
 
 PROG=	ssh-keyscan
+SRCS=	ssh-keyscan.c roaming_dummy.c
 CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
 
 DPADD=	${LIBSSH} ${LIBCRYPT} ${LIBCRYPTO} ${LIBZ}

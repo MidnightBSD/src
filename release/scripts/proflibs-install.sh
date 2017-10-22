@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/release/scripts/proflibs-install.sh 161688 2006-08-28 08:12:49Z ru $
+# $FreeBSD$
 #
 
 if [ "`id -u`" != "0" ]; then

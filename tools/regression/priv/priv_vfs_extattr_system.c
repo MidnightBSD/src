@@ -27,7 +27,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/regression/priv/priv_vfs_extattr_system.c 172106 2007-09-09 23:08:39Z rwatson $
+ * $FreeBSD$
  */
 
 /*
@@ -80,7 +80,7 @@ priv_vfs_extattr_system(int asroot, int injail, struct test *test)
 	else if (ret == EA_SIZE)
 		error = 0;
 	else
-		err(-1, "priv_vfs_extattr_system: set returned %d", ret);
+		err(-1, "priv_vfs_extattr_system: set returned %zd", ret);
 	if (asroot && injail)
 		expect("priv_vfs_extattr_system(asroot, injail)", error, -1,
 		    EPERM);

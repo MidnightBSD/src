@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/gnu/usr.bin/patch/INTERN.h 50965 1999-09-05 17:31:55Z peter $
+/* $FreeBSD$
  *
  * $Log: INTERN.h,v $
  * Revision 2.0  86/09/17  15:35:58  lwall

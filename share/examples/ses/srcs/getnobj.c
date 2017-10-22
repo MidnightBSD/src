@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/share/examples/ses/srcs/getnobj.c 57580 2000-02-29 05:44:19Z mjacob $ */
+/* $FreeBSD$ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.
@@ -41,9 +41,7 @@
 #include SESINC
 
 int
-main(argc, argv)
-	int argc;
-	char **argv;
+main(int argc, char **argv)
 {
 	unsigned int nobj;
 	int fd;

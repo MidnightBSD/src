@@ -12,11 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -45,7 +41,7 @@ static const char sccsid[] = "@(#)pom.c       8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/games/pom/pom.c 145782 2005-05-01 19:34:22Z stefanf $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Phase of the Moon.  Calculates the current phase of the moon.
@@ -57,9 +53,13 @@ __FBSDID("$FreeBSD: release/7.0.0/games/pom/pom.c 145782 2005-05-01 19:34:22Z st
  *
  */
 
-#include <time.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
+#include <string.h>
+#include <sysexits.h>
+#include <time.h>
+#include <unistd.h> 
 
 #ifndef	PI
 #define	PI	  3.14159265358979323846
@@ -76,22 +76,71 @@ __FBSDID("$FreeBSD: release/7.0.0/games/pom/pom.c 145782 2005-05-01 19:34:22Z st
 static void	adj360(double *);
 static double	dtor(double);
 static double	potm(double);
+static void	usage(char *progname);
 
 int
-main(void)
+main(int argc, char **argv)
 {
 	time_t tt;
-	struct tm *GMT;
+	struct tm GMT, tmd;
 	double days, today, tomorrow;
-	int cnt;
+	int ch, cnt, pflag = 0;
+	char *odate = NULL, *otime = NULL;
 
-	(void) time(&tt);
-	GMT = gmtime(&tt);
-	days = (GMT->tm_yday + 1) + ((GMT->tm_hour +
-	    (GMT->tm_min / 60.0) + (GMT->tm_sec / 3600.0)) / 24.0);
-	for (cnt = EPOCH; cnt < GMT->tm_year; ++cnt)
+	while ((ch = getopt(argc, argv, "d:pt:")) != -1)
+		switch (ch) {
+		case 'd':
+			odate = optarg;
+			break;
+		case 'p':
+			pflag = 1;
+			break;
+		case 't':
+			otime = optarg;
+			break;
+		default:
+			usage(argv[0]);
+		}
+
+        argc -= optind;
+	argv += optind;
+
+	if (argc)
+		usage(argv[0]);
+
+	/* Adjust based on users preferences */
+	time(&tt);
+	if (otime != NULL || odate != NULL) {
+		/* Save today in case -d isn't specified */
+		localtime_r(&tt, &tmd);
+
+		if (odate != NULL) {
+			tmd.tm_year = strtol(odate, NULL, 10) - 1900;
+			tmd.tm_mon = strtol(odate + 5, NULL, 10) - 1;
+			tmd.tm_mday = strtol(odate + 8, NULL, 10);
+			/* Use midnight as the middle of the night */
+			tmd.tm_hour = 0;
+			tmd.tm_min = 0;
+			tmd.tm_sec = 0;
+		}
+		if (otime != NULL) {
+			tmd.tm_hour = strtol(otime, NULL, 10);
+			tmd.tm_min = strtol(otime + 3, NULL, 10);
+			tmd.tm_sec = strtol(otime + 6, NULL, 10);
+		}
+		tt = mktime(&tmd);
+	}
+
+	gmtime_r(&tt, &GMT);
+	days = (GMT.tm_yday + 1) + ((GMT.tm_hour +
+	    (GMT.tm_min / 60.0) + (GMT.tm_sec / 3600.0)) / 24.0);
+	for (cnt = EPOCH; cnt < GMT.tm_year; ++cnt)
 		days += isleap(1900 + cnt) ? 366 : 365;
 	today = potm(days) + .5;
+	if (pflag) {
+		(void)printf("%1.0f\n", today);
+		return (0);
+	}
 	(void)printf("The Moon is ");
 	if ((int)today == 100)
 		(void)printf("Full\n");
@@ -160,6 +209,7 @@ potm(double days)
 static double
 dtor(double deg)
 {
+
 	return(deg * PI / 180);
 }
 
@@ -170,6 +220,7 @@ dtor(double deg)
 static void
 adj360(double *deg)
 {
+
 	for (;;)
 		if (*deg < 0)
 			*deg += 360;
@@ -177,4 +228,13 @@ adj360(double *deg)
 			*deg -= 360;
 		else
 			break;
+}
+
+static void
+usage(char *progname)
+{
+
+	fprintf(stderr, "Usage: %s [-p] [-d yyyy.mm.dd] [-t hh:mm:ss]\n",
+	    progname);
+	exit(EX_USAGE);
 }

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/games/fortune/datfiles/limerick.sp.ok 174574 2007-12-13 05:45:08Z dougb $
+# $FreeBSD$
 abbess's
 Abercrombie
 Aberystwyth
@@ -283,6 +283,7 @@ McTavish
 meanie
 meanies
 meany
+Mensa
 mentis
 midgets
 minimis
@@ -353,11 +354,9 @@ quimmy
 quints
 ravished
 Reims
-reknown
 Resounded
 retriebrve
 Rhyll
-rococco
 rogered
 Salinas
 Sandem

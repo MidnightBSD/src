@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)sysctl.c	8.2 (Berkeley) 1/4/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/gen/sysctl.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -43,15 +43,12 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/gen/sysctl.c 165903 2007-01-09 00:28:
 #include <unistd.h>
 #include <string.h>
 
-extern int __sysctl(int *name, u_int namelen, void *oldp, size_t *oldlenp,
-    void *newp, size_t newlen);
+extern int __sysctl(const int *name, u_int namelen, void *oldp,
+    size_t *oldlenp, const void *newp, size_t newlen);
 
 int
-sysctl(name, namelen, oldp, oldlenp, newp, newlen)
-	int *name;
-	u_int namelen;
-	void *oldp, *newp;
-	size_t *oldlenp, newlen;
+sysctl(const int *name, u_int namelen, void *oldp, size_t *oldlenp,
+    const void *newp, size_t newlen)
 {
 	if (name[0] != CTL_USER)
 		return (__sysctl(name, namelen, oldp, oldlenp, newp, newlen));

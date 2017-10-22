@@ -47,7 +47,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)locate.c    8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/7.0.0/usr.bin/locate/locate/locate.c 159519 2006-06-11 17:40:25Z maxim $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 /*
@@ -291,6 +291,8 @@ search_mmap(db, s)
 	    fstat(fd, &sb) == -1)
 		err(1, "`%s'", db);
 	len = sb.st_size;
+	if (len < (2*NBG))
+		errx(1, "database too small: %s", db);
 
 	if ((p = mmap((caddr_t)0, (size_t)len,
 		      PROT_READ, MAP_SHARED,
@@ -325,7 +327,7 @@ cputime ()
 {
 	struct rusage rus;
 
-	getrusage(0, &rus);
+	getrusage(RUSAGE_SELF, &rus);
 	return(rus.ru_utime.tv_sec * 1000 + rus.ru_utime.tv_usec / 1000);
 }
 #endif /* DEBUG */

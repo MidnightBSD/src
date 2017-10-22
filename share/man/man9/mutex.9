@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	from BSDI $Id: mutex.4,v 1.1.2.3 1998/04/27 22:53:13 ewv Exp $
-.\" $FreeBSD: release/7.0.0/share/man/man9/mutex.9 168071 2007-03-30 18:07:26Z julian $
+.\" $FreeBSD$
 .\"
 .Dd December 21, 2006
 .Dt MUTEX 9
@@ -128,9 +128,7 @@ Mutexes which do not context switch are
 mutexes.
 These should only be used to protect data shared with primary interrupt
 code.
-This includes
-.Dv INTR_FAST
-interrupt handlers and low level scheduling code.
+This includes interrupt filters and low level scheduling code.
 In all architectures both acquiring and releasing of a
 uncontested spin mutex is more expensive than the same operation
 on a non-spin mutex.

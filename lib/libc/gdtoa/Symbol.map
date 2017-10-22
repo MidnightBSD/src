@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/7.0.0/lib/libc/gdtoa/Symbol.map 172946 2007-10-24 23:53:20Z deischen $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {
@@ -11,4 +11,9 @@ FBSD_1.0 {
 
 	/* FreeBSD additions */
 	strtold;
+};
+
+FBSDprivate_1.0 {
+	/* used in libm */
+	__hexnan_D2A;
 };

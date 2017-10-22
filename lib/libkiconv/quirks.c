@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libkiconv/quirks.c 120492 2003-09-26 20:26:25Z fjoe $
+ * $FreeBSD$
  */
 
 /*
@@ -183,9 +183,13 @@ quirk_unix2vendor(uint16_t c, struct quirk_replace_list *replace_list, size_t nu
 
 #else /* statically linked */
 
+#include <sys/types.h>
+#include <sys/iconv.h>
+
 const char *
-kiconv_quirkcs(const char* base, int vendor)
+kiconv_quirkcs(const char* base __unused, int vendor __unused)
 {
+
 	return (base);
 }
 

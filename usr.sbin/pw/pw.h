@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/pw/pw.h 168044 2007-03-30 11:23:10Z le $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -95,6 +95,7 @@ struct userconf
 	int	numgroups;		/* (internal) size of default_group array */
 };
 
+#define	_DEF_DIRMODE	(S_IRWXU | S_IRWXG | S_IRWXO)
 #define _PATH_PW_CONF	"/etc/pw.conf"
 #define _UC_MAXLINE	1024
 #define _UC_MAXSHELLS	32

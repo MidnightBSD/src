@@ -34,7 +34,7 @@
 # From src/sys/kern/makedevops.pl,v 1.12 1999/11/22 14:40:04 n_hibma Exp
 # From src/sys/kern/makeobjops.pl,v 1.8 2001/11/16 02:02:42 joe Exp
 #
-# $FreeBSD: release/7.0.0/sys/tools/makeobjops.awk 139825 2005-01-07 02:29:27Z imp $
+# $FreeBSD$
 
 #
 #   Script to produce kobj front-end sugar.
@@ -240,7 +240,7 @@ function handle_method (static, doc)
 		lineno++
 	}
 
-	default = "";
+	default_function = "";
 	if (!match(line, /\};?/)) {
 		warnsrc("Premature end of file");
 		error = 1;
@@ -248,9 +248,9 @@ function handle_method (static, doc)
 	}
 	extra = substr(line, RSTART + RLENGTH);
 	if (extra ~ /[	 ]*DEFAULT[ 	]*[a-zA-Z_][a-zA-Z_0-9]*[ 	]*;/) {
-		default = extra;
-		sub(/.*DEFAULT[	 ]*/, "", default);
-		sub(/[; 	]+.*$/, "", default);
+		default_function = extra;
+		sub(/.*DEFAULT[	 ]*/, "", default_function);
+		sub(/[; 	]+.*$/, "", default_function);
 	}
 	else if (extra && opt_d) {
 		#   Warn about garbage at end of line.
@@ -294,8 +294,8 @@ function handle_method (static, doc)
 
 	firstvar = varnames[1];
 
-	if (default == "")
-		default = "kobj_error_method";
+	if (default_function == "")
+		default_function = "kobj_error_method";
 
 	# the method description 
 	printh("/** @brief Unique descriptor for the " umname "() method */");
@@ -308,7 +308,7 @@ function handle_method (static, doc)
 
 	# Print out the method desc
 	printc("struct kobj_method " mname "_method_default = {");
-	printc("\t&" mname "_desc, (kobjop_t) " default);
+	printc("\t&" mname "_desc, (kobjop_t) " default_function);
 	printc("};\n");
 
 	printc("struct kobjop_desc " mname "_desc = {");

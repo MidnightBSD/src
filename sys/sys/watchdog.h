@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sys/watchdog.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 #ifndef _SYS_WATCHDOG_H
 #define	_SYS_WATCHDOG_H
@@ -48,6 +48,12 @@
 	 * The kernel will chose an appropriate timeout duration and
 	 * periodically reset the timer provided everything looks all
 	 * right to the kernel.
+ 	 */
+
+#define WD_LASTVAL	0x0200000
+	/*
+	 * Use the already last used timeout value.
+	 * The kernel will use as timeout the last valid timeout provided.
  	 */
 
 #define WD_INTERVAL	0x00000ff
@@ -78,6 +84,9 @@
 typedef void (*watchdog_fn)(void *, u_int, int *);
 
 EVENTHANDLER_DECLARE(watchdog_list, watchdog_fn);
+
+u_int	wdog_kern_last_timeout(void);
+int	wdog_kern_pat(u_int utim);
 #endif
 
 #endif /* _SYS_WATCHDOG_H */

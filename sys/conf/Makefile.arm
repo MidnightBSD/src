@@ -1,7 +1,7 @@
 # Makefile.arm -- with config changes.
 # Copyright 1990 W. Jolitz
 #	from: @(#)Makefile.i386	7.1 5/10/91
-# $FreeBSD: release/7.0.0/sys/conf/Makefile.arm 174854 2007-12-22 06:32:46Z cvs2svn $
+# $FreeBSD$
 #
 # Makefile for FreeBSD
 #
@@ -19,9 +19,6 @@
 # Which version of config(8) is required.
 %VERSREQ=	600004
 
-# Temporary stuff while we're still embryonic
-NO_MODULES=
-
 STD8X16FONT?=	iso
 
 .if !defined(S)
@@ -33,6 +30,8 @@ S=	../../..
 .endif
 .include "$S/conf/kern.pre.mk"
 
+INCLUDES+= -I$S/contrib/libfdt
+
 SYSTEM_LD:= ${SYSTEM_LD:$S/conf/ldscript.$M=ldscript.$M}
 SYSTEM_DEP:= ${SYSTEM_DEP:$S/conf/ldscript.$M=ldscript.$M}
 
@@ -40,6 +39,10 @@ SYSTEM_DEP:= ${SYSTEM_DEP:$S/conf/ldscript.$M=ldscript.$M}
 CC += -mbig-endian
 SYSTEM_LD += -EB
 LD += -EB
+.else
+CC += -mlittle-endian
+SYSTEM_LD += -EL
+LD += -EL
 .endif
 
 
@@ -63,11 +66,18 @@ SYSTEM_LD_TAIL +=;sed s/" + SIZEOF_HEADERS"// ldscript.$M\
 		${KERNEL_KO}.bin; \
 		rm ${FULLKERNEL}.noheader
 
+.if defined(MFS_IMAGE)
+SYSTEM_LD_TAIL += ;sh ${S}/tools/embed_mfs.sh ${KERNEL_KO}.bin ${MFS_IMAGE};
+.endif
+
 FILES_CPU_FUNC =	$S/$M/$M/cpufunc_asm_arm7tdmi.S \
 	$S/$M/$M/cpufunc_asm_arm8.S $S/$M/$M/cpufunc_asm_arm9.S \
 	$S/$M/$M/cpufunc_asm_sa1.S $S/$M/$M/cpufunc_asm_arm10.S \
 	$S/$M/$M/cpufunc_asm_xscale.S $S/$M/$M/cpufunc_asm.S \
-	$S/$M/$M/cpufunc_asm_xscale_c3.S
+	$S/$M/$M/cpufunc_asm_xscale_c3.S $S/$M/$M/cpufunc_asm_armv5_ec.S \
+	$S/$M/$M/cpufunc_asm_sheeva.S $S/$M/$M/cpufunc_asm_fa526.S
+KERNEL_EXTRA=trampoline
+KERNEL_EXTRA_INSTALL=kernel.gz.tramp
 trampoline: ${KERNEL_KO}.tramp
 ${KERNEL_KO}.tramp: ${KERNEL_KO} $S/$M/$M/inckern.S $S/$M/$M/elf_trampoline.c
 	echo "#define KERNNAME \"${KERNEL_KO}.tmp\"" >opt_kernname.h 
@@ -81,10 +91,11 @@ ${KERNEL_KO}.tramp: ${KERNEL_KO} $S/$M/$M/inckern.S $S/$M/$M/elf_trampoline.c
 	-g --strip-symbol '$$t' ${FULLKERNEL} ${KERNEL_KO}.tmp
 	eval $$(stat -s ${KERNEL_KO}.tmp) && \
 	echo "#define KERNSIZE $$st_size" >>opt_kernname.h
-	${CC} -O -nostdlib -I. -Xlinker -T -Xlinker ldscript.$M.tramp \
+	${CC} -O -nostdlib -I. -I$S -Xlinker -T -Xlinker ldscript.$M.tramp \
 	tmphack.S $S/$M/$M/elf_trampoline.c $S/$M/$M/inckern.S \
 	${FILES_CPU_FUNC} -o ${KERNEL_KO}.tramp
-	${CC} -O -nostdlib -I. -Xlinker -T -Xlinker ldscript.$M.tramp.noheader \
+	${CC} -O -nostdlib -I. -I$S -Xlinker -T -Xlinker \
+	ldscript.$M.tramp.noheader \
 	tmphack.S $S/$M/$M/elf_trampoline.c $S/$M/$M/inckern.S \
 	${FILES_CPU_FUNC} -o ${KERNEL_KO}.tramp.noheader 
 	${OBJCOPY} -S -O binary ${KERNEL_KO}.tramp.noheader \
@@ -97,17 +108,21 @@ ${KERNEL_KO}.tramp: ${KERNEL_KO} $S/$M/$M/inckern.S $S/$M/$M/elf_trampoline.c
 	gzip -9 ${KERNEL_KO}.tmp
 	eval $$(stat -s ${KERNEL_KO}.tmp.gz) && \
 	echo "#define KERNCOMPSIZE $$st_size" >>opt_kernname.h
-	${CC} -O2 -DKZIP -I. -c $S/kern/inflate.c -o inflate-tramp.o
-	${CC} -O -nostdlib -I. -Xlinker -T -Xlinker ldscript.$M.tramp \
+	${CC} -O2 -ffreestanding -DKZIP -I. -I$S -c $S/kern/inflate.c -o \
+	    inflate-tramp.o
+	${CC} -O -nostdlib -I. -I$S -Xlinker -T -Xlinker ldscript.$M.tramp \
 	-DKZIP tmphack.S $S/$M/$M/elf_trampoline.c inflate-tramp.o \
 	$S/$M/$M/inckern.S ${FILES_CPU_FUNC} -o ${KERNEL_KO}.gz.tramp
-	${CC} -O -nostdlib -I. -Xlinker -T -Xlinker ldscript.$M.tramp.noheader \
+	${CC} -O -nostdlib -I. -I$S -Xlinker -T -Xlinker \
+	ldscript.$M.tramp.noheader \
 	-DKZIP tmphack.S $S/$M/$M/elf_trampoline.c inflate-tramp.o \
 	$S/$M/$M/inckern.S ${FILES_CPU_FUNC} -o ${KERNEL_KO}.tramp.noheader
 	${OBJCOPY} -S -O binary ${KERNEL_KO}.tramp.noheader \
 	${KERNEL_KO}.gz.tramp.bin
 	rm ${KERNEL_KO}.tmp.gz ${KERNEL_KO}.tramp.noheader opt_kernname.h \
 	inflate-tramp.o tmphack.S
+
+MKMODULESENV+=	MACHINE=${MACHINE}
 
 %BEFORE_DEPEND
 

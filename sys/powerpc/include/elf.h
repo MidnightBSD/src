@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/powerpc/include/elf.h 163016 2006-10-04 21:37:10Z jb $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ELF_H_
@@ -36,14 +36,26 @@
  * [ppc-eabi-1995-01.pdf] for details.
  */
 
-#include <sys/elf32.h>	/* Definitions common to all 32 bit architectures. */
-
+#ifndef __ELF_WORD_SIZE
+#ifdef __powerpc64__
+#define	__ELF_WORD_SIZE	64	/* Used by <sys/elf_generic.h> */
+#else
 #define	__ELF_WORD_SIZE	32	/* Used by <sys/elf_generic.h> */
+#endif
+#endif
+
+#include <sys/elf32.h>	/* Definitions common to all 32 bit architectures. */
+#include <sys/elf64.h>	/* Definitions common to all 64 bit architectures. */
 #include <sys/elf_generic.h>
 
+#if __ELF_WORD_SIZE == 64
+#define	ELF_ARCH	EM_PPC64
+#define	ELF_MACHINE_OK(x) ((x) == EM_PPC64)
+#else
 #define	ELF_ARCH	EM_PPC
-
+#define	ELF_ARCH32	EM_PPC
 #define	ELF_MACHINE_OK(x) ((x) == EM_PPC)
+#endif
 
 /*
  * Auxiliary vector entries for passing information to the interpreter.
@@ -61,6 +73,15 @@ typedef struct {	/* Auxiliary vector entry on initial stack */
 	} a_un;
 } Elf32_Auxinfo;
 
+typedef struct {	/* Auxiliary vector entry on initial stack */
+	long	a_type;			/* Entry type. */
+	union {
+		long	a_val;		/* Integer value. */
+		void	*a_ptr;		/* Address. */
+		void	(*a_fcn)(void);	/* Function pointer (not used). */
+	} a_un;
+} Elf64_Auxinfo;
+
 __ElfType(Auxinfo);
 
 /* Values for a_type. */
@@ -77,11 +98,17 @@ __ElfType(Auxinfo);
 #define	AT_DCACHEBSIZE	10	/* Data cache block size for the processor. */
 #define	AT_ICACHEBSIZE	11	/* Instruction cache block size for the uP. */
 #define	AT_UCACHEBSIZE	12	/* Cache block size, or `0' if cache not unified. */
+#define	AT_EXECPATH	13	/* Path to the executable. */
+#define	AT_CANARY	14	/* Canary for SSP */
+#define	AT_CANARYLEN	15	/* Length of the canary. */
+#define	AT_OSRELDATE	16	/* OSRELDATE. */
+#define	AT_NCPUS	17	/* Number of CPUs. */
+#define	AT_PAGESIZES	18	/* Pagesizes. */
+#define	AT_PAGESIZESLEN	19	/* Number of pagesizes. */
+#define	AT_STACKPROT	21	/* Initial stack protection. */
+#define	AT_TIMEKEEP	22	/* Pointer to timehands. */
 
-#define	AT_COUNT	13	/* Count of defined aux entry types. */
-
-/* Used in John Polstra's testbed stuff. */
-#define	AT_DEBUG	14	/* Debugging level. */
+#define	AT_COUNT	23	/* Count of defined aux entry types. */
 
 /*
  * Relocation types.
@@ -93,9 +120,18 @@ __ElfType(Auxinfo);
 #define	R_PPC_EMB_COUNT		(R_PPC_EMB_RELSDA - R_PPC_EMB_NADDR32 + 1)
 
 /* Define "machine" characteristics */
+#if __ELF_WORD_SIZE == 64
+#define	ELF_TARG_CLASS	ELFCLASS64
+#define	ELF_TARG_DATA	ELFDATA2MSB
+#define	ELF_TARG_MACH	EM_PPC64
+#define	ELF_TARG_VER	1
+#else
 #define	ELF_TARG_CLASS	ELFCLASS32
 #define	ELF_TARG_DATA	ELFDATA2MSB
 #define	ELF_TARG_MACH	EM_PPC
 #define	ELF_TARG_VER	1
+#endif
+
+#define	ET_DYN_LOAD_ADDR 0x01010000
 
 #endif /* !_MACHINE_ELF_H_ */

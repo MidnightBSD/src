@@ -1,4 +1,3 @@
-.\"  -*- nroff -*-
 .\"
 .\" Author: Tatu Ylonen <ylo@cs.hut.fi>
 .\" Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -34,18 +33,16 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $OpenBSD: sshd_config.5,v 1.70 2006/08/21 08:14:01 dtucker Exp $
-.\" $FreeBSD: release/7.0.0/crypto/openssh/sshd_config.5 172506 2007-10-10 16:59:15Z cvs2svn $
-.Dd September 25, 1999
+.\" $OpenBSD: sshd_config.5,v 1.131 2010/12/08 04:02:47 djm Exp $
+.\" $FreeBSD$
+.Dd December 8, 2010
 .Dt SSHD_CONFIG 5
 .Os
 .Sh NAME
 .Nm sshd_config
 .Nd OpenSSH SSH daemon configuration file
 .Sh SYNOPSIS
-.Bl -tag -width Ds -compact
-.It Pa /etc/ssh/sshd_config
-.El
+.Nm /etc/ssh/sshd_config
 .Sh DESCRIPTION
 .Xr sshd 8
 reads configuration data from
@@ -98,6 +95,15 @@ Valid arguments are
 (use IPv6 only).
 The default is
 .Dq any .
+.It Cm AllowAgentForwarding
+Specifies whether
+.Xr ssh-agent 1
+forwarding is permitted.
+The default is
+.Dq yes .
+Note that disabling agent forwarding does not improve security
+unless users are also denied shell access, as they can always install
+their own forwarders.
 .It Cm AllowGroups
 This keyword can be followed by a list of group name patterns, separated
 by spaces.
@@ -149,6 +155,10 @@ for more information on patterns.
 .It Cm AuthorizedKeysFile
 Specifies the file that contains the public keys that can be used
 for user authentication.
+The format is described in the
+.Sx AUTHORIZED_KEYS FILE FORMAT
+section of
+.Xr sshd 8 .
 .Cm AuthorizedKeysFile
 may contain tokens of the form %T which are substituted during connection
 setup.
@@ -161,27 +171,106 @@ is taken to be an absolute path or one relative to the user's home
 directory.
 The default is
 .Dq .ssh/authorized_keys .
+.It Cm AuthorizedPrincipalsFile
+Specifies a file that lists principal names that are accepted for
+certificate authentication.
+When using certificates signed by a key listed in
+.Cm TrustedUserCAKeys ,
+this file lists names, one of which must appear in the certificate for it
+to be accepted for authentication.
+Names are listed one per line preceded by key options (as described
+in
+.Sx AUTHORIZED_KEYS FILE FORMAT
+in
+.Xr sshd 8 ) .
+Empty lines and comments starting with
+.Ql #
+are ignored.
+.Pp
+.Cm AuthorizedPrincipalsFile
+may contain tokens of the form %T which are substituted during connection
+setup.
+The following tokens are defined: %% is replaced by a literal '%',
+%h is replaced by the home directory of the user being authenticated, and
+%u is replaced by the username of that user.
+After expansion,
+.Cm AuthorizedPrincipalsFile
+is taken to be an absolute path or one relative to the user's home
+directory.
+.Pp
+The default is not to use a principals file \(en in this case, the username
+of the user must appear in a certificate's principals list for it to be
+accepted.
+Note that
+.Cm AuthorizedPrincipalsFile
+is only used when authentication proceeds using a CA listed in
+.Cm TrustedUserCAKeys
+and is not consulted for certification authorities trusted via
+.Pa ~/.ssh/authorized_keys ,
+though the
+.Cm principals=
+key option offers a similar facility (see
+.Xr sshd 8
+for details).
 .It Cm Banner
-In some jurisdictions, sending a warning message before authentication
-may be relevant for getting legal protection.
 The contents of the specified file are sent to the remote user before
 authentication is allowed.
+If the argument is
+.Dq none
+then no banner is displayed.
 This option is only available for protocol version 2.
 By default, no banner is displayed.
 .It Cm ChallengeResponseAuthentication
-Specifies whether challenge-response authentication is allowed.
-Specifically, in
-.Fx ,
-this controls the use of PAM (see
-.Xr pam 3 )
-for authentication.
-Note that this affects the effectiveness of the
-.Cm PasswordAuthentication
-and
-.Cm PermitRootLogin
-variables.
+Specifies whether challenge-response authentication is allowed (e.g. via
+PAM or though authentication styles supported in
+.Xr login.conf 5 )
 The default is
 .Dq yes .
+.It Cm ChrootDirectory
+Specifies the pathname of a directory to
+.Xr chroot 2
+to after authentication.
+All components of the pathname must be root-owned directories that are
+not writable by any other user or group.
+After the chroot,
+.Xr sshd 8
+changes the working directory to the user's home directory.
+.Pp
+The pathname may contain the following tokens that are expanded at runtime once
+the connecting user has been authenticated: %% is replaced by a literal '%',
+%h is replaced by the home directory of the user being authenticated, and
+%u is replaced by the username of that user.
+.Pp
+The
+.Cm ChrootDirectory
+must contain the necessary files and directories to support the
+user's session.
+For an interactive session this requires at least a shell, typically
+.Xr sh 1 ,
+and basic
+.Pa /dev
+nodes such as
+.Xr null 4 ,
+.Xr zero 4 ,
+.Xr stdin 4 ,
+.Xr stdout 4 ,
+.Xr stderr 4 ,
+.Xr arandom 4
+and
+.Xr tty 4
+devices.
+For file transfer sessions using
+.Dq sftp ,
+no additional configuration of the environment is necessary if the
+in-process sftp server is used,
+though sessions which use logging do require
+.Pa /dev/log
+inside the chroot directory (see
+.Xr sftp-server 8
+for details).
+.Pp
+The default is not to
+.Xr chroot 2 .
 .It Cm Ciphers
 Specifies the ciphers allowed for protocol version 2.
 Multiple ciphers must be comma-separated.
@@ -201,9 +290,9 @@ and
 .Dq cast128-cbc .
 The default is:
 .Bd -literal -offset 3n
-aes128-cbc,3des-cbc,blowfish-cbc,cast128-cbc,arcfour128,
-arcfour256,arcfour,aes192-cbc,aes256-cbc,aes128-ctr,
-aes192-ctr,aes256-ctr
+aes128-ctr,aes192-ctr,aes256-ctr,arcfour256,arcfour128,
+aes128-cbc,3des-cbc,blowfish-cbc,cast128-cbc,aes192-cbc,
+aes256-cbc,arcfour
 .Ed
 .It Cm ClientAliveCountMax
 Sets the number of client alive messages (see below) which may be
@@ -294,7 +383,9 @@ for more information on patterns.
 .It Cm ForceCommand
 Forces the execution of the command specified by
 .Cm ForceCommand ,
-ignoring any command supplied by the client.
+ignoring any command supplied by the client and
+.Pa ~/.ssh/rc
+if present.
 The command is invoked by using the user's login shell with the -c option.
 This applies to shell, command, or subsystem execution.
 It is most useful inside a
@@ -303,6 +394,11 @@ block.
 The command originally supplied by the client is available in the
 .Ev SSH_ORIGINAL_COMMAND
 environment variable.
+Specifying a command of
+.Dq internal-sftp
+will force the use of an in-process sftp server that requires no support
+files when used with
+.Cm ChrootDirectory .
 .It Cm GatewayPorts
 Specifies whether remote hosts are allowed to connect to ports
 forwarded for the client.
@@ -360,13 +456,24 @@ uses the name supplied by the client rather than
 attempting to resolve the name from the TCP connection itself.
 The default is
 .Dq no .
+.It Cm HostCertificate
+Specifies a file containing a public host certificate.
+The certificate's public key must match a private host key already specified
+by
+.Cm HostKey .
+The default behaviour of
+.Xr sshd 8
+is not to load any certificates.
 .It Cm HostKey
 Specifies a file containing a private host key
 used by SSH.
 The default is
 .Pa /etc/ssh/ssh_host_key
 for protocol version 1, and
-.Pa /etc/ssh/ssh_host_dsa_key
+.Pa /etc/ssh/ssh_host_dsa_key ,
+.Pa /etc/ssh/ssh_host_ecdsa_key
+and
+.Pa /etc/ssh/ssh_host_rsa_key
 for protocol version 2.
 Note that
 .Xr sshd 8
@@ -374,7 +481,8 @@ will refuse to use a file if it is group/world-accessible.
 It is possible to have multiple host key files.
 .Dq rsa1
 keys are used for version 1 and
-.Dq dsa
+.Dq dsa ,
+.Dq ecdsa
 or
 .Dq rsa
 are used for version 2 of the SSH protocol.
@@ -405,6 +513,43 @@ or
 .Cm HostbasedAuthentication .
 The default is
 .Dq no .
+.It Cm IPQoS
+Specifies the IPv4 type-of-service or DSCP class for the connection.
+Accepted values are
+.Dq af11 ,
+.Dq af12 ,
+.Dq af13 ,
+.Dq af14 ,
+.Dq af22 ,
+.Dq af23 ,
+.Dq af31 ,
+.Dq af32 ,
+.Dq af33 ,
+.Dq af41 ,
+.Dq af42 ,
+.Dq af43 ,
+.Dq cs0 ,
+.Dq cs1 ,
+.Dq cs2 ,
+.Dq cs3 ,
+.Dq cs4 ,
+.Dq cs5 ,
+.Dq cs6 ,
+.Dq cs7 ,
+.Dq ef ,
+.Dq lowdelay ,
+.Dq throughput ,
+.Dq reliability ,
+or a numeric value.
+This option may take one or two arguments, separated by whitespace.
+If one argument is specified, it is used as the packet class unconditionally.
+If two values are specified, the first is automatically selected for
+interactive sessions and the second for non-interactive sessions.
+The default is
+.Dq lowdelay
+for interactive sessions and
+.Dq throughput
+for non-interactive sessions.
 .It Cm KerberosAuthentication
 Specifies whether the password provided by the user for
 .Cm PasswordAuthentication
@@ -430,6 +575,17 @@ Specifies whether to automatically destroy the user's ticket cache
 file on logout.
 The default is
 .Dq yes .
+.It Cm KexAlgorithms
+Specifies the available KEX (Key Exchange) algorithms.
+Multiple algorithms must be comma-separated.
+The default is
+.Dq ecdh-sha2-nistp256 ,
+.Dq ecdh-sha2-nistp384 ,
+.Dq ecdh-sha2-nistp521 ,
+.Dq diffie-hellman-group-exchange-sha256 ,
+.Dq diffie-hellman-group-exchange-sha1 ,
+.Dq diffie-hellman-group14-sha1 ,
+.Dq diffie-hellman-group1-sha1 .
 .It Cm KeyRegenerationInterval
 In protocol version 1, the ephemeral server key is automatically regenerated
 after this many seconds (if it has been used).
@@ -497,7 +653,10 @@ The MAC algorithm is used in protocol version 2
 for data integrity protection.
 Multiple algorithms must be comma-separated.
 The default is:
-.Dq hmac-md5,hmac-sha1,hmac-ripemd160,hmac-sha1-96,hmac-md5-96 .
+.Bd -literal -offset indent
+hmac-md5,hmac-sha1,umac-64@openssh.com,
+hmac-ripemd160,hmac-sha1-96,hmac-md5-96
+.Ed
 .It Cm Match
 Introduces a conditional block.
 If all of the criteria on the
@@ -506,6 +665,7 @@ line are satisfied, the keywords on the following lines override those
 set in the global section of the config file, until either another
 .Cm Match
 line or the end of the file.
+.Pp
 The arguments to
 .Cm Match
 are one or more criteria-pattern pairs.
@@ -515,16 +675,57 @@ The available criteria are
 .Cm Host ,
 and
 .Cm Address .
+The match patterns may consist of single entries or comma-separated
+lists and may use the wildcard and negation operators described in the
+.Sx PATTERNS
+section of
+.Xr ssh_config 5 .
+.Pp
+The patterns in an
+.Cm Address
+criteria may additionally contain addresses to match in CIDR
+address/masklen format, e.g.\&
+.Dq 192.0.2.0/24
+or
+.Dq 3ffe:ffff::/32 .
+Note that the mask length provided must be consistent with the address -
+it is an error to specify a mask length that is too long for the address
+or one with bits set in this host portion of the address.
+For example,
+.Dq 192.0.2.0/33
+and
+.Dq 192.0.2.0/8
+respectively.
+.Pp
 Only a subset of keywords may be used on the lines following a
 .Cm Match
 keyword.
 Available keywords are
+.Cm AllowAgentForwarding ,
 .Cm AllowTcpForwarding ,
+.Cm AuthorizedKeysFile ,
+.Cm AuthorizedPrincipalsFile ,
+.Cm Banner ,
+.Cm ChrootDirectory ,
 .Cm ForceCommand ,
 .Cm GatewayPorts ,
+.Cm GSSAPIAuthentication ,
+.Cm HostbasedAuthentication ,
+.Cm HostbasedUsesNameFromPacketOnly ,
+.Cm KbdInteractiveAuthentication ,
+.Cm KerberosAuthentication ,
+.Cm MaxAuthTries ,
+.Cm MaxSessions ,
+.Cm PasswordAuthentication ,
+.Cm PermitEmptyPasswords ,
 .Cm PermitOpen ,
+.Cm PermitRootLogin ,
+.Cm PermitTunnel ,
+.Cm PubkeyAuthentication ,
+.Cm RhostsRSAAuthentication ,
+.Cm RSAAuthentication ,
 .Cm X11DisplayOffset ,
-.Cm X11Forwarding ,
+.Cm X11Forwarding
 and
 .Cm X11UseLocalHost .
 .It Cm MaxAuthTries
@@ -533,6 +734,9 @@ connection.
 Once the number of failures reaches half this value,
 additional failures are logged.
 The default is 6.
+.It Cm MaxSessions
+Specifies the maximum number of open sessions permitted per network connection.
+The default is 10.
 .It Cm MaxStartups
 Specifies the maximum number of concurrent unauthenticated connections to the
 SSH daemon.
@@ -559,23 +763,10 @@ are refused if the number of unauthenticated connections reaches
 (60).
 .It Cm PasswordAuthentication
 Specifies whether password authentication is allowed.
+See also
+.Cm UsePAM .
 The default is
-.Dq no ,
-unless
-.Nm sshd
-was built without PAM support, in which case the default is
-.Dq yes .
-Note that if
-.Cm ChallengeResponseAuthentication
-is
-.Dq yes ,
-and the PAM authentication policy for
-.Nm sshd
-includes
-.Xr pam_unix 8 ,
-password authentication will be allowed through the challenge-response
-mechanism regardless of the value of
-.Cm PasswordAuthentication .
+.Dq no .
 .It Cm PermitEmptyPasswords
 When password authentication is allowed, it specifies whether the
 server allows login to accounts with empty password strings.
@@ -718,7 +909,7 @@ and
 .Sq 2 .
 Multiple versions must be comma-separated.
 The default is
-.Dq 2 .
+.Sq 2 .
 Note that the order of the protocol list does not indicate preference,
 because the client selects among multiple protocol versions offered
 by the server.
@@ -731,6 +922,11 @@ Specifies whether public key authentication is allowed.
 The default is
 .Dq yes .
 Note that this option applies to protocol version 2 only.
+.It Cm RevokedKeys
+Specifies a list of revoked public keys.
+Keys listed in this file will be refused for public key authentication.
+Note that if this file is not readable, then public key authentication will
+be refused for all users.
 .It Cm RhostsRSAAuthentication
 Specifies whether rhosts or
 .Pa /etc/hosts.equiv
@@ -746,7 +942,7 @@ The default is
 This option applies to protocol version 1 only.
 .It Cm ServerKeyBits
 Defines the number of bits in the ephemeral protocol version 1 server key.
-The minimum value is 512, and the default is 768.
+The minimum value is 512, and the default is 1024.
 .It Cm StrictModes
 Specifies whether
 .Xr sshd 8
@@ -756,15 +952,29 @@ This is normally desirable because novices sometimes accidentally leave their
 directory or files world-writable.
 The default is
 .Dq yes .
+Note that this does not apply to
+.Cm ChrootDirectory ,
+whose permissions and ownership are checked unconditionally.
 .It Cm Subsystem
 Configures an external subsystem (e.g. file transfer daemon).
 Arguments should be a subsystem name and a command (with optional arguments)
 to execute upon subsystem request.
+.Pp
 The command
 .Xr sftp-server 8
 implements the
 .Dq sftp
 file transfer subsystem.
+.Pp
+Alternately the name
+.Dq internal-sftp
+implements an in-process
+.Dq sftp
+server.
+This may simplify configurations using
+.Cm ChrootDirectory
+to force a different filesystem root on clients.
+.Pp
 By default no subsystems are defined.
 Note that this option applies to protocol version 2 only.
 .It Cm SyslogFacility
@@ -794,6 +1004,22 @@ This avoids infinitely hanging sessions.
 .Pp
 To disable TCP keepalive messages, the value should be set to
 .Dq no .
+.It Cm TrustedUserCAKeys
+Specifies a file containing public keys of certificate authorities that are
+trusted to sign user certificates for authentication.
+Keys are listed one per line; empty lines and comments starting with
+.Ql #
+are allowed.
+If a certificate is presented for authentication and has its signing CA key
+listed in this file, then it may be used for authentication for any user
+listed in the certificate's principals list.
+Note that certificates that lack a list of principals will not be permitted
+for authentication using
+.Cm TrustedUserCAKeys .
+For more details on certificates, see the
+.Sx CERTIFICATES
+section in
+.Xr ssh-keygen 1 .
 .It Cm UseDNS
 Specifies whether
 .Xr sshd 8
@@ -860,7 +1086,7 @@ The default is
 Specifies a string to append to the regular version string to identify
 OS- or site-specific modifications.
 The default is
-.Dq FreeBSD-20061110 .
+.Dq FreeBSD-20110503 .
 .It Cm X11DisplayOffset
 Specifies the first display number available for
 .Xr sshd 8 Ns 's

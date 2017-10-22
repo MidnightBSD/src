@@ -28,7 +28,7 @@
  *
  * Customisation of signalling source to the NG environment.
  *
- * $FreeBSD: release/7.0.0/sys/netgraph/atm/uni/ng_uni_cust.h 159166 2006-06-02 09:08:51Z dds $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -146,5 +146,3 @@ size_t unimem_sizes[UNIMEM_TYPES] = {					\
 	[UNIMEM_CALL]	= sizeof(struct call),				\
 	[UNIMEM_PARTY]	= sizeof(struct party)				\
 };
-
-#define	memmove(T, F, L) bcopy((F), (T), (L))

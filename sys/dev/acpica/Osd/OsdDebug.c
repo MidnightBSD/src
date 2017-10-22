@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/Osd/OsdDebug.c 167814 2007-03-22 18:16:43Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 #include <sys/param.h>
@@ -41,24 +41,29 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/Osd/OsdDebug.c 167814 2007-03-2
 #include <ddb/ddb.h>
 #include <ddb/db_output.h>
 
-#include <contrib/dev/acpica/acpi.h>
-#include <contrib/dev/acpica/acdebug.h>
+#include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/accommon.h>
+#include <contrib/dev/acpica/include/acdebug.h>
+
 #include <dev/acpica/acpivar.h>
 
-UINT32
-AcpiOsGetLine(char *Buffer)
+ACPI_STATUS
+AcpiOsGetLine(char *Buffer, UINT32 BufferLength, UINT32 *BytesRead)
 {
 #ifdef DDB
-    char	*cp;
+	char *cp;
 
-    db_readline(Buffer, 80);
-    for (cp = Buffer; *cp != 0; cp++)
-	if (*cp == '\n')
-	    *cp = 0;
-    return (AE_OK);
+	cp = Buffer;
+	if (db_readline(Buffer, BufferLength) > 0)
+		while (*cp != '\0' && *cp != '\n' && *cp != '\r')
+			cp++;
+	*cp = '\0';
+	if (BytesRead != NULL)
+		*BytesRead = cp - Buffer;
+	return (AE_OK);
 #else
-    printf("AcpiOsGetLine called but no input support");
-    return (AE_NOT_EXIST);
+	printf("AcpiOsGetLine called but no input support");
+	return (AE_NOT_EXIST);
 #endif /* DDB */
 }
 
@@ -73,13 +78,13 @@ AcpiOsSignal(UINT32 Function, void *Info)
 	printf("ACPI fatal signal, type 0x%x code 0x%x argument 0x%x",
 	      fatal->Type, fatal->Code, fatal->Argument);
 #ifdef ACPI_DEBUG
-	kdb_enter("AcpiOsSignal");
+	kdb_enter(KDB_WHY_ACPI, "AcpiOsSignal");
 #endif
 	break;
 
     case ACPI_SIGNAL_BREAKPOINT:
 #ifdef ACPI_DEBUG
-	kdb_enter((char *)Info);
+	kdb_enter(KDB_WHY_ACPI, (char *)Info);
 #endif
 	break;
 

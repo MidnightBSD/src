@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/contrib/libreadline/util.c 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $FreeBSD$ */
 /* util.c -- readline utility functions */
 
 /* Copyright (C) 1987-2005 Free Software Foundation, Inc.

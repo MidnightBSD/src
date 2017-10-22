@@ -32,7 +32,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ncplogin/ncplogin.c 166509 2007-02-05 07:35:23Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/errno.h>
@@ -40,8 +40,6 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.bin/ncplogin/ncplogin.c 166509 2007-02-05 
 
 #include <err.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sysexits.h>
@@ -110,7 +108,7 @@ logout(int argc, char *argv[], struct ncp_conn_loginfo *li) {
 	int error = 0, connid, opt;
 
 	connid = -1;
-	while ((opt = getopt(argc, argv, STDPARAM_OPT"c:")) != EOF){
+	while ((opt = getopt(argc, argv, STDPARAM_OPT"c:")) != -1){
 		switch (opt) {
 		    case 'c':
 			connid = atoi(optarg);

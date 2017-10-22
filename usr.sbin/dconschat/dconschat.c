@@ -32,14 +32,17 @@
  * SUCH DAMAGE.
  * 
  * $Id: dconschat.c,v 1.76 2003/10/23 06:21:13 simokawa Exp $
- * $FreeBSD: release/7.0.0/usr.sbin/dconschat/dconschat.c 171397 2007-07-12 13:08:00Z simokawa $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
@@ -158,7 +161,9 @@ dconschat_reset_target(struct dcons_state *dc, struct dcons_port *p)
 	if (dc->reset == 0)
 		return;
 
-	snprintf(buf, PAGE_SIZE, "\r\n[dconschat reset target(addr=0x%zx)...]\r\n", dc->reset);
+	snprintf(buf, PAGE_SIZE,
+	    "\r\n[dconschat reset target(addr=0x%jx)...]\r\n",
+	    (intmax_t)dc->reset);
 	write(p->outfd, buf, strlen(buf));
 	bzero(&buf[0], PAGE_SIZE);
 	dwrite(dc, (void *)buf, PAGE_SIZE, dc->reset);

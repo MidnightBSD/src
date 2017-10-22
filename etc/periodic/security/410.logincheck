@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/7.0.0/etc/periodic/security/410.logincheck 161602 2006-08-25 07:34:36Z trhodes $
+# $FreeBSD$
 #
 
 # If there is a global system configuration file, suck it in.
@@ -39,7 +39,7 @@ case "$daily_status_security_logincheck_enable" in
     [Yy][Ee][Ss])
 	echo ""
 	echo 'Checking login.conf permissions:'
-	if [ -G /etc/login.conf -a -O /etc/login.conf ] then
+	if [ -G /etc/login.conf -a -O /etc/login.conf ]; then
 	    n=0
 	else
 	    echo "Bad ownership of /etc/login.conf"

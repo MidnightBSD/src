@@ -12,7 +12,7 @@
  * no representations about the suitability of this software for any
  * purpose.  It is provided "as is" without express or implied
  * warranty.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY M.I.T. ``AS IS''.  M.I.T. DISCLAIMS
  * ALL EXPRESS OR IMPLIED WARRANTIES WITH REGARD TO THIS SOFTWARE,
  * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/nexus.c 166901 2007-02-23 12:19:07Z piso $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -74,16 +74,14 @@ static struct rman mem_rman;
 static	int nexus_probe(device_t);
 static	int nexus_attach(device_t);
 static	int nexus_print_child(device_t, device_t);
-static	device_t nexus_add_child(device_t, int, const char *, int);
+static	device_t nexus_add_child(device_t, u_int, const char *, int);
 static	struct resource *nexus_alloc_resource(device_t, device_t, int, int *,
-	u_long, u_long, u_long, u_int);
+    u_long, u_long, u_long, u_int);
 static	int nexus_activate_resource(device_t, device_t, int, int,
-	struct resource *);
-static int
-nexus_setup_intr(device_t dev, device_t child, struct resource *res, int flags,
-        driver_filter_t *filt, driver_intr_t *intr, void *arg, void **cookiep);
-static int
-nexus_teardown_intr(device_t, device_t, struct resource *, void *);
+    struct resource *);
+static int nexus_setup_intr(device_t dev, device_t child, struct resource *res,
+    int flags, driver_filter_t *filt, driver_intr_t *intr, void *arg, void **cookiep);
+static int nexus_teardown_intr(device_t, device_t, struct resource *, void *);
 
 static device_method_t nexus_methods[] = {
 	/* Device interface */
@@ -109,54 +107,50 @@ static devclass_t nexus_devclass;
 static int
 nexus_probe(device_t dev)
 {
+
 	device_quiet(dev);	/* suppress attach message for neatness */
-		
-	mem_rman.rm_start = 0;
-	mem_rman.rm_end = ~0u;
-	mem_rman.rm_type = RMAN_ARRAY;
-	mem_rman.rm_descr = "I/O memory addresses";
-	if (rman_init(&mem_rman)
-		|| rman_manage_region(&mem_rman, 0, ~0u))
-		panic("nexus_probe mem_rman");
-		
-	return (0);
-	return bus_generic_probe(dev);
+
+	return (BUS_PROBE_DEFAULT);
 }
 
 static int
 nexus_setup_intr(device_t dev, device_t child, struct resource *res, int flags,
     driver_filter_t *filt, driver_intr_t *intr, void *arg, void **cookiep)
 {
-	int i;
 
-	for (i = rman_get_start(res); i <= rman_get_end(res); i++)
-		arm_setup_irqhandler(device_get_nameunit(child), 
-		    filt, intr, arg, i, flags, cookiep);
+	if ((rman_get_flags(res) & RF_SHAREABLE) == 0)
+		flags |= INTR_EXCL;
+
+	arm_setup_irqhandler(device_get_nameunit(child), 
+	    filt, intr, arg, rman_get_start(res), flags, cookiep);
 	return (0);
 }
 
 static int
 nexus_teardown_intr(device_t dev, device_t child, struct resource *r, void *ih)
 {
-	int error;
-	int i;
 
-	for (i = rman_get_start(r); i <= rman_get_end(r); i++)
-		arm_mask_irq(i);
-	error = arm_remove_irqhandler(ih);
-	return (error);
+	return (arm_remove_irqhandler(rman_get_start(r), ih));
 }
 
 static int
 nexus_attach(device_t dev)
 {
+
+	mem_rman.rm_start = 0;
+	mem_rman.rm_end = ~0ul;
+	mem_rman.rm_type = RMAN_ARRAY;
+	mem_rman.rm_descr = "I/O memory addresses";
+	if (rman_init(&mem_rman) || rman_manage_region(&mem_rman, 0, ~0))
+		panic("nexus_probe mem_rman");
+
 	/*
 	 * First, deal with the children we know about already
 	 */
 	bus_generic_probe(dev);
 	bus_generic_attach(dev);
-	
-	return 0;
+
+	return (0);
 }
 
 
@@ -164,31 +158,30 @@ static int
 nexus_print_child(device_t bus, device_t child)
 {
 	int retval = 0;
-	
+
 	retval += bus_print_child_header(bus, child);
 	retval += printf(" on motherboard\n");	/* XXX "motherboard", ick */
-	
+
 	return (retval);
 }
 
-
 static device_t
-nexus_add_child(device_t bus, int order, const char *name, int unit)
+nexus_add_child(device_t bus, u_int order, const char *name, int unit)
 {
-	device_t	child;
+	device_t child;
 	struct nexus_device *ndev;
-	
+
 	ndev = malloc(sizeof(struct nexus_device), M_NEXUSDEV, M_NOWAIT|M_ZERO);
 	if (!ndev)
-		return(0);
+		return (0);
 	resource_list_init(&ndev->nx_resources);
 
 	child = device_add_child_ordered(bus, order, name, unit);
-	
+
 	/* should we free this in nexus_child_detached? */
 	device_set_ivars(child, ndev);
-	
-	return(child);
+
+	return (child);
 }
 
 
@@ -200,7 +193,7 @@ nexus_add_child(device_t bus, int order, const char *name, int unit)
 #define ARM_BUS_SPACE_MEM 1
 static struct resource *
 nexus_alloc_resource(device_t bus, device_t child, int type, int *rid,
-	u_long start, u_long end, u_long count, u_int flags)
+    u_long start, u_long end, u_long count, u_int flags)
 {
 	struct resource *rv;
 	struct rman *rm;
@@ -210,33 +203,33 @@ nexus_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	case SYS_RES_MEMORY:
 		rm = &mem_rman;
 		break;
-		
+
 	default:
-		return 0;
+		return (0);
 	}
 
 	rv = rman_reserve_resource(rm, start, end, count, flags, child);
 	if (rv == 0)
-		return 0;
+		return (0);
 
 	rman_set_rid(rv, *rid);
 	rman_set_bustag(rv, (void*)ARM_BUS_SPACE_MEM);
-	rman_set_bushandle(rv, rman_get_start(rv));		
-	
+	rman_set_bushandle(rv, rman_get_start(rv));
+
 	if (needactivate) {
 		if (bus_activate_resource(child, type, *rid, rv)) {
 			rman_release_resource(rv);
-			return 0;
+			return (0);
 		}
 	}
-	
-	return rv;
+
+	return (rv);
 }
 
 
 static int
 nexus_activate_resource(device_t bus, device_t child, int type, int rid,
-	struct resource *r)
+    struct resource *r)
 {
 	/*
 	 * If this is a memory resource, map it into the kernel.
@@ -246,7 +239,7 @@ nexus_activate_resource(device_t bus, device_t child, int type, int rid,
 		u_int32_t paddr;
 		u_int32_t psize;
 		u_int32_t poffs;
-		
+
 		paddr = rman_get_start(r);
 		psize = rman_get_size(r);
 		poffs = paddr - trunc_page(paddr);

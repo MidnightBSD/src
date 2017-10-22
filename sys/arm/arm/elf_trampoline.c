@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/elf_trampoline.c 171619 2007-07-27 14:42:25Z cognet $");
+__FBSDID("$FreeBSD$");
 #include <machine/asm.h>
 #include <sys/param.h>
 #include <sys/elf32.h>
@@ -32,8 +32,6 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/elf_trampoline.c 171619 2007-07-27
 #include <machine/pte.h>
 #include <machine/cpufunc.h>
 #include <machine/armreg.h>
-
-#include <stdlib.h>
 
 /*
  * Since we are compiled outside of the normal kernel build process, we
@@ -47,6 +45,7 @@ extern char kernel_end[];
 
 extern void *_end;
 
+void _start(void);
 void __start(void);
 void __startC(void);
 
@@ -58,6 +57,10 @@ void __startC(void);
 #define cpu_idcache_wbinv_all	arm8_cache_purgeID
 #elif defined(CPU_ARM9)
 #define cpu_idcache_wbinv_all	arm9_idcache_wbinv_all
+#elif defined(CPU_FA526) || defined(CPU_FA626TE)
+#define cpu_idcache_wbinv_all	fa526_idcache_wbinv_all
+#elif defined(CPU_ARM9E)
+#define cpu_idcache_wbinv_all	armv5_ec_idcache_wbinv_all
 #elif defined(CPU_ARM10)
 #define cpu_idcache_wbinv_all	arm10_idcache_wbinv_all
 #elif defined(CPU_SA110) || defined(CPU_SA1110) || defined(CPU_SA1100) || \
@@ -72,6 +75,8 @@ void __startC(void);
 #endif
 #ifdef CPU_XSCALE_81342
 #define cpu_l2cache_wbinv_all	xscalec3_l2cache_purge
+#elif defined(SOC_MV_KIRKWOOD) || defined(SOC_MV_DISCOVERY)
+#define cpu_l2cache_wbinv_all	sheeva_l2cache_wbinv_all
 #else
 #define cpu_l2cache_wbinv_all()	
 #endif
@@ -154,7 +159,7 @@ _startC(void)
 #if defined(FLASHADDR) && defined(LOADERRAMADDR)
 	unsigned int pc;
 
-	__asm __volatile("adr %0, _start\n"
+	__asm __volatile("mov %0, pc\n"
 	    : "=r" (pc));
 	if ((FLASHADDR > LOADERRAMADDR && pc >= FLASHADDR) ||
 	    (FLASHADDR < LOADERRAMADDR && pc < LOADERRAMADDR)) {
@@ -168,11 +173,13 @@ _startC(void)
 		 */
 		unsigned int target_addr;
 		unsigned int tmp_sp;
+		uint32_t src_addr = (uint32_t)&_start - PHYSADDR + FLASHADDR
+		    + (pc - FLASHADDR - ((uint32_t)&_startC - PHYSADDR)) & 0xfffff000;
 
 		target_addr = (unsigned int)&_start - PHYSADDR + LOADERRAMADDR;
 		tmp_sp = target_addr + 0x100000 +
 		    (unsigned int)&_end - (unsigned int)&_start;
-		memcpy((char *)target_addr, (char *)pc,
+		memcpy((char *)target_addr, (char *)src_addr,
 		    (unsigned int)&_end - (unsigned int)&_start);
 		/* Temporary set the sp and jump to the new location. */
 		__asm __volatile(
@@ -401,11 +408,11 @@ load_kernel(unsigned int kstart, unsigned int curaddr,unsigned int func_end,
 	int symtabindex = -1;
 	int symstrindex = -1;
 	vm_offset_t lastaddr = 0;
-	Elf_Addr ssym = 0, esym = 0;
+	Elf_Addr ssym = 0;
 	Elf_Dyn *dp;
 	
 	eh = (Elf32_Ehdr *)kstart;
-	ssym = esym = 0;
+	ssym = 0;
 	entry_point = (void*)eh->e_entry;
 	memcpy(phdr, (void *)(kstart + eh->e_phoff ),
 	    eh->e_phnum * sizeof(phdr[0]));
@@ -547,7 +554,7 @@ setup_pagetables(unsigned int pt_addr, vm_paddr_t physstart, vm_paddr_t physend,
 	for (addr = physstart; addr < physend; addr += L1_S_SIZE) {
 		pd[addr >> L1_S_SHIFT] = L1_TYPE_S|L1_S_C|L1_S_AP(AP_KRW)|
 		    L1_S_DOM(PMAP_DOMAIN_KERNEL) | addr;
-		if (write_back)
+		if (write_back && 0)
 			pd[addr >> L1_S_SHIFT] |= L1_S_B;
 	}
 	/* XXX: See below */
@@ -607,12 +614,6 @@ __start(void)
 		    (unsigned int)&func_end + 800 , 0);
 		if (altdst > dst)
 			dst = altdst;
-		cpu_idcache_wbinv_all();
-		cpu_l2cache_wbinv_all();
-		__asm __volatile("mrc p15, 0, %0, c1, c0, 0\n"
-		    "bic %0, %0, #1\n" /* MMU_ENABLE */
-		    "mcr p15, 0, %0, c1, c0, 0\n"
-		    : "=r" (pt_addr));
 	} else
 #endif
 		dst = 4 + load_kernel((unsigned int)&kernel_start, 

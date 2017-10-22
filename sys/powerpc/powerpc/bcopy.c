@@ -39,7 +39,7 @@ static char *rcsid = "$NetBSD: bcopy.c,v 1.2 1997/04/16 22:09:41 thorpej Exp $";
 #endif
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/bcopy.c 127977 2004-04-07 05:00:01Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #ifdef _KERNEL
@@ -52,7 +52,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/bcopy.c 127977 2004-04-07 
  * sizeof(word) MUST BE A POWER OF TWO
  * SO THAT wmask BELOW IS ALL ONES
  */
-typedef	int	word;		/* "word" used for optimal copy speed */
+typedef	long	word;		/* "word" used for optimal copy speed */
 
 #define	wsize	sizeof(word)
 #define wmask	(wsize - 1)
@@ -86,14 +86,14 @@ memcpy(void *dst0, const void *src0, size_t length)
 		/*
 		 * Copy forward.
 		 */
-		t = (int)src;	/* only need low bits */
+		t = (size_t)src;	/* only need low bits */
 
-		if ((t | (int)dst) & wmask) {
+		if ((t | (uintptr_t)dst) & wmask) {
 			/*
 			 * Try to align operands.  This cannot be done
 			 * unless the low bits match.
 			 */
-			if ((t ^ (int)dst) & wmask || length < wsize) {
+			if ((t ^ (uintptr_t)dst) & wmask || length < wsize) {
 				t = length;
 			} else {
 				t = wsize - (t & wmask);
@@ -118,10 +118,10 @@ memcpy(void *dst0, const void *src0, size_t length)
 		 */
 		src += length;
 		dst += length;
-		t = (int)src;
+		t = (uintptr_t)src;
 
-		if ((t | (int)dst) & wmask) {
-			if ((t ^ (int)dst) & wmask || length <= wsize) {
+		if ((t | (uintptr_t)dst) & wmask) {
+			if ((t ^ (uintptr_t)dst) & wmask || length <= wsize) {
 				t = length;
 			} else {
 				t &= wmask;

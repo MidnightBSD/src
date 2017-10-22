@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/tools/regression/lib/libc/nss/Makefile 168754 2007-04-15 11:02:31Z bushman $
+# $FreeBSD$
 
 TESTS=	test-getaddr test-getgr test-gethostby test-getpw test-getproto\
 	test-getrpc test-getserv test-getusershell

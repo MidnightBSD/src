@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/pc98/libpc98/biosmem.c 153599 2005-12-21 06:09:47Z nyan $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Obtain memory configuration information from the BIOS
@@ -34,8 +34,13 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/boot/pc98/libpc98/biosmem.c 153599 2005-12
 #include "libi386.h"
 #include "btxv86.h"
 
-vm_offset_t	memtop, memtop_copyin;
-u_int32_t	bios_basemem, bios_extmem;
+vm_offset_t	memtop, memtop_copyin, high_heap_base;
+uint32_t	bios_basemem, bios_extmem, high_heap_size;
+
+/*
+ * The minimum amount of memory to reserve in bios_extmem for the heap.
+ */
+#define	HEAP_MIN	(3 * 1024 * 1024)
 
 void
 bios_getmem(void)
@@ -48,5 +53,12 @@ bios_getmem(void)
     /* Set memtop to actual top of memory */
     memtop = memtop_copyin = 0x100000 + bios_extmem;
 
+    /*
+     * If we have extended memory, use the last 3MB of 'extended' memory
+     * as a high heap candidate.
+     */
+    if (bios_extmem >= HEAP_MIN) {
+	high_heap_size = HEAP_MIN;
+	high_heap_base = memtop - HEAP_MIN;
+    }
 }    
-

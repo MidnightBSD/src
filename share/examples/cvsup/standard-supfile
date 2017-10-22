@@ -1,21 +1,18 @@
-# $FreeBSD: release/7.0.0/share/examples/cvsup/standard-supfile 174861 2007-12-22 13:39:03Z kensmith $
+# $FreeBSD$
 #
 # This file contains all of the "CVSup collections" that make up the
 # FreeBSD-current source tree.
 #
-# CVSup (CVS Update Protocol) allows you to download the latest CVS
+# csup (CVS Update Protocol) allows you to download the latest CVS
 # tree (or any branch of development therefrom) to your system easily
-# and efficiently (far more so than with sup, which CVSup is aimed
-# at replacing).  If you're running CVSup interactively, and are
-# currently using an X display server, you should run CVSup as follows
-# to keep your CVS tree up-to-date:
+# and efficiently
 #
-#	cvsup standard-supfile
+# To keep your CVS tree up-to-date run:
 #
-# If not running X, or invoking cvsup from a non-interactive script, then
-# run it as follows:
+#	csup standard-supfile
 #
-#	cvsup -g -L 2 standard-supfile
+# Note that this only updates the tree contents and does not
+# update what is actually installed.
 #
 # You may wish to change some of the settings in this file to better
 # suit your system:
@@ -24,12 +21,12 @@
 #		This specifies the server host which will supply the
 #		file updates.  You must change it to one of the CVSup
 #		mirror sites listed in the FreeBSD Handbook at
-#		http://www.freebsd.org/doc/handbook/mirrors.html.
+#		http://www.freebsd.org/doc/handbook/cvsup.html#CVSUP-MIRRORS.
 #		You can	override this setting on the command line
 #		with cvsup's "-h host" option.
 #
 # base=/var/db
-#		This specifies the root where CVSup will store information
+#		This specifies the root where csup will store information
 #		about the collections you have transferred to your system.
 #		A setting of "/var/db" will generate this information in
 #		/var/db/sup.  You can override the "base" setting on the
@@ -45,11 +42,11 @@
 # Defaults that apply to all the collections
 #
 # IMPORTANT: Change the next line to use one of the CVSup mirror sites
-# listed at http://www.freebsd.org/doc/handbook/mirrors.html.
+# listed at http://www.freebsd.org/doc/handbook/cvsup.html#CVSUP-MIRRORS.
 *default host=CHANGE_THIS.FreeBSD.org
 *default base=/var/db
 *default prefix=/usr
-*default release=cvs tag=RELENG_7_0
+*default release=cvs tag=RELENG_9_1
 *default delete use-rel-suffix
 
 # If you seem to be limited by CPU rather than network or disk bandwidth, try

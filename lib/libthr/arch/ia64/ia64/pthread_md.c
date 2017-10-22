@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libthr/arch/ia64/ia64/pthread_md.c 161840 2006-09-01 21:01:11Z marcel $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

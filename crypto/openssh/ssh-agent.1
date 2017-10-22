@@ -1,4 +1,5 @@
-.\" $OpenBSD: ssh-agent.1,v 1.44 2006/07/18 08:03:09 jmc Exp $
+.\" $OpenBSD: ssh-agent.1,v 1.53 2010/11/21 01:01:13 djm Exp $
+.\" $FreeBSD$
 .\"
 .\" Author: Tatu Ylonen <ylo@cs.hut.fi>
 .\" Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -34,7 +35,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.Dd September 25, 1999
+.Dd November 21, 2010
 .Dt SSH-AGENT 1
 .Os
 .Sh NAME
@@ -42,18 +43,18 @@
 .Nd authentication agent
 .Sh SYNOPSIS
 .Nm ssh-agent
-.Op Fl a Ar bind_address
-.Op Fl c Li | Fl s
-.Op Fl t Ar life
+.Op Fl c | s
 .Op Fl d
-.Op Ar command Op Ar args ...
+.Op Fl a Ar bind_address
+.Op Fl t Ar life
+.Op Ar command Op Ar arg ...
 .Nm ssh-agent
-.Op Fl c Li | Fl s
+.Op Fl c | s
 .Fl k
 .Sh DESCRIPTION
 .Nm
 is a program to hold private keys used for public key authentication
-(RSA, DSA).
+(RSA, DSA, ECDSA).
 The idea is that
 .Nm
 is started in the beginning of an X-session or a login session, and
@@ -67,26 +68,33 @@ machines using
 The options are as follows:
 .Bl -tag -width Ds
 .It Fl a Ar bind_address
-Bind the agent to the unix-domain socket
+Bind the agent to the
+.Ux Ns -domain
+socket
 .Ar bind_address .
 The default is
-.Pa /tmp/ssh-XXXXXXXXXX/agent.\*(Ltppid\*(Gt .
+.Pa $TMPDIR/ssh-XXXXXXXXXX/agent.\*(Ltppid\*(Gt .
 .It Fl c
 Generate C-shell commands on
 .Dv stdout .
 This is the default if
 .Ev SHELL
 looks like it's a csh style of shell.
+.It Fl d
+Debug mode.
+When this option is specified
+.Nm
+will not fork.
+.It Fl k
+Kill the current agent (given by the
+.Ev SSH_AGENT_PID
+environment variable).
 .It Fl s
 Generate Bourne shell commands on
 .Dv stdout .
 This is the default if
 .Ev SHELL
 does not look like it's a csh style of shell.
-.It Fl k
-Kill the current agent (given by the
-.Ev SSH_AGENT_PID
-environment variable).
 .It Fl t Ar life
 Set a default value for the maximum lifetime of identities added to the agent.
 The lifetime may be specified in seconds or in a time format specified in
@@ -95,11 +103,6 @@ A lifetime specified for an identity with
 .Xr ssh-add 1
 overrides this value.
 Without this option the default maximum lifetime is forever.
-.It Fl d
-Debug mode.
-When this option is specified
-.Nm
-will not fork.
 .El
 .Pp
 If a commandline is given, this is executed as a subprocess of the agent.
@@ -112,13 +115,15 @@ When executed without arguments,
 .Xr ssh-add 1
 adds the files
 .Pa ~/.ssh/id_rsa ,
-.Pa ~/.ssh/id_dsa
+.Pa ~/.ssh/id_dsa ,
+.Pa ~/.ssh/id_ecdsa
 and
 .Pa ~/.ssh/identity .
 If the identity has a passphrase,
 .Xr ssh-add 1
-asks for the passphrase (using a small X11 application if running
-under X11, or from the terminal if running without X).
+asks for the passphrase on the terminal if it has one or from a small X11
+program if running under X11.
+If neither of these is the case then the authentication will fail.
 It then sends the identity to the agent.
 Several identities can be stored in the
 agent; the agent can automatically use any of these identities.
@@ -141,7 +146,7 @@ The second is that the agent prints the needed shell commands (either
 .Xr sh 1
 or
 .Xr csh 1
-syntax can be generated) which can be evalled in the calling shell, eg
+syntax can be generated) which can be evaluated in the calling shell, eg
 .Cm eval `ssh-agent -s`
 for Bourne-type shells such as
 .Xr sh 1
@@ -162,8 +167,9 @@ Instead, operations that require a private key will be performed
 by the agent, and the result will be returned to the requester.
 This way, private keys are not exposed to clients using the agent.
 .Pp
-A unix-domain socket is created
-and the name of this socket is stored in the
+A
+.Ux Ns -domain
+socket is created and the name of this socket is stored in the
 .Ev SSH_AUTH_SOCK
 environment
 variable.
@@ -183,11 +189,13 @@ line terminates.
 Contains the protocol version 1 RSA authentication identity of the user.
 .It Pa ~/.ssh/id_dsa
 Contains the protocol version 2 DSA authentication identity of the user.
+.It Pa ~/.ssh/id_ecdsa
+Contains the protocol version 2 ECDSA authentication identity of the user.
 .It Pa ~/.ssh/id_rsa
 Contains the protocol version 2 RSA authentication identity of the user.
-.It Pa /tmp/ssh-XXXXXXXXXX/agent.\*(Ltppid\*(Gt
-Unix-domain sockets used to contain the connection to the
-authentication agent.
+.It Pa $TMPDIR/ssh-XXXXXXXXXX/agent.\*(Ltppid\*(Gt
+.Ux Ns -domain
+sockets used to contain the connection to the authentication agent.
 These sockets should only be readable by the owner.
 The sockets should get automatically removed when the agent exits.
 .El

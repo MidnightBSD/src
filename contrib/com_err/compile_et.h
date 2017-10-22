@@ -31,8 +31,8 @@
  * SUCH DAMAGE. 
  */
 
-/* $Id: compile_et.h,v 1.6 2000/07/01 20:21:48 assar Exp $ */
-/* $FreeBSD: release/7.0.0/contrib/com_err/compile_et.h 127807 2004-04-03 21:17:01Z nectar $ */
+/* $Id: compile_et.h 15426 2005-06-16 19:21:42Z lha $ */
+/* $FreeBSD$ */
 
 #ifndef __COMPILE_ET_H__
 #define __COMPILE_ET_H__
@@ -41,13 +41,14 @@
 #include <config.h>
 #endif
 
+#include <err.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <ctype.h>
 
-extern long base;
+extern long base_id;
 extern int number;
 extern char *prefix;
 extern char name[128];

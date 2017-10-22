@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/lib/libreadline/readline/doc/Makefile 136654 2004-10-18 08:08:03Z ache $
+# $FreeBSD$
 
 SRCDIR= ${.CURDIR}/../../../../../contrib/libreadline/doc
 
@@ -13,7 +13,7 @@ CLEANFILES += readline.texi
 readline.info: rlman.texi rluser.texi rltech.texi version.texi fdl.texi
 
 readline.texi: rlman.texi
-	cp ${SRCDIR}/rlman.texi ${.TARGET}
+	cp -f ${SRCDIR}/rlman.texi ${.TARGET}
 
 rluserman.info: rluserman.texi version.texi rluser.texi fdl.texi
 

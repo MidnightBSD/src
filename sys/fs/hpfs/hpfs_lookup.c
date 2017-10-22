@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/fs/hpfs/hpfs_lookup.c 60041 2000-05-05 09:59:14Z phk $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

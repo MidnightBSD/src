@@ -64,10 +64,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/7.0.0/share/examples/kld/cdev/test/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 #
 PROG=	testcdev
 NO_MAN=
+WARNS?=	5
 
 MODSTAT= /sbin/kldstat
 

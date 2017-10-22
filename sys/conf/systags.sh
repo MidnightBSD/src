@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 #	@(#)systags.sh	8.1 (Berkeley) 6/10/93
-# $FreeBSD: release/7.0.0/sys/conf/systags.sh 174854 2007-12-22 06:32:46Z cvs2svn $
+# $FreeBSD$
 #
 # systags.sh - construct a system tags file using dependence relations
 #	in a .depend file

@@ -35,8 +35,9 @@
 # include <fcntl.h>
 #endif
 #include <stdarg.h>
-#include <unistd.h>
+#include <string.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include <openssl/rand.h>
 #include <openssl/crypto.h>
@@ -99,6 +100,7 @@ seed_rng(void)
 		close(p[0]);
 		close(p[1]);
 		close(devnull);
+		closefrom(STDERR_FILENO + 1);
 
 		if (original_uid != original_euid &&
 		    ( seteuid(getuid()) == -1 ||
@@ -156,7 +158,7 @@ init_rng(void)
 	 */
 	if ((SSLeay() ^ OPENSSL_VERSION_NUMBER) & ~0xff0L)
 		fatal("OpenSSL version mismatch. Built against %lx, you "
-		    "have %lx", OPENSSL_VERSION_NUMBER, SSLeay());
+		    "have %lx", (u_long)OPENSSL_VERSION_NUMBER, SSLeay());
 
 #ifndef OPENSSL_PRNG_ONLY
 	original_uid = getuid();

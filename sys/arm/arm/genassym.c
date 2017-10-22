@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/genassym.c 171788 2007-08-08 09:27:52Z cognet $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/assym.h>
@@ -79,7 +79,9 @@ ASSYM(CF_SETTTB, offsetof(struct cpu_functions, cf_setttb));
 ASSYM(CF_CONTROL, offsetof(struct cpu_functions, cf_control));
 ASSYM(CF_CONTEXT_SWITCH, offsetof(struct cpu_functions, cf_context_switch));
 ASSYM(CF_DCACHE_WB_RANGE, offsetof(struct cpu_functions, cf_dcache_wb_range));
+ASSYM(CF_L2CACHE_WB_RANGE, offsetof(struct cpu_functions, cf_l2cache_wb_range));
 ASSYM(CF_IDCACHE_WBINV_ALL, offsetof(struct cpu_functions, cf_idcache_wbinv_all));
+ASSYM(CF_L2CACHE_WBINV_ALL, offsetof(struct cpu_functions, cf_l2cache_wbinv_all));
 ASSYM(CF_TLB_FLUSHID_SE, offsetof(struct cpu_functions, cf_tlb_flushID_SE));
 ASSYM(CF_ICACHE_SYNC, offsetof(struct cpu_functions, cf_icache_sync_all));
 
@@ -94,6 +96,8 @@ ASSYM(TD_FRAME, offsetof(struct thread, td_frame));
 ASSYM(TD_MD, offsetof(struct thread, td_md));
 ASSYM(TD_LOCK, offsetof(struct thread, td_lock));
 ASSYM(MD_TP, offsetof(struct mdthread, md_tp));
+ASSYM(MD_RAS_START, offsetof(struct mdthread, md_ras_start));
+ASSYM(MD_RAS_END, offsetof(struct mdthread, md_ras_end));
 
 ASSYM(TF_R0, offsetof(struct trapframe, tf_r0));
 ASSYM(TF_R1, offsetof(struct trapframe, tf_r1));
@@ -102,6 +106,8 @@ ASSYM(P_PID, offsetof(struct proc, p_pid));
 ASSYM(P_FLAG, offsetof(struct proc, p_flag));
 
 ASSYM(ARM_TP_ADDRESS, ARM_TP_ADDRESS);
+ASSYM(ARM_RAS_START, ARM_RAS_START);
+ASSYM(ARM_RAS_END, ARM_RAS_END);
 ASSYM(PAGE_SIZE, PAGE_SIZE);
 ASSYM(PDESIZE, PDESIZE);
 ASSYM(PMAP_DOMAIN_KERNEL, PMAP_DOMAIN_KERNEL);

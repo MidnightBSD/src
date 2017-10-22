@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libelf/elf_strptr.c 164190 2006-11-11 17:16:35Z jkoshy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -55,7 +55,7 @@ elf_strptr(Elf *e, size_t scndx, size_t offset)
 	    gelf_getshdr(s, &shdr) == NULL)
 		return (NULL);
 
-	if (shdr.sh_type != SHT_STRTAB ||
+	if (/*shdr.sh_type != SHT_STRTAB || */
 	    offset >= shdr.sh_size) {
 		LIBELF_SET_ERROR(ARGUMENT, 0);
 		return (NULL);

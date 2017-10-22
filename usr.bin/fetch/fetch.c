@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2000-2004 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 2000-2011 Dag-Erling SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/fetch/fetch.c 164152 2006-11-10 22:05:41Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -42,13 +42,13 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.bin/fetch/fetch.c 164152 2006-11-10 22:05:
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sysexits.h>
 #include <termios.h>
 #include <unistd.h>
 
 #include <fetch.h>
 
 #define MINBUFSIZE	4096
+#define TIMEOUT		120
 
 /* Option flags */
 int	 A_flag;	/*    -A: do not follow 302 redirects */
@@ -60,6 +60,8 @@ int	 d_flag;	/*    -d: direct connection */
 int	 F_flag;	/*    -F: restart without checking mtime  */
 char	*f_filename;	/*    -f: file to fetch */
 char	*h_hostname;	/*    -h: host to fetch from */
+int	 i_flag;	/*    -i: specify input file for mtime comparison */
+char	*i_filename;	/*        name of input file */
 int	 l_flag;	/*    -l: link rather than copy file: URLs */
 int	 m_flag;	/* -[Mm]: mirror mode */
 char	*N_filename;	/*    -N: netrc file name */
@@ -74,7 +76,7 @@ int	 R_flag;	/*    -R: don't delete partially transferred files */
 int	 r_flag;	/*    -r: restart previously interrupted transfer */
 off_t	 S_size;        /*    -S: require size to match */
 int	 s_flag;        /*    -s: show size, don't fetch */
-long	 T_secs = 120;	/*    -T: transfer timeout in seconds */
+long	 T_secs;	/*    -T: transfer timeout in seconds */
 int	 t_flag;	/*!   -t: workaround TCP bug */
 int	 U_flag;	/*    -U: do not use high ports */
 int	 v_level = 1;	/*    -v: verbosity level */
@@ -87,8 +89,8 @@ int	 sigalrm;	/* SIGALRM received */
 int	 siginfo;	/* SIGINFO received */
 int	 sigint;	/* SIGINT received */
 
-long	 ftp_timeout;	/* default timeout for FTP transfers */
-long	 http_timeout;	/* default timeout for HTTP transfers */
+long	 ftp_timeout = TIMEOUT;		/* default timeout for FTP transfers */
+long	 http_timeout = TIMEOUT;	/* default timeout for HTTP transfers */
 char	*buf;		/* transfer buffer */
 
 
@@ -315,7 +317,7 @@ fetch(char *URL, const char *path)
 	struct stat sb, nsb;
 	struct xferstat xs;
 	FILE *f, *of;
-	size_t size, wr;
+	size_t size, readcnt, wr;
 	off_t count;
 	char flags[8];
 	const char *slash;
@@ -338,6 +340,11 @@ fetch(char *URL, const char *path)
 		fetchDebug = 1;
 
 	/* parse URL */
+	url = NULL;
+	if (*URL == '\0') {
+		warnx("empty URL");
+		goto failure;
+	}
 	if ((url = fetchParseURL(URL)) == NULL) {
 		warnx("%s: parse error", URL);
 		goto failure;
@@ -364,7 +371,7 @@ fetch(char *URL, const char *path)
 	}
 
 	/* FTP specific flags */
-	if (strcmp(url->scheme, "ftp") == 0) {
+	if (strcmp(url->scheme, SCHEME_FTP) == 0) {
 		if (p_flag)
 			strcat(flags, "p");
 		if (d_flag)
@@ -375,12 +382,21 @@ fetch(char *URL, const char *path)
 	}
 
 	/* HTTP specific flags */
-	if (strcmp(url->scheme, "http") == 0) {
+	if (strcmp(url->scheme, SCHEME_HTTP) == 0 ||
+	    strcmp(url->scheme, SCHEME_HTTPS) == 0) {
 		if (d_flag)
 			strcat(flags, "d");
 		if (A_flag)
 			strcat(flags, "A");
 		timeout = T_secs ? T_secs : http_timeout;
+		if (i_flag) {
+			if (stat(i_filename, &sb)) {
+				warn("%s: stat()", i_filename);
+				goto failure;
+			}
+			url->ims_time = sb.st_mtime;
+			strcat(flags, "i");
+		}
 	}
 
 	/* set the protocol timeout. */
@@ -448,7 +464,14 @@ fetch(char *URL, const char *path)
 		goto signal;
 	if (f == NULL) {
 		warnx("%s: %s", URL, fetchLastErrString);
-		goto failure;
+		if (i_flag && strcmp(url->scheme, SCHEME_HTTP) == 0
+		    && fetchLastErrCode == FETCH_OK
+		    && strcmp(fetchLastErrString, "Not Modified") == 0) {
+			/* HTTP Not Modified Response, return OK. */
+			r = 0;
+			goto done;
+		} else
+			goto failure;
 	}
 	if (sigint)
 		goto signal;
@@ -499,6 +522,12 @@ fetch(char *URL, const char *path)
 				    "does not match remote", path);
 				goto failure_keep;
 			}
+		} else if (url->offset > sb.st_size) {
+			/* gap between what we asked for and what we got */
+			warnx("%s: gap in resume mode", URL);
+			fclose(of);
+			of = NULL;
+			/* picked up again later */
 		} else if (us.size != -1) {
 			if (us.size == sb.st_size)
 				/* nothing to do */
@@ -511,7 +540,7 @@ fetch(char *URL, const char *path)
 				goto failure;
 			}
 			/* we got it, open local file */
-			if ((of = fopen(path, "a")) == NULL) {
+			if ((of = fopen(path, "r+")) == NULL) {
 				warn("%s: fopen()", path);
 				goto failure;
 			}
@@ -528,7 +557,15 @@ fetch(char *URL, const char *path)
 				fclose(of);
 				of = NULL;
 				sb = nsb;
+				/* picked up again later */
 			}
+		}
+		/* seek to where we left off */
+		if (of != NULL && fseeko(of, url->offset, SEEK_SET) != 0) {
+			warn("%s: fseeko()", path);
+			fclose(of);
+			of = NULL;
+			/* picked up again later */
 		}
 	} else if (m_flag && sb.st_size != -1) {
 		/* mirror mode, local file exists */
@@ -599,21 +636,26 @@ fetch(char *URL, const char *path)
 			stat_end(&xs);
 			siginfo = 0;
 		}
-		if ((size = fread(buf, 1, size, f)) == 0) {
+
+		if (size == 0)
+			break;
+
+		if ((readcnt = fread(buf, 1, size, f)) < size) {
 			if (ferror(f) && errno == EINTR && !sigint)
 				clearerr(f);
-			else
+			else if (readcnt == 0)
 				break;
 		}
-		stat_update(&xs, count += size);
-		for (ptr = buf; size > 0; ptr += wr, size -= wr)
-			if ((wr = fwrite(ptr, 1, size, of)) < size) {
+
+		stat_update(&xs, count += readcnt);
+		for (ptr = buf; readcnt > 0; ptr += wr, readcnt -= wr)
+			if ((wr = fwrite(ptr, 1, readcnt, of)) < readcnt) {
 				if (ferror(of) && errno == EINTR && !sigint)
 					clearerr(of);
 				else
 					break;
 			}
-		if (size != 0)
+		if (readcnt != 0)
 			break;
 	}
 	if (!sigalrm)
@@ -710,10 +752,11 @@ fetch(char *URL, const char *path)
 static void
 usage(void)
 {
-	fprintf(stderr, "%s\n%s\n%s\n",
-	    "usage: fetch [-146AFMPRUadlmnpqrsv] [-N netrc] [-o outputfile]",
-	    "             [-S bytes] [-B bytes] [-T seconds] [-w seconds]",
-	    "             [-h host -f file [-c dir] | URL ...]");
+	fprintf(stderr, "%s\n%s\n%s\n%s\n",
+"usage: fetch [-146AadFlMmnPpqRrsUv] [-B bytes] [-N file] [-o file] [-S bytes]",
+"       [-T seconds] [-w seconds] [-i file] URL ...",
+"       fetch [-146AadFlMmnPpqRrsUv] [-B bytes] [-N file] [-o file] [-S bytes]",
+"       [-T seconds] [-w seconds] [-i file] -h host -f file [-c dir]");
 }
 
 
@@ -730,7 +773,7 @@ main(int argc, char *argv[])
 	int c, e, r;
 
 	while ((c = getopt(argc, argv,
-	    "146AaB:bc:dFf:Hh:lMmN:nPpo:qRrS:sT:tUvw:")) != -1)
+	    "146AaB:bc:dFf:Hh:i:lMmN:nPpo:qRrS:sT:tUvw:")) != -1)
 		switch (c) {
 		case '1':
 			once_flag = 1;
@@ -774,6 +817,10 @@ main(int argc, char *argv[])
 			break;
 		case 'h':
 			h_hostname = optarg;
+			break;
+		case 'i':
+			i_flag = 1;
+			i_filename = optarg;
 			break;
 		case 'l':
 			l_flag = 1;
@@ -842,7 +889,7 @@ main(int argc, char *argv[])
 			break;
 		default:
 			usage();
-			exit(EX_USAGE);
+			exit(1);
 		}
 
 	argc -= optind;
@@ -851,7 +898,7 @@ main(int argc, char *argv[])
 	if (h_hostname || f_filename || c_dirname) {
 		if (!h_hostname || !f_filename || argc) {
 			usage();
-			exit(EX_USAGE);
+			exit(1);
 		}
 		/* XXX this is a hack. */
 		if (strcspn(h_hostname, "@:/") != strlen(h_hostname))
@@ -864,7 +911,7 @@ main(int argc, char *argv[])
 
 	if (!argc) {
 		usage();
-		exit(EX_USAGE);
+		exit(1);
 	}
 
 	/* allocate buffer */
@@ -905,10 +952,10 @@ main(int argc, char *argv[])
 		} else if (stat(o_filename, &sb) == -1) {
 			if (errno == ENOENT) {
 				if (argc > 1)
-					errx(EX_USAGE, "%s is not a directory",
+					errx(1, "%s is not a directory",
 					    o_filename);
 			} else {
-				err(EX_IOERR, "%s", o_filename);
+				err(1, "%s", o_filename);
 			}
 		} else {
 			if (sb.st_mode & S_IFDIR)

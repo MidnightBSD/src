@@ -1,5 +1,5 @@
 
-# $FreeBSD: release/7.0.0/sys/modules/puc/Makefile 158124 2006-04-28 21:21:53Z marcel $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../dev/puc
 

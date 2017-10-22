@@ -1,4 +1,6 @@
-# $FreeBSD: release/7.0.0/sys/boot/i386/boot2/Makefile 169732 2007-05-19 05:07:47Z kan $
+# $FreeBSD$
+
+.include <bsd.own.mk>
 
 FILES=		boot boot1 boot2
 
@@ -26,7 +28,8 @@ CFLAGS=	-Os \
 	-fno-unit-at-a-time \
 	-mno-align-long-strings \
 	-mrtd \
-	-mno-mmx -mno-3dnow -mno-sse -mno-sse2 -mno-sse3 \
+	-mregparm=3 \
+	-DUSE_XREAD \
 	-D${BOOT2_UFS} \
 	-DFLAGS=${BOOT_BOOT1_FLAGS} \
 	-DSIOPRT=${BOOT_COMCONSOLE_PORT} \
@@ -37,7 +40,8 @@ CFLAGS=	-Os \
 	-Wall -Waggregate-return -Wbad-function-cast -Wcast-align \
 	-Wmissing-declarations -Wmissing-prototypes -Wnested-externs \
 	-Wpointer-arith -Wshadow -Wstrict-prototypes -Wwrite-strings \
-	-Winline --param max-inline-insns-single=100
+	-Winline --param max-inline-insns-single=100 \
+	${CLANG_OPT_SMALL}
 
 LDFLAGS=-static -N --gc-sections
 
@@ -70,7 +74,7 @@ boot2.ld: boot2.ldr boot2.bin ${BTXKERN}
 	    -o ${.TARGET} -P 1 boot2.bin
 
 boot2.ldr:
-	dd if=/dev/zero of=${.TARGET} bs=276 count=1
+	dd if=/dev/zero of=${.TARGET} bs=512 count=1
 
 boot2.bin: boot2.out
 	objcopy -S -O binary boot2.out ${.TARGET}
@@ -79,6 +83,7 @@ boot2.out: ${BTXCRT} boot2.o sio.o
 	${LD} ${LDFLAGS} -Ttext ${ORG2} -o ${.TARGET} ${.ALLSRC}
 
 boot2.o: boot2.s
+	${CC} ${ACFLAGS} -c boot2.s
 
 SRCS=	boot2.c boot2.h
 
@@ -94,7 +99,7 @@ boot2.h: boot1.out
 	    ORG1=`printf "%d" ${ORG1}` \
 	    REL1=`printf "%d" ${REL1}` > ${.TARGET}
 
-.if ${MACHINE_ARCH} == "amd64"
+.if ${MACHINE_CPUARCH} == "amd64"
 beforedepend boot2.s: machine
 CLEANFILES+=	machine
 machine:
@@ -102,3 +107,7 @@ machine:
 .endif
 
 .include <bsd.prog.mk>
+
+# XXX: clang integrated-as doesn't grok .codeNN directives yet
+CFLAGS.boot1.S=		${CLANG_NO_IAS}
+CFLAGS+=		${CFLAGS.${.IMPSRC:T}}

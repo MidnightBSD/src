@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/tools/tools/ipw/Makefile 159784 2006-06-20 00:26:35Z sam $
+# $FreeBSD$
 
 PROG=	ipwstats
 NO_MAN=

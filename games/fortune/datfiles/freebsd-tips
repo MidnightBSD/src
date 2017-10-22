@@ -1,5 +1,5 @@
 This fortune brought to you by:
-$FreeBSD: release/7.0.0/games/fortune/datfiles/freebsd-tips 174574 2007-12-13 05:45:08Z dougb $
+$FreeBSD$
 %
 Any user that is a member of the wheel group can use "su -" to simulate
 a root login. You can add a user to the wheel group by editing /etc/group.
@@ -50,18 +50,6 @@ If you are in the C shell and have just installed a new program, you won't
 be able to run it unless you first type "rehash".
 		-- Dru <genesis@istar.ca>
 %
-If you are running xterm, the default TERM variable will be 'xterm'.  If you
-set this environment variable to 'xterm-color' instead, a lot of programs will
-use colors.  You can do this by
-
-	TERM=xterm-color; export TERM
-
-in Bourne-derived shells, and
-
-	setenv TERM xterm-color
-
-in csh-derived shells.
-%
 If you do not want to get beeps in X11 (X Windows), you can turn them off with
 
 	xset b off
@@ -85,8 +73,8 @@ If you need to ask a question on the FreeBSD-questions mailing list then
 
 contains lots of useful advice to help you get the best results.
 %
-If you `set filec' (file completion) in tcsh and write a part of the
-filename, pressing TAB will show you the available choices when there
+If you write part of a filename in tcsh,
+pressing TAB will show you the available choices when there
 is more than one, or complete the filename if there's only one match.
 %
 If you `set watch = (0 any any)' in tcsh, you will be notified when
@@ -133,9 +121,6 @@ also do a lot more advanced searches - type 'man grep' for details.
 In order to support national characters for European languages in tools like
 less without creating other nationalisation aspects, set the environment
 variable LC_ALL to 'en_US.ISO8859-1'.
-%
-In tcsh, you can `set autolist' to have the shell automatically show
-all the possible matches when doing filename/directory expansion.
 %
 "man firewall" will give advice for building a FreeBSD firewall
 		-- David Scheidt <dscheidt@tumbolia.com>
@@ -204,19 +189,12 @@ flag is your gateway.
 Nice bash prompt: PS1='(\[$(tput md)\]\t <\w>\[$(tput me)\]) $(echo $?) \$ '
 		-- Mathieu <mathieu@hal.interactionvirtuelle.com>
 %
-Nice tcsh prompts:
-	set prompt = '[%B%m%b] %B%~%b%# '
-	set prompt = '%m %# '
-	set prompt = '%n@%m%# '
-	set prompt = '%n@%m:%/%# '
-	set prompt = '%n@%m:%~%# '
-%
 Over quota?  "du -s * | sort -n " will give you a sorted list of your
 directory sizes.
 		-- David Scheidt <dscheidt@tumbolia.com>
 %
-ports/net/netcat port is useful not only for redirecting input/output
-to TCP or UDP connections, but also for proxying them with inetd(8).
+nc(1) (or netcat) is useful not only for redirecting input/output to
+TCP or UDP connections, but also for proxying them with inetd(8).
 %
 sh (the default Bourne shell in FreeBSD) supports command-line editing.  Just
 ``set -o emacs'' or ``set -o vi'' to enable it.
@@ -275,7 +253,7 @@ To quickly create an empty file, use "touch filename".
 		-- Dru <genesis@istar.ca>
 %
 To read a compressed file without having to first uncompress it, use
-"zcat" or "zmore" to view it.
+"zcat" or "zless" to view it.
 		-- Dru <genesis@istar.ca>
 %
 To repeat the last command in the C shell, type "!!".
@@ -294,7 +272,7 @@ will search '/', and all subdirectories, for files with 'GENERIC' in the name.
 %
 To see all of the directories on your FreeBSD system, type
 
-	ls -R / | more
+	ls -R / | less
 		-- Dru <genesis@istar.ca>
 %
 To see how long it takes a command to run, type the word "time" before the
@@ -334,7 +312,7 @@ been replaced with other messages, look at /var/run/dmesg.boot.
 Want colour in your directory listings?  Use "ls -G".  "ls -F" is also useful,
 and they can be combined as "ls -FG".
 %
-Want to find a specific port, just type the following under /usr/ports,
+Want to find a specific port, just type the following under /usr/ports
 or one its subdirectories:
 
 	"make search name=<port-name>"
@@ -401,16 +379,6 @@ install it by doing
 
 as root.  This will install a collection of packages that is appropriate for
 running a "generic" server.
-%
-You can get a good standard workstation install by using the
-instant-workstation port/package.  If you have ports installed, you can
-install it by doing
-
-	# cd /usr/ports/misc/instant-workstation
-	# make install && make clean
-
-as root.  This will install a collection of packages that is convenient to
-have on a workstation.
 %
 You can install extra packages for FreeBSD by using the ports system.
 If you have installed it, you can download, compile, and install software by
@@ -498,6 +466,12 @@ You can use "whereis" to search standard binary, manual page and source
 directories for the specified programs. This can be particularly handy
 when you are trying to find where in the ports tree an application is.
 
-Try "whereis netscape" and "whereis whereis".
+Try "whereis firefox" and "whereis whereis".
 		-- Konstantinos Konstantinidis <kkonstan@duth.gr>
+%
+Want to run the same command again?
+In tcsh you can type "!!"
+%
+Want to go the directory you were just in?
+Type "cd -"
 %

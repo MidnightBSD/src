@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007 Sean C. Farley <scf@FreeBSD.org>
+ * Copyright (c) 2007-2008 Sean C. Farley <scf@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,36 +33,47 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/tools/regression/environ/envctl.c 171525 2007-07-20 23:30:13Z scf $");
+__FBSDID("$FreeBSD$");
 
 
 extern char **environ;
 
 
+/*
+ * Print entire environ array.
+ */
 static void
 dump_environ(void)
 {
 	char **environPtr;
 
-	for (environPtr = environ; *environPtr != NULL; *environPtr++)
+	for (environPtr = environ; *environPtr != NULL; environPtr++)
 		printf("%s\n", *environPtr);
 
 	return;
 }
 
 
+/*
+ * Print usage.
+ */
 static void
 usage(const char *program)
 {
-	fprintf(stderr, "Usage:  %s [-CDGUchrt] [-gu name] [-p name=value] "
-	    "[(-S|-s name) value overwrite]\n\n"
+	fprintf(stderr, "Usage:  %s [-DGUchrt] [-c 1|2|3|4] [-bgu name] "
+	    "[-p name=value]\n"
+	    "\t[(-S|-s name) value overwrite]\n\n"
 	    "Options:\n"
-	    "  -C\t\t\t\tClear environ variable with NULL pointer\n"
 	    "  -D\t\t\t\tDump environ\n"
 	    "  -G name\t\t\tgetenv(NULL)\n"
 	    "  -S value overwrite\t\tsetenv(NULL, value, overwrite)\n"
 	    "  -U\t\t\t\tunsetenv(NULL)\n"
-	    "  -c\t\t\t\tClear environ variable with calloc()'d memory\n"
+	    "  -b name\t\t\tblank the 'name=$name' entry, corrupting it\n"
+	    "  -c 1|2|3|4\t\t\tClear environ variable using method:\n"
+	    "\t\t\t\t1 - set environ to NULL pointer\n"
+	    "\t\t\t\t2 - set environ[0] to NULL pointer\n"
+	    "\t\t\t\t3 - set environ to calloc()'d NULL-terminated array\n"
+	    "\t\t\t\t4 - set environ to static NULL-terminated array\n"
 	    "  -g name\t\t\tgetenv(name)\n"
 	    "  -h\t\t\t\tHelp\n"
 	    "  -p name=value\t\t\tputenv(name=value)\n"
@@ -76,87 +87,130 @@ usage(const char *program)
 }
 
 
+/*
+ * Print the return value of a call along with errno upon error else zero.
+ * Also, use the eol string based upon whether running in test mode or not.
+ */
+static void
+print_rtrn_errno(int rtrnVal, const char *eol)
+{
+	printf("%d %d%s", rtrnVal, rtrnVal != 0 ? errno : 0, eol);
+
+	return;
+}
+
+static void
+blank_env(const char *var)
+{
+	char **newenviron;
+	int n, varlen;
+
+	if (environ == NULL)
+		return;
+
+	for (n = 0; environ[n] != NULL; n++)
+		;
+	newenviron = malloc(sizeof(char *) * (n + 1));
+	varlen = strlen(var);
+	for (; n >= 0; n--) {
+		newenviron[n] = environ[n];
+		if (newenviron[n] != NULL &&
+		    strncmp(newenviron[n], var, varlen) == 0 &&
+		    newenviron[n][varlen] == '=')
+			newenviron[n] += strlen(newenviron[n]);
+	}
+	environ = newenviron;
+}
+
 int
 main(int argc, char **argv)
 {
-	char *staticEnv[] = { "FOO=bar", NULL };
 	char arg;
 	const char *eol = "\n";
 	const char *value;
+	static char *emptyEnv[] = { NULL };
+	static char *staticEnv[] = { "FOO=bar", NULL };
 
 	if (argc == 1) {
 		usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
-	while ((arg = getopt(argc, argv, "CDGS:Ucg:hp:rs:tu:")) != -1) {
+	/* The entire program is basically executed from this loop. */
+	while ((arg = getopt(argc, argv, "DGS:Ub:c:g:hp:rs:tu:")) != -1) {
 		switch (arg) {
-			case 'C':
+		case 'b':
+			blank_env(optarg);
+			break;
+
+		case 'c':
+			switch (atoi(optarg)) {
+			case 1:
 				environ = NULL;
 				break;
 
-			case 'c':
+			case 2:
+				environ[0] = NULL;
+				break;
+
+			case 3:
 				environ = calloc(1, sizeof(*environ));
 				break;
 
-			case 'D':
-				errno = 0;
-				dump_environ();
+			case 4:
+				environ = emptyEnv;
 				break;
+			}
+			break;
 
-			case 'G':
-				value = getenv(NULL);
-				printf("%s%s", value == NULL ? "" : value, eol);
-				break;
+		case 'D':
+			dump_environ();
+			break;
 
-			case 'g':
-				value = getenv(optarg);
-				printf("%s%s", value == NULL ? "" : value, eol);
-				break;
+		case 'G':
+		case 'g':
+			value = getenv(arg == 'g' ? optarg : NULL);
+			printf("%s%s", value == NULL ? "*NULL*" : value, eol);
+			break;
 
-			case 'p':
-				errno = 0;
-				printf("%d %d%s", putenv(optarg), errno, eol);
-				break;
+		case 'p':
+			print_rtrn_errno(putenv(optarg), eol);
+			break;
 
-			case 'r':
-				environ = staticEnv;
-				break;
+		case 'r':
+			environ = staticEnv;
+			break;
 
-			case 'S':
-				errno = 0;
-				printf("%d %d%s", setenv(NULL, optarg,
-				    atoi(argv[optind])), errno, eol);
-				optind += 1;
-				break;
+		case 'S':
+			print_rtrn_errno(setenv(NULL, optarg,
+			    atoi(argv[optind])), eol);
+			optind += 1;
+			break;
 
-			case 's':
-				errno = 0;
-				printf("%d %d%s", setenv(optarg, argv[optind],
-				    atoi(argv[optind + 1])), errno, eol);
-				optind += 2;
-				break;
+		case 's':
+			print_rtrn_errno(setenv(optarg, argv[optind],
+			    atoi(argv[optind + 1])), eol);
+			optind += 2;
+			break;
 
-			case 't':
-				eol = " ";
-				break;
+		case 't':
+			eol = " ";
+			break;
 
-			case 'U':
-				printf("%d %d%s", unsetenv(NULL), errno, eol);
-				break;
+		case 'U':
+		case 'u':
+			print_rtrn_errno(unsetenv(arg == 'u' ? optarg : NULL),
+			    eol);
+			break;
 
-			case 'u':
-				printf("%d %d%s", unsetenv(optarg), errno, eol);
-				break;
-
-			case 'h':
-			default:
-				usage(argv[0]);
-				exit(EXIT_FAILURE);
+		case 'h':
+		default:
+			usage(argv[0]);
+			exit(EXIT_FAILURE);
 		}
 	}
 
-	// Output a closing newline in test mode.
+	/* Output a closing newline in test mode. */
 	if (eol[0] == ' ')
 		printf("\n");
 

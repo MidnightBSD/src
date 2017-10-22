@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)scandir.c	8.3 (Berkeley) 1/2/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/gen/scandir.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Scan the directory dirname calling select to make a list of selected
@@ -41,12 +41,12 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/gen/scandir.c 165903 2007-01-09 00:28
  */
 
 #include "namespace.h"
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include "un-namespace.h"
+
+static int alphasort_thunk(void *thunk, const void *p1, const void *p2);
 
 /*
  * The DIRSIZ macro is the minimum record length which will hold the directory
@@ -60,28 +60,19 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/gen/scandir.c 165903 2007-01-09 00:28
 	    (((dp)->d_namlen + 1 + 3) &~ 3))
 
 int
-scandir(dirname, namelist, select, dcomp)
-	const char *dirname;
-	struct dirent ***namelist;
-	int (*select)(struct dirent *);
-	int (*dcomp)(const void *, const void *);
+scandir(const char *dirname, struct dirent ***namelist,
+    int (*select)(const struct dirent *), int (*dcomp)(const struct dirent **,
+	const struct dirent **))
 {
 	struct dirent *d, *p, **names = NULL;
 	size_t nitems = 0;
-	struct stat stb;
 	long arraysz;
 	DIR *dirp;
 
 	if ((dirp = opendir(dirname)) == NULL)
 		return(-1);
-	if (_fstat(dirp->dd_fd, &stb) < 0)
-		goto fail;
 
-	/*
-	 * estimate the array size by taking the size of the directory file
-	 * and dividing it by a multiple of the minimum size entry.
-	 */
-	arraysz = (stb.st_size / 24);
+	arraysz = 32;	/* initial estimate of the array size */
 	names = (struct dirent **)malloc(arraysz * sizeof(struct dirent *));
 	if (names == NULL)
 		goto fail;
@@ -105,42 +96,50 @@ scandir(dirname, namelist, select, dcomp)
 		 * realloc the maximum size.
 		 */
 		if (nitems >= arraysz) {
-			const int inc = 10;	/* increase by this much */
 			struct dirent **names2;
 
 			names2 = (struct dirent **)realloc((char *)names,
-				(arraysz + inc) * sizeof(struct dirent *));
+				(arraysz * 2) * sizeof(struct dirent *));
 			if (names2 == NULL) {
 				free(p);
 				goto fail;
 			}
 			names = names2;
-			arraysz += inc;
+			arraysz *= 2;
 		}
 		names[nitems++] = p;
 	}
 	closedir(dirp);
 	if (nitems && dcomp != NULL)
-		qsort(names, nitems, sizeof(struct dirent *), dcomp);
+		qsort_r(names, nitems, sizeof(struct dirent *),
+		    &dcomp, alphasort_thunk);
 	*namelist = names;
-	return(nitems);
+	return (nitems);
 
 fail:
 	while (nitems > 0)
 		free(names[--nitems]);
 	free(names);
 	closedir(dirp);
-	return -1;
+	return (-1);
 }
 
 /*
  * Alphabetic order comparison routine for those who want it.
+ * POSIX 2008 requires that alphasort() uses strcoll().
  */
 int
-alphasort(d1, d2)
-	const void *d1;
-	const void *d2;
+alphasort(const struct dirent **d1, const struct dirent **d2)
 {
-	return(strcmp((*(struct dirent **)d1)->d_name,
-	    (*(struct dirent **)d2)->d_name));
+
+	return (strcoll((*d1)->d_name, (*d2)->d_name));
+}
+
+static int
+alphasort_thunk(void *thunk, const void *p1, const void *p2)
+{
+	int (*dc)(const struct dirent **, const struct dirent **);
+
+	dc = *(int (**)(const struct dirent **, const struct dirent **))thunk;
+	return (dc((const struct dirent **)p1, (const struct dirent **)p2));
 }

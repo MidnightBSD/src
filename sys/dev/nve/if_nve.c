@@ -72,7 +72,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/nve/if_nve.c 170593 2007-06-12 02:21:02Z yongari $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -130,7 +130,7 @@ static int      nve_detach(device_t);
 static void     nve_init(void *);
 static void     nve_init_locked(struct nve_softc *);
 static void     nve_stop(struct nve_softc *);
-static void     nve_shutdown(device_t);
+static int      nve_shutdown(device_t);
 static int      nve_init_rings(struct nve_softc *);
 static void     nve_free_rings(struct nve_softc *);
 
@@ -140,14 +140,14 @@ static int      nve_ioctl(struct ifnet *, u_long, caddr_t);
 static void     nve_intr(void *);
 static void     nve_tick(void *);
 static void     nve_setmulti(struct nve_softc *);
-static void     nve_watchdog(struct ifnet *);
+static void     nve_watchdog(struct nve_softc *);
 static void     nve_update_stats(struct nve_softc *);
 
 static int      nve_ifmedia_upd(struct ifnet *);
 static void	nve_ifmedia_upd_locked(struct ifnet *);
 static void     nve_ifmedia_sts(struct ifnet *, struct ifmediareq *);
 static int      nve_miibus_readreg(device_t, int, int);
-static void     nve_miibus_writereg(device_t, int, int, int);
+static int      nve_miibus_writereg(device_t, int, int, int);
 
 static void     nve_dmamap_cb(void *, bus_dma_segment_t *, int, int);
 static void     nve_dmamap_tx_cb(void *, bus_dma_segment_t *, int, bus_size_t, int);
@@ -184,15 +184,11 @@ static device_method_t nve_methods[] = {
 	DEVMETHOD(device_detach, nve_detach),
 	DEVMETHOD(device_shutdown, nve_shutdown),
 
-	/* Bus interface */
-	DEVMETHOD(bus_print_child, bus_generic_print_child),
-	DEVMETHOD(bus_driver_added, bus_generic_driver_added),
-
 	/* MII interface */
 	DEVMETHOD(miibus_readreg, nve_miibus_readreg),
 	DEVMETHOD(miibus_writereg, nve_miibus_writereg),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t nve_driver = {
@@ -211,32 +207,52 @@ DRIVER_MODULE(nve, pci, nve_driver, nve_devclass, 0, 0);
 DRIVER_MODULE(miibus, nve, miibus_driver, miibus_devclass, 0, 0);
 
 static struct nve_type nve_devs[] = {
-	{NVIDIA_VENDORID, NFORCE_MCPNET1_DEVICEID,
-	"NVIDIA nForce MCP Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET2_DEVICEID,
-	"NVIDIA nForce MCP2 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET3_DEVICEID,
-	"NVIDIA nForce MCP3 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET4_DEVICEID,
-	"NVIDIA nForce MCP4 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET5_DEVICEID,
-	"NVIDIA nForce MCP5 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET6_DEVICEID,
-	"NVIDIA nForce MCP6 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET7_DEVICEID,
-	"NVIDIA nForce MCP7 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET8_DEVICEID,
-	"NVIDIA nForce MCP8 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET9_DEVICEID,
-	"NVIDIA nForce MCP9 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET10_DEVICEID,
-	"NVIDIA nForce MCP10 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET11_DEVICEID,
-	"NVIDIA nForce MCP11 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET12_DEVICEID,
-	"NVIDIA nForce MCP12 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET13_DEVICEID,
-	"NVIDIA nForce MCP13 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE_LAN,
+	    "NVIDIA nForce MCP Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE2_LAN,
+	    "NVIDIA nForce2 MCP2 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE2_400_LAN1,
+	    "NVIDIA nForce2 400 MCP4 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE2_400_LAN2,
+	    "NVIDIA nForce2 400 MCP5 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE3_LAN1,
+	    "NVIDIA nForce3 MCP3 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE3_250_LAN,
+	    "NVIDIA nForce3 250 MCP6 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE3_LAN4,
+	    "NVIDIA nForce3 MCP7 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE4_LAN1,
+	    "NVIDIA nForce4 CK804 MCP8 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE4_LAN2,
+	    "NVIDIA nForce4 CK804 MCP9 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP04_LAN1,
+	    "NVIDIA nForce MCP04 Networking Adapter"},		// MCP10
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP04_LAN2,
+	    "NVIDIA nForce MCP04 Networking Adapter"},		// MCP11
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE430_LAN1,
+	    "NVIDIA nForce 430 MCP12 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE430_LAN2,
+	    "NVIDIA nForce 430 MCP13 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP55_LAN1,
+	    "NVIDIA nForce MCP55 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP55_LAN2,
+	    "NVIDIA nForce MCP55 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP61_LAN1,
+	    "NVIDIA nForce MCP61 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP61_LAN2,
+	    "NVIDIA nForce MCP61 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP61_LAN3,
+	    "NVIDIA nForce MCP61 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP61_LAN4,
+	    "NVIDIA nForce MCP61 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP65_LAN1,
+	    "NVIDIA nForce MCP65 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP65_LAN2,
+	    "NVIDIA nForce MCP65 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP65_LAN3,
+	    "NVIDIA nForce MCP65 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP65_LAN4,
+	    "NVIDIA nForce MCP65 Networking Adapter"},
 	{0, 0, NULL}
 };
 
@@ -355,7 +371,8 @@ nve_attach(device_t dev)
 		goto fail;
 	}
 	/* Allocate DMA tags */
-	error = bus_dma_tag_create(NULL, 4, 0, BUS_SPACE_MAXADDR_32BIT,
+	error = bus_dma_tag_create(bus_get_dma_tag(dev),
+		     4, 0, BUS_SPACE_MAXADDR_32BIT,
 		     BUS_SPACE_MAXADDR, NULL, NULL, MCLBYTES * NV_MAX_FRAGS,
 				   NV_MAX_FRAGS, MCLBYTES, 0,
 				   busdma_lock_mutex, &Giant,
@@ -364,7 +381,8 @@ nve_attach(device_t dev)
 		device_printf(dev, "couldn't allocate dma tag\n");
 		goto fail;
 	}
-	error = bus_dma_tag_create(NULL, 4, 0, BUS_SPACE_MAXADDR_32BIT,
+	error = bus_dma_tag_create(bus_get_dma_tag(dev),
+	    4, 0, BUS_SPACE_MAXADDR_32BIT,
 	    BUS_SPACE_MAXADDR, NULL, NULL,
 	    sizeof(struct nve_rx_desc) * RX_RING_SIZE, 1,
 	    sizeof(struct nve_rx_desc) * RX_RING_SIZE, 0,
@@ -374,7 +392,8 @@ nve_attach(device_t dev)
 		device_printf(dev, "couldn't allocate dma tag\n");
 		goto fail;
 	}
-	error = bus_dma_tag_create(NULL, 4, 0, BUS_SPACE_MAXADDR_32BIT,
+	error = bus_dma_tag_create(bus_get_dma_tag(dev),
+	    4, 0, BUS_SPACE_MAXADDR_32BIT,
 	    BUS_SPACE_MAXADDR, NULL, NULL,
 	    sizeof(struct nve_tx_desc) * TX_RING_SIZE, 1,
 	    sizeof(struct nve_tx_desc) * TX_RING_SIZE, 0,
@@ -506,23 +525,12 @@ nve_attach(device_t dev)
 		goto fail;
 	}
 
-	/* Probe device for MII interface to PHY */
-	DEBUGOUT(NVE_DEBUG_INIT, "nve: do mii_phy_probe\n");
-	if (mii_phy_probe(dev, &sc->miibus, nve_ifmedia_upd, nve_ifmedia_sts)) {
-		device_printf(dev, "MII without any phy!\n");
-		error = ENXIO;
-		goto fail;
-	}
-
 	/* Setup interface parameters */
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = nve_ioctl;
-	ifp->if_output = ether_output;
 	ifp->if_start = nve_ifstart;
-	ifp->if_watchdog = nve_watchdog;
-	ifp->if_timer = 0;
 	ifp->if_init = nve_init;
 	ifp->if_mtu = ETHERMTU;
 	ifp->if_baudrate = IF_Mbps(100);
@@ -532,14 +540,23 @@ nve_attach(device_t dev)
 	ifp->if_capabilities |= IFCAP_VLAN_MTU;
 	ifp->if_capenable |= IFCAP_VLAN_MTU;
 
+	/* Attach device for MII interface to PHY */
+	DEBUGOUT(NVE_DEBUG_INIT, "nve: do mii_attach\n");
+	error = mii_attach(dev, &sc->miibus, ifp, nve_ifmedia_upd,
+	    nve_ifmedia_sts, BMSR_DEFCAPMASK, MII_PHY_ANY, MII_OFFSET_ANY, 0);
+	if (error != 0) {
+		device_printf(dev, "attaching PHYs failed\n");
+		goto fail;
+	}
+
 	/* Attach to OS's managers. */
 	ether_ifattach(ifp, eaddr);
 
 	/* Activate our interrupt handler. - attach last to avoid lock */
-	error = bus_setup_intr(sc->dev, sc->irq, INTR_TYPE_NET | INTR_MPSAFE,
+	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET | INTR_MPSAFE,
 	    NULL, nve_intr, sc, &sc->sc_ih);
 	if (error) {
-		device_printf(sc->dev, "couldn't set up interrupt handler\n");
+		device_printf(dev, "couldn't set up interrupt handler\n");
 		goto fail;
 	}
 	DEBUGOUT(NVE_DEBUG_INIT, "nve: nve_attach - exit\n");
@@ -565,11 +582,11 @@ nve_detach(device_t dev)
 	ifp = sc->ifp;
 
 	if (device_is_attached(dev)) {
+		ether_ifdetach(ifp);
 		NVE_LOCK(sc);
 		nve_stop(sc);
 		NVE_UNLOCK(sc);
 		callout_drain(&sc->stat_callout);
-		ether_ifdetach(ifp);
 	}
 
 	if (sc->miibus)
@@ -690,7 +707,7 @@ nve_stop(struct nve_softc *sc)
 	DEBUGOUT(NVE_DEBUG_RUNNING, "nve: nve_stop - entry\n");
 
 	ifp = sc->ifp;
-	ifp->if_timer = 0;
+	sc->tx_timer = 0;
 
 	/* Cancel tick timer */
 	callout_stop(&sc->stat_callout);
@@ -717,7 +734,7 @@ nve_stop(struct nve_softc *sc)
 }
 
 /* Shutdown interface for unload/reboot */
-static void
+static int
 nve_shutdown(device_t dev)
 {
 	struct nve_softc *sc;
@@ -730,6 +747,8 @@ nve_shutdown(device_t dev)
 	NVE_LOCK(sc);
 	nve_stop(sc);
 	NVE_UNLOCK(sc);
+
+	return (0);
 }
 
 /* Allocate TX ring buffers */
@@ -962,7 +981,7 @@ nve_ifstart_locked(struct ifnet *ifp)
 			return;
 		}
 		/* Set watchdog timer. */
-		ifp->if_timer = 8;
+		sc->tx_timer = 8;
 
 		/* Copy packet to BPF tap */
 		BPF_MTAP(ifp, m0);
@@ -1074,7 +1093,7 @@ nve_intr(void *arg)
 
 	/* If no pending packets we don't need a timeout */
 	if (sc->pending_txs == 0)
-		sc->ifp->if_timer = 0;
+		sc->tx_timer = 0;
 	NVE_UNLOCK(sc);
 
 	DEBUGOUT(NVE_DEBUG_INTERRUPT, "nve: nve_intr - exit\n");
@@ -1112,7 +1131,7 @@ nve_setmulti(struct nve_softc *sc)
 		return;
 	}
 	/* Setup multicast filter */
-	IF_ADDR_LOCK(ifp);
+	if_maddr_rlock(ifp);
 	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 		u_char *addrp;
 
@@ -1126,7 +1145,7 @@ nve_setmulti(struct nve_softc *sc)
 			oraddr[i] |= mcaddr;
 		}
 	}
-	IF_ADDR_UNLOCK(ifp);
+	if_maddr_runlock(ifp);
 	for (i = 0; i < 6; i++) {
 		hwfilter.acMulticastAddress[i] = andaddr[i] & oraddr[i];
 		hwfilter.acMulticastMask[i] = andaddr[i] | (~oraddr[i]);
@@ -1157,19 +1176,15 @@ nve_ifmedia_upd_locked(struct ifnet *ifp)
 {
 	struct nve_softc *sc = ifp->if_softc;
 	struct mii_data *mii;
+	struct mii_softc *miisc;
 
 	DEBUGOUT(NVE_DEBUG_MII, "nve: nve_ifmedia_upd\n");
 
 	NVE_LOCK_ASSERT(sc);
 	mii = device_get_softc(sc->miibus);
 
-	if (mii->mii_instance) {
-		struct mii_softc *miisc;
-		for (miisc = LIST_FIRST(&mii->mii_phys); miisc != NULL;
-		    miisc = LIST_NEXT(miisc, mii_list)) {
-			mii_phy_reset(miisc);
-		}
-	}
+	LIST_FOREACH(miisc, &mii->mii_phys, mii_list)
+		PHY_RESET(miisc);
 	mii_mediachg(mii);
 }
 
@@ -1186,10 +1201,10 @@ nve_ifmedia_sts(struct ifnet *ifp, struct ifmediareq *ifmr)
 	NVE_LOCK(sc);
 	mii = device_get_softc(sc->miibus);
 	mii_pollstat(mii);
-	NVE_UNLOCK(sc);
 
 	ifmr->ifm_active = mii->mii_media_active;
 	ifmr->ifm_status = mii->mii_media_status;
+	NVE_UNLOCK(sc);
 
 	return;
 }
@@ -1215,6 +1230,9 @@ nve_tick(void *xsc)
 		if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
 			nve_ifstart_locked(ifp);
 	}
+
+	if (sc->tx_timer > 0 && --sc->tx_timer == 0)
+		nve_watchdog(sc);
 	callout_reset(&sc->stat_callout, hz, nve_tick, sc);
 
 	return;
@@ -1270,7 +1288,7 @@ nve_miibus_readreg(device_t dev, int phy, int reg)
 }
 
 /* miibus Write PHY register wrapper - calls Nvidia API entry point */
-static void
+static int
 nve_miibus_writereg(device_t dev, int phy, int reg, int data)
 {
 	struct nve_softc *sc = device_get_softc(dev);
@@ -1281,17 +1299,18 @@ nve_miibus_writereg(device_t dev, int phy, int reg, int data)
 
 	DEBUGOUT(NVE_DEBUG_MII, "nve: nve_miibus_writereg - exit\n");
 
-	return;
+	return 0;
 }
 
 /* Watchdog timer to prevent PHY lockups */
 static void
-nve_watchdog(struct ifnet *ifp)
+nve_watchdog(struct nve_softc *sc)
 {
-	struct nve_softc *sc = ifp->if_softc;
+	struct ifnet *ifp;
 	int pending_txs_start;
 
-	NVE_LOCK(sc);
+	NVE_LOCK_ASSERT(sc);
+	ifp = sc->ifp;
 
 	/*
 	 * The nvidia driver blob defers tx completion notifications.
@@ -1307,24 +1326,18 @@ nve_watchdog(struct ifnet *ifp)
 	sc->hwapi->pfnDisableInterrupts(sc->hwapi->pADCX);
 	sc->hwapi->pfnHandleInterrupt(sc->hwapi->pADCX);
 	sc->hwapi->pfnEnableInterrupts(sc->hwapi->pADCX);
-	if (sc->pending_txs < pending_txs_start) {
-		NVE_UNLOCK(sc);
+	if (sc->pending_txs < pending_txs_start)
 		return;
-	}
 
 	device_printf(sc->dev, "device timeout (%d)\n", sc->pending_txs);
 
 	sc->tx_errors++;
 
 	nve_stop(sc);
-	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	nve_init_locked(sc);
 
 	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
 		nve_ifstart_locked(ifp);
-	NVE_UNLOCK(sc);
-
-	return;
 }
 
 /* --- Start of NVOSAPI interface --- */

@@ -1,4 +1,4 @@
-/* $Header: /p/tcsh/cvsroot/tcsh/sh.lex.c,v 3.77 2006/09/27 17:01:06 mitr Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/sh.lex.c,v 3.87 2011/01/24 17:48:15 christos Exp $ */
 /*
  * sh.lex.c: Lexical analysis into tokens
  */
@@ -32,7 +32,7 @@
  */
 #include "sh.h"
 
-RCSID("$tcsh: sh.lex.c,v 3.77 2006/09/27 17:01:06 mitr Exp $")
+RCSID("$tcsh: sh.lex.c,v 3.87 2011/01/24 17:48:15 christos Exp $")
 
 #include "ed.h"
 
@@ -368,7 +368,7 @@ loop:
 		else {
 		    if (bslash_quote &&
 			((c == '\'') || (c == '"') ||
-			 (c == '\\'))) {
+			 (c == '\\') || (c == '$'))) {
 			c |= QUOTE;
 		    }
 		    else {
@@ -460,7 +460,13 @@ getC1(int flag)
 		setexclp(exclnxt->word);
 	    continue;
 	}
-	c = readc(0);
+	c = readc(1);
+
+	/* Catch EOF in the middle of a line.  (An EOF at the beginning of
+	 * a line would have been processed by the readc(0) in lex().) */
+	if (c == CHAR_ERR)
+	    c = '\n';
+
 	if (c == '$' && (flag & DODOL)) {
 	    getdol();
 	    continue;
@@ -672,11 +678,11 @@ getexcl(Char sc)
     eChar c;
 
     if (sc == 0) {
-	sc = getC(0);
-	if (sc != '{') {
-	    ungetC(sc);
-	    sc = 0;
-	}
+	c = getC(0);
+	if (c == '{')
+	    sc = (Char) c;
+	else
+	    ungetC(c);
     }
     quesarg = -1;
 
@@ -693,7 +699,7 @@ getexcl(Char sc)
 	for (ip = hp->next->next; ip != hp->prev; ip = ip->next)
 	    dol++;
     left = 0, right = dol;
-    if (sc == HISTSUB) {
+    if (sc == HISTSUB && HISTSUB != '\0') {
 	ungetC('s'), unreadc(HISTSUB), c = ':';
 	goto subst;
     }
@@ -726,7 +732,7 @@ subst:
     exclc = right - left + 1;
     while (--left >= 0)
 	hp = hp->next;
-    if (sc == HISTSUB || c == ':') {
+    if ((sc == HISTSUB && HISTSUB != '\0') || c == ':') {
 	do {
 	    hp = getsub(hp);
 	    c = getC(0);
@@ -928,7 +934,7 @@ dosub(Char sc, struct wordent *en, int global)
      * ANSI mode HP/UX compiler chokes on
      * return &enthist(HIST_PURGE, &lexi, 0)->Hlex;
      */
-    hst = enthist(HIST_PURGE, &lexi, 0, 0);
+    hst = enthist(HIST_PURGE, &lexi, 0, 0, -1);
     return &(hst->Hlex);
 }
 
@@ -1147,7 +1153,7 @@ gethent(Char sc)
     int     event;
     int    back = 0;
 
-    c = sc == HISTSUB ? (eChar)HIST : getC(0);
+    c = (sc == HISTSUB && HISTSUB != '\0') ? (eChar)HIST : getC(0);
     if (c == (eChar)HIST) {
 	if (alhistp)
 	    return (alhistp);
@@ -1258,7 +1264,7 @@ gethent(Char sc)
 	    lastev = hp->Hnum;
 	    return (&hp->Hlex);
 	}
-    np = putn(event);
+    np = putn((tcsh_number_t)event);
     seterror(ERR_NOEVENT, short2str(np));
     xfree(np);
     return (0);
@@ -1491,7 +1497,7 @@ reread:
 		if (adrof(STRignoreeof)) {
 			/* If so, tell the user to use exit or logout */
 		    if (loginsh) {
-				xprintf(CGETS(16, 2,
+				xprintf("%s", CGETS(16, 2,
 					"\nUse \"logout\" to logout.\n"));
 		   	} else {
 				xprintf(CGETS(16, 3,
@@ -1626,7 +1632,7 @@ bgetc(void)
 		return CHAR_ERR;
 	    feobp += c;
 	}
-#ifndef WINNT_NATIVE
+#if !defined(WINNT_NATIVE) && !defined(__CYGWIN__)
 	ch = fbuf[0][fseekp - fbobp];
 	fseekp++;
 #else
@@ -1634,7 +1640,7 @@ bgetc(void)
 	    ch = fbuf[0][fseekp - fbobp];
 	    fseekp++;
 	} while(ch == '\r');
-#endif /* !WINNT_NATIVE */
+#endif /* !WINNT_NATIVE && !__CYGWIN__ */
 	return (ch);
     }
 
@@ -1679,7 +1685,7 @@ bgetc(void)
     if (windowchg)
 	(void) check_window_size(0);	/* for window systems */
 #endif /* SIG_WINDOW */
-#ifndef WINNT_NATIVE
+#if !defined(WINNT_NATIVE) && !defined(__CYGWIN__)
     ch = fbuf[(int) fseekp / BUFSIZE][(int) fseekp % BUFSIZE];
     fseekp++;
 #else
@@ -1687,7 +1693,7 @@ bgetc(void)
 	ch = fbuf[(int) fseekp / BUFSIZE][(int) fseekp % BUFSIZE];
 	fseekp++;
     } while(ch == '\r');
-#endif /* !WINNT_NATIVE */
+#endif /* !WINNT_NATIVE && !__CYGWIN__ */
     return (ch);
 }
 

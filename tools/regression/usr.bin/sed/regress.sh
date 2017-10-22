@@ -1,8 +1,8 @@
-# $FreeBSD: release/7.0.0/tools/regression/usr.bin/sed/regress.sh 171285 2007-07-06 16:36:52Z delphij $
+# $FreeBSD$
 
 REGRESSION_START($1)
 
-echo '1..21'
+echo '1..25'
 
 REGRESSION_TEST(`G', `sed G < regress.in')
 REGRESSION_TEST(`P', `sed P < regress.in')
@@ -69,5 +69,6 @@ REGRESSION_TEST(`icase3', `sed s/SED/Foo/ < regress.in')
 
 REGRESSION_TEST(`hanoi', `echo ":abcd: : :" | sed -f hanoi.sed')
 REGRESSION_TEST(`math', `echo "4+7*3+2^7/3" | sed -f math.sed')
+REGRESSION_TEST(`not', `echo foo | sed "1!!s/foo/bar/"')
 
 REGRESSION_END()

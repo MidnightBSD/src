@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/msun/i387/s_llrint.S 140086 2005-01-11 23:10:53Z das $"); 
+__FBSDID("$FreeBSD$"); 
 	
 ENTRY(llrint)
 	fldl	4(%esp)
@@ -34,3 +34,6 @@ ENTRY(llrint)
 	popl	%eax
 	popl	%edx
 	ret
+END(llrint)
+
+	.section .note.GNU-stack,"",%progbits

@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)bt_get.c	8.6 (Berkeley) 7/20/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/db/btree/bt_get.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -58,11 +58,7 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libc/db/btree/bt_get.c 165903 2007-01-09 0
  *	RET_ERROR, RET_SUCCESS and RET_SPECIAL if the key not found.
  */
 int
-__bt_get(dbp, key, data, flags)
-	const DB *dbp;
-	const DBT *key;
-	DBT *data;
-	u_int flags;
+__bt_get(const DB *dbp, const DBT *key, DBT *data, u_int flags)
 {
 	BTREE *t;
 	EPG *e;

@@ -11,9 +11,8 @@
  * From: @(#)s_floor.c 5.1 93/09/24
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: release/7.0.0/lib/msun/src/s_floorl.c 145637 2005-04-28 19:45:55Z stefanf $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /*
  * floorl(x)

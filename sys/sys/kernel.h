@@ -39,7 +39,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)kernel.h	8.3 (Berkeley) 1/21/94
- * $FreeBSD: release/7.0.0/sys/sys/kernel.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_KERNEL_H_
@@ -55,10 +55,6 @@
 /* Global variables for the kernel. */
 
 /* 1.1 */
-extern unsigned long hostid;
-extern char hostuuid[64];
-extern char hostname[MAXHOSTNAMELEN];
-extern char domainname[MAXHOSTNAMELEN];
 extern char kernelname[MAXPATHLEN];
 
 extern int tick;			/* usec per tick (1000000 / hz) */
@@ -68,9 +64,6 @@ extern int stathz;			/* statistics clock's frequency */
 extern int profhz;			/* profiling clock's frequency */
 extern int profprocs;			/* number of process's profiling */
 extern int ticks;
-#ifndef _SOLARIS_C_SOURCE
-extern int lbolt;			/* once a second sleep address */
-#endif
 
 #endif /* _KERNEL */
 
@@ -113,15 +106,23 @@ enum sysinit_sub_id {
 	SI_SUB_MTX_POOL_DYNAMIC	= 0x1AC0000,	/* dynamic mutex pool */
 	SI_SUB_LOCK		= 0x1B00000,	/* various locks */
 	SI_SUB_EVENTHANDLER	= 0x1C00000,	/* eventhandler init */
+	SI_SUB_VNET_PRELINK	= 0x1E00000,	/* vnet init before modules */
 	SI_SUB_KLD		= 0x2000000,	/* KLD and module setup */
 	SI_SUB_CPU		= 0x2100000,	/* CPU resource(s)*/
+	SI_SUB_RACCT		= 0x2110000,	/* resource accounting */
+	SI_SUB_RANDOM		= 0x2120000,	/* random number generator */
+	SI_SUB_KDTRACE		= 0x2140000,	/* Kernel dtrace hooks */
 	SI_SUB_MAC		= 0x2180000,	/* TrustedBSD MAC subsystem */
 	SI_SUB_MAC_POLICY	= 0x21C0000,	/* TrustedBSD MAC policies */
 	SI_SUB_MAC_LATE		= 0x21D0000,	/* TrustedBSD MAC subsystem */
+	SI_SUB_VNET		= 0x21E0000,	/* vnet 0 */
 	SI_SUB_INTRINSIC	= 0x2200000,	/* proc 0*/
 	SI_SUB_VM_CONF		= 0x2300000,	/* config VM, set limits*/
+	SI_SUB_DDB_SERVICES	= 0x2380000,	/* capture, scripting, etc. */
 	SI_SUB_RUN_QUEUE	= 0x2400000,	/* set up run queue*/
 	SI_SUB_KTRACE		= 0x2480000,	/* ktrace */
+	SI_SUB_OPENSOLARIS	= 0x2490000,	/* OpenSolaris compatibility */
+	SI_SUB_CYCLIC		= 0x24A0000,	/* Cyclic timers */
 	SI_SUB_AUDIT		= 0x24C0000,	/* audit */
 	SI_SUB_CREATE_INIT	= 0x2500000,	/* create init process*/
 	SI_SUB_SCHED_IDLE	= 0x2600000,	/* required idle procs */
@@ -132,6 +133,9 @@ enum sysinit_sub_id {
 	SI_SUB_DEVFS		= 0x2F00000,	/* devfs ready for devices */
 	SI_SUB_INIT_IF		= 0x3000000,	/* prep for net interfaces */
 	SI_SUB_NETGRAPH		= 0x3010000,	/* Let Netgraph initialize */
+	SI_SUB_DTRACE		= 0x3020000,	/* DTrace subsystem */
+	SI_SUB_DTRACE_PROVIDER	= 0x3048000,	/* DTrace providers */
+	SI_SUB_DTRACE_ANON	= 0x308C000,	/* DTrace anon enabling */
 	SI_SUB_DRIVERS		= 0x3100000,	/* Let Drivers initialize */
 	SI_SUB_CONFIGURE	= 0x3800000,	/* Configure devices */
 	SI_SUB_VFS		= 0x4000000,	/* virtual filesystem*/
@@ -145,6 +149,7 @@ enum sysinit_sub_id {
 	SI_SUB_EXEC		= 0x7400000,	/* execve() handlers */
 	SI_SUB_PROTO_BEGIN	= 0x8000000,	/* XXX: set splimp (kludge)*/
 	SI_SUB_PROTO_IF		= 0x8400000,	/* interfaces*/
+	SI_SUB_PROTO_DOMAININIT	= 0x8600000,	/* domain registration system */
 	SI_SUB_PROTO_DOMAIN	= 0x8800000,	/* domains (address families?)*/
 	SI_SUB_PROTO_IFATTACHDOMAIN	= 0x8800001,	/* domain dependent data init*/
 	SI_SUB_PROTO_END	= 0x8ffffff,	/* XXX: set splx (kludge)*/
@@ -154,10 +159,10 @@ enum sysinit_sub_id {
 	SI_SUB_ROOT_CONF	= 0xb000000,	/* Find root devices */
 	SI_SUB_DUMP_CONF	= 0xb200000,	/* Find dump devices */
 	SI_SUB_RAID		= 0xb380000,	/* Configure GEOM classes */
-	SI_SUB_MOUNT_ROOT	= 0xb400000,	/* root mount*/
 	SI_SUB_SWAP		= 0xc000000,	/* swap */
 	SI_SUB_INTRINSIC_POST	= 0xd000000,	/* proc 0 cleanup*/
 	SI_SUB_SYSCALLS		= 0xd800000,	/* register system calls */
+	SI_SUB_VNET_DONE	= 0xdc00000,	/* vnet registration complete */
 	SI_SUB_KTHREAD_INIT	= 0xe000000,	/* init process*/
 	SI_SUB_KTHREAD_PAGE	= 0xe400000,	/* pageout daemon*/
 	SI_SUB_KTHREAD_VM	= 0xe800000,	/* vm daemon*/
@@ -165,6 +170,7 @@ enum sysinit_sub_id {
 	SI_SUB_KTHREAD_UPDATE	= 0xec00000,	/* update daemon*/
 	SI_SUB_KTHREAD_IDLE	= 0xee00000,	/* idle procs*/
 	SI_SUB_SMP		= 0xf000000,	/* start the APs*/
+	SI_SUB_RACCTD		= 0xf100000,	/* start raccd*/
 	SI_SUB_RUN_SCHEDULER	= 0xfffffff	/* scheduler*/
 };
 
@@ -176,6 +182,7 @@ enum sysinit_elem_order {
 	SI_ORDER_FIRST		= 0x0000000,	/* first*/
 	SI_ORDER_SECOND		= 0x0000001,	/* second*/
 	SI_ORDER_THIRD		= 0x0000002,	/* third*/
+	SI_ORDER_FOURTH		= 0x0000003,	/* fourth*/
 	SI_ORDER_MIDDLE		= 0x1000000,	/* somewhere in the middle */
 	SI_ORDER_ANY		= 0xfffffff	/* last*/
 };
@@ -233,7 +240,7 @@ struct sysinit {
 		func,						\
 		(ident)						\
 	};							\
-	DATA_SET(sysinit_set,uniquifier ## _sys_init);
+	DATA_SET(sysinit_set,uniquifier ## _sys_init)
 
 #define	SYSINIT(uniquifier, subsystem, order, func, ident)	\
 	C_SYSINIT(uniquifier, subsystem, order,			\
@@ -323,6 +330,25 @@ struct tunable_ulong {
 	    &__CONCAT(__tunable_ulong_, __LINE__))
 
 #define	TUNABLE_ULONG_FETCH(path, var)	getenv_ulong((path), (var))
+
+/*
+ * quad
+ */
+extern void tunable_quad_init(void *);
+struct tunable_quad {
+	const char *path;
+	quad_t *var;
+};
+#define	TUNABLE_QUAD(path, var)					\
+	static struct tunable_quad __CONCAT(__tunable_quad_, __LINE__) = { \
+		(path),						\
+		(var),						\
+	};							\
+	SYSINIT(__CONCAT(__Tunable_init_, __LINE__),		\
+	    SI_SUB_TUNABLES, SI_ORDER_MIDDLE, tunable_quad_init, \
+	    &__CONCAT(__tunable_quad_, __LINE__))
+
+#define	TUNABLE_QUAD_FETCH(path, var)	getenv_quad((path), (var))
 
 extern void tunable_str_init(void *);
 struct tunable_str {

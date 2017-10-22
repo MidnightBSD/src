@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/7.0.0/share/man/man7/build.7 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
-.Dd October 1, 2006
+.Dd July 2, 2012
 .Dt BUILD 7
 .Os
 .Sh NAME
@@ -39,6 +39,11 @@ normally
 .Pa /usr/doc ,
 and
 .Pa /usr/ports .
+These directories may be initially empty or non-existent until updated with
+.Xr csup 1 ,
+.Xr svn 1 ,
+or
+.Xr portsnap 8 .
 Directory
 .Pa /usr/src
 contains the
@@ -196,6 +201,13 @@ variable
 .Va DISTDIR .
 This target is used while building a release; see
 .Xr release 7 .
+.It Cm packageworld
+Archive the results of
+.Cm distributeworld ,
+placing the results in
+.Va DISTDIR .
+This target is used while building a release; see
+.Xr release 7 .
 .It Cm installworld
 Install everything built by a preceding
 .Cm buildworld
@@ -218,23 +230,37 @@ on how to make it start at boot time.
 Create the build toolchain needed to build the rest of the system.
 For cross-architecture builds, this step creates a cross-toolchain.
 .It Cm universe
-Execute a
+For each architecture,
+execute a
 .Cm buildworld
-and
+followed by a
 .Cm buildkernel
-for all kernels including
-.Pa LINT ,
-for each architecture supported by the build system.
+for all kernels for that architecture,
+including
+.Pa LINT .
 This command takes a long time.
 .It Cm update
 Get updated sources as configured in
 .Xr make.conf 5 .
+.It Cm targets
+Print a list of supported
+.Va TARGET
+/
+.Va TARGET_ARCH
+pairs for world and kernel targets.
+.It Cm tinderbox
+Execute the same targets as
+.Cm universe .
+In addition print a summary of all failed targets at the end and
+exit with an error if there were any.
+.It Cm toolchains
+Create a build toolchain for each architecture supported by the build system.
 .El
 .Pp
 Kernel specific build targets in
 .Pa /usr/src
 are:
-.Bl -tag -width ".Cm reinstallkernel"
+.Bl -tag -width ".Cm distributekernel"
 .It Cm buildkernel
 Rebuild the kernel and the kernel modules.
 .It Cm installkernel
@@ -251,6 +277,18 @@ and
 .Va KODIR
 .Xr make 1
 variables.
+.It Cm distributekernel
+Install the kernel to the directory
+.Pa ${DISTDIR}/kernel/boot/kernel .
+This target is used while building a release; see
+.Xr release 7 .
+.It Cm packagekernel
+Archive the results of
+.Cm distributekernel ,
+placing the results in
+.Va DISTDIR .
+This target is used while building a release; see
+.Xr release 7 .
 .It Cm kernel
 Equivalent to
 .Cm buildkernel
@@ -311,6 +349,20 @@ should be set as with
 .Sh ENVIRONMENT
 Variables that influence all builds include:
 .Bl -tag -width ".Va MAKEOBJDIRPREFIX"
+.It Va DEBUG_FLAGS
+Defines a set of debugging flags that will be used to build all userland
+binaries under
+.Pa /usr/src .
+When
+.Va DEBUG_FLAGS
+is defined, the
+.Cm install
+and
+.Cm installworld
+targets install binaries from the current
+.Va MAKEOBJDIRPREFIX
+without stripping,
+so that debugging information is retained in the installed binaries.
 .It Va DESTDIR
 The directory hierarchy prefix where built objects will be installed.
 If not set,
@@ -327,6 +379,15 @@ or the command line.
 .It Va NO_WERROR
 If defined, compiler warnings will not cause the build to halt,
 even if the makefile says otherwise.
+.It Va WITH_CTF
+If defined, the build process will run the DTrace CTF conversion
+tools on built objects.
+Please note that this WITH_ option is handled differently than all
+other WITH_ options (there is no
+.Va WITHOUT_CTF ,
+or corresponding
+.Va MK_CTF
+in the build system).
 .El
 .Pp
 Additionally, builds in
@@ -335,9 +396,39 @@ are influenced by the following
 .Xr make 1
 variables:
 .Bl -tag -width ".Va SUBDIR_OVERRIDE"
+.It Va KERNCONF
+Overrides which kernel to build and install for the various kernel
+make targets.
+It defaults to
+.Cm GENERIC .
+.It Va KERNFAST
+If set, the build target
+.Cm buildkernel
+defaults to setting
+.Va NO_KERNELCLEAN ,
+.Va NO_KERNELCONFIG ,
+.Va NO_KERNELDEPEND
+and
+.Va NO_KERNELOBJ .
+When set to a value other than
+.Cm 1
+then
+.Va KERNCONF
+is set to the value of
+.Va KERNFAST .
 .It Va LOCAL_DIRS
 If set, this variable supplies a list of additional directories to
 build, relative to the root of the source tree.
+.It Va PORTS_MODULES
+A list of ports with kernel modules that should be built and installed
+as part of the
+.Cm buildkernel
+and
+.Cm installkernel
+process.
+.Bd -literal -offset indent
+make PORTS_MODULES=emulators/kqemu-kmod kernel
+.Ed
 .It Va SUBDIR_OVERRIDE
 Override the default list of sub-directories and only build the
 sub-directory named in this variable.
@@ -366,7 +457,85 @@ output.
 Set this to cross-build for a different architecture.
 If not set,
 .Va TARGET_ARCH
-defaults to the current machine architecture.
+defaults to the current machine architecture, unless
+.Va TARGET
+is also set, in which case it defaults to the appropriate
+value for that platform.
+Typically, one only needs to set
+.Va TARGET .
+.El
+.Pp
+Builds under directory
+.Pa /usr/src
+are also influenced by defining one or more of the following symbols,
+using the
+.Fl D
+option of
+.Xr make 1 :
+.Bl -tag -width ".Va -DNO_KERNELDEPEND"
+.It Va NO_CLEANDIR
+If set, the build targets that clean parts of the object tree use the
+equivalent of
+.Dq make clean
+instead of
+.Dq make cleandir .
+.It Va NO_CLEAN
+If set, no object tree files are cleaned at all.
+Setting
+.Va NO_CLEAN
+implies
+.Va NO_KERNELCLEAN ,
+so when
+.Va NO_CLEAN
+is set no kernel objects are cleaned either.
+.It Va NO_CTF
+If set, the build process does not run the DTrace CTF conversion tools
+on built objects.
+.It Va NO_SHARE
+If set, the build does not descend into the
+.Pa /usr/src/share
+subdirectory (i.e., manpages, locale data files, timezone data files and
+other
+.Pa /usr/src/share
+files will not be rebuild from their sources).
+.It Va NO_KERNELCLEAN
+If set, the build process does not run
+.Dq make clean
+as part of the
+.Cm buildkernel
+target.
+.It Va NO_KERNELCONFIG
+If set, the build process does not run
+.Xr config 8
+as part of the
+.Cm buildkernel
+target.
+.It Va NO_KERNELDEPEND
+If set, the build process does not run
+.Dq make depend
+as part of the
+.Cm buildkernel
+target.
+.It Va NO_KERNELOBJ
+If set, the build process does not run
+.Dq make obj
+as part of the
+.Cm buildkernel
+target.
+.It Va NO_DOCUPDATE
+If set, the update process does not update the source of the
+.Fx
+documentation as part of the
+.Dq make update
+target.
+.It Va NO_PORTSUPDATE
+If set, the update process does not update the Ports tree as part of the
+.Dq make update
+target.
+.It Va NO_WWWUPDATE
+If set, the update process does not update the www tree as part of the
+.Dq make update
+target.
 .El
 .Pp
 Builds under directory
@@ -379,6 +548,29 @@ variables:
 If set, restricts the documentation build to the language subdirectories
 specified as its content.
 The default action is to build documentation for all languages.
+.El
+.Pp
+Builds using the
+.Cm universe
+target are influenced by the following
+.Xr make 1
+variables:
+.Bl -tag -width ".Va MAKE_JUST_KERNELS"
+.It Va JFLAG
+Pass the value of this variable to each
+.Xr make 1
+invocation used to build worlds and kernels.
+This can be used to enable multiple jobs within a single architecture's build
+while still building each architecture serially.
+.It Va MAKE_JUST_KERNELS
+Only build kernels for each supported architecture.
+.It Va MAKE_JUST_WORLDS
+Only build worlds for each supported architecture.
+.It Va UNIVERSE_TARGET
+Execute the specified
+.Xr make 1
+target for each supported architecture instead of the default action of
+building a world and one or more kernels.
 .El
 .Sh FILES
 .Bl -tag -width ".Pa /usr/share/examples/etc/make.conf" -compact
@@ -402,19 +594,22 @@ The following sequence of commands can be used to cross-build the
 system for the sparc64 architecture on an i386 host:
 .Bd -literal -offset indent
 cd /usr/src
-make TARGET_ARCH=sparc64 buildworld
-make TARGET_ARCH=sparc64 DESTDIR=/clients/sparc64 installworld
+make TARGET=sparc64 buildworld
+make TARGET=sparc64 DESTDIR=/clients/sparc64 installworld
 .Ed
 .Sh SEE ALSO
 .Xr cc 1 ,
+.Xr csup 1 ,
 .Xr install 1 ,
 .Xr make 1 ,
+.Xr svn 1 ,
 .Xr make.conf 5 ,
 .Xr src.conf 5 ,
 .Xr ports 7 ,
 .Xr release 7 ,
 .Xr config 8 ,
 .Xr mergemaster 8 ,
+.Xr portsnap 8 ,
 .Xr reboot 8 ,
 .Xr shutdown 8
 .Sh AUTHORS

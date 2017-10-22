@@ -1,4 +1,5 @@
-/* $OpenBSD: misc.c,v 1.64 2006/08/03 03:34:42 deraadt Exp $ */
+/* $OpenBSD: misc.c,v 1.84 2010/11/21 01:01:13 djm Exp $ */
+/* $FreeBSD$ */
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  * Copyright (c) 2005,2006 Damien Miller.  All rights reserved.
@@ -35,13 +36,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <netinet/in.h>
+#include <netinet/in_systm.h>
+#include <netinet/ip.h>
 #include <netinet/tcp.h>
 
 #include <errno.h>
 #include <fcntl.h>
+#include <netdb.h>
 #ifdef HAVE_PATHS_H
 # include <paths.h>
 #include <pwd.h>
@@ -120,6 +125,14 @@ unset_nonblock(int fd)
 	return (0);
 }
 
+const char *
+ssh_gai_strerror(int gaierr)
+{
+	if (gaierr == EAI_SYSTEM)
+		return strerror(errno);
+	return gai_strerror(gaierr);
+}
+
 /* disable nagle on socket */
 void
 set_nodelay(int fd)
@@ -169,6 +182,7 @@ strdelim(char **s)
 			return (NULL);		/* no matching quote */
 		} else {
 			*s[0] = '\0';
+			*s += strspn(*s + 1, WHITESPACE) + 1;
 			return (old);
 		}
 	}
@@ -212,23 +226,19 @@ pwcopy(struct passwd *pw)
 
 /*
  * Convert ASCII string to TCP/IP port number.
- * Port must be >0 and <=65535.
- * Return 0 if invalid.
+ * Port must be >=0 and <=65535.
+ * Return -1 if invalid.
  */
 int
 a2port(const char *s)
 {
-	long port;
-	char *endp;
+	long long port;
+	const char *errstr;
 
-	errno = 0;
-	port = strtol(s, &endp, 0);
-	if (s == endp || *endp != '\0' ||
-	    (errno == ERANGE && (port == LONG_MIN || port == LONG_MAX)) ||
-	    port <= 0 || port > 65535)
-		return 0;
-
-	return port;
+	port = strtonum(s, 0, 65535, &errstr);
+	if (errstr != NULL)
+		return -1;
+	return (int)port;
 }
 
 int
@@ -420,7 +430,7 @@ colon(char *cp)
 	int flag = 0;
 
 	if (*cp == ':')		/* Leading colon is part of file name. */
-		return (0);
+		return NULL;
 	if (*cp == '[')
 		flag = 1;
 
@@ -432,9 +442,9 @@ colon(char *cp)
 		if (*cp == ':' && !flag)
 			return (cp);
 		if (*cp == '/')
-			return (0);
+			return NULL;
 	}
-	return (0);
+	return NULL;
 }
 
 /* function to assist building execv() arguments */
@@ -525,7 +535,7 @@ tilde_expand_filename(const char *filename, uid_t uid)
 		if ((pw = getpwnam(user)) == NULL)
 			fatal("tilde_expand_filename: No such user %s", user);
 	} else if ((pw = getpwuid(uid)) == NULL)	/* ~/path */
-		fatal("tilde_expand_filename: No such uid %d", uid);
+		fatal("tilde_expand_filename: No such uid %ld", (long)uid);
 
 	if (strlcpy(ret, pw->pw_dir, sizeof(ret)) >= sizeof(ret))
 		fatal("tilde_expand_filename: Path too long");
@@ -555,11 +565,11 @@ char *
 percent_expand(const char *string, ...)
 {
 #define EXPAND_MAX_KEYS	16
+	u_int num_keys, i, j;
 	struct {
 		const char *key;
 		const char *repl;
 	} keys[EXPAND_MAX_KEYS];
-	u_int num_keys, i, j;
 	char buf[4096];
 	va_list ap;
 
@@ -571,12 +581,11 @@ percent_expand(const char *string, ...)
 			break;
 		keys[num_keys].repl = va_arg(ap, char *);
 		if (keys[num_keys].repl == NULL)
-			fatal("percent_expand: NULL replacement");
+			fatal("%s: NULL replacement", __func__);
 	}
+	if (num_keys == EXPAND_MAX_KEYS && va_arg(ap, char *) != NULL)
+		fatal("%s: too many keys", __func__);
 	va_end(ap);
-
-	if (num_keys >= EXPAND_MAX_KEYS)
-		fatal("percent_expand: too many keys");
 
 	/* Expand string */
 	*buf = '\0';
@@ -585,23 +594,24 @@ percent_expand(const char *string, ...)
  append:
 			buf[i++] = *string;
 			if (i >= sizeof(buf))
-				fatal("percent_expand: string too long");
+				fatal("%s: string too long", __func__);
 			buf[i] = '\0';
 			continue;
 		}
 		string++;
+		/* %% case */
 		if (*string == '%')
 			goto append;
 		for (j = 0; j < num_keys; j++) {
 			if (strchr(keys[j].key, *string) != NULL) {
 				i = strlcat(buf, keys[j].repl, sizeof(buf));
 				if (i >= sizeof(buf))
-					fatal("percent_expand: string too long");
+					fatal("%s: string too long", __func__);
 				break;
 			}
 		}
 		if (j >= num_keys)
-			fatal("percent_expand: unknown key %%%c", *string);
+			fatal("%s: unknown key %%%c", __func__, *string);
 	}
 	return (xstrdup(buf));
 #undef EXPAND_MAX_KEYS
@@ -616,6 +626,8 @@ read_keyfile_line(FILE *f, const char *filename, char *buf, size_t bufsz,
    u_long *lineno)
 {
 	while (fgets(buf, bufsz, f) != NULL) {
+		if (buf[0] == '\0')
+			continue;
 		(*lineno)++;
 		if (buf[strlen(buf) - 1] == '\n' || feof(f)) {
 			return 0;
@@ -707,7 +719,8 @@ sanitise_stdfd(void)
 	int nullfd, dupfd;
 
 	if ((nullfd = dupfd = open(_PATH_DEVNULL, O_RDWR)) == -1) {
-		fprintf(stderr, "Couldn't open /dev/null: %s", strerror(errno));
+		fprintf(stderr, "Couldn't open /dev/null: %s\n",
+		    strerror(errno));
 		exit(1);
 	}
 	while (++dupfd <= 2) {
@@ -715,7 +728,7 @@ sanitise_stdfd(void)
 		if (fcntl(dupfd, F_GETFL, 0) >= 0)
 			continue;
 		if (dup2(nullfd, dupfd) == -1) {
-			fprintf(stderr, "dup2: %s", strerror(errno));
+			fprintf(stderr, "dup2: %s\n", strerror(errno));
 			exit(1);
 		}
 	}
@@ -820,4 +833,198 @@ put_u16(void *vp, u_int16_t v)
 
 	p[0] = (u_char)(v >> 8) & 0xff;
 	p[1] = (u_char)v & 0xff;
+}
+
+void
+ms_subtract_diff(struct timeval *start, int *ms)
+{
+	struct timeval diff, finish;
+
+	gettimeofday(&finish, NULL);
+	timersub(&finish, start, &diff);	
+	*ms -= (diff.tv_sec * 1000) + (diff.tv_usec / 1000);
+}
+
+void
+ms_to_timeval(struct timeval *tv, int ms)
+{
+	if (ms < 0)
+		ms = 0;
+	tv->tv_sec = ms / 1000;
+	tv->tv_usec = (ms % 1000) * 1000;
+}
+
+void
+bandwidth_limit_init(struct bwlimit *bw, u_int64_t kbps, size_t buflen)
+{
+	bw->buflen = buflen;
+	bw->rate = kbps;
+	bw->thresh = bw->rate;
+	bw->lamt = 0;
+	timerclear(&bw->bwstart);
+	timerclear(&bw->bwend);
+}	
+
+/* Callback from read/write loop to insert bandwidth-limiting delays */
+void
+bandwidth_limit(struct bwlimit *bw, size_t read_len)
+{
+	u_int64_t waitlen;
+	struct timespec ts, rm;
+
+	if (!timerisset(&bw->bwstart)) {
+		gettimeofday(&bw->bwstart, NULL);
+		return;
+	}
+
+	bw->lamt += read_len;
+	if (bw->lamt < bw->thresh)
+		return;
+
+	gettimeofday(&bw->bwend, NULL);
+	timersub(&bw->bwend, &bw->bwstart, &bw->bwend);
+	if (!timerisset(&bw->bwend))
+		return;
+
+	bw->lamt *= 8;
+	waitlen = (double)1000000L * bw->lamt / bw->rate;
+
+	bw->bwstart.tv_sec = waitlen / 1000000L;
+	bw->bwstart.tv_usec = waitlen % 1000000L;
+
+	if (timercmp(&bw->bwstart, &bw->bwend, >)) {
+		timersub(&bw->bwstart, &bw->bwend, &bw->bwend);
+
+		/* Adjust the wait time */
+		if (bw->bwend.tv_sec) {
+			bw->thresh /= 2;
+			if (bw->thresh < bw->buflen / 4)
+				bw->thresh = bw->buflen / 4;
+		} else if (bw->bwend.tv_usec < 10000) {
+			bw->thresh *= 2;
+			if (bw->thresh > bw->buflen * 8)
+				bw->thresh = bw->buflen * 8;
+		}
+
+		TIMEVAL_TO_TIMESPEC(&bw->bwend, &ts);
+		while (nanosleep(&ts, &rm) == -1) {
+			if (errno != EINTR)
+				break;
+			ts = rm;
+		}
+	}
+
+	bw->lamt = 0;
+	gettimeofday(&bw->bwstart, NULL);
+}
+
+/* Make a template filename for mk[sd]temp() */
+void
+mktemp_proto(char *s, size_t len)
+{
+	const char *tmpdir;
+	int r;
+
+	if ((tmpdir = getenv("TMPDIR")) != NULL) {
+		r = snprintf(s, len, "%s/ssh-XXXXXXXXXXXX", tmpdir);
+		if (r > 0 && (size_t)r < len)
+			return;
+	}
+	r = snprintf(s, len, "/tmp/ssh-XXXXXXXXXXXX");
+	if (r < 0 || (size_t)r >= len)
+		fatal("%s: template string too short", __func__);
+}
+
+static const struct {
+	const char *name;
+	int value;
+} ipqos[] = {
+	{ "af11", IPTOS_DSCP_AF11 },
+	{ "af12", IPTOS_DSCP_AF12 },
+	{ "af13", IPTOS_DSCP_AF13 },
+	{ "af14", IPTOS_DSCP_AF21 },
+	{ "af22", IPTOS_DSCP_AF22 },
+	{ "af23", IPTOS_DSCP_AF23 },
+	{ "af31", IPTOS_DSCP_AF31 },
+	{ "af32", IPTOS_DSCP_AF32 },
+	{ "af33", IPTOS_DSCP_AF33 },
+	{ "af41", IPTOS_DSCP_AF41 },
+	{ "af42", IPTOS_DSCP_AF42 },
+	{ "af43", IPTOS_DSCP_AF43 },
+	{ "cs0", IPTOS_DSCP_CS0 },
+	{ "cs1", IPTOS_DSCP_CS1 },
+	{ "cs2", IPTOS_DSCP_CS2 },
+	{ "cs3", IPTOS_DSCP_CS3 },
+	{ "cs4", IPTOS_DSCP_CS4 },
+	{ "cs5", IPTOS_DSCP_CS5 },
+	{ "cs6", IPTOS_DSCP_CS6 },
+	{ "cs7", IPTOS_DSCP_CS7 },
+	{ "ef", IPTOS_DSCP_EF },
+	{ "lowdelay", IPTOS_LOWDELAY },
+	{ "throughput", IPTOS_THROUGHPUT },
+	{ "reliability", IPTOS_RELIABILITY },
+	{ NULL, -1 }
+};
+
+int
+parse_ipqos(const char *cp)
+{
+	u_int i;
+	char *ep;
+	long val;
+
+	if (cp == NULL)
+		return -1;
+	for (i = 0; ipqos[i].name != NULL; i++) {
+		if (strcasecmp(cp, ipqos[i].name) == 0)
+			return ipqos[i].value;
+	}
+	/* Try parsing as an integer */
+	val = strtol(cp, &ep, 0);
+	if (*cp == '\0' || *ep != '\0' || val < 0 || val > 255)
+		return -1;
+	return val;
+}
+
+void
+sock_set_v6only(int s)
+{
+#ifdef IPV6_V6ONLY
+	int on = 1;
+
+	debug3("%s: set socket %d IPV6_V6ONLY", __func__, s);
+	if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on)) == -1)
+		error("setsockopt IPV6_V6ONLY: %s", strerror(errno));
+#endif
+}
+
+void
+sock_get_rcvbuf(int *size, int rcvbuf)
+{
+	int sock, socksize;
+	socklen_t socksizelen = sizeof(socksize);
+
+	/*
+	 * Create a socket but do not connect it.  We use it
+	 * only to get the rcv socket size.
+	 */
+	sock = socket(AF_INET6, SOCK_STREAM, 0);
+	if (sock < 0)
+		sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock < 0)
+		return;
+
+	/*
+	 * If the tcp_rcv_buf option is set and passed in, attempt to set the
+	 *  buffer size to its value.
+	 */
+	if (rcvbuf)
+		setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void *)&rcvbuf,
+		    sizeof(rcvbuf));
+
+	if (getsockopt(sock, SOL_SOCKET, SO_RCVBUF,
+	    &socksize, &socksizelen) == 0)
+		if (size != NULL)
+			*size = socksize;
+	close(sock);
 }

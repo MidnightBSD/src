@@ -1,6 +1,6 @@
-/* $FreeBSD: release/7.0.0/contrib/less/prompt.c 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $FreeBSD$ */
 /*
- * Copyright (C) 1984-2007  Mark Nudelman
+ * Copyright (C) 1984-2011  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -23,7 +23,6 @@
 #include "position.h"
 
 extern int pr_type;
-extern int hit_eof;
 extern int new_file;
 extern int sc_width;
 extern int so_s_width, so_e_width;
@@ -197,7 +196,7 @@ cond(c, where)
 	case 'c':
 		return (hshift != 0);
 	case 'e':	/* At end of file? */
-		return (hit_eof);
+		return (eof_displayed());
 	case 'f':	/* Filename known? */
 		return (strcmp(get_filename(curr_ifile), "-") != 0);
 	case 'l':	/* Line number known? */
@@ -305,6 +304,9 @@ protochar(c, where, iseditproto)
 	case 'f':	/* File name */
 		ap_str(get_filename(curr_ifile));
 		break;
+	case 'F':	/* Last component of file name */
+		ap_str(last_component(get_filename(curr_ifile)));
+		break;
 	case 'i':	/* Index into list of files */
 #if TAGS
 		if (ntags())
@@ -365,6 +367,7 @@ protochar(c, where, iseditproto)
 	case 't':	/* Truncate trailing spaces in the message */
 		while (mp > message && mp[-1] == ' ')
 			mp--;
+		*mp = '\0';
 		break;
 	case 'T':	/* Type of list */
 #if TAGS
@@ -391,9 +394,9 @@ protochar(c, where, iseditproto)
  * where to resume parsing the string.
  * We must keep track of nested IFs and skip them properly.
  */
-	static char *
+	static char constant *
 skipcond(p)
-	register char *p;
+	register char constant *p;
 {
 	register int iflevel;
 
@@ -449,9 +452,9 @@ skipcond(p)
 /*
  * Decode a char that represents a position on the screen.
  */
-	static char *
+	static char constant *
 wherechar(p, wp)
-	char *p;
+	char constant *p;
 	int *wp;
 {
 	switch (*p)
@@ -475,10 +478,10 @@ wherechar(p, wp)
  */
 	public char *
 pr_expand(proto, maxwidth)
-	char *proto;
+	char constant *proto;
 	int maxwidth;
 {
-	register char *p;
+	register char constant *p;
 	register int c;
 	int where;
 

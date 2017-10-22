@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/pst/Makefile 119571 2003-08-30 08:01:05Z sos $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/pst
 

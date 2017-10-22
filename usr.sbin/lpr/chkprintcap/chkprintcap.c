@@ -31,7 +31,7 @@ static const char copyright[] =
 	"Copyright (C) 1997, Massachusetts Institute of Technology\r\n";
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/lpr/chkprintcap/chkprintcap.c 117623 2003-07-15 08:48:30Z gad $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/queue.h>

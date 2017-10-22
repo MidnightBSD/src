@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.2 (Berkeley) 4/20/94
-# $FreeBSD: release/7.0.0/share/doc/usd/Makefile 124750 2004-01-20 13:09:29Z ru $
+# $FreeBSD$
 
 # The following modules are not provided:
 # 14.jove
@@ -7,6 +7,8 @@
 SUBDIR=	title \
 	contents \
 	04.csh \
+	05.dc \
+	06.bc \
 	07.mail \
 	10.exref \
 	11.vitut \

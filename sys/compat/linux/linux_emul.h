@@ -25,14 +25,18 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/compat/linux/linux_emul.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_EMUL_H_
 #define	_LINUX_EMUL_H_
 
+#define EMUL_SHARED_HASXSTAT	0x01
+
 struct linux_emuldata_shared {
 	int	refs;
+	int	flags;
+	int	xstat;
 	pid_t	group_pid;
 
 	LIST_HEAD(, linux_emuldata) threads; /* head of list of linux threads */
@@ -51,6 +55,9 @@ struct linux_emuldata {
 	struct linux_emuldata_shared *shared;
 
 	int	pdeath_signal;		/* parent death signal */
+	int	flags;			/* different emuldata flags */
+
+	struct	linux_robust_list_head	*robust_futexes;
 
 	LIST_ENTRY(linux_emuldata) threads;	/* list of linux threads */
 };
@@ -69,10 +76,15 @@ struct linux_emuldata	*em_find(struct proc *, int locked);
 #define	EMUL_DOLOCK		1
 #define	EMUL_DONTLOCK		0
 
+/* emuldata flags */
+#define	LINUX_XDEPR_REQUEUEOP	0x00000001	/* uses deprecated
+						   futex REQUEUE op*/
+
 int	linux_proc_init(struct thread *, pid_t, int);
 void	linux_proc_exit(void *, struct proc *);
-void	linux_schedtail(void *, struct proc *);
+void	linux_schedtail(struct thread *);
 void	linux_proc_exec(void *, struct proc *, struct image_params *);
+void	linux_kill_threads(struct thread *, int);
 
 extern struct sx	emul_shared_lock;
 extern struct mtx	emul_lock;

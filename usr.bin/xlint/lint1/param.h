@@ -30,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.bin/xlint/lint1/param.h 129223 2004-05-14 13:44:36Z cognet $
+ * $FreeBSD$
  */
 
 /*
@@ -93,6 +93,9 @@
 #define PTRDIFF_IS_LONG         0
 #define SIZEOF_IS_ULONG         0
 #elif __arm__
+#define PTRDIFF_IS_LONG		0
+#define SIZEOF_IS_ULONG		0
+#elif __mips__
 #define PTRDIFF_IS_LONG		0
 #define SIZEOF_IS_ULONG		0
 #else

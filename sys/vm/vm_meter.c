@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/vm/vm_meter.c 171633 2007-07-27 20:01:22Z alc $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,8 +54,6 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/vm/vm_meter.c 171633 2007-07-27 20:01:22Z 
 
 struct vmmeter cnt;
 
-int maxslp = MAXSLP;
-
 SYSCTL_UINT(_vm, VM_V_FREE_MIN, v_free_min,
 	CTLFLAG_RW, &cnt.v_free_min, 0, "");
 SYSCTL_UINT(_vm, VM_V_FREE_TARGET, v_free_target,
@@ -76,6 +74,7 @@ SYSCTL_UINT(_vm, OID_AUTO, v_free_severe,
 static int
 sysctl_vm_loadavg(SYSCTL_HANDLER_ARGS)
 {
+	
 #ifdef SCTL_MASK32
 	u_int32_t la[4];
 
@@ -89,13 +88,13 @@ sysctl_vm_loadavg(SYSCTL_HANDLER_ARGS)
 #endif
 		return SYSCTL_OUT(req, &averunnable, sizeof(averunnable));
 }
-SYSCTL_PROC(_vm, VM_LOADAVG, loadavg, CTLTYPE_STRUCT|CTLFLAG_RD, 
-    NULL, 0, sysctl_vm_loadavg, "S,loadavg", "Machine loadaverage history");
+SYSCTL_PROC(_vm, VM_LOADAVG, loadavg, CTLTYPE_STRUCT | CTLFLAG_RD |
+    CTLFLAG_MPSAFE, NULL, 0, sysctl_vm_loadavg, "S,loadavg",
+    "Machine loadaverage history");
 
 static int
 vmtotal(SYSCTL_HANDLER_ARGS)
 {
-/* XXXKSE almost completely broken */
 	struct proc *p;
 	struct vmtotal total;
 	vm_map_entry_t entry;
@@ -109,7 +108,6 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 	/*
 	 * Mark all objects as inactive.
 	 */
-	GIANT_REQUIRED;
 	mtx_lock(&vm_object_list_mtx);
 	TAILQ_FOREACH(object, &vm_object_list, object_list) {
 		if (!VM_OBJECT_TRYLOCK(object)) {
@@ -131,33 +129,24 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 	FOREACH_PROC_IN_SYSTEM(p) {
 		if (p->p_flag & P_SYSTEM)
 			continue;
-		PROC_SLOCK(p);
+		PROC_LOCK(p);
 		switch (p->p_state) {
 		case PRS_NEW:
-			PROC_SUNLOCK(p);
+			PROC_UNLOCK(p);
 			continue;
 			break;
 		default:
 			FOREACH_THREAD_IN_PROC(p, td) {
-				/* Need new statistics  XXX */
 				thread_lock(td);
 				switch (td->td_state) {
 				case TDS_INHIBITED:
-					/*
-					 * XXX stats no longer synchronized.
-					 */
-					if (TD_ON_LOCK(td) ||
-					    (td->td_inhibitors ==
-					    TDI_SWAPPED)) {
+					if (TD_IS_SWAPPED(td))
 						total.t_sw++;
-					} else if (TD_IS_SLEEPING(td) ||
-					   TD_AWAITING_INTR(td) ||
-					   TD_IS_SUSPENDED(td)) {
-						if (td->td_priority <= PZERO)
-							total.t_dw++;
-						else
-							total.t_sl++;
-					}
+					else if (TD_IS_SLEEPING(td) &&
+					    td->td_priority <= PZERO)
+						total.t_dw++;
+					else
+						total.t_sl++;
 					break;
 
 				case TDS_CAN_RUN:
@@ -174,7 +163,7 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 				thread_unlock(td);
 			}
 		}
-		PROC_SUNLOCK(p);
+		PROC_UNLOCK(p);
 		/*
 		 * Note active objects.
 		 */
@@ -211,7 +200,7 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 		 * synchronization should not impair the accuracy of
 		 * the reported statistics. 
 		 */
-		if (object->type == OBJT_DEVICE) {
+		if (object->type == OBJT_DEVICE || object->type == OBJT_SG) {
 			/*
 			 * Devices, like /dev/mem, will badly skew our totals.
 			 */
@@ -262,20 +251,16 @@ vcnt(SYSCTL_HANDLER_ARGS)
 {
 	int count = *(int *)arg1;
 	int offset = (char *)arg1 - (char *)&cnt;
-#ifdef SMP
 	int i;
 
-	for (i = 0; i < mp_ncpus; ++i) {
+	CPU_FOREACH(i) {
 		struct pcpu *pcpu = pcpu_find(i);
 		count += *(int *)((char *)&pcpu->pc_cnt + offset);
 	}
-#else
-	count += *(int *)((char *)PCPU_PTR(cnt) + offset);
-#endif
 	return (SYSCTL_OUT(req, &count, sizeof(int)));
 }
 
-SYSCTL_PROC(_vm, VM_TOTAL, vmtotal, CTLTYPE_OPAQUE|CTLFLAG_RD,
+SYSCTL_PROC(_vm, VM_TOTAL, vmtotal, CTLTYPE_OPAQUE|CTLFLAG_RD|CTLFLAG_MPSAFE,
     0, sizeof(struct vmtotal), vmtotal, "S,vmtotal", 
     "System virtual memory statistics");
 SYSCTL_NODE(_vm, OID_AUTO, stats, CTLFLAG_RW, 0, "VM meter stats");
@@ -285,103 +270,103 @@ static SYSCTL_NODE(_vm_stats, OID_AUTO, vm, CTLFLAG_RW, 0,
 	"VM meter vm stats");
 SYSCTL_NODE(_vm_stats, OID_AUTO, misc, CTLFLAG_RW, 0, "VM meter misc stats");
 
-SYSCTL_PROC(_vm_stats_sys, OID_AUTO, v_swtch, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_sys, OID_AUTO, v_swtch, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_swtch, 0, vcnt, "IU", "Context switches");
-SYSCTL_PROC(_vm_stats_sys, OID_AUTO, v_trap, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_sys, OID_AUTO, v_trap, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_trap, 0, vcnt, "IU", "Traps");
-SYSCTL_PROC(_vm_stats_sys, OID_AUTO, v_syscall, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_sys, OID_AUTO, v_syscall, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_syscall, 0, vcnt, "IU", "Syscalls");
-SYSCTL_PROC(_vm_stats_sys, OID_AUTO, v_intr, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_sys, OID_AUTO, v_intr, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_intr, 0, vcnt, "IU", "Hardware interrupts");
-SYSCTL_PROC(_vm_stats_sys, OID_AUTO, v_soft, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_sys, OID_AUTO, v_soft, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_soft, 0, vcnt, "IU", "Software interrupts");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_vm_faults, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_vm_faults, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_vm_faults, 0, vcnt, "IU", "VM faults");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_cow_faults, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_cow_faults, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_cow_faults, 0, vcnt, "IU", "COW faults");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_cow_optim, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_cow_optim, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_cow_optim, 0, vcnt, "IU", "Optimized COW faults");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_zfod, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_zfod, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_zfod, 0, vcnt, "IU", "Zero fill");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_ozfod, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_ozfod, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_ozfod, 0, vcnt, "IU", "Optimized zero fill");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_swapin, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_swapin, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_swapin, 0, vcnt, "IU", "Swapin operations");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_swapout, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_swapout, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_swapout, 0, vcnt, "IU", "Swapout operations");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_swappgsin, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_swappgsin, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_swappgsin, 0, vcnt, "IU", "Swapin pages");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_swappgsout, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_swappgsout, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_swappgsout, 0, vcnt, "IU", "Swapout pages");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_vnodein, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_vnodein, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_vnodein, 0, vcnt, "IU", "Vnodein operations");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_vnodeout, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_vnodeout, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_vnodeout, 0, vcnt, "IU", "Vnodeout operations");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_vnodepgsin, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_vnodepgsin, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_vnodepgsin, 0, vcnt, "IU", "Vnodein pages");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_vnodepgsout, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_vnodepgsout, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_vnodepgsout, 0, vcnt, "IU", "Vnodeout pages");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_intrans, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_intrans, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_intrans, 0, vcnt, "IU", "In transit page blocking");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_reactivated, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_reactivated, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_reactivated, 0, vcnt, "IU", "Reactivated pages");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_pdwakeups, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_pdwakeups, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_pdwakeups, 0, vcnt, "IU", "Pagedaemon wakeups");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_pdpages, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_pdpages, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_pdpages, 0, vcnt, "IU", "Pagedaemon page scans");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_tcached, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_tcached, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_tcached, 0, vcnt, "IU", "Total pages cached");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_dfree, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_dfree, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_dfree, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_pfree, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_pfree, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_pfree, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_tfree, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_tfree, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_tfree, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_page_size, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_page_size, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_page_size, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_page_count, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_page_count, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_page_count, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_free_reserved, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_free_reserved, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_free_reserved, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_free_target, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_free_target, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_free_target, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_free_min, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_free_min, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_free_min, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_free_count, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_free_count, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_free_count, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_wire_count, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_wire_count, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_wire_count, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_active_count, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_active_count, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_active_count, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_inactive_target, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_inactive_target, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_inactive_target, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_inactive_count, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_inactive_count, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_inactive_count, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_cache_count, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_cache_count, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_cache_count, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_cache_min, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_cache_min, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_cache_min, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_cache_max, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_cache_max, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_cache_max, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_pageout_free_min, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_pageout_free_min, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_pageout_free_min, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_interrupt_free_min, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_interrupt_free_min, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_interrupt_free_min, 0, vcnt, "IU", "");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_forks, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_forks, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_forks, 0, vcnt, "IU", "Number of fork() calls");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_vforks, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_vforks, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_vforks, 0, vcnt, "IU", "Number of vfork() calls");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_rforks, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_rforks, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_rforks, 0, vcnt, "IU", "Number of rfork() calls");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_kthreads, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_kthreads, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_kthreads, 0, vcnt, "IU", "Number of fork() calls by kernel");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_forkpages, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_forkpages, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_forkpages, 0, vcnt, "IU", "VM pages affected by fork()");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_vforkpages, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_vforkpages, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_vforkpages, 0, vcnt, "IU", "VM pages affected by vfork()");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_rforkpages, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_rforkpages, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_rforkpages, 0, vcnt, "IU", "VM pages affected by rfork()");
-SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_kthreadpages, CTLTYPE_UINT|CTLFLAG_RD,
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_kthreadpages, CTLTYPE_UINT|CTLFLAG_RD|CTLFLAG_MPSAFE,
 	&cnt.v_kthreadpages, 0, vcnt, "IU", "VM pages affected by fork() by kernel");
 
 SYSCTL_INT(_vm_stats_misc, OID_AUTO,

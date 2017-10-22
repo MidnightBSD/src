@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)popen.c	8.3 (Berkeley) 4/6/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/libexec/ftpd/popen.c 137859 2004-11-18 13:46:29Z yar $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -110,10 +110,11 @@ ftpd_popen(char *program, char *type)
 		flags |= GLOB_LIMIT;
 		if (glob(argv[argc], flags, NULL, &gl))
 			gargv[gargc++] = strdup(argv[argc]);
-		else
+		else if (gl.gl_pathc > 0) {
 			for (pop = gl.gl_pathv; *pop && gargc < (MAXGLOBARGS-1);
 			     pop++)
 				gargv[gargc++] = strdup(*pop);
+		}
 		globfree(&gl);
 	}
 	gargv[gargc] = NULL;
@@ -142,6 +143,9 @@ ftpd_popen(char *program, char *type)
 			}
 			(void)close(pdes[1]);
 		}
+		/* Drop privileges before proceeding */
+		if (getuid() != geteuid() && setuid(geteuid()) < 0)
+			_exit(1);
 		if (strcmp(gargv[0], _PATH_LS) == 0) {
 			/* Reset getopt for ls_main() */
 			optreset = optind = optopt = 1;

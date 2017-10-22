@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/if_lagg/Makefile 168793 2007-04-17 00:35:11Z thompsa $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 

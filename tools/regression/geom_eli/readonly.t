@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/7.0.0/tools/regression/geom_eli/readonly.t 162432 2006-09-19 11:28:06Z pjd $
+# $FreeBSD$
 
 base=`basename $0`
 no=45
@@ -11,7 +11,7 @@ echo "1..11"
 
 dd if=/dev/random of=${keyfile} bs=512 count=16 >/dev/null 2>&1
 
-geli init -P -K $keyfile md${no}
+geli init -B none -P -K $keyfile md${no}
 if [ $? -eq 0 ]; then
 	echo "ok 1"
 else

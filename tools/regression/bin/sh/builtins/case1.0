@@ -1,4 +1,4 @@
-#$FreeBSD: release/7.0.0/tools/regression/bin/sh/builtins/case1.0 172440 2007-10-04 16:14:48Z stefanf $
+#$FreeBSD$
 f()
 {
 	false

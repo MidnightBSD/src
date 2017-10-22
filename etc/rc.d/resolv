@@ -24,11 +24,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/resolv 175783 2008-01-29 00:22:33Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: resolv
-# REQUIRE: netif
+# REQUIRE: netif var
 # KEYWORD: nojail
 
 . /etc/rc.subr
@@ -41,17 +41,17 @@ load_rc_config $name
 # if the info is available via dhcp/kenv
 # build the resolv.conf
 #
-if [ ! -e /etc/resolv.conf -a \
-    -n "`/bin/kenv dhcp.domain-name-servers 2> /dev/null`" ]; then
-	> /etc/resolv.conf
-
+if [ -n "`/bin/kenv dhcp.domain-name-servers 2> /dev/null`" ]; then
+	interface="`/bin/kenv boot.netif.name`"
+	(
 	if [ -n "`/bin/kenv dhcp.domain-name 2> /dev/null`" ]; then
-		echo domain `/bin/kenv dhcp.domain-name` > /etc/resolv.conf
+		echo domain `/bin/kenv dhcp.domain-name`
 	fi
 
 	set -- `/bin/kenv dhcp.domain-name-servers`
 	for ns in `IFS=','; echo $*`; do
-		echo nameserver $ns >> /etc/resolv.conf;
+		echo nameserver $ns
 	done
+	) | /sbin/resolvconf -a ${interface}:dhcp4
 fi
 

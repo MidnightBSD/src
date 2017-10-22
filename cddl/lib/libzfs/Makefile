@@ -1,47 +1,57 @@
-# $FreeBSD: release/7.0.0/cddl/lib/libzfs/Makefile 169303 2007-05-06 01:39:39Z pjd $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../compat/opensolaris/misc
-.PATH: ${.CURDIR}/../../../sys/contrib/opensolaris/common/zfs
-.PATH: ${.CURDIR}/../../../sys/contrib/opensolaris/uts/common/fs/zfs
-.PATH: ${.CURDIR}/../../../contrib/opensolaris/lib/libzfs/common
+.PATH: ${.CURDIR}/../../../cddl/compat/opensolaris/misc
+.PATH: ${.CURDIR}/../../../sys/cddl/contrib/opensolaris/common/zfs
+.PATH: ${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/fs/zfs
+.PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libzfs/common
 
 LIB=	zfs
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+DPADD=	${LIBMD} ${LIBPTHREAD} ${LIBUMEM} ${LIBUTIL}
+LDADD=	-lmd -lpthread -lumem -lutil
 
 SRCS=	deviceid.c \
-	mnttab.c \
-	mkdirp.c \
-	zmount.c \
 	fsshare.c \
+	mkdirp.c \
+	mnttab.c \
+	zmount.c \
 	zone.c
 
-SRCS+=	zfs_namecheck.c \
-	zfs_prop.c \
+SRCS+=	libzfs_changelist.c \
+	libzfs_config.c \
 	libzfs_dataset.c \
-	libzfs_util.c \
-	libzfs_graph.c \
+	libzfs_diff.c \
+	libzfs_import.c \
+	libzfs_iter.c \
 	libzfs_mount.c \
 	libzfs_pool.c \
-	libzfs_changelist.c \
-	libzfs_config.c \
-	libzfs_import.c \
-	libzfs_status.c
+	libzfs_sendrecv.c \
+	libzfs_status.c \
+	libzfs_util.c \
+	zfs_comutil.c \
+	zfs_deleg.c \
+	zfs_fletcher.c \
+	zfs_ioctl_compat.c \
+	zfs_namecheck.c \
+	zfs_prop.c \
+	zpool_prop.c \
+	zprop_common.c \
 
+WARNS?=	0
+CSTD=	c99
 CFLAGS+= -DZFS_NO_ACL
 CFLAGS+= -I${.CURDIR}/../../../sbin/mount
 CFLAGS+= -I${.CURDIR}/../../../cddl/lib/libumem
-CFLAGS+= -I${.CURDIR}/../../../sys/compat/opensolaris
-CFLAGS+= -I${.CURDIR}/../../../compat/opensolaris/include
-CFLAGS+= -I${.CURDIR}/../../../compat/opensolaris/lib/libumem
-CFLAGS+= -I${.CURDIR}/../../../contrib/opensolaris/lib/libzpool/common
-CFLAGS+= -I${.CURDIR}/../../../sys/contrib/opensolaris/common/zfs
-CFLAGS+= -I${.CURDIR}/../../../sys/contrib/opensolaris/uts/common/fs/zfs
-CFLAGS+= -I${.CURDIR}/../../../sys/contrib/opensolaris/uts/common/sys
-CFLAGS+= -I${.CURDIR}/../../../contrib/opensolaris/head
-CFLAGS+= -I${.CURDIR}/../../../sys/contrib/opensolaris/uts/common
-CFLAGS+= -I${.CURDIR}/../../../contrib/opensolaris/lib/libnvpair
-CFLAGS+= -I${.CURDIR}/../../../contrib/opensolaris/lib/libuutil/common
-CFLAGS+= -I${.CURDIR}/../../../contrib/opensolaris/lib/libzfs/common
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/compat/opensolaris
+CFLAGS+= -I${.CURDIR}/../../../cddl/compat/opensolaris/include
+CFLAGS+= -I${.CURDIR}/../../../cddl/compat/opensolaris/lib/libumem
+CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libzpool/common
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/common/zfs
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/fs/zfs
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/sys
+CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/head
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common
+CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libnvpair
+CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libuutil/common
+CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libzfs/common
 
 .include <bsd.lib.mk>

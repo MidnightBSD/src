@@ -1,4 +1,9 @@
-# $FreeBSD: release/7.0.0/gnu/lib/libssp/Makefile 169862 2007-05-22 10:40:58Z ru $
+# $FreeBSD$
+
+SHLIBDIR?=	/lib
+
+.include <bsd.own.mk>
+MK_SSP=		no
 
 GCCDIR=	${.CURDIR}/../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
@@ -8,7 +13,6 @@ SRCDIR=	${GCCLIB}/libssp
 
 LIB=		ssp
 SHLIB_MAJOR=	0
-SHLIBDIR?=	/lib
 NO_PROFILE=
 
 SRCS=	ssp.c gets-chk.c memcpy-chk.c memmove-chk.c mempcpy-chk.c \

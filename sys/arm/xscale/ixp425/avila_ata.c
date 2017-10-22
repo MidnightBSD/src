@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/ixp425/avila_ata.c 170068 2007-05-28 18:45:16Z jhay $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Compact Flash Support for the Avila Gateworks XScale boards.
@@ -67,13 +67,64 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/ixp425/avila_ata.c 170068 2007-
 #include <dev/ata/ata-all.h>
 #include <ata_if.h>
 
-#define	AVILA_IDE_GPIN		12		/* GPIO pin # */
-#define	AVILA_IDE_IRQ		IXP425_INT_GPIO_12
-#define	AVILA_IDE_CTRL		0x06		/* control register */
+#define	AVILA_IDE_CTRL	0x06
 
-#define	PRONGHORN_IDE_GPIN	0	/* GPIO pin # */
-#define	PRONGHORN_IDE_IRQ	IXP425_INT_GPIO_0
-#define	PRONGHORN_IDE_CNTRL	0x06	/* control register */
+struct ata_config {
+	const char	*desc;		/* description for probe */
+	uint8_t		gpin;		/* GPIO pin */
+	uint8_t		irq;		/* IRQ */
+	uint32_t	base16;		/* CS base addr for 16-bit */
+	uint32_t	size16;		/* CS size for 16-bit */
+	uint32_t	off16;		/* CS offset for 16-bit */
+	uint32_t	basealt;	/* CS base addr for alt */
+	uint32_t	sizealt;	/* CS size for alt */
+	uint32_t	offalt;		/* CS offset for alt */
+};
+
+static const struct ata_config *
+ata_getconfig(struct ixp425_softc *sa)
+{
+	static const struct ata_config configs[] = {
+		{ .desc		= "Gateworks Avila IDE/CF Controller",
+		  .gpin		= 12,
+		  .irq		= IXP425_INT_GPIO_12,
+		  .base16	= IXP425_EXP_BUS_CS1_HWBASE,
+		  .size16	= IXP425_EXP_BUS_CS1_SIZE,
+		  .off16	= EXP_TIMING_CS1_OFFSET,
+		  .basealt	= IXP425_EXP_BUS_CS2_HWBASE,
+		  .sizealt	= IXP425_EXP_BUS_CS2_SIZE,
+		  .offalt	= EXP_TIMING_CS2_OFFSET,
+		},
+		{ .desc		= "Gateworks Cambria IDE/CF Controller",
+		  .gpin		= 12,
+		  .irq		= IXP425_INT_GPIO_12,
+		  .base16	= CAMBRIA_CFSEL0_HWBASE,
+		  .size16	= CAMBRIA_CFSEL0_SIZE,
+		  .off16	= EXP_TIMING_CS3_OFFSET,
+		  .basealt	= CAMBRIA_CFSEL1_HWBASE,
+		  .sizealt	= CAMBRIA_CFSEL1_SIZE,
+		  .offalt	= EXP_TIMING_CS4_OFFSET,
+		},
+		{ .desc		= "ADI Pronghorn Metro IDE/CF Controller",
+		  .gpin		= 0,
+		  .irq		= IXP425_INT_GPIO_0,
+		  .base16	= IXP425_EXP_BUS_CS3_HWBASE,
+		  .size16	= IXP425_EXP_BUS_CS3_SIZE,
+		  .off16	= EXP_TIMING_CS3_OFFSET,
+		  .basealt	= IXP425_EXP_BUS_CS4_HWBASE,
+		  .sizealt	= IXP425_EXP_BUS_CS4_SIZE,
+		  .offalt	= EXP_TIMING_CS4_OFFSET,
+		},
+	};
+
+	/* XXX honor hint? (but then no multi-board support) */
+	/* XXX total hack */
+	if (cpu_is_ixp43x())
+		return &configs[1];		/* Cambria */
+	if (EXP_BUS_READ_4(sa, EXP_TIMING_CS2_OFFSET) != 0)
+		return &configs[0];		/* Avila */
+	return &configs[2];			/* Pronghorn */
+}
 
 struct ata_avila_softc {
 	device_t		sc_dev;
@@ -105,14 +156,14 @@ static int
 ata_avila_probe(device_t dev)
 {
 	struct ixp425_softc *sa = device_get_softc(device_get_parent(dev));
+	const struct ata_config *config;
 
-	/* XXX any way to check? */
-	if (EXP_BUS_READ_4(sa, EXP_TIMING_CS2_OFFSET) != 0)
-		device_set_desc_copy(dev, "Gateworks Avila IDE/CF Controller");
-	else
-		device_set_desc_copy(dev,
-		    "ADI Pronghorn Metro IDE/CF Controller");
-	return 0;
+	config = ata_getconfig(sa);
+	if (config != NULL) {
+		device_set_desc_copy(dev, config->desc);
+		return 0;
+	}
+	return ENXIO;
 }
 
 static int
@@ -120,100 +171,85 @@ ata_avila_attach(device_t dev)
 {
 	struct ata_avila_softc *sc = device_get_softc(dev);
 	struct ixp425_softc *sa = device_get_softc(device_get_parent(dev));
-	u_int32_t alt_t_off, ide_gpin, ide_irq;
+	const struct ata_config	*config;
+
+	config = ata_getconfig(sa);
+	KASSERT(config != NULL, ("no board config"));
 
 	sc->sc_dev = dev;
 	/* NB: borrow from parent */
 	sc->sc_iot = sa->sc_iot;
 	sc->sc_exp_ioh = sa->sc_exp_ioh;
-	if (EXP_BUS_READ_4(sc, EXP_TIMING_CS2_OFFSET) != 0) {
-		/* Avila board */
-		if (bus_space_map(sc->sc_iot, IXP425_EXP_BUS_CS1_HWBASE,
-		    IXP425_EXP_BUS_CS1_SIZE, 0, &sc->sc_ioh))
-			panic("%s: unable to map Expansion Bus CS1 window",
-			    __func__);
-		if (bus_space_map(sc->sc_iot, IXP425_EXP_BUS_CS2_HWBASE,
-		    IXP425_EXP_BUS_CS2_SIZE, 0, &sc->sc_alt_ioh))
-			panic("%s: unable to map Expansion Bus CS2 window",
-			    __func__);
-		ide_gpin = AVILA_IDE_GPIN;
-		ide_irq = AVILA_IDE_IRQ;
-		sc->sc_16bit_off = EXP_TIMING_CS1_OFFSET;
-		alt_t_off = EXP_TIMING_CS2_OFFSET;
+
+	if (bus_space_map(sc->sc_iot, config->base16, config->size16,
+	    0, &sc->sc_ioh))
+		panic("%s: cannot map 16-bit window (0x%x/0x%x)",
+		    __func__, config->base16, config->size16);
+	if (bus_space_map(sc->sc_iot, config->basealt, config->sizealt,
+	    0, &sc->sc_alt_ioh))
+		panic("%s: cannot map alt window (0x%x/0x%x)",
+		    __func__, config->basealt, config->sizealt);
+	sc->sc_16bit_off = config->off16;
+
+	if (config->base16 != CAMBRIA_CFSEL0_HWBASE) {
+		/*
+		 * Craft special resource for ATA bus space ops
+		 * that go through the expansion bus and require
+		 * special hackery to ena/dis 16-bit operations.
+		 *
+		 * XXX probably should just make this generic for
+		 * accessing the expansion bus.
+		 */
+		sc->sc_expbus_tag.bs_cookie = sc;	/* NB: backpointer */
+		/* read single */
+		sc->sc_expbus_tag.bs_r_1	= ata_bs_r_1,
+		sc->sc_expbus_tag.bs_r_2	= ata_bs_r_2,
+		/* read multiple */
+		sc->sc_expbus_tag.bs_rm_2	= ata_bs_rm_2,
+		sc->sc_expbus_tag.bs_rm_2_s	= ata_bs_rm_2_s,
+		/* write (single) */
+		sc->sc_expbus_tag.bs_w_1	= ata_bs_w_1,
+		sc->sc_expbus_tag.bs_w_2	= ata_bs_w_2,
+		/* write multiple */
+		sc->sc_expbus_tag.bs_wm_2	= ata_bs_wm_2,
+		sc->sc_expbus_tag.bs_wm_2_s	= ata_bs_wm_2_s,
+
+		rman_set_bustag(&sc->sc_ata, &sc->sc_expbus_tag);
+		rman_set_bustag(&sc->sc_alt_ata, &sc->sc_expbus_tag);
 	} else {
-		/* Pronghorn */
-		if (bus_space_map(sc->sc_iot, IXP425_EXP_BUS_CS3_HWBASE,
-		    IXP425_EXP_BUS_CS3_SIZE, 0, &sc->sc_ioh))
-			panic("%s: unable to map Expansion Bus CS3 window",
-			    __func__);
-		if (bus_space_map(sc->sc_iot, IXP425_EXP_BUS_CS4_HWBASE,
-		    IXP425_EXP_BUS_CS4_SIZE, 0, &sc->sc_alt_ioh))
-			panic("%s: unable to map Expansion Bus CS4 window",
-			    __func__);
-		ide_gpin = PRONGHORN_IDE_GPIN;
-		ide_irq = PRONGHORN_IDE_IRQ;
-		sc->sc_16bit_off = EXP_TIMING_CS3_OFFSET;
-		alt_t_off = EXP_TIMING_CS4_OFFSET;
+		/*
+		 * On Cambria use the shared CS3 expansion bus tag
+		 * that handles interlock for sharing access with the
+		 * optional UART's.
+		 */
+		rman_set_bustag(&sc->sc_ata, &cambria_exp_bs_tag);
+		rman_set_bustag(&sc->sc_alt_ata, &cambria_exp_bs_tag);
 	}
-
-	/*
-	 * Craft special resource for ATA bus space ops
-	 * that go through the expansion bus and require
-	 * special hackery to ena/dis 16-bit operations.
-	 *
-	 * XXX probably should just make this generic for
-	 * accessing the expansion bus.
-	 */
-	sc->sc_expbus_tag.bs_cookie = sc;	/* NB: backpointer */
-	/* read single */
-	sc->sc_expbus_tag.bs_r_1	= ata_bs_r_1,
-	sc->sc_expbus_tag.bs_r_2	= ata_bs_r_2,
-	/* read multiple */
-	sc->sc_expbus_tag.bs_rm_2	= ata_bs_rm_2,
-	sc->sc_expbus_tag.bs_rm_2_s	= ata_bs_rm_2_s,
-	/* write (single) */
-	sc->sc_expbus_tag.bs_w_1	= ata_bs_w_1,
-	sc->sc_expbus_tag.bs_w_2	= ata_bs_w_2,
-	/* write multiple */
-	sc->sc_expbus_tag.bs_wm_2	= ata_bs_wm_2,
-	sc->sc_expbus_tag.bs_wm_2_s	= ata_bs_wm_2_s,
-
-	rman_set_bustag(&sc->sc_ata, &sc->sc_expbus_tag);
 	rman_set_bushandle(&sc->sc_ata, sc->sc_ioh);
-	rman_set_bustag(&sc->sc_alt_ata, &sc->sc_expbus_tag);
 	rman_set_bushandle(&sc->sc_alt_ata, sc->sc_alt_ioh);
 
-	GPIO_CONF_WRITE_4(sa, IXP425_GPIO_GPOER, 
-	    GPIO_CONF_READ_4(sa, IXP425_GPIO_GPOER) | (1<<ide_gpin));
-	/* set interrupt type */
-	GPIO_CONF_WRITE_4(sa, GPIO_TYPE_REG(ide_gpin),
-	    (GPIO_CONF_READ_4(sa, GPIO_TYPE_REG(ide_gpin)) &~
-	     GPIO_TYPE(ide_gpin, GPIO_TYPE_MASK)) |
-	     GPIO_TYPE(ide_gpin, GPIO_TYPE_EDG_RISING));
-
-	/* clear ISR */
-	GPIO_CONF_WRITE_4(sa, IXP425_GPIO_GPISR, (1<<ide_gpin));
+	ixp425_set_gpio(sa, config->gpin, GPIO_TYPE_EDG_RISING);
 
 	/* configure CS1/3 window, leaving timing unchanged */
 	EXP_BUS_WRITE_4(sc, sc->sc_16bit_off,
 	    EXP_BUS_READ_4(sc, sc->sc_16bit_off) |
 	        EXP_BYTE_EN | EXP_WR_EN | EXP_BYTE_RD16 | EXP_CS_EN);
 	/* configure CS2/4 window, leaving timing unchanged */
-	EXP_BUS_WRITE_4(sc, alt_t_off,
-	    EXP_BUS_READ_4(sc, alt_t_off) |
+	EXP_BUS_WRITE_4(sc, config->offalt,
+	    EXP_BUS_READ_4(sc, config->offalt) |
 	        EXP_BYTE_EN | EXP_WR_EN | EXP_BYTE_RD16 | EXP_CS_EN);
 
 	/* setup interrupt */
 	sc->sc_irq = bus_alloc_resource(dev, SYS_RES_IRQ, &sc->sc_rid,
-	    ide_irq, ide_irq, 1, RF_ACTIVE);
+	    config->irq, config->irq, 1, RF_ACTIVE);
 	if (!sc->sc_irq)
-		panic("Unable to allocate irq %u.\n", ide_irq);
+		panic("Unable to allocate irq %u.\n", config->irq);
 	bus_setup_intr(dev, sc->sc_irq,
 	    INTR_TYPE_BIO | INTR_MPSAFE | INTR_ENTROPY,
 	    NULL, ata_avila_intr, sc, &sc->sc_ih);
 
 	/* attach channel on this controller */
-	device_add_child(dev, "ata", devclass_find_free_unit(ata_devclass, 0));
+	device_add_child(dev, "ata", -1);
 	bus_generic_attach(dev);
 
 	return 0;
@@ -223,17 +259,11 @@ static int
 ata_avila_detach(device_t dev)
 {
 	struct ata_avila_softc *sc = device_get_softc(dev);
-	device_t *children;
-	int nc;
 
 	/* XXX quiesce gpio? */
 
 	/* detach & delete all children */
-	if (device_get_children(dev, &children, &nc) == 0) {
-	    if (nc > 0)
-		    device_delete_child(dev, children[0]);
-	    free(children, M_TEMP);
-	}
+	device_delete_children(dev);
 
 	bus_teardown_intr(dev, sc->sc_irq, sc->sc_ih);
 	bus_release_resource(dev, SYS_RES_IRQ, sc->sc_rid, sc->sc_irq);
@@ -308,7 +338,7 @@ ata_avila_teardown_intr(device_t dev, device_t child, struct resource *irq,
 /*
  * Enable/disable 16-bit ops on the expansion bus.
  */
-static void __inline
+static __inline void
 enable_16(struct ata_avila_softc *sc)
 {
 	EXP_BUS_WRITE_4(sc, sc->sc_16bit_off,
@@ -316,7 +346,7 @@ enable_16(struct ata_avila_softc *sc)
 	DELAY(100);		/* XXX? */
 }
 
-static void __inline
+static __inline void
 disable_16(struct ata_avila_softc *sc)
 {
 	DELAY(100);		/* XXX? */

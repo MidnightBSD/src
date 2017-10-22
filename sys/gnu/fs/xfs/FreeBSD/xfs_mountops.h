@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/gnu/fs/xfs/FreeBSD/xfs_mountops.h 153323 2005-12-12 01:04:32Z rodrigc $
+ * $FreeBSD$
  */
 #ifndef	_XFS_XFS_H_
 #define	_XFS_XFS_H_

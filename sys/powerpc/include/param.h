@@ -35,51 +35,69 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: release/7.0.0/sys/powerpc/include/param.h 153168 2005-12-06 13:27:21Z ru $
+ * $FreeBSD$
  */
+
+#ifndef _POWERPC_INCLUDE_PARAM_H_
+#define	_POWERPC_INCLUDE_PARAM_H_
 
 /*
- * Machine dependent constants for PowerPC (32-bit only currently)
+ * Machine dependent constants for PowerPC
  */
 
-/*
- * Round p (pointer or byte index) up to a correctly-aligned value
- * for all data types (int, long, ...).   The result is unsigned int
- * and must be cast to any desired pointer type.
- */
-#ifndef _ALIGNBYTES
-#define	_ALIGNBYTES	(sizeof(int) - 1)
-#endif
-#ifndef _ALIGN
-#define	_ALIGN(p)	(((unsigned)(p) + _ALIGNBYTES) & ~_ALIGNBYTES)
-#endif
+#include <machine/_align.h>
 
-#ifndef _NO_NAMESPACE_POLLUTION
-
-#ifndef _MACHINE_PARAM_H_
-#define	_MACHINE_PARAM_H_
+/* Needed to display interrupts on OFW PCI */
+#define __PCI_REROUTE_INTERRUPT
 
 #ifndef MACHINE
 #define	MACHINE		"powerpc"
 #endif
 #ifndef MACHINE_ARCH
+#ifdef __powerpc64__
+#define	MACHINE_ARCH	"powerpc64"
+#else
 #define	MACHINE_ARCH	"powerpc"
 #endif
+#endif
 #define	MID_MACHINE	MID_POWERPC
+#ifdef __powerpc64__
+#ifndef	MACHINE_ARCH32
+#define	MACHINE_ARCH32	"powerpc"
+#endif
+#endif
 
-#ifdef SMP
-#define	MAXCPU		2
+#if defined(SMP) || defined(KLD_MODULE)
+#ifndef MAXCPU
+#define	MAXCPU		8
+#endif
 #else
 #define	MAXCPU		1
-#endif /* SMP */
+#endif /* SMP || KLD_MODULE */
 
 #define	ALIGNBYTES	_ALIGNBYTES
 #define	ALIGN(p)	_ALIGN(p)
+/*
+ * ALIGNED_POINTER is a boolean macro that checks whether an address
+ * is valid to fetch data elements of type t from on this architecture.
+ * This does not reflect the optimal alignment, just the possibility
+ * (within reasonable limits). 
+ */
+#define	ALIGNED_POINTER(p, t)	((((uintptr_t)(p)) & (sizeof (t) - 1)) == 0)
+
+/*
+ * CACHE_LINE_SIZE is the compile-time maximum cache line size for an
+ * architecture.  It should be used with appropriate caution.
+ */
+#define	CACHE_LINE_SHIFT	7
+#define	CACHE_LINE_SIZE		(1 << CACHE_LINE_SHIFT)
 
 #define	PAGE_SHIFT	12
-#define	PAGE_SIZE	(1 << PAGE_SHIFT)	/* Page size */
-#define	PAGE_MASK	(PAGE_SIZE - 1)
+#define	PAGE_SIZE	(1L << PAGE_SHIFT)	/* Page size */
+#define	PAGE_MASK	(vm_offset_t)(PAGE_SIZE - 1)
 #define	NPTEPG		(PAGE_SIZE/(sizeof (pt_entry_t)))
+
+#define	MAXPAGESIZES	1		/* maximum number of supported page sizes */
 
 #ifndef KSTACK_PAGES
 #define	KSTACK_PAGES		4		/* includes pcb */
@@ -92,16 +110,13 @@
  */
 #define	trunc_page(x)		((unsigned long)(x) & ~(PAGE_MASK))
 #define	round_page(x)		(((x) + PAGE_MASK) & ~PAGE_MASK)
-#define	trunc_4mpage(x)		((unsigned)(x) & ~PDRMASK)
-#define	round_4mpage(x)		((((unsigned)(x)) + PDRMASK) & ~PDRMASK)
 
 #define	atop(x)			((unsigned long)(x) >> PAGE_SHIFT)
 #define	ptoa(x)			((unsigned long)(x) << PAGE_SHIFT)
 
-#define	powerpc_btop(x)		((unsigned)(x) >> PAGE_SHIFT)
-#define	powerpc_ptob(x)		((unsigned)(x) << PAGE_SHIFT)
+#define	powerpc_btop(x)		((unsigned long)(x) >> PAGE_SHIFT)
+#define	powerpc_ptob(x)		((unsigned long)(x) << PAGE_SHIFT)
 
-#define	pgtok(x)		((x) * (PAGE_SIZE / 1024))
+#define	pgtok(x)		((x) * (PAGE_SIZE / 1024UL))
 
-#endif /* !_MACHINE_PARAM_H_ */
-#endif /* !_NO_NAMESPACE_POLLUTION */
+#endif /* !_POWERPC_INCLUDE_PARAM_H_ */

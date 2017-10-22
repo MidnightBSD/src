@@ -1,5 +1,5 @@
 /*	$NetBSD: rpcent.h,v 1.1 2000/06/02 22:57:56 fvdl Exp $	*/
-/*	$FreeBSD: release/7.0.0/include/rpc/rpcent.h 158138 2006-04-29 04:26:16Z ume $ */
+/*	$FreeBSD$ */
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for

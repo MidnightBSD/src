@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)flags.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/stdio/flags.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/file.h>
@@ -80,11 +80,30 @@ __sflags(mode, optr)
 		return (0);
 	}
 
-	/* [rwa]\+ or [rwa]b\+ means read and write */
-	if (*mode == '+' || (*mode == 'b' && mode[1] == '+')) {
+	/* 'b' (binary) is ignored */
+	if (*mode == 'b')
+		mode++;
+
+	/* [rwa][b]\+ means read and write */
+	if (*mode == '+') {
+		mode++;
 		ret = __SRW;
 		m = O_RDWR;
 	}
+
+	/* 'b' (binary) can appear here, too -- and is ignored again */
+	if (*mode == 'b')
+		mode++;
+
+	/* 'x' means exclusive (fail if the file exists) */
+	if (*mode == 'x') {
+		if (m == O_RDONLY) {
+			errno = EINVAL;
+			return (0);
+		}
+		o |= O_EXCL;
+	}
+
 	*optr = m | o;
 	return (ret);
 }

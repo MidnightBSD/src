@@ -36,7 +36,7 @@
  *
  *	@(#)af.h	8.1 (Berkeley) 6/5/93
  *
- * $FreeBSD: release/7.0.0/usr.sbin/IPXrouted/af.h 50479 1999-08-28 01:35:59Z peter $
+ * $FreeBSD$
  */
 
 /*

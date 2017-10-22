@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/asf/asf_prog.c 159720 2006-06-18 11:14:40Z yar $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <err.h>

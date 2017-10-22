@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: release/7.0.0/usr.sbin/inetd/Makefile 171246 2007-07-05 08:56:46Z bz $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -8,7 +8,7 @@ MAN=	inetd.8
 MLINKS=	inetd.8 inetd.conf.5
 SRCS=	inetd.c builtins.c
 
-WARNS?=	2
+WARNS?=	3
 CFLAGS+= -DLOGIN_CAP
 #CFLAGS+= -DSANITY_CHECK
 

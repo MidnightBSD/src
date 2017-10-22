@@ -29,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/i386/string/strrchr.S 97748 2002-06-02 20:05:59Z schweikh $");
+__FBSDID("$FreeBSD$");
 
 /*
  * strrchr(s, c)
@@ -62,3 +62,6 @@ L2:
 	jne	L1
 	popl	%ebx
 	ret
+END(strrchr)
+
+	.section .note.GNU-stack,"",%progbits

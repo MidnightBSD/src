@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libkvm/kvm_arm.c 165895 2007-01-08 18:25:58Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/elf32.h>
@@ -52,10 +52,14 @@ __FBSDID("$FreeBSD: release/7.0.0/lib/libkvm/kvm_arm.c 165895 2007-01-08 18:25:5
 #include <limits.h>
 #include <kvm.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "kvm_private.h"
 
+/* minidump must be the first item! */
 struct vmstate {
+	int minidump;		/* 1 = minidump mode */
 	pd_entry_t *l1pt;
 	void *mmapbase;
 	size_t mmapsize;
@@ -107,6 +111,8 @@ void
 _kvm_freevtop(kvm_t *kd)
 {
 	if (kd->vmst != 0) {
+		if (kd->vmst->minidump)
+			return (_kvm_minidump_freevtop(kd));
 		if (kd->vmst->mmapbase != NULL)
 			munmap(kd->vmst->mmapbase, kd->vmst->mmapsize);
 		free(kd->vmst);
@@ -117,13 +123,25 @@ _kvm_freevtop(kvm_t *kd)
 int
 _kvm_initvtop(kvm_t *kd)
 {
-	struct vmstate *vm = _kvm_malloc(kd, sizeof(*vm));
-	struct nlist nlist[2];
+	struct vmstate *vm;
+	struct nlist nl[2];
 	u_long kernbase, physaddr, pa;
 	pd_entry_t *l1pt;
 	Elf32_Ehdr *ehdr;
 	size_t hdrsz;
-	
+	char minihdr[8];
+
+	if (!kd->rawdump) {
+		if (pread(kd->pmfd, &minihdr, 8, 0) == 8) {
+			if (memcmp(&minihdr, "minidump", 8) == 0)
+				return (_kvm_minidump_initvtop(kd));
+		} else {
+			_kvm_err(kd, kd->program, "cannot read header");
+			return (-1);
+		}
+	}
+
+	vm = _kvm_malloc(kd, sizeof(*vm));
 	if (vm == 0) {
 		_kvm_err(kd, kd->program, "cannot allocate vm");
 		return (-1);
@@ -136,25 +154,25 @@ _kvm_initvtop(kvm_t *kd)
 	hdrsz = ehdr->e_phoff + ehdr->e_phentsize * ehdr->e_phnum;
 	if (_kvm_maphdrs(kd, hdrsz) == -1)
 		return (-1);
-	nlist[0].n_name = "kernbase";
-	nlist[1].n_name = NULL;
-	if (kvm_nlist(kd, nlist) != 0)
+	nl[0].n_name = "kernbase";
+	nl[1].n_name = NULL;
+	if (kvm_nlist(kd, nl) != 0)
 		kernbase = KERNBASE;
 	else
-		kernbase = nlist[0].n_value;
+		kernbase = nl[0].n_value;
 
-	nlist[0].n_name = "physaddr";
-	if (kvm_nlist(kd, nlist) != 0) {
+	nl[0].n_name = "physaddr";
+	if (kvm_nlist(kd, nl) != 0) {
 		_kvm_err(kd, kd->program, "couldn't get phys addr");
 		return (-1);
 	}
-	physaddr = nlist[0].n_value;
-	nlist[0].n_name = "kernel_l1pa";
-	if (kvm_nlist(kd, nlist) != 0) {
+	physaddr = nl[0].n_value;
+	nl[0].n_name = "kernel_l1pa";
+	if (kvm_nlist(kd, nl) != 0) {
 		_kvm_err(kd, kd->program, "bad namelist");
 		return (-1);
 	}
-	if (kvm_read(kd, (nlist[0].n_value - kernbase + physaddr), &pa,
+	if (kvm_read(kd, (nl[0].n_value - kernbase + physaddr), &pa,
 	    sizeof(pa)) != sizeof(pa)) {
 		_kvm_err(kd, kd->program, "cannot read kernel_l1pa");
 		return (-1);
@@ -187,11 +205,13 @@ _kvm_initvtop(kvm_t *kd)
 int
 _kvm_kvatop(kvm_t *kd, u_long va, off_t *pa)
 {
-	u_long offset = va & (PAGE_SIZE - 1);
 	struct vmstate *vm = kd->vmst;
 	pd_entry_t pd;
 	pt_entry_t pte;
 	u_long pte_pa;
+
+	if (kd->vmst->minidump)
+		return (_kvm_minidump_kvatop(kd, va, pa));
 
 	if (vm->l1pt == NULL)
 		return (_kvm_pa2off(kd, va, pa, PAGE_SIZE));
@@ -223,7 +243,7 @@ _kvm_kvatop(kvm_t *kd, u_long va, off_t *pa)
 	*pa = (pte & L2_S_FRAME) | (va & L2_S_OFFSET);
 	return (_kvm_pa2off(kd, *pa, pa, PAGE_SIZE));
 invalid:
-	_kvm_err(kd, 0, "Invalid address (%x)", va);
+	_kvm_err(kd, 0, "Invalid address (%lx)", va);
 	return 0;
 }
 
@@ -232,16 +252,15 @@ invalid:
  * not just those for a kernel crash dump.  Some architectures
  * have to deal with these NOT being constants!  (i.e. m68k)
  */
+#ifdef FBSD_NOT_YET
 int
-_kvm_mdopen(kd)
-	kvm_t	*kd;
+_kvm_mdopen(kvm_t *kd)
 {
 
-#ifdef FBSD_NOT_YET
 	kd->usrstack = USRSTACK;
 	kd->min_uva = VM_MIN_ADDRESS;
 	kd->max_uva = VM_MAXUSER_ADDRESS;
-#endif
 
 	return (0);
 }
+#endif

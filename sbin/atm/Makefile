@@ -21,13 +21,8 @@
 # notice must be reproduced on all copies.
 #
 #	@(#) $Id: Makefile,v 1.5 1998/07/10 16:01:58 jpt Exp $
-# $FreeBSD: release/7.0.0/sbin/atm/Makefile 171453 2007-07-14 21:49:24Z rwatson $
+# $FreeBSD$
 
 SUBDIR=	atmconfig
-
-# Disabled in 7.0 as netatm is not MPSAFE.
-#	atm \
-#	fore_dnld \
-#	ilmid
 
 .include <bsd.subdir.mk>

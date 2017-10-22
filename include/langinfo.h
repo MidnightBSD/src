@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/include/langinfo.h 103522 2002-09-18 05:54:25Z mike $
+ * $FreeBSD$
  */
 
 #ifndef _LANGINFO_H_
@@ -114,8 +114,26 @@ typedef	__nl_item	nl_item;
 #define	D_MD_ORDER	57	/* month/day order (local extension) */
 #endif
 
+/* standalone months forms for %OB */
+#define	ALTMON_1	58
+#define	ALTMON_2	59
+#define	ALTMON_3	60
+#define	ALTMON_4	61
+#define	ALTMON_5	62
+#define	ALTMON_6	63
+#define	ALTMON_7	64
+#define	ALTMON_8	65
+#define	ALTMON_9	66
+#define	ALTMON_10	67
+#define	ALTMON_11	68
+#define	ALTMON_12	69
+
 __BEGIN_DECLS
 char	*nl_langinfo(nl_item);
+
+#if __POSIX_VISIBLE >= 200809 || defined(_XLOCALE_H_)
+#include <xlocale/_langinfo.h>
+#endif
 __END_DECLS
 
 #endif /* !_LANGINFO_H_ */

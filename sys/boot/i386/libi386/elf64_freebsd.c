@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/i386/libi386/elf64_freebsd.c 163708 2006-10-26 20:04:22Z ru $");
+__FBSDID("$FreeBSD$");
 
 #define __ELF_WORD_SIZE 64
 #include <sys/param.h>
@@ -78,7 +78,7 @@ elf64_exec(struct preloaded_file *fp)
     int				i;
 
     if ((md = file_findmetadata(fp, MODINFOMD_ELFHDR)) == NULL)
-	return(EFTYPE);			/* XXX actually EFUCKUP */
+	return(EFTYPE);
     ehdr = (Elf_Ehdr *)&(md->md_data);
 
     err = bi_load64(fp->f_args, &modulep, &kernend);

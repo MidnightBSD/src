@@ -22,20 +22,19 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: release/7.0.0/sys/sparc64/sparc64/spitfire.c 122464 2003-11-11 06:41:54Z jake $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include "opt_pmap.h"
 
 #include <sys/param.h>
-#include <sys/linker_set.h>
-#include <sys/proc.h>
+#include <sys/systm.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/smp.h>
 #include <sys/sysctl.h>
-#include <sys/systm.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -57,7 +56,7 @@ PMAP_STATS_VAR(spitfire_icache_npage_inval_match);
  * Enable the level 1 caches.
  */
 void
-spitfire_cache_enable(void)
+spitfire_cache_enable(u_int cpu_impl __unused)
 {
 	u_long lsu;
 
@@ -73,9 +72,11 @@ spitfire_cache_flush(void)
 {
 	u_long addr;
 
-	for (addr = 0; addr < cache.dc_size; addr += cache.dc_linesize)
+	for (addr = 0; addr < PCPU_GET(cache.dc_size);
+	    addr += PCPU_GET(cache.dc_linesize))
 		stxa_sync(addr, ASI_DCACHE_TAG, 0);
-	for (addr = 0; addr < cache.ic_size; addr += cache.ic_linesize)
+	for (addr = 0; addr < PCPU_GET(cache.ic_size);
+	    addr += PCPU_GET(cache.ic_linesize))
 		stxa_sync(addr, ASI_ICACHE_TAG, 0);
 }
 
@@ -90,12 +91,12 @@ spitfire_dcache_page_inval(vm_paddr_t pa)
 	u_long addr;
 	u_long tag;
 
-	KASSERT((pa & PAGE_MASK) == 0,
-	    ("dcache_page_inval: pa not page aligned"));
+	KASSERT((pa & PAGE_MASK) == 0, ("%s: pa not page aligned", __func__));
 	PMAP_STATS_INC(spitfire_dcache_npage_inval);
 	target = pa >> (PAGE_SHIFT - DC_TAG_SHIFT);
 	cookie = ipi_dcache_page_inval(tl_ipi_spitfire_dcache_page_inval, pa);
-	for (addr = 0; addr < cache.dc_size; addr += cache.dc_linesize) {
+	for (addr = 0; addr < PCPU_GET(cache.dc_size);
+	    addr += PCPU_GET(cache.dc_linesize)) {
 		tag = ldxa(addr, ASI_DCACHE_TAG);
 		if (((tag >> DC_VALID_SHIFT) & DC_VALID_MASK) == 0)
 			continue;
@@ -119,12 +120,12 @@ spitfire_icache_page_inval(vm_paddr_t pa)
 	void *cookie;
 	u_long addr;
 
-	KASSERT((pa & PAGE_MASK) == 0,
-	    ("icache_page_inval: pa not page aligned"));
+	KASSERT((pa & PAGE_MASK) == 0, ("%s: pa not page aligned", __func__));
 	PMAP_STATS_INC(spitfire_icache_npage_inval);
 	target = pa >> (PAGE_SHIFT - IC_TAG_SHIFT);
 	cookie = ipi_icache_page_inval(tl_ipi_spitfire_icache_page_inval, pa);
-	for (addr = 0; addr < cache.ic_size; addr += cache.ic_linesize) {
+	for (addr = 0; addr < PCPU_GET(cache.ic_size);
+	    addr += PCPU_GET(cache.ic_linesize)) {
 		__asm __volatile("ldda [%1] %2, %%g0" /*, %g1 */
 		    : "=r" (tag) : "r" (addr), "n" (ASI_ICACHE_TAG));
 		if (((tag >> IC_VALID_SHIFT) & IC_VALID_MASK) == 0)
@@ -139,25 +140,45 @@ spitfire_icache_page_inval(vm_paddr_t pa)
 }
 
 /*
- * Flush all user mappings from the tlb.
+ * Flush all non-locked mappings from the TLBs.
+ */
+void
+spitfire_tlb_flush_nonlocked(void)
+{
+	u_int i;
+	u_int slot;
+
+	for (i = 0; i < SPITFIRE_TLB_ENTRIES; i++) {
+		slot = TLB_DAR_SLOT(TLB_DAR_T32, i);
+		if ((ldxa(slot, ASI_DTLB_DATA_ACCESS_REG) & TD_L) == 0)
+			stxa_sync(slot, ASI_DTLB_DATA_ACCESS_REG, 0);
+		if ((ldxa(slot, ASI_ITLB_DATA_ACCESS_REG) & TD_L) == 0)
+			stxa_sync(slot, ASI_ITLB_DATA_ACCESS_REG, 0);
+	}
+}
+
+/*
+ * Flush all user mappings from the TLBs.
  */
 void
 spitfire_tlb_flush_user(void)
 {
 	u_long data;
 	u_long tag;
-	int i;
+	u_int i;
+	u_int slot;
 
 	for (i = 0; i < SPITFIRE_TLB_ENTRIES; i++) {
-		data = ldxa(TLB_DAR_SLOT(i), ASI_DTLB_DATA_ACCESS_REG);
-		tag = ldxa(TLB_DAR_SLOT(i), ASI_DTLB_TAG_READ_REG);
+		slot = TLB_DAR_SLOT(TLB_DAR_T32, i);
+		data = ldxa(slot, ASI_DTLB_DATA_ACCESS_REG);
+		tag = ldxa(slot, ASI_DTLB_TAG_READ_REG);
 		if ((data & TD_V) != 0 && (data & TD_L) == 0 &&
 		    TLB_TAR_CTX(tag) != TLB_CTX_KERNEL)
-			stxa_sync(TLB_DAR_SLOT(i), ASI_DTLB_DATA_ACCESS_REG, 0);
-		data = ldxa(TLB_DAR_SLOT(i), ASI_ITLB_DATA_ACCESS_REG);
-		tag = ldxa(TLB_DAR_SLOT(i), ASI_ITLB_TAG_READ_REG);
+			stxa_sync(slot, ASI_DTLB_DATA_ACCESS_REG, 0);
+		data = ldxa(slot, ASI_ITLB_DATA_ACCESS_REG);
+		tag = ldxa(slot, ASI_ITLB_TAG_READ_REG);
 		if ((data & TD_V) != 0 && (data & TD_L) == 0 &&
 		    TLB_TAR_CTX(tag) != TLB_CTX_KERNEL)
-			stxa_sync(TLB_DAR_SLOT(i), ASI_ITLB_DATA_ACCESS_REG, 0);
+			stxa_sync(slot, ASI_ITLB_DATA_ACCESS_REG, 0);
 	}
 }

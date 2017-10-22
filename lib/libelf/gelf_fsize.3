@@ -21,11 +21,11 @@
 .\" out of the use of this software, even if advised of the possibility of
 .\" such damage.
 .\"
-.\" $FreeBSD: release/7.0.0/lib/libelf/gelf_fsize.3 164253 2006-11-13 09:46:16Z ru $
+.\" $FreeBSD$
 .\"
-.Dd July 3, 2006
-.Os
+.Dd February 5, 2008
 .Dt GELF_FSIZE 3
+.Os
 .Sh NAME
 .Nm gelf_fsize ,
 .Nm elf32_fsize ,
@@ -40,12 +40,15 @@
 .Ft size_t
 .Fn elf64_fsize "Elf_Type type" "size_t count" "unsigned int version"
 .In gelf.h
+.Ft size_t
 .Fn gelf_fsize "Elf *elf" "Elf_Type type" "size_t count" "unsigned int version"
 .Sh DESCRIPTION
 These functions return the size in bytes of the file representation of
 .Ar count
 numbers of objects of ELF type
 .Ar type .
+For ELF types that are of variable length, these functions return a
+size of one byte.
 .Pp
 Functions
 .Fn elf32_fsize

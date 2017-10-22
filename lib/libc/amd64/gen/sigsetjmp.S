@@ -37,7 +37,7 @@
 	.asciz "$Id: sigsetjmp.S,v 1.1 1993/12/05 13:01:05 ats Exp $"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/amd64/gen/sigsetjmp.S 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "SYS.h"
 
@@ -62,6 +62,7 @@ ENTRY(sigsetjmp)
 	movq	$1,%rdi			/* SIG_BLOCK       */
 	movq	$0,%rsi			/* (sigset_t*)set  */
 	leaq	72(%rcx),%rdx		/* 9,10 (sigset_t*)oset */
+	/* stack is 16-byte aligned */
 	call	PIC_PLT(CNAME(_sigprocmask))
 	popq	%rdi
 2:	movq	%rdi,%rcx
@@ -77,6 +78,7 @@ ENTRY(sigsetjmp)
 	fnstcw	64(%rcx)		/* 8; fpu cw */
 	xorq	%rax,%rax
 	ret
+END(sigsetjmp)
 
 	.weak CNAME(siglongjmp)
 	.set CNAME(siglongjmp),CNAME(__siglongjmp)
@@ -89,7 +91,9 @@ ENTRY(__siglongjmp)
 	movq	$3,%rdi			/* SIG_SETMASK     */
 	leaq	72(%rdx),%rsi		/* (sigset_t*)set  */
 	movq	$0,%rdx			/* (sigset_t*)oset */
+	subq	$0x8,%rsp		/* make the stack 16-byte aligned */
 	call	PIC_PLT(CNAME(_sigprocmask))
+	addq	$0x8,%rsp
 	popq	%rsi
 	popq	%rdi			/* jmpbuf */
 2:	movq	%rdi,%rdx
@@ -109,3 +113,6 @@ ENTRY(__siglongjmp)
 	incq	%rax
 1:	movq	%rcx,0(%rsp)
 	ret
+END(__siglongjmp)
+
+	.section .note.GNU-stack,"",%progbits

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/etc/disktab 163354 2006-10-14 16:39:03Z ru $
+# $FreeBSD$
 #
 # Disk geometry and partition layout tables.
 # See disktab(5) for format of this file.

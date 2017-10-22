@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $FreeBSD: release/7.0.0/contrib/top/utils.c 172506 2007-10-10 16:59:15Z cvs2svn $
+ * $FreeBSD$
  */
 
 /*
@@ -476,7 +476,7 @@ int amt;
 
 char *format_k2(amt)
 
-int amt;
+unsigned long long amt;
 
 {
     static char retarray[NUM_STRINGS][16];
@@ -499,7 +499,7 @@ int amt;
 	}
     }
 
-    p = strecpy(p, itoa(amt));
+    p = strecpy(p, itoa((int)amt));
     *p++ = tag;
     *p = '\0';
 

@@ -1,9 +1,9 @@
-/* $Id: port-aix.h,v 1.27 2006/09/18 13:54:33 dtucker Exp $ */
+/* $Id: port-aix.h,v 1.32 2009/12/20 23:49:22 dtucker Exp $ */
 
 /*
  *
  * Copyright (c) 2001 Gert Doering.  All rights reserved.
- * Copyright (c) 2004, 2005 Darren Tucker.  All rights reserved.
+ * Copyright (c) 2004,2005,2006 Darren Tucker.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -71,6 +71,11 @@ int passwdexpired(char *, char **);
 # include <sys/timers.h>
 #endif
 
+/* for setpcred and friends */
+#ifdef HAVE_USERSEC_H
+# include <usersec.h>
+#endif
+
 /*
  * According to the setauthdb man page, AIX password registries must be 15
  * chars or less plus terminating NUL.
@@ -87,7 +92,13 @@ void aix_usrinfo(struct passwd *);
 int sys_auth_allowed_user(struct passwd *, Buffer *);
 # define CUSTOM_SYS_AUTH_RECORD_LOGIN 1
 int sys_auth_record_login(const char *, const char *, const char *, Buffer *);
+# define CUSTOM_SYS_AUTH_GET_LASTLOGIN_MSG
+char *sys_auth_get_lastlogin_msg(const char *, uid_t);
 # define CUSTOM_FAILED_LOGIN 1
+# if defined(S_AUTHDOMAIN)  && defined (S_AUTHNAME)
+# define USE_AIX_KRB_NAME
+char *aix_krb5_get_principal_name(char *);
+# endif
 #endif
 
 void aix_setauthdb(const char *);
@@ -101,6 +112,16 @@ void aix_remove_embedded_newlines(char *);
 int sshaix_getnameinfo(const struct sockaddr *, size_t, char *, size_t,
     char *, size_t, int);
 # define getnameinfo(a,b,c,d,e,f,g) (sshaix_getnameinfo(a,b,c,d,e,f,g))
+#endif
+
+/*
+ * We use getgrset in preference to multiple getgrent calls for efficiency
+ * plus it supports NIS and LDAP groups.
+ */
+#if !defined(HAVE_GETGROUPLIST) && defined(HAVE_GETGRSET)
+# define HAVE_GETGROUPLIST
+# define USE_GETGRSET
+int getgrouplist(const char *, gid_t, gid_t *, int *);
 #endif
 
 #endif /* _AIX */

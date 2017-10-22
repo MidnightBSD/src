@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/boot/i386/kgzldr/Makefile 139112 2004-12-21 09:59:45Z ru $
+# $FreeBSD$
 
 PROG=	kgzldr.o
 STRIP=

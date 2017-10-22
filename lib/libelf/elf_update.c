@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2006 Joseph Koshy
+ * Copyright (c) 2006-2008 Joseph Koshy
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libelf/elf_update.c 172088 2007-09-08 08:20:12Z jkoshy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/mman.h>
 #include <sys/param.h>
@@ -141,7 +141,7 @@ _libelf_compute_section_extents(Elf *e, Elf_Scn *s, off_t *rc)
 
 	/* Compute the section alignment. */
 	STAILQ_FOREACH(d, &s->s_data, d_next)  {
-		if (d->d_type != elftype) {
+		if (d->d_type > ELF_T_LAST) {
 			LIBELF_SET_ERROR(DATA, 0);
 			return (0);
 		}
@@ -149,11 +149,7 @@ _libelf_compute_section_extents(Elf *e, Elf_Scn *s, off_t *rc)
 			LIBELF_SET_ERROR(VERSION, 0);
 			return (0);
 		}
-		if ((d_align = d->d_align) % sh_align) {
-			LIBELF_SET_ERROR(LAYOUT, 0);
-			return (0);
-		}
-		if (d_align == 0 || (d_align & (d_align - 1))) {
+		if ((d_align = d->d_align) == 0 || (d_align & (d_align - 1))) {
 			LIBELF_SET_ERROR(DATA, 0);
 			return (0);
 		}
@@ -168,7 +164,7 @@ _libelf_compute_section_extents(Elf *e, Elf_Scn *s, off_t *rc)
 			if ((uint64_t) d->d_off + d->d_size > scn_size)
 				scn_size = d->d_off + d->d_size;
 		} else {
-			scn_size = roundup2(scn_size, scn_alignment);
+			scn_size = roundup2(scn_size, d->d_align);
 			d->d_off = scn_size;
 			scn_size += d->d_size;
 		}
@@ -246,13 +242,19 @@ _libelf_insert_section(Elf *e, Elf_Scn *s)
 		tmin = t->s_offset;
 		tmax = tmin + t->s_size;
 
-		/* check if there is an overlap */
-		if (tmax < smin) {
+		if (tmax <= smin) {
+			/*
+			 * 't' lies entirely before 's': ...| t |...| s |...
+			 */
 			prevt = t;
 			continue;
-		} else if (smax < tmin)
+		} else if (smax <= tmin)
+			/*
+			 * 's' lies entirely before 't', and after 'prevt':
+			 *      ...| prevt |...| s |...| t |...
+			 */
 			break;
-		else {
+		else {	/* 's' and 't' overlap. */
 			LIBELF_SET_ERROR(LAYOUT, 0);
 			return (0);
 		}
@@ -291,7 +293,6 @@ _libelf_resync_sections(Elf *e, off_t rc)
 		else
 			sh_type = s->s_shdr.s_shdr64.sh_type;
 
-		/* XXX Do we need the 'size' field of an SHT_NOBITS section */
 		if (sh_type == SHT_NOBITS || sh_type == SHT_NULL)
 			continue;
 
@@ -417,8 +418,8 @@ _libelf_resync_elf(Elf *e)
 		(E)->e_ident[EI_VERSION] = (V);				\
 		(E)->e_ehsize = _libelf_fsize(ELF_T_EHDR, (EC), (V),	\
 		    (size_t) 1);					\
-		(E)->e_phentsize = _libelf_fsize(ELF_T_PHDR, (EC), (V),	\
-		    (size_t) 1);					\
+		(E)->e_phentsize = (phnum == 0) ? 0 : _libelf_fsize(	\
+		    ELF_T_PHDR, (EC), (V), (size_t) 1);			\
 		(E)->e_shentsize = _libelf_fsize(ELF_T_SHDR, (EC), (V),	\
 		    (size_t) 1);					\
 	} while (0)
@@ -466,6 +467,11 @@ _libelf_resync_elf(Elf *e)
 	 * Compute the layout of the sections associated with the
 	 * file.
 	 */
+
+	if (e->e_cmd != ELF_C_WRITE &&
+	    (e->e_flags & LIBELF_F_SHDRS_LOADED) == 0 &&
+	    _libelf_load_scn(e, ehdr) == 0)
+		return ((off_t) -1);
 
 	if ((rc = _libelf_resync_sections(e, rc)) < 0)
 		return ((off_t) -1);
@@ -529,26 +535,26 @@ _libelf_write_scn(Elf *e, char *nf, Elf_Scn *s, off_t rc)
 	int ec;
 	size_t fsz, msz, nobjects;
 	uint32_t sh_type;
-	uint64_t sh_off;
+	uint64_t sh_off, sh_size;
 	int elftype;
 	Elf_Data *d, dst;
 
-	if ((ec = e->e_class) == ELFCLASS32)
+	if ((ec = e->e_class) == ELFCLASS32) {
 		sh_type = s->s_shdr.s_shdr32.sh_type;
-	else
+		sh_size = (uint64_t) s->s_shdr.s_shdr32.sh_size;
+	} else {
 		sh_type = s->s_shdr.s_shdr64.sh_type;
+		sh_size = s->s_shdr.s_shdr64.sh_size;
+	}
 
 	/*
 	 * Ignore sections that do not allocate space in the file.
 	 */
-	if (sh_type == SHT_NOBITS || sh_type == SHT_NULL)
+	if (sh_type == SHT_NOBITS || sh_type == SHT_NULL || sh_size == 0)
 		return (rc);
-
 
 	elftype = _libelf_xlate_shtype(sh_type);
 	assert(elftype >= ELF_T_FIRST && elftype <= ELF_T_LAST);
-
-	msz = _libelf_msize(elftype, ec, e->e_version);
 
 	sh_off = s->s_offset;
 	assert(sh_off % _libelf_falign(elftype, ec) == 0);
@@ -596,6 +602,8 @@ _libelf_write_scn(Elf *e, char *nf, Elf_Scn *s, off_t rc)
 
 	STAILQ_FOREACH(d, &s->s_data, d_next) {
 
+		msz = _libelf_msize(d->d_type, ec, e->e_version);
+
 		if ((uint64_t) rc < sh_off + d->d_off)
 			(void) memset(nf + rc,
 			    LIBELF_PRIVATE(fillchar), sh_off + d->d_off - rc);
@@ -603,13 +611,12 @@ _libelf_write_scn(Elf *e, char *nf, Elf_Scn *s, off_t rc)
 		rc = sh_off + d->d_off;
 
 		assert(d->d_buf != NULL);
-		assert(d->d_type == (Elf_Type) elftype);
 		assert(d->d_version == e->e_version);
 		assert(d->d_size % msz == 0);
 
 		nobjects = d->d_size / msz;
 
-		fsz = _libelf_fsize(elftype, ec, e->e_version, nobjects);
+		fsz = _libelf_fsize(d->d_type, ec, e->e_version, nobjects);
 
 		dst.d_buf    = nf + rc;
 		dst.d_size   = fsz;
@@ -719,14 +726,9 @@ _libelf_write_elf(Elf *e, off_t newsize)
 		assert(phoff % _libelf_falign(ELF_T_PHDR, ec) == 0);
 		assert(fsz > 0);
 
+		src.d_buf = _libelf_getphdr(e, ec);
 		src.d_version = dst.d_version = e->e_version;
 		src.d_type = ELF_T_PHDR;
-
-		if (ec == ELFCLASS32)
-			src.d_buf = e->e_u.e_elf.e_phdr.e_phdr32;
-		else
-			src.d_buf = e->e_u.e_elf.e_phdr.e_phdr64;
-
 		src.d_size = phnum * _libelf_msize(ELF_T_PHDR, ec,
 		    e->e_version);
 
@@ -782,15 +784,14 @@ _libelf_write_elf(Elf *e, off_t newsize)
 				src.d_buf = &scn->s_shdr.s_shdr64;
 
 			dst.d_size = fsz;
-			dst.d_buf = newfile + rc;
+			dst.d_buf = newfile + rc + scn->s_ndx * fsz;
 
 			if (_libelf_xlate(&dst, &src, e->e_byteorder, ec,
 				ELF_TOFILE) != &dst)
 				goto error;
-
-			rc += fsz;
 		}
 
+		rc += e->e_u.e_elf.e_nscn * fsz;
 		if (maxrc > rc)
 			rc = maxrc;
 	}
@@ -849,11 +850,13 @@ _libelf_write_elf(Elf *e, off_t newsize)
 		e->e_u.e_elf.e_phdr.e_phdr64 = NULL;
 	}
 
+	free(newfile);
+
 	return (rc);
 
  error:
-	if (newfile)
-		free(newfile);
+	free(newfile);
+
 	return ((off_t) -1);
 }
 

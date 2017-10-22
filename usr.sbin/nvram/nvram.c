@@ -23,7 +23,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/nvram/nvram.c 160892 2006-08-01 22:19:01Z sobomax $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

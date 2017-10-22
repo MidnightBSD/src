@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/gnu/usr.bin/patch/version.c 95601 2002-04-28 01:33:45Z gad $
+/* $FreeBSD$
  *
  * $Log: version.c,v $
  * Revision 2.0  86/09/17  15:40:11  lwall

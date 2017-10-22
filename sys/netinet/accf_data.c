@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/netinet/accf_data.c 174854 2007-12-22 06:32:46Z cvs2svn $");
+__FBSDID("$FreeBSD$");
 
 #define ACCEPT_FILTER_MOD
 
@@ -38,7 +38,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/netinet/accf_data.c 174854 2007-12-22 06:3
 
 /* accept filter that holds a socket until data arrives */
 
-static void	sohasdata(struct socket *so, void *arg, int waitflag);
+static int	sohasdata(struct socket *so, void *arg, int waitflag);
 
 static struct accept_filter accf_data_filter = {
 	"dataready",
@@ -55,15 +55,12 @@ static moduledata_t accf_data_mod = {
 
 DECLARE_MODULE(accf_data, accf_data_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
 
-static void
+static int
 sohasdata(struct socket *so, void *arg, int waitflag)
 {
 
 	if (!soreadable(so))
-		return;
+		return (SU_OK);
 
-	so->so_upcall = NULL;
-	so->so_rcv.sb_flags &= ~SB_UPCALL;
-	soisconnected(so);
-	return;
+	return (SU_ISCONNECTED);
 }

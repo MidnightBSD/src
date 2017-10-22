@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/netipsec/keysock.h 154625 2006-01-21 10:44:34Z bz $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: keysock.h,v 1.8 2000/03/27 05:11:06 sumikawa Exp $	*/
 
 /*-
@@ -69,7 +69,8 @@ struct keycb {
 	int kp_registered;	/* registered socket */
 };
 
-extern struct pfkeystat pfkeystat;
+VNET_DECLARE(struct pfkeystat, pfkeystat);
+#define	V_pfkeystat		VNET(pfkeystat)
 
 extern int key_output(struct mbuf *m, struct socket *so);
 extern int key_usrreq __P((struct socket *,

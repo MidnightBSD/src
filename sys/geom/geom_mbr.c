@@ -31,12 +31,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/geom/geom_mbr.c 152971 2005-11-30 22:15:00Z sobomax $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/errno.h>
 #include <sys/endian.h>
 #include <sys/systm.h>
+#include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/fcntl.h>
 #include <sys/malloc.h>
@@ -44,11 +45,14 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/geom/geom_mbr.c 152971 2005-11-30 22:15:00
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/md5.h>
+#include <sys/proc.h>
 
 #include <sys/diskmbr.h>
 #include <sys/sbuf.h>
 #include <geom/geom.h>
 #include <geom/geom_slice.h>
+
+FEATURE(geom_mbr, "GEOM DOS/MBR partitioning support");
 
 #define MBR_CLASS_NAME "MBR"
 #define MBREXT_CLASS_NAME "MBREXT"

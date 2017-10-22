@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/examples/kld/cdev/Makefile 99771 2002-07-11 13:38:05Z ru $
+# $FreeBSD$
 
 SUBDIR=	module test
 

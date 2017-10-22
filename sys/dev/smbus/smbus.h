@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/smbus/smbus.h 162234 2006-09-11 20:52:41Z jhb $
+ * $FreeBSD$
  *
  */
 #ifndef __SMBUS_H
@@ -34,6 +34,6 @@ struct smbus_softc {
 	struct mtx lock;
 };
 
-void	smbus_generic_intr(device_t dev, u_char devaddr, char low, char high);
+void smbus_generic_intr(device_t dev, u_char devaddr, char low, char high, int err);
 
 #endif

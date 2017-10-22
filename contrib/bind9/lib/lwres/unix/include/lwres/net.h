@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2002  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: net.h,v 1.5.18.2 2005/04/29 00:17:23 marka Exp $ */
+/* $Id$ */
 
 #ifndef LWRES_NET_H
 #define LWRES_NET_H 1
@@ -65,7 +65,7 @@
 #ifdef LWRES_PLATFORM_NEEDNETINET6IN6H
 #include <netinet6/in6.h>	/* Required on BSD/OS for in6_pktinfo. */
 #endif
-#include <net/if.h>	
+#include <net/if.h>
 
 #include <lwres/lang.h>
 
@@ -80,7 +80,7 @@
 /*!
  * Required for some pre RFC2133 implementations.
  * IN6ADDR_ANY_INIT and IN6ADDR_LOOPBACK_INIT were added in
- * draft-ietf-ipngwg-bsd-api-04.txt or draft-ietf-ipngwg-bsd-api-05.txt.  
+ * draft-ietf-ipngwg-bsd-api-04.txt or draft-ietf-ipngwg-bsd-api-05.txt.
  * If 's6_addr' is defined then assume that there is a union and three
  * levels otherwise assume two levels required.
  */

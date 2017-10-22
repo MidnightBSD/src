@@ -29,32 +29,52 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: pcb.h,v 1.4 2000/06/04 11:57:17 tsubai Exp $
- * $FreeBSD: release/7.0.0/sys/powerpc/include/pcb.h 160712 2006-07-26 17:05:11Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PCB_H_
 #define	_MACHINE_PCB_H_
 
-typedef int faultbuf[23];
+typedef register_t faultbuf[25];
 
 struct pcb {
 	register_t	pcb_context[20];	/* non-volatile r14-r31 */
 	register_t	pcb_cr;			/* Condition register */
 	register_t	pcb_sp;			/* stack pointer */
+	register_t	pcb_toc;		/* toc pointer */
 	register_t	pcb_lr;			/* link register */
-	register_t	pcb_usr;		/* USER_SR segment register */
 	struct		pmap *pcb_pm;		/* pmap of our vmspace */
-	struct		pmap *pcb_pmreal;	 /* real address of above */
 	faultbuf	*pcb_onfault;		/* For use during
 						    copyin/copyout */
 	int		pcb_flags;
 #define	PCB_FPU		1	/* Process had FPU initialized */
+#define	PCB_VEC		2	/* Process had Altivec initialized */
 	struct fpu {
 		double	fpr[32];
 		double	fpscr;	/* FPSCR stored as double for easier access */
 	} pcb_fpu;		/* Floating point processor */
 	unsigned int	pcb_fpcpu;		/* which CPU had our FPU
 							stuff. */
+	struct vec {
+		uint32_t vr[32][4];
+		register_t vrsave;
+		register_t spare[2];
+		register_t vscr;	/* aligned at vector element 3 */
+	} pcb_vec __aligned(16);	/* Vector processor */
+	unsigned int	pcb_veccpu;		/* which CPU had our vector
+							stuff. */
+
+	union {
+		struct {
+			vm_offset_t	usr_segm;	/* Base address */
+			register_t	usr_vsid;	/* USER_SR segment */
+		} aim;
+		struct {
+			register_t	ctr;
+			register_t	xer;
+			register_t	dbcr0;
+		} booke;
+	} pcb_cpu;
 };
 
 #ifdef	_KERNEL

@@ -14,11 +14,6 @@
 # include "config.h"
 #endif
 
-#if defined(SYS_WINNT)
-#undef close
-#define close closesocket
-#endif
-
 #if defined(REFCLOCK) && (defined(CLOCK_HOPF_SERIAL))
 
 #include "ntpd.h"
@@ -30,9 +25,11 @@
 
 #if defined HAVE_SYS_MODEM_H
 # include <sys/modem.h>
-# define TIOCMSET MCSETA
-# define TIOCMGET MCGETA
-# define TIOCM_RTS MRTS
+# ifndef __QNXNTO__
+#  define TIOCMSET MCSETA
+#  define TIOCMGET MCGETA
+#  define TIOCM_RTS MRTS
+# endif
 #endif
 
 #ifdef HAVE_TERMIOS_H
@@ -47,6 +44,12 @@
 
 #ifdef HAVE_SYS_IOCTL_H
 # include <sys/ioctl.h>
+#endif
+
+#ifdef SYS_WINNT
+extern int async_write(int, const void *, unsigned int);
+#undef write
+#define write(fd, data, octets)	async_write(fd, data, octets)
 #endif
 
 /*

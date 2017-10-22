@@ -23,6 +23,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <machine/asm.h>
+__FBSDID("$FreeBSD$");
+
 	.section .init,"ax",@progbits
 	add	$12,%esp
 	ret
@@ -31,5 +34,4 @@
 	add	$12,%esp
 	ret
 
-	.section .rodata
-.ascii "$FreeBSD: release/7.0.0/lib/csu/i386-elf/crtn.S 146369 2005-05-19 07:31:06Z dfr $\0"
+	.section .note.GNU-stack,"",%progbits

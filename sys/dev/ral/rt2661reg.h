@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/7.0.0/sys/dev/ral/rt2661reg.h 170530 2007-06-11 03:36:55Z sam $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2006

@@ -22,7 +22,7 @@ along with GCC; see the file COPYING.  If not, write to
 the Free Software Foundation, 51 Franklin Street, Fifth Floor,
 Boston, MA 02110-1301, USA.  */
 
-/* $FreeBSD: release/7.0.0/contrib/gcc/config/i386/freebsd.h 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $FreeBSD$ */
 
 #undef  CC1_SPEC
 #define CC1_SPEC "%(cc1_cpu) %{profile:-p}"
@@ -54,7 +54,7 @@ Boston, MA 02110-1301, USA.  */
 /* Reset our STARTFILE_SPEC which was properly set in config/freebsd.h
    but trashed by config/<cpu>/<file.h>. */
 
-#undef STARTFILE_SPEC
+#undef  STARTFILE_SPEC
 #define STARTFILE_SPEC FBSD_STARTFILE_SPEC
 
 /* Provide an ENDFILE_SPEC appropriate for FreeBSD/i386.  */
@@ -78,18 +78,13 @@ Boston, MA 02110-1301, USA.  */
 #undef  WCHAR_TYPE_SIZE
 #define WCHAR_TYPE_SIZE	(TARGET_64BIT ? 32 : BITS_PER_WORD)
 
-#undef  SUBTARGET_EXTRA_SPECS  /* i386.h bogusly defines it.  */
+#undef  SUBTARGET_EXTRA_SPECS	/* i386.h bogusly defines it.  */
 #define SUBTARGET_EXTRA_SPECS \
   { "fbsd_dynamic_linker", FBSD_DYNAMIC_LINKER }
 
 #define TARGET_VERSION	fprintf (stderr, " (i386 FreeBSD/ELF)");
 
-#define TARGET_ELF			1
-
-/* This goes away when the math emulator is fixed.  */
-#undef  TARGET_SUBTARGET_DEFAULT
-#define TARGET_SUBTARGET_DEFAULT \
-  (MASK_80387 | MASK_IEEE_FP | MASK_FLOAT_RETURNS | MASK_NO_FANCY_MATH_387)
+#define TARGET_ELF	1
 
 /* Don't default to pcc-struct-return, we want to retain compatibility with
    older gcc versions AND pcc-struct-return is nonreentrant.
@@ -101,7 +96,7 @@ Boston, MA 02110-1301, USA.  */
 
 /* FreeBSD sets the rounding precision of the FPU to 53 bits.  Let the
    compiler get the contents of <float.h> and std::numeric_limits correct.  */
-#undef TARGET_96_ROUND_53_LONG_DOUBLE
+#undef  TARGET_96_ROUND_53_LONG_DOUBLE
 #define TARGET_96_ROUND_53_LONG_DOUBLE (!TARGET_64BIT)
 
 /* Tell final.c that we don't need a label passed to mcount.  */
@@ -110,7 +105,7 @@ Boston, MA 02110-1301, USA.  */
 /* Output assembler code to FILE to begin profiling of the current function.
    LABELNO is an optional label.  */
 
-#undef MCOUNT_NAME
+#undef  MCOUNT_NAME
 #define MCOUNT_NAME ".mcount"
 
 /* Output assembler code to FILE to end profiling of the current function.  */
@@ -145,7 +140,7 @@ Boston, MA 02110-1301, USA.  */
 	else								\
 	  fprintf ((FILE), "%s", xname);				\
       }									\
-    else 								\
+    else								\
       {									\
 	  if (xname[0] == '%')						\
 	    xname += 2;							\
@@ -191,7 +186,7 @@ Boston, MA 02110-1301, USA.  */
    uninitialized global data will be output in the data section if
    `-fno-common' is passed, otherwise `ASM_OUTPUT_COMMON' will be
    used.  */
-#undef BSS_SECTION_ASM_OP
+#undef  BSS_SECTION_ASM_OP
 #define BSS_SECTION_ASM_OP "\t.section\t.bss"
 
 /* Like `ASM_OUTPUT_BSS' except takes the required alignment as a
@@ -202,7 +197,7 @@ Boston, MA 02110-1301, USA.  */
 
    Try to use function `asm_output_aligned_bss' defined in file
    `varasm.c' when defining this macro.  */
-#undef ASM_OUTPUT_ALIGNED_BSS
+#undef  ASM_OUTPUT_ALIGNED_BSS
 #define ASM_OUTPUT_ALIGNED_BSS(FILE, DECL, NAME, SIZE, ALIGN) \
   asm_output_aligned_bss (FILE, DECL, NAME, SIZE, ALIGN)
 
@@ -230,7 +225,7 @@ Boston, MA 02110-1301, USA.  */
     assemble_name (asm_out_file, NAME);					\
         fputc ('-', asm_out_file);					\
         assemble_name (asm_out_file,					\
-	      	 XSTR (XEXP (DECL_RTL (current_function_decl), 0), 0));	\
+		 XSTR (XEXP (DECL_RTL (current_function_decl), 0), 0));	\
     fprintf (asm_out_file, "\n");					\
   } while (0)
 
@@ -244,3 +239,6 @@ Boston, MA 02110-1301, USA.  */
 		 XSTR (XEXP (DECL_RTL (current_function_decl), 0), 0));	\
     fprintf (asm_out_file, "\n");					\
   } while (0)
+
+#undef NEED_INDICATE_EXEC_STACK
+#define NEED_INDICATE_EXEC_STACK 1

@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008, 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2001, 2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: time.c,v 1.47.18.2 2005/04/29 00:17:09 marka Exp $ */
+/* $Id$ */
 
 /*! \file */
 
@@ -227,7 +227,7 @@ isc_time_nowplusinterval(isc_time_t *t, const isc_interval_t *i) {
 
 	t->seconds = tv.tv_sec + i->seconds;
 	t->nanoseconds = tv.tv_usec * NS_PER_US + i->nanoseconds;
-	if (t->nanoseconds > NS_PER_S) {
+	if (t->nanoseconds >= NS_PER_S) {
 		t->seconds++;
 		t->nanoseconds -= NS_PER_S;
 	}
@@ -319,7 +319,7 @@ isc_time_microdiff(const isc_time_t *t1, const isc_time_t *t2) {
 	/*
 	 * Convert to microseconds.
 	 */
-	i3 = (i1 - i2) / NS_PER_US;
+	i3 /= NS_PER_US;
 
 	return (i3);
 }
@@ -334,7 +334,6 @@ isc_time_seconds(const isc_time_t *t) {
 
 isc_result_t
 isc_time_secondsastimet(const isc_time_t *t, time_t *secondsp) {
-	isc_uint64_t i;
 	time_t seconds;
 
 	REQUIRE(t != NULL);
@@ -354,33 +353,16 @@ isc_time_secondsastimet(const isc_time_t *t, time_t *secondsp) {
 	 * pretty much only true if time_t is a signed integer of the same
 	 * size as the return value of isc_time_seconds.
 	 *
-	 * The use of the 64 bit integer ``i'' takes advantage of C's
-	 * conversion rules to either zero fill or sign extend the widened
-	 * type.
-	 *
-	 * Solaris 5.6 gives this warning about the left shift:
-	 *	warning: integer overflow detected: op "<<"
-	 * if the U(nsigned) qualifier is not on the 1.
+	 * If the paradox in the if clause below is true, t->seconds is out
+	 * of range for time_t.
 	 */
 	seconds = (time_t)t->seconds;
 
 	INSIST(sizeof(unsigned int) == sizeof(isc_uint32_t));
 	INSIST(sizeof(time_t) >= sizeof(isc_uint32_t));
 
-	if (sizeof(time_t) == sizeof(isc_uint32_t) &&	       /* Same size. */
-	    (time_t)0.5 != 0.5 &&	       /* Not a floating point type. */
-	    (i = (time_t)-1) != 4294967295u &&		       /* Is signed. */
-	    (seconds &
-	     (1U << (sizeof(time_t) * CHAR_BIT - 1))) != 0U) {   /* Negative. */
-		/*
-		 * This UNUSED() is here to shut up the IRIX compiler:
-		 *	variable "i" was set but never used
-		 * when the value of i *was* used in the third test.
-		 * (Let's hope the compiler got the actual test right.)
-		 */
-		UNUSED(i);
+	if (t->seconds > (~0U>>1) && seconds <= (time_t)(~0U>>1))
 		return (ISC_R_RANGE);
-	}
 
 	*secondsp = seconds;
 
@@ -410,5 +392,29 @@ isc_time_formattimestamp(const isc_time_t *t, char *buf, unsigned int len) {
 		snprintf(buf + flen, len - flen,
 			 ".%03u", t->nanoseconds / 1000000);
 	else
-                snprintf(buf, len, "99-Bad-9999 99:99:99.999");
+		snprintf(buf, len, "99-Bad-9999 99:99:99.999");
+}
+
+void
+isc_time_formathttptimestamp(const isc_time_t *t, char *buf, unsigned int len) {
+	time_t now;
+	unsigned int flen;
+
+	REQUIRE(len > 0);
+
+	now = (time_t)t->seconds;
+	flen = strftime(buf, len, "%a, %d %b %Y %H:%M:%S GMT", gmtime(&now));
+	INSIST(flen < len);
+}
+
+void
+isc_time_formatISO8601(const isc_time_t *t, char *buf, unsigned int len) {
+	time_t now;
+	unsigned int flen;
+
+	REQUIRE(len > 0);
+
+	now = (time_t)t->seconds;
+	flen = strftime(buf, len, "%Y-%m-%dT%H:%M:%SZ", gmtime(&now));
+	INSIST(flen < len);
 }

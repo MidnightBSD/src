@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/geom/bde/g_bde_work.c 160964 2006-08-04 07:56:35Z yar $
+ * $FreeBSD$
  */
 /*
  * This source file contains the state-engine which makes things happen in the
@@ -664,7 +664,7 @@ g_bde_worker(void *arg)
 	mtx_unlock(&sc->worklist_mutex);
 	sc->dead = 2;
 	wakeup(sc);
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 /*

@@ -25,13 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/games/random/randomize_fd.c 157758 2006-04-14 17:32:27Z ache $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
 
 #include <ctype.h>
 #include <err.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -94,15 +95,16 @@ int
 randomize_fd(int fd, int type, int unique, double denom)
 {
 	u_char *buf;
-	u_int numnode, j, selected, slen;
+	u_int slen;
+	u_long i, j, numnode, selected;
 	struct rand_node *n, *prev;
 	int bufleft, eof, fndstr, ret;
-	size_t bufc, buflen, i;
+	size_t bufc, buflen;
 	ssize_t len;
 
 	rand_root = rand_tail = NULL;
 	bufc = i = 0;
-	bufleft = eof = fndstr = numnode = ret = 0;
+	bufleft = eof = fndstr = numnode = 0;
 
 	if (type == RANDOM_TYPE_UNSET)
 		type = RANDOM_TYPE_LINES;
@@ -173,6 +175,11 @@ randomize_fd(int fd, int type, int unique, double denom)
 			    (type == RANDOM_TYPE_WORDS && isspace(buf[i])) ||
 			    (eof && i == buflen - 1)) {
 			make_token:
+				if (numnode == RANDOM_MAX_PLUS1) {
+					errno = EFBIG;
+					err(1, "too many delimiters");
+				}
+				numnode++;
 				n = rand_node_allocate();
 				if (-1 != (int)i) {
 					slen = i - (u_long)bufc;
@@ -188,7 +195,6 @@ randomize_fd(int fd, int type, int unique, double denom)
 				}
 				rand_node_append(n);
 				fndstr = 1;
-				numnode++;
 			}
 		}
 	}
@@ -202,16 +208,20 @@ randomize_fd(int fd, int type, int unique, double denom)
 	}
 
 	for (i = numnode; i > 0; i--) {
-		selected = ((int)denom * random())/(((double)RAND_MAX + 1) / numnode);
+		selected = random() % numnode;
 
 		for (j = 0, prev = n = rand_root; n != NULL; j++, prev = n, n = n->next) {
 			if (j == selected) {
 				if (n->cp == NULL)
 					break;
 
-				ret = printf("%.*s", (int)n->len - 1, n->cp);
-				if (ret < 0)
-					err(1, "printf");
+				if ((int)(denom * random() /
+					RANDOM_MAX_PLUS1) == 0) {
+					ret = printf("%.*s",
+						(int)n->len - 1, n->cp);
+					if (ret < 0)
+						err(1, "printf");
+				}
 				if (unique) {
 					if (n == rand_root)
 						rand_root = n->next;
@@ -221,8 +231,8 @@ randomize_fd(int fd, int type, int unique, double denom)
 					prev->next = n->next;
 					rand_node_free(n);
 					numnode--;
-					break;
 				}
+				break;
 			}
 		}
 	}

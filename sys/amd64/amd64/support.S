@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/amd64/amd64/support.S 171916 2007-08-22 05:06:14Z jkoshy $
+ * $FreeBSD$
  */
 
 #include "opt_ddb.h"
@@ -37,17 +37,6 @@
 #include <machine/pmap.h>
 
 #include "assym.s"
-
-	ALIGN_DATA
-	.globl	intrcnt, eintrcnt
-intrcnt:
-	.space	INTRCNT_COUNT * 8
-eintrcnt:
-
-	.globl	intrnames, eintrnames
-intrnames:
-	.space	INTRCNT_COUNT * (MAXCOMLEN + 1)
-eintrnames:
 
 	.text
 
@@ -699,20 +688,45 @@ ENTRY(longjmp)
 END(longjmp)
 
 /*
- * Support for BB-profiling (gcc -a).  The kernbb program will extract
- * the data from the kernel.
+ * Support for reading MSRs in the safe manner.
  */
+ENTRY(rdmsr_safe)
+/* int rdmsr_safe(u_int msr, uint64_t *data) */
+	movq	PCPU(CURPCB),%r8
+	movq	$msr_onfault,PCB_ONFAULT(%r8)
+	movl	%edi,%ecx
+	rdmsr			/* Read MSR pointed by %ecx. Returns
+				   hi byte in edx, lo in %eax */
+	salq	$32,%rdx	/* sign-shift %rdx left */
+	movl	%eax,%eax	/* zero-extend %eax -> %rax */
+	orq	%rdx,%rax
+	movq	%rax,(%rsi)
+	xorq	%rax,%rax
+	movq	%rax,PCB_ONFAULT(%r8)
+	ret
 
-	.data
-	ALIGN_DATA
-	.globl bbhead
-bbhead:
-	.quad 0
+/*
+ * Support for writing MSRs in the safe manner.
+ */
+ENTRY(wrmsr_safe)
+/* int wrmsr_safe(u_int msr, uint64_t data) */
+	movq	PCPU(CURPCB),%r8
+	movq	$msr_onfault,PCB_ONFAULT(%r8)
+	movl	%edi,%ecx
+	movl	%esi,%eax
+	sarq	$32,%rsi
+	movl	%esi,%edx
+	wrmsr			/* Write MSR pointed by %ecx. Accepts
+				   hi byte in edx, lo in %eax. */
+	xorq	%rax,%rax
+	movq	%rax,PCB_ONFAULT(%r8)
+	ret
 
-	.text
-NON_GPROF_ENTRY(__bb_init_func)
-	movq	$1,(%rdi)
-	movq	bbhead,%rax
-	movq	%rax,32(%rdi)
-	movq	%rdi,bbhead
-	NON_GPROF_RET
+/*
+ * MSR operations fault handler
+ */
+	ALIGN_TEXT
+msr_onfault:
+	movq	$0,PCB_ONFAULT(%r8)
+	movl	$EFAULT,%eax
+	ret

@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2010-2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1997-2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: heap.c,v 1.30.18.3 2006/04/17 18:27:33 explorer Exp $ */
+/* $Id$ */
 
 /*! \file
  * Heap implementation of priority queues adapted from the following:
@@ -86,8 +86,9 @@ isc_heap_create(isc_mem_t *mctx, isc_heapcompare_t compare,
 	if (heap == NULL)
 		return (ISC_R_NOMEMORY);
 	heap->magic = HEAP_MAGIC;
-	heap->mctx = mctx;
 	heap->size = 0;
+	heap->mctx = NULL;
+	isc_mem_attach(mctx, &heap->mctx);
 	if (size_increment == 0)
 		heap->size_increment = SIZE_INCREMENT;
 	else
@@ -114,7 +115,7 @@ isc_heap_destroy(isc_heap_t **heapp) {
 		isc_mem_put(heap->mctx, heap->array,
 			    heap->size * sizeof(void *));
 	heap->magic = 0;
-	isc_mem_put(heap->mctx, heap, sizeof(*heap));
+	isc_mem_putanddetach(&heap->mctx, heap, sizeof(*heap));
 
 	*heapp = NULL;
 }
@@ -186,15 +187,17 @@ sink_down(isc_heap_t *heap, unsigned int i, void *elt) {
 
 isc_result_t
 isc_heap_insert(isc_heap_t *heap, void *elt) {
-	unsigned int i;
+	unsigned int new_last;
 
 	REQUIRE(VALID_HEAP(heap));
 
-	i = ++heap->last;
-	if (heap->last >= heap->size && !resize(heap))
+	new_last = heap->last + 1;
+	RUNTIME_CHECK(new_last > 0); /* overflow check */
+	if (new_last >= heap->size && !resize(heap))
 		return (ISC_R_NOMEMORY);
+	heap->last = new_last;
 
-	float_up(heap, i, elt);
+	float_up(heap, new_last, elt);
 
 	return (ISC_R_SUCCESS);
 }
@@ -208,9 +211,13 @@ isc_heap_delete(isc_heap_t *heap, unsigned int index) {
 	REQUIRE(index >= 1 && index <= heap->last);
 
 	if (index == heap->last) {
+		heap->array[heap->last] = NULL;
 		heap->last--;
 	} else {
-		elt = heap->array[heap->last--];
+		elt = heap->array[heap->last];
+		heap->array[heap->last] = NULL;
+		heap->last--;
+
 		less = heap->compare(elt, heap->array[index]);
 		heap->array[index] = elt;
 		if (less)
@@ -239,9 +246,11 @@ isc_heap_decreased(isc_heap_t *heap, unsigned int index) {
 void *
 isc_heap_element(isc_heap_t *heap, unsigned int index) {
 	REQUIRE(VALID_HEAP(heap));
-	REQUIRE(index >= 1 && index <= heap->last);
+	REQUIRE(index >= 1);
 
-	return (heap->array[index]);
+	if (index <= heap->last)
+		return (heap->array[index]);
+	return (NULL);
 }
 
 void

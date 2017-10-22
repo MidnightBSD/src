@@ -56,7 +56,7 @@
  * [including the GNU Public Licence.]
  */
 
-/* A nice addition from Dr Stephen Henson <shenson@bigfoot.com> to 
+/* A nice addition from Dr Stephen Henson <steve@openssl.org> to 
  * add the -strparse option which parses nested binary structures
  */
 
@@ -408,6 +408,7 @@ static int do_generate(BIO *bio, char *genstr, char *genconf, BUF_MEM *buf)
 
 	atyp = ASN1_generate_nconf(genstr, cnf);
 	NCONF_free(cnf);
+	cnf = NULL;
 
 	if (!atyp)
 		return -1;

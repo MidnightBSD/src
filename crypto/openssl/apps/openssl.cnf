@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/crypto/openssl/apps/openssl.cnf 172506 2007-10-10 16:59:15Z cvs2svn $
+# $FreeBSD$
 #
 # OpenSSL example configuration file.
 # This is mostly being used for generation of certificate requests.
@@ -142,7 +142,7 @@ localityName			= Locality Name (eg, city)
 organizationalUnitName		= Organizational Unit Name (eg, section)
 #organizationalUnitName_default	=
 
-commonName			= Common Name (eg, YOUR name)
+commonName			= Common Name (e.g. server FQDN or YOUR name)
 commonName_max			= 64
 
 emailAddress			= Email Address

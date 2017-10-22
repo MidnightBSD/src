@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/ahb/ahb.c 170883 2007-06-17 15:21:09Z scottl $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -291,8 +291,7 @@ ahbattach(device_t dev)
 	 * need to perform during normal operation.
 	 */
 	/* DMA tag for mapping buffers into device visible space. */
-	/* XXX Should be a child of the EISA bus dma tag */
-	if (bus_dma_tag_create(	/* parent	*/ NULL,
+	if (bus_dma_tag_create(	/* parent	*/ bus_get_dma_tag(dev),
 				/* alignment	*/ 1,
 				/* boundary	*/ 0,
 				/* lowaddr	*/ BUS_SPACE_MAXADDR_32BIT,
@@ -311,7 +310,7 @@ ahbattach(device_t dev)
 	ahb->init_level++;
 
 	/* DMA tag for our ccb structures and ha inquiry data */
-	if (bus_dma_tag_create(	/* parent	*/ NULL,
+	if (bus_dma_tag_create(	/* parent	*/ bus_get_dma_tag(dev),
 				/* alignment	*/ 1,
 				/* boundary	*/ 0,
 				/* lowaddr	*/ BUS_SPACE_MAXADDR_32BIT,

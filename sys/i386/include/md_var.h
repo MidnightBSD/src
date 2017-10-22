@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/i386/include/md_var.h 160309 2006-07-12 19:46:08Z mr $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -36,11 +36,6 @@
  * Miscellaneous machine-dependent declarations.
  */
 
-extern	void	(*bcopy_vector)(const void *from, void *to, size_t len);
-extern	void	(*bzero_vector)(void *buf, size_t len);
-extern	int	(*copyin_vector)(const void *udaddr, void *kaddr, size_t len);
-extern	int	(*copyout_vector)(const void *kaddr, void *udaddr, size_t len);
-
 extern	long	Maxmem;
 extern	u_int	basemem;	/* PA of original top of base memory */
 extern	int	busdma_swi_pending;
@@ -49,8 +44,10 @@ extern	u_int	cpu_feature;
 extern	u_int	cpu_feature2;
 extern	u_int	amd_feature;
 extern	u_int	amd_feature2;
+extern	u_int	amd_pminfo;
 extern	u_int	via_feature_rng;
 extern	u_int	via_feature_xcrypt;
+extern	u_int	cpu_clflush_line_size;
 extern	u_int	cpu_fxsr;
 extern	u_int	cpu_high;
 extern	u_int	cpu_id;
@@ -58,6 +55,7 @@ extern	u_int	cpu_mxcsr_mask;
 extern	u_int	cpu_procinfo;
 extern	u_int	cpu_procinfo2;
 extern	char	cpu_vendor[];
+extern	u_int	cpu_vendor_id;
 extern	u_int	cyrix_did;
 extern	char	kstack[];
 extern	char	sigcode[];
@@ -70,6 +68,7 @@ extern	int	szosigcode;
 #endif
 extern	uint32_t *vm_page_dump;
 extern	int	vm_page_dump_size;
+extern	int	workaround_erratum383;
 
 typedef void alias_for_inthand_t(u_int cs, u_int ef, u_int esp, u_int ss);
 struct	thread;
@@ -92,13 +91,9 @@ void	doreti_popl_fs(void) __asm(__STRING(doreti_popl_fs));
 void	doreti_popl_fs_fault(void) __asm(__STRING(doreti_popl_fs_fault));
 void	dump_add_page(vm_paddr_t);
 void	dump_drop_page(vm_paddr_t);
+void	initializecpu(void);
 void	enable_sse(void);
 void	fillw(int /*u_short*/ pat, void *base, size_t cnt);
-void	i486_bzero(void *buf, size_t len);
-void	i586_bcopy(const void *from, void *to, size_t len);
-void	i586_bzero(void *buf, size_t len);
-int	i586_copyin(const void *udaddr, void *kaddr, size_t len);
-int	i586_copyout(const void *kaddr, void *udaddr, size_t len);
 void	i686_pagezero(void *addr);
 void	sse2_pagezero(void *addr);
 void	init_AMD_Elan_sc520(void);

@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/netgraph/atm/ng_ccatm.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD$
  */
 
 /*
@@ -166,7 +166,6 @@ struct ngm_ccatm_portlist {
 
 struct ccatm_op {
 	uint32_t	op;	/* request code */
-	u_char		data[];
 };
 
 #endif

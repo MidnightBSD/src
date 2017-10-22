@@ -8,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/file2c/file2c.c 173612 2007-11-14 19:24:10Z ru $");
+__FBSDID("$FreeBSD$");
 
 #include <limits.h>
 #include <stdio.h>

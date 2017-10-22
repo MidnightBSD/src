@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/7.0.0/usr.sbin/sade/dmenu.c 161120 2006-08-09 11:25:10Z netchild $
+ * $FreeBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

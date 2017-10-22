@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2007-2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001, 2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnssectool.h,v 1.18 2004/03/05 04:57:41 marka Exp $ */
+/* $Id: dnssectool.h,v 1.31.162.2 2011/10/20 23:46:27 tbox Exp $ */
 
 #ifndef DNSSECTOOL_H
 #define DNSSECTOOL_H 1
@@ -27,8 +27,9 @@
 
 typedef void (fatalcallback_t)(void);
 
-void
-fatal(const char *format, ...) ISC_FORMAT_PRINTF(1, 2);
+ISC_PLATFORM_NORETURN_PRE void
+fatal(const char *format, ...)
+ISC_FORMAT_PRINTF(1, 2) ISC_PLATFORM_NORETURN_POST;
 
 void
 setfatalcallback(fatalcallback_t *callback);
@@ -41,19 +42,11 @@ vbprintf(int level, const char *fmt, ...) ISC_FORMAT_PRINTF(2, 3);
 
 void
 type_format(const dns_rdatatype_t type, char *cp, unsigned int size);
-#define TYPE_FORMATSIZE 10
-
-void
-alg_format(const dns_secalg_t alg, char *cp, unsigned int size);
-#define ALG_FORMATSIZE 10
+#define TYPE_FORMATSIZE 20
 
 void
 sig_format(dns_rdata_rrsig_t *sig, char *cp, unsigned int size);
-#define SIG_FORMATSIZE (DNS_NAME_FORMATSIZE + ALG_FORMATSIZE + sizeof("65535"))
-
-void
-key_format(const dst_key_t *key, char *cp, unsigned int size);
-#define KEY_FORMATSIZE (DNS_NAME_FORMATSIZE + ALG_FORMATSIZE + sizeof("65535"))
+#define SIG_FORMATSIZE (DNS_NAME_FORMATSIZE + DNS_SECALG_FORMATSIZE + sizeof("65535"))
 
 void
 setup_logging(int verbose, isc_mem_t *mctx, isc_log_t **logp);
@@ -67,10 +60,25 @@ setup_entropy(isc_mem_t *mctx, const char *randomfile, isc_entropy_t **ectx);
 void
 cleanup_entropy(isc_entropy_t **ectx);
 
+dns_ttl_t strtottl(const char *str);
+
 isc_stdtime_t
 strtotime(const char *str, isc_int64_t now, isc_int64_t base);
 
 dns_rdataclass_t
 strtoclass(const char *str);
+
+isc_result_t
+try_dir(const char *dirname);
+
+void
+check_keyversion(dst_key_t *key, char *keystr);
+
+void
+set_keyversion(dst_key_t *key);
+
+isc_boolean_t
+key_collision(dst_key_t *key, dns_name_t *name, const char *dir,
+	      isc_mem_t *mctx, isc_boolean_t *exact);
 
 #endif /* DNSSEC_DNSSECTOOL_H */

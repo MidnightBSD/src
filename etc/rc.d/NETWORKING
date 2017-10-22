@@ -1,11 +1,12 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/NETWORKING 175737 2008-01-28 07:58:32Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: NETWORKING NETWORK
-# REQUIRE: netif netoptions routing network_ipv6 isdnd ppp
-# REQUIRE: routed mrouted route6d mroute6d resolv
+# REQUIRE: netif netoptions routing ppp ipfw stf faith
+# REQUIRE: defaultroute routed mrouted route6d mroute6d resolv bridge
+# REQUIRE: static_arp static_ndp
 
 #	This is a dummy dependency, for services which require networking
 #	to be operational before starting.

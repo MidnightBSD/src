@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/tools/regression/sockets/sblock/sblock.c 169311 2007-05-06 14:28:49Z rwatson $
+ * $FreeBSD$
  */
 
 /*

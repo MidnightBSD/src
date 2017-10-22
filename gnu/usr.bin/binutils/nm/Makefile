@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/binutils/nm/Makefile 130575 2004-06-16 07:09:44Z obrien $
+# $FreeBSD$
 
 .include "../Makefile.inc0"
 
@@ -6,7 +6,6 @@
 
 PROG=	nm
 SRCS=	nm.c
-WARNS?=	2
 CFLAGS+= -D_GNU_SOURCE
 CFLAGS+= -I${.CURDIR}/${RELTOP}/libbinutils
 CFLAGS+= -I${SRCDIR}/bfd

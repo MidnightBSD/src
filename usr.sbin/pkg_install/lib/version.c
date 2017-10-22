@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/version.c 131274 2004-06-29 18:52:13Z eik $");
+__FBSDID("$FreeBSD$");
 
 #include "lib.h"
 #include <err.h>
@@ -66,7 +66,7 @@ split_version(const char *pkgname, const char **endname, unsigned long *epoch, u
     if (pkgname == NULL)
 	errx(2, "%s: Passed NULL pkgname.", __func__);
 
-    /* Look for the last '-' the the pkgname */
+    /* Look for the last '-' in the pkgname */
     ch = strrchr(pkgname, '-');
     /* Cheat if we are just passed a version, not a valid package name */
     versionstr = ch ? ch + 1 : pkgname;

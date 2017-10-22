@@ -16,7 +16,7 @@
  */
 
 /*
- * $FreeBSD: release/7.0.0/usr.sbin/cron/cron/compat.h 50479 1999-08-28 01:35:59Z peter $
+ * $FreeBSD$
  */
 
 #ifndef __P

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/hpfs/Makefile 144214 2005-03-28 09:41:25Z jeff $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../fs/hpfs
 

@@ -1,7 +1,7 @@
-/* $FreeBSD: release/7.0.0/lib/bind/isc/isc/platform.h 174398 2007-12-07 08:31:23Z dougb $ */
+/* $FreeBSD$ */
 
 /*
- * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -17,7 +17,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: platform.h.in,v 1.34.18.9 2007/09/13 05:04:01 each Exp $ */
+/* $Id: platform.h.in,v 1.56 2010-12-18 01:56:23 each Exp $ */
 
 #ifndef ISC_PLATFORM_H
 #define ISC_PLATFORM_H 1
@@ -27,11 +27,6 @@
 /*****
  ***** Platform-dependent defines.
  *****/
-
-/*
- * Define if the platform has <strings.h>.
- */
-#define ISC_PLATFORM_HAVESTRINGSH 1
 
 /***
  *** Network.
@@ -101,29 +96,26 @@
 #undef ISC_PLATFORM_NEEDPTON
 
 /*! \brief
- * If this system needs inet_aton(), ISC_PLATFORM_NEEDATON will be defined.
- */
-#undef ISC_PLATFORM_NEEDATON
-
-/*! \brief
  * If this system needs in_port_t, ISC_PLATFORM_NEEDPORTT will be defined.
  */
 #undef ISC_PLATFORM_NEEDPORTT
 
 /*! \brief
- * If the system needs strsep(), ISC_PLATFORM_NEEDSTRSEP will be defined.
+ * Define if the system has struct lifconf which is a extended struct ifconf
+ * for IPv6.
  */
-#undef ISC_PLATFORM_NEEDSTRSEP
+#undef ISC_PLATFORM_HAVELIFCONF
 
 /*! \brief
- * If the system needs strlcpy(), ISC_PLATFORM_NEEDSTRLCPY will be defined.
+ * Define if the system has struct if_laddrconf which is a extended struct
+ * ifconf for IPv6.
  */
-#undef ISC_PLATFORM_NEEDSTRLCPY
+#undef ISC_PLATFORM_HAVEIF_LADDRCONF
 
 /*! \brief
- * If the system needs strlcat(), ISC_PLATFORM_NEEDSTRLCAT will be defined.
+ * Define if the system has struct if_laddrreq.
  */
-#undef ISC_PLATFORM_NEEDSTRLCAT
+#undef ISC_PLATFORM_HAVEIF_LADDRREQ
 
 /*! \brief
  * Define either ISC_PLATFORM_BSD44MSGHDR or ISC_PLATFORM_BSD43MSGHDR.
@@ -131,16 +123,35 @@
 #define ISC_NET_BSD44MSGHDR 1
 
 /*! \brief
- * Define if PTHREAD_ONCE_INIT should be surrounded by braces to
- * prevent compiler warnings (such as with gcc on Solaris 2.8).
+ * Define if the system supports if_nametoindex.
  */
-#undef ISC_PLATFORM_BRACEPTHREADONCEINIT
+#define ISC_PLATFORM_HAVEIFNAMETOINDEX 1
 
 /*! \brief
  * Define on some UnixWare systems to fix erroneous definitions of various
  * IN6_IS_ADDR_* macros.
  */
 #undef ISC_PLATFORM_FIXIN6ISADDR
+
+/*! \brief
+ * Define if the system supports kqueue multiplexing
+ */
+#define ISC_PLATFORM_HAVEKQUEUE 1
+
+/*! \brief
+ * Define if the system supports epoll multiplexing
+ */
+#undef ISC_PLATFORM_HAVEEPOLL
+
+/*! \brief
+ * Define if the system supports /dev/poll multiplexing
+ */
+#undef ISC_PLATFORM_HAVEDEVPOLL
+
+/*! \brief
+ * Define if we want to log backtrace
+ */
+#define ISC_PLATFORM_USEBACKTRACE 1
 
 /*
  *** Printing.
@@ -162,62 +173,86 @@
  */
 #define ISC_PLATFORM_QUADFORMAT "ll"
 
-/*! \brief
- * Defined if we are using threads.
+/***
+ *** String functions.
+ ***/
+/*
+ * If the system needs strsep(), ISC_PLATFORM_NEEDSTRSEP will be defined.
  */
-#define ISC_PLATFORM_USETHREADS 1
+#undef ISC_PLATFORM_NEEDSTRSEP
 
-/*! \brief
- * Defined if unistd.h does not cause fd_set to be delared.
+/*
+ * If the system needs strlcpy(), ISC_PLATFORM_NEEDSTRLCPY will be defined.
  */
-#undef ISC_PLATFORM_NEEDSYSSELECTH
+#undef ISC_PLATFORM_NEEDSTRLCPY
 
-/*! \brief
- * Type used for resource limits.
+/*
+ * If the system needs strlcat(), ISC_PLATFORM_NEEDSTRLCAT will be defined.
  */
-#define ISC_PLATFORM_RLIMITTYPE rlim_t
+#undef ISC_PLATFORM_NEEDSTRLCAT
 
-/*! \brief
- * Define if your compiler supports "long long int".
- */
-#define ISC_PLATFORM_HAVELONGLONG 1
-
-/*! \brief
- * Define if the system has struct lifconf which is a extended struct ifconf
- * for IPv6.
- */
-#undef ISC_PLATFORM_HAVELIFCONF
-
-/*! \brief
- * Define if the system has struct if_laddrconf which is a extended struct
- * ifconf for IPv6.
- */
-#undef ISC_PLATFORM_HAVEIF_LADDRCONF
-
-/*! \brief
- * Define if the system has struct if_laddrreq.
- */
-#undef ISC_PLATFORM_HAVEIF_LADDRREQ
-
-/*! \brief
- * Used to control how extern data is linked; needed for Win32 platforms.
- */
-#undef ISC_PLATFORM_USEDECLSPEC
-
-/*! \brief
- * Define if the system supports if_nametoindex.
- */
-#define ISC_PLATFORM_HAVEIFNAMETOINDEX 1
-
-/*! \brief
+/*
  * Define if this system needs strtoul.
  */
 #undef ISC_PLATFORM_NEEDSTRTOUL
 
-/*! \brief
+/*
  * Define if this system needs memmove.
  */
 #undef ISC_PLATFORM_NEEDMEMMOVE
+
+/***
+ *** Miscellaneous.
+ ***/
+
+/*
+ * Defined if we are using threads.
+ */
+#define ISC_PLATFORM_USETHREADS 1
+
+/*
+ * Defined if unistd.h does not cause fd_set to be delared.
+ */
+#undef ISC_PLATFORM_NEEDSYSSELECTH
+
+/*
+ * Defined to <gssapi.h> or <gssapi/gssapi.h> for how to include
+ * the GSSAPI header.
+ */
+
+
+/*
+ * Defined to <gssapi_krb5.h> or <gssapi/gssapi_krb5.h> for how to
+ * include the GSSAPI KRB5 header.
+ */
+
+
+/*
+ * Defined to <krb5.h> or <krb5/krb5.h> for how to include
+ * the KRB5 header.
+ */
+
+
+/*
+ * Type used for resource limits.
+ */
+#define ISC_PLATFORM_RLIMITTYPE rlim_t
+
+/*
+ * Define if your compiler supports "long long int".
+ */
+#define ISC_PLATFORM_HAVELONGLONG 1
+
+/*
+ * Define if PTHREAD_ONCE_INIT should be surrounded by braces to
+ * prevent compiler warnings (such as with gcc on Solaris 2.8).
+ */
+#undef ISC_PLATFORM_BRACEPTHREADONCEINIT
+
+/*
+ * Used to control how extern data is linked; needed for Win32 platforms.
+ */
+#undef ISC_PLATFORM_USEDECLSPEC
 
 /*
  * Define if the platform has <sys/un.h>.
@@ -226,26 +261,67 @@
 
 /*
  * If the "xadd" operation is available on this architecture,
- * ISC_PLATFORM_HAVEXADD will be defined. 
+ * ISC_PLATFORM_HAVEXADD will be defined.
  */
+/*
+ * FreeBSD local modification, preserve this over upgrades
+ */
+#if defined (__i386__) || defined (__amd64__) || defined (__ia64__)
 #define ISC_PLATFORM_HAVEXADD 1
+#else
+#undef ISC_PLATFORM_HAVEXADD
+#endif
+
+/*
+ * If the "xaddq" operation (64bit xadd) is available on this architecture,
+ * ISC_PLATFORM_HAVEXADDQ will be defined.
+ */
+/*
+ * FreeBSD local modification, preserve this over upgrades
+ */
+#ifdef __amd64__
+#define ISC_PLATFORM_HAVEXADDQ 1
+#else
+#undef ISC_PLATFORM_HAVEXADDQ
+#endif
 
 /*
  * If the "atomic swap" operation is available on this architecture,
- * ISC_PLATFORM_HAVEATOMICSTORE" will be defined. 
+ * ISC_PLATFORM_HAVEATOMICSTORE" will be defined.
  */
+/*
+ * FreeBSD local modification, preserve this over upgrades
+ */
+#if defined (__i386__) || defined (__amd64__) || defined (__ia64__)
 #define ISC_PLATFORM_HAVEATOMICSTORE 1
+#else
+#undef ISC_PLATFORM_HAVEATOMICSTORE
+#endif
 
 /*
  * If the "compare-and-exchange" operation is available on this architecture,
- * ISC_PLATFORM_HAVECMPXCHG will be defined. 
+ * ISC_PLATFORM_HAVECMPXCHG will be defined.
  */
+/*
+ * FreeBSD local modification, preserve this over upgrades
+ */
+#if defined (__i386__) || defined (__amd64__) || defined (__ia64__)
 #define ISC_PLATFORM_HAVECMPXCHG 1
+#else
+#undef ISC_PLATFORM_HAVECMPXCHG
+#endif
 
 /*
  * Define if gcc ASM extension is available
  */
+/*
+ * FreeBSD local modification, preserve this over upgrades
+ */
+#if defined (__i386__) || defined (__amd64__) || defined (__ia64__)
 #define ISC_PLATFORM_USEGCCASM 1
+#else
+#undef ISC_PLATFORM_USEGCCASM
+#endif
 
 /*
  * Define if Tru64 style ASM syntax must be used.
@@ -256,6 +332,26 @@
  * Define if the standard __asm function must be used.
  */
 
+
+/*
+ * Define if the platform has <strings.h>.
+ */
+#define ISC_PLATFORM_HAVESTRINGSH 1
+
+/*
+ * Define if the hash functions must be provided by OpenSSL.
+ */
+#undef ISC_PLATFORM_OPENSSLHASH
+
+/*
+ * Defines for the noreturn attribute.
+ */
+#define ISC_PLATFORM_NORETURN_PRE
+#define ISC_PLATFORM_NORETURN_POST __attribute__((noreturn))
+
+/***
+ ***	Windows dll support.
+ ***/
 
 /*
  * Define if MacOS style of PPC assembly must be used.

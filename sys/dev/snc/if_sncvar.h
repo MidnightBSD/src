@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/snc/if_sncvar.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  */
 
 /*
@@ -44,4 +44,4 @@ int	snc_alloc_irq		(device_t, int, int);
 int	snc_probe		(device_t, int);
 int	snc_attach		(device_t);
 
-void	snc_shutdown		(device_t);
+int	snc_shutdown		(device_t);

@@ -2,7 +2,7 @@
 # Copyright 1990 W. Jolitz
 #	from: @(#)Makefile.i386	7.1 5/10/91
 #	from FreeBSD: src/sys/conf/Makefile.i386,v 1.255 2002/02/20 23:35:49
-# $FreeBSD: release/7.0.0/sys/conf/Makefile.amd64 174854 2007-12-22 06:32:46Z cvs2svn $
+# $FreeBSD$
 #
 # Makefile for FreeBSD
 #
@@ -32,11 +32,20 @@ S=	../../..
 .include "$S/conf/kern.pre.mk"
 
 DDB_ENABLED!=	grep DDB opt_ddb.h || true
-.if !empty(DDB_ENABLED)
+DTR_ENABLED!=	grep KDTRACE_FRAME opt_kdtrace.h || true
+HWPMC_ENABLED!=	grep HWPMC opt_hwpmc_hooks.h || true
+.if !empty(DDB_ENABLED) || !empty(DTR_ENABLED) || !empty(HWPMC_ENABLED)
 CFLAGS+=	-fno-omit-frame-pointer
 .endif
 
 MKMODULESENV+= MACHINE=amd64
+
+# XXX: clang integrated-as doesn't grok .codeNN directives yet
+ASM_CFLAGS.acpi_wakecode.S=	${CLANG_NO_IAS}
+ASM_CFLAGS.ia32_sigtramp.S=	${CLANG_NO_IAS}
+ASM_CFLAGS.linux32_locore.s=	${CLANG_NO_IAS}
+ASM_CFLAGS.mpboot.S=		${CLANG_NO_IAS}
+ASM_CFLAGS+=			${ASM_CFLAGS.${.IMPSRC:T}}
 
 %BEFORE_DEPEND
 

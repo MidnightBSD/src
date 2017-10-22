@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/acpi_acad.c 167814 2007-03-22 18:16:43Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -40,7 +40,8 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/acpica/acpi_acad.c 167814 2007-03-22 1
 #include <sys/conf.h>
 #include <sys/power.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 #include <dev/acpica/acpiio.h>
 #include <isa/isavar.h>
@@ -108,13 +109,14 @@ acpi_acad_get_status(void *context)
     ACPI_SERIAL_BEGIN(acad);
     if (newstatus != -1 && sc->status != newstatus) {
 	sc->status = newstatus;
+	ACPI_SERIAL_END(acad);
 	power_profile_set_state(newstatus ? POWER_PROFILE_PERFORMANCE :
 	    POWER_PROFILE_ECONOMY);
 	ACPI_VPRINT(dev, acpi_device_get_parent_softc(dev),
 	    "%s Line\n", newstatus ? "On" : "Off");
 	acpi_UserNotify("ACAD", h, newstatus);
-    }
-    ACPI_SERIAL_END(acad);
+    } else
+	ACPI_SERIAL_END(acad);
 }
 
 static void

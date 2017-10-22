@@ -189,6 +189,10 @@ Wunused-variable
 Common Var(warn_unused_variable)
 Warn when a variable is unused
 
+Wvariable-decl
+Common Var(warn_variable_decl)
+Warn about variable-sized declarations.
+
 Wvolatile-register-var
 Common Var(warn_register_var)
 Warn when a register variable is declared volatile
@@ -578,7 +582,7 @@ Common
 Does nothing.  Preserved for backward compatibility.
 
 fmath-errno
-Common Report Var(flag_errno_math) Init(1)
+Common Report Var(flag_errno_math) Init(0)
 Set errno after built-in math functions
 
 fmem-report

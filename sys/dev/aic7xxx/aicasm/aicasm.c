@@ -39,7 +39,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm.c#23 $
  *
- * $FreeBSD: release/7.0.0/sys/dev/aic7xxx/aicasm/aicasm.c 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  */
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -53,7 +53,7 @@
 #include <sysexits.h>
 #include <unistd.h>
 
-#if linux
+#if defined(__linux__) || defined(__GLIBC__)
 #include <endian.h>
 #else
 #include <machine/endian.h>
@@ -79,8 +79,8 @@ static void output_code(void);
 static void output_listing(char *ifilename);
 static void dump_scope(scope_t *scope);
 static void emit_patch(scope_t *scope, int patch);
-static int check_patch(patch_t **start_patch, int start_instr,
-		       int *skip_addr, int *func_vals);
+static int check_patch(patch_t **start_patch, unsigned int start_instr,
+		       unsigned int *skip_addr, int *func_vals);
 
 struct path_list search_path;
 int includes_search_curdir;
@@ -116,8 +116,6 @@ int main(int argc, char *argv[]);
 int
 main(int argc, char *argv[])
 {
-	extern char *optarg;
-	extern int optind;
 	int  ch;
 	int  retval;
 	char *inputfilename;
@@ -308,7 +306,7 @@ main(int argc, char *argv[])
 }
 
 static void
-usage()
+usage(void)
 {
 
 	(void)fprintf(stderr,
@@ -320,7 +318,7 @@ usage()
 }
 
 static void
-back_patch()
+back_patch(void)
 {
 	struct instruction *cur_instr;
 
@@ -349,7 +347,7 @@ back_patch()
 }
 
 static void
-output_code()
+output_code(void)
 {
 	struct instruction *cur_instr;
 	patch_t *cur_patch;
@@ -530,9 +528,9 @@ output_listing(char *ifilename)
 	int *func_values;
 	int instrcount;
 	int instrptr;
-	int line;
+	unsigned int line;
 	int func_count;
-	int skip_addr;
+	unsigned int skip_addr;
 
 	instrcount = 0;
 	instrptr = 0;
@@ -641,6 +639,8 @@ output_listing(char *ifilename)
 		}
 		instrptr++;
 	}
+	free(func_values);
+
 	/* Dump the remainder of the file */
 	while(fgets(buf, sizeof(buf), ifile) != NULL)
 		fprintf(listfile, "             %s", buf);
@@ -649,8 +649,8 @@ output_listing(char *ifilename)
 }
 
 static int
-check_patch(patch_t **start_patch, int start_instr,
-	    int *skip_addr, int *func_vals)
+check_patch(patch_t **start_patch, unsigned int start_instr,
+	    unsigned int *skip_addr, int *func_vals)
 {
 	patch_t *cur_patch;
 
@@ -733,7 +733,7 @@ stop(const char *string, int err_code)
 }
 
 struct instruction *
-seq_alloc()
+seq_alloc(void)
 {
 	struct instruction *new_instr;
 
@@ -747,7 +747,7 @@ seq_alloc()
 }
 
 critical_section_t *
-cs_alloc()
+cs_alloc(void)
 {
 	critical_section_t *new_cs;
 
@@ -761,7 +761,7 @@ cs_alloc()
 }
 
 scope_t *
-scope_alloc()
+scope_alloc(void)
 {
 	scope_t *new_scope;
 

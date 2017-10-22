@@ -1,8 +1,17 @@
-# $FreeBSD: release/7.0.0/sys/modules/gem/Makefile 108965 2003-01-08 20:40:29Z tmm $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/gem
 
 KMOD=	if_gem
-SRCS=	if_gem.c if_gem_pci.c device_if.h bus_if.h pci_if.h miibus_if.h
+SRCS=	bus_if.h device_if.h if_gem.c if_gem_pci.c ${if_gem_sbus} miibus_if.h
+SRCS+=	${ofw_bus_if} pci_if.h
+
+.if ${MACHINE} == "sparc64"
+if_gem_sbus=	if_gem_sbus.c
+.endif
+
+.if ${MACHINE_CPUARCH} == "powerpc" || ${MACHINE_CPUARCH} == "sparc64"
+ofw_bus_if=	ofw_bus_if.h
+.endif
 
 .include <bsd.kmod.mk>

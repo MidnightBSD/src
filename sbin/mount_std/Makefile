@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 3/27/94
-#	$FreeBSD: release/7.0.0/sbin/mount_std/Makefile 153008 2005-12-02 04:25:54Z davidxu $
+#	$FreeBSD$
 
 PROG=	mount_std
 SRCS=	mount_std.c getmntopts.c
@@ -11,7 +11,7 @@ MLINKS=	mount_std.8 mount_devfs.8 \
 
 MOUNT=	${.CURDIR}/../mount
 CFLAGS+= -I${MOUNT}
-WARNS?=	0
+WARNS?=	3
 
 .PATH:	${MOUNT}
 

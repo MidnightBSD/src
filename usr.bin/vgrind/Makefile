@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/9/93
-# $FreeBSD: release/7.0.0/usr.bin/vgrind/Makefile 142262 2005-02-22 23:29:54Z ru $
+# $FreeBSD$
 
 PROG=	vfontedpr
 SRCS=	regexp.c vfontedpr.c
@@ -10,6 +10,8 @@ FILESNAME_vgrindefs.src.db=	vgrindefs.db
 FILESDIR=	${SHAREDIR}/misc
 FILESDIR_tmac.vgrind=	${SHAREDIR}/tmac
 MAN=	vgrind.1 vgrindefs.5
+
+WARNS?=	2
 
 BINDIR=	/usr/libexec
 SCRIPTSDIR=/usr/bin

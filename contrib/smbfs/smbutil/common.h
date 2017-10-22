@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/contrib/smbfs/smbutil/common.h 172506 2007-10-10 16:59:15Z cvs2svn $ */
+/* $FreeBSD$ */
 
 #define iprintf(ident,args...)	do { printf("%-" # ident "s", ""); \
 				printf(args);}while(0)

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/cron 175737 2008-01-28 07:58:32Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: cron
@@ -11,7 +11,7 @@
 . /etc/rc.subr
 
 name="cron"
-rcvar="`set_rcvar`"
+rcvar="cron_enable"
 command="/usr/sbin/${name}"
 pidfile="/var/run/${name}.pid"
 

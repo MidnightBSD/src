@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/secure/lib/Makefile.inc 114283 2003-04-30 07:54:39Z ru $
+# $FreeBSD$
 
 .include "../Makefile.inc"
 .if exists(${.CURDIR}/../../../lib/Makefile.inc)

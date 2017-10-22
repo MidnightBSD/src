@@ -1,4 +1,5 @@
-/* $OpenBSD: serverloop.c,v 1.145 2006/10/11 12:38:03 markus Exp $ */
+/* $OpenBSD: serverloop.c,v 1.159 2009/05/28 16:50:16 andreas Exp $ */
+/* $FreeBSD$ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -56,6 +57,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 
+#include "openbsd-compat/sys-queue.h"
 #include "xmalloc.h"
 #include "packet.h"
 #include "buffer.h"
@@ -77,6 +79,7 @@
 #include "auth-options.h"
 #include "serverloop.h"
 #include "misc.h"
+#include "roaming.h"
 
 extern ServerOptions options;
 
@@ -104,7 +107,7 @@ static int connection_in;	/* Connection to client (input). */
 static int connection_out;	/* Connection to client (output). */
 static int connection_closed = 0;	/* Connection to client closed. */
 static u_int buffer_high;	/* "Soft" max buffer size. */
-static int client_alive_timeouts = 0;
+static int no_more_sessions = 0; /* Disallow further sessions. */
 
 /*
  * This SIGCHLD kludge is used to detect when the child exits.  The server
@@ -248,7 +251,7 @@ client_alive_check(void)
 	int channel_id;
 
 	/* timeout, check to see how many we have had */
-	if (++client_alive_timeouts > options.client_alive_count_max) {
+	if (packet_inc_alive_timeouts() > options.client_alive_count_max) {
 		logit("Timeout, client not responding.");
 		cleanup_exit(255);
 	}
@@ -280,6 +283,7 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	struct timeval tv, *tvp;
 	int ret;
 	int client_alive_scheduled = 0;
+	int program_alive_scheduled = 0;
 
 	/*
 	 * if using client_alive, set the max timeout accordingly,
@@ -317,6 +321,7 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 		 * the client, try to get some more data from the program.
 		 */
 		if (packet_not_very_much_data_to_write()) {
+			program_alive_scheduled = child_terminated;
 			if (!fdout_eof)
 				FD_SET(fdout, *readsetp);
 			if (!fderr_eof)
@@ -362,8 +367,16 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 		memset(*writesetp, 0, *nallocp);
 		if (errno != EINTR)
 			error("select: %.100s", strerror(errno));
-	} else if (ret == 0 && client_alive_scheduled)
-		client_alive_check();
+	} else {
+		if (ret == 0 && client_alive_scheduled)
+			client_alive_check();
+		if (!compat20 && program_alive_scheduled && fdin_is_tty) {
+			if (!fdout_eof)
+				FD_SET(fdout, *readsetp);
+			if (!fderr_eof)
+				FD_SET(fderr, *readsetp);
+		}
+	}
 
 	notify_done(*readsetp);
 }
@@ -380,8 +393,11 @@ process_input(fd_set *readset)
 
 	/* Read and buffer any input data from the client. */
 	if (FD_ISSET(connection_in, readset)) {
-		len = read(connection_in, buf, sizeof(buf));
+		int cont = 0;
+		len = roaming_read(connection_in, buf, sizeof(buf), &cont);
 		if (len == 0) {
+			if (cont)
+				return;
 			verbose("Connection closed by %.100s",
 			    get_remote_ipaddr());
 			connection_closed = 1;
@@ -389,7 +405,8 @@ process_input(fd_set *readset)
 				return;
 			cleanup_exit(255);
 		} else if (len < 0) {
-			if (errno != EINTR && errno != EAGAIN) {
+			if (errno != EINTR && errno != EAGAIN &&
+			    errno != EWOULDBLOCK) {
 				verbose("Read error from remote host "
 				    "%.100s: %.100s",
 				    get_remote_ipaddr(), strerror(errno));
@@ -407,7 +424,8 @@ process_input(fd_set *readset)
 	if (!fdout_eof && FD_ISSET(fdout, readset)) {
 		errno = 0;
 		len = read(fdout, buf, sizeof(buf));
-		if (len < 0 && (errno == EINTR || errno == EAGAIN)) {
+		if (len < 0 && (errno == EINTR || ((errno == EAGAIN ||
+		    errno == EWOULDBLOCK) && !child_terminated))) {
 			/* do nothing */
 #ifndef PTY_ZEROREAD
 		} else if (len <= 0) {
@@ -425,7 +443,8 @@ process_input(fd_set *readset)
 	if (!fderr_eof && FD_ISSET(fderr, readset)) {
 		errno = 0;
 		len = read(fderr, buf, sizeof(buf));
-		if (len < 0 && (errno == EINTR || errno == EAGAIN)) {
+		if (len < 0 && (errno == EINTR || ((errno == EAGAIN ||
+		    errno == EWOULDBLOCK) && !child_terminated))) {
 			/* do nothing */
 #ifndef PTY_ZEROREAD
 		} else if (len <= 0) {
@@ -456,7 +475,8 @@ process_output(fd_set *writeset)
 		data = buffer_ptr(&stdin_buffer);
 		dlen = buffer_len(&stdin_buffer);
 		len = write(fdin, data, dlen);
-		if (len < 0 && (errno == EINTR || errno == EAGAIN)) {
+		if (len < 0 &&
+		    (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) {
 			/* do nothing */
 		} else if (len <= 0) {
 			if (fdin != fdout)
@@ -707,7 +727,7 @@ server_loop(pid_t pid, int fdin_arg, int fdout_arg, int fderr_arg)
 	/* Wait until all output has been sent to the client. */
 	drain_output();
 
-	debug("End of interactive session; stdin %ld, stdout (read %ld, sent %ld), stderr %ld bytes.",
+	debug("End of interactive session; stdin %ld, stdout (read %ld, " "sent %ld), stderr %ld bytes.",
 	    stdin_bytes, fdout_bytes, stdout_bytes, stderr_bytes);
 
 	/* Free and clear the buffers. */
@@ -875,7 +895,7 @@ server_input_keep_alive(int type, u_int32_t seq, void *ctxt)
 	 * even if this was generated by something other than
 	 * the bogus CHANNEL_REQUEST we send for keepalives.
 	 */
-	client_alive_timeouts = 0;
+	packet_set_alive_timeouts(0);
 }
 
 static void
@@ -926,9 +946,8 @@ static Channel *
 server_request_direct_tcpip(void)
 {
 	Channel *c;
-	int sock;
 	char *target, *originator;
-	int target_port, originator_port;
+	u_short target_port, originator_port;
 
 	target = packet_get_string(NULL);
 	target_port = packet_get_int();
@@ -936,18 +955,16 @@ server_request_direct_tcpip(void)
 	originator_port = packet_get_int();
 	packet_check_eom();
 
-	debug("server_request_direct_tcpip: originator %s port %d, target %s port %d",
-	    originator, originator_port, target, target_port);
+	debug("server_request_direct_tcpip: originator %s port %d, target %s "
+	    "port %d", originator, originator_port, target, target_port);
 
 	/* XXX check permission */
-	sock = channel_connect_to(target, target_port);
-	xfree(target);
+	c = channel_connect_to(target, target_port,
+	    "direct-tcpip", "direct-tcpip");
+
 	xfree(originator);
-	if (sock < 0)
-		return NULL;
-	c = channel_new("direct-tcpip", SSH_CHANNEL_CONNECTING,
-	    sock, sock, -1, CHAN_TCP_WINDOW_DEFAULT,
-	    CHAN_TCP_PACKET_DEFAULT, 0, "direct-tcpip", 1);
+	xfree(target);
+
 	return c;
 }
 
@@ -982,13 +999,19 @@ server_request_tun(void)
 	sock = tun_open(tun, mode);
 	if (sock < 0)
 		goto done;
-	c = channel_new("tun", SSH_CHANNEL_OPEN, sock, sock, -1,
-	    CHAN_TCP_WINDOW_DEFAULT, CHAN_TCP_PACKET_DEFAULT, 0, "tun", 1);
+	if (options.hpn_disabled)
+		c = channel_new("tun", SSH_CHANNEL_OPEN, sock, sock, -1,
+		    CHAN_TCP_WINDOW_DEFAULT, CHAN_TCP_PACKET_DEFAULT, 0,
+		    "tun", 1);
+	else
+		c = channel_new("tun", SSH_CHANNEL_OPEN, sock, sock, -1,
+		    options.hpn_buffer_size, CHAN_TCP_PACKET_DEFAULT, 0,
+		    "tun", 1);
 	c->datagram = 1;
 #if defined(SSH_TUN_FILTER)
 	if (mode == SSH_TUNMODE_POINTOPOINT)
 		channel_register_filter(c->self, sys_tun_infilter,
-		    sys_tun_outfilter);
+		    sys_tun_outfilter, NULL, NULL);
 #endif
 
  done:
@@ -1004,6 +1027,12 @@ server_request_session(void)
 
 	debug("input_session_request");
 	packet_check_eom();
+
+	if (no_more_sessions) {
+		packet_disconnect("Possible attack: attempt to open a session "
+		    "after additional sessions disabled");
+	}
+
 	/*
 	 * A server session has no fd to read or write until a
 	 * CHANNEL_REQUEST for a shell is made, so we set the type to
@@ -1013,6 +1042,8 @@ server_request_session(void)
 	c = channel_new("session", SSH_CHANNEL_LARVAL,
 	    -1, -1, -1, /*window size*/0, CHAN_SES_PACKET_DEFAULT,
 	    0, "server-session", 1);
+	if (!options.hpn_disabled && options.tcp_rcv_buf_poll)
+		c->dynamic_window = 1;
 	if (session_open(the_authctxt, c->self) != 1) {
 		debug("session open failed, free channel %d", c->self);
 		channel_free(c);
@@ -1077,7 +1108,7 @@ server_input_global_request(int type, u_int32_t seq, void *ctxt)
 {
 	char *rtype;
 	int want_reply;
-	int success = 0;
+	int success = 0, allocated_listen_port = 0;
 
 	rtype = packet_get_string(NULL);
 	want_reply = packet_get_char();
@@ -1099,9 +1130,11 @@ server_input_global_request(int type, u_int32_t seq, void *ctxt)
 
 		/* check permissions */
 		if (!options.allow_tcp_forwarding ||
-		    no_port_forwarding_flag
+		    no_port_forwarding_flag ||
+		    (!want_reply && listen_port == 0)
 #ifndef NO_IPPORT_RESERVED_CONCEPT
-		    || (listen_port < IPPORT_RESERVED && pw->pw_uid != 0)
+		    || (listen_port != 0 && listen_port < IPPORT_RESERVED &&
+                    pw->pw_uid != 0)
 #endif
 		    ) {
 			success = 0;
@@ -1109,7 +1142,8 @@ server_input_global_request(int type, u_int32_t seq, void *ctxt)
 		} else {
 			/* Start listening on the port */
 			success = channel_setup_remote_fwd_listener(
-			    listen_address, listen_port, options.gateway_ports);
+			    listen_address, listen_port,
+			    &allocated_listen_port, options.gateway_ports);
 		}
 		xfree(listen_address);
 	} else if (strcmp(rtype, "cancel-tcpip-forward") == 0) {
@@ -1124,10 +1158,15 @@ server_input_global_request(int type, u_int32_t seq, void *ctxt)
 		success = channel_cancel_rport_listener(cancel_address,
 		    cancel_port);
 		xfree(cancel_address);
+	} else if (strcmp(rtype, "no-more-sessions@openssh.com") == 0) {
+		no_more_sessions = 1;
+		success = 1;
 	}
 	if (want_reply) {
 		packet_start(success ?
 		    SSH2_MSG_REQUEST_SUCCESS : SSH2_MSG_REQUEST_FAILURE);
+		if (success && allocated_listen_port > 0)
+			packet_put_int(allocated_listen_port);
 		packet_send();
 		packet_write_wait();
 	}
@@ -1151,7 +1190,11 @@ server_input_channel_req(int type, u_int32_t seq, void *ctxt)
 	if ((c = channel_lookup(id)) == NULL)
 		packet_disconnect("server_input_channel_req: "
 		    "unknown channel %d", id);
-	if (c->type == SSH_CHANNEL_LARVAL || c->type == SSH_CHANNEL_OPEN)
+	if (!strcmp(rtype, "eow@openssh.com")) {
+		packet_check_eom();
+		chan_rcvd_eow(c);
+	} else if ((c->type == SSH_CHANNEL_LARVAL ||
+	    c->type == SSH_CHANNEL_OPEN) && strcmp(c->ctype, "session") == 0)
 		success = session_input_channel_req(c, rtype);
 	if (reply) {
 		packet_start(success ?
@@ -1178,6 +1221,7 @@ server_init_dispatch_20(void)
 	dispatch_set(SSH2_MSG_CHANNEL_WINDOW_ADJUST, &channel_input_window_adjust);
 	dispatch_set(SSH2_MSG_GLOBAL_REQUEST, &server_input_global_request);
 	/* client_alive */
+	dispatch_set(SSH2_MSG_CHANNEL_SUCCESS, &server_input_keep_alive);
 	dispatch_set(SSH2_MSG_CHANNEL_FAILURE, &server_input_keep_alive);
 	dispatch_set(SSH2_MSG_REQUEST_SUCCESS, &server_input_keep_alive);
 	dispatch_set(SSH2_MSG_REQUEST_FAILURE, &server_input_keep_alive);

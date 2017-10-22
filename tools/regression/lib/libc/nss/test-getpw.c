@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/tools/regression/lib/libc/nss/test-getpw.c 168754 2007-04-15 11:02:31Z bushman $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <errno.h>

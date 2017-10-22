@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/libexec/rtld-elf/sparc64/rtld_machdep.h 133063 2004-08-03 08:51:00Z dfr $
+ * $FreeBSD$
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -32,12 +32,10 @@
 #include <sys/types.h>
 #include <machine/atomic.h>
 
-#define CACHE_LINE_SIZE		128
-
 struct Struct_Obj_Entry;
 
 /* Return the address of the .dynamic section in the dynamic linker. */
-Elf_Dyn *rtld_dynamic_addr();
+Elf_Dyn *rtld_dynamic_addr(void);
 #define	rtld_dynamic(obj)	rtld_dynamic_addr()
 #define	RTLD_IS_DYNAMIC()	(rtld_dynamic_addr() != NULL)
 
@@ -51,6 +49,9 @@ Elf_Addr reloc_jmpslot(Elf_Addr *, Elf_Addr,
 
 #define call_initfini_pointer(obj, target) \
 	(((InitFunc)(target))())
+
+#define call_init_pointer(obj, target) \
+	(((InitArrFunc)(target))(main_argc, main_argv, environ))
 
 #define round(size, align) \
 	(((size) + (align) - 1) & ~((align) - 1))
@@ -66,5 +67,8 @@ typedef struct {
 } tls_index;
 
 extern void *__tls_get_addr(tls_index *ti);
+
+#define	RTLD_DEFAULT_STACK_PF_EXEC	0
+#define	RTLD_DEFAULT_STACK_EXEC		0
 
 #endif

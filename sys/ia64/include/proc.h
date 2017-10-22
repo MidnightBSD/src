@@ -23,14 +23,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/ia64/include/proc.h 148807 2005-08-06 20:28:19Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PROC_H_
 #define	_MACHINE_PROC_H_
 
 struct mdthread {
-	struct mtx md_highfp_mtx;
 	int	md_spinlock_count;	/* (k) */
 	int	md_saved_intr;		/* (k) */
 };
@@ -38,5 +37,18 @@ struct mdthread {
 struct mdproc {
 	int		__dummy;	/* Avoid having an empty struct. */
 };
+
+#define	KINFO_PROC_SIZE 1088
+#define	KINFO_PROC32_SIZE 768
+
+#ifdef _KERNEL
+struct syscall_args {
+	u_int code;
+	struct sysent *callp;
+	register_t *args;
+	register_t args32[8];
+	int narg;
+};
+#endif
 
 #endif /* !_MACHINE_PROC_H_ */

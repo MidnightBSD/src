@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libthr/thread/thr_mutexattr.c 165967 2007-01-12 07:26:21Z imp $
+ * $FreeBSD$
  */
 
 /*
@@ -132,8 +132,7 @@ _pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type)
 {
 	int	ret;
 	if (attr == NULL || *attr == NULL || type >= PTHREAD_MUTEX_TYPE_MAX) {
-		errno = EINVAL;
-		ret = -1;
+		ret = EINVAL;
 	} else {
 		(*attr)->m_type = type;
 		ret = 0;

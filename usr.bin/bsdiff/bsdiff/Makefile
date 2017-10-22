@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.bin/bsdiff/bsdiff/Makefile 148771 2005-08-06 01:59:06Z cperciva $
+# $FreeBSD$
 
 PROG=	bsdiff
 

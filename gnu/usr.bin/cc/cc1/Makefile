@@ -1,14 +1,17 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/cc/cc1/Makefile 169718 2007-05-19 04:25:59Z kan $
+# $FreeBSD$
 
 .include "../Makefile.inc"
+NO_MAN=
+.include <bsd.own.mk>
 
 .PATH: ${GCCDIR}
 
 PROG=	cc1
 SRCS=	main.c c-parser.c c-lang.c
 BINDIR=	/usr/libexec
-NO_MAN=
+.if ${MK_SHARED_TOOLCHAIN} == "no"
 NO_SHARED?=yes
+.endif
 
 OBJS+=  ${PROG}-checksum.o
 DPADD=	${LIBBACKEND} ${LIBCPP} ${LIBDECNUMBER} ${LIBIBERTY}

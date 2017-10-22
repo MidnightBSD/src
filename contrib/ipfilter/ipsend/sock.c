@@ -1,4 +1,4 @@
-/* $FreeBSD: release/7.0.0/contrib/ipfilter/ipsend/sock.c 173213 2007-10-31 05:00:38Z darrenr $ */
+/* $FreeBSD$ */
 /*
  * sock.c (C) 1995-1998 Darren Reed
  *
@@ -32,16 +32,25 @@ typedef int     boolean_t;
 #if !defined(__osf__)
 # ifdef __NetBSD__ 
 #  include <machine/lock.h>
+#  include <machine/mutex.h>
 # endif
-# define _KERNEL
-# define	KERNEL
+# ifdef __FreeBSD__
+#  define _WANT_FILE
+# else
+#  define _KERNEL
+#  define	KERNEL
+# endif
 # ifdef	ultrix
 #  undef	LOCORE
 #  include <sys/smp_lock.h>
 # endif
 # include <sys/file.h>
-# undef  _KERNEL
-# undef  KERNEL
+# ifdef __FreeBSD__
+#  undef _WANT_FILE
+# else
+#  undef  _KERNEL
+#  undef  KERNEL
+# endif
 #endif
 #include <nlist.h>
 #include <sys/user.h>

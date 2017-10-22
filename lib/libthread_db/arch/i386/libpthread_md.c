@@ -25,13 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libthread_db/arch/i386/libpthread_md.c 146818 2005-05-31 09:43:04Z dfr $");
+__FBSDID("$FreeBSD$");
 
-#include <string.h>
 #include <sys/types.h>
-#include <proc_service.h>
-#include <thread_db.h>
 #include <machine/npx.h>
+#include <string.h>
+#include <thread_db.h>
 
 #include "libpthread_db.h"
 

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/moused/Makefile 167461 2007-03-11 20:02:26Z philip $
+# $FreeBSD$
 
 PROG=	moused
 MAN=	moused.8

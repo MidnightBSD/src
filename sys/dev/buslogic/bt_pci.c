@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/buslogic/bt_pci.c 165102 2006-12-11 18:28:31Z mjacob $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -172,8 +172,7 @@ bt_pci_attach(device_t dev)
 	}
 
 	/* Allocate a dmatag for our CCB DMA maps */
-	/* XXX Should be a child of the PCI bus dma tag */
-	if (bus_dma_tag_create(	/* parent	*/ NULL,
+	if (bus_dma_tag_create(	/* PCI parent	*/ bus_get_dma_tag(dev),
 				/* alignemnt	*/ 1,
 				/* boundary	*/ 0,
 				/* lowaddr	*/ BUS_SPACE_MAXADDR_32BIT,

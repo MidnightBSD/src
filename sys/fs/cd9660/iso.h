@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)iso.h	8.6 (Berkeley) 5/10/95
- * $FreeBSD: release/7.0.0/sys/fs/cd9660/iso.h 166774 2007-02-15 22:08:35Z pjd $
+ * $FreeBSD$
  */
 
 #define ISODCL(from, to) (to - from + 1)
@@ -220,7 +220,7 @@ enum ISO_FTYPE	{ ISO_FTYPE_DEFAULT, ISO_FTYPE_9660, ISO_FTYPE_RRIP,
 #endif
 
 struct iso_mnt {
-	int im_flags;
+	uint64_t im_flags;
 
 	struct mount *im_mountp;
 	struct cdev *im_dev;

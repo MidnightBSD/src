@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)key.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/bin/stty/key.c 137314 2004-11-06 13:56:18Z ache $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -257,14 +257,15 @@ f_rows(struct info *ip)
 void
 f_sane(struct info *ip)
 {
+	struct termios def;
 
-	ip->t.c_cflag = TTYDEF_CFLAG | (ip->t.c_cflag & CLOCAL);
-	ip->t.c_iflag = TTYDEF_IFLAG;
-	ip->t.c_iflag |= ICRNL;
+	cfmakesane(&def);
+	ip->t.c_cflag = def.c_cflag | (ip->t.c_cflag & CLOCAL);
+	ip->t.c_iflag = def.c_iflag;
 	/* preserve user-preference flags in lflag */
 #define	LKEEP	(ECHOKE|ECHOE|ECHOK|ECHOPRT|ECHOCTL|ALTWERASE|TOSTOP|NOFLSH)
-	ip->t.c_lflag = TTYDEF_LFLAG | (ip->t.c_lflag & LKEEP);
-	ip->t.c_oflag = TTYDEF_OFLAG;
+	ip->t.c_lflag = def.c_lflag | (ip->t.c_lflag & LKEEP);
+	ip->t.c_oflag = def.c_oflag;
 	ip->set = 1;
 }
 

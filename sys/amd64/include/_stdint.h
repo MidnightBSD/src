@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/amd64/include/_stdint.h 129393 2004-05-18 16:04:57Z stefanf $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE__STDINT_H_
@@ -52,8 +52,8 @@
 #define	UINT32_C(c)		(c ## U)
 #define	UINT64_C(c)		(c ## UL)
 
-#define	INTMAX_C(c)		(c ## L)
-#define	UINTMAX_C(c)		(c ## UL)
+#define	INTMAX_C(c)		INT64_C(c)
+#define	UINTMAX_C(c)		UINT64_C(c)
 
 #endif /* !defined(__cplusplus) || defined(__STDC_CONSTANT_MACROS) */
 

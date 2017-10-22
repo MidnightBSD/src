@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/dev/hptrr/os_bsd.h 176415 2008-02-20 04:35:24Z kensmith $
+ * $FreeBSD$
  */
 #include <dev/hptrr/hptrr_config.h>
 /* $Id: os_bsd.h,v 1.18 2006/04/11 08:19:02 gmm Exp $
@@ -34,6 +34,10 @@
 
 #ifndef _OS_BSD_H
 #define _OS_BSD_H
+
+#ifndef DBG
+#define  DBG	0
+#endif
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -87,7 +91,6 @@
 #include <cam/cam_sim.h>
 #include <cam/cam_xpt_sim.h>
 #include <cam/cam_debug.h>
-#include <cam/cam_xpt_periph.h>
 #include <cam/cam_periph.h>
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>

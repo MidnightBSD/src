@@ -1,4 +1,4 @@
-/* $Header: /p/tcsh/cvsroot/tcsh/sh.dir.c,v 3.79 2006/09/25 18:17:26 christos Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/sh.dir.c,v 3.82 2011/10/16 16:25:05 christos Exp $ */
 /*
  * sh.dir.c: Directory manipulation functions
  */
@@ -33,7 +33,7 @@
 #include "sh.h"
 #include "ed.h"
 
-RCSID("$tcsh: sh.dir.c,v 3.79 2006/09/25 18:17:26 christos Exp $")
+RCSID("$tcsh: sh.dir.c,v 3.82 2011/10/16 16:25:05 christos Exp $")
 
 /*
  * C Shell - directory management
@@ -42,7 +42,7 @@ RCSID("$tcsh: sh.dir.c,v 3.79 2006/09/25 18:17:26 christos Exp $")
 static	Char			*agetcwd	(void);
 static	void			 dstart		(const char *);
 static	struct directory	*dfind		(Char *);
-static	Char 			*dfollow	(Char *);
+static	Char 			*dfollow	(Char *, int);
 static	void 	 	 	 printdirs	(int);
 static	Char 			*dgoto		(Char *);
 static	void 	 	 	 dnewcwd	(struct directory *, int);
@@ -204,10 +204,12 @@ skipargs(Char ***v, const char *dstr, const char *str)
     for (n++; loop && *n != NULL && (*n)[0] == '-'; n++) 
 	if (*(s = &((*n)[1])) == '\0')	/* test for bare "-" argument */
 	    dflag |= DIR_OLD;
-	else {
+	else if ((*n)[1] == '-' && (*n)[2] == '\0') {   /* test for -- */
+	    n++;
+	    break;
+	} else {
 	    char *p;
-	    while (*s != '\0')	/* examine flags */
-	    {
+	    while (*s != '\0')	/* examine flags */ {
 		if ((p = strchr(dstr, *s++)) != NULL)
 		    dflag |= (1 << (p - dstr));
 	        else
@@ -523,7 +525,7 @@ dochngd(Char **v, struct command *c)
 	return;
     }
     else
-	if ((cp = dfollow(cp)) == NULL)
+	if ((cp = dfollow(cp, dflag & DIR_OLD)) == NULL)
 	    return;
     dp = xcalloc(sizeof(struct directory), 1);
     dp->di_name = cp;
@@ -588,13 +590,13 @@ dgoto(Char *cp)
  * dfollow - change to arg directory; fall back on cdpath if not valid
  */
 static Char *
-dfollow(Char *cp)
+dfollow(Char *cp, int old)
 {
     Char *dp;
     struct varent *c;
     int serrno;
 
-    cp = globone(cp, G_ERROR);
+    cp = old ? Strsave(cp) : globone(cp, G_ERROR);
     cleanup_push(cp, xfree);
 #ifdef apollo
     if (Strchr(cp, '`')) {
@@ -643,9 +645,13 @@ dfollow(Char *cp)
 	Char  **cdp;
 
 	for (cdp = c->vec; *cdp; cdp++) {
+	    size_t len = Strlen(*cdp);
 	    buf.len = 0;
-	    Strbuf_append(&buf, *cdp);
-	    Strbuf_append1(&buf, '/');
+	    if (len > 0) {
+		Strbuf_append(&buf, *cdp);
+		if ((*cdp)[len - 1] != '/')
+		    Strbuf_append1(&buf, '/');
+	    }
 	    Strbuf_append(&buf, cp);
 	    Strbuf_terminate(&buf);
 	    /*
@@ -712,7 +718,7 @@ dopushd(Char **v, struct command *c)
 		stderror(ERR_NAME | ERR_NOHOMEDIR);
 	    if (chdir(short2str(cp)) < 0)
 		stderror(ERR_NAME | ERR_CANTCHANGE);
-	    if ((cp = dfollow(cp)) == NULL)
+	    if ((cp = dfollow(cp, dflag & DIR_OLD)) == NULL)
 		return;
 	    dp = xcalloc(sizeof(struct directory), 1);
 	    dp->di_name = cp;
@@ -758,7 +764,7 @@ dopushd(Char **v, struct command *c)
     else {
 	Char *ccp;
 
-	if ((ccp = dfollow(cp)) == NULL)
+	if ((ccp = dfollow(cp, dflag & DIR_OLD)) == NULL)
 	    return;
 	dp = xcalloc(sizeof(struct directory), 1);
 	dp->di_name = ccp;

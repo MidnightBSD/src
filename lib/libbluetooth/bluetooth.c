@@ -1,7 +1,9 @@
 /*
  * bluetooth.c
- *
- * Copyright (c) 2001-2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
+ */
+
+/*-
+ * Copyright (c) 2001-2009 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: bluetooth.c,v 1.3 2003/05/20 23:04:30 max Exp $
- * $FreeBSD: release/7.0.0/lib/libbluetooth/bluetooth.c 126643 2004-03-05 08:10:19Z markm $
+ * $FreeBSD$
  */
 
 #include <bluetooth.h>

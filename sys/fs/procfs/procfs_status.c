@@ -34,7 +34,7 @@
  *
  * From:
  *	$Id: procfs_status.c,v 3.1 1993/12/15 09:40:17 jsp Exp $
- * $FreeBSD: release/7.0.0/sys/fs/procfs/procfs_status.c 172207 2007-09-17 05:31:39Z jeff $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -82,7 +82,7 @@ procfs_doprocstatus(PFS_FILL_ARGS)
 	sid = sess->s_leader ? sess->s_leader->p_pid : 0;
 
 /* comm pid ppid pgid sid tty ctty,sldr start ut st wmsg
-				euid ruid rgid,egid,groups[1 .. NGROUPS]
+				euid ruid rgid,egid,groups[1 .. ngroups]
 */
 
 	pc = p->p_comm;
@@ -112,20 +112,15 @@ procfs_doprocstatus(PFS_FILL_ARGS)
 		sbuf_printf(sb, "noflags");
 	}
 
-#ifdef KSE
-	if (p->p_flag & P_SA)
-		wmesg = "-kse- ";
-	else
-#endif
-	{
-		tdfirst = FIRST_THREAD_IN_PROC(p);
-		if (tdfirst->td_wchan != NULL) {
-			KASSERT(tdfirst->td_wmesg != NULL,
-			    ("wchan %p has no wmesg", tdfirst->td_wchan));
-			wmesg = tdfirst->td_wmesg;
-		} else
-			wmesg = "nochan";
-	}
+	tdfirst = FIRST_THREAD_IN_PROC(p);
+	thread_lock(tdfirst);
+	if (tdfirst->td_wchan != NULL) {
+		KASSERT(tdfirst->td_wmesg != NULL,
+		    ("wchan %p has no wmesg", tdfirst->td_wchan));
+		wmesg = tdfirst->td_wmesg;
+	} else
+		wmesg = "nochan";
+	thread_unlock(tdfirst);
 
 	if (p->p_flag & P_INMEM) {
 		struct timeval start, ut, st;
@@ -158,10 +153,11 @@ procfs_doprocstatus(PFS_FILL_ARGS)
 		sbuf_printf(sb, ",%lu", (u_long)cr->cr_groups[i]);
 	}
 
-	if (jailed(p->p_ucred)) {
-		mtx_lock(&p->p_ucred->cr_prison->pr_mtx);
-		sbuf_printf(sb, " %s", p->p_ucred->cr_prison->pr_host);
-		mtx_unlock(&p->p_ucred->cr_prison->pr_mtx);
+	if (jailed(cr)) {
+		mtx_lock(&cr->cr_prison->pr_mtx);
+		sbuf_printf(sb, " %s",
+		    prison_name(td->td_ucred->cr_prison, cr->cr_prison));
+		mtx_unlock(&cr->cr_prison->pr_mtx);
 	} else {
 		sbuf_printf(sb, " -");
 	}
@@ -174,15 +170,10 @@ procfs_doprocstatus(PFS_FILL_ARGS)
 int
 procfs_doproccmdline(PFS_FILL_ARGS)
 {
-	struct ps_strings pstr;
-	char **ps_argvstr;
-	int error, i;
 
 	/*
 	 * If we are using the ps/cmdline caching, use that.  Otherwise
-	 * revert back to the old way which only implements full cmdline
-	 * for the currept process and just p->p_comm for all other
-	 * processes.
+	 * read argv from the process space.
 	 * Note that if the argv is no longer available, we deliberately
 	 * don't fall back on p->p_comm or return an error: the authentic
 	 * Linux behaviour is to return zero-length in this case.
@@ -194,30 +185,13 @@ procfs_doproccmdline(PFS_FILL_ARGS)
 		PROC_UNLOCK(p);
 		return (0);
 	}
-	PROC_UNLOCK(p);
-	if (p != td->td_proc) {
-		sbuf_printf(sb, "%.*s", MAXCOMLEN, p->p_comm);
-	} else {
-		error = copyin((void *)p->p_sysent->sv_psstrings, &pstr,
-		    sizeof(pstr));
-		if (error)
-			return (error);
-		if (pstr.ps_nargvstr > ARG_MAX)
-			return (E2BIG);
-		ps_argvstr = malloc(pstr.ps_nargvstr * sizeof(char *),
-		    M_TEMP, M_WAITOK);
-		error = copyin((void *)pstr.ps_argvstr, ps_argvstr,
-		    pstr.ps_nargvstr * sizeof(char *));
-		if (error) {
-			free(ps_argvstr, M_TEMP);
-			return (error);
-		}
-		for (i = 0; i < pstr.ps_nargvstr; i++) {
-			sbuf_copyin(sb, ps_argvstr[i], 0);
-			sbuf_printf(sb, "%c", '\0');
-		}
-		free(ps_argvstr, M_TEMP);
+
+	if ((p->p_flag & P_SYSTEM) != 0) {
+		PROC_UNLOCK(p);
+		return (0);
 	}
 
-	return (0);
+	PROC_UNLOCK(p);
+
+	return (proc_getargv(td, p, sb));
 }

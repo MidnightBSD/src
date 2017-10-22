@@ -42,8 +42,16 @@ static char sccsid[] = "@(#)mkfs.c	8.11 (Berkeley) 5/3/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sbin/newfs/mkfs.c 163842 2006-10-31 21:52:28Z pjd $");
+__FBSDID("$FreeBSD$");
 
+#include <sys/param.h>
+#include <sys/disklabel.h>
+#include <sys/file.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 #include <err.h>
 #include <grp.h>
 #include <limits.h>
@@ -52,20 +60,11 @@ __FBSDID("$FreeBSD: release/7.0.0/sbin/newfs/mkfs.c 163842 2006-10-31 21:52:28Z 
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <time.h>
 #include <unistd.h>
-#include <sys/param.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
 #include <ufs/ufs/dinode.h>
 #include <ufs/ufs/dir.h>
 #include <ufs/ffs/fs.h>
-#include <sys/disklabel.h>
-#include <sys/file.h>
-#include <sys/mman.h>
-#include <sys/ioctl.h>
 #include "newfs.h"
 
 /*
@@ -101,14 +100,26 @@ static void setblock(struct fs *, unsigned char *, int);
 static void wtfs(ufs2_daddr_t, int, char *);
 static u_int32_t newfs_random(void);
 
+static int
+do_sbwrite(struct uufsd *disk)
+{
+	if (!disk->d_sblock)
+		disk->d_sblock = disk->d_fs.fs_sblockloc / disk->d_bsize;
+	return (pwrite(disk->d_fd, &disk->d_fs, SBLOCKSIZE, (off_t)((part_ofs +
+	    disk->d_sblock) * disk->d_bsize)));
+}
+
 void
 mkfs(struct partition *pp, char *fsys)
 {
 	int fragsperinode, optimalfpg, origdensity, minfpg, lastminfpg;
-	long i, j, cylno, csfrags;
+	long i, j, csfrags;
+	uint cg;
 	time_t utime;
 	quad_t sizepb;
 	int width;
+	ino_t maxinum;
+	int minfragsperinode;	/* minimum ratio of frags to inodes */
 	char tmpbuf[100];	/* XXX this will break in about 2,500 years */
 	union {
 		struct fs fdummy;
@@ -139,6 +150,8 @@ mkfs(struct partition *pp, char *fsys)
 		sblock.fs_flags |= FS_GJOURNAL;
 	if (lflag)
 		sblock.fs_flags |= FS_MULTILABEL;
+	if (tflag)
+		sblock.fs_flags |= FS_TRIM;
 	/*
 	 * Validate the given file system size.
 	 * Verify that its last block can actually be accessed.
@@ -161,6 +174,8 @@ mkfs(struct partition *pp, char *fsys)
 	if (sblock.fs_avgfpdir <= 0)
 		printf("illegal expected number of files per directory %d\n",
 		    sblock.fs_avgfpdir), exit(15);
+
+restart:
 	/*
 	 * collect and verify the block and fragment sizes
 	 */
@@ -207,6 +222,8 @@ mkfs(struct partition *pp, char *fsys)
 		    sblock.fs_fsize, MAXFRAG, sblock.fs_bsize / MAXFRAG);
 		sblock.fs_fsize = sblock.fs_bsize / MAXFRAG;
 	}
+	if (maxbsize == 0)
+		maxbsize = bsize;
 	if (maxbsize < bsize || !POWEROF2(maxbsize)) {
 		sblock.fs_maxbsize = sblock.fs_bsize;
 		printf("Extent size set to %d\n", sblock.fs_maxbsize);
@@ -216,6 +233,14 @@ mkfs(struct partition *pp, char *fsys)
 	} else {
 		sblock.fs_maxbsize = maxbsize;
 	}
+	/*
+	 * Maxcontig sets the default for the maximum number of blocks
+	 * that may be allocated sequentially. With file system clustering
+	 * it is possible to allocate contiguous blocks up to the maximum
+	 * transfer size permitted by the controller or buffering.
+	 */
+	if (maxcontig == 0)
+		maxcontig = MAX(1, MAXPHYS / bsize);
 	sblock.fs_maxcontig = maxcontig;
 	if (sblock.fs_maxcontig < sblock.fs_maxbsize / sblock.fs_bsize) {
 		sblock.fs_maxcontig = sblock.fs_maxbsize / sblock.fs_bsize;
@@ -306,9 +331,26 @@ mkfs(struct partition *pp, char *fsys)
 	 * can put into each cylinder group. If this is too big, we reduce
 	 * the density until it fits.
 	 */
+	maxinum = (((int64_t)(1)) << 32) - INOPB(&sblock);
+	minfragsperinode = 1 + fssize / maxinum;
+	if (density == 0) {
+		density = MAX(NFPI, minfragsperinode) * fsize;
+	} else if (density < minfragsperinode * fsize) {
+		origdensity = density;
+		density = minfragsperinode * fsize;
+		fprintf(stderr, "density increased from %d to %d\n",
+		    origdensity, density);
+	}
 	origdensity = density;
 	for (;;) {
 		fragsperinode = MAX(numfrags(&sblock, density), 1);
+		if (fragsperinode < minfragsperinode) {
+			bsize <<= 1;
+			fsize <<= 1;
+			printf("Block size too small for a file system %s %d\n",
+			     "of this size. Increasing blocksize to", bsize);
+			goto restart;
+		}
 		minfpg = fragsperinode * INOPB(&sblock);
 		if (minfpg > sblock.fs_size)
 			minfpg = sblock.fs_size;
@@ -335,16 +377,20 @@ mkfs(struct partition *pp, char *fsys)
 	 * Start packing more blocks into the cylinder group until
 	 * it cannot grow any larger, the number of cylinder groups
 	 * drops below MINCYLGRPS, or we reach the size requested.
+	 * For UFS1 inodes per cylinder group are stored in an int16_t
+	 * so fs_ipg is limited to 2^15 - 1.
 	 */
 	for ( ; sblock.fs_fpg < maxblkspercg; sblock.fs_fpg += sblock.fs_frag) {
 		sblock.fs_ipg = roundup(howmany(sblock.fs_fpg, fragsperinode),
 		    INOPB(&sblock));
-		if (sblock.fs_size / sblock.fs_fpg < MINCYLGRPS)
-			break;
-		if (CGSIZE(&sblock) < (unsigned long)sblock.fs_bsize)
-			continue;
-		if (CGSIZE(&sblock) == (unsigned long)sblock.fs_bsize)
-			break;
+		if (Oflag > 1 || (Oflag == 1 && sblock.fs_ipg <= 0x7fff)) {
+			if (sblock.fs_size / sblock.fs_fpg < MINCYLGRPS)
+				break;
+			if (CGSIZE(&sblock) < (unsigned long)sblock.fs_bsize)
+				continue;
+			if (CGSIZE(&sblock) == (unsigned long)sblock.fs_bsize)
+				break;
+		}
 		sblock.fs_fpg -= sblock.fs_frag;
 		sblock.fs_ipg = roundup(howmany(sblock.fs_fpg, fragsperinode),
 		    INOPB(&sblock));
@@ -397,7 +443,10 @@ mkfs(struct partition *pp, char *fsys)
 	if (sblock.fs_sbsize > SBLOCKSIZE)
 		sblock.fs_sbsize = SBLOCKSIZE;
 	sblock.fs_minfree = minfree;
-	sblock.fs_maxbpg = maxbpg;
+	if (maxbpg == 0)
+		sblock.fs_maxbpg = MAXBLKPG(sblock.fs_bsize);
+	else
+		sblock.fs_maxbpg = maxbpg;
 	sblock.fs_optim = opt;
 	sblock.fs_cgrotor = 0;
 	sblock.fs_pendingblocks = 0;
@@ -448,30 +497,41 @@ mkfs(struct partition *pp, char *fsys)
 		printf("\twith soft updates\n");
 #	undef B2MBFACTOR
 
+	if (Eflag && !Nflag) {
+		printf("Erasing sectors [%jd...%jd]\n", 
+		    sblock.fs_sblockloc / disk.d_bsize,
+		    fsbtodb(&sblock, sblock.fs_size) - 1);
+		berase(&disk, sblock.fs_sblockloc / disk.d_bsize,
+		    sblock.fs_size * sblock.fs_fsize - sblock.fs_sblockloc);
+	}
 	/*
 	 * Wipe out old UFS1 superblock(s) if necessary.
 	 */
 	if (!Nflag && Oflag != 1) {
-		i = bread(&disk, SBLOCK_UFS1 / disk.d_bsize, chdummy, SBLOCKSIZE);
+		i = bread(&disk, part_ofs + SBLOCK_UFS1 / disk.d_bsize, chdummy, SBLOCKSIZE);
 		if (i == -1)
 			err(1, "can't read old UFS1 superblock: %s", disk.d_error);
 
 		if (fsdummy.fs_magic == FS_UFS1_MAGIC) {
 			fsdummy.fs_magic = 0;
-			bwrite(&disk, SBLOCK_UFS1 / disk.d_bsize, chdummy, SBLOCKSIZE);
-			for (i = 0; i < fsdummy.fs_ncg; i++)
-				bwrite(&disk, fsbtodb(&fsdummy, cgsblock(&fsdummy, i)),
-	                    chdummy, SBLOCKSIZE);
+			bwrite(&disk, part_ofs + SBLOCK_UFS1 / disk.d_bsize,
+			    chdummy, SBLOCKSIZE);
+			for (cg = 0; cg < fsdummy.fs_ncg; cg++) {
+				if (fsbtodb(&fsdummy, cgsblock(&fsdummy, cg)) > fssize)
+					break;
+				bwrite(&disk, part_ofs + fsbtodb(&fsdummy,
+				  cgsblock(&fsdummy, cg)), chdummy, SBLOCKSIZE);
+			}
 		}
 	}
 	if (!Nflag)
-		sbwrite(&disk, 0);
-	if (Eflag == 1) {
-		printf("** Exiting on Eflag 1\n");
+		do_sbwrite(&disk);
+	if (Xflag == 1) {
+		printf("** Exiting on Xflag 1\n");
 		exit(0);
 	}
-	if (Eflag == 2)
-		printf("** Leaving BAD MAGIC on Eflag 2\n");
+	if (Xflag == 2)
+		printf("** Leaving BAD MAGIC on Xflag 2\n");
 	else
 		sblock.fs_magic = (Oflag != 1) ? FS_UFS2_MAGIC : FS_UFS1_MAGIC;
 
@@ -479,7 +539,7 @@ mkfs(struct partition *pp, char *fsys)
 	 * Now build the cylinders group blocks and
 	 * then print out indices of cylinder groups.
 	 */
-	printf("super-block backups (for fsck -b #) at:\n");
+	printf("super-block backups (for fsck_ffs -b #) at:\n");
 	i = 0;
 	width = charsperline();
 	/*
@@ -490,21 +550,20 @@ mkfs(struct partition *pp, char *fsys)
 		iobufsize = SBLOCKSIZE + 3 * sblock.fs_bsize;
 	else
 		iobufsize = 4 * sblock.fs_bsize;
-	if ((iobuf = malloc(iobufsize)) == 0) {
+	if ((iobuf = calloc(1, iobufsize)) == 0) {
 		printf("Cannot allocate I/O buffer\n");
 		exit(38);
 	}
-	bzero(iobuf, iobufsize);
 	/*
 	 * Make a copy of the superblock into the buffer that we will be
 	 * writing out in each cylinder group.
 	 */
 	bcopy((char *)&sblock, iobuf, SBLOCKSIZE);
-	for (cylno = 0; cylno < sblock.fs_ncg; cylno++) {
-		initcg(cylno, utime);
+	for (cg = 0; cg < sblock.fs_ncg; cg++) {
+		initcg(cg, utime);
 		j = snprintf(tmpbuf, sizeof(tmpbuf), " %jd%s",
-		    (intmax_t)fsbtodb(&sblock, cgsblock(&sblock, cylno)),
-		    cylno < (sblock.fs_ncg-1) ? "," : "");
+		    (intmax_t)fsbtodb(&sblock, cgsblock(&sblock, cg)),
+		    cg < (sblock.fs_ncg-1) ? "," : "");
 		if (j < 0)
 			tmpbuf[j = 0] = '\0';
 		if (i + j >= width) {
@@ -529,19 +588,31 @@ mkfs(struct partition *pp, char *fsys)
 		sblock.fs_old_cstotal.cs_nifree = sblock.fs_cstotal.cs_nifree;
 		sblock.fs_old_cstotal.cs_nffree = sblock.fs_cstotal.cs_nffree;
 	}
-	if (Eflag == 3) {
-		printf("** Exiting on Eflag 3\n");
+	if (Xflag == 3) {
+		printf("** Exiting on Xflag 3\n");
 		exit(0);
 	}
-	if (!Nflag)
-		sbwrite(&disk, 0);
+	if (!Nflag) {
+		do_sbwrite(&disk);
+		/*
+		 * For UFS1 filesystems with a blocksize of 64K, the first
+		 * alternate superblock resides at the location used for
+		 * the default UFS2 superblock. As there is a valid
+		 * superblock at this location, the boot code will use
+		 * it as its first choice. Thus we have to ensure that
+		 * all of its statistcs on usage are correct.
+		 */
+		if (Oflag == 1 && sblock.fs_bsize == 65536)
+			wtfs(fsbtodb(&sblock, cgsblock(&sblock, 0)),
+			    sblock.fs_bsize, (char *)&sblock);
+	}
 	for (i = 0; i < sblock.fs_cssize; i += sblock.fs_bsize)
 		wtfs(fsbtodb(&sblock, sblock.fs_csaddr + numfrags(&sblock, i)),
 			sblock.fs_cssize - i < sblock.fs_bsize ?
 			sblock.fs_cssize - i : sblock.fs_bsize,
 			((char *)fscs) + i);
 	/*
-	 * Update information about this partion in pack
+	 * Update information about this partition in pack
 	 * label, to that it may be updated on disk.
 	 */
 	if (pp != NULL) {
@@ -558,7 +629,8 @@ mkfs(struct partition *pp, char *fsys)
 void
 initcg(int cylno, time_t utime)
 {
-	long i, j, d, dlower, dupper, blkno, start;
+	long blkno, start;
+	uint i, j, d, dlower, dupper;
 	ufs2_daddr_t cbase, dmax;
 	struct ufs1_dinode *dp1;
 	struct ufs2_dinode *dp2;
@@ -615,7 +687,7 @@ initcg(int cylno, time_t utime)
 		acg.cg_nextfreeoff = acg.cg_clusteroff +
 		    howmany(fragstoblks(&sblock, sblock.fs_fpg), CHAR_BIT);
 	}
-	if (acg.cg_nextfreeoff > sblock.fs_cgsize) {
+	if (acg.cg_nextfreeoff > (unsigned)sblock.fs_cgsize) {
 		printf("Panic: cylinder group too big\n");
 		exit(37);
 	}
@@ -864,9 +936,10 @@ makedir(struct direct *protodir, int entries)
 ufs2_daddr_t
 alloc(int size, int mode)
 {
-	int i, d, blkno, frag;
+	int i, blkno, frag;
+	uint d;
 
-	bread(&disk, fsbtodb(&sblock, cgtod(&sblock, 0)), (char *)&acg,
+	bread(&disk, part_ofs + fsbtodb(&sblock, cgtod(&sblock, 0)), (char *)&acg,
 	    sblock.fs_cgsize);
 	if (acg.cg_magic != CG_MAGIC) {
 		printf("cg 0: bad magic number\n");
@@ -916,10 +989,8 @@ void
 iput(union dinode *ip, ino_t ino)
 {
 	ufs2_daddr_t d;
-	int c;
 
-	c = ino_to_cg(&sblock, ino);
-	bread(&disk, fsbtodb(&sblock, cgtod(&sblock, 0)), (char *)&acg,
+	bread(&disk, part_ofs + fsbtodb(&sblock, cgtod(&sblock, 0)), (char *)&acg,
 	    sblock.fs_cgsize);
 	if (acg.cg_magic != CG_MAGIC) {
 		printf("cg 0: bad magic number\n");
@@ -936,7 +1007,7 @@ iput(union dinode *ip, ino_t ino)
 		exit(32);
 	}
 	d = fsbtodb(&sblock, ino_to_fsba(&sblock, ino));
-	bread(&disk, d, (char *)iobuf, sblock.fs_bsize);
+	bread(&disk, part_ofs + d, (char *)iobuf, sblock.fs_bsize);
 	if (sblock.fs_magic == FS_UFS1_MAGIC)
 		((struct ufs1_dinode *)iobuf)[ino_to_fsbo(&sblock, ino)] =
 		    ip->dp1;
@@ -954,7 +1025,7 @@ wtfs(ufs2_daddr_t bno, int size, char *bf)
 {
 	if (Nflag)
 		return;
-	if (bwrite(&disk, bno, bf, size) < 0)
+	if (bwrite(&disk, part_ofs + bno, bf, size) < 0)
 		err(36, "wtfs: %d bytes at sector %jd", size, (intmax_t)bno);
 }
 

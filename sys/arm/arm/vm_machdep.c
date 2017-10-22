@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/vm_machdep.c 172189 2007-09-15 18:47:02Z alc $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,6 +51,8 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/vm_machdep.c 172189 2007-09-15 18:
 #include <sys/proc.h>
 #include <sys/socketvar.h>
 #include <sys/sf_buf.h>
+#include <sys/syscall.h>
+#include <sys/sysent.h>
 #include <sys/unistd.h>
 #include <machine/cpu.h>
 #include <machine/pcb.h>
@@ -77,7 +79,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/vm_machdep.c 172189 2007-09-15 18:
 
 #ifndef ARM_USE_SMALL_ALLOC
 static void     sf_buf_init(void *arg);
-SYSINIT(sock_sf, SI_SUB_MBUF, SI_ORDER_ANY, sf_buf_init, NULL)
+SYSINIT(sock_sf, SI_SUB_MBUF, SI_ORDER_ANY, sf_buf_init, NULL);
 
 LIST_HEAD(sf_head, sf_buf);
 	
@@ -108,21 +110,17 @@ void
 cpu_fork(register struct thread *td1, register struct proc *p2,
     struct thread *td2, int flags)
 {
-	struct pcb *pcb1, *pcb2;
+	struct pcb *pcb2;
 	struct trapframe *tf;
 	struct switchframe *sf;
 	struct mdproc *mdp2;
 
 	if ((flags & RFPROC) == 0)
 		return;
-	pcb1 = td1->td_pcb;
 	pcb2 = (struct pcb *)(td2->td_kstack + td2->td_kstack_pages * PAGE_SIZE) - 1;
 #ifdef __XSCALE__
 #ifndef CPU_XSCALE_CORE3
 	pmap_use_minicache(td2->td_kstack, td2->td_kstack_pages * PAGE_SIZE);
-	if (td2->td_altkstack)
-		pmap_use_minicache(td2->td_altkstack, td2->td_altkstack_pages *
-		    PAGE_SIZE);
 #endif
 #endif
 	td2->td_pcb = pcb2;
@@ -148,7 +146,7 @@ cpu_fork(register struct thread *td1, register struct proc *p2,
 	/* Setup to release spin count in fork_exit(). */
 	td2->td_md.md_spinlock_count = 1;
 	td2->td_md.md_saved_cspr = 0;
-	td2->td_md.md_tp = *(uint32_t **)ARM_TP_ADDRESS;
+	td2->td_md.md_tp = *(register_t *)ARM_TP_ADDRESS;
 }
 				
 void
@@ -173,8 +171,11 @@ sf_buf_free(struct sf_buf *sf)
 	 if (sf->ref_count == 0) {
 		 TAILQ_INSERT_TAIL(&sf_buf_freelist, sf, free_entry);
 		 nsfbufsused--;
+		 pmap_kremove(sf->kva);
+		 sf->m = NULL;
+		 LIST_REMOVE(sf, list_entry);
 		 if (sf_buf_alloc_want > 0)
-			 wakeup_one(&sf_buf_freelist);
+			 wakeup(&sf_buf_freelist);
 	 }
 	 mtx_unlock(&sf_buf_lock);				 
 #endif
@@ -265,6 +266,57 @@ done:
 #endif
 }
 
+void
+cpu_set_syscall_retval(struct thread *td, int error)
+{
+	trapframe_t *frame;
+	int fixup;
+#ifdef __ARMEB__
+	uint32_t insn;
+#endif
+
+	frame = td->td_frame;
+	fixup = 0;
+
+#ifdef __ARMEB__
+	insn = *(u_int32_t *)(frame->tf_pc - INSN_SIZE);
+	if ((insn & 0x000fffff) == SYS___syscall) {
+		register_t *ap = &frame->tf_r0;
+		register_t code = ap[_QUAD_LOWWORD];
+		if (td->td_proc->p_sysent->sv_mask)
+			code &= td->td_proc->p_sysent->sv_mask;
+		fixup = (code != SYS_freebsd6_lseek && code != SYS_lseek)
+		    ? 1 : 0;
+	}
+#endif
+
+	switch (error) {
+	case 0:
+		if (fixup) {
+			frame->tf_r0 = 0;
+			frame->tf_r1 = td->td_retval[0];
+		} else {
+			frame->tf_r0 = td->td_retval[0];
+			frame->tf_r1 = td->td_retval[1];
+		}
+		frame->tf_spsr &= ~PSR_C_bit;   /* carry bit */
+		break;
+	case ERESTART:
+		/*
+		 * Reconstruct the pc to point at the swi.
+		 */
+		frame->tf_pc -= INSN_SIZE;
+		break;
+	case EJUSTRETURN:
+		/* nothing to do */
+		break;
+	default:
+		frame->tf_r0 = error;
+		frame->tf_spsr |= PSR_C_bit;    /* carry bit */
+		break;
+	}
+}
+
 /*
  * Initialize machine state (pcb and trap frame) for a new thread about to
  * upcall. Put enough state in the new thread's PCB to get it to go back 
@@ -318,10 +370,10 @@ cpu_set_user_tls(struct thread *td, void *tls_base)
 {
 
 	if (td != curthread)
-		td->td_md.md_tp = tls_base;
+		td->td_md.md_tp = (register_t)tls_base;
 	else {
 		critical_enter();
-		*(void **)ARM_TP_ADDRESS = tls_base;
+		*(register_t *)ARM_TP_ADDRESS = (register_t)tls_base;
 		critical_exit();
 	}
 	return (0);
@@ -333,7 +385,7 @@ cpu_thread_exit(struct thread *td)
 }
 
 void
-cpu_thread_setup(struct thread *td)
+cpu_thread_alloc(struct thread *td)
 {
 	td->td_pcb = (struct pcb *)(td->td_kstack + td->td_kstack_pages * 
 	    PAGE_SIZE) - 1;
@@ -344,8 +396,13 @@ cpu_thread_setup(struct thread *td)
 	pmap_use_minicache(td->td_kstack, td->td_kstack_pages * PAGE_SIZE);
 #endif
 #endif  
-		
 }
+
+void
+cpu_thread_free(struct thread *td)
+{
+}
+
 void
 cpu_thread_clean(struct thread *td)
 {
@@ -405,10 +462,9 @@ void *
 arm_remap_nocache(void *addr, vm_size_t size)
 {
 	int i, j;
-	
+
 	size = round_page(size);
-	for (i = 0; i < MIN(ARM_NOCACHE_KVA_SIZE / (PAGE_SIZE * BITS_PER_INT),
-	    ARM_TP_ADDRESS); i++) {
+	for (i = 0; i < ARM_NOCACHE_KVA_SIZE / PAGE_SIZE; i++) {
 		if (!(arm_nocache_allocated[i / BITS_PER_INT] & (1 << (i % 
 		    BITS_PER_INT)))) {
 			for (j = i; j < i + (size / (PAGE_SIZE)); j++)
@@ -419,20 +475,25 @@ arm_remap_nocache(void *addr, vm_size_t size)
 				break;
 		}
 	}
-	if (i < MIN(ARM_NOCACHE_KVA_SIZE / (PAGE_SIZE * BITS_PER_INT), 
-	    ARM_TP_ADDRESS)) {
+	if (i < ARM_NOCACHE_KVA_SIZE / PAGE_SIZE) {
 		vm_offset_t tomap = arm_nocache_startaddr + i * PAGE_SIZE;
 		void *ret = (void *)tomap;
 		vm_paddr_t physaddr = vtophys((vm_offset_t)addr);
+		vm_offset_t vaddr = (vm_offset_t) addr;
 		
+		vaddr = vaddr & ~PAGE_MASK;
 		for (; tomap < (vm_offset_t)ret + size; tomap += PAGE_SIZE,
-		    physaddr += PAGE_SIZE, i++) {
+		    vaddr += PAGE_SIZE, physaddr += PAGE_SIZE, i++) {
+			cpu_idcache_wbinv_range(vaddr, PAGE_SIZE);
+			cpu_l2cache_wbinv_range(vaddr, PAGE_SIZE);
 			pmap_kenter_nocache(tomap, physaddr);
+			cpu_tlb_flushID_SE(vaddr);
 			arm_nocache_allocated[i / BITS_PER_INT] |= 1 << (i % 
 			    BITS_PER_INT);
 		}
 		return (ret);
 	}
+
 	return (NULL);
 }
 
@@ -444,9 +505,12 @@ arm_unmap_nocache(void *addr, vm_size_t size)
 
 	size = round_page(size);
 	i = (raddr - arm_nocache_startaddr) / (PAGE_SIZE);
-	for (; size > 0; size -= PAGE_SIZE, i++)
+	for (; size > 0; size -= PAGE_SIZE, i++) {
 		arm_nocache_allocated[i / BITS_PER_INT] &= ~(1 << (i % 
 		    BITS_PER_INT));
+		pmap_kremove(raddr);
+		raddr += PAGE_SIZE;
+	}
 }
 
 #ifdef ARM_USE_SMALL_ALLOC
@@ -480,7 +544,7 @@ arm_ptovirt(vm_paddr_t pa)
 	int i;
 	vm_offset_t addr = alloc_firstaddr;
 
-	KASSERT(alloc_firstaddr != 0, ("arm_ptovirt called to early ?"));
+	KASSERT(alloc_firstaddr != 0, ("arm_ptovirt called too early ?"));
 	for (i = 0; dump_avail[i + 1]; i += 2) {
 		if (pa >= dump_avail[i] && pa < dump_avail[i + 1])
 			break;

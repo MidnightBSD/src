@@ -25,12 +25,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libc/gen/_thread_init.c 90039 2002-02-01 00:57:29Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
+void _thread_init_stub(void);
+
 __weak_reference(_thread_init_stub, _thread_init);
-__weak_reference(_thread_autoinit_dummy_decl_stub, _thread_autoinit_dummy_decl);
+__weak_reference(_thread_autoinit_dummy_decl_stub,
+    _thread_autoinit_dummy_decl);
 
 int	_thread_autoinit_dummy_decl_stub = 0;
 

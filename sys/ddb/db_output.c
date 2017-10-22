@@ -33,7 +33,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/ddb/db_output.c 163190 2006-10-10 06:36:01Z bde $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_ddb.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,6 +48,13 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/ddb/db_output.c 163190 2006-10-10 06:36:01
 
 #include <ddb/ddb.h>
 #include <ddb/db_output.h>
+
+struct dbputchar_arg {
+	size_t	da_nbufr;
+	size_t	da_remain;
+	char	*da_pbufr;
+	char	*da_pnext;
+};
 
 /*
  *	Character output - tracks position in line.
@@ -73,6 +82,8 @@ static int	ddb_use_printf = 0;
 SYSCTL_INT(_debug, OID_AUTO, ddb_use_printf, CTLFLAG_RW, &ddb_use_printf, 0,
     "use printf for all ddb output");
 
+static void	db_putc(int c);
+static void	db_puts(const char *str);
 static void	db_putchar(int c, void *arg);
 static void	db_pager(void);
 
@@ -90,11 +101,13 @@ db_force_whitespace()
 	    if (next_tab <= db_output_position) {
 		while (last_print < next_tab) { /* DON'T send a tab!!! */
 			cnputc(' ');
+			db_capture_writech(' ');
 			last_print++;
 		}
 	    }
 	    else {
 		cnputc(' ');
+		db_capture_writech(' ');
 		last_print++;
 	    }
 	}
@@ -105,9 +118,34 @@ db_force_whitespace()
  * Output character.  Buffer whitespace.
  */
 static void
-db_putchar(c, arg)
-	int	c;		/* character to output */
-	void *	arg;
+db_putchar(int c, void *arg)
+{
+	struct dbputchar_arg *dap = arg;
+
+	if (dap->da_pbufr == NULL) {
+
+		 /* No bufferized output is provided. */
+		db_putc(c);
+	} else {
+
+		*dap->da_pnext++ = c;
+		dap->da_remain--;
+
+		/* Leave always the buffer 0 terminated. */
+		*dap->da_pnext = '\0';
+
+		/* Check if the buffer needs to be flushed. */
+		if (dap->da_remain < 2 || c == '\n') {
+			db_puts(dap->da_pbufr);
+			dap->da_pnext = dap->da_pbufr;
+			dap->da_remain = dap->da_nbufr;
+			*dap->da_pnext = '\0';
+		}
+	}
+}
+
+static void
+db_putc(int c)
 {
 
 	/*
@@ -137,12 +175,14 @@ db_putchar(c, arg)
 	     */
 	    db_force_whitespace();
 	    cnputc(c);
+	    db_capture_writech(c);
 	    db_output_position++;
 	    db_last_non_space = db_output_position;
 	}
 	else if (c == '\n') {
 	    /* Newline */
 	    cnputc(c);
+	    db_capture_writech(c);
 	    db_output_position = 0;
 	    db_last_non_space = 0;
 	    db_check_interrupt();
@@ -155,6 +195,7 @@ db_putchar(c, arg)
 	else if (c == '\r') {
 	    /* Return */
 	    cnputc(c);
+	    db_capture_writech(c);
 	    db_output_position = 0;
 	    db_last_non_space = 0;
 	    db_check_interrupt();
@@ -170,8 +211,18 @@ db_putchar(c, arg)
 	else if (c == '\007') {
 	    /* bell */
 	    cnputc(c);
+	    /* No need to beep in a log: db_capture_writech(c); */
 	}
 	/* other characters are assumed non-printing */
+}
+
+static void
+db_puts(const char *str)
+{
+	int i;
+
+	for (i = 0; str[i] != '\0'; i++)
+		db_putc(str[i]);
 }
 
 /*
@@ -206,6 +257,7 @@ db_pager(void)
 {
 	int c, done;
 
+	db_capture_enterpager();
 	db_printf("--More--\r");
 	done = 0;
 	while (!done) {
@@ -249,6 +301,7 @@ db_pager(void)
 	db_force_whitespace();
 	db_printf("\r");
 	db_newlines = 0;
+	db_capture_exitpager();
 }
 
 /*
@@ -263,31 +316,46 @@ db_print_position()
 /*
  * Printing
  */
-void
-#if __STDC__
+int
 db_printf(const char *fmt, ...)
-#else
-db_printf(fmt)
-	const char *fmt;
-#endif
 {
+#ifdef DDB_BUFR_SIZE
+	char bufr[DDB_BUFR_SIZE];
+#endif
+	struct dbputchar_arg dca;
 	va_list	listp;
+	int retval;
+
+#ifdef DDB_BUFR_SIZE
+	dca.da_pbufr = bufr;
+	dca.da_pnext = dca.da_pbufr;
+	dca.da_nbufr = sizeof(bufr);
+	dca.da_remain = sizeof(bufr);
+	*dca.da_pnext = '\0';
+#else
+	dca.da_pbufr = NULL;
+#endif
 
 	va_start(listp, fmt);
-	kvprintf (fmt, db_putchar, NULL, db_radix, listp);
+	retval = kvprintf (fmt, db_putchar, &dca, db_radix, listp);
 	va_end(listp);
+
+#ifdef DDB_BUFR_SIZE
+	if (*dca.da_pbufr != '\0')
+		db_puts(dca.da_pbufr);
+#endif
+	return (retval);
 }
 
 int db_indent;
 
 void
-#if __STDC__
 db_iprintf(const char *fmt,...)
-#else
-db_iprintf(fmt)
-	const char *fmt;
-#endif
 {
+#ifdef DDB_BUFR_SIZE
+	char bufr[DDB_BUFR_SIZE];
+#endif
+	struct dbputchar_arg dca;
 	register int i;
 	va_list listp;
 
@@ -295,9 +363,25 @@ db_iprintf(fmt)
 		db_printf("\t");
 	while (--i >= 0)
 		db_printf(" ");
+
+#ifdef DDB_BUFR_SIZE
+	dca.da_pbufr = bufr;
+	dca.da_pnext = dca.da_pbufr;
+	dca.da_nbufr = sizeof(bufr);
+	dca.da_remain = sizeof(bufr);
+	*dca.da_pnext = '\0';
+#else
+	dca.da_pbufr = NULL;
+#endif
+
 	va_start(listp, fmt);
-	kvprintf (fmt, db_putchar, NULL, db_radix, listp);
+	kvprintf (fmt, db_putchar, &dca, db_radix, listp);
 	va_end(listp);
+
+#ifdef DDB_BUFR_SIZE
+	if (*dca.da_pbufr != '\0')
+		db_puts(dca.da_pbufr);
+#endif
 }
 
 /*

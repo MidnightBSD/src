@@ -34,7 +34,7 @@
  *
  * From:
  *	$Id: procfs_regs.c,v 3.2 1993/12/15 09:40:17 jsp Exp $
- * $FreeBSD: release/7.0.0/sys/fs/procfs/procfs_fpregs.c 168759 2007-04-15 13:29:36Z des $
+ * $FreeBSD$
  */
 
 #include "opt_compat.h"
@@ -45,6 +45,7 @@
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/ptrace.h>
+#include <sys/sysent.h>
 #include <sys/uio.h>
 
 #include <machine/reg.h>
@@ -52,12 +53,10 @@
 #include <fs/pseudofs/pseudofs.h>
 #include <fs/procfs/procfs.h>
 
-#ifdef COMPAT_IA32
+#ifdef COMPAT_FREEBSD32
 #include <sys/procfs.h>
 #include <machine/fpu.h>
-#include <compat/ia32/ia32_reg.h>
 
-extern struct sysentvec ia32_freebsd_sysvec;
 /*
  * PROC(write, fpregs, td2, &r) becomes
  * proc_write_fpregs(td2, &r)   or
@@ -84,7 +83,7 @@ procfs_doprocfpregs(PFS_FILL_ARGS)
 	int error;
 	struct fpreg r;
 	struct thread *td2;
-#ifdef COMPAT_IA32
+#ifdef COMPAT_FREEBSD32
 	struct fpreg32 r32;
 	int wrap32 = 0;
 #endif
@@ -98,12 +97,16 @@ procfs_doprocfpregs(PFS_FILL_ARGS)
 		PROC_UNLOCK(p);
 		return (EPERM);
 	}
+	if (!P_SHOULDSTOP(p)) {
+		PROC_UNLOCK(p);
+		return (EBUSY);
+	}
 
 	/* XXXKSE: */
 	td2 = FIRST_THREAD_IN_PROC(p);
-#ifdef COMPAT_IA32
-	if (td->td_proc->p_sysent == &ia32_freebsd_sysvec) {
-		if (td2->td_proc->p_sysent != &ia32_freebsd_sysvec) {
+#ifdef COMPAT_FREEBSD32
+	if (SV_CURPROC_FLAG(SV_ILP32)) {
+		if (SV_PROC_FLAG(td2->td_proc, SV_ILP32) == 0) {
 			PROC_UNLOCK(p);
 			return (EINVAL);
 		}

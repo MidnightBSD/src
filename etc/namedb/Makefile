@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/etc/namedb/Makefile 170913 2007-06-18 05:44:38Z dougb $
+# $FreeBSD$
 
 SUBDIR=	master
 

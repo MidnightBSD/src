@@ -1,4 +1,4 @@
-/* $Header: /p/tcsh/cvsroot/tcsh/tc.sig.h,v 3.32 2006/03/11 15:32:00 mitr Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/tc.sig.h,v 3.34 2010/11/29 15:28:58 christos Exp $ */
 /*
  * tc.sig.h: Signal handling
  *
@@ -34,7 +34,7 @@
 #ifndef _h_tc_sig
 #define _h_tc_sig
 
-#if (SYSVREL > 0) || defined(BSD4_4) || defined(_MINIX) || defined(DGUX) || defined(WINNT_NATIVE)
+#if (SYSVREL > 0) || defined(BSD4_4) || defined(_MINIX) || defined(DGUX) || defined(WINNT_NATIVE) || defined(__QNXNTO__)
 # include <signal.h>
 # ifndef SIGCHLD
 #  define SIGCHLD SIGCLD
@@ -159,7 +159,7 @@ extern int phup_disabled;
 extern int pintr_disabled;
 
 extern void sigset_interrupting(int, void (*) (int));
-extern void handle_pending_signals(void);
+extern int handle_pending_signals(void);
 
 extern void queue_alrmcatch(int);
 extern void queue_pchild(int);

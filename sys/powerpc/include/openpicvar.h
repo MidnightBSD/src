@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/powerpc/include/openpicvar.h 171805 2007-08-11 19:25:32Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef	_POWERPC_OPENPICVAR_H_
@@ -35,10 +35,13 @@
 struct openpic_softc {
 	device_t	sc_dev;
 	struct resource	*sc_memr;
+	struct resource	*sc_intr;
 	bus_space_tag_t sc_bt;
 	bus_space_handle_t sc_bh;
 	char		*sc_version;
 	int		sc_rid;
+	int		sc_irq;
+	void		*sc_icookie;
 	u_int		sc_ncpu;
 	u_int		sc_nirq;
 	int		sc_psim;
@@ -49,14 +52,17 @@ extern devclass_t openpic_devclass;
 /*
  * Bus-independent attach i/f
  */
-int	openpic_attach(device_t);
+int	openpic_common_attach(device_t, uint32_t);
 
 /*
  * PIC interface.
  */
+void	openpic_bind(device_t dev, u_int irq, cpuset_t cpumask);
+void	openpic_config(device_t, u_int, enum intr_trigger, enum intr_polarity);
 void	openpic_dispatch(device_t, struct trapframe *);
 void	openpic_enable(device_t, u_int, u_int);
 void	openpic_eoi(device_t, u_int);
+void	openpic_ipi(device_t, u_int);
 void	openpic_mask(device_t, u_int);
 void	openpic_unmask(device_t, u_int);
 

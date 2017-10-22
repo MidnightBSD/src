@@ -26,12 +26,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/machdep.c 176302 2008-02-14 22:51:52Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
 #include "opt_kstack_pages.h"
-#include "opt_msgbuf.h"
+#include "opt_sched.h"
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -58,6 +58,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/machdep.c 176302 2008-02-14 22:5
 #include <sys/sched.h>
 #include <sys/signalvar.h>
 #include <sys/syscall.h>
+#include <sys/syscallsubr.h>
 #include <sys/sysctl.h>
 #include <sys/sysproto.h>
 #include <sys/ucontext.h>
@@ -79,14 +80,13 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/machdep.c 176302 2008-02-14 22:5
 #include <vm/vm_pager.h>
 
 #include <machine/bootinfo.h>
-#include <machine/clock.h>
 #include <machine/cpu.h>
 #include <machine/efi.h>
 #include <machine/elf.h>
 #include <machine/fpu.h>
+#include <machine/intr.h>
 #include <machine/mca.h>
 #include <machine/md_var.h>
-#include <machine/mutex.h>
 #include <machine/pal.h>
 #include <machine/pcb.h>
 #include <machine/reg.h>
@@ -98,22 +98,26 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/machdep.c 176302 2008-02-14 22:5
 #include <machine/unwind.h>
 #include <machine/vmparam.h>
 
-#include <i386/include/specialreg.h>
+SYSCTL_NODE(_hw, OID_AUTO, freq, CTLFLAG_RD, 0, "");
+SYSCTL_NODE(_machdep, OID_AUTO, cpu, CTLFLAG_RD, 0, "");
 
-/* XXX fc.i kluge (quick fix) */
-extern int ia64_icache_sync_kluge;
+static u_int bus_freq;
+SYSCTL_UINT(_hw_freq, OID_AUTO, bus, CTLFLAG_RD, &bus_freq, 0,
+    "Bus clock frequency");
 
-u_int64_t processor_frequency;
-u_int64_t bus_frequency;
-u_int64_t itc_frequency;
+static u_int cpu_freq;
+SYSCTL_UINT(_hw_freq, OID_AUTO, cpu, CTLFLAG_RD, &cpu_freq, 0,
+    "CPU clock frequency");
+
+static u_int itc_freq;
+SYSCTL_UINT(_hw_freq, OID_AUTO, itc, CTLFLAG_RD, &itc_freq, 0,
+    "ITC frequency");
+
 int cold = 1;
 
-u_int64_t pa_bootinfo;
-struct bootinfo bootinfo;
+struct bootinfo *bootinfo;
 
 struct pcpu pcpu0;
-extern char kstack[]; 
-vm_offset_t proc0kstack;
 
 extern u_int64_t kernel_text[], _end[];
 
@@ -123,8 +127,15 @@ extern u_int64_t epc_sigtramp[];
 
 struct fpswa_iface *fpswa_iface;
 
-u_int64_t ia64_pal_base;
-u_int64_t ia64_port_base;
+vm_size_t ia64_pal_size;
+vm_paddr_t ia64_pal_base;
+vm_offset_t ia64_port_base;
+
+u_int64_t ia64_lapic_addr = PAL_PIB_DEFAULT_ADDR;
+
+struct ia64_pib *ia64_pib;
+
+static int ia64_sync_icache_needed;
 
 char machine[] = MACHINE;
 SYSCTL_STRING(_hw, HW_MACHINE, machine, CTLFLAG_RD, machine, 0, "");
@@ -141,10 +152,11 @@ SYSCTL_STRING(_hw, OID_AUTO, family, CTLFLAG_RD, cpu_family, 0,
 extern vm_offset_t ksym_start, ksym_end;
 #endif
 
-static void cpu_startup(void *);
-SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL)
 
-struct msgbuf *msgbufp=0;
+struct msgbuf *msgbufp = NULL;
+
+/* Other subsystems (e.g., ACPI) can hook this later. */
+void (*cpu_idle_hook)(void) = NULL;
 
 long Maxmem = 0;
 long realmem = 0;
@@ -156,20 +168,10 @@ vm_paddr_t phys_avail[PHYSMAP_SIZE + 2];
 /* must be 2 less so 0 0 can signal end of chunks */
 #define PHYS_AVAIL_ARRAY_END ((sizeof(phys_avail) / sizeof(vm_offset_t)) - 2)
 
-void mi_startup(void);		/* XXX should be in a MI header */
-
 struct kva_md_info kmi;
 
 #define	Mhz	1000000L
 #define	Ghz	(1000L*Mhz)
-
-void setPQL2(int *const size, int *const ways);
-
-void
-setPQL2(int *const size, int *const ways)
-{
-	return;
-}
 
 static void
 identifycpu(void)
@@ -212,9 +214,7 @@ identifycpu(void)
 			 * (i.e. the clock frequency) to identify those.
 			 * Allow for roughly 1% error margin.
 			 */
-			tmp = processor_frequency >> 7;
-			if ((processor_frequency - tmp) < 1*Ghz &&
-			    (processor_frequency + tmp) >= 1*Ghz)
+			if (cpu_freq > 990 && cpu_freq < 1010)
 				model_name = "Deerfield";
 			else
 				model_name = "Madison";
@@ -225,13 +225,15 @@ identifycpu(void)
 		}
 		break;
 	case 0x20:
-		/* XXX fc.i kluge (quick fix) */
-		ia64_icache_sync_kluge = 1;
+		ia64_sync_icache_needed = 1;
 
 		family_name = "Itanium 2";
 		switch (model) {
 		case 0x00:
 			model_name = "Montecito";
+			break;
+		case 0x01:
+			model_name = "Montvale";
 			break;
 		}
 		break;
@@ -242,11 +244,8 @@ identifycpu(void)
 	features = ia64_get_cpuid(4);
 
 	printf("CPU: %s (", model_name);
-	if (processor_frequency) {
-		printf("%ld.%02ld-Mhz ",
-		    (processor_frequency + 4999) / Mhz,
-		    ((processor_frequency + 4999) / (Mhz/100)) % 100);
-	}
+	if (cpu_freq)
+		printf("%u MHz ", cpu_freq);
 	printf("%s)\n", family_name);
 	printf("  Origin = \"%s\"  Revision = %d\n", vendor, revision);
 	printf("  Features = 0x%b\n", (u_int32_t) features,
@@ -257,16 +256,17 @@ identifycpu(void)
 }
 
 static void
-cpu_startup(dummy)
-	void *dummy;
+cpu_startup(void *dummy)
 {
+	char nodename[16];
+	struct pcpu *pc;
+	struct pcpu_stats *pcs;
 
 	/*
 	 * Good {morning,afternoon,evening,night}.
 	 */
 	identifycpu();
 
-	/* startrtclock(); */
 #ifdef PERFMON
 	perfmon_init();
 #endif
@@ -312,14 +312,90 @@ cpu_startup(dummy)
 	 * information.
 	 */
 	ia64_probe_sapics();
+	ia64_pib = pmap_mapdev(ia64_lapic_addr, sizeof(*ia64_pib));
+
 	ia64_mca_init();
+
+	/*
+	 * Create sysctl tree for per-CPU information.
+	 */
+	STAILQ_FOREACH(pc, &cpuhead, pc_allcpu) {
+		snprintf(nodename, sizeof(nodename), "%u", pc->pc_cpuid);
+		sysctl_ctx_init(&pc->pc_md.sysctl_ctx);
+		pc->pc_md.sysctl_tree = SYSCTL_ADD_NODE(&pc->pc_md.sysctl_ctx,
+		    SYSCTL_STATIC_CHILDREN(_machdep_cpu), OID_AUTO, nodename,
+		    CTLFLAG_RD, NULL, "");
+		if (pc->pc_md.sysctl_tree == NULL)
+			continue;
+
+		pcs = &pc->pc_md.stats;
+
+		SYSCTL_ADD_ULONG(&pc->pc_md.sysctl_ctx,
+		    SYSCTL_CHILDREN(pc->pc_md.sysctl_tree), OID_AUTO,
+		    "nasts", CTLFLAG_RD, &pcs->pcs_nasts,
+		    "Number of IPI_AST interrupts");
+
+		SYSCTL_ADD_ULONG(&pc->pc_md.sysctl_ctx,
+		    SYSCTL_CHILDREN(pc->pc_md.sysctl_tree), OID_AUTO,
+		    "nclks", CTLFLAG_RD, &pcs->pcs_nclks,
+		    "Number of clock interrupts");
+
+		SYSCTL_ADD_ULONG(&pc->pc_md.sysctl_ctx,
+		    SYSCTL_CHILDREN(pc->pc_md.sysctl_tree), OID_AUTO,
+		    "nextints", CTLFLAG_RD, &pcs->pcs_nextints,
+		    "Number of ExtINT interrupts");
+
+		SYSCTL_ADD_ULONG(&pc->pc_md.sysctl_ctx,
+		    SYSCTL_CHILDREN(pc->pc_md.sysctl_tree), OID_AUTO,
+		    "nhardclocks", CTLFLAG_RD, &pcs->pcs_nhardclocks,
+		    "Number of IPI_HARDCLOCK interrupts");
+
+		SYSCTL_ADD_ULONG(&pc->pc_md.sysctl_ctx,
+		    SYSCTL_CHILDREN(pc->pc_md.sysctl_tree), OID_AUTO,
+		    "nhighfps", CTLFLAG_RD, &pcs->pcs_nhighfps,
+		    "Number of IPI_HIGH_FP interrupts");
+
+		SYSCTL_ADD_ULONG(&pc->pc_md.sysctl_ctx,
+		    SYSCTL_CHILDREN(pc->pc_md.sysctl_tree), OID_AUTO,
+		    "nhwints", CTLFLAG_RD, &pcs->pcs_nhwints,
+		    "Number of hardware (device) interrupts");
+
+		SYSCTL_ADD_ULONG(&pc->pc_md.sysctl_ctx,
+		    SYSCTL_CHILDREN(pc->pc_md.sysctl_tree), OID_AUTO,
+		    "npreempts", CTLFLAG_RD, &pcs->pcs_npreempts,
+		    "Number of IPI_PREEMPT interrupts");
+
+		SYSCTL_ADD_ULONG(&pc->pc_md.sysctl_ctx,
+		    SYSCTL_CHILDREN(pc->pc_md.sysctl_tree), OID_AUTO,
+		    "nrdvs", CTLFLAG_RD, &pcs->pcs_nrdvs,
+		    "Number of IPI_RENDEZVOUS interrupts");
+
+		SYSCTL_ADD_ULONG(&pc->pc_md.sysctl_ctx,
+		    SYSCTL_CHILDREN(pc->pc_md.sysctl_tree), OID_AUTO,
+		    "nstops", CTLFLAG_RD, &pcs->pcs_nstops,
+		    "Number of IPI_STOP interrupts");
+
+		SYSCTL_ADD_ULONG(&pc->pc_md.sysctl_ctx,
+		    SYSCTL_CHILDREN(pc->pc_md.sysctl_tree), OID_AUTO,
+		    "nstrays", CTLFLAG_RD, &pcs->pcs_nstrays,
+		    "Number of stray interrupts");
+	}
 }
+SYSINIT(cpu_startup, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL);
 
 void
-cpu_boot(int howto)
+cpu_flush_dcache(void *ptr, size_t len)
 {
+	vm_offset_t lim, va;
 
-	efi_reset_system();
+	va = (uintptr_t)ptr & ~31;
+	lim = (uintptr_t)ptr + len;
+	while (va < lim) {
+		ia64_fc(va);
+		va += 32;
+	}
+
+	ia64_srlz_d();
 }
 
 /* Get current clock frequency for the given cpu id. */
@@ -329,7 +405,7 @@ cpu_est_clockrate(int cpu_id, uint64_t *rate)
 
 	if (pcpu_find(cpu_id) == NULL || rate == NULL)
 		return (EINVAL);
-	*rate = processor_frequency;
+	*rate = (u_long)cpu_freq * 1000000ul;
 	return (0);
 }
 
@@ -340,28 +416,47 @@ cpu_halt()
 	efi_reset_system();
 }
 
-static void
-cpu_idle_default(void)
-{
-	struct ia64_pal_result res;
-
-	res = ia64_call_pal_static(PAL_HALT_LIGHT, 0, 0, 0);
-}
-
 void
-cpu_idle()
+cpu_idle(int busy)
 {
-	(*cpu_idle_hook)();
+	register_t ie;
+
+	if (!busy) {
+		critical_enter();
+		cpu_idleclock();
+	}
+
+	ie = intr_disable();
+	KASSERT(ie != 0, ("%s called with interrupts disabled\n", __func__));
+
+	if (sched_runnable())
+		ia64_enable_intr();
+	else if (cpu_idle_hook != NULL) {
+		(*cpu_idle_hook)();
+		/* The hook must enable interrupts! */
+	} else {
+		ia64_call_pal_static(PAL_HALT_LIGHT, 0, 0, 0);
+		ia64_enable_intr();
+	}
+
+	if (!busy) {
+		cpu_activeclock();
+		critical_exit();
+	}
 }
 
-/* Other subsystems (e.g., ACPI) can hook this later. */
-void (*cpu_idle_hook)(void) = cpu_idle_default;
+int
+cpu_idle_wakeup(int cpu)
+{
+
+	return (0);
+}
 
 void
 cpu_reset()
 {
 
-	cpu_boot(0);
+	efi_reset_system();
 }
 
 void
@@ -370,7 +465,7 @@ cpu_switch(struct thread *old, struct thread *new, struct mtx *mtx)
 	struct pcb *oldpcb, *newpcb;
 
 	oldpcb = old->td_pcb;
-#ifdef COMPAT_IA32
+#ifdef COMPAT_FREEBSD32
 	ia32_savectx(oldpcb);
 #endif
 	if (PCPU_GET(fpcurthread) == old)
@@ -379,10 +474,20 @@ cpu_switch(struct thread *old, struct thread *new, struct mtx *mtx)
 		newpcb = new->td_pcb;
 		oldpcb->pcb_current_pmap =
 		    pmap_switch(newpcb->pcb_current_pmap);
+
+		atomic_store_rel_ptr(&old->td_lock, mtx);
+
+#if defined(SCHED_ULE) && defined(SMP)
+		while (atomic_load_acq_ptr(&new->td_lock) == &blocked_lock)
+			cpu_spinwait();
+#endif
+
 		PCPU_SET(curthread, new);
-#ifdef COMPAT_IA32
+
+#ifdef COMPAT_FREEBSD32
 		ia32_restorectx(newpcb);
 #endif
+
 		if (PCPU_GET(fpcurthread) == new)
 			new->td_frame->tf_special.psr &= ~IA64_PSR_DFH;
 		restorectx(newpcb);
@@ -399,10 +504,18 @@ cpu_throw(struct thread *old __unused, struct thread *new)
 
 	newpcb = new->td_pcb;
 	(void)pmap_switch(newpcb->pcb_current_pmap);
+
+#if defined(SCHED_ULE) && defined(SMP)
+	while (atomic_load_acq_ptr(&new->td_lock) == &blocked_lock)
+		cpu_spinwait();
+#endif
+
 	PCPU_SET(curthread, new);
-#ifdef COMPAT_IA32
+
+#ifdef COMPAT_FREEBSD32
 	ia32_restorectx(newpcb);
 #endif
+
 	restorectx(newpcb);
 	/* We should not get here. */
 	panic("cpu_throw: restorectx() returned");
@@ -413,18 +526,26 @@ void
 cpu_pcpu_init(struct pcpu *pcpu, int cpuid, size_t size)
 {
 
-	pcpu->pc_acpi_id = cpuid;
+	/*
+	 * Set pc_acpi_id to "uninitialized".
+	 * See sys/dev/acpica/acpi_cpu.c
+	 */
+	pcpu->pc_acpi_id = 0xffffffff;
 }
 
 void
 spinlock_enter(void)
 {
 	struct thread *td;
+	int intr;
 
 	td = curthread;
-	if (td->td_md.md_spinlock_count == 0)
-		td->td_md.md_saved_intr = intr_disable();
-	td->td_md.md_spinlock_count++;
+	if (td->td_md.md_spinlock_count == 0) {
+		intr = intr_disable();
+		td->td_md.md_spinlock_count = 1;
+		td->td_md.md_saved_intr = intr;
+	} else
+		td->td_md.md_spinlock_count++;
 	critical_enter();
 }
 
@@ -432,12 +553,14 @@ void
 spinlock_exit(void)
 {
 	struct thread *td;
+	int intr;
 
 	td = curthread;
 	critical_exit();
+	intr = td->td_md.md_saved_intr;
 	td->td_md.md_spinlock_count--;
 	if (td->td_md.md_spinlock_count == 0)
-		intr_restore(td->td_md.md_saved_intr);
+		intr_restore(intr);
 }
 
 void
@@ -451,15 +574,15 @@ map_vhpt(uintptr_t vhpt)
 	pte |= vhpt & PTE_PPN_MASK;
 
 	__asm __volatile("ptr.d %0,%1" :: "r"(vhpt),
-	    "r"(IA64_ID_PAGE_SHIFT<<2));
+	    "r"(pmap_vhpt_log2size << 2));
 
 	__asm __volatile("mov   %0=psr" : "=r"(psr));
 	__asm __volatile("rsm   psr.ic|psr.i");
 	ia64_srlz_i();
 	ia64_set_ifa(vhpt);
-	ia64_set_itir(IA64_ID_PAGE_SHIFT << 2);
+	ia64_set_itir(pmap_vhpt_log2size << 2);
 	ia64_srlz_d();
-	__asm __volatile("itr.d dtr[%0]=%1" :: "r"(2), "r"(pte));
+	__asm __volatile("itr.d dtr[%0]=%1" :: "r"(3), "r"(pte));
 	__asm __volatile("mov   psr.l=%0" :: "r" (psr));
 	ia64_srlz_i();
 }
@@ -468,25 +591,36 @@ void
 map_pal_code(void)
 {
 	pt_entry_t pte;
+	vm_offset_t va;
+	vm_size_t sz;
 	uint64_t psr;
+	u_int shft;
 
-	if (ia64_pal_base == 0)
+	if (ia64_pal_size == 0)
 		return;
+
+	va = IA64_PHYS_TO_RR7(ia64_pal_base);
+
+	sz = ia64_pal_size;
+	shft = 0;
+	while (sz > 1) {
+		shft++;
+		sz >>= 1;
+	}
 
 	pte = PTE_PRESENT | PTE_MA_WB | PTE_ACCESSED | PTE_DIRTY |
 	    PTE_PL_KERN | PTE_AR_RWX;
 	pte |= ia64_pal_base & PTE_PPN_MASK;
 
-	__asm __volatile("ptr.d %0,%1; ptr.i %0,%1" ::
-	    "r"(IA64_PHYS_TO_RR7(ia64_pal_base)), "r"(IA64_ID_PAGE_SHIFT<<2));
+	__asm __volatile("ptr.d %0,%1; ptr.i %0,%1" :: "r"(va), "r"(shft<<2));
 
 	__asm __volatile("mov	%0=psr" : "=r"(psr));
 	__asm __volatile("rsm	psr.ic|psr.i");
 	ia64_srlz_i();
-	ia64_set_ifa(IA64_PHYS_TO_RR7(ia64_pal_base));
-	ia64_set_itir(IA64_ID_PAGE_SHIFT << 2);
+	ia64_set_ifa(va);
+	ia64_set_itir(shft << 2);
 	ia64_srlz_d();
-	__asm __volatile("itr.d	dtr[%0]=%1" :: "r"(1), "r"(pte));
+	__asm __volatile("itr.d	dtr[%0]=%1" :: "r"(4), "r"(pte));
 	ia64_srlz_d();
 	__asm __volatile("itr.i	itr[%0]=%1" :: "r"(1), "r"(pte));
 	__asm __volatile("mov	psr.l=%0" :: "r" (psr));
@@ -501,25 +635,34 @@ map_gateway_page(void)
 
 	pte = PTE_PRESENT | PTE_MA_WB | PTE_ACCESSED | PTE_DIRTY |
 	    PTE_PL_KERN | PTE_AR_X_RX;
-	pte |= (uint64_t)ia64_gateway_page & PTE_PPN_MASK;
+	pte |= ia64_tpa((uint64_t)ia64_gateway_page) & PTE_PPN_MASK;
 
 	__asm __volatile("ptr.d %0,%1; ptr.i %0,%1" ::
-	    "r"(VM_MAX_ADDRESS), "r"(PAGE_SHIFT << 2));
+	    "r"(VM_MAXUSER_ADDRESS), "r"(PAGE_SHIFT << 2));
 
 	__asm __volatile("mov	%0=psr" : "=r"(psr));
 	__asm __volatile("rsm	psr.ic|psr.i");
 	ia64_srlz_i();
-	ia64_set_ifa(VM_MAX_ADDRESS);
+	ia64_set_ifa(VM_MAXUSER_ADDRESS);
 	ia64_set_itir(PAGE_SHIFT << 2);
 	ia64_srlz_d();
-	__asm __volatile("itr.d	dtr[%0]=%1" :: "r"(3), "r"(pte));
+	__asm __volatile("itr.d	dtr[%0]=%1" :: "r"(5), "r"(pte));
 	ia64_srlz_d();
-	__asm __volatile("itr.i	itr[%0]=%1" :: "r"(3), "r"(pte));
+	__asm __volatile("itr.i	itr[%0]=%1" :: "r"(2), "r"(pte));
 	__asm __volatile("mov	psr.l=%0" :: "r" (psr));
 	ia64_srlz_i();
 
 	/* Expose the mapping to userland in ar.k5 */
-	ia64_set_k5(VM_MAX_ADDRESS);
+	ia64_set_k5(VM_MAXUSER_ADDRESS);
+}
+
+static u_int
+freq_ratio(u_long base, u_long ratio)
+{
+	u_long f;
+
+	f = (base * (ratio >> 32)) / (ratio & 0xfffffffful);
+	return ((f + 500000) / 1000000);
 }
 
 static void
@@ -527,9 +670,12 @@ calculate_frequencies(void)
 {
 	struct ia64_sal_result sal;
 	struct ia64_pal_result pal;
+	register_t ie;
 
+	ie = intr_disable();
 	sal = ia64_sal_entry(SAL_FREQ_BASE, 0, 0, 0, 0, 0, 0, 0);
 	pal = ia64_call_pal_static(PAL_FREQ_RATIOS, 0, 0, 0);
+	intr_restore(ie);
 
 	if (sal.sal_status == 0 && pal.pal_status == 0) {
 		if (bootverbose) {
@@ -544,21 +690,16 @@ calculate_frequencies(void)
 			       pal.pal_result[2] >> 32,
 			       pal.pal_result[2] & ((1L << 32) - 1));
 		}
-		processor_frequency =
-			sal.sal_result[0] * (pal.pal_result[0] >> 32)
-			/ (pal.pal_result[0] & ((1L << 32) - 1));
-		bus_frequency =
-			sal.sal_result[0] * (pal.pal_result[1] >> 32)
-			/ (pal.pal_result[1] & ((1L << 32) - 1));
-		itc_frequency =
-			sal.sal_result[0] * (pal.pal_result[2] >> 32)
-			/ (pal.pal_result[2] & ((1L << 32) - 1));
+		cpu_freq = freq_ratio(sal.sal_result[0], pal.pal_result[0]);
+		bus_freq = freq_ratio(sal.sal_result[0], pal.pal_result[1]);
+		itc_freq = freq_ratio(sal.sal_result[0], pal.pal_result[2]);
 	}
 }
 
-void
+struct ia64_init_return
 ia64_init(void)
 {
+	struct ia64_init_return ret;
 	int phys_avail_cnt;
 	vm_offset_t kernstart, kernend;
 	vm_offset_t kernstartpfn, kernendpfn, pfn0, pfn1;
@@ -580,59 +721,76 @@ ia64_init(void)
 	 */
 
 	/*
-	 * pa_bootinfo is the physical address of the bootinfo block as
-	 * passed to us by the loader and set in locore.s.
-	 */
-	bootinfo = *(struct bootinfo *)(IA64_PHYS_TO_RR7(pa_bootinfo));
-
-	if (bootinfo.bi_magic != BOOTINFO_MAGIC || bootinfo.bi_version != 1) {
-		bzero(&bootinfo, sizeof(bootinfo));
-		bootinfo.bi_kernend = (vm_offset_t) round_page(_end);
-	}
-
-	/*
 	 * Look for the I/O ports first - we need them for console
 	 * probing.
 	 */
 	for (md = efi_md_first(); md != NULL; md = efi_md_next(md)) {
 		switch (md->md_type) {
 		case EFI_MD_TYPE_IOPORT:
-			ia64_port_base = IA64_PHYS_TO_RR6(md->md_phys);
+			ia64_port_base = (uintptr_t)pmap_mapdev(md->md_phys,
+			    md->md_pages * EFI_PAGE_SIZE);
 			break;
 		case EFI_MD_TYPE_PALCODE:
+			ia64_pal_size = md->md_pages * EFI_PAGE_SIZE;
 			ia64_pal_base = md->md_phys;
 			break;
 		}
 	}
 
 	metadata_missing = 0;
-	if (bootinfo.bi_modulep)
-		preload_metadata = (caddr_t)bootinfo.bi_modulep;
+	if (bootinfo->bi_modulep)
+		preload_metadata = (caddr_t)bootinfo->bi_modulep;
 	else
 		metadata_missing = 1;
 
-	if (envmode == 0 && bootinfo.bi_envp)
-		kern_envp = (caddr_t)bootinfo.bi_envp;
+	if (envmode == 0 && bootinfo->bi_envp)
+		kern_envp = (caddr_t)bootinfo->bi_envp;
 	else
 		kern_envp = static_env;
 
 	/*
 	 * Look at arguments passed to us and compute boothowto.
 	 */
-	boothowto = bootinfo.bi_boothowto;
-
-	/*
-	 * Catch case of boot_verbose set in environment.
-	 */
-	if ((p = getenv("boot_verbose")) != NULL) {
-		if (strcmp(p, "yes") == 0 || strcmp(p, "YES") == 0) {
-			boothowto |= RB_VERBOSE;
-		}
-		freeenv(p);
-	}
+	boothowto = bootinfo->bi_boothowto;
 
 	if (boothowto & RB_VERBOSE)
 		bootverbose = 1;
+
+	/*
+	 * Find the beginning and end of the kernel.
+	 */
+	kernstart = trunc_page(kernel_text);
+#ifdef DDB
+	ksym_start = bootinfo->bi_symtab;
+	ksym_end = bootinfo->bi_esymtab;
+	kernend = (vm_offset_t)round_page(ksym_end);
+#else
+	kernend = (vm_offset_t)round_page(_end);
+#endif
+	/* But if the bootstrap tells us otherwise, believe it! */
+	if (bootinfo->bi_kernend)
+		kernend = round_page(bootinfo->bi_kernend);
+
+	/*
+	 * Region 6 is direct mapped UC and region 7 is direct mapped
+	 * WC. The details of this is controlled by the Alt {I,D}TLB
+	 * handlers. Here we just make sure that they have the largest
+	 * possible page size to minimise TLB usage.
+	 */
+	ia64_set_rr(IA64_RR_BASE(6), (6 << 8) | (PAGE_SHIFT << 2));
+	ia64_set_rr(IA64_RR_BASE(7), (7 << 8) | (PAGE_SHIFT << 2));
+	ia64_srlz_d();
+
+	/*
+	 * Wire things up so we can call the firmware.
+	 */
+	map_pal_code();
+	efi_boot_minimal(bootinfo->bi_systab);
+	ia64_xiv_init();
+	ia64_sal_init();
+	calculate_frequencies();
+
+	set_cputicker(ia64_get_itc, (u_long)itc_freq * 1000000, 0);
 
 	/*
 	 * Setup the PCPU data for the bootstrap processor. It is needed
@@ -642,6 +800,9 @@ ia64_init(void)
 	pcpup = &pcpu0;
 	ia64_set_k4((u_int64_t)pcpup);
 	pcpu_init(pcpup, 0, sizeof(pcpu0));
+	dpcpu_init((void *)kernend, 0);
+	PCPU_SET(md.lid, ia64_get_lid());
+	kernend += DPCPU_SIZE;
 	PCPU_SET(curthread, &thread0);
 
 	/*
@@ -651,53 +812,19 @@ ia64_init(void)
 
 	/* OUTPUT NOW ALLOWED */
 
-	if (ia64_pal_base != 0) {
-		ia64_pal_base &= ~IA64_ID_PAGE_MASK;
-		/*
-		 * We use a TR to map the first 256M of memory - this might
-		 * cover the palcode too.
-		 */
-		if (ia64_pal_base == 0)
-			printf("PAL code mapped by the kernel's TR\n");
-	} else
-		printf("PAL code not found\n");
-
-	/*
-	 * Wire things up so we can call the firmware.
-	 */
-	map_pal_code();
-	efi_boot_minimal(bootinfo.bi_systab);
-	ia64_sal_init();
-	calculate_frequencies();
-
-	/*
-	 * Find the beginning and end of the kernel.
-	 */
-	kernstart = trunc_page(kernel_text);
-#ifdef DDB
-	ksym_start = bootinfo.bi_symtab;
-	ksym_end = bootinfo.bi_esymtab;
-	kernend = (vm_offset_t)round_page(ksym_end);
-#else
-	kernend = (vm_offset_t)round_page(_end);
-#endif
-
-	/* But if the bootstrap tells us otherwise, believe it! */
-	if (bootinfo.bi_kernend)
-		kernend = round_page(bootinfo.bi_kernend);
 	if (metadata_missing)
 		printf("WARNING: loader(8) metadata is missing!\n");
 
 	/* Get FPSWA interface */
-	fpswa_iface = (bootinfo.bi_fpswa == 0) ? NULL :
-	    (struct fpswa_iface *)IA64_PHYS_TO_RR7(bootinfo.bi_fpswa);
+	fpswa_iface = (bootinfo->bi_fpswa == 0) ? NULL :
+	    (struct fpswa_iface *)IA64_PHYS_TO_RR7(bootinfo->bi_fpswa);
 
 	/* Init basic tunables, including hz */
 	init_param1();
 
 	p = getenv("kernelname");
-	if (p) {
-		strncpy(kernelname, p, sizeof(kernelname) - 1);
+	if (p != NULL) {
+		strlcpy(kernelname, p, sizeof(kernelname));
 		freeenv(p);
 	}
 
@@ -792,15 +919,14 @@ ia64_init(void)
 	/*
 	 * Initialize error message buffer (at end of core).
 	 */
-	msgbufp = (struct msgbuf *)pmap_steal_memory(MSGBUF_SIZE);
-	msgbufinit(msgbufp, MSGBUF_SIZE);
+	msgbufp = (struct msgbuf *)pmap_steal_memory(msgbufsize);
+	msgbufinit(msgbufp, msgbufsize);
 
 	proc_linkup0(&proc0, &thread0);
 	/*
 	 * Init mapping for kernel stack for proc 0
 	 */
-	proc0kstack = (vm_offset_t)kstack;
-	thread0.td_kstack = proc0kstack;
+	thread0.td_kstack = pmap_steal_memory(KSTACK_PAGES * PAGE_SIZE);
 	thread0.td_kstack_pages = KSTACK_PAGES;
 
 	mutex_init();
@@ -812,7 +938,7 @@ ia64_init(void)
 	 * and make proc0's trapframe pointer point to it for sanity.
 	 * Initialise proc0's backing store to start after u area.
 	 */
-	cpu_thread_setup(&thread0);
+	cpu_thread_alloc(&thread0);
 	thread0.td_frame->tf_flags = FRAME_SYSCALL;
 	thread0.td_pcb->pcb_special.sp =
 	    (u_int64_t)thread0.td_frame - 16;
@@ -830,42 +956,23 @@ ia64_init(void)
 
 #ifdef KDB
 	if (boothowto & RB_KDB)
-		kdb_enter("Boot flags requested debugger\n");
+		kdb_enter(KDB_WHY_BOOTFLAGS,
+		    "Boot flags requested debugger\n");
 #endif
 
 	ia64_set_tpr(0);
 	ia64_srlz_d();
 
-	/*
-	 * Save our current context so that we have a known (maybe even
-	 * sane) context as the initial context for new threads that are
-	 * forked from us. If any of those threads (including thread0)
-	 * does something wrong, we may be lucky and return here where
-	 * we're ready for them with a nice panic.
-	 */
-	if (!savectx(thread0.td_pcb))
-		mi_startup();
-
-	/* We should not get here. */
-	panic("ia64_init: Whooaa there!");
-	/* NOTREACHED */
-}
-
-__volatile void *
-ia64_ioport_address(u_int port)
-{
-	uint64_t addr;
-
-	addr = (port > 0xffff) ? IA64_PHYS_TO_RR6((uint64_t)port) :
-	    ia64_port_base | ((port & 0xfffc) << 10) | (port & 0xFFF);
-	return ((__volatile void *)addr);
+	ret.bspstore = thread0.td_pcb->pcb_special.bspstore;
+	ret.sp = thread0.td_pcb->pcb_special.sp;
+	return (ret);
 }
 
 uint64_t
 ia64_get_hcdp(void)
 {
 
-	return (bootinfo.bi_hcdp);
+	return (bootinfo->bi_hcdp);
 }
 
 void
@@ -900,17 +1007,28 @@ bzero(void *buf, size_t len)
 	}
 }
 
+u_int
+ia64_itc_freq(void)
+{
+
+	return (itc_freq);
+}
+
 void
 DELAY(int n)
 {
 	u_int64_t start, end, now;
 
+	sched_pin();
+
 	start = ia64_get_itc();
-	end = start + (itc_frequency * n) / 1000000;
+	end = start + itc_freq * n;
 	/* printf("DELAY from 0x%lx to 0x%lx\n", start, end); */
 	do {
 		now = ia64_get_itc();
 	} while (now < end || (now > start && end < start));
+
+	sched_unpin();
 }
 
 /*
@@ -1037,18 +1155,16 @@ sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
  * MPSAFE
  */
 int
-sigreturn(struct thread *td,
+sys_sigreturn(struct thread *td,
 	struct sigreturn_args /* {
 		ucontext_t *sigcntxp;
 	} */ *uap)
 {
 	ucontext_t uc;
 	struct trapframe *tf;
-	struct proc *p;
 	struct pcb *pcb;
 
 	tf = td->td_frame;
-	p = td->td_proc;
 	pcb = td->td_pcb;
 
 	/*
@@ -1060,17 +1176,13 @@ sigreturn(struct thread *td,
 
 	set_mcontext(td, &uc.uc_mcontext);
 
-	PROC_LOCK(p);
 #if defined(COMPAT_43)
 	if (sigonstack(tf->tf_special.sp))
 		td->td_sigstk.ss_flags |= SS_ONSTACK;
 	else
 		td->td_sigstk.ss_flags &= ~SS_ONSTACK;
 #endif
-	td->td_sigmask = uc.uc_sigmask;
-	SIG_CANTMASK(td->td_sigmask);
-	signotify(td);
-	PROC_UNLOCK(p);
+	kern_sigprocmask(td, SIG_SETMASK, &uc.uc_sigmask, NULL, 0);
 
 	return (EJUSTRETURN);
 }
@@ -1080,7 +1192,7 @@ int
 freebsd4_sigreturn(struct thread *td, struct freebsd4_sigreturn_args *uap)
 {
 
-	return sigreturn(td, (struct sigreturn_args *)uap);
+	return sys_sigreturn(td, (struct sigreturn_args *)uap);
 }
 #endif
 
@@ -1107,7 +1219,7 @@ ia64_flush_dirty(struct thread *td, struct _special *r)
 	struct iovec iov;
 	struct uio uio;
 	uint64_t bspst, kstk, rnat;
-	int error;
+	int error, locked;
 
 	if (r->ndirty == 0)
 		return (0);
@@ -1128,7 +1240,9 @@ ia64_flush_dirty(struct thread *td, struct _special *r)
 		r->rnat = (bspst > kstk && (bspst & 0x1ffL) < (kstk & 0x1ffL))
 		    ? *(uint64_t*)(kstk | 0x1f8L) : rnat;
 	} else {
-		PHOLD(td->td_proc);
+		locked = PROC_LOCKED(td->td_proc);
+		if (!locked)
+			PHOLD(td->td_proc);
 		iov.iov_base = (void*)(uintptr_t)kstk;
 		iov.iov_len = r->ndirty;
 		uio.uio_iov = &iov;
@@ -1146,7 +1260,8 @@ ia64_flush_dirty(struct thread *td, struct _special *r)
 		 */
 		if (uio.uio_resid != 0 && error == 0)
 			error = ENOSPC;
-		PRELE(td->td_proc);
+		if (!locked)
+			PRELE(td->td_proc);
 	}
 
 	r->bspstore += r->ndirty;
@@ -1216,15 +1331,14 @@ set_mcontext(struct thread *td, const mcontext_t *mc)
 		/*
 		 * We can get an async context passed to us while we
 		 * entered the kernel through a syscall: sigreturn(2)
-		 * and kse_switchin(2) both take contexts that could
-		 * previously be the result of a trap or interrupt.
+		 * takes contexts that could previously be the result of
+		 * a trap or interrupt.
 		 * Hence, we cannot assert that the trapframe is not
 		 * a syscall frame, but we can assert that it's at
 		 * least an expected syscall.
 		 */
 		if (tf->tf_flags & FRAME_SYSCALL) {
-			KASSERT(tf->tf_scratch.gr15 == SYS_sigreturn ||
-			    tf->tf_scratch.gr15 == SYS_kse_switchin, ("foo"));
+			KASSERT(tf->tf_scratch.gr15 == SYS_sigreturn, ("foo"));
 			tf->tf_flags &= ~FRAME_SYSCALL;
 		}
 		tf->tf_scratch = mc->mc_scratch;
@@ -1244,9 +1358,6 @@ set_mcontext(struct thread *td, const mcontext_t *mc)
 	restore_callee_saved(&mc->mc_preserved);
 	restore_callee_saved_fp(&mc->mc_preserved_fp);
 
-	if (mc->mc_flags & _MC_FLAGS_KSE_SET_MBOX)
-		suword((caddr_t)mc->mc_special.ifa, mc->mc_special.isr);
-
 	return (0);
 }
 
@@ -1254,7 +1365,7 @@ set_mcontext(struct thread *td, const mcontext_t *mc)
  * Clear registers on exec.
  */
 void
-exec_setregs(struct thread *td, u_long entry, u_long stack, u_long ps_strings)
+exec_setregs(struct thread *td, struct image_params *imgp, u_long stack)
 {
 	struct trapframe *tf;
 	uint64_t *ksttop, *kst;
@@ -1292,7 +1403,7 @@ exec_setregs(struct thread *td, u_long entry, u_long stack, u_long ps_strings)
 		*kst-- = 0;
 		if (((uintptr_t)kst & 0x1ff) == 0x1f8)
 			*kst-- = 0;
-		*kst-- = ps_strings;
+		*kst-- = imgp->ps_strings;
 		if (((uintptr_t)kst & 0x1ff) == 0x1f8)
 			*kst-- = 0;
 		*kst = stack;
@@ -1307,11 +1418,11 @@ exec_setregs(struct thread *td, u_long entry, u_long stack, u_long ps_strings)
 		 * Assumes that (bspstore & 0x1f8) < 0x1e0.
 		 */
 		suword((caddr_t)tf->tf_special.bspstore - 24, stack);
-		suword((caddr_t)tf->tf_special.bspstore - 16, ps_strings);
+		suword((caddr_t)tf->tf_special.bspstore - 16, imgp->ps_strings);
 		suword((caddr_t)tf->tf_special.bspstore -  8, 0);
 	}
 
-	tf->tf_special.iip = entry;
+	tf->tf_special.iip = imgp->entry_addr;
 	tf->tf_special.sp = (stack & ~15) - 16;
 	tf->tf_special.rsc = 0xf;
 	tf->tf_special.fpsr = IA64_FPSR_DEFAULT;
@@ -1456,83 +1567,20 @@ set_fpregs(struct thread *td, struct fpreg *fpregs)
 	return (0);
 }
 
-/*
- * High FP register functions.
- */
-
-int
-ia64_highfp_drop(struct thread *td)
+void
+ia64_sync_icache(vm_offset_t va, vm_offset_t sz)
 {
-	struct pcb *pcb;
-	struct pcpu *cpu;
-	struct thread *thr;
+	vm_offset_t lim;
 
-	mtx_lock_spin(&td->td_md.md_highfp_mtx);
-	pcb = td->td_pcb;
-	cpu = pcb->pcb_fpcpu;
-	if (cpu == NULL) {
-		mtx_unlock_spin(&td->td_md.md_highfp_mtx);
-		return (0);
+	if (!ia64_sync_icache_needed)
+		return;
+
+	lim = va + sz;
+	while (va < lim) {
+		ia64_fc_i(va);
+		va += 32;	/* XXX */
 	}
-	pcb->pcb_fpcpu = NULL;
-	thr = cpu->pc_fpcurthread;
-	cpu->pc_fpcurthread = NULL;
-	mtx_unlock_spin(&td->td_md.md_highfp_mtx);
 
-	/* Post-mortem sanity checking. */
-	KASSERT(thr == td, ("Inconsistent high FP state"));
-	return (1);
-}
-
-int
-ia64_highfp_save(struct thread *td)
-{
-	struct pcb *pcb;
-	struct pcpu *cpu;
-	struct thread *thr;
-
-	/* Don't save if the high FP registers weren't modified. */
-	if ((td->td_frame->tf_special.psr & IA64_PSR_MFH) == 0)
-		return (ia64_highfp_drop(td));
-
-	mtx_lock_spin(&td->td_md.md_highfp_mtx);
-	pcb = td->td_pcb;
-	cpu = pcb->pcb_fpcpu;
-	if (cpu == NULL) {
-		mtx_unlock_spin(&td->td_md.md_highfp_mtx);
-		return (0);
-	}
-#ifdef SMP
-	if (td == curthread)
-		sched_pin();
-	if (cpu != pcpup) {
-		mtx_unlock_spin(&td->td_md.md_highfp_mtx);
-		ipi_send(cpu, IPI_HIGH_FP);
-		if (td == curthread)
-			sched_unpin();
-		while (pcb->pcb_fpcpu == cpu)
-			DELAY(100);
-		return (1);
-	} else {
-		save_high_fp(&pcb->pcb_high_fp);
-		if (td == curthread)
-			sched_unpin();
-	}
-#else
-	save_high_fp(&pcb->pcb_high_fp);
-#endif
-	pcb->pcb_fpcpu = NULL;
-	thr = cpu->pc_fpcurthread;
-	cpu->pc_fpcurthread = NULL;
-	mtx_unlock_spin(&td->td_md.md_highfp_mtx);
-
-	/* Post-mortem sanity cxhecking. */
-	KASSERT(thr == td, ("Inconsistent high FP state"));
-	return (1);
-}
-
-int
-sysbeep(int pitch, int period)
-{
-	return (ENODEV);
+	ia64_sync_i();
+	ia64_srlz_i();
 }

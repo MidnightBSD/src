@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/fs/hpfs/hpfs_vnops.c 166774 2007-02-15 22:08:35Z pjd $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -409,7 +409,6 @@ hpfs_getattr(ap)
 		struct vnode *a_vp;
 		struct vattr *a_vap;
 		struct ucred *a_cred;
-		struct thread *a_td;
 	} */ *ap;
 {
 	register struct vnode *vp = ap->a_vp;
@@ -425,7 +424,7 @@ hpfs_getattr(ap)
 	vap->va_nlink = 1;
 	vap->va_uid = hp->h_uid;
 	vap->va_gid = hp->h_gid;
-	vap->va_rdev = 0;				/* XXX UNODEV ? */
+	vap->va_rdev = NODEV;
 	vap->va_size = hp->h_fn.fn_size;
 	vap->va_bytes = ((hp->h_fn.fn_size + DEV_BSIZE-1) & ~(DEV_BSIZE-1)) +
 			DEV_BSIZE;
@@ -457,14 +456,13 @@ hpfs_setattr(ap)
 		struct vnode *a_vp;
 		struct vattr *a_vap;
 		struct ucred *a_cred;
-		struct thread *a_td;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
 	struct hpfsnode *hp = VTOHP(vp);
 	struct vattr *vap = ap->a_vap;
 	struct ucred *cred = ap->a_cred;
-	struct thread *td = ap->a_td;
+	struct thread *td = curthread;
 	int error;
 
 	dprintf(("hpfs_setattr(0x%x):\n", hp->h_no));
@@ -577,9 +575,6 @@ hpfs_inactive(ap)
 			return (error);
 	}
 
-	if (prtactive && vrefcnt(vp) != 0)
-		vprint("hpfs_inactive: pushing active", vp);
-
 	if (hp->h_flag & H_INVAL) {
 		vrecycle(vp, ap->a_td);
 		return (0);
@@ -613,7 +608,7 @@ hpfs_reclaim(ap)
 
 	vp->v_data = NULL;
 
-	FREE(hp, M_HPFSNO);
+	free(hp, M_HPFSNO);
 
 	return (0);
 }
@@ -663,7 +658,7 @@ hpfs_strategy(ap)
 			bp->b_error = error;
 			bp->b_ioflags |= BIO_ERROR;
 			bufdone(bp);
-			return (error);
+			return (0);
 		}
 		if ((long)bp->b_blkno == -1)
 			vfs_bio_clrbuf(bp);
@@ -685,14 +680,14 @@ int
 hpfs_access(ap)
 	struct vop_access_args /* {
 		struct vnode *a_vp;
-		int  a_mode;
+		accmode_t a_accmode;
 		struct ucred *a_cred;
 		struct thread *a_td;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
 	struct hpfsnode *hp = VTOHP(vp);
-	mode_t mode = ap->a_mode;
+	accmode_t accmode = ap->a_accmode;
 
 	dprintf(("hpfs_access(0x%x):\n", hp->h_no));
 
@@ -701,7 +696,7 @@ hpfs_access(ap)
 	 * unless the file is a socket, fifo, or a block or
 	 * character device resident on the filesystem.
 	 */
-	if (mode & VWRITE) {
+	if (accmode & VWRITE) {
 		switch ((int)vp->v_type) {
 		case VDIR:
 		case VLNK:
@@ -713,7 +708,7 @@ hpfs_access(ap)
 	}
 
 	return (vaccess(vp->v_type, hp->h_mode, hp->h_uid, hp->h_gid,
-	    ap->a_mode, ap->a_cred, NULL));
+	    ap->a_accmode, ap->a_cred, NULL));
 }
 
 /*
@@ -1005,7 +1000,7 @@ readdone:
 		dpStart = (struct dirent *)
 		     ((caddr_t)uio->uio_iov->iov_base -
 			 (uio->uio_offset - off));
-		MALLOC(cookies, u_long *, ncookies * sizeof(u_long),
+		cookies = malloc(ncookies * sizeof(u_long),
 		       M_TEMP, M_WAITOK);
 		for (dp = dpStart, cookiep = cookies, i=0;
 		     i < ncookies;
@@ -1063,10 +1058,10 @@ hpfs_lookup(ap)
 
 		if (VFS_VGET(hpmp->hpm_mp, dhp->h_fn.fn_parent,
 		    LK_NOWAIT | LK_EXCLUSIVE, ap->a_vpp)) {
-			VOP_UNLOCK(dvp,0,cnp->cn_thread);
+			VOP_UNLOCK(dvp,0);
 			error = VFS_VGET(hpmp->hpm_mp,
 				 dhp->h_fn.fn_parent, LK_EXCLUSIVE, ap->a_vpp); 
-			vn_lock(dvp, LK_EXCLUSIVE|LK_RETRY, cnp->cn_thread);
+			vn_lock(dvp, LK_EXCLUSIVE|LK_RETRY);
 			if (error)
 				return(error);
 		}

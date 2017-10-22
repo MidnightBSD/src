@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/share/mk/bsd.dep.mk 139761 2005-01-06 11:12:43Z krion $
+# $FreeBSD$
 #
 # The include file <bsd.dep.mk> handles Makefile dependencies.
 #
@@ -58,14 +58,14 @@ DEPENDFILE?=	.depend
 # Keep `tags' here, before SRCS are mangled below for `depend'.
 .if !target(tags) && defined(SRCS) && !defined(NO_TAGS)
 tags: ${SRCS}
-.if ${CTAGS:T} == "ctags"
-	@${CTAGS} ${CTAGSFLAGS} -f /dev/stdout \
-	    ${.ALLSRC:N*.h} | sed "s;${.CURDIR}/;;" > ${.TARGET}
-.elif ${CTAGS:T} == "gtags"
+.if ${CTAGS:T} == "gtags"
 	@cd ${.CURDIR} && ${CTAGS} ${GTAGSFLAGS} ${.OBJDIR}
 .if defined(HTML)
 	@cd ${.CURDIR} && htags ${HTAGSFLAGS} -d ${.OBJDIR} ${.OBJDIR}
 .endif
+.else
+	@${CTAGS} ${CTAGSFLAGS} -f /dev/stdout \
+	    ${.ALLSRC:N*.h} | sed "s;${.CURDIR}/;;" > ${.TARGET}
 .endif
 .endif
 
@@ -125,15 +125,8 @@ depend: beforedepend ${DEPENDFILE} afterdepend
 
 # Different types of sources are compiled with slightly different flags.
 # Split up the sources, and filter out headers and non-applicable flags.
-.if ${CC} == "icc"
-MKDEP_CFLAGS=	${CFLAGS:M-X*} ${CFLAGS:M-[BID]*}
-MKDEP_CXXFLAGS=	${CXXFLAGS:M-X*} ${CXXFLAGS:M-[BID]*}
-MKDEP_OBJCFLAGS=${OBJCFLAGS:M-X*} ${OBJCFLAGS:M-[BID]*}
-.else
-MKDEP_CFLAGS=	${CFLAGS:M-nostdinc*} ${CFLAGS:M-[BID]*}
-MKDEP_CXXFLAGS=	${CXXFLAGS:M-nostdinc*} ${CXXFLAGS:M-[BID]*}
-MKDEP_OBJCFLAGS=${OBJCFLAGS:M-nostdinc*} ${OBJCFLAGS:M-[BID]*} ${OBJCFLAGS:M-Wno-import*}
-.endif
+MKDEP_CFLAGS=	${CFLAGS:M-nostdinc*} ${CFLAGS:M-[BIDU]*}
+MKDEP_CXXFLAGS=	${CXXFLAGS:M-nostdinc*} ${CXXFLAGS:M-[BIDU]*}
 
 DPSRCS+= ${SRCS}
 ${DEPENDFILE}: ${DPSRCS}
@@ -147,10 +140,6 @@ ${DEPENDFILE}: ${DPSRCS}
 	${MKDEPCMD} -f ${DEPENDFILE} -a ${MKDEP} \
 	    ${MKDEP_CXXFLAGS} \
 	    ${.ALLSRC:M*.cc} ${.ALLSRC:M*.C} ${.ALLSRC:M*.cpp} ${.ALLSRC:M*.cxx}
-.endif
-.if !empty(DPSRCS:M*.m)
-	${MKDEPCMD} -f ${DEPENDFILE} -a ${MKDEP} \
-	    ${MKDEP_OBJCFLAGS} ${.ALLSRC:M*.m}
 .endif
 .if target(_EXTRADEPEND)
 _EXTRADEPEND: .USE
@@ -175,13 +164,13 @@ afterdepend:
 .if !target(cleandepend)
 cleandepend:
 .if defined(SRCS)
-.if ${CTAGS:T} == "ctags"
-	rm -f ${DEPENDFILE} tags
-.elif ${CTAGS:T} == "gtags"
+.if ${CTAGS:T} == "gtags"
 	rm -f ${DEPENDFILE} GPATH GRTAGS GSYMS GTAGS
 .if defined(HTML)
 	rm -rf HTML
 .endif
+.else
+	rm -f ${DEPENDFILE} tags
 .endif
 .endif
 .endif

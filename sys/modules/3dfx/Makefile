@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/3dfx/Makefile 156260 2006-03-03 21:37:38Z yar $
+# $FreeBSD$
 
 MAINTAINER=	cokane@FreeBSD.org
 

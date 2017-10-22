@@ -30,7 +30,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: release/7.0.0/usr.sbin/ndiscvt/ndisgen.sh 148350 2005-07-23 18:47:18Z dougb $
+# $FreeBSD$
 #
 
 header () {
@@ -414,9 +414,9 @@ echo "KMOD= ${SYSBASE}"						>> ${MAKEFILE}
 echo "SRCS+= ${STUBFILE} ${DNAME}.h bus_if.h device_if.h"	>> ${MAKEFILE}
 echo "OBJS+=${FRMLIST} ${DNAME}.o"				>> ${MAKEFILE}
 echo "CFLAGS+=	\\"						>> ${MAKEFILE}
-echo "	-DDRV_DATA_START=${SYSBASE}_drv_data_start \\"		>> ${MAKEFILE}
-echo "	-DDRV_NAME=${SYSBASE} \\"				>> ${MAKEFILE}
-echo "	-DDRV_DATA_END=${SYSBASE}_drv_data_end"			>> ${MAKEFILE}
+echo "	-DDRV_DATA_START=ndis_${SYSBASE}_drv_data_start \\"		>> ${MAKEFILE}
+echo "	-DDRV_NAME=ndis_${SYSBASE} \\"				>> ${MAKEFILE}
+echo "	-DDRV_DATA_END=ndis_${SYSBASE}_drv_data_end"			>> ${MAKEFILE}
 echo "CLEANFILES+=	\\"					>> ${MAKEFILE}
 echo "	${INFFILE} \\"						>> ${MAKEFILE}
 echo "	${DNAME}.h \\"						>> ${MAKEFILE}

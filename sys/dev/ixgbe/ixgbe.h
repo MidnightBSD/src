@@ -1,36 +1,37 @@
-/**************************************************************************
+/******************************************************************************
 
-Copyright (c) 2001-2007, Intel Corporation
-All rights reserved.
+  Copyright (c) 2001-2012, Intel Corporation 
+  All rights reserved.
+  
+  Redistribution and use in source and binary forms, with or without 
+  modification, are permitted provided that the following conditions are met:
+  
+   1. Redistributions of source code must retain the above copyright notice, 
+      this list of conditions and the following disclaimer.
+  
+   2. Redistributions in binary form must reproduce the above copyright 
+      notice, this list of conditions and the following disclaimer in the 
+      documentation and/or other materials provided with the distribution.
+  
+   3. Neither the name of the Intel Corporation nor the names of its 
+      contributors may be used to endorse or promote products derived from 
+      this software without specific prior written permission.
+  
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
+  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+******************************************************************************/
+/*$FreeBSD$*/
 
- 1. Redistributions of source code must retain the above copyright notice,
-    this list of conditions and the following disclaimer.
-
- 2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
-
- 3. Neither the name of the Intel Corporation nor the names of its
-    contributors may be used to endorse or promote products derived from
-    this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
-
-***************************************************************************/
-/* $FreeBSD: release/7.0.0/sys/dev/ixgbe/ixgbe.h 174064 2007-11-28 23:52:14Z jfv $ */
 
 #ifndef _IXGBE_H_
 #define _IXGBE_H_
@@ -38,6 +39,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#if __FreeBSD_version >= 800000
+#include <sys/buf_ring.h>
+#endif
 #include <sys/mbuf.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
@@ -63,6 +67,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
+#include <netinet/tcp_lro.h>
 #include <netinet/udp.h>
 
 #include <machine/in_cksum.h>
@@ -80,6 +85,13 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <sys/sysctl.h>
 #include <sys/endian.h>
 #include <sys/taskqueue.h>
+#include <sys/pcpu.h>
+#include <sys/smp.h>
+#include <machine/smp.h>
+
+#ifdef IXGBE_IEEE1588
+#include <sys/ieee1588.h>
+#endif
 
 #include "ixgbe_api.h"
 
@@ -92,7 +104,7 @@ POSSIBILITY OF SUCH DAMAGE.
  * bytes. Performance tests have show the 2K value to be optimal for top
  * performance.
  */
-#define DEFAULT_TXD	256
+#define DEFAULT_TXD	1024
 #define PERFORM_TXD	2048
 #define MAX_TXD		4096
 #define MIN_TXD		64
@@ -107,7 +119,7 @@ POSSIBILITY OF SUCH DAMAGE.
  *	against the system mbuf pool limit, you can tune nmbclusters
  *	to adjust for this.
  */
-#define DEFAULT_RXD	256
+#define DEFAULT_RXD	1024
 #define PERFORM_RXD	2048
 #define MAX_RXD		4096
 #define MIN_RXD		64
@@ -119,12 +131,14 @@ POSSIBILITY OF SUCH DAMAGE.
  * This parameter controls the maximum no of times the driver will loop in
  * the isr. Minimum Value = 1
  */
-#define MAX_INTR	10
+#define MAX_LOOP	10
 
 /*
- * This parameter controls the duration of transmit watchdog timer.
+ * This is the max watchdog interval, ie. the time that can
+ * pass between any two TX clean operations, such only happening
+ * when the TX hardware is functioning.
  */
-#define IXGBE_TX_TIMEOUT                   5	/* set to 5 seconds */
+#define IXGBE_WATCHDOG                   (10 * hz)
 
 /*
  * This parameters control when the driver calls the routine to reclaim
@@ -136,9 +150,14 @@ POSSIBILITY OF SUCH DAMAGE.
 #define IXGBE_MAX_FRAME_SIZE	0x3F00
 
 /* Flow control constants */
-#define IXGBE_FC_PAUSE		0x680
+#define IXGBE_FC_PAUSE		0xFFFF
 #define IXGBE_FC_HI		0x20000
 #define IXGBE_FC_LO		0x10000
+
+/* Keep older OS drivers building... */
+#if !defined(SYSCTL_ADD_UQUAD)
+#define SYSCTL_ADD_UQUAD SYSCTL_ADD_QUAD
+#endif
 
 /* Defines for printing debug information */
 #define DEBUG_INIT  0
@@ -156,45 +175,54 @@ POSSIBILITY OF SUCH DAMAGE.
 #define HW_DEBUGOUT2(S, A, B)       if (DEBUG_HW) printf(S "\n", A, B)
 
 #define MAX_NUM_MULTICAST_ADDRESSES     128
-#define IXGBE_MAX_SCATTER		100
-#define	IXGBE_MMBA			0x0010
-#define IXGBE_TSO_SIZE			65535
+#define IXGBE_82598_SCATTER		100
+#define IXGBE_82599_SCATTER		32
+#define MSIX_82598_BAR			3
+#define MSIX_82599_BAR			4
+#define IXGBE_TSO_SIZE			262140
 #define IXGBE_TX_BUFFER_SIZE		((u32) 1514)
-#define IXGBE_RX_HDR_SIZE		((u32) 256)
-#define CSUM_OFFLOAD			7	/* Bits in csum flags */
+#define IXGBE_RX_HDR			128
+#define IXGBE_VFTA_SIZE			128
+#define IXGBE_BR_SIZE			4096
+#define IXGBE_QUEUE_MIN_FREE		32
+#define IXGBE_QUEUE_IDLE		1
+#define IXGBE_QUEUE_WORKING		2
+#define IXGBE_QUEUE_HUNG		4
+#define IXGBE_QUEUE_DEPLETED		8
 
-/* The number of MSIX messages the 82598 supports */
-#define IXGBE_MSGS			18
+/* Offload bits in mbuf flag */
+#if __FreeBSD_version >= 800000
+#define CSUM_OFFLOAD		(CSUM_IP|CSUM_TCP|CSUM_UDP|CSUM_SCTP)
+#else
+#define CSUM_OFFLOAD		(CSUM_IP|CSUM_TCP|CSUM_UDP)
+#endif
 
 /* For 6.X code compatibility */
-#if __FreeBSD_version < 700000
+#if !defined(ETHER_BPF_MTAP)
 #define ETHER_BPF_MTAP		BPF_MTAP
+#endif
+
+#if __FreeBSD_version < 700000
 #define CSUM_TSO		0
 #define IFCAP_TSO4		0
-#define FILTER_STRAY
-#define FILTER_HANDLED
 #endif
 
 /*
  * Interrupt Moderation parameters 
- * 	for now we hardcode, later
- *	it would be nice to do dynamic
  */
-#define MAX_IRQ_SEC	8000
-#define DEFAULT_ITR	1000000000/(MAX_IRQ_SEC * 256)
-#define LINK_ITR	1000000000/(1950 * 256)
-
-/* Used for auto RX queue configuration */
-extern int mp_ncpus;
+#define IXGBE_LOW_LATENCY	128
+#define IXGBE_AVE_LATENCY	400
+#define IXGBE_BULK_LATENCY	1200
+#define IXGBE_LINK_ITR		2000
 
 /*
- * ******************************************************************************
+ *****************************************************************************
  * vendor_info_array
  * 
  * This array contains the list of Subvendor/Subdevice IDs on which the driver
  * should load.
  * 
-*****************************************************************************
+ *****************************************************************************
  */
 typedef struct _ixgbe_vendor_info_t {
 	unsigned int    vendor_id;
@@ -202,20 +230,21 @@ typedef struct _ixgbe_vendor_info_t {
 	unsigned int    subvendor_id;
 	unsigned int    subdevice_id;
 	unsigned int    index;
-}               ixgbe_vendor_info_t;
+} ixgbe_vendor_info_t;
 
 
 struct ixgbe_tx_buf {
-	int		next_eop;
+	u32		eop_index;
 	struct mbuf	*m_head;
 	bus_dmamap_t	map;
 };
 
 struct ixgbe_rx_buf {
 	struct mbuf	*m_head;
-	boolean_t	bigbuf;
-	/* one small and one large map */
-	bus_dmamap_t	map[2];
+	struct mbuf	*m_pack;
+	struct mbuf	*fmp;
+	bus_dmamap_t	hmap;
+	bus_dmamap_t	pmap;
 };
 
 /*
@@ -232,22 +261,53 @@ struct ixgbe_dma_alloc {
 };
 
 /*
- * The transmit ring, one per tx queue
+** Driver queue struct: this is the interrupt container
+**  for the associated tx and rx ring.
+*/
+struct ix_queue {
+	struct adapter		*adapter;
+	u32			msix;           /* This queue's MSIX vector */
+	u32			eims;           /* This queue's EIMS bit */
+	u32			eitr_setting;
+	struct resource		*res;
+	void			*tag;
+	struct tx_ring		*txr;
+	struct rx_ring		*rxr;
+	struct task		que_task;
+	struct taskqueue	*tq;
+	u64			irqs;
+};
+
+/*
+ * The transmit ring, one per queue
  */
 struct tx_ring {
         struct adapter		*adapter;
+	struct mtx		tx_mtx;
 	u32			me;
-	u32			msix;
+	int			queue_status;
+	int			watchdog_time;
 	union ixgbe_adv_tx_desc	*tx_base;
 	struct ixgbe_dma_alloc	txdma;
-	u32			next_avail_tx_desc;
-	u32			next_tx_to_clean;
+	u32			next_avail_desc;
+	u32			next_to_clean;
 	struct ixgbe_tx_buf	*tx_buffers;
 	volatile u16		tx_avail;
 	u32			txd_cmd;
 	bus_dma_tag_t		txtag;
-	/* Interrupt soft stat */
-	u64			tx_irq;
+	char			mtx_name[16];
+#if __FreeBSD_version >= 800000
+	struct buf_ring		*br;
+#endif
+#ifdef IXGBE_FDIR
+	u16			atr_sample;
+	u16			atr_count;
+#endif
+	u32			bytes;  /* used for AIM */
+	u32			packets;
+	/* Soft Stats */
+	u64			no_desc_avail;
+	u64			total_packets;
 };
 
 
@@ -255,105 +315,210 @@ struct tx_ring {
  * The Receive ring, one per rx queue
  */
 struct rx_ring {
-        struct adapter			*adapter;
-	u32				me;
-	u32				msix;
-	u32				payload;
-	union 	ixgbe_adv_rx_desc	*rx_base;
-	struct ixgbe_dma_alloc		rxdma;
-        unsigned int			last_cleaned;
-        unsigned int			next_to_check;
-	struct ixgbe_rx_buf		*rx_buffers;
-	bus_dma_tag_t			rxtag[2];
-	bus_dmamap_t			spare_map[2];
-	struct mbuf			*fmp;
-	struct mbuf			*lmp;
+        struct adapter		*adapter;
+	struct mtx		rx_mtx;
+	u32			me;
+	union ixgbe_adv_rx_desc	*rx_base;
+	struct ixgbe_dma_alloc	rxdma;
+	struct lro_ctrl		lro;
+	bool			lro_enabled;
+	bool			hdr_split;
+	bool			hw_rsc;
+	bool			discard;
+	bool			vtag_strip;
+        u32			next_to_refresh;
+        u32 			next_to_check;
+	char			mtx_name[16];
+	struct ixgbe_rx_buf	*rx_buffers;
+	bus_dma_tag_t		htag;
+	bus_dma_tag_t		ptag;
+
+	u32			bytes; /* Used for AIM calc */
+	u32			packets;
+
 	/* Soft stats */
-	u64				rx_irq;
-	u64				packet_count;
-	u64 				byte_count;
+	u64			rx_irq;
+	u64			rx_split_packets;
+	u64			rx_packets;
+	u64 			rx_bytes;
+	u64 			rx_discarded;
+	u64 			rsc_num;
+#ifdef IXGBE_FDIR
+	u64			flm;
+#endif
 };
 
 /* Our adapter structure */
 struct adapter {
-	struct ifnet	*ifp;
-	struct ixgbe_hw	hw;
+	struct ifnet		*ifp;
+	struct ixgbe_hw		hw;
 
-	/* FreeBSD operating-system-specific structures */
 	struct ixgbe_osdep	osdep;
+	struct device		*dev;
 
-	struct device	*dev;
-	struct resource	*res_memory;
-	struct resource	*res_msix;
+	struct resource		*pci_mem;
+	struct resource		*msix_mem;
 
 	/*
-	 * Interrupt resources:
-	 *  Oplin has 20 MSIX messages
-	 *  so allocate that for now.
+	 * Interrupt resources: this set is
+	 * either used for legacy, or for Link
+	 * when doing MSIX
 	 */
-	void		*tag[IXGBE_MSGS];
-	struct resource *res[IXGBE_MSGS];
-	int		rid[IXGBE_MSGS];
+	void			*tag;
+	struct resource 	*res;
 
-	struct ifmedia	media;
-	struct callout	timer;
-	int		watchdog_timer;
-	int		msix;
-	int		if_flags;
+	struct ifmedia		media;
+	struct callout		timer;
+	int			msix;
+	int			if_flags;
 
-	/* Dual locks for the driver */
-	struct mtx	core_mtx;
-	struct mtx	tx_mtx;
+	struct mtx		core_mtx;
 
-	/* Legacy Fast Intr handling */
-	struct task     link_task;
-	struct task     rxtx_task;
-	struct taskqueue *tq;
-	
-	/* Info about the board itself */
-	u32		part_num;
-	bool		link_active;
-	u16		max_frame_size;
-	u32		link_speed;
-	u32		tx_int_delay;
-	u32		tx_abs_int_delay;
-	u32		rx_int_delay;
-	u32		rx_abs_int_delay;
+	eventhandler_tag 	vlan_attach;
+	eventhandler_tag 	vlan_detach;
 
-	/* Indicates the cluster size to use */
-	bool		bigbufs;
+	u16			num_vlans;
+	u16			num_queues;
+
+	/*
+	** Shadow VFTA table, this is needed because
+	** the real vlan filter table gets cleared during
+	** a soft reset and the driver needs to be able
+	** to repopulate it.
+	*/
+	u32			shadow_vfta[IXGBE_VFTA_SIZE];
+
+	/* Info about the interface */
+	u32			optics;
+	u32			fc; /* local flow ctrl setting */
+	int			advertise;  /* link speeds */
+	bool			link_active;
+	u16			max_frame_size;
+	u16			num_segs;
+	u32			link_speed;
+	bool			link_up;
+	u32 			linkvec;
+
+	/* Mbuf cluster size */
+	u32			rx_mbuf_sz;
+
+	/* Support for pluggable optics */
+	bool			sfp_probe;
+	struct task     	link_task;  /* Link tasklet */
+	struct task     	mod_task;   /* SFP tasklet */
+	struct task     	msf_task;   /* Multispeed Fiber */
+#ifdef IXGBE_FDIR
+	int			fdir_reinit;
+	struct task     	fdir_task;
+#endif
+	struct taskqueue	*tq;
+
+	/*
+	** Queues: 
+	**   This is the irq holder, it has
+	**   and RX/TX pair or rings associated
+	**   with it.
+	*/
+	struct ix_queue		*queues;
 
 	/*
 	 * Transmit rings:
 	 *	Allocated at run time, an array of rings.
 	 */
-	struct tx_ring	*tx_rings;
-	int		num_tx_desc;
-	int		num_tx_queues;
+	struct tx_ring		*tx_rings;
+	int			num_tx_desc;
 
 	/*
 	 * Receive rings:
 	 *	Allocated at run time, an array of rings.
 	 */
-	struct rx_ring	*rx_rings;
-	int		num_rx_desc;
-	int		num_rx_queues;
-	u32		rx_process_limit;
+	struct rx_ring		*rx_rings;
+	int			num_rx_desc;
+	u64			que_mask;
+	u32			rx_process_limit;
+
+	/* Multicast array memory */
+	u8			*mta;
 
 	/* Misc stats maintained by the driver */
-	unsigned long   dropped_pkts;
-	unsigned long   mbuf_alloc_failed;
-	unsigned long   mbuf_cluster_failed;
-	unsigned long   no_tx_desc_avail1;
-	unsigned long   no_tx_desc_avail2;
-	unsigned long   no_tx_map_avail;
-	unsigned long   no_tx_dma_setup;
-	unsigned long   watchdog_events;
-	unsigned long   tso_tx;
-	unsigned long	linkvec;
-	unsigned long	link_irq;
+	unsigned long   	dropped_pkts;
+	unsigned long   	mbuf_defrag_failed;
+	unsigned long   	mbuf_header_failed;
+	unsigned long   	mbuf_packet_failed;
+	unsigned long   	no_tx_map_avail;
+	unsigned long   	no_tx_dma_setup;
+	unsigned long   	watchdog_events;
+	unsigned long   	tso_tx;
+	unsigned long		link_irq;
 
-	struct ixgbe_hw_stats stats;
+	struct ixgbe_hw_stats 	stats;
 };
+
+/* Precision Time Sync (IEEE 1588) defines */
+#define ETHERTYPE_IEEE1588      0x88F7
+#define PICOSECS_PER_TICK       20833
+#define TSYNC_UDP_PORT          319 /* UDP port for the protocol */
+#define IXGBE_ADVTXD_TSTAMP	0x00080000
+
+
+#define IXGBE_CORE_LOCK_INIT(_sc, _name) \
+        mtx_init(&(_sc)->core_mtx, _name, "IXGBE Core Lock", MTX_DEF)
+#define IXGBE_CORE_LOCK_DESTROY(_sc)      mtx_destroy(&(_sc)->core_mtx)
+#define IXGBE_TX_LOCK_DESTROY(_sc)        mtx_destroy(&(_sc)->tx_mtx)
+#define IXGBE_RX_LOCK_DESTROY(_sc)        mtx_destroy(&(_sc)->rx_mtx)
+#define IXGBE_CORE_LOCK(_sc)              mtx_lock(&(_sc)->core_mtx)
+#define IXGBE_TX_LOCK(_sc)                mtx_lock(&(_sc)->tx_mtx)
+#define IXGBE_TX_TRYLOCK(_sc)             mtx_trylock(&(_sc)->tx_mtx)
+#define IXGBE_RX_LOCK(_sc)                mtx_lock(&(_sc)->rx_mtx)
+#define IXGBE_CORE_UNLOCK(_sc)            mtx_unlock(&(_sc)->core_mtx)
+#define IXGBE_TX_UNLOCK(_sc)              mtx_unlock(&(_sc)->tx_mtx)
+#define IXGBE_RX_UNLOCK(_sc)              mtx_unlock(&(_sc)->rx_mtx)
+#define IXGBE_CORE_LOCK_ASSERT(_sc)       mtx_assert(&(_sc)->core_mtx, MA_OWNED)
+#define IXGBE_TX_LOCK_ASSERT(_sc)         mtx_assert(&(_sc)->tx_mtx, MA_OWNED)
+
+
+static inline bool
+ixgbe_is_sfp(struct ixgbe_hw *hw)
+{
+	switch (hw->phy.type) {
+	case ixgbe_phy_sfp_avago:
+	case ixgbe_phy_sfp_ftl:
+	case ixgbe_phy_sfp_intel:
+	case ixgbe_phy_sfp_unknown:
+	case ixgbe_phy_sfp_passive_tyco:
+	case ixgbe_phy_sfp_passive_unknown:
+		return TRUE;
+	default:
+		return FALSE;
+	}
+}
+
+/* Workaround to make 8.0 buildable */
+#if __FreeBSD_version >= 800000 && __FreeBSD_version < 800504
+static __inline int
+drbr_needs_enqueue(struct ifnet *ifp, struct buf_ring *br)
+{
+#ifdef ALTQ
+        if (ALTQ_IS_ENABLED(&ifp->if_snd))
+                return (1);
+#endif
+        return (!buf_ring_empty(br));
+}
+#endif
+
+/*
+** Find the number of unrefreshed RX descriptors
+*/
+static inline u16
+ixgbe_rx_unrefreshed(struct rx_ring *rxr)
+{       
+	struct adapter  *adapter = rxr->adapter;
+        
+	if (rxr->next_to_check > rxr->next_to_refresh)
+		return (rxr->next_to_check - rxr->next_to_refresh - 1);
+	else
+		return ((adapter->num_rx_desc + rxr->next_to_check) -
+		    rxr->next_to_refresh - 1);
+}       
 
 #endif /* _IXGBE_H_ */

@@ -1,4 +1,4 @@
-#  $FreeBSD: release/7.0.0/sys/boot/arm/at91/bootspi/Makefile 164323 2006-11-16 00:53:28Z imp $
+#  $FreeBSD$
 
 .PATH:	${.CURDIR}/../libat91
 

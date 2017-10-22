@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: link_policy.c,v 1.3 2003/08/18 19:19:54 max Exp $
- * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/hccontrol/link_policy.c 133178 2004-08-05 16:32:41Z emax $
+ * $FreeBSD$
  */
 
 #include <bluetooth.h>

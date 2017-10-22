@@ -1,11 +1,11 @@
-# $FreeBSD: release/7.0.0/gnu/usr.bin/binutils/libopcodes/Makefile 136910 2004-10-24 15:33:08Z ru $
+# $FreeBSD$
 
 .include "../Makefile.inc0"
 
 .PATH: ${SRCDIR}/opcodes
 
 LIB=	opcodes
-SRCS+=	dis-buf.c dis-init.c disassemble.c
+SRCS+=	dis-buf.c dis-init.c disassemble.c i386-opc.c
 CFLAGS+= -D_GNU_SOURCE
 CFLAGS+= -I${SRCDIR}/opcodes -I${SRCDIR}/bfd
 INTERNALLIB=

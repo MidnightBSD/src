@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libstand/cd9660.c 151447 2005-10-18 13:35:08Z des $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Stand-alone ISO9660 file reading package.
@@ -545,7 +545,7 @@ again:
 }
 
 static int
-cd9660_write(struct open_file *f, void *start, size_t size, size_t *resid)
+cd9660_write(struct open_file *f __unused, void *start __unused, size_t size __unused, size_t *resid __unused)
 {
 	return EROFS;
 }

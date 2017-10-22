@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/makewhatis/makewhatis.c 172753 2007-10-18 12:55:27Z edwin $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -38,6 +38,7 @@ __FBSDID("$FreeBSD: release/7.0.0/usr.bin/makewhatis/makewhatis.c 172753 2007-10
 #include <ctype.h>
 #include <dirent.h>
 #include <err.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -692,7 +693,7 @@ enum { STATE_UNKNOWN, STATE_MANSTYLE, STATE_MDOCNAME, STATE_MDOCDESC };
 static void
 process_page(struct page_info *page, char *section_dir)
 {
-	gzFile *in;
+	gzFile in;
 	char buffer[4096];
 	char *line;
 	StringList *names;
@@ -878,9 +879,9 @@ process_section(char *section_dir)
  * Returns whether the directory entry is a man page section.
  */
 static int
-select_sections(struct dirent *entry)
+select_sections(const struct dirent *entry)
 {
-	char *p = &entry->d_name[3];
+	const char *p = &entry->d_name[3];
 
 	if (strncmp(entry->d_name, "man", 3) != 0)
 		return 0;
@@ -1002,7 +1003,7 @@ main(int argc, char **argv)
 				char *sep = strchr(locale, '_');
 				if (sep != NULL && isupper(sep[1]) &&
 				    isupper(sep[2])) {
-					asprintf(&lang_locale, "%.*s%s", sep - locale, locale, &sep[3]);
+					asprintf(&lang_locale, "%.*s%s", (int)(ptrdiff_t)(sep - locale), locale, &sep[3]);
 				}
 			}
 			break;

@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/secure/lib/libssl/Makefile.man 167616 2007-03-15 20:15:15Z simon $
+# $FreeBSD$
 # DO NOT EDIT: generated from man-makefile-update target
 MAN+= SSL_CIPHER_get_name.3
 MAN+= SSL_COMP_add_compression_method.3
@@ -135,8 +135,11 @@ MLINKS+= SSL_CTX_set_msg_callback.3 SSL_CTX_set_msg_callback_arg.3
 MLINKS+= SSL_CTX_set_msg_callback.3 SSL_set_msg_callback.3
 MLINKS+= SSL_CTX_set_msg_callback.3 SSL_get_msg_callback_arg.3
 MLINKS+= SSL_CTX_set_options.3 SSL_set_options.3
+MLINKS+= SSL_CTX_set_options.3 SSL_CTX_clear_options.3
+MLINKS+= SSL_CTX_set_options.3 SSL_clear_options.3
 MLINKS+= SSL_CTX_set_options.3 SSL_CTX_get_options.3
 MLINKS+= SSL_CTX_set_options.3 SSL_get_options.3
+MLINKS+= SSL_CTX_set_options.3 SSL_get_secure_renegotiation_support.3
 MLINKS+= SSL_CTX_set_quiet_shutdown.3 SSL_CTX_get_quiet_shutdown.3
 MLINKS+= SSL_CTX_set_quiet_shutdown.3 SSL_set_quiet_shutdown.3
 MLINKS+= SSL_CTX_set_quiet_shutdown.3 SSL_get_quiet_shutdown.3

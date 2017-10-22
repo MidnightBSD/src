@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2002,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2007,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -36,8 +36,6 @@
  * Terminfo-only terminal setup routines:
  *
  *		int restartterm(const char *, int, int *)
- *		TERMINAL *set_curterm(TERMINAL *)
- *		int del_curterm(TERMINAL *)
  */
 
 #include <curses.priv.h>
@@ -48,23 +46,22 @@
 
 #include <term.h>		/* lines, columns, cur_term */
 
-MODULE_ID("$Id: lib_restart.c,v 1.6 2006/01/14 15:58:23 tom Exp $")
+MODULE_ID("$Id: lib_restart.c,v 1.10 2008/06/21 17:31:22 tom Exp $")
 
 NCURSES_EXPORT(int)
 restartterm(NCURSES_CONST char *termp, int filenum, int *errret)
 {
-    int saveecho = SP->_echo;
-    int savecbreak = SP->_cbreak;
-    int saveraw = SP->_raw;
-    int savenl = SP->_nl;
     int result;
 
     T((T_CALLED("restartterm(%s,%d,%p)"), termp, filenum, errret));
 
-    _nc_handle_sigwinch(0);
     if (setupterm(termp, filenum, errret) != OK) {
 	result = ERR;
-    } else {
+    } else if (SP != 0) {
+	int saveecho = SP->_echo;
+	int savecbreak = SP->_cbreak;
+	int saveraw = SP->_raw;
+	int savenl = SP->_nl;
 
 	if (saveecho)
 	    echo();
@@ -89,11 +86,12 @@ restartterm(NCURSES_CONST char *termp, int filenum, int *errret)
 	reset_prog_mode();
 
 #if USE_SIZECHANGE
-	_nc_update_screensize();
+	_nc_update_screensize(SP);
 #endif
 
 	result = OK;
+    } else {
+	result = ERR;
     }
-    _nc_handle_sigwinch(1);
     returnCode(result);
 }

@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/package.c 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #include "sysinstall.h"
@@ -55,7 +55,7 @@ int
 package_add(char *name)
 {
     PkgNodePtr tmp;
-    int i;
+    int i, current, low, high;
 
     if (!mediaVerify())
 	return DITEM_FAILURE;
@@ -68,9 +68,16 @@ package_add(char *name)
 	return i;
 
     tmp = index_search(&Top, name, &tmp);
-    if (tmp)
-	return index_extract(mediaDevice, &Top, tmp, FALSE);
-    else {
+    if (tmp) {
+	if (have_volumes) {
+	    low = low_volume;
+	    high = high_volume;
+	} else
+	    low = high = 0;
+	for (current = low; current <= high; current++)
+	    i = index_extract(mediaDevice, &Top, tmp, FALSE, current);
+	return i;
+    } else {
 	msgConfirm("Sorry, package %s was not found in the INDEX.", name);
 	return DITEM_FAILURE;
     }
@@ -132,7 +139,7 @@ package_extract(Device *dev, char *name, Boolean depended)
 
     /* If necessary, initialize the ldconfig hints */
     if (!file_readable("/var/run/ld-elf.so.hints"))
-	vsystem("ldconfig /usr/lib /usr/lib/compat /usr/local/lib /usr/X11R6/lib");
+	vsystem("ldconfig /usr/lib /usr/lib/compat /usr/local/lib");
 
     /* Be initially optimistic */
     ret = DITEM_SUCCESS;
@@ -178,7 +185,6 @@ package_extract(Device *dev, char *name, Boolean depended)
 	    close(pfd[1]);
 
 	    /* Prevent pkg_add from wanting to interact in bad ways */
-	    setenv("PACKAGE_BUILDING", "t", 1);
 	    setenv("BATCH", "t", 1);
 
 	    if (isDebug())

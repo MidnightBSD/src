@@ -34,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/usr.bin/locate/locate/fastfind.c 153197 2005-12-07 12:22:46Z des $
+ * $FreeBSD$
  */
 
 
@@ -154,9 +154,6 @@ fastfind
 
 	/* init bigram table */
 #ifdef FF_MMAP
-	if (len < (2*NBG))
-		errx(1, "database too small: %s", database);
-	
 	for (c = 0, p = bigram1, s = bigram2; c < NBG; c++, len-= 2) {
 		p[c] = check_bigram_char(*paddr++);
 		s[c] = check_bigram_char(*paddr++);
@@ -216,6 +213,8 @@ fastfind
 			count += c - OFFSET;
 		}
 
+		if (count < 0 || count > MAXPATHLEN)
+			errx(1, "corrupted database: %s", database);
 		/* overlay old path */
 		p = path + count;
 		foundchar = p - 1;

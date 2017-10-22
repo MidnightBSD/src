@@ -10,20 +10,21 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/arm/at91/at91_st.c 167950 2007-03-27 21:03:37Z n_hibma $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -76,11 +77,7 @@ static unsigned at91st_get_timecount(struct timecounter *tc);
 static struct timecounter at91st_timecounter = {
 	at91st_get_timecount, /* get_timecount */
 	NULL, /* no poll_pps */
-#ifdef SKYEYE_WORKAROUNDS
-	0xffffffffu, /* counter_mask */
-#else
 	0xfffffu, /* counter_mask */
-#endif
 	32768, /* frequency */
 	"AT91RM9200 timer", /* name */
 	1000 /* quality */
@@ -137,18 +134,10 @@ static devclass_t at91st_devclass;
 
 DRIVER_MODULE(at91_st, atmelarm, at91st_driver, at91st_devclass, 0, 0);
 
-#ifdef SKYEYE_WORKAROUNDS
-static unsigned long tot_count = 0;
-#endif
-
 static unsigned
 at91st_get_timecount(struct timecounter *tc)
 {
-#ifdef SKYEYE_WORKAROUNDS
-	return (tot_count);
-#else
 	return (st_crtr());
-#endif
 }
 
 /*
@@ -188,9 +177,6 @@ clock_intr(void *arg)
 
 	/* The interrupt is shared, so we have to make sure it's for us. */
 	if (RD4(ST_SR) & ST_SR_PITS) {
-#ifdef SKYEYE_WORKAROUNDS
-		tot_count += 32768 / hz;
-#endif
 		hardclock(TRAPF_USERMODE(fp), TRAPF_PC(fp));
 		return (FILTER_HANDLED);
 	}

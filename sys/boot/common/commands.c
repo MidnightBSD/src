@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/common/commands.c 137667 2004-11-13 17:04:55Z ru $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include <string.h>
@@ -150,6 +150,7 @@ command_help(int argc, char *argv[])
 	break;
     default:
 	command_errmsg = "usage is 'help <topic> [<subtopic>]";
+	close(hfd);
 	return(CMD_ERROR);
     }
 

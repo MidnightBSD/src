@@ -1,6 +1,13 @@
-# $FreeBSD: release/7.0.0/etc/periodic/monthly/Makefile 100316 2002-07-18 12:33:01Z ru $
+# $FreeBSD$
 
-FILES=	200.accounting \
-	999.local
+.include <bsd.own.mk>
+
+FILES=	999.local
+
+# NB: keep these sorted by MK_* knobs
+
+.if ${MK_UTMPX} != "no"
+FILES+=	200.accounting
+.endif
 
 .include <bsd.prog.mk>

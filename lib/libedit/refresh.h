@@ -31,7 +31,7 @@
  *
  *	@(#)refresh.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: refresh.h,v 1.5 2003/08/07 16:44:33 agc Exp $
- * $FreeBSD: release/7.0.0/lib/libedit/refresh.h 148834 2005-08-07 20:55:59Z stefanf $
+ * $FreeBSD$
  */
 
 /*

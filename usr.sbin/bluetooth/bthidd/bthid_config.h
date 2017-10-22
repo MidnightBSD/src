@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: bthid_config.h,v 1.4 2006/09/07 21:06:53 max Exp $
- * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/bthidd/bthid_config.h 162128 2006-09-07 21:47:49Z emax $
+ * $FreeBSD$
  */
 
 #ifndef _BTHID_CONFIG_H_

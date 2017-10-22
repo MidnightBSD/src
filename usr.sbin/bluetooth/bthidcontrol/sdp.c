@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: sdp.c,v 1.3 2004/02/17 22:14:57 max Exp $
- * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/bthidcontrol/sdp.c 155516 2006-02-10 19:54:17Z markus $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
@@ -54,7 +54,9 @@ SDP_ATTR_RANGE(	SDP_ATTR_PROTOCOL_DESCRIPTOR_LIST,
 SDP_ATTR_RANGE	(SDP_ATTR_ADDITIONAL_PROTOCOL_DESCRIPTOR_LISTS,
 		SDP_ATTR_ADDITIONAL_PROTOCOL_DESCRIPTOR_LISTS),
 SDP_ATTR_RANGE(	0x0205,		/* HIDReconnectInitiate */
-		0x0206),	/* HIDDescriptorList */
+		0x0205),
+SDP_ATTR_RANGE(	0x0206,		/* HIDDescriptorList */
+		0x0206),
 SDP_ATTR_RANGE(	0x0209,		/* HIDBatteryPower */
 		0x0209),
 SDP_ATTR_RANGE(	0x020d,		/* HIDNormallyConnectable */
@@ -149,7 +151,7 @@ hid_sdp_query(bdaddr_t const *local, struct hid_device *hd, int32_t *error)
 	}
 
 	if (control_psm == -1 || interrupt_psm == -1 ||
-	    reconnect_initiate == -1 || normally_connectable == -1 ||
+	    reconnect_initiate == -1 ||
 	    hid_descriptor == NULL || hid_descriptor_length == -1)
 		hid_sdp_query_exit(ENOATTR);
 

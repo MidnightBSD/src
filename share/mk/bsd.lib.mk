@@ -1,5 +1,5 @@
 #	from: @(#)bsd.lib.mk	5.26 (Berkeley) 5/2/91
-# $FreeBSD: release/7.0.0/share/mk/bsd.lib.mk 172907 2007-10-23 15:41:34Z ru $
+# $FreeBSD$
 #
 
 .include <bsd.init.mk>
@@ -33,8 +33,17 @@ CFLAGS+= -DNDEBUG
 NO_WERROR=
 .endif
 
+# Enable CTF conversion on request.
+.if defined(WITH_CTF)
+.undef NO_CTF
+.endif
+
 .if defined(DEBUG_FLAGS)
 CFLAGS+= ${DEBUG_FLAGS}
+
+.if !defined(NO_CTF) && (${DEBUG_FLAGS:M-g} != "")
+CTFFLAGS+= -g
+.endif
 .endif
 
 .if !defined(DEBUG_FLAGS)
@@ -46,67 +55,94 @@ STRIP?=	-s
 # prefer .s to a .c, add .po, remove stuff not used in the BSD libraries
 # .So used for PIC object files
 .SUFFIXES:
-.SUFFIXES: .out .o .po .So .S .asm .s .c .cc .cpp .cxx .m .C .f .y .l .ln
+.SUFFIXES: .out .o .po .So .S .asm .s .c .cc .cpp .cxx .C .f .y .l .ln
 
 .if !defined(PICFLAG)
-.if ${MACHINE_ARCH} == "sparc64"
+.if ${MACHINE_CPUARCH} == "sparc64"
 PICFLAG=-fPIC
 .else
 PICFLAG=-fpic
 .endif
 .endif
 
-.if ${CC} == "icc"
-PO_FLAG=-p
-.else
 PO_FLAG=-pg
-.endif
+
+.c.o:
+	${CC} ${STATIC_CFLAGS} ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
+		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
+		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
 
 .c.po:
-	${CC} ${PO_FLAG} ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CC} ${PO_FLAG} ${STATIC_CFLAGS} ${PO_CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
+		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
+		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
 
 .c.So:
-	${CC} ${PICFLAG} -DPIC ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CC} ${PICFLAG} -DPIC ${SHARED_CFLAGS} ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
+		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
+		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+
+.cc.o .C.o .cpp.o .cxx.o:
+	${CXX} ${STATIC_CXXFLAGS} ${CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .cc.po .C.po .cpp.po .cxx.po:
-	${CXX} ${PO_FLAG} ${CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CXX} ${PO_FLAG} ${STATIC_CXXFLAGS} ${PO_CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .cc.So .C.So .cpp.So .cxx.So:
-	${CXX} ${PICFLAG} -DPIC ${CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CXX} ${PICFLAG} -DPIC ${SHARED_CXXFLAGS} ${CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .f.po:
 	${FC} -pg ${FFLAGS} -o ${.TARGET} -c ${.IMPSRC}
+	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
+		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
+		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
 
 .f.So:
 	${FC} ${PICFLAG} -DPIC ${FFLAGS} -o ${.TARGET} -c ${.IMPSRC}
-
-.m.po:
-	${OBJC} ${OBJCFLAGS} -pg -c ${.IMPSRC} -o ${.TARGET}
-
-.m.So:
-	${OBJC} ${PICFLAG} -DPIC ${OBJCFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
+		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
+		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
 
 .s.po .s.So:
 	${AS} ${AFLAGS} -o ${.TARGET} ${.IMPSRC}
+	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
+		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
+		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
 
 .asm.po:
-	${CC} -x assembler-with-cpp -DPROF ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CC} -x assembler-with-cpp -DPROF ${PO_CFLAGS} ${ACFLAGS} \
+		-c ${.IMPSRC} -o ${.TARGET}
+	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
+		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
+		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
 
 .asm.So:
-	${CC} -x assembler-with-cpp ${PICFLAG} -DPIC ${CFLAGS} \
+	${CC} -x assembler-with-cpp ${PICFLAG} -DPIC ${CFLAGS} ${ACFLAGS} \
 	    -c ${.IMPSRC} -o ${.TARGET}
+	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
+		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
+		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
 
 .S.po:
-	${CC} -DPROF ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CC} -DPROF ${PO_CFLAGS} ${ACFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
+		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
+		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
 
 .S.So:
-	${CC} ${PICFLAG} -DPIC ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CC} ${PICFLAG} -DPIC ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
+		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
+		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
 
 all: objwarn
 
 .include <bsd.symver.mk>
 
-# Allow librararies to specify their own version map or have it
+# Allow libraries to specify their own version map or have it
 # automatically generated (see bsd.symver.mk above).
 .if ${MK_SYMVER} == "yes" && !empty(VERSION_MAP)
 ${SHLIB_NAME}:	${VERSION_MAP}
@@ -156,21 +192,33 @@ SOBJS+=		${OBJS:.o=.So}
 .if defined(SHLIB_NAME)
 _LIBS+=		${SHLIB_NAME}
 
+SOLINKOPTS=	-shared -Wl,-x
+.if !defined(ALLOW_SHARED_TEXTREL)
+SOLINKOPTS+=	-Wl,--fatal-warnings -Wl,--warn-shared-textrel
+.endif
+
+.if target(beforelinking)
+${SHLIB_NAME}: ${SOBJS} beforelinking
+.else
 ${SHLIB_NAME}: ${SOBJS}
+.endif
 	@${ECHO} building shared library ${SHLIB_NAME}
 	@rm -f ${.TARGET} ${SHLIB_LINK}
 .if defined(SHLIB_LINK)
 	@ln -fs ${.TARGET} ${SHLIB_LINK}
 .endif
 .if !defined(NM)
-	@${CC} ${LDFLAGS} -shared -Wl,-x \
+	@${CC} ${LDFLAGS} ${SSP_CFLAGS} ${SOLINKOPTS} \
 	    -o ${.TARGET} -Wl,-soname,${SONAME} \
 	    `lorder ${SOBJS} | tsort -q` ${LDADD}
 .else
-	@${CC} ${LDFLAGS} -shared -Wl,-x \
+	@${CC} ${LDFLAGS} ${SSP_CFLAGS} ${SOLINKOPTS} \
 	    -o ${.TARGET} -Wl,-soname,${SONAME} \
 	    `NM='${NM}' lorder ${SOBJS} | tsort -q` ${LDADD}
 .endif
+	@[ -z "${CTFMERGE}" -o -n "${NO_CTF}" ] || \
+		(${ECHO} ${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${SOBJS} && \
+		${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${SOBJS})
 .endif
 
 .if defined(INSTALL_PIC_ARCHIVE) && defined(LIB) && !empty(LIB) && ${MK_TOOLCHAIN} != "no"
@@ -248,6 +296,25 @@ _libinstall:
 	    ${_INSTALLFLAGS} ${_SHLINSTALLFLAGS} \
 	    ${SHLIB_NAME} ${DESTDIR}${SHLIBDIR}
 .if defined(SHLIB_LINK)
+# ${_SHLIBDIRPREFIX} and ${_LDSCRIPTROOT} are both needed when cross-building
+# and when building 32 bits library shims.  ${_SHLIBDIRPREFIX} is the directory
+# prefix where shared objects will be installed.  ${_LDSCRIPTROOT} is the
+# directory prefix that will be used in generated ld(1) scripts.  They cannot
+# be coalesced because of the way ld(1) handles the sysroot prefix (used in the
+# cross-toolchain):
+# - 64 bits libs are located under sysroot, so ${_LDSCRIPTROOT} must be empty.
+# - 32 bits shims are not, so ${_LDSCRIPTROOT} is used to specify their full
+#   path.  Note that ld(1) scripts are generated both during buildworld and
+#   installworld; in the later case ${_LDSCRIPTROOT} must be obviously empty.
+# On the other hand, the use of ${_SHLIBDIRPREFIX} is more consistent since it
+# does not involve the logic of a tool we do not own.
+.if defined(SHLIB_LDSCRIPT) && !empty(SHLIB_LDSCRIPT) && exists(${.CURDIR}/${SHLIB_LDSCRIPT})
+	sed -e 's,@@SHLIB@@,${_LDSCRIPTROOT}${SHLIBDIR}/${SHLIB_NAME},g' \
+	    -e 's,@@LIBDIR@@,${_LDSCRIPTROOT}${LIBDIR},g' \
+	    ${.CURDIR}/${SHLIB_LDSCRIPT} > lib${LIB}.ld
+	${INSTALL} -S -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
+	    ${_INSTALLFLAGS} lib${LIB}.ld ${DESTDIR}${LIBDIR}/${SHLIB_LINK}
+.else
 .if ${SHLIBDIR} == ${LIBDIR}
 	ln -fs ${SHLIB_NAME} ${DESTDIR}${LIBDIR}/${SHLIB_LINK}
 .else
@@ -258,8 +325,9 @@ _libinstall:
 	rm -f ${DESTDIR}${LIBDIR}/${SHLIB_NAME}
 .endif
 .endif
-.endif
-.endif
+.endif # SHLIB_LDSCRIPT
+.endif # SHLIB_LINK
+.endif # SHIB_NAME
 .if defined(INSTALL_PIC_ARCHIVE) && defined(LIB) && !empty(LIB) && ${MK_TOOLCHAIN} != "no"
 	${INSTALL} -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
 	    ${_INSTALLFLAGS} lib${LIB}_pic.a ${DESTDIR}${LIBDIR}
@@ -327,6 +395,9 @@ clean:
 .endif
 .if defined(SHLIB_NAME)
 .if defined(SHLIB_LINK)
+.if defined(SHLIB_LDSCRIPT) && exists(${.CURDIR}/${SHLIB_LDSCRIPT})
+	rm -f lib${LIB}.ld
+.endif
 	rm -f ${SHLIB_LINK}
 .endif
 .if defined(LIB) && !empty(LIB)

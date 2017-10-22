@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/geom/geom_stripe/Makefile 129475 2004-05-20 10:27:20Z pjd $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../geom/stripe
 

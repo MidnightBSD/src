@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/firewire/fwcrom.c 155315 2006-02-04 21:37:39Z imp $");
+__FBSDID("$FreeBSD$");
 #endif
 
 #include <sys/param.h>

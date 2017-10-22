@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/sys/modules/firewire/Makefile 132034 2004-07-12 13:13:17Z dfr $
+# $FreeBSD$
 
 SUBDIR=	firewire \
 	fwe \

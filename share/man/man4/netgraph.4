@@ -34,9 +34,9 @@
 .\"          Archie Cobbs <archie@FreeBSD.org>
 .\"
 .\" $Whistle: netgraph.4,v 1.7 1999/01/28 23:54:52 julian Exp $
-.\" $FreeBSD: release/7.0.0/share/man/man4/netgraph.4 174854 2007-12-22 06:32:46Z cvs2svn $
+.\" $FreeBSD$
 .\"
-.Dd July 1, 2004
+.Dd May 25, 2008
 .Dt NETGRAPH 4
 .Os
 .Sh NAME
@@ -531,7 +531,7 @@ The message can be examined using the
 macro, or completely extracted from the item using the
 .Fn NGI_GET_MSG
 which also removes the reference within the item.
-If the Item still holds a reference to the message when it is freed
+If the item still holds a reference to the message when it is freed
 (using the
 .Fn NG_FREE_ITEM
 macro), then the message will also be freed appropriately.
@@ -689,19 +689,6 @@ The message may have travelled from
 .Dq Li Frame1:
 to B
 as a synchronous reply, saving time and cycles.
-.Pp
-A similar graph might be used to represent multi-link PPP running
-over an ISDN line:
-.Bd -literal
-[ type BRI ](B1)<--->(link1)[ type MPP  ]
-[  "ISDN1" ](B2)<--->(link2)[ (no name) ]
-[          ](D) <-+
-                  |
- +----------------+
- |
- +->(switch)[ type Q.921 ](term1)<---->(datalink)[ type Q.931 ]
-            [ (no name)  ]                       [ (no name)  ]
-.Ed
 .Ss Netgraph Structures
 Structures are defined in
 .In netgraph/netgraph.h
@@ -905,7 +892,7 @@ by returning
 Each type should have an include file that defines the commands,
 argument format, and cookie for its own messages.
 The typecookie
-insures that the same header file was included by both sender and
+ensures that the same header file was included by both sender and
 receiver; when an incompatible change in the header file is made,
 the typecookie
 .Em must
@@ -1431,7 +1418,6 @@ common networking problems, solved using
 .Xr ng_async 4 ,
 .Xr ng_atm 4 ,
 .Xr ng_atmllc 4 ,
-.Xr ng_atmpif 4 ,
 .Xr ng_bluetooth 4 ,
 .Xr ng_bpf 4 ,
 .Xr ng_bridge 4 ,

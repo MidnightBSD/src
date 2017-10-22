@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/7.0.0/etc/rc.d/kerberos 175788 2008-01-29 07:15:46Z mtm $
+# $FreeBSD$
 #
 
 # PROVIDE: kerberos

@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)rpc_clntout.c 1.11 89/02/22 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.bin/rpcgen/rpc_clntout.c 152398 2005-11-13 21:17:24Z dwmalone $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpc_clntout.c, Client-stub outputter for the RPC protocol compiler

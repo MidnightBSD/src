@@ -1,6 +1,6 @@
 This is the top level of the FreeBSD source directory.  This file
 was last revised on:
-$FreeBSD: release/7.0.0/README 174854 2007-12-22 06:32:46Z cvs2svn $
+$FreeBSD$
 
 For copyright information, please see the file COPYRIGHT in this
 directory (additional copyright information also exists for some
@@ -42,6 +42,9 @@ pure reference and documentation file.
 Source Roadmap:
 ---------------
 bin		System/user commands.
+
+cddl		Various commands and libraries under the Common Development
+		and Distribution License.
 
 contrib		Packages contributed by 3rd parties.
 

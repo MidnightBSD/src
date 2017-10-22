@@ -47,7 +47,7 @@ static char sccsid[] = "@(#)ftpcmd.y	8.3 (Berkeley) 4/6/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/libexec/ftpd/ftpcmd.y 168849 2007-04-18 22:43:39Z yar $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -76,31 +76,6 @@ __FBSDID("$FreeBSD: release/7.0.0/libexec/ftpd/ftpcmd.y 168849 2007-04-18 22:43:
 #include "extern.h"
 #include "pathnames.h"
 
-extern	union sockunion data_dest, his_addr;
-extern	int hostinfo;
-extern	int logged_in;
-extern	struct passwd *pw;
-extern	int guest;
-extern	char *homedir;
-extern 	int paranoid;
-extern	int logging;
-extern	int type;
-extern	int form;
-extern	int ftpdebug;
-extern	int timeout;
-extern	int maxtimeout;
-extern  int pdata;
-extern	char *hostname;
-extern	char proctitle[];
-extern	int usedefault;
-extern  char tmpline[];
-extern	int readonly;
-extern	int assumeutf8;
-extern	int noepsv;
-extern	int noretr;
-extern	int noguestretr;
-extern	char *typenames[]; /* defined in <arpa/ftp.h> included from ftpd.c */
-
 off_t	restart_point;
 
 static	int cmd_type;
@@ -109,8 +84,6 @@ static	int cmd_bytesz;
 static	int state;
 char	cbuf[512];
 char	*fromname = NULL;
-
-extern int epsvall;
 
 %}
 
@@ -1191,7 +1164,7 @@ lookup(struct tab *p, char *cmd)
 /*
  * getline - a hacked up version of fgets to ignore TELNET escape codes.
  */
-char *
+int
 getline(char *s, int n, FILE *iop)
 {
 	int c;
@@ -1207,7 +1180,7 @@ getline(char *s, int n, FILE *iop)
 			if (ftpdebug)
 				syslog(LOG_DEBUG, "command: %s", s);
 			tmpline[0] = '\0';
-			return(s);
+			return(0);
 		}
 		if (c == 0)
 			tmpline[0] = '\0';
@@ -1244,13 +1217,24 @@ getline(char *s, int n, FILE *iop)
 			}
 		}
 		*cs++ = c;
-		if (--n <= 0 || c == '\n')
+		if (--n <= 0) {
+			/*
+			 * If command doesn't fit into buffer, discard the
+			 * rest of the command and indicate truncation.
+			 * This prevents the command to be split up into
+			 * multiple commands.
+			 */
+			while (c != '\n' && (c = getc(iop)) != EOF)
+				;
+			return (-2);
+		}
+		if (c == '\n')
 			break;
 	}
 got_eof:
 	sigprocmask(SIG_SETMASK, &osset, NULL);
 	if (c == EOF && cs == s)
-		return (NULL);
+		return (-1);
 	*cs++ = '\0';
 	if (ftpdebug) {
 		if (!guest && strncasecmp("pass ", s, 5) == 0) {
@@ -1270,7 +1254,7 @@ got_eof:
 			syslog(LOG_DEBUG, "command: %.*s", len, s);
 		}
 	}
-	return (s);
+	return (0);
 }
 
 static void
@@ -1300,9 +1284,14 @@ yylex(void)
 		case CMD:
 			(void) signal(SIGALRM, toolong);
 			(void) alarm(timeout);
-			if (getline(cbuf, sizeof(cbuf)-1, stdin) == NULL) {
+			n = getline(cbuf, sizeof(cbuf)-1, stdin);
+			if (n == -1) {
 				reply(221, "You could at least say goodbye.");
 				dologout(0);
+			} else if (n == -2) {
+				reply(500, "Command too long.");
+				(void) alarm(0);
+				continue;
 			}
 			(void) alarm(0);
 #ifdef SETPROCTITLE

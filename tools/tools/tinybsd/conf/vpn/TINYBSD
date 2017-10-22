@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/tools/tools/tinybsd/conf/vpn/TINYBSD 171923 2007-08-22 18:45:00Z remko $
+# $FreeBSD$
 machine		i386
 cpu		I486_CPU
 cpu		I586_CPU
@@ -133,7 +133,6 @@ device		xe		# Xircom pccard Ethernet
 device		loop		# Network loopback
 device		random		# Entropy device
 device		ether		# Ethernet support
-#device		sl		# Kernel SLIP
 device		ppp		# Kernel PPP
 device		tun		# Packet tunnel.
 device		pty		# Pseudo-ttys (telnet etc)

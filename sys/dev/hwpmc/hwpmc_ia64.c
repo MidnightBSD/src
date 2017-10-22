@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/hwpmc/hwpmc_ia64.c 147191 2005-06-09 19:45:09Z jkoshy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/pmc.h>
@@ -37,4 +37,30 @@ struct pmc_mdep *
 pmc_md_initialize()
 {
 	return NULL;
+}
+
+void
+pmc_md_finalize(struct pmc_mdep *md)
+{
+	(void) md;
+}
+
+int
+pmc_save_kernel_callchain(uintptr_t *cc, int maxsamples,
+    struct trapframe *tf)
+{
+	(void) cc;
+	(void) maxsamples;
+	(void) tf;
+	return (0);
+}
+
+int
+pmc_save_user_callchain(uintptr_t *cc, int maxsamples,
+    struct trapframe *tf)
+{
+	(void) cc;
+	(void) maxsamples;
+	(void) tf;
+	return (0);
 }

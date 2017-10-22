@@ -31,11 +31,9 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static char sccsid[] = "@(#)exp.c	8.1 (Berkeley) 6/4/93";
-#endif /* not lint */
+/* @(#)exp.c	8.1 (Berkeley) 6/4/93 */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/msun/bsdsrc/b_exp.c 138924 2004-12-16 20:40:37Z das $");
+__FBSDID("$FreeBSD$");
 
 
 /* EXP(X)

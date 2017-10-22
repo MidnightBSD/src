@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/arm/xscale/ixp425/ixp425var.h 170109 2007-05-29 18:10:42Z jhay $
+ * $FreeBSD$
  *
  */
 
@@ -47,6 +47,11 @@
 #include <dev/pci/pcivar.h>
 #include <sys/rman.h>
 
+/* NB: cputype is setup by set_cpufuncs */
+#define	cpu_is_ixp42x()	(cputype == CPU_ID_IXP425)
+#define	cpu_is_ixp43x()	(cputype == CPU_ID_IXP435)
+#define	cpu_is_ixp46x()	(cputype == CPU_ID_IXP465)
+
 struct ixp425_softc {
 	device_t sc_dev;
 	bus_space_tag_t sc_iot;
@@ -59,6 +64,8 @@ struct ixp425_softc {
 	struct rman sc_mem_rman;
 	bus_dma_tag_t sc_dmat;
 };
+
+void	ixp425_set_gpio(struct ixp425_softc *sc, int pin, int type);
 
 struct ixppcib_softc {
 	device_t                sc_dev;
@@ -86,14 +93,23 @@ struct ixppcib_softc {
 	bus_space_write_4(sc->sc_iot, sc->sc_gpio_ioh, reg, data)
 #define	GPIO_CONF_READ_4(sc, reg) \
 	bus_space_read_4(sc->sc_iot, sc->sc_gpio_ioh, reg)
+#define	IXP4XX_GPIO_LOCK()	mtx_lock(&ixp425_gpio_mtx)
+#define	IXP4XX_GPIO_UNLOCK()	mtx_unlock(&ixp425_gpio_mtx)
+extern struct mtx ixp425_gpio_mtx;
 
 extern struct bus_space ixp425_bs_tag;
 extern struct bus_space ixp425_a4x_bs_tag;
+
+extern struct bus_space cambria_exp_bs_tag;
+void	cambria_exp_bus_init(struct ixp425_softc *);
 
 void	ixp425_io_bs_init(bus_space_tag_t, void *);
 void	ixp425_mem_bs_init(bus_space_tag_t, void *);
 
 uint32_t ixp425_sdram_size(void);
+uint32_t ixp435_ddram_size(void);
+uint32_t ixp4xx_read_feature_bits(void);
+void	ixp4xx_write_feature_bits(uint32_t);
 
 int	ixp425_md_route_interrupt(device_t, device_t, int);
 void	ixp425_md_attach(device_t);
@@ -110,5 +126,4 @@ enum {
 	IXP425_IVAR_ADDR,		/* base physical address */
 	IXP425_IVAR_IRQ			/* irq/gpio pin assignment */
 };
-
 #endif /* _IXP425VAR_H_ */

@@ -26,13 +26,19 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sys/refcount.h 174854 2007-12-22 06:32:46Z cvs2svn $
+ * $FreeBSD$
  */
 
 #ifndef __SYS_REFCOUNT_H__
 #define __SYS_REFCOUNT_H__
 
 #include <machine/atomic.h>
+
+#ifdef _KERNEL
+#include <sys/systm.h>
+#else
+#define	KASSERT(exp, msg)	/* */
+#endif
 
 static __inline void
 refcount_init(volatile u_int *count, u_int value)
@@ -51,9 +57,12 @@ refcount_acquire(volatile u_int *count)
 static __inline int
 refcount_release(volatile u_int *count)
 {
+	u_int old;
 
 	/* XXX: Should this have a rel membar? */
-	return (atomic_fetchadd_int(count, -1) == 1);
+	old = atomic_fetchadd_int(count, -1);
+	KASSERT(old > 0, ("negative refcount %p", count));
+	return (old == 1);
 }
 
 #endif	/* ! __SYS_REFCOUNT_H__ */

@@ -27,10 +27,13 @@
 #include <machine/asm.h>
 
 #ifndef fn
-__FBSDID("$FreeBSD: release/7.0.0/lib/msun/amd64/s_lrint.S 140275 2005-01-15 03:32:28Z das $")
+__FBSDID("$FreeBSD$")
 #define	fn	lrint
 #endif
 
 ENTRY(fn)
 	cvtsd2si %xmm0, %rax
 	ret
+END(fn)
+
+	.section .note.GNU-stack,"",%progbits

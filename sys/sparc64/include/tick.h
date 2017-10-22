@@ -23,14 +23,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/sparc64/include/tick.h 145150 2005-04-16 14:57:38Z marius $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_TICK_H_
 #define	_MACHINE_TICK_H_
 
-void	tick_init(u_long clock);
-void	tick_start(void);
-void	tick_stop(void);
+extern u_int tick_et_use_stick;
+
+void	tick_clear(u_int cpu_impl);
+void	tick_stop(u_int cpu_impl);
 
 #endif

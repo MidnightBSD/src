@@ -32,7 +32,7 @@
  *
  *	@(#)fpu_emu.h	8.1 (Berkeley) 6/11/93
  *	$NetBSD: fpu_emu.h,v 1.4 2000/08/03 18:32:07 eeh Exp $
- * $FreeBSD: release/7.0.0/lib/libc/sparc64/fpu/fpu_emu.h 165903 2007-01-09 00:28:16Z imp $
+ * $FreeBSD$
  */
 
 /*
@@ -140,7 +140,7 @@ struct fpn {
 #define	FTYPE_SNG	INSFP_s
 #define	FTYPE_DBL	INSFP_d
 #define	FTYPE_EXT	INSFP_q
-#define	FTYPE_LNG	-1
+#define	FTYPE_LNG	4
 
 /*
  * Emulator state.

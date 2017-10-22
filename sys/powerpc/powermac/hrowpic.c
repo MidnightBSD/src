@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/powerpc/powermac/hrowpic.c 171805 2007-08-11 19:25:32Z marcel $
+ * $FreeBSD$
  */
 
 /*
@@ -45,10 +45,8 @@
 #include <dev/ofw/openfirm.h>
 
 #include <machine/bus.h>
-#include <machine/intr.h>
 #include <machine/intr_machdep.h>
 #include <machine/md_var.h>
-#include <machine/nexusvar.h>
 #include <machine/pio.h>
 #include <machine/resource.h>
 
@@ -68,6 +66,7 @@ static int	hrowpic_attach(device_t);
 static void	hrowpic_dispatch(device_t, struct trapframe *);
 static void	hrowpic_enable(device_t, u_int, u_int);
 static void	hrowpic_eoi(device_t, u_int);
+static void	hrowpic_ipi(device_t, u_int);
 static void	hrowpic_mask(device_t, u_int);
 static void	hrowpic_unmask(device_t, u_int);
 
@@ -80,6 +79,7 @@ static device_method_t  hrowpic_methods[] = {
 	DEVMETHOD(pic_dispatch,		hrowpic_dispatch),
 	DEVMETHOD(pic_enable,		hrowpic_enable),
 	DEVMETHOD(pic_eoi,		hrowpic_eoi),
+	DEVMETHOD(pic_ipi,		hrowpic_ipi),
 	DEVMETHOD(pic_mask,		hrowpic_mask),
 	DEVMETHOD(pic_unmask,		hrowpic_unmask),
 
@@ -167,7 +167,7 @@ hrowpic_attach(device_t dev)
 	hrowpic_write_reg(sc, HPIC_ENABLE, HPIC_SECONDARY, 0);
 	hrowpic_write_reg(sc, HPIC_CLEAR,  HPIC_SECONDARY, 0xffffffff);
 
-	powerpc_register_pic(dev);
+	powerpc_register_pic(dev, ofw_bus_get_node(dev), 64, 0, FALSE);
 	return (0);
 }
 
@@ -181,7 +181,13 @@ hrowpic_toggle_irq(struct hrowpic_softc *sc, int irq, int enable)
 	u_int roffset;
 	u_int rbit;
 
-	KASSERT((irq > 0) && (irq < HROWPIC_IRQMAX), ("en irq out of range"));
+	KASSERT((irq > 0) && (irq <= HROWPIC_IRQMAX), ("en irq out of range"));
+
+	/*
+	 * Humor the SMP layer if it wants to set up an IPI handler.
+	 */
+	if (irq == HROWPIC_IRQMAX)
+		return;
 
 	/*
 	 * Calculate prim/sec register bank for the IRQ, update soft copy,
@@ -250,15 +256,18 @@ hrowpic_eoi(device_t dev __unused, u_int irq __unused)
 }
 
 static void
+hrowpic_ipi(device_t dev, u_int irq)
+{
+	/* No SMP support. */
+}
+
+static void
 hrowpic_mask(device_t dev, u_int irq)
 {
 	struct hrowpic_softc *sc;
-	int bank;
 
 	sc = device_get_softc(dev);
 	hrowpic_toggle_irq(sc, irq, 0);
-	bank = (irq >= 32) ? HPIC_SECONDARY : HPIC_PRIMARY ;
-	hrowpic_write_reg(sc, HPIC_CLEAR, bank, 1U << (irq & 0x1f));
 }
 
 static void

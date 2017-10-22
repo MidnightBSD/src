@@ -1,10 +1,9 @@
-# $FreeBSD: release/7.0.0/usr.bin/ncal/Makefile 140909 2005-01-27 14:52:47Z delphij $
+# $FreeBSD$
 
 PROG=	ncal
 
-DPADD=	${LIBCALENDAR}
-LDADD=	-lcalendar
-WARNS?=	1
+DPADD=	${LIBCALENDAR} ${LIBTERMCAP}
+LDADD=	-lcalendar -ltermcap
 
 LINKS=	${BINDIR}/ncal ${BINDIR}/cal
 MLINKS=	ncal.1 cal.1

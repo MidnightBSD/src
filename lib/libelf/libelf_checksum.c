@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libelf/libelf_checksum.c 165535 2006-12-25 02:22:22Z jkoshy $");
+__FBSDID("$FreeBSD$");
 
 #include <gelf.h>
 

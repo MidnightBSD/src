@@ -1,6 +1,6 @@
-# $FreeBSD: release/7.0.0/tools/regression/lib/libc/gen/Makefile 110405 2003-02-05 16:40:18Z mike $
+# $FreeBSD$
 
-TESTS=	test-fpclassify test-wordexp
+TESTS=	test-fmtcheck test-fnmatch test-fpclassify test-posix_spawn test-wordexp
 
 .PHONY: tests
 tests: ${TESTS}
@@ -9,3 +9,7 @@ tests: ${TESTS}
 .PHONY: clean
 clean:
 	-rm -f ${TESTS}
+
+sh-tests: test-fnmatch
+	./test-fnmatch -s 1 >../../../bin/sh/builtins/case2.0
+	./test-fnmatch -s 2 >../../../bin/sh/builtins/case3.0

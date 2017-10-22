@@ -1,4 +1,4 @@
-# $FreeBSD: release/7.0.0/usr.sbin/cron/crontab/Makefile 137164 2004-11-03 18:01:21Z ru $
+# $FreeBSD$
 
 BINDIR=	/usr/bin
 
@@ -7,6 +7,8 @@ MAN=	crontab.1 crontab.5
 BINOWN=	root
 BINMODE=4555
 PRECIOUSPROG=
+
+WARNS?=	3
 
 CFLAGS+= -I${.CURDIR}/../cron
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/ddb/db_main.c 164029 2006-11-06 11:10:57Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -36,6 +36,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/ddb/db_main.c 164029 2006-11-06 11:10:57Z 
 #include <sys/pcpu.h>
 #include <sys/proc.h>
 #include <sys/reboot.h>
+#include <sys/sysctl.h>
 
 #include <machine/kdb.h>
 #include <machine/pcb.h>
@@ -45,11 +46,15 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/ddb/db_main.c 164029 2006-11-06 11:10:57Z 
 #include <ddb/db_command.h>
 #include <ddb/db_sym.h>
 
+SYSCTL_NODE(_debug, OID_AUTO, ddb, CTLFLAG_RW, 0, "DDB settings");
+
 static dbbe_init_f db_init;
 static dbbe_trap_f db_trap;
 static dbbe_trace_f db_trace_self_wrapper;
+static dbbe_trace_thread_f db_trace_thread_wrapper;
 
-KDB_BACKEND(ddb, db_init, db_trace_self_wrapper, db_trap);
+KDB_BACKEND(ddb, db_init, db_trace_self_wrapper, db_trace_thread_wrapper,
+    db_trap);
 
 vm_offset_t ksym_start, ksym_end;
 
@@ -169,6 +174,7 @@ db_init(void)
 	uintptr_t symtab, strtab;
 	Elf_Size tabsz, strsz;
 
+	db_command_init();
 	if (ksym_end > ksym_start && ksym_start != 0) {
 		symtab = ksym_start;
 		tabsz = *((Elf_Size*)symtab);
@@ -191,6 +197,7 @@ db_trap(int type, int code)
 	jmp_buf jb;
 	void *prev_jb;
 	boolean_t bkpt, watchpt;
+	const char *why;
 
 	/*
 	 * Don't handle the trap if the console is unavailable (i.e. it
@@ -219,6 +226,8 @@ db_trap(int type, int code)
 				db_printf("Stopped at\t");
 			db_print_loc_and_inst(db_dot);
 		}
+		why = kdb_why;
+		db_script_kdbenter(why != KDB_WHY_UNSET ? why : "unknown");
 		db_command_loop();
 		(void)kdb_jmpbuf(prev_jb);
 	}
@@ -237,5 +246,17 @@ db_trace_self_wrapper(void)
 	prev_jb = kdb_jmpbuf(jb);
 	if (setjmp(jb) == 0)
 		db_trace_self();
+	(void)kdb_jmpbuf(prev_jb);
+}
+
+static void
+db_trace_thread_wrapper(struct thread *td)
+{
+	jmp_buf jb;
+	void *prev_jb;
+
+	prev_jb = kdb_jmpbuf(jb);
+	if (setjmp(jb) == 0)
+		db_trace_thread(td, -1);
 	(void)kdb_jmpbuf(prev_jb);
 }

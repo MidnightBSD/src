@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/lib/libelf/elf_next.c 164190 2006-11-11 17:16:35Z jkoshy $");
+__FBSDID("$FreeBSD$");
 
 #include <ar.h>
 #include <assert.h>

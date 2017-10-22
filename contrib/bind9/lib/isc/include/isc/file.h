@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009, 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,12 +15,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: file.h,v 1.27.18.2 2005/04/29 00:16:54 marka Exp $ */
+/* $Id$ */
 
 #ifndef ISC_FILE_H
 #define ISC_FILE_H 1
 
-/*! \file */
+/*! \file isc/file.h */
 
 #include <stdio.h>
 
@@ -35,7 +35,7 @@ isc_file_settime(const char *file, isc_time_t *time);
 isc_result_t
 isc_file_getmodtime(const char *file, isc_time_t *time);
 /*!<
- * \brief Get the time of last modication of a file.
+ * \brief Get the time of last modification of a file.
  *
  * Notes:
  *\li	The time that is set is relative to the (OS-specific) epoch, as are
@@ -100,6 +100,10 @@ isc_file_mktemplate(const char *path, char *buf, size_t buflen);
 
 isc_result_t
 isc_file_openunique(char *templet, FILE **fp);
+isc_result_t
+isc_file_openuniqueprivate(char *templet, FILE **fp);
+isc_result_t
+isc_file_openuniquemode(char *templet, int mode, FILE **fp);
 /*!<
  * \brief Create and open a file with a unique name based on 'templet'.
  *
@@ -181,6 +185,27 @@ isc_file_isabsolute(const char *filename);
  * \brief Return #ISC_TRUE if the given file name is absolute.
  */
 
+isc_result_t
+isc_file_isplainfile(const char *name);
+/*!<
+ * \brief Check that the file is a plain file
+ *
+ * Returns:
+ *\li	#ISC_R_SUCCESS
+ *		Success. The file is a plain file.
+ *\li	#ISC_R_INVALIDFILE
+ *		The path specified was not usable by the operating system.
+ *\li	#ISC_R_FILENOTFOUND
+ *		The file does not exist. This return code comes from
+ *		errno=ENOENT when stat returns -1. This code is mentioned
+ *		here, because in logconf.c, it is the one rcode that is
+ *		permitted in addition to ISC_R_SUCCESS. This is done since
+ *		the next call in logconf.c is to isc_stdio_open(), which
+ *		will create the file if it can.
+ *\li	#other ISC_R_* errors translated from errno
+ *		These occur when stat returns -1 and an errno.
+ */
+
 isc_boolean_t
 isc_file_iscurrentdir(const char *filename);
 /*!<
@@ -204,7 +229,7 @@ isc_result_t
 isc_file_progname(const char *filename, char *buf, size_t buflen);
 /*!<
  * \brief Given an operating system specific file name "filename"
- * referring to a program, return the canonical program name. 
+ * referring to a program, return the canonical program name.
  *
  *
  * Any directory prefix or executable file name extension (if
@@ -249,6 +274,29 @@ isc_result_t
 isc_file_truncate(const char *filename, isc_offset_t size);
 /*%<
  * Truncate/extend the file specified to 'size' bytes.
+ */
+
+isc_result_t
+isc_file_safecreate(const char *filename, FILE **fp);
+/*%<
+ * Open 'filename' for writing, truncating if necessary.  Ensure that
+ * if it existed it was a normal file.  If creating the file, ensure
+ * that only the owner can read/write it.
+ */
+
+isc_result_t
+isc_file_splitpath(isc_mem_t *mctx, char *path,
+		   char **dirname, char **basename);
+/*%<
+ * Split a path into dirname and basename.  If 'path' contains no slash
+ * (or, on windows, backslash), then '*dirname' is set to ".".
+ *
+ * Allocates memory for '*dirname', which can be freed with isc_mem_free().
+ *
+ * Returns:
+ * - ISC_R_SUCCESS on success
+ * - ISC_R_INVALIDFILE if 'path' is empty or ends with '/'
+ * - ISC_R_NOMEMORY if unable to allocate memory
  */
 
 ISC_LANG_ENDDECLS

@@ -1,10 +1,11 @@
-/* $FreeBSD: release/7.0.0/tools/regression/mqueue/mqtest1/mqtest1.c 165829 2007-01-06 11:32:15Z davidxu $ */
+/* $FreeBSD$ */
 
-#include <stdio.h>
-#include <mqueue.h>
-#include <fcntl.h>
-#include <signal.h>
+#include <err.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <mqueue.h>
+#include <signal.h>
+#include <stdio.h>
 
 #define MQNAME	"/mytstqueue1"
 

@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/pc98/cbus/pckbd.c 166901 2007-02-23 12:19:07Z piso $
+ * $FreeBSD$
  */
 
 #include "opt_compat.h"
@@ -150,7 +150,7 @@ pckbdresume(device_t dev)
 	kbd = kbd_get_keyboard(kbd_find_keyboard(DRIVER_NAME,
 						 device_get_unit(dev)));
 	if (kbd)
-		(*kbdsw[kbd->kb_index]->clear_state)(kbd);
+		kbdd_clear_state(kbd);
 
 	return (0);
 }
@@ -160,7 +160,7 @@ pckbd_isa_intr(void *arg)
 {
         keyboard_t	*kbd = arg;
 
-	(*kbdsw[kbd->kb_index]->intr)(kbd, NULL);
+	kbdd_intr(kbd, NULL);
 }
 
 static int
@@ -246,15 +246,15 @@ pckbd_timeout(void *arg)
 	 */
 	s = spltty();
 	kbd = (keyboard_t *)arg;
-	if ((*kbdsw[kbd->kb_index]->lock)(kbd, TRUE)) {
+	if (kbdd_lock(kbd, TRUE)) {
 		/*
 		 * We have seen the lock flag is not set. Let's reset
 		 * the flag early, otherwise the LED update routine fails
 		 * which may want the lock during the interrupt routine.
 		 */
-		(*kbdsw[kbd->kb_index]->lock)(kbd, FALSE);
-		if ((*kbdsw[kbd->kb_index]->check_char)(kbd))
-			(*kbdsw[kbd->kb_index]->intr)(kbd, NULL);
+		kbdd_lock(kbd, FALSE);
+		if (kbdd_check_char(kbd))
+			kbdd_intr(kbd, NULL);
 	}
 	splx(s);
 	timeout(pckbd_timeout, arg, hz/10);
@@ -799,6 +799,7 @@ pckbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 		break;
 
 	case PIO_KEYMAP:	/* set keyboard translation table */
+	case OPIO_KEYMAP:	/* set keyboard translation table (compat) */
 	case PIO_KEYMAPENT:	/* set keyboard translation table entry */
 	case PIO_DEADKEYMAP:	/* set accent key translation table */
 		state->ks_accents = 0;

@@ -54,7 +54,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/sys/boot/ofw/libofw/openfirm.h 170854 2007-06-17 00:17:15Z marius $
+ * $FreeBSD$
  */
 #ifndef _OPENFIRM_H_
 #define	_OPENFIRM_H_
@@ -72,6 +72,7 @@ typedef unsigned long int	cell_t;
 extern int		(*openfirmware)(void *);
 extern phandle_t	chosen;
 extern ihandle_t	memory, mmu;
+extern int		real_mode;
 
 /*
  * This isn't actually an Open Firmware function, but it seemed like the right

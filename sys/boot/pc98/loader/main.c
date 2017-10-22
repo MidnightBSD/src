@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/boot/pc98/loader/main.c 173255 2007-11-01 18:19:19Z jhb $");
+__FBSDID("$FreeBSD$");
 
 /*
  * MD bootstrap main() and assorted miscellaneous
@@ -33,27 +33,25 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/boot/pc98/loader/main.c 173255 2007-11-01 
  */
 
 #include <stand.h>
+#include <stddef.h>
 #include <string.h>
 #include <machine/bootinfo.h>
+#include <sys/param.h>
 #include <sys/reboot.h>
 
 #include "bootstrap.h"
+#include "common/bootargs.h"
 #include "libi386/libi386.h"
+#include "libpc98/libpc98.h"
 #include "btxv86.h"
 
-#define	KARGS_FLAGS_CD		0x1
-#define	KARGS_FLAGS_PXE		0x2
+CTASSERT(sizeof(struct bootargs) == BOOTARGS_SIZE);
+CTASSERT(offsetof(struct bootargs, bootinfo) == BA_BOOTINFO);
+CTASSERT(offsetof(struct bootargs, bootflags) == BA_BOOTFLAGS);
+CTASSERT(offsetof(struct bootinfo, bi_size) == BI_SIZE);
 
 /* Arguments passed in from the boot1/boot2 loader */
-static struct 
-{
-    u_int32_t	howto;
-    u_int32_t	bootdev;
-    u_int32_t	bootflags;
-    u_int32_t	pxeinfo;
-    u_int32_t	res2;
-    u_int32_t	bootinfo;
-} *kargs;
+static struct bootargs *kargs;
 
 static u_int32_t	initial_howto;
 static u_int32_t	initial_bootdev;
@@ -75,10 +73,28 @@ extern char end[];
 static void *heap_top;
 static void *heap_bottom;
 
+static uint64_t
+pc98_loadaddr(u_int type, void *data, uint64_t addr)
+{
+	struct stat st;
+
+	if (type == LOAD_ELF)
+		return (roundup(addr, PAGE_SIZE));
+
+	/* We cannot use 15M-16M area on pc98. */
+	if (type == LOAD_RAW && addr < 0x1000000 && stat(data, &st) == 0 &&
+	    (st.st_size == -1 || addr + st.st_size > 0xf00000))
+		addr = 0x1000000;
+	return (addr);
+}
+
 int
 main(void)
 {
     int			i;
+
+    /* Set machine type to PC98_SYSTEM_PARAMETER. */
+    set_machine_type();
 
     /* Pick up arguments */
     kargs = (void *)__args;
@@ -86,19 +102,27 @@ main(void)
     initial_bootdev = kargs->bootdev;
     initial_bootinfo = kargs->bootinfo ? (struct bootinfo *)PTOV(kargs->bootinfo) : NULL;
 
+    /* Initialize the v86 register set to a known-good state. */
+    bzero(&v86, sizeof(v86));
+    v86.efl = PSL_RESERVED_DEFAULT | PSL_I;
+
     /* 
      * Initialise the heap as early as possible.  Once this is done, malloc() is usable.
      */
     bios_getmem();
 
-#ifdef LOADER_BZIP2_SUPPORT
-    heap_top = PTOV(memtop_copyin);
-    memtop_copyin -= 0x300000;
-    heap_bottom = PTOV(memtop_copyin);
-#else
-    heap_top = (void *)bios_basemem;
-    heap_bottom = (void *)end;
+#if defined(LOADER_BZIP2_SUPPORT)
+    if (high_heap_size > 0) {
+	heap_top = PTOV(high_heap_base + high_heap_size);
+	heap_bottom = PTOV(high_heap_base);
+	if (high_heap_base < memtop_copyin)
+	    memtop_copyin = high_heap_base;
+    } else
 #endif
+    {
+	heap_top = (void *)PTOV(bios_basemem);
+	heap_bottom = (void *)end;
+    }
     setheap(heap_bottom, heap_top);
 
     /* 
@@ -140,6 +164,15 @@ main(void)
 	    bc_add(initial_bootdev);
     }
 
+    archsw.arch_autoload = i386_autoload;
+    archsw.arch_getdev = i386_getdev;
+    archsw.arch_copyin = i386_copyin;
+    archsw.arch_copyout = i386_copyout;
+    archsw.arch_readin = i386_readin;
+    archsw.arch_isainb = isa_inb;
+    archsw.arch_isaoutb = isa_outb;
+    archsw.arch_loadaddr = pc98_loadaddr;
+
     /*
      * March through the device switch probing for things.
      */
@@ -158,14 +191,6 @@ main(void)
 
     extract_currdev();				/* set $currdev and $loaddev */
     setenv("LINES", "24", 1);			/* optional */
-    
-    archsw.arch_autoload = i386_autoload;
-    archsw.arch_getdev = i386_getdev;
-    archsw.arch_copyin = i386_copyin;
-    archsw.arch_copyout = i386_copyout;
-    archsw.arch_readin = i386_readin;
-    archsw.arch_isainb = isa_inb;
-    archsw.arch_isaoutb = isa_outb;
 
     interact();			/* doesn't return */
 
@@ -183,7 +208,8 @@ static void
 extract_currdev(void)
 {
     struct i386_devdesc	new_currdev;
-    int			major, biosdev = -1;
+    int			major;
+    int			biosdev = -1;
 
     /* Assume we are booting from a BIOS disk by default */
     new_currdev.d_dev = &biosdisk;

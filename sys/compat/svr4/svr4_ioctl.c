@@ -27,10 +27,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/compat/svr4/svr4_ioctl.c 150663 2005-09-28 07:03:03Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
+#include <sys/capability.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
 #include <sys/fcntl.h>
@@ -46,7 +47,6 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/compat/svr4/svr4_ioctl.c 150663 2005-09-28
 #include <compat/svr4/svr4_stropts.h>
 #include <compat/svr4/svr4_ioctl.h>
 #include <compat/svr4/svr4_termios.h>
-#include <compat/svr4/svr4_ttold.h>
 #include <compat/svr4/svr4_filio.h>
 #include <compat/svr4/svr4_sockio.h>
 
@@ -80,7 +80,7 @@ svr4_decode_cmd(cmd, dir, c, num, argsiz)
 
 int
 svr4_sys_ioctl(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_ioctl_args *uap;
 {
 	int             *retval;
@@ -103,7 +103,7 @@ svr4_sys_ioctl(td, uap)
 	retval = td->td_retval;
 	cmd = uap->com;
 
-	if ((error = fget(td, uap->fd, &fp)) != 0)
+	if ((error = fget(td, uap->fd, CAP_IOCTL, &fp)) != 0)
 		return (error);
 
 	if ((fp->f_flag & (FREAD | FWRITE)) == 0) {
@@ -119,13 +119,6 @@ svr4_sys_ioctl(td, uap)
 #endif
 
 	switch (cmd & 0xff00) {
-#ifndef BURN_BRIDGES
-	case SVR4_tIOC:
-	        DPRINTF(("ttold\n"));
-		fun = svr4_ttold_ioctl;
-		break;
-#endif
-
 	case SVR4_TIOC:
 	        DPRINTF(("term\n"));
 		fun = svr4_term_ioctl;

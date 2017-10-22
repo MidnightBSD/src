@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/libexec/rtld-elf/amd64/rtld_machdep.h 157261 2006-03-29 12:29:01Z des $
+ * $FreeBSD$
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -31,8 +31,6 @@
 
 #include <sys/types.h>
 #include <machine/atomic.h>
-
-#define	CACHE_LINE_SIZE		64
 
 struct Struct_Obj_Entry;
 
@@ -60,6 +58,9 @@ reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
 #define call_initfini_pointer(obj, target) \
 	(((InitFunc)(target))())
 
+#define call_init_pointer(obj, target) \
+	(((InitArrFunc)(target))(main_argc, main_argv, environ))
+
 #define round(size, align) \
 	(((size) + (align) - 1) & ~((align) - 1))
 #define calculate_first_tls_offset(size, align) \
@@ -74,5 +75,8 @@ typedef struct {
 } tls_index;
 
 extern void *__tls_get_addr(tls_index *ti);
+
+#define	RTLD_DEFAULT_STACK_PF_EXEC	PF_X
+#define	RTLD_DEFAULT_STACK_EXEC		PROT_EXEC
 
 #endif

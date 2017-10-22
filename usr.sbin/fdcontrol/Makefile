@@ -1,10 +1,9 @@
-# $FreeBSD: release/7.0.0/usr.sbin/fdcontrol/Makefile 139905 2005-01-08 15:46:06Z delphij $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../fdread
 
 PROG=	fdcontrol
 SRCS=	fdcontrol.c fdutil.c
-WARNS?=	6
 CFLAGS+= -I${.CURDIR}/../fdread
 MAN=	fdcontrol.8
 

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/7.0.0/lib/libgeom/geom_ctl.c 115625 2003-06-01 15:05:22Z phk $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -45,10 +45,16 @@
 #define GCTL_TABLE 1
 #include <libgeom.h>
 
+/* 
+ * Global pointer to a string that is used to avoid an errorneous free in
+ * gctl_free.
+ */
+static char nomemmsg[] = "Could not allocate memory";
+
 void
 gctl_dump(struct gctl_req *req, FILE *f)
 {
-	u_int i;
+	unsigned int i;
 	int j;
 	struct gctl_req_arg *ap;
 
@@ -105,11 +111,12 @@ gctl_set_error(struct gctl_req *req, const char *error, ...)
 static void
 gctl_check_alloc(struct gctl_req *req, void *ptr)
 {
+
 	if (ptr != NULL)
 		return;
-	gctl_set_error(req, "Could not allocate memory");
+	gctl_set_error(req, nomemmsg);
 	if (req->error == NULL)
-		req->error = "Could not allocate memory";
+		req->error = nomemmsg;
 }
 
 /*
@@ -119,10 +126,8 @@ gctl_check_alloc(struct gctl_req *req, void *ptr)
 struct gctl_req *
 gctl_get_handle(void)
 {
-	struct gctl_req *rp;
 
-	rp = calloc(1, sizeof *rp);
-	return (rp);
+	return (calloc(1, sizeof(struct gctl_req)));
 }
 
 /*
@@ -134,7 +139,7 @@ gctl_new_arg(struct gctl_req *req)
 	struct gctl_req_arg *ap;
 
 	req->narg++;
-	req->arg = realloc(req->arg, sizeof *ap * req->narg);
+	req->arg = reallocf(req->arg, sizeof *ap * req->narg);
 	gctl_check_alloc(req, req->arg);
 	if (req->arg == NULL) {
 		req->narg = 0;
@@ -145,8 +150,9 @@ gctl_new_arg(struct gctl_req *req)
 	return (ap);
 }
 
-void
-gctl_ro_param(struct gctl_req *req, const char *name, int len, const void* value)
+static void
+gctl_param_add(struct gctl_req *req, const char *name, int len, void *value,
+    int flag)
 {
 	struct gctl_req_arg *ap;
 
@@ -157,9 +163,11 @@ gctl_ro_param(struct gctl_req *req, const char *name, int len, const void* value
 		return;
 	ap->name = strdup(name);
 	gctl_check_alloc(req, ap->name);
+	if (ap->name == NULL)
+		return;
 	ap->nlen = strlen(ap->name) + 1;
-	ap->value = __DECONST(void *, value);
-	ap->flag = GCTL_PARAM_RD;
+	ap->value = value;
+	ap->flag = flag;
 	if (len >= 0)
 		ap->len = len;
 	else if (len < 0) {
@@ -169,24 +177,17 @@ gctl_ro_param(struct gctl_req *req, const char *name, int len, const void* value
 }
 
 void
-gctl_rw_param(struct gctl_req *req, const char *name, int len, void* value)
+gctl_ro_param(struct gctl_req *req, const char *name, int len, const void* value)
 {
-	struct gctl_req_arg *ap;
 
-	if (req == NULL || req->error != NULL)
-		return;
-	ap = gctl_new_arg(req);
-	if (ap == NULL)
-		return;
-	ap->name = strdup(name);
-	gctl_check_alloc(req, ap->name);
-	ap->nlen = strlen(ap->name) + 1;
-	ap->value = value;
-	ap->flag = GCTL_PARAM_RW;
-	if (len >= 0)
-		ap->len = len;
-	else if (len < 0)
-		ap->len = strlen(value) + 1;	
+	gctl_param_add(req, name, len, __DECONST(void *, value), GCTL_PARAM_RD);
+}
+
+void
+gctl_rw_param(struct gctl_req *req, const char *name, int len, void *value)
+{
+
+	gctl_param_add(req, name, len, value, GCTL_PARAM_RW);
 }
 
 const char *
@@ -201,12 +202,11 @@ gctl_issue(struct gctl_req *req)
 
 	req->version = GCTL_VERSION;
 	req->lerror = BUFSIZ;		/* XXX: arbitrary number */
-	req->error = malloc(req->lerror);
+	req->error = calloc(1, req->lerror);
 	if (req->error == NULL) {
 		gctl_check_alloc(req, req->error);
 		return (req->error);
 	}
-	memset(req->error, 0, req->lerror);
 	req->lerror--;
 	fd = open(_PATH_DEV PATH_GEOM_CTL, O_RDONLY);
 	if (fd < 0)
@@ -223,7 +223,7 @@ gctl_issue(struct gctl_req *req)
 void
 gctl_free(struct gctl_req *req)
 {
-	u_int i;
+	unsigned int i;
 
 	if (req == NULL)
 		return;
@@ -232,7 +232,7 @@ gctl_free(struct gctl_req *req)
 			free(req->arg[i].name);
 	}
 	free(req->arg);
-	if (req->error != NULL)
+	if (req->error != NULL && req->error != nomemmsg)
 		free(req->error);
 	free(req);
 }

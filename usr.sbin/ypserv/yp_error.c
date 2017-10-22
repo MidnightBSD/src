@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/ypserv/yp_error.c 114601 2003-05-03 21:06:42Z obrien $");
+__FBSDID("$FreeBSD$");
 
 /*
  * error logging/reporting facilities

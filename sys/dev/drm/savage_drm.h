@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/7.0.0/sys/dev/drm/savage_drm.h 152909 2005-11-28 23:13:57Z anholt $");
+__FBSDID("$FreeBSD$");
 
 #ifndef __SAVAGE_DRM_H__
 #define __SAVAGE_DRM_H__
@@ -50,7 +50,7 @@ __FBSDID("$FreeBSD: release/7.0.0/sys/dev/drm/savage_drm.h 152909 2005-11-28 23:
 typedef struct _drm_savage_sarea {
 	/* LRU lists for texture memory in agp space and on the card.
 	 */
-	drm_tex_region_t texList[SAVAGE_NR_TEX_HEAPS][SAVAGE_NR_TEX_REGIONS+1];
+	struct drm_tex_region texList[SAVAGE_NR_TEX_HEAPS][SAVAGE_NR_TEX_REGIONS+1];
 	unsigned int texAge[SAVAGE_NR_TEX_HEAPS];
 
 	/* Mechanism to validate card state.
@@ -115,7 +115,7 @@ typedef struct drm_savage_cmdbuf {
 	unsigned int vb_size;	/* size of client vertex buffer in bytes */
 	unsigned int vb_stride;	/* stride of vertices in 32bit words */
 				/* boxes in client's address space */
-	drm_clip_rect_t __user *box_addr;
+	struct drm_clip_rect __user *box_addr;
 	unsigned int nbox;	/* number of clipping boxes */
 } drm_savage_cmdbuf_t;
 

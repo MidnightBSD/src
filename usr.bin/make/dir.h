@@ -37,7 +37,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)dir.h	8.2 (Berkeley) 4/28/95
- * $FreeBSD: release/7.0.0/usr.bin/make/dir.h 144020 2005-03-23 12:56:15Z harti $
+ * $FreeBSD$
  */
 
 #ifndef dir_h_6002e3b8
@@ -56,6 +56,7 @@ TAILQ_HEAD(Path, PathElement);
 void Dir_Init(void);
 void Dir_InitDot(void);
 Boolean Dir_HasWildcards(const char *);
+int Dir_FindHereOrAbove(char *, char *, char *, int);
 int Dir_MTime(struct GNode *);
 void Dir_PrintDirectories(void);
 
