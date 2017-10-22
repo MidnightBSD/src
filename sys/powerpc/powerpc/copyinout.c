@@ -54,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/copyinout.c,v 1.11 2005/01/07 02:29:20 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/copyinout.c 163488 2006-10-18 19:56:20Z grehan $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -322,17 +322,23 @@ fuword32(const void *addr)
 	return ((int32_t)fuword(addr));
 }
 
-intptr_t
-casuptr(intptr_t *addr, intptr_t old, intptr_t new)
+uint32_t
+casuword32(volatile uint32_t *base, uint32_t oldval, uint32_t newval)
+{
+	return (casuword((volatile u_long *)base, oldval, newval));
+}
+
+u_long
+casuword(volatile u_long *addr, u_long old, u_long new)
 {
 	struct thread *td;
 	pmap_t pm;
 	faultbuf env;
-	intptr_t *p, val;
+	u_long *p, val;
 
 	td = PCPU_GET(curthread);
 	pm = &td->td_proc->p_vmspace->vm_pmap;
-	p = (intptr_t *)((u_int)USER_ADDR + ((u_int)addr & ~SEGMENT_MASK));
+	p = (u_long *)((u_int)USER_ADDR + ((u_int)addr & ~SEGMENT_MASK));
 
 	set_user_sr(pm->pm_sr[(u_int)addr >> ADDR_SR_SHFT]);
 
@@ -342,7 +348,7 @@ casuptr(intptr_t *addr, intptr_t old, intptr_t new)
 	}
 
 	val = *p;
-	(void) atomic_cmpset_32(p, old, new);
+	(void) atomic_cmpset_32((volatile uint32_t *)p, old, new);
 
 	td->td_pcb->pcb_onfault = NULL;
 

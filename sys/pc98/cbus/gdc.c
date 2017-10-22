@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pc98/cbus/gdc.c,v 1.48.2.1 2005/11/06 05:01:03 nyan Exp $
+ * $FreeBSD: release/7.0.0/sys/pc98/cbus/gdc.c 153165 2005-12-06 11:19:37Z ru $
  */
 
 #include "opt_gdc.h"
@@ -94,7 +94,7 @@ static int		gdc_attach_unit(int unit, gdc_softc_t *sc, int flags);
 static int		gdc_alloc_resource(device_t dev);
 static int		gdc_release_resource(device_t dev);
 
-#if FB_INSTALL_CDEV
+#ifdef FB_INSTALL_CDEV
 
 static d_open_t		gdcopen;
 static d_close_t	gdcclose;
@@ -1463,7 +1463,7 @@ gdc_dev_ioctl(video_adapter_t *adp, u_long cmd, caddr_t arg)
 static int
 gdc_diag(video_adapter_t *adp, int level)
 {
-#if FB_DEBUG > 1
+#if defined(FB_DEBUG) && FB_DEBUG > 1
     int i;
 #endif
 
@@ -1472,7 +1472,7 @@ gdc_diag(video_adapter_t *adp, int level)
 
     fb_dump_adp_info(DRIVER_NAME, adp, level);
 
-#if FB_DEBUG > 1
+#if defined(FB_DEBUG) && FB_DEBUG > 1
     for (i = 0; bios_vmode[i].vi_mode != EOT; ++i) {
 	 if (bios_vmode[i].vi_mode == NA)
 	    continue;

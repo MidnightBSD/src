@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/hfa/Makefile,v 1.1 2002/04/17 00:24:57 mdodd Exp $
+# $FreeBSD: release/7.0.0/sys/modules/hfa/Makefile 94898 2002-04-17 00:26:09Z mdodd $
 
 SUBDIR=	hfa pci
 

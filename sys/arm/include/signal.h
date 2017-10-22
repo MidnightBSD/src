@@ -29,7 +29,7 @@
  *      @(#)signal.h    8.1 (Berkeley) 6/11/93
  *	from: FreeBSD: src/sys/i386/include/signal.h,v 1.13 2000/11/09
  *	from: FreeBSD: src/sys/sparc64/include/signal.h,v 1.6 2001/09/30 18:52:17
- * $FreeBSD: src/sys/arm/include/signal.h,v 1.6 2005/01/05 21:58:48 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/signal.h 149337 2005-08-20 16:44:41Z stefanf $
  */
 
 #ifndef	_MACHINE_SIGNAL_H_
@@ -38,10 +38,6 @@
 #include <sys/cdefs.h>
 
 typedef	long sig_atomic_t;
-
-#if __XSI_VISIBLE
-#define	MINSIGSTKSZ	(1024 * 4)
-#endif
 
 #if __BSD_VISIBLE
 

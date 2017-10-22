@@ -33,7 +33,7 @@
  *
  *	From: @(#)ansi.h	8.2 (Berkeley) 1/4/94
  *	From: @(#)types.h	8.3 (Berkeley) 1/5/94
- * $FreeBSD: src/sys/arm/include/_types.h,v 1.6 2005/03/02 21:33:22 joerg Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/_types.h 158581 2006-05-15 00:17:27Z cognet $
  */
 
 #ifndef _MACHINE__TYPES_H_
@@ -87,7 +87,7 @@ typedef	__int32_t	__register_t;
 typedef	__int32_t	__segsz_t;		/* segment size (in pages) */
 typedef	__uint32_t	__size_t;		/* sizeof() */
 typedef	__int32_t	__ssize_t;		/* byte count or error */
-typedef	__int32_t	__time_t;		/* time()... */
+typedef	__int64_t	__time_t;		/* time()... */
 typedef	__uint32_t	__uintfptr_t;
 typedef	__uint64_t	__uintmax_t;
 typedef	__uint32_t	__uintptr_t;

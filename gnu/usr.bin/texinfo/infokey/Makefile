@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/texinfo/infokey/Makefile,v 1.4 2005/05/23 10:52:07 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/texinfo/infokey/Makefile 146522 2005-05-23 10:52:07Z ru $
 
 PROG=	infokey
 SRCS=	infokey.c key.c

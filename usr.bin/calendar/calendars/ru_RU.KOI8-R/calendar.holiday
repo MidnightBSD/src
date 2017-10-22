@@ -1,7 +1,7 @@
 /*
  * Российские праздники (нерабочие "красные" дни)
  *
- * $FreeBSD: src/usr.bin/calendar/calendars/ru_RU.KOI8-R/calendar.holiday,v 1.2.10.2 2005/11/16 07:47:44 ru Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/calendar/calendars/ru_RU.KOI8-R/calendar.holiday 151965 2005-11-02 09:22:28Z maxim $
  */
 
 #ifndef _ru_RU_KOI8_R_holiday_

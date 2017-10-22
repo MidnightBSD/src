@@ -1,4 +1,6 @@
-# $FreeBSD: src/gnu/usr.bin/Makefile,v 1.84 2005/03/21 05:30:58 kientzle Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/Makefile 166255 2007-01-26 10:19:08Z delphij $
+
+.include <bsd.own.mk>
 
 SUBDIR= bc \
 	${_binutils} \
@@ -13,36 +15,42 @@ SUBDIR= bc \
 	${_gperf} \
 	grep \
 	${_groff} \
-	gzip \
-	man \
+	${_man} \
 	patch \
-	rcs \
+	${_rcs} \
 	sdiff \
 	send-pr \
 	sort \
-	texinfo
+	${_texinfo}
  
-.if ${MACHINE_ARCH} == "arm" || ${MACHINE_ARCH} == "powerpc"
-NO_GDB=	# not yet
-.endif
-
-.if !defined(NO_CXX)
-.if ${MACHINE_ARCH} != "powerpc"
+.if ${MK_CXX} != "no"
 _gperf=		gperf
-.endif
+.if ${MK_GROFF} != "no"
 _groff=		groff
 .endif
+.endif
 
-.if !defined(NO_CVS)
+.if ${MK_CVS} != "no"
 _cvs=		cvs
 .endif
 
-.if !defined(NO_TOOLCHAIN)
+.if ${MK_MAN} != "no"
+_man=		man
+.endif
+
+.if ${MK_INFO} != "no"
+_texinfo=	texinfo
+.endif
+
+.if ${MK_TOOLCHAIN} != "no"
 _binutils=	binutils
 _cc=		cc
-.if !defined(NO_GDB)
+.if ${MK_GDB} != "no"
 _gdb=		gdb
 .endif
+.endif
+.if ${MK_RCS} != "no"
+_rcs=		rcs
 .endif
 
 .include <bsd.subdir.mk>

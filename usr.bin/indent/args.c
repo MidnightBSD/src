@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)args.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/indent/args.c,v 1.15 2004/09/19 20:34:30 das Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/indent/args.c 135477 2004-09-19 20:34:30Z das $");
 
 /*
  * Argument scanning and profile reading code.  Default parameters are set

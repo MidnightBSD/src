@@ -1,4 +1,6 @@
-# $FreeBSD: src/sys/boot/powerpc/loader/Makefile,v 1.18 2004/12/21 12:32:15 ru Exp $
+# $FreeBSD: release/7.0.0/sys/boot/powerpc/loader/Makefile 156813 2006-03-17 18:54:44Z ru $
+
+.include <bsd.own.mk>
 
 PROG=		loader
 NEWVERSWHAT=	"bootstrap loader" "Open Firmware/PowerPC"
@@ -46,7 +48,7 @@ CFLAGS+=	-DLOADER_NFS_SUPPORT
 CFLAGS+=	-DLOADER_TFTP_SUPPORT
 .endif
 
-.if !defined(NO_FORTH)
+.if ${MK_FORTH} != "no"
 # Enable BootForth
 BOOT_FORTH=	yes
 CFLAGS+=	-DBOOT_FORTH -I${.CURDIR}/../../ficl -I${.CURDIR}/../../ficl/powerpc

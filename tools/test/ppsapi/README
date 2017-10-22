@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/test/ppsapi/README,v 1.2 2004/11/19 17:30:48 obrien Exp $
+# $FreeBSD: release/7.0.0/tools/test/ppsapi/README 137892 2004-11-19 17:31:31Z obrien $
 
 This is a small test program which I have had around since we wrote
 the RFC 2783 API.

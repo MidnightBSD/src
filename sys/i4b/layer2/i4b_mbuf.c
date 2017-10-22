@@ -32,7 +32,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer2/i4b_mbuf.c,v 1.17 2005/01/06 22:18:21 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer2/i4b_mbuf.c 139790 2005-01-06 22:18:23Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

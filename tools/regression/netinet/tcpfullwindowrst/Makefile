@@ -1,6 +1,6 @@
-# $FreeBSD: src/tools/regression/netinet/tcpfullwindowrst/Makefile,v 1.2 2004/12/21 08:47:22 ru Exp $
+# $FreeBSD: release/7.0.0/tools/regression/netinet/tcpfullwindowrst/Makefile 156735 2006-03-15 10:46:38Z ru $
 
 PROG=	tcpfullwindowrsttest
-NO_MAN=	noman
+NO_MAN=
 
 .include <bsd.prog.mk>

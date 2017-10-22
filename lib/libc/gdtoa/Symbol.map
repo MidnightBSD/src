@@ -1,0 +1,14 @@
+/*
+ * $FreeBSD: release/7.0.0/lib/libc/gdtoa/Symbol.map 172946 2007-10-24 23:53:20Z deischen $
+ */
+
+FBSD_1.0 {
+	/*
+	 * Standard functions from contrib/gdtoa
+	 */
+	strtod;
+	strtof;
+
+	/* FreeBSD additions */
+	strtold;
+};

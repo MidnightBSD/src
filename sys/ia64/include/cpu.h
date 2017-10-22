@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/ia64/include/cpu.h,v 1.46 2005/01/06 22:18:23 imp Exp $ */
+/* $FreeBSD: release/7.0.0/sys/ia64/include/cpu.h 158459 2006-05-11 22:49:31Z marcel $ */
 /* From: NetBSD: cpu.h,v 1.18 1997/09/23 23:17:49 mjacob Exp */
 
 /*-
@@ -44,37 +44,9 @@
 
 #include <machine/frame.h>
 
-/*
- * Arguments to hardclock and gatherstats encapsulate the previous machine
- * state in an opaque clockframe.
- */
-struct clockframe {
-	struct trapframe cf_tf;
-};
-#define	CLKF_PC(cf)		((cf)->cf_tf.tf_special.iip)
-#define	CLKF_CPL(cf)		((cf)->cf_tf.tf_special.psr & IA64_PSR_CPL)
-#define	CLKF_USERMODE(cf)	(CLKF_CPL(cf) != IA64_PSR_CPL_KERN)
-
 #define	TRAPF_PC(tf)		((tf)->tf_special.iip)
 #define	TRAPF_CPL(tf)		((tf)->tf_special.psr & IA64_PSR_CPL)
 #define	TRAPF_USERMODE(tf)	(TRAPF_CPL(tf) != IA64_PSR_CPL_KERN)
-
-/*
- * CTL_MACHDEP definitions.
- */
-#define	CPU_CONSDEV		1	/* dev_t: console terminal device */
-#define	CPU_ADJKERNTZ		2	/* int:	timezone offset	(seconds) */
-#define	CPU_DISRTCSET		3	/* int: disable resettodr() call */
-#define	CPU_WALLCLOCK		4	/* int:	indicates wall CMOS clock */
-#define	CPU_MAXID		5	/* valid machdep IDs */
-
-#define	CTL_MACHDEP_NAMES { \
-	{ 0, 0 }, \
-	{ "console_device", CTLTYPE_STRUCT }, \
-	{ "adjkerntz", CTLTYPE_INT }, \
-	{ "disable_rtc_set", CTLTYPE_INT }, \
-	{ "wall_cmos_clock", CTLTYPE_INT }, \
-}
 
 #ifdef _KERNEL
 

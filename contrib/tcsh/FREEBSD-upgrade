@@ -1,13 +1,13 @@
-$FreeBSD: src/contrib/tcsh/FREEBSD-upgrade,v 1.1 2002/07/24 16:42:58 mp Exp $
+$FreeBSD: release/7.0.0/contrib/tcsh/FREEBSD-upgrade 172506 2007-10-10 16:59:15Z cvs2svn $
 
 Christos Zoulas `tcsh'
 	originals can be found at: ftp://ftp.astron.com/pub/tcsh/
 
 The stripped down version was created using FREEBSD-Xlist during extraction:
 
-	tar -X FREEBSD-Xlist -xzf tcsh-6.12.00.tar.gz
+	tar -X FREEBSD-Xlist -xzf tcsh-6.15.00.tar.gz
 
 Imported by:
 
-	cvs import -m "Import of tcsh-6.12.00" \
-		src/contrib/tcsh ZOULAS tcsh_6_12
+	cvs import -m "Import of tcsh-6.15.00" \
+		src/contrib/tcsh ZOULAS tcsh_6_15

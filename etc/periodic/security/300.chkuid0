@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/etc/periodic/security/300.chkuid0,v 1.1 2001/12/07 23:57:38 cjc Exp $
+# $FreeBSD: release/7.0.0/etc/periodic/security/300.chkuid0 87514 2001-12-07 23:57:39Z cjc $
 #
 
 

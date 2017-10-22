@@ -22,7 +22,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $FreeBSD: src/gnu/lib/libdialog/dialog.h,v 1.22 2000/12/14 02:35:22 jkh Exp $
+ * $FreeBSD: release/7.0.0/gnu/lib/libdialog/dialog.h 171951 2007-08-24 16:26:24Z ache $
  *
  */
 
@@ -74,7 +74,7 @@ typedef struct _dmenu_item {
 } dialogMenuItem;
 
 #define VERSION "0.4"
-#define MAX_LEN 2048
+#define MAX_LEN 4096
 
 #ifndef TRUE
 #define TRUE (1)

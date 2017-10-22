@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/tools/netrate/Makefile.inc,v 1.1 2004/12/21 12:14:33 keramida Exp $
+# $FreeBSD: release/7.0.0/tools/tools/netrate/Makefile.inc 139121 2004-12-21 12:14:34Z keramida $
 
 WARNS?= 5
 WFORMAT?= 2

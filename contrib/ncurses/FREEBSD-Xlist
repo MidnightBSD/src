@@ -1,0 +1,9 @@
+$FreeBSD: release/7.0.0/contrib/ncurses/FREEBSD-Xlist 172506 2007-10-10 16:59:15Z cvs2svn $
+
+Ada95
+c++
+doc/html/Ada95.html
+doc/html/ada
+doc/html/index.html
+doc/html/man
+test

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/keyserv/Makefile,v 1.14 2004/08/06 07:27:06 cperciva Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/keyserv/Makefile 133196 2004-08-06 07:27:08Z cperciva $
 
 PROG=	keyserv
 MAN=	keyserv.8

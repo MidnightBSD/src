@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile,v 1.2 1995/07/03 21:24:39 cgd Exp $
-# $FreeBSD: src/usr.bin/xlint/lint2/Makefile,v 1.5 2004/12/21 08:47:30 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/xlint/lint2/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 .PATH:	${.CURDIR}/../lint1
 

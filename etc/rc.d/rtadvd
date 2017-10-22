@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $NetBSD: rtadvd,v 1.5 2002/03/22 04:34:00 thorpej Exp $
-# $FreeBSD: src/etc/rc.d/rtadvd,v 1.10 2004/10/07 13:55:26 mtm Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/rtadvd 175737 2008-01-28 07:58:32Z dougb $
 #
 
 # PROVIDE: rtadvd

@@ -1,11 +1,13 @@
-# $FreeBSD: src/usr.bin/fetch/Makefile,v 1.17 2004/12/21 10:16:02 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/fetch/Makefile 156813 2006-03-17 18:54:44Z ru $
+
+.include <bsd.own.mk>
 
 PROG=		fetch
 CSTD?=		c99
 WARNS?=		6
 DPADD=		${LIBFETCH}
 LDADD=		-lfetch
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
+.if ${MK_OPENSSL} != "no"
 DPADD+=		${LIBSSL} ${LIBCRYPTO}
 LDADD+=		-lssl -lcrypto
 .endif

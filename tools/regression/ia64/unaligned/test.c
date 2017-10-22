@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/ia64/unaligned/test.c,v 1.5 2005/01/28 02:58:32 marcel Exp $
+ * $FreeBSD: release/7.0.0/tools/regression/ia64/unaligned/test.c 140922 2005-01-28 02:58:32Z marcel $
  */
 
 #include <machine/float.h>

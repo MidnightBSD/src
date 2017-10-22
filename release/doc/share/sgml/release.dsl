@@ -1,4 +1,4 @@
-<!-- $FreeBSD: src/release/doc/share/sgml/release.dsl,v 1.9.2.1 2005/11/28 06:25:20 hrs Exp $ -->
+<!-- $FreeBSD: release/7.0.0/release/doc/share/sgml/release.dsl 174854 2007-12-22 06:32:46Z cvs2svn $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -54,6 +54,7 @@
      ((equal? STR (car s)) #t)
      (else (loop (cdr s))))))
 
+; Deal with conditional inclusion of text via entities.
 (default
   (let* ((arch (attribute-string (normalize "arch")))
 	 (role (attribute-string (normalize "role")))

@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/mk/bsd.sys.mk,v 1.37 2005/01/16 21:18:16 obrien Exp $
+# $FreeBSD: release/7.0.0/share/mk/bsd.sys.mk 169961 2007-05-24 21:53:42Z obrien $
 #
 # This file contains common settings used for building FreeBSD
 # sources.
@@ -8,7 +8,25 @@
 
 # for GCC:  http://gcc.gnu.org/onlinedocs/gcc-3.0.4/gcc_3.html#IDX143
 
+# Universally disable -Werror until src/ is in better shape for GCC 4.2
+NO_WERROR=
+
 .if !defined(NO_WARNS) && ${CC} != "icc"
+. if defined(CSTD)
+.  if ${CSTD} == "k&r"
+CFLAGS		+= -traditional
+.  elif ${CSTD} == "c89" || ${CSTD} == "c90"
+CFLAGS		+= -std=iso9899:1990
+.  elif ${CSTD} == "c94" || ${CSTD} == "c95"
+CFLAGS		+= -std=iso9899:199409
+.  elif ${CSTD} == "c99"
+CFLAGS		+= -std=iso9899:1999
+.  else
+CFLAGS		+= -std=${CSTD}
+.  endif
+# -pedantic is problematic because it also imposes namespace restrictions
+#CFLAGS		+= -pedantic
+. endif
 . if defined(WARNS)
 .  if ${WARNS} >= 1
 CWARNFLAGS	+=	-Wsystem-headers
@@ -36,6 +54,9 @@ CWARNFLAGS	+=	-Wchar-subscripts -Winline -Wnested-externs -Wredundant-decls
 # XXX always get it right.
 CWARNFLAGS	+=	-Wno-uninitialized
 .  endif
+.  if !defined(WITH_GCC3)
+CWARNFLAGS	+=	-Wno-pointer-sign
+.  endif
 . endif
 
 . if defined(FORMAT_AUDIT)
@@ -50,6 +71,10 @@ CWARNFLAGS	+=	-Werror
 .   endif
 .  endif
 . endif
+.endif
+
+.if defined(IGNORE_PRAGMA)
+CWARNFLAGS	+=	-Wno-unknown-pragmas
 .endif
 
 # Allow user-specified additional warning flags

@@ -38,7 +38,7 @@
  *
  * Prototypes for cpu, mmu and tlb related functions.
  *
- * $FreeBSD: src/sys/arm/include/cpufunc.h,v 1.7 2005/06/03 19:49:53 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/cpufunc.h 171618 2007-07-27 14:39:41Z cognet $
  */
 
 #ifndef _MACHINE_CPUFUNC_H_
@@ -140,6 +140,10 @@ struct cpu_functions {
 
 	void	(*cf_idcache_wbinv_all)	(void);
 	void	(*cf_idcache_wbinv_range) (vm_offset_t, vm_size_t);
+	void	(*cf_l2cache_wbinv_all) (void);
+	void	(*cf_l2cache_wbinv_range) (vm_offset_t, vm_size_t);
+	void	(*cf_l2cache_inv_range)	  (vm_offset_t, vm_size_t);
+	void	(*cf_l2cache_wb_range)	  (vm_offset_t, vm_size_t);
 
 	/* Other functions */
 
@@ -189,6 +193,10 @@ extern u_int cputype;
 
 #define	cpu_idcache_wbinv_all()	cpufuncs.cf_idcache_wbinv_all()
 #define	cpu_idcache_wbinv_range(a, s) cpufuncs.cf_idcache_wbinv_range((a), (s))
+#define cpu_l2cache_wbinv_all()	cpufuncs.cf_l2cache_wbinv_all()
+#define cpu_l2cache_wb_range(a, s) cpufuncs.cf_l2cache_wb_range((a), (s))
+#define cpu_l2cache_inv_range(a, s) cpufuncs.cf_l2cache_inv_range((a), (s))
+#define cpu_l2cache_wbinv_range(a, s) cpufuncs.cf_l2cache_wbinv_range((a), (s))
 
 #define	cpu_flush_prefetchbuf()	cpufuncs.cf_flush_prefetchbuf()
 #define	cpu_drain_writebuf()	cpufuncs.cf_drain_writebuf()
@@ -322,16 +330,16 @@ void	arm9_setttb		(u_int);
 
 void	arm9_tlb_flushID_SE	(u_int va);
 
-void	arm9_icache_sync_all	__P((void));
-void	arm9_icache_sync_range	__P((vm_offset_t, vm_size_t));
+void	arm9_icache_sync_all	(void);
+void	arm9_icache_sync_range	(vm_offset_t, vm_size_t);
 
-void	arm9_dcache_wbinv_all	__P((void));
-void	arm9_dcache_wbinv_range __P((vm_offset_t, vm_size_t));
-void	arm9_dcache_inv_range	__P((vm_offset_t, vm_size_t));
-void	arm9_dcache_wb_range	__P((vm_offset_t, vm_size_t));
+void	arm9_dcache_wbinv_all	(void);
+void	arm9_dcache_wbinv_range (vm_offset_t, vm_size_t);
+void	arm9_dcache_inv_range	(vm_offset_t, vm_size_t);
+void	arm9_dcache_wb_range	(vm_offset_t, vm_size_t);
 
-void	arm9_idcache_wbinv_all	__P((void));
-void	arm9_idcache_wbinv_range __P((vm_offset_t, vm_size_t));
+void	arm9_idcache_wbinv_all	(void);
+void	arm9_idcache_wbinv_range (vm_offset_t, vm_size_t);
 
 void	arm9_context_switch	(void);
 
@@ -371,10 +379,11 @@ extern unsigned arm10_dcache_index_inc;
 #endif
 
 #if defined(CPU_ARM9) || defined(CPU_ARM10) || defined(CPU_SA110) || \
-    defined(CPU_SA1100) || defined(CPU_SA1110) || \
-    defined(CPU_XSCALE_80200) || defined(CPU_XSCALE_80321) || \
-    defined(CPU_XSCALE_PXA2X0) || defined(CPU_XSCALE_IXP425)
-
+  defined(CPU_SA1100) || defined(CPU_SA1110) ||			     \
+  defined(CPU_XSCALE_80200) || defined(CPU_XSCALE_80321) ||	     \
+  defined(CPU_XSCALE_PXA2X0) || defined(CPU_XSCALE_IXP425) ||	     \
+  defined(CPU_XSCALE_80219) || defined(CPU_XSCALE_81342)
+  
 void	armv4_tlb_flushID	(void);
 void	armv4_tlb_flushI	(void);
 void	armv4_tlb_flushD	(void);
@@ -389,8 +398,9 @@ void	ixp12x0_context_switch	(void);
 void	ixp12x0_setup		(char *string);
 #endif
 
-#if defined(CPU_XSCALE_80200) || defined(CPU_XSCALE_80321) || \
-    defined(CPU_XSCALE_PXA2X0) || defined(CPU_XSCALE_IXP425)
+#if defined(CPU_XSCALE_80200) || defined(CPU_XSCALE_80321) ||	\
+  defined(CPU_XSCALE_PXA2X0) || defined(CPU_XSCALE_IXP425) ||	\
+  defined(CPU_XSCALE_80219) || defined(CPU_XSCALE_81342)
 void	xscale_cpwait		(void);
 
 void	xscale_cpu_sleep	(int mode);
@@ -428,7 +438,33 @@ void	xscale_cache_flushD_rng	(vm_offset_t start, vm_size_t end);
 void	xscale_context_switch	(void);
 
 void	xscale_setup		(char *string);
-#endif	/* CPU_XSCALE_80200 || CPU_XSCALE_80321 || CPU_XSCALE_PXA2X0 || CPU_XSCALE_IXP425 */
+#endif	/* CPU_XSCALE_80200 || CPU_XSCALE_80321 || CPU_XSCALE_PXA2X0 || CPU_XSCALE_IXP425 
+	   CPU_XSCALE_80219 */
+
+#ifdef	CPU_XSCALE_81342
+
+void	xscalec3_l2cache_purge	(void);
+void	xscalec3_cache_purgeID	(void);
+void	xscalec3_cache_purgeD	(void);
+void	xscalec3_cache_cleanID	(void);
+void	xscalec3_cache_cleanD	(void);
+void	xscalec3_cache_syncI	(void);
+
+void	xscalec3_cache_purgeID_rng 	(vm_offset_t start, vm_size_t end);
+void	xscalec3_cache_purgeD_rng	(vm_offset_t start, vm_size_t end);
+void	xscalec3_cache_cleanID_rng	(vm_offset_t start, vm_size_t end);
+void	xscalec3_cache_cleanD_rng	(vm_offset_t start, vm_size_t end);
+void	xscalec3_cache_syncI_rng	(vm_offset_t start, vm_size_t end);
+
+void	xscalec3_l2cache_flush_rng	(vm_offset_t, vm_size_t);
+void	xscalec3_l2cache_clean_rng	(vm_offset_t start, vm_size_t end);
+void	xscalec3_l2cache_purge_rng	(vm_offset_t start, vm_size_t end);
+
+
+void	xscalec3_setttb		(u_int ttb);
+void	xscalec3_context_switch	(void);
+
+#endif /* CPU_XSCALE_81342 */
 
 #define tlb_flush	cpu_tlb_flushID
 #define setttb		cpu_setttb
@@ -460,7 +496,7 @@ __set_cpsr_c(u_int bic, u_int eor)
 		      (mask) & (I32_bit | F32_bit)))
 
 #define enable_interrupts(mask)						\
-	(__set_cpsr_c((mask | F32_bit) & (I32_bit | F32_bit), 0))
+	(__set_cpsr_c((mask) & (I32_bit | F32_bit), 0))
 
 #define restore_interrupts(old_cpsr)					\
 	(__set_cpsr_c((I32_bit | F32_bit), (old_cpsr) & (I32_bit | F32_bit)))
@@ -478,20 +514,20 @@ u_int	GetCPSR(void);
  * (in arm/arm32/setstack.S)
  */
 
-void set_stackptr	__P((u_int mode, u_int address));
-u_int get_stackptr	__P((u_int mode));
+void set_stackptr	(u_int mode, u_int address);
+u_int get_stackptr	(u_int mode);
 
 /*
  * Miscellany
  */
 
-int get_pc_str_offset	__P((void));
+int get_pc_str_offset	(void);
 
 /*
  * CPU functions from locore.S
  */
 
-void cpu_reset		__P((void)) __attribute__((__noreturn__));
+void cpu_reset		(void) __attribute__((__noreturn__));
 
 /*
  * Cache info variables.

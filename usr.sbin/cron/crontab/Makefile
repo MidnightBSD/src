@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/cron/crontab/Makefile,v 1.14 2004/11/03 18:01:21 ru Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/cron/crontab/Makefile 137164 2004-11-03 18:01:21Z ru $
 
 BINDIR=	/usr/bin
 

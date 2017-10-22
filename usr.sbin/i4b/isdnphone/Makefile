@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/i4b/isdnphone/Makefile,v 1.4 2001/07/20 06:19:50 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/i4b/isdnphone/Makefile 80029 2001-07-20 06:20:32Z obrien $
 
 PROG=	isdnphone
 MAN=	isdnphone.8

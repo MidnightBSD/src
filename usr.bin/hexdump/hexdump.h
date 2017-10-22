@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)hexdump.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/hexdump/hexdump.h,v 1.9 2004/07/11 01:11:12 tjr Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/hexdump/hexdump.h 131954 2004-07-11 01:11:12Z tjr $
  */
 
 #include <wchar.h>

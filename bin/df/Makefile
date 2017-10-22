@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.3 (Berkeley) 5/8/95
-# $FreeBSD: src/bin/df/Makefile,v 1.18 2004/05/24 22:21:49 pjd Exp $
+# $FreeBSD: release/7.0.0/bin/df/Makefile 129678 2004-05-24 22:22:29Z pjd $
 
 MOUNT=	${.CURDIR}/../../sbin/mount
 .PATH: ${MOUNT}

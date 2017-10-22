@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/split/split.c,v 1.15 2004/07/11 14:44:23 tjr Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/split/split.c 161172 2006-08-10 10:41:47Z keramida $");
 
 #ifndef lint
 static const char copyright[] =
@@ -88,7 +88,7 @@ main(int argc, char **argv)
 
 	setlocale(LC_ALL, "");
 
-	while ((ch = getopt(argc, argv, "-0123456789a:b:l:p:")) != -1)
+	while ((ch = getopt(argc, argv, "0123456789a:b:l:p:")) != -1)
 		switch (ch) {
 		case '0': case '1': case '2': case '3': case '4':
 		case '5': case '6': case '7': case '8': case '9':
@@ -108,11 +108,6 @@ main(int argc, char **argv)
 					    "%s: illegal line count", optarg);
 			}
 			break;
-		case '-':		/* Undocumented: historic stdin flag. */
-			if (ifd != -1)
-				usage();
-			ifd = 0;
-			break;
 		case 'a':		/* Suffix length */
 			if ((sufflen = strtol(optarg, &ep, 10)) <= 0 || *ep)
 				errx(EX_USAGE,
@@ -121,24 +116,20 @@ main(int argc, char **argv)
 		case 'b':		/* Byte count. */
 			errno = 0;
 			if ((bytecnti = strtoimax(optarg, &ep, 10)) <= 0 ||
-			    (*ep != '\0' && *ep != 'k' && *ep != 'm') ||
-			    errno != 0)
+			    strchr("kKmMgG", *ep) == NULL || errno != 0)
 				errx(EX_USAGE,
 				    "%s: illegal byte count", optarg);
-			if (*ep == 'k')
+			if (*ep == 'k' || *ep == 'K')
 				scale = 1024;
-			else if (*ep == 'm')
+			else if (*ep == 'm' || *ep == 'M')
 				scale = 1024 * 1024;
+			else if (*ep == 'g' || *ep == 'G')
+				scale = 1024 * 1024 * 1024;
 			else
 				scale = 1;
 			if (bytecnti > OFF_MAX / scale)
 				errx(EX_USAGE, "%s: offset too large", optarg);
 			bytecnt = (off_t)(bytecnti * scale);
-			break;
-		case 'p' :      /* pattern matching. */
-			if (regcomp(&rgx, optarg, REG_EXTENDED|REG_NOSUB) != 0)
-				errx(EX_USAGE, "%s: illegal regexp", optarg);
-			pflag = 1;
 			break;
 		case 'l':		/* Line count. */
 			if (numlines != 0)
@@ -147,20 +138,24 @@ main(int argc, char **argv)
 				errx(EX_USAGE,
 				    "%s: illegal line count", optarg);
 			break;
+		case 'p':		/* pattern matching. */
+			if (regcomp(&rgx, optarg, REG_EXTENDED|REG_NOSUB) != 0)
+				errx(EX_USAGE, "%s: illegal regexp", optarg);
+			pflag = 1;
+			break;
 		default:
 			usage();
 		}
 	argv += optind;
 	argc -= optind;
 
-	if (*argv != NULL)
-		if (ifd == -1) {		/* Input file. */
-			if (strcmp(*argv, "-") == 0)
-				ifd = STDIN_FILENO;
-			else if ((ifd = open(*argv, O_RDONLY, 0)) < 0)
-				err(EX_NOINPUT, "%s", *argv);
-			++argv;
-		}
+	if (*argv != NULL) {			/* Input file. */
+		if (strcmp(*argv, "-") == 0)
+			ifd = STDIN_FILENO;
+		else if ((ifd = open(*argv, O_RDONLY, 0)) < 0)
+			err(EX_NOINPUT, "%s", *argv);
+		++argv;
+	}
 	if (*argv != NULL)			/* File name prefix. */
 		if (strlcpy(fname, *argv++, sizeof(fname)) >= sizeof(fname))
 			errx(EX_USAGE, "file name prefix is too long");
@@ -319,16 +314,8 @@ newfile(void)
 		if ((maxfiles *= 26) <= 0)
 			errx(EX_USAGE, "suffix is too long (max %ld)", i);
 
-	/*
-	 * Hack to increase max files; original code wandered through
-	 * magic characters.
-	 */
-	if (fnum == maxfiles) {
-		if (!defname || fname[0] == 'z')
-			errx(EX_DATAERR, "too many files");
-		++fname[0];
-		fnum = 0;
-	}
+	if (fnum == maxfiles)
+		errx(EX_DATAERR, "too many files");
 
 	/* Generate suffix of sufflen letters */
 	tfnum = fnum;
@@ -349,8 +336,8 @@ static void
 usage(void)
 {
 	(void)fprintf(stderr,
-"usage: split [-a sufflen] [-b byte_count] [-l line_count] [-p pattern]\n");
-	(void)fprintf(stderr,
-"             [file [prefix]]\n");
+"usage: split [-l line_count] [-a suffix_length] [file [prefix]]\n"
+"       split -b byte_count[K|k|M|m|G|g] [-a suffix_length] [file [prefix]]\n"
+"       split -p pattern [-a suffix_length] [file [prefix]]\n");
 	exit(EX_USAGE);
 }

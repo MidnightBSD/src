@@ -34,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/sa11x0/sa11x0_var.h,v 1.1 2004/05/14 11:46:45 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/sa11x0/sa11x0_var.h 159047 2006-05-29 19:32:32Z cognet $
  *
  */
 
@@ -45,6 +45,7 @@
 
 #include <sys/bus.h>
 #include <machine/bus.h>
+#include <sys/rman.h>
 
 struct sa11x0_softc {
 	device_t sc_dev;
@@ -55,6 +56,7 @@ struct sa11x0_softc {
 	bus_space_handle_t sc_dmach;
 	bus_space_handle_t sc_reseth;
 	u_int32_t sc_intrmask;
+	struct rman sa11x0_rman;
 };
 
 /* Attach args all devices */
@@ -62,15 +64,6 @@ struct sa11x0_softc {
 typedef void *sa11x0_chipset_tag_t;
 
 extern struct bus_space sa11x0_bs_tag;
-struct sa11x0_attach_args {
-	sa11x0_chipset_tag_t	sa_sc;		
-	bus_space_tag_t		sa_iot;		/* Bus tag */
-	bus_addr_t		sa_addr;	/* i/o address  */
-	bus_size_t		sa_size;
-
-	int			sa_intr;
-	int			sa_gpio;
-};
 
 void *sa11x0_intr_establish(sa11x0_chipset_tag_t, int, int, int, 
 			    int (*)(void *), void *);

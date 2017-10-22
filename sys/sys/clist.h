@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)clist.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: src/sys/sys/clist.h,v 1.11 2004/04/07 04:19:49 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/sys/clist.h 174854 2007-12-22 06:32:46Z cvs2svn $
  */
 
 #ifndef _SYS_CLIST_H_

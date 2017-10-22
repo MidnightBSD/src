@@ -12,7 +12,7 @@
  *
  *	last edit-date: [Fri May 25 15:21:33 2001]
  *
- * $FreeBSD: src/share/examples/isdn/contrib/hplay.c,v 1.1 2001/05/25 13:25:59 hm Exp $
+ * $FreeBSD: release/7.0.0/share/examples/isdn/contrib/hplay.c 171272 2007-07-06 07:21:56Z bz $
  *
  *---------------------------------------------------------------------------*/
 
@@ -29,7 +29,7 @@
 #include <sys/signal.h>
 #include <sys/ioctl.h>
 
-#include <machine/i4b_tel_ioctl.h>
+#include <i4b/i4b_tel_ioctl.h>
 
 #include "proto.h"
 #include "getargs.h"

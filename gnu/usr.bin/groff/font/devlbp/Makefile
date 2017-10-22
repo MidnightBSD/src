@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/groff/font/devlbp/Makefile,v 1.2 2002/10/11 08:58:13 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/font/devlbp/Makefile 104869 2002-10-11 08:58:14Z ru $
 
 DEV=		lbp
 LBPPRINT=	${PSPRINT}

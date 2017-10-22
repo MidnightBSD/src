@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/rtprio/rtprio.c,v 1.10 2003/07/06 12:44:10 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/rtprio/rtprio.c 117280 2003-07-06 12:44:11Z charnier $");
 
 #include <sys/param.h>
 #include <sys/rtprio.h>

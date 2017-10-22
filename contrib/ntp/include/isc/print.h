@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: print.h,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: print.h,v 1.17 2001/02/27 02:19:33 gson Exp $ */
 
 #ifndef ISC_PRINT_H
 #define ISC_PRINT_H 1

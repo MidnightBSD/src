@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)icu.h	5.6 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/i386/isa/icu.h,v 1.33 2004/05/11 20:23:24 jhb Exp $
+ * $FreeBSD: release/7.0.0/sys/i386/isa/icu.h 165302 2006-12-17 05:07:01Z kmacy $
  */
 
 /*
@@ -47,7 +47,7 @@
 #define	ICU_IMR_OFFSET	1
 #endif
 
-void	atpic_handle_intr(struct intrframe iframe);
+void	atpic_handle_intr(u_int vector, struct trapframe *frame);
 void	atpic_startup(void);
 
 #endif /* !_I386_ISA_ICU_H_ */

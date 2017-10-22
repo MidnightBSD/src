@@ -46,7 +46,7 @@ static char copyright[] =
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/make/main.c,v 1.155 2005/05/24 16:05:51 harti Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/make/main.c 174069 2007-11-29 04:20:19Z fjoe $");
 
 /*
  * main.c
@@ -61,15 +61,13 @@ __FBSDID("$FreeBSD: src/usr.bin/make/main.c,v 1.155 2005/05/24 16:05:51 harti Ex
  *			the .MFLAGS target.
  */
 
-#ifndef MACHINE
-#include <sys/utsname.h>
-#endif
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <sys/time.h>
 #include <sys/queue.h>
 #include <sys/resource.h>
+#include <sys/utsname.h>
 #include <sys/wait.h>
 #include <err.h>
 #include <errno.h>
@@ -82,6 +80,7 @@ __FBSDID("$FreeBSD: src/usr.bin/make/main.c,v 1.155 2005/05/24 16:05:51 harti Ex
 #include "config.h"
 #include "dir.h"
 #include "globals.h"
+#include "GNode.h"
 #include "job.h"
 #include "make.h"
 #include "parse.h"
@@ -95,21 +94,26 @@ __FBSDID("$FreeBSD: src/usr.bin/make/main.c,v 1.155 2005/05/24 16:05:51 harti Ex
 
 extern char **environ;	/* XXX what header declares this variable? */
 
-#define WANT_ENV_MKLVL	1
+#define	WANT_ENV_MKLVL	1
 #define	MKLVL_MAXVAL	500
 #define	MKLVL_ENVVAR	"__MKLVL__"
 
 /* ordered list of makefiles to read */
 static Lst makefiles = Lst_Initializer(makefiles);
 
+/* ordered list of source makefiles */
+static Lst source_makefiles = Lst_Initializer(source_makefiles);
+
 /* list of variables to print */
 static Lst variables = Lst_Initializer(variables);
 
 static Boolean	expandVars;	/* fully expand printed variables */
 static Boolean	noBuiltins;	/* -r flag */
-static Boolean	forceJobs;      /* -j argument given */
+static Boolean	forceJobs;	/* -j argument given */
 static char	*curdir;	/* startup directory */
 static char	*objdir;	/* where we chdir'ed to */
+static char	**save_argv;	/* saved argv */
+static char	*save_makeflags;/* saved MAKEFLAGS */
 
 /* (-E) vars to override from env */
 Lst envFirstVars = Lst_Initializer(envFirstVars);
@@ -118,10 +122,11 @@ Lst envFirstVars = Lst_Initializer(envFirstVars);
 Lst create = Lst_Initializer(create);
 
 Boolean		allPrecious;	/* .PRECIOUS given on line by itself */
+Boolean		is_posix;	/* .POSIX target seen */
 Boolean		beSilent;	/* -s flag */
 Boolean		beVerbose;	/* -v flag */
 Boolean		compatMake;	/* -B argument */
-Boolean		debug;		/* -d flag */
+int		debug;		/* -d flag */
 Boolean		ignoreErrors;	/* -i flag */
 int		jobLimit;	/* -j argument */
 Boolean		jobsRunning;	/* TRUE if the jobs might be running */
@@ -236,14 +241,14 @@ Main_ParseWarn(const char *arg, int iscmd)
 static Boolean
 ReadMakefile(const char p[])
 {
-	char *fname;			/* makefile to read */
+	char *fname, *fnamesave;	/* makefile to read */
 	FILE *stream;
 	char *name, path[MAXPATHLEN];
 	char *MAKEFILE;
 	int setMAKEFILE;
 
 	/* XXX - remove this once constification is done */
-	fname = estrdup(p);
+	fnamesave = fname = estrdup(p);
 
 	if (!strcmp(fname, "-")) {
 		Parse_File("(stdin)", stdin);
@@ -298,8 +303,10 @@ ReadMakefile(const char p[])
 		name = Path_FindFile(fname, &parseIncPath);
 		if (!name)
 			name = Path_FindFile(fname, &sysIncPath);
-		if (!name || !(stream = fopen(name, "r")))
+		if (!name || !(stream = fopen(name, "r"))) {
+			free(fnamesave);
 			return (FALSE);
+		}
 		MAKEFILE = fname = name;
 		/*
 		 * set the MAKEFILE variable desired by System V fans -- the
@@ -310,8 +317,33 @@ found:
 		if (setMAKEFILE)
 			Var_SetGlobal("MAKEFILE", MAKEFILE);
 		Parse_File(fname, stream);
-		fclose(stream);
 	}
+	free(fnamesave);
+	return (TRUE);
+}
+
+/**
+ * Open and parse the given makefile.
+ * If open is successful add it to the list of makefiles.
+ *
+ * Results:
+ *	TRUE if ok. FALSE if couldn't open file.
+ */
+static Boolean
+TryReadMakefile(const char p[])
+{
+	char *data;
+	LstNode *last = Lst_Last(&source_makefiles);
+
+	if (!ReadMakefile(p))
+		return (FALSE);
+
+	data = estrdup(p);
+	if (last == NULL) {
+		LstNode *first = Lst_First(&source_makefiles);
+		Lst_Insert(&source_makefiles, first, data);
+	} else
+		Lst_Append(&source_makefiles, last, estrdup(p));
 	return (TRUE);
 }
 
@@ -502,7 +534,7 @@ rearg:
 			if (Main_ParseWarn(optarg, 1) != -1)
 				MFLAGS_append("-x", optarg);
 			break;
-				
+
 		default:
 		case '?':
 			usage();
@@ -517,16 +549,18 @@ rearg:
 	 * Parse the rest of the arguments.
 	 *	o Check for variable assignments and perform them if so.
 	 *	o Check for more flags and restart getopt if so.
-	 *      o Anything else is taken to be a target and added
+	 *	o Anything else is taken to be a target and added
 	 *	  to the end of the "create" list.
 	 */
 	for (; *argv != NULL; ++argv, --argc) {
 		if (Parse_IsVar(*argv)) {
 			char *ptr = MAKEFLAGS_quote(*argv);
+			char *v = estrdup(*argv);
 
 			Var_Append(".MAKEFLAGS", ptr, VAR_GLOBAL);
-			Parse_DoVar(*argv, VAR_CMD);
+			Parse_DoVar(v, VAR_CMD);
 			free(ptr);
+			free(v);
 
 		} else if ((*argv)[0] == '-') {
 			if ((*argv)[1] == '\0') {
@@ -563,10 +597,10 @@ rearg:
 
 /**
  * Main_ParseArgLine
- *  	Used by the parse module when a .MFLAGS or .MAKEFLAGS target
+ *	Used by the parse module when a .MFLAGS or .MAKEFLAGS target
  *	is encountered and by main() when reading the .MAKEFLAGS envariable.
  *	Takes a line of arguments and breaks it into its
- * 	component words and passes those words and the number of them to the
+ *	component words and passes those words and the number of them to the
  *	MainParseArgs function.
  *	The line should have all its leading whitespace removed.
  *
@@ -640,6 +674,184 @@ check_make_level(void)
 }
 
 /**
+ * Main_AddSourceMakefile
+ *	Add a file to the list of source makefiles
+ */
+void
+Main_AddSourceMakefile(const char *name)
+{
+
+	Lst_AtEnd(&source_makefiles, estrdup(name));
+}
+
+/**
+ * Remake_Makefiles
+ *	Remake all the makefiles
+ */
+static void
+Remake_Makefiles(void)
+{
+	LstNode *ln;
+	int error_cnt = 0;
+	int remade_cnt = 0;
+
+	Compat_InstallSignalHandlers();
+	if (curdir != objdir) {
+		if (chdir(curdir) < 0)
+			Fatal("Failed to change directory to %s.", curdir);
+	}
+
+	LST_FOREACH(ln, &source_makefiles) {
+		LstNode *ln2;
+		struct GNode *gn;
+		const char *name = Lst_Datum(ln);
+		Boolean saveTouchFlag = touchFlag;
+		Boolean saveQueryFlag = queryFlag;
+		Boolean saveNoExecute = noExecute;
+		int mtime;
+
+		/*
+		 * Create node
+		 */
+		gn = Targ_FindNode(name, TARG_CREATE);
+		DEBUGF(MAKE, ("Checking %s...", gn->name));
+		Suff_FindDeps(gn);
+
+		/*
+		 * ! dependencies as well as
+		 * dependencies with .FORCE, .EXEC and .PHONY attributes
+		 * are skipped to prevent infinite loops
+		 */
+		if (gn->type & (OP_FORCE | OP_EXEC | OP_PHONY)) {
+			DEBUGF(MAKE, ("skipping (force, exec or phony).\n",
+			    gn->name));
+			continue;
+		}
+
+		/*
+		 * Skip :: targets that have commands and no children
+		 * because such targets are always out-of-date
+		 */
+		if ((gn->type & OP_DOUBLEDEP) &&
+		    !Lst_IsEmpty(&gn->commands) &&
+		    Lst_IsEmpty(&gn->children)) {
+			DEBUGF(MAKE, ("skipping (doubledep, no sources "
+			    "and has commands).\n"));
+			continue;
+		}
+
+		/*
+		 * Skip targets without sources and without commands
+		 */
+		if (Lst_IsEmpty(&gn->commands) &&
+		    Lst_IsEmpty(&gn->children)) {
+			DEBUGF(MAKE,
+			    ("skipping (no sources and no commands).\n"));
+			continue;
+		}
+
+		DEBUGF(MAKE, ("\n"));
+
+		/*
+		 * -t, -q and -n has no effect unless the makefile is
+		 * specified as one of the targets explicitly in the
+		 * command line
+		 */
+		LST_FOREACH(ln2, &create) {
+			if (!strcmp(gn->name, Lst_Datum(ln2))) {
+				/* found as a target */
+				break;
+			}
+		}
+		if (ln2 == NULL) {
+			touchFlag = FALSE;
+			queryFlag = FALSE;
+			noExecute = FALSE;
+		}
+
+		/*
+		 * Check and remake the makefile
+		 */
+		mtime = Dir_MTime(gn);
+		Compat_Make(gn, gn);
+
+		/*
+		 * Restore -t, -q and -n behaviour
+		 */
+		touchFlag = saveTouchFlag;
+		queryFlag = saveQueryFlag;
+		noExecute = saveNoExecute;
+
+		/*
+		 * Compat_Make will leave the 'made' field of gn
+		 * in one of the following states:
+		 *	UPTODATE  gn was already up-to-date
+		 *	MADE	  gn was recreated successfully
+		 *	ERROR	  An error occurred while gn was being created
+		 *	ABORTED	  gn was not remade because one of its inferiors
+		 *		  could not be made due to errors.
+		 */
+		if (gn->made == MADE) {
+			if (mtime != Dir_MTime(gn)) {
+				DEBUGF(MAKE,
+				    ("%s updated (%d -> %d).\n",
+				     gn->name, mtime, gn->mtime));
+				remade_cnt++;
+			} else {
+				DEBUGF(MAKE,
+				    ("%s not updated: skipping restart.\n",
+				     gn->name));
+			}
+		} else if (gn->made == ERROR)
+			error_cnt++;
+		else if (gn->made == ABORTED) {
+			printf("`%s' not remade because of errors.\n",
+			    gn->name);
+			error_cnt++;
+		} else if (gn->made == UPTODATE) {
+			Lst examine;
+
+			Lst_Init(&examine);
+			Lst_EnQueue(&examine, gn);
+			while (!Lst_IsEmpty(&examine)) {
+				LstNode	*eln;
+				GNode *egn = Lst_DeQueue(&examine);
+
+				egn->make = FALSE;
+				LST_FOREACH(eln, &egn->children) {
+					GNode *cgn = Lst_Datum(eln);
+
+					Lst_EnQueue(&examine, cgn);
+				}
+			}
+		}
+	}
+
+	if (error_cnt > 0)
+		Fatal("Failed to remake Makefiles.");
+	if (remade_cnt > 0) {
+		DEBUGF(MAKE, ("Restarting `%s'.\n", save_argv[0]));
+
+		/*
+		 * Some of makefiles were remade -- restart from clean state
+		 */
+		if (save_makeflags != NULL)
+			setenv("MAKEFLAGS", save_makeflags, 1);
+		else
+			unsetenv("MAKEFLAGS");
+		if (execvp(save_argv[0], save_argv) < 0) {
+			Fatal("Can't restart `%s': %s.",
+			    save_argv[0], strerror(errno));
+		}
+	}
+
+	if (curdir != objdir) {
+		if (chdir(objdir) < 0)
+			Fatal("Failed to change directory to %s.", objdir);
+	}
+}
+
+/**
  * main
  *	The main function, for obvious reasons. Initializes variables
  *	and a few modules, then parses the arguments give it in the
@@ -659,10 +871,10 @@ check_make_level(void)
 int
 main(int argc, char **argv)
 {
-    	const char *machine;
+	const char *machine;
 	const char *machine_arch;
 	const char *machine_cpu;
-	Boolean outOfDate = TRUE; 	/* FALSE if all targets up to date */
+	Boolean outOfDate = TRUE;	/* FALSE if all targets up to date */
 	const char *p;
 	const char *pathp;
 	const char *path;
@@ -671,12 +883,17 @@ main(int argc, char **argv)
 	char cdpath[MAXPATHLEN];
 	char *cp = NULL, *start;
 
+	save_argv = argv;
+	save_makeflags = getenv("MAKEFLAGS");
+	if (save_makeflags != NULL)
+		save_makeflags = estrdup(save_makeflags);
+
 	/*
 	 * Initialize file global variables.
 	 */
 	expandVars = TRUE;
 	noBuiltins = FALSE;		/* Read the built-in rules */
-	forceJobs = FALSE;              /* No -j flag */
+	forceJobs = FALSE;		/* No -j flag */
 	curdir = cdpath;
 
 	/*
@@ -715,13 +932,14 @@ main(int argc, char **argv)
 #endif
 
 	/*
-	 * PC-98 kernel sets the `i386' string to the utsname.machine and
-	 * it cannot be distinguished from IBM-PC by uname(3).  Therefore,
-	 * we check machine.ispc98 and adjust the machine variable before
-	 * using usname(3) below.
-	 * NOTE: machdep.ispc98 was defined on 1998/8/31. At that time,
-	 * __FreeBSD_version was defined as 300003. So, this check can
-	 * safely be done with any kernel with version > 300003.
+	 * FreeBSD/pc98 kernel used to set the utsname.machine to
+	 * "i386", and MACHINE was defined as "i386", so it could
+	 * not be distinguished from FreeBSD/i386.  Therefore, we
+	 * had to check machine.ispc98 and adjust the MACHINE
+	 * variable.
+	 * NOTE: The code is still here to be able to compile new
+	 * make binary on old FreeBSD/pc98 systems, and have the
+	 * MACHINE variable set properly.
 	 */
 	if ((machine = getenv("MACHINE")) == NULL) {
 		int	ispc98;
@@ -739,19 +957,15 @@ main(int argc, char **argv)
 	 * so we can share an executable for similar machines.
 	 * (i.e. m68k: amiga hp300, mac68k, sun3, ...)
 	 *
-	 * Note that while MACHINE is decided at run-time,
-	 * MACHINE_ARCH is always known at compile time.
+	 * Note that both MACHINE and MACHINE_ARCH are decided at
+	 * run-time.
 	 */
 	if (machine == NULL) {
-#ifdef MACHINE
-		machine = MACHINE;
-#else
 		static struct utsname utsname;
 
 		if (uname(&utsname) == -1)
 			err(2, "uname");
 		machine = utsname.machine;
-#endif
 	}
 
 	if ((machine_arch = getenv("MACHINE_ARCH")) == NULL) {
@@ -961,14 +1175,14 @@ main(int argc, char **argv)
 		LstNode *ln;
 
 		LST_FOREACH(ln, &makefiles) {
-			if (!ReadMakefile(Lst_Datum(ln)))
+			if (!TryReadMakefile(Lst_Datum(ln)))
 				break;
 		}
 		if (ln != NULL)
 			Fatal("make: cannot open %s.", (char *)Lst_Datum(ln));
-	} else if (!ReadMakefile("BSDmakefile"))
-	    if (!ReadMakefile("makefile"))
-		ReadMakefile("Makefile");
+	} else if (!TryReadMakefile("BSDmakefile"))
+	    if (!TryReadMakefile("makefile"))
+		TryReadMakefile("Makefile");
 
 	ReadMakefile(".depend");
 
@@ -1037,6 +1251,13 @@ main(int argc, char **argv)
 		 */
 		Lst targs = Lst_Initializer(targs);
 
+		if (!is_posix) {
+			/*
+			 * Check if any of the makefiles are out-of-date.
+			 */
+			Remake_Makefiles();
+		}
+
 		if (Lst_IsEmpty(&create))
 			Parse_MainName(&targs);
 		else
@@ -1075,6 +1296,7 @@ main(int argc, char **argv)
 
 	Lst_Destroy(&variables, free);
 	Lst_Destroy(&makefiles, free);
+	Lst_Destroy(&source_makefiles, free);
 	Lst_Destroy(&create, free);
 
 	/* print the graph now it's been processed if the user requested it */

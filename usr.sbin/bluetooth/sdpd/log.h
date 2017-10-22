@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: log.h,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/sdpd/log.h,v 1.1 2004/01/20 20:48:26 emax Exp $
+ * $Id: log.h,v 1.1 2004/01/07 23:15:00 max Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/sdpd/log.h 124758 2004-01-20 20:48:26Z emax $
  */
 
 #ifndef _LOG_H_

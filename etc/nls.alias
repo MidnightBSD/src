@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/nls.alias,v 1.5 2003/06/10 01:22:30 ache Exp $
+# $FreeBSD: release/7.0.0/etc/nls.alias 116133 2003-06-10 01:22:30Z ache $
 
 POSIX                   C
 en_US.US-ASCII          C

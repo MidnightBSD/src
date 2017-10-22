@@ -1,4 +1,4 @@
-# $FreeBSD: src/release/doc/de_DE.ISO8859-1/installation/sparc64/Makefile,v 1.1 2002/03/14 18:32:27 ue Exp $
+# $FreeBSD: release/7.0.0/release/doc/de_DE.ISO8859-1/installation/sparc64/Makefile 92277 2002-03-14 18:32:27Z ue $
 # $FreeBSDde: de-docproj/relnotes/de_DE.ISO8859-1/installation/sparc64/Makefile,v 1.1 2002/03/14 18:23:47 ue Exp $
 # basiert auf: 1.1
 

@@ -1,5 +1,5 @@
 /*	$NetBSD: lockd_lock.h,v 1.2 2000/06/09 14:00:54 fvdl Exp $	*/
-/*	$FreeBSD: src/usr.sbin/rpc.lockd/lockd_lock.h,v 1.4 2002/03/21 22:52:45 alfred Exp $ */
+/*	$FreeBSD: release/7.0.0/usr.sbin/rpc.lockd/lockd_lock.h 92909 2002-03-21 22:52:45Z alfred $ */
 
 /* Headers and function declarations for file-locking utilities */
 

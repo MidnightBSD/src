@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: src/tools/regression/lib/libutil/test-trimdomain.t,v 1.1.2.1 2005/12/22 03:47:05 brooks Exp $
+# $FreeBSD: release/7.0.0/tools/regression/lib/libutil/test-trimdomain.t 150956 2005-10-05 04:46:10Z brooks $
 
 cd `dirname $0`
 

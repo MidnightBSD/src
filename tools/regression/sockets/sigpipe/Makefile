@@ -1,9 +1,9 @@
 #
-# $FreeBSD: src/tools/regression/sockets/sigpipe/Makefile,v 1.1 2005/03/11 12:47:14 rwatson Exp $
+# $FreeBSD: release/7.0.0/tools/regression/sockets/sigpipe/Makefile 156735 2006-03-15 10:46:38Z ru $
 #
 
 PROG=	sigpipe
-NO_MAN=	
+NO_MAN=
 WARNS?=	2
 
 .include <bsd.prog.mk>

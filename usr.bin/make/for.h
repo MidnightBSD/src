@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/make/for.h,v 1.3 2005/05/13 08:53:00 harti Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/make/for.h 146177 2005-05-13 08:53:00Z harti $
  */
 
 #ifndef for_h_9d770f33

@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/examples/cvsup/ports-supfile,v 1.33.2.1 2005/11/09 10:15:20 pav Exp $
+# $FreeBSD: release/7.0.0/share/examples/cvsup/ports-supfile 174854 2007-12-22 06:32:46Z cvs2svn $
 #
 # This file contains all of the "CVSup collections" that make up the
 # FreeBSD-current ports collection.
@@ -32,11 +32,9 @@
 #		This specifies the root where CVSup will store information
 #		about the collections you have transferred to your system.
 #		A setting of "/var/db" will generate this information in
-#		/var/db/sup.  Even if you are CVSupping a large number of
-#		collections, you will be hard pressed to generate more than
-#		~1MB of data in this directory.  You can override the
-#		"base" setting on the command line with cvsup's "-b base"
-#		option.  This directory must exist in order to run CVSup.
+#		/var/db/sup.  You can override the "base" setting on the
+#		command line with cvsup's "-b base" option.  This directory
+#		must exist in order to run CVSup.
 #
 # prefix=/usr
 #		This specifies where to place the requested files.  A
@@ -112,9 +110,11 @@ ports-all
 #ports-net
 #ports-net-im
 #ports-net-mgmt
+#ports-net-p2p
 #ports-news
 #ports-palm
 #ports-polish
+#ports-ports-mgmt
 #ports-portuguese
 #ports-print
 #ports-russian
@@ -128,6 +128,7 @@ ports-all
 #ports-www
 #ports-x11
 #ports-x11-clocks
+#ports-x11-drivers
 #ports-x11-fm
 #ports-x11-fonts
 #ports-x11-servers

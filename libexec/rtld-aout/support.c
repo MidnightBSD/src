@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *-
- * $FreeBSD: src/libexec/rtld-aout/support.c,v 1.7 2005/01/11 16:40:29 trhodes Exp $
+ * $FreeBSD: release/7.0.0/libexec/rtld-aout/support.c 140072 2005-01-11 16:40:29Z trhodes $
  */
 #include <sys/types.h>
 #include <string.h>

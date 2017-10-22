@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/sa11x0/sa11x0_ostreg.h,v 1.1 2004/05/14 11:46:45 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/sa11x0/sa11x0_ostreg.h 129198 2004-05-14 11:46:45Z cognet $
  *
  */
 

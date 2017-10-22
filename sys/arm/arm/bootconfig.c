@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/bootconfig.c,v 1.2 2005/01/05 21:58:47 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/bootconfig.c 139735 2005-01-05 21:58:49Z imp $");
 
 #include <sys/param.h>
 

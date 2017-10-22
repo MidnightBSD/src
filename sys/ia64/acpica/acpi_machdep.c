@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/acpica/acpi_machdep.c,v 1.5.2.1 2005/11/07 09:53:25 obrien Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/acpica/acpi_machdep.c 150003 2005-09-11 18:39:03Z obrien $
  */
 
 #include <sys/param.h>

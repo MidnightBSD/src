@@ -45,12 +45,10 @@
  **/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/moused/moused.c,v 1.70.2.3 2006/01/30 00:32:40 philip Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/moused/moused.c 170895 2007-06-17 20:27:54Z philip $");
 
 #include <sys/param.h>
 #include <sys/consio.h>
-#include <sys/linker.h>
-#include <sys/module.h>
 #include <sys/mouse.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -72,6 +70,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/moused/moused.c,v 1.70.2.3 2006/01/30 00:32:40 
 #include <syslog.h>
 #include <termios.h>
 #include <unistd.h>
+#include <math.h>
 
 #define MAX_CLICKTHRESHOLD	2000	/* 2 seconds */
 #define MAX_BUTTON2TIMEOUT	2000	/* 2 seconds */
@@ -101,6 +100,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/moused/moused.c,v 1.70.2.3 2006/01/30 00:32:40 
 #define NoPnP		0x0010
 #define VirtualScroll	0x0020
 #define HVirtualScroll	0x0040
+#define ExponentialAcc	0x0080
 
 #define ID_NONE		0
 #define ID_PORT		1
@@ -109,26 +109,26 @@ __FBSDID("$FreeBSD: src/usr.sbin/moused/moused.c,v 1.70.2.3 2006/01/30 00:32:40 
 #define ID_MODEL	8
 #define ID_ALL		(ID_PORT | ID_IF | ID_TYPE | ID_MODEL)
 
-#define debug(fmt, args...) do {				\
+#define debug(...) do {						\
 	if (debug && nodaemon)					\
-		warnx(fmt, ##args);				\
+		warnx(__VA_ARGS__);				\
 } while (0)
 
-#define logerr(e, fmt, args...) do {				\
-	log_or_warn(LOG_DAEMON | LOG_ERR, errno, fmt, ##args);	\
+#define logerr(e, ...) do {					\
+	log_or_warn(LOG_DAEMON | LOG_ERR, errno, __VA_ARGS__);	\
 	exit(e);						\
 } while (0)
 
-#define logerrx(e, fmt, args...) do {				\
-	log_or_warn(LOG_DAEMON | LOG_ERR, 0, fmt, ##args);	\
+#define logerrx(e, ...) do {					\
+	log_or_warn(LOG_DAEMON | LOG_ERR, 0, __VA_ARGS__);	\
 	exit(e);						\
 } while (0)
 
-#define logwarn(fmt, args...)					\
-	log_or_warn(LOG_DAEMON | LOG_WARNING, errno, fmt, ##args)
+#define logwarn(...)						\
+	log_or_warn(LOG_DAEMON | LOG_WARNING, errno, __VA_ARGS__)
 
-#define logwarnx(fmt, args...)					\
-	log_or_warn(LOG_DAEMON | LOG_WARNING, 0, fmt, ##args)
+#define logwarnx(...)						\
+	log_or_warn(LOG_DAEMON | LOG_WARNING, 0, __VA_ARGS__)
 
 /* structures */
 
@@ -396,6 +396,10 @@ static struct rodentparam {
     mousemode_t mode;		/* protocol information */
     float accelx;		/* Acceleration in the X axis */
     float accely;		/* Acceleration in the Y axis */
+    float expoaccel;		/* Exponential acceleration */
+    float expoffset;		/* Movement offset for exponential accel. */
+    float remainx;		/* Remainder on X and Y axis, respectively... */
+    float remainy;		/*    ... to compensate for rounding errors. */
     int scrollthreshold;	/* Movement distance before virtual scrolling */
 } rodent = {
     .flags = 0,
@@ -415,6 +419,10 @@ static struct rodentparam {
     .button2timeout = DFLT_BUTTON2TIMEOUT,
     .accelx = 1.0,
     .accely = 1.0,
+    .expoaccel = 1.0,
+    .expoffset = 1.0,
+    .remainx = 0.0,
+    .remainy = 0.0,
     .scrollthreshold = DFLT_SCROLLTHRESHOLD,
 };
 
@@ -494,6 +502,8 @@ static struct drift_xy  drift_previous={0,0}; /* steps in previous drift_time */
 
 /* function prototypes */
 
+static void	linacc(int, int, int*, int*);
+static void	expoacc(int, int, int*, int*);
 static void	moused(void);
 static void	hup(int sig);
 static void	cleanup(int sig);
@@ -544,7 +554,7 @@ main(int argc, char *argv[])
     for (i = 0; i < MOUSE_MAXBUTTON; ++i)
 	mstate[i] = &bstate[i];
 
-    while ((c = getopt(argc, argv, "3C:DE:F:HI:PRS:T:VU:a:cdfhi:l:m:p:r:st:w:z:")) != -1)
+    while ((c = getopt(argc, argv, "3A:C:DE:F:HI:PRS:T:VU:a:cdfhi:l:m:p:r:st:w:z:")) != -1)
 	switch(c) {
 
 	case '3':
@@ -563,12 +573,25 @@ main(int argc, char *argv[])
 	case 'a':
 	    i = sscanf(optarg, "%f,%f", &rodent.accelx, &rodent.accely);
 	    if (i == 0) {
-		warnx("invalid acceleration argument '%s'", optarg);
+		warnx("invalid linear acceleration argument '%s'", optarg);
 		usage();
 	    }
 
 	    if (i == 1)
 		rodent.accely = rodent.accelx;
+
+	    break;
+
+	case 'A':
+	    rodent.flags |= ExponentialAcc;
+	    i = sscanf(optarg, "%f,%f", &rodent.expoaccel, &rodent.expoffset);
+	    if (i == 0) {
+		warnx("invalid exponential acceleration argument '%s'", optarg);
+		usage();
+	    }
+
+	    if (i == 1)
+		rodent.expoffset = 1.0;
 
 	    break;
 
@@ -901,38 +924,68 @@ main(int argc, char *argv[])
 static int
 usbmodule(void)
 {
-    struct kld_file_stat fstat;
-    struct module_stat mstat;
-    int fileid, modid;
-    int loaded;
+    return (kld_isloaded("uhub/ums") || kld_load("ums") != -1);
+}
 
-    for (loaded = 0, fileid = kldnext(0); !loaded && fileid > 0;
-	 fileid = kldnext(fileid)) {
-	fstat.version = sizeof(fstat);
-	if (kldstat(fileid, &fstat) < 0)
-	    continue;
-	if (strncmp(fstat.name, "uhub/ums", 8) == 0) {
-	    loaded = 1;
-	    break;
-	}
-	for (modid = kldfirstmod(fileid); modid > 0;
-	     modid = modfnext(modid)) {
-	    mstat.version = sizeof(mstat);
-	    if (modstat(modid, &mstat) < 0)
-		continue;
-	    if (strncmp(mstat.name, "uhub/ums", 8) == 0) {
-		loaded = 1;
-		break;
-	    }
-	}
+/*
+ * Function to calculate linear acceleration.
+ *
+ * If there are any rounding errors, the remainder
+ * is stored in the remainx and remainy variables
+ * and taken into account upon the next movement.
+ */
+
+static void
+linacc(int dx, int dy, int *movex, int *movey)
+{
+    float fdx, fdy;
+
+    if (dx == 0 && dy == 0) {
+	*movex = *movey = 0;
+	return;
     }
-    if (!loaded) {
-	if (kldload("ums") != -1)
-	    return 1;
-	if (errno != EEXIST)
-	    logerr(1, "unable to load USB mouse driver");
+    fdx = dx * rodent.accelx + rodent.remainx;
+    fdy = dy * rodent.accely + rodent.remainy;
+    *movex = lround(fdx);
+    *movey = lround(fdy);
+    rodent.remainx = fdx - *movex;
+    rodent.remainy = fdy - *movey;
+}
+
+/*
+ * Function to calculate exponential acceleration.
+ * (Also includes linear acceleration if enabled.)
+ *
+ * In order to give a smoother behaviour, we record the four
+ * most recent non-zero movements and use their average value
+ * to calculate the acceleration.
+ */
+
+static void
+expoacc(int dx, int dy, int *movex, int *movey)
+{
+    static float lastlength[3] = {0.0, 0.0, 0.0};
+    float fdx, fdy, length, lbase, accel;
+
+    if (dx == 0 && dy == 0) {
+	*movex = *movey = 0;
+	return;
     }
-    return 0;
+    fdx = dx * rodent.accelx;
+    fdy = dy * rodent.accely;
+    length = sqrtf((fdx * fdx) + (fdy * fdy));		/* Pythagoras */
+    length = (length + lastlength[0] + lastlength[1] + lastlength[2]) / 4;
+    lbase = length / rodent.expoffset;
+    accel = powf(lbase, rodent.expoaccel) / lbase;
+    fdx = fdx * accel + rodent.remainx;
+    fdy = fdy * accel + rodent.remainy;
+    *movex = lroundf(fdx);
+    *movey = lroundf(fdy);
+    rodent.remainx = fdx - *movex;
+    rodent.remainy = fdy - *movey;
+    lastlength[2] = lastlength[1];
+    lastlength[1] = lastlength[0];
+    lastlength[0] = length;	/* Insert new average, not original length! */
 }
 
 static void
@@ -1194,8 +1247,14 @@ moused(void)
 		if (action2.flags & MOUSE_POSCHANGED) {
 		    mouse.operation = MOUSE_MOTION_EVENT;
 		    mouse.u.data.buttons = action2.button;
-		    mouse.u.data.x = action2.dx * rodent.accelx;
-		    mouse.u.data.y = action2.dy * rodent.accely;
+		    if (rodent.flags & ExponentialAcc) {
+			expoacc(action2.dx, action2.dy,
+			    &mouse.u.data.x, &mouse.u.data.y);
+		    }
+		    else {
+			linacc(action2.dx, action2.dy,
+			    &mouse.u.data.x, &mouse.u.data.y);
+		    }
 		    mouse.u.data.z = action2.dz;
 		    if (debug < 2)
 			if (!paused)
@@ -1204,8 +1263,14 @@ moused(void)
 	    } else {
 		mouse.operation = MOUSE_ACTION;
 		mouse.u.data.buttons = action2.button;
-		mouse.u.data.x = action2.dx * rodent.accelx;
-		mouse.u.data.y = action2.dy * rodent.accely;
+		if (rodent.flags & ExponentialAcc) {
+		    expoacc(action2.dx, action2.dy,
+			&mouse.u.data.x, &mouse.u.data.y);
+		}
+		else {
+		    linacc(action2.dx, action2.dy,
+			&mouse.u.data.x, &mouse.u.data.y);
+		}
 		mouse.u.data.z = action2.dz;
 		if (debug < 2)
 		    if (!paused)

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ia64/ia64/mp_machdep.c,v 1.55.2.2 2006/02/14 03:40:49 marcel Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/mp_machdep.c 171740 2007-08-06 05:15:57Z marcel $");
 
 #include "opt_kstack_pages.h"
 
@@ -34,11 +34,13 @@ __FBSDID("$FreeBSD: src/sys/ia64/ia64/mp_machdep.c,v 1.55.2.2 2006/02/14 03:40:4
 #include <sys/systm.h>
 #include <sys/ktr.h>
 #include <sys/proc.h>
+#include <sys/bus.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/kernel.h>
 #include <sys/pcpu.h>
+#include <sys/sched.h>
 #include <sys/smp.h>
 #include <sys/sysctl.h>
 #include <sys/uuid.h>
@@ -49,8 +51,9 @@ __FBSDID("$FreeBSD: src/sys/ia64/ia64/mp_machdep.c,v 1.55.2.2 2006/02/14 03:40:4
 #include <vm/vm_kern.h>
 
 #include <machine/atomic.h>
-#include <machine/clock.h>
+#include <machine/cpu.h>
 #include <machine/fpu.h>
+#include <machine/intr.h>
 #include <machine/mca.h>
 #include <machine/md_var.h>
 #include <machine/pal.h>
@@ -63,8 +66,6 @@ __FBSDID("$FreeBSD: src/sys/ia64/ia64/mp_machdep.c,v 1.55.2.2 2006/02/14 03:40:4
 MALLOC_DECLARE(M_PMAP);
 
 void ia64_ap_startup(void);
-
-extern uint64_t ia64_lapic_address;
 
 #define	LID_SAPIC_ID(x)		((int)((x) >> 24) & 0xff)
 #define	LID_SAPIC_EID(x)	((int)((x) >> 16) & 0xff)
@@ -86,12 +87,15 @@ static void cpu_mp_unleash(void *);
 void
 ia64_ap_startup(void)
 {
+	volatile struct ia64_interrupt_block *ib = IA64_INTERRUPT_BLOCK;
+	int vector;
 
 	pcpup = ap_pcpu;
 	ia64_set_k4((intptr_t)pcpup);
 
-	__asm __volatile("mov cr.pta=%0;; srlz.i;;" ::
-	    "r" (ap_vhpt + (1<<8) + (pmap_vhpt_log2size<<2) + 1));
+	map_vhpt(ap_vhpt);
+	ia64_set_pta(ap_vhpt + (1 << 8) + (pmap_vhpt_log2size << 2) + 1);
+	ia64_srlz_i();
 
 	ap_awake = 1;
 	ap_delay = 0;
@@ -103,23 +107,11 @@ ia64_ap_startup(void)
 
 	/* Wait until it's time for us to be unleashed */
 	while (ap_spin)
-		DELAY(0);
-
-	__asm __volatile("ssm psr.i;; srlz.d;;");
+		cpu_spinwait();
 
 	/* Initialize curthread. */
 	KASSERT(PCPU_GET(idlethread) != NULL, ("no idle thread"));
 	PCPU_SET(curthread, PCPU_GET(idlethread));
-
-	/*
-	 * Correct spinlock nesting.  The idle thread context that we are
-	 * borrowing was created so that it would start out with a single
-	 * spin lock (sched_lock) held in fork_trampoline().  Since we
-	 * don't have any locks and explicitly acquire locks when we need
-	 * to, the nesting count will be off by 1.
-	 */
-	curthread->td_md.md_spinlock_count = 0;
-	critical_exit();
 
 	/*
 	 * Get and save the CPU specific MCA records. Should we get the
@@ -130,21 +122,30 @@ ia64_ap_startup(void)
 
 	ap_awake++;
 	while (!smp_started)
-		DELAY(0);
+		cpu_spinwait();
 
 	CTR1(KTR_SMP, "SMP: cpu%d launched", PCPU_GET(cpuid));
 
-	mtx_lock_spin(&sched_lock);
-
-	binuptime(PCPU_PTR(switchtime));
-	PCPU_SET(switchticks, ticks);
-
-	ia64_set_tpr(0);
+	/* Acknowledge and EOI all interrupts. */
+	vector = ia64_get_ivr();
+	while (vector != 15) {
+		ia64_srlz_d();
+		if (vector == 0)
+			vector = (int)ib->ib_inta;
+		ia64_set_eoi(0);
+		ia64_srlz_d();
+		vector = ia64_get_ivr();
+	}
+	ia64_srlz_d();
 
 	/* kick off the clock on this AP */
 	pcpu_initclock();
 
-	cpu_throw(NULL, choosethread());
+	ia64_set_tpr(0);
+	ia64_srlz_d();
+	enable_intr();
+
+	sched_throw(NULL);
 	/* NOTREACHED */
 }
 
@@ -201,8 +202,8 @@ cpu_mp_add(u_int acpiid, u_int apicid, u_int apiceid)
 	}
 
 	if (acpiid != 0) {
-		pc = (struct pcpu *)kmem_alloc(kernel_map, PAGE_SIZE);
-		pcpu_init(pc, acpiid, PAGE_SIZE);
+		pc = (struct pcpu *)malloc(sizeof(*pc), M_PMAP, M_WAITOK);
+		pcpu_init(pc, acpiid, sizeof(*pc));
 	} else
 		pc = pcpup;
 
@@ -292,7 +293,7 @@ cpu_mp_unleash(void *dummy)
 	ap_spin = 0;
 
 	while (ap_awake != smp_cpus)
-		DELAY(0);
+		cpu_spinwait();
 
 	if (smp_cpus != cpus || cpus != mp_ncpus) {
 		printf("SMP: %d CPUs found; %d CPUs usable; %d CPUs woken\n",

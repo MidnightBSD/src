@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/include/ucontext.h,v 1.7 2003/12/07 20:47:33 marcel Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/include/ucontext.h 123255 2003-12-07 20:47:33Z marcel $
  */
 
 #ifndef _MACHINE_UCONTEXT_H_

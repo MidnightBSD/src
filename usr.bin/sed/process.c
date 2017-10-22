@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/sed/process.c,v 1.39 2005/04/09 14:31:41 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/sed/process.c 170609 2007-06-12 12:17:25Z yar $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)process.c	8.6 (Berkeley) 4/20/94";
@@ -85,7 +85,7 @@ static regex_t *defpreg;
 size_t maxnsub;
 regmatch_t *match;
 
-#define OUT(s) { fwrite(s, sizeof(u_char), psl, outfile); fputc('\n', outfile); }
+#define OUT() do {fwrite(ps, 1, psl, outfile); fputc('\n', outfile);} while (0)
 
 void
 process(void)
@@ -128,7 +128,7 @@ redirect:
 			case 'c':
 				pd = 1;
 				psl = 0;
-				if (cp->a2 == NULL || lastaddr)
+				if (cp->a2 == NULL || lastaddr || lastline())
 					(void)fprintf(outfile, "%s", cp->t);
 				break;
 			case 'd':
@@ -150,15 +150,15 @@ redirect:
 				cspace(&PS, hs, hsl, REPLACE);
 				break;
 			case 'G':
-				cspace(&PS, "\n", 1, 0);
-				cspace(&PS, hs, hsl, 0);
+				cspace(&PS, "\n", 1, APPEND);
+				cspace(&PS, hs, hsl, APPEND);
 				break;
 			case 'h':
 				cspace(&HS, ps, psl, REPLACE);
 				break;
 			case 'H':
-				cspace(&HS, "\n", 1, 0);
-				cspace(&HS, ps, psl, 0);
+				cspace(&HS, "\n", 1, APPEND);
+				cspace(&HS, ps, psl, APPEND);
 				break;
 			case 'i':
 				(void)fprintf(outfile, "%s", cp->t);
@@ -168,7 +168,7 @@ redirect:
 				break;
 			case 'n':
 				if (!nflag && !pd)
-					OUT(ps)
+					OUT();
 				flush_appends();
 				if (!mf_fgets(&PS, REPLACE))
 					exit(0);
@@ -176,30 +176,29 @@ redirect:
 				break;
 			case 'N':
 				flush_appends();
-				cspace(&PS, "\n", 1, 0);
-				if (!mf_fgets(&PS, 0))
+				cspace(&PS, "\n", 1, APPEND);
+				if (!mf_fgets(&PS, APPEND))
 					exit(0);
 				break;
 			case 'p':
 				if (pd)
 					break;
-				OUT(ps)
+				OUT();
 				break;
 			case 'P':
 				if (pd)
 					break;
-				if (psl != 0 &&
-				    (p = memchr(ps, '\n', psl)) != NULL) {
+				if ((p = memchr(ps, '\n', psl)) != NULL) {
 					oldpsl = psl;
 					psl = p - ps;
 				}
-				OUT(ps)
+				OUT();
 				if (p != NULL)
 					psl = oldpsl;
 				break;
 			case 'q':
 				if (!nflag && !pd)
-					OUT(ps)
+					OUT();
 				flush_appends();
 				exit(0);
 			case 'r':
@@ -235,6 +234,12 @@ redirect:
 					err(1, "%s", cp->t);
 				break;
 			case 'x':
+				/*
+				 * If the hold space is null, make it empty
+				 * but not null.  Otherwise the pattern space
+				 * will become null after the swap, which is
+				 * an abnormal condition.
+				 */
 				if (hs == NULL)
 					cspace(&HS, "", 0, REPLACE);
 				tspace = PS;
@@ -256,7 +261,7 @@ redirect:
 		} /* for all cp */
 
 new:		if (!nflag && !pd)
-			OUT(ps)
+			OUT();
 		flush_appends();
 	} /* for all lines */
 }
@@ -265,9 +270,9 @@ new:		if (!nflag && !pd)
  * TRUE if the address passed matches the current program state
  * (lastline, linenumber, ps).
  */
-#define	MATCH(a)						\
-	(a)->type == AT_RE ? regexec_e((a)->u.r, ps, 0, 1, psl) :	\
-	    (a)->type == AT_LINE ? linenum == (a)->u.l : lastline()
+#define	MATCH(a)							\
+	((a)->type == AT_RE ? regexec_e((a)->u.r, ps, 0, 1, psl) :	\
+	    (a)->type == AT_LINE ? linenum == (a)->u.l : lastline())
 
 /*
  * Return TRUE if the command applies to the current line.  Sets the inrange
@@ -286,8 +291,17 @@ applies(struct s_command *cp)
 			if (MATCH(cp->a2)) {
 				cp->inrange = 0;
 				lastaddr = 1;
-			}
-			r = 1;
+				r = 1;
+			} else if (cp->a2->type == AT_LINE &&
+				   linenum > cp->a2->u.l) {
+				/*
+				 * We missed the 2nd address due to a branch,
+				 * so just close the range and return false.
+				 */
+				cp->inrange = 0;
+				r = 0;
+			} else
+				r = 1;
 		} else if (MATCH(cp->a1)) {
 			/*
 			 * If the second address is a number less than or
@@ -306,6 +320,27 @@ applies(struct s_command *cp)
 	else
 		r = MATCH(cp->a1);
 	return (cp->nonsel ? ! r : r);
+}
+
+/*
+ * Reset the sed processor to its initial state.
+ */
+void
+resetstate(void)
+{
+	struct s_command *cp;
+
+	/*
+	 * Reset all inrange markers.
+	 */
+	for (cp = prog; cp; cp = cp->code == '{' ? cp->u.c : cp->next)
+		if (cp->a2)
+			cp->inrange = 0;
+
+	/*
+	 * Clear out the hold space.
+	 */
+	cspace(&HS, "", 0, REPLACE);
 }
 
 /*
@@ -407,7 +442,7 @@ substitute(struct s_command *cp)
 
 	/* Handle the 'p' flag. */
 	if (cp->u.s->p)
-		OUT(ps)
+		OUT();
 
 	/* Handle the 'w' flag. */
 	if (cp->u.s->wfile && !pd) {
@@ -667,9 +702,9 @@ regsub(SPACE *sp, char *string, char *src)
 }
 
 /*
- * aspace --
- *	Append the source space to the destination space, allocating new
- *	space as necessary.
+ * cspace --
+ *	Concatenate space: append the source space to the destination space,
+ *	allocating new space as necessary.
  */
 void
 cspace(SPACE *sp, const char *p, size_t len, enum e_spflag spflag)

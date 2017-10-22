@@ -30,9 +30,9 @@
  *
  *	last edit-date: [Wed Jul 19 09:40:55 2000]
  *
- *	$Id: i4b_ihfc_drv.h,v 1.1.1.2 2006-02-25 02:37:13 laffer1 Exp $
+ *	$Id: i4b_ihfc_drv.h,v 1.7 2000/09/19 13:50:36 hm Exp $
  *
- * $FreeBSD: src/sys/i4b/layer1/ihfc/i4b_ihfc_drv.h,v 1.2 2005/01/06 22:18:19 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/i4b/layer1/ihfc/i4b_ihfc_drv.h 139790 2005-01-06 22:18:23Z imp $
  *
  *---------------------------------------------------------------------------*/
 #ifndef	I4B_IHFC_DRV_H_

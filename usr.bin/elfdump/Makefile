@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/elfdump/Makefile,v 1.4 2003/02/03 01:59:27 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.bin/elfdump/Makefile 110259 2003-02-03 01:59:27Z obrien $
 
 PROG=	elfdump
 WARNS?=	5

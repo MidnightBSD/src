@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $NetBSD: sendmail,v 1.14 2002/02/12 01:26:36 lukem Exp $
-# $FreeBSD: src/etc/rc.d/sendmail,v 1.14.2.2 2005/12/16 01:42:54 dougb Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/sendmail 175737 2008-01-28 07:58:32Z dougb $
 #
 
 # PROVIDE: mail
@@ -11,7 +10,7 @@
 
 # XXX - Get together with sendmail mantainer to figure out how to
 #	better handle SENDMAIL_ENABLE and 3rd party MTAs.
-#
+
 . /etc/rc.subr
 
 name="sendmail"
@@ -58,16 +57,18 @@ sendmail_precmd()
 	fi
 
 	# check modifications on /etc/mail/aliases
-	if [ -f "/etc/mail/aliases.db" ]; then
-		if [ "/etc/mail/aliases" -nt "/etc/mail/aliases.db" ]; then
+	if checkyesno sendmail_rebuild_aliases; then
+		if [ -f "/etc/mail/aliases.db" ]; then
+			if [ "/etc/mail/aliases" -nt "/etc/mail/aliases.db" ]; then
+				echo \
+	    	"${name}: /etc/mail/aliases newer than /etc/mail/aliases.db, regenerating"
+				/usr/bin/newaliases
+			fi
+		else
 			echo \
-	    "${name}: /etc/mail/aliases newer than /etc/mail/aliases.db, regenerating"
-			/usr/bin/newaliases
+	    	"${name}: /etc/mail/aliases.db not present, generating"
+				/usr/bin/newaliases
 		fi
-	else
-		echo \
-	    "${name}: /etc/mail/aliases.db not present, generating"
-			/usr/bin/newaliases
 	fi
 }
 

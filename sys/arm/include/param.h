@@ -35,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: src/sys/arm/include/param.h,v 1.9 2004/11/20 16:51:32 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/param.h 154128 2006-01-09 06:05:57Z imp $
  */
 
 /*
@@ -56,14 +56,10 @@
 
 #define STACKALIGNBYTES	(8 - 1)
 #define STACKALIGN(p)	((u_int)(p) & ~STACKALIGNBYTES)
-#ifndef	_MACHINE
-#define	_MACHINE	"arm"
-#endif
-#ifndef _MACHINE_ARCH
-#define	_MACHINE_ARCH	"arm"
-#endif
 
 #ifndef _NO_NAMESPACE_POLLUTION
+
+#define __PCI_REROUTE_INTERRUPT
 
 #ifndef _MACHINE_PARAM_H_
 #define	_MACHINE_PARAM_H_

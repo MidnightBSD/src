@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/busdma_machdep.c,v 1.25 2005/07/09 06:53:52 grehan Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/busdma_machdep.c 170979 2007-06-22 03:57:36Z yongari $");
 
 /*
  * MacPPC bus dma support routines
@@ -263,9 +263,18 @@ bus_dmamem_alloc(bus_dma_tag_t dmat, void** vaddr, int flags,
 		mflags |= M_ZERO;
 
         *mapp = NULL;
-	
-        if (dmat->maxsize <= PAGE_SIZE) {
-                *vaddr = malloc(dmat->maxsize, M_DEVBUF, mflags);
+
+	/* 
+	 * XXX:
+	 * (dmat->alignment < dmat->maxsize) is just a quick hack; the exact
+	 * alignment guarantees of malloc need to be nailed down, and the
+	 * code below should be rewritten to take that into account.
+	 *
+	 * In the meantime, we'll return an error if malloc gets it wrong.
+	 */
+	if (dmat->maxsize <= PAGE_SIZE &&
+	    dmat->alignment < dmat->maxsize) {
+		*vaddr = malloc(dmat->maxsize, M_DEVBUF, mflags);
         } else {
                 /*
                  * XXX Use Contigmalloc until it is merged into this facility
@@ -280,6 +289,9 @@ bus_dmamem_alloc(bus_dma_tag_t dmat, void** vaddr, int flags,
         if (*vaddr == NULL)
                 return (ENOMEM);
 
+	if ((uintptr_t)*vaddr % dmat->alignment)
+		printf("XXX: %s: alignment not respected!\n", __func__);
+
         return (0);
 }
 
@@ -292,79 +304,11 @@ bus_dmamem_free(bus_dma_tag_t dmat, void *vaddr, bus_dmamap_t map)
 {
         if (map != NULL)
                 panic("bus_dmamem_free: Invalid map freed\n");
-        if (dmat->maxsize <= PAGE_SIZE)
+        if (dmat->maxsize <= PAGE_SIZE &&
+	    dmat->alignment < dmat->maxsize)
 		free(vaddr, M_DEVBUF);
-        else {
+        else
 		contigfree(vaddr, dmat->maxsize, M_DEVBUF);
-	}
-}
-
-/*
- * Map the buffer buf into bus space using the dmamap map.
- */
-int
-bus_dmamap_load(bus_dma_tag_t dmat, bus_dmamap_t map, void *buf,
-                bus_size_t buflen, bus_dmamap_callback_t *callback,
-                void *callback_arg, int flags)
-{
-        vm_offset_t             vaddr;
-        vm_offset_t             paddr;
-#ifdef __CC_SUPPORTS_DYNAMIC_ARRAY_INIT
-        bus_dma_segment_t       dm_segments[dmat->nsegments];
-#else
-        bus_dma_segment_t       dm_segments[BUS_DMAMAP_NSEGS];
-#endif
-        bus_dma_segment_t      *sg;
-        int                     seg;
-        int                     error = 0;
-        vm_offset_t             nextpaddr;
-
-        if (map != NULL)
-		panic("bus_dmamap_load: Invalid map\n");
-
-        vaddr = (vm_offset_t)buf;
-        sg = &dm_segments[0];
-        seg = 1;
-        sg->ds_len = 0;
-        nextpaddr = 0;
-
-        do {
-		bus_size_t      size;
-
-                paddr = pmap_kextract(vaddr);
-                size = PAGE_SIZE - (paddr & PAGE_MASK);
-                if (size > buflen)
-                        size = buflen;
-
-                if (sg->ds_len == 0) {
-                        sg->ds_addr = paddr;
-                        sg->ds_len = size;
-                } else if (paddr == nextpaddr) {
-                        sg->ds_len += size;
-                } else {
-                        /* Go to the next segment */
-                        sg++;
-                        seg++;
-                        if (seg > dmat->nsegments)
-				break;
-                        sg->ds_addr = paddr;
-                        sg->ds_len = size;
-                }
-                vaddr += size;
-                nextpaddr = paddr + size;
-                buflen -= size;
-
-	} while (buflen > 0);
-	
-	if (buflen != 0) {
-		printf("bus_dmamap_load: Too many segs! buf_len = 0x%lx\n",
-		    (u_long)buflen);
-		error = EFBIG;
-	}
-
-	(*callback)(callback_arg, dm_segments, seg, error);
-	
-	return (0);
 }
 
 /*
@@ -406,6 +350,8 @@ bus_dmamap_load_buffer(bus_dma_tag_t dmat, bus_dma_segment_t segs[],
 		 * Compute the segment size, and adjust counts.
 		 */
 		sgsize = PAGE_SIZE - ((u_long)curaddr & PAGE_MASK);
+		if (sgsize > dmat->maxsegsz)
+			sgsize = dmat->maxsegsz;
 		if (buflen < sgsize)
 			sgsize = buflen;
 
@@ -452,6 +398,38 @@ bus_dmamap_load_buffer(bus_dma_tag_t dmat, bus_dma_segment_t segs[],
 	 * Did we fit?
 	 */
 	return (buflen != 0 ? EFBIG : 0); /* XXX better return value here? */
+}
+
+/*
+ * Map the buffer buf into bus space using the dmamap map.
+ */
+int
+bus_dmamap_load(bus_dma_tag_t dmat, bus_dmamap_t map, void *buf,
+		bus_size_t buflen, bus_dmamap_callback_t *callback,
+		void *callback_arg, int flags)
+{
+#ifdef __CC_SUPPORTS_DYNAMIC_ARRAY_INIT
+	bus_dma_segment_t	dm_segments[dmat->nsegments];
+#else
+	bus_dma_segment_t	dm_segments[BUS_DMAMAP_NSEGS];
+#endif
+	vm_offset_t		lastaddr;
+	int			error, nsegs;
+
+	if (map != NULL)
+		panic("bus_dmamap_load: Invalid map\n");
+
+	lastaddr = (vm_offset_t)0;
+	nsegs = 0;	
+	error = bus_dmamap_load_buffer(dmat, dm_segments, buf, buflen,
+	    NULL, flags, &lastaddr, &nsegs, 1);
+
+	if (error == 0)
+		(*callback)(callback_arg, dm_segments, nsegs + 1, 0);
+	else
+		(*callback)(callback_arg, NULL, 0, error);
+
+	return (0);
 }
 
 /*

@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)cmp.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/cmp/cmp.c,v 1.16.14.1 2005/09/17 11:33:41 brian Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/cmp/cmp.c 149388 2005-08-23 13:13:13Z brian $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

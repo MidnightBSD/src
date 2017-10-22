@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)jobs.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/jobs.h,v 1.18 2004/04/06 20:06:51 markm Exp $
+ * $FreeBSD: release/7.0.0/bin/sh/jobs.h 163085 2006-10-07 16:51:16Z stefanf $
  */
 
 /* Mode argument to forkshell.  Don't change FORK_FG or FORK_BG. */
@@ -74,6 +74,13 @@ struct job {
 #endif
 };
 
+enum {
+	SHOWJOBS_DEFAULT,	/* job number, status, command */
+	SHOWJOBS_VERBOSE,	/* job number, PID, status, command */
+	SHOWJOBS_PIDS,		/* PID only */
+	SHOWJOBS_PGIDS		/* PID of the group leader only */
+};
+
 extern pid_t backgndpid;	/* pid of last background process */
 extern int job_warning;		/* user was warned about stopped jobs */
 extern int in_waitcmd;		/* are we in waitcmd()? */
@@ -84,7 +91,7 @@ void setjobctl(int);
 int fgcmd(int, char **);
 int bgcmd(int, char **);
 int jobscmd(int, char **);
-void showjobs(int, int, int);
+void showjobs(int, int);
 int waitcmd(int, char **);
 int jobidcmd(int, char **);
 struct job *makejob(union node *, int);

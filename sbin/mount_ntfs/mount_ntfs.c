@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/mount_ntfs/mount_ntfs.c,v 1.14 2005/06/10 09:51:42 delphij Exp $
+ * $FreeBSD: release/7.0.0/sbin/mount_ntfs/mount_ntfs.c 147242 2005-06-10 09:51:43Z delphij $
  *
  */
 

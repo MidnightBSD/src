@@ -35,7 +35,7 @@ static const char copyright[] =
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/ed/main.c,v 1.28 2005/02/09 17:37:37 ru Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/ed/main.c 172506 2007-10-10 16:59:15Z cvs2svn $");
 
 /*
  * CREDITS
@@ -292,7 +292,7 @@ extract_addr_range(void)
 		errmsg = "invalid address";			\
 		return ERR;					\
 	}							\
-} while (0);
+} while (0)
 
 /*  next_addr: return the next line address in the command buffer */
 long

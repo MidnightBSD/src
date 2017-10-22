@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)ns.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/ipx.c,v 1.23 2005/01/02 19:26:06 rwatson Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/netstat/ipx.c 171656 2007-07-30 11:06:42Z des $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -49,6 +49,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/ipx.c,v 1.23 2005/01/02 19:26:06 rwatson
 
 #include <net/route.h>
 
+#define TCPSTATES
 #include <netinet/tcp_fsm.h>
 
 #include <netipx/ipx.h>
@@ -65,13 +66,12 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/ipx.c,v 1.23 2005/01/02 19:26:06 rwatson
 
 #include <nlist.h>
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "netstat.h"
 
 static char *ipx_prpr (struct ipx_addr *);
-
-extern char *tcpstates[];
 
 /*
  * Print a summary of connections related to a Network Systems
@@ -81,7 +81,7 @@ extern char *tcpstates[];
  */
 
 void
-ipxprotopr(u_long off, const char *name, int af1 __unused)
+ipxprotopr(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
 	struct ipxpcbhead cb;
 	struct ipxpcb *ipxp;
@@ -154,7 +154,7 @@ ipxprotopr(u_long off, const char *name, int af1 __unused)
  * Dump SPX statistics structure.
  */
 void
-spx_stats(u_long off, const char *name, int af1 __unused)
+spx_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
 	struct spx_istat spx_istat;
 #define spxstat spx_istat.newstats
@@ -230,7 +230,7 @@ spx_stats(u_long off, const char *name, int af1 __unused)
  * Dump IPX statistics structure.
  */
 void
-ipx_stats(u_long off, const char *name, int af1 __unused)
+ipx_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
 	struct ipxstat ipxstat;
 
@@ -273,7 +273,7 @@ static	struct {
  */
 /*ARGSUSED*/
 void
-ipxerr_stats(u_long off, const char *name, int af __unused)
+ipxerr_stats(u_long off, const char *name, int af __unused, int proto __unused)
 {
 	struct ipx_errstat ipx_errstat;
 	int j;
@@ -338,7 +338,7 @@ ipx_erputil(int z, int c)
 }
 #endif /* IPXERRORMSGS */
 
-static struct sockaddr_ipx ssipx = {AF_IPX};
+static struct sockaddr_ipx ssipx = { .sipx_family = AF_IPX };
 
 static
 char *ipx_prpr(struct ipx_addr *x)

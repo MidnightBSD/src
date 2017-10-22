@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/ipatm/ipatm_if.c,v 1.17 2005/01/07 01:45:37 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/netatm/ipatm/ipatm_if.c 151897 2005-10-31 15:41:29Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -60,7 +60,7 @@ __FBSDID("$FreeBSD: src/sys/netatm/ipatm/ipatm_if.c,v 1.17 2005/01/07 01:45:37 i
 #include <netatm/ipatm/ipatm_var.h>
 #include <netatm/ipatm/ipatm_serv.h>
 
-static MALLOC_DEFINE(M_IPATM_NIF, "ipatm nif", "IP/ATM network interfaces");
+static MALLOC_DEFINE(M_IPATM_NIF, "ipatm_nif", "IP/ATM network interfaces");
 
 /*
  * Local functions

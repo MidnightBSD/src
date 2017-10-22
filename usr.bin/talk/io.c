@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/talk/io.c,v 1.16 2004/05/10 15:52:16 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/talk/io.c 129090 2004-05-10 15:52:16Z cognet $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)io.c	8.1 (Berkeley) 6/6/93";

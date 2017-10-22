@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.bin/tty/Makefile,v 1.4 2001/12/12 00:06:52 markm Exp $
+# $FreeBSD: release/7.0.0/usr.bin/tty/Makefile 87714 2001-12-12 00:06:52Z markm $
 
 PROG=	tty
 

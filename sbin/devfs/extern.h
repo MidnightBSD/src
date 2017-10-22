@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/devfs/extern.h,v 1.3 2004/06/02 23:02:31 stefanf Exp $
+ * $FreeBSD: release/7.0.0/sbin/devfs/extern.h 130021 2004-06-02 23:02:31Z stefanf $
  */
 
 #ifndef __DEVFS_H__

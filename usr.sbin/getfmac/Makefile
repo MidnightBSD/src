@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/getfmac/Makefile,v 1.4 2005/01/27 14:52:46 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/getfmac/Makefile 140909 2005-01-27 14:52:47Z delphij $
 
 PROG=   getfmac
 MAN=	getfmac.8

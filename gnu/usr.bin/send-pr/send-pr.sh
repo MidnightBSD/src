@@ -20,7 +20,7 @@
 # along with GNU GNATS; see the file COPYING.  If not, write to
 # the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# $FreeBSD: src/gnu/usr.bin/send-pr/send-pr.sh,v 1.36 2004/09/14 20:30:35 ceri Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/send-pr/send-pr.sh 170209 2007-06-02 18:06:08Z philip $
 
 # The version of this send-pr.
 VERSION=3.113
@@ -300,6 +300,8 @@ else
     for file in $TEMP $REF ; do
       cat  > $file << '__EOF__'
 SEND-PR: -*- send-pr -*-
+SEND-PR: vim: syntax=sendpr
+SEND-PR:
 SEND-PR: Lines starting with `SEND-PR' will be removed automatically, as
 SEND-PR: will all comments (text enclosed in `<' and `>').
 SEND-PR:
@@ -576,7 +578,7 @@ else
   if [ -z "$BATCH" ]; then
     BAD=`mktemp -t pbad`
     echo "$COMMAND: the problem report remains in $BAD and is not sent."
-    mv $REF $BAD
+    mv $TEMP $BAD
   else
     echo "$COMMAND: the problem report is not sent."
   fi

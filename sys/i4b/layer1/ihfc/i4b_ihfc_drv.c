@@ -35,7 +35,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/ihfc/i4b_ihfc_drv.c,v 1.16 2005/01/06 22:18:19 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer1/ihfc/i4b_ihfc_drv.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,9 +46,9 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer1/ihfc/i4b_ihfc_drv.c,v 1.16 2005/01/06 22:
 
 #include <i4b/include/i4b_mbuf.h>
 
-#include <machine/i4b_debug.h>
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_trace.h>
+#include <i4b/include/i4b_debug.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_trace.h>
 
 #include <i4b/layer1/i4b_l1.h>
 #include <i4b/layer1/i4b_hdlc.h>

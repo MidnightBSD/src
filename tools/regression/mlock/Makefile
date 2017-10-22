@@ -1,6 +1,6 @@
-# $FreeBSD: src/tools/regression/mlock/Makefile,v 1.1 2005/01/03 19:56:20 rwatson Exp $
+# $FreeBSD: release/7.0.0/tools/regression/mlock/Makefile 156735 2006-03-15 10:46:38Z ru $
 
 PROG=	mlock
-NO_MAN=	yes
+NO_MAN=
 
 .include <bsd.prog.mk>

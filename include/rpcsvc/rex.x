@@ -37,7 +37,7 @@
 %/*static char sccsid[] = "from: @(#)rex.x	2.1 88/08/01 4.0 RPCSRC";*/
 %#endif /* not lint */
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: src/include/rpcsvc/rex.x,v 1.7 2003/05/04 02:51:42 obrien Exp $");
+%__FBSDID("$FreeBSD: release/7.0.0/include/rpcsvc/rex.x 114629 2003-05-04 02:51:42Z obrien $");
 #endif
 
 const STRINGSIZE = 1024;

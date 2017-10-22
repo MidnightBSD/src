@@ -33,7 +33,7 @@
  *	from tahoe:	in_cksum.c	1.2	86/01/05
  *	from:		@(#)in_cksum.c	1.3 (Berkeley) 1/19/91
  *	from: Id: in_cksum.c,v 1.8 1995/12/03 18:35:19 bde Exp
- * $FreeBSD: src/sys/arm/include/in_cksum.h,v 1.2 2005/05/24 21:44:34 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/in_cksum.h 156520 2006-03-09 23:33:59Z cognet $
  */
 
 #ifndef _MACHINE_IN_CKSUM_H_
@@ -44,18 +44,23 @@
 #ifdef _KERNEL
 u_short in_cksum(struct mbuf *m, int len);
 u_short in_addword(u_short sum, u_short b);
-u_short in_pseudo(u_int sum, u_int b, u_int c);
 u_short in_cksum_skip(struct mbuf *m, int len, int skip);
 u_int do_cksum(const void *, int);
-static __inline u_int
-in_cksum_hdr(const struct ip *ip)
-{
-	u_int sum = do_cksum(ip, sizeof(struct ip));
+u_int in_cksum_hdr(const struct ip *);
 
+static __inline u_short
+in_pseudo(u_int sum, u_int b, u_int c)
+{
+	__asm __volatile("adds %0, %0, %1\n"
+	    		"adcs %0, %0, %2\n"
+			"adc %0, %0, #0\n"
+			: "+r" (sum) 
+			: "r" (b), "r" (c));
 	sum = (sum & 0xffff) + (sum >> 16);
 	if (sum > 0xffff)
 		sum -= 0xffff;
-	return (~sum & 0xffff);
+	return (sum);
 }
+
 #endif /* _KERNEL */
 #endif /* _MACHINE_IN_CKSUM_H_ */

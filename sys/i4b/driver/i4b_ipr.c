@@ -55,7 +55,7 @@
  *---------------------------------------------------------------------------*/ 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/driver/i4b_ipr.c,v 1.34.2.1 2005/08/25 05:01:19 rwatson Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/driver/i4b_ipr.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include "opt_i4b.h"
 
@@ -98,15 +98,15 @@ __FBSDID("$FreeBSD: src/sys/i4b/driver/i4b_ipr.c,v 1.34.2.1 2005/08/25 05:01:19 
 #include <sys/time.h>
 #include <net/bpf.h>
 
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_debug.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_debug.h>
 
 #include <i4b/include/i4b_global.h>
 #include <i4b/include/i4b_l3l4.h>
 
 #include <i4b/layer4/i4b_l4.h>
 
-NET_NEEDS_GIANT("i4b_ipr");
+#error "Cannot be used until I4B is locked."
 
 #define I4BIPRMTU	1500		/* regular MTU */
 #define I4BIPRMAXMTU	2000		/* max MTU */
@@ -490,7 +490,7 @@ i4biprioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			{
 			struct thread *td = curthread;	/* XXX */
 
-			if((error = suser(td)))
+			if((error = priv_check(td, PRIV_DRIVER)))
 				return (error);
 		        sl_compress_setup(sc->sc_compr, *(int *)data);
 			}
@@ -883,7 +883,7 @@ error:
 	}
 #endif
 
-	if(sc->sc_ifp->if_bpf)
+	if(bpf_peers_present(sc->sc_ifp->if_bpf))
 	{
 		/* prepend the address family as a four byte field */		
 		struct mbuf mm;
@@ -891,7 +891,7 @@ error:
 		mm.m_next = m;
 		mm.m_len = 4;
 		mm.m_data = (char *)&af;
-		BPF_MTAP(sc->sc_ifp, &mm);
+		bpf_mtap(sc->sc_ifp->if_bpf, &mm);
 	}
 
 	if(netisr_queue(NETISR_IP, m))	/* (0) on success. */
@@ -936,7 +936,7 @@ ipr_tx_queue_empty(int unit)
 
 		microtime(&sc->sc_ifp->if_lastchange);
 		
-		if(sc->sc_ifp->if_bpf)
+		if(bpf_peers_present(sc->sc_ifp->if_bpf))
 		{
 			/* prepend the address family as a four byte field */
 	
@@ -945,7 +945,7 @@ ipr_tx_queue_empty(int unit)
 			mm.m_next = m;
 			mm.m_len = 4;
 			mm.m_data = (char *)&af;
-			BPF_MTAP(sc->sc_ifp, &mm);
+			bpf_mtap(sc->sc_ifp->if_bpf, &mm);
 		}
 	
 #if I4BIPRACCT

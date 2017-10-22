@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)ls.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: src/bin/ls/ls.h,v 1.21 2005/01/10 08:39:23 imp Exp $
+ * $FreeBSD: release/7.0.0/bin/ls/ls.h 157098 2006-03-24 16:38:02Z jhb $
  */
 
 #define NO_PRINT	1
@@ -38,6 +38,7 @@
 extern long blocksize;		/* block size units */
 
 extern int f_accesstime;	/* use time of last access */
+extern int f_birthtime;	/* use time of file creation */
 extern int f_flags;		/* show flags associated with a file */
 extern int f_humanval;		/* show human-readable file sizes */
 extern int f_label;		/* show MAC label */

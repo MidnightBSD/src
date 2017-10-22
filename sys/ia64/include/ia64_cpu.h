@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2007 Marcel Moolenaar
  * Copyright (c) 2000 Doug Rabson
  * All rights reserved.
  *
@@ -23,11 +24,29 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/ia64/include/ia64_cpu.h,v 1.19.10.1 2005/09/13 21:07:14 marcel Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/include/ia64_cpu.h 171735 2007-08-05 18:19:38Z marcel $
  */
 
 #ifndef _MACHINE_IA64_CPU_H_
 #define _MACHINE_IA64_CPU_H_
+
+/*
+ * Definition of DCR bits.
+ */
+#define	IA64_DCR_PP		0x0000000000000001
+#define	IA64_DCR_BE		0x0000000000000002
+#define	IA64_DCR_LC		0x0000000000000004
+#define	IA64_DCR_DM		0x0000000000000100
+#define	IA64_DCR_DP		0x0000000000000200
+#define	IA64_DCR_DK		0x0000000000000400
+#define	IA64_DCR_DX		0x0000000000000800
+#define	IA64_DCR_DR		0x0000000000001000
+#define	IA64_DCR_DA		0x0000000000002000
+#define	IA64_DCR_DD		0x0000000000004000
+
+#define	IA64_DCR_DEFAULT					\
+    (IA64_DCR_DM | IA64_DCR_DP | IA64_DCR_DK | IA64_DCR_DX |	\
+     IA64_DCR_DR | IA64_DCR_DA | IA64_DCR_DD)
 
 /*
  * Definition of PSR and IPSR bits.
@@ -381,7 +400,7 @@ IA64_CR(lrr1)
 static __inline void
 ia64_set_rr(u_int64_t rrbase, u_int64_t v)
 {
-	__asm __volatile("mov rr[%0]=%1;; srlz.d;;"
+	__asm __volatile("mov rr[%0]=%1"
 			 :: "r"(rrbase), "r"(v) : "memory");
 }
 
@@ -407,6 +426,18 @@ static __inline void
 ia64_enable_highfp(void)
 {
 	__asm __volatile("rsm psr.dfh;; srlz.d");
+}
+
+static __inline void
+ia64_srlz_d(void)
+{
+	__asm __volatile("srlz.d");
+}
+
+static __inline void
+ia64_srlz_i(void)
+{
+	__asm __volatile("srlz.i;;");
 }
 
 #endif /* !LOCORE */

@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/add/extract.c,v 1.43.2.1 2006/01/10 22:15:05 krion Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/add/extract.c 174854 2007-12-22 06:32:46Z cvs2svn $");
 
 #include <ctype.h>
 #include <err.h>
@@ -34,7 +34,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/pkg_install/add/extract.c,v 1.43.2.1 2006/01/10
 
 #define PUSHOUT(todir) /* push out string */ \
     if (where_count > (int)sizeof(STARTSTRING)-1) { \
-	strcat(where_args, "|/usr/bin/tar --unlink -xpf - -C "); \
+	strcat(where_args, "|/usr/bin/tar --unlink -xpPf - -C "); \
 	strcat(where_args, todir); \
 	if (system(where_args)) { \
 	    cleanup(0); \

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/chkgrp/Makefile,v 1.7 2001/07/20 06:19:39 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/chkgrp/Makefile 80029 2001-07-20 06:20:32Z obrien $
 
 PROG=	chkgrp
 MAN=	chkgrp.8

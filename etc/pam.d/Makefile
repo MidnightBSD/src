@@ -1,8 +1,22 @@
-# $FreeBSD: src/etc/pam.d/Makefile,v 1.13 2005/06/10 20:52:36 nectar Exp $
+# $FreeBSD: release/7.0.0/etc/pam.d/Makefile 170890 2007-06-17 17:25:53Z yar $
 
 NO_OBJ=
-FILES=	README ftpd gdm imap kde login other passwd pop3 \
-	rsh sshd su system telnetd xdm
+
+FILES=	README \
+	atrun \
+	cron \
+	ftpd \
+	gdm \
+	imap \
+	kde \
+	login \
+	other \
+	passwd pop3 \
+	rsh \
+	sshd su system \
+	telnetd \
+	xdm
+
 FILESDIR=	/etc/pam.d
 FILESMODE=	644
 FILESMODE_README=	444

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/mksnap_ffs/Makefile,v 1.1 2003/03/02 01:50:33 mckusick Exp $
+# $FreeBSD: release/7.0.0/sbin/mksnap_ffs/Makefile 111716 2003-03-02 01:50:33Z mckusick $
 
 PROG=	mksnap_ffs
 MAN=	mksnap_ffs.8

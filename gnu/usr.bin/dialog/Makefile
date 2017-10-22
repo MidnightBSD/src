@@ -1,7 +1,11 @@
 # Makefile for dialog
-# $FreeBSD: src/gnu/usr.bin/dialog/Makefile,v 1.11 2004/02/05 22:44:22 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/dialog/Makefile 156813 2006-03-17 18:54:44Z ru $
 
+.include <bsd.own.mk>
+
+.if ${MK_EXAMPLES} != "no"
 SUBDIR=	TESTS
+.endif
 
 PROG=   dialog
 

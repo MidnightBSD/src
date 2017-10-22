@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/mtree/BSD.local.dist,v 1.117.2.1 2006/01/17 06:53:17 dougb Exp $
+# $FreeBSD: release/7.0.0/etc/mtree/BSD.local.dist 172422 2007-10-03 05:51:20Z ru $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -111,8 +111,6 @@
             cat3
             ..
             cat4
-                alpha
-                ..
                 i386
                 ..
             ..
@@ -123,8 +121,6 @@
             cat7
             ..
             cat8
-                alpha
-                ..
                 i386
                 ..
             ..
@@ -475,11 +471,11 @@
                 LC_MESSAGES
                 ..
             ..
-            sr@Latn
+            sq
                 LC_MESSAGES
                 ..
             ..
-            sq
+            sr@Latn
                 LC_MESSAGES
                 ..
             ..

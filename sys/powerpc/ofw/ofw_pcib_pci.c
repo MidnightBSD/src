@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/ofw/ofw_pcib_pci.c,v 1.4 2004/08/16 15:45:26 marius Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/ofw/ofw_pcib_pci.c 154079 2006-01-06 19:22:19Z jhb $
  */
 
 #include <sys/param.h>
@@ -75,12 +75,10 @@ static device_method_t ofw_pcib_pci_methods[] = {
 	{0, 0}
 };
 
-static driver_t ofw_pcib_pci_driver = {
-	"pcib",
-	ofw_pcib_pci_methods,
-	sizeof(struct pcib_softc),
-};
+static devclass_t pcib_devclass;
 
+DEFINE_CLASS_0(pcib, ofw_pcib_pci_driver, ofw_pcib_pci_methods,
+    sizeof(struct pcib_softc));
 DRIVER_MODULE(ofw_pcib, pci, ofw_pcib_pci_driver, pcib_devclass, 0, 0);
 
 static int

@@ -21,7 +21,7 @@
 # Copies of this Software may be made, however, the above copyright
 # notice must be reproduced on all copies.
 #
-#	@(#) $FreeBSD: src/usr.sbin/atm/Makefile,v 1.3 2001/07/20 06:19:37 obrien Exp $
+#	@(#) $FreeBSD: release/7.0.0/usr.sbin/atm/Makefile 80029 2001-07-20 06:20:32Z obrien $
 
 SUBDIR=	atmarpd \
 	scspd

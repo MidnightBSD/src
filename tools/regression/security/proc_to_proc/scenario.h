@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/security/proc_to_proc/scenario.h,v 1.1 2001/04/11 17:21:14 rwatson Exp $
+ * $FreeBSD: release/7.0.0/tools/regression/security/proc_to_proc/scenario.h 75422 2001-04-11 17:21:14Z rwatson $
  */
 #ifndef _SCENARIO_H
 #define _SCENARIO_H

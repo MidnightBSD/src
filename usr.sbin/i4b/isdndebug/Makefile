@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/i4b/isdndebug/Makefile,v 1.5 2001/07/20 06:19:48 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/i4b/isdndebug/Makefile 80029 2001-07-20 06:20:32Z obrien $
 
 PROG=	isdndebug
 MAN= 	isdndebug.8

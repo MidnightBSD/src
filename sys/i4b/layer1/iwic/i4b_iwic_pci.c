@@ -32,7 +32,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/iwic/i4b_iwic_pci.c,v 1.14 2005/03/19 03:00:22 murray Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer1/iwic/i4b_iwic_pci.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include "opt_i4b.h"
 
@@ -50,8 +50,8 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer1/iwic/i4b_iwic_pci.c,v 1.14 2005/03/19 03:
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_trace.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_trace.h>
 
 #include <i4b/include/i4b_global.h>
 #include <i4b/include/i4b_l3l4.h>
@@ -231,7 +231,7 @@ iwic_pci_attach(device_t dev)
 	sc->enabled = FALSE;
 	
 	if(bus_setup_intr(dev, sc->sc_resources.irq, INTR_TYPE_NET,
-				(void(*)(void*))iwic_pci_intr,
+				NULL, (void(*)(void*))iwic_pci_intr,
 				sc, &ih))
 	{
 		printf("iwic%d: Couldn't set up irq!\n", unit);

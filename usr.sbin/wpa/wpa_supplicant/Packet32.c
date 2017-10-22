@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/wpa/wpa_supplicant/Packet32.c,v 1.2.2.1 2005/10/27 17:06:47 wpaul Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/wpa/wpa_supplicant/Packet32.c 171371 2007-07-11 16:04:08Z sam $");
 
 /*
  * This file implements a small portion of the Winpcap API for the
@@ -56,6 +56,8 @@ __FBSDID("$FreeBSD: src/usr.sbin/wpa/wpa_supplicant/Packet32.c,v 1.2.2.1 2005/10
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <net/route.h>
+
+#include <net80211/ieee80211_ioctl.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -97,6 +99,7 @@ typedef struct NDIS_802_11_KEY_COMPAT {
 struct adapter {
 	int			socket;
 	char			name[IFNAMSIZ];
+	int			prev_roaming;
 };
 
 PCHAR
@@ -113,6 +116,7 @@ PacketOpenAdapter(iface)
 	int			s;
 	int			ifflags;
 	struct ifreq		ifr;
+	struct ieee80211req	ireq;
 
 	s = socket(PF_INET, SOCK_DGRAM, 0);
 
@@ -124,7 +128,23 @@ PacketOpenAdapter(iface)
 		return(NULL);
 
 	a->socket = s;
+	if (strncmp(iface, "\\Device\\NPF_", 12) == 0)
+		iface += 12;
+	else if (strncmp(iface, "\\DEVICE\\", 8) == 0)
+		iface += 8;
 	snprintf(a->name, IFNAMSIZ, "%s", iface);
+
+	/* Turn off net80211 roaming */
+	bzero((char *)&ireq, sizeof(ireq));
+	strncpy(ireq.i_name, iface, sizeof (ifr.ifr_name));
+	ireq.i_type = IEEE80211_IOC_ROAMING;
+	if (ioctl(a->socket, SIOCG80211, &ireq) == 0) {
+		a->prev_roaming = ireq.i_val;
+		ireq.i_val = IEEE80211_ROAMING_MANUAL;
+		if (ioctl(a->socket, SIOCS80211, &ireq) < 0)
+			fprintf(stderr,
+			    "Could not set IEEE80211_ROAMING_MANUAL\n");
+	}
 
 	bzero((char *)&ifr, sizeof(ifr));
         strncpy(ifr.ifr_name, iface, sizeof (ifr.ifr_name));
@@ -246,15 +266,15 @@ PacketGetAdapterNames(namelist, len)
 	mib[5] = 0;             /* no flags */
 
 	if (sysctl (mib, 6, NULL, &needed, NULL, 0) < 0)
-		return(EIO);
+		return(FALSE);
 
 	buf = malloc (needed);
 	if (buf == NULL)
-		return(ENOMEM);
+		return(FALSE);
 
 	if (sysctl (mib, 6, buf, &needed, NULL, 0) < 0) {
 		free(buf);
-		return(EIO);
+		return(FALSE);
 	}
 
 	lim = buf + needed;
@@ -269,7 +289,7 @@ PacketGetAdapterNames(namelist, len)
 			if (strnstr(sdl->sdl_data, "ndis", sdl->sdl_nlen)) {
 				if ((spc + sdl->sdl_nlen) > *len) {
 					free(buf);
-					return(ENOSPC);
+					return(FALSE);
 				}
 				strncpy(plist, sdl->sdl_data, sdl->sdl_nlen);
 				plist += (sdl->sdl_nlen + 1);
@@ -302,7 +322,7 @@ PacketGetAdapterNames(namelist, len)
 			if (strnstr(sdl->sdl_data, "ndis", sdl->sdl_nlen)) {
 				if ((spc + sdl->sdl_nlen) > *len) {
 					free(buf);
-					return(ENOSPC);
+					return(FALSE);
 				}
 				strncpy(plist, sdl->sdl_data, sdl->sdl_nlen);
 				plist += (sdl->sdl_nlen + 1);
@@ -317,7 +337,7 @@ PacketGetAdapterNames(namelist, len)
 
 	*len = spc + 1;
 
-	return(0);
+	return(TRUE);
 }
 
 void
@@ -326,11 +346,19 @@ PacketCloseAdapter(iface)
 {	
 	struct adapter		*a;
 	struct ifreq		ifr;
+	struct ieee80211req	ireq;
 
 	if (iface == NULL)
 		return;
 
 	a = iface;
+
+	/* Reset net80211 roaming */
+	bzero((char *)&ireq, sizeof(ireq));
+	strncpy(ireq.i_name, a->name, sizeof (ifr.ifr_name));
+	ireq.i_type = IEEE80211_IOC_ROAMING;
+	ireq.i_val = a->prev_roaming;
+	ioctl(a->socket, SIOCS80211, &ireq);
 
 	bzero((char *)&ifr, sizeof(ifr));
         strncpy(ifr.ifr_name, a->name, sizeof (ifr.ifr_name));

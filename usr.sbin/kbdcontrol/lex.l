@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/kbdcontrol/lex.l,v 1.15 2002/07/11 21:12:18 alfred Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/kbdcontrol/lex.l 99816 2002-07-11 21:12:18Z alfred $
  */
 
 %{

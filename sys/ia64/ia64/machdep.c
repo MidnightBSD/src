@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ia64/ia64/machdep.c,v 1.200.2.1 2005/09/13 21:07:14 marcel Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/machdep.c 176302 2008-02-14 22:51:52Z marcel $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
@@ -100,6 +100,9 @@ __FBSDID("$FreeBSD: src/sys/ia64/ia64/machdep.c,v 1.200.2.1 2005/09/13 21:07:14 
 
 #include <i386/include/specialreg.h>
 
+/* XXX fc.i kluge (quick fix) */
+extern int ia64_icache_sync_kluge;
+
 u_int64_t processor_frequency;
 u_int64_t bus_frequency;
 u_int64_t itc_frequency;
@@ -108,7 +111,7 @@ int cold = 1;
 u_int64_t pa_bootinfo;
 struct bootinfo bootinfo;
 
-struct pcpu early_pcpu;
+struct pcpu pcpu0;
 extern char kstack[]; 
 vm_offset_t proc0kstack;
 
@@ -146,7 +149,9 @@ struct msgbuf *msgbufp=0;
 long Maxmem = 0;
 long realmem = 0;
 
-vm_offset_t phys_avail[100];
+#define	PHYSMAP_SIZE	(2 * VM_PHYSSEG_MAX)
+
+vm_paddr_t phys_avail[PHYSMAP_SIZE + 2];
 
 /* must be 2 less so 0 0 can signal end of chunks */
 #define PHYS_AVAIL_ARRAY_END ((sizeof(phys_avail) / sizeof(vm_offset_t)) - 2)
@@ -157,6 +162,14 @@ struct kva_md_info kmi;
 
 #define	Mhz	1000000L
 #define	Ghz	(1000L*Mhz)
+
+void setPQL2(int *const size, int *const ways);
+
+void
+setPQL2(int *const size, int *const ways)
+{
+	return;
+}
 
 static void
 identifycpu(void)
@@ -211,6 +224,17 @@ identifycpu(void)
 			break;
 		}
 		break;
+	case 0x20:
+		/* XXX fc.i kluge (quick fix) */
+		ia64_icache_sync_kluge = 1;
+
+		family_name = "Itanium 2";
+		switch (model) {
+		case 0x00:
+			model_name = "Montecito";
+			break;
+		}
+		break;
 	}
 	snprintf(cpu_family, sizeof(cpu_family), "%s", family_name);
 	snprintf(cpu_model, sizeof(cpu_model), "%s", model_name);
@@ -248,7 +272,7 @@ cpu_startup(dummy)
 #endif
 	printf("real memory  = %ld (%ld MB)\n", ia64_ptob(Maxmem),
 	    ia64_ptob(Maxmem) / 1048576);
-	realmem = ia64_ptob(Maxmem);
+	realmem = Maxmem;
 
 	/*
 	 * Display any holes after the first chunk of extended memory.
@@ -258,10 +282,11 @@ cpu_startup(dummy)
 
 		printf("Physical memory chunk(s):\n");
 		for (indx = 0; phys_avail[indx + 1] != 0; indx += 2) {
-			int size1 = phys_avail[indx + 1] - phys_avail[indx];
+			long size1 = phys_avail[indx + 1] - phys_avail[indx];
 
-			printf("0x%08lx - 0x%08lx, %d bytes (%d pages)\n", phys_avail[indx],
-			    phys_avail[indx + 1] - 1, size1, size1 / PAGE_SIZE);
+			printf("0x%08lx - 0x%08lx, %ld bytes (%ld pages)\n",
+			    phys_avail[indx], phys_avail[indx + 1] - 1, size1,
+			    size1 >> PAGE_SHIFT);
 		}
 	}
 
@@ -340,12 +365,12 @@ cpu_reset()
 }
 
 void
-cpu_switch(struct thread *old, struct thread *new)
+cpu_switch(struct thread *old, struct thread *new, struct mtx *mtx)
 {
 	struct pcb *oldpcb, *newpcb;
 
 	oldpcb = old->td_pcb;
-#if COMPAT_IA32
+#ifdef COMPAT_IA32
 	ia32_savectx(oldpcb);
 #endif
 	if (PCPU_GET(fpcurthread) == old)
@@ -355,7 +380,7 @@ cpu_switch(struct thread *old, struct thread *new)
 		oldpcb->pcb_current_pmap =
 		    pmap_switch(newpcb->pcb_current_pmap);
 		PCPU_SET(curthread, new);
-#if COMPAT_IA32
+#ifdef COMPAT_IA32
 		ia32_restorectx(newpcb);
 #endif
 		if (PCPU_GET(fpcurthread) == new)
@@ -375,7 +400,7 @@ cpu_throw(struct thread *old __unused, struct thread *new)
 	newpcb = new->td_pcb;
 	(void)pmap_switch(newpcb->pcb_current_pmap);
 	PCPU_SET(curthread, new);
-#if COMPAT_IA32
+#ifdef COMPAT_IA32
 	ia32_restorectx(newpcb);
 #endif
 	restorectx(newpcb);
@@ -387,17 +412,7 @@ cpu_throw(struct thread *old __unused, struct thread *new)
 void
 cpu_pcpu_init(struct pcpu *pcpu, int cpuid, size_t size)
 {
-	size_t pcpusz;
 
-	/*
-	 * Make sure the PCB is 16-byte aligned by making the PCPU
-	 * a multiple of 16 bytes. We assume the PCPU is 16-byte
-	 * aligned itself.
-	 */
-	pcpusz = (sizeof(struct pcpu) + 15) & ~15;
-	KASSERT(size >= pcpusz + sizeof(struct pcb),
-	    ("%s: too small an allocation for pcpu", __func__));
-	pcpu->pc_pcb = (struct pcb *)((char*)pcpu + pcpusz);
 	pcpu->pc_acpi_id = cpuid;
 }
 
@@ -426,6 +441,30 @@ spinlock_exit(void)
 }
 
 void
+map_vhpt(uintptr_t vhpt)
+{
+	pt_entry_t pte;
+	uint64_t psr;
+
+	pte = PTE_PRESENT | PTE_MA_WB | PTE_ACCESSED | PTE_DIRTY |
+	    PTE_PL_KERN | PTE_AR_RW;
+	pte |= vhpt & PTE_PPN_MASK;
+
+	__asm __volatile("ptr.d %0,%1" :: "r"(vhpt),
+	    "r"(IA64_ID_PAGE_SHIFT<<2));
+
+	__asm __volatile("mov   %0=psr" : "=r"(psr));
+	__asm __volatile("rsm   psr.ic|psr.i");
+	ia64_srlz_i();
+	ia64_set_ifa(vhpt);
+	ia64_set_itir(IA64_ID_PAGE_SHIFT << 2);
+	ia64_srlz_d();
+	__asm __volatile("itr.d dtr[%0]=%1" :: "r"(2), "r"(pte));
+	__asm __volatile("mov   psr.l=%0" :: "r" (psr));
+	ia64_srlz_i();
+}
+
+void
 map_pal_code(void)
 {
 	pt_entry_t pte;
@@ -443,15 +482,15 @@ map_pal_code(void)
 
 	__asm __volatile("mov	%0=psr" : "=r"(psr));
 	__asm __volatile("rsm	psr.ic|psr.i");
-	__asm __volatile("srlz.i");
-	__asm __volatile("mov	cr.ifa=%0" ::
-	    "r"(IA64_PHYS_TO_RR7(ia64_pal_base)));
-	__asm __volatile("mov	cr.itir=%0" :: "r"(IA64_ID_PAGE_SHIFT << 2));
+	ia64_srlz_i();
+	ia64_set_ifa(IA64_PHYS_TO_RR7(ia64_pal_base));
+	ia64_set_itir(IA64_ID_PAGE_SHIFT << 2);
+	ia64_srlz_d();
 	__asm __volatile("itr.d	dtr[%0]=%1" :: "r"(1), "r"(pte));
-	__asm __volatile("srlz.d");		/* XXX not needed. */
+	ia64_srlz_d();
 	__asm __volatile("itr.i	itr[%0]=%1" :: "r"(1), "r"(pte));
 	__asm __volatile("mov	psr.l=%0" :: "r" (psr));
-	__asm __volatile("srlz.i");
+	ia64_srlz_i();
 }
 
 void
@@ -469,14 +508,15 @@ map_gateway_page(void)
 
 	__asm __volatile("mov	%0=psr" : "=r"(psr));
 	__asm __volatile("rsm	psr.ic|psr.i");
-	__asm __volatile("srlz.i");
-	__asm __volatile("mov	cr.ifa=%0" :: "r"(VM_MAX_ADDRESS));
-	__asm __volatile("mov	cr.itir=%0" :: "r"(PAGE_SHIFT << 2));
+	ia64_srlz_i();
+	ia64_set_ifa(VM_MAX_ADDRESS);
+	ia64_set_itir(PAGE_SHIFT << 2);
+	ia64_srlz_d();
 	__asm __volatile("itr.d	dtr[%0]=%1" :: "r"(3), "r"(pte));
-	__asm __volatile("srlz.d");		/* XXX not needed. */
+	ia64_srlz_d();
 	__asm __volatile("itr.i	itr[%0]=%1" :: "r"(3), "r"(pte));
 	__asm __volatile("mov	psr.l=%0" :: "r" (psr));
-	__asm __volatile("srlz.i");
+	ia64_srlz_i();
 
 	/* Expose the mapping to userland in ar.k5 */
 	ia64_set_k5(VM_MAX_ADDRESS);
@@ -570,10 +610,11 @@ ia64_init(void)
 		preload_metadata = (caddr_t)bootinfo.bi_modulep;
 	else
 		metadata_missing = 1;
-	if (envmode == 1)
-		kern_envp = static_env;
-	else
+
+	if (envmode == 0 && bootinfo.bi_envp)
 		kern_envp = (caddr_t)bootinfo.bi_envp;
+	else
+		kern_envp = static_env;
 
 	/*
 	 * Look at arguments passed to us and compute boothowto.
@@ -592,6 +633,16 @@ ia64_init(void)
 
 	if (boothowto & RB_VERBOSE)
 		bootverbose = 1;
+
+	/*
+	 * Setup the PCPU data for the bootstrap processor. It is needed
+	 * by printf(). Also, since printf() has critical sections, we
+	 * need to initialize at least pc_curthread.
+	 */
+	pcpup = &pcpu0;
+	ia64_set_k4((u_int64_t)pcpup);
+	pcpu_init(pcpup, 0, sizeof(pcpu0));
+	PCPU_SET(curthread, &thread0);
 
 	/*
 	 * Initialize the console before we print anything out.
@@ -682,21 +733,6 @@ ia64_init(void)
 			continue;
 
 		/*
-		 * Wimp out for now since we do not DTRT here with
-		 * pci bus mastering (no bounce buffering, for example).
-		 */
-		if (pfn0 >= ia64_btop(0x100000000UL)) {
-			printf("Skipping memory chunk start 0x%lx\n",
-			    md->md_phys);
-			continue;
-		}
-		if (pfn1 >= ia64_btop(0x100000000UL)) {
-			printf("Skipping memory chunk end 0x%lx\n",
-			    md->md_phys + md->md_pages * 4096);
-			continue;
-		}
-
-		/*
 		 * We have a memory descriptor that describes conventional
 		 * memory that is for general use. We must determine if the
 		 * loader has put the kernel in this region.
@@ -759,21 +795,13 @@ ia64_init(void)
 	msgbufp = (struct msgbuf *)pmap_steal_memory(MSGBUF_SIZE);
 	msgbufinit(msgbufp, MSGBUF_SIZE);
 
-	proc_linkup(&proc0, &ksegrp0, &thread0);
+	proc_linkup0(&proc0, &thread0);
 	/*
 	 * Init mapping for kernel stack for proc 0
 	 */
 	proc0kstack = (vm_offset_t)kstack;
 	thread0.td_kstack = proc0kstack;
 	thread0.td_kstack_pages = KSTACK_PAGES;
-
-	/*
-	 * Setup the global data for the bootstrap cpu.
-	 */
-	pcpup = (struct pcpu *)pmap_steal_memory(PAGE_SIZE);
-	ia64_set_k4((u_int64_t)pcpup);
-	pcpu_init(pcpup, 0, PAGE_SIZE);
-	PCPU_SET(curthread, &thread0);
 
 	mutex_init();
 
@@ -806,6 +834,7 @@ ia64_init(void)
 #endif
 
 	ia64_set_tpr(0);
+	ia64_srlz_d();
 
 	/*
 	 * Save our current context so that we have a known (maybe even
@@ -820,6 +849,16 @@ ia64_init(void)
 	/* We should not get here. */
 	panic("ia64_init: Whooaa there!");
 	/* NOTREACHED */
+}
+
+__volatile void *
+ia64_ioport_address(u_int port)
+{
+	uint64_t addr;
+
+	addr = (port > 0xffff) ? IA64_PHYS_TO_RR6((uint64_t)port) :
+	    ia64_port_base | ((port & 0xfffc) << 10) | (port & 0xFFF);
+	return ((__volatile void *)addr);
 }
 
 uint64_t
@@ -878,7 +917,7 @@ DELAY(int n)
  * Send an interrupt (signal) to a process.
  */
 void
-sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
+sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 {
 	struct proc *p;
 	struct thread *td;
@@ -887,10 +926,14 @@ sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 	struct sigframe sf, *sfp;
 	u_int64_t sbs, sp;
 	int oonstack;
+	int sig;
+	u_long code;
 
 	td = curthread;
 	p = td->td_proc;
 	PROC_LOCK_ASSERT(p, MA_OWNED);
+	sig = ksi->ksi_signo;
+	code = ksi->ksi_code;
 	psp = p->p_sigacts;
 	mtx_assert(&psp->ps_mtx, MA_OWNED);
 	tf = td->td_frame;
@@ -926,8 +969,12 @@ sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 
 	/* Fill in the siginfo structure for POSIX handlers. */
 	if (SIGISMEMBER(psp->ps_siginfo, sig)) {
+		sf.sf_si = ksi->ksi_info;
 		sf.sf_si.si_signo = sig;
-		sf.sf_si.si_code = code;
+		/*
+		 * XXX this shouldn't be here after code in trap.c
+		 * is fixed
+		 */
 		sf.sf_si.si_addr = (void*)tf->tf_special.ifa;
 		code = (u_int64_t)&sfp->sf_si;
 	}
@@ -976,25 +1023,6 @@ sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 
 	PROC_LOCK(p);
 	mtx_lock(&psp->ps_mtx);
-}
-
-/*
- * Build siginfo_t for SA thread
- */
-void
-cpu_thread_siginfo(int sig, u_long code, siginfo_t *si)
-{
-	struct proc *p;
-	struct thread *td;
-
-	td = curthread;
-	p = td->td_proc;
-	PROC_LOCK_ASSERT(p, MA_OWNED);
-
-	bzero(si, sizeof(*si));
-	si->si_signo = sig;
-	si->si_code = code;
-	/* XXXKSE fill other fields */
 }
 
 /*
@@ -1100,6 +1128,7 @@ ia64_flush_dirty(struct thread *td, struct _special *r)
 		r->rnat = (bspst > kstk && (bspst & 0x1ffL) < (kstk & 0x1ffL))
 		    ? *(uint64_t*)(kstk | 0x1f8L) : rnat;
 	} else {
+		PHOLD(td->td_proc);
 		iov.iov_base = (void*)(uintptr_t)kstk;
 		iov.iov_len = r->ndirty;
 		uio.uio_iov = &iov;
@@ -1117,6 +1146,7 @@ ia64_flush_dirty(struct thread *td, struct _special *r)
 		 */
 		if (uio.uio_resid != 0 && error == 0)
 			error = ENOSPC;
+		PRELE(td->td_proc);
 	}
 
 	r->bspstore += r->ndirty;

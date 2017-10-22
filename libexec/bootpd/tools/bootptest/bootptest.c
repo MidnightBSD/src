@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/libexec/bootpd/tools/bootptest/bootptest.c,v 1.8 2003/02/05 13:45:25 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/libexec/bootpd/tools/bootptest/bootptest.c 110395 2003-02-05 13:45:25Z charnier $");
 
 char *usage = "bootptest [-h] server-name [vendor-data-template-file]";
 

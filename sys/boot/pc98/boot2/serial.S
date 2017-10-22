@@ -24,7 +24,7 @@
  * the rights to redistribute these changes.
  *
  *	from: Mach, Revision 2.2  92/04/04  11:34:26  rpd
- * $FreeBSD: src/sys/boot/pc98/boot2/serial.S,v 1.4 2000/03/30 09:25:02 kato Exp $
+ * $FreeBSD: release/7.0.0/sys/boot/pc98/boot2/serial.S 58829 2000-03-30 09:25:03Z kato $
  */
 
 /*

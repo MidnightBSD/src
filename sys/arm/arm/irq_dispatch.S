@@ -72,7 +72,7 @@
 #include <machine/asm.h>
 #include <machine/asmacros.h>
 #include <machine/armreg.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/irq_dispatch.S,v 1.4 2005/01/05 21:58:47 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/irq_dispatch.S 139735 2005-01-05 21:58:49Z imp $");
 
 /*
  * irq_entry:

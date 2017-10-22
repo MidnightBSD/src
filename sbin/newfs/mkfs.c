@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)mkfs.c	8.11 (Berkeley) 5/3/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/newfs/mkfs.c,v 1.89 2005/02/20 11:32:49 delphij Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sbin/newfs/mkfs.c 163842 2006-10-31 21:52:28Z pjd $");
 
 #include <err.h>
 #include <grp.h>
@@ -135,6 +135,8 @@ mkfs(struct partition *pp, char *fsys)
 		sblock.fs_flags |= FS_DOSOFTDEP;
 	if (Lflag)
 		strlcpy(sblock.fs_volname, volumelabel, MAXVOLLEN);
+	if (Jflag)
+		sblock.fs_flags |= FS_GJOURNAL;
 	if (lflag)
 		sblock.fs_flags |= FS_MULTILABEL;
 	/*
@@ -748,11 +750,16 @@ fsinit(time_t utime)
 {
 	union dinode node;
 	struct group *grp;
+	gid_t gid;
 	int entries;
 
 	memset(&node, 0, sizeof node);
-	if ((grp = getgrnam("operator")) == NULL)
-		errx(35, "Cannot retrieve operator gid");
+	if ((grp = getgrnam("operator")) != NULL) {
+		gid = grp->gr_gid;
+	} else {
+		warnx("Cannot retrieve operator gid, using gid 0.");
+		gid = 0;
+	}
 	entries = (nflag) ? ROOTLINKCNT - 1: ROOTLINKCNT;
 	if (sblock.fs_magic == FS_UFS1_MAGIC) {
 		/*
@@ -778,7 +785,7 @@ fsinit(time_t utime)
 			 * create the .snap directory
 			 */
 			node.dp1.di_mode |= 020;
-			node.dp1.di_gid = grp->gr_gid;
+			node.dp1.di_gid = gid;
 			node.dp1.di_nlink = SNAPLINKCNT;
 			node.dp1.di_size = makedir(snap_dir, SNAPLINKCNT);
 				node.dp1.di_db[0] =
@@ -814,7 +821,7 @@ fsinit(time_t utime)
 			 * create the .snap directory
 			 */
 			node.dp2.di_mode |= 020;
-			node.dp2.di_gid = grp->gr_gid;
+			node.dp2.di_gid = gid;
 			node.dp2.di_nlink = SNAPLINKCNT;
 			node.dp2.di_size = makedir(snap_dir, SNAPLINKCNT);
 				node.dp2.di_db[0] =

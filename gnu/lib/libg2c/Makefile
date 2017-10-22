@@ -1,4 +1,6 @@
-# $FreeBSD: src/gnu/lib/libg2c/Makefile,v 1.15.2.1 2005/07/22 17:29:01 kensmith Exp $
+# $FreeBSD: release/7.0.0/gnu/lib/libg2c/Makefile 156854 2006-03-18 21:37:05Z ru $
+
+.include <bsd.own.mk>
 
 SRCDIR=	${.CURDIR}/../../../contrib/libf2c
 
@@ -105,7 +107,7 @@ ${E77OBJS:.o=.So}: f2cext.c
 	    ${.ALLSRC:M*.c}
 .endif
 
-.if !defined(NO_PROFILE)
+.if ${MK_PROFILE} != "no"
 ${E77OBJS:.o=.po}: f2cext.c
 	${CC} -p ${CFLAGS} -c -DL${.PREFIX} -o ${.TARGET} ${.ALLSRC:M*.c}
 .endif

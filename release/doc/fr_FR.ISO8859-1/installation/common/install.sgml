@@ -2,8 +2,8 @@
      The FreeBSD Documentation Project
      The FreeBSD French Documentation Project
 
-     $Id: install.sgml,v 1.1.1.2 2006-02-25 02:35:16 laffer1 Exp $
-     $FreeBSD: src/release/doc/fr_FR.ISO8859-1/installation/common/install.sgml,v 1.8 2002/11/01 20:12:25 gioria Exp $
+     $Id$
+     $FreeBSD: release/7.0.0/release/doc/fr_FR.ISO8859-1/installation/common/install.sgml 166562 2007-02-08 05:04:18Z rodrigc $
      Original revision: 1.14
 
      This file has architecture-dependent installation instructions, culled
@@ -880,7 +880,7 @@ pqb0.0.1.4.0               PQB0                       PCI EIDE</screen>
           <literal>ad</literal>. Montez ensuite la partition comme une
           partition DOS standard, e.g.:</para>
 
-	  <screen>&prompt.root; <userinput>mount -t msdos /dev/da0s5 /dos_d</userinput></screen>
+	  <screen>&prompt.root; <userinput>mount -t msdosfs /dev/da0s5 /dos_d</userinput></screen>
 	</answer>
       </qandaentry>
 

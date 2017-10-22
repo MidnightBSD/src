@@ -1,6 +1,6 @@
-/* $FreeBSD: src/gnu/usr.bin/patch/version.c,v 1.7 2002/04/28 01:33:45 gad Exp $
+/* $FreeBSD: release/7.0.0/gnu/usr.bin/patch/version.c 95601 2002-04-28 01:33:45Z gad $
  *
- * $Log: not supported by cvs2svn $
+ * $Log: version.c,v $
  * Revision 2.0  86/09/17  15:40:11  lwall
  * Baseline for netwide release.
  *

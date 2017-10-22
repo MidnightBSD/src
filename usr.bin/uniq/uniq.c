@@ -45,7 +45,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)uniq.c	8.3 (Berkeley) 5/4/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.bin/uniq/uniq.c,v 1.26 2004/09/14 12:01:18 tjr Exp $";
+  "$FreeBSD: release/7.0.0/usr.bin/uniq/uniq.c 169639 2007-05-17 00:19:56Z jmallett $";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -113,10 +113,10 @@ main (int argc, char *argv[])
 		case '?':
 		default:
 			usage();
-	}
+		}
 
 	argc -= optind;
-	argv +=optind;
+	argv += optind;
 
 	/* If no flags are set, default is -d -u. */
 	if (cflag) {
@@ -143,7 +143,7 @@ main (int argc, char *argv[])
 
 	if (getline(prevline, MAXLINELEN, ifp) == NULL) {
 		if (ferror(ifp))
-			err(1, "%s", ifp == stdin ? "stdin" : argv[0]);
+			err(1, "%s", ifn);
 		exit(0);
 	}
 	if (!cflag && uflag && dflag)
@@ -178,7 +178,7 @@ main (int argc, char *argv[])
 			++repeats;
 	}
 	if (ferror(ifp))
-		err(1, "%s", ifp == stdin ? "stdin" : argv[0]);
+		err(1, "%s", ifn);
 	if (cflag || !dflag || !uflag)
 		show(ofp, prevline);
 	exit(0);

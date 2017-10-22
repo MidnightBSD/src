@@ -1,4 +1,4 @@
-$FreeBSD: src/contrib/expat/FREEBSD-upgrade,v 1.1.1.1 2002/10/02 07:16:04 phk Exp $
+$FreeBSD: release/7.0.0/contrib/expat/FREEBSD-upgrade 104349 2002-10-02 07:16:04Z phk $
 
 eXpat from www.libexpat.org
 

@@ -27,9 +27,9 @@
  *	printing cause values
  *	---------------------
  *
- *	$Id: pcause.c,v 1.1.1.2 2006-02-25 02:38:28 laffer1 Exp $
+ *	$Id: pcause.c,v 1.13 2000/10/09 12:53:29 hm Exp $
  *
- * $FreeBSD: src/usr.sbin/i4b/isdnd/pcause.c,v 1.8 2000/10/09 14:22:38 hm Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdnd/pcause.c 66880 2000-10-09 14:22:51Z hm $
  *
  *	last edit-date: [Mon Dec 13 21:48:07 1999]
  *

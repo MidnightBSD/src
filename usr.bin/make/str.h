@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/make/str.h,v 1.6 2005/05/23 13:27:52 harti Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/make/str.h 146543 2005-05-23 13:27:52Z harti $
  */
 
 #ifndef str_h_44db59e6

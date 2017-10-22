@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)output.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/output.h,v 1.13 2004/04/06 20:06:51 markm Exp $
+ * $FreeBSD: release/7.0.0/bin/sh/output.h 127958 2004-04-06 20:06:54Z markm $
  */
 
 #ifndef OUTPUT_INCL

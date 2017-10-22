@@ -1,4 +1,4 @@
-$FreeBSD: src/contrib/bc/FREEBSD-upgrade,v 1.6 2004/02/17 01:04:18 ache Exp $
+$FreeBSD: release/7.0.0/contrib/bc/FREEBSD-upgrade 172506 2007-10-10 16:59:15Z cvs2svn $
 
 bc 1.0.5a
 	originals can be found at: ftp://prep.ai.mit.edu/pub/gnu/

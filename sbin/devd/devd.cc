@@ -34,7 +34,7 @@
 //	  - devd.conf needs more details on the supported statements.
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/devd/devd.cc,v 1.22.2.5 2005/12/19 03:33:05 jkoshy Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sbin/devd/devd.cc 162388 2006-09-17 22:49:26Z ru $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -48,6 +48,7 @@ __FBSDID("$FreeBSD: src/sbin/devd/devd.cc,v 1.22.2.5 2005/12/19 03:33:05 jkoshy 
 #include <errno.h>
 #include <err.h>
 #include <fcntl.h>
+#include <libutil.h>
 #include <regex.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -78,6 +79,8 @@ static const char nomatch = '?';
 static const char attach = '+';
 static const char detach = '-';
 
+static struct pidfh *pfh;
+
 int Dflag;
 int dflag;
 int nflag;
@@ -107,11 +110,7 @@ event_proc::event_proc() : _prio(-1)
 
 event_proc::~event_proc()
 {
-	vector<eps *>::const_iterator i;
-
-	for (i = _epsvec.begin(); i != _epsvec.end(); i++)
-		delete *i;
-	_epsvec.clear();
+	delete_and_clear(_epsvec);
 }
 
 void
@@ -170,7 +169,7 @@ match::match(config &c, const char *var, const char *re)
 	_re = "^";
 	_re.append(c.expand_string(string(re)));
 	_re.append("$");
-	regcomp(&_regex, _re.c_str(), REG_EXTENDED | REG_NOSUB);
+	regcomp(&_regex, _re.c_str(), REG_EXTENDED | REG_NOSUB | REG_ICASE);
 }
 
 match::~match()
@@ -196,7 +195,7 @@ match::do_match(config &c)
 #include <net/if.h>
 #include <net/if_media.h>
 
-media::media(config &c, const char *var, const char *type)
+media::media(config &, const char *var, const char *type)
 	: _var(var), _type(-1)
 {
 	static struct ifmedia_description media_types[] = {
@@ -312,6 +311,7 @@ config::parse_one_file(const char *fn)
 	yyin = fopen(fn, "r");
 	if (yyin == NULL)
 		err(1, "Cannot open config file %s", fn);
+	lineno = 1;
 	if (yyparse() != 0)
 		errx(1, "Cannot parse %s at line %d", fn, lineno);
 	fclose(yyin);
@@ -369,17 +369,32 @@ config::parse(void)
 }
 
 void
-config::drop_pidfile()
+config::open_pidfile()
 {
-	FILE *fp;
+	pid_t otherpid;
 	
 	if (_pidfile == "")
 		return;
-	fp = fopen(_pidfile.c_str(), "w");
-	if (fp == NULL)
-		return;
-	fprintf(fp, "%d\n", getpid());
-	fclose(fp);
+	pfh = pidfile_open(_pidfile.c_str(), 0600, &otherpid);
+	if (pfh == NULL) {
+		if (errno == EEXIST)
+			errx(1, "devd already running, pid: %d", (int)otherpid);
+		warn("cannot open pid file");
+	}
+}
+
+void
+config::write_pidfile()
+{
+	
+	pidfile_write(pfh);
+}
+
+void
+config::remove_pidfile()
+{
+	
+	pidfile_remove(pfh);
 }
 
 void
@@ -587,7 +602,7 @@ config::find_and_execute(char type)
 {
 	vector<event_proc *> *l;
 	vector<event_proc *>::const_iterator i;
-	char *s;
+	const char *s;
 
 	switch (type) {
 	default:
@@ -753,8 +768,10 @@ event_loop(void)
 			if (rv == 0) {
 				if (Dflag)
 					fprintf(stderr, "Calling daemon\n");
+				cfg.remove_pidfile();
+				cfg.open_pidfile();
 				daemon(0, 0);
-				cfg.drop_pidfile();
+				cfg.write_pidfile();
 				once++;
 			}
 		}
@@ -885,7 +902,7 @@ gensighand(int)
 static void
 usage()
 {
-	fprintf(stderr, "usage: %s [-Ddn]\n", getprogname());
+	fprintf(stderr, "usage: %s [-Ddn] [-f file]\n", getprogname());
 	exit(1);
 }
 
@@ -935,8 +952,9 @@ main(int argc, char **argv)
 
 	cfg.parse();
 	if (!dflag && nflag) {
+		cfg.open_pidfile();
 		daemon(0, 0);
-		cfg.drop_pidfile();
+		cfg.write_pidfile();
 	}
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGHUP, gensighand);

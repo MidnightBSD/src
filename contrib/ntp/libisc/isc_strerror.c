@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: isc_strerror.c,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: strerror.c,v 1.3 2001/11/20 01:45:45 gson Exp $ */
 
 #include <config.h>
 

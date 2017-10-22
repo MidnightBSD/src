@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/include/proc.h,v 1.14.2.1 2005/09/13 21:07:14 marcel Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/include/proc.h 148807 2005-08-06 20:28:19Z marcel $
  */
 
 #ifndef _MACHINE_PROC_H_

@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/powerpc/powerpc/ofwmagic.S,v 1.3 2004/08/16 15:45:27 marius Exp $ */
+/* $FreeBSD: release/7.0.0/sys/powerpc/powerpc/ofwmagic.S 133862 2004-08-16 15:45:27Z marius $ */
 /* $NetBSD: ofwmagic.S,v 1.2 1997/10/09 08:38:18 jtc Exp $ */
 
 /*-

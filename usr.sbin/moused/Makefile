@@ -1,10 +1,10 @@
-# $FreeBSD: src/usr.sbin/moused/Makefile,v 1.7.2.1 2006/01/15 17:50:37 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/moused/Makefile 167461 2007-03-11 20:02:26Z philip $
 
 PROG=	moused
 MAN=	moused.8
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+DPADD=	${LIBUTIL}  ${LIBM}
+LDADD=	-lutil -lm
 
 #BINMODE=4555
 #PRECIOUSPROG=

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/raycontrol/raycontrol.c,v 1.7 2004/04/04 19:38:08 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/raycontrol/raycontrol.c 127860 2004-04-04 19:38:08Z charnier $");
 
 #include <sys/types.h>
 #include <sys/param.h>

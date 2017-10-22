@@ -27,11 +27,13 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)extern.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: src/bin/ls/extern.h,v 1.24 2005/06/03 11:05:58 dd Exp $
+ * $FreeBSD: release/7.0.0/bin/ls/extern.h 157098 2006-03-24 16:38:02Z jhb $
  */
 
 int	 acccmp(const FTSENT *, const FTSENT *);
 int	 revacccmp(const FTSENT *, const FTSENT *);
+int	 birthcmp(const FTSENT *, const FTSENT *);
+int	 revbirthcmp(const FTSENT *, const FTSENT *);
 int	 modcmp(const FTSENT *, const FTSENT *);
 int	 revmodcmp(const FTSENT *, const FTSENT *);
 int	 namecmp(const FTSENT *, const FTSENT *);

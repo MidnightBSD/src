@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.35.2.1 2006/01/20 13:00:32 ceri Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/anonFTP.c 174854 2007-12-22 06:32:46Z cvs2svn $
  *
  * Copyright (c) 1995
  *	Coranth Gryphon.  All rights reserved.
@@ -49,8 +49,8 @@
 /* These change if we want to use different defaults */
 
 #define FTP_UID		14
-#define FTP_GID		5
-#define FTP_GROUP	"operator"
+#define FTP_GID		14
+#define FTP_GROUP	"ftp"
 #define FTP_UPLOAD	"incoming"
 #define FTP_COMMENT	"Anonymous FTP Admin"
 #define FTP_HOMEDIR	"/var/ftp"
@@ -115,7 +115,7 @@ static Layout layout[] = {
     { 19, 35, 0, 0,
       "CANCEL", "Select this if you wish to cancel this screen",
       &cancelbutton, BUTTONOBJ, NULL },
-    { 0 },
+    LAYOUT_END,
 };
 
 static int
@@ -148,7 +148,7 @@ createFtpUser(void)
     else if (!getgrgid(gid)) {
 	/* group does not exist, create it by number */
 	
-	tptr = msgGetInput("14", "What group name to use for gid %d ?", gid);
+	tptr = msgGetInput("ftp", "What group name to use for gid %d ?", gid);
 	if (tptr && *tptr) {
 	    SAFE_STRCPY(tconf.group, tptr);
 	    if ((tgrp = getgrnam(tconf.group))) {

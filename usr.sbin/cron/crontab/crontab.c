@@ -18,7 +18,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/cron/crontab/crontab.c,v 1.22 2004/09/14 19:01:19 dds Exp $";
+  "$FreeBSD: release/7.0.0/usr.sbin/cron/crontab/crontab.c 161964 2006-09-03 17:52:19Z ru $";
 #endif
 
 /* crontab - install and manage per-user crontab files
@@ -134,6 +134,7 @@ parse_args(argc, argv)
 	char	*argv[];
 {
 	int		argch;
+	char		resolved_path[PATH_MAX];
 
 	if (!(pw = getpwuid(getuid())))
 		errx(ERROR_EXIT, "your UID isn't in the passwd file, bailing out");
@@ -200,6 +201,9 @@ parse_args(argc, argv)
 		 */
 		if (!strcmp(Filename, "-")) {
 			NewCrontab = stdin;
+		} else if (realpath(Filename, resolved_path) != NULL &&
+		    !strcmp(resolved_path, SYSCRONTAB)) {
+			err(ERROR_EXIT, SYSCRONTAB " must be edited manually");
 		} else {
 			/* relinquish the setuid status of the binary during
 			 * the open, lest nonroot users read files they should

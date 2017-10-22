@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)print.c	8.4 (Berkeley) 4/17/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/ls/print.c,v 1.74 2005/01/10 08:39:23 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/ls/print.c 163480 2006-10-18 10:58:27Z ru $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -190,6 +190,8 @@ printlong(const DISPLAY *dp)
 			printsize(dp->s_size, sp->st_size);
 		if (f_accesstime)
 			printtime(sp->st_atime);
+		else if (f_birthtime)
+			printtime(sp->st_birthtime);
 		else if (f_statustime)
 			printtime(sp->st_ctime);
 		else
@@ -626,9 +628,10 @@ aclmode(char *buf, const FTSENT *p, int *haveacls)
 		    p->fts_parent->fts_accpath, p->fts_name);   
 	/*
 	 * We have no way to tell whether a symbolic link has an ACL since
-	 * pathconf() and acl_get_file() both follow them.
+	 * pathconf() and acl_get_file() both follow them.  They also don't
+	 * support whiteouts.
 	 */
-	if (S_ISLNK(p->fts_statp->st_mode)) {
+	if (S_ISLNK(p->fts_statp->st_mode) || S_ISWHT(p->fts_statp->st_mode)) {
 		*haveacls = 1;
 		return;
 	}

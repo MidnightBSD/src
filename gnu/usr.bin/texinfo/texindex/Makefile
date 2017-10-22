@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/texinfo/texindex/Makefile,v 1.8 2002/06/05 06:58:33 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/texinfo/texindex/Makefile 97852 2002-06-05 06:58:33Z ru $
 
 PROG=	texindex
 

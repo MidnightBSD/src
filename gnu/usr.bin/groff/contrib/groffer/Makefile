@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/groff/contrib/groffer/Makefile,v 1.1 2002/10/11 08:58:13 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/contrib/groffer/Makefile 104869 2002-10-11 08:58:14Z ru $
 
 SCRIPTS=	groffer
 MAN=		groffer.1

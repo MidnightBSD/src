@@ -37,7 +37,7 @@
  |	Copyright (c) 1986, 1987, 1988, 1991, 1992, 1993, 1994, 1995 Hugh Mahon
  |	All are rights reserved.
  |
- |	$Header: /home/cvs/src/usr.bin/ee/Attic/new_curse.c,v 1.1.1.2 2006-02-25 02:38:12 laffer1 Exp $
+ |	$Header: /home/hugh/sources/old_ae/RCS/new_curse.c,v 1.49 1998/12/21 02:25:59 hugh Exp hugh $
  |
  */
 
@@ -45,7 +45,7 @@ char *copyright_message[] = { "Copyright (c) 1986, 1987, 1988, 1991, 1992, 1993,
 				"All rights are reserved."};
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ee/new_curse.c,v 1.9 2002/06/30 05:21:17 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ee/new_curse.c 99112 2002-06-30 05:25:07Z obrien $");
 
 #include "new_curse.h"
 #include <signal.h>

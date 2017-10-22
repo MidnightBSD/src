@@ -32,7 +32,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/driver/i4b_rbch.c,v 1.35 2005/01/06 22:18:18 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/driver/i4b_rbch.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include "opt_i4b.h"
 
@@ -48,9 +48,9 @@ __FBSDID("$FreeBSD: src/sys/i4b/driver/i4b_rbch.c,v 1.35 2005/01/06 22:18:18 imp
 
 #include <net/if.h>
 
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_rbch_ioctl.h>
-#include <machine/i4b_debug.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_rbch_ioctl.h>
+#include <i4b/include/i4b_debug.h>
 
 #include <i4b/include/i4b_global.h>
 #include <i4b/include/i4b_mbuf.h>

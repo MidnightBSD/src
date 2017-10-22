@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: msgcat.c,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: msgcat.c,v 1.12 2001/11/30 01:59:39 gson Exp $ */
 
 /*
  * Principal Author: Bob Halley

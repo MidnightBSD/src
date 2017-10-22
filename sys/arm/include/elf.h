@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/elf.h,v 1.5 2004/05/04 22:21:36 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/elf.h 163016 2006-10-04 21:37:10Z jb $
  */
 
 #ifndef _MACHINE_ELF_H_
@@ -82,47 +82,22 @@ __ElfType(Auxinfo);
 
 #define AT_COUNT        15      /* Count of defined aux entry types. */
 
-#define	R_ARM_NONE		0	/* No relocation. */
-#define	R_ARM_PC24		1
-#define	R_ARM_ABS32		2
-#define	R_ARM_REL32		3
-#define	R_ARM_PC13		4
-#define	R_ARM_ABS16		5
-#define	R_ARM_ABS12		6
-#define	R_ARM_THM_ABS5		7
-#define	R_ARM_ABS8		8
-#define	R_ARM_SBREL32		9
-#define	R_ARM_THM_PC22		10
-#define	R_ARM_THM_PC8		11
-#define	R_ARM_AMP_VCALL9	12
-#define	R_ARM_SWI24		13
-#define	R_ARM_THM_SWI8		14
-#define	R_ARM_XPC25		15
-#define	R_ARM_THM_XPC22		16
-#define	R_ARM_COPY		20	/* Copy data from shared object. */
-#define	R_ARM_GLOB_DAT		21	/* Set GOT entry to data address. */
-#define	R_ARM_JUMP_SLOT		22	/* Set GOT entry to code address. */
-#define	R_ARM_RELATIVE		23	/* Add load address of shared object. */
-#define	R_ARM_GOTOFF		24	/* Add GOT-relative symbol address. */
-#define	R_ARM_GOTPC		25	/* Add PC-relative GOT table address. */
-#define	R_ARM_GOT32		26	/* Add PC-relative GOT offset. */
-#define	R_ARM_PLT32		27	/* Add PC-relative PLT offset. */
-#define	R_ARM_GNU_VTENTRY	100
-#define	R_ARM_GNU_VTINHERIT	101
-#define	R_ARM_RSBREL32		250
-#define	R_ARM_THM_RPC22		251
-#define	R_ARM_RREL32		252
-#define	R_ARM_RABS32		253
-#define	R_ARM_RPC24		254
-#define	R_ARM_RBASE		255
-
 #define	R_ARM_COUNT		33	/* Count of defined relocation types. */
 
 
 /* Define "machine" characteristics */
 #define	ELF_TARG_CLASS	ELFCLASS32
+#ifdef __ARMEB__
+#define	ELF_TARG_DATA	ELFDATA2MSB
+#else
 #define	ELF_TARG_DATA	ELFDATA2LSB
+#endif
 #define	ELF_TARG_MACH	EM_ARM
 #define	ELF_TARG_VER	1
 
+/* 
+ * Magic number for the elf trampoline, chosen wisely to be an immediate 
+ * value.
+ */
+#define MAGIC_TRAMP_NUMBER	0x5c000003
 #endif /* !_MACHINE_ELF_H_ */

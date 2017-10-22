@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/ipcrm/Makefile,v 1.6 2002/02/08 22:31:40 markm Exp $
+# $FreeBSD: release/7.0.0/usr.bin/ipcrm/Makefile 90415 2002-02-08 22:31:43Z markm $
 
 PROG=	ipcrm
 

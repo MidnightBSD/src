@@ -5,7 +5,7 @@
 # this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 # ----------------------------------------------------------------------------
 #
-# $FreeBSD: src/usr.sbin/fdwrite/Makefile,v 1.11 2005/01/08 15:46:06 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/fdwrite/Makefile 139905 2005-01-08 15:46:06Z delphij $
 
 PROG=	fdwrite
 WARNS?=	6

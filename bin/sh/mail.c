@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)mail.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/mail.c,v 1.13.8.1 2005/11/06 20:39:48 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/sh/mail.c 149017 2005-08-13 08:26:58Z stefanf $");
 
 /*
  * Routines to check for mail.  (Perhaps make part of main.c?)

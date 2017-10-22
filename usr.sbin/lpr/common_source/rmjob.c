@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)rmjob.c	8.2 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: src/usr.sbin/lpr/common_source/rmjob.c,v 1.21 2004/12/31 00:36:28 gad Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/lpr/common_source/rmjob.c 139464 2004-12-31 00:36:28Z gad $");
 
 #include <sys/param.h>
 #include <sys/uio.h>

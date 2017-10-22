@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/ncp.c,v 1.8 2004/10/11 10:21:53 brian Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ppp/ncp.c 136377 2004-10-11 10:21:53Z brian $
  */
 
 #include <sys/param.h>

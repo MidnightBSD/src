@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/lqr.h,v 1.18 2004/06/30 12:24:56 brian Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ppp/lqr.h 131327 2004-06-30 12:24:56Z brian $
  */
 
 /*

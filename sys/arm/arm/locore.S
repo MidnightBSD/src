@@ -37,9 +37,9 @@
 #include <machine/asm.h>
 #include <machine/armreg.h>
 #include <machine/pte.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/locore.S,v 1.10 2005/03/16 07:53:02 jmg Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/locore.S 172356 2007-09-27 20:52:17Z cognet $");
 
-/* What size should this really be ? It is only used by init_arm() */
+/* What size should this really be ? It is only used by initarm() */
 #define INIT_ARM_STACK_SIZE	2048
 
 /*
@@ -60,53 +60,60 @@ __FBSDID("$FreeBSD: src/sys/arm/arm/locore.S,v 1.10 2005/03/16 07:53:02 jmg Exp 
 	.align	0
 .globl kernbase
 .set kernbase,KERNBASE
+.globl physaddr
+.set physaddr,PHYSADDR
 
 ENTRY_NP(btext)
 
 ASENTRY_NP(_start)
-
-
-	/* Check if we are running on RAM, if not move ourself to RAM */
-#if 0
-	cmp	pc, #PHYSADDR
-	bhi	start_inram /* XXX: This is wrong */
-#endif
-	b	start_inram /*
-			     * XXX: this is even more wrong, but RedBoot
-			     * use 0x00000000-0x100000000 as virtual
-			     * addresses for the RAM.
-			     */
-
-	/* move me to RAM
-	 * XXX: we can use memcpy if it is PIC
+#if defined (FLASHADDR) && defined(LOADERRAMADDR)
+	/* Check if we're running from flash. */
+	ldr	r7, =FLASHADDR
+	/* 
+	 * If we're running with MMU disabled, test against the
+	 * physical address instead.
 	 */
-	ldr r1, Lcopy_size
-	adr r0, _C_LABEL(_start)
-	add r1, r1, #3
-	mov r1, r1, LSR #2
-	mov r2, #PHYSADDR
-	add r2, r2, #0x00200000
-	mov r4, r2
-
-5:	ldr r3,[r0],#4
-	str r3,[r2],#4
-	subs r1,r1,#1
-	bhi 5b
-
-	/* Jump to RAM */
-	ldr r0, Lstart_off
-	add pc, r4, r0
-
-Lcopy_size:	.word _edata-_C_LABEL(_start)
-Lstart_off:	.word start_inram-_C_LABEL(_start)
-start_inram:
+	mrc     p15, 0, r2, c1, c0, 0
+	ands	r2, r2, #CPU_CONTROL_MMU_ENABLE
+	ldreq	r8, =PHYSADDR
+	ldrne	r8, =LOADERRAMADDR
+	cmp	r7, r8
+	bls 	flash_lower
+	cmp	r7, pc
+	bhi	from_ram
+	b	do_copy
+	
+flash_lower:
+	cmp	r8, pc
+	bls	from_ram
+do_copy:
+	ldr	r9, =KERNBASE
+	adr	r1, _start 
+	ldr	r0, Lreal_start
+	ldr	r2, Lend
+	sub	r2, r2, r0
+	sub	r0, r0, r9
+	add	r0, r0, r8
+	mov	r4, r0
+	bl	memcpy
+	ldr	r0, Lram_offset
+	add	pc, r4, r0
+Lram_offset:	.word from_ram-_C_LABEL(_start)
+from_ram:
+	nop
+#endif
 	adr	r7, Lunmapped
-	bic	r7, r7, #0xff000000
-	orr	r7, r7, #PHYSADDR
+	bic     r7, r7, #0xff000000
+	orr     r7, r7, #PHYSADDR
+			
 
+disable_mmu:
 	/* Disable MMU for a while */
 	mrc     p15, 0, r2, c1, c0, 0
-	bic     r2, r2, #CPU_CONTROL_MMU_ENABLE
+	bic	r2, r2, #(CPU_CONTROL_MMU_ENABLE | CPU_CONTROL_DC_ENABLE |\
+	    CPU_CONTROL_WBUF_ENABLE)
+	bic	r2, r2, #(CPU_CONTROL_IC_ENABLE)
+	bic	r2, r2, #(CPU_CONTROL_BPRD_ENABLE)
 	mcr     p15, 0, r2, c1, c0, 0
 
 	nop
@@ -114,7 +121,6 @@ start_inram:
 	nop
 	mov	pc, r7
 Lunmapped:
-
 #ifdef STARTUP_PAGETABLE_ADDR
 	/* build page table from scratch */
 	ldr	r0, Lstartup_pagetable
@@ -128,7 +134,7 @@ Lunmapped:
 	adds	r1, r1, #-1
 	bhi	2b
 3:
-	ldmia	r4!, {r1,r2,r3}   /* # of sections, PA|attr, VA */
+	ldmia	r4!, {r1,r2,r3}   /* # of sections, VA, PA|attr */
 	cmp	r1, #0
 	adrne	r5, 2b
 	bicne	r5, r5, #0xff000000
@@ -141,43 +147,30 @@ Lunmapped:
 	/* Set the Domain Access register.  Very important! */
 	mov     r0, #((DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2)) | DOMAIN_CLIENT)
 	mcr	p15, 0, r0, c3, c0, 0
-
 	/* Enable MMU */
 	mrc	p15, 0, r0, c1, c0, 0
 	orr	r0, r0, #CPU_CONTROL_MMU_ENABLE
 	mcr	p15, 0, r0, c1, c0, 0
+	nop
+	nop
+	nop
 	CPWAIT(r0)
 
-	bl	mmu_done
-mmu_done:
 #endif
+mmu_done:
+	nop
 	adr	r1, .Lstart
 	ldmia	r1, {r1, r2, sp}	/* Set initial stack and */
 	sub	r2, r2, r1		/* get zero init data */
 	mov	r3, #0
-
 .L1:
-	str	r3, [r1], #0x0004	/* Zero the bss */
+	str	r3, [r1], #0x0004	/* get zero init data */
 	subs	r2, r2, #4
 	bgt	.L1
+	ldr	pc, .Lvirt_done
 
-	ldr	r4, =KERNVIRTADDR
-	cmp	pc, r4
-#if	KERNVIRTADDR > KERNPHYSADDR
-	bgt	virt_done
-	ldr	r4, =KERNVIRTADDR
-	ldr	r5, =KERNPHYSADDR
-	sub	r4, r4, r5
-	add	pc, pc, r4
-#else
-	blt	virt_done
-	ldr	r4, =KERNPHYSADDR
-	ldr	r5, =KERNVIRTADDR
-	sub	r4, r4, r5
-	sub	pc, pc, r4
-#endif
 virt_done:
-	ldr	fp, =KERNVIRTADDR	/* trace back starts here */
+	mov	fp, #0		/* trace back starts here */
 	bl	_C_LABEL(initarm)	/* Off we go */
 
 	/* init arm will return the new stack pointer. */
@@ -194,6 +187,14 @@ virt_done:
 	.word	4*((va)>>L1_S_SHIFT)			    ; \
 	.word	(pa)|(attr)				    ;
 
+Lvirtaddr:
+	.word	KERNVIRTADDR
+Lphysaddr:
+	.word	KERNPHYSADDR
+Lreal_start:
+	.word	_start
+Lend:	
+	.word	_edata
 Lstartup_pagetable:
 	.word	STARTUP_PAGETABLE_ADDR
 mmu_init_table:
@@ -210,6 +211,13 @@ mmu_init_table:
 	.word	_end
 	.word	svcstk + INIT_ARM_STACK_SIZE
 
+#if defined(FLASHADDR) && defined(LOADERRAMADDR)
+.L_arm_memcpy:
+        .word   _C_LABEL(_arm_memcpy)
+#endif
+
+.Lvirt_done:
+	.word	virt_done
 .Lmainreturned:
 	.asciz	"main() returned"
 	.align	0

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/periodic/daily/999.local,v 1.5 2001/06/01 16:40:55 dougb Exp $
+# $FreeBSD: release/7.0.0/etc/periodic/daily/999.local 77592 2001-06-01 16:40:57Z dougb $
 #
 # Run the old /etc/daily.local script.  This is really for backwards
 # compatibility more than anything else.

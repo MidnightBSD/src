@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/portsnap/Makefile,v 1.1.2.2 2005/11/13 06:45:35 cperciva Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/portsnap/Makefile 148871 2005-08-08 20:10:06Z cperciva $
 
 SUBDIR=	portsnap make_index phttpget
 

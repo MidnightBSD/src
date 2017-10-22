@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/aio/kqueue/lio/lio_kqueue.c,v 1.1 2005/03/02 04:00:55 ambrisko Exp $
+ * $FreeBSD: release/7.0.0/tools/regression/aio/kqueue/lio/lio_kqueue.c 154668 2006-01-22 03:46:03Z davidxu $
  */
 
 /*
@@ -116,7 +116,7 @@ main(int argc, char *argv[]){
 				iocb[k]->aio_lio_opcode = LIO_WRITE;
 			}
 			sig.sigev_notify_kqueue = kq;
-			sig.sigev_value.sigval_ptr = lio[j];
+			sig.sigev_value.sival_ptr = lio[j];
 			sig.sigev_notify = SIGEV_KEVENT;
 			time(&time1);
 			result = lio_listio(LIO_NOWAIT, lio[j],

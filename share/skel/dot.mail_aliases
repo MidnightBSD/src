@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/skel/dot.mail_aliases,v 1.3 2003/09/28 16:17:30 rwatson Exp $
+# $FreeBSD: release/7.0.0/share/skel/dot.mail_aliases 120555 2003-09-28 16:17:30Z rwatson $
 #
 # .mail_aliases - private mail aliases
 #

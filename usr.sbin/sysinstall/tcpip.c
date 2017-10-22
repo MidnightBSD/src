@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.132.2.2 2006/02/12 15:23:50 delphij Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/tcpip.c 174854 2007-12-22 06:32:46Z cvs2svn $
  *
  * Copyright (c) 1995
  *      Gary J Palmer. All rights reserved.
@@ -104,7 +104,7 @@ static Layout layout[] = {
     { 19, 35, 0, 0,
       "CANCEL", "Select this if you wish to cancel this screen",
       &cancelbutton, BUTTONOBJ, NULL },
-    { 0 },
+    LAYOUT_END,
 };
 
 #define _validByte(b) ((b) >= 0 && (b) <= 255)
@@ -122,7 +122,7 @@ static int
 verifyIP(char *ip, unsigned long *mask, unsigned long *out)
 {
     long a, b, c, d;
-    char *endptr;
+    char *endptr, *endptr_prev;
 
     unsigned long parsedip;
     unsigned long max_addr = (255 << 24) | (255 << 16) | (255 << 8) | 255;
@@ -130,16 +130,19 @@ verifyIP(char *ip, unsigned long *mask, unsigned long *out)
     if (ip == NULL)
 	return 0;
     a = strtol(ip, &endptr, 10);
-    if (*endptr++ != '.')
+    if (endptr - ip == 0 || *endptr++ != '.')
 	return 0;
+    endptr_prev = endptr;
     b = strtol(endptr, &endptr, 10);
-    if (*endptr++ != '.')
+    if (endptr - endptr_prev == 0 || *endptr++ != '.')
 	return 0;
+    endptr_prev = endptr;
     c = strtol(endptr, &endptr, 10);
-    if (*endptr++ != '.')
+    if (endptr - endptr_prev == 0 || *endptr++ != '.')
 	return 0;
+    endptr_prev = endptr;
     d = strtol(endptr, &endptr, 10);
-    if (*endptr != '\0')
+    if (*endptr != '\0' || endptr - endptr_prev == 0)
 	return 0;
     if (!_validByte(a) || !_validByte(b) || !_validByte(c) || !_validByte(d))
 	return 0;
@@ -177,7 +180,7 @@ static int
 verifyNetmask(const char *netmask, unsigned long *out)
 {
     unsigned long mask;
-    unsigned long tmp;
+    long tmp;
     char *endptr;
 
     if (netmask[0] == '0' && (netmask[1] == 'x' || netmask[1] == 'X')) {
@@ -187,9 +190,10 @@ verifyNetmask(const char *netmask, unsigned long *out)
             return 0;
     } else {
         /* Parse out quad decimal mask */
-        mask = strtoul(netmask, &endptr, 10);
-        if (!_validByte(mask) || *endptr++ != '.')
+        tmp = strtoul(netmask, &endptr, 10);
+        if (!_validByte(tmp) || *endptr++ != '.')
             return 0;
+	mask = tmp;
         tmp = strtoul(endptr, &endptr, 10);
         if (!_validByte(tmp) || *endptr++ != '.')
             return 0;
@@ -494,7 +498,7 @@ tcpOpenDialog(Device *devp)
     dialog_clear_norefresh();
 
     /* Modify the help line for PLIP config */
-    if (!strncmp(devp->name, "lp", 2))
+    if (!strncmp(devp->name, "plip", 4))
 	layout[LAYOUT_EXTRAS].help = 
          "For PLIP configuration, you must enter the peer's IP address here.";
 

@@ -1,4 +1,6 @@
-# $FreeBSD: src/lib/bind/lwres/Makefile,v 1.7.2.1 2005/11/16 07:59:50 ru Exp $
+# $FreeBSD: release/7.0.0/lib/bind/lwres/Makefile 174398 2007-12-07 08:31:23Z dougb $
+
+.include <bsd.own.mk>
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9
 LIB_BIND_REL=	..
@@ -6,8 +8,8 @@ LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/lib/lwres
 
 # Unlike other BIND libs, this should be installed unless the user says NO.
-.if !defined(NO_BIND_LIBS_LWRES)
-WITH_BIND_LIBS=
+.if ${MK_BIND_LIBS_LWRES} != "no"
+MK_BIND_LIBS=	yes
 .endif
 
 .include	"${LIB_BIND_DIR}/config.mk"
@@ -23,8 +25,15 @@ SRCS+=		context.c gai_strerror.c getaddrinfo.c gethost.c \
 
 CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include
 CFLAGS+=	-I${.CURDIR}
+CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
+CFLAGS+=	-I${BIND_DIR}/lib/isc/include
+CFLAGS+=	-I${BIND_DIR}/lib/isc/unix/include
+CFLAGS+=	-I${LIB_BIND_DIR}/isc
 
-.if defined(WITH_BIND_LIBS)
+DPADD=		${PTHREAD_DPADD}
+LDADD=		${PTHREAD_LDADD}
+
+.if ${MK_BIND_LIBS} != "no"
 MAN=		lwres.3 lwres_buffer.3 lwres_config.3 lwres_context.3 \
 		lwres_gabn.3 lwres_gai_strerror.3 lwres_getaddrinfo.3 \
 		lwres_gethostent.3 lwres_getipnode.3 lwres_getnameinfo.3 \

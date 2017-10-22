@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/periodic/daily/110.clean-tmps,v 1.13 2004/02/28 04:58:40 ache Exp $
+# $FreeBSD: release/7.0.0/etc/periodic/daily/110.clean-tmps 126342 2004-02-28 04:58:40Z ache $
 #
 # Perform temporary directory cleaning so that long-lived systems
 # don't end up with excessively old files there.

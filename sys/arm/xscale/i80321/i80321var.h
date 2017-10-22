@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/xscale/i80321/i80321var.h,v 1.2 2005/01/05 21:58:49 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/xscale/i80321/i80321var.h 171628 2007-07-27 14:53:06Z cognet $
  *
  */
 
@@ -43,11 +43,7 @@
 
 #include <sys/queue.h>
 #include <dev/pci/pcivar.h>
-
-/*
- * There are roughly 32 interrupt sources.
- */
-#define	NIRQ		32
+#include <sys/rman.h>
 
 extern struct bus_space i80321_bs_tag;
 
@@ -107,8 +103,25 @@ struct i80321_softc {
 	/* GPIO state */
 	uint8_t sc_gpio_dir;    /* GPIO pin direction (1 == output) */
 	uint8_t sc_gpio_val;    /* GPIO output pin value */
+	struct rman sc_irq_rman;
 			
 };
+
+
+struct i80321_pci_softc {
+	device_t 		sc_dev;
+	bus_space_tag_t 	sc_st;
+	bus_space_handle_t 	sc_atu_sh;
+	bus_space_tag_t		sc_pciio;
+	bus_space_tag_t		sc_pcimem;
+	int			sc_busno;
+	struct rman		sc_mem_rman;
+	struct rman		sc_io_rman;
+	struct rman		sc_irq_rman;
+	uint32_t		sc_mem;
+	uint32_t		sc_io;
+};
+
 void	i80321_sdram_bounds(bus_space_tag_t, bus_space_handle_t,
 	    vm_paddr_t *, vm_size_t *);
 
@@ -118,5 +131,7 @@ void	i80321_calibrate_delay(void);
 void	i80321_bs_init(bus_space_tag_t, void *);
 void	i80321_io_bs_init(bus_space_tag_t, void *);
 void	i80321_mem_bs_init(bus_space_tag_t, void *);
+extern int machdep_pci_route_interrupt(device_t pcib, device_t dev, int pin);
+
 
 #endif /* _ARM_XSCALE_I80321VAR_H_ */

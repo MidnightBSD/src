@@ -1,5 +1,7 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/4/94
-# $FreeBSD: src/libexec/lukemftpd/Makefile,v 1.16 2004/12/21 12:49:23 ru Exp $
+# $FreeBSD: release/7.0.0/libexec/lukemftpd/Makefile 160778 2006-07-28 10:50:11Z yar $
+
+.include <bsd.own.mk>
 
 LUKEMFTPD=	${.CURDIR}/../../contrib/lukemftpd
 .PATH: ${LUKEMFTPD}/src ${LUKEMFTPD}/libnetbsd
@@ -11,6 +13,11 @@ SRCS=	cmds.c conf.c ftpd.c ftpcmd.y popen.c
 SRCS+=	strsuftoll.c
 
 WFORMAT= 0
+
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+= -DINET6
+.endif
+
 CFLAGS+= -include nbsd2fbsd.h
 CFLAGS+= -I${.CURDIR} -I${LUKEMFTPD} -I${LUKEMFTPD}/src
 CFLAGS+= -I${.CURDIR}/../../lib/libc/stdtime
@@ -30,7 +37,7 @@ CFLAGS+= -DUSE_OPIE -DLOGIN_CAP
 DPADD+=	${LIBOPIE} ${LIBMD}
 LDADD+=	-lopie -lmd
 
-.if !defined(NO_PAM)
+.if ${MK_PAM_SUPPORT} != "no"
 CFLAGS+= -DUSE_PAM
 DPADD+=	${LIBPAM}
 LDADD+=	${MINUSLPAM}

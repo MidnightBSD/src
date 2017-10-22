@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)symtab.c	8.3 (Berkeley) 4/28/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/restore/symtab.c,v 1.14 2004/04/09 19:58:36 markm Exp $";
+  "$FreeBSD: release/7.0.0/sbin/restore/symtab.c 128073 2004-04-09 19:58:40Z markm $";
 #endif /* not lint */
 
 /*

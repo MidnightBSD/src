@@ -1,4 +1,6 @@
-# $FreeBSD: src/usr.sbin/ppp/Makefile,v 1.109 2004/12/21 12:49:24 ru Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/ppp/Makefile 156813 2006-03-17 18:54:44Z ru $
+
+.include <bsd.own.mk>
 
 PROG=	ppp
 MAN=	ppp.8
@@ -21,13 +23,13 @@ PPP_NO_RADIUS=
 PPP_NO_SUID=
 .endif
 
-.if defined(NO_ATM)
+.if ${MK_ATM} == "no"
 PPP_NO_ATM=
 .endif
-.if defined(NO_I4B)
+.if ${MK_I4B} == "no"
 PPP_NO_I4B=
 .endif
-.if defined(NO_PAM)
+.if ${MK_PAM_SUPPORT} == "no"
 PPP_NO_PAM=
 .endif
 
@@ -58,7 +60,7 @@ CFLAGS+=-DPPP_CONFDIR=\"${PPP_CONFDIR}\"
 CFLAGS+=-DNOKLDLOAD
 .endif
 
-.if defined(NO_INET6)
+.if ${MK_INET6_SUPPORT} == "no"
 CFLAGS+=-DNOINET6
 .endif
 
@@ -82,7 +84,7 @@ CFLAGS+=-DNOSUID
 SRCS+=	id.c
 .endif
 
-.if defined(RELEASE_CRUNCH) || defined(NO_CRYPT) || defined(NO_OPENSSL) || \
+.if defined(RELEASE_CRUNCH) || ${MK_OPENSSL} == "no" || \
     defined(PPP_NO_DES)
 CFLAGS+=-DNODES
 .else

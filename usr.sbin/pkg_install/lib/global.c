@@ -20,13 +20,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/lib/global.c,v 1.10 2004/10/18 05:34:54 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/global.c 159554 2006-06-12 22:39:32Z obrien $");
 
 #include "lib.h"
 
 /* These are global for all utils */
 Boolean	Quiet		= FALSE;
-Boolean	Verbose		= FALSE;
 Boolean	Fake		= FALSE;
 Boolean	Force		= FALSE;
 int AutoAnswer		= FALSE;
+int	Verbose			= 0;		/* Allow multiple levels of verbose. */

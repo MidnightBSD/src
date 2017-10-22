@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/security/Makefile,v 1.4 2004/12/21 08:46:54 ru Exp $
+# $FreeBSD: release/7.0.0/share/security/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 FILES=	lomac-policy.contexts
 NO_OBJ=

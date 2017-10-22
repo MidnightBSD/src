@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)atalk.c	1.1 (Whistle) 6/6/96";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/atalk.c,v 1.24 2004/07/26 20:18:11 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/netstat/atalk.c 171465 2007-07-16 17:15:55Z jhb $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -55,6 +55,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/atalk.c,v 1.24 2004/07/26 20:18:11 charn
 #include <errno.h>
 #include <nlist.h>
 #include <netdb.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "netstat.h"
@@ -216,7 +217,8 @@ atalk_print2(struct sockaddr *sa, struct sockaddr *mask, int what)
 }
 
 void
-atalkprotopr(u_long off __unused, const char *name, int af1 __unused)
+atalkprotopr(u_long off __unused, const char *name, int af1 __unused,
+    int proto __unused)
 {
 	struct ddpcb *this, *next;
 
@@ -265,7 +267,8 @@ atalkprotopr(u_long off __unused, const char *name, int af1 __unused)
  * Dump DDP statistics structure.
  */
 void
-ddp_stats(u_long off __unused, const char *name, int af1 __unused)
+ddp_stats(u_long off __unused, const char *name, int af1 __unused,
+    int proto __unused)
 {
 	struct ddpstat ddpstat;
 

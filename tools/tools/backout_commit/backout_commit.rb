@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby -w
 
-# $FreeBSD: src/tools/tools/backout_commit/backout_commit.rb,v 1.1 2003/01/31 22:08:14 seanc Exp $
+# $FreeBSD: release/7.0.0/tools/tools/backout_commit/backout_commit.rb 110160 2003-01-31 22:08:14Z seanc $
 
 # Please note, that this utility must be kept in sync with
 # CVSROOT/log_accum.pl.  If someone has a different output from their

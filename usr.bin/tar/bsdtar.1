@@ -1,4 +1,4 @@
-.\" Copyright (c) 2003 Tim Kientzle
+.\" Copyright (c) 2003-2007 Tim Kientzle
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.bin/tar/bsdtar.1,v 1.29.2.1 2006/01/25 20:55:44 simon Exp $
+.\" $FreeBSD: release/7.0.0/usr.bin/tar/bsdtar.1 170084 2007-05-29 05:39:10Z kientzle $
 .\"
 .Dd April 13, 2004
 .Dt BSDTAR 1
@@ -50,6 +50,9 @@
 .Sh DESCRIPTION
 .Nm
 creates and manipulates streaming archive files.
+This implementation can extract from tar, pax, cpio, zip, jar, ar,
+and ISO 9660 cdrom images and can create tar, pax, cpio, ar,
+and shar archives.
 .Pp
 The first synopsis form shows a
 .Dq bundled
@@ -357,6 +360,10 @@ Without this option,
 overwrites existing files, which preserves existing hardlinks.
 With this option, existing hardlinks will be broken, as will any
 symlink that would affect the location of an extracted file.
+.It Fl -use-compress-program Ar program
+Pipe the input (in x or t mode) or the output (in c mode) through
+.Pa program
+instead of using the builtin compression support.
 .It Fl v
 Produce verbose output.
 In create and extract modes,
@@ -445,27 +452,30 @@ option.
 .Sh EXAMPLES
 The following creates a new archive
 called
-.Ar file.tar
+.Ar file.tar.gz
 that contains two files
 .Ar source.c
 and
 .Ar source.h :
-.Dl Nm Fl czf Pa file.tar Pa source.c Pa source.h
+.Dl Nm Fl czf Pa file.tar.gz Pa source.c Pa source.h
 .Pp
 To view a detailed table of contents for this
 archive:
-.Dl Nm Fl tvf Pa file.tar
+.Dl Nm Fl tvf Pa file.tar.gz
 .Pp
 To extract all entries from the archive on
 the default tape drive:
 .Dl Nm Fl x
 .Pp
+To examine the contents of an ISO 9660 cdrom image:
+.Dl Nm Fl tf Pa image.iso
+.Pp
 To move file hierarchies, invoke
 .Nm
 as
-.Dl Nm Fl cf Pa - Fl C Pa srcdir\ . | Nm Fl xpBf Pa - Fl C Pa destdir
+.Dl Nm Fl cf Pa - Fl C Pa srcdir\ . | Nm Fl xpf Pa - Fl C Pa destdir
 or more traditionally
-.Dl cd srcdir \&; Nm Fl cf Pa -\ . | ( cd destdir \&; Nm Fl xpBf Pa - )
+.Dl cd srcdir \&; Nm Fl cf Pa -\ . | ( cd destdir \&; Nm Fl xpf Pa - )
 .Pp
 In create mode, the list of files and directories to be archived
 can also include directory change instructions of the form

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/pnpinfo/Makefile,v 1.11 2005/01/27 14:52:47 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/pnpinfo/Makefile 161526 2006-08-22 08:03:01Z ru $
 
 .PATH: ${.CURDIR}/../../contrib/pnpinfo
 
@@ -9,11 +9,6 @@ CFLAGS+= -I${.CURDIR}/../../sys
 
 .if ${MACHINE} == "pc98"
 CFLAGS+= -DPC98
-.endif
-
-.if ${MACHINE_ARCH} == "alpha"
-LDADD=	-lio
-DPADD=  ${LIBIO}
 .endif
 
 .include <bsd.prog.mk>

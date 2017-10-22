@@ -1,5 +1,5 @@
 #	@(#)Makefile	5.3 (Berkeley) 5/12/90
-# $FreeBSD: src/usr.bin/yacc/Makefile,v 1.13 2002/02/08 23:07:36 markm Exp $
+# $FreeBSD: release/7.0.0/usr.bin/yacc/Makefile 90416 2002-02-08 23:07:37Z markm $
 
 PROG=	yacc
 SRCS=	closure.c error.c lalr.c lr0.c main.c mkpar.c output.c reader.c \

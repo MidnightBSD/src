@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/lib/msg.c,v 1.16 2002/04/01 09:39:07 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/msg.c 93520 2002-04-01 09:39:07Z obrien $");
 
 #include "lib.h"
 #include <err.h>

@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/conf/ldscript.powerpc,v 1.7 2001/10/08 10:43:34 mp Exp $ */
+/* $FreeBSD: release/7.0.0/sys/conf/ldscript.powerpc 174854 2007-12-22 06:32:46Z cvs2svn $ */
 
 OUTPUT_FORMAT("elf32-powerpc", "elf32-powerpc", "elf32-powerpc")
 OUTPUT_ARCH(powerpc)

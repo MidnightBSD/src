@@ -6,7 +6,7 @@
 # this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 # ----------------------------------------------------------------------------
 #
-# $FreeBSD: src/tools/tools/kerninclude/kerninclude.sh,v 1.7 2001/04/23 17:31:16 phk Exp $
+# $FreeBSD: release/7.0.0/tools/tools/kerninclude/kerninclude.sh 75872 2001-04-23 17:31:16Z phk $
 #
 # This script tries to find #include statements which are not needed in
 # the FreeBSD kernel tree.

@@ -28,7 +28,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/dc.4,v 1.35.2.2 2006/02/02 07:50:00 trhodes Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man4/dc.4 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
 .Dd July 16, 2005
 .Dt DC 4
@@ -199,8 +199,6 @@ Alfa Inc GFC2204 (ASIX AX88140A)
 Built in 10Mbps only Ethernet on Compaq Presario 7900 series
 desktops (21143, non-MII)
 .It
-Built in DE500-BA on DEC Alpha workstations (21143, non-MII)
-.It
 Built in Sun DMFE 10/100 Mbps Ethernet on Sun Netra X1 and Sun Fire V100
 (DM9102A, MII)
 .It
@@ -343,6 +341,7 @@ If you power down your system prior to booting
 the card should be configured correctly.
 .El
 .Sh SEE ALSO
+.Xr altq 4 ,
 .Xr arp 4 ,
 .Xr miibus 4 ,
 .Xr netintro 4 ,

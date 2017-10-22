@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/truncate/Makefile,v 1.3 2001/12/12 00:06:52 markm Exp $
+# $FreeBSD: release/7.0.0/usr.bin/truncate/Makefile 87714 2001-12-12 00:06:52Z markm $
 
 PROG=		truncate
 

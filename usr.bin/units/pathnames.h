@@ -1,4 +1,4 @@
-/* $FreeBSD: src/usr.bin/units/pathnames.h,v 1.4 1999/08/28 01:07:09 peter Exp $	*/
+/* $FreeBSD: release/7.0.0/usr.bin/units/pathnames.h 50477 1999-08-28 01:08:13Z peter $	*/
 
 /*
  * Copyright (c) 1993 Christopher G. Demetriou

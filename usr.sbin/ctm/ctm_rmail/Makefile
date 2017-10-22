@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/ctm/ctm_rmail/Makefile,v 1.8 2003/04/04 17:49:13 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/ctm/ctm_rmail/Makefile 113091 2003-04-04 17:49:21Z obrien $
 
 PROG=	ctm_rmail
 MLINKS=	ctm_rmail.1 ctm_smail.1 \

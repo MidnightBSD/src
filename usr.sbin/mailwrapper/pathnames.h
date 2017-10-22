@@ -1,4 +1,4 @@
-/* $FreeBSD: src/usr.sbin/mailwrapper/pathnames.h,v 1.3 2000/01/10 03:20:13 imp Exp $ */
+/* $FreeBSD: release/7.0.0/usr.sbin/mailwrapper/pathnames.h 55705 2000-01-10 03:20:13Z imp $ */
 
 /*
  * Copyright (c) 1998

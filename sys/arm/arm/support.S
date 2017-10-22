@@ -23,13 +23,90 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+/*
+ * Copyright 2003 Wasabi Systems, Inc.
+ * All rights reserved.
+ *
+ * Written by Steve C. Woodford for Wasabi Systems, Inc.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *      This product includes software developed for the NetBSD Project by
+ *      Wasabi Systems, Inc.
+ * 4. The name of Wasabi Systems, Inc. may not be used to endorse
+ *    or promote products derived from this software without specific prior
+ *    written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY WASABI SYSTEMS, INC. ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL WASABI SYSTEMS, INC
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+/*
+ * Copyright (c) 1997 The NetBSD Foundation, Inc.
+ * All rights reserved.
+ *
+ * This code is derived from software contributed to The NetBSD Foundation
+ * by Neil A. Carson and Mark Brinicombe
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *	This product includes software developed by the NetBSD
+ *	Foundation, Inc. and its contributors.
+ * 4. Neither the name of The NetBSD Foundation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
+ * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
 
 #include <machine/asm.h>
 #include <machine/asmacros.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/support.S,v 1.9 2005/04/12 22:46:09 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/support.S 175391 2008-01-16 22:45:03Z cognet $");
 
 #include "assym.s"
 
+.L_arm_memcpy:
+	.word	_C_LABEL(_arm_memcpy)
+.L_arm_bzero:
+	.word	_C_LABEL(_arm_bzero)
+.L_min_memcpy_size:
+	.word	_C_LABEL(_min_memcpy_size)
+.L_min_bzero_size:
+	.word	_C_LABEL(_min_bzero_size)
 /*
  * memset: Sets a block of memory to the specified value
  *
@@ -43,6 +120,22 @@ __FBSDID("$FreeBSD: src/sys/arm/arm/support.S,v 1.9 2005/04/12 22:46:09 cognet E
  */
 /* LINTSTUB: Func: void bzero(void *, size_t) */
 ENTRY(bzero)
+	ldr	r3, .L_arm_bzero
+	ldr	r3, [r3]
+	cmp	r3, #0
+	beq	.Lnormal0
+	ldr	r2, .L_min_bzero_size
+	ldr	r2, [r2]
+	cmp	r1, r2
+	blt	.Lnormal0
+	stmfd	sp!, {r0, r1, lr}
+	mov	r2, #0
+	mov	lr, pc
+	mov	pc, r3
+	cmp	r0, #0
+	ldmfd	sp!, {r0, r1, lr}
+	RETeq
+.Lnormal0:
 	mov	r3, #0x00
 	b	do_memset
 
@@ -847,6 +940,36 @@ ENTRY(memmove)
 #if !defined(__XSCALE__)
 ENTRY(memcpy)
 	/* save leaf functions having to store this away */
+	/* Do not check arm_memcpy if we're running from flash */
+#ifdef FLASHADDR
+#if FLASHADDR > PHYSADDR
+	ldr	r3, =FLASHADDR
+	cmp	r3, pc
+	bls	.Lnormal
+#else
+	ldr	r3, =FLASHADDR
+	cmp	r3, pc
+	bhi	.Lnormal
+#endif
+#endif
+	ldr	r3, .L_arm_memcpy
+	ldr	r3, [r3]
+	cmp	r3, #0
+	beq	.Lnormal
+	ldr	r3, .L_min_memcpy_size
+	ldr	r3, [r3]
+	cmp	r2, r3
+	blt	.Lnormal
+	stmfd	sp!, {r0-r2, r4, lr}
+	mov	r3, #0
+	ldr	r4, .L_arm_memcpy
+	mov	lr, pc
+	ldr	pc, [r4]
+	cmp	r0, #0
+	ldmfd	sp!, {r0-r2, r4, lr}
+	RETeq
+
+.Lnormal:
 	stmdb	sp!, {r0, lr}		/* memcpy() returns dest addr */
 
 	subs	r2, r2, #4
@@ -1054,6 +1177,34 @@ ENTRY(memcpy)
 	pld	[r1]
 	cmp	r2, #0x0c
 	ble	.Lmemcpy_short		/* <= 12 bytes */
+#ifdef FLASHADDR
+#if FLASHADDR > PHYSADDR
+	ldr	r3, =FLASHADDR
+	cmp	r3, pc
+	bls	.Lnormal
+#else
+	ldr	r3, =FLASHADDR
+	cmp	r3, pc
+	bhi	.Lnormal
+#endif
+#endif
+	ldr	r3, .L_arm_memcpy
+	ldr	r3, [r3]
+	cmp	r3, #0
+	beq	.Lnormal
+	ldr	r3, .L_min_memcpy_size
+	ldr	r3, [r3]
+	cmp	r2, r3
+	blt	.Lnormal
+	stmfd	sp!, {r0-r2, r4, lr}
+	mov	r3, #0
+	ldr	r4, .L_arm_memcpy
+	mov	lr, pc
+	ldr	pc, [r4]
+	cmp	r0, #0
+	ldmfd	sp!, {r0-r2, r4, lr}
+	RETeq
+.Lnormal:
 	mov	r3, r0			/* We must not clobber r0 */
 
 	/* Word-align the destination buffer */

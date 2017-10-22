@@ -1,4 +1,4 @@
-# $FreeBSD: src/libexec/pt_chown/Makefile,v 1.4 2005/01/28 16:08:05 ru Exp $
+# $FreeBSD: release/7.0.0/libexec/pt_chown/Makefile 140941 2005-01-28 16:08:11Z ru $
 
 PROG=	pt_chown
 BINOWN=	root

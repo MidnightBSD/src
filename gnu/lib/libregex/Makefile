@@ -1,9 +1,9 @@
-# $FreeBSD: src/gnu/lib/libregex/Makefile,v 1.31.2.1 2005/07/22 17:29:02 kensmith Exp $
+# $FreeBSD: release/7.0.0/gnu/lib/libregex/Makefile 170925 2007-06-18 18:47:54Z rafan $
 
 SUBDIR=		doc
 
 LIB=		gnuregex
-SHLIB_MAJOR=	3
+SHLIB_MAJOR=	4
 
 SRCS=		gnuregex.c
 INCSGROUPS=	INCS WRINCS PXINCS

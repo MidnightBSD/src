@@ -1,6 +1,6 @@
-/* $FreeBSD: src/gnu/usr.bin/patch/pch.c,v 1.20 2002/05/21 00:44:18 gad Exp $
+/* $FreeBSD: release/7.0.0/gnu/usr.bin/patch/pch.c 97028 2002-05-21 00:44:18Z gad $
  *
- * $Log: not supported by cvs2svn $
+ * $Log: pch.c,v $
  * Revision 2.0.2.0  90/05/01  22:17:51  davison
  * patch12u: unidiff support added
  *

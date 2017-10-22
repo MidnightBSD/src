@@ -9,7 +9,7 @@
 ** FICL_ROBUST is enabled. This may require some consideration
 ** in firmware systems since assert often
 ** assumes stderr/stdout.  
-** $Id: sysdep.h,v 1.1.1.2 2006-02-25 02:35:59 laffer1 Exp $
+** $Id: sysdep.h,v 1.6 2001-04-26 21:41:55-07 jsadler Exp jsadler $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -45,8 +45,8 @@
 ** if you would like to contribute to the ficl release, please send
 ** contact me by email at the address above.
 **
-** $Id: sysdep.h,v 1.1.1.2 2006-02-25 02:35:59 laffer1 Exp $
-** $FreeBSD: src/sys/boot/ficl/powerpc/sysdep.h,v 1.1 2003/12/10 09:05:08 grehan Exp $
+** $Id: sysdep.h,v 1.6 2001-04-26 21:41:55-07 jsadler Exp jsadler $
+** $FreeBSD: release/7.0.0/sys/boot/ficl/powerpc/sysdep.h 123372 2003-12-10 09:05:08Z grehan $
 */
 
 #if !defined (__SYSDEP_H__)

@@ -1,4 +1,4 @@
-# $FreeBSD: src/include/arpa/Makefile,v 1.3 2004/12/21 08:46:51 ru Exp $
+# $FreeBSD: release/7.0.0/include/arpa/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 NO_OBJ=
 INCS=	ftp.h inet.h nameser.h nameser_compat.h telnet.h tftp.h

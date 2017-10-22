@@ -1,4 +1,4 @@
-<!-- $FreeBSD: src/release/doc/en_US.ISO8859-1/share/sgml/release.dsl,v 1.8.4.1 2005/11/27 17:11:20 hrs Exp $ -->
+<!-- $FreeBSD: release/7.0.0/release/doc/en_US.ISO8859-1/share/sgml/release.dsl 131458 2004-07-02 13:13:20Z den $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY release.dsl PUBLIC "-//FreeBSD//DOCUMENT Release Notes DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
@@ -42,8 +42,8 @@
 		(literal (entity-text "release.branch"))
 		(literal " should subscribe to the ")
                 (literal "<")
-		(create-link (list (list "HREF" "mailto:stable@FreeBSD.org"))
-                  (literal "stable@FreeBSD.org"))
+		(create-link (list (list "HREF" "mailto:current@FreeBSD.org"))
+                  (literal "current@FreeBSD.org"))
                 (literal "> mailing list.")))
 
             (make element gi: "p"

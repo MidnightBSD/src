@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/monetary.h,v 1.7 2002/09/20 08:22:48 mike Exp $
+ * $FreeBSD: release/7.0.0/include/monetary.h 103667 2002-09-20 08:22:48Z mike $
  */
 
 #ifndef _MONETARY_H_

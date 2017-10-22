@@ -1,5 +1,5 @@
 /*	$NetBSD: usbdevs.c,v 1.22 2003/11/12 13:31:08 grant Exp $	*/
-/*	$FreeBSD: src/usr.sbin/usbdevs/usbdevs.c,v 1.10 2004/05/24 13:22:00 le Exp $	*/
+/*	$FreeBSD: release/7.0.0/usr.sbin/usbdevs/usbdevs.c 129659 2004-05-24 13:22:00Z le $	*/
 
 /*
  * Copyright (c) 1998 The NetBSD Foundation, Inc.

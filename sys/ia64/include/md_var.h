@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/include/md_var.h,v 1.22 2005/07/05 17:12:18 marcel Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/include/md_var.h 171739 2007-08-06 05:11:01Z marcel $
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -77,15 +77,17 @@ void	cpu_mp_add(u_int, u_int, u_int);
 int	do_ast(struct trapframe *);
 void	ia32_trap(int, struct trapframe *);
 int	ia64_count_cpus(void);
+int	ia64_emulate(struct trapframe *, struct thread *);
 int	ia64_flush_dirty(struct thread *, struct _special *);
 uint64_t ia64_get_hcdp(void);
 int	ia64_highfp_drop(struct thread *);
 int	ia64_highfp_save(struct thread *);
 void	ia64_init(void);
 void	ia64_probe_sapics(void);
-int	interrupt(uint64_t, struct trapframe *);
+void	interrupt(struct trapframe *);
 void	map_gateway_page(void);
 void	map_pal_code(void);
+void	map_vhpt(uintptr_t);
 void	os_boot_rendez(void);
 void	os_mca(void);
 int	syscall(struct trapframe *);

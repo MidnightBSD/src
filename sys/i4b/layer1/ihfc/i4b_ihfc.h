@@ -30,9 +30,9 @@
  *
  *	last edit-date: [Wed Jul 19 09:40:45 2000]
  *
- *	$Id: i4b_ihfc.h,v 1.1.1.2 2006-02-25 02:37:13 laffer1 Exp $
+ *	$Id: i4b_ihfc.h,v 1.9 2000/09/19 13:50:36 hm Exp $
  *
- * $FreeBSD: src/sys/i4b/layer1/ihfc/i4b_ihfc.h,v 1.2 2005/01/06 22:18:19 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/i4b/layer1/ihfc/i4b_ihfc.h 139790 2005-01-06 22:18:23Z imp $
  *
  *---------------------------------------------------------------------------*/
 

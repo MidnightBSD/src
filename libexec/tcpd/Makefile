@@ -1,4 +1,6 @@
-# $FreeBSD: src/libexec/tcpd/Makefile,v 1.4.2.1 2005/11/16 08:01:07 ru Exp $
+# $FreeBSD: release/7.0.0/libexec/tcpd/Makefile 156813 2006-03-17 18:54:44Z ru $
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../contrib/tcp_wrappers
 
@@ -9,7 +11,7 @@ CFLAGS+=-DREAL_DAEMON_DIR=\"/usr/libexec\" \
 	-DSEVERITY=LOG_INFO -DRFC931_TIMEOUT=10 \
 	-DHOSTS_DENY=\"/etc/hosts.deny\" -DHOSTS_ALLOW=\"/etc/hosts.allow\" \
 	-DFACILITY=LOG_DAEMON
-.if !defined(NO_INET6)
+.if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=-DINET6
 .endif
 

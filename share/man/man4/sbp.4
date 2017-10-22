@@ -29,7 +29,7 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/sbp.4,v 1.11 2004/06/16 08:33:54 ru Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man4/sbp.4 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
 .Dd May 20, 2002
 .Dt SBP 4
@@ -70,7 +70,8 @@ or when the device is temporary disconnected because the user changes the bus
 topology.
 If you want to force to detach the device, run
 .Dq Nm fwcontrol Fl r
-several times.
+several times or set hw.firewire.hold_count=0 by
+.Xr sysctl 1 .
 .Pp
 Some (broken) HDDs do not work well with tagged queuing.
 If you have problems with such drives, try

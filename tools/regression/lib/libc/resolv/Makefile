@@ -1,9 +1,8 @@
 #	$NetBSD: Makefile,v 1.1 2004/05/13 19:17:12 christos Exp $
-# $FreeBSD: src/tools/regression/lib/libc/resolv/Makefile,v 1.2 2005/05/04 19:40:30 ume Exp $
-
-NOMAN=		# defined
+# $FreeBSD: release/7.0.0/tools/regression/lib/libc/resolv/Makefile 156735 2006-03-15 10:46:38Z ru $
 
 PROG=		resolv
+NO_MAN=
 
 # Note: this test relies on being dynamically linked.  You will get a
 # spurious PASS for a statically linked test.

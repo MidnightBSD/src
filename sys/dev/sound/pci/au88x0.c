@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/pci/au88x0.c,v 1.10 2005/03/01 08:58:05 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/dev/sound/pci/au88x0.c 170873 2007-06-17 06:10:43Z ariff $
  */
 
 #include <dev/sound/pcm/sound.h>
@@ -332,7 +332,7 @@ au88x0_chan_init(kobj_t obj, void *arg,
 	struct au88x0_info *aui = arg;
 	struct au88x0_chan_info *auci = au88x0_channel(aui, dir);
 
-	if (sndbuf_alloc(buf, aui->aui_dmat, aui->aui_bufsize) != 0)
+	if (sndbuf_alloc(buf, aui->aui_dmat, 0, aui->aui_bufsize) != 0)
 		return (NULL);
 	auci->auci_aui = aui;
 	auci->auci_pcmchan = chan;
@@ -572,10 +572,7 @@ au88x0_pci_attach(device_t dev)
 	uint32_t config;
 	int error;
 
-	if ((aui = malloc(sizeof *aui, M_DEVBUF, M_NOWAIT|M_ZERO)) == NULL) {
-		device_printf(dev, "failed to allocate softc\n");
-		return (ENXIO);
-	}
+	aui = malloc(sizeof(*aui), M_DEVBUF, M_WAITOK | M_ZERO);
 	aui->aui_dev = dev;
 
 	/* Model-specific parameters */
@@ -636,7 +633,7 @@ au88x0_pci_attach(device_t dev)
 	/* DMA mapping */
 	aui->aui_bufsize = pcm_getbuffersize(dev, AU88X0_BUFSIZE_MIN,
 	    AU88X0_BUFSIZE_DFLT, AU88X0_BUFSIZE_MAX);
-	error = bus_dma_tag_create(NULL,
+	error = bus_dma_tag_create(bus_get_dma_tag(dev),
 	    2, 0, /* 16-bit alignment, no boundary */
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, /* restrict to 4GB */
 	    NULL, NULL, /* no filter */

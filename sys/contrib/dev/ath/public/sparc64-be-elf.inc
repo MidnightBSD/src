@@ -33,7 +33,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $Id: sparc64-be-elf.inc,v 1.1.1.1 2006-02-25 02:36:12 laffer1 Exp $
+# $Id: powerpc-be-elf.inc,v 1.1 2004/12/19 23:23:21 sam Exp $
 #
 
 #
@@ -75,3 +75,9 @@ COPTS+=	-DAH_BYTE_ORDER=AH_BIG_ENDIAN
 COPTS+=	-DAH_WORDSIZE=64
 COPTS+= -mcmodel=medlow
 COPTS+= -mno-fpu
+#
+# Suppress TLS register usage; haven't figured out to do this
+# when we build the toolchain (so unfortunately we pollute the
+# build options).
+#
+COPTS+= -ffixed-g2 -ffixed-g3

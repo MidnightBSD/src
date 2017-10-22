@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.264.2.2 2006/01/31 22:03:19 jkim Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/sysinstall.h 175324 2008-01-14 19:28:43Z kensmith $
  */
 
 #ifndef _SYSINSTALL_H_INCLUDE
@@ -61,7 +61,7 @@
 #define	WITH_SLICES
 #endif
 
-#if defined(__i386__) || defined(__alpha__)
+#if defined(__i386__)
 #define	WITH_LINUX
 #endif
 
@@ -97,6 +97,7 @@
 #define VAR_BOOTMGR			"bootManager"
 #define VAR_BROWSER_BINARY		"browserBinary"
 #define VAR_BROWSER_PACKAGE		"browserPackage"
+#define VAR_COUNTRY			"country"
 #define VAR_CPIO_VERBOSITY		"cpioVerbose"
 #define VAR_DEBUG			"debug"
 #define VAR_DESKSTYLE			"_deskStyle"
@@ -106,6 +107,7 @@
 #define VAR_DIST_MAIN			"distMain"
 #define VAR_DIST_SRC			"distSRC"
 #define VAR_DIST_X11			"distX11"
+#define VAR_DIST_KERNEL			"distKernel"
 #define VAR_DEDICATE_DISK		"dedicateDisk"
 #define VAR_DOMAINNAME			"domainname"
 #define VAR_EDITOR			"editor"
@@ -146,6 +148,7 @@
 #define VAR_MOUSED_PORT			"moused_port"
 #define VAR_MOUSED_TYPE			"moused_type"
 #define VAR_NAMESERVER			"nameserver"
+#define	VAR_NCPUS			"ncpus"
 #define VAR_NETINTERACTIVE		"netInteractive"
 #define VAR_NETMASK			"netmask"
 #define VAR_NETWORK_DEVICE		"netDev"
@@ -198,6 +201,11 @@
 #define VAR_TERM			"TERM"
 #define VAR_CONSTERM                    "_consterm"
 
+#ifdef PC98
+#define DEFAULT_COUNTRY		"jp"
+#else
+#define DEFAULT_COUNTRY		"us"
+#endif
 #define DEFAULT_TAPE_BLOCKSIZE	"20"
 
 /* One MB worth of blocks */
@@ -261,6 +269,9 @@ typedef struct _layout {
     int         type;           /* The type of the dialog to create */
     void        *obj;           /* The obj pointer returned by libdialog */
 } Layout;
+
+/* Layout array terminator. */
+#define	LAYOUT_END		{ 0, 0, 0, 0, NULL, NULL, NULL, 0, NULL }
 
 typedef enum {
     DEVICE_TYPE_NONE,
@@ -349,7 +360,7 @@ typedef struct _opt {
     enum { OPT_IS_STRING, OPT_IS_INT, OPT_IS_FUNC, OPT_IS_VAR } type;
     void *data;
     void *aux;
-    char *(*check)();
+    char *(*check)(struct _opt *);
 } Option;
 
 /* Weird index nodey things we use for keeping track of package information */
@@ -412,8 +423,10 @@ extern Device		*mediaDevice;		/* Where we're getting our distribution from	*/
 extern unsigned int	Dists;			/* Which distributions we want			*/
 extern unsigned int	SrcDists;		/* Which src distributions we want		*/
 extern unsigned int	XOrgDists;		/* Which X.Org dists we want			*/
+extern unsigned int	KernelDists;		/* Which kernel dists we want			*/
 extern int		BootMgr;		/* Which boot manager to use 			*/
 extern int		StatusLine;		/* Where to print our status messages		*/
+extern DMenu		MenuCountry;		/* Country menu				*/
 extern DMenu		MenuInitial;		/* Initial installation menu			*/
 extern DMenu		MenuFixit;		/* Fixit repair menu				*/
 #if defined(__i386__) || defined(__amd64__)
@@ -460,18 +473,13 @@ extern DMenu		MenuDistributions;	/* Distribution menu				*/
 extern DMenu		MenuDiskDevices;	/* Disk type devices				*/
 extern DMenu		MenuSubDistributions;	/* Custom distribution menu			*/
 extern DMenu		MenuSrcDistributions;	/* Source distribution menu			*/
-extern DMenu		MenuXOrg;		/* X.Org main menu				*/
-extern DMenu		MenuXOrgSelect;		/* X.Org distribution selection menu		*/
-extern DMenu		MenuXOrgSelectCore;	/* X.Org core distribution menu			*/
-extern DMenu		MenuXOrgSelectServer;	/* X.Org server distribution menu		*/
-extern DMenu		MenuXOrgSelectFonts;	/* X.Org font selection menu			*/
-extern DMenu		MenuXDesktops;		/* X Desktops menu				*/
+extern DMenu		MenuKernelDistributions;/* Kernel distribution menu			*/
 extern DMenu		MenuHTMLDoc;		/* HTML Documentation menu			*/
 extern DMenu		MenuUsermgmt;		/* User management menu				*/
 extern DMenu		MenuFixit;		/* Fixit floppy/CDROM/shell menu		*/
-extern DMenu		MenuXOrgConfig;		/* Select X.Org configuration tool		*/
-extern int              FixItMode;              /* FixItMode starts shell onc urrent device (ie Serial port) */
+extern int              FixItMode;              /* FixItMode starts shell on current device (ie Serial port) */
 extern const char *	StartName;		/* Which name we were started as */
+extern int		NCpus;			/* # cpus on machine */
 
 /* Important chunks. */
 extern Chunk *HomeChunk;
@@ -489,6 +497,9 @@ extern void display_helpfile(void);
 extern void display_helpline(WINDOW *w, int y, int width);
 
 /*** Prototypes ***/
+
+/* acpi.c */
+extern int	acpi_detect(void);
 
 /* anonFTP.c */
 extern int	configAnonFTP(dialogMenuItem *self);
@@ -522,6 +533,7 @@ extern int	configNTP(dialogMenuItem *self);
 #ifdef __alpha__
 extern int	configOSF1(dialogMenuItem *self);
 #endif
+extern int	configCountry(dialogMenuItem *self);
 extern int	configUsers(dialogMenuItem *self);
 extern int	configRouter(dialogMenuItem *self);
 extern int	configPCNFSD(dialogMenuItem *self);
@@ -594,8 +606,9 @@ extern int	distSetXUser(dialogMenuItem *self);
 extern int	distSetMinimum(dialogMenuItem *self);
 extern int	distSetEverything(dialogMenuItem *self);
 extern int	distSetSrc(dialogMenuItem *self);
-extern int	distSetXOrg(dialogMenuItem *self);
+extern int	distSetKernel(dialogMenuItem *self);
 extern int	distExtractAll(dialogMenuItem *self);
+extern int	selectKernel(void);
 
 /* dmenu.c */
 extern int	dmenuDisplayFile(dialogMenuItem *tmp);
@@ -605,11 +618,16 @@ extern int	dmenuSystemCommandBox(dialogMenuItem *tmp);
 extern int	dmenuExit(dialogMenuItem *tmp);
 extern int	dmenuISetVariable(dialogMenuItem *tmp);
 extern int	dmenuSetVariable(dialogMenuItem *tmp);
+extern int	dmenuSetCountryVariable(dialogMenuItem *tmp);
 extern int	dmenuSetKmapVariable(dialogMenuItem *tmp);
 extern int	dmenuSetVariables(dialogMenuItem *tmp);
 extern int	dmenuToggleVariable(dialogMenuItem *tmp);
 extern int	dmenuSetFlag(dialogMenuItem *tmp);
 extern int	dmenuSetValue(dialogMenuItem *tmp);
+extern int	dmenuFindItem(DMenu *menu, const char *prompt, const char *title, void *data);
+extern void	dmenuSetDefaultIndex(DMenu *menu, int *choice, int *scroll, int *curr, int *max);
+extern int	dmenuSetDefaultItem(DMenu *menu, const char *prompt, const char *title, void *data,
+				    int *choice, int *scroll, int *curr, int *max);
 extern Boolean	dmenuOpen(DMenu *menu, int *choice, int *scroll, int *curr, int *max, Boolean buttons);
 extern Boolean	dmenuOpenSimple(DMenu *menu, Boolean buttons);
 extern int	dmenuVarCheck(dialogMenuItem *item);
@@ -667,6 +685,7 @@ extern int	installFixitHoloShell(dialogMenuItem *self);
 extern int	installFixitCDROM(dialogMenuItem *self);
 extern int	installFixitFloppy(dialogMenuItem *self);
 extern int	installFixupBase(dialogMenuItem *self);
+extern int	installFixupKernel(dialogMenuItem *self, int dists);
 extern int	installUpgrade(dialogMenuItem *self);
 extern int	installFilesystems(dialogMenuItem *self);
 extern int	installVarDefaults(dialogMenuItem *self);
@@ -677,6 +696,7 @@ extern Boolean	copySelf(void);
 extern int	kget(char *out);
 
 /* keymap.c */
+extern int	keymapMenuSelect(dialogMenuItem *self);
 extern int	loadKeymap(const char *lang);
 
 /* label.c */
@@ -757,6 +777,7 @@ extern int	layoutDialogLoop(WINDOW *win, Layout *layout, ComposeObj **obj,
 extern WINDOW	*savescr(void);
 extern void	restorescr(WINDOW *w);
 extern char	*sstrncpy(char *dst, const char *src, int size);
+extern char	*getsysctlbyname(const char *sysctlname);
 
 /* modules.c */
 extern void	driverFloppyCheck(void);
@@ -767,6 +788,9 @@ extern int	kldBrowser(dialogMenuItem *self);
 extern int	mousedTest(dialogMenuItem *self);
 extern int	mousedDisable(dialogMenuItem *self);
 extern int      setMouseFlags(dialogMenuItem *self);
+
+/* mptable.c */
+extern int	biosmptable_detect(void);
 
 /* msg.c */
 extern Boolean	isDebug(void);
@@ -843,9 +867,6 @@ extern void     configTtys(void);
 extern void	mediaShutdownUFS(Device *dev);
 extern Boolean	mediaInitUFS(Device *dev);
 extern FILE	*mediaGetUFS(Device *dev, char *file, Boolean probe);
-
-/* usb.c */
-extern void	usbInitialize(void);
 
 /* user.c */
 extern int	userAddGroup(dialogMenuItem *self);

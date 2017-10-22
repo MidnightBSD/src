@@ -82,9 +82,7 @@
 #include "opt_ktrace.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/trap.c,v 1.17 2005/06/23 11:39:18 cognet Exp $");
-
-#include <sys/types.h>
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/trap.c 171672 2007-07-31 17:09:05Z cognet $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -112,12 +110,13 @@ __FBSDID("$FreeBSD: src/sys/arm/arm/trap.c,v 1.17 2005/06/23 11:39:18 cognet Exp
 #include <machine/cpuconf.h>
 #include <machine/vmparam.h>
 #include <machine/frame.h>
-#include <machine/katelib.h>
 #include <machine/cpu.h>
 #include <machine/intr.h>
 #include <machine/pcb.h>
 #include <machine/proc.h>
 #include <machine/swi.h>
+
+#include <security/audit/audit.h>
 
 #ifdef KDB
 #include <sys/kdb.h>
@@ -131,6 +130,7 @@ void undefinedinstruction(trapframe_t *);
 #include <machine/machdep.h>
  
 extern char fusubailout[];
+extern char *syscallnames[];
 
 #ifdef DEBUG
 int last_fault_code;	/* For the benefit of pmap_fault_fixup() */
@@ -184,8 +184,12 @@ static const struct data_abort data_aborts[] = {
 static __inline void
 call_trapsignal(struct thread *td, int sig, u_long code)
 {
+	ksiginfo_t ksi;
 
-	trapsignal(td, sig, code);
+	ksiginfo_init_trap(&ksi);
+	ksi.ksi_signo = sig;
+	ksi.ksi_code = (int)code;
+	trapsignal(td, &ksi);
 }
 
 static __inline int
@@ -228,7 +232,6 @@ data_abort_handler(trapframe_t *tf)
 	vm_prot_t ftype;
 	void *onfault;
 	vm_offset_t va;
-	u_int sticks = 0;
 	int error = 0;
 	struct ksig ksig;
 	struct proc *p;
@@ -250,23 +253,31 @@ data_abort_handler(trapframe_t *tf)
 	td = curthread;
 	p = td->td_proc;
 
-	PCPU_LAZY_INC(cnt.v_trap);
+	PCPU_INC(cnt.v_trap);
 	/* Data abort came from user mode? */
 	user = TRAP_USERMODE(tf);
 
 	if (user) {
-		sticks = td->td_sticks;                                                         td->td_frame = tf;		
+		td->td_pticks = 0;
+		td->td_frame = tf;		
 		if (td->td_ucred != td->td_proc->p_ucred)
 			cred_update_thread(td);
+#ifdef KSE
 		if (td->td_pflags & TDP_SA)
 			thread_user_enter(td);
+#endif
 		
 	}
 	/* Grab the current pcb */
 	pcb = td->td_pcb;
 	/* Re-enable interrupts if they were enabled previously */
-	if (td->td_critnest == 0 && __predict_true(tf->tf_spsr & I32_bit) == 0)
-		enable_interrupts(I32_bit);
+	if (td->td_md.md_spinlock_count == 0) {
+		if (__predict_true(tf->tf_spsr & I32_bit) == 0)
+			enable_interrupts(I32_bit);
+		if (__predict_true(tf->tf_spsr & F32_bit) == 0)
+			enable_interrupts(F32_bit);
+	}
+		
 
 	/* Invoke the appropriate handler, if necessary */
 	if (__predict_false(data_aborts[fsr & FAULT_TYPE_MASK].func != NULL)) {
@@ -421,15 +432,14 @@ data_abort_handler(trapframe_t *tf)
 	error = vm_fault(map, va, ftype, (ftype & VM_PROT_WRITE) ? 
 	    VM_FAULT_DIRTY : VM_FAULT_NORMAL);
 	pcb->pcb_onfault = onfault;
-	if (__predict_true(error == 0)) {
-		goto out;
-	}
 
 	if (map != kernel_map) {
 		PROC_LOCK(p);
 		p->p_lock--;
 		PROC_UNLOCK(p);
 	}
+	if (__predict_true(error == 0))
+		goto out;
 	if (user == 0) {
 		if (pcb->pcb_onfault) {
 			tf->tf_r0 = error;
@@ -458,7 +468,7 @@ do_trapsignal:
 out:
 	/* If returning to user mode, make sure to invoke userret() */
 	if (user)
-		userret(td, tf, sticks);
+		userret(td, tf);
 }
 
 /*
@@ -481,6 +491,7 @@ dab_fatal(trapframe_t *tf, u_int fsr, u_int far, struct thread *td, struct ksig 
 
 	mode = TRAP_USERMODE(tf) ? "user" : "kernel";
 
+	disable_interrupts(I32_bit|F32_bit);
 	if (td != NULL) {
 		printf("Fatal %s mode data abort: '%s'\n", mode,
 		    data_aborts[fsr & FAULT_TYPE_MASK].desc);
@@ -700,7 +711,6 @@ prefetch_abort_handler(trapframe_t *tf)
 	struct vm_map *map;
 	vm_offset_t fault_pc, va;
 	int error = 0;
-	u_int sticks = 0;
 	struct ksig ksig;
 
 
@@ -715,19 +725,25 @@ prefetch_abort_handler(trapframe_t *tf)
 	
  	td = curthread;
 	p = td->td_proc;
-	PCPU_LAZY_INC(cnt.v_trap);
+	PCPU_INC(cnt.v_trap);
 
 	if (TRAP_USERMODE(tf)) {
 		td->td_frame = tf;
 		if (td->td_ucred != td->td_proc->p_ucred)
 			cred_update_thread(td);
+#ifdef KSE
 		if (td->td_proc->p_flag & P_SA)
 			thread_user_enter(td);
+#endif
 	}
 	fault_pc = tf->tf_pc;
-	if (td->td_critnest == 0 &&
-	    __predict_true((tf->tf_spsr & I32_bit) == 0))
-		enable_interrupts(I32_bit);
+	if (td->td_md.md_spinlock_count == 0) {
+		if (__predict_true(tf->tf_spsr & I32_bit) == 0)
+			enable_interrupts(I32_bit);
+		if (__predict_true(tf->tf_spsr & F32_bit) == 0)
+			enable_interrupts(F32_bit);
+	}
+	 
 
 		       
 	/* See if the cpu state needs to be fixed up */
@@ -747,7 +763,7 @@ prefetch_abort_handler(trapframe_t *tf)
 	/* Prefetch aborts cannot happen in kernel mode */
 	if (__predict_false(!TRAP_USERMODE(tf)))
 		dab_fatal(tf, 0, tf->tf_pc, NULL, &ksig);
-	sticks = td->td_sticks;
+	td->td_pticks = 0;
 
 
 	/* Ok validate the address, can only execute in USER space */
@@ -802,7 +818,7 @@ do_trapsignal:
 	call_trapsignal(td, ksig.signb, ksig.code);
 
 out:
-	userret(td, tf, sticks);
+	userret(td, tf);
 
 }
 
@@ -863,11 +879,9 @@ syscall(struct thread *td, trapframe_t *frame, u_int32_t insn)
 	u_int nap, nargs;
 	register_t *ap, *args, copyargs[MAXARGS];
 	struct sysent *callp;
-	int locked = 0;
-	u_int sticks = 0;
 
-	PCPU_LAZY_INC(cnt.v_syscall);
-	sticks = td->td_sticks;
+	PCPU_INC(cnt.v_syscall);
+	td->td_pticks = 0;
 	if (td->td_ucred != td->td_proc->p_ucred)
 		cred_update_thread(td);
 	switch (insn & SWI_OS_MASK) {
@@ -875,21 +889,21 @@ syscall(struct thread *td, trapframe_t *frame, u_int32_t insn)
 		nap = 4;
 		break;
 	default:
-		trapsignal(td, SIGILL, 0);
-		userret(td, frame, td->td_sticks);
+		call_trapsignal(td, SIGILL, 0);
+		userret(td, frame);
 		return;
 	}
 	code = insn & 0x000fffff;                
-	sticks = td->td_sticks;
+	td->td_pticks = 0;
 	ap = &frame->tf_r0;
 	if (code == SYS_syscall) {
 		code = *ap++;
 		
 		nap--;
 	} else if (code == SYS___syscall) {
-		code = *ap++;
+		code = ap[_QUAD_LOWWORD];
 		nap -= 2;
-		ap++;
+		ap += 2;
 	}
 	if (p->p_sysent->sv_mask)
 		code &= p->p_sysent->sv_mask;
@@ -897,7 +911,7 @@ syscall(struct thread *td, trapframe_t *frame, u_int32_t insn)
 		callp = &p->p_sysent->sv_table[0];
 	else
 		callp = &p->p_sysent->sv_table[code];
-	nargs = callp->sy_narg & SYF_ARGMASK;
+	nargs = callp->sy_narg;
 	memcpy(copyargs, ap, nap * sizeof(register_t));
 	if (nargs > nap) {
 		error = copyin((void *)frame->tf_usr_sp, copyargs + nap,
@@ -914,34 +928,36 @@ syscall(struct thread *td, trapframe_t *frame, u_int32_t insn)
 		
 	CTR4(KTR_SYSC, "syscall enter thread %p pid %d proc %s code %d", td,
 	    td->td_proc->p_pid, td->td_proc->p_comm, code);
-	if ((callp->sy_narg & SYF_MPSAFE) == 0)
-		mtx_lock(&Giant);
-	locked = 1;
 	if (error == 0) {
 		td->td_retval[0] = 0;
 		td->td_retval[1] = 0;
-		STOPEVENT(p, S_SCE, (callp->sy_narg & SYF_ARGMASK));
+		STOPEVENT(p, S_SCE, callp->sy_narg);
 		PTRACESTOP_SC(p, td, S_PT_SCE);
+		AUDIT_SYSCALL_ENTER(code, td);
 		error = (*callp->sy_call)(td, args);
+		AUDIT_SYSCALL_EXIT(error, td);
+		KASSERT(td->td_ar == NULL, 
+		    ("returning from syscall with td_ar set!"));
 	}
 	switch (error) {
 	case 0: 
 #ifdef __ARMEB__
-		if ((insn & 0x000fffff) &&
-		    (code != SYS_lseek)) {
+		if ((insn & 0x000fffff) == SYS___syscall &&
+		    code != SYS_freebsd6_lseek && code != SYS_lseek) {
 			/*
 			 * 64-bit return, 32-bit syscall. Fixup byte order
-			 */
+			 */ 
 			frame->tf_r0 = 0;
 			frame->tf_r1 = td->td_retval[0];
 		} else {
-                        frame->tf_r0 = td->td_retval[0];
-                        frame->tf_r1 = td->td_retval[1];
+			frame->tf_r0 = td->td_retval[0];
+			frame->tf_r1 = td->td_retval[1];
 		}
 #else
-      		frame->tf_r0 = td->td_retval[0];
-		frame->tf_r1 = td->td_retval[1];
-#endif		
+		frame->tf_r0 = td->td_retval[0];
+	  	frame->tf_r1 = td->td_retval[1];
+#endif
+					      
 		frame->tf_spsr &= ~PSR_C_bit;   /* carry bit */
 		break;
 		
@@ -960,11 +976,18 @@ bad:
 		frame->tf_spsr |= PSR_C_bit;    /* carry bit */
 		break;
 	}
-	if (locked && (callp->sy_narg & SYF_MPSAFE) == 0)
-		mtx_unlock(&Giant);
-	
-	
-	userret(td, frame, sticks);
+
+	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
+	KASSERT(td->td_critnest == 0,
+	    ("System call %s returning in a critical section",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???"));
+	KASSERT(td->td_locks == 0,
+	    ("System call %s returning with %d locks held",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???",
+	    td->td_locks));
+
+	userret(td, frame);
 	CTR4(KTR_SYSC, "syscall exit thread %p pid %d proc %s code %d", td,
 	    td->td_proc->p_pid, td->td_proc->p_comm, code);
 	
@@ -974,8 +997,6 @@ bad:
       	if (KTRPOINT(td, KTR_SYSRET))
 		ktrsysret(code, error, td->td_retval[0]);
 #endif
-	mtx_assert(&sched_lock, MA_NOTOWNED);
-	mtx_assert(&Giant, MA_NOTOWNED);
 }
 
 void
@@ -986,15 +1007,18 @@ swi_handler(trapframe_t *frame)
 
 	td->td_frame = frame;
 	
+	td->td_pticks = 0;
+#ifdef KSE
 	if (td->td_proc->p_flag & P_SA)
 		thread_user_enter(td);
+#endif
 	/*
       	 * Make sure the program counter is correctly aligned so we
 	 * don't take an alignment fault trying to read the opcode.
 	 */
 	if (__predict_false(((frame->tf_pc - INSN_SIZE) & 3) != 0)) {
-		trapsignal(td, SIGILL, 0);
-		userret(td, frame, td->td_sticks);
+		call_trapsignal(td, SIGILL, 0);
+		userret(td, frame);
 		return;
 	}
 	insn = *(u_int32_t *)(frame->tf_pc - INSN_SIZE);
@@ -1003,9 +1027,13 @@ swi_handler(trapframe_t *frame)
 	 * Since all syscalls *should* come from user mode it will always
 	 * be safe to enable them, but check anyway. 
 	 */       
-	if (td->td_critnest == 0 && !(frame->tf_spsr & I32_bit))
-		enable_interrupts(I32_bit);
-
+	if (td->td_md.md_spinlock_count == 0) {
+		if (__predict_true(frame->tf_spsr & I32_bit) == 0)
+			enable_interrupts(I32_bit);
+		if (__predict_true(frame->tf_spsr & F32_bit) == 0)
+			enable_interrupts(F32_bit);
+	}
+	 
 	syscall(td, frame, insn);
 }
 

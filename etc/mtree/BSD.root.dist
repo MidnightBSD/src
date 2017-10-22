@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/mtree/BSD.root.dist,v 1.74 2005/05/30 20:51:13 rwatson Exp $
+# $FreeBSD: release/7.0.0/etc/mtree/BSD.root.dist 168509 2007-04-08 23:59:39Z pjd $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -10,9 +10,13 @@
     boot
         defaults
         ..
+        firmware
+        ..
         kernel
         ..
         modules
+        ..
+        zfs
         ..
     ..
     dev             mode=0555
@@ -25,6 +29,8 @@
         defaults
         ..
         gnats
+        ..
+        gss
         ..
         isdn            mode=0700
         ..
@@ -58,12 +64,16 @@
         ..
         ssl
         ..
+        zfs
+        ..
     ..
     lib
         geom
         ..
     ..
     libexec
+    ..
+    media
     ..
     mnt
     ..

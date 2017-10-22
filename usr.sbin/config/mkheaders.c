@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)mkheaders.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/config/mkheaders.c,v 1.30 2004/08/30 23:03:56 peter Exp $";
+  "$FreeBSD: release/7.0.0/usr.sbin/config/mkheaders.c 152811 2005-11-25 22:25:34Z ru $";
 #endif /* not lint */
 
 /*
@@ -50,23 +50,10 @@ static const char rcsid[] =
 void
 headers(void)
 {
-	struct file_list *fl;
 	struct device *dp;
-	int match;
 	int errors;
 
 	errors = 0;
-	STAILQ_FOREACH(fl, &ftab, f_next) {
-		if (fl->f_needs != 0) {
-			match = 0;
-			STAILQ_FOREACH(dp, &dtab, d_next) {
-				if (eq(dp->d_name, fl->f_needs)) {
-					match++;
-					dp->d_done |= DEVDONE;
-				}
-			}
-		}
-	}
 	STAILQ_FOREACH(dp, &dtab, d_next) {
 		if (!(dp->d_done & DEVDONE)) {
 			warnx("Error: device \"%s\" is unknown",

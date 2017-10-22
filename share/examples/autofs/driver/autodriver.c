@@ -23,8 +23,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: autodriver.c,v 1.1.1.2 2006-02-25 02:35:37 laffer1 Exp $
- * $FreeBSD: src/share/examples/autofs/driver/autodriver.c,v 1.3 2004/09/09 01:26:11 alfred Exp $
+ * $Id: autodriver.c,v 1.9 2004/09/08 08:12:21 bright Exp $
+ * $FreeBSD: release/7.0.0/share/examples/autofs/driver/autodriver.c 134969 2004-09-09 01:26:11Z alfred $
  */
 #include <ctype.h>
 #include <err.h>

@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)rm.c	8.5 (Berkeley) 4/18/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/rm/rm.c,v 1.52.2.1 2005/10/08 17:27:37 dougb Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/rm/rm.c 163812 2006-10-31 02:22:36Z delphij $");
 
 #include <sys/stat.h>
 #include <sys/param.h>
@@ -307,6 +307,7 @@ err:
 	}
 	if (errno)
 		err(1, "fts_read");
+	fts_close(fts);
 }
 
 void
@@ -346,7 +347,7 @@ rm_file(char **argv)
 		if (!fflag && !S_ISWHT(sb.st_mode) && !check(f, f, &sb))
 			continue;
 		rval = 0;
-		if (!uid &&
+		if (!uid && !S_ISWHT(sb.st_mode) &&
 		    (sb.st_flags & (UF_APPEND|UF_IMMUTABLE)) &&
 		    !(sb.st_flags & (SF_APPEND|SF_IMMUTABLE)))
 			rval = chflags(f, sb.st_flags & ~(UF_APPEND|UF_IMMUTABLE));
@@ -399,6 +400,11 @@ rm_overwrite(char *file, struct stat *sbp)
 	}
 	if (!S_ISREG(sbp->st_mode))
 		return (1);
+	if (sbp->st_nlink > 1 && !fflag) {
+		warnx("%s (inode %u): not overwritten due to multiple links",
+		    file, sbp->st_ino);
+		return (0);
+	}
 	if ((fd = open(file, O_WRONLY, 0)) == -1)
 		goto err;
 	if (fstatfs(fd, &fsb) == -1)

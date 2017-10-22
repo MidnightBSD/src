@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)ls.c	8.5 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/ls/ls.c,v 1.80.2.2 2005/11/22 20:58:58 ru Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/ls/ls.c 157101 2006-03-24 17:09:03Z jhb $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -104,6 +104,7 @@ int termwidth = 80;		/* default terminal width */
 
 /* flags */
        int f_accesstime;	/* use time of last access */
+       int f_birthtime;		/* use time of birth */
        int f_flags;		/* show flags associated with a file */
        int f_humanval;		/* show human-readable file sizes */
        int f_inode;		/* print inode */
@@ -178,7 +179,7 @@ main(int argc, char *argv[])
 
 	fts_options = FTS_PHYSICAL;
  	while ((ch = getopt(argc, argv,
-	    "1ABCFGHILPRSTWZabcdfghiklmnopqrstuwx")) != -1) {
+	    "1ABCFGHILPRSTUWZabcdfghiklmnopqrstuwx")) != -1) {
 		switch (ch) {
 		/*
 		 * The -1, -C, -x and -l options all override each other so
@@ -207,13 +208,20 @@ main(int argc, char *argv[])
 			f_longform = 0;
 			f_singlecol = 0;
 			break;
-		/* The -c and -u options override each other. */
+		/* The -c, -u, and -U options override each other. */
 		case 'c':
 			f_statustime = 1;
 			f_accesstime = 0;
+			f_birthtime = 0;
 			break;
 		case 'u':
 			f_accesstime = 1;
+			f_statustime = 0;
+			f_birthtime = 0;
+			break;
+		case 'U':
+			f_birthtime = 1;
+			f_accesstime = 0;
 			f_statustime = 0;
 			break;
 		case 'F':
@@ -296,11 +304,14 @@ main(int argc, char *argv[])
 		case 'T':
 			f_sectime = 1;
 			break;
+		/* The -t and -S options override each other. */
 		case 't':
 			f_timesort = 1;
+			f_sizesort = 0;
 			break;
 		case 'S':
 			f_sizesort = 1;
+			f_timesort = 0;
 			break;
 		case 'W':
 			f_whiteout = 1;
@@ -408,23 +419,27 @@ main(int argc, char *argv[])
 	if (f_reversesort) {
 		if (!f_timesort && !f_sizesort)
 			sortfcn = revnamecmp;
-		else if (f_accesstime)
-			sortfcn = revacccmp;
-		else if (f_statustime)
-			sortfcn = revstatcmp;
 		else if (f_sizesort)
 			sortfcn = revsizecmp;
+		else if (f_accesstime)
+			sortfcn = revacccmp;
+		else if (f_birthtime)
+			sortfcn = revbirthcmp;
+		else if (f_statustime)
+			sortfcn = revstatcmp;
 		else		/* Use modification time. */
 			sortfcn = revmodcmp;
 	} else {
 		if (!f_timesort && !f_sizesort)
 			sortfcn = namecmp;
-		else if (f_accesstime)
-			sortfcn = acccmp;
-		else if (f_statustime)
-			sortfcn = statcmp;
 		else if (f_sizesort)
 			sortfcn = sizecmp;
+		else if (f_accesstime)
+			sortfcn = acccmp;
+		else if (f_birthtime)
+			sortfcn = birthcmp;
+		else if (f_statustime)
+			sortfcn = statcmp;
 		else		/* Use modification time. */
 			sortfcn = modcmp;
 	}

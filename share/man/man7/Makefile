@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: src/share/man/man7/Makefile,v 1.29.8.1 2006/01/25 13:22:58 harti Exp $
+# $FreeBSD: release/7.0.0/share/man/man7/Makefile 174854 2007-12-22 06:32:46Z cvs2svn $
 
 #MISSING: eqnchar.7 ms.7 term.7
 MAN=	ascii.7 \
@@ -25,5 +25,6 @@ MAN=	ascii.7 \
 	tuning.7
 
 MLINKS=	intro.7 miscellaneous.7
+MLINKS+=	security.7 securelevel.7
 
 .include <bsd.prog.mk>

@@ -31,7 +31,7 @@
  *
  *	@(#)quota.h	8.3 (Berkeley) 8/19/94
  * %FreeBSD: src/sys/ufs/ufs/quota.h,v 1.15 1999/12/29 04:55:05 peter Exp %
- * $FreeBSD: src/sys/boot/pc98/boot2/quota.h,v 1.2 2004/04/05 23:41:29 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/boot/pc98/boot2/quota.h 127919 2004-04-05 23:41:29Z imp $
  */
 
 #ifndef _UFS_UFS_QUOTA_H_

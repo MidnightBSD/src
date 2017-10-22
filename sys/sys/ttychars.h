@@ -27,13 +27,11 @@
  * SUCH DAMAGE.
  *
  *	@(#)ttychars.h	8.2 (Berkeley) 1/4/94
- * $FreeBSD: src/sys/sys/ttychars.h,v 1.9 2004/06/21 22:57:16 phk Exp $
+ * $FreeBSD: release/7.0.0/sys/sys/ttychars.h 174854 2007-12-22 06:32:46Z cvs2svn $
  */
 
 #ifndef _SYS_TTYCHARS_H_
 #define _SYS_TTYCHARS_H_
-
-#ifndef BURN_BRIDGES
 
 /*
  * 4.3 COMPATIBILITY FILE
@@ -60,7 +58,5 @@ struct ttychars {
 #ifdef USE_OLD_TTY
 #include <sys/ttydefaults.h>	/* to pick up character defaults */
 #endif
-
-#endif /* BURN_BRIDGES */
 
 #endif /* !_SYS_TTYCHARS_H_ */

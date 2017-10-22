@@ -1,4 +1,4 @@
-	# $FreeBSD: src/secure/lib/libcrypto/i386/des-586.s,v 1.2 2004/03/23 08:32:29 markm Exp $
+	# $FreeBSD: release/7.0.0/secure/lib/libcrypto/i386/des-586.s 127326 2004-03-23 08:32:29Z markm $
 
 
 

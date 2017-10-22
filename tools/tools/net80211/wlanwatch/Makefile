@@ -1,7 +1,13 @@
-# $FreeBSD: src/tools/tools/net80211/wlanwatch/Makefile,v 1.1.2.1 2006/01/31 20:48:21 sam Exp $
+# $FreeBSD: release/7.0.0/tools/tools/net80211/wlanwatch/Makefile 160779 2006-07-28 10:59:27Z yar $
 
-PROG    = wlanwatch
-BINDIR	= /usr/local/bin
-NO_MAN	= noman
+PROG=	wlanwatch
+BINDIR=	/usr/local/bin
+NO_MAN=
+
+.include <bsd.own.mk>
+
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+= -DINET6
+.endif
 
 .include <bsd.prog.mk>

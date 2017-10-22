@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003 Hewlett-Packard Development Company, L.P.
+Copyright (c) 2003-2006 Hewlett-Packard Development Company, L.P.
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without
@@ -23,7 +23,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "uwx_env.h"
-#include "uwx_context.h"
 #include "uwx_scoreboard.h"
 #include "uwx_step.h"
 #include "uwx_trace.h"
@@ -182,7 +181,7 @@ int uwx_get_nat(struct uwx_env *env, int regid, int *natp)
 	bsp = uwx_add_to_bsp(bsp, regid);
 	natcollp = bsp | 0x01f8;
 	n = (*env->copyin)(UWX_COPYIN_RSTACK, (char *)&natcoll,
-			bsp, DWORDSZ, env->cb_token);
+			natcollp, DWORDSZ, env->cb_token);
 	if (n != DWORDSZ)
 	    return UWX_ERR_COPYIN_RSTK;
 	*natp = (int)(natcoll >> (((int)bsp >> 3) & 0x3f)) & 0x01;
@@ -208,8 +207,17 @@ int uwx_get_spill_loc(struct uwx_env *env, int regid, uint64_t *dispp)
 
     if (regid == UWX_REG_GR(12))
 	regid = UWX_REG_SP;
-    if (regid < NSPECIALREG)
+    if (regid < NSPECIALREG) {
+	if (regid == UWX_REG_PSP || regid == UWX_REG_RP ||
+						regid == UWX_REG_PFS) {
+	    if (!(env->context.valid_regs & (1 << regid))) {
+		status = uwx_restore_markers(env);
+		if (status != UWX_OK)
+		    return status;
+	    }
+	}
 	*dispp = env->history.special[regid];
+    }
     else if (regid >= UWX_REG_GR(4) && regid <= UWX_REG_GR(7))
 	*dispp = env->history.gr[regid - UWX_REG_GR(4)];
     else if (regid >= UWX_REG_GR(32) && regid <= UWX_REG_GR(127)) {
@@ -313,7 +321,7 @@ uint64_t uwx_add_to_bsp(uint64_t bsp, int nslots)
      *                           ^
      *                           |
      *                          bsp
-     *   <------- adjusted (nslots + bias) ------->
+     *   <------------ nslots + bias ----------->
 
      *  When subtracting from bsp, we avoid depending on the sign of
      *  the quotient by adding 63*8 before division and subtracting 8
@@ -325,12 +333,12 @@ uint64_t uwx_add_to_bsp(uint64_t bsp, int nslots)
      *  |                              X                               X|
      *  +---------------------------------------------------------------+
      *                                  <-- bias -->
-     *                            <--- |nslots| --->
+     *                           <--- (-nslots) --->
      *                                              ^
      *                                              |
      *                                             bsp
      *                           <----------------->
-     *                        adjusted |nslots + bias|
+     *                             -(nslots + bias)
      */
 
     bias = ((unsigned int)bsp & 0x1f8) / DWORDSZ;
@@ -366,7 +374,7 @@ int uwx_selftest_bsp_arithmetic()
 	if (r >= 1000)
 	    r -= 1000;
 	for (j = 0; j < 96; j++) {
-	    p = (uint64_t *)uwx_add_to_bsp((uint64_t)bsp, j);
+	    p = (uint64_t *)(intptr_t)uwx_add_to_bsp((uint64_t)bsp, j);
 	    if (*p != (r + j)) {
 		failed++;
 		printf("%d [%08lx] + %d -> %08lx ",
@@ -385,7 +393,7 @@ int uwx_selftest_bsp_arithmetic()
 	if (r >= 1000)
 	    r -= 1000;
 	for (j = 0; j < 96; j++) {
-	    p = (uint64_t *)uwx_add_to_bsp((uint64_t)bsp, -j);
+	    p = (uint64_t *)(intptr_t)uwx_add_to_bsp((uint64_t)bsp, -j);
 	    if (*p != (r - j)) {
 		failed++;
 		printf("%d [%08lx] - %d -> %08lx ",

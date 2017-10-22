@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/gbde/gbde.c,v 1.30.2.1 2006/02/14 16:15:48 cperciva Exp $
+ * $FreeBSD: release/7.0.0/sbin/gbde/gbde.c 155453 2006-02-08 06:52:15Z cperciva $
  *
  * XXX: Future stuff
  *

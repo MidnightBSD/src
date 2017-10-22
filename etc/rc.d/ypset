@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/ypset,v 1.6 2004/10/07 13:55:26 mtm Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/ypset 165664 2006-12-30 22:53:20Z yar $
 #
 
 # PROVIDE: ypset
@@ -17,6 +17,8 @@ command_args="${nis_ypset_flags}"
 
 ypset_precmd()
 {
+	local _domain
+
 	if ! checkyesno rpcbind_enable  && \
 	    ! /etc/rc.d/rpcbind forcestatus 1>/dev/null 2>&1
 	then

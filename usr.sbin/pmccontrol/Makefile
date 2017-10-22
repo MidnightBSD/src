@@ -1,5 +1,5 @@
 #
-# $FreeBSD: src/usr.sbin/pmccontrol/Makefile,v 1.2 2005/04/19 14:43:59 jkoshy Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/pmccontrol/Makefile 145280 2005-04-19 14:43:59Z jkoshy $
 #
 
 PROG=	pmccontrol

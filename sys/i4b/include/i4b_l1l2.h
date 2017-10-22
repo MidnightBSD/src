@@ -28,7 +28,7 @@
  *	i4b_l1l2.h - i4b layer 1 / layer 2 interactions
  *	---------------------------------------------------
  *
- * $FreeBSD: src/sys/i4b/include/i4b_l1l2.h,v 1.9 2005/01/06 22:18:18 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/i4b/include/i4b_l1l2.h 171270 2007-07-06 07:17:22Z bz $
  *
  *	last edit-date: [Sat Mar  9 15:54:49 2002]
  *
@@ -37,7 +37,7 @@
 #ifndef _I4B_L1L2_H_
 #define _I4B_L1L2_H_
 
-#include <machine/i4b_trace.h>
+#include <i4b/include/i4b_trace.h>
 
 extern struct i4b_l1l2_func i4b_l1l2_func;
 

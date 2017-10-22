@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/conf/ldscript.ia64,v 1.12 2004/08/25 07:43:28 marcel Exp $ */
+/* $FreeBSD: release/7.0.0/sys/conf/ldscript.ia64 174854 2007-12-22 06:32:46Z cvs2svn $ */
 OUTPUT_FORMAT("elf64-ia64-little", "elf64-ia64-little", "elf64-ia64-little")
 OUTPUT_ARCH(ia64)
 ENTRY(__start)

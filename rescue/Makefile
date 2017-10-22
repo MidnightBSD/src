@@ -1,4 +1,4 @@
-# $FreeBSD: src/rescue/Makefile,v 1.1 2003/06/29 18:35:36 gordon Exp $
+# $FreeBSD: release/7.0.0/rescue/Makefile 117035 2003-06-29 18:35:37Z gordon $
 
 SUBDIR=	librescue \
 	rescue

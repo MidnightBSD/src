@@ -14,10 +14,10 @@
  *---------------------------------------------------------------------------
  *
  * Description: PowerMACH Works header file
- * $FreeBSD: src/sys/contrib/dev/oltr/trlld.h,v 1.4 2000/03/18 23:51:51 lile Exp $
+ * $FreeBSD: release/7.0.0/sys/contrib/dev/oltr/trlld.h 58267 2000-03-18 23:51:54Z lile $
  *
  *---------------------------------------------------------------------------
- * $Log: not supported by cvs2svn $
+ * $Log:   J:/usr/project/trlld/libsrc/include/trlld.h_v  $
  * 
  *    Rev 1.9   25 Jan 1999 09:56:28   EGS
  * Added 3150

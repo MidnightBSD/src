@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/ncplist/Makefile,v 1.2 1999/10/31 08:58:29 bp Exp $
+# $FreeBSD: release/7.0.0/usr.bin/ncplist/Makefile 52712 1999-10-31 08:58:29Z bp $
 
 PROG=	ncplist
 

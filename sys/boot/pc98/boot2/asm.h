@@ -24,7 +24,7 @@
  * the rights to redistribute these changes.
  *
  *	from: Mach, Revision 2.7  92/02/29  15:33:41  rpd
- * $FreeBSD: src/sys/boot/pc98/boot2/asm.h,v 1.5 2003/07/13 08:13:52 nyan Exp $
+ * $FreeBSD: release/7.0.0/sys/boot/pc98/boot2/asm.h 117511 2003-07-13 08:13:52Z nyan $
  */
 
 #define S_ARG0	 4(%esp)

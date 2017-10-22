@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: l2ping.c,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/l2ping/l2ping.c,v 1.6.8.1 2005/09/12 16:09:23 emax Exp $
+ * $Id: l2ping.c,v 1.5 2003/05/16 19:54:40 max Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/l2ping/l2ping.c 149698 2005-09-01 22:45:25Z emax $
  */
 
 #include <sys/ioctl.h>

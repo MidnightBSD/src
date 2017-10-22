@@ -1,10 +1,8 @@
 #	@(#)Makefile	8.1 (Berkeley) 7/19/93
-# $FreeBSD: src/sbin/init/Makefile,v 1.32 2005/01/11 14:34:29 delphij Exp $
+# $FreeBSD: release/7.0.0/sbin/init/Makefile 170195 2007-06-01 21:48:07Z remko $
 
 PROG=	init
 MAN=	init.8
-MLINKS=	init.8 securelevel.8
-BINMODE=500
 PRECIOUSPROG=
 INSTALLFLAGS=-b -B.bak
 WARNS?=	6

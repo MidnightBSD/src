@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003 Hewlett-Packard Development Company, L.P.
+Copyright (c) 2003-2006 Hewlett-Packard Development Company, L.P.
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without
@@ -46,7 +46,7 @@ void uwx_init_bstream(
     }
     else {
 	bstream->source = 0;
-	bstream->bufp = (unsigned char *) source;
+	bstream->bufp = (unsigned char *) (intptr_t) source;
 	bstream->nbuf = len;
 	bstream->copyin = 0;
 	bstream->cb_token = 0;

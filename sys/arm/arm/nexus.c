@@ -40,9 +40,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/nexus.c,v 1.5 2005/06/09 12:26:19 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/nexus.c 166901 2007-02-23 12:19:07Z piso $");
 
-#define __RMAN_RESOURCE_VISIBLE
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -82,7 +81,7 @@ static	int nexus_activate_resource(device_t, device_t, int, int,
 	struct resource *);
 static int
 nexus_setup_intr(device_t dev, device_t child, struct resource *res, int flags,
-        driver_intr_t *intr, void *arg, void **cookiep);
+        driver_filter_t *filt, driver_intr_t *intr, void *arg, void **cookiep);
 static int
 nexus_teardown_intr(device_t, device_t, struct resource *, void *);
 
@@ -126,10 +125,13 @@ nexus_probe(device_t dev)
 
 static int
 nexus_setup_intr(device_t dev, device_t child, struct resource *res, int flags,
-    driver_intr_t *intr, void *arg, void **cookiep)
+    driver_filter_t *filt, driver_intr_t *intr, void *arg, void **cookiep)
 {
-	arm_setup_irqhandler(device_get_nameunit(child), 
-	    intr, arg, res->r_start, flags, cookiep);
+	int i;
+
+	for (i = rman_get_start(res); i <= rman_get_end(res); i++)
+		arm_setup_irqhandler(device_get_nameunit(child), 
+		    filt, intr, arg, i, flags, cookiep);
 	return (0);
 }
 
@@ -137,8 +139,10 @@ static int
 nexus_teardown_intr(device_t dev, device_t child, struct resource *r, void *ih)
 {
 	int error;
+	int i;
 
-	arm_mask_irq(r->r_start);
+	for (i = rman_get_start(r); i <= rman_get_end(r); i++)
+		arm_mask_irq(i);
 	error = arm_remove_irqhandler(ih);
 	return (error);
 }
@@ -215,8 +219,9 @@ nexus_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	if (rv == 0)
 		return 0;
 
+	rman_set_rid(rv, *rid);
 	rman_set_bustag(rv, (void*)ARM_BUS_SPACE_MEM);
-	rman_set_bushandle(rv, rv->r_start);		
+	rman_set_bushandle(rv, rman_get_start(rv));		
 	
 	if (needactivate) {
 		if (bus_activate_resource(child, type, *rid, rv)) {

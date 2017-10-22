@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/setfacl/util.c,v 1.6 2005/01/10 08:39:25 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/setfacl/util.c 139969 2005-01-10 08:39:26Z imp $");
 
 #include <err.h>
 #include <stdlib.h>

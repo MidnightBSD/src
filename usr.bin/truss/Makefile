@@ -1,6 +1,6 @@
-# $FreeBSD: src/usr.bin/truss/Makefile,v 1.21 2004/10/24 15:33:00 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/truss/Makefile 168569 2007-04-10 04:03:34Z delphij $
 
-WARNS?=	2
+WARNS?= 6	
 NO_WERROR=
 PROG=	truss
 SRCS=	main.c setup.c syscalls.c syscalls.h ioctl.c ${MACHINE_ARCH}-fbsd.c

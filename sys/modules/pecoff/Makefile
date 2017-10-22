@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/pecoff/Makefile,v 1.7 2005/06/03 15:35:36 imp Exp $
+# $FreeBSD: release/7.0.0/sys/modules/pecoff/Makefile 146935 2005-06-03 15:35:36Z imp $
 
 .PATH: ${.CURDIR}/../../compat/pecoff
 

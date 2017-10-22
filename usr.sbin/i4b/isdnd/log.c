@@ -27,11 +27,15 @@
  *	i4b daemon - logging routines
  *	-----------------------------
  *
- * $FreeBSD: src/usr.sbin/i4b/isdnd/log.c,v 1.9 2001/12/27 08:41:10 hm Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdnd/log.c 158517 2006-05-13 12:42:55Z hm $
  *
- *      last edit-date: [Wed Dec 26 12:49:45 2001]
+ *      last edit-date: [Sat May 13 13:07:18 2006]
  *
  *---------------------------------------------------------------------------*/
+
+#ifdef __FreeBSD__
+#include <osreldate.h>
+#endif
 
 #include "isdnd.h"
 
@@ -108,7 +112,7 @@ init_log(void)
 
 		if((p = malloc(strlen(buf) + 1)) == NULL)
 		{
-			log(LL_DBG, "init_log: malloc failed: %s", strerror(errno));
+			llog(LL_DBG, "init_log: malloc failed: %s", strerror(errno));
 			do_exit(1);
 		}
 
@@ -139,7 +143,7 @@ finish_log(void)
  *	place entry into logfile
  *---------------------------------------------------------------------------*/
 void
-log(int what, const char *fmt, ...)
+llog(int what, const char *fmt, ...)
 {
 	char buffer[LOGBUFLEN];
 	register char *dp;
@@ -165,9 +169,6 @@ log(int what, const char *fmt, ...)
  * to write to the last column in the logfilewindow without causing an
  * automatic newline to occur resulting in a blank line in that window.
  */
-#ifdef __FreeBSD__
-#include <osreldate.h>
-#endif
 #if defined(__FreeBSD_version) && __FreeBSD_version >= 400009		
 #warning "FreeBSD ncurses is buggy: write to last column = auto newline!"
 		     COLS-((strlen(dp))+(strlen(logtab[what].text))+3), buffer);

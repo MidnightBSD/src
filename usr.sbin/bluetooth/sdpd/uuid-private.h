@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: uuid-private.h,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/sdpd/uuid-private.h,v 1.1 2005/01/05 18:37:37 emax Exp $
+ * $Id: uuid-private.h,v 1.1 2004/12/09 18:20:26 max Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/sdpd/uuid-private.h 139721 2005-01-05 18:37:37Z emax $
  */
 
 #ifndef _UUID_PRIVATE_H_

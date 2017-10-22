@@ -1,5 +1,5 @@
 #
-# $FreeBSD: src/usr.sbin/smbmsg/Makefile,v 1.2 2004/09/26 09:24:15 ru Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/smbmsg/Makefile 135814 2004-09-26 09:25:03Z ru $
 
 PROG=	smbmsg
 MAN=	smbmsg.8

@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.sbin/lpr/lpc/Makefile,v 1.12 2002/07/17 00:51:19 gad Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/lpr/lpc/Makefile 100203 2002-07-17 00:51:19Z gad $
 
 .PATH: ${.CURDIR}/../common_source
 

@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/grep/doc/Makefile,v 1.3 1999/11/22 08:56:30 obrien Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/grep/doc/Makefile 172506 2007-10-10 16:59:15Z cvs2svn $
 
 INFO=		grep
 INFOSECTION=	"System Utilities"

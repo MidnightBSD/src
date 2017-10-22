@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: net.c,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: net.c,v 1.25 2001/11/30 01:59:45 gson Exp $ */
 
 #include <config.h>
 

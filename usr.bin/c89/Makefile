@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/c89/Makefile,v 1.7 2005/01/28 16:08:07 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/c89/Makefile 140941 2005-01-28 16:08:11Z ru $
 
 PROG=	c89
 

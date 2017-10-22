@@ -7,7 +7,7 @@
 #
 # Usage: package-split.py <INDEX> <master INDEX>
 #
-# $FreeBSD: src/release/scripts/package-split.py,v 1.6.2.4 2005/12/07 22:27:49 obrien Exp $
+# $FreeBSD: release/7.0.0/release/scripts/package-split.py 175321 2008-01-14 17:31:35Z kensmith $
 
 import os
 import sys
@@ -26,15 +26,15 @@ else:
 # List of packages for disc1.  This just includes packages sysinstall can
 # install as a distribution
 def disc1_packages():
-    # 5.x only
     pkgs = ['lang/perl5.8']
     pkgs.extend(['x11/xorg',
-                 'x11/xorg-manpages',
-                 'devel/imake-6'])
-    if arch == 'alpha':
-        pkgs.append('emulators/osf1_base')
-    elif arch == 'i386':
-        pkgs.append('emulators/linux_base-8')
+		 'x11-drivers/xorg-drivers',
+		 'x11-fonts/xorg-fonts',
+		 'x11-servers/xorg-nestserver',
+		 'x11-servers/xorg-vfbserver',
+                 'devel/imake'])
+    if arch == 'i386':
+        pkgs.append('emulators/linux_base-fc4')
     return pkgs
 
 # List of packages for disc2.  This includes packages that the X desktop
@@ -48,7 +48,10 @@ def disc2_packages():
     else:
 	pkgs = ['x11/gnome2',
 		'x11/kde3']
-    pkgs.extend(['x11-wm/afterstep',
+    return pkgs
+
+def disc3_packages():
+    pkgs = ['x11-wm/afterstep',
             'x11-wm/windowmaker',
             'x11-wm/fvwm2',
             # "Nice to have"
@@ -56,13 +59,13 @@ def disc2_packages():
             'astro/xearth',                 
             'devel/gmake',
             'editors/emacs',
-            'editors/vim',
             'editors/vim-lite',
             'editors/xemacs',
             'emulators/mtools',
             'graphics/png',
             'graphics/xv',
-            'irc/xchat2',
+            'irc/xchat',
+            'lang/php5',
             'mail/exim',
             'mail/fetchmail',
             'mail/mutt',
@@ -70,38 +73,44 @@ def disc2_packages():
             'mail/popd',
             'mail/xfmail',
             'mail/postfix',
-            'net/cvsup',
+            'misc/compat5x',
+            'misc/compat6x',
             'net/cvsup-without-gui',
             'net/rsync',
-            'net/samba',
+            'net/samba3',
             'news/slrn',
             'news/tin',
+            'ports-mgmt/portupgrade',
             'print/a2ps-letter',
             'print/apsfilter',
             'print/ghostscript-gnu-nox11',
             'print/gv',
             'print/psutils-letter',
-            'shells/bash2',
+            'print/teTeX',
+            'shells/bash',
             'shells/pdksh',
             'shells/zsh',
-            'security/freebsd-update',
             'security/sudo',
-            'sysutils/portupgrade',
+            'textproc/docproj-jadetex',
+            'www/apache13',
+            'www/apache13-modssl',
+            'www/apache22',
             'www/links',
             'www/lynx',
             'x11/rxvt',
             # Formerly on disc3
-            'security/portaudit'])
+            'ports-mgmt/portaudit']
     if arch == 'i386':
-        pkgs.extend(['comms/ltmdm',
-                     'www/opera'])
+        pkgs.extend(['www/opera',
+            'misc/compat4x'])
     return pkgs
 
 # The list of desired packages
 def desired_packages():
     disc1 = disc1_packages()
     disc2 = disc2_packages()
-    return [disc1, disc2]
+    disc3 = disc3_packages()
+    return [disc1, disc2, disc3]
 
 # Suck the entire INDEX file into a two different dictionaries.  The first
 # dictionary maps port names (origins) to package names.  The second

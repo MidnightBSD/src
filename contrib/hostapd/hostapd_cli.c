@@ -1,6 +1,6 @@
 /*
  * hostapd - command line interface for hostapd daemon
- * Copyright (c) 2004-2005, Jouni Malinen <jkmaline@cc.hut.fi>
+ * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -12,20 +12,16 @@
  * See README and COPYING for more details.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <signal.h>
-#include <unistd.h>
+#include "includes.h"
 #include <dirent.h>
 
-#include "hostapd_ctrl.h"
+#include "wpa_ctrl.h"
 #include "version.h"
 
 
 static const char *hostapd_cli_version =
 "hostapd_cli v" VERSION_STR "\n"
-"Copyright (c) 2004-2005, Jouni Malinen <jkmaline@cc.hut.fi> and contributors";
+"Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi> and contributors";
 
 
 static const char *hostapd_cli_license =
@@ -47,7 +43,7 @@ static const char *hostapd_cli_full_license =
 "\n"
 "You should have received a copy of the GNU General Public License\n"
 "along with this program; if not, write to the Free Software\n"
-"Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA\n"
+"Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA\n"
 "\n"
 "Alternatively, this software may be distributed under the terms of the\n"
 "BSD license.\n"
@@ -81,17 +77,18 @@ static const char *hostapd_cli_full_license =
 "\n";
 
 static const char *commands_help =
-"commands:\n"
-"  mib = get MIB variables (dot1x, dot11, radius)\n"
-"  sta <addr> = get MIB vatiables for one station\n"
-"  all_sta = get MIB variables for all stations\n"
-"  help = show this usage help\n"
-"  interface [ifname] = show interfaces/select interface\n"
-"  level <debug level> = change debug level\n"
-"  license = show full hostapd_cli license\n"
-"  quit = exit hostapd_cli\n";
+"Commands:\n"
+"   mib                  get MIB variables (dot1x, dot11, radius)\n"
+"   sta <addr>           get MIB variables for one station\n"
+"   all_sta              get MIB variables for all stations\n"
+"   new_sta <addr>       add a new station\n"
+"   help                 show this usage help\n"
+"   interface [ifname]   show interfaces/select interface\n"
+"   level <debug level>  change debug level\n"
+"   license              show full hostapd_cli license\n"
+"   quit                 exit hostapd_cli\n";
 
-static struct hostapd_ctrl *ctrl_conn;
+static struct wpa_ctrl *ctrl_conn;
 static int hostapd_cli_quit = 0;
 static int hostapd_cli_attached = 0;
 static const char *ctrl_iface_dir = "/var/run/hostapd";
@@ -100,18 +97,26 @@ static char *ctrl_ifname = NULL;
 
 static void usage(void)
 {
-	printf("hostapd_cli [-p<path to ctrl sockets>] [-i<ifname>] [-hv] "
-	       "[command..]\n"
-	       "  -h = help (show this usage text)\n"
-	       "  -v = shown version information\n"
-	       "  default path: /var/run/hostapd\n"
-	       "  default interface: first interface found in socket path\n"
-	       "%s",
-	       commands_help);
+	fprintf(stderr, "%s\n", hostapd_cli_version);
+	fprintf(stderr, 
+		"\n"	
+		"usage: hostapd_cli [-p<path>] [-i<ifname>] [-hv] "
+		"[command..]\n"
+		"\n"
+		"Options:\n"
+		"   -h           help (show this usage text)\n"
+		"   -v           shown version information\n"
+		"   -p<path>     path to find control sockets (default: "
+		"/var/run/hostapd)\n"
+		"   -i<ifname>   Interface to listen on (default: first "
+		"interface found in the\n"
+		"                socket path)\n\n"
+		"%s",
+		commands_help);
 }
 
 
-static struct hostapd_ctrl * hostapd_cli_open_connection(const char *ifname)
+static struct wpa_ctrl * hostapd_cli_open_connection(const char *ifname)
 {
 	char *cfile;
 	int flen;
@@ -125,7 +130,7 @@ static struct hostapd_ctrl * hostapd_cli_open_connection(const char *ifname)
 		return NULL;
 	snprintf(cfile, flen, "%s/%s", ctrl_iface_dir, ifname);
 
-	ctrl_conn = hostapd_ctrl_open(cfile);
+	ctrl_conn = wpa_ctrl_open(cfile);
 	free(cfile);
 	return ctrl_conn;
 }
@@ -137,10 +142,10 @@ static void hostapd_cli_close_connection(void)
 		return;
 
 	if (hostapd_cli_attached) {
-		hostapd_ctrl_detach(ctrl_conn);
+		wpa_ctrl_detach(ctrl_conn);
 		hostapd_cli_attached = 0;
 	}
-	hostapd_ctrl_close(ctrl_conn);
+	wpa_ctrl_close(ctrl_conn);
 	ctrl_conn = NULL;
 }
 
@@ -151,8 +156,7 @@ static void hostapd_cli_msg_cb(char *msg, size_t len)
 }
 
 
-static int _hostapd_ctrl_command(struct hostapd_ctrl *ctrl, char *cmd,
-				 int print)
+static int _wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd, int print)
 {
 	char buf[4096];
 	size_t len;
@@ -163,7 +167,7 @@ static int _hostapd_ctrl_command(struct hostapd_ctrl *ctrl, char *cmd,
 		return -1;
 	}
 	len = sizeof(buf) - 1;
-	ret = hostapd_ctrl_request(ctrl, cmd, strlen(cmd), buf, &len,
+	ret = wpa_ctrl_request(ctrl, cmd, strlen(cmd), buf, &len,
 			       hostapd_cli_msg_cb);
 	if (ret == -2) {
 		printf("'%s' command timed out.\n", cmd);
@@ -180,28 +184,25 @@ static int _hostapd_ctrl_command(struct hostapd_ctrl *ctrl, char *cmd,
 }
 
 
-static inline int hostapd_ctrl_command(struct hostapd_ctrl *ctrl, char *cmd)
+static inline int wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd)
 {
-	return _hostapd_ctrl_command(ctrl, cmd, 1);
+	return _wpa_ctrl_command(ctrl, cmd, 1);
 }
 
 
-static int hostapd_cli_cmd_ping(struct hostapd_ctrl *ctrl, int argc,
-				char *argv[])
+static int hostapd_cli_cmd_ping(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	return hostapd_ctrl_command(ctrl, "PING");
+	return wpa_ctrl_command(ctrl, "PING");
 }
 
 
-static int hostapd_cli_cmd_mib(struct hostapd_ctrl *ctrl, int argc,
-			       char *argv[])
+static int hostapd_cli_cmd_mib(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	return hostapd_ctrl_command(ctrl, "MIB");
+	return wpa_ctrl_command(ctrl, "MIB");
 }
 
 
-static int hostapd_cli_cmd_sta(struct hostapd_ctrl *ctrl, int argc,
-			       char *argv[])
+static int hostapd_cli_cmd_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	char buf[64];
 	if (argc != 1) {
@@ -210,12 +211,26 @@ static int hostapd_cli_cmd_sta(struct hostapd_ctrl *ctrl, int argc,
 		return -1;
 	}
 	snprintf(buf, sizeof(buf), "STA %s", argv[0]);
-	return hostapd_ctrl_command(ctrl, buf);
+	return wpa_ctrl_command(ctrl, buf);
 }
 
 
-static int hostapd_ctrl_command_sta(struct hostapd_ctrl *ctrl, char *cmd,
-				    char *addr, size_t addr_len)
+static int hostapd_cli_cmd_new_sta(struct wpa_ctrl *ctrl, int argc,
+				   char *argv[])
+{
+	char buf[64];
+	if (argc != 1) {
+		printf("Invalid 'new_sta' command - exactly one argument, STA "
+		       "address, is required.\n");
+		return -1;
+	}
+	snprintf(buf, sizeof(buf), "NEW_STA %s", argv[0]);
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+
+static int wpa_ctrl_command_sta(struct wpa_ctrl *ctrl, char *cmd,
+				char *addr, size_t addr_len)
 {
 	char buf[4096], *pos;
 	size_t len;
@@ -226,7 +241,7 @@ static int hostapd_ctrl_command_sta(struct hostapd_ctrl *ctrl, char *cmd,
 		return -1;
 	}
 	len = sizeof(buf) - 1;
-	ret = hostapd_ctrl_request(ctrl, cmd, strlen(cmd), buf, &len,
+	ret = wpa_ctrl_request(ctrl, cmd, strlen(cmd), buf, &len,
 			       hostapd_cli_msg_cb);
 	if (ret == -2) {
 		printf("'%s' command timed out.\n", cmd);
@@ -250,30 +265,29 @@ static int hostapd_ctrl_command_sta(struct hostapd_ctrl *ctrl, char *cmd,
 }
 
 
-static int hostapd_cli_cmd_all_sta(struct hostapd_ctrl *ctrl, int argc,
-				    char *argv[])
+static int hostapd_cli_cmd_all_sta(struct wpa_ctrl *ctrl, int argc,
+				   char *argv[])
 {
 	char addr[32], cmd[64];
 
-	if (hostapd_ctrl_command_sta(ctrl, "STA-FIRST", addr, sizeof(addr)))
+	if (wpa_ctrl_command_sta(ctrl, "STA-FIRST", addr, sizeof(addr)))
 		return 0;
 	do {
 		snprintf(cmd, sizeof(cmd), "STA-NEXT %s", addr);
-	} while (hostapd_ctrl_command_sta(ctrl, cmd, addr, sizeof(addr)) == 0);
+	} while (wpa_ctrl_command_sta(ctrl, cmd, addr, sizeof(addr)) == 0);
 
 	return -1;
 }
 
 
-static int hostapd_cli_cmd_help(struct hostapd_ctrl *ctrl, int argc,
-				char *argv[])
+static int hostapd_cli_cmd_help(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	printf("%s", commands_help);
 	return 0;
 }
 
 
-static int hostapd_cli_cmd_license(struct hostapd_ctrl *ctrl, int argc,
+static int hostapd_cli_cmd_license(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
 	printf("%s\n\n%s\n", hostapd_cli_version, hostapd_cli_full_license);
@@ -281,16 +295,14 @@ static int hostapd_cli_cmd_license(struct hostapd_ctrl *ctrl, int argc,
 }
 
 
-static int hostapd_cli_cmd_quit(struct hostapd_ctrl *ctrl, int argc,
-				char *argv[])
+static int hostapd_cli_cmd_quit(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	hostapd_cli_quit = 1;
 	return 0;
 }
 
 
-static int hostapd_cli_cmd_level(struct hostapd_ctrl *ctrl, int argc,
-				 char *argv[])
+static int hostapd_cli_cmd_level(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	char cmd[256];
 	if (argc != 1) {
@@ -299,11 +311,11 @@ static int hostapd_cli_cmd_level(struct hostapd_ctrl *ctrl, int argc,
 		return 0;
 	}
 	snprintf(cmd, sizeof(cmd), "LEVEL %s", argv[0]);
-	return hostapd_ctrl_command(ctrl, cmd);
+	return wpa_ctrl_command(ctrl, cmd);
 }
 
 
-static void hostapd_cli_list_interfaces(struct hostapd_ctrl *ctrl)
+static void hostapd_cli_list_interfaces(struct wpa_ctrl *ctrl)
 {
 	struct dirent *dent;
 	DIR *dir;
@@ -326,7 +338,7 @@ static void hostapd_cli_list_interfaces(struct hostapd_ctrl *ctrl)
 }
 
 
-static int hostapd_cli_cmd_interface(struct hostapd_ctrl *ctrl, int argc,
+static int hostapd_cli_cmd_interface(struct wpa_ctrl *ctrl, int argc,
 				     char *argv[])
 {
 	if (argc < 1) {
@@ -340,7 +352,7 @@ static int hostapd_cli_cmd_interface(struct hostapd_ctrl *ctrl, int argc,
 
 	if (hostapd_cli_open_connection(ctrl_ifname)) {
 		printf("Connected to interface '%s.\n", ctrl_ifname);
-		if (hostapd_ctrl_attach(ctrl_conn) == 0) {
+		if (wpa_ctrl_attach(ctrl_conn) == 0) {
 			hostapd_cli_attached = 1;
 		} else {
 			printf("Warning: Failed to attach to "
@@ -356,7 +368,7 @@ static int hostapd_cli_cmd_interface(struct hostapd_ctrl *ctrl, int argc,
 
 struct hostapd_cli_cmd {
 	const char *cmd;
-	int (*handler)(struct hostapd_ctrl *ctrl, int argc, char *argv[]);
+	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
 };
 
 static struct hostapd_cli_cmd hostapd_cli_commands[] = {
@@ -364,6 +376,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "mib", hostapd_cli_cmd_mib },
 	{ "sta", hostapd_cli_cmd_sta },
 	{ "all_sta", hostapd_cli_cmd_all_sta },
+	{ "new_sta", hostapd_cli_cmd_new_sta },
 	{ "help", hostapd_cli_cmd_help },
 	{ "interface", hostapd_cli_cmd_interface },
 	{ "level", hostapd_cli_cmd_level },
@@ -373,7 +386,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 };
 
 
-static void wpa_request(struct hostapd_ctrl *ctrl, int argc, char *argv[])
+static void wpa_request(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	struct hostapd_cli_cmd *cmd, *match = NULL;
 	int count;
@@ -407,15 +420,15 @@ static void wpa_request(struct hostapd_ctrl *ctrl, int argc, char *argv[])
 }
 
 
-static void hostapd_cli_recv_pending(struct hostapd_ctrl *ctrl, int in_read)
+static void hostapd_cli_recv_pending(struct wpa_ctrl *ctrl, int in_read)
 {
 	int first = 1;
 	if (ctrl_conn == NULL)
 		return;
-	while (hostapd_ctrl_pending(ctrl)) {
+	while (wpa_ctrl_pending(ctrl)) {
 		char buf[256];
 		size_t len = sizeof(buf) - 1;
-		if (hostapd_ctrl_recv(ctrl, buf, &len) == 0) {
+		if (wpa_ctrl_recv(ctrl, buf, &len) == 0) {
 			buf[len] = '\0';
 			if (in_read && first)
 				printf("\n");
@@ -484,7 +497,7 @@ static void hostapd_cli_terminate(int sig)
 
 static void hostapd_cli_alarm(int sig)
 {
-	if (ctrl_conn && _hostapd_ctrl_command(ctrl_conn, "PING", 0)) {
+	if (ctrl_conn && _wpa_ctrl_command(ctrl_conn, "PING", 0)) {
 		printf("Connection to hostapd lost - trying to reconnect\n");
 		hostapd_cli_close_connection();
 	}
@@ -492,7 +505,7 @@ static void hostapd_cli_alarm(int sig)
 		ctrl_conn = hostapd_cli_open_connection(ctrl_ifname);
 		if (ctrl_conn) {
 			printf("Connection to hostapd re-established\n");
-			if (hostapd_ctrl_attach(ctrl_conn) == 0) {
+			if (wpa_ctrl_attach(ctrl_conn) == 0) {
 				hostapd_cli_attached = 1;
 			} else {
 				printf("Warning: Failed to attach to "
@@ -524,6 +537,7 @@ int main(int argc, char *argv[])
 			printf("%s\n", hostapd_cli_version);
 			return 0;
 		case 'i':
+			free(ctrl_ifname);
 			ctrl_ifname = strdup(optarg);
 			break;
 		case 'p':
@@ -568,7 +582,7 @@ int main(int argc, char *argv[])
 
 		if (!interactive) {
 			perror("Failed to connect to hostapd - "
-			       "hostapd_ctrl_open");
+			       "wpa_ctrl_open");
 			return -1;
 		}
 
@@ -585,7 +599,7 @@ int main(int argc, char *argv[])
 	signal(SIGALRM, hostapd_cli_alarm);
 
 	if (interactive) {
-		if (hostapd_ctrl_attach(ctrl_conn) == 0) {
+		if (wpa_ctrl_attach(ctrl_conn) == 0) {
 			hostapd_cli_attached = 1;
 		} else {
 			printf("Warning: Failed to attach to hostapd.\n");

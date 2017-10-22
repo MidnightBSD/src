@@ -1,5 +1,7 @@
 #	@(#)Makefile	8.8 (Berkeley) 3/28/97
-# $FreeBSD: src/usr.sbin/sendmail/Makefile,v 1.51.2.1 2005/08/20 01:39:08 gshapiro Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/sendmail/Makefile 168522 2007-04-09 01:45:52Z gshapiro $
+
+.include <bsd.own.mk>
 
 SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 SMDIR=	${SENDMAIL_DIR}/src
@@ -28,17 +30,16 @@ BINMODE=2555
 # Define the database format to use for aliases et al.
 DBMDEF=	-DNEWDB
 # If you don't want NIS alias/map support, comment out this line
-.if !defined(NO_NIS)
+.if ${MK_NIS} != "no"
 NIS=	-DNIS
 .endif
 # Map extensions
 MAPS=	-DMAP_REGEX -DDNSMAP
 
-CSTD?=	c89
 CFLAGS+= -I${SMDIR} -I${SENDMAIL_DIR}/include -I.
 CFLAGS+= ${DBMDEF} ${NIS} -DTCPWRAPPERS ${MAPS}
 
-.if !defined(NO_INET6)
+.if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+= -DNETINET6
 .endif
 
@@ -57,9 +58,9 @@ LDADD+=	${LIBSMUTIL} ${LIBSM}
 SRCS+=	sm_os.h
 CLEANFILES+=sm_os.h
 
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL) && !defined(RELEASE_CRUNCH)
+.if ${MK_OPENSSL} != "no" && !defined(RELEASE_CRUNCH)
 # STARTTLS support
-CFLAGS+=	-DSTARTTLS -D_FFR_TLS_1 -D_FFR_DEAL_WITH_ERROR_SSL
+CFLAGS+=	-DSTARTTLS -D_FFR_TLS_1
 DPADD+=		${LIBSSL} ${LIBCRYPTO}
 LDADD+=		-lssl -lcrypto
 .endif

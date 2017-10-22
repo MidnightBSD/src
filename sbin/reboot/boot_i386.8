@@ -34,7 +34,7 @@
 .\"
 .\"     @(#)boot_i386.8	8.2 (Berkeley) 4/19/94
 .\"
-.\" $FreeBSD: src/sbin/reboot/boot_i386.8,v 1.52.2.5 2006/02/15 15:10:55 ru Exp $
+.\" $FreeBSD: release/7.0.0/sbin/reboot/boot_i386.8 171883 2007-08-18 07:58:36Z danger $
 .\"
 .Dd August 18, 2005
 .Dt BOOT 8 i386
@@ -81,15 +81,6 @@ is displayed) before
 is invoked.
 Booting will also be attempted at stage two, if the
 third stage cannot be loaded.
-.Pp
-Make note of the fact that
-.Pa /boot.config
-is read only from the
-.Ql a
-partition.
-As a result, slices which are missing an
-.Ql a
-partition require user intervention during the boot process.
 .Pp
 The remainder of this subsection deals only with the boot blocks.
 The
@@ -239,7 +230,8 @@ See the man page for
 .Xr sio 4
 for more details.
 .It Fl m
-mute the console.
+mute the console to suppress all console input and output during the
+boot.
 .It Fl n
 ignore key press to interrupt boot before
 .Xr loader 8
@@ -289,13 +281,14 @@ be verbose during device probing (and later).
 .El
 .El
 .Pp
-You may put a BIOS drive number, a controller type, a unit number,
-a partition, a kernel file name, and any valid option in
+Use the
 .Pa /boot.config
-to set defaults.
-Enter them in one line just as you type at the
-.Ql boot:
-prompt.
+file to set the default configuration options for the boot block code.
+See
+.Xr boot.config 5
+for more information about the
+.Pa /boot.config
+file.
 .Sh FILES
 .Bl -tag -width /boot/loader -compact
 .It Pa /boot.config
@@ -352,6 +345,7 @@ is reported by the second-stage bootstrap, it generally means that this
 requirement has not been adhered to.
 .Sh SEE ALSO
 .Xr ddb 4 ,
+.Xr boot.config 5 ,
 .Xr make.conf 5 ,
 .Xr ttys 5 ,
 .Xr boot0cfg 8 ,
@@ -360,6 +354,7 @@ requirement has not been adhered to.
 .Xr config 8 ,
 .Xr halt 8 ,
 .Xr loader 8 ,
+.Xr nextboot 8 ,
 .Xr reboot 8 ,
 .Xr shutdown 8
 .Sh BUGS

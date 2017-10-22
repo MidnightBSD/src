@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/examples/pppd/options.sample,v 1.2 2004/11/19 17:31:31 obrien Exp $
+# $FreeBSD: release/7.0.0/share/examples/pppd/options.sample 137892 2004-11-19 17:31:31Z obrien $
 #
 # Example for /etc/ppp/options file.
 #

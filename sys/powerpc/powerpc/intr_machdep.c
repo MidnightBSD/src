@@ -57,7 +57,7 @@
  *	from: @(#)isa.c	7.2 (Berkeley) 5/13/91
  *	form: src/sys/i386/isa/intr_machdep.c,v 1.57 2001/07/20
  *
- * $FreeBSD: src/sys/powerpc/powerpc/intr_machdep.c,v 1.6 2004/07/02 20:21:43 jhb Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/powerpc/intr_machdep.c 173943 2007-11-26 16:14:45Z scottl $
  */
 
 #include <sys/param.h>
@@ -66,41 +66,37 @@
 #include <sys/queue.h>
 #include <sys/bus.h>
 #include <sys/interrupt.h>
+#include <sys/ktr.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/pcpu.h>
+#include <sys/syslog.h>
 #include <sys/vmmeter.h>
 #include <sys/proc.h>
 
 #include <machine/frame.h>
-#include <machine/interruptvar.h>
 #include <machine/intr_machdep.h>
+#include <machine/md_var.h>
 #include <machine/trap.h>
+
+#include "pic_if.h"
 
 #define	MAX_STRAY_LOG	5
 
 MALLOC_DEFINE(M_INTR, "intr", "interrupt handler data");
 
-static int	intr_initialized = 0;
+struct powerpc_intr {
+	struct intr_event *event;
+	long	*cntp;
+	u_int	irq;
+};
 
-static u_int		intr_nirq;
-static struct		intr_handler *intr_handlers;
+static struct powerpc_intr *powerpc_intrs[INTR_VECTORS];
+static u_int nvectors;		/* Allocated vectors */
+static u_int stray_count;
 
-static struct		mtx intr_table_lock;
-
-extern int	extint, extsize;
-extern u_long	extint_call;
-
-static int 		intrcnt_index;
-static ih_func_t	intr_stray_handler;
-static ih_func_t	sched_ithd;
-
-static void		(*irq_enable)(uintptr_t);
-static void		(*irq_disable)(uintptr_t);
-
-static void intrcnt_setname(const char *name, int index);
-static void intrcnt_updatename(struct intr_handler *ih);
+device_t pic;
 
 static void
 intrcnt_setname(const char *name, int index)
@@ -109,207 +105,202 @@ intrcnt_setname(const char *name, int index)
 	    MAXCOMLEN, name);
 }
 
+#ifdef INTR_FILTER
 static void
-intrcnt_updatename(struct intr_handler *ih)
+powerpc_intr_eoi(void *arg)
 {
-	intrcnt_setname(ih->ih_ithd->it_td->td_proc->p_comm, ih->ih_index);
+	u_int irq = (uintptr_t)arg;
+
+	PIC_EOI(pic, irq);
 }
 
 static void
-intrcnt_register(struct intr_handler *ih)
+powerpc_intr_mask(void *arg)
 {
-	char straystr[MAXCOMLEN + 1];
+	u_int irq = (uintptr_t)arg;
 
-	KASSERT(ih->ih_ithd != NULL,
-		("%s: intr_handler with no ithread", __func__));
+	PIC_MASK(pic, irq);
+}
+#endif
 
-	ih->ih_index = intrcnt_index;
-	intrcnt_index += 2;
-	snprintf(straystr, MAXCOMLEN + 1, "stray irq%d", ih->ih_irq);
-	intrcnt_updatename(ih);
-	ih->ih_count = &intrcnt[ih->ih_index];
-	intrcnt_setname(straystr, ih->ih_index + 1);
-	ih->ih_straycount = &intrcnt[ih->ih_index + 1];
+static void
+powerpc_intr_unmask(void *arg)
+{
+	u_int irq = (uintptr_t)arg;
+
+	PIC_UNMASK(pic, irq);
 }
 
 void
-intr_init(void (*handler)(void), int nirq, void (*irq_e)(uintptr_t),
-    void (*irq_d)(uintptr_t))
+powerpc_register_pic(device_t dev)
 {
-	int		i;
-	u_int32_t	msr;
 
-	if (intr_initialized != 0)
-		panic("intr_init: interrupts intialized twice\n");
-
-	intr_initialized++;
-
-	intr_nirq = nirq;
-	intr_handlers = malloc(nirq * sizeof(struct intr_handler), M_INTR,
-	    M_NOWAIT|M_ZERO);
-	if (intr_handlers == NULL)
-		panic("intr_init: unable to allocate interrupt handler array");
-
-	for (i = 0; i < nirq; i++) {
-		intr_handlers[i].ih_func = intr_stray_handler;
-		intr_handlers[i].ih_arg = &intr_handlers[i];
-		intr_handlers[i].ih_irq = i;
-		intr_handlers[i].ih_flags = 0;
-		/* mux all initial stray irqs onto same count... */
-		intr_handlers[i].ih_straycount = &intrcnt[0];
-	}
-
-	intrcnt_setname("???", 0);
-	intrcnt_index = 1;
-
-	msr = mfmsr();
-	mtmsr(msr & ~PSL_EE);
-
-	ext_intr_install(handler);
-
-	mtmsr(msr);
-
-	irq_enable = irq_e;
-	irq_disable = irq_d;
-
-	mtx_init(&intr_table_lock, "ithread table lock", NULL, MTX_SPIN);
-}
-
-void
-intr_setup(u_int irq, ih_func_t *ihf, void *iha, u_int flags)
-{
-	u_int32_t	msr;
-
-	msr = mfmsr();
-	mtmsr(msr & ~PSL_EE);
-
-	intr_handlers[irq].ih_func = ihf;
-	intr_handlers[irq].ih_arg = iha;
-	intr_handlers[irq].ih_irq = irq;
-	intr_handlers[irq].ih_flags = flags;
-
-	mtmsr(msr);
+	pic = dev;
 }
 
 int
-inthand_add(const char *name, u_int irq, void (*handler)(void *), void *arg,
-    int flags, void **cookiep)
+powerpc_enable_intr(void)
 {
-	struct	intr_handler *ih;
-	struct	ithd *ithd, *orphan;
-	int	error = 0;
-	int	created_ithd = 0;
+	struct powerpc_intr *i;
+	int vector;
 
-	/*
-	 * Work around a race where more than one CPU may be registering
-	 * handlers on the same IRQ at the same time.
-	 */
-	ih = &intr_handlers[irq];
-	mtx_lock_spin(&intr_table_lock);
-	ithd = ih->ih_ithd;
-	mtx_unlock_spin(&intr_table_lock);
-	if (ithd == NULL) {
-		error = ithread_create(&ithd, irq, 0, irq_disable,
-		    irq_enable, "irq%d:", irq);
-		if (error)
-			return (error);
+	for (vector = 0; vector < nvectors; vector++) {
+		i = powerpc_intrs[vector];
+		if (i == NULL)
+			continue;
 
-		mtx_lock_spin(&intr_table_lock);
-
-		if (ih->ih_ithd == NULL) {
-			ih->ih_ithd = ithd;
-			created_ithd++;
-			mtx_unlock_spin(&intr_table_lock);
-		} else {
-			orphan = ithd;
-			ithd = ih->ih_ithd;
-			mtx_unlock_spin(&intr_table_lock);
-			ithread_destroy(orphan);
-		}
+		PIC_ENABLE(pic, i->irq, vector);
 	}
-
-	error = ithread_add_handler(ithd, name, handler, arg,
-	    ithread_priority(flags), flags, cookiep);
-
-	if ((flags & INTR_FAST) == 0 || error) {
-		intr_setup(irq, sched_ithd, ih, flags);
-		error = 0;
-	}
-
-	if (error)
-		return (error);
-
-	if (flags & INTR_FAST)
-		intr_setup(irq, handler, arg, flags);
-
-	intrcnt_register(ih);
 
 	return (0);
 }
 
 int
-inthand_remove(u_int irq, void *cookie)
+powerpc_setup_intr(const char *name, u_int irq, driver_filter_t filter, 
+    driver_intr_t handler, void *arg, enum intr_type flags, void **cookiep)
 {
-	struct	intr_handler *ih;
-	int	error;
+	struct powerpc_intr *i;
+	u_int vector;
+	int error;
 
-	error = ithread_remove_handler(cookie);
+	/* XXX lock */
 
-	if (error == 0) {
-		ih = &intr_handlers[irq];
-
-		mtx_lock_spin(&intr_table_lock);
-
-		if (ih->ih_ithd == NULL) {
-			intr_setup(irq, intr_stray_handler, ih, 0);
-		} else {
-			intr_setup(irq, sched_ithd, ih, 0);
-		}
-
-		mtx_unlock_spin(&intr_table_lock);
+	i = NULL;
+	for (vector = 0; vector < nvectors; vector++) {
+		i = powerpc_intrs[vector];
+		if (i == NULL)
+			continue;
+		if (i->irq == irq)
+			break;
+		i = NULL;
 	}
 
+	if (i == NULL) {
+		if (nvectors >= INTR_VECTORS) {
+			/* XXX unlock */
+			return (ENOENT);
+		}
+
+		i = malloc(sizeof(*i), M_INTR, M_NOWAIT);
+		if (i == NULL) {
+			/* XXX unlock */
+			return (ENOMEM);
+		}
+		error = intr_event_create(&i->event, (void *)irq, 0,
+		    powerpc_intr_unmask,
+#ifdef INTR_FILTER
+		    powerpc_intr_eoi, powerpc_intr_mask,
+#endif
+		    "irq%u:", irq);
+		if (error) {
+			/* XXX unlock */
+			free(i, M_INTR);
+			return (error);
+		}
+
+		vector = nvectors++;
+		powerpc_intrs[vector] = i;
+
+		i->irq = irq;
+
+		/* XXX unlock */
+
+		i->cntp = &intrcnt[vector];
+		intrcnt_setname(i->event->ie_fullname, vector);
+
+		if (!cold)
+			PIC_ENABLE(pic, i->irq, vector);
+	} else {
+		/* XXX unlock */
+	}
+
+	error = intr_event_add_handler(i->event, name, filter, handler, arg,
+	    intr_priority(flags), flags, cookiep);
+	if (!error)
+		intrcnt_setname(i->event->ie_fullname, vector);
 	return (error);
 }
 
+int
+powerpc_teardown_intr(void *cookie)
+{
+
+	return (intr_event_remove_handler(cookie));
+}
+
 void
-intr_handle(u_int irq)
+powerpc_dispatch_intr(u_int vector, struct trapframe *tf)
 {
-	atomic_add_long(intr_handlers[irq].ih_count, 1);
-	intr_handlers[irq].ih_func(intr_handlers[irq].ih_arg);
+	struct powerpc_intr *i;
+	struct intr_event *ie;
+#ifndef INTR_FILTER
+	struct intr_handler *ih;
+	int error, sched, ret;
+#endif
 
-	/* XXX wrong thing when using pre-emption ? */
-	if ((intr_handlers[irq].ih_flags & INTR_FAST) != 0)
-		irq_enable(irq);
-}
+	i = powerpc_intrs[vector];
+	if (i == NULL)
+		goto stray;
 
-static void
-intr_stray_handler(void *cookie)
-{
-	struct	intr_handler *ih;
+	(*i->cntp)++;
 
-	ih = (struct intr_handler *)cookie;
+	ie = i->event;
+	KASSERT(ie != NULL, ("%s: interrupt without an event", __func__));
 
-	if (*intr_handlers[ih->ih_irq].ih_straycount < MAX_STRAY_LOG) {
-		printf("stray irq %d\n", ih->ih_irq);
-
-		atomic_add_long(intr_handlers[ih->ih_irq].ih_straycount, 1);
-		if (*intr_handlers[ih->ih_irq].ih_straycount >= MAX_STRAY_LOG)
-			printf("got %d stray irq %d's: not logging anymore\n",
-			       MAX_STRAY_LOG, ih->ih_irq);
+#ifdef INTR_FILTER
+	if (intr_event_handle(ie, tf) != 0) {
+		PIC_MASK(pic, i->irq);
+		log(LOG_ERR, "stray irq%u\n", i->irq);
 	}
-}
+#else
+	if (TAILQ_EMPTY(&ie->ie_handlers))
+		goto stray;
 
-static void
-sched_ithd(void *cookie)
-{
-	struct	intr_handler *ih;
-	int	error;
+	/*
+	 * Execute all fast interrupt handlers directly without Giant.  Note
+	 * that this means that any fast interrupt handler must be MP safe.
+	 */
+	ret = 0;
+	sched = 0;
+	critical_enter();
+	TAILQ_FOREACH(ih, &ie->ie_handlers, ih_next) {
+		if (ih->ih_filter == NULL) {
+			sched = 1;
+			continue;
+		}
+		CTR4(KTR_INTR, "%s: exec %p(%p) for %s", __func__,
+		    ih->ih_filter, ih->ih_argument, ih->ih_name);
+		ret = ih->ih_filter(ih->ih_argument);
+		/*
+		 * Wrapper handler special case: see
+		 * i386/intr_machdep.c::intr_execute_handlers()
+		 */
+		if (!sched) {
+			if (ret == FILTER_SCHEDULE_THREAD)
+				sched = 1;
+		}
+	}
 
-	ih = (struct intr_handler *)cookie;
+	if (sched) {
+		PIC_MASK(pic, i->irq);
+		error = intr_event_schedule_thread(ie);
+		KASSERT(error == 0, ("%s: impossible stray interrupt",
+		    __func__));
+	} else
+		PIC_EOI(pic, i->irq);
+	critical_exit();
+#endif
+	return;
 
-	error = ithread_schedule(ih->ih_ithd);
-
-	if (error == EINVAL)
-		intr_stray_handler(ih);
+stray:
+	stray_count++;
+	if (stray_count <= MAX_STRAY_LOG) {
+		printf("stray irq %d\n", i->irq);
+		if (stray_count >= MAX_STRAY_LOG) {
+			printf("got %d stray interrupts, not logging anymore\n",
+			    MAX_STRAY_LOG);
+		}
+	}
+	if (i != NULL)
+		PIC_MASK(pic, i->irq);
 }

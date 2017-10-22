@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/ofw/ofw_syscons.c,v 1.7.2.2 2005/10/05 21:48:03 marius Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/ofw/ofw_syscons.c 150686 2005-09-28 14:54:07Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

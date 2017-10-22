@@ -80,7 +80,7 @@
 /*static char *sccsid = "from: @(#)xdr.c	2.1 88/07/29 4.0 RPCSRC";*/
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/spans/spans_kxdr.c,v 1.15 2005/01/07 01:45:38 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/netatm/spans/spans_kxdr.c 139823 2005-01-07 01:45:51Z imp $");
 
 /*
  * xdr.c, Generic XDR routines implementation.

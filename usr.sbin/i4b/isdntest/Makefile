@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/i4b/isdntest/Makefile,v 1.7 2003/04/13 14:21:56 bde Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/i4b/isdntest/Makefile 113438 2003-04-13 14:21:56Z bde $
 
 PROG=	isdntest
 MAN=	isdntest.8

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/id.h,v 1.16 2004/09/07 06:28:00 marcel Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ppp/id.h 134885 2004-09-07 06:28:00Z marcel $
  */
 
 #ifndef NOSUID

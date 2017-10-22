@@ -1,6 +1,6 @@
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: src/release/doc/ru_RU.KOI8-R/relnotes/amd64/Makefile,v 1.1 2004/05/21 11:59:55 den Exp $
+# $FreeBSD: release/7.0.0/release/doc/ru_RU.KOI8-R/relnotes/amd64/Makefile 129544 2004-05-21 11:59:56Z den $
 # $FreeBSDru: frdp/release/doc/ru_RU.KOI8-R/relnotes/amd64/Makefile,v 1.1 2004/05/20 07:02:25 den Exp $
 #
 # Original revision: 1.1

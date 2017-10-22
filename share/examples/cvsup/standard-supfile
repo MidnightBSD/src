@@ -1,7 +1,7 @@
-# $FreeBSD: src/share/examples/cvsup/standard-supfile,v 1.23.4.2 2006/02/14 02:32:25 hrs Exp $
+# $FreeBSD: release/7.0.0/share/examples/cvsup/standard-supfile 174861 2007-12-22 13:39:03Z kensmith $
 #
 # This file contains all of the "CVSup collections" that make up the
-# FreeBSD 6.x-STABLE source tree.
+# FreeBSD-current source tree.
 #
 # CVSup (CVS Update Protocol) allows you to download the latest CVS
 # tree (or any branch of development therefrom) to your system easily
@@ -32,11 +32,9 @@
 #		This specifies the root where CVSup will store information
 #		about the collections you have transferred to your system.
 #		A setting of "/var/db" will generate this information in
-#		/var/db/sup.  Even if you are CVSupping a large number of
-#		collections, you will be hard pressed to generate more than
-#		~1MB of data in this directory.  You can override the
-#		"base" setting on the command line with cvsup's "-b base"
-#		option.  This directory must exist in order to run CVSup.
+#		/var/db/sup.  You can override the "base" setting on the
+#		command line with cvsup's "-b base" option.  This directory
+#		must exist in order to run CVSup.
 #
 # prefix=/usr
 #		This specifies where to place the requested files.  A
@@ -51,7 +49,7 @@
 *default host=CHANGE_THIS.FreeBSD.org
 *default base=/var/db
 *default prefix=/usr
-*default release=cvs tag=RELENG_6
+*default release=cvs tag=RELENG_7_0
 *default delete use-rel-suffix
 
 # If you seem to be limited by CPU rather than network or disk bandwidth, try
@@ -69,6 +67,7 @@ src-all
 # use these, be sure to comment out "src-all" above.
 #src-base
 #src-bin
+#src-cddl
 #src-contrib
 #src-etc
 #src-games
@@ -79,6 +78,7 @@ src-all
 #src-lib
 #src-libexec
 #src-release
+#src-rescue
 #src-sbin
 #src-share
 #src-sys

@@ -2,8 +2,8 @@
      The FreeBSD Documentation Project
      The FreeBSD French Documentation Project
 
-     $Id: trouble.sgml,v 1.1.1.2 2006-02-25 02:35:16 laffer1 Exp $
-     $FreeBSD: src/release/doc/fr_FR.ISO8859-1/installation/common/trouble.sgml,v 1.4 2003/01/01 18:48:45 schweikh Exp $
+     $Id$
+     $FreeBSD: release/7.0.0/release/doc/fr_FR.ISO8859-1/installation/common/trouble.sgml 108533 2003-01-01 18:49:04Z schweikh $
      Original revision: 1.5
 
 	This file contains the comments of the old TROUBLE.TXT file.

@@ -23,7 +23,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/fdformat/fdformat.c,v 1.22 2004/08/20 15:14:25 phk Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/fdformat/fdformat.c 134081 2004-08-20 15:14:25Z phk $
  */
 
 #include <sys/types.h>

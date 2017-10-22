@@ -2,8 +2,8 @@
      The FreeBSD Documentation Project
      The FreeBSD French Documentation Project
 
-     $Id: dev.sgml,v 1.1.1.2 2006-02-25 02:35:15 laffer1 Exp $
-     $FreeBSD: src/release/doc/fr_FR.ISO8859-1/hardware/common/dev.sgml,v 1.7 2002/11/09 11:32:40 gioria Exp $
+     $Id: dev.sgml,v 1.3 2002/09/29 21:03:53 eagle Exp $
+     $FreeBSD: release/7.0.0/release/doc/fr_FR.ISO8859-1/hardware/common/dev.sgml 106695 2002-11-09 11:32:41Z gioria $
      Original revision: 1.114
 -->
 <!--
@@ -39,7 +39,7 @@
 
 <sect1>
   <sect1info>
-    <pubdate>$FreeBSD: src/release/doc/fr_FR.ISO8859-1/hardware/common/dev.sgml,v 1.7 2002/11/09 11:32:40 gioria Exp $</pubdate>
+    <pubdate>$FreeBSD: release/7.0.0/release/doc/fr_FR.ISO8859-1/hardware/common/dev.sgml 106695 2002-11-09 11:32:41Z gioria $</pubdate>
   </sect1info>
 
   <title>P&eacute;riph&eacute;riques support&eacute;s</title>

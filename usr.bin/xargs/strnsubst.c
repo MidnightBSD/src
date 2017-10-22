@@ -9,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/xargs/strnsubst.c,v 1.7 2004/10/18 15:40:47 cperciva Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/xargs/strnsubst.c 153917 2005-12-30 23:22:50Z jmallett $");
 
 #include <err.h>
 #include <stdlib.h>
@@ -36,6 +36,18 @@ strnsubst(char **str, const char *match, const char *replstr, size_t maxsize)
 	s1 = *str;
 	if (s1 == NULL)
 		return;
+	/*
+	 * If maxsize is 0 then set it to to the length of s1, because we have
+	 * to duplicate s1.  XXX we maybe should double-check whether the match
+	 * appears in s1.  If it doesn't, then we also have to set the length
+	 * to the length of s1, to avoid modifying the argument.  It may make
+	 * sense to check if maxsize is <= strlen(s1), because in that case we
+	 * want to return the unmodified string, too.
+	 */
+	if (maxsize == 0) {
+		match = NULL;
+		maxsize = strlen(s1) + 1;
+	}
 	s2 = calloc(maxsize, 1);
 	if (s2 == NULL)
 		err(1, "calloc");

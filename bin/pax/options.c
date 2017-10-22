@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)options.c	8.2 (Berkeley) 4/18/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pax/options.c,v 1.31 2004/04/06 20:06:48 markm Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/pax/options.c 127958 2004-04-06 20:06:54Z markm $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

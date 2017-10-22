@@ -10,7 +10,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/create/main.c,v 1.36.2.1 2005/11/11 08:07:24 krion Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/create/main.c 162803 2006-09-29 17:23:14Z ru $");
 
 #include <err.h>
 #include "lib.h"
@@ -41,7 +41,12 @@ char	PlayPen[FILENAME_MAX];
 int	Dereference	= FALSE;
 int	PlistOnly	= FALSE;
 int	Recursive	= FALSE;
-enum zipper	Zipper	= GZIP;
+#if defined(__FreeBSD_version) && __FreeBSD_version >= 500039
+enum zipper	Zipper  = BZIP2;
+#else
+enum zipper	Zipper  = GZIP;
+#endif
+
 
 static void usage __P((void));
 
@@ -55,7 +60,7 @@ main(int argc, char **argv)
     while ((ch = getopt(argc, argv, Options)) != -1)
 	switch(ch) {
 	case 'v':
-	    Verbose = TRUE;
+	    Verbose++;
 	    break;
 
 	case 'x':
@@ -223,12 +228,12 @@ static void
 usage()
 {
     fprintf(stderr, "%s\n%s\n%s\n%s\n%s\n%s\n%s\n",
-"usage: pkg_create [-YNOhvyz] [-P pkgs] [-C conflicts] [-p prefix] ",
-"                  [-i iscript] [-I piscript] [-k dscript] [-K pdscript] ",
-"                  [-r rscript] [-t template] [-X excludefile] ",
-"                  [-D displayfile] [-m mtreefile] [-o origin] ",
-"                  [-s srcdir] [-S basedir] ",
+"usage: pkg_create [-YNOhjvyz] [-C conflicts] [-P pkgs] [-p prefix]",
+"                  [-i iscript] [-I piscript] [-k dscript] [-K pdscript]",
+"                  [-r rscript] [-s srcdir] [-S basedir]",
+"                  [-t template] [-X excludefile]",
+"                  [-D displayfile] [-m mtreefile] [-o originpath]",
 "                  -c comment -d description -f packlist pkg-filename",
-"       pkg_create [-EGYNhvxyzR] -b pkg-name [pkg-filename]");
+"       pkg_create [-EGYNRhvxy] -b pkg-name [pkg-filename]");
     exit(1);
 }

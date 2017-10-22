@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/powerpc/powerpc/db_trace.c,v 1.9 2005/01/07 02:29:20 imp Exp $ */
+/*	$FreeBSD: release/7.0.0/sys/powerpc/powerpc/db_trace.c 160312 2006-07-12 21:22:44Z jhb $ */
 /*	$NetBSD: db_trace.c,v 1.20 2002/05/13 20:30:09 matt Exp $	*/
 /*	$OpenBSD: db_trace.c,v 1.3 1997/03/21 02:10:48 niklas Exp $	*/
 
@@ -32,6 +32,7 @@
 #include <sys/systm.h>
 #include <sys/kdb.h>
 #include <sys/proc.h>
+#include <sys/stack.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -96,6 +97,7 @@ struct db_variable db_regs[] = {
 struct db_variable *db_eregs = db_regs + sizeof (db_regs)/sizeof (db_regs[0]);
 
 extern int trapexit[];
+extern int asttrapexit[];
 extern int end[];
 
 /*
@@ -129,7 +131,6 @@ db_backtrace(struct thread *td, db_addr_t fp, int count)
 	const char *symname;
 	boolean_t kernel_only = TRUE;
 	boolean_t full = FALSE;
-	int quit;
 
 #if 0
 	{
@@ -149,9 +150,7 @@ db_backtrace(struct thread *td, db_addr_t fp, int count)
 
 	stackframe = fp;
 
-	quit = 0;
-	db_setup_paging(db_simple_pager, &quit, db_lines_per_page);
-	while (!quit) {
+	while (!db_pager_quit) {
 		if (stackframe < PAGE_SIZE)
 			break;
 
@@ -185,11 +184,13 @@ db_backtrace(struct thread *td, db_addr_t fp, int count)
 		db_printf("0x%08x: ", stackframe);
 
 		/*
-		 * The trap code labels the return address from the
-		 * call to C code as 'trapexit'. Use this to determine
-		 * if the callframe has to traverse a saved trap context
+		 * The trap code labels the return addresses from the
+		 * call to C code as 'trapexit' and 'asttrapexit. Use this
+		 * to determine if the callframe has to traverse a saved
+		 * trap context
 		 */
-		if (lr + 4 == (db_addr_t) &trapexit) {
+		if ((lr + 4 == (db_addr_t) &trapexit) ||
+		    (lr + 4 == (db_addr_t) &asttrapexit)) {
 			const char *trapstr;
 			struct trapframe *tf = (struct trapframe *)
 				(stackframe+8);
@@ -285,5 +286,38 @@ db_trace_thread(struct thread *td, int count)
 
 	ctx = kdb_thr_ctx(td);
 	return (db_backtrace(td, (db_addr_t)ctx->pcb_sp, count));
+}
+
+void
+stack_save(struct stack *st)
+{
+	vm_offset_t callpc;
+	db_addr_t stackframe;
+
+	stack_zero(st);
+	stackframe = (db_addr_t)__builtin_frame_address(1);
+	if (stackframe < PAGE_SIZE)
+		return;
+	while (1) {
+		stackframe = *(db_addr_t *)stackframe;
+		if (stackframe < PAGE_SIZE)
+			break;
+		callpc = *(vm_offset_t *)(stackframe + 4) - 4;
+		if ((callpc & 3) || (callpc < 0x100))
+			break;
+
+		/*
+		 * Don't bother traversing trap-frames - there should
+		 * be enough info down to the frame to work out where
+		 * things are going wrong. Plus, prevents this shortened
+		 * version of code from accessing user-space frames
+		 */
+		if (callpc + 4 == (db_addr_t) &trapexit ||
+		    callpc + 4 == (db_addr_t) &asttrapexit)
+			break;
+
+		if (stack_put(st, callpc) == -1)
+			break;
+	}
 }
 

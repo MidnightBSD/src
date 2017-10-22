@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/mppe.h,v 1.2 2000/11/07 23:19:11 brian Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ppp/mppe.h 68461 2000-11-07 23:19:11Z brian $
  */
 
 #define MPPE_KEY_LEN	16

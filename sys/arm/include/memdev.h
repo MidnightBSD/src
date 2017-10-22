@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/memdev.h,v 1.1 2004/11/07 23:01:36 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/memdev.h 137362 2004-11-07 23:01:36Z cognet $
  */
 
 #define CDEV_MAJOR	2

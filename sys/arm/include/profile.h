@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)profile.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: src/sys/arm/include/profile.h,v 1.6 2005/01/05 21:58:48 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/profile.h 169768 2007-05-19 16:20:37Z cognet $
  */
 
 #ifndef _MACHINE_PROFILE_H_
@@ -61,9 +61,9 @@ typedef u_long	fptrdiff_t;
 #define	MCOUNT								\
 	__asm__(".text");						\
 	__asm__(".align	0");						\
-	__asm__(".type	_mcount ,%function");				\
-	__asm__(".global	_mcount");				\
-	__asm__("_mcount:");						\
+	__asm__(".type	__mcount ,%function");				\
+	__asm__(".global	__mcount");				\
+	__asm__("__mcount:");						\
 	/*								\
 	 * Preserve registers that are trashed during mcount		\
 	 */								\

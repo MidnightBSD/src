@@ -25,80 +25,93 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/kldunload/kldunload.c,v 1.15 2005/01/30 13:23:04 ru Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sbin/kldunload/kldunload.c 156091 2006-02-27 22:20:57Z wkoszek $");
+
+#include <sys/param.h>
+#include <sys/linker.h>
 
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sysexits.h>
 #include <unistd.h>
-#include <sys/param.h>
-#include <sys/linker.h>
 
 static void
 usage(void)
 {
-    fprintf(stderr, "usage: kldunload [-fv] -i id\n");
-    fprintf(stderr, "       kldunload [-fv] [-n] name\n");
-    exit(1);
+	fprintf(stderr, "usage: kldunload [-fv] -i id ...\n");
+	fprintf(stderr, "       kldunload [-fv] [-n] name ...\n");
+	exit(EX_USAGE);
 }
+
+#define OPT_NULL	0x00
+#define OPT_ID		0x01
+#define OPT_VERBOSE	0x02
+#define OPT_FORCE	0x04
 
 int
 main(int argc, char** argv)
 {
-    int c;
-    int verbose = 0;
-    int fileid = 0;
-    int force = LINKER_UNLOAD_NORMAL;
-    char* filename = NULL;
-
-    while ((c = getopt(argc, argv, "fi:n:v")) != -1)
-	switch (c) {
-	case 'f':
-	    force = LINKER_UNLOAD_FORCE;
-	    break;
-	case 'i':
-	    fileid = atoi(optarg);
-	    if (!fileid)
-		errx(1, "Invalid ID %s", optarg);
-	    break;
-	case 'n':
-	    filename = optarg;
-	    break;
-	case 'v':
-	    verbose = 1;
-	    break;
-	default:
-	    usage();
-	}
-    argc -= optind;
-    argv += optind;
-
-    if (fileid == 0 && filename == NULL && (argc == 1)) {
-	filename = *argv;
-	argc--;
-    }
-    
-    if (argc != 0 || (fileid != 0 && filename != NULL))
-	usage();
-
-    if (fileid == 0 && filename == NULL)
-	usage();
-
-    if (filename != NULL) {
-	if ((fileid = kldfind(filename)) < 0)
-	    err(1, "can't find file %s", filename);
-    }
-
-    if (verbose) {
 	struct kld_file_stat stat;
-	stat.version = sizeof stat;
-	if (kldstat(fileid, &stat) < 0)
-	    err(1, "can't stat file");
-	printf("Unloading %s, id=%d\n", stat.name, fileid);
-    }
+	int c, fileid, force, opt;
+	char *filename;
 
-    if (kldunloadf(fileid, force) < 0)
-	err(1, "can't unload file");
+	filename = NULL;
+	opt = OPT_NULL;
 
-    return 0;
+	while ((c = getopt(argc, argv, "finv")) != -1) {
+		switch (c) {
+		case 'f':
+			opt |= OPT_FORCE;
+			break;
+		case 'i':
+			opt |= OPT_ID;
+			break;
+		case 'n':
+			/* 
+			 * XXX: For backward compatibility. Currently does
+			 * nothing
+			 */
+			break;
+		case 'v':
+			opt |= OPT_VERBOSE;
+			break;
+		default:
+			usage();
+		}
+	}
+
+	argc -= optind;
+	argv += optind;
+
+	if (argc == 0)
+		usage();
+
+	while ((filename = *argv++) != NULL) {
+		if (opt & OPT_ID) {
+			fileid = atoi(filename);
+			if (fileid < 0)
+				errx(EXIT_FAILURE, "Invalid ID %s", optarg);
+		} else {
+			if ((fileid = kldfind(filename)) < 0)
+				errx(EXIT_FAILURE, "can't find file %s",
+				    filename);
+		}
+		if (opt & OPT_VERBOSE) {
+			stat.version = sizeof(stat);
+			if (kldstat(fileid, &stat) < 0)
+				err(EXIT_FAILURE, "can't stat file");
+			(void) printf("Unloading %s, id=%d\n", stat.name,
+			    fileid);
+		}
+		if (opt & OPT_FORCE)
+			force = LINKER_UNLOAD_FORCE;
+		else
+			force = LINKER_UNLOAD_NORMAL;
+
+		if (kldunloadf(fileid, force) < 0)
+			err(EXIT_FAILURE, "can't unload file");
+	}
+
+	return (EXIT_SUCCESS);
 }

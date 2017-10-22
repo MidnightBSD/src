@@ -4,7 +4,7 @@
 # Author: Jordan K Hubbard
 # Date:   22 June 2001
 #
-# $FreeBSD: src/release/i386/mkisoimages.sh,v 1.13 2005/01/30 21:10:51 kensmith Exp $
+# $FreeBSD: release/7.0.0/release/i386/mkisoimages.sh 158650 2006-05-16 14:22:37Z nyan $
 #
 # This script is used by release/Makefile to build the (optional) ISO images
 # for a FreeBSD release.  It is considered architecture dependent since each
@@ -28,12 +28,15 @@ publisher="The FreeBSD Project.  http://www.freebsd.org/"
 if [ "x$1" = "x-b" ]; then
 	bootable="-b boot/cdboot -no-emul-boot"
 	shift
+elif [ "x$1" = "x-G" ]; then
+	bootable="-G /R/cdrom/bootonly/boot/cdboot"
+	shift
 else
 	bootable=""
 fi
 
 if [ $# -lt 3 ]; then
-	echo Usage: $0 '[-b] image-label image-name base-bits-dir [extra-bits-dir]'
+	echo Usage: $0 '[-bG] image-label image-name base-bits-dir [extra-bits-dir]'
 	exit 1
 fi
 

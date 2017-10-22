@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: src/sbin/gbde/test.sh,v 1.4 2004/02/07 22:58:39 phk Exp $
+# $FreeBSD: release/7.0.0/sbin/gbde/test.sh 168420 2007-04-06 11:16:11Z pjd $
 
 set -e
 
@@ -29,6 +29,8 @@ if ./gbde nuke $D -p foo1 -l /tmp/_l1 -n -1 ; then false ; fi
 if ./gbde nuke $D -p foo2 -l /tmp/_l2 -n -1 ; then false ; fi
 if ./gbde nuke $D -p foo3 -l /tmp/_l3 -n -1 ; then false ; fi
 if ./gbde nuke $D -p foo4 -l /tmp/_l4 -n -1 ; then false ; fi
+
+rm -f /tmp/_l1 /tmp/_l2 /tmp/_l3 /tmp/_l4
 
 ./gbde init $D -P foo 
 ./gbde setkey $D -p foo -P bar

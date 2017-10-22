@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/make/targ.c,v 1.41 2005/05/13 13:47:41 harti Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/make/targ.c 168893 2007-04-20 06:33:25Z fjoe $");
 
 /*
  * Functions for maintaining the Lst allTargets. Target nodes are
@@ -141,6 +141,7 @@ Targ_NewGN(const char *name)
 	gn->childMade = FALSE;
 	gn->order = 0;
 	gn->mtime = gn->cmtime = 0;
+	gn->cmtime_gn = NULL;
 	Lst_Init(&gn->iParents);
 	Lst_Init(&gn->cohorts);
 	Lst_Init(&gn->parents);

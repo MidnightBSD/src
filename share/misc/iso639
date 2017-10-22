@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/misc/iso639,v 1.4 2002/02/04 17:35:33 wollman Exp $
+# $FreeBSD: release/7.0.0/share/misc/iso639 174854 2007-12-22 06:32:46Z cvs2svn $
 #
 # ISO 639-2 language codes
 #

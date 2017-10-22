@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: strerror.h,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: strerror.h,v 1.3 2001/11/20 01:45:47 gson Exp $ */
 
 #ifndef ISC_STRERROR_H
 #define ISC_STRERROR_H

@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/login/login_fbtab.c,v 1.16 2002/03/22 01:22:49 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/login/login_fbtab.c 172261 2007-09-21 01:55:11Z kevlo $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -93,8 +93,8 @@ gid_t   gid;
     int     prot;
     const char *table;
 
-    if ((fp = fopen(table = _PATH_FBTAB, "r")) == 0
-    && (fp = fopen(table = _PATH_LOGINDEVPERM, "r")) == 0)
+    if ((fp = fopen(table = _PATH_FBTAB, "r")) == NULL
+    && (fp = fopen(table = _PATH_LOGINDEVPERM, "r")) == NULL)
 	return;
 
     while (fgets(buf, sizeof(buf), fp)) {
@@ -133,7 +133,7 @@ gid_t gid;
 {
     glob_t  gl;
     char   *path;
-    int     i;
+    unsigned int     i;
 
     if (glob(pattern, GLOB_NOSORT, NULL, &gl) != 0)
 	return;

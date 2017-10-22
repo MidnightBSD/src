@@ -39,7 +39,7 @@ static char *rcsid = "$NetBSD: bcopy.c,v 1.2 1997/04/16 22:09:41 thorpej Exp $";
 #endif
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/bcopy.c,v 1.5 2004/04/07 04:59:59 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/bcopy.c 127977 2004-04-07 05:00:01Z imp $");
 
 #include <sys/param.h>
 #ifdef _KERNEL

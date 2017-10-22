@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)fold.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.bin/fold/fold.1,v 1.12 2004/08/02 11:15:01 tjr Exp $
+.\" $FreeBSD: release/7.0.0/usr.bin/fold/fold.1 165240 2006-12-15 11:23:59Z ru $
 .\"
-.Dd August 2, 2004
+.Dd December 15, 2006
 .Dt FOLD 1
 .Os
 .Sh NAME
@@ -62,7 +62,9 @@ Fold line after the last blank character within the first
 column positions (or bytes).
 .It Fl w Ar width
 Specify a line width to use instead of the default 80 columns.
-.Ar Width
+The
+.Ar width
+value
 should be a multiple of 8 if tabs are present, or the tabs should
 be expanded using
 .Xr expand 1
@@ -87,4 +89,6 @@ The
 utility conforms to
 .St -p1003.1-2001 .
 .Sh BUGS
-If underlining is present it may be messed up by folding.
+If underlining (see
+.Xr ul 1 )
+is present it may be messed up by folding.

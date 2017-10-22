@@ -27,7 +27,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)df.1	8.3 (Berkeley) 5/8/95
-.\" $FreeBSD: src/bin/df/df.1,v 1.39 2005/01/16 16:41:56 ru Exp $
+.\" $FreeBSD: release/7.0.0/bin/df/df.1 167105 2007-02-28 10:29:48Z ru $
 .\"
 .Dd April 22, 2004
 .Dt DF 1
@@ -58,9 +58,10 @@ statistics for all mounted file systems are displayed
 option below).
 .Pp
 The following options are available:
-.Bl -tag -width Ds
+.Bl -tag -width indent
 .It Fl a
-Show all mount points, including those that were mounted with the MNT_IGNORE
+Show all mount points, including those that were mounted with the
+.Dv MNT_IGNORE
 flag.
 .It Fl b
 Use 512-byte blocks rather than the default.

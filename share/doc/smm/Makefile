@@ -1,5 +1,7 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/10/93
-# $FreeBSD: src/share/doc/smm/Makefile,v 1.19 2004/01/20 13:08:33 ru Exp $
+# $FreeBSD: release/7.0.0/share/doc/smm/Makefile 172506 2007-10-10 16:59:15Z cvs2svn $
+
+.include <bsd.own.mk>
 
 # The following modules do not describe FreeBSD:
 # 14.uucpimpl, 15.uucpnet
@@ -24,7 +26,7 @@ SUBDIR=	title \
 	12.timed \
 	18.net
 
-.if !defined(NO_SENDMAIL)
+.if ${MK_SENDMAIL} != "no"
 _08.sendmailop=	08.sendmailop 
 .endif
 

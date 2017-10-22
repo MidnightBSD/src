@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pc98/include/pci_cfgreg.h,v 1.2 2005/04/03 23:26:44 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/pc98/include/pci_cfgreg.h 144611 2005-04-03 23:27:11Z imp $
  */
 
 #ifndef _PC98_INCLUDE_PCI_CFGREG_H_

@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/rpc/rpcclnt.h,v 1.5 2005/01/07 02:29:21 imp Exp $ */
+/* $FreeBSD: release/7.0.0/sys/rpc/rpcclnt.h 139825 2005-01-07 02:29:27Z imp $ */
 /*	$OpenBSD: nfsmount.h,v 1.11 2002/03/14 01:27:13 millert Exp $	*/
 /*	$NetBSD: nfsmount.h,v 1.10 1996/02/18 11:54:03 fvdl Exp $	*/
 

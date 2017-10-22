@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: src/sys/arm/include/sysarch.h,v 1.4 2005/02/26 18:59:01 cognet Exp $ */
+/* $FreeBSD: release/7.0.0/sys/arm/include/sysarch.h 142570 2005-02-26 18:59:01Z cognet $ */
 
 #ifndef _ARM_SYSARCH_H_
 #define _ARM_SYSARCH_H_

@@ -76,16 +76,17 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/sa11x0/sa11x0_irqhandler.c,v 1.4 2005/06/09 12:26:20 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/sa11x0_irqhandler.c 163553 2006-10-21 04:25:00Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
 #include <sys/syslog.h>
 #include <sys/malloc.h>
-#include <sys/types.h>
 #include <sys/bus.h>
 #include <sys/interrupt.h>
+#include <sys/rman.h>
+
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
 
@@ -111,7 +112,8 @@ arm_get_next_irq()
 {
 	int irq;
 
-	if ((irq = (bus_space_read_4(sc->sc_iot, sc->sc_ioh, SAIPIC_IP) &
+	if ((irq = (bus_space_read_4(sa11x0_softc->sc_iot, sa11x0_softc->sc_ioh,
+	    SAIPIC_IP) &
 	    sa11x0_irq_mask)) != 0)
 		return (ffs(irq) - 1);
 	return (-1);

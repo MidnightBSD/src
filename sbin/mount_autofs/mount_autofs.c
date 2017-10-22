@@ -23,8 +23,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: mount_autofs.c,v 1.1.1.2 2006-02-25 02:35:24 laffer1 Exp $
- * $FreeBSD: src/sbin/mount_autofs/mount_autofs.c,v 1.4 2004/09/12 07:06:48 alfred Exp $
+ * $Id: mount_autofs.c,v 1.5 2004/09/08 08:12:21 bright Exp $
+ * $FreeBSD: release/7.0.0/sbin/mount_autofs/mount_autofs.c 135097 2004-09-12 07:06:48Z alfred $
  */
 #include <err.h>
 #include <stdio.h>

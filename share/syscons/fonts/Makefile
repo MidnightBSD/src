@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/syscons/fonts/Makefile,v 1.37 2004/12/21 08:46:55 ru Exp $
+# $FreeBSD: release/7.0.0/share/syscons/fonts/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 FILES=	armscii8-8x8.fnt armscii8-8x14.fnt armscii8-8x16.fnt \
 	cp437-8x8.fnt cp437-8x14.fnt cp437-8x16.fnt \

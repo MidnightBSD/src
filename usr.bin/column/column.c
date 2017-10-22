@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)column.c	8.4 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/column/column.c,v 1.14.2.1 2006/02/23 11:34:45 dwmalone Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/column/column.c 165249 2006-12-15 17:47:25Z ru $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -141,7 +141,7 @@ main(int argc, char **argv)
 	if (!entries)
 		exit(eval);
 
-	maxlength = roundup(maxlength + TAB, TAB);
+	maxlength = roundup(maxlength + 1, TAB);
 	if (tflag)
 		maketbl();
 	else if (maxlength >= termwidth)
@@ -171,7 +171,7 @@ c_columnate(void)
 			endcol = maxlength;
 			putwchar('\n');
 		} else {
-			while ((cnt = roundup(chcnt + TAB, TAB)) <= endcol) {
+			while ((cnt = roundup(chcnt + 1, TAB)) <= endcol) {
 				(void)putwchar('\t');
 				chcnt = cnt;
 			}
@@ -199,7 +199,7 @@ r_columnate(void)
 			chcnt += width(list[base]);
 			if ((base += numrows) >= entries)
 				break;
-			while ((cnt = roundup(chcnt + TAB, TAB)) <= endcol) {
+			while ((cnt = roundup(chcnt + 1, TAB)) <= endcol) {
 				(void)putwchar('\t');
 				chcnt = cnt;
 			}
@@ -247,10 +247,10 @@ maketbl(void)
 		    (cols[coloff] = wcstok(p, separator, &last));
 		    p = NULL)
 			if (++coloff == maxcols) {
-				if (!(cols = realloc(cols, (u_int)maxcols +
-				    DEFCOLS * sizeof(char *))) ||
+				if (!(cols = realloc(cols, ((u_int)maxcols +
+				    DEFCOLS) * sizeof(char *))) ||
 				    !(lens = realloc(lens,
-				    (u_int)maxcols + DEFCOLS * sizeof(int))))
+				    ((u_int)maxcols + DEFCOLS) * sizeof(int))))
 					err(1, NULL);
 				memset((char *)lens + maxcols * sizeof(int),
 				    0, DEFCOLS * sizeof(int));

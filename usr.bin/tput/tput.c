@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/tput/tput.c,v 1.15 2002/09/04 23:29:07 dwmalone Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/tput/tput.c 163283 2006-10-12 21:10:55Z ru $");
 
 #ifndef lint
 static const char copyright[] =
@@ -80,6 +80,9 @@ main(int argc, char **argv)
 		}
 	argc -= optind;
 	argv += optind;
+
+	if (argc < 1)
+		usage();
 
 	if (!term && !(term = getenv("TERM")))
 errx(2, "no terminal type specified and no TERM environmental variable.");

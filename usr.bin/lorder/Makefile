@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.bin/lorder/Makefile,v 1.8 2001/04/07 11:21:22 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/lorder/Makefile 150671 2005-09-28 07:54:18Z ru $
 
 SCRIPTS=lorder.sh
 MAN=	lorder.1

@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ee/ee.c,v 1.32.2.1 2006/01/11 08:02:16 cperciva Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ee/ee.c 154216 2006-01-11 08:02:16Z cperciva $");
 
 char *ee_copyright_message = 
 "Copyright (c) 1986, 1990, 1991, 1992, 1993, 1994, 1995, 1996 Hugh Mahon ";

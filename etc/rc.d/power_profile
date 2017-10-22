@@ -5,16 +5,17 @@
 #
 # Arguments: 0x00 (AC offline, economy) or 0x01 (AC online, performance)
 #
-# $FreeBSD: src/etc/rc.d/power_profile,v 1.7.2.1 2005/12/15 16:47:06 obrien Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/power_profile 175783 2008-01-29 00:22:33Z dougb $
 #
 
 # PROVIDE: power_profile
-# REQUIRE: mountcritlocal syslogd
+# REQUIRE: FILESYSTEMS syslogd
 # KEYWORD: nojail nostart
 
 . /etc/rc.subr
 
 name="power_profile"
+stop_cmd=':'
 LOGGER="logger -t power_profile -p daemon.notice"
 
 # Set a given sysctl node to a value.
@@ -76,7 +77,7 @@ esac
 # Set the various sysctls based on the profile's values.
 node="hw.acpi.cpu.cx_lowest"
 highest_value="C1"
-lowest_value="`(sysctl -n hw.acpi.cpu.cx_supported | \
+lowest_value="`(sysctl -n dev.cpu.0.cx_supported | \
 	awk '{ print "C" split($0, a) }' -) 2> /dev/null`"
 eval value=\$${profile}_cx_lowest
 sysctl_set

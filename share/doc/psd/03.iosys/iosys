@@ -36,7 +36,7 @@
 .\" 
 .\"	@(#)iosys	8.1 (Berkeley) 6/8/93
 .\"
-.\" $FreeBSD: src/share/doc/psd/03.iosys/iosys,v 1.2 2002/05/19 06:03:05 grog Exp $
+.\" $FreeBSD: release/7.0.0/share/doc/psd/03.iosys/iosys 96923 2002-05-19 06:03:06Z grog $
 .EH 'PSD:3-%''The UNIX I/O System'
 .OH 'The UNIX I/O System''PSD:3-%'
 .TL

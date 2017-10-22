@@ -50,7 +50,7 @@ static char sccsid[] = "@(#)chpass.c	8.4 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/chpass/chpass.c,v 1.27 2004/01/18 21:46:39 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/chpass/chpass.c 162633 2006-09-25 15:06:24Z marck $");
 
 #include <sys/param.h>
 
@@ -217,7 +217,12 @@ main(int argc, char *argv[])
 		pw_fini();
 		if (pw == NULL)
 			err(1, "edit()");
-		if (pw_equal(old_pw, pw))
+		/* 
+		 * pw_equal does not check for crypted passwords, so we
+		 * should do it explicitly
+		 */
+		if (pw_equal(old_pw, pw) && 
+		    strcmp(old_pw->pw_passwd, pw->pw_passwd) == 0)
 			errx(0, "user information unchanged");
 	}
 

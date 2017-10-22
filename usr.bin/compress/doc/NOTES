@@ -1,5 +1,5 @@
 
-  $FreeBSD: src/usr.bin/compress/doc/NOTES,v 1.2 2002/10/16 12:42:15 charnier Exp $
+  $FreeBSD: release/7.0.0/usr.bin/compress/doc/NOTES 105236 2002-10-16 12:42:15Z charnier $
 
 From: James A. Woods <jaw@eos.arc.nasa.gov>
 

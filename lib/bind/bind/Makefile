@@ -1,4 +1,6 @@
-# $FreeBSD: src/lib/bind/bind/Makefile,v 1.4.4.1 2005/11/16 07:59:49 ru Exp $
+# $FreeBSD: release/7.0.0/lib/bind/bind/Makefile 174398 2007-12-07 08:31:23Z dougb $
+
+#.include <bsd.own.mk>
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9
 LIB_BIND_REL=	..
@@ -57,12 +59,16 @@ SRCS+=		ns_date.c ns_name.c ns_netint.c \
 		ns_sign.c ns_ttl.c ns_verify.c
 
 .PATH:		${SRCDIR}/resolv
-SRCS+=		herror.c res_comp.c res_data.c \
-		res_debug.c res_findzonecut.c res_init.c \
-		res_mkquery.c res_mkupdate.c res_query.c \
-		res_send.c res_sendsigned.c res_update.c
+SRCS+=		herror.c mtctxres.c res_comp.c \
+		res_data.c res_debug.c res_findzonecut.c \
+		res_init.c res_mkquery.c res_mkupdate.c \
+		res_query.c res_send.c res_sendsigned.c \
+		res_update.c
 
-#.if defined(WITH_BIND_LIBS)
+DPADD=		${PTHREAD_DPADD}
+LDADD=		${PTHREAD_LDADD}
+
+#.if ${MK_BIND_LIBS} != "no"
 #INCS=		${SRCDIR}/include/isc/assertions.h \
 #		${SRCDIR}/include/isc/ctl.h \
 #		${SRCDIR}/include/isc/dst.h \

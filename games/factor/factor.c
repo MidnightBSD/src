@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)factor.c	8.4 (Berkeley) 5/4/95";
 __RCSID("$NetBSD: factor.c,v 1.13 2002/06/18 23:07:36 simonb Exp $");
 #endif
 static const char rcsid[] =
- "$FreeBSD: src/games/factor/factor.c,v 1.13 2002/10/09 19:55:04 fanf Exp $";
+ "$FreeBSD: release/7.0.0/games/factor/factor.c 104722 2002-10-09 19:55:04Z fanf $";
 #endif /* not lint */
 
 /*

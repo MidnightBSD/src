@@ -48,7 +48,7 @@ static char sccsid[] = "@(#)xargs.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/xargs/xargs.c,v 1.57.2.1 2005/12/21 12:15:52 des Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/xargs/xargs.c 153960 2006-01-01 22:59:54Z jmallett $");
 
 #include <sys/param.h>
 #include <sys/wait.h>
@@ -80,7 +80,7 @@ static char **av, **bxp, **ep, **endxp, **xp;
 static char *argp, *bbp, *ebp, *inpline, *p, *replstr;
 static const char *eofstr;
 static int count, insingle, indouble, oflag, pflag, tflag, Rflag, rval, zflag;
-static int cnt, Iflag, jfound, Lflag, wasquoted, xflag;
+static int cnt, Iflag, jfound, Lflag, Sflag, wasquoted, xflag;
 static int curprocs, maxprocs;
 
 static volatile int childerr;
@@ -124,8 +124,8 @@ main(int argc, char *argv[])
 		nline -= strlen(*ep++) + 1 + sizeof(*ep);
 	}
 	maxprocs = 1;
-	while ((ch = getopt(argc, argv, "0E:I:J:L:n:oP:pR:s:rtx")) != -1)
-		switch(ch) {
+	while ((ch = getopt(argc, argv, "0E:I:J:L:n:oP:pR:S:s:rtx")) != -1)
+		switch (ch) {
 		case 'E':
 			eofstr = optarg;
 			break;
@@ -166,6 +166,11 @@ main(int argc, char *argv[])
 		case 'r':
 			/* GNU compatibility */
 			break;
+		case 'S':
+			Sflag = strtoul(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				errx(1, "replsize must be a number");
+			break;
 		case 's':
 			nline = atoi(optarg);
 			break;
@@ -187,8 +192,12 @@ main(int argc, char *argv[])
 
 	if (!Iflag && Rflag)
 		usage();
+	if (!Iflag && Sflag)
+		usage();
 	if (Iflag && !Rflag)
 		Rflag = 5;
+	if (Iflag && !Sflag)
+		Sflag = 255;
 	if (xflag && !nflag)
 		usage();
 	if (Iflag || Lflag)
@@ -260,7 +269,7 @@ parse_input(int argc, char *argv[])
 
 	foundeof = 0;
 
-	switch(ch = getchar()) {
+	switch (ch = getchar()) {
 	case EOF:
 		/* No arguments since last exec. */
 		if (p == bbp) {
@@ -295,7 +304,7 @@ arg1:		if (insingle || indouble)
 			errx(1, "unterminated quote");
 arg2:
 		foundeof = *eofstr != '\0' &&
-		    strcmp(argp, eofstr) == 0;
+		    strncmp(argp, eofstr, p - argp) == 0;
 
 		/* Do not make empty args unless they are quoted */
 		if ((argp != p || wasquoted) && !foundeof) {
@@ -454,7 +463,7 @@ prerun(int argc, char *argv[])
 	while (--argc) {
 		*tmp = *avj++;
 		if (repls && strstr(*tmp, replstr) != NULL) {
-			strnsubst(tmp++, replstr, inpline, (size_t)255);
+			strnsubst(tmp++, replstr, inpline, (size_t)Sflag);
 			if (repls > 0)
 				repls--;
 		} else {
@@ -528,7 +537,7 @@ run(char **argv)
 	}
 exec:
 	childerr = 0;
-	switch(pid = vfork()) {
+	switch (pid = vfork()) {
 	case -1:
 		err(1, "vfork");
 	case 0:
@@ -599,6 +608,7 @@ prompt(void)
 		(void)fclose(ttyfp);
 		return (0);
 	}
+	response[rsize - 1] = '\0';
 	match = regexec(&cre, response, 0, NULL, 0);
 	(void)fclose(ttyfp);
 	regfree(&cre);
@@ -609,8 +619,8 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-"usage: xargs [-0opt] [-E eofstr] [-I replstr [-R replacements]] [-J replstr]\n"
-"             [-L number] [-n number [-x]] [-P maxprocs] [-s size]\n"
-"             [utility [argument ...]]\n");
+"usage: xargs [-0opt] [-E eofstr] [-I replstr [-R replacements] [-S replsize]]\n"
+"             [-J replstr] [-L number] [-n number [-x]] [-P maxprocs]\n"
+"             [-s size] [utility [argument ...]]\n");
 	exit(1);
 }

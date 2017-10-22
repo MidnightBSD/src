@@ -47,7 +47,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/sa11x0/assabet_machdep.c,v 1.9 2005/01/05 21:58:48 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/assabet_machdep.c 175495 2008-01-19 18:15:07Z kib $");
 
 #include "opt_md.h"
 
@@ -93,6 +93,8 @@ __FBSDID("$FreeBSD: src/sys/arm/sa11x0/assabet_machdep.c,v 1.9 2005/01/05 21:58:
 #include <machine/bus.h>
 #include <sys/reboot.h>
 
+#include <arm/sa11x0/sa11x0_reg.h>
+
 #define MDROOT_ADDR 0xd0400000
 
 #define KERNEL_PT_VMEM		0	/* Page table for mapping video memory */
@@ -102,7 +104,7 @@ __FBSDID("$FreeBSD: src/sys/arm/sa11x0/assabet_machdep.c,v 1.9 2005/01/05 21:58:
 #define KERNEL_PT_KERNEL	1	/* Page table for mapping kernel */
 #define KERNEL_PT_L1		4	/* Page table for mapping l1pt */
 #define	KERNEL_PT_VMDATA	5	/* Page tables for mapping kernel VM */
-#define	KERNEL_PT_VMDATA_NUM	4	/* start with 16MB of KVM */
+#define	KERNEL_PT_VMDATA_NUM	7	/* start with 16MB of KVM */
 #define	NUM_KERNEL_PTS		(KERNEL_PT_VMDATA + KERNEL_PT_VMDATA_NUM)
 
 /* Define various stack sizes in pages */
@@ -113,7 +115,7 @@ __FBSDID("$FreeBSD: src/sys/arm/sa11x0/assabet_machdep.c,v 1.9 2005/01/05 21:58:
 #else
 #define UND_STACK_SIZE	1
 #endif
-#define	KERNEL_VM_BASE		(KERNBASE + 0x00c00000)
+#define	KERNEL_VM_BASE		(KERNBASE + 0x00100000)
 #define	KERNEL_VM_SIZE		0x05000000
 
 extern u_int data_abort_handler_address;
@@ -124,7 +126,7 @@ struct pv_addr kernel_pt_table[NUM_KERNEL_PTS];
 
 extern void *_end;
 
-int got_mmu = 0;
+extern vm_offset_t sa1110_uart_vaddr;
 
 extern vm_offset_t sa1_cache_clean_addr;
 
@@ -139,19 +141,47 @@ struct pcpu *pcpup = &__pcpu;
 /* Physical and virtual addresses for some global pages */
 
 vm_paddr_t phys_avail[10];
+vm_paddr_t dump_avail[4];
 vm_paddr_t physical_start;
 vm_paddr_t physical_end;
 vm_paddr_t physical_freestart;
 vm_offset_t physical_pages;
-vm_offset_t clean_sva, clean_eva;
 
 struct pv_addr systempage;
 struct pv_addr irqstack;
 struct pv_addr undstack;
 struct pv_addr abtstack;
 struct pv_addr kernelstack;
-void enable_mmu(vm_offset_t);
 static struct trapframe proc0_tf;
+
+/* Static device mappings. */
+static const struct pmap_devmap assabet_devmap[] = {
+	/*
+	 * Map the on-board devices VA == PA so that we can access them
+	 * with the MMU on or off.
+	 */
+	{
+		SACOM1_VBASE,
+		SACOM1_BASE,
+		SACOM1_SIZE,
+		VM_PROT_READ|VM_PROT_WRITE,
+		PTE_NOCACHE,
+	},
+	{
+		SAIPIC_BASE,
+		SAIPIC_BASE,
+		SAIPIC_SIZE,
+		VM_PROT_READ|VM_PROT_WRITE,
+		PTE_NOCACHE,
+	},
+	{
+		0,
+		0,
+		0,
+		0,
+		0,
+	}
+};
 
 struct arm32_dma_range *
 bus_dma_get_range(void)
@@ -190,6 +220,8 @@ initarm(void *arg, void *arg2)
 	vm_size_t pt_size;
 	int i = 0;
 	uint32_t fake_preload[35];
+	uint32_t memsize = 32 * 1024 * 1024;
+	sa1110_uart_vaddr = SACOM1_VBASE;
 
 	boothowto = RB_VERBOSE | RB_SINGLE;
 	cninit();
@@ -226,7 +258,7 @@ initarm(void *arg, void *arg2)
 	fake_preload[i] = 0;
 	preload_metadata = (void *)fake_preload;
 
-	physmem =( 16 * 1024 * 1024) / PAGE_SIZE;
+	physmem = memsize / PAGE_SIZE;
 	pc = &__pcpu;
 	pcpu_init(pc, 0, sizeof(struct pcpu));
 	PCPU_SET(curthread, &thread0);
@@ -255,9 +287,18 @@ initarm(void *arg, void *arg2)
 	valloc_pages(kernel_l1pt, L1_TABLE_SIZE / PAGE_SIZE);
 	valloc_pages(md_bla, L2_TABLE_SIZE / PAGE_SIZE);
 	alloc_pages(sa1_cache_clean_addr, CPU_SA110_CACHE_CLEAN_SIZE / PAGE_SIZE);
+
 	for (loop = 0; loop < NUM_KERNEL_PTS; ++loop) {
-		valloc_pages(kernel_pt_table[loop],
-		    L2_TABLE_SIZE / PAGE_SIZE);
+		if (!(loop % (PAGE_SIZE / L2_TABLE_SIZE_REAL))) {
+			valloc_pages(kernel_pt_table[loop],
+			    L2_TABLE_SIZE / PAGE_SIZE);
+		} else {
+			kernel_pt_table[loop].pv_pa = freemempos +
+			    (loop % (PAGE_SIZE / L2_TABLE_SIZE_REAL)) *
+			    L2_TABLE_SIZE_REAL;
+			kernel_pt_table[loop].pv_va = 
+			    kernel_pt_table[loop].pv_pa;
+		}
 	}
 
 	valloc_pages(systempage, 1);
@@ -304,10 +345,10 @@ initarm(void *arg, void *arg2)
 	pmap_link_l2pt(l1pagetable, MDROOT_ADDR,
 	    &md_bla);
 	for (loop = 0; loop < KERNEL_PT_VMDATA_NUM; ++loop)
-		pmap_link_l2pt(l1pagetable, KERNEL_VM_BASE + loop * 0x00400000,
+		pmap_link_l2pt(l1pagetable, KERNEL_VM_BASE + loop * 0x00100000,
 		    &kernel_pt_table[KERNEL_PT_VMDATA + loop]);
 	pmap_map_chunk(l1pagetable, KERNBASE, KERNBASE,
-	   (uint32_t)&end - KERNBASE, VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
+	   ((uint32_t)&end - KERNBASE), VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
 	/* Map the stack pages */
 	pmap_map_chunk(l1pagetable, irqstack.pv_va, irqstack.pv_pa,
 	    IRQ_STACK_SIZE * PAGE_SIZE, VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
@@ -333,11 +374,8 @@ initarm(void *arg, void *arg2)
 	/* Map the vector page. */
 	pmap_map_entry(l1pagetable, vector_page, systempage.pv_pa,
 	    VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
-	/* Map SACOM3. */
-	pmap_map_entry(l1pagetable, 0xd000d000, 0x80010000, 
-	    VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE);
-	pmap_map_entry(l1pagetable, 0x90050000, 0x90050000,
-	    VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE);
+	/* Map the statically mapped devices. */
+	pmap_devmap_bootstrap(l1pagetable, assabet_devmap);
 	pmap_map_chunk(l1pagetable, sa1_cache_clean_addr, 0xf0000000, 
 	    CPU_SA110_CACHE_CLEAN_SIZE, VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
 
@@ -377,14 +415,14 @@ initarm(void *arg, void *arg2)
 	 * After booting there are no gross reloations of the kernel thus
 	 * this problem will not occur after initarm().
 	 */
-/*	cpu_idcache_wbinv_all();*/
+	cpu_idcache_wbinv_all();
 
 
 	bootverbose = 1;
 
 	/* Set stack for exception handlers */
 	
-	proc_linkup(&proc0, &ksegrp0, &thread0);
+	proc_linkup0(&proc0, &thread0);
 	thread0.td_kstack = kernelstack.pv_va;
 	thread0.td_pcb = (struct pcb *)
 		(thread0.td_kstack + KSTACK_PAGES * PAGE_SIZE) - 1;
@@ -395,28 +433,23 @@ initarm(void *arg, void *arg2)
 	/* Enable MMU, I-cache, D-cache, write buffer. */
 
 	cpufunc_control(0x337f, 0x107d);
-	got_mmu = 1;
 	arm_vector_init(ARM_VECTORS_LOW, ARM_VEC_ALL);
 
 	pmap_curmaxkvaddr = freemempos + KERNEL_PT_VMDATA_NUM * 0x400000;
 
+	dump_avail[0] = phys_avail[0] = round_page(virtual_avail);
+	dump_avail[1] = phys_avail[1] = 0xc0000000 + 0x02000000 - 1;
+	dump_avail[2] = phys_avail[2] = 0;
+	dump_avail[3] = phys_avail[3] = 0;
+					
+	mutex_init();
 	pmap_bootstrap(freemempos, 
 	    0xd0000000, &kernel_l1pt);
 
-	
-	mutex_init();
-	
-	
-	phys_avail[0] = round_page(virtual_avail);
-	phys_avail[1] = 0xc0000000 + 0x02000000 - 1;
-	phys_avail[2] = 0;
-	phys_avail[3] = 0;
-	
 	/* Do basic tuning, hz etc */
 	init_param1();
 	init_param2(physmem);
 	kdb_init();
-	avail_end = 0xc0000000 + 0x02000000 - 1;
 	return ((void *)(kernelstack.pv_va + USPACE_SVC_STACK_TOP -
 	    sizeof(struct pcb)));
 }

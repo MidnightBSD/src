@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/_stdint.h,v 1.2 2004/05/18 16:04:56 stefanf Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/_stdint.h 129393 2004-05-18 16:04:57Z stefanf $
  */
 
 #ifndef _MACHINE__STDINT_H_

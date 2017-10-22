@@ -1,5 +1,5 @@
 #
-# $FreeBSD: src/tools/tools/netrate/netsend/Makefile,v 1.4 2004/12/21 08:47:28 ru Exp $
+# $FreeBSD: release/7.0.0/tools/tools/netrate/netsend/Makefile 139103 2004-12-21 08:47:35Z ru $
 #
 
 CFLAGS+=	-Wall

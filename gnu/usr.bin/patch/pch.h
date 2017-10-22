@@ -1,6 +1,6 @@
-/* $FreeBSD: src/gnu/usr.bin/patch/pch.h,v 1.7 2002/04/28 01:33:45 gad Exp $
+/* $FreeBSD: release/7.0.0/gnu/usr.bin/patch/pch.h 95601 2002-04-28 01:33:45Z gad $
  *
- * $Log: not supported by cvs2svn $
+ * $Log: pch.h,v $
  * Revision 2.0.1.1  87/01/30  22:47:16  lwall
  * Added do_ed_script().
  *

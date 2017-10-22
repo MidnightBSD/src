@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/tty_conf.c,v 1.24 2004/07/15 20:47:40 phk Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/kern/tty_conf.c 132226 2004-07-15 20:47:41Z phk $");
 
 #include "opt_compat.h"
 

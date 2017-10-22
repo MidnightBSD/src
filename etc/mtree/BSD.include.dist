@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/mtree/BSD.include.dist,v 1.100.2.2 2005/11/16 10:50:10 ru Exp $
+# $FreeBSD: release/7.0.0/etc/mtree/BSD.include.dist 172422 2007-10-03 05:51:20Z ru $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -14,7 +14,7 @@
     bsnmp
     ..
     c++
-        3.4
+        4.2
             backward
             ..
             bits
@@ -22,6 +22,58 @@
             debug
             ..
             ext
+                pb_ds
+                    detail
+                        basic_tree_policy
+                        ..
+                        bin_search_tree_
+                        ..
+                        binary_heap_
+                        ..
+                        binomial_heap_
+                        ..
+                        binomial_heap_base_
+                        ..
+                        cc_hash_table_map_
+                        ..
+                        eq_fn
+                        ..
+                        gp_hash_table_map_
+                        ..
+                        hash_fn
+                        ..
+                        left_child_next_sibling_heap_
+                        ..
+                        list_update_map_
+                        ..
+                        list_update_policy
+                        ..
+                        ov_tree_map_
+                        ..
+                        pairing_heap_
+                        ..
+                        pat_trie_
+                        ..
+                        rb_tree_map_
+                        ..
+                        rc_binomial_heap_
+                        ..
+                        resize_policy
+                        ..
+                        splay_tree_
+                        ..
+                        thin_heap_
+                        ..
+                        tree_policy
+                        ..
+                        trie_policy
+                        ..
+                        unordered_iterator
+                        ..
+                    ..
+                ..
+            ..
+            tr1
             ..
         ..
     ..
@@ -48,9 +100,13 @@
         ..
         iicbus
         ..
+        lmc
+        ..
         ofw
         ..
         pbio
+        ..
+        powermac_nvram
         ..
         ppbus
         ..
@@ -61,6 +117,8 @@
         usb
         ..
         utopia
+        ..
+        vkbd
         ..
         wi
         ..
@@ -88,21 +146,25 @@
         ..
         udf
         ..
-        umapfs
-        ..
         unionfs
         ..
     ..
     geom
+        cache
+        ..
         concat
         ..
         eli
         ..
         gate
         ..
+        journal
+        ..
         label
         ..
         mirror
+        ..
+        multipath
         ..
         nop
         ..
@@ -112,12 +174,18 @@
         ..
         stripe
         ..
+        virstor
+        ..
     ..
     gnu
         posix
         ..
     ..
     gpib
+    ..
+    gssapi
+    ..
+    i4b
     ..
     isofs
         cd9660
@@ -139,16 +207,17 @@
     ..
     netatalk
     ..
-    netatm
-        ipatm
-        ..
-        sigpvc
-        ..
-        spans
-        ..
-        uni
-        ..
-    ..
+# Disabled in 7.0 as netatm is not MPSAFE.
+#    netatm
+#        ipatm
+#        ..
+#        sigpvc
+#        ..
+#        spans
+#        ..
+#        uni
+#        ..
+#    ..
     netgraph
         atm
         ..
@@ -166,8 +235,6 @@
     netipsec
     ..
     netipx
-    ..
-    netkey
     ..
     netnatm
         api
@@ -195,8 +262,6 @@
     ..
     pccard
     ..
-    posix4
-    ..
     protocols
     ..
     readline
@@ -206,6 +271,8 @@
     rpcsvc
     ..
     security
+        audit
+        ..
         mac_biba
         ..
         mac_bsdextended
@@ -216,6 +283,8 @@
         ..
         mac_partition
         ..
+    ..
+    ssp
     ..
     sys
     ..

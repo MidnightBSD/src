@@ -1,4 +1,4 @@
-# $FreeBSD: src/libexec/rpc.rquotad/Makefile,v 1.6 2001/03/26 14:22:07 ru Exp $
+# $FreeBSD: release/7.0.0/libexec/rpc.rquotad/Makefile 74814 2001-03-26 14:22:12Z ru $
 
 PROG =	rpc.rquotad
 SRCS =	rquotad.c

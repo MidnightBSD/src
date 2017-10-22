@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/ia64/include/param.h,v 1.20.2.1 2005/09/13 21:07:14 marcel Exp $ */
+/* $FreeBSD: release/7.0.0/sys/ia64/include/param.h 154128 2006-01-09 06:05:57Z imp $ */
 /* From: NetBSD: param.h,v 1.20 1997/09/19 13:52:53 leo Exp */
 
 /*-
@@ -63,14 +63,10 @@
 #define _ALIGNED_POINTER(p,t)	((((u_long)(p)) & (sizeof(t)-1)) == 0)
 #endif
 
-#ifndef _MACHINE
-#define	_MACHINE	ia64
-#endif
-#ifndef _MACHINE_ARCH
-#define	_MACHINE_ARCH	ia64
-#endif
-
 #ifndef _NO_NAMESPACE_POLLUTION
+
+#define __HAVE_ACPI
+#define __PCI_REROUTE_INTERRUPT
 
 #ifndef _MACHINE_PARAM_H_
 #define	_MACHINE_PARAM_H_
@@ -110,13 +106,6 @@
 #define	PAGE_SIZE	(1<<(LOG2_PAGE_SIZE))
 #define PAGE_MASK	(PAGE_SIZE-1)
 #define NPTEPG		(PAGE_SIZE/(sizeof (pt_entry_t)))
-
-#define	CLSIZE		1
-#define	CLSIZELOG2	0
-
-/* NOTE: SSIZE, SINCR and UPAGES must be multiples of CLSIZE */
-#define	SSIZE		1		/* initial stack size/NBPG */
-#define	SINCR		1		/* increment of stack/NBPG */
 
 #ifndef	KSTACK_PAGES
 #define	KSTACK_PAGES	4		/* pages of kernel stack */

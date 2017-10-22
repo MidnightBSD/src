@@ -1,7 +1,7 @@
 #
 # /etc/locate.rc -  command script for updatedb(8)
 #
-# $FreeBSD: src/usr.bin/locate/locate/locate.rc,v 1.8.34.1 2005/08/25 19:06:11 cperciva Exp $
+# $FreeBSD: release/7.0.0/usr.bin/locate/locate/locate.rc 171507 2007-07-19 21:00:08Z jhb $
 
 #
 # All commented values are the defaults
@@ -23,4 +23,4 @@
 # an empty database.
 #
 # be careful if you add 'nfs'
-#FILESYSTEMS="ufs" 
+#FILESYSTEMS="ufs ext2fs" 

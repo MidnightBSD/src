@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/powermac/uninorth.c,v 1.13 2005/05/29 08:51:21 grehan Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/powermac/uninorth.c 172394 2007-09-30 11:05:18Z marius $
  */
 
 #include <sys/param.h>
@@ -303,15 +303,12 @@ uninorth_write_config(device_t dev, u_int bus, u_int slot, u_int func,
 		switch (width) {
 		case 1:
 			out8rb(caoff, val);
-			(void)in8rb(caoff);
 			break;
 		case 2:
 			out16rb(caoff, val);
-			(void)in16rb(caoff);
 			break;
 		case 4:
 			out32rb(caoff, val);
-			(void)in32rb(caoff);
 			break;
 		}
 	}
@@ -332,10 +329,12 @@ uninorth_read_ivar(device_t dev, device_t child, int which, uintptr_t *result)
 	sc = device_get_softc(dev);
 
 	switch (which) {
+	case PCIB_IVAR_DOMAIN:
+		*result = device_get_unit(dev);
+		return (0);
 	case PCIB_IVAR_BUS:
 		*result = sc->sc_bus;
 		return (0);
-		break;
 	}
 
 	return (ENOENT);
@@ -384,6 +383,7 @@ uninorth_alloc_resource(device_t bus, device_t child, int type, int *rid,
 		return (NULL);
 	}
 
+	rman_set_rid(rv, *rid);
 	rman_set_bustag(rv, bt);
 	rman_set_bushandle(rv, rman_get_start(rv));
 

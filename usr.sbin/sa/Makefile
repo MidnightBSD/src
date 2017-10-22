@@ -1,8 +1,10 @@
-# $FreeBSD: src/usr.sbin/sa/Makefile,v 1.10 2005/02/10 07:07:32 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/sa/Makefile 169863 2007-05-22 10:49:42Z dds $
+
+.PATH: ${.CURDIR}/../../usr.bin/lastcomm
 
 PROG=	sa
 MAN=	sa.8
-SRCS=	main.c pdb.c usrdb.c
+SRCS=	main.c db.c pdb.c usrdb.c readrec.c
 
 WARNS?=	6
 

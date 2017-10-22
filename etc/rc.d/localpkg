@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/localpkg,v 1.5.2.2 2005/12/21 07:11:34 dougb Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/localpkg 155566 2006-02-12 10:04:56Z matteo $
 #
 
 # PROVIDE: localpkg
@@ -48,6 +48,9 @@ pkg_stop()
 		find_local_scripts_old
 		for script in `reverse_list ${slist} ${zlist}`; do
 			if [ -x "${script}" ]; then
+				if [ `sysctl -n debug.bootverbose` -eq 1 ]; then
+					echo "==>" ${script}
+				fi
 				(set -T
 				trap 'exit 1' 2
 				${script} stop)

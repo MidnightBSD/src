@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/release/picobsd/tinyware/vm/vm.c,v 1.8 2001/10/25 01:29:21 luigi Exp $
+ * $FreeBSD: release/7.0.0/release/picobsd/tinyware/vm/vm.c 164718 2006-11-28 12:46:02Z ru $
  */
 
 #include <stdio.h>
@@ -95,14 +95,14 @@ main(int argc, char *argv[])
 			printf("  procs    kB virt mem       real mem     shared vm   shared real    free\n");
 			printf(" r w l s    tot     act    tot    act    tot    act    tot    act\n");
 		}
-		printf("%2hu%2hu%2hu%2hu",v.t_rq-1,v.t_dw+v.t_pw,v.t_sl,v.t_sw);
-		printf("%7ld %7ld %7ld%7ld",
-			(long)pgtok(v.t_vm),(long)pgtok(v.t_avm),
-			(long)pgtok(v.t_rm),(long)pgtok(v.t_arm));
-		printf("%7ld%7ld%7ld%7ld%7ld\n",
-			(long)pgtok(v.t_vmshr),(long)pgtok(v.t_avmshr),
-			(long)pgtok(v.t_rmshr),(long)pgtok(v.t_armshr),
-			(long)pgtok(v.t_free));
+		printf("%2hd%2hd%2hd%2hd",v.t_rq-1,v.t_dw+v.t_pw,v.t_sl,v.t_sw);
+		printf("%7d %7d %7d%7d",
+			pgtok(v.t_vm),pgtok(v.t_avm),
+			pgtok(v.t_rm),pgtok(v.t_arm));
+		printf("%7d%7d%7d%7d%7d\n",
+			pgtok(v.t_vmshr),pgtok(v.t_avmshr),
+			pgtok(v.t_rmshr),pgtok(v.t_armshr),
+			pgtok(v.t_free));
 		sleep(5);
 		i++;
 		if(i>22) i=0;

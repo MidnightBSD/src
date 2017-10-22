@@ -32,7 +32,7 @@
 # SUCH DAMAGE.
 #
 #	@(#)pagesize.sh	8.1 (Berkeley) 4/3/94
-# $FreeBSD: src/usr.bin/pagesize/pagesize.sh,v 1.5 1999/08/28 01:04:48 peter Exp $
+# $FreeBSD: release/7.0.0/usr.bin/pagesize/pagesize.sh 50477 1999-08-28 01:08:13Z peter $
 #
 
 PATH=/bin:/usr/bin:/sbin:/usr/sbin; export PATH

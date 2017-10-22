@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/stat/Makefile,v 1.4 2005/01/28 16:08:08 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/stat/Makefile 140941 2005-01-28 16:08:11Z ru $
 
 PROG=	stat
 WARNS?=	2

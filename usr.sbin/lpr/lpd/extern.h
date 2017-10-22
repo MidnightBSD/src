@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *      From: @(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.sbin/lpr/lpd/extern.h,v 1.9 2003/07/14 15:54:40 gad Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/lpr/lpd/extern.h 117554 2003-07-14 15:54:41Z gad $
  */
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */

@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/doc/psd/28.cvs/Makefile,v 1.4 2004/10/24 15:32:43 ru Exp $
+# $FreeBSD: release/7.0.0/share/doc/psd/28.cvs/Makefile 136910 2004-10-24 15:33:08Z ru $
 
 VOLUME=		psd/28.cvs
 SRCS=		cvs-paper.ms

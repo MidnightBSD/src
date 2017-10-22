@@ -40,7 +40,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/isic/i4b_tel_s08.c,v 1.10 2005/01/06 22:18:20 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer1/isic/i4b_tel_s08.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include "opt_i4b.h"
 
@@ -52,8 +52,8 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer1/isic/i4b_tel_s08.c,v 1.10 2005/01/06 22:1
 #include <net/if.h>
 
 #include <machine/md_var.h>
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_trace.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_trace.h>
 
 #include <i4b/layer1/i4b_l1.h>
 #include <i4b/layer1/isic/i4b_isic.h>
@@ -268,7 +268,7 @@ isic_probe_s08(device_t dev)
 
 	bus_setup_intr(dev, sc->sc_resources.irq,
 			INTR_TYPE_NET,
-			(void(*)(void *))(isicintr),
+			NULL, (void(*)(void *))(isicintr),
 			sc, &ih);
 
 	return (0);

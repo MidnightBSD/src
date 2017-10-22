@@ -1,48 +1,53 @@
-# $NetBSD: Makefile,v 1.16 2001/01/14 15:37:22 minoura Exp $
-# $FreeBSD: src/etc/rc.d/Makefile,v 1.53.2.8 2006/02/12 22:13:15 flz Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/Makefile 175783 2008-01-29 00:22:33Z dougb $
 
-FILES=	DAEMON LOGIN NETWORKING SERVERS \
+.include <bsd.own.mk>
+
+FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	abi accounting addswap adjkerntz amd \
-	apm apmd archdep atm1 atm2 atm3 \
-	bgfsck bluetooth bootparams bsnmpd \
+	apm apmd archdep atm1 atm2 atm3 auditd auto_linklocal \
+	bgfsck bluetooth bootparams bridge bsnmpd bthidd \
 	ccd cleanvar cleartmp cron \
 	devd devfs dhclient \
 	dmesg dumpon \
 	early.sh encswap \
-	fsck ftpd \
+	fsck ftp-proxy ftpd \
 	gbde geli geli2 \
 	hcsecd \
-	hostapd hostname \
-	ike \
-	inetd initrandom \
+	hostapd hostid hostname \
+	idmapd inetd initrandom \
 	ip6addrctl ip6fw ipfilter ipfs ipfw ipmon \
 	ipnat ipsec ipxrouted isdnd \
 	jail \
-	kadmind kerberos keyserv kldxref kpasswdd \
-	ldconfig local localpkg lpd \
-	mixer motd mountcritlocal mountcritremote \
-	mountd moused mroute6d mrouted msgs \
+	kadmind kerberos kernel keyserv kldxref kpasswdd \
+	ldconfig local localpkg lockd lpd \
+	mixer motd mountcritlocal mountcritremote mountlate \
+	mdconfig mdconfig2 mountd moused mroute6d mrouted msgs \
 	named natd netif netoptions \
 	network_ipv6 newsyslog nfsclient nfsd \
-	nfslocking nfsserver nisdomain nsswitch ntpd ntpdate \
+	nfsserver nisdomain nsswitch ntpd ntpdate \
 	othermta \
-	pccard pcvt pf pflog pfsync \
+	pf pflog pfsync \
 	powerd power_profile ppp pppoed pwcheck \
 	quota \
-	ramdisk ramdisk-own random rarpd resolv root \
+	random rarpd resolv root \
 	route6d routed routing rpcbind rtadvd rwho \
 	savecore sdpd securelevel sendmail \
-	serial sppp swap1 \
+	serial sppp statd swap1 \
 	syscons sysctl syslogd \
 	timed tmp \
-	ugidfw usbd \
+	ugidfw \
 	var virecover \
 	watchdogd wpa_supplicant \
 	ypbind yppasswdd ypserv \
-	ypset ypupdated ypxfrd
+	ypset ypupdated ypxfrd \
+	zfs
 
-.if !defined(NO_OPENSSH)
+.if ${MK_OPENSSH} != "no"
 FILES+=	sshd
+.endif
+
+.if ${MK_NS_CACHING} != "no"
+FILES+= nscd
 .endif
 
 FILESDIR=	/etc/rc.d

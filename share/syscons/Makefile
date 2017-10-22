@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/syscons/Makefile,v 1.4 1999/08/28 00:21:55 peter Exp $
+# $FreeBSD: release/7.0.0/share/syscons/Makefile 50476 1999-08-28 00:22:10Z peter $
 
 SUBDIR= fonts keymaps scrnmaps
 

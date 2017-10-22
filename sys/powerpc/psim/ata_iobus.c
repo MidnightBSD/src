@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/psim/ata_iobus.c,v 1.13 2005/04/12 15:59:54 ssouhlal Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/psim/ata_iobus.c 152305 2005-11-11 09:36:38Z grehan $
  */
 
 /*
@@ -242,7 +242,7 @@ ata_iobus_sub_probe(device_t dev)
 	/* Only a single unit per controller thus far */
 	ch->unit = 0;
 	ch->flags = (ATA_USE_16BIT|ATA_NO_SLAVE);
-	ata_generic_hw(ch);
+	ata_generic_hw(dev);
 
 	return ata_probe(dev);
 }

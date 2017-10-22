@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/pccard/pccardd/readcis.h,v 1.15 2003/02/25 22:14:38 green Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/pccard/pccardd/readcis.h 111507 2003-02-25 22:14:38Z green $
  */
 
 struct tuple {

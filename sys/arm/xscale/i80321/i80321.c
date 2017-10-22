@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/xscale/i80321/i80321.c,v 1.5 2005/06/09 12:26:20 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/i80321/i80321.c 172046 2007-09-04 18:45:27Z cognet $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -72,23 +72,6 @@ struct bus_space i80321_bs_tag;
  * i80321 without having to have a handle on the softc itself.
  */
 struct i80321_softc *i80321_softc;
-
-/* Built-in devices. */
-static const struct iopxs_device {
-	const char *id_name;
-	bus_addr_t id_offset;
-	bus_size_t id_size;
-} iopxs_devices[] = {
-	{ "iopaau",	VERDE_AAU_BASE,		VERDE_AAU_SIZE },
-/*	{ "iopdma",	VERDE_DMA_BASE0,	VERDE_DMA_CHSIZE },	*/
-/*	{ "iopdma",	VERDE_DMA_BASE1,	VERDE_DMA_CHSIZE },	*/
-	{ "iopiic",	VERDE_I2C_BASE0,	VERDE_I2C_CHSIZE },
-	{ "iopiic",	VERDE_I2C_BASE1,	VERDE_I2C_CHSIZE },
-/*	{ "iopssp",	VERDE_SSP_BASE,		VERDE_SSP_SIZE },	*/
-	{ "iopmu",	VERDE_MU_BASE,		VERDE_MU_SIZE },
-	{ "iopwdog",	0,			0 },
-	{ NULL,		0,			0 }
-};
 
 #define PCI_MAPREG_MEM_ADDR(x) ((x) & 0xfffffff0)
 /*
@@ -230,8 +213,6 @@ i80321_attach(struct i80321_softc *sc)
 		    PCIM_CMD_SERRESPEN;
 		bus_space_write_4(sc->sc_st, sc->sc_atu_sh,
 		    PCIR_COMMAND, preg);
-		preg = bus_space_read_4(sc->sc_st, sc->sc_atu_sh,
-		    PCIR_COMMAND);
 	}
 	/* Initialize the bus space tags. */
 	i80321_io_bs_init(&sc->sc_pci_iot, sc);

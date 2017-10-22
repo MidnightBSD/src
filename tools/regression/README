@@ -1,4 +1,4 @@
-$FreeBSD: src/tools/regression/README,v 1.13 2005/01/02 21:40:36 marcel Exp $
+$FreeBSD: release/7.0.0/tools/regression/README 169852 2007-05-22 06:11:44Z dds $
 
 This directory is for regression test programs.
 
@@ -62,9 +62,20 @@ which is the same as their path relative to src/, for example the uuencode(1)
 utility resides in src/usr.bin/uuencode so its regression test resides in
 src/tools/regression/usr.bin/uuencode.
 
+To avoid the pre-commit check program complaining about the lack of
+CVS keywords in test data files, use a .in suffix for input files and
+a .out suffix for output files.
+
+To execute individual regression tests for binaries that you are
+developing, add their directory in the path before running the tests.
+Example:
+cd /usr/src/tools/regression/usr.bin
+(PATH=/home/user/src/experimental/jot:$PATH ; make SUBDIR=jot)
+
 Please make a subdir per other regression test, and add a brief description to
 this file.
 
+acct		Exercise the integer to float conversion used in acct(5)
 geom		Some tests and an out-of-kernel simulator for the GEOM code
 ia64		ia64 specific regression tests
 nfsmmap		Some tests to exercise some tricky cases in NFS and mmap

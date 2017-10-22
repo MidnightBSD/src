@@ -28,7 +28,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ed.4,v 1.45.2.2 2006/02/02 07:50:00 trhodes Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man4/ed.4 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
 .Dd October 5, 2005
 .Dt ED 4
@@ -57,6 +57,13 @@ The
 driver provides support for 8 and 16bit Ethernet cards that are based on
 the National Semiconductor DS8390 and similar NICs manufactured by
 other companies.
+The
+.Nm
+driver also supports many PC Card chips which interface via MII to a PHY.
+Axiom's AX88790, AX88190 and AX88190A;
+DLink's DL10019 and DL10022; and
+Tamarack's TC5299J chips all support internal or external MII/PHY combinations.
+For these chipsets, autonegotiation and status reporting are supported.
 .Pp
 The
 .Nm
@@ -163,6 +170,8 @@ Corega Ether98-T (flags 0x000000) (PC-98)
 .It
 Corega Ether PCC-T/EtherII PCC-T/FEther PCC-TXF/PCC-TXD
 .It
+Corega LAPCCTXD (TC5299J)
+.It
 CyQ've ELA-010
 .It
 DEC EtherWorks DE305
@@ -180,6 +189,8 @@ ELECOM LD-98P (flags 0x500000) (PC-98)
 ELECOM LD-BDN, LD-NW801G (flags 0x200000) (PC-98)
 .It
 ELECOM Laneed LD-CDL/TX, LD-CDF, LD-CDS, LD-10/100CD, LD-CDWA (DP83902A)
+.It
+Hawking PN652TX PC Card (AX88790)
 .It
 HP PC Lan+ 27247B and 27252A
 .Pq Cd "options ED_HPP"
@@ -265,7 +276,7 @@ SMC EtherEZ98 (flags 0x000000) (PC-98)
 .It
 SMC WD8003E/WD8003EBT/WD8003S/WD8003SBT/WD8003W/WD8013EBT/WD8013W and clones
 .It
-SMC EZCard PC Card, 8040-TX, 8041-TX
+SMC EZCard PC Card, 8040-TX, 8041-TX, 8041-TX V.2
 .It
 Socket LP-E, ES-1000 Ethernet/Serial, LP-E CF, LP-FE CF
 .It
@@ -364,6 +375,7 @@ In addition, you should also specify
 .Cd "iosiz 16384"
 to take advantage of the extra 8K of shared memory that 16bit mode provides.
 .Sh SEE ALSO
+.Xr altq 4 ,
 .Xr arp 4 ,
 .Xr miibus 4 ,
 .Xr netintro 4 ,
@@ -388,6 +400,6 @@ As a result, it may throw out some good packets which
 have been received but not yet transferred from the card to main memory.
 .Pp
 The
-.Nm 
-PC Card attachment supports the D-Link DMF650TX Lan/Modem card's ethernet
+.Nm
+PC Card attachment supports the D-Link DMF650TX LAN/Modem card's Ethernet
 port only at this time.

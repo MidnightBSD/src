@@ -1,6 +1,6 @@
 #	@(#)Makefile	5.2 (Berkeley) 12/28/90
-#	$Id: Makefile,v 1.1.1.2 2006-02-25 02:38:15 laffer1 Exp $
-# $FreeBSD: src/usr.bin/make/Makefile,v 1.61 2005/05/25 08:46:31 harti Exp $
+#	$Id: Makefile,v 1.6 1994/06/30 05:33:39 cgd Exp $
+# $FreeBSD: release/7.0.0/usr.bin/make/Makefile 158452 2006-05-11 18:08:44Z ru $
 
 PROG=	make
 CFLAGS+=-I${.CURDIR}
@@ -12,6 +12,7 @@ NO_WERROR=
 WARNS?=	6
 NO_SHARED?=	YES
 
+CFLAGS+=-DOLD_JOKE=1
 CFLAGS+=-DMAKE_VERSION=\"5200408120\"
 .if defined(_UPGRADING)
 CFLAGS+=-D__FBSDID=__RCSID
@@ -29,7 +30,7 @@ CFLAGS+=-D__FBSDID=__RCSID
 main.o shell.o: ${MAKEFILE}
 
 # Directive and keyword tables. We use hash tables. These hash tables have been
-# generated with mph which can be found on the usual GNU mirrors.
+# generated with mph (ports/devel/mph)
 # If you change the directives or keywords (adding, deleting, reordering) you
 # need to create new tables and hash functions (directive_hash, keyword_hash).
 #

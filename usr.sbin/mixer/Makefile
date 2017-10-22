@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/mixer/Makefile,v 1.10 2001/07/20 06:20:00 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/mixer/Makefile 80029 2001-07-20 06:20:32Z obrien $
 
 PROG=	mixer
 MAN=	mixer.8

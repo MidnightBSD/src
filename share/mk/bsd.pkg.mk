@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/mk/bsd.pkg.mk,v 1.1 2004/12/20 15:46:56 paul Exp $
+# $FreeBSD: release/7.0.0/share/mk/bsd.pkg.mk 139068 2004-12-20 15:46:56Z paul $
 
 WRKDIR=${.OBJDIR}
 .if ${.OBJDIR} == ${.CURDIR}

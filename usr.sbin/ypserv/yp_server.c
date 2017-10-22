@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/ypserv/yp_server.c,v 1.39 2005/05/02 09:42:59 ume Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/ypserv/yp_server.c 159461 2006-06-09 14:01:07Z maxim $");
 
 #include "yp.h"
 #include "yp_extern.h"
@@ -164,9 +164,9 @@ ypproc_match_2_svc(ypreq_key *argp, struct svc_req *rqstp)
 	 */
 
 #ifdef DB_CACHE
-	if (result.stat != YP_TRUE &&
+	if (do_dns && result.stat != YP_TRUE &&
 	    (yp_testflag(argp->map, argp->domain, YP_INTERDOMAIN) ||
-	     ((strstr(argp->map, "hosts") || strstr(argp->map, "ipnodes")) && do_dns))) {
+	    (strstr(argp->map, "hosts") || strstr(argp->map, "ipnodes")))) {
 #else
 	if (do_dns && result.stat != YP_TRUE &&
 	    (strstr(argp->map, "hosts") || strstr(argp->map, "ipnodes"))) {

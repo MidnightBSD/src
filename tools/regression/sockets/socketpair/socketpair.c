@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/sockets/socketpair/socketpair.c,v 1.1 2004/08/04 03:46:35 rwatson Exp $
+ * $FreeBSD: release/7.0.0/tools/regression/sockets/socketpair/socketpair.c 168278 2007-04-02 19:15:47Z jhb $
  */
 
 #include <sys/types.h>
@@ -49,6 +49,7 @@
 int
 main(int argc, char *argv[])
 {
+	int fd1, fd2, fd3;
 	int sv[2];
 
 	/*
@@ -121,6 +122,38 @@ main(int argc, char *argv[])
 		fprintf(stderr, "socketpair(PF_INET, SOCK_STREAM): %s\n",
 		    strerror(errno));
 		fprintf(stderr, "FAIL\n");
+	}
+
+	/*
+	 * Check for sequential fd allocation, and give up early if not.
+	 */
+	fd1 = dup(STDIN_FILENO);
+	fd2 = dup(STDIN_FILENO);
+	if (fd2 != fd1 + 1) {
+		fprintf(stderr, "Non-sequential fd allocation\n");
+		fprintf(stderr, "FAIL\n");
+		exit(-1);
+	}
+
+	/* Allocate a socketpair using a bad destination address. */
+	if (socketpair(PF_UNIX, SOCK_DGRAM, 0, NULL) == 0) {
+		fprintf(stderr, "socketpair(PF_UNIX, SOCK_DGRAM, NULL): opened\n");
+		fprintf(stderr, "FAIL\n");
+		exit(-1);
+	}
+	if (errno != EFAULT) {
+		fprintf(stderr, "socketpair(PF_UNIX, SOCK_DGRAM, NULL): %s\n",
+		    strerror(errno));
+		fprintf(stderr, "FAIL\n");
+		exit(-1);
+	}
+
+	/* Allocate a file descriptor and make sure it's fd2+1. */
+	fd3 = dup(STDIN_FILENO);
+	if (fd3 != fd2 + 1) {
+		fprintf(stderr, "socketpair(..., NULL) allocated descriptors\n");
+		fprintf(stderr, "FAIL\n");
+		exit(-1);
 	}
 
 	fprintf(stderr, "PASS\n");

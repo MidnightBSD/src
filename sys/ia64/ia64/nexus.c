@@ -26,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/ia64/nexus.c,v 1.11 2005/03/20 06:55:49 njl Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/ia64/nexus.c 171664 2007-07-30 22:29:33Z marcel $
  */
 
 /*
@@ -39,8 +39,6 @@
  * ISA code but it's easier to do it here for now), I/O port addresses,
  * and I/O memory address space.
  */
-
-#define __RMAN_RESOURCE_VISIBLE
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -77,9 +75,6 @@ static struct rman irq_rman, drq_rman, port_rman, mem_rman;
 
 static	int nexus_probe(device_t);
 static	int nexus_attach(device_t);
-static	int nexus_print_resources(struct resource_list *rl, const char *name, int type,
-				  const char *format);
-static	int nexus_print_all_resources(device_t dev);
 static	int nexus_print_child(device_t, device_t);
 static device_t nexus_add_child(device_t bus, int order, const char *name,
 				int unit);
@@ -94,7 +89,8 @@ static	int nexus_deactivate_resource(device_t, device_t, int, int,
 static	int nexus_release_resource(device_t, device_t, int, int,
 				   struct resource *);
 static	int nexus_setup_intr(device_t, device_t, struct resource *, int flags,
-			     void (*)(void *), void *, void **);
+			     driver_filter_t filter, void (*)(void *), void *, 
+			     void **);
 static	int nexus_teardown_intr(device_t, device_t, struct resource *,
 				void *);
 static struct resource_list *nexus_get_reslist(device_t dev, device_t child);
@@ -232,58 +228,16 @@ nexus_attach(device_t dev)
 }
 
 static int
-nexus_print_resources(struct resource_list *rl, const char *name, int type,
-		      const char *format)
+nexus_print_child(device_t bus, device_t child)
 {
-	struct resource_list_entry *rle;
-	int printed, retval;
-
-	printed = 0;
-	retval = 0;
-	/* Yes, this is kinda cheating */
-	STAILQ_FOREACH(rle, rl, link) {
-		if (rle->type == type) {
-			if (printed == 0)
-				retval += printf(" %s ", name);
-			else if (printed > 0)
-				retval += printf(",");
-			printed++;
-			retval += printf(format, rle->start);
-			if (rle->count > 1) {
-				retval += printf("-");
-				retval += printf(format, rle->start +
-						 rle->count - 1);
-			}
-		}
-	}
-	return retval;
-}
-
-static int
-nexus_print_all_resources(device_t dev)
-{
-	struct	nexus_device *ndev = DEVTONX(dev);
+	struct nexus_device *ndev = DEVTONX(child);
 	struct resource_list *rl = &ndev->nx_resources;
 	int retval = 0;
 
-	if (STAILQ_FIRST(rl) || ndev->nx_pcibus != -1)
-		retval += printf(" at");
-	
-	retval += nexus_print_resources(rl, "port", SYS_RES_IOPORT, "%#lx");
-	retval += nexus_print_resources(rl, "iomem", SYS_RES_MEMORY, "%#lx");
-	retval += nexus_print_resources(rl, "irq", SYS_RES_IRQ, "%ld");
-
-	return retval;
-}
-
-static int
-nexus_print_child(device_t bus, device_t child)
-{
-	struct	nexus_device *ndev = DEVTONX(child);
-	int retval = 0;
-
 	retval += bus_print_child_header(bus, child);
-	retval += nexus_print_all_resources(child);
+	retval += resource_list_print_type(rl, "port", SYS_RES_IOPORT, "%#lx");
+	retval += resource_list_print_type(rl, "iomem", SYS_RES_MEMORY, "%#lx");
+	retval += resource_list_print_type(rl, "irq", SYS_RES_IRQ, "%ld");
 	if (ndev->nx_pcibus != -1)
 		retval += printf(" pcibus %d", ndev->nx_pcibus);
 	if (device_get_flags(child))
@@ -402,14 +356,7 @@ nexus_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	rv = rman_reserve_resource(rm, start, end, count, flags, child);
 	if (rv == 0)
 		return 0;
-
-	if (type == SYS_RES_MEMORY) {
-		rman_set_bustag(rv, IA64_BUS_SPACE_MEM);
-	} else if (type == SYS_RES_IOPORT) {
-		rman_set_bustag(rv, IA64_BUS_SPACE_IO);
-		/* IBM-PC: the type of bus_space_handle_t is u_int */
-		rman_set_bushandle(rv, rv->r_start);
-	}
+	rman_set_rid(rv, *rid);
 
 	if (needactivate) {
 		if (bus_activate_resource(child, type, *rid, rv)) {
@@ -425,17 +372,25 @@ static int
 nexus_activate_resource(device_t bus, device_t child, int type, int rid,
 			struct resource *r)
 {
+	vm_paddr_t paddr, psize;
+	void *vaddr;
+
 	/*
 	 * If this is a memory resource, map it into the kernel.
 	 */
-	if (rman_get_bustag(r) == IA64_BUS_SPACE_MEM) {
-		vm_offset_t paddr = rman_get_start(r);
-		vm_offset_t psize = rman_get_size(r);
-		caddr_t vaddr = 0;
-
+	switch (type) {
+	case SYS_RES_IOPORT:
+		rman_set_bustag(r, IA64_BUS_SPACE_IO);
+		rman_set_bushandle(r, rman_get_start(r));
+		break;
+	case SYS_RES_MEMORY:
+		paddr = rman_get_start(r);
+		psize = rman_get_size(r);
 		vaddr = pmap_mapdev(paddr, psize);
 		rman_set_virtual(r, vaddr);
+		rman_set_bustag(r, IA64_BUS_SPACE_MEM);
 		rman_set_bushandle(r, (bus_space_handle_t) paddr);
+		break;
 	}
 	return (rman_activate_resource(r));
 }
@@ -468,7 +423,8 @@ nexus_release_resource(device_t bus, device_t child, int type, int rid,
  */
 static int
 nexus_setup_intr(device_t bus, device_t child, struct resource *irq,
-		 int flags, void (*ihand)(void *), void *arg, void **cookiep)
+		 int flags, driver_filter_t filter, void (*ihand)(void *), 
+		 void *arg, void **cookiep)
 {
 	driver_t	*driver;
 	int		error;
@@ -478,7 +434,7 @@ nexus_setup_intr(device_t bus, device_t child, struct resource *irq,
 		panic("nexus_setup_intr: NULL irq resource!");
 
 	*cookiep = 0;
-	if ((irq->r_flags & RF_SHAREABLE) == 0)
+	if ((rman_get_flags(irq) & RF_SHAREABLE) == 0)
 		flags |= INTR_EXCL;
 
 	driver = device_get_driver(child);
@@ -490,20 +446,18 @@ nexus_setup_intr(device_t bus, device_t child, struct resource *irq,
 	if (error)
 		return (error);
 
-	error = ia64_setup_intr(device_get_nameunit(child), irq->r_start,
-	    ihand, arg, flags, cookiep, 0);
+	error = ia64_setup_intr(device_get_nameunit(child),
+	    rman_get_start(irq), filter, ihand, arg, flags, cookiep);
 
 	return (error);
 }
 
 static int
-nexus_teardown_intr(device_t dev, device_t child, struct resource *r, void *ih)
+nexus_teardown_intr(device_t dev, device_t child, struct resource *ires,
+    void *cookie)
 {
-#if 0
-	return (inthand_remove(ih));
-#else
-	return 0;
-#endif
+
+	return (ia64_teardown_intr(cookie));
 }
 
 static struct resource_list *

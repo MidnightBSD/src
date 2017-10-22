@@ -23,7 +23,7 @@
  * Copies of this Software may be made, however, the above copyright
  * notice must be reproduced on all copies.
  *
- *	@(#) $FreeBSD: src/usr.sbin/atm/atmarpd/atmarp_config.c,v 1.4 2002/05/16 23:28:40 arr Exp $
+ *	@(#) $FreeBSD: release/7.0.0/usr.sbin/atm/atmarpd/atmarp_config.c 96760 2002-05-16 23:28:40Z arr $
  *
  */
 
@@ -61,7 +61,7 @@
 #include "atmarp_var.h"
 
 #ifndef lint
-__RCSID("@(#) $FreeBSD: src/usr.sbin/atm/atmarpd/atmarp_config.c,v 1.4 2002/05/16 23:28:40 arr Exp $");
+__RCSID("@(#) $FreeBSD: release/7.0.0/usr.sbin/atm/atmarpd/atmarp_config.c 96760 2002-05-16 23:28:40Z arr $");
 #endif
 
 

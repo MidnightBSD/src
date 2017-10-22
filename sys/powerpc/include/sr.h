@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/include/sr.h,v 1.5 2005/01/07 02:29:19 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/sr.h 139825 2005-01-07 02:29:27Z imp $
  */
 
 #ifndef _MACHINE_SR_H_

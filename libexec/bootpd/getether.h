@@ -1,4 +1,4 @@
 /* getether.h */
-/* $FreeBSD: src/libexec/bootpd/getether.h,v 1.2 2002/05/28 18:31:41 alfred Exp $ */
+/* $FreeBSD: release/7.0.0/libexec/bootpd/getether.h 97416 2002-05-28 18:31:41Z alfred $ */
 
 extern int getether(char *ifname, char *eaptr);

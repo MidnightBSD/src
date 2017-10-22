@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)ul.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.bin/ul/ul.1,v 1.18 2005/05/21 09:55:09 ru Exp $
+.\" $FreeBSD: release/7.0.0/usr.bin/ul/ul.1 167065 2007-02-27 12:06:02Z ru $
 .\"
 .Dd August 4, 2004
 .Dt UL 1
@@ -64,13 +64,15 @@ degenerates to
 If the terminal cannot underline, underlining is ignored.
 .Pp
 The following options are available:
-.Bl -tag -width Ds
+.Bl -tag -width indent
 .It Fl i
 Underlining is indicated by a separate line containing appropriate
-dashes `\-'; this is useful when you want to look at the underlining
+dashes
+.Ql \- ;
+this is useful when you want to look at the underlining
 which is present in an
 .Xr nroff 1
-output stream on a crt-terminal.
+output stream on a CRT-terminal.
 .It Fl t Ar terminal
 Overrides the terminal type specified in the environment with
 .Ar terminal .

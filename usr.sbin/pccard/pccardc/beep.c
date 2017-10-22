@@ -31,7 +31,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/pccard/pccardc/beep.c,v 1.3 2002/04/22 13:44:45 des Exp $";
+  "$FreeBSD: release/7.0.0/usr.sbin/pccard/pccardc/beep.c 95258 2002-04-22 13:44:47Z des $";
 #endif /* not lint */
 
 #include <ctype.h>

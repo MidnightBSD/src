@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 5/31/93
-# $FreeBSD: src/bin/ln/Makefile,v 1.11 2001/12/04 01:57:44 obrien Exp $
+# $FreeBSD: release/7.0.0/bin/ln/Makefile 87323 2001-12-04 01:57:47Z obrien $
 
 PROG=	ln
 MAN=	ln.1 symlink.7

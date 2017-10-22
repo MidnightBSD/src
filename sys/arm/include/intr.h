@@ -32,14 +32,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/intr.h,v 1.5 2005/06/09 12:26:19 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/intr.h 170827 2007-06-16 15:03:33Z cognet $
  *
  */
 
 #ifndef _MACHINE_INTR_H_
 #define _MACHINE_INTR_H_
 
-#ifdef CPU_ARM9
+#ifdef CPU_XSCALE_81342
+#define NIRQ		128
+#elif defined(CPU_ARM9)
 #define NIRQ		64
 #else
 #define NIRQ		32
@@ -50,7 +52,7 @@
 int arm_get_next_irq(void);
 void arm_mask_irq(uintptr_t);
 void arm_unmask_irq(uintptr_t);
-void arm_setup_irqhandler(const char *, void (*)(void*), void *, int, int,
-    void **);
+void arm_setup_irqhandler(const char *, int (*)(void*), void (*)(void*), 
+    void *, int, int, void **);    
 int arm_remove_irqhandler(void *);
 #endif	/* _MACHINE_INTR_H */

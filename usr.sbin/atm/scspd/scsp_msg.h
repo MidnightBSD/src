@@ -23,7 +23,7 @@
  * Copies of this Software may be made, however, the above copyright
  * notice must be reproduced on all copies.
  *
- *	@(#) $FreeBSD: src/usr.sbin/atm/scspd/scsp_msg.h,v 1.3 2002/05/16 23:57:37 arr Exp $
+ *	@(#) $FreeBSD: release/7.0.0/usr.sbin/atm/scspd/scsp_msg.h 96765 2002-05-16 23:57:37Z arr $
  *
  */
 

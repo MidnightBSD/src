@@ -32,7 +32,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/itjc/i4b_itjc_l1.c,v 1.5 2005/01/06 22:18:20 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer1/itjc/i4b_itjc_l1.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -41,13 +41,12 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer1/itjc/i4b_itjc_l1.c,v 1.5 2005/01/06 22:18
 #include <sys/socket.h>
 
 #include <machine/stdarg.h>
-#include <machine/clock.h>
 
 #include <net/if.h>
 
-#include <machine/i4b_debug.h>
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_trace.h>
+#include <i4b/include/i4b_debug.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_trace.h>
 
 #include <i4b/layer1/isic/i4b_isic.h>
 #include <i4b/layer1/isic/i4b_isac.h>

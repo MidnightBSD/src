@@ -1,4 +1,4 @@
 #!/bin/sh
-# $FreeBSD: src/usr.bin/alias/generic.sh,v 1.1.16.1 2005/11/04 18:21:37 cperciva Exp $
+# $FreeBSD: release/7.0.0/usr.bin/alias/generic.sh 151635 2005-10-24 22:32:19Z cperciva $
 # This file is in the public domain.
 builtin ${0##*/} ${1+"$@"}

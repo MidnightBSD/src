@@ -38,7 +38,7 @@
 static char sccsid[] = "@(#)popen.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/lib/libdialog/raw_popen.c,v 1.5 2003/05/03 21:31:08 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/gnu/lib/libdialog/raw_popen.c 114603 2003-05-03 21:31:08Z obrien $");
 
 #include <sys/param.h>
 #include <sys/wait.h>

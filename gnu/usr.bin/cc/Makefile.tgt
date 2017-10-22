@@ -1,10 +1,8 @@
-# $FreeBSD: src/gnu/usr.bin/cc/Makefile.tgt,v 1.8 2004/07/28 05:27:19 kan Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/cc/Makefile.tgt 169718 2007-05-19 04:25:59Z kan $
 
 TARGET_ARCH?=	${MACHINE_ARCH}
 
-.if ${TARGET_ARCH} == "alpha"
-GCC_CPU=	alpha
-.elif ${TARGET_ARCH} == "arm"
+.if ${TARGET_ARCH} == "arm"
 GCC_CPU=	arm
 .elif ${TARGET_ARCH} == "i386" || ${TARGET_ARCH} == "amd64"
 GCC_CPU=	i386

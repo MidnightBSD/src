@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/hwpmc.4,v 1.6.2.3 2005/10/01 15:52:13 jkoshy Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man4/hwpmc.4 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
 .Dd September 28, 2005
 .Dt HWPMC 4
@@ -35,7 +35,7 @@
 .Cd "device hwpmc"
 .Pp
 Additionally, for i386 systems:
-.Cd device apic
+.Cd "device apic"
 .Sh DESCRIPTION
 The
 .Nm
@@ -50,8 +50,7 @@ PMCs are allocated using the
 request.
 A successful
 .Dv PMC_OP_PMCALLOCATE
-request will return an integer handle (typically a small integer) to
-the requesting process.
+request will return an integer handle to the requesting process.
 Subsequent operations on the allocated PMC use this handle to denote
 the specific PMC.
 A process that has successfully allocated a PMC is termed an
@@ -77,14 +76,14 @@ sampling:
 In counting modes, the PMCs count hardware events.
 These counts are retrievable using the
 .Dv PMC_OP_PMCREAD
-system call on all architectures, though some architectures like the
-i386 and amd64 offer faster methods of reading these counts.
+system call on all architectures.
+Some architectures offer faster methods of reading these counts.
 .It Em Sampling
-In sampling modes, where PMCs are configured to sample the CPU
+In sampling modes, the PMCs are configured to sample the CPU
 instruction pointer after a configurable number of hardware events
 have been observed.
-These instruction pointer samples are directed to a log file for
-subsequent analysis.
+These instruction pointer samples are usually directed to a log file
+for subsequent analysis.
 .El
 .Pp
 These modes of operation are orthogonal; a PMC may be configured to
@@ -136,14 +135,11 @@ System-wide statistical sampling can only be enabled by a process with
 super-user privileges.
 .El
 .Pp
-Processes are allowed to allocate as many PMCs are the hardware and
+Processes are allowed to allocate as many PMCs as the hardware and
 current operating conditions permit.
 Processes may mix allocations of system-wide and process-private
 PMCs.
-Multiple processes are allowed to be concurrently using the facilities
-of the
-.Nm
-driver.
+Multiple processes may be using PMCs simultaneously.
 .Pp
 Allocated PMCs are started using the
 .Dv PMC_OP_PMCSTART
@@ -225,7 +221,7 @@ and
 .Dv PMC_F_LOG_PROCCSW
 may be used in combination with modifier
 .Dv PMC_F_DESCENDANTS
-to track the behaviour of complex pipelines of processes.
+to track the behavior of complex pipelines of processes.
 PMCs with modifiers
 .Dv PMC_F_LOG_PROCEXIT
 and
@@ -410,7 +406,7 @@ before
 .Nm
 is loaded.
 .Sh SECURITY CONSIDERATIONS
-PMCs may be used to monitor the actual behaviour of the system on hardware.
+PMCs may be used to monitor the actual behavior of the system on hardware.
 In situations where this constitutes an undesirable information leak,
 the following options are available:
 .Bl -enum
@@ -456,7 +452,7 @@ has permitted user processes running at a processor CPL of 3 to
 read the TSC using the RDTSC instruction.
 The
 .Nm
-driver preserves this semantics.
+driver preserves this behavior.
 .Ss Intel P4/HTT Handling
 On CPUs with HTT support, Intel P4 PMCs are capable of qualifying
 only a subset of hardware events on a per-logical CPU basis.
@@ -467,7 +463,7 @@ driver will reject allocation requests for process-private PMCs that
 request counting of hardware events that cannot be counted separately
 for each logical CPU.
 .Ss Intel Pentium-Pro Handling
-Writing a value to the PMC MSRs found ing Intel Pentium-Pro style PMCs
+Writing a value to the PMC MSRs found in Intel Pentium-Pro style PMCs
 (found in
 .Tn "Intel Pentium Pro" ,
 .Tn "Pentium II" ,
@@ -503,7 +499,7 @@ between the currently executing kernel and the module being loaded.
 .It "hwpmc: this kernel has not been compiled with 'options HWPMC_HOOKS'."
 The module loading process failed because the currently executing kernel
 was not configured with the required configuration option
-.Cd HWPMC_HOOKS .
+.Dv HWPMC_HOOKS .
 .It "hwpmc: tunable hashsize=%d must be greater than zero."
 A negative value was supplied for tunable
 .Va kern.hwpmc.hashsize .
@@ -682,6 +678,9 @@ A
 .Dv PMC_OP_PMCALLOCATE
 request was issued for PMC capabilities not supported
 by the specified PMC class.
+.It Bq Er EOPNOTSUPP
+(i386 architectures)
+A sampling mode PMC was requested on a CPU lacking an APIC.
 .It Bq Er EPERM
 A
 .Dv PMC_OP_PMCADMIN

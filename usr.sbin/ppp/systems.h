@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/systems.h,v 1.17 2001/11/03 21:45:32 brian Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ppp/systems.h 85991 2001-11-03 21:45:32Z brian $
  */
 
 struct prompt;

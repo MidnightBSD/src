@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: src/usr.sbin/nfsd/Makefile,v 1.17 2004/11/06 18:15:44 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/nfsd/Makefile 137319 2004-11-06 18:15:44Z delphij $
 
 PROG=	nfsd
 MAN=	nfsd.8

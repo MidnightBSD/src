@@ -1,7 +1,7 @@
 # The FreeBSD Documentation
 # The FreeBSD German Documentation Project
 #
-# $FreeBSD: src/release/doc/de_DE.ISO8859-1/early-adopter/Makefile,v 1.1 2002/11/02 03:07:46 ue Exp $
+# $FreeBSD: release/7.0.0/release/doc/de_DE.ISO8859-1/early-adopter/Makefile 106322 2002-11-02 03:07:46Z ue $
 # $FreeBSDde: de-docproj/relnotes/de_DE.ISO8859-1/early-adopter/Makefile,v 1.1 2002/10/28 18:37:20 ue Exp $
 # basiert auf: 1.3
 

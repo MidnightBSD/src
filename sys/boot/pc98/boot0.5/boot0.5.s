@@ -1,4 +1,4 @@
-# Copyright (c) KATO Takenori, 1999, 2000.
+# Copyright (c) KATO Takenori, 1999, 2000, 2007.
 #
 # All rights reserved.  Unpublished rights reserved under the copyright
 # laws of Japan.
@@ -25,7 +25,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/boot/pc98/boot0.5/boot0.5.s,v 1.2 2000/08/06 14:35:37 kato Exp $
+# $FreeBSD: release/7.0.0/sys/boot/pc98/boot0.5/boot0.5.s 168457 2007-04-07 08:37:04Z kato $
 #
 	.global	main
 	.code16
@@ -60,7 +60,7 @@ normalmode:
 	jmp	exit			# No hard drives
 
 drives_found:
-	# Setup sector size depended parameters
+	# Setup sector size dependent parameters
 	movw	%si, %cx		# %cx = number of devices
 setup_loop:
 	movw	%cx, %di
@@ -254,22 +254,15 @@ showunit:
 	ret
 
 	.data
-	.global	curdevice, daua, secsize, defflagoff, defpartoff
-	.global	maxpart, partoff, ndevice
+	.global	curdevice, ndevice
 ndevice:	.word	0		# number of device
 curdevice:	.word	0		# current device
-daua:		.space	12		# DA/DU list
-secsize:	.space	12 * 2		# Sector soize
-defflagoff:	.space	12 * 2
-defpartoff:	.space	12 * 2
-maxpart:	.space	12 * 2
-partoff:	.space	12 * 2
 
 	.global	ishireso
 ishireso:	.byte	0
 
-title:		.asciz	"PC98 Boot Selector Version 1.1"
-copyright:	.ascii	"(C)Copyright 1999, 2000 KATO Takenori. "
+title:		.asciz	"PC98 Boot Selector Version 1.2"
+copyright:	.ascii	"(C)Copyright 1999-2007 KATO Takenori. "
 		.asciz	"All rights reserved."
 msg_device:	.asciz	"Device"
 msg_sasi:	.asciz	"SASI/IDE unit "
@@ -288,3 +281,13 @@ msg_usage9:	.asciz	"LEGEND"
 msg_usage10:	.asciz	">>: selected device/slice"
 msg_usage11:	.asciz	"*: default slice to boot"
 msg_usage12:	.asciz	"!: unbootable slice"
+
+	.bss
+	.global	daua, secsize, defflagoff, defpartoff
+	.global	maxpart, partoff
+daua:		.space	12		# DA/DU list
+secsize:	.space	12 * 2		# Sector soize
+defflagoff:	.space	12 * 2
+defpartoff:	.space	12 * 2
+maxpart:	.space	12 * 2
+partoff:	.space	12 * 2

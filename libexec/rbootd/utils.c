@@ -49,7 +49,7 @@
 static const char sccsid[] = "@(#)utils.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/rbootd/utils.c,v 1.8 2004/05/24 11:59:16 stefanf Exp $";
+  "$FreeBSD: release/7.0.0/libexec/rbootd/utils.c 129652 2004-05-24 11:59:17Z stefanf $";
 #endif /* not lint */
 
 #include <sys/param.h>

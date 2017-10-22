@@ -1,7 +1,6 @@
-# $FreeBSD: src/etc/periodic/weekly/Makefile,v 1.8 2002/07/18 12:33:01 ru Exp $
+# $FreeBSD: release/7.0.0/etc/periodic/weekly/Makefile 161708 2006-08-29 08:49:58Z ru $
 
-FILES=	120.clean-kvmdb \
-	310.locate \
+FILES=	310.locate \
 	320.whatis \
 	330.catman \
 	340.noid \

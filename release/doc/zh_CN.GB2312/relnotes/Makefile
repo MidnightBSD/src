@@ -1,16 +1,27 @@
 # The FreeBSD Simplified Chinese Project
-# Original Revision: 1.6
+# Original Revision: 1.11
 #
-# $FreeBSD: src/release/doc/zh_CN.GB2312/relnotes/Makefile,v 1.1 2004/10/15 06:43:47 delphij Exp $
+# $FreeBSD: release/7.0.0/release/doc/zh_CN.GB2312/relnotes/Makefile 174504 2007-12-09 23:37:43Z delphij $
 
 RELN_ROOT?= ${.CURDIR}/../..
 
-SUBDIR = alpha
-SUBDIR+= amd64
-SUBDIR+= ia64
-SUBDIR+= i386
-SUBDIR+= pc98
-SUBDIR+= sparc64
+.ifdef NO_LANGCODE_IN_DESTDIR
+DESTDIR?=	${DOCDIR}/relnotes
+.else
+DESTDIR?=	${DOCDIR}/zh_CN.GB2312/relnotes
+.endif
+
+DOC?= article
+FORMATS?= html
+INSTALL_COMPRESSED?= gz
+INSTALL_ONLY_COMPRESSED?=
+
+JADEFLAGS+=	-V %generate-article-toc%
+
+# SGML content
+SRCS+=	article.sgml
+
+URL_RELPREFIX?=	../../../..
 
 .include "${RELN_ROOT}/share/mk/doc.relnotes.mk"
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

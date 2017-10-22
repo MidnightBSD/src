@@ -1,5 +1,5 @@
 <!--
-    $FreeBSD: src/release/doc/ja_JP.eucJP/hardware/sparc64/proc-sparc64.sgml,v 1.6 2005/02/28 16:41:33 rushani Exp $
+    $FreeBSD: release/7.0.0/release/doc/ja_JP.eucJP/hardware/sparc64/proc-sparc64.sgml 142802 2005-02-28 16:41:33Z rushani $
     Original revision: 1.12
 -->
 <sect1 id="support-sys">

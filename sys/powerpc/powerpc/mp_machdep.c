@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/powerpc/powerpc/mp_machdep.c,v 1.12 2004/11/27 06:51:38 das Exp $
+ *	$FreeBSD: release/7.0.0/sys/powerpc/powerpc/mp_machdep.c 158651 2006-05-16 14:37:58Z phk $
  */
 
 #include <sys/param.h>
@@ -42,7 +42,6 @@
 
 #include <machine/atomic.h>
 #include <machine/pmap.h>
-#include <machine/clock.h>
 
 int			boot_cpu_id;
 

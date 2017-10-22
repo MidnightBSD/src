@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile.inc,v 1.8 2002/02/04 00:18:32 thorpej Exp $
-# $FreeBSD: src/usr.bin/xlint/Makefile.inc,v 1.5 2004/02/23 20:21:21 johan Exp $
+# $FreeBSD: release/7.0.0/usr.bin/xlint/Makefile.inc 126178 2004-02-23 20:25:27Z johan $
 
 WARNS?=		0
 

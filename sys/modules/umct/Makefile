@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/umct/Makefile,v 1.4 2004/12/29 08:49:50 imp Exp $
+# $FreeBSD: release/7.0.0/sys/modules/umct/Makefile 139399 2004-12-29 08:50:35Z imp $
 
 S=	${.CURDIR}/../..
 .PATH: $S/dev/usb

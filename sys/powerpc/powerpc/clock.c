@@ -56,13 +56,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/clock.c,v 1.20 2005/02/04 01:41:38 grehan Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/clock.c 173609 2007-11-14 16:41:31Z grehan $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
 #include <sys/bus.h>
+#include <sys/clock.h>
 #include <sys/timetc.h>
 #include <sys/interrupt.h>
 
@@ -82,17 +83,6 @@ static u_long		ticks_per_sec = 12500000;
 static long		ticks_per_intr;
 static volatile u_long	lasttb;
 
-static int sysctl_machdep_adjkerntz(SYSCTL_HANDLER_ARGS);
-
-int	wall_cmos_clock;	/* wall CMOS clock assumed if != 0 */
-SYSCTL_INT(_machdep, CPU_WALLCLOCK, wall_cmos_clock,
-	CTLFLAG_RW, &wall_cmos_clock, 0, "");
-
-int	adjkerntz;		/* local offset from GMT in seconds */
-SYSCTL_PROC(_machdep, CPU_ADJKERNTZ, adjkerntz, CTLTYPE_INT|CTLFLAG_RW,
-	&adjkerntz, 0, sysctl_machdep_adjkerntz, "I", "");
-
-#define	SECDAY		86400
 #define	DIFF19041970	2082844800
 
 static int		clockinitted = 0;
@@ -106,17 +96,6 @@ static struct timecounter	decr_timecounter = {
 	0,			/* frequency */
 	"decrementer"		/* name */
 };
-
-static int
-sysctl_machdep_adjkerntz(SYSCTL_HANDLER_ARGS)
-{
-	int error;
-
-	error = sysctl_handle_int(oidp, oidp->oid_arg1, oidp->oid_arg2, req);
-	if (!error && req->newptr)
-		resettodr();
-	return (error);
-}
 
 void
 inittodr(time_t base)
@@ -183,7 +162,7 @@ resettodr()
 }
 
 void
-decr_intr(struct clockframe *frame)
+decr_intr(struct trapframe *frame)
 {
 	u_long		tb;
 	long		tick;
@@ -225,17 +204,10 @@ decr_intr(struct clockframe *frame)
 	 */
 #if 0
 	while (--nticks > 0) {
-		hardclock(frame);
+		hardclock(TRAPF_USERMODE(frame), TRAPF_PC(frame));
 	}
 #endif
-	hardclock(frame);
-}
-
-void
-cpu_initclocks(void)
-{
-
-	return;
+	hardclock(TRAPF_USERMODE(frame), TRAPF_PC(frame));
 }
 
 void
@@ -261,9 +233,6 @@ decr_init(void)
 			msr = mfmsr();
 			mtmsr(msr & ~(PSL_EE|PSL_RI));
 
-			decr_timecounter.tc_frequency = ticks_per_sec;
-			tc_init(&decr_timecounter);
-
 			ns_per_tick = 1000000000 / ticks_per_sec;
 			ticks_per_intr = ticks_per_sec / hz;
 			__asm __volatile ("mftb %0" : "=r"(lasttb));
@@ -283,6 +252,13 @@ decr_init(void)
 	}
 	if (!phandle)
 		panic("no cpu node");
+}
+
+void
+decr_tc_init(void)
+{
+	decr_timecounter.tc_frequency = ticks_per_sec;
+	tc_init(&decr_timecounter);
 }
 
 static __inline u_quad_t

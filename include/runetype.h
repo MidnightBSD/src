@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)runetype.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/include/runetype.h,v 1.9 2004/06/23 07:01:43 tjr Exp $
+ * $FreeBSD: release/7.0.0/include/runetype.h 130961 2004-06-23 07:01:44Z tjr $
  */
 
 #ifndef	_RUNETYPE_H_

@@ -1,4 +1,4 @@
-# $FreeBSD: src/release/doc/de_DE.ISO8859-1/installation/Makefile,v 1.5 2002/11/09 21:27:37 ue Exp $
+# $FreeBSD: release/7.0.0/release/doc/de_DE.ISO8859-1/installation/Makefile 106709 2002-11-09 21:27:38Z ue $
 # $FreeBSDde: de-docproj/relnotes/de_DE.ISO8859-1/installation/Makefile,v 1.6 2002/11/09 18:09:45 ue Exp $
 # basiert auf: 1.5
 

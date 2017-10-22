@@ -23,7 +23,7 @@
  * Copies of this Software may be made, however, the above copyright
  * notice must be reproduced on all copies.
  *
- *	@(#) $FreeBSD: src/usr.sbin/atm/scspd/scsp_timer.c,v 1.3 1999/08/28 01:15:34 peter Exp $
+ *	@(#) $FreeBSD: release/7.0.0/usr.sbin/atm/scspd/scsp_timer.c 50479 1999-08-28 01:35:59Z peter $
  *
  */
 
@@ -57,7 +57,7 @@
 #include "scsp_var.h"
 
 #ifndef lint
-__RCSID("@(#) $FreeBSD: src/usr.sbin/atm/scspd/scsp_timer.c,v 1.3 1999/08/28 01:15:34 peter Exp $");
+__RCSID("@(#) $FreeBSD: release/7.0.0/usr.sbin/atm/scspd/scsp_timer.c 50479 1999-08-28 01:35:59Z peter $");
 #endif
 
 

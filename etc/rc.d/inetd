@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $NetBSD: inetd,v 1.6 2000/09/19 13:04:38 lukem Exp $
-# $FreeBSD: src/etc/rc.d/inetd,v 1.5 2005/01/16 03:12:03 obrien Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/inetd 175737 2008-01-28 07:58:32Z dougb $
 #
 
 # PROVIDE: inetd

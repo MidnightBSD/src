@@ -27,9 +27,9 @@
  *	isdntel - isdn4bsd telephone answering support
  *      ==============================================
  *
- *	$Id: defs.h,v 1.1.1.2 2006-02-25 02:38:29 laffer1 Exp $ 
+ *	$Id: defs.h,v 1.10 1999/12/13 21:25:26 hm Exp $ 
  *
- * $FreeBSD: src/usr.sbin/i4b/isdntel/defs.h,v 1.7 2000/10/09 14:22:44 hm Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdntel/defs.h 171272 2007-07-06 07:21:56Z bz $
  *
  *      last edit-date: [Mon Dec 13 21:53:50 1999]
  *
@@ -53,7 +53,7 @@
 #endif
 #include <sys/param.h>
 
-#include <machine/i4b_ioctl.h>
+#include <i4b/i4b_ioctl.h>
 
 #define GOOD	0
 #define	ERROR	(-1)

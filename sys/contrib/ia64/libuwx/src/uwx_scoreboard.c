@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003 Hewlett-Packard Development Company, L.P.
+Copyright (c) 2003-2006 Hewlett-Packard Development Company, L.P.
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without
@@ -58,6 +58,15 @@ malloc(size_t sz)
 #endif
 
 
+void uwx_prealloc_scoreboard(struct uwx_env *env, struct uwx_scoreboard *sb)
+{
+    sb->id = env->nscoreboards++;
+    sb->nextused = env->used_scoreboards;
+    sb->prealloc = 1;
+    env->used_scoreboards = sb;
+    TRACE_B_PREALLOC(sb->id)
+}
+
 struct uwx_scoreboard *uwx_alloc_scoreboard(struct uwx_env *env)
 {
     struct uwx_scoreboard *sb;
@@ -79,6 +88,7 @@ struct uwx_scoreboard *uwx_alloc_scoreboard(struct uwx_env *env)
 	    return 0;
 	sb->id = env->nscoreboards++;
 	sb->nextused = env->used_scoreboards;
+	sb->prealloc = 0;
 	env->used_scoreboards = sb;
 	TRACE_B_ALLOC(sb->id)
     }
@@ -291,10 +301,12 @@ void uwx_free_scoreboards(struct uwx_env *env)
     for (sb = env->used_scoreboards; sb != 0; sb = next) {
 	TRACE_B_FREE(sb->id)
 	next = sb->nextused;
-	if (env->free_cb == 0)
-	    free((void *)sb);
-	else
-	    (*env->free_cb)((void *)sb);
+	if (!sb->prealloc) {
+	    if (env->free_cb == 0)
+		free((void *)sb);
+	    else
+		(*env->free_cb)((void *)sb);
+	}
     }
     env->free_scoreboards = 0;
     env->used_scoreboards = 0;

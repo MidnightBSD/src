@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)calendar.c  8.3 (Berkeley) 3/25/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/calendar/calendar.c,v 1.18 2002/08/14 11:28:07 ru Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/calendar/calendar.c 169343 2007-05-07 11:18:30Z dwmalone $");
 
 #include <err.h>
 #include <errno.h>
@@ -67,9 +67,7 @@ int f_dayBefore = 0; /* days before current date */
 int Friday = 5;	     /* day before weekend */
 
 int
-main(argc, argv)
-	int argc;
-	char *argv[];
+main(int argc, char *argv[])
 {
 	int ch;
 
@@ -143,7 +141,7 @@ main(argc, argv)
 
 
 void
-usage()
+usage(void)
 {
 	(void)fprintf(stderr, "%s\n%s\n",
 	    "usage: calendar [-a] [-A days] [-B days] [-F friday] "

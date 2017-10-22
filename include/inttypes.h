@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/inttypes.h,v 1.8 2002/09/22 08:06:45 tjr Exp $
+ * $FreeBSD: release/7.0.0/include/inttypes.h 103793 2002-09-22 08:06:45Z tjr $
  */
 
 #ifndef _INTTYPES_H_

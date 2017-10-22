@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/xscale/i80321/i80321_pci.c,v 1.4 2005/06/09 12:26:20 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/i80321/i80321_pci.c 172394 2007-09-30 11:05:18Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -48,7 +48,6 @@ __FBSDID("$FreeBSD: src/sys/arm/xscale/i80321/i80321_pci.c,v 1.4 2005/06/09 12:2
 #include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
-#define __RMAN_RESOURCE_VISIBLE
 #include <sys/rman.h>
 
 #include <machine/bus.h>
@@ -68,20 +67,6 @@ __FBSDID("$FreeBSD: src/sys/arm/xscale/i80321/i80321_pci.c,v 1.4 2005/06/09 12:2
 
 #include <dev/pci/pcireg.h>
 extern struct i80321_softc *i80321_softc;
-
-struct i80321_pci_softc {
-	device_t 		sc_dev;
-	bus_space_tag_t 	sc_st;
-	bus_space_handle_t 	sc_atu_sh;
-	bus_space_tag_t		sc_pciio;
-	bus_space_tag_t		sc_pcimem;
-	int			sc_busno;
-	struct rman		sc_mem_rman;
-	struct rman		sc_io_rman;
-	struct rman		sc_irq_rman;
-	uint32_t		sc_mem;
-	uint32_t		sc_io;
-};
 
 static int
 i80321_pci_probe(device_t dev)
@@ -201,7 +186,7 @@ i80321_pci_read_config(device_t dev, int bus, int slot, int func, int reg,
 	if (i80321_pci_conf_setup(sc, bus, slot, func, reg & ~3, &addr))
 		return (-1);
 	bus_space_write_4(sc->sc_st, sc->sc_atu_sh, ATU_OCCAR,
-	    addr/* & ~3*/);
+	    addr);
 
 	va = sc->sc_atu_sh;
 	switch (bytes) {
@@ -215,7 +200,7 @@ i80321_pci_read_config(device_t dev, int bus, int slot, int func, int reg,
 		err = badaddr_read((void *)(va + ATU_OCCDR), 4, &ret);
 		break;
 	default:
-		printf("i803218_read_config: invalid size %d\n", bytes);
+		printf("i80321_read_config: invalid size %d\n", bytes);
 		ret = -1;
 	}
 	if (err) {
@@ -261,68 +246,14 @@ i80321_pci_write_config(device_t dev, int bus, int slot, int func, int reg,
 }
 
 static int
-i80321_pci_route_interrupt(device_t pcib, device_t dev, int pin)
-{
-	int bus;
-	int device;
-	int func;
-	uint32_t busno;
-	struct i80321_pci_softc *sc = device_get_softc(pcib);
-	bus = pci_get_bus(dev);
-	device = pci_get_slot(dev);
-	func = pci_get_function(dev);
-	busno = bus_space_read_4(sc->sc_st, sc->sc_atu_sh, ATU_PCIXSR);
-	busno = PCIXSR_BUSNO(busno);
-	if (busno == 0xff)
-		busno = 0;
-	if (bus != busno)
-		goto no_mapping;
-	switch (device) {
-		/* IQ31244 PCI */
-	case 1: /* PCIX-PCIX bridge */
-		/*
-		 * The S-ATA chips are behind the bridge, and all of
-		 * the S-ATA interrupts are wired together.
-		 */
-		return (ICU_INT_XINT(2));
-	case 2: /* PCI slot */
-		/* All pins are wired together. */
-		return (ICU_INT_XINT(3));
-	case 3: /* i82546 dual Gig-E */
-		if (pin == 1 || pin == 2)
-			return (ICU_INT_XINT(0));
-		goto no_mapping;
-		/* IQ80321 PCI */
-	case 4: /* i82544 Gig-E */
-	case 8: /*
-		 * Apparently you can set the device for the ethernet adapter
-		 * to 8 with a jumper, so handle that as well
-		 */
-		if (pin == 1)
-			return (ICU_INT_XINT(0));
-		goto no_mapping;
-	case 6: /* S-PCI-X slot */
-		if (pin == 1)
-			return (ICU_INT_XINT(2));
-		if (pin == 2)
-			return (ICU_INT_XINT(3));
-		goto no_mapping;
-	default:
-no_mapping:
-		printf("No mapping for %d/%d/%d/%c\n", bus, device, func, pin);
-		
-	}
-	return (0);
-
-}
-
-static int
 i80321_read_ivar(device_t dev, device_t child, int which, uintptr_t *result)
 {
 	struct i80321_pci_softc *sc = device_get_softc(dev);
 	switch (which) {
+	case PCIB_IVAR_DOMAIN:
+		*result = 0;
+		return (0);
 	case PCIB_IVAR_BUS:
-
 		*result = sc->sc_busno;
 		return (0);
 		
@@ -336,6 +267,8 @@ i80321_write_ivar(device_t dev, device_t child, int which, uintptr_t result)
 	struct i80321_pci_softc * sc = device_get_softc(dev);
 
 	switch (which) {
+	case PCIB_IVAR_DOMAIN:
+		return (EINVAL);
 	case PCIB_IVAR_BUS:
 		sc->sc_busno = result;
 		return (0);
@@ -353,16 +286,9 @@ i80321_pci_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	bus_space_tag_t bt = NULL;
 	bus_space_handle_t bh = 0;
 
-	if (type == SYS_RES_IRQ) {
-		rv = malloc(sizeof(*rv), M_DEVBUF, M_WAITOK);
-		rv->r_start = start;
-		rv->r_end = end;
-		rv->r_rid = *rid;
-		return (rv);
-	}
 	switch (type) {
 	case SYS_RES_IRQ:
-		rm = &sc->sc_mem_rman;
+		rm = &sc->sc_irq_rman;
 		break;
 	case SYS_RES_MEMORY:
 		rm = &sc->sc_mem_rman;
@@ -376,18 +302,22 @@ i80321_pci_alloc_resource(device_t bus, device_t child, int type, int *rid,
 		rm = &sc->sc_io_rman;
 		bt = sc->sc_pciio;
 		bh = sc->sc_io;
-		start = start - 0x90000000 + sc->sc_io;
-		end = end - 0x90000000 + sc->sc_io;
+		if (start < sc->sc_io) {
+			start = start - 0x90000000 + sc->sc_io;
+			end = end - 0x90000000 + sc->sc_io;
+		}
 		break;
 	default:
 		return (NULL);
 	}
 
 	rv = rman_reserve_resource(rm, start, end, count, flags, child);
-	if (rv == NULL) 
+	if (rv == NULL)
 		return (NULL);
+	rman_set_rid(rv, *rid);
 	if (type != SYS_RES_IRQ) {
-		bh += (rman_get_start(rv));
+		if (type == SYS_RES_MEMORY)
+			bh += (rman_get_start(rv));
 		rman_set_bustag(rv, bt);
 		rman_set_bushandle(rv, bh);
 		if (flags & RF_ACTIVE) {
@@ -420,11 +350,11 @@ i80321_pci_activate_resource(device_t bus, device_t child, int type, int rid,
 
 static int
 i80321_pci_setup_intr(device_t dev, device_t child,
-    struct resource *ires, int flags, driver_intr_t *intr, void *arg,
-    void **cookiep)
+    struct resource *ires, int flags, driver_filter_t *filt, 
+    driver_intr_t *intr, void *arg, void **cookiep)    
 {
 	return (BUS_SETUP_INTR(device_get_parent(dev), child, ires, flags,
-	    intr, arg, cookiep));
+	    filt, intr, arg, cookiep));
 }
 
 static int
@@ -457,7 +387,7 @@ static device_method_t i80321_pci_methods[] = {
 	DEVMETHOD(pcib_maxslots,	i80321_pci_maxslots),
 	DEVMETHOD(pcib_read_config,	i80321_pci_read_config),
 	DEVMETHOD(pcib_write_config,	i80321_pci_write_config),
-	DEVMETHOD(pcib_route_interrupt,	i80321_pci_route_interrupt),
+	DEVMETHOD(pcib_route_interrupt,	machdep_pci_route_interrupt),
 
 	{0, 0}
 };

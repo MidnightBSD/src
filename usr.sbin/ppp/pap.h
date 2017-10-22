@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/pap.h,v 1.12 2001/06/13 21:52:19 brian Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ppp/pap.h 78189 2001-06-13 21:52:19Z brian $
  */
 
 #define	PAP_REQUEST	1

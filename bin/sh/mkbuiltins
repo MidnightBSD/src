@@ -32,7 +32,7 @@
 # SUCH DAMAGE.
 #
 #	@(#)mkbuiltins	8.2 (Berkeley) 5/4/95
-# $FreeBSD: src/bin/sh/mkbuiltins,v 1.14.2.1 2005/11/06 20:39:48 stefanf Exp $
+# $FreeBSD: release/7.0.0/bin/sh/mkbuiltins 157413 2006-04-02 18:43:33Z stefanf $
 
 temp=`/usr/bin/mktemp -t ka`
 havejobs=0
@@ -66,9 +66,14 @@ echo '};
 
 const struct builtincmd builtincmd[] = {'
 awk '{	for (i = 2 ; i <= NF ; i++) {
-		printf "\t{ \"%s\", %d },\n",  $i, NR-1
+		if ($i == "-s") {
+			spc = 1;
+		} else {
+			printf "\t{ \"%s\", %d, %d },\n",  $i, NR-1, spc
+			spc = 0;
+		}
 	}}' $temp
-echo '	{ NULL, 0 }
+echo '	{ NULL, 0, 0 }
 };'
 
 exec > ${objdir}/builtins.h
@@ -85,6 +90,7 @@ echo '
 struct builtincmd {
       char *name;
       int code;
+      int special;
 };
 
 extern int (*const builtinfunc[])(int, char **);

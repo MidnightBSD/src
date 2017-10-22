@@ -43,7 +43,7 @@
 #include <machine/asm.h>
 #include <machine/armreg.h>
 #include <machine/asmacros.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/copystr.S,v 1.3 2005/01/05 21:58:47 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/copystr.S 139735 2005-01-05 21:58:49Z imp $");
 
 #include <sys/errno.h>
 

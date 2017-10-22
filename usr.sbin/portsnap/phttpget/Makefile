@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/portsnap/phttpget/Makefile,v 1.1.2.2 2005/11/13 06:45:35 cperciva Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/portsnap/phttpget/Makefile 148871 2005-08-08 20:10:06Z cperciva $
 
 PROG=	phttpget
 NO_MAN=

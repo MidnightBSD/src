@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/uuid.h,v 1.3 2005/01/03 02:56:15 marcel Exp $
+ * $FreeBSD: release/7.0.0/include/uuid.h 139601 2005-01-03 02:56:15Z marcel $
  */
 
 #ifndef _UUID_H_

@@ -13,9 +13,9 @@
 .\"
 .\" Jordan K. Hubbard
 .\"
-.\" $FreeBSD: src/usr.sbin/pkg_install/add/pkg_add.1,v 1.66.2.3 2006/01/31 18:32:15 krion Exp $
+.\" $FreeBSD: release/7.0.0/usr.sbin/pkg_install/add/pkg_add.1 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
-.Dd January 16, 2006
+.Dd January 9, 2006
 .Dt PKG_ADD 1
 .Os
 .Sh NAME
@@ -23,7 +23,7 @@
 .Nd a utility for installing software package distributions
 .Sh SYNOPSIS
 .Nm
-.Op Fl vInfrRMSK
+.Op Fl vInfFrRMSK
 .Op Fl t Ar template
 .Op Fl p Ar prefix
 .Op Fl P Ar prefix
@@ -109,6 +109,8 @@ Although
 .Nm
 will still try to find and auto-install missing prerequisite packages,
 a failure to find one will not be fatal.
+.It Fl F
+Already installed packages are not an error.
 .It Fl p Ar prefix
 Set
 .Ar prefix
@@ -132,11 +134,12 @@ modes (see the
 .Fl M
 and
 .Fl S
-options). If the
+options).
+If the
 .Fl p
 flag appears after any
 .Fl P
-flag on the command line, it overrides it's effect, causing
+flag on the command line, it overrides its effect, causing
 .Nm
 not to use the given
 .Ar prefix
@@ -146,11 +149,12 @@ Does the same as the
 .Fl p
 option, except that the given
 .Ar prefix
-is also used recursively for the dependency packages, if any. If the
+is also used recursively for the dependency packages, if any.
+If the
 .Fl P
 flag appears after any
 .Fl p
-flag on the command line, it overrides it's effect, causing
+flag on the command line, it overrides its effect, causing
 .Nm
 to use the given
 .Ar prefix

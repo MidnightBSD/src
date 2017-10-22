@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ipcrm/ipcrm.c,v 1.11 2002/09/04 23:29:02 dwmalone Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ipcrm/ipcrm.c 102944 2002-09-04 23:29:10Z dwmalone $");
 
 #include <ctype.h>
 #include <err.h>

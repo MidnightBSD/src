@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/ccdconfig/Makefile,v 1.10 2003/08/07 19:10:35 johan Exp $
+# $FreeBSD: release/7.0.0/sbin/ccdconfig/Makefile 118632 2003-08-07 19:10:35Z johan $
 
 PROG=	ccdconfig
 WARNS?=	6

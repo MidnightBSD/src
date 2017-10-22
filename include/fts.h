@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fts.h	8.3 (Berkeley) 8/14/94
- * $FreeBSD: src/include/fts.h,v 1.11 2005/01/07 00:06:20 pjd Exp $
+ * $FreeBSD: release/7.0.0/include/fts.h 139811 2005-01-07 00:06:20Z pjd $
  */
 
 #ifndef	_FTS_H_

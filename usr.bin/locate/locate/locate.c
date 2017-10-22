@@ -47,7 +47,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)locate.c    8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.bin/locate/locate/locate.c,v 1.15.14.1 2005/12/21 12:17:49 des Exp $";
+  "$FreeBSD: release/7.0.0/usr.bin/locate/locate/locate.c 159519 2006-06-11 17:40:25Z maxim $";
 #endif /* not lint */
 
 /*
@@ -334,7 +334,7 @@ void
 usage ()
 {
         (void)fprintf(stderr,
-	"usage: locate [-Scims] [-l limit] [-d database] pattern ...\n\n");
+	"usage: locate [-0Scims] [-l limit] [-d database] pattern ...\n\n");
         (void)fprintf(stderr,
 	"default database: `%s' or $LOCATE_PATH\n", _PATH_FCODES);
         exit(1);

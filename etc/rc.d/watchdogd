@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/etc/rc.d/watchdogd,v 1.5 2005/01/16 03:12:03 obrien Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/watchdogd 140339 2005-01-16 03:12:03Z obrien $
 #
 
 # PROVIDE: watchdogd

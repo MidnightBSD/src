@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/create/pl.c,v 1.27.8.1 2006/01/10 22:15:05 krion Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/create/pl.c 154102 2006-01-07 22:10:58Z krion $");
 
 #include "lib.h"
 #include "create.h"

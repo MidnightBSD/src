@@ -33,7 +33,7 @@
  *
  *      @(#)extern.h	8.1 (Berkeley) 6/6/93
  *
- * $FreeBSD: src/usr.sbin/lpr/lpc/extern.h,v 1.12 2003/07/14 22:24:28 gad Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/lpr/lpc/extern.h 117599 2003-07-14 22:24:28Z gad $
  */
 
 

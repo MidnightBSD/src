@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)miscbltin.c	8.4 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/miscbltin.c,v 1.30.8.1 2005/11/06 20:39:48 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/sh/miscbltin.c 155301 2006-02-04 14:37:50Z schweikh $");
 
 /*
  * Miscellaneous builtins.
@@ -401,7 +401,7 @@ ulimitcmd(int argc __unused, char **argv __unused)
 		}
 	}
 	if (all) {
-		for (l = limits; l->name; l++) { 
+		for (l = limits; l->name; l++) {
 			char optbuf[40];
 			if (getrlimit(l->cmd, &limit) < 0)
 				error("can't get limit: %s", strerror(errno));

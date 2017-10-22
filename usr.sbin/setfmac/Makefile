@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/setfmac/Makefile,v 1.7 2005/01/27 14:52:47 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/setfmac/Makefile 140909 2005-01-27 14:52:47Z delphij $
 
 PROG=   setfmac
 LINKS=	${BINDIR}/setfmac ${BINDIR}/setfsmac

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ray/Makefile,v 1.4 2004/05/26 00:53:07 imp Exp $
+# $FreeBSD: release/7.0.0/sys/modules/ray/Makefile 129740 2004-05-26 00:53:10Z imp $
 
 .PATH: ${.CURDIR}/../../dev/ray
 

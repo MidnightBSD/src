@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/tools/netrate/netsend/netsend.c,v 1.8 2005/04/21 19:28:22 mux Exp $
+ * $FreeBSD: release/7.0.0/tools/tools/netrate/netsend/netsend.c 166567 2007-02-08 15:37:13Z rwatson $
  */
 
 #include <sys/types.h>
@@ -268,7 +268,7 @@ main(int argc, char *argv[])
 		interval.tv_sec = 0;
 		interval.tv_nsec = ((1 * 1000000000) / rate);
 	}
-	printf("Sending packet of payload size %ld every %jd.%09ld for %ld "
+	printf("Sending packet of payload size %ld every %jd.%09lds for %ld "
 	    "seconds\n", payloadsize, (intmax_t)interval.tv_sec,
 	    interval.tv_nsec, duration);
 

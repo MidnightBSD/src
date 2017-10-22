@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)clri.c	8.2 (Berkeley) 9/23/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/clri/clri.c,v 1.15 2005/05/29 16:07:10 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sbin/clri/clri.c 146757 2005-05-29 16:07:10Z charnier $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>

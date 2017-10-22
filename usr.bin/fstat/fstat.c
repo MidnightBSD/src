@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)fstat.c	8.3 (Berkeley) 5/2/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/fstat/fstat.c,v 1.60.2.3 2006/01/14 01:18:03 tegge Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/fstat/fstat.c 167367 2007-03-09 16:21:40Z emaste $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -164,7 +164,7 @@ main(int argc, char **argv)
 	int arg, ch, what;
 
 	arg = 0;
-	what = KERN_PROC_ALL;
+	what = KERN_PROC_PROC;
 	nlistf = memf = NULL;
 	while ((ch = getopt(argc, argv, "fmnp:u:vN:M:")) != -1)
 		switch((char)ch) {

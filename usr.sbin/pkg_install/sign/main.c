@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/sign/main.c,v 1.2 2002/04/01 09:39:07 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/sign/main.c 166354 2007-01-30 15:09:30Z ru $");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -106,9 +106,9 @@ main(argc, argv, envp)
 	int i;
 	int type = TAG_ANY;
 
-/* #ifndef BSD4_4 */
+#ifndef BSD4_4
 	set_program_name(argv[0]);
-/* #endif */
+#endif
 #ifdef CHECKER_ONLY
 	mode = CHECK;
 #else

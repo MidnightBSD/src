@@ -50,7 +50,7 @@ static char sccsid[] = "@(#)lpr.c	8.4 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: src/usr.sbin/lpr/lpr/lpr.c,v 1.44 2003/07/15 08:40:31 gad Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/lpr/lpr/lpr.c 117621 2003-07-15 08:40:31Z gad $");
 
 /*
  *      lpr -- off line print

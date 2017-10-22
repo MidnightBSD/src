@@ -25,7 +25,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/boot/pc98/boot0.5/boot.s,v 1.2 2000/08/03 13:01:45 kato Exp $
+# $FreeBSD: release/7.0.0/sys/boot/pc98/boot0.5/boot.s 167657 2007-03-17 05:30:03Z kato $
 #
 
 	.code16
@@ -60,7 +60,7 @@ boot:
 	movw	parttable(%si), %ax
 	movw	%ax, b_cylinder
 
-	# Step 2: Calculate egment address of bootstrap routine
+	# Step 2: Calculate the segment address of the bootstrap routine
 	movw	$0x1d00, %ax
 	movw	b_secsize, %cx
 	shrw	%cx

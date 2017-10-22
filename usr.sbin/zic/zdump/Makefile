@@ -1,9 +1,9 @@
-# $FreeBSD: src/usr.sbin/zic/zdump/Makefile,v 1.10 2003/04/04 17:49:21 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/zic/zdump/Makefile 163484 2006-10-18 12:35:24Z ru $
 
 .PATH: ${.CURDIR}/..
 
 PROG=	zdump
-MAN=	${.CURDIR}/../zdump.8
+MAN=	zdump.8
 SRCS=	zdump.c ialloc.c scheck.c
 
 CFLAGS+= -DTM_GMTOFF=tm_gmtoff -DTM_ZONE=tm_zone -DSTD_INSPIRED -DPCTS

@@ -1,0 +1,23 @@
+/*
+ * $FreeBSD: release/7.0.0/lib/libc/compat-43/Symbol.map 169092 2007-04-29 14:05:22Z deischen $
+ */
+
+FBSD_1.0 {
+	creat;
+	gethostid;
+	getwd;
+	killpg;
+	sethostid;
+	setpgrp;
+	setrgid;
+	setruid;
+	sigblock;
+	sigpause;
+	sigsetmask;
+	sigvec;
+};
+
+FBSDprivate_1.0 {
+	__creat;
+	_creat;
+};

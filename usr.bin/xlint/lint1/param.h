@@ -30,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/xlint/lint1/param.h,v 1.9 2004/05/14 13:44:36 cognet Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/xlint/lint1/param.h 129223 2004-05-14 13:44:36Z cognet $
  */
 
 /*

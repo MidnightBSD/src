@@ -41,7 +41,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/isic/i4b_siemens_isurf.c,v 1.8 2005/01/06 22:18:20 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer1/isic/i4b_siemens_isurf.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include "opt_i4b.h"
 
@@ -53,7 +53,7 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer1/isic/i4b_siemens_isurf.c,v 1.8 2005/01/06
 
 #include <net/if.h>
 
-#include <machine/i4b_ioctl.h>
+#include <i4b/include/i4b_ioctl.h>
 
 #include <i4b/layer1/isic/i4b_isic.h>
 #include <i4b/layer1/isic/i4b_ipac.h>

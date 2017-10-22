@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/tools/tools/kttcp/sys/kttcpio.h,v 1.1 2003/11/13 00:30:27 sam Exp $	*/
+/*	$FreeBSD: release/7.0.0/tools/tools/kttcp/sys/kttcpio.h 122592 2003-11-13 00:30:27Z sam $	*/
 /*	$NetBSD$	*/
 
 /*

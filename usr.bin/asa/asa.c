@@ -36,7 +36,7 @@
 __RCSID("$NetBSD: asa.c,v 1.11 1997/09/20 14:55:00 lukem Exp $");
 #endif
 #endif
-__FBSDID("$FreeBSD: src/usr.bin/asa/asa.c,v 1.6 2005/05/21 09:55:04 ru Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/asa/asa.c 146466 2005-05-21 09:55:10Z ru $");
 
 #include <err.h>
 #include <stdio.h>

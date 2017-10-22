@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/colldef/map.ISCII-DEV,v 1.1 2001/11/28 07:23:03 ache Exp $
+# $FreeBSD: release/7.0.0/share/colldef/map.ISCII-DEV 87043 2001-11-28 07:23:11Z ache $
 NU 							 \x00
 SH 							 \x01
 SX 							 \x02

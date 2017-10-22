@@ -1,0 +1,23 @@
+# $FreeBSD: release/7.0.0/lib/libkse/test/sem_d.exp 172491 2007-10-09 13:42:34Z obrien $
+Test begin
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Got semaphore
+Test end

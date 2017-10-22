@@ -68,7 +68,7 @@
  * SUCH DAMAGE.
  *
  *
- * $FreeBSD: src/share/examples/kld/cdev/test/testcdev.c,v 1.5 2003/08/03 10:39:29 mbr Exp $
+ * $FreeBSD: release/7.0.0/share/examples/kld/cdev/test/testcdev.c 118385 2003-08-03 10:39:29Z mbr $
  */
 
 #include <stdio.h>

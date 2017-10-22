@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)tree.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ctags/tree.c,v 1.11 2002/07/28 15:50:38 dwmalone Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ctags/tree.c 166501 2007-02-04 20:04:29Z rse $");
 
 #include <err.h>
 #include <limits.h>
@@ -126,10 +126,12 @@ add_node(NODE *node, NODE *cur_node)
 static void
 free_tree(NODE *node)
 {
+	NODE *node_next;
 	while (node) {
 		if (node->right)
 			free_tree(node->right);
+		node_next = node->left;
 		free(node);
-		node = node->left;
+		node = node_next;
 	}
 }

@@ -3,8 +3,8 @@
 # highly experimental (not working right at all) and very limited
 # functionality.
 #
-# $Id: faithd.rb,v 1.1.1.2 2006-02-25 02:38:28 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/faithd/test/faithd.rb,v 1.2 2003/11/14 17:34:08 ume Exp $
+# $Id: faithd.rb,v 1.1.2.4 1999/05/10 17:06:30 itojun Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/faithd/test/faithd.rb 122679 2003-11-14 17:34:08Z ume $
 
 require "socket"
 require "thread"

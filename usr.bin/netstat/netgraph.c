@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/netgraph.c,v 1.10 2004/07/26 20:18:11 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/netstat/netgraph.c 171465 2007-07-16 17:15:55Z jhb $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -51,6 +51,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/netgraph.c,v 1.10 2004/07/26 20:18:11 ch
 
 #include <nlist.h>
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -61,7 +62,8 @@ static	int first = 1;
 static	int csock = -1;
 
 void
-netgraphprotopr(u_long off, const char *name, int af1 __unused)
+netgraphprotopr(u_long off, const char *name, int af1 __unused,
+    int proto __unused)
 {
 	struct ngpcb *this, *next;
 	struct ngpcb ngpcb;
@@ -74,10 +76,15 @@ netgraphprotopr(u_long off, const char *name, int af1 __unused)
 		const char *const modname = "ng_socket.ko";
 /* XXX We should get "mpath" from "sysctl kern.module_path" */
 		const char *mpath[] = { "/", "/boot/", "/modules/", NULL };
-		struct nlist sym[] = { { "_ngsocklist" }, { NULL } };
+		struct nlist sym[] = { { .n_name = "_ngsocklist" },
+				       { .n_name = NULL } };
 		const char **pre;
 		struct kld_file_stat ks;
 		int fileid;
+
+		/* Can't do this for core dumps. */
+		if (!live)
+			return;
 
 		/* See if module is loaded */
 		if ((fileid = kldfind(modname)) < 0) {

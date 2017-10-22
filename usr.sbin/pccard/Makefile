@@ -1,6 +1,6 @@
 # Makefile for pccardc/pccardd.
-# $FreeBSD: src/usr.sbin/pccard/Makefile,v 1.6.14.1 2005/10/06 16:56:45 imp Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/pccard/Makefile 163491 2006-10-18 21:09:43Z imp $
 
-SUBDIR=	pccardc
+SUBDIR=	dumpcis
 
 .include <bsd.subdir.mk>

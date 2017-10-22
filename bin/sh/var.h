@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)var.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/var.h,v 1.12 2004/04/06 20:06:51 markm Exp $
+ * $FreeBSD: release/7.0.0/bin/sh/var.h 159632 2006-06-15 07:00:49Z stefanf $
  */
 
 /*
@@ -40,8 +40,8 @@
 /* flags */
 #define VEXPORT		0x01	/* variable is exported */
 #define VREADONLY	0x02	/* variable cannot be modified */
-#define VSTRFIXED	0x04	/* variable struct is staticly allocated */
-#define VTEXTFIXED	0x08	/* text is staticly allocated */
+#define VSTRFIXED	0x04	/* variable struct is statically allocated */
+#define VTEXTFIXED	0x08	/* text is statically allocated */
 #define VSTACK		0x10	/* text is allocated on the stack */
 #define VUNSET		0x20	/* the variable is not set */
 #define VNOFUNC		0x40	/* don't call the callback function */
@@ -74,6 +74,7 @@ extern struct var vpath;
 extern struct var vppid;
 extern struct var vps1;
 extern struct var vps2;
+extern struct var vps4;
 #ifndef NO_HISTORY
 extern struct var vhistsize;
 #endif
@@ -91,6 +92,7 @@ extern struct var vhistsize;
 #define pathval()	(vpath.text + 5)
 #define ps1val()	(vps1.text + 4)
 #define ps2val()	(vps2.text + 4)
+#define ps4val()	(vps4.text + 4)
 #define optindval()	(voptind.text + 7)
 #ifndef NO_HISTORY
 #define histsizeval()	(vhistsize.text + 9)

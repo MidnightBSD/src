@@ -1,18 +1,38 @@
-/* $FreeBSD: src/contrib/hostapd/eap.h,v 1.2 2005/06/05 22:41:14 sam Exp $ */
+/* $FreeBSD: release/7.0.0/contrib/hostapd/eap.h 172506 2007-10-10 16:59:15Z cvs2svn $ */
+
+/*
+ * hostapd / EAP Standalone Authenticator state machine (RFC 4137)
+ * Copyright (c) 2004-2005, Jouni Malinen <j@w1.fi>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * Alternatively, this software may be distributed under the terms of BSD
+ * license.
+ *
+ * See README and COPYING for more details.
+ */
 
 #ifndef EAP_H
 #define EAP_H
 
 #include "defs.h"
 #include "eap_defs.h"
+#include "eap_methods.h"
 
 struct eap_sm;
 
 #define EAP_MAX_METHODS 8
 struct eap_user {
-	u8 methods[EAP_MAX_METHODS];
+	struct {
+		int vendor;
+		u32 method;
+	} methods[EAP_MAX_METHODS];
 	u8 *password;
 	size_t password_len;
+	int password_hash; /* whether password is hashed with
+			    * nt_password_hash() */
 	int phase2;
 	int force_version;
 };
@@ -32,6 +52,7 @@ struct eapol_callbacks {
 			       size_t eapKeyDataLen);
 	int (*get_eap_user)(void *ctx, const u8 *identity, size_t identity_len,
 			    int phase2, struct eap_user *user);
+	const char * (*get_eap_req_id_text)(void *ctx, size_t *len);
 };
 
 struct eap_config {
@@ -41,18 +62,19 @@ struct eap_config {
 };
 
 
-#ifdef EAP_AUTHENTICATOR
+#ifdef EAP_SERVER
 
 struct eap_sm * eap_sm_init(void *eapol_ctx, struct eapol_callbacks *eapol_cb,
 			    struct eap_config *eap_conf);
 void eap_sm_deinit(struct eap_sm *sm);
 int eap_sm_step(struct eap_sm *sm);
-u8 eap_get_type(const char *name);
 void eap_set_eapRespData(struct eap_sm *sm, const u8 *eapRespData,
 			 size_t eapRespDataLen);
 void eap_sm_notify_cached(struct eap_sm *sm);
+void eap_sm_pending_cb(struct eap_sm *sm);
+int eap_sm_method_pending(struct eap_sm *sm);
 
-#else /* EAP_AUTHENTICATOR */
+#else /* EAP_SERVER */
 
 static inline struct eap_sm * eap_sm_init(void *eapol_ctx,
 					  struct eapol_callbacks *eapol_cb,
@@ -70,10 +92,6 @@ static inline int eap_sm_step(struct eap_sm *sm)
 	return 0;
 }
 
-static inline u8 eap_get_type(const char *name)
-{
-	return EAP_TYPE_NONE;
-}
 
 static inline void eap_set_eapRespData(struct eap_sm *sm,
 				       const u8 *eapRespData,
@@ -85,6 +103,15 @@ static inline void eap_sm_notify_cached(struct eap_sm *sm)
 {
 }
 
-#endif /* EAP_AUTHENTICATOR */
+static inline void eap_sm_pending_cb(struct eap_sm *sm)
+{
+}
+
+static inline int eap_sm_method_pending(struct eap_sm *sm)
+{
+	return 0;
+}
+
+#endif /* EAP_SERVER */
 
 #endif /* EAP_H */

@@ -29,27 +29,25 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/nge.4,v 1.15.2.2 2005/09/24 01:59:37 keramida Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man4/nge.4 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
-.Dd July 16, 2005
+.Dd January 14, 2006
 .Dt NGE 4
 .Os
 .Sh NAME
 .Nm nge
 .Nd "National Semiconductor PCI Gigabit Ethernet adapter driver"
 .Sh SYNOPSIS
-To compile support for the
-.Nm
-driver into your kernel, place the following lines in your
+To compile this driver into the kernel,
+place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device miibus"
 .Cd "device nge"
 .Ed
 .Pp
-Alternatively, to load the
-.Nm
-driver at boot time, place the following line in
+Alternatively, to load the driver as a
+module at boot time, place the following line in
 .Xr loader.conf 5 :
 .Bd -literal -offset indent
 if_nge_load="YES"
@@ -171,8 +169,6 @@ Ark PC SOHO-GA2500T (32-bit PCI) and SOHO-GA2000T (64-bit PCI)
 Asante FriendlyNet GigaNIX 1000TA and 1000TPC
 .It
 D-Link DGE-500T
-.It
-LinkSys EG1032 (32-bit PCI) and EG1064 (64-bit PCI)
 .It
 Netgear GA621
 .It

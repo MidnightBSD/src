@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: netaddr.h,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: netaddr.h,v 1.21 2002/04/03 06:38:35 marka Exp $ */
 
 #ifndef ISC_NETADDR_H
 #define ISC_NETADDR_H 1

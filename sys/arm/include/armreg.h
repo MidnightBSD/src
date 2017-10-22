@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/armreg.h,v 1.2 2005/01/05 21:58:48 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/armreg.h 171630 2007-07-27 14:54:27Z cognet $
  */
 
 #ifndef MACHINE_ARMREG_H
@@ -129,6 +129,7 @@
 /* Post-ARM7 CPUs */
 #define CPU_ID_ARM810		0x41018100
 #define CPU_ID_ARM920T		0x41129200
+#define CPU_ID_ARM920T_ALT	0x41009200
 #define CPU_ID_ARM922T		0x41029220
 #define CPU_ID_ARM940T		0x41029400 /* XXX no MMU */
 #define CPU_ID_ARM946ES		0x41049460 /* XXX no MMU */
@@ -154,6 +155,9 @@
 #define	CPU_ID_80321_600	0x69052430
 #define	CPU_ID_80321_400_B0	0x69052c20
 #define	CPU_ID_80321_600_B0	0x69052c30
+#define	CPU_ID_80219_400	0x69052e20 /* A0 stepping/revision. */
+#define	CPU_ID_80219_600	0x69052e30 /* A0 stepping/revision. */
+#define	CPU_ID_81342		0x69056810
 #define	CPU_ID_IXP425_533	0x690541c0
 #define	CPU_ID_IXP425_400	0x690541d0
 #define	CPU_ID_IXP425_266	0x690541f0
@@ -223,16 +227,21 @@
 #define CPU_CONTROL_VECRELOC	0x00002000 /* V: Vector relocation */
 #define CPU_CONTROL_ROUNDROBIN	0x00004000 /* RR: Predictable replacement */
 #define CPU_CONTROL_V4COMPAT	0x00008000 /* L4: ARMv4 compat LDR R15 etc */
+#define CPU_CONTROL_L2_ENABLE	0x04000000 /* L2 Cache enabled */
 
 #define CPU_CONTROL_IDC_ENABLE	CPU_CONTROL_DC_ENABLE
 
 /* XScale Auxillary Control Register (CP15 register 1, opcode2 1) */
 #define	XSCALE_AUXCTL_K		0x00000001 /* dis. write buffer coalescing */
 #define	XSCALE_AUXCTL_P		0x00000002 /* ECC protect page table access */
+/* Note: XSCale core 3 uses those for LLR DCcahce attributes */
 #define	XSCALE_AUXCTL_MD_WB_RA	0x00000000 /* mini-D$ wb, read-allocate */
 #define	XSCALE_AUXCTL_MD_WB_RWA	0x00000010 /* mini-D$ wb, read/write-allocate */
 #define	XSCALE_AUXCTL_MD_WT	0x00000020 /* mini-D$ wt, read-allocate */
 #define	XSCALE_AUXCTL_MD_MASK	0x00000030
+
+/* Xscale Core 3 only */
+#define XSCALE_AUXCTL_LLR	0x00000400 /* Enable L2 for LLR Cache */
 
 /* Cache type register definitions */
 #define	CPU_CT_ISIZE(x)		((x) & 0xfff)		/* I$ info */

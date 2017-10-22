@@ -29,7 +29,7 @@
  *	from tahoe:	in_cksum.c	1.2	86/01/05
  *	from:		@(#)in_cksum.c	1.3 (Berkeley) 1/19/91
  *	from: Id: in_cksum.c,v 1.8 1995/12/03 18:35:19 bde Exp
- * $FreeBSD: src/sys/powerpc/include/in_cksum.h,v 1.3 2005/03/02 21:33:28 joerg Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/in_cksum.h 143063 2005-03-02 21:33:29Z joerg $
  */
 
 #ifndef _MACHINE_IN_CKSUM_H_

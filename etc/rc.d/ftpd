@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/ftpd,v 1.1.2.1 2006/01/29 13:52:34 yar Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/ftpd 154645 2006-01-21 18:08:16Z yar $
 #
 
 # PROVIDE: ftpd

@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/tabs/tabs.c,v 1.3 2002/06/08 11:33:22 tjr Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/tabs/tabs.c 98048 2002-06-08 11:33:22Z tjr $");
 
 #include <sys/types.h>
 #include <sys/tty.h>

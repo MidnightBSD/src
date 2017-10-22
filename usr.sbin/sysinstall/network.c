@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/network.c,v 1.51.14.1 2006/02/12 15:23:50 delphij Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/network.c 174854 2007-12-22 06:32:46Z cvs2svn $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -307,7 +307,7 @@ startPPP(Device *devp)
     variable_set2(VAR_PPP_ENABLE, "YES", 0);
     variable_set2(VAR_PPP_PROFILE, "install", 0);
 
-    if (!Fake && !file_readable("/dev/tun0") && mknod("/dev/tun0", 0600 | S_IFCHR, makedev(52, 0))) {
+    if (!Fake && !file_readable("/dev/tun0")) {
 	msgConfirm("Warning:  No /dev/tun0 device.  PPP will not work!");
 	restorescr(w);
 	return 0;

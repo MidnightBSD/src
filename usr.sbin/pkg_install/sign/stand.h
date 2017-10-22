@@ -1,4 +1,4 @@
-/* $FreeBSD: src/usr.sbin/pkg_install/sign/stand.h,v 1.2 2004/06/29 19:06:42 eik Exp $ */
+/* $FreeBSD: release/7.0.0/usr.sbin/pkg_install/sign/stand.h 131285 2004-06-29 19:06:42Z eik $ */
 /* $OpenBSD: stand.h,v 1.2 1999/10/04 21:46:30 espie Exp $ */
 
 /* provided to cater for BSD idiosyncrasies */

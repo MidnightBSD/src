@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/ia64/mca.c,v 1.10.2.1 2006/02/14 03:40:49 marcel Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/ia64/mca.c 169757 2007-05-19 12:50:12Z marcel $
  */
 
 #include <sys/param.h>
@@ -90,6 +90,9 @@ ia64_mca_save_state(int type)
 	 * the state information previously.
 	 */
 	if (mca_info_size[type] == -1)
+		return;
+
+	if (mca_info_block == 0)
 		return;
 
 	while (1) {
@@ -198,9 +201,9 @@ ia64_mca_init(void)
 	}
 	max_size = round_page(max_size);
 
-	if (max_size) {
-		p = contigmalloc(max_size, M_TEMP, M_WAITOK, 0ul,
-		    256*1024*1024 - 1, PAGE_SIZE, 256*1024*1024);
+	p = (max_size) ? contigmalloc(max_size, M_TEMP, 0, 0ul,
+	    256*1024*1024 - 1, PAGE_SIZE, 256*1024*1024) : NULL;
+	if (p != NULL) {
 		mca_info_block = IA64_PHYS_TO_RR7(ia64_tpa((u_int64_t)p));
 
 		if (bootverbose)

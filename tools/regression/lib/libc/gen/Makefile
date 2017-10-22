@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/regression/lib/libc/gen/Makefile,v 1.2 2003/02/05 16:40:18 mike Exp $
+# $FreeBSD: release/7.0.0/tools/regression/lib/libc/gen/Makefile 110405 2003-02-05 16:40:18Z mike $
 
 TESTS=	test-fpclassify test-wordexp
 

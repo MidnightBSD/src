@@ -1,9 +1,9 @@
-# $FreeBSD: src/usr.sbin/gstat/Makefile,v 1.6 2005/01/27 14:52:46 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/gstat/Makefile 166355 2007-01-30 15:10:37Z ru $
 
 PROG=	gstat
 MAN=	gstat.8
 WARNS?=	5
-DPADD=	${LIBGEOM} ${LIBDEVSTAT} ${LIBKVM} ${LIBBSDXML} ${LIBCURSES} ${LIBSBUF}
-LDADD=	-lgeom -ldevstat -lkvm -lbsdxml -lcurses -lsbuf
+DPADD=	${LIBDEVSTAT} ${LIBKVM} ${LIBGEOM} ${LIBBSDXML} ${LIBSBUF} ${LIBEDIT} ${LIBCURSES}
+LDADD=	-ldevstat -lkvm -lgeom -lbsdxml -lsbuf -ledit -lcurses
 
 .include <bsd.prog.mk>

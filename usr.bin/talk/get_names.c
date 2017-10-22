@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/talk/get_names.c,v 1.9 2004/06/14 22:34:13 bms Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/talk/get_names.c 130494 2004-06-14 22:34:13Z bms $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)get_names.c	8.1 (Berkeley) 6/6/93";

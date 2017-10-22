@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/boot/pc98/boot0/Makefile,v 1.4 2004/12/21 08:47:16 ru Exp $
+# $FreeBSD: release/7.0.0/sys/boot/pc98/boot0/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 PROG=	${BOOT}.out
 INTERNALPROG=

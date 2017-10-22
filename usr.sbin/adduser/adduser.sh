@@ -24,7 +24,7 @@
 #
 #       Email: Mike Makonnen <mtm@FreeBSD.Org>
 #
-# $FreeBSD: src/usr.sbin/adduser/adduser.sh,v 1.26.2.1 2006/01/25 07:43:48 matteo Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/adduser/adduser.sh 173115 2007-10-28 21:06:34Z mtm $
 #
 
 # err msg
@@ -199,6 +199,7 @@ save_config() {
 	echo "udotdir=$udotdir"		>> ${ADDUSERCONF}
 	echo "msgfile=$msgfile"		>> ${ADDUSERCONF}
 	echo "disableflag=$disableflag" >> ${ADDUSERCONF}
+	echo "uidstart=$uidstart"       >> ${ADDUSERCONF}
 }
 
 # add_user
@@ -346,11 +347,17 @@ get_user() {
 			_input="`echo "$fileline" | cut -f1 -d:`"
 		fi
 
-		# There *must* be a username. If this is an interactive
-		# session give the user an opportunity to retry.
+		# There *must* be a username, and it must not exist. If
+		# this is an interactive session give the user an
+		# opportunity to retry.
 		#
 		if [ -z "$_input" ]; then
 			err "You must enter a username!"
+			[ -z "$fflag" ] && continue
+		fi
+		${PWCMD} usershow $_input > /dev/null 2>&1
+		if [ "$?" -eq 0 ]; then
+			err "User exists!"
 			[ -z "$fflag" ] && continue
 		fi
 		break
@@ -447,15 +454,9 @@ get_homedir() {
 #	allocates one if it is not specified.
 #
 get_uid() {
-	if [ -z "$uuid" ]; then
-		uuid=${uidstart}
-	fi
-
+	uuid=${uidstart}
 	_input=
 	_prompt=
-
-	# No need to take down uids for a configuration saving run.
-	[ -n "$configflag" ] && return
 
 	if [ -n "$uuid" ]; then
 		_prompt="Uid [$uuid]: "
@@ -592,19 +593,21 @@ input_from_file() {
 		case "$fileline" in
 		\#*|'')
 			;;
+		*)
+			get_user || continue
+			get_gecos
+			get_uid
+			get_logingroup
+			get_class
+			get_shell
+			get_homedir
+			get_password
+			get_expire_dates
+			ugroups="$defaultgroups"
+
+			add_user
+			;;
 		esac
-
-		get_user || continue
-		get_gecos
-		get_uid
-		get_logingroup
-		get_class
-		get_shell
-		get_homedir
-		get_password
-		get_expire_dates
-
-		add_user
 	done
 }
 

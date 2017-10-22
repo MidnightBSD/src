@@ -31,7 +31,7 @@
  *	from: @(#)auth.h 1.17 88/02/08 SMI
  *	from: @(#)auth.h	2.3 88/08/07 4.0 RPCSRC
  *	from: @(#)auth.h	1.43 	98/02/02 SMI
- * $FreeBSD: src/include/rpc/auth.h,v 1.20 2003/01/01 18:48:42 schweikh Exp $
+ * $FreeBSD: release/7.0.0/include/rpc/auth.h 156109 2006-02-28 16:02:26Z deischen $
  */
 
 /*
@@ -299,7 +299,7 @@ __END_DECLS
  */
 __BEGIN_DECLS
 extern int getpublickey (const char *, char *);
-extern int getpublicandprivatekey (char *, char *);
+extern int getpublicandprivatekey (const char *, char *);
 extern int getsecretkey (char *, char *, char *);
 __END_DECLS
 

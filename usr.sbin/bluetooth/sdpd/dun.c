@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: dun.c,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/sdpd/dun.c,v 1.1 2004/01/20 20:48:26 emax Exp $
+ * $Id: dun.c,v 1.5 2004/01/13 01:54:39 max Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/sdpd/dun.c 124758 2004-01-20 20:48:26Z emax $
  */
 
 #include <sys/queue.h>

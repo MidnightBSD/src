@@ -26,7 +26,7 @@
                 Western Washington University
                 Bellingham, WA 98226-9062
 
-$FreeBSD: src/contrib/bc/bc/main.c,v 1.6 2004/02/17 00:53:50 ache Exp $
+$FreeBSD: release/7.0.0/contrib/bc/bc/main.c 172506 2007-10-10 16:59:15Z cvs2svn $
        
 *************************************************************************/
 
@@ -65,7 +65,7 @@ usage (char *progname)
   printf ("usage: %s [options] [file ...]\n%s%s%s%s%s%s%s", progname,
           "  -h  --help         print this usage and exit\n",
 	  "  -i  --interactive  force interactive mode\n",
-	  "  -l  --mathlib      use the predefine math routnes\n",
+	  "  -l  --mathlib      use the predefined math routines\n",
 	  "  -q  --quiet        don't print initial banner\n",
 	  "  -s  --standard     non-standard bc constructs are errors\n",
 	  "  -w  --warn         warn about non-standard bc constructs\n",

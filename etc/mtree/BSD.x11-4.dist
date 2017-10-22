@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/mtree/BSD.x11-4.dist,v 1.27.2.1 2005/11/16 07:50:36 ru Exp $
+# $FreeBSD: release/7.0.0/etc/mtree/BSD.x11-4.dist 172422 2007-10-03 05:51:20Z ru $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -28,6 +28,10 @@
         ..
     ..
     libdata
+        ldconfig
+        ..
+        ldconfig32
+        ..
         pkgconfig
         ..
     ..
@@ -449,11 +453,11 @@
                 LC_MESSAGES
                 ..
             ..
-            wa
+            vi
                 LC_MESSAGES
                 ..
             ..
-            vi
+            wa
                 LC_MESSAGES
                 ..
             ..

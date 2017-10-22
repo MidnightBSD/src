@@ -34,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/locate/code/locate.code.c,v 1.13 2002/03/22 01:22:47 imp Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/locate/code/locate.code.c 92920 2002-03-22 01:22:50Z imp $
  */
 
 #ifndef lint

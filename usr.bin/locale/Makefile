@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/locale/Makefile,v 1.4 2003/06/25 23:05:11 phantom Exp $
+# $FreeBSD: release/7.0.0/usr.bin/locale/Makefile 116851 2003-06-25 23:05:11Z phantom $
 
 PROG = locale
 CFLAGS += -I${.CURDIR}/../../lib/libc/locale

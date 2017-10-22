@@ -25,9 +25,9 @@ changecom(,)dnl
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/ppp/ppp.8.m4,v 1.322 2005/05/06 16:13:32 brian Exp $
+.\" $FreeBSD: release/7.0.0/usr.sbin/ppp/ppp.8.m4 169987 2007-05-25 16:05:17Z brueffer $
 .\"
-.Dd July 20, 2004
+.Dd May 24, 2007
 .Dt PPP 8
 .Os
 .Sh NAME
@@ -3121,7 +3121,7 @@ Versions of
 .Nm
 prior to version 3.4.1 did not send the
 .Dq NAS-IP-Address
-atribute as it was reported to break the Radiator RADIUS server.
+attribute as it was reported to break the Radiator RADIUS server.
 As the latest rfc (2865) no longer hints that only one of
 .Dq NAS-IP-Address
 and
@@ -3617,9 +3617,11 @@ See the
 .Dq set authname
 command below.
 .It Li COMPILATIONDATE
-This is replaced with the date on which
+In previous software revisions, this was replaced with the date on which
 .Nm
 was compiled.
+This is no longer supported as it breaks the ability to recompile the same
+code to produce an exact duplicate of a previous compilation.
 .It Li DNS0 & DNS1
 These are replaced with the primary and secondary nameserver IP numbers.
 If nameservers are negotiated by IPCP, the values of these macros will change.
@@ -5586,6 +5588,27 @@ value will tell
 to sent RADIUS accounting information to the RADIUS server every
 .Ar timeout
 seconds.
+.It set rad_port_id Ar option
+When RADIUS is configured, setting the
+.Dq rad_port_id
+value allows to specify what should be sent to the RADIUS server as
+NAS-Port-Id.
+The
+.Ar option Ns No s
+are as follows:
+.Pp
+.Bl -tag -width Ds
+.It pid
+PID of the corresponding tunnel.
+.It tunnum
+.Xr tun 4
+interface number.
+.It ifnum
+index of the interface as returned by
+.Xr if_nametoindex 3 .
+.It default
+keeps the default behavior.
+.El
 .It set reconnect Ar timeout ntries
 Should the line drop unexpectedly (due to loss of CD or LQR
 failure), a connection will be re-established after the given

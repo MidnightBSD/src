@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/regression/lib/libc/stdlib/Makefile,v 1.1 2004/06/25 12:31:12 sobomax Exp $
+# $FreeBSD: release/7.0.0/tools/regression/lib/libc/stdlib/Makefile 131099 2004-06-25 12:31:12Z sobomax $
 
 TESTS=	test-qsort	\
 	test-heapsort	\

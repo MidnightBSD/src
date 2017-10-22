@@ -1,22 +1,32 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/12/93
-# $FreeBSD: src/usr.bin/netstat/Makefile,v 1.26.2.3 2006/01/05 03:47:24 kbyanc Exp $
+# $FreeBSD: release/7.0.0/usr.bin/netstat/Makefile 171135 2007-07-01 12:08:08Z gnn $
+
+.include <bsd.own.mk>
 
 PROG=	netstat
-SRCS=	bpf.c if.c inet.c inet6.c main.c mbuf.c mcast.c mroute.c ipx.c route.c \
-	unix.c atalk.c netgraph.c mroute6.c ipsec.c pfkey.c
+SRCS=	if.c inet.c main.c mbuf.c mcast.c mroute.c route.c \
+	unix.c atalk.c netgraph.c mroute6.c ipsec.c bpf.c pfkey.c sctp.c
 
-WARNS?=	2
-NO_WERROR=
+WARNS?=	3
 
 CFLAGS+=-DIPSEC
-.if !defined(NO_INET6)
+CFLAGS+=-DSCTP
+
+.if ${MK_INET6_SUPPORT} != "no"
+SRCS+=	inet6.c
 CFLAGS+=-DINET6
-CFLAGS+=-DFAST_IPSEC
 .endif
 
 BINGRP=	kmem
 BINMODE=2555
-DPADD=	${LIBKVM} ${LIBIPX} ${LIBMEMSTAT} ${LIBNETGRAPH} ${LIBUTIL}
-LDADD=	-lkvm -lipx -lmemstat -lnetgraph -lutil
+DPADD=	${LIBKVM} ${LIBMEMSTAT} ${LIBNETGRAPH} ${LIBUTIL}
+LDADD=	-lkvm -lmemstat -lnetgraph -lutil
+
+.if ${MK_IPX_SUPPORT} != "no"
+SRCS+=	ipx.c
+DPADD+=	${LIBIPX}
+LDADD+=	-lipx
+CFLAGS+=-DIPX
+.endif
 
 .include <bsd.prog.mk>

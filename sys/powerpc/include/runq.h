@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/include/runq.h,v 1.3 2005/01/07 02:29:19 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/runq.h 139825 2005-01-07 02:29:27Z imp $
  */
 
 #ifndef	_MACHINE_RUNQ_H_

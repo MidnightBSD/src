@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ldd/ldd.c,v 1.33 2002/10/19 10:18:29 sobomax Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ldd/ldd.c 105439 2002-10-19 10:18:29Z sobomax $");
 
 #include <sys/wait.h>
 

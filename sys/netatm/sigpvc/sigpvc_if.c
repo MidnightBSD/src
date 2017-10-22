@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/sigpvc/sigpvc_if.c,v 1.18 2005/01/07 01:45:38 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/netatm/sigpvc/sigpvc_if.c 139823 2005-01-07 01:45:51Z imp $");
 
 #ifndef ATM_SIGPVC_MODULE
 #include "opt_atm.h"

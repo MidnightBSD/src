@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/mtree/BSD.release.dist,v 1.8 2001/06/26 13:50:32 nik Exp $
+# $FreeBSD: release/7.0.0/etc/mtree/BSD.release.dist 78822 2001-06-26 13:50:33Z nik $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/vjcomp.c,v 1.40 2004/09/05 01:46:52 brian Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ppp/vjcomp.c 134789 2004-09-05 01:46:52Z brian $
  */
 
 #include <sys/param.h>

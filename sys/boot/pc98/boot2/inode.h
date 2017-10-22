@@ -33,7 +33,7 @@
  *
  *	@(#)inode.h	8.9 (Berkeley) 5/14/95
  * %FreeBSD: src/sys/ufs/ufs/inode.h,v 1.28.2.2 2001/09/29 12:52:52 iedowse Exp %
- * $FreeBSD: src/sys/boot/pc98/boot2/inode.h,v 1.4 2004/06/16 18:21:22 phk Exp $
+ * $FreeBSD: release/7.0.0/sys/boot/pc98/boot2/inode.h 162649 2006-09-26 04:15:59Z tegge $
  */
 
 #ifndef _UFS_UFS_INODE_H_
@@ -147,7 +147,7 @@ struct indir {
 
 /* Determine if soft dependencies are being done */
 #define DOINGSOFTDEP(vp)	((vp)->v_mount->mnt_flag & MNT_SOFTDEP)
-#define DOINGASYNC(vp)		((vp)->v_mount->mnt_flag & MNT_ASYNC)
+#define DOINGASYNC(vp)		((vp)->v_mount->mnt_kern_flag & MNTK_ASYNC)
 
 /* This overlays the fid structure (see mount.h). */
 struct ufid {

@@ -22,12 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/ia64/ia32/ia32_reg.c,v 1.1 2005/06/30 07:49:22 peter Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ia64/ia32/ia32_reg.c,v 1.1 2005/06/30 07:49:22 peter Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia32/ia32_reg.c 149923 2005-09-10 01:13:33Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -25,13 +25,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/autoconf.c,v 1.15 2005/05/29 23:44:22 marcel Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/autoconf.c 171805 2007-08-11 19:25:32Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/cons.h>
 #include <sys/kernel.h>
+
+#include <machine/intr_machdep.h>
 
 static device_t nexusdev;
 
@@ -65,9 +67,14 @@ configure(void *dummy)
 static void
 configure_final(void *dummy)
 {
+
 	/*
-	 * Enable device interrupts
+	 * Now that we're guaranteed to have a PIC driver (or we'll never
+	 * have one), program it with all the previously setup interrupts.
 	 */
+	powerpc_enable_intr();
+
+	/* Enable external interrupts. */
 	mtmsr(mfmsr() | PSL_EE | PSL_RI);
 
 	cninit_finish();

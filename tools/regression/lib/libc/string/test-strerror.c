@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/lib/libc/string/test-strerror.c,v 1.3 2005/02/01 01:53:35 nik Exp $
+ * $FreeBSD: release/7.0.0/tools/regression/lib/libc/string/test-strerror.c 141092 2005-02-01 01:53:35Z nik $
  */
 
 #include <assert.h>

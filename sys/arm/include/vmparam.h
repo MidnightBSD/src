@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/vmparam.h,v 1.5 2005/06/07 23:04:24 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/vmparam.h 172317 2007-09-25 06:25:06Z alc $
  */
 
 #ifndef	_MACHINE_VMPARAM_H_
@@ -48,38 +48,26 @@
 #define	KERNBASE		0xc0000000
 
 /*
- * Override the default pager_map size, there's not enough KVA.
- */
-/*
- * Size of User Raw I/O map
- */
-
-#define USRIOSIZE       300
-
-/* virtual sizes (bytes) for various kernel submaps */
-
-#define VM_PHYS_SIZE		(USRIOSIZE*PAGE_SIZE)
-
-/*
  * max number of non-contig chunks of physical RAM you can have
  */
 
 #define	VM_PHYSSEG_MAX		32
 
 /*
- * when converting a physical address to a vm_page structure, we
- * want to use a binary search on the chunks of physical memory
- * to find our RAM
+ * The physical address space is densely populated.
  */
-
-#define	VM_PHYSSEG_STRAT	VM_PSTRAT_BSEARCH
+#define	VM_PHYSSEG_DENSE
 
 /*
- * this indicates that we can't add RAM to the VM system after the
- * vm system is init'd.
+ * Create three free page pools: VM_FREEPOOL_DEFAULT is the default pool
+ * from which physical pages are allocated and VM_FREEPOOL_DIRECT is
+ * the pool from which physical pages for small UMA objects are
+ * allocated.
  */
-
-#define	VM_PHYSSEG_NOADD
+#define	VM_NFREEPOOL		3
+#define	VM_FREEPOOL_CACHE	2
+#define	VM_FREEPOOL_DEFAULT	0
+#define	VM_FREEPOOL_DIRECT	1
 
 /*
  * we support 2 free lists:
@@ -92,11 +80,23 @@
 #define	VM_FREELIST_DEFAULT	0
 #define	VM_FREELIST_ISADMA	1
 
+/*
+ * The largest allocation size is 1MB.
+ */
+#define	VM_NFREEORDER		9
+
 #define UPT_MAX_ADDRESS		VADDR(UPTPTDI + 3, 0)
 #define UPT_MIN_ADDRESS		VADDR(UPTPTDI, 0)
 
 #define VM_MIN_ADDRESS          (0x00001000)
+#ifdef ARM_USE_SMALL_ALLOC
+#ifndef ARM_KERN_DIRECTMAP
+#define ARM_KERN_DIRECTMAP 512 * 1024 * 1024 /* 512 MB */
+#endif
+#define VM_MAXUSER_ADDRESS	KERNBASE - ARM_KERN_DIRECTMAP
+#else /* ARM_USE_SMALL_ALLOC */
 #define VM_MAXUSER_ADDRESS      KERNBASE
+#endif /* ARM_USE_SMALL_ALLOC */
 #define VM_MAX_ADDRESS          VM_MAXUSER_ADDRESS
 
 #define USRSTACK        VM_MAXUSER_ADDRESS

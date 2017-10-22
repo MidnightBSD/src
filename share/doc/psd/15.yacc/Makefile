@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 8/14/93
-# $FreeBSD: src/share/doc/psd/15.yacc/Makefile,v 1.8 2004/10/24 15:32:42 ru Exp $
+# $FreeBSD: release/7.0.0/share/doc/psd/15.yacc/Makefile 136910 2004-10-24 15:33:08Z ru $
 
 VOLUME=		psd/15.yacc
 SRCS=		stubs ss.. ss0 ss1 ss2 ss3 ss4 ss5 ss6 ss7 ss8 ss9 \

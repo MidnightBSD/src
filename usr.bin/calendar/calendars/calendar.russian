@@ -1,7 +1,7 @@
 /*
  * Russian calendar files
  *
- * $FreeBSD: src/usr.bin/calendar/calendars/calendar.russian,v 1.5 2000/05/04 11:35:27 phantom Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/calendar/calendars/calendar.russian 59948 2000-05-04 11:35:27Z phantom $
  */
 
 #ifndef _calendar_russian_

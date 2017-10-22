@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/passwd/passwd.c,v 1.23 2003/04/18 21:27:09 nectar Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/passwd/passwd.c 113693 2003-04-18 21:27:09Z nectar $");
 
 #include <sys/param.h>
 

@@ -1,4 +1,4 @@
-// $FreeBSD: src/share/examples/isdn/contrib/answer.c,v 1.2 2002/04/22 13:44:29 des Exp $
+// $FreeBSD: release/7.0.0/share/examples/isdn/contrib/answer.c 95258 2002-04-22 13:44:47Z des $
 // changed ".g711a" to ".al" (-hm)
 // Tue Mar  3 02:42:14 MET 1998 	dave@turbocat.de
 // started

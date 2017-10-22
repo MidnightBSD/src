@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/elf.h,v 1.8 2002/07/04 11:05:39 markm Exp $
+ * $FreeBSD: release/7.0.0/include/elf.h 163001 2006-10-04 07:25:55Z jb $
  */
 
 /*
@@ -37,5 +37,9 @@
 #include <machine/elf.h>
 #include <sys/elf32.h>
 #include <sys/elf64.h>
+
+#ifdef _SOLARIS_C_SOURCE
+#include <sys/_elf_solaris.h>
+#endif
 
 #endif /* !_ELF_H_ */

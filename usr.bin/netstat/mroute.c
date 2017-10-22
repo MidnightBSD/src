@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/mroute.c,v 1.22 2004/07/26 20:18:11 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/netstat/mroute.c 171465 2007-07-16 17:15:55Z jhb $");
 
 /*
  * Print multicast routing structures and statistics.
@@ -62,6 +62,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/mroute.c,v 1.22 2004/07/26 20:18:11 char
 #include <netinet/ip_mroute.h>
 
 #include <err.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "netstat.h"
@@ -83,28 +84,24 @@ mroutepr(u_long mfcaddr, u_long vifaddr)
 	size_t len;
 
 	len = sizeof(mfctable);
-	if (sysctlbyname("net.inet.ip.mfctable", mfctable, &len, NULL, 0) < 0) {
-		warn("sysctl: net.inet.ip.mfctable");
-		/* Compatability with older kernels - candidate for removal */
-		if (mfcaddr == 0) {
-			printf("No IPv4 multicast routing compiled into this system.\n");
+	if (live) {
+		if (sysctlbyname("net.inet.ip.mfctable", mfctable, &len, NULL,
+		    0) < 0) {
+			warn("sysctl: net.inet.ip.mfctable");
 			return;
 		}
-
+	} else
 		kread(mfcaddr, (char *)mfctable, sizeof(mfctable));
-	}
 
 	len = sizeof(viftable);
-	if (sysctlbyname("net.inet.ip.viftable", viftable, &len, NULL, 0) < 0) {
-		warn("sysctl: net.inet.ip.viftable");
-		/* Compatability with older kernels - candidate for removal */
-		if (vifaddr == 0) {
-			printf("No IPv4 multicast routing compiled into this system.\n");
+	if (live) {
+		if (sysctlbyname("net.inet.ip.viftable", viftable, &len, NULL,
+		    0) < 0) {
+			warn("sysctl: net.inet.ip.viftable");
 			return;
 		}
-
+	} else
 		kread(vifaddr, (char *)viftable, sizeof(viftable));
-	}
 
 	saved_numeric_addr = numeric_addr;
 	numeric_addr = 1;
@@ -116,7 +113,7 @@ mroutepr(u_long mfcaddr, u_long vifaddr)
 
 		maxvif = vifi;
 		if (!banner_printed) {
-			printf("\nVirtual Interface Table\n"
+			printf("\nIPv4 Virtual Interface Table\n"
 			       " Vif   Thresh   Rate   Local-Address   "
 			       "Remote-Address    Pkts-In   Pkts-Out\n");
 			banner_printed = 1;
@@ -132,16 +129,17 @@ mroutepr(u_long mfcaddr, u_long vifaddr)
 		printf(" %9lu  %9lu\n", v->v_pkt_in, v->v_pkt_out);
 	}
 	if (!banner_printed)
-		printf("\nVirtual Interface Table is empty\n");
+		printf("\nIPv4 Virtual Interface Table is empty\n");
 
 	banner_printed = 0;
 	for (i = 0; i < MFCTBLSIZ; ++i) {
 		m = mfctable[i];
 		while(m) {
+			/* XXX KVM */
 			kread((u_long)m, (char *)&mfc, sizeof mfc);
 
 			if (!banner_printed) {
-				printf("\nIPv4 Multicast Forwarding Cache\n"
+				printf("\nIPv4 Multicast Forwarding Table\n"
 				       " Origin          Group            "
 				       " Packets In-Vif  Out-Vifs:Ttls\n");
 				banner_printed = 1;
@@ -165,6 +163,7 @@ mroutepr(u_long mfcaddr, u_long vifaddr)
 				
 				bwm = mfc.mfc_bw_meter;
 				while (bwm) {
+				    /* XXX KVM */
 				    kread((u_long)bwm, (char *)&bw_meter,
 						sizeof bw_meter);
 				    print_bw_meter(&bw_meter,
@@ -181,7 +180,7 @@ mroutepr(u_long mfcaddr, u_long vifaddr)
 		}
 	}
 	if (!banner_printed)
-		printf("\nMulticast Routing Table is empty\n");
+		printf("\nIPv4 Multicast Forwarding Table is empty\n");
 
 	printf("\n");
 	numeric_addr = saved_numeric_addr;
@@ -207,16 +206,16 @@ print_bw_meter(struct bw_meter *bw_meter, int *banner_printed)
 
 	/* The measured values */
 	if (bw_meter->bm_flags & BW_METER_UNIT_PACKETS)
-		sprintf(s1, "%llu", bw_meter->bm_measured.b_packets);
+		sprintf(s1, "%ju", (uintmax_t)bw_meter->bm_measured.b_packets);
 	else
 		sprintf(s1, "?");
 	if (bw_meter->bm_flags & BW_METER_UNIT_BYTES)
-		sprintf(s2, "%llu", bw_meter->bm_measured.b_bytes);
+		sprintf(s2, "%ju", (uintmax_t)bw_meter->bm_measured.b_bytes);
 	else
 		sprintf(s2, "?");
 	sprintf(s0, "%lu.%lu|%s|%s",
-		bw_meter->bm_start_time.tv_sec,
-		bw_meter->bm_start_time.tv_usec,
+		(u_long)bw_meter->bm_start_time.tv_sec,
+		(u_long)bw_meter->bm_start_time.tv_usec,
 		s1, s2);
 	printf("  %-30s", s0);
 
@@ -230,16 +229,16 @@ print_bw_meter(struct bw_meter *bw_meter, int *banner_printed)
 
 	/* The threshold values */
 	if (bw_meter->bm_flags & BW_METER_UNIT_PACKETS)
-		sprintf(s1, "%llu", bw_meter->bm_threshold.b_packets);
+		sprintf(s1, "%ju", (uintmax_t)bw_meter->bm_threshold.b_packets);
 	else
 		sprintf(s1, "?");
 	if (bw_meter->bm_flags & BW_METER_UNIT_BYTES)
-		sprintf(s2, "%llu", bw_meter->bm_threshold.b_bytes);
+		sprintf(s2, "%ju", (uintmax_t)bw_meter->bm_threshold.b_bytes);
 	else
 		sprintf(s2, "?");
 	sprintf(s0, "%lu.%lu|%s|%s",
-		bw_meter->bm_threshold.b_time.tv_sec,
-		bw_meter->bm_threshold.b_time.tv_usec,
+		(u_long)bw_meter->bm_threshold.b_time.tv_sec,
+		(u_long)bw_meter->bm_threshold.b_time.tv_usec,
 		s1, s2);
 	printf("  %-30s", s0);
 
@@ -248,11 +247,15 @@ print_bw_meter(struct bw_meter *bw_meter, int *banner_printed)
 		 &bw_meter->bm_threshold.b_time, &end);
 	if (timercmp(&now, &end, <=)) {
 		timersub(&end, &now, &delta);
-		sprintf(s3, "%lu.%lu", delta.tv_sec, delta.tv_usec);
+		sprintf(s3, "%lu.%lu",
+			(u_long)delta.tv_sec,
+			(u_long)delta.tv_usec);
 	} else {
 		/* Negative time */
 		timersub(&now, &end, &delta);
-		sprintf(s3, "-%lu.%lu", delta.tv_sec, delta.tv_usec);
+		sprintf(s3, "-%lu.%lu",
+			(u_long)delta.tv_sec,
+			(u_long)delta.tv_usec);
 	}
 	printf(" %s", s3);
 
@@ -265,17 +268,15 @@ mrt_stats(u_long mstaddr)
 	struct mrtstat mrtstat;
 	size_t len = sizeof mrtstat;
 
-	if (sysctlbyname("net.inet.ip.mrtstat", &mrtstat, &len,
-				NULL, 0) < 0) {
-		warn("sysctl: net.inet.ip.mrtstat");
-		/* Compatability with older kernels - candidate for removal */
-		if (mstaddr == 0) {
-			printf("No IPv4 multicast routing compiled into this system.\n");
+	if (live) {
+		if (sysctlbyname("net.inet.ip.mrtstat", &mrtstat, &len, NULL,
+		    0) < 0) {
+			warn("sysctl: net.inet.ip.mrtstat");
 			return;
 		}
-
+	} else
 		kread(mstaddr, (char *)&mrtstat, sizeof(mrtstat));
-	}
+
 	printf("IPv4 multicast forwarding:\n");
 
 #define	p(f, m) if (mrtstat.f || sflag <= 1) \
@@ -285,7 +286,7 @@ mrt_stats(u_long mstaddr)
 
 	p(mrts_mfc_lookups, "\t%lu multicast forwarding cache lookup%s\n");
 	p2(mrts_mfc_misses, "\t%lu multicast forwarding cache miss%s\n");
-	p(mrts_upcalls, "\t%lu upcall%s to mrouted\n");
+	p(mrts_upcalls, "\t%lu upcall%s to multicast routing daemon\n");
 	p(mrts_upq_ovflw, "\t%lu upcall queue overflow%s\n");
 	p(mrts_upq_sockfull,
 	    "\t%lu upcall%s dropped due to full socket buffer\n");

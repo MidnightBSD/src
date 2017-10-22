@@ -1,6 +1,6 @@
-/* $FreeBSD: src/gnu/usr.bin/patch/common.h,v 1.9 2002/10/13 01:18:33 kris Exp $
+/* $FreeBSD: release/7.0.0/gnu/usr.bin/patch/common.h 105017 2002-10-13 01:18:33Z kris $
  *
- * $Log: not supported by cvs2svn $
+ * $Log: common.h,v $
  * Revision 2.0.1.2  88/06/22  20:44:53  lwall
  * patch12: sprintf was declared wrong
  *

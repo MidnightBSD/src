@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/usr.bin/less/zless.sh,v 1.1 2005/05/17 11:14:11 des Exp $
+# $FreeBSD: release/7.0.0/usr.bin/less/zless.sh 146314 2005-05-17 11:14:11Z des $
 #
 
 export LESSOPEN="|/usr/bin/lesspipe.sh %s"

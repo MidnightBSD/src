@@ -35,7 +35,7 @@
  *
  *	@(#)strfile.h	8.1 (Berkeley) 5/31/93
  */
-/* $FreeBSD: src/games/fortune/strfile/strfile.h,v 1.4 2005/02/17 18:06:37 ru Exp $ */
+/* $FreeBSD: release/7.0.0/games/fortune/strfile/strfile.h 142022 2005-02-17 18:06:37Z ru $ */
 
 #include <sys/types.h>
 

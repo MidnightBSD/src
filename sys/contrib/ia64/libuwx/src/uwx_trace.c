@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003 Hewlett-Packard Development Company, L.P.
+Copyright (c) 2003-2006 Hewlett-Packard Development Company, L.P.
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without
@@ -23,6 +23,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "uwx_env.h"
+#include "uwx_utable.h"
 #include "uwx_uinfo.h"
 #include "uwx_scoreboard.h"
 #include "uwx_trace.h"
@@ -47,7 +48,7 @@ void uwx_trace_init(struct uwx_env *env)
 		case 'L': env->trace |= UWX_TRACE_LOOKUPIP; break;
 		case '?':
 #ifdef _KERNEL
-		    printf("UWX_TRACE flag `%c' unknown.\n", *tstr);
+		    fprintf(stderr, "UWX_TRACE flag `%c' unknown.\n", *tstr);
 #else
 		    fprintf(stderr, "UWX_TRACE flags:\n");
 		    fprintf(stderr, "  i: unwind info\n");
@@ -84,37 +85,37 @@ void uwx_dump_rstate(int regid, uint64_t rstate)
 
     if (rstate == UWX_DISP_NONE)
 	return;
-    printf("    %-7s", uwx_sb_rnames[regid]);
+    fprintf(stderr, "    %-7s", uwx_sb_rnames[regid]);
     switch (UWX_GET_DISP_CODE(rstate)) {
 	case UWX_DISP_NONE:
-	    printf("    unchanged\n");
+	    fprintf(stderr, "    unchanged\n");
 	    break;
 	case UWX_DISP_SPPLUS(0):
-	    printf("    SP + %d\n", (int)rstate & ~0x07);
+	    fprintf(stderr, "    SP + %d\n", (int)rstate & ~0x07);
 	    break;
 	case UWX_DISP_SPREL(0):
-	    printf("    [SP + %d]\n", (int)rstate & ~0x07);
+	    fprintf(stderr, "    [SP + %d]\n", (int)rstate & ~0x07);
 	    break;
 	case UWX_DISP_PSPREL(0):
-	    printf("    [PSP + 16 - %d]\n", (int)rstate & ~0x07);
+	    fprintf(stderr, "    [PSP + 16 - %d]\n", (int)rstate & ~0x07);
 	    break;
 	case UWX_DISP_REG(0):
 	    reg = UWX_GET_DISP_REGID(rstate);
 	    if (reg == UWX_REG_AR_PFS)
-		printf("    [AR.PFS]\n");
+		fprintf(stderr, "    AR.PFS\n");
 	    else if (reg == UWX_REG_AR_UNAT)
-		printf("    [AR.UNAT]\n");
+		fprintf(stderr, "    AR.UNAT\n");
 	    else if (reg >= UWX_REG_GR(0) && reg < UWX_REG_GR(128))
-		printf("    [GR%d]\n", reg - UWX_REG_GR(0));
+		fprintf(stderr, "    GR%d\n", reg - UWX_REG_GR(0));
 	    else if (reg >= UWX_REG_FR(0) && reg < UWX_REG_FR(128))
-		printf("    [FR%d]\n", reg - UWX_REG_FR(0));
+		fprintf(stderr, "    FR%d\n", reg - UWX_REG_FR(0));
 	    else if (reg >= UWX_REG_BR(0) && reg < UWX_REG_BR(8))
-		printf("    [BR%d]\n", reg - UWX_REG_BR(0));
+		fprintf(stderr, "    BR%d\n", reg - UWX_REG_BR(0));
 	    else
-		printf("    [reg %d]\n", reg);
+		fprintf(stderr, "    <reg %d>\n", reg);
 	    break;
 	default:
-	    printf("    <%08llx>\n", (unsigned long long)rstate);
+	    fprintf(stderr, "    <%08lx>\n", (long)rstate);
 	    break;
     }
 }
@@ -129,15 +130,37 @@ void uwx_dump_scoreboard(
     int i;
 
     if (rhdr->is_prologue)
-	printf("  Prologue region (start = %d, length = %d)\n",
+	fprintf(stderr, "  Prologue region (start = %d, length = %d)\n",
 		    (int)cur_slot, (int)rhdr->rlen);
     else
-	printf("  Body region (start = %d, length = %d, ecount = %d)\n",
+	fprintf(stderr, "  Body region (start = %d, length = %d, ecount = %d)\n",
 		    cur_slot, (int)rhdr->rlen, rhdr->ecount);
     if (ip_slot < rhdr->rlen)
-	printf("    IP is in this region (offset = %d)\n", ip_slot);
+	fprintf(stderr, "    IP is in this region (offset = %d)\n", ip_slot);
     for (i = 0; i < nsbreg; i++)
 	uwx_dump_rstate(i, scoreboard->rstate[i]);
+}
+
+void uwx_dump_uinfo_block(
+	struct uwx_utable_entry *uentry,
+	unsigned int ulen)
+{
+    int i;
+    uint32_t *uinfo = (uint32_t *)(intptr_t)uentry->unwind_info;
+
+    ulen += DWORDSZ;		/* Include unwind info header */
+    if (uentry->unwind_flags & UNWIND_TBL_32BIT) /* and personality routine */
+	ulen += WORDSZ;
+    else
+	ulen += DWORDSZ;
+    while (ulen >= WORDSZ) {
+	fprintf(stderr, "  %08lx: ", (unsigned long)uinfo);
+	for (i = 0; i < 4 * WORDSZ && ulen >= WORDSZ; i += WORDSZ) {
+	    fprintf(stderr, " %04x", *uinfo++);
+	    ulen -= WORDSZ;
+	}
+	fprintf(stderr, "\n");
+    }
 }
 
 #endif /* UWX_TRACE_ENABLE */

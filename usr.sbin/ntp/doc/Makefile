@@ -1,7 +1,10 @@
-# $FreeBSD: src/usr.sbin/ntp/doc/Makefile,v 1.11 2005/05/25 16:30:43 sheldonh Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/ntp/doc/Makefile 158688 2006-05-17 10:50:35Z pav $
+
+.include <bsd.own.mk>
 
 FILESDIR=	${SHAREDIR}/doc/ntp
 
+.if ${MK_HTML} != "no"
 FILES=	accopt.html assoc.html audio.html authopt.html build.html \
 	clockopt.html \
 	config.html confopt.html copyright.html debug.html driver1.html \
@@ -18,9 +21,10 @@ FILES=	accopt.html assoc.html audio.html authopt.html build.html \
 	ntptrace.html parsedata.html parsenew.html patches.html porting.html \
 	pps.html prefer.html quick.html rdebug.html refclock.html \
 	release.html tickadj.html
+.endif
 
 MAN=	ntp.conf.5 ntp.keys.5
-MAN+=	ntpd.8 ntpdate.8 ntpdc.8 ntpq.8 ntptime.8 ntptrace.8
+MAN+=	ntp-keygen.8 ntpd.8 ntpdate.8 ntpdc.8 ntpq.8 ntptime.8 ntptrace.8
 
 .PATH: ${.CURDIR}/../../../contrib/ntp/html \
 	${.CURDIR}/../../../contrib/ntp/html/drivers

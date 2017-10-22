@@ -1,4 +1,6 @@
-# $FreeBSD: src/gnu/usr.bin/groff/tmac/Makefile,v 1.42.10.1 2005/11/15 22:07:00 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/tmac/Makefile 161282 2006-08-14 13:02:01Z ru $
+
+.include <bsd.own.mk>			# SHAREDIR
 
 TMACOWN?=	${BINOWN}
 TMACGRP?=	${BINGRP}

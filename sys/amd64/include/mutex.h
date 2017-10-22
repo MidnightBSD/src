@@ -25,20 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: mutex.h,v 1.1.1.2 2006-02-25 02:35:57 laffer1 Exp $
- * $FreeBSD: src/sys/amd64/include/mutex.h,v 1.38 2003/12/06 23:17:18 peter Exp $
+ *	from BSDI $Id: mutex.h,v 2.7.2.35 2000/04/27 03:10:26 cp Exp $
+ * $FreeBSD: release/7.0.0/sys/amd64/include/mutex.h 158748 2006-05-19 18:53:50Z sobomax $
  */
 
 #ifndef _MACHINE_MUTEX_H_
 #define _MACHINE_MUTEX_H_
 
-#ifndef LOCORE
-#ifdef _KERNEL
-
-/* Global locks */
-extern struct mtx	clock_lock;
-
-#endif	/* _KERNEL */
-
-#endif	/* !LOCORE */
 #endif	/* __MACHINE_MUTEX_H */

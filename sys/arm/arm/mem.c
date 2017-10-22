@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/mem.c,v 1.1 2004/11/07 23:01:36 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/mem.c 166688 2007-02-13 15:35:57Z cognet $");
 
 /*
  * Memory special file
@@ -63,6 +63,7 @@ __FBSDID("$FreeBSD: src/sys/arm/arm/mem.c,v 1.1 2004/11/07 23:01:36 cognet Exp $
 #include <vm/vm_extern.h>
 
 #include <machine/memdev.h>
+#include <machine/vmparam.h>
 
 /*
  * Used in /dev/mem drivers and elsewhere
@@ -91,8 +92,21 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 			continue;
 		}
 		if (minor(dev) == CDEV_MINOR_MEM) {
+			int i;
+			int address_valid = 0;
+
 			v = uio->uio_offset;
 			v &= ~PAGE_MASK;
+			for (i = 0; dump_avail[i] || dump_avail[i + 1];
+			i += 2) {
+				if (v >= dump_avail[i] && 
+				    v < dump_avail[i + 1]) {
+					address_valid = 1;
+					break;
+				}
+			}
+			if (!address_valid)
+				return (EINVAL);
 			pmap_kenter((vm_offset_t)_tmppt, v);
 			o = (int)uio->uio_offset & PAGE_MASK;
 			c = (u_int)(PAGE_SIZE - ((int)iov->iov_base & PAGE_MASK));
@@ -116,11 +130,14 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 			for (; addr < eaddr; addr += PAGE_SIZE) 
 				if (pmap_extract(kernel_pmap, addr) == 0)
 					return (EFAULT);
-
 			if (!kernacc((caddr_t)(int)uio->uio_offset, c,
 			    uio->uio_rw == UIO_READ ? 
 			    VM_PROT_READ : VM_PROT_WRITE))
-				return (EFAULT);
+#ifdef ARM_USE_SMALL_ALLOC
+				if (addr <= VM_MAXUSER_ADDRESS ||
+				    addr >= KERNBASE)
+#endif
+					return (EFAULT);
 			error = uiomove((caddr_t)(int)uio->uio_offset, (int)c, uio);
 			continue;
 		}

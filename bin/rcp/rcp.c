@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)rcp.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/rcp/rcp.c,v 1.45 2005/02/09 17:37:38 ru Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/rcp/rcp.c 169848 2007-05-22 04:21:00Z cperciva $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -403,7 +403,8 @@ syserr:			run_err("%s: %s", name, strerror(errno));
 		if (response() < 0)
 			goto next;
 		if ((bp = allocbuf(&buffer, fd, BUFSIZ)) == NULL) {
-next:			(void)close(fd);
+next:			if (fd >= 0)
+				(void)close(fd);
 			continue;
 		}
 

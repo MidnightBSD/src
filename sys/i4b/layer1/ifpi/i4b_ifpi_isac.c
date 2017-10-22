@@ -27,13 +27,13 @@
  *
  *	i4b_ifpi_isac.c - i4b Fritz PCI ISAC handler
  *	--------------------------------------------
- *	$Id: i4b_ifpi_isac.c,v 1.1.1.2 2006-02-25 02:37:12 laffer1 Exp $ 
+ *	$Id: i4b_ifpi_isac.c,v 1.3 2000/05/29 15:41:41 hm Exp $ 
  *      last edit-date: [Mon May 29 15:22:52 2000]
  *
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/ifpi/i4b_ifpi_isac.c,v 1.8 2005/01/06 22:18:19 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer1/ifpi/i4b_ifpi_isac.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include "opt_i4b.h"
 
@@ -44,9 +44,9 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer1/ifpi/i4b_ifpi_isac.c,v 1.8 2005/01/06 22:
 
 #include <net/if.h>
 
-#include <machine/i4b_debug.h>
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_trace.h>
+#include <i4b/include/i4b_debug.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_trace.h>
 
 #include <i4b/layer1/i4b_l1.h>
 

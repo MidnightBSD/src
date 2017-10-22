@@ -33,7 +33,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/atomic.h,v 1.8.2.3 2005/10/06 18:12:05 jhb Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/atomic.h 174418 2007-12-07 22:08:02Z cognet $
  */
 
 #ifndef	_MACHINE_ATOMIC_H_
@@ -61,7 +61,7 @@
 			"orr  %1, %0, %2;"		\
 			"msr  cpsr_all, %1;"		\
 			: "=r" (cpsr_save), "=r" (tmp)	\
-			: "I" (I32_bit)		\
+			: "I" (I32_bit | F32_bit)		\
 		        : "cc" );		\
 		(expr);				\
 		 __asm __volatile(		\
@@ -79,7 +79,7 @@ __swp(uint32_t val, volatile uint32_t *ptr)
 {
 	__asm __volatile("swp	%0, %2, [%3]"
 	    : "=&r" (val), "=m" (*ptr)
-	    : "r" (val) , "r" (ptr), "m" (*ptr)
+	    : "r" (val), "r" (ptr), "m" (*ptr)
 	    : "memory");
 	return (val);
 }
@@ -148,22 +148,26 @@ atomic_cmpset_32(volatile u_int32_t *p, volatile u_int32_t cmpval, volatile u_in
 	register int done, ras_start;
 
 	__asm __volatile("1:\n"
-	    "mov	%0, #0xe0000008\n"
-	    "adr	%1, 2f\n"
-	    "str	%1, [%0]\n"
 	    "adr	%1, 1b\n"
 	    "mov	%0, #0xe0000004\n"
+	    "str	%1, [%0]\n"
+	    "mov	%0, #0xe0000008\n"
+	    "adr	%1, 2f\n"
 	    "str	%1, [%0]\n"
 	    "ldr	%1, [%2]\n"
 	    "cmp	%1, %3\n"
 	    "streq	%4, [%2]\n"
 	    "2:\n"
 	    "mov	%1, #0\n"
+	    "mov	%0, #0xe0000004\n"
+	    "str	%1, [%0]\n"
+	    "mov	%1, #0xffffffff\n"
+	    "mov	%0, #0xe0000008\n"
 	    "str	%1, [%0]\n"
 	    "moveq	%1, #1\n"
 	    "movne	%1, #0\n"
 	    : "=r" (ras_start), "=r" (done)
-	    ,"+r" (p), "+r" (cmpval), "+r" (newval));
+	    ,"+r" (p), "+r" (cmpval), "+r" (newval) : : "memory");
 	return (done);
 }
 
@@ -173,19 +177,24 @@ atomic_add_32(volatile u_int32_t *p, u_int32_t val)
 	int ras_start, start;
 
 	__asm __volatile("1:\n"
-	    "mov	%0, #0xe0000008\n"
-	    "adr	%1, 2f\n"
-	    "str	%1, [%0]\n"
 	    "adr	%1, 1b\n"
 	    "mov	%0, #0xe0000004\n"
+	    "str	%1, [%0]\n"
+	    "mov	%0, #0xe0000008\n"
+	    "adr	%1, 2f\n"
 	    "str	%1, [%0]\n"
 	    "ldr	%1, [%2]\n"
 	    "add	%1, %1, %3\n"
 	    "str	%1, [%2]\n"
 	    "2:\n"
+	    "mov	%0, #0xe0000004\n"
 	    "mov	%1, #0\n"
 	    "str	%1, [%0]\n"
-	    : "=r" (ras_start), "=r" (start), "+r" (p), "+r" (val));
+	    "mov	%1, #0xffffffff\n"
+	    "mov	%0, #0xe0000008\n"
+	    "str	%1, [%0]\n"
+	    : "=r" (ras_start), "=r" (start), "+r" (p), "+r" (val)
+	    : : "memory");
 }
 
 static __inline void
@@ -194,20 +203,25 @@ atomic_subtract_32(volatile u_int32_t *p, u_int32_t val)
 	int ras_start, start;
 
 	__asm __volatile("1:\n"
-	    "mov	%0, #0xe0000008\n"
-	    "adr	%1, 2f\n"
-	    "str	%1, [%0]\n"
 	    "adr	%1, 1b\n"
 	    "mov	%0, #0xe0000004\n"
+	    "str	%1, [%0]\n"
+	    "mov	%0, #0xe0000008\n"
+	    "adr	%1, 2f\n"
 	    "str	%1, [%0]\n"
 	    "ldr	%1, [%2]\n"
 	    "sub	%1, %1, %3\n"
 	    "str	%1, [%2]\n"
 	    "2:\n"
+	    "mov	%0, #0xe0000004\n"
 	    "mov	%1, #0\n"
 	    "str	%1, [%0]\n"
+	    "mov	%1, #0xffffffff\n"
+	    "mov	%0, #0xe0000008\n"
+	    "str	%1, [%0]\n"
 
-	    : "=r" (ras_start), "=r" (start), "+r" (p), "+r" (val));
+	    : "=r" (ras_start), "=r" (start), "+r" (p), "+r" (val)
+	    : : "memory");
 }
 
 static __inline void
@@ -216,20 +230,25 @@ atomic_set_32(volatile uint32_t *address, uint32_t setmask)
 	int ras_start, start;
 
 	__asm __volatile("1:\n"
-	    "mov	%0, #0xe0000008\n"
-	    "adr	%1, 2f\n"
-	    "str	%1, [%0]\n"
 	    "adr	%1, 1b\n"
 	    "mov	%0, #0xe0000004\n"
+	    "str	%1, [%0]\n"
+	    "mov	%0, #0xe0000008\n"
+	    "adr	%1, 2f\n"
 	    "str	%1, [%0]\n"
 	    "ldr	%1, [%2]\n"
 	    "orr	%1, %1, %3\n"
 	    "str	%1, [%2]\n"
 	    "2:\n"
+	    "mov	%0, #0xe0000004\n"
 	    "mov	%1, #0\n"
 	    "str	%1, [%0]\n"
+	    "mov	%1, #0xffffffff\n"
+	    "mov	%0, #0xe0000008\n"
+	    "str	%1, [%0]\n"
 
-	    : "=r" (ras_start), "=r" (start), "+r" (address), "+r" (setmask));
+	    : "=r" (ras_start), "=r" (start), "+r" (address), "+r" (setmask)
+	    : : "memory");
 }
 
 static __inline void
@@ -238,19 +257,24 @@ atomic_clear_32(volatile uint32_t *address, uint32_t clearmask)
 	int ras_start, start;
 
 	__asm __volatile("1:\n"
-	    "mov	%0, #0xe0000008\n"
-	    "adr	%1, 2f\n"
-	    "str	%1, [%0]\n"
 	    "adr	%1, 1b\n"
 	    "mov	%0, #0xe0000004\n"
+	    "str	%1, [%0]\n"
+	    "mov	%0, #0xe0000008\n"
+	    "adr	%1, 2f\n"
 	    "str	%1, [%0]\n"
 	    "ldr	%1, [%2]\n"
 	    "bic	%1, %1, %3\n"
 	    "str	%1, [%2]\n"
 	    "2:\n"
+	    "mov	%0, #0xe0000004\n"
 	    "mov	%1, #0\n"
 	    "str	%1, [%0]\n"
-	    : "=r" (ras_start), "=r" (start), "+r" (address), "+r" (clearmask));
+	    "mov	%1, #0xffffffff\n"
+	    "mov	%0, #0xe0000008\n"
+	    "str	%1, [%0]\n"
+	    : "=r" (ras_start), "=r" (start), "+r" (address), "+r" (clearmask)
+	    : : "memory");
 
 }
 
@@ -260,19 +284,24 @@ atomic_fetchadd_32(volatile uint32_t *p, uint32_t v)
 	uint32_t ras_start, start;
 
 	__asm __volatile("1:\n"
-	    "mov	%0, #0xe0000008\n"
-	    "adr	%1, 2f\n"
-	    "str	%1, [%0]\n"
 	    "adr	%1, 1b\n"
 	    "mov	%0, #0xe0000004\n"
 	    "str	%1, [%0]\n"
-	    "ldr	%1, %2\n"
-	    "add	%3, %1, %3\n"
-	    "str	%3, %2\n"
+	    "mov	%0, #0xe0000008\n"
+	    "adr	%1, 2f\n"
+	    "str	%1, [%0]\n"
+	    "ldr	%1, [%2]\n"
+	    "add	%0, %1, %3\n"
+	    "str	%0, [%2]\n"
 	    "2:\n"
+	    "mov	%0, #0xe0000004\n"
 	    "mov	%3, #0\n"
 	    "str	%3, [%0]\n"
-	    : "=r" (ras_start), "=r" (start), "=m" (*p), "+r" (v));
+	    "mov	%0, #0xe0000008\n"
+	    "mov	%3, #0xffffffff\n"
+	    "str	%3, [%0]\n"
+	    : "=r" (ras_start), "=r" (start), "+r" (p), "+r" (v)
+	    : : "memory");
 	return (start);
 }
 
@@ -303,31 +332,76 @@ atomic_readandclear_32(volatile u_int32_t *p)
 
 #endif /* _LOCORE */
 
+#define	atomic_add_long(p, v) \
+	atomic_add_32((volatile u_int *)(p), (u_int)(v))
+#define atomic_add_acq_long		atomic_add_long
+#define atomic_add_rel_long		atomic_add_long
+#define	atomic_subtract_long(p, v) \
+	atomic_subtract_32((volatile u_int *)(p), (u_int)(v))
+#define atomic_subtract_acq_long	atomic_subtract_long
+#define atomic_subtract_rel_long	atomic_subtract_long
+#define	atomic_clear_long(p, v) \
+	atomic_clear_32((volatile u_int *)(p), (u_int)(v))
+#define atomic_clear_acq_long		atomic_clear_long
+#define atomic_clear_rel_long		atomic_clear_long
+#define	atomic_set_long(p, v) \
+	atomic_set_32((volatile u_int *)(p), (u_int)(v))
+#define atomic_set_acq_long		atomic_set_long
+#define atomic_set_rel_long		atomic_set_long
+#define	atomic_cmpset_long(dst, old, new) \
+	atomic_cmpset_32((volatile u_int *)(dst), (u_int)(old), (u_int)(new))
+#define atomic_cmpset_acq_long		atomic_cmpset_long
+#define atomic_cmpset_rel_long		atomic_cmpset_long
+#define	atomic_fetchadd_long(p, v) \
+	atomic_fetchadd_32((volatile u_int *)(p), (u_int)(v))
+#define	atomic_readandclear_long(p) \
+	atomic_readandclear_long((volatile u_int *)(p))
+#define	atomic_load_long(p) \
+	atomic_load_32((volatile u_int *)(p))
+#define atomic_load_acq_long		atomic_load_long
+#define	atomic_store_rel_long(p, v) \
+	atomic_store_rel_32((volatile u_int *)(p), (u_int)(v))
 
-#define atomic_set_rel_int		atomic_set_32
-#define atomic_set_int			atomic_set_32
-#define atomic_readandclear_int		atomic_readandclear_32
-#define atomic_clear_int		atomic_clear_32
-#define atomic_subtract_int		atomic_subtract_32
-#define atomic_subtract_rel_int		atomic_subtract_32
-#define atomic_subtract_acq_int		atomic_subtract_32
-#define atomic_add_int			atomic_add_32
-#define atomic_add_rel_int		atomic_add_32
-#define atomic_add_acq_int		atomic_add_32
-#define atomic_cmpset_int		atomic_cmpset_32
-#define atomic_cmpset_rel_int		atomic_cmpset_32
+
+#define atomic_clear_ptr		atomic_clear_32
+#define atomic_set_ptr			atomic_set_32
+#define atomic_cmpset_ptr		atomic_cmpset_32
 #define atomic_cmpset_rel_ptr		atomic_cmpset_ptr
-#define atomic_cmpset_acq_int		atomic_cmpset_32
 #define atomic_cmpset_acq_ptr		atomic_cmpset_ptr
+#define atomic_store_ptr		atomic_store_32
 #define atomic_store_rel_ptr		atomic_store_ptr
-#define atomic_store_rel_int		atomic_store_32
-#define atomic_cmpset_rel_32		atomic_cmpset_32
-#define atomic_cmpset_rel_ptr		atomic_cmpset_ptr
+
+#define atomic_add_int			atomic_add_32
+#define atomic_add_acq_int		atomic_add_int
+#define atomic_add_rel_int		atomic_add_int
+#define atomic_subtract_int		atomic_subtract_32
+#define atomic_subtract_acq_int		atomic_subtract_int
+#define atomic_subtract_rel_int		atomic_subtract_int
+#define atomic_clear_int		atomic_clear_32
+#define atomic_clear_acq_int		atomic_clear_int
+#define atomic_clear_rel_int		atomic_clear_int
+#define atomic_set_int			atomic_set_32
+#define atomic_set_acq_int		atomic_set_int
+#define atomic_set_rel_int		atomic_set_int
+#define atomic_cmpset_int		atomic_cmpset_32
+#define atomic_cmpset_acq_int		atomic_cmpset_int
+#define atomic_cmpset_rel_int		atomic_cmpset_int
+#define atomic_fetchadd_int		atomic_fetchadd_32
+#define atomic_readandclear_int		atomic_readandclear_32
 #define atomic_load_acq_int		atomic_load_32
-#define	atomic_clear_ptr		atomic_clear_32
-#define	atomic_store_ptr		atomic_store_32
-#define	atomic_cmpset_ptr		atomic_cmpset_32
-#define	atomic_set_ptr			atomic_set_32
-#define	atomic_fetchadd_int		atomic_fetchadd_32
+#define atomic_store_rel_int		atomic_store_32
+
+#define atomic_add_acq_32		atomic_add_32
+#define atomic_add_rel_32		atomic_add_32
+#define atomic_subtract_acq_32		atomic_subtract_32
+#define atomic_subtract_rel_32		atomic_subtract_32
+#define atomic_clear_acq_32		atomic_clear_32
+#define atomic_clear_rel_32		atomic_clear_32
+#define atomic_set_acq_32		atomic_set_32
+#define atomic_set_rel_32		atomic_set_32
+#define atomic_cmpset_acq_32		atomic_cmpset_32
+#define atomic_cmpset_rel_32		atomic_cmpset_32
+#define atomic_load_acq_32		atomic_load_32
+#define atomic_store_rel_32		atomic_store_32
 
 #endif /* _MACHINE_ATOMIC_H_ */

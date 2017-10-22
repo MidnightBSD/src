@@ -1,7 +1,7 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSDru: frdp/release/doc/ru_RU.KOI8-R/readme/Makefile,v 1.1 2004/06/24 13:32:02 den Exp $
-# $FreeBSD: src/release/doc/ru_RU.KOI8-R/readme/Makefile,v 1.1 2004/06/24 13:45:38 den Exp $
+# $FreeBSD: release/7.0.0/release/doc/ru_RU.KOI8-R/readme/Makefile 131053 2004-06-24 13:45:38Z den $
 #
 # Original revision: 1.7
 #

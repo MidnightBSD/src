@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/usr.sbin/rtadvd/rtadvd.c,v 1.23.10.2 2005/11/05 10:57:41 suz Exp $	*/
+/*	$FreeBSD: release/7.0.0/usr.sbin/rtadvd/rtadvd.c 166134 2007-01-20 08:24:02Z maxim $	*/
 /*	$KAME: rtadvd.c,v 1.82 2003/08/05 12:34:23 itojun Exp $	*/
 
 /*
@@ -49,7 +49,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <err.h>
 #include <errno.h>
 #include <string.h>

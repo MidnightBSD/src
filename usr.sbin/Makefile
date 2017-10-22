@@ -1,5 +1,7 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
-# $FreeBSD: src/usr.sbin/Makefile,v 1.332.2.3 2005/12/15 23:30:11 pjd Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/Makefile 174854 2007-12-22 06:32:46Z cvs2svn $
+
+.include <bsd.own.mk>
 
 # XXX MISSING:		mkproto
 SUBDIR=	ac \
@@ -14,6 +16,9 @@ SUBDIR=	ac \
 	arp \
 	${_asf} \
 	${_atm} \
+	${_audit} \
+	${_auditd} \
+	${_auditreduce} \
 	${_authpf} \
 	${_bluetooth} \
 	${_boot0cfg} \
@@ -41,15 +46,16 @@ SUBDIR=	ac \
 	${_editmap} \
 	edquota \
 	${_eeprom} \
-	${_elf2exe} \
 	extattr \
 	extattrctl \
-	faithd \
+	${_faithd} \
 	fdcontrol \
 	fdformat \
 	fdread \
 	fdwrite \
 	flowctl \
+	freebsd-update \
+	${_ftp-proxy} \
 	fwcontrol \
 	getfmac \
 	getpmac \
@@ -58,8 +64,9 @@ SUBDIR=	ac \
 	ifmcstat \
 	inetd \
 	iostat \
-	ip6addrctl \
-	IPXrouted \
+	${_ip6addrctl} \
+	ipfwpcap \
+	${_IPXrouted} \
 	jail \
 	jexec \
 	jls \
@@ -70,6 +77,7 @@ SUBDIR=	ac \
 	${_kgzip} \
 	kldxref \
 	lastlogin \
+	lmcconfig \
 	${_lpr} \
 	${_lptcontrol} \
 	${_mailstats} \
@@ -87,7 +95,6 @@ SUBDIR=	ac \
 	${_mount_smbfs} \
 	moused \
 	${_mptable} \
-	mrouted \
 	mtest \
 	mtree \
 	${_named} \
@@ -95,17 +102,18 @@ SUBDIR=	ac \
 	${_named-checkzone} \
 	${_named.reload} \
 	${_ndiscvt} \
-	ndp \
+	${_ndp} \
 	newsyslog \
 	nfsd \
 	ngctl \
 	nghook \
 	nologin \
+	${_nscd} \
 	ntp \
+	${_nvram} \
 	${_ofwdump} \
-	${_pccard} \
+	pccard \
 	pciconf \
-	${_pcvt} \
 	periodic \
 	pkg_install \
 	pmccontrol \
@@ -118,6 +126,7 @@ SUBDIR=	ac \
 	pppd \
 	pppstats \
 	${_praliases} \
+	${_praudit} \
 	procctl \
 	pstat \
 	pw \
@@ -139,12 +148,13 @@ SUBDIR=	ac \
 	${_rpc.yppasswdd} \
 	${_rpc.ypupdated} \
 	${_rpc.ypxfrd} \
-	rrenumd \
-	rtadvd \
+	${_rrenumd} \
+	${_rtadvd} \
 	rtprio \
-	rtsold \
+	${_rtsold} \
 	rwhod \
 	sa \
+	sade \
 	${_sendmail} \
 	setfmac \
 	setpmac \
@@ -152,6 +162,7 @@ SUBDIR=	ac \
 	sliplogin \
 	slstat \
 	smbmsg \
+	snapinfo \
 	${_spkrtest} \
 	spray \
 	${_sysinstall} \
@@ -166,14 +177,12 @@ SUBDIR=	ac \
 	trpt \
 	tzsetup \
 	ugidfw \
-	${_usbd} \
 	${_usbdevs} \
 	vidcontrol \
 	vipw \
-	vnconfig \
 	watch \
 	watchdogd \
-	wicontrol \
+	wlandebug \
 	${_wlconfig} \
 	wpa \
 	${_ypbind} \
@@ -189,16 +198,23 @@ SUBDIR=	ac \
 _sysinstall=	sysinstall
 .endif
 
-.if !defined(NO_ATM)
-_atm=		atm
+# Disabled in 7.0 as netatm is not MPSAFE.
+#.if ${MK_ATM} != "no"
+#_atm=		atm
+#.endif
+
+.if ${MK_AUDIT} != "no"
+_audit= 	audit
+_auditd=	auditd
+_auditreduce=	auditreduce
+_praudit=	praudit
 .endif
 
-.if !defined(NO_BIND)
-.if !defined(NO_BIND_DNSSEC) && !defined(NO_CRYPT)
+.if ${MK_BIND_DNSSEC} != "no" && ${MK_OPENSSL} != "no"
 _dnssec-keygen=		dnssec-keygen
 _dnssec-signzone=	dnssec-signzone
 .endif
-.if !defined(NO_BIND_NAMED)
+.if ${MK_BIND_NAMED} != "no"
 _named=			named
 _named-checkconf=	named-checkconf
 _named-checkzone=	named-checkzone
@@ -206,24 +222,37 @@ _named.reload=		named.reload
 _rndc=			rndc
 _rndc-confgen=		rndc-confgen
 .endif
-.endif
 
-.if !defined(NO_BLUETOOTH)
+.if ${MK_BLUETOOTH} != "no"
 _bluetooth=	bluetooth
 .endif
 
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
+.if ${MK_OPENSSL} != "no"
 _keyserv=	keyserv
 .endif
 
-.if !defined(NO_INET6)
+.if ${MK_PF} != "no"
+_ftp-proxy=	ftp-proxy
+.endif
+
+.if ${MK_INET6} != "no"
+_faithd=	faithd
+_ip6addrctl=	ip6addrctl
 _mld6query=	mld6query
+_ndp=		ndp
 _rip6query=	rip6query
 _route6d=	route6d
+_rrenumd=	rrenumd
+_rtadvd=	rtadvd
+_rtsold=	rtsold
 _traceroute6=	traceroute6
 .endif
 
-.if !defined(NO_NIS)
+.if ${MK_IPX} != "no"
+_IPXrouted=	IPXrouted
+.endif
+
+.if ${MK_NIS} != "no"
 _rpc.yppasswdd=	rpc.yppasswdd
 _rpc.ypupdated=	rpc.ypupdated
 _rpc.ypxfrd=	rpc.ypxfrd
@@ -235,15 +264,25 @@ _ypserv=	ypserv
 _ypset=		ypset
 .endif
 
-.if !defined(NO_PF) && !defined(NO_AUTHPF)
+.if ${MK_AUTHPF} != "no"
 _authpf=	authpf
 .endif
 
-.if !defined(NO_LPR)
+.if ${MK_LIBTHR} != "no" || ${MK_LIBKSE} != "no"
+_pppctl=	pppctl
+.endif
+
+.if ${MK_LPR} != "no"
 _lpr=		lpr
 .endif
 
-.if !defined(NO_SENDMAIL)
+.if ${MK_NS_CACHING} != "no"
+.if ${MK_LIBTHR} != "no" || ${MK_LIBKSE} != "no"
+_nscd=		nscd
+.endif
+.endif
+
+.if ${MK_SENDMAIL} != "no"
 _editmap=	editmap
 _mailstats=	mailstats
 _makemap=	makemap
@@ -251,8 +290,7 @@ _praliases=	praliases
 _sendmail=	sendmail
 .endif
 
-.if !defined(NO_USB)
-_usbd=		usbd
+.if ${MK_USB} != "no"
 _usbdevs=	usbdevs
 .endif
 
@@ -265,42 +303,31 @@ _apm=		apm
 _apmd=		apmd
 _asf=		asf
 _btxld=		btxld
-.if !defined(NO_I4B)
+.if ${MK_I4B} != "no"
 _i4b=		i4b
 .endif
 _kgmon=		kgmon
 _kgzip=		kgzip
 _lptcontrol=	lptcontrol
+.if ${MK_NCP} != "no"
 _mount_nwfs=	mount_nwfs
+.endif
 _mount_smbfs=	mount_smbfs
 _mptable=	mptable
 _ndiscvt=	ndiscvt
-_pccard=	pccard
 _pnpinfo=	pnpinfo
-.if !defined(NO_LIBPTHREAD)
-_pppctl=	pppctl
-.endif
 _sicontrol=	sicontrol
 _spkrtest=	spkrtest
 _zzz=		zzz
 .if ${MACHINE} == "i386" 
-.if !defined(NO_ACPI)
+.if ${MK_ACPI} != "no"
 _acpi=		acpi
 .endif
 _arlcontrol=	arlcontrol
 _boot0cfg=	boot0cfg
-_pcvt=		pcvt
 _wlconfig=	wlconfig
 .elif ${MACHINE} == "pc98"
 _boot98cfg=	boot98cfg
-.endif
-.endif
-
-.if ${MACHINE_ARCH} == "alpha"
-_elf2exe=	elf2exe
-_pnpinfo=	pnpinfo
-.if !defined(NO_LIBC_R)
-_pppctl=	pppctl
 .endif
 .endif
 
@@ -308,7 +335,7 @@ _pppctl=	pppctl
 # mptable: broken (not 64 bit clean)
 # pnpinfo: crashes (not really useful anyway)
 .if ${MACHINE_ARCH} == "amd64"
-.if !defined(NO_ACPI)
+.if ${MK_ACPI} != "no"
 _acpi=		acpi
 .endif
 _asf=		asf
@@ -316,35 +343,34 @@ _boot0cfg=	boot0cfg
 _btxld=		btxld
 _kgmon=		kgmon
 _lptcontrol=	lptcontrol
+.if ${MK_NCP} != "no"
 _mount_nwfs=	mount_nwfs
+.endif
 _mount_smbfs=	mount_smbfs
 _mptable=	mptable
 _ndiscvt=	ndiscvt
-.if !defined(NO_LIBPTHREAD)
-_pppctl=	pppctl
-.endif
 _sicontrol=	sicontrol
 _spkrtest=	spkrtest
 _zzz=		zzz
 .endif
 
 .if ${MACHINE_ARCH} == "ia64"
-.if !defined(NO_ACPI)
+.if ${MK_ACPI} != "no"
 _acpi=		acpi
 .endif
 _kgmon=		kgmon
-.if !defined(NO_LIBPTHREAD)
-_pppctl=	pppctl
-.endif
+_mount_smbfs=	mount_smbfs
 _zzz=		zzz
+.endif
+
+.if ${MACHINE_ARCH} == "powerpc"
+_mount_smbfs=	mount_smbfs
+_nvram=		nvram
 .endif
 
 .if ${MACHINE_ARCH} == "sparc64"
 _eeprom=	eeprom
 _ofwdump=	ofwdump
-.if !defined(NO_LIBC_R)
-_pppctl=	pppctl
-.endif
 .endif
 
 .include <bsd.subdir.mk>

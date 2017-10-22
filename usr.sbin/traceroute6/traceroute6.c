@@ -76,7 +76,7 @@ static char copyright[] =
 static char sccsid[] = "@(#)traceroute.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/traceroute6/traceroute6.c,v 1.16 2004/06/13 18:38:46 dwmalone Exp $";
+  "$FreeBSD: release/7.0.0/usr.sbin/traceroute6/traceroute6.c 171135 2007-07-01 12:08:08Z gnn $";
 #endif /* not lint */
 
 /*
@@ -279,7 +279,7 @@ static const char rcsid[] =
 
 #ifdef IPSEC
 #include <net/route.h>
-#include <netinet6/ipsec.h>
+#include <netipsec/ipsec.h>
 #endif
 
 #define DUMMY_PORT 10010
@@ -373,6 +373,7 @@ main(argc, argv)
 	u_long probe, hops, lport;
 	struct hostent *hp;
 	size_t size;
+	uid_t uid;
 
 	/*
 	 * Receive ICMP
@@ -383,8 +384,11 @@ main(argc, argv)
 	}
 
 	/* revoke privs */
-	seteuid(getuid());
-	setuid(getuid());
+	uid = getuid();
+	if (setresuid(uid, uid, uid) == -1) {
+		perror("setresuid");
+		exit(1);
+	}
 
 	size = sizeof(i);
 	(void) sysctl(mib, sizeof(mib)/sizeof(mib[0]), &i, &size, NULL, 0);
@@ -537,9 +541,9 @@ main(argc, argv)
 				    "traceroute6: invalid wait time.\n");
 				exit(1);
 			}
-			if (waittime <= 1) {
+			if (waittime < 1) {
 				fprintf(stderr,
-				    "traceroute6: wait must be >1 sec.\n");
+				    "traceroute6: wait must be >= 1 sec.\n");
 				exit(1);
 			}
 			break;

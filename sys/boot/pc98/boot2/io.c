@@ -27,12 +27,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/pc98/boot2/io.c,v 1.8.2.1 2005/11/06 05:02:07 nyan Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/boot/pc98/boot2/io.c 158378 2006-05-09 14:20:17Z nyan $");
 
 #include "boot.h"
 #include <machine/cpufunc.h>
 #include <sys/reboot.h>
-#include <pc98/cbus/cbus.h>
+#include <pc98/pc98/pc98_machdep.h>
 
 static int getchar(int in_buf);
 

@@ -1,10 +1,9 @@
-# $FreeBSD: src/share/mk/bsd.endian.mk,v 1.2 2005/02/25 00:24:03 cognet Exp $
+# $FreeBSD: release/7.0.0/share/mk/bsd.endian.mk 164000 2006-11-05 15:33:26Z cognet $
 
-.if ${MACHINE_ARCH} == "alpha" || \
-    ${MACHINE_ARCH} == "amd64" || \
+.if ${MACHINE_ARCH} == "amd64" || \
     ${MACHINE_ARCH} == "i386" || \
     ${MACHINE_ARCH} == "ia64" || \
-    (${MACHINE_ARCH} == "arm" && !defined(ARM_BIG_ENDIAN))
+    (${MACHINE_ARCH} == "arm" && !defined(TARGET_BIG_ENDIAN))
 TARGET_ENDIANNESS= 1234
 .elif ${MACHINE_ARCH} == "powerpc" || \
     ${MACHINE_ARCH} == "sparc64" || \

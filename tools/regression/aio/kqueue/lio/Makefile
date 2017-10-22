@@ -1,10 +1,6 @@
-# $FreeBSD: src/tools/regression/aio/kqueue/lio/Makefile,v 1.1 2005/03/02 04:00:55 ambrisko Exp $
+# $FreeBSD: release/7.0.0/tools/regression/aio/kqueue/lio/Makefile 156735 2006-03-15 10:46:38Z ru $
 
 PROG=	lio_kqueue
-NO_MAN=	YES
-
-lio_kqueue:
-	@echo "This will not compile without"
-	@echo "  http://www.ambrisko.com/doug/listio_kqueue/listio_kqueue.patch"
+NO_MAN=
 
 .include <bsd.prog.mk>

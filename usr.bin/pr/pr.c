@@ -48,7 +48,7 @@ static char sccsid[] = "@(#)pr.c	8.2 (Berkeley) 4/16/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/pr/pr.c,v 1.18 2004/07/26 20:24:59 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/pr/pr.c 151701 2005-10-26 17:37:54Z jhb $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -1438,7 +1438,7 @@ prhead(char *buf, const char *fname, int pagcnt)
 	 * in the spec clearly does not limit length. No pr currently
 	 * restricts header length. However if we need to truncate in
 	 * a reasonable way, adjust the length of the printf by
-	 * changing HDFMT to allow a length max as an arguement printf.
+	 * changing HDFMT to allow a length max as an argument to printf.
 	 * buf (which contains the offset spaces and time field could
 	 * also be trimmed
 	 *

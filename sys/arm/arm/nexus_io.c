@@ -37,12 +37,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/nexus_io.c,v 1.5 2005/01/05 21:58:47 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/nexus_io.c 164424 2006-11-19 23:46:50Z sam $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/queue.h>
-#include <sys/types.h>
 #include <sys/bus.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
@@ -153,7 +152,7 @@ nexus_bs_alloc(t, rstart, rend, size, alignment, boundary, cacheable,
 
 
 void
-nexus_bs_unmap(void *t, bus_size_t size)
+nexus_bs_unmap(void *t, bus_space_handle_t h, bus_size_t size)
 {
 	/*
 	 * Temporary implementation

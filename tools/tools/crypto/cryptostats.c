@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/tools/crypto/cryptostats.c,v 1.2 2003/03/19 01:53:55 sam Exp $
+ * $FreeBSD: release/7.0.0/tools/tools/crypto/cryptostats.c 112394 2003-03-19 01:53:55Z sam $
  */
 
 /*

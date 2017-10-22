@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/pcb.h,v 1.5 2005/01/05 21:58:48 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/pcb.h 139735 2005-01-05 21:58:49Z imp $
  */
 
 #ifndef	_MACHINE_PCB_H_

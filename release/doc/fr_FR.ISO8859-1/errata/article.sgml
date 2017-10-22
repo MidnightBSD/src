@@ -2,8 +2,8 @@
      The FreeBSD Documentation Project
      The FreeBSD French Documentation Project
 
-     $Id: article.sgml,v 1.1.1.2 2006-02-25 02:35:15 laffer1 Exp $
-     $FreeBSD: src/release/doc/fr_FR.ISO8859-1/errata/article.sgml,v 1.6 2004/08/22 09:53:23 hrs Exp $
+     $Id$
+     $FreeBSD: release/7.0.0/release/doc/fr_FR.ISO8859-1/errata/article.sgml 134153 2004-08-22 09:53:24Z hrs $
      Original revision: 1.9
 
 	FreeBSD errata document.  Unlike some of the other RELNOTESng
@@ -40,7 +40,7 @@
     Le projet &os;
     </corpauthor>
 
-    <pubdate>$FreeBSD: src/release/doc/fr_FR.ISO8859-1/errata/article.sgml,v 1.6 2004/08/22 09:53:23 hrs Exp $</pubdate>
+    <pubdate>$FreeBSD: release/7.0.0/release/doc/fr_FR.ISO8859-1/errata/article.sgml 134153 2004-08-22 09:53:24Z hrs $</pubdate>
 
     <copyright>
       <year>2000</year>

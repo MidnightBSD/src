@@ -1,4 +1,6 @@
-# $FreeBSD: src/lib/bind/bind9/Makefile,v 1.4.4.1 2005/11/16 07:59:49 ru Exp $
+# $FreeBSD: release/7.0.0/lib/bind/bind9/Makefile 170221 2007-06-02 23:19:58Z dougb $
+
+.include <bsd.own.mk>
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9
 LIB_BIND_REL=	..
@@ -13,8 +15,12 @@ LIB=		bind9
 SRCS=		check.c getaddresses.c version.c
 
 CFLAGS+=	-I${SRCDIR}/include
+CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
 
-.if defined(WITH_BIND_LIBS)
+DPADD=		${PTHREAD_DPADD}
+LDADD=		${PTHREAD_LDADD}
+
+.if ${MK_BIND_LIBS} != "no"
 INCS=		${SRCDIR}/include/bind9/check.h \
 		${SRCDIR}/include/bind9/getaddresses.h \
 		${SRCDIR}/include/bind9/version.h

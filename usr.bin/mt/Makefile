@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.bin/mt/Makefile,v 1.4 2001/05/18 13:41:31 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/mt/Makefile 76812 2001-05-18 13:41:42Z ru $
 
 PROG=	mt
 

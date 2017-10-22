@@ -17,7 +17,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/cron/lib/misc.c,v 1.12.2.1 2006/01/15 17:50:36 delphij Exp $";
+  "$FreeBSD: release/7.0.0/usr.sbin/cron/lib/misc.c 149430 2005-08-24 17:51:36Z pjd $";
 #endif
 
 /* vix 26jan87 [RCS has the rest of the log]

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/boot/pc98/btx/Makefile,v 1.3 1999/08/28 00:40:28 peter Exp $
+# $FreeBSD: release/7.0.0/sys/boot/pc98/btx/Makefile 50477 1999-08-28 01:08:13Z peter $
 
 SUBDIR=	btx btxldr lib
 

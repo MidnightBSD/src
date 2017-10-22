@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/getpmac/Makefile,v 1.5 2005/01/27 14:52:46 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/getpmac/Makefile 140909 2005-01-27 14:52:47Z delphij $
 
 PROG=   getpmac
 MAN=	getpmac.8

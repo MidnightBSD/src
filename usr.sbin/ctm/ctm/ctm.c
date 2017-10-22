@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: src/usr.sbin/ctm/ctm/ctm.c,v 1.21 2002/03/25 13:53:29 phk Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ctm/ctm/ctm.c 93150 2002-03-25 13:53:46Z phk $
  *
  * This is the client program of 'CTM'.  It will apply a CTM-patch to a
  * collection of files.

@@ -39,7 +39,7 @@
  *	from: hp300: @(#)pmap.h	7.2 (Berkeley) 12/16/90
  *	from: @(#)pmap.h	7.4 (Berkeley) 5/12/91
  *	from: i386 pmap.h,v 1.54 1997/11/20 19:30:35 bde Exp
- * $FreeBSD: src/sys/ia64/include/pmap.h,v 1.24.2.1 2005/09/13 21:07:14 marcel Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/include/pmap.h 164250 2006-11-13 06:26:57Z ru $
  */
 
 #ifndef _MACHINE_PMAP_H_
@@ -58,7 +58,7 @@
 #endif
 #define MAXKPT		(PAGE_SIZE/sizeof(vm_offset_t))
 
-#define	vtophys(va)	pmap_kextract(((vm_offset_t) (va)))
+#define	vtophys(va)	pmap_kextract((vm_offset_t)(va))
 
 #endif /* _KERNEL */
 
@@ -100,7 +100,7 @@ extern struct pmap	kernel_pmap_store;
 
 /*
  * For each vm_page_t, there is a list of all currently valid virtual
- * mappings of that page.  An entry is a pv_entry_t, the list is pv_table.
+ * mappings of that page.  An entry is a pv_entry_t, the list is pv_list.
  */
 typedef struct pv_entry {
 	pmap_t		pv_pmap;	/* pmap where mapping lies */
@@ -119,6 +119,8 @@ extern uint64_t pmap_vhpt_base[];
 extern int pmap_vhpt_log2size;
 
 #define	pmap_page_is_mapped(m)	(!TAILQ_EMPTY(&(m)->md.pv_list))
+#define	pmap_mapbios(pa, sz)	pmap_mapdev(pa, sz)
+#define	pmap_unmapbios(va, sz)	pmap_unmapdev(va, sz)
 
 vm_offset_t pmap_steal_memory(vm_size_t);
 void	pmap_bootstrap(void);

@@ -38,7 +38,7 @@
  *
  *	from: @(#)vm_machdep.c	7.3 (Berkeley) 5/13/91
  *	Utah $Hdr: vm_machdep.c 1.16.1.1 89/06/23$
- * $FreeBSD: src/sys/powerpc/powerpc/vm_machdep.c,v 1.110 2005/07/10 23:31:10 davidxu Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/powerpc/vm_machdep.c 170363 2007-06-06 06:01:56Z grehan $
  */
 /*-
  * Copyright (c) 1994, 1995, 1996 Carnegie-Mellon University.
@@ -84,12 +84,12 @@
 #include <sys/sysctl.h>
 #include <sys/unistd.h>
 
-#include <machine/clock.h>
 #include <machine/cpu.h>
 #include <machine/fpu.h>
 #include <machine/frame.h>
 #include <machine/md_var.h>
 #include <machine/pcb.h>
+#include <machine/powerpc.h>
 
 #include <dev/ofw/openfirm.h>
 
@@ -154,7 +154,7 @@ cpu_fork(struct thread *td1, struct proc *p2, struct thread *td2, int flags)
 	pcb->pcb_lr = (register_t)fork_trampoline;
 	pcb->pcb_usr = kernel_pmap->pm_sr[USER_SR];
 
-	/* Setup to release sched_lock in fork_exit(). */
+	/* Setup to release spin count in fork_exit(). */
 	td2->td_md.md_spinlock_count = 1;
 	td2->td_md.md_saved_msr = PSL_KERNSET;
 
@@ -197,7 +197,7 @@ void
 cpu_throw(struct thread *old, struct thread *new)
 {
 
-	cpu_switch(old, new);
+	cpu_switch(old, new, NULL);
 	panic("cpu_throw() didn't");
 }
 
@@ -207,7 +207,7 @@ cpu_throw(struct thread *old, struct thread *new)
 void
 cpu_reset()
 {
-	OF_exit();
+	OF_reboot();
 }
 
 /*
@@ -327,7 +327,7 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	pcb2->pcb_lr = (register_t)fork_trampoline;
 	pcb2->pcb_usr = kernel_pmap->pm_sr[USER_SR];
 
-	/* Setup to release sched_lock in fork_exit(). */
+	/* Setup to release spin count in fork_exit(). */
 	td->td_md.md_spinlock_count = 1;
 	td->td_md.md_saved_msr = PSL_KERNSET;
 }
@@ -359,6 +359,6 @@ int
 cpu_set_user_tls(struct thread *td, void *tls_base)
 {
 
-	td->td_frame->fixreg[2] = (register_t)tls_base;
+	td->td_frame->fixreg[2] = (register_t)tls_base + 0x7008;
 	return (0);
 }

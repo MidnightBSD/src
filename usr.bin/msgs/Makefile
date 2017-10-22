@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.bin/msgs/Makefile,v 1.9 2005/01/17 17:45:38 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.bin/msgs/Makefile 140389 2005-01-17 17:45:38Z delphij $
 
 PROG=	msgs
 WARNS?=	6

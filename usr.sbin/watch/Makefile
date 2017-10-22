@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/watch/Makefile,v 1.16 2003/04/04 17:49:20 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/watch/Makefile 113091 2003-04-04 17:49:21Z obrien $
 
 PROG=	watch
 MAN=	watch.8

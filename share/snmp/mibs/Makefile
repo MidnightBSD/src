@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/snmp/mibs/Makefile,v 1.3 2004/12/21 08:46:55 ru Exp $
+# $FreeBSD: release/7.0.0/share/snmp/mibs/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 FILES=	FREEBSD-MIB.txt
 NO_OBJ=

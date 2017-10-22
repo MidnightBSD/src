@@ -42,7 +42,7 @@
  *
  * Created      : 30/09/94
  *
- * $FreeBSD: src/sys/arm/include/frame.h,v 1.3 2005/01/05 21:58:48 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/frame.h 153666 2005-12-22 22:16:09Z jhb $
  *
  */
 
@@ -136,28 +136,6 @@ typedef struct irqframe {
 	unsigned int if_svc_lr;
 	unsigned int if_pc;
 } irqframe_t;
-
-typedef struct clockframe {
-	unsigned int if_spsr;
-	unsigned int if_r0;
-	unsigned int if_r1;
-	unsigned int if_r2;
-	unsigned int if_r3;
-	unsigned int if_r4;
-	unsigned int if_r5;
-	unsigned int if_r6;
-	unsigned int if_r7;
-	unsigned int if_r8;
-	unsigned int if_r9;
-	unsigned int if_r10;
-	unsigned int if_r11;
-	unsigned int if_r12;
-	unsigned int if_usr_sp;
-	unsigned int if_usr_lr;
-	unsigned int if_svc_sp;
-	unsigned int if_svc_lr;
-	unsigned int if_pc;
-} clockframe_t;
 
 /*
  * Switch frame

@@ -25,7 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: stdarg.h,v 1.5 2000/02/27 17:50:21 tsubai Exp $
- * $FreeBSD: src/sys/powerpc/include/stdarg.h,v 1.9 2005/03/02 21:33:28 joerg Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/stdarg.h 162487 2006-09-21 01:37:02Z kan $
  */
 
 #ifndef _MACHINE_STDARG_H_
@@ -42,7 +42,7 @@ typedef	__va_list	va_list;
 #if defined(__GNUCLIKE_BUILTIN_STDARG)
 
 #define	va_start(ap, last) \
-	__builtin_stdarg_start((ap), (last))
+	__builtin_va_start((ap), (last))
 
 #define	va_arg(ap, type) \
 	__builtin_va_arg((ap), type)

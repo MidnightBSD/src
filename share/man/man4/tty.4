@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)tty.4	8.3 (Berkeley) 4/19/94
-.\" $FreeBSD: src/share/man/man4/tty.4,v 1.22 2005/02/13 22:25:17 ru Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man4/tty.4 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
-.Dd August 14, 1992
+.Dd Jun 27, 2007
 .Dt TTY 4
 .Os
 .Sh NAME
@@ -280,7 +280,7 @@ The current system does not allocate a controlling terminal to
 a process on an
 .Fn open
 call: there is a specific ioctl called
-.Dv TIOSCTTY
+.Dv TIOCSCTTY
 to make a terminal the controlling
 terminal.
 In addition, a program can

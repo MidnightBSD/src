@@ -27,7 +27,7 @@
 # SUCH DAMAGE.
 #
 
-# $FreeBSD: src/sys/boot/i386/cdboot/cdboot.s,v 1.13 2004/06/22 21:55:22 jhb Exp $
+# $FreeBSD: release/7.0.0/sys/boot/i386/cdboot/cdboot.s 173826 2007-11-21 16:22:34Z jhb $
 
 #
 # This program is a freestanding boot program to load an a.out binary
@@ -400,7 +400,7 @@ ff.nextblock:	subl $SECTOR_SIZE,rec_size	# Adjust size
 ff.checkname:	lea DIR_NAME(%bx),%di		# Address name in record
 		push %si			# Save
 		repe cmpsb			# Compare name
-		jcxz ff.match			# We have a winner!
+		je ff.match			# We have a winner!
 		pop %si				# Restore
 		jmp ff.nextrec			# Keep looking.
 ff.match:	add $2,%sp			# Discard saved %si
@@ -472,7 +472,7 @@ putc:		mov $0x7,%bx			# attribute for output
 twiddle:	push %ax			# Save
 		push %bx			# Save
 		mov twiddle_index,%al		# Load index
-		mov twiddle_chars,%bx		# Address table
+		mov $twiddle_chars,%bx		# Address table
 		inc %al				# Next
 		and $3,%al			#  char
 		mov %al,twiddle_index		# Save index for next call
@@ -485,10 +485,17 @@ twiddle:	push %ax			# Save
 		ret
 
 #
-# Enable A20
+# Enable A20. Put an upper limit on the amount of time we wait for the
+# keyboard controller to get ready (65K x ISA access time). If
+# we wait more than that amount, the hardware is probably
+# legacy-free and simply doesn't have a keyboard controller.
+# Thus, the A20 line is already enabled.
 #
 seta20: 	cli				# Disable interrupts
-seta20.1:	in $0x64,%al			# Get status
+		xor %cx,%cx			# Clear
+seta20.1:	inc %cx				# Increment, overflow?
+		jz seta20.3			# Yes
+		in $0x64,%al			# Get status
 		test $0x2,%al			# Busy?
 		jnz seta20.1			# Yes
 		mov $0xd1,%al			# Command: Write
@@ -498,7 +505,7 @@ seta20.2:	in $0x64,%al			# Get status
 		jnz seta20.2			# Yes
 		mov $0xdf,%al			# Enable
 		out %al,$0x60			#  A20
-		sti				# Enable interrupts
+seta20.3:	sti				# Enable interrupts
 		ret				# To caller
 
 #
@@ -578,7 +585,7 @@ msg_bootinfo:	.asciz	"Building the boot loader arguments\r\n"
 msg_relocate:	.asciz	"Relocating the loader and the BTX\r\n"
 msg_jump:	.asciz	"Starting the BTX loader\r\n"
 msg_badread:	.ascii  "Read Error: 0x"
-hex_error:	.ascii	"00\r\n"
+hex_error:	.asciz	"00\r\n"
 msg_novd:	.asciz  "Could not find Primary Volume Descriptor\r\n"
 msg_lookup:	.asciz  "Looking up "
 msg_lookup2:	.asciz  "... "

@@ -28,7 +28,7 @@
  *
  *	@(#)radix.c	8.4 (Berkeley) 11/2/94
  *
- * $FreeBSD: src/sbin/routed/radix.c,v 1.9 2005/05/31 20:28:49 stefanf Exp $
+ * $FreeBSD: release/7.0.0/sbin/routed/radix.c 146838 2005-05-31 20:28:49Z stefanf $
  */
 
 /*
@@ -40,10 +40,10 @@
 #ifdef __NetBSD__
 __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
-__RCSID("$FreeBSD: src/sbin/routed/radix.c,v 1.9 2005/05/31 20:28:49 stefanf Exp $");
+__RCSID("$FreeBSD: release/7.0.0/sbin/routed/radix.c 146838 2005-05-31 20:28:49Z stefanf $");
 #else
-__RCSID("$Revision: 1.1.1.2 $");
-#ident "$Revision: 1.1.1.2 $"
+__RCSID("$Revision: 2.23 $");
+#ident "$Revision: 2.23 $"
 #endif
 
 #define log(x, msg) syslog(x, msg)

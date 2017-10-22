@@ -1,5 +1,5 @@
 #        @(#)Makefile	8.1 (Berkeley) 5/31/93
-# $FreeBSD: src/bin/test/Makefile,v 1.10 2003/09/07 12:52:17 ru Exp $
+# $FreeBSD: release/7.0.0/bin/test/Makefile 119837 2003-09-07 12:52:17Z ru $
 
 PROG=	test
 LINKS=	${BINDIR}/test ${BINDIR}/[

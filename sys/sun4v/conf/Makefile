@@ -1,0 +1,3 @@
+# $FreeBSD: release/7.0.0/sys/sun4v/conf/Makefile 163022 2006-10-05 06:14:28Z kmacy $
+
+.include "${.CURDIR}/../../conf/makeLINT.mk"

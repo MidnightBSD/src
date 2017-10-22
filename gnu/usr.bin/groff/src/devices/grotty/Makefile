@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/groff/src/devices/grotty/Makefile,v 1.4 2003/05/01 13:22:19 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/src/devices/grotty/Makefile 114412 2003-05-01 13:22:21Z ru $
 
 PROG_CXX=	grotty
 SRCS=		tty.cpp

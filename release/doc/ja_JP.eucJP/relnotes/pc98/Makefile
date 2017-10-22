@@ -1,4 +1,4 @@
-# $FreeBSD: src/release/doc/ja_JP.eucJP/relnotes/pc98/Makefile,v 1.1 2002/06/25 18:54:39 hrs Exp $
+# $FreeBSD: release/7.0.0/release/doc/ja_JP.eucJP/relnotes/pc98/Makefile 98819 2002-06-25 18:54:39Z hrs $
 # Original revision: 1.1
 
 RELN_ROOT?= ${.CURDIR}/../../..

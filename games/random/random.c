@@ -46,7 +46,7 @@ static const char sccsid[] = "@(#)random.c	8.5 (Berkeley) 4/5/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/games/random/random.c,v 1.19 2005/06/22 15:24:00 jhb Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/games/random/random.c 157758 2006-04-14 17:32:27Z ache $");
 
 #include <sys/types.h>
 
@@ -54,6 +54,7 @@ __FBSDID("$FreeBSD: src/games/random/random.c,v 1.19 2005/06/22 15:24:00 jhb Exp
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -84,6 +85,9 @@ main(int argc, char *argv[])
 	random_type = RANDOM_TYPE_UNSET;
 	random_exit = randomize_lines = random_type = unbuffer_output = 0;
 	unique_output = 1;
+
+	(void)setlocale(LC_CTYPE, "");
+
 	while ((ch = getopt(argc, argv, "ef:hlruUw")) != -1)
 		switch (ch) {
 		case 'e':

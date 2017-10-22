@@ -37,7 +37,7 @@
 #include <machine/asmacros.h>
 #include <machine/armreg.h>
 #include "assym.s"
-__FBSDID("$FreeBSD: src/sys/arm/arm/fusu.S,v 1.7 2005/04/23 16:45:04 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/fusu.S 163449 2006-10-17 02:24:47Z davidxu $");
 
 #ifdef MULTIPROCESSOR
 .Lcpu_info:
@@ -52,7 +52,8 @@ __FBSDID("$FreeBSD: src/sys/arm/arm/fusu.S,v 1.7 2005/04/23 16:45:04 cognet Exp 
  * Fetch an int from the user's address space.
  */
 
-ENTRY(casuptr)
+ENTRY_NP(casuword32)
+ENTRY(casuword)
 #ifdef MULTIPROCESSOR
 	/* XXX Probably not appropriate for non-Hydra SMPs */
 	stmfd	sp!, {r0, r14}
@@ -71,7 +72,7 @@ ENTRY(casuptr)
 	beq	.Lfusupcbfault
 #endif
 	stmfd	sp!, {r4, r5}
-	adr	r4, .Lcasuptrfault
+	adr	r4, .Lcasuwordfault
 	str	r4, [r3, #PCB_ONFAULT]
 	ldrt	r5, [r0]
 	cmp	r5, r1
@@ -84,10 +85,10 @@ ENTRY(casuptr)
 	RET
 
 /*
- * Handle faults from casuptr.  Clean up and return -1.
+ * Handle faults from casuword.  Clean up and return -1.
  */
 
-.Lcasuptrfault:
+.Lcasuwordfault:
 	mov	r0, #0x00000000
 	str	r0, [r3, #PCB_ONFAULT]
 	mvn	r0, #0x00000000
@@ -98,7 +99,7 @@ ENTRY(casuptr)
  * Fetch an int from the user's address space.
  */
 
-ENTRY(fuword32)
+ENTRY_NP(fuword32)
 ENTRY(fuword)
 #ifdef MULTIPROCESSOR
 	/* XXX Probably not appropriate for non-Hydra SMPs */
@@ -300,7 +301,7 @@ fusupcbfaulttext:
  * Store an int in the user's address space.
  */
 
-ENTRY(suword32)
+ENTRY_NP(suword32)
 ENTRY(suword)
 #ifdef MULTIPROCESSOR
 	/* XXX Probably not appropriate for non-Hydra SMPs */

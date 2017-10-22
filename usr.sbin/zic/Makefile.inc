@@ -1,3 +1,3 @@
-# $FreeBSD: src/usr.sbin/zic/Makefile.inc,v 1.4 1999/08/28 01:21:18 peter Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/zic/Makefile.inc 50479 1999-08-28 01:35:59Z peter $
 
 .include "${.CURDIR}/../../Makefile.inc"

@@ -67,16 +67,16 @@
  *
  *	last edit-date: [Mon Dec 13 21:44:01 1999]
  *
- *	$Id: g711conv.c,v 1.1.1.2 2006-02-25 02:38:28 laffer1 Exp $
+ *	$Id: g711conv.c,v 1.5 1999/12/13 21:25:24 hm Exp $
  *
- * $FreeBSD: src/usr.sbin/i4b/g711conv/g711conv.c,v 1.6 2003/06/08 06:24:46 imp Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/g711conv/g711conv.c 171272 2007-07-06 07:21:56Z bz $
  *
  *---------------------------------------------------------------------------*/
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <machine/i4b_ioctl.h>
+#include <i4b/i4b_ioctl.h>
 
 /* copy from CCITT G.711 specifications */
 

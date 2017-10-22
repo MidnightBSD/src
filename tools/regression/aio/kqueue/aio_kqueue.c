@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/aio/kqueue/aio_kqueue.c,v 1.1 2005/03/02 03:32:01 ambrisko Exp $
+ * $FreeBSD: release/7.0.0/tools/regression/aio/kqueue/aio_kqueue.c 154668 2006-01-22 03:46:03Z davidxu $
  */
 
 /* 
@@ -95,7 +95,7 @@ main(int argc, char *argv[]){
 			iocb[i]->aio_offset = iocb[i]->aio_nbytes * i * run;
 			
 			iocb[i]->aio_sigevent.sigev_notify_kqueue = kq;
-			iocb[i]->aio_sigevent.sigev_value.sigval_ptr = iocb[i];
+			iocb[i]->aio_sigevent.sigev_value.sival_ptr = iocb[i];
 			iocb[i]->aio_sigevent.sigev_notify = SIGEV_KEVENT;
 			
 			result = aio_write(iocb[i]);

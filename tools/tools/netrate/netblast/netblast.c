@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/tools/netrate/netblast/netblast.c,v 1.2 2005/02/12 20:03:30 rwatson Exp $
+ * $FreeBSD: release/7.0.0/tools/tools/netrate/netblast/netblast.c 153470 2005-12-16 06:02:44Z scottl $
  */
 
 #include <sys/types.h>
@@ -126,9 +126,9 @@ blast_loop(int s, long duration, u_char *packet, u_int packet_len)
 	}
 
 	printf("\n");
-	printf("start:             %d.%09lu\n", starttime.tv_sec,
+	printf("start:             %zd.%09lu\n", starttime.tv_sec,
 	    starttime.tv_nsec);
-	printf("finish:            %d.%09lu\n", tmptime.tv_sec,
+	printf("finish:            %zd.%09lu\n", tmptime.tv_sec,
 	    tmptime.tv_nsec);
 	printf("send calls:        %d\n", send_calls);
 	printf("send errors:       %d\n", send_errors);

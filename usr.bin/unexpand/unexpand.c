@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/unexpand/unexpand.c,v 1.14 2004/06/24 13:48:28 tjr Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/unexpand/unexpand.c 163316 2006-10-13 16:22:25Z ru $");
 
 #ifndef lint
 static const char copyright[] =
@@ -112,7 +112,7 @@ main(int argc, char *argv[])
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: unexpand [-a] [-t tablist] [file ...]\n");
+	fprintf(stderr, "usage: unexpand [-a | -t tablist] [file ...]\n");
 	exit(1);
 }
 

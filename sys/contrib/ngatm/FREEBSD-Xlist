@@ -1,0 +1,15 @@
+#$FreeBSD: release/7.0.0/sys/contrib/ngatm/FREEBSD-Xlist 172506 2007-10-10 16:59:15Z cvs2svn $
+*/README
+*/VERSION
+*/Makefile.in
+*/Makefile.pre
+*/Makefile.post
+*/aclocal.m4
+*/config
+*/configure
+*/configure.ac
+*/libngatm
+*/man
+*/snmp_atm
+*/snmp_ilmid
+*/sscop

@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)make.1	8.8 (Berkeley) 6/13/95
-.\" $FreeBSD: src/usr.bin/make/make.1,v 1.89.2.2 2006/01/22 16:33:46 yar Exp $
+.\" $FreeBSD: release/7.0.0/usr.bin/make/make.1 167339 2007-03-08 14:05:45Z fjoe $
 .\"
-.Dd October 14, 2005
+.Dd April 8, 2006
 .Dt MAKE 1
 .Os
 .Sh NAME
@@ -216,7 +216,7 @@ Specify the maximum number of jobs that
 .Nm
 may have running at any one time.
 Turns compatibility mode off, unless the
-.Ar B
+.Fl B
 flag is also specified.
 .It Fl k
 Continue processing after errors are encountered, but only on those targets
@@ -343,7 +343,7 @@ is used.
 The target is removed if
 .Nm
 is interrupted.
-.It Ic \&::
+.It Ic ::
 If no sources are specified, the target is always re-created.
 Otherwise, a target is considered out-of-date if any of its sources has
 been modified more recently than the target.
@@ -408,18 +408,18 @@ consist of all upper-case letters.
 The five operators that can be used to assign values to variables are as
 follows:
 .Bl -tag -width Ds
-.It Ic \&=
+.It Ic =
 Assign the value to the variable.
 Any previous value is overridden.
-.It Ic \&+=
+.It Ic +=
 Append the value to the current value of the variable.
-.It Ic \&?=
+.It Ic ?=
 Assign the value to the variable if it is not already defined.
-.It Ic \&:=
+.It Ic :=
 Assign with expansion, i.e., expand the value before assigning it
 to the variable.
 Normally, expansion is not done until the variable is referenced.
-.It Ic \&!=
+.It Ic !=
 Expand the value and pass it to the shell for execution and assign
 the result to the variable.
 Any newlines in the result are replaced with spaces.
@@ -437,7 +437,7 @@ or parentheses
 .Pq Ql ()
 and preceding it with
 a dollar sign
-.Pq Ql \&$ .
+.Pq Ql $ .
 If the variable name contains only a single letter, the surrounding
 braces or parentheses are not required.
 This shorter form is not recommended.
@@ -470,7 +470,7 @@ The seven local variables are as follows:
 .Bl -tag -width ".ARCHIVE"
 .It Va .ALLSRC
 The list of all sources for this target; also known as
-.Sq Va \&> .
+.Sq Va > .
 .It Va .ARCHIVE
 The name of the archive file; also known as
 .Sq Va \&! .
@@ -479,10 +479,10 @@ The name/path of the source from which the target is to be transformed
 (the
 .Dq implied
 source); also known as
-.Sq Va \&< .
+.Sq Va < .
 .It Va .MEMBER
 The name of the archive member; also known as
-.Sq Va \&% .
+.Sq Va % .
 .It Va .OODATE
 The list of sources for this target that were deemed out-of-date; also
 known as
@@ -499,10 +499,10 @@ The name of the target; also known as
 The shorter forms
 .Sq Va @ ,
 .Sq Va \&! ,
-.Sq Va \&< ,
-.Sq Va \&% ,
+.Sq Va < ,
+.Sq Va % ,
 .Sq Va \&? ,
-.Sq Va \&> ,
+.Sq Va > ,
 and
 .Sq Va *
 are permitted for backward
@@ -535,11 +535,11 @@ In addition,
 sets or knows about the following internal variables or environment
 variables:
 .Bl -tag -width ".Va .MAKEFILE_LIST"
-.It Va \&$
+.It Va $
 A single dollar sign
-.Ql \&$ ,
+.Ql $ ,
 i.e.\&
-.Ql \&$$
+.Ql $$
 expands to a single dollar
 sign.
 .It Va MAKE
@@ -616,6 +616,8 @@ As
 reads various makefiles, including the default files and any
 obtained from the command line and
 .Ic .include
+and
+.Ic .sinclude
 directives, their names will be automatically appended to the
 .Va .MAKEFILE_LIST
 variable.
@@ -720,9 +722,9 @@ The colon may be escaped with a backslash
 .Pq Ql \e .
 .Bl -tag -width Cm
 .Sm off
-.It Cm C No \&/ Ar pattern Xo
-.No \&/ Ar replacement
-.No \&/ Op Cm 1g
+.It Cm C No / Ar pattern Xo
+.No / Ar replacement
+.No / Op Cm 1g
 .Xc
 .Sm on
 Modify each word of the value,
@@ -780,9 +782,9 @@ safely through recursive invocations of
 .It Cm R
 Replaces each word in the variable with everything but its suffix.
 .Sm off
-.It Cm S No \&/ Ar old_string Xo
-.No \&/ Ar new_string
-.No \&/ Op Cm g
+.It Cm S No / Ar old_string Xo
+.No / Ar new_string
+.No / Op Cm g
 .Xc
 .Sm on
 Modify the first occurrence of
@@ -802,7 +804,7 @@ is anchored at the beginning of each word.
 If
 .Ar old_string
 ends with a dollar sign
-.Pq Ql \&$ ,
+.Pq Ql $ ,
 it is anchored at the end of each word.
 Inside
 .Ar new_string ,
@@ -822,7 +824,7 @@ and
 .Ar new_string
 with the single exception that a backslash is used to prevent the expansion
 of a dollar sign
-.Pq Ql \&$ ,
+.Pq Ql $ ,
 not a preceding dollar sign as is usual.
 .It Ar old_string=new_string
 This is the
@@ -848,6 +850,9 @@ to be replaced in
 Replaces each word in the variable with its last component.
 .It Cm U
 Converts variable to upper-case letters.
+.It Cm u
+Remove adjacent duplicate words (like
+.Xr uniq 1 ) .
 .El
 .Sh DIRECTIVES, CONDITIONALS, AND FOR LOOPS
 Directives, conditionals, and for loops reminiscent
@@ -859,8 +864,8 @@ dot
 character.
 The following directives are supported:
 .Bl -tag -width Ds
-.It Ic \&.include Ar <file>
-.It Ic \&.include Ar \*qfile\*q
+.It Ic .include Ar <file>
+.It Ic .include Ar \*qfile\*q
 Include the specified makefile.
 Variables between the angle brackets
 or double quotes are expanded to form the file name.
@@ -872,6 +877,11 @@ makefile's directory and any directories specified using the
 .Fl I
 option are searched before the system
 makefile directory.
+.It Ic .sinclude Ar <file>
+.It Ic .sinclude Ar \*qfile\*q
+Like
+.Ic .include ,
+but silently ignored if the file cannot be found and opened.
 .It Ic .undef Ar variable
 Un-define the specified global variable.
 Only global variables may be un-defined.
@@ -1158,7 +1168,7 @@ to them.
 .It Ic .WAIT
 If special
 .Ic .WAIT
-source is appears in a dependency line, the sources that precede it are
+source appears in a dependency line, the sources that precede it are
 made before the sources that succeed it in the line.
 Loops are not being
 detected and targets that form loops will be silently ignored.
@@ -1455,6 +1465,51 @@ Several flags can be specified on a single
 .Ic .WARN
 target by seperating them with blanks.
 .El
+.Sh REMAKING MAKEFILES
+After reading Makefile and all the files that are included using
+.Ic .include
+or
+.Ic .sinclude
+directives (source Makefiles)
+.Nm
+considers each source Makefile as a target and tries to rebuild it.
+Both explicit and implicit rules are checked and all source Makefiles
+are updated if necessary. If any of the source Makefiles were rebuilt,
+.Nm
+restarts from clean state.
+.Pp
+To prevent infinite loops the following source Makefile targets are ignored:
+.Bl -bullet
+.It
+.Ic ::
+targets that have no prerequisites but have commands
+.It
+.Ic !
+targets
+.It
+targets that have
+.Ic .PHONY
+or
+.Ic .EXEC
+attributes
+.It
+targets without prerequisites and without commands
+.El
+.Pp
+When remaking a source Makefile options
+.Ic -t
+(touch target),
+.Ic -q
+(query mode), and
+.Ic -n
+(no exec) do not take effect, unless source Makefile is specified
+explicitly as a target in
+.Nm
+command line.
+.Pp
+Additionally, system makefiles and
+.Ic .depend
+are not considered as Makefiles that can be rebuilt.
 .Sh ENVIRONMENT
 The
 .Nm
@@ -1581,7 +1636,7 @@ all:
 A trailing backslash in a variable value defined on the command line causes
 the delimiting space in the
 .Ev MAKEFLAGS
-environment variable to be preceeded by that backslash.
+environment variable to be preceded by that backslash.
 That causes a submake to not treat that space as a word delimiter.
 Fixing this requires a larger rewrite of the code handling command line
 macros and assignments to

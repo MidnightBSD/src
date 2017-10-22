@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/share/examples/pppd/ip-up.sample,v 1.1 2002/01/29 00:23:33 cjc Exp $
+# $FreeBSD: release/7.0.0/share/examples/pppd/ip-up.sample 89936 2002-01-29 00:23:35Z cjc $
 #
 # Example for /etc/ppp/ip-up file.
 

@@ -38,7 +38,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/ifpnp/i4b_ifpnp_avm.c,v 1.12 2005/01/06 22:18:19 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer1/ifpnp/i4b_ifpnp_avm.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include "opt_i4b.h"
 
@@ -56,9 +56,9 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer1/ifpnp/i4b_ifpnp_avm.c,v 1.12 2005/01/06 2
 #include <sys/socket.h>
 #include <net/if.h>
 
-#include <machine/i4b_debug.h>
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_trace.h>
+#include <i4b/include/i4b_debug.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_trace.h>
 
 #include <i4b/include/i4b_global.h>
 #include <i4b/include/i4b_mbuf.h>
@@ -515,8 +515,14 @@ avm_pnp_attach(device_t dev)
 
 	/* not needed */
 	sc->sc_irq = rman_get_start(sc->sc_resources.irq);
-	bus_setup_intr(dev,sc->sc_resources.irq,INTR_TYPE_NET,
-				(void(*)(void*))avm_pnp_intr, sc,&ih);
+	error = bus_setup_intr(dev,sc->sc_resources.irq,INTR_TYPE_NET,
+				NULL, (void(*)(void*))avm_pnp_intr, sc,&ih);
+	if (error != 0)
+	{
+		printf("avm_pnp%d: Could not setup irq.\n",unit);
+		error = ENXIO;
+		goto fail;
+	}
 	sc->sc_unit = unit;
 
 	/* end of new-bus stuff */

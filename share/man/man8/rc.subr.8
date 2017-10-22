@@ -34,9 +34,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man8/rc.subr.8,v 1.6.8.1 2006/01/22 13:19:13 yar Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man8/rc.subr.8 169668 2007-05-18 12:04:41Z mtm $
 .\"
-.Dd October 26, 2005
+.Dd May 18, 2007
 .Dt RC.SUBR 8
 .Os
 .Sh NAME
@@ -64,7 +64,11 @@
 .It
 .Ic info Ar message
 .It
-.Ic load_rc_config Ar command
+.Ic load_kld Oo Fl e Ar regex Oc Oo Fl m Ar module Oc Ar file
+.It
+.Ic load_rc_config Ar name
+.It
+.Ic load_rc_config_var Ar name Ar var
 .It
 .Ic mount_critical_filesystems Ar type
 .It
@@ -310,14 +314,28 @@ turned on or off by the
 .Xr rc.conf 5
 variable
 .Va rc_info .
-.It Ic load_rc_config Ar command
+.It Ic load_kld Oo Fl e Ar regex Oc Oo Fl m Ar module Oc Ar file
+Load
+.Ar file
+as a kernel module unless it is already loaded.
+For the purpose of checking the module status,
+either the exact module name can be specified using
+.Fl m ,
+or an
+.Xr egrep 1
+regular expression matching the module name can be supplied via
+.Fl e .
+By default, the module is assumed to have the same name as
+.Ar file ,
+which is not always the case.
+.It Ic load_rc_config Ar name
 Source in the configuration files for
-.Ar command .
+.Ar name .
 First,
 .Pa /etc/rc.conf
 is sourced if it has not yet been read in.
 Then,
-.Pa /etc/rc.conf.d/ Ns Ar command
+.Pa /etc/rc.conf.d/ Ns Ar name
 is sourced if it is an existing file.
 The latter may also contain other variable assignments to override
 .Ic run_rc_command
@@ -325,6 +343,17 @@ arguments defined by the calling script, to provide an easy
 mechanism for an administrator to override the behaviour of a given
 .Xr rc.d 8
 script without requiring the editing of that script.
+.It Ic load_rc_config_var Ar name Ar var
+Read the
+.Xr rc.conf 5
+variable
+.Ar var
+for
+.Ar name
+and set in the current shell, using
+.Ic load_rc_config
+in a sub-shell to prevent unwanted side effects from other variable
+assignments.
 .It Ic mount_critical_filesystems Ar type
 Go through a list of critical file systems,
 as found in the
@@ -449,6 +478,8 @@ Full path to the command.
 Not required if
 .Ar argument Ns Va _cmd
 is defined for each supported keyword.
+Can be overridden by
+.Va ${name}_program .
 .It Va command_args
 Optional arguments and/or shell directives for
 .Va command .
@@ -492,15 +523,49 @@ Defaults to the value of
 .Va command .
 .It Va required_dirs
 Check for the existence of the listed directories
-before running the default start method.
+before running the
+.Cm start
+method.
 .It Va required_files
 Check for the readability of the listed files
-before running the default start method.
+before running the
+.Cm start
+method.
+.It Va required_modules
+Ensure that the listed kernel modules are loaded
+before running the
+.Cm start
+method.
+This is done after invoking the commands from
+.Va start_precmd
+so that the missing modules are not loaded in vain
+if the preliminary commands indicate a error condition.
+A word in the list can have an optional
+.Dq Li : Ns Ar modname
+or
+.Dq Li ~ Ns Ar pattern
+suffix.
+The
+.Ar modname
+or
+.Ar pattern
+parameter is passed to
+.Ic load_kld
+through a
+.Fl m
+or
+.Fl e
+option, respectively.
+See the description of
+.Ic load_kld
+in this document for details.
 .It Va required_vars
 Perform
 .Ic checkyesno
 on each of the list variables
-before running the default start method.
+before running the
+.Cm start
+method.
 .It Va ${name}_chdir
 Directory to
 .Ic cd
@@ -537,6 +602,19 @@ as.
 Only supported after
 .Pa /usr
 is mounted.
+.It Va ${name}_program
+Full path to the command.
+Overrides
+.Va command
+if both are set, but has no effect if
+.Va command
+is unset.
+As a rule,
+.Va command
+should be set in the script while
+.Va ${name}_program
+should be set in
+.Xr rc.conf 5 .
 .It Va ${name}_user
 User to run
 .Va command
@@ -755,6 +833,23 @@ otherwise source
 .Ar file
 into the current shell.
 .El
+.It Ic stop_boot Op Ar always
+Prevent booting to multiuser mode.
+If the
+.Sy autoboot
+variable is
+.Sq yes ,
+or
+.Ar always
+is
+.Sq true ,
+then a
+.Sy SIGTERM
+signal is sent to the parent
+process (which is assumed to be
+.Xr rc 8 ).
+Otherwise, the shell exits with status
+.Li 1 .
 .It Ic set_rcvar Op Ar base
 Set the variable name required to start a service.
 In

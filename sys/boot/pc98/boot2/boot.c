@@ -49,7 +49,7 @@ WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/pc98/boot2/boot.c,v 1.14 2005/05/27 19:26:11 jhb Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/boot/pc98/boot2/boot.c 173255 2007-11-01 18:19:19Z jhb $");
 
 #include "boot.h"
 #include <a.out.h>
@@ -70,7 +70,7 @@ static char kernel_config[KERNEL_CONFIG_SIZE];
 static char kernel_config_namebuf[NAMEBUF_LEN + sizeof "config"];
 static char linebuf[NAMEBUF_LEN];
 static char namebuf[NAMEBUF_LEN];
-static struct bootinfo bootinfo;
+struct bootinfo bootinfo;
 int loadflags;
 
 static void getbootdev(char *ptr, int *howto);
@@ -294,7 +294,7 @@ loadprog(void)
 	 * For backwards compatibility, use the previously-unused adaptor
 	 * and controller bitfields to hold the slice number.
 	 */
-	bootdev = MAKEBOOTDEV(maj, (slice >> 4), slice & 0xf, unit, part);
+	bootdev = MAKEBOOTDEV(maj, slice, unit, part);
 
 	bootinfo.bi_version = BOOTINFO_VERSION;
 	bootinfo.bi_kernelname = (u_int32_t)(name + ouraddr);

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/limits/Makefile,v 1.5 2004/11/08 18:08:16 des Exp $
+# $FreeBSD: release/7.0.0/usr.bin/limits/Makefile 137391 2004-11-08 18:08:16Z des $
 
 PROG=	limits
 DPADD=	${LIBUTIL}

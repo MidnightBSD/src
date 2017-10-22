@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: msgs.h,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: msgs.h,v 1.7 2002/05/27 00:40:18 marka Exp $ */
 
 #ifndef ISC_MSGS_H
 #define ISC_MSGS_H 1

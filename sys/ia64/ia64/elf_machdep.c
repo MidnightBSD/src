@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/ia64/elf_machdep.c,v 1.19.8.3 2006/01/28 18:40:55 marcel Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/ia64/elf_machdep.c 169846 2007-05-22 02:22:58Z kan $
  */
 
 #include <sys/param.h>
@@ -90,6 +90,7 @@ static Elf64_Brandinfo freebsd_brand_info = {
 	"/libexec/ld-elf.so.1",
 	&elf64_freebsd_sysvec,
 	NULL,
+	BI_CAN_EXEC_DYN,
 };
 SYSINIT(elf64, SI_SUB_EXEC, SI_ORDER_ANY,
     (sysinit_cfunc_t)elf64_insert_brand_entry, &freebsd_brand_info);
@@ -102,6 +103,7 @@ static Elf64_Brandinfo freebsd_brand_oinfo = {
 	"/usr/libexec/ld-elf.so.1",
 	&elf64_freebsd_sysvec,
 	NULL,
+	BI_CAN_EXEC_DYN,
 };
 SYSINIT(oelf64, SI_SUB_EXEC, SI_ORDER_ANY,
     (sysinit_cfunc_t)elf64_insert_brand_entry, &freebsd_brand_oinfo);

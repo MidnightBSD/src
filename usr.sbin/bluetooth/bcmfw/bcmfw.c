@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bcmfw.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bcmfw/bcmfw.c,v 1.2 2004/06/25 23:14:06 imp Exp $
+ * $Id: bcmfw.c,v 1.4 2003/04/27 19:28:09 max Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/bcmfw/bcmfw.c 131120 2004-06-25 23:14:06Z imp $
  *
  * Based on Linux BlueZ BlueFW-0.9 package
  *

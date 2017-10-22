@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ktrdump/ktrdump.c,v 1.11.2.1 2006/01/21 10:08:15 glebius Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ktrdump/ktrdump.c 154274 2006-01-12 22:32:07Z glebius $");
 
 #include <sys/types.h>
 #include <sys/ktr.h>
@@ -259,7 +259,8 @@ next:			if ((c = *p++) == '\0')
 			if (rflag) {
 				if (tlast == -1)
 					tlast = tnow;
-				fprintf(out, "%16ju ", tlast - tnow);
+				fprintf(out, "%16ju ", !iflag ? tlast - tnow :
+				    tnow - tlast);
 				tlast = tnow;
 			} else
 				fprintf(out, "%16ju ", tnow);

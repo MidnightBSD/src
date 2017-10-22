@@ -27,9 +27,9 @@
  *	decode.h - isdndecode header file
  *	---------------------------------
  *
- *	$Id: decode.h,v 1.1.1.2 2006-02-25 02:38:28 laffer1 Exp $
+ *	$Id: decode.h,v 1.6 1999/12/13 21:25:25 hm Exp $
  *
- * $FreeBSD: src/usr.sbin/i4b/isdndecode/decode.h,v 1.7 2000/10/09 14:22:41 hm Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdndecode/decode.h 171272 2007-07-06 07:21:56Z bz $
  *
  *      last edit-date: [Mon Dec 13 21:49:50 1999]
  *
@@ -50,8 +50,8 @@
 #include <sys/ioctl.h>
 #include <sys/file.h>
 
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_trace.h>
+#include <i4b/i4b_ioctl.h>
+#include <i4b/i4b_trace.h>
 
 #include "pcause.h"
 

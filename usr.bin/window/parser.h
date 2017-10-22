@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)parser.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/window/parser.h,v 1.2 2000/10/26 10:00:52 obrien Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/window/parser.h 67606 2000-10-26 10:00:52Z obrien $
  */
 
 #include "value.h"

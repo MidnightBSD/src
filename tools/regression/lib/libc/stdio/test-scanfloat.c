@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/tools/regression/lib/libc/stdio/test-scanfloat.c,v 1.5 2005/03/01 01:43:20 das Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/tools/regression/lib/libc/stdio/test-scanfloat.c 165754 2007-01-03 21:28:26Z das $");
 
 #include <assert.h>
 #include <fenv.h>
@@ -190,7 +190,15 @@ main(int argc, char *argv[])
 	assert(f != f);
 	assert(d != d);
 	assert(ld != ld);
+#if 0
+	/*
+	 * POSIX says we should only generate quiet NaNs, but the gdtoa
+	 * author convincingly argues that if you ask for a NaN format
+	 * based on some implementation-defined string, you should get
+	 * what you asked for, even if it's a signaling NaN.
+	 */
 	assert(fetestexcept(FE_INVALID) == 0);
+#endif
 
 	printf("ok 2 - scanfloat\n");
 
@@ -218,7 +226,7 @@ main(int argc, char *argv[])
 	assert(d == 0.0);
 
 	sscanf("0x1.2345678p-1050", "%le", &d);
-	assert(d == 0x1.234568p-1050);
+	assert(d == 0x1.234567p-1050);
 
 	fesetround(FE_UPWARD);
 
@@ -248,7 +256,7 @@ main(int argc, char *argv[])
 	assert(d == 0.0);
 
 	sscanf("0x1.2345678p-1050", "%le", &d);
-	assert(d == 0x1.234568p-1050);
+	assert(d == 0x1.234567p-1050);
 
 	fesetround(FE_TONEAREST);
 

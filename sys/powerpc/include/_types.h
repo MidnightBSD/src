@@ -33,7 +33,7 @@
  *
  *	From: @(#)ansi.h	8.2 (Berkeley) 1/4/94
  *	From: @(#)types.h	8.3 (Berkeley) 1/5/94
- * $FreeBSD: src/sys/powerpc/include/_types.h,v 1.7 2005/03/02 21:33:28 joerg Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/_types.h 143063 2005-03-02 21:33:29Z joerg $
  */
 
 #ifndef _MACHINE__TYPES_H_

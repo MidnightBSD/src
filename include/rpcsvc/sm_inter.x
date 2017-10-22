@@ -38,7 +38,7 @@
 
 #ifndef RPC_HDR
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: src/include/rpcsvc/sm_inter.x,v 1.11 2003/05/04 02:51:42 obrien Exp $");
+%__FBSDID("$FreeBSD: release/7.0.0/include/rpcsvc/sm_inter.x 114629 2003-05-04 02:51:42Z obrien $");
 #endif
 
 program SM_PROG { 

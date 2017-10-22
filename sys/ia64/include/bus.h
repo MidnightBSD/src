@@ -67,7 +67,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/* $FreeBSD: src/sys/ia64/include/bus.h,v 1.22 2005/05/29 04:42:28 nyan Exp $ */
+/* $FreeBSD: release/7.0.0/sys/ia64/include/bus.h 146734 2005-05-29 04:42:30Z nyan $ */
 
 #ifndef _MACHINE_BUS_H_
 #define _MACHINE_BUS_H_

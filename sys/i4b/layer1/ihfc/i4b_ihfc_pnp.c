@@ -31,12 +31,12 @@
  *	  been put here, except the chip spesific "PnP" setup.
  *
  *      last edit-date: [Tue Jan 23 16:03:33 2001]
- *      $Id: i4b_ihfc_pnp.c,v 1.1.1.2 2006-02-25 02:37:13 laffer1 Exp $
+ *      $Id: i4b_ihfc_pnp.c,v 1.9 2000/09/19 13:50:36 hm Exp $
  *     
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/ihfc/i4b_ihfc_pnp.c,v 1.10 2005/01/06 22:18:20 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer1/ihfc/i4b_ihfc_pnp.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,8 +46,8 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer1/ihfc/i4b_ihfc_pnp.c,v 1.10 2005/01/06 22:
 
 #include <i4b/include/i4b_global.h>
 
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_trace.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_trace.h>
 
 #include <i4b/layer1/i4b_l1.h>
 #include <i4b/layer1/ihfc/i4b_ihfc.h>
@@ -206,8 +206,15 @@ ihfc_pnp_probe(device_t dev)
 				/* setup interrupt routine now to avvoid stray	*
 				 * interrupts.					*/
 
-				bus_setup_intr(dev, S_IRQ, INTR_TYPE_NET, (void(*)(void*))
-					HFC_INTR, sc, &dummy);
+				if (bus_setup_intr(dev, S_IRQ, INTR_TYPE_NET,
+					NULL, (void(*)(void*)) HFC_INTR, sc,
+					&dummy) != 0)
+				{
+					printf("ihfc%d: failed to setup irq.\n",
+						unit);
+					HFC_END;
+					return ENXIO;
+				}
 
 				flag = 1;
 
@@ -298,8 +305,13 @@ ihfc_isa_probe(device_t dev)
 		/* setup interrupt routine now to avvoid stray	*
 		 * interrupts.					*/
 
-		bus_setup_intr(dev, S_IRQ, INTR_TYPE_NET, (void(*)(void*))
-			HFC_INTR, sc, &dummy);
+		if (bus_setup_intr(dev, S_IRQ, INTR_TYPE_NET, NULL,
+			(void(*)(void*)) HFC_INTR, sc, &dummy) != 0)
+		{
+			printf("ihfc%d: failed to setup irq.\n", unit);
+			HFC_END;
+			return ENXIO;
+		}
 
 		flag = 1;
 

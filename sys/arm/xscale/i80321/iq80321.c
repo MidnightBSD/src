@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/xscale/i80321/iq80321.c,v 1.8 2005/06/09 12:26:20 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/i80321/iq80321.c 166901 2007-02-23 12:19:07Z piso $");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
@@ -51,7 +51,6 @@ __FBSDID("$FreeBSD: src/sys/arm/xscale/i80321/iq80321.c,v 1.8 2005/06/09 12:26:2
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/malloc.h>
-#define __RMAN_RESOURCE_VISIBLE
 #include <sys/rman.h>
 #include <machine/bus.h>
 #include <machine/intr.h>
@@ -158,16 +157,34 @@ iq80321_attach(device_t dev)
 	b0u = bus_space_read_4(sc->sc_st, sc->sc_atu_sh, PCIR_BARS+0x4);
 	b1l = bus_space_read_4(sc->sc_st, sc->sc_atu_sh, PCIR_BARS+0x8);
 	b1u = bus_space_read_4(sc->sc_st, sc->sc_atu_sh, PCIR_BARS+0xc);
+
+#ifdef VERBOSE_INIT_ARM	
+	printf("i80321: BAR0 = %08x.%08x BAR1 = %08x.%08x\n",
+		   b0l,b0u, b1l, b1u );
+#endif
+
 #define PCI_MAPREG_MEM_ADDR_MASK	0xfffffff0
 	b0l &= PCI_MAPREG_MEM_ADDR_MASK;
 	b0u &= PCI_MAPREG_MEM_ADDR_MASK;
 	b1l &= PCI_MAPREG_MEM_ADDR_MASK;
 	b1u &= PCI_MAPREG_MEM_ADDR_MASK;
 
+#ifdef VERBOSE_INIT_ARM	
+	printf("i80219: BAR0 = %08x.%08x BAR1 = %08x.%08x\n",
+		   b0l,b0u, b1l, b1u );
+#endif
+
 	if ((b0u != b1u) || (b0l != 0) || ((b1l & ~0x80000000U) != 0))
 		sc->sc_is_host = 0;
 	else
 		sc->sc_is_host = 1;
+
+	/* FIXME: i force it's */	
+
+#ifdef CPU_XSCALE_80219
+	sc->sc_is_host = 1;
+#endif
+	
 	i80321_sdram_bounds(sc->sc_st, sc->sc_mcu_sh, &memstart, &memsize);
 	/*
 	 * We set up the Inbound Windows as follows:
@@ -225,6 +242,21 @@ iq80321_attach(device_t dev)
 	sc->sc_iwin[3].iwin_base_hi = 0;
 	sc->sc_iwin[3].iwin_xlate = 0;
 	sc->sc_iwin[3].iwin_size = 0;
+	
+#ifdef 	VERBOSE_INIT_ARM
+	printf("i80321: Reserve space for private devices (Inbound Window 1) \n hi:0x%08x lo:0x%08x xlate:0x%08x size:0x%08x\n",
+		   sc->sc_iwin[1].iwin_base_hi,
+		   sc->sc_iwin[1].iwin_base_lo,
+		   sc->sc_iwin[1].iwin_xlate,
+		   sc->sc_iwin[1].iwin_size
+		);
+	printf("i80321: RAM access (Inbound Window 2) \n hi:0x%08x lo:0x%08x xlate:0x%08x size:0x%08x\n",
+		   sc->sc_iwin[2].iwin_base_hi,
+		   sc->sc_iwin[2].iwin_base_lo,
+		   sc->sc_iwin[2].iwin_xlate,
+		   sc->sc_iwin[2].iwin_size
+		);
+#endif
 
 	/*
 	 * We set up the Outbound Windows as follows:
@@ -251,11 +283,24 @@ iq80321_attach(device_t dev)
 	busno = PCIXSR_BUSNO(busno);
 	if (busno == 0xff)
 		busno = 0;
+	sc->sc_irq_rman.rm_type = RMAN_ARRAY;
+	sc->sc_irq_rman.rm_descr = "i80321 IRQs";
+	if (rman_init(&sc->sc_irq_rman) != 0 ||
+	    rman_manage_region(&sc->sc_irq_rman, 0, 25) != 0)
+		panic("i80321_attach: failed to set up IRQ rman");
+
 	device_add_child(dev, "obio", 0);
 	device_add_child(dev, "itimer", 0);
 	device_add_child(dev, "iopwdog", 0);
+#ifndef 	CPU_XSCALE_80219
 	device_add_child(dev, "iqseg", 0);
+#endif	
 	device_add_child(dev, "pcib", busno);
+	device_add_child(dev, "i80321_dma", 0);
+	device_add_child(dev, "i80321_dma", 1);
+#ifndef CPU_XSCALE_80219	
+	device_add_child(dev, "i80321_aau", 0);
+#endif
 	bus_generic_probe(dev);
 	bus_generic_attach(dev);
 
@@ -283,7 +328,7 @@ cpu_reset()
 	(void) disable_interrupts(I32_bit|F32_bit);
 	*(__volatile uint32_t *)(IQ80321_80321_VBASE + VERDE_ATU_BASE +
 	    ATU_PCSR) = PCSR_RIB | PCSR_RPB;
-	printf("Reset failed :'(\n");
+	printf("Reset failed!\n");
 	for(;;);
 }
 
@@ -291,23 +336,27 @@ static struct resource *
 iq80321_alloc_resource(device_t dev, device_t child, int type, int *rid,
     u_long start, u_long end, u_long count, u_int flags)
 {
+	struct i80321_softc *sc = device_get_softc(dev);
+	struct resource *rv;
+
 	if (type == SYS_RES_IRQ) {
-		struct resource *res = malloc(sizeof(*res), M_DEVBUF, M_WAITOK);
-		res->r_start = start;
-		res->r_end = end;
-		return (res);
+		rv = rman_reserve_resource(&sc->sc_irq_rman,
+		    start, end, count, flags, child);
+		if (rv != NULL)
+			rman_set_rid(rv, *rid);
+		return (rv);
 	}
 	return (NULL);
 }
 
 static int
 iq80321_setup_intr(device_t dev, device_t child,
-    struct resource *ires, int flags, driver_intr_t *intr, void *arg,
-    void **cookiep)
+    struct resource *ires, int flags, driver_filter_t *filt, 
+    driver_intr_t *intr, void *arg, void **cookiep)
 {
-	BUS_SETUP_INTR(device_get_parent(dev), child, ires, flags, intr, arg,
-	    cookiep);
-	intr_enabled |= 1 << ires->r_start;
+	BUS_SETUP_INTR(device_get_parent(dev), child, ires, flags, filt, intr, 
+	    arg, cookiep);
+	intr_enabled |= 1 << rman_get_start(ires);
 	i80321_set_intrmask();
 	
 	return (0);

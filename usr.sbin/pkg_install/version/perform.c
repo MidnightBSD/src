@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/version/perform.c,v 1.12.2.3 2006/02/22 16:27:58 krion Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/version/perform.c 174854 2007-12-22 06:32:46Z cvs2svn $");
 
 #include "lib.h"
 #include "version.h"
@@ -28,6 +28,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/pkg_install/version/perform.c,v 1.12.2.3 2006/0
 #include <signal.h>
 
 FILE *IndexFile;
+char IndexPath[PATH_MAX] = "";
 struct index_head Index = SLIST_HEAD_INITIALIZER(Index);
 
 static int pkg_do(char *);
@@ -44,7 +45,7 @@ static void show_version(Package, const char *, const char *);
 int
 pkg_perform(char **indexarg)
 {
-    char tmp[PATH_MAX], **pkgs, *pat[2], **patterns;
+    char **pkgs, *pat[2], **patterns;
     struct index_entry *ie;
     int i, err_cnt = 0;
     int MatchType;
@@ -54,13 +55,13 @@ pkg_perform(char **indexarg)
      * later, if we actually need the INDEX.
      */
     if (*indexarg == NULL)
-	snprintf(tmp, PATH_MAX, "%s/%s", PORTS_DIR, INDEX_FNAME);
+	snprintf(IndexPath, sizeof(IndexPath), "%s/%s", PORTS_DIR, INDEX_FNAME);
     else
-	strlcpy(tmp, *indexarg, PATH_MAX);
-    if (isURL(tmp))
-	IndexFile = fetchGetURL(tmp, "");
+	strlcpy(IndexPath, *indexarg, sizeof(IndexPath));
+    if (isURL(IndexPath))
+	IndexFile = fetchGetURL(IndexPath, "");
     else
-	IndexFile = fopen(tmp, "r");
+	IndexFile = fopen(IndexPath, "r");
 
     /* Get either a list of matching or all packages */
     if (MatchName != NULL) {
@@ -172,7 +173,7 @@ pkg_do(char *pkg)
 	/* We only pull in the INDEX once, if needed. */
 	if (SLIST_EMPTY(&Index)) {
 	    if (!IndexFile)
-		errx(2, "Unable to open INDEX in %s.", __func__);
+		errx(2, "Unable to open %s in %s.", IndexPath, __func__);
 	    while ((ch = fgetln(IndexFile, &len)) != NULL) {
 		/*
 		 * Don't use strlcpy() because fgetln() doesn't
@@ -234,8 +235,8 @@ pkg_do(char *pkg)
 	    show_version(plist, NULL, NULL);
 	else
 	    show_version(plist, latest, "index");
-		}
 	}
+    }
     if (latest != NULL)
 	free(latest);
     free_plist(&plist);
@@ -259,7 +260,7 @@ show_version(Package plist, const char *latest, const char *source)
 
     if (!plist.name || strlen(plist.name) == 0)
 	return;
-    if (ShowOrigin != FALSE)
+    if (ShowOrigin != FALSE && plist.origin != NULL)
 	strlcpy(tmp, plist.origin, PATH_MAX);
     else {
 	strlcpy(tmp, plist.name, PATH_MAX);
@@ -274,7 +275,7 @@ show_version(Package plist, const char *latest, const char *source)
 	    if (Verbose)
 		printf("   Comparison failed");
 	    printf("\n");
-	} else if (source == NULL && OUTPUT('?')) {
+	} else if (OUTPUT('?')) {
 	    printf("%-34s  ?", tmp);
 	    if (Verbose)
 		printf("   orphaned: %s", plist.origin);

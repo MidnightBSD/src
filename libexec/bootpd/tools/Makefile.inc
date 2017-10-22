@@ -1,4 +1,4 @@
 # Makefile.inc
-# $FreeBSD: src/libexec/bootpd/tools/Makefile.inc,v 1.6 2001/03/26 14:22:03 ru Exp $
+# $FreeBSD: release/7.0.0/libexec/bootpd/tools/Makefile.inc 74814 2001-03-26 14:22:12Z ru $
 
 BINDIR=		/usr/sbin

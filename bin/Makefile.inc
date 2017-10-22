@@ -1,9 +1,11 @@
 #	@(#)Makefile.inc	8.1 (Berkeley) 5/31/93
-# $FreeBSD: src/bin/Makefile.inc,v 1.22 2004/12/21 09:59:40 ru Exp $
+# $FreeBSD: release/7.0.0/bin/Makefile.inc 156813 2006-03-17 18:54:44Z ru $
+
+.include <bsd.own.mk>
 
 BINDIR?=	/bin
 WARNS?=		6
 
-.if defined(NO_DYNAMICROOT)
+.if ${MK_DYNAMICROOT} == "no"
 NO_SHARED?=	YES
 .endif

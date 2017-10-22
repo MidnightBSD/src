@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/newfs_msdos/Makefile,v 1.11 2005/01/24 01:56:06 cognet Exp $
+# $FreeBSD: release/7.0.0/sbin/newfs_msdos/Makefile 140691 2005-01-24 01:56:06Z cognet $
 
 PROG=	newfs_msdos
 MAN=	newfs_msdos.8

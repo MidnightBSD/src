@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/release/scripts/src-install.sh,v 1.10 2004/08/06 08:42:05 cperciva Exp $
+# $FreeBSD: release/7.0.0/release/scripts/src-install.sh 173505 2007-11-09 16:16:59Z ru $
 #
 
 if [ "`id -u`" != "0" ]; then
@@ -11,8 +11,8 @@ if [ $# -lt 1 ]; then
 	echo "You must specify which components of src to extract"
 	echo "possible subcomponents are:"
 	echo
-	echo "base bin contrib crypto etc games gnu include krb5 lib"
-	echo "libexec release rescue sbin secure share sys tools ubin"
+	echo "base bin cddl compat contrib crypto etc games gnu include krb5"
+	echo "lib libexec release rescue sbin secure share sys tools ubin"
 	echo "usbin"
 	echo
 	echo "You may also specify all to extract all subcomponents."
@@ -20,7 +20,7 @@ if [ $# -lt 1 ]; then
 fi
 
 if [ "$1" = "all" ]; then
-	dists="base bin contrib crypto etc games gnu include krb5 lib libexec release rescue sbin secure share sys tools ubin usbin"
+	dists="base bin cddl compat contrib crypto etc games gnu include krb5 lib libexec release rescue sbin secure share sys tools ubin usbin"
 else
 	dists="$*"
 fi

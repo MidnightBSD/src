@@ -34,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/asmacros.h,v 1.4 2005/04/07 22:03:04 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/asmacros.h 174418 2007-12-07 22:08:02Z cognet $
  */
 
 #ifndef	_MACHINE_ASMACROS_H_
@@ -67,7 +67,13 @@
 	stmia	r0, {r13-r14}^;		/* Push the user mode registers */ \
         mov     r0, r0;                 /* NOP for previous instruction */ \
 	mrs	r0, spsr_all;		/* Put the SPSR on the stack */	   \
-	str	r0, [sp, #-4]!;
+	str	r0, [sp, #-4]!;						   \
+	mov	r0, #0xe0000004;					   \
+	mov	r1, #0;							   \
+	str	r1, [r0];						   \
+	mov	r0, #0xe0000008;					   \
+	mov	r1, #0xffffffff;					   \
+	str	r1, [r0];
 
 /*
  * PULLFRAME - macro to pull a trap frame from the stack in the current mode
@@ -116,18 +122,16 @@
 	ldr	r5, =0xe0000004;	/* Check if there's any RAS */	   \
 	ldr	r3, [r5];						   \
 	cmp	r3, #0;			/* Is the update needed ? */	   \
-	beq	1f;							   \
-	ldr	lr, [r0, #16];						   \
-	ldr	r1, =0xe0000008;					   \
-	ldr	r4, [r1];		/* Get the end of the RAS */	   \
-	mov	r2, #0;			/* Reset the magic addresses */	   \
-	str	r2, [r5];						   \
-	str	r2, [r1];						   \
-	cmp	lr, r3;			/* Were we in the RAS ? */	   \
-	blt	1f;							   \
-	cmp	lr, r4;							   \
-	strlt	r3, [r0, #16];		/* Yes, update the pc */	   \
-	1:								   \
+	ldrgt	lr, [r0, #16];						   \
+	ldrgt	r1, =0xe0000008;					   \
+	ldrgt	r4, [r1];		/* Get the end of the RAS */	   \
+	movgt	r2, #0;			/* Reset the magic addresses */	   \
+	strgt	r2, [r5];						   \
+	movgt	r2, #0xffffffff;					   \
+	strgt	r2, [r1];						   \
+	cmpgt	lr, r3;			/* Were we in the RAS ? */	   \
+	cmpgt	r4, lr;							   \
+	strgt	r3, [r0, #16];		/* Yes, update the pc */	   \
 	mrs	r0, spsr_all;		/* Put the SPSR on the stack */	   \
 	str	r0, [sp, #-4]!
 
@@ -159,12 +163,12 @@ name:
 #define	DO_AST								\
 	ldr	r0, [sp]		/* Get the SPSR from stack */	;\
 	mrs	r4, cpsr		/* save CPSR */			;\
-	orr	r1, r4, #(I32_bit)					;\
+	orr	r1, r4, #(I32_bit|F32_bit)				;\
 	msr	cpsr_c, r1		/* Disable interrupts */	;\
 	and	r0, r0, #(PSR_MODE)	/* Returning to USR mode? */	;\
 	teq	r0, #(PSR_USR32_MODE)					;\
 	bne	2f			/* Nope, get out now */		;\
-	bic	r4, r4, #(I32_bit)					;\
+	bic	r4, r4, #(I32_bit|F32_bit)				;\
 1:	ldr	r5, .Lcurthread						;\
 	ldr	r5, [r5]						;\
 	ldr	r1, [r5, #(TD_FLAGS)]					;\
@@ -174,7 +178,7 @@ name:
 	msr	cpsr_c, r4		/* Restore interrupts */	;\
 	mov	r0, sp							;\
 	bl	_C_LABEL(ast)		/* ast(frame) */		;\
-	orr	r0, r4, #(I32_bit)					;\
+	orr	r0, r4, #(I32_bit|F32_bit)				;\
 	msr	cpsr_c, r0						;\
 	b	1b							;\
 2:

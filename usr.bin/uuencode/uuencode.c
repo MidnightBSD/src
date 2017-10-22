@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)uuencode.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/uuencode/uuencode.c,v 1.18 2004/01/22 07:23:35 grehan Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/uuencode/uuencode.c 124830 2004-01-22 07:23:36Z grehan $");
 
 /*
  * uuencode [input] output

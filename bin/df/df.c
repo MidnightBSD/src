@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)df.c	8.9 (Berkeley) 5/8/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/df/df.c,v 1.64 2005/01/10 08:39:21 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/df/df.c 171195 2007-07-04 00:00:41Z scf $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -93,7 +93,7 @@ imax(int a, int b)
 	return (a > b ? a : b);
 }
 
-static int	aflag = 0, cflag, hflag, iflag, nflag;
+static int	aflag = 0, cflag, hflag, iflag, kflag, lflag = 0, nflag;
 static struct	ufs_args mdev;
 
 int
@@ -113,7 +113,7 @@ main(int argc, char *argv[])
 
 	memset(&totalbuf, 0, sizeof(totalbuf));
 	totalbuf.f_bsize = DEV_BSIZE;
-	strncpy(totalbuf.f_mntfromname, "total", MNAMELEN);
+	strlcpy(totalbuf.f_mntfromname, "total", MNAMELEN);
 	vfslist = NULL;
 	while ((ch = getopt(argc, argv, "abcgHhiklmnPt:")) != -1)
 		switch (ch) {
@@ -123,14 +123,22 @@ main(int argc, char *argv[])
 		case 'b':
 				/* FALLTHROUGH */
 		case 'P':
-			putenv("BLOCKSIZE=512");
+			/*
+			 * POSIX specifically discusses the the behavior of
+			 * both -k and -P. It states that the blocksize should
+			 * be set to 1024. Thus, if this occurs, simply break
+			 * rather than clobbering the old blocksize.
+			 */
+			if (kflag)
+				break;
+			setenv("BLOCKSIZE", "512", 1);
 			hflag = 0;
 			break;
 		case 'c':
 			cflag = 1;
 			break;
 		case 'g':
-			putenv("BLOCKSIZE=1g");
+			setenv("BLOCKSIZE", "1g", 1);
 			hflag = 0;
 			break;
 		case 'H':
@@ -143,22 +151,26 @@ main(int argc, char *argv[])
 			iflag = 1;
 			break;
 		case 'k':
-			putenv("BLOCKSIZE=1k");
+			kflag++;
+			setenv("BLOCKSIZE", "1024", 1);
 			hflag = 0;
 			break;
 		case 'l':
 			if (vfslist != NULL)
 				errx(1, "-l and -t are mutually exclusive.");
 			vfslist = makevfslist(makenetvfslist());
+			lflag = 1;
 			break;
 		case 'm':
-			putenv("BLOCKSIZE=1m");
+			setenv("BLOCKSIZE", "1m", 1);
 			hflag = 0;
 			break;
 		case 'n':
 			nflag = 1;
 			break;
 		case 't':
+			if (lflag)
+				errx(1, "-l and -t are mutually exclusive.");
 			if (vfslist != NULL)
 				errx(1, "only one -t option may be specified");
 			fstype = optarg;
@@ -372,7 +384,7 @@ fsbtoblk(int64_t num, uint64_t fsbs, u_long bs)
 static void
 prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 {
-	static u_long blocksize;
+	static long blocksize;
 	static int headerlen, timesthrough = 0;
 	static const char *header;
 	int64_t used, availblks, inodes;
@@ -449,7 +461,7 @@ addstat(struct statfs *totalfsp, struct statfs *statfsp)
 static void
 update_maxwidths(struct maxwidths *mwp, const struct statfs *sfsp)
 {
-	static u_long blocksize = 0;
+	static long blocksize = 0;
 	int dummy;
 
 	if (blocksize == 0)
@@ -552,7 +564,7 @@ makenetvfslist(void)
 
 	*str = 'n'; *(str + 1) = 'o';
 	for (i = 0, strptr = str + 2; i < cnt; i++, strptr++) {
-		strncpy(strptr, listptr[i], 32);
+		strlcpy(strptr, listptr[i], 32);
 		strptr += strlen(listptr[i]);
 		*strptr = ',';
 		free(listptr[i]);

@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/tools/tools/genericize/genericize.pl,v 1.5 2004/09/20 15:22:57 des Exp $
+# $FreeBSD: release/7.0.0/tools/tools/genericize/genericize.pl 155041 2006-01-30 10:46:01Z des $
 #
 
 use strict;
@@ -46,7 +46,6 @@ MAIN:{
 	chomp();
 	s/\s*(\#.*)?$//;
 	next unless $_;
-	#print("$_\n");
 	my ($keyword, $values) = split(' ', $_, 2);
 	foreach my $value (split(/,\s*/, $values)) {
 	    if ($keyword eq 'machine') {
@@ -61,7 +60,12 @@ MAIN:{
 	}
     }
 
-    my $generic = "/usr/src/sys/$machine/conf/GENERIC";
+    my $generic;
+    if ($machine) {
+	$generic = "/usr/src/sys/$machine/conf/GENERIC";
+    } else {
+	($generic = $ARGV) =~ s|([^/])+$|GENERIC|;
+    }
     local *GENERIC;
     open(GENERIC, "<", $generic)
 	or die("$generic: $!\n");
@@ -87,7 +91,7 @@ MAIN:{
 	} elsif ($keyword eq 'ident') {
 	    $line =~ s/$value/$ident/;
 	} elsif ($keyword eq 'options' && $value =~ m/(\w+)=(.+)/ &&
-	    defined($config{$keyword}->{$1}) &&
+	    $config{$keyword} && $config{$keyword}->{$1} &&
 	    $config{$keyword}->{$1} != \&EMPTY) {
 	    $value = $1;
 	    if ($config{$keyword}->{$value} ne $2) {
@@ -97,7 +101,7 @@ MAIN:{
 	    delete($config{$keyword}->{$value});
 	    delete($config{$keyword})
 		unless %{$config{$keyword}};
-	} elsif (defined($config{$keyword}->{$value})) {
+	} elsif ($config{$keyword} && $config{$keyword}->{$value}) {
 	    delete($config{$keyword}->{$value});
 	    delete($config{$keyword})
 		unless %{$config{$keyword}};

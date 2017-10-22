@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/setfacl/setfacl.c,v 1.11 2005/02/09 17:37:39 ru Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/setfacl/setfacl.c 167000 2007-02-26 00:42:17Z mckusick $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -109,6 +109,7 @@ main(int argc, char *argv[])
 	int local_error, carried_error, ch, i;
 	struct sf_file *file;
 	struct sf_entry *entry;
+	const char *fn_dup;
 
 	acl_type = ACL_TYPE_ACCESS;
 	carried_error = local_error = 0;
@@ -187,7 +188,10 @@ main(int argc, char *argv[])
 		while (fgets(filename, (int)sizeof(filename), stdin)) {
 			/* remove the \n */
 			filename[strlen(filename) - 1] = '\0';
-			add_filename(filename);
+			fn_dup = strdup(filename);
+			if (fn_dup == NULL)
+				err(1, "strdup() failed");
+			add_filename(fn_dup);
 		}
 	} else
 		for (i = 0; i < argc; i++)
@@ -249,10 +253,20 @@ main(int argc, char *argv[])
 		if (need_mask && (set_acl_mask(&final_acl) == -1)) {
 			warnx("failed to set ACL mask on %s", file->filename);
 			carried_error++;
-		} else if (acl_set_file(file->filename, acl_type,
-		    final_acl) == -1) {
-			carried_error++;
-			warn("acl_set_file() failed for %s", file->filename);
+		} else if (h_flag) {
+			if (acl_set_link_np(file->filename, acl_type,
+			    final_acl) == -1) {
+				carried_error++;
+				warn("acl_set_link_np() failed for %s",
+				    file->filename);
+			}
+		} else {
+			if (acl_set_file(file->filename, acl_type,
+			    final_acl) == -1) {
+				carried_error++;
+				warn("acl_set_file() failed for %s",
+				    file->filename);
+			}
 		}
 
 		acl_free(acl[ACCESS_ACL]);

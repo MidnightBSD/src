@@ -1,19 +1,19 @@
-# $FreeBSD: src/sys/conf/options.pc98,v 1.189 2005/07/02 20:06:42 delphij Exp $
+# $FreeBSD: release/7.0.0/sys/conf/options.pc98 174854 2007-12-22 06:32:46Z cvs2svn $
 # Options specific to the pc98 platform kernels
 
 AUTO_EOI_1		opt_auto_eoi.h
 BROKEN_KEYBOARD_RESET	opt_reset.h
+COUNT_XINVLTLB_HITS	opt_smp.h
+COUNT_IPIS		opt_smp.h
 DISABLE_PG_G		opt_pmap.h
 DISABLE_PSE		opt_pmap.h
 I586_PMC_GUPROF		opt_i586_guprof.h
 MAXMEM
 MPTABLE_FORCE_HTT
+MP_WATCHDOG
 PERFMON
 PMAP_SHPGPERPROC	opt_pmap.h
 POWERFAIL_NMI		opt_trap.h
-PPC_DEBUG		opt_ppc.h
-PPC_PROBE_CHIPSET	opt_ppc.h
-MP_WATCHDOG		opt_mp_watchdog.h
 
 # Options for emulators.  These should only be used at config time, so
 # they are handled like options for static filesystems
@@ -23,6 +23,8 @@ IBCS2			opt_dontuse.h
 COMPAT_LINUX		opt_dontuse.h
 COMPAT_SVR4		opt_dontuse.h
 DEBUG_SVR4		opt_svr4.h
+LINPROCFS		opt_dontuse.h
+LINSYSFS		opt_dontuse.h
 PECOFF_DEBUG		opt_pecoff.h
 PECOFF_SUPPORT		opt_dontuse.h
 
@@ -32,6 +34,12 @@ KVA_PAGES		opt_global.h
 CLK_CALIBRATION_LOOP		opt_clock.h
 CLK_USE_I8254_CALIBRATION	opt_clock.h
 TIMER_FREQ			opt_clock.h
+
+# options for serial support
+COM_ESP			opt_sio.h
+COM_MULTIPORT		opt_sio.h
+CONSPEED		opt_sio.h
+GDBSPEED		opt_sio.h
 
 CPU_BLUELIGHTNING_3X		opt_cpu.h
 CPU_BLUELIGHTNING_FPU_OP_CACHE	opt_cpu.h
@@ -81,8 +89,8 @@ ELSA_QS1PCI		opt_i4b.h
 # temporary workaround for SMP machines
 I4B_SMP_WORKAROUND	opt_i4b.h
 # enable VJ compression code for ipr i/f
-IPR_VJ			opt_i4b.h
-IPR_LOG			opt_i4b.h
+#XXXBZ#IPR_VJ			opt_i4b.h
+#XXXBZ#IPR_LOG			opt_i4b.h
 
 # ct driver options
 CT_BUS_WEIGHT		opt_ct.h
@@ -103,5 +111,8 @@ DEV_MECIA		opt_mecia.h
 DEV_NPX			opt_npx.h
 
 # Debugging
-KDB_STOP_NMI		opt_kdb.h
 NPX_DEBUG		opt_npx.h
+STOP_NMI		opt_cpu.h
+
+# BPF just-in-time compiler
+BPF_JITTER		opt_bpf.h

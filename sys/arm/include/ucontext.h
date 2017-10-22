@@ -35,7 +35,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/ucontext.h,v 1.2 2004/05/14 11:46:44 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/ucontext.h 129198 2004-05-14 11:46:45Z cognet $
  */
 
 #ifndef _MACHINE_MCONTEXT_H_

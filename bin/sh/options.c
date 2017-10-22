@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)options.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/options.c,v 1.23.2.1 2005/11/06 20:39:48 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/sh/options.c 157601 2006-04-09 12:21:20Z stefanf $");
 
 #include <signal.h>
 #include <unistd.h>
@@ -374,7 +374,7 @@ shiftcmd(int argc, char **argv)
 	if (argc > 1)
 		n = number(argv[1]);
 	if (n > shellparam.nparam)
-		error("can't shift that many");
+		return 1;
 	INTOFF;
 	shellparam.nparam -= n;
 	for (ap1 = shellparam.p ; --n >= 0 ; ap1++) {

@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/sa11x0/sa11x0_reg.h,v 1.1 2004/05/14 11:46:45 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/sa11x0/sa11x0_reg.h 158854 2006-05-23 12:14:14Z cognet $
  *
  */
 
@@ -48,9 +48,11 @@
 #define SARCR_BASE		0x90030000	/* Reset Controller */
 #define SAGPIO_BASE		0x90040000	/* GPIO */
 #define SAIPIC_BASE		0x90050000	/* Interrupt Controller */
+#define SAIPIC_SIZE		0x24
 #define SAPPC_BASE		0x90060000	/* Peripheral Pin Controller */
 #define SAUDC_BASE		0x80000000	/* USB Device Controller*/
 #define	SACOM1_BASE		0x80010000	/* GPCLK/UART 1 */
+#define SACOM1_SIZE		0x24
 #define SACOM3_HW_BASE		0x80050000	/* UART 3  */
 #define SAMCP_BASE		0x80060000	/* MCP Controller */
 #define SASSP_BASE		0x80070000	/* Synchronous serial port */
@@ -59,7 +61,7 @@
 #define SALCD_BASE		0xB0100000	/* LCD */
 
 /* Register base virtual addresses mapped by initarm() */
-#define SACOM3_BASE             0xd000d000
+#define SACOM1_VBASE		0xd000d000
 
 /* Interrupt controller registers */
 #define SAIPIC_NPORTS		9

@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)telnet.h	8.2 (Berkeley) 12/15/93
- * $FreeBSD: src/include/arpa/telnet.h,v 1.9 2003/01/18 06:13:57 billf Exp $
+ * $FreeBSD: release/7.0.0/include/arpa/telnet.h 109467 2003-01-18 06:13:57Z billf $
  */
 
 #ifndef _ARPA_TELNET_H_

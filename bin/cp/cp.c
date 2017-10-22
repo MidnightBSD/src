@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)cp.c	8.2 (Berkeley) 4/1/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/cp/cp.c,v 1.51.2.1 2005/11/12 21:21:45 csjp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/cp/cp.c 163233 2006-10-11 10:26:34Z trhodes $");
 
 /*
  * Cp copies source files to target files.
@@ -83,7 +83,7 @@ static char emptystring[] = "";
 
 PATH_T to = { to.p_path, emptystring, "" };
 
-int fflag, iflag, nflag, pflag, vflag;
+int fflag, iflag, lflag, nflag, pflag, vflag;
 static int Rflag, rflag;
 volatile sig_atomic_t info;
 
@@ -102,7 +102,7 @@ main(int argc, char *argv[])
 	char *target;
 
 	Hflag = Lflag = Pflag = 0;
-	while ((ch = getopt(argc, argv, "HLPRfinprv")) != -1)
+	while ((ch = getopt(argc, argv, "HLPRfilnprv")) != -1)
 		switch (ch) {
 		case 'H':
 			Hflag = 1;
@@ -127,6 +127,9 @@ main(int argc, char *argv[])
 			iflag = 1;
 			fflag = nflag = 0;
 			break;
+		case 'l':
+			lflag = 1;
+			break;
 		case 'n':
 			nflag = 1;
 			fflag = iflag = 0;
@@ -135,7 +138,8 @@ main(int argc, char *argv[])
 			pflag = 1;
 			break;
 		case 'r':
-			rflag = 1;
+			rflag = Lflag = 1;
+			Hflag = Pflag = 0;
 			break;
 		case 'v':
 			vflag = 1;
@@ -151,16 +155,10 @@ main(int argc, char *argv[])
 		usage();
 
 	fts_options = FTS_NOCHDIR | FTS_PHYSICAL;
-	if (rflag) {
-		if (Rflag)
-			errx(1,
-		    "the -R and -r options may not be specified together.");
-		if (Hflag || Lflag || Pflag)
-			errx(1,
-	"the -H, -L, and -P options may not be specified with the -r option.");
-		fts_options &= ~FTS_PHYSICAL;
-		fts_options |= FTS_LOGICAL;
-	}
+	if (Rflag && rflag)
+		errx(1, "the -R and -r options may not be specified together");
+	if (rflag)
+		Rflag = 1;
 	if (Rflag) {
 		if (Hflag)
 			fts_options |= FTS_COMFOLLOW;
@@ -224,12 +222,12 @@ main(int argc, char *argv[])
 		 * the initial mkdir().
 		 */
 		if (r == -1) {
-			if (rflag || (Rflag && (Lflag || Hflag)))
+			if (Rflag && (Lflag || Hflag))
 				stat(*argv, &tmp_stat);
 			else
 				lstat(*argv, &tmp_stat);
 
-			if (S_ISDIR(tmp_stat.st_mode) && (Rflag || rflag))
+			if (S_ISDIR(tmp_stat.st_mode) && Rflag)
 				type = DIR_TO_DNE;
 			else
 				type = FILE_TO_FILE;
@@ -417,7 +415,7 @@ copy(char *argv[], enum op type, int fts_options)
 			}
 			break;
 		case S_IFDIR:
-			if (!Rflag && !rflag) {
+			if (!Rflag) {
 				warnx("%s is a directory (not copied).",
 				    curr->fts_path);
 				(void)fts_set(ftsp, curr, FTS_SKIP);
@@ -457,6 +455,9 @@ copy(char *argv[], enum op type, int fts_options)
 					badcp = rval = 1;
 			}
 			break;
+		case S_IFSOCK:
+			warnx("%s is a socket (not copied).",
+				    curr->fts_path);
 		case S_IFIFO:
 			if (Rflag) {
 				if (copy_fifo(curr->fts_statp, !dne))
@@ -476,6 +477,7 @@ copy(char *argv[], enum op type, int fts_options)
 	}
 	if (errno)
 		err(1, "fts_read");
+	fts_close(ftsp);
 	return (rval);
 }
 

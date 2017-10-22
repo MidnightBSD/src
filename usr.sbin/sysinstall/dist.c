@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/dist.c,v 1.239.2.1 2005/08/30 20:01:32 murray Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/dist.c 175324 2008-01-14 19:28:43Z kensmith $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -39,12 +39,14 @@
 #include <sys/mount.h>
 #include <sys/time.h>
 #include <sys/uio.h>
+#include <ctype.h>
 #include <signal.h>
 #include <libutil.h>
 
 unsigned int Dists;
 unsigned int SrcDists;
 unsigned int XOrgDists;
+unsigned int KernelDists;
 
 enum _disttype { DT_TARBALL, DT_SUBDIST, DT_PACKAGE };
 
@@ -59,6 +61,7 @@ typedef struct _dist {
     } my_data;
 } Distribution;
 
+static Distribution KernelDistTable[];
 static Distribution SrcDistTable[];
 static Distribution XOrgDistTable[];
 
@@ -68,12 +71,14 @@ static Distribution XOrgDistTable[];
 	{ name, mask, DIST_ ## flag, DT_PACKAGE, { package } }
 #define	DTE_SUBDIST(name, mask, flag, subdist)				\
 	{ name, mask, DIST_ ## flag, DT_SUBDIST, { .my_dist = subdist } }
+#define	DTE_END			{ NULL, NULL, 0, 0, { NULL } }
 
 #define	BASE_DIST	(&DistTable[0])
 
 /* The top-level distribution categories */
 static Distribution DistTable[] = {
     DTE_TARBALL("base",	    &Dists, BASE,     "/"),
+    DTE_SUBDIST("kernels",  &Dists, KERNEL,   KernelDistTable),
     DTE_TARBALL("doc",	    &Dists, DOC,      "/"),
     DTE_TARBALL("games",    &Dists, GAMES,    "/"),
     DTE_TARBALL("manpages", &Dists, MANPAGES, "/"),
@@ -87,13 +92,24 @@ static Distribution DistTable[] = {
     DTE_SUBDIST("src",	    &Dists, SRC,      SrcDistTable),
     DTE_TARBALL("ports",    &Dists, PORTS,    "/usr"),
     DTE_TARBALL("local",    &Dists, LOCAL,    "/"),
-    DTE_SUBDIST("X.Org",    &Dists, XORG,     XOrgDistTable),
-    { NULL },
+    DTE_PACKAGE("X.Org",    &Dists, XORG,     "xorg"),
+    DTE_END,
+};
+
+/* The kernel distributions */
+static Distribution KernelDistTable[] = {
+    DTE_TARBALL("GENERIC",  &KernelDists, KERNEL_GENERIC, "/boot"),
+#ifdef WITH_SMP
+    DTE_TARBALL("SMP", 	    &KernelDists, KERNEL_SMP,	  "/boot"),
+#endif
+    DTE_END,
 };
 
 /* The /usr/src distribution */
 static Distribution SrcDistTable[] = {
     DTE_TARBALL("sbase",    &SrcDists, SRC_BASE,    "/usr/src"),
+    DTE_TARBALL("scddl",    &SrcDists, SRC_CDDL,    "/usr/src"),
+    DTE_TARBALL("scompat",  &SrcDists, SRC_COMPAT,  "/usr/src"),
     DTE_TARBALL("scontrib", &SrcDists, SRC_CONTRIB, "/usr/src"),
     DTE_TARBALL("scrypto",  &SrcDists, SRC_SCRYPTO, "/usr/src"),
     DTE_TARBALL("sgnu",	    &SrcDists, SRC_GNU,	    "/usr/src"),
@@ -113,30 +129,7 @@ static Distribution SrcDistTable[] = {
     DTE_TARBALL("susbin",   &SrcDists, SRC_USBIN,   "/usr/src"),
     DTE_TARBALL("stools",   &SrcDists, SRC_TOOLS,   "/usr/src"),
     DTE_TARBALL("srescue",  &SrcDists, SRC_RESCUE,  "/usr/src"),
-    { NULL },
-};
-
-/* The X.Org distribution */
-static Distribution XOrgDistTable[] = {
-    DTE_PACKAGE("Xbin",	 &XOrgDists, XORG_CLIENTS,	 "xorg-clients"),
-    DTE_PACKAGE("Xlib",	 &XOrgDists, XORG_LIB,		 "xorg-libraries"),
-    DTE_PACKAGE("Xman",	 &XOrgDists, XORG_MAN,		 "xorg-manpages"),
-    DTE_PACKAGE("Xdoc",  &XOrgDists, XORG_DOC,		 "xorg-documents"),
-    DTE_PACKAGE("Xprog", &XOrgDists, XORG_IMAKE,	 "imake"),
-
-    DTE_PACKAGE("Xsrv",  &XOrgDists, XORG_SERVER,	 "xorg-server"),
-    DTE_PACKAGE("Xnest", &XOrgDists, XORG_NESTSERVER,	 "xorg-nestserver"),
-    DTE_PACKAGE("Xprt",  &XOrgDists, XORG_PRINTSERVER,	 "xorg-printserver"),
-    DTE_PACKAGE("Xvfb",  &XOrgDists, XORG_VFBSERVER,	 "xorg-vfbserver"),
-
-    DTE_PACKAGE("Xfmsc", &XOrgDists, XORG_FONTS_MISC,	 "xorg-fonts-miscbitmaps"),
-    DTE_PACKAGE("Xf75",  &XOrgDists, XORG_FONTS_75,	 "xorg-fonts-75dpi"),
-    DTE_PACKAGE("Xf100", &XOrgDists, XORG_FONTS_100,	 "xorg-fonts-100dpi"),
-    DTE_PACKAGE("Xfcyr", &XOrgDists, XORG_FONTS_CYR,	 "xorg-fonts-cyrillic"),
-    DTE_PACKAGE("Xft1",  &XOrgDists, XORG_FONTS_T1,	 "xorg-fonts-type1"),
-    DTE_PACKAGE("Xftt",  &XOrgDists, XORG_FONTS_TT,	 "xorg-fonts-truetype"),
-    DTE_PACKAGE("Xfs",   &XOrgDists, XORG_FONTSERVER,	 "xorg-fontserver"),
-    { NULL },
+    DTE_END,
 };
 
 static int	distMaybeSetPorts(dialogMenuItem *self);
@@ -148,9 +141,11 @@ distVerifyFlags(void)
 	Dists |= DIST_SRC;
     if (XOrgDists)
 	Dists |= DIST_XORG;
+    if (KernelDists)
+	Dists |= DIST_KERNEL;
     if (isDebug()) {
-	msgDebug("Dist Masks: Dists: %0x, Srcs: %0x\n", Dists,
-	    SrcDists);
+	msgDebug("Dist Masks: Dists: %0x, Srcs: %0x Kernels: %0x\n", Dists,
+	    SrcDists, KernelDists);
 	msgDebug("XServer: %0x\n", XOrgDists);
     }
 }
@@ -161,6 +156,7 @@ distReset(dialogMenuItem *self)
     Dists = 0;
     SrcDists = 0;
     XOrgDists = 0;
+    KernelDists = 0;
     return DITEM_SUCCESS | DITEM_REDRAW;
 }
 
@@ -180,6 +176,9 @@ distConfig(dialogMenuItem *self)
     if ((cp = variable_get(VAR_DIST_X11)) != NULL)
 	XOrgDists = atoi(cp);
 
+    if ((cp = variable_get(VAR_DIST_KERNEL)) != NULL)
+	KernelDists = atoi(cp);
+
     distVerifyFlags();
     return DITEM_SUCCESS | DITEM_REDRAW;
 }
@@ -188,8 +187,19 @@ static int
 distSetX(void)
 {
     Dists |= DIST_XORG;
-    XOrgDists = DIST_XORG_MISC_ALL | DIST_XORG_SERVER | _DIST_XORG_FONTS_BASE;
-    return distSetXOrg(NULL);
+    XOrgDists = DIST_XORG_ALL;
+    return DITEM_SUCCESS;
+}
+
+int
+selectKernel(void)
+{
+#ifdef WITH_SMP
+    /* select default kernel based on deduced cpu count */
+    return NCpus > 1 ? DIST_KERNEL_SMP : DIST_KERNEL_GENERIC;
+#else
+    return DIST_KERNEL_GENERIC;
+#endif
 }
 
 int
@@ -200,6 +210,7 @@ distSetDeveloper(dialogMenuItem *self)
     distReset(NULL);
     Dists = _DIST_DEVELOPER;
     SrcDists = DIST_SRC_ALL;
+    KernelDists = selectKernel();
     i = distMaybeSetPorts(self);
     distVerifyFlags();
     return i;
@@ -223,7 +234,8 @@ distSetKernDeveloper(dialogMenuItem *self)
 
     distReset(NULL);
     Dists = _DIST_DEVELOPER;
-    SrcDists = DIST_SRC_SYS;
+    SrcDists = DIST_SRC_SYS | DIST_SRC_BASE;
+    KernelDists = selectKernel();
     i = distMaybeSetPorts(self);
     distVerifyFlags();
     return i;
@@ -247,6 +259,7 @@ distSetUser(dialogMenuItem *self)
 
     distReset(NULL);
     Dists = _DIST_USER;
+    KernelDists = selectKernel();
     i = distMaybeSetPorts(self);
     distVerifyFlags();
     return i;
@@ -267,7 +280,8 @@ int
 distSetMinimum(dialogMenuItem *self)
 {
     distReset(NULL);
-    Dists = DIST_BASE;
+    Dists = DIST_BASE | DIST_KERNEL;
+    KernelDists = selectKernel();
     distVerifyFlags();
     return DITEM_SUCCESS | DITEM_REDRAW;
 }
@@ -280,6 +294,7 @@ distSetEverything(dialogMenuItem *self)
     Dists = DIST_ALL;
     SrcDists = DIST_SRC_ALL;
     XOrgDists = DIST_XORG_ALL;
+    KernelDists = DIST_KERNEL_ALL;
     i = distMaybeSetPorts(self);
     distVerifyFlags();
     return i | DITEM_REDRAW;
@@ -290,8 +305,8 @@ distMaybeSetPorts(dialogMenuItem *self)
 {
     dialog_clear_norefresh();
     if (!msgYesNo("Would you like to install the FreeBSD ports collection?\n\n"
-		  "This will give you ready access to over 13,300 ported software packages,\n"
-		  "at a cost of around 440MB of disk space when \"clean\" and possibly\n"
+		  "This will give you ready access to over 17,000 ported software packages,\n"
+		  "at a cost of around 400MB of disk space when \"clean\" and possibly\n"
 		  "much more than that when a lot of the distribution tarballs are loaded\n"
 		  "(unless you have the extra discs available from a FreeBSD CD/DVD distribution\n"
 		  "and can mount them on /cdrom, in which case this is far less of a problem).\n\n"
@@ -422,13 +437,15 @@ distSetSrc(dialogMenuItem *self)
 }
 
 int
-distSetXOrg(dialogMenuItem *self)
+distSetKernel(dialogMenuItem *self)
 {
-    int i = DITEM_SUCCESS;
+    int i;
 
     dialog_clear_norefresh();
-    if (!dmenuOpenSimple(&MenuXOrgSelect, FALSE))
+    if (!dmenuOpenSimple(&MenuKernelDistributions, FALSE))
 	i = DITEM_FAILURE;
+    else
+	i = DITEM_SUCCESS;
     distVerifyFlags();
     return i | DITEM_RESTORE;
 }
@@ -454,13 +471,31 @@ check_for_interrupt(void)
 }
 
 /*
+ * translate distribution filename to lower case
+ * as doTARBALL does in release/Makefile
+ */
+static void
+translateDist(char trdist[PATH_MAX], const char *dist)
+{
+    int j;
+
+    /*
+     * translate distribution filename to lower case
+     * as doTARBALL does in release/Makefile
+     */
+    for (j = 0; j < PATH_MAX-1 && dist[j] != '\0'; j++)
+	trdist[j] = tolower(dist[j]);
+    trdist[j] = '\0';
+}
+
+/*
  * Try to get distribution as multiple pieces, locating and parsing an
  * info file which tells us how many we need for this distribution.
  */
 static Boolean
 distExtractTarball(char *path, char *dist, char *my_dir, int is_base)
 {
-    char *buf = NULL, fname[PATH_MAX];
+    char *buf = NULL, trdist[PATH_MAX], fname[PATH_MAX];
     struct timeval start, stop;
     int j, status, total, intr;
     int cpid, zpid, fd2, chunk, numchunks;
@@ -468,14 +503,23 @@ distExtractTarball(char *path, char *dist, char *my_dir, int is_base)
     const char *tmp;
     FILE *fp;
 
+    translateDist(trdist, dist);
+    if (isDebug())
+	msgDebug("%s: path \"%s\" dist \"%s\" trdist \"%s\" "
+		"my_dir \"%s\" %sis_base\n",
+		__func__, path, dist, trdist, my_dir, is_base ? "" : "!");
+
     status = TRUE;
     numchunks = 0;
-    snprintf(fname, sizeof (fname), "%s/%s.inf", path, dist);
+    snprintf(fname, sizeof (fname), "%s/%s.inf", path, trdist);
 
 getinfo:
     fp = DEVICE_GET(mediaDevice, fname, TRUE);
     intr = check_for_interrupt();
     if (fp == (FILE *)IO_ERROR || intr || !mediaDevice) {
+	if (isDebug())
+	    msgDebug("%s: fname %s fp: %p, intr: %d mediaDevice: %p\n",
+		__func__, fname, fp, intr, mediaDevice);
 	/* Hard error, can't continue */
 	if (!msgYesNo("Unable to open %s: %s.\nReinitialize media?",
 		fname, !intr ? "I/O error." : "User interrupt.")) {
@@ -487,8 +531,10 @@ getinfo:
 	    return (FALSE);
     } else if (fp == NULL) {
 	/* No attributes file, so try as a single file. */
-	snprintf(fname, sizeof(fname), "%s/%s.%s", path, dist,
+	snprintf(fname, sizeof(fname), "%s/%s.%s", path, trdist,
 	    USE_GZIP ? "tgz" : "tbz");
+	if (isDebug())
+	    msgDebug("%s: fp is NULL (1) fname: %s\n", __func__, fname);
 	/*
 	 * Passing TRUE as 3rd parm to get routine makes this a "probing"
 	 * get, for which errors are not considered too significant.
@@ -497,6 +543,9 @@ getinfo:
 	fp = DEVICE_GET(mediaDevice, fname, TRUE);
 	intr = check_for_interrupt();
 	if (fp == (FILE *)IO_ERROR || intr || !mediaDevice) {
+	    if (isDebug())
+		msgDebug("%s: fname %s fp: %p, intr: %d mediaDevice: %p\n",
+		    __func__, fname, fp, intr, mediaDevice);
 	    /* Hard error, can't continue */
 	    msgConfirm("Unable to open %s: %s", fname,
 		!intr ? "I/O error" : "User interrupt");
@@ -512,8 +561,11 @@ getinfo:
 	    status = mediaExtractDist(dir, dist, fp);
 	    fclose(fp);
 	    return (status);
-	} else
+	} else {
+	    if (isDebug())
+		msgDebug("%s: fp is NULL (2) fname %s\n", __func__, fname);
 	    return (FALSE);
+	}
     }
 
     if (isDebug())
@@ -522,6 +574,8 @@ getinfo:
     dist_attr = properties_read(fileno(fp));
     intr = check_for_interrupt();
     if (intr || !dist_attr) {
+	if (isDebug())
+	    msgDebug("%s: intr %d dist_attr %p\n", __func__, intr, dist_attr);
 	msgConfirm("Cannot parse information file for the %s distribution: %s\n"
 		   "Please verify that your media is valid and try again.",
 		   dist, !intr ? "I/O error" : "User interrupt");
@@ -531,8 +585,11 @@ getinfo:
 	    numchunks = strtol(tmp, 0, 0);
     }
     fclose(fp);
-    if (!numchunks)
+    if (!numchunks) {
+	if (isDebug())
+	    msgDebug("%s: numchunks is zero\n", __func__);
 	return (TRUE);
+    }
 
     if (isDebug())
 	msgDebug("Attempting to extract distribution from %u chunks.\n",
@@ -561,7 +618,7 @@ getinfo:
 	    tmp = index(tmp, ' ');
 	    chunksize = strtol(tmp, 0, 0);
 	}
-	snprintf(fname, sizeof(fname), "%s/%s.%c%c", path, dist, (chunk / 26) + 'a',
+	snprintf(fname, sizeof(fname), "%s/%s.%c%c", path, trdist, (chunk / 26) + 'a',
 	    (chunk % 26) + 'a');
 	if (isDebug())
 	    msgDebug("trying for piece %d of %d: %s\n", chunk + 1, numchunks,
@@ -766,7 +823,7 @@ printSelected(char *buf, int selected, Distribution *me, int *col)
 int
 distExtractAll(dialogMenuItem *self)
 {
-    int old_dists, retries = 0, status = DITEM_SUCCESS;
+    int old_dists, old_kernel, retries = 0, status = DITEM_SUCCESS;
     char buf[512];
     WINDOW *w;
 
@@ -780,6 +837,7 @@ distExtractAll(dialogMenuItem *self)
 	return DITEM_FAILURE;
 
     old_dists = Dists;
+    old_kernel = KernelDists;
     distVerifyFlags();
 
     dialog_clear_norefresh();
@@ -794,6 +852,9 @@ distExtractAll(dialogMenuItem *self)
     /* Only do base fixup if base dist was successfully extracted */
     if ((old_dists & DIST_BASE) && !(Dists & DIST_BASE))
 	status |= installFixupBase(self);
+    /* Only do kernel fixup if kernel dist was successfully extracted */
+    if ((old_dists & DIST_KERNEL) && !(Dists & DIST_KERNEL))
+	status |= installFixupKernel(self, old_kernel);
 
     /* Clear any local dist flags now */
     Dists &= ~DIST_LOCAL;

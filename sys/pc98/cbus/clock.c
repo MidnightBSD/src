@@ -30,8 +30,10 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)clock.c	7.2 (Berkeley) 5/12/91
- * $FreeBSD: src/sys/pc98/cbus/clock.c,v 1.148.2.1 2005/07/18 19:52:05 jhb Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: release/7.0.0/sys/pc98/cbus/clock.c 171653 2007-07-29 20:16:48Z dwmalone $");
 
 /*
  * Routines to handle clock hardware.
@@ -56,6 +58,7 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/clock.h>
 #include <sys/lock.h>
 #include <sys/kdb.h>
 #include <sys/mutex.h>
@@ -70,6 +73,7 @@
 #include <sys/power.h>
 
 #include <machine/clock.h>
+#include <machine/cpu.h>
 #include <machine/cputypes.h>
 #include <machine/frame.h>
 #include <machine/intr_machdep.h>
@@ -89,18 +93,9 @@
 #include <isa/isavar.h>
 #endif
 
-/*
- * 32-bit time_t's can't reach leap years before 1904 or after 2036, so we
- * can use a simple formula for leap years.
- */
-#define	LEAPYEAR(y) (((u_int)(y) % 4 == 0) ? 1 : 0)
-#define DAYSPERYEAR   (31+28+31+30+31+30+31+31+30+31+30+31)
-
 #define	TIMER_DIV(x) ((timer_freq + (x) / 2) / (x))
 
-int	adjkerntz;		/* local offset from GMT in seconds */
 int	clkintr_pending;
-int	disable_rtc_set;	/* disable resettodr() if != 0 */
 int	pscnt = 1;
 int	psdiv = 1;
 int	statclock_disable;
@@ -110,11 +105,9 @@ int	statclock_disable;
 u_int	timer_freq = TIMER_FREQ;
 int	timer0_max_count;
 int	timer0_real_max_count;
-int	wall_cmos_clock;	/* wall CMOS clock assumed if != 0 */
-struct mtx clock_lock;
 
 static	int	beeping = 0;
-static	const u_char daysinmonth[] = {31,28,31,30,31,30,31,31,30,31,30,31};
+static	struct mtx clock_lock;
 static	struct intsrc *i8254_intsrc;
 static	u_int32_t i8254_lastcount;
 static	u_int32_t i8254_offset;
@@ -128,7 +121,7 @@ static	int	using_lapic_timer;
 #define	ACQUIRED	2
 #define	ACQUIRE_PENDING	3
 
-static 	u_char	timer1_state;
+static	u_char	timer1_state;
 static	u_char	timer2_state;
 static void rtc_serialcombit(int);
 static void rtc_serialcom(int);
@@ -148,8 +141,8 @@ static struct timecounter i8254_timecounter = {
 	0			/* quality */
 };
 
-static void
-clkintr(struct clockframe *frame)
+static int
+clkintr(struct trapframe *frame)
 {
 
 	if (timecounter->tc_get_timecount == i8254_get_timecount) {
@@ -163,8 +156,9 @@ clkintr(struct clockframe *frame)
 		clkintr_pending = 0;
 		mtx_unlock_spin(&clock_lock);
 	}
-	if (!using_lapic_timer)
-		hardclock(frame);
+	KASSERT(!using_lapic_timer, ("clk interrupt enabled with lapic timer"));
+	hardclock(TRAPF_USERMODE(frame), TRAPF_PC(frame));
+	return (FILTER_HANDLED);
 }
 
 int
@@ -272,13 +266,6 @@ DELAY(int n)
 		printf("DELAY(%d)...", n);
 #endif
 	/*
-	 * Guard against the timer being uninitialized if we are called
-	 * early for console i/o.
-	 */
-	if (timer0_max_count == 0)
-		set_timer_freq(timer_freq, hz);
-
-	/*
 	 * Read the counter first, so that the rest of the setup overhead is
 	 * counted.  Guess the initial overhead is 20 usec (on most systems it
 	 * takes about 1.5 usec for each of the i/o's in getit().  The loop
@@ -375,9 +362,9 @@ sysbeep(int pitch, int period)
 			splx(x);
 			return (-1); /* XXX Should be EBUSY, but nobody cares anyway. */
 		}
-	disable_intr();
+	mtx_lock_spin(&clock_lock);
 	spkr_set_pitch(pitch);
-	enable_intr();
+	mtx_unlock_spin(&clock_lock);
 	if (!beeping) {
 		/* enable counter1 output to speaker */
 		ppi_spkr_on();
@@ -388,29 +375,11 @@ sysbeep(int pitch, int period)
 	return (0);
 }
 
-
-unsigned int delaycount;
-#define FIRST_GUESS	0x2000
-static void findcpuspeed(void)
-{
-	int i;
-	int remainder;
-
-	/* Put counter in count down mode */
-	outb(TIMER_MODE, TIMER_SEL0 | TIMER_16BIT | TIMER_RATEGEN);
-	outb(TIMER_CNTR0, 0xff);
-	outb(TIMER_CNTR0, 0xff);
-	for (i = FIRST_GUESS; i; i--)
-		;
-	remainder = getit();
-	delaycount = (FIRST_GUESS * TIMER_DIV(1000)) / (0xffff - remainder);
-}
-
 static u_int
 calibrate_clocks(void)
 {
-	int	timeout;
-	u_int	count, prev_count, tot_count;
+	int timeout;
+	u_int count, prev_count, tot_count;
 	u_short	sec, start_sec;
 
 	if (bootverbose)
@@ -433,6 +402,8 @@ calibrate_clocks(void)
 		if (--timeout == 0)
 			goto fail;
 	}
+
+	/* Start keeping track of the i8254 counter. */
 	prev_count = getit();
 	if (prev_count == 0 || prev_count > timer0_max_count)
 		goto fail;
@@ -520,22 +491,26 @@ timer_restore(void)
 	i8254_restore();		/* restore timer_freq and hz */
 }
 
-/*
- * Initialize 8254 timer 0 early so that it can be used in DELAY().
- * XXX initialization of other timers is unintentionally left blank.
- */
+/* This is separate from startrtclock() so that it can be called early. */
 void
-startrtclock()
+i8254_init(void)
 {
-	u_int delta, freq;
 
-	findcpuspeed();
+	mtx_init(&clock_lock, "clk", NULL, MTX_SPIN | MTX_NOPROFILE);
+
 	if (pc98_machine_type & M_8M)
 		timer_freq = 1996800L; /* 1.9968 MHz */
 	else
 		timer_freq = 2457600L; /* 2.4576 MHz */
 
 	set_timer_freq(timer_freq, hz);
+}
+
+void
+startrtclock()
+{
+	u_int delta, freq;
+
 	freq = calibrate_clocks();
 #ifdef CLK_CALIBRATION_LOOP
 	if (bootverbose) {
@@ -638,66 +613,39 @@ rtc_inb(void)
 void
 inittodr(time_t base)
 {
-	unsigned long	sec, days;
-	int		year, month;
-	int		y, m, s;
 	struct timespec ts;
-	int		second, min, hour;
+	struct clocktime ct;
+	int i;
 
 	if (base) {
-		s = splclock();
 		ts.tv_sec = base;
 		ts.tv_nsec = 0;
 		tc_setclock(&ts);
-		splx(s);
 	}
 
 	rtc_serialcom(0x03);	/* Time Read */
 	rtc_serialcom(0x01);	/* Register shift command. */
 	DELAY(20);
 
-	second = bcd2bin(rtc_inb() & 0xff);	/* sec */
-	min = bcd2bin(rtc_inb() & 0xff);	/* min */
-	hour = bcd2bin(rtc_inb() & 0xff);	/* hour */
-	days = bcd2bin(rtc_inb() & 0xff) - 1;	/* date */
-
-	month = (rtc_inb() >> 4) & 0x0f;	/* month */
-	for (m = 1; m <	month; m++)
-		days +=	daysinmonth[m-1];
-	year = bcd2bin(rtc_inb() & 0xff) + 1900;	/* year */
-	/* 2000 year problem */
-	if (year < 1995)
-		year += 100;
-	if (year < 1970)
-		goto wrong_time;
-	for (y = 1970; y < year; y++)
-		days +=	DAYSPERYEAR + LEAPYEAR(y);
-	if ((month > 2)	&& LEAPYEAR(year))
-		days ++;
-	sec = ((( days * 24 +
-		  hour) * 60 +
-		  min) * 60 +
-		  second);
-	/* sec now contains the	number of seconds, since Jan 1 1970,
-	   in the local	time zone */
-
-	s = splhigh();
-
-	sec += tz_minuteswest * 60 + (wall_cmos_clock ? adjkerntz : 0);
-
-	y = time_second - sec;
-	if (y <= -2 || y >= 2) {
-		/* badly off, adjust it */
-		ts.tv_sec = sec;
-		ts.tv_nsec = 0;
-		tc_setclock(&ts);
+	ct.nsec = 0;
+	ct.sec = bcd2bin(rtc_inb() & 0xff);		/* sec */
+	ct.min = bcd2bin(rtc_inb() & 0xff);		/* min */
+	ct.hour = bcd2bin(rtc_inb() & 0xff);		/* hour */
+	ct.day = bcd2bin(rtc_inb() & 0xff);		/* date */
+	i = rtc_inb();
+	ct.dow = i & 0x0f;				/* dow */
+	ct.mon = (i >> 4) & 0x0f;			/* month */
+	ct.year = bcd2bin(rtc_inb() & 0xff) + 1900;	/* year */
+	if (ct.year < 1995)
+		ct.year += 100;
+	/* Set dow = -1 because some clocks don't set it correctly. */
+	ct.dow = -1;
+	if (clock_ct_to_ts(&ct, &ts)) {
+		printf("Invalid time in clock: check and reset the date!\n");
+		return;
 	}
-	splx(s);
-	return;
-
-wrong_time:
-	printf("Invalid time in real time clock.\n");
-	printf("Check and reset the date immediately!\n");
+	ts.tv_sec += utc_offset();
+	tc_setclock(&ts);
 }
 
 /*
@@ -706,50 +654,25 @@ wrong_time:
 void
 resettodr()
 {
-	unsigned long	tm;
-	int		y, m, s;
-	int		wd;
+	struct timespec	ts;
+	struct clocktime ct;
 
 	if (disable_rtc_set)
 		return;
 
-	s = splclock();
-	tm = time_second;
-	splx(s);
+	getnanotime(&ts);
+	ts.tv_sec -= utc_offset();
+	clock_ts_to_ct(&ts, &ct);
 
 	rtc_serialcom(0x01);	/* Register shift command. */
 
-	/* Calculate local time	to put in RTC */
+	rtc_outb(bin2bcd(ct.sec)); 		/* Write back Seconds */
+	rtc_outb(bin2bcd(ct.min)); 		/* Write back Minutes */
+	rtc_outb(bin2bcd(ct.hour)); 		/* Write back Hours   */
 
-	tm -= tz_minuteswest * 60 + (wall_cmos_clock ? adjkerntz : 0);
-
-	rtc_outb(bin2bcd(tm%60)); tm /= 60;	/* Write back Seconds */
-	rtc_outb(bin2bcd(tm%60)); tm /= 60;	/* Write back Minutes */
-	rtc_outb(bin2bcd(tm%24)); tm /= 24;	/* Write back Hours   */
-
-	/* We have now the days	since 01-01-1970 in tm */
-	wd = (tm + 4) % 7 + 1;			/* Write back Weekday */
-	for (y = 1970, m = DAYSPERYEAR + LEAPYEAR(y);
-	     tm >= m;
-	     y++,      m = DAYSPERYEAR + LEAPYEAR(y))
-	     tm -= m;
-
-	/* Now we have the years in y and the day-of-the-year in tm */
-	for (m = 0; ; m++) {
-		int ml;
-
-		ml = daysinmonth[m];
-		if (m == 1 && LEAPYEAR(y))
-			ml++;
-		if (tm < ml)
-			break;
-		tm -= ml;
-	}
-
-	m++;
-	rtc_outb(bin2bcd(tm+1));		/* Write back Day     */
-	rtc_outb((m << 4) | wd);		/* Write back Month & Weekday  */
-	rtc_outb(bin2bcd(y%100));		/* Write back Year    */
+	rtc_outb(bin2bcd(ct.day));		/* Write back Day     */
+	rtc_outb((ct.mon << 4) | ct.dow);	/* Write back Month and DOW */
+	rtc_outb(bin2bcd(ct.year % 100));	/* Write back Year    */
 
 	rtc_serialcom(0x02);	/* Time set & Counter hold command. */
 	rtc_serialcom(0x00);	/* Register hold command. */
@@ -773,8 +696,8 @@ cpu_initclocks()
 	 * timecounter to user a simpler algorithm.
 	 */
 	if (!using_lapic_timer) {
-		intr_add_handler("clk", 0, (driver_intr_t *)clkintr, NULL,
-		    INTR_TYPE_CLK | INTR_FAST, NULL);
+		intr_add_handler("clk", 0, (driver_filter_t *)clkintr, NULL,
+		    NULL, INTR_TYPE_CLK, NULL);
 		i8254_intsrc = intr_lookup_source(0);
 		if (i8254_intsrc != NULL)
 			i8254_pending =
@@ -810,7 +733,7 @@ sysctl_machdep_i8254_freq(SYSCTL_HANDLER_ARGS)
 	 * is is too generic.  Should use it everywhere.
 	 */
 	freq = timer_freq;
-	error = sysctl_handle_int(oidp, &freq, sizeof(freq), req);
+	error = sysctl_handle_int(oidp, &freq, 0, req);
 	if (error == 0 && req->newptr != NULL)
 		set_timer_freq(freq, hz);
 	return (error);

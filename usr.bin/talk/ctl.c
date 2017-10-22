@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/talk/ctl.c,v 1.10 2005/02/09 09:13:36 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/talk/ctl.c 141563 2005-02-09 09:13:36Z stefanf $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)ctl.c	8.1 (Berkeley) 6/6/93";

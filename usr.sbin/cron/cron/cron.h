@@ -17,7 +17,7 @@
 
 /* cron.h - header for vixie's cron
  *
- * $FreeBSD: src/usr.sbin/cron/cron/cron.h,v 1.15.8.1 2006/01/15 17:50:36 delphij Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/cron/cron/cron.h 170890 2007-06-17 17:25:53Z yar $
  *
  * vix 14nov88 [rest of log is in RCS]
  * vix 14jan87 [0 or 7 can be sunday; thanks, mwm@berkeley]
@@ -76,6 +76,7 @@
 #define	MAX_UNAME	20	/* max length of username, should be overkill */
 #define	ROOT_UID	0	/* don't change this, it really must be root */
 #define	ROOT_USER	"root"	/* ditto */
+#define	SYS_NAME	"*system*" /* magic owner name for system crontab */
 
 				/* NOTE: these correspond to DebugFlagNames,
 				 *	defined below.

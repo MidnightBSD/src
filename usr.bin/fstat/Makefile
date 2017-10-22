@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.bin/fstat/Makefile,v 1.9 2004/10/21 12:09:45 phk Exp $
+# $FreeBSD: release/7.0.0/usr.bin/fstat/Makefile 136744 2004-10-21 12:09:45Z phk $
 
 PROG=	fstat
 SRCS=	cd9660.c fstat.c msdosfs.c

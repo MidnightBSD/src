@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/realpath/realpath.c,v 1.6 2004/04/06 20:06:50 markm Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/realpath/realpath.c 127958 2004-04-06 20:06:54Z markm $");
 
 #include <sys/param.h>
 

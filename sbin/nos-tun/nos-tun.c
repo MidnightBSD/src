@@ -57,7 +57,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/nos-tun/nos-tun.c,v 1.14 2005/02/10 09:19:32 ru Exp $";
+  "$FreeBSD: release/7.0.0/sbin/nos-tun/nos-tun.c 141611 2005-02-10 09:19:34Z ru $";
 #endif /* not lint */
 
 #include <sys/types.h>

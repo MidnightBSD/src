@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/sa11x0/uart_cpu_sa1110.c,v 1.3 2005/01/05 21:58:48 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/uart_cpu_sa1110.c 168281 2007-04-02 22:00:22Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -36,12 +36,15 @@ __FBSDID("$FreeBSD: src/sys/arm/sa11x0/uart_cpu_sa1110.c,v 1.3 2005/01/05 21:58:
 #include <dev/uart/uart.h>
 #include <dev/uart/uart_cpu.h>
 
+#include <arm/sa11x0/sa11x0_reg.h>
 #include <arm/sa11x0/sa11x0_var.h>
 
 bus_space_tag_t uart_bus_space_io;
 bus_space_tag_t uart_bus_space_mem;
 
-extern struct uart_ops uart_sa1110_ops;
+extern struct uart_class uart_sa1110_class;
+
+vm_offset_t sa1110_uart_vaddr;
 
 int
 uart_cpu_eqres(struct uart_bas *b1, struct uart_bas *b2)
@@ -49,15 +52,14 @@ uart_cpu_eqres(struct uart_bas *b1, struct uart_bas *b2)
 	return ((b1->bsh == b2->bsh && b1->bst == b2->bst) ? 1 : 0);
 }
 
-extern int got_mmu;
-
 int
 uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 {
-	di->ops = uart_sa1110_ops;
+
+	di->ops = uart_getops(&uart_sa1110_class);
 	di->bas.chan = 0;
 	di->bas.bst = &sa11x0_bs_tag;
-	di->bas.bsh = 0x80010000;
+	di->bas.bsh = sa1110_uart_vaddr;
 	di->bas.regshft = 0;
 	di->bas.rclk = 0;
 	di->baudrate = 9600;

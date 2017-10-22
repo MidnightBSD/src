@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: src/sys/pc98/include/pmc_mdep.h,v 1.1 2005/04/19 21:06:06 imp Exp $ */
+/* $FreeBSD: release/7.0.0/sys/pc98/include/pmc_mdep.h 145299 2005-04-19 21:06:06Z imp $ */
 
 #include <i386/pmc_mdep.h>

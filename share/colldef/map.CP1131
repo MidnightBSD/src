@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/colldef/map.CP1131,v 1.1 2003/12/20 11:20:05 ache Exp $
+# $FreeBSD: release/7.0.0/share/colldef/map.CP1131 123683 2003-12-20 11:20:05Z ache $
 NU \x00
 SH \x01
 SX \x02

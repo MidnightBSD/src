@@ -8,6 +8,7 @@
  * (eliminate some state variables and post-processing).  Among other
  * things, these changes eliminated two shift/reduce conflicts.  (Went
  * from 10 to 8.)
+ * All of Tim Kientzle's changes to this file are public domain.
  */
 
 /*
@@ -23,8 +24,10 @@
 /* SUPPRESS 287 on yaccpar_sccsid *//* Unused static variable */
 /* SUPPRESS 288 on yyerrlab *//* Label unused */
 
-#include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/getdate.y,v 1.4 2005/04/23 18:38:32 kientzle Exp $");
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/tar/getdate.y 171511 2007-07-20 01:27:50Z kientzle $");
+#endif
 
 #include <ctype.h>
 #include <stdio.h>
@@ -268,11 +271,11 @@ relunit	: '-' tUNUMBER tSEC_UNIT {
 	}
 	| tUNUMBER tSEC_UNIT {
 		/* "1 day" */
-		yyRelSeconds += $1;
+		yyRelSeconds += $1 * $2;
 	}
 	| tSEC_UNIT {
 		/* "hour" */
-		yyRelSeconds++;
+		yyRelSeconds += $1;
 	}
 	| '-' tUNUMBER tMONTH_UNIT {
 		/* "-3 months" */
@@ -608,7 +611,7 @@ yylex(void)
 	char	buff[64];
 
 	for ( ; ; ) {
-		while (isspace(*yyInput))
+		while (isspace((unsigned char)*yyInput))
 			yyInput++;
 
 		/* Skip parenthesized comments. */
@@ -635,11 +638,11 @@ yylex(void)
 
 			/* Force to lowercase and strip '.' characters. */
 			while (*src != '\0'
-			    && (isalnum(*src) || *src == '.')
+			    && (isalnum((unsigned char)*src) || *src == '.')
 			    && i < sizeof(buff)-1) {
 				if (*src != '.') {
-					if (isupper(*src))
-						buff[i++] = tolower(*src);
+					if (isupper((unsigned char)*src))
+						buff[i++] = tolower((unsigned char)*src);
 					else
 						buff[i++] = *src;
 				}
@@ -673,8 +676,8 @@ yylex(void)
 		 * Because '-' and '+' have other special meanings, I
 		 * don't deal with signed numbers here.
 		 */
-		if (isdigit(c = *yyInput)) {
-			for (yylval.Number = 0; isdigit(c = *yyInput++); )
+		if (isdigit((unsigned char)(c = *yyInput))) {
+			for (yylval.Number = 0; isdigit((unsigned char)(c = *yyInput++)); )
 				yylval.Number = 10 * yylval.Number + c - '0';
 			yyInput--;
 			return (tUNUMBER);
@@ -717,6 +720,7 @@ get_date(char *p)
 	time_t		nowtime;
 	long		tzone;
 
+	memset(&gmt, 0, sizeof(gmt));
 	yyInput = p;
 
 	(void)time (&nowtime);

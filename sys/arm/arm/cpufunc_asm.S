@@ -43,7 +43,7 @@
  */
  
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/cpufunc_asm.S,v 1.6 2005/02/26 18:59:01 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/cpufunc_asm.S 142570 2005-02-26 18:59:01Z cognet $");
 
 	.text
 	.align	0

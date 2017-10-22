@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/pkg_install/info/Makefile,v 1.20 2004/08/12 20:06:00 ru Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/pkg_install/info/Makefile 133596 2004-08-12 20:06:01Z ru $
 
 PROG=	pkg_info
 SRCS=	main.c perform.c show.c

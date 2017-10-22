@@ -6,8 +6,8 @@
 # Bill Fenner <fenner@freebsd.org> 11 January 2000
 # Dag-Erling Smørgrav <des@freebsd.org> 09 January 2003
 #
-# $Id: whereintheworld.pl,v 1.1.1.2 2006-02-25 02:38:10 laffer1 Exp $
-# $FreeBSD: src/tools/tools/whereintheworld/whereintheworld.pl,v 1.5 2003/02/15 14:30:51 des Exp $
+# $Id: whereintheworld,v 1.3 2000/01/28 00:42:32 fenner Exp $
+# $FreeBSD: release/7.0.0/tools/tools/whereintheworld/whereintheworld.pl 110939 2003-02-15 14:30:51Z des $
 #
 
 use strict;

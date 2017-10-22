@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/ldconfig/Makefile,v 1.20 2005/01/14 12:22:57 delphij Exp $
+# $FreeBSD: release/7.0.0/sbin/ldconfig/Makefile 140241 2005-01-14 12:22:57Z delphij $
 
 PROG=	ldconfig
 SRCS=	elfhints.c ldconfig.c shlib.c support.c

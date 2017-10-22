@@ -2,8 +2,8 @@
 #      The FreeBSD Documentation Project
 #      The FreeBSD French Documentation Project
 #
-#      $Id: Makefile.inc,v 1.1.1.2 2006-02-25 02:35:15 laffer1 Exp $
-#      $FreeBSD: src/release/doc/fr_FR.ISO8859-1/hardware/Makefile.inc,v 1.2 2003/01/18 18:03:01 gioria Exp $
+#      $Id$
+#      $FreeBSD: release/7.0.0/release/doc/fr_FR.ISO8859-1/hardware/Makefile.inc 109488 2003-01-18 18:03:01Z gioria $
 #      Original revision: 1.2
 
 .ifdef NO_LANGCODE_IN_DESTDIR

@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/esp.4,v 1.4.2.1 2005/09/24 01:59:37 keramida Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man4/esp.4 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
 .Dd September 18, 2005
 .Dt ESP 4
@@ -32,8 +32,13 @@
 .Nm esp
 .Nd Qlogic FEPS and FAS366 SCSI driver
 .Sh SYNOPSIS
-.Cd device scbus
-.Cd device esp
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device scbus"
+.Cd "device esp"
+.Ed
 .Sh HARDWARE
 The
 .Nm

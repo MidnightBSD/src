@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ugen/Makefile,v 1.14 2005/06/04 10:58:38 schweikh Exp $
+# $FreeBSD: release/7.0.0/sys/modules/ugen/Makefile 146957 2005-06-04 10:58:39Z schweikh $
 
 .PATH: ${.CURDIR}/../../dev/usb
 

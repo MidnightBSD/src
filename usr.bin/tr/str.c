@@ -33,13 +33,12 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/tr/str.c,v 1.24 2004/11/14 05:15:25 jkh Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/tr/str.c 166134 2007-01-20 08:24:02Z maxim $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)str.c	8.2 (Berkeley) 4/28/95";
 #endif
 
-#include <sys/cdefs.h>
 #include <sys/types.h>
 
 #include <ctype.h>

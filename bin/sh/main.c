@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/28/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/main.c,v 1.26 2004/04/06 20:06:51 markm Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/sh/main.c 163085 2006-10-07 16:51:16Z stefanf $");
 
 #include <stdio.h>
 #include <signal.h>
@@ -155,6 +155,8 @@ main(int argc, char *argv[])
 	procargs(argc, argv);
 	if (getpwd() == NULL && iflag)
 		out2str("sh: cannot determine working directory\n");
+	if (getpwd() != NULL)
+		setvar ("PWD", getpwd(), VEXPORT);
 	if (argv[0] && argv[0][0] == '-') {
 		state = 1;
 		read_profile("/etc/profile");
@@ -209,7 +211,7 @@ cmdloop(int top)
 		inter = 0;
 		if (iflag && top) {
 			inter++;
-			showjobs(1, 0, 0);
+			showjobs(1, SHOWJOBS_DEFAULT);
 			chkmail(0);
 			flushout(&output);
 		}
@@ -314,19 +316,21 @@ int
 dotcmd(int argc, char **argv)
 {
 	struct strlist *sp;
+	char *fullname;
+
+	if (argc < 2)
+		error("missing filename");
+
 	exitstatus = 0;
 
 	for (sp = cmdenviron; sp ; sp = sp->next)
 		setvareq(savestr(sp->text), VSTRFIXED|VTEXTFIXED);
 
-	if (argc >= 2) {		/* That's what SVR2 does */
-		char *fullname = find_dot_file(argv[1]);
-
-		setinputfile(fullname, 1);
-		commandname = fullname;
-		cmdloop(0);
-		popfile();
-	}
+	fullname = find_dot_file(argv[1]);
+	setinputfile(fullname, 1);
+	commandname = fullname;
+	cmdloop(0);
+	popfile();
 	return exitstatus;
 }
 

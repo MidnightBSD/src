@@ -39,7 +39,7 @@
 static char sccsid[] = "@(#)pr_tbl.c	8.1 (Berkeley) 5/31/93";
 #endif
 static const char rcsid[] =
- "$FreeBSD: src/games/primes/pr_tbl.c,v 1.5 2002/10/09 19:38:55 fanf Exp $";
+ "$FreeBSD: release/7.0.0/games/primes/pr_tbl.c 104720 2002-10-09 19:38:55Z fanf $";
 #endif /* not lint */
 
 /*

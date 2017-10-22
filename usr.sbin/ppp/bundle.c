@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/bundle.c,v 1.136 2004/11/29 17:11:14 brian Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ppp/bundle.c 138198 2004-11-29 17:11:15Z brian $
  */
 
 #include <sys/param.h>

@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD: src/usr.sbin/timed/SMM.doc/timedop/Makefile,v 1.2 2001/07/20 06:20:22 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/timed/SMM.doc/timedop/Makefile 172506 2007-10-10 16:59:15Z cvs2svn $
 
 DIR=	smm/11.timedop
 SRCS=	timed.ms

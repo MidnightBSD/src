@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/vis/extern.h,v 1.2 2002/03/22 01:42:42 imp Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/vis/extern.h 92922 2002-03-22 01:42:45Z imp $
  */
 
 extern int foldit(char *, int, int);

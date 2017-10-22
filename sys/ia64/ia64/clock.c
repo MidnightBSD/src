@@ -25,14 +25,16 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ia64/ia64/clock.c,v 1.25 2005/04/22 05:04:58 marcel Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/clock.c 171719 2007-08-04 19:28:19Z marcel $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
+#include <sys/clock.h>
 #include <sys/queue.h>
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/clock.h>
 #include <sys/timetc.h>
 #include <sys/pcpu.h>
 
@@ -40,68 +42,9 @@ __FBSDID("$FreeBSD: src/sys/ia64/ia64/clock.c,v 1.25 2005/04/22 05:04:58 marcel 
 #include <machine/cpu.h>
 #include <machine/efi.h>
 
-static int sysctl_machdep_adjkerntz(SYSCTL_HANDLER_ARGS);
-
-int disable_rtc_set;		/* disable resettodr() if != 0 */
-SYSCTL_INT(_machdep, CPU_DISRTCSET, disable_rtc_set,
-	CTLFLAG_RW, &disable_rtc_set, 0, "");
-
-int wall_cmos_clock;		/* wall	CMOS clock assumed if != 0 */
-SYSCTL_INT(_machdep, CPU_WALLCLOCK, wall_cmos_clock,
-	CTLFLAG_RW, &wall_cmos_clock, 0, "");
-
-int adjkerntz;			/* local offset	from GMT in seconds */
-SYSCTL_PROC(_machdep, CPU_ADJKERNTZ, adjkerntz, CTLTYPE_INT|CTLFLAG_RW,
-	&adjkerntz, 0, sysctl_machdep_adjkerntz, "I", "");
-
-static int
-sysctl_machdep_adjkerntz(SYSCTL_HANDLER_ARGS)
-{
-	int error;
-
-	error = sysctl_handle_int(oidp, oidp->oid_arg1, oidp->oid_arg2, req);
-	if (!error && req->newptr)
-		resettodr();
-	return (error);
-}
-
 uint64_t ia64_clock_reload;
 
 static int clock_initialized = 0;
-
-static short dayyr[12] = {
-	0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
-};
-
-/*
- * Leap years
- *
- * Our well-known calendar, the Gregorian calendar, is intended to be of the
- * same length as the cycle of the seasons (the tropical year). However, the
- * tropical year is approximately 365.2422 days. If the calendar year always
- * consisted of 365 days, it would be short of the tropical year by about
- * 0.2422 days every year. Over a century, the beginning of spring in the
- * northern hemisphere would shift from March 20 to April 13.
- *
- * When Pope Gregory XIII instituted the Gregorian calendar in 1582, the
- * calendar was shifted to make the beginning of spring fall on March 21 and
- * a new system of leap days was introduced. Instead of intercalating a leap
- * day every fourth year, 97 leap days would be introduced every 400 years,
- * according to the following rule:
- *
- *     Years evenly divisible by 4 are leap years, with the exception of
- *     centurial years that are not evenly divisible by 400.
- *
- * Thus, the average Gregorian calendar year is 365.2425 days in length. This
- * agrees to within half a minute of the length of the tropical year.
- */
-
-static __inline
-int isleap(int yr)
-{
-
-	return ((yr % 4) ? 0 : (yr % 100) ? 1 : (yr % 400) ? 0 : 1);
-}
 
 #ifndef SMP
 static timecounter_get_t ia64_get_timecount;
@@ -129,6 +72,7 @@ pcpu_initclock(void)
 	PCPU_SET(clock, ia64_get_itc());
 	ia64_set_itm(PCPU_GET(clock) + ia64_clock_reload);
 	ia64_set_itv(CLOCK_VECTOR);	/* highest priority class */
+	ia64_srlz_d();
 }
 
 /*
@@ -170,10 +114,10 @@ cpu_stopprofclock(void)
 void
 inittodr(time_t base)
 {
+	long days;
 	struct efi_tm tm;
 	struct timespec ts;
-	long days;
-	int yr;
+	struct clocktime ct;
 
 	efi_get_time(&tm);
 
@@ -191,16 +135,17 @@ inittodr(time_t base)
 			printf("ERROR: COULD NOT RESET EFI CLOCK!\n");
 	}
 
-	days = 0L;
-	for (yr = 1970; yr < (int)tm.tm_year; yr++)
-		days += isleap(yr) ? 366L : 365L;
-	days += dayyr[tm.tm_mon - 1] + tm.tm_mday - 1L;
-	if (isleap(tm.tm_year) && tm.tm_mon > 2)
-		days++;
-
-	ts.tv_sec = ((days * 24L + tm.tm_hour) * 60L + tm.tm_min) * 60L
-	    + tm.tm_sec + ((wall_cmos_clock) ? adjkerntz : 0L);
-	ts.tv_nsec = tm.tm_nsec;
+	ct.nsec = tm.tm_nsec;
+	ct.sec = tm.tm_sec;
+	ct.min = tm.tm_min;
+	ct.hour = tm.tm_hour;
+	ct.day = tm.tm_mday;
+	ct.mon = tm.tm_mon;
+	ct.year = tm.tm_year;
+	ct.dow = -1;
+	if (clock_ct_to_ts(&ct, &ts))
+		printf("Invalid time in clock: check and reset the date!\n");
+	ts.tv_sec += utc_offset();
 
 	/*
 	 * The EFI clock is supposed to be a real-time clock, whereas the
@@ -232,35 +177,26 @@ inittodr(time_t base)
 void
 resettodr()
 {
+	struct timespec ts;
+	struct clocktime ct;
 	struct efi_tm tm;
-	long t;
-	int x;
 
 	if (!clock_initialized || disable_rtc_set)
 		return;
 
 	efi_get_time(&tm);
-	tm.tm_nsec = 0;
+	getnanotime(&ts);
+	ts.tv_sec -= utc_offset();
+	clock_ts_to_ct(&ts, &ct);
 
-	t = time_second - ((wall_cmos_clock) ? adjkerntz : 0L);
+	tm.tm_nsec = ts.tv_nsec;
+	tm.tm_sec = ct.sec;
+	tm.tm_min = ct.min;
+	tm.tm_hour = ct.hour;
 
-	tm.tm_sec = t % 60;	t /= 60L;
-	tm.tm_min = t % 60;	t /= 60L;
-	tm.tm_hour = t % 24;	t /= 24L;
-
-	tm.tm_year = 1970;
-	x = (isleap(tm.tm_year)) ? 366 : 365;
-	while (t > x) {
-		t -= x;
-		tm.tm_year++;
-		x = (isleap(tm.tm_year)) ? 366 : 365;
-	}
-
-	x = 11;
-	while (t < dayyr[x])
-		x--;
-	tm.tm_mon = x + 1;
-	tm.tm_mday = t - dayyr[x] + 1;
+	tm.tm_year = ct.year;
+	tm.tm_mon = ct.mon;
+	tm.tm_mday = ct.day;
 	if (efi_set_time(&tm))
 		printf("ERROR: COULD NOT RESET EFI CLOCK!\n");
 }

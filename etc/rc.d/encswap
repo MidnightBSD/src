@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/encswap,v 1.8.2.1 2005/08/16 09:04:55 pjd Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/encswap 148765 2005-08-05 23:38:51Z pjd $
 #
 
 # PROVIDE: disks

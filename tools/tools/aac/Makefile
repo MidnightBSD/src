@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/tools/aac/Makefile,v 1.4 2004/12/21 08:47:26 ru Exp $
+# $FreeBSD: release/7.0.0/tools/tools/aac/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 PROG=	aac_checkq
 NO_MAN=

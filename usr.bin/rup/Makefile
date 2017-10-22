@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/rup/Makefile,v 1.5 2001/03/27 10:52:09 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/rup/Makefile 74848 2001-03-27 10:52:19Z ru $
 
 PROG=	rup
 

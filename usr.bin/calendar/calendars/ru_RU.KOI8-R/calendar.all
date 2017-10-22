@@ -1,7 +1,7 @@
 /*
  * Русский календарь
  *
- * $FreeBSD: src/usr.bin/calendar/calendars/ru_RU.KOI8-R/calendar.all,v 1.6 2003/12/15 11:51:26 maxim Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/calendar/calendars/ru_RU.KOI8-R/calendar.all 123550 2003-12-15 11:51:26Z maxim $
  */
 
 #ifndef _ru_RU_KOI8_R_all

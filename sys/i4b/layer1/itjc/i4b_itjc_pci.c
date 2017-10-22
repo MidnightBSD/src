@@ -33,12 +33,12 @@
  *
  *	i4b_itjc_pci.c: NetJet-S hardware driver
  *	----------------------------------------
- *      last edit-date: [Thu Jan 11 11:29:38 2001]
+ *      last edit-date: [Sat May 13 15:25:47 2006]
  *
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/itjc/i4b_itjc_pci.c,v 1.15 2005/05/29 04:42:28 nyan Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer1/itjc/i4b_itjc_pci.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include "opt_i4b.h"
 
@@ -47,7 +47,6 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer1/itjc/i4b_itjc_pci.c,v 1.15 2005/05/29 04:
 #include <sys/systm.h>
 #include <sys/mbuf.h>
 
-#include <machine/clock.h>
 #include <machine/bus.h>
 #include <machine/resource.h>
 #include <sys/bus.h>
@@ -59,9 +58,9 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer1/itjc/i4b_itjc_pci.c,v 1.15 2005/05/29 04:
 #include <sys/socket.h>
 #include <net/if.h>
 
-#include <machine/i4b_debug.h>
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_trace.h>
+#include <i4b/include/i4b_debug.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_trace.h>
 
 #include <i4b/include/i4b_global.h>
 #include <i4b/include/i4b_mbuf.h>
@@ -210,8 +209,8 @@ enum tiger_reg_bits
 
 	TIGER_PIB_CYCLE_TIMING_MASK	= 0x30,
 		TIGER_PIB_3_CYCLES	= 0x00,
-		TIGER_PIB_5_CYCLES	= 0x01,
-		TIGER_PIB_12_CYCLES	= 0x10,
+		TIGER_PIB_5_CYCLES	= 0x10,
+		TIGER_PIB_12_CYCLES	= 0x20,
 
 	TIGER_RESET_MASK		= 0x0F,
 		TIGER_RESET_PULSE_COUNT	= 0x08,
@@ -223,7 +222,7 @@ enum tiger_reg_bits
 /* DMA Operation */
 	TIGER_DMA_RESTART_MASK		= 0x02,
 		TIGER_HOLD_DMA		= 0x00,
-		TIGER_RESTART_DMA	= 0x00,
+		TIGER_RESTART_DMA	= 0x02,
 
 	TIGER_DMA_ENABLE_MASK		= 0x01,
 		TIGER_ENABLE_DMA	= 0x01,
@@ -250,13 +249,13 @@ enum tiger_reg_bits
 		TIGER_AUX_4_IS_INPUT	= 0x00,
 		TIGER_AUX_4_IS_OUTPUT	= 0x10,
 		TIGER_AUX_3_IS_INPUT	= 0x00,
-		TIGER_AUX_3_IS_OUTPUT	= 0x80,
+		TIGER_AUX_3_IS_OUTPUT	= 0x08,
 		TIGER_AUX_2_IS_INPUT	= 0x00,
-		TIGER_AUX_2_IS_OUTPUT	= 0x40,
+		TIGER_AUX_2_IS_OUTPUT	= 0x04,
 		TIGER_AUX_1_IS_INPUT	= 0x00,
-		TIGER_AUX_1_IS_OUTPUT	= 0x20,
+		TIGER_AUX_1_IS_OUTPUT	= 0x02,
 		TIGER_AUX_0_IS_INPUT	= 0x00,
-		TIGER_AUX_0_IS_OUTPUT	= 0x10,
+		TIGER_AUX_0_IS_OUTPUT	= 0x01,
 		TIGER_AUX_NJ_DEFAULT	= 0xEF, /* All but ISAC int is output */
 
 /* Interrupt 0 Mask & Status */
@@ -1569,7 +1568,7 @@ itjc_attach(device_t dev)
 	++res_init_level;
 
 	error = bus_setup_intr(dev, sc->sc_resources.irq, INTR_TYPE_NET,
-			 itjc_intr, sc, &ih);
+			 NULL, itjc_intr, sc, &ih);
 
 	if (error)
 	{
@@ -1901,7 +1900,7 @@ itjc_bchannel_setup(int unit, int h_chan, int bprot, int activate)
 static void
 itjc_bchannel_start(int unit, int h_chan)
 {
-#if Buggy_code
+#if 0 /* Buggy code */
 	/*
 	 * I disabled this routine because it was causing crashes when
 	 * this driver was used with the ISP (kernel SPPP) protocol driver.

@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)sel_subs.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pax/sel_subs.c,v 1.19 2004/04/06 20:06:48 markm Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/pax/sel_subs.c 169993 2007-05-25 17:53:38Z brian $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -412,7 +412,7 @@ trng_add(char *str)
 		 */
 		if (str_sec(str, &(pt->low_time)) < 0) {
 			paxwarn(1, "Illegal lower time range %s", str);
-			(void)free((char *)pt);
+			free(pt);
 			goto out;
 		}
 		pt->flgs |= HASLOW;
@@ -424,7 +424,7 @@ trng_add(char *str)
 		 */
 		if (str_sec(up_pt, &(pt->high_time)) < 0) {
 			paxwarn(1, "Illegal upper time range %s", up_pt);
-			(void)free((char *)pt);
+			free(pt);
 			goto out;
 		}
 		pt->flgs |= HASHIGH;
@@ -436,7 +436,7 @@ trng_add(char *str)
 			if (pt->low_time > pt->high_time) {
 				paxwarn(1, "Upper %s and lower %s time overlap",
 					up_pt, str);
-				(void)free((char *)pt);
+				free(pt);
 				return(-1);
 			}
 		}

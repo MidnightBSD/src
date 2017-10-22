@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vis.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/include/vis.h,v 1.11 2003/10/30 10:40:49 phk Exp $
+ * $FreeBSD: release/7.0.0/include/vis.h 121728 2003-10-30 10:40:49Z phk $
  */
 
 #ifndef _VIS_H_

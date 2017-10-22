@@ -22,7 +22,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/include/ofw_machdep.h,v 1.2 2004/08/16 13:07:40 ssouhlal Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/ofw_machdep.h 160714 2006-07-26 17:12:54Z marcel $
  */
 
 #ifndef _MACHINE_OFW_MACHDEP_H_
@@ -30,7 +30,7 @@
 
 #include <sys/bus.h>
 
+int  OF_decode_addr(phandle_t, int, bus_space_tag_t *, bus_space_handle_t *);
 void OF_getetheraddr(device_t dev, u_char *addr);
-int mem_valid(vm_offset_t addr, int len);
 
 #endif /* _MACHINE_OFW_MACHDEP_H_ */

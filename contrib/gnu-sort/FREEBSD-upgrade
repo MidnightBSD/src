@@ -1,4 +1,4 @@
-$FreeBSD: src/contrib/gnu-sort/FREEBSD-upgrade,v 1.4 2004/07/06 00:33:52 ache Exp $
+$FreeBSD: release/7.0.0/contrib/gnu-sort/FREEBSD-upgrade 172506 2007-10-10 16:59:15Z cvs2svn $
 
 GNU Sort
 	originals can be found at:      ftp://ftp.gnu.org/gnu/coreutils/

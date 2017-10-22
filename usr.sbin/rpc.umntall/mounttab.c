@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/rpc.umntall/mounttab.c,v 1.6 2003/05/03 21:06:39 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/rpc.umntall/mounttab.c 114601 2003-05-03 21:06:42Z obrien $");
 
 #include <sys/syslog.h>
 

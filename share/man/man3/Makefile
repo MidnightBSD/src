@@ -1,5 +1,7 @@
 #	@(#)Makefile	8.2 (Berkeley) 12/13/93
-# $FreeBSD: src/share/man/man3/Makefile,v 1.36 2005/05/18 16:23:11 keramida Exp $
+# $FreeBSD: release/7.0.0/share/man/man3/Makefile 172500 2007-10-09 23:31:11Z obrien $
+
+.include <bsd.own.mk>
 
 MAN=		assert.3 \
 		bitstring.3 \
@@ -8,6 +10,7 @@ MAN=		assert.3 \
 		intro.3 \
 		${PTHREAD_MAN} \
 		queue.3 \
+		siginfo.3 \
 		stdarg.3 \
 		sysexits.3 \
 		tgmath.3 \
@@ -109,6 +112,7 @@ MLINKS+=	tree.3 RB_EMPTY.3 \
 		tree.3 RB_FIND.3 \
 		tree.3 RB_FOREACH.3 \
 		tree.3 RB_GENERATE.3 \
+		tree.3 RB_GENERATE_STATIC.3 \
 		tree.3 RB_HEAD.3 \
 		tree.3 RB_INIT.3 \
 		tree.3 RB_INITIALIZER.3 \
@@ -117,8 +121,10 @@ MLINKS+=	tree.3 RB_EMPTY.3 \
 		tree.3 RB_MAX.3 \
 		tree.3 RB_MIN.3 \
 		tree.3 RB_NEXT.3 \
+		tree.3 RB_NFIND.3 \
 		tree.3 RB_PARENT.3 \
 		tree.3 RB_PROTOTYPE.3 \
+		tree.3 RB_PROTOTYPE_STATIC.3 \
 		tree.3 RB_REMOVE.3 \
 		tree.3 RB_RIGHT.3 \
 		tree.3 RB_ROOT.3 \
@@ -140,7 +146,7 @@ MLINKS+=	tree.3 RB_EMPTY.3 \
 		tree.3 SPLAY_RIGHT.3 \
 		tree.3 SPLAY_ROOT.3
 
-.if !defined(NO_LIBC_R) || !defined(NO_LIBPTHREAD) || !defined(NO_LIBTHR)
+.if ${MK_LIBTHR} != "no" || ${MK_LIBKSE} != "no"
 PTHREAD_MAN=	pthread.3 \
 		pthread_atfork.3 \
 		pthread_attr.3 \
@@ -202,7 +208,8 @@ PTHREAD_MAN=	pthread.3 \
 		pthread_suspend_all_np.3 \
 		pthread_suspend_np.3 \
 		pthread_switch_add_np.3 \
-		pthread_testcancel.3
+		pthread_testcancel.3 \
+		pthread_yield.3
 
 PTHREAD_MLINKS=	pthread_attr.3 pthread_attr_destroy.3 \
 		pthread_attr.3 pthread_attr_getdetachstate.3 \

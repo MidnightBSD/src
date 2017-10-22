@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)netdate.c	8.1 (Berkeley) 5/31/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/date/netdate.c,v 1.18 2004/04/06 20:06:45 markm Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/date/netdate.c 161469 2006-08-20 06:31:24Z imp $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -108,14 +108,14 @@ netsettime(time_t tval)
 		warnx("all ports in use");
 		goto bad;
 	}
+	memset(&msg, 0, sizeof(msg));
 	msg.tsp_type = TSP_SETDATE;
 	msg.tsp_vers = TSPVERSION;
 	if (gethostname(hostname, sizeof(hostname))) {
 		warn("gethostname");
 		goto bad;
 	}
-	(void)strncpy(msg.tsp_name, hostname, sizeof(msg.tsp_name) - 1);
-	msg.tsp_name[sizeof(msg.tsp_name) - 1] = '\0';
+	(void)strlcpy(msg.tsp_name, hostname, sizeof(msg.tsp_name));
 	msg.tsp_seq = htons((u_short)0);
 	msg.tsp_time.tv_sec = htonl((u_long)tval);
 	msg.tsp_time.tv_usec = htonl((u_long)0);

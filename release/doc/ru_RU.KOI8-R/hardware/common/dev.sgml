@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: src/release/doc/ru_RU.KOI8-R/hardware/common/dev.sgml,v 1.14.2.1 2006/01/31 18:30:41 joel Exp $
+     $FreeBSD: release/7.0.0/release/doc/ru_RU.KOI8-R/hardware/common/dev.sgml 158573 2006-05-14 20:31:32Z brueffer $
      $FreeBSDru: frdp/release/doc/ru_RU.KOI8-R/hardware/common/dev.sgml,v 1.18 2005/06/30 11:12:31 den Exp $
 
      Original revision: 1.282
@@ -37,7 +37,7 @@
 
 <sect1 id="support">
   <sect1info>
-    <pubdate>$FreeBSD: src/release/doc/ru_RU.KOI8-R/hardware/common/dev.sgml,v 1.14.2.1 2006/01/31 18:30:41 joel Exp $</pubdate>
+    <pubdate>$FreeBSD: release/7.0.0/release/doc/ru_RU.KOI8-R/hardware/common/dev.sgml 158573 2006-05-14 20:31:32Z brueffer $</pubdate>
   </sect1info>
 
   <title>Поддерживаемые устройства</title>
@@ -219,8 +219,6 @@
 
     &hwlist.pcn;
 
-    &hwlist.lnc;
-
     <para arch="i386,pc98,amd64">SMC 83c17x (EPIC) Ethernet сетевые карты
       (драйвер &man.tx.4;)
     </para>
@@ -268,8 +266,6 @@
     &hwlist.ie;
 
     &hwlist.ep;
-
-    &hwlist.el;
 
     &hwlist.xl;
 

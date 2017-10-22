@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/savecore/Makefile,v 1.13 2005/01/10 10:44:56 delphij Exp $
+# $FreeBSD: release/7.0.0/sbin/savecore/Makefile 139975 2005-01-10 10:44:56Z delphij $
 
 PROG=	savecore
 WARNS?=	6

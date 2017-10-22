@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/contrib/dev/oltr/if_oltr_pci.c,v 1.2 2005/06/10 16:49:03 brooks Exp $
+ * $FreeBSD: release/7.0.0/sys/contrib/dev/oltr/if_oltr_pci.c 151297 2005-10-13 21:11:20Z ru $
  */
 
 #include <sys/param.h>
@@ -241,7 +241,6 @@ oltr_pci_detach(device_t dev)
 	s = splimp();
 
 	iso88025_ifdetach(ifp, ISO88025_BPF_SUPPORTED);
-	if_free(ifp);
 	if (sc->state > OL_CLOSED)
 		oltr_stop(sc);
 
@@ -250,6 +249,8 @@ oltr_pci_detach(device_t dev)
 
 	bus_teardown_intr(dev, sc->irq_res, sc->oltr_intrhand);
 	bus_release_resource(dev, SYS_RES_IRQ, 0, sc->irq_res);
+
+	if_free(ifp);
 
 	/* Deallocate all dynamic memory regions */
 	for (i = 0; i < RING_BUFFER_LEN; i++) {

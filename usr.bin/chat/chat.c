@@ -78,7 +78,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/chat/chat.c,v 1.21 2003/10/31 06:22:03 kientzle Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/chat/chat.c 121784 2003-10-31 06:22:03Z kientzle $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

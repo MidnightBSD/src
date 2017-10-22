@@ -3,7 +3,7 @@ $ ee.i18n.guide for more information
 $ 
 $ For ee patchlevel 3
 $ 
-$ $FreeBSD: src/usr.bin/ee/nls/pl_PL.ISO8859-2/ee.msg,v 1.6 2005/02/27 19:42:48 phantom Exp $
+$ $FreeBSD: release/7.0.0/usr.bin/ee/nls/pl_PL.ISO8859-2/ee.msg 142685 2005-02-27 19:42:48Z phantom $
 $ 
 $ 
 $set 1

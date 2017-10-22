@@ -1,5 +1,5 @@
-/* $FreeBSD: src/sys/nfs4client/nfs4_dev.c,v 1.7 2005/01/07 01:45:50 imp Exp $ */
-/* $Id: nfs4_dev.c,v 1.1.1.2 2006-02-25 02:37:39 laffer1 Exp $ */
+/* $FreeBSD: release/7.0.0/sys/nfs4client/nfs4_dev.c 158505 2006-05-13 00:16:35Z cel $ */
+/* $Id: nfs4_dev.c,v 1.10 2003/11/05 14:58:59 rees Exp $ */
 
 /*-
  * copyright (c) 2003
@@ -49,7 +49,7 @@
 #define NFS4DEV_NAME "nfs4"
 #define CDEV_MINOR 1
 
-MALLOC_DEFINE(M_NFS4DEV, "NFS4 dev", "NFS4 device");
+MALLOC_DEFINE(M_NFS4DEV, "nfs4_dev", "NFS4 device");
 
 struct nfs4dev_upcall {
   	/* request msg */
@@ -152,11 +152,12 @@ nfs4dev_reply(caddr_t addr)
 		return EINVAL;
 	}
 
-	if (m->msg_len == 0 || m->msg_len > NFS4DEV_MSG_MAX_DATALEN) {
+	if (m->msg_len < sizeof(*m) - NFS4DEV_MSG_MAX_DATALEN ||
+		m->msg_len > NFS4DEV_MSG_MAX_DATALEN) {
 	  	NFS4DEV_DEBUG("bad message length\n");
 		return EINVAL;
 	}
-	  	
+
 	/* match the reply with a request */
 	mtx_lock(&nfs4dev_waitq_mtx);
 	TAILQ_FOREACH(u, &nfs4dev_waitq, up_entry) {
@@ -197,8 +198,10 @@ found:
 
 	return 0;
 bad:
-	u->up_error = error;
-	wakeup(u);
+	if (u) {
+		u->up_error = error;
+		wakeup(u);
+	}
 	return error;
 }
 

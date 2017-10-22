@@ -1,5 +1,5 @@
 char rcsid[] =
-  "$FreeBSD: src/gnu/usr.bin/patch/patch.c,v 1.21 2002/10/13 01:18:33 kris Exp $";
+  "$FreeBSD: release/7.0.0/gnu/usr.bin/patch/patch.c 105017 2002-10-13 01:18:33Z kris $";
 
 /* patch - a program to apply diffs to original files
  *
@@ -8,7 +8,7 @@ char rcsid[] =
  * This program may be copied as long as you don't try to make any
  * money off of it, or pretend that you wrote it.
  *
- * $Log: not supported by cvs2svn $
+ * $Log: patch.c,v $
  * Revision 2.0.2.0  90/05/01  22:17:50  davison
  * patch12u: unidiff support added
  *

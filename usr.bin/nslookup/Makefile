@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/nslookup/Makefile,v 1.4.2.1 2005/07/30 07:56:27 des Exp $
+# $FreeBSD: release/7.0.0/usr.bin/nslookup/Makefile 170221 2007-06-02 23:19:58Z dougb $
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind9
 LIB_BIND_REL=	../../lib/bind
@@ -13,8 +13,11 @@ PROG=		nslookup
 SRCS+=		dighost.c nslookup.c
 
 CFLAGS+=	-I${SRCDIR}/include
+CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
 
-DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD}
-LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD}
+DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
+LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}
+
+MANFILTER=	sed -e "s@^host \[server\]@\\\fBhost\\\fR \\\fI[server]\\\fR@"
 
 .include <bsd.prog.mk>

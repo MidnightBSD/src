@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/setpmac/Makefile,v 1.5 2005/01/27 14:52:47 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/setpmac/Makefile 140909 2005-01-27 14:52:47Z delphij $
 
 PROG=   setpmac
 MAN=	setpmac.8

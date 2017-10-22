@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/rpc.ypxfrd/Makefile,v 1.11 2001/07/20 06:20:18 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/rpc.ypxfrd/Makefile 80029 2001-07-20 06:20:32Z obrien $
 
 .PATH: ${.CURDIR}/../../usr.sbin/ypserv
 

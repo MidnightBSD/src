@@ -33,7 +33,7 @@
 static	char sccsid[] = "@(#)update.c 1.2 91/03/11 Copyr 1986 Sun Micro";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/rpc.ypupdated/update.c,v 1.7 2002/02/06 15:26:05 des Exp $";
+  "$FreeBSD: release/7.0.0/usr.sbin/rpc.ypupdated/update.c 166735 2007-02-15 02:45:14Z trhodes $";
 #endif /* not lint */
 
 /*
@@ -328,4 +328,3 @@ match(char *line, char *name)
 		(line[len] == ' ' || line[len] == '\t'));
 }
 #endif /* !YP */
-

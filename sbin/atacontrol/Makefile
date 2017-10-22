@@ -1,4 +1,4 @@
-#$FreeBSD: src/sbin/atacontrol/Makefile,v 1.8 2003/11/05 19:20:41 johan Exp $
+#$FreeBSD: release/7.0.0/sbin/atacontrol/Makefile 122133 2003-11-05 19:20:41Z johan $
 
 PROG=	atacontrol
 MAN=	atacontrol.8

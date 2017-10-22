@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/etc/rc.shutdown,v 1.30.2.1 2005/12/21 07:11:34 dougb Exp $
+# $FreeBSD: release/7.0.0/etc/rc.shutdown 153027 2005-12-02 20:06:07Z dougb $
 #
 
 # Site-specific closing actions for daemons run by init on shutdown,

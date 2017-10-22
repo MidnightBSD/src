@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/tools/crypto/ubsecstats.c,v 1.3 2003/03/24 17:36:50 sam Exp $
+ * $FreeBSD: release/7.0.0/tools/tools/crypto/ubsecstats.c 158719 2006-05-18 13:22:44Z pjd $
  */
 #include <stdio.h>
 #include <sys/types.h>
@@ -49,11 +49,13 @@ main(int argc, char *argv[])
 	printf("invalid %u badsession %u badflags %u\n",
 		stats.hst_invalid, stats.hst_badsession, stats.hst_badflags);
 	printf("nodesc %u badalg %u nomem %u queuefull %u\n",
-		stats.hst_badalg, stats.hst_nomem, stats.hst_queuefull);
+		stats.hst_nodesc, stats.hst_badalg, stats.hst_nomem,
+		stats.hst_queuefull);
 	printf("dmaerr %u mcrerr %u nodmafree %u\n",
 		stats.hst_dmaerr, stats.hst_mcrerr, stats.hst_nodmafree);
 	printf("lenmismatch %u skipmisatch %u iovmisalined %u\n",
-		stats.hst_lenmismatch, stats.hst_skipmismatch, stats.hst_iovmisaligned);
+		stats.hst_lenmismatch, stats.hst_skipmismatch,
+		stats.hst_iovmisaligned);
 	printf("noirq %u unaligned %u nomap %u noload %u nomcl %u\n",
 		stats.hst_noirq, stats.hst_unaligned, stats.hst_nomap,
 		stats.hst_noload, stats.hst_nomcl);

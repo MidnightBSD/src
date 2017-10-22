@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/conscontrol/conscontrol.c,v 1.4 2004/06/18 06:33:44 green Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sbin/conscontrol/conscontrol.c 130676 2004-06-18 06:33:44Z green $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

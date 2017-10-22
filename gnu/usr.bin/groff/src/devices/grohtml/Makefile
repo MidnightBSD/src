@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/groff/src/devices/grohtml/Makefile,v 1.7 2004/12/21 08:47:00 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/src/devices/grohtml/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 PROG_CXX=	post-grohtml
 SRCS=		post-html.cpp html-table.cpp html-text.cpp output.cpp

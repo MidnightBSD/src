@@ -10,9 +10,9 @@
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
 .\"
-.\" $FreeBSD: src/share/man/man4/syncache.4,v 1.1.14.1 2005/08/29 09:10:22 glebius Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man4/syncache.4 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
-.Dd August 31, 2001
+.Dd December 18, 2007
 .Dt SYNCACHE 4
 .Os
 .Sh NAME
@@ -95,7 +95,7 @@ applied to the connection, precluding use of features like window scale,
 timestamps, or exact MSS sizing.
 As the returning ACK establishes the connection, it may be possible for
 an attacker to ACK flood a machine in an attempt to create a connection.
-While steps have been taken to militate this risk, this may provide a way
+While steps have been taken to mitigate this risk, this may provide a way
 to bypass firewalls which filter incoming segments with the SYN bit set.
 .Pp
 The
@@ -132,7 +132,7 @@ Read-only, tunable via
 .Xr loader 8 .
 .It Va rexmtlimit
 Maximum number of times a SYN,ACK is retransmitted before being discarded.
-The default of 3 retransmits corresponds to a 15 second timeout, this value
+The default of 3 retransmits corresponds to a 45 second timeout, this value
 may be increased depending on the RTT to client machines.
 Tunable via
 .Xr sysctl 3 .

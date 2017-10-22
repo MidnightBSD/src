@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: util.h,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: util.h,v 1.23 2001/11/30 01:59:38 gson Exp $ */
 
 #ifndef ISC_UTIL_H
 #define ISC_UTIL_H 1

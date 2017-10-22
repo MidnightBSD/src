@@ -16,7 +16,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/gnu/usr.bin/man/man/man.c,v 1.62 2003/10/26 06:40:37 bde Exp $";
+  "$FreeBSD: release/7.0.0/gnu/usr.bin/man/man/man.c 172325 2007-09-25 21:41:22Z edwin $";
 #endif /* not lint */
 
 #define MAN_MAIN
@@ -24,6 +24,7 @@ static const char rcsid[] =
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/param.h>
+#include <sys/utsname.h>
 #include <ctype.h>
 #include <errno.h>
 #ifdef __FreeBSD__
@@ -73,6 +74,7 @@ extern int do_system_command ();
 
 char *prognam;
 static char *pager;
+static char *machine_arch;
 static char *machine;
 static char *manp;
 static char *manpathlist[MAXDIRS];
@@ -362,7 +364,11 @@ man_getopt (argc, argv)
 	  apropos++;
 	  break;
 	case 'm':
-	  machine = optarg;
+	  machine_arch = optarg;
+	  if ((machine = strchr(optarg, ':')) != NULL)
+	    *machine++ = '\0';
+	  else
+	    machine = optarg;
 	  break;
 #ifdef __FreeBSD__
 	case 'o':
@@ -468,11 +474,23 @@ man_getopt (argc, argv)
   if (debug)
     fprintf (stderr, "\nusing %s as pager\n", pager);
 
+  if (machine_arch == NULL && (machine_arch = getenv ("MACHINE_ARCH")) == NULL)
+    machine_arch = MACHINE_ARCH;
+
   if (machine == NULL && (machine = getenv ("MACHINE")) == NULL)
-    machine = MACHINE;
+    {
+      static struct utsname utsname;
+
+      if (uname(&utsname) == -1)
+	{
+	  perror ("uname");
+	  exit (1);
+	}
+      machine = utsname.machine;
+    }
 
   if (debug)
-    fprintf (stderr, "\nusing %s architecture\n", machine);
+    fprintf (stderr, "\nusing %s:%s architecture\n", machine_arch, machine);
 
   if (manp == NULL)
     {
@@ -866,11 +884,26 @@ ultimate_source (name, path)
 
  next:
 
+#if HAVE_LIBZ > 0
+  if ((fp = gzopen (ult, "r")) == NULL)
+  {
+    /* check for the compressed version too */
+    strlcat(ult, ".gz", FILENAME_MAX);
+    if ((fp = gzopen (ult, "r")) == NULL)
+      return ult; /* we munged it, but it doesn't exist anyway */
+  }
+#else
   if ((fp = fopen (ult, "r")) == NULL)
     return ult;
+#endif
 
+#if HAVE_LIBZ > 0
+  end = gzgets (fp, buf, BUFSIZ);
+  gzclose(fp);
+#else
   end = fgets (buf, BUFSIZ, fp);
   fclose(fp);
+#endif
 
   if (!end || strlen (buf) < 5)
     return ult;
@@ -1497,6 +1530,19 @@ try_section (path, section, longsec, name, glob)
 	  arch_search--;
 	  if (found && !findall)   /* only do this architecture... */
 	    return found;
+	}
+      if (strcmp(machine_arch, machine) != 0)
+	{
+	  snprintf(buf, sizeof(buf), "%s/man%s/%s", path, section, machine_arch);
+	  if (is_directory (buf) == 1)
+	    {
+	      snprintf(buf, sizeof(buf), "%s/%s", machine_arch, name);
+	      arch_search++;
+	      found = try_section (path, section, longsec, buf, glob);
+	      arch_search--;
+	      if (found && !findall)   /* only do this architecture... */
+		return found;
+	    }
 	}
     }
 

@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/groff/src/preproc/Makefile,v 1.2 2002/10/29 14:56:06 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/src/preproc/Makefile 106143 2002-10-29 14:56:09Z ru $
 
 SUBDIR=		eqn grn html pic refer soelim tbl
 

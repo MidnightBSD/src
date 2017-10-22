@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/colldef/be_BY.CP1131.src,v 1.1 2003/12/20 11:18:42 ache Exp $
+# $FreeBSD: release/7.0.0/share/colldef/be_BY.CP1131.src 123682 2003-12-20 11:18:43Z ache $
 charmap map.CP1131
 order \
 # controls

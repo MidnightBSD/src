@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/add/perform.c,v 1.77.8.2 2006/01/16 19:48:17 flz Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/add/perform.c 174854 2007-12-22 06:32:46Z cvs2svn $");
 
 #include <err.h>
 #include <paths.h>
@@ -245,9 +245,9 @@ pkg_do(char *pkg)
      */
     if ((isinstalledpkg(Plist.name) > 0 ||
          matchbyorigin(Plist.origin, NULL) != NULL) && !Force) {
-	warnx("package '%s' or its older version already installed",
-	      Plist.name);
-	code = 1;
+	warnx("package '%s' or its older version already installed%s",
+	      Plist.name, FailOnAlreadyInstalled ? "" : " (ignored)");
+	code = FailOnAlreadyInstalled != FALSE;
 	goto success;	/* close enough for government work */
     }
 

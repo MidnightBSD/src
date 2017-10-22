@@ -27,7 +27,7 @@
  *	i4brunppp - run userland ppp for incoming call from rbch i/f
  *	------------------------------------------------------------
  *
- * $FreeBSD: src/share/examples/isdn/i4brunppp/i4brunppp.c,v 1.3 2003/01/01 18:48:48 schweikh Exp $
+ * $FreeBSD: release/7.0.0/share/examples/isdn/i4brunppp/i4brunppp.c 171272 2007-07-06 07:21:56Z bz $
  *
  *      last edit-date: [Sat Jul 21 13:38:10 2001]
  *
@@ -59,8 +59,8 @@
 #include <time.h>
 #include <ctype.h>
 
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_rbch_ioctl.h>
+#include <i4b/i4b_ioctl.h>
+#include <i4b/i4b_rbch_ioctl.h>
 
 #define I4BDEVICE	"/dev/i4b"
 

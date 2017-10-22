@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/db_interface.c,v 1.5 2005/06/23 11:38:47 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/db_interface.c 167009 2007-02-26 05:17:47Z kevlo $");
 #include "opt_ddb.h"
 
 #include <sys/param.h>
@@ -53,7 +53,6 @@ __FBSDID("$FreeBSD: src/sys/arm/arm/db_interface.c,v 1.5 2005/06/23 11:38:47 cog
 #include <vm/vm_extern.h>
 
 #include <machine/db_machdep.h>
-#include <machine/katelib.h>
 #include <machine/vmparam.h>
 #include <machine/cpu.h>
 
@@ -109,7 +108,7 @@ db_access_und_sp(struct db_variable *vp, db_expr_t *valp, int rw)
 		*valp = get_stackptr(PSR_UND32_MODE);
 		return (1);
 	}
-	return(0);
+	return (0);
 }
 
 int
@@ -120,7 +119,7 @@ db_access_abt_sp(struct db_variable *vp, db_expr_t *valp, int rw)
 		*valp = get_stackptr(PSR_ABT32_MODE);
 		return (1);
 	}
-	return(0);
+	return (0);
 }
 
 int
@@ -131,7 +130,7 @@ db_access_irq_sp(struct db_variable *vp, db_expr_t *valp, int rw)
 		*valp = get_stackptr(PSR_IRQ32_MODE);
 		return (1);
 	}
-	return(0);
+	return (0);
 }
 
 int db_frame(struct db_variable *vp, db_expr_t *valp, int rw)
@@ -146,7 +145,7 @@ int db_frame(struct db_variable *vp, db_expr_t *valp, int rw)
 		*valp = *reg;
 	else
 		*reg = *valp;
-	return(1);
+	return (1);
 }
 
 void
@@ -339,4 +338,3 @@ branch_taken(u_int insn, db_addr_t pc)
 		panic("branch_taken: botch");
 	}
 }
-

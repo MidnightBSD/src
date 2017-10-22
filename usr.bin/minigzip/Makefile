@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/minigzip/Makefile,v 1.4 2004/02/05 22:44:25 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/minigzip/Makefile 125503 2004-02-05 22:44:25Z ru $
 
 PROG=	minigzip
 LDADD=	-lz

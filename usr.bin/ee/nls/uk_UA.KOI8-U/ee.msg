@@ -3,7 +3,7 @@ $ ee.i18n.guide for more information
 $ 
 $ For ee patchlevel 3
 $ 
-$ $FreeBSD: src/usr.bin/ee/nls/uk_UA.KOI8-U/ee.msg,v 1.1 2001/03/28 16:51:02 sobomax Exp $
+$ $FreeBSD: release/7.0.0/usr.bin/ee/nls/uk_UA.KOI8-U/ee.msg 74947 2001-03-28 16:51:02Z sobomax $
 $ 
 $ 
 $set 1

@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)io.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/indent/io.c,v 1.14 2004/06/27 10:58:37 schweikh Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/indent/io.c 152395 2005-11-13 20:37:25Z dwmalone $");
 
 #include <ctype.h>
 #include <err.h>
@@ -539,8 +539,6 @@ count_spaces(int current, char *buffer)
     }				/* end of for loop */
     return (cur);
 }
-
-int	found_err;
 
 void
 diag4(int level, const char *msg, int a, int b)

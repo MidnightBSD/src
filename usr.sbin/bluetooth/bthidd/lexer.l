@@ -1,8 +1,10 @@
 %{
 /*
  * lexer.l
- *
- * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
+ */
+
+/*-
+ * Copyright (c) 2006 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,13 +28,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: lexer.l,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bthidd/lexer.l,v 1.2 2004/11/18 18:05:15 emax Exp $
+ * $Id: lexer.l,v 1.3 2006/09/07 21:06:53 max Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/bthidd/lexer.l 162128 2006-09-07 21:47:49Z emax $
  */
 
 #include <bluetooth.h>
 #include <stdlib.h>
 #include "parser.h"
+
+	int	yylex	(void);
 %}
 
 %option yylineno noyywrap nounput
@@ -87,7 +91,7 @@ hexbytestring			0x{hexbyte}
 				}
 
 {hexbytestring}			{
-				char	*ep = NULL;
+				char	*ep;
 
 				yylval.num = strtoul(yytext, &ep, 16);
 

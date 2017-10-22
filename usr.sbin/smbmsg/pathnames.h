@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/smbmsg/pathnames.h,v 1.1.1.1 2004/05/17 10:56:04 joerg Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/smbmsg/pathnames.h 172506 2007-10-10 16:59:15Z cvs2svn $
  */
 
 #define PATH_DEFAULTSMBDEV	"/dev/smb0"

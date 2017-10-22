@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/sicontrol/Makefile,v 1.7 2001/07/20 06:20:19 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/sicontrol/Makefile 80029 2001-07-20 06:20:32Z obrien $
 
 PROG=	sicontrol
 MAN=	sicontrol.8

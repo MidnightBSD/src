@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/groff/font/devhtml/Makefile,v 1.2.14.1 2005/11/15 22:06:58 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/font/devhtml/Makefile 151504 2005-10-20 10:57:53Z ru $
 
 DEV=		html
 FONTS=		R I B BI CR CI CB CBI S

@@ -43,7 +43,7 @@
 #include <machine/armreg.h>
 #include <machine/asmacros.h>
 #include <arm/sa11x0/sa11x0_reg.h>
-__FBSDID("$FreeBSD: src/sys/arm/sa11x0/sa11x0_irq.S,v 1.3 2005/01/05 21:58:48 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/sa11x0_irq.S 139735 2005-01-05 21:58:49Z imp $");
 Lcurrent_intr_depth:
 	.word	_C_LABEL(current_intr_depth)
 

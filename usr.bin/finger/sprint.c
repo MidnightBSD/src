@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)sprint.c	8.3 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/finger/sprint.c,v 1.22 2003/04/02 20:22:29 rwatson Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/finger/sprint.c 156282 2006-03-04 16:13:16Z rwatson $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -86,10 +86,10 @@ sflag_print(void)
 	 *	else
 	 *		remote host
 	 */
-#define	MAXREALNAME	20
+#define	MAXREALNAME	16
 #define MAXHOSTNAME     17      /* in reality, hosts are never longer than 16 */
-	(void)printf("%-*s %-*s%s  %s\n", UT_NAMESIZE, "Login", MAXREALNAME,
-	    "Name", " TTY  Idle  Login  Time ", (gflag) ? "" :
+	(void)printf("%-*s %-*s%s %s\n", UT_NAMESIZE, "Login", MAXREALNAME,
+	    "Name", " TTY      Idle  Login  Time  ", (gflag) ? "" :
 	    oflag ? "Office  Phone" : "Where");
 
 	for (sflag = R_FIRST;; sflag = R_NEXT) {
@@ -115,12 +115,12 @@ sflag_print(void)
 			(void)putchar(w->info == LOGGEDIN && !w->writable ?
 			    '*' : ' ');
 			if (*w->tty)
-				(void)printf("%-3.3s ",
+				(void)printf("%-7.7s ",
 					     (strncmp(w->tty, "tty", 3)
 					      && strncmp(w->tty, "cua", 3))
 					     ? w->tty : w->tty + 3);
 			else
-				(void)printf("    ");
+				(void)printf("        ");
 			if (w->info == LOGGEDIN) {
 				stimeprint(w);
 				(void)printf("  ");

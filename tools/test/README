@@ -1,4 +1,4 @@
-$FreeBSD: src/tools/test/README,v 1.4 2001/10/08 12:28:31 asmodai Exp $
+$FreeBSD: release/7.0.0/tools/test/README 84667 2001-10-08 12:28:31Z asmodai $
 
 This directory is for test programs.
 

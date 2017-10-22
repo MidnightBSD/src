@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/mtree/BSD.x11.dist,v 1.17.14.1 2006/01/17 06:53:17 dougb Exp $
+# $FreeBSD: release/7.0.0/etc/mtree/BSD.x11.dist 154114 2006-01-08 10:15:31Z dougb $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #

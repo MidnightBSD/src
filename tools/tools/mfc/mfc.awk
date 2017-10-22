@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 #
-# $FreeBSD: src/tools/tools/mfc/mfc.awk,v 1.1 2004/09/24 20:06:49 jmg Exp $
+# $FreeBSD: release/7.0.0/tools/tools/mfc/mfc.awk 158356 2006-05-08 06:47:59Z jmg $
 #
 
 BEGIN {
@@ -22,9 +22,12 @@ BEGIN {
 	if (!(match($2, "\\+[0-9]") && match($3, "-[0-9]")))
 		next
 	printf("cvs -d %s update %s -j 1.%d -j 1.%d %s\n", CVSROOT, UPDATEOPTS, $1 - 1, $1, $4)
-	files = files " " $4
+	files[$4] = 1
 }
 
 END {
-	printf("cvs -d %s commit %s\n", CVSROOT, files);
+	for (i in files)
+		fl = fl " " i
+	printf("cvs -d %s diff -kk %s | less\n", CVSROOT, fl);
+	printf("cvs -d %s commit %s\n", CVSROOT, fl);
 }

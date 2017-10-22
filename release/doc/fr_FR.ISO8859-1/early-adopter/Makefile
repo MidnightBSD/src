@@ -2,8 +2,8 @@
 #      The FreeBSD Documentation Project
 #      The FreeBSD French Documentation Project
 #
-#      $Id: Makefile,v 1.1.1.2 2006-02-25 02:35:15 laffer1 Exp $
-#      $FreeBSD: src/release/doc/fr_FR.ISO8859-1/early-adopter/Makefile,v 1.2 2003/01/18 18:03:01 gioria Exp $
+#      $Id$
+#      $FreeBSD: release/7.0.0/release/doc/fr_FR.ISO8859-1/early-adopter/Makefile 109488 2003-01-18 18:03:01Z gioria $
 #      Original revision: 1.3
 
 RELN_ROOT?= ${.CURDIR}/../..

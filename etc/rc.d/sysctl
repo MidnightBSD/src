@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $NetBSD: sysctl,v 1.12 2002/04/29 12:10:23 lukem Exp $
-# $FreeBSD: src/etc/rc.d/sysctl,v 1.16 2004/10/07 13:55:26 mtm Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/sysctl 175737 2008-01-28 07:58:32Z dougb $
 #
 
 # PROVIDE: sysctl
@@ -37,7 +36,7 @@ sysctl_start()
 					${val})
 						;;
 					*)
-						sysctl ${var}
+						sysctl "${var}"
 						;;
 					esac
 				elif [ "$1" = "last" ]; then

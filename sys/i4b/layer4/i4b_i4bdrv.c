@@ -32,7 +32,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer4/i4b_i4bdrv.c,v 1.43 2005/01/06 22:18:21 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer4/i4b_i4bdrv.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include "opt_i4b.h"
 
@@ -48,9 +48,9 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer4/i4b_i4bdrv.c,v 1.43 2005/01/06 22:18:21 i
 #include <sys/selinfo.h>
 #include <net/if.h>
 
-#include <machine/i4b_debug.h>
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_cause.h>
+#include <i4b/include/i4b_debug.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_cause.h>
 
 #include <i4b/include/i4b_l3l4.h>
 #include <i4b/include/i4b_mbuf.h>
@@ -423,31 +423,31 @@ i4bioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td
 
 			switch(mdrsp->driver)
 			{
-#if NI4BIPR > 0
+#if defined(NI4BIPR) && (NI4BIPR > 0)
 				case BDRV_IPR:
 					dlt = ipr_ret_linktab(mdrsp->driver_unit);
 					break;
 #endif					
 
-#if NI4BISPPP > 0
+#if defined(NI4BISPPP) && (NI4BISPPP > 0)
 				case BDRV_ISPPP:
 					dlt = i4bisppp_ret_linktab(mdrsp->driver_unit);
 					break;
 #endif
 
-#if NI4BTEL > 0
+#if defined(NI4BTEL) && (NI4BTEL > 0)
 				case BDRV_TEL:
 					dlt = tel_ret_linktab(mdrsp->driver_unit);
 					break;
 #endif
 
-#if NIBC > 0
+#if defined(NIBC) && NIBC > 0
 				case BDRV_IBC:
 					dlt = ibc_ret_linktab(mdrsp->driver_unit);
 					break;
 #endif
 
-#if NI4BING > 0
+#if defined(NI4BING) && (NI4BING > 0)
 				case BDRV_ING:
 					dlt = ing_ret_linktab(mdrsp->driver_unit);
 					break;
@@ -543,7 +543,7 @@ i4bioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td
 			
 			mui = (msg_updown_ind_t *)data;
 
-#if NI4BIPR > 0
+#if defined(NI4BIPR) && (NI4BIPR > 0)
 			if(mui->driver == BDRV_IPR)
 			{
 				drvr_link_t *dlt;

@@ -1,5 +1,9 @@
-#$FreeBSD: src/rescue/rescue/Makefile,v 1.45.2.1 2005/12/22 21:17:12 jhb Exp $
+#$FreeBSD: release/7.0.0/rescue/rescue/Makefile 171453 2007-07-14 21:49:24Z rwatson $
 #	@(#)Makefile	8.1 (Berkeley) 6/2/93
+
+NO_MAN=
+
+.include <bsd.own.mk>
 
 PROG=	rescue
 BINDIR?=/rescue
@@ -68,7 +72,7 @@ CRUNCH_PROGS_bin= cat chflags chio chmod cp date dd df echo 	\
 	 ed expr getfacl hostname kenv kill ln ls mkdir mv pax ps pwd 	\
 	 realpath rm rmdir setfacl sh stty sync test
 CRUNCH_LIBS+= -lcrypt -ledit -lkvm -ll -lm -ltermcap -lutil
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
+.if ${MK_OPENSSL} != "no"
 CRUNCH_LIBS+= -lcrypto
 .endif
 
@@ -81,11 +85,11 @@ CRUNCH_ALIAS_ln= link
 CRUNCH_ALIAS_rm= unlink
 CRUNCH_ALIAS_ed= red
 
-.if !defined(NO_RCMDS)
+.if ${MK_RCMDS} != "no"
 CRUNCH_PROGS_bin+= rcp
 .endif
 
-.if !defined(NO_TCSH)
+.if ${MK_TCSH} != "no"
 CRUNCH_PROGS_bin+= csh
 CRUNCH_ALIAS_csh= -csh tcsh -tcsh
 CRUNCH_SUPPRESS_LINK_-csh= 1
@@ -107,37 +111,46 @@ CRUNCH_PROGS_sbin= atacontrol badsect bsdlabel		\
 	dumpfs dumpon fsck fsck_ffs fsck_msdosfs fsdb		\
 	fsirand gbde ifconfig init 				\
 	kldconfig kldload kldstat kldunload ldconfig 			\
-	md5 mdconfig mdmfs mknod mount mount_cd9660 mount_ext2fs	\
+	md5 mdconfig mdmfs mknod mount mount_cd9660	\
 	mount_msdosfs mount_nfs mount_ntfs mount_nullfs			\
-	mount_std mount_udf mount_umapfs mount_unionfs newfs		\
+	mount_udf mount_unionfs newfs		\
 	newfs_msdos nos-tun ping reboot			\
 	restore rcorder route routed rtquery rtsol savecore 		\
 	slattach spppcontrol startslip swapon sysctl tunefs umount 
 
-.if !defined(NO_ATM)
-CRUNCH_PROGS_sbin+= atm atmconfig fore_dnld ilmid
-CRUNCH_LIBS+= -latm
+.if ${MK_ATM} != "no"
+CRUNCH_PROGS_sbin+= atmconfig
+# Disabled in 7.0 as netatm is not MPSAFE.
+#CRUNCH_PROGS_sbin+= atm fore_dnld ilmid
+#CRUNCH_LIBS+= -latm
 .endif
 
-.if !defined(NO_INET6)
+.if ${MK_INET6_SUPPORT} != "no"
 CRUNCH_PROGS_sbin+= ping6
 .endif
 
-.if !defined(NO_IPFILTER)
+.if ${MK_IPFILTER} != "no"
 CRUNCH_PROGS_sbin+= ipf
 .endif
 
 # crunchgen does not like C++ programs; this should be fixed someday
 # CRUNCH_PROGS+= devd
 
-CRUNCH_LIBS+= -lalias -lbsdxml -lcam -lcurses -ldevstat -lipsec -lipx \
-	-lgeom -lkiconv -lmd -lreadline -lsbuf -lufs -lz 
+CRUNCH_LIBS+= -lalias -lcam -lcurses -ldevstat -lipsec
+.if ${MK_IPX} != "no"
+CRUNCH_LIBS+= -lipx
+.endif
+CRUNCH_LIBS+= -lgeom -lbsdxml -lkiconv -lmd -lreadline -lsbuf -lufs -lz
 
 .if ${MACHINE_ARCH} == "i386"
 CRUNCH_PROGS_sbin+= sconfig fdisk
 CRUNCH_ALIAS_bsdlabel= disklabel
-#CRUNCH_PROGS+= mount_nwfs mount_smbfs
-#CRUNCH_LIBS+= -lncp -lsmb
+#.if ${MK_NCP} != "no"
+#CRUNCH_PROGS+= mount_nwfs
+#CRUNCH_LIBS+= -lncp
+#.endif
+#CRUNCH_PROGS+= mount_smbfs
+#CRUNCH_LIBS+= -lsmb
 .endif
 
 .if ${MACHINE} == "pc98"
@@ -150,10 +163,6 @@ CRUNCH_PROGS_sbin+= mca gpt fdisk
 
 .if ${MACHINE_ARCH} == "sparc64"
 CRUNCH_PROGS_sbin+= sunlabel
-.endif
-
-.if ${MACHINE_ARCH} == "alpha"
-CRUNCH_ALIAS_bsdlabel= disklabel
 .endif
 
 .if ${MACHINE_ARCH} == "amd64"
@@ -171,7 +180,6 @@ CRUNCH_ALIAS_reboot= fastboot halt fasthalt
 CRUNCH_ALIAS_restore= rrestore
 CRUNCH_ALIAS_dump= rdump
 CRUNCH_ALIAS_fsck_ffs= fsck_4.2bsd fsck_ufs
-CRUNCH_ALIAS_mount_std= mount_devfs mount_fdescfs mount_linprocfs mount_procfs
 
 # dhclient has historically been troublesome...
 CRUNCH_PROGS_sbin+= dhclient
@@ -181,9 +189,8 @@ CRUNCH_BUILDOPTS_dhclient= -DRELEASE_CRUNCH -Dlint
 # Programs from stock /usr/bin
 # 
 CRUNCH_SRCDIRS+= usr.bin
-CRUNCH_SRCDIRS+= gnu/usr.bin
 
-CRUNCH_PROGS_gnu/usr.bin+= gzip
+CRUNCH_PROGS_usr.bin+= gzip
 CRUNCH_ALIAS_gzip= gunzip gzcat zcat
 
 CRUNCH_PROGS_usr.bin+= bzip2
@@ -221,7 +228,6 @@ CANONICALOBJDIR:= ${MAKEOBJDIRPREFIX}${.CURDIR}
 CANONICALOBJDIR:= /usr/obj${.CURDIR}
 .endif
 
-NO_MAN=
 CLEANFILES+= $(CONF) *.o *.lo *.c *.mk *.cache *.a *.h
 
 # Program names and their aliases contribute hardlinks to 'rescue' executable,
@@ -307,11 +313,11 @@ cleandepend cleandir obj objlink:
 .ifdef CRUNCH_SRCDIR_${P}
 	cd ${CRUNCH_SRCDIR_$(P)} && \
 	    MAKEOBJDIRPREFIX=${CANONICALOBJDIR} ${MAKE} \
-	    DIRPRFX=${DIRPRFX}${P}/ ${.TARGET}
+	    DIRPRFX=${DIRPRFX}${P}/ ${CRUNCH_BUILDOPTS} ${.TARGET}
 .else
 	cd $(.CURDIR)/../../${D}/${P} && \
 	    MAKEOBJDIRPREFIX=${CANONICALOBJDIR} ${MAKE} \
-	    DIRPRFX=${DIRPRFX}${P}/ ${.TARGET}
+	    DIRPRFX=${DIRPRFX}${P}/ ${CRUNCH_BUILDOPTS} ${.TARGET}
 .endif
 .endfor
 .endfor
@@ -326,11 +332,11 @@ clean:
 .ifdef CRUNCH_SRCDIR_${P}
 	cd ${CRUNCH_SRCDIR_$(P)} && \
 	    MAKEOBJDIRPREFIX=${CANONICALOBJDIR} ${MAKE} \
-	    DIRPRFX=${DIRPRFX}${P}/ ${.TARGET}
+	    DIRPRFX=${DIRPRFX}${P}/ ${CRUNCH_BUILDOPTS} ${.TARGET}
 .else
 	cd $(.CURDIR)/../../${D}/${P} && \
 	    MAKEOBJDIRPREFIX=${CANONICALOBJDIR} ${MAKE} \
-	    DIRPRFX=${DIRPRFX}${P}/ ${.TARGET}
+	    DIRPRFX=${DIRPRFX}${P}/ ${CRUNCH_BUILDOPTS} ${.TARGET}
 .endif
 .endfor
 .endfor

@@ -1,8 +1,10 @@
-# $FreeBSD: src/share/mk/bsd.incs.mk,v 1.4 2005/04/11 07:13:29 harti Exp $
+# $FreeBSD: release/7.0.0/share/mk/bsd.incs.mk 156813 2006-03-17 18:54:44Z ru $
 
 .if !target(__<bsd.init.mk>__)
 .error bsd.incs.mk cannot be included directly.
 .endif
+
+.if !defined(NO_INCS) && ${MK_TOOLCHAIN} != "no"
 
 INCSGROUPS?=	INCS
 
@@ -78,3 +80,5 @@ installincludes:
 
 realinstall: installincludes
 .ORDER: beforeinstall installincludes
+
+.endif # !defined(NO_INCS) && ${MK_TOOLCHAIN} != "no"

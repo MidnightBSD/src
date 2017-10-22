@@ -1,12 +1,12 @@
-# $FreeBSD: src/share/doc/papers/Makefile,v 1.15.2.1 2005/08/16 22:39:27 phk Exp $
+# $FreeBSD: release/7.0.0/share/doc/papers/Makefile 163030 2006-10-05 13:42:30Z ru $
 
 SUBDIR=	beyond4.3 \
 	bufbio \
 	contents \
 	devfs \
 	diskperf \
-	hwpmc \
 	fsinterface \
+	hwpmc \
 	jail \
 	kernmalloc \
 	kerntune \

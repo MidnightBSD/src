@@ -1,8 +1,8 @@
-# $FreeBSD: src/usr.bin/lessecho/Makefile,v 1.3 2004/12/21 08:47:29 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/lessecho/Makefile 161480 2006-08-20 15:52:17Z delphij $
 
 PROG=	lessecho
 SRCS=	lessecho.c version.c
-NO_MAN=
+CLEANFILES= lessecho.1
 
 .include "${.CURDIR}/../less/Makefile.common"
 .include <bsd.prog.mk>

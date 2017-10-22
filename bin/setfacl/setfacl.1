@@ -23,7 +23,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/bin/setfacl/setfacl.1,v 1.13 2005/02/09 17:37:39 ru Exp $
+.\" $FreeBSD: release/7.0.0/bin/setfacl/setfacl.1 162379 2006-09-17 17:40:07Z ru $
 .\"
 .Dd January 7, 2001
 .Dt SETFACL 1
@@ -44,6 +44,9 @@ The
 .Nm
 utility sets discretionary access control information on
 the specified file(s).
+If no files are specified, or the list consists of the only
+.Sq Fl ,
+the file names are taken from the standard input.
 .Pp
 The following options are available:
 .Bl -tag -width indent
@@ -252,7 +255,7 @@ on
 .Pp
 Remove the group mail ACL entry containing read/write permissions
 from
-.Pa file.
+.Pa file .
 .Pp
 .Dl setfacl -bn file
 .Pp

@@ -24,7 +24,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/powerpc/include/bootinfo.h,v 1.9 2005/01/07 02:29:19 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/bootinfo.h 139825 2005-01-07 02:29:27Z imp $
  */
 
 /*

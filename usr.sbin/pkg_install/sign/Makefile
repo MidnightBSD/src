@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/pkg_install/sign/Makefile,v 1.10 2004/08/12 20:06:00 ru Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/pkg_install/sign/Makefile 133596 2004-08-12 20:06:01Z ru $
 # $OpenBSD: Makefile.bsd-wrapper,v 1.2 1999/10/07 16:30:32 espie Exp $
 
 PROG=	pkg_sign

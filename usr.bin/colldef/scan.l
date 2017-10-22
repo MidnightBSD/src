@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/colldef/scan.l,v 1.19 2002/08/23 04:18:26 ache Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/colldef/scan.l 102299 2002-08-23 04:18:26Z ache $");
 
 #include <ctype.h>
 #include <err.h>

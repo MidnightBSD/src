@@ -33,7 +33,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)wc.1	8.2 (Berkeley) 4/19/94
-.\" $FreeBSD: src/usr.bin/wc/wc.1,v 1.23 2005/02/26 04:14:20 trhodes Exp $
+.\" $FreeBSD: release/7.0.0/usr.bin/wc/wc.1 165455 2006-12-21 22:59:07Z ru $
 .\"
 .Dd February 23, 2005
 .Dt WC 1
@@ -70,7 +70,7 @@ for all the files is displayed on a separate line after the output for
 the last file.
 .Pp
 The following options are available:
-.Bl -tag -width Ds
+.Bl -tag -width indent
 .It Fl c
 The number of bytes in each input file
 is written to the standard output.
@@ -132,11 +132,14 @@ as well as the totals for both:
 .Sh COMPATIBILITY
 Historically, the
 .Nm
-utility was documented to define a word as a ``maximal string of
-characters delimited by <space>, <tab> or <newline> characters''.
+utility was documented to define a word as a
+.Do
+maximal string of
+characters delimited by <space>, <tab> or <newline> characters
+.Dc .
 The implementation, however, did not handle non-printing characters
 correctly so that
-.Dq Li "  ^D^E  "
+.Dq Li "\ \ ^D^E\ \ "
 counted as 6 spaces, while
 .Dq Li foo^D^Ebar
 counted as 8 characters.
@@ -145,7 +148,9 @@ systems after
 .Bx 4.3
 modified the implementation to be consistent
 with the documentation.
-This implementation defines a ``word'' in terms of the
+This implementation defines a
+.Dq word
+in terms of the
 .Xr iswspace 3
 function, as required by
 .St -p1003.2 .

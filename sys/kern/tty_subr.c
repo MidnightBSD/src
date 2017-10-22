@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/tty_subr.c,v 1.43 2005/01/06 23:35:40 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/kern/tty_subr.c 139804 2005-01-06 23:35:40Z imp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

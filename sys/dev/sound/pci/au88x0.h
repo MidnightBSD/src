@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/pci/au88x0.h,v 1.2 2003/10/12 11:33:39 des Exp $
+ * $FreeBSD: release/7.0.0/sys/dev/sound/pci/au88x0.h 121028 2003-10-12 11:33:39Z des $
  */
 
 #ifndef _AU88X0_H_INCLUDED

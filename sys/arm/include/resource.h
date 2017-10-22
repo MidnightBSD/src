@@ -26,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/resource.h,v 1.2 2005/01/05 21:58:48 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/resource.h 139735 2005-01-05 21:58:49Z imp $
  */
 
 #ifndef _MACHINE_RESOURCE_H_

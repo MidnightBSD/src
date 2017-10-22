@@ -1,4 +1,4 @@
-#	$FreeBSD: src/tools/tools/ath/Makefile,v 1.5.2.1 2006/01/31 20:48:19 sam Exp $
+#	$FreeBSD: release/7.0.0/tools/tools/ath/Makefile 153317 2005-12-11 23:13:54Z sam $
 
 SUBDIR=	athstats athdebug
 

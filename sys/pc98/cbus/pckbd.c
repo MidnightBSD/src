@@ -25,9 +25,10 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pc98/cbus/pckbd.c,v 1.30 2005/05/12 13:39:31 nyan Exp $
+ * $FreeBSD: release/7.0.0/sys/pc98/cbus/pckbd.c 166901 2007-02-23 12:19:07Z piso $
  */
 
+#include "opt_compat.h"
 #include "opt_kbd.h"
 
 #include <sys/param.h>
@@ -136,8 +137,7 @@ pckbdattach(device_t dev)
 	res = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid, RF_ACTIVE);
 	if (res == NULL)
 		return ENXIO;
-	BUS_SETUP_INTR(device_get_parent(dev), dev, res, INTR_TYPE_TTY,
-		       pckbd_isa_intr, kbd, &ih);
+	bus_setup_intr(dev, res, INTR_TYPE_TTY, NULL, pckbd_isa_intr, kbd, &ih);
 
 	return 0;
 }
@@ -705,6 +705,10 @@ pckbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 	pckbd_state_t *state = kbd->kb_data;
 	int s;
 	int i;
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+	int ival;
+#endif
 
 	s = spltty();
 	switch (cmd) {
@@ -712,6 +716,13 @@ pckbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 	case KDGKBMODE:		/* get keyboard mode */
 		*(int *)arg = state->ks_mode;
 		break;
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+	case _IO('K', 7):
+		ival = IOCPARM_IVAL(arg);
+		arg = (caddr_t)&ival;
+		/* FALLTHROUGH */
+#endif
 	case KDSKBMODE:		/* set keyboard mode */
 		switch (*(int *)arg) {
 		case K_XLATE:
@@ -737,6 +748,13 @@ pckbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 	case KDGETLED:		/* get keyboard LED */
 		*(int *)arg = KBD_LED_VAL(kbd);
 		break;
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+	case _IO('K', 66):
+		ival = IOCPARM_IVAL(arg);
+		arg = (caddr_t)&ival;
+		/* FALLTHROUGH */
+#endif
 	case KDSETLED:		/* set keyboard LED */
 		/* NOTE: lock key state in ks_state won't be changed */
 		if (*(int *)arg & ~LOCK_MASK) {
@@ -757,6 +775,13 @@ pckbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 	case KDGKBSTATE:	/* get lock key state */
 		*(int *)arg = state->ks_state & LOCK_MASK;
 		break;
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+	case _IO('K', 20):
+		ival = IOCPARM_IVAL(arg);
+		arg = (caddr_t)&ival;
+		/* FALLTHROUGH */
+#endif
 	case KDSKBSTATE:	/* set lock key state */
 		if (*(int *)arg & ~LOCK_MASK) {
 			splx(s);

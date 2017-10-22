@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# $FreeBSD: src/contrib/gcc/FREEBSD-libiberty,v 1.2 2002/05/10 05:21:15 obrien Exp $
+# $FreeBSD: release/7.0.0/contrib/gcc/FREEBSD-libiberty 174854 2007-12-22 06:32:46Z cvs2svn $
 
 for F in \
 	choose-temp.c	\

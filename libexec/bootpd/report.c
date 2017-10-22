@@ -1,4 +1,4 @@
-/* $FreeBSD: src/libexec/bootpd/report.c,v 1.5 2002/05/28 18:31:41 alfred Exp $ */
+/* $FreeBSD: release/7.0.0/libexec/bootpd/report.c 97416 2002-05-28 18:31:41Z alfred $ */
 
 /*
  * report() - calls syslog

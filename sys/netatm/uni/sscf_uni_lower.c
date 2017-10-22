@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/uni/sscf_uni_lower.c,v 1.13 2005/01/07 01:45:37 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/netatm/uni/sscf_uni_lower.c 170996 2007-06-23 00:02:20Z mjacob $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -142,7 +142,7 @@ sscf_uni_lower(cmd, tok, arg1, arg2)
 		uvp->uv_lstate = UVL_IDLE;
 
 		STACK_CALL(SSCOP_INIT, uvp->uv_lower, uvp->uv_tokl, cvp, 
-			(int)vers, (int)&sscf_uni_sscop_parms, err);
+			(int)vers, (size_t)&sscf_uni_sscop_parms, err);
 		if (err) {
 			/*
 			 * Should never happen

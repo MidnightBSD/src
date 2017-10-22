@@ -23,22 +23,25 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/netstat/bpf.c,v 1.5.2.1 2005/12/27 23:34:13 csjp Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/netstat/bpf.c 171465 2007-07-16 17:15:55Z jhb $
  */
 #include <sys/types.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
+#include <sys/socketvar.h>
 #include <sys/sysctl.h>
 #include <sys/param.h>
 #include <sys/user.h>
 
 #include <net/if.h>
 #include <net/if_var.h>
+#include <net/bpf.h>
 #include <net/bpfdesc.h>
 #include <arpa/inet.h>
 
 #include <err.h>
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -75,14 +78,16 @@ bpf_flags(struct xbpf_d *bd, char *flagbuf)
 	*flagbuf++ = bd->bd_promisc ? 'p' : '-';
 	*flagbuf++ = bd->bd_immediate ? 'i' : '-';
 	*flagbuf++ = bd->bd_hdrcmplt ? '-' : 'f';
-	*flagbuf++ = bd->bd_seesent ? 's' : '-';
+	*flagbuf++ = (bd->bd_direction == BPF_D_IN) ? '-' :
+	    ((bd->bd_direction == BPF_D_OUT) ? 'o' : 's');
+	*flagbuf++ = bd->bd_feedback ? 'b' : '-';
 	*flagbuf++ = bd->bd_async ? 'a' : '-';
 	*flagbuf++ = bd->bd_locked ? 'l' : '-';
 	*flagbuf++ = '\0';
 }       
 
 void
-bpf_stats(char *interface)
+bpf_stats(char *ifname)
 {
 	struct xbpf_d *d, *bd;
 	char *pname, flagbuf[12];
@@ -106,15 +111,15 @@ bpf_stats(char *interface)
 		free(bd);
 		return;
 	}
-	printf("%5s %6s %6s %9s %9s %9s %5s %5s %s\n",
+	printf("%5s %6s %7s %9s %9s %9s %5s %5s %s\n",
 	    "Pid", "Netif", "Flags", "Recv", "Drop", "Match", "Sblen",
 	    "Hblen", "Command");
 	for (d = &bd[0]; d < &bd[size / sizeof(*d)]; d++) {
-		if (interface && strcmp(interface, d->bd_ifname) != 0)
+		if (ifname && strcmp(ifname, d->bd_ifname) != 0)
 			continue;
 		bpf_flags(d, flagbuf);
 		pname = bpf_pidname(d->bd_pid);
-		printf("%5d %6s %6s %9lu %9lu %9lu %5d %5d %s\n",
+		printf("%5d %6s %7s %9lu %9lu %9lu %5d %5d %s\n",
 		    d->bd_pid, d->bd_ifname, flagbuf,
 		    d->bd_rcount, d->bd_dcount, d->bd_fcount,
 		    d->bd_slen, d->bd_hlen, pname);

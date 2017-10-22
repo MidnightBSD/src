@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/memcontrol/Makefile,v 1.6 2005/01/07 12:06:30 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/memcontrol/Makefile 139854 2005-01-07 12:06:30Z delphij $
 
 PROG=	memcontrol
 MAN=	memcontrol.8

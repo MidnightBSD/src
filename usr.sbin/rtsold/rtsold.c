@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/rtsold/rtsold.c,v 1.21 2005/06/09 09:28:35 suz Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/rtsold/rtsold.c 147161 2005-06-09 09:28:35Z suz $
  */
 
 #include <sys/types.h>

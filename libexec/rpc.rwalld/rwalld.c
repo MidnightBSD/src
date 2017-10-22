@@ -29,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/rpc.rwalld/rwalld.c,v 1.13 2005/02/14 17:42:58 stefanf Exp $";
+  "$FreeBSD: release/7.0.0/libexec/rpc.rwalld/rwalld.c 141918 2005-02-14 17:42:58Z stefanf $";
 #endif /* not lint */
 
 #include <err.h>

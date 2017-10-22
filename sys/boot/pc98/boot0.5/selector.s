@@ -1,4 +1,4 @@
-# Copyright (c) KATO Takenori, 1999, 2000.
+# Copyright (c) KATO Takenori, 1999, 2000, 2007.
 #
 # All rights reserved.  Unpublished rights reserved under the copyright
 # laws of Japan.
@@ -25,7 +25,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/boot/pc98/boot0.5/selector.s,v 1.2 2000/08/06 14:35:37 kato Exp $
+# $FreeBSD: release/7.0.0/sys/boot/pc98/boot0.5/selector.s 168457 2007-04-07 08:37:04Z kato $
 #
 
 	.code16
@@ -299,6 +299,11 @@ devmode_loop:
 	jne	dev_right
 	movw	$3, mode		# N88-BASIC
 	ret
+
+	# XXX
+	.space	5, 0x90
+	ret				# Dummy ret @0x9ab
+
 dev_up:
 	cmpw	$0, curdevice
 	je	devmode_loop

@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/ia64/include/signal.h,v 1.13 2005/01/06 22:18:23 imp Exp $ */
+/* $FreeBSD: release/7.0.0/sys/ia64/include/signal.h 149337 2005-08-20 16:44:41Z stefanf $ */
 /* From: NetBSD: signal.h,v 1.3 1997/04/06 08:47:43 cgd Exp */
 
 /*-
@@ -48,11 +48,6 @@ typedef long	sig_atomic_t;
 #define FPE_FLTSUB	8	/* subscript out of range */
 
 #define BUS_SEGM_FAULT	30	/* segment protection base */
-#endif
-
-#if __XSI_VISIBLE
-/* Minimum signal stack size. */
-#define MINSIGSTKSZ     (3072 * 4)
 #endif
 
 /*

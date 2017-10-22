@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/groff/src/roff/troff/Makefile,v 1.4.12.1 2005/11/15 22:07:00 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/src/roff/troff/Makefile 151504 2005-10-20 10:57:53Z ru $
 
 PROG_CXX=	troff
 SRCS=		dictionary.cpp div.cpp env.cpp input.cpp \

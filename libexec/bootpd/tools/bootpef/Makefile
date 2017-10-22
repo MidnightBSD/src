@@ -1,5 +1,5 @@
 # Makefile
-# $FreeBSD: src/libexec/bootpd/tools/bootpef/Makefile,v 1.6 2001/03/26 14:22:03 ru Exp $
+# $FreeBSD: release/7.0.0/libexec/bootpd/tools/bootpef/Makefile 74814 2001-03-26 14:22:12Z ru $
 
 PROG=	bootpef
 MAN=	bootpef.8

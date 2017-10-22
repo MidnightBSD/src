@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/lib/libdialog/menubox.c,v 1.38 2004/02/26 01:52:39 eric Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/gnu/lib/libdialog/menubox.c 126257 2004-02-26 01:52:39Z eric $");
 
 #include <dialog.h>
 #include "dialog.priv.h"

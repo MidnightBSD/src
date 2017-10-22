@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)rmdir.1	8.1 (Berkeley) 5/31/93
-.\" $FreeBSD: src/bin/rmdir/rmdir.1,v 1.14 2005/05/31 12:57:44 tjr Exp $
+.\" $FreeBSD: release/7.0.0/bin/rmdir/rmdir.1 165564 2006-12-27 12:14:56Z ru $
 .\"
 .Dd March 21, 2004
 .Dt RMDIR 1
@@ -76,12 +76,14 @@ Be verbose, listing each directory as it is removed.
 The
 .Nm
 utility exits with one of the following values:
-.Bl -tag -width Ds
-.It Li \&0
-Each directory entry specified by a dir operand
+.Bl -tag -width indent
+.It Li 0
+Each directory entry specified by a
+.Ar directory
+operand
 referred to an empty directory and was removed
 successfully.
-.It Li \&>\&0
+.It Li >0
 An error occurred.
 .El
 .Sh SEE ALSO
@@ -89,7 +91,7 @@ An error occurred.
 .Sh STANDARDS
 The
 .Nm
-command is expected to be
+utility is expected to be
 .St -p1003.2
 compatible.
 .Sh HISTORY

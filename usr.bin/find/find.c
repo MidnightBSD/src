@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)find.c	8.5 (Berkeley) 8/5/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/find/find.c,v 1.17 2004/05/28 17:17:15 eik Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/find/find.c 158572 2006-05-14 20:23:01Z krion $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -231,10 +231,7 @@ find_execute(PLAN *plan, char *paths[])
 		 */
 		for (p = plan; p && (p->execute)(p, entry); p = p->next);
 	}
-	/* Finish any pending -exec ... {} + functions. */
-	for (p = plan; p != NULL; p = p->next)
-		if (p->execute == f_exec && p->flags & F_EXECPLUS)
-			(p->execute)(p, NULL);
+	finish_execplus();
 	if (errno)
 		err(1, "fts_read");
 	return (rval);

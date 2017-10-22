@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/spppcontrol/spppcontrol.c,v 1.13 2003/05/03 18:41:59 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sbin/spppcontrol/spppcontrol.c 114589 2003-05-03 18:41:59Z obrien $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>

@@ -4,7 +4,7 @@
 #
 #           Originally written by Toshiharu OHNO
 #
-# $FreeBSD: src/share/examples/ppp/ppp.conf.sample,v 1.35 2004/12/13 17:54:30 brian Exp $
+# $FreeBSD: release/7.0.0/share/examples/ppp/ppp.conf.sample 138815 2004-12-13 17:54:30Z brian $
 #
 #################################################################
 

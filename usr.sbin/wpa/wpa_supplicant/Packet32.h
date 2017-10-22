@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/wpa/wpa_supplicant/Packet32.h,v 1.2.2.1 2005/10/27 17:06:47 wpaul Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/wpa/wpa_supplicant/Packet32.h 151517 2005-10-20 16:49:31Z wpaul $
  */
 
 #ifndef _PACKET32_H_

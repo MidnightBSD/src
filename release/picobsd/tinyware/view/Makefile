@@ -1,4 +1,4 @@
-# $FreeBSD: src/release/picobsd/tinyware/view/Makefile,v 1.5 2004/12/21 08:47:06 ru Exp $
+# $FreeBSD: release/7.0.0/release/picobsd/tinyware/view/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 PROG=view
 SRCS=view.c

@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)env.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/env/env.c,v 1.16 2005/06/21 19:38:26 gad Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/env/env.c 171195 2007-07-04 00:00:41Z scf $");
 
 #include <err.h>
 #include <errno.h>
@@ -67,6 +67,7 @@ main(int argc, char **argv)
 	char *altpath, **ep, *p, **parg;
 	char *cleanenv[1];
 	int ch, want_clear;
+	int rtrn;
 
 	altpath = NULL;
 	want_clear = 0;
@@ -105,7 +106,11 @@ main(int argc, char **argv)
 	for (argv += optind; *argv && (p = strchr(*argv, '=')); ++argv) {
 		if (env_verbosity)
 			fprintf(stderr, "#env setenv:\t%s\n", *argv);
-		(void)setenv(*argv, ++p, 1);
+		*p = '\0';
+		rtrn = setenv(*argv, p + 1, 1);
+		*p = '=';
+		if (rtrn == -1)
+			err(EXIT_FAILURE, "setenv %s", *argv);
 	}
 	if (*argv) {
 		if (altpath)

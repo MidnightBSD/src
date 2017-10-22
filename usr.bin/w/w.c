@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/w/w.c,v 1.58 2005/06/04 23:40:09 gad Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/w/w.c 158444 2006-05-11 17:25:36Z phk $");
 
 #ifndef lint
 static const char copyright[] =
@@ -239,21 +239,16 @@ main(int argc, char *argv[])
 		nextp = &ep->next;
 		memmove(&ep->utmp, &utmp, sizeof(struct utmp));
 		ep->tdev = stp->st_rdev;
-#ifdef CPU_CONSDEV
 		/*
 		 * If this is the console device, attempt to ascertain
 		 * the true console device dev_t.
 		 */
 		if (ep->tdev == 0) {
-			int mib[2];
 			size_t size;
 
-			mib[0] = CTL_MACHDEP;
-			mib[1] = CPU_CONSDEV;
 			size = sizeof(dev_t);
-			(void)sysctl(mib, 2, &ep->tdev, &size, NULL, 0);
+			(void)sysctlbyname("machdep.consdev", &ep->tdev, &size, NULL, 0);
 		}
-#endif
 		touched = stp->st_atime;
 		if (touched < ep->utmp.ut_time) {
 			/* tty untouched since before login */
@@ -424,9 +419,8 @@ pr_header(time_t *nowp, int nusers)
 {
 	double avenrun[3];
 	time_t uptime;
+	struct timespec tp;
 	int days, hrs, i, mins, secs;
-	int mib[2];
-	size_t size;
 	char buf[256];
 
 	/*
@@ -437,14 +431,9 @@ pr_header(time_t *nowp, int nusers)
 		(void)printf("%s ", buf);
 	/*
 	 * Print how long system has been up.
-	 * (Found by looking getting "boottime" from the kernel)
 	 */
-	mib[0] = CTL_KERN;
-	mib[1] = KERN_BOOTTIME;
-	size = sizeof(boottime);
-	if (sysctl(mib, 2, &boottime, &size, NULL, 0) != -1 &&
-	    boottime.tv_sec != 0) {
-		uptime = now - boottime.tv_sec;
+	if (clock_gettime(CLOCK_MONOTONIC, &tp) != -1) {
+		uptime = tp.tv_sec;
 		if (uptime > 60)
 			uptime += 30;
 		days = uptime / 86400;

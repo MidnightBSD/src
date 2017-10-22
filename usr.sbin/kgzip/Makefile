@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/kgzip/Makefile,v 1.11 2003/06/11 21:36:06 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/kgzip/Makefile 116221 2003-06-11 21:36:06Z obrien $
 
 PROG=	kgzip
 MAN=	kgzip.8

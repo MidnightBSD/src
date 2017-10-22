@@ -1,11 +1,10 @@
 #!/bin/sh
 #
-# $NetBSD: ipsec,v 1.7 2002/03/22 04:33:58 thorpej Exp $
-# $FreeBSD: src/etc/rc.d/ipsec,v 1.11.2.2 2006/01/31 00:28:01 pjd Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/ipsec 175737 2008-01-28 07:58:32Z dougb $
 #
 
 # PROVIDE: ipsec
-# REQUIRE: root mountcritlocal
+# REQUIRE: FILESYSTEMS
 # BEFORE:  DAEMON mountcritremote
 # KEYWORD: nojail
 
@@ -26,15 +25,7 @@ ipsec_prestart()
 {
 	if [ ! -f "$ipsec_file" ]; then
 		warn "$ipsec_file not readable; ipsec start aborted."
-			#
-			# If booting directly to multiuser, send SIGTERM to
-			# the parent (/etc/rc) to abort the boot
-			#
-		if [ "$autoboot" = yes ]; then
-			echo "ERROR: ABORTING BOOT (sending SIGTERM to parent)!"
-			kill -TERM $$
-			exit 1
-		fi
+		stop_boot
 		return 1
 	fi
 	return 0
@@ -61,8 +52,6 @@ ipsec_stop()
 ipsec_reload()
 {
 	echo "Reloading ipsec manual keys/policies."
-	${ipsec_program} -F
-	${ipsec_program} -FP
 	${ipsec_program} -f "$ipsec_file"
 }
 

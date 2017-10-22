@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: net.h,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: net.h,v 1.34 2002/04/03 06:38:38 marka Exp $ */
 
 #ifndef ISC_NET_H
 #define ISC_NET_H 1

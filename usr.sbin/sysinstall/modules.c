@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/modules.c,v 1.7 2003/08/20 06:24:12 imp Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/modules.c 174854 2007-12-22 06:32:46Z cvs2svn $
  */
 
 #include "sysinstall.h"

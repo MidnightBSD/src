@@ -1,4 +1,4 @@
-# $FreeBSD: src/libexec/pppoed/Makefile,v 1.5 2005/01/28 16:08:05 ru Exp $
+# $FreeBSD: release/7.0.0/libexec/pppoed/Makefile 140941 2005-01-28 16:08:11Z ru $
 
 PROG=	pppoed
 DPADD=	${LIBNETGRAPH}

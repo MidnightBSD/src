@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/newsyslog/Makefile,v 1.16 2004/03/12 16:03:26 trhodes Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/newsyslog/Makefile 126878 2004-03-12 16:03:26Z trhodes $
 
 PROG=	newsyslog
 MAN=	newsyslog.8 newsyslog.conf.5

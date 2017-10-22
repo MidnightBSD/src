@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/arm/xscale/i80321/i80321_intr.h,v 1.2 2005/01/05 21:58:49 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/xscale/i80321/i80321_intr.h 161592 2006-08-24 23:51:28Z cognet $
  *
  */
 
@@ -73,9 +73,21 @@ i80321_set_intrsteer(void)
 	    : "r" (intr_steer & ICU_INT_HWMASK));
 }
 
+#if defined ( CPU_XSCALE_80219 )
+#define INT_SWMASK														\
+	((1U << ICU_INT_bit26) |											\
+	 (1U << ICU_INT_bit25) |											\
+	 (1U << ICU_INT_bit23) |											\
+	 (1U << ICU_INT_bit22) |											\
+	 (1U << ICU_INT_bit7)  |											\
+	 (1U << ICU_INT_bit6)  |											\
+	 (1U << ICU_INT_bit5)  |											\
+	 (1U << ICU_INT_bit4))
+#else
 #define INT_SWMASK                                                      \
         ((1U << ICU_INT_bit26) | (1U << ICU_INT_bit22) |                \
          (1U << ICU_INT_bit5)  | (1U << ICU_INT_bit4))
+#endif
 
 #if 0
 static __inline void __attribute__((__unused__))

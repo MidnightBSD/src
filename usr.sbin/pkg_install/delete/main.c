@@ -20,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/delete/main.c,v 1.26.8.1 2005/10/29 15:25:01 krion Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/delete/main.c 159554 2006-06-12 22:39:32Z obrien $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -52,7 +52,7 @@ main(int argc, char **argv)
     while ((ch = getopt(argc, argv, Options)) != -1)
 	switch(ch) {
 	case 'v':
-	    Verbose = TRUE;
+	    Verbose++;
 	    break;
 
 	case 'f':

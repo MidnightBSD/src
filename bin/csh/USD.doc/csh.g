@@ -27,7 +27,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)csh.g	8.1 (Berkeley) 6/8/93
-.\" $FreeBSD: src/bin/csh/USD.doc/csh.g,v 1.9 2005/01/10 08:39:21 imp Exp $
+.\" $FreeBSD: release/7.0.0/bin/csh/USD.doc/csh.g 139969 2005-01-10 08:39:26Z imp $
 .\"
 .SH
 Glossary

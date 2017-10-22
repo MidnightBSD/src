@@ -30,7 +30,7 @@
 
 #ifndef RPC_HDR
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: src/include/rpcsvc/nis.x,v 1.6 2003/05/04 02:51:42 obrien Exp $");
+%__FBSDID("$FreeBSD: release/7.0.0/include/rpcsvc/nis.x 114629 2003-05-04 02:51:42Z obrien $");
 #endif
 
 /* 

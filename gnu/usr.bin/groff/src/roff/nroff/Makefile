@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/groff/src/roff/nroff/Makefile,v 1.1 2001/04/17 12:37:13 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/src/roff/nroff/Makefile 75592 2001-04-17 12:37:18Z ru $
 
 SCRIPTS=	nroff
 MAN=		nroff.1

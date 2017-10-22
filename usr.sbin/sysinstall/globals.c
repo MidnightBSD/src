@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/globals.c,v 1.27 2004/08/07 01:19:54 marcel Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/globals.c 174854 2007-12-22 06:32:46Z cvs2svn $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

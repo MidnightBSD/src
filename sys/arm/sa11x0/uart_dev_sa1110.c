@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/sa11x0/uart_dev_sa1110.c,v 1.2 2005/01/05 21:58:48 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/uart_dev_sa1110.c 172152 2007-09-12 18:28:09Z cognet $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,13 +38,12 @@ __FBSDID("$FreeBSD: src/sys/arm/sa11x0/uart_dev_sa1110.c,v 1.2 2005/01/05 21:58:
 #include <dev/uart/uart.h>
 #include <dev/uart/uart_cpu.h>
 #include <dev/uart/uart_bus.h>
+#include <arm/sa11x0/sa11x0_reg.h>
 #include <arm/sa11x0/uart_dev_sa1110.h>
 
 #include "uart_if.h"
 
 #define      DEFAULT_RCLK    3686400
-
-extern int got_mmu;
 
 /*
  * Low-level UART interface.
@@ -53,19 +52,17 @@ static int sa1110_probe(struct uart_bas *bas);
 static void sa1110_init(struct uart_bas *bas, int, int, int, int);
 static void sa1110_term(struct uart_bas *bas);
 static void sa1110_putc(struct uart_bas *bas, int);
-static int sa1110_poll(struct uart_bas *bas);
-static int sa1110_getc(struct uart_bas *bas);
-
-int did_mmu = 0;
+static int sa1110_rxready(struct uart_bas *bas);
+static int sa1110_getc(struct uart_bas *bas, struct mtx *mtx);
 
 extern SLIST_HEAD(uart_devinfo_list, uart_devinfo) uart_sysdevs;
 
-struct uart_ops uart_sa1110_ops = {
+static struct uart_ops uart_sa1110_ops = {
 	.probe = sa1110_probe,
 	.init = sa1110_init,
 	.term = sa1110_term,
 	.putc = sa1110_putc,
-	.poll = sa1110_poll,
+	.rxready = sa1110_rxready,
 	.getc = sa1110_getc,
 };
 
@@ -76,22 +73,11 @@ sa1110_probe(struct uart_bas *bas)
 }
 
 static void
-sa1110_addr_change(struct uart_bas *bas)
-{
-	
-	bas->bsh = 0xd000d000;
-	did_mmu = 1;
-}
-
-static void
 sa1110_init(struct uart_bas *bas, int baudrate, int databits, int stopbits,
     int parity)
 {
 	int brd;
 	
-	/* XXX: sigh. */
-	if (!did_mmu && got_mmu) 
-		sa1110_addr_change(bas);
 	if (bas->rclk == 0)
 		bas->rclk = DEFAULT_RCLK;
 	while (uart_getreg(bas, SACOM_SR1) & SR1_TBY);
@@ -111,33 +97,21 @@ sa1110_term(struct uart_bas *bas)
 static void
 sa1110_putc(struct uart_bas *bas, int c)
 {
-	/* XXX: sigh. */
-	if (!did_mmu && got_mmu) 
-		sa1110_addr_change(bas);
-
-	while (!uart_getreg(bas, SACOM_SR1) & SR1_TNF);
+	while (!(uart_getreg(bas, SACOM_SR1) & SR1_TNF));
 	uart_setreg(bas, SACOM_DR, c);
 }
 
 static int
-sa1110_poll(struct uart_bas *bas)
+sa1110_rxready(struct uart_bas *bas)
 {
-	/* XXX: sigh. */
-	if (!did_mmu && got_mmu) 
-		sa1110_addr_change(bas);
 
-	if (!(uart_getreg(bas, SACOM_SR1) & SR1_RNE))
-		return (-1);
-	return (uart_getreg(bas, SACOM_DR) & 0xff);
+	return ((uart_getreg(bas, SACOM_SR1) & SR1_RNE) != 0 ? 1 : 0);
 }
 
 static int
-sa1110_getc(struct uart_bas *bas)
+sa1110_getc(struct uart_bas *bas, struct mtx *mtx)
 {
 	int c;
-	/* XXX: sigh. */
-	if (!did_mmu && got_mmu) 
-		sa1110_addr_change(bas);
 
 	while (!(uart_getreg(bas, SACOM_SR1) & SR1_RNE)) {
 		u_int32_t sr0;
@@ -212,7 +186,7 @@ sa1110_bus_transmit(struct uart_softc *sc)
 	uart_setreg(&sc->sc_bas, SACOM_CR3, uart_getreg(&sc->sc_bas, SACOM_CR3)
 	    | CR3_TIE);    
 	for (i = 0; i < sc->sc_txdatasz; i++) {
-		while (!uart_getreg(&sc->sc_bas, SACOM_SR1) & SR1_TNF);
+		while (!(uart_getreg(&sc->sc_bas, SACOM_SR1) & SR1_TNF));
 
 		uart_setreg(&sc->sc_bas, SACOM_DR, sc->sc_txbuf[i]);
 		uart_barrier(&sc->sc_bas);
@@ -270,12 +244,12 @@ sa1110_bus_ipend(struct uart_softc *sc)
 	int mask = CR3_RIE | CR3_TIE;
 	if (sr & 1) {
 		if (uart_getreg(&sc->sc_bas, SACOM_CR3) & CR3_TIE)
-			ipend |= UART_IPEND_TXIDLE;
+			ipend |= SER_INT_TXIDLE;
 		mask &= ~CR3_TIE;
 	}
 	if (sr & 4) {
 		if (uart_getreg(&sc->sc_bas, SACOM_CR3) & CR3_RIE)
-			ipend |= UART_IPEND_RXREADY;
+			ipend |= SER_INT_RXREADY;
 		mask &= ~CR3_RIE;
 	}
 	uart_setreg(&sc->sc_bas, SACOM_CR3, CR3_RXE | mask); 
@@ -298,10 +272,12 @@ sa1110_bus_ioctl(struct uart_softc *sc, int request, intptr_t data)
 {
 	return (EINVAL);
 }
+
 struct uart_class uart_sa1110_class = {
-	"sa1110 class",
+	"sa1110",
 	sa1110_methods,
 	1,
+	.uc_ops = &uart_sa1110_ops,
 	.uc_range = 8,
 	.uc_rclk = 3686400
 };

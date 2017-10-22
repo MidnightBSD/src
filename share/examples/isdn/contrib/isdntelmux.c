@@ -28,7 +28,7 @@
  *	i4btemux - record while playing
  *      ===============================
  *
- * $FreeBSD: src/share/examples/isdn/contrib/isdntelmux.c,v 1.1 2001/05/25 13:25:59 hm Exp $
+ * $FreeBSD: release/7.0.0/share/examples/isdn/contrib/isdntelmux.c 171272 2007-07-06 07:21:56Z bz $
  *
  *----------------------------------------------------------------------------*/
 
@@ -47,7 +47,7 @@
 #include<sys/types.h>
 #include<sys/time.h>
 #include<sys/param.h>
-#include<machine/i4b_tel_ioctl.h>
+#include<i4b/i4b_tel_ioctl.h>
 
 // DECL DEFS
 #define BUFLEN 2048

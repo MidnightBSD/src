@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/newgrp/newgrp.c,v 1.2 2003/10/30 15:14:34 harti Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/newgrp/newgrp.c 121741 2003-10-30 15:14:34Z harti $");
 
 #include <sys/types.h>
 

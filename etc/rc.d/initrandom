@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/initrandom,v 1.5.2.1 2005/12/21 07:11:34 dougb Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/initrandom 169924 2007-05-24 05:58:20Z rse $
 #
 
 # PROVIDE: initrandom
@@ -53,7 +53,7 @@ initrandom_start()
 		# harvesting rate.
 		# Entropy below is not great, but better than nothing.
 		# This unblocks the generator at startup
-		( ps -fauxww; sysctl -a; date; df -ib; dmesg; ps -fauxww; ) \
+		( ps -fauxww; sysctl -a; date; df -ib; dmesg; ps -fauxww ) \
 		    | dd of=/dev/random bs=8k 2>/dev/null
 		cat /bin/ls | dd of=/dev/random bs=8k 2>/dev/null
 

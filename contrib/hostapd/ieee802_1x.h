@@ -1,31 +1,21 @@
-/* $FreeBSD: src/contrib/hostapd/ieee802_1x.h,v 1.2 2005/06/05 22:41:14 sam Exp $ */
+/* $FreeBSD: release/7.0.0/contrib/hostapd/ieee802_1x.h 172506 2007-10-10 16:59:15Z cvs2svn $ */
+
+/*
+ * hostapd / IEEE 802.1X Authenticator
+ * Copyright (c) 2002-2005, Jouni Malinen <j@w1.fi>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * Alternatively, this software may be distributed under the terms of BSD
+ * license.
+ *
+ * See README and COPYING for more details.
+ */
 
 #ifndef IEEE802_1X_H
 #define IEEE802_1X_H
-
-/* IEEE Std 802.1X-REV-d11, 7.2 */
-
-struct ieee802_1x_hdr {
-	u8 version;
-	u8 type;
-	u16 length;
-	/* followed by length octets of data */
-} __attribute__ ((packed));
-
-
-#if defined(IEEE802_1X_EAPOL_VERSION_2)
-#define EAPOL_VERSION 2
-#else
-/* Enable support for older Authenticators/Supplicants using EAPOL Version 1 */
-#define EAPOL_VERSION 1
-#endif /* ! IEEE802_1X_EAPOL_VERSION_2 */
-
-enum { IEEE802_1X_TYPE_EAP_PACKET = 0,
-       IEEE802_1X_TYPE_EAPOL_START = 1,
-       IEEE802_1X_TYPE_EAPOL_LOGOFF = 2,
-       IEEE802_1X_TYPE_EAPOL_KEY = 3,
-       IEEE802_1X_TYPE_EAPOL_ENCAPSULATED_ASF_ALERT = 4
-};
 
 /* draft-congdon-radius-8021x-20.txt */
 
@@ -51,33 +41,34 @@ struct ieee802_1x_eapol_key {
 	 * RC4 key used in encryption = Key-IV + MS-MPPE-Recv-Key */
 } __attribute__ ((packed));
 
-enum { EAPOL_KEY_TYPE_RC4 = 1, EAPOL_KEY_TYPE_RSN = 2,
-       EAPOL_KEY_TYPE_WPA = 254 };
 
-
-void ieee802_1x_receive(hostapd *hapd, u8 *sa, u8 *buf, size_t len);
-void ieee802_1x_new_station(hostapd *hapd, struct sta_info *sta);
+void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
+			size_t len);
+void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta);
 void ieee802_1x_free_station(struct sta_info *sta);
 
 void ieee802_1x_request_identity(struct hostapd_data *hapd,
 				 struct sta_info *sta);
 void ieee802_1x_tx_canned_eap(struct hostapd_data *hapd, struct sta_info *sta,
 			      int success);
-void ieee802_1x_tx_req(hostapd *hapd, struct sta_info *sta);
+void ieee802_1x_tx_req(struct hostapd_data *hapd, struct sta_info *sta);
 void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta);
-void ieee802_1x_send_resp_to_server(hostapd *hapd, struct sta_info *sta);
+void ieee802_1x_send_resp_to_server(struct hostapd_data *hapd,
+				    struct sta_info *sta);
 void ieee802_1x_abort_auth(struct hostapd_data *hapd, struct sta_info *sta);
-void ieee802_1x_set_sta_authorized(hostapd *hapd, struct sta_info *sta,
-				   int authorized);
-void ieee802_1x_set_port_enabled(hostapd *hapd, struct sta_info *sta,
-				 int enabled);
+void ieee802_1x_set_sta_authorized(struct hostapd_data *hapd,
+				   struct sta_info *sta, int authorized);
 void ieee802_1x_dump_state(FILE *f, const char *prefix, struct sta_info *sta);
-int ieee802_1x_init(hostapd *hapd);
-void ieee802_1x_deinit(hostapd *hapd);
-int ieee802_1x_tx_status(hostapd *hapd, struct sta_info *sta, u8 *buf,
-			 size_t len, int ack);
+int ieee802_1x_init(struct hostapd_data *hapd);
+void ieee802_1x_deinit(struct hostapd_data *hapd);
+int ieee802_1x_reconfig(struct hostapd_data *hapd,
+			struct hostapd_config *oldconf,
+			struct hostapd_bss_config *oldbss);
+int ieee802_1x_tx_status(struct hostapd_data *hapd, struct sta_info *sta,
+			 u8 *buf, size_t len, int ack);
 u8 * ieee802_1x_get_identity(struct eapol_state_machine *sm, size_t *len);
-u8 * ieee802_1x_get_radius_class(struct eapol_state_machine *sm, size_t *len);
+u8 * ieee802_1x_get_radius_class(struct eapol_state_machine *sm, size_t *len,
+				 int idx);
 u8 * ieee802_1x_get_key_crypt(struct eapol_state_machine *sm, size_t *len);
 void ieee802_1x_notify_port_enabled(struct eapol_state_machine *sm,
 				    int enabled);
@@ -90,5 +81,12 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 void hostapd_get_ntp_timestamp(u8 *buf);
 void ieee802_1x_finished(struct hostapd_data *hapd, struct sta_info *sta,
 			 int success);
+char *eap_type_text(u8 type);
+
+struct radius_class_data;
+
+void ieee802_1x_free_radius_class(struct radius_class_data *class);
+int ieee802_1x_copy_radius_class(struct radius_class_data *dst,
+				 struct radius_class_data *src);
 
 #endif /* IEEE802_1X_H */

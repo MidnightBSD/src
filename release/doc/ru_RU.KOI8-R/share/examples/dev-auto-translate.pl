@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $FreeBSD: src/release/doc/ru_RU.KOI8-R/share/examples/dev-auto-translate.pl,v 1.3 2005/06/30 12:07:29 den Exp $
+# $FreeBSD: release/7.0.0/release/doc/ru_RU.KOI8-R/share/examples/dev-auto-translate.pl 147695 2005-06-30 12:07:29Z den $
 # $FreeBSDru: frdp/release/doc/ru_RU.KOI8-R/share/examples/dev-auto-translate.pl,v 1.4 2005/06/30 12:11:18 den Exp $
 #
 # Auto-translate some device entities from English to Russian (KOI8-R)

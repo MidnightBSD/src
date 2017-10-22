@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/release/scripts/proflibs-make.sh,v 1.8 2004/01/18 09:06:40 ru Exp $
+# $FreeBSD: release/7.0.0/release/scripts/proflibs-make.sh 124661 2004-01-18 09:06:40Z ru $
 #
 
 # Move the profiled libraries out to their own dist

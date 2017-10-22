@@ -1,4 +1,4 @@
-# $FreeBSD: src/bin/getfacl/Makefile,v 1.6 2001/12/04 01:57:44 obrien Exp $
+# $FreeBSD: release/7.0.0/bin/getfacl/Makefile 87323 2001-12-04 01:57:47Z obrien $
 
 PROG=	getfacl
 

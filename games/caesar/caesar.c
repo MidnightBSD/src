@@ -51,7 +51,7 @@ static const char sccsid[] = "@(#)caesar.c    8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/games/caesar/caesar.c,v 1.14 2005/05/01 19:34:22 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/games/caesar/caesar.c 145782 2005-05-01 19:34:22Z stefanf $");
 
 #include <errno.h>
 #include <math.h>

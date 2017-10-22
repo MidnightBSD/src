@@ -27,9 +27,9 @@
  *	layer3_subr.c - subroutines for IE decoding
  *	-------------------------------------------
  *
- *	$Id: layer3_subr.c,v 1.1.1.2 2006-02-25 02:38:28 laffer1 Exp $
+ *	$Id: layer3_subr.c,v 1.8 2000/02/21 15:17:17 hm Exp $
  *
- * $FreeBSD: src/usr.sbin/i4b/isdndecode/layer3_subr.c,v 1.8 2001/04/26 08:40:35 kris Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdndecode/layer3_subr.c 76018 2001-04-26 08:40:35Z kris $
  *
  *      last edit-date: [Mon Feb 21 15:45:16 2000]
  *

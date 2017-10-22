@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/nc/Makefile,v 1.3 2005/02/07 08:44:34 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/nc/Makefile 141443 2005-02-07 08:44:34Z ru $
 
 .PATH: ${.CURDIR}/../../contrib/netcat
 

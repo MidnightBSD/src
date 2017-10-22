@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/compress/zopen.h,v 1.5 2002/03/22 01:19:31 imp Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/compress/zopen.h 92920 2002-03-22 01:22:50Z imp $
  */
 
 #ifndef _ZOPEN_H_

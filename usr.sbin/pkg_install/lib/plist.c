@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/plist.c 167972 2007-03-28 05:33:52Z njl $");
 
 #include "lib.h"
 #include <err.h>
@@ -480,7 +480,7 @@ delete_package(Boolean ign_err, Boolean nukedirs, Package *pkg)
 			/* Mismatch? */
 			if (strcmp(cp, p->next->name + 4)) {
 			    warnx("'%s' fails original MD5 checksum - %s",
-				       tmp, Force ? "deleted anyway." : "not deleted.");
+				  tmp, Force ? "deleted anyway." : "not deleted.");
 			    if (!Force) {
 				fail = FAIL;
 				continue;

@@ -17,7 +17,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/cron/cron/cron.c,v 1.15.8.1 2006/01/15 17:50:36 delphij Exp $";
+  "$FreeBSD: release/7.0.0/usr.sbin/cron/cron/cron.c 160521 2006-07-20 09:11:08Z stefanf $";
 #endif
 
 #define	MAIN_PROGRAM
@@ -398,7 +398,8 @@ cron_clean(db)
 
 #ifdef USE_SIGCHLD
 static void
-sigchld_handler(x) {
+sigchld_handler(int x)
+{
 	WAIT_T		waiter;
 	PID_T		pid;
 
@@ -428,7 +429,8 @@ sigchld_handler(x) {
 
 
 static void
-sighup_handler(x) {
+sighup_handler(int x)
+{
 	log_close();
 }
 

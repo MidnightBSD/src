@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/pred.h,v 1.9 2001/06/13 21:52:19 brian Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ppp/pred.h 78189 2001-06-13 21:52:19Z brian $
  */
 
 extern const struct ccp_algorithm Pred1Algorithm;

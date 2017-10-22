@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/dhclient/dispatch.c,v 1.1.1.1.2.1 2005/09/10 17:01:16 brooks Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sbin/dhclient/dispatch.c 174511 2007-12-10 17:49:16Z jkim $");
 
 #include "dhcpd.h"
 
@@ -329,6 +329,7 @@ interface_status(struct interface_info *ifinfo)
 	if (ifmr.ifm_status & IFM_AVALID) {
 		switch (ifmr.ifm_active & IFM_NMASK) {
 		case IFM_ETHER:
+		case IFM_IEEE80211:
 			if (ifmr.ifm_status & IFM_ACTIVE)
 				goto active;
 			else
@@ -487,7 +488,9 @@ interface_link_status(char *ifname)
 	close(sock);
 
 	if (ifmr.ifm_status & IFM_AVALID) {
-		if ((ifmr.ifm_active & IFM_NMASK) == IFM_ETHER) {
+		switch (ifmr.ifm_active & IFM_NMASK) {
+		case IFM_ETHER:
+		case IFM_IEEE80211:
 			if (ifmr.ifm_status & IFM_ACTIVE)
 				return (1);
 			else

@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/true/true.c,v 1.6 2003/02/19 00:18:13 peter Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/true/true.c 111109 2003-02-19 00:18:13Z peter $
  */
 
 #ifndef lint

@@ -26,8 +26,8 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-/* @(#) $Header: /home/cvs/src/usr.bin/lex/flexdef.h,v 1.1.1.2 2006-02-25 02:38:14 laffer1 Exp $ (LBL) */
-/* $FreeBSD: src/usr.bin/lex/flexdef.h,v 1.6 2003/01/01 18:49:00 schweikh Exp $ */
+/* @(#) $Header: /home/daffy/u0/vern/flex/RCS/flexdef.h,v 2.53 95/04/20 11:17:36 vern Exp $ (LBL) */
+/* $FreeBSD: release/7.0.0/usr.bin/lex/flexdef.h 108533 2003-01-01 18:49:04Z schweikh $ */
 
 #include <stdio.h>
 #include <ctype.h>

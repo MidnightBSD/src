@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: hcseriald.c,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/hcseriald/hcseriald.c,v 1.5 2004/11/02 20:12:06 emax Exp $
+ * $Id: hcseriald.c,v 1.3 2003/05/21 22:40:32 max Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/hcseriald/hcseriald.c 137135 2004-11-02 20:12:06Z emax $
  */
 
 #include <sys/types.h>

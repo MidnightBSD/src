@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/tools/hcomp/Makefile,v 1.1 2003/08/04 13:10:01 des Exp $
+# $FreeBSD: release/7.0.0/tools/tools/hcomp/Makefile 118425 2003-08-04 13:10:01Z des $
 
 BINDIR		?= ${HOME}/bin
 BINOWN		?= ${USER}

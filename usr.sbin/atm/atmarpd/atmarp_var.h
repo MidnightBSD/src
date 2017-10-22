@@ -23,7 +23,7 @@
  * Copies of this Software may be made, however, the above copyright
  * notice must be reproduced on all copies.
  *
- *	@(#) $FreeBSD: src/usr.sbin/atm/atmarpd/atmarp_var.h,v 1.4 2002/10/10 00:32:55 alfred Exp $
+ *	@(#) $FreeBSD: release/7.0.0/usr.sbin/atm/atmarpd/atmarp_var.h 104744 2002-10-10 00:32:55Z alfred $
  *
  */
 

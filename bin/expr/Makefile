@@ -1,4 +1,4 @@
-# $FreeBSD: src/bin/expr/Makefile,v 1.18 2003/06/13 07:04:02 markm Exp $
+# $FreeBSD: release/7.0.0/bin/expr/Makefile 116282 2003-06-13 07:04:02Z markm $
 
 PROG=	expr
 SRCS=	expr.y

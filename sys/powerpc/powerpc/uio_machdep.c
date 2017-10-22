@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/uio_machdep.c,v 1.5 2005/01/07 02:29:20 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/uio_machdep.c 170473 2007-06-09 21:55:17Z marcel $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -49,6 +49,7 @@ __FBSDID("$FreeBSD: src/sys/powerpc/powerpc/uio_machdep.c,v 1.5 2005/01/07 02:29
 #include <vm/vm.h>
 #include <vm/vm_page.h>
 
+#include <machine/md_var.h>
 #include <machine/vmparam.h>
 
 /*
@@ -92,10 +93,13 @@ uiomove_fromphys(vm_page_t ma[], vm_offset_t offset, int n, struct uio *uio)
 				uio_yield();
 			if (uio->uio_rw == UIO_READ)
 				error = copyout(cp, iov->iov_base, cnt);
-			else
+			else 
 				error = copyin(iov->iov_base, cp, cnt);
 			if (error)
 				goto out;
+			if (uio->uio_rw == UIO_WRITE &&
+			    pmap_page_executable(ma[offset >> PAGE_SHIFT]))
+				__syncicache(cp, cnt);
 			break;
 		case UIO_SYSSPACE:
 			if (uio->uio_rw == UIO_READ)

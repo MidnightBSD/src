@@ -50,7 +50,7 @@
  * SUCH DAMAGE.
  *
  *	from:	@(#)fd.c	7.4 (Berkeley) 5/25/91
- * $FreeBSD: src/sys/pc98/cbus/fdc.c,v 1.160.2.1 2005/11/06 05:01:03 nyan Exp $
+ * $FreeBSD: release/7.0.0/sys/pc98/cbus/fdc.c 167753 2007-03-21 03:38:37Z nyan $
  */
 
 #include "opt_fdc.h"
@@ -68,17 +68,16 @@
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/rman.h>
 #include <sys/systm.h>
 
 #include <machine/bus.h>
-#include <machine/clock.h>
 #include <machine/stdarg.h>
 
 #ifdef PC98
 #include <isa/isavar.h>
-#include <pc98/cbus/cbus.h>
 #include <pc98/cbus/fdcreg.h>
 #include <pc98/cbus/fdcvar.h>
 #include <pc98/pc98/pc98_machdep.h>
@@ -477,7 +476,7 @@ enable_fifo(fdc_p fdc)
 		 * first byte, and check for an early turn of data directon.
 		 */
 		
-		if (out_fdc(fdc, I8207X_CONFIGURE) < 0)
+		if (out_fdc(fdc, I8207X_CONFIG) < 0)
 			return fdc_err(fdc, "Enable FIFO failed\n");
 		
 		/* If command is invalid, return */
@@ -500,7 +499,7 @@ enable_fifo(fdc_p fdc)
 		return 0;
 	}
 	if (fd_cmd(fdc, 4,
-		   I8207X_CONFIGURE, 0, (fifo_threshold - 1) & 0xf, 0, 0) < 0)
+		   I8207X_CONFIG, 0, (fifo_threshold - 1) & 0xf, 0, 0) < 0)
 		return fdc_err(fdc, "Re-enable FIFO failed\n");
 	return 0;
 }
@@ -654,21 +653,16 @@ fdc_release_resources(struct fdc_data *fdc)
 
 	dev = fdc->fdc_dev;
 	if (fdc->fdc_intr) {
-		BUS_TEARDOWN_INTR(device_get_parent(dev), dev, fdc->res_irq,
-		    fdc->fdc_intr);
+		bus_teardown_intr(dev, fdc->res_irq, fdc->fdc_intr);
 		fdc->fdc_intr = NULL;
 	}
 	if (fdc->res_irq != 0) {
-		bus_deactivate_resource(dev, SYS_RES_IRQ, fdc->rid_irq,
-					fdc->res_irq);
 		bus_release_resource(dev, SYS_RES_IRQ, fdc->rid_irq,
 				     fdc->res_irq);
 		fdc->res_irq = NULL;
 	}
 #ifndef PC98
 	if (fdc->res_ctl != 0) {
-		bus_deactivate_resource(dev, SYS_RES_IOPORT, fdc->rid_ctl,
-					fdc->res_ctl);
 		bus_release_resource(dev, SYS_RES_IOPORT, fdc->rid_ctl,
 				     fdc->res_ctl);
 		fdc->res_ctl = NULL;
@@ -676,28 +670,20 @@ fdc_release_resources(struct fdc_data *fdc)
 #endif
 #ifdef PC98
 	if (fdc->res_fdsio != 0) {
-		bus_deactivate_resource(dev, SYS_RES_IOPORT, 3,
-					fdc->res_fdsio);
 		bus_release_resource(dev, SYS_RES_IOPORT, 3, fdc->res_fdsio);
 		fdc->res_fdsio = NULL;
 	}
 	if (fdc->res_fdemsio != 0) {
-		bus_deactivate_resource(dev, SYS_RES_IOPORT, 4,
-					fdc->res_fdemsio);
 		bus_release_resource(dev, SYS_RES_IOPORT, 4, fdc->res_fdemsio);
 		fdc->res_fdemsio = NULL;
 	}
 #endif
 	if (fdc->res_ioport != 0) {
-		bus_deactivate_resource(dev, SYS_RES_IOPORT, fdc->rid_ioport,
-					fdc->res_ioport);
 		bus_release_resource(dev, SYS_RES_IOPORT, fdc->rid_ioport,
 				     fdc->res_ioport);
 		fdc->res_ioport = NULL;
 	}
 	if (fdc->res_drq != 0) {
-		bus_deactivate_resource(dev, SYS_RES_DRQ, fdc->rid_drq,
-					fdc->res_drq);
 		bus_release_resource(dev, SYS_RES_DRQ, fdc->rid_drq,
 				     fdc->res_drq);
 		fdc->res_drq = NULL;
@@ -823,8 +809,8 @@ fdc_attach(device_t dev)
 
 	fdc = device_get_softc(dev);
 	fdc->fdc_dev = dev;
-	error = BUS_SETUP_INTR(device_get_parent(dev), dev, fdc->res_irq,
-			       INTR_TYPE_BIO | INTR_ENTROPY, fdc_intr, fdc,
+	error = bus_setup_intr(dev, fdc->res_irq,
+			       INTR_TYPE_BIO | INTR_ENTROPY, NULL, fdc_intr, fdc,
 			       &fdc->fdc_intr);
 	if (error) {
 		device_printf(dev, "cannot setup interrupt\n");
@@ -926,8 +912,7 @@ fd_probe(device_t dev)
 /*
  * XXX I think using __i386__ is wrong here since we actually want to probe
  * for the machine type, not the CPU type (so non-PC arch's like the PC98 will
- * fail the probe).  However, for whatever reason, testing for _MACHINE_ARCH
- * == i386 breaks the test on FreeBSD/Alpha.
+ * fail the probe).
  */
 #ifdef __i386__
 	if (fd->type == FDT_NONE && (fd->fdu == 0 || fd->fdu == 1)) {
@@ -2516,7 +2501,7 @@ fdioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td)
 #endif
 
 	case FD_CLRERR:
-		if (suser(td) != 0)
+		if (priv_check(td, PRIV_DRIVER) != 0)
 			return (EPERM);
 		fd->fdc->fdc_errs = 0;
 		return (0);
@@ -2560,7 +2545,7 @@ fdioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td)
 
 	case FD_STYPE:                  /* set drive type */
 		/* this is considered harmful; only allow for superuser */
-		if (suser(td) != 0)
+		if (priv_check(td, PRIV_DRIVER) != 0)
 			return (EPERM);
 		*fd->ft = *(struct fd_type *)addr;
 		break;
@@ -2584,7 +2569,7 @@ fdioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td)
 #endif
 
 	case FD_CLRERR:
-		if (suser(td) != 0)
+		if (priv_check(td, PRIV_DRIVER) != 0)
 			return (EPERM);
 		fd->fdc->fdc_errs = 0;
 		break;

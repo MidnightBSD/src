@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/sign/sign.c,v 1.4 2004/06/29 19:06:42 eik Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/sign/sign.c 156729 2006-03-15 01:19:23Z krion $");
 
 #include <sys/types.h>
 #include <stdlib.h>
@@ -116,6 +116,9 @@ sign(filename, type, userid, envp)
 	case TAG_X509:
 		success = retrieve_x509_marker(filename, &sign, userid);
 		break;
+	default:
+		success = 0;
+		fprintf(stderr, "Unknown type %d\n", type);
 	}
 
 	if (!success) {

@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ssr.c,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/sdpd/ssr.c,v 1.3 2005/01/05 18:37:37 emax Exp $
+ * $Id: ssr.c,v 1.5 2004/01/13 01:54:39 max Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/sdpd/ssr.c 139721 2005-01-05 18:37:37Z emax $
  */
 
 #include <sys/queue.h>

@@ -1,16 +1,16 @@
 #
-# $FreeBSD: src/etc/pam.d/kde,v 1.6 2003/04/30 21:57:54 markm Exp $
+# $FreeBSD: release/7.0.0/etc/pam.d/kde 170510 2007-06-10 18:57:20Z yar $
 #
 # PAM configuration for the "kde" service
 #
 
 # auth
-auth		required	pam_nologin.so		no_warn
 #auth		sufficient	pam_krb5.so		no_warn try_first_pass
 #auth		sufficient	pam_ssh.so		no_warn try_first_pass
 auth		required	pam_unix.so		no_warn try_first_pass
 
 # account
+account		required	pam_nologin.so
 #account 	required	pam_krb5.so
 account		required	pam_unix.so
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/mtree/specspec.c,v 1.6 2005/03/29 11:44:17 tobez Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/mtree/specspec.c 144295 2005-03-29 11:44:17Z tobez $");
 
 #include <err.h>
 #include <grp.h>

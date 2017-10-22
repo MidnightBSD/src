@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/login.access,v 1.4 2004/06/06 11:46:27 schweikh Exp $
+# $FreeBSD: release/7.0.0/etc/login.access 130151 2004-06-06 11:46:29Z schweikh $
 #
 # Login access control table.
 #

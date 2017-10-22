@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/uni/uniarp.c,v 1.23 2005/06/10 16:49:20 brooks Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/netatm/uni/uniarp.c 170996 2007-06-23 00:02:20Z mjacob $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -776,7 +776,7 @@ uniarp_iftimeout(tip)
 	 * Back-off to uniip control block
 	 */
 	uip = (struct uniip *)
-		((caddr_t)tip - (int)(&((struct uniip *)0)->uip_arptime));
+		((caddr_t)tip - offsetof(struct uniip, uip_arptime));
 
 	ATM_DEBUG2("uniarp_iftimeout: uip=%p, state=%d\n", uip, 
 		uip->uip_arpstate);

@@ -1,4 +1,6 @@
-# $FreeBSD: src/sys/boot/pc98/loader/Makefile,v 1.38.2.1 2005/10/30 16:34:37 nyan Exp $
+# $FreeBSD: release/7.0.0/sys/boot/pc98/loader/Makefile 163893 2006-11-02 00:26:45Z marcel $
+
+.include <bsd.own.mk>
 
 PROG=		loader.sym
 INTERNALPROG=
@@ -15,11 +17,13 @@ CFLAGS+=	-DLOADER_TFTP_SUPPORT
 CFLAGS+=	-DLOADER_NFS_SUPPORT
 .endif
 
+HAVE_BCACHE=	yes
+
 # Enable PnP and ISA-PnP code.
 HAVE_PNP=	yes
 HAVE_ISABUS=	yes
 
-.if !defined(NO_FORTH)
+.if ${MK_FORTH} != "no"
 # Enable BootForth
 BOOT_FORTH=	yes
 CFLAGS+=	-DBOOT_FORTH -I${.CURDIR}/../../ficl -I${.CURDIR}/../../ficl/i386

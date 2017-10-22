@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/msg.c,v 1.59 2001/09/11 20:42:07 jkh Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/msg.c 174854 2007-12-22 06:32:46Z cvs2svn $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

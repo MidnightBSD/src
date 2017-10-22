@@ -15,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/lib/libdialog/TESTS/fselect.c,v 1.6 2003/05/03 21:31:08 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/gnu/lib/libdialog/TESTS/fselect.c 114603 2003-05-03 21:31:08Z obrien $");
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/ia64/support.S,v 1.25 2005/01/06 22:18:22 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/ia64/support.S 163449 2006-10-17 02:24:47Z davidxu $
  */
 /*-
  * Copyright (c) 1994, 1995, 1996 Carnegie-Mellon University.
@@ -192,10 +192,10 @@ ENTRY(fusufault, 0)
 END(fusufault)
 
 /*
- * casuptr(intptr_t *p, intptr_t old, intptr_t new)
+ * casuword(u_long *p, u_long old, u_long new)
  *	Perform a compare-exchange in user space.
  */
-ENTRY(casuptr, 3)
+ENTRY(casuword, 3)
 {	.mlx
 	add		r15=PC_CURTHREAD,r13
 	movl		r14=VM_MAX_ADDRESS
@@ -239,7 +239,57 @@ ENTRY(casuptr, 3)
 	br.ret.sptk	rp
 	;;
 }
-END(casuptr)
+END(casuword)
+
+/*
+ * casuword32(uint32_t *p, uint32_t old, uint32_t new)
+ *	Perform a 32-bit compare-exchange in user space.
+ */
+ENTRY(casuword32, 3)
+{	.mlx
+	add		r15=PC_CURTHREAD,r13
+	movl		r14=VM_MAX_ADDRESS
+	;;
+}
+{	.mib
+	ld8		r15=[r15]		// r15 = curthread
+	cmp.geu		p6,p0=in0,r14
+(p6)	br.dpnt.few	1f
+	;;
+}
+{	.mlx
+	add		r15=TD_PCB,r15
+	movl		r14=fusufault
+	;;
+}
+{	.mmi
+	ld8		r15=[r15]		// r15 = PCB
+	;;
+	mov		ar.ccv=in1
+	add		r15=PCB_ONFAULT,r15
+	;;
+}
+{	.mmi
+	st8		[r15]=r14		// Set onfault
+	;;
+	cmpxchg4.rel	ret0=[in0],in2,ar.ccv
+	nop		0
+	;;
+}
+{	.mfb
+	st8.rel		[r15]=r0		// Clear onfault
+	nop		0
+	br.ret.sptk	rp
+	;;
+}
+1:
+{	.mfb
+	add		ret0=-1,r0
+	nop		0
+	br.ret.sptk	rp
+	;;
+}
+END(casuword32)
 
 /*
  * subyte(void *addr, int byte)

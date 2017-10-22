@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 # Emacs should use -*- cperl -*- mode
 #
-# Copyright (c) 2003-2005 Simon L. Nielsen <simon@FreeBSD.org>
+# Copyright (c) 2003-2006 Simon L. Nielsen <simon@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/release/doc/share/misc/man2hwnotes.pl,v 1.12 2005/07/04 07:48:02 simon Exp $
+# $FreeBSD: release/7.0.0/release/doc/share/misc/man2hwnotes.pl 166778 2007-02-16 02:10:12Z bmah $
 #
 
 # Parse the list of supported hardware out of section 4 manual pages
@@ -40,7 +40,7 @@
 # arguments to the .It command, only the argument will be printed.
 
 # Usage:
-# man2hwnotes.pl [-l] [-d 0-6] [-a <archlist file>] [-o <outputfile>]
+# man2hwnotes.pl [-cl] [-d 0-6] [-a <archlist file>] [-o <outputfile>]
 #                <manualpage> [<manualpage> ...]
 
 use strict;
@@ -55,6 +55,7 @@ my $archlist_file = "dev.archlist.txt";
 my %archlist;
 
 # Globals
+my $compat_mode = 0; # Enable compat for old Hardware Notes style
 my $debuglevel = 0;
 my $only_list_out = 0; # Should only lists be generated in the output?
 my @out_lines; # Single lines
@@ -62,10 +63,13 @@ my @out_dev;   # Device entities
 
 # Getopt
 my %options = ();
-if (!getopts("a:d:lo:",\%options)) {
+if (!getopts("a:cd:lo:",\%options)) {
     die("$!: Invalid command line arguments in ", __LINE__, "\n");
 }
 
+if (defined($options{c})) {
+    $compat_mode = 1;
+}
 if (defined($options{d})) {
     $debuglevel = $options{d};
 }
@@ -204,6 +208,16 @@ sub parse {
 		    add_sgmltag(\%mdocvars, "'>");
 		    $mdocvars{isin_hwlist} = 0;
 		}
+		if ($mdocvars{isin_list}) {
+		    dlog(1, "Warning: Still in list, but just entered new " .
+			 "section.  This is probably due to missing .El; " .
+			 "check manual page for errors.");
+		    # If we try to recover from this we will probably
+		    # just end with bad SGML output and it really
+		    # should be fixed in the manual page so we don't
+		    # even try to "fix" this.
+		}
+
 
 	    } elsif (/^Dt ([^ ]+) ([^ ]+)/) {
 		dlog(4, "Setting mansection to $2");
@@ -357,9 +371,17 @@ sub flush_out {
     $entity_name = add_txt_ent(${$mdocvars}{parabuf});
     ${$mdocvars}{parabuf} = "";
     if(defined($archlist{${$mdocvars}{Nm}})) {
-	$para_arch = ' arch="' . $archlist{${$mdocvars}{Nm}} . '"';
+	if ($compat_mode) {
+	    $para_arch = ' arch="' . $archlist{${$mdocvars}{Nm}} . '"';
+	} else {
+	    $para_arch = '[' . $archlist{${$mdocvars}{Nm}} . '] ';
+	}
     }
-    $out = "<para".$para_arch.">&".$entity_name.";</para>";
+    if ($compat_mode) {
+	$out = "<para".$para_arch.">&".$entity_name.";</para>";
+    } else {
+	$out = "<para>".$para_arch."&".$entity_name.";</para>";
+    }
 
     dlog(4, "Flushing parabuf");
     add_sgmltag($mdocvars, $out);
@@ -374,8 +396,12 @@ sub add_listitem {
     $entity_name = add_txt_ent(${$mdocvars}{parabuf});
     ${$mdocvars}{parabuf} = "";
 
-    if(defined($archlist{${$mdocvars}{Nm}})) {
-	$para_arch = ' arch="' . $archlist{${$mdocvars}{Nm}} . '"';
+    if ($compat_mode) {
+	if(defined($archlist{${$mdocvars}{Nm}})) {
+	    $para_arch = ' arch="' . $archlist{${$mdocvars}{Nm}} . '"';
+	}
+    } else {
+	$listitem = "<listitem><para>&".$entity_name.";</para></listitem>";
     }
     $listitem = "<listitem><para".$para_arch.">&".$entity_name.";</para></listitem>";
     dlog(4, "Adding '$listitem' to out_dev");
@@ -388,23 +414,30 @@ sub parabuf_addline {
     my $mdocvars = shift;
     my ($txt) = (@_);
 
-    dlog(5, "Now in parabuf_addline");
+    dlog(5, "Now in parabuf_addline for '$txt'");
 
     # We only care about the HW list for now.
     if (!${$mdocvars}{isin_hwlist}) {
+	dlog(6, "Exiting parabuf_addline due to: !\${\$mdocvars}{isin_hwlist}");
 	return;
     }
     if ($txt eq "") {
+	dlog(6, "Exiting parabuf_addline due to: \$txt eq \"\"");
 	return;
     }
 
     if ($only_list_out && !${$mdocvars}{isin_list}) {
+	dlog(6, "Exiting parabuf_addline due to: ".
+	     "\$only_list_out && !\${\$mdocvars}{isin_list}");
 	return;
     }
 
     # We only add the first line for "tag" lists
     if (${$mdocvars}{parabuf} ne "" && ${$mdocvars}{isin_list} &&
 	${$mdocvars}{listtype} eq "tag") {
+	dlog(6, "Exiting parabuf_addline due to: ".
+	     "\${\$mdocvars}{parabuf} ne \"\" && \${\$mdocvars}{isin_list} && ".
+	     "\${\$mdocvars}{listtype} eq \"tag\"");
 	return;
     }
 

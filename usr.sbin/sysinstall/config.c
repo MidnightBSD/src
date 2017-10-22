@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/config.c 174854 2007-12-22 06:32:46Z cvs2svn $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -268,7 +268,7 @@ configFstab(dialogMenuItem *self)
  * returns number of lines read.  line contents
  * are malloc'd and must be freed by the caller.
  */
-int
+static int
 readConfig(char *config, char **lines, int max)
 {
     FILE *fp;
@@ -506,6 +506,21 @@ configNTP(dialogMenuItem *self)
 }
 
 int
+configCountry(dialogMenuItem *self)
+{
+    int choice, scroll, curr, max;
+
+    WINDOW *w = savescr();
+
+    dialog_clear_norefresh();
+    dmenuSetDefaultItem(&MenuCountry, NULL, NULL,
+	VAR_COUNTRY "=" DEFAULT_COUNTRY, &choice, &scroll, &curr, &max);
+    dmenuOpen(&MenuCountry, &choice, &scroll, &curr, &max, FALSE);
+    restorescr(w);
+    return DITEM_SUCCESS;
+}
+
+int
 configUsers(dialogMenuItem *self)
 {
     WINDOW *w = savescr();
@@ -527,7 +542,7 @@ configLinux(dialogMenuItem *self)
     variable_set2(VAR_LINUX_ENABLE, "YES", 1);
     Mkdir("/compat/linux");
     msgNotify("Installing Linux compatibility library...");
-    i = package_add("linux_base-8");
+    i = package_add("linux_base-fc");
     restorescr(w);
     return i;
 }
@@ -591,54 +606,6 @@ configSecurelevelNetworkSecure(dialogMenuItem *self)
 }
 
 int
-configSecurity(dialogMenuItem *self)
-{
-    WINDOW *w = savescr();
-
-    dialog_clear_norefresh();
-    dmenuOpenSimple(&MenuSecurity, FALSE);
-    restorescr(w);
-    return DITEM_SUCCESS;
-}
-
-static void
-write_root_xprofile(char *str)
-{
-    FILE *fp;
-    int len;
-    char **cp;
-    static char *flist[] = { /* take care of both xdm and startx */
-	"/root/.xinitrc",
-	"/root/.xsession",
-	"/usr/share/skel/dot.xinitrc",
-	"/usr/share/skel/dot.xsession",
-	NULL,
-    };
-
-    len = strlen(str);
-    for (cp = flist; *cp; cp++) {
-	fp = fopen(*cp, "w");
-	if (fp) {
-	    fwrite(str, 1, len, fp);
-	    fchmod(fileno(fp), 0755);
-	    fclose(fp);
-	}
-    }
-}
-
-static int
-gotit(char *fname)
-{
-    char tmp[FILENAME_MAX];
-
-    snprintf(tmp, sizeof tmp, "/usr/X11R6/bin/%s", fname);
-    if (file_executable(tmp))
-	return TRUE;
-    snprintf(tmp, sizeof tmp, "/usr/local/bin/%s", fname);
-    return file_executable(tmp);
-}
-
-int
 configResolv(dialogMenuItem *ditem)
 {
     FILE *fp;
@@ -669,8 +636,8 @@ skip:
 	return DITEM_FAILURE;
     /* Add an entry for localhost */
     if (dp) {
-	fprintf(fp, "::1\t\t\tlocalhost.%s localhost\n", dp);
-	fprintf(fp, "127.0.0.1\t\tlocalhost.%s localhost\n", dp);
+	fprintf(fp, "::1\t\t\tlocalhost localhost.%s\n", dp);
+	fprintf(fp, "127.0.0.1\t\tlocalhost localhost.%s\n", dp);
     } else {
 	fprintf(fp, "::1\t\t\tlocalhost\n");
 	fprintf(fp, "127.0.0.1\t\tlocalhost\n");
@@ -904,13 +871,18 @@ configNFSServer(dialogMenuItem *self)
 int
 configRpcBind(dialogMenuItem *self)
 {
+    char *tmp, *tmp2;
     int retval = 0;
     int doupdate = 1;
 
     if (self != NULL) {
     	retval = dmenuToggleVariable(self);
-	if (strcmp(variable_get(self->data), "YES") != 0)
+	tmp = strdup(self->data);
+	if ((tmp2 = index(tmp, '=')) != NULL)
+	    *tmp2 = '\0';
+	if (strcmp(variable_get(tmp), "YES") != 0)
 	    doupdate = 0;
+	free(tmp);
     }
 
     if (doupdate && strcmp(variable_get(VAR_RPCBIND_ENABLE), "YES") != 0) {
@@ -994,7 +966,7 @@ configMTAPostfix(dialogMenuItem *self)
 	msgError("Error setting the enviroment variable POSTFIX_DEFAULT_MTA: %s (%u)",
 		 strerror(errno), errno);
 
-    ret = package_add("postfix-2.2");
+    ret = package_add("postfix-2.4");
     unsetenv("POSTFIX_DEFAULT_MTA");
 
     if(DITEM_STATUS(ret) == DITEM_FAILURE) {

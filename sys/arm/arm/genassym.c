@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/genassym.c,v 1.5 2005/02/26 18:59:01 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/genassym.c 171788 2007-08-08 09:27:52Z cognet $");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/assym.h>
@@ -41,7 +41,6 @@ __FBSDID("$FreeBSD: src/sys/arm/arm/genassym.c,v 1.5 2005/02/26 18:59:01 cognet 
 #include <machine/cpu.h>
 #include <machine/proc.h>
 #include <machine/cpufunc.h>
-#include <machine/pcb.h>
 #include <machine/pte.h>
 #include <machine/intr.h>
 #include <machine/sysarch.h>
@@ -93,6 +92,7 @@ ASSYM(TD_FLAGS, offsetof(struct thread, td_flags));
 ASSYM(TD_PROC, offsetof(struct thread, td_proc));
 ASSYM(TD_FRAME, offsetof(struct thread, td_frame));
 ASSYM(TD_MD, offsetof(struct thread, td_md));
+ASSYM(TD_LOCK, offsetof(struct thread, td_lock));
 ASSYM(MD_TP, offsetof(struct mdthread, md_tp));
 
 ASSYM(TF_R0, offsetof(struct trapframe, tf_r0));
@@ -102,6 +102,7 @@ ASSYM(P_PID, offsetof(struct proc, p_pid));
 ASSYM(P_FLAG, offsetof(struct proc, p_flag));
 
 ASSYM(ARM_TP_ADDRESS, ARM_TP_ADDRESS);
+ASSYM(PAGE_SIZE, PAGE_SIZE);
 ASSYM(PDESIZE, PDESIZE);
 ASSYM(PMAP_DOMAIN_KERNEL, PMAP_DOMAIN_KERNEL);
 #ifdef PMAP_INCLUDE_PTE_SYNC

@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD: src/share/doc/usd/20.meref/Makefile,v 1.8 2002/10/29 14:56:09 ru Exp $
+# $FreeBSD: release/7.0.0/share/doc/usd/20.meref/Makefile 106143 2002-10-29 14:56:09Z ru $
 
 VOLUME=		usd/20.meref
 SRCS=		meref.me-sed

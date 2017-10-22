@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/m4/trace.c,v 1.7 2002/07/15 02:15:12 jmallett Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/m4/trace.c 100014 2002-07-15 02:15:12Z jmallett $");
 
 #include <sys/types.h>
 #include <stddef.h>

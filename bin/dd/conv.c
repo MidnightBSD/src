@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)conv.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/dd/conv.c,v 1.19 2004/04/06 20:06:45 markm Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/dd/conv.c 127958 2004-04-06 20:06:54Z markm $");
 
 #include <sys/param.h>
 

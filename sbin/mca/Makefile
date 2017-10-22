@@ -1,6 +1,6 @@
-# $FreeBSD: src/sbin/mca/Makefile,v 1.4 2004/12/21 08:47:08 ru Exp $
+# $FreeBSD: release/7.0.0/sbin/mca/Makefile 155557 2006-02-11 23:09:58Z marcel $
 PROG=	mca
 WARNS?=	4
-NO_MAN=
+MAN=	mca.8
 
 .include <bsd.prog.mk>

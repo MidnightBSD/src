@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/options.ia64,v 1.26 2004/08/16 18:54:22 marcel Exp $
+# $FreeBSD: release/7.0.0/sys/conf/options.ia64 174854 2007-12-22 06:32:46Z cvs2svn $
 # Options specific to the ia64 platform kernels
 
 ITANIUM			opt_global.h
@@ -11,8 +11,7 @@ UWX_TRACE_ENABLE	opt_global.h
 
 COMPAT_IA32		opt_compat.h
 
-PPC_PROBE_CHIPSET       opt_ppc.h
-PPC_DEBUG               opt_ppc.h
+EXCEPTION_TRACING	opt_xtrace.h
 
 VGA_ALT_SEQACCESS	opt_vga.h
 VGA_DEBUG		opt_vga.h

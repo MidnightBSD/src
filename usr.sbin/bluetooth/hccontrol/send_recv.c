@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: send_recv.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/send_recv.c,v 1.5 2004/04/09 23:58:53 emax Exp $
+ * $Id: send_recv.c,v 1.2 2003/05/21 22:40:30 max Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/hccontrol/send_recv.c 128079 2004-04-09 23:58:53Z emax $
  */
 
 #include <sys/types.h>

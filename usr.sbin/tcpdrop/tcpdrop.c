@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/tcpdrop/tcpdrop.c,v 1.2 2005/02/14 07:37:51 maxim Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/tcpdrop/tcpdrop.c 141886 2005-02-14 07:37:51Z maxim $");
 
 #include <sys/types.h>
 #include <sys/socket.h>

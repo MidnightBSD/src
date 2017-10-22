@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)whois.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/whois/whois.c,v 1.43.2.1 2006/01/31 18:11:21 jhay Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/whois/whois.c 168721 2007-04-14 14:32:48Z ache $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -304,6 +304,8 @@ whois(const char *query, const char *hostname, int flags)
 		err(EX_OSERR, "fdopen()");
 	if (strcmp(hostname, GERMNICHOST) == 0) {
 		fprintf(sfo, "-T dn,ace -C US-ASCII %s\r\n", query);
+	} else if (strcmp(hostname, "dk" QNICHOST_TAIL) == 0) {
+		fprintf(sfo, "--show-handles %s\r\n", query);
 	} else {
 		fprintf(sfo, "%s\r\n", query);
 	}
@@ -339,7 +341,7 @@ whois(const char *query, const char *hostname, int flags)
 				    (int)(buf + len - host), host);
 			} else if (strcmp(hostname, ANICHOST) == 0) {
 				for (c = 0; c <= len; c++)
-					buf[c] = tolower((int)buf[c]);
+					buf[c] = tolower((unsigned char)buf[c]);
 				for (i = 0; ip_whois[i] != NULL; i++) {
 					if (strnstr(buf, ip_whois[i], len) !=
 					    NULL) {

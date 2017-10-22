@@ -1,13 +1,12 @@
 /*-
- * Copyright (c) 2003-2005 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -25,14 +24,20 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/bsdtar.c,v 1.63.2.2 2005/11/06 22:27:21 kientzle Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/tar/bsdtar.c 172095 2007-09-09 00:07:18Z kientzle $");
 
+#ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#include <archive.h>
-#include <archive_entry.h>
+#endif
+#ifdef HAVE_ERRNO_H
 #include <errno.h>
+#endif
+#ifdef HAVE_FCNTL_H
 #include <fcntl.h>
+#endif
 #ifdef HAVE_GETOPT_LONG
 #include <getopt.h>
 #else
@@ -48,21 +53,35 @@ struct option {
 #ifdef HAVE_LANGINFO_H
 #include <langinfo.h>
 #endif
+#ifdef HAVE_LOCALE_H
 #include <locale.h>
+#endif
 #ifdef HAVE_PATHS_H
 #include <paths.h>
 #endif
 #include <stdio.h>
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif
+#ifdef HAVE_STRING_H
 #include <string.h>
+#endif
+#ifdef HAVE_TIME_H
 #include <time.h>
+#endif
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #if HAVE_ZLIB_H
 #include <zlib.h>
 #endif
 
 #include "bsdtar.h"
 
+/*
+ * Per POSIX.1-1988, tar defaults to reading/writing archives to/from
+ * the default tape device for the system.  Pick something reasonable here.
+ */
 #ifdef __linux
 #define	_PATH_DEFTAPE "/dev/st0"
 #endif
@@ -91,7 +110,7 @@ static void		 version(void);
  * non-option.  Otherwise, GNU getopt() permutes the arguments and
  * screws up -C processing.
  */
-static const char *tar_opts = "+Bb:C:cF:f:HhI:jkLlmnOoPprtT:UuvW:wX:xyZz";
+static const char *tar_opts = "+Bb:C:cf:HhI:jkLlmnOoPprtT:UuvW:wX:xyZz";
 
 /*
  * Most of these long options are deliberately not documented.  They
@@ -120,11 +139,14 @@ enum {
 	OPTION_NEWER_MTIME,
 	OPTION_NEWER_MTIME_THAN,
 	OPTION_NODUMP,
+	OPTION_NO_SAME_OWNER,
 	OPTION_NO_SAME_PERMISSIONS,
 	OPTION_NULL,
 	OPTION_ONE_FILE_SYSTEM,
+	OPTION_POSIX,
 	OPTION_STRIP_COMPONENTS,
 	OPTION_TOTALS,
+	OPTION_USE_COMPRESS_PROGRAM,
 	OPTION_VERSION
 };
 
@@ -169,10 +191,11 @@ static const struct option tar_longopts[] = {
 	{ "nodump",             no_argument,       NULL, OPTION_NODUMP },
 	{ "norecurse",          no_argument,       NULL, 'n' },
 	{ "no-recursion",       no_argument,       NULL, 'n' },
-	{ "no-same-owner",	no_argument,	   NULL, 'o' },
+	{ "no-same-owner",	no_argument,	   NULL, OPTION_NO_SAME_OWNER },
 	{ "no-same-permissions",no_argument,	   NULL, OPTION_NO_SAME_PERMISSIONS },
 	{ "null",		no_argument,	   NULL, OPTION_NULL },
 	{ "one-file-system",	no_argument,	   NULL, OPTION_ONE_FILE_SYSTEM },
+	{ "posix",		no_argument,	   NULL, OPTION_POSIX },
 	{ "preserve-permissions", no_argument,     NULL, 'p' },
 	{ "read-full-blocks",	no_argument,	   NULL, 'B' },
 	{ "same-permissions",   no_argument,       NULL, 'p' },
@@ -182,10 +205,17 @@ static const struct option tar_longopts[] = {
 	{ "unlink",		no_argument,       NULL, 'U' },
 	{ "unlink-first",	no_argument,       NULL, 'U' },
 	{ "update",             no_argument,       NULL, 'u' },
+	{ "use-compress-program",
+				required_argument, NULL, OPTION_USE_COMPRESS_PROGRAM },
 	{ "verbose",            no_argument,       NULL, 'v' },
 	{ "version",            no_argument,       NULL, OPTION_VERSION },
 	{ NULL, 0, NULL, 0 }
 };
+
+/* A basic set of security flags to request from libarchive. */
+#define	SECURITY					\
+	(ARCHIVE_EXTRACT_SECURE_SYMLINKS		\
+	 | ARCHIVE_EXTRACT_SECURE_NODOTDOT)
 
 int
 main(int argc, char **argv)
@@ -235,9 +265,19 @@ main(int argc, char **argv)
 	/* Default: preserve mod time on extract */
 	bsdtar->extract_flags = ARCHIVE_EXTRACT_TIME;
 
-	/* Default for root user: preserve ownership on extract. */
-	if (bsdtar->user_uid == 0)
+	/* Default: Perform basic security checks. */
+	bsdtar->extract_flags |= SECURITY;
+
+	/* Defaults for root user: */
+	if (bsdtar->user_uid == 0) {
+		/* --same-owner */
 		bsdtar->extract_flags |= ARCHIVE_EXTRACT_OWNER;
+		/* -p */
+		bsdtar->extract_flags |= ARCHIVE_EXTRACT_PERM;
+		bsdtar->extract_flags |= ARCHIVE_EXTRACT_ACL;
+		bsdtar->extract_flags |= ARCHIVE_EXTRACT_XATTR;
+		bsdtar->extract_flags |= ARCHIVE_EXTRACT_FFLAGS;
+	}
 
 	/* Rewrite traditional-style tar arguments, if used. */
 	argv = rewrite_argv(bsdtar, &argc, argv, tar_opts);
@@ -246,6 +286,12 @@ main(int argc, char **argv)
 	bsdtar->argc = argc;
 
 	/* Process all remaining arguments now. */
+	/*
+	 * Comments following each option indicate where that option
+	 * originated:  SUSv2, POSIX, GNU tar, star, etc.  If there's
+	 * no such comment, then I don't know of anyone else who
+	 * implements that option.
+	 */
 	while ((opt = bsdtar_getopt(bsdtar, tar_opts, &option)) != -1) {
 		switch (opt) {
 		case 'B': /* GNU tar */
@@ -272,7 +318,7 @@ main(int argc, char **argv)
 				bsdtar_errc(bsdtar, 1, 0,
 				    "Couldn't exclude %s\n", optarg);
 			break;
-		case OPTION_FORMAT:
+		case OPTION_FORMAT: /* GNU tar, others */
 			bsdtar->create_format = optarg;
 			break;
 		case 'f': /* SUSv2 */
@@ -291,14 +337,29 @@ main(int argc, char **argv)
 			/* Hack: -h by itself is the "help" command. */
 			possible_help_request = 1;
 			break;
-		case OPTION_HELP:
+		case OPTION_HELP: /* GNU tar, others */
 			long_help(bsdtar);
 			exit(0);
 			break;
 		case 'I': /* GNU tar */
+			/*
+			 * TODO: Allow 'names' to come from an archive,
+			 * not just a text file.  Design a good UI for
+			 * allowing names and mode/owner to be read
+			 * from an archive, with contents coming from
+			 * disk.  This can be used to "refresh" an
+			 * archive or to design archives with special
+			 * permissions without having to create those
+			 * permissions on disk.
+			 */
 			bsdtar->names_from_file = optarg;
 			break;
 		case OPTION_INCLUDE:
+			/*
+			 * Noone else has the @archive extension, so
+			 * noone else needs this to filter entries
+			 * when transforming archives.
+			 */
 			if (include(bsdtar, optarg))
 				bsdtar_errc(bsdtar, 1, 0,
 				    "Failed to add %s to inclusion list",
@@ -342,6 +403,13 @@ main(int argc, char **argv)
 		case 'n': /* GNU tar */
 			bsdtar->option_no_subdirs = 1;
 			break;
+	        /*
+		 * Selecting files by time:
+		 *    --newer-?time='date' Only files newer than 'date'
+		 *    --newer-?time-than='file' Only files newer than time
+		 *         on specified file (useful for incremental backups)
+		 * TODO: Add corresponding "older" options to reverse these.
+		 */
 		case OPTION_NEWER_CTIME: /* GNU tar */
 			bsdtar->newer_ctime_sec = get_date(optarg);
 			break;
@@ -373,13 +441,14 @@ main(int argc, char **argv)
 		case OPTION_NODUMP: /* star */
 			bsdtar->option_honor_nodump = 1;
 			break;
+		case OPTION_NO_SAME_OWNER: /* GNU tar */
+			bsdtar->extract_flags &= ~ARCHIVE_EXTRACT_OWNER;
+			break;
 		case OPTION_NO_SAME_PERMISSIONS: /* GNU tar */
-			/*
-			 * This is always the default in FreeBSD's
-			 * version of GNU tar; it's also the default
-			 * behavior for bsdtar, so treat the
-			 * command-line option as a no-op.
-			 */
+			bsdtar->extract_flags &= ~ARCHIVE_EXTRACT_PERM;
+			bsdtar->extract_flags &= ~ARCHIVE_EXTRACT_ACL;
+			bsdtar->extract_flags &= ~ARCHIVE_EXTRACT_XATTR;
+			bsdtar->extract_flags &= ~ARCHIVE_EXTRACT_FFLAGS;
 			break;
 		case OPTION_NULL: /* GNU tar */
 			bsdtar->option_null++;
@@ -387,10 +456,10 @@ main(int argc, char **argv)
 		case 'O': /* GNU tar */
 			bsdtar->option_stdout = 1;
 			break;
-		case 'o': /* SUSv2 and GNU conflict here */
+		case 'o': /* SUSv2 and GNU conflict here, but not fatally */
 			option_o = 1; /* Record it and resolve it later. */
 			break;
-		case OPTION_ONE_FILE_SYSTEM: /* -l in GNU tar */
+		case OPTION_ONE_FILE_SYSTEM: /* GNU tar */
 			bsdtar->option_dont_traverse_mounts = 1;
 			break;
 #if 0
@@ -405,12 +474,17 @@ main(int argc, char **argv)
 			break;
 #endif
 		case 'P': /* GNU tar */
+			bsdtar->extract_flags &= ~SECURITY;
 			bsdtar->option_absolute_paths = 1;
 			break;
 		case 'p': /* GNU tar, star */
 			bsdtar->extract_flags |= ARCHIVE_EXTRACT_PERM;
 			bsdtar->extract_flags |= ARCHIVE_EXTRACT_ACL;
+			bsdtar->extract_flags |= ARCHIVE_EXTRACT_XATTR;
 			bsdtar->extract_flags |= ARCHIVE_EXTRACT_FFLAGS;
+			break;
+		case OPTION_POSIX: /* GNU tar */
+			bsdtar->create_format = "pax";
 			break;
 		case 'r': /* SUSv2 */
 			set_mode(bsdtar, opt);
@@ -438,9 +512,17 @@ main(int argc, char **argv)
 		case 'v': /* SUSv2 */
 			bsdtar->verbose++;
 			break;
-		case OPTION_VERSION:
+		case OPTION_VERSION: /* GNU convention */
 			version();
 			break;
+#if 0
+		/*
+		 * The -W longopt feature is handled inside of
+		 * bsdtar_getop(), so -W is not available here.
+		 */
+		case 'W': /* Obscure, but useful GNU convention. */
+			break;
+#endif
 		case 'w': /* SUSv2 */
 			bsdtar->option_interactive = 1;
 			break;
@@ -484,6 +566,9 @@ main(int argc, char **argv)
 			usage(bsdtar);
 #endif
 			break;
+		case OPTION_USE_COMPRESS_PROGRAM:
+			bsdtar->compress_program = optarg;
+			break;
 		default:
 			usage(bsdtar);
 		}
@@ -492,18 +577,21 @@ main(int argc, char **argv)
 	/*
 	 * Sanity-check options.
 	 */
+
+	/* If no "real" mode was specified, treat -h as --help. */
 	if ((bsdtar->mode == '\0') && possible_help_request) {
 		long_help(bsdtar);
 		exit(0);
 	}
 
+	/* Otherwise, a mode is required. */
 	if (bsdtar->mode == '\0')
 		bsdtar_errc(bsdtar, 1, 0,
 		    "Must specify one of -c, -r, -t, -u, -x");
 
 	/* Check boolean options only permitted in certain modes. */
 	if (bsdtar->option_dont_traverse_mounts)
-		only_mode(bsdtar, "-X", "cru");
+		only_mode(bsdtar, "--one-file-system", "cru");
 	if (bsdtar->option_fast_read)
 		only_mode(bsdtar, "--fast-read", "xt");
 	if (bsdtar->option_honor_nodump)
@@ -533,6 +621,8 @@ main(int argc, char **argv)
 		only_mode(bsdtar, "-n", "cru");
 	if (bsdtar->option_stdout)
 		only_mode(bsdtar, "-O", "xt");
+	if (bsdtar->option_unlink_first)
+		only_mode(bsdtar, "-U", "x");
 	if (bsdtar->option_warn_links)
 		only_mode(bsdtar, "--check-links", "cr");
 
@@ -553,6 +643,8 @@ main(int argc, char **argv)
 		buff[1] = bsdtar->symlink_mode;
 		only_mode(bsdtar, buff, "cru");
 	}
+	if (bsdtar->strip_components != 0)
+		only_mode(bsdtar, "--strip-components", "xt");
 
 	bsdtar->argc -= optind;
 	bsdtar->argv += optind;
@@ -576,6 +668,9 @@ main(int argc, char **argv)
 	}
 
 	cleanup_exclusions(bsdtar);
+	if (bsdtar->return_value != 0)
+		bsdtar_warnc(bsdtar, 0,
+		    "Error exit delayed from previous errors.");
 	return (bsdtar->return_value);
 }
 
@@ -689,9 +784,7 @@ usage(struct bsdtar *bsdtar)
 static void
 version(void)
 {
-	printf("bsdtar %s, ", PACKAGE_VERSION);
-	printf("%s\n", archive_version());
-	printf("Copyright (C) 2003-2005 Tim Kientzle\n");
+	printf("bsdtar %s - %s\n", PACKAGE_VERSION, archive_version());
 	exit(1);
 }
 
@@ -757,8 +850,7 @@ long_help(struct bsdtar *bsdtar)
 		} else
 			putchar(*p);
 	}
-	fprintf(stdout, "\n%s %s\n", PACKAGE_NAME, PACKAGE_VERSION);
-	fprintf(stdout, "%s\n", archive_version());
+	version();
 }
 
 static int
@@ -824,6 +916,10 @@ bsdtar_getopt(struct bsdtar *bsdtar, const char *optstring,
 				    "(matches both %s and %s)",
 				    p, (*poption)->name, option->name);
 
+			if ((*poption)->has_arg == required_argument
+			    && optarg == NULL)
+				bsdtar_errc(bsdtar, 1, 0,
+				    "Option \"%s\" requires argument", p);
 		} else {
 			opt = '?';
 			/* TODO: Set up a fake 'struct option' for

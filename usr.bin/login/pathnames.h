@@ -31,13 +31,12 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/9/93
- * $FreeBSD: src/usr.bin/login/pathnames.h,v 1.5 2001/08/30 11:27:36 markm Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/login/pathnames.h 156345 2006-03-06 12:38:42Z yar $
  */
 
 #include <paths.h>
 
 #define	_PATH_HUSHLOGIN		".hushlogin"
 #define	_PATH_MOTDFILE		"/etc/motd"
-#define _PATH_LOGACCESS		"/etc/login.access"
 #define _PATH_FBTAB		"/etc/fbtab"
 #define _PATH_LOGINDEVPERM	"/etc/logindevperm"

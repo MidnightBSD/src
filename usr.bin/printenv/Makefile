@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.bin/printenv/Makefile,v 1.5 2003/06/01 06:29:47 tjr Exp $
+# $FreeBSD: release/7.0.0/usr.bin/printenv/Makefile 115603 2003-06-01 06:29:47Z tjr $
 
 PROG=	printenv
 

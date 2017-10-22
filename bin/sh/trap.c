@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)trap.c	8.5 (Berkeley) 6/5/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/trap.c,v 1.29.8.2 2005/12/26 15:43:54 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/sh/trap.c 157811 2006-04-17 17:55:11Z schweikh $");
 
 #include <signal.h>
 #include <unistd.h>
@@ -75,7 +75,7 @@ MKINIT char sigmode[NSIG];	/* current value of signal */
 int pendingsigs;		/* indicates some signal received */
 int in_dotrap;			/* do we execute in a trap handler? */
 static char *volatile trap[NSIG];	/* trap handler commands */
-static volatile sig_atomic_t gotsig[NSIG]; 
+static volatile sig_atomic_t gotsig[NSIG];
 				/* indicates specified signal received */
 static int ignore_sigchld;	/* Used while handling SIGCHLD traps. */
 volatile sig_atomic_t gotwinch;
@@ -375,12 +375,12 @@ onsig(int signo)
 	/* If we are currently in a wait builtin, prepare to break it */
 	if ((signo == SIGINT || signo == SIGQUIT) && in_waitcmd != 0)
 		breakwaitcmd = 1;
-	/* 
-	 * If a trap is set, not ignored and not the null command, we need 
+	/*
+	 * If a trap is set, not ignored and not the null command, we need
 	 * to make sure traps are executed even when a child blocks signals.
 	 */
 	if (Tflag &&
-	    trap[signo] != NULL && 
+	    trap[signo] != NULL &&
 	    ! (trap[signo][0] == '\0') &&
 	    ! (trap[signo][0] == ':' && trap[signo][1] == '\0'))
 		breakwaitcmd = 1;

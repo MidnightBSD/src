@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)banner.c	8.4 (Berkeley) 4/29/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/banner/banner.c,v 1.15 2002/03/22 01:19:22 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/banner/banner.c 164522 2006-11-22 21:05:17Z maxim $");
 
 /*
  * banner - prints large signs
@@ -1045,7 +1045,7 @@ main(int argc, char *argv[])
 			break;
 		case 'w':
 			width = atoi(optarg);
-			if (width <= 0)
+			if (width <= 0 || width > DWIDTH)
 				errx(1, "illegal argument for -w option");
 			break;
 		case '?':
@@ -1056,7 +1056,7 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	for (i = 0; i < width; i++) {
-		j = i * 132 / width;
+		j = i * DWIDTH / width;
 		print[j] = 1;
 	}
 

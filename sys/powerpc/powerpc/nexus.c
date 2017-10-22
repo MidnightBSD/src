@@ -52,7 +52,7 @@
  *
  * 	from: FreeBSD: src/sys/i386/i386/nexus.c,v 1.43 2001/02/09
  *
- * $FreeBSD: src/sys/powerpc/powerpc/nexus.c,v 1.12 2005/01/07 02:29:20 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/powerpc/nexus.c 171805 2007-08-11 19:25:32Z marcel $
  */
 #include "opt_psim.h"
 
@@ -74,6 +74,7 @@
 
 #include <sys/rman.h>
 
+#include "ofw_bus_if.h"
 #include "pic_if.h"
 
 /*
@@ -96,7 +97,7 @@ struct nexus_devinfo {
 };
 
 struct nexus_softc {
-	device_t	sc_pic;
+	struct rman	sc_rman;
 };
 
 /*
@@ -112,7 +113,7 @@ static device_t nexus_add_child(device_t, int, const char *, int);
 static int	nexus_read_ivar(device_t, device_t, int, uintptr_t *);
 static int	nexus_write_ivar(device_t, device_t, int, uintptr_t);
 static int	nexus_setup_intr(device_t, device_t, struct resource *, int,
-		    driver_intr_t *, void *, void **);
+		    driver_filter_t *, driver_intr_t *, void *, void **);
 static int	nexus_teardown_intr(device_t, device_t, struct resource *,
 		    void *);
 static struct	resource *nexus_alloc_resource(device_t, device_t, int, int *,
@@ -123,6 +124,11 @@ static int	nexus_deactivate_resource(device_t, device_t, int, int,
 		    struct resource *);
 static int	nexus_release_resource(device_t, device_t, int, int,
 		    struct resource *);
+
+static phandle_t	 nexus_ofw_get_node(device_t, device_t);
+static const char	*nexus_ofw_get_name(device_t, device_t);
+static const char	*nexus_ofw_get_type(device_t, device_t);
+static const char	*nexus_ofw_get_compat(device_t, device_t);
 
 /*
  * Local routines
@@ -151,6 +157,12 @@ static device_method_t nexus_methods[] = {
 	DEVMETHOD(bus_deactivate_resource,	nexus_deactivate_resource),
 	DEVMETHOD(bus_release_resource,	nexus_release_resource),
 
+	/* OFW bus interface */
+	DEVMETHOD(ofw_bus_get_node, nexus_ofw_get_node),
+	DEVMETHOD(ofw_bus_get_name, nexus_ofw_get_name),
+	DEVMETHOD(ofw_bus_get_type, nexus_ofw_get_type),
+	DEVMETHOD(ofw_bus_get_compat, nexus_ofw_get_compat),
+
 	{ 0, 0 }
 };
 
@@ -170,11 +182,23 @@ nexus_probe(device_t dev)
 	phandle_t	root;
 	phandle_t	child;
 	struct		nexus_softc *sc;
+	u_long		start, end;
 
 	if ((root = OF_peer(0)) == -1)
 		panic("nexus_probe: OF_peer failed.");
 
 	sc = device_get_softc(dev);
+
+	start = 0;
+	end = INTR_VECTORS - 1;
+
+	sc->sc_rman.rm_start = start;
+	sc->sc_rman.rm_end = end;
+	sc->sc_rman.rm_type = RMAN_ARRAY;
+	sc->sc_rman.rm_descr = "Interrupt request lines";
+	if (rman_init(&sc->sc_rman) ||
+	    rman_manage_region(&sc->sc_rman, start, end))
+		panic("nexus_probe IRQ rman");
 
 	/*
 	 * Allow devices to identify
@@ -290,31 +314,40 @@ nexus_write_ivar(device_t dev, device_t child, int which, uintptr_t value)
 
 static int
 nexus_setup_intr(device_t dev, device_t child, struct resource *res, int flags,
-    driver_intr_t *intr, void *arg, void **cookiep)
+    driver_filter_t *filter, driver_intr_t *ihand, void *arg, void **cookiep)
 {
-	struct	nexus_softc *sc;
+	driver_t	*driver;
+	int		error;
 
-	sc = device_get_softc(dev);
+	/* somebody tried to setup an irq that failed to allocate! */
+	if (res == NULL)
+		panic("nexus_setup_intr: NULL irq resource!");
 
-	if (device_get_state(sc->sc_pic) != DS_ATTACHED)
-		panic("nexus_setup_intr: no pic attached\n");
+	*cookiep = 0;
+	if ((rman_get_flags(res) & RF_SHAREABLE) == 0)
+		flags |= INTR_EXCL;
 
-	return (PIC_SETUP_INTR(sc->sc_pic, child, res, flags, intr, arg,
-	    cookiep));
+	driver = device_get_driver(child);
+
+	/*
+	 * We depend here on rman_activate_resource() being idempotent.
+	 */
+	error = rman_activate_resource(res);
+	if (error)
+		return (error);
+
+	error = powerpc_setup_intr(device_get_nameunit(child),
+	    rman_get_start(res), filter, ihand, arg, flags, cookiep);
+
+	return (error);
 }
 
 static int
 nexus_teardown_intr(device_t dev, device_t child, struct resource *res,
-    void *ih)
+    void *cookie)
 {
-	struct	nexus_softc *sc;
 
-	sc = device_get_softc(dev);
-
-	if (device_get_state(sc->sc_pic) != DS_ATTACHED)
-		panic("nexus_teardown_intr: no pic attached\n");
-
-	return (PIC_TEARDOWN_INTR(sc->sc_pic, child, res, ih));
+	return (powerpc_teardown_intr(cookie));
 }
 
 /*
@@ -325,10 +358,8 @@ static struct resource *
 nexus_alloc_resource(device_t bus, device_t child, int type, int *rid,
     u_long start, u_long end, u_long count, u_int flags)
 {
-	struct	nexus_softc *sc;
-	struct	resource *rv;
-
-	sc = device_get_softc(bus);
+	struct nexus_softc *sc;
+	struct resource *rv;
 
 	if (type != SYS_RES_IRQ) {
 		device_printf(bus, "unknown resource request from %s\n",
@@ -336,10 +367,21 @@ nexus_alloc_resource(device_t bus, device_t child, int type, int *rid,
 		return (NULL);
 	}
 
-	if (device_get_state(sc->sc_pic) != DS_ATTACHED)
-		panic("nexus_alloc_resource: no pic attached\n");
+	if (count == 0 || start + count - 1 != end) {
+		device_printf(bus, "invalid IRQ allocation from %s\n",
+		    device_get_nameunit(child));
+		return (NULL);
+	}
 
-	rv = PIC_ALLOCATE_INTR(sc->sc_pic, child, rid, start, flags);
+	sc = device_get_softc(bus);
+
+	rv = rman_reserve_resource(&sc->sc_rman, start, end, count,
+	    flags, child);
+	if (rv == NULL) {
+		device_printf(bus, "IRQ allocation failed for %s\n",
+		    device_get_nameunit(child));
+	} else
+		rman_set_rid(rv, *rid);
 
 	return (rv);
 }
@@ -366,9 +408,6 @@ static int
 nexus_release_resource(device_t bus, device_t child, int type, int rid,
     struct resource *res)
 {
-	struct	nexus_softc *sc;
-
-	sc = device_get_softc(bus);
 
 	if (type != SYS_RES_IRQ) {
 		device_printf(bus, "unknown resource request from %s\n",
@@ -376,10 +415,7 @@ nexus_release_resource(device_t bus, device_t child, int type, int rid,
 		return (EINVAL);
 	}
 
-	if (device_get_state(sc->sc_pic) != DS_ATTACHED)
-		panic("nexus_release_resource: no pic attached\n");
-
-	return (PIC_RELEASE_INTR(sc->sc_pic, child, rid, res));
+	return (rman_release_resource(res));
 }
 
 static device_t
@@ -406,13 +442,46 @@ nexus_device_from_node(device_t parent, phandle_t node)
 	return (cdev);
 }
 
-int
-nexus_install_intcntlr(device_t dev)
+static const char *
+nexus_ofw_get_name(device_t bus, device_t dev)
 {
-	struct	nexus_softc *sc;
+	struct nexus_devinfo *dinfo;
 
-	sc = device_get_softc(device_get_parent(dev));
-	sc->sc_pic = dev;
+	if ((dinfo = device_get_ivars(dev)) == NULL)
+		return (NULL);
+	
+	return (dinfo->ndi_name);
+}
 
-	return (0);
+static phandle_t
+nexus_ofw_get_node(device_t bus, device_t dev)
+{
+	struct nexus_devinfo *dinfo;
+
+	if ((dinfo = device_get_ivars(dev)) == NULL)
+		return (0);
+	
+	return (dinfo->ndi_node);
+}
+
+static const char *
+nexus_ofw_get_type(device_t bus, device_t dev)
+{
+	struct nexus_devinfo *dinfo;
+
+	if ((dinfo = device_get_ivars(dev)) == NULL)
+		return (NULL);
+	
+	return (dinfo->ndi_device_type);
+}
+
+static const char *
+nexus_ofw_get_compat(device_t bus, device_t dev)
+{
+	struct nexus_devinfo *dinfo;
+
+	if ((dinfo = device_get_ivars(dev)) == NULL)
+		return (NULL);
+	
+	return (dinfo->ndi_compatible);
 }

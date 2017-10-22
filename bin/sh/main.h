@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)main.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/main.h,v 1.8 2004/04/06 20:06:51 markm Exp $
+ * $FreeBSD: release/7.0.0/bin/sh/main.h 127958 2004-04-06 20:06:54Z markm $
  */
 
 extern int rootpid;	/* pid of main shell */

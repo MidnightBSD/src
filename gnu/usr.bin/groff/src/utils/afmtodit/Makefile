@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/groff/src/utils/afmtodit/Makefile,v 1.1 2001/04/17 12:37:15 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/src/utils/afmtodit/Makefile 75592 2001-04-17 12:37:18Z ru $
 
 SCRIPTS=	afmtodit
 MAN=		afmtodit.1

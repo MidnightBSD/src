@@ -21,9 +21,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man7/tuning.7,v 1.72 2005/06/30 13:04:25 hmp Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man7/tuning.7 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
-.Dd June 25, 2002
+.Dd January 17, 2007
 .Dt TUNING 7
 .Os
 .Sh NAME
@@ -743,6 +743,26 @@ option
 .Cd maxusers
 instead.
 .Pp
+The
+.Va kern.dfldsiz
+and
+.Va kern.dflssiz
+tunables set the default soft limits for process data and stack size
+respectively.
+Processes may increase these up to the hard limits by calling
+.Xr setrlimit 2 .
+The
+.Va kern.maxdsiz ,
+.Va kern.maxssiz ,
+and
+.Va kern.maxtsiz
+tunables set the hard limits for process data, stack, and text size
+respectively; processes may not exceed these limits.
+The
+.Va kern.sgrowsiz
+tunable controls how much the stack segment will grow when a process
+needs to allocate more stack.
+.Pp
 .Va kern.ipc.nmbclusters
 may be adjusted to increase the number of network mbufs the system is
 willing to allocate.
@@ -922,6 +942,7 @@ over services you export from your box (web services, email).
 .Sh SEE ALSO
 .Xr netstat 1 ,
 .Xr systat 1 ,
+.Xr sendfile 2 ,
 .Xr ata 4 ,
 .Xr dummynet 4 ,
 .Xr login.conf 5 ,

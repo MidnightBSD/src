@@ -10,7 +10,7 @@
  * software, nor does the author assume any responsibility for damages
  * incurred with its use.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/termcap.c,v 1.30 2001/09/22 18:07:47 murray Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/termcap.c 174854 2007-12-22 06:32:46Z cvs2svn $
  */
 
 #include "sysinstall.h"
@@ -50,7 +50,7 @@ prompt_term(char **termp, char **termcapp)
 	    printf("5 ...................... xterm terminal emulator.\n\n");
 	    printf("Your choice: (1-5) ");
 	    fflush(stdout);
-	    fgets(str, 80, stdin);
+	    fgets(str, sizeof(str), stdin);
 	    i = str[0] - '0';
 	    if (i > 0 && i < 6) {
 		*termp = (char *)lookup[i - 1].term;
@@ -64,7 +64,7 @@ prompt_term(char **termp, char **termcapp)
     else {
 	printf("\nPlease set your TERM variable before running this program.\n");
 	printf("Defaulting to an ANSI compatible terminal - please press RETURN\n");
-	fgets(str, 80, stdin);	/* Just to make it interactive */
+	fgets(str, sizeof(str), stdin);	/* Just to make it interactive */
 	*termp = (char *)"ansi";
 	*termcapp = (char *)termcap_ansi;
     }

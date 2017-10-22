@@ -27,7 +27,7 @@
  *
  *	@(#)endian.h	8.1 (Berkeley) 6/10/93
  * $NetBSD: endian.h,v 1.7 1999/08/21 05:53:51 simonb Exp $
- * $FreeBSD: src/sys/arm/include/endian.h,v 1.9 2005/05/24 21:43:16 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/endian.h 172104 2007-09-09 11:58:38Z cognet $
  */
 
 #ifndef _ENDIAN_H_
@@ -99,14 +99,15 @@ __bswap32_var(__uint32_t v)
 static __inline __uint16_t
 __bswap16_var(__uint16_t v)
 {
+	__uint32_t ret = v & 0xffff;
+
 	__asm __volatile(
-	    "mov    %0, %1, ror #8\n"
+	    "mov    %0, %0, ror #8\n"
 	    "orr    %0, %0, %0, lsr #16\n"
 	    "bic    %0, %0, %0, lsl #16"
-	    : "=r" (v)
-	    : "0" (v));
+	    : "+r" (ret));
 	
-	return (v);
+	return ((__uint16_t)ret);
 }		
 
 #ifdef __OPTIMIZE__

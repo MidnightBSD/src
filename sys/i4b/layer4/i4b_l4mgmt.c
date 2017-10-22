@@ -32,14 +32,14 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer4/i4b_l4mgmt.c,v 1.17 2005/01/06 22:18:21 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer4/i4b_l4mgmt.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/mbuf.h>
 
-#include <machine/i4b_debug.h>
-#include <machine/i4b_ioctl.h>
+#include <i4b/include/i4b_debug.h>
+#include <i4b/include/i4b_ioctl.h>
 
 #include <i4b/include/i4b_l3l4.h>
 #include <i4b/include/i4b_global.h>
@@ -301,7 +301,9 @@ i4b_l4_daemon_attached(void)
 
 	for(i=0; i < nctrl; i++)
 	{
-/*XXX*/		if(ctrl_desc[i].ctrl_type == CTRL_PASSIVE)
+/*XXX*/		if(*ctrl_desc[i].N_MGMT_COMMAND &&
+		   (ctrl_desc[i].ctrl_type == CTRL_PASSIVE ||
+		    ctrl_desc[i].ctrl_type == CTRL_CAPIMGR))
 		{
 			NDBGL4(L4_MSG, "CMR_DOPEN sent to unit %d", ctrl_desc[i].unit);
 			(*ctrl_desc[i].N_MGMT_COMMAND)(ctrl_desc[i].unit, CMR_DOPEN, 0);
@@ -322,7 +324,9 @@ i4b_l4_daemon_detached(void)
 
 	for(i=0; i < nctrl; i++)
 	{
-/*XXX*/		if(ctrl_desc[i].ctrl_type == CTRL_PASSIVE)
+/*XXX*/		if(*ctrl_desc[i].N_MGMT_COMMAND &&
+		   (ctrl_desc[i].ctrl_type == CTRL_PASSIVE ||
+		    ctrl_desc[i].ctrl_type == CTRL_CAPIMGR))
 		{
 			NDBGL4(L4_MSG, "CMR_DCLOSE sent to unit %d", ctrl_desc[i].unit);
 			(*ctrl_desc[i].N_MGMT_COMMAND)(ctrl_desc[i].unit, CMR_DCLOSE, 0);

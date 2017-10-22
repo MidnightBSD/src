@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/identcpu.c,v 1.4 2005/01/05 21:58:47 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/identcpu.c 171625 2007-07-27 14:49:11Z cognet $");
 #include <sys/systm.h>
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -126,6 +126,13 @@ static const char * const i80321_steppings[16] = {
 	"rev 12",	"rev 13",	"rev 14",	"rev 15",
 };
 
+static const char * const i81342_steppings[16] = {
+	"step A-0",	"rev 1",	"rev 2",	"rev 3",
+	"rev 4",	"rev 5",	"rev 6",	"rev 7",
+	"rev 8",	"rev 9",	"rev 10",	"rev 11",
+	"rev 12",	"rev 13",	"rev 14",	"rev 15",
+};
+
 static const char * const pxa2x0_steppings[16] = {
 	"step A-0",	"step A-1",	"step B-0",	"step B-1",
 	"step B-2",	"step C-0",	"rev 6",	"rev 7",
@@ -134,7 +141,7 @@ static const char * const pxa2x0_steppings[16] = {
 };
 
 static const char * const ixp425_steppings[16] = {
-	"step 0",	"rev 1",	"rev 2",	"rev 3",
+	"step 0 (A0)",	"rev 1 (ARMv5TE)", "rev 2",	"rev 3",
 	"rev 4",	"rev 5",	"rev 6",	"rev 7",
 	"rev 8",	"rev 9",	"rev 10",	"rev 11",
 	"rev 12",	"rev 13",	"rev 14",	"rev 15",
@@ -187,6 +194,8 @@ const struct cpuidtab cpuids[] = {
 
 	{ CPU_ID_ARM920T,	CPU_CLASS_ARM9TDMI,	"ARM920T",
 	  generic_steppings },
+	{ CPU_ID_ARM920T_ALT,	CPU_CLASS_ARM9TDMI,	"ARM920T",
+	  generic_steppings },
 	{ CPU_ID_ARM922T,	CPU_CLASS_ARM9TDMI,	"ARM922T",
 	  generic_steppings },
 	{ CPU_ID_ARM940T,	CPU_CLASS_ARM9TDMI,	"ARM940T",
@@ -227,6 +236,15 @@ const struct cpuidtab cpuids[] = {
 	{ CPU_ID_80321_600_B0,	CPU_CLASS_XSCALE,	"i80321 600MHz",
 	  i80321_steppings },
 
+	{ CPU_ID_81342,		CPU_CLASS_XSCALE,	"i81342",
+	  i81342_steppings },
+
+	{ CPU_ID_80219_400,	CPU_CLASS_XSCALE,	"i80219 400MHz",
+	  xscale_steppings },
+	
+	{ CPU_ID_80219_600,	CPU_CLASS_XSCALE,	"i80219 600MHz",
+	  xscale_steppings },
+
 	{ CPU_ID_PXA250A,	CPU_CLASS_XSCALE,	"PXA250",
 	  pxa2x0_steppings },
 	{ CPU_ID_PXA210A,	CPU_CLASS_XSCALE,	"PXA210",
@@ -264,7 +282,7 @@ const struct cpu_classtab cpu_classes[] = {
 	{ "ARM7",	"CPU_ARM7" },		/* CPU_CLASS_ARM7 */
 	{ "ARM7TDMI",	"CPU_ARM7TDMI" },	/* CPU_CLASS_ARM7TDMI */
 	{ "ARM8",	"CPU_ARM8" },		/* CPU_CLASS_ARM8 */
-	{ "ARM9TDMI",	NULL },			/* CPU_CLASS_ARM9TDMI */
+	{ "ARM9TDMI",	"CPU_ARM9TDMI" },	/* CPU_CLASS_ARM9TDMI */
 	{ "ARM9E-S",	NULL },			/* CPU_CLASS_ARM9ES */
 	{ "ARM10E",	"CPU_ARM10" },		/* CPU_CLASS_ARM10E */
 	{ "SA-1",	"CPU_SA110" },		/* CPU_CLASS_SA1 */
@@ -296,6 +314,15 @@ static const char * const wtnames[] = {
 	"**unknown 15**",
 };
 
+void setPQL2(int *const size, int *const ways);
+
+void
+setPQL2(int *const size, int *const ways)
+{
+	return;
+}
+
+
 extern int ctrl;
 void
 identify_arm_cpu(void)
@@ -314,7 +341,7 @@ identify_arm_cpu(void)
 	for (i = 0; cpuids[i].cpuid != 0; i++)
 		if (cpuids[i].cpuid == (cpuid & CPU_ID_CPU_MASK)) {
 			cpu_class = cpuids[i].cpu_class;
-			printf("%s %s (%s core)\n",
+			printf("CPU: %s %s (%s core)\n",
 			    cpuids[i].cpu_name,
 			    cpuids[i].cpu_steppings[cpuid &
 			    CPU_ID_REVISION_MASK],
@@ -324,6 +351,7 @@ identify_arm_cpu(void)
 	if (cpuids[i].cpuid == 0)
 		printf("unknown CPU (ID = 0x%x)\n", cpuid);
 
+	printf(" ");
 	switch (cpu_class) {
 	case CPU_CLASS_ARM6:
 	case CPU_CLASS_ARM7:
@@ -346,6 +374,12 @@ identify_arm_cpu(void)
 			printf(" IC disabled");
 		else
 			printf(" IC enabled");
+#ifdef CPU_XSCALE_81342
+		if ((ctrl & CPU_CONTROL_L2_ENABLE) == 0)
+			printf(" L2 disabled");
+		else
+			printf(" L2 enabled");
+#endif
 		break;
 	default:
 		break;
@@ -363,24 +397,24 @@ identify_arm_cpu(void)
 	if (ctrl & CPU_CONTROL_BPRD_ENABLE)
 		printf(" branch prediction enabled");
 
+	printf("\n");
 	/* Print cache info. */
 	if (arm_picache_line_size == 0 && arm_pdcache_line_size == 0)
 		return;
 	
 	if (arm_pcache_unified) {
- 		printf("%dKB/%dB %d-way %s unified cache\n",
+ 		printf("  %dKB/%dB %d-way %s unified cache\n",
 		    arm_pdcache_size / 1024,
 		    arm_pdcache_line_size, arm_pdcache_ways,
 		    wtnames[arm_pcache_type]);
 	} else {
-		printf("%dKB/%dB %d-way Instruction cache\n",
+		printf("  %dKB/%dB %d-way Instruction cache\n",
 		    arm_picache_size / 1024,
 		    arm_picache_line_size, arm_picache_ways);
-		printf("%dKB/%dB %d-way %s Data cache\n",
+		printf("  %dKB/%dB %d-way %s Data cache\n",
 		    arm_pdcache_size / 1024,
 		    arm_pdcache_line_size, arm_pdcache_ways,
 		    wtnames[arm_pcache_type]);                
 	}
-	printf("\n");
 }
 

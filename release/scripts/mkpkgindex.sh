@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/release/scripts/mkpkgindex.sh,v 1.2 2004/01/02 22:58:29 obrien Exp $
+# $FreeBSD: release/7.0.0/release/scripts/mkpkgindex.sh 124088 2004-01-02 22:58:29Z obrien $
 
 # Creates an INDEX file suitable for an ISO distribution image from a master
 # INDEX file.  The generated INDEX file contains only the packages in the

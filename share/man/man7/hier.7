@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)hier.7	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD: src/share/man/man7/hier.7,v 1.115 2005/01/21 20:50:39 ru Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man7/hier.7 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
-.Dd January 15, 2005
+.Dd June 28, 2007
 .Dt HIER 7
 .Os
 .Sh NAME
@@ -90,11 +90,13 @@ mount point used by
 .It Pa /etc/
 system configuration files and scripts
 .Pp
-.Bl -tag -width ".Pa defaults/" -compact
+.Bl -tag -width ".Pa bluetooth/" -compact
 .It Pa defaults/
 default system configuration files;
 see
 .Xr rc 8
+.It Pa bluetooth/
+bluetooth configuration files
 .It Pa gnats/
 gnats configuration files;
 see
@@ -119,18 +121,28 @@ see
 .Xr named 8
 .It Pa pam.d/
 configuration files for the Pluggable Authentication Modules (PAM)
-library;
-see
-.Xr pam 8
+library
 .It Pa periodic/
 scripts that are run daily, weekly, and monthly, via
 .Xr cron 8 ;
 see
 .Xr periodic 8
+.It Pa rc.d/
+System and daemon startup/control scripts;
+see
+.Xr rc 8
+.It Pa security/
+OpenBSM audit configuration files;
+see
+.Xr audit 8
 .It Pa ppp/
 ppp configuration files;
 see
 .Xr ppp 8
+.It Pa ssh/
+OpenSSH configuration files;
+see
+.Xr ssh 1
 .It Pa ssl/
 OpenSSL configuration files
 .El
@@ -151,14 +163,17 @@ critical system utilities needed for binaries in
 .Pa /bin
 and
 .Pa /sbin
+.It Pa /media/
+contains subdirectories to be used as mount points
+for removable media such as CDs, USB drives, and
+floppy disks
 .It Pa /mnt/
 empty directory commonly used by
 system administrators as a temporary mount point
 .It Pa /proc/
 process file system;
 see
-.Xr procfs 5 ,
-.Xr mount_procfs 8
+.Xr procfs 5
 .It Pa /rescue/
 statically linked programs for emergency recovery;
 see
@@ -168,8 +183,6 @@ root's HOME directory
 .It Pa /sbin/
 system programs and administration utilities
 fundamental to both single-user and multi-user environments
-.It Pa /stand/
-programs used in a standalone environment
 .It Pa /tmp/
 temporary files that are not guaranteed to persist across system reboots
 .It Pa /usr/
@@ -255,8 +268,6 @@ process file system
 SMB/CIFS file system
 .It Pa udf/
 UDF file system
-.It Pa umapfs/
-alternate uid/gid mappings file system
 .It Pa unionfs
 union file system
 .El
@@ -307,10 +318,12 @@ see
 C include files for Internet protocol version 6;
 see
 .Xr inet6 4
+.It Pa netipsec/
+kernel key-management service;
+see
+.Xr ipsec 4
 .It Pa netipx/
 IPX/SPX protocol stacks
-.It Pa netkey/
-kernel key-management service
 .It Pa netnatm/
 NATM include files;
 see
@@ -336,10 +349,6 @@ Objective C include files
 OpenSSL (Cryptography/SSL toolkit) headers
 .It Pa pccard/
 PC-CARD controllers
-.It Pa posix4/
-POSIX real-time extensions includes;
-see
-.Xr p1003_1b 9
 .It Pa protocols/
 C include files for Berkeley service protocols
 .It Pa readline/
@@ -395,6 +404,10 @@ shared libraries for compatibility
 .It Pa aout/
 a.out backward compatibility libraries
 .El
+.It Pa dtrace/
+DTrace library scripts
+.It Pa engines/
+OpenSSL (Cryptography/SSL toolkit) dynamically loadable engines
 .El
 .Pp
 .It Pa libdata/
@@ -506,6 +519,8 @@ Spanish translations of documents in /usr/share/doc
 Handbook
 .It Pa ja/
 Japanese translations of documents in /usr/share/doc
+.It Pa legal/
+License files for vendor supplied firmwares
 .It Pa ncurses/
 HTML documents pertaining to ncurses;
 see
@@ -554,10 +569,6 @@ miscellaneous system-wide ASCII text files
 .Bl -tag -width Fl -compact
 .It Pa fonts/
 ???
-.It Pa pcvtfonts/
-pcvt fonts;
-see
-.Xr pcvt 4
 .It Pa termcap
 terminal characteristics database;
 see
@@ -571,10 +582,6 @@ see
 national language support files;
 see
 .Xr mklocale 1
-.It Pa pcvt/
-pcvt documentation and etc examples;
-see
-.Xr pcvt 4
 .It Pa security/
 data files for security policies such as
 .Xr mac_lomac 4
@@ -677,23 +684,6 @@ tools used for maintenance and testing of
 source code for files in /usr/bin
 .It Pa usr.sbin/
 source code for files in /usr/sbin
-.El
-.Pp
-.It Pa X11R6/
-X11R6 distribution executables, libraries, etc (optional).
-.Bl -tag -width ".Pa include/" -compact
-.It Pa bin/
-X11R6 binaries (servers, utilities, local packages/ports).
-.It Pa etc/
-X11R6 configuration files and scripts.
-.It Pa include/
-X11R6 include files.
-.It Pa lib/
-X11R6 libraries.
-.It Pa man/
-X11R6 manual pages.
-.It Pa share/
-architecture-independent files.
 .El
 .El
 .It Pa /var/

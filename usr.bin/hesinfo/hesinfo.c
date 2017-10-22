@@ -19,7 +19,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/hesinfo/hesinfo.c,v 1.7 2002/09/04 23:29:01 dwmalone Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/hesinfo/hesinfo.c 102944 2002-09-04 23:29:10Z dwmalone $");
 
 #include <err.h>
 #include <errno.h>

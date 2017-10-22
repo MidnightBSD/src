@@ -1,8 +1,10 @@
-# $FreeBSD: src/secure/usr.bin/ssh/Makefile,v 1.31 2005/06/07 09:31:27 des Exp $
+# $FreeBSD: release/7.0.0/secure/usr.bin/ssh/Makefile 158529 2006-05-13 21:38:16Z des $
 #
 
+.include <bsd.own.mk>
+
 PROG=	ssh
-CFLAGS+=-I${SSHDIR}
+CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
 LINKS=	${BINDIR}/ssh ${BINDIR}/slogin
 MAN=	ssh.1 ssh_config.5
 MLINKS=	ssh.1 slogin.1
@@ -14,10 +16,10 @@ SRCS=	ssh.c readconf.c clientloop.c sshtty.c \
 DPADD=	${LIBSSH} ${LIBUTIL} ${LIBZ}
 LDADD=	-lssh -lutil -lz
 
-.if !defined(NO_KERBEROS)
-CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_H=1 -DKRB5 -DHEIMDAL
-DPADD+=	 ${LIBGSSAPI} ${LIBKRB5} ${LIBASN1} ${LIBCOM_ERR} ${LIBMD} ${LIBROKEN}
-LDADD+=	 -lgssapi -lkrb5 -lasn1 -lcom_err -lmd -lroken
+.if ${MK_KERBEROS_SUPPORT} != "no"
+CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DKRB5 -DHEIMDAL
+DPADD+=	 ${LIBGSSAPI}
+LDADD+=	 -lgssapi
 .endif
 
 .if defined(X11BASE)
@@ -30,3 +32,5 @@ LDADD+=	-lcrypt -lcrypto
 .include <bsd.prog.mk>
 
 .PATH:	${SSHDIR}
+
+${OBJS} ${POBJS} ${SOBJS}: ssh_namespace.h

@@ -34,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/locate/locate/util.c,v 1.10 2002/06/24 12:40:11 naddy Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/locate/locate/util.c 98751 2002-06-24 12:40:11Z naddy $
  */
 
 

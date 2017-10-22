@@ -26,7 +26,7 @@
 
 #include <dev/sound/pcm/sound.h>
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pcm/fake.c,v 1.14.2.1 2005/12/30 19:55:54 netchild Exp $");
+SND_DECLARE_FILE("$FreeBSD: release/7.0.0/sys/dev/sound/pcm/fake.c 167611 2007-03-15 18:19:01Z ariff $");
 
 static u_int32_t fk_fmt[] = {
 	AFMT_MU_LAW,
@@ -137,15 +137,16 @@ fkchan_setup(device_t dev)
     	struct snddev_info *d = device_get_softc(dev);
 	struct pcm_channel *c;
 
-	c = malloc(sizeof(*c), M_DEVBUF, M_WAITOK);
+	c = malloc(sizeof(*c), M_DEVBUF, M_WAITOK | M_ZERO);
 	c->methods = kobj_create(&fkchan_class, M_DEVBUF, M_WAITOK);
 	c->parentsnddev = d;
 	/*
 	 * Fake channel is such a blessing in disguise. Using this,
-	 * we can keep track prefered virtual channel speed without
+	 * we can keep track prefered virtual channel speed / format without
 	 * querying kernel hint repetitively (see vchan_create / vchan.c).
 	 */
 	c->speed = 0;
+	c->format = 0;
 	snprintf(c->name, CHN_NAMELEN, "%s:fake", device_get_nameunit(dev));
 
 	return c;

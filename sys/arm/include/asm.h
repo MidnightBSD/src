@@ -33,7 +33,7 @@
  *
  *	from: @(#)asm.h	5.5 (Berkeley) 5/7/91
  *
- * $FreeBSD: src/sys/arm/include/asm.h,v 1.4 2005/01/05 21:58:48 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/asm.h 169768 2007-05-19 16:20:37Z cognet $
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -54,15 +54,6 @@
 #ifndef _JB_MAGIC__SETJMP
 #define _JB_MAGIC__SETJMP       0x4278f500
 #define _JB_MAGIC_SETJMP        0x4278f501
-#endif
-#if 0
-#ifdef __STDC__
-# define __CONCAT(x,y)	x ## y
-# define __STRING(x)	#x
-#else
-# define __CONCAT(x,y)	x/**/y
-# define __STRING(x)	"x"
-#endif
 #endif
 
 #define I32_bit (1 << 7)	/* IRQ disable */
@@ -89,7 +80,7 @@
 
 #ifdef GPROF
 #  define _PROF_PROLOGUE	\
-	mov ip, lr; bl _mcount
+	mov ip, lr; bl __mcount
 #else
 # define _PROF_PROLOGUE
 #endif

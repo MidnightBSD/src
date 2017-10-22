@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/label.c,v 1.148.8.2 2006/01/24 15:51:33 ceri Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/label.c 174854 2007-12-22 06:32:46Z cvs2svn $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -67,7 +67,7 @@
 #define ROOT_MIN_SIZE			118
 #endif
 #define SWAP_MIN_SIZE			32
-#define USR_MIN_SIZE			128
+#define USR_MIN_SIZE			160
 #define VAR_MIN_SIZE			20
 #define TMP_MIN_SIZE			20
 #define HOME_MIN_SIZE			20
@@ -837,7 +837,6 @@ print_command_summary(void)
 static void
 clear_wins(void)
 {
-    extern void print_label_chunks();
     clear();
     print_label_chunks();
 }
@@ -1523,6 +1522,7 @@ try_auto_label(Device **devs, Device *dev, int perc, int *req)
     if (UsrChunk == NULL && !variable_get(VAR_NO_USR)) {
 	sz = requested_part_size(VAR_USR_SIZE, USR_NOMINAL_SIZE, USR_DEFAULT_SIZE, perc);
 #if AUTO_HOME == 0
+	if (sz < space_free(label_chunk_info[here].c))
 	    sz = space_free(label_chunk_info[here].c);
 #endif
 	if (sz) {

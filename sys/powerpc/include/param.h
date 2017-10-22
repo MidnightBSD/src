@@ -35,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: src/sys/powerpc/include/param.h,v 1.15 2004/11/20 02:29:50 das Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/param.h 153168 2005-12-06 13:27:21Z ru $
  */
 
 /*
@@ -52,13 +52,6 @@
 #endif
 #ifndef _ALIGN
 #define	_ALIGN(p)	(((unsigned)(p) + _ALIGNBYTES) & ~_ALIGNBYTES)
-#endif
-
-#ifndef	_MACHINE
-#define	_MACHINE	powerpc
-#endif
-#ifndef _MACHINE_ARCH
-#define	_MACHINE_ARCH	powerpc
 #endif
 
 #ifndef _NO_NAMESPACE_POLLUTION

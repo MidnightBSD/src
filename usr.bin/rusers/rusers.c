@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/rusers/rusers.c,v 1.17 2005/05/21 09:55:08 ru Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/rusers/rusers.c 146466 2005-05-21 09:55:10Z ru $");
 
 #include <sys/types.h>
 #include <sys/socket.h>

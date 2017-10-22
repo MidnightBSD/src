@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-#      $FreeBSD: src/tools/tools/mtxstat/mtxstat.pl,v 1.2 2003/09/19 21:52:29 sam Exp $
+#      $FreeBSD: release/7.0.0/tools/tools/mtxstat/mtxstat.pl 120245 2003-09-19 21:52:29Z sam $
 #
 
 use strict;

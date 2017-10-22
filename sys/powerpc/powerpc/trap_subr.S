@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/powerpc/powerpc/trap_subr.S,v 1.14.2.1 2005/08/08 07:02:12 grehan Exp $ */
+/* $FreeBSD: release/7.0.0/sys/powerpc/powerpc/trap_subr.S 153685 2005-12-23 13:05:27Z grehan $ */
 /* $NetBSD: trap_subr.S,v 1.20 2002/04/22 23:20:08 kleink Exp $	*/
 
 /*-
@@ -438,15 +438,17 @@ CNAME(trapexit):
 	isync
 	addi	%r3,%r1,8
 	bl	CNAME(ast)
+	.globl	CNAME(asttrapexit)	/* backtrace code sentinel #2 */
+CNAME(asttrapexit):
 	b	trapexit		/* test ast ret value ? */
 1:
 	FRAME_LEAVE(PC_TEMPSAVE)
 	rfi
 
 /*
- *	Temporary: vector-unavailable traps are directed to vector-assist traps
+ *     Temporary: vector-unavailable traps are directed to vector-assist traps
  */
-	.globl	CNAME(vectrap),CNAME(vectrapsize)
+	.globl  CNAME(vectrap),CNAME(vectrapsize)
 CNAME(vectrap):
 	ba	EXC_VECAST
 CNAME(vectrapsize) = .-CNAME(vectrap)

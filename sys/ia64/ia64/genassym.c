@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/ia64/genassym.c,v 1.41.2.1 2006/01/28 18:40:55 marcel Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/ia64/genassym.c 164391 2006-11-18 21:48:13Z marcel $
  */
 
 #include "opt_compat.h"

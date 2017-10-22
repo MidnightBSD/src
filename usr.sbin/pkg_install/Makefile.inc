@@ -1,8 +1,10 @@
-# $FreeBSD: src/usr.sbin/pkg_install/Makefile.inc,v 1.13 2005/06/10 06:12:53 des Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/pkg_install/Makefile.inc 174854 2007-12-22 06:32:46Z cvs2svn $
+
+.include <bsd.own.mk>
 
 LIBINSTALL=	${.OBJDIR}/../lib/libinstall.a
 
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL) && \
+.if ${MK_OPENSSL} != "no" && \
     defined(LDADD) && ${LDADD:M-lfetch} != ""
 DPADD+=		${LIBSSL} ${LIBCRYPTO}
 LDADD+=		-lssl -lcrypto

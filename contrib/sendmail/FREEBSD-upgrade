@@ -1,6 +1,6 @@
-$FreeBSD: src/contrib/sendmail/FREEBSD-upgrade,v 1.28 2005/06/07 04:22:21 gshapiro Exp $
+$FreeBSD: release/7.0.0/contrib/sendmail/FREEBSD-upgrade 173547 2007-11-11 17:07:37Z gshapiro $
 
-sendmail 8.13.4
+sendmail 8.14.2
 	originals can be found at: ftp://ftp.sendmail.org/pub/sendmail/
 
 For the import of sendmail, the following files were removed:
@@ -21,9 +21,13 @@ The following directories were renamed:
 
 Imported using:
 
-	cvs import -m 'Import sendmail 8.13.4' \
-		src/contrib/sendmail SENDMAIL v8_13_4
+	cvs import -m 'Import sendmail 8.14.2' \
+		src/contrib/sendmail SENDMAIL v8_14_2
 
+After importing, bump the version of src/etc/sendmail/freebsd*mc
+so mergemaster will merge /etc/mail/freebsd*cf:
+
+	cvs commit -f src/etc/sendmail/freebsd*mc
 
 To make local changes to sendmail, simply patch and commit to the main
 branch (aka HEAD).  Never make local changes on the vendor (SENDMAIL)
@@ -93,4 +97,4 @@ infrastructure in FreeBSD:
 	usr.sbin/mailwrapper/Makefile
 
 gshapiro@FreeBSD.org
-6-June-2005
+11-November-2007

@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/sys_machdep.c,v 1.4 2005/02/25 22:56:16 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/sys_machdep.c 166695 2007-02-14 01:25:41Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -68,7 +68,7 @@ arm32_sync_icache(struct thread *td, void *args)
 	cpu_icache_sync_range(ua.addr, ua.len);
 
 	td->td_retval[0] = 0;
-	return(0);
+	return (0);
 }
 
 static int
@@ -78,7 +78,7 @@ arm32_drain_writebuf(struct thread *td, void *args)
 
 	td->td_retval[0] = 0;
 	cpu_drain_writebuf();
-	return(0);
+	return (0);
 }
 
 static int
@@ -108,7 +108,6 @@ sysarch(td, uap)
 	case ARM_SYNC_ICACHE : 
 		error = arm32_sync_icache(td, uap->parms);
 		break;
-		
 	case ARM_DRAIN_WRITEBUF : 
 		error = arm32_drain_writebuf(td, uap->parms);
 		break;
@@ -124,4 +123,3 @@ sysarch(td, uap)
 	}
 	return (error);
 }
-

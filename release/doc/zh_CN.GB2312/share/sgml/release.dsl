@@ -1,5 +1,5 @@
-<!-- Original Revision: 1.8.2.1 -->
-<!-- $FreeBSD: src/release/doc/zh_CN.GB2312/share/sgml/release.dsl,v 1.1 2004/10/15 06:43:48 delphij Exp $ -->
+<!-- Original Revision: 1.8 -->
+<!-- $FreeBSD: release/7.0.0/release/doc/zh_CN.GB2312/share/sgml/release.dsl 156311 2006-03-05 15:07:57Z delphij $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY release.dsl PUBLIC "-//FreeBSD//DOCUMENT Release Notes DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
@@ -43,8 +43,8 @@
 		(literal (entity-text "release.branch"))
 		(literal " 的用户都应该订阅 ")
                 (literal "<")
-		(create-link (list (list "HREF" "mailto:stable@FreeBSD.org"))
-                  (literal "stable@FreeBSD.org"))
+		(create-link (list (list "HREF" "mailto:current@FreeBSD.org"))
+                  (literal "current@FreeBSD.org"))
                 (literal "> 邮件列表。")))
 
             (make element gi: "p"

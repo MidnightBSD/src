@@ -16,7 +16,7 @@
  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/usr.sbin/pppd/ipcp.h,v 1.10 1999/08/28 01:19:03 peter Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/pppd/ipcp.h 50479 1999-08-28 01:35:59Z peter $
  */
 
 /*

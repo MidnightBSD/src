@@ -40,7 +40,7 @@
 ;;;;
 ;;;;---------------------------------------------------------------------------
 ;;;;
-;;;; $FreeBSD: src/gnu/usr.bin/send-pr/send-pr-el.in,v 1.7 2000/10/29 22:11:38 steve Exp $
+;;;; $FreeBSD: release/7.0.0/gnu/usr.bin/send-pr/send-pr-el.in 67909 2000-10-29 22:11:39Z steve $
 
 (provide 'send-pr)
 

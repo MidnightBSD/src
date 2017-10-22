@@ -1,19 +1,18 @@
 #	$NetBSD: Makefile,v 1.3 2000/06/20 13:56:43 fvdl Exp $
-# $FreeBSD: src/usr.sbin/rpcbind/Makefile,v 1.5 2003/04/04 17:49:18 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/rpcbind/Makefile 156813 2006-03-17 18:54:44Z ru $
 
-LIBCDIR=        ${.CURDIR}/../../lib/libc
-LIBCRPCDIR=     ${LIBCDIR}/rpc
-LIBCINCLUDE=    ${LIBCDIR}/include
-
-.PATH: ${LIBCRPCDIR}
+.include <bsd.own.mk>
 
 PROG=	rpcbind
 MAN=	rpcbind.8
 SRCS=	check_bound.c rpcb_stat.c rpcb_svc_4.c rpcbind.c pmap_svc.c \
-	rpcb_svc.c rpcb_svc_com.c security.c warmstart.c util.c \
-	rpc_generic.c
+	rpcb_svc.c rpcb_svc_com.c security.c warmstart.c util.c
 
-CFLAGS+= -I${LIBCRPCDIR} -I${LIBCINCLUDE} -DPORTMAP -DINET6 -DLIBWRAP
+CFLAGS+= -DPORTMAP -DLIBWRAP
+
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+= -DINET6
+.endif
 
 DPADD=	${LIBWRAP} ${LIBUTIL}
 LDADD=	-lwrap -lutil

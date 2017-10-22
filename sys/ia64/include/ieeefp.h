@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/include/ieeefp.h,v 1.4 2003/08/11 21:25:19 marcel Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/include/ieeefp.h 160105 2006-07-05 06:10:21Z bde $
  */
 
 #ifndef _MACHINE_IEEEFP_H_
@@ -39,10 +39,10 @@ typedef int fp_except_t;
 #define	FP_X_IMP	IA64_FPSR_TRAP_ID /* imprecise(inexact) exception */
 
 typedef enum {
-	FP_RZ=0,		/* round to zero (truncate) */
-	FP_RM=1,		/* round toward negative infinity */
-	FP_RN=2,		/* round to nearest representable number */
-	FP_RP=3			/* round toward positive infinity */
+	FP_RN = 0,		/* round to nearest */
+	FP_RM,			/* round toward minus infinity */
+	FP_RP,			/* round toward plus infinity */
+	FP_RZ			/* round toward zero */
 } fp_rnd_t;
 
-#endif /* _MACHINE_IEEEFP_H_ */
+#endif /* !_MACHINE_IEEEFP_H_ */

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/netatalk/simple_send/simple_send.c,v 1.2 2004/07/17 17:16:16 rwatson Exp $
+ * $FreeBSD: release/7.0.0/tools/regression/netatalk/simple_send/simple_send.c 156815 2006-03-17 20:14:25Z rwatson $
  */
 
 #include <sys/types.h>
@@ -124,7 +124,7 @@ main(int argc, char *argv[])
 	printf("Address source is %u.%u:%u, address destination is %u.%u:%u\n",
 	    ntohs(sat_from.sat_addr.s_net), sat_from.sat_addr.s_node,
 	    sat_from.sat_port,
-	    ntohs(sat_to.sat_addr.s_net), sat_to.sat_addr.s_net,
+	    ntohs(sat_to.sat_addr.s_net), sat_to.sat_addr.s_node,
 	    sat_to.sat_port);
 
 	/*

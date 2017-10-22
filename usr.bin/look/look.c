@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)look.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/look/look.c,v 1.17 2004/07/19 11:12:02 tjr Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/look/look.c 160467 2006-07-18 10:19:46Z stefanf $");
 
 /*
  * look -- find lines in a sorted list.
@@ -276,10 +276,8 @@ linear_search(wchar_t *string, unsigned char *front, unsigned char *back)
 		switch (compare(string, front, back)) {
 		case EQUAL:		/* Found it. */
 			return (front);
-			break;
 		case LESS:		/* No such string. */
 			return (NULL);
-			break;
 		case GREATER:		/* Keep going. */
 			break;
 		}

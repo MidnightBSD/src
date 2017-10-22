@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/hostapd,v 1.1.2.1 2006/02/12 22:13:15 flz Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/hostapd 175142 2008-01-07 21:15:45Z brix $
 #
 
 # PROVIDE: hostapd
@@ -14,9 +14,11 @@ command="/usr/sbin/${name}"
 rcvar=`set_rcvar`
 
 conf_file="/etc/${name}.conf"
+pidfile="/var/run/${name}.pid"
 
-command_args="-B ${conf_file}"
+command_args="-P ${pidfile} -B ${conf_file}"
 required_files="${conf_file}"
+extra_commands="reload"
 
 load_rc_config ${name}
 run_rc_command "$1"

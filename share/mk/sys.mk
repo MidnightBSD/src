@@ -1,5 +1,5 @@
 #	from: @(#)sys.mk	8.2 (Berkeley) 3/21/94
-# $FreeBSD: src/share/mk/sys.mk,v 1.86.2.1 2005/11/16 08:12:03 ru Exp $
+# $FreeBSD: release/7.0.0/share/mk/sys.mk 174177 2007-12-02 13:24:43Z cognet $
 
 unix		?=	We run FreeBSD, not UNIX.
 .FreeBSD	?=	true
@@ -19,8 +19,6 @@ unix		?=	We run FreeBSD, not UNIX.
 .SUFFIXES:	.out .a .ln .o .c .cc .cpp .cxx .C .m .F .f .e .r .y .l .S .asm .s .cl .p .h .sh
 .endif
 
-X11BASE		?=	/usr/X11R6
-
 AR		?=	ar
 .if defined(%POSIX)
 ARFLAGS		?=	-rv
@@ -37,7 +35,11 @@ CC		?=	c89
 CFLAGS		?=	-O
 .else
 CC		?=	cc
+.if ${MACHINE_ARCH} == "arm"
+CFLAGS		?=	-O -fno-strict-aliasing -pipe
+.else
 CFLAGS		?=	-O2 -fno-strict-aliasing -pipe
+.endif
 .endif
 
 CXX		?=	c++

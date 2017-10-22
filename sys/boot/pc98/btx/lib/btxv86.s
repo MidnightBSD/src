@@ -13,7 +13,7 @@
 # purpose.
 #
 
-# $FreeBSD: src/sys/boot/pc98/btx/lib/btxv86.s,v 1.2 1999/08/28 00:40:33 peter Exp $
+# $FreeBSD: release/7.0.0/sys/boot/pc98/btx/lib/btxv86.s 50477 1999-08-28 01:08:13Z peter $
 
 #
 # BTX V86 interface.

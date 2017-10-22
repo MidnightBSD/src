@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/ia64/include/_limits.h,v 1.13 2005/01/06 22:18:23 imp Exp $ */
+/* $FreeBSD: release/7.0.0/sys/ia64/include/_limits.h 149337 2005-08-20 16:44:41Z stefanf $ */
 /* From: NetBSD: limits.h,v 1.3 1997/04/06 08:47:31 cgd Exp */
 
 /*-
@@ -85,5 +85,8 @@
 
 #define	__LONG_BIT	64
 #define	__WORD_BIT	32
+
+/* Minimum signal stack size. */
+#define	__MINSIGSTKSZ	(3072 * 4)
 
 #endif /* !_MACHINE__LIMITS_H_ */

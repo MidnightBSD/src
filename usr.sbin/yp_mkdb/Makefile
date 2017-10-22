@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/yp_mkdb/Makefile,v 1.9 2003/04/04 17:49:20 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/yp_mkdb/Makefile 113091 2003-04-04 17:49:21Z obrien $
 
 .PATH: ${.CURDIR}/../../libexec/ypxfr ${.CURDIR}/../ypserv
 

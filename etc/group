@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/group,v 1.32 2005/06/06 20:19:56 brooks Exp $
+# $FreeBSD: release/7.0.0/etc/group 170566 2007-06-11 18:36:39Z ceri $
 #
 wheel:*:0:root
 daemon:*:1:
@@ -11,6 +11,7 @@ bin:*:7:
 news:*:8:
 man:*:9:
 games:*:13:
+ftp:*:14:
 staff:*:20:
 sshd:*:22:
 smmsp:*:25:
@@ -24,6 +25,7 @@ _dhcp:*:65:
 uucp:*:66:
 dialer:*:68:
 network:*:69:
+audit:*:77:
 www:*:80:
 nogroup:*:65533:
 nobody:*:65534:

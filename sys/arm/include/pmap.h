@@ -44,14 +44,14 @@
  *      from: @(#)pmap.h        7.4 (Berkeley) 5/12/91
  * 	from: FreeBSD: src/sys/i386/include/pmap.h,v 1.70 2000/11/30
  *
- * $FreeBSD: src/sys/arm/include/pmap.h,v 1.10 2005/06/07 23:04:24 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/pmap.h 171620 2007-07-27 14:45:04Z cognet $
  */
 
 #ifndef _MACHINE_PMAP_H_
 #define _MACHINE_PMAP_H_
 
 #include <machine/pte.h>
-
+#include <machine/cpuconf.h>
 /*
  * Pte related macros
  */
@@ -62,6 +62,8 @@
 #ifndef LOCORE
 
 #include <sys/queue.h>
+#include <sys/_lock.h>
+#include <sys/_mutex.h>
 
 #define PDESIZE		sizeof(pd_entry_t)	/* for assembly files */
 #define PTESIZE		sizeof(pt_entry_t)	/* for assembly files */
@@ -136,6 +138,7 @@ struct l2_dtable;
 #define	L2_SIZE		(1 << L2_LOG2)
 
 struct	pmap {
+	struct mtx		pm_mtx;
 	u_int8_t		pm_domain;
 	struct l1_ttable	*pm_l1;
 	struct l2_dtable	*pm_l2[L2_SIZE];
@@ -144,7 +147,6 @@ struct	pmap {
 	int			pm_active;	/* active on cpus */
 	struct pmap_statistics	pm_stats;	/* pmap statictics */
 	TAILQ_HEAD(,pv_entry)	pm_pvlist;	/* list of mappings in pmap */
-	LIST_ENTRY(pmap)	pm_list;	/* List of all pmaps */
 };
 
 typedef struct pmap *pmap_t;
@@ -153,12 +155,22 @@ typedef struct pmap *pmap_t;
 extern pmap_t	kernel_pmap;
 #define pmap_kernel() kernel_pmap
 
+#define	PMAP_ASSERT_LOCKED(pmap) \
+				mtx_assert(&(pmap)->pm_mtx, MA_OWNED)
+#define	PMAP_LOCK(pmap)		mtx_lock(&(pmap)->pm_mtx)
+#define	PMAP_LOCK_DESTROY(pmap)	mtx_destroy(&(pmap)->pm_mtx)
+#define	PMAP_LOCK_INIT(pmap)	mtx_init(&(pmap)->pm_mtx, "pmap", \
+				    NULL, MTX_DEF | MTX_DUPOK)
+#define	PMAP_OWNED(pmap)	mtx_owned(&(pmap)->pm_mtx)
+#define	PMAP_MTX(pmap)		(&(pmap)->pm_mtx)
+#define	PMAP_TRYLOCK(pmap)	mtx_trylock(&(pmap)->pm_mtx)
+#define	PMAP_UNLOCK(pmap)	mtx_unlock(&(pmap)->pm_mtx)
 #endif
 
 
 /*
  * For each vm_page_t, there is a list of all currently valid virtual
- * mappings of that page.  An entry is a pv_entry_t, the list is pv_table.
+ * mappings of that page.  An entry is a pv_entry_t, the list is pv_list.
  */
 typedef struct pv_entry {
 	pmap_t          pv_pmap;        /* pmap where mapping lies */
@@ -201,15 +213,13 @@ vtopte(vm_offset_t va)
 	return (ptep);
 }
 
-extern vm_offset_t avail_end;
-extern vm_offset_t clean_eva;
-extern vm_offset_t clean_sva;
 extern vm_offset_t phys_avail[];
 extern vm_offset_t virtual_avail;
 extern vm_offset_t virtual_end;
 
 void	pmap_bootstrap(vm_offset_t, vm_offset_t, struct pv_addr *);
 void	pmap_kenter(vm_offset_t va, vm_paddr_t pa);
+void	pmap_kenter_nocache(vm_offset_t va, vm_paddr_t pa);
 void 	pmap_kenter_user(vm_offset_t va, vm_paddr_t pa);
 void	pmap_kremove(vm_offset_t);
 void	*pmap_mapdev(vm_offset_t, vm_size_t);
@@ -227,8 +237,8 @@ int pmap_fault_fixup(pmap_t, vm_offset_t, vm_prot_t, int);
 /*
  * Definitions for MMU domains
  */
-#define	PMAP_DOMAINS		15	/* 15 'user' domains (0-14) */
-#define	PMAP_DOMAIN_KERNEL	15	/* The kernel uses domain #15 */
+#define	PMAP_DOMAINS		15	/* 15 'user' domains (1-15) */
+#define	PMAP_DOMAIN_KERNEL	0	/* The kernel uses domain #0 */
 
 /*
  * The new pmap ensures that page-tables are always mapping Write-Thru.
@@ -254,14 +264,16 @@ extern int pmap_needs_pte_sync;
 #define	L1_S_PROT_MASK		(L1_S_PROT_U|L1_S_PROT_W)
 
 #define	L1_S_CACHE_MASK_generic	(L1_S_B|L1_S_C)
-#define	L1_S_CACHE_MASK_xscale	(L1_S_B|L1_S_C|L1_S_XSCALE_TEX(TEX_XSCALE_X))
+#define	L1_S_CACHE_MASK_xscale	(L1_S_B|L1_S_C|L1_S_XSCALE_TEX(TEX_XSCALE_X)|\
+    				L1_S_XSCALE_TEX(TEX_XSCALE_T))
 
 #define	L2_L_PROT_U		(L2_AP(AP_U))
 #define	L2_L_PROT_W		(L2_AP(AP_W))
 #define	L2_L_PROT_MASK		(L2_L_PROT_U|L2_L_PROT_W)
 
 #define	L2_L_CACHE_MASK_generic	(L2_B|L2_C)
-#define	L2_L_CACHE_MASK_xscale	(L2_B|L2_C|L2_XSCALE_L_TEX(TEX_XSCALE_X))
+#define	L2_L_CACHE_MASK_xscale	(L2_B|L2_C|L2_XSCALE_L_TEX(TEX_XSCALE_X) | \
+    				L2_XSCALE_L_TEX(TEX_XSCALE_T))
 
 #define	L2_S_PROT_U_generic	(L2_AP(AP_U))
 #define	L2_S_PROT_W_generic	(L2_AP(AP_W))
@@ -272,7 +284,8 @@ extern int pmap_needs_pte_sync;
 #define	L2_S_PROT_MASK_xscale	(L2_S_PROT_U|L2_S_PROT_W)
 
 #define	L2_S_CACHE_MASK_generic	(L2_B|L2_C)
-#define	L2_S_CACHE_MASK_xscale	(L2_B|L2_C|L2_XSCALE_T_TEX(TEX_XSCALE_X))
+#define	L2_S_CACHE_MASK_xscale	(L2_B|L2_C|L2_XSCALE_T_TEX(TEX_XSCALE_X)| \
+    				 L2_XSCALE_T_TEX(TEX_XSCALE_X))
 
 #define	L1_S_PROTO_generic	(L1_TYPE_S | L1_S_IMP)
 #define	L1_S_PROTO_xscale	(L1_TYPE_S)
@@ -331,11 +344,19 @@ extern int pmap_needs_pte_sync;
 
 #endif /* ARM_NMMUS > 1 */
 
+#ifdef SKYEYE_WORKAROUNDS
+#define PMAP_NEEDS_PTE_SYNC     1
+#define PMAP_INCLUDE_PTE_SYNC
+#else
 #if (ARM_MMU_SA1 == 1) && (ARM_NMMUS == 1)
 #define	PMAP_NEEDS_PTE_SYNC	1
 #define	PMAP_INCLUDE_PTE_SYNC
+#elif defined(CPU_XSCALE_81342)
+#define PMAP_NEEDS_PTE_SYNC	1
+#define PMAP_INCLUDE_PTE_SYNC
 #elif (ARM_MMU_SA1 == 0)
 #define	PMAP_NEEDS_PTE_SYNC	0
+#endif
 #endif
 
 /*
@@ -372,14 +393,18 @@ extern int pmap_needs_pte_sync;
 
 #define	PTE_SYNC(pte)							\
 do {									\
-	if (PMAP_NEEDS_PTE_SYNC)					\
+	if (PMAP_NEEDS_PTE_SYNC) {					\
 		cpu_dcache_wb_range((vm_offset_t)(pte), sizeof(pt_entry_t));\
+		cpu_l2cache_wb_range((vm_offset_t)(pte), sizeof(pt_entry_t));\
+	}\
 } while (/*CONSTCOND*/0)
 
 #define	PTE_SYNC_RANGE(pte, cnt)					\
 do {									\
 	if (PMAP_NEEDS_PTE_SYNC) {					\
 		cpu_dcache_wb_range((vm_offset_t)(pte),			\
+		    (cnt) << 2); /* * sizeof(pt_entry_t) */		\
+		cpu_l2cache_wb_range((vm_offset_t)(pte), 		\
 		    (cnt) << 2); /* * sizeof(pt_entry_t) */		\
 	}								\
 } while (/*CONSTCOND*/0)
@@ -408,7 +433,7 @@ extern pt_entry_t		pte_l2_s_proto;
 extern void (*pmap_copy_page_func)(vm_paddr_t, vm_paddr_t);
 extern void (*pmap_zero_page_func)(vm_paddr_t, int, int);
 
-#if (ARM_MMU_GENERIC + ARM_MMU_SA1) != 0
+#if (ARM_MMU_GENERIC + ARM_MMU_SA1) != 0 || defined(CPU_XSCALE_81342)
 void	pmap_copy_page_generic(vm_paddr_t, vm_paddr_t);
 void	pmap_zero_page_generic(vm_paddr_t, int, int);
 
@@ -438,6 +463,10 @@ void	xscale_setup_minidata(vm_offset_t, vm_offset_t, vm_offset_t);
 
 void	pmap_use_minicache(vm_offset_t, vm_size_t);
 #endif /* ARM_MMU_XSCALE == 1 */
+#if defined(CPU_XSCALE_81342)
+#define ARM_HAVE_SUPERSECTIONS
+#endif
+
 #define PTE_KERNEL	0
 #define PTE_USER	1
 #define	l1pte_valid(pde)	((pde) != 0)
@@ -506,17 +535,31 @@ void	pmap_devmap_register(const struct pmap_devmap *);
 #define SECTION_CACHE	0x1
 #define SECTION_PT	0x2
 void	pmap_kenter_section(vm_offset_t, vm_paddr_t, int flags);
+#ifdef ARM_HAVE_SUPERSECTIONS
+void	pmap_kenter_supersection(vm_offset_t, uint64_t, int flags);
+#endif
 
 extern char *_tmppt;
 
+void	pmap_postinit(void);
+
 #ifdef ARM_USE_SMALL_ALLOC
 void	arm_add_smallalloc_pages(void *, void *, int, int);
-void 	arm_busy_pages(void);
+vm_offset_t arm_ptovirt(vm_paddr_t);
+void arm_init_smallalloc(void);
 struct arm_small_page {
 	void *addr;
 	TAILQ_ENTRY(arm_small_page) pg_list;
 };
+
 #endif
+
+#define ARM_NOCACHE_KVA_SIZE 0x1000000
+extern vm_offset_t arm_nocache_startaddr;
+void *arm_remap_nocache(void *, vm_size_t);
+void arm_unmap_nocache(void *, vm_size_t);
+
+extern vm_paddr_t dump_avail[];
 #endif	/* _KERNEL */
 
 #endif	/* !LOCORE */

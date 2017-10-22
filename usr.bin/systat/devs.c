@@ -60,7 +60,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/systat/devs.c,v 1.9 2003/10/20 20:13:50 phk Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/systat/devs.c 121291 2003-10-20 20:13:50Z phk $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)disks.c	8.1 (Berkeley) 6/6/93";

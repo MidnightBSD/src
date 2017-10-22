@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/boot/pc98/libpc98/Makefile,v 1.22 2005/05/08 14:17:28 nyan Exp $
+# $FreeBSD: release/7.0.0/sys/boot/pc98/libpc98/Makefile 157668 2006-04-11 20:11:30Z jhb $
 #
 LIB=			pc98
 INTERNALLIB=
@@ -7,7 +7,7 @@ INTERNALLIB=
 
 SRCS=	bioscd.c biosdisk.c biosmem.c biospnp.c biospci.c biossmap.c \
 	bootinfo.c bootinfo32.c comconsole.c devicename.c elf32_freebsd.c \
-	gatea20.c i386_copy.c i386_module.c nullconsole.c pxe.c pxetramp.s \
+	i386_copy.c i386_module.c nullconsole.c pxe.c pxetramp.s \
 	time.c vidconsole.c
 
 BOOT_COMCONSOLE_PORT?= 0x238
@@ -23,6 +23,9 @@ CFLAGS+= -DDISK_DEBUG
 
 # Include simple terminal emulation (cons25-compatible)
 CFLAGS+= -DTERM_EMU
+
+# XXX: make alloca() useable
+CFLAGS+= -Dalloca=__builtin_alloca
 
 CFLAGS+=	-I${.CURDIR}/../../common -I${.CURDIR}/../btx/lib \
 		-I${.CURDIR}/../../i386/libi386 \

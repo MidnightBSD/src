@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/tools/crypto/ipsecstats.c,v 1.1 2003/03/19 01:53:55 sam Exp $
+ * $FreeBSD: release/7.0.0/tools/tools/crypto/ipsecstats.c 172240 2007-09-19 08:50:55Z gnn $
  */
 #include <stdio.h>
 #include <sys/types.h>
@@ -83,7 +83,7 @@ int
 main(int argc, char *argv[])
 {
 #define	STAT(x,fmt)	if (x) printf(fmt "\n", x)
-	struct newipsecstat ips;
+	struct ipsecstat ips;
 	struct ahstat ahs;
 	struct espstat esps;
 	size_t slen;

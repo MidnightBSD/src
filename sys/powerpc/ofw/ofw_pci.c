@@ -28,7 +28,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * from NetBSD: pci_machdep.c,v 1.18 2001/07/22 11:29:48 wiz Exp
- * $FreeBSD: src/sys/powerpc/ofw/ofw_pci.c,v 1.5 2005/01/07 02:29:20 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/ofw/ofw_pci.c 139825 2005-01-07 02:29:27Z imp $
  */
 
 #include <sys/param.h>

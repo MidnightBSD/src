@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD: src/share/termcap/Makefile,v 1.18.2.1 2005/08/16 22:42:46 phk Exp $
+# $FreeBSD: release/7.0.0/share/termcap/Makefile 148724 2005-08-05 09:52:25Z phk $
 
 # reorder gives an editor command for most common terminals
 # (in reverse order from n'th to 1'st most commonly used)

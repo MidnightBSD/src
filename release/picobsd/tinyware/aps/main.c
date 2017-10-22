@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/release/picobsd/tinyware/aps/main.c,v 1.2 1999/08/28 01:33:52 peter Exp $
+ * $FreeBSD: release/7.0.0/release/picobsd/tinyware/aps/main.c 50479 1999-08-28 01:35:59Z peter $
  *
  */
 

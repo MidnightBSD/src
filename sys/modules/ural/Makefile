@@ -1,8 +1,8 @@
-# $FreeBSD: src/sys/modules/ural/Makefile,v 1.1 2005/04/18 18:47:38 damien Exp $
+# $FreeBSD: release/7.0.0/sys/modules/ural/Makefile 150636 2005-09-27 18:10:43Z mlaier $
 
 .PATH: ${.CURDIR}/../../dev/usb
 
 KMOD    = if_ural
-SRCS    = if_ural.c opt_bdg.h opt_usb.h device_if.h bus_if.h usbdevs.h
+SRCS    = if_ural.c opt_usb.h device_if.h bus_if.h usbdevs.h
 
 .include <bsd.kmod.mk>

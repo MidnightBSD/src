@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)route.c	8.6 (Berkeley) 4/28/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/route/route.c,v 1.79.2.1 2005/09/26 15:00:34 glebius Exp $";
+  "$FreeBSD: release/7.0.0/sbin/route/route.c 150679 2005-09-28 12:12:15Z tobez $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -174,6 +174,7 @@ main(argc, argv)
 
 		case K_CHANGE:
 		case K_ADD:
+		case K_DEL:
 		case K_DELETE:
 			newroute(argc, argv);
 			/* NOTREACHED */

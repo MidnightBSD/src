@@ -1,4 +1,4 @@
-$FreeBSD: src/contrib/cvs/FREEBSD-Xlist,v 1.1 2004/06/09 20:14:53 des Exp $
+$FreeBSD: release/7.0.0/contrib/cvs/FREEBSD-Xlist 172506 2007-10-10 16:59:15Z cvs2svn $
 
 */*.com
 */*.dep

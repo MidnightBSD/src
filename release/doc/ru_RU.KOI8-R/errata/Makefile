@@ -1,7 +1,7 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSDru: frdp/release/doc/ru_RU.KOI8-R/errata/Makefile,v 1.2 2004/06/29 07:55:42 den Exp $
-# $FreeBSD: src/release/doc/ru_RU.KOI8-R/errata/Makefile,v 1.1 2004/09/10 13:56:40 den Exp $
+# $FreeBSD: release/7.0.0/release/doc/ru_RU.KOI8-R/errata/Makefile 135037 2004-09-10 13:56:41Z den $
 #
 # Original revision: 1.5
 #

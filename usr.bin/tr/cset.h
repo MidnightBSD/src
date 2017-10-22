@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/tr/cset.h,v 1.2 2004/07/14 08:35:11 tjr Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/tr/cset.h 132143 2004-07-14 08:35:11Z tjr $
  */
 
 #ifndef CSET_H

@@ -24,9 +24,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/tools/make_libdeps.sh,v 1.5 2004/04/13 11:06:20 ru Exp $
+# $FreeBSD: release/7.0.0/tools/make_libdeps.sh 172400 2007-10-01 18:11:43Z ru $
 
-export PATH=/usr/bin
+export PATH=/bin:/usr/bin
 
 FS=': '				# internal field separator
 LIBDEPENDS=./_libdeps		# intermediate output file
@@ -37,7 +37,7 @@ LIBS="
 	kerberos5/lib
 	secure/lib
 	usr.bin/lex/lib
-	usr.sbin/pcvt/keycap
+	cddl/lib
 "				# where to scan for libraries
 
 # This sed(1) filter is used to convert -lfoo to path/to/libfoo.
@@ -49,7 +49,7 @@ sed -E
     -e's;-lbsdxml!;lib/libexpat;g'
     -e's;-lm!;lib/msun;g'
     -e's;-l(supc\+\+)!;gnu/lib/lib\1;g'
-    -e's;-l(asn1|gssapi|krb5|roken)!;kerberos5/lib/lib\1;g'
+    -e's;-l(asn1|krb5|roken)!;kerberos5/lib/lib\1;g'
     -e's;-l(crypto|ssh|ssl)!;secure/lib/lib\1;g'
     -e's;-l([^!]+)!;lib/lib\1;g'
 "
@@ -66,7 +66,7 @@ genlibdepends()
 			libdir=$(dirname ${makefile})
 			deps=$(
 				cd ${libdir}
-				make -V LDADD
+				make -m ${USRSRC}/share/mk -V LDADD
 			)
 			if [ "${deps}" ]; then
 				echo ${libdir}"${FS}"$(

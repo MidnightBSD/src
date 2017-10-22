@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)finger.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/finger/finger.h,v 1.5 2004/03/14 06:43:34 jmallett Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/finger/finger.h 126963 2004-03-14 06:43:34Z jmallett $
  */
 
 #ifndef	_FINGER_H_

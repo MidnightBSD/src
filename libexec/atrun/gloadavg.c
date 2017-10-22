@@ -25,7 +25,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/atrun/gloadavg.c,v 1.5 1999/08/28 00:09:12 peter Exp $";
+  "$FreeBSD: release/7.0.0/libexec/atrun/gloadavg.c 170768 2007-06-15 10:12:37Z yar $";
 #endif /* not lint */
 
 #ifndef __FreeBSD__
@@ -44,7 +44,7 @@ static const char rcsid[] =
 
 /* Global functions */
 
-void perr(const char *a);
+void perr(const char *fmt, ...);
 
 double
 gloadavg(void)

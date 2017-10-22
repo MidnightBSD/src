@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/descriptor.h,v 1.8 2000/03/14 01:46:06 brian Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ppp/descriptor.h 58028 2000-03-14 01:46:09Z brian $
  */
 
 #define PHYSICAL_DESCRIPTOR (1)

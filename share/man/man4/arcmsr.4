@@ -22,19 +22,31 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/arcmsr.4,v 1.3 2005/04/01 10:36:09 brueffer Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man4/arcmsr.4 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
-.Dd March 31, 2005
+.Dd January 10, 2007
 .Dt ARCMSR 4
 .Os
 .Sh NAME
 .Nm arcmsr
 .Nd Areca SATA II RAID Controller driver
 .Sh SYNOPSIS
-.Cd "device arcmsr"
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device pci"
 .Cd "device scbus"
 .Cd "device da"
+.Cd "device arcmsr"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+arcmsr_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -68,9 +80,15 @@ ARC-1130
 .It
 ARC-1160
 .It
-ARC-1130-ML
+ARC-1170
 .It
-ARC-1160-ML
+ARC-1110ML
+.It
+ARC-1120ML
+.It
+ARC-1130ML
+.It
+ARC-1160ML
 .It
 ARC-1210
 .It
@@ -80,18 +98,24 @@ ARC-1230
 .It
 ARC-1260
 .It
-ARC-1230-ML
+ARC-1280
 .It
-ARC-1260-ML
+ARC-1210ML
+.It
+ARC-1220ML
+.It
+ARC-1231ML
+.It
+ARC-1261ML
+.It
+ARC-1280ML
 .El
 .Sh FILES
-.Bl -tag -width ".Pa /boot/kernel/arcmsr.ko" -compact
+.Bl -tag -width ".Pa /dev/arcmsr?" -compact
 .It Pa /dev/da?
 Array block device
 .It Pa /dev/arcmsr?
 Management interface
-.It Pa /boot/kernel/arcmsr.ko
-Loadable module
 .El
 .Sh SEE ALSO
 .Xr da 4 ,

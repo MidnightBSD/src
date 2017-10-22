@@ -28,14 +28,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/setfmac/setfmac.c,v 1.8 2005/01/27 14:44:39 delphij Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/setfmac/setfmac.c 166582 2007-02-09 09:23:10Z kevlo $
  */
 
 #include <sys/types.h>
 #include <sys/mac.h>
-#include <sys/types.h>
 #include <sys/queue.h>
-#include <sys/mac.h>
 #include <sys/stat.h>
 
 #include <ctype.h>

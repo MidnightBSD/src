@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/keylogin/Makefile,v 1.3 1999/08/28 01:02:27 peter Exp $
+# $FreeBSD: release/7.0.0/usr.bin/keylogin/Makefile 50477 1999-08-28 01:08:13Z peter $
 
 PROG=	keylogin
 

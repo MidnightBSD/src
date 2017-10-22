@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)net.c	8.4 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/finger/net.c,v 1.23 2004/05/16 22:08:15 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/finger/net.c 168632 2007-04-11 19:11:54Z des $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -144,13 +144,7 @@ do_protocol(const char *name, const struct addrinfo *ai)
 	iov[msg.msg_iovlen].iov_base = neteol;
 	iov[msg.msg_iovlen++].iov_len = 2;
 
-	/*
-	 * -T disables data-on-SYN: compatibility option to finger broken
-	 * hosts.  Also, the implicit-open API is broken on IPv6, so do
-	 * the explicit connect there, too.
-	 */
-	if ((Tflag || ai->ai_addr->sa_family == AF_INET6)
-	    && connect(s, ai->ai_addr, ai->ai_addrlen) < 0) {
+	if (connect(s, ai->ai_addr, ai->ai_addrlen) < 0) {
 		warn("connect");
 		close(s);
 		return -1;

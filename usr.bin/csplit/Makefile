@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/csplit/Makefile,v 1.1 2002/05/02 07:54:04 tjr Exp $
+# $FreeBSD: release/7.0.0/usr.bin/csplit/Makefile 95927 2002-05-02 07:54:04Z tjr $
 
 PROG=	csplit
 

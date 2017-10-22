@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/powerd,v 1.2.2.1 2005/12/16 01:42:54 dougb Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/powerd 161667 2006-08-27 11:04:39Z cperciva $
 #
 
 # PROVIDE: powerd
@@ -13,6 +13,13 @@
 name="powerd"
 rcvar=`set_rcvar`
 command="/usr/sbin/${name}"
+stop_postcmd=powerd_poststop
+
+powerd_poststop()
+{
+	sysctl dev.cpu.0.freq=`sysctl -n dev.cpu.0.freq_levels |
+	    sed -e 's:/.*::'` > /dev/null
+}
 
 load_rc_config $name
 run_rc_command "$1"

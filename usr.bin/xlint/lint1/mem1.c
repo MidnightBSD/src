@@ -35,11 +35,12 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: mem1.c,v 1.7 2002/01/31 19:36:54 tv Exp $");
 #endif
-__FBSDID("$FreeBSD: src/usr.bin/xlint/lint1/mem1.c,v 1.9 2002/07/19 16:38:20 markm Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/xlint/lint1/mem1.c 148723 2005-08-05 09:07:42Z stefanf $");
 
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/param.h>
+#include <err.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>

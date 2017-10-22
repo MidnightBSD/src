@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/boot98cfg/Makefile,v 1.5.14.1 2005/08/19 12:43:55 nyan Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/boot98cfg/Makefile 148064 2005-07-15 15:32:52Z nyan $
 
 PROG=	boot98cfg
 MAN=	boot98cfg.8

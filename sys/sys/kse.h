@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: src/sys/sys/kse.h,v 1.28 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/sys/kse.h 174854 2007-12-22 06:32:46Z cvs2svn $
  */
 
 #ifndef _SYS_KSE_H_

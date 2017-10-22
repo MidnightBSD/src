@@ -1,0 +1,5 @@
+# $FreeBSD: release/7.0.0/gnu/usr.bin/binutils/gdb/Makefile.alpha 104931 2002-10-11 19:39:18Z obrien $
+
+XSRCS+=	alphabsd-nat.c alphafbsd-tdep.c alpha-tdep.c \
+	core-regset.c
+CFLAGS+= -DDEFAULT_BFD_VEC=bfd_elf64_alpha_freebsd_vec

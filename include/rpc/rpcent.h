@@ -1,5 +1,5 @@
 /*	$NetBSD: rpcent.h,v 1.1 2000/06/02 22:57:56 fvdl Exp $	*/
-/*	$FreeBSD: src/include/rpc/rpcent.h,v 1.2 2002/03/23 17:24:55 imp Exp $ */
+/*	$FreeBSD: release/7.0.0/include/rpc/rpcent.h 158138 2006-04-29 04:26:16Z ume $ */
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
@@ -53,12 +53,10 @@ struct rpcent {
 };
 
 __BEGIN_DECLS
-extern struct rpcent *getrpcbyname_r(const char *, struct rpcent *,
-				     char *, int);
-extern struct rpcent *getrpcbynumber_r(int, struct rpcent *, char *, int);
-extern struct rpcent *getrpcent_r(struct rpcent *, char *, int);
-
-/* Old interfaces that return a pointer to a static area;  MT-unsafe */
+/*
+ * These interfaces are currently implemented through nsswitch and are
+ * MT-safe.
+ */
 extern struct rpcent *getrpcbyname(char *);
 extern struct rpcent *getrpcbynumber(int);
 extern struct rpcent *getrpcent(void);

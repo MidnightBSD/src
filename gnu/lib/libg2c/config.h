@@ -1,4 +1,4 @@
-/* $FreeBSD: src/gnu/lib/libg2c/config.h,v 1.3 2004/04/20 15:33:00 obrien Exp $ */
+/* $FreeBSD: release/7.0.0/gnu/lib/libg2c/config.h 128481 2004-04-20 15:33:00Z obrien $ */
 
 /* *****[ libU77 ]***** */
 

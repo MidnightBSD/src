@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/i4b.c,v 1.15 2004/09/05 01:46:51 brian Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ppp/i4b.c 171272 2007-07-06 07:21:56Z bz $
  */
 
 #include <sys/param.h>
@@ -36,17 +36,12 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#ifdef __FreeBSD__
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_rbch_ioctl.h>
-#else
 #ifdef __NetBSD__
 #include <netisdn/i4b_ioctl.h>
 #include <netisdn/i4b_rbch_ioctl.h>
 #else
 #include <i4b/i4b_ioctl.h>
 #include <i4b/i4b_rbch_ioctl.h>
-#endif
 #endif
 #include <stdio.h>
 #include <stdlib.h>

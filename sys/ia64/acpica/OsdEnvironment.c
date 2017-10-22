@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ia64/acpica/OsdEnvironment.c,v 1.8.2.1 2005/11/07 09:53:25 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/acpica/OsdEnvironment.c 167814 2007-03-22 18:16:43Z jkim $");
 
 #include <sys/types.h>
 #include <sys/linker_set.h>
@@ -56,19 +56,17 @@ AcpiOsTerminate(void)
 	return(AE_OK);
 }
 
-ACPI_STATUS
-AcpiOsGetRootPointer(UINT32 Flags, ACPI_POINTER *RsdpAddress)
+ACPI_PHYSICAL_ADDRESS
+AcpiOsGetRootPointer(void)
 {
 	void *acpi_root;
 
 	if (acpi_root_phys == 0) {
 		acpi_root = efi_get_table(&acpi_root_uuid);
 		if (acpi_root == NULL)
-			return (AE_NOT_FOUND);
+			return (0);
 		acpi_root_phys = IA64_RR_MASK((u_long)acpi_root);
 	}
 
-	RsdpAddress->PointerType = ACPI_PHYSICAL_POINTER;
-	RsdpAddress->Pointer.Physical = acpi_root_phys;
-	return (AE_OK);
+	return (acpi_root_phys);
 }

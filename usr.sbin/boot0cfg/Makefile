@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/boot0cfg/Makefile,v 1.8.12.1 2005/08/16 22:45:33 phk Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/boot0cfg/Makefile 148036 2005-07-15 08:04:32Z phk $
 
 PROG=	boot0cfg
 MAN=	boot0cfg.8

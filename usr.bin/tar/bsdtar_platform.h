@@ -1,13 +1,12 @@
 /*-
- * Copyright (c) 2003-2004 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/tar/bsdtar_platform.h,v 1.15.2.1 2005/11/06 22:24:27 kientzle Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/tar/bsdtar_platform.h 168649 2007-04-12 04:45:32Z kientzle $
  */
 
 /*
@@ -35,74 +34,15 @@
 #ifndef BSDTAR_PLATFORM_H_INCLUDED
 #define	BSDTAR_PLATFORM_H_INCLUDED
 
-#if HAVE_CONFIG_H
-#include "config.h"
+#if defined(PLATFORM_CONFIG_H)
+/* Use hand-built config.h in environments that need it. */
+#include PLATFORM_CONFIG_H
+#elif defined(HAVE_CONFIG_H)
+/* Most POSIX platforms use the 'configure' script to build config.h */
+#include "../config.h"
 #else
-
-#ifdef __FreeBSD__
-#include <sys/param.h>  /* __FreeBSD_version */
-/* A default configuration for FreeBSD, used if there is no config.h. */
-#define	PACKAGE_NAME "bsdtar"
-
-#if __FreeBSD__ > 4
-#define	HAVE_ACL_GET_PERM 0
-#define	HAVE_ACL_GET_PERM_NP 1
-#define	HAVE_ACL_PERMSET_T 1
-#endif
-#define	HAVE_BZLIB_H 1
-#define	HAVE_CHFLAGS 1
-#define	HAVE_DIRENT_D_NAMLEN 1
-#define	HAVE_DIRENT_H 1
-#define	HAVE_D_MD_ORDER 1
-#define	HAVE_FCHDIR 1
-#define	HAVE_FCNTL_H 1
-#define	HAVE_FNMATCH 1
-#define	HAVE_FNM_LEADING_DIR 1
-#define	HAVE_FTRUNCATE 1
-#define	HAVE_GETOPT_LONG 1
-#define	HAVE_INTTYPES_H 1
-#define	HAVE_LANGINFO_H 1
-#define	HAVE_LIBARCHIVE 1
-#define	HAVE_LIBBZ2 1
-#define	HAVE_LIBZ 1
-#define	HAVE_LIMITS_H 1
-#define	HAVE_LOCALE_H 1
-#define	HAVE_MALLOC 1
-#define	HAVE_MEMMOVE 1
-#define	HAVE_MEMORY_H 1
-#define	HAVE_MEMSET 1
-#if __FreeBSD_version >= 450002 /* nl_langinfo introduced */
-#define	HAVE_NL_LANGINFO 1
-#endif
-#define	HAVE_PATHS_H 1
-#define	HAVE_SETLOCALE 1
-#define	HAVE_STDINT_H 1
-#define	HAVE_STDLIB_H 1
-#define	HAVE_STRCHR 1
-#define	HAVE_STRDUP 1
-#define	HAVE_STRERROR 1
-#define	HAVE_STRFTIME 1
-#define	HAVE_STRINGS_H 1
-#define	HAVE_STRING_H 1
-#define	HAVE_STRRCHR 1
-#define	HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC 1
-#define	HAVE_STRUCT_STAT_ST_RDEV 1
-#define	HAVE_SYS_ACL_H 1
-#define	HAVE_SYS_IOCTL_H 1
-#define	HAVE_SYS_PARAM_H 1
-#define	HAVE_SYS_STAT_H 1
-#define	HAVE_SYS_TYPES_H 1
-#define	HAVE_UINTMAX_T 1
-#define	HAVE_UNISTD_H 1
-#define	HAVE_VPRINTF 1
-#define	HAVE_ZLIB_H 1
-#define	STDC_HEADERS 1
-
-#else /* !__FreeBSD__ */
 /* Warn if bsdtar hasn't been (automatically or manually) configured. */
 #error Oops: No config.h and no built-in configuration in bsdtar_platform.h.
-#endif /* !__FreeBSD__ */
-
 #endif /* !HAVE_CONFIG_H */
 
 /* No non-FreeBSD platform will have __FBSDID, so just define it here. */
@@ -112,8 +52,14 @@
 #define	__FBSDID(a)     /* null */
 #endif
 
-#ifndef HAVE_LIBARCHIVE
-#error Configuration error: did not find libarchive.
+#ifdef HAVE_LIBARCHIVE
+/* If we're using the platform libarchive, include system headers. */
+#include <archive.h>
+#include <archive_entry.h>
+#else
+/* Otherwise, include user headers. */
+#include "archive.h"
+#include "archive_entry.h"
 #endif
 
 /*
@@ -121,17 +67,21 @@
  * including some variant of the acl_get_perm() function (which was
  * omitted from the POSIX.1e draft)?
  */
-#if HAVE_SYS_ACL_H && HAVE_ACL_PERMSET_T
+#if HAVE_SYS_ACL_H && HAVE_ACL_PERMSET_T && HAVE_ACL_USER
 #if HAVE_ACL_GET_PERM || HAVE_ACL_GET_PERM_NP
 #define	HAVE_POSIX_ACL	1
 #endif
 #endif
 
+#ifdef HAVE_LIBACL
+#include <acl/libacl.h>
+#endif
+
 #if HAVE_ACL_GET_PERM
-#define ACL_GET_PERM acl_get_perm
+#define	ACL_GET_PERM acl_get_perm
 #else
 #if HAVE_ACL_GET_PERM_NP
-#define ACL_GET_PERM acl_get_perm_np
+#define	ACL_GET_PERM acl_get_perm_np
 #endif
 #endif
 

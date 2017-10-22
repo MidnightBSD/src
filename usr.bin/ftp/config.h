@@ -1,9 +1,9 @@
-/* $FreeBSD: src/usr.bin/ftp/config.h,v 1.3 2002/06/15 09:42:17 mikeh Exp $ */
+/* $FreeBSD: release/7.0.0/usr.bin/ftp/config.h 98250 2002-06-15 09:42:17Z mikeh $ */
 
 
 /* config.h.  Generated automatically by configure.  */
 /* config.h.in.  Generated automatically from configure.in by autoheader.  */
-/* $Id: config.h,v 1.1.1.2 2006-02-25 02:38:13 laffer1 Exp $ */
+/* $Id: config.h.in,v 1.24 2000/09/18 00:40:12 lukem Exp $ */
 
 
 /* Define if on AIX 3.

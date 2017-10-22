@@ -1,4 +1,4 @@
-# $FreeBSD: src/release/doc/share/mk/doc.relnotes.mk,v 1.13 2004/08/08 09:23:49 hrs Exp $
+# $FreeBSD: release/7.0.0/release/doc/share/mk/doc.relnotes.mk 166778 2007-02-16 02:10:12Z bmah $
 
 DOC_PREFIX?= ${RELN_ROOT}/../../../doc
 
@@ -43,9 +43,14 @@ DEV-AUTODIR=	${RELN_ROOT:S/${.CURDIR}/${.OBJDIR}/}/share/sgml
 CLEANFILES+=	${DEV-AUTODIR}/dev-auto.sgml ${DEV-AUTODIR}/catalog-auto
 
 MAN2HWNOTES_CMD=${RELN_ROOT}/share/misc/man2hwnotes.pl
+.if defined(HWNOTES_MI)
+MAN2HWNOTES_FLAGS=
+.else
+MAN2HWNOTES_FLAGS=	-c
+.endif
 
 # Dependency that the article makefiles can use to pull in
 # dev-auto.sgml.
 ${DEV-AUTODIR}/catalog-auto ${DEV-AUTODIR}/dev-auto.sgml: ${MAN4PAGES} \
 	${ARCHLIST} ${MAN2HWNOTES_CMD}
-	cd ${RELN_ROOT}/share/sgml && make dev-auto.sgml
+	cd ${RELN_ROOT}/share/sgml && make MAN2HWNOTES_FLAGS=${MAN2HWNOTES_FLAGS} dev-auto.sgml

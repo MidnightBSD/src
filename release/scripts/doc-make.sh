@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/release/scripts/doc-make.sh,v 1.3 2002/04/23 22:16:40 obrien Exp $
+# $FreeBSD: release/7.0.0/release/scripts/doc-make.sh 95327 2002-04-23 22:16:41Z obrien $
 #
 
 # Create the doc dist.

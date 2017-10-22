@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/groff/font/devX75/Makefile,v 1.2 2004/12/21 08:46:51 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/font/devX75/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 NO_OBJ=
 

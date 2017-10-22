@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)cmp.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/ls/cmp.c,v 1.17 2005/06/03 11:05:58 dd Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/ls/cmp.c 157098 2006-03-24 16:38:02Z jhb $");
 
 
 #include <sys/types.h>
@@ -112,6 +112,32 @@ revacccmp(const FTSENT *a, const FTSENT *b)
 {
 
 	return (acccmp(b, a));
+}
+
+int
+birthcmp(const FTSENT *a, const FTSENT *b)
+{
+
+	if (b->fts_statp->st_birthtimespec.tv_sec >
+	    a->fts_statp->st_birthtimespec.tv_sec)
+		return (1);
+	if (b->fts_statp->st_birthtimespec.tv_sec <
+	    a->fts_statp->st_birthtimespec.tv_sec)
+		return (-1);
+	if (b->fts_statp->st_birthtimespec.tv_nsec >
+	    a->fts_statp->st_birthtimespec.tv_nsec)
+		return (1);
+	if (b->fts_statp->st_birthtimespec.tv_nsec <
+	    a->fts_statp->st_birthtimespec.tv_nsec)
+		return (-1);
+	return (strcoll(a->fts_name, b->fts_name));
+}
+
+int
+revbirthcmp(const FTSENT *a, const FTSENT *b)
+{
+
+	return (birthcmp(b, a));
 }
 
 int

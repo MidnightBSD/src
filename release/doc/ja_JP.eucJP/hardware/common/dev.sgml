@@ -26,13 +26,13 @@
 	this file to fix "missed" conversions are likely to break the
 	build.
 
-        $FreeBSD: src/release/doc/ja_JP.eucJP/hardware/common/dev.sgml,v 1.29.2.1 2006/01/31 18:30:41 joel Exp $
+        $FreeBSD: release/7.0.0/release/doc/ja_JP.eucJP/hardware/common/dev.sgml 158573 2006-05-14 20:31:32Z brueffer $
         Original revision: 1.282
 -->
 
 <sect1 id="support">
   <sect1info>
-    <pubdate>$FreeBSD: src/release/doc/ja_JP.eucJP/hardware/common/dev.sgml,v 1.29.2.1 2006/01/31 18:30:41 joel Exp $</pubdate>
+    <pubdate>$FreeBSD: release/7.0.0/release/doc/ja_JP.eucJP/hardware/common/dev.sgml 158573 2006-05-14 20:31:32Z brueffer $</pubdate>
   </sect1info>
 
   <title>対応ハードウェア</title>
@@ -216,8 +216,6 @@
 
     &hwlist.pcn;
 
-    &hwlist.lnc;
-
     <para arch="i386,pc98,amd64">SMC 83c17x (EPIC) ベースの Ethernet NIC
       (&man.tx.4; ドライバ)</para>
     
@@ -264,8 +262,6 @@
     &hwlist.ie;
 
     &hwlist.ep;
-
-    &hwlist.el;
 
     &hwlist.xl;
 

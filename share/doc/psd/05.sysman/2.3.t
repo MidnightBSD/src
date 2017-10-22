@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)2.3.t	8.1 (Berkeley) 6/8/93
-.\" $FreeBSD: src/share/doc/psd/05.sysman/2.3.t,v 1.5 1999/08/28 00:18:19 peter Exp $
+.\" $FreeBSD: release/7.0.0/share/doc/psd/05.sysman/2.3.t 172506 2007-10-10 16:59:15Z cvs2svn $
 .\"
 .sh "Interprocess communications
 .NH 3

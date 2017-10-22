@@ -2,8 +2,8 @@
      The FreeBSD Documentation Project
      The FreeBSD French Documentation Project
 
-     $Id: proc-alpha.sgml,v 1.1.1.2 2006-02-25 02:35:15 laffer1 Exp $
-     $FreeBSD: src/release/doc/fr_FR.ISO8859-1/hardware/alpha/proc-alpha.sgml,v 1.5 2002/12/30 21:18:04 schweikh Exp $
+     $Id: proc-alpha.sgml,v 1.5 2002/09/29 17:03:01 eagle Exp $
+     $FreeBSD: release/7.0.0/release/doc/fr_FR.ISO8859-1/hardware/alpha/proc-alpha.sgml 160964 2006-08-04 07:56:35Z yar $
      Original revision: 1.43
 -->
 
@@ -1212,7 +1212,7 @@ cpu	EV4</programlisting>
       IDE interface is quite slow, a Promise card gives a 3-4 times 
       speed improvement.</para>
 
-      <para>On PC164 the SRM sometimes seems to loose its variable settings. 
+      <para>On PC164 the SRM sometimes seems to lose its variable settings. 
       <quote>For PC164, current superstition says that, to avoid losing settings,
       you want to first downgrade to SRM 4.x and then upgrade to 5.x.</quote>
       One sample error that was observed was:</para>

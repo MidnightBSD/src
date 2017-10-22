@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/powerpc/db_hwwatch.c,v 1.2 2005/01/07 02:29:20 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/powerpc/db_hwwatch.c 149925 2005-09-10 03:01:25Z marcel $
  */
 #include <sys/param.h>
 
@@ -33,10 +33,6 @@
 #include <ddb/db_sym.h>
 #include <ddb/db_variables.h>
 #include <ddb/db_watch.h>
-
-int	db_md_set_watchpoint(db_expr_t, db_expr_t);
-int	db_md_clr_watchpoint(db_expr_t, db_expr_t);
-void	db_md_list_watchpoints(void);
 
 int
 db_md_set_watchpoint(db_expr_t addr, db_expr_t size)

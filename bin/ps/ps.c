@@ -47,7 +47,7 @@ static char sccsid[] = "@(#)ps.c	8.4 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/ps/ps.c,v 1.110 2005/02/09 17:37:38 ru Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/ps/ps.c 173636 2007-11-15 15:56:59Z jhb $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -73,6 +73,8 @@ __FBSDID("$FreeBSD: src/bin/ps/ps.c,v 1.110 2005/02/09 17:37:38 ru Exp $");
 #include <unistd.h>
 
 #include "ps.h"
+
+#define	_PATH_PTS	"/dev/pts/"
 
 #define	W_SEP	" \t"		/* "Whitespace" list separators */
 #define	T_SEP	","		/* "Terminate-element" list separators */
@@ -705,9 +707,9 @@ addelem_pid(struct listinfo *inf, const char *elem)
 
 /*-
  * The user can specify a device via one of three formats:
- *     1) fully qualified, e.g.:     /dev/ttyp0 /dev/console
- *     2) missing "/dev", e.g.:      ttyp0      console
- *     3) two-letters, e.g.:         p0         co
+ *     1) fully qualified, e.g.:     /dev/ttyp0 /dev/console	/dev/pts/0
+ *     2) missing "/dev", e.g.:      ttyp0      console		pts/0
+ *     3) two-letters, e.g.:         p0         co		0
  *        (matching letters that would be seen in the "TT" column)
  */
 static int
@@ -715,10 +717,11 @@ addelem_tty(struct listinfo *inf, const char *elem)
 {
 	const char *ttypath;
 	struct stat sb;
-	char pathbuf[PATH_MAX], pathbuf2[PATH_MAX];
+	char pathbuf[PATH_MAX], pathbuf2[PATH_MAX], pathbuf3[PATH_MAX];
 
 	ttypath = NULL;
 	pathbuf2[0] = '\0';
+	pathbuf3[0] = '\0';
 	switch (*elem) {
 	case '/':
 		ttypath = elem;
@@ -735,6 +738,8 @@ addelem_tty(struct listinfo *inf, const char *elem)
 		ttypath = pathbuf;
 		if (strncmp(pathbuf, _PATH_TTY, strlen(_PATH_TTY)) == 0)
 			break;
+		if (strncmp(pathbuf, _PATH_PTS, strlen(_PATH_PTS)) == 0)
+			break;
 		if (strcmp(pathbuf, _PATH_CONSOLE) == 0)
 			break;
 		/* Check to see if /dev/tty${elem} exists */
@@ -745,21 +750,30 @@ addelem_tty(struct listinfo *inf, const char *elem)
 			ttypath = NULL;	
 			break;
 		}
+		/* Check to see if /dev/pts/${elem} exists */
+		strlcpy(pathbuf3, _PATH_PTS, sizeof(pathbuf3));
+		strlcat(pathbuf3, elem, sizeof(pathbuf3));
+		if (stat(pathbuf3, &sb) == 0 && S_ISCHR(sb.st_mode)) {
+			/* No need to repeat stat() && S_ISCHR() checks */
+			ttypath = NULL;	
+			break;
+		}
 		break;
 	}
 	if (ttypath) {
 		if (stat(ttypath, &sb) == -1) {
-			if (pathbuf2[0] != '\0')
-				warn("%s and %s", pathbuf2, ttypath);
+			if (pathbuf3[0] != '\0')
+				warn("%s, %s, and %s", pathbuf3, pathbuf2,
+				    ttypath);
 			else
 				warn("%s", ttypath);
 			optfatal = 1;
 			return (0);
 		}
 		if (!S_ISCHR(sb.st_mode)) {
-			if (pathbuf2[0] != '\0')
-				warnx("%s and %s: Not a terminal", pathbuf2,
-				    ttypath);
+			if (pathbuf3[0] != '\0')
+				warnx("%s, %s, and %s: Not a terminal",
+				    pathbuf3, pathbuf2, ttypath);
 			else
 				warnx("%s: Not a terminal", ttypath);
 			optfatal = 1;
@@ -994,13 +1008,13 @@ fmt(char **(*fn)(kvm_t *, const struct kinfo_proc *, int), KINFO *ki,
 	return (s);
 }
 
-#define UREADOK(ki)	(forceuread || (ki->ki_p->ki_sflag & PS_INMEM))
+#define UREADOK(ki)	(forceuread || (ki->ki_p->ki_flag & P_INMEM))
 
 static void
 saveuser(KINFO *ki)
 {
 
-	if (ki->ki_p->ki_sflag & PS_INMEM) {
+	if (ki->ki_p->ki_flag & P_INMEM) {
 		/*
 		 * The u-area might be swapped out, and we can't get
 		 * at it because we have a crashdump and no swap.

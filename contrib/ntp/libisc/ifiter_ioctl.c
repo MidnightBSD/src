@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ifiter_ioctl.c,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: ifiter_ioctl.c,v 1.34 2002/08/16 00:05:57 marka Exp $ */
 
 /*
  * Obtain the list of network interfaces using the SIOCGLIFCONF ioctl.

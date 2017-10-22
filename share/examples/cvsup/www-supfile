@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/examples/cvsup/www-supfile,v 1.6 2004/05/24 06:23:15 cjc Exp $
+# $FreeBSD: release/7.0.0/share/examples/cvsup/www-supfile 174854 2007-12-22 06:32:46Z cvs2svn $
 #
 # This file contains all of the "CVSup collections" that make up the
 # source of the FreeBSD www tree
@@ -32,11 +32,9 @@
 #		This specifies the root where CVSup will store information
 #		about the collections you have transferred to your system.
 #		A setting of "/var/db" will generate this information in
-#		/var/db/sup.  Even if you are CVSupping a large number of
-#		collections, you will be hard pressed to generate more than
-#		~1MB of data in this directory.  You can override the
-#		"base" setting on the command line with cvsup's "-b base"
-#		option.  This directory must exist in order to run CVSup.
+#		/var/db/sup.  You can override the "base" setting on the
+#		command line with cvsup's "-b base" option.  This directory
+#		must exist in order to run CVSup.
 #
 # prefix=/usr
 #		This specifies where to place the requested files.  A

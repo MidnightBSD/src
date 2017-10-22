@@ -1,21 +1,24 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
-# $FreeBSD: src/include/Makefile,v 1.244.2.2 2005/11/16 10:50:09 ru Exp $
+# $FreeBSD: release/7.0.0/include/Makefile 172397 2007-10-01 18:07:29Z ru $
 #
 # Doing a "make install" builds /usr/include.
 
+.include <bsd.own.mk>
+
 CLEANFILES= osreldate.h version vers.c
-SUBDIR= arpa protocols rpcsvc rpc
+SUBDIR= arpa gssapi protocols rpcsvc rpc
 INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
 	db.h \
 	dirent.h dlfcn.h elf.h elf-hints.h err.h fmtmsg.h fnmatch.h fstab.h \
-	fts.h ftw.h getopt.h glob.h grp.h \
-	hesiod.h histedit.h ieeefp.h ifaddrs.h \
+	fts.h ftw.h getopt.h glob.h grp.h gssapi.h \
+	histedit.h ieeefp.h ifaddrs.h \
 	inttypes.h iso646.h kenv.h langinfo.h libgen.h limits.h link.h \
-	locale.h malloc.h memory.h monetary.h mpool.h ndbm.h netconfig.h \
-	netdb.h nl_types.h nlist.h nss.h nsswitch.h objformat.h paths.h \
-	proc_service.h pthread.h \
+	locale.h malloc.h malloc_np.h memory.h monetary.h mpool.h mqueue.h \
+	ndbm.h netconfig.h \
+	netdb.h nl_types.h nlist.h nss.h nsswitch.h paths.h \
+	printf.h proc_service.h pthread.h \
 	pthread_np.h pwd.h ranlib.h readpassphrase.h regex.h regexp.h \
-	resolv.h runetype.h search.h setjmp.h sgtty.h \
+	res_update.h resolv.h runetype.h search.h setjmp.h sgtty.h \
 	signal.h stab.h \
 	stdbool.h stddef.h stdio.h stdlib.h string.h stringlist.h \
 	strings.h sysexits.h tar.h tgmath.h \
@@ -23,40 +26,63 @@ INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
 	ulimit.h unistd.h utime.h utmp.h uuid.h varargs.h vis.h wchar.h \
 	wctype.h wordexp.h
 
+I4BHDRS=i4b_cause.h i4b_debug.h i4b_ioctl.h i4b_rbch_ioctl.h \
+	i4b_tel_ioctl.h i4b_trace.h
+
 MHDRS=	float.h floatingpoint.h stdarg.h
 
-# posix4/mqueue.h is useless without an implementation and isn't installed:
-PHDRS=	sched.h semaphore.h _semaphore.h # mqueue.h
+PHDRS=	sched.h semaphore.h _semaphore.h
 
 LHDRS=	aio.h errno.h fcntl.h linker_set.h poll.h stdint.h syslog.h \
 	termios.h ucontext.h
 
-LDIRS=	bsm cam geom net net80211 netatalk netatm netgraph netinet netinet6 \
-	netipsec netipx netkey netnatm netncp netsmb nfs nfsclient nfsserver \
-	pccard posix4 sys vm
+LDIRS=	bsm cam geom net net80211 netatalk netgraph netinet netinet6 \
+	netipsec ${_netipx} netnatm ${_netncp} netsmb \
+	nfs nfsclient nfsserver \
+	pccard sys vm
+#LDIRS+=	netatm
 
 LSUBDIRS=	cam/scsi \
 	dev/acpica dev/an dev/bktr dev/firewire dev/hwpmc \
-	dev/ic dev/iicbus ${_dev_ieee488} dev/ofw \
-	dev/pbio dev/ppbus dev/smbus dev/speaker dev/usb dev/wi dev/utopia \
+	dev/ic dev/iicbus ${_dev_ieee488} dev/lmc dev/ofw \
+	dev/pbio ${_dev_powermac_nvram} dev/ppbus dev/smbus \
+	dev/speaker dev/usb dev/utopia dev/vkbd dev/wi \
 	fs/devfs fs/fdescfs fs/fifofs fs/msdosfs fs/ntfs fs/nullfs \
-	fs/nwfs fs/portalfs fs/procfs fs/smbfs fs/udf fs/umapfs \
-	fs/unionfs \
-	geom/concat geom/eli geom/gate geom/label geom/mirror geom/nop \
-	geom/raid3 geom/shsec geom/stripe \
-	isofs/cd9660 \
-	netatm/ipatm netatm/sigpvc netatm/spans netatm/uni \
+	${_fs_nwfs} fs/portalfs fs/procfs fs/smbfs fs/udf fs/unionfs \
+	geom/cache geom/concat geom/eli geom/gate geom/journal geom/label \
+	geom/mirror geom/multipath geom/nop \
+	geom/raid3 geom/shsec geom/stripe geom/virstor \
 	netgraph/atm netgraph/netflow \
+	security/audit \
 	security/mac_biba security/mac_bsdextended security/mac_lomac \
 	security/mac_mls security/mac_partition \
 	ufs/ffs ufs/ufs
+#LSUBDIRS+=	netatm/ipatm netatm/sigpvc netatm/spans netatm/uni
 
-.if !defined(NO_GPIB)
+.if ${MACHINE_ARCH} == "powerpc"
+_dev_powermac_nvram=	dev/powermac_nvram
+.endif
+
+.if ${MK_GPIB} != "no"
 _dev_ieee488=	dev/ieee488
 .endif
 
-.if !defined(NO_BLUETOOTH)
+.if ${MK_HESIOD} != "no"
+INCS+=	hesiod.h
+.endif
+
+.if ${MK_BLUETOOTH} != "no"
 LSUBSUBDIRS=	netgraph/bluetooth/include
+.endif
+
+# XXX unconditionally needed by <netsmb/netbios.h>
+#.if ${MK_IPX} != "no"
+_netipx=	netipx
+#.endif
+
+.if ${MK_NCP} != "no"
+_netncp=	netncp
+_fs_nwfs=	fs/nwfs
 .endif
 
 # Define SHARED to indicate whether you want symbolic links to the system
@@ -68,18 +94,18 @@ SHARED?=	copies
 
 INCS+=	osreldate.h
 
-osreldate.h:	${.CURDIR}/../sys/conf/newvers.sh \
-		${.CURDIR}/../sys/sys/param.h \
-		${.CURDIR}/Makefile
+osreldate.h: ${.CURDIR}/../sys/conf/newvers.sh ${.CURDIR}/../sys/sys/param.h \
+    ${.CURDIR}/Makefile
 	@${ECHO} creating osreldate.h from newvers.sh
-	@setvar PARAMFILE ${.CURDIR}/../sys/sys/param.h; \
-	MAKE=${MAKE} . ${.CURDIR}/../sys/conf/newvers.sh;	\
-	echo "$$COPYRIGHT" > osreldate.h;			\
-	echo "#ifdef _KERNEL" >> osreldate.h;			\
-	echo '#error "<osreldate.h> cannot be used in the kernel, use <sys/param.h>"' >> osreldate.h; \
-	echo "#else" >> osreldate.h;				\
-	echo \#'undef __FreeBSD_version' >> osreldate.h;	\
-	echo \#'define __FreeBSD_version' $$RELDATE >> osreldate.h; \
+	@MAKE=${MAKE}; \
+	PARAMFILE=${.CURDIR}/../sys/sys/param.h; \
+	. ${.CURDIR}/../sys/conf/newvers.sh; \
+	echo "$$COPYRIGHT" > osreldate.h; \
+	echo "#ifdef _KERNEL" >> osreldate.h; \
+	echo "#error \"<osreldate.h> cannot be used in the kernel, use <sys/param.h>\"" >> osreldate.h; \
+	echo "#else" >> osreldate.h; \
+	echo "#undef __FreeBSD_version" >> osreldate.h; \
+	echo "#define __FreeBSD_version $$RELDATE" >> osreldate.h; \
 	echo "#endif" >> osreldate.h
 
 .for i in ${LHDRS}
@@ -89,7 +115,7 @@ INCSLINKS+=	sys/$i ${INCLUDEDIR}/$i
 INCSLINKS+=	machine/$i ${INCLUDEDIR}/$i
 .endfor
 .for i in ${PHDRS}
-INCSLINKS+=	posix4/$i ${INCLUDEDIR}/$i
+INCSLINKS+=	sys/$i ${INCLUDEDIR}/$i
 .endfor
 
 .if ${MACHINE} != ${MACHINE_ARCH}
@@ -111,7 +137,7 @@ compat:
 	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} \
 	    -f ${.CURDIR}/../etc/mtree/BSD.include.dist \
 	    -p ${DESTDIR}${INCLUDEDIR}
-.if defined(WITH_BIND_LIBS) && !defined(NO_BIND)
+.if ${MK_BIND_LIBS} != "no"
 	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} \
 	    -f ${.CURDIR}/../etc/mtree/BIND.include.dist \
 	    -p ${DESTDIR}${INCLUDEDIR}
@@ -141,7 +167,10 @@ copies:
 	cd ${.CURDIR}/../sys/contrib/altq/altq; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h \
 	    ${DESTDIR}${INCLUDEDIR}/altq
-.if !defined(NO_IPFILTER)
+	cd ${.CURDIR}/../sys/fs/cd9660/; \
+	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h \
+	    ${DESTDIR}${INCLUDEDIR}/isofs/cd9660
+.if ${MK_IPFILTER} != "no"
 	cd ${.CURDIR}/../sys/contrib/ipfilter/netinet; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h \
 	    ${DESTDIR}${INCLUDEDIR}/netinet
@@ -152,6 +181,13 @@ copies:
 	cd ${.CURDIR}/../sys/crypto; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 rijndael/rijndael.h \
 	    ${DESTDIR}${INCLUDEDIR}/crypto
+.if ${MACHINE_ARCH} == "i386"
+.if ${MK_I4B} != "no"
+	cd ${.CURDIR}/../sys/i4b/include; \
+	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 ${I4BHDRS} \
+	    ${DESTDIR}${INCLUDEDIR}/i4b
+.endif
+.endif
 	cd ${.CURDIR}/../sys/opencrypto; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h \
 	    ${DESTDIR}${INCLUDEDIR}/crypto
@@ -177,6 +213,9 @@ copies:
 	    ${DESTDIR}${INCLUDEDIR}/${_MARCH}/pc
 .endif
 .endif
+	cd ${.CURDIR}/../sys/rpc; \
+	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 types.h \
+	    ${DESTDIR}${INCLUDEDIR}/rpc
 
 symlinks:
 	@${ECHO} "Setting up symlinks to kernel source tree..."
@@ -213,7 +252,7 @@ symlinks:
 		ln -fs ../../../sys/contrib/altq/altq/$$h \
 		    ${DESTDIR}${INCLUDEDIR}/altq; \
 	done
-.if !defined(NO_IPFILTER)
+.if ${MK_IPFILTER} != "no"
 	cd ${.CURDIR}/../sys/contrib/ipfilter/netinet; \
 	for h in *.h; do \
 		ln -fs ../../../sys/contrib/ipfilter/netinet/$$h \
@@ -229,6 +268,11 @@ symlinks:
 	for h in rijndael/rijndael.h; do \
 		ln -fs ../../../sys/crypto/$$h \
 		    ${DESTDIR}${INCLUDEDIR}/crypto; \
+	done
+	cd ${.CURDIR}/../sys/i4b/include; \
+	for h in ${I4BHDRS}; do \
+		ln -fs ../../../sys/i4b/include/$$h \
+		    ${DESTDIR}${INCLUDEDIR}/i4b; \
 	done
 	cd ${.CURDIR}/../sys/opencrypto; \
 	for h in *.h; do \
@@ -265,3 +309,13 @@ symlinks:
 	done
 .endif
 .endif
+	cd ${.CURDIR}/../sys/fs/cd9660; \
+	for h in *.h; do \
+		ln -fs ../../../../sys/fs/cd9660/$$h \
+		    ${DESTDIR}${INCLUDEDIR}/isofs/cd9660; \
+	done
+	cd ${.CURDIR}/../sys/rpc; \
+	for h in types.h; do \
+		ln -fs ../../../sys/rpc/$$h \
+		    ${DESTDIR}${INCLUDEDIR}/rpc; \
+	done

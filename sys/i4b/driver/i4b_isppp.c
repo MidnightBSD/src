@@ -40,7 +40,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/driver/i4b_isppp.c,v 1.30.2.1 2005/08/25 05:01:19 rwatson Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/driver/i4b_isppp.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include "opt_i4b.h"
 
@@ -60,15 +60,15 @@ __FBSDID("$FreeBSD: src/sys/i4b/driver/i4b_isppp.c,v 1.30.2.1 2005/08/25 05:01:1
 #include <sys/time.h>
 #include <net/bpf.h>
 
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_debug.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_debug.h>
 
 #include <i4b/include/i4b_global.h>
 #include <i4b/include/i4b_l3l4.h>
 
 #include <i4b/layer4/i4b_l4.h>
 
-NET_NEEDS_GIANT("i4b_isppp");
+#error "Cannot be used until I4B is locked."
 
 #define ISPPP_FMT	"isp%d: "
 #define	ISPPP_ARG(sc)	(sc->sc_ifp->if_dunit)

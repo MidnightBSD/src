@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: src/sys/pc98/include/_stdint.h,v 1.1 2005/04/01 23:19:42 imp Exp $ */
+/* $FreeBSD: release/7.0.0/sys/pc98/include/_stdint.h 144513 2005-04-01 23:19:43Z imp $ */
 
 #include <i386/_stdint.h>

@@ -1,7 +1,7 @@
 /*-
  * This file is in the public domain.
  *
- * $FreeBSD: src/sys/ia64/include/pmc_mdep.h,v 1.2 2005/06/09 19:45:08 jkoshy Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/include/pmc_mdep.h 147191 2005-06-09 19:45:09Z jkoshy $
  */
 
 #ifndef _MACHINE_PMC_MDEP_H_

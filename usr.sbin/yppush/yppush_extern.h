@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/yppush/yppush_extern.h,v 1.5 2002/02/06 13:30:30 des Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/yppush/yppush_extern.h 90297 2002-02-06 13:30:31Z des $
  */
 
 /* Privately defined error codes. */

@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/powermac/pswitch.c,v 1.4 2005/01/07 02:29:20 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/powermac/pswitch.c 167170 2007-03-02 15:13:17Z piso $
  */
 
 #include "opt_ddb.h"
@@ -52,7 +52,7 @@ struct pswitch_softc {
 static int	pswitch_probe(device_t);
 static int	pswitch_attach(device_t);
 
-static void	pswitch_intr(void *);
+static int	pswitch_intr(void *);
 
 static device_method_t pswitch_methods[] = {
 	/* Device interface */
@@ -121,8 +121,8 @@ pswitch_attach(device_t dev)
 		return (ENXIO);
 	}
 
-	if (bus_setup_intr(dev, sc->sc_irq, INTR_TYPE_MISC | INTR_FAST,
-	    pswitch_intr, dev, &sc->sc_ih) != 0) {
+	if (bus_setup_intr(dev, sc->sc_irq, INTR_TYPE_MISC,
+	    pswitch_intr, NULL, dev, &sc->sc_ih) != 0) {
 		device_printf(dev, "could not setup interrupt\n");
 		bus_release_resource(dev, SYS_RES_IRQ, sc->sc_irqrid,
 		    sc->sc_irq);
@@ -132,7 +132,7 @@ pswitch_attach(device_t dev)
 	return (0);
 }
 
-static void
+static int
 pswitch_intr(void *arg)
 {
 	device_t	dev;
@@ -140,4 +140,5 @@ pswitch_intr(void *arg)
 	dev = (device_t)arg;
 
 	kdb_enter(device_get_nameunit(dev));
+	return (FILTER_HANDLED);
 }

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/release/picobsd/tinyware/msg/msg.c,v 1.3 2001/07/03 19:51:53 tmm Exp $
+ * $FreeBSD: release/7.0.0/release/picobsd/tinyware/msg/msg.c 79155 2001-07-03 19:51:53Z tmm $
  */
 
 /*

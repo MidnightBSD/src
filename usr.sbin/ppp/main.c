@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/main.c,v 1.193 2004/12/21 11:12:05 ru Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ppp/main.c 139116 2004-12-21 11:12:05Z ru $
  */
 
 #include <sys/param.h>

@@ -1,11 +1,14 @@
-# $FreeBSD: src/usr.sbin/ntp/ntpq/Makefile,v 1.10 2004/12/21 08:47:33 ru Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/ntp/ntpq/Makefile 156813 2006-03-17 18:54:44Z ru $
+
+NO_MAN=
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../../contrib/ntp/ntpq
 
 BINDIR=	/usr/bin
 
 PROG=	ntpq
-NO_MAN=
 SRCS= 	ntpq.c ntpq_ops.c version.c
 
 CFLAGS+= -I${.CURDIR}/../../../contrib/ntp/include -I${.CURDIR}/../
@@ -13,7 +16,7 @@ CFLAGS+= -I${.CURDIR}/../../../contrib/ntp/include -I${.CURDIR}/../
 DPADD=	${LIBNTP} ${LIBMD}
 LDADD=	${LIBNTP} -lmd
 
-.if !defined(NO_GNU)
+.if ${MK_GNU_SUPPORT} != "no"
 DPADD+=		${LIBREADLINE} ${LIBTERMCAP}
 LDADD+=		-lreadline -ltermcap
 CFLAGS+=	-DHAVE_LIBREADLINE -DHAVE_READLINE_HISTORY_H \

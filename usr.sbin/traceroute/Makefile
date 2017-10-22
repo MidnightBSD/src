@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/traceroute/Makefile,v 1.21 2004/12/21 12:44:20 ru Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/traceroute/Makefile 161526 2006-08-22 08:03:01Z ru $
 
 TRACEROUTE_DISTDIR?= ${.CURDIR}/../../contrib/traceroute
 .PATH: ${TRACEROUTE_DISTDIR}
@@ -27,11 +27,6 @@ CFLAGS+= -DIPSEC
 .if !defined(TRACEROUTE_NO_IPSEC)
 DPADD=	${LIBIPSEC}
 LDADD=	-lipsec
-.endif
-
-.if ${MACHINE_ARCH} == "alpha"
-# gcc builtin memcpy causes unaligned access
-CFLAGS+= -fno-builtin
 .endif
 
 CFLAGS+= -I${TRACEROUTE_DISTDIR}/lbl

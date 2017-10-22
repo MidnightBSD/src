@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pax/getoldopt.c,v 1.5 2005/01/10 08:39:24 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/pax/getoldopt.c 139969 2005-01-10 08:39:26Z imp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

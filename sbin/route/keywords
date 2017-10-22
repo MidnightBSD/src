@@ -1,11 +1,12 @@
 #	@(#)keywords	8.2 (Berkeley) 3/19/94
-# $FreeBSD: src/sbin/route/keywords,v 1.5 2001/06/12 13:31:53 ru Exp $
+# $FreeBSD: release/7.0.0/sbin/route/keywords 150679 2005-09-28 12:12:15Z tobez $
 
 add
 atalk
 blackhole
 change
 cloning
+del
 delete
 dst
 expire

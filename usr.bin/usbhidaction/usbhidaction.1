@@ -1,4 +1,4 @@
-.\" $FreeBSD: src/usr.bin/usbhidaction/usbhidaction.1,v 1.3 2003/05/30 21:27:29 ru Exp $
+.\" $FreeBSD: release/7.0.0/usr.bin/usbhidaction/usbhidaction.1 171101 2007-06-30 03:58:01Z imp $
 .\" $NetBSD: usbhidaction.1,v 1.8 2003/02/25 10:35:59 wiz Exp $
 .\"
 .\" Copyright (c) 2000 The NetBSD Foundation, Inc.
@@ -47,6 +47,7 @@
 .Fl c Ar config-file
 .Fl f Ar device
 .Op Fl p Ar pidfile
+.Op Fl t Ar tablefile
 .Ar arg ...
 .Sh DESCRIPTION
 The
@@ -73,6 +74,8 @@ Ignore HID items in the configuration file that do not exist in the device.
 Be verbose, and do not become a daemon.
 .It Fl c Ar config-file
 Specify a path name for the configuration file.
+.It Fl t Ar tablefile
+Specify a path name for the HID usage table file.
 .It Fl f Ar device
 Specify a path name for the device to operate on.
 If

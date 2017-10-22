@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/regression/lib/libc/string/Makefile,v 1.3 2005/02/01 09:26:34 nik Exp $
+# $FreeBSD: release/7.0.0/tools/regression/lib/libc/string/Makefile 141097 2005-02-01 09:26:34Z nik $
 
 CFLAGS+=	-I/usr/local/include 
 LDFLAGS+=	-L/usr/local/lib

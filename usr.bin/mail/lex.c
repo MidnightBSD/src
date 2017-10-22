@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)lex.c	8.2 (Berkeley) 4/20/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/mail/lex.c,v 1.16 2004/03/06 13:27:59 mikeh Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/mail/lex.c 126691 2004-03-06 13:27:59Z mikeh $");
 
 #include "rcv.h"
 #include <errno.h>

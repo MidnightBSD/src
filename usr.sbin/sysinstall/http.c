@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/http.c,v 1.7 2002/11/01 02:05:05 kuriyama Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/http.c 174854 2007-12-22 06:32:46Z cvs2svn $
  */
 
 #include "sysinstall.h"
@@ -36,7 +36,7 @@
 
 extern const char *ftp_dirs[]; /* defined in ftp.c */
 
-Boolean
+static Boolean
 checkAccess(Boolean proxyCheckOnly)
 {
 /* 

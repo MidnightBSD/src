@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/main.c,v 1.71 2003/08/20 06:27:21 imp Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/main.c 174967 2007-12-29 06:17:04Z kensmith $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -37,6 +37,8 @@
 #include "sysinstall.h"
 #include <sys/signal.h>
 #include <sys/fcntl.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 const char *StartName;		/* Initial contents of argv[0] */
 
@@ -51,6 +53,8 @@ int
 main(int argc, char **argv)
 {
     int choice, scroll, curr, max, status;
+    char titlestr[80], *arch, *osrel, *ostype;
+    struct rlimit rlim;
     
     /* Record name to be able to restart */
     StartName = argv[0];
@@ -68,12 +72,26 @@ main(int argc, char **argv)
 	return 1;
     }
 
+    /*
+     * Given what it does sysinstall (and stuff sysinstall runs like
+     * pkg_add) shouldn't be subject to process limits.  Better to just
+     * let them have what they think they need than have them blow
+     * their brains out during an install (in sometimes strange and
+     * mysterious ways).
+     */
+
+    rlim.rlim_cur = rlim.rlim_max = RLIM_INFINITY;
+    if (setrlimit(RLIMIT_DATA, &rlim) != 0)
+	fprintf(stderr, "Warning: setrlimit() of datasize failed.\n");
+    if (setrlimit(RLIMIT_STACK, &rlim) != 0)
+	fprintf(stderr, "Warning: setrlimit() of stacksize failed.\n");
+
 #ifdef PC98
     {
 	/* XXX */
 	char *p = getenv("TERM");
 	if (p && strcmp(p, "cons25") == 0)
-	    putenv("TERM=cons25w");
+	    setenv("TERM", "cons25w", 1);
     }
 #endif
 
@@ -120,12 +138,6 @@ main(int argc, char **argv)
     }
 #endif
 
-    /* Initialize USB, if we haven't already done so. */
-    if (!pvariable_get("usbInitialize")) {
-	usbInitialize();
-	pvariable_set("usbInitialize=1");
-    }
-
     /* Probe for all relevant devices on the system */
     deviceGetAll();
 
@@ -163,6 +175,21 @@ main(int argc, char **argv)
 		   "in debugging problems like this.", status);
 	systemShutdown(status);
     }
+
+    /* Get user's country and keymap */
+    if (RunningAsInit)
+	configCountry(NULL);
+
+    /* Add FreeBSD version info to the menu title */
+    arch = getsysctlbyname("hw.machine_arch");
+    osrel = getsysctlbyname("kern.osrelease");
+    ostype = getsysctlbyname("kern.ostype");
+    snprintf(titlestr, sizeof(titlestr), "%s/%s %s - %s", ostype, arch,
+	     osrel, MenuInitial.title);
+    free(arch);
+    free(osrel);
+    free(ostype);
+    MenuInitial.title = titlestr;
 
     /* Begin user dialog at outer menu */
     dialog_clear();

@@ -4,13 +4,13 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/system.c,v 1.124.2.1 2005/08/17 13:32:29 kensmith Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/system.c 174854 2007-12-22 06:32:46Z cvs2svn $
  *
  * Jordan Hubbard
  *
  * My contributions are in the public domain.
  *
- * Parts of this file are also blatently stolen from Poul-Henning Kamp's
+ * Parts of this file are also blatantly stolen from Poul-Henning Kamp's
  * previous version of sysinstall, and as such fall under his "BEERWARE license"
  * so buy him a beer if you like it!  Buy him a beer for me, too!
  * Heck, get him completely drunk and send me pictures! :-)
@@ -95,6 +95,7 @@ handle_intr(int sig)
     restorescr(save);
 }
 
+#if 0
 /*
  * Harvest children if we are init.
  */
@@ -107,6 +108,7 @@ reap_children(int sig)
 	;
     errno = errbak;
 }
+#endif
 
 /* Expand a file into a convenient location, nuking it each time */
 static char *
@@ -261,7 +263,7 @@ systemShutdown(int status)
 #if defined(__alpha__) || defined(__sparc64__)
 	reboot(RB_HALT);
 #else
-	reboot(0);
+	reboot(RB_AUTOBOOT);
 #endif
     }
     else
@@ -533,7 +535,7 @@ systemCreateHoloshell(void)
 	    else {
 	        (void)waitpid(ehs_pid, &waitstatus, 0); /* we only wait for
 							   shell to finish 
-							   it serial mode
+							   in serial mode
 							   since there is no
 							   virtual console */
 	        systemResumeDialog();

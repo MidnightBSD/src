@@ -12,12 +12,12 @@
 # LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE.
 #
-# $FreeBSD: src/usr.sbin/mld6query/Makefile,v 1.5 2003/10/24 18:26:30 ume Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/mld6query/Makefile 160755 2006-07-27 15:31:13Z yar $
 
 PROG=	mld6query
 MAN=	mld6query.8
 SRCS=	mld6.c
 
-CFLAGS+= -DINET6 -DIPSEC -DUSE_RFC2292BIS
+CFLAGS+= -DIPSEC -DUSE_RFC2292BIS
 
 .include <bsd.prog.mk>

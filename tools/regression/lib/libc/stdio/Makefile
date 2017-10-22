@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/regression/lib/libc/stdio/Makefile,v 1.4 2005/03/01 01:43:05 das Exp $
+# $FreeBSD: release/7.0.0/tools/regression/lib/libc/stdio/Makefile 142842 2005-03-01 01:43:05Z das $
 
 TESTS=	test-perror test-printfloat test-scanfloat
 CFLAGS+= -lm

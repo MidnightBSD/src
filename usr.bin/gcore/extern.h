@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/gcore/extern.h,v 1.4 2002/09/13 16:33:35 peter Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/gcore/extern.h 103299 2002-09-13 16:33:35Z peter $
  */
 
 struct dumpers {

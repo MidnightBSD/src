@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/digictl/Makefile,v 1.6 2003/04/04 17:49:13 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/digictl/Makefile 113091 2003-04-04 17:49:21Z obrien $
 
 PROG=	digictl
 MAN=	digictl.8

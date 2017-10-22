@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/tools/regression/lib/msun/test-fenv.c,v 1.4 2005/03/16 19:04:45 das Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/tools/regression/lib/msun/test-fenv.c 143710 2005-03-16 19:04:45Z das $");
 
 #include <sys/types.h>
 #include <sys/wait.h>

@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/examples/cvsup/stable-supfile,v 1.29.2.1 2005/09/28 14:00:13 kensmith Exp $
+# $FreeBSD: release/7.0.0/share/examples/cvsup/stable-supfile 174854 2007-12-22 06:32:46Z cvs2svn $
 #
 # This file contains all of the "CVSup collections" that make up the
 # FreeBSD-stable source tree.
@@ -32,11 +32,9 @@
 #		This specifies the root where CVSup will store information
 #		about the collections you have transferred to your system.
 #		A setting of "/var/db" will generate this information in
-#		/var/db/sup.  Even if you are CVSupping a large number of
-#		collections, you will be hard pressed to generate more than
-#		~1MB of data in this directory.  You can override the
-#		"base" setting on the command line with cvsup's "-b base"
-#		option.  This directory must exist in order to run CVSup.
+#		/var/db/sup.  You can override the "base" setting on the
+#		command line with cvsup's "-b base" option.  This directory
+#		must exist in order to run CVSup.
 #
 # prefix=/usr
 #		This specifies where to place the requested files.  A
@@ -68,10 +66,10 @@
 *default host=CHANGE_THIS.FreeBSD.org
 *default base=/var/db
 *default prefix=/usr
-# The following line is for 6-stable.  If you want 5-stable, 4-stable,
-# 3-stable, or 2.2-stable, change to "RELENG_5", "RELENG_4", "RELENG_3",
-# or "RELENG_2_2" respectively.
-*default release=cvs tag=RELENG_6
+# The following line is for 7-stable.  If you want 6-stable, 5-stable,
+# 4-stable, 3-stable, or 2.2-stable, change to "RELENG_6", "RELENG_5",
+# "RELENG_4", "RELENG_3", or "RELENG_2_2" respectively.
+*default release=cvs tag=RELENG_7
 *default delete use-rel-suffix
 
 # If you seem to be limited by CPU rather than network or disk bandwidth, try
@@ -90,6 +88,7 @@ src-all
 # use these, be sure to comment out "src-all" above.
 #src-base
 #src-bin
+#src-cddl
 #src-contrib
 #src-etc
 #src-games
@@ -100,6 +99,7 @@ src-all
 #src-lib
 #src-libexec
 #src-release
+#src-rescue
 #src-sbin
 #src-share
 #src-sys

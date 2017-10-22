@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/trap.c,v 1.54.2.1 2005/08/08 07:02:12 grehan Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/trap.c 171783 2007-08-07 18:40:02Z marcel $");
 
 #include "opt_ktrace.h"
 
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: src/sys/powerpc/powerpc/trap.c,v 1.54.2.1 2005/08/08 07:02:1
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/pioctl.h>
+#include <sys/ptrace.h>
 #include <sys/reboot.h>
 #include <sys/syscall.h>
 #include <sys/sysent.h>
@@ -53,6 +54,8 @@ __FBSDID("$FreeBSD: src/sys/powerpc/powerpc/trap.c,v 1.54.2.1 2005/08/08 07:02:1
 #include <sys/ktrace.h>
 #endif
 #include <sys/vmmeter.h>
+
+#include <security/audit/audit.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -72,8 +75,6 @@ __FBSDID("$FreeBSD: src/sys/powerpc/powerpc/trap.c,v 1.54.2.1 2005/08/08 07:02:1
 #include <machine/trap.h>
 #include <machine/spr.h>
 #include <machine/sr.h>
-
-void		trap(struct trapframe *);
 
 static void	trap_fatal(struct trapframe *frame);
 static void	printtrap(u_int vector, struct trapframe *frame, int isfatal,
@@ -143,9 +144,10 @@ trap(struct trapframe *frame)
 	struct thread	*td;
 	struct proc	*p;
 	int		sig, type, user;
-	u_int		sticks, ucode;
+	u_int		ucode;
+	ksiginfo_t	ksi;
 
-	PCPU_LAZY_INC(cnt.v_trap);
+	PCPU_INC(cnt.v_trap);
 
 	td = PCPU_GET(curthread);
 	p = td->td_proc;
@@ -153,13 +155,12 @@ trap(struct trapframe *frame)
 	type = ucode = frame->exc;
 	sig = 0;
 	user = frame->srr1 & PSL_PR;
-	sticks = 0;
 
 	CTR3(KTR_TRAP, "trap: %s type=%s (%s)", p->p_comm,
 	    trapname(type), user ? "user" : "kernel");
 
 	if (user) {
-		sticks = td->td_sticks;
+		td->td_pticks = 0;
 		td->td_frame = frame;
 		if (td->td_ucred != p->p_ucred)
 			cred_update_thread(td);
@@ -254,10 +255,15 @@ trap(struct trapframe *frame)
 	if (sig != 0) {
 		if (p->p_sysent->sv_transtrap != NULL)
 			sig = (p->p_sysent->sv_transtrap)(sig, type);
-		trapsignal(td, sig, ucode);
+		ksiginfo_init_trap(&ksi);
+		ksi.ksi_signo = sig;
+		ksi.ksi_code = (int) ucode; /* XXX, not POSIX */
+		/* ksi.ksi_addr = ? */
+		ksi.ksi_trapno = type;
+		trapsignal(td, &ksi);
 	}
 
-	userret(td, frame, sticks);
+	userret(td, frame);
 	mtx_assert(&Giant, MA_NOTOWNED);
 }
 
@@ -341,10 +347,12 @@ syscall(struct trapframe *frame)
 	td = PCPU_GET(curthread);
 	p = td->td_proc;
 
-	PCPU_LAZY_INC(cnt.v_syscall);
+	PCPU_INC(cnt.v_syscall);
 
+#ifdef KSE
 	if (p->p_flag & P_SA)
 		thread_user_enter(td);
+#endif
 
 	code = frame->fixreg[0];
 	params = (caddr_t)(frame->fixreg + FIRSTARG);
@@ -383,7 +391,7 @@ syscall(struct trapframe *frame)
   	else
  		callp = &p->p_sysent->sv_table[code];
 
-	narg = callp->sy_narg & SYF_ARGMASK;
+	narg = callp->sy_narg;
 
 	if (narg > n) {
 		bcopy(params, args, n * sizeof(register_t));
@@ -403,11 +411,8 @@ syscall(struct trapframe *frame)
 	if (KTRPOINT(td, KTR_SYSCALL))
 		ktrsyscall(code, narg, (register_t *)params);
 #endif
-	/*
-	 * Try to run the syscall without Giant if the syscall is MP safe.
-	 */
-	if ((callp->sy_narg & SYF_MPSAFE) == 0)
-		mtx_lock(&Giant);
+
+	td->td_syscalls++;
 
 	if (error == 0) {
 		td->td_retval[0] = 0;
@@ -415,15 +420,19 @@ syscall(struct trapframe *frame)
 
 		STOPEVENT(p, S_SCE, narg);
 
+		PTRACESTOP_SC(p, td, S_PT_SCE);
+
+		AUDIT_SYSCALL_ENTER(code, td);
 		error = (*callp->sy_call)(td, params);
+		AUDIT_SYSCALL_EXIT(error, td);
 
 		CTR3(KTR_SYSC, "syscall: p=%s %s ret=%x", p->p_comm,
 		     syscallnames[code], td->td_retval[0]);
 	}
 	switch (error) {
 	case 0:
-		if ((frame->fixreg[0] == SYS___syscall) &&
-		    (code != SYS_lseek)) {
+		if (frame->fixreg[0] == SYS___syscall &&
+		    code != SYS_freebsd6_lseek && code != SYS_lseek) {
 			/*
 			 * 64-bit return, 32-bit syscall. Fixup byte order
 			 */
@@ -458,9 +467,18 @@ syscall(struct trapframe *frame)
 		break;
 	}
 
-
-	if ((callp->sy_narg & SYF_MPSAFE) == 0)
-		mtx_unlock(&Giant);
+	/*
+	 * Check for misbehavior.
+	 */
+	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
+	KASSERT(td->td_critnest == 0,
+	    ("System call %s returning in a critical section",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???"));
+	KASSERT(td->td_locks == 0,
+	    ("System call %s returning with %d locks held",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???",
+	    td->td_locks));
 
 #ifdef	KTRACE
 	if (KTRPOINT(td, KTR_SYSRET))
@@ -471,11 +489,8 @@ syscall(struct trapframe *frame)
 	 * Does the comment in the i386 code about errno apply here?
 	 */
 	STOPEVENT(p, S_SCX, code);
-
-	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
-	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
-	mtx_assert(&sched_lock, MA_NOTOWNED);
-	mtx_assert(&Giant, MA_NOTOWNED);
+ 
+	PTRACESTOP_SC(p, td, S_PT_SCX);
 }
 
 static int

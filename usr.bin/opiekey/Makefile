@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/opiekey/Makefile,v 1.11 2002/01/03 21:20:29 ache Exp $
+# $FreeBSD: release/7.0.0/usr.bin/opiekey/Makefile 88857 2002-01-03 21:20:29Z ache $
 #
 OPIE_DIST?=	${.CURDIR}/../../contrib/opie
 

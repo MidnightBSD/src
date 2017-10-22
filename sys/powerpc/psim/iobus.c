@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/psim/iobus.c,v 1.8 2005/01/07 02:29:21 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/psim/iobus.c 157895 2006-04-20 04:19:10Z imp $
  */
 
 /*
@@ -341,6 +341,7 @@ iobus_alloc_resource(device_t bus, device_t child, int type, int *rid,
 		return (NULL);
 	}
 
+	rman_set_rid(rv, *rid);
 	rman_set_bustag(rv, tagval);
 	rman_set_bushandle(rv, rman_get_start(rv));
 

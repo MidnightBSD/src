@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)biff.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/biff/biff.c,v 1.18 2002/07/24 18:54:59 robert Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/biff/biff.c 100627 2002-07-24 18:54:59Z robert $");
 
 #include <sys/stat.h>
 

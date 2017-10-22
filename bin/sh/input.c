@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)input.c	8.3 (Berkeley) 6/9/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/input.c,v 1.22 2004/04/06 20:06:51 markm Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/sh/input.c 158143 2006-04-29 10:29:10Z stefanf $");
 
 #include <stdio.h>	/* defines BUFSIZ */
 #include <fcntl.h>
@@ -184,14 +184,23 @@ preadfd(void)
 retry:
 #ifndef NO_HISTORY
 	if (parsefile->fd == 0 && el) {
-		const char *rl_cp;
+		static const char *rl_cp;
+		static int el_len;
 
-		rl_cp = el_gets(el, &nr);
+		if (rl_cp == NULL)
+			rl_cp = el_gets(el, &el_len);
 		if (rl_cp == NULL)
 			nr = 0;
 		else {
-			/* XXX - BUFSIZE should redesign so not necessary */
-			(void) strcpy(parsenextc, rl_cp);
+			nr = el_len;
+			if (nr > BUFSIZ - 1)
+				nr = BUFSIZ - 1;
+			memcpy(parsenextc, rl_cp, nr);
+			if (nr != el_len) {
+				el_len -= nr;
+				rl_cp += nr;
+			} else
+				rl_cp = NULL;
 		}
 	} else
 #endif

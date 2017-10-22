@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/ifconfig/ifmac.c,v 1.4 2004/12/31 19:46:27 sam Exp $
+ * $FreeBSD: release/7.0.0/sbin/ifconfig/ifmac.c 139494 2004-12-31 19:46:27Z sam $
  */
 
 #include <sys/param.h>

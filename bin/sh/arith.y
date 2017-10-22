@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)arith.y	8.3 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/arith.y,v 1.19.8.1 2005/11/06 20:39:47 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/sh/arith.y 149013 2005-08-13 07:59:46Z stefanf $");
 
 #include <limits.h>
 #include <stdio.h>

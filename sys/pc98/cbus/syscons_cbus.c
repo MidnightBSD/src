@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pc98/cbus/syscons_cbus.c,v 1.22 2005/05/14 09:10:01 nyan Exp $
+ * $FreeBSD: release/7.0.0/sys/pc98/cbus/syscons_cbus.c 167085 2007-02-27 17:22:30Z jhb $
  */
 
 #include "opt_syscons.h"
@@ -41,7 +41,6 @@
 #include <machine/ppireg.h>
 #include <machine/timerreg.h>
 
-#include <pc98/cbus/cbus.h>
 #include <pc98/pc98/pc98_machdep.h>
 
 #include <dev/syscons/syscons.h>
@@ -90,7 +89,6 @@ static int
 scsuspend(device_t dev)
 {
 	int		retry = 10;
-	static int	dummy;
 	sc_softc_t	*sc;
 
 	sc = &main_softc;
@@ -108,7 +106,7 @@ scsuspend(device_t dev)
 		if (!sc->switch_in_progress) {
 			break;
 		}
-		tsleep(&dummy, 0, "scsuspend", 100);
+		pause("scsuspend", hz);
 	} while (retry--);
 
 	return (0);

@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/tools/install.sh,v 1.7 2004/07/07 09:38:14 ru Exp $
+# $FreeBSD: release/7.0.0/tools/install.sh 131737 2004-07-07 09:38:14Z ru $
 
 # parse install's options and ignore them completely.
 while [ $# -gt 0 ]; do

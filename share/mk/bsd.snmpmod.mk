@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/mk/bsd.snmpmod.mk,v 1.2.2.1 2006/01/25 13:22:58 harti Exp $
+# $FreeBSD: release/7.0.0/share/mk/bsd.snmpmod.mk 152277 2005-11-10 12:07:12Z harti $
 
 INCSDIR=	${INCLUDEDIR}/bsnmp
 

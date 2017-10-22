@@ -66,7 +66,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: bus.h,v 1.9.4.1 2000/06/30 16:27:30 simonb Exp $
- * $FreeBSD: src/sys/powerpc/include/bus.h,v 1.17 2005/04/18 21:45:34 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/bus.h 165147 2006-12-13 03:25:31Z marcel $
  */
 
 #ifndef	_MACPPC_BUS_H_
@@ -109,9 +109,16 @@ __ppc_ba(bus_space_tag_t tag __unused, bus_space_handle_t handle,
  *
  * Map a region of bus space.
  */
-#if 0
-bus_space_map(t, addr, size, flags, bshp) ! not implemented !
-#endif
+
+static __inline int
+bus_space_map(bus_space_tag_t t __unused, bus_addr_t addr,
+	      bus_size_t size __unused, int flags __unused,
+	      bus_space_handle_t *bshp)
+{
+
+	*bshp = addr;
+	return (0);
+}
 
 /*
  *	int bus_space_unmap(bus_space_tag_t t,

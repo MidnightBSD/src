@@ -36,7 +36,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/tail/forward.c,v 1.38.2.1 2005/10/09 03:51:55 delphij Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/tail/forward.c 163587 2006-10-21 18:05:06Z marcel $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)forward.c	8.1 (Berkeley) 6/6/93";
@@ -249,7 +249,8 @@ show(file_info_t *file)
 
     while ((ch = getc(file->fp)) != EOF) {
 	if (last != file && no_files > 1) {
-		(void)printf("\n==> %s <==\n", file->file_name);
+		if (!qflag)
+			(void)printf("\n==> %s <==\n", file->file_name);
 		last = file;
 	}
 	if (putchar(ch) == EOF)
@@ -322,7 +323,7 @@ follow(file_info_t *files, enum STYLE style, off_t off)
 		if (file->fp) {
 			active = 1;
 			n++;
-			if (no_files > 1)
+			if (no_files > 1 && !qflag)
 				(void)printf("\n==> %s <==\n", file->file_name);
 			forward(file->fp, style, off, &file->st);
 			if (Fflag && fileno(file->fp) != STDIN_FILENO)
@@ -347,13 +348,11 @@ follow(file_info_t *files, enum STYLE style, off_t off)
 			if (! file->fp)
 				continue;
 			if (Fflag && file->fp && fileno(file->fp) != STDIN_FILENO) {
-				if (stat(file->file_name, &sb2) != 0) {
-					/* file was rotated, skip it until it reappears */
-					continue;
-				}
-				if (sb2.st_ino != file->st.st_ino ||
-				    sb2.st_dev != file->st.st_dev ||
-				    sb2.st_nlink == 0) {
+				if (stat(file->file_name, &sb2) == 0 &&
+				    (sb2.st_ino != file->st.st_ino ||
+				     sb2.st_dev != file->st.st_dev ||
+				     sb2.st_nlink == 0)) {
+					show(file);
 					file->fp = freopen(file->file_name, "r", file->fp);
 					if (file->fp == NULL) {
 						ierr();

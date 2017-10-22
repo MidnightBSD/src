@@ -1,4 +1,4 @@
-$FreeBSD: src/LOCKS,v 1.2.2.1 2006/02/06 16:39:06 ru Exp $
+$FreeBSD: release/7.0.0/LOCKS 174854 2007-12-22 06:32:46Z cvs2svn $
 
 This file documents formal review/approval requirements that have been
 approved by core.

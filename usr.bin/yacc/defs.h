@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)defs.h	5.6 (Berkeley) 5/24/93
- * $FreeBSD: src/usr.bin/yacc/defs.h,v 1.12 2002/06/11 11:27:20 robert Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/yacc/defs.h 98116 2002-06-11 11:27:20Z robert $
  */
 
 #include <assert.h>

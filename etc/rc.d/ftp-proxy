@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# $FreeBSD: release/7.0.0/etc/rc.d/ftp-proxy 175737 2008-01-28 07:58:32Z dougb $
+#
+
+# PROVIDE: ftp-proxy
+# REQUIRE: DAEMON pf
+
+. /etc/rc.subr
+
+name="ftpproxy"
+rcvar=`set_rcvar`
+command="/usr/sbin/ftp-proxy"
+
+load_rc_config $name
+run_rc_command "$1"

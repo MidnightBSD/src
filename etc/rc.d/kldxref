@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/kldxref,v 1.4 2004/10/07 13:55:26 mtm Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/kldxref 168531 2007-04-09 08:53:40Z des $
 #
 
 # PROVIDE: kldxref
-# REQUIRE: root mountcritlocal
+# REQUIRE: FILESYSTEMS
 # BEFORE:  netif
 # KEYWORD: nojail
 

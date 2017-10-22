@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/tools/mfc/Makefile,v 1.1 2004/09/24 15:24:12 des Exp $
+# $FreeBSD: release/7.0.0/tools/tools/mfc/Makefile 135743 2004-09-24 15:24:12Z des $
 
 BINDIR?=	${HOME}/bin
 BINOWN?=	`id -u`

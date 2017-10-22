@@ -23,12 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/mount/extern.h,v 1.4 2002/03/21 13:14:19 imp Exp $
+ * $FreeBSD: release/7.0.0/sbin/mount/extern.h 152738 2005-11-23 23:22:56Z rodrigc $
  */
 
 /* vfslist.c */
 int checkvfsname(const char *, const char **);
 const char **makevfslist(char *);
 
-/* mount_ufs.c */
-int mount_ufs(int, char *const *);
+int mount_fs(const char *, int, char *[]);

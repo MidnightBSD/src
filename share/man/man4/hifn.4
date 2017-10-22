@@ -26,16 +26,30 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/hifn.4,v 1.6 2005/01/21 08:36:37 ru Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man4/hifn.4 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
-.Dd September 12, 2004
+.Dd April 1, 2006
 .Dt HIFN 4
 .Os
 .Sh NAME
 .Nm hifn
 .Nd Hifn 7751/7951/7811/7955/7956 crypto accelerator
 .Sh SYNOPSIS
-.Cd device hifn
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device crypto"
+.Cd "device cryptodev"
+.Cd "device hifn"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+hifn_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm

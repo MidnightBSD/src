@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: cpu.h,v 1.11 2000/05/26 21:19:53 thorpej Exp $
- * $FreeBSD: src/sys/powerpc/include/cpu.h,v 1.18 2005/01/07 02:29:19 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/cpu.h 170473 2007-06-09 21:55:17Z marcel $
  */
 
 #ifndef _MACHINE_CPU_H_
@@ -39,38 +39,16 @@
 #include <machine/pcb.h>
 #include <machine/psl.h>
 
-#define	CLKF_USERMODE(frame)	(((frame)->srr1 & PSL_PR) != 0)
-#define	CLKF_BASEPRI(frame)	((frame)->pri == 0)
-#define	CLKF_PC(frame)		((frame)->srr0)
-#define	CLKF_INTR(frame)	((frame)->depth > 0)
-
 #define	TRAPF_USERMODE(frame)	(((frame)->srr1 & PSL_PR) != 0)
 #define	TRAPF_PC(frame)		((frame)->srr0)
 
 #define	cpu_swapout(p)
 #define	cpu_number()		0
 
-#if defined(_KERNEL) || defined(_STANDALONE)
-#define	CACHELINESIZE	32
-#endif
-
-extern void __syncicache(void *, int);
-
 /*
  * CTL_MACHDEP definitions.
  */
 #define	CPU_CACHELINE	1
-#define CPU_CONSDEV	2
-#define CPU_ADJKERNTZ   3
-#define CPU_DISRTCSET   4
-#define CPU_BOOTINFO    5 
-#define CPU_WALLCLOCK   6
-#define CPU_MAXID       7
-
-#define	CTL_MACHDEP_NAMES { \
-	{ 0, 0 }, \
-	{ "cachelinesize", CTLTYPE_INT }, \
-}
 
 static __inline u_int64_t
 get_cyclecount(void)

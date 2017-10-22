@@ -31,7 +31,7 @@
  *
  *	from: @(#)isa.c	7.2 (Berkeley) 5/13/91
  *	from: isa_dma.c,v 1.3 1999/05/09 23:56:00 peter Exp $
- * $FreeBSD: src/sys/ia64/isa/isa_dma.c,v 1.9 2005/05/14 10:14:56 nyan Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/isa/isa_dma.c 171312 2007-07-09 04:58:16Z marcel $
  */
 
 /*
@@ -331,7 +331,7 @@ isa_dmastart(int flags, caddr_t addr, u_int nbytes, int chan)
 		printf("isa_dmastart: channel %d busy\n", chan);
 #endif
 
-	if (!dma_tag || !dma_map[chan])
+	if (!dma_tag[chan] || !dma_map[chan])
 		panic("isa_dmastart: called without isa_dma_init");
 
 	dma_busy |= (1 << chan);

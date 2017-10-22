@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/mkuzip/Makefile,v 1.4 2005/05/02 17:38:49 sobomax Exp $
+# $FreeBSD: release/7.0.0/usr.bin/mkuzip/Makefile 145808 2005-05-02 17:38:49Z sobomax $
 
 PROG=	mkuzip
 MAN=	mkuzip.8

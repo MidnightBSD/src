@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/ia64/include/vmparam.h,v 1.10 2005/01/06 22:18:23 imp Exp $ */
+/* $FreeBSD: release/7.0.0/sys/ia64/include/vmparam.h 172317 2007-09-25 06:25:06Z alc $ */
 /* From: NetBSD: vmparam.h,v 1.6 1997/09/23 23:23:23 mjacob Exp */
 #ifndef	_MACHINE_VMPARAM_H
 #define	_MACHINE_VMPARAM_H
@@ -44,11 +44,9 @@
  * Machine dependent constants for ia64.
  */
 /*
- * USRTEXT is the start of the user text/data space, while USRSTACK
- * is the top (end) of the user stack.  Immediately above the user stack
- * resides the syscall gateway page.
+ * USRSTACK is the top (end) of the user stack.  Immediately above the user
+ * stack resides the syscall gateway page.
  */
-#define	USRTEXT		CLBYTES
 #define	USRSTACK	VM_MAX_ADDRESS
 
 /*
@@ -71,14 +69,6 @@
 #endif
 #ifndef SGROWSIZ
 #define SGROWSIZ	(128UL*1024)		/* amount to grow stack */
-#endif
-
-/*
- * PTEs for mapping user space into the kernel for phyio operations.
- * 64 pte's are enough to cover 8 disks * MAXBSIZE.
- */
-#ifndef USRIOSIZE
-#define USRIOSIZE	64
 #endif
 
 /*
@@ -109,7 +99,7 @@
  * by the page replacement algorithm.  Basically this says that if you are
  * swapped in you deserve some resources.  We protect the last SAFERSS
  * pages against paging and will just swap you out rather than paging you.
- * Note that each process has at least UPAGES+CLSIZE pages which are not
+ * Note that each process has at least UPAGES pages which are not
  * paged anyways, in addition to SAFERSS.
  */
 #define	SAFERSS		10		/* nominal ``small'' resident set size
@@ -119,6 +109,40 @@
  * We need region 7 virtual addresses for pagetables.
  */
 #define UMA_MD_SMALL_ALLOC
+
+/*
+ * The physical address space is sparsely populated.
+ */
+#define	VM_PHYSSEG_SPARSE
+
+/*
+ * The number of PHYSSEG entries is equal to the number of phys_avail
+ * entries.
+ */
+#define	VM_PHYSSEG_MAX		49
+
+/*
+ * Create three free page pools: VM_FREEPOOL_DEFAULT is the default pool
+ * from which physical pages are allocated and VM_FREEPOOL_DIRECT is
+ * the pool from which physical pages for small UMA objects are
+ * allocated.
+ */
+#define	VM_NFREEPOOL		3
+#define	VM_FREEPOOL_CACHE	2
+#define	VM_FREEPOOL_DEFAULT	0
+#define	VM_FREEPOOL_DIRECT	1
+
+/*
+ * Create one free page list.
+ */
+#define	VM_NFREELIST		1
+#define	VM_FREELIST_DEFAULT	0
+
+/*
+ * An allocation size of 256MB is supported in order to optimize the
+ * use of the identity mappings in region 7 by UMA.
+ */
+#define	VM_NFREEORDER		16
 
 /*
  * Manipulating region bits of an address.
@@ -163,7 +187,8 @@
 
 /*
  * How many physical pages per KVA page allocated.
- * min(max(VM_KMEM_SIZE, Physical memory/VM_KMEM_SIZE_SCALE), VM_KMEM_SIZE_MAX)
+ * min(max(max(VM_KMEM_SIZE, Physical memory/VM_KMEM_SIZE_SCALE),
+ *     VM_KMEM_SIZE_MIN), VM_KMEM_SIZE_MAX)
  * is the total KVA space allocated for kmem_map.
  */
 #ifndef VM_KMEM_SIZE_SCALE

@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/xscale/xscalereg.h,v 1.2 2005/01/05 21:58:49 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/xscale/xscalereg.h 139735 2005-01-05 21:58:49Z imp $
  */
 
 #ifndef _ARM_XSCALE_XSCALEREG_H_ 

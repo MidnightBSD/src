@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/talk/get_iface.c,v 1.10 2005/03/11 14:17:12 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/talk/get_iface.c 143415 2005-03-11 14:17:12Z stefanf $");
 
 /*
  * From:

@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)finger.1	8.3 (Berkeley) 5/5/94
-.\" $FreeBSD: src/usr.bin/finger/finger.1,v 1.30.8.1 2006/01/22 11:56:14 dds Exp $
+.\" $FreeBSD: release/7.0.0/usr.bin/finger/finger.1 168657 2007-04-12 08:22:49Z ru $
 .\"
-.Dd July 17, 2004
+.Dd April 11, 2007
 .Dt FINGER 1
 .Os
 .Sh NAME
@@ -40,7 +40,7 @@
 .Nd user information lookup program
 .Sh SYNOPSIS
 .Nm
-.Op Fl 46gklmpshoT
+.Op Fl 46gklmpsho
 .Op Ar user ...\&
 .Op Ar user@host ...\&
 .Sh DESCRIPTION
@@ -161,9 +161,6 @@ option is supplied.
 All name matching performed by
 .Nm
 is case insensitive.
-.It Fl T
-Disable the piggybacking of data on the initial connection request.
-This option is needed to finger hosts with a broken TCP implementation.
 .El
 .Pp
 If no options are specified,
@@ -248,13 +245,6 @@ The
 command appeared in
 .Bx 3.0 .
 .Sh BUGS
-The current FINGER protocol RFC requires that the client keep the connection
-fully open until the server closes.
-This prevents the use of the optimal
-three-packet T/TCP exchange.
-(Servers which depend on this requirement are
-bogus but have nonetheless been observed in the Internet at large.)
-.Pp
 The
 .Nm
 utility does not recognize multibyte characters.

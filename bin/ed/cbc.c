@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/ed/cbc.c,v 1.20 2004/04/06 20:06:47 markm Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/ed/cbc.c 172506 2007-10-10 16:59:15Z cvs2svn $");
 
 #include <sys/types.h>
 #include <errno.h>

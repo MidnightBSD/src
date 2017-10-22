@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/2/94
-# $FreeBSD: src/bin/mv/Makefile,v 1.8 2001/12/04 01:57:45 obrien Exp $
+# $FreeBSD: release/7.0.0/bin/mv/Makefile 87323 2001-12-04 01:57:47Z obrien $
 
 PROG=	mv
 

@@ -34,7 +34,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/vgrind/regexp.c,v 1.7 2002/03/22 01:42:41 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/vgrind/regexp.c 92922 2002-03-22 01:42:45Z imp $");
 
 #ifndef lint
 static const char copyright[] =

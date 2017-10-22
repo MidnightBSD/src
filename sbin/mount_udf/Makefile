@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/mount_udf/Makefile,v 1.5 2004/12/21 09:59:43 ru Exp $
+# $FreeBSD: release/7.0.0/sbin/mount_udf/Makefile 160447 2006-07-17 20:53:25Z stefanf $
 
 PROG=	mount_udf
 SRCS=	mount_udf.c getmntopts.c
@@ -7,7 +7,7 @@ DPADD=	${LIBKICONV}
 LDADD=	-lkiconv
 
 MOUNT=	${.CURDIR}/../mount
-CFLAGS+= -I${MOUNT} -I${.CURDIR}/../../sys -Wall
+CFLAGS+= -I${MOUNT} -I${.CURDIR}/../../sys
 .PATH:	${MOUNT}
 WARNS?= 1
 

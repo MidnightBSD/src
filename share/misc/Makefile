@@ -1,7 +1,8 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD: src/share/misc/Makefile,v 1.23 2004/12/21 08:46:53 ru Exp $
+# $FreeBSD: release/7.0.0/share/misc/Makefile 174854 2007-12-22 06:32:46Z cvs2svn $
 
-FILES=	ascii birthtoken bsd-family-tree eqnchar flowers init.ee \
+FILES=	ascii birthtoken bsd-family-tree committers-doc.dot committers-ports.dot \
+	committers-src.dot eqnchar flowers init.ee \
 	iso3166 iso639 latin1 man.template mdoc.template operator pci_vendors \
 	scsi_modes usb_hid_usages
 NO_OBJ=

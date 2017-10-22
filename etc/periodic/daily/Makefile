@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/periodic/daily/Makefile,v 1.12 2003/10/27 20:14:53 jesper Exp $
+# $FreeBSD: release/7.0.0/etc/periodic/daily/Makefile 169556 2007-05-14 17:34:59Z maxim $
 
 FILES=	100.clean-disks \
 	110.clean-tmps \
@@ -12,13 +12,19 @@ FILES=	100.clean-disks \
 	310.accounting \
 	330.news \
 	400.status-disks \
-	420.status-network \
+	404.status-zfs \
 	405.status-ata-raid \
+	406.status-gmirror \
+	407.status-graid3 \
+	408.status-gstripe \
+	409.status-gconcat \
+	420.status-network \
 	430.status-rwho \
 	440.status-mailq \
 	450.status-security \
 	460.status-mail-rejects \
 	470.status-named \
+	480.status-ntpd \
 	500.queuerun \
 	999.local
 

@@ -32,7 +32,7 @@
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/5/93
  *
- * $FreeBSD: src/usr.sbin/mount_portalfs/pathnames.h,v 1.6 2004/08/07 04:27:50 imp Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/mount_portalfs/pathnames.h 133249 2004-08-07 04:28:56Z imp $
  */
 
 #include <paths.h>

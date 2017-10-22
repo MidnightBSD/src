@@ -25,7 +25,7 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# $FreeBSD: src/usr.sbin/portsnap/portsnap/portsnap.sh,v 1.8.2.4 2006/01/30 04:18:12 cperciva Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/portsnap/portsnap/portsnap.sh 171691 2007-08-02 02:05:23Z cperciva $
 
 #### Usage function -- called from command-line handling code.
 
@@ -43,6 +43,7 @@ Options:
                   (default: /etc/portsnap.conf)
   -I           -- Update INDEX only. (update command only)
   -k KEY       -- Trust an RSA key with SHA256 hash of KEY
+  -l descfile  -- Merge the specified local describes file into the INDEX.
   -p portsdir  -- Location of uncompressed ports tree
                   (default: /usr/ports/)
   -s server    -- Server from which to fetch updates.
@@ -82,6 +83,7 @@ init_params() {
 	INDEXONLY=""
 	SERVERNAME=""
 	REFUSE=""
+	LOCALDESC=""
 }
 
 # Parse the command line
@@ -116,6 +118,11 @@ parse_cmdline() {
 			if [ $# -eq 1 ]; then usage; fi
 			if [ ! -z "${KEYPRINT}" ]; then usage; fi
 			shift; KEYPRINT="$1"
+			;;
+		-l)
+			if [ $# -eq 1 ]; then usage; fi
+			if [ ! -z "${LOCALDESC}" ]; then usage; fi
+			shift; LOCALDESC="$1"
 			;;
 		--no-stats)
 			if [ -z "${STATSREDIR}" ]; then
@@ -203,7 +210,9 @@ default_params() {
 	_WORKDIR="/var/db/portsnap"
 	_PORTSDIR="/usr/ports"
 	_NDEBUG="-n"
-	for X in QUIETREDIR QUIETFLAG STATSREDIR WORKDIR PORTSDIR NDEBUG; do
+	_LOCALDESC="/dev/null"
+	for X in QUIETREDIR QUIETFLAG STATSREDIR WORKDIR PORTSDIR	\
+	    NDEBUG LOCALDESC; do
 		eval _=\$${X}
 		eval __=\$_${X}
 		if [ -z "${_}" ]; then
@@ -309,31 +318,63 @@ update_check_params() {
 # (in which case portsnap will use that particular server, since there
 # won't be an SRV entry for that name).
 #
-# We don't implement the recommendations from RFC 2782 completely, since
-# we are only looking to pick a single server -- the recommendations are
-# targetted at applications which obtain a list of servers and then try
-# each in turn, but we are instead just going to pick one server and let
-# the user re-run portsnap if a broken server was selected.
-#
-# We also ignore the Port field, since we are always going to use port 80.
-fetch_pick_server() {
+# We ignore the Port field, since we are always going to use port 80.
+
+# Fetch the mirror list, but do not pick a mirror yet.  Returns 1 if
+# no mirrors are available for any reason.
+fetch_pick_server_init() {
+	: > serverlist_tried
+
 # Check that host(1) exists (i.e., that the system wasn't built with the
-# NO_BIND flag set) and don't try to find a mirror if it doesn't exist.
+# WITHOUT_BIND set) and don't try to find a mirror if it doesn't exist.
 	if ! which -s host; then
-		return
+		: > serverlist_full
+		return 1
 	fi
 
-	echo -n "Looking up ${SERVERNAME} mirrors..."
+	echo -n "Looking up ${SERVERNAME} mirrors... "
 
 # Issue the SRV query and pull out the Priority, Weight, and Target fields.
-	host -t srv "_http._tcp.${SERVERNAME}" |
-	    grep -E "^_http._tcp.${SERVERNAME} has SRV record" |
-	    cut -f 5,6,8 -d ' ' > serverlist
+# BIND 9 prints "$name has SRV record ..." while BIND 8 prints
+# "$name server selection ..."; we allow either format.
+	MLIST="_http._tcp.${SERVERNAME}"
+	host -t srv "${MLIST}" |
+	    sed -nE "s/${MLIST} (has SRV record|server selection) //p" |
+	    cut -f 1,2,4 -d ' ' |
+	    sed -e 's/\.$//' |
+	    sort > serverlist_full
 
 # If no records, give up -- we'll just use the server name we were given.
+	if [ `wc -l < serverlist_full` -eq 0 ]; then
+		echo "none found."
+		return 1
+	fi
+
+# Report how many mirrors we found.
+	echo `wc -l < serverlist_full` "mirrors found."
+
+# Generate a random seed for use in picking mirrors.  If HTTP_PROXY
+# is set, this will be used to generate the seed; otherwise, the seed
+# will be random.
+	if [ -n "${HTTP_PROXY}${http_proxy}" ]; then
+		RANDVALUE=`sha256 -qs "${HTTP_PROXY}${http_proxy}" |
+		    tr -d 'a-f' |
+		    cut -c 1-9`
+	else
+		RANDVALUE=`jot -r 1 0 999999999`
+	fi
+}
+
+# Pick a mirror.  Returns 1 if we have run out of mirrors to try.
+fetch_pick_server() {
+# Generate a list of not-yet-tried mirrors
+	sort serverlist_tried |
+	    comm -23 serverlist_full - > serverlist
+
+# Have we run out of mirrors?
 	if [ `wc -l < serverlist` -eq 0 ]; then
-		echo " none found."
-		return
+		echo "No mirrors remaining, giving up."
+		return 1
 	fi
 
 # Find the highest priority level (lowest numeric value).
@@ -358,17 +399,20 @@ fetch_pick_server() {
 		SRV_W_ADD=0
 	fi
 
-# Pick a random value between 1 and the sum of the weights
-	SRV_RND=`jot -r 1 1 ${SRV_WSUM}`
+# Pick a value between 0 and the sum of the weights - 1
+	SRV_RND=`expr ${RANDVALUE} % ${SRV_WSUM}`
 
-# Read through the list of mirrors and set SERVERNAME
+# Read through the list of mirrors and set SERVERNAME.  Write the line
+# corresponding to the mirror we selected into serverlist_tried so that
+# we won't try it again.
 	while read X; do
 		case "$X" in
 		${SRV_PRIORITY}\ *)
 			SRV_W=`echo $X | cut -f 2 -d ' '`
 			SRV_W=$(($SRV_W + $SRV_W_ADD))
-			if [ $SRV_RND -le $SRV_W ]; then
+			if [ $SRV_RND -lt $SRV_W ]; then
 				SERVERNAME=`echo $X | cut -f 3 -d ' '`
+				echo "$X" >> serverlist_tried
 				break
 			else
 				SRV_RND=$(($SRV_RND - $SRV_W))
@@ -376,18 +420,17 @@ fetch_pick_server() {
 			;;
 		esac
 	done < serverlist
-
-	echo " using ${SERVERNAME}"
 }
 
 # Check that we have a public key with an appropriate hash, or
-# fetch the key if it doesn't exist.
+# fetch the key if it doesn't exist.  Returns 1 if the key has
+# not yet been fetched.
 fetch_key() {
 	if [ -r pub.ssl ] && [ `${SHA256} -q pub.ssl` = ${KEYPRINT} ]; then
-		return
+		return 0
 	fi
 
-	echo -n "Fetching public key... "
+	echo -n "Fetching public key from ${SERVERNAME}... "
 	rm -f pub.ssl
 	fetch ${QUIETFLAG} http://${SERVERNAME}/pub.ssl \
 	    2>${QUIETREDIR} || true
@@ -407,8 +450,8 @@ fetch_key() {
 fetch_tag() {
 	rm -f snapshot.ssl tag.new
 
-	echo ${NDEBUG} "Fetching snapshot tag... "
-	fetch ${QUIETFLAG} http://${SERVERNAME}/$1.ssl
+	echo ${NDEBUG} "Fetching snapshot tag from ${SERVERNAME}... "
+	fetch ${QUIETFLAG} http://${SERVERNAME}/$1.ssl		\
 	    2>${QUIETREDIR} || true
 	if ! [ -r $1.ssl ]; then
 		echo "failed."
@@ -567,7 +610,9 @@ fetch_snapshot_verify() {
 
 # Fetch a snapshot tarball, extract, and verify.
 fetch_snapshot() {
-	fetch_tag snapshot || return 1
+	while ! fetch_tag snapshot; do
+		fetch_pick_server || return 1
+	done
 	fetch_snapshot_tagsanity || return 1
 	fetch_metadata || return 1
 	fetch_metadata_sanity || return 1
@@ -615,7 +660,9 @@ fetch_update() {
 	OLDSNAPSHOTDATE=`cut -f 2 -d '|' < tag`
 	OLDSNAPSHOTHASH=`cut -f 3 -d '|' < tag`
 
-	fetch_tag latest || return 1
+	while ! fetch_tag latest; do
+		fetch_pick_server || return 1
+	done
 	fetch_update_tagsanity || return 1
 	fetch_update_neededp || return 0
 	fetch_metadata || return 1
@@ -768,9 +815,11 @@ fetch_update() {
 
 # Do the actual work involved in "fetch" / "cron".
 fetch_run() {
-	fetch_pick_server
+	fetch_pick_server_init && fetch_pick_server
 
-	fetch_key || return 1
+	while ! fetch_key; do
+		fetch_pick_server || return 1
+	done
 
 	if ! [ -d files -a -r tag -a -r INDEX -a -r tINDEX ]; then
 		fetch_snapshot || return 1
@@ -781,7 +830,9 @@ fetch_run() {
 # Build a ports INDEX file
 extract_make_index() {
 	gunzip -c "${WORKDIR}/files/`look $1 ${WORKDIR}/tINDEX |
-	    cut -f 2 -d '|'`.gz" | ${MKINDEX} /dev/stdin > ${PORTSDIR}/$2
+	    cut -f 2 -d '|'`.gz" |
+	    cat - ${LOCALDESC} |
+	    ${MKINDEX} /dev/stdin > ${PORTSDIR}/$2
 }
 
 # Create INDEX, INDEX-5, INDEX-6
@@ -790,6 +841,7 @@ extract_indices() {
 	extract_make_index DESCRIBE.4 INDEX || return 1
 	extract_make_index DESCRIBE.5 INDEX-5 || return 1
 	extract_make_index DESCRIBE.6 INDEX-6 || return 1
+	extract_make_index DESCRIBE.7 INDEX-7 || return 1
 	echo "done."
 }
 
@@ -822,9 +874,7 @@ extract_run() {
 			grep -vE "${REFUSE}" ${WORKDIR}/INDEX
 		else
 			cat ${WORKDIR}/INDEX
-		fi | while read LINE; do
-		FILE=`echo ${LINE} | cut -f 1 -d '|'`
-		HASH=`echo ${LINE} | cut -f 2 -d '|'`
+		fi | tr '|' ' ' | while read FILE HASH; do
 		echo ${PORTSDIR}/${FILE}
 		if ! [ -r "${WORKDIR}/files/${HASH}.gz" ]; then
 			echo "files/${HASH}.gz not found -- snapshot corrupt."
@@ -832,7 +882,7 @@ extract_run() {
 		fi
 		case ${FILE} in
 		*/)
-			rm -rf ${PORTSDIR}/${FILE}
+			rm -rf ${PORTSDIR}/${FILE%/}
 			mkdir -p ${PORTSDIR}/${FILE}
 			tar -xzf ${WORKDIR}/files/${HASH}.gz	\
 			    -C ${PORTSDIR}/${FILE}
@@ -874,11 +924,13 @@ update_run() {
 		sort ${WORKDIR}/INDEX |
 		    comm -23 ${PORTSDIR}/.portsnap.INDEX - | cut -f 1 -d '|' |
 		    grep -vE "${REFUSE}" |
-		    lam -s "${PORTSDIR}/" - | xargs rm -rf
+		    lam -s "${PORTSDIR}/" - |
+		    sed -e 's|/$||' | xargs rm -rf
 	else
 		sort ${WORKDIR}/INDEX |
 		    comm -23 ${PORTSDIR}/.portsnap.INDEX - | cut -f 1 -d '|' |
-		    lam -s "${PORTSDIR}/" - | xargs rm -rf
+		    lam -s "${PORTSDIR}/" - |
+		    sed -e 's|/$||' | xargs rm -rf
 	fi
 	echo "done."
 
@@ -980,6 +1032,9 @@ cmd_update() {
 
 # Make sure we find utilities from the base system
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:${PATH}
+
+# Set LC_ALL in order to avoid problems with character ranges like [A-Z].
+export LC_ALL=C
 
 get_params $@
 for COMMAND in ${COMMANDS}; do

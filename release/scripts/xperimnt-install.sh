@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/release/scripts/xperimnt-install.sh,v 1.3 2001/04/08 23:09:21 obrien Exp $
+# $FreeBSD: release/7.0.0/release/scripts/xperimnt-install.sh 75328 2001-04-08 23:09:21Z obrien $
 #
 
 if [ "`id -u`" != "0" ]; then

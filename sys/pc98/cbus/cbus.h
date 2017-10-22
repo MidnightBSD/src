@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)isa.h	5.7 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/pc98/cbus/cbus.h,v 1.21 2005/05/14 10:14:56 nyan Exp $
+ * $FreeBSD: release/7.0.0/sys/pc98/cbus/cbus.h 158358 2006-05-08 12:03:58Z nyan $
  */
 
 #ifndef _PC98_PC98_PC98_H_
@@ -100,13 +100,5 @@
 #endif
 #define	RAM_SIZE	(RAM_END - RAM_BEGIN)
 #endif /* !RAM_BEGIN */
-
-#define	M_NEC_PC98	0x0001
-#define	M_EPSON_PC98	0x0002
-#define	M_NOT_H98	0x0010
-#define	M_H98		0x0020
-#define	M_NOTE		0x0040
-#define	M_NORMAL	0x1000
-#define	M_8M		0x8000
 
 #endif /* !_PC98_PC98_PC98_H_ */

@@ -1,7 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.bin/locate/Makefile,v 1.6 1999/08/28 01:02:52 peter Exp $
-
-MAINTAINER= wosch
+# $FreeBSD: release/7.0.0/usr.bin/locate/Makefile 148109 2005-07-17 21:19:28Z wosch $
 
 
 SUBDIR=	bigram code locate

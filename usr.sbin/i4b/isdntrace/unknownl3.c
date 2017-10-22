@@ -27,9 +27,9 @@
  *	unknownl3.c - print L3 packets with unknown PD
  *	----------------------------------------------
  *
- *	$Id: unknownl3.c,v 1.1.1.2 2006-02-25 02:38:29 laffer1 Exp $
+ *	$Id: unknownl3.c,v 1.2 2000/02/13 15:26:52 hm Exp $
  *
- * $FreeBSD: src/usr.sbin/i4b/isdntrace/unknownl3.c,v 1.1 2000/10/09 14:22:49 hm Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdntrace/unknownl3.c 66880 2000-10-09 14:22:51Z hm $
  *
  *      last edit-date: [Sun Feb 13 14:16:44 2000]
  *

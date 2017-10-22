@@ -23,7 +23,7 @@
  * Copies of this Software may be made, however, the above copyright
  * notice must be reproduced on all copies.
  *
- *	@(#) $FreeBSD: src/usr.sbin/atm/scspd/scsp_socket.c,v 1.4 2002/05/16 23:57:37 arr Exp $
+ *	@(#) $FreeBSD: release/7.0.0/usr.sbin/atm/scspd/scsp_socket.c 96765 2002-05-16 23:57:37Z arr $
  *
  */
 
@@ -63,7 +63,7 @@
 #include "scsp_var.h"
 
 #ifndef lint
-__RCSID("@(#) $FreeBSD: src/usr.sbin/atm/scspd/scsp_socket.c,v 1.4 2002/05/16 23:57:37 arr Exp $");
+__RCSID("@(#) $FreeBSD: release/7.0.0/usr.sbin/atm/scspd/scsp_socket.c 96765 2002-05-16 23:57:37Z arr $");
 #endif
 
 

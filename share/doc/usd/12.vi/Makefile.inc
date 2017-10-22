@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/doc/usd/12.vi/Makefile.inc,v 1.4 2002/10/29 15:01:58 ru Exp $
+# $FreeBSD: release/7.0.0/share/doc/usd/12.vi/Makefile.inc 106146 2002-10-29 15:01:59Z ru $
 
 VOLUME=		usd/12.vi
 MACROS=		-ms

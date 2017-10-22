@@ -47,7 +47,7 @@ static char sccsid[] = "@(#)col.c	8.5 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/col/col.c,v 1.19 2004/07/29 07:28:26 tjr Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/col/col.c 160464 2006-07-18 07:16:25Z stefanf $");
 
 #include <err.h>
 #include <locale.h>
@@ -397,14 +397,14 @@ void
 flush_line(LINE *l)
 {
 	CHAR *c, *endc;
-	int i, nchars, last_col, this_col;
+	int i, j, nchars, last_col, save, this_col, tot;
 
 	last_col = 0;
 	nchars = l->l_line_len;
 
 	if (l->l_needs_sort) {
 		static CHAR *sorted;
-		static int count_size, *count, i, save, sorted_size, tot;
+		static int count_size, *count, sorted_size;
 
 		/*
 		 * Do an O(n) sort on l->l_line by column being careful to
@@ -493,7 +493,7 @@ flush_line(LINE *l)
 			}
 			PUTC(c->c_char);
 			if ((c + 1) < endc)
-				for (i = 0; i < c->c_width; i++)
+				for (j = 0; j < c->c_width; j++)
 					PUTC('\b');
 			if (++c >= endc)
 				break;

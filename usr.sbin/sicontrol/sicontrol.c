@@ -28,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/sicontrol/sicontrol.c,v 1.15 2004/10/02 18:51:37 phk Exp $";
+  "$FreeBSD: release/7.0.0/usr.sbin/sicontrol/sicontrol.c 136063 2004-10-02 18:51:37Z phk $";
 #endif /* not lint */
 
 #include <ctype.h>

@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)cd.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/cd.c,v 1.34 2004/04/06 20:06:51 markm Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/sh/cd.c 159551 2006-06-12 21:06:00Z stefanf $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -124,8 +124,9 @@ cdcmd(int argc, char **argv)
 				 * XXX - rethink
 				 */
 				if (p[0] == '.' && p[1] == '/' && p[2] != '\0')
-					p += 2;
-				print = strcmp(p, dest);
+					print = strcmp(p + 2, dest);
+				else
+					print = strcmp(p, dest);
 			}
 			if (docd(p, print, phys) >= 0)
 				return 0;

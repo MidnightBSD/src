@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)reader.c	5.7 (Berkeley) 1/20/91";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/yacc/reader.c,v 1.19 2002/08/25 13:23:09 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/yacc/reader.c 102412 2002-08-25 13:23:09Z charnier $");
 
 #include <limits.h>
 #include <stdlib.h>

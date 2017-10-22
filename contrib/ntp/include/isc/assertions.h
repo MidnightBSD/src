@@ -16,7 +16,7 @@
  */
 
 /*
- * $Id: assertions.h,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $
+ * $Id: assertions.h,v 1.17 2001/07/12 05:58:21 mayer Exp $
  */
 
 #ifndef ISC_ASSERTIONS_H

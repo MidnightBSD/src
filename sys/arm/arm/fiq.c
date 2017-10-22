@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/fiq.c,v 1.3 2005/03/16 07:56:21 jmg Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/fiq.c 143682 2005-03-16 07:56:21Z jmg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

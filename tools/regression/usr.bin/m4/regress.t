@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: src/tools/regression/usr.bin/m4/regress.t,v 1.1 2004/11/11 19:47:54 nik Exp $
+# $FreeBSD: release/7.0.0/tools/regression/usr.bin/m4/regress.t 137587 2004-11-11 19:47:55Z nik $
 
 cd `dirname $0`
 

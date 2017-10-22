@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/devfs/Makefile,v 1.2 2002/07/28 06:52:47 dd Exp $
+# $FreeBSD: release/7.0.0/sbin/devfs/Makefile 100802 2002-07-28 06:52:47Z dd $
 
 PROG=	devfs
 SRCS=	devfs.c rule.c

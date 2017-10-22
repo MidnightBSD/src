@@ -1,4 +1,4 @@
-$FreeBSD: src/share/examples/isdn/i4brunppp/README,v 1.2 2003/01/01 18:48:48 schweikh Exp $
+$FreeBSD: release/7.0.0/share/examples/isdn/i4brunppp/README 108533 2003-01-01 18:49:04Z schweikh $
 
 BEWARE: HIGHLY EXPERIMENTAL!
 ---------------------------

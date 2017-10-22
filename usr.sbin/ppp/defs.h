@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/defs.h,v 1.68 2004/11/19 03:56:47 obrien Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ppp/defs.h 137885 2004-11-19 03:56:47Z obrien $
  */
 
 /* Check the following definitions for your machine environment */

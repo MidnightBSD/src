@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stdarg.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/arm/include/stdarg.h,v 1.3 2005/03/02 21:33:22 joerg Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/stdarg.h 162487 2006-09-21 01:37:02Z kan $
  */
 
 #ifndef _MACHINE_STDARG_H_
@@ -45,7 +45,7 @@ typedef	__va_list	va_list;
 #ifdef __GNUCLIKE_BUILTIN_STDARG
 
 #define	va_start(ap, last) \
-	__builtin_stdarg_start((ap), (last))
+	__builtin_va_start((ap), (last))
 
 #define	va_arg(ap, type) \
 	__builtin_va_arg((ap), type)

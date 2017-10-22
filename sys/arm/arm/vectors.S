@@ -33,7 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/vectors.S,v 1.2 2005/01/05 21:58:47 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/vectors.S 139735 2005-01-05 21:58:49Z imp $");
 
 /*
  * These are the exception vectors copied down to page 0.

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/copystr.c,v 1.2 2003/04/03 21:36:33 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/copystr.c 113038 2003-04-03 21:36:33Z obrien $");
 
 #include <sys/param.h>
 #include <sys/errno.h>

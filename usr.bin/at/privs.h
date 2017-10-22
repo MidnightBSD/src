@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/at/privs.h,v 1.8 2001/09/04 16:15:51 ru Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/at/privs.h 82973 2001-09-04 16:15:51Z ru $
  */
 
 #ifndef _PRIVS_H

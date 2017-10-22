@@ -1,6 +1,6 @@
-# $FreeBSD: src/release/doc/de_DE.ISO8859-1/relnotes/i386/Makefile,v 1.1 2002/03/12 18:35:53 ue Exp $
+# $FreeBSD: release/7.0.0/release/doc/de_DE.ISO8859-1/relnotes/i386/Makefile 92160 2002-03-12 18:35:54Z ue $
 # $FreeBSDde: de-docproj/relnotes/de_DE.ISO8859-1/relnotes/i386/Makefile,v 1.2 2002/03/10 18:41:47 ue Exp $
-# $Id: Makefile,v 1.1.1.2 2006-02-25 02:35:14 laffer1 Exp $
+# $Id: Makefile,v 1.3 2002/03/10 15:37:20 ue Exp $
 # basiert auf: 1.6
 
 RELN_ROOT?= ${.CURDIR}/../../..

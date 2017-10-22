@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/index.c,v 1.106 2005/07/02 22:34:22 dwhite Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/index.c 174968 2007-12-29 06:17:39Z kensmith $
  */
 
 #include <fcntl.h>
@@ -60,7 +60,7 @@ static void	index_recorddeps(Boolean add, PkgNodePtr root, IndexEntryPtr ie);
 PkgNode Top, Plist;
 
 /* Smarter strdup */
-inline char *
+static inline char *
 _strdup(char *ptr)
 {
     return ptr ? strdup(ptr) : NULL;
@@ -79,7 +79,6 @@ static char *descrs[] = {
     "All", "All available packages in all categories.",
     "accessibility", "Ports to help disabled users.",
     "afterstep", "Ports to support the AfterStep window manager.",
-    "applications", "User application software.",
     "arabic", "Ported software for Arab countries.",
     "archivers", "Utilities for archiving and unarchiving data.",
     "astro", "Applications related to astronomy.",
@@ -94,18 +93,20 @@ static char *descrs[] = {
     "deskutils", "Various Desktop utilities.",
     "devel", "Software development utilities and libraries.",
     "dns", "Domain Name Service tools.",
-    "documentation", "Document preparation utilities.",
-    "editors", "Common text editors.",
+    "editors", "Editors.",
     "elisp", "Things related to Emacs Lisp.",
-    "emulators", "Utilities for emulating other OS types.",
+    "emulators", "Utilities for emulating other operating systems.",
     "finance", "Monetary, financial and related applications.",
     "french", "Ported software for French countries.",
     "ftp", "FTP client and server utilities.",
     "games", "Various and sundry amusements.",
     "german", "Ported software for Germanic countries.",
+    "geography", "Geography-related software.",
     "gnome", "Components of the Gnome Desktop environment.",
+    "gnustep", "Software for GNUstep desktop environment.",
     "graphics", "Graphics libraries and utilities.",
     "haskell", "Software related to the Haskell language.",
+    "hamradio", "Software for amateur radio.",
     "hebrew", "Ported software for Hebrew language.",
     "hungarian", "Ported software for the Hungarian market.",
     "ipv6", "IPv6 related software.",
@@ -113,69 +114,66 @@ static char *descrs[] = {
     "japanese", "Ported software for the Japanese market.",
     "java", "Java language support.",
     "kde", "Software for the K Desktop Environment.",
+    "kld", "Kernel loadable modules",
     "korean", "Ported software for the Korean market.",
     "lang", "Computer languages.",
-    "languages", "Computer languages.",
-    "libraries", "Software development libraries.",
-    "linux", "Linux programs that can be run under binary compatibility.",
+    "linux", "Linux programs that can run under binary compatibility.",
+    "lisp", "Software related to the Lisp language.",
     "mail", "Electronic mail packages and utilities.",
     "math", "Mathematical computation software.",
     "mbone", "Applications and utilities for the MBONE.",
     "misc", "Miscellaneous utilities.",
     "multimedia", "Multimedia software.",
     "net", "Networking utilities.",
-    "net-mgmt", "Network Management",
+    "net-im", "Instant messaging software.",
+    "net-mgmt", "Network management tools.",
+    "net-p2p", "Peer to peer network applications.",
     "news", "USENET News support software.",
-    "numeric", "Mathematical computation software.",
-    "offix", "An office automation suite of sorts.",
-    "orphans", "Packages without a home elsewhere.",
     "palm", "Software support for the Palm(tm) series.",
     "parallel", "Applications dealing with parallelism in computing.",
+    "pear", "Software related to the Pear PHP framework.",
     "perl5", "Utilities/modules for the PERL5 language.",
-    "picobsd", "Ports to support PicoBSD.",
-    "pilot", "Software support for the 3Com Palm Pilot(tm) series.",
     "plan9", "Software from the Plan9 operating system.",
     "polish", "Ported software for the Polish market.",
+    "ports-mgmt", "Utilities for managing ports and packages.",
     "portuguese", "Ported software for the Portuguese market.",
     "print", "Utilities for dealing with printing.",
-    "printing", "Utilities for dealing with printing.",
-    "programming", "Software development utilities and libraries.",
     "python", "Software related to the Python language.",
     "ruby", "Software related to the Ruby language.",
+    "rubygems", "Ports of RubyGems packages.",
     "russian", "Ported software for the Russian market.",
-    "science", "Scientific software.",
     "scheme", "Software related to the Scheme language.",
+    "science", "Scientific software.",
     "security", "System security software.",
     "shells", "Various shells (tcsh, bash, etc).",
+    "spanish", "Ported software for the Spanish market.",
     "sysutils", "Various system utilities.",
-    "tcl75", "TCL v7.5 and packages that depend on it.",
-    "tcl76", "TCL v7.6 and packages that depend on it.",
+    "tcl", "TCL and packages that depend on it.",
     "tcl80", "TCL v8.0 and packages that depend on it.",
-    "tcl81", "TCL v8.1 and packages that depend on it.",
     "tcl82", "TCL v8.2 and packages that depend on it.",
     "tcl83", "TCL v8.3 and packages that depend on it.",
     "tcl84", "TCL v8.4 and packages that depend on it.",
     "textproc", "Text processing/search utilities.",
-    "tk41", "Tk4.1 and packages that depend on it.",
-    "tk42", "Tk4.2 and packages that depend on it.",
+    "tk", "Tk and packages that depend on it.",
     "tk80", "Tk8.0 and packages that depend on it.",
-    "tk81", "Tk8.1 and packages that depend on it.",
     "tk82", "Tk8.2 and packages that depend on it.",
     "tk83", "Tk8.3 and packages that depend on it.",
-    "tkstep80", "tkstep wm and packages that depend on it.",
-    "troff", "TROFF text formatting utilities.",
+    "tk84", "Tk8.4 and packages that depend on it.",
+    "tkstep80", "Ports to support the TkStep window manager.",
     "ukrainian", "Ported software for the Ukrainian market.",
     "vietnamese", "Ported software for the Vietnamese market.",
     "windowmaker", "Ports to support the WindowMaker window manager.",
-    "www", "WEB utilities (browers, HTTP servers, etc).",
+    "www", "Web utilities (browsers, HTTP servers, etc).",
     "x11", "X Window System based utilities.",
     "x11-clocks", "X Window System based clocks.",
+    "x11-drivers", "X Window System drivers.",
     "x11-fm", "X Window System based file managers.",
     "x11-fonts", "X Window System fonts and font utilities.",
     "x11-servers", "X Window System servers.",
     "x11-themes", "X Window System themes.",
     "x11-toolkits", "X Window System based development toolkits.",
     "x11-wm", "X Window System window managers.",
+    "xfce", "Software related to the Xfce Desktop Environment.",
     "zope", "Software related to the Zope platform.",
     NULL, NULL,
 };
@@ -272,6 +270,18 @@ copy_to_sep(char *to, char *from, int sep)
 }
 
 static int
+skip_to_sep(char *from, int sep)
+{
+    char *tok;
+
+    tok = strchr(from, sep);
+    if (!tok)
+	return 0;
+    *tok = '\0';
+    return tok + 1 - from;
+}
+
+static int
 readline(FILE *fp, char *buf, int max)
 {
     int rv, i = 0;
@@ -289,7 +299,7 @@ readline(FILE *fp, char *buf, int max)
  * lines without a set number of '|' delimited fields.
  */
 
-int
+static int
 index_parse(FILE *fp, char *name, char *pathto, char *prefix, char *comment, char *descr, char *maint, char *cats, char *rdeps, int *volume)
 {
     char line[10240 + 2048 * 7];
@@ -309,21 +319,21 @@ index_parse(FILE *fp, char *name, char *pathto, char *prefix, char *comment, cha
     cp += copy_to_sep(descr, cp, '|');		/* path to pkg-descr */
     cp += copy_to_sep(maint, cp, '|');		/* maintainer */
     cp += copy_to_sep(cats, cp, '|');		/* categories */
-    cp += copy_to_sep(junk, cp, '|');		/* build deps - not used */
+    cp += skip_to_sep(cp, '|');			/* build deps - not used */
     cp += copy_to_sep(rdeps, cp, '|');		/* run deps */
     if (index(cp, '|'))
-        cp += copy_to_sep(junk, cp, '|');	/* url - not used */
+        cp += skip_to_sep(cp, '|');		/* url - not used */
     else {
 	strncpy(junk, cp, 1023);
 	*volume = 0;
 	return 0;
     }
     if (index(cp, '|'))
-	cp += copy_to_sep(junk, cp, '|');	/* extract deps - not used */
+	cp += skip_to_sep(cp, '|');		/* extract deps - not used */
     if (index(cp, '|'))
-	cp += copy_to_sep(junk, cp, '|');	/* patch deps - not used */
+	cp += skip_to_sep(cp, '|');		/* patch deps - not used */
     if (index(cp, '|'))
-	cp += copy_to_sep(junk, cp, '|');	/* fetch deps - not used */
+	cp += skip_to_sep(cp, '|');		/* fetch deps - not used */
     if (index(cp, '|'))
         cp += copy_to_sep(volstr, cp, '|');	/* media volume */
     else {
@@ -437,7 +447,7 @@ index_sort(PkgNodePtr top)
 }
 
 /* Delete an entry out of the list it's in (only the plist, at present) */
-void
+static void
 index_delete(PkgNodePtr n)
 {
     if (n->next) {
@@ -482,7 +492,7 @@ index_search(PkgNodePtr top, char *str, PkgNodePtr *tp)
     return p;
 }
 
-int
+static int
 pkg_checked(dialogMenuItem *self)
 {
     ListPtrsPtr lists = (ListPtrsPtr)self->aux;
@@ -502,7 +512,7 @@ pkg_checked(dialogMenuItem *self)
 	return FALSE;
 }
 
-int
+static int
 pkg_fire(dialogMenuItem *self)
 {
     int ret;
@@ -561,7 +571,7 @@ pkg_fire(dialogMenuItem *self)
     return ret;
 }
 
-void
+static void
 pkg_selected(dialogMenuItem *self, int is_selected)
 {
     PkgNodePtr kp = self->data;
@@ -575,7 +585,8 @@ int
 index_menu(PkgNodePtr root, PkgNodePtr top, PkgNodePtr plist, int *pos, int *scroll)
 {
     struct ListPtrs lists;
-    int n, rval, maxname;
+    size_t maxname;
+    int n, rval;
     int curr, max;
     PkgNodePtr kp;
     dialogMenuItem *nitems;
@@ -592,7 +603,7 @@ index_menu(PkgNodePtr root, PkgNodePtr top, PkgNodePtr plist, int *pos, int *scr
 
     /* Figure out if this menu is full of "leaves" or "branches" */
     for (kp = top->kids; kp && kp->name; kp = kp->next) {
-	int len;
+	size_t len;
 
 	++n;
 	if (kp->type == PACKAGE && plist) {
@@ -676,7 +687,7 @@ index_extract(Device *dev, PkgNodePtr top, PkgNodePtr who, Boolean depended)
     int status = DITEM_SUCCESS;
     PkgNodePtr tmp2;
     IndexEntryPtr id = who->data;
-    WINDOW *w = savescr();
+    WINDOW *w;
 
     /* 
      * Short-circuit the package dependency checks.  We're already
@@ -691,25 +702,7 @@ index_extract(Device *dev, PkgNodePtr top, PkgNodePtr who, Boolean depended)
     if (id->installed == 1)
 	return DITEM_SUCCESS;
 
-    /*
-     * Prompt user if the package is not available on the current volume.
-     */
-
-    if(mediaDevice->type == DEVICE_TYPE_CDROM) {
-	while (id->volume != dev->volume) {
-	    if (!msgYesNo("This is disc #%d.  Package %s is on disc #%d\n"
-			  "Would you like to switch discs now?\n", dev->volume,
-			  id->name, id->volume)) {
-		DEVICE_SHUTDOWN(mediaDevice);
-		msgConfirm("Please remove disc #%d from your drive, and add disc #%d\n",
-		    dev->volume, id->volume);
-		DEVICE_INIT(mediaDevice);
-	    } else {
-		return DITEM_FAILURE;
-	    }
-	}
-    }
-
+    w = savescr();
     if (id && id->deps && strlen(id->deps)) {
 	char t[2048 * 8], *cp, *cp2;
 
@@ -741,6 +734,22 @@ index_extract(Device *dev, PkgNodePtr top, PkgNodePtr who, Boolean depended)
     }
     /* Done with the deps?  Load the real m'coy */
     if (DITEM_STATUS(status) == DITEM_SUCCESS) {
+	/* Prompt user if the package is not available on the current volume. */
+	if(mediaDevice->type == DEVICE_TYPE_CDROM) {
+	    while (id->volume != dev->volume) {
+		if (!msgYesNo("This is disc #%d.  Package %s is on disc #%d\n"
+			  "Would you like to switch discs now?\n", dev->volume,
+			  id->name, id->volume)) {
+		    DEVICE_SHUTDOWN(mediaDevice);
+		    msgConfirm("Please remove disc #%d from your drive, and add disc #%d\n",
+			dev->volume, id->volume);
+		    DEVICE_INIT(mediaDevice);
+		} else {
+		    restorescr(w);
+		    return DITEM_FAILURE;
+		}
+	    }
+	}
 	status = package_extract(dev, who->name, depended);
 	if (DITEM_STATUS(status) == DITEM_SUCCESS)
 	    id->installed = 1;

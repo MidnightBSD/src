@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: once.h,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: once.h,v 1.3 2001/01/09 21:57:56 bwelling Exp $ */
 
 #ifndef ISC_ONCE_H
 #define ISC_ONCE_H 1

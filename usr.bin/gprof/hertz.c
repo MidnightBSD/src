@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)hertz.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/gprof/hertz.c,v 1.3 2004/10/03 18:22:35 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/gprof/hertz.c 136099 2004-10-03 18:22:35Z stefanf $");
 
 #include <sys/time.h>
 

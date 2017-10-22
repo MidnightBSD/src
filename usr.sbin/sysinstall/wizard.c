@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: src/usr.sbin/sysinstall/wizard.c,v 1.23 2004/08/02 23:18:48 marcel Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/wizard.c 174854 2007-12-22 06:32:46Z cvs2svn $
  *
  */
 
@@ -15,7 +15,7 @@
 #include <err.h>
 #include <libdisk.h>
 
-int
+static int
 scan_block(int fd, daddr_t block)
 {
     u_char foo[512];
@@ -27,7 +27,7 @@ scan_block(int fd, daddr_t block)
     return 0;
 }
 
-void
+static void
 Scan_Disk(Disk *d)
 {
     char device[64];

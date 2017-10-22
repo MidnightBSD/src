@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)indent_globs.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/indent/indent_globs.h,v 1.10 2004/06/27 10:58:37 schweikh Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/indent/indent_globs.h 152395 2005-11-13 20:37:25Z dwmalone $
  */
 
 #define BACKSLASH '\\'
@@ -131,6 +131,7 @@ char       *bp_save;		/* saved value of buf_ptr when taking input
 char       *be_save;		/* similarly saved value of buf_end */
 
 
+int         found_err;
 int         pointer_as_binop;
 int         blanklines_after_declarations;
 int         blanklines_before_blockcomments;

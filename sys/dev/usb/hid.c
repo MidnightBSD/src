@@ -2,7 +2,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/hid.c,v 1.25 2005/02/06 12:41:00 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/dev/usb/hid.c 170960 2007-06-20 05:11:37Z imp $");
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -42,9 +42,6 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/hid.c,v 1.25 2005/02/06 12:41:00 obrien Exp 
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#if defined(__NetBSD__)
-#include <sys/kernel.h>
-#endif
 #include <sys/malloc.h>
 
 #include <dev/usb/usb.h>
@@ -53,15 +50,15 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/hid.c,v 1.25 2005/02/06 12:41:00 obrien Exp 
 #include <dev/usb/hid.h>
 
 #ifdef USB_DEBUG
-#define DPRINTF(x)	if (usbdebug) logprintf x
-#define DPRINTFN(n,x)	if (usbdebug>(n)) logprintf x
+#define DPRINTF(x)	if (usbdebug) printf x
+#define DPRINTFN(n,x)	if (usbdebug>(n)) printf x
 extern int usbdebug;
 #else
 #define DPRINTF(x)
 #define DPRINTFN(n,x)
 #endif
 
-Static void hid_clear_local(struct hid_item *);
+static void hid_clear_local(struct hid_item *);
 
 #define MAXUSAGE 100
 struct hid_data {
@@ -77,7 +74,7 @@ struct hid_data {
 	int kindset;
 };
 
-Static void
+static void
 hid_clear_local(struct hid_item *c)
 {
 
@@ -371,14 +368,22 @@ hid_report_size(void *buf, int len, enum hid_kind k, u_int8_t *idp)
 {
 	struct hid_data *d;
 	struct hid_item h;
-	int size, id;
+	int hi, lo, size, id;
 
 	id = 0;
+	hi = lo = -1;
 	for (d = hid_start_parse(buf, len, 1<<k); hid_get_item(d, &h); )
-		if (h.report_ID != 0 && !id)
-			id = h.report_ID;
+		if (h.kind == k) {
+			if (h.report_ID != 0 && !id)
+				id = h.report_ID;
+			if (h.report_ID == id) {
+				if (lo < 0)
+					lo = h.loc.pos;
+				hi = h.loc.pos + h.loc.size * h.loc.count;
+			}
+		}
 	hid_end_parse(d);
-	size = h.loc.pos;
+	size = hi - lo;
 	if (id != 0) {
 		size += 8;
 		*idp = id;	/* XXX wrong */

@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)string.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/include/string.h,v 1.21.2.1 2005/08/29 18:46:39 andre Exp $
+ * $FreeBSD: release/7.0.0/include/string.h 152754 2005-11-24 08:30:44Z ru $
  */
 
 #ifndef _STRING_H_

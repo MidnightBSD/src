@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ng_netflow.4,v 1.11.2.1 2005/11/25 14:49:04 glebius Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man4/ng_netflow.4 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
-.Dd May 11, 2005
+.Dd March 2, 2006
 .Os
 .Dt NG_NETFLOW 4
 .Sh NAME
@@ -108,7 +108,7 @@ Sets data link type on the
 .Va iface Ns Ar N
 hook.
 Currently, supported types are raw IP datagrams and Ethernet.
-This messsage type uses
+This message type uses
 .Vt "struct ng_netflow_setdlt"
 as an argument:
 .Bd -literal -offset 4n
@@ -251,7 +251,7 @@ SEQ
 .Xr flowctl 8 ,
 .Xr ngctl 8
 .Pp
-.Pa http://www.cisco.com/warp/public/cc/pd/iosw/ioft/neflct/tech/napps_wp.htm
+.Pa http://www.cisco.com/univercd/cc/td/doc/cisintwk/intsolns/netflsol/nfwhite.htm
 .Sh AUTHORS
 .An -nosplit
 The

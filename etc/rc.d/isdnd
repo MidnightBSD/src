@@ -1,13 +1,12 @@
 #!/bin/sh
 #
-# $NetBSD: isdnd,v 1.9 2002/04/10 23:37:13 martin Exp $
-# $FreeBSD: src/etc/rc.d/isdnd,v 1.20 2005/01/16 03:12:03 obrien Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/isdnd 175737 2008-01-28 07:58:32Z dougb $
 #
 # Mostly based on original script (/etc/rc.isdn) written by  Hellmuth Michaelis
 #
 
 # PROVIDE: isdnd
-# REQUIRE: netif mountcritlocal cleanvar
+# REQUIRE: netif FILESYSTEMS cleanvar
 # KEYWORD: nojail
 
 . /etc/rc.subr
@@ -15,21 +14,12 @@
 name="isdnd"
 rcvar=`set_rcvar isdn`
 pidfile="/var/run/${name}.pid"
+command="/usr/sbin/isdnd"
 start_cmd="isdnd_start"
 
 isdnd_start()
 {
 	echo -n 'ISDN subsystem setup:'
-
-	# Check for pcvt driver (VT100/VT220 emulator)
-	#
-	if [ -x /usr/sbin/ispcvt ]; then
-		if /usr/sbin/ispcvt; then
-			# No vidcontrol if we are using pcvt
-			#
-			isdn_screenflags=NO
-		fi
-	fi
 
 	# Start isdnd
 	#

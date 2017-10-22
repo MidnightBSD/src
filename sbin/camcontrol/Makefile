@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/camcontrol/Makefile,v 1.16 2004/05/14 13:31:21 cognet Exp $
+# $FreeBSD: release/7.0.0/sbin/camcontrol/Makefile 172093 2007-09-08 20:24:12Z ken $
 
 PROG=	camcontrol
 SRCS=	camcontrol.c util.c
@@ -12,8 +12,8 @@ WARNS?= 3
 .else
 WARNS?=	6
 .endif
-DPADD=	${LIBCAM} ${LIBSBUF}
-LDADD=	-lcam -lsbuf
+DPADD=	${LIBCAM} ${LIBSBUF} ${LIBUTIL}
+LDADD=	-lcam -lsbuf -lutil
 MAN=	camcontrol.8
 
 .include <bsd.prog.mk>

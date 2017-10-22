@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/Makefile.inc,v 1.5 2002/09/25 09:55:20 markm Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/Makefile.inc 103959 2002-09-25 09:55:20Z markm $
 
 BINDIR?=	/usr/bin
 

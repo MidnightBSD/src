@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/ee/Makefile,v 1.24 2002/07/02 12:37:09 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/ee/Makefile 99257 2002-07-02 12:37:09Z ru $
 
 CFLAGS+= -DCAP -DHAS_NCURSES -DHAS_UNISTD -DHAS_STDARG -DHAS_STDLIB \
 	 -DHAS_CTYPE -DHAS_SYS_IOCTL -DHAS_SYS_WAIT -DSLCT_HDR

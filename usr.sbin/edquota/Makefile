@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.sbin/edquota/Makefile,v 1.8 2003/04/04 17:49:13 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/edquota/Makefile 113091 2003-04-04 17:49:21Z obrien $
 
 PROG=	edquota
 MAN=	edquota.8

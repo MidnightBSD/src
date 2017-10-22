@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pc98/cbus/sio.c,v 1.234.2.1 2005/11/06 05:01:03 nyan Exp $
+ * $FreeBSD: release/7.0.0/sys/pc98/cbus/sio.c 171381 2007-07-11 22:30:13Z mjacob $
  *	from: @(#)com.c	7.5 (Berkeley) 5/16/91
  *	from: i386/isa sio.c,v 1.234
  */
@@ -43,8 +43,8 @@
  * Works for National Semiconductor NS8250-NS16550AF UARTs.
  * COM driver, based on HP dca driver.
  *
- * Changes for PC-Card integration:
- *	- Added PC-Card driver table and handlers
+ * Changes for PC Card integration:
+ *	- Added PC Card driver table and handlers
  */
 /*===============================================================
  * 386BSD(98),FreeBSD-1.1x(98) com driver.
@@ -350,7 +350,7 @@ static	void	comclose(struct tty *tp);
 static	int	comopen(struct tty *tp, struct cdev *dev);
 static	void	sioinput(struct com_s *com);
 static	void	siointr1(struct com_s *com);
-static	void	siointr(void *arg);
+static	int	siointr(void *arg);
 static	int	commodem(struct tty *tp, int sigon, int sigoff);
 static	int	comparam(struct tty *tp, struct termios *t);
 static	void	siopoll(void *);
@@ -706,6 +706,7 @@ sysctl_machdep_comdefaultrate(SYSCTL_HANDLER_ARGS)
 
 SYSCTL_PROC(_machdep, OID_AUTO, conspeed, CTLTYPE_INT | CTLFLAG_RW,
 	    0, 0, sysctl_machdep_comdefaultrate, "I", "");
+TUNABLE_INT("machdep.conspeed", __DEVOLATILE(int *, &comdefaultrate));
 
 /*
  *	Unload the driver and clear the table.
@@ -1718,9 +1719,9 @@ determined_type: ;
 	printf("\n");
 
 	if (sio_fast_ih == NULL) {
-		swi_add(&tty_ithd, "sio", siopoll, NULL, SWI_TTY, 0,
+		swi_add(&tty_intr_event, "sio", siopoll, NULL, SWI_TTY, 0,
 		    &sio_fast_ih);
-		swi_add(&clk_ithd, "sio", siopoll, NULL, SWI_CLOCK, 0,
+		swi_add(&clk_intr_event, "sio", siopoll, NULL, SWI_CLOCK, 0,
 		    &sio_slow_ih);
 	}
 
@@ -1737,13 +1738,14 @@ determined_type: ;
 	rid = 0;
 	com->irqres = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid, RF_ACTIVE);
 	if (com->irqres) {
-		ret = BUS_SETUP_INTR(device_get_parent(dev), dev, com->irqres,
-				     INTR_TYPE_TTY | INTR_FAST,
-				     siointr, com, &com->cookie);
+		ret = bus_setup_intr(dev, com->irqres,
+				     INTR_TYPE_TTY,
+				     siointr, NULL, com, &com->cookie);
 		if (ret) {
-			ret = BUS_SETUP_INTR(device_get_parent(dev), dev,
+			ret = bus_setup_intr(dev,
 					     com->irqres, INTR_TYPE_TTY,
-					     siointr, com, &com->cookie);
+					     NULL, (driver_intr_t *)siointr, 
+					     com, &com->cookie);
 			if (ret == 0)
 				device_printf(dev, "unable to activate interrupt in fast mode - using normal mode\n");
 		}
@@ -1762,7 +1764,7 @@ determined_type: ;
 	}
 
 	/* We're ready, open the doors... */
-	ttycreate(tp, NULL, unit, MINOR_CALLOUT, "d%r", unit);
+	ttycreate(tp, TS_CALLOUT, "d%r", unit);
 
 	return (0);
 }
@@ -2154,7 +2156,7 @@ sioinput(com)
 #endif
 }
 
-static void
+static int
 siointr(arg)
 	void		*arg;
 {
@@ -2220,6 +2222,7 @@ siointr(arg)
 	} while (possibly_more_intrs);
 	mtx_unlock_spin(&sio_lock);
 #endif /* COM_MULTIPORT */
+	return (FILTER_HANDLED);
 }
 
 static struct timespec siots[8];
@@ -3451,15 +3454,13 @@ static void siocnclose(struct siocnstate *sp, Port_t iobase);
 static void siocnopen(struct siocnstate *sp, Port_t iobase, int speed);
 static void siocntxwait(Port_t iobase);
 
-static cn_probe_t siocnprobe;
-static cn_init_t siocninit;
-static cn_term_t siocnterm;
-static cn_checkc_t siocncheckc;
-static cn_getc_t siocngetc;
-static cn_putc_t siocnputc;
+static cn_probe_t sio_cnprobe;
+static cn_init_t sio_cninit;
+static cn_term_t sio_cnterm;
+static cn_getc_t sio_cngetc;
+static cn_putc_t sio_cnputc;
 
-CONS_DRIVER(sio, siocnprobe, siocninit, siocnterm, siocngetc, siocncheckc,
-	    siocnputc, NULL);
+CONSOLE_DRIVER(sio);
 
 static void
 siocntxwait(iobase)
@@ -3581,7 +3582,7 @@ siocnclose(sp, iobase)
 }
 
 static void
-siocnprobe(cp)
+sio_cnprobe(cp)
 	struct consdev	*cp;
 {
 	speed_t			boot_speed;
@@ -3664,21 +3665,21 @@ siocnprobe(cp)
 }
 
 static void
-siocninit(cp)
+sio_cninit(cp)
 	struct consdev	*cp;
 {
 	comconsole = cp->cn_unit;
 }
 
 static void
-siocnterm(cp)
+sio_cnterm(cp)
 	struct consdev	*cp;
 {
 	comconsole = -1;
 }
 
 static int
-siocncheckc(struct consdev *cd)
+sio_cngetc(struct consdev *cd)
 {
 	int	c;
 	Port_t	iobase;
@@ -3708,38 +3709,8 @@ siocncheckc(struct consdev *cd)
 	return (c);
 }
 
-static int
-siocngetc(struct consdev *cd)
-{
-	int	c;
-	Port_t	iobase;
-	int	s;
-	struct siocnstate	sp;
-	speed_t	speed;
-
-	if (cd != NULL && cd->cn_unit == siocnunit) {
-		iobase = siocniobase;
-		speed = comdefaultrate;
-	} else {
-#ifdef GDB
-		iobase = siogdbiobase;
-		speed = gdbdefaultrate;
-#else
-		return (-1);
-#endif
-	}
-	s = spltty();
-	siocnopen(&sp, iobase, speed);
-	while (!(inb(iobase + com_lsr) & LSR_RXRDY))
-		;
-	c = inb(iobase + com_data);
-	siocnclose(&sp, iobase);
-	splx(s);
-	return (c);
-}
-
 static void
-siocnputc(struct consdev *cd, int c)
+sio_cnputc(struct consdev *cd, int c)
 {
 	int	need_unlock;
 	int	s;
@@ -3785,11 +3756,9 @@ static gdb_probe_f siogdbprobe;
 static gdb_init_f siogdbinit;
 static gdb_term_f siogdbterm;
 static gdb_getc_f siogdbgetc;
-static gdb_checkc_f siogdbcheckc;
 static gdb_putc_f siogdbputc;
 
-GDB_DBGPORT(sio, siogdbprobe, siogdbinit, siogdbterm, siogdbcheckc,
-    siogdbgetc, siogdbputc);
+GDB_DBGPORT(sio, siogdbprobe, siogdbinit, siogdbterm, siogdbgetc, siogdbputc);
 
 static int
 siogdbprobe(void)
@@ -3810,19 +3779,13 @@ siogdbterm(void)
 static void
 siogdbputc(int c)
 {
-	siocnputc(NULL, c);
-}
-
-static int
-siogdbcheckc(void)
-{
-	return (siocncheckc(NULL));
+	sio_cnputc(NULL, c);
 }
 
 static int
 siogdbgetc(void)
 {
-	return (siocngetc(NULL));
+	return (sio_cngetc(NULL));
 }
 
 #endif
@@ -4351,6 +4314,10 @@ pc98_check_if_type(device_t dev, struct siodev *iod)
 		else
 		    iod->irq = irq_tab[0][tmp & 0x07];
 	    }
+	    iod->cmd  = 0;
+	    iod->sts  = 0;
+	    iod->mod  = 0;
+	    iod->ctrl = 0;
 	}
 	if ( iod->irq == -1 ) return -1;
 

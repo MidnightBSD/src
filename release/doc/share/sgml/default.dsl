@@ -1,4 +1,4 @@
-<!-- $FreeBSD: src/release/doc/share/sgml/default.dsl,v 1.2 2001/06/02 23:12:23 dd Exp $ -->
+<!-- $FreeBSD: release/7.0.0/release/doc/share/sgml/default.dsl 174854 2007-12-22 06:32:46Z cvs2svn $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY release.dsl PUBLIC "-//FreeBSD//DOCUMENT Release Notes DocBook Stylesheet//EN" CDATA DSSSL>

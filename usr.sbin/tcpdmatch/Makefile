@@ -1,4 +1,6 @@
-# $FreeBSD: src/usr.sbin/tcpdmatch/Makefile,v 1.9 2004/12/21 10:49:28 ru Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/tcpdmatch/Makefile 156813 2006-03-17 18:54:44Z ru $
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../contrib/tcp_wrappers
 
@@ -8,7 +10,7 @@ SRCS=	tcpdmatch.c fakelog.c inetcf.c scaffold.c
 
 CFLAGS+=-DREAL_DAEMON_DIR=\"/usr/libexec\" \
 	-DSEVERITY=LOG_INFO -DRFC931_TIMEOUT=10
-.if !defined(NO_INET6)
+.if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=-DINET6
 .endif
 

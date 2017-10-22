@@ -23,7 +23,7 @@
  * Copies of this Software may be made, however, the above copyright
  * notice must be reproduced on all copies.
  *
- *	@(#) $FreeBSD: src/sys/netatm/spans/spans_var.h,v 1.9 2005/01/07 01:45:38 imp Exp $
+ *	@(#) $FreeBSD: release/7.0.0/sys/netatm/spans/spans_var.h 139823 2005-01-07 01:45:51Z imp $
  *
  */
 

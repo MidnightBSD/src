@@ -48,7 +48,7 @@ static char sccsid[] = "@(#)indent.c	5.17 (Berkeley) 6/7/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/indent/indent.c,v 1.23 2004/06/27 10:58:37 schweikh Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/indent/indent.c 162264 2006-09-13 05:06:12Z charnier $");
 
 #include <sys/param.h>
 #include <err.h>
@@ -69,8 +69,6 @@ const char *in_name = "Standard Input";	/* will always point to name of input
 const char *out_name = "Standard Output";	/* will always point to name
 						 * of output file */
 char        bakfile[MAXPATHLEN] = "";
-
-extern int  found_err;	/* flag set in diagN() on error */
 
 int
 main(int argc, char **argv)
@@ -154,6 +152,7 @@ main(int argc, char **argv)
     be_save = 0;
 
     output = 0;
+    tabs_to_var = 0;
 
     /*--------------------------------------------------*\
     |   		COMMAND LINE SCAN		 |

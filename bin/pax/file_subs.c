@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)file_subs.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pax/file_subs.c,v 1.21 2004/04/06 20:06:48 markm Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/pax/file_subs.c 169926 2007-05-24 06:44:37Z rse $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -284,7 +284,7 @@ mk_link(char *to, struct stat *to_sb, char *from,
 		 */
 		if ((to_sb->st_dev==sb.st_dev)&&(to_sb->st_ino == sb.st_ino)) {
 			paxwarn(1, "Unable to link file %s to itself", to);
-			return(-1);;
+			return(-1);
 		}
 
 		/*

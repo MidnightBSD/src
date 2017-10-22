@@ -1,6 +1,6 @@
-/* $FreeBSD: src/gnu/usr.bin/patch/inp.h,v 1.7 2002/04/28 01:33:45 gad Exp $
+/* $FreeBSD: release/7.0.0/gnu/usr.bin/patch/inp.h 95601 2002-04-28 01:33:45Z gad $
  *
- * $Log: not supported by cvs2svn $
+ * $Log: inp.h,v $
  * Revision 2.0  86/09/17  15:37:25  lwall
  * Baseline for netwide release.
  *

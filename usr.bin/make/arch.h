@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/make/arch.h,v 1.5 2005/05/18 06:50:38 harti Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/make/arch.h 146338 2005-05-18 06:50:39Z harti $
  */
 
 #ifndef arch_h_488adf7a

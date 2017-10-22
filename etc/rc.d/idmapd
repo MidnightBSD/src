@@ -1,0 +1,18 @@
+#!/bin/sh
+#
+# $FreeBSD: release/7.0.0/etc/rc.d/idmapd 163378 2006-10-15 14:19:06Z ceri $
+#
+
+# PROVIDE: idmapd
+# REQUIRE: rpcbind
+# KEYWORD: nojail
+
+. /etc/rc.subr
+
+name="idmapd"
+
+load_rc_config $name
+rcvar="idmapd_enable"
+command="${idmapd:-/sbin/${name}}"
+eval ${name}_flags=\"${idmapd_flags}\"
+run_rc_command "$1"

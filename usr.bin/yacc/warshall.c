@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)warshall.c	5.4 (Berkeley) 5/24/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/yacc/warshall.c,v 1.12 2002/04/09 11:39:05 ru Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/yacc/warshall.c 94276 2002-04-09 11:39:05Z ru $");
 
 #include "defs.h"
 

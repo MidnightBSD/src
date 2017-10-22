@@ -33,9 +33,9 @@
  *	i4b daemon - network monitor client
  *	-----------------------------------
  *
- *	$Id: main.c,v 1.1.1.2 2006-02-25 02:38:29 laffer1 Exp $
+ *	$Id: main.c,v 1.35 2000/08/24 11:48:57 hm Exp $
  *
- * $FreeBSD: src/usr.sbin/i4b/isdnmonitor/main.c,v 1.8 2000/10/09 14:22:42 hm Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdnmonitor/main.c 160194 2006-07-09 05:53:24Z cperciva $
  *
  *      last edit-date: [Mon Dec 13 21:52:11 1999]
  *
@@ -71,6 +71,9 @@ int getopt(int nargc, char * const nargv[], const char *ostr);
 #endif
 #ifdef ERROR
 #undef ERROR
+#endif
+#ifdef __FreeBSD__
+#include <osreldate.h>
 #endif
 
 #define MAIN
@@ -137,7 +140,7 @@ static void
 usage()
 {
         fprintf(stderr, "\n");
-        fprintf(stderr, "isdnmonitor - version %02d.%02d.%d, %s %s (protocol %02d.%02d)\n", VERSION, REL, STEP, __DATE__, __TIME__, MPROT_VERSION, MPROT_REL);
+        fprintf(stderr, "isdnmonitor - version %02d.%02d.%d, (protocol %02d.%02d)\n", VERSION, REL, STEP, MPROT_VERSION, MPROT_REL);
 #ifdef FOREIGN
         fprintf(stderr, "  usage: isdnmonitor [-c] [-d val] [-f name] [-h host] [-p port]\n");
 #else
@@ -518,9 +521,6 @@ print_logevent(time_t tstamp, int prio, char * what, char * msg)
  * to write to the last column in the logfilewindow without causing an
  * automatic newline to occur resulting in a blank line in that window.
  */
-#ifdef __FreeBSD__
-#include <osreldate.h>
-#endif
 #if defined(__FreeBSD_version) && __FreeBSD_version >= 400009
 #warning "FreeBSD ncurses is buggy: write to last column = auto newline!"
 	                wprintw(lower_w, "%s %s %-.*s\n", buf, what,

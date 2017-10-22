@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/uni/uni_load.c,v 1.12 2005/01/07 01:45:37 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/netatm/uni/uni_load.c 139823 2005-01-07 01:45:51Z imp $");
 
 #ifndef ATM_UNI_MODULE
 #include "opt_atm.h"

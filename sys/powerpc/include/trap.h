@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $NetBSD: trap.h,v 1.7 2002/02/22 13:51:40 kleink Exp $
- * $FreeBSD: src/sys/powerpc/include/trap.h,v 1.4 2005/01/07 02:29:19 imp Exp $ 
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/trap.h 171782 2007-08-07 18:39:28Z marcel $ 
  */
 
 #ifndef	_POWERPC_TRAP_H_
@@ -102,5 +102,12 @@
 /* Macros to extract register information */
 #define EXC_ALI_RST(dsisr) ((dsisr >> 5) & 0x1f)   /* source or target */
 #define EXC_ALI_RA(dsisr) (dsisr & 0x1f)
+
+#ifndef LOCORE
+
+struct trapframe;
+void    trap(struct trapframe *);
+
+#endif
 
 #endif	/* _POWERPC_TRAP_H_ */

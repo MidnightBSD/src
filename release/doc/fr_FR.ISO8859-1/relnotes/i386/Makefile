@@ -2,8 +2,8 @@
 #      The FreeBSD Documentation Project
 #      The FreeBSD French Documentation Project
 #
-#      $Id: Makefile,v 1.1.1.2 2006-02-25 02:35:16 laffer1 Exp $
-#      $FreeBSD: src/release/doc/fr_FR.ISO8859-1/relnotes/i386/Makefile,v 1.2 2002/10/19 16:26:33 gioria Exp $
+#      $Id$
+#      $FreeBSD: release/7.0.0/release/doc/fr_FR.ISO8859-1/relnotes/i386/Makefile 105459 2002-10-19 16:26:33Z gioria $
 #      Original revision: 1.6
 
 RELN_ROOT?= ${.CURDIR}/../../..

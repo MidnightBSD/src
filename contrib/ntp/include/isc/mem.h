@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: mem.h,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: mem.h,v 1.58 2001/09/07 00:51:51 marka Exp $ */
 
 #ifndef ISC_MEM_H
 #define ISC_MEM_H 1

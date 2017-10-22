@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: proc.h,v 1.2 1997/04/16 22:57:48 thorpej Exp $
- * $FreeBSD: src/sys/powerpc/include/proc.h,v 1.7 2005/04/04 21:53:55 jhb Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/proc.h 144637 2005-04-04 21:53:56Z jhb $
  */
 
 #ifndef _MACHINE_PROC_H_

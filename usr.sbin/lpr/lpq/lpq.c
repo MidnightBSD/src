@@ -45,7 +45,7 @@ static char sccsid[] = "@(#)lpq.c	8.3 (Berkeley) 5/10/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: src/usr.sbin/lpr/lpq/lpq.c,v 1.12 2003/07/15 08:48:30 gad Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/lpr/lpq/lpq.c 117623 2003-07-15 08:48:30Z gad $");
 
 /*
  * Spool Queue examination program

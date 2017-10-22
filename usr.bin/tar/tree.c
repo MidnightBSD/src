@@ -1,13 +1,12 @@
 /*-
- * Copyright (c) 2003-2004 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -44,15 +43,29 @@
  * regular dir or via fchdir(2) for a symlink).
  */
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/tree.c,v 1.2 2005/05/08 06:25:15 kientzle Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/tar/tree.c 167450 2007-03-11 10:36:42Z kientzle $");
 
+#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
+#endif
+#ifdef HAVE_DIRENT_H
 #include <dirent.h>
+#endif
+#ifdef HAVE_ERRNO_H
 #include <errno.h>
+#endif
+#ifdef HAVE_FCNTL_H
 #include <fcntl.h>
+#endif
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif
+#ifdef HAVE_STRING_H
 #include <string.h>
+#endif
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 #include "tree.h"
 
@@ -130,7 +143,7 @@ tree_dump(struct tree *t, FILE *out)
 	fprintf(out, "\tpwd: "); fflush(stdout); system("pwd");
 	fprintf(out, "\taccess: %s\n", t->basename);
 	fprintf(out, "\tstack:\n");
-	for(te = t->stack; te != NULL; te = te->next) {
+	for (te = t->stack; te != NULL; te = te->next) {
 		fprintf(out, "\t\tte->name: %s%s%s\n", te->name,
 		    te->flags & needsPreVisit ? "" : " *",
 		    t->current == te ? " (current)" : "");
@@ -311,13 +324,14 @@ tree_next(struct tree *t)
 				t->tree_errno = errno;
 				return (t->visit_type = TREE_ERROR_DIR);
 			}
+			t->depth++;
 			t->d = opendir(".");
 			if (t->d == NULL) {
+				tree_ascend(t); /* Undo "chdir" */
 				tree_pop(t);
 				t->tree_errno = errno;
 				return (t->visit_type = TREE_ERROR_DIR);
 			}
-			t->depth++;
 			t->flags &= ~hasLstat;
 			t->flags &= ~hasStat;
 			t->basename = ".";
@@ -393,46 +407,70 @@ tree_current_lstat(struct tree *t)
 }
 
 /*
- * Test whether current entry is a dir or dir link.
+ * Test whether current entry is a dir or link to a dir.
  */
 int
 tree_current_is_dir(struct tree *t)
 {
-	/* If we've already pulled stat(), just use that. */
-	if (t->flags & hasStat)
-		return (S_ISDIR(tree_current_stat(t)->st_mode));
+	const struct stat *st;
 
-	/* If we've already pulled lstat(), we may be able to use that. */
+	/*
+	 * If we already have lstat() info, then try some
+	 * cheap tests to determine if this is a dir.
+	 */
 	if (t->flags & hasLstat) {
 		/* If lstat() says it's a dir, it must be a dir. */
 		if (S_ISDIR(tree_current_lstat(t)->st_mode))
 			return 1;
-		/* If it's not a dir and not a link, we're done. */
+		/* Not a dir; might be a link to a dir. */
+		/* If it's not a link, then it's not a link to a dir. */
 		if (!S_ISLNK(tree_current_lstat(t)->st_mode))
 			return 0;
 		/*
-		 * If the above two tests fail, then it's a link, but
-		 * we don't know whether it's a link to a dir or a
-		 * non-dir.
+		 * It's a link, but we don't know what it's a link to,
+		 * so we'll have to use stat().
 		 */
 	}
 
-	/* TODO: Use a more efficient mechanism when available. */
-	return (S_ISDIR(tree_current_stat(t)->st_mode));
+	st = tree_current_stat(t);
+	/* If we can't stat it, it's not a dir. */
+	if (st == NULL)
+		return 0;
+	/* Use the definitive test.  Hopefully this is cached. */
+	return (S_ISDIR(st->st_mode));
 }
 
 /*
- * Test whether current entry is a physical directory.
+ * Test whether current entry is a physical directory.  Usually, we
+ * already have at least one of stat() or lstat() in memory, so we
+ * use tricks to try to avoid an extra trip to the disk.
  */
 int
 tree_current_is_physical_dir(struct tree *t)
 {
-	/* If we've already pulled lstat(), just use that. */
-	if (t->flags & hasLstat)
-		return (S_ISDIR(tree_current_lstat(t)->st_mode));
+	const struct stat *st;
 
-	/* TODO: Use a more efficient mechanism when available. */
-	return (S_ISDIR(tree_current_lstat(t)->st_mode));
+	/*
+	 * If stat() says it isn't a dir, then it's not a dir.
+	 * If stat() data is cached, this check is free, so do it first.
+	 */
+	if ((t->flags & hasStat)
+	    && (!S_ISDIR(tree_current_stat(t)->st_mode)))
+		return 0;
+
+	/*
+	 * Either stat() said it was a dir (in which case, we have
+	 * to determine whether it's really a link to a dir) or
+	 * stat() info wasn't available.  So we use lstat(), which
+	 * hopefully is already cached.
+	 */
+
+	st = tree_current_lstat(t);
+	/* If we can't stat it, it's not a dir. */
+	if (st == NULL)
+		return 0;
+	/* Use the definitive test.  Hopefully this is cached. */
+	return (S_ISDIR(st->st_mode));
 }
 
 /*
@@ -441,12 +479,10 @@ tree_current_is_physical_dir(struct tree *t)
 int
 tree_current_is_physical_link(struct tree *t)
 {
-	/* If we've already pulled lstat(), just use that. */
-	if (t->flags & hasLstat)
-		return (S_ISLNK(tree_current_lstat(t)->st_mode));
-
-	/* TODO: Use a more efficient mechanism when available. */
-	return (S_ISLNK(tree_current_lstat(t)->st_mode));
+	const struct stat *st = tree_current_lstat(t);
+	if (st == NULL)
+		return 0;
+	return (S_ISLNK(st->st_mode));
 }
 
 /*

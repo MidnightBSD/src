@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ia64/ia32/ia32_trap.c,v 1.5 2005/04/12 23:18:54 jhb Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia32/ia32_trap.c 170291 2007-06-04 21:38:48Z attilio $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -36,6 +36,7 @@ __FBSDID("$FreeBSD: src/sys/ia64/ia32/ia32_trap.c,v 1.5 2005/04/12 23:18:54 jhb 
 #include <sys/mutex.h>
 #include <sys/pioctl.h>
 #include <sys/proc.h>
+#include <sys/ptrace.h>
 #include <sys/signalvar.h>
 #include <sys/syscall.h>
 #include <sys/sysent.h>
@@ -45,9 +46,9 @@ __FBSDID("$FreeBSD: src/sys/ia64/ia32/ia32_trap.c,v 1.5 2005/04/12 23:18:54 jhb 
 #include <machine/md_var.h>
 #include <i386/include/psl.h>
 
-#ifdef WITNESS
+#include <security/audit/audit.h>
+
 extern char *syscallnames[];
-#endif
 
 static void
 ia32_syscall(struct trapframe *tf)
@@ -61,8 +62,9 @@ ia32_syscall(struct trapframe *tf)
 	register_t eflags;
 	u_int code;
 	int error, i, narg;
+	ksiginfo_t ksi;
 
-	PCPU_LAZY_INC(cnt.v_syscall);
+	PCPU_INC(cnt.v_syscall);
 
 	td = curthread;
 	params = (caddr_t)(tf->tf_special.sp & ((1L<<32)-1)) +
@@ -96,7 +98,7 @@ ia32_syscall(struct trapframe *tf)
 	else
 		callp = &p->p_sysent->sv_table[code];
 
-	narg = callp->sy_narg & SYF_ARGMASK;
+	narg = callp->sy_narg;
 
 	/* copyin and the ktrsyscall()/ktrsysret() code is MP-aware */
 	if (params != NULL && narg != 0)
@@ -111,12 +113,8 @@ ia32_syscall(struct trapframe *tf)
 	if (KTRPOINT(td, KTR_SYSCALL))
 		ktrsyscall(code, narg, args64);
 #endif
-	/*
-	 * Try to run the syscall without Giant if the syscall
-	 * is MP safe.
-	 */
-	if ((callp->sy_narg & SYF_MPSAFE) == 0)
-		mtx_lock(&Giant);
+	CTR4(KTR_SYSC, "syscall enter thread %p pid %d proc %s code %d", td,
+	    td->td_proc->p_pid, td->td_proc->p_comm, code);
 
 	if (error == 0) {
 		td->td_retval[0] = 0;
@@ -124,7 +122,11 @@ ia32_syscall(struct trapframe *tf)
 
 		STOPEVENT(p, S_SCE, narg);
 
+		PTRACESTOP_SC(p, td, S_PT_SCE);
+
+		AUDIT_SYSCALL_ENTER(code, td);
 		error = (*callp->sy_call)(td, args64);
+		AUDIT_SYSCALL_EXIT(error, td);
 	}
 
 	switch (error) {
@@ -158,19 +160,35 @@ ia32_syscall(struct trapframe *tf)
 	}
 
 	/*
-	 * Release Giant if we previously set it.
-	 */
-	if ((callp->sy_narg & SYF_MPSAFE) == 0)
-		mtx_unlock(&Giant);
-
-	/*
 	 * Traced syscall.
 	 */
 	if ((eflags & PSL_T) && !(eflags & PSL_VM)) {
 		ia64_set_eflag(ia64_get_eflag() & ~PSL_T);
-		trapsignal(td, SIGTRAP, 0);
+		ksiginfo_init_trap(&ksi);
+		ksi.ksi_signo = SIGTRAP;
+		ksi.ksi_code = TRAP_TRACE;
+		ksi.ksi_addr = (void *)tf->tf_special.iip;
+		trapsignal(td, &ksi);
 	}
 
+	/*
+	 * Check for misbehavior.
+	 */
+	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
+	KASSERT(td->td_critnest == 0,
+	    ("System call %s returning in a critical section",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???"));
+	KASSERT(td->td_locks == 0,
+	    ("System call %s returning with %d locks held",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???",
+	    td->td_locks));
+
+	/*
+	 * End of syscall tracing.
+	 */
+	CTR4(KTR_SYSC, "syscall exit thread %p pid %d proc %s code %d", td,
+	    td->td_proc->p_pid, td->td_proc->p_comm, code);
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_SYSRET))
 		ktrsysret(code, error, td->td_retval[0]);
@@ -182,11 +200,8 @@ ia32_syscall(struct trapframe *tf)
 	 * is not the case, this code will need to be revisited.
 	 */
 	STOPEVENT(p, S_SCX, code);
-
-	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
-	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
-	mtx_assert(&sched_lock, MA_NOTOWNED);
-	mtx_assert(&Giant, MA_NOTOWNED);
+ 
+	PTRACESTOP_SC(p, td, S_PT_SCX);
 }
 
 /*
@@ -200,16 +215,16 @@ ia32_trap(int vector, struct trapframe *tf)
 	struct thread *td;
 	uint64_t ucode;
 	int sig;
-	u_int sticks;
+	ksiginfo_t ksi;
 
 	KASSERT(TRAPF_USERMODE(tf), ("%s: In kernel mode???", __func__));
 
 	ia64_set_fpsr(IA64_FPSR_DEFAULT);
-	PCPU_LAZY_INC(cnt.v_trap);
+	PCPU_INC(cnt.v_trap);
 
 	td = curthread;
 	td->td_frame = tf;
-	sticks = td->td_sticks;
+	td->td_pticks = 0;
 	p = td->td_proc;
 	if (td->td_ucred != p->p_ucred)
 		cred_update_thread(td);
@@ -284,10 +299,14 @@ ia32_trap(int vector, struct trapframe *tf)
 
 	KASSERT(sig != 0, ("%s: signal not set", __func__));
 
-	trapsignal(td, sig, ucode);
+	ksiginfo_init_trap(&ksi);
+	ksi.ksi_signo = sig;
+	ksi.ksi_code = (int)ucode; /* XXX */
+	/* ksi.ksi_addr */
+	trapsignal(td, &ksi);
 
 out:
-	userret(td, tf, sticks);
+	userret(td, tf);
 	mtx_assert(&Giant, MA_NOTOWNED);
 	do_ast(tf);
 }

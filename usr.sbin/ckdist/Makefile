@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/ckdist/Makefile,v 1.5 2001/07/20 06:19:39 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/ckdist/Makefile 80029 2001-07-20 06:20:32Z obrien $
 
 .PATH: ${.CURDIR}/../../usr.bin/cksum
 

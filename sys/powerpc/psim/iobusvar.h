@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/psim/iobusvar.h,v 1.3 2005/01/07 02:29:21 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/psim/iobusvar.h 139825 2005-01-07 02:29:27Z imp $
  */
 
 #ifndef _PSIM_IOBUSVAR_H_

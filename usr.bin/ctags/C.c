@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)C.c	8.4 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ctags/C.c,v 1.11 2002/07/28 15:50:38 dwmalone Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ctags/C.c 166503 2007-02-04 20:07:07Z rse $");
 
 #include <limits.h>
 #include <stdio.h>
@@ -114,7 +114,7 @@ c_entries(void)
 		 */
 		case '"':
 		case '\'':
-			(void)skip_string(c);
+			skip_string(c);
 			break;
 
 		/*

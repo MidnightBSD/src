@@ -1,7 +1,7 @@
 /*
  * lookup.c - Lookup IP address, HW address, netmask
  *
- * $FreeBSD: src/libexec/bootpd/lookup.c,v 1.7 1999/08/28 00:09:19 peter Exp $
+ * $FreeBSD: release/7.0.0/libexec/bootpd/lookup.c 50476 1999-08-28 00:22:10Z peter $
  */
 
 #include <sys/types.h>

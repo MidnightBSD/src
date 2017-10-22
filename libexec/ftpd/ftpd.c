@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)ftpd.c	8.4 (Berkeley) 4/16/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/libexec/ftpd/ftpd.c,v 1.206.2.1 2006/01/29 13:21:05 yar Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/libexec/ftpd/ftpd.c 168849 2007-04-18 22:43:39Z yar $");
 
 /*
  * FTP server.
@@ -128,6 +128,7 @@ int	logging;
 int	restricted_data_ports = 1;
 int	paranoid = 1;	  /* be extra careful about security */
 int	anon_only = 0;    /* Only anonymous ftp allowed */
+int	assumeutf8 = 0;   /* Assume that server file names are in UTF-8 */
 int	guest;
 int	dochroot;
 char	*chrootdir;
@@ -239,7 +240,7 @@ static	int transflag;		/* NB: for debugging only */
 	}
 
 #ifdef VIRTUAL_HOSTING
-static void	 inithosts(void);
+static void	 inithosts(int);
 static void	 selecthost(union sockunion *);
 #endif
 static void	 ack(char *);
@@ -308,7 +309,7 @@ main(int argc, char *argv[], char **envp)
 	openlog("ftpd", LOG_PID | LOG_NDELAY, LOG_FTP);
 
 	while ((ch = getopt(argc, argv,
-	                    "46a:AdDEhlmMoOp:P:rRSt:T:u:UvW")) != -1) {
+	                    "468a:AdDEhlmMoOp:P:rRSt:T:u:UvW")) != -1) {
 		switch (ch) {
 		case '4':
 			family = (family == AF_INET6) ? AF_UNSPEC : AF_INET;
@@ -316,6 +317,10 @@ main(int argc, char *argv[], char **envp)
 
 		case '6':
 			family = (family == AF_INET) ? AF_UNSPEC : AF_INET6;
+			break;
+
+		case '8':
+			assumeutf8 = 1;
 			break;
 
 		case 'a':
@@ -423,10 +428,6 @@ main(int argc, char *argv[], char **envp)
 		}
 	}
 
-#ifdef VIRTUAL_HOSTING
-	inithosts();
-#endif
-
 	if (daemon_mode) {
 		int *ctl_sock, fd, maxfd = -1, nfds, i;
 		fd_set defreadfds, readfds;
@@ -455,6 +456,10 @@ main(int argc, char *argv[], char **envp)
 
 		sa.sa_handler = reapchild;
 		(void)sigaction(SIGCHLD, &sa, NULL);
+
+#ifdef VIRTUAL_HOSTING
+		inithosts(family);
+#endif
 
 		/*
 		 * Open a socket, bind it to the FTP port, and start
@@ -525,6 +530,15 @@ main(int argc, char *argv[], char **envp)
 			syslog(LOG_ERR, "getpeername (%s): %m",argv[0]);
 			exit(1);
 		}
+
+#ifdef VIRTUAL_HOSTING
+		if (his_addr.su_family == AF_INET6 &&
+		    IN6_IS_ADDR_V4MAPPED(&his_addr.su_sin6.sin6_addr))
+			family = AF_INET;
+		else
+			family = his_addr.su_family;
+		inithosts(family);
+#endif
 	}
 
 gotchild:
@@ -663,7 +677,7 @@ sigquit(int signo)
  */
 
 static void
-inithosts(void)
+inithosts(int family)
 {
 	int insert;
 	size_t len;
@@ -688,8 +702,9 @@ inithosts(void)
 	hrp->hostinfo = NULL;
 
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_flags = AI_CANONNAME;
-	hints.ai_family = AF_UNSPEC;
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_family = family;
+	hints.ai_socktype = SOCK_STREAM;
 	if (getaddrinfo(hrp->hostname, NULL, &hints, &res) == 0)
 		hrp->hostinfo = res;
 	hrp->statfile = _PATH_FTPDSTATFILE;
@@ -759,9 +774,9 @@ inithosts(void)
 						/* NOTREACHED */
 					}
 
-			hints.ai_flags = 0;
-			hints.ai_family = AF_UNSPEC;
 			hints.ai_flags = AI_PASSIVE;
+			hints.ai_family = family;
+			hints.ai_socktype = SOCK_STREAM;
 			if (getaddrinfo(vhost, NULL, &hints, &res) != 0)
 				goto nextline;
 			for (ai = res; ai != NULL && ai->ai_addr != NULL;
@@ -1861,20 +1876,12 @@ getdatasock(char *mode)
 #ifdef TCP_NOPUSH
 	/*
 	 * Turn off push flag to keep sender TCP from sending short packets
-	 * at the boundaries of each write().  Should probably do a SO_SNDBUF
-	 * to set the send buffer size as well, but that may not be desirable
-	 * in heavy-load situations.
+	 * at the boundaries of each write().
 	 */
 	on = 1;
 	if (setsockopt(s, IPPROTO_TCP, TCP_NOPUSH, &on, sizeof on) < 0)
 		syslog(LOG_WARNING, "data setsockopt (TCP_NOPUSH): %m");
 #endif
-#ifdef SO_SNDBUF
-	on = 65536;
-	if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, &on, sizeof on) < 0)
-		syslog(LOG_WARNING, "data setsockopt (SO_SNDBUF): %m");
-#endif
-
 	return (fdopen(s, mode));
 bad:
 	/* Return the real value of errno (close may change it) */

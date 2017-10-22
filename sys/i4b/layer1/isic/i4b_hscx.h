@@ -31,7 +31,7 @@
 
 /*---------------------------------------------------------------------------
  *
- * $FreeBSD: src/sys/i4b/layer1/isic/i4b_hscx.h,v 1.3 2005/01/06 22:18:20 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/i4b/layer1/isic/i4b_hscx.h 139790 2005-01-06 22:18:23Z imp $
  *
  *      last edit-date: [Wed Jan 24 09:09:51 2001]
  *

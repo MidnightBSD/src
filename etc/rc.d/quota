@@ -1,10 +1,9 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/quota,v 1.5 2004/10/07 13:55:26 mtm Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/quota 175737 2008-01-28 07:58:32Z dougb $
 #
 
 # Enable/Check the quotas (must be after ypbind if using NIS)
-#
 
 # PROVIDE: quota
 # REQUIRE: mountcritremote
@@ -16,18 +15,18 @@
 name="quota"
 rcvar="enable_quotas"
 start_cmd="quota_start"
-stop_cmd="/usr/sbin/quotaoff -a"
+stop_cmd="/usr/sbin/quotaoff ${quotaoff_flags}"
 
 quota_start()
 {
 	if checkyesno check_quotas; then
 		echo -n 'Checking quotas:'
-		quotacheck -a
+		quotacheck ${quotacheck_flags}
 		echo ' done.'
 	fi
 
 	echo -n 'Enabling quotas:'
-	quotaon -a
+	quotaon ${quotaon_flags}
 	echo ' done.'
 }
 

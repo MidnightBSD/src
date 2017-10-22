@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)logger.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/logger/logger.c,v 1.14 2005/05/29 16:04:46 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/logger/logger.c 169344 2007-05-07 11:28:01Z dwmalone $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -63,7 +63,7 @@ __FBSDID("$FreeBSD: src/usr.bin/logger/logger.c,v 1.14 2005/05/29 16:04:46 charn
 
 int	decode(char *, CODE *);
 int	pencode(char *);
-static void	logmessage(int, char *, char *);
+static void	logmessage(int, const char *, const char *, const char *);
 static void	usage(void);
 
 struct socks {
@@ -90,13 +90,15 @@ main(int argc, char *argv[])
 {
 	int ch, logflags, pri;
 	char *tag, *host, buf[1024];
+	const char *svcname;
 
 	tag = NULL;
 	host = NULL;
+	svcname = "syslog";
 	pri = LOG_USER | LOG_NOTICE;
 	logflags = 0;
 	unsetenv("TZ");
-	while ((ch = getopt(argc, argv, "46Af:h:ip:st:")) != -1)
+	while ((ch = getopt(argc, argv, "46Af:h:iP:p:st:")) != -1)
 		switch((char)ch) {
 		case '4':
 			family = PF_INET;
@@ -118,6 +120,9 @@ main(int argc, char *argv[])
 			break;
 		case 'i':		/* log process id also */
 			logflags |= LOG_PID;
+			break;
+		case 'P':		/* service name or port number */
+			svcname = optarg;
 			break;
 		case 'p':		/* priority */
 			pri = pencode(optarg);
@@ -147,11 +152,11 @@ main(int argc, char *argv[])
 		for (p = buf, endp = buf + sizeof(buf) - 2; *argv;) {
 			len = strlen(*argv);
 			if (p + len > endp && p > buf) {
-				logmessage(pri, host, buf);
+				logmessage(pri, host, svcname, buf);
 				p = buf;
 			}
 			if (len > sizeof(buf) - 1)
-				logmessage(pri, host, *argv++);
+				logmessage(pri, host, svcname, *argv++);
 			else {
 				if (p != buf)
 					*p++ = ' ';
@@ -160,10 +165,10 @@ main(int argc, char *argv[])
 			}
 		}
 		if (p != buf)
-			logmessage(pri, host, buf);
+			logmessage(pri, host, svcname, buf);
 	} else
 		while (fgets(buf, sizeof(buf), stdin) != NULL)
-			logmessage(pri, host, buf);
+			logmessage(pri, host, svcname, buf);
 	exit(0);
 }
 
@@ -171,7 +176,7 @@ main(int argc, char *argv[])
  *  Send the message to syslog, either on the local host, or on a remote host
  */
 void 
-logmessage(int pri, char *host, char *buf)
+logmessage(int pri, const char *host, const char *svcname, const char *buf)
 {
 	static struct socks *socks;
 	static int nsock = 0;
@@ -189,9 +194,9 @@ logmessage(int pri, char *host, char *buf)
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_family = family;
 		hints.ai_socktype = SOCK_DGRAM;
-		error = getaddrinfo(host, "syslog", &hints, &res);
+		error = getaddrinfo(host, svcname, &hints, &res);
 		if (error == EAI_SERVICE) {
-			warnx("syslog/udp: unknown service");	/* not fatal */
+			warnx("%s/udp: unknown service", svcname);
 			error = getaddrinfo(host, "514", &hints, &res);
 		}
 		if (error)
@@ -282,7 +287,8 @@ static void
 usage(void)
 {
 	(void)fprintf(stderr, "usage: %s\n",
-	    "logger [-46Ais] [-f file] [-h host] [-p pri] [-t tag] [message ...]"
+	    "logger [-46Ais] [-f file] [-h host] [-P port] [-p pri] [-t tag]\n"
+	    "              [message ...]"
 	    );
 	exit(1);
 }

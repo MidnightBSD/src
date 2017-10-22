@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)colrm.c	8.2 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/colrm/colrm.c,v 1.12 2004/07/29 09:09:22 tjr Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/colrm/colrm.c 132831 2004-07-29 09:09:22Z tjr $");
 
 #include <sys/types.h>
 #include <err.h>

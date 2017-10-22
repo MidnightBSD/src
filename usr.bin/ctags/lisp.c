@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)lisp.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ctags/lisp.c,v 1.7 2002/07/28 15:50:38 dwmalone Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ctags/lisp.c 100822 2002-07-28 15:50:38Z dwmalone $");
 
 #include <ctype.h>
 #include <limits.h>

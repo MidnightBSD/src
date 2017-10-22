@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)print.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ctags/print.c,v 1.9 2002/07/28 15:50:38 dwmalone Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ctags/print.c 100822 2002-07-28 15:50:38Z dwmalone $");
 
 #include <limits.h>
 #include <stdio.h>

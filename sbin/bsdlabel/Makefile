@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 3/17/94
-# $FreeBSD: src/sbin/bsdlabel/Makefile,v 1.19 2004/01/11 09:11:10 nyan Exp $
+# $FreeBSD: release/7.0.0/sbin/bsdlabel/Makefile 161526 2006-08-22 08:03:01Z ru $
 
 .PATH: ${.CURDIR}/../../sys/geom
 
@@ -8,8 +8,7 @@ SRCS=	bsdlabel.c geom_bsd_enc.c
 #MAN=	bsdlabel.5
 MAN+=	bsdlabel.8
 
-.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "alpha" || \
-    ${MACHINE_ARCH} == "amd64"
+.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
 LINKS=	${BINDIR}/bsdlabel ${BINDIR}/disklabel
 MLINKS=	bsdlabel.8 disklabel.8
 .endif

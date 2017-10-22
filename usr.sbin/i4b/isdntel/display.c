@@ -27,9 +27,9 @@
  *	isdntel - isdn4bsd telephone answering machine support
  *      ======================================================
  *
- *	$Id: display.c,v 1.1.1.2 2006-02-25 02:38:29 laffer1 Exp $ 
+ *	$Id: display.c,v 1.9 2000/07/19 08:56:24 hm Exp $ 
  *
- * $FreeBSD: src/usr.sbin/i4b/isdntel/display.c,v 1.7 2000/10/09 14:22:44 hm Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdntel/display.c 66880 2000-10-09 14:22:51Z hm $
  *
  *      last edit-date: [Wed Jul 19 10:08:06 2000]
  *

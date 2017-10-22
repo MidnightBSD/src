@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/2/94
- * $FreeBSD: src/bin/dd/extern.h,v 1.15 2004/08/15 19:10:05 rwatson Exp $
+ * $FreeBSD: release/7.0.0/bin/dd/extern.h 133762 2004-08-15 19:10:05Z rwatson $
  */
 
 void block(void);

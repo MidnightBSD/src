@@ -1,4 +1,4 @@
-$FreeBSD: src/usr.bin/awk/run.c.diff,v 1.1 2005/05/17 14:54:33 ru Exp $
+$FreeBSD: release/7.0.0/usr.bin/awk/run.c.diff 146322 2005-05-17 14:54:33Z ru $
 
 Index: run.c
 ===================================================================

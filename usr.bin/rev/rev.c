@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)rev.c	8.3 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/rev/rev.c,v 1.8 2004/12/15 06:24:57 ssouhlal Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/rev/rev.c 160834 2006-07-30 07:41:28Z maxim $");
 
 #include <sys/types.h>
 
@@ -96,7 +96,6 @@ main(int argc, char *argv[])
 		while ((p = fgetwln(fp, &len)) != NULL) {
 			if (p[len - 1] == '\n')
 				--len;
-			t = p + len - 1;
 			for (t = p + len - 1; t >= p; --t)
 				putwchar(*t);
 			putwchar('\n');

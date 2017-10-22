@@ -55,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/machdep.c,v 1.89.2.1 2005/08/08 07:02:12 grehan Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/machdep.c 175495 2008-01-19 18:15:07Z kib $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
@@ -104,12 +104,12 @@ __FBSDID("$FreeBSD: src/sys/powerpc/powerpc/machdep.c,v 1.89.2.1 2005/08/08 07:0
 #include <vm/vm_pager.h>
 
 #include <machine/bat.h>
-#include <machine/clock.h>
 #include <machine/cpu.h>
 #include <machine/elf.h>
 #include <machine/fpu.h>
 #include <machine/md_var.h>
 #include <machine/metadata.h>
+#include <machine/mmuvar.h>
 #include <machine/pcb.h>
 #include <machine/powerpc.h>
 #include <machine/reg.h>
@@ -135,9 +135,6 @@ vm_offset_t	kstack0_phys;
 
 char		machine[] = "powerpc";
 SYSCTL_STRING(_hw, HW_MACHINE, machine, CTLFLAG_RD, machine, 0, "");
-
-static char	model[128];
-SYSCTL_STRING(_hw, HW_MODEL, model, CTLFLAG_RD, model, 0, "");
 
 static int cacheline_size = CACHELINESIZE;
 SYSCTL_INT(_machdep, CPU_CACHELINE, cacheline_size,
@@ -168,6 +165,14 @@ extern int	ofmsr;
 struct bat	battable[16];
 
 struct kva_md_info kmi;
+
+void setPQL2(int *const size, int *const ways);
+
+void
+setPQL2(int *const size, int *const ways)
+{
+	return;
+}
 
 static void
 powerpc_ofw_shutdown(void *junk, int howto)
@@ -287,7 +292,7 @@ powerpc_init(u_int startkernel, u_int endkernel, u_int basekernel, void *mdp)
 	/*
 	 * Start initializing proc0 and thread0.
 	 */
-	proc_linkup(&proc0, &ksegrp0, &thread0);
+	proc_linkup0(&proc0, &thread0);
 	thread0.td_frame = &frame0;
 
 	/*
@@ -317,6 +322,8 @@ powerpc_init(u_int startkernel, u_int endkernel, u_int basekernel, void *mdp)
 
 	kdb_init();
 
+	kobj_machdep_init();
+
 	/*
 	 * XXX: Initialize the interrupt tables.
 	 *      Disable translation in case the vector area
@@ -329,7 +336,7 @@ powerpc_init(u_int startkernel, u_int endkernel, u_int basekernel, void *mdp)
 	bcopy(&dsitrap,  (void *)EXC_DSI,  (size_t)&dsisize);
 	bcopy(&trapcode, (void *)EXC_ISI,  (size_t)&trapsize);
 	bcopy(&trapcode, (void *)EXC_EXI,  (size_t)&trapsize);
-	bcopy(&trapcode, (void *)EXC_ALI,  (size_t)&trapsize);
+	bcopy(&alitrap,  (void *)EXC_ALI,  (size_t)&alisize);
 	bcopy(&trapcode, (void *)EXC_PGM,  (size_t)&trapsize);
 	bcopy(&trapcode, (void *)EXC_FPU,  (size_t)&trapsize);
 	bcopy(&trapcode, (void *)EXC_DECR, (size_t)&trapsize);
@@ -358,6 +365,7 @@ powerpc_init(u_int startkernel, u_int endkernel, u_int basekernel, void *mdp)
 	/*
 	 * Initialise virtual memory.
 	 */
+	pmap_mmu_install(MMU_TYPE_OEA, 0);		/* XXX temporary */
 	pmap_bootstrap(startkernel, endkernel);
 
 	/*
@@ -432,7 +440,7 @@ bzero(void *buf, size_t len)
 }
 
 void
-sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
+sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 {
 	struct trapframe *tf;
 	struct sigframe *sfp;
@@ -441,10 +449,14 @@ sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 	struct thread *td;
 	struct proc *p;
 	int oonstack, rndfsize;
+	int sig;
+	int code;
 
 	td = curthread;
 	p = td->td_proc;
 	PROC_LOCK_ASSERT(p, MA_OWNED);
+	sig = ksi->ksi_signo;
+	code = ksi->ksi_code;
 	psp = p->p_sigacts;
 	mtx_assert(&psp->ps_mtx, MA_OWNED);
 	tf = td->td_frame;
@@ -472,7 +484,7 @@ sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 	 */
 	if ((td->td_pflags & TDP_ALTSTACK) != 0 && !oonstack &&
 	    SIGISMEMBER(psp->ps_sigonstack, sig)) {
-		sfp = (struct sigframe *)((caddr_t)td->td_sigstk.ss_sp +
+		sfp = (struct sigframe *)(td->td_sigstk.ss_sp +
 		   td->td_sigstk.ss_size - rndfsize);
 	} else {
 		sfp = (struct sigframe *)(tf->fixreg[1] - rndfsize);
@@ -512,12 +524,15 @@ sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 		/*
 		 * Fill siginfo structure.
 		 */
+		sf.sf_si = ksi->ksi_info;
 		sf.sf_si.si_signo = sig;
-		sf.sf_si.si_code = code;
-		sf.sf_si.si_addr = (void *)tf->srr0;
+		sf.sf_si.si_addr = (void *) ((tf->exc == EXC_DSI) ? 
+		                             tf->dar : tf->srr0);
 	} else {
 		/* Old FreeBSD-style arguments. */
 		tf->fixreg[FIRSTARG+1] = code;
+		tf->fixreg[FIRSTARG+3] = (tf->exc == EXC_DSI) ? 
+		                             tf->dar : tf->srr0;
 	}
 	mtx_unlock(&psp->ps_mtx);
 	PROC_UNLOCK(p);
@@ -527,7 +542,7 @@ sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 	/*
 	 * copy the frame out to userland.
 	 */
-	if (copyout((caddr_t)&sf, (caddr_t)sfp, sizeof(sf)) != 0) {
+	if (copyout(&sf, sfp, sizeof(*sfp)) != 0) {
 		/*
 		 * Process has trashed its stack. Kill it.
 		 */
@@ -541,25 +556,6 @@ sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 
 	PROC_LOCK(p);
 	mtx_lock(&psp->ps_mtx);
-}
-
-/*
- * Build siginfo_t for SA thread
- */
-void
-cpu_thread_siginfo(int sig, u_long code, siginfo_t *si)
-{
-	struct proc *p;
-	struct thread *td;
-
-	td = curthread;
-	p = td->td_proc;
-	PROC_LOCK_ASSERT(p, MA_OWNED);
-
-	bzero(si, sizeof(*si));
-	si->si_signo = sig;
-	si->si_code = code;
-	/* XXXKSE fill other fields */
 }
 
 int
@@ -717,6 +713,13 @@ set_mcontext(struct thread *td, const mcontext_t *mcp)
 void
 cpu_boot(int howto)
 {
+}
+
+void
+cpu_initclocks(void)
+{
+
+	decr_tc_init();
 }
 
 /* Get current clock frequency for the given cpu id. */

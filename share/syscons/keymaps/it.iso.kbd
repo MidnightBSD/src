@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/syscons/keymaps/it.iso.kbd,v 1.11 2004/01/23 16:37:51 ale Exp $
+# $FreeBSD: release/7.0.0/share/syscons/keymaps/it.iso.kbd 124874 2004-01-23 16:37:51Z ale $
 #
 # Aggiunte ad una tastiera italiana standard :
 #

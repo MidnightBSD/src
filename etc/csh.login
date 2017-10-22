@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/csh.login,v 1.21 2004/06/06 11:46:27 schweikh Exp $
+# $FreeBSD: release/7.0.0/etc/csh.login 130151 2004-06-06 11:46:29Z schweikh $
 #
 # System-wide .login file for csh(1).
 # Uncomment this to give you the default 4.2 behavior, where disk

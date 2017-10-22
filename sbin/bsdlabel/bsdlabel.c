@@ -53,7 +53,7 @@ static char sccsid[] = "@(#)disklabel.c	8.2 (Berkeley) 1/7/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/bsdlabel/bsdlabel.c,v 1.110.2.1 2005/11/10 09:52:56 iedowse Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sbin/bsdlabel/bsdlabel.c 163539 2006-10-20 13:10:27Z maxim $");
 
 #include <sys/param.h>
 #include <stdint.h>
@@ -148,7 +148,7 @@ main(int argc, char *argv[])
 	int ch, error = 0;
 	char const *name = 0;
 
-	while ((ch = getopt(argc, argv, "ABb:efm:nRrs:w")) != -1)
+	while ((ch = getopt(argc, argv, "ABb:efm:nRrw")) != -1)
 		switch (ch) {
 			case 'A':
 				allfields = 1;

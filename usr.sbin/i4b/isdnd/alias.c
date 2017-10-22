@@ -30,11 +30,11 @@
  *	NOTE:	this has to stay in sync with isdntel/alias.c to be able
  *		to share a common aliasfile!
  *		
- *      $Id: alias.c,v 1.1.1.2 2006-02-25 02:38:28 laffer1 Exp $
+ *      $Id: alias.c,v 1.8 1999/12/13 21:25:24 hm Exp $
  *
- * $FreeBSD: src/usr.sbin/i4b/isdnd/alias.c,v 1.7 2000/10/09 14:22:38 hm Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdnd/alias.c 158517 2006-05-13 12:42:55Z hm $
  *
- *      last edit-date: [Mon Dec 13 21:45:19 1999]
+ *      last edit-date: [Sat May 13 13:04:40 2006]
  *
  *----------------------------------------------------------------------------*/
 
@@ -64,7 +64,7 @@ init_alias(char *filename)
 	
 	if((fp = fopen(filename, "r")) == NULL)
 	{
-		log(LL_ERR, "init_alias: error opening aliasfile %s: %s!", filename, strerror(errno));
+		llog(LL_ERR, "init_alias: error opening aliasfile %s: %s!", filename, strerror(errno));
 		exit(1);
 	}
 
@@ -98,19 +98,19 @@ init_alias(char *filename)
 		{
 			if((newa = (struct alias *) malloc(sizeof(struct alias))) == NULL)
 			{
-				log(LL_ERR, "init_alias: malloc failed for struct alias!\n");
+				llog(LL_ERR, "init_alias: malloc failed for struct alias!\n");
 				exit(1);
 			}
 
 			if((newa->number = (char *) malloc(strlen(number)+1)) == NULL)
 			{
-				log(LL_ERR, "init_alias: malloc failed for number alias!\n");
+				llog(LL_ERR, "init_alias: malloc failed for number alias!\n");
 				exit(1);
 			}
 
 			if((newa->name = (char *) malloc(strlen(name)+1)) == NULL)
 			{
-				log(LL_ERR, "init_alias: malloc failed for name alias!\n");
+				llog(LL_ERR, "init_alias: malloc failed for name alias!\n");
 				exit(1);
 			}
 

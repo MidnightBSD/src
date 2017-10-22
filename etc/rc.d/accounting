@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $NetBSD: accounting,v 1.7 2002/03/22 04:33:57 thorpej Exp $
-# $FreeBSD: src/etc/rc.d/accounting,v 1.9 2004/10/07 13:55:25 mtm Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/accounting 175737 2008-01-28 07:58:32Z dougb $
 #
 
 # PROVIDE: accounting
@@ -20,6 +19,8 @@ stop_cmd="accounting_stop"
 
 accounting_start()
 {
+	local _dir
+
 	_dir=`dirname "$accounting_file"`
 	if [ ! -d `dirname "$_dir"` ]; then
 		if ! mkdir -p "$_dir"; then

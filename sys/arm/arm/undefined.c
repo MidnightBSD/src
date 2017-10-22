@@ -48,7 +48,7 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/undefined.c,v 1.8 2005/04/12 23:18:53 jhb Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/undefined.c 170291 2007-06-04 21:38:48Z attilio $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -58,7 +58,6 @@ __FBSDID("$FreeBSD: src/sys/arm/arm/undefined.c,v 1.8 2005/04/12 23:18:53 jhb Ex
 #include <sys/proc.h>
 #include <sys/syslog.h>
 #include <sys/vmmeter.h>
-#include <sys/types.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/signalvar.h>
@@ -134,11 +133,17 @@ static int
 gdb_trapper(u_int addr, u_int insn, struct trapframe *frame, int code)
 {
 	struct thread *td;
+	ksiginfo_t ksi;
+
 	td = (curthread == NULL) ? &thread0 : curthread;
 
 	if (insn == GDB_BREAKPOINT || insn == GDB5_BREAKPOINT) {
 		if (code == FAULT_USER) {
-			trapsignal(td, SIGTRAP, 0);
+			ksiginfo_init_trap(&ksi);
+			ksi.ksi_signo = SIGTRAP;
+			ksi.ksi_code = TRAP_BRKPT;
+			ksi.ksi_addr = (u_int32_t *)addr;
+			trapsignal(td, &ksi);
 			return 0;
 		}
 #if 0
@@ -179,13 +184,14 @@ undefinedinstruction(trapframe_t *frame)
 #ifdef VERBOSE_ARM32
 	int s;
 #endif
+	ksiginfo_t ksi;
 
 	/* Enable interrupts if they were enabled before the exception. */
 	if (!(frame->tf_spsr & I32_bit))
-		enable_interrupts(I32_bit);
+		enable_interrupts(I32_bit|F32_bit);
 
 	frame->tf_pc -= INSN_SIZE;
-	PCPU_LAZY_INC(cnt.v_trap);
+	PCPU_INC(cnt.v_trap);
 
 	fault_pc = frame->tf_pc;
 
@@ -200,8 +206,12 @@ undefinedinstruction(trapframe_t *frame)
 	 * don't take an alignment fault trying to read the opcode.
 	 */
 	if (__predict_false((fault_pc & 3) != 0)) {
-		trapsignal(td, SIGILL, 0);
-		userret(td, frame, 0);
+		ksiginfo_init_trap(&ksi);
+		ksi.ksi_signo = SIGILL;
+		ksi.ksi_code = ILL_ILLADR;
+		ksi.ksi_addr = (u_int32_t *)(intptr_t) fault_pc;
+		trapsignal(td, &ksi);
+		userret(td, frame);
 		return;
 	}
 
@@ -250,23 +260,31 @@ undefinedinstruction(trapframe_t *frame)
 		    break;
 
 	if (fault_code & FAULT_USER && fault_instruction == PTRACE_BREAKPOINT) {
+		PROC_LOCK(td->td_proc);
+		_PHOLD(td->td_proc);
 		ptrace_clear_single_step(td);
+		_PRELE(td->td_proc);
+		PROC_UNLOCK(td->td_proc);
 		return;
 	}
 
 	if (uh == NULL && (fault_code & FAULT_USER)) {
 		/* Fault has not been handled */
-		trapsignal(td, SIGILL, 0);
+		ksiginfo_init_trap(&ksi);
+		ksi.ksi_signo = SIGILL;
+		ksi.ksi_code = ILL_ILLOPC;
+		ksi.ksi_addr = (u_int32_t *)(intptr_t) fault_pc;
+		trapsignal(td, &ksi);
 	}
 
 	if ((fault_code & FAULT_USER) == 0) {
 		if (fault_instruction == KERNEL_BREAKPOINT) {
 #ifdef KDB
-		kdb_trap(T_BREAKPOINT, 0, frame);
+			kdb_trap(T_BREAKPOINT, 0, frame);
 #else
-		printf("No debugger in kernel.\n");
+			printf("No debugger in kernel.\n");
 #endif
-		return;
+			return;
 		} else
 			panic("Undefined instruction in kernel.\n");
 	}
@@ -298,6 +316,6 @@ undefinedinstruction(trapframe_t *frame)
 	}
 
 #else
-	userret(td, frame, 0);
+	userret(td, frame);
 #endif
 }

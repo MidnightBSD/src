@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/tools/regression/lib/msun/test-rem.c,v 1.1 2005/03/25 06:24:46 das Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/tools/regression/lib/msun/test-rem.c 165856 2007-01-07 09:25:22Z das $");
 
 #include <assert.h>
 #include <math.h>
@@ -100,11 +100,15 @@ test_invalid(double x, double y)
 
 	assert(isnan(remainder(x, y)));
 	assert(isnan(remquo(x, y, &q)));
+#ifdef STRICT
 	assert(q == 0xdeadbeef);
+#endif
 
 	assert(isnan(remainderf(x, y)));
 	assert(isnan(remquof(x, y, &q)));
+#ifdef STRICT
 	assert(q == 0xdeadbeef);
+#endif
 }
 
 /* 0x012345 ==> 0x01ffff */
@@ -123,9 +127,11 @@ testd(double x, double y, double expected_rem, int expected_quo)
 	assert(remainder(x, y) == expected_rem);
 	assert(remquo(x, y, &q) == expected_rem);
 	assert((q & 0x7) == (expected_quo & 0x7));
-	assert((q > 0) ^ !(expected_quo > 0));
-	q = abs(q);
-	assert((q & mask(q)) == (abs(expected_quo) & mask(q)));
+	if (q != 0) {
+		assert((q > 0) ^ !(expected_quo > 0));
+		q = abs(q);
+		assert(q == (abs(expected_quo) & mask(q)));
+	}
 }
 
 static void
@@ -137,7 +143,9 @@ testf(float x, float y, float expected_rem, int expected_quo)
 	assert(remainderf(x, y) == expected_rem);
 	assert(remquof(x, y, &q) == expected_rem);
 	assert((q & 0x7) == (expected_quo & 0x7));
-	assert((q > 0) ^ !(expected_quo > 0));
-	q = abs(q);
-	assert((q & mask(q)) == (abs(expected_quo) & mask(q)));
+	if (q != 0) {
+		assert((q > 0) ^ !(expected_quo > 0));
+		q = abs(q);
+		assert((q & mask(q)) == (abs(expected_quo) & mask(q)));
+	}
 }

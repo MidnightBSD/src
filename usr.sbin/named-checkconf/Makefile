@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/named-checkconf/Makefile,v 1.4.2.1 2005/07/30 07:56:28 des Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/named-checkconf/Makefile 170221 2007-06-02 23:19:58Z dougb $
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind9
 LIB_BIND_REL=	../../lib/bind
@@ -14,8 +14,8 @@ SRCS+=		named-checkconf.c check-tool.c
 
 CFLAGS+=	-I${LIB_BIND_DIR}
 
-DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD}
-LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD}
+DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
+LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}
 
 MAN=		named-checkconf.8
 

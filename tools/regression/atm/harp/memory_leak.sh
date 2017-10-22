@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/tools/regression/atm/harp/memory_leak.sh,v 1.1 2004/01/29 15:58:06 harti Exp $
+# $FreeBSD: release/7.0.0/tools/regression/atm/harp/memory_leak.sh 125203 2004-01-29 15:58:06Z harti $
 #
 # Perform memory leak test
 #

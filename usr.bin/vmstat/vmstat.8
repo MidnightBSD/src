@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)vmstat.8	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.bin/vmstat/vmstat.8,v 1.32.2.1 2006/02/17 22:25:02 marck Exp $
+.\" $FreeBSD: release/7.0.0/usr.bin/vmstat/vmstat.8 163921 2006-11-02 19:53:57Z rwatson $
 .\"
-.Dd February 11, 2005
+.Dd October 21, 2006
 .Dt VMSTAT 8
 .Os
 .Sh NAME
@@ -109,8 +109,9 @@ extract the name list from the specified
 instead of the default,
 which is the kernel image the system has booted from.
 .It Fl m
-Report on the usage of kernel dynamic memory listed first by size of
-allocation and then by type of usage.
+Report on the usage of kernel dynamic memory allocated using
+.Xr malloc 9
+by type.
 .It Fl n
 Change the maximum number of disks to display from the default of 2.
 .It Fl p
@@ -201,10 +202,9 @@ If no repeat
 .Ar wait
 interval is specified, the default is 1 second.
 .It Fl z
-Report on memory used by the kernel zone allocator, by zone.
-The information shown is the same as that returned by the
-.Va vm.zone
-sysctl variable.
+Report on memory used by the kernel zone allocator,
+.Xr uma 9 ,
+by zone.
 .El
 .Pp
 By default,
@@ -333,10 +333,13 @@ statistics every second.
 .Xr nfsstat 1 ,
 .Xr ps 1 ,
 .Xr systat 1 ,
+.Xr libmemstat 3 ,
 .Xr gstat 8 ,
 .Xr iostat 8 ,
 .Xr pstat 8 ,
-.Xr sysctl 8
+.Xr sysctl 8 ,
+.Xr malloc 9 ,
+.Xr uma 9
 .Pp
 The sections starting with ``Interpreting system activity'' in
 .%T "Installing and Operating 4.3BSD" .

@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/watch/watch.c,v 1.31.8.1 2005/09/23 23:24:55 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/watch/watch.c 150417 2005-09-21 14:30:14Z cognet $");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>

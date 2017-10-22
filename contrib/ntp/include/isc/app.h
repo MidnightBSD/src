@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: app.h,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: app.h,v 1.1 2001/07/06 19:50:03 gson Exp $ */
 
 #ifndef ISC_APP_H
 #define ISC_APP_H 1

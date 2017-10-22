@@ -15,7 +15,7 @@
 static const char sccsid[] = "@(#)exf.c	10.49 (Berkeley) 10/10/96";
 #endif
 static const char rcsid[] = 
-  "$FreeBSD: src/contrib/nvi/common/exf.c,v 1.5 2001/10/26 08:25:32 jkh Exp $";
+  "$FreeBSD: release/7.0.0/contrib/nvi/common/exf.c 172506 2007-10-10 16:59:15Z cvs2svn $";
 #endif /* not lint */
 
 #include <sys/param.h>

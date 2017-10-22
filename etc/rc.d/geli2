@@ -24,11 +24,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/etc/rc.d/geli2,v 1.1.2.1 2005/08/16 09:20:32 pjd Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/geli2 168283 2007-04-02 22:53:07Z des $
 #
 
 # PROVIDE: geli2
-# REQUIRE: mountcritlocal
+# REQUIRE: FILESYSTEMS
 # KEYWORD: nojail
 
 . /etc/rc.subr

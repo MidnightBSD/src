@@ -1,9 +1,11 @@
-# $FreeBSD: src/etc/namedb/Makefile,v 1.4 2004/12/21 08:46:50 ru Exp $
+# $FreeBSD: release/7.0.0/etc/namedb/Makefile 170913 2007-06-18 05:44:38Z dougb $
 
-FILES=	PROTO.localhost.rev PROTO.localhost-v6.rev named.conf named.root \
-	make-localhost
+SUBDIR=	master
+
+FILES=	named.conf named.root
+
 NO_OBJ=
-FILESDIR= /etc/namedb
-FILESMODE= 644
+FILESDIR=	/etc/namedb
+FILESMODE=	644
 
 .include <bsd.prog.mk>

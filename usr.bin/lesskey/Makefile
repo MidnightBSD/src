@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/lesskey/Makefile,v 1.3 2001/03/27 10:51:48 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/lesskey/Makefile 74848 2001-03-27 10:52:19Z ru $
 
 PROG=	lesskey
 SRCS=	lesskey.c version.c

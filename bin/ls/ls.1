@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)ls.1	8.7 (Berkeley) 7/29/94
-.\" $FreeBSD: src/bin/ls/ls.1,v 1.89.2.3 2005/11/22 20:58:58 ru Exp $
+.\" $FreeBSD: release/7.0.0/bin/ls/ls.1 163263 2006-10-12 10:08:52Z ru $
 .\"
-.Dd November 16, 2005
+.Dd October 12, 2006
 .Dt LS 1
 .Os
 .Sh NAME
@@ -40,7 +40,7 @@
 .Nd list directory contents
 .Sh SYNOPSIS
 .Nm
-.Op Fl ABCFGHILPRSTWZabcdfghiklmnopqrstuwx1
+.Op Fl ABCFGHILPRSTUWZabcdfghiklmnopqrstuwx1
 .Op Ar
 .Sh DESCRIPTION
 For each operand that names a
@@ -68,7 +68,10 @@ lexicographical order.
 The following options are available:
 .Bl -tag -width indent
 .It Fl A
-List all entries except for
+Include directory entries whose names begin with a
+dot
+.Pq Sq Pa \&.
+except for
 .Pa \&.
 and
 .Pa .. .
@@ -149,6 +152,8 @@ When used with the
 .Dq ell )
 option, display complete time information for the file, including
 month, day, hour, minute, second, and year.
+.It Fl U
+Use time when file was created for sorting or printing.
 .It Fl W
 Display whiteouts when scanning directories.
 .It Fl Z
@@ -157,7 +162,7 @@ Display each file's MAC label; see
 .It Fl a
 Include directory entries whose names begin with a
 dot
-.Pq Pa \&. .
+.Pq Sq Pa \&. .
 .It Fl b
 As
 .Fl B ,
@@ -263,11 +268,18 @@ options all override each other; the last one specified determines
 the format used.
 .Pp
 The
-.Fl c
+.Fl c , u ,
 and
-.Fl u
-options override each other; the last one specified determines
+.Fl U
+options all override each other; the last one specified determines
 the file time used.
+.Pp
+The
+.Fl S
+and
+.Fl t
+options override each other; the last one specified determines
+the sort order used.
 .Pp
 The
 .Fl B , b , w ,
@@ -355,6 +367,8 @@ The entry type character describes the type of file, as
 follows:
 .Pp
 .Bl -tag -width 4n -offset indent -compact
+.It Sy \-
+Regular file.
 .It Sy b
 Block special file.
 .It Sy c
@@ -363,12 +377,12 @@ Character special file.
 Directory.
 .It Sy l
 Symbolic link.
-.It Sy s
-Socket link.
 .It Sy p
 .Tn FIFO .
-.It Sy \-
-Regular file.
+.It Sy s
+Socket.
+.It Sy w
+Whiteout.
 .El
 .Pp
 The next three fields
@@ -650,9 +664,7 @@ specification.
 .Xr sticky 8
 .Sh STANDARDS
 With the exception of options
-.Fl I ,
-.Fl g ,
-.Fl n
+.Fl I , g , n
 and
 .Fl o ,
 the

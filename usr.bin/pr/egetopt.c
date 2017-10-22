@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)egetopt.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/pr/egetopt.c,v 1.3 2002/06/23 20:42:30 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/pr/egetopt.c 98698 2002-06-23 20:42:30Z charnier $");
 
 #include <ctype.h>
 #include <stdio.h>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/netinet/tcpconnect/tcpconnect.c,v 1.4 2005/05/16 00:54:47 rwatson Exp $
+ * $FreeBSD: release/7.0.0/tools/regression/netinet/tcpconnect/tcpconnect.c 146251 2005-05-16 00:54:47Z rwatson $
  */
 
 #include <sys/types.h>

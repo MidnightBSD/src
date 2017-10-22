@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)fortran.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ctags/fortran.c,v 1.12 2002/07/28 15:50:38 dwmalone Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ctags/fortran.c 166502 2007-02-04 20:06:10Z rse $");
 
 #include <ctype.h>
 #include <limits.h>
@@ -124,7 +124,7 @@ PF_funcs()
 			continue;
 		for (cp = lbp + 1; *cp && intoken(*cp); ++cp)
 			continue;
-		if ((cp = lbp + 1))
+		if (cp == lbp + 1)
 			continue;
 		*cp = EOS;
 		(void)strlcpy(tok, lbp, sizeof(tok));	/* possible trunc */

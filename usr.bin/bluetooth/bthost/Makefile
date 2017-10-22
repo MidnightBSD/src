@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.1.1.2 2006-02-25 02:38:11 laffer1 Exp $
-# $FreeBSD: src/usr.bin/bluetooth/bthost/Makefile,v 1.2 2005/01/28 16:08:06 ru Exp $
+# $Id: Makefile,v 1.4 2003/08/14 20:07:13 max Exp $
+# $FreeBSD: release/7.0.0/usr.bin/bluetooth/bthost/Makefile 140941 2005-01-28 16:08:11Z ru $
 
 PROG=		bthost
 WARNS?=		2

@@ -1,5 +1,7 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
-# $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
+# $FreeBSD: release/7.0.0/usr.bin/Makefile 172500 2007-10-09 23:31:11Z obrien $
+
+.include <bsd.own.mk>
 
 # XXX MISSING:		deroff diction graph learn plot
 #			spell spline struct xsend
@@ -23,9 +25,9 @@ SUBDIR=	alias \
 	bzip2recover \
 	${_c89} \
 	${_c99} \
-	calendar \
+	${_calendar} \
 	cap_mkdb \
-	catman \
+	${_catman} \
 	chat \
 	checknr \
 	${_chkey} \
@@ -41,6 +43,7 @@ SUBDIR=	alias \
 	compile_et \
 	compress \
 	csplit \
+	${_csup} \
 	ctags \
 	cut \
 	${_dig} \
@@ -67,10 +70,12 @@ SUBDIR=	alias \
 	gcore \
 	gencat \
 	getconf \
+	getent \
 	getopt \
 	${_gprof} \
+	gzip \
 	head \
-	hesinfo \
+	${_hesinfo} \
 	hexdump \
 	${_host} \
 	id \
@@ -133,7 +138,6 @@ SUBDIR=	alias \
 	nohup \
 	${_nslookup} \
 	${_nsupdate} \
-	objformat \
 	opieinfo \
 	opiekey \
 	opiepasswd \
@@ -188,7 +192,6 @@ SUBDIR=	alias \
 	tset \
 	tsort \
 	tty \
-	${_uac} \
 	ul \
 	uname \
 	unexpand \
@@ -227,79 +230,99 @@ SUBDIR=	alias \
 	${_ypmatch} \
 	${_ypwhich}
 
-.if ${MACHINE_ARCH} != "arm" && \
-    ${MACHINE_ARCH} != "powerpc"
+.if ${MACHINE_ARCH} != "arm"
 _truss=		truss
 .endif
 
-.if !defined(NO_ATM)
+.if ${MK_ATM} != "no"
 _atm=		atm
 .endif
 
-.if !defined(NO_BIND) && !defined(NO_BIND_UTILS)
+.if ${MK_MAN} != "no"
+_catman=	catman
+.endif
+
+.if ${MK_BIND_UTILS} != "no"
 _dig=		dig
 _host=		host
 _nslookup=	nslookup
 _nsupdate=	nsupdate
 .endif
 
-.if !defined(NO_BLUETOOTH)
+.if ${MK_BLUETOOTH} != "no"
 _bluetooth=	bluetooth
 .endif
 
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
-_chkey=		chkey
-_newkey=	newkey
+.if ${MK_CALENDAR} != "no"
+_calendar=	calendar
 .endif
 
-.if !defined(NO_NETCAT)
+.if ${MK_OPENSSL} != "no"
+_chkey=		chkey
+_newkey=	newkey
+.if ${MK_LIBTHR} != "no" || ${MK_LIBKSE} != "no"
+_csup=		csup
+.endif
+.endif
+
+.if ${MK_HESIOD} != "no"
+_hesinfo=	hesinfo
+.endif
+
+.if ${MK_NETCAT} != "no"
 _nc=		nc
 .endif
 
-.if !defined(NO_NIS) 
+.if ${MK_NIS} != "no"
 _ypcat=		ypcat
 _ypmatch=	ypmatch
 _ypwhich=	ypwhich
 .endif
 
-.if !defined(NO_RCMDS)
+.if ${MK_RCMDS} != "no"
 _rlogin=	rlogin
 _rsh=		rsh
 .endif
 
-.if !defined(NO_SENDMAIL)
+.if ${MK_SENDMAIL} != "no"
 _vacation=	vacation
 .endif
 
-.if !defined(NO_TOOLCHAIN)
+.if ${MK_TOOLCHAIN} != "no"
 _c89=		c89
 _c99=		c99
-.if ${MACHINE_ARCH} != "powerpc"
 _gprof=		gprof
-.endif
 _lex=		lex
 _xlint=		xlint
 _yacc=		yacc
 .endif
 
-.if !defined(NO_USB)
+.if ${MK_USB} != "no"
 _usbhidaction=	usbhidaction
 _usbhidctl=	usbhidctl
 .endif
 
 .if ${MACHINE_ARCH} == "i386"
+.if ${MK_NCP} != "no"
 _ncplist=	ncplist
 _ncplogin=	ncplogin
+.endif
 _smbutil=	smbutil
 .endif
 
-.if ${MACHINE_ARCH} == "alpha"
-_uac=		uac
+.if ${MACHINE_ARCH} == "ia64"
+_smbutil=	smbutil
 .endif
 
 .if ${MACHINE_ARCH} == "amd64"
+.if ${MK_NCP} != "no"
 _ncplist=	ncplist
 _ncplogin=	ncplogin
+.endif
+_smbutil=	smbutil
+.endif
+
+.if ${MACHINE_ARCH} == "powerpc"
 _smbutil=	smbutil
 .endif
 

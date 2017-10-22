@@ -1,7 +1,7 @@
-# $FreeBSD: src/tools/regression/netinet/udpconnectjail/Makefile,v 1.2 2005/01/22 22:42:39 rwatson Exp $
+# $FreeBSD: release/7.0.0/tools/regression/netinet/udpconnectjail/Makefile 156735 2006-03-15 10:46:38Z ru $
 
 PROG=	udpconnectjail
-NO_MAN=	yes
+NO_MAN=
 WARNS?=	2
 
 .include <bsd.prog.mk>

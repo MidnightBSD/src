@@ -1,4 +1,4 @@
-# $FreeBSD: src/libexec/rpc.sprayd/Makefile,v 1.6 2001/03/26 14:22:08 ru Exp $
+# $FreeBSD: release/7.0.0/libexec/rpc.sprayd/Makefile 74814 2001-03-26 14:22:12Z ru $
 
 PROG =	rpc.sprayd
 SRCS =	sprayd.c

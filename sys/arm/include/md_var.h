@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/i386/include/md_var.h,v 1.40 2001/07/12
- * $FreeBSD: src/sys/arm/include/md_var.h,v 1.2 2004/09/23 22:30:05 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/md_var.h 166063 2007-01-17 00:53:05Z cognet $
  */
 
 #ifndef	_MACHINE_MD_VAR_H_
@@ -35,5 +35,18 @@
 
 extern char sigcode[];
 extern int szsigcode;
+
+extern int (*_arm_memcpy)(void *, void *, int, int);
+extern int (*_arm_bzero)(void *, int, int);
+
+extern int _min_memcpy_size;
+extern int _min_bzero_size;
+
+#define DST_IS_USER	0x1
+#define SRC_IS_USER	0x2
+#define IS_PHYSICAL	0x4
+
+extern int busdma_swi_pending;
+void busdma_swi(void);
 
 #endif /* !_MACHINE_MD_VAR_H_ */

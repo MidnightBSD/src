@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)print.c	8.6 (Berkeley) 4/16/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/ps/print.c,v 1.93 2004/07/20 05:52:00 tjr Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/ps/print.c 172207 2007-09-17 05:31:39Z jeff $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -197,14 +197,13 @@ logname(KINFO *k, VARENT *ve)
 void
 state(KINFO *k, VARENT *ve)
 {
-	int flag, sflag, tdflags;
+	int flag, tdflags;
 	char *cp;
 	VAR *v;
 	char buf[16];
 
 	v = ve->var;
 	flag = k->ki_p->ki_flag;
-	sflag = k->ki_p->ki_sflag;
 	tdflags = k->ki_p->ki_tdflags;	/* XXXKSE */
 	cp = buf;
 
@@ -242,7 +241,7 @@ state(KINFO *k, VARENT *ve)
 		*cp = '?';
 	}
 	cp++;
-	if (!(sflag & PS_INMEM))
+	if (!(flag & P_INMEM))
 		*cp++ = 'W';
 	if (k->ki_p->ki_nice < NZERO)
 		*cp++ = '<';
@@ -366,6 +365,8 @@ tname(KINFO *k, VARENT *ve)
 		if (strncmp(ttname, "tty", 3) == 0 ||
 		    strncmp(ttname, "cua", 3) == 0)
 			ttname += 3;
+		if (strncmp(ttname, "pts/", 4) == 0)
+			ttname += 4;
 		(void)printf("%*.*s%c", v->width - 1, v->width - 1, ttname,
 		    k->ki_p->ki_kiflag & KI_CTTY ? ' ' : '-');
 	}
@@ -589,7 +590,7 @@ getpcpu(const KINFO *k)
 #define	fxtofl(fixpt)	((double)(fixpt) / fscale)
 
 	/* XXX - I don't like this */
-	if (k->ki_p->ki_swtime == 0 || (k->ki_p->ki_sflag & PS_INMEM) == 0)
+	if (k->ki_p->ki_swtime == 0 || (k->ki_p->ki_flag & P_INMEM) == 0)
 		return (0.0);
 	if (rawcpu)
 		return (100.0 * fxtofl(k->ki_p->ki_pctcpu));
@@ -617,7 +618,7 @@ getpmem(KINFO *k)
 	if (failure)
 		return (0.0);
 
-	if ((k->ki_p->ki_sflag & PS_INMEM) == 0)
+	if ((k->ki_p->ki_flag & P_INMEM) == 0)
 		return (0.0);
 	/* XXX want pmap ptpages, segtab, etc. (per architecture) */
 	/* XXX don't have info about shared */

@@ -27,9 +27,9 @@
  *	facility.c - decode Q.932 facilities
  *	------------------------------------
  *
- *	$Id: facility.c,v 1.1.1.2 2006-02-25 02:38:28 laffer1 Exp $
+ *	$Id: facility.c,v 1.5 2000/02/21 15:17:17 hm Exp $
  *
- * $FreeBSD: src/usr.sbin/i4b/isdndecode/facility.c,v 1.7 2000/10/09 14:22:41 hm Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdndecode/facility.c 66880 2000-10-09 14:22:51Z hm $
  *
  *      last edit-date: [Mon Feb 21 16:15:43 2000]
  *

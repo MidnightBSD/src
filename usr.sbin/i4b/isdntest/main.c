@@ -27,11 +27,11 @@
  *	main.c - i4b selftest utility
  *	-----------------------------
  *
- *	$Id: main.c,v 1.1.1.2 2006-02-25 02:38:29 laffer1 Exp $ 
+ *	$Id: main.c,v 1.16 2000/03/13 16:18:38 hm Exp $ 
  *
- * $FreeBSD: src/usr.sbin/i4b/isdntest/main.c,v 1.8 2000/10/09 14:22:45 hm Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdntest/main.c 171272 2007-07-06 07:21:56Z bz $
  *
- *      last edit-date: [Mon Mar 13 17:19:26 2000]
+ *      last edit-date: [Sat May 13 16:50:38 2006]
  *
  *---------------------------------------------------------------------------*/
 
@@ -49,8 +49,8 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_cause.h>
+#include <i4b/i4b_ioctl.h>
+#include <i4b/i4b_cause.h>
 
 static void kbdrdhdl ( void );
 static void isdnrdhdl (int isdnfd );
@@ -95,7 +95,7 @@ static void
 usage(void)
 {
 	fprintf(stderr, "\n");
-	fprintf(stderr, "isdntest - i4b selftest, version %d.%d.%d, compiled %s %s\n",VERSION, REL, STEP, __DATE__, __TIME__);
+	fprintf(stderr, "isdntest - i4b selftest, version %d.%d.%d\n",VERSION, REL, STEP);
 	fprintf(stderr, "usage: isdntest [-c ctrl] [-d level] [-h] [-i telno] [-o telno] [-t num] [-w]\n");
 	fprintf(stderr, "       -c <ctrl>     specify controller to use\n");
 	fprintf(stderr, "       -d <level>    set debug level\n");	
@@ -487,7 +487,7 @@ handle_disconnect(unsigned char *ptr)
 	}
 	else
 	{
-		fprintf(stderr, "isdntest: incoming disconnect indication, cdid %d (???), cause %d\n",
+		fprintf(stderr, "isdntest: incoming disconnect indication, cdid %d (\?\?\?), cause %d\n",
 			mdi->header.cdid, mdi->cause);
 	}		
 }

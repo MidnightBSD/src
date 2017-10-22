@@ -56,7 +56,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)protosw.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/netinet/ipprotosw.h,v 1.6 2005/01/07 01:45:44 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/netinet/ipprotosw.h 174854 2007-12-22 06:32:46Z cvs2svn $
  */
 
 #ifndef _NETINET_IPPROTOSW_H_

@@ -1,4 +1,4 @@
-$FreeBSD: src/tools/diag/README,v 1.6 2002/02/06 17:50:05 phantom Exp $
+$FreeBSD: release/7.0.0/tools/diag/README 90309 2002-02-06 17:50:05Z phantom $
 
 This directory is for diagnostic programs.
 

@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/cc/f771/Makefile,v 1.13 2004/12/21 08:46:59 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/cc/f771/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 .include "${.CURDIR}/../Makefile.inc"
 

@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)login.1	8.2 (Berkeley) 5/5/94
-.\" $FreeBSD: src/usr.bin/login/login.1,v 1.28 2004/10/16 00:13:38 brueffer Exp $
+.\" $FreeBSD: release/7.0.0/usr.bin/login/login.1 174357 2007-12-06 10:50:35Z philip $
 .\"
-.Dd October 16, 2004
+.Dd September 13, 2006
 .Dt LOGIN 1
 .Os
 .Sh NAME
@@ -78,13 +78,11 @@ The
 option disables this behavior.
 .El
 .Pp
-If the file
-.Pa /etc/login.access
-exists,
-.Nm
-checks to see if the user and host pair are specifically allowed or denied
-access.
-Login access may also be controlled via the login class, which provides
+Login access can be controlled via
+.Xr login.access 5
+or the login class in
+.Xr login.conf 5 ,
+which provides
 allow and deny records based on time, tty and remote host name.
 .Pp
 If the file
@@ -124,12 +122,17 @@ command which is similar or identical to this utility.
 Consult the
 .Xr builtin 1
 manual page.
+.Pp
+The
+.Nm
+utility will submit an audit record when login succeeds or fails.
+Failure to determine the current auditing state will
+result in an error exit from
+.Nm .
 .Sh FILES
-.Bl -tag -width ".Pa /etc/login.access" -compact
+.Bl -tag -width ".Pa /etc/security/audit_control" -compact
 .It Pa /etc/fbtab
 changes device protections
-.It Pa /etc/login.access
-login access control table
 .It Pa /etc/login.conf
 login class capabilities database
 .It Pa /etc/motd
@@ -143,19 +146,23 @@ configure authentication services
 .It Pa /etc/pam.d/login
 .Xr pam 8
 configuration file
+.It Pa /etc/security/audit_user
+user flags for auditing
+.It Pa /etc/security/audit_control
+global flags for auditing
 .El
 .Sh SEE ALSO
 .Xr builtin 1 ,
 .Xr chpass 1 ,
 .Xr csh 1 ,
+.Xr newgrp 1 ,
 .Xr passwd 1 ,
 .Xr rlogin 1 ,
 .Xr getpass 3 ,
 .Xr fbtab 5 ,
 .Xr login.access 5 ,
 .Xr login.conf 5 ,
-.Xr environ 7 ,
-.Xr pam 8
+.Xr environ 7
 .Sh HISTORY
 A
 .Nm

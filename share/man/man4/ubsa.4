@@ -33,17 +33,29 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ubsa.4,v 1.5 2004/10/16 21:36:19 le Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man4/ubsa.4 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
-.Dd October 16, 2004
+.Dd May 8, 2007
 .Dt UBSA 4
 .Os
 .Sh NAME
 .Nm ubsa
 .Nd USB support for Belkin serial adapters
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device ubsa"
 .Cd "device ucom"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+ubsa_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -61,6 +73,8 @@ driver supports the following adapters:
 .Pp
 .Bl -bullet -compact
 .It
+AnyData ADU-E100A (no EV-DO mode support)
+.It
 Belkin F5U103
 .It
 Belkin F5U120
@@ -69,10 +83,24 @@ e-Tek Labs Kwik232
 .It
 GoHubs GoCOM232
 .It
-Peracom single port serial adapter
+Huawei Technologies Mobile card (3G)
 .It
-Vodafone Mobile Connect 3G datacard
+Novatel Wireless Merlin U740 (only basic modem port supported)
+.It
+Option Globetrotter 3G (aka Vodafone Mobile Connect Card 3G)
+.It
+Option Globetrotter 3G Quad
+.It
+Option Globetrotter 3G Fusion (no WLAN support, only basic 3G modem port)
+.It
+Option Globetrotter 3G Fusion Quad (no WLAN support)
+.It
+Peracom single port serial adapter
 .El
+.Pp
+The supported 3G cards provide the necessary modem port for ppp,
+pppd, or mpd connections; other functions of these cards (diagnostic port,
+SIM toolkit port, WLAN) are not supported.
 .Sh SEE ALSO
 .Xr tty 4 ,
 .Xr ucom 4 ,

@@ -4,7 +4,7 @@
 #	isdn telephone answering
 #	-------------------------
 #
-# $FreeBSD: src/etc/isdn/isdntel.sh,v 1.4 1999/09/13 15:44:20 sheldonh Exp $
+# $FreeBSD: release/7.0.0/etc/isdn/isdntel.sh 51231 1999-09-13 15:44:20Z sheldonh $
 #
 #	last edit-date: [Thu May 20 11:45:04 1999]
 #

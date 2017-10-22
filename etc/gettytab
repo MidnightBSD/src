@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/gettytab,v 1.22.8.1 2006/01/25 07:39:42 matteo Exp $
+# $FreeBSD: release/7.0.0/etc/gettytab 157658 2006-04-11 09:54:23Z des $
 #	from: @(#)gettytab	5.14 (Berkeley) 3/27/91
 #
 # Most of the table entries here are just copies of the old getty table,
@@ -204,6 +204,16 @@ A|Auto-baud:\
 
 autologin|al.9600:\
 	:al=root:tc=std.9600:
+al.19200:\
+	:al=root:tc=std.19200:
+al.38400:\
+	:al=root:tc=std.38400:
+al.57600:\
+	:al=root:tc=std.57600:
+al.115200:\
+	:al=root:tc=std.115200:
+al.230400:\
+	:al=root:tc=std.230400:
 
 #
 # Entries for 3-wire serial terminals.  These don't supply carrier, so

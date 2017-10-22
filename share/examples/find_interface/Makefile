@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/examples/find_interface/Makefile,v 1.5 2004/12/21 08:47:09 ru Exp $
+# $FreeBSD: release/7.0.0/share/examples/find_interface/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 PROG=	find_interface
 NO_MAN=

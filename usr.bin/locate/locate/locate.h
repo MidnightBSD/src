@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)locate.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/locate/locate/locate.h,v 1.7 1999/08/28 01:02:59 peter Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/locate/locate/locate.h 50477 1999-08-28 01:08:13Z peter $
  */
 
 /* Symbolic constants shared by locate.c and code.c */

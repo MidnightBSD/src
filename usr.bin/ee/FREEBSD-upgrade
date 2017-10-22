@@ -1,4 +1,4 @@
-$FreeBSD: src/usr.bin/ee/FREEBSD-upgrade,v 1.2 2001/06/11 03:45:25 ache Exp $
+$FreeBSD: release/7.0.0/usr.bin/ee/FREEBSD-upgrade 78048 2001-06-11 03:45:33Z ache $
 
 Hugh F. Mahon's EasyEditor
 	originals can be found at: 	http://mahon.cwx.net/

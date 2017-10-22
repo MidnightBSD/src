@@ -37,7 +37,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)config.h	8.2 (Berkeley) 4/28/95
- * $FreeBSD: src/usr.bin/make/config.h,v 1.16 2005/02/01 10:50:35 harti Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/make/config.h 141104 2005-02-01 10:50:37Z harti $
  */
 
 #ifndef config_h_efe0765e

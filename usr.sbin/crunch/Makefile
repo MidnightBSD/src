@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/crunch/Makefile,v 1.2 2001/07/20 06:19:43 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/crunch/Makefile 80029 2001-07-20 06:20:32Z obrien $
 
 SUBDIR=	crunchgen crunchide
 

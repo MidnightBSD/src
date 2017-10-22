@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pc98/cbus/sc_machdep.h,v 1.5 2001/07/14 08:07:26 nyan Exp $
+ * $FreeBSD: release/7.0.0/sys/pc98/cbus/sc_machdep.h 79708 2001-07-14 08:07:26Z nyan $
  */
 
 #ifndef _PC98_PC98_SC_MACHDEP_H_

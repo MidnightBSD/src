@@ -1,10 +1,10 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.bin/quota/Makefile,v 1.5 2003/06/15 06:46:24 rwatson Exp $
+# $FreeBSD: release/7.0.0/usr.bin/quota/Makefile 163599 2006-10-21 23:57:38Z ru $
 
 PROG=	quota
 BINOWN=	root
 
-DPADD=	${LIBRPCSVC}
-LDADD=	-lrpcsvc
+DPADD=	${LIBRPCSVC} ${LIBUTIL}
+LDADD=	-lrpcsvc -lutil
 
 .include <bsd.prog.mk>

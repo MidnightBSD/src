@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/powerpc/elf_machdep.c,v 1.22 2004/08/11 02:35:05 marcel Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/powerpc/elf_machdep.c 169846 2007-05-22 02:22:58Z kan $
  */
 
 #include <sys/param.h>
@@ -85,6 +85,7 @@ static Elf32_Brandinfo freebsd_brand_info = {
 						"/libexec/ld-elf.so.1",
 						&elf32_freebsd_sysvec,
 						NULL,
+						BI_CAN_EXEC_DYN,
 					  };
 
 SYSINIT(elf32, SI_SUB_EXEC, SI_ORDER_ANY,
@@ -99,6 +100,7 @@ static Elf32_Brandinfo freebsd_brand_oinfo = {
 						"/usr/libexec/ld-elf.so.1",
 						&elf32_freebsd_sysvec,
 						NULL,
+						BI_CAN_EXEC_DYN,
 					  };
 
 SYSINIT(oelf32, SI_SUB_EXEC, SI_ORDER_ANY,

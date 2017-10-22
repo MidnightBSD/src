@@ -44,7 +44,7 @@
 
 #include <machine/asm.h>
 #include "assym.s"
-__FBSDID("$FreeBSD: src/sys/arm/arm/in_cksum_arm.S,v 1.5 2005/05/24 21:44:34 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/in_cksum_arm.S 150859 2005-10-03 14:07:09Z cognet $");
 
 /*
  * int in_cksum(struct mbuf *m, int len)
@@ -93,10 +93,10 @@ ENTRY(in_cksum)
 
 
 ENTRY(do_cksum)
-	stmfd	sp!, {r4-r11, lr}
+	stmfd	sp!, {r4-r7, lr}
 	bl	L_cksumdata
 	mov	r0, r2
-	ldmfd	sp!, {r4-r11, pc}
+	ldmfd	sp!, {r4-r7, pc}
 /*
  * The main in*_cksum() workhorse...
  *

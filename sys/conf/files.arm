@@ -1,4 +1,6 @@
-# $FreeBSD: src/sys/conf/files.arm,v 1.8 2005/06/09 19:45:07 jkoshy Exp $
+# $FreeBSD: release/7.0.0/sys/conf/files.arm 174854 2007-12-22 06:32:46Z cvs2svn $
+crypto/blowfish/bf_enc.c	optional	crypto | ipsec 
+crypto/des/des_enc.c		optional	crypto | ipsec | netsmb
 arm/arm/autoconf.c	standard
 arm/arm/bcopy_page.S	standard
 arm/arm/bcopyinout.S		standard
@@ -15,16 +17,17 @@ arm/arm/cpufunc_asm_sa11x0.S 	standard
 arm/arm/db_disasm.c		optional	ddb
 arm/arm/db_interface.c		optional	ddb
 arm/arm/db_trace.c		optional	ddb
-arm/arm/disassem.c		standard
+arm/arm/disassem.c		optional	ddb
 arm/arm/dump_machdep.c		standard
 arm/arm/elf_machdep.c		standard
 arm/arm/exception.S		standard
 arm/arm/fiq.c			standard
 arm/arm/fiq_subr.S		standard
 arm/arm/fusu.S			standard
+arm/arm/gdb_machdep.c		optional	gdb
 arm/arm/identcpu.c		standard
-arm/arm/in_cksum.c		standard
-arm/arm/in_cksum_arm.S		standard
+arm/arm/in_cksum.c		optional	inet
+arm/arm/in_cksum_arm.S		optional	inet
 arm/arm/intr.c			standard
 arm/arm/locore.S		standard	no-obj
 arm/arm/machdep.c		standard
@@ -46,11 +49,17 @@ arm/arm/vm_machdep.c		standard
 arm/fpe-arm/armfpe_glue.S	optional	armfpe
 arm/fpe-arm/armfpe_init.c	optional	armfpe
 arm/fpe-arm/armfpe.S		optional	armfpe
-dev/hwpmc/hwpmc_arm.c		optional	hwpmc
 geom/geom_bsd.c			standard
 geom/geom_bsd_enc.c		standard
 geom/geom_mbr.c			standard
 geom/geom_mbr_enc.c		standard
+hal.o				optional	ath_hal		\
+	compile-with		"ATH_HAL_CPU=`echo ${CONF_CFLAGS}|sed 's/.*-mcpu=\([a-zA-Z0-9]*\).*/\1/'`; ATH_ENDIAN=`if (echo ${CC}|grep mbig-endian>/dev/null); then echo be; else echo le; fi;`; uudecode < $S/contrib/dev/ath/public/$$ATH_HAL_CPU-$$ATH_ENDIAN-elf.hal.o.uu" \
+	no-implicit-rule
+opt_ah.h			optional	ath_hal		\
+	compile-with		"ATH_HAL_CPU=`echo ${CONF_CFLAGS}|sed 's/.*-mcpu=\([a-zA-Z0-9]*\).*/\1/'`; ATH_ENDIAN=`if (echo ${CC}|grep mbig-endian>/dev/null); then echo be; else echo le; fi;`; rm -f opt_ah.h; cp $S/contrib/dev/ath/public/$$ATH_HAL_CPU-$$ATH_ENDIAN-elf.opt_ah.h opt_ah.h" \
+	no-obj no-implicit-rule before-depend			\
+	clean		"opt_ah.h"
 libkern/arm/divsi3.S		standard
 libkern/arm/ffs.S		standard
 libkern/arm/muldi3.c		standard
@@ -58,6 +67,7 @@ libkern/ashldi3.c		standard
 libkern/ashrdi3.c		standard
 libkern/divdi3.c		standard
 libkern/ffsl.c			standard
+libkern/fls.c			standard
 libkern/flsl.c			standard
 libkern/lshrdi3.c		standard
 libkern/moddi3.c		standard

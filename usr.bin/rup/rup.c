@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/rup/rup.c,v 1.18.2.1 2006/01/30 00:29:15 philip Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/rup/rup.c 153090 2005-12-04 18:25:26Z philip $");
 
 #include <sys/param.h>
 #include <sys/socket.h>

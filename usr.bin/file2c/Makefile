@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/file2c/Makefile,v 1.8 2005/05/15 06:26:59 marcel Exp $
+# $FreeBSD: release/7.0.0/usr.bin/file2c/Makefile 146231 2005-05-15 06:26:59Z marcel $
 
 PROG=	file2c
 WARNS?=	6

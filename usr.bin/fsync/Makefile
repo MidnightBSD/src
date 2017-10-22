@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/fsync/Makefile,v 1.5 2005/01/25 14:12:01 ssouhlal Exp $
+# $FreeBSD: release/7.0.0/usr.bin/fsync/Makefile 140811 2005-01-25 14:12:01Z ssouhlal $
 
 PROG=	fsync
 

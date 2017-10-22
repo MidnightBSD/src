@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/lib/exec.c,v 1.10 2002/04/01 09:39:07 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/exec.c 167972 2007-03-28 05:33:52Z njl $");
 
 #include "lib.h"
 #include <err.h>
@@ -68,8 +68,8 @@ vpipe(const char *fmt, ...)
 
     rp = malloc(MAXPATHLEN);
     if (!rp) {
-        warnx("vpipe can't alloc buffer space");
-        return NULL;
+	warnx("vpipe can't alloc buffer space");
+	return NULL;
     }
     maxargs = sysconf(_SC_ARG_MAX);
     maxargs -= 32;			    /* some slop for the sh -c */

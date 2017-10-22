@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $NetBSD: mountcritlocal,v 1.7 2002/04/29 12:29:53 lukem Exp $
-# $FreeBSD: src/etc/rc.d/mountcritlocal,v 1.12 2004/10/07 13:55:26 mtm Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/mountcritlocal 175737 2008-01-28 07:58:32Z dougb $
 #
 
 # PROVIDE: mountcritlocal
@@ -27,6 +26,7 @@ mountcritlocal_start()
 	esac
 
 	# Mount everything except nfs filesystems.
+	echo -n 'Mounting local file systems:'
 	mount_excludes='no'
 	for i in ${netfs_types}; do
 		fstype=${i%:*}
@@ -34,6 +34,7 @@ mountcritlocal_start()
 	done
 	mount_excludes=${mount_excludes%,}
 	mount -a -t ${mount_excludes}
+	echo '.'
 
 	case $? in
 	0)
@@ -41,7 +42,7 @@ mountcritlocal_start()
 	*)
 		echo 'Mounting /etc/fstab filesystems failed,' \
 		    ' startup aborted'
-		kill -QUIT $$
+		stop_boot true
 		;;
 	esac
 }

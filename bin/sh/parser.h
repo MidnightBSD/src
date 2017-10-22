@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)parser.h	8.3 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/parser.h,v 1.10 2004/04/06 20:06:51 markm Exp $
+ * $FreeBSD: release/7.0.0/bin/sh/parser.h 164003 2006-11-05 18:36:05Z stefanf $
  */
 
 /* control characters in argument strings */
@@ -60,6 +60,7 @@
 #define VSTRIMRIGHT	0x8		/* ${var%pattern} */
 #define VSTRIMRIGHTMAX 	0x9		/* ${var%%pattern} */
 #define VSLENGTH	0xa		/* ${#var} */
+#define VSERROR		0xb		/* Syntax error, issue when expanded */
 
 
 /*

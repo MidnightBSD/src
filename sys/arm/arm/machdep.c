@@ -44,7 +44,7 @@
 
 #include "opt_compat.h"
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/machdep.c,v 1.16 2005/04/04 21:53:52 jhb Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/machdep.c 170170 2007-05-31 22:52:15Z attilio $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -57,6 +57,7 @@ __FBSDID("$FreeBSD: src/sys/arm/arm/machdep.c,v 1.16 2005/04/04 21:53:52 jhb Exp
 #include <sys/exec.h>
 #include <sys/imgact.h>
 #include <sys/kernel.h>
+#include <sys/ktr.h>
 #include <sys/linker.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
@@ -95,29 +96,49 @@ vm_offset_t vector_page;
 
 long realmem = 0;
 
+int (*_arm_memcpy)(void *, void *, int, int) = NULL;
+int (*_arm_bzero)(void *, int, int) = NULL;
+int _min_memcpy_size = 0;
+int _min_bzero_size = 0;
+
 void
-sendsig(catcher, sig, mask, code)
+sendsig(catcher, ksi, mask)
 	sig_t catcher;
-	int sig;
+	ksiginfo_t *ksi;
 	sigset_t *mask;
-	u_long code;
 {
-	struct thread *td = curthread;
-	struct proc *p = td->td_proc;
-	struct trapframe *tf = td->td_frame;
+	struct thread *td;
+	struct proc *p;
+	struct trapframe *tf;
 	struct sigframe *fp, frame;
-	struct sigacts *psp = td->td_proc->p_sigacts;
+	struct sigacts *psp;
 	int onstack;
+	int sig;
+	int code;
 
-	onstack = sigonstack(td->td_frame->tf_usr_sp);
+	td = curthread;
+	p = td->td_proc;
+	PROC_LOCK_ASSERT(p, MA_OWNED);
+	sig = ksi->ksi_signo;
+	code = ksi->ksi_code;
+	psp = p->p_sigacts;
+	mtx_assert(&psp->ps_mtx, MA_OWNED);
+	tf = td->td_frame;
+	onstack = sigonstack(tf->tf_usr_sp);
 
-	if ((td->td_flags & TDP_ALTSTACK) &&
-	    !(onstack) &&
-	    SIGISMEMBER(td->td_proc->p_sigacts->ps_sigonstack, sig)) {
-		fp = (void*)(td->td_sigstk.ss_sp + td->td_sigstk.ss_size);
+	CTR4(KTR_SIG, "sendsig: td=%p (%s) catcher=%p sig=%d", td, p->p_comm,
+	    catcher, sig);
+
+	/* Allocate and validate space for the signal handler context. */
+	if ((td->td_flags & TDP_ALTSTACK) != 0 && !(onstack) &&
+	    SIGISMEMBER(psp->ps_sigonstack, sig)) {
+		fp = (struct sigframe *)(td->td_sigstk.ss_sp + 
+		    td->td_sigstk.ss_size);
+#if defined(COMPAT_43)
 		td->td_sigstk.ss_flags |= SS_ONSTACK;
+#endif
 	} else
-		fp = (void*)td->td_frame->tf_usr_sp;
+		fp = (struct sigframe *)td->td_frame->tf_usr_sp;
 		 
 	/* make room on the stack */
 	fp--;
@@ -125,19 +146,27 @@ sendsig(catcher, sig, mask, code)
 	/* make the stack aligned */
 	fp = (struct sigframe *)STACKALIGN(fp);
 	/* Populate the siginfo frame. */
-	frame.sf_si.si_signo = sig;
-	frame.sf_si.si_code = code;
+	get_mcontext(td, &frame.sf_uc.uc_mcontext, 0);
+	frame.sf_si = ksi->ksi_info;
 	frame.sf_uc.uc_sigmask = *mask;
-	frame.sf_uc.uc_link = NULL;
-	frame.sf_uc.uc_flags = (td->td_pflags & TDP_ALTSTACK ) 
+	frame.sf_uc.uc_stack.ss_flags = (td->td_pflags & TDP_ALTSTACK ) 
 	    ? ((onstack) ? SS_ONSTACK : 0) : SS_DISABLE;
 	frame.sf_uc.uc_stack = td->td_sigstk;
-	memset(&frame.sf_uc.uc_stack, 0, sizeof(frame.sf_uc.uc_stack));
-	get_mcontext(td, &frame.sf_uc.uc_mcontext, 0);
-	PROC_UNLOCK(td->td_proc);
 	mtx_unlock(&psp->ps_mtx);
-	if (copyout(&frame, (void*)fp, sizeof(frame)) != 0)
+	PROC_UNLOCK(td->td_proc);
+
+	/* Copy the sigframe out to the user's stack. */
+	if (copyout(&frame, fp, sizeof(*fp)) != 0) {
+		/* Process has trashed its stack. Kill it. */
+		CTR2(KTR_SIG, "sendsig: sigexit td=%p fp=%p", td, fp);
+		PROC_LOCK(p);
 		sigexit(td, SIGILL);
+	}
+
+	/* Translate the signal if appropriate. */
+	if (p->p_sysent->sv_sigtbl && sig <= p->p_sysent->sv_sigsize)
+		sig = p->p_sysent->sv_sigtbl[_SIG_IDX(sig)];
+
 	/*
 	 * Build context to run handler in.  We invoke the handler
 	 * directly, only returning via the trampoline.  Note the
@@ -146,15 +175,19 @@ sendsig(catcher, sig, mask, code)
 	 */
 	
 	tf->tf_r0 = sig;
-	tf->tf_r1 = (int)&fp->sf_si;
-	tf->tf_r2 = (int)&fp->sf_uc;
+	tf->tf_r1 = (register_t)&fp->sf_si;
+	tf->tf_r2 = (register_t)&fp->sf_uc;
 
 	/* the trampoline uses r5 as the uc address */
-	tf->tf_r5 = (int)&fp->sf_uc;
-	tf->tf_pc = (int)catcher;
-	tf->tf_usr_sp = (int)fp;
-	tf->tf_usr_lr = (int)(PS_STRINGS - *(p->p_sysent->sv_szsigcode));
-	PROC_LOCK(td->td_proc);
+	tf->tf_r5 = (register_t)&fp->sf_uc;
+	tf->tf_pc = (register_t)catcher;
+	tf->tf_usr_sp = (register_t)fp;
+	tf->tf_usr_lr = (register_t)(PS_STRINGS - *(p->p_sysent->sv_szsigcode));
+
+	CTR3(KTR_SIG, "sendsig: return td=%p pc=%#x sp=%#x", td, tf->tf_usr_lr,
+	    tf->tf_usr_sp);
+
+	PROC_LOCK(p);
 	mtx_lock(&psp->ps_mtx);
 }
 
@@ -225,7 +258,37 @@ cpu_startup(void *dummy)
 	vm_page_t m;
 #endif
 
+	cpu_setup("");
+	identify_arm_cpu();
+
+	printf("real memory  = %ju (%ju MB)\n", (uintmax_t)ptoa(physmem),
+	    (uintmax_t)ptoa(physmem) / 1048576);
+	realmem = physmem;
+
+	/*
+	 * Display the RAM layout.
+	 */
+	if (bootverbose) {
+		int indx;
+
+		printf("Physical memory chunk(s):\n");
+		for (indx = 0; phys_avail[indx + 1] != 0; indx += 2) {
+			vm_paddr_t size;
+
+			size = phys_avail[indx + 1] - phys_avail[indx];
+			printf("%#08jx - %#08jx, %ju bytes (%ju pages)\n",
+			    (uintmax_t)phys_avail[indx],
+			    (uintmax_t)phys_avail[indx + 1] - 1,
+			    (uintmax_t)size, (uintmax_t)size / PAGE_SIZE);
+		}
+	}
+
 	vm_ksubmap_init(&kmi);
+
+	printf("avail memory = %ju (%ju MB)\n",
+	    (uintmax_t)ptoa(cnt.v_free_count),
+	    (uintmax_t)ptoa(cnt.v_free_count) / 1048576);
+
 	bufinit();
 	vm_pager_bufferinit();
 	pcb->un_32.pcb32_und_sp = (u_int)thread0.td_kstack +
@@ -234,9 +297,8 @@ cpu_startup(void *dummy)
 	    USPACE_SVC_STACK_TOP;
 	vector_page_setprot(VM_PROT_READ);
 	pmap_set_pcb_pagedir(pmap_kernel(), pcb);
-	cpu_setup("");
-	identify_arm_cpu();
 	thread0.td_frame = (struct trapframe *)pcb->un_32.pcb32_sp - 1;
+	pmap_postinit();
 #ifdef ARM_CACHE_LOCK_ENABLE
 	pmap_kenter_user(ARM_TP_ADDRESS, ARM_TP_ADDRESS);
 	arm_lock_cache_line(ARM_TP_ADDRESS);
@@ -244,8 +306,6 @@ cpu_startup(void *dummy)
 	m = vm_page_alloc(NULL, 0, VM_ALLOC_NOOBJ | VM_ALLOC_ZERO);
 	pmap_kenter_user(ARM_TP_ADDRESS, VM_PAGE_TO_PHYS(m));
 #endif
-	realmem = physmem;
-	
 }
 
 SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL)
@@ -319,6 +379,8 @@ ptrace_read_int(struct thread *td, vm_offset_t addr, u_int32_t *v)
 {
 	struct iovec iov;
 	struct uio uio;
+
+	PROC_LOCK_ASSERT(td->td_proc, MA_NOTOWNED);
 	iov.iov_base = (caddr_t) v;
 	iov.iov_len = sizeof(u_int32_t);
 	uio.uio_iov = &iov;
@@ -336,6 +398,8 @@ ptrace_write_int(struct thread *td, vm_offset_t addr, u_int32_t v)
 {
 	struct iovec iov;
 	struct uio uio;
+
+	PROC_LOCK_ASSERT(td->td_proc, MA_NOTOWNED);
 	iov.iov_base = (caddr_t) &v;
 	iov.iov_len = sizeof(u_int32_t);
 	uio.uio_iov = &iov;
@@ -351,28 +415,38 @@ ptrace_write_int(struct thread *td, vm_offset_t addr, u_int32_t v)
 int
 ptrace_single_step(struct thread *td)
 {
+	struct proc *p;
 	int error;
 	
 	KASSERT(td->td_md.md_ptrace_instr == 0,
 	 ("Didn't clear single step"));
+	p = td->td_proc;
+	PROC_UNLOCK(p);
 	error = ptrace_read_int(td, td->td_frame->tf_pc + 4, 
 	    &td->td_md.md_ptrace_instr);
 	if (error)
-		return (error);
+		goto out;
 	error = ptrace_write_int(td, td->td_frame->tf_pc + 4,
 	    PTRACE_BREAKPOINT);
 	if (error)
 		td->td_md.md_ptrace_instr = 0;
 	td->td_md.md_ptrace_addr = td->td_frame->tf_pc + 4;
+out:
+	PROC_LOCK(p);
 	return (error);
 }
 
 int
 ptrace_clear_single_step(struct thread *td)
 {
+	struct proc *p;
+
 	if (td->td_md.md_ptrace_instr) {
+		p = td->td_proc;
+		PROC_UNLOCK(p);
 		ptrace_write_int(td, td->td_md.md_ptrace_addr,
 		    td->td_md.md_ptrace_instr);
+		PROC_LOCK(p);
 		td->td_md.md_ptrace_instr = 0;
 	}
 	return (0);
@@ -431,17 +505,6 @@ exec_setregs(struct thread *td, u_long entry, u_long stack, u_long ps_strings)
 }
 
 /*
- * Build siginfo_t for SA thread
- */
-void
-cpu_thread_siginfo(int sig, u_long code, siginfo_t *si)
-{
-	bzero(si, sizeof(*si));
-	si->si_signo = sig;
-	si->si_code = code;
-}
-
-/*
  * Get machine context.
  */
 int
@@ -484,7 +547,7 @@ int
 set_mcontext(struct thread *td, const mcontext_t *mcp)
 {
 	struct trapframe *tf = td->td_frame;
-	__greg_t *gr = mcp->__gregs;
+	const __greg_t *gr = mcp->__gregs;
 
 	tf->tf_r0 = gr[_REG_R0];
 	tf->tf_r1 = gr[_REG_R1];
@@ -514,7 +577,7 @@ int
 sigreturn(td, uap)
 	struct thread *td;
 	struct sigreturn_args /* {
-		const __ucontext *sigcntxp;
+		const struct __ucontext *sigcntxp;
 	} */ *uap;
 {
 	struct proc *p = td->td_proc;

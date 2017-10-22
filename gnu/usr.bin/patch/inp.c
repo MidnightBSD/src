@@ -1,6 +1,6 @@
-/* $FreeBSD: src/gnu/usr.bin/patch/inp.c,v 1.12 2002/05/21 00:44:18 gad Exp $
+/* $FreeBSD: release/7.0.0/gnu/usr.bin/patch/inp.c 97028 2002-05-21 00:44:18Z gad $
  *
- * $Log: not supported by cvs2svn $
+ * $Log: inp.c,v $
  * Revision 2.0.1.1  88/06/03  15:06:13  lwall
  * patch10: made a little smarter about sccs files
  *

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/wpa/ndis_events/Makefile,v 1.1.2.1 2005/10/27 17:06:47 wpaul Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/wpa/ndis_events/Makefile 151214 2005-10-10 17:51:12Z wpaul $
 
 PROG=	ndis_events
 SRCS+=	ndis_events.c

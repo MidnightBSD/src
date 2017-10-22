@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)uudecode.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/uudecode/uudecode.c,v 1.49 2003/05/03 19:44:46 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/uudecode/uudecode.c 114594 2003-05-03 19:44:46Z obrien $");
 
 /*
  * uudecode [file ...]

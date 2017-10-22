@@ -1,4 +1,4 @@
-.\" $FreeBSD: src/usr.bin/at/at.man,v 1.35 2005/01/18 13:43:46 ru Exp $
+.\" $FreeBSD: release/7.0.0/usr.bin/at/at.man 140420 2005-01-18 13:43:56Z ru $
 .Dd January 13, 2002
 .Dt "AT" 1
 .Os

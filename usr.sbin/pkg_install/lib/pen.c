@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/lib/pen.c,v 1.42 2004/07/28 16:03:13 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/lib/pen.c 132799 2004-07-28 16:03:13Z stefanf $");
 
 #include "lib.h"
 #include <err.h>

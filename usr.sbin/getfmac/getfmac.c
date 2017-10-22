@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/getfmac/getfmac.c,v 1.3 2005/01/27 14:44:38 delphij Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/getfmac/getfmac.c 140907 2005-01-27 14:44:39Z delphij $
  */
 #include <sys/types.h>
 #include <sys/mac.h>

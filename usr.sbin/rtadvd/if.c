@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/usr.sbin/rtadvd/if.c,v 1.10 2003/09/20 09:41:13 suz Exp $	*/
+/*	$FreeBSD: release/7.0.0/usr.sbin/rtadvd/if.c 120280 2003-09-20 09:41:13Z suz $	*/
 /*	$KAME: if.c,v 1.17 2001/01/21 15:27:30 itojun Exp $	*/
 
 /*

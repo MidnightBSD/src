@@ -37,7 +37,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)job.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/make/job.h,v 1.45 2005/05/24 15:30:03 harti Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/make/job.h 167330 2007-03-08 09:16:11Z fjoe $
  */
 
 #ifndef job_h_4678dfd1
@@ -72,6 +72,8 @@ void Proc_Init(void);
 
 struct Buffer *Cmd_Exec(const char *, const char **);
 
+int Compat_Make(struct GNode *gn, struct GNode *pgn);
+void Compat_InstallSignalHandlers(void);
 void Compat_Run(struct Lst *);
 
 #endif /* job_h_4678dfd1 */

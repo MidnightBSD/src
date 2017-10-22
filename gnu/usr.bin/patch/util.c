@@ -1,4 +1,4 @@
-/* $FreeBSD: src/gnu/usr.bin/patch/util.c,v 1.10 2002/05/21 00:44:18 gad Exp $ */
+/* $FreeBSD: release/7.0.0/gnu/usr.bin/patch/util.c 97028 2002-05-21 00:44:18Z gad $ */
 
 #include <paths.h>
 

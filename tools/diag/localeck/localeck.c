@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/diag/localeck/localeck.c,v 1.4 2002/04/22 13:44:35 des Exp $
+ * $FreeBSD: release/7.0.0/tools/diag/localeck/localeck.c 95258 2002-04-22 13:44:47Z des $
  */
 
 #include <locale.h>

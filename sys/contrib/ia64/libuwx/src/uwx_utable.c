@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003 Hewlett-Packard Development Company, L.P.
+Copyright (c) 2003-2006 Hewlett-Packard Development Company, L.P.
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without
@@ -84,7 +84,7 @@ int uwx_search_utable(
 	switch ((int)*uvec++) {
 	    case UWX_KEY_TBASE:
 		keys |= 1;
-		text_base = *uvec++;
+		env->text_base = text_base = *uvec++;
 		break;
 	    case UWX_KEY_UFLAGS:
 		unwind_flags = *uvec++;
@@ -96,6 +96,9 @@ int uwx_search_utable(
 	    case UWX_KEY_UEND:
 		keys |= 4;
 		unwind_end = *uvec++;
+		break;
+	    case UWX_KEY_GP:
+		uwx_set_reg(env, UWX_REG_GP, *uvec++);
 		break;
 	    default:
 		return UWX_ERR_BADKEY;
@@ -133,6 +136,8 @@ int uwx_search_utable(
 	(*env->copyin)(UWX_COPYIN_UINFO, (dest), (src), \
 						WORDSZ, env->cb_token) : \
 	(*(uint32_t *)(dest) = *(uint32_t *)(src), WORDSZ) )
+
+#define SWIZZLE(x) (((uint64_t)((x) & 0xc0000000) << 31) | (x))
 
 int uwx_search_utable32(
     struct uwx_env *env,
@@ -191,9 +196,10 @@ int uwx_search_utable32(
 	return UWX_ERR_COPYIN_UTBL;
     if (env->byte_swap)
 	uwx_swap4(&unwind_info);
-    uentry->code_start = text_base + code_start;
-    uentry->code_end = text_base + code_end;
-    uentry->unwind_info = text_base + unwind_info;
+    uentry->ptr_size = WORDSZ;
+    uentry->code_start = SWIZZLE(text_base + code_start);
+    uentry->code_end = SWIZZLE(text_base + code_end);
+    uentry->unwind_info = SWIZZLE(text_base + unwind_info);
     return UWX_OK;
 }
 
@@ -202,9 +208,9 @@ int uwx_search_utable32(
 
 #define COPYIN_UINFO_8(dest, src) \
     (env->remote? \
-	(*env->copyin)(UWX_COPYIN_UINFO, (dest), (src), \
+      (*env->copyin)(UWX_COPYIN_UINFO, (dest), (src), \
 						DWORDSZ, env->cb_token) : \
-	(*(uint64_t *)(dest) = *(uint64_t *)(src), DWORDSZ) )
+      (*(uint64_t *)(intptr_t)(dest) = *(uint64_t *)(intptr_t)(src), DWORDSZ) )
 
 int uwx_search_utable64(
     struct uwx_env *env,
@@ -259,6 +265,7 @@ int uwx_search_utable64(
 	return UWX_ERR_COPYIN_UTBL;
     if (env->byte_swap)
 	uwx_swap8(&unwind_info);
+    uentry->ptr_size = DWORDSZ;
     uentry->code_start = text_base + code_start;
     uentry->code_end = text_base + code_end;
     uentry->unwind_info = text_base + unwind_info;

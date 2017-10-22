@@ -27,13 +27,13 @@
  *
  *	i4b_ifpi_l1.c - AVM Fritz PCI layer 1 handler
  *	---------------------------------------------
- *	$Id: i4b_ifpi_l1.c,v 1.1.1.2 2006-02-25 02:37:12 laffer1 Exp $ 
+ *	$Id: i4b_ifpi_l1.c,v 1.4 2000/06/02 16:14:36 hm Exp $ 
  *      last edit-date: [Fri Jun  2 14:54:30 2000]
  *
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/ifpi/i4b_ifpi_l1.c,v 1.8 2005/01/06 22:18:19 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer1/ifpi/i4b_ifpi_l1.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,9 +42,9 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer1/ifpi/i4b_ifpi_l1.c,v 1.8 2005/01/06 22:18
 
 #include <net/if.h>
 
-#include <machine/i4b_debug.h>
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_trace.h>
+#include <i4b/include/i4b_debug.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_trace.h>
 
 #include <i4b/layer1/isic/i4b_isic.h>
 #include <i4b/layer1/isic/i4b_isac.h>

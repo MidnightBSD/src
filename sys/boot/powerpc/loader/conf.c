@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/powerpc/loader/conf.c,v 1.10 2004/01/04 23:21:18 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/boot/powerpc/loader/conf.c 158467 2006-05-12 04:09:53Z jhb $");
 
 #include <stand.h>
 #include "bootstrap.h"
@@ -102,7 +102,7 @@ struct file_format *file_formats[] = {
 /* 
  * Consoles 
  *
- * We don't prototype these in libalpha.h because they require
+ * We don't prototype these in libofw.h because they require
  * data structures from bootstrap.h as well.
  */
 extern struct console ofwconsole;

@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: search.c,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/sdpcontrol/search.c,v 1.4 2005/05/27 19:11:33 emax Exp $
+ * $Id: search.c,v 1.2 2003/09/08 17:35:15 max Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/bluetooth/sdpcontrol/search.c 173831 2007-11-21 17:30:50Z emax $
  */
 
 #include <netinet/in.h>
@@ -585,9 +585,6 @@ do_sdp_search(void *xs, int argc, char **argv)
 	default:
 		return (USAGE);
 	}
-
-	if (service < SDP_SERVICE_CLASS_SERVICE_DISCOVERY_SERVER)
-		return (USAGE);
 
 	/* Initialize attribute values array */
 	for (n = 0; n < values_len; n ++) {

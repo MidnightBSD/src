@@ -1,5 +1,5 @@
 #
-# $FreeBSD: src/usr.sbin/flowctl/Makefile,v 1.2 2004/09/17 22:37:45 glebius Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/flowctl/Makefile 135408 2004-09-17 22:37:45Z glebius $
 #
 
 PROG=	flowctl

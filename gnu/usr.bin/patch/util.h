@@ -1,6 +1,6 @@
-/* $FreeBSD: src/gnu/usr.bin/patch/util.h,v 1.8 2002/04/28 01:33:45 gad Exp $
+/* $FreeBSD: release/7.0.0/gnu/usr.bin/patch/util.h 95601 2002-04-28 01:33:45Z gad $
  *
- * $Log: not supported by cvs2svn $
+ * $Log: util.h,v $
  * Revision 2.0  86/09/17  15:40:06  lwall
  * Baseline for netwide release.
  *

@@ -8,7 +8,7 @@
  *
  * This is a V.21 modem for ISDN4BSD.
  *
- * $FreeBSD: src/share/examples/isdn/v21/v21modem.c,v 1.2 2001/07/09 09:23:44 brian Exp $
+ * $FreeBSD: release/7.0.0/share/examples/isdn/v21/v21modem.c 171272 2007-07-06 07:21:56Z bz $
  */
 
 #include <string.h>
@@ -25,7 +25,7 @@
 #include <termios.h>
 #include <libutil.h>
 
-#include <machine/i4b_tel_ioctl.h>
+#include <i4b/i4b_tel_ioctl.h>
 
 static void create_session(void);
 static void input_byte(int byte, int stopbit);

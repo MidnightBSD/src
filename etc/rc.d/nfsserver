@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/nfsserver,v 1.4 2004/10/07 13:55:26 mtm Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/nfsserver 165683 2006-12-31 10:37:18Z yar $
 #
 
 # PROVIDE: nfsserver
@@ -11,20 +11,9 @@
 
 name="nfsserver"
 rcvar="nfs_server_enable"
-start_cmd="nfsserver_start"
+start_cmd=":"
 stop_cmd=":"
-
-# Load nfs modules if they were not compiled into the kernel
-nfsserver_start()
-{
-	if ! sysctl vfs.nfsrv >/dev/null 2>&1; then
-		if ! kldload nfsserver; then
-			warn 'Could not load NFS server module'
-			return 1
-		fi
-	fi
-	return 0
-}
+required_modules="nfsserver"
 
 load_rc_config $name
 run_rc_command "$1"

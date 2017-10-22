@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/share/examples/scsi_target/scsi_target.h,v 1.3 2004/01/09 19:26:30 njl Exp $
+ * $FreeBSD: release/7.0.0/share/examples/scsi_target/scsi_target.h 162704 2006-09-27 15:38:13Z mjacob $
  */
 
 #ifndef _SCSI_TARGET_H
@@ -33,9 +33,9 @@
 
 /*
  * Maximum number of parallel commands to accept,
- * 256 for Fibre Channel (SPI is 16).
+ * 1024 for Fibre Channel (SPI is 16).
  */
-#define MAX_INITIATORS		256
+#define MAX_INITIATORS		1024
 #define	SECTOR_SIZE		512
 #define MAX_EVENTS		(MAX_INITIATORS + 5)
 				/* kqueue for AIO, signals */
@@ -113,5 +113,17 @@ extern int		work_atio(struct ccb_accept_tio *atio);
 extern void		send_ccb(union ccb *ccb, int priority);
 extern void		free_ccb(union ccb *ccb);
 static __inline u_int	min(u_int a, u_int b) { return (a < b ? a : b); }
+
+/* Global Data */
+extern int notaio;
+
+/*
+ * Compat Defines
+ */
+#if __FreeBSD_version >= 500000
+#define	OFF_FMT	"%ju"
+#else
+#define	OFF_FMT "%llu"
+#endif
 
 #endif /* _SCSI_TARGET_H */

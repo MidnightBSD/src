@@ -2,8 +2,8 @@
  * Copyright (c) 2003 Bernd Walter <ticso@freebsd.org>
  *
  * $URL: https://devel.bwct.de/svn/projects/ubser/ubser.h $
- * $Date: 2006-02-25 02:37:00 $
- * $Author: laffer1 $
+ * $Date: 2004-02-29 01:53:10 +0100 (Sun, 29 Feb 2004) $
+ * $Author: ticso $
  * $Rev: 1127 $
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/usb/ubser.h,v 1.3 2005/03/17 22:47:18 ticso Exp $
+ * $FreeBSD: release/7.0.0/sys/dev/usb/ubser.h 143772 2005-03-17 22:47:18Z ticso $
  */
 
 #ifndef UBSER_H

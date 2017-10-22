@@ -13,7 +13,7 @@
  * 
  * ISBN 3-924521-59-X
  * 
- * $FreeBSD: src/usr.bin/calendar/calendars/de_DE.ISO8859-1/calendar.geschichte,v 1.12.10.1 2005/11/16 07:47:44 ru Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/calendar/calendars/de_DE.ISO8859-1/calendar.geschichte 150483 2005-09-23 11:58:16Z krion $
  */
 
 #ifndef _de_DE_ISO8859_1_geschichte_

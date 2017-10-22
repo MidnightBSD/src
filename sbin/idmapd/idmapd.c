@@ -1,5 +1,5 @@
-/* $FreeBSD: src/sbin/idmapd/idmapd.c,v 1.6 2005/04/14 20:27:30 rees Exp $ */
-/* $Id: idmapd.c,v 1.1.1.2 2006-02-25 02:35:23 laffer1 Exp $ */
+/* $FreeBSD: release/7.0.0/sbin/idmapd/idmapd.c 145089 2005-04-14 20:27:30Z rees $ */
+/* $Id: idmapd.c,v 1.5 2003/11/05 14:58:58 rees Exp $ */
 
 /*
  * copyright (c) 2003

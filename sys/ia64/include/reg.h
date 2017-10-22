@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/ia64/include/reg.h,v 1.13 2004/03/20 05:27:14 marcel Exp $
+ *	$FreeBSD: release/7.0.0/sys/ia64/include/reg.h 127219 2004-03-20 05:27:14Z marcel $
  */
 
 #ifndef _MACHINE_REG_H_

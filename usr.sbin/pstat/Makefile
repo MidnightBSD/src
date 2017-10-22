@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.sbin/pstat/Makefile,v 1.14 2005/03/21 18:11:31 keramida Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/pstat/Makefile 143936 2005-03-21 18:11:31Z keramida $
 
 PROG=	pstat
 LINKS=	${BINDIR}/pstat ${BINDIR}/swapinfo

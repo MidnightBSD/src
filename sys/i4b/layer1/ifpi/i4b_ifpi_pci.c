@@ -33,13 +33,13 @@
  *
  *	i4b_ifpi_pci.c: AVM Fritz!Card PCI hardware driver
  *	--------------------------------------------------
- *	$Id: i4b_ifpi_pci.c,v 1.1.1.2 2006-02-25 02:37:12 laffer1 Exp $
+ *	$Id: i4b_ifpi_pci.c,v 1.4 2000/06/02 11:58:56 hm Exp $
  *      last edit-date: [Fri Jan 12 17:01:26 2001]
  *
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/ifpi/i4b_ifpi_pci.c,v 1.17 2005/01/06 22:18:19 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer1/ifpi/i4b_ifpi_pci.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include "opt_i4b.h"
 
@@ -58,9 +58,9 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer1/ifpi/i4b_ifpi_pci.c,v 1.17 2005/01/06 22:
 #include <sys/socket.h>
 #include <net/if.h>
 
-#include <machine/i4b_debug.h>
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_trace.h>
+#include <i4b/include/i4b_debug.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_trace.h>
 
 #include <i4b/include/i4b_global.h>
 #include <i4b/include/i4b_mbuf.h>
@@ -540,7 +540,7 @@ avma1pp_attach_avma1pp(device_t dev)
 		goto fail;
 	}
 
-	error = bus_setup_intr(dev, sc->sc_resources.irq, INTR_TYPE_NET, avma1pp_intr, sc, &ih);
+	error = bus_setup_intr(dev, sc->sc_resources.irq, INTR_TYPE_NET, NULL, avma1pp_intr, sc, &ih);
 
 	if (error) {
 		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->sc_resources.irq);

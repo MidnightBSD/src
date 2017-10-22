@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pmccontrol/pmccontrol.c,v 1.4.2.1 2005/10/01 15:48:02 jkoshy Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pmccontrol/pmccontrol.c 156065 2006-02-27 14:25:32Z jkoshy $");
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -237,7 +237,7 @@ pmcc_do_list_state(void)
 	ncpu = pc->pm_ncpu;
 
 	for (c = cpu = 0; cpu < ncpu; cpu++) {
-#if	i386
+#if	defined(__i386__) || defined(__amd64__)
 		if (pc->pm_cputype == PMC_CPU_INTEL_PIV &&
 		    (logical_cpus_mask & (1 << cpu)))
 			continue; /* skip P4-style 'logical' cpus */

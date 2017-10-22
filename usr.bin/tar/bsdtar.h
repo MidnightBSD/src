@@ -1,19 +1,15 @@
 /*-
- * Copyright (c) 2003-2004 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name(s) of the author(s) may not be used to endorse or promote
- *    products derived from this software without specific prior written
- *    permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -26,10 +22,10 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/tar/bsdtar.h,v 1.23 2005/04/17 17:20:54 kientzle Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/tar/bsdtar.h 170084 2007-05-29 05:39:10Z kientzle $
  */
 
-#include <archive.h>
+#include "bsdtar_platform.h"
 #include <stdio.h>
 
 #define	DEFAULT_BYTES_PER_BLOCK	(20*512)
@@ -59,18 +55,19 @@ struct bsdtar {
 	char		  mode; /* Program mode: 'c', 't', 'r', 'u', 'x' */
 	char		  symlink_mode; /* H or L, per BSD conventions */
 	char		  create_compression; /* j, y, or z */
+	const char	 *compress_program;
 	char		  option_absolute_paths; /* -P */
-	char		  option_dont_traverse_mounts; /* -X */
+	char		  option_dont_traverse_mounts; /* --one-file-system */
 	char		  option_fast_read; /* --fast-read */
 	char		  option_honor_nodump; /* --nodump */
 	char		  option_interactive; /* -w */
 	char		  option_no_owner; /* -o */
-	char		  option_no_subdirs; /* -d */
+	char		  option_no_subdirs; /* -n */
 	char		  option_null; /* --null */
-	char		  option_stdout; /* -p */
+	char		  option_stdout; /* -O */
 	char		  option_totals; /* --totals */
 	char		  option_unlink_first; /* -U */
-	char		  option_warn_links; /* -l */
+	char		  option_warn_links; /* --check-links */
 	char		  day_first; /* show day before month in -tv output */
 
 	/* If >= 0, then close this when done. */
@@ -112,6 +109,7 @@ int	exclude_from_file(struct bsdtar *, const char *pathname);
 int	excluded(struct bsdtar *, const char *pathname);
 int	include(struct bsdtar *, const char *pattern);
 int	include_from_file(struct bsdtar *, const char *pathname);
+int	pathcmp(const char *a, const char *b);
 int	process_lines(struct bsdtar *bsdtar, const char *pathname,
 	    int (*process)(struct bsdtar *, const char *));
 void	safe_fprintf(FILE *, const char *fmt, ...);

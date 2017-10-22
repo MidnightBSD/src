@@ -33,9 +33,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)rc.8	8.2 (Berkeley) 12/11/93
-.\" $FreeBSD: src/share/man/man8/rc.8,v 1.29.2.1 2005/12/21 07:11:35 dougb Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man8/rc.8 171562 2007-07-24 06:41:07Z delphij $
 .\"
-.Dd December 19, 2005
+.Dd May 18, 2007
 .Dt RC 8
 .Os
 .Sh NAME
@@ -123,7 +123,7 @@ Load the configuration files.
 .It
 Determine if booting in a jail,
 and add
-.Dq nojail
+.Dq Li nojail
 to the list of KEYWORDS to skip in
 .Xr rcorder 8 .
 .It
@@ -249,16 +249,11 @@ Extreme care must be taken in using this, as the startup sequence will
 terminate if the script does.
 .It Pa bar
 Scripts that are sourced in a subshell.
-These can stop the boot if necessary with the following shell
-commands:
-.Bd -literal -offset indent
-if [ "$autoboot" = yes ]; then
-	kill -TERM $$
-fi
-exit 1
-.Ed
-.Pp
-Note that this should be used extremely sparingly!
+The boot does not stop if such a script terminates with a non-zero status,
+but a script can stop the boot if necessary by invoking the
+.Fn stop_boot
+function (from
+.Xr rc.subr 8 ).
 .El
 .Pp
 Each script should contain
@@ -417,10 +412,8 @@ The
 script can execute scripts from multiple
 .Nm rc.d/
 directories.
-The default locations are
-.Pa /usr/local/etc/rc.d/
-and
-.Pa /usr/X11R6/etc/rc.d/ ,
+The default location includes
+.Pa /usr/local/etc/rc.d/ ,
 but these may be overridden with the
 .Va local_startup
 .Xr rc.conf 5

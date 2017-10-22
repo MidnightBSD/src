@@ -35,9 +35,9 @@
  *	trace.h - header file for isdn trace
  *	------------------------------------
  *
- *	$Id: trace.h,v 1.1.1.2 2006-02-25 02:38:29 laffer1 Exp $ 
+ *	$Id: trace.h,v 1.12 2000/02/14 16:25:22 hm Exp $ 
  *
- * $FreeBSD: src/usr.sbin/i4b/isdntrace/trace.h,v 1.7 2000/10/09 14:22:49 hm Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdntrace/trace.h 171272 2007-07-06 07:21:56Z bz $
  *
  *      last edit-date: [Mon Feb 14 14:43:40 2000]
  *
@@ -59,8 +59,8 @@
 #include <sys/stat.h>
 #include <sys/param.h>
 
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_trace.h>
+#include <i4b/i4b_ioctl.h>
+#include <i4b/i4b_trace.h>
 
 #include "pcause_1tr6.h"	/* obsolete german national ISDN */
 #include "pcause_q850.h"

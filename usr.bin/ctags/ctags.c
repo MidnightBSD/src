@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)ctags.c	8.4 (Berkeley) 2/7/95";
 #include <sys/cdefs.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-__FBSDID("$FreeBSD: src/usr.bin/ctags/ctags.c,v 1.19 2004/05/07 19:44:40 cjc Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ctags/ctags.c 160465 2006-07-18 07:29:42Z stefanf $");
 
 #include <err.h>
 #include <limits.h>
@@ -244,7 +244,7 @@ void
 init(void)
 {
 	int		i;
-	const unsigned char	*sp;
+	const char	*sp;
 
 	for (i = 0; i < 256; i++) {
 		_wht[i] = _etk[i] = _itk[i] = _btk[i] = NO;

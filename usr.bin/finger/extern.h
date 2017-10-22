@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.2 (Berkeley) 4/28/95
- * $FreeBSD: src/usr.bin/finger/extern.h,v 1.9.8.1 2006/01/22 11:56:14 dds Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/finger/extern.h 168632 2007-04-11 19:11:54Z des $
  */
 
 #ifndef	_EXTERN_H_
@@ -47,7 +47,6 @@ extern int lflag;
 extern time_t now;
 extern int oflag;
 extern int pplan;			/* don't show .plan/.project */
-extern int Tflag;
 extern int invoker_root;		/* Invoked by root */
 
 void	 enter_lastlog(PERSON *);

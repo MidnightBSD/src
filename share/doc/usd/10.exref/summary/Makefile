@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/doc/usd/10.exref/summary/Makefile,v 1.6 2004/10/24 15:32:45 ru Exp $
+# $FreeBSD: release/7.0.0/share/doc/usd/10.exref/summary/Makefile 136910 2004-10-24 15:33:08Z ru $
 
 DOC=		summary
 SRCS=		ex.summary

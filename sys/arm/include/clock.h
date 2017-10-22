@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/clock.h,v 1.1 2004/05/14 11:46:44 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/clock.h 162954 2006-10-02 12:59:59Z phk $
  */
 
 #ifndef	_MACHINE_CLOCK_H_

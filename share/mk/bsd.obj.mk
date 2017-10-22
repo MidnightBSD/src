@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/mk/bsd.obj.mk,v 1.54 2005/04/11 07:13:29 harti Exp $
+# $FreeBSD: release/7.0.0/share/mk/bsd.obj.mk 144893 2005-04-11 07:13:29Z harti $
 #
 # The include file <bsd.obj.mk> handles creating the 'obj' directory
 # and cleaning up object files, etc.

@@ -35,7 +35,7 @@
 
 /*
  * #ident	"@(#)warmstart.c	1.7	93/07/05 SMI"
- * $FreeBSD: src/usr.sbin/rpcbind/warmstart.c,v 1.3 2003/01/01 18:49:03 schweikh Exp $/
+ * $FreeBSD: release/7.0.0/usr.sbin/rpcbind/warmstart.c 108533 2003-01-01 18:49:04Z schweikh $/
  */
 #include <sys/types.h>
 #include <sys/stat.h>

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ufm/Makefile,v 1.3 2004/06/27 12:33:17 imp Exp $
+# $FreeBSD: release/7.0.0/sys/modules/ufm/Makefile 131186 2004-06-27 12:33:20Z imp $
 
 .PATH:	${.CURDIR}/../../dev/usb
 KMOD=	ufm

@@ -46,7 +46,7 @@
  * SUCH DAMAGE.
  *
  *	from: unknown origin, 386BSD 0.1
- * $FreeBSD: src/sys/pc98/cbus/olpt.c,v 1.29 2005/05/10 12:30:30 nyan Exp $
+ * $FreeBSD: release/7.0.0/sys/pc98/cbus/olpt.c 166923 2007-02-23 20:11:27Z piso $
  */
 
 /*
@@ -111,7 +111,6 @@
 #include <sys/syslog.h>
 #include <sys/malloc.h>
 
-#include <machine/clock.h>
 #include <machine/bus.h>
 #include <machine/resource.h>
 #include <sys/rman.h>
@@ -349,7 +348,7 @@ lpt_attach(device_t dev)
 					     sc->res_port);
 			return ENXIO;
 		}
-		if (bus_setup_intr(dev, sc->res_irq, INTR_TYPE_TTY, lpt_intr,
+		if (bus_setup_intr(dev, sc->res_irq, INTR_TYPE_TTY, NULL, lpt_intr,
 				   sc, &sc->sc_ih)) {
 			bus_release_resource(dev, SYS_RES_IOPORT, 0,
 					     sc->res_port);

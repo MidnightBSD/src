@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)aux.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/mail/aux.c,v 1.13 2002/08/25 13:22:47 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/mail/aux.c 102412 2002-08-25 13:23:09Z charnier $");
 
 #include <sys/time.h>
 

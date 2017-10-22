@@ -37,7 +37,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)buf.h	8.2 (Berkeley) 4/28/95
- * $FreeBSD: src/usr.bin/make/buf.h,v 1.27 2005/05/13 08:53:00 harti Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/make/buf.h 146177 2005-05-13 08:53:00Z harti $
  */
 
 #ifndef buf_h_a61a6812

@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.bin/unifdef/Makefile,v 1.6 2003/06/04 10:01:10 fanf Exp $
+# $FreeBSD: release/7.0.0/usr.bin/unifdef/Makefile 115823 2003-06-04 10:01:10Z fanf $
 
 PROG=	unifdef
 SCRIPTS=unifdefall.sh

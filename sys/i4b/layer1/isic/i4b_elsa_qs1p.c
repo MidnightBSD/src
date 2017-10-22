@@ -34,7 +34,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/isic/i4b_elsa_qs1p.c,v 1.14 2005/01/06 22:18:20 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer1/isic/i4b_elsa_qs1p.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include "opt_i4b.h"
 
@@ -55,7 +55,7 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer1/isic/i4b_elsa_qs1p.c,v 1.14 2005/01/06 22
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-#include <machine/i4b_ioctl.h>
+#include <i4b/include/i4b_ioctl.h>
 
 #include <i4b/layer1/isic/i4b_isic.h>
 #include <i4b/layer1/isic/i4b_ipac.h>
@@ -325,7 +325,7 @@ eqs1p_pci_attach(device_t dev)
 	}
 
 	if(bus_setup_intr(dev, sc->sc_resources.irq, INTR_TYPE_NET,
-				(void(*)(void*))isicintr,
+				NULL, (void(*)(void*))isicintr,
 				sc, &ih))
 	{
 		printf("isic%d: Couldn't set up irq for ELSA MicroLink ISDN/PCI!\n", unit);

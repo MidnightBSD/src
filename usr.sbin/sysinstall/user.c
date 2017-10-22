@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/usr.sbin/sysinstall/user.c,v 1.19 2004/03/11 11:58:16 bde Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/user.c 174854 2007-12-22 06:32:46Z cvs2svn $
  *
  * Copyright (c) 1996
  *      Jörg Wunsch. All rights reserved.
@@ -102,7 +102,7 @@ static Layout groupLayout[] = {
     { 18, 35, 0, 0,
       "CANCEL", "Select this if you wish to cancel this screen",
       &cancelbutton, BUTTONOBJ, NULL },
-    { 0 },
+    LAYOUT_END,
 };
 
 /* The user configuration menu. */
@@ -147,7 +147,7 @@ static Layout userLayout[] = {
     { 18, 35, 0, 0,
       "CANCEL", "Select this if you wish to cancel this screen",
       &cancelbutton, BUTTONOBJ, NULL },
-    { 0 },
+    LAYOUT_END,
 };
 
 /* whine */

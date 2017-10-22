@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: src/release/doc/ru_RU.KOI8-R/hardware/sparc64/proc-sparc64.sgml,v 1.2 2004/09/01 13:14:46 den Exp $
+     $FreeBSD: release/7.0.0/release/doc/ru_RU.KOI8-R/hardware/sparc64/proc-sparc64.sgml 134602 2004-09-01 13:14:47Z den $
      $FreeBSDru: frdp/release/doc/ru_RU.KOI8-R/hardware/sparc64/proc-sparc64.sgml,v 1.2 2004/09/01 12:23:40 den Exp $
 
      Original revision: 1.12

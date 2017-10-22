@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/regression/tls/ttls2/Makefile,v 1.4 2004/12/21 08:47:25 ru Exp $
+# $FreeBSD: release/7.0.0/tools/regression/tls/ttls2/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 PROG=	ttls2
 LDADD+= -lpthread

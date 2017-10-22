@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/lpr/Makefile,v 1.10 2003/06/12 03:32:21 gad Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/lpr/Makefile 116231 2003-06-12 03:32:21Z gad $
 
 SUBDIR=	common_source chkprintcap lp lpc lpd lpq lpr lprm lptest pac \
 	filters filters.ru SMM.doc

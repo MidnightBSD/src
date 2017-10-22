@@ -1,4 +1,5 @@
-# $FreeBSD: src/tools/regression/usr.bin/sed/Makefile,v 1.2 2002/06/24 13:52:25 jmallett Exp $
+# $FreeBSD: release/7.0.0/tools/regression/usr.bin/sed/Makefile 167569 2007-03-14 18:58:59Z dds $
 
 all:
 	@m4 ${.CURDIR}/../regress.m4 ${.CURDIR}/regress.sh | sh /dev/stdin ${.CURDIR}
+	@sh multitest.t

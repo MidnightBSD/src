@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)startdaemon.c	8.2 (Berkeley) 4/17/94";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: src/usr.sbin/lpr/common_source/startdaemon.c,v 1.12 2003/07/14 20:20:58 gad Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/lpr/common_source/startdaemon.c 117592 2003-07-14 20:20:58Z gad $");
 
 #include <sys/param.h>
 #include <sys/socket.h>

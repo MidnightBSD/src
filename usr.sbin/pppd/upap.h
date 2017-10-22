@@ -16,7 +16,7 @@
  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/usr.sbin/pppd/upap.h,v 1.7 1999/08/28 01:19:09 peter Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/pppd/upap.h 50479 1999-08-28 01:35:59Z peter $
  */
 
 /*

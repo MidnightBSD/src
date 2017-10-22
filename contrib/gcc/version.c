@@ -1,12 +1,15 @@
-/* $FreeBSD: src/contrib/gcc/version.c,v 1.12 2005/06/03 03:52:25 kan Exp $ */
+/* $FreeBSD: release/7.0.0/contrib/gcc/version.c 174854 2007-12-22 06:32:46Z cvs2svn $ */
 #include "version.h"
 
-/* This is the string reported as the version number by all components
-   of the compiler.  If you distribute a modified version of GCC,
-   please modify this string to indicate that, e.g. by putting your
-   organization's name in parentheses at the end of the string.  */
+/* This is the trailing component of the string reported as the
+   version number by all components of the compiler.  For an official
+   FSF release, it is empty.  If you distribute a modified version of
+   GCC, please change this string to indicate that.  The suggested
+   format is a leading space, followed by your organization's name
+   in parentheses.  You may also wish to include a number indicating
+   the revision of your modified compiler.  */
 
-const char version_string[] = "3.4.4 [FreeBSD] 20050518";
+#define VERSUFFIX " [FreeBSD]"
 
 /* This is the location of the online document giving instructions for
    reporting bugs.  If you distribute a modified version of GCC,
@@ -16,3 +19,8 @@ const char version_string[] = "3.4.4 [FreeBSD] 20050518";
    not bugs in your modifications.)  */
 
 const char bug_report_url[] = "<URL:http://gcc.gnu.org/bugs.html>";
+
+/* The complete version string, assembled from several pieces.
+   BASEVER, DATESTAMP, and DEVPHASE are defined by the Makefile.  */
+
+const char version_string[] = BASEVER DATESTAMP DEVPHASE VERSUFFIX;

@@ -22,9 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/ia64/ia32/ia32_signal.c,v 1.7 2003/12/18 06:59:18 peter Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia32/ia32_signal.c 163058 2006-10-06 19:33:44Z marcel $");
 
 #include "opt_compat.h"
 
@@ -67,12 +68,29 @@
 #include <vm/vm_object.h>
 #include <vm/vm_extern.h>
 
+#include <compat/freebsd32/freebsd32_signal.h>
 #include <compat/freebsd32/freebsd32_util.h>
 #include <compat/freebsd32/freebsd32_proto.h>
 #include <compat/ia32/ia32_signal.h>
 #include <i386/include/psl.h>
 #include <i386/include/segments.h>
 #include <i386/include/specialreg.h>
+
+char ia32_sigcode[] = {
+	0xff, 0x54, 0x24, 0x10,		/* call *SIGF_HANDLER(%esp) */
+	0x8d, 0x44, 0x24, 0x14,		/* lea SIGF_UC(%esp),%eax */
+	0x50,				/* pushl %eax */
+	0xf7, 0x40, 0x54, 0x00, 0x00, 0x02, 0x02, /* testl $PSL_VM,UC_EFLAGS(%ea
+x) */
+	0x75, 0x03,			/* jne 9f */
+	0x8e, 0x68, 0x14,		/* movl UC_GS(%eax),%gs */
+	0xb8, 0x57, 0x01, 0x00, 0x00,	/* 9: movl $SYS_sigreturn,%eax */
+	0x50,				/* pushl %eax */
+	0xcd, 0x80,			/* int $0x80 */
+	0xeb, 0xfe,			/* 0: jmp 0b */
+	0
+};
+int sz_ia32_sigcode = sizeof(ia32_sigcode);
 
 /*
  * Signal sending has not been implemented on ia64.  This causes
@@ -81,9 +99,9 @@
  * sendsig() means that at least untrapped signals will work.
  */
 void
-ia32_sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
+ia32_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 {
-	sendsig(catcher, sig, mask, code);
+	sendsig(catcher, ksi, mask);
 }
 
 #ifdef COMPAT_FREEBSD4
@@ -245,4 +263,25 @@ ia32_savectx(struct pcb *pcb)
 	pcb->pcb_ia32_fdr = ia64_get_fdr();
 	pcb->pcb_ia32_fir = ia64_get_fir();
 	pcb->pcb_ia32_fsr = ia64_get_fsr();
+}
+
+int
+freebsd32_getcontext(struct thread *td, struct freebsd32_getcontext_args *uap)
+{
+
+	return (nosys(td, NULL));
+}
+
+int
+freebsd32_setcontext(struct thread *td, struct freebsd32_setcontext_args *uap)
+{
+
+	return (nosys(td, NULL));
+}
+
+int
+freebsd32_swapcontext(struct thread *td, struct freebsd32_swapcontext_args *uap)
+{
+
+	return (nosys(td, NULL));
 }

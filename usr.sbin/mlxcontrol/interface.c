@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/usr.sbin/mlxcontrol/interface.c,v 1.2 2000/04/11 23:04:17 msmith Exp $
+ *	$FreeBSD: release/7.0.0/usr.sbin/mlxcontrol/interface.c 59159 2000-04-11 23:04:17Z msmith $
  */
 
 #include <fcntl.h>

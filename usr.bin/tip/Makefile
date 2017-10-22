@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/tip/Makefile,v 1.6 2001/12/20 14:25:46 markm Exp $
+# $FreeBSD: release/7.0.0/usr.bin/tip/Makefile 88276 2001-12-20 14:25:46Z markm $
 
 SUBDIR=tip
 

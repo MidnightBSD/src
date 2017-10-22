@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $NetBSD: root,v 1.2 2000/05/13 08:45:09 lukem Exp $
-# $FreeBSD: src/etc/rc.d/root,v 1.10.2.2 2006/01/21 17:25:00 wes Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/root 175737 2008-01-28 07:58:32Z dougb $
 #
 
 # PROVIDE: root
@@ -25,7 +24,7 @@ root_start()
 	*)
 		if ! mount -uw /; then
 			echo 'Mounting root filesystem rw failed, startup aborted'
-			/bin/kill -QUIT $$
+			stop_boot true
 		fi
 		;;
 	esac
@@ -34,7 +33,9 @@ root_start()
 
 	# If we booted a special kernel remove the record
 	# so we will boot the default kernel next time.
-	/sbin/nextboot -D
+	if [ -x /sbin/nextboot ]; then
+		/sbin/nextboot -D
+	fi
 }
 
 load_rc_config $name

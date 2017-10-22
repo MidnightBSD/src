@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/ia64/ia64/interrupt.c,v 1.49.2.1 2005/09/13 21:07:14 marcel Exp $ */
+/* $FreeBSD: release/7.0.0/sys/ia64/ia64/interrupt.c 173938 2007-11-26 15:06:50Z scottl $ */
 /* $NetBSD: interrupt.c,v 1.23 1998/02/24 07:38:01 thorpej Exp $ */
 
 /*-
@@ -49,6 +49,7 @@
 #include <sys/mutex.h>
 #include <sys/smp.h>
 #include <sys/sysctl.h>
+#include <sys/syslog.h>
 
 #include <machine/clock.h>
 #include <machine/cpu.h>
@@ -76,7 +77,7 @@ struct evcnt clock_intr_evcnt;	/* event counter for clock intrs. */
 extern int mp_ipi_test;
 #endif
 
-volatile int mc_expected, mc_received;
+static void ia64_dispatch_intr(void *, u_int);
 
 static void 
 dummy_perf(unsigned long vector, struct trapframe *tf)  
@@ -126,35 +127,45 @@ static int adjust_ticks = 0;
 SYSCTL_INT(_debug_clock, OID_AUTO, adjust_ticks, CTLFLAG_RD,
     &adjust_ticks, 0, "Total number of ITC interrupts with adjustment");
 
-int
-interrupt(u_int64_t vector, struct trapframe *tf)
+void
+interrupt(struct trapframe *tf)
 {
 	struct thread *td;
 	volatile struct ia64_interrupt_block *ib = IA64_INTERRUPT_BLOCK;
 	uint64_t adj, clk, itc;
 	int64_t delta;
+	u_int vector;
 	int count;
-
+	uint8_t inta;
 	ia64_set_fpsr(IA64_FPSR_DEFAULT);
 
 	td = curthread;
 	atomic_add_int(&td->td_intr_nesting_level, 1);
 
+	vector = tf->tf_special.ifa;
+
+ next:
 	/*
 	 * Handle ExtINT interrupts by generating an INTA cycle to
 	 * read the vector.
 	 */
 	if (vector == 0) {
-		vector = ib->ib_inta;
-		printf("ExtINT interrupt: vector=%ld\n", vector);
-		if (vector == 15)
+		inta = ib->ib_inta;
+		printf("ExtINT interrupt: vector=%u\n", (int)inta);
+		if (inta == 15) {
+			__asm __volatile("mov cr.eoi = r0;; srlz.d");
 			goto stray;
-	}
+		}
+		vector = (int)inta;
+	} else if (vector == 15)
+		goto stray;
 
 	if (vector == CLOCK_VECTOR) {/* clock interrupt */
 		/* CTR0(KTR_INTR, "clock interrupt"); */
 
-		PCPU_LAZY_INC(cnt.v_intr);
+		itc = ia64_get_itc();
+
+		PCPU_INC(cnt.v_intr);
 #ifdef EVCNT_COUNTERS
 		clock_intr_evcnt.ev_count++;
 #else
@@ -165,26 +176,25 @@ interrupt(u_int64_t vector, struct trapframe *tf)
 		critical_enter();
 
 		adj = PCPU_GET(clockadj);
-		itc = ia64_get_itc();
-		ia64_set_itm(itc + ia64_clock_reload - adj);
 		clk = PCPU_GET(clock);
 		delta = itc - clk;
 		count = 0;
 		while (delta >= ia64_clock_reload) {
 			/* Only the BSP runs the real clock */
 			if (PCPU_GET(cpuid) == 0)
-				hardclock((struct clockframe *)tf);
+				hardclock(TRAPF_USERMODE(tf), TRAPF_PC(tf));
 			else
-				hardclock_process((struct clockframe *)tf);
+				hardclock_cpu(TRAPF_USERMODE(tf));
 			if (profprocs != 0)
-				profclock((struct clockframe *)tf);
-			statclock((struct clockframe *)tf);
+				profclock(TRAPF_USERMODE(tf), TRAPF_PC(tf));
+			statclock(TRAPF_USERMODE(tf));
 			delta -= ia64_clock_reload;
 			clk += ia64_clock_reload;
 			if (adj != 0)
 				adjust_ticks++;
 			count++;
 		}
+		ia64_set_itm(itc + ia64_clock_reload - adj);
 		if (count > 0) {
 			adjust_lost += count - 1;
 			if (delta > (ia64_clock_reload >> 3)) {
@@ -199,8 +209,8 @@ interrupt(u_int64_t vector, struct trapframe *tf)
 		}
 		PCPU_SET(clock, clk);
 		PCPU_SET(clockadj, adj);
-
 		critical_exit();
+		ia64_srlz_d();
 
 #ifdef SMP
 	} else if (vector == ipi_vector[IPI_AST]) {
@@ -220,20 +230,14 @@ interrupt(u_int64_t vector, struct trapframe *tf)
 		CTR1(KTR_SMP, "IPI_RENDEZVOUS, cpuid=%d", PCPU_GET(cpuid));
 		smp_rendezvous_action();
 	} else if (vector == ipi_vector[IPI_STOP]) {
-		u_int32_t mybit = PCPU_GET(cpumask);
+		cpumask_t mybit = PCPU_GET(cpumask);
 
-		CTR1(KTR_SMP, "IPI_STOP, cpuid=%d", PCPU_GET(cpuid));
-		savectx(PCPU_GET(pcb));
-		stopped_cpus |= mybit;
+		savectx(PCPU_PTR(pcb));
+		atomic_set_int(&stopped_cpus, mybit);
 		while ((started_cpus & mybit) == 0)
-			/* spin */;
-		started_cpus &= ~mybit;
-		stopped_cpus &= ~mybit;
-		if (PCPU_GET(cpuid) == 0 && cpustop_restartfunc != NULL) {
-			void (*f)(void) = cpustop_restartfunc;
-			cpustop_restartfunc = NULL;
-			(*f)();
-		}
+			cpu_spinwait();
+		atomic_clear_int(&started_cpus, mybit);
+		atomic_clear_int(&stopped_cpus, mybit);
 	} else if (vector == ipi_vector[IPI_TEST]) {
 		CTR1(KTR_SMP, "IPI_TEST, cpuid=%d", PCPU_GET(cpuid));
 		mp_ipi_test++;
@@ -243,9 +247,20 @@ interrupt(u_int64_t vector, struct trapframe *tf)
 		ia64_dispatch_intr(tf, vector);
 	}
 
+	__asm __volatile("mov cr.eoi = r0;; srlz.d");
+	vector = ia64_get_ivr();
+	if (vector != 15)
+		goto next;
+
 stray:
 	atomic_subtract_int(&td->td_intr_nesting_level, 1);
-	return (TRAPF_USERMODE(tf));
+
+	if (TRAPF_USERMODE(tf)) {
+		enable_intr();
+		userret(td, tf);
+		mtx_assert(&Giant, MA_NOTOWNED);
+		do_ast(tf);
+	}
 }
 
 /*
@@ -254,173 +269,218 @@ stray:
 #define IA64_HARDWARE_IRQ_BASE	0x20
 
 struct ia64_intr {
-    struct ithd		*ithd;  /* interrupt thread */
-    volatile long	*cntp;  /* interrupt counter */
+	struct intr_event *event;	/* interrupt event */
+	volatile long *cntp;		/* interrupt counter */
+	struct sapic *sapic;
+	u_int	irq;
 };
 
-static struct mtx ia64_intrs_lock;
 static struct ia64_intr *ia64_intrs[256];
 
-extern struct sapic *ia64_sapics[];
-extern int ia64_sapic_count;
-
 static void
-ithds_init(void *dummy)
+ia64_intr_eoi(void *arg)
 {
+	u_int vector = (uintptr_t)arg;
+	struct ia64_intr *i;
 
-	mtx_init(&ia64_intrs_lock, "ithread table lock", NULL, MTX_SPIN);
+	i = ia64_intrs[vector];
+	if (i != NULL)
+		sapic_eoi(i->sapic, vector);
 }
-SYSINIT(ithds_init, SI_SUB_INTR, SI_ORDER_SECOND, ithds_init, NULL);
 
 static void
-ia64_send_eoi(uintptr_t vector)
+ia64_intr_mask(void *arg)
 {
-	int irq, i;
+	u_int vector = (uintptr_t)arg;
+	struct ia64_intr *i;
 
-	irq = vector - IA64_HARDWARE_IRQ_BASE;
-	for (i = 0; i < ia64_sapic_count; i++) {
-		struct sapic *sa = ia64_sapics[i];
-		if (irq >= sa->sa_base && irq <= sa->sa_limit)
-			sapic_eoi(sa, vector);
+	i = ia64_intrs[vector];
+	if (i != NULL) {
+		sapic_mask(i->sapic, i->irq);
+		sapic_eoi(i->sapic, vector);
 	}
+}
+
+static void
+ia64_intr_unmask(void *arg)
+{
+	u_int vector = (uintptr_t)arg;
+	struct ia64_intr *i;
+
+	i = ia64_intrs[vector];
+	if (i != NULL)
+		sapic_unmask(i->sapic, i->irq);
 }
 
 int
-ia64_setup_intr(const char *name, int irq, driver_intr_t handler, void *arg,
-		enum intr_type flags, void **cookiep, volatile long *cntp)
+ia64_setup_intr(const char *name, int irq, driver_filter_t filter,
+    driver_intr_t handler, void *arg, enum intr_type flags, void **cookiep)
 {
 	struct ia64_intr *i;
-	int errcode;
-	int vector = irq + IA64_HARDWARE_IRQ_BASE;
+	struct sapic *sa;
 	char *intrname;
+	u_int vector;
+	int error;
+
+	/* Get the I/O SAPIC that corresponds to the IRQ. */
+	sa = sapic_lookup(irq);
+	if (sa == NULL)
+		return (EINVAL);
 
 	/*
-	 * XXX - Can we have more than one device on a vector?  If so, we have
-	 * a race condition here that needs to be worked around similar to
-	 * the fashion done in the i386 inthand_add() function.
+	 * XXX - There's a priority implied by the choice of vector.
+	 * We should therefore relate the vector to the interrupt type.
 	 */
-	
-	/* First, check for an existing hash table entry for this vector. */
-	mtx_lock_spin(&ia64_intrs_lock);
-	i = ia64_intrs[vector];
-	mtx_unlock_spin(&ia64_intrs_lock);
+	vector = irq + IA64_HARDWARE_IRQ_BASE;
 
+	i = ia64_intrs[vector];
 	if (i == NULL) {
-		/* None was found, so create an entry. */
 		i = malloc(sizeof(struct ia64_intr), M_DEVBUF, M_NOWAIT);
 		if (i == NULL)
-			return ENOMEM;
-		if (cntp == NULL)
-			i->cntp = intrcnt + irq + INTRCNT_ISA_IRQ;
-		else
-			i->cntp = cntp;
-		if (name != NULL && *name != '\0') {
-			/* XXX needs abstraction. Too error phrone. */
-			intrname = intrnames + (irq + INTRCNT_ISA_IRQ) *
-			    INTRNAME_LEN;
-			memset(intrname, ' ', INTRNAME_LEN - 1);
-			bcopy(name, intrname, strlen(name));
-		}
-		errcode = ithread_create(&i->ithd, vector, 0, 0,
-					 ia64_send_eoi, "intr:");
-		if (errcode) {
+			return (ENOMEM);
+
+		error = intr_event_create(&i->event, (void *)(uintptr_t)vector,
+		    0, ia64_intr_unmask,
+#ifdef INTR_FILTER
+		    ia64_intr_eoi, ia64_intr_mask,
+#endif
+		    "irq%u:", irq);
+		if (error) {
 			free(i, M_DEVBUF);
-			return errcode;
+			return (error);
 		}
 
-		mtx_lock_spin(&ia64_intrs_lock);
-		ia64_intrs[vector] = i;
-		mtx_unlock_spin(&ia64_intrs_lock);
+		if (!atomic_cmpset_ptr(&ia64_intrs[vector], NULL, i)) {
+			intr_event_destroy(i->event);
+			free(i, M_DEVBUF);
+			i = ia64_intrs[vector];
+		} else {
+			i->sapic = sa;
+			i->irq = irq;
+
+			i->cntp = intrcnt + irq + INTRCNT_ISA_IRQ;
+			if (name != NULL && *name != '\0') {
+				/* XXX needs abstraction. Too error prone. */
+				intrname = intrnames +
+				    (irq + INTRCNT_ISA_IRQ) * INTRNAME_LEN;
+				memset(intrname, ' ', INTRNAME_LEN - 1);
+				bcopy(name, intrname, strlen(name));
+			}
+
+			sapic_enable(i->sapic, irq, vector);
+		}
 	}
 
-	/* Second, add this handler. */
-	errcode = ithread_add_handler(i->ithd, name, handler, arg,
-	    ithread_priority(flags), flags, cookiep);
-	if (errcode)
-		return errcode;
-
-	return (sapic_enable(irq, vector));
+	error = intr_event_add_handler(i->event, name, filter, handler, arg,
+	    intr_priority(flags), flags, cookiep);
+	return (error);
 }
 
 int
 ia64_teardown_intr(void *cookie)
 {
 
-	return (ithread_remove_handler(cookie));
+	return (intr_event_remove_handler(cookie));
 }
 
-void
-ia64_dispatch_intr(void *frame, unsigned long vector)
+static void
+ia64_dispatch_intr(void *frame, u_int vector)
 {
 	struct ia64_intr *i;
-	struct ithd *ithd;			/* our interrupt thread */
-	struct intrhand *ih;
-	int error;
+	struct intr_event *ie;			/* our interrupt event */
+#ifndef INTR_FILTER
+	struct intr_handler *ih;
+	int error, thread, ret;
+#endif
 
 	/*
 	 * Find the interrupt thread for this vector.
 	 */
 	i = ia64_intrs[vector];
-	if (i == NULL)
-		return;			/* no ithread for this vector */
+	KASSERT(i != NULL, ("%s: unassigned vector", __func__));
 
-	if (i->cntp)
-		atomic_add_long(i->cntp, 1);
+	(*i->cntp)++;
 
-	ithd = i->ithd;
-	KASSERT(ithd != NULL, ("interrupt vector without a thread"));
+	ie = i->event;
+	KASSERT(ie != NULL, ("%s: interrupt without event", __func__));
 
+#ifdef INTR_FILTER
+	if (intr_event_handle(ie, frame) != 0) {
+		ia64_intr_mask((void *)(uintptr_t)vector);
+		log(LOG_ERR, "stray irq%u\n", i->irq);
+	}
+#else
 	/*
-	 * As an optimization, if an ithread has no handlers, don't
+	 * As an optimization, if an event has no handlers, don't
 	 * schedule it to run.
 	 */
-	if (TAILQ_EMPTY(&ithd->it_handlers))
+	if (TAILQ_EMPTY(&ie->ie_handlers))
 		return;
 
 	/*
-	 * Handle a fast interrupt if there is no actual thread for this
-	 * interrupt by calling the handler directly without Giant.  Note
+	 * Execute all fast interrupt handlers directly without Giant.  Note
 	 * that this means that any fast interrupt handler must be MP safe.
 	 */
-	ih = TAILQ_FIRST(&ithd->it_handlers);
-	if ((ih->ih_flags & IH_FAST) != 0) {
-		critical_enter();
-		ih->ih_handler(ih->ih_argument);
-		ia64_send_eoi(vector);
-		critical_exit();
-		return;
+	ret = 0;
+	thread = 0;
+	critical_enter();
+	TAILQ_FOREACH(ih, &ie->ie_handlers, ih_next) {
+		if (ih->ih_filter == NULL) {
+			thread = 1;
+			continue;
+		}
+		CTR4(KTR_INTR, "%s: exec %p(%p) for %s", __func__,
+		    ih->ih_filter, ih->ih_argument, ih->ih_name);
+		ret = ih->ih_filter(ih->ih_argument);
+		/*
+		 * Wrapper handler special case: see
+		 * i386/intr_machdep.c::intr_execute_handlers()
+		 */
+		if (!thread) {
+			if (ret == FILTER_SCHEDULE_THREAD)
+				thread = 1;
+		}
 	}
 
-	error = ithread_schedule(ithd);
-	KASSERT(error == 0, ("got an impossible stray interrupt"));
+	if (thread) {
+		ia64_intr_mask((void *)(uintptr_t)vector);
+		error = intr_event_schedule_thread(ie);
+		KASSERT(error == 0, ("%s: impossible stray", __func__));
+	} else
+		ia64_intr_eoi((void *)(uintptr_t)vector);
+	critical_exit();
+#endif
 }
 
 #ifdef DDB
 
 static void
-db_show_vector(int vector)
+db_print_vector(u_int vector, int always)
 {
-	int irq, i;
+	struct ia64_intr *i;
 
-	irq = vector - IA64_HARDWARE_IRQ_BASE;
-	for (i = 0; i < ia64_sapic_count; i++) {
-		struct sapic *sa = ia64_sapics[i];
-		if (irq >= sa->sa_base && irq <= sa->sa_limit)
-			sapic_print(sa, irq - sa->sa_base);
-	}
+	i = ia64_intrs[vector];
+	if (i != NULL) {
+		db_printf("vector %u (%p): ", vector, i);
+		sapic_print(i->sapic, i->irq);
+	} else if (always)
+		db_printf("vector %u: unassigned\n", vector);
 }
 
-DB_SHOW_COMMAND(irq, db_show_irq)
+DB_SHOW_COMMAND(vector, db_show_vector)
 {
-	int vector;
+	u_int vector;
 
 	if (have_addr) {
 		vector = ((addr >> 4) % 16) * 10 + (addr % 16);
-		db_show_vector(vector);
+		if (vector >= 256)
+			db_printf("error: vector %u not in range [0..255]\n",
+			    vector);
+		else
+			db_print_vector(vector, 1);
 	} else {
-		for (vector = IA64_HARDWARE_IRQ_BASE;
-		     vector < IA64_HARDWARE_IRQ_BASE + 64; vector++)
-			db_show_vector(vector);
+		for (vector = 0; vector < 256; vector++)
+			db_print_vector(vector, 0);
 	}
 }
 

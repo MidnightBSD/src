@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/ncal/Makefile,v 1.8 2005/01/27 14:52:45 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.bin/ncal/Makefile 140909 2005-01-27 14:52:47Z delphij $
 
 PROG=	ncal
 

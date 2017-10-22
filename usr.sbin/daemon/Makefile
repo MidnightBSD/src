@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/daemon/Makefile,v 1.2.12.1 2006/01/15 17:50:36 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/daemon/Makefile 149424 2005-08-24 17:24:39Z pjd $
 
 PROG=	daemon
 MAN=	daemon.8

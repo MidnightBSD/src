@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)limits.h	8.3 (Berkeley) 1/4/94
- * $FreeBSD: src/sys/powerpc/include/_limits.h,v 1.28 2005/01/07 02:29:19 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/_limits.h 149337 2005-08-20 16:44:41Z stefanf $
  */
 
 #ifndef _MACHINE__LIMITS_H_
@@ -92,5 +92,8 @@
 #define	__LONG_BIT	32
 #endif
 #define	__WORD_BIT	32
+
+/* Minimum signal stack size. */
+#define	__MINSIGSTKSZ	(512 * 4)
 
 #endif /* !_MACHINE__LIMITS_H_ */

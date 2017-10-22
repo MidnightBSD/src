@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/ldd/Makefile,v 1.13 2004/06/29 21:13:15 dwmalone Exp $
+# $FreeBSD: release/7.0.0/usr.bin/ldd/Makefile 131291 2004-06-29 21:13:15Z dwmalone $
 
 PROG=		ldd
 SRCS=		ldd.c

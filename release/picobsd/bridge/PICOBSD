@@ -1,5 +1,5 @@
 #
-# $FreeBSD: src/release/picobsd/bridge/PICOBSD,v 1.17 2004/11/16 21:23:11 jhb Exp $
+# $FreeBSD: release/7.0.0/release/picobsd/bridge/PICOBSD 173814 2007-11-21 07:20:11Z luigi $
 #
 # Line starting with #PicoBSD contains PicoBSD build parameters
 #marker         def_sz  init    MFS_inodes      floppy_inodes
@@ -7,7 +7,6 @@
 options MD_ROOT_SIZE=3200      # same as def_sz
 
 hints	"PICOBSD.hints"
-machine		i386
 cpu		I486_CPU
 cpu		I586_CPU
 cpu		I686_CPU
@@ -39,9 +38,8 @@ options		IPDIVERT		# divert (for natd)
 
 # Support for bridging and bandwidth limiting
 options		DUMMYNET
-options		BRIDGE
+device		if_bridge
 options		HZ=1000
-#options		NMBCLUSTERS=4096
 
 device		isa
 device		pci

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ia64/ia64/busdma_machdep.c,v 1.39 2005/03/07 02:18:52 scottl Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/busdma_machdep.c 170086 2007-05-29 06:30:26Z yongari $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -430,7 +430,17 @@ bus_dmamem_alloc(bus_dma_tag_t dmat, void** vaddr, int flags,
 			return (ENOMEM);
 	}
 
-	if ((dmat->maxsize <= PAGE_SIZE) && dmat->lowaddr >= ptoa(Maxmem)) {
+	/* 
+	 * XXX:
+	 * (dmat->alignment < dmat->maxsize) is just a quick hack; the exact
+	 * alignment guarantees of malloc need to be nailed down, and the
+	 * code below should be rewritten to take that into account.
+	 *
+	 * In the meantime, we'll warn the user if malloc gets it wrong.
+	 */
+	if ((dmat->maxsize <= PAGE_SIZE) &&
+	   (dmat->alignment < dmat->maxsize) &&
+	    dmat->lowaddr >= ptoa(Maxmem)) {
 		*vaddr = malloc(dmat->maxsize, M_DEVBUF, mflags);
 	} else {
 		/*
@@ -445,6 +455,8 @@ bus_dmamem_alloc(bus_dma_tag_t dmat, void** vaddr, int flags,
 	}
 	if (*vaddr == NULL)
 		return (ENOMEM);
+	else if ((uintptr_t)*vaddr & (dmat->alignment - 1))
+		printf("bus_dmamem_alloc failed to align memory properly.\n");
 	return (0);
 }
 
@@ -461,7 +473,9 @@ bus_dmamem_free(bus_dma_tag_t dmat, void *vaddr, bus_dmamap_t map)
 	 */
 	if (map != NULL)
 		panic("bus_dmamem_free: Invalid map freed\n");
-	if ((dmat->maxsize <= PAGE_SIZE) && dmat->lowaddr >= ptoa(Maxmem))
+	if ((dmat->maxsize <= PAGE_SIZE) &&
+	   (dmat->alignment < dmat->maxsize) &&
+	    dmat->lowaddr >= ptoa(Maxmem))
 		free(vaddr, M_DEVBUF);
 	else {
 		contigfree(vaddr, dmat->maxsize, M_DEVBUF);
@@ -564,6 +578,8 @@ _bus_dmamap_load_buffer(bus_dma_tag_t dmat,
 		 * Compute the segment size, and adjust counts.
 		 */
 		sgsize = PAGE_SIZE - ((u_long)curaddr & PAGE_MASK);
+		if (sgsize > dmat->maxsegsz)
+			sgsize = dmat->maxsegsz;
 		if (buflen < sgsize)
 			sgsize = buflen;
 
@@ -806,7 +822,6 @@ _bus_dmamap_sync(bus_dma_tag_t dmat, bus_dmamap_t map, bus_dmasync_op_t op)
 		 * want to add support for invalidating
 		 * the caches on broken hardware
 		 */
-		total_bounced++;
 
 		if (op & BUS_DMASYNC_PREWRITE) {
 			while (bpage != NULL) {
@@ -815,6 +830,7 @@ _bus_dmamap_sync(bus_dma_tag_t dmat, bus_dmamap_t map, bus_dmasync_op_t op)
 				      bpage->datacount);
 				bpage = STAILQ_NEXT(bpage, links);
 			}
+			total_bounced++;
 		}
 
 		if (op & BUS_DMASYNC_POSTREAD) {
@@ -824,6 +840,7 @@ _bus_dmamap_sync(bus_dma_tag_t dmat, bus_dmamap_t map, bus_dmasync_op_t op)
 				      bpage->datacount);
 				bpage = STAILQ_NEXT(bpage, links);
 			}
+			total_bounced++;
 		}
 	}
 }

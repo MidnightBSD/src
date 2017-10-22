@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 # 
-# $FreeBSD: src/tools/tools/scsi-defects/scsi-defects.pl,v 1.3 1999/08/28 00:54:32 peter Exp $
+# $FreeBSD: release/7.0.0/tools/tools/scsi-defects/scsi-defects.pl 50477 1999-08-28 01:08:13Z peter $
 #
 
 #

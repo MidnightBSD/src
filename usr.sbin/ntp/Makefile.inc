@@ -1,4 +1,6 @@
-# $FreeBSD: src/usr.sbin/ntp/Makefile.inc,v 1.8 2005/06/10 06:12:53 des Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/ntp/Makefile.inc 156813 2006-03-17 18:54:44Z ru $
+
+.include <bsd.own.mk>
 
 DEFS_LOCAL= -DPARSE -DHAVE_CONFIG_H
 NTPDEFS=   -DSYS_FREEBSD
@@ -8,7 +10,7 @@ NTPDEFS=   -DSYS_FREEBSD
 #	-DMX4200 -DNMEA -DBOEDER
 CFLAGS+= ${NTPDEFS} ${DEFS_LOCAL} ${CLOCKDEFS}
 
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL) && !defined(RELEASE_CRUNCH)
+.if ${MK_OPENSSL} != "no" && !defined(RELEASE_CRUNCH)
 CFLAGS+= -DOPENSSL
 .endif
 

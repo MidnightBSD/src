@@ -1,4 +1,4 @@
-/* $FreeBSD: src/usr.sbin/pppd/patchlevel.h,v 1.10 1999/08/28 01:19:07 peter Exp $ */
+/* $FreeBSD: release/7.0.0/usr.sbin/pppd/patchlevel.h 50479 1999-08-28 01:35:59Z peter $ */
 #define	PATCHLEVEL	5
 
 #define VERSION		"2.3"

@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.84.12.1 2005/12/03 14:36:26 philip Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/installUpgrade.c 174854 2007-12-22 06:32:46Z cvs2svn $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -68,9 +68,9 @@ static HitList etc_files [] = {
    { JUST_COPY,		"csh.login",		TRUE, NULL },
    { JUST_COPY,		"csh.logout",		TRUE, NULL },
    { JUST_COPY,		"cvsupfile",		TRUE, NULL },
+   { JUST_COPY,		"devfs.conf",		TRUE, NULL },
    { JUST_COPY,		"dhclient.conf",	TRUE, NULL },
    { JUST_COPY,		"disktab",		TRUE, NULL },
-   { JUST_COPY,		"dm.conf",		TRUE, NULL },
    { JUST_COPY,		"dumpdates",		TRUE, NULL },
    { JUST_COPY,		"exports",		TRUE, NULL },
    { JUST_COPY,		"fbtab",		TRUE, NULL },
@@ -89,21 +89,27 @@ static HitList etc_files [] = {
    { JUST_COPY,		"login.conf",		TRUE, NULL },
    { JUST_COPY,		"mail",			TRUE, NULL },
    { JUST_COPY,		"mail.rc",		TRUE, NULL },
+   { JUST_COPY,		"mac.conf",		TRUE, NULL },
    { JUST_COPY,		"make.conf",		TRUE, NULL },
    { JUST_COPY,		"manpath.config",	TRUE, NULL },
    { JUST_COPY,		"master.passwd",	FALSE, NULL },
+   { JUST_COPY,		"mergemaster.rc",	TRUE, NULL },
    { JUST_COPY,		"motd",			TRUE, NULL },
    { JUST_COPY,		"namedb",		TRUE, NULL },
    { JUST_COPY,		"networks",		TRUE, NULL },
    { JUST_COPY,		"newsyslog.conf",	TRUE, NULL },
    { JUST_COPY,		"nsmb.conf",		TRUE, NULL },
    { JUST_COPY,		"nsswitch.conf",	TRUE, NULL },
+   { JUST_COPY,		"ntp.conf",		TRUE, NULL },
    { JUST_COPY,		"pam.conf",		TRUE, NULL },
    { JUST_COPY,		"passwd",		TRUE, NULL },
    { JUST_COPY,		"periodic",		TRUE, NULL },
+   { JUST_COPY,		"pf.conf",		TRUE, NULL },
+   { JUST_COPY,		"portsnap.conf",	TRUE, NULL },
    { JUST_COPY,		"ppp",			TRUE, NULL },
    { JUST_COPY,		"printcap",		TRUE, NULL },
    { JUST_COPY,		"profile",		TRUE, NULL },
+   { JUST_COPY,		"protocols",		TRUE, NULL },
    { JUST_COPY,		"pwd.db",		TRUE, NULL },
    { JUST_COPY,		"rc.local",		TRUE, NULL },
    { JUST_COPY,		"rc.firewall",		TRUE, NULL },
@@ -116,16 +122,17 @@ static HitList etc_files [] = {
    { JUST_COPY,		"services",		TRUE, NULL },
    { JUST_COPY,		"shells",		TRUE, NULL },
    { JUST_COPY,		"skeykeys",		TRUE, NULL },
+   { JUST_COPY,		"snmpd.config",		TRUE, NULL },
    { JUST_COPY,		"spwd.db",		TRUE, NULL },
+   { JUST_COPY,		"src.conf",		TRUE, NULL },
    { JUST_COPY,		"ssh",			TRUE, NULL },
    { JUST_COPY,		"sysctl.conf",		TRUE, NULL },
    { JUST_COPY,		"syslog.conf",		TRUE, NULL },
    { JUST_COPY,		"ttys",			TRUE, NULL },
-   { JUST_COPY,		"uucp",			TRUE, NULL },
-   { 0 },
+   { 0,			NULL,			FALSE, NULL },
 };
 
-void
+static void
 traverseHitlist(HitList *h)
 {
     system("rm -rf /etc/upgrade");
@@ -253,7 +260,7 @@ installUpgrade(dialogMenuItem *self)
 
     saved_etc[0] = '\0';
 
-    /* Don't allow sources to be upgraded unless if we have src already */
+    /* Don't allow sources to be upgraded if we have src already */
     if (directory_exists("/usr/src/") && (Dists & DIST_SRC)) {
 	Dists &= ~DIST_SRC;
 	SrcDists = 0;
@@ -290,11 +297,20 @@ installUpgrade(dialogMenuItem *self)
 	}
 
 	msgNotify("chflags'ing old binaries - please wait.");
-	(void)vsystem("chflags -R noschg /bin /sbin /usr/sbin /usr/bin /usr/lib /usr/libexec /kernel*");
+	(void)vsystem("chflags -R noschg /bin /sbin /lib /libexec /usr/bin /usr/sbin /usr/lib /usr/libexec /var/empty /boot/kernel*");
 
-	if (file_readable("/kernel")) {
-	    msgNotify("Moving old kernel to /kernel.prev");
-	    if (system("mv /kernel /kernel.prev")) {
+	if (directory_exists("/boot/kernel")) {
+	    if (directory_exists("/boot/kernel.prev")) {
+		msgNotify("Removing /boot/kernel.prev");
+		if (system("rm -fr /boot/kernel.prev")) {
+		    msgConfirm("NOTICE: I'm trying to back up /boot/kernel to\n"
+			       "/boot/kernel.prev, but /boot/kernel.prev exists and I\n"
+			       "can't remove it.  This means that the backup will, in\n"
+			       "all probability, fail.");
+		}
+	    }
+	    msgNotify("Moving old kernel to /boot/kernel.prev");
+	    if (system("mv /boot/kernel /boot/kernel.prev")) {
 		if (!msgYesNo("Hmmm!  I couldn't move the old kernel over!  Do you want to\n"
 			      "treat this as a big problem and abort the upgrade?  Due to the\n"
 			      "way that this upgrade process works, you will have to reboot\n"
@@ -302,8 +318,9 @@ installUpgrade(dialogMenuItem *self)
 		    systemShutdown(1);
 	    }
 	    else 
-		msgConfirm("NOTICE: Your old kernel is in /kernel.prev should this upgrade\n"
-			   "fail for any reason and you need to boot your old kernel");
+		msgConfirm("NOTICE: Your old kernel is in /boot/kernel.prev should this\n"
+			   "upgrade fail for any reason and you need to boot your old\n"
+			   "kernel.");
 	}
     }
 
@@ -322,7 +339,7 @@ media:
 	    return DITEM_FAILURE | DITEM_REDRAW | DITEM_RESTORE;
     }
     
-    msgNotify("Beginning extraction of distributions..");
+    msgNotify("Beginning extraction of distributions.");
     if (DITEM_STATUS(distExtractAll(self)) == DITEM_FAILURE) {
 	msgConfirm("Hmmmm.  We couldn't even extract the base distribution.  This upgrade\n"
 		   "should be considered a failure and started from the beginning, sorry!\n"
@@ -346,7 +363,7 @@ media:
     }
 
     if (extractingBin)
-	vsystem("disklabel -B `awk '$2~/\\/$/ {print substr($1, 6, 3)}' /etc/fstab`");
+	vsystem("disklabel -B `awk '$2~/\\/$/ {print substr($1, 6, 5)}' /etc/fstab`");
     msgNotify("First stage of upgrade completed successfully!\n\n"
 	       "Next comes stage 2, where we attempt to resurrect your /etc\n"
 	       "directory!");
@@ -400,7 +417,7 @@ installUpgradeNonInteractive(dialogMenuItem *self)
 	    return DITEM_FAILURE;
 	}
 	else {
-	    /* Enable all the drives befor we start */
+	    /* Enable all the drives before we start */
 	    for (i = 0; i < cnt; i++)
 		devs[i]->enabled = TRUE;
 	}
@@ -459,15 +476,25 @@ installUpgradeNonInteractive(dialogMenuItem *self)
 	return DITEM_FAILURE;
     }
 
-    if (file_readable("/kernel")) {
-	msgNotify("Moving old kernel to /kernel.prev");
-	if (!system("chflags noschg /kernel && mv /kernel /kernel.prev")) {
-	    /* Give us a working kernel in case we crash and reboot */
-	    system("cp /kernel.prev /kernel");
+    /*
+     * Back up the old kernel, leaving it in place in case we
+     *  crash and reboot.
+     */
+    if (directory_exists("/boot/kernel")) {
+	if (directory_exists("/boot/kernel.prev")) {
+	    msgNotify("Removing /boot/kernel.prev");
+	    if (system("rm -fr /boot/kernel.prev")) {
+		msgConfirm("NOTICE: I'm trying to back up /boot/kernel to\n"
+		    "/boot/kernel.prev, but /boot/kernel.prev exists and I\n"
+		    "can't remove it.  This means that the backup will, in\n"
+		    "all probability, fail.");
+	    }
 	}
-    }
+	msgNotify("Copying old kernel to /boot/kernel.prev");
+	vsystem("cp -Rp /boot/kernel /boot/kernel.prev");
+    }   
 
-    msgNotify("Beginning extraction of distributions..");
+    msgNotify("Beginning extraction of distributions.");
     if (DITEM_STATUS(distExtractAll(self)) == DITEM_FAILURE) {
 	msgConfirm("Hmmmm.  We couldn't even extract the base distribution.  This upgrade\n"
 		   "should be considered a failure and started from the beginning, sorry!\n"

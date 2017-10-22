@@ -3,7 +3,7 @@
  * Garrett Wollman, September 1994.
  * This file is in the public domain.
  *
- * $FreeBSD: src/sys/ia64/include/clock.h,v 1.10 2005/01/06 22:18:23 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/include/clock.h 162954 2006-10-02 12:59:59Z phk $
  */
 
 #ifndef _MACHINE_CLOCK_H_
@@ -12,10 +12,6 @@
 #ifdef _KERNEL
 
 #define	CLOCK_VECTOR	254
-
-extern int adjkerntz;
-extern int disable_rtc_set;
-extern int wall_cmos_clock;
 
 extern uint64_t	ia64_clock_reload;
 extern uint64_t	itc_frequency;

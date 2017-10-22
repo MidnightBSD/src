@@ -24,7 +24,7 @@
  * the rights to redistribute these changes.
  *
  *	from: FreeBSD: src/sys/i386/include/db_machdep.h,v 1.16 1999/10/04
- * $FreeBSD: src/sys/arm/include/db_machdep.h,v 1.5 2005/01/05 21:58:48 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/db_machdep.h 160740 2006-07-27 11:41:37Z cognet $
  */
 
 #ifndef	_MACHINE_DB_MACHDEP_H_
@@ -89,4 +89,7 @@ int db_validate_address(vm_offset_t);
 
 u_int branch_taken (u_int insn, u_int pc);
 
+#ifdef __ARMEB__
+#define BYTE_MSF	(1)
+#endif
 #endif /* !_MACHINE_DB_MACHDEP_H_ */

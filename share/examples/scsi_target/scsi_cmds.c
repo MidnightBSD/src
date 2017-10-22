@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/share/examples/scsi_target/scsi_cmds.c,v 1.6 2004/01/09 19:33:21 njl Exp $
+ * $FreeBSD: release/7.0.0/share/examples/scsi_target/scsi_cmds.c 162704 2006-09-27 15:38:13Z mjacob $
  */
 
 #include <stdio.h>
@@ -35,6 +35,7 @@
 #include <string.h>
 #include <err.h>
 #include <aio.h>
+#include <unistd.h>
 #include <assert.h>
 #include <sys/param.h>
 #include <sys/types.h>
@@ -48,6 +49,9 @@
 typedef int targ_start_func(struct ccb_accept_tio *, struct ccb_scsiio *);
 typedef void targ_done_func(struct ccb_accept_tio *, struct ccb_scsiio *,
 			      io_ops);
+#ifndef	REPORT_LUNS
+#define	REPORT_LUNS	0xa0
+#endif
 
 struct targ_cdb_handlers {
 	u_int8_t	  cmd;
@@ -87,7 +91,7 @@ static struct targ_cdb_handlers cdb_handlers[] = {
 	{ SYNCHRONIZE_CACHE,	tcmd_null_ok,		NULL },
 	{ MODE_SENSE_6,		tcmd_illegal_req,	NULL },
 	{ MODE_SELECT_6,	tcmd_illegal_req,	NULL },
-	/* XXX REPORT_LUNS should be handled here. */
+	{ REPORT_LUNS,		tcmd_illegal_req,	NULL },
 #ifdef READ_16
 	{ READ_16,		tcmd_rdwr,		tcmd_rdwr_done },
 	{ WRITE_16,		tcmd_rdwr,		tcmd_rdwr_done },
@@ -152,6 +156,16 @@ tcmd_handle(struct ccb_accept_tio *atio, struct ccb_scsiio *ctio, io_ops event)
 		}
 		last_cmd = h;
 	}
+
+	/* call completion and exit */
+	if (event != ATIO_WORK) {
+		if (last_cmd->done != NULL)
+			last_cmd->done(atio, ctio, event);
+		else
+			free_ccb((union ccb *)ctio);
+		return (1);
+	}
+
 	if (last_cmd->cmd == ILLEGAL_CDB) {
 		if (event != ATIO_WORK) {
 			warnx("no done func for %#x???", a_descr->cdb[0]);
@@ -162,15 +176,6 @@ tcmd_handle(struct ccb_accept_tio *atio, struct ccb_scsiio *ctio, io_ops event)
 		tcmd_illegal_req(atio, ctio);
 		send_ccb((union ccb *)ctio, /*priority*/1);
 		return (0);
-	}
-
-	/* call completion and exit */
-	if (event != ATIO_WORK) {
-		if (last_cmd->done != NULL)
-			last_cmd->done(atio, ctio, event);
-		else
-			free_ccb((union ccb *)ctio);
-		return (1);
 	}
 
 	istate = tcmd_get_istate(ctio->init_id);
@@ -356,7 +361,7 @@ init_inquiry(u_int16_t req_flags, u_int16_t sim_flags)
 
 	/* Advertise only what the SIM can actually support */
 	req_flags &= sim_flags;
-	scsi_ulto2b(req_flags, &inq->reserved[1]);
+	scsi_ulto2b(req_flags, &inq->spc2_flags);
 
 	inq->response_format = 2; /* SCSI2 Inquiry Format */
 	inq->additional_length = SHORT_INQUIRY_LENGTH -
@@ -492,21 +497,13 @@ tcmd_rdwr(struct ccb_accept_tio *atio, struct ccb_scsiio *ctio)
 	if ((a_descr->flags & CAM_DIR_IN) != 0) {
 		ret = start_io(atio, ctio, CAM_DIR_IN);
 		if (debug)
-#if __FreeBSD_version >= 500000
-			warnx("Starting DIR_IN @%jd:%u",
-#else
-			warnx("Starting DIR_IN @%lld:%u",
-#endif
-			    c_descr->offset, a_descr->targ_req);
+			warnx("Starting %p DIR_IN @" OFF_FMT ":%u",
+			    a_descr, c_descr->offset, a_descr->targ_req);
 	} else {
 		ret = start_io(atio, ctio, CAM_DIR_OUT);
 		if (debug)
-#if __FreeBSD_version >= 500000
-			warnx("Starting DIR_OUT @%jd:%u",
-#else
-			warnx("Starting DIR_OUT @%lld:%u",
-#endif
-			    c_descr->offset, a_descr->init_req);
+			warnx("Starting %p DIR_OUT @" OFF_FMT ":%u",
+			    a_descr, c_descr->offset, a_descr->init_req);
 	}
 
 	return (ret);
@@ -568,29 +565,17 @@ tcmd_rdwr_decode(struct ccb_accept_tio *atio, struct ccb_scsiio *ctio)
 	a_descr->total_len = count * sector_size;
 	if (a_descr->total_len == 0) {
 		if (debug)
-#if __FreeBSD_version >= 500000
-			warnx("r/w 0 blocks @ blkno %ju", blkno);
-#else
-			warnx("r/w 0 blocks @ blkno %llu", blkno);
-#endif
+			warnx("r/w 0 blocks @ blkno " OFF_FMT, blkno);
 		tcmd_null_ok(atio, ctio);
 		return (0);
 	} else if (cdb[0] == WRITE_6 || cdb[0] == WRITE_10) {
 		a_descr->flags |= CAM_DIR_OUT;
 		if (debug)
-#if __FreeBSD_version >= 500000
-			warnx("write %u blocks @ blkno %ju", count, blkno);
-#else
-			warnx("write %u blocks @ blkno %llu", count, blkno);
-#endif
+			warnx("write %u blocks @ blkno " OFF_FMT, count, blkno);
 	} else {
 		a_descr->flags |= CAM_DIR_IN;
 		if (debug)
-#if __FreeBSD_version >= 500000
-			warnx("read %u blocks @ blkno %ju", count, blkno);
-#else
-			warnx("read %u blocks @ blkno %llu", count, blkno);
-#endif
+			warnx("read %u blocks @ blkno " OFF_FMT,  count, blkno);
 	}
 	return (1);
 }
@@ -622,14 +607,41 @@ start_io(struct ccb_accept_tio *atio, struct ccb_scsiio *ctio, int dir)
 	/* If DIR_IN, start read from target, otherwise begin CTIO xfer. */
 	ret = 1;
 	if (dir == CAM_DIR_IN) {
-		if (aio_read(&c_descr->aiocb) < 0)
-			err(1, "aio_read"); /* XXX */
+		if (notaio) {
+			if (debug)
+				warnx("read sync %lud @ block " OFF_FMT,
+				    (unsigned long)
+				    (ctio->dxfer_len / sector_size),
+				    c_descr->offset / sector_size);
+			if (lseek(c_descr->aiocb.aio_fildes,
+			    c_descr->aiocb.aio_offset, SEEK_SET) < 0) {
+				perror("lseek");
+				err(1, "lseek");
+			}
+			if (read(c_descr->aiocb.aio_fildes,
+			    (void *)c_descr->aiocb.aio_buf,
+			    ctio->dxfer_len) != ctio->dxfer_len) {
+				err(1, "read");
+			}
+		} else {
+			if (debug)
+				warnx("read async %lud @ block " OFF_FMT,
+				    (unsigned long)
+				    (ctio->dxfer_len / sector_size),
+				    c_descr->offset / sector_size);
+			if (aio_read(&c_descr->aiocb) < 0) {
+				err(1, "aio_read"); /* XXX */
+			}
+		}
 		a_descr->targ_req += ctio->dxfer_len;
+		/* if we're done, we can mark the CCB as to send status */
 		if (a_descr->targ_req == a_descr->total_len) {
 			ctio->ccb_h.flags |= CAM_SEND_STATUS;
 			ctio->scsi_status = SCSI_STATUS_OK;
 			ret = 0;
 		}
+		if (notaio)
+			tcmd_rdwr_done(atio, ctio, AIO_DONE);
 	} else {
 		if (a_descr->targ_ack == a_descr->total_len)
 			tcmd_null_ok(atio, ctio);
@@ -661,7 +673,7 @@ tcmd_rdwr_done(struct ccb_accept_tio *atio, struct ccb_scsiio *ctio,
 
 	switch (event) {
 	case AIO_DONE:
-		if (aio_return(&c_descr->aiocb) < 0) {
+		if (!notaio && aio_return(&c_descr->aiocb) < 0) {
 			warn("aio_return error");
 			/* XXX */
 			tcmd_sense(ctio->init_id, ctio,
@@ -671,8 +683,12 @@ tcmd_rdwr_done(struct ccb_accept_tio *atio, struct ccb_scsiio *ctio,
 		}
 		a_descr->targ_ack += ctio->dxfer_len;
 		if ((a_descr->flags & CAM_DIR_IN) != 0) {
-			if (debug)
-				warnx("sending CTIO for AIO read");
+			if (debug) {
+				if (notaio)
+					warnx("sending CTIO for AIO read");
+				else
+					warnx("sending CTIO for sync read");
+			}
 			a_descr->init_req += ctio->dxfer_len;
 			send_ccb((union ccb *)ctio, /*priority*/1);
 		} else {
@@ -685,18 +701,55 @@ tcmd_rdwr_done(struct ccb_accept_tio *atio, struct ccb_scsiio *ctio,
 		}
 		break;
 	case CTIO_DONE:
-		if (ctio->ccb_h.status != CAM_REQ_CMP) {
-			/* XXX */
+		switch (ctio->ccb_h.status & CAM_STATUS_MASK) {
+		case CAM_REQ_CMP:
+			break;
+		case CAM_REQUEUE_REQ:
+			warnx("requeueing request");
+			if ((a_descr->flags & CAM_DIR_MASK) == CAM_DIR_OUT) {
+				if (aio_write(&c_descr->aiocb) < 0) {
+					err(1, "aio_write"); /* XXX */
+				}
+			} else {
+				if (aio_read(&c_descr->aiocb) < 0) {
+					err(1, "aio_read"); /* XXX */
+				}
+			}
+			return;
+		default:
 			errx(1, "CTIO failed, status %#x", ctio->ccb_h.status);
 		}
 		a_descr->init_ack += ctio->dxfer_len;
 		if ((a_descr->flags & CAM_DIR_MASK) == CAM_DIR_OUT &&
 		    ctio->dxfer_len > 0) {
-			if (debug)
-				warnx("sending AIO for CTIO write");
 			a_descr->targ_req += ctio->dxfer_len;
-			if (aio_write(&c_descr->aiocb) < 0)
-				err(1, "aio_write"); /* XXX */
+			if (notaio) {
+				if (debug)
+					warnx("write sync %lud @ block "
+					    OFF_FMT, (unsigned long)
+					    (ctio->dxfer_len / sector_size),
+					    c_descr->offset / sector_size);
+				if (lseek(c_descr->aiocb.aio_fildes,
+				    c_descr->aiocb.aio_offset, SEEK_SET) < 0) {
+					perror("lseek");
+					err(1, "lseek");
+				}
+				if (write(c_descr->aiocb.aio_fildes,
+				    (void *) c_descr->aiocb.aio_buf,
+				    ctio->dxfer_len) != ctio->dxfer_len) {
+					err(1, "write");
+				}
+				tcmd_rdwr_done(atio, ctio, AIO_DONE);
+			} else {
+				if (debug)
+					warnx("write async %lud @ block "
+					    OFF_FMT, (unsigned long)
+					    (ctio->dxfer_len / sector_size),
+					    c_descr->offset / sector_size);
+				if (aio_write(&c_descr->aiocb) < 0) {
+					err(1, "aio_write"); /* XXX */
+				}
+			}
 		} else {
 			if (debug)
 				warnx("CTIO done freeing CTIO");

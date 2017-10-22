@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/ia64/ia64/ssc.c,v 1.24 2004/10/18 21:51:26 phk Exp $
+ *	$FreeBSD: release/7.0.0/sys/ia64/ia64/ssc.c 164049 2006-11-06 17:43:10Z rwatson $
  */
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -33,6 +33,7 @@
 #include <sys/lock.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/systm.h>
 #include <sys/tty.h>
@@ -53,26 +54,26 @@
 
 #define	SSC_POLL_HZ	50
 
-static	d_open_t	sscopen;
-static	d_close_t	sscclose;
+static	d_open_t	ssc_open;
+static	d_close_t	ssc_close;
 
 static struct cdevsw ssc_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_open =	sscopen,
-	.d_close =	sscclose,
+	.d_open =	ssc_open,
+	.d_close =	ssc_close,
 	.d_name =	"ssc",
 	.d_flags =	D_TTY | D_NEEDGIANT,
 };
 
 static struct tty *ssc_tp = NULL;
 static int polltime;
-static struct callout_handle ssctimeouthandle
-	= CALLOUT_HANDLE_INITIALIZER(&ssctimeouthandle);
+static struct callout_handle ssc_timeouthandle
+	= CALLOUT_HANDLE_INITIALIZER(&ssc_timeouthandle);
 
-static void	sscstart(struct tty *);
-static void	ssctimeout(void *);
-static int	sscparam(struct tty *, struct termios *);
-static void	sscstop(struct tty *, int);
+static void	ssc_start(struct tty *);
+static void	ssc_timeout(void *);
+static int	ssc_param(struct tty *, struct termios *);
+static void	ssc_stop(struct tty *, int);
 
 static u_int64_t
 ssc(u_int64_t in0, u_int64_t in1, u_int64_t in2, u_int64_t in3, int which)
@@ -87,43 +88,39 @@ ssc(u_int64_t in0, u_int64_t in1, u_int64_t in2, u_int64_t in3, int which)
 }
 
 static void
-ssccnprobe(struct consdev *cp)
+ssc_cnprobe(struct consdev *cp)
 {
 	sprintf(cp->cn_name, "ssccons");
 	cp->cn_pri = CN_INTERNAL;
 }
 
 static void
-ssccninit(struct consdev *cp)
+ssc_cninit(struct consdev *cp)
 {
 }
 
 static void
-ssccnattach(void *arg)
+ssc_cnterm(struct consdev *cp)
+{
+}
+
+static void
+ssc_cnattach(void *arg)
 {
 	make_dev(&ssc_cdevsw, 0, UID_ROOT, GID_WHEEL, 0600, "ssccons");
+	ssc_tp = ttyalloc();
 }
-SYSINIT(ssccnattach, SI_SUB_DRIVERS, SI_ORDER_ANY, ssccnattach, 0);
+
+SYSINIT(ssc_cnattach, SI_SUB_DRIVERS, SI_ORDER_ANY, ssc_cnattach, 0);
 
 static void
-ssccnputc(struct consdev *cp, int c)
+ssc_cnputc(struct consdev *cp, int c)
 {
 	ssc(c, 0, 0, 0, SSC_PUTCHAR);
 }
 
 static int
-ssccngetc(struct consdev *cp)
-{
-	int c;
-	do {
-		c = ssc(0, 0, 0, 0, SSC_GETCHAR);
-	} while (c == 0);
-
-	return c;
-}
-
-static int
-ssccncheckc(struct consdev *cp)
+ssc_cngetc(struct consdev *cp)
 {
     int c;
     c = ssc(0, 0, 0, 0, SSC_GETCHAR);
@@ -133,26 +130,26 @@ ssccncheckc(struct consdev *cp)
 }
 
 static int
-sscopen(struct cdev *dev, int flag, int mode, struct thread *td)
+ssc_open(struct cdev *dev, int flag, int mode, struct thread *td)
 {
 	struct tty *tp;
 	int s;
 	int error = 0, setuptimeout = 0;
  
-	tp = ssc_tp = dev->si_tty = ttymalloc(ssc_tp);
+	tp = dev->si_tty = ssc_tp;
 
 	s = spltty();
-	tp->t_oproc = sscstart;
-	tp->t_param = sscparam;
-	tp->t_stop = sscstop;
+	tp->t_oproc = ssc_start;
+	tp->t_param = ssc_param;
+	tp->t_stop = ssc_stop;
 	tp->t_dev = dev;
 	if ((tp->t_state & TS_ISOPEN) == 0) {
 		tp->t_state |= TS_CARR_ON;
 		ttyconsolemode(tp, 0);
-		ttsetwater(tp);
 
 		setuptimeout = 1;
-	} else if ((tp->t_state & TS_XCLUDE) && suser(td)) {
+	} else if ((tp->t_state & TS_XCLUDE) &&
+	    priv_check(td, PRIV_TTY_EXCLUSIVE)) {
 		splx(s);
 		return EBUSY;
 	}
@@ -165,13 +162,13 @@ sscopen(struct cdev *dev, int flag, int mode, struct thread *td)
 		polltime = hz / SSC_POLL_HZ;
 		if (polltime < 1)
 			polltime = 1;
-		ssctimeouthandle = timeout(ssctimeout, tp, polltime);
+		ssc_timeouthandle = timeout(ssc_timeout, tp, polltime);
 	}
 	return error;
 }
  
 static int
-sscclose(struct cdev *dev, int flag, int mode, struct thread *td)
+ssc_close(struct cdev *dev, int flag, int mode, struct thread *td)
 {
 	int unit = minor(dev);
 	struct tty *tp = ssc_tp;
@@ -179,21 +176,21 @@ sscclose(struct cdev *dev, int flag, int mode, struct thread *td)
 	if (unit != 0)
 		return ENXIO;
 
-	untimeout(ssctimeout, tp, ssctimeouthandle);
+	untimeout(ssc_timeout, tp, ssc_timeouthandle);
 	ttyld_close(tp, flag);
 	tty_close(tp);
 	return 0;
 }
  
 static int
-sscparam(struct tty *tp, struct termios *t)
+ssc_param(struct tty *tp, struct termios *t)
 {
 
 	return 0;
 }
 
 static void
-sscstart(struct tty *tp)
+ssc_start(struct tty *tp)
 {
 	int s;
 
@@ -207,7 +204,7 @@ sscstart(struct tty *tp)
 
 	tp->t_state |= TS_BUSY;
 	while (tp->t_outq.c_cc != 0)
-		ssccnputc(NULL, getc(&tp->t_outq));
+		ssc_cnputc(NULL, getc(&tp->t_outq));
 	tp->t_state &= ~TS_BUSY;
 
 	ttwwakeup(tp);
@@ -218,7 +215,7 @@ sscstart(struct tty *tp)
  * Stop output on a line.
  */
 static void
-sscstop(struct tty *tp, int flag)
+ssc_stop(struct tty *tp, int flag)
 {
 	int s;
 
@@ -230,16 +227,16 @@ sscstop(struct tty *tp, int flag)
 }
 
 static void
-ssctimeout(void *v)
+ssc_timeout(void *v)
 {
 	struct tty *tp = v;
 	int c;
 
-	while ((c = ssccncheckc(NULL)) != -1) {
+	while ((c = ssc_cngetc(NULL)) != -1) {
 		if (tp->t_state & TS_ISOPEN)
 			ttyld_rint(tp, c);
 	}
-	ssctimeouthandle = timeout(ssctimeout, tp, polltime);
+	ssc_timeouthandle = timeout(ssc_timeout, tp, polltime);
 }
 
-CONS_DRIVER(ssc, ssccnprobe, ssccninit, NULL, ssccngetc, ssccncheckc, ssccnputc, NULL);
+CONSOLE_DRIVER(ssc);

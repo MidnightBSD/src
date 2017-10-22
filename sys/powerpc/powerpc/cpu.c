@@ -55,7 +55,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * from $NetBSD: cpu_subr.c,v 1.1 2003/02/03 17:10:09 matt Exp $
- * $FreeBSD: src/sys/powerpc/powerpc/cpu.c,v 1.7 2005/02/04 01:59:48 grehan Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/powerpc/cpu.c 166812 2007-02-18 17:40:09Z marcel $
  */
 
 #include <sys/param.h>
@@ -63,6 +63,7 @@
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
+#include <sys/sysctl.h>
 
 #include <machine/bus.h>
 #include <machine/hid.h>
@@ -99,6 +100,9 @@ static const struct cputab models[] = {
         { "Unknown PowerPC CPU",	0,		REVFMT_HEX }
 };
 
+static char model[64];
+SYSCTL_STRING(_hw, HW_MODEL, model, CTLFLAG_RD, model, 0, "");
+
 static register_t	l2cr_config = 0;
 
 static void	cpu_print_speed(void);
@@ -126,7 +130,7 @@ cpu_setup(u_int cpuid)
 		min = (pvr >>  0) & 0xf;
 	}
 
-	for (cp = models; cp->name[0] != '\0'; cp++) {
+	for (cp = models; cp->version != 0; cp++) {
 		if (cp->version == vers)
 			break;
 	}
@@ -137,6 +141,7 @@ cpu_setup(u_int cpuid)
 		name = "Motorola MPC755";
 		revfmt = REVFMT_HEX;
 	}
+	strncpy(model, name, sizeof(model) - 1);
 
 	printf("cpu%d: %s revision ", cpuid, name);
 

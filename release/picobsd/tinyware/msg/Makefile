@@ -1,4 +1,4 @@
-# $FreeBSD: src/release/picobsd/tinyware/msg/Makefile,v 1.4 2004/12/21 08:47:05 ru Exp $
+# $FreeBSD: release/7.0.0/release/picobsd/tinyware/msg/Makefile 139103 2004-12-21 08:47:35Z ru $
 #
 PROG=msg
 SRCS= 	msg.c

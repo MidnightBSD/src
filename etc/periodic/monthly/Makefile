@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/periodic/monthly/Makefile,v 1.3 2002/07/18 12:32:57 ru Exp $
+# $FreeBSD: release/7.0.0/etc/periodic/monthly/Makefile 100316 2002-07-18 12:33:01Z ru $
 
 FILES=	200.accounting \
 	999.local

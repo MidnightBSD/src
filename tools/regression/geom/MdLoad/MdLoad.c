@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/geom/MdLoad/MdLoad.c,v 1.1 2003/04/09 12:34:20 phk Exp $
+ * $FreeBSD: release/7.0.0/tools/regression/geom/MdLoad/MdLoad.c 113290 2003-04-09 12:34:20Z phk $
  */
 
 #include <stdio.h>

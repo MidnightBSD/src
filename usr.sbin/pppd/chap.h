@@ -30,7 +30,7 @@
  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/usr.sbin/pppd/chap.h,v 1.7 1999/08/28 01:19:01 peter Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/pppd/chap.h 50479 1999-08-28 01:35:59Z peter $
  */
 
 #ifndef __CHAP_INCLUDE__

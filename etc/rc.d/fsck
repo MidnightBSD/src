@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $NetBSD: fsck,v 1.2 2001/06/18 06:42:35 lukem Exp $
-# $FreeBSD: src/etc/rc.d/fsck,v 1.10 2004/10/07 13:55:25 mtm Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/fsck 175737 2008-01-28 07:58:32Z dougb $
 #
 
 # PROVIDE: fsck
@@ -13,17 +12,6 @@
 name="fsck"
 start_cmd="fsck_start"
 stop_cmd=":"
-
-stop_boot()
-{
-	#	Terminate the process (which may include the parent /etc/rc)
-	#	if booting directly to multiuser mode.
-	#
-	if [ "$autoboot" = yes ]; then
-		kill -TERM $$
-	fi
-	exit 1
-}
 
 fsck_start()
 {

@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/doc.c,v 1.32 2004/01/02 09:19:13 obrien Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/doc.c 174854 2007-12-22 06:32:46Z cvs2svn $
  */
 
 #include "sysinstall.h"

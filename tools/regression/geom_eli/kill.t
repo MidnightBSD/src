@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: src/tools/regression/geom_eli/kill.t,v 1.1.2.1 2005/08/05 20:04:38 pjd Exp $
+# $FreeBSD: release/7.0.0/tools/regression/geom_eli/kill.t 148459 2005-07-27 22:27:30Z pjd $
 
 base=`basename $0`
 no=45

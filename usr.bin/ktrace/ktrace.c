@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)ktrace.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ktrace/ktrace.c,v 1.20 2003/02/05 14:25:43 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ktrace/ktrace.c 166679 2007-02-13 00:22:29Z mpp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -123,7 +123,7 @@ main(int argc, char *argv[])
 	argv += optind;
 	argc -= optind;
 	
-	if ((pidset && *argv) || (!pidset && !*argv))
+	if ((pidset && *argv) || (!pidset && clear == NOTSET && !*argv))
 		usage();
 			
 	if (inherit)
@@ -145,11 +145,14 @@ main(int argc, char *argv[])
 
 	omask = umask(S_IRWXG|S_IRWXO);
 	if (append) {
-		if ((fd = open(tracefile, O_CREAT | O_WRONLY, DEFFILEMODE)) < 0)
+		if ((fd = open(tracefile, O_CREAT | O_WRONLY | O_NONBLOCK,
+		    DEFFILEMODE)) < 0)
 			err(1, "%s", tracefile);
 		if (fstat(fd, &sb) != 0 || sb.st_uid != getuid())
 			errx(1, "refuse to append to %s not owned by you",
 			    tracefile);
+		if (!(S_ISREG(sb.st_mode)))
+			errx(1, "%s not regular file", tracefile);
 	} else {
 		if (unlink(tracefile) == -1 && errno != ENOENT)
 			err(1, "unlink %s", tracefile);

@@ -3,7 +3,7 @@
 # Copyright 2002. Gordon Tetlow.
 # gordon@FreeBSD.org
 #
-# $FreeBSD: src/sbin/reboot/nextboot.sh,v 1.1 2002/05/24 04:06:03 gordon Exp $
+# $FreeBSD: release/7.0.0/sbin/reboot/nextboot.sh 154498 2006-01-18 04:48:45Z wes $
 
 delete="NO"
 force="NO"

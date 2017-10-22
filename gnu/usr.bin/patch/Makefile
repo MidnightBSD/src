@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/patch/Makefile,v 1.8 2004/02/17 01:24:45 ache Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/patch/Makefile 125910 2004-02-17 01:34:53Z ache $
 
 PROG= 	patch
 SRCS=   backupfile.c inp.c patch.c pch.c util.c version.c

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/ipcs/Makefile,v 1.7 2004/02/05 22:44:24 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/ipcs/Makefile 125503 2004-02-05 22:44:25Z ru $
 
 PROG=	ipcs
 DPADD=	${LIBKVM}

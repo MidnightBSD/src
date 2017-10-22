@@ -1,4 +1,4 @@
-/* $Id: lukemftp.h,v 1.1.1.2 2006-02-25 02:33:36 laffer1 Exp $ */
+/* $Id: lukemftp.h,v 1.43 2002/06/10 08:13:01 lukem Exp $ */
 
 #define	FTP_PRODUCT	"lukemftp"
 #define	FTP_VERSION	"1.6-beta2"

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/sign/gzip.c,v 1.3 2002/04/01 09:39:07 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/sign/gzip.c 93520 2002-04-01 09:39:07Z obrien $");
 
 #include <sys/types.h>
 #include <sys/wait.h>

@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/pecoff/imgact_pecoff.c,v 1.39 2005/02/22 01:26:48 sam Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/compat/pecoff/imgact_pecoff.c 175495 2008-01-19 18:15:07Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -405,7 +405,7 @@ exec_pecoff_coff_prep_zmagic(struct image_params * imgp,
 	int             prot;
 	u_long          text_size = 0, data_size = 0, dsize;
 	u_long          text_addr = 0, data_addr = VM_MAXUSER_ADDRESS;
-	u_long          ldexport, ldbase;
+	u_long          ldexport = 0, ldbase = 0;
 	struct pecoff_opthdr *wp;
 	struct coff_scnhdr *sh;
 	struct vmspace *vmspace;
@@ -416,7 +416,11 @@ exec_pecoff_coff_prep_zmagic(struct image_params * imgp,
 	wp = (void *) ((char *) ap + sizeof(struct coff_aouthdr));
 	error = pecoff_read_from(FIRST_THREAD_IN_PROC(imgp->proc), imgp->vp,
 	    peofs + PECOFF_HDR_SIZE, (caddr_t) sh, scnsiz);
-	exec_new_vmspace(imgp, &pecoff_sysvec);
+	if (error)
+		return (error);
+	error = exec_new_vmspace(imgp, &pecoff_sysvec);
+	if (error)
+		return (error);
 	vmspace = imgp->proc->p_vmspace;
 	for (i = 0; i < fp->f_nscns; i++) {
 		prot = VM_PROT_WRITE;	/* XXX for relocation? */

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/getopt/Makefile,v 1.5 2002/02/08 22:31:40 markm Exp $
+# $FreeBSD: release/7.0.0/usr.bin/getopt/Makefile 90415 2002-02-08 22:31:43Z markm $
 #
 
 PROG = getopt

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/ofwdump/Makefile,v 1.4 2004/05/22 16:51:11 marius Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/ofwdump/Makefile 129589 2004-05-22 16:51:11Z marius $
 
 PROG=	ofwdump
 MAN=	ofwdump.8

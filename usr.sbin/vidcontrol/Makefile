@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/vidcontrol/Makefile,v 1.6 2005/01/13 03:59:44 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/vidcontrol/Makefile 140159 2005-01-13 03:59:44Z delphij $
 
 PROG=	vidcontrol
 SRCS=	vidcontrol.c decode.c

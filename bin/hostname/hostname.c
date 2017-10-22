@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)hostname.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/hostname/hostname.c,v 1.17 2005/01/10 08:39:22 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/hostname/hostname.c 165006 2006-12-08 07:47:08Z kientzle $");
 
 #include <sys/param.h>
 
@@ -58,8 +58,15 @@ main(int argc, char *argv[])
 	char *p, hostname[MAXHOSTNAMELEN];
 
 	sflag = 0;
-	while ((ch = getopt(argc, argv, "s")) != -1)
+	while ((ch = getopt(argc, argv, "fs")) != -1)
 		switch (ch) {
+		case 'f':
+			/*
+			 * On Linux, "hostname -f" prints FQDN.
+			 * BSD "hostname" always prints FQDN by
+			 * default, so we accept but ignore -f.
+			 */
+			break;
 		case 's':
 			sflag = 1;
 			break;
@@ -93,6 +100,6 @@ void
 usage(void)
 {
 
-	(void)fprintf(stderr, "usage: hostname [-s] [name-of-host]\n");
+	(void)fprintf(stderr, "usage: hostname [-fs] [name-of-host]\n");
 	exit(1);
 }

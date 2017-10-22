@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $NetBSD: rpcbind,v 1.6 2002/01/31 01:26:06 lukem Exp $
-# $FreeBSD: src/etc/rc.d/rpcbind,v 1.12 2004/10/07 13:55:26 mtm Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/rpcbind 175737 2008-01-28 07:58:32Z dougb $
 #
 
 # PROVIDE: rpcbind

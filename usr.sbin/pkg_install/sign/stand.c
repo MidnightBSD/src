@@ -1,9 +1,9 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/sign/stand.c,v 1.2 2002/04/01 09:39:07 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/sign/stand.c 166354 2007-01-30 15:09:30Z ru $");
 
 #include "stand.h"
 
-#ifdef BSD4_4
+#ifndef BSD4_4
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>

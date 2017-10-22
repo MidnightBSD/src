@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)kernmalloc.t	5.1 (Berkeley) 4/16/91
-.\" $FreeBSD: src/share/doc/papers/kernmalloc/kernmalloc.t,v 1.6 2000/11/28 19:26:53 ru Exp $
+.\" $FreeBSD: release/7.0.0/share/doc/papers/kernmalloc/kernmalloc.t 172506 2007-10-10 16:59:15Z cvs2svn $
 .\"
 .\" reference a system routine name
 .de RN

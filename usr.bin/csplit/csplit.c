@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/csplit/csplit.c,v 1.9 2004/03/22 11:15:03 tjr Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/csplit/csplit.c 127300 2004-03-22 11:15:03Z tjr $");
 
 #include <sys/types.h>
 

@@ -1,6 +1,6 @@
-# $FreeBSD: src/etc/root/dot.profile,v 1.20 1999/08/27 23:24:09 peter Exp $
+# $FreeBSD: release/7.0.0/etc/root/dot.profile 170087 2007-05-29 06:33:10Z dougb $
 #
-PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/X11R6/bin
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/games:/usr/local/sbin:/usr/local/bin:~/bin
 export PATH
 HOME=/root
 export HOME

@@ -1,3 +1,3 @@
-# $FreeBSD: src/usr.sbin/pccard/Makefile.inc,v 1.9.2.1 2005/11/16 08:35:22 ru Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/pccard/Makefile.inc 151416 2005-10-17 15:28:25Z ru $
 
 .include "../Makefile.inc"

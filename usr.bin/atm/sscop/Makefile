@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/atm/sscop/Makefile,v 1.3 2004/09/24 22:10:34 trhodes Exp $
+# $FreeBSD: release/7.0.0/usr.bin/atm/sscop/Makefile 135771 2004-09-24 22:10:34Z trhodes $
 
 CONTRIB= ${.CURDIR}/../../../contrib/ngatm/sscop
 

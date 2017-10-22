@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/rpc.ypupdated/ypupdated_server.c,v 1.7 2003/05/03 21:06:40 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/rpc.ypupdated/ypupdated_server.c 114601 2003-05-03 21:06:42Z obrien $");
 
 #include <stdio.h>
 #include <rpc/rpc.h>

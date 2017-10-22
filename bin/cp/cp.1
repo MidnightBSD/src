@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)cp.1	8.3 (Berkeley) 4/18/94
-.\" $FreeBSD: src/bin/cp/cp.1,v 1.33 2005/02/25 00:40:46 trhodes Exp $
+.\" $FreeBSD: release/7.0.0/bin/cp/cp.1 163919 2006-11-02 19:10:05Z ceri $
 .\"
-.Dd February 23, 2005
+.Dd October 27, 2006
 .Dt CP 1
 .Os
 .Sh NAME
@@ -45,7 +45,7 @@
 .Op Fl H | Fl L | Fl P
 .Oc
 .Op Fl f | i | n
-.Op Fl pv
+.Op Fl lpv
 .Ar source_file target_file
 .Nm
 .Oo
@@ -53,7 +53,7 @@
 .Op Fl H | Fl L | Fl P
 .Oc
 .Op Fl f | i | n
-.Op Fl pv
+.Op Fl lpv
 .Ar source_file ... target_directory
 .Sh DESCRIPTION
 In the first synopsis form, the
@@ -144,6 +144,8 @@ option overrides any previous
 or
 .Fl n
 options.)
+.It Fl l
+Create hard links to regular files in a hierarchy instead of copying.
 .It Fl n
 Do not overwrite an existing file.
 (The
@@ -249,9 +251,24 @@ Historic versions of the
 utility had a
 .Fl r
 option.
-This implementation supports that option, however, its use is strongly
-discouraged, as it does not correctly copy special files, symbolic links
-or fifo's.
+This implementation supports that option, however, its behavior
+is different from historical
+.Fx
+behavior.
+Use of this option
+is strongly discouraged as the behavior is
+implementation-dependent.
+In
+.Fx ,
+.Fl r
+is a synonym for
+.Fl RL
+and works the same unless modified by other flags.
+Historical implementations
+of
+.Fl r
+differ as they copy special files as normal
+files while recreating a hierarchy.
 .Pp
 The
 .Fl v

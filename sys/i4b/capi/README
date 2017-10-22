@@ -1,4 +1,4 @@
-$FreeBSD: src/sys/i4b/capi/README,v 1.1 2001/05/25 08:39:31 hm Exp $
+$FreeBSD: release/7.0.0/sys/i4b/capi/README 77164 2001-05-25 08:43:30Z hm $
 
 Message-ID: <3AF56886.7D92609A@cubical.fi>
 Date: Sun, 06 May 2001 18:06:47 +0300

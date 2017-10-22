@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/vgrind/vfontedpr.c,v 1.15 2003/10/26 05:03:11 peter Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/vgrind/vfontedpr.c 121547 2003-10-26 05:03:11Z peter $");
 
 #ifndef lint
 static const char copyright[] =

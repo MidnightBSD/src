@@ -1,0 +1,8 @@
+.\" $FreeBSD: release/7.0.0/tools/build/options/WITHOUT_BIND_MTREE 157717 2006-04-13 10:37:29Z ru $
+Set to avoid running
+.Xr mtree 8
+to create the chroot directory structure under
+.Pa /var/named ,
+and avoid creating an
+.Pa /etc/namedb
+symlink to the chroot directory.

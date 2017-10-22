@@ -1,0 +1,13 @@
+# $FreeBSD: release/7.0.0/tools/regression/bin/sh/builtins/command3.0 151797 2005-10-28 14:02:42Z stefanf $
+command -v ls
+command -v true
+command -v /bin/ls
+
+fun() {
+}
+command -v fun
+command -v break
+command -v if
+
+alias foo=bar
+command -v foo

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/include/sc_machdep.h,v 1.1 2004/01/21 05:16:23 grehan Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/sc_machdep.h 124771 2004-01-21 05:16:23Z grehan $
  */
 
 #ifndef	_MACHINE_SC_MACHDEP_H_

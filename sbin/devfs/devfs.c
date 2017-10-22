@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/devfs/devfs.c,v 1.5 2004/01/22 07:23:35 grehan Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sbin/devfs/devfs.c 159605 2006-06-14 15:09:52Z maxim $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -163,7 +163,7 @@ efgetln(FILE *fp, char **line)
 		if (*line == NULL)
 			errx(1, "cannot allocate memory");
 		memcpy(*line, cp, rv);
-		*line[rv] = '\0';
+		(*line)[rv] = '\0';
 	}
 	assert(rv == strlen(*line));
 	return (rv);

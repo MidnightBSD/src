@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/sdpd,v 1.4.2.1 2005/11/23 18:03:33 emax Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/sdpd 165683 2006-12-31 10:37:18Z yar $
 #
 
 # PROVIDE: sdpd
@@ -13,21 +13,7 @@
 name="sdpd"
 command="/usr/sbin/${name}"
 rcvar=`set_rcvar`
-start_precmd="sdpd_prestart"
-
-sdpd_prestart()
-{
-	if ! kldstat -q -m ng_btsocket ; then
-		if kldload ng_btsocket > /dev/null 2>&1 ; then
-			info 'ng_btsocket module loaded'
-		else
-			warn 'ng_btsocket module failed to load'
-			return 1
-		fi
-	fi
-
-	return 0
-}
+required_modules="ng_btsocket"
 
 load_rc_config $name
 control="${sdpd_control:-/var/run/sdp}"

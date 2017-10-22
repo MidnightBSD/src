@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)ftree.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pax/ftree.c,v 1.24 2005/01/12 03:25:55 brian Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/pax/ftree.c 140097 2005-01-12 03:25:55Z brian $");
 
 #include <sys/types.h>
 #include <sys/time.h>

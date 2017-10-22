@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/burncd/burncd.c,v 1.45 2005/05/13 20:06:44 ru Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/burncd/burncd.c 146195 2005-05-13 20:06:44Z ru $
  */
 
 #include <unistd.h>

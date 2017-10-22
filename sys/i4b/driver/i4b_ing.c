@@ -32,7 +32,7 @@
  *---------------------------------------------------------------------------*/ 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/driver/i4b_ing.c,v 1.24 2005/01/06 22:18:18 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/driver/i4b_ing.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include "opt_i4b.h"
 
@@ -50,13 +50,15 @@ __FBSDID("$FreeBSD: src/sys/i4b/driver/i4b_ing.c,v 1.24 2005/01/06 22:18:18 imp 
 #include <netgraph/ng_parse.h>
 #include <netgraph/netgraph.h>
 
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_debug.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_debug.h>
 
 #include <i4b/include/i4b_global.h>
 #include <i4b/include/i4b_l3l4.h>
 
 #include <i4b/layer4/i4b_l4.h>
+
+#error "Cannot be used until I4B is locked."
 
 #define I4BINGACCT	1		/* enable accounting messages */
 #define	I4BINGACCTINTVL	2		/* accounting msg interval in secs */

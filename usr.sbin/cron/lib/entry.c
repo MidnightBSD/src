@@ -17,7 +17,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/cron/lib/entry.c,v 1.16 2005/02/14 14:09:21 delphij Exp $";
+  "$FreeBSD: release/7.0.0/usr.sbin/cron/lib/entry.c 170890 2007-06-17 17:25:53Z yar $";
 #endif
 
 /* vix 26jan87 [RCS'd; rest of log is in RCS file]
@@ -323,10 +323,12 @@ load_entry(file, error_func, pw, envp)
 #endif
 	}
 
+#ifndef PAM	/* PAM takes care of account expiration by itself */
 	if (pw->pw_expire && time(NULL) >= pw->pw_expire) {
 		ecode = e_username;
 		goto eof;
 	}
+#endif /* !PAM */
 
 	e->uid = pw->pw_uid;
 	e->gid = pw->pw_gid;
@@ -351,14 +353,16 @@ load_entry(file, error_func, pw, envp)
 			goto eof;
 		}
 	}
-	prev_env = e->envp;
-	sprintf(envstr, "HOME=%s", pw->pw_dir);
-	e->envp = env_set(e->envp, envstr);
-	if (e->envp == NULL) {
-		warn("env_set(%s)", envstr);
-		env_free(prev_env);
-		ecode = e_mem;
-		goto eof;
+	if (!env_get("HOME", e->envp)) {
+		prev_env = e->envp;
+		sprintf(envstr, "HOME=%s", pw->pw_dir);
+		e->envp = env_set(e->envp, envstr);
+		if (e->envp == NULL) {
+			warn("env_set(%s)", envstr);
+			env_free(prev_env);
+			ecode = e_mem;
+			goto eof;
+		}
 	}
 	if (!env_get("PATH", e->envp)) {
 		prev_env = e->envp;
@@ -507,7 +511,9 @@ get_range(bits, low, high, names, ch, file)
 		if (EOF == (ch = get_number(&num1, low, names, ch, file)))
 			return EOF;
 
-		if (ch != '-') {
+		if (ch == '/')
+			num2 = high;
+		else if (ch != '-') {
 			/* not a range, it's a single number.
 			 */
 			if (EOF == set_element(bits, low, high, num1))

@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)gen_subs.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pax/gen_subs.c,v 1.23 2004/04/06 20:06:48 markm Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/pax/gen_subs.c 127958 2004-04-06 20:06:54Z markm $");
 
 #include <sys/types.h>
 #include <sys/time.h>

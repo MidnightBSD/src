@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/nfs4client/Makefile,v 1.4.2.1 2006/02/10 00:38:04 yar Exp $
+# $FreeBSD: release/7.0.0/sys/modules/nfs4client/Makefile 155824 2006-02-18 23:49:28Z yar $
 
 .PATH: ${.CURDIR}/../../nfsclient ${.CURDIR}/../../nfs4client \
 	${.CURDIR}/../../nfs ${.CURDIR}/../../rpc
@@ -34,4 +34,3 @@ opt_inet6.h:
 .endif
 
 .include <bsd.kmod.mk>
-

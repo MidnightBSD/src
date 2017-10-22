@@ -26,9 +26,9 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-/* $Header: /home/cvs/src/usr.bin/lex/nfa.c,v 1.1.1.2 2006-02-25 02:38:14 laffer1 Exp $ */
+/* $Header: /home/daffy/u0/vern/flex/RCS/nfa.c,v 2.17 95/03/04 16:11:42 vern Exp $ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/lex/nfa.c,v 1.6 2002/06/30 05:25:04 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/lex/nfa.c 99112 2002-06-30 05:25:07Z obrien $");
 
 #include "flexdef.h"
 

@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/devices.c,v 1.160.2.1 2005/07/28 01:17:12 grehan Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/devices.c 174854 2007-12-22 06:32:46Z cvs2svn $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -50,97 +50,114 @@
 #include <ctype.h>
 #include <libdisk.h>
 
-/* how much to bias minor number for a given /dev/<ct#><un#>s<s#> slice */
-#define SLICE_DELTA	(0x10000)
-
 static Device *Devices[DEV_MAX];
 static int numDevs;
+
+#define	DEVICE_ENTRY(type, name, descr, max)	{ type, name, descr, max }
+
+#define	CDROM(name, descr, max)					\
+	DEVICE_ENTRY(DEVICE_TYPE_CDROM, name, descr, max)
+#define	TAPE(name, descr, max)						\
+	DEVICE_ENTRY(DEVICE_TYPE_TAPE, name, descr, max)
+#define	DISK(name, descr, max)						\
+	DEVICE_ENTRY(DEVICE_TYPE_DISK, name, descr, max)
+#define	FLOPPY(name, descr, max)					\
+	DEVICE_ENTRY(DEVICE_TYPE_FLOPPY, name, descr, max)
+#define	NETWORK(name, descr)						\
+	DEVICE_ENTRY(DEVICE_TYPE_NETWORK, name, descr, 0)
+#define	SERIAL(name, descr, max)					\
+	DEVICE_ENTRY(DEVICE_TYPE_NETWORK, name, descr, max)
 
 static struct _devname {
     DeviceType type;
     char *name;
     char *description;
-    int major, minor, delta, max;
+    int max;
 } device_names[] = {
-    { DEVICE_TYPE_CDROM,	"cd%d",		"SCSI CDROM drive",	15, 2, 8, 4 				},
-    { DEVICE_TYPE_CDROM,	"mcd%d",	"Mitsumi (old model) CDROM drive",	29, 0, 8, 4	 	},
-    { DEVICE_TYPE_CDROM,	"scd%d",	"Sony CDROM drive - CDU31/33A type",	45, 0, 8, 4 		},
-#ifdef notdef
-    { DEVICE_TYPE_CDROM,	"matcd%d",	"Matsushita CDROM ('sound blaster' type)", 46, 0, 8, 4 		},
-#endif
-    { DEVICE_TYPE_CDROM,	"acd%d",	"ATAPI/IDE CDROM",	117, 0, 8, 4				},
-    { DEVICE_TYPE_TAPE, 	"sa%d",		"SCSI tape drive",	14, 0, 16, 4				},
-    { DEVICE_TYPE_TAPE, 	"rwt%d",	"Wangtek tape drive",	10, 0, 1, 4				},
-    { DEVICE_TYPE_DISK, 	"da%d",		"SCSI disk device",	13, 65538, 8, 16			},
-    { DEVICE_TYPE_DISK, 	"ad%d",		"ATA/IDE disk device",	116, 65538, 8, 16			},
-    { DEVICE_TYPE_DISK, 	"ar%d",		"ATA/IDE RAID device",	157, 65538, 8, 16			},
-    { DEVICE_TYPE_DISK, 	"afd%d",	"ATAPI/IDE floppy device",	118, 65538, 8, 4		},
-    { DEVICE_TYPE_DISK, 	"mlxd%d",	"Mylex RAID disk",	131, 65538, 8, 4			},
-    { DEVICE_TYPE_DISK, 	"amrd%d",	"AMI MegaRAID drive",	133, 65538, 8, 4			},
-    { DEVICE_TYPE_DISK, 	"idad%d",	"Compaq RAID array",	109, 65538, 8, 4			},
-    { DEVICE_TYPE_DISK, 	"twed%d",	"3ware ATA RAID array",	147, 65538, 8, 4			},
-    { DEVICE_TYPE_DISK, 	"aacd%d",	"Adaptec FSA RAID array", 151, 65538, 8, 4			},
-    { DEVICE_TYPE_DISK, 	"ipsd%d",	"IBM ServeRAID RAID array", 176, 65538, 8, 4			},
-    { DEVICE_TYPE_FLOPPY,	"fd%d",		"floppy drive unit A",	9, 0, 64, 4				},
-    { DEVICE_TYPE_NETWORK,	"an",		"Aironet 4500/4800 802.11 wireless adapter"			},
-    { DEVICE_TYPE_NETWORK,	"aue",		"ADMtek USB ethernet adapter"					},
-    { DEVICE_TYPE_NETWORK,	"axe",		"ASIX Electronics USB ethernet adapter"					},
-    { DEVICE_TYPE_NETWORK,	"bfe",		"Broadcom BCM440x PCI ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"bge",		"Broadcom BCM570x PCI gigabit ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"cue",		"CATC USB ethernet adapter"					},
-    { DEVICE_TYPE_NETWORK,	"fpa",		"DEC DEFPA PCI FDDI card"					},
-    { DEVICE_TYPE_NETWORK,	"sr",		"SDL T1/E1 sync serial PCI card"				},
-    { DEVICE_TYPE_NETWORK,	"cc3i",		"SDL HSSI sync serial PCI card"					},
-    { DEVICE_TYPE_NETWORK,	"en",		"Efficient Networks ATM PCI card"				},
-    { DEVICE_TYPE_NETWORK,	"dc",		"DEC/Intel 21143 (and clones) PCI fast ethernet card"		},
-    { DEVICE_TYPE_NETWORK,	"de",		"DEC DE435 PCI NIC or other DC21040-AA based card"		},
-    { DEVICE_TYPE_NETWORK,	"fxp",		"Intel EtherExpress Pro/100B PCI Fast Ethernet card"		},
-    { DEVICE_TYPE_NETWORK,	"ed",		"Novell NE1000/2000; 3C503; NE2000-compatible PCMCIA"		},
-    { DEVICE_TYPE_NETWORK,	"ep",		"3Com 3C509 ethernet card/3C589 PCMCIA"				},
-    { DEVICE_TYPE_NETWORK,	"el",		"3Com 3C501 ethernet card"					},
-    { DEVICE_TYPE_NETWORK,	"em",		"Intel(R) PRO/1000 ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"ex",		"Intel EtherExpress Pro/10 ethernet card"			},
-    { DEVICE_TYPE_NETWORK,	"fe",		"Fujitsu MB86960A/MB86965A ethernet card"			},
-    { DEVICE_TYPE_NETWORK,	"gem",		"Apple/Sun GMAC ethernet adapter"				},
-    { DEVICE_TYPE_NETWORK,	"ie",		"AT&T StarLAN 10 and EN100; 3Com 3C507; NI5210"			},
-    { DEVICE_TYPE_NETWORK,	"ix",		"Intel Etherexpress ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"kue",		"Kawasaki LSI USB ethernet adapter"				},
-    { DEVICE_TYPE_NETWORK,	"le",		"DEC EtherWorks 2 or 3 ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"lnc",		"Lance/PCnet (Isolan/Novell NE2100/NE32-VL) ethernet"		},
-    { DEVICE_TYPE_NETWORK,	"lge",		"Level 1 LXT1001 gigabit ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"nge",		"NatSemi PCI gigabit ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"pcn",		"AMD Am79c79x PCI ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"ray",		"Raytheon Raylink 802.11 wireless adaptor"			},
-    { DEVICE_TYPE_NETWORK,	"re",		"RealTek 8139C+/8169/8169S/8110S PCI ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"rl",		"RealTek 8129/8139 PCI ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"rue",		"RealTek USB ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"sf",		"Adaptec AIC-6915 PCI ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"sis",		"SiS 900/SiS 7016 PCI ethernet card"				},
+    CDROM("cd%d",	"SCSI CDROM drive",			4),
+    CDROM("mcd%d",	"Mitsumi (old model) CDROM drive",	4),
+    CDROM("scd%d",	"Sony CDROM drive - CDU31/33A type",	4),
+    CDROM("acd%d",	"ATAPI/IDE CDROM",			4),
+    TAPE("sa%d",	"SCSI tape drive",			4),
+    TAPE("rwt%d",	"Wangtek tape drive",			4),
+    DISK("da%d",	"SCSI disk device",			16),
+    DISK("ad%d",	"ATA/IDE disk device",			16),
+    DISK("ar%d",	"ATA/IDE RAID device",			16),
+    DISK("afd%d",	"ATAPI/IDE floppy device",		4),
+    DISK("mlxd%d",	"Mylex RAID disk",			4),
+    DISK("amrd%d",	"AMI MegaRAID drive",			4),
+    DISK("idad%d",	"Compaq RAID array",			4),
+    DISK("twed%d",	"3ware ATA RAID array",			4),
+    DISK("aacd%d",	"Adaptec FSA RAID array",		4),
+    DISK("ipsd%d",	"IBM ServeRAID RAID array",		4),
+    DISK("mfid%d",	"LSI MegaRAID SAS array",		4),
+    FLOPPY("fd%d",	"floppy drive unit A",			4),
+    SERIAL("cuad%d",	"%s on device %s (COM%d)",		16),
+    NETWORK("an",	"Aironet 4500/4800 802.11 wireless adapter"),
+    NETWORK("ath",	"Atheros IEEE 802.11 wireless adapter"),
+    NETWORK("aue",	"ADMtek USB Ethernet adapter"),
+    NETWORK("axe",	"ASIX Electronics USB Ethernet adapter"),
+    NETWORK("bce",	"Broadcom NetXtreme II Gigabit Ethernet card"),
+    NETWORK("bfe",	"Broadcom BCM440x PCI Ethernet card"),
+    NETWORK("bge",	"Broadcom BCM570x PCI Gigabit Ethernet card"),
+    NETWORK("cue",	"CATC USB Ethernet adapter"),
+    NETWORK("cxgb",	"Chelsio T3 10Gb Ethernet card"),
+    NETWORK("fpa",	"DEC DEFPA PCI FDDI card"),
+    NETWORK("sr",	"SDL T1/E1 sync serial PCI card"),
+    NETWORK("cc3i",	"SDL HSSI sync serial PCI card"),
+    NETWORK("en",	"Efficient Networks ATM PCI card"),
+    NETWORK("dc",	"DEC/Intel 21143 (and clones) PCI Fast Ethernet card"),
+    NETWORK("de",	"DEC DE435 PCI NIC or other DC21040-AA based card"),
+    NETWORK("fxp",	"Intel EtherExpress Pro/100B PCI Fast Ethernet card"),
+    NETWORK("ed",	"Novell NE1000/2000; 3C503; NE2000-compatible PCMCIA"),
+    NETWORK("ep",	"3Com 3C509 Ethernet card/3C589 PCMCIA"),
+    NETWORK("em",	"Intel(R) PRO/1000 Ethernet card"),
+    NETWORK("ex",	"Intel EtherExpress Pro/10 Ethernet card"),
+    NETWORK("fe",	"Fujitsu MB86960A/MB86965A Ethernet card"),
+    NETWORK("gem",	"Apple GMAC or Sun ERI/GEM Ethernet adapter"),
+    NETWORK("hme",	"Sun HME (Happy Meal Ethernet) Ethernet adapter"),
+    NETWORK("ie",	"AT&T StarLAN 10 and EN100; 3Com 3C507; NI5210"),
+    NETWORK("ixgb",	"Intel(R) PRO/10Gb Ethernet card"),
+    NETWORK("kue",	"Kawasaki LSI USB Ethernet adapter"),
+    NETWORK("le",	"AMD Am7900 LANCE or Am79C9xx PCnet Ethernet adapter"),
+    NETWORK("lge",	"Level 1 LXT1001 Gigabit Ethernet card"),
+    NETWORK("msk",	"Marvell/SysKonnect Yukon II Gigabit Ethernet"),
+    NETWORK("mxge",	"Myricom Myri10GE 10Gb Ethernet card"),
+    NETWORK("nfe",	"NVIDIA nForce MCP Ethernet"),
+    NETWORK("nge",	"NatSemi PCI Gigabit Ethernet card"),
+    NETWORK("nve",	"NVIDIA nForce MCP Ethernet"),
+    NETWORK("pcn",	"AMD Am79c79x PCI Ethernet card"),
+    NETWORK("ray",	"Raytheon Raylink 802.11 wireless adapter"),
+    NETWORK("re",	"RealTek 8139C+/8169/8169S/8110S PCI Ethernet card"),
+    NETWORK("rl",	"RealTek 8129/8139 PCI Ethernet card"),
+    NETWORK("rue",	"RealTek USB Ethernet card"),
+    NETWORK("sf",	"Adaptec AIC-6915 PCI Ethernet card"),
+    NETWORK("sis",	"SiS 900/SiS 7016 PCI Ethernet card"),
 #ifdef PC98
-    { DEVICE_TYPE_NETWORK,	"snc",		"SONIC ethernet card"						},
+    NETWORK("snc",	"SONIC Ethernet card"),
 #endif
-    { DEVICE_TYPE_NETWORK,	"sn",		"SMC/Megahertz ethernet card"					},
-    { DEVICE_TYPE_NETWORK,	"ste",		"Sundance ST201 PCI ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"sk",		"SysKonnect PCI gigabit ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"tx",		"SMC 9432TX ethernet card"					},
-    { DEVICE_TYPE_NETWORK,	"txp",		"3Com 3cR990 ethernet card"					},
-    { DEVICE_TYPE_NETWORK,	"ti",		"Alteon Networks PCI gigabit ethernet card"			},
-    { DEVICE_TYPE_NETWORK,	"tl",		"Texas Instruments ThunderLAN PCI ethernet card"		},
-    { DEVICE_TYPE_NETWORK,	"vge",		"VIA VT612x PCI gigabit ethernet card"			},
-    { DEVICE_TYPE_NETWORK,	"vr",		"VIA VT3043/VT86C100A Rhine PCI ethernet card"			},
-    { DEVICE_TYPE_NETWORK,	"vlan",		"IEEE 802.1Q VLAN network interface"				},
-    { DEVICE_TYPE_NETWORK,	"vx",		"3COM 3c590 / 3c595 ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"wb",		"Winbond W89C840F PCI ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"wi",		"Lucent WaveLAN/IEEE 802.11 wireless adapter"			},
-    { DEVICE_TYPE_NETWORK,	"wx",		"Intel Gigabit Ethernet (82452) card"			},
-    { DEVICE_TYPE_NETWORK,	"xe",		"Xircom/Intel EtherExpress Pro100/16 ethernet card"		},
-    { DEVICE_TYPE_NETWORK,	"xl",		"3COM 3c90x / 3c90xB PCI ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"cuad%d",	"%s on device %s (COM%d)",	28, 128, 1, 16			},
-    { DEVICE_TYPE_NETWORK,	"fwe",		"FireWire Ethernet emulation"					},
-    { DEVICE_TYPE_NETWORK,	"lp",		"Parallel Port IP (PLIP) peer connection"			},
-    { DEVICE_TYPE_NETWORK,	"lo",		"Loop-back (local) network interface"				},
-    { DEVICE_TYPE_NETWORK,	"disc",		"Software discard network interface"				},
-    { 0 },
+    NETWORK("sn",	"SMC/Megahertz Ethernet card"),
+    NETWORK("ste",	"Sundance ST201 PCI Ethernet card"),
+    NETWORK("stge",	"Sundance/Tamarack TC9021 Gigabit Ethernet"),
+    NETWORK("sk",	"SysKonnect PCI Gigabit Ethernet card"),
+    NETWORK("tx",	"SMC 9432TX Ethernet card"),
+    NETWORK("txp",	"3Com 3cR990 Ethernet card"),
+    NETWORK("ti",	"Alteon Networks PCI Gigabit Ethernet card"),
+    NETWORK("tl",	"Texas Instruments ThunderLAN PCI Ethernet card"),
+    NETWORK("vge",	"VIA VT612x PCI Gigabit Ethernet card"),
+    NETWORK("vr",	"VIA VT3043/VT86C100A Rhine PCI Ethernet card"),
+    NETWORK("vlan",	"IEEE 802.1Q VLAN network interface"),
+    NETWORK("vx",	"3COM 3c590 / 3c595 Ethernet card"),
+    NETWORK("wb",	"Winbond W89C840F PCI Ethernet card"),
+    NETWORK("wi",	"Lucent WaveLAN/IEEE 802.11 wireless adapter"),
+    NETWORK("xe",	"Xircom/Intel EtherExpress Pro100/16 Ethernet card"),
+    NETWORK("xl",	"3COM 3c90x / 3c90xB PCI Ethernet card"),
+    NETWORK("fwe",	"FireWire Ethernet emulation"),
+    NETWORK("fwip",	"IP over FireWire"),
+    NETWORK("plip",	"Parallel Port IP (PLIP) peer connection"),
+    NETWORK("lo",	"Loop-back (local) network interface"),
+    NETWORK("disc",	"Software discard network interface"),
+    { 0, NULL, NULL, 0 }
 };
 
 Device *
@@ -179,9 +196,6 @@ deviceTry(struct _devname dev, char *try, int i)
 {
     int fd;
     char unit[80];
-    mode_t m;
-    dev_t d;
-    int fail;
 
     snprintf(unit, sizeof unit, dev.name, i);
     snprintf(try, FILENAME_MAX, "/dev/%s", unit);
@@ -191,26 +205,10 @@ deviceTry(struct _devname dev, char *try, int i)
     if (fd >= 0) {
 	if (isDebug())
 	    msgDebug("deviceTry: open of %s succeeded on first try.\n", try);
-	return fd;
-    }
-    m = 0640 | S_IFCHR;
-    d = makedev(dev.major, dev.minor + (i * dev.delta));
-    if (isDebug())
-	msgDebug("deviceTry: Making %s device for %s [%d, %d]\n", m & S_IFCHR ? "raw" : "block", try, dev.major, dev.minor + (i * dev.delta));
-    fail = mknod(try, m, d);
-    fd = open(try, O_RDONLY);
-    if (fd >= 0) {
+    } else {
 	if (isDebug())
-	    msgDebug("deviceTry: open of %s succeeded on second try.\n", try);
-	return fd;
+	    msgDebug("deviceTry: open of %s failed.\n", try);
     }
-    else if (!fail)
-	(void)unlink(try);
-    /* Don't try a "make-under" here since we're using a fixit floppy in this case */
-    snprintf(try, FILENAME_MAX, "/mnt/dev/%s", unit);
-    fd = open(try, O_RDONLY);
-    if (isDebug())
-	msgDebug("deviceTry: final attempt for %s returns %d\n", try, fd);
     return fd;
 }
 
@@ -371,29 +369,7 @@ skipif:
 		break;
 
 	    case DEVICE_TYPE_DISK:
-		fd = deviceTry(device_names[i], try, j);
-		if (fd >= 0 && RunningAsInit) {
-		    dev_t d;
-		    mode_t m;
-		    int s, fail;
-		    char unit[80], slice[80];
-
-		    close(fd);
-		    /* Make associated slice entries */
-		    for (s = 1; s < 8; s++) {
-			snprintf(unit, sizeof unit, device_names[i].name, j);
-			snprintf(slice, sizeof slice, "/dev/%ss%d", unit, s);
-			d = makedev(device_names[i].major, device_names[i].minor +
-				    (j * device_names[i].delta) + (s * SLICE_DELTA));
-			m = 0640 | S_IFCHR;
-			fail = mknod(slice, m, d);
-			fd = open(slice, O_RDONLY);
-			if (fd >= 0)
-			    close(fd);
-			else if (!fail)
-			    (void)unlink(slice);
-		    }
-		}
+		/* nothing to do */
 		break;
 
 	    case DEVICE_TYPE_FLOPPY:

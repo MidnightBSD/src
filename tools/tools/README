@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/tools/README,v 1.40 2005/06/06 00:18:17 sobomax Exp $
+# $FreeBSD: release/7.0.0/tools/tools/README 171095 2007-06-29 22:47:18Z sam $
 
 This directory is for tools.
 
@@ -8,6 +8,7 @@ the other categories.
 Please make a subdir per program, and add a brief description to this
 file.
 
+ansify		Convert K&R-style function definitions to ANSI style
 ath		Tools specific to the Atheros 802.11 support
 backout_commit	A tool for reading in a commit message and generating
 		a script that will backout the commit.
@@ -29,6 +30,8 @@ hcomp		Compress header files by removing comments and whitespace.
 html-mv         Rename HTML generated filenames to human readable filenames.
 ifinfo		Uses the interface MIB to print out all the information
 		an interface exports in an ugly form.
+iwi		Tools specific to the Intel PRO/Wireless 2200BG/2225BG/2915ABG
+		support.
 kdrv		KernelDriver; add/list/remove third-party kernel driver
 		source to/in/from a kernel source tree.
 kernelcruft	Shellscript to find orphaned *.c files in /sys
@@ -38,7 +41,10 @@ kttcp		An in-kernel version of the ttcp network performance tool
 mfc		Merge a directory from HEAD to a branch where it does not
 		already exist and other MFC related script(s).
 mid	 	Create a Message-ID database for mailing lists.
+ncpus		Count the number of processors
+nxge		A diagnostic tool for the nxge(4) driver
 pciid		Generate src/share/misc/pci_vendors.
+pciroms		A tool for dumping PCI ROM images. WARNING: alpha quality.
 pirtool		A tool for dumping the $PIR table on i386 machines at runtime.
 portsinfo 	Generate list of new ports for last two weeks.
 prstats		Generate statistics about the PR database.
@@ -46,8 +52,7 @@ recoverdisk	Copy as much data as possible from a deffective disk.
 scsi-defects	Get at the primary or grown defect list of a SCSI disk.
 sysdoc		Build a manual page with available sysctls for a specific
 		kernel configuration.
-tinderbox	Sample script for nightly test builds.
-upgrade         Scripts used for upgrading an installed system.
+tinybsd		Script to build FreeBSD embedded systems.
 vop_table	Generates a HTML document that shows all the VOP's in
 		the kernel.
 whereintheworld	Summarizes "make world" output.

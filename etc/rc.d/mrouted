@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $NetBSD: mrouted,v 1.6 2002/03/22 04:33:59 thorpej Exp $
-# $FreeBSD: src/etc/rc.d/mrouted,v 1.9 2005/01/16 03:12:03 obrien Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/mrouted 175737 2008-01-28 07:58:32Z dougb $
 #
 
 # PROVIDE: mrouted
@@ -12,7 +11,7 @@
 
 name="mrouted"
 rcvar=`set_rcvar`
-command="/usr/sbin/${name}"
+command="/usr/local/sbin/${name}"
 pidfile="/var/run/${name}.pid"
 required_files="/etc/${name}.conf"
 extra_commands="reload"

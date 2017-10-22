@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/colldef/Makefile,v 1.69 2005/03/04 14:24:29 ru Exp $
+# $FreeBSD: release/7.0.0/share/colldef/Makefile 164131 2006-11-09 18:10:34Z des $
 
 LOCALES=	bg_BG.CP1251 \
 		be_BY.CP1131 \
@@ -64,8 +64,8 @@ ISO8859-1_Big5=	is_IS:zh_TW
 ISO8859-1_ISO8859-1= ${ISO8859-15_ISO8859-15} pt_PT:pt_BR
 
 LATIN1LINKS=	af_ZA da_DK en_AU en_CA en_GB en_NZ en_US eu_ES fi_FI \
-		fr_BE fr_CA fr_CH fr_FR it_CH it_IT nl_BE nl_NL no_NO \
-		pt_PT
+		fr_BE fr_CA fr_CH fr_FR it_CH it_IT nb_NO nl_BE nl_NL \
+		nn_NO no_NO pt_PT
 ISO8859-15_ISO8859-15= de_DE:de_AT de_DE:de_CH ${LATIN1LINKS:C/^/la_LN:/}
 
 LATIN2LINKS=    hr_HR hu_HU ro_RO sr_YU
@@ -89,7 +89,8 @@ UTF8LINKS=	af_ZA am_ET be_BY bg_BG ca_ES cs_CZ da_DK de_AT de_CH \
 		de_DE el_GR en_AU en_CA en_GB en_IE en_NZ en_US es_ES \
 		et_EE eu_ES fi_FI fr_BE \
 		fr_CA fr_CH fr_FR he_IL hr_HR hu_HU hy_AM is_IS it_CH it_IT \
-		ja_JP kk_KZ ko_KR lt_LT nl_BE nl_NL no_NO pl_PL pt_BR pt_PT \
+		ja_JP kk_KZ ko_KR lt_LT mn_MN \
+		nb_NO nl_BE nl_NL nn_NO no_NO pl_PL pt_BR pt_PT \
 		ro_RO ru_RU sk_SK sl_SI sr_YU sv_SE tr_TR uk_UA zh_CN zh_HK \
 		zh_TW
 US-ASCII_UTF-8=	${UTF8LINKS:C/^/la_LN:/}

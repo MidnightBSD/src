@@ -1,0 +1,6 @@
+# $FreeBSD: release/7.0.0/tools/regression/bin/sh/builtins/alias.0 149781 2005-09-04 11:59:59Z stefanf $
+set -e
+
+unalias -a
+alias foo=bar
+alias

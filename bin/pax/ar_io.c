@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)ar_io.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pax/ar_io.c,v 1.26 2005/03/12 06:38:01 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/pax/ar_io.c 169993 2007-05-25 17:53:38Z brian $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -1109,8 +1109,8 @@ get_phys(void)
 int
 ar_next(void)
 {
+	static char *arcbuf;
 	char buf[PAXPATHLEN+2];
-	static int freeit = 0;
 	sigset_t o_mask;
 
 	/*
@@ -1228,17 +1228,14 @@ ar_next(void)
 		 * try to open new archive
 		 */
 		if (ar_open(buf) >= 0) {
-			if (freeit) {
-				(void)free((char *)(uintptr_t)arcname);
-				freeit = 0;
-			}
-			if ((arcname = strdup(buf)) == NULL) {
+			free(arcbuf);
+			if ((arcbuf = strdup(buf)) == NULL) {
 				done = 1;
 				lstrval = -1;
 				paxwarn(0, "Cannot save archive name.");
 				return(-1);
 			}
-			freeit = 1;
+			arcname = arcbuf;
 			break;
 		}
 		tty_prnt("Cannot open %s, try again\n", buf);

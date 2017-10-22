@@ -24,7 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/tools/regression/ia64/unaligned/unaligned.t,v 1.3 2005/01/27 23:15:58 marcel Exp $
+# $FreeBSD: release/7.0.0/tools/regression/ia64/unaligned/unaligned.t 140920 2005-01-27 23:15:58Z marcel $
 
 my $srcdir = `dirname $0`;
 chomp $srcdir;

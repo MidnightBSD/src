@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/powerpc/interrupt.c,v 1.4 2005/01/07 02:29:20 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/powerpc/interrupt.c 171805 2007-08-11 19:25:32Z marcel $
  */
 
 /*
@@ -49,31 +49,19 @@
 #include <sys/vmmeter.h>
 
 #include <machine/cpu.h>
+#include <machine/clock.h>
 #include <machine/db_machdep.h>
 #include <machine/fpu.h>
 #include <machine/frame.h>
+#include <machine/intr_machdep.h>
+#include <machine/md_var.h>
 #include <machine/pcb.h>
 #include <machine/psl.h>
 #include <machine/trap.h>
 #include <machine/spr.h>
 #include <machine/sr.h>
-#include <machine/interruptvar.h>
 
-void powerpc_interrupt(struct trapframe *);
-
-/*
- * External interrupt install routines
- */
-static void (*powerpc_extintr_handler)(void);
-
-void
-ext_intr_install(void (*new_extint)(void))
-{
-	powerpc_extintr_handler = new_extint;
-}
-
-extern void	decr_intr(struct clockframe *);
-extern void	trap(struct trapframe *);
+#include "pic_if.h"
 
 /*
  * A very short dispatch, to try and maximise assembler code use
@@ -83,35 +71,31 @@ extern void	trap(struct trapframe *);
 void
 powerpc_interrupt(struct trapframe *framep)
 {
-        struct thread *td;
-	struct clockframe ckframe;
+	struct thread *td;
+	register_t ee;
 
 	td = curthread;
 
 	switch (framep->exc) {
 	case EXC_EXI:
 		atomic_add_int(&td->td_intr_nesting_level, 1);
-		(*powerpc_extintr_handler)();
+		PIC_DISPATCH(pic, framep);
 		atomic_subtract_int(&td->td_intr_nesting_level, 1);	
 		break;
 
 	case EXC_DECR:
 		atomic_add_int(&td->td_intr_nesting_level, 1);
-		ckframe.srr0 = framep->srr0;
-		ckframe.srr1 = framep->srr1;
-		decr_intr(&ckframe);
+		decr_intr(framep);
 		atomic_subtract_int(&td->td_intr_nesting_level, 1);	
 		break;
 
 	default:
-		/*
-		 * Re-enable interrupts and call the generic trap code
-		 */
-#if 0
-		printf("powerpc_interrupt: got trap\n");
-		mtmsr(mfmsr() | PSL_EE);
-		isync();
-#endif
+		/* Re-enable interrupts if applicable. */
+		ee = framep->srr1 & PSL_EE;
+		if (ee != 0) {
+			mtmsr(mfmsr() | ee);
+			isync();
+		}
 		trap(framep);
 	}	        
 }

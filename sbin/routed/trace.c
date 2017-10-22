@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/routed/trace.c,v 1.12 2005/05/31 20:28:49 stefanf Exp $
+ * $FreeBSD: release/7.0.0/sbin/routed/trace.c 146838 2005-05-31 20:28:49Z stefanf $
  */
 
 #define	RIPCMDS
@@ -39,10 +39,10 @@
 #ifdef __NetBSD__
 __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
-__RCSID("$FreeBSD: src/sbin/routed/trace.c,v 1.12 2005/05/31 20:28:49 stefanf Exp $");
+__RCSID("$FreeBSD: release/7.0.0/sbin/routed/trace.c 146838 2005-05-31 20:28:49Z stefanf $");
 #else
-__RCSID("$Revision: 1.1.1.2 $");
-#ident "$Revision: 1.1.1.2 $"
+__RCSID("$Revision: 2.27 $");
+#ident "$Revision: 2.27 $"
 #endif
 
 

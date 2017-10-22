@@ -57,7 +57,7 @@ static char sccsid[] = "@(#)finger.c	8.5 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/finger/finger.c,v 1.35.2.1 2006/01/22 11:56:15 dds Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/finger/finger.c 168635 2007-04-11 20:32:09Z des $");
 
 /*
  * Finger prints out information about users.  It is not portable since
@@ -91,7 +91,7 @@ __FBSDID("$FreeBSD: src/usr.bin/finger/finger.c,v 1.35.2.1 2006/01/22 11:56:15 d
 
 DB *db;
 time_t now;
-int entries, gflag, kflag, lflag, mflag, pplan, sflag, oflag, Tflag;
+int entries, gflag, kflag, lflag, mflag, pplan, sflag, oflag;
 sa_family_t family = PF_UNSPEC;
 int d_first = -1;
 char tbuf[1024];
@@ -109,7 +109,7 @@ option(int argc, char **argv)
 
 	optind = 1;		/* reset getopt */
 
-	while ((ch = getopt(argc, argv, "46gklmpshoT")) != -1)
+	while ((ch = getopt(argc, argv, "46gklmpsho")) != -1)
 		switch(ch) {
 		case '4':
 			family = AF_INET;
@@ -141,9 +141,6 @@ option(int argc, char **argv)
 		case 'o':
 			oflag = 1;		/* office info */
 			break;
-		case 'T':
-			Tflag = 1;		/* disable T/TCP */
-			break;
 		case '?':
 		default:
 			usage();
@@ -156,7 +153,7 @@ static void
 usage(void)
 {
 	(void)fprintf(stderr,
-	    "usage: finger [-46gklmpshoT] [user ...] [user@host ...]\n");
+	    "usage: finger [-46gklmpsho] [user ...] [user@host ...]\n");
 	exit(1);
 }
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/share/examples/kld/firmware/fwconsumer/fw_consumer.c,v 1.1.2.1 2006/02/23 02:13:29 mlaier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/share/examples/kld/firmware/fwconsumer/fw_consumer.c 154974 2006-01-29 02:52:42Z mlaier $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

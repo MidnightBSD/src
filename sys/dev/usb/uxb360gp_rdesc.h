@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/usb/uxb360gp_rdesc.h,v 1.2.2.1 2006/01/20 22:47:49 mux Exp $
+ * $FreeBSD: release/7.0.0/sys/dev/usb/uxb360gp_rdesc.h 153925 2005-12-31 04:38:50Z mux $
  */
 
 /*

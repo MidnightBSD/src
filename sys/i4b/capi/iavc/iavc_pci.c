@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/capi/iavc/iavc_pci.c,v 1.10 2005/01/06 22:18:18 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/capi/iavc/iavc_pci.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -37,7 +37,6 @@ __FBSDID("$FreeBSD: src/sys/i4b/capi/iavc/iavc_pci.c,v 1.10 2005/01/06 22:18:18 
 #include <sys/socket.h>
 #include <net/if.h>
 
-#include <machine/clock.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>
@@ -49,9 +48,9 @@ __FBSDID("$FreeBSD: src/sys/i4b/capi/iavc/iavc_pci.c,v 1.10 2005/01/06 22:18:18 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-#include <machine/i4b_debug.h>
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_trace.h>
+#include <i4b/include/i4b_debug.h>
+#include <i4b/include/i4b_ioctl.h>
+#include <i4b/include/i4b_trace.h>
 
 #include <i4b/include/i4b_global.h>
 #include <i4b/include/i4b_l3l4.h>
@@ -251,7 +250,7 @@ iavc_pci_attach(device_t dev)
     /* setup the interrupt */
 
     if(bus_setup_intr(dev, sc->sc_resources.irq, INTR_TYPE_NET,
-		      (void(*)(void*))iavc_pci_intr,
+		      NULL, (void(*)(void*))iavc_pci_intr,
 		      sc, &ih)) {
 	printf("iavc%d: irq setup failed\n", unit);
 	return(ENXIO);

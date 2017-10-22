@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)nice.c	8.2 (Berkeley) 4/16/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/nice/nice.c,v 1.12 2005/05/21 09:55:07 ru Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/nice/nice.c 146466 2005-05-21 09:55:10Z ru $");
 
 #include <sys/types.h>
 #include <sys/time.h>

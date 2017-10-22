@@ -28,7 +28,7 @@
  *      i4b_itjc - NetJet PCI for split layers
  *      ------------------------------------------
  *
- * $FreeBSD: src/sys/i4b/layer1/itjc/i4b_itjc_ext.h,v 1.2 2005/01/06 22:18:20 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/i4b/layer1/itjc/i4b_itjc_ext.h 139790 2005-01-06 22:18:23Z imp $
  *
  *      last edit-date: [Wed Jan 10 17:15:31 2001]
  *

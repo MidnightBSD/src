@@ -25,12 +25,12 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/bin/getfacl/getfacl.1,v 1.9 2005/01/16 16:41:57 ru Exp $
+.\" $FreeBSD: release/7.0.0/bin/getfacl/getfacl.1 162379 2006-09-17 17:40:07Z ru $
 .\"
 .\" Developed by the TrustedBSD Project.
 .\" Support for POSIX.1e access control lists.
 .\"
-.Dd December 30, 2002
+.Dd March 13, 2006
 .Dt GETFACL 1
 .Os
 .Sh NAME
@@ -38,7 +38,7 @@
 .Nd get ACL information
 .Sh SYNOPSIS
 .Nm
-.Op Fl dh
+.Op Fl dhq
 .Op Ar
 .Sh DESCRIPTION
 The
@@ -64,6 +64,10 @@ An error is generated if a default ACL cannot be associated with
 .It Fl h
 If the target of the operation is a symbolic link, return the ACL from
 the symbolic link itself rather than following the link.
+.It Fl q
+Do not write commented information about file name and ownership.
+This is
+useful when dealing with filenames with unprintable characters.
 .El
 .Pp
 The following operand is available:

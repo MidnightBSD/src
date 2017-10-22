@@ -20,9 +20,9 @@
 .\" This document is derived in part from the enet man page (enet.4)
 .\" distributed with 4.3BSD Unix.
 .\"
-.\" $FreeBSD: src/share/man/man4/bpf.4,v 1.45 2005/02/13 22:25:17 ru Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man4/bpf.4 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
-.Dd January 16, 1996
+.Dd February 26, 2007
 .Dt BPF 4
 .Os
 .Sh NAME
@@ -231,7 +231,7 @@ which must respond to messages in real time.
 The default for a new file is off.
 .It Dv BIOCSETF
 .Pq Li "struct bpf_program"
-Sets the filter program used by the kernel to discard uninteresting
+Sets the read filter program used by the kernel to discard uninteresting
 packets.
 An array of instructions and its length is passed in using
 the following structure:
@@ -255,6 +255,16 @@ are performed.
 See section
 .Sx "FILTER MACHINE"
 for an explanation of the filter language.
+.It Dv BIOCSETWF
+.Pq Li "struct bpf_program"
+Sets the write filter program used by the kernel to control what type of
+packets can be written to the interface.
+See the
+.Dv BIOCSETF
+command for more
+information on the
+.Nm
+filter program.
 .It Dv BIOCVERSION
 .Pq Li "struct bpf_version"
 Returns the major and minor version numbers of the filter language currently
@@ -295,12 +305,50 @@ This flag is initialized to zero by default.
 .It Dv BIOCSSEESENT
 .It Dv BIOCGSEESENT
 .Pq Li u_int
+These commands are obsolete but left for compatibility.
+Use
+.Dv BIOCSDIRECTION
+and
+.Dv BIOCGDIRECTION
+instead.
 Set or get the flag determining whether locally generated packets on the
 interface should be returned by BPF.
 Set to zero to see only incoming packets on the interface.
 Set to one to see packets originating locally and remotely on the interface.
-This flag is initialized to one by
-default.
+This flag is initialized to one by default.
+.It Dv BIOCSDIRECTION
+.It Dv BIOCGDIRECTION
+.Pq Li u_int
+Set or get the setting determining whether incoming, outgoing, or all packets
+on the interface should be returned by BPF.
+Set to
+.Dv BPF_D_IN
+to see only incoming packets on the interface.
+Set to
+.Dv BPF_D_INOUT
+to see packets originating locally and remotely on the interface.
+Set to
+.Dv BPF_D_OUT
+to see only outgoing packets on the interface.
+This setting is initialized to
+.Dv BPF_D_INOUT
+by default.
+.It Dv BIOCFEEDBACK
+.Pq Li u_int
+Set packet feedback mode.
+This allows injected packets to be fed back as input to the interface when
+output via the interface is successful.
+When
+.Dv BPF_D_INOUT
+direction is set, injected outgoing packet is not returned by BPF to avoid
+duplication. This flag is initialized to zero by default.
+.It Dv BIOCLOCK
+Set the locked flag on the
+.Nm
+descriptor.
+This prevents the execution of
+ioctl commands which could change the underlying operating parameters of
+the device.
 .El
 .Sh BPF HEADER
 The following structure is prepended to each packet returned by
@@ -718,9 +766,12 @@ so desired, must utilize a filter to reject foreign packets.
 Data link protocols with variable length headers are not currently supported.
 .Pp
 The
-.Dv SEESENT
-flag has been observed to work incorrectly on some interface
+.Dv SEESENT ,
+.Dv DIRECTION ,
+and
+.Dv FEEDBACK
+settings have been observed to work incorrectly on some interface
 types, including those with hardware loopback rather than software loopback,
 and point-to-point interfaces.
-It appears to function correctly on a
+They appear to function correctly on a
 broad range of Ethernet-style interfaces.

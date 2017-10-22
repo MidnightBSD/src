@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/contrib/dev/oltr/if_oltrvar.h,v 1.2 2005/06/10 16:49:03 brooks Exp $
+ * $FreeBSD: release/7.0.0/sys/contrib/dev/oltr/if_oltrvar.h 147256 2005-06-10 16:49:24Z brooks $
  */
 
 /*#define DEBUG_MASK DEBUG_POLL*/

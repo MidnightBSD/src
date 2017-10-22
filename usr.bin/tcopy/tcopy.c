@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/tcopy/tcopy.c,v 1.13 2002/03/25 05:23:45 mike Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/tcopy/tcopy.c 93123 2002-03-25 05:23:45Z mike $");
 
 #ifndef lint
 static const char copyright[] =

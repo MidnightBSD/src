@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/mtree/BSD.usr.dist,v 1.312.2.1 2005/11/16 07:47:43 ru Exp $
+# $FreeBSD: release/7.0.0/etc/mtree/BSD.usr.dist 174446 2007-12-08 12:44:59Z benjsc $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -17,6 +17,10 @@
         compat
             aout
             ..
+        ..
+        dtrace
+        ..
+        engines
         ..
     ..
     libdata
@@ -69,6 +73,14 @@
                 arm
                 ..
                 misc
+                ..
+            ..
+            legal
+                intel_ipw
+                ..
+                intel_iwi
+                ..
+                intel_wpi
                 ..
             ..
             ncurses
@@ -177,8 +189,9 @@
             ..
             IPv6
             ..
-            atm
-            ..
+# Disabled in 7.0 as netatm is not MPSAFE.
+#            atm
+#            ..
             bc
             ..
             bootforth
@@ -201,11 +214,15 @@
             ..
             find_interface
             ..
+            hostapd
+            ..
             ibcs2
             ..
             ipfilter
             ..
             ipfw
+            ..
+            iscsi
             ..
             isdn
                 contrib
@@ -290,6 +307,8 @@
                 ..
             ..
             tcsh
+            ..
+            wpa_supplicant
             ..
         ..
         games
@@ -545,6 +564,14 @@
             ..
             lt_LT.UTF-8
             ..
+            mn_MN.UTF-8
+            ..
+            nb_NO.ISO8859-1
+            ..
+            nb_NO.ISO8859-15
+            ..
+            nb_NO.UTF-8
+            ..
             nl_BE.ISO8859-1
             ..
             nl_BE.ISO8859-15
@@ -556,6 +583,12 @@
             nl_NL.ISO8859-15
             ..
             nl_NL.UTF-8
+            ..
+            nn_NO.ISO8859-1
+            ..
+            nn_NO.ISO8859-15
+            ..
+            nn_NO.UTF-8
             ..
             no_NO.ISO8859-1
             ..
@@ -653,11 +686,13 @@
             cat3
             ..
             cat4
-                alpha
-                ..
                 amd64
                 ..
+                arm
+                ..
                 i386
+                ..
+                powerpc
                 ..
                 sparc64
                 ..
@@ -669,11 +704,11 @@
             cat7
             ..
             cat8
-                alpha
-                ..
                 amd64
                 ..
                 i386
+                ..
+                powerpc
                 ..
                 sparc64
                 ..
@@ -690,11 +725,13 @@
                 cat3
                 ..
                 cat4
-                    alpha
-                    ..
                     amd64
                     ..
+                    arm
+                    ..
                     i386
+                    ..
+                    powerpc
                     ..
                     sparc64
                     ..
@@ -706,11 +743,11 @@
                 cat7
                 ..
                 cat8
-                    alpha
-                    ..
                     amd64
                     ..
                     i386
+                    ..
+                    powerpc
                     ..
                     sparc64
                     ..
@@ -766,11 +803,13 @@
             man3
             ..
             man4
-                alpha
-                ..
                 amd64
                 ..
+                arm
+                ..
                 i386
+                ..
+                powerpc
                 ..
                 sparc64
                 ..
@@ -782,11 +821,11 @@
             man7
             ..
             man8
-                alpha
-                ..
                 amd64
                 ..
                 i386
+                ..
+                powerpc
                 ..
                 sparc64
                 ..
@@ -798,8 +837,6 @@
         ..
         misc
             fonts
-            ..
-            pcvtfonts
             ..
         ..
         mk
@@ -1011,6 +1048,8 @@
             ..
             lt_LT.UTF-8
             ..
+            mn_MN.UTF-8
+            ..
             nl_BE.ISO8859-1
             ..
             nl_BE.ISO8859-15
@@ -1124,12 +1163,6 @@
                 ..
                 man3
                 ..
-            ..
-        ..
-        pcvt
-            Doc
-            ..
-            Etc
             ..
         ..
         security

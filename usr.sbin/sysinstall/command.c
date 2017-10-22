@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/command.c,v 1.20 2002/11/01 02:05:05 kuriyama Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/command.c 174854 2007-12-22 06:32:46Z cvs2svn $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

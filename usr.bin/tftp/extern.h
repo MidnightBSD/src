@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/tftp/extern.h,v 1.3 2002/03/22 01:42:33 imp Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/tftp/extern.h 92922 2002-03-22 01:42:45Z imp $
  */
 
 void	recvfile(int, char *, char *);

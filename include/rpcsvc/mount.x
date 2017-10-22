@@ -37,7 +37,7 @@
 %/*static char sccsid[] = "from: @(#)mount.x	2.1 88/08/01 4.0 RPCSRC";*/
 %#endif /* not lint */
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: src/include/rpcsvc/mount.x,v 1.7 2003/05/04 02:51:42 obrien Exp $");
+%__FBSDID("$FreeBSD: release/7.0.0/include/rpcsvc/mount.x 114629 2003-05-04 02:51:42Z obrien $");
 #endif
 
 const MNTPATHLEN = 1024;	/* maximum bytes in a pathname argument */

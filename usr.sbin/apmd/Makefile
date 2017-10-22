@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/apmd/Makefile,v 1.8 2004/01/21 13:38:17 ru Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/apmd/Makefile 124786 2004-01-21 13:38:17Z ru $
 
 PROG=	apmd
 MAN=	apmd.8

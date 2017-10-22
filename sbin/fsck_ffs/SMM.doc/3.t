@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"	$FreeBSD: src/sbin/fsck_ffs/SMM.doc/3.t,v 1.7 2004/04/09 19:58:29 markm Exp $
+.\"	$FreeBSD: release/7.0.0/sbin/fsck_ffs/SMM.doc/3.t 128073 2004-04-09 19:58:40Z markm $
 .\"	@(#)3.t	8.1 (Berkeley) 6/5/93
 .\"
 .ds RH Fixing corrupted file systems

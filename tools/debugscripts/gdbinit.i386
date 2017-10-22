@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/debugscripts/gdbinit.i386,v 1.4 2004/11/20 02:32:42 das Exp $
+# $FreeBSD: release/7.0.0/tools/debugscripts/gdbinit.i386 137923 2004-11-20 02:32:42Z das $
 # Assembler-level macros for i386
 # Disassemble the next 10 instructions.
 define xi

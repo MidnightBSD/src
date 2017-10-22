@@ -1,7 +1,7 @@
 <!--
 The FreeBSD Russian Documentation Project
 
-$FreeBSD: src/release/doc/ru_RU.KOI8-R/installation/common/install.sgml,v 1.8 2005/06/30 11:35:03 den Exp $
+$FreeBSD: release/7.0.0/release/doc/ru_RU.KOI8-R/installation/common/install.sgml 166562 2007-02-08 05:04:18Z rodrigc $
 $FreeBSDru: frdp/release/doc/ru_RU.KOI8-R/installation/common/install.sgml,v 1.8 2005/06/30 11:12:32 den Exp $
 
 Original revision: 1.32
@@ -943,7 +943,7 @@ pqb0.0.1.4.0               PQB0                       PCI EIDE</screen>
 	    Иными словами, расширенные разделы монтируются так же, как и
 	    любые другие DOS диски, т.е.:</para>
 
-	  <screen>&prompt.root; <userinput>mount -t msdos /dev/da0s5 /dos_d</userinput></screen>
+	  <screen>&prompt.root; <userinput>mount -t msdosfs /dev/da0s5 /dos_d</userinput></screen>
 	</answer>
       </qandaentry>
 

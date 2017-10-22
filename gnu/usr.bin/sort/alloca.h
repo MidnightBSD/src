@@ -1,2 +1,2 @@
-/* $FreeBSD: src/gnu/usr.bin/sort/alloca.h,v 1.1 2004/07/02 09:34:37 tjr Exp $ */
+/* $FreeBSD: release/7.0.0/gnu/usr.bin/sort/alloca.h 131452 2004-07-02 09:34:37Z tjr $ */
 extern void *alloca(size_t size);

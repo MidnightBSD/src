@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pc98/pc98/canbus.c,v 1.5 2005/03/20 05:22:57 nyan Exp $
+ * $FreeBSD: release/7.0.0/sys/pc98/pc98/canbus.c 158651 2006-05-16 14:37:58Z phk $
  */
 
 #include <sys/param.h>
@@ -35,7 +35,6 @@
 #include <sys/module.h>
 #include <sys/sysctl.h>
 
-#include <machine/clock.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>

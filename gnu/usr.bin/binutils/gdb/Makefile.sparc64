@@ -1,0 +1,4 @@
+# $FreeBSD: release/7.0.0/gnu/usr.bin/binutils/gdb/Makefile.sparc64 99014 2002-06-29 03:16:40Z obrien $
+
+XSRCS+=	sparc-nat.c sparc-tdep.c
+CFLAGS+= -DDEFAULT_BFD_VEC=bfd_elf64_sparc_vec

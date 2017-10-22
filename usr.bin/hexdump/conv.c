@@ -35,7 +35,7 @@
 static const char sccsid[] = "@(#)conv.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/hexdump/conv.c,v 1.8 2004/07/16 11:07:07 johan Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/hexdump/conv.c 160857 2006-07-31 14:17:04Z jkoshy $");
 
 #include <sys/types.h>
 
@@ -134,7 +134,7 @@ retry:
 			*pr->cchar = 'C';
 			assert(strcmp(pr->fmt, "%3C") == 0);
 			width = wcwidth(wc);
-			assert(width > 0);
+			assert(width >= 0);
 			pad = 3 - width;
 			if (pad < 0)
 				pad = 0;

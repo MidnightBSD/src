@@ -1,0 +1,6 @@
+# $FreeBSD: release/7.0.0/sys/arm/at91/std.at91 174178 2007-12-02 14:21:27Z cognet $
+
+files	"../at91/files.at91"
+cpu	CPU_ARM9
+makeoptions	CONF_CFLAGS=-mcpu=arm9
+options		PHYSADDR=0x20000000

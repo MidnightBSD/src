@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)a.t	5.1 (Berkeley) 4/16/91
-.\" $FreeBSD: src/share/doc/papers/newvm/a.t,v 1.6 1999/08/28 00:18:14 peter Exp $
+.\" $FreeBSD: release/7.0.0/share/doc/papers/newvm/a.t 50476 1999-08-28 00:22:10Z peter $
 .\"
 .sp 2
 .ne 2i

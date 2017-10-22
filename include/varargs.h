@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/varargs.h,v 1.1 2003/09/01 03:28:25 kan Exp $
+ * $FreeBSD: release/7.0.0/include/varargs.h 119630 2003-09-01 03:28:25Z kan $
  */
 
 #ifndef _VARARGS_H_

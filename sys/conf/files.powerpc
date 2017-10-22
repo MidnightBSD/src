@@ -1,7 +1,7 @@
 # This file tells config what files go into building a kernel,
 # files marked standard are always included.
 #
-# $FreeBSD: src/sys/conf/files.powerpc,v 1.44.2.1 2005/12/08 10:56:46 marius Exp $
+# $FreeBSD: release/7.0.0/sys/conf/files.powerpc 174854 2007-12-22 06:32:46Z cvs2svn $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -13,21 +13,25 @@ font.h                          optional        sc            \
         compile-with    "uudecode < /usr/share/syscons/fonts/${SC_DFLT_FONT}-8x16.fnt && file2c 'u_char dflt_font_16[16*256] = {' '};' < ${SC_DFLT_FONT}-8x16 > font.h && uudecode < /usr/share/syscons/fonts/${SC_DFLT_FONT}-8x14.fnt && file2c 'u_char dflt_font_14[14*256] = {' '};' < ${SC_DFLT_FONT}-8x14 >> font.h && uudecode < /usr/share/syscons/fonts/${SC_DFLT_FONT}-8x8.fnt && file2c 'u_char dflt_font_8[8*256] = {' '};' < ${SC_DFLT_FONT}-8x8 >> font.h" \
 	no-obj no-implicit-rule before-depend				\
 	clean	"font.h ${SC_DFLT_FONT}-8x14 ${SC_DFLT_FONT}-8x16 ${SC_DFLT_FONT}-8x8"
+#
+hal.o				optional	ath_hal			\
+	dependency	"$S/contrib/dev/ath/public/powerpc-be-elf.hal.o.uu"	\
+	compile-with	"uudecode < $S/contrib/dev/ath/public/powerpc-be-elf.hal.o.uu" \
+	no-implicit-rule
+opt_ah.h			optional	ath_hal			\
+	dependency	"$S/contrib/dev/ath/public/powerpc-be-elf.opt_ah.h"	\
+	compile-with	"rm -f opt_ah.h; cp $S/contrib/dev/ath/public/powerpc-be-elf.opt_ah.h opt_ah.h" \
+	no-obj no-implicit-rule before-depend				\
+	clean		"opt_ah.h"
+#
 
 dev/fb/fb.c			optional	sc
 dev/hwpmc/hwpmc_powerpc.c	optional	hwpmc
 dev/kbd/kbd.c			optional	sc
 dev/syscons/scgfbrndr.c		optional	sc
-dev/syscons/schistory.c		optional	sc
-dev/syscons/scmouse.c		optional	sc
-dev/syscons/scterm.c		optional	sc
-dev/syscons/scterm-dumb.c	optional	sc
 dev/syscons/scterm-sc.c		optional	sc
-dev/syscons/scvidctl.c		optional	sc
 dev/syscons/scvtb.c		optional	sc
-dev/syscons/syscons.c		optional	sc
-dev/syscons/sysmouse.c		optional	sc
-geom/geom_apple.c		standard
+dev/uart/uart_cpu_powerpc.c	optional	uart
 kern/syscalls.c			optional	ktr
 powerpc/powerpc/atomic.S	standard
 powerpc/powerpc/autoconf.c	standard
@@ -40,17 +44,20 @@ powerpc/powerpc/cpu.c		standard
 powerpc/powerpc/elf_machdep.c	standard
 powerpc/powerpc/fpu.c		standard
 powerpc/powerpc/fuswintr.c	standard
+powerpc/powerpc/gdb_machdep.c	optional	gdb
 powerpc/powerpc/in_cksum.c	optional	inet
 powerpc/powerpc/interrupt.c	standard
 powerpc/powerpc/intr_machdep.c	standard
 powerpc/powerpc/locore.S	standard	no-obj
 powerpc/powerpc/machdep.c	standard
+powerpc/powerpc/mmu_if.m	standard
+powerpc/powerpc/mmu_oea.c	standard
 powerpc/powerpc/nexus.c		standard
 powerpc/powerpc/ofwmagic.S	standard
 powerpc/powerpc/ofw_machdep.c	standard
 powerpc/powerpc/openpic.c	standard
 powerpc/powerpc/pic_if.m	standard
-powerpc/powerpc/pmap.c		standard
+powerpc/powerpc/pmap_dispatch.c	standard
 powerpc/powerpc/sc_machdep.c	optional	sc
 powerpc/powerpc/setjmp.S	standard
 powerpc/powerpc/sigcode.S	standard
@@ -68,12 +75,12 @@ powerpc/powerpc/db_interface.c	optional	ddb
 powerpc/powerpc/db_hwwatch.c	optional	ddb
 powerpc/powerpc/db_trace.c	optional	ddb
 
-crypto/blowfish/bf_enc.c	optional	ipsec ipsec_esp
-crypto/des/des_enc.c		optional	ipsec ipsec_esp
-crypto/des/des_enc.c		optional	netsmbcrypto
+crypto/blowfish/bf_enc.c	optional	crypto | ipsec 
+crypto/des/des_enc.c		optional	crypto | ipsec | netsmb
 
 dev/ofw/openfirm.c		standard
 dev/ofw/ofw_bus_if.m		standard
+dev/ofw/ofw_bus_subr.c		standard
 dev/ofw/ofw_console.c		standard
 dev/ofw/ofw_disk.c		optional	ofwd
 
@@ -86,6 +93,7 @@ libkern/ffsl.c			standard
 libkern/fls.c			standard
 libkern/flsl.c			standard
 libkern/lshrdi3.c		standard
+libkern/memset.c		standard
 libkern/moddi3.c		standard
 libkern/qdivrem.c		standard
 libkern/ucmpdi2.c		standard
@@ -111,7 +119,8 @@ powerpc/powermac/uninorth.c	optional	powermac pci
 powerpc/psim/iobus.c 		optional psim
 powerpc/psim/ata_iobus.c	optional ata psim
 powerpc/psim/openpic_iobus.c	optional psim
-powerpc/psim/sio_iobus.c	optional sio psim
+powerpc/psim/uart_iobus.c	optional uart psim
 
-dev/zs/zs.c			optional	powermac zs
-dev/zs/zs_macio.c		optional	powermac zs
+dev/scc/scc_bfe_macio.c		optional	scc powermac
+
+dev/powermac_nvram/powermac_nvram.c optional	powermac powermac_nvram

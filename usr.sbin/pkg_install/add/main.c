@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/add/main.c,v 1.61.2.4 2006/01/16 19:48:17 flz Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/add/main.c 174862 2007-12-22 13:45:15Z kensmith $");
 
 #include <err.h>
 #include <sys/param.h>
@@ -27,7 +27,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/pkg_install/add/main.c,v 1.61.2.4 2006/01/16 19
 #include "lib.h"
 #include "add.h"
 
-static char Options[] = "hvIRfnrp:P:SMt:C:K";
+static char Options[] = "hvIRfFnrp:P:SMt:C:K";
 
 char	*Prefix		= NULL;
 Boolean	PrefixRecursive	= FALSE;
@@ -36,6 +36,7 @@ Boolean	NoInstall	= FALSE;
 Boolean	NoRecord	= FALSE;
 Boolean Remote		= FALSE;
 Boolean KeepPackage	= FALSE;
+Boolean FailOnAlreadyInstalled	= TRUE;
 
 char	*Mode		= NULL;
 char	*Owner		= NULL;
@@ -46,9 +47,7 @@ char	*Directory	= NULL;
 char	FirstPen[FILENAME_MAX];
 add_mode_t AddMode	= NORMAL;
 
-#define MAX_PKGS	200
-char	pkgnames[MAX_PKGS][MAXPATHLEN];
-char	*pkgs[MAX_PKGS];
+char	**pkgs;
 
 struct {
 	int lowver;	/* Lowest version number to match */
@@ -73,12 +72,18 @@ struct {
 	{ 502010, 502099, "/packages-5.2.1-release" },
 	{ 503000, 503099, "/packages-5.3-release" },
 	{ 504000, 504099, "/packages-5.4-release" },
+	{ 505000, 505099, "/packages-5.5-release" },
 	{ 600000, 600099, "/packages-6.0-release" },
+	{ 601000, 601099, "/packages-6.1-release" },
+	{ 602000, 602099, "/packages-6.2-release" },
+	{ 603000, 603099, "/packages-6.3-release" },
+	{ 700000, 700099, "/packages-7.0-release" },
 	{ 300000, 399000, "/packages-3-stable" },
 	{ 400000, 499000, "/packages-4-stable" },
 	{ 502100, 502128, "/packages-5-current" },
 	{ 503100, 599000, "/packages-5-stable" },
 	{ 600100, 699000, "/packages-6-stable" },
+	{ 700000, 799000, "/packages-7-stable" },
 	{ 0, 9999999, "/packages-current" },
 	{ 0, 0, NULL }
 };
@@ -106,7 +111,7 @@ main(int argc, char **argv)
     while ((ch = getopt(argc, argv, Options)) != -1) {
 	switch(ch) {
 	case 'v':
-	    Verbose = TRUE;
+	    Verbose++;
 	    break;
 
 	case 'p':
@@ -129,6 +134,10 @@ main(int argc, char **argv)
 
 	case 'f':
 	    Force = TRUE;
+	    break;
+
+	case 'F':
+	    FailOnAlreadyInstalled = FALSE;
 	    break;
 
 	case 'K':
@@ -170,15 +179,13 @@ main(int argc, char **argv)
     argc -= optind;
     argv += optind;
 
-    if (argc > MAX_PKGS) {
-	errx(1, "too many packages (max %d)", MAX_PKGS);
-    }
-
     if (AddMode != SLAVE) {
-	for (ch = 0; ch < MAX_PKGS; pkgs[ch++] = NULL) ;
+	pkgs = (char **)malloc((argc+1) * sizeof(char *));
+	for (ch = 0; ch <= argc; pkgs[ch++] = NULL) ;
 
 	/* Get all the remaining package names, if any */
 	for (ch = 0; *argv; ch++, argv++) {
+	    char temp[MAXPATHLEN];
     	    if (Remote) {
 		if ((packagesite = getpackagesite()) == NULL)
 		    errx(1, "package name too long");
@@ -204,31 +211,27 @@ main(int argc, char **argv)
 	    if (!strcmp(*argv, "-"))	/* stdin? */
 		pkgs[ch] = (char *)"-";
 	    else if (isURL(*argv)) {  	/* preserve URLs */
-		if (strlcpy(pkgnames[ch], *argv, sizeof(pkgnames[ch]))
-		    >= sizeof(pkgnames[ch]))
+		if (strlcpy(temp, *argv, sizeof(temp)) >= sizeof(temp))
 		    errx(1, "package name too long");
-		pkgs[ch] = pkgnames[ch];
+		pkgs[ch] = strdup(temp);
 	    }
 	    else if ((Remote) && isURL(remotepkg)) {
-	    	if (strlcpy(pkgnames[ch], remotepkg, sizeof(pkgnames[ch]))
-		    >= sizeof(pkgnames[ch]))
+	    	if (strlcpy(temp, remotepkg, sizeof(temp)) >= sizeof(temp))
 		    errx(1, "package name too long");
-		pkgs[ch] = pkgnames[ch];
+		pkgs[ch] = strdup(temp);
 	    } else {			/* expand all pathnames to fullnames */
 		if (fexists(*argv)) /* refers to a file directly */
-		    pkgs[ch] = realpath(*argv, pkgnames[ch]);
+		    pkgs[ch] = strdup(realpath(*argv, temp));
 		else {		/* look for the file in the expected places */
 		    if (!(cp = fileFindByPath(NULL, *argv))) {
 			/* let pkg_do() fail later, so that error is reported */
-			if (strlcpy(pkgnames[ch], *argv, sizeof(pkgnames[ch]))
-			    >= sizeof(pkgnames[ch]))
+			if (strlcpy(temp, *argv, sizeof(temp)) >= sizeof(temp))
 			    errx(1, "package name too long");
-			pkgs[ch] = pkgnames[ch];
+			pkgs[ch] = strdup(temp);
 		    } else {
-			if (strlcpy(pkgnames[ch], cp, sizeof(pkgnames[ch]))
-			    >= sizeof(pkgnames[ch]))
+			if (strlcpy(temp, cp, sizeof(temp)) >= sizeof(temp))
 			    errx(1, "package name too long");
-			pkgs[ch] = pkgnames[ch];
+			pkgs[ch] = strdup(temp);
 		    }
 		}
 	    }
@@ -320,7 +323,7 @@ static void
 usage()
 {
     fprintf(stderr, "%s\n%s\n",
-	"usage: pkg_add [-vInrfRMSK] [-t template] [-p prefix] [-P prefix] [-C chrootdir]",
+	"usage: pkg_add [-vInfFrRMSK] [-t template] [-p prefix] [-P prefix] [-C chrootdir]",
 	"               pkg-name [pkg-name ...]");
     exit(1);
 }

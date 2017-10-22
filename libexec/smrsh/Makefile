@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 7/2/95
-# $FreeBSD: src/libexec/smrsh/Makefile,v 1.10 2005/06/10 06:12:51 des Exp $
+# $FreeBSD: release/7.0.0/libexec/smrsh/Makefile 147225 2005-06-10 06:12:53Z des $
 
 SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/smrsh

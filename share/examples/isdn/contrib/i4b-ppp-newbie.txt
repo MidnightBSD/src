@@ -1,4 +1,4 @@
-$FreeBSD: src/share/examples/isdn/contrib/i4b-ppp-newbie.txt,v 1.1 2001/05/25 13:25:59 hm Exp $
+$FreeBSD: release/7.0.0/share/examples/isdn/contrib/i4b-ppp-newbie.txt 77177 2001-05-25 13:25:59Z hm $
 
                               PPP mit isdn4bsd
      _________________________________________________________________

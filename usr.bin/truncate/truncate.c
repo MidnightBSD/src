@@ -27,7 +27,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-    "$FreeBSD: src/usr.bin/truncate/truncate.c,v 1.9 2005/05/21 09:55:08 ru Exp $";
+    "$FreeBSD: release/7.0.0/usr.bin/truncate/truncate.c 162412 2006-09-18 16:39:23Z maxim $";
 #endif
 
 #include <sys/stat.h>
@@ -40,7 +40,7 @@ static const char rcsid[] =
 #include <stdlib.h>
 #include <unistd.h>
 
-static off_t	parselength(char *, off_t *);
+static int	parselength(char *, off_t *);
 static void	usage(void);
 
 static int	no_create;
@@ -108,6 +108,8 @@ main(int argc, char **argv)
 	omode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
 	while ((fname = *argv++) != NULL) {
+		if (fd != -1)
+			close(fd);
 		if ((fd = open(fname, oflags, omode)) == -1) {
 			if (errno != ENOENT) {
 				warn("%s", fname);
@@ -138,18 +140,18 @@ main(int argc, char **argv)
 			error++;
 			continue;
 		}
-
-		close(fd);
 	}
+	if (fd != -1)
+		close(fd);
 
 	return error ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 /*
- * Return the numeric value of a string given in the form [+-][0-9]+[GMK]
+ * Return the numeric value of a string given in the form [+-][0-9]+[GMKT]
  * or -1 on format error or overflow.
  */
-static off_t
+static int
 parselength(char *ls, off_t *sz)
 {
 	off_t	length, oflow;
@@ -176,6 +178,10 @@ parselength(char *ls, off_t *sz)
 	}
 
 	switch (*ls) {
+	case 'T':
+	case 't':
+		oflow = length * 1024;
+		ASSIGN_CHK_OFLOW(oflow, length);
 	case 'G':
 	case 'g':
 		oflow = length * 1024;
@@ -204,7 +210,7 @@ static void
 usage(void)
 {
 	fprintf(stderr, "%s\n%s\n",
-	    "usage: truncate [-c] -s [+|-]size[K|k|M|m|G|g] file ...",
+	    "usage: truncate [-c] -s [+|-]size[K|k|M|m|G|g|T|t] file ...",
 	    "       truncate [-c] -r rfile file ...");
 	exit(EXIT_FAILURE);
 }

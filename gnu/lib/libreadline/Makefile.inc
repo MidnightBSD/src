@@ -1,7 +1,7 @@
-# $FreeBSD: src/gnu/lib/libreadline/Makefile.inc,v 1.11.2.1 2005/07/22 17:29:02 kensmith Exp $
+# $FreeBSD: release/7.0.0/gnu/lib/libreadline/Makefile.inc 170925 2007-06-18 18:47:54Z rafan $
 
-SHLIB_MAJOR=6
-RL_LIBRARY_VERSION=5.0
+SHLIB_MAJOR=7
+RL_LIBRARY_VERSION=5.2
 
 SRCDIR= ${.CURDIR}/../../../../contrib/libreadline
 .PATH: ${SRCDIR} ${.CURDIR}/..

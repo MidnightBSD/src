@@ -27,7 +27,7 @@
  *	isdnphone - main module
  *	=======================
  *
- * $FreeBSD: src/usr.sbin/i4b/isdnphone/main.c,v 1.4 2002/08/27 14:46:22 hm Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdnphone/main.c 160194 2006-07-09 05:53:24Z cperciva $
  *
  *      last edit-date: [Tue Aug 27 16:38:55 2002]
  *
@@ -45,7 +45,7 @@ static void
 usage(void)
 {
 	fprintf(stderr, "\n");
-	fprintf(stderr, "isdnphone - i4b phone program, version %d.%d.%d, compiled %s %s\n",VERSION, REL, STEP, __DATE__, __TIME__);
+	fprintf(stderr, "isdnphone - i4b phone program, version %d.%d.%d\n",VERSION, REL, STEP);
 	fprintf(stderr, "usage: isdnphone -d -h -k <string> -n <number> -u <unit> -v -w\n");
 	fprintf(stderr, "       -d            debug\n");
 	fprintf(stderr, "       -h            hangup\n");

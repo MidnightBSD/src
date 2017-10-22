@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/xscale/i80321/i80321_space.c,v 1.3 2005/02/13 18:20:39 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/i80321/i80321_space.c 164824 2006-12-02 13:37:29Z cognet $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -99,7 +99,7 @@ const struct bus_space i80321_bs_tag_template = {
 	NULL,
 
 	/* read region */
-	NULL,
+	generic_bs_rr_1,
 	generic_armv4_bs_rr_2,
 	generic_bs_rr_4,
 	NULL,
@@ -138,6 +138,42 @@ const struct bus_space i80321_bs_tag_template = {
 	NULL,
 	generic_armv4_bs_c_2,
 	NULL,
+	NULL,
+
+	/* read (single) stream */
+	generic_bs_r_1,
+	generic_armv4_bs_r_2,
+	generic_bs_r_4,
+	NULL,
+
+	/* read multiple stream */
+	generic_bs_rm_1,
+	generic_armv4_bs_rm_2,
+	generic_bs_rm_4,
+	NULL,
+
+	/* read region stream */
+	generic_bs_rr_1,
+	generic_armv4_bs_rr_2,
+	generic_bs_rr_4,
+	NULL,
+
+	/* write (single) stream */
+	generic_bs_w_1,
+	generic_armv4_bs_w_2,
+	generic_bs_w_4,
+	NULL,
+
+	/* write multiple stream */
+	generic_bs_wm_1,
+	generic_armv4_bs_wm_2,
+	generic_bs_wm_4,
+	NULL,
+
+	/* write region stream */
+	NULL,
+	generic_armv4_bs_wr_2,
+	generic_bs_wr_4,
 	NULL,
 };
 
@@ -228,7 +264,7 @@ i80321_io_bs_map(void *t, bus_addr_t bpa, bus_size_t size, int flags,
 }
 
 void
-i80321_io_bs_unmap(void *t, bus_size_t size)
+i80321_io_bs_unmap(void *t, bus_space_handle_t h, bus_size_t size)
 {
 
 	/* Nothing to do. */
@@ -257,30 +293,18 @@ int
 i80321_mem_bs_map(void *t, bus_addr_t bpa, bus_size_t size, int flags,
     bus_space_handle_t *bshp)
 {
+	vm_paddr_t pa, endpa;
 
-	vm_offset_t va;
-	uint32_t busbase;
-	vm_paddr_t pa, endpa, physbase;
-
-	/*
-	 * Found the window -- PCI MEM space is not mapped by allocating
-	 * some kernel VA space and mapping the pages with pmap_enter().
-	 * pmap_enter() will map unmanaged pages as non-cacheable.
-	 */
-	pa = trunc_page((bpa - busbase) + physbase);
-	endpa = round_page(((bpa - busbase) + physbase) + size);
 	pa = trunc_page(bpa);
 	endpa = round_page(bpa + size);
 
-	*bshp = va + (bpa & PAGE_MASK);
-	*bshp = pa;
 	*bshp = (vm_offset_t)pmap_mapdev(pa, endpa - pa);
 		       
 	return (0);
 }
 
 void
-i80321_mem_bs_unmap(void *t, bus_size_t size)
+i80321_mem_bs_unmap(void *t, bus_space_handle_t h, bus_size_t size)
 {
 	vm_offset_t va, endva;
 

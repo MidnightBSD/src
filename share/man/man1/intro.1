@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)intro.1	8.2 (Berkeley) 12/30/93
-.\" $FreeBSD: src/share/man/man1/intro.1,v 1.16 2001/10/23 00:46:13 dd Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man1/intro.1 165524 2006-12-24 10:25:23Z ru $
 .\"
 .Dd October 21, 2001
 .Dt INTRO 1
@@ -58,7 +58,7 @@ to see if the command completed normally.
 Traditionally, the value 0 signifies successful
 completion of the command, while a value >0 indicates an error.
 Some commands attempt to describe the nature of the failure by using
-errors codes as defined in
+exit codes as defined in
 .Xr sysexits 3 ,
 while others simply set the status to an arbitrary value >0 (typically 1).
 .Sh SEE ALSO

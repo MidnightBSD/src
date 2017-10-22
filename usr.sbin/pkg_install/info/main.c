@@ -20,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/info/main.c,v 1.47.2.2 2006/01/16 19:48:17 flz Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/info/main.c 159554 2006-06-12 22:39:32Z obrien $");
 
 #include "lib.h"
 #include "info.h"
@@ -69,7 +69,7 @@ main(int argc, char **argv)
 	    break;
 
 	case 'v':
-	    Verbose = TRUE;
+	    Verbose++;
 	    /* Reasonable definition of 'everything' */
 	    Flags = SHOW_COMMENT | SHOW_DESC | SHOW_PLIST | SHOW_INSTALL |
 		SHOW_DEINSTALL | SHOW_REQUIRE | SHOW_DISPLAY | SHOW_MTREE;

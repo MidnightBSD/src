@@ -1,8 +1,10 @@
-# $FreeBSD: src/usr.sbin/pkg_install/Makefile,v 1.16 2004/12/21 10:16:03 ru Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/pkg_install/Makefile 174854 2007-12-22 06:32:46Z cvs2svn $
+
+.include <bsd.own.mk>
 
 SUBDIR=	lib add create delete info ${_sign} version
 
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
+.if ${MK_OPENSSL} != "no"
 _sign=	sign
 .endif
 

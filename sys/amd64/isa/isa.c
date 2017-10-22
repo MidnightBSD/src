@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/isa/isa.c,v 1.148 2005/01/21 05:56:41 peter Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/amd64/isa/isa.c 166901 2007-02-23 12:19:07Z piso $");
 
 /*-
  * Modifications for Intel architecture by Garrett A. Wollman.
@@ -147,10 +147,11 @@ isa_release_resource(device_t bus, device_t child, int type, int rid,
  */
 int
 isa_setup_intr(device_t bus, device_t child, struct resource *r, int flags,
-	       void (*ihand)(void *), void *arg, void **cookiep)
+	       driver_filter_t *filter, void (*ihand)(void *), void *arg, 
+	       void **cookiep)
 {
 	return (BUS_SETUP_INTR(device_get_parent(bus), child, r, flags,
-			       ihand, arg, cookiep));
+			       filter, ihand, arg, cookiep));
 }
 
 int

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ypwhich/ypwhich.c,v 1.16 2004/04/04 19:17:38 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ypwhich/ypwhich.c 127856 2004-04-04 19:17:38Z charnier $");
 
 #include <sys/param.h>
 #include <sys/types.h>

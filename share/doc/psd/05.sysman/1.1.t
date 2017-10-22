@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)1.1.t	8.1 (Berkeley) 6/8/93
-.\"	$FreeBSD: src/share/doc/psd/05.sysman/1.1.t,v 1.2 2000/11/26 22:20:17 kris Exp $
+.\"	$FreeBSD: release/7.0.0/share/doc/psd/05.sysman/1.1.t 172506 2007-10-10 16:59:15Z cvs2svn $
 .\"
 .sh "Processes and protection
 .NH 3

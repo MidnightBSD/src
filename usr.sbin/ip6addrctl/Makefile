@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/ip6addrctl/Makefile,v 1.1 2003/10/30 17:46:40 ume Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/ip6addrctl/Makefile 121748 2003-10-30 17:46:40Z ume $
 
 PROG=	ip6addrctl
 MAN=	ip6addrctl.8

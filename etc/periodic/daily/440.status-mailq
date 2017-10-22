@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/periodic/daily/440.status-mailq,v 1.9 2002/12/07 23:37:44 keramida Exp $
+# $FreeBSD: release/7.0.0/etc/periodic/daily/440.status-mailq 156435 2006-03-08 17:26:53Z matteo $
 #
 
 # If there is a global system configuration file, suck it in.
@@ -29,11 +29,12 @@ case "$daily_status_mailq_enable" in
 			sort |
 			uniq -c |
 			sort -nr |
-			awk '$1 > 1 {print $1, $2}';;
+			awk '$1 >= 1 {print $1, $2}';;
 		*)
 		    mailq;;
-	    esac | tee /dev/stderr | fgrep -v 'mqueue is empty' | wc -l)
-	    [ $rc -gt 1 ] && rc=1
+	    esac | tee /dev/stderr |
+	    egrep -v '(mqueue is empty|Total requests)' | wc -l)
+	    [ $rc -gt 0 ] && rc=1 || rc=0
 
 	    case "$daily_status_include_submit_mailq" in
 	    [Yy][Ee][Ss])
@@ -42,18 +43,19 @@ case "$daily_status_mailq_enable" in
 		    echo ""
 		    echo "Mail in submit queue:"
 
-		    rc=$(case "$daily_status_mailq_shorten" in
+		    rc_submit=$(case "$daily_status_mailq_shorten" in
 			[Yy][Ee][Ss])
 			    mailq -Ac |
 				egrep -e '^[[:space:]]+[^[:space:]]+@' |
 				sort |
 				uniq -c |
 				sort -nr |
-				awk '$1 > 1 {print $1, $2}';;
+				awk '$1 >= 1 {print $1, $2}';;
 			*)
 			    mailq -Ac;;
-		    esac | tee /dev/stderr | fgrep -v 'mqueue is empty' | wc -l)
-		    [ $rc -gt 1 ] && rc=1
+		    esac | tee /dev/stderr |
+		    egrep -v '(mqueue is empty|Total requests)' | wc -l)
+		    [ $rc_submit -gt 0 ] && rc=1
 		fi;;
 	    esac
 	fi;;

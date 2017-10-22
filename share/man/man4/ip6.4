@@ -28,9 +28,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ip6.4,v 1.20 2005/02/13 22:25:17 ru Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man4/ip6.4 174854 2007-12-22 06:32:46Z cvs2svn $
 .\"
-.Dd December 29, 2004
+.Dd September 29, 2006
 .Dt IP6 4
 .Os
 .Sh NAME
@@ -179,7 +179,7 @@ the destination group and if multicast loopback (see below) has not been
 disabled on the sending socket.
 Multicast datagrams with a hop limit greater than 1 may be forwarded to
 the other networks if a multicast router (such as
-.Xr mrouted 8 )
+.Xr mrouted 8 Pq Pa ports/net/mrouted )
 is attached to the local network.
 .It Dv IPV6_MULTICAST_LOOP Fa "u_int *"
 Get or set the status of whether multicast datagrams will be looped back

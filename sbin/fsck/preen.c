@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/fsck/preen.c,v 1.28 2004/04/09 19:58:28 markm Exp $
+ * $FreeBSD: release/7.0.0/sbin/fsck/preen.c 128073 2004-04-09 19:58:40Z markm $
  */
 
 #include <sys/cdefs.h>

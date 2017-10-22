@@ -1,4 +1,4 @@
-/* $FreeBSD: src/gnu/usr.bin/bc/config.h,v 1.7 2001/11/09 17:09:42 ache Exp $ */
+/* $FreeBSD: release/7.0.0/gnu/usr.bin/bc/config.h 86215 2001-11-09 17:09:42Z ache $ */
 
 /* config.h.  Generated automatically by configure.  */
 /* config.h.in.  Generated automatically from configure.in by autoheader.  */

@@ -32,7 +32,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer2/i4b_l2timer.c,v 1.14 2005/01/06 22:18:21 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer2/i4b_l2timer.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -40,7 +40,7 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer2/i4b_l2timer.c,v 1.14 2005/01/06 22:18:21 
 #include <sys/socket.h>
 #include <net/if.h>
 
-#include <machine/i4b_debug.h>
+#include <i4b/include/i4b_debug.h>
 
 #include <i4b/include/i4b_global.h>
 
@@ -161,7 +161,7 @@ i4b_T202_stop(l2_softc_t *l2sc)
 /*---------------------------------------------------------------------------*
  *	Q.921 timer T203 timeout function
  *---------------------------------------------------------------------------*/
-#if I4B_T203_ACTIVE
+#if defined(I4B_T203_ACTIVE) && I4B_T203_ACTIVE
 static void
 i4b_T203_timeout(l2_softc_t *l2sc)
 {
@@ -176,7 +176,7 @@ i4b_T203_timeout(l2_softc_t *l2sc)
 void
 i4b_T203_start(l2_softc_t *l2sc)
 {
-#if I4B_T203_ACTIVE
+#if defined(I4B_T203_ACTIVE) && I4B_T203_ACTIVE
 	if (l2sc->T203 == TIMER_ACTIVE)
 		return;
 		
@@ -193,7 +193,7 @@ i4b_T203_start(l2_softc_t *l2sc)
 void
 i4b_T203_stop(l2_softc_t *l2sc)
 {
-#if I4B_T203_ACTIVE
+#if defined(I4B_T203_ACTIVE) && I4B_T203_ACTIVE
 	CRIT_VAR;
 	CRIT_BEG;
 	if(l2sc->T203 != TIMER_IDLE)
@@ -212,7 +212,7 @@ i4b_T203_stop(l2_softc_t *l2sc)
 void
 i4b_T203_restart(l2_softc_t *l2sc)
 {
-#if I4B_T203_ACTIVE
+#if defined(I4B_T203_ACTIVE) && I4B_T203_ACTIVE
 	CRIT_VAR;
 	CRIT_BEG;
 

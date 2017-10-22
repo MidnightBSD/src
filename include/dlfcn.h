@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/dlfcn.h,v 1.19 2003/02/13 17:47:43 kan Exp $
+ * $FreeBSD: release/7.0.0/include/dlfcn.h 153515 2005-12-18 19:43:33Z kan $
  */
 
 #ifndef _DLFCN_H_
@@ -131,6 +131,8 @@ void	 dllockinit(void *_context,
 	    void (*_lock_release)(void *_lock),
 	    void (*_lock_destroy)(void *_lock),
 	    void (*_context_destroy)(void *_context));
+void	*dlvsym(void * __restrict, const char * __restrict,
+	    const char * __restrict);
 #endif /* __BSD_VISIBLE */
 __END_DECLS
 

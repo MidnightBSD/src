@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.1.1.2 2006-02-25 02:38:11 laffer1 Exp $
-# $FreeBSD: src/usr.bin/bluetooth/rfcomm_sppd/Makefile,v 1.3 2005/01/28 16:08:07 ru Exp $
+# $Id: Makefile,v 1.7 2003/09/07 18:15:55 max Exp $
+# $FreeBSD: release/7.0.0/usr.bin/bluetooth/rfcomm_sppd/Makefile 140941 2005-01-28 16:08:11Z ru $
 
 PROG=		rfcomm_sppd
 SRCS=		rfcomm_sppd.c rfcomm_sdp.c

@@ -23,7 +23,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/bin/setfacl/setfacl.h,v 1.5 2005/01/10 08:39:25 imp Exp $
+ * $FreeBSD: release/7.0.0/bin/setfacl/setfacl.h 139969 2005-01-10 08:39:26Z imp $
  */
 
 #ifndef _SETFACL_H

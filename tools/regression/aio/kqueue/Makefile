@@ -1,6 +1,6 @@
-# $FreeBSD: src/tools/regression/aio/kqueue/Makefile,v 1.1 2005/03/02 03:32:01 ambrisko Exp $
+# $FreeBSD: release/7.0.0/tools/regression/aio/kqueue/Makefile 156735 2006-03-15 10:46:38Z ru $
 
 PROG=	aio_kqueue
-NO_MAN=	YES
+NO_MAN=
 
 .include <bsd.prog.mk>

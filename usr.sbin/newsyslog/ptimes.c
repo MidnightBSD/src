@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/newsyslog/ptimes.c,v 1.5 2004/06/07 21:53:27 gad Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/newsyslog/ptimes.c 130214 2004-06-07 21:53:27Z gad $");
 
 #include <ctype.h>
 #include <limits.h>

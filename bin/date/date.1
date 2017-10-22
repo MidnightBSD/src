@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)date.1	8.3 (Berkeley) 4/28/95
-.\" $FreeBSD: src/bin/date/date.1,v 1.72 2005/02/13 22:25:09 ru Exp $
+.\" $FreeBSD: release/7.0.0/bin/date/date.1 170215 2007-06-02 20:15:59Z remko $
 .\"
-.Dd August 9, 2004
+.Dd June 2, 2007
 .Dt DATE 1
 .Os
 .Sh NAME
@@ -80,7 +80,7 @@ both the kernel clock and the hardware clock are updated.
 .Pp
 Only the superuser may set the date,
 and if the system securelevel (see
-.Xr securelevel 8 )
+.Xr securelevel 7 )
 is greater than 1,
 the time may not be changed by more than 1 second.
 .Pp
@@ -404,6 +404,7 @@ and
 .Xr timed 8
 fails.
 .Sh SEE ALSO
+.Xr locale 1 ,
 .Xr gettimeofday 2 ,
 .Xr strftime 3 ,
 .Xr strptime 3 ,
@@ -419,6 +420,11 @@ The
 .Nm
 utility is expected to be compatible with
 .St -p1003.2 .
+The
+.Fl d , f , j , n , r , t ,
+and
+.Fl v
+options are all extensions to the standard.
 .Sh HISTORY
 A
 .Nm

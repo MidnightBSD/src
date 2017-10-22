@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/powermac/hrowpicvar.h,v 1.2 2005/01/07 02:29:20 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/powermac/hrowpicvar.h 171805 2007-08-11 19:25:32Z marcel $
  */
 
 #ifndef  _POWERPC_POWERMAC_HROWPICVAR_H_
@@ -62,16 +62,14 @@
 
 #define  HPIC_1ST_OFFSET  0x10		/* offset to primary reg bank */
 
-
 struct hrowpic_softc {
-	struct		rman sc_rman;		/* resource mgr for IRQs */
-	u_int32_t	sc_irq[HROWPIC_IRQMAX];	/* allocated IRQ flags */
-	u_int32_t	sc_softreg[2];		/* ENABLE reg copy */
-	device_t       	sc_maciodev;		/* macio device */
-	struct resource *sc_memr;		/* macio bus resource */
+	device_t	sc_dev;			/* macio device */
+	struct resource *sc_rres;		/* macio bus resource */
 	bus_space_tag_t sc_bt;			/* macio bus tag/handle */
 	bus_space_handle_t sc_bh;
+	int		sc_rrid;
+	uint32_t	sc_softreg[2];		/* ENABLE reg copy */
+	u_int		sc_vector[HROWPIC_IRQMAX];
 };
-
 
 #endif  /* _POWERPC_POWERMAC_HROWPICVAR_H_ */

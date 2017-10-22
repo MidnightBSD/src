@@ -25,7 +25,7 @@
  *
  *	from: Mach, Revision 2.2  92/04/04  11:35:26  rpd
  *	boot2.S,v 1.6 1995/01/25 21:37:40 bde Exp
- * $FreeBSD: src/sys/boot/pc98/boot2/boot2.S,v 1.4 2005/05/08 14:17:27 nyan Exp $
+ * $FreeBSD: release/7.0.0/sys/boot/pc98/boot2/boot2.S 146011 2005-05-08 14:17:28Z nyan $
  */
 /*
  * Ported to PC-9801 by Yoshio Kimura

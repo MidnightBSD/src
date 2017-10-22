@@ -34,7 +34,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/sysinstall/menus.c,v 1.410.2.3 2006/02/13 21:02:35 ceri Exp $";
+  "$FreeBSD: release/7.0.0/usr.sbin/sysinstall/menus.c 175658 2008-01-25 10:54:40Z mnag $";
 #endif
 
 #include "sysinstall.h"
@@ -57,51 +57,18 @@ clearSrc(dialogMenuItem *self)
 }
 
 static int
-setX11Misc(dialogMenuItem *self)
+setKernel(dialogMenuItem *self)
 {
-    XOrgDists |= DIST_XORG_MISC_ALL;
-    Dists |= DIST_XORG;
+    Dists |= DIST_KERNEL;
+    KernelDists = DIST_KERNEL_ALL;
     return DITEM_SUCCESS | DITEM_REDRAW;
 }
 
 static int
-clearX11Misc(dialogMenuItem *self)
+clearKernel(dialogMenuItem *self)
 {
-    XOrgDists &= ~DIST_XORG_MISC_ALL;
-    if (!XOrgDists)
-	Dists &= ~DIST_XORG;
-    return DITEM_SUCCESS | DITEM_REDRAW;
-}
-
-static int
-setX11Servers(dialogMenuItem *self)
-{
-    XOrgDists |= DIST_XORG_SERVER_ALL;
-    return DITEM_SUCCESS | DITEM_REDRAW;
-}
-
-static int
-clearX11Servers(dialogMenuItem *self)
-{
-    XOrgDists &= ~DIST_XORG_SERVER_ALL;
-    if (!XOrgDists)
-	Dists &= ~DIST_XORG;
-    return DITEM_SUCCESS | DITEM_REDRAW;
-}
-
-static int
-setX11Fonts(dialogMenuItem *self)
-{
-    XOrgDists |= DIST_XORG_FONTS_ALL;
-    return DITEM_SUCCESS | DITEM_REDRAW;
-}
-
-static int
-clearX11Fonts(dialogMenuItem *self)
-{
-    XOrgDists &= ~DIST_XORG_FONTS_ALL;
-    if (!XOrgDists)
-	Dists &= ~DIST_XORG;
+    Dists &= ~DIST_KERNEL;
+    KernelDists = 0;
     return DITEM_SUCCESS | DITEM_REDRAW;
 }
 
@@ -152,7 +119,7 @@ checkDistXUser(dialogMenuItem *self)
 static int
 checkDistMinimum(dialogMenuItem *self)
 {
-    return Dists == (DIST_BASE);
+    return Dists == (DIST_BASE | DIST_KERNEL);
 }
 
 static int
@@ -160,7 +127,8 @@ checkDistEverything(dialogMenuItem *self)
 {
     return Dists == DIST_ALL &&
 	_IS_SET(SrcDists, DIST_SRC_ALL) &&
-	_IS_SET(XOrgDists, DIST_XORG_ALL);
+	_IS_SET(XOrgDists, DIST_XORG_ALL) &&
+	_IS_SET(KernelDists, DIST_KERNEL_ALL);
 }
 
 static int
@@ -178,6 +146,12 @@ x11FlagCheck(dialogMenuItem *item)
 	Dists &= ~DIST_XORG;
 
     return Dists & DIST_XORG;
+}
+
+static int
+kernelFlagCheck(dialogMenuItem *item)
+{
+    return KernelDists;
 }
 
 static int
@@ -203,6 +177,7 @@ DMenu MenuIndex = {
     NULL,
     { { " Anon FTP",		"Configure anonymous FTP logins.",	dmenuVarCheck, configAnonFTP, NULL, "anon_ftp" },
       { " Commit",		"Commit any pending actions (dangerous!)", NULL, installCustomCommit },
+      { " Country",		"Set the system's country",		NULL, configCountry },
 #ifdef WITH_SYSCONS
       { " Console settings",	"Customize system console behavior.",	NULL, dmenuSubmenu, NULL, &MenuSyscons },
 #endif
@@ -221,12 +196,10 @@ DMenu MenuIndex = {
       { " Dists, User",		"Select average user distribution.",	checkDistUser, distSetUser },
       { " Dists, X User",	"Select average X user distribution.",	checkDistXUser, distSetXUser },
       { " Distributions, Adding", "Installing additional distribution sets", NULL, distExtractAll },
-      { " Distributions, X.Org","X.Org distribution menu.",		NULL, distSetXOrg },
       { " Documentation",	"Installation instructions, README, etc.", NULL, dmenuSubmenu, NULL, &MenuDocumentation },
       { " Doc, README",		"The distribution README file.",	NULL, dmenuDisplayFile, NULL, "README" },
       { " Doc, Errata",		"The distribution errata.",	NULL, dmenuDisplayFile, NULL, "ERRATA" },
       { " Doc, Hardware",	"The distribution hardware guide.",	NULL, dmenuDisplayFile,	NULL, "HARDWARE" },
-      { " Doc, Install",		"The distribution installation guide.",	NULL, dmenuDisplayFile,	NULL, "INSTALL" },
       { " Doc, Copyright",	"The distribution copyright notices.",	NULL, dmenuDisplayFile,	NULL, "COPYRIGHT" },
       { " Doc, Release",		"The distribution release notes.",	NULL, dmenuDisplayFile, NULL, "RELNOTES" },
       { " Doc, HTML",		"The HTML documentation menu.",		NULL, docBrowser },
@@ -273,7 +246,7 @@ DMenu MenuIndex = {
 #ifndef PC98
       { " Syscons, Font",	"The console screen font.",	  NULL, dmenuSubmenu, NULL, &MenuSysconsFont },
 #endif
-      { " Syscons, Keymap",	"The console keymap configuration menu.", NULL, dmenuSubmenu, NULL, &MenuSysconsKeymap },
+      { " Syscons, Keymap",	"The console keymap configuration menu.", NULL, keymapMenuSelect },
       { " Syscons, Keyrate",	"The console key rate configuration menu.", NULL, dmenuSubmenu, NULL, &MenuSysconsKeyrate },
       { " Syscons, Saver",	"The console screen saver configuration menu.",	NULL, dmenuSubmenu, NULL, &MenuSysconsSaver },
 #ifndef PC98
@@ -286,10 +259,11 @@ DMenu MenuIndex = {
       { " Upgrade",		"Upgrade an existing system.",		NULL, installUpgrade },
       { " Usage",		"Quick start - How to use this menu system.",	NULL, dmenuDisplayFile, NULL, "usage" },
       { " User Management",	"Add user and group information.",	NULL, dmenuSubmenu, NULL, &MenuUsermgmt },
-      { " X.Org, Fonts",	"X.Org Font selection menu.",		NULL, dmenuSubmenu, NULL, &MenuXOrgSelectFonts },
-      { " X.Org, Server",	"X.Org Server selection menu.",	NULL, dmenuSubmenu, NULL, &MenuXOrgSelectServer },
       { NULL } },
 };
+
+/* The country menu */
+#include "countries.h"
 
 /* The initial installation menu */
 DMenu MenuInitial = {
@@ -299,8 +273,8 @@ DMenu MenuInitial = {
     "select one of the options below by using the arrow keys or typing the\n"
     "first character of the option name you're interested in.  Invoke an\n"
     "option with [SPACE] or [ENTER].  To exit, use [TAB] to move to Exit.", 
-    "Press F1 for Installation Guide",			/* help line */
-    "INSTALL",						/* help file */
+    NULL,
+    NULL,
     { { " Select " },
       { "X Exit Install",	NULL, NULL, dmenuExit },
       { " Usage",	"Quick start - How to use this menu system",	NULL, dmenuDisplayFile, NULL, "usage" },
@@ -310,7 +284,7 @@ DMenu MenuInitial = {
       { "Configure",	"Do post-install configuration of FreeBSD",	NULL, dmenuSubmenu, NULL, &MenuConfigure },
       { "Doc",	"Installation instructions, README, etc.",	NULL, dmenuSubmenu, NULL, &MenuDocumentation },
 #ifdef WITH_SYSCONS
-      { "Keymap",	"Select keyboard type",				NULL, dmenuSubmenu, NULL, &MenuSysconsKeymap },
+      { "Keymap",	"Select keyboard type",				NULL, keymapMenuSelect },
 #endif
       { "Options",	"View/Set various installation options",	NULL, optionsEditor },
       { "Fixit",	"Repair mode with CDROM/DVD/floppy or start shell",	NULL, dmenuSubmenu, NULL, &MenuFixit },
@@ -335,11 +309,10 @@ DMenu MenuDocumentation = {
       { "1 README",	"A general description of FreeBSD.  Read this!", NULL, dmenuDisplayFile, NULL, "README" },
       { "2 Errata",	"Late-breaking, post-release news.", NULL, dmenuDisplayFile, NULL, "ERRATA" },
       { "3 Hardware",	"The FreeBSD survival guide for PC hardware.",	NULL, dmenuDisplayFile,	NULL, "HARDWARE" },
-      { "4 Install",	"A step-by-step guide to installing FreeBSD.",	NULL, dmenuDisplayFile,	NULL, "INSTALL" },
-      { "5 Copyright",	"The FreeBSD Copyright notices.",		NULL, dmenuDisplayFile,	NULL, "COPYRIGHT" },
-      { "6 Release"	,"The release notes for this version of FreeBSD.", NULL, dmenuDisplayFile, NULL, "RELNOTES" },
-      { "7 Shortcuts",	"Creating shortcuts to sysinstall.",		NULL, dmenuDisplayFile, NULL, "shortcuts" },
-      { "8 HTML Docs",	"Go to the HTML documentation menu (post-install).", NULL, docBrowser },
+      { "4 Copyright",	"The FreeBSD Copyright notices.",		NULL, dmenuDisplayFile,	NULL, "COPYRIGHT" },
+      { "5 Release"	,"The release notes for this version of FreeBSD.", NULL, dmenuDisplayFile, NULL, "RELNOTES" },
+      { "6 Shortcuts",	"Creating shortcuts to sysinstall.",		NULL, dmenuDisplayFile, NULL, "shortcuts" },
+      { "7 HTML Docs",	"Go to the HTML documentation menu (post-install).", NULL, docBrowser },
       { NULL } },
 };
 
@@ -471,8 +444,8 @@ DMenu MenuMediaCDROM = {
     "FreeBSD distribution.  If you are seeing this menu it is because\n"
     "more than one CD/DVD drive was found on your system.  Please select one\n"
     "of the following CD/DVD drives as your installation drive.",
-    "Press F1 to read the installation guide",
-    "INSTALL",
+    NULL,
+    NULL,
     { { NULL } },
 };
 
@@ -497,8 +470,8 @@ DMenu MenuMediaDOS = {
     "into a \"FREEBSD\" subdirectory on one of your DOS partitions.\n"
     "Otherwise, please select the DOS partition containing the FreeBSD\n"
     "distribution files.",
-    "Press F1 to read the installation guide",
-    "INSTALL",
+    NULL,
+    NULL,
     { { NULL } },
 };
 
@@ -510,7 +483,7 @@ DMenu MenuMediaFTP = {
     "carries more than the base distribution kits. Only Primary sites are\n"
     "guaranteed to carry the full range of possible distributions.",
     "Select a site that's close!",
-    "INSTALL",
+    NULL,
     { { "Main Site",	"ftp.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp.freebsd.org" },
       { "URL", "Specify some other ftp site by URL", NULL, dmenuSetVariable, NULL,
@@ -520,12 +493,18 @@ DMenu MenuMediaFTP = {
       { "Snapshots Server Sweden", "snapshots.se.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://snapshots.se.freebsd.org" },
 
-      { "IPv6 Ireland", "ftp3.ie.freebsd.org", NULL, dmenuSetVariable, NULL,
+      { "IPv6 Main Site", "ftp.freebsd.org", NULL, dmenuSetVariable, NULL,
+	VAR_FTP_PATH "=ftp://ftp.freebsd.org" },
+      { " IPv6 Ireland", "ftp3.ie.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp3.ie.freebsd.org" },
+      { " IPv6 Israel", "ftp.il.freebsd.org", NULL, dmenuSetVariable, NULL,
+	VAR_FTP_PATH "=ftp://ftp.il.freebsd.org" },
       { " IPv6 Japan", "ftp2.jp.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp2.jp.freebsd.org" },
       { " IPv6 USA", "ftp4.us.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp4.us.freebsd.org" },
+      { " IPv6 Turkey", "ftp2.tr.freebsd.org", NULL, dmenuSetVariable, NULL,
+	VAR_FTP_PATH "=ftp://ftp2.tr.freebsd.org" },
 
       { "Primary",	"ftp1.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp1.freebsd.org" },
@@ -662,6 +641,9 @@ DMenu MenuMediaFTP = {
       { " Ireland #3",	"ftp3.ie.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp3.ie.freebsd.org" },
 
+      { "Isreal",	"ftp.il.freebsd.org", NULL, dmenuSetVariable, NULL,
+	VAR_FTP_PATH "=ftp://ftp.il.freebsd.org" },
+
       { "Italy",	"ftp.it.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp.it.freebsd.org" },
 
@@ -784,6 +766,8 @@ DMenu MenuMediaFTP = {
 
       { "Turkey",	"ftp.tr.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp.tr.freebsd.org" },
+      { " Turkey #2",	"ftp2.tr.freebsd.org", NULL, dmenuSetVariable, NULL,
+	VAR_FTP_PATH "=ftp://ftp.tr.freebsd.org" },
 
       { "UK",		"ftp.uk.freebsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://ftp.uk.freebsd.org" },
@@ -854,8 +838,8 @@ DMenu MenuMediaTape = {
     "poor random-access devices, so we extract _everything_ on the tape\n"
     "in one pass).  If you have sufficient space for this, then you should\n"
     "select one of the following tape devices detected on your system.",
-    "Press F1 to read the installation guide",
-    "INSTALL",
+    NULL,
+    NULL,
     { { NULL } },
 };
 
@@ -961,6 +945,8 @@ DMenu MenuSubDistributions = {
 	NULL, distReset, NULL, NULL, ' ', ' ', ' ' },
       { " base",	"Binary base distribution (required)",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_BASE },
+      { " kernels",	"Binary kernel distributions (required)",
+	kernelFlagCheck,distSetKernel },
       { " dict",	"Spelling checker dictionary files",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_DICT },
       { " doc",		"Miscellaneous FreeBSD online docs",
@@ -986,7 +972,28 @@ DMenu MenuSubDistributions = {
       { " local",	"Local additions collection",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_LOCAL},
       { " X.Org",	"The X.Org distribution",
-	x11FlagCheck,	distSetXOrg },
+	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_XORG },
+      { NULL } },
+};
+
+DMenu MenuKernelDistributions = {
+    DMENU_CHECKLIST_TYPE | DMENU_SELECTION_RETURNS,
+    "Select the operating system kernels you wish to install.",
+    "Please check off those kernels you wish to install.\n",
+    NULL,
+    NULL,
+    { { "X Exit", "Exit this menu (returning to previous)",
+	checkTrue, dmenuExit, NULL, NULL, '<', '<', '<' },
+      { "All",		"Select all of the below",
+	NULL,		setKernel, NULL, NULL, ' ', ' ', ' ' },
+      { "Reset",	"Reset all of the below",
+	NULL,		clearKernel, NULL, NULL, ' ', ' ', ' ' },
+      { " GENERIC",	"GENERIC kernel configuration",
+	dmenuFlagCheck,	dmenuSetFlag, NULL, &KernelDists, '[', 'X', ']', DIST_KERNEL_GENERIC },
+#ifdef WITH_SMP
+      { " SMP",		"GENERIC symmetric multiprocessor kernel configuration",
+	dmenuFlagCheck,	dmenuSetFlag,	NULL, &KernelDists, '[', 'X', ']', DIST_KERNEL_SMP },
+#endif
       { NULL } },
 };
 
@@ -1005,6 +1012,10 @@ DMenu MenuSrcDistributions = {
 	NULL,		clearSrc, NULL, NULL, ' ', ' ', ' ' },
       { " base",	"top-level files in /usr/src",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &SrcDists, '[', 'X', ']', DIST_SRC_BASE },
+      { " cddl",	"/usr/src/cddl (software from Sun)",
+	dmenuFlagCheck,	dmenuSetFlag, NULL, &SrcDists, '[', 'X', ']', DIST_SRC_CDDL },
+      { " compat",	"/usr/src/compat (compatibility software)",
+	dmenuFlagCheck,	dmenuSetFlag,	NULL, &SrcDists, '[', 'X', ']', DIST_SRC_COMPAT },
       { " contrib",	"/usr/src/contrib (contributed software)",
 	dmenuFlagCheck,	dmenuSetFlag,	NULL, &SrcDists, '[', 'X', ']', DIST_SRC_CONTRIB },
       { " crypto",	"/usr/src/crypto (contrib encryption sources)",
@@ -1046,155 +1057,6 @@ DMenu MenuSrcDistributions = {
       { NULL } },
 };
 
-DMenu MenuXOrgConfig = {
-    DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
-    "Please select the X.Org configuration tool you want to use.",
-    "The first option, xorgcfg, is fully graphical.\n"
-    "The second option provides a menu-based interface similar to\n"
-    "what you are currently using. "
-    "The third option, xorgconfig, is\n"
-    "a more simplistic shell-script based tool and less friendly to\n"
-    "new users, but it may work in situations where the other options\n"
-    "do not.",
-    NULL,
-    NULL,
-    { { "X Exit", "Exit this menu (returning to previous)",
-	NULL, dmenuExit },
-      { "2 xorgcfg",	"Fully graphical X.Org configuration tool.",
-	NULL, dmenuSetVariable, NULL, VAR_XORG_CONFIG "=xorgcfg" },
-      { "3 xorgcfg -textmode",	"ncurses-based X.Org configuration tool.",
-	NULL, dmenuSetVariable, NULL, VAR_XORG_CONFIG "=xorgcfg -textmode" },
-      { "4 xorgconfig",	"Shell-script based X.Org configuration tool.",
-	NULL, dmenuSetVariable, NULL, VAR_XORG_CONFIG "=xorgconfig" },
-      { "D XDesktop",	"X already set up, just do desktop configuration.",
-	NULL, dmenuSubmenu, NULL, &MenuXDesktops },
-      { NULL } },
-};
-
-DMenu MenuXDesktops = {
-    DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
-    "Please select the default X desktop to use.",
-    "By default, X.Org comes with a fairly vanilla desktop which\n"
-    "is based around the twm(1) window manager and does not offer\n"
-    "much in the way of features.  It does have the advantage of\n"
-    "being a standard part of X so you don't need to load anything\n"
-    "extra in order to use it.  If, however, you have access to a\n"
-    "reasonably full packages collection on your installation media,\n"
-    "you can choose any one of the following desktops as alternatives.",
-    NULL,
-    NULL,
-    { { "X Exit", "Exit this menu (returning to previous)",
-	NULL, dmenuExit },
-      { "2 KDE",		"The K Desktop Environment (Lite Edition)",
-	NULL, dmenuSetVariable, NULL, VAR_DESKSTYLE "=kde" },
-      { "3 GNOME 2",		"The GNOME 2 Desktop Environment (Lite Edition)",
-	NULL, dmenuSetVariable, NULL, VAR_DESKSTYLE "=gnome2" },
-      { "4 Afterstep",	"The Afterstep window manager",
-	NULL, dmenuSetVariable, NULL, VAR_DESKSTYLE "=afterstep" },
-      { "5 Windowmaker",	"The Windowmaker window manager",
-	NULL, dmenuSetVariable, NULL, VAR_DESKSTYLE "=windowmaker" },
-      { "6 fvwm",		"The fvwm window manager",
-	NULL, dmenuSetVariable, NULL, VAR_DESKSTYLE "=fvwm2" },
-      { NULL } },
-};
-
-DMenu MenuXOrgSelect = {
-    DMENU_NORMAL_TYPE,
-    "X.Org Distribution",
-    "Please select the components you need from the X.Org\n"
-    "distribution sets.",
-    NULL,
-    NULL,
-    { { "X Exit", "Exit this menu (returning to previous)", NULL, dmenuExit },
-      { "Basic",	"Basic component menu (required)",	NULL, dmenuSubmenu, NULL, &MenuXOrgSelectCore },
-      { "Server",	"X server menu",			NULL, dmenuSubmenu, NULL, &MenuXOrgSelectServer },
-      { "Fonts",	"Font set menu",			NULL, dmenuSubmenu, NULL, &MenuXOrgSelectFonts },
-      { NULL } },
-};
-
-DMenu MenuXOrgSelectCore = {
-    DMENU_CHECKLIST_TYPE | DMENU_SELECTION_RETURNS,
-    "X.Org base distribution types",
-    "Please check off the basic X.Org components you wish to install.\n"
-    "Bin, lib, and set are recommended for a minimum installaion.",
-    NULL,
-    NULL,
-    { { "X Exit",	"Exit this menu (returning to previous)",
-	checkTrue, dmenuExit, NULL, NULL, '<', '<', '<' },
-      { "All",		"Select all below",
-	NULL,		setX11Misc, NULL, NULL, ' ', ' ', ' ' },
-      { "Reset",	"Reset all below",
-	NULL,		clearX11Misc, NULL, NULL, ' ', ' ', ' ' },
-      { " lib",         "Shared libraries and data files needed at runtime",
-	dmenuFlagCheck, dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_LIB },
-      { " bin", 	"Client applications",
-	dmenuFlagCheck, dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_CLIENTS },
-      { " man",         "Manual pages",
-	dmenuFlagCheck, dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_MAN },
-      { " doc",         "Documentation",
-	dmenuFlagCheck, dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_DOC },
-      { " prog",        "Programming tools",
-	dmenuFlagCheck, dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_IMAKE },
-      { NULL } },
-};
-
-DMenu MenuXOrgSelectFonts = {
-    DMENU_CHECKLIST_TYPE | DMENU_SELECTION_RETURNS,
-    "X.Org Font distribution selection.",
-    "Please check off the individual font distributions you wish to\n\
-install.  At the minimum, you should install the standard\n\
-75 DPI and misc fonts if you're also installing an X server\n\
-(these are selected by default).  The TrueType set is also \n\
-highly recommended.  The font server is unnecessary in most\n\
-configurations.",
-    NULL,
-    NULL,
-    { { "X Exit",	"Exit this menu (returning to previous)",
-	checkTrue, dmenuExit, NULL, NULL, '<', '<', '<' },
-      { "All",		"All fonts",
-	NULL,		setX11Fonts, NULL, NULL, ' ', ' ', ' ' },
-      { "Reset",	"Reset font selections",
-	NULL,		clearX11Fonts, NULL, NULL, ' ', ' ', ' ' },
-      { " fmsc",	"Standard miscellaneous fonts",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_FONTS_MISC },
-      { " f75",		"75 DPI fonts",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_FONTS_75 },
-      { " f100",	"100 DPI fonts",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_FONTS_100 },
-      { " fcyr",	"Cyrillic Fonts",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_FONTS_CYR },
-      { " ft1",		"Type1 scalable fonts",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_FONTS_T1 },
-      { " ftt",		"TrueType scalable fonts",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_FONTS_TT },
-      { " fs",		"Font server",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_FONTSERVER },
-      { NULL } },
-};
-
-DMenu MenuXOrgSelectServer = {
-    DMENU_CHECKLIST_TYPE | DMENU_SELECTION_RETURNS,
-    "X.Org X Server selection.",
-    "Please check off the types of X servers you wish to install.\n",
-    NULL,
-    NULL,
-    { { "X Exit",	"Exit this menu (returning to previous)",
-	checkTrue, dmenuExit, NULL, NULL, '<', '<', '<' },
-      { "All",		"Select all of the above",
-	NULL,		setX11Servers, NULL, NULL, ' ', ' ', ' ' },
-      { "Reset",	"Reset all of the above",
-	NULL,		clearX11Servers, NULL, NULL, ' ', ' ', ' ' },
-      { " srv",		"Standard Graphics Framebuffer",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_SERVER },
-      { " nest",	"Nested X Server",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_NESTSERVER },
-      { " prt", 	"X Print Server",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_PRINTSERVER },
-      { " vfb",		"Virtual Framebuffer",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &XOrgDists, '[', 'X', ']', DIST_XORG_VFBSERVER },
-      { NULL } },
-};
-
 DMenu MenuDiskDevices = {
     DMENU_CHECKLIST_TYPE | DMENU_SELECTION_RETURNS,
     "Select Drive(s)",
@@ -1233,8 +1095,8 @@ DMenu MenuInstallCustom = {
     "This is the custom installation menu. You may use this menu to specify\n"
     "details on the type of distribution you wish to have, where you wish\n"
     "to install it from and how you wish to allocate disk storage to FreeBSD.",
-    "Press F1 to read the installation guide",
-    "INSTALL",
+    NULL,
+    NULL,
     { { "X Exit",		"Exit this menu (returning to previous)", NULL,	dmenuExit },
       { "2 Options",		"View/Set various installation options", NULL, optionsEditor },
 #ifndef WITH_SLICES
@@ -1372,10 +1234,6 @@ DMenu MenuStartup = {
       { " pccard ifconfig",	"List of PCCARD ethernet devices to configure",
 	dmenuVarCheck, dmenuISetVariable, NULL, "pccard_ifconfig" },
 #endif
-      { " usbd", "Enable USB daemon (detect USB attach / detach)",
-        dmenuVarCheck, dmenuToggleVariable, NULL, "usbd_enable=YES" },
-      { " usbd flags", "Set default flags to usbd (if enabled)", 
-        dmenuVarCheck, dmenuISetVariable, NULL, "usbd_flags" },
       { " ",		" -- ", NULL,	NULL, NULL, NULL, ' ', ' ', ' ' },
       { " Startup dirs",	"Set the list of dirs to look for startup scripts",
 	dmenuVarCheck, dmenuISetVariable, NULL, "local_startup" },
@@ -1549,16 +1407,19 @@ DMenu MenuNTP = {
       { "Belgium #2",		"ntp2.belbone.be",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
 	"ntpdate_enable=YES,ntpdate_flags=ntp2.belbone.be" },
-      { "Brazil",		"ntp.cais.rnp.br",
+      { "Brazil",		"a.ntp.br",
+	dmenuVarsCheck, dmenuSetVariables, NULL,
+	"ntpdate_enable=YES,ntpdate_flags=a.ntp.br" },
+      { "Brazil #2",		"b.ntp.br",
+	dmenuVarsCheck, dmenuSetVariables, NULL,
+	"ntpdate_enable=YES,ntpdate_flags=b.ntp.br" },
+      { "Brazil #3",		"c.ntp.br",
+	dmenuVarsCheck, dmenuSetVariables, NULL,
+	"ntpdate_enable=YES,ntpdate_flags=c.ntp.br" },
+      { "Brazil #4",		"ntp.cais.rnp.br",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
 	"ntpdate_enable=YES,ntpdate_flags=ntp.cais.rnp.br" },
-      { "Brazil #2",		"ntp.pop-df.rnp.br",
-	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.pop-df.rnp.br" },
-      { "Brazil #3",		"ntp.ufes.br",
-	dmenuVarsCheck, dmenuSetVariables, NULL,
-	"ntpdate_enable=YES,ntpdate_flags=ntp.ufes.br" },
-      { "Brazil #4",		"ntp1.pucpr.br",
+      { "Brazil #5",		"ntp1.pucpr.br",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
 	"ntpdate_enable=YES,ntpdate_flags=ntp1.pucpr.br" },
       { "Canada",		"ca.pool.ntp.org",
@@ -1732,6 +1593,21 @@ DMenu MenuNTP = {
       { "Scotland",		"ntp.cs.strath.ac.uk",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
 	"ntpdate_enable=YES,ntpdate_flags=ntp.cs.strath.ac.uk" },
+      { "Taiwan",              "time.stdtime.gov.tw",
+	dmenuVarsCheck, dmenuSetVariables, NULL,
+	"ntpdate_enable=YES,ntpdate_flags=time.stdtime.gov.tw" },
+      { "Taiwan #2",           "clock.stdtime.gov.tw",
+	dmenuVarsCheck, dmenuSetVariables, NULL,
+	"ntpdate_enable=YES,ntpdate_flags=clock.stdtime.gov.tw" },
+      { "Taiwan #3",           "tick.stdtime.gov.tw",
+	dmenuVarsCheck, dmenuSetVariables, NULL,
+	"ntpdate_enable=YES,ntpdate_flags=tick.stdtime.gov.tw" },
+      { "Taiwan #4",           "tock.stdtime.gov.tw",
+	dmenuVarsCheck, dmenuSetVariables, NULL,
+	"ntpdate_enable=YES,ntpdate_flags=tock.stdtime.gov.tw" },
+      { "Taiwan #5",           "watch.stdtime.gov.tw",
+	dmenuVarsCheck, dmenuSetVariables, NULL,
+	"ntpdate_enable=YES,ntpdate_flags=watch.stdtime.gov.tw" },
       { "United Kingdom",	"uk.pool.ntp.org",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
 	"ntpdate_enable=YES,ntpdate_flags=uk.pool.ntp.org" },
@@ -2074,7 +1950,7 @@ DMenu MenuSysconsSaver = {
     "By default, the console driver will not attempt to do anything\n"
     "special with your screen when it's idle.  If you expect to leave your\n"
     "monitor switched on and idle for long periods of time then you should\n"
-    "probably enable one of these screen savers to prevent phosphor burn-in.",
+    "probably enable one of these screen savers to prevent burn-in.",
     "Choose a nifty-looking screen saver",
     NULL,
     { { "1 Blank",	"Simply blank the screen",
@@ -2244,7 +2120,7 @@ DMenu MenuSecurelevel = {
     "access to direct kernel memory is limited, and kernel modules may not\n"
     "be changed.  In highly secure mode, mounted file systems may not be\n"
     "modified on-disk, tampering with the system clock is prohibited.  In\n"
-    "network secure mode configuration changes to firwalling are prohibited.\n",
+    "network secure mode configuration changes to firewalling are prohibited.\n",
     "Select a securelevel to operate at - F1 for help",
     "securelevel",
     { { "X Exit",      "Exit this menu (returning to previous)",

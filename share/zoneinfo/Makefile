@@ -1,4 +1,30 @@
-# $FreeBSD: src/share/zoneinfo/Makefile,v 1.20 2004/10/19 20:38:49 ru Exp $
+# $FreeBSD: release/7.0.0/share/zoneinfo/Makefile 172476 2007-10-08 21:16:38Z edwin $
+
+#
+# HOW TO UPDATE THE ZONEINFO DATA
+#
+# In a clean directory, unpack the distribution archive and run:
+#
+# $ cvs -d :ext:ncvs.freebsd.org:/home/ncvs import -b 1.1.2 \
+#	src/share/zoneinfo ADO tzdataYYYYt
+#
+# where YYYYt is the year and the version of the distribution, for
+# example 2004h.
+#
+# Then go to the checked out source, and merge the changes from the
+# previous tag to the new tag in the HEAD:
+#
+# $ cd ../src/share/zoneinfo
+# $ cvs update -jtzdataYYYYp -j tzdataYYYYt
+#
+# Update it again:
+# 
+# $ cvs update
+#
+# And push it back into CVS:
+#
+# $ cvs ci
+#
 
 CLEANFILES+=	yearistype
 
@@ -9,11 +35,11 @@ LEAPFILE=
 .endif
 
 TZFILES=	africa antarctica asia australasia etcetera europe \
-		factory northamerica southamerica systemv
+		factory northamerica southamerica
 POSIXRULES=	America/New_York
 
 .if defined(OLDTIMEZONES)
-TZFILES+=	backward
+TZFILES+=	backward systemv
 .endif
 
 all: yearistype

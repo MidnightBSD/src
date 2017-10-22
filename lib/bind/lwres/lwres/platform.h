@@ -1,4 +1,4 @@
-/* $FreeBSD: src/lib/bind/lwres/lwres/platform.h,v 1.1.4.1 2006/01/14 10:13:50 dougb Exp $ */
+/* $FreeBSD: release/7.0.0/lib/bind/lwres/lwres/platform.h 170224 2007-06-02 23:24:14Z dougb $ */
 
 /*
  * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
@@ -17,7 +17,9 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: platform.h,v 1.1.1.2 2006-02-25 02:34:49 laffer1 Exp $ */
+/* $Id: platform.h.in,v 1.14.18.5 2005/06/08 02:07:59 marka Exp $ */
+
+/*! \file */
 
 #ifndef LWRES_PLATFORM_H
 #define LWRES_PLATFORM_H 1
@@ -98,7 +100,7 @@
 /*! \brief
  * Define if this system needs strtoul.
  */
-#undef ISC_PLATFORM_NEEDSTRTOUL
+#undef LWRES_PLATFORM_NEEDSTRTOUL
 
 #ifndef LWRES_PLATFORM_USEDECLSPEC
 #define LIBLWRES_EXTERNAL_DATA
@@ -109,5 +111,12 @@
 #define LIBLWRES_EXTERNAL_DATA __declspec(dllimport)
 #endif
 #endif
+
+/*
+ * Tell Emacs to use C mode on this file.
+ * Local Variables:
+ * mode: c
+ * End:
+ */
 
 #endif /* LWRES_PLATFORM_H */

@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)chmod.1	8.4 (Berkeley) 3/31/94
-.\" $FreeBSD: src/bin/chmod/chmod.1,v 1.39 2005/02/13 23:45:45 ru Exp $
+.\" $FreeBSD: release/7.0.0/bin/chmod/chmod.1 165463 2006-12-22 07:28:38Z ru $
 .\"
-.Dd March 31, 1994
+.Dd December 22, 2006
 .Dt CHMOD 1
 .Os
 .Sh NAME
@@ -228,6 +228,8 @@ If no value is supplied for
 each permission bit specified in
 .Ar perm ,
 for which the corresponding bit in the file mode creation mask
+(see
+.Xr umask 2 )
 is clear, is set.
 Otherwise, the mode bits represented by the specified
 .Ar who
@@ -252,7 +254,9 @@ values are cleared.
 .It =
 The mode bits specified by the
 .Ar who
-value are cleared, or, if no who value is specified, the owner, group
+value are cleared, or, if no
+.Ar who
+value is specified, the owner, group
 and other mode bits are cleared.
 Then, if no value is supplied for
 .Ar who ,

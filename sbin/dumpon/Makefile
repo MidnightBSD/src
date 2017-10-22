@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/dumpon/Makefile,v 1.10 2004/10/03 23:39:14 des Exp $
+# $FreeBSD: release/7.0.0/sbin/dumpon/Makefile 136105 2004-10-03 23:39:14Z des $
 
 PROG=	dumpon
 WARNS?=	6

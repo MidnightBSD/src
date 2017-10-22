@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/groff/src/utils/tfmtodit/Makefile,v 1.4 2003/05/01 13:22:21 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/src/utils/tfmtodit/Makefile 114412 2003-05-01 13:22:21Z ru $
 
 PROG_CXX=	tfmtodit
 SRCS=		tfmtodit.cpp

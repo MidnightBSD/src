@@ -26,9 +26,9 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-/* $Header: /home/cvs/src/usr.bin/lex/gen.c,v 1.1.1.2 2006-02-25 02:38:14 laffer1 Exp $ */
+/* $Header: /home/daffy/u0/vern/flex/RCS/gen.c,v 2.56 96/05/25 20:43:38 vern Exp $ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/lex/gen.c,v 1.7 2004/01/06 18:54:55 nectar Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/lex/gen.c 124183 2004-01-06 18:54:55Z nectar $");
 
 #include "flexdef.h"
 

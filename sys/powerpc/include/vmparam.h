@@ -29,13 +29,12 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: vmparam.h,v 1.11 2000/02/11 19:25:16 thorpej Exp $
- * $FreeBSD: src/sys/powerpc/include/vmparam.h,v 1.4 2004/03/02 06:49:21 grehan Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/vmparam.h 172317 2007-09-25 06:25:06Z alc $
  */
 
 #ifndef _MACHINE_VMPARAM_H_
 #define	_MACHINE_VMPARAM_H_
 
-#define	USRTEXT		NBPG
 #define	USRSTACK	VM_MAXUSER_ADDRESS
 
 #ifndef	MAXTSIZ
@@ -64,11 +63,6 @@
 #ifndef	SHMMAXPGS
 #define	SHMMAXPGS	1024
 #endif
-
-/*
- * Size of User Raw I/O map
- */
-#define	USRIOSIZE	1024
 
 /*
  * The time for a process to be blocked before being very swappable.
@@ -103,19 +97,39 @@
 #define	VM_MAX_KERNEL_BUF	(SEGMENT_LENGTH * 7 / 10)
 #endif
 
-#define	VM_PHYS_SIZE		(USRIOSIZE * NBPG)
-
 struct pmap_physseg {
 	struct pv_entry *pvent;
 	char *attrs;
 };
 
 #define	VM_PHYSSEG_MAX		16	/* 1? */
-#define	VM_PHYSSEG_STRAT	VM_PSTRAT_BSEARCH
-#define	VM_PHYSSEG_NOADD		/* can't add RAM after vm_mem_init */
 
+/*
+ * The physical address space is densely populated.
+ */
+#define	VM_PHYSSEG_DENSE
+
+/*
+ * Create three free page pools: VM_FREEPOOL_DEFAULT is the default pool
+ * from which physical pages are allocated and VM_FREEPOOL_DIRECT is
+ * the pool from which physical pages for small UMA objects are
+ * allocated.
+ */
+#define	VM_NFREEPOOL		3
+#define	VM_FREEPOOL_CACHE	2
+#define	VM_FREEPOOL_DEFAULT	0
+#define	VM_FREEPOOL_DIRECT	1
+
+/*
+ * Create one free page list.
+ */
 #define	VM_NFREELIST		1
 #define	VM_FREELIST_DEFAULT	0
+
+/*
+ * The largest allocation size is 4MB.
+ */
+#define	VM_NFREEORDER		11
 
 #ifndef VM_INITIAL_PAGEIN
 #define	VM_INITIAL_PAGEIN	16

@@ -1,7 +1,7 @@
 /*
  * PC Card support for sysinstall
  *
- * $FreeBSD: src/usr.sbin/sysinstall/pccard.c,v 1.19 2003/08/20 06:27:21 imp Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/pccard.c 174854 2007-12-22 06:32:46Z cvs2svn $
  *
  * Copyright (c) 1997-1999
  *	Tatsumi Hosokawa <hosokawa@jp.FreeBSD.org>.  All rights reserved.

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/tzsetup/Makefile,v 1.17 2003/04/04 17:49:20 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/tzsetup/Makefile 113091 2003-04-04 17:49:21Z obrien $
 
 PROG=	tzsetup
 MAN=	tzsetup.8

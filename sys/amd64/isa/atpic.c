@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/isa/atpic.c,v 1.15.2.1 2005/12/13 16:47:33 jhb Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/amd64/isa/atpic.c 169391 2007-05-08 21:29:14Z jhb $");
 
 #include "opt_auto_eoi.h"
 #include "opt_isa.h"
@@ -45,7 +45,6 @@ __FBSDID("$FreeBSD: src/sys/amd64/isa/atpic.c,v 1.15.2.1 2005/12/13 16:47:33 jhb
 #include <sys/lock.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
-#include <sys/proc.h>
 
 #include <machine/cpufunc.h>
 #include <machine/frame.h>
@@ -108,9 +107,10 @@ inthand_t
 
 #define	ATPIC(io, base, eoi, imenptr)					\
      	{ { atpic_enable_source, atpic_disable_source, (eoi),		\
-	    atpic_enable_intr, atpic_vector, atpic_source_pending, NULL, \
-	    atpic_resume, atpic_config_intr }, (io), (base),		\
-	    IDT_IO_INTS + (base), (imenptr) }
+	    atpic_enable_intr, atpic_disable_intr, atpic_vector,	\
+	    atpic_source_pending, NULL,	atpic_resume, atpic_config_intr,\
+	    atpic_assign_cpu }, (io), (base), IDT_IO_INTS + (base),	\
+	    (imenptr) }
 
 #define	INTSRC(irq)							\
 	{ { &atpics[(irq) / 8].at_pic }, IDTVEC(atpic_intr ## irq ),	\
@@ -138,11 +138,13 @@ static void atpic_disable_source(struct intsrc *isrc, int eoi);
 static void atpic_eoi_master(struct intsrc *isrc);
 static void atpic_eoi_slave(struct intsrc *isrc);
 static void atpic_enable_intr(struct intsrc *isrc);
+static void atpic_disable_intr(struct intsrc *isrc);
 static int atpic_vector(struct intsrc *isrc);
-static void atpic_resume(struct intsrc *isrc);
+static void atpic_resume(struct pic *pic);
 static int atpic_source_pending(struct intsrc *isrc);
 static int atpic_config_intr(struct intsrc *isrc, enum intr_trigger trig,
     enum intr_polarity pol);
+static void atpic_assign_cpu(struct intsrc *isrc, u_int apic_id);
 static void i8259_init(struct atpic *pic, int slave);
 
 static struct atpic atpics[] = {
@@ -266,6 +268,12 @@ atpic_enable_intr(struct intsrc *isrc)
 {
 }
 
+static void
+atpic_disable_intr(struct intsrc *isrc)
+{
+}
+
+
 static int
 atpic_vector(struct intsrc *isrc)
 {
@@ -285,16 +293,13 @@ atpic_source_pending(struct intsrc *isrc)
 }
 
 static void
-atpic_resume(struct intsrc *isrc)
+atpic_resume(struct pic *pic)
 {
-	struct atpic_intsrc *ai = (struct atpic_intsrc *)isrc;
-	struct atpic *ap = (struct atpic *)isrc->is_pic;
+	struct atpic *ap = (struct atpic *)pic;
 
-	if (ai->at_irq == 0) {
-		i8259_init(ap, ap == &atpics[SLAVE]);
-		if (ap == &atpics[SLAVE] && elcr_found)
-			elcr_resume();
-	}
+	i8259_init(ap, ap == &atpics[SLAVE]);
+	if (ap == &atpics[SLAVE] && elcr_found)
+		elcr_resume();
 }
 
 static int
@@ -351,6 +356,17 @@ atpic_config_intr(struct intsrc *isrc, enum intr_trigger trig,
 	ai->at_trigger = trig;
 	mtx_unlock_spin(&icu_lock);
 	return (0);
+}
+
+static void
+atpic_assign_cpu(struct intsrc *isrc, u_int apic_id)
+{
+
+	/*
+	 * 8259A's are only used in UP in which case all interrupts always
+	 * go to the sole CPU and this function shouldn't even be called.
+	 */
+	panic("%s: bad cookie", __func__);
 }
 
 static void
@@ -454,6 +470,14 @@ atpic_init(void *dummy __unused)
 	int i;
 
 	/*
+	 * Register our PICs, even if we aren't going to use any of their
+	 * pins so that they are suspended and resumed.
+	 */
+	if (intr_register_pic(&atpics[0].at_pic) != 0 ||
+	    intr_register_pic(&atpics[1].at_pic) != 0)
+		panic("Unable to register ATPICs");
+
+	/*
 	 * If any of the ISA IRQs have an interrupt source already, then
 	 * assume that the APICs are being used and don't register any
 	 * of our interrupt sources.  This makes sure we don't accidentally
@@ -478,19 +502,18 @@ atpic_init(void *dummy __unused)
 SYSINIT(atpic_init, SI_SUB_INTR, SI_ORDER_SECOND + 1, atpic_init, NULL)
 
 void
-atpic_handle_intr(void *cookie, struct intrframe iframe)
+atpic_handle_intr(u_int vector, struct trapframe *frame)
 {
 	struct intsrc *isrc;
-	int vec = (uintptr_t)cookie;
 
-	KASSERT(vec < NUM_ISA_IRQS, ("unknown int %d\n", vec));
-	isrc = &atintrs[vec].at_intsrc;
+	KASSERT(vector < NUM_ISA_IRQS, ("unknown int %u\n", vector));
+	isrc = &atintrs[vector].at_intsrc;
 
 	/*
-	 * If we don't have an ithread, see if this is a spurious
+	 * If we don't have an event, see if this is a spurious
 	 * interrupt.
 	 */
-	if (isrc->is_ithread == NULL && (vec == 7 || vec == 15)) {
+	if (isrc->is_event == NULL && (vector == 7 || vector == 15)) {
 		int port, isr;
 
 		/*
@@ -506,7 +529,7 @@ atpic_handle_intr(void *cookie, struct intrframe iframe)
 		if ((isr & IRQ_MASK(7)) == 0)
 			return;
 	}
-	intr_execute_handlers(isrc, &iframe);
+	intr_execute_handlers(isrc, frame);
 }
 
 #ifdef DEV_ISA

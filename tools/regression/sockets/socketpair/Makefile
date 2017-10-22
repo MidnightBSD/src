@@ -1,11 +1,9 @@
 #
-# $FreeBSD: src/tools/regression/sockets/socketpair/Makefile,v 1.3 2004/12/21 08:47:24 ru Exp $
+# $FreeBSD: release/7.0.0/tools/regression/sockets/socketpair/Makefile 160202 2006-07-09 11:51:14Z maxim $
 #
 
 PROG=	socketpair
 NO_MAN=
-
-socketpair: socketpair.c
-	gcc -Wall -o socketpair socketpair.c
+WARNS?=	2
 
 .include <bsd.prog.mk>

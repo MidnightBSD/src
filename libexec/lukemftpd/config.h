@@ -1,9 +1,9 @@
-/* $FreeBSD: src/libexec/lukemftpd/config.h,v 1.4 2004/08/21 03:36:47 obrien Exp $ */
+/* $FreeBSD: release/7.0.0/libexec/lukemftpd/config.h 134094 2004-08-21 03:36:47Z obrien $ */
 
 
 /* config.h.  Generated automatically by configure.  */
 /* config.h.in.  Generated automatically from configure.in by autoheader.  */
-/* $Id: config.h,v 1.1.1.2 2006-02-25 02:35:12 laffer1 Exp $ */
+/* $Id: config.h.in,v 1.6 2004/08/10 00:40:22 lukem Exp $ */
 
 
 /* Define if the closedir function returns void instead of int.  */

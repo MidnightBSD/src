@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/include/sf_buf.h,v 1.2 2004/04/18 07:11:12 alc Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/include/sf_buf.h 128393 2004-04-18 07:11:12Z alc $
  */
 
 #ifndef _MACHINE_SF_BUF_H_

@@ -25,7 +25,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/release/scripts/tar.sh,v 1.7 2001/04/08 23:09:21 obrien Exp $
+# $FreeBSD: release/7.0.0/release/scripts/tar.sh 75328 2001-04-08 23:09:21Z obrien $
 #
 
 #

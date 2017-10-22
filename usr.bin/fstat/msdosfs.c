@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/fstat/msdosfs.c,v 1.9 2004/06/29 21:28:09 dwmalone Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/fstat/msdosfs.c 131293 2004-06-29 21:28:09Z dwmalone $");
 
 #include <sys/param.h>
 #include <sys/time.h>

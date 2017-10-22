@@ -1,3 +1,17 @@
+/*
+ * hostapd / RADIUS authentication server
+ * Copyright (c) 2005, Jouni Malinen <j@w1.fi>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * Alternatively, this software may be distributed under the terms of BSD
+ * license.
+ *
+ * See README and COPYING for more details.
+ */
+
 #ifndef RADIUS_SERVER_H
 #define RADIUS_SERVER_H
 
@@ -9,6 +23,7 @@ struct radius_server_conf {
 	void *hostapd_conf;
 	void *eap_sim_db_priv;
 	void *ssl_ctx;
+	int ipv6;
 };
 
 
@@ -21,6 +36,8 @@ void radius_server_deinit(struct radius_server_data *data);
 
 int radius_server_get_mib(struct radius_server_data *data, char *buf,
 			  size_t buflen);
+
+void radius_server_eap_pending_cb(struct radius_server_data *data, void *ctx);
 
 #else /* RADIUS_SERVER */
 
@@ -38,6 +55,11 @@ static inline int radius_server_get_mib(struct radius_server_data *data,
 					char *buf, size_t buflen)
 {
 	return 0;
+}
+
+static inline void
+radius_server_eap_pending_cb(struct radius_server_data *data, void *ctx)
+{
 }
 
 #endif /* RADIUS_SERVER */

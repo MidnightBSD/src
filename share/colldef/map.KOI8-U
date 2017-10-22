@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/colldef/map.KOI8-U,v 1.3 2003/06/07 02:59:28 ache Exp $
+# $FreeBSD: release/7.0.0/share/colldef/map.KOI8-U 115933 2003-06-07 02:59:28Z ache $
 NU \x00
 SH \x01
 SX \x02

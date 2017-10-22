@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/mklocale/extern.h,v 1.1 2002/04/28 12:34:54 markm Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/mklocale/extern.h 95643 2002-04-28 12:34:54Z markm $
  */
 
 int yylex(void);

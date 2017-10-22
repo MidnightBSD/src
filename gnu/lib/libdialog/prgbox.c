@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/lib/libdialog/prgbox.c,v 1.14 2003/05/03 21:31:08 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/gnu/lib/libdialog/prgbox.c 114603 2003-05-03 21:31:08Z obrien $");
 
 #include <sys/types.h>
 

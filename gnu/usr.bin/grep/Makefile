@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/grep/Makefile,v 1.30 2004/07/04 10:05:37 tjr Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/grep/Makefile 172506 2007-10-10 16:59:15Z cvs2svn $
 
 GREP_LIBZ=YES
 

@@ -32,7 +32,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/etc/pam.d/convert.pl,v 1.6 2004/06/06 11:46:29 schweikh Exp $
+# $FreeBSD: release/7.0.0/etc/pam.d/convert.pl 130151 2004-06-06 11:46:29Z schweikh $
 #
 
 use strict;

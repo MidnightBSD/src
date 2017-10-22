@@ -42,7 +42,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/isic/i4b_isic_pnp.c,v 1.12 2005/01/06 22:18:20 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i4b/layer1/isic/i4b_isic_pnp.c 171270 2007-07-06 07:17:22Z bz $");
 
 #include "opt_i4b.h"
 
@@ -53,7 +53,7 @@ __FBSDID("$FreeBSD: src/sys/i4b/layer1/isic/i4b_isic_pnp.c,v 1.12 2005/01/06 22:
 #include <sys/socket.h>
 #include <net/if.h>
 
-#include <machine/i4b_ioctl.h>
+#include <i4b/include/i4b_ioctl.h>
 #include <i4b/layer1/isic/i4b_isic.h>
 
 #include <isa/isavar.h>
@@ -320,9 +320,14 @@ isic_pnp_attach(device_t dev)
 	else
 	{
 		/* setup intr routine */
-		bus_setup_intr(dev,sc->sc_resources.irq,INTR_TYPE_NET,
-				(void(*)(void*))isicintr,
-				sc,&ih);
+		if (bus_setup_intr(dev,sc->sc_resources.irq,INTR_TYPE_NET,
+				NULL, (void(*)(void*))isicintr, sc,&ih) != 0)
+		{
+			printf("isic%d: Could not setup irq.\n",unit);
+			isic_detach_common(dev);
+			return ENXIO;
+		}
+
 		return 0;
 	}
 }

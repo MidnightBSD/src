@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/apm/apm.c,v 1.38 2005/05/30 18:44:43 will Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/apm/apm.c 146812 2005-05-30 18:44:43Z will $");
 
 #include <sys/file.h>
 #include <sys/ioctl.h>

@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/getopt/getopt.c,v 1.10 2002/09/04 23:29:01 dwmalone Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/getopt/getopt.c 102944 2002-09-04 23:29:10Z dwmalone $");
 
 #include <stdio.h>
 #include <stdlib.h>

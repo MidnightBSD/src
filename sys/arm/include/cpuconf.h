@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/cpuconf.h,v 1.5 2005/05/26 16:05:22 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/cpuconf.h 164777 2006-11-30 23:30:40Z cognet $
  *
  */
 
@@ -57,22 +57,23 @@
  */
 
 #if (defined(CPU_ARM7TDMI) || defined(CPU_ARM8) || defined(CPU_ARM9) ||	\
-     defined(CPU_ARM10) || defined(CPU_SA110) || defined(CPU_SA1100) || \
-     defined(CPU_SA1110) || defined(CPU_IXP12X0) || defined(CPU_XSCALE_IXP425))
+     defined(CPU_SA110) || defined(CPU_SA1100) || defined(CPU_SA1110) || \
+    defined(CPU_IXP12X0) || defined(CPU_XSCALE_IXP425))
 #define	ARM_ARCH_4	1
 #else
 #define	ARM_ARCH_4	0
 #endif
 
-#if (defined(CPU_XSCALE_80200) || defined(CPU_XSCALE_80321) ||		\
-     defined(CPU_XSCALE_PXA2X0))
+#if (defined(CPU_XSCALE_80200) || defined(CPU_XSCALE_80321) || \
+    defined(CPU_XSCALE_80219) || defined(CPU_XSCALE_81342) || \
+     defined(CPU_XSCALE_PXA2X0)) || defined(CPU_ARM10)
 #define	ARM_ARCH_5	1
 #else
 #define	ARM_ARCH_5	0
 #endif
 
 #define	ARM_NARCH	(ARM_ARCH_4 + ARM_ARCH_5)
-#if ARM_NARCH == 0 && !defined(KLD_MODULE)
+#if ARM_NARCH == 0 && !defined(KLD_MODULE) && defined(_KERNEL)
 #error ARM_NARCH is 0
 #endif
 
@@ -112,7 +113,8 @@
 #endif
 
 #if(defined(CPU_XSCALE_80200) || defined(CPU_XSCALE_80321) ||		\
-     defined(CPU_XSCALE_PXA2X0) || defined(CPU_XSCALE_IXP425))
+    defined(CPU_XSCALE_PXA2X0) || defined(CPU_XSCALE_IXP425) ||		\
+    defined(CPU_XSCALE_80219)) || defined(CPU_XSCALE_81342)
 #define	ARM_MMU_XSCALE		1
 #else
 #define	ARM_MMU_XSCALE		0
@@ -120,7 +122,7 @@
 
 #define	ARM_NMMUS		(ARM_MMU_MEMC + ARM_MMU_GENERIC +	\
 				 ARM_MMU_SA1 + ARM_MMU_XSCALE)
-#if ARM_NMMUS == 0 && !defined(KLD_MODULE)
+#if ARM_NMMUS == 0 && !defined(KLD_MODULE) && defined(_KERNEL)
 #error ARM_NMMUS is 0
 #endif
 
@@ -130,10 +132,14 @@
  *	ARM_XSCALE_PMU		Performance Monitoring Unit on 80200 and 80321
  */
 
-#if (defined(CPU_XSCALE_80200) || defined(CPU_XSCALE_80321))
+#if (defined(CPU_XSCALE_80200) || defined(CPU_XSCALE_80321) || \
+     defined(CPU_XSCALE_80219)) || defined(CPU_XSCALE_81342)
 #define ARM_XSCALE_PMU	1
 #else
 #define ARM_XSCALE_PMU	0
 #endif
 
+#if defined(CPU_XSCALE_81342)
+#define CPU_XSCALE_CORE3
+#endif
 #endif /* _MACHINE_CPUCONF_H_ */

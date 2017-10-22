@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pc98/cbus/scterm-sck.c,v 1.16 2005/04/13 13:26:48 nyan Exp $
+ * $FreeBSD: release/7.0.0/sys/pc98/cbus/scterm-sck.c 153110 2005-12-05 11:58:35Z ru $
  */
 
 #include "opt_syscons.h"
@@ -463,7 +463,7 @@ scterm_scan_esc(scr_stat *scp, term_stat *tcp, u_char c)
 			sc_term_up_scroll(scp, 1, sc->scr_map[0x20],
 					  tcp->cur_attr, 0, 0);
 			break;
-#if notyet
+#ifdef notyet
 		case 'Q':
 			tcp->esc = 4;
 			return;
@@ -892,7 +892,7 @@ scterm_scan_esc(scr_stat *scp, term_stat *tcp, u_char c)
 			splx(i);
 			break;
 		}
-#if notyet
+#ifdef notyet
 	} else if (tcp->esc == 4) {	/* seen ESC Q */
 		/* to be filled */
 #endif

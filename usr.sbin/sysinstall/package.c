@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/package.c,v 1.103 2004/01/02 09:52:14 obrien Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/sysinstall/package.c 174854 2007-12-22 06:32:46Z cvs2svn $
  */
 
 #include "sysinstall.h"
@@ -115,7 +115,8 @@ package_extract(Device *dev, char *name, Boolean depended)
 {
     char path[MAXPATHLEN];
     const char *PkgExts[] = { "", ".tbz", ".tbz2", ".tgz" };
-    int ext, last_msg, pathend, ret;
+    int last_msg, pathend, ret;
+    size_t ext;
     FILE *fp;
 
     last_msg = 0;

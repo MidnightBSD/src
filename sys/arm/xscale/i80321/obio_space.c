@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/xscale/i80321/obio_space.c,v 1.3 2005/04/07 22:03:34 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/xscale/i80321/obio_space.c 164440 2006-11-20 13:21:02Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -181,7 +181,7 @@ obio_bs_alloc(void *t, bus_addr_t rstart, bus_addr_t rend, bus_size_t size,
 
 
 void
-obio_bs_unmap(void *t, bus_size_t size)
+obio_bs_unmap(void *t, bus_space_handle_t h, bus_size_t size)
 {
 	vm_offset_t va, endva;
 

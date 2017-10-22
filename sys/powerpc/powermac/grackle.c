@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/powermac/grackle.c,v 1.7 2005/01/07 02:29:20 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/powermac/grackle.c 172394 2007-09-30 11:05:18Z marius $
  */
 
 #include <sys/param.h>
@@ -345,10 +345,12 @@ grackle_read_ivar(device_t dev, device_t child, int which, uintptr_t *result)
 	sc = device_get_softc(dev);
 
 	switch (which) {
+	case PCIB_IVAR_DOMAIN:
+		*result = 0;
+		return (0);
 	case PCIB_IVAR_BUS:
 		*result = sc->sc_bus;
 		return (0);
-		break;
 	}
 
 	return (ENOENT);
@@ -398,6 +400,7 @@ grackle_alloc_resource(device_t bus, device_t child, int type, int *rid,
 		return (NULL);
 	}
 
+	rman_set_rid(rv, *rid);
 	rman_set_bustag(rv, bt);
 	rman_set_bushandle(rv, rman_get_start(rv));
 

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/ac/Makefile,v 1.10 2004/03/08 20:01:34 gad Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/ac/Makefile 126751 2004-03-08 20:01:34Z gad $
 
 PROG=	ac
 MAN=	ac.8

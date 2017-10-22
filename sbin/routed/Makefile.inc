@@ -1,3 +1,3 @@
-# $FreeBSD: src/sbin/routed/Makefile.inc,v 1.4 2001/10/25 08:37:12 ru Exp $
+# $FreeBSD: release/7.0.0/sbin/routed/Makefile.inc 85473 2001-10-25 08:37:12Z ru $
 
 .include "../Makefile.inc"

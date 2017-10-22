@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 3/27/94
-#	$FreeBSD: src/sbin/mount_std/Makefile,v 1.11 2004/02/23 20:13:54 johan Exp $
+#	$FreeBSD: release/7.0.0/sbin/mount_std/Makefile 153008 2005-12-02 04:25:54Z davidxu $
 
 PROG=	mount_std
 SRCS=	mount_std.c getmntopts.c

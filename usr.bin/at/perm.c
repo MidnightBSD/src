@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/at/perm.c,v 1.13 2001/12/10 21:13:01 dwmalone Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/at/perm.c 87628 2001-12-10 21:13:08Z dwmalone $");
 
 /* System Headers */
 

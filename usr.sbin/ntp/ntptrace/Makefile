@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/ntp/ntptrace/Makefile,v 1.6.2.1 2005/11/16 08:33:02 ru Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/ntp/ntptrace/Makefile 150670 2005-09-28 07:52:27Z ru $
 
 .PATH:	${.CURDIR}/../scripts
 

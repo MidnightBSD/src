@@ -1,0 +1,4 @@
+# $FreeBSD: release/7.0.0/gnu/usr.bin/binutils/libopcodes/Makefile.alpha 84906 2001-10-14 01:31:37Z obrien $
+
+SRCS+=	alpha-dis.c alpha-opc.c
+CFLAGS+= -DARCH_alpha

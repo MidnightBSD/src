@@ -2,7 +2,7 @@ static const char	elsieid[] = "@(#)zic.c	7.116";
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/zic/zic.c,v 1.17 2004/10/19 20:30:09 ru Exp $";
+  "$FreeBSD: release/7.0.0/usr.sbin/zic/zic.c 174392 2007-12-07 05:17:34Z kevlo $";
 #endif /* not lint */
 
 #include "private.h"
@@ -1990,7 +1990,10 @@ register char *	cp;
 			else while ((*dp = *cp++) != '"')
 				if (*dp != '\0')
 					++dp;
-				else	error(_("odd number of quotation marks"));
+				else {
+					error(_("odd number of quotation marks"));
+					exit(EXIT_FAILURE);
+				}
 		} while (*cp != '\0' && *cp != '#' &&
 			(!isascii(*cp) || !isspace((unsigned char) *cp)));
 		if (isascii(*cp) && isspace((unsigned char) *cp))

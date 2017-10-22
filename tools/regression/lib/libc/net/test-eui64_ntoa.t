@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: src/tools/regression/lib/libc/net/test-eui64_ntoa.t,v 1.1 2004/11/11 19:47:52 nik Exp $
+# $FreeBSD: release/7.0.0/tools/regression/lib/libc/net/test-eui64_ntoa.t 137587 2004-11-11 19:47:55Z nik $
 
 cd `dirname $0`
 

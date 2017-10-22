@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/include/cpufunc.h,v 1.22 2005/03/02 21:33:27 joerg Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/include/cpufunc.h 170507 2007-06-10 16:53:01Z marcel $
  */
 
 #ifndef _MACHINE_CPUFUNC_H_
@@ -54,10 +54,9 @@ breakpoint(void)
 #define	HAVE_INLINE_FFS
 #define	ffs(x)	__builtin_ffs(x)
 
-extern uint64_t ia64_port_base;
 #define	__MEMIO_ADDR(x)		(__volatile void*)(IA64_PHYS_TO_RR6(x))
-#define	__PIO_ADDR(x)		(__volatile void*)(ia64_port_base |	\
-	(((x) & 0xFFFC) << 10) | ((x) & 0xFFF))
+extern __volatile void *ia64_ioport_address(u_int);
+#define	__PIO_ADDR(x)		ia64_ioport_address(x)
 
 /*
  * I/O port reads with ia32 semantics.

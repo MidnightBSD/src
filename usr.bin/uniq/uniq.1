@@ -33,7 +33,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)uniq.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.bin/uniq/uniq.1,v 1.19 2005/01/17 07:44:34 ru Exp $
+.\" $FreeBSD: release/7.0.0/usr.bin/uniq/uniq.1 166035 2007-01-15 23:25:51Z keramida $
 .\"
 .Dd July 3, 2004
 .Dt UNIQ 1
@@ -153,3 +153,7 @@ A
 .Nm
 command appeared in
 .At v3 .
+.Sh BUGS
+Input lines are limited to
+.Dv LINE_MAX
+(2048) bytes in length.

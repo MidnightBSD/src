@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: src/libexec/tftpd/Makefile,v 1.9 2001/03/26 14:22:11 ru Exp $
+# $FreeBSD: release/7.0.0/libexec/tftpd/Makefile 74814 2001-03-26 14:22:12Z ru $
 
 PROG=	tftpd
 SRCS=	tftpd.c tftpsubs.c

@@ -8,7 +8,7 @@
 
               Brendan Conoboy <synk@swcp.com>
             Erik Fichtner <emf@obfuscation.org>
-            $FreeBSD: src/share/examples/ipfilter/ipf-howto.txt,v 1.2 2003/01/01 18:48:48 schweikh Exp $
+            $FreeBSD: release/7.0.0/share/examples/ipfilter/ipf-howto.txt 151702 2005-10-26 17:39:35Z jhb $
 
                 Fri Apr 20 09:31:14 EDT 2001
 
@@ -2564,7 +2564,7 @@ integrity of the firewall itself.  Can somebody  break  into
 your  firewall,  thereby  subverting its ruleset?  This is a
 common problem administrators must face,  particularly  when
 they're  using  firewall  solutions  on top of their Unix/NT
-machines.  Some use it as an arguement for blackbox hardware
+machines.  Some use it as an argument for blackbox hardware
 solutions,  under  the flawed notion that inherent obscurity
 
 

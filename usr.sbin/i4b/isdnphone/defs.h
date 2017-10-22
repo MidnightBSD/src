@@ -27,9 +27,9 @@
  *	isdnphone - header file
  *      =======================
  *
- *	$Id: defs.h,v 1.1.1.2 2006-02-25 02:38:29 laffer1 Exp $ 
+ *	$Id: defs.h,v 1.6 1999/12/13 21:25:26 hm Exp $ 
  *
- * $FreeBSD: src/usr.sbin/i4b/isdnphone/defs.h,v 1.2 2000/10/13 11:55:13 bde Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdnphone/defs.h 171272 2007-07-06 07:21:56Z bz $
  *
  *      last edit-date: [Mon Dec 13 21:52:46 1999]
  *
@@ -54,8 +54,8 @@
 #include <sys/time.h>
 #include <sys/param.h>
 
-#include <machine/i4b_ioctl.h>
-#include <machine/i4b_tel_ioctl.h>
+#include <i4b/i4b_ioctl.h>
+#include <i4b/i4b_tel_ioctl.h>
 
 /* device file prefixes */
 

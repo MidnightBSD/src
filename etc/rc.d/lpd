@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $NetBSD: lpd,v 1.5 2002/03/22 04:33:59 thorpej Exp $
-# $FreeBSD: src/etc/rc.d/lpd,v 1.7 2005/03/02 02:46:47 brooks Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/lpd 175737 2008-01-28 07:58:32Z dougb $
 #
 
 # PROVIDE: lpd
@@ -14,9 +13,9 @@ name="lpd"
 rcvar=`set_rcvar`
 command="/usr/sbin/${name}"
 required_files="/etc/printcap"
-start_precmd="_chkprintcap"
+start_precmd="chkprintcap"
 
-_chkprintcap()
+chkprintcap()
 {
 	if checkyesno chkprintcap_enable ; then
 		/usr/sbin/chkprintcap ${chkprintcap_flags}

@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/colldef/el_GR.ISO8859-7.src,v 1.2 2001/06/10 13:43:47 ache Exp $
+# $FreeBSD: release/7.0.0/share/colldef/el_GR.ISO8859-7.src 77980 2001-06-10 13:43:47Z ache $
 #
 # Greek/ISO 8859-7 (backward compatible with ASCII)
 #

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/pppctl/Makefile,v 1.16 2004/01/31 17:28:09 marcel Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/pppctl/Makefile 125270 2004-01-31 17:28:09Z marcel $
 
 PROG=	pppctl
 MAN=	pppctl.8

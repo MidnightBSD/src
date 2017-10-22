@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/etc/periodic/security/200.chkmounts,v 1.5 2002/10/25 15:14:16 thomas Exp $
+# $FreeBSD: release/7.0.0/etc/periodic/security/200.chkmounts 105936 2002-10-25 15:14:16Z thomas $
 #
 
 # Show changes in the way filesystems are mounted

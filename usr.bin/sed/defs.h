@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)defs.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/sed/defs.h,v 1.5 2004/08/09 15:29:41 dds Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/sed/defs.h 171206 2007-07-04 16:42:41Z ssouhlal $
  */
 
 /*
@@ -60,6 +60,7 @@ struct s_addr {
 struct s_subst {
 	int n;					/* Occurrence to subst. */
 	int p;					/* True if p flag */
+	int icase;				/* True if I flag */
 	char *wfile;				/* NULL if no wfile */
 	int wfd;				/* Cached file descriptor */
 	regex_t *re;				/* Regular expression */

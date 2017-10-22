@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ia64/ia64/trap.c,v 1.113.2.1 2005/09/13 21:07:14 marcel Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/ia64/ia64/trap.c 170291 2007-06-04 21:38:48Z attilio $");
 
 #include "opt_ddb.h"
 #include "opt_ktrace.h"
@@ -56,7 +56,6 @@ __FBSDID("$FreeBSD: src/sys/ia64/ia64/trap.c,v 1.113.2.1 2005/09/13 21:07:14 mar
 #include <vm/vm_extern.h>
 #include <vm/vm_param.h>
 #include <sys/ptrace.h>
-#include <machine/clock.h>
 #include <machine/cpu.h>
 #include <machine/md_var.h>
 #include <machine/reg.h>
@@ -73,6 +72,8 @@ __FBSDID("$FreeBSD: src/sys/ia64/ia64/trap.c,v 1.113.2.1 2005/09/13 21:07:14 mar
 #include <sys/ktrace.h>
 #endif
 
+#include <security/audit/audit.h>
+
 #include <ia64/disasm/disasm.h>
 
 static int print_usertrap = 0;
@@ -86,9 +87,7 @@ static void break_syscall(struct trapframe *tf);
  */
 extern struct fpswa_iface *fpswa_iface;
 
-#ifdef WITNESS
 extern char *syscallnames[];
-#endif
 
 static const char *ia64_vector_names[] = {
 	"VHPT Translation",			/* 0 */
@@ -360,11 +359,11 @@ trap(int vector, struct trapframe *tf)
 	struct thread *td;
 	uint64_t ucode;
 	int error, sig, user;
-	u_int sticks;
+	ksiginfo_t ksi;
 
 	user = TRAPF_USERMODE(tf) ? 1 : 0;
 
-	PCPU_LAZY_INC(cnt.v_trap);
+	PCPU_INC(cnt.v_trap);
 
 	td = curthread;
 	p = td->td_proc;
@@ -372,12 +371,11 @@ trap(int vector, struct trapframe *tf)
 
 	if (user) {
 		ia64_set_fpsr(IA64_FPSR_DEFAULT);
-		sticks = td->td_sticks;
+		td->td_pticks = 0;
 		td->td_frame = tf;
 		if (td->td_ucred != p->p_ucred)
 			cred_update_thread(td);
 	} else {
-		sticks = 0;		/* XXX bogus -Wuninitialized warning */
 		KASSERT(cold || td->td_ucred != NULL,
 		    ("kernel trap doesn't have ucred"));
 #ifdef KDB
@@ -610,9 +608,41 @@ trap(int vector, struct trapframe *tf)
 		break;
 	}
 
-	case IA64_VEC_GENERAL_EXCEPTION:
-	case IA64_VEC_NAT_CONSUMPTION:
+	case IA64_VEC_GENERAL_EXCEPTION: {
+		int code;
+
+		if (!user)
+			trap_panic(vector, tf);
+
+		code = tf->tf_special.isr & (IA64_ISR_CODE & 0xf0ull);
+		switch (code) {
+		case 0x0:	/* Illegal Operation Fault. */
+			sig = ia64_emulate(tf, td);
+			break;
+		default:
+			sig = SIGILL;
+			break;
+		}
+		if (sig == 0)
+			goto out;
+		ucode = vector;
+		break;
+	}
+
 	case IA64_VEC_SPECULATION:
+		/*
+		 * The branching behaviour of the chk instruction is not
+		 * implemented by the processor. All we need to do is
+		 * compute the target address of the branch and make sure
+		 * that control is transfered to that address.
+		 * We should do this in the IVT table and not by entring
+		 * the kernel...
+		 */
+		tf->tf_special.iip += tf->tf_special.ifa << 4;
+		tf->tf_special.psr &= ~IA64_PSR_RI;
+		goto out;
+
+	case IA64_VEC_NAT_CONSUMPTION:
 	case IA64_VEC_UNSUPP_DATA_REFERENCE:
 		if (user) {
 			ucode = vector;
@@ -869,11 +899,14 @@ trap(int vector, struct trapframe *tf)
 	if (print_usertrap)
 		printtrap(vector, tf, 1, user);
 
-	trapsignal(td, sig, ucode);
+	ksiginfo_init(&ksi);
+	ksi.ksi_signo = sig;
+	ksi.ksi_code = ucode;
+	trapsignal(td, &ksi);
 
 out:
 	if (user) {
-		userret(td, tf, sticks);
+		userret(td, tf);
 		mtx_assert(&Giant, MA_NOTOWNED);
 		do_ast(tf);
 	}
@@ -939,24 +972,25 @@ syscall(struct trapframe *tf)
 	struct thread *td;
 	uint64_t *args;
 	int code, error;
-	u_int sticks;
 
 	ia64_set_fpsr(IA64_FPSR_DEFAULT);
 
 	code = tf->tf_scratch.gr15;
 	args = &tf->tf_scratch.gr16;
 
-	PCPU_LAZY_INC(cnt.v_syscall);
+	PCPU_INC(cnt.v_syscall);
 
 	td = curthread;
 	td->td_frame = tf;
 	p = td->td_proc;
 
-	sticks = td->td_sticks;
+	td->td_pticks = 0;
 	if (td->td_ucred != p->p_ucred)
 		cred_update_thread(td);
+#ifdef KSE
 	if (p->p_flag & P_SA)
 		thread_user_enter(td);
+#endif
 
 	if (p->p_sysent->sv_prepsyscall) {
 		/* (*p->p_sysent->sv_prepsyscall)(tf, args, &code, &params); */
@@ -985,26 +1019,22 @@ syscall(struct trapframe *tf)
 
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_SYSCALL))
-		ktrsyscall(code, (callp->sy_narg & SYF_ARGMASK), args);
+		ktrsyscall(code, callp->sy_narg, args);
 #endif
+	CTR4(KTR_SYSC, "syscall enter thread %p pid %d proc %s code %d", td,
+	    td->td_proc->p_pid, td->td_proc->p_comm, code);
 
 	td->td_retval[0] = 0;
 	td->td_retval[1] = 0;
 	tf->tf_scratch.gr10 = EJUSTRETURN;
 
-	STOPEVENT(p, S_SCE, (callp->sy_narg & SYF_ARGMASK));
+	STOPEVENT(p, S_SCE, callp->sy_narg);
 
 	PTRACESTOP_SC(p, td, S_PT_SCE);
 
-	/*
-	 * Grab Giant if the syscall is not flagged as MP safe.
-	 */
-	if ((callp->sy_narg & SYF_MPSAFE) == 0) {
-		mtx_lock(&Giant);
-		error = (*callp->sy_call)(td, args);
-		mtx_unlock(&Giant);
-	} else
-		error = (*callp->sy_call)(td, args);
+	AUDIT_SYSCALL_ENTER(code, td);
+	error = (*callp->sy_call)(td, args);
+	AUDIT_SYSCALL_EXIT(error, td);
 
 	if (error != EJUSTRETURN) {
 		/*
@@ -1026,8 +1056,28 @@ syscall(struct trapframe *tf)
 		}
 	}
 
-	userret(td, tf, sticks);
+	td->td_syscalls++;
 
+	/*
+	 * Check for misbehavior.
+	 */
+	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
+	KASSERT(td->td_critnest == 0,
+	    ("System call %s returning in a critical section",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???"));
+	KASSERT(td->td_locks == 0,
+	    ("System call %s returning with %d locks held",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???",
+	    td->td_locks));
+
+	/*
+	 * Handle reschedule and other end-of-syscall issues
+	 */
+	userret(td, tf);
+
+	CTR4(KTR_SYSC, "syscall exit thread %p pid %d proc %s code %d", td,
+	    td->td_proc->p_pid, td->td_proc->p_comm, code);
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_SYSRET))
 		ktrsysret(code, error, td->td_retval[0]);
@@ -1041,11 +1091,6 @@ syscall(struct trapframe *tf)
 	STOPEVENT(p, S_SCX, code);
 
 	PTRACESTOP_SC(p, td, S_PT_SCX);
-
-	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
-	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
-	mtx_assert(&sched_lock, MA_NOTOWNED);
-	mtx_assert(&Giant, MA_NOTOWNED);
 
 	return (error);
 }

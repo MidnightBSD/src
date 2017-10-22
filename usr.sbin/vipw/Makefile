@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.sbin/vipw/Makefile,v 1.8 2003/04/04 17:49:20 obrien Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/vipw/Makefile 113091 2003-04-04 17:49:21Z obrien $
 
 PROG=	vipw
 MAN=	vipw.8

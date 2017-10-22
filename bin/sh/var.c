@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)var.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/var.c,v 1.27.2.1 2005/11/06 20:39:48 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/sh/var.c 171268 2007-07-06 04:04:58Z scf $");
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -88,6 +88,7 @@ struct var vpath;
 struct var vppid;
 struct var vps1;
 struct var vps2;
+struct var vps4;
 struct var vvers;
 STATIC struct var voptind;
 
@@ -111,6 +112,8 @@ STATIC const struct varinit varinit[] = {
 	 */
 	{ &vps2,	VSTRFIXED|VTEXTFIXED,		"PS2=> ",
 	  NULL },
+	{ &vps4,	VSTRFIXED|VTEXTFIXED,		"PS4=+ ",
+	  NULL },
 	{ &voptind,	VSTRFIXED|VTEXTFIXED,		"OPTIND=1",
 	  getoptsreset },
 	{ NULL,	0,				NULL,
@@ -124,7 +127,7 @@ STATIC int varequal(char *, char *);
 STATIC int localevar(char *);
 
 /*
- * Initialize the varable symbol tables and import the environment
+ * Initialize the variable symbol tables and import the environment.
  */
 
 #ifdef mkinit
@@ -208,7 +211,7 @@ setvarsafe(char *name, char *val, int flags)
 }
 
 /*
- * Set the value of a variable.  The flags argument is tored with the
+ * Set the value of a variable.  The flags argument is stored with the
  * flags of the variable.  If val is NULL, the variable is unset.
  */
 
@@ -275,6 +278,30 @@ localevar(char *s)
 	return 0;
 }
 
+
+/*
+ * Sets/unsets an environment variable from a pointer that may actually be a
+ * pointer into environ where the string should not be manipulated.
+ */
+static void
+change_env(char *s, int set)
+{
+	char *eqp;
+	char *ss;
+
+	ss = savestr(s);
+	if ((eqp = strchr(ss, '=')) != NULL)
+		*eqp = '\0';
+	if (set && eqp != NULL)
+		(void) setenv(ss, eqp + 1, 1);
+	else
+		(void) unsetenv(ss);
+	ckfree(ss);
+
+	return;
+}
+
+
 /*
  * Same as setvar except that the variable and value are passed in
  * the first argument as name=value.  Since the first argument will
@@ -316,7 +343,7 @@ setvareq(char *s, int flags)
 			if (vp == &vmpath || (vp == &vmail && ! mpathset()))
 				chkmail(1);
 			if ((vp->flags & VEXPORT) && localevar(s)) {
-				putenv(s);
+				change_env(s, 1);
 				(void) setlocale(LC_ALL, "");
 			}
 			INTON;
@@ -332,7 +359,7 @@ setvareq(char *s, int flags)
 	INTOFF;
 	*vpp = vp;
 	if ((vp->flags & VEXPORT) && localevar(s)) {
-		putenv(s);
+		change_env(s, 1);
 		(void) setlocale(LC_ALL, "");
 	}
 	INTON;
@@ -479,6 +506,21 @@ shprocvar(void)
 }
 
 
+static int
+var_compare(const void *a, const void *b)
+{
+	const char *const *sa, *const *sb;
+
+	sa = a;
+	sb = b;
+	/*
+	 * This compares two var=value strings which creates a different
+	 * order from what you would probably expect.  POSIX is somewhat
+	 * ambiguous on what should be sorted exactly.
+	 */
+	return strcoll(*sa, *sb);
+}
+
 
 /*
  * Command to list all variables which are set.  Currently this command
@@ -492,18 +534,41 @@ showvarscmd(int argc __unused, char **argv __unused)
 	struct var **vpp;
 	struct var *vp;
 	const char *s;
+	const char **vars;
+	int i, n;
 
-	for (vpp = vartab ; vpp < vartab + VTABSIZE ; vpp++) {
-		for (vp = *vpp ; vp ; vp = vp->next) {
-			if (vp->flags & VUNSET)
-				continue;
-			for (s = vp->text; *s != '='; s++)
-				out1c(*s);
-			out1c('=');
-			out1qstr(s + 1);
-			out1c('\n');
+	/*
+	 * POSIX requires us to sort the variables.
+	 */
+	n = 0;
+	for (vpp = vartab; vpp < vartab + VTABSIZE; vpp++) {
+		for (vp = *vpp; vp; vp = vp->next) {
+			if (!(vp->flags & VUNSET))
+				n++;
 		}
 	}
+
+	INTON;
+	vars = ckmalloc(n * sizeof(*vars));
+	i = 0;
+	for (vpp = vartab; vpp < vartab + VTABSIZE; vpp++) {
+		for (vp = *vpp; vp; vp = vp->next) {
+			if (!(vp->flags & VUNSET))
+				vars[i++] = vp->text;
+		}
+	}
+
+	qsort(vars, n, sizeof(*vars), var_compare);
+	for (i = 0; i < n; i++) {
+		for (s = vars[i]; *s != '='; s++)
+			out1c(*s);
+		out1c('=');
+		out1qstr(s + 1);
+		out1c('\n');
+	}
+	ckfree(vars);
+	INTOFF;
+
 	return 0;
 }
 
@@ -555,7 +620,7 @@ exportcmd(int argc, char **argv)
 
 						vp->flags |= flag;
 						if ((vp->flags & VEXPORT) && localevar(vp->text)) {
-							putenv(vp->text);
+							change_env(vp->text, 1);
 							(void) setlocale(LC_ALL, "");
 						}
 						goto found;
@@ -747,7 +812,7 @@ unsetvar(char *s)
 			if (*(strchr(vp->text, '=') + 1) != '\0')
 				setvar(s, nullstr, 0);
 			if ((vp->flags & VEXPORT) && localevar(vp->text)) {
-				unsetenv(s);
+				change_env(s, 0);
 				setlocale(LC_ALL, "");
 			}
 			vp->flags &= ~VEXPORT;

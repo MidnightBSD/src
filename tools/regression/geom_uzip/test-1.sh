@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/tools/regression/geom_uzip/test-1.sh,v 1.1 2004/08/13 09:53:52 fjoe Exp $
+# $FreeBSD: release/7.0.0/tools/regression/geom_uzip/test-1.sh 150734 2005-09-29 22:41:20Z fjoe $
 #
 
 mntpoint="/mnt/test-1"
@@ -8,8 +8,8 @@ mntpoint="/mnt/test-1"
 #
 # prepare
 kldload geom_uzip
-uudecode test-1.img.gz.uue
-num=`mdconfig -an -f test-1.img.gz` || exit 1
+uudecode test-1.img.uzip.uue
+num=`mdconfig -an -f test-1.img.uzip` || exit 1
 sleep 1
 
 #
@@ -32,4 +32,5 @@ fi
 umount "${mntpoint}"
 rmdir "${mntpoint}"
 mdconfig -d -u ${num}
+sleep 1
 kldunload geom_uzip

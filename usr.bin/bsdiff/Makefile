@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/bsdiff/Makefile,v 1.1.2.1 2005/08/15 18:34:21 cperciva Exp $
+# $FreeBSD: release/7.0.0/usr.bin/bsdiff/Makefile 148771 2005-08-06 01:59:06Z cperciva $
 
 SUBDIR=	bsdiff bspatch
 

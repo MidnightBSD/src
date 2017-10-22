@@ -1,4 +1,6 @@
-# $FreeBSD: src/lib/bind/isccc/Makefile,v 1.4.4.1 2005/11/16 07:59:50 ru Exp $
+# $FreeBSD: release/7.0.0/lib/bind/isccc/Makefile 170221 2007-06-02 23:19:58Z dougb $
+
+.include <bsd.own.mk>
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9
 LIB_BIND_REL=	..
@@ -15,8 +17,12 @@ SRCS=		alist.c base64.c cc.c ccmsg.c \
 		result.c sexpr.c symtab.c version.c
 
 CFLAGS+=	-I${SRCDIR}/include
+CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
 
-.if defined(WITH_BIND_LIBS)
+DPADD=		${PTHREAD_DPADD}
+LDADD=		${PTHREAD_LDADD}
+
+.if ${MK_BIND_LIBS} != "no"
 INCS=		${SRCDIR}/include/isccc/alist.h \
 		${SRCDIR}/include/isccc/base64.h \
 		${SRCDIR}/include/isccc/cc.h \

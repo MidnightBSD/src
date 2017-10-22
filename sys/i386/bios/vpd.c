@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/bios/vpd.c,v 1.5 2004/08/31 21:45:30 mdodd Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/i386/bios/vpd.c 167742 2007-03-20 20:21:44Z jhb $");
 
 /*
  * VPD decoder for IBM systems (Thinkpads)
@@ -128,7 +128,7 @@ vpd_identify (driver_t *driver, device_t parent)
 		rid = 0;
 		length = ADDR2VPD(addr)->Length;
 
-		child = BUS_ADD_CHILD(parent, 0, "vpd", -1);
+		child = BUS_ADD_CHILD(parent, 5, "vpd", -1);
 		device_set_driver(child, driver);
 		bus_set_resource(child, SYS_RES_MEMORY, rid, addr, length);
 		device_set_desc(child, "Vital Product Data Area");

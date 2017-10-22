@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)xinstall.c	8.1 (Berkeley) 7/21/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/xinstall/xinstall.c,v 1.66 2005/01/25 14:34:57 ssouhlal Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/xinstall/xinstall.c 156363 2006-03-06 21:52:59Z obrien $");
 
 #include <sys/param.h>
 #include <sys/mman.h>
@@ -172,6 +172,11 @@ main(int argc, char *argv[])
 	if (dostrip && dodir) {
 		warnx("-d and -s may not be specified together");
 		usage();
+	}
+
+	if (getenv("DONTSTRIP") != NULL) {
+		warnx("DONTSTRIP set - will not strip installed binaries");
+		dostrip = 0;
 	}
 
 	/* must have at least two arguments, except when creating directories */

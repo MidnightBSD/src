@@ -67,14 +67,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/mroute6.c,v 1.15 2004/07/26 20:18:11 charnier Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/netstat/mroute6.c 171465 2007-07-16 17:15:55Z jhb $");
 
 #ifdef INET6
 #include <sys/param.h>
 #include <sys/queue.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
+#include <sys/sysctl.h>
 #include <sys/protosw.h>
+#include <sys/mbuf.h>
+#include <sys/time.h>
 
 #include <net/if.h>
 #include <net/if_var.h>
@@ -82,7 +85,10 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/mroute6.c,v 1.15 2004/07/26 20:18:11 cha
 
 #include <netinet/in.h>
 
+#include <err.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define	KERNEL 1
 #include <netinet6/ip6_mroute.h>
@@ -107,18 +113,22 @@ mroute6pr(u_long mfcaddr, u_long mifaddr)
 	int saved_numeric_addr;
 	mifi_t maxmif = 0;
 	long int waitings;
+	size_t len;
 
-	if (mfcaddr == 0 || mifaddr == 0) {
-		printf("No IPv6 multicast routing compiled into this"
-		       " system.\n");
-		return;
-	}
+	len = sizeof(mif6table);
+	if (live) {
+		if (sysctlbyname("net.inet6.ip6.mif6table", mif6table, &len,
+		    NULL, 0) < 0) {
+			warn("sysctl: net.inet6.ip6.mif6table");
+			return;
+		}
+	} else
+		kread(mifaddr, (char *)mif6table, sizeof(mif6table));
 
 	saved_numeric_addr = numeric_addr;
 	numeric_addr = 1;
-
-	kread(mifaddr, (char *)&mif6table, sizeof(mif6table));
 	banner_printed = 0;
+
 	for (mifi = 0, mifp = mif6table; mifi < MAXMIFS; ++mifi, ++mifp) {
 		struct ifnet ifnet;
 		char ifname[IFNAMSIZ];
@@ -126,7 +136,9 @@ mroute6pr(u_long mfcaddr, u_long mifaddr)
 		if (mifp->m6_ifp == NULL)
 			continue;
 
+		/* XXX KVM */
 		kread((u_long)mifp->m6_ifp, (char *)&ifnet, sizeof(ifnet));
+
 		maxmif = mifi;
 		if (!banner_printed) {
 			printf("\nIPv6 Multicast Interface Table\n"
@@ -140,14 +152,24 @@ mroute6pr(u_long mfcaddr, u_long mifaddr)
 		printf("   %5s", (mifp->m6_flags & MIFF_REGISTER) ?
 		       "reg0" : if_indextoname(ifnet.if_index, ifname));
 
-		printf(" %9llu  %9llu\n", (unsigned long long)mifp->m6_pkt_in,
-		    (unsigned long long)mifp->m6_pkt_out);
+		printf(" %9ju  %9ju\n", (uintmax_t)mifp->m6_pkt_in,
+		    (uintmax_t)mifp->m6_pkt_out);
 	}
 	if (!banner_printed)
 		printf("\nIPv6 Multicast Interface Table is empty\n");
 
-	kread(mfcaddr, (char *)&mf6ctable, sizeof(mf6ctable));
+	len = sizeof(mf6ctable);
+	if (live) {
+		if (sysctlbyname("net.inet6.ip6.mf6ctable", mf6ctable, &len,
+		    NULL, 0) < 0) {
+			warn("sysctl: net.inet6.ip6.mf6ctable");
+			return;
+		}
+	} else
+		kread(mfcaddr, (char *)mf6ctable, sizeof(mf6ctable));
+
 	banner_printed = 0;
+
 	for (i = 0; i < MF6CTBLSIZ; ++i) {
 		mfcp = mf6ctable[i];
 		while(mfcp) {
@@ -165,10 +187,11 @@ mroute6pr(u_long mfcaddr, u_long mifaddr)
 			       routename6(&mfc.mf6c_origin));
 			printf(" %-*.*s", WID_GRP, WID_GRP,
 			       routename6(&mfc.mf6c_mcastgrp));
-			printf(" %9llu", (unsigned long long)mfc.mf6c_pkt_cnt);
+			printf(" %9ju", (uintmax_t)mfc.mf6c_pkt_cnt);
 
 			for (waitings = 0, rtep = mfc.mf6c_stall; rtep; ) {
 				waitings++;
+				/* XXX KVM */
 				kread((u_long)rtep, (char *)&rte, sizeof(rte));
 				rtep = rte.next;
 			}
@@ -188,7 +211,7 @@ mroute6pr(u_long mfcaddr, u_long mifaddr)
 		}
 	}
 	if (!banner_printed)
-		printf("\nIPv6 Multicast Routing Table is empty\n");
+		printf("\nIPv6 Multicast Forwarding Table is empty\n");
 
 	printf("\n");
 	numeric_addr = saved_numeric_addr;
@@ -198,36 +221,39 @@ void
 mrt6_stats(u_long mstaddr)
 {
 	struct mrt6stat mrtstat;
+	size_t len = sizeof mrtstat;
 
-	if (mstaddr == 0) {
-		printf("No IPv6 multicast routing compiled into this"
-		       " system.\n");
-		return;
-	}
+	if (live) {
+		if (sysctlbyname("net.inet6.ip6.mrt6stat", &mrtstat, &len,
+		    NULL, 0) < 0) {
+			warn("sysctl: net.inet6.ip6.mrt6stat");
+			return;
+		}
+	} else
+		kread(mstaddr, (char *)&mrtstat, sizeof(mrtstat));
 
-	kread(mstaddr, (char *)&mrtstat, sizeof(mrtstat));
 	printf("IPv6 multicast forwarding:\n");
 
 #define	p(f, m) if (mrtstat.f || sflag <= 1) \
-	printf(m, (unsigned long long)mrtstat.f, plural(mrtstat.f))
+	printf(m, (uintmax_t)mrtstat.f, plural(mrtstat.f))
 #define	p2(f, m) if (mrtstat.f || sflag <= 1) \
-	printf(m, (unsigned long long)mrtstat.f, plurales(mrtstat.f))
+	printf(m, (uintmax_t)mrtstat.f, plurales(mrtstat.f))
 
-	p(mrt6s_mfc_lookups, "\t%llu multicast forwarding cache lookup%s\n");
-	p2(mrt6s_mfc_misses, "\t%llu multicast forwarding cache miss%s\n");
-	p(mrt6s_upcalls, "\t%llu upcall%s to mrouted\n");
-	p(mrt6s_upq_ovflw, "\t%llu upcall queue overflow%s\n");
+	p(mrt6s_mfc_lookups, "\t%ju multicast forwarding cache lookup%s\n");
+	p2(mrt6s_mfc_misses, "\t%ju multicast forwarding cache miss%s\n");
+	p(mrt6s_upcalls, "\t%ju upcall%s to multicast routing daemon\n");
+	p(mrt6s_upq_ovflw, "\t%ju upcall queue overflow%s\n");
 	p(mrt6s_upq_sockfull,
-	    "\t%llu upcall%s dropped due to full socket buffer\n");
-	p(mrt6s_cache_cleanups, "\t%llu cache cleanup%s\n");
-	p(mrt6s_no_route, "\t%llu datagram%s with no route for origin\n");
-	p(mrt6s_bad_tunnel, "\t%llu datagram%s arrived with bad tunneling\n");
-	p(mrt6s_cant_tunnel, "\t%llu datagram%s could not be tunneled\n");
-	p(mrt6s_wrong_if, "\t%llu datagram%s arrived on wrong interface\n");
-	p(mrt6s_drop_sel, "\t%llu datagram%s selectively dropped\n");
+	    "\t%ju upcall%s dropped due to full socket buffer\n");
+	p(mrt6s_cache_cleanups, "\t%ju cache cleanup%s\n");
+	p(mrt6s_no_route, "\t%ju datagram%s with no route for origin\n");
+	p(mrt6s_bad_tunnel, "\t%ju datagram%s arrived with bad tunneling\n");
+	p(mrt6s_cant_tunnel, "\t%ju datagram%s could not be tunneled\n");
+	p(mrt6s_wrong_if, "\t%ju datagram%s arrived on wrong interface\n");
+	p(mrt6s_drop_sel, "\t%ju datagram%s selectively dropped\n");
 	p(mrt6s_q_overflow,
-	    "\t%llu datagram%s dropped due to queue overflow\n");
-	p(mrt6s_pkt2large, "\t%llu datagram%s dropped for being too large\n");
+	    "\t%ju datagram%s dropped due to queue overflow\n");
+	p(mrt6s_pkt2large, "\t%ju datagram%s dropped for being too large\n");
 
 #undef	p2
 #undef	p

@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
-# $FreeBSD: src/bin/rmail/Makefile,v 1.22 2005/06/10 06:12:49 des Exp $
+# $FreeBSD: release/7.0.0/bin/rmail/Makefile 147225 2005-06-10 06:12:53Z des $
 
 SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/rmail

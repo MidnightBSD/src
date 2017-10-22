@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/doc/psd/25.xdrrfc/Makefile,v 1.6 2004/10/24 15:32:43 ru Exp $
+# $FreeBSD: release/7.0.0/share/doc/psd/25.xdrrfc/Makefile 136910 2004-10-24 15:33:08Z ru $
 
 VOLUME=		psd/25.xdrrfc
 SRCS=		stubs xdr.rfc.ms

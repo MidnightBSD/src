@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/include/pcpu.h,v 1.22 2004/07/12 22:18:02 grehan Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/pcpu.h 170291 2007-06-04 21:38:48Z attilio $
  */
 
 #ifndef	_MACHINE_PCPU_H_
@@ -57,6 +57,13 @@ struct pmap;
 #define PCPUP	((struct pcpu *) powerpc_get_pcpup())
 
 #define	PCPU_GET(member)	(PCPUP->pc_ ## member)
+
+/*
+ * XXX The implementation of this operation should be made atomic
+ * with respect to preemption.
+ */
+#define	PCPU_ADD(member, value)	(PCPUP->pc_ ## member += (value))
+#define	PCPU_INC(member)	PCPU_ADD(member, 1)
 #define	PCPU_PTR(member)	(&PCPUP->pc_ ## member)
 #define	PCPU_SET(member,value)	(PCPUP->pc_ ## member = (value))
 

@@ -42,7 +42,7 @@ static const char sccsid[] = "@(#)ruptime.c	8.2 (Berkeley) 4/5/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ruptime/ruptime.c,v 1.17 2005/05/21 09:55:08 ru Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/ruptime/ruptime.c 149719 2005-09-02 14:58:26Z ssouhlal $");
 
 #include <sys/param.h>
 
@@ -63,7 +63,7 @@ struct hs {
 	int	hs_nusers;
 } *hs;
 struct	whod awhod;
-#define LEFTEARTH(h)		(now - (h)->hs_wd->wd_recvtime > 4*24*60*60)
+#define LEFTEARTH(h)		(now - (h) > 4*24*60*60)
 #define	ISDOWN(h)		(now - (h)->hs_wd->wd_recvtime > 11 * 60)
 #define	WHDRSIZE	(sizeof (awhod) - sizeof (awhod.wd_we))
 
@@ -208,6 +208,8 @@ ruptime(const char *host, int aflg, int (*cmp)(const void *, const void *))
 
 		if (cc < WHDRSIZE)
 			continue;
+		if (LEFTEARTH(((struct whod *)buf)->wd_recvtime))
+			continue;
 		if (nhosts == hspace) {
 			if ((hs =
 			    realloc(hs, (hspace += 40) * sizeof(*hs))) == NULL)
@@ -241,8 +243,6 @@ ruptime(const char *host, int aflg, int (*cmp)(const void *, const void *))
 	qsort(hs, nhosts, sizeof(hs[0]), cmp);
 	for (i = 0; i < (int)nhosts; i++) {
 		hsp = &hs[i];
-		if (LEFTEARTH(hsp))
-			continue;
 		if (ISDOWN(hsp)) {
 			(void)printf("%-12.12s%s\n", hsp->hs_wd->wd_hostname,
 			    interval(now - hsp->hs_wd->wd_recvtime, "down"));

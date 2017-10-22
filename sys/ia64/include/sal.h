@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/include/sal.h,v 1.6 2004/09/19 03:50:46 marcel Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/include/sal.h 135453 2004-09-19 03:50:46Z marcel $
  */
 
 #ifndef _MACHINE_SAL_H_

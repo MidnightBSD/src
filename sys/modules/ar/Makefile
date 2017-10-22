@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ar/Makefile,v 1.4.8.1 2006/02/10 00:37:58 yar Exp $
+# $FreeBSD: release/7.0.0/sys/modules/ar/Makefile 151350 2005-10-14 23:30:17Z yar $
 
 .PATH:  ${.CURDIR}/../../dev/ar
 KMOD    = if_ar

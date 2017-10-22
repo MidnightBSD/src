@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/dialog/TESTS/Makefile,v 1.5 2004/12/21 08:46:51 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/dialog/TESTS/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 NO_OBJ=
 FILES=		README checklist ftreebox infobox inputbox menubox msgbox \

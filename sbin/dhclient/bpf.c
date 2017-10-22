@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/dhclient/bpf.c,v 1.2.2.3 2005/12/20 21:11:16 brooks Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sbin/dhclient/bpf.c 162641 2006-09-26 01:02:02Z brooks $");
 
 #include "dhcpd.h"
 #include <sys/ioctl.h>
@@ -282,7 +282,7 @@ receive_packet(struct interface_info *interface, unsigned char *buf,
 	 */
 	do {
 		/* If the buffer is empty, fill it. */
-		if (interface->rbuf_offset == interface->rbuf_len) {
+		if (interface->rbuf_offset >= interface->rbuf_len) {
 			length = read(interface->rfdesc, interface->rbuf,
 			    interface->rbuf_max);
 			if (length <= 0)

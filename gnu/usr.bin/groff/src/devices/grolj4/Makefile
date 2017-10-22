@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/groff/src/devices/grolj4/Makefile,v 1.4.12.1 2005/11/15 22:06:59 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/src/devices/grolj4/Makefile 151504 2005-10-20 10:57:53Z ru $
 
 PROG_CXX=	grolj4
 MAN=		grolj4.1 lj4_font.5

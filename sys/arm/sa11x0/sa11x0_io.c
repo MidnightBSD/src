@@ -41,11 +41,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/sa11x0/sa11x0_io.c,v 1.6 2005/04/13 16:02:03 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/sa11x0_io.c 164440 2006-11-20 13:21:02Z kevlo $");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/queue.h>
-#include <sys/types.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 
@@ -146,6 +145,13 @@ sa11x0_bs_map(t, bpa, size, cacheable, bshp)
 	u_long startpa, endpa, pa;
 	vm_offset_t va;
 	pt_entry_t *pte;
+	const struct pmap_devmap *pd;
+
+	if ((pd = pmap_devmap_find_pa(bpa, size)) != NULL) {
+		/* Device was statically mapped. */
+		*bshp = pd->pd_va + (bpa - pd->pd_pa);
+		return 0;
+	}
 
 	startpa = trunc_page(bpa);
 	endpa = round_page(bpa + size);
@@ -184,13 +190,26 @@ sa11x0_bs_alloc(t, rstart, rend, size, alignment, boundary, cacheable,
 
 
 void
-sa11x0_bs_unmap(t, size)
+sa11x0_bs_unmap(t, h, size)
 	void *t;
+	bus_space_handle_t h;
 	bus_size_t size;
 {
-	/*
-	 * Temporary implementation
-	 */
+	vm_offset_t va, endva;
+
+	if (pmap_devmap_find_va((vm_offset_t)t, size) != NULL) {
+		/* Device was statically mapped; nothing to do. */
+		return;
+	}
+
+	va = trunc_page((vm_offset_t)t);
+	endva = round_page((vm_offset_t)t + size);
+
+	while (va < endva) {
+		pmap_kremove(va);
+		va += PAGE_SIZE;
+	}
+	kmem_free(kernel_map, va, endva - va);
 }
 
 void    

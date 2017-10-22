@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/atm/Makefile,v 1.1 2003/10/29 10:30:53 harti Exp $
+# $FreeBSD: release/7.0.0/usr.bin/atm/Makefile 121666 2003-10-29 10:30:54Z harti $
 
 SUBDIR=	sscop
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/calendar/ostern.c,v 1.11 2001/12/10 21:13:03 dwmalone Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/calendar/ostern.c 169343 2007-05-07 11:18:30Z dwmalone $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,8 +43,8 @@ __FBSDID("$FreeBSD: src/usr.bin/calendar/ostern.c,v 1.11 2001/12/10 21:13:03 dwm
  * Astronomical Almanac".
  */
 
-int easter (year)
-    int year;            /* 0 ... abcd, NOT since 1900 */
+int
+easter(int year) /* 0 ... abcd, NOT since 1900 */
 {
     int G,	/* Golden number - 1 */
 	C,	/* Century */
@@ -73,12 +73,9 @@ int easter (year)
  */
 
 int
-geteaster(s, year)
-	char *s;
-        int year;
+geteaster(char *s, int year)
 {
 	int offset = 0;
-	extern struct fixs neaster;
 
 #define EASTER "easter"
 #define EASTERNAMELEN (sizeof(EASTER) - 1)

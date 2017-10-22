@@ -1,14 +1,14 @@
-# $FreeBSD: src/release/doc/Makefile,v 1.7 2004/08/06 08:41:22 simon Exp $
+# $FreeBSD: release/7.0.0/release/doc/Makefile 174854 2007-12-22 06:32:46Z cvs2svn $
 #
 # The user can override the default language to build and install
 # with the RELNOTES_LANG variable.
 # 
-SUBDIR =	share/sgml
 .if defined(RELNOTES_LANG) && !empty(RELNOTES_LANG)
 SUBDIR+= 	${RELNOTES_LANG}
 .else
 SUBDIR+=	en_US.ISO8859-1
 .endif
+SUBDIR+=	share/sgml
 
 RELN_ROOT?= ${.CURDIR}
 

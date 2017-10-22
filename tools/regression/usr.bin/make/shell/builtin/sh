@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: src/tools/regression/usr.bin/make/shell/builtin/sh,v 1.1 2005/05/31 14:13:03 harti Exp $
+# $FreeBSD: release/7.0.0/tools/regression/usr.bin/make/shell/builtin/sh 146822 2005-05-31 14:13:07Z harti $
 echo "$@"
 if ! test -t 0 ; then
 	cat

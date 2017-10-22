@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.4 (Berkeley) 6/22/95
-# $FreeBSD: src/usr.sbin/rpc.umntall/Makefile,v 1.5 2003/10/26 06:14:10 peter Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/rpc.umntall/Makefile 121560 2003-10-26 06:14:10Z peter $
 
 PROG=	rpc.umntall
 MAN=	rpc.umntall.8

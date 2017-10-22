@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lib.c,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: lib.c,v 1.9 2001/11/19 03:08:23 mayer Exp $ */
 
 #include <config.h>
 

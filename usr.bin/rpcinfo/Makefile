@@ -1,16 +1,10 @@
 #	from: @(#)Makefile	5.2 (Berkeley) 5/11/90
-# $FreeBSD: src/usr.bin/rpcinfo/Makefile,v 1.6 2001/03/27 10:52:08 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/rpcinfo/Makefile 160748 2006-07-27 13:47:02Z yar $
 
 PROG=	rpcinfo
-SRCS=	rpcinfo.c rpc_generic.c
+SRCS=	rpcinfo.c
 MAN=	rpcinfo.8
 
-LIBCDIR=	${.CURDIR}/../../lib/libc
-LIBCRPCDIR=	${LIBCDIR}/rpc
-LIBCINCLUDE=	${LIBCDIR}/include
-
-CFLAGS+=	-I${LIBCRPCDIR} -I${LIBCINCLUDE} -DPORTMAP -DINET6
-
-.PATH:	${LIBCRPCDIR}
+CFLAGS+= -DPORTMAP
 
 .include <bsd.prog.mk>

@@ -2,11 +2,11 @@
 #
 # Add additional swap files
 #
-# $FreeBSD: src/etc/rc.d/addswap,v 1.4.2.1 2006/01/20 14:24:34 matteo Exp $
+# $FreeBSD: release/7.0.0/etc/rc.d/addswap 168283 2007-04-02 22:53:07Z des $
 #
 
 # PROVIDE: addswap
-# REQUIRE: mountcritlocal
+# REQUIRE: FILESYSTEMS
 # BEFORE: sysctl
 # KEYWORD: nojail
 

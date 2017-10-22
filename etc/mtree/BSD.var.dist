@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/mtree/BSD.var.dist,v 1.71.2.1 2005/08/15 20:24:07 cperciva Exp $
+# $FreeBSD: release/7.0.0/etc/mtree/BSD.var.dist 161748 2006-08-31 09:51:34Z cperciva $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -16,6 +16,10 @@
 /set uname=root
     ..
 /set mode=0750
+/set gname=audit
+    audit
+    ..
+/set gname=wheel
     backups
     ..
     crash
@@ -27,6 +31,8 @@
 /set mode=0755
     db
         entropy         uname=operator gname=operator mode=0700
+        ..
+        freebsd-update
         ..
         ipf             mode=0700
         ..

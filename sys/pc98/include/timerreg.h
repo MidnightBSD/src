@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pc98/include/timerreg.h,v 1.2 2005/05/28 13:40:27 nyan Exp $
+ * $FreeBSD: release/7.0.0/sys/pc98/include/timerreg.h 146721 2005-05-28 13:40:27Z nyan $
  */
 
 /*

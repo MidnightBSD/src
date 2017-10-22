@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)gprof.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/gprof/gprof.c,v 1.24 2004/07/11 17:37:33 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/gprof/gprof.c 131990 2004-07-11 17:37:33Z stefanf $");
 
 #include <err.h>
 #include <limits.h>

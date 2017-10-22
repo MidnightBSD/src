@@ -50,5 +50,5 @@ without halting on systems which can't support the larger sizes.
 
 
 
-	@(#) $FreeBSD: src/share/examples/atm/NOTES,v 1.2 1999/08/28 00:19:06 peter Exp $
+	@(#) $FreeBSD: release/7.0.0/share/examples/atm/NOTES 50476 1999-08-28 00:22:10Z peter $
 

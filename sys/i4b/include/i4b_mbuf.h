@@ -28,7 +28,7 @@
  *	i4b - mbuf handling support routines
  *	--------------------------------------
  *
- * $FreeBSD: src/sys/i4b/include/i4b_mbuf.h,v 1.9 2005/01/06 22:18:18 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/i4b/include/i4b_mbuf.h 139790 2005-01-06 22:18:23Z imp $
  *
  *	last edit-date: [Sat Mar  9 15:58:11 2002]
  *

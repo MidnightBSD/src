@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/snmp/Makefile,v 1.1 2004/04/24 19:54:54 phk Exp $
+# $FreeBSD: release/7.0.0/share/snmp/Makefile 128612 2004-04-24 19:54:55Z phk $
 
 SUBDIR= mibs
 

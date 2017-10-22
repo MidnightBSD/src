@@ -1,4 +1,6 @@
-# $FreeBSD: src/gnu/usr.bin/bc/Makefile,v 1.24 2004/02/17 00:56:16 ache Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/bc/Makefile 156813 2006-03-17 18:54:44Z ru $
+
+.include <bsd.own.mk>
 
 BCDIR=	${.CURDIR}/../../../contrib/bc
 .PATH: ${BCDIR}/bc ${BCDIR}/lib ${BCDIR}/doc ${BCDIR}/Examples
@@ -11,7 +13,9 @@ CFLAGS+=-DHAVE_CONFIG_H
 DPADD=	${LIBREADLINE} ${LIBTERMCAP}
 LDADD=	-lreadline -ltermcap
 
+.if ${MK_EXAMPLES} != "no"
 FILES=	ckbook.b pi.b primes.b twins.b
 FILESDIR=	${SHAREDIR}/examples/bc
+.endif
 
 .include <bsd.prog.mk>

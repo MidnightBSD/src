@@ -18,7 +18,7 @@ M.I.T. and the M.I.T. S.I.P.B. make no representations about
 the suitability of this software for any purpose.  It is
 provided "as is" without express or implied warranty.
 
- $FreeBSD: src/usr.sbin/newsyslog/pathnames.h,v 1.3 2001/07/30 15:17:17 obrien Exp $
+ $FreeBSD: release/7.0.0/usr.sbin/newsyslog/pathnames.h 80638 2001-07-30 15:17:17Z obrien $
 
 */
 

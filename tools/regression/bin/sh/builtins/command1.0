@@ -1,0 +1,5 @@
+# $FreeBSD: release/7.0.0/tools/regression/bin/sh/builtins/command1.0 151797 2005-10-28 14:02:42Z stefanf $
+true() {
+	false
+}
+command true

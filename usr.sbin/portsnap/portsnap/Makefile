@@ -1,6 +1,6 @@
-# $FreeBSD: src/usr.sbin/portsnap/portsnap/Makefile,v 1.1.2.2 2005/11/13 06:45:36 cperciva Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/portsnap/portsnap/Makefile 161809 2006-09-01 09:49:09Z cperciva $
 
 SCRIPTS=portsnap.sh
-MAN8=	portsnap.8
+MAN=	portsnap.8
 
 .include <bsd.prog.mk>

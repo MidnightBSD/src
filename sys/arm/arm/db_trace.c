@@ -30,13 +30,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/db_trace.c,v 1.10 2005/01/05 21:58:47 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/db_trace.c 160312 2006-07-12 21:22:44Z jhb $");
 #include <sys/param.h>
 #include <sys/systm.h>
 
 
 #include <sys/proc.h>
 #include <sys/kdb.h>
+#include <sys/stack.h>
 #include <machine/armreg.h>
 #include <machine/asm.h>
 #include <machine/cpufunc.h>
@@ -50,9 +51,6 @@ __FBSDID("$FreeBSD: src/sys/arm/arm/db_trace.c,v 1.10 2005/01/05 21:58:47 imp Ex
 
 #define INKERNEL(va)	(((vm_offset_t)(va)) >= VM_MIN_KERNEL_ADDRESS)
 
-int  db_md_set_watchpoint(db_expr_t addr, db_expr_t size);
-int  db_md_clr_watchpoint(db_expr_t addr, db_expr_t size);
-void db_md_list_watchpoints(void);
 /*
  * APCS stack frames are awkward beasts, so I don't think even trying to use
  * a structure to represent them is a good idea.
@@ -95,15 +93,13 @@ db_stack_trace_cmd(db_expr_t addr, db_expr_t count)
 	db_expr_t value;
 	db_expr_t offset;
 	boolean_t	kernel_only = TRUE;
-	int	scp_offset, quit;
+	int	scp_offset;
 
 	frame = (u_int32_t *)addr;
 	lastframe = NULL;
 	scp_offset = -(get_pc_str_offset() >> 2);
 
-	quit = 0;
-	db_setup_paging(db_simple_pager, &quit, db_lines_per_page);
-	while (count-- && frame != NULL && !quit) {
+	while (count-- && frame != NULL && !db_pager_quit) {
 		db_addr_t	scp;
 		u_int32_t	savecode;
 		int		r;
@@ -218,4 +214,22 @@ void
 db_trace_self(void)
 {
 	db_trace_thread(curthread, -1);
+}
+
+void
+stack_save(struct stack *st)
+{
+	vm_offset_t callpc;
+	u_int32_t *frame;
+
+	stack_zero(st);
+	frame = (u_int32_t *)__builtin_frame_address(0);
+	while (1) {
+		if (!INKERNEL(frame))
+			break;
+		callpc = frame[FR_SCP];
+		if (stack_put(st, callpc) == -1)
+			break;
+		frame = (u_int32_t *)(frame[FR_RFP]);
+	}
 }

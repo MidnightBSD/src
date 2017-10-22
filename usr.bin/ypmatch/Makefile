@@ -1,5 +1,5 @@
 #	from: @(#)Makefile	5.8 (Berkeley) 7/28/90
-# $FreeBSD: src/usr.bin/ypmatch/Makefile,v 1.6 2002/02/08 23:07:37 markm Exp $
+# $FreeBSD: release/7.0.0/usr.bin/ypmatch/Makefile 90416 2002-02-08 23:07:37Z markm $
 
 PROG=	ypmatch
 

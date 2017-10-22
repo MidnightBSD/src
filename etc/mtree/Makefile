@@ -1,4 +1,6 @@
-# $FreeBSD: src/etc/mtree/Makefile,v 1.5 2004/12/21 08:46:50 ru Exp $
+# $FreeBSD: release/7.0.0/etc/mtree/Makefile 156813 2006-03-17 18:54:44Z ru $
+
+.include <bsd.own.mk>
 
 FILES=	${_BIND.chroot.dist} \
 	${_BIND.include.dist} \
@@ -10,9 +12,9 @@ FILES=	${_BIND.chroot.dist} \
 	BSD.x11-4.dist \
 	BSD.x11.dist
 
-.if !defined(NO_BIND)
+.if ${MK_BIND} != "no"
 _BIND.chroot.dist=	BIND.chroot.dist
-.if defined(WITH_BIND_LIBS)
+.if ${MK_BIND_LIBS} != "no"
 _BIND.include.dist=	BIND.include.dist
 .endif
 .endif

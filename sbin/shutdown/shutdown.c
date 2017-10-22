@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)shutdown.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/shutdown/shutdown.c,v 1.28 2005/01/25 08:40:51 delphij Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sbin/shutdown/shutdown.c 140797 2005-01-25 08:40:51Z delphij $");
 
 #include <sys/param.h>
 #include <sys/time.h>

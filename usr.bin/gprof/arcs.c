@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)arcs.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/gprof/arcs.c,v 1.12 2004/06/20 11:05:25 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/gprof/arcs.c 130776 2004-06-20 11:05:25Z stefanf $");
 
 #include <err.h>
 #include "gprof.h"

@@ -1,0 +1,16 @@
+/*
+ * $FreeBSD: release/7.0.0/lib/msun/i387/Symbol.map 169092 2007-04-29 14:05:22Z deischen $
+ */
+FBSD_1.0 {
+	__has_sse;
+	__test_sse;
+	fesetexceptflag;
+	feraiseexcept;
+	fegetenv;
+	feholdexcept;
+	feupdateenv;
+	__feenableexcept;
+	__fedisableexcept;
+	feenableexcept;
+	fedisableexcept;
+};

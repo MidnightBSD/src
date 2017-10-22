@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/include/exec.h,v 1.3 2005/02/19 21:16:48 ru Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/exec.h 142107 2005-02-19 21:16:48Z ru $
  */
 
 #ifndef	_MACHINE_EXEC_H_

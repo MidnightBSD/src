@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/keylogout/Makefile,v 1.4 2004/02/04 11:59:07 ru Exp $
+# $FreeBSD: release/7.0.0/usr.bin/keylogout/Makefile 125433 2004-02-04 11:59:08Z ru $
 
 PROG=	keylogout
 

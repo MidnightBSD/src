@@ -1,5 +1,7 @@
-# $FreeBSD: src/secure/usr.sbin/sshd/Makefile,v 1.44 2005/06/07 09:31:28 des Exp $
+# $FreeBSD: release/7.0.0/secure/usr.sbin/sshd/Makefile 162861 2006-09-30 13:41:26Z des $
 #
+
+.include <bsd.own.mk>
 
 PROG=	sshd
 SRCS=	sshd.c auth-rhosts.c auth-passwd.c auth-rsa.c auth-rh-rsa.c \
@@ -12,19 +14,25 @@ SRCS=	sshd.c auth-rhosts.c auth-passwd.c auth-rsa.c auth-rh-rsa.c \
 	auth-krb5.c \
 	auth2-gss.c gss-serv.c gss-serv-krb5.c \
 	loginrec.c auth-pam.c auth-shadow.c auth-sia.c md5crypt.c \
-	audit.c audit-bsm.c \
+	audit.c audit-bsm.c platform.c \
 	gss-genr.c
 
 # gss-genr.c really belongs in libssh; see src/secure/lib/libssh/Makefile
 
 MAN=	sshd.8 sshd_config.5
-CFLAGS+=-I${SSHDIR}
+CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
 
 DPADD=	${LIBSSH} ${LIBUTIL} ${LIBZ} ${LIBWRAP} ${LIBPAM}
 LDADD=	-lssh -lutil -lz -lwrap ${MINUSLPAM}
 
-.if !defined(NO_KERBEROS)
-CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_H=1 -DKRB5 -DHEIMDAL
+.if ${MK_AUDIT} != "no"
+CFLAGS+= -DUSE_BSM_AUDIT
+DPADD+=  ${LIBBSM}
+LDADD+=  -lbsm
+.endif
+
+.if ${MK_KERBEROS_SUPPORT} != "no"
+CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DKRB5 -DHEIMDAL
 DPADD+=	 ${LIBGSSAPI} ${LIBKRB5} ${LIBASN1} ${LIBCOM_ERR} ${LIBROKEN}
 LDADD+=	 -lgssapi -lkrb5 -lasn1 -lcom_err -lroken
 .endif
@@ -39,3 +47,5 @@ LDADD+=	-lcrypto -lcrypt
 .include <bsd.prog.mk>
 
 .PATH:	${SSHDIR}
+
+${OBJS} ${POBJS} ${SOBJS}: ssh_namespace.h

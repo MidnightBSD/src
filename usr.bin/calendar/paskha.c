@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/calendar/paskha.c,v 1.7 2001/12/10 21:13:03 dwmalone Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/calendar/paskha.c 169343 2007-05-07 11:18:30Z dwmalone $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,13 +43,11 @@ static int paskha (int);
 /* (old style result) */
 
 static int
-paskha (R)
-int R;  /*year*/
+paskha(int R) /*year*/
 {
 	int a, b, c, d, e;
 	static int x = 15;
 	static int y = 6;
-	extern int *cumdays;
 
 	a = R % 19;
 	b = R % 4;
@@ -62,12 +60,9 @@ int R;  /*year*/
 /* return year day for Orthodox Easter depending days */
 
 int
-getpaskha(s, year)
-	char *s;
-        int year;
+getpaskha(char *s, int year)
 {
 	int offset;
-	extern struct fixs npaskha;
 
 	if (strncasecmp(s, PASKHA, PASKHALEN) == 0)
 	    s += PASKHALEN;

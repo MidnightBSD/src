@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/texinfo/info/Makefile,v 1.13 2002/06/05 06:58:32 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/texinfo/info/Makefile 172244 2007-09-19 14:21:18Z obrien $
 
 PROG=	info
 MAN=	info.1 info.5 texinfo.5
@@ -8,7 +8,7 @@ SRCS=	dir.c display.c doc.c dribble.c echo-area.c filesys.c \
 	infomap.c m-x.c man.c nodemenu.c nodes.c search.c session.c \
 	signals.c terminal.c tilde.c variables.c window.c
 
-CFLAGS+= -DINFODIR=\"${INFODIR}:/usr/local/info:/usr/X11R6/info:.\"
+CFLAGS+= -DINFODIR=\"${INFODIR}:/usr/local/info:.\"
 
 DPADD=	${LIBTERMCAP} ${LIBTXI}
 LDADD=	-ltermcap ${LIBTXI}

@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)pat_rep.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pax/pat_rep.c,v 1.25 2004/04/06 20:06:48 markm Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/pax/pat_rep.c 169993 2007-05-25 17:53:38Z brian $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -140,7 +140,7 @@ rep_add(char *str)
 		regerror(res, &(rep->rcmp), rebuf, sizeof(rebuf));
 		paxwarn(1, "%s while compiling regular expression %s", rebuf, str);
 #	endif
-		(void)free((char *)rep);
+		free(rep);
 		return(-1);
 	}
 
@@ -152,11 +152,11 @@ rep_add(char *str)
 	*pt1++ = *str;
 	if ((pt2 = strchr(pt1, *str)) == NULL) {
 #		ifdef NET2_REGEX
-		(void)free((char *)rep->rcmp);
+		free(rep->rcmp);
 #		else
-		regfree(&(rep->rcmp));
+		regfree(&rep->rcmp);
 #		endif
-		(void)free((char *)rep);
+		free(rep);
 		paxwarn(1, "Invalid replacement string %s", str);
 		return(-1);
 	}
@@ -181,11 +181,11 @@ rep_add(char *str)
 			break;
 		default:
 #			ifdef NET2_REGEX
-			(void)free((char *)rep->rcmp);
+			free(rep->rcmp);
 #			else
-			regfree(&(rep->rcmp));
+			regfree(&rep->rcmp);
 #			endif
-			(void)free((char *)rep);
+			free(rep);
 			*pt1 = *str;
 			paxwarn(1, "Invalid replacement string option %s", str);
 			return(-1);
@@ -401,7 +401,7 @@ pat_sel(ARCHD *arcn)
 		return(-1);
 	}
 	*ppt = pt->fow;
-	(void)free((char *)pt);
+	free(pt);
 	arcn->pat = NULL;
 	return(0);
 }

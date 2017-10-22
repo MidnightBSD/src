@@ -7,7 +7,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/lib/libdialog/TESTS/tree.c,v 1.3 2003/05/03 21:31:08 obrien Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/gnu/lib/libdialog/TESTS/tree.c 114603 2003-05-03 21:31:08Z obrien $");
 
 #include <stdio.h>
 #include <stdlib.h>

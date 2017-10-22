@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/quotacheck/Makefile,v 1.8 2004/02/23 20:13:55 johan Exp $
+# $FreeBSD: release/7.0.0/sbin/quotacheck/Makefile 126178 2004-02-23 20:25:27Z johan $
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
 
 PROG=	quotacheck

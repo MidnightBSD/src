@@ -1,4 +1,5 @@
-# $FreeBSD: src/release/doc/zh_CN.GB2312/errata/Makefile,v 1.1 2004/10/15 06:43:44 delphij Exp $
+# Original Revision: 1.5
+# $FreeBSD: release/7.0.0/release/doc/zh_CN.GB2312/errata/Makefile 174504 2007-12-09 23:37:43Z delphij $
 
 RELN_ROOT?= ${.CURDIR}/../..
 .ifdef NO_LANGCODE_IN_DESTDIR

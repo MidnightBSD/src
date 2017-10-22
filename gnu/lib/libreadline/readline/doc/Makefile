@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/lib/libreadline/readline/doc/Makefile,v 1.5 2004/10/18 08:03:38 ache Exp $
+# $FreeBSD: release/7.0.0/gnu/lib/libreadline/readline/doc/Makefile 136654 2004-10-18 08:08:03Z ache $
 
 SRCDIR= ${.CURDIR}/../../../../../contrib/libreadline/doc
 

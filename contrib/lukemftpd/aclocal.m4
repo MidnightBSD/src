@@ -1,4 +1,4 @@
-dnl $Id: aclocal.m4,v 1.1.1.2 2006-02-25 02:33:37 laffer1 Exp $
+dnl $Id: aclocal.m4,v 1.1 2000/07/29 13:34:15 lukem Exp $
 dnl
 
 dnl

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/include/md_var.h,v 1.26 2003/08/16 16:57:57 marcel Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/md_var.h 173609 2007-11-14 16:41:31Z grehan $
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -44,17 +44,22 @@ extern	vm_offset_t	kstack0_phys;
 
 extern	u_long	ns_per_tick;
 
-struct fpreg;
-struct proc;
-struct reg;
-struct cam_sim;
-struct pcicfg;
+#if defined(_KERNEL) || defined(_STANDALONE)
+#define	CACHELINESIZE	32
+#endif
+
+void	__syncicache(void *, int);
 
 void	busdma_swi(void);
 int	is_physical_memory(vm_offset_t addr);
+int	mem_valid(vm_offset_t addr, int len);
 
 void	decr_init(void);
+void	decr_tc_init(void);
 
 void	cpu_setup(u_int);
+
+struct trapframe;
+void	powerpc_interrupt(struct trapframe *);
 
 #endif /* !_MACHINE_MD_VAR_H_ */

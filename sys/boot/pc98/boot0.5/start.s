@@ -1,4 +1,4 @@
-# Copyright (c) KATO Takenori, 1999, 2000.
+# Copyright (c) KATO Takenori, 1999, 2000, 2007.
 # 
 # All rights reserved.  Unpublished rights reserved under the copyright
 # laws of Japan.
@@ -25,7 +25,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/boot/pc98/boot0.5/start.s,v 1.2 2003/05/02 09:33:12 kato Exp $
+# $FreeBSD: release/7.0.0/sys/boot/pc98/boot0.5/start.s 168457 2007-04-07 08:37:04Z kato $
 #
 	.global	start
 	.code16
@@ -34,8 +34,19 @@
 start:
 	jmp	start1
 
+	# Magic
+	.org	0x053, 0x20
+	.byte	0x4e, 0x45, 0x43
+
+	.org	0x8f
+	.byte	0x32, 0x2e, 0x37, 0x30
+
 	.org	0x2d4
 start1:
+	# The instruction 'call 0x9ab' can be here.  See also selector.s.
+	nop
+	nop
+	nop
 	cli
 	movw	%cs, %ax
 	movw	%ax, %ds

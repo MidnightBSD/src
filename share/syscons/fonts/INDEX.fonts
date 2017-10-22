@@ -1,5 +1,5 @@
 #
-# $FreeBSD: src/share/syscons/fonts/INDEX.fonts,v 1.27 2003/12/20 11:18:43 ache Exp $
+# $FreeBSD: release/7.0.0/share/syscons/fonts/INDEX.fonts 123682 2003-12-20 11:18:43Z ache $
 #
 # database for vidfont(8) 
 #

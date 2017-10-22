@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/sysinstall/Makefile,v 1.134.2.1 2005/10/07 15:56:30 nyan Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/sysinstall/Makefile 174854 2007-12-22 06:32:46Z cvs2svn $
 
 .if ${MACHINE_ARCH} != "ia64"
 _wizard=	wizard.c
@@ -11,8 +11,8 @@ SRCS=	anonFTP.c cdrom.c command.c config.c devices.c dhcp.c \
 	ftp.c globals.c http.c index.c install.c installUpgrade.c keymap.c \
 	label.c main.c makedevs.c media.c menus.c misc.c modules.c \
 	mouse.c msg.c network.c nfs.c options.c package.c \
-	system.c tape.c tcpip.c termcap.c ttys.c ufs.c usb.c user.c \
-	variable.c ${_wizard} keymap.h
+	system.c tape.c tcpip.c termcap.c ttys.c ufs.c user.c \
+	variable.c ${_wizard} keymap.h countries.h
 
 CFLAGS+= -DUSE_GZIP=1
 .if ${MACHINE} == "pc98"
@@ -23,8 +23,39 @@ CFLAGS+= -I${.CURDIR}/../../gnu/lib/libdialog -I.
 DPADD=	${LIBDIALOG} ${LIBNCURSES} ${LIBUTIL} ${LIBDISK} ${LIBFTPIO}
 LDADD=	-ldialog -lncurses -lutil -ldisk -lftpio
 
+#
+# When distributions have both UP and SMP kernels sysinstall
+# will probe for the number of cpus on the target machine and
+# automatically select which is appropriate.  This can be overridden
+# through the menus or both kernels can be installed (with the
+# most "appropriate" one setup as /boot/kernel).  For now this
+# is done for i386 and amd64; for other systems support must be
+# added to identify the cpu count if acpi and MPTable probing
+# is insufficient.
+#
+# The unmber of cpus probed is passed through the environment in
+# VAR_NCPUS ("ncpus") to scripts.
+#
+# Note that WITH_SMP is a compile time option that enables the
+# builtin menus for the SMP kernel configuration.  If this kernel
+# is not built (see release/Makefile) then this should not be
+# enabled as sysinstall may try to select an SMP kernel config
+# where none is available.  This option should not be needed--we
+# should probe for an SMP kernel in the distribution but doing
+# that is painful because of media changes and the structure of
+# sysinstall so for now it's a priori.
+#
+.if ${MACHINE} == "i386" || ${MACHINE_ARCH} == "amd64"
+SRCS+=	acpi.c biosmptable.c
+.if exists(${.CURDIR}/../../sys/${MACHINE}/conf/SMP)
+CFLAGS+=-DWITH_SMP	
+.endif
+DPADD+=	${LIBDEVINFO}
+LDADD+=	-ldevinfo
+.endif
+
 CLEANFILES=	makedevs.c rtermcap
-CLEANFILES+=	keymap.tmp keymap.h
+CLEANFILES+=	keymap.tmp keymap.h countries.tmp countries.h
 
 .if exists(${.CURDIR}/../../share/termcap/termcap.src)
 RTERMCAP=	TERMCAP=${.CURDIR}/../../share/termcap/termcap.src ./rtermcap
@@ -96,7 +127,28 @@ keymap.h:
 		echo -n '	{ "'$$map'", ' >> keymap.tmp ; \
 		echo "&keymap_$$map }," | tr '[-.]' '_' >> keymap.tmp ; \
 	done
-	( echo "	{ 0 }"; echo "};" ; echo "" ) >> keymap.tmp
+	( echo "	{ NULL, NULL }"; echo "};" ; echo "" ) >> keymap.tmp
 	mv keymap.tmp keymap.h
+
+countries.h: ${.CURDIR}/../../share/misc/iso3166
+	rm -f countries.tmp
+	awk 'BEGIN { \
+	    FS = "\t"; \
+	    num = 1; \
+	    print "DMenu MenuCountry = {"; \
+	    print "    DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,"; \
+	    print "    \"Country Selection\","; \
+	    print "    \"Please choose a country, region, or group.\\n\""; \
+	    print "    \"Select an item using [SPACE] or [ENTER].\","; \
+	    printf "    NULL,\n    NULL,\n    { "; \
+	} \
+	/^[[:space:]]*#/ {next;} \
+	{if (num > 1) {printf "      ";} \
+	    print "{ \"" num "\", \"" $$4 "\"" \
+	    ", dmenuVarCheck, dmenuSetCountryVariable" \
+	    ", NULL, VAR_COUNTRY \"=" tolower($$1) "\" },"; \
+	    ++num;} \
+	END {print "      { NULL } }\n};\n";}' < ${.ALLSRC} > countries.tmp
+	mv countries.tmp ${.TARGET}
 
 .include <bsd.prog.mk>

@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)float.h	7.1 (Berkeley) 5/8/90
- * $FreeBSD: src/sys/arm/include/float.h,v 1.5 2005/03/20 00:34:24 cognet Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/include/float.h 143857 2005-03-20 00:34:24Z cognet $
  */
 
 #ifndef _MACHINE_FLOAT_H_

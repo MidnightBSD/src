@@ -38,7 +38,7 @@
  *
  *	from: @(#)vm_machdep.c	7.3 (Berkeley) 5/13/91
  *	Utah $Hdr: vm_machdep.c 1.16.1.1 89/06/23$
- * $FreeBSD: src/sys/ia64/ia64/vm_machdep.c,v 1.90.2.1 2005/09/13 21:07:14 marcel Exp $
+ * $FreeBSD: release/7.0.0/sys/ia64/ia64/vm_machdep.c 170305 2007-06-04 23:57:32Z jeff $
  */
 /*-
  * Copyright (c) 1994, 1995, 1996 Carnegie-Mellon University.
@@ -81,7 +81,6 @@
 #include <sys/sysctl.h>
 #include <sys/unistd.h>
 
-#include <machine/clock.h>
 #include <machine/cpu.h>
 #include <machine/fpu.h>
 #include <machine/md_var.h>
@@ -160,7 +159,7 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	pcb->pcb_special.rp = FDESC_FUNC(fork_trampoline);
 	cpu_set_fork_handler(td, (void (*)(void*))fork_return, td);
 
-	/* Setup to release sched_lock in fork_exit(). */
+	/* Setup to release the spin count in fork_exit(). */
 	td->td_md.md_spinlock_count = 1;
 	td->td_md.md_saved_intr = 1;
 }
@@ -285,7 +284,7 @@ cpu_fork(struct thread *td1, struct proc *p2 __unused, struct thread *td2,
 	td2->td_pcb->pcb_special.rp = FDESC_FUNC(fork_trampoline);
 	cpu_set_fork_handler(td2, (void (*)(void*))fork_return, td2);
 
-	/* Setup to release sched_lock in fork_exit(). */
+	/* Setup to release the spin count in fork_exit(). */
 	td2->td_md.md_spinlock_count = 1;
 	td2->td_md.md_saved_intr = 1;
 }

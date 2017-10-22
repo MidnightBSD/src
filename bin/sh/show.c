@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)show.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/show.c,v 1.21.8.1 2005/11/06 20:39:48 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/bin/sh/show.c 157750 2006-04-14 13:59:03Z schweikh $");
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -144,6 +144,8 @@ shcmd(union node *cmd, FILE *fp)
 			case NFROM:	s = "<";  dftfd = 0; break;
 			case NFROMTO:	s = "<>"; dftfd = 0; break;
 			case NFROMFD:	s = "<&"; dftfd = 0; break;
+			case NHERE:	s = "<<"; dftfd = 0; break;
+			case NXHERE:	s = "<<"; dftfd = 0; break;
 			default:  	s = "*error*"; dftfd = 0; break;
 		}
 		if (np->nfile.fd != dftfd)
@@ -154,6 +156,10 @@ shcmd(union node *cmd, FILE *fp)
 				fprintf(fp, "%d", np->ndup.dupfd);
 			else
 				fprintf(fp, "-");
+		} else if (np->nfile.type == NHERE) {
+				fprintf(fp, "HERE");
+		} else if (np->nfile.type == NXHERE) {
+				fprintf(fp, "XHERE");
 		} else {
 			sharg(np->nfile.fname, fp);
 		}

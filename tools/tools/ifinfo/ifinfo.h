@@ -26,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/tools/ifinfo/ifinfo.h,v 1.4 1999/08/28 00:54:29 peter Exp $
+ * $FreeBSD: release/7.0.0/tools/tools/ifinfo/ifinfo.h 50477 1999-08-28 01:08:13Z peter $
  */
 #ifndef	ifinfo_h
 #define	ifinfo_h	1

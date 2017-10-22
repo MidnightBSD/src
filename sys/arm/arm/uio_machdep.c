@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/uio_machdep.c,v 1.5 2005/01/05 21:58:47 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/uio_machdep.c 139735 2005-01-05 21:58:49Z imp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

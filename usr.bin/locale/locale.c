@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/locale/locale.c,v 1.15 2004/08/02 12:50:12 tjr Exp $
+ * $FreeBSD: release/7.0.0/usr.bin/locale/locale.c 133014 2004-08-02 12:50:12Z tjr $
  */
 
 /*

@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/examples/kld/cdev/Makefile,v 1.2 2002/07/11 13:38:05 ru Exp $
+# $FreeBSD: release/7.0.0/share/examples/kld/cdev/Makefile 99771 2002-07-11 13:38:05Z ru $
 
 SUBDIR=	module test
 

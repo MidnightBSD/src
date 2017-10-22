@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/usr.sbin/rtadvd/config.c,v 1.24.2.1 2005/11/05 10:50:09 suz Exp $	*/
+/*	$FreeBSD: release/7.0.0/usr.sbin/rtadvd/config.c 157047 2006-03-23 14:39:38Z suz $	*/
 /*	$KAME: config.c,v 1.84 2003/08/05 12:34:23 itojun Exp $	*/
 
 /*
@@ -656,7 +656,7 @@ get_prefix(struct rainfo *rai)
 		memcpy(&pp->prefix, a, sizeof(*a));
 		p = (u_char *)&pp->prefix;
 		ep = (u_char *)(&pp->prefix + 1);
-		while (m < lim)
+		while (m < lim && p < ep)
 			*p++ &= *m++;
 		while (p < ep)
 			*p++ = 0x00;
@@ -705,7 +705,7 @@ makeentry(buf, len, id, string)
  * Add a prefix to the list of specified interface and reconstruct
  * the outgoing packet.
  * The prefix must not be in the list.
- * XXX: other parameters of the prefix (e.g. lifetime) shoule be
+ * XXX: other parameters of the prefix (e.g. lifetime) should be
  * able to be specified.
  */
 static void

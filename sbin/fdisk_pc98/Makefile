@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/fdisk_pc98/Makefile,v 1.7.2.1 2005/08/19 12:43:09 nyan Exp $
+# $FreeBSD: release/7.0.0/sbin/fdisk_pc98/Makefile 148062 2005-07-15 15:31:19Z nyan $
 
 PROG=	fdisk
 SRCS=	fdisk.c geom_pc98_enc.c

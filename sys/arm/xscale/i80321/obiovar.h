@@ -34,14 +34,15 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/xscale/i80321/obiovar.h,v 1.2 2005/01/05 21:58:49 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/arm/xscale/i80321/obiovar.h 150552 2005-09-25 21:06:50Z cognet $
  *
  */
 
 #ifndef _IQ80321_OBIOVAR_H_
 #define	_IQ80321_OBIOVAR_H_
 
-#ifdef __RMAN_RESOURCE_VISIBLE
+#include <sys/rman.h>
+
 struct obio_softc {
 	bus_space_tag_t oba_st;		/* bus space tag */
 	bus_addr_t oba_addr;		/* address of device */
@@ -49,9 +50,9 @@ struct obio_softc {
 	int oba_width;			/* bus width */
 	int oba_irq;			/* XINT interrupt bit # */
 	struct rman oba_rman;
+	struct rman oba_irq_rman;
 	
 };
-#endif /* __RMAN_RESOURCE_VISIBLE */
 extern struct bus_space obio_bs_tag;
 
 #endif /* _IQ80321_OBIOVAR_H_ */

@@ -36,7 +36,7 @@
 static char sccsid[] = "@(#)print.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/talkd/print.c,v 1.12 2003/04/03 05:13:27 jmallett Exp $";
+  "$FreeBSD: release/7.0.0/libexec/talkd/print.c 112998 2003-04-03 05:13:27Z jmallett $";
 #endif /* not lint */
 
 /* debug print routines */

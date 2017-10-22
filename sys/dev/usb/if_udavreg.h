@@ -1,6 +1,6 @@
 /*	$NetBSD: if_udavreg.h,v 1.2 2003/09/04 15:17:39 tsutsui Exp $	*/
 /*	$nabe: if_udavreg.h,v 1.2 2003/08/21 16:26:40 nabe Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/if_udavreg.h,v 1.5 2005/06/10 16:49:15 brooks Exp $	*/
+/*	$FreeBSD: release/7.0.0/sys/dev/usb/if_udavreg.h 162097 2006-09-07 00:06:42Z imp $	*/
 /*-
  * Copyright (c) 2003
  *     Shingo WATANABE <nabe@nabechan.org>.  All rights reserved.
@@ -164,7 +164,7 @@ struct udav_softc {
 #if defined(__FreeBSD__)
 	struct ifnet		*sc_ifp;
 #endif
-	USBBASEDEVICE		sc_dev;	/* base device */
+	device_t		sc_dev;	/* base device */
 	usbd_device_handle	sc_udev;
 
 	/* USB */
@@ -194,7 +194,7 @@ struct udav_softc {
 	struct lock		sc_mii_lock;
 	int			sc_link;
 #define	sc_media udav_mii.mii_media
-#if NRND > 0
+#if defined(NRND) && NRND > 0
 	rndsource_element_t	rnd_source;
 #endif
 	struct ue_cdata		sc_cdata;

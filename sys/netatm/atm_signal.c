@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/atm_signal.c,v 1.13.2.1 2006/02/13 23:54:48 rwatson Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/netatm/atm_signal.c 154661 2006-01-22 01:04:05Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/9/93
- *	$FreeBSD: src/usr.bin/tset/extern.h,v 1.9 2002/03/22 01:42:37 imp Exp $
+ *	$FreeBSD: release/7.0.0/usr.bin/tset/extern.h 92922 2002-03-22 01:42:45Z imp $
  */
 
 #include <termcap.h>

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/jail/Makefile,v 1.10 2004/11/17 10:01:48 delphij Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/jail/Makefile 137808 2004-11-17 10:01:48Z delphij $
 
 PROG=	jail
 MAN=	jail.8

@@ -1,11 +1,13 @@
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
-# $FreeBSD: src/games/factor/Makefile,v 1.10 2005/04/22 18:57:32 trhodes Exp $
+# $FreeBSD: release/7.0.0/games/factor/Makefile 156813 2006-03-17 18:54:44Z ru $
+
+.include <bsd.own.mk>
 
 PROG=	factor
 SRCS=	factor.c pr_tbl.c
 CFLAGS+=-I${.CURDIR}/../primes
 
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
+.if ${MK_OPENSSL} != "no"
 CFLAGS+=-DHAVE_OPENSSL
 DPADD=	${LIBCRYPTO}
 LDADD=	-lcrypto

@@ -27,7 +27,7 @@
  *	main.c - i4b set debug options
  *	------------------------------
  *
- * $FreeBSD: src/usr.sbin/i4b/isdndebug/main.c,v 1.11 2001/05/25 08:36:45 hm Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/i4b/isdndebug/main.c 171272 2007-07-06 07:21:56Z bz $
  *
  *      last edit-date: [Mon May 21 10:09:23 2001]
  *
@@ -47,8 +47,8 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
-#include <machine/i4b_debug.h>
-#include <machine/i4b_ioctl.h>
+#include <i4b/i4b_debug.h>
+#include <i4b/i4b_ioctl.h>
 
 char *bin_str(unsigned long val, int length);
 
@@ -82,7 +82,7 @@ static void
 usage(void)
 {
 	fprintf(stderr, "\n");
-	fprintf(stderr, "isdndebug - i4b set debug level, version %d.%d.%d, compiled %s %s\n", VERSION, REL, STEP, __DATE__, __TIME__);
+	fprintf(stderr, "isdndebug - i4b set debug level, version %d.%d.%d\n", VERSION, REL, STEP);
 	fprintf(stderr, "usage: isdndebug -c -e -g -l <layer> -m -q -r -s <value> -u <unit> -z -C -Q\n");
 	fprintf(stderr, "       -c            get chipset statistics\n");
 	fprintf(stderr, "       -e            set error only debugging output\n");

@@ -1,6 +1,5 @@
-# $FreeBSD: src/tools/debugscripts/dot.gdbinit,v 1.8 2004/11/19 03:51:12 obrien Exp $
+# $FreeBSD: release/7.0.0/tools/debugscripts/dot.gdbinit 158820 2006-05-22 07:12:25Z maxim $
 # .gdbinit file for remote serial debugging.
-# see gdbinit(9) for further details.
 #
 # XXX Do not use this file directly.  It contains parameters which are
 # XXX substituted by the kernel Makefile when you do a 'make gdbinit'.
@@ -8,9 +7,9 @@
 # XXX
 # To debug kernels, do:
 #
-#  cd /usr/src/sys/GENERIC   (or kernel build directory)
+#  cd /usr/obj/usr/src/sys/GENERIC   (or kernel build directory)
 #  make gdbinit
-#  gdb -k kernel.debug
+#  gdb kernel.debug
 #
 # Read gdb(4) for more details.
 

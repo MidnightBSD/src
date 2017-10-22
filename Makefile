@@ -1,5 +1,5 @@
 #
-# $FreeBSD: src/Makefile,v 1.319.2.2 2006/01/07 19:40:08 netchild Exp $
+# $FreeBSD: release/7.0.0/Makefile 174854 2007-12-22 06:32:46Z cvs2svn $
 #
 # The user-driven targets are:
 #
@@ -8,17 +8,23 @@
 # buildworld          - Rebuild *everything*, including glue to help do
 #                       upgrades.
 # installworld        - Install everything built by "buildworld".
-# world               - buildworld + installworld.
+# world               - buildworld + installworld, no kernel.
 # buildkernel         - Rebuild the kernel and the kernel-modules.
 # installkernel       - Install the kernel and the kernel-modules.
 # installkernel.debug
 # reinstallkernel     - Reinstall the kernel and the kernel-modules.
 # reinstallkernel.debug
 # kernel              - buildkernel + installkernel.
+# doxygen             - Build API documentation of the kernel, needs doxygen.
 # update              - Convenient way to update your source tree (cvs).
-# check-old           - Print a list of old files/directories in the system.
-# delete-old          - Delete obsolete files and directories interactively.
-# delete-old-libs     - Delete obsolete libraries interactively.
+# check-old           - List obsolete directories/files/libraries.
+# check-old-dirs      - List obsolete directories.
+# check-old-files     - List obsolete files.
+# check-old-libs      - List obsolete libraries.
+# delete-old          - Delete obsolete directories/files/libraries.
+# delete-old-dirs     - Delete obsolete directories.
+# delete-old-files    - Delete obsolete files.
+# delete-old-libs     - Delete obsolete libraries.
 #
 # This makefile is simple by design. The FreeBSD make automatically reads
 # the /usr/share/mk/sys.mk unless the -m argument is specified on the
@@ -36,7 +42,8 @@
 # system, the simple instructions are:
 #
 # 1.  `cd /usr/src'  (or to the directory containing your source tree).
-# 2.  `make world'
+# 2.  Define `HISTORICAL_MAKE_WORLD' variable (see README).
+# 3.  `make world'
 #
 # For individuals wanting to upgrade their sources (even if only a
 # delta of a few days):
@@ -45,6 +52,7 @@
 #  2.  `make buildworld'
 #  3.  `make buildkernel KERNCONF=YOUR_KERNEL_HERE'     (default is GENERIC).
 #  4.  `make installkernel KERNCONF=YOUR_KERNEL_HERE'   (default is GENERIC).
+#       [steps 3. & 4. can be combined by using the "kernel" target]
 #  5.  `reboot'        (in single user mode: boot -s from the loader prompt).
 #  6.  `mergemaster -p'
 #  7.  `make installworld'
@@ -55,8 +63,8 @@
 #
 # See src/UPDATING `COMMON ITEMS' for more complete information.
 #
-# If TARGET_ARCH=arch (e.g. ia64, sparc64, ...) is specified you can
-# cross build world for other architectures using the buildworld target,
+# If TARGET=machine (e.g. ia64, sparc64, ...) is specified you can
+# cross build world for other machine types using the buildworld target,
 # and once the world is built you can cross build a kernel using the
 # buildkernel target.
 #
@@ -67,16 +75,19 @@
 # developer convenience only.  They are intentionally not documented and
 # completely subject to change without notice.
 #
-TGTS=	all all-man buildenv buildkernel buildworld check-old checkdpadd \
-	clean cleandepend cleandir delete-old delete-old-libs depend \
-	distribute distributeworld distrib-dirs distribution everything \
-	hierarchy install installcheck installkernel installkernel.debug\
-	reinstallkernel reinstallkernel.debug installworld \
-	kernel-toolchain libraries lint maninstall \
-	obj objlink regress rerelease tags toolchain update \
+TGTS=	all all-man buildenv buildenvvars buildkernel buildworld \
+	check-old check-old-dirs check-old-files check-old-libs \
+	checkdpadd clean cleandepend cleandir \
+	delete-old delete-old-dirs delete-old-files delete-old-libs \
+	depend distribute distributeworld distrib-dirs distribution doxygen \
+	everything hierarchy install installcheck installkernel \
+	installkernel.debug reinstallkernel reinstallkernel.debug \
+	installworld kernel-toolchain libraries lint maninstall \
+	obj objlink regress rerelease showconfig tags toolchain update \
 	_worldtmp _legacy _bootstrap-tools _cleanobj _obj \
 	_build-tools _cross-tools _includes _libraries _depend \
 	build32 distribute32 install32
+TGTS+=	${SUBDIR_TARGETS}
 
 BITGTS=	files includes
 BITGTS:=${BITGTS} ${BITGTS:S/^/build/} ${BITGTS:S/^/install/}
@@ -93,11 +104,11 @@ TGTS+=	${BITGTS}
 PATH=	/sbin:/bin:/usr/sbin:/usr/bin
 MAKEOBJDIRPREFIX?=	/usr/obj
 _MAKEOBJDIRPREFIX!= /usr/bin/env -i PATH=${PATH} ${MAKE} \
-    ${.MAKEFLAGS:MMAKEOBJDIRPREFIX=*} \
+    ${.MAKEFLAGS:MMAKEOBJDIRPREFIX=*} __MAKE_CONF=${__MAKE_CONF} \
     -f /dev/null -V MAKEOBJDIRPREFIX dummy
 .if !empty(_MAKEOBJDIRPREFIX)
 .error MAKEOBJDIRPREFIX can only be set in environment, not as a global\
-	(in /etc/make.conf) or command-line variable.
+	(in make.conf(5)) or command-line variable.
 .endif
 MAKEPATH=	${MAKEOBJDIRPREFIX}${.CURDIR}/make.${MACHINE}
 BINMAKE= \
@@ -136,14 +147,14 @@ cleanworld:
 .if ${.CURDIR} == ${.OBJDIR} || ${.CURDIR}/obj == ${.OBJDIR}
 .if exists(${BW_CANONICALOBJDIR}/)
 	-rm -rf ${BW_CANONICALOBJDIR}/*
-	chflags -R 0 ${BW_CANONICALOBJDIR}
+	-chflags -R 0 ${BW_CANONICALOBJDIR}
 	rm -rf ${BW_CANONICALOBJDIR}/*
 .endif
 	#   To be safe in this case, fall back to a 'make cleandir'
 	${_+_}@cd ${.CURDIR}; ${_MAKE} cleandir
 .else
 	-rm -rf ${.OBJDIR}/*
-	chflags -R 0 ${.OBJDIR}
+	-chflags -R 0 ${.OBJDIR}
 	rm -rf ${.OBJDIR}/*
 .endif
 
@@ -202,9 +213,6 @@ world:
 	@echo "'Rebuilding world', for how to upgrade your system."
 	@echo "Define DESTDIR to where you want to install FreeBSD,"
 	@echo "including /, to override this warning and proceed as usual."
-	@echo "You may get the historical 'make world' behavior by defining"
-	@echo "HISTORICAL_MAKE_WORLD.  You should understand the implications"
-	@echo "before doing this."
 	@echo ""
 	@echo "Bailing out now..."
 	@false
@@ -260,40 +268,39 @@ make: .PHONY
 # existing system is.
 #
 .if make(universe)
+TARGETS?=amd64 arm i386 ia64 pc98 powerpc sparc64 sun4v
+
 universe: universe_prologue
 universe_prologue:
 	@echo "--------------------------------------------------------------"
 	@echo ">>> make universe started on ${STARTTIME}"
 	@echo "--------------------------------------------------------------"
-.for target in i386 i386:pc98 sparc64 alpha ia64 amd64
-.for arch in ${target:C/:.*$//}
-.for mach in ${target:C/^.*://}
-KERNCONFS!=	cd ${.CURDIR}/sys/${mach}/conf && \
-		find [A-Z]*[A-Z] -type f -maxdepth 0
+.for target in ${TARGETS}
+KERNCONFS!=	cd ${.CURDIR}/sys/${target}/conf && \
+		find [A-Z]*[A-Z] -type f -maxdepth 0 \
+		! -name DEFAULTS ! -name LINT
 KERNCONFS:=	${KERNCONFS:S/^NOTES$/LINT/}
-universe: universe_${mach}
-.ORDER: universe_prologue universe_${mach} universe_epilogue
-universe_${mach}:
-	@echo ">> ${mach} started on `LC_ALL=C date`"
+universe: universe_${target}
+.ORDER: universe_prologue universe_${target} universe_epilogue
+universe_${target}:
+	@echo ">> ${target} started on `LC_ALL=C date`"
 	-cd ${.CURDIR} && ${MAKE} ${JFLAG} buildworld \
-	    TARGET_ARCH=${arch} TARGET=${mach} \
+	    TARGET=${target} \
 	    __MAKE_CONF=/dev/null \
-	    > _.${mach}.buildworld 2>&1
-	@echo ">> ${mach} buildworld completed on `LC_ALL=C date`"
-.if exists(${.CURDIR}/sys/${mach}/conf/NOTES)
-	-cd ${.CURDIR}/sys/${mach}/conf && ${MAKE} LINT \
-	    > ${.CURDIR}/_.${mach}.makeLINT 2>&1
+	    > _.${target}.buildworld 2>&1
+	@echo ">> ${target} buildworld completed on `LC_ALL=C date`"
+.if exists(${.CURDIR}/sys/${target}/conf/NOTES)
+	-cd ${.CURDIR}/sys/${target}/conf && ${MAKE} LINT \
+	    > ${.CURDIR}/_.${target}.makeLINT 2>&1
 .endif
 .for kernel in ${KERNCONFS}
 	-cd ${.CURDIR} && ${MAKE} ${JFLAG} buildkernel \
-	    TARGET_ARCH=${arch} TARGET=${mach} \
+	    TARGET=${target} \
 	    KERNCONF=${kernel} \
 	    __MAKE_CONF=/dev/null \
-	    > _.${mach}.${kernel} 2>&1
+	    > _.${target}.${kernel} 2>&1
 .endfor
-	@echo ">> ${mach} completed on `LC_ALL=C date`"
-.endfor
-.endfor
+	@echo ">> ${target} completed on `LC_ALL=C date`"
 .endfor
 universe: universe_epilogue
 universe_epilogue:

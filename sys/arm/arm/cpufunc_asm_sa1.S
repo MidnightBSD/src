@@ -37,7 +37,7 @@
  */
  
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/cpufunc_asm_sa1.S,v 1.3 2005/01/05 21:58:47 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/arm/cpufunc_asm_sa1.S 139735 2005-01-05 21:58:49Z imp $");
 
 .Lblock_userspace_access:
 	.word	_C_LABEL(block_userspace_access)

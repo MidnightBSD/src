@@ -1,4 +1,4 @@
-#	$FreeBSD: src/share/examples/kld/firmware/fwimage/Makefile,v 1.1.2.1 2006/02/23 02:13:29 mlaier Exp $
+#	$FreeBSD: release/7.0.0/share/examples/kld/firmware/fwimage/Makefile 154974 2006-01-29 02:52:42Z mlaier $
 
 KMOD=	beastie
 FIRMWS=	firmware.img:beastie

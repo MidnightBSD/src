@@ -1,9 +1,9 @@
 #
 #     The FreeBSD Documentation Project
 #     The FreeBSD French Documentation Project
-#     $Id: Makefile,v 1.1.1.2 2006-02-25 02:35:16 laffer1 Exp $
+#     $Id$
 #
-#     $FreeBSD: src/release/doc/fr_FR.ISO8859-1/installation/sparc64/Makefile,v 1.1 2002/10/19 21:49:09 gioria Exp $
+#     $FreeBSD: release/7.0.0/release/doc/fr_FR.ISO8859-1/installation/sparc64/Makefile 105484 2002-10-19 21:49:09Z gioria $
 #     Original revision: 1.1
 #
 

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/uni/uniarp_cache.c,v 1.15 2005/06/10 16:49:20 brooks Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/netatm/uni/uniarp_cache.c 147256 2005-06-10 16:49:24Z brooks $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

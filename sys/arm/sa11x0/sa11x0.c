@@ -57,19 +57,18 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/sa11x0/sa11x0.c,v 1.4 2004/09/23 22:33:38 cognet Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/arm/sa11x0/sa11x0.c 167262 2007-03-06 10:56:54Z piso $");
 
-#define __RMAN_RESOURCE_VISIBLE
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/reboot.h>
-#include <sys/types.h>
 #include <sys/malloc.h>
 #include <sys/bus.h>
 #include <sys/interrupt.h>
 #include <sys/module.h>
+#include <sys/rman.h>
 
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
@@ -83,7 +82,6 @@ __FBSDID("$FreeBSD: src/sys/arm/sa11x0/sa11x0.c,v 1.4 2004/09/23 22:33:38 cognet
 #include <arm/sa11x0/sa11x0_ppcreg.h>
 #include <arm/sa11x0/sa11x0_gpioreg.h>
 #include <machine/bus.h>
-#include <sys/rman.h>
 
 extern void sa11x0_activateirqs(void);
 
@@ -93,30 +91,30 @@ static struct resource *sa1110_alloc_resource(device_t, device_t, int, int *,
 static int sa1110_activate_resource(device_t, device_t, int, int,
         struct resource *);
 static int sa1110_setup_intr(device_t, device_t, struct resource *, int,
-        driver_intr_t *, void *, void **);
+        driver_filter_t *, driver_intr_t *, void *, void **);
 
 struct sa11x0_softc *sa11x0_softc; /* There can be only one. */
 
 static int
 sa1110_setup_intr(device_t dev, device_t child,
-        struct resource *ires,  int flags, driver_intr_t *intr, void *arg,
-	    void **cookiep)
+        struct resource *ires,  int flags, driver_filter_t *filt, 
+	driver_intr_t *intr, void *arg, void **cookiep)
 {
 	int saved_cpsr;
 	
 	if (flags & INTR_TYPE_TTY) 
-		ires->r_start = 15;
+		rman_set_start(ires, 15);
 	else if (flags & INTR_TYPE_CLK) {
-		if (ires->r_start == 0)
-			ires->r_start = 26;
+		if (rman_get_start(ires) == 0)
+			rman_set_start(ires, 26);
 		else
-			ires->r_start = 27;
+			rman_set_start(ires, 27);
 	}
 	saved_cpsr = SetCPSR(I32_bit, I32_bit);                 
 
 	SetCPSR(I32_bit, saved_cpsr & I32_bit);
-	BUS_SETUP_INTR(device_get_parent(dev), child, ires, flags, intr, arg,
-	    cookiep);
+	BUS_SETUP_INTR(device_get_parent(dev), child, ires, flags, filt, 
+	    intr, arg, cookiep);
 	return (0);
 }
 
@@ -124,9 +122,13 @@ static struct resource *
 sa1110_alloc_resource(device_t bus, device_t child, int type, int *rid,
         u_long start, u_long end, u_long count, u_int flags)
 {
-	struct resource *res = malloc(sizeof(*res), M_DEVBUF, M_WAITOK);
-/* XXX */
-	res->r_start = *rid;
+	struct resource *res;
+	
+	res = rman_reserve_resource(&sa11x0_softc->sa11x0_rman, *rid, *rid,
+	    count, flags, child);
+	if (res != NULL)
+		rman_set_rid(res, *rid);
+
 	return (res);
 }
 static int
@@ -227,6 +229,11 @@ sa11x0_attach(device_t dev)
 	/*
 	 *  Attach each devices
 	 */
+	sc->sa11x0_rman.rm_type = RMAN_ARRAY;
+	sc->sa11x0_rman.rm_descr = "SA11x0 IRQs";
+	if (rman_init(&sc->sa11x0_rman) != 0 ||
+	    rman_manage_region(&sc->sa11x0_rman, 0, 32) != 0)
+		panic("sa11x0_attach: failed to set up rman");
 	device_add_child(dev, "uart", 0);
 	device_add_child(dev, "saost", 0);
 	bus_generic_probe(dev);

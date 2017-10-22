@@ -15,7 +15,7 @@
 # The University of Texas at Austin
 # Austin, Texas  78712
 #
-# $FreeBSD: src/gnu/usr.bin/man/apropos/apropos.sh,v 1.16 2002/10/21 07:44:42 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/man/apropos/apropos.sh 105615 2002-10-21 07:44:42Z ru $
 
 
 PATH=/bin:/usr/bin:$PATH

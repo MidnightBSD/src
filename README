@@ -1,6 +1,6 @@
 This is the top level of the FreeBSD source directory.  This file
 was last revised on:
-$FreeBSD: src/README,v 1.22 2003/03/08 10:01:26 markm Exp $
+$FreeBSD: release/7.0.0/README 174854 2007-12-22 06:32:46Z cvs2svn $
 
 For copyright information, please see the file COPYRIGHT in this
 directory (additional copyright information also exists for some
@@ -11,8 +11,13 @@ The Makefile in this directory supports a number of targets for
 building components (or all) of the FreeBSD source tree, the most
 commonly used one being ``world'', which rebuilds and installs
 everything in the FreeBSD system from the source tree except the
-kernel, the kernel-modules and the contents of /etc.  The
-``buildkernel'' and ``installkernel'' targets build and install
+kernel, the kernel-modules and the contents of /etc.  The ``world''
+target should only be used in cases where the source tree has not
+changed from the currently running version.  See:
+http://www.freebsd.org/doc/en_US.ISO8859-1/books/handbook/makeworld.html
+for more information, including setting make(1) variables.
+
+The ``buildkernel'' and ``installkernel'' targets build and install
 the kernel and the modules (see below).  Please see the top of
 the Makefile in this directory for more information on the
 standard build targets and compile-time flags.
@@ -58,6 +63,8 @@ lib		System libraries.
 libexec		System daemons.
 
 release		Release building Makefile & associated tools.
+
+rescue		Build system for statically linked /rescue utilities.
 
 sbin		System commands.
 

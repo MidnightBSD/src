@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/syncicache.c,v 1.5 2005/01/07 02:29:20 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/powerpc/powerpc/syncicache.c 170473 2007-06-09 21:55:17Z marcel $");
 
 #include <sys/param.h>
 #if	defined(_KERNEL) || defined(_STANDALONE)
@@ -42,7 +42,7 @@ __FBSDID("$FreeBSD: src/sys/powerpc/powerpc/syncicache.c,v 1.5 2005/01/07 02:29:
 #endif
 #include <sys/sysctl.h>
 
-#include <machine/cpu.h>
+#include <machine/md_var.h>
 
 #if	defined(_KERNEL) || defined(_STANDALONE)
 #ifndef	CACHELINESIZE

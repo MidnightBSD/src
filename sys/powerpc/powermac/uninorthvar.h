@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/powermac/uninorthvar.h,v 1.4 2005/01/07 02:29:20 imp Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/powermac/uninorthvar.h 139825 2005-01-07 02:29:27Z imp $
  */
 
 #ifndef	_POWERPC_POWERMAC_UNINORTHVAR_H_

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/uuidgen/uuidgen.c,v 1.3 2003/03/15 02:27:10 marcel Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/uuidgen/uuidgen.c 112252 2003-03-15 02:27:10Z marcel $");
 
 #include <err.h>
 #include <stdio.h>

@@ -1,12 +1,12 @@
 #
-# $FreeBSD: src/usr.sbin/pmcstat/Makefile,v 1.3 2005/06/30 19:01:26 jkoshy Exp $
+# $FreeBSD: release/7.0.0/usr.sbin/pmcstat/Makefile 172401 2007-10-01 18:15:11Z ru $
 #
 
 PROG=	pmcstat
 MAN=	pmcstat.8
 
-DPADD=	${LIBPMC} ${LIBM}
-LDADD=	-lpmc -lm
+DPADD=	${LIBKVM} ${LIBPMC} ${LIBM}
+LDADD=	-lkvm -lpmc -lm
 
 WARNS?=	6
 

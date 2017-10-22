@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/texinfo/install-info/Makefile,v 1.12 2002/06/05 06:58:32 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/texinfo/install-info/Makefile 97852 2002-06-05 06:58:33Z ru $
 
 PROG=	install-info
 

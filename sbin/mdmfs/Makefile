@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/mdmfs/Makefile,v 1.6 2005/01/25 14:28:31 ssouhlal Exp $
+# $FreeBSD: release/7.0.0/sbin/mdmfs/Makefile 140815 2005-01-25 14:28:31Z ssouhlal $
 
 PROG=		mdmfs
 LINKS=		${BINDIR}/${PROG} ${BINDIR}/mount_mfs

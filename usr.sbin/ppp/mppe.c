@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/mppe.c,v 1.28 2004/09/07 15:48:27 phk Exp $
+ * $FreeBSD: release/7.0.0/usr.sbin/ppp/mppe.c 134906 2004-09-07 15:48:27Z phk $
  */
 
 #include <sys/param.h>

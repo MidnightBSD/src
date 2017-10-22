@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/version/main.c,v 1.5.2.1 2005/07/29 18:16:06 krion Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.sbin/pkg_install/version/main.c 174854 2007-12-22 06:32:46Z cvs2svn $");
 
 #include "lib.h"
 #include "version.h"
@@ -54,7 +54,7 @@ main(int argc, char **argv)
     else while ((ch = getopt(argc, argv, Options)) != -1) {
 	switch(ch) {
 	case 'v':
-	    Verbose = TRUE;
+	    Verbose++;
 	    break;
 
 	case 'I':
@@ -77,9 +77,9 @@ main(int argc, char **argv)
 	    MatchName = optarg;
 	    break;
 
-        case 'O':
-            LookUpOrigin = optarg;
-            break;
+	case 'O':
+	    LookUpOrigin = optarg;
+	    break;
 
 	case 'o':
 	    ShowOrigin = TRUE;

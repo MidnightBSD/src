@@ -1,14 +1,13 @@
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: src/release/doc/ru_RU.KOI8-R/hardware/Makefile,v 1.1 2004/05/31 11:43:21 den Exp $
+# $FreeBSD: release/7.0.0/release/doc/ru_RU.KOI8-R/hardware/Makefile 158696 2006-05-17 16:40:06Z bmah $
 # $FreeBSDru: frdp/release/doc/ru_RU.KOI8-R/hardware/Makefile,v 1.1 2004/05/27 06:09:42 den Exp $
 #
 # Original revision: 1.6
 
 RELN_ROOT?= ${.CURDIR}/../..
 
-SUBDIR = alpha
-SUBDIR+= amd64
+SUBDIR= amd64
 SUBDIR+= ia64
 SUBDIR+= i386
 SUBDIR+= pc98

@@ -22,7 +22,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/include/nexusvar.h,v 1.3 2004/01/13 11:20:52 grehan Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/nexusvar.h 124468 2004-01-13 11:20:52Z grehan $
  */
 
 #ifndef _MACHINE_NEXUSVAR_H_

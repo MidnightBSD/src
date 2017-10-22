@@ -36,7 +36,7 @@
  */
 
 #include <sys/types.h>
-__FBSDID("$FreeBSD: src/sbin/rcorder/rcorder.c,v 1.1.1.2.14.1 2006/01/26 01:30:12 dougb Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sbin/rcorder/rcorder.c 172506 2007-10-10 16:59:15Z cvs2svn $");
 
 #include <sys/stat.h>
 
@@ -722,6 +722,10 @@ keep_ok(fnode)
  * is ok, we loop over the filenodes requirements, calling satisfy_req()
  * for each of them.. once we have done this, remove this filenode
  * from each provision table, as we are now done.
+ *
+ * NOTE: do_file() is called recursively from several places and cannot
+ * safely free() anything related to items that may be recursed on.
+ * Circular dependancies will cause problems if we do.
  */
 void
 do_file(fnode)
@@ -757,8 +761,10 @@ do_file(fnode)
 		r_tmp = r;
 		satisfy_req(r, fnode->filename);
 		r = r->next;
+#if 0
 		if (was_set == 0)
-			free(r_tmp);		   
+			free(r_tmp);
+#endif
 	}
 	fnode->req_list = NULL;
 
@@ -797,10 +803,12 @@ do_file(fnode)
 	}
 
 	DPRINTF((stderr, "nuking %s\n", fnode->filename));
+#if 0
 	if (was_set == 0) {
    		free(fnode->filename);
    		free(fnode);
 	}
+#endif
 }
 
 void

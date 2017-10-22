@@ -1,5 +1,5 @@
 # Makefile
-# $FreeBSD: src/libexec/bootpd/tools/Makefile,v 1.4 1999/08/28 00:09:23 peter Exp $
+# $FreeBSD: release/7.0.0/libexec/bootpd/tools/Makefile 50476 1999-08-28 00:22:10Z peter $
 
 SUBDIR=	bootpef bootptest
 

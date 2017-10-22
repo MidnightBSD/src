@@ -1,7 +1,7 @@
-# $FreeBSD: src/tools/regression/aio/aiotest/Makefile,v 1.2 2004/12/21 08:47:25 ru Exp $
+# $FreeBSD: release/7.0.0/tools/regression/aio/aiotest/Makefile 156735 2006-03-15 10:46:38Z ru $
 
 PROG=	aiotest
-NO_MAN=	YES
+NO_MAN=
 
 DPADD=	${LIBUTIL}
 LDADD=	-lutil

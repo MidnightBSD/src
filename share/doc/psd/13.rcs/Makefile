@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/doc/psd/13.rcs/Makefile,v 1.2 1999/08/28 00:18:21 peter Exp $
+# $FreeBSD: release/7.0.0/share/doc/psd/13.rcs/Makefile 50476 1999-08-28 00:22:10Z peter $
 
 SUBDIR=	rcs rcs_func
 

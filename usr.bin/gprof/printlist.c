@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)printlist.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/gprof/printlist.c,v 1.6 2004/05/24 12:44:00 stefanf Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/usr.bin/gprof/printlist.c 129657 2004-05-24 12:44:00Z stefanf $");
 
 #include <err.h>
 #include <string.h>

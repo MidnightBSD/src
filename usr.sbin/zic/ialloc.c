@@ -6,7 +6,7 @@ static const char	elsieid[] = "@(#)ialloc.c	8.29";
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/zic/ialloc.c,v 1.6 2000/11/28 18:18:56 charnier Exp $";
+  "$FreeBSD: release/7.0.0/usr.sbin/zic/ialloc.c 69315 2000-11-28 18:18:56Z charnier $";
 #endif /* not lint */
 
 /*LINTLIBRARY*/

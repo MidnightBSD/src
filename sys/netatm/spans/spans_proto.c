@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/spans/spans_proto.c,v 1.14 2005/01/07 01:45:38 imp Exp $");
+__FBSDID("$FreeBSD: release/7.0.0/sys/netatm/spans/spans_proto.c 170996 2007-06-23 00:02:20Z mjacob $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -214,7 +214,7 @@ spans_timer(tip)
 	 * Back-off to SPANS control block
 	 */
 	spp = (struct spans *)
-		((caddr_t)tip - (int)(&((struct spans *)0)->sp_time));
+		((caddr_t)tip - offsetof(struct spans, sp_time));
 
 	ATM_DEBUG2("spans_timer: spp=%p,state=%d\n",
 			spp, spp->sp_state);
@@ -363,8 +363,8 @@ spans_vctimer(tip)
 	/*
 	 * Get VCCB and SPANS control block addresses
 	 */
-	svp = (struct spans_vccb *) ((caddr_t)tip -
-			(int)(&((struct vccb *)0)->vc_time));
+	svp = (struct spans_vccb *)
+		((caddr_t)tip - offsetof(struct vccb, vc_time));
 	spp = (struct spans *)svp->sv_pif->pif_siginst;
 
 	ATM_DEBUG3("spans_vctimer: svp=%p, sstate=%d, ustate=%d\n",

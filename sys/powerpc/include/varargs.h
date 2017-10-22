@@ -25,7 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
  *	$NetBSD: varargs.h,v 1.5 2000/02/27 17:50:22 tsubai Exp $
- * $FreeBSD: src/sys/powerpc/include/varargs.h,v 1.6 2005/03/02 21:33:28 joerg Exp $
+ * $FreeBSD: release/7.0.0/sys/powerpc/include/varargs.h 143063 2005-03-02 21:33:29Z joerg $
  */
 
 #ifndef _MACHINE_VARARGS_H_

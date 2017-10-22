@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/groff/src/libs/libbib/Makefile,v 1.4 2004/10/24 15:32:28 ru Exp $
+# $FreeBSD: release/7.0.0/gnu/usr.bin/groff/src/libs/libbib/Makefile 136910 2004-10-24 15:33:08Z ru $
 
 LIB=		bib
 INTERNALLIB=

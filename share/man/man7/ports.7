@@ -23,9 +23,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man7/ports.7,v 1.50.2.2 2005/08/10 20:43:27 jcamou Exp $
+.\" $FreeBSD: release/7.0.0/share/man/man7/ports.7 175619 2008-01-24 07:11:29Z brueffer $
 .\"
-.Dd February 8, 2005
+.Dd January 21, 2008
 .Dt PORTS 7
 .Os
 .Sh NAME
@@ -66,7 +66,7 @@ from
 .Pa http://www.FreeBSD.org/ports/
 first!
 The
-.Xr portcheckout 1 Pq Pa ports/devel/portcheckout
+.Xr portcheckout 1 Pq Pa ports/ports-mgmt/portcheckout
 script (also a port, of course!) will help to download new ports.
 .Pp
 For more information about using ports, see
@@ -199,6 +199,8 @@ Show list of files that would be retrieved by
 .It Cm pretty-print-run-depends-list , pretty-print-build-depends-list
 Print a list of all the compile and run dependencies, and dependencies
 of those dependencies.
+.It Cm missing
+Print a list of missing dependencies to be installed for the port.
 .It Cm clean
 Remove the expanded source code.
 This recurses to dependencies unless
@@ -272,7 +274,9 @@ file for the pattern specified by the
 .Va bdeps
 (searches the port build-time dependency),
 .Va rdeps
-(searches the port run-time dependency)
+(searches the port run-time dependency),
+.Va www
+(searches the port web site)
 .Xr make 1
 variables, and their exclusion counterparts:
 .Va xname , xkey
@@ -315,10 +319,25 @@ To find ports that contain
 .Dq Li apache
 in either of the name, path, info
 fields, ignore the rest of the record.
+.Pp
+By default the search is not case-nsensitive.
+In order to make it case-sensitive you can use the
+.Va icase
+variable:
+.Bd -literal -offset indent
+make search name=p5-R icase=0
+.Ed
+.It Cm quicksearch
+Reduced
+.Cm search
+output.
+Only display name, path and info.
 .It Cm describe
 Generate a one-line description of each port for use in the
 .Pa INDEX
 file.
+.It Cm maintainer
+Display the port maintainer's email address.
 .It Cm index
 Create
 .Pa /usr/ports/INDEX ,
@@ -383,9 +402,7 @@ The full path to the package.
 .It Va PREFIX
 Where to install things in general
 (usually
-.Pa /usr/local
-or
-.Pa /usr/X11R6 ) .
+.Pa /usr/local ) .
 .It Va MASTER_SITES
 Primary sites for distribution files if not found locally.
 .It Va PATCH_SITES
@@ -399,6 +416,12 @@ site for all files.
 Try going to these sites for all files and patches, first.
 .It Va MASTER_SITE_BACKUP
 Try going to these sites for all files and patches, last.
+.It Va RANDOMIZE_MASTER_SITES
+Try the download locations in a random order.
+.It Va MASTER_SORT
+Sort the download locations according to user supplied pattern.
+Example:
+.Dl .dk .sunet.se .se dk.php.net .no .de heanet.dl.sourceforge.net
 .It Va MASTER_SITE_INDEX
 Where to get
 .Pa INDEX
@@ -434,22 +457,30 @@ Location of
 If defined, only operate on a port if it requires interaction.
 .It Va BATCH
 If defined, only operate on a port if it can be installed 100% automatically.
-.It Va OPTIONS
-If defined, list of what
-.Va WITH_*
-options this port accepts.
-.Em Note :
-to make
-.Va OPTIONS
-actually work, it is necessary to include
-.Pa bsd.port.pre.mk
-before starting to test the
-.Va WITH_*
-variables.
 .It Va DISABLE_VULNERABILITIES
 If defined, disable check for security vulnerabilities using
-.Xr portaudit 1 Pq Pa ports/security/portaudit
+.Xr portaudit 1 Pq Pa ports/ports-mgmt/portaudit
 when installing new ports.
+.It Va NO_IGNORE
+If defined, allow installation of ports marked as
+.Aq Va FORBIDDEN .
+The default behavior of the Ports framework is to abort when the
+installation of a forbidden port is attempted.
+Of course, these ports may not work as expected, but if you really know
+what you are doing and are sure about installing a forbidden port, then
+.Va NO_IGNORE
+lets you do it.
+.It Va PORT_DBDIR
+Directory where the results of configuring
+.Va OPTIONS
+are stored.
+Defaults to
+.Pa /var/db/ports .
+Each port where
+.Va OPTIONS
+have been configured will have a uniquely named sub-directory, containing a
+single file
+.Pa options .
 .El
 .Sh FILES
 .Bl -tag -width ".Pa /usr/ports/Mk/bsd.port.mk" -compact
@@ -474,7 +505,6 @@ The big Kahuna.
 .Pp
 The following are part of the ports collection:
 .Pp
-.Xr pib 1 ,
 .Xr portaudit 1 ,
 .Xr portcheckout 1 ,
 .Xr portlint 1

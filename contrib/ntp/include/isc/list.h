@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: list.h,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
+/* $Id: list.h,v 1.19 2002/05/09 07:09:30 marka Exp $ */
 
 #ifndef ISC_LIST_H
 #define ISC_LIST_H 1
