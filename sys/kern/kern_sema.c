@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_sema.c 139804 2005-01-06 23:35:40Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

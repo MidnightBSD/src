@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/digi/digi_EPCX_PCI/Makefile 76195 2001-05-02 01:08:09Z brian $
 
 .PATH:	${.CURDIR}/../../../dev/digi
 KMOD=	digi_EPCX_PCI

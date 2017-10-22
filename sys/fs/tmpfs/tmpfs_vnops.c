@@ -34,7 +34,7 @@
  * tmpfs vnode interface.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/fs/tmpfs/tmpfs_vnops.c 248678 2013-03-24 07:41:36Z kib $");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -51,6 +51,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/vnode.h>
 
 #include <vm/vm.h>
+#include <vm/vm_param.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
@@ -1305,6 +1306,7 @@ tmpfs_rename(struct vop_rename_args *v)
 	cache_purge(fvp);
 	if (tvp != NULL)
 		cache_purge(tvp);
+	cache_purge_negative(tdvp);
 
 	error = 0;
 

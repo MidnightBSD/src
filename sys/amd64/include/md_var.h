@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/amd64/include/md_var.h 243139 2012-11-16 07:07:00Z kib $
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -48,6 +48,7 @@ extern	u_int	amd_pminfo;
 extern	u_int	via_feature_rng;
 extern	u_int	via_feature_xcrypt;
 extern	u_int	cpu_clflush_line_size;
+extern	u_int	cpu_stdext_feature;
 extern	u_int	cpu_fxsr;
 extern	u_int	cpu_high;
 extern	u_int	cpu_id;
@@ -57,6 +58,7 @@ extern	u_int	cpu_procinfo;
 extern	u_int	cpu_procinfo2;
 extern	char	cpu_vendor[];
 extern	u_int	cpu_vendor_id;
+extern	char	ctx_switch_xsave[];
 extern	char	kstack[];
 extern	char	sigcode[];
 extern	int	szsigcode;

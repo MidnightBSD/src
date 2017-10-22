@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ufs/ufs/ufs_bmap.c 247053 2013-02-20 20:12:17Z pfg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -212,7 +212,6 @@ ufs_bmaparray(vp, bn, bnp, nbp, runp, runb)
 		if (bp)
 			bqrelse(bp);
 
-		ap->in_exists = 1;
 		bp = getblk(vp, metalbn, mp->mnt_stat.f_iosize, 0, 0, 0);
 		if ((bp->b_flags & B_CACHE) == 0) {
 #ifdef INVARIANTS
@@ -357,7 +356,6 @@ ufs_getlbns(vp, bn, ap, nump)
 	 */
 	ap->in_lbn = metalbn;
 	ap->in_off = off = NIADDR - i;
-	ap->in_exists = 0;
 	ap++;
 	for (++numlevels; i <= NIADDR; i++) {
 		/* If searching for a meta-data block, quit when found. */
@@ -370,7 +368,6 @@ ufs_getlbns(vp, bn, ap, nump)
 		++numlevels;
 		ap->in_lbn = metalbn;
 		ap->in_off = off;
-		ap->in_exists = 0;
 		++ap;
 
 		metalbn -= -1 + off * blockcnt;

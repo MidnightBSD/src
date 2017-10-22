@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/mips/gen/_ctx_start.S 209233 2010-06-16 14:13:36Z jchandra $");
 
 /*
  * XXX gp?

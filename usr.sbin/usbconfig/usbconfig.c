@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/usr.sbin/usbconfig/usbconfig.c 214271 2010-10-24 13:48:11Z hselasky $ */
 /*-
  * Copyright (c) 2008-2009 Hans Petter Selasky. All rights reserved.
  *

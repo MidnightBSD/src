@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  */
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/contrib/com_err/lex.l 178846 2008-05-08 11:01:46Z dfr $ */
 
 /*
  * This is to handle the definition of this symbol in some AIX

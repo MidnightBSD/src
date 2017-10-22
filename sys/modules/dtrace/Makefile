@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/dtrace/Makefile 243989 2012-12-07 19:06:40Z gnn $
 
 .include <bsd.own.mk>
 .include "Makefile.inc"
@@ -11,6 +11,7 @@ SUBDIR=		dtmalloc	\
 		dtrace_test	\
 		lockstat	\
 		profile		\
+		dtio		\
 		prototype	\
 		sdt		\
 		systrace

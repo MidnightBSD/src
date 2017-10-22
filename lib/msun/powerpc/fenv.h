@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/msun/powerpc/fenv.h 176530 2008-02-24 19:22:53Z raj $
  */
 
 #ifndef	_FENV_H_

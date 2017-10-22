@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cddl/compat/opensolaris/sys/dnlc.h 207937 2010-05-11 22:46:36Z pjd $
  */
 
 #ifndef _OPENSOLARIS_SYS_DNLC_H_

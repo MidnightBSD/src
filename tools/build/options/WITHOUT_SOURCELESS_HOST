@@ -1,2 +1,2 @@
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/tools/build/options/WITHOUT_SOURCELESS_HOST 231905 2012-02-19 07:44:38Z rmh $
 Set to not build kernel modules that include sourceless native code for host CPU.

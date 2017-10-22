@@ -24,7 +24,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/csu/powerpc64/crti.S 218824 2011-02-18 21:44:53Z nwhitehorn $");
 
 	.section .init,"ax",@progbits
 	.align	2

@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/cron 242153 2012-10-26 18:06:49Z obrien $
 #
 
 # PROVIDE: cron
-# REQUIRE: LOGIN cleanvar
+# REQUIRE: LOGIN FILESYSTEMS
 # BEFORE: securelevel
 # KEYWORD: shutdown
 

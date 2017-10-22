@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/usr.bin/binutils/libbfd/Makefile.ia64 218822 2011-02-18 20:54:12Z dim $
 
 DEFAULT_VECTOR=	bfd_elf64_ia64_freebsd_vec
 

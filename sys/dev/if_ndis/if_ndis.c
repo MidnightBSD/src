@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/if_ndis/if_ndis.c 248078 2013-03-09 00:39:54Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1175,7 +1175,7 @@ ndis_rxeof_eth(adapter, ctx, addr, hdr, hdrlen, lookahead, lookaheadlen, pktlen)
 
 	block = adapter;
 
-	m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+	m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (m == NULL)
 		return;
 
@@ -1419,7 +1419,7 @@ ndis_rxeof(adapter, packets, pktcnt)
 		} else {
 #ifdef notdef
 			if (p->np_oob.npo_status == NDIS_STATUS_RESOURCES) {
-				m = m_dup(m0, M_DONTWAIT);
+				m = m_dup(m0, M_NOWAIT);
 				/*
 				 * NOTE: we want to destroy the mbuf here, but
 				 * we don't actually want to return it to the
@@ -1437,7 +1437,7 @@ ndis_rxeof(adapter, packets, pktcnt)
 			} else
 				p->np_oob.npo_status = NDIS_STATUS_PENDING;
 #endif
-			m = m_dup(m0, M_DONTWAIT);
+			m = m_dup(m0, M_NOWAIT);
 			if (p->np_oob.npo_status == NDIS_STATUS_RESOURCES)
 				p->np_refcnt++;
 			else

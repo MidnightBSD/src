@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_btsocket_l2cap.c,v 1.16 2003/09/14 23:29:06 max Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/bluetooth/socket/ng_btsocket_l2cap.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #include <sys/param.h>
@@ -63,7 +63,7 @@
 
 /* MALLOC define */
 #ifdef NG_SEPARATE_MALLOC
-MALLOC_DEFINE(M_NETGRAPH_BTSOCKET_L2CAP, "netgraph_btsocks_l2cap",
+static MALLOC_DEFINE(M_NETGRAPH_BTSOCKET_L2CAP, "netgraph_btsocks_l2cap",
 		"Netgraph Bluetooth L2CAP sockets");
 #else
 #define M_NETGRAPH_BTSOCKET_L2CAP M_NETGRAPH
@@ -111,7 +111,7 @@ static int					ng_btsocket_l2cap_curpps;
 
 /* Sysctl tree */
 SYSCTL_DECL(_net_bluetooth_l2cap_sockets);
-SYSCTL_NODE(_net_bluetooth_l2cap_sockets, OID_AUTO, seq, CTLFLAG_RW,
+static SYSCTL_NODE(_net_bluetooth_l2cap_sockets, OID_AUTO, seq, CTLFLAG_RW,
 	0, "Bluetooth SEQPACKET L2CAP sockets family");
 SYSCTL_UINT(_net_bluetooth_l2cap_sockets_seq, OID_AUTO, debug_level,
 	CTLFLAG_RW,

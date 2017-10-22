@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Id: pdqvar.h,v 1.21 1997/03/21 21:16:04 thomas Exp
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/pdq/pdqvar.h 248078 2013-03-09 00:39:54Z marius $
  *
  */
 
@@ -214,9 +214,9 @@ typedef struct mbuf PDQ_OS_DATABUF_T;
 #ifndef PDQ_OS_DATABUF_ALLOC
 #define	PDQ_OS_DATABUF_ALLOC(pdq, b) do { \
     PDQ_OS_DATABUF_T *x_m0; \
-    MGETHDR(x_m0, M_DONTWAIT, MT_DATA); \
+    MGETHDR(x_m0, M_NOWAIT, MT_DATA); \
     if (x_m0 != NULL) { \
-	MCLGET(x_m0, M_DONTWAIT);	\
+	MCLGET(x_m0, M_NOWAIT);	\
 	if ((x_m0->m_flags & M_EXT) == 0) { \
 	    m_free(x_m0); \
 	    (b) = NULL; \

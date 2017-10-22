@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/hwpmc/hwpmc_tsc.h 184802 2008-11-09 17:37:54Z jkoshy $
  */
 
 #ifndef _DEV_HWPMC_TSC_H_

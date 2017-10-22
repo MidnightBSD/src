@@ -35,7 +35,7 @@
  *
  * Define the interface structure required by the disassembler.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/arm/include/disassem.h 208052 2010-05-14 00:00:19Z cognet $
  */
 
 #ifndef _MACHINE_DISASSEM_H_

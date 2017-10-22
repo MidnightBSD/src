@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/gnu/usr.bin/gdb/kgdb/trgt_ia64.c 205711 2010-03-26 19:41:40Z marcel $");
 
 #include <sys/types.h>
 #ifdef CROSS_DEBUGGER

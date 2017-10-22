@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/cpuctl/cpuctl.c 242860 2012-11-10 12:08:06Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -204,7 +204,7 @@ cpuctl_do_cpuid(int cpu, cpuctl_cpuid_args_t *data, struct thread *td)
 	oldcpu = td->td_oncpu;
 	is_bound = cpu_sched_is_bound(td);
 	set_cpu(cpu, td);
-	do_cpuid(data->level, data->data);
+	cpuid_count(data->level, 0, data->data);
 	restore_cpu(oldcpu, is_bound, td);
 	return (0);
 }

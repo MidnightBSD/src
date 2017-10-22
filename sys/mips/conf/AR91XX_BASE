@@ -7,7 +7,7 @@
 # override the default options (adding devices as needed) and adding
 # hints as needed (for example, the GPIO and LAN PHY.)
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/mips/conf/AR91XX_BASE 221753 2011-05-11 00:52:41Z gonzo $
 #
 
 machine         mips mipseb

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/ppp/lqr.c 242095 2012-10-25 20:45:57Z n_hibma $
  */
 
 #include <sys/param.h>
@@ -108,7 +108,8 @@ lqr_RecvEcho(struct fsm *fp, struct mbuf *bp)
        *      die as a result.
        */
     }
-    if (lqr.signature == SIGNATURE) {
+    if (lqr.signature == SIGNATURE
+	|| lqr.signature == lcp->want_magic) {			/* some implementations return the wrong magic */
       /* careful not to update lqm.echo.seq_recv with older values */
       if ((hdlc->lqm.echo.seq_recv > (u_int32_t)0 - 5 && lqr.sequence < 5) ||
           (hdlc->lqm.echo.seq_recv <= (u_int32_t)0 - 5 &&

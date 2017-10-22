@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/zfs/libzfs.h 242241 2012-10-28 16:10:03Z avg $
  */
 
 #ifndef _BOOT_LIBZFS_H_
@@ -53,12 +53,15 @@ struct zfs_boot_args
     uint32_t		reserved;
     uint64_t		pool;
     uint64_t		root;
+    uint64_t		primary_pool;
+    uint64_t		primary_vdev;
 };
 
 int	zfs_parsedev(struct zfs_devdesc *dev, const char *devspec,
 		     const char **path);
 char	*zfs_fmtdev(void *vdev);
 int	zfs_probe_dev(const char *devname, uint64_t *pool_guid);
+int	zfs_list(const char *name);
 
 extern struct devsw zfs_dev;
 extern struct fs_ops zfs_fsops;

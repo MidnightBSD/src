@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/msdosfs/msdosfstest-2.sh 145176 2005-04-17 00:56:38Z silby $
 # A really simple script to create a swap-backed msdosfs filesystem, then test to
 # make sure the case conversion issue described in msdosfs_lookup.c rev 1.46
 # is fixed.

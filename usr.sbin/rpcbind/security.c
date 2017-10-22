@@ -1,5 +1,5 @@
 /*	$NetBSD: security.c,v 1.5 2000/06/08 09:01:05 fvdl Exp $	*/
-/*	$FreeBSD$ */
+/*	$FreeBSD: stable/9/usr.sbin/rpcbind/security.c 107952 2002-12-16 22:24:26Z mbr $ */
 
 #include <sys/types.h>
 #include <sys/time.h>

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/digi/EPCX_PCI.fepos.h 145975 2005-05-06 20:53:34Z anholt $
  */
 
 static const u_char EPCX_PCI_fepos[] = {

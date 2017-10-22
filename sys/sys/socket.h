@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)socket.h	8.4 (Berkeley) 2/21/94
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/socket.h 247525 2013-03-01 03:04:57Z jhb $
  */
 
 #ifndef _SYS_SOCKET_H_
@@ -140,6 +140,15 @@ typedef	__uid_t		uid_t;
 #define	SO_USER_COOKIE	0x1015		/* user cookie (dummynet etc.) */
 #define	SO_PROTOCOL	0x1016		/* get socket protocol (Linux name) */
 #define	SO_PROTOTYPE	SO_PROTOCOL	/* alias for SO_PROTOCOL (SunOS name) */
+#endif
+
+/*
+ * Space reserved for new socket options added by third-party vendors.
+ * This range applies to all socket option levels.  New socket options
+ * in FreeBSD should always use an option value less than SO_VENDOR.
+ */
+#if __BSD_VISIBLE
+#define	SO_VENDOR	0x80000000
 #endif
 
 /*

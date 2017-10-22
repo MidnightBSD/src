@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libarchive/Makefile 229595 2012-01-05 12:52:05Z mm $
 .include <bsd.own.mk>
 
 LIBARCHIVEDIR=	${.CURDIR}/../../contrib/libarchive

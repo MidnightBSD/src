@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/pc98/pc98/machdep.c 243460 2012-11-23 15:42:25Z nyan $");
 
 #include "opt_apic.h"
 #include "opt_atalk.h"
@@ -54,6 +54,7 @@ __FBSDID("$FreeBSD$");
 #include "opt_mp_watchdog.h"
 #include "opt_npx.h"
 #include "opt_perfmon.h"
+#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -73,6 +74,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/linker.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/memrange.h>
 #include <sys/msgbuf.h>
 #include <sys/mutex.h>
 #include <sys/pcpu.h>
@@ -215,6 +217,8 @@ static struct trapframe proc0_tf;
 struct pcpu __pcpu[MAXCPU];
 
 struct mtx icu_lock;
+
+struct mem_range_softc mem_range_softc;
 
 static void
 cpu_startup(dummy)
@@ -404,7 +408,13 @@ osendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 	}
 
 	regs->tf_esp = (int)fp;
-	regs->tf_eip = PS_STRINGS - szosigcode;
+	if (p->p_sysent->sv_sigcode_base != 0) {
+		regs->tf_eip = p->p_sysent->sv_sigcode_base + szsigcode -
+		    szosigcode;
+	} else {
+		/* a.out sysentvec does not use shared page */
+		regs->tf_eip = p->p_sysent->sv_psstrings - szosigcode;
+	}
 	regs->tf_eflags &= ~(PSL_T | PSL_D);
 	regs->tf_cs = _ucodesel;
 	regs->tf_ds = _udatasel;
@@ -531,7 +541,8 @@ freebsd4_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 	}
 
 	regs->tf_esp = (int)sfp;
-	regs->tf_eip = PS_STRINGS - szfreebsd4_sigcode;
+	regs->tf_eip = p->p_sysent->sv_sigcode_base + szsigcode -
+	    szfreebsd4_sigcode;
 	regs->tf_eflags &= ~(PSL_T | PSL_D);
 	regs->tf_cs = _ucodesel;
 	regs->tf_ds = _udatasel;
@@ -682,7 +693,7 @@ sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 	}
 
 	regs->tf_esp = (int)sfp;
-	regs->tf_eip = PS_STRINGS - *(p->p_sysent->sv_szsigcode);
+	regs->tf_eip = p->p_sysent->sv_sigcode_base;
 	regs->tf_eflags &= ~(PSL_T | PSL_D);
 	regs->tf_cs = _ucodesel;
 	regs->tf_ds = _udatasel;
@@ -1204,7 +1215,7 @@ cpu_idle(int busy)
 
 	CTR2(KTR_SPARE2, "cpu_idle(%d) at %d",
 	    busy, curcpu);
-#ifdef MP_WATCHDOG
+#if defined(MP_WATCHDOG)
 	ap_watchdog(PCPU_GET(cpuid));
 #endif
 	/* If we are busy - try to use fast methods. */
@@ -1382,7 +1393,7 @@ exec_setregs(struct thread *td, struct image_params *imgp, u_long stack)
                 pcb->pcb_dr3 = 0;
                 pcb->pcb_dr6 = 0;
                 pcb->pcb_dr7 = 0;
-                if (pcb == PCPU_GET(curpcb)) {
+                if (pcb == curpcb) {
 		        /*
 			 * Clear the debug registers on the running
 			 * CPU, otherwise they will end up affecting
@@ -1740,7 +1751,11 @@ extern inthand_t
 	IDTVEC(bnd), IDTVEC(ill), IDTVEC(dna), IDTVEC(fpusegm),
 	IDTVEC(tss), IDTVEC(missing), IDTVEC(stk), IDTVEC(prot),
 	IDTVEC(page), IDTVEC(mchk), IDTVEC(rsvd), IDTVEC(fpu), IDTVEC(align),
-	IDTVEC(xmm), IDTVEC(lcall_syscall), IDTVEC(int0x80_syscall);
+	IDTVEC(xmm),
+#ifdef KDTRACE_HOOKS
+	IDTVEC(dtrace_ret),
+#endif
+	IDTVEC(lcall_syscall), IDTVEC(int0x80_syscall);
 
 #ifdef DDB
 /*
@@ -2120,6 +2135,8 @@ do_next:
 	for (off = 0; off < round_page(msgbufsize); off += PAGE_SIZE)
 		pmap_kenter((vm_offset_t)msgbufp + off, phys_avail[pa_indx] +
 		    off);
+
+	PT_UPDATES_FLUSH();
 }
 
 void
@@ -2259,6 +2276,10 @@ init386(first)
 	    GSEL(GCODE_SEL, SEL_KPL));
  	setidt(IDT_SYSCALL, &IDTVEC(int0x80_syscall), SDT_SYS386TGT, SEL_UPL,
 	    GSEL(GCODE_SEL, SEL_KPL));
+#ifdef KDTRACE_HOOKS
+	setidt(IDT_DTRACE_RET, &IDTVEC(dtrace_ret), SDT_SYS386TGT, SEL_UPL,
+	    GSEL(GCODE_SEL, SEL_KPL));
+#endif
 
 	r_idt.rd_limit = sizeof(idt0) - 1;
 	r_idt.rd_base = (int) idt;
@@ -2611,7 +2632,8 @@ int
 fill_fpregs(struct thread *td, struct fpreg *fpregs)
 {
 
-	KASSERT(td == curthread || TD_IS_SUSPENDED(td),
+	KASSERT(td == curthread || TD_IS_SUSPENDED(td) ||
+	    P_SHOULDSTOP(td->td_proc),
 	    ("not suspended thread %p", td));
 #ifdef DEV_NPX
 	npxgetregs(td);
@@ -2780,6 +2802,7 @@ static void
 fpstate_drop(struct thread *td)
 {
 
+	KASSERT(PCB_USER_FPU(td->td_pcb), ("fpstate_drop: kernel-owned fpu"));
 	critical_enter();
 #ifdef DEV_NPX
 	if (PCPU_GET(fpcurthread) == td)

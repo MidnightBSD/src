@@ -15,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/ath/ath_hal/ah_regdomain/ah_rd_domains.h 219442 2011-03-10 03:13:56Z adrian $
  */
 
 #ifndef	__AH_REGDOMAIN_DOMAINS_H__

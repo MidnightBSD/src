@@ -27,7 +27,7 @@
 
 /*
  * $Id$
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/geom/sched/gs_rr.c 248085 2013-03-09 02:36:32Z marius $
  *
  * A round-robin (RR) anticipatory scheduler, with per-client queues.
  *
@@ -198,7 +198,7 @@ static struct g_rr_params me = {
 struct g_rr_params *gs_rr_me = &me;
 
 SYSCTL_DECL(_kern_geom_sched);
-SYSCTL_NODE(_kern_geom_sched, OID_AUTO, rr, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_kern_geom_sched, OID_AUTO, rr, CTLFLAG_RW, 0,
     "GEOM_SCHED ROUND ROBIN stuff");
 SYSCTL_INT(_kern_geom_sched_rr, OID_AUTO, units, CTLFLAG_RD,
     &me.units, 0, "Scheduler instances");

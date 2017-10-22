@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/cddl/lib/drti/Makefile 228073 2011-11-28 15:09:31Z rwatson $
 
 .PATH:		${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libdtrace/common
 

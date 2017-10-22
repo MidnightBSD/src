@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/net/if_enc.c 248085 2013-03-09 02:36:32Z marius $
  */
 
 #include "opt_inet.h"
@@ -102,9 +102,9 @@ IFC_SIMPLE_DECLARE(enc, 1);
  * Before and after are relative to when we are stripping the
  * outer IP header.
  */
-SYSCTL_NODE(_net, OID_AUTO, enc, CTLFLAG_RW, 0, "enc sysctl");
+static SYSCTL_NODE(_net, OID_AUTO, enc, CTLFLAG_RW, 0, "enc sysctl");
 
-SYSCTL_NODE(_net_enc, OID_AUTO, in, CTLFLAG_RW, 0, "enc input sysctl");
+static SYSCTL_NODE(_net_enc, OID_AUTO, in, CTLFLAG_RW, 0, "enc input sysctl");
 static int ipsec_filter_mask_in = ENC_BEFORE;
 SYSCTL_INT(_net_enc_in, OID_AUTO, ipsec_filter_mask, CTLFLAG_RW,
 	&ipsec_filter_mask_in, 0, "IPsec input firewall filter mask");
@@ -112,7 +112,7 @@ static int ipsec_bpf_mask_in = ENC_BEFORE;
 SYSCTL_INT(_net_enc_in, OID_AUTO, ipsec_bpf_mask, CTLFLAG_RW,
 	&ipsec_bpf_mask_in, 0, "IPsec input bpf mask");
 
-SYSCTL_NODE(_net_enc, OID_AUTO, out, CTLFLAG_RW, 0, "enc output sysctl");
+static SYSCTL_NODE(_net_enc, OID_AUTO, out, CTLFLAG_RW, 0, "enc output sysctl");
 static int ipsec_filter_mask_out = ENC_BEFORE;
 SYSCTL_INT(_net_enc_out, OID_AUTO, ipsec_filter_mask, CTLFLAG_RW,
 	&ipsec_filter_mask_out, 0, "IPsec output firewall filter mask");
@@ -179,12 +179,12 @@ enc_modevent(module_t mod, int type, void *data)
 }
 
 static moduledata_t enc_mod = {
-	"enc",
+	"if_enc",
 	enc_modevent,
 	0
 };
 
-DECLARE_MODULE(enc, enc_mod, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_ANY);
+DECLARE_MODULE(if_enc, enc_mod, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_ANY);
 
 static int
 enc_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,

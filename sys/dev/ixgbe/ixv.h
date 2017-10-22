@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD$*/
+/*$FreeBSD: stable/9/sys/dev/ixgbe/ixv.h 235528 2012-05-17 00:06:54Z jfv $*/
 
 
 #ifndef _IXV_H_

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/ia64/ski/pal_stub.S 139738 2005-01-05 22:16:58Z imp $
  */
 
 #include <machine/asm.h>

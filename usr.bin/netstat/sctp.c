@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)sctp.c	0.1 (Berkeley) 4/18/2007";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/netstat/sctp.c 238613 2012-07-19 09:32:59Z tuexen $");
 
 #include <sys/param.h>
 #include <sys/queue.h>

@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/in6_cksum.c 238227 2012-07-08 10:29:01Z bz $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>

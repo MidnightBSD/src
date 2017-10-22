@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)pause.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/pause.c 204307 2010-02-25 13:51:11Z kib $");
 
 #include "namespace.h"
 #include <signal.h>

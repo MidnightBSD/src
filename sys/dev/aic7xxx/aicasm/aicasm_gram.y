@@ -40,7 +40,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_gram.y#29 $
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/aic7xxx/aicasm/aicasm_gram.y 243198 2012-11-17 23:34:10Z dim $
  */
 
 #include <sys/types.h>
@@ -1076,7 +1076,7 @@ conditional:
 		last_scope = TAILQ_LAST(&scope_context->inner_scope,
 					scope_tailq);
 		if (last_scope == NULL
-		 || last_scope->type == T_ELSE) {
+		 || last_scope->type == SCOPE_ELSE) {
 
 			stop("'else if' without leading 'if'", EX_DATAERR);
 			/* NOTREACHED */

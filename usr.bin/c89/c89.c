@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/c89/c89.c 248131 2013-03-10 15:01:06Z dim $");
 
 #include <err.h>
 #include <stdio.h>
@@ -72,7 +72,7 @@ main(int argc, char **argv)
 	Argv.a = malloc((argc + 1 + N_ARGS_PREPENDED) * sizeof *Argv.a);
 	if (Argv.a == NULL)
 		err(1, "malloc");
-	Argv.a[Argc++] = argv[0];
+	Argv.a[Argc++] = CC;
 	for (j = 0; j < N_ARGS_PREPENDED; ++j)
 		Argv.a[Argc++] = args_prepended[j];
 	while ((i = getopt(argc, argv, "cD:EgI:l:L:o:OsU:")) != -1) {

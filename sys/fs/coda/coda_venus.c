@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/fs/coda/coda_venus.c 210997 2010-08-07 08:08:14Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

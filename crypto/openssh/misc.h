@@ -1,5 +1,5 @@
-/* $OpenBSD: misc.h,v 1.47 2010/11/21 01:01:13 djm Exp $ */
-/* $FreeBSD$ */
+/* $OpenBSD: misc.h,v 1.48 2011/03/29 18:54:17 stevesk Exp $ */
+/* $FreeBSD: stable/9/crypto/openssh/misc.h 247485 2013-02-28 18:43:50Z des $ */
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -91,6 +91,7 @@ void bandwidth_limit_init(struct bwlimit *, u_int64_t, size_t);
 void bandwidth_limit(struct bwlimit *, size_t);
 
 int parse_ipqos(const char *);
+const char *iptos2str(int);
 void mktemp_proto(char *, size_t);
 
 /* readpass.c */

@@ -28,7 +28,7 @@
 #elif defined(HAVE_SYS_UTIME_H)
 #include <sys/utime.h>
 #endif
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/contrib/libarchive/cpio/test/test_option_a.c 229592 2012-01-05 12:06:54Z mm $");
 
 static struct {
 	const char *name;

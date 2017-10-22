@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/link/06.t 166065 2007-01-17 01:42:12Z pjd $
 
 desc="link returns EACCES when a component of either path prefix denies search permission"
 

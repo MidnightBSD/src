@@ -1,5 +1,5 @@
 /*	$NetBSD: queue.c,v 1.2 2011/02/16 01:31:33 joerg Exp $	*/
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/usr.bin/grep/queue.c 220422 2011-04-07 13:03:35Z gabor $	*/
 
 /*-
  * Copyright (c) 1999 James Howard and Dag-Erling Coïdan Smørgrav
@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/grep/queue.c 220422 2011-04-07 13:03:35Z gabor $");
 
 #include <sys/param.h>
 #include <sys/queue.h>

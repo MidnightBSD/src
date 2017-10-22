@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/test/malloc/Makefile 219511 2011-03-11 17:33:31Z brucec $
 PROG=	malloc
 SRCS=	main.c
 .PATH:	${.CURDIR}/../../../lib/libc/stdlib

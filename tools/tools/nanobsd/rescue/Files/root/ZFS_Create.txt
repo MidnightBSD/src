@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/nanobsd/rescue/Files/root/ZFS_Create.txt 219799 2011-03-20 13:01:57Z mr $
 
 Some remarks for setting up a zfs boot environment
 

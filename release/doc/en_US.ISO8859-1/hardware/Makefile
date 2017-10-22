@@ -1,7 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/release/doc/en_US.ISO8859-1/hardware/Makefile 241122 2012-10-02 06:37:46Z gabor $
 
 RELN_ROOT?= ${.CURDIR}/../..
-LANGCODE=	en_US.ISO8859-1
 
 .ifdef NO_LANGCODE_IN_DESTDIR
 DESTDIR?=	${DOCDIR}/hardware
@@ -17,9 +16,9 @@ INSTALL_ONLY_COMPRESSED?=
 JADEFLAGS+=	-V %generate-article-toc%
 
 # SGML content
-SRCS+=	article.sgml
+SRCS+=	article.xml
 SRCS+=	${DEV-AUTODIR}/catalog-auto
-SRCS+=	${DEV-AUTODIR}/dev-auto.sgml
+SRCS+=	${DEV-AUTODIR}/dev-auto.xml
 
 CATALOGS+=	-c ${DEV-AUTODIR}/catalog-auto
 

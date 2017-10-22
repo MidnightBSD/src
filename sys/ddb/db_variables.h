@@ -23,7 +23,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ddb/db_variables.h 195699 2009-07-14 22:48:30Z rwatson $
  */
 
 /*

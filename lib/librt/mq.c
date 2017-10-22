@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/librt/mq.c 213153 2010-09-25 01:57:47Z davidxu $
  */
 
 #include <sys/cdefs.h>

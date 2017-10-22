@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/subr_taskqueue.c 243850 2012-12-04 00:54:49Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -252,9 +252,13 @@ taskqueue_enqueue_timeout(struct taskqueue *queue,
 		} else {
 			queue->tq_callouts++;
 			timeout_task->f |= DT_CALLOUT_ARMED;
+			if (ticks < 0)
+				ticks = -ticks; /* Ignore overflow. */
 		}
-		callout_reset(&timeout_task->c, ticks, taskqueue_timeout_func,
-		    timeout_task);
+		if (ticks > 0) {
+			callout_reset(&timeout_task->c, ticks,
+			    taskqueue_timeout_func, timeout_task);
+		}
 	}
 	TQ_UNLOCK(queue);
 	return (res);
@@ -565,7 +569,7 @@ taskqueue_fast_run(void *dummy)
 }
 
 TASKQUEUE_FAST_DEFINE(fast, taskqueue_fast_enqueue, NULL,
-	swi_add(NULL, "Fast task queue", taskqueue_fast_run, NULL,
+	swi_add(NULL, "fast taskq", taskqueue_fast_run, NULL,
 	SWI_TQ_FAST, INTR_MPSAFE, &taskqueue_fast_ih));
 
 int

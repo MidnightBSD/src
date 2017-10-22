@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/sn/if_sn.c 248078 2013-03-09 00:39:54Z marius $");
 
 /*
  * This is a driver for SMC's 9000 series of Ethernet adapters.
@@ -1057,7 +1057,7 @@ read_another:
 	/*
 	 * Allocate a header mbuf from the kernel.
 	 */
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	MGETHDR(m, M_NOWAIT, MT_DATA);
 	if (m == NULL)
 		goto out;
 
@@ -1067,7 +1067,7 @@ read_another:
 	/*
 	 * Attach an mbuf cluster
 	 */
-	MCLGET(m, M_DONTWAIT);
+	MCLGET(m, M_NOWAIT);
 
 	/*
 	 * Insist on getting a cluster

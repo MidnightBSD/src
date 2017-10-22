@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_ethersubr.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/net/if_ethersubr.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #include "opt_atalk.h"
@@ -72,7 +72,7 @@
 #include <netinet/ip_carp.h>
 #include <netinet/ip_var.h>
 #include <netinet/ip_fw.h>
-#include <netinet/ipfw/ip_fw_private.h>
+#include <netpfil/ipfw/ip_fw_private.h>
 #endif
 #ifdef INET6
 #include <netinet6/nd6.h>
@@ -134,7 +134,7 @@ static	void ether_reassign(struct ifnet *, struct vnet *, char *);
 #endif
 
 /* XXX: should be in an arp support file, not here */
-MALLOC_DEFINE(M_ARPCOM, "arpcom", "802.* interface internals");
+static MALLOC_DEFINE(M_ARPCOM, "arpcom", "802.* interface internals");
 
 #define	ETHER_IS_BROADCAST(addr) \
 	(bcmp(etherbroadcastaddr, (addr), ETHER_ADDR_LEN) == 0)

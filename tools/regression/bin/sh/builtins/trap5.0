@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/bin/sh/builtins/trap5.0 217461 2011-01-15 21:09:00Z jilles $
 
 set -e
 trap - USR1

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libdisk/write_arm_disk.c 154814 2006-01-25 11:24:37Z cognet $");
 
 #include <stdio.h>
 #include <stdlib.h>

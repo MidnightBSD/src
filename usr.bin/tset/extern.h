@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/9/93
- *	$FreeBSD$
+ *	$FreeBSD: stable/9/usr.bin/tset/extern.h 216370 2010-12-11 08:32:16Z joel $
  */
 
 extern struct termios mode, oldmode;

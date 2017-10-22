@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/boot/i386/libi386/Makefile 243243 2012-11-18 17:09:29Z ae $
 #
 LIB=			i386
 INTERNALLIB=
@@ -37,10 +37,6 @@ CFLAGS+= -DSMBIOS_SERIAL_NUMBERS
 # Use little-endian UUID format as defined in SMBIOS 2.6.
 CFLAGS+= -DSMBIOS_LITTLE_ENDIAN_UUID
 .endif
-.endif
-
-.if !defined(LOADER_NO_GPT_SUPPORT)
-CFLAGS+=	-DLOADER_GPT_SUPPORT
 .endif
 
 # Include simple terminal emulation (cons25-compatible)

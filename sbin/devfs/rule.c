@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/devfs/rule.c 154053 2006-01-05 13:37:07Z maxim $");
 
 #include <sys/param.h>
 #include <sys/conf.h>

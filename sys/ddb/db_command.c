@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ddb/db_command.c 229254 2012-01-02 00:01:09Z kib $");
 
 #include <sys/param.h>
 #include <sys/linker_set.h>

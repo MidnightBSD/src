@@ -58,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/isa/isa_common.c 221526 2011-05-06 13:48:53Z jhb $");
 
 #include "opt_isa.h"
 

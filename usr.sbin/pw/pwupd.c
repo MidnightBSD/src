@@ -26,7 +26,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/usr.sbin/pw/pwupd.c 246280 2013-02-03 03:43:59Z eadler $";
 #endif /* not lint */
 
 #include <stdio.h>
@@ -53,12 +53,10 @@ setpwdir(const char * dir)
 {
 	if (dir == NULL)
 		return -1;
-	else {
-		char * d = malloc(strlen(dir)+1);
-		if (d == NULL)
-			return -1;
-		pwpath = strcpy(d, dir);
-	}
+	else
+		pwpath = strdup(dir);
+	if (pwpath == NULL)
+		return -1;
 	return 0;
 }
 

@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/9/contrib/xz/FREEBSD-Xlist 223935 2011-07-11 14:15:27Z mm $
 */*/*/Makefile.*
 */*/Makefile.*
 */.gitignore

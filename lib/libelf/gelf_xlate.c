@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libelf/gelf_xlate.c 164190 2006-11-11 17:16:35Z jkoshy $");
 
 #include <gelf.h>
 #include <libelf.h>

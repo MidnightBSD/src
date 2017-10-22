@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/hpfs/hpfs_vfsops.c 233120 2012-03-18 15:03:02Z kevlo $
  */
 
 

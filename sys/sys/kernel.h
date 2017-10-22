@@ -39,7 +39,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)kernel.h	8.3 (Berkeley) 1/21/94
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/kernel.h 247555 2013-03-01 17:10:43Z jhb $
  */
 
 #ifndef _SYS_KERNEL_H_
@@ -63,7 +63,7 @@ extern int psratio;			/* ratio: prof / stat */
 extern int stathz;			/* statistics clock's frequency */
 extern int profhz;			/* profiling clock's frequency */
 extern int profprocs;			/* number of process's profiling */
-extern int ticks;
+extern volatile int ticks;
 
 #endif /* _KERNEL */
 

@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/arm/at91/at91_mcireg.h 236084 2012-05-26 09:11:45Z marius $ */
 
 #ifndef ARM_AT91_AT91_MCIREG_H
 #define ARM_AT91_AT91_MCIREG_H

@@ -1,7 +1,7 @@
 /*
  * 16 Feb 93	Julian Elischer	(julian@dialix.oz.au)
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/cdio.h 141031 2005-01-30 08:12:37Z sobomax $
  */
 
 /*

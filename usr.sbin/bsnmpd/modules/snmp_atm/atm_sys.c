@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_atm/atm_sys.c 133391 2004-08-09 16:36:04Z harti $
  *
  * SNMP module for ATM hardware interfaces - FreeBSD/Ng specific part.
  */

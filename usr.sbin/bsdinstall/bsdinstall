@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/bsdinstall/bsdinstall 248237 2013-03-13 13:41:28Z nwhitehorn $
 
 : ${BSDINSTALL_LOG="/tmp/bsdinstall_log"}; export BSDINSTALL_LOG
 : ${BSDINSTALL_TMPETC="/tmp/bsdinstall_etc"}; export BSDINSTALL_TMPETC
@@ -32,13 +32,8 @@
 : ${BSDINSTALL_DISTDIR="/usr/freebsd-dist"}; export BSDINSTALL_DISTDIR
 : ${BSDINSTALL_CHROOT="/mnt"}; export BSDINSTALL_CHROOT
 
-VERB=$1; shift
+VERB=${1:-auto}; shift
 
-if [ -z $VERB ]; then
-	VERB=auto
-fi
-
-test -d "$BSDINSTALL_TMPETC" || mkdir "$BSDINSTALL_TMPETC"
-echo Running installation step: $VERB $@ >> "$BSDINSTALL_LOG"
-exec /usr/libexec/bsdinstall/$VERB $@ 2>>"$BSDINSTALL_LOG"
-
+[ -d "$BSDINSTALL_TMPETC" ] || mkdir -p "$BSDINSTALL_TMPETC"
+echo "Running installation step: $VERB $@" >> "$BSDINSTALL_LOG"
+exec "/usr/libexec/bsdinstall/$VERB" "$@" 2>> "$BSDINSTALL_LOG"

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/login.access 130151 2004-06-06 11:46:29Z schweikh $
 #
 # Login access control table.
 #

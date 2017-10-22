@@ -30,7 +30,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/adm5120/uart_dev_adm5120.h 202175 2010-01-12 21:36:08Z imp $
  */
 #ifndef	_ADMUART_H
 #define	_ADMUART_H

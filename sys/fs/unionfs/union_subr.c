@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)union_subr.c	8.20 (Berkeley) 5/20/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/unionfs/union_subr.c 244660 2012-12-24 13:29:22Z kib $
  */
 
 #include <sys/param.h>
@@ -954,7 +954,7 @@ unionfs_vn_create_on_upper(struct vnode **vpp, struct vnode *udvp,
 		vput(vp);
 		goto unionfs_vn_create_on_upper_free_out1;
 	}
-	vp->v_writecount++;
+	VOP_ADD_WRITECOUNT(vp, 1);
 	*vpp = vp;
 
 unionfs_vn_create_on_upper_free_out1:
@@ -1089,7 +1089,7 @@ unionfs_copyfile(struct unionfs_node *unp, int docopy, struct ucred *cred,
 		}
 	}
 	VOP_CLOSE(uvp, FWRITE, cred, td);
-	uvp->v_writecount--;
+	VOP_ADD_WRITECOUNT(uvp, -1);
 
 	vn_finished_write(mp);
 

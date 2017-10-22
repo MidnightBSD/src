@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_timewait.c 247658 2013-03-02 17:51:22Z flo $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -519,6 +519,7 @@ tcp_twrespond(struct tcptw *tw, int flags)
 	struct ip6_hdr *ip6 = NULL;
 	int isipv6 = inp->inp_inc.inc_flags & INC_ISIPV6;
 #endif
+	hdrlen = 0;                     /* Keep compiler happy */
 
 	INP_WLOCK_ASSERT(inp);
 

@@ -1,5 +1,5 @@
 /*	$NetBSD: lock_proc.c,v 1.7 2000/10/11 20:23:56 is Exp $	*/
-/*	$FreeBSD$ */
+/*	$FreeBSD: stable/9/usr.sbin/rpc.lockd/lock_proc.c 141217 2005-02-03 22:21:19Z kuriyama $ */
 /*
  * Copyright (c) 1995
  *	A.R. Gordon (andrew.gordon@net-tel.co.uk).  All rights reserved.

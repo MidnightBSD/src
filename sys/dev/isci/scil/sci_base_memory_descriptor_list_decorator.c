@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/isci/scil/sci_base_memory_descriptor_list_decorator.c 231689 2012-02-14 15:58:49Z jimharris $");
 
 /**
  * @file

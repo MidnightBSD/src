@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/crypt_client.c 229078 2011-12-31 12:52:18Z dim $");
 
 #include "namespace.h"
 #include <err.h>

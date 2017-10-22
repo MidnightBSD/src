@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/libkern/qsort.c 132228 2004-07-15 23:58:23Z glebius $");
 
 #include <sys/param.h>
 #include <sys/libkern.h>

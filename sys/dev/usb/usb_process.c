@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/usb_process.c 248085 2013-03-09 02:36:32Z marius $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -81,10 +81,9 @@ static int usb_pcount;
 #ifdef USB_DEBUG
 static int usb_proc_debug;
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, proc, CTLFLAG_RW, 0, "USB process");
-SYSCTL_INT(_hw_usb_proc, OID_AUTO, debug, CTLFLAG_RW, &usb_proc_debug, 0,
+static SYSCTL_NODE(_hw_usb, OID_AUTO, proc, CTLFLAG_RW, 0, "USB process");
+SYSCTL_INT(_hw_usb_proc, OID_AUTO, debug, CTLFLAG_RW | CTLFLAG_TUN, &usb_proc_debug, 0,
     "Debug level");
-
 TUNABLE_INT("hw.usb.proc.debug", &usb_proc_debug);
 #endif
 

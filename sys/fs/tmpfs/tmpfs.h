@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/tmpfs/tmpfs.h 242368 2012-10-30 17:24:26Z alfred $
  */
 
 #ifndef _FS_TMPFS_TMPFS_H_
@@ -387,6 +387,9 @@ struct tmpfs_mount {
 	 * tmpfs_pool.c. */
 	uma_zone_t		tm_dirent_pool;
 	uma_zone_t		tm_node_pool;
+
+	/* Read-only status. */
+	int			tm_ronly;
 };
 #define TMPFS_LOCK(tm) mtx_lock(&(tm)->allnode_lock)
 #define TMPFS_UNLOCK(tm) mtx_unlock(&(tm)->allnode_lock)

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/libiconv/Makefile 230196 2012-01-16 05:15:13Z kevlo $
 
 .PATH: ${.CURDIR}/../../libkern ${.CURDIR}/../../sys
 

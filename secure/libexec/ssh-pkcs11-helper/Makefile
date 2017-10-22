@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/secure/libexec/ssh-pkcs11-helper/Makefile 204948 2010-03-10 11:05:31Z des $
 
 PROG=	ssh-pkcs11-helper
 SRCS=	ssh-pkcs11.c ssh-pkcs11-helper.c

@@ -41,7 +41,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)bcd.c	8.2 (Berkeley) 3/20/94";
 #endif
 static const char rcsid[] =
- "$FreeBSD$";
+ "$FreeBSD: stable/9/games/bcd/bcd.c 242047 2012-10-25 03:20:00Z eadler $";
 #endif /* not lint */
 
 /*
@@ -128,9 +128,6 @@ int
 main(int argc, char **argv)
 {
 	char cardline[80];
-
-	/* revoke setgid privileges */
-	setgid(getgid());
 
 	/*
 	 * The original bcd prompts with a "%" when reading from stdin,

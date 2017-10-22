@@ -28,7 +28,7 @@
  *
  *	@(#)sysexits.h	8.1 (Berkeley) 6/2/93
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/include/sysexits.h 203964 2010-02-16 19:39:50Z imp $
  */
 
 #ifndef	_SYSEXITS_H_

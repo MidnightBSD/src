@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cddl/compat/opensolaris/sys/sdt.h 177698 2008-03-28 22:16:18Z jb $
  */
 
 #ifndef _OPENSOLARIS_SYS_SDT_H_

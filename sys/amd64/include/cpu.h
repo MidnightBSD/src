@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)cpu.h	5.4 (Berkeley) 5/9/91
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/amd64/include/cpu.h 219673 2011-03-15 17:19:52Z jkim $
  */
 
 #ifndef _MACHINE_CPU_H_

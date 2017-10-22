@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/pcpu.h 224221 2011-07-19 16:50:55Z attilio $
  */
 
 #ifndef _SYS_PCPU_H_

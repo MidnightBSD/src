@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/backend/installimage.sh 212350 2010-09-09 03:33:07Z imp $
 
 # Source our functions scripts
 . ${BACKEND}/functions.sh

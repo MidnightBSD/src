@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/hwpmc/Makefile 236238 2012-05-29 14:50:21Z fabient $
 #
 
 .PATH: ${.CURDIR}/../../dev/hwpmc

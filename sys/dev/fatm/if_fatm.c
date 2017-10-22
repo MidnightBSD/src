@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/fatm/if_fatm.c 248078 2013-03-09 00:39:54Z marius $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -1099,7 +1099,7 @@ fatm_supply_small_buffers(struct fatm_softc *sc)
 				if_printf(sc->ifp, "out of rbufs\n");
 				break;
 			}
-			MGETHDR(m, M_DONTWAIT, MT_DATA);
+			MGETHDR(m, M_NOWAIT, MT_DATA);
 			if (m == NULL) {
 				LIST_INSERT_HEAD(&sc->rbuf_free, rb, link);
 				break;
@@ -1189,7 +1189,7 @@ fatm_supply_large_buffers(struct fatm_softc *sc)
 				if_printf(sc->ifp, "out of rbufs\n");
 				break;
 			}
-			if ((m = m_getcl(M_DONTWAIT, MT_DATA,
+			if ((m = m_getcl(M_NOWAIT, MT_DATA,
 			    M_PKTHDR)) == NULL) {
 				LIST_INSERT_HEAD(&sc->rbuf_free, rb, link);
 				break;
@@ -1768,17 +1768,17 @@ copy_mbuf(struct mbuf *m)
 {
 	struct mbuf *new;
 
-	MGET(new, M_DONTWAIT, MT_DATA);
+	MGET(new, M_NOWAIT, MT_DATA);
 	if (new == NULL)
 		return (NULL);
 
 	if (m->m_flags & M_PKTHDR) {
 		M_MOVE_PKTHDR(new, m);
 		if (m->m_len > MHLEN)
-			MCLGET(new, M_WAIT);
+			MCLGET(new, M_WAITOK);
 	} else {
 		if (m->m_len > MLEN)
-			MCLGET(new, M_WAIT);
+			MCLGET(new, M_WAITOK);
 	}
 
 	bcopy(m->m_data, new->m_data, m->m_len);

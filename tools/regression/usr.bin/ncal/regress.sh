@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/usr.bin/ncal/regress.sh 205427 2010-03-21 21:33:21Z edwin $
 
 CAL_BIN="ncal"
 CAL="${CAL_BIN} -C"

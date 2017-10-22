@@ -30,7 +30,7 @@
 static char sccsid[] = "@(#)realpath.c	8.1 (Berkeley) 2/16/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/stdlib/realpath.c 240528 2012-09-15 02:52:19Z emaste $");
 
 #include "namespace.h"
 #include <sys/param.h>

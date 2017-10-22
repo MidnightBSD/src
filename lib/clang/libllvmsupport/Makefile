@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/clang/libllvmsupport/Makefile 235633 2012-05-18 21:49:11Z dim $
 
 .include <bsd.own.mk>
 

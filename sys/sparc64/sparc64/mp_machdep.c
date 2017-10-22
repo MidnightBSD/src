@@ -55,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/mp_machdep.c 241681 2012-10-18 12:06:26Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -112,8 +112,6 @@ struct	ipi_cache_args ipi_cache_args;
 struct	ipi_rd_args ipi_rd_args;
 struct	ipi_tlb_args ipi_tlb_args;
 struct	pcb stoppcbs[MAXCPU];
-
-struct	mtx ipi_mtx;
 
 cpu_ipi_selected_t *cpu_ipi_selected;
 cpu_ipi_single_t *cpu_ipi_single;
@@ -279,8 +277,6 @@ sun4u_startcpu(phandle_t cpu, void *func, u_long arg)
 void
 cpu_mp_start(void)
 {
-
-	mtx_init(&ipi_mtx, "ipi", NULL, MTX_SPIN);
 
 	intr_setup(PIL_AST, cpu_ipi_ast, -1, NULL, NULL);
 	intr_setup(PIL_RENDEZVOUS, (ih_func_t *)smp_rendezvous_action,
@@ -503,13 +499,13 @@ cpu_mp_shutdown(void)
 }
 
 static void
-cpu_ipi_ast(struct trapframe *tf)
+cpu_ipi_ast(struct trapframe *tf __unused)
 {
 
 }
 
 static void
-cpu_ipi_stop(struct trapframe *tf)
+cpu_ipi_stop(struct trapframe *tf __unused)
 {
 	u_int cpuid;
 

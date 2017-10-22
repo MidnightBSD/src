@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/mk/bsd.own.mk 248531 2013-03-19 20:00:34Z brooks $
 #
 # The include file <bsd.own.mk> set common variables for owner,
 # group, mode, and directories. Defaults are in brackets.
@@ -203,10 +203,18 @@ COMPRESS_EXT?=	.gz
 # regardless of user's setting).
 #
 .for var in \
+    CTF \
     INSTALLLIB \
     MAN \
     PROFILE
 .if defined(NO_${var})
+.if defined(WITH_${var})
+.warning unsetting WITH_${var}
+.undef WITH_${var}
+.if defined(WITH_${var})
+.error wtf
+.endif
+.endif
 WITHOUT_${var}=
 .endif
 .endfor
@@ -377,6 +385,7 @@ __DEFAULT_YES_OPTIONS = \
     OPENSSH \
     OPENSSL \
     PAM \
+    PC_SYSINSTALL \
     PF \
     PKGTOOLS \
     PMC \
@@ -415,11 +424,14 @@ __DEFAULT_NO_OPTIONS = \
     BIND_XML \
     CLANG_EXTRAS \
     CLANG_IS_CC \
+    CTF \
     HESIOD \
     ICONV \
     IDEA \
     LIBCPLUSPLUS \
+    NMTREE \
     OFED \
+    OPENSSH_NONE_CIPHER \
     SHARED_TOOLCHAIN
 
 #
@@ -437,9 +449,9 @@ __T=${MACHINE_ARCH}
 .endif
 # Clang is only for x86 and powerpc right now, by default.
 .if ${__T} == "amd64" || ${__T} == "i386" || ${__T:Mpowerpc*}
-__DEFAULT_YES_OPTIONS+=CLANG
+__DEFAULT_YES_OPTIONS+=CLANG CLANG_FULL
 .else
-__DEFAULT_NO_OPTIONS+=CLANG
+__DEFAULT_NO_OPTIONS+=CLANG CLANG_FULL
 .endif
 # FDT is needed only for arm and powerpc
 .if ${__T:Marm*} || ${__T:Mpowerpc*}
@@ -518,10 +530,7 @@ MK_SOURCELESS_UCODE:= no
 
 .if ${MK_CDDL} == "no"
 MK_ZFS:=	no
-.endif
-
-.if ${MK_CLANG} == "no"
-MK_CLANG_EXTRAS:= no
+MK_CTF:=	no
 .endif
 
 .if ${MK_CRYPT} == "no"
@@ -570,6 +579,8 @@ MK_GDB:=	no
 .endif
 
 .if ${MK_CLANG} == "no"
+MK_CLANG_EXTRAS:= no
+MK_CLANG_FULL:= no
 MK_CLANG_IS_CC:= no
 .endif
 
@@ -629,6 +640,14 @@ MK_${vv:H}:=	no
 MK_${vv:H}:=	${MK_${vv:T}}
 .endif
 .endfor
+
+.if ${MK_CTF} != "no"
+CTFCONVERT_CMD=	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.elif ${MAKE_VERSION} >= 9201210220
+CTFCONVERT_CMD=
+.else
+CTFCONVERT_CMD=	@:
+.endif 
 
 .endif # !_WITHOUT_SRCCONF
 

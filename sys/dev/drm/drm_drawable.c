@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/drm_drawable.c 183834 2008-10-13 18:06:33Z rnoland $");
 
 /** @file drm_drawable.c
  * This file implements ioctls to store information along with DRM drawables,

@@ -43,7 +43,7 @@
  */
  
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/cpufunc_asm.S 142570 2005-02-26 18:59:01Z cognet $");
 
 	.text
 	.align	0

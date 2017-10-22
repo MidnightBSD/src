@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/lindev/lindev.c 197518 2009-09-26 12:45:28Z bz $");
 
 #include <sys/param.h>
 #include <sys/conf.h>

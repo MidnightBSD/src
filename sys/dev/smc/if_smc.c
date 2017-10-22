@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/smc/if_smc.c 248078 2013-03-09 00:39:54Z marius $");
 
 /*
  * Driver for SMSC LAN91C111, may work for older variants.
@@ -688,11 +688,11 @@ smc_task_rx(void *context, int pending)
 		/*
 		 * Grab an mbuf and attach a cluster.
 		 */
-		MGETHDR(m, M_DONTWAIT, MT_DATA);
+		MGETHDR(m, M_NOWAIT, MT_DATA);
 		if (m == NULL) {
 			break;
 		}
-		MCLGET(m, M_DONTWAIT);
+		MCLGET(m, M_NOWAIT);
 		if ((m->m_flags & M_EXT) == 0) {
 			m_freem(m);
 			break;

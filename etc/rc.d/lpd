@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/lpd 231653 2012-02-14 10:16:56Z dougb $
 #
 
 # PROVIDE: lpd

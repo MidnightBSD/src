@@ -1,0 +1,4 @@
+.\" $FreeBSD: stable/9/tools/build/options/WITH_CTF 246322 2013-02-04 16:13:55Z des $
+Set to compile with CTF (Compact C Type Format) data.
+CTF data encapsulates a reduced form of debugging information
+similar to DWARF and the venerable stabs and is required for DTrace.

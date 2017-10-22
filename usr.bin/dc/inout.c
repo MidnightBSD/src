@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/dc/inout.c 203443 2010-02-03 21:06:13Z gabor $");
 
 #include <openssl/ssl.h>
 #include <ctype.h>

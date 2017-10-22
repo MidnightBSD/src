@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/obio.c 212843 2010-09-19 09:18:27Z jmallett $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

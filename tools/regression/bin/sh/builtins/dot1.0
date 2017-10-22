@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/bin/sh/builtins/dot1.0 208629 2010-05-28 22:08:34Z jilles $
 
 failures=
 failure() {

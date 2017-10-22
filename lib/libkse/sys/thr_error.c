@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libkse/sys/thr_error.c 174689 2007-12-16 23:29:57Z deischen $
  */
 #include <errno.h>
 #include <pthread.h>

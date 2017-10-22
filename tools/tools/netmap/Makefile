@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/netmap/Makefile 231650 2012-02-14 09:42:02Z luigi $
 #
 # For multiple programs using a single source file each,
 # we can just define 'progs' and create custom targets.

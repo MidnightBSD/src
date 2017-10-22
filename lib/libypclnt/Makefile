@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libypclnt/Makefile 231702 2012-02-14 19:36:35Z dim $
 
 LIB=	ypclnt
 SHLIB_MAJOR= 4

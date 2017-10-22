@@ -44,7 +44,7 @@
  * from: scsi.c,v 1.17 1998/01/12 07:57:57 charnier Exp $";
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/ctladm/util.c 229997 2012-01-12 00:34:33Z ken $");
 
 #include <sys/stdint.h>
 #include <sys/types.h>

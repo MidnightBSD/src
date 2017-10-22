@@ -1,6 +1,6 @@
 # Espan~ol (backward compatible with ASCII)
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/share/colldef/ca_ES.ISO8859-15.src 108428 2002-12-30 09:09:58Z ache $
 #
 charmap map.ISO8859-15
 order \

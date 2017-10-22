@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/link/09.t 166065 2007-01-17 01:42:12Z pjd $
 
 desc="link returns ENOENT if the source file does not exist"
 

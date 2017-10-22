@@ -7,7 +7,7 @@
 #
 # Usage: make-memstick.sh <directory tree> <image filename>
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/release/powerpc/make-memstick.sh 224504 2011-07-30 00:51:36Z nwhitehorn $
 #
 
 PATH=/bin:/usr/bin:/sbin:/usr/sbin

@@ -28,7 +28,7 @@
  *
  * Textual conventions for OctetStrings
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmptc.c 216295 2010-12-08 14:30:25Z syrinx $
  */
 
 #include <sys/param.h> 

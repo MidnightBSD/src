@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/nanobsd/rescue/common 219760 2011-03-18 22:56:53Z mr $
 #
 NANO_TOOLS=`pwd`
 NANO_PACKAGE_DIR=`pwd`/Pkg

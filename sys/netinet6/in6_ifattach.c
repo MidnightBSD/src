@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/in6_ifattach.c 233200 2012-03-19 20:49:16Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -27,7 +27,7 @@
  * Portions Copyright (c) 1999 Whistle Communications, Inc.
  * (ng_bpf by Archie Cobbs <archie@freebsd.org>)
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_tag.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 /*
@@ -69,7 +69,7 @@
 #include <netgraph/ng_tag.h>
 
 #ifdef NG_SEPARATE_MALLOC
-MALLOC_DEFINE(M_NETGRAPH_TAG, "netgraph_tag", "netgraph tag node ");
+static MALLOC_DEFINE(M_NETGRAPH_TAG, "netgraph_tag", "netgraph tag node");
 #else
 #define M_NETGRAPH_TAG M_NETGRAPH
 #endif

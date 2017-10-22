@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libstand/ext2fs.c 136093 2004-10-03 15:58:20Z stefanf $");
 
 /*-
  * Copyright (c) 1993

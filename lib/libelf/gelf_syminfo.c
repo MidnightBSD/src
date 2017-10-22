@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libelf/gelf_syminfo.c 165317 2006-12-18 05:40:01Z jkoshy $");
 
 #include <sys/limits.h>
 

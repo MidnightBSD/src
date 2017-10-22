@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/msun/i387/fenv.h 203441 2010-02-03 20:23:47Z kib $
  */
 
 #ifndef	_FENV_H_

@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/i386/libi386/spinconsole.c 199857 2009-11-27 04:00:52Z sobomax $");
 
 #include <stand.h>
 #include <bootstrap.h>

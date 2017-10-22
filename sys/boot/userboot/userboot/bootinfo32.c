@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/userboot/userboot/bootinfo32.c 243243 2012-11-18 17:09:29Z ae $");
 
 #include <stand.h>
 #include <sys/param.h>
@@ -143,7 +143,7 @@ bi_load32(char *args, int *howtop, int *bootdevp, vm_offset_t *bip, vm_offset_t 
     vm_offset_t			size;
     vm_offset_t			ssym, esym;
     char			*rootdevname;
-    int				bootdevnr, i, howto;
+    int				bootdevnr, howto;
     char			*kernelname;
     const char			*kernelpath;
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/ath/ath_hal/ar9002/ar9285_phy.c 222323 2011-05-26 20:17:59Z adrian $
  */
 #include "opt_ah.h"
 

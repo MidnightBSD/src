@@ -9,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/ministat/ministat.c 244279 2012-12-15 21:57:34Z eadler $");
 
 #include <stdio.h>
 #include <math.h>
@@ -509,7 +509,7 @@ usage(char const *whine)
 
 	fprintf(stderr, "%s\n", whine);
 	fprintf(stderr,
-	    "Usage: ministat [-C column] [-c confidence] [-d delimiter(s)] [-ns] [-w width] [file [file ...]]\n");
+	    "Usage: ministat [-C column] [-c confidence] [-d delimiter(s)] [-Ans] [-w width] [file [file ...]]\n");
 	fprintf(stderr, "\tconfidence = {");
 	for (i = 0; i < NCONF; i++) {
 		fprintf(stderr, "%s%g%%",
@@ -517,6 +517,7 @@ usage(char const *whine)
 		    studentpct[i]);
 	}
 	fprintf(stderr, "}\n");
+	fprintf(stderr, "\t-A : print statistics only. suppress the graph.\n");
 	fprintf(stderr, "\t-C : column number to extract (starts and defaults to 1)\n");
 	fprintf(stderr, "\t-d : delimiter(s) string, default to \" \\t\"\n");
 	fprintf(stderr, "\t-n : print summary statistics only, no graph/test\n");
@@ -538,6 +539,7 @@ main(int argc, char **argv)
 	int flag_s = 0;
 	int flag_n = 0;
 	int termwidth = 74;
+	int suppress_plot = 0;
 
 	if (isatty(STDOUT_FILENO)) {
 		struct winsize wsz;
@@ -550,8 +552,11 @@ main(int argc, char **argv)
 	}
 
 	ci = -1;
-	while ((c = getopt(argc, argv, "C:c:d:snw:")) != -1)
+	while ((c = getopt(argc, argv, "AC:c:d:snw:")) != -1)
 		switch (c) {
+		case 'A':
+			suppress_plot = 1;
+			break;
 		case 'C':
 			column = strtol(optarg, &p, 10);
 			if (p != NULL && *p != '\0')
@@ -610,7 +615,7 @@ main(int argc, char **argv)
 	for (i = 0; i < nds; i++) 
 		printf("%c %s\n", symbol[i+1], ds[i]->name);
 
-	if (!flag_n) {
+	if (!flag_n && !suppress_plot) {
 		SetupPlot(termwidth, flag_s, nds);
 		for (i = 0; i < nds; i++)
 			DimPlot(ds[i]);

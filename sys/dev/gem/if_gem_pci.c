@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/gem/if_gem_pci.c 242908 2012-11-12 07:34:05Z dim $");
 
 /*
  * PCI bindings for Apple GMAC, Sun ERI and Sun GEM Ethernet controllers
@@ -104,7 +104,7 @@ static const struct gem_pci_dev {
 	uint32_t	gpd_devid;
 	int		gpd_variant;
 	const char	*gpd_desc;
-} const gem_pci_devlist[] = {
+} gem_pci_devlist[] = {
 	{ 0x1101108e, GEM_SUN_ERI,	"Sun ERI 10/100 Ethernet" },
 	{ 0x2bad108e, GEM_SUN_GEM,	"Sun GEM Gigabit Ethernet" },
 	{ 0x0021106b, GEM_APPLE_GMAC,	"Apple UniNorth GMAC Ethernet" },

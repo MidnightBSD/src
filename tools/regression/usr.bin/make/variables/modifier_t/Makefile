@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/usr.bin/make/variables/modifier_t/Makefile 236977 2012-06-12 23:16:00Z obrien $
 #
 # Test the t modifier.
 #

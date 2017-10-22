@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/sa/db.c 229242 2012-01-01 23:41:31Z dim $");
 
 #include <sys/types.h>
 #include <sys/acct.h>

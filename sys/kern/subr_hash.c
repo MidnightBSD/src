@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/subr_hash.c 231587 2012-02-13 15:21:12Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

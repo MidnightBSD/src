@@ -63,7 +63,7 @@
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/rpc/rpcsec_gss/rpcsec_gss.c 195246 2009-07-01 16:42:03Z rmacklem $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

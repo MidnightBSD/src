@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/examples/ipfilter/Makefile 156190 2006-03-01 22:59:00Z ru $
 
 FILES=	README
 

@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/cx/if_cx.c 248078 2013-03-09 00:39:54Z marius $");
 
 #include <sys/param.h>
 
@@ -252,13 +252,13 @@ static struct mbuf *makembuf (void *buf, u_int len)
 {
 	struct mbuf *m, *o, *p;
 
-	MGETHDR (m, M_DONTWAIT, MT_DATA);
+	MGETHDR (m, M_NOWAIT, MT_DATA);
 
 	if (! m)
 		return 0;
 
 	if (len >= MINCLSIZE)
-		MCLGET (m, M_DONTWAIT);
+		MCLGET (m, M_NOWAIT);
 
 	m->m_pkthdr.len = len;
 	m->m_len = 0;
@@ -271,13 +271,13 @@ static struct mbuf *makembuf (void *buf, u_int len)
 		if (! n) {
 			/* Allocate new mbuf. */
 			o = p;
-			MGET (p, M_DONTWAIT, MT_DATA);
+			MGET (p, M_NOWAIT, MT_DATA);
 			if (! p) {
 				m_freem (m);
 				return 0;
 			}
 			if (len >= MINCLSIZE)
-				MCLGET (p, M_DONTWAIT);
+				MCLGET (p, M_NOWAIT);
 			p->m_len = 0;
 			o->m_next = p;
 

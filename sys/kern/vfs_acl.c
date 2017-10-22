@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/vfs_acl.c 246757 2013-02-13 10:16:58Z pluknet $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -247,7 +247,7 @@ vacl_get_acl(struct thread *td, struct vnode *vp, acl_type_t type,
 	struct acl *inkernelacl;
 	int error;
 
-	inkernelacl = acl_alloc(M_WAITOK);
+	inkernelacl = acl_alloc(M_WAITOK | M_ZERO);
 	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 #ifdef MAC
 	error = mac_vnode_check_getacl(td->td_ucred, vp, type);

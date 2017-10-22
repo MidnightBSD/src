@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_shutdown.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_ddb.h"
 #include "opt_kdb.h"
@@ -126,7 +126,8 @@ SYSCTL_INT(_kern, OID_AUTO, stop_scheduler_on_panic, CTLFLAG_RW | CTLFLAG_TUN,
     &stop_scheduler_on_panic, 0, "stop scheduler upon entering panic");
 TUNABLE_INT("kern.stop_scheduler_on_panic", &stop_scheduler_on_panic);
 
-SYSCTL_NODE(_kern, OID_AUTO, shutdown, CTLFLAG_RW, 0, "Shutdown environment");
+static SYSCTL_NODE(_kern, OID_AUTO, shutdown, CTLFLAG_RW, 0,
+    "Shutdown environment");
 
 #ifndef DIAGNOSTIC
 static int show_busybufs;
@@ -148,7 +149,7 @@ static struct dumperinfo dumper;	/* our selected dumper */
 
 /* Context information for dump-debuggers. */
 static struct pcb dumppcb;		/* Registers. */
-static lwpid_t dumptid;			/* Thread ID. */
+lwpid_t dumptid;			/* Thread ID. */
 
 static void poweroff_wait(void *, int);
 static void shutdown_halt(void *junk, int howto);

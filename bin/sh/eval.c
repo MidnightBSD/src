@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)eval.c	8.9 (Berkeley) 6/8/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/sh/eval.c 249242 2013-04-07 21:25:14Z jilles $");
 
 #include <paths.h>
 #include <signal.h>
@@ -905,6 +905,15 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 			mode = FORK_NOJOB;
 			if (pipe(pip) < 0)
 				error("Pipe call failed: %s", strerror(errno));
+		}
+		if (cmdentry.cmdtype == CMDNORMAL &&
+		    cmd->ncmd.redirect == NULL &&
+		    varlist.list == NULL &&
+		    (mode == FORK_FG || mode == FORK_NOJOB) &&
+		    !disvforkset() && !iflag && !mflag) {
+			vforkexecshell(jp, argv, environment(), path,
+			    cmdentry.u.index, flags & EV_BACKCMD ? pip : NULL);
+			goto parent;
 		}
 		if (forkshell(jp, cmd, mode) != 0)
 			goto parent;	/* at end of routine */

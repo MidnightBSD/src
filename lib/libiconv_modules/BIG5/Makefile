@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libiconv_modules/BIG5/Makefile 219019 2011-02-25 00:04:39Z gabor $
 
 SHLIB=	BIG5
 SRCS+=	citrus_big5.c

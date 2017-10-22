@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/padlock/Makefile 167771 2007-03-21 17:37:13Z sam $
 
 .PATH: ${.CURDIR}/../../crypto/via
 

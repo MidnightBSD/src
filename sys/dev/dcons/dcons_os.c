@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/dcons/dcons_os.c 248085 2013-03-09 02:36:32Z marius $
  */
 
 #include <sys/param.h>
@@ -93,7 +93,7 @@ static int poll_hz = DCONS_POLL_HZ;
 
 static struct dcons_softc sc[DCONS_NPORT];
 
-SYSCTL_NODE(_kern, OID_AUTO, dcons, CTLFLAG_RD, 0, "Dumb Console");
+static SYSCTL_NODE(_kern, OID_AUTO, dcons, CTLFLAG_RD, 0, "Dumb Console");
 SYSCTL_INT(_kern_dcons, OID_AUTO, poll_hz, CTLFLAG_RW, &poll_hz, 0,
 				"dcons polling rate");
 

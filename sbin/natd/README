@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/natd/README 109727 2003-01-23 08:35:21Z ru $
 
 	A Network Address Translation Daemon for FreeBSD
 

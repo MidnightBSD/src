@@ -31,7 +31,7 @@
  *
  *	@(#)el.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: el.h,v 1.17 2006/12/15 22:13:33 christos Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libedit/el.h 239589 2012-08-22 20:06:59Z pfg $
  */
 
 /*
@@ -115,6 +115,7 @@ struct editline {
 	FILE		 *el_errfile;	/* Stdio stuff			*/
 	int		  el_infd;	/* Input file descriptor	*/
 	int		  el_flags;	/* Various flags.		*/
+	int		  el_errno;	/* Local copy of errno		*/
 	coord_t		  el_cursor;	/* Cursor location		*/
 	char		**el_display;	/* Real screen image = what is there */
 	char		**el_vdisplay;	/* Virtual screen image = what we see */

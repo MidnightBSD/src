@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ia64/include/fpu.h 138674 2004-12-11 06:15:12Z marcel $
  */
 
 #ifndef _MACHINE_FPU_H_

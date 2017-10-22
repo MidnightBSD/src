@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/nwfs/nwfs_ioctl.c 206361 2010-04-07 16:50:38Z joel $
  */
 #include <sys/param.h>
 #include <sys/systm.h>

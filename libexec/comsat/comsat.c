@@ -42,7 +42,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)comsat.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/libexec/comsat/comsat.c 222825 2011-06-07 16:23:27Z jh $";
 #endif /* not lint */
 
 #include <sys/param.h>

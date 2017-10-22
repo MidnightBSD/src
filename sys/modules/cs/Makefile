@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/cs/Makefile 134745 2004-09-04 03:32:15Z imp $
 
 .PATH: ${.CURDIR}/../../dev/cs
 

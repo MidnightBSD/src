@@ -1,5 +1,5 @@
 #       @(#)Makefile    8.1 (Berkeley) 6/5/93
-# $FreeBSD$
+# $FreeBSD: stable/9/share/info/Makefile 248353 2013-03-15 21:45:49Z brooks $
 
 NO_OBJ=
 
@@ -17,6 +17,6 @@ beforeinstall:
 	@exit 3;
 .endif
 .if !exists(${DESTDIR}${INFODIR}/dir)
-	${INSTALL} -o ${INFOOWN} -g ${INFOGRP} -m ${INFOMODE} \
+	${INSTALL} -o ${INFOOWN} -g ${INFOGRP} -m 644 \
 		 dir-tmpl ${DESTDIR}${INFODIR}/dir
 .endif

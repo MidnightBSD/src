@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/clang/llvm-link/Makefile 245431 2013-01-14 19:51:26Z dim $
 
 PROG_CXX=llvm-link
 
@@ -13,6 +13,7 @@ LIBDEPS=llvmasmparser \
 	llvmanalysis \
 	llvmtarget \
 	llvmmc \
+	llvmobject \
 	llvmarchive \
 	llvmbitreader \
 	llvmcore \

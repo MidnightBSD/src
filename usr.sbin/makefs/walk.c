@@ -37,7 +37,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/makefs/walk.c 248293 2013-03-14 22:57:27Z brooks $");
 
 #include <sys/param.h>
 
@@ -59,7 +59,6 @@ static	void	 apply_specdir(const char *, NODE *, fsnode *, int);
 static	void	 apply_specentry(const char *, NODE *, fsnode *);
 static	fsnode	*create_fsnode(const char *, const char *, const char *,
 			       struct stat *);
-static	fsinode	*link_check(fsinode *);
 
 
 /*
@@ -236,7 +235,7 @@ create_fsnode(const char *root, const char *path, const char *name,
 /*
  * free_fsnodes --
  *	Removes node from tree and frees it and all of
- *   its decendents.
+ *   its descendants.
  */
 void
 free_fsnodes(fsnode *node)
@@ -644,7 +643,7 @@ inode_type(mode_t mode)
 /* This was borrowed from du.c and tweaked to keep an fsnode 
  * pointer instead. -- dbj@netbsd.org
  */
-static fsinode *
+fsinode *
 link_check(fsinode *entry)
 {
 	static struct entry {

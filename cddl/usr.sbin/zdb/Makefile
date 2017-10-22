@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/cddl/usr.sbin/zdb/Makefile 243674 2012-11-29 14:05:04Z mm $
 
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/cmd/zdb
 
@@ -23,9 +23,11 @@ CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/common/zfs
 CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/head
 CFLAGS+= -I${.CURDIR}/../../lib/libumem
 
-DPADD=	${LIBAVL} ${LIBGEOM} ${LIBM} ${LIBNVPAIR} ${LIBPTHREAD} ${LIBUMEM} \
-	${LIBUUTIL} ${LIBZ} ${LIBZFS} ${LIBZPOOL}
-LDADD=	-lavl -lgeom -lm -lnvpair -lpthread -lumem -luutil -lz -lzfs -lzpool
+DPADD=	${LIBGEOM} ${LIBM} ${LIBNVPAIR} ${LIBPTHREAD} ${LIBUMEM} \
+	${LIBUUTIL} ${LIBZFS} ${LIBZPOOL}
+LDADD=	-lgeom -lm -lnvpair -lpthread -lumem -luutil -lzfs -lzpool
 
+CFLAGS+=	-DDEBUG=1
+#DEBUG_FLAGS+=	-g
 
 .include <bsd.prog.mk>

@@ -8,7 +8,7 @@
   * 
   * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
   *
-  * $FreeBSD$
+  * $FreeBSD: stable/9/contrib/tcp_wrappers/rfc931.c 63152 2000-07-14 15:07:37Z dwmalone $
   */
 
 #ifndef lint

@@ -22,7 +22,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/gnu/lib/libodialog/dialog.h 171951 2007-08-24 16:26:24Z ache $
  *
  */
 

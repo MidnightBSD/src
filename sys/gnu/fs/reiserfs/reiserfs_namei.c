@@ -4,7 +4,7 @@
  * 
  * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
  * 
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/gnu/fs/reiserfs/reiserfs_namei.c 175294 2008-01-13 14:44:15Z attilio $
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>

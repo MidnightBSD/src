@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/bsdinstall/scripts/services 248237 2013-03-13 13:41:28Z nwhitehorn $
 
 : ${DIALOG_OK=0}
 
@@ -45,7 +45,7 @@ DAEMONS=$(dialog --backtitle "FreeBSD Installer" \
 	sshd	"Secure shell daemon" ${sshd_enable:-off} \
 	moused	"PS/2 mouse pointer on console" ${moused_enable:-off} \
 	ntpd	"Synchronize system and network time" ${ntpd_enable:-off} \
-	powerd	"Adjust CPU frequency dynamically" ${powerd_enable:-off} \
+	powerd	"Adjust CPU frequency dynamically if supported" ${powerd_enable:-off} \
 2>&1 1>&3)
 exec 3>&-
 

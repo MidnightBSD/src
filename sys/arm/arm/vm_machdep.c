@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/vm_machdep.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -526,7 +526,7 @@ extern uma_zone_t l2zone;
 
 struct mtx smallalloc_mtx;
 
-MALLOC_DEFINE(M_VMSMALLALLOC, "vm_small_alloc", "VM Small alloc data");
+static MALLOC_DEFINE(M_VMSMALLALLOC, "vm_small_alloc", "VM Small alloc data");
 
 vm_offset_t alloc_firstaddr;
 

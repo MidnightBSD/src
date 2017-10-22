@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/powermac/atibl.c 239929 2012-08-30 23:54:49Z jhibbits $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -98,7 +98,7 @@ atibl_probe(device_t dev)
 
 	handle = OF_finddevice("mac-io/backlight");
 
-	if (handle <= 0)
+	if (handle == -1)
 		return (ENXIO);
 
 	if (OF_getprop(handle, "backlight-control", &control, sizeof(control)) < 0)
@@ -107,7 +107,7 @@ atibl_probe(device_t dev)
 	if (strcmp(control, "ati") != 0)
 		return (ENXIO);
 
-	device_set_desc(dev, "PowerBook backlight");
+	device_set_desc(dev, "PowerBook backlight for ATI graphics");
 
 	return (0);
 }

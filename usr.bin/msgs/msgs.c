@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)msgs.c	8.2 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/msgs/msgs.c 242166 2012-10-27 01:20:48Z eadler $");
 
 /*
  * msgs - a user bulletin board program
@@ -175,7 +175,8 @@ main(int argc, char *argv[])
 	setlocale(LC_ALL, "");
 
 	time(&t);
-	setuid(uid = getuid());
+	if (setuid(uid = getuid()) != 0)
+		err(1, "setuid failed");
 	ruptible = (signal(SIGINT, SIG_IGN) == SIG_DFL);
 	if (ruptible)
 		signal(SIGINT, SIG_DFL);

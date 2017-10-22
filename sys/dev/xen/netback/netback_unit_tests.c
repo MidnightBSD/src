@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/xen/netback/netback_unit_tests.c 243068 2012-11-15 07:48:44Z dim $");
 
 /**
  * \file netback_unit_tests.c
@@ -58,8 +58,8 @@ __FBSDID("$FreeBSD$");
 #define	TOSTRING(x) STRINGIFY(x)
 
 /**
- * Writes an error message to buffer if cond is false, and returns true
- * iff the assertion failed.  Note the implied parameters buffer and
+ * Writes an error message to buffer if cond is false
+ * Note the implied parameters buffer and
  * buflen
  */
 #define	XNB_ASSERT(cond) ({						\
@@ -71,7 +71,7 @@ __FBSDID("$FreeBSD$");
 		strlcat(_buffer, ":" TOSTRING(__LINE__) 		\
 		  " Assertion Error: " #cond "\n", _buflen);		\
 	}								\
- ! passed; })
+	})
 
 
 /**

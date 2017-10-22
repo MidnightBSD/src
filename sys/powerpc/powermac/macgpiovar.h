@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/powermac/macgpiovar.h 185757 2008-12-08 03:00:45Z nwhitehorn $
  */
 
 #ifndef _MACIO_MACGPIOVAR_H_

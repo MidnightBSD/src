@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/Makefile 247544 2013-03-01 10:33:31Z des $
 
 .include <bsd.own.mk>
 
@@ -87,6 +87,7 @@ SUBDIR=	${SUBDIR_ORDERED} \
 	${_libmilter} \
 	${_libmp} \
 	${_libncp} \
+	libnetbsd \
 	${_libngatm} \
 	libopie \
 	libpam \
@@ -168,6 +169,11 @@ _libiconv_modules=	libiconv_modules
 _libipx=	libipx
 .endif
 
+.if ${MK_LIBCPLUSPLUS} != "no"
+_libcxxrt=	libcxxrt
+_libcplusplus=	libc++
+.endif
+
 .if ${MK_LIBTHR} != "no"
 _libthr=	libthr
 .endif
@@ -211,11 +217,6 @@ _libsmb=	libsmb
 
 .if ${MK_OPENSSL} != "no"
 _libmp=		libmp
-.endif
-
-.if ${MK_LIBCPLUSPLUS} != "no"
-_libcxxrt=	libcxxrt
-_libcplusplus=	libc++
 .endif
 
 .if ${MK_PMC} != "no"

@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/kldxref/kldxref.c 186827 2009-01-06 14:23:38Z luigi $
  */
 
 #include <sys/types.h>

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ep/if_ep.c 248078 2013-03-09 00:39:54Z marius $");
 
 /*
  *	Modified from the FreeBSD 1.1.5.1 version by:
@@ -747,11 +747,11 @@ read_again:
 	rx_fifo = rx_fifo2 = status & RX_BYTES_MASK;
 
 	if (EP_FTST(sc, F_RX_FIRST)) {
-		MGETHDR(m, M_DONTWAIT, MT_DATA);
+		MGETHDR(m, M_NOWAIT, MT_DATA);
 		if (!m)
 			goto out;
 		if (rx_fifo >= MINCLSIZE)
-			MCLGET(m, M_DONTWAIT);
+			MCLGET(m, M_NOWAIT);
 		sc->top = sc->mcur = top = m;
 #define EROUND  ((sizeof(struct ether_header) + 3) & ~3)
 #define EOFF    (EROUND - sizeof(struct ether_header))
@@ -775,11 +775,11 @@ read_again:
 		lenthisone = min(rx_fifo, M_TRAILINGSPACE(m));
 		if (lenthisone == 0) {	/* no room in this one */
 			mcur = m;
-			MGET(m, M_DONTWAIT, MT_DATA);
+			MGET(m, M_NOWAIT, MT_DATA);
 			if (!m)
 				goto out;
 			if (rx_fifo >= MINCLSIZE)
-				MCLGET(m, M_DONTWAIT);
+				MCLGET(m, M_NOWAIT);
 			m->m_len = 0;
 			mcur->m_next = m;
 			lenthisone = min(rx_fifo, M_TRAILINGSPACE(m));

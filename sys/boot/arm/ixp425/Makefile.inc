@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/boot/arm/ixp425/Makefile.inc 183651 2008-10-06 19:38:10Z jhay $
 
 .if !target(__ixp425_boot_Makefile.inc__)
 .PATH:	${.CURDIR}/../../../../libkern ${.CURDIR}/../../../../libkern/arm

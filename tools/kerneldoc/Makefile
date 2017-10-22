@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/kerneldoc/Makefile 160171 2006-07-08 12:31:33Z netchild $
 
 .PATH:	${.CURDIR}/../kern
 

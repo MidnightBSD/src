@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/csup/misc.c 230743 2012-01-29 14:55:20Z marius $
  */
 
 #include <sys/types.h>

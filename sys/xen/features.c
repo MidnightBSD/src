@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/xen/features.c 189699 2009-03-11 15:30:12Z dfr $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -33,7 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/arm/gen/setjmp.S 193145 2009-05-31 02:03:40Z marcel $");
 /*
  * C library -- setjmp, longjmp
  *

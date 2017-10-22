@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/nop/g_nop.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,7 +42,7 @@ __FBSDID("$FreeBSD$");
 
 
 SYSCTL_DECL(_kern_geom);
-SYSCTL_NODE(_kern_geom, OID_AUTO, nop, CTLFLAG_RW, 0, "GEOM_NOP stuff");
+static SYSCTL_NODE(_kern_geom, OID_AUTO, nop, CTLFLAG_RW, 0, "GEOM_NOP stuff");
 static u_int g_nop_debug = 0;
 SYSCTL_UINT(_kern_geom_nop, OID_AUTO, debug, CTLFLAG_RW, &g_nop_debug, 0,
     "Debug level");
@@ -189,7 +189,7 @@ g_nop_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 			return (EEXIST);
 		}
 	}
-	gp = g_new_geomf(mp, name);
+	gp = g_new_geomf(mp, "%s", name);
 	sc = g_malloc(sizeof(*sc), M_WAITOK);
 	sc->sc_offset = offset;
 	sc->sc_error = ioerror;
@@ -205,7 +205,7 @@ g_nop_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 	gp->access = g_nop_access;
 	gp->dumpconf = g_nop_dumpconf;
 
-	newpp = g_new_providerf(gp, gp->name);
+	newpp = g_new_providerf(gp, "%s", gp->name);
 	newpp->mediasize = size;
 	newpp->sectorsize = secsize;
 

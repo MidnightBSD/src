@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/bin/sh/expansion/arith4.0 206167 2010-04-04 16:29:48Z jilles $
 
 failures=0
 

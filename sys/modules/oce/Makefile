@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/oce/Makefile 231663 2012-02-14 10:30:22Z luigi $
 #
 
 .PATH:	${.CURDIR}/../../dev/oce

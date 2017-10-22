@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/contrib/pnpinfo/pnpinfo.c 229236 2012-01-01 23:26:49Z dim $");
 
 #include <sys/time.h>
 

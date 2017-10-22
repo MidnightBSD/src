@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/contrib/ipfilter/ipsend/lsock.c 161357 2006-08-16 12:23:02Z guido $	*/
 
 /*
  * lsock.c (C) 1995-1998 Darren Reed

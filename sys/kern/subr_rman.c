@@ -58,7 +58,7 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/subr_rman.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1085,7 +1085,7 @@ found:
 	return (error);
 }
 
-SYSCTL_NODE(_hw_bus, OID_AUTO, rman, CTLFLAG_RD, sysctl_rman,
+static SYSCTL_NODE(_hw_bus, OID_AUTO, rman, CTLFLAG_RD, sysctl_rman,
     "kernel resource manager");
 
 #ifdef DDB

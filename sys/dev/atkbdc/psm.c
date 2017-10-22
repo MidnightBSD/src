@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/atkbdc/psm.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_isa.h"
 #include "opt_psm.h"
@@ -238,6 +238,10 @@ typedef struct synapticspacket {
 #define	SYNAPTICS_PACKETQUEUE 10
 #define SYNAPTICS_QUEUE_CURSOR(x)					\
 	(x + SYNAPTICS_PACKETQUEUE) % SYNAPTICS_PACKETQUEUE
+
+#define	SYNAPTICS_VERSION_GE(synhw, major, minor)			\
+    ((synhw).infoMajor > (major) ||					\
+     ((synhw).infoMajor == (major) && (synhw).infoMinor >= (minor)))
 
 typedef struct synapticsaction {
 	synapticspacket_t	queue[SYNAPTICS_PACKETQUEUE];
@@ -867,7 +871,9 @@ doopen(struct psm_softc *sc, int command_byte)
 	if (sc->hw.model == MOUSE_MODEL_SYNAPTICS) {
 		mouse_ext_command(sc->kbdc, 1);
 		get_mouse_status(sc->kbdc, stat, 0, 3);
-		if (stat[1] == 0x47 && stat[2] == 0x40) {
+		if ((SYNAPTICS_VERSION_GE(sc->synhw, 7, 5) ||
+		     stat[1] == 0x47) &&
+		    stat[2] == 0x40) {
 			/* Set the mode byte -- request wmode where
 			 * available */
 			if (sc->synhw.capExtended)
@@ -2259,8 +2265,8 @@ psmtimeout(void *arg)
 }
 
 /* Add all sysctls under the debug.psm and hw.psm nodes */
-SYSCTL_NODE(_debug, OID_AUTO, psm, CTLFLAG_RD, 0, "ps/2 mouse");
-SYSCTL_NODE(_hw, OID_AUTO, psm, CTLFLAG_RD, 0, "ps/2 mouse");
+static SYSCTL_NODE(_debug, OID_AUTO, psm, CTLFLAG_RD, 0, "ps/2 mouse");
+static SYSCTL_NODE(_hw, OID_AUTO, psm, CTLFLAG_RD, 0, "ps/2 mouse");
 
 SYSCTL_INT(_debug_psm, OID_AUTO, loglevel, CTLFLAG_RW, &verbose, 0,
     "Verbosity level");
@@ -2454,7 +2460,7 @@ proc_mmanplus(struct psm_softc *sc, packetbuf_t *pb, mousestatus_t *ms,
 {
 
 	/*
-	 * PS2++ protocl packet
+	 * PS2++ protocol packet
 	 *
 	 *          b7 b6 b5 b4 b3 b2 b1 b0
 	 * byte 1:  *  1  p3 p2 1  *  *  *
@@ -3738,7 +3744,7 @@ enable_mmanplus(KBDC kbdc, struct psm_softc *sc)
 		return (FALSE);
 
 	/*
-	 * PS2++ protocl, packet type 0
+	 * PS2++ protocol, packet type 0
 	 *
 	 *          b7 b6 b5 b4 b3 b2 b1 b0
 	 * byte 1:  *  1  p3 p2 1  *  *  *
@@ -4381,7 +4387,7 @@ enable_synaptics(KBDC kbdc, struct psm_softc *sc)
 		return (FALSE);
 	if (get_mouse_status(kbdc, status, 0, 3) != 3)
 		return (FALSE);
-	if (status[1] != 0x47) {
+	if (!SYNAPTICS_VERSION_GE(synhw, 7, 5) && status[1] != 0x47) {
 		printf("  Failed to read extended capability bits\n");
 		return (FALSE);
 	}
@@ -4437,7 +4443,7 @@ enable_synaptics(KBDC kbdc, struct psm_softc *sc)
 		return (FALSE);
 	if (get_mouse_status(kbdc, status, 0, 3) != 3)
 		return (FALSE);
-	if (status[1] != 0x47) {
+	if (!SYNAPTICS_VERSION_GE(synhw, 7, 5) && status[1] != 0x47) {
 		printf("  Failed to read mode byte\n");
 		return (FALSE);
 	}

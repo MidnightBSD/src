@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/net/if_fwsubr.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #include "opt_inet.h"
@@ -63,7 +63,7 @@
 
 #include <security/mac/mac_framework.h>
 
-MALLOC_DEFINE(M_FWCOM, "fw_com", "firewire interface internals");
+static MALLOC_DEFINE(M_FWCOM, "fw_com", "firewire interface internals");
 
 struct fw_hwaddr firewire_broadcastaddr = {
 	0xffffffff,

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/who/who.c 202200 2010-01-13 18:09:54Z ed $");
 
 #include <sys/param.h>
 #include <sys/types.h>

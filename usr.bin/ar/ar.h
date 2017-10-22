@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/ar/ar.h 242057 2012-10-25 03:30:06Z eadler $
  */
 
 #define	BSDAR_VERSION	"1.1.0"
@@ -111,7 +111,7 @@ struct bsdar {
 };
 
 void	bsdar_errc(struct bsdar *, int _eval, int _code,
-	    const char *fmt, ...);
+	    const char *fmt, ...) __dead2;
 void	bsdar_warnc(struct bsdar *, int _code, const char *fmt, ...);
 void	ar_mode_d(struct bsdar *bsdar);
 void	ar_mode_m(struct bsdar *bsdar);

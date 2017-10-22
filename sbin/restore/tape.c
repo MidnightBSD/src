@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)tape.c	8.9 (Berkeley) 5/1/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/restore/tape.c 242166 2012-10-27 01:20:48Z eadler $");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -164,7 +164,11 @@ setinput(char *source, int ispipecommand)
 		}
 		pipein++;
 	}
-	setuid(getuid());	/* no longer need or want root privileges */
+	/* no longer need or want root privileges */
+	if (setuid(getuid()) != 0) {
+		fprintf(stderr, "setuid failed\n");
+		done(1);
+	}
 	magtape = strdup(source);
 	if (magtape == NULL) {
 		fprintf(stderr, "Cannot allocate space for magtape buffer\n");

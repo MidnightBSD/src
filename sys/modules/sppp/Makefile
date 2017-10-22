@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/sppp/Makefile 182668 2008-09-01 23:59:00Z imp $
 
 .PATH: ${.CURDIR}/../../net
 

@@ -2,7 +2,7 @@
 #
 # Script for testing multi-bss open+WPA1+WPA2.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/net80211/scripts/setup.mixed 178361 2008-04-20 20:43:42Z sam $
 #
 PATH=.:$PATH
 . config

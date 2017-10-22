@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.2 (Berkeley) 4/28/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/make/pathnames.h 143412 2005-03-11 13:02:38Z harti $
  */
 
 #ifndef pathnames_h_235b888a

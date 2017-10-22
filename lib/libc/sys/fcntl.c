@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/sys/fcntl.c 239899 2012-08-30 10:12:40Z kib $");
 
 #include <fcntl.h>
 #include <stdarg.h>
@@ -41,7 +41,7 @@ __fcntl_compat(int fd, int cmd, ...)
 {
 	va_list args;
 	long arg;
-	struct oflock ofl;
+	struct __oflock ofl;
 	struct flock *flp;
 	int res;
 

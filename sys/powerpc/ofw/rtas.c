@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/ofw/rtas.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -47,7 +47,7 @@ __FBSDID("$FreeBSD$");
 
 #include <dev/ofw/openfirm.h>
 
-MALLOC_DEFINE(M_RTAS, "rtas", "Run Time Abstraction Service");
+static MALLOC_DEFINE(M_RTAS, "rtas", "Run Time Abstraction Service");
 
 static vm_offset_t	rtas_bounce_phys;
 static caddr_t		rtas_bounce_virt;

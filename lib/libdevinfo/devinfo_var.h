@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$FreeBSD: stable/9/lib/libdevinfo/devinfo_var.h 218505 2011-02-10 04:53:09Z imp $
  */
 
 #include <sys/types.h>

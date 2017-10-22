@@ -53,7 +53,7 @@
  * SUCH DAMAGE.
  *
  *
- *      $FreeBSD$
+ *      $FreeBSD: stable/9/sys/dev/amr/amrvar.h 210570 2010-07-28 16:24:11Z mdf $
  */
 
 #include <geom/geom_disk.h>

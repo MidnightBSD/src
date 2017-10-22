@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/arcnet/Makefile 220470 2011-04-09 09:07:31Z uqs $
 
 .PATH: ${.CURDIR}/../../net
 

@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/k_log.h 216210 2010-12-05 22:11:03Z das $");
 
 /* __kernel_log(x)
  * Return log(x) - (x-1) for x in ~[sqrt(2)/2, sqrt(2)].

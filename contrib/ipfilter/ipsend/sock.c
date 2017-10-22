@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/contrib/ipfilter/ipsend/sock.c 180778 2008-07-24 12:35:05Z darrenr $ */
 /*
  * sock.c (C) 1995-1998 Darren Reed
  *

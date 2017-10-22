@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/ttydisc.h 196452 2009-08-23 08:04:40Z ed $
  */
 
 #ifndef _SYS_TTYDISC_H_

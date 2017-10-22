@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/uncompress/g_uncompress.c 249148 2013-04-05 10:35:36Z mav $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -406,13 +406,11 @@ g_uncompress_orphan(struct g_consumer *cp)
 	g_trace(G_T_TOPOLOGY, "%s(%p/%s)", __func__, cp,
 		cp->provider->name);
 	g_topology_assert();
-	KASSERT(cp->provider->error != 0,
-		("g_uncompress_orphan with error == 0"));
 
 	gp = cp->geom;
 	g_uncompress_softc_free(gp->softc, gp);
 	gp->softc = NULL;
-	g_wither_geom(gp, cp->provider->error);
+	g_wither_geom(gp, ENXIO);
 }
 
 static int

@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)sigcompat.c	8.1 (Berkeley) 6/2/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/compat-43/sigcompat.c 210370 2010-07-22 09:14:18Z kib $");
 
 #include "namespace.h"
 #include <sys/param.h>

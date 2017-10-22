@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/libkern/memset.c 180514 2008-07-14 21:36:02Z obrien $");
 
 #define	LIBKERN_INLINE
 

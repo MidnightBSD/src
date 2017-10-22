@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libwrap/Makefile 201381 2010-01-02 09:58:07Z ed $
 #
 
 .include <bsd.own.mk>

@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/mips/db_disasm.c 202175 2010-01-12 21:36:08Z imp $");
 
 #include <sys/param.h>
 #include <vm/vm_param.h>

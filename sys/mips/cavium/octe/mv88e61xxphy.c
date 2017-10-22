@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/cavium/octe/mv88e61xxphy.c 213762 2010-10-13 09:17:44Z jmallett $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octe/mv88e61xxphy.c 213762 2010-10-13 09:17:44Z jmallett $");
 
 /*
  * Driver for the Marvell 88E61xx family of switch PHYs

@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)from: inetd.c	8.4 (Berkeley) 4/13/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/inetd/inetd.c 246402 2013-02-06 13:16:43Z zont $");
 
 /*
  * Inetd - Internet super-server
@@ -1387,7 +1387,7 @@ setsockopt(fd, SOL_SOCKET, opt, (char *)&on, sizeof (on))
                 }
         }
 	if (sep->se_socktype == SOCK_STREAM)
-		listen(sep->se_fd, 64);
+		listen(sep->se_fd, -1);
 	enable(sep);
 	if (debug) {
 		warnx("registered %s on %d",

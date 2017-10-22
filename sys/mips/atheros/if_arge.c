@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/atheros/if_arge.c 229093 2011-12-31 14:12:12Z hselasky $");
 
 /*
  * AR71XX gigabit ethernet driver

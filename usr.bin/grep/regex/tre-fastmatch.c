@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/usr.bin/grep/regex/tre-fastmatch.c 248215 2013-03-12 19:28:41Z markj $ */
 
 /*-
  * Copyright (c) 1999 James Howard and Dag-Erling Coïdan Smørgrav
@@ -468,7 +468,7 @@ static int	fastcmp(const fastmatch_t *fg, const void *data,
   fg->nosub = (cflags & REG_NOSUB);					\
 									\
   /* Cannot handle REG_ICASE with MB string */				\
-  if (fg->icase && (TRE_MB_CUR_MAX > 1))				\
+  if (fg->icase && (TRE_MB_CUR_MAX > 1) && n > 0)			\
     {									\
       DPRINT(("Cannot use fast matcher for MBS with REG_ICASE\n"));	\
       return REG_BADPAT;						\

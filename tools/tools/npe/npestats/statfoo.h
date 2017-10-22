@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/tools/npe/npestats/statfoo.h 192661 2009-05-23 19:16:34Z sam $
  */
 
 #ifndef _STATFOO_H_

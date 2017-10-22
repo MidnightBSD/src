@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/usr.sbin/pkg_install/lib/lib.h 241135 2012-10-02 17:04:53Z bapt $ */
 
 /*
  * FreeBSD install - a package for the installation and maintainance
@@ -99,7 +99,7 @@
  * Version of the package tools - increase whenever you make a change
  * in the code that is not cosmetic only.
  */
-#define PKG_INSTALL_VERSION	20120913
+#define PKG_INSTALL_VERSION	20120918
 
 #define PKG_WRAPCONF_FNAME	"/var/db/pkg_install.conf"
 #define main(argc, argv)	real_main(argc, argv)

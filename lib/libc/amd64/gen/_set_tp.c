@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$FreeBSD: stable/9/lib/libc/amd64/gen/_set_tp.c 133754 2004-08-15 16:18:52Z dfr $
  */
 
 #include <string.h>

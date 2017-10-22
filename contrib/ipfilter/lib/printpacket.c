@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/contrib/ipfilter/lib/printpacket.c 172776 2007-10-18 21:52:14Z darrenr $	*/
 
 /*
  * Copyright (C) 2000-2005 by Darren Reed.

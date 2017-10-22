@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/conf/options.sparc64 248048 2013-03-08 12:50:29Z marius $
 
 GFB_DEBUG		opt_gfb.h
 GFB_NO_FONT_LOADING	opt_gfb.h
@@ -23,7 +23,6 @@ PSM_DEBUG		opt_psm.h
 PSM_HOOKRESUME		opt_psm.h
 PSM_RESETAFTERSUSPEND	opt_psm.h
 
-DEBUGGER_ON_POWERFAIL	opt_psycho.h
 PSYCHO_DEBUG		opt_psycho.h
 
 SCHIZO_DEBUG		opt_schizo.h

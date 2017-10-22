@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/quicc/quicc_core.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -61,7 +61,7 @@ __FBSDID("$FreeBSD$");
 devclass_t quicc_devclass;
 char quicc_driver_name[] = "quicc";
 
-MALLOC_DEFINE(M_QUICC, "QUICC", "QUICC driver");
+static MALLOC_DEFINE(M_QUICC, "QUICC", "QUICC driver");
 
 struct quicc_device {
 	struct rman	*qd_rman;

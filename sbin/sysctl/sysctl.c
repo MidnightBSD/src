@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)from: sysctl.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/sbin/sysctl/sysctl.c 244669 2012-12-25 00:24:43Z delphij $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -62,7 +62,7 @@ static int	aflag, bflag, dflag, eflag, hflag, iflag;
 static int	Nflag, nflag, oflag, qflag, xflag, warncount;
 
 static int	oidfmt(int *, int, char *, u_int *);
-static void	parse(char *);
+static void	parse(const char *);
 static int	show_var(int *, int);
 static int	sysctl_all(int *oid, int len);
 static int	name2oid(char *, int *);
@@ -161,7 +161,7 @@ main(int argc, char **argv)
  * Set a new value if requested.
  */
 static void
-parse(char *string)
+parse(const char *string)
 {
 	int len, i, j;
 	void *newval = 0;
@@ -176,12 +176,11 @@ parse(char *string)
 	char *cp, *bufp, buf[BUFSIZ], *endptr, fmt[BUFSIZ];
 	u_int kind;
 
-	bufp = buf;
+	cp = buf;
 	if (snprintf(buf, BUFSIZ, "%s", string) >= BUFSIZ)
 		errx(1, "oid too long: '%s'", string);
-	if ((cp = strchr(string, '=')) != NULL) {
-		*strchr(buf, '=') = '\0';
-		*cp++ = '\0';
+	bufp = strsep(&cp, "=");
+	if (cp != NULL) {
 		while (isspace(*cp))
 			cp++;
 		newval = cp;

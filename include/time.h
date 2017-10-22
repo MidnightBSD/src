@@ -35,7 +35,7 @@
  */
 
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/include/time.h 235785 2012-05-22 14:40:39Z theraven $
  */
 
 #ifndef _TIME_H_

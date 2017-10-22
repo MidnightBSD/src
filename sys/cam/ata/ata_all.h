@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cam/ata/ata_all.h 249152 2013-04-05 11:41:56Z mav $
  */
 
 #ifndef	CAM_ATA_ALL_H
@@ -35,6 +35,7 @@ struct ccb_ataio;
 struct cam_periph;
 union  ccb;
 
+#define	SID_AEN		0x04	/* Abuse inq_flags bit to track enabled AEN. */
 #define	SID_DMA		0x10	/* Abuse inq_flags bit to track enabled DMA. */
 
 struct ata_cmd {

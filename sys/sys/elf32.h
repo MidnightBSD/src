@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/elf32.h 163457 2006-10-17 05:43:30Z jkoshy $
  */
 
 #ifndef _SYS_ELF32_H_

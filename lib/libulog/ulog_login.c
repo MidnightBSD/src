@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libulog/ulog_login.c 202215 2010-01-13 18:53:06Z ed $");
 
 #include <sys/param.h>
 #include <sys/time.h>

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/pkg/elf_tables.h 234313 2012-04-15 15:13:36Z bapt $
  */
 
 #ifndef ELF_TABLES_H_

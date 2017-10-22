@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)symtab.c	5.3 (Berkeley) 6/1/90";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/yacc/symtab.c 216370 2010-12-11 08:32:16Z joel $");
 
 #include <stdlib.h>
 #include <string.h>

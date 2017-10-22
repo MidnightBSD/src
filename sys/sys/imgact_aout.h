@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)exec.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/imgact_aout.h 204552 2010-03-02 06:58:58Z alfred $
  */
 
 #ifndef	_IMGACT_AOUT_H_

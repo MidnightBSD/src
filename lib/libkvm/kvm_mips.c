@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libkvm/kvm_mips.c 217744 2011-01-23 11:08:28Z uqs $");
 
 #include <sys/param.h>
 #include <sys/elf32.h>

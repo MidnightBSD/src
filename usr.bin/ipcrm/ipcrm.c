@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/ipcrm/ipcrm.c 174891 2007-12-25 00:52:24Z edwin $");
 
 #include <sys/param.h>
 #define _KERNEL

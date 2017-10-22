@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/hptrr/hptrr_config.c 195626 2009-07-11 22:30:37Z cperciva $
  */
 #include <dev/hptrr/hptrr_config.h>
 /****************************************************************************

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/atheros/pcf2123_rtc.c 202839 2010-01-22 22:14:12Z gonzo $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

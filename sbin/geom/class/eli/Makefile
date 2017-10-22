@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/geom/class/eli/Makefile 216493 2010-12-16 17:54:56Z obrien $
 
 .PATH: ${.CURDIR}/../../misc ${.CURDIR}/../../../../sys/geom/eli ${.CURDIR}/../../../../sys/crypto/sha2
 

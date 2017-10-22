@@ -31,7 +31,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/m4/TEST/string.m4 216370 2010-12-11 08:32:16Z joel $
 #
 #	@(#)string.m4	8.1 (Berkeley) 6/6/93
 #

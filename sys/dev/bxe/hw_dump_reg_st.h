@@ -30,7 +30,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- /*$FreeBSD$*/
+ /*$FreeBSD: stable/9/sys/dev/bxe/hw_dump_reg_st.h 219656 2011-03-15 01:06:27Z davidch $*/
 
 #ifndef _HW_DUMP_REG_ST_H
 #define	_HW_DUMP_REG_ST_H

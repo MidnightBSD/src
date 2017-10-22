@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/28/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/sh/main.c 241030 2012-09-28 13:43:42Z jilles $");
 
 #include <stdio.h>
 #include <signal.h>
@@ -266,14 +266,7 @@ read_profile(char *name)
 void
 readcmdfile(const char *name)
 {
-	int fd;
-
-	INTOFF;
-	if ((fd = open(name, O_RDONLY)) >= 0)
-		setinputfd(fd, 1);
-	else
-		error("cannot open %s: %s", name, strerror(errno));
-	INTON;
+	setinputfile(name, 1);
 	cmdloop(0);
 	popfile();
 }

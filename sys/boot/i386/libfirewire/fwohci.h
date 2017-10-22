@@ -30,7 +30,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/i386/libfirewire/fwohci.h 170101 2007-05-29 14:35:57Z simokawa $
  *
  */
 

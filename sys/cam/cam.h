@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cam/cam.h 246431 2013-02-06 18:40:07Z mav $
  */
 
 #ifndef _CAM_CAM_H
@@ -83,6 +83,7 @@ typedef struct {
 #define CAM_PRIORITY_NORMAL	((CAM_RL_NORMAL << 8) + 0x80)
 #define CAM_PRIORITY_NONE	(u_int32_t)-1
 #define CAM_PRIORITY_TO_RL(x)	((x) >> 8)
+#define CAM_RL_TO_PRIORITY(x)	((x) << 8)
 	u_int32_t generation;
 	int       index;
 #define CAM_UNQUEUED_INDEX	-1

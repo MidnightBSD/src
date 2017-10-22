@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/sysinstall/Makefile 248313 2013-03-15 05:00:51Z dteske $
 
 .if ${MACHINE_CPUARCH} != "ia64"
 _wizard=	wizard.c
@@ -8,9 +8,9 @@ PROG=	sysinstall
 MAN=	sysinstall.8
 SRCS=	anonFTP.c cdrom.c command.c config.c devices.c dhcp.c \
 	disks.c dispatch.c dist.c dmenu.c doc.c dos.c floppy.c \
-	ftp.c globals.c http.c index.c install.c installUpgrade.c keymap.c \
-	label.c main.c makedevs.c media.c menus.c misc.c modules.c \
-	mouse.c msg.c network.c nfs.c options.c package.c \
+	ftp.c globals.c http.c httpdirect.c index.c install.c \
+	installUpgrade.c keymap.c label.c main.c makedevs.c media.c menus.c \
+	misc.c modules.c mouse.c msg.c network.c nfs.c options.c package.c \
 	system.c tcpip.c termcap.c ttys.c ufs.c usb.c user.c \
 	variable.c ${_wizard} keymap.h countries.h
 

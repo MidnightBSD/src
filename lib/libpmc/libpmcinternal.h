@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libpmc/libpmcinternal.h 185363 2008-11-27 09:00:47Z jkoshy $
  */
 
 #ifndef	LIBPMC_INTERNAL_H

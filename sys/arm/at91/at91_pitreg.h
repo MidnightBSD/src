@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/arm/at91/at91_pitreg.h 210040 2010-07-14 00:48:53Z cognet $ */
 
 #ifndef ARM_AT91_AT91PITREG_H
 #define ARM_AT91_AT91PITREG_H

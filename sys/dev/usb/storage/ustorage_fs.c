@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/storage/ustorage_fs.c 235000 2012-05-04 15:05:30Z hselasky $ */
 /*-
  * Copyright (C) 2003-2005 Alan Stern
  * Copyright (C) 2008 Hans Petter Selasky

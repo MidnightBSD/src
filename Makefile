@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/Makefile 249534 2013-04-16 06:51:07Z dim $
 #
 # The user-driven targets are:
 #
@@ -356,7 +356,7 @@ MAKEFAIL=tee -a ${FAILFILE}
 MAKEFAIL=cat
 .endif
 
-universe: universe_prologue
+universe: universe_prologue upgrade_checks
 universe_prologue:
 	@echo "--------------------------------------------------------------"
 	@echo ">>> make universe started on ${STARTTIME}"
@@ -366,7 +366,7 @@ universe_prologue:
 .endif
 .for target in ${TARGETS}
 universe: universe_${target}
-.ORDER: universe_prologue universe_${target} universe_epilogue
+.ORDER: universe_prologue upgrade_checks universe_${target}_prologue universe_${target} universe_epilogue
 universe_${target}: universe_${target}_prologue
 universe_${target}_prologue:
 	@echo ">> ${target} started on `LC_ALL=C date`"

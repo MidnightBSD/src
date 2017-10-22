@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/9/tools/regression/usr.bin/make/README 146855 2005-06-01 11:25:38Z harti $
 
 This directory contains regression tests for make(1).
 

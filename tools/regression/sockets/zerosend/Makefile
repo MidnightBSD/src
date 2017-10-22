@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/sockets/zerosend/Makefile 165982 2007-01-12 21:49:36Z rwatson $
 
 PROG=	zerosend
 NO_MAN=

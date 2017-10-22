@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/hptrr/ldm.h 176939 2008-03-08 18:06:48Z scottl $
  */
 #include <dev/hptrr/hptrr_config.h>
 /*

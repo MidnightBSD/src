@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/iicbus/ad7417.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -121,7 +121,7 @@ static driver_t ad7417_driver = {
 static devclass_t ad7417_devclass;
 
 DRIVER_MODULE(ad7417, iicbus, ad7417_driver, ad7417_devclass, 0, 0);
-MALLOC_DEFINE(M_AD7417, "ad7417", "Supply-Monitor AD7417");
+static MALLOC_DEFINE(M_AD7417, "ad7417", "Supply-Monitor AD7417");
 
 
 static int

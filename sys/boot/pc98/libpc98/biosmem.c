@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/pc98/libpc98/biosmem.c 200255 2009-12-08 13:06:35Z nyan $");
 
 /*
  * Obtain memory configuration information from the BIOS

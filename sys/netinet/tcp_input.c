@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_input.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_ipfw.h"		/* for ipfw_fwd	*/
 #include "opt_inet.h"
@@ -165,7 +165,7 @@ SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, abc_l_var, CTLFLAG_RW,
     &VNET_NAME(tcp_abc_l_var), 2,
     "Cap the max cwnd increment during slow-start to this number of segments");
 
-SYSCTL_NODE(_net_inet_tcp, OID_AUTO, ecn, CTLFLAG_RW, 0, "TCP ECN");
+static SYSCTL_NODE(_net_inet_tcp, OID_AUTO, ecn, CTLFLAG_RW, 0, "TCP ECN");
 
 VNET_DEFINE(int, tcp_do_ecn) = 0;
 SYSCTL_VNET_INT(_net_inet_tcp_ecn, OID_AUTO, enable, CTLFLAG_RW,
@@ -575,9 +575,7 @@ tcp_input(struct mbuf *m, int off0)
 	uint8_t sig_checked = 0;
 #endif
 	uint8_t iptos = 0;
-#ifdef IPFIREWALL_FORWARD
-	struct m_tag *fwd_tag;
-#endif
+	struct m_tag *fwd_tag = NULL;
 #ifdef INET6
 	struct ip6_hdr *ip6 = NULL;
 	int isipv6;
@@ -791,15 +789,23 @@ findpcb:
 	}
 #endif
 
-#ifdef IPFIREWALL_FORWARD
 	/*
 	 * Grab info from PACKET_TAG_IPFORWARD tag prepended to the chain.
 	 */
-	fwd_tag = m_tag_find(m, PACKET_TAG_IPFORWARD, NULL);
-#endif /* IPFIREWALL_FORWARD */
+        if (
+#ifdef INET6
+	    (isipv6 && (m->m_flags & M_IP6_NEXTHOP))
+#ifdef INET
+	    || (!isipv6 && (m->m_flags & M_IP_NEXTHOP))
+#endif
+#endif
+#if defined(INET) && !defined(INET6)
+	    (m->m_flags & M_IP_NEXTHOP)
+#endif
+	    )
+		fwd_tag = m_tag_find(m, PACKET_TAG_IPFORWARD, NULL);
 
 #ifdef INET6
-#ifdef IPFIREWALL_FORWARD
 	if (isipv6 && fwd_tag != NULL) {
 		struct sockaddr_in6 *next_hop6;
 
@@ -825,9 +831,9 @@ findpcb:
 		}
 		/* Remove the tag from the packet.  We don't need it anymore. */
 		m_tag_delete(m, fwd_tag);
-	} else
-#endif /* IPFIREWALL_FORWARD */
-	if (isipv6) {
+		m->m_flags &= ~M_IP6_NEXTHOP;
+		fwd_tag = NULL;
+	} else if (isipv6) {
 		inp = in6_pcblookup_mbuf(&V_tcbinfo, &ip6->ip6_src,
 		    th->th_sport, &ip6->ip6_dst, th->th_dport,
 		    INPLOOKUP_WILDCARD | INPLOOKUP_WLOCKPCB,
@@ -838,7 +844,6 @@ findpcb:
 	else
 #endif
 #ifdef INET
-#ifdef IPFIREWALL_FORWARD
 	if (fwd_tag != NULL) {
 		struct sockaddr_in *next_hop;
 
@@ -864,8 +869,9 @@ findpcb:
 		}
 		/* Remove the tag from the packet.  We don't need it anymore. */
 		m_tag_delete(m, fwd_tag);
+		m->m_flags &= ~M_IP_NEXTHOP;
+		fwd_tag = NULL;
 	} else
-#endif /* IPFIREWALL_FORWARD */
 		inp = in_pcblookup_mbuf(&V_tcbinfo, ip->ip_src,
 		    th->th_sport, ip->ip_dst, th->th_dport,
 		    INPLOOKUP_WILDCARD | INPLOOKUP_WLOCKPCB,
@@ -2441,6 +2447,16 @@ tcp_do_segment(struct mbuf *m, struct tcphdr *th, struct socket *so,
 						}
 					} else
 						tp->snd_cwnd += tp->t_maxseg;
+					if ((thflags & TH_FIN) &&
+					    (TCPS_HAVERCVDFIN(tp->t_state) == 0)) {
+						/* 
+						 * If its a fin we need to process
+						 * it to avoid a race where both
+						 * sides enter FIN-WAIT and send FIN|ACK
+						 * at the same time.
+						 */
+						break;
+					}
 					(void) tcp_output(tp);
 					goto drop;
 				} else if (tp->t_dupacks == tcprexmtthresh) {
@@ -2480,6 +2496,16 @@ tcp_do_segment(struct mbuf *m, struct tcphdr *th, struct socket *so,
 					}
 					tp->snd_nxt = th->th_ack;
 					tp->snd_cwnd = tp->t_maxseg;
+					if ((thflags & TH_FIN) &&
+					    (TCPS_HAVERCVDFIN(tp->t_state) == 0)) {
+						/* 
+						 * If its a fin we need to process
+						 * it to avoid a race where both
+						 * sides enter FIN-WAIT and send FIN|ACK
+						 * at the same time.
+						 */
+						break;
+					}
 					(void) tcp_output(tp);
 					KASSERT(tp->snd_limited <= 2,
 					    ("%s: tp->snd_limited too big",
@@ -2506,6 +2532,16 @@ tcp_do_segment(struct mbuf *m, struct tcphdr *th, struct socket *so,
 					    (tp->snd_nxt - tp->snd_una) +
 					    (tp->t_dupacks - tp->snd_limited) *
 					    tp->t_maxseg;
+					if ((thflags & TH_FIN) &&
+					    (TCPS_HAVERCVDFIN(tp->t_state) == 0)) {
+						/* 
+						 * If its a fin we need to process
+						 * it to avoid a race where both
+						 * sides enter FIN-WAIT and send FIN|ACK
+						 * at the same time.
+						 */
+						break;
+					}
 					(void) tcp_output(tp);
 					sent = tp->snd_max - oldsndmax;
 					if (sent > tp->t_maxseg) {

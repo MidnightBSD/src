@@ -28,7 +28,7 @@
 
 /* $Header: /home/daffy/u0/vern/flex/RCS/dfa.c,v 2.26 95/04/20 13:53:14 vern Exp $ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/lex/dfa.c 179549 2008-06-04 19:50:34Z dwmalone $");
 
 #include "flexdef.h"
 

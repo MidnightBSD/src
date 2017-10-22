@@ -53,7 +53,7 @@
 #include "sb_bus_space.h"
 #include "sb_scd.h"
 
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/sibyte/sb_zbpci.c 218909 2011-02-21 09:01:34Z brucec $");
 
 static struct {
 	vm_offset_t vaddr;

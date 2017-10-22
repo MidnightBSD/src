@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/secure/usr.bin/ssh-add/Makefile 197679 2009-10-01 17:12:52Z des $
 
 PROG=	ssh-add
 SRCS+=	ssh-add.c

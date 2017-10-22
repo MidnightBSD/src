@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: filecomplete.h,v 1.9 2009/12/30 22:37:40 christos Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libedit/filecomplete.h 209219 2010-06-15 21:34:57Z jilles $
  */
 #ifndef _FILECOMPLETE_H_
 #define _FILECOMPLETE_H_

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/makewhatis/Makefile 107053 2002-11-18 10:11:22Z ru $
 
 PROG=		makewhatis
 DPADD=		${LIBZ}

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)queue.h	8.5 (Berkeley) 8/20/94
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/queue.h 242893 2012-11-11 12:21:51Z ed $
  */
 
 #ifndef _SYS_QUEUE_H_
@@ -65,7 +65,7 @@
  * so that an arbitrary element can be removed without a need to
  * traverse the list. New elements can be added to the list before
  * or after an existing element or at the head of the list. A list
- * may only be traversed in the forward direction.
+ * may be traversed in either direction.
  *
  * A tail queue is headed by a pair of pointers, one to the head of the
  * list and the other to the tail of the list. The elements are doubly
@@ -85,7 +85,7 @@
  * _EMPTY			+	+	+	+
  * _FIRST			+	+	+	+
  * _NEXT			+	+	+	+
- * _PREV			-	-	-	+
+ * _PREV			-	+	-	+
  * _LAST			-	-	+	+
  * _FOREACH			+	+	+	+
  * _FOREACH_SAFE		+	+	+	+
@@ -287,10 +287,8 @@ struct {								\
 } while (0)
 
 #define	STAILQ_LAST(head, type, field)					\
-	(STAILQ_EMPTY((head)) ?						\
-		NULL :							\
-	        ((struct type *)(void *)				\
-		((char *)((head)->stqh_last) - __offsetof(struct type, field))))
+	(STAILQ_EMPTY((head)) ? NULL :					\
+	    __containerof((head)->stqh_last, struct type, field.stqe_next))
 
 #define	STAILQ_NEXT(elm, field)	((elm)->field.stqe_next)
 
@@ -424,6 +422,10 @@ struct {								\
 } while (0)
 
 #define	LIST_NEXT(elm, field)	((elm)->field.le_next)
+
+#define	LIST_PREV(elm, head, type, field)				\
+	((elm)->field.le_prev == &LIST_FIRST((head)) ? NULL :		\
+	    __containerof((elm)->field.le_prev, struct type, field.le_next))
 
 #define	LIST_REMOVE(elm, field) do {					\
 	QMD_SAVELINK(oldnext, (elm)->field.le_next);			\

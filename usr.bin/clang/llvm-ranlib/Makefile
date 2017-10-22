@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/clang/llvm-ranlib/Makefile 231057 2012-02-05 23:56:22Z dim $
 
 PROG_CXX=llvm-ranlib
 

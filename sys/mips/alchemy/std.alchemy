@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/mips/alchemy/std.alchemy 215270 2010-11-13 22:34:12Z imp $
 # Standard include file for Alchemy Au1xxx CPUs: 
 # Au1000, Au1200, Au1250, Au1500 and Au1550
 

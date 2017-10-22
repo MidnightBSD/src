@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/powerpc/boot1.chrp/boot1.c 246234 2013-02-02 09:57:34Z trasz $");
 
 #include <sys/param.h>
 #include <sys/dirent.h>
@@ -62,7 +62,7 @@ static void usage(void);
 static void bcopy(const void *src, void *dst, size_t len);
 static void bzero(void *b, size_t len);
 
-static int mount(const char *device, int quiet);
+static int domount(const char *device, int quiet);
 
 static void panic(const char *fmt, ...) __dead2;
 static int printf(const char *fmt, ...);
@@ -432,7 +432,7 @@ main(int ac, char **av)
 				bootpath_full[len+2] = '\0';
 			}
 				
-			if (mount(bootpath_full,1) >= 0)
+			if (domount(bootpath_full,1) >= 0)
 				break;
 
 			if (bootdev > 0)
@@ -440,10 +440,10 @@ main(int ac, char **av)
 		}
 
 		if (i >= 16)
-			panic("mount");
+			panic("domount");
 	} else {
-		if (mount(bootpath_full,0) == -1)
-			panic("mount");
+		if (domount(bootpath_full,0) == -1)
+			panic("domount");
 	}
 
 	printf("   Boot volume:   %s\n",bootpath_full);
@@ -470,17 +470,17 @@ exit(int code)
 static struct dmadat __dmadat;
 
 static int
-mount(const char *device, int quiet)
+domount(const char *device, int quiet)
 {
 
 	dmadat = &__dmadat;
 	if ((bootdev = ofw_open(device)) == -1) {
-		printf("mount: can't open device\n");
+		printf("domount: can't open device\n");
 		return (-1);
 	}
 	if (fsread(0, NULL, 0)) {
 		if (!quiet)
-			printf("mount: can't read superblock\n");
+			printf("domount: can't read superblock\n");
 		return (-1);
 	}
 	return (0);

@@ -14,11 +14,11 @@
  */
 
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/i386/boot2/lib.h 242562 2012-11-04 13:37:33Z avg $
  */
 
-void sio_init(int) __attribute__((regparm (3)));
-void sio_flush(void);
+int sio_init(int) __attribute__((regparm (3)));
+int sio_flush(void);
 void sio_putc(int) __attribute__((regparm (3)));
 int sio_getc(void);
 int sio_ischar(void);

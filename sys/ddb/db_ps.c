@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ddb/db_ps.c 235440 2012-05-14 13:49:06Z pluknet $");
 
 #include <sys/param.h>
 #include <sys/cons.h>

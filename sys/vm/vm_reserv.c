@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/vm/vm_reserv.c 234771 2012-04-28 20:34:14Z alc $");
 
 #include "opt_vm.h"
 

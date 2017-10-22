@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)mkfs.c	8.11 (Berkeley) 5/3/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/newfs/mkfs.c 246284 2013-02-03 12:17:49Z trasz $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -263,6 +263,7 @@ restart:
 	}
 	sblock.fs_fsbtodb = ilog2(sblock.fs_fsize / sectorsize);
 	sblock.fs_size = fssize = dbtofsb(&sblock, fssize);
+	sblock.fs_providersize = dbtofsb(&sblock, mediasize / sectorsize);
 
 	/*
 	 * Before the filesystem is finally initialized, mark it

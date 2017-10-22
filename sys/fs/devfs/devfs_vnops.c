@@ -31,7 +31,7 @@
  *	@(#)kernfs_vnops.c	8.15 (Berkeley) 5/21/95
  * From: FreeBSD: src/sys/miscfs/kernfs/kernfs_vnops.c 1.43
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/devfs/devfs_vnops.c 247076 2013-02-21 05:38:11Z kib $
  */
 
 /*
@@ -1049,6 +1049,7 @@ devfs_open(struct vop_open_args *ap)
 	int error, ref, vlocked;
 	struct cdevsw *dsw;
 	struct file *fpop;
+	struct mtx *mtxp;
 
 	if (vp->v_type == VBLK)
 		return (ENXIO);
@@ -1081,12 +1082,18 @@ devfs_open(struct vop_open_args *ap)
 		error = dsw->d_fdopen(dev, ap->a_mode, td, fp);
 	else
 		error = dsw->d_open(dev, ap->a_mode, S_IFCHR, td);
+	/* cleanup any cdevpriv upon error */
+	if (error != 0)
+		devfs_clear_cdevpriv();
 	td->td_fpop = fpop;
 
 	vn_lock(vp, vlocked | LK_RETRY);
 	dev_relthread(dev, ref);
-	if (error)
+	if (error != 0) {
+		if (error == ERESTART)
+			error = EINTR;
 		return (error);
+	}
 
 #if 0	/* /dev/console */
 	KASSERT(fp != NULL, ("Could not vnode bypass device on NULL fp"));
@@ -1096,6 +1103,16 @@ devfs_open(struct vop_open_args *ap)
 #endif
 	if (fp->f_ops == &badfileops)
 		finit(fp, fp->f_flag, DTYPE_VNODE, dev, &devfs_ops_f);
+	mtxp = mtx_pool_find(mtxpool_sleep, fp);
+
+	/*
+	 * Hint to the dofilewrite() to not force the buffer draining
+	 * on the writer to the file.  Most likely, the write would
+	 * not need normal buffers.
+	 */
+	mtx_lock(mtxp);
+	fp->f_vnread_flags |= FDEVFS_VNODE;
+	mtx_unlock(mtxp);
 	return (error);
 }
 
@@ -1170,18 +1187,14 @@ devfs_read_f(struct file *fp, struct uio *uio, struct ucred *cred, int flags, st
 	if (ioflag & O_DIRECT)
 		ioflag |= IO_DIRECT;
 
-	if ((flags & FOF_OFFSET) == 0)
-		uio->uio_offset = fp->f_offset;
-
+	foffset_lock_uio(fp, uio, flags | FOF_NOLOCK);
 	error = dsw->d_read(dev, uio, ioflag);
 	if (uio->uio_resid != resid || (error == 0 && resid != 0))
 		vfs_timestamp(&dev->si_atime);
 	td->td_fpop = fpop;
 	dev_relthread(dev, ref);
 
-	if ((flags & FOF_OFFSET) == 0)
-		fp->f_offset = uio->uio_offset;
-	fp->f_nextoff = uio->uio_offset;
+	foffset_unlock_uio(fp, uio, flags | FOF_NOLOCK | FOF_NEXTOFF);
 	return (error);
 }
 
@@ -1648,8 +1661,7 @@ devfs_write_f(struct file *fp, struct uio *uio, struct ucred *cred, int flags, s
 	ioflag = fp->f_flag & (O_NONBLOCK | O_DIRECT | O_FSYNC);
 	if (ioflag & O_DIRECT)
 		ioflag |= IO_DIRECT;
-	if ((flags & FOF_OFFSET) == 0)
-		uio->uio_offset = fp->f_offset;
+	foffset_lock_uio(fp, uio, flags | FOF_NOLOCK);
 
 	resid = uio->uio_resid;
 
@@ -1661,9 +1673,7 @@ devfs_write_f(struct file *fp, struct uio *uio, struct ucred *cred, int flags, s
 	td->td_fpop = fpop;
 	dev_relthread(dev, ref);
 
-	if ((flags & FOF_OFFSET) == 0)
-		fp->f_offset = uio->uio_offset;
-	fp->f_nextoff = uio->uio_offset;
+	foffset_unlock_uio(fp, uio, flags | FOF_NOLOCK | FOF_NEXTOFF);
 	return (error);
 }
 

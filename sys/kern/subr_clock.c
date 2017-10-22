@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/subr_clock.c 217195 2011-01-09 14:34:56Z bz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

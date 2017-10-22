@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libmd/sha256.h 154479 2006-01-17 15:35:57Z phk $
  */
 
 #ifndef _SHA256_H_

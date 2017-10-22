@@ -58,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/aha/aha.c 181530 2008-08-10 15:10:39Z keramida $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

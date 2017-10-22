@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/procstat/procstat_files.c 240510 2012-09-14 18:45:14Z trociny $
  */
 
 #include <sys/param.h>
@@ -476,4 +476,5 @@ procstat_files(struct procstat *procstat, struct kinfo_proc *kipp)
 
 		printf("\n");
 	}
+	procstat_freefiles(procstat, head);
 }

@@ -1,8 +1,8 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/ipfw/Makefile 243401 2012-11-22 12:11:32Z glebius $
 
 .include <bsd.own.mk>
 
-.PATH: ${.CURDIR}/../../netinet/ipfw
+.PATH: ${.CURDIR}/../../netpfil/ipfw
 
 KMOD=	ipfw
 SRCS=	ip_fw2.c ip_fw_pfil.c

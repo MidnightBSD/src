@@ -42,7 +42,7 @@ static const char sccsid[] = "@(#)du.c	8.5 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/du/du.c 247538 2013-03-01 09:39:53Z des $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -110,7 +110,7 @@ main(int argc, char *argv[])
 	depth = INT_MAX;
 	SLIST_INIT(&ignores);
 
-	while ((ch = getopt(argc, argv, "AB:HI:LPasd:chklmnrt:x")) != -1)
+	while ((ch = getopt(argc, argv, "AB:HI:LPasd:cghklmnrt:x")) != -1)
 		switch (ch) {
 		case 'A':
 			Aflag = 1;
@@ -156,6 +156,10 @@ main(int argc, char *argv[])
 			break;
 		case 'c':
 			cflag = 1;
+			break;
+		case 'g':
+			hflag = 0;
+			blocksize = 1073741824;
 			break;
 		case 'h':
 			hflag = 1;

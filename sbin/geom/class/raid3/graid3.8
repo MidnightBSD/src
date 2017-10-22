@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/sbin/geom/class/raid3/graid3.8 246081 2013-01-29 17:51:12Z mav $
 .\"
-.Dd January 5, 2010
+.Dd January 15, 2012
 .Dt GRAID3 8
 .Os
 .Sh NAME
@@ -53,7 +53,7 @@
 .Nm
 .Cm insert
 .Op Fl hv
-.Fl n Ar number
+.Op Fl n Ar number
 .Ar name
 .Ar prov
 .Nm
@@ -171,6 +171,8 @@ Add the given component to the existing array, if one of the components was
 removed previously with the
 .Cm remove
 command or if one component is missing and will not be connected again.
+If no number is given, new component will be added instead of first missed
+component.
 .Pp
 Additional options include:
 .Bl -tag -width ".Fl h"

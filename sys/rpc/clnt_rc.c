@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/rpc/clnt_rc.c 221127 2011-04-27 18:19:26Z rmacklem $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

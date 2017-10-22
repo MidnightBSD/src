@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/i386/mem.c 239880 2012-08-29 20:49:36Z jhb $");
 
 /*
  * Memory special file
@@ -71,8 +71,6 @@ __FBSDID("$FreeBSD$");
  * Used in /dev/mem drivers and elsewhere
  */
 MALLOC_DEFINE(M_MEMDESC, "memdesc", "memory range descriptors");
-
-struct mem_range_softc mem_range_softc;
 
 static struct sx memsxlock;
 SX_SYSINIT(memsxlockinit, &memsxlock, "/dev/mem lock");

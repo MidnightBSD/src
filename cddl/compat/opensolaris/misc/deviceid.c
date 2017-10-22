@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/cddl/compat/opensolaris/misc/deviceid.c 185174 2008-11-22 13:33:06Z pjd $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>

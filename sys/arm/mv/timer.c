@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/mv/timer.c 218426 2011-02-08 01:43:45Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

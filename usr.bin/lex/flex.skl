@@ -2,7 +2,7 @@
 
 /* Scanner skeleton version:
  * $Header: /home/daffy/u0/vern/flex/RCS/flex.skl,v 2.91 96/09/10 16:58:48 vern Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/lex/flex.skl 214272 2010-10-24 15:31:41Z uqs $
  */
 
 #if defined(__FreeBSD__)

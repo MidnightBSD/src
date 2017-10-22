@@ -47,7 +47,7 @@
  *
  *	from: @(#)locore.s	8.5 (Berkeley) 1/4/94
  *	JNPR: support.S,v 1.5.2.2 2007/08/29 10:03:49 girish
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/mips/support.S 210626 2010-07-29 19:47:15Z jchandra $
  */
 
 /*

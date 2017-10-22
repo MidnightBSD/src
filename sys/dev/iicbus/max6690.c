@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/iicbus/max6690.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -101,7 +101,7 @@ static driver_t max6690_driver = {
 static devclass_t max6690_devclass;
 
 DRIVER_MODULE(max6690, iicbus, max6690_driver, max6690_devclass, 0, 0);
-MALLOC_DEFINE(M_MAX6690, "max6690", "Temp-Monitor MAX6690");
+static MALLOC_DEFINE(M_MAX6690, "max6690", "Temp-Monitor MAX6690");
 
 static int
 max6690_read(device_t dev, uint32_t addr, uint8_t reg, uint8_t *data)

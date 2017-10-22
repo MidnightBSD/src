@@ -23,7 +23,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/geom/raid/g_raid_md_if.m 235874 2012-05-24 02:34:03Z mav $
 
 #include <sys/param.h>
 #include <sys/lock.h>

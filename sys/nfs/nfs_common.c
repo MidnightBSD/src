@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/nfs/nfs_common.c 247502 2013-02-28 21:57:38Z jhb $");
 
 /*
  * These functions support the macros and help fiddle mbuf chains for
@@ -89,15 +89,6 @@ SYSCTL_INT(_vfs_nfs_common, OID_AUTO, realign_test, CTLFLAG_RD,
 static int nfs_realign_count;
 SYSCTL_INT(_vfs_nfs_common, OID_AUTO, realign_count, CTLFLAG_RD,
     &nfs_realign_count, 0, "Number of mbuf realignments done");
-
-u_quad_t
-nfs_curusec(void)
-{
-	struct timeval tv;
-
-	getmicrotime(&tv);
-	return ((u_quad_t)tv.tv_sec * 1000000 + (u_quad_t)tv.tv_usec);
-}
 
 /*
  * copies mbuf chain to the uio scatter/gather list

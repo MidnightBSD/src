@@ -27,7 +27,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/usr.sbin/pw/pw_user.c 242916 2012-11-12 14:13:49Z bapt $";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -315,7 +315,7 @@ pw_user(struct userconf * cnf, int mode, struct cargs * args)
 		 */
 		if (mode != M_ADD && pwd == NULL
 		    && strspn(a_name->val, "0123456789") == strlen(a_name->val)
-		    && atoi(a_name->val) > 0) {	/* Assume uid */
+		    && *a_name->val) {
 			(a_uid = a_name)->ch = 'u';
 			a_name = NULL;
 		}

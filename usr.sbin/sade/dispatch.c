@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sade/dispatch.c 161099 2006-08-08 13:45:46Z delphij $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

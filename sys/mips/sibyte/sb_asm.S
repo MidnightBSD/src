@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/sibyte/sb_asm.S 205675 2010-03-26 07:15:27Z neel $
  */
 
 #include <machine/asm.h>

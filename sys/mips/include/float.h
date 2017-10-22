@@ -29,7 +29,7 @@
  *	from: @(#)float.h	7.1 (Berkeley) 5/8/90
  *	from: src/sys/i386/include/float.h,v 1.8 1999/08/28 00:44:11 peter
  *	JNPR: float.h,v 1.4 2006/12/02 09:53:41 katta
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/include/float.h 202175 2010-01-12 21:36:08Z imp $
  */
 
 #ifndef _MACHINE_FLOAT_H_

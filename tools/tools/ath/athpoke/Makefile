@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/ath/athpoke/Makefile 220534 2011-04-11 06:53:45Z adrian $
 
 PROG=	athpoke
 LINKS=	${BINDIR}/${PROG} ${BINDIR}/athpeek

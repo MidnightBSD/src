@@ -3,7 +3,7 @@
 #	All rights reserved.
 # Author: Harti Brandt <brandt@fokus.gmd.de>
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/atm/atmconfig/Makefile 211725 2010-08-23 22:24:11Z imp $
 
 PROG=	atmconfig
 .ifndef RESCUE

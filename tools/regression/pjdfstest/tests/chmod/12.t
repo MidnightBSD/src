@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/chmod/12.t 219463 2011-03-10 20:59:02Z pjd $
 
 desc="verify SUID/SGID bit behaviour"
 

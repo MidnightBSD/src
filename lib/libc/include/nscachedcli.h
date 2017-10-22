@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libc/include/nscachedcli.h 158115 2006-04-28 12:03:38Z ume $
  */
 
 #ifndef __NS_CACHED_CLI_H__

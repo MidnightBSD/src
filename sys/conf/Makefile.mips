@@ -1,5 +1,5 @@
 # Makefile.mips
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/conf/Makefile.mips 224105 2011-07-16 17:22:01Z jchandra $
 #
 # Makefile for FreeBSD
 #

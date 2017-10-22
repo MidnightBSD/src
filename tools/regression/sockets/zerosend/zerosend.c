@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/sockets/zerosend/zerosend.c 165984 2007-01-12 22:17:31Z rwatson $
  */
 
 #include <sys/select.h>

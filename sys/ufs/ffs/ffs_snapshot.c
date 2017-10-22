@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ufs/ffs/ffs_snapshot.c 245283 2013-01-11 05:39:17Z kib $");
 
 #include "opt_quota.h"
 
@@ -686,8 +686,7 @@ out1:
 	/*
 	 * Resume operation on filesystem.
 	 */
-	vfs_write_resume(vp->v_mount);
-	vn_start_write(NULL, &wrtmp, V_WAIT);
+	vfs_write_resume_flags(vp->v_mount, VR_START_WRITE | VR_NO_SUSPCLR);
 	if (collectsnapstats && starttime.tv_sec > 0) {
 		nanotime(&endtime);
 		timespecsub(&endtime, &starttime);

@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/nfsserver/nfs_fha.c 203732 2010-02-09 23:45:14Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

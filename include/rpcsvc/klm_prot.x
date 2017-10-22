@@ -42,7 +42,7 @@
 %/*static char sccsid[] = "from: @(#)klm_prot.x	2.1 88/08/01 4.0 RPCSRC";*/
 %#endif /* not lint */
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD$");
+%__FBSDID("$FreeBSD: stable/9/include/rpcsvc/klm_prot.x 114629 2003-05-04 02:51:42Z obrien $");
 #endif
 
 const	LM_MAXSTRLEN = 1024;

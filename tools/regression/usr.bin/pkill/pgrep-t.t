@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/usr.bin/pkill/pgrep-t.t 201491 2010-01-04 11:11:37Z obrien $
 
 base=`basename $0`
 

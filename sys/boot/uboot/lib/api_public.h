@@ -48,7 +48,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/uboot/lib/api_public.h 183599 2008-10-04 13:19:15Z raj $
  *
  * This file needs to be kept in sync with U-Boot reference:
  * http://www.denx.de/cgi-bin/gitweb.cgi?p=u-boot.git;a=blob;f=include/api_public.h

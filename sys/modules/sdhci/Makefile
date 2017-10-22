@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/sdhci/Makefile 184138 2008-10-21 20:33:40Z mav $
 
 .PATH: ${.CURDIR}/../../dev/sdhci
 

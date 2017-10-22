@@ -1,4 +1,4 @@
-#	$FreeBSD$
+#	$FreeBSD: stable/9/share/examples/kld/firmware/fwimage/Makefile 220256 2011-04-01 23:47:10Z emaste $
 
 KMOD=	beastie
 FIRMWS=	firmware.img:beastie

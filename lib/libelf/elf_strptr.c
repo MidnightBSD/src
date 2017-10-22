@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libelf/elf_strptr.c 179241 2008-05-23 07:35:36Z jb $");
 
 #include <sys/param.h>
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/procstat/procstat_args.c 230917 2012-02-02 18:17:49Z trociny $
  */
 
 #include <sys/param.h>

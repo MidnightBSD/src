@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/machdep.c 235260 2012-05-11 04:10:23Z attilio $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"

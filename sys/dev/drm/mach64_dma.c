@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/mach64_dma.c 218909 2011-02-21 09:01:34Z brucec $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

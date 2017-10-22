@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/systat/ip.c 241213 2012-10-04 22:56:15Z melifaro $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)mbufs.c	8.1 (Berkeley) 6/6/93";
@@ -146,7 +146,7 @@ domode(struct stat *ret)
 	switch(currentmode) {
 	case display_RATE:
 		sub = &oldstat;
-		divisor = naptime;
+		divisor = (delay > 1000000) ? delay / 1000000 : 1;
 		break;
 	case display_DELTA:
 		sub = &oldstat;

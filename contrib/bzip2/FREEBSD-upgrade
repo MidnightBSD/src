@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/9/contrib/bzip2/FREEBSD-upgrade 177423 2008-03-20 02:45:32Z delphij $
 
 Julian Seward's bzip2
 	originals can be found at: 	http://www.bzip.org/downloads.html

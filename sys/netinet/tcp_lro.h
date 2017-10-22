@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netinet/tcp_lro.h 238230 2012-07-08 11:24:22Z bz $
  */
 
 #ifndef _TCP_LRO_H_

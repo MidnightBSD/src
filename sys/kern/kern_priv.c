@@ -31,7 +31,7 @@
 #include "opt_kdtrace.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_priv.c 245420 2013-01-14 11:13:31Z zont $");
 
 #include <sys/param.h>
 #include <sys/jail.h>
@@ -58,6 +58,11 @@ static int	suser_enabled = 1;
 SYSCTL_INT(_security_bsd, OID_AUTO, suser_enabled, CTLFLAG_RW,
     &suser_enabled, 0, "processes with uid 0 have privilege");
 TUNABLE_INT("security.bsd.suser_enabled", &suser_enabled);
+
+static int	unprivileged_mlock = 0;
+SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_mlock, CTLFLAG_RW|CTLFLAG_TUN,
+    &unprivileged_mlock, 0, "Allow non-root users to call mlock(2)");
+TUNABLE_INT("security.bsd.unprivileged_mlock", &unprivileged_mlock);
 
 SDT_PROVIDER_DEFINE(priv);
 SDT_PROBE_DEFINE1(priv, kernel, priv_check, priv_ok, priv-ok, "int");
@@ -92,6 +97,19 @@ priv_check_cred(struct ucred *cred, int priv, int flags)
 	error = prison_priv_check(cred, priv);
 	if (error)
 		goto out;
+
+	if (unprivileged_mlock) {
+		/*
+		 * Allow unprivileged users to call mlock(2)/munlock(2) and
+		 * mlockall(2)/munlockall(2).
+		 */
+		switch (priv) {
+			case PRIV_VM_MLOCK:
+			case PRIV_VM_MUNLOCK:
+				error = 0;
+				goto out;
+		}
+	}
 
 	/*
 	 * Having determined if privilege is restricted by various policies,

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/colldef/parse.y 175038 2008-01-01 10:04:10Z imp $");
 
 #include <sys/types.h>
 #include <arpa/inet.h>

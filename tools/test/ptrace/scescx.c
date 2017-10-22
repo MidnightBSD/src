@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/test/ptrace/scescx.c 231443 2012-02-10 21:33:12Z kib $");
 
 #include <sys/types.h>
 #include <sys/ptrace.h>

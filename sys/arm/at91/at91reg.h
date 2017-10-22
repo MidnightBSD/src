@@ -24,7 +24,7 @@
  */
 
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/arm/at91/at91reg.h 236081 2012-05-26 09:05:45Z marius $
  */
 
 #ifndef _AT91REG_H_

@@ -1,6 +1,6 @@
 \ Words implementing frame drawing
 \ XXX Filled boxes are left as an exercise for the reader... ;-/
-\ $FreeBSD$
+\ $FreeBSD: stable/9/sys/boot/forth/frames.4th 124648 2004-01-18 04:13:27Z nyan $
 
 marker task-frames.4th
 

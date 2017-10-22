@@ -68,7 +68,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/net/eui64.c 129957 2004-06-01 19:30:13Z brooks $");
 
 #include <stdio.h>
 #include <paths.h>

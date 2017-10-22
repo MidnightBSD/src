@@ -36,9 +36,9 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pcm/ac97.c 249132 2013-04-05 08:22:11Z mav $");
 
-MALLOC_DEFINE(M_AC97, "ac97", "ac97 codec");
+static MALLOC_DEFINE(M_AC97, "ac97", "ac97 codec");
 
 struct ac97mixtable_entry {
 	int reg;		/* register index		*/

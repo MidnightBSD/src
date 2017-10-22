@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/crashinfo/crashinfo.sh 239431 2012-08-20 14:49:06Z emaste $
 
 usage()
 {
@@ -45,10 +45,11 @@ find_kernel()
 		nextline=1
 		next
 	}
-	// {
-		if (nextline) {
-			print
+	nextline==1 {
+		if ($0 ~ "^  [A-Za-z ]+: ") {
 			nextline=0
+		} else {
+			print
 		}
 	}' $INFO)
 

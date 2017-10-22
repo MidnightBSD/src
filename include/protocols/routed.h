@@ -28,7 +28,7 @@
  *
  *	@(#)routed.h	8.1 (Berkeley) 6/2/93
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/include/protocols/routed.h 203965 2010-02-16 19:46:46Z imp $
  *	$Revision: 2.26 $
  */
 

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_deflate.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 /*
@@ -49,7 +49,8 @@
 
 #include "opt_netgraph.h"
 
-MALLOC_DEFINE(M_NETGRAPH_DEFLATE, "netgraph_deflate", "netgraph deflate node ");
+static MALLOC_DEFINE(M_NETGRAPH_DEFLATE, "netgraph_deflate",
+    "netgraph deflate node");
 
 /* DEFLATE header length */
 #define DEFLATE_HDRLEN		2

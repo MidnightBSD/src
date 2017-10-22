@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ath/if_ath_tx_ht.c 222498 2011-05-30 15:06:57Z adrian $");
 
 #include "opt_inet.h"
 #include "opt_ath.h"

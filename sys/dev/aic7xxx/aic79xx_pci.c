@@ -46,7 +46,7 @@
 #include "aic79xx_inline.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/aic7xxx/aic79xx_pci.c 219902 2011-03-23 13:10:15Z jhb $");
 #include <dev/aic7xxx/aic79xx_osm.h>
 #include <dev/aic7xxx/aic79xx_inline.h>
 #endif

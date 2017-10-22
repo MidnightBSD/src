@@ -34,7 +34,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$")
+__FBSDID("$FreeBSD: stable/9/lib/msun/i387/s_cos.S 217108 2011-01-07 16:13:12Z kib $")
 
 ENTRY(cos)
 	fldl	4(%esp)

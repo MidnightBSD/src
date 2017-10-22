@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/bpf_zerocopy.c 240238 2012-09-08 16:40:18Z kib $");
 
 #include "opt_bpf.h"
 
@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD$");
 #include <net/bpfdesc.h>
 
 #include <vm/vm.h>
+#include <vm/vm_param.h>
 #include <vm/pmap.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_map.h>

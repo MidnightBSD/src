@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/ObsoleteFiles.inc 249521 2013-04-15 18:38:21Z bapt $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -38,6 +38,48 @@
 #   xargs -n1 | sort | uniq -d;
 # done
 
+# 20130415: Ports are no more available via cvsup
+OLD_FILES+=usr/share/examples/cvsup/ports-supfile
+OLD_FILES+=usr/share/examples/cvsup/refuse
+OLD_FILES+=usr/share/examples/cvsup/refuse.README
+# 20130315: removed long unused directories for .1aout section manpages
+OLD_FILES+=usr/share/man/en.ISO8859-1/man1aout
+OLD_FILES+=usr/share/man/en.UTF-8/man1aout
+OLD_DIRS+=usr/share/man/man1aout
+OLD_DIRS+=usr/share/man/cat1aout
+OLD_DIRS+=usr/share/man/en.ISO8859-1/cat1aout
+OLD_DIRS+=usr/share/man/en.UTF-8/cat1aout
+# 20121230: remove wrongly created directories for auditdistd
+OLD_DIRS+=var/dist
+OLD_DIRS+=var/remote
+# 20120816: new clang import which bumps version from 3.1 to 3.2
+OLD_FILES+=usr/bin/llvm-ld
+OLD_FILES+=usr/bin/llvm-stub
+OLD_FILES+=usr/include/clang/3.1/altivec.h
+OLD_FILES+=usr/include/clang/3.1/avx2intrin.h
+OLD_FILES+=usr/include/clang/3.1/avxintrin.h
+OLD_FILES+=usr/include/clang/3.1/bmi2intrin.h
+OLD_FILES+=usr/include/clang/3.1/bmiintrin.h
+OLD_FILES+=usr/include/clang/3.1/cpuid.h
+OLD_FILES+=usr/include/clang/3.1/emmintrin.h
+OLD_FILES+=usr/include/clang/3.1/fma4intrin.h
+OLD_FILES+=usr/include/clang/3.1/immintrin.h
+OLD_FILES+=usr/include/clang/3.1/lzcntintrin.h
+OLD_FILES+=usr/include/clang/3.1/mm3dnow.h
+OLD_FILES+=usr/include/clang/3.1/mm_malloc.h
+OLD_FILES+=usr/include/clang/3.1/mmintrin.h
+OLD_FILES+=usr/include/clang/3.1/module.map
+OLD_FILES+=usr/include/clang/3.1/nmmintrin.h
+OLD_FILES+=usr/include/clang/3.1/pmmintrin.h
+OLD_FILES+=usr/include/clang/3.1/popcntintrin.h
+OLD_FILES+=usr/include/clang/3.1/smmintrin.h
+OLD_FILES+=usr/include/clang/3.1/tmmintrin.h
+OLD_FILES+=usr/include/clang/3.1/unwind.h
+OLD_FILES+=usr/include/clang/3.1/wmmintrin.h
+OLD_FILES+=usr/include/clang/3.1/x86intrin.h
+OLD_FILES+=usr/include/clang/3.1/xmmintrin.h
+OLD_DIRS+=usr/include/clang/3.1
+OLD_FILES+=usr/share/man/man1/llvm-ld.1.gz
 # 20120713: auth.conf removed
 OLD_FILES+=etc/auth.conf
 OLD_FILES+=usr/share/examples/etc/auth.conf
@@ -580,7 +622,6 @@ OLD_LIBS+=usr/lib/snmp_hostres.so.5
 OLD_LIBS+=usr/lib/snmp_mibII.so.5
 OLD_LIBS+=usr/lib/snmp_netgraph.so.5
 OLD_LIBS+=usr/lib/snmp_pf.so.5
-OLD_LIBS+=usr/lib/libwrap.so.5
 OLD_LIBS+=usr/lib32/libalias.so.6
 OLD_LIBS+=usr/lib32/libarchive.so.4
 OLD_LIBS+=usr/lib32/libauditd.so.4
@@ -1217,6 +1258,11 @@ OLD_FILES+=usr/share/man/man2/kse_thr_interrupt.2.gz
 OLD_FILES+=usr/share/man/man2/kse_wakeup.2.gz
 OLD_FILES+=usr/lib32/libkse.so
 OLD_LIBS+=usr/lib32/libkse.so.3
+# 20080225: bsdar/bsdranlib rename to ar/ranlib
+OLD_FILES+=usr/bin/bsdar
+OLD_FILES+=usr/bin/bsdranlib
+OLD_FILES+=usr/share/man/man1/bsdar.1.gz
+OLD_FILES+=usr/share/man/man1/bsdranlib.1.gz
 # 20080220: geom_lvm rename to geom_linux_lvm
 OLD_FILES+=usr/share/man/man4/geom_lvm.4.gz
 # 20080126: oldcard.4 removal

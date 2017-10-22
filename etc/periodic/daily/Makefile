@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/periodic/daily/Makefile 220049 2011-03-27 03:06:58Z dougb $
 
 .include <bsd.own.mk>
 

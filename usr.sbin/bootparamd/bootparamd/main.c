@@ -9,7 +9,7 @@ use and modify. Please send modifications and/or suggestions + bug fixes to
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/usr.sbin/bootparamd/bootparamd/main.c 181143 2008-08-02 00:10:02Z cognet $";
 #endif /* not lint */
 
 #include <ctype.h>

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)systat.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/systat/systat.h 231279 2012-02-09 15:21:54Z ed $
  */
 
 #include <curses.h>

@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/fs/coda/coda_psdev.c 224778 2011-08-11 12:30:23Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

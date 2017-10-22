@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/lib/csu/Makefile 211725 2010-08-23 22:24:11Z imp $
 
 .include <bsd.own.mk>
 MK_SSP=		no

@@ -26,11 +26,11 @@
  *
  * LSI MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/mps/mps_sas.c 242544 2012-11-04 01:21:49Z eadler $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/mps/mps_sas.c 242544 2012-11-04 01:21:49Z eadler $");
 
 /* Communications core for LSI MPT2 */
 
@@ -360,7 +360,7 @@ mpssas_remove_volume(struct mps_softc *sc, struct mps_command *tm)
 
 	mps_printf(sc, "Reset aborted %u commands\n", reply->TerminationCount);
 	mps_free_reply(sc, tm->cm_reply_data);
-	tm->cm_reply = NULL;	/* Ensures the the reply won't get re-freed */
+	tm->cm_reply = NULL;	/* Ensures the reply won't get re-freed */
 
 	mps_printf(sc, "clearing target %u handle 0x%04x\n", targ->tid, handle);
 	
@@ -550,7 +550,7 @@ mpssas_remove_device(struct mps_softc *sc, struct mps_command *tm)
 	mps_dprint(sc, MPS_INFO, "Reset aborted %u commands\n",
 	    le32toh(reply->TerminationCount));
 	mps_free_reply(sc, tm->cm_reply_data);
-	tm->cm_reply = NULL;	/* Ensures the the reply won't get re-freed */
+	tm->cm_reply = NULL;	/* Ensures the reply won't get re-freed */
 
 	/* Reuse the existing command */
 	req = (MPI2_SAS_IOUNIT_CONTROL_REQUEST *)tm->cm_req;
@@ -2020,7 +2020,7 @@ mpssas_scsiio_complete(struct mps_softc *sc, struct mps_command *cm)
 		if (cm->cm_flags & MPS_CM_FLAGS_DATAIN)
 			dir = BUS_DMASYNC_POSTREAD;
 		else if (cm->cm_flags & MPS_CM_FLAGS_DATAOUT)
-			dir = BUS_DMASYNC_POSTWRITE;;
+			dir = BUS_DMASYNC_POSTWRITE;
 		bus_dmamap_sync(sc->buffer_dmat, cm->cm_dmamap, dir);
 		bus_dmamap_unload(sc->buffer_dmat, cm->cm_dmamap);
 	}

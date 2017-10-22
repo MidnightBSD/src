@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$ 
+ * $FreeBSD: stable/9/sys/mips/include/intr_machdep.h 224115 2011-07-16 20:31:29Z jchandra $ 
  */
 
 #ifndef	_MACHINE_INTR_MACHDEP_H_

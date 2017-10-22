@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/accf_http.c 248085 2013-03-09 02:36:32Z marius $");
 
 #define ACCEPT_FILTER_MOD
 
@@ -69,7 +69,7 @@ DECLARE_MODULE(accf_http, accf_http_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
 
 static int parse_http_version = 1;
 
-SYSCTL_NODE(_net_inet_accf, OID_AUTO, http, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_net_inet_accf, OID_AUTO, http, CTLFLAG_RW, 0,
 "HTTP accept filter");
 SYSCTL_INT(_net_inet_accf_http, OID_AUTO, parsehttpversion, CTLFLAG_RW,
 &parse_http_version, 1,

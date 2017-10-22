@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/usr.bin/cc/Makefile.inc 217128 2011-01-07 22:57:31Z tijl $
 
 .include "../Makefile.inc"
 

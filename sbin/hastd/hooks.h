@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sbin/hastd/hooks.h 213429 2010-10-04 21:43:06Z pjd $
  */
 
 #ifndef	_HOOKS_H_

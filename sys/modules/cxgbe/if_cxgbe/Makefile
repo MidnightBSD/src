@@ -1,6 +1,8 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/cxgbe/if_cxgbe/Makefile 240169 2012-09-06 17:28:47Z np $
 #
+
+.include <bsd.own.mk>
 
 CXGBE = ${.CURDIR}/../../../dev/cxgbe
 .PATH: ${CXGBE} ${CXGBE}/common
@@ -16,5 +18,18 @@ CFLAGS+= -I${CXGBE}
 
 # Provide the timestamp of a packet in its header mbuf.
 #CFLAGS+= -DT4_PKT_TIMESTAMP
+
+.if !defined(KERNBUILDDIR)
+.if ${MK_INET_SUPPORT} != "no"
+opt_inet.h:
+	@echo "#define INET 1" > ${.TARGET}
+	@echo "#define TCP_OFFLOAD 1" >> ${.TARGET}
+.endif
+
+.if ${MK_INET6_SUPPORT} != "no"
+opt_inet6.h:
+	@echo "#define INET6 1" > ${.TARGET}
+.endif
+.endif
 
 .include <bsd.kmod.mk>

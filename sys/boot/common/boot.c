@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/common/boot.c 237767 2012-06-29 10:22:20Z avg $");
 
 /*
  * Loading modules, booting the system

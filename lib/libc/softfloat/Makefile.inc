@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile.inc,v 1.3 2003/05/06 08:58:20 rearnsha Exp $
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libc/softfloat/Makefile.inc 211774 2010-08-24 20:54:43Z imp $
 
 SOFTFLOAT_BITS?=64
 .PATH:		${LIBC_ARCH}/softfloat \

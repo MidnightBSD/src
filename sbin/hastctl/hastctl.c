@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/hastctl/hastctl.c 247867 2013-03-06 06:58:11Z trociny $");
 
 #include <sys/param.h>
 #include <sys/disk.h>
@@ -342,15 +342,21 @@ control_status(struct nv *nv)
 		    (intmax_t)nv_get_uint64(nv, "dirty%u", ii));
 		printf("  statistics:\n");
 		printf("    reads: %ju\n",
-		    (uint64_t)nv_get_uint64(nv, "stat_read%u", ii));
+		    (uintmax_t)nv_get_uint64(nv, "stat_read%u", ii));
 		printf("    writes: %ju\n",
-		    (uint64_t)nv_get_uint64(nv, "stat_write%u", ii));
+		    (uintmax_t)nv_get_uint64(nv, "stat_write%u", ii));
 		printf("    deletes: %ju\n",
-		    (uint64_t)nv_get_uint64(nv, "stat_delete%u", ii));
+		    (uintmax_t)nv_get_uint64(nv, "stat_delete%u", ii));
 		printf("    flushes: %ju\n",
-		    (uint64_t)nv_get_uint64(nv, "stat_flush%u", ii));
+		    (uintmax_t)nv_get_uint64(nv, "stat_flush%u", ii));
 		printf("    activemap updates: %ju\n",
-		    (uint64_t)nv_get_uint64(nv, "stat_activemap_update%u", ii));
+		    (uintmax_t)nv_get_uint64(nv, "stat_activemap_update%u", ii));
+		printf("    local errors: "
+		    "read: %ju, write: %ju, delete: %ju, flush: %ju\n",
+		    (uintmax_t)nv_get_uint64(nv, "stat_read_error%u", ii),
+		    (uintmax_t)nv_get_uint64(nv, "stat_write_error%u", ii),
+		    (uintmax_t)nv_get_uint64(nv, "stat_delete_error%u", ii),
+		    (uintmax_t)nv_get_uint64(nv, "stat_flush_error%u", ii));
 	}
 	return (ret);
 }

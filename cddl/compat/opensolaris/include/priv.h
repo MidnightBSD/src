@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/cddl/compat/opensolaris/include/priv.h 219089 2011-02-27 19:41:40Z pjd $ */
 
 #ifndef	_OPENSOLARIS_PRIV_H_
 #define	_OPENSOLARIS_PRIV_H_

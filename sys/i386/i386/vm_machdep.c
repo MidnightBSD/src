@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/i386/vm_machdep.c 239996 2012-09-01 15:59:09Z kib $");
 
 #include "opt_isa.h"
 #include "opt_npx.h"
@@ -105,6 +105,10 @@ __FBSDID("$FreeBSD$");
 #ifndef NSFBUFS
 #define	NSFBUFS		(512 + maxusers * 16)
 #endif
+
+CTASSERT((struct thread **)OFFSETOF_CURTHREAD ==
+    &((struct pcpu *)NULL)->pc_curthread);
+CTASSERT((struct pcb **)OFFSETOF_CURPCB == &((struct pcpu *)NULL)->pc_curpcb);
 
 static void	cpu_reset_real(void);
 #ifdef SMP

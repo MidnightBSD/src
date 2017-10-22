@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/periodic/daily/404.status-zfs 231721 2012-02-15 01:52:59Z gjb $
 #
 
 # If there is a global system configuration file, suck it in.

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/release/scripts/catpages-install.sh 75328 2001-04-08 23:09:21Z obrien $
 #
 
 if [ "`id -u`" != "0" ]; then

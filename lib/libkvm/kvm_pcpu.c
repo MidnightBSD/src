@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libkvm/kvm_pcpu.c 223758 2011-07-04 12:04:52Z attilio $");
 
 #include <sys/param.h>
 #include <sys/pcpu.h>

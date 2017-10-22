@@ -14,7 +14,7 @@
 # Copyright (c) 2001, 2004-2005, Juniper Networks, Inc.
 # All rights reserved.
 # JNPR: files.mips,v 1.11 2007/08/09 12:25:35 katta
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/conf/files.mips 240815 2012-09-22 12:32:00Z kib $
 #
 # ----------------------------------------------------------------------
 # Phase 2
@@ -88,6 +88,8 @@ libkern/umoddi3.c		optional	isa_mips32
 #XXX: We can't use these versions, as strcmp.c is included conf/files
 #libkern/mips/strcmp.S		standard
 #libkern/mips/strncmp.S		standard
+
+kern/subr_dummy_vdso_tc.c		standard
 
 kern/kern_clocksource.c		standard
 kern/link_elf_obj.c		standard

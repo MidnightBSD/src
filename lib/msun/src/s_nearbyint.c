@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/s_nearbyint.c 175309 2008-01-14 02:12:07Z das $");
 
 #include <fenv.h>
 #include <math.h>

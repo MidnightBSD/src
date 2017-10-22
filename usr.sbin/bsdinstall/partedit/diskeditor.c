@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/bsdinstall/partedit/diskeditor.c 248239 2013-03-13 13:45:47Z nwhitehorn $
  */
 
 #include <stdio.h>
@@ -77,7 +77,7 @@ diskeditor_show(const char *title, const char *cprompt,
 	int partlist_height, partlist_width;
 	int cur_scroll = 0;
 	int key, fkey;
-	int cur_button = 0, cur_part = 0;
+	int cur_button = 5, cur_part = 0;
 	int result = DLG_EXIT_UNKNOWN;
 
 	static DLG_KEYS_BINDING binding[] = {

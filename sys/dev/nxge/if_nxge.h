@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/nxge/if_nxge.h 173139 2007-10-29 14:19:32Z rwatson $
  */
 
 #ifndef _IF_XGE_H

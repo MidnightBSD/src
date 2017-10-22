@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vmmeter.h	8.2 (Berkeley) 7/10/94
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/vmmeter.h 240142 2012-09-05 16:35:37Z kib $
  */
 
 #ifndef _SYS_VMMETER_H_
@@ -79,7 +79,7 @@ struct vmmeter {
 	u_int v_pdpages;	/* (q) pages analyzed by daemon */
 
 	u_int v_tcached;	/* (p) total pages cached */
-	u_int v_dfree;		/* (q) pages freed by daemon */
+	u_int v_dfree;		/* (p) pages freed by daemon */
 	u_int v_pfree;		/* (p) pages freed by exiting processes */
 	u_int v_tfree;		/* (p) total pages freed */
 	/*

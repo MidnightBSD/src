@@ -58,7 +58,7 @@
 #include "opt_pf.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/contrib/pf/net/if_pfsync.c 233275 2012-03-21 09:19:23Z glebius $");
 
 #define	NBPFILTER	1
 

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/clang/opt/Makefile 245431 2013-01-14 19:51:26Z dim $
 
 PROG_CXX=opt
 
@@ -9,7 +9,34 @@ SRCS=	AnalysisWrappers.cpp \
 	opt.cpp
 
 TGHDRS=	Intrinsics
-LIBDEPS=llvmipo \
+LIBDEPS=llvmarmdisassembler \
+	llvmarmasmparser \
+	llvmarmcodegen \
+	llvmarmdesc \
+	llvmarminfo \
+	llvmarminstprinter \
+	llvmmipsasmparser \
+	llvmmipscodegen \
+	llvmmipsdesc \
+	llvmmipsinstprinter \
+	llvmmipsdisassembler \
+	llvmmipsinfo \
+	llvmpowerpccodegen \
+	llvmpowerpcdesc \
+	llvmpowerpcinfo \
+	llvmpowerpcinstprinter \
+	llvmx86asmparser \
+	llvmx86codegen \
+	llvmselectiondag \
+	llvmasmprinter \
+	llvmmcparser \
+	llvmcodegen \
+	llvmx86disassembler \
+	llvmx86desc \
+	llvmx86info \
+	llvmx86instprinter \
+	llvmx86utils \
+	llvmipo \
 	llvmvectorize \
 	llvmscalaropts \
 	llvminstcombine \

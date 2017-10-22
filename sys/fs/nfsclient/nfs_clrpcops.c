@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/fs/nfsclient/nfs_clrpcops.c 246285 2013-02-03 14:24:52Z kib $");
 
 /*
  * Rpc op calls, generally called from the vnode op calls or through the
@@ -56,6 +56,7 @@ extern u_int32_t newnfs_false, newnfs_true;
 extern nfstype nfsv34_type[9];
 extern int nfsrv_useacl;
 extern char nfsv4_callbackaddr[INET6_ADDRSTRLEN];
+extern int nfscl_debuglevel;
 NFSCLSTATEMUTEX;
 int nfstest_outofseq = 0;
 int nfscl_assumeposixlocks = 1;
@@ -1338,7 +1339,7 @@ nfsrpc_readrpc(vnode_t vp, struct uio *uiop, struct ucred *cred,
 			NFSM_DISSECT(tl, u_int32_t *, NFSX_UNSIGNED);
 			eof = fxdr_unsigned(int, *tl);
 		}
-		NFSM_STRSIZ(retlen, rsize);
+		NFSM_STRSIZ(retlen, len);
 		error = nfsm_mbufuio(nd, uiop, retlen);
 		if (error)
 			goto nfsmout;
@@ -1398,7 +1399,7 @@ nfsrpc_write(vnode_t vp, struct uio *uiop, int *iomode, int *must_commit,
 			if (stateid.other[0] == 0 && stateid.other[1] == 0 &&
 			    stateid.other[2] == 0) {
 				nostateid = 1;
-				printf("stateid0 in write\n");
+				NFSCL_DEBUG(1, "stateid0 in write\n");
 			}
 		}
 

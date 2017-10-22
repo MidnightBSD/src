@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/advansys/adwlib.c 146734 2005-05-29 04:42:30Z nyan $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

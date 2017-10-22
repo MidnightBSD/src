@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_clock.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_kdb.h"
 #include "opt_device_polling.h"
@@ -311,7 +311,8 @@ static struct kthread_desc deadlkres_kd = {
 
 SYSINIT(deadlkres, SI_SUB_CLOCKS, SI_ORDER_ANY, kthread_start, &deadlkres_kd);
 
-SYSCTL_NODE(_debug, OID_AUTO, deadlkres, CTLFLAG_RW, 0, "Deadlock resolver");
+static SYSCTL_NODE(_debug, OID_AUTO, deadlkres, CTLFLAG_RW, 0,
+    "Deadlock resolver");
 SYSCTL_INT(_debug_deadlkres, OID_AUTO, slptime_threshold, CTLFLAG_RW,
     &slptime_threshold, 0,
     "Number of seconds within is valid to sleep on a sleepqueue");
@@ -381,7 +382,7 @@ static void watchdog_config(void *, u_int, int *);
 int	stathz;
 int	profhz;
 int	profprocs;
-int	ticks;
+volatile int	ticks;
 int	psratio;
 
 static DPCPU_DEFINE(int, pcputicks);	/* Per-CPU version of ticks. */
@@ -468,7 +469,7 @@ void
 hardclock(int usermode, uintfptr_t pc)
 {
 
-	atomic_add_int((volatile int *)&ticks, 1);
+	atomic_add_int(&ticks, 1);
 	hardclock_cpu(usermode);
 	tc_ticktock(1);
 	cpu_tick_calibration();

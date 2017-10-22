@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/camcontrol/camcontrol.c 243296 2012-11-19 18:26:08Z emaste $");
 
 #include <sys/ioctl.h>
 #include <sys/stdint.h>
@@ -142,7 +142,7 @@ static const char smppc_opts[] = "a:A:d:lm:M:o:p:s:S:T:";
 static const char smpphylist_opts[] = "lq";
 #endif
 
-struct camcontrol_opts option_table[] = {
+static struct camcontrol_opts option_table[] = {
 #ifndef MINIMALISTIC
 	{"tur", CAM_CMD_TUR, CAM_ARG_NONE, NULL},
 	{"inquiry", CAM_CMD_INQUIRY, CAM_ARG_NONE, "DSR"},
@@ -210,8 +210,8 @@ struct cam_devlist {
 	path_id_t path_id;
 };
 
-cam_cmdmask cmdlist;
-cam_argmask arglist;
+static cam_cmdmask cmdlist;
+static cam_argmask arglist;
 
 camcontrol_optret getoption(struct camcontrol_opts *table, char *arg,
 			    uint32_t *cmdnum, cam_argmask *argnum,
@@ -4463,7 +4463,7 @@ static int
 smpcmd(struct cam_device *device, int argc, char **argv, char *combinedopt,
        int retry_count, int timeout)
 {
-	int c, error;
+	int c, error = 0;
 	union ccb *ccb;
 	uint8_t *smp_request = NULL, *smp_response = NULL;
 	int request_size = 0, response_size = 0;
@@ -4757,7 +4757,10 @@ try_long:
 
 	smp_report_general_sbuf(response, sizeof(*response), sb);
 
-	sbuf_finish(sb);
+	if (sbuf_finish(sb) != 0) {
+		warnx("%s: sbuf_finish", __func__);
+		goto bailout;
+	}
 
 	printf("%s", sbuf_data(sb));
 
@@ -4777,7 +4780,7 @@ bailout:
 	return (error);
 }
 
-struct camcontrol_opts phy_ops[] = {
+static struct camcontrol_opts phy_ops[] = {
 	{"nop", SMP_PC_PHY_OP_NOP, CAM_ARG_NONE, NULL},
 	{"linkreset", SMP_PC_PHY_OP_LINK_RESET, CAM_ARG_NONE, NULL},
 	{"hardreset", SMP_PC_PHY_OP_HARD_RESET, CAM_ARG_NONE, NULL},
@@ -5128,7 +5131,10 @@ smpmaninfo(struct cam_device *device, int argc, char **argv,
 
 	smp_report_manuf_info_sbuf(&response, sizeof(response), sb);
 
-	sbuf_finish(sb);
+	if (sbuf_finish(sb) != 0) {
+		warnx("%s: sbuf_finish", __func__);
+		goto bailout;
+	}
 
 	printf("%s", sbuf_data(sb));
 
@@ -5458,6 +5464,7 @@ smpphylist(struct cam_device *device, int argc, char **argv,
 
 	bzero(&(&ccb->ccb_h)[1],
 	      sizeof(union ccb) - sizeof(struct ccb_hdr));
+	STAILQ_INIT(&devlist.dev_queue);
 
 	rgrequest = malloc(sizeof(*rgrequest));
 	if (rgrequest == NULL) {
@@ -5526,7 +5533,6 @@ smpphylist(struct cam_device *device, int argc, char **argv,
 		goto bailout;
 	}
 
-	STAILQ_INIT(&devlist.dev_queue);
 	devlist.path_id = device->path_id;
 
 	retval = buildbusdevlist(&devlist);
@@ -5776,9 +5782,10 @@ bailout:
 #endif /* MINIMALISTIC */
 
 void
-usage(int verbose)
+usage(int printlong)
 {
-	fprintf(verbose ? stdout : stderr,
+
+	fprintf(printlong ? stdout : stderr,
 "usage:  camcontrol <command>  [device id][generic args][command args]\n"
 "        camcontrol devlist    [-v]\n"
 #ifndef MINIMALISTIC
@@ -5827,7 +5834,7 @@ usage(int verbose)
 "        camcontrol fwdownload [dev_id][generic args] <-f fw_image> [-y][-s]\n"
 #endif /* MINIMALISTIC */
 "        camcontrol help\n");
-	if (!verbose)
+	if (!printlong)
 		return;
 #ifndef MINIMALISTIC
 	fprintf(stdout,
@@ -5883,7 +5890,7 @@ usage(int verbose)
 "defects arguments:\n"
 "-f format         specify defect list format (block, bfi or phys)\n"
 "-G                get the grown defect list\n"
-"-P                get the permanant defect list\n"
+"-P                get the permanent defect list\n"
 "inquiry arguments:\n"
 "-D                get the standard inquiry data\n"
 "-S                get the serial number\n"

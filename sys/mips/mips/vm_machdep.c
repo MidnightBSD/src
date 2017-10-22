@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/mips/vm_machdep.c 217944 2011-01-27 14:49:22Z jchandra $");
 
 #include "opt_cputype.h"
 #include "opt_ddb.h"

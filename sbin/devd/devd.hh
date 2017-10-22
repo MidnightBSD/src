@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sbin/devd/devd.hh 247803 2013-03-04 16:50:01Z ian $
  */
 
 #ifndef DEVD_HH
@@ -90,6 +90,7 @@ public:
 	virtual bool do_match(config &);
 	virtual bool do_action(config &) { return true; }
 private:
+	bool _inv;
 	std::string _var;
 	std::string _re;
 	regex_t _regex;
@@ -133,8 +134,8 @@ public:
 	int get_priority() const { return (_prio); }
 	void set_priority(int prio) { _prio = prio; }
 	void add(eps *);
-	bool matches(config &);
-	bool run(config &);
+	bool matches(config &) const;
+	bool run(config &) const;
 private:
 	int _prio;
 	std::vector<eps *> _epsvec;
@@ -143,7 +144,7 @@ private:
 class config
 {
 public:
-	config() { _pidfile = ""; push_var_table(); }
+	config() : _pidfile("") { push_var_table(); }
 	virtual ~config() { reset(); }
 	void add_attach(int, event_proc *);
 	void add_detach(int, event_proc *);
@@ -161,7 +162,8 @@ public:
 	void pop_var_table();
 	void set_variable(const char *var, const char *val);
 	const std::string &get_variable(const std::string &var);
-	const std::string expand_string(const std::string &var);
+	const std::string expand_string(const char * var, 
+	    const char * prepend = NULL, const char * append = NULL);
 	char *set_vars(char *);
 	void find_and_execute(char);
 protected:
@@ -169,7 +171,7 @@ protected:
 	void parse_one_file(const char *fn);
 	void parse_files_in_dir(const char *dirname);
 	void expand_one(const char *&src, std::string &dst);
-	bool is_id_char(char);
+	bool is_id_char(char) const;
 	bool chop_var(char *&buffer, char *&lhs, char *&rhs);
 private:
 	std::vector<std::string> _dir_list;

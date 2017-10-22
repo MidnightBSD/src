@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/procstat/procstat_sigs.c 221807 2011-05-12 10:11:39Z stas $
  */
 
 #include <sys/param.h>

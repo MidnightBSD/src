@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/tip/tip/acu.c 169514 2007-05-12 23:29:33Z pav $");
 
 #ifndef lint
 #if 0

@@ -14,7 +14,7 @@
  */
 
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/pc98/btx/lib/btxv86.h 229501 2012-01-04 16:39:39Z jhb $
  */
 
 #ifndef _BTXV86_H_

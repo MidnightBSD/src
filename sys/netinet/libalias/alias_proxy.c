@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/libalias/alias_proxy.c 243282 2012-11-19 15:26:03Z emaste $");
 
 /* file: alias_proxy.c
 
@@ -210,13 +210,13 @@ RuleAdd(struct libalias *la, struct proxy_entry *entry)
 
 	LIBALIAS_LOCK_ASSERT(la);
 
+	entry->la = la;
 	if (la->proxyList == NULL) {
 		la->proxyList = entry;
 		entry->last = NULL;
 		entry->next = NULL;
 		return;
 	}
-	entry->la = la;
 
 	rule_index = entry->rule_index;
 	ptr = la->proxyList;

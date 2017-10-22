@@ -24,7 +24,7 @@ SOFTWARE.
 /*
  * bootpd.h -- common header file for all the modules of the bootpd program.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/libexec/bootpd/bootpd.h 53105 1999-11-12 10:11:48Z marcel $
  */
 
 #include "bptypes.h"

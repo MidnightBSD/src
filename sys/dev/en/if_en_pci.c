@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/en/if_en_pci.c 223624 2011-06-28 08:36:48Z kevlo $");
 
 /*
  * i f _ e n _ p c i . c  

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libdwarf/dwarf_loc.c 195747 2009-07-17 21:15:09Z np $
  */
 
 #include <stdlib.h>

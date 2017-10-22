@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/geom/linux_lvm/g_linux_lvm.h 176417 2008-02-20 07:45:36Z thompsa $
  */
 
 #define	G_LLVM_DEBUG(lvl, ...)	do {					\

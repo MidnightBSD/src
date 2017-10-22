@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/powerpc64/gen/modf.c 218909 2011-02-21 09:01:34Z brucec $");
 
 #include <sys/types.h>
 #include <machine/ieee.h>

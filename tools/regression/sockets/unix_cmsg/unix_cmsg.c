@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/regression/sockets/unix_cmsg/unix_cmsg.c 242544 2012-11-04 01:21:49Z eadler $");
 
 #include <sys/types.h>
 #include <sys/resource.h>
@@ -1513,7 +1513,7 @@ t_timestamp_server(int fd1)
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 1;
 	msg.msg_control = control_un.control;
-	msg.msg_controllen = sizeof control_un.control;;
+	msg.msg_controllen = sizeof control_un.control;
 	msg.msg_flags = 0;
 
 	if (recvmsg_timeout(fd2, &msg, sizeof buf) < 0)

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/lib/msun/test-nan.t 174685 2007-12-16 21:19:51Z das $
 
 cd `dirname $0`
 

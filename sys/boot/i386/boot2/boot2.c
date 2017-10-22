@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/i386/boot2/boot2.c 242562 2012-11-04 13:37:33Z avg $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -416,8 +416,10 @@ parse()
 	    }
 	    ioctrl = OPT_CHECK(RBX_DUAL) ? (IO_SERIAL|IO_KEYBOARD) :
 		     OPT_CHECK(RBX_SERIAL) ? IO_SERIAL : IO_KEYBOARD;
-	    if (ioctrl & IO_SERIAL)
-	        sio_init(115200 / comspeed);
+	    if (ioctrl & IO_SERIAL) {
+	        if (sio_init(115200 / comspeed) != 0)
+		    ioctrl &= ~IO_SERIAL;
+	    }
 	} else {
 	    for (q = arg--; *q && *q != '('; q++);
 	    if (*q) {

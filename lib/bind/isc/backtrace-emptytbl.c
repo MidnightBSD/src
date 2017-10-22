@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/bind/isc/backtrace-emptytbl.c 224093 2011-07-16 11:20:54Z dougb $ */
 
 /*
  * Copyright (C) 2009  Internet Systems Consortium, Inc. ("ISC")

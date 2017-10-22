@@ -49,7 +49,7 @@
 %/*static char sccsid[] = "from: @(#)rstat.x	2.2 88/08/01 4.0 RPCSRC";*/
 %#endif /* not lint */
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD$");
+%__FBSDID("$FreeBSD: stable/9/include/rpcsvc/rstat.x 114629 2003-05-04 02:51:42Z obrien $");
 
 #endif /* def RPC_HDR */
 

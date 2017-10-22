@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/amd/Makefile 107840 2002-12-13 22:59:18Z scottl $
 
 .PATH: ${.CURDIR}/../../dev/amd
 

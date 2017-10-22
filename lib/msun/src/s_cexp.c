@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/s_cexp.c 219359 2011-03-07 03:09:24Z das $");
 
 #include <complex.h>
 #include <math.h>

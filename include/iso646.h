@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/include/iso646.h 226036 2011-10-05 15:50:05Z jkim $
  */
 
 #ifndef _ISO646_H_

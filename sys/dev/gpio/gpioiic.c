@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/gpio/gpioiic.c 213277 2010-09-29 20:53:33Z gonzo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

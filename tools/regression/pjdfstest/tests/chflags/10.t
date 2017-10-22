@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/chflags/10.t 211186 2010-08-11 17:34:58Z pjd $
 
 desc="chflags returns EPERM if non-super-user tries to set one of SF_IMMUTABLE, SF_APPEND, or SF_NOUNLINK"
 

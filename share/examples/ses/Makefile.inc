@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/examples/ses/Makefile.inc 246437 2013-02-06 22:07:38Z mav $
 #
 # Copyright (c) 2000 by Matthew Jacob
 # All rights reserved.
@@ -32,7 +32,6 @@
 # mjacob@feral.com
 #
 
-CFLAGS+= -I/usr/include/cam/scsi -DSESINC="<scsi_ses.h>"
 BINDIR?= /usr/sbin
 
 CLEANFILES+= ${MAN}

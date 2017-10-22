@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/twa/tw_osl_freebsd.c 249132 2013-04-05 08:22:11Z mav $");
 
 /*
  * AMCC'S 3ware driver for 9000 series storage controllers.
@@ -55,7 +55,7 @@ TW_INT32	TW_DEBUG_LEVEL_FOR_OSL = TW_OSL_DEBUG;
 TW_INT32	TW_OSL_DEBUG_LEVEL_FOR_CL = TW_OSL_DEBUG;
 #endif /* TW_OSL_DEBUG */
 
-MALLOC_DEFINE(TW_OSLI_MALLOC_CLASS, "twa_commands", "twa commands");
+static MALLOC_DEFINE(TW_OSLI_MALLOC_CLASS, "twa_commands", "twa commands");
 
 
 static	d_open_t		twa_open;

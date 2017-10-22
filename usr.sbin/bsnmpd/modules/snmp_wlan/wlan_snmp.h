@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_wlan/wlan_snmp.h 229213 2012-01-01 21:43:14Z dim $
  */
 
 #define	WLAN_IFMODE_MAX				WlanIfaceOperatingModeType_tdma

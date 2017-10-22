@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/_types.h 223710 2011-07-01 12:13:48Z jonathan $
  */
 
 #ifndef _SYS__TYPES_H_

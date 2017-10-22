@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libc/i386/Makefile.inc 174204 2007-12-03 07:17:33Z das $
 
 # Long double is 80 bits
 GDTOASRCS+=strtorx.c

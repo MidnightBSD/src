@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/gnu/usr.bin/gdb/kgdb/trgt_powerpc64.c 209867 2010-07-10 02:29:22Z nwhitehorn $");
 
 #include <sys/types.h>
 #include <machine/pcb.h>

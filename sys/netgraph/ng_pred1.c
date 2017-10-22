@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_pred1.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 /*
@@ -46,7 +46,7 @@
 
 #include "opt_netgraph.h"
 
-MALLOC_DEFINE(M_NETGRAPH_PRED1, "netgraph_pred1", "netgraph pred1 node ");
+static MALLOC_DEFINE(M_NETGRAPH_PRED1, "netgraph_pred1", "netgraph pred1 node");
 
 /* PRED1 header length */
 #define PRED1_HDRLEN		2

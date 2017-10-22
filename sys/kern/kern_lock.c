@@ -32,7 +32,7 @@
 #include "opt_kdtrace.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_lock.c 245351 2013-01-13 00:32:07Z mjg $");
 
 #include <sys/param.h>
 #include <sys/ktr.h>
@@ -489,6 +489,8 @@ __lockmgr_args(struct lock *lk, u_int flags, struct lock_object *ilk,
 		case LK_DOWNGRADE:
 			_lockmgr_assert(lk, KA_XLOCKED | KA_NOTRECURSED,
 			    file, line);
+			if (flags & LK_INTERLOCK)
+				class->lc_unlock(ilk);
 			return (0);
 		}
 	}

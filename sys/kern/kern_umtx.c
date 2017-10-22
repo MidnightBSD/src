@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_umtx.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_compat.h"
 #include "opt_umtx_profiling.h"
@@ -192,7 +192,7 @@ static struct umtxq_chain	umtxq_chains[2][UMTX_CHAINS];
 static MALLOC_DEFINE(M_UMTX, "umtx", "UMTX queue memory");
 static int			umtx_pi_allocated;
 
-SYSCTL_NODE(_debug, OID_AUTO, umtx, CTLFLAG_RW, 0, "umtx debug");
+static SYSCTL_NODE(_debug, OID_AUTO, umtx, CTLFLAG_RW, 0, "umtx debug");
 SYSCTL_INT(_debug_umtx, OID_AUTO, umtx_pi_allocated, CTLFLAG_RD,
     &umtx_pi_allocated, 0, "Allocated umtx_pi");
 
@@ -3364,8 +3364,8 @@ freebsd32_umtx_unlock(struct thread *td, struct freebsd32_umtx_unlock_args *uap)
 }
 
 struct timespec32 {
-	uint32_t tv_sec;
-	uint32_t tv_nsec;
+	int32_t tv_sec;
+	int32_t tv_nsec;
 };
 
 static inline int

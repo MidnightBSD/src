@@ -1,5 +1,5 @@
 #	@(#)Makefile.inc	5.1 (Berkeley) 5/11/90
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/bootparamd/Makefile.inc 201390 2010-01-02 11:07:44Z ed $
 
 BINDIR?=	/usr/sbin
 

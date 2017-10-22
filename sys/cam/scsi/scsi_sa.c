@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/cam/scsi/scsi_sa.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -102,7 +102,7 @@ __FBSDID("$FreeBSD$");
  * Driver states
  */
 
-MALLOC_DEFINE(M_SCSISA, "SCSI sa", "SCSI sequential access buffers");
+static MALLOC_DEFINE(M_SCSISA, "SCSI sa", "SCSI sequential access buffers");
 
 typedef enum {
 	SA_STATE_NORMAL, SA_STATE_ABNORMAL
@@ -1445,11 +1445,6 @@ saregister(struct cam_periph *periph, void *arg)
 	int i;
 	
 	cgd = (struct ccb_getdev *)arg;
-	if (periph == NULL) {
-		printf("saregister: periph was NULL!!\n");
-		return (CAM_REQ_CMP_ERR);
-	}
-
 	if (cgd == NULL) {
 		printf("saregister: no getdev CCB, can't register device\n");
 		return (CAM_REQ_CMP_ERR);

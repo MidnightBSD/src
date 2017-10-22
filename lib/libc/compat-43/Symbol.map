@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libc/compat-43/Symbol.map 199827 2009-11-26 13:49:37Z kib $
  */
 
 FBSD_1.0 {

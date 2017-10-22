@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/efi/libefi/libefi.c 219691 2011-03-16 03:53:18Z marcel $");
 
 #include <efi.h>
 #include <efilib.h>

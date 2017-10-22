@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cam/cam_sim.h 236541 2012-06-04 07:03:56Z mav $
  */
 
 #ifndef _CAM_CAM_SIM_H

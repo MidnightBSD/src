@@ -17,7 +17,7 @@
  * Cronyx Id: ng_sppp.c,v 1.1.2.10 2004/03/01 15:17:21 rik Exp $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netgraph/ng_sppp.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD$");
 #include <netgraph/ng_sppp.h>
 
 #ifdef NG_SEPARATE_MALLOC
-MALLOC_DEFINE(M_NETGRAPH_SPPP, "netgraph_sppp", "netgraph sppp node ");
+static MALLOC_DEFINE(M_NETGRAPH_SPPP, "netgraph_sppp", "netgraph sppp node");
 #else
 #define M_NETGRAPH_SPPP M_NETGRAPH
 #endif

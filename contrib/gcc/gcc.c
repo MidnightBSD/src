@@ -23,7 +23,7 @@ Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA
 This paragraph is here to try to keep Sun CC from dying.
 The number of chars here seems crucial!!!!  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/contrib/gcc/gcc.c 247167 2013-02-23 04:51:20Z kientzle $ */
 
 /* This program is the user interface to the C compiler and possibly to
 other compilers.  It is used because compilation is a complicated procedure
@@ -2694,6 +2694,17 @@ find_a_file (const struct path_prefix *pprefix, const char *name, int mode,
 #ifdef DEFAULT_LINKER
   if (! strcmp(name, "ld") && access (DEFAULT_LINKER, mode) == 0)
     return xstrdup (DEFAULT_LINKER);
+#endif
+
+#ifdef FREEBSD_NATIVE
+  if (! strcmp(name, "include"))
+    {
+#ifdef CROSS_INCLUDE_DIR
+      return xstrdup(CROSS_INCLUDE_DIR);
+#else
+      return xstrdup(STANDARD_INCLUDE_DIR);
+#endif
+    }
 #endif
 
   /* Determine the filename to execute (special case for absolute paths).  */

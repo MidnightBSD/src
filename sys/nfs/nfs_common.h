@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsm_subs.h	8.2 (Berkeley) 3/30/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/nfs/nfs_common.h 247502 2013-02-28 21:57:38Z jhb $
  */
 
 #ifndef _NFS_NFS_COMMON_H_
@@ -46,7 +46,6 @@ extern nfstype nfsv3_type[];
 #define	vtonfsv3_type(a)	txdr_unsigned(nfsv3_type[((int32_t)(a))])
 
 int	nfs_adv(struct mbuf **, caddr_t *, int, int);
-u_quad_t nfs_curusec(void);
 void	*nfsm_disct(struct mbuf **, caddr_t *, int, int, int);
 int	nfs_realign(struct mbuf **, int);
 

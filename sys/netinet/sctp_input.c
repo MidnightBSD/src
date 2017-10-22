@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_input.c 240580 2012-09-17 00:47:35Z eadler $");
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -3160,7 +3160,7 @@ sctp_handle_ecn_cwr(struct sctp_cwr_chunk *cp, struct sctp_tcb *stcb, struct sct
 {
 	/*
 	 * Here we get a CWR from the peer. We must look in the outqueue and
-	 * make sure that we have a covered ECNE in teh control chunk part.
+	 * make sure that we have a covered ECNE in the control chunk part.
 	 * If so remove it.
 	 */
 	struct sctp_tmit_chunk *chk;

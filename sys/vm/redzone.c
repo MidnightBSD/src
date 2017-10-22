@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/vm/redzone.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -36,7 +36,7 @@ __FBSDID("$FreeBSD$");
 #include <vm/redzone.h>
 
 
-SYSCTL_NODE(_vm, OID_AUTO, redzone, CTLFLAG_RW, NULL, "RedZone data");
+static SYSCTL_NODE(_vm, OID_AUTO, redzone, CTLFLAG_RW, NULL, "RedZone data");
 static u_long redzone_extra_mem = 0;
 SYSCTL_ULONG(_vm_redzone, OID_AUTO, extra_mem, CTLFLAG_RD, &redzone_extra_mem,
     0, "Extra memory allocated by redzone");     

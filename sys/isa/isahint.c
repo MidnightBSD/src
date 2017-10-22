@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/isa/isahint.c 196520 2009-08-24 21:51:46Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

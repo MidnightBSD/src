@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/makefs/ffs/ufs_bmap.c 248293 2013-03-14 22:57:27Z brooks $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -117,7 +117,6 @@ ufs_getlbns(struct inode *ip, daddr_t bn, struct indir *ap, int *nump)
 	 */
 	ap->in_lbn = metalbn;
 	ap->in_off = off = NIADDR - i;
-	ap->in_exists = 0;
 	ap++;
 	for (++numlevels; i <= NIADDR; i++) {
 		/* If searching for a meta-data block, quit when found. */
@@ -131,7 +130,6 @@ ufs_getlbns(struct inode *ip, daddr_t bn, struct indir *ap, int *nump)
 		++numlevels;
 		ap->in_lbn = metalbn;
 		ap->in_off = off;
-		ap->in_exists = 0;
 		++ap;
 
 		metalbn -= -1 + (off << lbc);

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/ral/Makefile 236004 2012-05-25 16:07:39Z bschmidt $
 
 .PATH: ${.CURDIR}/../../dev/ral
 

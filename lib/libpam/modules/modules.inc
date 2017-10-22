@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libpam/modules/modules.inc 156813 2006-03-17 18:54:44Z ru $
 
 .include <bsd.own.mk>
 

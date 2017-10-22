@@ -1,7 +1,7 @@
 #
 # TP-1043ND -- Kernel configuration file for the TP-Link WR-1043ND
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/mips/conf/TP-WN1043ND 220295 2011-04-03 13:19:58Z adrian $
 #
 
 # Include the default AR913x parameters common to all AR913x SoC users.

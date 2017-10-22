@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/vm/default_pager.c 216128 2010-12-02 17:37:16Z trasz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

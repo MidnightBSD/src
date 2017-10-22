@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ddb/db_capture.c 217326 2011-01-12 19:54:19Z mdf $");
 
 #include "opt_ddb.h"
 

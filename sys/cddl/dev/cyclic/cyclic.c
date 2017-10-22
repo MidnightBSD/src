@@ -21,7 +21,7 @@
  *
  * Portions Copyright 2008 John Birrell <jb@freebsd.org>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cddl/dev/cyclic/cyclic.c 249132 2013-04-05 08:22:11Z mav $
  *
  * This is a simplified version of the cyclic timer subsystem from
  * OpenSolaris. In the FreeBSD version, we don't use interrupt levels.
@@ -339,7 +339,7 @@ static kmem_cache_t *cyclic_id_cache;
 static cyc_id_t *cyclic_id_head;
 static cyc_backend_t cyclic_backend;
 
-MALLOC_DEFINE(M_CYCLIC, "cyclic", "Cyclic timer subsystem");
+static MALLOC_DEFINE(M_CYCLIC, "cyclic", "Cyclic timer subsystem");
 
 static __inline hrtime_t
 cyc_gethrtime(void)

@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/csup/fnmatch.c 216370 2010-12-11 08:32:16Z joel $
  *
  * From FreeBSD fnmatch.c 1.11
  * $Id: fnmatch.c,v 1.3 1997/08/19 02:34:30 jdp Exp $

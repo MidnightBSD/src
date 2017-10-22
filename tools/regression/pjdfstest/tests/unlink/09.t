@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/unlink/09.t 210984 2010-08-06 23:58:54Z pjd $
 
 desc="unlink returns EPERM if the named file has its immutable, undeletable or append-only flag set"
 

@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/backend/functions-unmount.sh 233224 2012-03-19 23:20:52Z jpaetzel $
 
 # Functions which unmount all mounted disk filesystems
 

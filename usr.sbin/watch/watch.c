@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/watch/watch.c 233083 2012-03-17 09:10:43Z ed $");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>

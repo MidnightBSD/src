@@ -39,7 +39,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aic7xxx.h#85 $
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/aic7xxx/aic7xxx.h 168873 2007-04-19 18:53:52Z scottl $
  */
 
 #ifndef _AIC7XXX_H_

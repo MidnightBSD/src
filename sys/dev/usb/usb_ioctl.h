@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/usb_ioctl.h 247475 2013-02-28 16:56:08Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
@@ -270,7 +270,8 @@ struct usb_gen_quirk {
 #define	USB_IFACE_DRIVER_DETACH	_IOW ('U', 125, int)
 #define	USB_GET_PLUGTIME	_IOR ('U', 126, uint32_t)
 #define	USB_READ_DIR		_IOW ('U', 127, struct usb_read_dir)
-/* 128 - 135 unused */
+/* 128 - 134 unused */
+#define	USB_GET_POWER_USAGE	_IOR ('U', 135, int)
 #define	USB_SET_TX_FORCE_SHORT	_IOW ('U', 136, int)
 #define	USB_SET_TX_TIMEOUT	_IOW ('U', 137, int)
 #define	USB_GET_TX_FRAME_SIZE	_IOR ('U', 138, int)

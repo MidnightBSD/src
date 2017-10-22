@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/lmc/if_lmc.h 199538 2009-11-19 18:21:51Z jhb $
  *
  * Copyright (c) 2002-2004 David Boggs. (boggs@boggs.palo-alto.ca.us)
  * All rights reserved.

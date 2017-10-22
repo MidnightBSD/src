@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/ar/read.c 208189 2010-05-17 09:37:59Z kaiw $");
 
 #include <sys/queue.h>
 #include <sys/stat.h>

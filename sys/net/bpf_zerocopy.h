@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/net/bpf_zerocopy.h 234969 2012-05-03 16:48:48Z eadler $
  */
 
 #ifndef _NET_BPF_ZEROCOPY_H_

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/mfi/Makefile 234429 2012-04-18 18:31:11Z ambrisko $
 
 .PATH: ${.CURDIR}/../../dev/mfi
 

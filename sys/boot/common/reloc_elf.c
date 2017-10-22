@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/common/reloc_elf.c 241036 2012-09-28 17:36:00Z andreast $");
 
 #include <sys/types.h>
 #include <machine/elf.h>
@@ -190,6 +190,31 @@ __elfN(reloc)(struct elf_file *ef, symaddr_fn *symaddr, const void *reldata,
 	default:
 		printf("\nunhandled relocation type %u\n", (u_int)rtype);
 		return (EFTYPE);
+	}
+
+	return (0);
+#elif defined(__powerpc__)
+	Elf_Size w;
+	const Elf_Rela *rela;
+
+	switch (reltype) {
+	case ELF_RELOC_RELA:
+		rela = reldata;
+		if (relbase + rela->r_offset >= dataaddr &&
+		    relbase + rela->r_offset < dataaddr + len) {
+			switch (ELF_R_TYPE(rela->r_info)) {
+			case R_PPC_RELATIVE:
+				w = relbase + rela->r_addend;
+				bcopy(&w, (u_char *)data + (relbase +
+				      rela->r_offset - dataaddr), sizeof(w));
+				break;
+			default:
+				printf("\nunhandled relocation type %u\n",
+				       (u_int)ELF_R_TYPE(rela->r_info));
+				return (EFTYPE);
+			}
+		}
+		break;
 	}
 
 	return (0);

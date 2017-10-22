@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/examples/kld/khelp/Makefile 218545 2011-02-11 07:26:17Z lstewart $
 
 .include <bsd.own.mk>
 

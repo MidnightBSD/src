@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/stdint.h 235786 2012-05-22 15:26:55Z theraven $
  */
 
 #ifndef _SYS_STDINT_H_

@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)apply.c	8.4 (Berkeley) 4/4/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/apply/apply.c 246199 2013-02-01 07:40:46Z delphij $");
 
 #include <sys/types.h>
 #include <sys/sbuf.h>
@@ -55,7 +55,7 @@ __FBSDID("$FreeBSD$");
 
 #define EXEC	"exec "
 
-static int	exec_shell(const char *, char *, char *);
+static int	exec_shell(const char *, const char *, const char *);
 static void	usage(void);
 
 int
@@ -222,7 +222,7 @@ main(int argc, char *argv[])
  * 	arguments.
  */
 static int
-exec_shell(const char *command, char *use_shell, char *use_name)
+exec_shell(const char *command, const char *use_shell, const char *use_name)
 {
 	pid_t pid;
 	int omask, pstat;
@@ -250,7 +250,7 @@ exec_shell(const char *command, char *use_shell, char *use_name)
 	return(pid == -1 ? -1 : pstat);
 }
 
-void
+static void
 usage(void)
 {
 

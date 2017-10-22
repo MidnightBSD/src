@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/mtree/specspec.c 144295 2005-03-29 11:44:17Z tobez $");
 
 #include <err.h>
 #include <grp.h>

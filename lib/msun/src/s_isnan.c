@@ -23,15 +23,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/msun/src/s_isnan.c 243193 2012-11-17 23:05:18Z dim $
  */
 
 #include <math.h>
 
 #include "fpmath.h"
 
-/* Provided by libc */
-#if 0
+/* Provided by libc.so */
+#ifndef PIC
+#undef isnan
 int
 isnan(double d)
 {
@@ -40,7 +41,7 @@ isnan(double d)
 	u.d = d;
 	return (u.bits.exp == 2047 && (u.bits.manl != 0 || u.bits.manh != 0));
 }
-#endif
+#endif /* !PIC */
 
 int
 __isnanf(float f)

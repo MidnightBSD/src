@@ -19,7 +19,7 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
  * OF THIS SOFTWARE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/drm2/drm_dp_helper.h 235783 2012-05-22 11:07:44Z kib $
  */
 
 #ifndef _DRM_DP_HELPER_H_

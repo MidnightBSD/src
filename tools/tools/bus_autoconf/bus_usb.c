@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/tools/tools/bus_autoconf/bus_usb.c 233561 2012-03-27 15:32:09Z hselasky $ */
 
 /*-
  * Copyright (c) 2011 Hans Petter Selasky. All rights reserved.

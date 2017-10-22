@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/libc/iconv/citrus_iconv.c 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: citrus_iconv.c,v 1.7 2008/07/25 14:05:25 christos Exp $ */
 
 /*-

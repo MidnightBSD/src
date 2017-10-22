@@ -47,7 +47,7 @@
  *
  *	from: @(#)locore.s	8.5 (Berkeley) 1/4/94
  *	JNPR: swtch.S,v 1.6.2.1 2007/09/10 10:36:50 girish
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/mips/swtch.S 219121 2011-03-01 03:25:18Z jchandra $
  */
 
 /*

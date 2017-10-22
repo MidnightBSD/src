@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/powerpc/ps3/ps3mmu.c 217044 2011-01-06 04:12:29Z nwhitehorn $");
 
 #include <stand.h>
 #include <stdint.h>

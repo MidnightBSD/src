@@ -29,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/usr.sbin/pciconf/pciconf.c 241101 2012-10-01 15:47:01Z gavin $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -345,6 +345,7 @@ static struct
 	{PCIC_STORAGE,		PCIS_STORAGE_ATA_ADMA,	"ATA (ADMA)"},
 	{PCIC_STORAGE,		PCIS_STORAGE_SATA,	"SATA"},
 	{PCIC_STORAGE,		PCIS_STORAGE_SAS,	"SAS"},
+	{PCIC_STORAGE,		PCIS_STORAGE_NVM,	"NVM"},
 	{PCIC_NETWORK,		-1,			"network"},
 	{PCIC_NETWORK,		PCIS_NETWORK_ETHERNET,	"ethernet"},
 	{PCIC_NETWORK,		PCIS_NETWORK_TOKENRING,	"token ring"},

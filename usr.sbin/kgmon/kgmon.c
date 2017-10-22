@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)kgmon.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/usr.sbin/kgmon/kgmon.c 242166 2012-10-27 01:20:48Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -90,7 +90,9 @@ main(int argc, char **argv)
 	struct kvmvars kvmvars;
 	char *system, *kmemf;
 
-	seteuid(getuid());
+	if (seteuid(getuid()) != 0) {
+		err(1, "seteuid failed\n");
+	}
 	kmemf = NULL;
 	system = NULL;
 	while ((ch = getopt(argc, argv, "M:N:Bbhpr")) != -1) {

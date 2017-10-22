@@ -36,7 +36,7 @@
  *
  * From @(#)ctype.h	8.4 (Berkeley) 1/21/94
  * From FreeBSD: src/include/ctype.h,v 1.27 2004/06/23 07:11:39 tjr Exp
- * $FreeBSD$
+ * $FreeBSD: stable/9/include/_ctype.h 203964 2010-02-16 19:39:50Z imp $
  */
 
 #ifndef __CTYPE_H_

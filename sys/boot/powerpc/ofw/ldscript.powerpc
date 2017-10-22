@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/boot/powerpc/ofw/ldscript.powerpc 217657 2011-01-20 19:26:28Z imp $ */
 
 OUTPUT_FORMAT("elf32-powerpc", "elf32-powerpc", "elf32-powerpc")
 OUTPUT_ARCH(powerpc:common)

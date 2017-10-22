@@ -173,7 +173,7 @@ WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/wl/if_wl.c 248078 2013-03-09 00:39:54Z marius $");
 
 /*
  * NOTE:
@@ -1094,7 +1094,7 @@ wlread(struct wl_softc *sc, u_short fd_p)
     /*
      * Allocate a cluster'd mbuf to receive the packet.
      */
-    m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+    m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
     if (m == NULL) {
 	if (wlhwrst(sc) != TRUE) {
 	    sc->hacr &= ~HACR_INTRON;

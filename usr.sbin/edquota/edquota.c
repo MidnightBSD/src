@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)edquota.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/edquota/edquota.c 242166 2012-10-27 01:20:48Z eadler $");
 
 /*
  * Disk quota editor.
@@ -453,8 +453,10 @@ editit(char *tmpf)
 		const char *ed;
 
 		sigsetmask(omask);
-		setgid(getgid());
-		setuid(getuid());
+		if (setgid(getgid()) != 0)
+			err(1, "setgid failed");
+		if (setuid(getuid()) != 0)
+			err(1, "setuid failed");
 		if ((ed = getenv("EDITOR")) == (char *)0)
 			ed = _PATH_VI;
 		execlp(ed, ed, tmpf, (char *)0);

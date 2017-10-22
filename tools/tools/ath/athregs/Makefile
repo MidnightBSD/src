@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/ath/athregs/Makefile 220534 2011-04-11 06:53:45Z adrian $
 
 PROG=	athregs
 

@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/hostname 241208 2012-10-04 22:31:56Z dougb $
 #
 
 # PROVIDE: hostname
@@ -65,7 +65,7 @@ hostname_start()
 		# Null hostname is probably OK if DHCP is in use.
 		#
 		if [ -z "`list_net_interfaces dhcp`" ]; then
-			warn "\$hostname is not set -- see ${rcvar_manpage}."
+			warn "\$hostname is not set -- see rc.conf(5)."
 		fi
 		return
 	fi

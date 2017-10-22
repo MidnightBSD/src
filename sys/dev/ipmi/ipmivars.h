@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/ipmi/ipmivars.h 239920 2012-08-30 20:42:42Z jhb $
  */
 
 #ifndef __IPMIVARS_H__
@@ -105,6 +105,7 @@ struct ipmi_softc {
 	struct cdev		*ipmi_cdev;
 	TAILQ_HEAD(,ipmi_request) ipmi_pending_requests;
 	eventhandler_tag	ipmi_watchdog_tag;
+	int			ipmi_watchdog_active;
 	struct intr_config_hook	ipmi_ich;
 	struct mtx		ipmi_lock;
 	struct cv		ipmi_request_added;

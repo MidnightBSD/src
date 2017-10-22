@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/sys_socket.c 224914 2011-08-16 20:07:47Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

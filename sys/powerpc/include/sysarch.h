@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/include/sysarch.h 190703 2009-04-04 22:05:36Z marcel $
  */
 
 #ifndef _MACHINE_SYSARCH_H_

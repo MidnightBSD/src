@@ -1,7 +1,7 @@
 /*
  * LOCALE_CTYPE for Russian koi8-r character set (RFC1489)
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/share/mklocale/ru_RU.KOI8-R.src 87108 2001-11-30 05:05:53Z ache $
  */
 ENCODING	"NONE"
 VARIABLE        Russian KOI8-R character set by <ache@nagual.pp.ru>

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/aim/uma_machdep.c 204128 2010-02-20 16:23:29Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

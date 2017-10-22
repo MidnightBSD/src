@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/usr.bin/cc/libcpp/Makefile 169718 2007-05-19 04:25:59Z kan $
 
 # Use our headers in preference to ones from ../cc_tools.
 CFLAGS+=	-I${.CURDIR} -I.

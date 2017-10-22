@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$FreeBSD: stable/9/usr.sbin/mlxcontrol/command.c 182965 2008-09-12 17:40:17Z sepotvin $
  */
 
 #include <fcntl.h>

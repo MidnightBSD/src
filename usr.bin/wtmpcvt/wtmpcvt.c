@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/wtmpcvt/wtmpcvt.c 209192 2010-06-15 04:47:16Z ed $");
 
 #include <sys/endian.h>
 #include <sys/param.h>

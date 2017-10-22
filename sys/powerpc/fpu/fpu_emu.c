@@ -76,7 +76,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/fpu/fpu_emu.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_ddb.h"
 
@@ -97,7 +97,7 @@ __FBSDID("$FreeBSD$");
 #include <powerpc/fpu/fpu_extern.h>
 #include <powerpc/fpu/fpu_instr.h>
 
-SYSCTL_NODE(_hw, OID_AUTO, fpu_emu, CTLFLAG_RW, 0, "FPU emulator");
+static SYSCTL_NODE(_hw, OID_AUTO, fpu_emu, CTLFLAG_RW, 0, "FPU emulator");
 
 #define	FPU_EMU_EVCNT_DECL(name)					\
 static u_int fpu_emu_evcnt_##name;					\

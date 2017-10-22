@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/lpr/lptest/Makefile 117622 2003-07-15 08:45:06Z gad $
 
 PROG=	lptest
 

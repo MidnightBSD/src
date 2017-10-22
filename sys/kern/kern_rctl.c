@@ -26,11 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/kern/kern_rctl.c 249444 2013-04-13 21:04:06Z trasz $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_rctl.c 249444 2013-04-13 21:04:06Z trasz $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -76,6 +76,8 @@ FEATURE(rctl, "Resource Limits");
 #define	RCTL_MAX_INBUFLEN	4096
 #define	RCTL_LOG_BUFSIZE	128
 
+#define	RCTL_PCPU_SHIFT		(10 * 1000000)
+
 /*
  * 'rctl_rule_link' connects a rule with every racct it's related to.
  * For example, rule 'user:X:openfiles:deny=N/process' is linked
@@ -120,6 +122,7 @@ static struct dict resourcenames[] = {
 	{ "nshm", RACCT_NSHM },
 	{ "shmsize", RACCT_SHMSIZE },
 	{ "wallclock", RACCT_WALLCLOCK },
+	{ "pcpu", RACCT_PCTCPU },
 	{ NULL, -1 }};
 
 static struct dict actionnames[] = {
@@ -170,7 +173,7 @@ RW_SYSINIT(rctl_lock, &rctl_lock, "RCTL lock");
 static int rctl_rule_fully_specified(const struct rctl_rule *rule);
 static void rctl_rule_to_sbuf(struct sbuf *sb, const struct rctl_rule *rule);
 
-MALLOC_DEFINE(M_RCTL, "rctl", "Resource Limits");
+static MALLOC_DEFINE(M_RCTL, "rctl", "Resource Limits");
 
 static const char *
 rctl_subject_type_name(int subject)
@@ -268,6 +271,51 @@ rctl_would_exceed(const struct proc *p, const struct rctl_rule *rule,
 		return (0);
 
 	return (1);
+}
+
+/*
+ * Special version of rctl_available() function for the %cpu resource.
+ * We slightly cheat here and return less than we normally would.
+ */
+int64_t
+rctl_pcpu_available(const struct proc *p) {
+	struct rctl_rule *rule;
+	struct rctl_rule_link *link;
+	int64_t available, minavailable, limit;
+
+	minavailable = INT64_MAX;
+	limit = 0;
+
+	rw_rlock(&rctl_lock);
+
+	LIST_FOREACH(link, &p->p_racct->r_rule_links, rrl_next) {
+		rule = link->rrl_rule;
+		if (rule->rr_resource != RACCT_PCTCPU)
+			continue;
+		if (rule->rr_action != RCTL_ACTION_DENY)
+			continue;
+		available = rctl_available_resource(p, rule);
+		if (available < minavailable) {
+			minavailable = available;
+			limit = rule->rr_amount;
+		}
+	}
+
+	rw_runlock(&rctl_lock);
+
+	/*
+	 * Return slightly less than actual value of the available
+	 * %cpu resource.  This makes %cpu throttling more agressive
+	 * and lets us act sooner than the limits are already exceeded.
+	 */
+	if (limit != 0) {
+		if (limit > 2 * RCTL_PCPU_SHIFT)
+			minavailable -= RCTL_PCPU_SHIFT;
+		else
+			minavailable -= (limit / 2);
+	}
+
+	return (minavailable);
 }
 
 /*

@@ -29,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/usr.sbin/mptable/mptable.c 204085 2010-02-19 14:27:32Z jhb $";
 #endif /* not lint */
 
 /*

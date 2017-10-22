@@ -1,6 +1,6 @@
 /*	$NetBSD: grep.h,v 1.5 2011/02/27 17:33:37 joerg Exp $	*/
 /*	$OpenBSD: grep.h,v 1.15 2010/04/05 03:03:55 tedu Exp $	*/
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/usr.bin/grep/grep.h 246279 2013-02-03 03:38:44Z eadler $	*/
 
 /*-
  * Copyright (c) 1999 James Howard and Dag-Erling Coïdan Smørgrav
@@ -115,6 +115,7 @@ extern bool	 Eflag, Fflag, Gflag, Hflag, Lflag,
 extern bool	 dexclude, dinclude, fexclude, finclude, lbflag, nullflag;
 extern unsigned long long Aflag, Bflag;
 extern long long mcount;
+extern long long mlimit;
 extern char	*label;
 extern const char *color;
 extern int	 binbehave, devbehave, dirbehave, filebehave, grepbehave, linkbehave;

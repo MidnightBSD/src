@@ -3,7 +3,7 @@
 # Makefile for amd
 # 	This file is under a "BSD" copyright (c) by David O'Brien 1998
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/amd/mk-amd-map/Makefile 174305 2007-12-05 16:25:43Z obrien $
 
 .PATH: ${.CURDIR}/../../../contrib/amd/mk-amd-map
 

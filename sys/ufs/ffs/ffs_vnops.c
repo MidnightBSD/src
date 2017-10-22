@@ -62,7 +62,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ufs/ffs/ffs_vnops.c 240238 2012-09-08 16:40:18Z kib $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -80,6 +80,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/vnode.h>
 
 #include <vm/vm.h>
+#include <vm/vm_param.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
@@ -567,7 +568,7 @@ ffs_read(ap)
 			xfersize = size;
 		}
 
-		error = uiomove((char *)bp->b_data + blkoffset,
+		error = vn_io_fault_uiomove((char *)bp->b_data + blkoffset,
 		    (int)xfersize, uio);
 		if (error)
 			break;
@@ -738,8 +739,8 @@ ffs_write(ap)
 		if (size < xfersize)
 			xfersize = size;
 
-		error =
-		    uiomove((char *)bp->b_data + blkoffset, (int)xfersize, uio);
+		error = vn_io_fault_uiomove((char *)bp->b_data + blkoffset,
+		    (int)xfersize, uio);
 		/*
 		 * If the buffer is not already filled and we encounter an
 		 * error while trying to fill it, we have to clear out any

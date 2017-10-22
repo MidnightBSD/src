@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/release/doc/share/misc/man2hwnotes.pl 231606 2012-02-13 19:36:09Z jhb $
 #
 
 # Parse the list of supported hardware out of section 4 manual pages

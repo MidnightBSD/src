@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sbin/gbde/gbde.c 209052 2010-06-11 17:03:04Z uqs $
  *
  * XXX: Future stuff
  *

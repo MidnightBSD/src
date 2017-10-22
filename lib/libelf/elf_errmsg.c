@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libelf/elf_errmsg.c 165032 2006-12-09 16:27:15Z jkoshy $");
 
 #include <libelf.h>
 #include <string.h>

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/linux/linux_machdep.c 248532 2013-03-19 20:18:30Z jkim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -584,25 +584,6 @@ linux_mprotect(struct thread *td, struct linux_mprotect_args *uap)
 	if (bsd_args.prot & (PROT_READ | PROT_WRITE | PROT_EXEC))
 		bsd_args.prot |= PROT_READ | PROT_EXEC;
 	return (sys_mprotect(td, &bsd_args));
-}
-
-int
-linux_pipe(struct thread *td, struct linux_pipe_args *args)
-{
-	int error;
-	int fildes[2];
-
-#ifdef DEBUG
-	if (ldebug(pipe))
-		printf(ARGS(pipe, "*"));
-#endif
-
-	error = kern_pipe(td, fildes);
-	if (error)
-		return (error);
-
-	/* XXX: Close descriptors on error. */
-	return (copyout(fildes, args->pipefds, sizeof fildes));
 }
 
 int

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/mtree/BSD.usr.dist 248339 2013-03-15 19:50:21Z brooks $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -752,8 +752,6 @@
 /set uname=man
             cat1
             ..
-            cat1aout
-            ..
             cat2
             ..
             cat3
@@ -790,8 +788,6 @@
             ..
             en.ISO8859-1    uname=root
                 cat1
-                ..
-                cat1aout
                 ..
                 cat2
                 ..
@@ -830,8 +826,6 @@
             ..
             en.UTF-8        uname=root
                 cat1
-                ..
-                cat1aout
                 ..
                 cat2
                 ..
@@ -908,8 +902,6 @@
                 ..
             ..
             man1
-            ..
-            man1aout
             ..
             man2
             ..

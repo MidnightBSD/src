@@ -24,7 +24,7 @@
  *
  * Ackowledgement to Fen Systems Ltd.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/sfxge/common/efx_types.h 228100 2011-11-28 20:28:23Z philip $
  */
 
 #ifndef	_SYS_EFX_TYPES_H

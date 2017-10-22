@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/drm/mach64/Makefile 145132 2005-04-16 03:44:47Z anholt $
 
 .PATH:	${.CURDIR}/../../../dev/drm
 KMOD	= mach64

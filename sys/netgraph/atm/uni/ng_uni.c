@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netgraph/atm/uni/ng_uni.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -60,8 +60,8 @@ __FBSDID("$FreeBSD$");
 #include <netgraph/atm/ng_sscfu.h>
 #include <netgraph/atm/ng_uni.h>
 
-MALLOC_DEFINE(M_NG_UNI, "netgraph_uni_node", "netgraph uni node");
-MALLOC_DEFINE(M_UNI, "netgraph_uni_data", "uni protocol data");
+static MALLOC_DEFINE(M_NG_UNI, "netgraph_uni_node", "netgraph uni node");
+static MALLOC_DEFINE(M_UNI, "netgraph_uni_data", "uni protocol data");
 
 MODULE_DEPEND(ng_uni, ngatmbase, 1, 1, 1);
 

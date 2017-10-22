@@ -29,7 +29,7 @@
 #include "opt_compat.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/compat/linux/linux_ioctl.c 243417 2012-11-22 22:52:15Z simon $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

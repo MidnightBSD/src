@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/qlxgb/qla_os.c 248078 2013-03-09 00:39:54Z marius $");
 
 #include "qla_os.h"
 #include "qla_reg.h"
@@ -1064,7 +1064,7 @@ qla_send(qla_host_t *ha, struct mbuf **m_headp)
 		QL_DPRINT8((ha->pci_dev, "%s: EFBIG [%d]\n", __func__,
 			m_head->m_pkthdr.len));
 
-		m = m_defrag(m_head, M_DONTWAIT);
+		m = m_defrag(m_head, M_NOWAIT);
 		if (m == NULL) {
 			ha->err_tx_defrag++;
 			m_freem(m_head);
@@ -1406,7 +1406,7 @@ qla_get_mbuf(qla_host_t *ha, qla_rx_buf_t *rxb, struct mbuf *nmp,
 	if (mp == NULL) {
 
 		if (!jumbo) {
-			mp = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+			mp = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 
 			if (mp == NULL) {
 				ha->err_m_getcl++;
@@ -1417,7 +1417,7 @@ qla_get_mbuf(qla_host_t *ha, qla_rx_buf_t *rxb, struct mbuf *nmp,
 			}
 			mp->m_len = mp->m_pkthdr.len = MCLBYTES;
 		} else {
-			mp = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR,
+			mp = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR,
 				MJUM9BYTES);
 			if (mp == NULL) {
 				ha->err_m_getjcl++;

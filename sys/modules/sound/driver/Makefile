@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/sound/driver/Makefile 233165 2012-03-19 07:34:09Z mav $
 
 .include <bsd.own.mk>
 

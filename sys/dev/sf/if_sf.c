@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/sf/if_sf.c 248078 2013-03-09 00:39:54Z marius $");
 
 /*
  * Adaptec AIC-6915 "Starfire" PCI fast ethernet driver for FreeBSD.
@@ -1455,7 +1455,7 @@ sf_newbuf(struct sf_softc *sc, int idx)
 	bus_dmamap_t		map;
 	int			nsegs;
 
-	m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+	m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (m == NULL)
 		return (ENOBUFS);
 	m->m_len = m->m_pkthdr.len = MCLBYTES;
@@ -2173,7 +2173,7 @@ sf_encap(struct sf_softc *sc, struct mbuf **m_head)
 	error = bus_dmamap_load_mbuf_sg(sc->sf_cdata.sf_tx_tag, map,
 	    *m_head, txsegs, &nsegs, BUS_DMA_NOWAIT);
 	if (error == EFBIG) {
-		m = m_collapse(*m_head, M_DONTWAIT, SF_MAXTXSEGS);
+		m = m_collapse(*m_head, M_NOWAIT, SF_MAXTXSEGS);
 		if (m == NULL) {
 			m_freem(*m_head);
 			*m_head = NULL;

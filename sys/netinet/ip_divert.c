@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_divert.c 248085 2013-03-09 02:36:32Z marius $");
 
 #if !defined(KLD_MODULE)
 #include "opt_inet.h"
@@ -738,7 +738,8 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 }
 
 #ifdef SYSCTL_NODE
-SYSCTL_NODE(_net_inet, IPPROTO_DIVERT, divert, CTLFLAG_RW, 0, "IPDIVERT");
+static SYSCTL_NODE(_net_inet, IPPROTO_DIVERT, divert, CTLFLAG_RW, 0,
+    "IPDIVERT");
 SYSCTL_PROC(_net_inet_divert, OID_AUTO, pcblist, CTLTYPE_OPAQUE | CTLFLAG_RD,
     NULL, 0, div_pcblist, "S,xinpcb", "List of active divert sockets");
 #endif

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/isp/Makefile 178762 2008-05-04 14:59:25Z marius $
 
 .PATH: ${.CURDIR}/../../dev/isp
 

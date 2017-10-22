@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/link/07.t 166065 2007-01-17 01:42:12Z pjd $
 
 desc="link returns EACCES when the requested link requires writing in a directory with a mode that denies write permission"
 

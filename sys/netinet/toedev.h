@@ -24,7 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netinet/toedev.h 182591 2008-09-01 05:30:22Z kmacy $
  */
 
 #ifndef _NETINET_TOEDEV_H_

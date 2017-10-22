@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/rt305x/rt305x_sysctl.c 232786 2012-03-10 17:47:43Z gavin $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

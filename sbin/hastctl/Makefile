@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/hastctl/Makefile 229193 2012-01-01 19:19:48Z dim $
 
 .include <bsd.own.mk>
 

@@ -58,7 +58,7 @@
  *
  * Authors: Archie Cobbs <archie@freebsd.org>, Alexander Motin <mav@alkar.net>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_ppp.c 249132 2013-04-05 08:22:11Z mav $
  * $Whistle: ng_ppp.c,v 1.24 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -108,7 +108,7 @@
 #include <netgraph/ng_vjc.h>
 
 #ifdef NG_SEPARATE_MALLOC
-MALLOC_DEFINE(M_NETGRAPH_PPP, "netgraph_ppp", "netgraph ppp node");
+static MALLOC_DEFINE(M_NETGRAPH_PPP, "netgraph_ppp", "netgraph ppp node");
 #else
 #define M_NETGRAPH_PPP M_NETGRAPH
 #endif

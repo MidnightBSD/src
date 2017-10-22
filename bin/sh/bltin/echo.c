@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/sh/bltin/echo.c 127958 2004-04-06 20:06:54Z markm $");
 
 /*
  * Echo command.

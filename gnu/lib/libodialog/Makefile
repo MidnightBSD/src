@@ -1,5 +1,5 @@
 # Makefile for libdialog
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/lib/libodialog/Makefile 217309 2011-01-12 14:55:02Z nwhitehorn $
 
 .include <bsd.own.mk>
 

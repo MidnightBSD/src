@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libjail/jail.c 235836 2012-05-23 14:48:14Z jamie $");
 
 #include <sys/param.h>
 #include <sys/types.h>

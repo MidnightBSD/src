@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/lib/libutil/test-grp.t 178431 2008-04-23 00:49:13Z scf $
 #
 
 base=$(realpath $(dirname $0))

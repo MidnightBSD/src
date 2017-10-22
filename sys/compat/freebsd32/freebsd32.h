@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/compat/freebsd32/freebsd32.h 244172 2012-12-13 06:17:05Z kib $
  */
 
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_H_
@@ -77,6 +77,11 @@ struct rusage32 {
 	int32_t	ru_nsignals;
 	int32_t	ru_nvcsw;
 	int32_t	ru_nivcsw;
+};
+
+struct wrusage32 {
+	struct rusage32	wru_self;
+	struct rusage32 wru_children;
 };
 
 struct itimerval32 {

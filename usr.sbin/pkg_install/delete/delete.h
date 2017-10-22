@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/usr.sbin/pkg_install/delete/delete.h 131285 2004-06-29 19:06:42Z eik $ */
 
 /*
  * FreeBSD install - a package for the installation and maintainance

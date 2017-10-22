@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ia64/include/sysarch.h 202097 2010-01-11 18:10:13Z marcel $
  */
 
 #ifndef _MACHINE_SYSARCH_H_

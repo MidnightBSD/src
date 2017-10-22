@@ -34,7 +34,7 @@
  * Authors: Julian Elischer <julian@freebsd.org>
  *          Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_base.c 249132 2013-04-05 08:22:11Z mav $
  * $Whistle: ng_base.c,v 1.39 1999/01/28 23:54:53 julian Exp $
  */
 
@@ -242,10 +242,13 @@ void	ng_unname(node_p node);
 
 /* Our own netgraph malloc type */
 MALLOC_DEFINE(M_NETGRAPH, "netgraph", "netgraph structures and ctrl messages");
-MALLOC_DEFINE(M_NETGRAPH_HOOK, "netgraph_hook", "netgraph hook structures");
-MALLOC_DEFINE(M_NETGRAPH_NODE, "netgraph_node", "netgraph node structures");
-MALLOC_DEFINE(M_NETGRAPH_ITEM, "netgraph_item", "netgraph item structures");
 MALLOC_DEFINE(M_NETGRAPH_MSG, "netgraph_msg", "netgraph name storage");
+static MALLOC_DEFINE(M_NETGRAPH_HOOK, "netgraph_hook",
+    "netgraph hook structures");
+static MALLOC_DEFINE(M_NETGRAPH_NODE, "netgraph_node",
+    "netgraph node structures");
+static MALLOC_DEFINE(M_NETGRAPH_ITEM, "netgraph_item",
+    "netgraph item structures");
 
 /* Should not be visible outside this file */
 
@@ -2005,6 +2008,7 @@ ng_queue_rw(node_p node, item_p  item, int rw)
 		NGI_SET_WRITER(item);
 	else
 		NGI_SET_READER(item);
+	item->depth = 1;
 
 	NG_QUEUE_LOCK(ngq);
 	/* Set OP_PENDING flag and enqueue the item. */
@@ -2283,7 +2287,6 @@ ng_snd_item(item_p item, int flags)
 	}
 
 	if (queue) {
-		item->depth = 1;
 		/* Put it on the queue for that node*/
 		ng_queue_rw(node, item, rw);
 		return ((flags & NG_PROGRESS) ? EINPROGRESS : 0);

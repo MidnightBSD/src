@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/geom/Makefile 219974 2011-03-24 21:31:32Z mav $
 
 SUBDIR=	geom_bde \
 	geom_bsd \

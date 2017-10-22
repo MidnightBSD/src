@@ -12,7 +12,7 @@
  *
  * See README and COPYING for more details.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/wpa/hostapd/driver_freebsd.c 216556 2010-12-19 09:18:14Z bschmidt $
  */
 
 #include "includes.h"

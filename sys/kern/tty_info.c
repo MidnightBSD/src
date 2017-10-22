@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/tty_info.c 192252 2009-05-17 16:17:48Z ed $");
 
 #include <sys/param.h>
 #include <sys/lock.h>

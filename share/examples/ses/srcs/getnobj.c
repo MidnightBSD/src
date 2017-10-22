@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/share/examples/ses/srcs/getnobj.c 246437 2013-02-06 22:07:38Z mav $ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.
@@ -33,12 +33,15 @@
  */
 
 #include <unistd.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
-#include SESINC
+#include <cam/scsi/scsi_all.h>
+#include <cam/scsi/scsi_ses.h>
 
 int
 main(int argc, char **argv)

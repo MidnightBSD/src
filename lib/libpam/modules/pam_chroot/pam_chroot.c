@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libpam/modules/pam_chroot/pam_chroot.c 114262 2003-04-30 00:40:24Z des $");
 
 #include <sys/param.h>
 

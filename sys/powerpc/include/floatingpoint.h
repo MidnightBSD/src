@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/include/floatingpoint.h 139825 2005-01-07 02:29:27Z imp $
  */
 
 #ifndef _FLOATINGPOINT_H_

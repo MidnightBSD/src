@@ -36,7 +36,7 @@
 #include "cd9660_eltorito.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/makefs/cd9660/cd9660_eltorito.c 248293 2013-03-14 22:57:27Z brooks $");
 
 #ifdef DEBUG
 #define	ELTORITO_DPRINTF(__x)	printf __x
@@ -610,7 +610,7 @@ cd9660_write_boot(FILE *fd)
 			    e->entry_type);
 		}
 		/*
-		 * It doesnt matter which one gets written
+		 * It doesn't matter which one gets written
 		 * since they are the same size
 		 */
 		fwrite(&(e->entry_data.VE), 1, 32, fd);

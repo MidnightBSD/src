@@ -72,7 +72,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/le/if_le_pci.c 216518 2010-12-18 14:21:28Z tijl $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

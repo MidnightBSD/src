@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/libiconv_modules/JOHAB/citrus_johab.h 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: citrus_johab.h,v 1.1 2006/10/18 17:54:55 tnozaki Exp $ */
 
 /*-

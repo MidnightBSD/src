@@ -1,12 +1,11 @@
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/bios/smapi_bios.S 240206 2012-09-07 17:51:12Z dim $");
 
 /*
  * This is cribbed from the Linux thinkpad-4.1 driver by
  * Thomas Hood.
  */
 
-	.align
 smapi32_entry:					/* far pointer to SMAPI entry */
 	.globl	smapi32_offset
 smapi32_offset:		.long	0x00000000	/* set by caller */

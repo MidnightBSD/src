@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/zfs/misc.sh 185029 2008-11-17 20:49:29Z pjd $
 
 ntest=1
 os=`uname -s`

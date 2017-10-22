@@ -30,7 +30,7 @@
  *
  *	from: NetBSD: idprom.h,v 1.2 1998/09/05 23:57:26 eeh Exp
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sparc64/include/idprom.h 139825 2005-01-07 02:29:27Z imp $
  */
 
 #ifndef _MACHINE_IDPROM_H_

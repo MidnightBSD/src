@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/sound/driver/emu10kx/Makefile 230964 2012-02-03 22:39:04Z pfg $
 .PATH: ${.CURDIR}/../../../../dev/sound/pci
 
 KMOD=	snd_emu10kx

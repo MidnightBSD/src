@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/boot/i386/efi/ldscript.amd64 218822 2011-02-18 20:54:12Z dim $ */
 OUTPUT_FORMAT("elf64-x86-64-freebsd", "elf64-x86-64-freebsd", "elf64-x86-64-freebsd")
 OUTPUT_ARCH(i386:x86-64)
 ENTRY(_start)

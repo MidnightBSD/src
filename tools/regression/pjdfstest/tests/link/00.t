@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/link/00.t 211186 2010-08-11 17:34:58Z pjd $
 
 desc="link creates hardlinks"
 

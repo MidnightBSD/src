@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/usr.sbin/pkg_install/info/info.h 241135 2012-10-02 17:04:53Z bapt $ */
 
 /*
  * FreeBSD install - a package for the installation and maintainance
@@ -77,7 +77,7 @@ extern void	show_plist(const char *, Package *, plist_t, Boolean);
 extern void	show_files(const char *, Package *);
 extern void	show_index(const char *, const char *);
 extern void	show_size(const char *, Package *);
-extern void	show_cksum(const char *, Package *);
+extern int	show_cksum(const char *, Package *);
 extern void	show_origin(const char *, Package *);
 extern void	show_fmtrev(const char *, Package *);
 

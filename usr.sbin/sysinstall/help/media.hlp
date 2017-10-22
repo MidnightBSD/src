@@ -2,7 +2,7 @@ You can install from the following types of media:
 
    CDROM    requires one of the following supported CDROM drives:
             ATAPI - Any standard ATAPI CDROM drive hooked to
-	    a supported controller (see Hardware Guide).
+            a supported controller (see Hardware Guide).
             SCSI - Any standard SCSI CDROM drive hooked to
             a supported controller (see Hardware Guide).
 
@@ -41,14 +41,16 @@ You can install from the following types of media:
             Options screen.
 
 
+   HTTP Direct
+            Get the distribution files directly from an HTTP server.
+
+            If you chose to enter your own URL in the HTTP Direct menu,
+            please note that all paths are *relative* to the root
+            directory of the web server.
+
+
    NFS      Get the distribution files from an NFS server somewhere
             (make sure that permissions on the server allow this!).
             If this install method hangs on you or refuses to work
             properly, you may need to set some special options for
             your NFS server.  See the Options screen for more details.
-
-
-   Tape     Extract distribution files from tape into a temporary
-            directory and install from there.  If the tape was created
-            with blocksize other than 20, you may wish to change this
-            in the Options screen.

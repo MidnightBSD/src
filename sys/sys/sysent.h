@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/sysent.h 240817 2012-09-22 12:35:22Z kib $
  */
 
 #ifndef _SYS_SYSENT_H_
@@ -124,6 +124,10 @@ struct sysentvec {
 	vm_offset_t	sv_shared_page_base;
 	vm_offset_t	sv_shared_page_len;
 	vm_offset_t	sv_sigcode_base;
+	vm_offset_t	sv_timekeep_base;
+	int		sv_timekeep_off;
+	int		sv_timekeep_curr;
+	uint32_t	sv_timekeep_gen;
 	void		*sv_shared_page_obj;
 	void		(*sv_schedtail)(struct thread *);
 };
@@ -256,7 +260,9 @@ int	lkmressys(struct thread *, struct nosys_args *);
 int	syscall_thread_enter(struct thread *td, struct sysent *se);
 void	syscall_thread_exit(struct thread *td, struct sysent *se);
 
-int shared_page_fill(int size, int align, const char *data);
+int shared_page_alloc(int size, int align);
+int shared_page_fill(int size, int align, const void *data);
+void shared_page_write(int base, int size, const void *data);
 void exec_sysvec_init(void *param);
 
 #define INIT_SYSENTVEC(name, sv)					\

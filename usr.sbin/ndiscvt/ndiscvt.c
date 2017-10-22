@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/ndiscvt/ndiscvt.c 243210 2012-11-18 06:21:45Z eadler $");
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -325,6 +325,8 @@ main(int argc, char *argv[])
 	rewind (fp);
 	img = calloc(fsize, 1);
 	n = fread (img, fsize, 1, fp);
+	if (n == 0)
+		err(1, "reading .SYS file '%s' failed", sysfile);
 
 	fclose(fp);
 

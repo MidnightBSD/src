@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/geom/geom_part/geom_part_ldm/Makefile 233177 2012-03-19 13:15:48Z ae $
 
 .PATH: ${.CURDIR}/../../../../geom/part
 

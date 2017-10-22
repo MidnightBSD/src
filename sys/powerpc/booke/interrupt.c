@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>                  /* RCS ID & Copyright macro defns */
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/booke/interrupt.c 223485 2011-06-23 22:21:28Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

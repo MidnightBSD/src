@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/rctl.h 249444 2013-04-13 21:04:06Z trasz $
  */
 
 /*
@@ -140,6 +140,7 @@ void	rctl_rule_release(struct rctl_rule *rule);
 int	rctl_rule_add(struct rctl_rule *rule);
 int	rctl_rule_remove(struct rctl_rule *filter);
 int	rctl_enforce(struct proc *p, int resource, uint64_t amount);
+int64_t	rctl_pcpu_available(const struct proc *p);
 uint64_t rctl_get_limit(struct proc *p, int resource);
 uint64_t rctl_get_available(struct proc *p, int resource);
 const char *rctl_resource_name(int resource);

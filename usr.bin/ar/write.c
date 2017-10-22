@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/ar/write.c 224650 2011-08-04 14:18:09Z emaste $");
 
 #include <sys/endian.h>
 #include <sys/mman.h>

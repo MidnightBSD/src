@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kgssapi/krb5/krb5_mech.c 226637 2011-10-22 17:51:45Z brueffer $");
 
 #include "opt_inet6.h"
 

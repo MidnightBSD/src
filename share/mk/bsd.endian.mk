@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/mk/bsd.endian.mk 217123 2011-01-07 20:26:33Z imp $
 
 .if ${MACHINE_ARCH} == "amd64" || \
     ${MACHINE_ARCH} == "i386" || \

@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/vm/vnode_pager.c 244660 2012-12-24 13:29:22Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -68,6 +68,7 @@ __FBSDID("$FreeBSD$");
 #include <machine/atomic.h>
 
 #include <vm/vm.h>
+#include <vm/vm_param.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
@@ -271,10 +272,10 @@ vnode_pager_dealloc(object)
 	ASSERT_VOP_ELOCKED(vp, "vnode_pager_dealloc");
 	if (object->un_pager.vnp.writemappings > 0) {
 		object->un_pager.vnp.writemappings = 0;
-		vp->v_writecount--;
+		VOP_ADD_WRITECOUNT(vp, -1);
 	}
 	vp->v_object = NULL;
-	vp->v_vflag &= ~VV_TEXT;
+	VOP_UNSET_TEXT(vp);
 	VM_OBJECT_UNLOCK(object);
 	while (refs-- > 0)
 		vunref(vp);
@@ -983,37 +984,8 @@ vnode_pager_generic_getpages(vp, m, bytecount, reqpage)
 			    mt));
 		}
 		
-		if (i != reqpage) {
-
-			/*
-			 * whether or not to leave the page activated is up in
-			 * the air, but we should put the page on a page queue
-			 * somewhere. (it already is in the object). Result:
-			 * It appears that empirical results show that
-			 * deactivating pages is best.
-			 */
-
-			/*
-			 * just in case someone was asking for this page we
-			 * now tell them that it is ok to use
-			 */
-			if (!error) {
-				if (mt->oflags & VPO_WANTED) {
-					vm_page_lock(mt);
-					vm_page_activate(mt);
-					vm_page_unlock(mt);
-				} else {
-					vm_page_lock(mt);
-					vm_page_deactivate(mt);
-					vm_page_unlock(mt);
-				}
-				vm_page_wakeup(mt);
-			} else {
-				vm_page_lock(mt);
-				vm_page_free(mt);
-				vm_page_unlock(mt);
-			}
-		}
+		if (i != reqpage)
+			vm_page_readahead_finish(mt);
 	}
 	VM_OBJECT_UNLOCK(object);
 	if (error) {
@@ -1144,7 +1116,7 @@ vnode_pager_generic_putpages(struct vnode *vp, vm_page_t *ma, int bytecount,
 				m = ma[ncount - 1];
 				KASSERT(m->busy > 0,
 		("vnode_pager_generic_putpages: page %p is not busy", m));
-				KASSERT((m->aflags & PGA_WRITEABLE) == 0,
+				KASSERT(!pmap_page_is_write_mapped(m),
 		("vnode_pager_generic_putpages: page %p is not read-only", m));
 				vm_page_clear_dirty(m, pgoff, PAGE_SIZE -
 				    pgoff);
@@ -1244,10 +1216,10 @@ vnode_pager_update_writecount(vm_object_t object, vm_offset_t start,
 	vp = object->handle;
 	if (old_wm == 0 && object->un_pager.vnp.writemappings != 0) {
 		ASSERT_VOP_ELOCKED(vp, "v_writecount inc");
-		vp->v_writecount++;
+		VOP_ADD_WRITECOUNT(vp, 1);
 	} else if (old_wm != 0 && object->un_pager.vnp.writemappings == 0) {
 		ASSERT_VOP_ELOCKED(vp, "v_writecount dec");
-		vp->v_writecount--;
+		VOP_ADD_WRITECOUNT(vp, -1);
 	}
 	VM_OBJECT_UNLOCK(object);
 }

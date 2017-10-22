@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/viawd/viawd.c 237554 2012-06-25 07:33:54Z fabient $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

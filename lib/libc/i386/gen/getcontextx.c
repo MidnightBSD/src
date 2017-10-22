@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/i386/gen/getcontextx.c 238513 2012-07-16 02:10:26Z davidxu $");
 
 #include <sys/types.h>
 #include <sys/ucontext.h>

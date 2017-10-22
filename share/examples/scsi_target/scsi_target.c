@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/share/examples/scsi_target/scsi_target.c 237825 2012-06-29 21:33:36Z ken $
  */
 
 #include <sys/types.h>

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_mbuf.c 241468 2012-10-11 23:02:35Z np $");
 
 #include "opt_param.h"
 
@@ -110,14 +110,23 @@ struct mbstat mbstat;
 static void
 tunable_mbinit(void *dummy)
 {
-	TUNABLE_INT_FETCH("kern.ipc.nmbclusters", &nmbclusters);
 
 	/* This has to be done before VM init. */
+	TUNABLE_INT_FETCH("kern.ipc.nmbclusters", &nmbclusters);
 	if (nmbclusters == 0)
 		nmbclusters = 1024 + maxusers * 64;
-	nmbjumbop = nmbclusters / 2;
-	nmbjumbo9 = nmbjumbop / 2;
-	nmbjumbo16 = nmbjumbo9 / 2;
+
+	TUNABLE_INT_FETCH("kern.ipc.nmbjumbop", &nmbjumbop);
+	if (nmbjumbop == 0)
+		nmbjumbop = nmbclusters / 2;
+
+	TUNABLE_INT_FETCH("kern.ipc.nmbjumbo9", &nmbjumbo9);
+	if (nmbjumbo9 == 0)
+		nmbjumbo9 = nmbclusters / 4;
+
+	TUNABLE_INT_FETCH("kern.ipc.nmbjumbo16", &nmbjumbo16);
+	if (nmbjumbo16 == 0)
+		nmbjumbo16 = nmbclusters / 8;
 }
 SYSINIT(tunable_mbinit, SI_SUB_TUNABLES, SI_ORDER_MIDDLE, tunable_mbinit, NULL);
 

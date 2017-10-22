@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_conf.c 241322 2012-10-07 18:37:47Z jhb $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -306,7 +306,6 @@ dead_strategy(struct bio *bp)
 
 static struct cdevsw dead_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_NEEDGIANT, /* XXX: does dead_strategy need this ? */
 	.d_open =	dead_open,
 	.d_close =	dead_close,
 	.d_read =	dead_read,

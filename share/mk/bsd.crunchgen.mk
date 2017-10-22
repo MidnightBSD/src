@@ -23,7 +23,7 @@
 # CRUNCH_SUPPRESS_LINK_$(NAME) to 1.
 #
 
-# $FreeBSD$
+# $FreeBSD: stable/9/share/mk/bsd.crunchgen.mk 247112 2013-02-21 18:41:35Z pfg $
 
 ##################################################################
 #  The following is pretty nearly a generic crunchgen-handling makefile
@@ -100,7 +100,7 @@ $(CONF): Makefile
 .MAKEFLAGS:= ${.MAKEFLAGS:N-P}
 .ORDER: $(OUTPUTS) objs
 $(OUTPUTS): $(CONF)
-	MAKEOBJDIRPREFIX=${CRUNCHOBJS} crunchgen -fq -m $(OUTMK) \
+	MAKE=${MAKE} MAKEOBJDIRPREFIX=${CRUNCHOBJS} crunchgen -fq -m $(OUTMK) \
 	    -c $(OUTC) $(CONF)
 
 $(PROG): $(OUTPUTS) objs

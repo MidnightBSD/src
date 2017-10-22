@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ata/chipsets/ata-sis.c 242908 2012-11-12 07:34:05Z dim $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -74,7 +74,7 @@ ata_sis_probe(device_t dev)
 {
     struct ata_pci_controller *ctlr = device_get_softc(dev);
     const struct ata_chip_id *idx;
-    static const struct ata_chip_id const ids[] =
+    static const struct ata_chip_id ids[] =
     {{ ATA_SIS182,  0x00, SIS_SATA,   0, ATA_SA150, "182" }, /* south */
      { ATA_SIS181,  0x00, SIS_SATA,   0, ATA_SA150, "181" }, /* south */
      { ATA_SIS180,  0x00, SIS_SATA,   0, ATA_SA150, "180" }, /* south */

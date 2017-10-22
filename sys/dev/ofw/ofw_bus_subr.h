@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/ofw/ofw_bus_subr.h 209298 2010-06-18 14:06:27Z nwhitehorn $
  */
 
 #ifndef	_DEV_OFW_OFW_BUS_SUBR_H_

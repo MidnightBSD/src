@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/hatm/if_hatm_tx.c 248078 2013-03-09 00:39:54Z marius $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -466,7 +466,7 @@ hatm_start(struct ifnet *ifp)
 		if (error == EFBIG) {
 			/* try to defragment the packet */
 			sc->istats.defrag++;
-			m = m_defrag(m, M_DONTWAIT);
+			m = m_defrag(m, M_NOWAIT);
 			if (m == NULL) {
 				tpd->mbuf = NULL;
 				hatm_free_txmbuf(sc);

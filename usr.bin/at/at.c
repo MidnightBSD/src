@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/at/at.c 215518 2010-11-19 10:15:29Z kevlo $");
 
 #define _USE_BSD 1
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/part/g_part_apm.c 243237 2012-11-18 16:13:36Z ae $");
 
 #include <sys/param.h>
 #include <sys/apm.h>
@@ -157,6 +157,11 @@ apm_parse_type(const char *type, char *buf, size_t bufsz)
 	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD);
 	if (!strcasecmp(type, alias)) {
 		strcpy(buf, APM_ENT_TYPE_FREEBSD);
+		return (0);
+	}
+	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_NANDFS);
+	if (!strcasecmp(type, alias)) {
+		strcpy(buf, APM_ENT_TYPE_FREEBSD_NANDFS);
 		return (0);
 	}
 	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_SWAP);
@@ -485,6 +490,8 @@ g_part_apm_type(struct g_part_table *basetable, struct g_part_entry *baseentry,
 		return (g_part_alias_name(G_PART_ALIAS_APPLE_UFS));
 	if (!strcmp(type, APM_ENT_TYPE_FREEBSD))
 		return (g_part_alias_name(G_PART_ALIAS_FREEBSD));
+	if (!strcmp(type, APM_ENT_TYPE_FREEBSD_NANDFS))
+		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_NANDFS));
 	if (!strcmp(type, APM_ENT_TYPE_FREEBSD_SWAP))
 		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_SWAP));
 	if (!strcmp(type, APM_ENT_TYPE_FREEBSD_UFS))

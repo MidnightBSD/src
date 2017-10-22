@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/examples/cvsup/gnats-supfile 233526 2012-03-27 00:51:28Z eadler $
 #
 # This file contains all of the "CVSup collections" that make up the
 # FreeBSD GNATS bug report database.

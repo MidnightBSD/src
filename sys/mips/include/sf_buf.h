@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/include/sf_buf.h 217944 2011-01-27 14:49:22Z jchandra $
  */
 
 #ifndef _MACHINE_SF_BUF_H_

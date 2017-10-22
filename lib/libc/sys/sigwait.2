@@ -25,9 +25,9 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 .\" EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/lib/libc/sys/sigwait.2 241224 2012-10-05 14:20:53Z jilles $
 .\"
-.Dd August 24, 2011
+.Dd September 27, 2012
 .Dt SIGWAIT 2
 .Os
 .Sh NAME
@@ -107,9 +107,6 @@ The
 .Fa set
 argument
 specifies one or more invalid signal numbers.
-.It Bq Er EFAULT
-Any arguments point outside the allocated address space or there is a
-memory protection fault.
 .El
 .Sh SEE ALSO
 .Xr sigaction 2 ,

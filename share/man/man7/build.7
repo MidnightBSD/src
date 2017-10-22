@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/share/man/man7/build.7 241711 2012-10-19 00:22:09Z jhb $
 .\"
-.Dd July 2, 2012
+.Dd October 10, 2012
 .Dt BUILD 7
 .Os
 .Sh NAME
@@ -382,12 +382,6 @@ even if the makefile says otherwise.
 .It Va WITH_CTF
 If defined, the build process will run the DTrace CTF conversion
 tools on built objects.
-Please note that this WITH_ option is handled differently than all
-other WITH_ options (there is no
-.Va WITHOUT_CTF ,
-or corresponding
-.Va MK_CTF
-in the build system).
 .El
 .Pp
 Additionally, builds in

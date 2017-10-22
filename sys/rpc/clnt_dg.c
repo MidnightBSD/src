@@ -37,7 +37,7 @@
 static char sccsid[] = "@(#)clnt_dg.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/rpc/clnt_dg.c 227630 2011-11-17 16:08:46Z rmacklem $");
 
 /*
  * Implements a connectionless client side RPC.

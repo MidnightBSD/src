@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/sparc64/fpu/fpu_div.c 205396 2010-03-20 22:12:15Z marius $");
 
 /*
  * Perform an FPU divide (return x / y).

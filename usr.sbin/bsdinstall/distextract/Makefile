@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/bsdinstall/distextract/Makefile 218799 2011-02-18 14:54:34Z nwhitehorn $
 
 BINDIR= /usr/libexec/bsdinstall
 PROG=	distextract

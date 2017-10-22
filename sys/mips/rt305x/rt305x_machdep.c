@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/rt305x/rt305x_machdep.c 220297 2011-04-03 14:39:55Z adrian $");
 
 #include "opt_ddb.h"
 

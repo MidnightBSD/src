@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ata/ata-all.c 249340 2013-04-10 18:07:25Z mav $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -111,7 +111,7 @@ static int atapi_dma = 1;
 #endif
 
 /* sysctl vars */
-SYSCTL_NODE(_hw, OID_AUTO, ata, CTLFLAG_RD, 0, "ATA driver parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, ata, CTLFLAG_RD, 0, "ATA driver parameters");
 #ifndef ATA_CAM
 TUNABLE_INT("hw.ata.ata_dma", &ata_dma);
 SYSCTL_INT(_hw_ata, OID_AUTO, ata_dma, CTLFLAG_RDTUN, &ata_dma, 0,
@@ -166,12 +166,23 @@ ata_attach(device_t dev)
     ch->state = ATA_IDLE;
     bzero(&ch->state_mtx, sizeof(struct mtx));
     mtx_init(&ch->state_mtx, "ATA state lock", NULL, MTX_DEF);
+#ifndef ATA_CAM
     bzero(&ch->queue_mtx, sizeof(struct mtx));
     mtx_init(&ch->queue_mtx, "ATA queue lock", NULL, MTX_DEF);
     TAILQ_INIT(&ch->ata_queue);
+#endif
     TASK_INIT(&ch->conntask, 0, ata_conn_event, dev);
 #ifdef ATA_CAM
 	for (i = 0; i < 16; i++) {
+		ch->user[i].revision = 0;
+		snprintf(buf, sizeof(buf), "dev%d.sata_rev", i);
+		if (resource_int_value(device_get_name(dev),
+		    device_get_unit(dev), buf, &mode) != 0 &&
+		    resource_int_value(device_get_name(dev),
+		    device_get_unit(dev), "sata_rev", &mode) != 0)
+			mode = -1;
+		if (mode >= 0)
+			ch->user[i].revision = mode;
 		ch->user[i].mode = 0;
 		snprintf(buf, sizeof(buf), "dev%d.mode", i);
 		if (resource_string_value(device_get_name(dev),
@@ -331,7 +342,9 @@ ata_detach(device_t dev)
 	ch->dma.free(dev);
 
     mtx_destroy(&ch->state_mtx);
+#ifndef ATA_CAM
     mtx_destroy(&ch->queue_mtx);
+#endif
     return 0;
 }
 
@@ -860,7 +873,7 @@ ata_boot_attach(void)
 
     mtx_lock(&Giant);       /* newbus suckage it needs Giant */
 
-    /* kick of probe and attach on all channels */
+    /* kick off probe and attach on all channels */
     for (ctlr = 0; ctlr < devclass_get_maxunit(ata_devclass); ctlr++) {
 	if ((ch = devclass_get_softc(ata_devclass, ctlr))) {
 	    ata_identify(ch->dev);
@@ -1098,6 +1111,7 @@ ata_default_registers(device_t dev)
     ch->r_io[ATA_ALTSTAT].offset = ch->r_io[ATA_CONTROL].offset;
 }
 
+#ifndef ATA_CAM
 void
 ata_modify_if_48bit(struct ata_request *request)
 {
@@ -1199,6 +1213,7 @@ ata_modify_if_48bit(struct ata_request *request)
 	request->flags |= ATA_R_48BIT;
     }
 }
+#endif
 
 void
 ata_udelay(int interval)
@@ -1444,7 +1459,7 @@ bpack(int8_t *src, int8_t *dst, int len)
 #endif
 
 #ifdef ATA_CAM
-void
+static void
 ata_cam_begin_transaction(device_t dev, union ccb *ccb)
 {
 	struct ata_channel *ch = device_get_softc(dev);
@@ -1483,6 +1498,8 @@ ata_cam_begin_transaction(device_t dev, union ccb *ccb)
 		request->u.ata.lba |= ((uint64_t)ccb->ataio.cmd.lba_high << 16) |
 				      ((uint64_t)ccb->ataio.cmd.lba_mid << 8) |
 				       (uint64_t)ccb->ataio.cmd.lba_low;
+		if (ccb->ataio.cmd.flags & CAM_ATAIO_NEEDRESULT)
+			request->flags |= ATA_R_NEEDRESULT;
 		if ((ccb->ccb_h.flags & CAM_DIR_MASK) != CAM_DIR_NONE &&
 		    ccb->ataio.cmd.flags & CAM_ATAIO_DMA)
 			request->flags |= ATA_R_DMA;
@@ -1490,6 +1507,14 @@ ata_cam_begin_transaction(device_t dev, union ccb *ccb)
 			request->flags |= ATA_R_READ;
 		if ((ccb->ccb_h.flags & CAM_DIR_MASK) == CAM_DIR_OUT)
 			request->flags |= ATA_R_WRITE;
+		if (ccb->ataio.cmd.command == ATA_READ_MUL ||
+		    ccb->ataio.cmd.command == ATA_READ_MUL48 ||
+		    ccb->ataio.cmd.command == ATA_WRITE_MUL ||
+		    ccb->ataio.cmd.command == ATA_WRITE_MUL48) {
+			request->transfersize = min(request->bytecount,
+			    ch->curr[ccb->ccb_h.target_id].bytecount);
+		} else
+			request->transfersize = min(request->bytecount, 512);
 	} else {
 		request->data = ccb->csio.data_ptr;
 		request->bytecount = ccb->csio.dxfer_len;
@@ -1506,9 +1531,9 @@ ata_cam_begin_transaction(device_t dev, union ccb *ccb)
 			request->flags |= ATA_R_READ;
 		if ((ccb->ccb_h.flags & CAM_DIR_MASK) == CAM_DIR_OUT)
 			request->flags |= ATA_R_WRITE;
+		request->transfersize = min(request->bytecount,
+		    ch->curr[ccb->ccb_h.target_id].bytecount);
 	}
-	request->transfersize = min(request->bytecount,
-	    ch->curr[ccb->ccb_h.target_id].bytecount);
 	request->retries = 0;
 	request->timeout = (ccb->ccb_h.timeout + 999) / 1000;
 	callout_init_mtx(&request->callout, &ch->state_mtx, CALLOUT_RETURNUNLOCKED);

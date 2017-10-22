@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/nfsclient/nfs_kdtrace.h 223280 2011-06-18 23:02:53Z rmacklem $
  */
 
 #ifndef _NFSCL_NFS_KDTRACE_H_

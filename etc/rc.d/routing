@@ -2,7 +2,7 @@
 #
 # Configure routing and miscellaneous network tunables
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/routing 232904 2012-03-12 22:08:03Z bz $
 #
 
 # PROVIDE: routing

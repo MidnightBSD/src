@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/string/strcspn.c 144545 2005-04-02 18:52:44Z das $");
 
 #include <sys/types.h>
 #include <limits.h>

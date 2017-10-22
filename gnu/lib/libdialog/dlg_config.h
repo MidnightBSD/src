@@ -2,7 +2,7 @@
 /*
  * The configure script expands this as a set of definitions
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/gnu/lib/libdialog/dlg_config.h 218331 2011-02-05 16:23:32Z nwhitehorn $
  */
 
 #define DIALOG_PATCHDATE 20100428

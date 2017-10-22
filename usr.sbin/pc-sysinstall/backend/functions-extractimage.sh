@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/backend/functions-extractimage.sh 225657 2011-09-19 05:12:53Z jpaetzel $
 
 # Functions which perform the extraction / installation of system to disk
 

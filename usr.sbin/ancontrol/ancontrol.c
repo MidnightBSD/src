@@ -37,7 +37,7 @@ static const char copyright[] = "@(#) Copyright (c) 1997, 1998, 1999\
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/ancontrol/ancontrol.c 240035 2012-09-02 18:10:29Z eadler $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -1443,7 +1443,7 @@ an_enable_leap_mode(const char *iface, const char *username)
 
 	caps = (struct an_ltv_caps *)&areq;
 
-	if (!caps->an_softcaps & AN_AUTHTYPE_LEAP) {
+	if (!(caps->an_softcaps & AN_AUTHTYPE_LEAP)) {
 		fprintf(stderr, "Firmware does not support LEAP\n");
 		exit(1);
 	}

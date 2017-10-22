@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/usr.bin/gdb/Makefile 211725 2010-08-23 22:24:11Z imp $
 
 SUBDIR=	doc libgdb gdb gdbtui kgdb
 

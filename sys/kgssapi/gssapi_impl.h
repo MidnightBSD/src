@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/kgssapi/gssapi_impl.h 245018 2013-01-03 23:15:36Z rmacklem $
  */
 
 #include "gssd.h"
@@ -53,8 +53,10 @@ struct kgss_mech {
 LIST_HEAD(kgss_mech_list, kgss_mech);
 
 extern CLIENT *kgss_gssd_handle;
+extern struct mtx kgss_gssd_lock;
 extern struct kgss_mech_list kgss_mechs;
 
+CLIENT *kgss_gssd_client(void);
 int kgss_oid_equal(const gss_OID oid1, const gss_OID oid2);
 extern void kgss_install_mech(gss_OID mech_type, const char *name,
     struct kobj_class *cls);

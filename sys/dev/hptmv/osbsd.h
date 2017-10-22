@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/hptmv/osbsd.h 190809 2009-04-07 16:38:25Z delphij $
  */
 #ifndef _OSBSD_H_
 #define _OSBSD_H_

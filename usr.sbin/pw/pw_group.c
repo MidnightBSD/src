@@ -26,7 +26,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/usr.sbin/pw/pw_group.c 244459 2012-12-20 00:28:52Z eadler $";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -272,8 +272,7 @@ pw_group(struct userconf * cnf, int mode, struct cargs * args)
 
 	pw_log(cnf, mode, W_GROUP, "%s(%ld)", grp->gr_name, (long) grp->gr_gid);
 
-	if (members)
-		free(members);
+	free(members);
 
 	return EXIT_SUCCESS;
 }

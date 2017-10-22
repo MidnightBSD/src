@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/geom_concat/test-2.t 153185 2005-12-07 01:24:25Z pjd $
 
 . `dirname $0`/conf.sh
 

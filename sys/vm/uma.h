@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/vm/uma.h 242365 2012-10-30 17:05:12Z mdf $
  *
  */
 
@@ -165,9 +165,9 @@ typedef void (*uma_fini)(void *mem, int size);
  *	A pointer to a structure which is intended to be opaque to users of
  *	the interface.  The value may be null if the wait flag is not set.
  */
-uma_zone_t uma_zcreate(char *name, size_t size, uma_ctor ctor, uma_dtor dtor,
-			uma_init uminit, uma_fini fini, int align,
-			u_int32_t flags);
+uma_zone_t uma_zcreate(const char *name, size_t size, uma_ctor ctor,
+		    uma_dtor dtor, uma_init uminit, uma_fini fini,
+		    int align, u_int32_t flags);
 
 /*
  * Create a secondary uma zone

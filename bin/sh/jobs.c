@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)jobs.c	8.5 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/sh/jobs.c 249242 2013-04-07 21:25:14Z jilles $");
 
 #include <sys/ioctl.h>
 #include <sys/param.h>
@@ -57,6 +57,7 @@ __FBSDID("$FreeBSD$");
 #undef CEOF			/* syntax.h redefines this */
 #endif
 #include "redir.h"
+#include "exec.h"
 #include "show.h"
 #include "main.h"
 #include "parser.h"
@@ -883,6 +884,54 @@ forkshell(struct job *jp, union node *n, int mode)
 	return pid;
 }
 
+
+pid_t
+vforkexecshell(struct job *jp, char **argv, char **envp, const char *path, int idx, int pip[2])
+{
+	pid_t pid;
+	struct jmploc jmploc;
+	struct jmploc *savehandler;
+
+	TRACE(("vforkexecshell(%%%td, %s, %p) called\n", jp - jobtab, argv[0],
+	    (void *)pip));
+	INTOFF;
+	flushall();
+	savehandler = handler;
+	pid = vfork();
+	if (pid == -1) {
+		TRACE(("Vfork failed, errno=%d\n", errno));
+		INTON;
+		error("Cannot fork: %s", strerror(errno));
+	}
+	if (pid == 0) {
+		TRACE(("Child shell %d\n", (int)getpid()));
+		if (setjmp(jmploc.loc))
+			_exit(exception == EXEXEC ? exerrno : 2);
+		if (pip != NULL) {
+			close(pip[0]);
+			if (pip[1] != 1) {
+				dup2(pip[1], 1);
+				close(pip[1]);
+			}
+		}
+		handler = &jmploc;
+		shellexec(argv, envp, path, idx);
+	}
+	handler = savehandler;
+	if (jp) {
+		struct procstat *ps = &jp->ps[jp->nprocs++];
+		ps->pid = pid;
+		ps->status = -1;
+		ps->cmd = nullstr;
+		jp->foreground = 1;
+#if JOBS
+		setcurjob(jp);
+#endif
+	}
+	INTON;
+	TRACE(("In parent shell:  child = %d\n", (int)pid));
+	return pid;
+}
 
 
 /*

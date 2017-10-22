@@ -4,7 +4,7 @@
  * 
  * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
  * 
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/gnu/fs/reiserfs/reiserfs_stree.c 170491 2007-06-10 04:54:42Z mjacob $
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>

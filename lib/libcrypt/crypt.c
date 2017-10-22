@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libcrypt/crypt.c 238481 2012-07-15 11:39:35Z des $");
 
 #include <sys/types.h>
 #include <string.h>

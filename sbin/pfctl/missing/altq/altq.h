@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sbin/pfctl/missing/altq/altq.h 126385 2004-02-28 21:50:50Z mlaier $	*/
 /*	$KAME: altq.h,v 1.10 2003/07/10 12:07:47 kjc Exp $	*/
 
 /*

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/include/dbdma.h 183411 2008-09-27 15:41:16Z nwhitehorn $
  */
 
 #ifndef _MACHINE_DBDMA_H_

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libkse/thread/thr_stack.c 174112 2007-11-30 17:20:29Z deischen $
  */
 
 #include "namespace.h"

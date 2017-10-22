@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/netisr.c 248085 2013-03-09 02:36:32Z marius $");
 
 /*
  * netisr is a packet dispatch service, allowing synchronous (directly
@@ -124,7 +124,7 @@ static struct rmlock	netisr_rmlock;
 #define	NETISR_WUNLOCK()	rm_wunlock(&netisr_rmlock)
 /* #define	NETISR_LOCKING */
 
-SYSCTL_NODE(_net, OID_AUTO, isr, CTLFLAG_RW, 0, "netisr");
+static SYSCTL_NODE(_net, OID_AUTO, isr, CTLFLAG_RW, 0, "netisr");
 
 /*-
  * Three global direct dispatch policies are supported:

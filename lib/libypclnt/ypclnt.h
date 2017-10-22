@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libypclnt/ypclnt.h 160804 2006-07-28 21:34:37Z stefanf $
  */
 
 #ifndef _YPCLNT_H_INCLUDED

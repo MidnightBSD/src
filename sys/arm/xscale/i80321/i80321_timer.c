@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/i80321/i80321_timer.c 197733 2009-10-03 13:59:15Z rpaulo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/hptmv/mv.c 149871 2005-09-07 23:33:26Z scottl $
  */
 #include <sys/param.h>
 #include <sys/systm.h>

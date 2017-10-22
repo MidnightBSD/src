@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/security/mac_portacl/mac_portacl.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 /*
@@ -83,7 +83,7 @@
 
 SYSCTL_DECL(_security_mac);
 
-SYSCTL_NODE(_security_mac, OID_AUTO, portacl, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_security_mac, OID_AUTO, portacl, CTLFLAG_RW, 0,
     "TrustedBSD mac_portacl policy controls");
 
 static int	portacl_enabled = 1;
@@ -109,7 +109,7 @@ SYSCTL_INT(_security_mac_portacl, OID_AUTO, port_high, CTLFLAG_RW,
     &portacl_port_high, 0, "Highest port to enforce for");
 TUNABLE_INT("security.mac.portacl.port_high", &portacl_port_high);
 
-MALLOC_DEFINE(M_PORTACL, "portacl_rule", "Rules for mac_portacl");
+static MALLOC_DEFINE(M_PORTACL, "portacl_rule", "Rules for mac_portacl");
 
 #define	MAC_RULE_STRING_LEN	1024
 

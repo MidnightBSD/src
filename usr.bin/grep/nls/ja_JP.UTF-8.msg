@@ -1,4 +1,4 @@
-$ $FreeBSD$
+$ $FreeBSD: stable/9/usr.bin/grep/nls/ja_JP.UTF-8.msg 210622 2010-07-29 18:02:57Z gabor $
 $
 $set 1
 $quote "

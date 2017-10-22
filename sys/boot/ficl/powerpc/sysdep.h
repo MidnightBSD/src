@@ -46,7 +46,7 @@
 ** contact me by email at the address above.
 **
 ** $Id: sysdep.h,v 1.6 2001-04-26 21:41:55-07 jsadler Exp jsadler $
-** $FreeBSD$
+** $FreeBSD: stable/9/sys/boot/ficl/powerpc/sysdep.h 123372 2003-12-10 09:05:08Z grehan $
 */
 
 #if !defined (__SYSDEP_H__)

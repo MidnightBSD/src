@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ohci.c 248085 2013-03-09 02:36:32Z marius $");
 
 /*
  * USB Open Host Controller driver.
@@ -80,10 +80,9 @@ __FBSDID("$FreeBSD$");
 #ifdef USB_DEBUG
 static int ohcidebug = 0;
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, ohci, CTLFLAG_RW, 0, "USB ohci");
-SYSCTL_INT(_hw_usb_ohci, OID_AUTO, debug, CTLFLAG_RW,
+static SYSCTL_NODE(_hw_usb, OID_AUTO, ohci, CTLFLAG_RW, 0, "USB ohci");
+SYSCTL_INT(_hw_usb_ohci, OID_AUTO, debug, CTLFLAG_RW | CTLFLAG_TUN,
     &ohcidebug, 0, "ohci debug level");
-
 TUNABLE_INT("hw.usb.ohci.debug", &ohcidebug);
 
 static void ohci_dumpregs(ohci_softc_t *);
@@ -2344,7 +2343,7 @@ ohci_roothub_exec(struct usb_device *udev,
 			for (v = 0;; v++) {
 				if (v < 12) {
 					usb_pause_mtx(&sc->sc_bus.bus_mtx,
-					    USB_MS_TO_TICKS(USB_PORT_ROOT_RESET_DELAY));
+					    USB_MS_TO_TICKS(usb_port_root_reset_delay));
 
 					if ((OREAD4(sc, port) & UPS_RESET) == 0) {
 						break;

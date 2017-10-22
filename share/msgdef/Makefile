@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/msgdef/Makefile 196813 2009-09-04 06:19:37Z ache $
 
 LOCALES=	af_ZA.ISO8859-1 \
 		am_ET.UTF-8 \

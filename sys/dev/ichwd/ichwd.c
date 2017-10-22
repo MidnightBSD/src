@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ichwd/ichwd.c 231153 2012-02-07 19:40:52Z jhb $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

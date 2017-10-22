@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)eval.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/bin/sh/eval.h 231085 2012-02-06 13:29:50Z dumbbell $
  */
 
 extern char *commandname;	/* currently executing command */

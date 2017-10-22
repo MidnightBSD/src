@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/make/for.c 200417 2009-12-11 23:20:02Z delphij $");
 
 /*-
  * for.c --

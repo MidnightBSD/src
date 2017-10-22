@@ -38,7 +38,7 @@
  * Author: Archie Cobbs <archie@freebsd.org>
  *
  * $Whistle: ng_parse.c,v 1.3 1999/11/29 01:43:48 archie Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_parse.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #include <sys/types.h>
@@ -62,7 +62,7 @@
 #include <netgraph/ng_parse.h>
 
 #ifdef NG_SEPARATE_MALLOC
-MALLOC_DEFINE(M_NETGRAPH_PARSE, "netgraph_parse", "netgraph parse info");
+static MALLOC_DEFINE(M_NETGRAPH_PARSE, "netgraph_parse", "netgraph parse info");
 #else
 #define M_NETGRAPH_PARSE M_NETGRAPH
 #endif

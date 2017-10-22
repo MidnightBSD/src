@@ -1,4 +1,4 @@
-#	$FreeBSD$
+#	$FreeBSD: stable/9/tools/tools/ath/Makefile.inc 217681 2011-01-21 02:56:59Z adrian $
 
 BINDIR=	/usr/local/bin
 NO_MAN=

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/ppp/async.h 93418 2002-03-30 12:30:09Z brian $
  */
 
 #define HDLCSIZE	(MAX_MRU*2+6)

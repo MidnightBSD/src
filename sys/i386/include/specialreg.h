@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)specialreg.h	7.1 (Berkeley) 5/9/91
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/i386/include/specialreg.h 239942 2012-08-31 11:20:12Z kib $
  */
 
 #ifndef _MACHINE_SPECIALREG_H_
@@ -221,6 +221,11 @@
 #define	CPUID_TYPE_INVAL	0
 #define	CPUID_TYPE_SMT		1
 #define	CPUID_TYPE_CORE		2
+
+/*
+ * CPUID instruction 0xd Processor Extended State Enumeration Sub-leaf 1
+ */
+#define	CPUID_EXTSTATE_XSAVEOPT	0x00000001
 
 /*
  * AMD extended function 8000_0007h edx info

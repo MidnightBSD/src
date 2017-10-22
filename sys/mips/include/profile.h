@@ -32,7 +32,7 @@
  *
  *	from: @(#)profile.h	8.1 (Berkeley) 6/10/93
  *	JNPR: profile.h,v 1.4 2006/12/02 09:53:41 katta
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/include/profile.h 210606 2010-07-29 14:04:29Z jchandra $
  */
 #ifndef _MACHINE_PROFILE_H_
 #define	_MACHINE_PROFILE_H_

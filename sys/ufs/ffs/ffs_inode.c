@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ufs/ffs/ffs_inode.c 248626 2013-03-22 22:40:16Z mckusick $");
 
 #include "opt_quota.h"
 
@@ -547,9 +547,9 @@ done:
 	 */
 	ip->i_size = length;
 	DIP_SET(ip, i_size, length);
-	DIP_SET(ip, i_blocks, DIP(ip, i_blocks) - blocksreleased);
-
-	if (DIP(ip, i_blocks) < 0)			/* sanity */
+	if (DIP(ip, i_blocks) >= blocksreleased)
+		DIP_SET(ip, i_blocks, DIP(ip, i_blocks) - blocksreleased);
+	else	/* sanity */
 		DIP_SET(ip, i_blocks, 0);
 	ip->i_flag |= IN_CHANGE;
 #ifdef QUOTA

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/contrib/rdma/rdma_addr.c 194760 2009-06-23 20:19:09Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/condvar.h>

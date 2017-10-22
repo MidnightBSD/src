@@ -74,7 +74,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/s3c2xx0/s3c2xx0_space.c 210396 2010-07-22 23:12:19Z andrew $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

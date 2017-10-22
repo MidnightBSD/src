@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/calendar/dates.c 205872 2010-03-30 06:42:01Z edwin $");
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/avila_ata.c 229118 2011-12-31 15:31:34Z hselasky $");
 
 /*
  * Compact Flash Support for the Avila Gateworks XScale boards.

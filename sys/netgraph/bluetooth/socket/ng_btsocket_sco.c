@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_btsocket_sco.c,v 1.2 2005/10/31 18:08:51 max Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/bluetooth/socket/ng_btsocket_sco.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #include <sys/param.h>
@@ -63,7 +63,7 @@
 
 /* MALLOC define */
 #ifdef NG_SEPARATE_MALLOC
-MALLOC_DEFINE(M_NETGRAPH_BTSOCKET_SCO, "netgraph_btsocks_sco",
+static MALLOC_DEFINE(M_NETGRAPH_BTSOCKET_SCO, "netgraph_btsocks_sco",
 		"Netgraph Bluetooth SCO sockets");
 #else
 #define M_NETGRAPH_BTSOCKET_SCO M_NETGRAPH
@@ -110,7 +110,7 @@ static int					ng_btsocket_sco_curpps;
 
 /* Sysctl tree */
 SYSCTL_DECL(_net_bluetooth_sco_sockets);
-SYSCTL_NODE(_net_bluetooth_sco_sockets, OID_AUTO, seq, CTLFLAG_RW,
+static SYSCTL_NODE(_net_bluetooth_sco_sockets, OID_AUTO, seq, CTLFLAG_RW,
 	0, "Bluetooth SEQPACKET SCO sockets family");
 SYSCTL_UINT(_net_bluetooth_sco_sockets_seq, OID_AUTO, debug_level,
 	CTLFLAG_RW,

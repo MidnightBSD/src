@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/bin/pax/Makefile 211964 2010-08-29 12:14:53Z brian $
 
 all test:
 	prove -vmw regress.t

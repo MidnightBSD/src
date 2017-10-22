@@ -16,7 +16,7 @@
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software Foundation,
    Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/contrib/gnu-sort/lib/hard-locale.c 133545 2004-08-12 05:46:04Z tjr $ */
 
 #if HAVE_CONFIG_H
 # include <config.h>

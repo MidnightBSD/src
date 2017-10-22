@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_jail.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
@@ -78,7 +78,7 @@ __FBSDID("$FreeBSD$");
 #define	DEFAULT_HOSTUUID	"00000000-0000-0000-0000-000000000000"
 
 MALLOC_DEFINE(M_PRISON, "prison", "Prison structures");
-MALLOC_DEFINE(M_PRISON_RACCT, "prison_racct", "Prison racct structures");
+static MALLOC_DEFINE(M_PRISON_RACCT, "prison_racct", "Prison racct structures");
 
 /* Keep struct prison prison0 and some code in kern_jail_set() readable. */
 #ifdef INET
@@ -4025,7 +4025,7 @@ prison_path(struct prison *pr1, struct prison *pr2)
 /*
  * Jail-related sysctls.
  */
-SYSCTL_NODE(_security, OID_AUTO, jail, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_security, OID_AUTO, jail, CTLFLAG_RW, 0,
     "Jails");
 
 static int
@@ -4533,6 +4533,8 @@ prison_racct_detach(struct prison *pr)
 
 	sx_assert(&allprison_lock, SA_UNLOCKED);
 
+	if (pr->pr_prison_racct == NULL)
+		return;
 	prison_racct_free(pr->pr_prison_racct);
 	pr->pr_prison_racct = NULL;
 }

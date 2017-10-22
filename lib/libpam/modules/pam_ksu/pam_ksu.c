@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libpam/modules/pam_ksu/pam_ksu.c 125650 2004-02-10 10:13:21Z des $");
 
 #include <sys/param.h>
 #include <errno.h>

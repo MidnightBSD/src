@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/vm/uma_core.c 242365 2012-10-30 17:05:12Z mdf $");
 
 /* I should really use ktr.. */
 /*
@@ -153,7 +153,7 @@ static struct callout uma_callout;
  * a special allocation function just for zones.
  */
 struct uma_zctor_args {
-	char *name;
+	const char *name;
 	size_t size;
 	uma_ctor ctor;
 	uma_dtor dtor;
@@ -1384,7 +1384,7 @@ keg_ctor(void *mem, int size, void *udata, int flags)
 		hash_alloc(&keg->uk_hash);
 
 #ifdef UMA_DEBUG
-	printf("UMA: %s(%p) size %d(%d) flags %d ipers %d ppera %d out %d free %d\n",
+	printf("UMA: %s(%p) size %d(%d) flags %#x ipers %d ppera %d out %d free %d\n",
 	    zone->uz_name, zone, keg->uk_size, keg->uk_rsize, keg->uk_flags,
 	    keg->uk_ipers, keg->uk_ppera,
 	    (keg->uk_ipers * keg->uk_pages) - keg->uk_free, keg->uk_free);
@@ -1821,7 +1821,7 @@ uma_set_align(int align)
 
 /* See uma.h */
 uma_zone_t
-uma_zcreate(char *name, size_t size, uma_ctor ctor, uma_dtor dtor,
+uma_zcreate(const char *name, size_t size, uma_ctor ctor, uma_dtor dtor,
 		uma_init uminit, uma_fini fini, int align, u_int32_t flags)
 
 {
@@ -2166,6 +2166,7 @@ keg_fetch_slab(uma_keg_t keg, uma_zone_t zone, int flags)
 				zone->uz_flags |= UMA_ZFLAG_FULL;
 			if (flags & M_NOWAIT)
 				break;
+			zone->uz_sleeps++;
 			msleep(keg, &keg->uk_lock, PVM, "keglimit", 0);
 			continue;
 		}
@@ -3115,7 +3116,7 @@ uma_print_keg(uma_keg_t keg)
 {
 	uma_slab_t slab;
 
-	printf("keg: %s(%p) size %d(%d) flags %d ipers %d ppera %d "
+	printf("keg: %s(%p) size %d(%d) flags %#x ipers %d ppera %d "
 	    "out %d free %d limit %d\n",
 	    keg->uk_name, keg, keg->uk_size, keg->uk_rsize, keg->uk_flags,
 	    keg->uk_ipers, keg->uk_ppera,
@@ -3139,7 +3140,7 @@ uma_print_zone(uma_zone_t zone)
 	uma_klink_t kl;
 	int i;
 
-	printf("zone: %s(%p) size %d flags %d\n",
+	printf("zone: %s(%p) size %d flags %#x\n",
 	    zone->uz_name, zone, zone->uz_size, zone->uz_flags);
 	LIST_FOREACH(kl, &zone->uz_kegs, kl_link)
 		uma_print_keg(kl->kl_keg);
@@ -3345,6 +3346,8 @@ DB_SHOW_COMMAND(uma, db_show_uma)
 			    (uintmax_t)kz->uk_size,
 			    (intmax_t)(allocs - frees), cachefree,
 			    (uintmax_t)allocs, sleeps);
+			if (db_pager_quit)
+				return;
 		}
 	}
 }

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netncp/ncp_ncp.c 206361 2010-04-07 16:50:38Z joel $");
 
 #include <sys/param.h>
 #include <sys/errno.h>

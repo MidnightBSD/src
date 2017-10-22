@@ -68,7 +68,7 @@
  * - Dynamic control of hash-table size
  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/netinet/libalias/alias_sctp.c 249132 2013-04-05 08:22:11Z mav $ */
 
 #ifdef _KERNEL
 #include <machine/stdarg.h>
@@ -181,7 +181,7 @@ void SctpShowAliasStats(struct libalias *la);
 
 #ifdef	_KERNEL
 
-MALLOC_DEFINE(M_SCTPNAT, "sctpnat", "sctp nat dbs");
+static MALLOC_DEFINE(M_SCTPNAT, "sctpnat", "sctp nat dbs");
 /* Use kernel allocator. */
 #ifdef _SYS_MALLOC_H_
 #define	sn_malloc(x)	malloc(x, M_SCTPNAT, M_NOWAIT|M_ZERO)
@@ -364,8 +364,8 @@ SYSCTL_DECL(_net_inet);
 SYSCTL_DECL(_net_inet_ip);
 SYSCTL_DECL(_net_inet_ip_alias);
 
-SYSCTL_NODE(_net_inet_ip_alias, OID_AUTO, sctp, CTLFLAG_RW, NULL, "SCTP NAT");
-
+static SYSCTL_NODE(_net_inet_ip_alias, OID_AUTO, sctp, CTLFLAG_RW, NULL,
+    "SCTP NAT");
 SYSCTL_PROC(_net_inet_ip_alias_sctp, OID_AUTO, log_level, CTLTYPE_UINT | CTLFLAG_RW,
     &sysctl_log_level, 0, sysctl_chg_loglevel, "IU",
     "Level of detail (0 - default, 1 - event, 2 - info, 3 - detail, 4 - debug, 5 - max debug)");

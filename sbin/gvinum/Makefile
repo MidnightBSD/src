@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/gvinum/Makefile 220370 2011-04-05 18:41:01Z obrien $
 
 PROG=	gvinum
 SRCS=	gvinum.c gvinum.h geom_vinum_share.c

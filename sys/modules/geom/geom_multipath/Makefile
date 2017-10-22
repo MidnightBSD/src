@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/geom/geom_multipath/Makefile 167050 2007-02-27 04:01:58Z mjacob $
 
 .PATH: ${.CURDIR}/../../../geom/multipath
 

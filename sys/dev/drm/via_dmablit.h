@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/via_dmablit.h 203288 2010-01-31 14:30:39Z rnoland $");
 
 #ifndef _VIA_DMABLIT_H
 #define _VIA_DMABLIT_H

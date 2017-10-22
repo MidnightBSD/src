@@ -1,5 +1,5 @@
 #	@(#)Makefile	5.3 (Berkeley) 5/12/90
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/yacc/Makefile 214963 2010-11-07 23:34:05Z obrien $
 
 PROG=	yacc
 SRCS=	closure.c error.c lalr.c lr0.c main.c mkpar.c output.c reader.c \

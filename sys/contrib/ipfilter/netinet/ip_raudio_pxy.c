@@ -1,7 +1,7 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sys/contrib/ipfilter/netinet/ip_raudio_pxy.c 170268 2007-06-04 02:54:36Z darrenr $	*/
 
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/contrib/ipfilter/netinet/ip_raudio_pxy.c 170268 2007-06-04 02:54:36Z darrenr $
  * Copyright (C) 1998-2003 by Darren Reed
  *
  * See the IPFILTER.LICENCE file for details on licencing.

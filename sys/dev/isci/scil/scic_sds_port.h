@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/isci/scil/scic_sds_port.h 240579 2012-09-17 00:44:16Z eadler $
  */
 #ifndef _SCIC_SDS_PORT_H_
 #define _SCIC_SDS_PORT_H_
@@ -109,7 +109,7 @@ struct SCIC_SDS_REQUEST;
 /**
  * @struct SCIC_SDS_PORT
  *
- * The core port object provides the the abstraction for an SCU port.
+ * The core port object provides the abstraction for an SCU port.
  */
 typedef struct SCIC_SDS_PORT
 {

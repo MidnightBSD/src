@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl.h#5 $
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cam/ctl/ctl.h 237821 2012-06-29 21:19:24Z ken $
  */
 /*
  * Function definitions used both within CTL and potentially in various CTL

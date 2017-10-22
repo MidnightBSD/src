@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 12/13/93
-# $FreeBSD$
+# $FreeBSD: stable/9/share/man/man3/Makefile 242893 2012-11-11 12:21:51Z ed $
 
 .include <bsd.own.mk>
 
@@ -52,6 +52,7 @@ MLINKS+=	queue.3 LIST_EMPTY.3 \
 		queue.3 LIST_INSERT_BEFORE.3 \
 		queue.3 LIST_INSERT_HEAD.3 \
 		queue.3 LIST_NEXT.3 \
+		queue.3 LIST_PREV.3 \
 		queue.3 LIST_REMOVE.3 \
 		queue.3 LIST_SWAP.3 \
 		queue.3 SLIST_EMPTY.3 \

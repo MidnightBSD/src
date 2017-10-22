@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_dtrace_declare.h 237896 2012-07-01 07:59:00Z tuexen $");
 
 #ifndef _NETINET_SCTP_DTRACE_DECLARE_H_
 #define _NETINET_SCTP_DTRACE_DECLARE_H_

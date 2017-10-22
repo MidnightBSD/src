@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ia64/ia64/sscdisk.c 249132 2013-04-05 08:22:11Z mav $
  *
  */
 
@@ -72,7 +72,7 @@ ssc(u_int64_t in0, u_int64_t in1, u_int64_t in2, u_int64_t in3, int which)
 #define SSC_NSECT 409600
 #endif
 
-MALLOC_DEFINE(M_SSC, "ssc_disk", "Simulator Disk");
+static MALLOC_DEFINE(M_SSC, "ssc_disk", "Simulator Disk");
 
 static d_strategy_t sscstrategy;
 

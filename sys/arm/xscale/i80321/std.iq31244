@@ -1,5 +1,5 @@
 #IQ31244 board configuration
-#$FreeBSD$
+#$FreeBSD: stable/9/sys/arm/xscale/i80321/std.iq31244 153277 2005-12-09 23:52:51Z cognet $
 include		"../xscale/i80321/std.i80321"
 files		"../xscale/i80321/files.iq31244"
 makeoptions	KERNPHYSADDR=0xa0200000

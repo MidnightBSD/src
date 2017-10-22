@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/mii/lxtphy.c 229093 2011-12-31 14:12:12Z hselasky $");
 
 /*
  * driver for Level One's LXT-970 ethernet 10/100 PHY

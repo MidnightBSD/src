@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libprocstat/common_kvm.c 221807 2011-05-12 10:11:39Z stas $");
 
 #include <sys/param.h>
 #include <sys/user.h>

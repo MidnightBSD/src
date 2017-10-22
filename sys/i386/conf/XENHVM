@@ -1,7 +1,7 @@
 #
 # XENHVM -- Xen HVM kernel configuration file for FreeBSD/i386
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/i386/conf/XENHVM 239412 2012-08-20 11:34:49Z cperciva $
 #
 include		GENERIC
 ident		XENHVM

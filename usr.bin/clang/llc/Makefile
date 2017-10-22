@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/clang/llc/Makefile 245431 2013-01-14 19:51:26Z dim $
 
 PROG_CXX=llc
 
@@ -11,20 +11,20 @@ LIBDEPS=llvmasmparser \
 	llvmarmasmparser \
 	llvmarmcodegen \
 	llvmarmdesc \
-	llvmarminstprinter \
 	llvmarminfo \
+	llvmarminstprinter \
+	llvmmipsasmparser \
 	llvmmipscodegen \
 	llvmmipsdesc \
 	llvmmipsinstprinter \
+	llvmmipsdisassembler \
 	llvmmipsinfo \
 	llvmpowerpccodegen \
 	llvmpowerpcdesc \
-	llvmpowerpcinstprinter \
 	llvmpowerpcinfo \
-	llvmx86disassembler \
+	llvmpowerpcinstprinter \
 	llvmx86asmparser \
 	llvmx86codegen \
-	llvmx86desc \
 	llvmselectiondag \
 	llvmasmprinter \
 	llvmmcparser \
@@ -34,12 +34,15 @@ LIBDEPS=llvmasmparser \
 	llvmtransformutils \
 	llvmipa \
 	llvmanalysis \
+	llvmx86disassembler \
+	llvmx86desc \
+	llvmx86info \
 	llvmtarget \
 	llvmx86instprinter \
+	llvmmc \
+	llvmobject \
 	llvmx86utils \
 	llvmcore \
-	llvmx86info \
-	llvmmc \
 	llvmsupport
 
 .include "../clang.prog.mk"

@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/libexec/rtld-elf/map_object.c 247846 2013-03-05 16:04:07Z tijl $
  */
 
 #include <sys/param.h>
@@ -175,7 +175,7 @@ map_object(int fd, const char *path, const struct stat *sb)
     base_vaddr = trunc_page(segs[0]->p_vaddr);
     base_vlimit = round_page(segs[nsegs]->p_vaddr + segs[nsegs]->p_memsz);
     mapsize = base_vlimit - base_vaddr;
-    base_addr = hdr->e_type == ET_EXEC ? (caddr_t) base_vaddr : NULL;
+    base_addr = (caddr_t) base_vaddr;
 
     mapbase = mmap(base_addr, mapsize, PROT_NONE, MAP_ANON | MAP_PRIVATE |
       MAP_NOCORE, -1, 0);

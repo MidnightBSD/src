@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/nlm/intern_dev.c 225394 2011-09-05 10:45:29Z jchandra $");
 
 /*
  * 'Ignore' driver - eats devices that show up errnoeously on PCI

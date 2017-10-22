@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)inode.h	8.9 (Berkeley) 5/14/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/ext2fs/inode.h 247589 2013-03-01 22:03:57Z pfg $
  */
 
 #ifndef _FS_EXT2FS_INODE_H_
@@ -90,11 +90,11 @@ struct inode {
 	int32_t		i_atimensec;	/* Last access time. */
 	int32_t		i_ctimensec;	/* Last inode change time. */
 	int32_t		i_birthnsec;	/* Inode creation time. */
-	int32_t		i_db[NDADDR];	/* Direct disk blocks. */
-	int32_t		i_ib[NIADDR];	/* Indirect disk blocks. */
+	uint32_t	i_db[NDADDR];	/* Direct disk blocks. */
+	uint32_t	i_ib[NIADDR];	/* Indirect disk blocks. */
 	uint32_t	i_flags;	/* Status flags (chflags). */
-	int32_t		i_blocks;	/* Blocks actually held. */
-	int32_t		i_gen;		/* Generation number. */
+	uint32_t	i_blocks;	/* Blocks actually held. */
+	uint32_t	i_gen;		/* Generation number. */
 	uint32_t	i_uid;		/* File owner. */
 	uint32_t	i_gid;		/* File group. */
 };
@@ -108,7 +108,6 @@ struct inode {
  */
 #define	i_shortlink	i_db
 #define	i_rdev		i_db[0]
-#define	MAXSYMLINKLEN	((NDADDR + NIADDR) * sizeof(int32_t))
 
 /* File permissions. */
 #define	IEXEC		0000100		/* Executable. */
@@ -151,7 +150,6 @@ struct inode {
 struct indir {
 	int32_t in_lbn;			/* Logical block number. */
 	int	in_off;			/* Offset in buffer. */
-	int	in_exists;		/* Flag if the block exists. */
 };
 
 /* Convert between inode pointers and vnode pointers. */
@@ -163,7 +161,7 @@ struct ufid {
 	uint16_t ufid_len;	/* Length of structure. */
 	uint16_t ufid_pad;	/* Force 32-bit alignment. */
 	ino_t	 ufid_ino;	/* File number (ino). */
-	int32_t	 ufid_gen;	/* Generation number. */
+	uint32_t ufid_gen;	/* Generation number. */
 };
 #endif /* _KERNEL */
 

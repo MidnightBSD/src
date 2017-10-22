@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)cmds.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/timed/timedc/cmds.c 229247 2012-01-01 23:49:11Z dim $");
 
 #include "timedc.h"
 #include <sys/file.h>

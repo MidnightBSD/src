@@ -52,6 +52,11 @@
  * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
+/*
+ * Copyright 2013 by Saso Kiselkov. All rights reserved.
+ */
+
+#define	MAXNAMELEN	256
 
 /* CRC64 table */
 #define	ZFS_CRC64_POLY	0xC96C5795D7870F42ULL	/* ECMA-182, reflected form */
@@ -437,6 +442,7 @@ enum zio_compress {
 	ZIO_COMPRESS_GZIP_8,
 	ZIO_COMPRESS_GZIP_9,
 	ZIO_COMPRESS_ZLE,
+	ZIO_COMPRESS_LZ4,
 	ZIO_COMPRESS_FUNCTIONS
 };
 
@@ -508,6 +514,7 @@ typedef enum {
 #define	SPA_VERSION_26			26ULL
 #define	SPA_VERSION_27			27ULL
 #define	SPA_VERSION_28			28ULL
+#define	SPA_VERSION_5000		5000ULL
 
 /*
  * When bumping up SPA_VERSION, make sure GRUB ZFS understands the on-disk
@@ -515,8 +522,8 @@ typedef enum {
  * and do the appropriate changes.  Also bump the version number in
  * usr/src/grub/capability.
  */
-#define	SPA_VERSION			SPA_VERSION_28
-#define	SPA_VERSION_STRING		"28"
+#define	SPA_VERSION			SPA_VERSION_5000
+#define	SPA_VERSION_STRING		"5000"
 
 /*
  * Symbolic names for the changes that caused a SPA_VERSION switch.
@@ -567,6 +574,12 @@ typedef enum {
 #define	SPA_VERSION_DEADLISTS		SPA_VERSION_26
 #define	SPA_VERSION_FAST_SNAP		SPA_VERSION_27
 #define	SPA_VERSION_MULTI_REPLACE	SPA_VERSION_28
+#define	SPA_VERSION_BEFORE_FEATURES	SPA_VERSION_28
+#define	SPA_VERSION_FEATURES		SPA_VERSION_5000
+
+#define	SPA_VERSION_IS_SUPPORTED(v) \
+	(((v) >= SPA_VERSION_INITIAL && (v) <= SPA_VERSION_BEFORE_FEATURES) || \
+	((v) >= SPA_VERSION_FEATURES && (v) <= SPA_VERSION))
 
 /*
  * The following are configuration names used in the nvlist describing a pool's
@@ -602,6 +615,7 @@ typedef enum {
 #define	ZPOOL_CONFIG_HOSTNAME		"hostname"
 #define	ZPOOL_CONFIG_IS_LOG		"is_log"
 #define	ZPOOL_CONFIG_TIMESTAMP		"timestamp" /* not stored on disk */
+#define	ZPOOL_CONFIG_FEATURES_FOR_READ	"features_for_read"
 
 /*
  * The persistent vdev state is stored as separate values rather than a single
@@ -1171,12 +1185,12 @@ typedef struct zap_leaf_phys {
 typedef union zap_leaf_chunk {
 	struct zap_leaf_entry {
 		uint8_t le_type; 		/* always ZAP_CHUNK_ENTRY */
-		uint8_t le_int_size;		/* size of ints */
+		uint8_t le_value_intlen;	/* size of ints */
 		uint16_t le_next;		/* next entry in hash chain */
 		uint16_t le_name_chunk;		/* first chunk of the name */
-		uint16_t le_name_length;	/* bytes in name, incl null */
+		uint16_t le_name_numints;	/* bytes in name, incl null */
 		uint16_t le_value_chunk;	/* first chunk of the value */
-		uint16_t le_value_length;	/* value length in ints */
+		uint16_t le_value_numints;	/* value length in ints */
 		uint32_t le_cd;			/* collision differentiator */
 		uint64_t le_hash;		/* hash value of the name */
 	} l_entry;

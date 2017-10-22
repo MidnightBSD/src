@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/booke/platform_bare.c 224618 2011-08-02 23:49:23Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

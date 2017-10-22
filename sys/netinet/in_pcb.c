@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/in_pcb.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_ddb.h"
 #include "opt_ipsec.h"
@@ -162,7 +162,8 @@ sysctl_net_ipport_check(SYSCTL_HANDLER_ARGS)
 
 #undef RANGECHK
 
-SYSCTL_NODE(_net_inet_ip, IPPROTO_IP, portrange, CTLFLAG_RW, 0, "IP Ports");
+static SYSCTL_NODE(_net_inet_ip, IPPROTO_IP, portrange, CTLFLAG_RW, 0,
+    "IP Ports");
 
 SYSCTL_VNET_PROC(_net_inet_ip_portrange, OID_AUTO, lowfirst,
 	CTLTYPE_INT|CTLFLAG_RW, &VNET_NAME(ipport_lowfirstauto), 0,
@@ -1104,8 +1105,17 @@ in_pcbrele_rlocked(struct inpcb *inp)
 
 	INP_RLOCK_ASSERT(inp);
 
-	if (refcount_release(&inp->inp_refcount) == 0)
+	if (refcount_release(&inp->inp_refcount) == 0) {
+		/*
+		 * If the inpcb has been freed, let the caller know, even if
+		 * this isn't the last reference.
+		 */
+		if (inp->inp_flags2 & INP_FREED) {
+			INP_RUNLOCK(inp);
+			return (1);
+		}
 		return (0);
+	}
 
 	KASSERT(inp->inp_socket == NULL, ("%s: inp_socket != NULL", __func__));
 
@@ -1185,6 +1195,7 @@ in_pcbfree(struct inpcb *inp)
 		inp_freemoptions(inp->inp_moptions);
 #endif
 	inp->inp_vflag = 0;
+	inp->inp_flags2 |= INP_FREED;
 	crfree(inp->inp_cred);
 #ifdef MAC
 	mac_inpcb_destroy(inp);

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/granular/01.t 210984 2010-08-06 23:58:54Z pjd $
 
 desc="NFSv4 granular permissions checking - ACL_READ_ATTRIBUTES and ACL_WRITE_ATTRIBUTES"
 

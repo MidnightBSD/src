@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/share/examples/kld/firmware/fwconsumer/fw_consumer.c 202600 2010-01-18 22:59:53Z wkoszek $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

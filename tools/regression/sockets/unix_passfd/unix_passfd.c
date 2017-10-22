@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/sockets/unix_passfd/unix_passfd.c 152251 2005-11-09 21:41:20Z rwatson $
  */
 
 #include <sys/types.h>

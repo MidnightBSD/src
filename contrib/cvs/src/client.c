@@ -11,7 +11,7 @@
    GNU General Public License for more details.  */
 
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/contrib/cvs/src/client.c 177394 2008-03-19 14:49:14Z obrien $
  */
 
 #ifdef HAVE_CONFIG_H

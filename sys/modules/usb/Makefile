@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/usb/Makefile 231905 2012-02-19 07:44:38Z rmh $
 #
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #

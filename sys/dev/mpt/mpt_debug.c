@@ -64,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/mpt/mpt_debug.c 245983 2013-01-27 17:13:11Z marius $");
 
 #include <dev/mpt/mpt.h>
 
@@ -518,6 +518,7 @@ mpt_print_reply(void *vmsg)
 static void
 mpt_print_request_hdr(MSG_REQUEST_HEADER *req)
 {
+
 	printf("%s @ %p\n", mpt_ioc_function(req->Function), req);
 	printf("\tChain Offset  0x%02x\n", req->ChainOffset);
 	printf("\tMsgFlags      0x%02x\n", req->MsgFlags);
@@ -841,13 +842,8 @@ mpt_dump_request(struct mpt_softc *mpt, request_t *req)
         uint32_t *pReq = req->req_vbuf;
 	int o;
 
-#if __FreeBSD_version >= 500000
 	mpt_prt(mpt, "Send Request %d (%jx):",
 	    req->index, (uintmax_t) req->req_pbuf);
-#else
-	mpt_prt(mpt, "Send Request %d (%llx):",
-	    req->index, (unsigned long long) req->req_pbuf);
-#endif
 	for (o = 0; o < mpt->ioc_facts.RequestFrameSize; o++) {
 		if ((o & 0x7) == 0) {
 			mpt_prtc(mpt, "\n");
@@ -857,33 +853,6 @@ mpt_dump_request(struct mpt_softc *mpt, request_t *req)
 	}
 	mpt_prtc(mpt, "\n");
 }
-
-#if __FreeBSD_version < 500000
-void
-mpt_lprt(struct mpt_softc *mpt, int level, const char *fmt, ...)
-{
-	va_list ap;
-        if (level <= mpt->verbose) {
-		printf("%s: ", device_get_nameunit(mpt->dev));
-		va_start(ap, fmt);
-		vprintf(fmt, ap);
-		va_end(ap);
-	}
-}
-
-#if 0
-void
-mpt_lprtc(struct mpt_softc *mpt, int level, const char *fmt, ...)
-{
-	va_list ap;
-        if (level <= mpt->verbose) {
-		va_start(ap, fmt);
-		vprintf(fmt, ap);
-		va_end(ap);
-	}
-}
-#endif
-#endif
 
 void
 mpt_prt(struct mpt_softc *mpt, const char *fmt, ...)

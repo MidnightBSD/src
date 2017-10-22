@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stat.h	8.12 (Berkeley) 6/16/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/stat.h 239901 2012-08-30 10:23:27Z kib $
  */
 
 #ifndef _SYS_STAT_H_
@@ -99,7 +99,7 @@ typedef	__uid_t		uid_t;
 #include <sys/time.h>
 #endif
 
-#if __BSD_VISIBLE
+#ifdef _KERNEL
 struct ostat {
 	__uint16_t st_dev;		/* inode's device */
 	ino_t	  st_ino;		/* inode's number */
@@ -117,7 +117,7 @@ struct ostat {
 	fflags_t  st_flags;		/* user defined flags for file */
 	__uint32_t st_gen;		/* file generation number */
 };
-#endif /* __BSD_VISIBLE */
+#endif
 
 struct stat {
 	__dev_t   st_dev;		/* inode's device */
@@ -149,7 +149,7 @@ struct stat {
 	unsigned int :(8 / 2) * (16 - (int)sizeof(struct timespec));
 };
 
-#if __BSD_VISIBLE
+#ifdef _KERNEL
 struct nstat {
 	__dev_t   st_dev;		/* inode's device */
 	ino_t	  st_ino;		/* inode's number */

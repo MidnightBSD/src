@@ -1,5 +1,5 @@
 /*	$NetBSD: if_gre.c,v 1.49 2003/12/11 00:22:29 itojun Exp $ */
-/*	 $FreeBSD$ */
+/*	 $FreeBSD: stable/9/sys/net/if_gre.c 248085 2013-03-09 02:36:32Z marius $ */
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -148,7 +148,7 @@ static const struct protosw in_mobile_protosw = {
 #endif
 
 SYSCTL_DECL(_net_link);
-SYSCTL_NODE(_net_link, IFT_TUNNEL, gre, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_net_link, IFT_TUNNEL, gre, CTLFLAG_RW, 0,
     "Generic Routing Encapsulation");
 #ifndef MAX_GRE_NEST
 /*

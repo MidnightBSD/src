@@ -30,7 +30,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/sbin/fsdb/fsdbutil.c 248633 2013-03-23 03:28:20Z pluknet $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -241,7 +241,6 @@ printindir(ufs2_daddr_t blk, int level, char *bufp)
 	/* for the final indirect level, don't use the cache */
 	bp = &buf;
 	bp->b_un.b_buf = bufp;
-	bp->b_prev = bp->b_next = bp;
 	initbarea(bp);
 
 	getblk(bp, blk, sblock.fs_bsize);

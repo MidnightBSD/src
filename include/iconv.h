@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/include/iconv.h 219019 2011-02-25 00:04:39Z gabor $	*/
 /*	$NetBSD: iconv.h,v 1.6 2005/02/03 04:39:32 perry Exp $	*/
 
 /*-

@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/controller/ehci.h 242776 2012-11-08 16:17:52Z hselasky $ */
 /*-
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -345,6 +345,8 @@ typedef struct ehci_softc {
 #define	EHCI_SCFLG_TT		0x0020	/* transaction translator present */
 #define	EHCI_SCFLG_LOSTINTRBUG	0x0040	/* workaround for VIA / ATI chipsets */
 #define	EHCI_SCFLG_IAADBUG	0x0080	/* workaround for nVidia chipsets */
+#define	EHCI_SCFLG_DONTRESET	0x0100	/* don't reset ctrl. in ehci_init() */
+#define	EHCI_SCFLG_DONEINIT	0x1000	/* ehci_init() has been called. */
 
 	uint8_t	sc_offs;		/* offset to operational registers */
 	uint8_t	sc_doorbell_disable;	/* set on doorbell failure */

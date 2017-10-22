@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$FreeBSD: stable/9/tools/tools/ncpus/acpi.c 199291 2009-11-15 16:44:43Z attilio $
  */
 
 #include <sys/param.h>

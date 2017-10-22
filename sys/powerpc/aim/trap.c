@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/aim/trap.c 232431 2012-03-03 02:19:33Z nwhitehorn $");
 
 #include "opt_hwpmc_hooks.h"
 

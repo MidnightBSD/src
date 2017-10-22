@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/mvs/mvs_soc.c 237378 2012-06-21 10:28:59Z mav $");
 
 #include <sys/param.h>
 #include <sys/module.h>

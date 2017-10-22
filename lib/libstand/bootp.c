@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libstand/bootp.c 193189 2009-05-31 21:29:07Z ed $");
 
 #include <sys/types.h>
 #include <netinet/in.h>

@@ -12,7 +12,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/i386/common/bootargs.h 237756 2012-06-29 10:01:56Z avg $
  */
 
 #ifndef _BOOT_I386_ARGS_H_

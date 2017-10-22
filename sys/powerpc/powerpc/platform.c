@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/powerpc/platform.c 227711 2011-11-19 12:55:32Z marius $");
 
 /*
  * Dispatch platform calls to the appropriate platform implementation

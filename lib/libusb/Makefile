@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libusb/Makefile 247475 2013-02-28 16:56:08Z hselasky $
 #
 # Makefile for the FreeBSD specific LibUSB 2.0
 #
@@ -189,6 +189,7 @@ MLINKS += libusb20.3 libusb20_dev_reset.3
 MLINKS += libusb20.3 libusb20_dev_check_connected.3
 MLINKS += libusb20.3 libusb20_dev_set_power_mode.3
 MLINKS += libusb20.3 libusb20_dev_get_power_mode.3
+MLINKS += libusb20.3 libusb20_dev_get_power_usage.3
 MLINKS += libusb20.3 libusb20_dev_set_alt_index.3
 MLINKS += libusb20.3 libusb20_dev_get_device_desc.3
 MLINKS += libusb20.3 libusb20_dev_alloc_config.3

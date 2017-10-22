@@ -42,7 +42,7 @@
 #include "opt_compat.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/compat/linprocfs/linprocfs.c 232728 2012-03-09 16:17:46Z mm $");
 
 #include <sys/param.h>
 #include <sys/queue.h>

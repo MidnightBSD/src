@@ -1,5 +1,5 @@
 /*	$NetBSD: softfloat.h,v 1.6 2002/05/12 13:12:46 bjh21 Exp $	*/
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/libc/powerpc64/softfloat/softfloat.h 209878 2010-07-10 14:45:03Z nwhitehorn $ */
 
 /* This is a derivative work. */
 

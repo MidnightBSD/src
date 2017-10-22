@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/wpa/wpa_supplicant/Makefile 235328 2012-05-12 08:22:41Z bschmidt $
 
 .include "${.CURDIR}/../Makefile.inc"
 

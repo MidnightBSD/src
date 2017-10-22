@@ -35,7 +35,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: hash.c,v 1.7 2002/01/21 19:49:52 tv Exp $");
 #endif
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/xlint/lint2/hash.c 148723 2005-08-05 09:07:42Z stefanf $");
 
 /*
  * XXX Really need a generalized hash table package

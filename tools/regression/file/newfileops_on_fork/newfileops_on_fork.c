@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/file/newfileops_on_fork/newfileops_on_fork.c 203800 2010-02-12 16:33:03Z ru $
  */
 
 /*

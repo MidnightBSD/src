@@ -4,7 +4,7 @@
  * The FreeBSD vendor branch for v4l gives a more detailed description
  * about this in the README.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/compat/linux/linux_videodev.h 221425 2011-05-04 08:42:31Z netchild $
  */
 
 #ifndef __LINUX_VIDEODEV_H

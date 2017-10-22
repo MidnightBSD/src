@@ -34,7 +34,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$")
+__FBSDID("$FreeBSD: stable/9/lib/msun/i387/s_rintl.S 217108 2011-01-07 16:13:12Z kib $")
 
 ENTRY(rintl)
 	fldt	4(%esp)

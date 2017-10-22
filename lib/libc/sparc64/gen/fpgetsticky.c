@@ -6,7 +6,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/sparc64/gen/fpgetsticky.c 103323 2002-09-14 18:06:21Z tmm $");
 
 #include <machine/fsr.h>
 #include <ieeefp.h>

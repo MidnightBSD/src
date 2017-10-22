@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/sound/driver/solo/Makefile 110498 2003-02-07 13:56:33Z nyan $
 
 .PATH: ${.CURDIR}/../../../../dev/sound/pci
 

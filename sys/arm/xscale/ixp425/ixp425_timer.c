@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/ixp425_timer.c 186352 2008-12-20 03:26:09Z sam $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

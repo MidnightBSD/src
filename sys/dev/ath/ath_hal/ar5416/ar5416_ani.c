@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/ath/ath_hal/ar5416/ar5416_ani.c 243261 2012-11-19 05:52:23Z adrian $
  */
 #include "opt_ah.h"
 
@@ -341,11 +341,6 @@ ar5416AniControl(struct ath_hal *ah, HAL_ANI_CMD cmd, int param)
 		}
 		OS_REG_RMW_FIELD(ah, AR_PHY_TIMING5,
 		    AR_PHY_TIMING5_CYCPWR_THR1, params->cycPwrThr1[level]);
-
-		/* Only set the ext channel cycpwr_thr1 field for ht/40 */
-		if (IEEE80211_IS_CHAN_HT40(AH_PRIVATE(ah)->ah_curchan))
-			OS_REG_RMW_FIELD(ah, AR_PHY_EXT_CCA,
-			    AR_PHY_EXT_TIMING5_CYCPWR_THR1, params->cycPwrThr1[level]);
 
 		if (level > aniState->spurImmunityLevel)
 			ahp->ah_stats.ast_ani_spurup++;

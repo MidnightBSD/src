@@ -1,5 +1,5 @@
 
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/puc/Makefile 158124 2006-04-28 21:21:53Z marcel $
 
 .PATH:	${.CURDIR}/../../dev/puc
 

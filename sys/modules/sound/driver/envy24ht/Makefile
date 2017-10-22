@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/sound/driver/envy24ht/Makefile 162892 2006-09-30 18:12:33Z netchild $
 
 .PATH: ${.CURDIR}/../../../../dev/sound/pci
 

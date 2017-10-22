@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/script/script.c 226591 2011-10-21 05:37:40Z trociny $");
 
 #ifndef lint
 static const char copyright[] =

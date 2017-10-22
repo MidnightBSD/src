@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: powerpc.h,v 1.3 2000/06/01 00:49:59 matt Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/include/platform.h 215159 2010-11-12 04:18:19Z nwhitehorn $
  */
 
 #ifndef	_MACHINE_PLATFORM_H_

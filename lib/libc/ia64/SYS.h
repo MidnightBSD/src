@@ -26,7 +26,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libc/ia64/SYS.h 171217 2007-07-04 23:18:38Z peter $
  */
 
 #include <machine/asm.h>

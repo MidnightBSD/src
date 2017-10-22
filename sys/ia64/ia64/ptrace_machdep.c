@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ia64/ia64/ptrace_machdep.c 139790 2005-01-06 22:18:23Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

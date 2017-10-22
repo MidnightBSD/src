@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netgraph/atm/ngatmbase.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -61,8 +61,8 @@ DECLARE_MODULE(ngatmbase, ngatm_data, SI_SUB_EXEC, SI_ORDER_ANY);
 /*
  * UNI Stack message handling functions
  */
-MALLOC_DEFINE(M_UNIMSG, "unimsg", "uni message buffers");
-MALLOC_DEFINE(M_UNIMSGHDR, "unimsghdr", "uni message headers");
+static MALLOC_DEFINE(M_UNIMSG, "unimsg", "uni message buffers");
+static MALLOC_DEFINE(M_UNIMSGHDR, "unimsghdr", "uni message headers");
 
 #define EXTRA	128
 

@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/boot/efi/include/efi.h 163898 2006-11-02 02:42:48Z marcel $ */
 /*++
 
 Copyright (c)  1999 - 2002 Intel Corporation. All rights reserved

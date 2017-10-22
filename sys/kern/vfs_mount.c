@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/vfs_mount.c 249053 2013-04-03 15:34:25Z kib $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -479,6 +479,7 @@ vfs_mount_alloc(struct vnode *vp, struct vfsconf *vfsp, const char *fspath,
 	mac_mount_create(cred, mp);
 #endif
 	arc4rand(&mp->mnt_hashseed, sizeof mp->mnt_hashseed, 0);
+	TAILQ_INIT(&mp->mnt_uppers);
 	return (mp);
 }
 
@@ -512,6 +513,7 @@ vfs_mount_destroy(struct mount *mp)
 			vprint("", vp);
 		panic("unmount: dangling vnode");
 	}
+	KASSERT(TAILQ_EMPTY(&mp->mnt_uppers), ("mnt_uppers"));
 	if (mp->mnt_nvnodelistsize != 0)
 		panic("vfs_mount_destroy: nonzero nvnodelistsize");
 	if (mp->mnt_activevnodelistsize != 0)
@@ -709,7 +711,7 @@ sys_mount(td, uap)
 	int error;
 
 	/*
-	 * Mount flags are now 64-bits. On 32-bit archtectures only
+	 * Mount flags are now 64-bits. On 32-bit architectures only
 	 * 32-bits are passed in, but from here on everything handles
 	 * 64-bit flags correctly.
 	 */
@@ -1169,7 +1171,6 @@ sys_unmount(td, uap)
 		}
 		mtx_unlock(&mountlist_mtx);
 	} else {
-		AUDIT_ARG_UPATH1(td, pathbuf);
 		/*
 		 * Try to find global path for path argument.
 		 */
@@ -1259,11 +1260,14 @@ dounmount(mp, flags, td)
 		return (error);
 	}
 
+	vn_start_write(NULL, &mp, V_WAIT);
 	MNT_ILOCK(mp);
-	if (mp->mnt_kern_flag & MNTK_UNMOUNT) {
+	if ((mp->mnt_kern_flag & MNTK_UNMOUNT) != 0 ||
+	    !TAILQ_EMPTY(&mp->mnt_uppers)) {
 		MNT_IUNLOCK(mp);
 		if (coveredvp)
 			VOP_UNLOCK(coveredvp, 0);
+		vn_finished_write(mp);
 		return (EBUSY);
 	}
 	mp->mnt_kern_flag |= MNTK_UNMOUNT | MNTK_NOINSMNTQ;
@@ -1283,7 +1287,6 @@ dounmount(mp, flags, td)
 	KASSERT(error == 0,
 	    ("%s: invalid return value for msleep in the drain path @ %s:%d",
 	    __func__, __FILE__, __LINE__));
-	vn_start_write(NULL, &mp, V_WAIT);
 
 	if (mp->mnt_flag & MNT_EXPUBLIC)
 		vfs_setpublicfs(NULL, NULL, NULL);

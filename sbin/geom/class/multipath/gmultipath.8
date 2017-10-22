@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/sbin/geom/class/multipath/gmultipath.8 240159 2012-09-06 07:45:45Z thomas $
 .\"
 .Dd April 18, 2012
 .Dt GMULTIPATH 8
@@ -65,6 +65,11 @@
 .Cm rotate
 .Op Fl v
 .Ar name
+.Nm
+.Cm prefer
+.Op Fl v
+.Ar name
+.Ar prov
 .Nm
 .Cm getactive
 .Op Fl v
@@ -171,7 +176,9 @@ If there are other paths present, new requests will be forwarded there.
 Mark specified provider as a path of the specified multipath device as
 operational, allowing it to handle requests.
 .It Cm rotate
-Change the active provider/path in Active/Passive mode.
+Change the active provider/path to the next available provider in Active/Passive mode.
+.It Cm prefer
+Change the active provider/path to the specified provider in Active/Passive mode.
 .It Cm getactive
 Get the currently active provider(s)/path(s).
 .It Cm destroy

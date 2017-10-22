@@ -1,4 +1,4 @@
-#$FreeBSD$
+#$FreeBSD: stable/9/sys/arm/at91/std.qila9g20 213498 2010-10-06 22:40:27Z cognet $
 include "../at91/std.at91sam9"
 
 options		STARTUP_PAGETABLE_ADDR=0x20800000

@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/makefs/makefs.h 248293 2013-03-14 22:57:27Z brooks $
  */
 
 #ifndef	_MAKEFS_H
@@ -129,6 +129,7 @@ typedef struct {
 	int	freeblockpc;	/* free block % */
 	int	needswap;	/* non-zero if byte swapping needed */
 	int	sectorsize;	/* sector size */
+	int	sparse;		/* sparse image, don't fill it with zeros */
 
 	void	*fs_specific;	/* File system specific additions. */
 } fsinfo_t;
@@ -168,6 +169,7 @@ void		cd9660_makefs(const char *, const char *, fsnode *, fsinfo_t *);
 
 
 extern	u_int		debug;
+extern	int		dupsok;
 extern	struct timespec	start_time;
 
 /*
@@ -277,6 +279,8 @@ extern	struct timespec	start_time;
 
 struct fs;
 void   ffs_fragacct_swap(struct fs *, int, int32_t [], int, int);
+
+fsinode *link_check(fsinode *);
 
 /*
  * Declarations for compat routines.

@@ -23,26 +23,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cddl/compat/opensolaris/sys/debug.h 243674 2012-11-29 14:05:04Z mm $
  */
 
 #ifndef _OPENSOLARIS_SYS_DEBUG_H_
 #define	_OPENSOLARIS_SYS_DEBUG_H_
 
 #ifdef _KERNEL
-#include <sys/types.h>
 #include <sys/systm.h>
 
 #include_next <sys/debug.h>
-
-#define	assfail(a, f, l)						\
-	(panic("solaris assert: %s, file: %s, line: %d", (a), (f), (l)), 0)
-
-#define	assfail3(a, lv, op, rv, f, l)					\
-	panic("solaris assert: %s (0x%jx %s 0x%jx), file: %s, line: %d", \
-	    (a), (uintmax_t)(lv), (op), (uintmax_t)(rv), (f), (l))
 #else	/* !_KERNEL */
+
 #include_next <sys/debug.h>
-#endif
+#include <sys/assfail.h>
+#endif	/* _KERNEL */
 
 #endif	/* _OPENSOLARIS_SYS_DEBUG_H_ */

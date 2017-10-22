@@ -30,11 +30,12 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/5/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/sbin/init/pathnames.h 247004 2013-02-19 17:57:17Z ed $
  */
 
 #include <paths.h>
 
+#define	_PATH_INITLOG	"/var/log/init.log"
 #define	_PATH_SLOGGER	"/sbin/session_logger"
 #define	_PATH_RUNCOM	"/etc/rc"
 #define _PATH_RUNDOWN   "/etc/rc.shutdown"

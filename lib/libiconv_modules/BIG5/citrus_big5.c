@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/libiconv_modules/BIG5/citrus_big5.c 219019 2011-02-25 00:04:39Z gabor $ */
 /*	$NetBSD: citrus_big5.c,v 1.12 2008/06/14 16:01:07 tnozaki Exp $	*/
 
 /*-

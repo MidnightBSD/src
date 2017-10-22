@@ -33,9 +33,9 @@
 
 #include "feeder_if.h"
 
-SND_DECLARE_FILE("$FreeBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pcm/feeder.c 249132 2013-04-05 08:22:11Z mav $");
 
-MALLOC_DEFINE(M_FEEDER, "feeder", "pcm feeder");
+static MALLOC_DEFINE(M_FEEDER, "feeder", "pcm feeder");
 
 #define MAXFEEDERS 	256
 #undef FEEDER_DEBUG

@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_ksocket.c 249132 2013-04-05 08:22:11Z mav $
  * $Whistle: ng_ksocket.c,v 1.1 1999/11/16 20:04:40 archie Exp $
  */
 
@@ -69,7 +69,8 @@
 #include <netatalk/at.h>
 
 #ifdef NG_SEPARATE_MALLOC
-MALLOC_DEFINE(M_NETGRAPH_KSOCKET, "netgraph_ksock", "netgraph ksock node ");
+static MALLOC_DEFINE(M_NETGRAPH_KSOCKET, "netgraph_ksock",
+    "netgraph ksock node");
 #else
 #define M_NETGRAPH_KSOCKET M_NETGRAPH
 #endif

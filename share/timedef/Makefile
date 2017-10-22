@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/timedef/Makefile 196814 2009-09-04 06:26:40Z ache $
 
 LOCALES=	am_ET.UTF-8 \
 		be_BY.CP1131 \

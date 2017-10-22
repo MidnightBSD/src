@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/uart/uart_dev_quicc.c 185187 2008-11-22 21:22:53Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

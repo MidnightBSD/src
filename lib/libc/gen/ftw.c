@@ -21,14 +21,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/ftw.c 244359 2012-12-17 13:03:13Z jilles $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <fts.h>
 #include <ftw.h>
-#include <limits.h>
 
 int
 ftw(const char *path, int (*fn)(const char *, const struct stat *, int),
@@ -40,7 +39,7 @@ ftw(const char *path, int (*fn)(const char *, const struct stat *, int),
 	int error = 0, fnflag, sverrno;
 
 	/* XXX - nfds is currently unused */
-	if (nfds < 1 || nfds > OPEN_MAX) {
+	if (nfds < 1) {
 		errno = EINVAL;
 		return (-1);
 	}

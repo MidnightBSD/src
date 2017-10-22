@@ -34,7 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/flowtable.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>  
 #include <sys/types.h>
@@ -248,7 +248,8 @@ static VNET_DEFINE(int, flowtable_ready) = 0;
 #define	V_flowtable_nmbflows		VNET(flowtable_nmbflows)
 #define	V_flowtable_ready		VNET(flowtable_ready)
 
-SYSCTL_NODE(_net_inet, OID_AUTO, flowtable, CTLFLAG_RD, NULL, "flowtable");
+static SYSCTL_NODE(_net_inet, OID_AUTO, flowtable, CTLFLAG_RD, NULL,
+    "flowtable");
 SYSCTL_VNET_INT(_net_inet_flowtable, OID_AUTO, debug, CTLFLAG_RW,
     &VNET_NAME(flowtable_debug), 0, "print debug info.");
 SYSCTL_VNET_INT(_net_inet_flowtable, OID_AUTO, enable, CTLFLAG_RW,
@@ -618,6 +619,7 @@ flow_to_route(struct flentry *fle, struct route *ro)
 	sin->sin_addr.s_addr = hashkey[2];
 	ro->ro_rt = __DEVOLATILE(struct rtentry *, fle->f_rt);
 	ro->ro_lle = __DEVOLATILE(struct llentry *, fle->f_lle);
+	ro->ro_flags |= RT_NORTREF;
 }
 #endif /* INET */
 
@@ -825,7 +827,7 @@ flow_to_route_in6(struct flentry *fle, struct route_in6 *ro)
 	memcpy(&sin6->sin6_addr, &hashkey[5], sizeof (struct in6_addr));
 	ro->ro_rt = __DEVOLATILE(struct rtentry *, fle->f_rt);
 	ro->ro_lle = __DEVOLATILE(struct llentry *, fle->f_lle);
-
+	ro->ro_flags |= RT_NORTREF;
 }
 #endif /* INET6 */
 
@@ -1256,7 +1258,7 @@ uncached:
 			
 			else
 				l3addr = (struct sockaddr_storage *)&ro->ro_dst;
-			llentry_update(&lle, LLTABLE6(ifp), l3addr, ifp);
+			lle = llentry_alloc(ifp, LLTABLE6(ifp), l3addr);
 		}
 #endif	
 #ifdef INET
@@ -1265,7 +1267,7 @@ uncached:
 				l3addr = (struct sockaddr_storage *)rt->rt_gateway;
 			else
 				l3addr = (struct sockaddr_storage *)&ro->ro_dst;
-			llentry_update(&lle, LLTABLE(ifp), l3addr, ifp);	
+			lle = llentry_alloc(ifp, LLTABLE(ifp), l3addr);	
 		}
 			
 #endif

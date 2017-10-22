@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_osd.c 193030 2009-05-29 10:52:37Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

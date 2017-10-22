@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD$*/
+/*$FreeBSD: stable/9/sys/dev/e1000/e1000_80003es2lan.c 235527 2012-05-16 22:22:52Z jfv $*/
 
 /*
  * 80003ES2LAN Gigabit Ethernet Controller (Copper)

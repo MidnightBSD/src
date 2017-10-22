@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libstand/__main.c 221358 2011-05-03 04:44:50Z rodrigc $");
 
 #include <sys/types.h>
 

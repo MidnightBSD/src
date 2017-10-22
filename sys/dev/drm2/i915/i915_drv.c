@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/i915/i915_drv.c 241091 2012-10-01 08:33:39Z mav $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm.h>

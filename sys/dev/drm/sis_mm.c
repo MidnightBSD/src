@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/sis_mm.c 182080 2008-08-23 20:59:12Z rnoland $");
 
 #if defined(__linux__) && defined(CONFIG_FB_SIS)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)

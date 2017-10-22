@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/rmi/dev/sec/desc.h 212763 2010-09-16 20:23:22Z jchandra $
  * RMI_BSD */
 #ifndef _DESC_H_
 #define _DESC_H_

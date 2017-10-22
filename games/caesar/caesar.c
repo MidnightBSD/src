@@ -47,7 +47,7 @@ static const char sccsid[] = "@(#)caesar.c    8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/games/caesar/caesar.c 242047 2012-10-25 03:20:00Z eadler $");
 
 #include <errno.h>
 #include <math.h>
@@ -81,9 +81,6 @@ main(int argc, char **argv)
 	int ch, dot, i, nread, winnerdot = 0;
 	char *inbuf;
 	int obs[26], try, winner;
-
-	/* revoke setgid privileges */
-	setgid(getgid());
 
 	if (argc > 1)
 		printit(argv[1]);

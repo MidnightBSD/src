@@ -1,5 +1,5 @@
 /*	$NetBSD: file.c,v 1.5 2011/02/16 18:35:39 joerg Exp $	*/
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/usr.bin/grep/file.c 226573 2011-10-20 16:08:11Z gabor $	*/
 /*	$OpenBSD: file.c,v 1.11 2010/07/02 20:48:48 nicm Exp $	*/
 
 /*-
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/grep/file.c 226573 2011-10-20 16:08:11Z gabor $");
 
 #include <sys/param.h>
 #include <sys/mman.h>

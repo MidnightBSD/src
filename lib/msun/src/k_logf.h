@@ -10,7 +10,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/k_logf.h 216247 2010-12-07 02:19:15Z das $");
 
 /*
  * float version of __kernel_log(x). See k_log.c for details.

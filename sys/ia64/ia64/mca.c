@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ia64/ia64/mca.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #include <sys/param.h>
@@ -43,7 +43,7 @@
 #include <machine/sal.h>
 #include <machine/smp.h>
 
-MALLOC_DEFINE(M_MCA, "MCA", "Machine Check Architecture");
+static MALLOC_DEFINE(M_MCA, "MCA", "Machine Check Architecture");
 
 struct mca_info {
 	STAILQ_ENTRY(mca_info) mi_link;
@@ -59,7 +59,7 @@ static int64_t		mca_info_size[SAL_INFO_TYPES];
 static vm_offset_t	mca_info_block;
 static struct mtx	mca_info_block_lock;
 
-SYSCTL_NODE(_hw, OID_AUTO, mca, CTLFLAG_RW, NULL, "MCA container");
+static SYSCTL_NODE(_hw, OID_AUTO, mca, CTLFLAG_RW, NULL, "MCA container");
 
 static int mca_count;		/* Number of records stored. */
 static int mca_first;		/* First (lowest) record ID. */

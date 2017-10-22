@@ -23,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/cavium/octeon_machdep.c 217518 2011-01-17 23:03:09Z imp $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octeon_machdep.c 217518 2011-01-17 23:03:09Z imp $");
 
 #include <sys/param.h>
 #include <sys/conf.h>

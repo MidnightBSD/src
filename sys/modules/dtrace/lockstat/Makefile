@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/dtrace/lockstat/Makefile 197075 2009-09-10 19:12:08Z n_hibma $
 
 .PATH: ${.CURDIR}/../../../cddl/dev/lockstat
 

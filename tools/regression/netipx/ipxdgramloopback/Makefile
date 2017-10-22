@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/netipx/ipxdgramloopback/Makefile 204311 2010-02-25 14:42:26Z ru $
 #
 
 PROG=	ipxdgramloopback

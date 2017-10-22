@@ -26,7 +26,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/nlm/board.h 225394 2011-09-05 10:45:29Z jchandra $
  */
 
 #ifndef __NLM_BOARD_H__

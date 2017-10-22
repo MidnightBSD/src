@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 2/3/94
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libc/Makefile 219019 2011-02-25 00:04:39Z gabor $
 
 SHLIBDIR?= /lib
 

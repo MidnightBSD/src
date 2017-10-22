@@ -23,7 +23,7 @@
  *	+1-313-764-2278
  *	netatalk@umich.edu
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netatalk/at_extern.h 194819 2009-06-24 10:32:44Z rwatson $
  */
 
 #ifndef _NETATALK_AT_EXTERN_H_

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/mem/memutil.c 217515 2011-01-17 22:58:28Z jkim $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

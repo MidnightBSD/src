@@ -1,8 +1,8 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/dummynet/Makefile 243401 2012-11-22 12:11:32Z glebius $
 
 .include <bsd.own.mk>
 
-.PATH:  ${.CURDIR}/../../netinet/ipfw
+.PATH:  ${.CURDIR}/../../netpfil/ipfw
 KMOD=   dummynet
 SRCS=   ip_dummynet.c
 SRCS+= ip_dn_glue.c ip_dn_io.c

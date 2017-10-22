@@ -1,5 +1,5 @@
 #!/usr/local/bin/wish -f
-#$FreeBSD$
+#$FreeBSD: stable/9/usr.sbin/pkg_install/tkpkg 220200 2011-03-31 14:33:27Z emaste $
 #
 set pkgname ""
 wm title . "Package Installation"

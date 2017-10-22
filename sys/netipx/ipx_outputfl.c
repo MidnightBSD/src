@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netipx/ipx_outputfl.c 194905 2009-06-24 20:57:50Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sys/contrib/dev/ral/microcode.h 236004 2012-05-25 16:07:39Z bschmidt $	*/
 /*	$OpenBSD: microcode.h,v 1.7 2010/04/05 14:14:02 damien Exp $	*/
 
 /*-

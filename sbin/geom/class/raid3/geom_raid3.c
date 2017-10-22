@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/geom/class/raid3/geom_raid3.c 246081 2013-01-29 17:51:12Z mav $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -76,7 +76,7 @@ struct g_command class_commands[] = {
 	{ "insert", G_FLAG_VERBOSE, NULL,
 	    {
 		{ 'h', "hardcode", NULL, G_TYPE_BOOL },
-		{ 'n', "number", NULL, G_TYPE_NUMBER },
+		{ 'n', "number", G_VAL_OPTIONAL, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
 	    "[-hv] <-n number> name prov"

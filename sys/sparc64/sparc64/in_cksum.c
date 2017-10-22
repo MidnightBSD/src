@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/in_cksum.c 180299 2008-07-05 15:44:56Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

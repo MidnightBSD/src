@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/amd64/ia32/ia32_syscall.c 239578 2012-08-22 19:36:47Z kib $");
 
 /*
  * 386 Trap and System call handling
@@ -244,7 +244,7 @@ setup_lcall_gate(void)
 	bzero(ssd, sizeof(*ssd));
 	ssd->gd_looffset = lcall_addr;
 	ssd->gd_hioffset = lcall_addr >> 16;
-	ssd->gd_selector = _ucode32sel;
+	ssd->gd_selector = _ucodesel;
 	ssd->gd_type = SDT_SYSCGT;
 	ssd->gd_dpl = SEL_UPL;
 	ssd->gd_p = 1;

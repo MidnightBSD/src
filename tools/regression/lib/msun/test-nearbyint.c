@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/regression/lib/msun/test-nearbyint.c 216139 2010-12-03 00:44:31Z das $");
 
 #include <assert.h>
 #include <fenv.h>

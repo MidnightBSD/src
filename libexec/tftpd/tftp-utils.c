@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/libexec/tftpd/tftp-utils.c 247638 2013-03-02 16:38:58Z marius $");
 
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -121,7 +121,7 @@ get_field(int peer, char *buffer, ssize_t size)
 /*
  * Logging functions
  */
-int	_tftp_logtostdout = 1;
+static int _tftp_logtostdout = 1;
 
 void
 tftp_openlog(const char *ident, int logopt, int facility)

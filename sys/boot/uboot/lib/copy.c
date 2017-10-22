@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/uboot/lib/copy.c 177152 2008-03-13 17:54:21Z obrien $");
 
 #include <stand.h>
 

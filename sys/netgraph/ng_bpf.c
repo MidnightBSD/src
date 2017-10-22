@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_bpf.c 249132 2013-04-05 08:22:11Z mav $
  * $Whistle: ng_bpf.c,v 1.3 1999/12/03 20:30:23 archie Exp $
  */
 
@@ -74,7 +74,7 @@
 #include <netgraph/ng_bpf.h>
 
 #ifdef NG_SEPARATE_MALLOC
-MALLOC_DEFINE(M_NETGRAPH_BPF, "netgraph_bpf", "netgraph bpf node ");
+static MALLOC_DEFINE(M_NETGRAPH_BPF, "netgraph_bpf", "netgraph bpf node");
 #else
 #define M_NETGRAPH_BPF M_NETGRAPH
 #endif

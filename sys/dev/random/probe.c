@@ -26,14 +26,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/random/probe.c 240950 2012-09-26 09:22:28Z kib $");
+
+#if defined(__amd64__) || (defined(__i386__) && !defined(PC98))
+#include "opt_cpu.h"
+#endif
 
 #include <sys/types.h>
 #include <sys/param.h>
+#include <sys/systm.h>
+#include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/random.h>
 #include <sys/selinfo.h>
-#include <sys/stdint.h>
 #include <sys/sysctl.h>
 
 #if defined(__amd64__) || (defined(__i386__) && !defined(PC98))
@@ -45,7 +50,15 @@ __FBSDID("$FreeBSD$");
 
 #include <dev/random/randomdev.h>
 #include <dev/random/randomdev_soft.h>
-#include <dev/random/nehemiah.h>
+
+#if defined(__amd64__) || (defined(__i386__) && !defined(PC98))
+#ifdef PADLOCK_RNG
+extern struct random_systat random_nehemiah;
+#endif
+#ifdef RDRAND_RNG
+extern struct random_systat random_ivy;
+#endif
+#endif
 
 void
 random_ident_hardware(struct random_systat *systat)
@@ -56,8 +69,25 @@ random_ident_hardware(struct random_systat *systat)
 
 	/* Then go looking for hardware */
 #if defined(__amd64__) || (defined(__i386__) && !defined(PC98))
+#ifdef PADLOCK_RNG
 	if (via_feature_rng & VIA_HAS_RNG) {
-		*systat = random_nehemiah;
+		int enable;
+
+		enable = 1;
+		TUNABLE_INT_FETCH("hw.nehemiah_rng_enable", &enable);
+		if (enable)
+			*systat = random_nehemiah;
 	}
+#endif
+#ifdef RDRAND_RNG
+	if (cpu_feature2 & CPUID2_RDRAND) {
+		int enable;
+
+		enable = 1;
+		TUNABLE_INT_FETCH("hw.ivy_rng_enable", &enable);
+		if (enable)
+			*systat = random_ivy;
+	}
+#endif
 #endif
 }

@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netipx/spx_reass.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -93,7 +93,7 @@ __FBSDID("$FreeBSD$");
 static int	spx_use_delack = 0;
 static int	spxrexmtthresh = 3;
 
-MALLOC_DEFINE(M_SPXREASSQ, "spxreassq", "SPX reassembly queue entry");
+static MALLOC_DEFINE(M_SPXREASSQ, "spxreassq", "SPX reassembly queue entry");
 
 /*
  * Flesh pending queued segments on SPX close.

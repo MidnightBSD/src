@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/x86/include/mptable.h 224096 2011-07-16 14:05:34Z jhb $
  */
 
 #ifndef __MACHINE_MPTABLE_H__

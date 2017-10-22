@@ -42,12 +42,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/makefs/ffs/ffs_alloc.c 248293 2013-03-14 22:57:27Z brooks $");
 
 #include <sys/param.h>
 #include <sys/time.h>
 
 #include <errno.h>
+#include <stdint.h>
 
 #include "makefs.h"
 
@@ -439,8 +440,8 @@ ffs_blkfree(struct inode *ip, daddr_t bno, long size)
 	}
 	cg = dtog(fs, bno);
 	if (bno >= fs->fs_size) {
-		warnx("bad block %lld, ino %llu", (long long)bno,
-		    (unsigned long long)ip->i_number);
+		warnx("bad block %lld, ino %ju", (long long)bno,
+		    (uintmax_t)ip->i_number);
 		return;
 	}
 	error = bread(ip->i_fd, ip->i_fs, fsbtodb(fs, cgtod(fs, cg)),

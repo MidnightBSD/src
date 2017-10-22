@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/libexec/tftpd/tftp-options.h 207614 2010-05-04 13:07:40Z imp $");
 
 /*
  * Options

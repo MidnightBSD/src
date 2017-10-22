@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ia64/ia32/ia32_trap.c 225474 2011-09-11 16:05:09Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

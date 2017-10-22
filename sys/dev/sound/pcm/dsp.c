@@ -39,7 +39,7 @@
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 
-SND_DECLARE_FILE("$FreeBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pcm/dsp.c 225505 2011-09-12 08:38:21Z avg $");
 
 static int dsp_mmap_allow_prot_exec = 0;
 SYSCTL_INT(_hw_snd, OID_AUTO, compat_linux_mmap, CTLFLAG_RW,

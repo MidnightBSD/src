@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/share/examples/ses/srcs/eltsub.h 198934 2009-11-04 23:36:23Z delphij $ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/mknod/11.t 210967 2010-08-06 20:51:39Z pjd $
 
 desc="mknod creates device files"
 

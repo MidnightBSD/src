@@ -1,7 +1,7 @@
 /*
  * MD header for contrib/gdtoa
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libc/arm/arith.h 186461 2008-12-23 22:20:59Z marcel $
  */
 
 /*

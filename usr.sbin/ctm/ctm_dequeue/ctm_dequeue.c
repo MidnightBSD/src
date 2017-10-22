@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/ctm/ctm_dequeue/ctm_dequeue.c 229216 2012-01-01 22:06:41Z dim $
  */
 
 /*

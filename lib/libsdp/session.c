@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: session.c,v 1.2 2003/09/04 22:12:13 max Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libsdp/session.c 124317 2004-01-09 22:44:28Z emax $
  */
 
 #include <bluetooth.h>

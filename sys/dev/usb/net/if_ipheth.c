@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/if_ipheth.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -81,7 +81,7 @@ static uether_fn_t ipheth_setpromisc;
 #ifdef USB_DEBUG
 static int ipheth_debug = 0;
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, ipheth, CTLFLAG_RW, 0, "USB iPhone ethernet");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, ipheth, CTLFLAG_RW, 0, "USB iPhone ethernet");
 SYSCTL_INT(_hw_usb_ipheth, OID_AUTO, debug, CTLFLAG_RW, &ipheth_debug, 0, "Debug level");
 #endif
 
@@ -159,6 +159,9 @@ static const STRUCT_USB_HOST_ID ipheth_devs[] = {
 	    IPHETH_USBINTF_CLASS, IPHETH_USBINTF_SUBCLASS,
 	    IPHETH_USBINTF_PROTO)},
 	{IPHETH_ID(USB_VENDOR_APPLE, USB_PRODUCT_APPLE_IPHONE_4,
+	    IPHETH_USBINTF_CLASS, IPHETH_USBINTF_SUBCLASS,
+	    IPHETH_USBINTF_PROTO)},
+	{IPHETH_ID(USB_VENDOR_APPLE, USB_PRODUCT_APPLE_IPHONE_5,
 	    IPHETH_USBINTF_CLASS, IPHETH_USBINTF_SUBCLASS,
 	    IPHETH_USBINTF_PROTO)},
 };

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/iwi/if_iwi.c 248078 2013-03-09 00:39:54Z marius $");
 
 /*-
  * Intel(R) PRO/Wireless 2200BG/2225BG/2915ABG driver
@@ -788,7 +788,7 @@ iwi_alloc_rx_ring(struct iwi_softc *sc, struct iwi_rx_ring *ring, int count)
 			goto fail;
 		}
 
-		data->m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+		data->m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 		if (data->m == NULL) {
 			device_printf(sc->sc_dev,
 			    "could not allocate rx mbuf\n");
@@ -1236,7 +1236,7 @@ iwi_frame_intr(struct iwi_softc *sc, struct iwi_rx_data *data, int i,
 	 * drop the received packet and reuse the old mbuf. In the unlikely
 	 * case that the old mbuf can't be reloaded either, explicitly panic.
 	 */
-	mnew = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+	mnew = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (mnew == NULL) {
 		ifp->if_ierrors++;
 		return;
@@ -1884,7 +1884,7 @@ iwi_tx_start(struct ifnet *ifp, struct mbuf *m0, struct ieee80211_node *ni,
 		return error;
 	}
 	if (error != 0) {
-		mnew = m_defrag(m0, M_DONTWAIT);
+		mnew = m_defrag(m0, M_NOWAIT);
 		if (mnew == NULL) {
 			device_printf(sc->sc_dev,
 			    "could not defragment mbuf\n");

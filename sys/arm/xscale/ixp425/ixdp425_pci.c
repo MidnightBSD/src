@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/ixdp425_pci.c 196479 2009-08-23 19:54:36Z cognet $");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>

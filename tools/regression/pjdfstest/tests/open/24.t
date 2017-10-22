@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/open/24.t 210956 2010-08-06 19:22:42Z pjd $
 
 desc="open returns EOPNOTSUPP when trying to open UNIX domain socket"
 

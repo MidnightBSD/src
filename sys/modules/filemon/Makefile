@@ -1,6 +1,4 @@
-# $FreeBSD$
-
-MAINTAINER=	obrien@FreeBSD.org
+# $FreeBSD: stable/9/sys/modules/filemon/Makefile 242112 2012-10-26 00:44:32Z eadler $
 
 .PATH: ${.CURDIR}/../../dev/filemon
 

@@ -48,7 +48,7 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/undefined.c 196484 2009-08-23 23:37:53Z cognet $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>

@@ -57,7 +57,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/vm/vm_object.h 237805 2012-06-29 17:21:19Z jhb $
  */
 
 /*

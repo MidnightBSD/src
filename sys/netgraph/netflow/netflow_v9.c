@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * 	$FreeBSD$
+ * 	$FreeBSD: stable/9/sys/netgraph/netflow/netflow_v9.c 243983 2012-12-07 13:03:23Z melifaro $
  */
 
 static const char rcs_id[] =
-    "@(#) $FreeBSD$";
+    "@(#) $FreeBSD: stable/9/sys/netgraph/netflow/netflow_v9.c 243983 2012-12-07 13:03:23Z melifaro $";
 
 #include "opt_inet6.h"
 #include "opt_route.h"
@@ -480,3 +480,14 @@ ng_netflow_v9_cache_flush(priv_p priv)
 	for (i = 0; i < priv->flowsets_count; i++)
 		free(priv->v9_flowsets[i], M_NETFLOW_GENERAL);
 }
+
+/* Get a snapshot of NetFlow v9 settings */
+void
+ng_netflow_copyv9info(priv_p priv, struct ng_netflow_v9info *i)
+{
+
+	i->templ_time = priv->templ_time;
+	i->templ_packets = priv->templ_packets;
+	i->mtu = priv->mtu;
+}
+

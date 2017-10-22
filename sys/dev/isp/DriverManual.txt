@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/isp/DriverManual.txt 229461 2012-01-04 03:37:41Z eadler $ */
 
 		Driver Theory of Operation Manual
 

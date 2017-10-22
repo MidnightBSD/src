@@ -57,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/uipc_usrreq.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_ddb.h"
 
@@ -131,7 +131,7 @@ static const struct sockaddr	sun_noname = { sizeof(sun_noname), AF_LOCAL };
  * reentrance in the UNIX domain socket, file descriptor, and socket layer
  * code.  See unp_gc() for a full description.
  */
-static struct task	unp_gc_task;
+static struct timeout_task unp_gc_task;
 
 /*
  * The close of unix domain sockets attached as SCM_RIGHTS is
@@ -159,10 +159,11 @@ static u_long	unpdg_recvspace = 4*1024;
 static u_long	unpsp_sendspace = PIPSIZ;	/* really max datagram size */
 static u_long	unpsp_recvspace = PIPSIZ;
 
-SYSCTL_NODE(_net, PF_LOCAL, local, CTLFLAG_RW, 0, "Local domain");
-SYSCTL_NODE(_net_local, SOCK_STREAM, stream, CTLFLAG_RW, 0, "SOCK_STREAM");
-SYSCTL_NODE(_net_local, SOCK_DGRAM, dgram, CTLFLAG_RW, 0, "SOCK_DGRAM");
-SYSCTL_NODE(_net_local, SOCK_SEQPACKET, seqpacket, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_net, PF_LOCAL, local, CTLFLAG_RW, 0, "Local domain");
+static SYSCTL_NODE(_net_local, SOCK_STREAM, stream, CTLFLAG_RW, 0,
+    "SOCK_STREAM");
+static SYSCTL_NODE(_net_local, SOCK_DGRAM, dgram, CTLFLAG_RW, 0, "SOCK_DGRAM");
+static SYSCTL_NODE(_net_local, SOCK_SEQPACKET, seqpacket, CTLFLAG_RW, 0,
     "SOCK_SEQPACKET");
 
 SYSCTL_ULONG(_net_local_stream, OID_AUTO, sendspace, CTLFLAG_RW,
@@ -305,6 +306,7 @@ static struct protosw localsw[] = {
 	.pr_type =		SOCK_DGRAM,
 	.pr_domain =		&localdomain,
 	.pr_flags =		PR_ATOMIC|PR_ADDR|PR_RIGHTS,
+	.pr_ctloutput =		&uipc_ctloutput,
 	.pr_usrreqs =		&uipc_usrreqs_dgram
 },
 {
@@ -680,7 +682,7 @@ uipc_detach(struct socket *so)
 		VFS_UNLOCK_GIANT(vfslocked);
 	}
 	if (local_unp_rights)
-		taskqueue_enqueue(taskqueue_thread, &unp_gc_task);
+		taskqueue_enqueue_timeout(taskqueue_thread, &unp_gc_task, -1);
 }
 
 static int
@@ -1800,7 +1802,7 @@ unp_init(void)
 	LIST_INIT(&unp_shead);
 	LIST_INIT(&unp_sphead);
 	SLIST_INIT(&unp_defers);
-	TASK_INIT(&unp_gc_task, 0, unp_gc, NULL);
+	TIMEOUT_TASK_INIT(taskqueue_thread, &unp_gc_task, 0, unp_gc, NULL);
 	TASK_INIT(&unp_defer_task, 0, unp_process_defers, NULL);
 	UNP_LINK_LOCK_INIT();
 	UNP_LIST_LOCK_INIT();

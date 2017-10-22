@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_output.c 243586 2012-11-27 01:59:51Z ae $");
 
 #include "opt_ipfw.h"
 #include "opt_ipsec.h"
@@ -105,6 +105,10 @@ extern	struct protosw inetsw[];
  * ip_len and ip_off are in host format.
  * The mbuf chain containing the packet will be freed.
  * The mbuf opt, if present, will not be freed.
+ * If route ro is present and has ro_rt initialized, route lookup would be
+ * skipped and ro->ro_rt would be used. If ro is present but ro->ro_rt is NULL,
+ * then result of route lookup is stored in ro->ro_rt.
+ *
  * In the IP forwarding case, the packet will arrive with options already
  * inserted, so must have a NULL opt pointer.
  */
@@ -119,16 +123,13 @@ ip_output(struct mbuf *m, struct mbuf *opt, struct route *ro, int flags,
 	int mtu;
 	int n;	/* scratchpad */
 	int error = 0;
-	int nortfree = 0;
 	struct sockaddr_in *dst;
 	struct in_ifaddr *ia;
 	int isbroadcast, sw_csum;
 	struct route iproute;
 	struct rtentry *rte;	/* cache for ro->ro_rt */
 	struct in_addr odst;
-#ifdef IPFIREWALL_FORWARD
 	struct m_tag *fwd_tag = NULL;
-#endif
 #ifdef IPSEC
 	int no_route_but_check_spd = 0;
 #endif
@@ -146,24 +147,23 @@ ip_output(struct mbuf *m, struct mbuf *opt, struct route *ro, int flags,
 	if (ro == NULL) {
 		ro = &iproute;
 		bzero(ro, sizeof (*ro));
+	}
 
 #ifdef FLOWTABLE
-		{
-			struct flentry *fle;
+	if (ro->ro_rt == NULL) {
+		struct flentry *fle;
 			
-			/*
-			 * The flow table returns route entries valid for up to 30
-			 * seconds; we rely on the remainder of ip_output() taking no
-			 * longer than that long for the stability of ro_rt.  The
-			 * flow ID assignment must have happened before this point.
-			 */
-			if ((fle = flowtable_lookup_mbuf(V_ip_ft, m, AF_INET)) != NULL) {
-				flow_to_route(fle, ro);
-				nortfree = 1;
-			}
-		}
-#endif
+		/*
+		 * The flow table returns route entries valid for up to 30
+		 * seconds; we rely on the remainder of ip_output() taking no
+		 * longer than that long for the stability of ro_rt. The
+		 * flow ID assignment must have happened before this point.
+		 */
+		fle = flowtable_lookup_mbuf(V_ip_ft, m, AF_INET);
+		if (fle != NULL)
+			flow_to_route(fle, ro);
 	}
+#endif
 
 	if (opt) {
 		int len = 0;
@@ -210,16 +210,11 @@ again:
 		    !RT_LINK_IS_UP(rte->rt_ifp) ||
 			  dst->sin_family != AF_INET ||
 			  dst->sin_addr.s_addr != ip->ip_dst.s_addr)) {
-		if (!nortfree)
-			RTFREE(rte);
-		rte = ro->ro_rt = (struct rtentry *)NULL;
-		ro->ro_lle = (struct llentry *)NULL;
+		RO_RTFREE(ro);
+		ro->ro_lle = NULL;
+		rte = NULL;
 	}
-#ifdef IPFIREWALL_FORWARD
 	if (rte == NULL && fwd_tag == NULL) {
-#else
-	if (rte == NULL) {
-#endif
 		bzero(dst, sizeof(*dst));
 		dst->sin_family = AF_INET;
 		dst->sin_len = sizeof(*dst);
@@ -540,7 +535,6 @@ sendit:
 		}
 	}
 
-#ifdef IPFIREWALL_FORWARD
 	/* See if local, if yes, send it to netisr with IP_FASTFWD_OURS. */
 	if (m->m_flags & M_FASTFWD_OURS) {
 		if (m->m_pkthdr.rcvif == NULL)
@@ -561,17 +555,17 @@ sendit:
 		goto done;
 	}
 	/* Or forward to some other address? */
-	fwd_tag = m_tag_find(m, PACKET_TAG_IPFORWARD, NULL);
-	if (fwd_tag) {
+	if ((m->m_flags & M_IP_NEXTHOP) &&
+	    (fwd_tag = m_tag_find(m, PACKET_TAG_IPFORWARD, NULL)) != NULL) {
 		dst = (struct sockaddr_in *)&ro->ro_dst;
 		bcopy((fwd_tag+1), dst, sizeof(struct sockaddr_in));
 		m->m_flags |= M_SKIP_FIREWALL;
+		m->m_flags &= ~M_IP_NEXTHOP;
 		m_tag_delete(m, fwd_tag);
 		if (ia != NULL)
 			ifa_free(&ia->ia_ifa);
 		goto again;
 	}
-#endif /* IPFIREWALL_FORWARD */
 
 passout:
 	/* 127/8 must not appear on wire - RFC1122. */
@@ -678,9 +672,8 @@ passout:
 		IPSTAT_INC(ips_fragmented);
 
 done:
-	if (ro == &iproute && ro->ro_rt && !nortfree) {
-		RTFREE(ro->ro_rt);
-	}
+	if (ro == &iproute)
+		RO_RTFREE(ro);
 	if (ia != NULL)
 		ifa_free(&ia->ia_ifa);
 	return (error);

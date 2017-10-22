@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/controller/musb_otg.c 248085 2013-03-09 02:36:32Z marius $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -85,7 +85,7 @@
 #ifdef USB_DEBUG
 static int musbotgdebug = 0;
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, musbotg, CTLFLAG_RW, 0, "USB musbotg");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, musbotg, CTLFLAG_RW, 0, "USB musbotg");
 SYSCTL_INT(_hw_usb_musbotg, OID_AUTO, debug, CTLFLAG_RW,
     &musbotgdebug, 0, "Debug level");
 #endif

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/common/load_elf_obj.c 239821 2012-08-29 12:34:43Z jhb $");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -369,7 +369,7 @@ __elfN(obj_parse_modmetadata)(struct preloaded_file *fp, elf_file_t ef)
 
 	if (__elfN(obj_lookup_set)(fp, ef, "modmetadata_set", &p, &p_stop,
 	    &modcnt) != 0)
-		return ENOENT;
+		return 0;
 
 	modcnt = 0;
 	while (p < p_stop) {

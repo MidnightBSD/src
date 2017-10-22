@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/procstat/procstat_auxv.c 240847 2012-09-23 06:16:08Z kib $
  */
 
 #include <sys/param.h>
@@ -231,9 +231,11 @@ procstat_auxv(struct kinfo_proc *kipp)
 			else
 				PRINT(AT_STACKPROT, %s, "EXECUTABLE");
 			break;
-		case AT_COUNT:
-			PRINT(AT_COUNT, %ld, (long)auxv[i].a_un.a_val);
+#ifdef AT_TIMEKEEP
+		case AT_TIMEKEEP:
+			PRINT(AT_TIMEKEEP, %p, auxv[i].a_un.a_ptr);
 			break;
+#endif
 		default:
 			PRINT_UNKNOWN(auxv[i].a_type, auxv[i].a_un.a_val);
 			break;

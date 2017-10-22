@@ -57,7 +57,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/vm/vm_param.h 207410 2010-04-30 00:46:43Z kmacy $
  */
 
 /*

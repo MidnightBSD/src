@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sys/dev/wpi/if_wpireg.h 190458 2009-03-27 03:17:25Z jmallett $	*/
 
 /*-
  * Copyright (c) 2006,2007

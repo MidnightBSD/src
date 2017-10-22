@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/isci/scil/sati.c 240579 2012-09-17 00:44:16Z eadler $");
 
 /**
  * @file
@@ -1236,7 +1236,7 @@ void sati_sequence_terminate(
 )
 {
    // Decode the sequence type to determine how to handle the termination
-   // of the the translation method.
+   // of the translation method.
    switch (sequence->type)
    {
    case SATI_SEQUENCE_UNMAP:

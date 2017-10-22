@@ -16,7 +16,7 @@
 
 #ifndef INLINE_KERNEL_COSDF
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/k_cosf.c 239529 2012-08-21 19:45:48Z dim $");
 #endif
 
 #include "math.h"
@@ -30,10 +30,10 @@ C1  =  0x155553e1053a42.0p-57,	/*  0.0416666233237390631894 */
 C2  = -0x16c087e80f1e27.0p-62,	/* -0.00138867637746099294692 */
 C3  =  0x199342e0ee5069.0p-68;	/*  0.0000243904487962774090654 */
 
-#ifndef INLINE_KERNEL_COSDF
-extern
+#ifdef INLINE_KERNEL_COSDF
+static __inline
 #endif
-__inline float
+float
 __kernel_cosdf(double x)
 {
 	double r, w, z;

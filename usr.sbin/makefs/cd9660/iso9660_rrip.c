@@ -42,7 +42,7 @@
 #include <stdio.h>
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/makefs/cd9660/iso9660_rrip.c 248293 2013-03-14 22:57:27Z brooks $");
 
 static void cd9660_rrip_initialize_inode(cd9660node *);
 static int cd9660_susp_handle_continuation(cd9660node *);
@@ -298,7 +298,7 @@ cd9660_susp_initialize_node(cd9660node *node)
 	 * CE: is added for us where needed
 	 * ST: not sure if it is even required, but if so, should be
 	 *     handled by the CE code
-	 * PD: isnt needed (though might be added for testing)
+	 * PD: isn't needed (though might be added for testing)
 	 * SP: is stored ONLY on the . record of the root directory
 	 * ES: not sure
 	 */

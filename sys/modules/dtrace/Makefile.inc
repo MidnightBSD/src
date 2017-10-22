@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/dtrace/Makefile.inc 211690 2010-08-23 06:13:29Z imp $
 
 IGNORE_PRAGMA=	1
 

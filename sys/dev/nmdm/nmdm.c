@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/nmdm/nmdm.c 249132 2013-04-05 08:22:11Z mav $");
 
 /*
  * Pseudo-nulmodem driver
@@ -52,7 +52,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/malloc.h>
 #include <sys/taskqueue.h>
 
-MALLOC_DEFINE(M_NMDM, "nullmodem", "nullmodem data structures");
+static MALLOC_DEFINE(M_NMDM, "nullmodem", "nullmodem data structures");
 
 static tsw_inwakeup_t	nmdm_outwakeup;
 static tsw_outwakeup_t	nmdm_inwakeup;

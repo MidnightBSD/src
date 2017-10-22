@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/coretemp/coretemp.c 225662 2011-09-19 10:58:30Z attilio $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

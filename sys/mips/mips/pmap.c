@@ -66,7 +66,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/mips/pmap.c 248814 2013-03-28 06:31:04Z kib $");
 
 #include "opt_ddb.h"
 
@@ -172,7 +172,7 @@ static boolean_t pmap_try_insert_pv_entry(pmap_t pmap, vm_page_t mpte,
 static void pmap_update_page(pmap_t pmap, vm_offset_t va, pt_entry_t pte);
 static void pmap_invalidate_all(pmap_t pmap);
 static void pmap_invalidate_page(pmap_t pmap, vm_offset_t va);
-static int _pmap_unwire_pte_hold(pmap_t pmap, vm_offset_t va, vm_page_t m);
+static void _pmap_unwire_ptp(pmap_t pmap, vm_offset_t va, vm_page_t m);
 
 static vm_page_t pmap_allocpte(pmap_t pmap, vm_offset_t va, int flags);
 static vm_page_t _pmap_allocpte(pmap_t pmap, unsigned ptepindex, int flags);
@@ -837,10 +837,10 @@ pmap_kenter_attr(vm_offset_t va, vm_paddr_t pa, int attr)
 #ifdef PMAP_DEBUG
 	printf("pmap_kenter:  va: %p -> pa: %p\n", (void *)va, (void *)pa);
 #endif
-	npte = TLBLO_PA_TO_PFN(pa) | PTE_D | PTE_V | PTE_G | PTE_W | attr;
 
 	pte = pmap_pte(kernel_pmap, va);
 	opte = *pte;
+	npte = TLBLO_PA_TO_PFN(pa) | attr | PTE_D | PTE_V | PTE_G;
 	*pte = npte;
 	if (pte_test(&opte, PTE_V) && opte != npte)
 		pmap_update_page(kernel_pmap, va, npte);
@@ -951,29 +951,26 @@ pmap_qremove(vm_offset_t va, int count)
  * Page table page management routines.....
  ***************************************************/
 
-/*  Revision 1.507
- *
- * Simplify the reference counting of page table pages.	 Specifically, use
- * the page table page's wired count rather than its hold count to contain
- * the reference count.
- */
-
 /*
- * This routine unholds page table pages, and if the hold count
- * drops to zero, then it decrements the wire count.
+ * Decrements a page table page's wire count, which is used to record the
+ * number of valid page table entries within the page.  If the wire count
+ * drops to zero, then the page table page is unmapped.  Returns TRUE if the
+ * page table page was unmapped and FALSE otherwise.
  */
-static PMAP_INLINE int
-pmap_unwire_pte_hold(pmap_t pmap, vm_offset_t va, vm_page_t m)
+static PMAP_INLINE boolean_t
+pmap_unwire_ptp(pmap_t pmap, vm_offset_t va, vm_page_t m)
 {
+
 	--m->wire_count;
-	if (m->wire_count == 0)
-		return (_pmap_unwire_pte_hold(pmap, va, m));
-	else
-		return (0);
+	if (m->wire_count == 0) {
+		_pmap_unwire_ptp(pmap, va, m);
+		return (TRUE);
+	} else
+		return (FALSE);
 }
 
-static int
-_pmap_unwire_pte_hold(pmap_t pmap, vm_offset_t va, vm_page_t m)
+static void
+_pmap_unwire_ptp(pmap_t pmap, vm_offset_t va, vm_page_t m)
 {
 	pd_entry_t *pde;
 
@@ -1002,7 +999,7 @@ _pmap_unwire_pte_hold(pmap_t pmap, vm_offset_t va, vm_page_t m)
 		 */
 		pdp = (pd_entry_t *)*pmap_segmap(pmap, va);
 		pdpg = PHYS_TO_VM_PAGE(MIPS_DIRECT_TO_PHYS(pdp));
-		pmap_unwire_pte_hold(pmap, va, pdpg);
+		pmap_unwire_ptp(pmap, va, pdpg);
 	}
 #endif
 	if (pmap->pm_ptphint == m)
@@ -1013,7 +1010,6 @@ _pmap_unwire_pte_hold(pmap_t pmap, vm_offset_t va, vm_page_t m)
 	 */
 	vm_page_free_zero(m);
 	atomic_subtract_int(&cnt.v_wire_count, 1);
-	return (1);
 }
 
 /*
@@ -1040,7 +1036,7 @@ pmap_unuse_pt(pmap_t pmap, vm_offset_t va, vm_page_t mpte)
 			pmap->pm_ptphint = mpte;
 		}
 	}
-	return (pmap_unwire_pte_hold(pmap, va, mpte));
+	return (pmap_unwire_ptp(pmap, va, mpte));
 }
 
 void
@@ -2131,7 +2127,7 @@ pmap_enter_quick_locked(pmap_t pmap, vm_offset_t va, vm_page_t m,
 	if ((m->oflags & VPO_UNMANAGED) == 0 &&
 	    !pmap_try_insert_pv_entry(pmap, mpte, va, m)) {
 		if (mpte != NULL) {
-			pmap_unwire_pte_hold(pmap, va, mpte);
+			pmap_unwire_ptp(pmap, va, mpte);
 			mpte = NULL;
 		}
 		return (mpte);
@@ -2446,6 +2442,51 @@ pmap_copy_page(vm_page_t src, vm_page_t dst)
 		bcopy((void *)va_src, (void *)va_dst, PAGE_SIZE);
 		mips_dcache_wbinv_range(va_dst, PAGE_SIZE);
 		pmap_lmem_unmap();
+	}
+}
+
+void
+pmap_copy_pages(vm_page_t ma[], vm_offset_t a_offset, vm_page_t mb[],
+    vm_offset_t b_offset, int xfersize)
+{
+	char *a_cp, *b_cp;
+	vm_page_t a_m, b_m;
+	vm_offset_t a_pg_offset, b_pg_offset;
+	vm_paddr_t a_phys, b_phys;
+	int cnt;
+
+	while (xfersize > 0) {
+		a_pg_offset = a_offset & PAGE_MASK;
+		cnt = min(xfersize, PAGE_SIZE - a_pg_offset);
+		a_m = ma[a_offset >> PAGE_SHIFT];
+		a_phys = VM_PAGE_TO_PHYS(a_m);
+		b_pg_offset = b_offset & PAGE_MASK;
+		cnt = min(cnt, PAGE_SIZE - b_pg_offset);
+		b_m = mb[b_offset >> PAGE_SHIFT];
+		b_phys = VM_PAGE_TO_PHYS(b_m);
+		if (MIPS_DIRECT_MAPPABLE(a_phys) &&
+		    MIPS_DIRECT_MAPPABLE(b_phys)) {
+			pmap_flush_pvcache(a_m);
+			mips_dcache_wbinv_range_index(
+			    MIPS_PHYS_TO_DIRECT(b_phys), PAGE_SIZE);
+			a_cp = (char *)MIPS_PHYS_TO_DIRECT(a_phys) +
+			    a_pg_offset;
+			b_cp = (char *)MIPS_PHYS_TO_DIRECT(b_phys) +
+			    b_pg_offset;
+			bcopy(a_cp, b_cp, cnt);
+			mips_dcache_wbinv_range((vm_offset_t)b_cp, cnt);
+		} else {
+			a_cp = (char *)pmap_lmem_map2(a_phys, b_phys);
+			b_cp = (char *)a_cp + PAGE_SIZE;
+			a_cp += a_pg_offset;
+			b_cp += b_pg_offset;
+			bcopy(a_cp, b_cp, cnt);
+			mips_dcache_wbinv_range((vm_offset_t)b_cp, cnt);
+			pmap_lmem_unmap();
+		}
+		a_offset += cnt;
+		b_offset += cnt;
+		xfersize -= cnt;
 	}
 }
 
@@ -2881,7 +2922,7 @@ void
 pmap_unmapdev(vm_offset_t va, vm_size_t size)
 {
 #ifndef __mips_n64
-	vm_offset_t base, offset, tmpva;
+	vm_offset_t base, offset;
 
 	/* If the address is within KSEG1 then there is nothing to do */
 	if (va >= MIPS_KSEG1_START && va <= MIPS_KSEG1_END)
@@ -2890,8 +2931,6 @@ pmap_unmapdev(vm_offset_t va, vm_size_t size)
 	base = trunc_page(va);
 	offset = va & PAGE_MASK;
 	size = roundup(size + offset, PAGE_SIZE);
-	for (tmpva = base; tmpva < base + size; tmpva += PAGE_SIZE)
-		pmap_kremove(tmpva);
 	kmem_free(kernel_map, base, size);
 #endif
 }

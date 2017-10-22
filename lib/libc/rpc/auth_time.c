@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/auth_time.c 172259 2007-09-20 22:35:24Z matteo $");
 
 #include "namespace.h"
 #include <stdio.h>

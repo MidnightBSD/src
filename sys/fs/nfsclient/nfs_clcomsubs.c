@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/fs/nfsclient/nfs_clcomsubs.c 241194 2012-10-04 12:43:45Z rmacklem $");
 
 /*
  * These functions support the macros and help fiddle mbuf chains for
@@ -126,11 +126,11 @@ nfscl_reqstart(struct nfsrv_descript *nd, int procnum, struct nfsmount *nmp,
 	 * First, fill in some of the fields of nd.
 	 */
 	if (NFSHASNFSV4(nmp))
-		nd->nd_flag = ND_NFSV4;
+		nd->nd_flag = ND_NFSV4 | ND_NFSCL;
 	else if (NFSHASNFSV3(nmp))
-		nd->nd_flag = ND_NFSV3;
+		nd->nd_flag = ND_NFSV3 | ND_NFSCL;
 	else
-		nd->nd_flag = ND_NFSV2;
+		nd->nd_flag = ND_NFSV2 | ND_NFSCL;
 	nd->nd_procnum = procnum;
 	nd->nd_repstat = 0;
 

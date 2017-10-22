@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/makefs/ffs/mkfs.c 226275 2011-10-12 01:57:00Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/time.h>

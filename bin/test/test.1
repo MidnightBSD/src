@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)test.1	8.1 (Berkeley) 5/31/93
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/bin/test/test.1 246914 2013-02-17 14:25:42Z jilles $
 .\"
-.Dd September 10, 2010
+.Dd December 27, 2012
 .Dt TEST 1
 .Os
 .Sh NAME
@@ -331,6 +331,13 @@ missing.
 .It >1
 An error occurred.
 .El
+.Sh COMPATIBILITY
+For compatibility with some other implementations,
+the
+.Cm =
+primary can be substituted with
+.Cm ==
+with the same meaning.
 .Sh SEE ALSO
 .Xr builtin 1 ,
 .Xr expr 1 ,

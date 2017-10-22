@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/gpioctl/gpioctl.c 213238 2010-09-28 03:28:20Z gonzo $");
 
 #include <fcntl.h>
 #include <getopt.h>

@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ia64/ia64/mem.c 247303 2013-02-26 03:46:35Z marcel $");
 
 /*
  * Memory special file
@@ -128,8 +128,10 @@ kmemphys:
 			 */
 			addr = trunc_page(v);
 			eaddr = round_page(v + c);
+			if (addr < VM_MAXUSER_ADDRESS)
+				return (EFAULT);
 			for (; addr < eaddr; addr += PAGE_SIZE) {
-				if (pmap_extract(kernel_pmap, addr) == 0)
+				if (pmap_kextract(addr) == 0)
 					return (EFAULT);
 			}
 			if (!kernacc((caddr_t)v, c, (uio->uio_rw == UIO_READ)

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/tools/net80211/w00t/libw00t/w00t.c 161029 2006-08-06 23:50:56Z sam $
  */
 #include <stdio.h>
 #include <assert.h>

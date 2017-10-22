@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sade/label.c 229243 2012-01-01 23:43:45Z dim $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

@@ -5,7 +5,7 @@
 # such as options or devices that are not specified in any NOTES files
 # or MI devices specified in MD NOTES files.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/notescheck/notescheck.py 200941 2009-12-24 14:32:11Z jhb $
 
 import glob
 import os.path

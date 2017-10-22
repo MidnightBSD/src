@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sys/netipsec/xform_ipip.c 241076 2012-09-30 16:21:12Z kevlo $	*/
 /*	$OpenBSD: ip_ipip.c,v 1.25 2002/06/10 18:04:55 itojun Exp $ */
 /*-
  * The authors of this code are John Ioannidis (ji@tla.org),
@@ -577,6 +577,7 @@ ipip_output(
 			itos = ntohl(itos32) >> 20;
 
 			ip6o->ip6_nxt = IPPROTO_IPV6;
+			break;
 		}
 		default:
 			goto nofamily;

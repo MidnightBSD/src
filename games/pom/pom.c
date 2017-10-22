@@ -41,7 +41,7 @@ static const char sccsid[] = "@(#)pom.c       8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/games/pom/pom.c 239894 2012-08-30 07:45:25Z maxim $");
 
 /*
  * Phase of the Moon.  Calculates the current phase of the moon.
@@ -86,6 +86,7 @@ main(int argc, char **argv)
 	double days, today, tomorrow;
 	int ch, cnt, pflag = 0;
 	char *odate = NULL, *otime = NULL;
+	char *progname = argv[0];
 
 	while ((ch = getopt(argc, argv, "d:pt:")) != -1)
 		switch (ch) {
@@ -99,14 +100,14 @@ main(int argc, char **argv)
 			otime = optarg;
 			break;
 		default:
-			usage(argv[0]);
+			usage(progname);
 		}
 
         argc -= optind;
 	argv += optind;
 
 	if (argc)
-		usage(argv[0]);
+		usage(progname);
 
 	/* Adjust based on users preferences */
 	time(&tt);

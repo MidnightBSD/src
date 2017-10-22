@@ -1,5 +1,5 @@
 # $OpenBSD: Makefile,v 1.9 2004/05/04 12:52:05 henning Exp $
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/dhclient/Makefile 231277 2012-02-09 14:16:00Z bapt $
 #
 # Copyright (c) 1996, 1997 The Internet Software Consortium.
 # All rights reserved.

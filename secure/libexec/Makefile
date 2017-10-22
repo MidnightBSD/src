@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/secure/libexec/Makefile 204949 2010-03-10 11:33:15Z des $
 
 .include <bsd.own.mk>
 

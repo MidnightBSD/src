@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/quicc/quicc_bfe.h 207532 2010-05-02 19:05:57Z marius $
  */
 
 #ifndef _DEV_QUICC_BFE_H_

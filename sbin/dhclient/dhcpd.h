@@ -38,7 +38,7 @@
  * see ``http://www.vix.com/isc''.  To learn more about Vixie
  * Enterprises, see ``http://www.vix.com''.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sbin/dhclient/dhcpd.h 247335 2013-02-26 19:14:05Z jhb $
  */
 
 #include <sys/param.h>
@@ -208,6 +208,7 @@ struct interface_info {
 	int			 errors;
 	int			 dead;
 	u_int16_t		 index;
+	int			 linkstat;
 };
 
 struct timeout {

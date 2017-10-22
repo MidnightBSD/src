@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/amd64/linux32/linux32_sysvec.c 248085 2013-03-09 02:36:32Z marius $");
 #include "opt_compat.h"
 
 #ifndef COMPAT_FREEBSD32
@@ -977,7 +977,7 @@ linux_copyout_strings(struct image_params *imgp)
 	return ((register_t *)stack_base);
 }
 
-SYSCTL_NODE(_compat, OID_AUTO, linux32, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_compat, OID_AUTO, linux32, CTLFLAG_RW, 0,
     "32-bit Linux emulation");
 
 static u_long	linux32_maxdsiz = LINUX32_MAXDSIZ;

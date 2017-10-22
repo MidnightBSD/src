@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/ofw/ofw_real.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -158,7 +158,8 @@ static ofw_def_t ofw_32bit = {
 };
 OFW_DEF(ofw_32bit);
 
-MALLOC_DEFINE(M_OFWREAL, "ofwreal", "Open Firmware Real Mode Bounce Page");
+static MALLOC_DEFINE(M_OFWREAL, "ofwreal",
+    "Open Firmware Real Mode Bounce Page");
 
 static int (*openfirmware)(void *);
 

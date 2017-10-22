@@ -17,7 +17,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sbin/ipfw/altq.c 220802 2011-04-18 21:18:22Z glebius $
  *
  * altq interface
  */

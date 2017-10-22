@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/radeon_irq.c 197603 2009-09-28 22:37:07Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

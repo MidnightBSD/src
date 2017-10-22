@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/contrib/ipfilter/snoop.h 153881 2005-12-30 11:52:26Z guido $	*/
 
 /*
  * Copyright (C) 1993-2001 by Darren Reed.

@@ -36,7 +36,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/bcopyinout_xscale.S 153273 2005-12-09 15:31:02Z cognet $");
 
 	.text
 	.align	0

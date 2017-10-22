@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_cb.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/net/raw_cb.c 248085 2013-03-09 02:36:32Z marius $
  */
 
 #include <sys/param.h>
@@ -59,7 +59,8 @@
 struct mtx rawcb_mtx;
 VNET_DEFINE(struct rawcb_list_head, rawcb_list);
 
-SYSCTL_NODE(_net, OID_AUTO, raw, CTLFLAG_RW, 0, "Raw socket infrastructure");
+static SYSCTL_NODE(_net, OID_AUTO, raw, CTLFLAG_RW, 0,
+    "Raw socket infrastructure");
 
 static u_long	raw_sendspace = RAWSNDQ;
 SYSCTL_ULONG(_net_raw, OID_AUTO, sendspace, CTLFLAG_RW, &raw_sendspace, 0,

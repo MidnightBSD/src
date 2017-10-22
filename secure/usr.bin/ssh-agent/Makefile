@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/secure/usr.bin/ssh-agent/Makefile 197679 2009-10-01 17:12:52Z des $
 
 PROG=	ssh-agent
 SRCS=	ssh-agent.c

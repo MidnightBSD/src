@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/firewire/sbp_targ/Makefile 155824 2006-02-18 23:49:28Z yar $
 
 # Makefile for the SBP-II Target mode
 

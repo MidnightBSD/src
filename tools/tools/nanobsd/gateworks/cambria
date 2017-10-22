@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/nanobsd/gateworks/cambria 189114 2009-02-27 19:20:57Z sam $
 
 NANO_NAME="cambria-HEAD"
 NANO_SRC=`pwd | sed 's/.tools.tools.nanobsd.*//'`

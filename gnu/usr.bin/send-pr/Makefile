@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/usr.bin/send-pr/Makefile 119843 2003-09-07 13:38:07Z ru $
 #
 # Makefile for building a standalone send-pr.
 #

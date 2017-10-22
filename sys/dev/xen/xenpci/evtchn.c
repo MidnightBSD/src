@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/xen/xenpci/evtchn.c 232068 2012-02-23 19:52:33Z cperciva $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

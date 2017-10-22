@@ -5,7 +5,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/softfloat/eqsf2.c 129203 2004-05-14 12:13:06Z cognet $");
 
 #include "softfloat-for-gcc.h"
 #include "milieu.h"

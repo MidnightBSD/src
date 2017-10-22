@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libufs/block.c 190646 2009-04-02 17:16:39Z delphij $");
 
 #include <sys/param.h>
 #include <sys/mount.h>

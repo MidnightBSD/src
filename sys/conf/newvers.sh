@@ -28,11 +28,11 @@
 # SUCH DAMAGE.
 #
 #	@(#)newvers.sh	8.1 (Berkeley) 4/20/94
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/conf/newvers.sh 247874 2013-03-06 09:12:38Z avg $
 
 TYPE="FreeBSD"
 REVISION="9.1"
-BRANCH="RELEASE"
+BRANCH="STABLE"
 if [ "X${BRANCH_OVERRIDE}" != "X" ]; then
 	BRANCH=${BRANCH_OVERRIDE}
 fi
@@ -86,6 +86,7 @@ fi
 touch version
 v=`cat version` u=${USER:-root} d=`pwd` h=${HOSTNAME:-`hostname`} t=`date`
 i=`${MAKE:-make} -V KERN_IDENT`
+compiler_v=$($(${MAKE:-make} -V CC) -v 2>&1 | grep 'version')
 
 for dir in /bin /usr/bin /usr/local/bin; do
 	if [ -x "${dir}/svnversion" ] ; then
@@ -141,6 +142,7 @@ $COPYRIGHT
 
 char sccs[sizeof(SCCSSTR) > 128 ? sizeof(SCCSSTR) : 128] = SCCSSTR;
 char version[sizeof(VERSTR) > 256 ? sizeof(VERSTR) : 256] = VERSTR;
+char compiler_version[] = "${compiler_v}";
 char ostype[] = "${TYPE}";
 char osrelease[sizeof(RELSTR) > 32 ? sizeof(RELSTR) : 32] = RELSTR;
 int osreldate = ${RELDATE};

@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sysinstall/ftp.c 247634 2013-03-02 16:18:40Z dteske $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -50,8 +50,12 @@ int FtpPort;
 
 /* List of sub directories to look for under a given FTP server. */
 const char *ftp_dirs[] = { ".", "releases/"MACHINE, "snapshots/"MACHINE,
+    "releases/"MACHINE"/"MACHINE_ARCH, "snapshots/"MACHINE"/"MACHINE_ARCH,
     "pub/FreeBSD", "pub/FreeBSD/releases/"MACHINE,
-    "pub/FreeBSD/snapshots/"MACHINE, NULL };
+    "pub/FreeBSD/snapshots/"MACHINE,
+    "pub/FreeBSD/releases/"MACHINE"/"MACHINE_ARCH,
+    "pub/FreeBSD/snapshots/"MACHINE"/"MACHINE_ARCH,
+    NULL };
 
 /* Brings up attached network device, if any - takes FTP device as arg */
 static Boolean
@@ -107,7 +111,7 @@ try:
     hostname = variable_get(VAR_FTP_HOST);
     dir = variable_get(VAR_FTP_DIR);
     if (!hostname || !dir) {
-	msgConfirm("Missing FTP host or directory specification.  FTP media not initialized,");
+	msgConfirm("Missing FTP host or directory specification.  FTP media not initialized.");
 	netDown(dev);
 	return FALSE;
     }

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/cavium/asm_octeon.S 224661 2011-08-05 22:54:42Z marcel $
  */
 
 #include <machine/asm.h>

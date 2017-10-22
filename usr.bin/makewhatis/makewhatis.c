@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/makewhatis/makewhatis.c 237464 2012-06-23 00:37:32Z delphij $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

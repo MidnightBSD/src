@@ -32,7 +32,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/econa/uart_cpu_ec.c 201468 2010-01-04 03:35:45Z rpaulo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

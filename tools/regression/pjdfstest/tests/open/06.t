@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/open/06.t 210955 2010-08-06 19:20:35Z pjd $
 
 desc="open returns EACCES when the required permissions (for reading and/or writing) are denied for the given flags"
 

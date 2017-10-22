@@ -26,7 +26,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/ath/Makefile 245431 2013-01-14 19:51:26Z dim $
 #
 
 ATH_RATE?=	sample		# tx rate control algorithm
@@ -146,4 +146,7 @@ opt_ah.h:
 .include <bsd.kmod.mk>
 
 CWARNFLAGS.ah_regdomain.c=	${NO_WSHIFT_COUNT_NEGATIVE} ${NO_WSHIFT_COUNT_OVERFLOW}
+# XXX Work around clang warnings, until maintainer approves fix.
+CWARNFLAGS.ah_eeprom_9287.c=	${NO_WSOMETIMES_UNINITIALIZED}
+CWARNFLAGS.if_ath.c=		${NO_WSOMETIMES_UNINITIALIZED}
 CWARNFLAGS+=			${CWARNFLAGS.${.IMPSRC:T}}

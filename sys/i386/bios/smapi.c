@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/bios/smapi.c 196403 2009-08-20 19:17:53Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

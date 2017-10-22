@@ -32,7 +32,7 @@
 /* XXX use __SCCSID */
 static char sccsid[] __unused = "@(#)rec_seq.c	8.3 (Berkeley) 7/14/94";
 #endif /* not lint */
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/db/recno/rec_seq.c 189327 2009-03-04 00:58:04Z delphij $");
 
 #include <sys/types.h>
 

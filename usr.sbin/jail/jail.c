@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/jail/jail.c 239892 2012-08-30 07:34:25Z maxim $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -145,7 +145,7 @@ main(int argc, char **argv)
 	cfname = CONF_FILE;
 	JidFile = NULL;
 
-	while ((ch = getopt(argc, argv, "cdf:hiJ:lmn:p:qrRs:U:v")) != -1) {
+	while ((ch = getopt(argc, argv, "cdf:hiJ:lmn:p:qrRs:u:U:v")) != -1) {
 		switch (ch) {
 		case 'c':
 			op |= JF_START;

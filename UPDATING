@@ -4,13 +4,77 @@ This file is maintained and copyrighted by M. Warner Losh <imp@freebsd.org>.
 See end of file for further details.  For commonly done items, please see the
 COMMON ITEMS: section later in the file.  These instructions assume that you
 basically know what you are doing.  If not, then please consult the FreeBSD
-handbook.
+handbook:
+
+    http://www.freebsd.org/doc/en_US.ISO8859-1/books/handbook/makeworld.html
 
 Items affecting the ports and packages system can be found in
 /usr/ports/UPDATING.  Please read that file before running portupgrade.
 
+20130315:
+	The install(1) option -M has changed meaning and now takes an
+	argument that is a file or path to append logs to.  In the
+	unlikely event that -M was the last option on the command line
+	and the command line contained at least two files and a target
+	directory the first file will have logs appended to it.  The -M
+	option served little practical purpose in the last decade so it's
+	used expected to be extremely rare.
+
+20130225:
+	A new compression method (lz4) has been merged to.  Please refer to
+	zpool-features(7) for more information.
+
+	Please refer to the "ZFS notes" section of this file for information
+	on upgrading boot ZFS pools.
+
+20121224:
+	The VFS KBI was changed with the merge of several nullfs
+	optimizations and fixes.  All filesystem modules must be
+	recompiled.
+
+20121218:
+	With the addition of auditdistd(8), a new auditdistd user is now
+	depended on during installworld.  "mergemaster -p" can be used to add
+	the user prior to installworld, as documented in the handbook.
+
 20121205:
 	9.1-RELEASE.
+
+20121129:
+	A new version of ZFS (pool version 5000) has been merged to 9-STABLE.
+	Starting with this version the old system of ZFS pool versioning
+	is superseded by "feature flags". This concept enables forward
+	compatibility against certain future changes in functionality of ZFS
+	pools. The first two read-only compatible "feature flags" for ZFS
+	pools are "com.delphix:async_destroy" and "com.delphix:empty_bpobj".
+	For more information read the new zpool-features(7) manual page.
+        Please refer to the "ZFS notes" section of this file for information
+        on upgrading boot ZFS pools.
+
+20121114:
+	The commit introducing bsd.compiler.mk breaks the traditional
+	building of kernels before this point. Add -m ${SRC}/share/mk
+	(for the right value of SRC) to your command lines to work
+	around; update your useland to a point after this; or use the
+	buildkernel/installkernel top-level targets. See also 20120829.
+
+20121102:
+	The IPFIREWALL_FORWARD kernel option has been removed. Its
+	functionality now turned on by default.
+
+20120913:
+	The random(4) support for the VIA hardware random number
+	generator (`PADLOCK') is no longer enabled unconditionally.
+	Add the PADLOCK_RNG option in the custom kernel config if
+	needed.  The GENERIC kernels on i386 and amd64 do include the
+	option, so the change only affects the custom kernel
+	configurations.
+
+20120829:
+	The amd64 kernel now uses xsetbv, xrstor instructions. To compile with
+	the traditional method, you must update your system with an installworld
+	before the kernel will build. The documented make buildkernel/installkernel
+	interfaces (coupled with fresh make kernel-toolchain) continue to work.
 
 20120727:
 	The sparc64 ZFS loader has been changed to no longer try to auto-
@@ -1417,7 +1481,7 @@ COMMON ITEMS:
 	<reboot>
 
 
-	To upgrade in-place from 8.x-stable to current
+	To upgrade in-place from stable to current
 	----------------------------------------------
 	<make sure you have good level 0 dumps>
 	make buildworld					[9]
@@ -1525,4 +1589,4 @@ POSSIBILITY OF SUCH DAMAGE.
 Contact Warner Losh if you have any questions about your use of
 this document.
 
-$FreeBSD$
+$FreeBSD: stable/9/UPDATING 248331 2013-03-15 15:19:33Z brooks $

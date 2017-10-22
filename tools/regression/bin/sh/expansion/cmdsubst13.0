@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/bin/sh/expansion/cmdsubst13.0 233116 2012-03-18 13:02:56Z jilles $
 
 x=1 y=2
 [ "$(

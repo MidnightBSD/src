@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/gcore/elfcore.c 223924 2011-07-11 05:46:15Z delphij $");
 
 #include <sys/param.h>
 #include <sys/procfs.h>

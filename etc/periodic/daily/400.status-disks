@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/periodic/daily/400.status-disks 237809 2012-06-29 17:28:48Z jhb $
 #
 
 # If there is a global system configuration file, suck it in.

@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/secure/lib/libcrypto/opensslconf-mips.h 210843 2010-08-04 10:46:17Z jchandra $ */
 /* opensslconf.h */
 /* WARNING: Generated automatically from opensslconf.h.in by Configure. */
 

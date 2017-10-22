@@ -1,4 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/clang/libclangast/Makefile 246637 2013-02-10 21:24:47Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	clangast
 
@@ -10,6 +12,13 @@ SRCS=	APValue.cpp \
 	ASTImporter.cpp \
 	AttrImpl.cpp \
 	CXXInheritance.cpp \
+	Comment.cpp \
+	CommentBriefParser.cpp \
+	CommentCommandTraits.cpp \
+	CommentDumper.cpp \
+	CommentLexer.cpp \
+	CommentParser.cpp \
+	CommentSema.cpp \
 	Decl.cpp \
 	DeclBase.cpp \
 	DeclCXX.cpp \
@@ -35,6 +44,7 @@ SRCS=	APValue.cpp \
 	NestedNameSpecifier.cpp \
 	NSAPI.cpp \
 	ParentMap.cpp \
+	RawCommentList.cpp \
 	RecordLayout.cpp \
 	RecordLayoutBuilder.cpp \
 	SelectorLocationsKind.cpp \
@@ -55,8 +65,13 @@ SRCS=	APValue.cpp \
 TGHDRS=	AttrImpl \
 	AttrList \
 	Attrs \
+	CommentCommandInfo \
+	CommentHTMLTags \
+	CommentHTMLTagsProperties \
+	CommentNodes \
 	DeclNodes \
 	DiagnosticASTKinds \
+	DiagnosticCommentKinds \
 	DiagnosticCommonKinds \
 	DiagnosticSemaKinds \
 	StmtNodes

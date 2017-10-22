@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)pax.c	8.2 (Berkeley) 4/18/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/pax/pax.c 222177 2011-05-22 14:03:38Z uqs $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

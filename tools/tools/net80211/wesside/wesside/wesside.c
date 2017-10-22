@@ -5,7 +5,7 @@
  * XXX GENERAL: I DON'T CHECK FOR PACKET LENGTHS AND STUFF LIKE THAT and buffer
  * overflows.  this whole thing is experimental n e way.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/tools/net80211/wesside/wesside/wesside.c 195848 2009-07-24 15:31:22Z sam $
  */
 
 #include <sys/types.h>

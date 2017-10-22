@@ -25,7 +25,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/sbin/ifconfig/ifgif.c 196931 2009-09-07 15:52:15Z hrs $";
 #endif
 
 #include <sys/param.h>

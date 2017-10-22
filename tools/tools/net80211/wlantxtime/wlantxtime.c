@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/tools/net80211/wlantxtime/wlantxtime.c 188785 2009-02-19 05:36:07Z sam $");
 
 /*
  * IEEE 802.11 PHY-related support.

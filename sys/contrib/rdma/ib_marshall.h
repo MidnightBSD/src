@@ -29,7 +29,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/contrib/rdma/ib_marshall.h 178784 2008-05-05 18:35:55Z kmacy $
  */
 
 #if !defined(IB_USER_MARSHALL_H)

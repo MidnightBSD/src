@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libdevstat/devstat.c 220319 2011-04-04 09:25:27Z pluknet $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

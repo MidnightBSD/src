@@ -9,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/sysctlbyname.c 204172 2010-02-21 14:58:01Z ed $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

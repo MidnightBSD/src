@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_ipfw.c 243401 2012-11-22 12:11:32Z glebius $
  */
 
 #include "opt_inet.h"
@@ -48,10 +48,11 @@
 #include <netinet/in_var.h>
 #include <netinet/ip_var.h>
 #include <netinet/ip_fw.h>
-#include <netinet/ipfw/ip_fw_private.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
+
+#include <netpfil/ipfw/ip_fw_private.h>
 
 #include <netgraph/ng_message.h>
 #include <netgraph/ng_parse.h>

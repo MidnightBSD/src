@@ -21,7 +21,7 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/cddl/lib/libdtrace/errno.d 179189 2008-05-22 04:26:42Z jb $
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.

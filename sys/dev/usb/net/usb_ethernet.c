@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/net/usb_ethernet.c 248085 2013-03-09 02:36:32Z marius $ */
 /*-
  * Copyright (c) 2009 Andrew Thompson (thompsa@FreeBSD.org)
  *
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/usb_ethernet.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -57,7 +57,8 @@ __FBSDID("$FreeBSD$");
 #include <dev/usb/usb_process.h>
 #include <dev/usb/net/usb_ethernet.h>
 
-SYSCTL_NODE(_net, OID_AUTO, ue, CTLFLAG_RD, 0, "USB Ethernet parameters");
+static SYSCTL_NODE(_net, OID_AUTO, ue, CTLFLAG_RD, 0,
+    "USB Ethernet parameters");
 
 #define	UE_LOCK(_ue)		mtx_lock((_ue)->ue_mtx)
 #define	UE_UNLOCK(_ue)		mtx_unlock((_ue)->ue_mtx)
@@ -557,7 +558,7 @@ uether_newbuf(void)
 {
 	struct mbuf *m_new;
 
-	m_new = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+	m_new = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (m_new == NULL)
 		return (NULL);
 	m_new->m_len = m_new->m_pkthdr.len = MCLBYTES;

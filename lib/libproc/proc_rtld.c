@@ -28,7 +28,7 @@
  */ 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libproc/proc_rtld.c 247553 2013-03-01 16:18:40Z jhb $");
 
 #include <stdio.h>
 #include <string.h>
@@ -44,7 +44,8 @@ map_iter(const rd_loadobj_t *lop, void *arg)
 
 	if (phdl->nobjs >= phdl->rdobjsz) {
 		phdl->rdobjsz *= 2;
-		phdl->rdobjs = realloc(phdl->rdobjs, phdl->rdobjsz);
+		phdl->rdobjs = reallocf(phdl->rdobjs, sizeof(*phdl->rdobjs) *
+		    phdl->rdobjsz);
 		if (phdl->rdobjs == NULL)
 			return (-1);
 	}

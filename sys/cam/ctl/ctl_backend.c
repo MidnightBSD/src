@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/cam/ctl/ctl_backend.c 237941 2012-07-02 02:36:05Z ken $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

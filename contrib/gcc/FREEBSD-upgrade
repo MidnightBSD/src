@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/9/contrib/gcc/FREEBSD-upgrade 96330 2002-05-10 05:21:15Z obrien $
 
 tar -xvjf gcc-3.0.2.tar.bz2 -X FREEBSD-Xlist
 

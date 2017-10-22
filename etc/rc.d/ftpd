@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/ftpd 242153 2012-10-26 18:06:49Z obrien $
 #
 
 # PROVIDE: ftpd
-# REQUIRE: LOGIN cleanvar
+# REQUIRE: LOGIN FILESYSTEMS
 # KEYWORD: shutdown
 
 . /etc/rc.subr

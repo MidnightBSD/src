@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/fs/nfsserver/nfs_nfsdcache.c 232259 2012-02-28 15:52:01Z rmacklem $");
 
 /*
  * Here is the basic algorithm:

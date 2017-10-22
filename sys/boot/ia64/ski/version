@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/9/sys/boot/ia64/ski/version 219691 2011-03-16 03:53:18Z marcel $
 
 NOTE ANY CHANGES YOU MAKE TO THE BOOTBLOCKS HERE.  The format of this
 file is important.  Make sure the current version number is on line 6.

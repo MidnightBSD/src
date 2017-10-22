@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/crypto/sha1.c 116174 2003-06-10 21:44:29Z obrien $");
 
 #include <sys/types.h>
 #include <sys/cdefs.h>

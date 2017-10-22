@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/ncp/Makefile 124717 2004-01-19 14:00:26Z ru $
 
 .PATH: ${.CURDIR}/../../netncp
 

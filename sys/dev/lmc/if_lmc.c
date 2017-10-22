@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/lmc/if_lmc.c 248078 2013-03-09 00:39:54Z marius $
  *
  * Copyright (c) 2002-2004 David Boggs. <boggs@boggs.palo-alto.ca.us>
  * All rights reserved.
@@ -2916,7 +2916,7 @@ rxintr_cleanup(softc_t *sc)
     /* Optimization: copy a small pkt into a small mbuf. */
     if (first_mbuf->m_pkthdr.len <= COPY_BREAK)
       {
-      MGETHDR(new_mbuf, M_DONTWAIT, MT_DATA);
+      MGETHDR(new_mbuf, M_NOWAIT, MT_DATA);
       if (new_mbuf != NULL)
         {
         new_mbuf->m_pkthdr.rcvif = first_mbuf->m_pkthdr.rcvif;
@@ -3016,7 +3016,7 @@ rxintr_setup(softc_t *sc)
     return 0;  /* ring is full; nothing to do */
 
   /* Allocate a small mbuf and attach an mbuf cluster. */
-  MGETHDR(m, M_DONTWAIT, MT_DATA);
+  MGETHDR(m, M_NOWAIT, MT_DATA);
   if (m == NULL)
     {
     sc->status.cntrs.rxdma++;
@@ -3024,7 +3024,7 @@ rxintr_setup(softc_t *sc)
       printf("%s: rxintr_setup: MGETHDR() failed\n", NAME_UNIT);
     return 0;
     }
-  MCLGET(m, M_DONTWAIT);
+  MCLGET(m, M_NOWAIT);
   if ((m->m_flags & M_EXT) == 0)
     {
     m_freem(m);

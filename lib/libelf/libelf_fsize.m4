@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libelf/libelf_fsize.m4 210340 2010-07-21 10:39:29Z kaiw $
  */
 
 #include <libelf.h>

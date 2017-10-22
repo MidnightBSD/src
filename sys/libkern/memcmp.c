@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/libkern/memcmp.c 183299 2008-09-23 14:45:10Z obrien $");
 
 #include <sys/libkern.h>
 

@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/sparc64/sys/__sparc_utrap_fp_disabled.S 99116 2002-06-30 05:36:49Z obrien $");
 
 #include <machine/utrap.h>
 

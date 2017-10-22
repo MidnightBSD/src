@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/rndtest/rndtest.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -70,8 +70,8 @@ static const struct rndtest_testfunc {
 
 #define	RNDTEST_NTESTS	(sizeof(rndtest_funcs)/sizeof(rndtest_funcs[0]))
 
-SYSCTL_NODE(_kern, OID_AUTO, rndtest, CTLFLAG_RD, 0, "RNG test parameters");
-
+static SYSCTL_NODE(_kern, OID_AUTO, rndtest, CTLFLAG_RD, 0,
+	    "RNG test parameters");
 static	int rndtest_retest = 120;		/* interval in seconds */
 SYSCTL_INT(_kern_rndtest, OID_AUTO, retest, CTLFLAG_RW, &rndtest_retest,
 	    0, "retest interval (seconds)");

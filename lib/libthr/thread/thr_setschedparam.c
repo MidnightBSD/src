@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libthr/thread/thr_setschedparam.c 238714 2012-07-23 09:33:31Z davidxu $
  */
 
 #include "namespace.h"

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sbin/hastd/hast_checksum.h 219351 2011-03-06 22:56:14Z pjd $
  */
 
 #ifndef	_HAST_CHECKSUM_H_

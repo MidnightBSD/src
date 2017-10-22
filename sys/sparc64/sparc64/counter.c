@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/counter.c 223961 2011-07-12 18:02:37Z marius $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

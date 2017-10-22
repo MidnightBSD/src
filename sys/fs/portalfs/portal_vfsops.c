@@ -31,7 +31,7 @@
  *
  *	@(#)portal_vfsops.c	8.11 (Berkeley) 5/14/95
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/portalfs/portal_vfsops.c 230725 2012-01-29 08:03:45Z mckusick $
  */
 
 /*

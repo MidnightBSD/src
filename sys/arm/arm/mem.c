@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/mem.c 217519 2011-01-17 23:06:47Z jkim $");
 
 /*
  * Memory special file

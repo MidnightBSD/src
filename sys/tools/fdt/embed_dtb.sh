@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/tools/fdt/embed_dtb.sh 208749 2010-06-02 17:22:38Z raj $
 
 # $1: kernel filename
 # $2: device tree blob filename

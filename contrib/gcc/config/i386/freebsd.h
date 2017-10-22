@@ -22,7 +22,7 @@ along with GCC; see the file COPYING.  If not, write to
 the Free Software Foundation, 51 Franklin Street, Fifth Floor,
 Boston, MA 02110-1301, USA.  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/contrib/gcc/config/i386/freebsd.h 242478 2012-11-02 14:18:30Z kib $ */
 
 #undef  CC1_SPEC
 #define CC1_SPEC "%(cc1_cpu) %{profile:-p}"
@@ -49,6 +49,7 @@ Boston, MA 02110-1301, USA.  */
 	%{rdynamic: -export-dynamic} \
 	%{!dynamic-linker:-dynamic-linker %(fbsd_dynamic_linker) }} \
       %{static:-Bstatic}} \
+    %{!static:--hash-style=both --enable-new-dtags} \
     %{symbolic:-Bsymbolic}"
 
 /* Reset our STARTFILE_SPEC which was properly set in config/freebsd.h

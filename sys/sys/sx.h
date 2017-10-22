@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/sx.h 230799 2012-01-31 01:45:20Z attilio $
  */
 
 #ifndef	_SYS_SX_H_

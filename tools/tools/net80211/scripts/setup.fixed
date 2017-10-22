@@ -2,7 +2,7 @@
 #
 # Script for testing fixed xmit rate handling.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/net80211/scripts/setup.fixed 178361 2008-04-20 20:43:42Z sam $
 #
 PATH=.:$PATH
 . config

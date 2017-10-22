@@ -1,5 +1,5 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/Makefile 248531 2013-03-19 20:00:34Z brooks $
 
 .include <bsd.own.mk>
 
@@ -217,8 +217,7 @@ distribution:
 	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 0500 \
 	    ${BSM_ETC_EXEC_FILES} ${BSM_ETC_DIR}
 .if ${MK_BIND_MTREE} != "no"
-	@if [ ! -e ${DESTDIR}/etc/namedb ]; then \
-		set -x; \
+	if [ ! -e ${DESTDIR}/etc/namedb ]; then \
 		ln -s ../var/named/etc/namedb ${DESTDIR}/etc/namedb; \
 	fi
 .endif
@@ -264,9 +263,8 @@ distribution:
 .if ${MK_MAIL} != "no"
 	cd ${.CURDIR}/mail; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 	    ${ETCMAIL} ${DESTDIR}/etc/mail
-	@if [ -d ${DESTDIR}/etc/mail -a -f ${DESTDIR}/etc/mail/aliases -a \
+	if [ -d ${DESTDIR}/etc/mail -a -f ${DESTDIR}/etc/mail/aliases -a \
 	      ! -f ${DESTDIR}/etc/aliases ]; then \
-		set -x; \
 		ln -s mail/aliases ${DESTDIR}/etc/aliases; \
 	fi
 .endif
@@ -290,52 +288,59 @@ distribution:
 		${DESTDIR}/etc/nsswitch.conf
 .endif
 
-distrib-dirs:
-	mtree -eU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BSD.root.dist -p ${DESTDIR}/
-	mtree -eU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BSD.var.dist -p ${DESTDIR}/var
-	mtree -eU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BSD.usr.dist -p ${DESTDIR}/usr
-	mtree -eU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BSD.include.dist \
-		-p ${DESTDIR}/usr/include
+MTREE_CMD?=	mtree
+
+MTREES=		mtree/BSD.root.dist		/		\
+		mtree/BSD.var.dist		/var		\
+		mtree/BSD.usr.dist		/usr		\
+		mtree/BSD.include.dist		/usr/include
 .if ${MK_BIND_LIBS} != "no"
-	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BIND.include.dist \
-	    -p ${DESTDIR}/usr/include
+MTREES+=	mtree/BIND.include.dist		/usr/include
 .endif
 .if ${MK_BIND_MTREE} != "no"
-	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BIND.chroot.dist \
-	    -p ${DESTDIR}/var/named
+MTREES+=	mtree/BIND.chroot.dist		/var/named
 .endif
 .if ${MK_GROFF} != "no"
-	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BSD.groff.dist -p ${DESTDIR}/usr
+MTREES+=	mtree/BSD.groff.dist		/usr
 .endif
 .if ${MK_SENDMAIL} != "no"
-	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BSD.sendmail.dist -p ${DESTDIR}/
+MTREES+=	mtree/BSD.sendmail.dist		/
 .endif
-	cd ${DESTDIR}/; rm -f ${DESTDIR}/sys; ln -s usr/src/sys sys
-	cd ${DESTDIR}/usr/share/man/en.ISO8859-1; ln -sf ../man* .
-	cd ${DESTDIR}/usr/share/man/en.UTF-8; ln -sf ../man* .
+.for mtree in ${LOCAL_MTREE}
+MTREES+=	../${mtree}			/
+.endfor
+
+distrib-dirs:
+	@set ${MTREES}; \
+	while test $$# -ge 2; do \
+		m=${.CURDIR}/$$1; \
+		shift; \
+		d=${DESTDIR}$$1; \
+		shift; \
+		${ECHO} ${MTREE_CMD} -deU ${MTREE_FOLLOWS_SYMLINKS} \
+		    -f $$m -p $$d; \
+		${MTREE_CMD} -deU ${MTREE_FOLLOWS_SYMLINKS} -f $$m -p $$d; \
+	done; true
+	ln -sfh usr/src/sys ${DESTDIR}/sys
 	cd ${DESTDIR}/usr/share/man; \
-	set - `grep "^[a-zA-Z]" ${.CURDIR}/man.alias`; \
-	while [ $$# -gt 0 ] ; \
-	do \
-		rm -rf "$$1"; \
-		ln -s "$$2" "$$1"; \
-		shift; shift; \
+	for mandir in man*; do \
+		ln -sfh ../$$mandir ${DESTDIR}/usr/share/man/en.ISO8859-1/; \
+		ln -sfh ../$$mandir ${DESTDIR}/usr/share/man/en.UTF-8/; \
 	done
 	cd ${DESTDIR}/usr/share/openssl/man; \
+	for mandir in man*; do \
+		ln -sfh ../$$mandir \
+		    ${DESTDIR}/usr/share/openssl/man/en.ISO8859-1/; \
+	done
 	set - `grep "^[a-zA-Z]" ${.CURDIR}/man.alias`; \
-	while [ $$# -gt 0 ] ; \
-	do \
-		rm -rf "$$1"; \
-		ln -s "$$2" "$$1"; \
+	while [ $$# -gt 0 ] ; do \
+		ln -sfh "$$2" "${DESTDIR}/usr/share/man/$$1"; \
+		ln -sfh "$$2" "${DESTDIR}/usr/share/openssl/man/$$1"; \
 		shift; shift; \
 	done
-	cd ${DESTDIR}/usr/share/openssl/man/en.ISO8859-1; ln -sf ../man* .
-	cd ${DESTDIR}/usr/share/nls; \
 	set - `grep "^[a-zA-Z]" ${.CURDIR}/nls.alias`; \
-	while [ $$# -gt 0 ] ; \
-	do \
-		rm -rf "$$1"; \
-		ln -s "$$2" "$$1"; \
+	while [ $$# -gt 0 ] ; do \
+		ln -sfh "$$2" "${DESTDIR}/usr/share/nls/$$1"; \
 		shift; shift; \
 	done
 

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/mktemp/Makefile 90415 2002-02-08 22:31:43Z markm $
 
 PROG=	mktemp
 

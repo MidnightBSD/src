@@ -35,7 +35,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/firewire/fwmem.c 249132 2013-04-05 08:22:11Z mav $");
 #endif
 
 #include <sys/param.h>
@@ -73,7 +73,7 @@ __FBSDID("$FreeBSD$");
 static int fwmem_speed=2, fwmem_debug=0;
 static struct fw_eui64 fwmem_eui64;
 SYSCTL_DECL(_hw_firewire);
-SYSCTL_NODE(_hw_firewire, OID_AUTO, fwmem, CTLFLAG_RD, 0,
+static SYSCTL_NODE(_hw_firewire, OID_AUTO, fwmem, CTLFLAG_RD, 0,
 	"FireWire Memory Access");
 SYSCTL_UINT(_hw_firewire_fwmem, OID_AUTO, eui64_hi, CTLFLAG_RW,
 	&fwmem_eui64.hi, 0, "Fwmem target EUI64 high");
@@ -84,7 +84,7 @@ SYSCTL_INT(_hw_firewire_fwmem, OID_AUTO, speed, CTLFLAG_RW, &fwmem_speed, 0,
 SYSCTL_INT(_debug, OID_AUTO, fwmem_debug, CTLFLAG_RW, &fwmem_debug, 0,
 	"Fwmem driver debug flag");
 
-MALLOC_DEFINE(M_FWMEM, "fwmem", "fwmem/FireWire");
+static MALLOC_DEFINE(M_FWMEM, "fwmem", "fwmem/FireWire");
 
 #define MAXLEN (512 << fwmem_speed)
 

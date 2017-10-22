@@ -1,5 +1,5 @@
 #	from: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
-# $FreeBSD$
+# $FreeBSD: stable/9/share/mk/bsd.prog.mk 248339 2013-03-15 19:50:21Z brooks $
 
 .include <bsd.init.mk>
 
@@ -15,16 +15,11 @@ CFLAGS+= -DNDEBUG
 NO_WERROR=
 .endif
 
-# Enable CTF conversion on request.
-.if defined(WITH_CTF)
-.undef NO_CTF
-.endif
-
 .if defined(DEBUG_FLAGS)
 CFLAGS+=${DEBUG_FLAGS}
 CXXFLAGS+=${DEBUG_FLAGS}
 
-.if !defined(NO_CTF) && (${DEBUG_FLAGS:M-g} != "")
+.if ${MK_CTF} != "no" && ${DEBUG_FLAGS:M-g} != ""
 CTFFLAGS+= -g
 .endif
 .endif
@@ -60,9 +55,9 @@ ${PROG}: ${OBJS}
 .else
 	${CC} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
 .endif
-	@[ -z "${CTFMERGE}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS} && \
-		${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS})
+.if ${MK_CTF} != "no"
+	${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS}
+.endif
 
 .else	# !defined(SRCS)
 
@@ -90,9 +85,9 @@ ${PROG}: ${OBJS}
 .else
 	${CC} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
 .endif
-	@[ -z "${CTFMERGE}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS} && \
-		${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS})
+.if ${MK_CTF} != "no"
+	${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS}
+.endif
 .endif
 
 .endif
@@ -100,8 +95,7 @@ ${PROG}: ${OBJS}
 .if	${MK_MAN} != "no" && !defined(MAN) && \
 	!defined(MAN1) && !defined(MAN2) && !defined(MAN3) && \
 	!defined(MAN4) && !defined(MAN5) && !defined(MAN6) && \
-	!defined(MAN7) && !defined(MAN8) && !defined(MAN9) && \
-	!defined(MAN1aout)
+	!defined(MAN7) && !defined(MAN8) && !defined(MAN9)
 MAN=	${PROG}.1
 MAN1=	${MAN}
 .endif
@@ -131,7 +125,11 @@ _EXTRADEPEND:
 .else
 	echo ${PROG}: ${LIBC} ${DPADD} >> ${DEPENDFILE}
 .if defined(PROG_CXX)
+.if !empty(CXXFLAGS:M-stdlib=libc++)
+	echo ${PROG}: ${LIBCPLUSPLUS} >> ${DEPENDFILE}
+.else
 	echo ${PROG}: ${LIBSTDCPLUSPLUS} >> ${DEPENDFILE}
+.endif
 .endif
 .endif
 .endif

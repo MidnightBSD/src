@@ -1,4 +1,4 @@
-#$FreeBSD$
+#$FreeBSD: stable/9/sys/arm/xscale/i80321/files.iq31244 177944 2008-04-05 21:57:11Z cognet $
 arm/xscale/i80321/iq80321.c		standard
 arm/xscale/i80321/iq31244_machdep.c	standard
 arm/xscale/i80321/iq31244_7seg.c	optional	iq31244_7seg

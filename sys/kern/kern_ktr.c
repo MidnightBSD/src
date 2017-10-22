@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_ktr.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_ddb.h"
 #include "opt_ktr.h"
@@ -80,7 +80,7 @@ __FBSDID("$FreeBSD$");
 
 FEATURE(ktr, "Kernel support for KTR kernel tracing facility");
 
-SYSCTL_NODE(_debug, OID_AUTO, ktr, CTLFLAG_RD, 0, "KTR options");
+static SYSCTL_NODE(_debug, OID_AUTO, ktr, CTLFLAG_RD, 0, "KTR options");
 
 int	ktr_mask = KTR_MASK;
 TUNABLE_INT("debug.ktr.mask", &ktr_mask);
@@ -283,7 +283,7 @@ ktr_tracepoint(u_int mask, const char *file, int line, const char *format,
 	{
 		do {
 			saveindex = ktr_idx;
-			newindex = (saveindex + 1) & (KTR_ENTRIES - 1);
+			newindex = (saveindex + 1) % KTR_ENTRIES;
 		} while (atomic_cmpset_rel_int(&ktr_idx, saveindex, newindex) == 0);
 		entry = &ktr_buf[saveindex];
 	}
@@ -338,7 +338,7 @@ static	int db_mach_vtrace(void);
 DB_SHOW_COMMAND(ktr, db_ktr_all)
 {
 	
-	tstate.cur = (ktr_idx - 1) & (KTR_ENTRIES - 1);
+	tstate.cur = (ktr_idx - 1) % KTR_ENTRIES;
 	tstate.first = -1;
 	db_ktr_verbose = 0;
 	db_ktr_verbose |= (index(modif, 'v') != NULL) ? 2 : 0;

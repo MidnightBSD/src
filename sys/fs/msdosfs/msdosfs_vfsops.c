@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/fs/msdosfs/msdosfs_vfsops.c 247685 2013-03-03 07:09:25Z kib $ */
 /*	$NetBSD: msdosfs_vfsops.c,v 1.51 1997/11/17 15:36:58 ws Exp $	*/
 
 /*-
@@ -553,8 +553,7 @@ mountmsdosfs(struct vnode *devvp, struct mount *mp)
 	}
 
 	if (pmp->pm_RootDirEnts == 0) {
-		if (pmp->pm_Sectors
-		    || pmp->pm_FATsecs
+		if (pmp->pm_FATsecs
 		    || getushort(b710->bpbFSVers)) {
 			error = EINVAL;
 #ifdef MSDOSFS_DEBUG
@@ -898,6 +897,40 @@ msdosfs_statfs(struct mount *mp, struct statfs *sbp)
 	return (0);
 }
 
+/*
+ * If we have an FSInfo block, update it.
+ */
+static int
+msdosfs_fsiflush(struct msdosfsmount *pmp, int waitfor)
+{
+	struct fsinfo *fp;
+	struct buf *bp;
+	int error;
+
+	MSDOSFS_LOCK_MP(pmp);
+	if (pmp->pm_fsinfo == 0 || (pmp->pm_flags & MSDOSFS_FSIMOD) == 0) {
+		error = 0;
+		goto unlock;
+	}
+	error = bread(pmp->pm_devvp, pmp->pm_fsinfo, pmp->pm_BytesPerSec,
+	    NOCRED, &bp);
+	if (error != 0) {
+		brelse(bp);
+		goto unlock;
+	}
+	fp = (struct fsinfo *)bp->b_data;
+	putulong(fp->fsinfree, pmp->pm_freeclustercount);
+	putulong(fp->fsinxtfree, pmp->pm_nxtfree);
+	pmp->pm_flags &= ~MSDOSFS_FSIMOD;
+	if (waitfor == MNT_WAIT)
+		error = bwrite(bp);
+	else
+		bawrite(bp);
+unlock:
+	MSDOSFS_UNLOCK_MP(pmp);
+	return (error);
+}
+
 static int
 msdosfs_sync(struct mount *mp, int waitfor)
 {
@@ -960,6 +993,10 @@ loop:
 			allerror = error;
 		VOP_UNLOCK(pmp->pm_devvp, 0);
 	}
+
+	error = msdosfs_fsiflush(pmp, waitfor);
+	if (error != 0)
+		allerror = error;
 	return (allerror);
 }
 

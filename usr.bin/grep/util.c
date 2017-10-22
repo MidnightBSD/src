@@ -1,5 +1,5 @@
 /*	$NetBSD: util.c,v 1.9 2011/02/27 17:33:37 joerg Exp $	*/
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/usr.bin/grep/util.c 246279 2013-02-03 03:38:44Z eadler $	*/
 /*	$OpenBSD: util.c,v 1.39 2010/07/02 22:18:03 tedu Exp $	*/
 
 /*-
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/grep/util.c 246279 2013-02-03 03:38:44Z eadler $");
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -176,8 +176,7 @@ procfile(const char *fn)
 	mode_t s;
 	int c, t;
 
-	if (mflag && (mcount <= 0))
-		return (0);
+	mcount = mlimit;
 
 	if (strcmp(fn, "-") == 0) {
 		fn = label != NULL ? label : getstr(1);

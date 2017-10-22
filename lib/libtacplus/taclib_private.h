@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$FreeBSD: stable/9/lib/libtacplus/taclib_private.h 200399 2009-12-11 07:53:44Z syrinx $
  */
 
 #ifndef TACLIB_PRIVATE_H

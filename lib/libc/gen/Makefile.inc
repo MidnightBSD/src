@@ -1,5 +1,5 @@
 #	@(#)Makefile.inc	8.6 (Berkeley) 5/4/95
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libc/gen/Makefile.inc 245439 2013-01-14 22:00:43Z brooks $
 
 # machine-independent gen sources
 .PATH: ${.CURDIR}/${LIBC_ARCH}/gen ${.CURDIR}/gen
@@ -24,7 +24,7 @@ SRCS+=  __getosreldate.c __xuname.c \
 	lockf.c lrand48.c mrand48.c nftw.c nice.c \
 	nlist.c nrand48.c opendir.c \
 	pause.c pmadvise.c popen.c posix_spawn.c \
-	psignal.c pututxline.c pw_scan.c pwcache.c \
+	psignal.c pututxline.c pw_scan.c \
 	raise.c readdir.c readpassphrase.c rewinddir.c \
 	scandir.c seed48.c seekdir.c semctl.c \
 	setdomainname.c sethostname.c setjmperr.c setmode.c \
@@ -32,9 +32,16 @@ SRCS+=  __getosreldate.c __xuname.c \
 	sigsetops.c sleep.c srand48.c statvfs.c stringlist.c strtofflags.c \
 	sysconf.c sysctl.c sysctlbyname.c sysctlnametomib.c \
 	syslog.c telldir.c termios.c time.c times.c timezone.c tls.c \
-	ttyname.c ttyslot.c ualarm.c ulimit.c uname.c unvis.c \
-	usleep.c utime.c utxdb.c valloc.c vis.c wait.c wait3.c waitpid.c \
-	wordexp.c
+	ttyname.c ttyslot.c ualarm.c ulimit.c uname.c unvis-compat.c \
+	usleep.c utime.c utxdb.c valloc.c wait.c wait3.c waitpid.c \
+	waitid.c wordexp.c
+
+.PATH: ${.CURDIR}/../../contrib/libc-pwcache
+SRCS+=	pwcache.c pwcache.h
+
+.PATH: ${.CURDIR}/../../contrib/libc-vis
+CFLAGS+=	-I${.CURDIR}/../../contrib/libc-vis
+SRCS+=	unvis.c vis.c
 
 CANCELPOINTS_SRCS=sem.c sem_new.c
 .for src in ${CANCELPOINTS_SRCS}

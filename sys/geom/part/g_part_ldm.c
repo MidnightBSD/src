@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/part/g_part_ldm.c 234406 2012-04-18 04:59:47Z ae $");
 
 #include <sys/param.h>
 #include <sys/bio.h>

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/ata/Makefile 183724 2008-10-09 12:56:57Z sos $
 
 SUBDIR = atacore
 SUBDIR += atacard

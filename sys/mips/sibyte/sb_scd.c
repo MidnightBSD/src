@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/sibyte/sb_scd.c 222813 2011-06-07 08:46:13Z attilio $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

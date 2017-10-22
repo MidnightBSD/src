@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/aesni/Makefile 237986 2012-07-02 09:47:38Z obrien $
 
 .PATH: ${.CURDIR}/../../crypto/aesni
 

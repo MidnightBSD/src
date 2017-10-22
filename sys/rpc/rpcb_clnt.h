@@ -1,5 +1,5 @@
 /*	$NetBSD: rpcb_clnt.h,v 1.1 2000/06/02 22:57:56 fvdl Exp $	*/
-/*	$FreeBSD$ */
+/*	$FreeBSD: stable/9/sys/rpc/rpcb_clnt.h 177633 2008-03-26 15:23:12Z dfr $ */
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for

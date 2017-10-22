@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/kerberos5/usr.bin/kdestroy/Makefile 201918 2010-01-09 18:51:50Z antoine $
 
 PROG=	kdestroy
 CFLAGS+=-I${KRB5DIR}/lib/roken

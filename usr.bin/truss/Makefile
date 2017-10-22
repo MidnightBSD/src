@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/truss/Makefile 234444 2012-04-18 20:32:07Z dim $
 
 NO_WERROR=
 PROG=	truss

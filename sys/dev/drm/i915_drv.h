@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/i915_drv.h 229157 2011-12-31 20:42:34Z mdf $");
 
 #ifndef _I915_DRV_H_
 #define _I915_DRV_H_

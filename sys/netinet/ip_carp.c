@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_carp.c 233200 2012-03-19 20:49:16Z jhb $");
 
 #include "opt_bpf.h"
 #include "opt_inet.h"

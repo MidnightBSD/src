@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/sound/sound/Makefile 212523 2010-09-13 02:05:42Z imp $
 
 .PATH: ${.CURDIR}/../../../dev/sound
 .PATH: ${.CURDIR}/../../../dev/sound/pcm

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/symlink/11.t 210984 2010-08-06 23:58:54Z pjd $
 
 desc="symlink returns ENOSPC if there are no free inodes on the file system on which the symbolic link is being created"
 

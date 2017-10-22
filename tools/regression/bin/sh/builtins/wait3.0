@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/bin/sh/builtins/wait3.0 215547 2010-11-19 21:15:06Z jilles $
 
 failures=
 failure() {

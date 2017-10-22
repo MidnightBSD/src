@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)getnetgrent.c	8.2 (Berkeley) 4/27/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/getnetgrent.c 237267 2012-06-19 10:07:50Z kib $");
 
 #include <ctype.h>
 #include <stdio.h>

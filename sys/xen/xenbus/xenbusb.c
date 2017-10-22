@@ -52,7 +52,7 @@
  *                        xnb1
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/xen/xenbus/xenbusb.c 225704 2011-09-20 23:44:34Z gibbs $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

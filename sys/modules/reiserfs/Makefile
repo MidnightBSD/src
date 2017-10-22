@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/reiserfs/Makefile 147476 2005-06-18 17:10:50Z dumbbell $
 
 .PATH: ${.CURDIR}/../../gnu/fs/reiserfs
 KMOD=	reiserfs

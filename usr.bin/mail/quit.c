@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)quit.c	8.2 (Berkeley) 4/28/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/mail/quit.c 216564 2010-12-19 16:25:23Z charnier $");
 
 #include "rcv.h"
 #include <fcntl.h>

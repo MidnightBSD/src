@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cddl/contrib/opensolaris/common/atomic/ia64/opensolaris_atomic.S 221112 2011-04-27 04:03:04Z marcel $
  */
 
 #include <machine/asm.h>

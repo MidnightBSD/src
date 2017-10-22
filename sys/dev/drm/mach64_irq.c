@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/mach64_irq.c 189130 2009-02-28 02:37:55Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

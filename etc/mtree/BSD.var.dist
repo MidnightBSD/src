@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/mtree/BSD.var.dist 244771 2012-12-28 10:58:03Z ume $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -18,6 +18,10 @@
 /set mode=0750
 /set gname=audit
     audit
+        dist            uname=auditdistd gname=audit mode=0770
+        ..
+        remote          uname=auditdistd gname=wheel mode=0700
+        ..
     ..
 /set gname=wheel
     backups

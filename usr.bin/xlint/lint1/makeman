@@ -66,7 +66,7 @@ cat << \__EOF
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/usr.bin/xlint/lint1/makeman 203971 2010-02-16 21:43:57Z imp $
 .\"
 .Dd July 5, 2000
 .Dt LINT 7

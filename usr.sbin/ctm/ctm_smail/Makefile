@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/ctm/ctm_smail/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 .PATH: ${.CURDIR}/../ctm_rmail
 

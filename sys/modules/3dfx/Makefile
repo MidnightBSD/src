@@ -1,6 +1,4 @@
-# $FreeBSD$
-
-MAINTAINER=	cokane@FreeBSD.org
+# $FreeBSD: stable/9/sys/modules/3dfx/Makefile 242112 2012-10-26 00:44:32Z eadler $
 
 .PATH: $(.CURDIR)/../../dev/tdfx
 

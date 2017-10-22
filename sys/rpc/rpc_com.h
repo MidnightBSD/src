@@ -28,7 +28,7 @@
  * 2550 Garcia Avenue
  * Mountain View, California  94043
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/rpc/rpc_com.h 240542 2012-09-16 00:32:25Z pfg $
  */
 /*
  * Copyright (c) 1986 - 1991 by Sun Microsystems, Inc.
@@ -114,8 +114,8 @@ extern int __rpc_sockisbound(struct socket*);
 extern int bindresvport(struct socket *so, struct sockaddr *sa);
 
 struct xucred;
-struct __rpc_xdr;
-bool_t xdr_authunix_parms(struct __rpc_xdr *xdrs, uint32_t *time, struct xucred *cred);
+struct XDR;
+bool_t xdr_authunix_parms(struct XDR *xdrs, uint32_t *time, struct xucred *cred);
 #endif
 
 __END_DECLS

@@ -5,7 +5,7 @@
 # provided that this notice is preserved and due credit is given
 # to the original author and the contributors.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/contrib/ipfilter/Makefile 172776 2007-10-18 21:52:14Z darrenr $
 # Id: Makefile,v 2.76.2.24 2007/09/26 10:04:03 darrenr Exp $
 #
 SHELL=/bin/sh

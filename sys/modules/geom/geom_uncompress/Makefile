@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/geom/geom_uncompress/Makefile 229537 2012-01-04 23:39:11Z ray $
 
 .PATH: ${.CURDIR}/../../../geom/uncompress \
     ${.CURDIR}/../../../contrib/xz-embedded/freebsd/ \

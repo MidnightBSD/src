@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/memcontrol/memcontrol.c 242022 2012-10-25 01:20:19Z eadler $
  */
 
 #include <sys/types.h>
@@ -235,7 +235,7 @@ setfunc(int memfd, int argc, char *argv[])
     while(argc--) {
 	for (i = 0; attrnames[i].name != NULL; i++) {
 	    if (!strcmp(attrnames[i].name, argv[0])) {
-		if (!attrnames[i].kind & MDF_SETTABLE)
+		if (!(attrnames[i].kind & MDF_SETTABLE))
 		    help("flags");
 		mrd.mr_flags |= attrnames[i].val;
 		break;

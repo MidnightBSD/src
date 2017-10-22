@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/fs/cd9660/cd9660_rrip.c 193066 2009-05-29 21:27:12Z jamie $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

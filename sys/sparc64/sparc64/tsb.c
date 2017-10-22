@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/tsb.c 237627 2012-06-27 05:38:39Z alc $");
 
 #include "opt_ddb.h"
 #include "opt_pmap.h"

@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)lock.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/lock/lock.c 242166 2012-10-27 01:20:48Z eadler $");
 
 /*
  * Lock a terminal up until the given key is entered or the given
@@ -129,7 +129,9 @@ main(int argc, char **argv)
 		}
 	timeout.tv_sec = sectimeout * 60;
 
-	setuid(getuid());		/* discard privs */
+	/* discard privs */
+	if (setuid(getuid()) != 0)
+		errx(1, "setuid failed");
 
 	if (tcgetattr(0, &tty))		/* get information for header */
 		exit(1);

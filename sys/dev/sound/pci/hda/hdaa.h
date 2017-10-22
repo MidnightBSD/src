@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/sound/pci/hda/hdaa.h 243060 2012-11-15 05:54:18Z mav $
  */
 
 /*
@@ -260,7 +260,7 @@ struct hdaa_chan {
 		(((uint32_t)hda_get_vendor_id(devinfo->dev) << 16) +	\
 		hda_get_device_id(devinfo->dev))
 
-#define hdaa_subvendor_id(devinfo)					\
+#define hdaa_card_id(devinfo)					\
 		(((uint32_t)hda_get_subdevice_id(devinfo->dev) << 16) +	\
 		hda_get_subvendor_id(devinfo->dev))
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/mips/dump_machdep.c 224845 2011-08-13 17:17:04Z attilio $");
 
 #include "opt_watchdog.h"
 

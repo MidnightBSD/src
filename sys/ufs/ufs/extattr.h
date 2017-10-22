@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ufs/ufs/extattr.h 191990 2009-05-11 15:33:26Z attilio $
  */
 /*
  * Developed by the TrustedBSD Project.

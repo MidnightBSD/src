@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/adm5120/adm5120_machdep.c 216320 2010-12-09 07:47:40Z gonzo $");
 
 #include "opt_ddb.h"
 

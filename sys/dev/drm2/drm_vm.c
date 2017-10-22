@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/drm_vm.c 235783 2012-05-22 11:07:44Z kib $");
 
 /** @file drm_vm.c
  * Support code for mmaping of DRM maps.

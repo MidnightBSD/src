@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufsmount.h	8.6 (Berkeley) 3/30/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/ext2fs/ext2_mount.h 247055 2013-02-20 20:56:07Z pfg $
  */
 
 #ifndef _FS_EXT2FS_EXT2_MOUNT_H_
@@ -48,7 +48,6 @@ struct ext2mount {
 	struct	vnode *um_devvp;		/* block device mounted vnode */
 
 	struct	m_ext2fs *um_e2fs;		/* EXT2FS */
-#define em_e2fsb um_e2fs->e2fs
 
 	u_long	um_nindir;			/* indirect ptrs per block */
 	u_long	um_bptrtodb;			/* indir ptr to disk block */

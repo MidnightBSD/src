@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/bin/sh/builtins/cd1.0 213713 2010-10-11 23:24:57Z obrien $
 set -e
 
 P=${TMPDIR:-/tmp}

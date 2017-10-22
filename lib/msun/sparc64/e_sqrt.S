@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$")
+__FBSDID("$FreeBSD: stable/9/lib/msun/sparc64/e_sqrt.S 142182 2005-02-21 18:27:57Z das $")
 
 ENTRY(sqrt)
 	retl

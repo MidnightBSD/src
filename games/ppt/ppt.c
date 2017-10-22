@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)ppt.c	8.1 (Berkeley) 5/31/93";
 #endif
 static const char rcsid[] =
- "$FreeBSD$";
+ "$FreeBSD: stable/9/games/ppt/ppt.c 203932 2010-02-15 18:46:02Z imp $";
 #endif /* not lint */
 
 #include <stdio.h>

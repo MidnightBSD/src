@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__RCSID("$FreeBSD$");
+__RCSID("$FreeBSD: stable/9/usr.sbin/mptutil/mpt_config.c 215678 2010-11-22 14:36:04Z jhb $");
 
 #include <sys/param.h>
 #include <sys/errno.h>

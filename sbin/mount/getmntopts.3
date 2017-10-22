@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)getmntopts.3	8.3 (Berkeley) 3/30/95
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/sbin/mount/getmntopts.3 241671 2012-10-18 01:14:22Z eadler $
 .\"
 .Dd February 17, 2008
 .Dt GETMNTOPTS 3
@@ -70,8 +70,8 @@ has the following format:
 .Bd -literal
 struct mntopt {
 	char *m_option;		/* option name */
-	int m_inverse;		/* is this a negative option, e.g. "dev" */
-	int m_flag;		/* bit to set, e.g. MNT_RDONLY */
+	int m_inverse;		/* is this a negative option, e.g., "dev" */
+	int m_flag;		/* bit to set, e.g., MNT_RDONLY */
 	int m_altloc;		/* non-zero to use altflagp rather than flagp */
 };
 .Ed

@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)tables.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/pax/tables.c 222177 2011-05-22 14:03:38Z uqs $");
 
 #include <sys/types.h>
 #include <sys/time.h>

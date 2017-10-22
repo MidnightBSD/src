@@ -8,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/identcpu.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -26,7 +26,7 @@ static char cpu_model[128];
 SYSCTL_STRING(_hw, HW_MODEL, model, CTLFLAG_RD,
     cpu_model, 0, "Machine model");
 
-SYSCTL_NODE(_hw, OID_AUTO, freq, CTLFLAG_RD, 0, "");
+static SYSCTL_NODE(_hw, OID_AUTO, freq, CTLFLAG_RD, 0, "");
 
 static u_int cpu_count;
 static u_int cpu_freq;

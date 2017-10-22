@@ -1,4 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/clang/libclangarcmigrate/Makefile 246637 2013-02-10 21:24:47Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	clangarcmigrate
 
@@ -26,6 +28,7 @@ SRCS=	ARCMT.cpp \
 TGHDRS=	AttrList \
 	AttrParsedAttrList \
 	Attrs \
+	CommentNodes \
 	DeclNodes \
 	DiagnosticCommonKinds \
 	DiagnosticGroups \

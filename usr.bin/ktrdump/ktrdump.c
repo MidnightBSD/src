@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/ktrdump/ktrdump.c 243097 2012-11-15 19:27:11Z np $");
 
 #include <sys/types.h>
 #include <sys/ktr.h>
@@ -218,7 +218,7 @@ main(int ac, char **av)
 	 * Now tear through the trace buffer.
 	 */
 	if (!iflag)
-		i = (index - 1) & (entries - 1);
+		i = (index - 1) % entries;
 	tlast = -1;
 	for (;;) {
 		if (buf[i].ktr_desc == NULL)
@@ -286,7 +286,7 @@ next:			if ((c = *p++) == '\0')
 		if (!iflag) {
 			if (i == index)
 				break;
-			i = (i - 1) & (entries - 1);
+			i = (i - 1) % entries;
 		} else {
 			if (++i == entries)
 				break;

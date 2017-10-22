@@ -24,7 +24,7 @@
 #  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 #  SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/man/man.sh 248339 2013-03-15 19:50:21Z brooks $
 
 # Usage: add_to_manpath path
 # Adds a variable to manpath while ensuring we don't have duplicates.
@@ -945,7 +945,7 @@ STTY=/bin/stty
 SYSCTL=/sbin/sysctl
 
 debug=0
-man_default_sections='1:1aout:8:2:3:n:4:5:6:7:9:l'
+man_default_sections='1:8:2:3:n:4:5:6:7:9:l'
 man_default_path='/usr/share/man:/usr/share/openssl/man:/usr/local/man'
 cattool='/usr/bin/zcat -f'
 

@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/mmc/mmc.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -106,7 +106,7 @@ struct mmc_ivars {
 
 #define CMD_RETRIES	3
 
-SYSCTL_NODE(_hw, OID_AUTO, mmc, CTLFLAG_RD, NULL, "mmc driver");
+static SYSCTL_NODE(_hw, OID_AUTO, mmc, CTLFLAG_RD, NULL, "mmc driver");
 
 static int mmc_debug;
 SYSCTL_INT(_hw_mmc, OID_AUTO, debug, CTLFLAG_RW, &mmc_debug, 0, "Debug level");
@@ -878,7 +878,7 @@ mmc_format_card_id_string(struct mmc_ivars *ivar)
 	else
 		snprintf(oidstr, sizeof(oidstr), "0x%04x", ivar->cid.oid);
 	snprintf(ivar->card_id_string, sizeof(ivar->card_id_string),
-	    "%s%s %s %d.%d SN %d MFG %02d/%04d by %d %s",
+	    "%s%s %s %d.%d SN %u MFG %02d/%04d by %d %s",
 	    ivar->mode == mode_sd ? "SD" : "MMC", ivar->high_cap ? "HC" : "",
 	    ivar->cid.pnm, ivar->cid.prv >> 4, ivar->cid.prv & 0x0f,
 	    ivar->cid.psn, ivar->cid.mdt_month, ivar->cid.mdt_year,

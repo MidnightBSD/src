@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/kern/bus_if.m 247344 2013-02-26 20:19:19Z jhb $
 #
 
 #include <sys/types.h>
@@ -157,6 +157,20 @@ METHOD int write_ivar {
 	device_t _child;
 	int _indx;
 	uintptr_t _value;
+};
+
+/**
+ * @brief Notify a bus that a child was deleted
+ *
+ * Called at the beginning of device_delete_child() to allow the parent
+ * to teardown any bus-specific state for the child.
+ * 
+ * @param _dev		the device whose child is being deleted
+ * @param _child	the child device which is being deleted
+ */
+METHOD void child_deleted {
+	device_t _dev;
+	device_t _child;
 };
 
 /**

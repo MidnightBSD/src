@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/amd64/amd64/genassym.c 231979 2012-02-21 20:56:03Z kib $");
 
 #include "opt_compat.h"
 #include "opt_hwpmc_hooks.h"

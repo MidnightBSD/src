@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sysinstall/options.c 248313 2013-03-15 05:00:51Z dteske $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -74,6 +74,12 @@ mediaCheck(Option *opt)
 
 	case DEVICE_TYPE_FTP:
 	    return "FTP";
+
+	case DEVICE_TYPE_HTTP:
+	    return "HTTP Proxy";
+
+	case DEVICE_TYPE_HTTP_DIRECT:
+	    return "HTTP Direct";
 
 	case DEVICE_TYPE_CDROM:
 	    return "CDROM";

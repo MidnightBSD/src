@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/tools/net80211/w00t/redir/buddy.c 160996 2006-08-05 05:18:03Z sam $
  */
 #include <sys/uio.h>
 #include <sys/types.h>

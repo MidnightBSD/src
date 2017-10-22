@@ -1,7 +1,7 @@
 /*-
  * Test 0036:	BPF_ALU+BPF_AND+BPF_K
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/bpf/bpf_filter/tests/test0036.h 182393 2008-08-28 18:38:55Z jkim $
  */
 
 /* BPF program */

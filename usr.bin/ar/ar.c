@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/ar/ar.c 222122 2011-05-20 11:29:09Z bcr $");
 
 #include <sys/queue.h>
 #include <sys/types.h>

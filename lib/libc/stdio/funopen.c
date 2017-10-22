@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)funopen.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/stdio/funopen.c 200150 2009-12-05 19:31:38Z ed $");
 
 #include <stdio.h>
 #include <errno.h>

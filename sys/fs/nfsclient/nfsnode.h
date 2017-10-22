@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/nfsclient/nfsnode.h 236096 2012-05-26 13:12:14Z rmacklem $
  */
 
 #ifndef _NFSCLIENT_NFSNODE_H_

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/ncplist/Makefile 229203 2012-01-01 20:53:33Z dim $
 
 PROG=	ncplist
 NO_WCAST_ALIGN=

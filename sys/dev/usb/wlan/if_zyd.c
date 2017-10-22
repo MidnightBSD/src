@@ -1,6 +1,6 @@
 /*	$OpenBSD: if_zyd.c,v 1.52 2007/02/11 00:08:04 jsg Exp $	*/
 /*	$NetBSD: if_zyd.c,v 1.7 2007/06/21 04:04:29 kiyohara Exp $	*/
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_zyd.c 248085 2013-03-09 02:36:32Z marius $	*/
 
 /*-
  * Copyright (c) 2006 by Damien Bergamini <damien.bergamini@free.fr>
@@ -20,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/wlan/if_zyd.c 248085 2013-03-09 02:36:32Z marius $");
 
 /*
  * ZyDAS ZD1211/ZD1211B USB WLAN driver.
@@ -78,7 +78,7 @@ __FBSDID("$FreeBSD$");
 #ifdef USB_DEBUG
 static int zyd_debug = 0;
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, zyd, CTLFLAG_RW, 0, "USB zyd");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, zyd, CTLFLAG_RW, 0, "USB zyd");
 SYSCTL_INT(_hw_usb_zyd, OID_AUTO, debug, CTLFLAG_RW, &zyd_debug, 0,
     "zyd debug level");
 
@@ -2191,9 +2191,9 @@ zyd_rx_data(struct usb_xfer *xfer, int offset, uint16_t len)
 		ifp->if_ierrors++;
 		return;
 	} else if (rlen > (int)MHLEN)
-		m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+		m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	else
-		m = m_gethdr(M_DONTWAIT, MT_DATA);
+		m = m_gethdr(M_NOWAIT, MT_DATA);
 	if (m == NULL) {
 		DPRINTF(sc, ZYD_DEBUG_RECV, "%s: could not allocate rx mbuf\n",
 		    device_get_nameunit(sc->sc_dev));

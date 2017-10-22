@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/dev/pci/pci_if.m 169221 2007-05-02 17:50:36Z jhb $
 #
 
 #include <sys/bus.h>

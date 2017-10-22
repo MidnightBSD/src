@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -68,7 +68,7 @@ __FBSDID("$FreeBSD$");
 
 #include <vm/vm_param.h>
 
-MALLOC_DEFINE(M_ACPIDEV, "acpidev", "ACPI devices");
+static MALLOC_DEFINE(M_ACPIDEV, "acpidev", "ACPI devices");
 
 /* Hooks for the ACPI CA debugging infrastructure */
 #define _COMPONENT	ACPI_BUS
@@ -1960,6 +1960,7 @@ static void
 acpi_shutdown_final(void *arg, int howto)
 {
     struct acpi_softc *sc = (struct acpi_softc *)arg;
+    register_t intr;
     ACPI_STATUS status;
 
     /*
@@ -1975,13 +1976,15 @@ acpi_shutdown_final(void *arg, int howto)
 	    return;
 	}
 	device_printf(sc->acpi_dev, "Powering system off\n");
-	ACPI_DISABLE_IRQS();
+	intr = intr_disable();
 	status = AcpiEnterSleepState(ACPI_STATE_S5);
-	if (ACPI_FAILURE(status))
+	if (ACPI_FAILURE(status)) {
+	    intr_restore(intr);
 	    device_printf(sc->acpi_dev, "power-off failed - %s\n",
 		AcpiFormatException(status));
-	else {
+	} else {
 	    DELAY(1000000);
+	    intr_restore(intr);
 	    device_printf(sc->acpi_dev, "power-off failed - timeout\n");
 	}
     } else if ((howto & RB_HALT) == 0 && sc->acpi_handle_reboot) {
@@ -2652,8 +2655,11 @@ enum acpi_sleep_state {
 static ACPI_STATUS
 acpi_EnterSleepState(struct acpi_softc *sc, int state)
 {
-    ACPI_STATUS	status;
+    register_t intr;
+    ACPI_STATUS status;
+    ACPI_EVENT_STATUS power_button_status;
     enum acpi_sleep_state slp_state;
+    int sleep_result;
 
     ACPI_FUNCTION_TRACE_U32((char *)(uintptr_t)__func__, state);
 
@@ -2733,15 +2739,61 @@ acpi_EnterSleepState(struct acpi_softc *sc, int state)
     if (sc->acpi_sleep_delay > 0)
 	DELAY(sc->acpi_sleep_delay * 1000000);
 
+    intr = intr_disable();
     if (state != ACPI_STATE_S1) {
-	acpi_sleep_machdep(sc, state);
+	sleep_result = acpi_sleep_machdep(sc, state);
+	acpi_wakeup_machdep(sc, state, sleep_result, 0);
+
+	/*
+	 * XXX According to ACPI specification SCI_EN bit should be restored
+	 * by ACPI platform (BIOS, firmware) to its pre-sleep state.
+	 * Unfortunately some BIOSes fail to do that and that leads to
+	 * unexpected and serious consequences during wake up like a system
+	 * getting stuck in SMI handlers.
+	 * This hack is picked up from Linux, which claims that it follows
+	 * Windows behavior.
+	 */
+	if (sleep_result == 1 && state != ACPI_STATE_S4)
+	    AcpiWriteBitRegister(ACPI_BITREG_SCI_ENABLE, ACPI_ENABLE_EVENT);
+
+
+	if (sleep_result == 1 && state == ACPI_STATE_S3) {
+	    /*
+	     * Prevent mis-interpretation of the wakeup by power button
+	     * as a request for power off.
+	     * Ideally we should post an appropriate wakeup event,
+	     * perhaps using acpi_event_power_button_wake or alike.
+	     *
+	     * Clearing of power button status after wakeup is mandated
+	     * by ACPI specification in section "Fixed Power Button".
+	     *
+	     * XXX As of ACPICA 20121114 AcpiGetEventStatus provides
+	     * status as 0/1 corressponding to inactive/active despite
+	     * its type being ACPI_EVENT_STATUS.  In other words,
+	     * we should not test for ACPI_EVENT_FLAG_SET for time being.
+	     */
+	    if (ACPI_SUCCESS(AcpiGetEventStatus(ACPI_EVENT_POWER_BUTTON,
+		&power_button_status)) && power_button_status != 0) {
+		AcpiClearEvent(ACPI_EVENT_POWER_BUTTON);
+		device_printf(sc->acpi_dev,
+		    "cleared fixed power button status\n");
+	    }
+	}
+
+	intr_restore(intr);
+
+	/* call acpi_wakeup_machdep() again with interrupt enabled */
+	acpi_wakeup_machdep(sc, state, sleep_result, 1);
+
+	if (sleep_result == -1)
+		goto backout;
 
 	/* Re-enable ACPI hardware on wakeup from sleep state 4. */
 	if (state == ACPI_STATE_S4)
 	    AcpiEnable();
     } else {
-	ACPI_DISABLE_IRQS();
 	status = AcpiEnterSleepState(state);
+	intr_restore(intr);
 	if (ACPI_FAILURE(status)) {
 	    device_printf(sc->acpi_dev, "AcpiEnterSleepState failed - %s\n",
 			  AcpiFormatException(status));

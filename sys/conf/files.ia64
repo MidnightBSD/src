@@ -1,7 +1,7 @@
 # This file tells config what files go into building a kernel,
 # files marked standard are always included.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/conf/files.ia64 240815 2012-09-22 12:32:00Z kib $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -137,3 +137,4 @@ libkern/ia64/bswap16.S		standard
 libkern/ia64/bswap32.S		standard
 libkern/memmove.c		standard
 libkern/memset.c		standard
+kern/subr_dummy_vdso_tc.c	standard

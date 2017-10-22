@@ -1,7 +1,7 @@
 # This file tells config what files go into building a kernel,
 # files marked standard are always included.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/conf/files.powerpc 240815 2012-09-22 12:32:00Z kib $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -58,6 +58,7 @@ dev/tsec/if_tsec.c		optional	tsec
 dev/tsec/if_tsec_fdt.c		optional	tsec fdt
 dev/uart/uart_cpu_powerpc.c	optional	uart aim
 kern/kern_clocksource.c		standard
+kern/subr_dummy_vdso_tc.c	standard
 kern/syscalls.c			optional	ktr
 libkern/ashldi3.c		optional	powerpc
 libkern/ashrdi3.c		optional	powerpc
@@ -155,6 +156,7 @@ powerpc/powermac/hrowpic.c	optional	powermac pci
 powerpc/powermac/kiic.c		optional	powermac kiic
 powerpc/powermac/macgpio.c	optional	powermac pci 
 powerpc/powermac/macio.c	optional	powermac pci
+powerpc/powermac/nvbl.c		optional	powermac nvbl
 powerpc/powermac/openpic_macio.c optional	powermac pci
 powerpc/powermac/platform_powermac.c optional	powermac
 powerpc/powermac/powermac_thermal.c optional	powermac

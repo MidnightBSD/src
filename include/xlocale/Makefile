@@ -1,4 +1,4 @@
-# $FreeBSD$ 
+# $FreeBSD: stable/9/include/xlocale/Makefile 231673 2012-02-14 12:03:23Z theraven $ 
 
 NO_OBJ=
 INCS=	_ctype.h _inttypes.h _langinfo.h _locale.h _monetary.h _stdio.h\

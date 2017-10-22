@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sbin/geom/class/journal/geom_journal.h 163838 2006-10-31 21:32:54Z pjd $
  */
 
 #ifndef	_GEOM_JOURNAL_H_

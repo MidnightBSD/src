@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/cam/ctl/ctl_mem_pool.c 229997 2012-01-12 00:34:33Z ken $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

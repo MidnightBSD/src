@@ -36,7 +36,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ia64/include/setjmp.h 118048 2003-07-26 08:03:43Z marcel $
  */
 
 #ifndef _MACHINE_SETJMP_H_

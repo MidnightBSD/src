@@ -36,7 +36,7 @@
 #if defined(LIBC_SCCS)
 	RCSID("$NetBSD: modf.S,v 1.5 1997/07/16 14:37:18 christos Exp $")
 #endif
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/amd64/gen/modf.S 217106 2011-01-07 16:08:40Z kib $");
 
 /*
  * modf(value, iptr): return fractional part of value, and stores the

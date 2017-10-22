@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libc/arm/_fpmath.h 237023 2012-06-13 20:31:30Z mav $
  */
 
 #if defined(__VFP_FP__)

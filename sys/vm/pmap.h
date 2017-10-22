@@ -57,7 +57,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/vm/pmap.h 248814 2013-03-28 06:31:04Z kib $
  */
 
 /*
@@ -80,10 +80,11 @@ struct pmap_statistics {
 typedef struct pmap_statistics *pmap_statistics_t;
 
 /*
- * Each machine dependent implementation is expected to provide:
+ * Each machine-dependent implementation is required to provide:
  *
  * vm_memattr_t	pmap_page_get_memattr(vm_page_t);
  * boolean_t	pmap_page_is_mapped(vm_page_t);
+ * boolean_t	pmap_page_is_write_mapped(vm_page_t);
  * void		pmap_page_set_memattr(vm_page_t, vm_memattr_t);
  */
 #include <machine/pmap.h>
@@ -107,6 +108,8 @@ void		 pmap_clear_modify(vm_page_t m);
 void		 pmap_clear_reference(vm_page_t m);
 void		 pmap_copy(pmap_t, pmap_t, vm_offset_t, vm_size_t, vm_offset_t);
 void		 pmap_copy_page(vm_page_t, vm_page_t);
+void		 pmap_copy_pages(vm_page_t ma[], vm_offset_t a_offset,
+		    vm_page_t mb[], vm_offset_t b_offset, int xfersize);
 void		 pmap_enter(pmap_t, vm_offset_t, vm_prot_t, vm_page_t,
 		    vm_prot_t, boolean_t);
 void		 pmap_enter_object(pmap_t pmap, vm_offset_t start,

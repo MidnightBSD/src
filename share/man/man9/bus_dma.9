@@ -57,7 +57,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/share/man/man9/bus_dma.9 241318 2012-10-07 18:25:33Z jhb $
 .\" $NetBSD: bus_dma.9,v 1.25 2002/10/14 13:43:16 wiz Exp $
 .\"
 .Dd May 12, 2009
@@ -580,8 +580,13 @@ The status of the mapping has been delivered to the callback.
 The mapping has been deferred for lack of resources.
 The callback will be called as soon as resources are available.
 Callbacks are serviced in FIFO order.
-To ensure that ordering is guaranteed, all subsequent load requests will also
-be deferred until all callbacks have been processed.
+.Pp
+Note that subsequent load operations for the same tag that do not require
+extra resources will still succeed.
+This may result in out-of-order processing of requests.
+If the caller requires the order of requests to be preserved,
+then the caller is required to stall subsequent requests until a pending
+request's callback is invoked.
 .It Er ENOMEM
 The load request has failed due to insufficient resources, and the caller
 specifically used the

@@ -24,11 +24,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/var 242153 2012-10-26 18:06:49Z obrien $
 #
 
 # PROVIDE: var
-# REQUIRE: FILESYSTEMS kld addswap
+# REQUIRE: mountcritlocal zfs
+
+# NFS /var is not supported, unless NFS /var is part of diskless NFS /
 
 . /etc/rc.subr
 

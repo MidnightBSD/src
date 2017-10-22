@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/drmP.h 249080 2013-04-04 05:36:11Z kib $");
 
 #ifndef _DRM_P_H_
 #define _DRM_P_H_
@@ -105,6 +105,7 @@ struct drm_file;
 #include <dev/drm2/drm_mm.h>
 #include <dev/drm2/drm_hashtab.h>
 
+#include "opt_compat.h"
 #include "opt_drm.h"
 #ifdef DRM_DEBUG
 #undef DRM_DEBUG
@@ -227,6 +228,7 @@ typedef void			irqreturn_t;
 #define IRQ_NONE		/* nothing */
 
 #define unlikely(x)            __builtin_expect(!!(x), 0)
+#define likely(x)              __builtin_expect(!!(x), 1)
 #define container_of(ptr, type, member) ({			\
 	__typeof( ((type *)0)->member ) *__mptr = (ptr);	\
 	(type *)( (char *)__mptr - offsetof(type,member) );})
@@ -760,6 +762,10 @@ struct drm_driver_info {
 	int	(*device_is_agp) (struct drm_device * dev);
 
 	drm_ioctl_desc_t *ioctls;
+#ifdef COMPAT_FREEBSD32
+	drm_ioctl_desc_t *compat_ioctls;
+	int	*compat_ioctls_nr;
+#endif
 	int	max_ioctl;
 
 	int	buf_priv_size;

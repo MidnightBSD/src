@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ia64/ia64/busdma_machdep.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -88,7 +88,7 @@ static int total_bpages;
 static int total_bounced;
 static int total_deferred;
 
-SYSCTL_NODE(_hw, OID_AUTO, busdma, CTLFLAG_RD, 0, "Busdma parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, busdma, CTLFLAG_RD, 0, "Busdma parameters");
 SYSCTL_INT(_hw_busdma, OID_AUTO, free_bpages, CTLFLAG_RD, &free_bpages, 0,
     "Free bounce pages");
 SYSCTL_INT(_hw_busdma, OID_AUTO, reserved_bpages, CTLFLAG_RD, &reserved_bpages,

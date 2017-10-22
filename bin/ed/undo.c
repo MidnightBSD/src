@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/ed/undo.c 99109 2002-06-30 05:13:54Z obrien $");
 
 #include "ed.h"
 

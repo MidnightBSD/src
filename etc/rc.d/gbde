@@ -3,7 +3,7 @@
 # This file, originally written by Garrett A. Wollman, is in the public
 # domain.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/gbde 180563 2008-07-16 19:22:48Z dougb $
 #
 
 # PROVIDE: disks

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/send.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -55,7 +55,7 @@ __FBSDID("$FreeBSD$");
 #include <netinet6/scope6_var.h>
 #include <netinet6/send.h>
 
-MALLOC_DEFINE(M_SEND, "send", "Secure Neighbour Discovery");
+static MALLOC_DEFINE(M_SEND, "send", "Secure Neighbour Discovery");
 
 /*
  * The socket used to communicate with the SeND daemon.

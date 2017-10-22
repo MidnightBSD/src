@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/sound/pci/csareg.h 231047 2012-02-05 20:09:50Z pfg $
  */
 
 #ifndef _CSA_REG_H

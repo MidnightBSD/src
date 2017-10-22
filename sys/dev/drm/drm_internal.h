@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/drm_internal.h 182080 2008-08-23 20:59:12Z rnoland $");
 
 /* This header file holds function prototypes and data types that are
  * internal to the drm (not exported to user space) but shared across

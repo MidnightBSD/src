@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/arm/at91/std.ethernut5 237386 2012-06-21 11:23:38Z marius $
 include "../at91/std.at91sam9"
 
 options 	STARTUP_PAGETABLE_ADDR=0x20800000

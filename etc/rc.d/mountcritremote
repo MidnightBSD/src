@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/mountcritremote 242153 2012-10-26 18:06:49Z obrien $
 #
 
 # PROVIDE: mountcritremote
-# REQUIRE: NETWORKING FILESYSTEMS cleanvar ipsec netwait
+# REQUIRE: NETWORKING FILESYSTEMS ipsec netwait
 # KEYWORD: nojail
 
 . /etc/rc.subr

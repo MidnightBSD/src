@@ -20,7 +20,7 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cddl/dev/sdt/sdt.c 236152 2012-05-27 14:48:14Z rstone $
  *
  */
 

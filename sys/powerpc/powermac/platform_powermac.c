@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/powermac/platform_powermac.c 212054 2010-08-31 15:27:46Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

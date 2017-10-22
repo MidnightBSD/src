@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libstand/ioctl.c 165906 2007-01-09 01:02:06Z imp $");
 
 #include "stand.h"
 

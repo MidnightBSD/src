@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/pmap.c 248814 2013-03-28 06:31:04Z kib $");
 
 /*
  * Manages physical address maps.
@@ -675,9 +675,10 @@ pmap_bootstrap(u_int cpu_impl)
 	CPU_FILL(&pm->pm_active);
 
 	/*
-	 * Initialize the global tte list lock.
+	 * Initialize the global tte list lock, which is more commonly
+	 * known as the pmap pv global lock.
 	 */
-	rw_init(&tte_list_global_lock, "tte list global");
+	rw_init(&tte_list_global_lock, "pmap pv global");
 
 	/*
 	 * Flush all non-locked TLB entries possibly left over by the
@@ -1925,6 +1926,14 @@ pmap_copy_page(vm_page_t msrc, vm_page_t mdst)
 		tlb_page_demap(kernel_pmap, vsrc);
 		PMAP_UNLOCK(kernel_pmap);
 	}
+}
+
+void
+pmap_copy_pages(vm_page_t ma[], vm_offset_t a_offset, vm_page_t mb[],
+    vm_offset_t b_offset, int xfersize)
+{
+
+	panic("pmap_copy_pages: not implemented");
 }
 
 /*

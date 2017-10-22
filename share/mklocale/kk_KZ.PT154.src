@@ -1,7 +1,7 @@
 /*
  * LOCALE_CTYPE for PT154 character set (IANA PTCP154)
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/share/mklocale/kk_KZ.PT154.src 125208 2004-01-29 16:28:22Z ache $
  */
 ENCODING	"NONE"
 VARIABLE        PT154 character set by Birsh T <birsh@mail.kz>

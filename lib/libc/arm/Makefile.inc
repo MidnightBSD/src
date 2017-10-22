@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libc/arm/Makefile.inc 193145 2009-05-31 02:03:40Z marcel $
 #
 # Machine dependent definitions for the arm architecture.
 #

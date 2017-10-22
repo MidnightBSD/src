@@ -21,7 +21,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sparc64/include/fsr.h 241693 2012-10-18 15:24:43Z marius $
  */
 
 #ifndef	_MACHINE_FSR_H_
@@ -30,6 +30,8 @@
 #define	FPRS_DL		(1 << 0)
 #define	FPRS_DU		(1 << 1)
 #define	FPRS_FEF	(1 << 2)
+
+#define	VIS_BLOCKSIZE	64
 
 #ifndef LOCORE
 

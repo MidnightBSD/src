@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/ps3/ps3cdrom.c 226067 2011-10-06 19:15:51Z ken $");
 
 #include <sys/param.h>
 #include <sys/module.h>

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/arm/at91/std.at91 185300 2008-11-25 16:38:10Z imp $
 
 files	"../at91/files.at91"
 cpu		CPU_ARM9

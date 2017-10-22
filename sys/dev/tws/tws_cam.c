@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/tws/tws_cam.c 241762 2012-10-20 07:38:42Z delphij $
  */
 
 #include <dev/tws/tws.h>
@@ -529,10 +529,10 @@ tws_scsi_err_complete(struct tws_request *req, struct tws_command_header *hdr)
 
         if ( ccb->ccb_h.target_lun ) {
             TWS_TRACE_DEBUG(sc, "invalid lun error",0,0);
-            ccb->ccb_h.status |= CAM_LUN_INVALID;
+            ccb->ccb_h.status |= CAM_DEV_NOT_THERE;
         } else {
             TWS_TRACE_DEBUG(sc, "invalid target error",0,0);
-            ccb->ccb_h.status |= CAM_TID_INVALID;
+            ccb->ccb_h.status |= CAM_SEL_TIMEOUT;
         }
 
     } else {

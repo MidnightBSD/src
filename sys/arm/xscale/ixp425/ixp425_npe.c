@@ -57,7 +57,7 @@
  * SUCH DAMAGE.
 */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/ixp425_npe.c 194378 2009-06-17 17:57:52Z sam $");
 
 /*
  * Intel XScale Network Processing Engine (NPE) support.

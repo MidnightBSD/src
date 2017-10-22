@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/sfxge/sfxge_port.c 231156 2012-02-07 19:53:02Z jhb $");
 
 #include <sys/types.h>
 #include <sys/limits.h>

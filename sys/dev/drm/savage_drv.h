@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/savage_drv.h 182080 2008-08-23 20:59:12Z rnoland $");
 
 #ifndef __SAVAGE_DRV_H__
 #define __SAVAGE_DRV_H__

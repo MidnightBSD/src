@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/lpr/lpd/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 PROG=	lpd
 MAN=	lpd.8

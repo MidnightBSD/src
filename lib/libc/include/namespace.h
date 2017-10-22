@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libc/include/namespace.h 244175 2012-12-13 06:24:54Z kib $
  */
 
 #ifndef _NAMESPACE_H_
@@ -229,6 +229,7 @@
 #define		socketpair			_socketpair
 #define		usleep				_usleep
 #define		wait4				_wait4
+#define		wait6				_wait6
 #define		waitpid				_waitpid
 #define		write				_write
 #define		writev				_writev

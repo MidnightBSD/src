@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/boot/powerpc/uboot/ldscript.powerpc 209920 2010-07-12 00:49:22Z nwhitehorn $ */
 
 OUTPUT_FORMAT("elf32-powerpc", "elf32-powerpc", "elf32-powerpc")
 OUTPUT_ARCH(powerpc:common)

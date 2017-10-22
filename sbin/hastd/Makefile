@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/hastd/Makefile 229509 2012-01-04 17:22:10Z trociny $
 
 .include <bsd.own.mk>
 

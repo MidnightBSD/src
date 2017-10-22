@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/amd64/amd64/machdep.c 239945 2012-08-31 11:48:04Z kib $");
 
 #include "opt_atalk.h"
 #include "opt_atpic.h"
@@ -74,6 +74,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/linker.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/memrange.h>
 #include <sys/msgbuf.h>
 #include <sys/mutex.h>
 #include <sys/pcpu.h>
@@ -205,6 +206,8 @@ struct region_descriptor r_gdt, r_idt;
 struct pcpu __pcpu[MAXCPU];
 
 struct mtx icu_lock;
+
+struct mem_range_softc mem_range_softc;
 
 struct mtx dt_lock;	/* lock for GDT and LDT */
 
@@ -964,7 +967,7 @@ exec_setregs(struct thread *td, struct image_params *imgp, u_long stack)
 		pcb->pcb_dr3 = 0;
 		pcb->pcb_dr6 = 0;
 		pcb->pcb_dr7 = 0;
-		if (pcb == PCPU_GET(curpcb)) {
+		if (pcb == curpcb) {
 			/*
 			 * Clear the debug registers on the running
 			 * CPU, otherwise they will end up affecting

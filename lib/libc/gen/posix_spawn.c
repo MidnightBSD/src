@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/posix_spawn.c 223907 2011-07-10 14:20:11Z jilles $");
 
 #include "namespace.h"
 #include <sys/queue.h>

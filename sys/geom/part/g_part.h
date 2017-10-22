@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/geom/part/g_part.h 243237 2012-11-18 16:13:36Z ae $
  */
 
 #ifndef _GEOM_PART_H_
@@ -46,6 +46,7 @@ enum g_part_alias {
 	G_PART_ALIAS_EFI,		/* A EFI system partition entry. */
 	G_PART_ALIAS_FREEBSD,		/* A BSD labeled partition entry. */
 	G_PART_ALIAS_FREEBSD_BOOT,	/* A FreeBSD boot partition entry. */
+	G_PART_ALIAS_FREEBSD_NANDFS,	/* A FreeBSD nandfs partition entry. */
 	G_PART_ALIAS_FREEBSD_SWAP,	/* A swap partition entry. */
 	G_PART_ALIAS_FREEBSD_UFS,	/* A UFS/UFS2 file system entry. */
 	G_PART_ALIAS_FREEBSD_VINUM,	/* A Vinum partition entry. */

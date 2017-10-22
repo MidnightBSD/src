@@ -28,7 +28,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/rt305x/uart_dev_rt305x.h 220297 2011-04-03 14:39:55Z adrian $
  */
 #ifndef	_RT305XUART_H
 #define	_RT305XUART_H

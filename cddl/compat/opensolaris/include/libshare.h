@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/cddl/compat/opensolaris/include/libshare.h 185029 2008-11-17 20:49:29Z pjd $
  */
 
 #ifndef _OPENSOLARIS_LIBSHARE_H_

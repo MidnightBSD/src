@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/zvol 219090 2011-02-27 19:44:10Z pjd $
 #
 
 # PROVIDE: zvol

@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)fopen.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/lib/libc/stdio/fopen.3 242771 2012-11-08 13:47:32Z jilles $
 .\"
 .Dd October 17, 2011
 .Dt FOPEN 3
@@ -267,7 +267,11 @@ and
 .Fn freopen
 functions
 conform to
-.St -isoC .
+.St -isoC ,
+with the exception of the
+.Dq Li x
+mode option which conforms to
+.St -isoC-2011 .
 The
 .Fn fdopen
 function

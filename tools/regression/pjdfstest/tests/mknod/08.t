@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/mknod/08.t 211474 2010-08-18 22:06:43Z pjd $
 
 desc="mknod returns EEXIST if the named file exists"
 

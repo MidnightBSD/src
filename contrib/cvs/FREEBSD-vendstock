@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/9/contrib/cvs/FREEBSD-vendstock 178464 2008-04-24 18:23:13Z obrien $
 src/buffer.c
 src/commit.c
 src/filesubr.c

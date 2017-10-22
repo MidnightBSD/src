@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)find.c	8.5 (Berkeley) 8/5/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/find/find.c 216370 2010-12-11 08:32:16Z joel $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

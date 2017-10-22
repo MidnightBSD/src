@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ofw/openfirm.c 230884 2012-02-01 21:11:06Z marius $");
 
 #include "opt_platform.h"
 

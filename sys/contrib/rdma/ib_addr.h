@@ -25,7 +25,7 @@
  * notice, one of the license notices in the documentation
  * and/or other materials provided with the distribution.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/contrib/rdma/ib_addr.h 230966 2012-02-03 23:07:26Z dim $
  *
  */
 

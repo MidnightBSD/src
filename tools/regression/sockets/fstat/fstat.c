@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/sockets/fstat/fstat.c 183652 2008-10-06 19:42:03Z rwatson $
  */
 
 #include <sys/types.h>

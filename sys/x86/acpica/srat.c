@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/x86/acpica/srat.c 230078 2012-01-13 19:54:00Z jhb $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

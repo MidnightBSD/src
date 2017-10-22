@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/sound/driver/ich/Makefile 246069 2013-01-29 13:49:08Z pfg $
 
 .PATH:		${.CURDIR}/../../../../dev/sound/pci
 KMOD		= snd_ich

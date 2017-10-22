@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ata/chipsets/ata-marvell.c 242908 2012-11-12 07:34:05Z dim $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -99,7 +99,7 @@ static int
 ata_marvell_probe(device_t dev)
 {
     struct ata_pci_controller *ctlr = device_get_softc(dev);
-    static const struct ata_chip_id const ids[] =
+    static const struct ata_chip_id ids[] =
     {{ ATA_M88SX5040, 0, 4, MV_50XX, ATA_SA150, "88SX5040" },
      { ATA_M88SX5041, 0, 4, MV_50XX, ATA_SA150, "88SX5041" },
      { ATA_M88SX5080, 0, 8, MV_50XX, ATA_SA150, "88SX5080" },

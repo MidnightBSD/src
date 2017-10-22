@@ -8,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/w_cabsl.c 177757 2008-03-30 20:02:03Z das $");
 
 #include <complex.h>
 #include <math.h>

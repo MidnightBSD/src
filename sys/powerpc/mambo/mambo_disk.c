@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/mambo/mambo_disk.c 210677 2010-07-31 13:22:34Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

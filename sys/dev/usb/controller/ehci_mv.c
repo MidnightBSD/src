@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ehci_mv.c 229118 2011-12-31 15:31:34Z hselasky $");
 
 #include "opt_bus.h"
 

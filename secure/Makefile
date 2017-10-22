@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/secure/Makefile 201210 2009-12-29 20:14:39Z trasz $
 
 .include <bsd.own.mk>
 

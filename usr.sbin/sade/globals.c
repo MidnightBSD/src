@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sade/globals.c 161060 2006-08-07 23:35:49Z netchild $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

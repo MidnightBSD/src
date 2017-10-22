@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/open/22.t 211186 2010-08-11 17:34:58Z pjd $
 
 desc="open returns EEXIST when O_CREAT and O_EXCL were specified and the file exists"
 

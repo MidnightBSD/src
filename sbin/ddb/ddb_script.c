@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/ddb/ddb_script.c 174915 2007-12-26 09:38:22Z rwatson $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

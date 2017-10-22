@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/in_mcast.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -155,7 +155,8 @@ static int	inp_set_multicast_if(struct inpcb *, struct sockopt *);
 static int	inp_set_source_filters(struct inpcb *, struct sockopt *);
 static int	sysctl_ip_mcast_filters(SYSCTL_HANDLER_ARGS);
 
-SYSCTL_NODE(_net_inet_ip, OID_AUTO, mcast, CTLFLAG_RW, 0, "IPv4 multicast");
+static SYSCTL_NODE(_net_inet_ip, OID_AUTO, mcast, CTLFLAG_RW, 0,
+    "IPv4 multicast");
 
 static u_long in_mcast_maxgrpsrc = IP_MAX_GROUP_SRC_FILTER;
 SYSCTL_ULONG(_net_inet_ip_mcast, OID_AUTO, maxgrpsrc,
@@ -174,7 +175,7 @@ SYSCTL_INT(_net_inet_ip_mcast, OID_AUTO, loop, CTLFLAG_RW | CTLFLAG_TUN,
     &in_mcast_loop, 0, "Loopback multicast datagrams by default");
 TUNABLE_INT("net.inet.ip.mcast.loop", &in_mcast_loop);
 
-SYSCTL_NODE(_net_inet_ip_mcast, OID_AUTO, filters,
+static SYSCTL_NODE(_net_inet_ip_mcast, OID_AUTO, filters,
     CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_ip_mcast_filters,
     "Per-interface stack-wide source filters");
 

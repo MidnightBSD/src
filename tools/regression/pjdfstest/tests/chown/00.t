@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/chown/00.t 211350 2010-08-15 21:19:42Z pjd $
 
 desc="chown changes ownership"
 

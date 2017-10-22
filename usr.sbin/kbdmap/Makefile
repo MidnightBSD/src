@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/kbdmap/Makefile 140941 2005-01-28 16:08:11Z ru $
 
 PROG=	kbdmap
 LINKS=	${BINDIR}/kbdmap ${BINDIR}/vidfont

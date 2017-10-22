@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libmemstat/memstat_uma.c 242365 2012-10-30 17:05:12Z mdf $
  */
 
 #include <sys/param.h>
@@ -254,7 +254,7 @@ kread(kvm_t *kvm, void *kvm_pointer, void *address, size_t size,
 }
 
 static int
-kread_string(kvm_t *kvm, void *kvm_pointer, char *buffer, int buflen)
+kread_string(kvm_t *kvm, const void *kvm_pointer, char *buffer, int buflen)
 {
 	ssize_t ret;
 	int i;

@@ -42,7 +42,7 @@
 #include "opt_ktrace.h"
 #include "opt_kdtrace.h"
 
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/subr_syscall.c 236648 2012-06-06 01:01:12Z kib $");
 
 #include <sys/capability.h>
 #include <sys/ktr.h>

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/stack_machdep.c 174195 2007-12-02 20:40:35Z rwatson $");
 
 #include <sys/systm.h>
 #include <sys/param.h>

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/mv/gpio.c 224051 2011-07-15 02:29:10Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

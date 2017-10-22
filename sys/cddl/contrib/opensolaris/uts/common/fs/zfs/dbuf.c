@@ -21,6 +21,7 @@
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
+ * Copyright (c) 2012 by Delphix. All rights reserved.
  */
 
 #include <sys/zfs_context.h>
@@ -227,7 +228,7 @@ dbuf_is_metadata(dmu_buf_impl_t *db)
 		boolean_t is_metadata;
 
 		DB_DNODE_ENTER(db);
-		is_metadata = dmu_ot[DB_DNODE(db)->dn_type].ot_metadata;
+		is_metadata = DMU_OT_IS_METADATA(DB_DNODE(db)->dn_type);
 		DB_DNODE_EXIT(db);
 
 		return (is_metadata);
@@ -327,7 +328,7 @@ dbuf_verify(dmu_buf_impl_t *db)
 	} else if (db->db_blkid == DMU_SPILL_BLKID) {
 		ASSERT(dn != NULL);
 		ASSERT3U(db->db.db_size, >=, dn->dn_bonuslen);
-		ASSERT3U(db->db.db_offset, ==, 0);
+		ASSERT0(db->db.db_offset);
 	} else {
 		ASSERT3U(db->db.db_offset, ==, db->db_blkid * db->db.db_size);
 	}
@@ -512,7 +513,6 @@ dbuf_read_impl(dmu_buf_impl_t *db, zio_t *zio, uint32_t *flags)
 	spa_t *spa;
 	zbookmark_t zb;
 	uint32_t aflags = ARC_NOWAIT;
-	arc_buf_t *pbuf;
 
 	DB_DNODE_ENTER(db);
 	dn = DB_DNODE(db);
@@ -574,14 +574,8 @@ dbuf_read_impl(dmu_buf_impl_t *db, zio_t *zio, uint32_t *flags)
 	    db->db.db_object, db->db_level, db->db_blkid);
 
 	dbuf_add_ref(db, NULL);
-	/* ZIO_FLAG_CANFAIL callers have to check the parent zio's error */
 
-	if (db->db_parent)
-		pbuf = db->db_parent->db_buf;
-	else
-		pbuf = db->db_objset->os_phys_buf;
-
-	(void) dsl_read(zio, spa, db->db_blkptr, pbuf,
+	(void) arc_read(zio, spa, db->db_blkptr,
 	    dbuf_read_done, db, ZIO_PRIORITY_SYNC_READ,
 	    (*flags & DB_RF_CANFAIL) ? ZIO_FLAG_CANFAIL : ZIO_FLAG_MUSTSUCCEED,
 	    &aflags, &zb);
@@ -767,13 +761,15 @@ dbuf_unoverride(dbuf_dirty_record_t *dr)
 	ASSERT(db->db_data_pending != dr);
 
 	/* free this block */
-	if (!BP_IS_HOLE(bp)) {
+	if (!BP_IS_HOLE(bp) && !dr->dt.dl.dr_nopwrite) {
 		spa_t *spa;
 
 		DB_GET_SPA(&spa, db);
 		zio_free(spa, txg, bp);
 	}
 	dr->dt.dl.dr_override_state = DR_NOT_OVERRIDDEN;
+	dr->dt.dl.dr_nopwrite = B_FALSE;
+
 	/*
 	 * Release the already-written buffer, so we leave it in
 	 * a consistent dirty state.  Note that all callers are
@@ -979,7 +975,6 @@ void
 dbuf_release_bp(dmu_buf_impl_t *db)
 {
 	objset_t *os;
-	zbookmark_t zb;
 
 	DB_GET_OBJSET(&os, db);
 	ASSERT(dsl_pool_sync_context(dmu_objset_pool(os)));
@@ -987,13 +982,7 @@ dbuf_release_bp(dmu_buf_impl_t *db)
 	    list_link_active(&os->os_dsl_dataset->ds_synced_link));
 	ASSERT(db->db_parent == NULL || arc_released(db->db_parent->db_buf));
 
-	zb.zb_objset = os->os_dsl_dataset ?
-	    os->os_dsl_dataset->ds_object : 0;
-	zb.zb_object = db->db.db_object;
-	zb.zb_level = db->db_level;
-	zb.zb_blkid = db->db_blkid;
-	(void) arc_release_bp(db->db_buf, db,
-	    db->db_blkptr, os->os_spa, &zb);
+	(void) arc_release(db->db_buf, db);
 }
 
 dbuf_dirty_record_t *
@@ -1828,7 +1817,6 @@ dbuf_prefetch(dnode_t *dn, uint64_t blkid)
 		if (bp && !BP_IS_HOLE(bp)) {
 			int priority = dn->dn_type == DMU_OT_DDT_ZAP ?
 			    ZIO_PRIORITY_DDT_PREFETCH : ZIO_PRIORITY_ASYNC_READ;
-			arc_buf_t *pbuf;
 			dsl_dataset_t *ds = dn->dn_objset->os_dsl_dataset;
 			uint32_t aflags = ARC_NOWAIT | ARC_PREFETCH;
 			zbookmark_t zb;
@@ -1836,13 +1824,8 @@ dbuf_prefetch(dnode_t *dn, uint64_t blkid)
 			SET_BOOKMARK(&zb, ds ? ds->ds_object : DMU_META_OBJSET,
 			    dn->dn_object, 0, blkid);
 
-			if (db)
-				pbuf = db->db_buf;
-			else
-				pbuf = dn->dn_objset->os_phys_buf;
-
-			(void) dsl_read(NULL, dn->dn_objset->os_spa,
-			    bp, pbuf, NULL, NULL, priority,
+			(void) arc_read(NULL, dn->dn_objset->os_spa,
+			    bp, NULL, NULL, priority,
 			    ZIO_FLAG_CANFAIL | ZIO_FLAG_SPECULATIVE,
 			    &aflags, &zb);
 		}
@@ -2088,7 +2071,24 @@ dbuf_rele_and_unlock(dmu_buf_impl_t *db, void *tag)
 			dbuf_evict(db);
 		} else {
 			VERIFY(arc_buf_remove_ref(db->db_buf, db) == 0);
-			if (!DBUF_IS_CACHEABLE(db))
+
+			/*
+			 * A dbuf will be eligible for eviction if either the
+			 * 'primarycache' property is set or a duplicate
+			 * copy of this buffer is already cached in the arc.
+			 *
+			 * In the case of the 'primarycache' a buffer
+			 * is considered for eviction if it matches the
+			 * criteria set in the property.
+			 *
+			 * To decide if our buffer is considered a
+			 * duplicate, we must call into the arc to determine
+			 * if multiple buffers are referencing the same
+			 * block on-disk. If so, then we simply evict
+			 * ourselves.
+			 */
+			if (!DBUF_IS_CACHEABLE(db) ||
+			    arc_buf_eviction_needed(db->db_buf))
 				dbuf_clear(db);
 			else
 				mutex_exit(&db->db_mtx);
@@ -2169,6 +2169,13 @@ dmu_buf_freeable(dmu_buf_t *dbuf)
 		    db->db_blkptr, db->db_blkptr->blk_birth);
 
 	return (res);
+}
+
+blkptr_t *
+dmu_buf_get_blkptr(dmu_buf_t *db)
+{
+	dmu_buf_impl_t *dbi = (dmu_buf_impl_t *)db;
+	return (dbi->db_blkptr);
 }
 
 static void
@@ -2307,7 +2314,7 @@ dbuf_sync_leaf(dbuf_dirty_record_t *dr, dmu_tx_t *tx)
 		dbuf_dirty_record_t **drp;
 
 		ASSERT(*datap != NULL);
-		ASSERT3U(db->db_level, ==, 0);
+		ASSERT0(db->db_level);
 		ASSERT3U(dn->dn_phys->dn_bonuslen, <=, DN_MAX_BONUSLEN);
 		bcopy(*datap, DN_BONUS(dn->dn_phys), dn->dn_phys->dn_bonuslen);
 		DB_DNODE_EXIT(db);
@@ -2510,10 +2517,14 @@ dbuf_write_done(zio_t *zio, arc_buf_t *buf, void *vdb)
 	uint64_t txg = zio->io_txg;
 	dbuf_dirty_record_t **drp, *dr;
 
-	ASSERT3U(zio->io_error, ==, 0);
+	ASSERT0(zio->io_error);
 	ASSERT(db->db_blkptr == bp);
 
-	if (zio->io_flags & ZIO_FLAG_IO_REWRITE) {
+	/*
+	 * For nopwrites and rewrites we ensure that the bp matches our
+	 * original and bypass all the accounting.
+	 */
+	if (zio->io_flags & (ZIO_FLAG_IO_REWRITE | ZIO_FLAG_NOPWRITE)) {
 		ASSERT(BP_EQUAL(bp, bp_orig));
 	} else {
 		objset_t *os;
@@ -2704,7 +2715,7 @@ dbuf_write(dbuf_dirty_record_t *dr, arc_buf_t *data, dmu_tx_t *tx)
 		mutex_enter(&db->db_mtx);
 		dr->dt.dl.dr_override_state = DR_NOT_OVERRIDDEN;
 		zio_write_override(dr->dr_zio, &dr->dt.dl.dr_overridden_by,
-		    dr->dt.dl.dr_copies);
+		    dr->dt.dl.dr_copies, dr->dt.dl.dr_nopwrite);
 		mutex_exit(&db->db_mtx);
 	} else if (db->db_state == DB_NOFILL) {
 		ASSERT(zp.zp_checksum == ZIO_CHECKSUM_OFF);

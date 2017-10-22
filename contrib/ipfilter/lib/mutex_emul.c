@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/contrib/ipfilter/lib/mutex_emul.c 170268 2007-06-04 02:54:36Z darrenr $	*/
 
 /*
  * Copyright (C) 2003 by Darren Reed.

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/devfs/devfs_dir.c 213215 2010-09-27 17:47:09Z jh $
  */
 
 #include <sys/param.h>

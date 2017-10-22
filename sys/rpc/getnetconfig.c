@@ -28,7 +28,7 @@
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/rpc/getnetconfig.c 177633 2008-03-26 15:23:12Z dfr $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>

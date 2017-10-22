@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/bwi/if_bwi_pci.c 209892 2010-07-10 22:37:23Z weongyo $");
 
 /*
  * PCI/Cardbus front-end for the Broadcom Wireless LAN controller driver.

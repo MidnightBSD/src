@@ -1,5 +1,5 @@
 /* $OpenBSD: kex.c,v 1.86 2010/09/22 05:01:29 djm Exp $ */
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/crypto/openssh/kex.c 247485 2013-02-28 18:43:50Z des $ */
 /*
  * Copyright (c) 2000, 2001 Markus Friedl.  All rights reserved.
  *
@@ -91,7 +91,7 @@ kex_names_valid(const char *names)
 	return 1;
 }
 
-/* Put algorithm proposal into buffer. */
+/* put algorithm proposal into buffer. */
 #ifndef NONE_CIPHER_ENABLED
 static void
 #else
@@ -457,13 +457,13 @@ kex_choose_conf(Kex *kex)
 #ifdef	NONE_CIPHER_ENABLED
 		debug("REQUESTED ENC.NAME is '%s'", newkeys->enc.name);
 		if (strcmp(newkeys->enc.name, "none") == 0) {
-			debug("Requesting NONE. Authflag is %d", auth_flag);			
+			debug("Requesting NONE. Authflag is %d", auth_flag);
 			if (auth_flag == 1)
 				debug("None requested post authentication.");
 			else
 				fatal("Pre-authentication none cipher requests "
 				    "are not allowed.");
-		} 
+		}
 #endif
 		debug("kex: %s %s %s %s",
 		    ctos ? "client->server" : "server->client",

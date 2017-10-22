@@ -18,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/gnu/lib/libodialog/gauge.c 103140 2002-09-09 17:44:08Z wollman $");
 
 #include <stdlib.h>
 #include <string.h>

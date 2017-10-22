@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libstand/iodesc.h 165906 2007-01-09 01:02:06Z imp $
  */
 
 #ifndef __SYS_LIBNETBOOT_IODESC_H

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/clock.c 230890 2012-02-01 21:19:52Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/uipc_mqueue.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_compat.h"
 
@@ -186,7 +186,7 @@ struct mqueue_msg {
 	/* following real data... */
 };
 
-SYSCTL_NODE(_kern, OID_AUTO, mqueue, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_kern, OID_AUTO, mqueue, CTLFLAG_RW, 0,
 	"POSIX real time message queue");
 
 static int	default_maxmsg  = 10;

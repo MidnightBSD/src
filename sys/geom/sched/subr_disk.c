@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/sched/subr_disk.c 212160 2010-09-02 19:40:28Z gibbs $");
 
 //#include "opt_geom.h"
 

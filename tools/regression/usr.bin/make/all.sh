@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/usr.bin/make/all.sh 237100 2012-06-14 20:44:56Z obrien $
 
 # find all test scripts below our current directory
 SCRIPTS=`find . -name test.t`

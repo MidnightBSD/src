@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_input.c 243586 2012-11-27 01:59:51Z ae $");
 
 #include "opt_bootp.h"
 #include "opt_ipfw.h"
@@ -516,22 +516,22 @@ tooshort:
 	dchg = (odst.s_addr != ip->ip_dst.s_addr);
 	ifp = m->m_pkthdr.rcvif;
 
-#ifdef IPFIREWALL_FORWARD
 	if (m->m_flags & M_FASTFWD_OURS) {
 		m->m_flags &= ~M_FASTFWD_OURS;
 		goto ours;
 	}
-	if ((dchg = (m_tag_find(m, PACKET_TAG_IPFORWARD, NULL) != NULL)) != 0) {
-		/*
-		 * Directly ship the packet on.  This allows forwarding
-		 * packets originally destined to us to some other directly
-		 * connected host.
-		 */
-		ip_forward(m, dchg);
-		return;
+	if (m->m_flags & M_IP_NEXTHOP) {
+		dchg = (m_tag_find(m, PACKET_TAG_IPFORWARD, NULL) != NULL);
+		if (dchg != 0) {
+			/*
+			 * Directly ship the packet on.  This allows
+			 * forwarding packets originally destined to us
+			 * to some other directly connected host.
+			 */
+			ip_forward(m, 1);
+			return;
+		}
 	}
-#endif /* IPFIREWALL_FORWARD */
-
 passin:
 	/*
 	 * Process options and, if not destined for us,
@@ -1495,8 +1495,7 @@ ip_forward(struct mbuf *m, int srcrt)
 
 	if (error == EMSGSIZE && ro.ro_rt)
 		mtu = ro.ro_rt->rt_rmx.rmx_mtu;
-	if (ro.ro_rt)
-		RTFREE(ro.ro_rt);
+	RO_RTFREE(&ro);
 
 	if (error)
 		IPSTAT_INC(ips_cantforward);

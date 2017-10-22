@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/rtsold/rtsol.c 225520 2011-09-12 23:55:23Z hrs $
  */
 
 #include <sys/param.h>

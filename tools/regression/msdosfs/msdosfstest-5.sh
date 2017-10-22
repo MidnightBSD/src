@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/msdosfs/msdosfstest-5.sh 148117 2005-07-18 12:15:24Z imura $
 # A really simple script to create a swap-backed msdosfs filesystem, then
 # test to see if msdosfs_conv.c rev 1.45[2] works properly.
 # Note that this is a requisite condition but far away from sufficient condition.

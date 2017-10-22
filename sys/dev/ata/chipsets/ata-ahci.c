@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ata/chipsets/ata-ahci.c 243125 2012-11-16 03:04:30Z mav $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -555,8 +555,10 @@ ata_ahci_end_transaction(struct ata_request *request)
     if (request->status & ATA_S_ERROR)  
 	request->error = tf_data >> 8;
 
-    /* on control commands read back registers to the request struct */
-    if (request->flags & ATA_R_CONTROL) {
+    /* Read back registers to the request struct. */
+    if ((request->flags & ATA_R_ATAPI) == 0 &&
+	((request->status & ATA_S_ERROR) ||
+	 (request->flags & (ATA_R_CONTROL | ATA_R_NEEDRESULT)))) {
 	u_int8_t *fis = ch->dma.work + ATA_AHCI_FB_OFFSET + 0x40;
 
 	request->u.ata.count = fis[12] | ((u_int16_t)fis[13] << 8);

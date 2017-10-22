@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/kldload/kldload.c 233560 2012-03-27 15:29:51Z hselasky $");
 
 #include <sys/types.h>
 #include <sys/param.h>

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/gnu/usr.bin/gdb/kgdb/kthr.c 225017 2011-08-19 21:28:40Z jhb $");
 
 #include <sys/param.h>
 #include <sys/cpuset.h>

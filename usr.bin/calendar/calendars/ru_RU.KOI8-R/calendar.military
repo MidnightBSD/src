@@ -1,7 +1,7 @@
 /*
  * Дни воинской славы России
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/calendar/calendars/ru_RU.KOI8-R/calendar.military 211819 2010-08-25 18:11:01Z osa $
  */
 
 #ifndef _ru_RU_KOI8_R_military_

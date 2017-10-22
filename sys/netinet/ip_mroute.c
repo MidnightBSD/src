@@ -67,7 +67,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_mroute.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_inet.h"
 #include "opt_mrouting.h"
@@ -924,7 +924,6 @@ add_vif(struct vifctl *vifcp)
     vifp->v_pkt_out   = 0;
     vifp->v_bytes_in  = 0;
     vifp->v_bytes_out = 0;
-    bzero(&vifp->v_route, sizeof(vifp->v_route));
 
     /* Adjust numvifs up if the vifi is higher than numvifs */
     if (V_numvifs <= vifcp->vifc_vifi)
@@ -1702,7 +1701,7 @@ send_packet(struct vif *vifp, struct mbuf *m)
 	 * should get rejected because they appear to come from
 	 * the loopback interface, thus preventing looping.
 	 */
-	error = ip_output(m, NULL, &vifp->v_route, IP_FORWARDING, &imo, NULL);
+	error = ip_output(m, NULL, NULL, IP_FORWARDING, &imo, NULL);
 	CTR3(KTR_IPMF, "%s: vif %td err %d", __func__,
 	    (ptrdiff_t)(vifp - V_viftable), error);
 }
@@ -2807,9 +2806,9 @@ out_locked:
 	return (error);
 }
 
-SYSCTL_NODE(_net_inet_ip, OID_AUTO, mfctable, CTLFLAG_RD, sysctl_mfctable,
-    "IPv4 Multicast Forwarding Table (struct *mfc[mfchashsize], "
-    "netinet/ip_mroute.h)");
+static SYSCTL_NODE(_net_inet_ip, OID_AUTO, mfctable, CTLFLAG_RD,
+    sysctl_mfctable, "IPv4 Multicast Forwarding Table "
+    "(struct *mfc[mfchashsize], netinet/ip_mroute.h)");
 
 static void
 vnet_mroute_init(const void *unused __unused)

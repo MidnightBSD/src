@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/cam/cam_sim.c 249337 2013-04-10 17:49:25Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -40,10 +40,11 @@ __FBSDID("$FreeBSD$");
 #include <cam/cam_ccb.h>
 #include <cam/cam_sim.h>
 #include <cam/cam_queue.h>
+#include <cam/cam_xpt.h>
 
 #define CAM_PATH_ANY (u_int32_t)-1
 
-MALLOC_DEFINE(M_CAMSIM, "CAM SIM", "CAM SIM buffers");
+static MALLOC_DEFINE(M_CAMSIM, "CAM SIM", "CAM SIM buffers");
 
 struct cam_devq *
 cam_simq_alloc(u_int32_t max_sim_transactions)
@@ -105,6 +106,7 @@ cam_sim_alloc(sim_action_func sim_action, sim_poll_func sim_poll,
 void
 cam_sim_free(struct cam_sim *sim, int free_devq)
 {
+	union ccb *ccb;
 	int error;
 
 	sim->refcount--;
@@ -115,6 +117,10 @@ cam_sim_free(struct cam_sim *sim, int free_devq)
 
 	KASSERT(sim->refcount == 0, ("sim->refcount == 0"));
 
+	while ((ccb = (union ccb *)SLIST_FIRST(&sim->ccb_freeq)) != NULL) {
+		SLIST_REMOVE_HEAD(&sim->ccb_freeq, xpt_links.sle);
+		xpt_free_ccb(ccb);
+	}
 	if (free_devq)
 		cam_simq_free(sim->devq);
 	free(sim, M_CAMSIM);

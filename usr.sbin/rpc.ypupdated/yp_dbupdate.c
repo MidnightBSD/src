@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/rpc.ypupdated/yp_dbupdate.c 229241 2012-01-01 23:39:56Z dim $");
 
 #include <sys/fcntl.h>
 

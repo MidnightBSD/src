@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/pci/if_rl.c 245857 2013-01-24 01:07:34Z yongari $");
 
 /*
  * RealTek 8129/8139 PCI NIC driver
@@ -131,7 +131,7 @@ MODULE_DEPEND(rl, miibus, 1, 1, 1);
 /*
  * Various supported device vendors/types and their names.
  */
-static const struct rl_type const rl_devs[] = {
+static const struct rl_type rl_devs[] = {
 	{ RT_VENDORID, RT_DEVICEID_8129, RL_8129,
 		"RealTek 8129 10/100BaseTX" },
 	{ RT_VENDORID, RT_DEVICEID_8139, RL_8139,
@@ -148,6 +148,8 @@ static const struct rl_type const rl_devs[] = {
 		"Delta Electronics 8139 10/100BaseTX" },
 	{ ADDTRON_VENDORID, ADDTRON_DEVICEID_8139, RL_8139,
 		"Addtron Technology 8139 10/100BaseTX" },
+	{ DLINK_VENDORID, DLINK_DEVICEID_520TX_REVC1, RL_8139,
+		"D-Link DFE-520TX (rev. C1) 10/100BaseTX" },
 	{ DLINK_VENDORID, DLINK_DEVICEID_530TXPLUS, RL_8139,
 		"D-Link DFE-530TX+ 10/100BaseTX" },
 	{ DLINK_VENDORID, DLINK_DEVICEID_690TXD, RL_8139,

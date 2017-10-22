@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/csu/powerpc/Makefile 234726 2012-04-27 06:49:35Z dim $
 
 .PATH: ${.CURDIR}/../common
 

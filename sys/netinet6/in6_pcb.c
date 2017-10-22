@@ -65,7 +65,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/in6_pcb.c 234279 2012-04-14 10:36:43Z glebius $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"

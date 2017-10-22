@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/tpm/tpm_isa.c 211201 2010-08-12 00:16:18Z takawata $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

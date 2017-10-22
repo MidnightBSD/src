@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/rtadvd 249049 2013-04-03 11:51:11Z des $
 #
 
 # PROVIDE: rtadvd
@@ -44,6 +44,9 @@ rtadvd_precmd()
 				rtadvd_interfaces="${rtadvd_interfaces} ${i}"
 			fi
 		done
+		;;
+	[Nn][Oo][Nn][Ee])
+		rtadvd_interfaces=""
 		;;
 	esac
 	command_args="${rtadvd_interfaces}"

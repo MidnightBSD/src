@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/kern/genassym.sh 175449 2008-01-18 17:02:14Z julian $
 
 usage()
 {

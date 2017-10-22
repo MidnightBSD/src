@@ -1,5 +1,5 @@
 # Sample configuration file for an installation using pc-sysinstall
-#$FreeBSD$
+#$FreeBSD: stable/9/usr.sbin/pc-sysinstall/examples/pcinstall.cfg.upgrade 209513 2010-06-24 22:21:47Z imp $
 
 installMode=upgrade
 installInteractive=no

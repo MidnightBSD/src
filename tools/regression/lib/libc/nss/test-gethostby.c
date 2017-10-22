@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libc/nss/test-gethostby.c 242544 2012-11-04 01:21:49Z eadler $");
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -565,7 +565,7 @@ hostent_read_snapshot_addr(char *addr, unsigned char *result, size_t len)
 static int
 hostent_read_snapshot_func(struct hostent *ht, char *line)
 {
-	StringList *sl1, *sl2;;
+	StringList *sl1, *sl2;
 	char *s, *ps, *ts;
 	int i, rv;
 

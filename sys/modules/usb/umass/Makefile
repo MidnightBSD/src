@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/usb/umass/Makefile 188943 2009-02-23 18:32:59Z thompsa $
 #
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #

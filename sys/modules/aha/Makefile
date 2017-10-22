@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/aha/Makefile 217070 2011-01-06 21:04:00Z imp $
 
 .PATH: ${.CURDIR}/../../dev/aha
 

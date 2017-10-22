@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/mips/rmi/rootfs_list.txt 238481 2012-07-15 11:39:35Z des $
 #
 # This is the list of files that
 # should be in your rootfs (copy it from

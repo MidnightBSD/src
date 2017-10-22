@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/label/g_label_ufs.c 246284 2013-02-03 12:17:49Z trasz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -86,7 +86,8 @@ g_label_ufs_taste_common(struct g_consumer *cp, char *label, size_t size, int wh
 		    pp->mediasize / fs->fs_fsize == fs->fs_old_size) {
 		    	/* Valid UFS1. */
 		} else if (fs->fs_magic == FS_UFS2_MAGIC && fs->fs_fsize > 0 &&
-		    pp->mediasize / fs->fs_fsize == fs->fs_size) {
+		    ((pp->mediasize / fs->fs_fsize == fs->fs_size) ||
+		    (pp->mediasize / fs->fs_fsize == fs->fs_providersize))) {
 		    	/* Valid UFS2. */
 		} else {
 			g_free(fs);

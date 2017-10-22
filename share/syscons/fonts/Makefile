@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/syscons/fonts/Makefile 215991 2010-11-28 09:35:56Z delphij $
 
 FILES=	armscii8-8x8.fnt armscii8-8x14.fnt armscii8-8x16.fnt \
 	cp437-8x8.fnt cp437-8x14.fnt cp437-8x16.fnt \

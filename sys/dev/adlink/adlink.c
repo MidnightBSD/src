@@ -43,7 +43,7 @@
 
 #ifdef _KERNEL
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/adlink/adlink.c 217068 2011-01-06 21:02:14Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

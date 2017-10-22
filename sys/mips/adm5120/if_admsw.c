@@ -76,7 +76,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/adm5120/if_admsw.c 208022 2010-05-13 01:50:29Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -46,7 +46,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/subr_pcpu.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include "opt_ddb.h"
 
@@ -61,7 +61,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/sx.h>
 #include <ddb/ddb.h>
 
-MALLOC_DEFINE(M_PCPU, "Per-cpu", "Per-cpu resource accouting.");
+static MALLOC_DEFINE(M_PCPU, "Per-cpu", "Per-cpu resource accouting.");
 
 struct dpcpu_free {
 	uintptr_t	df_start;

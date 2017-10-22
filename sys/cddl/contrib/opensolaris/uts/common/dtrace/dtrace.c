@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cddl/contrib/opensolaris/uts/common/dtrace/dtrace.c 241088 2012-10-01 06:42:07Z hselasky $
  */
 
 /*
@@ -157,7 +157,7 @@ dtrace_optval_t	dtrace_dof_maxsize = (256 * 1024);
 size_t		dtrace_global_maxsize = (16 * 1024);
 size_t		dtrace_actions_max = (16 * 1024);
 size_t		dtrace_retain_max = 1024;
-dtrace_optval_t	dtrace_helper_actions_max = 32;
+dtrace_optval_t	dtrace_helper_actions_max = 128;
 dtrace_optval_t	dtrace_helper_providers_max = 32;
 dtrace_optval_t	dtrace_dstate_defsize = (1 * 1024 * 1024);
 size_t		dtrace_strsize_default = 256;
@@ -15517,8 +15517,6 @@ dtrace_close(struct cdev *dev, int flags, int fmt __unused, struct thread *td)
 		kmem_free(state, 0);
 #if __FreeBSD_version < 800039
 		dev->si_drv1 = NULL;
-#else
-		devfs_clear_cdevpriv();
 #endif
 #endif
 	}

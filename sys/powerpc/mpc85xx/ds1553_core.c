@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/mpc85xx/ds1553_core.c 194632 2009-06-22 15:48:47Z raj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

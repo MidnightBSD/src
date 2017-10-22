@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sbin/hastd/pjdlog.h 229509 2012-01-04 17:22:10Z trociny $
  */
 
 #ifndef	_PJDLOG_H_

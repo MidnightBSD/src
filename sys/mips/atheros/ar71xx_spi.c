@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/atheros/ar71xx_spi.c 202723 2010-01-21 00:15:59Z gonzo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

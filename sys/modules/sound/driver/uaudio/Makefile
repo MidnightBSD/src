@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/sound/driver/uaudio/Makefile 188957 2009-02-23 21:19:18Z thompsa $
 
 S=	${.CURDIR}/../../../..
 

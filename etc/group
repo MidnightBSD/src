@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/group 218046 2011-01-28 22:28:12Z pjd $
 #
 wheel:*:0:root
 daemon:*:1:

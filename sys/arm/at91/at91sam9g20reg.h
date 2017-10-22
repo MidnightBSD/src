@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/arm/at91/at91sam9g20reg.h 213496 2010-10-06 22:25:21Z cognet $ */
 
 #ifndef AT91SAM9G20REG_H_
 #define AT91SAM9G20REG_H_

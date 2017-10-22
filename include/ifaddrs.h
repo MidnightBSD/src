@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/include/ifaddrs.h 122687 2003-11-14 18:53:22Z bms $	*/
 
 /*
  * Copyright (c) 1995, 1999

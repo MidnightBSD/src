@@ -1,5 +1,5 @@
 /*	$NetBSD: lockd.c,v 1.7 2000/08/12 18:08:44 thorpej Exp $	*/
-/*	$FreeBSD$ */
+/*	$FreeBSD: stable/9/usr.sbin/rpc.lockd/lockd.c 222624 2011-06-02 19:49:47Z rmacklem $ */
 
 /*
  * Copyright (c) 1995

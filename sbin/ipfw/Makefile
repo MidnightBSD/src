@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/ipfw/Makefile 204869 2010-03-08 14:43:55Z luigi $
 
 PROG=	ipfw
 SRCS=	ipfw2.c dummynet.c ipv6.c main.c nat.c altq.c

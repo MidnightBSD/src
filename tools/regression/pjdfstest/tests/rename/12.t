@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/rename/12.t 211474 2010-08-18 22:06:43Z pjd $
 
 desc="rename returns ENOTDIR if a component of either path prefix is not a directory"
 

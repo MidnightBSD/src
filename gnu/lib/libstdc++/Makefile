@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/lib/libstdc++/Makefile 242347 2012-10-30 07:51:18Z dim $
 
 GCCVER=	4.2
 GCCDIR=	${.CURDIR}/../../../contrib/gcc
@@ -625,3 +625,6 @@ ${VERSION_MAP}: ${SRCDIR}/config/abi/pre/gnu.ver
 CLEANFILES+=	${VERSION_MAP}
 
 .include <bsd.lib.mk>
+
+# Filter out libc++-specific flags, and -std= flags above c++98 or gnu++98.
+CXXFLAGS:=	${CXXFLAGS:N-stdlib=libc++:N-std=c++[01][13x]:N-std=gnu++[01][13x]}

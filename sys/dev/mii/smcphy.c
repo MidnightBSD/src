@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/mii/smcphy.c 233485 2012-03-26 02:40:54Z yongari $");
 
 /*
  * Driver for the internal PHY on the SMSC LAN91C111.

@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/usb/mos/Makefile 218729 2011-02-16 08:33:30Z hselasky $
 #
 # Copyright (c) 2011 Rick van der Zwet <info@rickvanderzwet.nl>
 #

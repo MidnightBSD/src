@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/cam/scsi/scsi_targ_bh.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -51,7 +51,7 @@ __FBSDID("$FreeBSD$");
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>
 
-MALLOC_DEFINE(M_SCSIBH, "SCSI bh", "SCSI blackhole buffers");
+static MALLOC_DEFINE(M_SCSIBH, "SCSI bh", "SCSI blackhole buffers");
 
 typedef enum {
 	TARGBH_STATE_NORMAL,

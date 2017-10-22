@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/ath/if_ath_keycache.h 219185 2011-03-02 17:19:54Z adrian $
  */
 
 #ifndef	__IF_ATH_CRYPTO_H__

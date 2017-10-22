@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/hpt27xx/hpt27xx_config.c 245938 2013-01-26 05:20:09Z delphij $
  */
 
 #include <dev/hpt27xx/hpt27xx_config.h>
@@ -58,9 +58,9 @@ int init_config(void)
 	return 0;
 }
 
-char driver_name[] = "hpt27xx";
-char driver_name_long[] = "RocketRAID 27xx controller driver";
-char driver_ver[] = "v1.0 (" __DATE__ " " __TIME__ ")";
+const char driver_name[] = "hpt27xx";
+const char driver_name_long[] = "RocketRAID 27xx controller driver";
+const char driver_ver[] = "v1.0";
 int  osm_max_targets = 0xff;
 
 

@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/cambria_exp_space.c 194753 2009-06-23 19:29:23Z sam $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

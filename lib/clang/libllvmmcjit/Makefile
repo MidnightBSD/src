@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/clang/libllvmmcjit/Makefile 245431 2013-01-14 19:51:26Z dim $
 
 .include <bsd.own.mk>
 
@@ -6,9 +6,5 @@ LIB=	llvmmcjit
 
 SRCDIR=	lib/ExecutionEngine/MCJIT
 SRCS=	MCJIT.cpp
-
-.if ${MK_CLANG_EXTRAS} != "no"
-SRCS+=	MCJITMemoryManager.cpp
-.endif
 
 .include "../clang.lib.mk"

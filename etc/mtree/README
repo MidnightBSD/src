@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/9/etc/mtree/README 217596 2011-01-19 20:16:47Z uqs $
 
 Note: If you modify these files, please keep hier(7) updated!
 

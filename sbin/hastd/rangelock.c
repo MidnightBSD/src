@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/hastd/rangelock.c 231700 2012-02-14 19:08:21Z trociny $");
 
 #include <sys/queue.h>
 

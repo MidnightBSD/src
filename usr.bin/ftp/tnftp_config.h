@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/usr.bin/ftp/tnftp_config.h 223328 2011-06-20 08:00:32Z gavin $ */
 /* tnftp_config.h.  Generated from tnftp_config.h.in by configure.  */
 /* tnftp_config.h.in.  Generated from configure.ac by autoheader.  */
 

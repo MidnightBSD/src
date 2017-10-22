@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sysinstall/user.c 200302 2009-12-09 19:46:56Z ed $
  *
  * Copyright (c) 1996
  *      Jörg Wunsch. All rights reserved.

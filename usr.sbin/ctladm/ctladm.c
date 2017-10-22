@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/ctladm/ctladm.c 239518 2012-08-21 19:03:04Z dim $");
 
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -1026,7 +1026,7 @@ static int
 cctl_error_inject(int fd, uint32_t target, uint32_t lun, int argc, char **argv, 
 		  char *combinedopt)
 {
-	int retval;
+	int retval = 0;
 	struct ctl_error_desc err_desc;
 	uint64_t lba = 0;
 	uint32_t len = 0;

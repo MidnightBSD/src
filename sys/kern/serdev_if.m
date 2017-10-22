@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/kern/serdev_if.m 157990 2006-04-23 22:12:39Z marcel $
 #
 
 #include <sys/bus.h>

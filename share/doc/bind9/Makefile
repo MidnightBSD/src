@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/doc/bind9/Makefile 234468 2012-04-19 20:44:40Z dougb $
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9
 SRCDIR=		${BIND_DIR}/doc

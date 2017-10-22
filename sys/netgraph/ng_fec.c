@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_fec.c 220768 2011-04-18 09:12:27Z glebius $
  */
 /*-
  * Copyright (c) 1996-1999 Whistle Communications, Inc.

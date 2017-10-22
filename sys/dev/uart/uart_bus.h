@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/uart/uart_bus.h 247887 2013-03-06 11:07:59Z avg $
  */
 
 #ifndef _DEV_UART_BUS_H_
@@ -137,6 +137,7 @@ extern char uart_driver_name[];
 
 int uart_bus_attach(device_t dev);
 int uart_bus_detach(device_t dev);
+int uart_bus_resume(device_t dev);
 serdev_intr_t *uart_bus_ihand(device_t dev, int ipend);
 int uart_bus_ipend(device_t dev);
 int uart_bus_probe(device_t dev, int regshft, int rclk, int rid, int chan);

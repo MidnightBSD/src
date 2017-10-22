@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/libusb/libusb10_desc.c 235004 2012-05-04 15:27:18Z hselasky $ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  *

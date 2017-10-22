@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)shutdown.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/shutdown/shutdown.c 239648 2012-08-24 13:11:30Z des $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -93,7 +93,7 @@ static char mbuf[BUFSIZ];
 static const char *nosync, *whom;
 
 static void badtime(void);
-static void perform_shutdown(void);
+static void die_you_gravy_sucking_pig_dog(void);
 static void finish(int);
 static void getoffset(char *);
 static void loop(void);
@@ -282,7 +282,7 @@ loop(void)
 		if (!tp->timeleft)
 			break;
 	}
-	perform_shutdown();
+	die_you_gravy_sucking_pig_dog();
 }
 
 static jmp_buf alarmbuf;
@@ -349,7 +349,7 @@ timeout(int signo __unused)
 }
 
 static void
-perform_shutdown(void)
+die_you_gravy_sucking_pig_dog(void)
 {
 	char *empty_environ[] = { NULL };
 

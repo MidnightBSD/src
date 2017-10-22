@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: bt3cfw.c,v 1.2 2003/05/21 22:40:29 max Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/bluetooth/bt3cfw/bt3cfw.c 128079 2004-04-09 23:58:53Z emax $
  */
 
 #include <sys/types.h>

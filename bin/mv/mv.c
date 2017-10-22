@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)mv.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/mv/mv.c 243557 2012-11-26 05:13:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/acl.h>
@@ -68,7 +68,7 @@ __FBSDID("$FreeBSD$");
 /* Exit code for a failed exec. */
 #define EXEC_FAILED 127
 
-int fflg, iflg, nflg, vflg;
+static int	fflg, hflg, iflg, nflg, vflg;
 
 static int	copy(const char *, const char *);
 static int	do_move(const char *, const char *);
@@ -87,8 +87,11 @@ main(int argc, char *argv[])
 	int ch;
 	char path[PATH_MAX];
 
-	while ((ch = getopt(argc, argv, "finv")) != -1)
+	while ((ch = getopt(argc, argv, "fhinv")) != -1)
 		switch (ch) {
+		case 'h':
+			hflg = 1;
+			break;
 		case 'i':
 			iflg = 1;
 			fflg = nflg = 0;
@@ -121,6 +124,17 @@ main(int argc, char *argv[])
 		if (argc > 2)
 			usage();
 		exit(do_move(argv[0], argv[1]));
+	}
+
+	/*
+	 * If -h was specified, treat the target as a symlink instead of
+	 * directory.
+	 */
+	if (hflg) {
+		if (argc > 2)
+			usage();
+		if (lstat(argv[1], &sb) == 0 && S_ISLNK(sb.st_mode))
+			exit(do_move(argv[0], argv[1]));
 	}
 
 	/* It's a directory, move each file into it. */
@@ -185,7 +199,7 @@ do_move(const char *from, const char *to)
 		} else if (iflg) {
 			(void)fprintf(stderr, "overwrite %s? %s", to, YESNO);
 			ask = 1;
-		} else if (access(to, W_OK) && !stat(to, &sb)) {
+		} else if (access(to, W_OK) && !stat(to, &sb) && isatty(STDIN_FILENO)) {
 			strmode(sb.st_mode, modep);
 			(void)fprintf(stderr, "override %s%s%s/%s for %s? %s",
 			    modep + 1, modep[9] == ' ' ? "" : " ",
@@ -489,7 +503,7 @@ usage(void)
 {
 
 	(void)fprintf(stderr, "%s\n%s\n",
-		      "usage: mv [-f | -i | -n] [-v] source target",
+		      "usage: mv [-f | -i | -n] [-hv] source target",
 		      "       mv [-f | -i | -n] [-v] source ... directory");
 	exit(EX_USAGE);
 }

@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/flash/mx25l.c 218747 2011-02-16 20:07:44Z adrian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

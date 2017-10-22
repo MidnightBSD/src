@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/usr.sbin/pkg_install/create/create.h 213718 2010-10-12 10:04:44Z flz $ */
 
 /*
  * FreeBSD install - a package for the installation and maintainance

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/powermac/fcu.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -131,7 +131,7 @@ static driver_t fcu_driver = {
 static devclass_t fcu_devclass;
 
 DRIVER_MODULE(fcu, iicbus, fcu_driver, fcu_devclass, 0, 0);
-MALLOC_DEFINE(M_FCU, "fcu", "FCU Sensor Information");
+static MALLOC_DEFINE(M_FCU, "fcu", "FCU Sensor Information");
 
 static int
 fcu_write(device_t dev, uint32_t addr, uint8_t reg, uint8_t *buff,

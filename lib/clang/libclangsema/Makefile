@@ -1,4 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/clang/libclangsema/Makefile 246637 2013-02-10 21:24:47Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	clangsema
 
@@ -10,7 +12,9 @@ SRCS=	AnalysisBasedWarnings.cpp \
 	DelayedDiagnostic.cpp \
 	IdentifierResolver.cpp \
 	JumpDiagnostics.cpp \
+	MultiplexExternalSemaSource.cpp \
 	Scope.cpp \
+	ScopeInfo.cpp \
 	Sema.cpp \
 	SemaAccess.cpp \
 	SemaAttr.cpp \
@@ -36,6 +40,7 @@ SRCS=	AnalysisBasedWarnings.cpp \
 	SemaOverload.cpp \
 	SemaPseudoObject.cpp \
 	SemaStmt.cpp \
+	SemaStmtAsm.cpp \
 	SemaStmtAttr.cpp \
 	SemaTemplate.cpp \
 	SemaTemplateDeduction.cpp \
@@ -50,8 +55,10 @@ TGHDRS=	AttrList \
 	AttrParsedAttrList \
 	AttrTemplateInstantiate \
 	Attrs \
+	CommentNodes \
 	DeclNodes \
 	DiagnosticASTKinds \
+	DiagnosticCommentKinds \
 	DiagnosticCommonKinds \
 	DiagnosticParseKinds \
 	DiagnosticSemaKinds \

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)time.h	8.5 (Berkeley) 5/4/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/time.h 247555 2013-03-01 17:10:43Z jhb $
  */
 
 #ifndef _SYS_TIME_H_
@@ -281,8 +281,8 @@ struct clockinfo {
 void	inittodr(time_t base);
 void	resettodr(void);
 
-extern time_t	time_second;
-extern time_t	time_uptime;
+extern volatile time_t	time_second;
+extern volatile time_t	time_uptime;
 extern struct bintime boottimebin;
 extern struct timeval boottime;
 

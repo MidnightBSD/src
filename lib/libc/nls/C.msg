@@ -1,4 +1,4 @@
-$ $FreeBSD$
+$ $FreeBSD: stable/9/lib/libc/nls/C.msg 199083 2009-11-09 12:46:59Z ume $
 $
 $ Message catalog for C locale (template)
 $

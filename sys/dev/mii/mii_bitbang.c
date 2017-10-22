@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/mii/mii_bitbang.c 227277 2011-11-06 21:09:10Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -14,7 +14,7 @@ you didn't get a copy, you may request one from <license@inner.net>.
               they killed thread-safety.
         Created by cmetz for OPIE 2.3 using the old hash.c as a guide.
 
-$FreeBSD$
+$FreeBSD: stable/9/contrib/opie/libopie/hash.c 239459 2012-08-20 18:26:16Z delphij $
 */
 
 #include <sys/endian.h>

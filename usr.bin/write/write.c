@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)write.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/write/write.c 234274 2012-04-14 09:43:58Z glebius $");
 
 #include <sys/param.h>
 #include <sys/signal.h>

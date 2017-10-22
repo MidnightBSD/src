@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/boot/arm/uboot/Makefile 243243 2012-11-18 17:09:29Z ae $
 
 .include <bsd.own.mk>
 
@@ -11,7 +11,11 @@ WARNS?=		1
 # Architecture-specific loader code
 SRCS=		start.S conf.c vers.c
 
+.if !defined(LOADER_NO_DISK_SUPPORT)
 LOADER_DISK_SUPPORT?=	yes
+.else
+LOADER_DISK_SUPPORT=	no
+.endif
 LOADER_UFS_SUPPORT?=	yes
 LOADER_CD9660_SUPPORT?=	no
 LOADER_EXT2FS_SUPPORT?=	no

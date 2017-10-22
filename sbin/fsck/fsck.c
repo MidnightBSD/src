@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/fsck/fsck.c 199582 2009-11-20 15:27:00Z netchild $");
 
 #include <sys/param.h>
 #include <sys/mount.h>

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/cddl/lib/libdtrace/Makefile 248350 2013-03-15 20:34:10Z brooks $
 
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libdtrace/common
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libgen/common
@@ -46,6 +46,7 @@ SRCS=		dt_aggregate.c \
 		dis_tables.c
 
 DSRCS=		errno.d			\
+		io.d			\
 		psinfo.d		\
 		signal.d		\
 		unistd.d
@@ -94,7 +95,7 @@ dt_names.c:
 beforedepend:	dt_errtags.c dt_names.c
 
 beforeinstall:
-.if exists(${DESTDIR}/usr/lib/dtrace)
+.if !defined(LIBRARIES_ONLY) && exists(${DESTDIR}/usr/lib/dtrace)
 .for file in ${DSRCS}
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m ${NOBINMODE} ${.CURDIR}/${file} ${DESTDIR}/usr/lib/dtrace
 .endfor

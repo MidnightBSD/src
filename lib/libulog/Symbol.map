@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libulog/Symbol.map 202215 2010-01-13 18:53:06Z ed $
  */	
 
 FBSD_1.2 {

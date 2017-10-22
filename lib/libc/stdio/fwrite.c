@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)fwrite.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/stdio/fwrite.c 201999 2010-01-10 14:30:30Z cperciva $");
 
 #include "namespace.h"
 #include <errno.h>

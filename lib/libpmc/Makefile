@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libpmc/Makefile 249492 2013-04-15 03:09:59Z hiren $
 
 LIB=	pmc
 
@@ -28,6 +28,8 @@ MAN+=	pmc.atom.3
 MAN+=	pmc.core.3
 MAN+=	pmc.core2.3
 MAN+=	pmc.iaf.3
+MAN+=	pmc.ivybridge.3
+MAN+=	pmc.ivybridgexeon.3
 MAN+=	pmc.ucf.3
 MAN+=	pmc.k7.3
 MAN+=	pmc.k8.3
@@ -38,6 +40,7 @@ MAN+=	pmc.corei7.3
 MAN+=	pmc.corei7uc.3
 MAN+=	pmc.sandybridge.3
 MAN+=	pmc.sandybridgeuc.3	
+MAN+=	pmc.sandybridgexeon.3	
 MAN+=	pmc.westmere.3
 MAN+=	pmc.westmereuc.3
 MAN+=	pmc.tsc.3

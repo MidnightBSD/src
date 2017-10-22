@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/hpfs/hpfs_ioctl.h 54371 1999-12-09 19:10:13Z semenu $
  */
 
 #ifndef _HPFS_IOCTL_H_

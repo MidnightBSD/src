@@ -4,7 +4,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/sparc64/gen/flt_rounds.c 140424 2005-01-18 15:29:28Z das $");
 
 #include <sys/types.h>
 #include <machine/float.h>

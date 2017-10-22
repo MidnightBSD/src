@@ -57,7 +57,7 @@
  */
 
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libmd/ripemd.h 154479 2006-01-17 15:35:57Z phk $
  */
 
 #ifndef HEADER_RIPEMD_H

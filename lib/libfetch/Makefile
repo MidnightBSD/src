@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libfetch/Makefile 242606 2012-11-05 10:42:31Z des $
 
 .include <bsd.own.mk>
 
@@ -16,8 +16,8 @@ CFLAGS+=	-DINET6
 
 .if ${MK_OPENSSL} != "no"
 CFLAGS+=	-DWITH_SSL
-DPADD=		${LIBSSL} ${LIBCRYPTO} ${LIBMD}
-LDADD=		-lssl -lcrypto -lmd
+DPADD=		${LIBSSL} ${LIBCRYPTO}
+LDADD=		-lssl -lcrypto
 .else
 DPADD=		${LIBMD}
 LDADD=		-lmd

@@ -1,5 +1,5 @@
 #	from: @(#)Makefile	2.3 88/08/11 4.0 RPCSRC
-#	$FreeBSD$
+#	$FreeBSD: stable/9/include/rpc/Makefile 231702 2012-02-14 19:36:35Z dim $
 
 .SUFFIXES: .x
 

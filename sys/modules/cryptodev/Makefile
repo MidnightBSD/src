@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/cryptodev/Makefile 213781 2010-10-13 14:44:38Z rpaulo $
 
 .PATH:	${.CURDIR}/../../opencrypto
 KMOD	= cryptodev

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/secure/libexec/ssh-keysign/Makefile 197679 2009-10-01 17:12:52Z des $
 
 PROG=	ssh-keysign
 SRCS=	ssh-keysign.c readconf.c roaming_dummy.c

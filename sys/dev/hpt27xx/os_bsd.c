@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/hpt27xx/os_bsd.c 242544 2012-11-04 01:21:49Z eadler $
  */
 
 #include <dev/hpt27xx/hpt27xx_config.h>
@@ -133,7 +133,7 @@ HPT_U8 pcicfg_read_byte (HPT_U8 bus, HPT_U8 dev, HPT_U8 func, HPT_U8 reg)
 }
 HPT_U32 pcicfg_read_dword(HPT_U8 bus, HPT_U8 dev, HPT_U8 func, HPT_U8 reg)
 {
-	return (HPT_U32)pci_cfgregread(bus, dev, func, reg, 4);;
+	return (HPT_U32)pci_cfgregread(bus, dev, func, reg, 4);
 }
 void pcicfg_write_byte (HPT_U8 bus, HPT_U8 dev, HPT_U8 func, HPT_U8 reg, HPT_U8 v)
 {

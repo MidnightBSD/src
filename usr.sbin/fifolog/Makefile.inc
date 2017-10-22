@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/fifolog/Makefile.inc 201390 2010-01-02 11:07:44Z ed $
 
 LIBFIFOLOG= ${.OBJDIR}/../lib/libfifolog.a
 

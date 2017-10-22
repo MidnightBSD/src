@@ -36,7 +36,7 @@
 static char sccsid[] = "@(#)search.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libedit/search.c 237738 2012-06-29 03:01:38Z pfg $");
 
 /*
  * search.c: History and character search functions

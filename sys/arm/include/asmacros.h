@@ -34,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/arm/include/asmacros.h 231132 2012-02-07 16:07:29Z cognet $
  */
 
 #ifndef	_MACHINE_ASMACROS_H_

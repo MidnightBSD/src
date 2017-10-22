@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/cfi/cfi_core.c 193936 2009-06-10 17:41:24Z imp $");
 
 #include "opt_cfi.h"
 

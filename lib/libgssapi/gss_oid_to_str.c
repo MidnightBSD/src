@@ -30,7 +30,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/libgssapi/gss_oid_to_str.c 178828 2008-05-07 13:53:12Z dfr $ */
 
 #include <gssapi/gssapi.h>
 #include <stdio.h>

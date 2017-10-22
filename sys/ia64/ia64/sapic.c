@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ia64/ia64/sapic.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #include "opt_ddb.h"
@@ -99,7 +99,7 @@ struct sapic_rte {
 	uint64_t	rte_destination_id	:8;
 };
 
-MALLOC_DEFINE(M_SAPIC, "sapic", "I/O SAPIC devices");
+static MALLOC_DEFINE(M_SAPIC, "sapic", "I/O SAPIC devices");
 
 struct sapic *ia64_sapics[16];		/* XXX make this resizable */
 int ia64_sapic_count;

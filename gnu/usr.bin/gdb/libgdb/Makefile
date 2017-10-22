@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/usr.bin/gdb/libgdb/Makefile 217123 2011-01-07 20:26:33Z imp $
 
 # These assignments duplicate much of the functionality of
 # MACHINE_CPUARCH, but there's no easy way to export make functions...

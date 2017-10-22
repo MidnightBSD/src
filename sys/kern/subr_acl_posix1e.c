@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/subr_acl_posix1e.c 212002 2010-08-30 16:30:18Z jh $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/csup/lister.c 242019 2012-10-25 01:19:02Z eadler $
  */
 
 #include <assert.h>
@@ -530,7 +530,7 @@ lister_dorcsdead(struct lister *l, struct coll *coll, struct statusrec *sr)
 		return (0);
 	config = l->config;
 	wr = l->wr;
-	if (!coll->co_options & CO_TRUSTSTATUSFILE) {
+	if (!(coll->co_options & CO_TRUSTSTATUSFILE)) {
 		path = cvspath(coll->co_prefix, sr->sr_file, 1);
 		if (path == NULL) {
 			spath = coll_statuspath(coll);

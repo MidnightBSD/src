@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_clocksource.c 234167 2012-04-12 06:29:02Z mav $");
 
 /*
  * Common routines to manage event timers hardware.

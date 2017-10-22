@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/security/mac/mac_net.c 247629 2013-03-02 15:11:20Z melifaro $");
 
 #include "opt_kdtrace.h"
 #include "opt_mac.h"
@@ -319,6 +319,7 @@ mac_bpfdesc_create_mbuf(struct bpf_d *d, struct mbuf *m)
 {
 	struct label *label;
 
+	/* Assume reader lock is enough. */
 	BPFD_LOCK_ASSERT(d);
 
 	if (mac_policy_count == 0)
@@ -354,6 +355,7 @@ mac_bpfdesc_check_receive(struct bpf_d *d, struct ifnet *ifp)
 {
 	int error;
 
+	/* Assume reader lock is enough. */
 	BPFD_LOCK_ASSERT(d);
 
 	if (mac_policy_count == 0)

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/lastcomm/readrec.c 223375 2011-06-21 20:36:10Z delphij $");
 
 #include <sys/param.h>
 #include <sys/stat.h>

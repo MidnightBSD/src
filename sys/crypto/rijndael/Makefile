@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/crypto/rijndael/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 PROG=test00
 NO_MAN=

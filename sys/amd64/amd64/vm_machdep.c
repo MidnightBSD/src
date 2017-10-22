@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/amd64/amd64/vm_machdep.c 239945 2012-08-31 11:48:04Z kib $");
 
 #include "opt_isa.h"
 #include "opt_cpu.h"
@@ -89,6 +89,10 @@ static void	cpu_reset_proxy(void);
 static u_int	cpu_reset_proxyid;
 static volatile u_int	cpu_reset_proxy_active;
 #endif
+
+CTASSERT((struct thread **)OFFSETOF_CURTHREAD ==
+    &((struct pcpu *)NULL)->pc_curthread);
+CTASSERT((struct pcb **)OFFSETOF_CURPCB == &((struct pcpu *)NULL)->pc_curpcb);
 
 struct savefpu *
 get_pcb_user_save_td(struct thread *td)

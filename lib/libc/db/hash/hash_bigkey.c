@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)hash_bigkey.c	8.3 (Berkeley) 5/31/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/db/hash/hash_bigkey.c 190494 2009-03-28 06:47:05Z delphij $");
 
 /*
  * PACKAGE: hash

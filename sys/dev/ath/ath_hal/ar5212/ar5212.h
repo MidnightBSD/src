@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/ath/ath_hal/ar5212/ar5212.h 242908 2012-11-12 07:34:05Z dim $
  */
 #ifndef _ATH_AR5212_H_
 #define _ATH_AR5212_H_
@@ -143,7 +143,7 @@ typedef struct RfHalFuncs {
 		      int16_t *minPower, int16_t *maxPower,
 		      const struct ieee80211_channel *, uint16_t *rfXpdGain);
 	HAL_BOOL  (*getChannelMaxMinPower)(struct ath_hal *ah,
-		      const const struct ieee80211_channel *,
+		      const struct ieee80211_channel *,
 		      int16_t *maxPow, int16_t *minPow);
 	int16_t	  (*getNfAdjust)(struct ath_hal *, const HAL_CHANNEL_INTERNAL*);
 } RF_HAL_FUNCS;

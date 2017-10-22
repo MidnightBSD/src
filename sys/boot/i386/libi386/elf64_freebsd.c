@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/i386/libi386/elf64_freebsd.c 199806 2009-11-25 16:36:07Z trasz $");
 
 #define __ELF_WORD_SIZE 64
 #include <sys/param.h>

@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/cxgbe/Makefile 237920 2012-07-01 12:00:36Z np $
 #
 
 SUBDIR = if_cxgbe

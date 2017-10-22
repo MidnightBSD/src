@@ -50,7 +50,7 @@ static char sccsid[] = "@(#)chpass.c	8.4 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/chpass/chpass.c 243256 2012-11-19 04:07:43Z eadler $");
 
 #include <sys/param.h>
 
@@ -241,8 +241,11 @@ main(int argc, char *argv[])
 #ifdef YP
 	case _PWF_NIS:
 		ypclnt = ypclnt_new(yp_domain, "passwd.byname", yp_host);
-		if (ypclnt == NULL ||
-		    ypclnt_connect(ypclnt) == -1 ||
+		if (ypclnt == NULL) {
+			warnx("ypclnt_new failed");
+			exit(1);
+		}
+		if (ypclnt_connect(ypclnt) == -1 ||
 		    ypclnt_passwd(ypclnt, pw, password) == -1) {
 			warnx("%s", ypclnt->error);
 			ypclnt_free(ypclnt);

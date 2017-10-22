@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ia64/ia64/mp_locore.S 221271 2011-04-30 20:49:00Z marcel $
  */
 
 #include <machine/asm.h>

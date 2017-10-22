@@ -1,4 +1,4 @@
-/* $FreeBSD$	*/
+/* $FreeBSD: stable/9/bin/chio/defs.h 139969 2005-01-10 08:39:26Z imp $	*/
 
 /*-
  * Copyright (c) 1996 Jason R. Thorpe <thorpej@and.com>

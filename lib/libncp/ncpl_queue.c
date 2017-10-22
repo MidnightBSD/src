@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libncp/ncpl_queue.c 165920 2007-01-09 23:27:39Z imp $");
 
 #include <sys/types.h>
 #include <errno.h>

@@ -35,7 +35,7 @@
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/contrib/pf/net/pf_table.c 238600 2012-07-18 16:13:03Z glebius $");
 #endif
 
 #include <sys/param.h>

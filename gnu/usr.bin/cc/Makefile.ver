@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/usr.bin/cc/Makefile.ver 227128 2011-11-06 02:10:40Z obrien $
 
 BASEVER!=	cat ${GCCDIR}/BASE-VER
 DATESTAMP!=	cat ${GCCDIR}/DATESTAMP

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libc/include/un-namespace.h 244175 2012-12-13 06:24:54Z kib $
  */
 
 #ifndef _UN_NAMESPACE_H_
@@ -210,6 +210,7 @@
 #undef		socketpair
 #undef		usleep
 #undef		wait4
+#undef		wait6
 #undef		waitpid
 #undef		write
 #undef		writev

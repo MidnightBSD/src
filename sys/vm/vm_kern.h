@@ -57,7 +57,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/vm/vm_kern.h 180308 2008-07-05 19:34:33Z alc $
  */
 
 #ifndef _VM_VM_KERN_H_

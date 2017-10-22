@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/mount_portalfs/pt_conf.c 143389 2005-03-10 22:10:16Z dds $");
 
 #include <sys/types.h>
 #include <sys/param.h>

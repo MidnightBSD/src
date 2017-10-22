@@ -2,7 +2,7 @@
 #
 # Wait for the default route to be up if DHCP is in use
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/defaultroute 213270 2010-09-29 13:08:23Z emaste $
 #
 
 # PROVIDE: defaultroute

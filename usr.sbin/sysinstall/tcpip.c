@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sysinstall/tcpip.c 213763 2010-10-13 09:33:26Z brucec $
  *
  * Copyright (c) 1995
  *      Gary J Palmer. All rights reserved.

@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/xen/gnttab.c 214077 2010-10-19 20:53:30Z gibbs $");
 
 #include "opt_global.h"
 #include "opt_pmap.h"

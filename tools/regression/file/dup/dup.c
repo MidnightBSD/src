@@ -5,7 +5,7 @@
  *
  * Written by Artur Grabowski <art@openbsd.org> 2002 Public Domain.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/file/dup/dup.c 176957 2008-03-08 22:02:21Z antoine $
  */
 
 /*

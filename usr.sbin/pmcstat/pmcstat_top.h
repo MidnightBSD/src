@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/pmcstat/pmcstat_top.h 203790 2010-02-11 22:51:44Z fabient $
  */
 
 #ifndef	_PMCSTAT_TOP_H_

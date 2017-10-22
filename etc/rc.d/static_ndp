@@ -26,7 +26,7 @@
 #
 # Configure static NDP table
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/static_ndp 226786 2011-10-26 08:34:00Z mm $
 #
 
 # PROVIDE: static_ndp

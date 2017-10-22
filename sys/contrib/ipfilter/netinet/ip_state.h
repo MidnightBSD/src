@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sys/contrib/ipfilter/netinet/ip_state.h 172776 2007-10-18 21:52:14Z darrenr $	*/
 
 /*
  * Copyright (C) 1995-2001 by Darren Reed.
@@ -6,7 +6,7 @@
  * See the IPFILTER.LICENCE file for details on licencing.
  *
  * @(#)ip_state.h	1.3 1/12/96 (C) 1995 Darren Reed
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/contrib/ipfilter/netinet/ip_state.h 172776 2007-10-18 21:52:14Z darrenr $
  * Id: ip_state.h,v 2.68.2.10 2007/10/16 09:33:24 darrenr Exp $
  */
 #ifndef	__IP_STATE_H__

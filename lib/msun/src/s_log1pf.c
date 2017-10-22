@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/s_log1pf.c 177711 2008-03-29 16:37:59Z das $");
 
 #include <float.h>
 

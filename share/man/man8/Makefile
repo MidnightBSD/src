@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD$
+# $FreeBSD: stable/9/share/man/man8/Makefile 218998 2011-02-24 13:03:47Z remko $
 
 MAN=	crash.8 \
 	diskless.8 \

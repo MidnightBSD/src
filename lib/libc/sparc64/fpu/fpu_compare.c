@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/sparc64/fpu/fpu_compare.c 165903 2007-01-09 00:28:16Z imp $");
 
 /*
  * CMP and CMPE instructions.

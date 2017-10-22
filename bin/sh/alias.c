@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)alias.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/sh/alias.c 243402 2012-11-22 13:50:51Z jilles $");
 
 #include <stdlib.h>
 #include "shell.h"
@@ -68,7 +68,18 @@ setalias(const char *name, const char *val)
 		if (equal(name, ap->name)) {
 			INTOFF;
 			ckfree(ap->val);
+			/* See HACK below. */
+#ifdef notyet
 			ap->val	= savestr(val);
+#else
+			{
+			size_t len = strlen(val);
+			ap->val = ckmalloc(len + 2);
+			memcpy(ap->val, val, len);
+			ap->val[len] = ' ';
+			ap->val[len+1] = '\0';
+			}
+#endif
 			INTON;
 			return;
 		}

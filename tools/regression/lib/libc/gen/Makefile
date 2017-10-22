@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/lib/libc/gen/Makefile 223907 2011-07-10 14:20:11Z jilles $
 
 TESTS=	test-fmtcheck test-fnmatch test-fpclassify test-posix_spawn test-wordexp
 

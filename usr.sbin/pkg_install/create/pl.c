@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/create/pl.c 222035 2011-05-17 19:11:47Z flz $");
 
 #include "lib.h"
 #include "create.h"

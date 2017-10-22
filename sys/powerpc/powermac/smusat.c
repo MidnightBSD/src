@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/powermac/smusat.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -63,7 +63,7 @@ static int	smusat_attach(device_t);
 static int	smusat_sensor_sysctl(SYSCTL_HANDLER_ARGS);
 static int	smusat_sensor_read(struct smu_sensor *sens);
 
-MALLOC_DEFINE(M_SMUSAT, "smusat", "SMU Sattelite Sensors");
+static MALLOC_DEFINE(M_SMUSAT, "smusat", "SMU Sattelite Sensors");
 
 static device_method_t  smusat_methods[] = {
 	/* Device interface */

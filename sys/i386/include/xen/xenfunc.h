@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/i386/include/xen/xenfunc.h 207673 2010-05-05 20:39:02Z joel $
  */
 
 #ifndef _XEN_XENFUNC_H_

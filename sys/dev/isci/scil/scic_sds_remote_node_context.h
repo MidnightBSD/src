@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/isci/scil/scic_sds_remote_node_context.h 240579 2012-09-17 00:44:16Z eadler $
  */
 #ifndef _SCIC_SDS_REMOTE_NODE_CONTEXT_H_
 #define _SCIC_SDS_REMOTE_NODE_CONTEXT_H_
@@ -237,7 +237,7 @@ enum SCIC_SDS_REMOTE_NODE_CONTEXT_DESTINATION_STATE
  *
  * @brief  This structure contains the data associated with the remote
  *         node context object.  The remote node context (RNC) object models
- *         the the remote device information necessary to manage the
+ *         the remote device information necessary to manage the
  *         silicon RNC.
  */
 typedef struct SCIC_SDS_REMOTE_NODE_CONTEXT

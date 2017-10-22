@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/cddl/usr.bin/ztest/Makefile 243674 2012-11-29 14:05:04Z mm $
 
 .PATH: ${.CURDIR}/../..//contrib/opensolaris/cmd/ztest
 
@@ -11,16 +11,20 @@ CFLAGS+= -I${.CURDIR}/../../compat/opensolaris/include
 CFLAGS+= -I${.CURDIR}/../../compat/opensolaris/lib/libumem
 CFLAGS+= -I${.CURDIR}/../../contrib/opensolaris/lib/libzpool/common
 CFLAGS+= -I${.CURDIR}/../../contrib/opensolaris/lib/libnvpair
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/common/zfs
 CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/fs/zfs
 CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/sys
 CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common
 CFLAGS+= -I${.CURDIR}/../../contrib/opensolaris/head
 CFLAGS+= -I${.CURDIR}/../../lib/libumem
 
-DPADD=	${LIBM} ${LIBNVPAIR} ${LIBUMEM} ${LIBZPOOL} \
-	${LIBPTHREAD} ${LIBZ} ${LIBAVL}
-LDADD=	-lm -lnvpair -lumem -lzpool -lpthread -lz -lavl
+DPADD=	${LIBGEOM} ${LIBM} ${LIBNVPAIR} ${LIBUMEM} ${LIBZPOOL} \
+	${LIBPTHREAD} ${LIBAVL} ${LIBZFS} ${LIBUUTIL}
+LDADD=	-lgeom -lm -lnvpair -lumem -lzpool -lpthread -lavl -lzfs -luutil
 
 CSTD=	c99
+
+CFLAGS+= -DDEBUG=1
+#DEBUG_FLAGS+=	-g
 
 .include <bsd.prog.mk>

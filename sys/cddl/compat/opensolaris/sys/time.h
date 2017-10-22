@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cddl/compat/opensolaris/sys/time.h 248369 2013-03-16 08:16:11Z mm $
  */
 
 #ifndef _OPENSOLARIS_SYS_TIME_H_
@@ -45,6 +45,9 @@ typedef longlong_t	hrtime_t;
 #define	TIMESPEC_OVERFLOW(ts)						\
 	((ts)->tv_sec < INT64_MIN || (ts)->tv_sec > INT64_MAX)
 #endif
+
+#define	SEC_TO_TICK(sec)	((sec) * hz)
+#define	NSEC_TO_TICK(usec)	((usec) / (NANOSEC / hz))
 
 #ifdef _KERNEL
 static __inline hrtime_t

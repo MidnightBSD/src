@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libthr/thread/thr_info.c 168382 2007-04-05 07:20:31Z davidxu $
  */
 
 #include "namespace.h"

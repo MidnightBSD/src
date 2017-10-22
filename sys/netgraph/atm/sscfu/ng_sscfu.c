@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netgraph/atm/sscfu/ng_sscfu.c 220768 2011-04-18 09:12:27Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

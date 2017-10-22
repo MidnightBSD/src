@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/setfib/setfib.c 183987 2008-10-17 21:11:09Z delphij $");
 
 #include <ctype.h>
 #include <err.h>

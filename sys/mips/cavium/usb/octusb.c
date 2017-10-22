@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/usb/octusb.c 248085 2013-03-09 02:36:32Z marius $");
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
@@ -81,7 +81,7 @@ __FBSDID("$FreeBSD$");
 #ifdef USB_DEBUG
 static int octusbdebug = 0;
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, octusb, CTLFLAG_RW, 0, "OCTUSB");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, octusb, CTLFLAG_RW, 0, "OCTUSB");
 SYSCTL_INT(_hw_usb_octusb, OID_AUTO, debug, CTLFLAG_RW,
     &octusbdebug, 0, "OCTUSB debug level");
 

@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/nfsserver/nfs_srvsubs.c 247502 2013-02-28 21:57:38Z jhb $");
 
 /*
  * These functions support the macros and help fiddle mbuf chains for
@@ -1430,7 +1430,7 @@ nfsm_srvsattr_xx(struct vattr *a, struct mbuf **md, caddr_t *dpos)
 		toclient = 1;
 		break;
 	case NFSV3SATTRTIME_TOSERVER:
-		getnanotime(&(a)->va_atime);
+		vfs_timestamp(&a->va_atime);
 		a->va_vaflags |= VA_UTIMES_NULL;
 		break;
 	}
@@ -1446,7 +1446,7 @@ nfsm_srvsattr_xx(struct vattr *a, struct mbuf **md, caddr_t *dpos)
 		a->va_vaflags &= ~VA_UTIMES_NULL;
 		break;
 	case NFSV3SATTRTIME_TOSERVER:
-		getnanotime(&(a)->va_mtime);
+		vfs_timestamp(&a->va_mtime);
 		if (toclient == 0)
 			a->va_vaflags |= VA_UTIMES_NULL;
 		break;

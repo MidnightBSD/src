@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/cddl/usr.sbin/lockstat/Makefile 210697 2010-07-31 17:58:44Z rpaulo $
 
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/cmd/lockstat
 

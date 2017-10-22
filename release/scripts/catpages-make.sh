@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/release/scripts/catpages-make.sh 97286 2002-05-25 17:31:27Z ru $
 #
 
 # Move all the catpages out to their own dist, using the base dist as a

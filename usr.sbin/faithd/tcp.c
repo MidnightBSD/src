@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/faithd/tcp.c 173412 2007-11-07 10:53:41Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/types.h>

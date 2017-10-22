@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/userboot/userboot/main.c 243243 2012-11-18 17:09:29Z ae $");
 
 #include <stand.h>
 #include <string.h>
@@ -36,7 +36,9 @@ __FBSDID("$FreeBSD$");
 #include "disk.h"
 #include "libuserboot.h"
 
-struct loader_callbacks_v1 *callbacks;
+#define	USERBOOT_VERSION	USERBOOT_VERSION_2
+
+struct loader_callbacks *callbacks;
 void *callbacks_arg;
 
 extern char bootprog_name[];
@@ -65,12 +67,12 @@ exit(int v)
 }
 
 void
-loader_main(struct loader_callbacks_v1 *cb, void *arg, int version, int ndisks)
+loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
 {
 	static char malloc[512*1024];
 	int i;
 
-        if (version != USERBOOT_VERSION_1)
+        if (version != USERBOOT_VERSION)
                 abort();
 
 	callbacks = cb;

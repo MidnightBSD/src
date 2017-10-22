@@ -28,7 +28,7 @@
  *
  *	@(#)dump.h	8.2 (Berkeley) 4/28/95
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sbin/dump/dump.h 230047 2012-01-13 07:08:21Z mckusick $
  */
 
 /*

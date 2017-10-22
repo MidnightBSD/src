@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ia64/ia64/uma_machdep.c 172189 2007-09-15 18:47:02Z alc $");
 
 #include <sys/param.h>
 #include <sys/lock.h>

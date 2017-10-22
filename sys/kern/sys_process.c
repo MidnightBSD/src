@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/sys_process.c 247077 2013-02-21 05:47:52Z kib $");
 
 #include "opt_compat.h"
 
@@ -824,6 +824,8 @@ kern_ptrace(struct thread *td, int req, pid_t pid, void *addr, int data)
 	case PT_TRACE_ME:
 		/* set my trace flag and "owner" so it can read/write me */
 		p->p_flag |= P_TRACED;
+		if (p->p_flag & P_PPWAIT)
+			p->p_flag |= P_PPTRACE;
 		p->p_oppid = p->p_pptr->p_pid;
 		break;
 
@@ -1112,6 +1114,7 @@ kern_ptrace(struct thread *td, int req, pid_t pid, void *addr, int data)
 #endif
 		pl = addr;
 		pl->pl_lwpid = td2->td_tid;
+		pl->pl_event = PL_EVENT_NONE;
 		pl->pl_flags = 0;
 		if (td2->td_dbgflags & TDB_XSIG) {
 			pl->pl_event = PL_EVENT_SIGNAL;

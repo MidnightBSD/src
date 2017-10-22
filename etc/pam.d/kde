@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/pam.d/kde 197769 2009-10-05 09:28:54Z des $
 #
 # PAM configuration for the "kde" service
 #

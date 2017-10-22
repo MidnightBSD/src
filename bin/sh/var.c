@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)var.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/sh/var.c 249242 2013-04-07 21:25:14Z jilles $");
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -94,6 +94,7 @@ struct var vps2;
 struct var vps4;
 struct var vvers;
 static struct var voptind;
+struct var vdisvfork;
 
 int forcelocal;
 
@@ -125,6 +126,8 @@ static const struct varinit varinit[] = {
 #endif
 	{ &voptind,	0,				"OPTIND=1",
 	  getoptsreset },
+	{ &vdisvfork,	VUNSET,				"SH_DISABLE_VFORK=",
+	  NULL },
 	{ NULL,	0,				NULL,
 	  NULL }
 };

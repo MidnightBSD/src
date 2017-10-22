@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/uboot/lib/elf_freebsd.c 182723 2008-09-03 15:39:50Z raj $");
 
 #include <sys/param.h>
 #include <sys/linker.h>

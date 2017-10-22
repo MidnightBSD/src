@@ -34,7 +34,7 @@
 
 /* #pragma ident	"@(#)rpc_generic.c	1.17	94/04/24 SMI" */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/rpc_generic.c 241408 2012-10-10 19:08:46Z pfg $");
 
 /*
  * rpc_generic.c, Miscl routines for RPC.
@@ -269,7 +269,8 @@ __rpc_getconfip(nettype)
 		}
 		while ((nconf = getnetconfig(confighandle)) != NULL) {
 			if (strcmp(nconf->nc_protofmly, NC_INET) == 0) {
-				if (strcmp(nconf->nc_proto, NC_TCP) == 0) {
+				if (strcmp(nconf->nc_proto, NC_TCP) == 0 &&
+				    netid_tcp == NULL) {
 					netid_tcp = strdup(nconf->nc_netid);
 					if (main_thread)
 						netid_tcp_main = netid_tcp;
@@ -277,7 +278,8 @@ __rpc_getconfip(nettype)
 						thr_setspecific(tcp_key,
 							(void *) netid_tcp);
 				} else
-				if (strcmp(nconf->nc_proto, NC_UDP) == 0) {
+				if (strcmp(nconf->nc_proto, NC_UDP) == 0 &&
+				    netid_udp == NULL) {
 					netid_udp = strdup(nconf->nc_netid);
 					if (main_thread)
 						netid_udp_main = netid_udp;

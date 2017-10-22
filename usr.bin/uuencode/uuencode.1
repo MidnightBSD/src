@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)uuencode.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/usr.bin/uuencode/uuencode.1 242294 2012-10-29 04:21:16Z eadler $
 .\"
 .Dd January 27, 2002
 .Dt UUENCODE 1
@@ -183,7 +183,7 @@ tree.
 .Pp
 .Bd -literal -offset indent -compact
 tar cf \- src_tree \&| compress \&|
-uuencode src_tree.tar.Z \&| mail sys1!sys2!user
+uuencode src_tree.tar.Z \&| mail user@example.com
 .Ed
 .Pp
 The following example unpacks all uuencoded

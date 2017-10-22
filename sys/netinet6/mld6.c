@@ -64,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/mld6.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -194,7 +194,7 @@ static int	sysctl_mld_ifinfo(SYSCTL_HANDLER_ARGS);
  *    to a vnet in ifp->if_vnet.
  */
 static struct mtx		 mld_mtx;
-MALLOC_DEFINE(M_MLD, "mld", "mld state");
+static MALLOC_DEFINE(M_MLD, "mld", "mld state");
 
 #define	MLD_EMBEDSCOPE(pin6, zoneid)					\
 	if (IN6_IS_SCOPE_LINKLOCAL(pin6) ||				\
@@ -232,8 +232,9 @@ SYSCTL_VNET_PROC(_net_inet6_mld, OID_AUTO, gsrdelay,
 /*
  * Non-virtualized sysctls.
  */
-SYSCTL_NODE(_net_inet6_mld, OID_AUTO, ifinfo, CTLFLAG_RD | CTLFLAG_MPSAFE,
-    sysctl_mld_ifinfo, "Per-interface MLDv2 state");
+static SYSCTL_NODE(_net_inet6_mld, OID_AUTO, ifinfo,
+    CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_mld_ifinfo,
+    "Per-interface MLDv2 state");
 
 static int	mld_v1enable = 1;
 SYSCTL_INT(_net_inet6_mld, OID_AUTO, v1enable, CTLFLAG_RW,

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libusbhid/descr.c 243058 2012-11-15 05:44:44Z mav $");
 
 #include <sys/types.h>
 
@@ -68,7 +68,7 @@ hid_get_report_id(int fd)
 	if ((rep = hid_get_report_desc(fd)) == NULL)
 		goto use_ioctl;
 	kindset = 1 << hid_input | 1 << hid_output | 1 << hid_feature;
-	for (d = hid_start_parse(rep, kindset, 0); hid_get_item(d, &h); ) {
+	for (d = hid_start_parse(rep, kindset, -1); hid_get_item(d, &h); ) {
 		/* Return the first report ID we met. */
 		if (h.report_ID != 0) {
 			temp = h.report_ID;

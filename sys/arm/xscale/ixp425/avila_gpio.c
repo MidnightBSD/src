@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/avila_gpio.c 229883 2012-01-09 21:49:47Z thompsa $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

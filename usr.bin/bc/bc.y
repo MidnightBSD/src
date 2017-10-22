@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/bc/bc.y 243211 2012-11-18 06:25:37Z eadler $");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -1085,7 +1085,7 @@ escape(const char *str)
 }
 
 /* ARGSUSED */
-void
+static void
 sigchld(int signo)
 {
 	pid_t pid;

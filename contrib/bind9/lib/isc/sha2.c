@@ -16,7 +16,7 @@
 
 /* $Id$ */
 
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/contrib/bind9/lib/isc/sha2.c 234010 2012-04-08 01:43:41Z dougb $	*/
 /*	$KAME: sha2.c,v 1.8 2001/11/08 01:07:52 itojun Exp $	*/
 
 /*

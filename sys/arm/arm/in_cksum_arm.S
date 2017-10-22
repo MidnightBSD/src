@@ -44,7 +44,7 @@
 
 #include <machine/asm.h>
 #include "assym.s"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/in_cksum_arm.S 172614 2007-10-13 12:05:03Z cognet $");
 
 /*
  * int in_cksum(struct mbuf *m, int len)

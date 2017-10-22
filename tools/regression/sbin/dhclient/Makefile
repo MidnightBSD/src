@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/sbin/dhclient/Makefile 228259 2011-12-04 14:44:31Z dumbbell $
 
 .PATH:	${.CURDIR}/../../../../sbin/dhclient
 

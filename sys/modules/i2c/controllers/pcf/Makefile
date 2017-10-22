@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/i2c/controllers/pcf/Makefile 211690 2010-08-23 06:13:29Z imp $
 
 .PATH: ${.CURDIR}/../../../../dev/pcf
 

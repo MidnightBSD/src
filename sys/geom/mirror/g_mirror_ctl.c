@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/mirror/g_mirror_ctl.c 235968 2012-05-25 04:26:14Z ae $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/igmp.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -185,7 +185,7 @@ static const struct netisr_handler igmp_nh = {
 struct mtx		 igmp_mtx;
 
 struct mbuf		*m_raopt;		 /* Router Alert option */
-MALLOC_DEFINE(M_IGMP, "igmp", "igmp state");
+static MALLOC_DEFINE(M_IGMP, "igmp", "igmp state");
 
 /*
  * VIMAGE-wide globals.
@@ -280,8 +280,9 @@ SYSCTL_VNET_PROC(_net_inet_igmp, OID_AUTO, gsrdelay,
 /*
  * Non-virtualized sysctls.
  */
-SYSCTL_NODE(_net_inet_igmp, OID_AUTO, ifinfo, CTLFLAG_RD | CTLFLAG_MPSAFE,
-    sysctl_igmp_ifinfo, "Per-interface IGMPv3 state");
+static SYSCTL_NODE(_net_inet_igmp, OID_AUTO, ifinfo,
+    CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_igmp_ifinfo,
+    "Per-interface IGMPv3 state");
 
 static __inline void
 igmp_save_context(struct mbuf *m, struct ifnet *ifp)
@@ -2284,13 +2285,11 @@ igmp_change_state(struct in_multi *inm)
 	 */
 	KASSERT(inm->inm_ifma != NULL, ("%s: no ifma", __func__));
 	ifp = inm->inm_ifma->ifma_ifp;
-	if (ifp != NULL) {
-		/*
-		 * Sanity check that netinet's notion of ifp is the
-		 * same as net's.
-		 */
-		KASSERT(inm->inm_ifp == ifp, ("%s: bad ifp", __func__));
-	}
+	/*
+	 * Sanity check that netinet's notion of ifp is the
+	 * same as net's.
+	 */
+	KASSERT(inm->inm_ifp == ifp, ("%s: bad ifp", __func__));
 
 	IGMP_LOCK();
 

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/octeon_wdog.c 217243 2011-01-10 22:14:08Z jmallett $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

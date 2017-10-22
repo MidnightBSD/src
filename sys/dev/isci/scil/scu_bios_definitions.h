@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/isci/scil/scu_bios_definitions.h 240579 2012-09-17 00:44:16Z eadler $
  */
 #ifndef _SCU_BIOS_DEFINITIONS_H_
 #define _SCU_BIOS_DEFINITIONS_H_
@@ -299,7 +299,7 @@ typedef struct SCI_BIOS_OEM_PARAM_ELEMENT
         } sas_address;
 
         /**
-         * These are the per PHY equalization settings associated with the the
+         * These are the per PHY equalization settings associated with the
          * AFE XCVR Tx Amplitude and Equalization Control Register Set
          * (0 thru 3).
          *
@@ -496,7 +496,7 @@ typedef struct SCI_BIOS_OEM_PARAM_ELEMENT_v_1_1
         } sas_address;
 
         /**
-         * These are the per PHY equalization settings associated with the the
+         * These are the per PHY equalization settings associated with the
          * AFE XCVR Tx Amplitude and Equalization Control Register Set
          * (0 thru 3).
          *
@@ -706,7 +706,7 @@ typedef struct SCI_BIOS_OEM_PARAM_ELEMENT_v_1_2
         } sas_address;
 
         /**
-         * These are the per PHY equalization settings associated with the the
+         * These are the per PHY equalization settings associated with the
          * AFE XCVR Tx Amplitude and Equalization Control Register Set
          * (0 thru 3).
          *
@@ -927,7 +927,7 @@ typedef struct SCI_BIOS_OEM_PARAM_ELEMENT_v_1_3
         } sas_address;
 
         /**
-         * These are the per PHY equalization settings associated with the the
+         * These are the per PHY equalization settings associated with the
          * AFE XCVR Tx Amplitude and Equalization Control Register Set
          * (0 thru 3).
          *

@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/pmccontrol/Makefile 201390 2010-01-02 11:07:44Z ed $
 #
 
 PROG=	pmccontrol

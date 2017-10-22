@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/powerpc/uboot/start.S 182726 2008-09-03 16:38:27Z raj $
  */
 
 #include <machine/asm.h>

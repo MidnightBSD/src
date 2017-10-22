@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/bin/sh/expansion/cmdsubst2.0 205105 2010-03-12 23:23:46Z jilles $
 
 failures=0
 

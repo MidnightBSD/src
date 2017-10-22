@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)random.c	8.2 (Berkeley) 5/19/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/stdlib/random.c 241476 2012-10-12 02:12:53Z eadler $");
 
 #include "namespace.h"
 #include <sys/time.h>          /* for srandomdev() */
@@ -315,10 +315,9 @@ srandomdev()
 
 	if (!done) {
 		struct timeval tv;
-		unsigned long junk;
 
 		gettimeofday(&tv, NULL);
-		srandom((getpid() << 16) ^ tv.tv_sec ^ tv.tv_usec ^ junk);
+		srandom((getpid() << 16) ^ tv.tv_sec ^ tv.tv_usec);
 		return;
 	}
 

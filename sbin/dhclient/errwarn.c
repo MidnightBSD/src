@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/dhclient/errwarn.c 231277 2012-02-09 14:16:00Z bapt $");
 
 #include <errno.h>
 

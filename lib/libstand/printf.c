@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libstand/printf.c 209949 2010-07-12 15:32:45Z jkim $");
 
 /*
  * Standaloneified version of the FreeBSD kernel printf family.

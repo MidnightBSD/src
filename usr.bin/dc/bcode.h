@@ -1,4 +1,4 @@
-/*	$FreeBSD$						*/
+/*	$FreeBSD: stable/9/usr.bin/dc/bcode.h 203443 2010-02-03 21:06:13Z gabor $						*/
 /*	$OpenBSD: bcode.h,v 1.5 2006/01/16 08:09:25 otto Exp $	*/
 
 /*

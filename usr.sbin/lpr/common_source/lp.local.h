@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)lp.local.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/lpr/common_source/lp.local.h 216372 2010-12-11 09:38:12Z joel $
  */
 
 /*

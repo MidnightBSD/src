@@ -31,7 +31,7 @@
  */
 
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/net/if_tap.c 248085 2013-03-09 02:36:32Z marius $
  * $Id: if_tap.c,v 0.21 2000/07/23 21:46:02 max Exp $
  */
 
@@ -65,6 +65,7 @@
 #include <net/if.h>
 #include <net/if_clone.h>
 #include <net/if_dl.h>
+#include <net/if_media.h>
 #include <net/if_types.h>
 #include <net/route.h>
 #include <net/vnet.h>
@@ -163,7 +164,7 @@ MALLOC_DEFINE(M_TAP, CDEV_NAME, "Ethernet tunnel interface");
 SYSCTL_INT(_debug, OID_AUTO, if_tap_debug, CTLFLAG_RW, &tapdebug, 0, "");
 
 SYSCTL_DECL(_net_link);
-SYSCTL_NODE(_net_link, OID_AUTO, tap, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_net_link, OID_AUTO, tap, CTLFLAG_RW, 0,
     "Ethernet tunnel software network interface");
 SYSCTL_INT(_net_link_tap, OID_AUTO, user_open, CTLFLAG_RW, &tapuopen, 0,
 	"Allow user to open /dev/tap (based on node permissions)");
@@ -602,12 +603,29 @@ tapifioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	struct tap_softc	*tp = ifp->if_softc;
 	struct ifreq		*ifr = (struct ifreq *)data;
 	struct ifstat		*ifs = NULL;
-	int			 dummy;
+	struct ifmediareq	*ifmr = NULL;
+	int			 dummy, error = 0;
 
 	switch (cmd) {
 		case SIOCSIFFLAGS: /* XXX -- just like vmnet does */
 		case SIOCADDMULTI:
 		case SIOCDELMULTI:
+			break;
+
+		case SIOCGIFMEDIA:
+			ifmr = (struct ifmediareq *)data;
+			dummy = ifmr->ifm_count;
+			ifmr->ifm_count = 1;
+			ifmr->ifm_status = IFM_AVALID;
+			ifmr->ifm_active = IFM_ETHER;
+			if (tp->tap_flags & TAP_OPEN)
+				ifmr->ifm_status |= IFM_ACTIVE;
+			ifmr->ifm_current = ifmr->ifm_active;
+			if (dummy >= 1) {
+				int media = IFM_ETHER;
+				error = copyout(&media, ifmr->ifm_ulist,
+				    sizeof(int));
+			}
 			break;
 
 		case SIOCSIFMTU:
@@ -626,11 +644,11 @@ tapifioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			break;
 
 		default:
-			return (ether_ioctl(ifp, cmd, data));
-			/* NOT REACHED */
+			error = ether_ioctl(ifp, cmd, data);
+			break;
 	}
 
-	return (0);
+	return (error);
 } /* tapifioctl */
 
 
@@ -915,7 +933,7 @@ tapwrite(struct cdev *dev, struct uio *uio, int flag)
 	struct ifnet		*ifp = tp->tap_ifp;
 	struct mbuf		*m;
 
-	TAPDEBUG("%s writting, minor = %#x\n", 
+	TAPDEBUG("%s writing, minor = %#x\n", 
 		ifp->if_xname, dev2unit(dev));
 
 	if (uio->uio_resid == 0)

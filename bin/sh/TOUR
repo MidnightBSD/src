@@ -1,5 +1,5 @@
 #	@(#)TOUR	8.1 (Berkeley) 5/31/93
-# $FreeBSD$
+# $FreeBSD: stable/9/bin/sh/TOUR 222362 2011-05-27 16:00:37Z jilles $
 
 NOTE -- This is the original TOUR paper distributed with ash and
 does not represent the current state of the shell.  It is provided anyway

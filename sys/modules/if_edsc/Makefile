@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/if_edsc/Makefile 167891 2007-03-26 04:39:18Z yar $
 
 .PATH: ${.CURDIR}/../../net
 

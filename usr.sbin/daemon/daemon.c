@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/daemon/daemon.c 245993 2013-01-27 17:41:26Z marius $");
 
 #include <sys/param.h>
 #include <sys/mman.h>
@@ -62,7 +62,7 @@ main(int argc, char *argv[])
 	nochdir = noclose = 1;
 	restart = 0;
 	pidfile = user = NULL;
-	while ((ch = getopt(argc, argv, "-cfp:ru:")) != -1) {
+	while ((ch = getopt(argc, argv, "cfp:ru:")) != -1) {
 		switch (ch) {
 		case 'c':
 			nochdir = 0;

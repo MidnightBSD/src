@@ -20,7 +20,7 @@
  *
  * Portions Copyright 2008 John Birrell <jb@freebsd.org>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cddl/dev/dtrace/amd64/dtrace_asm.S 179237 2008-05-23 05:59:42Z jb $
  *
  */
 /*

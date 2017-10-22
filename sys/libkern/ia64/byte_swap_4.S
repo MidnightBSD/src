@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/libkern/ia64/byte_swap_4.S 139815 2005-01-07 00:24:33Z imp $ */
 /*	$NetBSD: byte_swap_4.S,v 1.2 1996/10/17 03:08:09 cgd Exp $	*/
 
 /*-

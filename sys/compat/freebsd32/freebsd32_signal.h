@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/compat/freebsd32/freebsd32_signal.h 232290 2012-02-29 06:19:00Z davidxu $
  */
 
 #ifndef _COMPAT_FREEBSD32_SIGNAL_H_

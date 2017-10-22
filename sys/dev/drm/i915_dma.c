@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/i915_dma.c 207066 2010-04-22 18:21:25Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

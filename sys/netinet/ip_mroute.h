@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip_mroute.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netinet/ip_mroute.h 240305 2012-09-10 11:38:02Z glebius $
  */
 
 #ifndef _NETINET_IP_MROUTE_H_
@@ -262,7 +262,6 @@ struct vif {
     u_long		v_pkt_out;	/* # pkts out on interface           */
     u_long		v_bytes_in;	/* # bytes in on interface	     */
     u_long		v_bytes_out;	/* # bytes out on interface	     */
-    struct route	v_route;	/* cached route */
 };
 
 #ifdef _KERNEL

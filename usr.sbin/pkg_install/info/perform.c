@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/info/perform.c 241135 2012-10-02 17:04:53Z bapt $");
 
 #include "lib.h"
 #include "info.h"
@@ -221,7 +221,7 @@ pkg_do(char *pkg)
 	if ((Flags & SHOW_SIZE) && installed)
 	    show_size("Package Size:\n", &plist);
 	if ((Flags & SHOW_CKSUM) && installed)
-	    show_cksum("Mismatched Checksums:\n", &plist);
+	    code += show_cksum("Mismatched Checksums:\n", &plist);
 	if (Flags & SHOW_ORIGIN)
 	    show_origin("Origin:\n", &plist);
 	if (Flags & SHOW_FMTREV)
@@ -234,7 +234,7 @@ pkg_do(char *pkg)
     leave_playpen();
     if (isTMP)
 	unlink(fname);
-    return code;
+    return (code ? 1 : 0);
 }
 
 void

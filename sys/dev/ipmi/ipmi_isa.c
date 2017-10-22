@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ipmi/ipmi_isa.c 171464 2007-07-16 17:03:48Z ambrisko $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

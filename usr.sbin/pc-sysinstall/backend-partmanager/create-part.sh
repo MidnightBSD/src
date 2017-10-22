@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/backend-partmanager/create-part.sh 233220 2012-03-19 23:04:21Z jpaetzel $
 
 # Create partitions on a target disk
 #############################

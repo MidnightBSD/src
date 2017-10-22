@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: read.h,v 1.5 2006/08/21 12:45:30 christos Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libedit/read.h 204555 2010-03-02 07:25:20Z joel $
  */
 
 /*

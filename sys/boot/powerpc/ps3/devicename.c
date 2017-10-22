@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/powerpc/ps3/devicename.c 224857 2011-08-14 00:20:37Z nwhitehorn $");
 
 #include <sys/disklabel.h>
 

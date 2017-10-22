@@ -69,10 +69,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: src/sys/alpha/include/bus.h,v 1.5 1999/08/28 00:38:40 peter
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/mips/bus_space_generic.c 210311 2010-07-20 19:25:11Z jmallett $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/mips/bus_space_generic.c 210311 2010-07-20 19:25:11Z jmallett $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

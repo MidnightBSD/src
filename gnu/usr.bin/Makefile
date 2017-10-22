@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/usr.bin/Makefile 222878 2011-06-08 21:29:33Z obrien $
 
 .include <bsd.own.mk>
 

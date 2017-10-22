@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/firewire/fwohci.c 248078 2013-03-09 00:39:54Z marius $
  *
  */
 
@@ -977,7 +977,7 @@ again:
 
 				if (firewire_debug)
 					device_printf(sc->fc.dev, "EFBIG.\n");
-				m0 = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+				m0 = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 				if (m0 != NULL) {
 					m_copydata(xfer->mbuf, 0,
 						xfer->mbuf->m_pkthdr.len,

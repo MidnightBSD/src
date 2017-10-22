@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/clang/llvm-extract/Makefile 245431 2013-01-14 19:51:26Z dim $
 
 PROG_CXX=llvm-extract
 
@@ -9,6 +9,7 @@ LIBDEPS=llvmasmparser \
 	llvmbitwriter \
 	llvmbitreader \
 	llvmipo \
+	llvmvectorize \
 	llvmscalaropts \
 	llvminstcombine \
 	llvmtransformutils \
@@ -16,6 +17,7 @@ LIBDEPS=llvmasmparser \
 	llvmanalysis \
 	llvmtarget \
 	llvmmc \
+	llvmobject \
 	llvmcore \
 	llvmsupport
 

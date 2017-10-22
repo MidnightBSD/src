@@ -1,7 +1,7 @@
 #
 # DEFAULTS -- Default kernel configuration file for FreeBSD/i386
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/i386/conf/DEFAULTS 221394 2011-05-03 18:23:11Z jhb $
 
 machine		i386
 

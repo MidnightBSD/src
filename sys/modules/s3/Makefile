@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/s3/Makefile 71996 2001-02-04 12:35:22Z peter $
 
 .PATH: ${.CURDIR}/../../dev/fb
 

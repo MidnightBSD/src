@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/dtrace/dtnfsclient/Makefile 190419 2009-03-25 17:47:22Z rwatson $
 
 .PATH: ${.CURDIR}/../../../nfsclient
 

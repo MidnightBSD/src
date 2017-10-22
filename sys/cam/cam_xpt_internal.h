@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cam/cam_xpt_internal.h 247111 2013-02-21 18:15:41Z mav $
  */
 
 #ifndef _CAM_CAM_XPT_INTERNAL_H
@@ -99,6 +99,8 @@ struct cam_ed {
 	uint8_t		 *device_id;
 	uint8_t		 physpath_len;
 	uint8_t		 *physpath;	/* physical path string form */
+	uint32_t	 rcap_len;
+	uint8_t		 *rcap_buf;
 	struct		 ata_params ident_data;
 	u_int8_t	 inq_flags;	/*
 					 * Current settings for inquiry flags.

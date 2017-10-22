@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sys/net/if_stf.c 248743 2013-03-26 18:57:25Z melifaro $	*/
 /*	$KAME: if_stf.c,v 1.73 2001/12/03 11:08:30 keiichi Exp $	*/
 
 /*-
@@ -121,11 +121,16 @@
 #include <security/mac/mac_framework.h>
 
 SYSCTL_DECL(_net_link);
-SYSCTL_NODE(_net_link, IFT_STF, stf, CTLFLAG_RW, 0, "6to4 Interface");
+static SYSCTL_NODE(_net_link, IFT_STF, stf, CTLFLAG_RW, 0, "6to4 Interface");
 
 static int stf_route_cache = 1;
 SYSCTL_INT(_net_link_stf, OID_AUTO, route_cache, CTLFLAG_RW,
     &stf_route_cache, 0, "Caching of IPv4 routes for 6to4 Output");
+
+static int stf_permit_rfc1918 = 0;
+TUNABLE_INT("net.link.stf.permit_rfc1918", &stf_permit_rfc1918);
+SYSCTL_INT(_net_link_stf, OID_AUTO, permit_rfc1918, CTLFLAG_RW | CTLFLAG_TUN,
+    &stf_permit_rfc1918, 0, "Permit the use of private IPv4 addresses");
 
 #define STFNAME		"stf"
 #define STFUNIT		0
@@ -580,9 +585,10 @@ isrfc1918addr(in)
 	 * returns 1 if private address range:
 	 * 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
 	 */
-	if ((ntohl(in->s_addr) & 0xff000000) >> 24 == 10 ||
+	if (stf_permit_rfc1918 == 0 && (
+	    (ntohl(in->s_addr) & 0xff000000) >> 24 == 10 ||
 	    (ntohl(in->s_addr) & 0xfff00000) >> 16 == 172 * 256 + 16 ||
-	    (ntohl(in->s_addr) & 0xffff0000) >> 16 == 192 * 256 + 168)
+	    (ntohl(in->s_addr) & 0xffff0000) >> 16 == 192 * 256 + 168))
 		return 1;
 
 	return 0;
@@ -793,7 +799,7 @@ stf_rtrequest(cmd, rt, info)
 	struct rt_addrinfo *info;
 {
 	RT_LOCK_ASSERT(rt);
-	rt->rt_rmx.rmx_mtu = IPV6_MMTU;
+	rt->rt_rmx.rmx_mtu = rt->rt_ifp->if_mtu;
 }
 
 static int
@@ -806,7 +812,7 @@ stf_ioctl(ifp, cmd, data)
 	struct ifreq *ifr;
 	struct sockaddr_in6 *sin6;
 	struct in_addr addr;
-	int error;
+	int error, mtu;
 
 	error = 0;
 	switch (cmd) {
@@ -838,6 +844,18 @@ stf_ioctl(ifp, cmd, data)
 			;
 		else
 			error = EAFNOSUPPORT;
+		break;
+
+	case SIOCGIFMTU:
+		break;
+
+	case SIOCSIFMTU:
+		ifr = (struct ifreq *)data;
+		mtu = ifr->ifr_mtu;
+		/* RFC 4213 3.2 ideal world MTU */
+		if (mtu < IPV6_MINMTU || mtu > IF_MAXMTU - 20)
+			return (EINVAL);
+		ifp->if_mtu = mtu;
 		break;
 
 	default:

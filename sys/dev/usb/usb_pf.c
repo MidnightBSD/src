@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/usb_pf.c 220301 2011-04-03 20:03:45Z hselasky $");
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>

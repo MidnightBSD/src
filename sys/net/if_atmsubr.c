@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/if_atmsubr.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -98,7 +98,7 @@ void	(*atm_harp_event_p)(struct ifnet *, uint32_t, void *);
 
 SYSCTL_NODE(_hw, OID_AUTO, atm, CTLFLAG_RW, 0, "ATM hardware");
 
-MALLOC_DEFINE(M_IFATM, "ifatm", "atm interface internals");
+static MALLOC_DEFINE(M_IFATM, "ifatm", "atm interface internals");
 
 #ifndef ETHERTYPE_IPV6
 #define	ETHERTYPE_IPV6	0x86dd

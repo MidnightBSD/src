@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/usb_core.h 199672 2009-11-22 21:16:43Z thompsa $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *

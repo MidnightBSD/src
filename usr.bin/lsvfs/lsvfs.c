@@ -6,7 +6,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/lsvfs/lsvfs.c 185029 2008-11-17 20:49:29Z pjd $");
 
 #include <sys/param.h>
 #include <sys/mount.h>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/kthread.h 210365 2010-07-22 05:42:29Z trasz $
  */
 
 #ifndef _SYS_KTHREAD_H_

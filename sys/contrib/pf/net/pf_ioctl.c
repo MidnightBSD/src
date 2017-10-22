@@ -37,7 +37,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/contrib/pf/net/pf_ioctl.c 237776 2012-06-29 12:11:31Z glebius $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"

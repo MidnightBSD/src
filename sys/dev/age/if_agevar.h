@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/age/if_agevar.h 246724 2013-02-13 00:46:41Z yongari $
  */
 
 #ifndef	_IF_AGEVAR_H
@@ -43,6 +43,12 @@
 #define	AGE_TSO_MAXSEGSIZE	4096
 #define	AGE_TSO_MAXSIZE		(65535 + sizeof(struct ether_vlan_header))
 #define	AGE_MAXTXSEGS		32
+#define	AGE_RX_BUF_ALIGN	8
+#ifndef __NO_STRICT_ALIGNMENT
+#define	AGE_RX_BUF_SIZE		(MCLBYTES - AGE_RX_BUF_ALIGN)	
+#else
+#define	AGE_RX_BUF_SIZE		(MCLBYTES)	
+#endif
 
 #define	AGE_ADDR_LO(x)		((uint64_t) (x) & 0xFFFFFFFF)
 #define	AGE_ADDR_HI(x)		((uint64_t) (x) >> 32)

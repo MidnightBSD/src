@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/lockf/lockf.c 181960 2008-08-21 07:36:17Z dwmalone $");
 
 #include <sys/types.h>
 #include <sys/wait.h>

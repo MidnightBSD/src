@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netgraph/atm/ng_atm.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -75,7 +75,8 @@ extern void	(*ng_atm_event_p)(struct ifnet *, uint32_t, void *);
 /*
  * Sysctl stuff.
  */
-SYSCTL_NODE(_net_graph, OID_AUTO, atm, CTLFLAG_RW, 0, "atm related stuff");
+static SYSCTL_NODE(_net_graph, OID_AUTO, atm, CTLFLAG_RW, 0,
+    "atm related stuff");
 
 #ifdef NGATM_DEBUG
 static int allow_shutdown;

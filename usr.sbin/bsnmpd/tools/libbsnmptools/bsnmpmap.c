@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmpmap.c 231281 2012-02-09 15:26:47Z ed $
  */
 
 #include <sys/param.h> 

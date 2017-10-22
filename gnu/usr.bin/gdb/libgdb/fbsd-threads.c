@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/gnu/usr.bin/gdb/libgdb/fbsd-threads.c 220043 2011-03-26 21:12:53Z kib $ */
 /* FreeBSD libthread_db assisted debugging support.
    Copyright 1999, 2000, 2001 Free Software Foundation, Inc.
 

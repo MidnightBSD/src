@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/fsck_ffs/ea.c 221110 2011-04-27 02:55:03Z des $");
 
 #include <sys/param.h>
 #include <sys/time.h>

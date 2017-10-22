@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_dtrace.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include "opt_kdb.h"
 
@@ -45,7 +45,7 @@ __FBSDID("$FreeBSD$");
 FEATURE(kdtrace_hooks,
     "Kernel DTrace hooks which are required to load DTrace kernel modules");
 
-MALLOC_DEFINE(M_KDTRACE, "kdtrace", "DTrace hooks");
+static MALLOC_DEFINE(M_KDTRACE, "kdtrace", "DTrace hooks");
 
 /* Return the DTrace process data size compiled in the kernel hooks. */
 size_t

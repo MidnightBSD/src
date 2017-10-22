@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/i386/efi/reloc.c 237752 2012-06-29 09:17:49Z avg $");
 
 #include <sys/types.h>
 #include <sys/elf32.h>

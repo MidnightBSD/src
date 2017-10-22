@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libpam/modules/pam_krb5/pam_krb5.c 242544 2012-11-04 01:21:49Z eadler $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -320,11 +320,11 @@ cleanup:
 	PAM_LOG("Done cleanup");
 cleanup2:
 	krb5_free_principal(pam_context, princ);
-	PAM_LOG("Done cleanup2");
-cleanup3:
 	if (princ_name)
 		free(princ_name);
+	PAM_LOG("Done cleanup2");
 
+cleanup3:
 	krb5_free_context(pam_context);
 
 	PAM_LOG("Done cleanup3");
@@ -633,7 +633,7 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags __unused,
 	if (krbret != 0) {
 		PAM_LOG("Error krb5_cc_get_principal(): %s",
 		    krb5_get_err_text(pam_context, krbret));
-		retval = PAM_PERM_DENIED;;
+		retval = PAM_PERM_DENIED;
 		goto cleanup;
 	}
 
@@ -779,11 +779,11 @@ cleanup:
 	PAM_LOG("Done cleanup");
 cleanup2:
 	krb5_free_principal(pam_context, princ);
-	PAM_LOG("Done cleanup2");
-cleanup3:
 	if (princ_name)
 		free(princ_name);
+	PAM_LOG("Done cleanup2");
 
+cleanup3:
 	krb5_free_context(pam_context);
 
 	PAM_LOG("Done cleanup3");

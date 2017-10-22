@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/backend-query/detect-nics.sh 209751 2010-07-06 23:29:55Z imp $
 
 for i in $(ifconfig -l); do
   case "${i%%[0-9]*}" in

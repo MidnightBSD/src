@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_async.c 249132 2013-04-05 08:22:11Z mav $
  * $Whistle: ng_async.c,v 1.17 1999/11/01 09:24:51 julian Exp $
  */
 
@@ -61,7 +61,7 @@
 #include <net/ppp_defs.h>
 
 #ifdef NG_SEPARATE_MALLOC
-MALLOC_DEFINE(M_NETGRAPH_ASYNC, "netgraph_async", "netgraph async node ");
+static MALLOC_DEFINE(M_NETGRAPH_ASYNC, "netgraph_async", "netgraph async node");
 #else
 #define M_NETGRAPH_ASYNC M_NETGRAPH
 #endif

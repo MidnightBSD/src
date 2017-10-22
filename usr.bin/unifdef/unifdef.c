@@ -58,7 +58,7 @@
 
 const char copyright[] =
     "@(#) $Version: unifdef-2.5.6.21f1388 $\n"
-    "@(#) $FreeBSD$\n"
+    "@(#) $FreeBSD: stable/9/usr.bin/unifdef/unifdef.c 217698 2011-01-21 18:10:11Z fanf $\n"
     "@(#) $Author: Tony Finch (dot@dotat.at) $\n"
     "@(#) $URL: http://dotat.at/prog/unifdef $\n"
 ;

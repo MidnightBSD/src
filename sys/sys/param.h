@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.3 (Berkeley) 4/4/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/param.h 248338 2013-03-15 19:32:37Z brooks $
  */
 
 #ifndef _SYS_PARAM_H_
@@ -48,9 +48,9 @@
  * __FreeBSD_version numbers are documented in the Porter's Handbook.
  * If you bump the version for any reason, you should update the documentation
  * there.
- * Currently this lives here:
+ * Currently this lives here in the doc/ repository:
  *
- *	doc/en_US.ISO8859-1/books/porters-handbook/book.sgml
+ *	head/en_US.ISO8859-1/books/porters-handbook/book.xml
  *
  * scheme is:  <major><two digit minor>Rxx
  *		'R' is in the range 0 to 4 if this is a release branch or
@@ -58,7 +58,7 @@
  *		in the range 5 to 9.
  */
 #undef __FreeBSD_version
-#define __FreeBSD_version 901000	/* Master, propagated to newvers */
+#define __FreeBSD_version 901504	/* Master, propagated to newvers */
 
 /*
  * __FreeBSD_kernel__ indicates that this system uses the kernel of FreeBSD,
@@ -331,8 +331,7 @@ __END_DECLS
 	((db) << (PAGE_SHIFT - DEV_BSHIFT))
 
 /*
- * Given the pointer x to the member m of the struct s, return
- * a pointer to the containing structure.
+ * Old spelling of __containerof().
  */
 #define	member2struct(s, m, x)						\
 	((struct s *)(void *)((char *)(x) - offsetof(struct s, m)))

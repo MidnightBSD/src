@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/clang/tblgen/Makefile 245431 2013-01-14 19:51:26Z dim $
 
 PROG_CXX=tblgen
 
@@ -10,7 +10,9 @@ SRCS=	AsmMatcherEmitter.cpp \
 	CodeEmitterGen.cpp \
 	CodeGenDAGPatterns.cpp \
 	CodeGenInstruction.cpp \
+	CodeGenMapTable.cpp \
 	CodeGenRegisters.cpp \
+	CodeGenSchedule.cpp \
 	CodeGenTarget.cpp \
 	DAGISelEmitter.cpp \
 	DAGISelMatcher.cpp \
@@ -27,7 +29,6 @@ SRCS=	AsmMatcherEmitter.cpp \
 	PseudoLoweringEmitter.cpp \
 	RegisterInfoEmitter.cpp \
 	SetTheory.cpp \
-	StringMatcher.cpp \
 	SubtargetEmitter.cpp \
 	TGValueTypes.cpp \
 	TableGen.cpp \
@@ -36,6 +37,7 @@ SRCS=	AsmMatcherEmitter.cpp \
 	X86RecognizableInstr.cpp
 LLVM_REQUIRES_EH=
 
-LIBDEPS=llvmtablegen llvmsupport
+LIBDEPS=llvmtablegen \
+	llvmsupport
 
 .include "../clang.prog.mk"

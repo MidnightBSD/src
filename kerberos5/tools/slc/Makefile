@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/kerberos5/tools/slc/Makefile 179863 2008-06-18 21:20:50Z marius $
 
 PROG=	slc
 NO_MAN=

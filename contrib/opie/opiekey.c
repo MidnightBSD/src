@@ -37,7 +37,7 @@ License Agreement applies to this software.
 	Written at Bellcore for the S/Key Version 1 software distribution
 		(skey.c).
 
-$FreeBSD$
+$FreeBSD: stable/9/contrib/opie/opiekey.c 246980 2013-02-19 07:50:10Z dim $
 
 */
 #include "opie_cfg.h"
@@ -109,19 +109,19 @@ static void getsecret FUNCTION((secret, promptextra, retype), char *secret AND c
     if (!opiereadpass(verify, OPIE_SECRET_MAX, 0)) {
       fprintf(stderr, "Error reading %ssecret pass phrase!\n", promptextra);
       memset(verify, 0, sizeof(verify));
-      memset(secret, 0, sizeof(secret));
+      memset(secret, 0, OPIE_SECRET_MAX + 1);
       exit(1);
     }
     if (verify[0] && strcmp(verify, secret)) {
       fprintf(stderr, "They don't match. Try again.\n");
       memset(verify, 0, sizeof(verify));
-      memset(secret, 0, sizeof(secret));
+      memset(secret, 0, OPIE_SECRET_MAX + 1);
       exit(1);
     }
     memset(verify, 0, sizeof(verify));
   }
   if (!(flags & 2) && !aflag && opiepasscheck(secret)) {
-    memset(secret, 0, sizeof(secret));
+    memset(secret, 0, OPIE_SECRET_MAX + 1);
     fprintf(stderr, "Secret pass phrases must be between %d and %d characters long.\n", OPIE_SECRET_MIN, OPIE_SECRET_MAX);
     exit(1);
   };

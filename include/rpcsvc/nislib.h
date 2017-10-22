@@ -26,7 +26,7 @@
  * 2550 Garcia Avenue
  * Mountain View, California  94043
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/include/rpcsvc/nislib.h 93032 2002-03-23 17:24:55Z imp $
  */
 
 /*

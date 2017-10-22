@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/ypxfrd 231792 2012-02-15 22:59:15Z dougb $
 #
 
 # PROVIDE: ypxfrd

@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_cons.c 241637 2012-10-17 11:30:14Z avg $");
 
 #include "opt_ddb.h"
 
@@ -384,7 +384,7 @@ cngetc(void)
 	if (cn_mute)
 		return (-1);
 	while ((c = cncheckc()) == -1)
-		;
+		cpu_spinwait();
 	if (c == '\r')
 		c = '\n';		/* console input is always ICRNL */
 	return (c);

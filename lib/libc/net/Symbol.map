@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libc/net/Symbol.map 234942 2012-05-03 07:12:38Z tuexen $
  */
 
 FBSD_1.0 {

@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/natd/natd.c 242544 2012-11-04 01:21:49Z eadler $");
 
 #define SYSLOG_NAMES
 
@@ -1509,7 +1509,7 @@ static void ParseOption (const char* option, const char* parms)
 		break;
 
 	case LogIpfwDenied:
-		logIpfwDenied = yesNoValue;;
+		logIpfwDenied = yesNoValue;
 		break;
 
 	case PidFile:

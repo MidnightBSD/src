@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/sparc64/fpu/fpu_sqrt.c 178139 2008-04-12 03:10:13Z das $");
 
 /*
  * Perform an FPU square root (return sqrt(x)).

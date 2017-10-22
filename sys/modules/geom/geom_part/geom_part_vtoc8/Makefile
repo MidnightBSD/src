@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/geom/geom_part/geom_part_vtoc8/Makefile 177512 2008-03-23 01:42:47Z marcel $
 
 .PATH: ${.CURDIR}/../../../../geom/part
 

@@ -34,7 +34,7 @@ static char sccsid[] = "From: @(#)route.c	8.6 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/netstat/route.c 242025 2012-10-25 01:23:41Z eadler $");
 
 #include <sys/param.h>
 #include <sys/protosw.h>
@@ -1104,10 +1104,8 @@ ipx_phost(struct sockaddr *sa)
 	struct sockaddr_ipx work;
 	static union ipx_net ipx_zeronet;
 	char *p;
-	struct ipx_addr in;
 
 	work = *sipx;
-	in = work.sipx_addr;
 
 	work.sipx_addr.x_port = 0;
 	work.sipx_addr.x_net = ipx_zeronet;

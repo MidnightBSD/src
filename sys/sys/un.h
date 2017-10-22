@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)un.h	8.3 (Berkeley) 2/19/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/un.h 247525 2013-03-01 03:04:57Z jhb $
  */
 
 #ifndef _SYS_UN_H_
@@ -53,9 +53,12 @@ struct sockaddr_un {
 #if __BSD_VISIBLE
 
 /* Socket options. */
-#define	LOCAL_PEERCRED		0x001	/* retrieve peer credentials */
-#define	LOCAL_CREDS		0x002	/* pass credentials to receiver */
-#define	LOCAL_CONNWAIT		0x004	/* connects block until accepted */
+#define	LOCAL_PEERCRED		1	/* retrieve peer credentials */
+#define	LOCAL_CREDS		2	/* pass credentials to receiver */
+#define	LOCAL_CONNWAIT		4	/* connects block until accepted */
+
+/* Start of reserved space for third-party socket options. */
+#define	LOCAL_VENDOR		SO_VENDOR
 
 #ifndef _KERNEL
 

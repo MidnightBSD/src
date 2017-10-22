@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/geom/geom_raid/Makefile 235874 2012-05-24 02:34:03Z mav $
 
 .PATH: ${.CURDIR}/../../../geom/raid
 

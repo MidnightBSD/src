@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)kvm_getvfsbyname.c	8.1 (Berkeley) 4/3/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/getvfsbyname.c 165903 2007-01-09 00:28:16Z imp $");
 
 #include <sys/param.h>
 #include <sys/mount.h>

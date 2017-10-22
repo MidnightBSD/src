@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/usr.bin/iconv/iconv.c 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: iconv.c,v 1.16 2009/02/20 15:28:21 yamt Exp $ */
 
 /*-

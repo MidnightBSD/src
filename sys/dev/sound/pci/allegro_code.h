@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/sound/pci/allegro_code.h 230985 2012-02-04 17:13:34Z pfg $ */
 /*-
  * Copyright (C) 1996-2008, 4Front Technologies
  * Copyright (C) 1997-1999 ESS Technology, Inc

@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/c99/c99.c 248132 2013-03-10 15:02:30Z dim $");
 
 #include <sys/types.h>
 
@@ -70,7 +70,7 @@ main(int argc, char *argv[])
 			usage();
 	}
 
-	addarg("cc");
+	addarg("/usr/bin/cc");
 	addarg("-std=iso9899:1999");
 	addarg("-pedantic");
 	for (i = 1; i < optind; i++)

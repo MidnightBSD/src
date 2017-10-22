@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/pc98/libpc98/libpc98.h 201339 2009-12-31 12:05:48Z nyan $
  */
 
 void set_machine_type(void);

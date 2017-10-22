@@ -5,7 +5,7 @@
  * 
  * Copyright (c) 2002, K A Fraser
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/xen/hypervisor.h 196322 2009-08-17 14:38:59Z jhb $
  */
 
 #ifndef __XEN_HYPERVISOR_H__

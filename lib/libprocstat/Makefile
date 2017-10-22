@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libprocstat/Makefile 223953 2011-07-12 13:46:13Z pluknet $
 
 .include <bsd.own.mk>
 

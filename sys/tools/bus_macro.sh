@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/tools/bus_macro.sh 150524 2005-09-24 20:11:07Z phk $
 #
 # Generate the convenience macros at the bottom of sys/bus.h
 #

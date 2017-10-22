@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)systm.h	8.7 (Berkeley) 3/29/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/systm.h 247874 2013-03-06 09:12:38Z avg $
  */
 
 #ifndef _SYS_SYSTM_H_
@@ -49,6 +49,7 @@ extern int cold;		/* nonzero if we are doing a cold boot */
 extern int rebooting;		/* kern_reboot() has been called. */
 extern const char *panicstr;	/* panic message */
 extern char version[];		/* system version */
+extern char compiler_version[];	/* compiler version */
 extern char copyright[];	/* system copyright */
 extern int kstack_pages;	/* number of kernel stack pages */
 

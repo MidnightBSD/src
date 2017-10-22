@@ -28,7 +28,7 @@
  * Freescale integrated Three-Speed Ethernet Controller (TSEC) driver.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/tsec/if_tsec.c 248078 2013-03-09 00:39:54Z marius $");
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -728,7 +728,7 @@ tsec_start_locked(struct ifnet *ifp)
 		csum_flags = m0->m_pkthdr.csum_flags;
 		if (csum_flags) {
 
-			M_PREPEND(m0, sizeof(struct tsec_tx_fcb), M_DONTWAIT);
+			M_PREPEND(m0, sizeof(struct tsec_tx_fcb), M_NOWAIT);
 			if (m0 == NULL)
 				break;
 
@@ -752,7 +752,7 @@ tsec_start_locked(struct ifnet *ifp)
 			fcb_inserted = 1;
 		}
 
-		mtmp = m_defrag(m0, M_DONTWAIT);
+		mtmp = m_defrag(m0, M_NOWAIT);
 		if (mtmp)
 			m0 = mtmp;
 
@@ -1030,7 +1030,7 @@ tsec_new_rxbuf(bus_dma_tag_t tag, bus_dmamap_t map, struct mbuf **mbufp,
 
 	KASSERT(mbufp != NULL, ("NULL mbuf pointer!"));
 
-	new_mbuf = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR, MCLBYTES);
+	new_mbuf = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, MCLBYTES);
 	if (new_mbuf == NULL)
 		return (ENOBUFS);
 	new_mbuf->m_len = new_mbuf->m_pkthdr.len = new_mbuf->m_ext.ext_size;

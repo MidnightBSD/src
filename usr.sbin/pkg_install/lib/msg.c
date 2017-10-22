@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/lib/msg.c 93520 2002-04-01 09:39:07Z obrien $");
 
 #include "lib.h"
 #include <err.h>

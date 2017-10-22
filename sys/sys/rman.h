@@ -26,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/rman.h 221220 2011-04-29 20:05:19Z jhb $
  */
 
 #ifndef _SYS_RMAN_H_

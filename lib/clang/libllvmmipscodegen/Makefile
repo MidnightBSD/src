@@ -1,22 +1,29 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/clang/libllvmmipscodegen/Makefile 246637 2013-02-10 21:24:47Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	llvmmipscodegen
 
 SRCDIR=	lib/Target/Mips
-SRCS=	MipsAnalyzeImmediate.cpp \
+SRCS=	Mips16FrameLowering.cpp \
+	Mips16InstrInfo.cpp \
+	Mips16RegisterInfo.cpp \
+	MipsAnalyzeImmediate.cpp \
 	MipsAsmPrinter.cpp \
 	MipsCodeEmitter.cpp \
 	MipsDelaySlotFiller.cpp \
-	MipsEmitGPRestore.cpp \
-	MipsExpandPseudo.cpp \
 	MipsFrameLowering.cpp \
 	MipsISelDAGToDAG.cpp \
 	MipsISelLowering.cpp \
 	MipsInstrInfo.cpp \
 	MipsJITInfo.cpp \
+	MipsLongBranch.cpp \
 	MipsMCInstLower.cpp \
 	MipsMachineFunction.cpp \
 	MipsRegisterInfo.cpp \
+	MipsSEFrameLowering.cpp \
+	MipsSEInstrInfo.cpp \
+	MipsSERegisterInfo.cpp \
 	MipsSelectionDAGInfo.cpp \
 	MipsSubtarget.cpp \
 	MipsTargetMachine.cpp \
@@ -28,6 +35,7 @@ TGHDRS=	Intrinsics \
 	MipsGenCodeEmitter \
 	MipsGenDAGISel \
 	MipsGenInstrInfo \
+	MipsGenMCPseudoLowering \
 	MipsGenRegisterInfo \
 	MipsGenSubtargetInfo
 

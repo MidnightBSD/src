@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/vacation/Makefile 247333 2013-02-26 18:31:03Z dim $
 
 SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/vacation
@@ -10,11 +10,6 @@ CFLAGS+=-DNEWDB -DNOT_SENDMAIL
 CFLAGS+=-D_FFR_LISTDB -D_FFR_DEBUG
 
 WARNS?=	2
-
-# Unfortunately, clang gives warnings about sendmail code that cannot
-# be turned off yet.  Since this is contrib code, and we don't really
-# care about the warnings, just make them non-fatal for now.
-NO_WERROR.clang=
 
 LIBSMDIR=	${.OBJDIR}/../../lib/libsm
 LIBSM=		${LIBSMDIR}/libsm.a

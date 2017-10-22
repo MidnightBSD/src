@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_descrip.c 249522 2013-04-15 18:56:03Z trociny $");
 
 #include "opt_capsicum.h"
 #include "opt_compat.h"
@@ -113,6 +113,7 @@ static uma_zone_t file_zone;
 /* Flags for do_dup() */
 #define DUP_FIXED	0x1	/* Force fixed allocation */
 #define DUP_FCNTL	0x2	/* fcntl()-style errors */
+#define	DUP_CLOEXEC	0x4	/* Atomically set FD_CLOEXEC. */
 
 static int do_dup(struct thread *td, int flags, int old, int new,
     register_t *retval);
@@ -363,7 +364,7 @@ int
 sys_fcntl(struct thread *td, struct fcntl_args *uap)
 {
 	struct flock fl;
-	struct oflock ofl;
+	struct __oflock ofl;
 	intptr_t arg;
 	int error;
 	int cmd;
@@ -472,6 +473,7 @@ kern_fcntl(struct thread *td, int fd, int cmd, intptr_t arg)
 	int vfslocked;
 	u_int old, new;
 	uint64_t bsize;
+	off_t foffset;
 
 	vfslocked = 0;
 	error = 0;
@@ -485,9 +487,21 @@ kern_fcntl(struct thread *td, int fd, int cmd, intptr_t arg)
 		error = do_dup(td, DUP_FCNTL, fd, tmp, td->td_retval);
 		break;
 
+	case F_DUPFD_CLOEXEC:
+		tmp = arg;
+		error = do_dup(td, DUP_FCNTL | DUP_CLOEXEC, fd, tmp,
+		    td->td_retval);
+		break;
+
 	case F_DUP2FD:
 		tmp = arg;
 		error = do_dup(td, DUP_FIXED, fd, tmp, td->td_retval);
+		break;
+
+	case F_DUP2FD_CLOEXEC:
+		tmp = arg;
+		error = do_dup(td, DUP_FIXED | DUP_CLOEXEC, fd, tmp,
+		    td->td_retval);
 		break;
 
 	case F_GETFD:
@@ -613,14 +627,15 @@ kern_fcntl(struct thread *td, int fd, int cmd, intptr_t arg)
 		}
 		flp = (struct flock *)arg;
 		if (flp->l_whence == SEEK_CUR) {
-			if (fp->f_offset < 0 ||
+			foffset = foffset_get(fp);
+			if (foffset < 0 ||
 			    (flp->l_start > 0 &&
-			     fp->f_offset > OFF_MAX - flp->l_start)) {
+			     foffset > OFF_MAX - flp->l_start)) {
 				FILEDESC_SUNLOCK(fdp);
 				error = EOVERFLOW;
 				break;
 			}
-			flp->l_start += fp->f_offset;
+			flp->l_start += foffset;
 		}
 
 		/*
@@ -714,15 +729,16 @@ kern_fcntl(struct thread *td, int fd, int cmd, intptr_t arg)
 			break;
 		}
 		if (flp->l_whence == SEEK_CUR) {
+			foffset = foffset_get(fp);
 			if ((flp->l_start > 0 &&
-			    fp->f_offset > OFF_MAX - flp->l_start) ||
+			    foffset > OFF_MAX - flp->l_start) ||
 			    (flp->l_start < 0 &&
-			     fp->f_offset < OFF_MIN - flp->l_start)) {
+			     foffset < OFF_MIN - flp->l_start)) {
 				FILEDESC_SUNLOCK(fdp);
 				error = EOVERFLOW;
 				break;
 			}
-			flp->l_start += fp->f_offset;
+			flp->l_start += foffset;
 		}
 		/*
 		 * VOP_ADVLOCK() may block.
@@ -826,6 +842,8 @@ do_dup(struct thread *td, int flags, int old, int new,
 	}
 	if (flags & DUP_FIXED && old == new) {
 		*retval = new;
+		if (flags & DUP_CLOEXEC)
+			fdp->fd_ofileflags[new] |= UF_EXCLOSE;
 		FILEDESC_XUNLOCK(fdp);
 		return (0);
 	}
@@ -911,7 +929,10 @@ do_dup(struct thread *td, int flags, int old, int new,
 	 * Duplicate the source descriptor
 	 */
 	fdp->fd_ofiles[new] = fp;
-	fdp->fd_ofileflags[new] = fdp->fd_ofileflags[old] &~ UF_EXCLOSE;
+	if ((flags & DUP_CLOEXEC) != 0)
+		fdp->fd_ofileflags[new] = fdp->fd_ofileflags[old] | UF_EXCLOSE;
+	else
+		fdp->fd_ofileflags[new] = fdp->fd_ofileflags[old] & ~UF_EXCLOSE;
 	if (new > fdp->fd_lastfile)
 		fdp->fd_lastfile = new;
 	*retval = new;
@@ -2907,7 +2928,7 @@ sysctl_kern_file(SYSCTL_HANDLER_ARGS)
 			xf.xf_type = fp->f_type;
 			xf.xf_count = fp->f_count;
 			xf.xf_msgcount = 0;
-			xf.xf_offset = fp->f_offset;
+			xf.xf_offset = foffset_get(fp);
 			xf.xf_flag = fp->f_flag;
 			error = SYSCTL_OUT(req, &xf, sizeof(xf));
 			if (error)
@@ -2992,12 +3013,9 @@ sysctl_kern_proc_ofiledesc(SYSCTL_HANDLER_ARGS)
 	int vfslocked;
 
 	name = (int *)arg1;
-	if ((p = pfind((pid_t)name[0])) == NULL)
-		return (ESRCH);
-	if ((error = p_candebug(curthread, p))) {
-		PROC_UNLOCK(p);
+	error = pget((pid_t)name[0], PGET_CANDEBUG, &p);
+	if (error != 0)
 		return (error);
-	}
 	fdp = fdhold(p);
 	PROC_UNLOCK(p);
 	if (fdp == NULL)
@@ -3112,7 +3130,7 @@ sysctl_kern_proc_ofiledesc(SYSCTL_HANDLER_ARGS)
 			kif->kf_flags |= KF_FLAG_DIRECT;
 		if (fp->f_flag & FHASLOCK)
 			kif->kf_flags |= KF_FLAG_HASLOCK;
-		kif->kf_offset = fp->f_offset;
+		kif->kf_offset = foffset_get(fp);
 		if (vp != NULL) {
 			vref(vp);
 			switch (vp->v_type) {
@@ -3309,12 +3327,9 @@ sysctl_kern_proc_filedesc(SYSCTL_HANDLER_ARGS)
 	cap_rights_t fd_cap_rights;
 
 	name = (int *)arg1;
-	if ((p = pfind((pid_t)name[0])) == NULL)
-		return (ESRCH);
-	if ((error = p_candebug(curthread, p))) {
-		PROC_UNLOCK(p);
+	error = pget((pid_t)name[0], PGET_CANDEBUG, &p);
+	if (error != 0)
 		return (error);
-	}
 	/* ktrace vnode */
 	tracevp = p->p_tracevp;
 	if (tracevp != NULL)
@@ -3456,7 +3471,7 @@ sysctl_kern_proc_filedesc(SYSCTL_HANDLER_ARGS)
 		}
 		refcnt = fp->f_count;
 		fflags = fp->f_flag;
-		offset = fp->f_offset;
+		offset = foffset_get(fp);
 
 		/*
 		 * Create sysctl entry.

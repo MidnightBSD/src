@@ -20,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/si/si_eisa.c 166923 2007-02-23 20:11:27Z piso $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/Osd/OsdSchedule.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -65,7 +65,7 @@ TUNABLE_INT("debug.acpi.max_tasks", &acpi_max_tasks);
 static int acpi_max_threads = ACPI_MAX_THREADS;
 TUNABLE_INT("debug.acpi.max_threads", &acpi_max_threads);
 
-MALLOC_DEFINE(M_ACPITASK, "acpitask", "ACPI deferred task");
+static MALLOC_DEFINE(M_ACPITASK, "acpitask", "ACPI deferred task");
 
 struct acpi_task_ctx {
     struct task			at_task;

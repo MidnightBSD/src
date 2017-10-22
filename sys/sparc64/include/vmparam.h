@@ -33,7 +33,7 @@
  *
  *	from: @(#)vmparam.h     5.9 (Berkeley) 5/12/91
  *	from: FreeBSD: src/sys/i386/include/vmparam.h,v 1.33 2000/03/30
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sparc64/include/vmparam.h 246645 2013-02-11 00:50:25Z kib $
  */
 
 #ifndef	_MACHINE_VMPARAM_H_
@@ -149,8 +149,8 @@
  *
  * We define some interesting address constants:
  *
- * VM_MIN_ADDRESS and VM_MAX_ADDRESS define the start and of the entire 64 bit
- * address space, mostly just for convenience.
+ * VM_MIN_ADDRESS and VM_MAX_ADDRESS define the start and end of the entire
+ * 64 bit address space, mostly just for convenience.
  *
  * VM_MIN_DIRECT_ADDRESS and VM_MAX_DIRECT_ADDRESS define the start and end
  * of the direct mapped region.  This maps virtual addresses to physical

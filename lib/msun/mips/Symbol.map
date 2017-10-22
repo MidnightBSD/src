@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/msun/mips/Symbol.map 178749 2008-05-03 21:16:08Z gonzo $
  */
 FBSD_1.0 {
 };

@@ -55,7 +55,7 @@
  *
  *	from: NetBSD: psychoreg.h,v 1.14 2008/05/30 02:29:37 mrg Exp
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sparc64/pci/psychoreg.h 219567 2011-03-12 14:33:32Z marius $
  */
 
 #ifndef _SPARC64_PCI_PSYCHOREG_H_

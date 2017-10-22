@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/netipx/ipxdgramloopback/ipxdgramloopback.c 157151 2006-03-26 18:25:53Z rwatson $
  */
 
 /*

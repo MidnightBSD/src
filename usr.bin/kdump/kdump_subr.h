@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/usr.bin/kdump/kdump_subr.h 237663 2012-06-27 21:12:15Z jhb $ */
 
 void signame (int);
 void semctlname (int);

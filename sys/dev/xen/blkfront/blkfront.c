@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/xen/blkfront/blkfront.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -82,7 +82,7 @@ static int blkif_completion(struct xb_command *);
 static void blkif_free(struct xb_softc *);
 static void blkif_queue_cb(void *, bus_dma_segment_t *, int, int);
 
-MALLOC_DEFINE(M_XENBLOCKFRONT, "xbd", "Xen Block Front driver data");
+static MALLOC_DEFINE(M_XENBLOCKFRONT, "xbd", "Xen Block Front driver data");
 
 #define GRANT_INVALID_REF 0
 

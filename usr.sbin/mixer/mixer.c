@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/mixer/mixer.c 230982 2012-02-04 15:42:07Z mav $");
 
 #include <err.h>
 #include <fcntl.h>

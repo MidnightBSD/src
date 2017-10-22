@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/root/dot.cshrc 244005 2012-12-08 00:25:51Z eadler $
 #
 # .cshrc - csh resource script, read at beginning of execution by each shell
 #
@@ -23,10 +23,7 @@ setenv	BLOCKSIZE	K
 
 if ($?prompt) then
 	# An interactive shell -- set some stuff up
-	if ($uid == 0) then
-		set user = root
-	endif
-	set prompt = "%n@%m:%/ %# "
+	set prompt = "%N@%m:%~ %# "
 	set promptchars = "%#"
 
 	set filec

@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/if_npe.c 248085 2013-03-09 02:36:32Z marius $");
 
 /*
  * Intel XScale NPE Ethernet driver.
@@ -250,7 +250,8 @@ static int	npe_setloopback(struct npe_softc *, int ena);
 /* NB: all tx done processing goes through one queue */
 static int tx_doneqid = -1;
 
-SYSCTL_NODE(_hw, OID_AUTO, npe, CTLFLAG_RD, 0, "IXP4XX NPE driver parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, npe, CTLFLAG_RD, 0,
+    "IXP4XX NPE driver parameters");
 
 static int npe_debug = 0;
 SYSCTL_INT(_hw_npe, OID_AUTO, debug, CTLFLAG_RW, &npe_debug,

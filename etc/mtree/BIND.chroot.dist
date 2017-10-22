@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/mtree/BIND.chroot.dist 200563 2009-12-15 05:14:39Z dougb $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #

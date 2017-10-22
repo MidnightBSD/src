@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/clang/libllvmanalysis/Makefile 245431 2013-01-14 19:51:26Z dim $
 
 .include <bsd.own.mk>
 
@@ -18,9 +18,9 @@ SRCS=	AliasAnalysis.cpp \
 	CaptureTracking.cpp \
 	CodeMetrics.cpp \
 	ConstantFolding.cpp \
-	DIBuilder.cpp \
+	CostModel.cpp \
 	DbgInfoPrinter.cpp \
-	DebugInfo.cpp \
+	DependenceAnalysis.cpp \
 	DomPrinter.cpp \
 	DominanceFrontier.cpp \
 	IVUsers.cpp \
@@ -34,7 +34,6 @@ SRCS=	AliasAnalysis.cpp \
 	LibCallSemantics.cpp \
 	Lint.cpp \
 	Loads.cpp \
-	LoopDependenceAnalysis.cpp \
 	LoopInfo.cpp \
 	LoopPass.cpp \
 	MemDepPrinter.cpp \
@@ -52,6 +51,8 @@ SRCS=	AliasAnalysis.cpp \
 	ProfileInfoLoader.cpp \
 	ProfileInfoLoaderPass.cpp \
 	ProfileVerifierPass.cpp \
+	ProfileDataLoader.cpp \
+	ProfileDataLoaderPass.cpp \
 	RegionInfo.cpp \
 	RegionPass.cpp \
 	RegionPrinter.cpp \

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ppc/ppc_pci.c 218861 2011-02-19 17:38:51Z miwi $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/resolvconf/Makefile 219738 2011-03-18 12:18:52Z ume $
 
 DIST=		${.CURDIR}/../../contrib/openresolv
 .PATH:		${DIST}

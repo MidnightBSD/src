@@ -38,7 +38,7 @@
 static char sccsid[] = "@(#)svc_raw.c 1.25 89/01/31 Copyr 1984 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/svc_raw.c 235045 2012-05-05 00:28:08Z kib $");
 
 /*
  * svc_raw.c,   This a toy for simple testing and timing.

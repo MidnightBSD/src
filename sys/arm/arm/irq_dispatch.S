@@ -72,7 +72,7 @@
 #include <machine/asm.h>
 #include <machine/asmacros.h>
 #include <machine/armreg.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/irq_dispatch.S 232508 2012-03-04 17:00:46Z raj $");
 
 /*
  * irq_entry:

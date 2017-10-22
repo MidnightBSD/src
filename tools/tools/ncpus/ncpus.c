@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/tools/tools/ncpus/ncpus.c 156362 2006-03-06 21:51:27Z sam $ */
 
 #include <stdio.h>
 

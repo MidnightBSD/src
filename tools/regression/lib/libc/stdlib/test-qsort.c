@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libc/stdlib/test-qsort.c 137587 2004-11-11 19:47:55Z nik $");
 
 #include <assert.h>
 #include <stdio.h>

@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD$*/
+/*$FreeBSD: stable/9/sys/dev/ixgbe/ixgbe_82598.h 246069 2013-01-29 13:49:08Z pfg $*/
 
 #ifndef _IXGBE_82598_H_
 #define _IXGBE_82598_H_

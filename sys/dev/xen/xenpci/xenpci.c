@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/xen/xenpci/xenpci.c 214077 2010-10-19 20:53:30Z gibbs $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

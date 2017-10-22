@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/arm/mv/mvwin.h 209131 2010-06-13 13:28:53Z raj $
  */
 
 #ifndef _MVWIN_H_

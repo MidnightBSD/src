@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/arm/at91/if_macbreg.h 210040 2010-07-14 00:48:53Z cognet $
  */
 
 #ifndef MACB_REG_H

@@ -26,7 +26,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/security/audit/audit_private.h 244324 2012-12-16 23:41:34Z pjd $
  */
 
 /*
@@ -388,7 +388,8 @@ au_event_t	 audit_flags_and_error_to_openevent(int oflags, int error);
 au_event_t	 audit_flags_and_error_to_openatevent(int oflags, int error);
 au_event_t	 audit_msgctl_to_event(int cmd);
 au_event_t	 audit_semctl_to_event(int cmr);
-void		 audit_canon_path(struct thread *td, char *path, char *cpath);
+void		 audit_canon_path(struct thread *td, int dirfd, char *path,
+		    char *cpath);
 au_event_t	 auditon_command_event(int cmd);
 
 /*

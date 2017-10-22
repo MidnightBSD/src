@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/ctladm/Makefile 237821 2012-06-29 21:19:24Z ken $
 
 PROG=		ctladm
 SRCS=		ctladm.c util.c ctl_util.c ctl_scsi_all.c

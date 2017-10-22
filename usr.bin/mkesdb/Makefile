@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/mkesdb/Makefile 219019 2011-02-25 00:04:39Z gabor $
 
 .PATH: ${.CURDIR}/../../lib/libc/iconv
 

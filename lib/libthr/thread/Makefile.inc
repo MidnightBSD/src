@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libthr/thread/Makefile.inc 218414 2011-02-07 21:26:46Z jkim $
 
 # thr sources
 .PATH: ${.CURDIR}/thread

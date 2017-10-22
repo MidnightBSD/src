@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/i80321/i80321_aau.c 156212 2006-03-02 14:06:38Z cognet $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

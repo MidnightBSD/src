@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/link/05.t 210984 2010-08-06 23:58:54Z pjd $
 
 desc="link returns EMLINK if the link count of the file named by name1 would exceed 32767"
 

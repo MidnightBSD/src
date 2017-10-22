@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/linux/linux_ptrace.c 208833 2010-06-05 15:59:59Z kib $");
 
 #include "opt_cpu.h"
 

@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sade/variable.c 178946 2008-05-11 17:23:57Z obrien $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

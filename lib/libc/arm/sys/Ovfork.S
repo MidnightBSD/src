@@ -32,7 +32,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/arm/sys/Ovfork.S 188827 2009-02-19 19:53:58Z imp $");
 #include "SYS.h"
 
 /*

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/mxge/mxge_rss_ethp_z8e/Makefile 175365 2008-01-15 20:34:49Z gallatin $
 
 .PATH: ${.CURDIR}/../../../dev/mxge
 KMOD=	mxge_rss_ethp_z8e

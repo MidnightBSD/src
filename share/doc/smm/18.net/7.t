@@ -31,7 +31,7 @@
 .\"
 .\"	@(#)7.t	8.1 (Berkeley) 6/8/93
 .\"
-.\"	$FreeBSD$
+.\"	$FreeBSD: stable/9/share/doc/smm/18.net/7.t 108533 2003-01-01 18:49:04Z schweikh $
 .\"
 .nr H2 1
 .br

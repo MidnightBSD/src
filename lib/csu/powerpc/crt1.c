@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/csu/powerpc/crt1.c 245777 2013-01-22 07:32:26Z kib $");
 
 #ifndef lint
 #ifndef __GNUC__
@@ -90,7 +90,8 @@ _start(int argc, char **argv, char **env,
 {
 	const char *s;
 
-	environ = env;
+	if (environ == NULL)
+		environ = env;
 
 	if (argc > 0 && argv[0] != NULL) {
 		__progname = argv[0];

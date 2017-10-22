@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/usr.bin/lastcomm/values.sh 201482 2010-01-04 09:59:18Z obrien $
 #
 
 ACCT=acct

@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/9/lib/libkse/test/README 172491 2007-10-09 13:42:34Z obrien $
 
 This test suite is meant to test general functionality of pthreads, as well as
 provide a simple framework for regression tests.  In general, this test suite

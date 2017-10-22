@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/isci/scil/sci_base_remote_device.h 240579 2012-09-17 00:44:16Z eadler $
  */
 #ifndef _SCI_BASE_REMOTE_DEVICE_H_
 #define _SCI_BASE_REMOTE_DEVICE_H_
@@ -93,7 +93,7 @@ typedef enum _SCI_BASE_REMOTE_DEVICE_STATES
    SCI_BASE_REMOTE_DEVICE_STATE_STOPPED,
 
    /**
-    * This state indicates the the remote device is in the process of
+    * This state indicates the remote device is in the process of
     * becoming ready (i.e. starting).  In this state no new IO operations
     * are permitted.
     * This state is entered from the STOPPED state.

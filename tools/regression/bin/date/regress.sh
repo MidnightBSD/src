@@ -5,7 +5,7 @@
 #
 # Submitted by Edwin Groothuis <edwin@FreeBSD.org>
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/bin/date/regress.sh 217208 2011-01-09 22:05:09Z keramida $
 #
 
 #

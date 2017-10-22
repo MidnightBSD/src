@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sysinstall/ufs.c 194807 2009-06-24 04:56:13Z cperciva $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

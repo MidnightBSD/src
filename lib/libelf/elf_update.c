@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libelf/elf_update.c 212373 2010-09-09 18:51:50Z kaiw $");
 
 #include <sys/mman.h>
 #include <sys/param.h>

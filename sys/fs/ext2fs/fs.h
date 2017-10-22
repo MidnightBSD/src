@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fs.h	8.7 (Berkeley) 4/19/94
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/ext2fs/fs.h 246892 2013-02-17 01:34:41Z pfg $
  */
 
 #ifndef _FS_EXT2FS_FS_H_
@@ -148,8 +148,5 @@
  * NINDIR is the number of indirects in a file system block.
  */
 #define	NINDIR(fs)	(EXT2_ADDR_PER_BLOCK(fs))
-
-extern int inside[], around[];
-extern u_char *fragtbl[];
 
 #endif /* !_FS_EXT2FS_FS_H_ */

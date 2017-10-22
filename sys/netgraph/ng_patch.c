@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netgraph/ng_patch.c 234681 2012-04-25 09:55:34Z melifaro $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

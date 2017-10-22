@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/cesa/cesa.c 227730 2011-11-19 16:30:06Z raj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

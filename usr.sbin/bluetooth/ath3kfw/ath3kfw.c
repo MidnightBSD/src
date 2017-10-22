@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/bluetooth/ath3kfw/ath3kfw.c 215195 2010-11-12 19:43:12Z emax $
  */
 
 #include <sys/types.h>

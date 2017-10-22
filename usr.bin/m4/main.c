@@ -50,7 +50,7 @@ static char rcsid[] = "$OpenBSD: main.c,v 1.53 2002/04/26 16:15:16 espie Exp $";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/m4/main.c 216370 2010-12-11 08:32:16Z joel $");
 
 /*
  * main.c

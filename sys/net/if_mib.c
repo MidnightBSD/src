@@ -26,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/net/if_mib.c 248085 2013-03-09 02:36:32Z marius $
  */
 
 #include <sys/param.h>
@@ -63,7 +63,7 @@
  */
 
 SYSCTL_DECL(_net_link_generic);
-SYSCTL_NODE(_net_link_generic, IFMIB_SYSTEM, system, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_net_link_generic, IFMIB_SYSTEM, system, CTLFLAG_RW, 0,
 	    "Variables global to all interfaces");
 
 SYSCTL_VNET_INT(_net_link_generic_system, IFMIB_IFCOUNT, ifcount, CTLFLAG_RD,
@@ -164,6 +164,6 @@ out:
 	return error;
 }
 
-SYSCTL_NODE(_net_link_generic, IFMIB_IFDATA, ifdata, CTLFLAG_RW,
+static SYSCTL_NODE(_net_link_generic, IFMIB_IFDATA, ifdata, CTLFLAG_RW,
 	    sysctl_ifdata, "Interface table");
 

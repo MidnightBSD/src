@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)memchr.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/string/memchr.c 188295 2009-02-07 19:34:44Z imp $");
 
 #include <string.h>
 

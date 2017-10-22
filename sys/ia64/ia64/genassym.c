@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ia64/ia64/genassym.c 246937 2013-02-18 05:05:01Z marcel $
  */
 
 #include "opt_compat.h"
@@ -96,7 +96,6 @@ ASSYM(PAGE_SHIFT,	PAGE_SHIFT);
 ASSYM(PAGE_SIZE,	PAGE_SIZE);
 
 ASSYM(PC_CURRENT_PMAP,	offsetof(struct pcpu, pc_md.current_pmap));
-ASSYM(PC_CURTHREAD,	offsetof(struct pcpu, pc_curthread));
 ASSYM(PC_IDLETHREAD,	offsetof(struct pcpu, pc_idlethread));
 
 ASSYM(PCB_CURRENT_PMAP,	offsetof(struct pcb, pcb_current_pmap));

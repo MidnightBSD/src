@@ -1,7 +1,7 @@
 /*	$NetBSD: smc90cx6.c,v 1.38 2001/07/07 15:57:53 thorpej Exp $ */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/cm/smc90cx6.c 248078 2013-03-09 00:39:54Z marius $");
 
 /*-
  * Copyright (c) 1994, 1995, 1998 The NetBSD Foundation, Inc.
@@ -502,7 +502,7 @@ cm_srint_locked(vsc)
 	buffer = sc->sc_rx_act ^ 1;
 
 	/* Allocate header mbuf */
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	MGETHDR(m, M_NOWAIT, MT_DATA);
 
 	if (m == 0) {
 		/*
@@ -539,7 +539,7 @@ cm_srint_locked(vsc)
 	 */
 	if ((len + 2 + 2) > MHLEN) {
 		/* attach an mbuf cluster */
-		MCLGET(m, M_DONTWAIT);
+		MCLGET(m, M_NOWAIT);
 
 		/* Insist on getting a cluster */
 		if ((m->m_flags & M_EXT) == 0) {

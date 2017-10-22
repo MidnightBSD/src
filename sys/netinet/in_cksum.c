@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/in_cksum.c 172467 2007-10-07 20:44:24Z silby $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>

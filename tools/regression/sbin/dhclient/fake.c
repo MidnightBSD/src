@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/tools/regression/sbin/dhclient/fake.c 230597 2012-01-26 19:46:13Z dumbbell $ */
 
 #include <setjmp.h>
 #include <stdarg.h>

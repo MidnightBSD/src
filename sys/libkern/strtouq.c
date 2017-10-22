@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/libkern/strtouq.c 189065 2009-02-26 12:06:46Z ed $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

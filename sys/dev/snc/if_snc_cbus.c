@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/snc/if_snc_cbus.c 243455 2012-11-23 14:16:55Z nyan $");
 
 /*
  *	National Semiconductor  DP8393X SONIC Driver
@@ -68,8 +68,7 @@ static struct isa_pnp_id snc_ids[] = {
 };
 
 static void
-snc_isapnp_reconfig(dev)
-	device_t dev;
+snc_isapnp_reconfig(device_t dev)
 {
 	struct isa_device *idev = DEVTOISA(dev);
         struct isa_config config;
@@ -111,8 +110,7 @@ snc_isapnp_reconfig(dev)
 }
 
 static int
-snc_isa_probe(dev)
-	device_t dev;
+snc_isa_probe(device_t dev)
 {
 	struct snc_softc *sc = device_get_softc(dev);
 	int type;
@@ -177,8 +175,7 @@ snc_isa_probe(dev)
 }
 
 static int
-snc_isa_attach(dev)
-	device_t dev;
+snc_isa_attach(device_t dev)
 {
 	struct snc_softc *sc = device_get_softc(dev);
 	

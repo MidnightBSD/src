@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/9/lib/libc/locale/DESIGN.xlocale 235785 2012-05-22 14:40:39Z theraven $
 
 Design of xlocale
 =================

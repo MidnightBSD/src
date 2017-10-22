@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/net/sctp_sys_calls.c 237894 2012-07-01 07:55:42Z tuexen $");
 
 #include <stdio.h>
 #include <string.h>

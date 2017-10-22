@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/ncal/Makefile 204706 2010-03-04 12:18:24Z edwin $
 
 PROG=	ncal
 

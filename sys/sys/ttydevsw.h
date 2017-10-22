@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/ttydevsw.h 223722 2011-07-02 13:54:20Z ed $
  */
 
 #ifndef _SYS_TTYDEVSW_H_

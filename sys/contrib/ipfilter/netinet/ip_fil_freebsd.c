@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sys/contrib/ipfilter/netinet/ip_fil_freebsd.c 241192 2012-10-04 09:49:53Z fjoe $	*/
 
 /*
  * Copyright (C) 1993-2003 by Darren Reed.
@@ -1357,7 +1357,9 @@ fr_info_t *fin;
 		else
 			sum = in_pseudo(ip->ip_src.s_addr, ip->ip_dst.s_addr,
 					htonl(m->m_pkthdr.csum_data +
-					fin->fin_ip->ip_len + fin->fin_p));
+					fin->fin_ip->ip_len -
+					(fin->fin_ip->ip_hl << 2) +
+					fin->fin_p));
 		sum ^= 0xffff;
 		if (sum != 0) {
 			fin->fin_flx |= FI_BAD;

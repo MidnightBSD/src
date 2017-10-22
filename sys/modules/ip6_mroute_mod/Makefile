@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/ip6_mroute_mod/Makefile 193588 2009-06-06 17:01:44Z rwatson $
 
 .include <bsd.own.mk>
 

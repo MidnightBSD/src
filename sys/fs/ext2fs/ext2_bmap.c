@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufs_bmap.c	8.7 (Berkeley) 3/21/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/ext2fs/ext2_bmap.c 247209 2013-02-24 02:47:19Z pfg $
  */
 
 #include <sys/param.h>
@@ -56,15 +56,7 @@
  * number to index into the array of block pointers described by the dinode.
  */
 int
-ext2_bmap(ap)
-	struct vop_bmap_args /* {
-		struct vnode *a_vp;
-		daddr_t a_bn;
-		struct bufobj **a_bop;
-		daddr_t *a_bnp;
-		int *a_runp;
-		int *a_runb;
-	} */ *ap;
+ext2_bmap(struct vop_bmap_args *ap)
 {
 	int32_t blkno;
 	int error;
@@ -99,12 +91,7 @@ ext2_bmap(ap)
  */
 
 int
-ext2_bmaparray(vp, bn, bnp, runp, runb)
-	struct vnode *vp;
-	int32_t bn;
-	int32_t *bnp;
-	int *runp;
-	int *runb;
+ext2_bmaparray(struct vnode *vp, int32_t bn, int32_t *bnp, int *runp, int *runb)
 {
 	struct inode *ip;
 	struct buf *bp;
@@ -183,12 +170,11 @@ ext2_bmaparray(vp, bn, bnp, runp, runb)
 		if (bp)
 			bqrelse(bp);
 
-		ap->in_exists = 1;
 		bp = getblk(vp, metalbn, bsize, 0, 0, 0);
 		if ((bp->b_flags & B_CACHE) == 0) {
 #ifdef DIAGNOSTIC
 			if (!daddr)
-				panic("ufs_bmaparray: indirect block not in cache");
+				panic("ext2_bmaparray: indirect block not in cache");
 #endif
 			bp->b_blkno = blkptrtodb(ump, daddr);
 			bp->b_iocmd = BIO_READ;
@@ -253,11 +239,7 @@ ext2_bmaparray(vp, bn, bnp, runp, runb)
  * once with the offset into the page itself.
  */
 int
-ext2_getlbns(vp, bn, ap, nump)
-	struct vnode *vp;
-	int32_t bn;
-	struct indir *ap;
-	int *nump;
+ext2_getlbns(struct vnode *vp, int32_t bn, struct indir *ap, int *nump)
 {
 	long blockcnt, metalbn, realbn;
 	struct ext2mount *ump;
@@ -310,7 +292,6 @@ ext2_getlbns(vp, bn, ap, nump)
 	 */
 	ap->in_lbn = metalbn;
 	ap->in_off = off = NIADDR - i;
-	ap->in_exists = 0;
 	ap++;
 	for (++numlevels; i <= NIADDR; i++) {
 		/* If searching for a meta-data block, quit when found. */
@@ -322,7 +303,6 @@ ext2_getlbns(vp, bn, ap, nump)
 		++numlevels;
 		ap->in_lbn = metalbn;
 		ap->in_off = off;
-		ap->in_exists = 0;
 		++ap;
 
 		metalbn -= -1 + off * blockcnt;

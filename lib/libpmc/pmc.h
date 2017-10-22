@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libpmc/pmc.h 229392 2012-01-03 16:35:00Z fabient $
  */
 
 #ifndef _PMC_H_

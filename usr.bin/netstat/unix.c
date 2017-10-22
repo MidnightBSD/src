@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)unix.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/netstat/unix.c 216370 2010-12-11 08:32:16Z joel $");
 
 /*
  * Display protocol blocks in the unix domain.

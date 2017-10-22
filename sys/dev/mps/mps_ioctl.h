@@ -29,7 +29,7 @@
  *
  * LSI MPT-Fusion Host Adapter FreeBSD userland interface
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/mps/mps_ioctl.h 237876 2012-07-01 05:22:45Z ken $
  */
 /*-
  * Copyright (c) 2011, 2012 LSI Corp.
@@ -58,7 +58,7 @@
  *
  * LSI MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/mps/mps_ioctl.h 237876 2012-07-01 05:22:45Z ken $
  */
 
 #ifndef _MPS_IOCTL_H_

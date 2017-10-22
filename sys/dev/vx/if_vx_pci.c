@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/vx/if_vx_pci.c 173839 2007-11-22 02:45:00Z yongari $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

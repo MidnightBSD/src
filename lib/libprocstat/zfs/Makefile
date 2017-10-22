@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libprocstat/zfs/Makefile 221807 2011-05-12 10:11:39Z stas $
 
 .PATH: ${.CURDIR}/..
 

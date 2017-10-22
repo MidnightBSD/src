@@ -31,7 +31,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/getgrent.c 174547 2007-12-12 10:08:03Z bushman $");
 
 #include "namespace.h"
 #include <sys/param.h>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/dtrace_bsd.h 243989 2012-12-07 19:06:40Z gnn $
  *
  * This file contains BSD shims for Sun's DTrace code.
  */
@@ -38,6 +38,8 @@ struct thread;
 struct vattr;
 struct vnode;
 struct reg;
+struct devstat;
+struct bio;
 
 /*
  * Cyclic clock function type definition used to hook the cyclic
@@ -167,6 +169,23 @@ extern dtrace_nfsclient_nfs23_done_probe_func_t
     dtrace_nfsclient_nfs23_done_probe;
 extern dtrace_nfsclient_nfs23_done_probe_func_t
     dtrace_nfscl_nfs234_done_probe;
+
+/* IO Provider hooks, really hook into devstat */
+typedef void (*dtrace_io_start_probe_func_t)(uint32_t, struct bio *,
+					     struct devstat *);
+extern dtrace_io_start_probe_func_t dtrace_io_start_probe;
+
+typedef void (*dtrace_io_done_probe_func_t)(uint32_t, struct bio *,
+					    struct devstat *);
+extern dtrace_io_done_probe_func_t dtrace_io_done_probe;
+
+typedef void (*dtrace_io_wait_start_probe_func_t)(uint32_t, uintptr_t *, 
+						  struct devstat *);
+extern dtrace_io_wait_start_probe_func_t dtrace_io_wait_start_probe;
+
+typedef void (*dtrace_io_wait_done_probe_func_t)(uint32_t, uintptr_t *, 
+						 struct devstat *);
+extern dtrace_io_wait_done_probe_func_t dtrace_io_wait_done_probe;
 
 /*
  * Functions which allow the dtrace module to check that the kernel 

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/bin/sh/builtins/builtin1.0 201431 2010-01-03 15:01:38Z jilles $
 
 failures=0
 

@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/i386/xen/xen_clock_util.c 193032 2009-05-29 13:36:06Z adrian $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/xen/xen_clock_util.c 193032 2009-05-29 13:36:06Z adrian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

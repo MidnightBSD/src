@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/rl/Makefile 184559 2008-11-02 16:50:57Z imp $
 
 .PATH: ${.CURDIR}/../../pci
 

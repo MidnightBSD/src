@@ -29,7 +29,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/at91/uart_cpu_at91rm9200usart.c 217036 2011-01-05 23:45:07Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

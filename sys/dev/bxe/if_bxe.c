@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/bxe/if_bxe.c 248085 2013-03-09 02:36:32Z marius $");
 
 /*
  * The following controllers are supported by this driver:
@@ -419,7 +419,7 @@ DRIVER_MODULE(bxe, pci, bxe_driver, bxe_devclass, 0, 0);
 /*
  * Tunable device values
  */
-SYSCTL_NODE(_hw, OID_AUTO, bxe, CTLFLAG_RD, 0, "bxe driver parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, bxe, CTLFLAG_RD, 0, "bxe driver parameters");
 /* Allowable values are TRUE (1) or FALSE (0). */
 
 static int bxe_dcc_enable = FALSE;
@@ -3752,7 +3752,7 @@ bxe_alloc_buf_rings(struct bxe_softc *sc)
 
 		if (fp != NULL) {
 			fp->br = buf_ring_alloc(BXE_BR_SIZE,
-			    M_DEVBUF, M_DONTWAIT, &fp->mtx);
+			    M_DEVBUF, M_NOWAIT, &fp->mtx);
 			if (fp->br == NULL) {
 				rc = ENOMEM;
 				goto bxe_alloc_buf_rings_exit;
@@ -8955,7 +8955,7 @@ bxe_tx_encap(struct bxe_fastpath *fp, struct mbuf **m_head)
 		} else if (error == EFBIG) {
 			/* Possibly recoverable with defragmentation. */
 			fp->mbuf_defrag_attempts++;
-			m0 = m_defrag(*m_head, M_DONTWAIT);
+			m0 = m_defrag(*m_head, M_NOWAIT);
 			if (m0 == NULL) {
 				fp->mbuf_defrag_failures++;
 				rc = ENOBUFS;
@@ -9551,6 +9551,11 @@ bxe_tx_mq_start_locked(struct ifnet *ifp,
 
 		/* The transmit frame was enqueued successfully. */
 		tx_count++;
+
+		/* Update stats */
+		ifp->if_obytes += next->m_pkthdr.len;
+		if (next->m_flags & M_MCAST)
+			ifp->if_omcasts++;
 
 		/* Send a copy of the frame to any BPF listeners. */
 		BPF_MTAP(ifp, next);
@@ -10457,7 +10462,7 @@ bxe_alloc_tpa_mbuf(struct bxe_fastpath *fp, int queue)
 #endif
 
 	/* Allocate the new TPA mbuf. */
-	m = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR, sc->mbuf_alloc_size);
+	m = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, sc->mbuf_alloc_size);
 	if (__predict_false(m == NULL)) {
 		fp->mbuf_tpa_alloc_failed++;
 		rc = ENOBUFS;
@@ -10651,7 +10656,7 @@ bxe_alloc_rx_sge_mbuf(struct bxe_fastpath *fp, uint16_t index)
 #endif
 
 	/* Allocate a new SGE mbuf. */
-	m = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR, SGE_PAGE_SIZE);
+	m = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, SGE_PAGE_SIZE);
 	if (__predict_false(m == NULL)) {
 		fp->mbuf_sge_alloc_failed++;
 		rc = ENOMEM;
@@ -10841,7 +10846,7 @@ bxe_alloc_rx_bd_mbuf(struct bxe_fastpath *fp, uint16_t index)
 #endif
 
 	/* Allocate the new RX BD mbuf. */
-	m = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR, sc->mbuf_alloc_size);
+	m = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, sc->mbuf_alloc_size);
 	if (__predict_false(m == NULL)) {
 		fp->mbuf_rx_bd_alloc_failed++;
 		rc = ENOBUFS;

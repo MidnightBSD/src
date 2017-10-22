@@ -17,7 +17,7 @@
  *
  * The call is: cvs commit [options] files...
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/contrib/cvs/src/commit.c 175282 2008-01-13 06:20:11Z obrien $
  */
 
 #include <assert.h>

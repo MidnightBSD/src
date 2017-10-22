@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/ftok.c 129926 2004-06-01 06:53:07Z tjr $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

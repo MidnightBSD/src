@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)disklabel.h	8.2 (Berkeley) 7/10/94
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/diskmbr.h 246938 2013-02-18 08:24:39Z ae $
  */
 
 #ifndef _SYS_DISKMBR_H_
@@ -50,6 +50,7 @@
 #define	DOSPTYP_EXTLBA	0x0f	/* DOS extended partition */
 #define	DOSPTYP_LDM	0x42	/* Win2k dynamic extended partition */
 #define	DOSPTYP_386BSD	0xa5	/* 386BSD partition type */
+#define	DOSPTYP_HFS	0xaf	/* HFS/HFS+ partition type */
 #define	DOSPTYP_LINSWP	0x82	/* Linux swap partition */
 #define	DOSPTYP_LINUX	0x83	/* Linux partition */
 #define	DOSPTYP_LINLVM	0x8e	/* Linux LVM partition */

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)resourcevar.h	8.4 (Berkeley) 1/9/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/resourcevar.h 230754 2012-01-29 21:08:24Z trociny $
  */
 
 #ifndef	_SYS_RESOURCEVAR_H_

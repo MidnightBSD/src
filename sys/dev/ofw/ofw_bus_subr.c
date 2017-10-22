@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ofw/ofw_bus_subr.c 234160 2012-04-12 00:38:34Z nwhitehorn $");
 
 #include "opt_platform.h"
 #include <sys/param.h>

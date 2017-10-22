@@ -3,7 +3,7 @@
  *
  * This is shared by bootpd and bootpef
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/libexec/bootpd/tzone.c 68561 2000-11-10 12:19:53Z dirk $
  */
 
 #ifdef	SVR4

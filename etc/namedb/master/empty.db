@@ -1,5 +1,5 @@
 
-; $FreeBSD$
+; $FreeBSD: stable/9/etc/namedb/master/empty.db 170914 2007-06-18 05:58:23Z dougb $
 
 $TTL 3h
 @ SOA @ nobody.localhost. 42 1d 12h 1w 3h

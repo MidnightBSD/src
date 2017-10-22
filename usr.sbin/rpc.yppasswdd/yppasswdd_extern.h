@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/rpc.yppasswdd/yppasswdd_extern.h 99824 2002-07-11 21:28:16Z alfred $
  */
 
 #ifndef _YPPASSWDD_EXTERN_H

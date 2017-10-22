@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/sound/sbus/cs4231.c 215034 2010-11-09 10:59:09Z brucec $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

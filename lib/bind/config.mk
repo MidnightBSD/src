@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/bind/config.mk 224129 2011-07-17 12:07:22Z dougb $
 
 .include <bsd.own.mk>
 .include <bsd.endian.mk>

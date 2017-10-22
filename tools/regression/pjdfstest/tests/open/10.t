@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/open/10.t 210984 2010-08-06 23:58:54Z pjd $
 
 desc="open returns EPERM when the named file has its immutable flag set and the file is to be modified"
 

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)jobs.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/bin/sh/jobs.h 249242 2013-04-07 21:25:14Z jilles $
  */
 
 /* Mode argument to forkshell.  Don't change FORK_FG or FORK_BG. */
@@ -91,6 +91,7 @@ void setjobctl(int);
 void showjobs(int, int);
 struct job *makejob(union node *, int);
 pid_t forkshell(struct job *, union node *, int);
+pid_t vforkexecshell(struct job *, char **, char **, const char *, int, int []);
 int waitforjob(struct job *, int *);
 int stoppedjobs(void);
 int backgndpidset(void);

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ata/chipsets/ata-ati.c 245797 2013-01-22 17:06:42Z mav $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -75,7 +75,7 @@ static int
 ata_ati_probe(device_t dev)
 {
     struct ata_pci_controller *ctlr = device_get_softc(dev);
-    static const struct ata_chip_id const ids[] =
+    static const struct ata_chip_id ids[] =
     {{ ATA_ATI_IXP200,    0x00, ATI_PATA, 0, ATA_UDMA5, "IXP200" },
      { ATA_ATI_IXP300,    0x00, ATI_PATA, 0, ATA_UDMA6, "IXP300" },
      { ATA_ATI_IXP300_S1, 0x00, ATI_SATA, SII_BUG, ATA_SA150, "IXP300" },
@@ -91,6 +91,12 @@ ata_ati_probe(device_t dev)
      { ATA_ATI_IXP700_S4, 0x00, ATI_AHCI, 0, ATA_SA300, "IXP700/800" },
      { ATA_ATI_IXP800_S1, 0x00, ATI_AHCI, 0, ATA_SA300, "IXP800" },
      { ATA_ATI_IXP800_S2, 0x00, ATI_AHCI, 0, ATA_SA300, "IXP800" },
+     { ATA_AMD_HUDSON2,     0x00, ATI_PATA, 0, ATA_UDMA6, "Hudson-2" },
+     { ATA_AMD_HUDSON2_S1,  0x00, ATI_AHCI, 0, ATA_SA300, "Hudson-2" },
+     { ATA_AMD_HUDSON2_S2,  0x00, ATI_AHCI, 0, ATA_SA300, "Hudson-2" },
+     { ATA_AMD_HUDSON2_S3,  0x00, ATI_AHCI, 0, ATA_SA300, "Hudson-2" },
+     { ATA_AMD_HUDSON2_S4,  0x00, ATI_AHCI, 0, ATA_SA300, "Hudson-2" },
+     { ATA_AMD_HUDSON2_S5,  0x00, ATI_AHCI, 0, ATA_SA300, "Hudson-2" },
      { 0, 0, 0, 0, 0, 0}};
 
     if (pci_get_vendor(dev) != ATA_ATI_ID)

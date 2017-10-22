@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/ipcs/ipc.c 224016 2011-07-14 14:18:14Z bz $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

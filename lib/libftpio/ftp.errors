@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libftpio/ftp.errors 62649 2000-07-05 19:34:43Z ume $
 #
 # This list is taken from RFC 959.
 # It probably needs a going over.

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/common/gpt.c 234693 2012-04-26 05:17:25Z ae $");
 
 #include <sys/param.h>
 #include <sys/gpt.h>

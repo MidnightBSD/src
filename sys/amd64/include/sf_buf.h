@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/amd64/include/sf_buf.h 142840 2005-02-28 23:38:15Z peter $
  */
 
 #ifndef _MACHINE_SF_BUF_H_

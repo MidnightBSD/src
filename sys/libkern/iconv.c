@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/libkern/iconv.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,7 +43,7 @@ SYSCTL_DECL(_kern_iconv);
 SYSCTL_NODE(_kern, OID_AUTO, iconv, CTLFLAG_RW, NULL, "kernel iconv interface");
 
 MALLOC_DEFINE(M_ICONV, "iconv", "ICONV structures");
-MALLOC_DEFINE(M_ICONVDATA, "iconv_data", "ICONV data");
+static MALLOC_DEFINE(M_ICONVDATA, "iconv_data", "ICONV data");
 
 MODULE_VERSION(libiconv, 2);
 
@@ -84,9 +84,11 @@ iconv_mod_unload(void)
 	struct iconv_cspair *csp;
 
 	sx_xlock(&iconv_lock);
-	while ((csp = TAILQ_FIRST(&iconv_cslist)) != NULL) {
-		if (csp->cp_refcount)
+	TAILQ_FOREACH(csp, &iconv_cslist, cp_link) {
+		if (csp->cp_refcount) {
+			sx_xunlock(&iconv_lock);
 			return EBUSY;
+		}
 	}
 
 	while ((csp = TAILQ_FIRST(&iconv_cslist)) != NULL)

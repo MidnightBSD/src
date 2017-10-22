@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/tools/aac/aac_checkq.c 219522 2011-03-11 18:51:42Z brucec $");
 
 #include <sys/types.h>
 #include <sys/fcntl.h>

@@ -38,7 +38,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/security/mac_mls/mac_mls.c 248085 2013-03-09 02:36:32Z marius $
  */
 
 /*
@@ -93,7 +93,7 @@
 
 SYSCTL_DECL(_security_mac);
 
-SYSCTL_NODE(_security_mac, OID_AUTO, mls, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_security_mac, OID_AUTO, mls, CTLFLAG_RW, 0,
     "TrustedBSD mac_mls policy controls");
 
 static int	mls_label_size = sizeof(struct mac_mls);

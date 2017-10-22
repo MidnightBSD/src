@@ -33,7 +33,7 @@
  *
  * $Id: ib_cache.h 1349 2004-12-16 21:09:43Z roland $
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/contrib/rdma/ib_cache.h 178784 2008-05-05 18:35:55Z kmacy $
  */
 
 #ifndef _IB_CACHE_H

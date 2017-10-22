@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sys/net/if_gif.c 248085 2013-03-09 02:36:32Z marius $	*/
 /*	$KAME: if_gif.c,v 1.87 2001/10/19 08:50:27 itojun Exp $	*/
 
 /*-
@@ -112,7 +112,7 @@ IFC_SIMPLE_DECLARE(gif, 0);
 static int gifmodevent(module_t, int, void *);
 
 SYSCTL_DECL(_net_link);
-SYSCTL_NODE(_net_link, IFT_GIF, gif, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_net_link, IFT_GIF, gif, CTLFLAG_RW, 0,
     "Generic Tunnel Interface");
 #ifndef MAX_GIF_NEST
 /*

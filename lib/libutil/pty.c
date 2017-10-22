@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libutil/pty.c 184634 2008-11-04 13:50:50Z des $");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0

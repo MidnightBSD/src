@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/security/audit/audit_pipe.c 225177 2011-08-25 15:51:54Z attilio $");
 
 #include <sys/param.h>
 #include <sys/condvar.h>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/csup/token.h 204556 2010-03-02 07:26:07Z lulf $
  */
 #ifndef _TOKEN_H_
 #define _TOKEN_H_

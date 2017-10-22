@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/iicbus/iic.c 226667 2011-10-23 18:20:51Z brueffer $
  *
  */
 #include <sys/param.h>

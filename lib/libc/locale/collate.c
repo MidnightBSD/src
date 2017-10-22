@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/locale/collate.c 240603 2012-09-17 13:05:39Z glebius $");
 
 #include "namespace.h"
 #include <arpa/inet.h>

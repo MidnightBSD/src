@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/pthread/mutex_isowned_np/mutex_isowned_np.c 176050 2008-02-06 19:41:05Z des $
  */
 
 #include <pthread.h>

@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libproc/proc_sym.c 211184 2010-08-11 17:33:26Z rpaulo $
  */
 
 #include <sys/types.h>

@@ -5,7 +5,7 @@
  *
  * Largely rewritten by J.T. Conklin (jtc@wimsey.com)
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/bin/expr/expr.y 244117 2012-12-11 12:40:54Z glebius $
  */
 
 #include <sys/types.h>

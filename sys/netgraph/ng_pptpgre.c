@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_pptpgre.c 243953 2012-12-06 18:35:00Z mav $
  * $Whistle: ng_pptpgre.c,v 1.7 1999/12/08 00:10:06 archie Exp $
  */
 
@@ -562,7 +562,7 @@ ng_pptpgre_xmit(hpriv_p hpriv, item_p item)
 		}
 
 		/* Sanity check frame length */
-		if (m != NULL && m->m_pkthdr.len > PPTP_MAX_PAYLOAD) {
+		if (m->m_pkthdr.len > PPTP_MAX_PAYLOAD) {
 			priv->stats.xmitTooBig++;
 			ERROUT(EMSGSIZE);
 		}

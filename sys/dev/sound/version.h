@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/sound/version.h 194233 2009-06-15 04:31:34Z ariff $
  */
 
 #ifndef _SND_VERSION_H_

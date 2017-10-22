@@ -20,7 +20,7 @@
    Boston, MA 02111-1307, USA.  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/gnu/usr.bin/gdb/gdbserver/fbsd-amd64-low.c 204335 2010-02-25 21:29:00Z jkim $");
 
 #include "server.h"
 #include "fbsd-low.h"

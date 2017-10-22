@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/pci/if_rlreg.h 245857 2013-01-24 01:07:34Z yongari $
  */
 
 /*
@@ -1046,6 +1046,11 @@ struct rl_softc {
  * D-Link DFE-530TX+ device ID
  */
 #define	DLINK_DEVICEID_530TXPLUS		0x1300
+
+/*
+ * D-Link DFE-520TX rev. C1 device ID
+ */
+#define	DLINK_DEVICEID_520TX_REVC1		0x4200
 
 /*
  * D-Link DFE-5280T device ID

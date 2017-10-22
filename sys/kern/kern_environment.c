@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_environment.c 241222 2012-10-05 09:47:54Z jh $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -143,9 +143,9 @@ sys_kenv(td, uap)
 		break;
 	}
 
-	name = malloc(KENV_MNAMELEN, M_TEMP, M_WAITOK);
+	name = malloc(KENV_MNAMELEN + 1, M_TEMP, M_WAITOK);
 
-	error = copyinstr(uap->name, name, KENV_MNAMELEN, NULL);
+	error = copyinstr(uap->name, name, KENV_MNAMELEN + 1, NULL);
 	if (error)
 		goto done;
 
@@ -176,8 +176,8 @@ sys_kenv(td, uap)
 			error = EINVAL;
 			goto done;
 		}
-		if (len > KENV_MVALLEN)
-			len = KENV_MVALLEN;
+		if (len > KENV_MVALLEN + 1)
+			len = KENV_MVALLEN + 1;
 		value = malloc(len, M_TEMP, M_WAITOK);
 		error = copyinstr(uap->value, value, len, NULL);
 		if (error) {
@@ -389,10 +389,10 @@ setenv(const char *name, const char *value)
 	KENV_CHECK;
 
 	namelen = strlen(name) + 1;
-	if (namelen > KENV_MNAMELEN)
+	if (namelen > KENV_MNAMELEN + 1)
 		return (-1);
 	vallen = strlen(value) + 1;
-	if (vallen > KENV_MVALLEN)
+	if (vallen > KENV_MVALLEN + 1)
 		return (-1);
 	buf = malloc(namelen + vallen, M_KENV, M_WAITOK);
 	sprintf(buf, "%s=%s", name, value);

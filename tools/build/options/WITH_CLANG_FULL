@@ -1,0 +1,3 @@
+.\" $FreeBSD: stable/9/tools/build/options/WITH_CLANG_FULL 246637 2013-02-10 21:24:47Z dim $
+Set to build the ARCMigrate, Rewriter and StaticAnalyzer components of the
+Clang C/C++ compiler.

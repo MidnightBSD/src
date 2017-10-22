@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/ggate/Makefile 177714 2008-03-29 17:44:40Z ru $
 
 .include <bsd.own.mk>
 

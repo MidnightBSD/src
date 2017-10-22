@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_pf/pf_snmp.c 216294 2010-12-08 13:51:38Z syrinx $
  */
 
 #include <sys/queue.h>

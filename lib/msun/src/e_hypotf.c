@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/e_hypotf.c 177751 2008-03-30 18:07:12Z bde $");
 
 #include "math.h"
 #include "math_private.h"

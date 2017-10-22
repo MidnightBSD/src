@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/priv/Makefile 204585 2010-03-02 16:58:04Z uqs $
 #
 
 .include <bsd.own.mk>

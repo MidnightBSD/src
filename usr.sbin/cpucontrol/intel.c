@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/cpucontrol/intel.c 246281 2013-02-03 03:46:16Z eadler $");
 
 #include <assert.h>
 #include <stdio.h>
@@ -33,6 +33,7 @@ __FBSDID("$FreeBSD$");
 #include <unistd.h>
 #include <fcntl.h>
 #include <err.h>
+#include <errno.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -266,7 +267,9 @@ matched:
 	args.size = data_size;
 	error = ioctl(devfd, CPUCTL_UPDATE, &args);
 	if (error < 0) {
+               error = errno;
 		fprintf(stderr, "failed.\n");
+               errno = error;
 		WARN(0, "ioctl()");
 		goto fail;
 	}

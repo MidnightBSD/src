@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/cddl/lib/libzpool/Makefile 243674 2012-11-29 14:05:04Z mm $
 
 .include "${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/Makefile.files"
 
@@ -63,5 +63,8 @@ LDADD=		-lmd -lpthread -lz
 NO_PROFILE=
 
 CSTD=	c99
+
+CFLAGS+=	-DDEBUG=1
+#DEBUG_FLAGS+=	-g
 
 .include <bsd.lib.mk>

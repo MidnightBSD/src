@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/cam/ata/ata_pmp.c 249160 2013-04-05 11:57:41Z mav $");
 
 #include <sys/param.h>
 
@@ -134,7 +134,7 @@ static int pmp_retry_count = PMP_DEFAULT_RETRY;
 static int pmp_default_timeout = PMP_DEFAULT_TIMEOUT;
 static int pmp_hide_special = PMP_DEFAULT_HIDE_SPECIAL;
 
-SYSCTL_NODE(_kern_cam, OID_AUTO, pmp, CTLFLAG_RD, 0,
+static SYSCTL_NODE(_kern_cam, OID_AUTO, pmp, CTLFLAG_RD, 0,
             "CAM Direct Access Disk driver");
 SYSCTL_INT(_kern_cam_pmp, OID_AUTO, retry_count, CTLFLAG_RW,
            &pmp_retry_count, 0, "Normal I/O retry count");
@@ -155,7 +155,7 @@ static struct periph_driver pmpdriver =
 
 PERIPHDRIVER_DECLARE(pmp, pmpdriver);
 
-MALLOC_DEFINE(M_ATPMP, "ata_pmp", "ata_pmp buffers");
+static MALLOC_DEFINE(M_ATPMP, "ata_pmp", "ata_pmp buffers");
 
 static void
 pmpinit(void)
@@ -367,11 +367,6 @@ pmpregister(struct cam_periph *periph, void *arg)
 	struct ccb_getdev *cgd;
 
 	cgd = (struct ccb_getdev *)arg;
-	if (periph == NULL) {
-		printf("pmpregister: periph was NULL!!\n");
-		return(CAM_REQ_CMP_ERR);
-	}
-
 	if (cgd == NULL) {
 		printf("pmpregister: no getdev CCB, can't register device\n");
 		return(CAM_REQ_CMP_ERR);
@@ -600,7 +595,9 @@ pmpdone(struct cam_periph *periph, union ccb *done_ccb)
 			 * causes timeouts if external SEP is not connected
 			 * to PMP over I2C.
 			 */
-			if (softc->pm_pid == 0x37261095 && softc->pm_ports == 6)
+			if ((softc->pm_pid == 0x37261095 ||
+			     softc->pm_pid == 0x38261095) &&
+			    softc->pm_ports == 6)
 				softc->pm_ports = 5;
 
 			/*

@@ -7,7 +7,7 @@
 #
 # Usage: package-split.py <INDEX> <master INDEX>
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/release/scripts/package-split.py 229512 2012-01-04 19:38:35Z kensmith $
 
 import os
 import sys

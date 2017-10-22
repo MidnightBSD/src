@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/ixp425_a4x_space.c 177887 2008-04-03 18:22:08Z raj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

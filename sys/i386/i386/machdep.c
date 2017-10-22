@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/i386/machdep.c 240816 2012-09-22 12:34:02Z kib $");
 
 #include "opt_apic.h"
 #include "opt_atalk.h"
@@ -75,6 +75,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/linker.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/memrange.h>
 #include <sys/msgbuf.h>
 #include <sys/mutex.h>
 #include <sys/pcpu.h>
@@ -246,6 +247,8 @@ static struct trapframe proc0_tf;
 struct pcpu __pcpu[MAXCPU];
 
 struct mtx icu_lock;
+
+struct mem_range_softc mem_range_softc;
 
 static void
 cpu_startup(dummy)
@@ -469,7 +472,13 @@ osendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 	}
 
 	regs->tf_esp = (int)fp;
-	regs->tf_eip = PS_STRINGS - szosigcode;
+	if (p->p_sysent->sv_sigcode_base != 0) {
+		regs->tf_eip = p->p_sysent->sv_sigcode_base + szsigcode -
+		    szosigcode;
+	} else {
+		/* a.out sysentvec does not use shared page */
+		regs->tf_eip = p->p_sysent->sv_psstrings - szosigcode;
+	}
 	regs->tf_eflags &= ~(PSL_T | PSL_D);
 	regs->tf_cs = _ucodesel;
 	regs->tf_ds = _udatasel;
@@ -596,7 +605,8 @@ freebsd4_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 	}
 
 	regs->tf_esp = (int)sfp;
-	regs->tf_eip = PS_STRINGS - szfreebsd4_sigcode;
+	regs->tf_eip = p->p_sysent->sv_sigcode_base + szsigcode -
+	    szfreebsd4_sigcode;
 	regs->tf_eflags &= ~(PSL_T | PSL_D);
 	regs->tf_cs = _ucodesel;
 	regs->tf_ds = _udatasel;
@@ -747,7 +757,7 @@ sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 	}
 
 	regs->tf_esp = (int)sfp;
-	regs->tf_eip = PS_STRINGS - *(p->p_sysent->sv_szsigcode);
+	regs->tf_eip = p->p_sysent->sv_sigcode_base;
 	regs->tf_eflags &= ~(PSL_T | PSL_D);
 	regs->tf_cs = _ucodesel;
 	regs->tf_ds = _udatasel;
@@ -1567,7 +1577,7 @@ exec_setregs(struct thread *td, struct image_params *imgp, u_long stack)
                 pcb->pcb_dr3 = 0;
                 pcb->pcb_dr6 = 0;
                 pcb->pcb_dr7 = 0;
-                if (pcb == PCPU_GET(curpcb)) {
+                if (pcb == curpcb) {
 		        /*
 			 * Clear the debug registers on the running
 			 * CPU, otherwise they will end up affecting

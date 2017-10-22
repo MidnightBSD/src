@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/boot/Makefile 223539 2011-06-25 16:01:45Z marius $
 
 .include <bsd.own.mk>
 .include <bsd.arch.inc.mk>

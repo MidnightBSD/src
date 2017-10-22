@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/boot/uboot/lib/Makefile 243243 2012-11-18 17:09:29Z ae $
 
 .PATH: ${.CURDIR}/../../common
 
@@ -6,12 +6,17 @@ LIB=		uboot
 INTERNALLIB=
 WARNS?=		2
 
-SRCS=	crc32.c console.c copy.c devicename.c disk.c elf_freebsd.c glue.c
+SRCS=	crc32.c console.c copy.c devicename.c elf_freebsd.c glue.c
 SRCS+=	module.c net.c reboot.c time.c
 
 CFLAGS+=	-ffreestanding -msoft-float
 
 CFLAGS+=	-I${.CURDIR}/../../../../lib/libstand/
+
+.if !defined(LOADER_NO_DISK_SUPPORT)
+SRCS+=	disk.c
+CFLAGS+= -DLOADER_DISK_SUPPORT
+.endif
 
 # Pick up FDT includes
 CFLAGS+=	-I${.CURDIR}/../../../../sys/contrib/libfdt/

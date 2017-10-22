@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/ksyms/ksyms.c 241088 2012-10-01 06:42:07Z hselasky $
  */
 
 #include <sys/param.h>
@@ -578,8 +578,6 @@ ksyms_close(struct cdev *dev, int flags __unused, int fmt __unused,
 
 	/* Unmap the buffer from the process address space. */
 	error = copyout_unmap(td, sc->sc_uaddr, sc->sc_usize);
-
-	devfs_clear_cdevpriv();
 
 	return (error);
 }

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/nd6_nbr.c 240305 2012-09-10 11:38:02Z glebius $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -595,9 +595,9 @@ nd6_ns_output(struct ifnet *ifp, const struct in6_addr *daddr6,
 	icmp6_ifstat_inc(ifp, ifs6_out_neighborsolicit);
 	ICMP6STAT_INC(icp6s_outhist[ND_NEIGHBOR_SOLICIT]);
 
-	if (ro.ro_rt) {		/* we don't cache this route. */
-		RTFREE(ro.ro_rt);
-	}
+	/* We don't cache this route. */
+	RO_RTFREE(&ro);
+
 	return;
 
   bad:
@@ -1117,9 +1117,9 @@ nd6_na_output_fib(struct ifnet *ifp, const struct in6_addr *daddr6_0,
 	icmp6_ifstat_inc(ifp, ifs6_out_neighboradvert);
 	ICMP6STAT_INC(icp6s_outhist[ND_NEIGHBOR_ADVERT]);
 
-	if (ro.ro_rt) {		/* we don't cache this route. */
-		RTFREE(ro.ro_rt);
-	}
+	/* We don't cache this route. */
+	RO_RTFREE(&ro);
+
 	return;
 
   bad:

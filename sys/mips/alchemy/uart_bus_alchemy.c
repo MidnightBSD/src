@@ -31,7 +31,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/alchemy/uart_bus_alchemy.c 187498 2009-01-20 22:42:37Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,7 +1,7 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/bind/dns/code.h 248808 2013-03-28 05:39:45Z delphij $ */
 
 /*
- * Copyright (C) 2004-2012 Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2013 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003 Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any

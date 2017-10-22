@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/common/bcache.c 136097 2004-10-03 16:34:01Z stefanf $");
 
 /*
  * Simple LRU block cache

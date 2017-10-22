@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_open_fd.c 229592 2012-01-05 12:06:54Z mm $");
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #define open _open

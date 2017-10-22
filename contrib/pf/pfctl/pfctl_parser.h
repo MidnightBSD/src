@@ -28,7 +28,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/contrib/pf/pfctl/pfctl_parser.h 223637 2011-06-28 11:57:25Z bz $
  */
 
 #ifndef _PFCTL_PARSER_H_

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/hptmv/raid5n.h 190809 2009-04-07 16:38:25Z delphij $
  */
 #ifdef _RAID5N_
 

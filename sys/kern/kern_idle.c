@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_idle.c 222531 2011-05-31 15:11:43Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

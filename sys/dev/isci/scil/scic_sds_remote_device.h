@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/isci/scil/scic_sds_remote_device.h 240577 2012-09-17 00:32:36Z eadler $
  */
 #ifndef _SCIC_SDS_REMOTE_DEVICE_H_
 #define _SCIC_SDS_REMOTE_DEVICE_H_
@@ -121,7 +121,7 @@ enum SCIC_SDS_STP_REMOTE_DEVICE_READY_SUBSTATES
 {
    /**
     * This is the idle substate for the stp remote device.  When there are no
-    * active IO for the device it is is in this state.
+    * active IO for the device it is in this state.
     */
    SCIC_SDS_STP_REMOTE_DEVICE_READY_SUBSTATE_IDLE,
 

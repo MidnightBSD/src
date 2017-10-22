@@ -7,7 +7,7 @@
 # The output file looks like this (tab-delimited):
 #  foo1.txz SHA256-checksu Number-of-files foo1 Description Install-by-default
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/release/scripts/make-manifest.sh 219615 2011-03-13 17:15:31Z nwhitehorn $
 
 desc_base="Base system (MANDATORY)"
 desc_kernel="Kernel (MANDATORY)"

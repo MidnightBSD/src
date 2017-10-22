@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kgssapi/gss_verify_mic.c 184588 2008-11-03 10:38:00Z dfr $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

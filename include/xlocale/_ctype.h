@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/include/xlocale/_ctype.h 243331 2012-11-20 11:47:22Z demon $
  */
 
 
@@ -53,7 +53,7 @@ _RuneLocale	*__runes_for_locale(locale_t, int*);
 #endif
 
 #ifndef _XLOCALE_INLINE
-#if __GNUC__ && !__GNUC_STDC_INLINE__
+#if defined(__GNUC__) && !defined(__GNUC_STDC_INLINE__)
 /* GNU89 inline has nonstandard semantics. */
 #define _XLOCALE_INLINE extern __inline
 #else

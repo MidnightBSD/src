@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/geom/concat/g_concat.h 249145 2013-04-05 10:27:05Z mav $
  */
 
 #ifndef	_G_CONCAT_H_
@@ -72,6 +72,7 @@ struct g_concat_disk {
 	struct g_concat_softc	*d_softc;
 	off_t			 d_start;
 	off_t			 d_end;
+	int			 d_removed;
 };
 
 struct g_concat_softc {

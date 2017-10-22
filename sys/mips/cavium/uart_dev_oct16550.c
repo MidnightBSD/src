@@ -55,7 +55,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/uart_dev_oct16550.c 213345 2010-10-02 05:38:45Z jmallett $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

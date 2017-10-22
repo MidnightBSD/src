@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/usr.bin/cvs/libdiff/Makefile 146929 2005-06-03 15:08:30Z imp $
 
 .include "${.CURDIR}/../Makefile.inc"
 

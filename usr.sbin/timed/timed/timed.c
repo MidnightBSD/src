@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)timed.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/timed/timed/timed.c 240626 2012-09-18 02:14:47Z kevlo $");
 
 #define TSPTYPES
 #include "globals.h"
@@ -419,9 +419,10 @@ main(argc, argv)
 			justquit = 1;
 		}
 		for (ntp = nettab; ntp != NULL; ntp = ntp->next) {
-			if (ntp->status == MASTER)
+			if (ntp->status == MASTER) {
 				rmnetmachs(ntp);
 				ntp->status = NOMASTER;
+			}
 		}
 		checkignorednets();
 		pickslavenet(0);

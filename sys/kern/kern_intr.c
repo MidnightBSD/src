@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_intr.c 249402 2013-04-12 13:04:23Z kib $");
 
 #include "opt_ddb.h"
 
@@ -1144,10 +1144,20 @@ swi_sched(void *cookie, int flags)
 {
 	struct intr_handler *ih = (struct intr_handler *)cookie;
 	struct intr_event *ie = ih->ih_event;
+	struct intr_entropy entropy;
 	int error;
 
 	CTR3(KTR_INTR, "swi_sched: %s %s need=%d", ie->ie_name, ih->ih_name,
 	    ih->ih_need);
+
+	if (harvest.swi) {
+		CTR2(KTR_INTR, "swi_sched: pid %d (%s) gathering entropy",
+		    curproc->p_pid, curthread->td_name);
+		entropy.event = (uintptr_t)ih;
+		entropy.td = curthread;
+		random_harvest(&entropy, sizeof(entropy), 1, 0,
+		    RANDOM_INTERRUPT);
+	}
 
 	/*
 	 * Set ih_need for this handler so that if the ithread is already
@@ -1738,7 +1748,16 @@ db_dump_intrhand(struct intr_handler *ih)
 		break;
 	}
 	db_printf(" ");
-	db_printsym((uintptr_t)ih->ih_handler, DB_STGY_PROC);
+	if (ih->ih_filter != NULL) {
+		db_printf("[F]");
+		db_printsym((uintptr_t)ih->ih_filter, DB_STGY_PROC);
+	}
+	if (ih->ih_handler != NULL) {
+		if (ih->ih_filter != NULL)
+			db_printf(",");
+		db_printf("[H]");
+		db_printsym((uintptr_t)ih->ih_handler, DB_STGY_PROC);
+	}
 	db_printf("(%p)", ih->ih_argument);
 	if (ih->ih_need ||
 	    (ih->ih_flags & (IH_EXCLUSIVE | IH_ENTROPY | IH_DEAD |

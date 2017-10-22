@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/i386/ptrace_machdep.c 239992 2012-09-01 15:50:52Z kib $");
 
 #include "opt_cpu.h"
 
@@ -54,10 +54,12 @@ cpu_ptrace(struct thread *td, int req, void *addr, int data)
 	fpstate = &td->td_pcb->pcb_user_save.sv_xmm;
 	switch (req) {
 	case PT_GETXMMREGS:
+		npxgetregs(td);
 		error = copyout(fpstate, addr, sizeof(*fpstate));
 		break;
 
 	case PT_SETXMMREGS:
+		npxgetregs(td);
 		error = copyin(addr, fpstate, sizeof(*fpstate));
 		fpstate->sv_env.en_mxcsr &= cpu_mxcsr_mask;
 		break;

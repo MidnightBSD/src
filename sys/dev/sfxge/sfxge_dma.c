@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/sfxge/sfxge_dma.c 248078 2013-03-09 00:39:54Z marius $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -97,7 +97,7 @@ retry:
 		goto err_out;
 	} else if (err == EFBIG || seg_count >= maxsegs) {
 		if (!defragged) {
-			m = m_defrag(*mp, M_DONTWAIT);
+			m = m_defrag(*mp, M_NOWAIT);
 			if (m == NULL) {
 				err = ENOBUFS;
 				goto err_out;

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/boot/i386/gptzfsboot/Makefile 232930 2012-03-13 18:39:57Z dim $
 
 .PATH:		${.CURDIR}/../boot2 ${.CURDIR}/../gptboot \
 		${.CURDIR}/../zfsboot ${.CURDIR}/../common \

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/scc/scc_core.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -48,7 +48,7 @@ __FBSDID("$FreeBSD$");
 devclass_t scc_devclass;
 char scc_driver_name[] = "scc";
 
-MALLOC_DEFINE(M_SCC, "SCC", "SCC driver");
+static MALLOC_DEFINE(M_SCC, "SCC", "SCC driver");
 
 static int
 scc_bfe_intr(void *arg)

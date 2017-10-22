@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/release/picobsd/tinyware/view/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 PROG=view
 SRCS=view.c

@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libkvm/Makefile 221869 2011-05-14 01:53:38Z attilio $
 
 LIB=	kvm
 SHLIBDIR?= /lib

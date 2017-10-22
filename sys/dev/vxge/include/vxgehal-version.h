@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD$*/
+/*$FreeBSD: stable/9/sys/dev/vxge/include/vxgehal-version.h 221167 2011-04-28 14:33:15Z gnn $*/
 
 #ifndef	VXGE_HAL_VERSION_H
 #define	VXGE_HAL_VERSION_H

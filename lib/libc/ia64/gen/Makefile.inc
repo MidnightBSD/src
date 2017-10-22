@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libc/ia64/gen/Makefile.inc 231981 2012-02-21 21:18:59Z kib $
 
 SRCS+=	__divdf3.S __divdi3.S __divsf3.S __divsi3.S __moddi3.S __modsi3.S \
 	__udivdi3.S __udivsi3.S __umoddi3.S __umodsi3.S _mcount.S _set_tp.c \

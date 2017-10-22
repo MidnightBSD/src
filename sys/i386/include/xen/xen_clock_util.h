@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/i386/include/xen/xen_clock_util.h 193034 2009-05-29 13:48:42Z adrian $
  */
 
 #ifndef	__XEN_CLOCK_UTIL_H__

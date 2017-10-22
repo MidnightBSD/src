@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/flash/at45d.c 242908 2012-11-12 07:34:05Z dim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -106,7 +106,7 @@ static int at45d_wait_ready(device_t dev, uint8_t *status);
  * 2^N byte pages.  If support for the latter is enabled, the sector offset
  * has to be reduced by one.
  */
-static const struct at45d_flash_ident const at45d_flash_devices[] = {
+static const struct at45d_flash_ident at45d_flash_devices[] = {
 	{ "AT45DB011B", 0x1f2200, 512, 9, 264, 256 },
 	{ "AT45DB021B", 0x1f2300, 1024, 9, 264, 256 },
 	{ "AT45DB041x", 0x1f2400, 2028, 9, 264, 256 },

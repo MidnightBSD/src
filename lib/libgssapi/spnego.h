@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$FreeBSD: stable/9/lib/libgssapi/spnego.h 153838 2005-12-29 14:40:22Z dfr $
  */
 
 typedef xder_OID MechType;

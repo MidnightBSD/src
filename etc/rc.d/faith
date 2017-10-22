@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/faith 220153 2011-03-30 01:19:00Z emaste $
 #
 
 # PROVIDE: faith

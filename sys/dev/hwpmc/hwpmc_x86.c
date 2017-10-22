@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/hwpmc/hwpmc_x86.c 239433 2012-08-20 14:54:30Z emaste $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -252,7 +252,7 @@ pmc_md_initialize()
 		return (NULL);
 
 	/* disallow sampling if we do not have an LAPIC */
-	if (!lapic_enable_pmc())
+	if (md != NULL && !lapic_enable_pmc())
 		for (i = 0; i < md->pmd_nclass; i++) {
 			if (i == PMC_CLASS_INDEX_SOFT)
 				continue;

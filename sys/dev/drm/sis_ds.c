@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/sis_ds.c 157617 2006-04-09 20:45:45Z anholt $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

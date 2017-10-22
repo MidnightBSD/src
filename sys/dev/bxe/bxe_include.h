@@ -30,7 +30,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- /*$FreeBSD$*/
+ /*$FreeBSD: stable/9/sys/dev/bxe/bxe_include.h 220932 2011-04-21 23:06:00Z davidch $*/
 
 #ifndef _BXE_INCLUDE_H
 #define _BXE_INCLUDE_H

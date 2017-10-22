@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/rrenumd/rrenumd.c 173412 2007-11-07 10:53:41Z kevlo $
  */
 
 #include <sys/param.h>

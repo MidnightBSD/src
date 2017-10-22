@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/isci/scil/scic_io_request.h 240580 2012-09-17 00:47:35Z eadler $
  */
 #ifndef _SCIC_IO_REQUEST_H_
 #define _SCIC_IO_REQUEST_H_
@@ -260,12 +260,12 @@ typedef struct SCIC_SMP_PASSTHRU_REQUEST_CALLBACKS
    */
    U8 (* scic_cb_smp_passthru_get_frame_type) ( void *);
    /**
-   * Function pointer to get the function in the the smp request
+   * Function pointer to get the function in the smp request
    */
    U8 (* scic_cb_smp_passthru_get_function) ( void * );
 
    /**
-   * Function pointer to get the "allocated response length" in the the smp request
+   * Function pointer to get the "allocated response length" in the smp request
    */
    U8 (* scic_cb_smp_passthru_get_allocated_response_length) ( void * );
 
@@ -706,7 +706,7 @@ void * scic_stp_io_request_get_h2d_reg_address(
  * @brief This method will return the address of the device to host register
  *        fis region for the io request object.
  *
- * @param[in] scic_io_request This parameter specifies teh handle to the io
+ * @param[in] scic_io_request This parameter specifies the handle to the io
  *       request object from which to get the device to host register fis
  *       buffer.
  *

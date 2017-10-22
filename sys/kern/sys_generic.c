@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/sys_generic.c 245103 2013-01-06 15:07:19Z kib $");
 
 #include "opt_capsicum.h"
 #include "opt_compat.h"
@@ -536,7 +536,8 @@ dofilewrite(td, fd, fp, auio, offset, flags)
 		ktruio = cloneuio(auio);
 #endif
 	cnt = auio->uio_resid;
-	if (fp->f_type == DTYPE_VNODE)
+	if (fp->f_type == DTYPE_VNODE &&
+	    (fp->f_vnread_flags & FDEVFS_VNODE) == 0)
 		bwillwrite();
 	if ((error = fo_write(fp, auio, td->td_ucred, flags, td))) {
 		if (auio->uio_resid != cnt && (error == ERESTART ||

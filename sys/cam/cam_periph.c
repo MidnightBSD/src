@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/cam/cam_periph.c 249152 2013-04-05 11:41:56Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -91,7 +91,7 @@ static int nperiph_drivers;
 static int initialized = 0;
 struct periph_driver **periph_drivers;
 
-MALLOC_DEFINE(M_CAMPERIPH, "CAM periph", "CAM peripheral buffers");
+static MALLOC_DEFINE(M_CAMPERIPH, "CAM periph", "CAM peripheral buffers");
 
 static int periph_selto_delay = 1000;
 TUNABLE_INT("kern.cam.periph_selto_delay", &periph_selto_delay);
@@ -613,6 +613,14 @@ camperiphfree(struct cam_periph *periph)
 		printf("camperiphfree: attempt to free non-existant periph\n");
 		return;
 	}
+
+	/*
+	 * We need to set this flag before dropping the topology lock, to
+	 * let anyone who is traversing the list that this peripheral is
+	 * about to be freed, and there will be no more reference count
+	 * checks.
+	 */
+	periph->flags |= CAM_PERIPH_FREE;
 
 	/*
 	 * The peripheral destructor semantics dictate calling with only the
@@ -1147,22 +1155,15 @@ camperiphdone(struct cam_periph *periph, union ccb *done_ccb)
 	union ccb      *saved_ccb;
 	cam_status	status;
 	struct scsi_start_stop_unit *scsi_cmd;
+	int    error_code, sense_key, asc, ascq;
 
 	scsi_cmd = (struct scsi_start_stop_unit *)
 	    &done_ccb->csio.cdb_io.cdb_bytes;
 	status = done_ccb->ccb_h.status;
 
 	if ((status & CAM_STATUS_MASK) != CAM_REQ_CMP) {
-		if ((status & CAM_STATUS_MASK) == CAM_SCSI_STATUS_ERROR &&
-		    (status & CAM_AUTOSNS_VALID)) {
-			struct scsi_sense_data *sense;
-			int    error_code, sense_key, asc, ascq, sense_len;
-
-			sense = &done_ccb->csio.sense_data;
-			sense_len = done_ccb->csio.sense_len -
-				    done_ccb->csio.sense_resid;
-			scsi_extract_sense_len(sense, sense_len, &error_code,
-			    &sense_key, &asc, &ascq, /*show_errors*/ 1);
+		if (scsi_extract_sense_ccb(done_ccb,
+		    &error_code, &sense_key, &asc, &ascq)) {
 			/*
 			 * If the error is "invalid field in CDB",
 			 * and the load/eject flag is set, turn the
@@ -1256,6 +1257,9 @@ cam_periph_freeze_after_event(struct cam_periph *periph,
 {
 	struct timeval delta;
 	struct timeval duration_tv;
+
+	if (!timevalisset(event_time))
+		return;
 
 	microtime(&delta);
 	timevalsub(&delta, event_time);
@@ -1421,12 +1425,8 @@ camperiphscsisenseerror(union ccb *ccb, union ccb **orig,
 		cgd.ccb_h.func_code = XPT_GDEV_TYPE;
 		xpt_action((union ccb *)&cgd);
 
-		if ((ccb->ccb_h.status & CAM_AUTOSNS_VALID) != 0)
-			err_action = scsi_error_action(&ccb->csio,
-						       &cgd.inq_data,
-						       sense_flags);
-		else
-			err_action = SS_RETRY|SSQ_DECREMENT_COUNT|EIO;
+		err_action = scsi_error_action(&ccb->csio, &cgd.inq_data,
+		    sense_flags);
 		error = err_action & SS_ERRMASK;
 
 		/*
@@ -1604,6 +1604,7 @@ cam_periph_error(union ccb *ccb, cam_flags camflags,
 	const char *action_string;
 	cam_status  status;
 	int	    frozen, error, openings, print, lost_device;
+	int	    error_code, sense_key, asc, ascq;
 	u_int32_t   relsim_flags, timeout;
 
 	print = 1;
@@ -1770,6 +1771,12 @@ cam_periph_error(union ccb *ccb, cam_flags camflags,
 			xpt_async(AC_LOST_DEVICE, newpath, NULL);
 			xpt_free_path(newpath);
 		}
+
+	/* Broadcast UNIT ATTENTIONs to all periphs. */
+	} else if (scsi_extract_sense_ccb(ccb,
+	    &error_code, &sense_key, &asc, &ascq) &&
+	    sense_key == SSD_KEY_UNIT_ATTENTION) {
+		xpt_async(AC_UNIT_ATTENTION, orig_ccb->ccb_h.path, orig_ccb);
 	}
 
 	/* Attempt a retry */

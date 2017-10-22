@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ufs/ufs/ufs_vnops.c 248678 2013-03-24 07:41:36Z kib $");
 
 #include "opt_quota.h"
 #include "opt_suiddir.h"
@@ -1562,6 +1562,7 @@ relock:
 	cache_purge(fvp);
 	if (tvp)
 		cache_purge(tvp);
+	cache_purge_negative(tdvp);
 
 unlockout:
 	vput(fdvp);

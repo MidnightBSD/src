@@ -58,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/iommu.c 249132 2013-04-05 08:22:11Z mav $");
 
 /*
  * UltraSPARC IOMMU support; used by both the PCI and SBus code.
@@ -118,7 +118,7 @@ __FBSDID("$FreeBSD$");
 /* Threshold for using the streaming buffer */
 #define	IOMMU_STREAM_THRESH	128
 
-MALLOC_DEFINE(M_IOMMU, "dvmamem", "IOMMU DVMA Buffers");
+static MALLOC_DEFINE(M_IOMMU, "dvmamem", "IOMMU DVMA Buffers");
 
 static	int iommu_strbuf_flush_sync(struct iommu_state *);
 #ifdef IOMMU_DIAG

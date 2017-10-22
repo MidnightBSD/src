@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/iicbus/pcf8563.c 241803 2012-10-21 11:43:43Z marius $");
 
 /*
  * Driver for NXP PCF8563 real-time clock/calendar

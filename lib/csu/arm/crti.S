@@ -1,5 +1,5 @@
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/csu/arm/crti.S 135679 2004-09-23 23:00:51Z cognet $");
 
 	.section .init,"ax",%progbits
 	.align 4

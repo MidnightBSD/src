@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/e_atan2l.c 181204 2008-08-02 19:17:00Z das $");
 
 /*
  * See comments in e_atan2.c.

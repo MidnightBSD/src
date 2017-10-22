@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$FreeBSD: stable/9/sys/dev/ciss/cissvar.h 246152 2013-01-31 19:24:33Z sbruno $
  */
 
 /*
@@ -45,8 +45,11 @@ typedef STAILQ_HEAD(, ciss_request)	cr_qhead_t;
 
 /*
  * Maximum number of logical drives we support.
+ * If the controller does not indicate a maximum
+ * value.  This is a compatibiliy value to support
+ * older ciss controllers (e.g. model 6i)
  */
-#define CISS_MAX_LOGICAL	15
+#define CISS_MAX_LOGICAL	16
 
 /*
  * Maximum number of physical devices we support.

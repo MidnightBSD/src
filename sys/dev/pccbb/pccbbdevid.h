@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/pccbb/pccbbdevid.h 152193 2005-11-08 15:42:12Z imp $
  */
 
 /* Vendor/Device IDs */

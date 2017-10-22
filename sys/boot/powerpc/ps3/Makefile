@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/boot/powerpc/ps3/Makefile 224857 2011-08-14 00:20:37Z nwhitehorn $
 
 .include <bsd.own.mk>
 MK_SSP=		no

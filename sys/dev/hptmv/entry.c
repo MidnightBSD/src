@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/hptmv/entry.c 242105 2012-10-26 00:28:29Z delphij $");
  
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -3046,7 +3046,7 @@ fOsCommandDone(_VBUS_ARG PCommand pCmd)
 	if (pCmd->cf_data_in) {
 		bus_dmamap_sync(pAdapter->io_dma_parent, pmap->dma_map, BUS_DMASYNC_POSTREAD);
 	}
-	else if (pCmd->cf_data_in) {
+	else if (pCmd->cf_data_out) {
 		bus_dmamap_sync(pAdapter->io_dma_parent, pmap->dma_map, BUS_DMASYNC_POSTWRITE);
 	}
 	

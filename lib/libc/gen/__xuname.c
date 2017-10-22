@@ -31,7 +31,7 @@
 /*static char sccsid[] = "From: @(#)uname.c	8.1 (Berkeley) 1/4/94";*/
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/__xuname.c 184185 2008-10-22 21:56:57Z kib $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>

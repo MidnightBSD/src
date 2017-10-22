@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/label/g_label.c 244547 2012-12-21 18:25:05Z jh $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -187,7 +187,7 @@ g_label_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 	gp->spoiled = g_label_spoiled;
 	g_access(cp, -1, 0, 0);
 	g_slice_config(gp, 0, G_SLICE_CONFIG_SET, (off_t)0, mediasize,
-	    pp->sectorsize, name);
+	    pp->sectorsize, "%s", name);
 	G_LABEL_DEBUG(1, "Label for provider %s is %s.", pp->name, name);
 	return (gp);
 }

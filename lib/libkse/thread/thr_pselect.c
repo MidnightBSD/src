@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libkse/thread/thr_pselect.c 174689 2007-12-16 23:29:57Z deischen $");
 
 #include "namespace.h"
 #include <sys/select.h>

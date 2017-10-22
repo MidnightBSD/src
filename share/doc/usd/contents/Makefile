@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/doc/usd/contents/Makefile 106146 2002-10-29 15:01:59Z ru $
 
 VOLUME=	usd
 DOC=	contents

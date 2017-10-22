@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/nfs/nfscl.h 240977 2012-09-26 23:07:00Z rmacklem $
  */
 
 #ifndef	_NFS_NFSCL_H
@@ -67,5 +67,11 @@ struct nfsv4node {
 #define	NFSSATTR_SIZE0		0x2
 #define	NFSSATTR_SIZENEG1	0x4
 #define	NFSSATTR_SIZERDEV	0x8
+
+/* Use this macro for debug printfs. */
+#define	NFSCL_DEBUG(level, ...)	do {					\
+		if (nfscl_debuglevel >= (level))			\
+			printf(__VA_ARGS__);				\
+	} while (0)
 
 #endif	/* _NFS_NFSCL_H */

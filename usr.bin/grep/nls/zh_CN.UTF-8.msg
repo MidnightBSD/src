@@ -1,4 +1,4 @@
-$ $FreeBSD$
+$ $FreeBSD: stable/9/usr.bin/grep/nls/zh_CN.UTF-8.msg 212927 2010-09-20 19:42:52Z delphij $
 $
 $set 1
 $quote "

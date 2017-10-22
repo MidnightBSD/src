@@ -29,7 +29,7 @@
  * official policies, either expressed or implied, of the FreeBSD Project.
  *
  * ------+---------+---------+---------+---------+---------+---------+---------*
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/lpr/common_source/ctlinfo.h 220586 2011-04-13 00:36:19Z gad $
  * ------+---------+---------+---------+---------+---------+---------+---------*
  */
 

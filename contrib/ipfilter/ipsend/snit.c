@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/contrib/ipfilter/ipsend/snit.c 153881 2005-12-30 11:52:26Z guido $	*/
 
 /*
  * (C)opyright 1992-1998 Darren Reed. (from tcplog)

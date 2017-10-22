@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/if_dead.c 199975 2009-11-30 21:25:57Z jhb $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>

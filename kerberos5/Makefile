@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/kerberos5/Makefile 237991 2012-07-02 10:06:13Z obrien $
 
 SUBDIR=	doc tools lib libexec usr.bin usr.sbin
 

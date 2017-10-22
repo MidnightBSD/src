@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/net/if_iso88025subr.c 249132 2013-04-05 08:22:11Z mav $
  *
  */
 
@@ -781,7 +781,7 @@ iso88025_resolvemulti (ifp, llsa, sa)
 	return (0);
 }
 
-MALLOC_DEFINE(M_ISO88025, "arpcom", "802.5 interface internals");
+static MALLOC_DEFINE(M_ISO88025, "arpcom", "802.5 interface internals");
 
 static void*
 iso88025_alloc(u_char type, struct ifnet *ifp)

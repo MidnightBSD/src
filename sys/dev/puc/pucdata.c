@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/puc/pucdata.c 248040 2013-03-08 12:08:52Z marius $");
 
 /*
  * PCI "universal" communications card driver configuration data (used to
@@ -630,6 +630,12 @@ const struct puc_cfg puc_pci_devices[] = {
 	    PUC_PORT_8S, 0x10, 0, -1,
 	},
 
+	{   0x13fe, 0x1600, 0x1602, 0x0002,
+	    "Advantech PCI-1602",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_2S, 0x10, 0, 8,
+	},
+
 	{   0x1407, 0x0100, 0xffff, 0,
 	    "Lava Computers Dual Serial",
 	    DEFAULT_RCLK,
@@ -737,6 +743,12 @@ const struct puc_cfg puc_pci_devices[] = {
 	    PUC_PORT_2S, 0x10, 0, 8,
 	},
 
+	{   0x1415, 0x950a, 0x131f, 0x2032,
+	    "SIIG Cyber Serial Dual PCI 16C850",
+	    DEFAULT_RCLK * 10,
+	    PUC_PORT_4S, 0x10, 0, 8,
+	},
+
 	{   0x1415, 0x950a, 0xffff, 0,
 	    "Oxford Semiconductor OX16PCI954 UARTs",
 	    DEFAULT_RCLK,
@@ -757,7 +769,7 @@ const struct puc_cfg puc_pci_devices[] = {
 
 	{   0x1415, 0x9538, 0xffff, 0,
 	    "Oxford Semiconductor OX16PCI958 UARTs",
-	    DEFAULT_RCLK * 10,
+	    DEFAULT_RCLK,
 	    PUC_PORT_8S, 0x18, 0, 8,
 	},
 
@@ -768,10 +780,35 @@ const struct puc_cfg puc_pci_devices[] = {
 	 */
 
 	{   0x155f, 0x0331, 0xffff, 0,
+	    "Perle Ultraport4 Express",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_4S, 0x10, 0, 8,
+	},
+
+	{   0x155f, 0xB012, 0xffff, 0,
+	    "Perle Speed2 LE",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_2S, 0x10, 0, 8,
+	},
+
+	{   0x155f, 0xB022, 0xffff, 0,
+	    "Perle Speed2 LE",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_2S, 0x10, 0, 8,
+	},
+
+	{   0x155f, 0xB004, 0xffff, 0,
 	    "Perle Speed4 LE",
 	    DEFAULT_RCLK * 8,
 	    PUC_PORT_4S, 0x10, 0, 8,
 	},
+
+	{   0x155f, 0xB008, 0xffff, 0,
+	    "Perle Speed8 LE",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_8S, 0x10, 0, 8,
+	},
+
 
 	/*
 	 * Oxford Semiconductor PCI Express Expresso family
@@ -881,6 +918,7 @@ const struct puc_cfg puc_pci_devices[] = {
 	    DEFAULT_RCLK * 8,
 	    PUC_PORT_4S, 0x10, 0, 8,
 	},
+
 	{   0x14d2, 0xa004, 0xffff, 0,
 	    "Titan PCI-800H",
 	    DEFAULT_RCLK * 8,
@@ -934,6 +972,12 @@ const struct puc_cfg puc_pci_devices[] = {
 	    DEFAULT_RCLK,
 	    PUC_PORT_4S1P, 0x10, 0, -1,
 	    .config_function = puc_config_syba
+	},
+
+	{   0x1fd4, 0x1999, 0xffff, 0,
+	    "Sunix SER5437A",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_2S, 0x10, 0, 8,
 	},
 
 	{    0x5372, 0x6873, 0xffff, 0,
@@ -1017,7 +1061,7 @@ const struct puc_cfg puc_pci_devices[] = {
 	{   0x9710, 0x9865, 0xa000, 0x3004,
 	    "NetMos NM9865 Quad UART",
 	    DEFAULT_RCLK,
-	    PUC_PORT_4S, 0x10, 4, 0,0
+	    PUC_PORT_4S, 0x10, 4, 0,
 	},
 
 	{   0x9710, 0x9865, 0xa000, 0x3011,
@@ -1377,26 +1421,26 @@ static int
 puc_config_timedia(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
     intptr_t *res)
 {
-	static uint16_t dual[] = {
+	static const uint16_t dual[] = {
 	    0x0002, 0x4036, 0x4037, 0x4038, 0x4078, 0x4079, 0x4085,
 	    0x4088, 0x4089, 0x5037, 0x5078, 0x5079, 0x5085, 0x6079, 
 	    0x7079, 0x8079, 0x8137, 0x8138, 0x8237, 0x8238, 0x9079, 
 	    0x9137, 0x9138, 0x9237, 0x9238, 0xA079, 0xB079, 0xC079,
 	    0xD079, 0
 	};
-	static uint16_t quad[] = {
+	static const uint16_t quad[] = {
 	    0x4055, 0x4056, 0x4095, 0x4096, 0x5056, 0x8156, 0x8157, 
 	    0x8256, 0x8257, 0x9056, 0x9156, 0x9157, 0x9158, 0x9159, 
 	    0x9256, 0x9257, 0xA056, 0xA157, 0xA158, 0xA159, 0xB056,
 	    0xB157, 0
 	};
-	static uint16_t octa[] = {
+	static const uint16_t octa[] = {
 	    0x4065, 0x4066, 0x5065, 0x5066, 0x8166, 0x9066, 0x9166, 
 	    0x9167, 0x9168, 0xA066, 0xA167, 0xA168, 0
 	};
-	static struct {
+	static const struct {
 		int ports;
-		uint16_t *ids;
+		const uint16_t *ids;
 	} subdevs[] = {
 	    { 2, dual },
 	    { 4, quad },

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/rpc/replay.c 211853 2010-08-26 23:33:04Z pjd $");
 
 #include <sys/param.h>
 #include <sys/hash.h>

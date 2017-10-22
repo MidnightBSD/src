@@ -54,7 +54,7 @@
 #include "opt_capsicum.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/sys_capability.c 234037 2012-04-08 16:26:26Z pho $");
 
 #include <sys/param.h>
 #include <sys/capability.h>

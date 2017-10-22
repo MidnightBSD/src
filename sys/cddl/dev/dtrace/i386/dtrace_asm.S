@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cddl/dev/dtrace/i386/dtrace_asm.S 233076 2012-03-17 05:45:21Z marcel $
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.

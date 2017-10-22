@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/mountver/g_mountver.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,7 +46,7 @@ __FBSDID("$FreeBSD$");
 
 
 SYSCTL_DECL(_kern_geom);
-SYSCTL_NODE(_kern_geom, OID_AUTO, mountver, CTLFLAG_RW,
+static SYSCTL_NODE(_kern_geom, OID_AUTO, mountver, CTLFLAG_RW,
     0, "GEOM_MOUNTVER stuff");
 static u_int g_mountver_debug = 0;
 static u_int g_mountver_check_ident = 1;
@@ -249,7 +249,7 @@ g_mountver_create(struct gctl_req *req, struct g_class *mp, struct g_provider *p
 			return (EEXIST);
 		}
 	}
-	gp = g_new_geomf(mp, name);
+	gp = g_new_geomf(mp, "%s", name);
 	sc = g_malloc(sizeof(*sc), M_WAITOK | M_ZERO);
 	mtx_init(&sc->sc_mtx, "gmountver", NULL, MTX_DEF);
 	TAILQ_INIT(&sc->sc_queue);
@@ -260,7 +260,7 @@ g_mountver_create(struct gctl_req *req, struct g_class *mp, struct g_provider *p
 	gp->access = g_mountver_access;
 	gp->dumpconf = g_mountver_dumpconf;
 
-	newpp = g_new_providerf(gp, gp->name);
+	newpp = g_new_providerf(gp, "%s", gp->name);
 	newpp->mediasize = pp->mediasize;
 	newpp->sectorsize = pp->sectorsize;
 

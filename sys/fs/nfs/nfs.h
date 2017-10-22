@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/nfs/nfs.h 247502 2013-02-28 21:57:38Z jhb $
  */
 
 #ifndef _NFS_NFS_H_
@@ -519,7 +519,6 @@ struct nfsrv_descript {
 	int			*nd_errp;	/* Pointer to ret status */
 	u_int32_t		nd_retxid;	/* Reply xid */
 	struct nfsrvcache	*nd_rp;		/* Assoc. cache entry */
-	struct timeval		nd_starttime;	/* Time RPC initiated */
 	fhandle_t		nd_fh;		/* File handle */
 	struct ucred		*nd_cred;	/* Credentials */
 	uid_t			nd_saveduid;	/* Saved uid */
@@ -559,6 +558,7 @@ struct nfsrv_descript {
 #define	ND_EXGSSINTEGRITY	0x00200000
 #define	ND_EXGSSPRIVACY		0x00400000
 #define	ND_INCRSEQID		0x00800000
+#define	ND_NFSCL		0x01000000
 
 /*
  * ND_GSS should be the "or" of all GSS type authentications.

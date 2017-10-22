@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_exec.c 247077 2013-02-21 05:47:52Z kib $");
 
 #include "opt_capsicum.h"
 #include "opt_hwpmc_hooks.h"
@@ -473,9 +473,8 @@ interpret:
 	 * Remember if this was set before and unset it in case this is not
 	 * actually an executable image.
 	 */
-	textset = imgp->vp->v_vflag & VV_TEXT;
-	ASSERT_VOP_ELOCKED(imgp->vp, "vv_text");
-	imgp->vp->v_vflag |= VV_TEXT;
+	textset = VOP_IS_TEXT(imgp->vp);
+	VOP_SET_TEXT(imgp->vp);
 
 	error = exec_map_first_page(imgp);
 	if (error)
@@ -506,10 +505,8 @@ interpret:
 
 	if (error) {
 		if (error == -1) {
-			if (textset == 0) {
-				ASSERT_VOP_ELOCKED(imgp->vp, "vv_text");
-				imgp->vp->v_vflag &= ~VV_TEXT;
-			}
+			if (textset == 0)
+				VOP_UNSET_TEXT(imgp->vp);
 			error = ENOEXEC;
 		}
 		goto exec_fail_dealloc;
@@ -527,7 +524,7 @@ interpret:
 		 * VV_TEXT will be set. The vnode lock is held over this
 		 * entire period so nothing should illegitimately be blocked.
 		 */
-		imgp->vp->v_vflag &= ~VV_TEXT;
+		VOP_UNSET_TEXT(imgp->vp);
 		/* free name buffer and old vnode */
 		if (args->fname != NULL)
 			NDFREE(&nd, NDF_ONLY_PNBUF);
@@ -649,7 +646,7 @@ interpret:
 	 */
 	p->p_flag |= P_EXEC;
 	if (p->p_pptr && (p->p_flag & P_PPWAIT)) {
-		p->p_flag &= ~P_PPWAIT;
+		p->p_flag &= ~(P_PPWAIT | P_PPTRACE);
 		cv_broadcast(&p->p_pwait);
 	}
 
@@ -694,7 +691,8 @@ interpret:
 		setsugid(p);
 
 #ifdef KTRACE
-		if (priv_check_cred(oldcred, PRIV_DEBUG_DIFFCRED, 0))
+		if (p->p_tracecred != NULL &&
+		    priv_check_cred(p->p_tracecred, PRIV_DEBUG_DIFFCRED, 0))
 			ktrprocexec(p, &tracecred, &tracevp);
 #endif
 		/*
@@ -1395,7 +1393,7 @@ exec_check_permissions(imgp)
 	struct vnode *vp = imgp->vp;
 	struct vattr *attr = imgp->attr;
 	struct thread *td;
-	int error;
+	int error, writecount;
 
 	td = curthread;
 
@@ -1440,7 +1438,10 @@ exec_check_permissions(imgp)
 	 * Check number of open-for-writes on the file and deny execution
 	 * if there are any.
 	 */
-	if (vp->v_writecount)
+	error = VOP_GET_WRITECOUNT(vp, &writecount);
+	if (error != 0)
+		return (error);
+	if (writecount != 0)
 		return (ETXTBSY);
 
 	/*
@@ -1512,65 +1513,4 @@ exec_unregister(execsw_arg)
 		free(execsw, M_TEMP);
 	execsw = newexecsw;
 	return (0);
-}
-
-static vm_object_t shared_page_obj;
-static int shared_page_free;
-
-int
-shared_page_fill(int size, int align, const char *data)
-{
-	vm_page_t m;
-	struct sf_buf *s;
-	vm_offset_t sk;
-	int res;
-
-	VM_OBJECT_LOCK(shared_page_obj);
-	m = vm_page_grab(shared_page_obj, 0, VM_ALLOC_RETRY);
-	res = roundup(shared_page_free, align);
-	if (res + size >= IDX_TO_OFF(shared_page_obj->size))
-		res = -1;
-	else {
-		VM_OBJECT_UNLOCK(shared_page_obj);
-		s = sf_buf_alloc(m, SFB_DEFAULT);
-		sk = sf_buf_kva(s);
-		bcopy(data, (void *)(sk + res), size);
-		shared_page_free = res + size;
-		sf_buf_free(s);
-		VM_OBJECT_LOCK(shared_page_obj);
-	}
-	vm_page_wakeup(m);
-	VM_OBJECT_UNLOCK(shared_page_obj);
-	return (res);
-}
-
-static void
-shared_page_init(void *dummy __unused)
-{
-	vm_page_t m;
-
-	shared_page_obj = vm_pager_allocate(OBJT_PHYS, 0, PAGE_SIZE,
-	    VM_PROT_DEFAULT, 0, NULL);
-	VM_OBJECT_LOCK(shared_page_obj);
-	m = vm_page_grab(shared_page_obj, 0, VM_ALLOC_RETRY | VM_ALLOC_NOBUSY |
-	    VM_ALLOC_ZERO);
-	m->valid = VM_PAGE_BITS_ALL;
-	VM_OBJECT_UNLOCK(shared_page_obj);
-}
-
-SYSINIT(shp, SI_SUB_EXEC, SI_ORDER_FIRST, (sysinit_cfunc_t)shared_page_init,
-    NULL);
-
-void
-exec_sysvec_init(void *param)
-{
-	struct sysentvec *sv;
-
-	sv = (struct sysentvec *)param;
-
-	if ((sv->sv_flags & SV_SHP) == 0)
-		return;
-	sv->sv_shared_page_obj = shared_page_obj;
-	sv->sv_sigcode_base = sv->sv_shared_page_base +
-	    shared_page_fill(*(sv->sv_szsigcode), 16, sv->sv_sigcode);
 }

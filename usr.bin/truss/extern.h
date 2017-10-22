@@ -28,11 +28,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/truss/extern.h 241162 2012-10-03 14:28:55Z zont $
  */
 
 extern int setup_and_wait(char **);
-extern int start_tracing(int);
+extern int start_tracing(pid_t);
 extern void restore_proc(int);
 extern void waitevent(struct trussinfo *);
 extern const char *ioctlname(register_t val);

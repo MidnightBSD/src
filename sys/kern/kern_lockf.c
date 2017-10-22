@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_lockf.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include "opt_debug_lockf.h"
 
@@ -90,7 +90,7 @@ static int	lockf_debug = 0; /* control debug output */
 SYSCTL_INT(_debug, OID_AUTO, lockf_debug, CTLFLAG_RW, &lockf_debug, 0, "");
 #endif
 
-MALLOC_DEFINE(M_LOCKF, "lockf", "Byte-range locking structures");
+static MALLOC_DEFINE(M_LOCKF, "lockf", "Byte-range locking structures");
 
 struct owner_edge;
 struct owner_vertex;

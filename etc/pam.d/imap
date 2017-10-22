@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/pam.d/imap 170771 2007-06-15 11:33:13Z yar $
 #
 # PAM configuration for the "imap" service
 #

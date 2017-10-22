@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/nfs/nfsport.h 247502 2013-02-28 21:57:38Z jhb $
  */
 
 #ifndef _NFS_NFSPORT_H_
@@ -524,12 +524,6 @@ void nfsrvd_rcv(struct socket *, void *, int);
 #define	NFSCNHASHZERO(c)
 #define	NFSCNHASH(c, v)
 #define	NCHNAMLEN	9999999
-
-/*
- * Define these to use the time of day clock.
- */
-#define	NFSGETTIME(t)		(getmicrotime(t))
-#define	NFSGETNANOTIME(t)	(getnanotime(t))
 
 /*
  * These macros are defined to initialize and set the timer routine.

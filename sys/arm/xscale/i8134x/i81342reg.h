@@ -24,7 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/arm/xscale/i8134x/i81342reg.h 172299 2007-09-22 22:25:24Z cognet $ */
 
 #ifndef I83142_REG_H_
 #define I83142_REG_H_

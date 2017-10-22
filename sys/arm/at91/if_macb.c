@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/at91/if_macb.c 217062 2011-01-06 19:32:00Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

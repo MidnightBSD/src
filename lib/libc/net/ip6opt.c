@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/net/ip6opt.c 242544 2012-11-04 01:21:49Z eadler $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -461,7 +461,7 @@ inet6_opt_append(void *extbuf, socklen_t extlen, int offset, u_int8_t type,
 int
 inet6_opt_finish(void *extbuf, socklen_t extlen, int offset)
 {
-	int updatelen = offset > 0 ? (1 + ((offset - 1) | 7)) : 0;;
+	int updatelen = offset > 0 ? (1 + ((offset - 1) | 7)) : 0;
 
 	if (extbuf) {
 		u_int8_t *padp;

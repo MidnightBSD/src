@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/cam_machdep.c 230665 2012-01-28 23:12:55Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

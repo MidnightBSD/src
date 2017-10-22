@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/netstat/netisr.c 222250 2011-05-24 12:38:00Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>

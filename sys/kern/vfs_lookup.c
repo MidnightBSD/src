@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/vfs_lookup.c 249246 2013-04-08 08:29:52Z kib $");
 
 #include "opt_capsicum.h"
 #include "opt_kdtrace.h"
@@ -163,17 +163,6 @@ namei(struct nameidata *ndp)
 		error = copyinstr(ndp->ni_dirp, cnp->cn_pnbuf,
 			    MAXPATHLEN, (size_t *)&ndp->ni_pathlen);
 
-	if (error == 0) {
-		/*
-		 * If we are auditing the kernel pathname, save the user
-		 * pathname.
-		 */
-		if (cnp->cn_flags & AUDITVNODE1)
-			AUDIT_ARG_UPATH1(td, cnp->cn_pnbuf);
-		if (cnp->cn_flags & AUDITVNODE2)
-			AUDIT_ARG_UPATH2(td, cnp->cn_pnbuf);
-	}
-
 	/*
 	 * Don't allow empty pathnames.
 	 */
@@ -215,6 +204,14 @@ namei(struct nameidata *ndp)
 	FILEDESC_SLOCK(fdp);
 	ndp->ni_rootdir = fdp->fd_rdir;
 	ndp->ni_topdir = fdp->fd_jdir;
+
+	/*
+	 * If we are auditing the kernel pathname, save the user pathname.
+	 */
+	if (cnp->cn_flags & AUDITVNODE1)
+		AUDIT_ARG_UPATH1(td, ndp->ni_dirfd, cnp->cn_pnbuf);
+	if (cnp->cn_flags & AUDITVNODE2)
+		AUDIT_ARG_UPATH2(td, ndp->ni_dirfd, cnp->cn_pnbuf);
 
 	dp = NULL;
 	if (cnp->cn_pnbuf[0] != '/') {
@@ -396,11 +393,13 @@ namei(struct nameidata *ndp)
 }
 
 static int
-compute_cn_lkflags(struct mount *mp, int lkflags)
+compute_cn_lkflags(struct mount *mp, int lkflags, int cnflags)
 {
 
-	if (mp == NULL || 
-	    ((lkflags & LK_SHARED) && !(mp->mnt_kern_flag & MNTK_LOOKUP_SHARED))) {
+	if (mp == NULL || ((lkflags & LK_SHARED) &&
+	    (!(mp->mnt_kern_flag & MNTK_LOOKUP_SHARED) ||
+	    ((cnflags & ISDOTDOT) &&
+	    (mp->mnt_kern_flag & MNTK_LOOKUP_EXCL_DOTDOT))))) {
 		lkflags &= ~LK_SHARED;
 		lkflags |= LK_EXCLUSIVE;
 	}
@@ -529,7 +528,8 @@ lookup(struct nameidata *ndp)
 	dp = ndp->ni_startdir;
 	ndp->ni_startdir = NULLVP;
 	vn_lock(dp,
-	    compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags | LK_RETRY));
+	    compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags | LK_RETRY,
+	    cnp->cn_flags));
 
 dirloop:
 	/*
@@ -686,7 +686,7 @@ dirloop:
 			VFS_UNLOCK_GIANT(tvfslocked);
 			vn_lock(dp,
 			    compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags |
-			    LK_RETRY));
+			    LK_RETRY, ISDOTDOT));
 		}
 	}
 
@@ -714,6 +714,10 @@ unionlookup:
 	    VOP_ISLOCKED(dp) == LK_SHARED &&
 	    (cnp->cn_flags & ISLASTCN) && (cnp->cn_flags & LOCKPARENT))
 		vn_lock(dp, LK_UPGRADE|LK_RETRY);
+	if ((dp->v_iflag & VI_DOOMED) != 0) {
+		error = ENOENT;
+		goto bad;
+	}
 	/*
 	 * If we're looking up the last component and we need an exclusive
 	 * lock, adjust our lkflags.
@@ -724,7 +728,8 @@ unionlookup:
 	vprint("lookup in", dp);
 #endif
 	lkflags_save = cnp->cn_lkflags;
-	cnp->cn_lkflags = compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags);
+	cnp->cn_lkflags = compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags,
+	    cnp->cn_flags);
 	if ((error = VOP_LOOKUP(dp, &ndp->ni_vp, cnp)) != 0) {
 		cnp->cn_lkflags = lkflags_save;
 		KASSERT(ndp->ni_vp == NULL, ("leaf should be empty"));
@@ -743,7 +748,7 @@ unionlookup:
 			VFS_UNLOCK_GIANT(tvfslocked);
 			vn_lock(dp,
 			    compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags |
-			    LK_RETRY));
+			    LK_RETRY, cnp->cn_flags));
 			goto unionlookup;
 		}
 
@@ -815,8 +820,8 @@ unionlookup:
 		dvfslocked = 0;
 		vref(vp_crossmp);
 		ndp->ni_dvp = vp_crossmp;
-		error = VFS_ROOT(mp, compute_cn_lkflags(mp, cnp->cn_lkflags),
-		    &tdp);
+		error = VFS_ROOT(mp, compute_cn_lkflags(mp, cnp->cn_lkflags,
+		    cnp->cn_flags), &tdp);
 		vfs_unbusy(mp);
 		if (vn_lock(vp_crossmp, LK_SHARED | LK_NOWAIT))
 			panic("vp_crossmp exclusively locked or reclaimed");

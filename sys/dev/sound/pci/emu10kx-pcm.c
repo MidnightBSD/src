@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/sound/pci/emu10kx-pcm.c 230964 2012-02-03 22:39:04Z pfg $
  */
 
 #include <sys/param.h>

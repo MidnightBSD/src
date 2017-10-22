@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/lib/libutil/kinfo_getproc.3 248137 2013-03-10 17:50:19Z pluknet $
 .\"
-.Dd February 25, 2012
+.Dd March 1, 2013
 .Os
 .Dt KINFO_GETPROC 3
 .Sh NAME
@@ -37,7 +37,7 @@
 .In sys/types.h
 .In libutil.h
 .Ft struct kinfo_proc *
-.Fn kinfo_getproc "pid_t pid" "int *cntp"
+.Fn kinfo_getproc "pid_t pid"
 .Sh DESCRIPTION
 This function is used for obtaining process information from the kernel.
 .Pp

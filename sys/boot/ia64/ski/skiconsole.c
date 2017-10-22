@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/ia64/ski/skiconsole.c 135696 2004-09-24 03:53:50Z marcel $");
 
 #include <stand.h>
 

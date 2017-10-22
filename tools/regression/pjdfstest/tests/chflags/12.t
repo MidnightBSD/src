@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/chflags/12.t 185173 2008-11-22 13:27:15Z pjd $
 
 desc="chflags returns EROFS if the named file resides on a read-only file system"
 

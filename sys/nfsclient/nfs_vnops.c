@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/nfsclient/nfs_vnops.c 247502 2013-02-28 21:57:38Z jhb $");
 
 /*
  * vnode op calls for Sun NFS version 2 and 3
@@ -3460,7 +3460,7 @@ nfsfifo_read(struct vop_read_args *ap)
 	 */
 	mtx_lock(&np->n_mtx);
 	np->n_flag |= NACC;
-	getnanotime(&np->n_atim);
+	vfs_timestamp(&np->n_atim);
 	mtx_unlock(&np->n_mtx);
 	error = fifo_specops.vop_read(ap);
 	return error;	
@@ -3479,7 +3479,7 @@ nfsfifo_write(struct vop_write_args *ap)
 	 */
 	mtx_lock(&np->n_mtx);
 	np->n_flag |= NUPD;
-	getnanotime(&np->n_mtim);
+	vfs_timestamp(&np->n_mtim);
 	mtx_unlock(&np->n_mtx);
 	return(fifo_specops.vop_write(ap));
 }
@@ -3499,7 +3499,7 @@ nfsfifo_close(struct vop_close_args *ap)
 
 	mtx_lock(&np->n_mtx);
 	if (np->n_flag & (NACC | NUPD)) {
-		getnanotime(&ts);
+		vfs_timestamp(&ts);
 		if (np->n_flag & NACC)
 			np->n_atim = ts;
 		if (np->n_flag & NUPD)

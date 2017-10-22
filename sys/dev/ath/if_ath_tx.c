@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ath/if_ath_tx.c 248078 2013-03-09 00:39:54Z marius $");
 
 /*
  * Driver for the Atheros Wireless LAN controller.
@@ -195,7 +195,7 @@ ath_tx_dmasetup(struct ath_softc *sc, struct ath_buf *bf, struct mbuf *m0)
 	 */
 	if (bf->bf_nseg > ATH_TXDESC) {		/* too many desc's, linearize */
 		sc->sc_stats.ast_tx_linear++;
-		m = m_collapse(m0, M_DONTWAIT, ATH_TXDESC);
+		m = m_collapse(m0, M_NOWAIT, ATH_TXDESC);
 		if (m == NULL) {
 			ath_freetx(m0);
 			sc->sc_stats.ast_tx_nombuf++;

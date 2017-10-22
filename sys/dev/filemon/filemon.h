@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/filemon/filemon.h 236592 2012-06-04 22:54:19Z obrien $
  */
 
 #define FILEMON_SET_FD		_IOWR('S', 1, int)

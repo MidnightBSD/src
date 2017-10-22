@@ -23,7 +23,7 @@
 static const char rcsid[] = "$Id: ev_streams.c,v 1.4.18.1 2005/04/27 05:01:06 sra Exp $";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/isc/ev_streams.c 170244 2007-06-03 17:20:27Z ume $");
 
 #include "port_before.h"
 #ifndef _LIBC

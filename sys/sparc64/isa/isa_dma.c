@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/isa/isa_dma.c 141391 2005-02-06 13:46:39Z phk $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

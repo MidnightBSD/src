@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/vm/vm_mmap.c 249079 2013-04-04 05:29:37Z kib $");
 
 #include "opt_compat.h"
 #include "opt_hwpmc_hooks.h"
@@ -59,6 +59,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/racct.h>
 #include <sys/resource.h>
 #include <sys/resourcevar.h>
+#include <sys/sysctl.h>
 #include <sys/vnode.h>
 #include <sys/fcntl.h>
 #include <sys/file.h>
@@ -86,6 +87,11 @@ __FBSDID("$FreeBSD$");
 #ifdef HWPMC_HOOKS
 #include <sys/pmckern.h>
 #endif
+
+int old_mlock = 1;
+SYSCTL_INT(_vm, OID_AUTO, old_mlock, CTLFLAG_RW | CTLFLAG_TUN, &old_mlock, 0,
+    "Do not apply RLIMIT_MEMLOCK on mlockall");
+TUNABLE_INT("vm.old_mlock", &old_mlock);
 
 #ifndef _SYS_SYSPROTO_H_
 struct sbrk_args {
@@ -208,11 +214,23 @@ sys_mmap(td, uap)
 
 	fp = NULL;
 
-	/* Make sure mapping fits into numeric range, etc. */
-	if ((uap->len == 0 && !SV_CURPROC_FLAG(SV_AOUT) &&
-	     curproc->p_osrel >= P_OSREL_MAP_ANON) ||
-	    ((flags & MAP_ANON) && (uap->fd != -1 || pos != 0)))
-		return (EINVAL);
+	/*
+	 * Enforce the constraints.
+	 * Mapping of length 0 is only allowed for old binaries.
+	 * Anonymous mapping shall specify -1 as filedescriptor and
+	 * zero position for new code. Be nice to ancient a.out
+	 * binaries and correct pos for anonymous mapping, since old
+	 * ld.so sometimes issues anonymous map requests with non-zero
+	 * pos.
+	 */
+	if (!SV_CURPROC_FLAG(SV_AOUT)) {
+		if ((uap->len == 0 && curproc->p_osrel >= P_OSREL_MAP_ANON) ||
+		    ((flags & MAP_ANON) != 0 && (uap->fd != -1 || pos != 0)))
+			return (EINVAL);
+	} else {
+		if ((flags & MAP_ANON) != 0)
+			pos = 0;
+	}
 
 	if (flags & MAP_STACK) {
 		if ((uap->fd != -1) ||
@@ -442,6 +460,13 @@ ommap(td, uap)
 	nargs.addr = uap->addr;
 	nargs.len = uap->len;
 	nargs.prot = cvtbsdprot[uap->prot & 0x7];
+#ifdef COMPAT_FREEBSD32
+#if defined(__amd64__) || defined(__ia64__)
+	if (i386_read_exec && SV_PROC_FLAG(td->td_proc, SV_ILP32) &&
+	    nargs.prot != 0)
+		nargs.prot |= PROT_EXEC;
+#endif
+#endif
 	nargs.flags = 0;
 	if (uap->flags & OMAP_ANON)
 		nargs.flags |= MAP_ANON;
@@ -1016,6 +1041,7 @@ sys_mlock(td, uap)
 	struct proc *proc;
 	vm_offset_t addr, end, last, start;
 	vm_size_t npages, size;
+	vm_map_t map;
 	unsigned long nsize;
 	int error;
 
@@ -1033,9 +1059,9 @@ sys_mlock(td, uap)
 	if (npages > vm_page_max_wired)
 		return (ENOMEM);
 	proc = td->td_proc;
+	map = &proc->p_vmspace->vm_map;
 	PROC_LOCK(proc);
-	nsize = ptoa(npages +
-	    pmap_wired_count(vm_map_pmap(&proc->p_vmspace->vm_map)));
+	nsize = ptoa(npages + pmap_wired_count(map->pmap));
 	if (nsize > lim_cur(proc, RLIMIT_MEMLOCK)) {
 		PROC_UNLOCK(proc);
 		return (ENOMEM);
@@ -1050,13 +1076,13 @@ sys_mlock(td, uap)
 	if (error != 0)
 		return (ENOMEM);
 #endif
-	error = vm_map_wire(&proc->p_vmspace->vm_map, start, end,
+	error = vm_map_wire(map, start, end,
 	    VM_MAP_WIRE_USER | VM_MAP_WIRE_NOHOLES);
 #ifdef RACCT
 	if (error != KERN_SUCCESS) {
 		PROC_LOCK(proc);
 		racct_set(proc, RACCT_MEMLOCK,
-		    ptoa(pmap_wired_count(vm_map_pmap(&proc->p_vmspace->vm_map))));
+		    ptoa(pmap_wired_count(map->pmap)));
 		PROC_UNLOCK(proc);
 	}
 #endif
@@ -1081,27 +1107,25 @@ sys_mlockall(td, uap)
 	int error;
 
 	map = &td->td_proc->p_vmspace->vm_map;
-	error = 0;
+	error = priv_check(td, PRIV_VM_MLOCK);
+	if (error)
+		return (error);
 
 	if ((uap->how == 0) || ((uap->how & ~(MCL_CURRENT|MCL_FUTURE)) != 0))
 		return (EINVAL);
 
-#if 0
 	/*
 	 * If wiring all pages in the process would cause it to exceed
 	 * a hard resource limit, return ENOMEM.
 	 */
-	PROC_LOCK(td->td_proc);
-	if (map->size > lim_cur(td->td_proc, RLIMIT_MEMLOCK)) {
+	if (!old_mlock && uap->how & MCL_CURRENT) {
+		PROC_LOCK(td->td_proc);
+		if (map->size > lim_cur(td->td_proc, RLIMIT_MEMLOCK)) {
+			PROC_UNLOCK(td->td_proc);
+			return (ENOMEM);
+		}
 		PROC_UNLOCK(td->td_proc);
-		return (ENOMEM);
 	}
-	PROC_UNLOCK(td->td_proc);
-#else
-	error = priv_check(td, PRIV_VM_MLOCK);
-	if (error)
-		return (error);
-#endif
 #ifdef RACCT
 	PROC_LOCK(td->td_proc);
 	error = racct_set(td->td_proc, RACCT_MEMLOCK, map->size);
@@ -1132,7 +1156,7 @@ sys_mlockall(td, uap)
 	if (error != KERN_SUCCESS) {
 		PROC_LOCK(td->td_proc);
 		racct_set(td->td_proc, RACCT_MEMLOCK,
-		    ptoa(pmap_wired_count(vm_map_pmap(&td->td_proc->p_vmspace->vm_map))));
+		    ptoa(pmap_wired_count(map->pmap)));
 		PROC_UNLOCK(td->td_proc);
 	}
 #endif
@@ -1328,6 +1352,10 @@ mark_atime:
 	vfs_mark_atime(vp, cred);
 
 done:
+	if (error != 0 && *writecounted) {
+		*writecounted = FALSE;
+		vnode_pager_update_writecount(obj, objsize, 0);
+	}
 	vput(vp);
 	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
@@ -1464,6 +1492,23 @@ vm_mmap(vm_map_t map, vm_offset_t *addr, vm_size_t size, vm_prot_t prot,
 	PROC_LOCK(td->td_proc);
 	if (td->td_proc->p_vmspace->vm_map.size + size >
 	    lim_cur(td->td_proc, RLIMIT_VMEM)) {
+		if (!old_mlock && map->flags & MAP_WIREFUTURE) {
+			if (ptoa(pmap_wired_count(map->pmap)) + size >
+			    lim_cur(td->td_proc, RLIMIT_MEMLOCK)) {
+				racct_set_force(td->td_proc, RACCT_VMEM,
+				    map->size);
+				PROC_UNLOCK(td->td_proc);
+				return (ENOMEM);
+			}
+			error = racct_set(td->td_proc, RACCT_MEMLOCK,
+			    ptoa(pmap_wired_count(map->pmap)) + size);
+			if (error != 0) {
+				racct_set_force(td->td_proc, RACCT_VMEM,
+				    map->size);
+				PROC_UNLOCK(td->td_proc);
+				return (error);
+			}
+		}
 		PROC_UNLOCK(td->td_proc);
 		return (ENOMEM);
 	}

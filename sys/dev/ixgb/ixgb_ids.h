@@ -31,7 +31,7 @@
 
 *******************************************************************************/
 
-/*$FreeBSD$*/
+/*$FreeBSD: stable/9/sys/dev/ixgb/ixgb_ids.h 129794 2004-05-28 00:23:00Z tackerman $*/
 
 #ifndef _IXGB_IDS_H_
 #define _IXGB_IDS_H_

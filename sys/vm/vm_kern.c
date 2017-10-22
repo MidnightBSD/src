@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/vm/vm_kern.c 248813 2013-03-28 06:22:43Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -85,11 +85,11 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm_extern.h>
 #include <vm/uma.h>
 
-vm_map_t kernel_map=0;
-vm_map_t kmem_map=0;
-vm_map_t exec_map=0;
+vm_map_t kernel_map;
+vm_map_t kmem_map;
+vm_map_t exec_map;
 vm_map_t pipe_map;
-vm_map_t buffer_map=0;
+vm_map_t buffer_map;
 
 const void *zero_region;
 CTASSERT((ZERO_REGION_SIZE & PAGE_MASK) == 0);

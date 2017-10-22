@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/rmi/tick.c 217616 2011-01-19 23:00:25Z mdf $");
 
 #include "opt_cputype.h"
 

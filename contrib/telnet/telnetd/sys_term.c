@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)sys_term.c	8.4+1 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/contrib/telnet/telnetd/sys_term.c 202212 2010-01-13 18:37:42Z ed $");
 
 #include <sys/types.h>
 #include <sys/tty.h>

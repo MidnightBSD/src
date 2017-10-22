@@ -1,4 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/clang/libllvmx86codegen/Makefile 246637 2013-02-10 21:24:47Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	llvmx86codegen
 
@@ -6,7 +8,6 @@ SRCDIR=	lib/Target/X86
 SRCS=	X86AsmPrinter.cpp \
 	X86COFFMachineModuleInfo.cpp \
 	X86CodeEmitter.cpp \
-	X86ELFWriterInfo.cpp \
 	X86FastISel.cpp \
 	X86FloatingPoint.cpp \
 	X86FrameLowering.cpp \

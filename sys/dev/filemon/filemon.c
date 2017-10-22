@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/filemon/filemon.c 236592 2012-06-04 22:54:19Z obrien $");
 
 #include <sys/param.h>
 #include <sys/file.h>

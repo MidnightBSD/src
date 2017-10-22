@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/dhclient/privsep.c 149399 2005-08-23 23:59:55Z brooks $");
 
 #include "dhcpd.h"
 #include "privsep.h"

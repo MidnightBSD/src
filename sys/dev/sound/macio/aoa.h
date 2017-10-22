@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/sound/macio/aoa.h 188259 2009-02-07 01:15:13Z nwhitehorn $
  */
 
 #ifndef SOUND_AOA_H

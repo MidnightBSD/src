@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/powerpc/ps3/ps3.h 217044 2011-01-06 04:12:29Z nwhitehorn $
  */
 
 #ifndef _PS3_H

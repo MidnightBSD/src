@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/isci/scil/sati_mode_sense_10.c 231689 2012-02-14 15:58:49Z jimharris $");
 
 /**
  * @file

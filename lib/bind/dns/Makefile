@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/bind/dns/Makefile 245163 2013-01-08 09:05:09Z erwin $
 
 .include <bsd.own.mk>
 
@@ -26,6 +26,7 @@ SRCS+=		acache.c acl.c adb.c byaddr.c \
 		name.c ncache.c nsec.c nsec3.c \
 		openssl_link.c openssldh_link.c \
 		openssldsa_link.c opensslgost_link.c opensslrsa_link.c \
+		opensslecdsa_link.c \
 		order.c peer.c portlist.c private.c \
 		rbt.c rbtdb.c rbtdb64.c rcode.c rdata.c rdatalist.c \
 		rdataset.c rdatasetiter.c rdataslab.c request.c \

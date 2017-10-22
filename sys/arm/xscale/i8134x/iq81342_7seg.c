@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/i8134x/iq81342_7seg.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -335,7 +335,7 @@ static const uint8_t snakemap[][2] = {
 	{ SEG_B,	SEG_F },
 };
 
-SYSCTL_NODE(_hw, OID_AUTO, sevenseg, CTLFLAG_RD, 0, "7 seg");
+static SYSCTL_NODE(_hw, OID_AUTO, sevenseg, CTLFLAG_RD, 0, "7 seg");
 static int freq = 20;
 SYSCTL_INT(_hw_sevenseg, OID_AUTO, freq, CTLFLAG_RW, &freq, 0, 
     "7 Seg update frequency");

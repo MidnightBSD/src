@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ubsec/ubsec.c 248085 2013-03-09 02:36:32Z marius $");
 
 /*
  * uBsec 5[56]01, 58xx hardware crypto accelerator
@@ -173,7 +173,8 @@ static	int ubsec_ksigbits(struct crparam *);
 static	void ubsec_kshift_r(u_int, u_int8_t *, u_int, u_int8_t *, u_int);
 static	void ubsec_kshift_l(u_int, u_int8_t *, u_int, u_int8_t *, u_int);
 
-SYSCTL_NODE(_hw, OID_AUTO, ubsec, CTLFLAG_RD, 0, "Broadcom driver parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, ubsec, CTLFLAG_RD, 0,
+    "Broadcom driver parameters");
 
 #ifdef UBSEC_DEBUG
 static	void ubsec_dump_pb(volatile struct ubsec_pktbuf *);
@@ -1374,18 +1375,18 @@ ubsec_process(device_t dev, struct cryptop *crp, int hint)
 				ubsecstats.hst_unaligned++;
 				totlen = q->q_src_mapsize;
 				if (totlen >= MINCLSIZE) {
-					m = m_getcl(M_DONTWAIT, MT_DATA,
+					m = m_getcl(M_NOWAIT, MT_DATA,
 					    q->q_src_m->m_flags & M_PKTHDR);
 					len = MCLBYTES;
 				} else if (q->q_src_m->m_flags & M_PKTHDR) {
-					m = m_gethdr(M_DONTWAIT, MT_DATA);
+					m = m_gethdr(M_NOWAIT, MT_DATA);
 					len = MHLEN;
 				} else {
-					m = m_get(M_DONTWAIT, MT_DATA);
+					m = m_get(M_NOWAIT, MT_DATA);
 					len = MLEN;
 				}
 				if (m && q->q_src_m->m_flags & M_PKTHDR &&
-				    !m_dup_pkthdr(m, q->q_src_m, M_DONTWAIT)) {
+				    !m_dup_pkthdr(m, q->q_src_m, M_NOWAIT)) {
 					m_free(m);
 					m = NULL;
 				}
@@ -1401,11 +1402,11 @@ ubsec_process(device_t dev, struct cryptop *crp, int hint)
 
 				while (totlen > 0) {
 					if (totlen >= MINCLSIZE) {
-						m = m_getcl(M_DONTWAIT,
+						m = m_getcl(M_NOWAIT,
 						    MT_DATA, 0);
 						len = MCLBYTES;
 					} else {
-						m = m_get(M_DONTWAIT, MT_DATA);
+						m = m_get(M_NOWAIT, MT_DATA);
 						len = MLEN;
 					}
 					if (m == NULL) {

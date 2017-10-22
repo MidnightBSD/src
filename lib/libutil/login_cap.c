@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libutil/login_cap.c 184633 2008-11-04 13:49:53Z des $");
 
 #include <sys/types.h>
 #include <sys/time.h>

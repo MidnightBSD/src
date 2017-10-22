@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/asr/Makefile 229274 2012-01-02 12:53:11Z dim $
 
 .PATH: ${.CURDIR}/../../dev/asr
 

@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/mips/mainbus.c 221218 2011-04-29 18:41:21Z jhb $");
 
 #include "opt_cputype.h"
 

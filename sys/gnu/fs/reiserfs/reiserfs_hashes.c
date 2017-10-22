@@ -4,7 +4,7 @@
  * 
  * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
  * 
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/gnu/fs/reiserfs/reiserfs_hashes.c 147476 2005-06-18 17:10:50Z dumbbell $
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>

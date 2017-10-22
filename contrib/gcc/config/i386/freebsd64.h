@@ -19,7 +19,7 @@ along with GCC; see the file COPYING.  If not, write to
 the Free Software Foundation, 51 Franklin Street, Fifth Floor,
 Boston, MA 02110-1301, USA.  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/contrib/gcc/config/i386/freebsd64.h 242478 2012-11-02 14:18:30Z kib $ */
 
 
 #undef  TARGET_VERSION
@@ -54,4 +54,5 @@ Boston, MA 02110-1301, USA.  */
         %{rdynamic:-export-dynamic} \
 	%{!dynamic-linker:-dynamic-linker %(fbsd_dynamic_linker) }} \
     %{static:-Bstatic}} \
+  %{!static:--hash-style=both --enable-new-dtags} \
   %{symbolic:-Bsymbolic}"

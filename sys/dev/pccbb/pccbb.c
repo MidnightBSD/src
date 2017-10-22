@@ -75,7 +75,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/pccbb/pccbb.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -129,7 +129,7 @@ __FBSDID("$FreeBSD$");
 devclass_t cbb_devclass;
 
 /* sysctl vars */
-SYSCTL_NODE(_hw, OID_AUTO, cbb, CTLFLAG_RD, 0, "CBB parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, cbb, CTLFLAG_RD, 0, "CBB parameters");
 
 /* There's no way to say TUNEABLE_LONG to get the right types */
 u_long cbb_start_mem = CBB_START_MEM;

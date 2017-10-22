@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/isci/scil/sati_start_stop_unit.c 231689 2012-02-14 15:58:49Z jimharris $");
 
 /**
  * @file

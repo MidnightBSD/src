@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/net/base64.c 92986 2002-03-22 21:53:29Z obrien $");
 
 #include <sys/types.h>
 #include <sys/param.h>

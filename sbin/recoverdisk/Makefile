@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/recoverdisk/Makefile 198236 2009-10-19 16:00:24Z ru $
 
 PROG=	recoverdisk
 

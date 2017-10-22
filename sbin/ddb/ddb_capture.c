@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/ddb/ddb_capture.c 198820 2009-11-02 20:18:50Z jhb $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

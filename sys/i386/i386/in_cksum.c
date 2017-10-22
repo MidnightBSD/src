@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/i386/in_cksum.c 189572 2009-03-09 13:11:16Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/i386/i386/support.s 249532 2013-04-16 06:20:35Z kib $
  */
 
 #include "opt_npx.h"
@@ -262,9 +262,9 @@ END(memcpy)
  * write permissions when we are executing with EPL 0. The 486 does check
  * this if the WP bit is set in CR0, so we can use a simpler version here.
  *
- * These routines set curpcb->onfault for the time they execute. When a
+ * These routines set curpcb->pcb_onfault for the time they execute. When a
  * protection violation occurs inside the functions, the trap handler
- * returns to *curpcb->onfault instead of the function.
+ * returns to *curpcb->pcb_onfault instead of the function.
  */
 
 /*

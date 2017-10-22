@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/mld6query/mld6.c 216586 2010-12-20 08:54:30Z charnier $");
 
 #include <sys/param.h>
 #include <sys/uio.h>

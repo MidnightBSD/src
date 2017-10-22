@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/pxa/pxa_smi.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,7 +42,8 @@ __FBSDID("$FreeBSD$");
 #include <arm/xscale/pxa/pxavar.h>
 #include <arm/xscale/pxa/pxareg.h>
 
-MALLOC_DEFINE(M_PXASMI, "PXA SMI", "Data for static memory interface devices.");
+static MALLOC_DEFINE(M_PXASMI, "PXA SMI",
+    "Data for static memory interface devices.");
 
 struct pxa_smi_softc {
 	struct resource	*ps_res[1];

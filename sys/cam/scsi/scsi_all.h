@@ -14,7 +14,7 @@
  *
  * Ported to run under 386BSD by Julian Elischer (julian@tfs.com) Sept 1992
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cam/scsi/scsi_all.h 249134 2013-04-05 08:51:05Z mav $
  */
 
 /*
@@ -984,6 +984,7 @@ struct ata_pass_16 {
 #define	WRITE_10		0x2A
 #define	POSITION_TO_ELEMENT	0x2B
 #define	WRITE_VERIFY_10		0x2E
+#define	VERIFY_10		0x2F
 #define	SYNCHRONIZE_CACHE	0x35
 #define	READ_DEFECT_DATA_10	0x37
 #define	WRITE_BUFFER            0x3B
@@ -1443,14 +1444,24 @@ struct scsi_read_capacity_data_long
 	uint8_t length[4];
 #define	SRC16_PROT_EN		0x01
 #define	SRC16_P_TYPE		0x0e
+#define	SRC16_PTYPE_1		0x00
+#define	SRC16_PTYPE_2		0x02
+#define	SRC16_PTYPE_3		0x04
 	uint8_t prot;
 #define	SRC16_LBPPBE		0x0f
 #define	SRC16_PI_EXPONENT	0xf0
 #define	SRC16_PI_EXPONENT_SHIFT	4
 	uint8_t prot_lbppbe;
-#define	SRC16_LALBA		0x3fff
-#define	SRC16_LBPRZ		0x4000
-#define	SRC16_LBPME		0x8000
+#define	SRC16_LALBA		0x3f
+#define	SRC16_LBPRZ		0x40
+#define	SRC16_LBPME		0x80
+/*
+ * Alternate versions of these macros that are intended for use on a 16-bit
+ * version of the lalba_lbp field instead of the array of 2 8 bit numbers.
+ */
+#define	SRC16_LALBA_A		0x3fff
+#define	SRC16_LBPRZ_A		0x4000
+#define	SRC16_LBPME_A		0x8000
 	uint8_t lalba_lbp[2];
 };
 
@@ -2378,6 +2389,8 @@ int		scsi_devid_match(uint8_t *rhs, size_t rhs_len,
 
 void scsi_extract_sense(struct scsi_sense_data *sense, int *error_code,
 			int *sense_key, int *asc, int *ascq);
+int scsi_extract_sense_ccb(union ccb *ccb, int *error_code, int *sense_key,
+			   int *asc, int *ascq);
 void scsi_extract_sense_len(struct scsi_sense_data *sense,
 			    u_int sense_len, int *error_code, int *sense_key,
 			    int *asc, int *ascq, int show_errors);

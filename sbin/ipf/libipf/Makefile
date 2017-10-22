@@ -1,4 +1,4 @@
-#	$FreeBSD$
+#	$FreeBSD: stable/9/sbin/ipf/libipf/Makefile 170575 2007-06-11 19:38:38Z cognet $
 
 LIB=		ipf
 INTERNALLIB=

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/periodic/daily/200.backup-passwd 86344 2001-11-14 09:30:01Z cjc $
 #
 
 # If there is a global system configuration file, suck it in.

@@ -1,4 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/clang/libclangparse/Makefile 246637 2013-02-10 21:24:47Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	clangparse
 
@@ -21,6 +23,7 @@ TGHDRS=	AttrLateParsed \
 	AttrList \
 	AttrParsedAttrList \
 	Attrs \
+	CommentNodes \
 	DeclNodes \
 	DiagnosticCommonKinds \
 	DiagnosticParseKinds \

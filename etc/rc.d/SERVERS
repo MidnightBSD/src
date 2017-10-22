@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/SERVERS 231749 2012-02-15 09:52:09Z avg $
 #
 
 # PROVIDE: SERVERS

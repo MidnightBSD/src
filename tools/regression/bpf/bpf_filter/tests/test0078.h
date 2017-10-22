@@ -1,7 +1,7 @@
 /*-
  * Test 0078:	Check boundary conditions (BPF_STX)
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/bpf/bpf_filter/tests/test0078.h 199604 2009-11-20 18:53:38Z jkim $
  */
 
 /* BPF program */

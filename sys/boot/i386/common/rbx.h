@@ -12,7 +12,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/i386/common/rbx.h 213136 2010-09-24 19:49:12Z pjd $
  */
 
 #ifndef _RBX_H_

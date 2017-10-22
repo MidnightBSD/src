@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/powermac/openpic_macio.c 242678 2012-11-06 21:54:45Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -93,6 +93,10 @@ openpic_macio_probe(device_t dev)
 
 	if (strcmp(type, "open-pic") != 0)
                 return (ENXIO);
+
+	/* On some U4 systems, there is a phantom MPIC in the mac-io cell */
+	if (OF_finddevice("/u4") != (phandle_t)-1)
+		return (ENXIO);
 
 	device_set_desc(dev, OPENPIC_DEVSTR);
 	return (0);

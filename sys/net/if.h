@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/net/if.h 238247 2012-07-08 14:21:36Z bz $
  */
 
 #ifndef _NET_IF_H_

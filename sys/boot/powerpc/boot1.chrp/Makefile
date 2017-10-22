@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/boot/powerpc/boot1.chrp/Makefile 232432 2012-03-03 02:20:46Z nwhitehorn $
 
 WITHOUT_SSP=
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/wake/wake.c 232775 2012-03-10 08:27:37Z jh $");
 
 #include <sys/ioctl.h>
 #include <sys/socket.h>

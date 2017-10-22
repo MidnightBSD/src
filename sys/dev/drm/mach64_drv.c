@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/mach64_drv.c 189563 2009-03-09 07:55:18Z rnoland $");
 
 
 #include <sys/types.h>

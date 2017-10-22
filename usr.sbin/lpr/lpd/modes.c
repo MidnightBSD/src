@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)modes.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/lpr/lpd/modes.c 216372 2010-12-11 09:38:12Z joel $");
 
 #include <stddef.h>
 #include <string.h>

@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)checknr.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/checknr/checknr.c 219126 2011-03-01 11:47:51Z brucec $");
 
 /*
  * checknr: check an nroff/troff input file for matching macro calls.

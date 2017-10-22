@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/vinum/geom_vinum_rm.c 197767 2009-10-05 08:44:31Z lulf $");
 
 #include <sys/param.h>
 #include <sys/libkern.h>

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ppbus/ppbconf.c 229118 2011-12-31 15:31:34Z hselasky $");
 #include "opt_ppb_1284.h"
 
 #include <sys/param.h>

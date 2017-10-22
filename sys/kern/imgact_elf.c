@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/imgact_elf.c 248587 2013-03-21 16:15:34Z tijl $");
 
 #include "opt_capsicum.h"
 #include "opt_compat.h"
@@ -646,7 +646,7 @@ __elfN(load_file)(struct proc *p, const char *file, u_long *addr,
 	 * Also make certain that the interpreter stays the same, so set
 	 * its VV_TEXT flag, too.
 	 */
-	nd->ni_vp->v_vflag |= VV_TEXT;
+	VOP_SET_TEXT(nd->ni_vp);
 
 	imgp->object = nd->ni_vp->v_object;
 
@@ -663,9 +663,8 @@ __elfN(load_file)(struct proc *p, const char *file, u_long *addr,
 	}
 
 	/* Only support headers that fit within first page for now      */
-	/*    (multiplication of two Elf_Half fields will not overflow) */
 	if ((hdr->e_phoff > PAGE_SIZE) ||
-	    (hdr->e_phentsize * hdr->e_phnum) > PAGE_SIZE - hdr->e_phoff) {
+	    (u_int)hdr->e_phentsize * hdr->e_phnum > PAGE_SIZE - hdr->e_phoff) {
 		error = ENOEXEC;
 		goto fail;
 	}
@@ -747,7 +746,7 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 	 */
 
 	if ((hdr->e_phoff > PAGE_SIZE) ||
-	    (hdr->e_phoff + hdr->e_phentsize * hdr->e_phnum) > PAGE_SIZE) {
+	    (u_int)hdr->e_phentsize * hdr->e_phnum > PAGE_SIZE - hdr->e_phoff) {
 		/* Only support headers in first page for now */
 		return (ENOEXEC);
 	}
@@ -766,8 +765,8 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 		case PT_INTERP:
 			/* Path to interpreter */
 			if (phdr[i].p_filesz > MAXPATHLEN ||
-			    phdr[i].p_offset >= PAGE_SIZE ||
-			    phdr[i].p_offset + phdr[i].p_filesz >= PAGE_SIZE)
+			    phdr[i].p_offset > PAGE_SIZE ||
+			    phdr[i].p_filesz > PAGE_SIZE - phdr[i].p_offset)
 				return (ENOEXEC);
 			interp = imgp->image_header + phdr[i].p_offset;
 			interp_name_len = phdr[i].p_filesz;
@@ -829,16 +828,6 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 			if (phdr[i].p_memsz == 0)
 				break;
 			prot = __elfN(trans_prot)(phdr[i].p_flags);
-
-#if defined(__ia64__) && __ELF_WORD_SIZE == 32 && defined(IA32_ME_HARDER)
-			/*
-			 * Some x86 binaries assume read == executable,
-			 * notably the M3 runtime and therefore cvsup
-			 */
-			if (prot & VM_PROT_READ)
-				prot |= VM_PROT_EXECUTE;
-#endif
-
 			if ((error = __elfN(load_section)(vmspace,
 			    imgp->object, phdr[i].p_offset,
 			    (caddr_t)(uintptr_t)phdr[i].p_vaddr + et_dyn_addr,
@@ -1014,6 +1003,10 @@ __elfN(freebsd_fixup)(register_t **stack_base, struct image_params *imgp)
 	if (imgp->pagesizes != 0) {
 		AUXARGS_ENTRY(pos, AT_PAGESIZES, imgp->pagesizes);
 		AUXARGS_ENTRY(pos, AT_PAGESIZESLEN, imgp->pagesizeslen);
+	}
+	if (imgp->sysent->sv_timekeep_base != 0) {
+		AUXARGS_ENTRY(pos, AT_TIMEKEEP,
+		    imgp->sysent->sv_timekeep_base);
 	}
 	AUXARGS_ENTRY(pos, AT_STACKPROT, imgp->sysent->sv_shared_page_obj
 	    != NULL && imgp->stack_prot != 0 ? imgp->stack_prot :
@@ -1561,9 +1554,8 @@ __elfN(parse_notes)(struct image_params *imgp, Elf_Brandnote *checknote,
 	const char *note_name;
 	int i;
 
-	if (pnote == NULL || pnote->p_offset >= PAGE_SIZE ||
-	    pnote->p_filesz > PAGE_SIZE ||
-	    pnote->p_offset + pnote->p_filesz >= PAGE_SIZE)
+	if (pnote == NULL || pnote->p_offset > PAGE_SIZE ||
+	    pnote->p_filesz > PAGE_SIZE - pnote->p_offset)
 		return (FALSE);
 
 	note = note0 = (const Elf_Note *)(imgp->image_header + pnote->p_offset);

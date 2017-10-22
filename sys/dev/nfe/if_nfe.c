@@ -21,7 +21,7 @@
 /* Driver for NVIDIA nForce MCP Fast Ethernet and Gigabit Ethernet */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/nfe/if_nfe.c 248078 2013-03-09 00:39:54Z marius $");
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -1976,7 +1976,7 @@ nfe_newbuf(struct nfe_softc *sc, int idx)
 	bus_dmamap_t map;
 	int nsegs;
 
-	m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+	m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (m == NULL)
 		return (ENOBUFS);
 
@@ -2032,7 +2032,7 @@ nfe_jnewbuf(struct nfe_softc *sc, int idx)
 	bus_dmamap_t map;
 	int nsegs;
 
-	m = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR, MJUM9BYTES);
+	m = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, MJUM9BYTES);
 	if (m == NULL)
 		return (ENOBUFS);
 	if ((m->m_flags & M_EXT) == 0) {
@@ -2401,7 +2401,7 @@ nfe_encap(struct nfe_softc *sc, struct mbuf **m_head)
 	error = bus_dmamap_load_mbuf_sg(sc->txq.tx_data_tag, map, *m_head, segs,
 	    &nsegs, BUS_DMA_NOWAIT);
 	if (error == EFBIG) {
-		m = m_collapse(*m_head, M_DONTWAIT, NFE_MAX_SCATTER);
+		m = m_collapse(*m_head, M_NOWAIT, NFE_MAX_SCATTER);
 		if (m == NULL) {
 			m_freem(*m_head);
 			*m_head = NULL;

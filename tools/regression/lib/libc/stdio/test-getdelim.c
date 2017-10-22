@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libc/stdio/test-getdelim.c 197753 2009-10-04 19:44:41Z das $");
 
 #define	_WITH_GETLINE
 #include <assert.h>

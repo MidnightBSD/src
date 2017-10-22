@@ -28,7 +28,7 @@
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/nlm/nlm_prot_impl.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/fail.h>
@@ -84,8 +84,9 @@ MALLOC_DEFINE(M_NLM, "NLM", "Network Lock Manager");
 /*
  * Support for sysctl vfs.nlm.sysid
  */
-SYSCTL_NODE(_vfs, OID_AUTO, nlm, CTLFLAG_RW, NULL, "Network Lock Manager");
-SYSCTL_NODE(_vfs_nlm, OID_AUTO, sysid, CTLFLAG_RW, NULL, "");
+static SYSCTL_NODE(_vfs, OID_AUTO, nlm, CTLFLAG_RW, NULL,
+    "Network Lock Manager");
+static SYSCTL_NODE(_vfs_nlm, OID_AUTO, sysid, CTLFLAG_RW, NULL, "");
 
 /*
  * Syscall hooks

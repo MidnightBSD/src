@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/common/commands.c 198537 2009-10-28 10:06:27Z brueffer $");
 
 #include <stand.h>
 #include <string.h>

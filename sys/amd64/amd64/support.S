@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/amd64/amd64/support.S 249532 2013-04-16 06:20:35Z kib $
  */
 
 #include "opt_ddb.h"
@@ -200,9 +200,9 @@ END(fillw)
  * Access user memory from inside the kernel. These routines should be
  * the only places that do this.
  *
- * These routines set curpcb->onfault for the time they execute. When a
+ * These routines set curpcb->pcb_onfault for the time they execute. When a
  * protection violation occurs inside the functions, the trap handler
- * returns to *curpcb->onfault instead of the function.
+ * returns to *curpcb->pcb_onfault instead of the function.
  */
 
 /*

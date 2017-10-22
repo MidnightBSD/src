@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/tools/regression/mqueue/mqtest2/mqtest2.c 205225 2010-03-16 20:42:54Z kib $ */
 
 #include <sys/types.h>
 #include <sys/wait.h>

@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * From: FreeBSD: src/sys/i386/include/minidump.h,v 1.1 2006/04/21 04:28:43
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/arm/include/minidump.h 184728 2008-11-06 16:20:27Z raj $
  */
 
 #ifndef	_MACHINE_MINIDUMP_H_

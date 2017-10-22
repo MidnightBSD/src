@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/x86/acpica/acpi_apm.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -53,7 +53,7 @@ __FBSDID("$FreeBSD$");
 static int apm_active;
 static struct clonedevs *apm_clones;
 
-MALLOC_DEFINE(M_APMDEV, "apmdev", "APM device emulation");
+static MALLOC_DEFINE(M_APMDEV, "apmdev", "APM device emulation");
 
 static d_open_t		apmopen;
 static d_close_t	apmclose;

@@ -44,7 +44,7 @@ divert(-1)
 #
 
 divert(0)
-VERSIONID(`$FreeBSD$')
+VERSIONID(`$FreeBSD: stable/9/etc/sendmail/freebsd.mc 244937 2013-01-01 18:53:47Z gshapiro $')
 OSTYPE(freebsd6)
 DOMAIN(generic)
 
@@ -63,13 +63,13 @@ dnl DNS based black hole lists
 dnl --------------------------------
 dnl DNS based black hole lists come and go on a regular basis
 dnl so this file will not serve as a database of the available servers.
-dnl For that, visit
-dnl http://www.google.com/Top/Computers/Internet/E-mail/Spam/Blacklists/
+dnl For more information, visit
+dnl http://en.wikipedia.org/wiki/DNSBL
 
 dnl Uncomment to activate your chosen DNS based blacklist
 dnl FEATURE(dnsbl, `dnsbl.example.com')
 dnl Alternatively, you can provide your own server and rejection message:
-dnl FEATURE(dnsbl, `dnsbl.example.com', ``"550 Mail from " $&{client_addr} " rejected'')
+dnl FEATURE(dnsbl, `dnsbl.example.com', ``"550 Mail from " $&{client_addr} " rejected"'')
 
 dnl Dialup users should uncomment and define this appropriately
 dnl define(`SMART_HOST', `your.isp.mail.server')

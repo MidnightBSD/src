@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/s_sinl.c 222508 2011-05-30 19:41:28Z kargl $");
 
 #include <float.h>
 

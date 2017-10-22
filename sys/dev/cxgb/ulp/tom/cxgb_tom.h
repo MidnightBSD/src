@@ -26,7 +26,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$FreeBSD$
+$FreeBSD: stable/9/sys/dev/cxgb/ulp/tom/cxgb_tom.h 247434 2013-02-28 00:44:54Z np $
 
 ***************************************************************************/
 #ifndef CXGB_TOM_H_
@@ -142,7 +142,8 @@ void t3_process_tid_release_list(void *data, int pending);
 static inline struct tom_data *
 t3_tomdata(struct toedev *tod)
 {
-	return (member2struct(tom_data, tod, tod));
+
+	return (__containerof(tod, struct tom_data, tod));
 }
 
 union listen_entry {

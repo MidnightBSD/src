@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/Makefile 216594 2010-12-20 17:13:14Z syrinx $
 
 .include <bsd.own.mk>
 

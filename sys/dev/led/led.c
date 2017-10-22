@@ -9,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/led/led.c 219951 2011-03-24 08:56:12Z mav $");
 
 #include <sys/param.h>
 #include <sys/conf.h>

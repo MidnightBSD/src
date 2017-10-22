@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/usr.bin/make/variables/opt_V/Makefile 236347 2012-05-31 01:07:52Z obrien $
 #
 # Test the -V option
 #

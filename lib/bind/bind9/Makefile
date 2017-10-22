@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/bind/bind9/Makefile 170221 2007-06-02 23:19:58Z dougb $
 
 .include <bsd.own.mk>
 

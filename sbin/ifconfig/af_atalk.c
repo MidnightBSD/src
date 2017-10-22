@@ -29,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/sbin/ifconfig/af_atalk.c 194799 2009-06-23 23:49:52Z delphij $";
 #endif /* not lint */
 
 #include <sys/types.h>

@@ -23,7 +23,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ddb/db_lex.h 174914 2007-12-26 09:33:19Z rwatson $
  */
 
 #ifndef _DDB_DB_LEX_H_

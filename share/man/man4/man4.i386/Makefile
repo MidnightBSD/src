@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/man/man4/man4.i386/Makefile 221961 2011-05-15 14:01:23Z brix $
 
 MAN=	aic.4 \
 	apm.4 \

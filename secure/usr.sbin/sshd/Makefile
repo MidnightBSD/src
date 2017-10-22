@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/secure/usr.sbin/sshd/Makefile 247515 2013-03-01 01:02:26Z des $
 #
 
 .include <bsd.own.mk>
@@ -16,7 +16,8 @@ SRCS=	sshd.c auth-rhosts.c auth-passwd.c auth-rsa.c auth-rh-rsa.c \
 	auth2-gss.c gss-serv.c gss-serv-krb5.c \
 	loginrec.c auth-pam.c auth-shadow.c auth-sia.c md5crypt.c \
 	sftp-server.c sftp-common.c \
-	roaming_common.c roaming_serv.c
+	roaming_common.c roaming_serv.c \
+	sandbox-null.c sandbox-rlimit.c sandbox-systrace.c sandbox-darwin.c
 
 # gss-genr.c really belongs in libssh; see src/secure/lib/libssh/Makefile
 SRCS+=	gss-genr.c
@@ -37,6 +38,10 @@ LDADD+=  -lbsm
 CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DHAVE_GSSAPI_GSSAPI_KRB5_H=1 -DKRB5 -DHEIMDAL
 DPADD+=	 ${LIBGSSAPI_KRB5} ${LIBGSSAPI} ${LIBKRB5} ${LIBASN1}
 LDADD+=	 -lgssapi_krb5 -lgssapi -lkrb5 -lasn1
+.endif
+
+.if ${MK_OPENSSH_NONE_CIPHER} != "no"
+CFLAGS+= -DNONE_CIPHER_ENABLED
 .endif
 
 DPADD+=	${LIBCRYPTO} ${LIBCRYPT}

@@ -1,6 +1,6 @@
 .\" @(#)rpc.3n	2.4 88/08/08 4.0 RPCSRC; from 1.19 88/06/24 SMI
 .\" $NetBSD: rpc_soc.3,v 1.2 2000/06/07 13:39:43 simonb Exp $
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/lib/libc/rpc/rpc_soc.3 241309 2012-10-07 05:11:29Z pfg $
 .\"
 .Dd February 16, 1988
 .Dt RPC_SOC 3
@@ -148,7 +148,7 @@ default authentication used by
 .Ft "AUTH *"
 .Xc
 .It Xo
-.Fn authunix_create "char *host" "int uid" "int gid" "int len" "int *aup_gids"
+.Fn authunix_create "char *host" "u_int uid" "u_int gid" "int len" "u_int *aup_gids"
 .Xc
 .Pp
 Create and return an

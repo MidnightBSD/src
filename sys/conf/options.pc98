@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/conf/options.pc98 202441 2010-01-16 12:24:12Z attilio $
 # Options specific to the pc98 platform kernels
 
 AUTO_EOI_1		opt_auto_eoi.h

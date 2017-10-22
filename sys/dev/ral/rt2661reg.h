@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sys/dev/ral/rt2661reg.h 170530 2007-06-11 03:36:55Z sam $	*/
 
 /*-
  * Copyright (c) 2006

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/net80211/stumbler/Makefile 204311 2010-02-25 14:42:26Z ru $
 
 PROG=	stumbler
 BINDIR=	/usr/local/bin

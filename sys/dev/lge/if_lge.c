@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/lge/if_lge.c 248078 2013-03-09 00:39:54Z marius $");
 
 /*
  * Level 1 LXT1001 gigabit ethernet driver for FreeBSD. Public
@@ -110,7 +110,7 @@ __FBSDID("$FreeBSD$");
 /*
  * Various supported device vendors/types and their names.
  */
-static const struct lge_type const lge_devs[] = {
+static const struct lge_type lge_devs[] = {
 	{ LGE_VENDORID, LGE_DEVICEID, "Level 1 Gigabit Ethernet" },
 	{ 0, 0, NULL }
 };
@@ -692,7 +692,7 @@ lge_newbuf(sc, c, m)
 	caddr_t			*buf = NULL;
 
 	if (m == NULL) {
-		MGETHDR(m_new, M_DONTWAIT, MT_DATA);
+		MGETHDR(m_new, M_NOWAIT, MT_DATA);
 		if (m_new == NULL) {
 			device_printf(sc->lge_dev, "no memory for rx list "
 			    "-- packet dropped!\n");

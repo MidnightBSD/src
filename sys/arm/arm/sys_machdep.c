@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/sys_machdep.c 223692 2011-06-30 10:56:02Z jonathan $");
 
 #include "opt_capsicum.h"
 

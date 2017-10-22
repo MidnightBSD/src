@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/make/arch.c 200630 2009-12-17 12:42:45Z stas $");
 
 /*-
  * arch.c --

@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/ia64/ski/time.c 139738 2005-01-05 22:16:58Z imp $");
 
 #include <time.h>
 #include <sys/time.h>

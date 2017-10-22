@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$FreeBSD: stable/9/lib/libc/rpc/rpcsec_gss_stub.c 181344 2008-08-06 14:02:05Z dfr $
  */
 
 #include <rpc/rpc.h>

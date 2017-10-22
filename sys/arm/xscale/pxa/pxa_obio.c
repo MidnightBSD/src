@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/pxa/pxa_obio.c 179701 2008-06-10 06:06:15Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

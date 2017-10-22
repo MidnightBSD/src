@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/ftpusers 243947 2012-12-06 11:52:31Z rwatson $
 #
 # list of users disallowed any ftp access.
 # read by ftpd(8).
@@ -19,6 +19,7 @@ _pflogd
 _dhcp
 uucp
 pop
+auditdistd
 www
 hast
 nobody

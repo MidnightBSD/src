@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/usr.bin/binutils/nm/Makefile 218822 2011-02-18 20:54:12Z dim $
 
 .include "../Makefile.inc0"
 

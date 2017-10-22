@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)displayq.c	8.4 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/lpr/common_source/displayq.c 216372 2010-12-11 09:38:12Z joel $");
 
 #include <sys/param.h>
 #include <sys/stat.h>

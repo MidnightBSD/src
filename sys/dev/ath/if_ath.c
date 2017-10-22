@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ath/if_ath.c 249132 2013-04-05 08:22:11Z mav $");
 
 /*
  * Driver for the Atheros Wireless LAN controller.
@@ -258,7 +258,7 @@ static	int ath_bstuck_threshold = 4;		/* max missed beacons */
 SYSCTL_INT(_hw_ath, OID_AUTO, bstuck, CTLFLAG_RW, &ath_bstuck_threshold,
 	    0, "max missed beacon xmits before chip reset");
 
-MALLOC_DEFINE(M_ATHDEV, "athdev", "ath driver dma buffers");
+static MALLOC_DEFINE(M_ATHDEV, "athdev", "ath driver dma buffers");
 
 #define	HAL_MODE_HT20 (HAL_MODE_11NG_HT20 | HAL_MODE_11NA_HT20)
 #define	HAL_MODE_HT40 \

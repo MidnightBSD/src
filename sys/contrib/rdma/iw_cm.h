@@ -30,7 +30,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/contrib/rdma/iw_cm.h 178784 2008-05-05 18:35:55Z kmacy $
  */
 #ifndef IW_CM_H
 #define IW_CM_H

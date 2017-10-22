@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufsmount.h	8.6 (Berkeley) 3/30/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ufs/ufs/ufsmount.h 246234 2013-02-02 09:57:34Z trasz $
  */
 
 #ifndef _UFS_UFS_UFSMOUNT_H_
@@ -98,6 +98,7 @@ struct ufsmount {
 	char	um_qflags[MAXQUOTAS];		/* quota specific flags */
 	int64_t	um_savedmaxfilesize;		/* XXX - limit maxfilesize */
 	int	um_candelete;			/* devvp supports TRIM */
+	int	um_writesuspended;		/* suspension in progress */
 	int	(*um_balloc)(struct vnode *, off_t, int, struct ucred *, int, struct buf **);
 	int	(*um_blkatoff)(struct vnode *, off_t, char **, struct buf **);
 	int	(*um_truncate)(struct vnode *, off_t, int, struct ucred *, struct thread *);

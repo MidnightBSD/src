@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/lpr/common_source/pathnames.h 216372 2010-12-11 09:38:12Z joel $
  *
  *      @(#)pathnames.h	8.1 (Berkeley) 6/6/93
  */

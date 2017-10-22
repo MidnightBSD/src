@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/vimage/Makefile 196409 2009-08-20 22:39:20Z zec $
 
 PROG=	vimage
 LDADD=	-ljail

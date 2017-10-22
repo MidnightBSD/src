@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/arm/xscale/ixp425/ixp425_npereg.h 194322 2009-06-17 02:55:53Z sam $
  */
 
 /*-

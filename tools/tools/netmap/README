@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/9/tools/tools/netmap/README 235549 2012-05-17 15:02:51Z luigi $
 
 This directory contains examples that use netmap
 

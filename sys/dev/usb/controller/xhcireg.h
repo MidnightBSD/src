@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/controller/xhcireg.h 242774 2012-11-08 16:04:32Z hselasky $ */
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
@@ -33,6 +33,9 @@
 #define	PCI_XHCI_USBREV		0x60	/* RO USB protocol revision */
 #define	PCI_USB_REV_3_0		0x30	/* USB 3.0 */
 #define	PCI_XHCI_FLADJ		0x61	/* RW frame length adjust */
+
+#define	PCI_XHCI_INTEL_XUSB2PR	0xD0	/* Intel USB2 Port Routing */
+#define	PCI_XHCI_INTEL_USB3_PSSEN 0xD8	/* Intel USB3 Port SuperSpeed Enable */
 
 /* XHCI capability registers */
 #define	XHCI_CAPLENGTH		0x00	/* RO capability */

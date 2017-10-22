@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/hpfs/hpfs_subr.h 175635 2008-01-24 12:34:30Z attilio $
  */
 
 #define	hpfs_bmmarkfree(hpmp, bn,bl) hpfs_bmmark(hpmp, bn, bl, 1)

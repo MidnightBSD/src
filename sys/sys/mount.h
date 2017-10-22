@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mount.h	8.21 (Berkeley) 5/20/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/mount.h 244652 2012-12-24 13:01:07Z kib $
  */
 
 #ifndef _SYS_MOUNT_H_
@@ -189,6 +189,8 @@ struct mount {
 #define	mnt_endzero	mnt_gjprovider
 	char		*mnt_gjprovider;	/* gjournal provider name */
 	struct lock	mnt_explock;		/* vfs_export walkers lock */
+	TAILQ_ENTRY(mount) mnt_upper_link;	/* (m) we in the all uppers */
+	TAILQ_HEAD(, mount) mnt_uppers;		/* (m) upper mounts over us*/
 };
 
 /*
@@ -198,8 +200,8 @@ struct vnode *__mnt_vnode_next_all(struct vnode **mvp, struct mount *mp);
 struct vnode *__mnt_vnode_first_all(struct vnode **mvp, struct mount *mp);
 void          __mnt_vnode_markerfree_all(struct vnode **mvp, struct mount *mp);
 
-#define MNT_VNODE_FOREACH_ALL(vp, mp, mvp) \
-	for (vp = __mnt_vnode_first_all(&(mvp), (mp)); \
+#define MNT_VNODE_FOREACH_ALL(vp, mp, mvp)				\
+	for (vp = __mnt_vnode_first_all(&(mvp), (mp));			\
 		(vp) != NULL; vp = __mnt_vnode_next_all(&(mvp), (mp)))
 
 #define MNT_VNODE_FOREACH_ALL_ABORT(mp, mvp)				\
@@ -217,17 +219,12 @@ struct vnode *__mnt_vnode_next_active(struct vnode **mvp, struct mount *mp);
 struct vnode *__mnt_vnode_first_active(struct vnode **mvp, struct mount *mp);
 void          __mnt_vnode_markerfree_active(struct vnode **mvp, struct mount *);
 
-#define MNT_VNODE_FOREACH_ACTIVE(vp, mp, mvp) \
-	for (vp = __mnt_vnode_first_active(&(mvp), (mp)); \
+#define MNT_VNODE_FOREACH_ACTIVE(vp, mp, mvp) 				\
+	for (vp = __mnt_vnode_first_active(&(mvp), (mp)); 		\
 		(vp) != NULL; vp = __mnt_vnode_next_active(&(mvp), (mp)))
 
 #define MNT_VNODE_FOREACH_ACTIVE_ABORT(mp, mvp)				\
-	do {								\
-		MNT_ILOCK(mp);						\
-		__mnt_vnode_markerfree_active(&(mvp), (mp));		\
-		/* MNT_IUNLOCK(mp); -- done in above function */	\
-		mtx_assert(MNT_MTX(mp), MA_NOTOWNED);			\
-	} while (0)
+	__mnt_vnode_markerfree_active(&(mvp), (mp))
 
 /*
  * Definitions for MNT_VNODE_FOREACH.
@@ -371,6 +368,13 @@ void          __mnt_vnode_markerfree(struct vnode **mvp, struct mount *mp);
 #define	MNTK_REFEXPIRE	0x00000020	/* refcount expiring is happening */
 #define MNTK_EXTENDED_SHARED	0x00000040 /* Allow shared locking for more ops */
 #define	MNTK_SHARED_WRITES	0x00000080 /* Allow shared locking for writes */
+#define	MNTK_NO_IOPF	0x00000100	/* Disallow page faults during reads
+					   and writes. Filesystem shall properly
+					   handle i/o state on EFAULT. */
+#define	MNTK_VGONE_UPPER	0x00000200
+#define	MNTK_VGONE_WAITER	0x00000400
+#define	MNTK_LOOKUP_EXCL_DOTDOT	0x00000800
+#define	MNTK_MARKER		0x00001000
 #define MNTK_NOASYNC	0x00800000	/* disable async */
 #define MNTK_UNMOUNT	0x01000000	/* unmount in progress */
 #define	MNTK_MWAIT	0x02000000	/* waiting for unmount to finish */
@@ -626,6 +630,7 @@ typedef	int vfs_mount_t(struct mount *mp);
 typedef int vfs_sysctl_t(struct mount *mp, fsctlop_t op,
 		    struct sysctl_req *req);
 typedef void vfs_susp_clean_t(struct mount *mp);
+typedef void vfs_reclaim_lowervp_t(struct mount *mp, struct vnode *lowervp);
 
 struct vfsops {
 	vfs_mount_t		*vfs_mount;
@@ -643,6 +648,7 @@ struct vfsops {
 	vfs_extattrctl_t	*vfs_extattrctl;
 	vfs_sysctl_t		*vfs_sysctl;
 	vfs_susp_clean_t	*vfs_susp_clean;
+	vfs_reclaim_lowervp_t	*vfs_reclaim_lowervp;
 };
 
 vfs_statfs_t	__vfs_statfs;
@@ -668,6 +674,9 @@ vfs_statfs_t	__vfs_statfs;
 #define	VFS_SUSP_CLEAN(MP) \
 	({if (*(MP)->mnt_op->vfs_susp_clean != NULL)		\
 	       (*(MP)->mnt_op->vfs_susp_clean)(MP); })
+#define	VFS_RECLAIM_LOWERVP(MP, VP)				\
+	({if (*(MP)->mnt_op->vfs_reclaim_lowervp != NULL)	\
+		(*(MP)->mnt_op->vfs_reclaim_lowervp)((MP), (VP)); })
 
 #define	VFS_NEEDSGIANT_(MP)						\
     ((MP) != NULL && ((MP)->mnt_kern_flag & MNTK_MPSAFE) == 0)

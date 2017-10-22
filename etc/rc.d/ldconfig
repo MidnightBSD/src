@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/ldconfig 242153 2012-10-26 18:06:49Z obrien $
 #
 
 # PROVIDE: ldconfig
-# REQUIRE: mountcritremote cleanvar
+# REQUIRE: mountcritremote FILESYSTEMS
 # BEFORE:  DAEMON
 
 . /etc/rc.subr

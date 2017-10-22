@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/vm/vm_object.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_vm.h"
 
@@ -140,7 +140,8 @@ struct mtx vm_object_list_mtx;	/* lock for object list and count */
 struct vm_object kernel_object_store;
 struct vm_object kmem_object_store;
 
-SYSCTL_NODE(_vm_stats, OID_AUTO, object, CTLFLAG_RD, 0, "VM object stats");
+static SYSCTL_NODE(_vm_stats, OID_AUTO, object, CTLFLAG_RD, 0,
+    "VM object stats");
 
 static long object_collapses;
 SYSCTL_LONG(_vm_stats_object, OID_AUTO, collapses, CTLFLAG_RD,
@@ -455,7 +456,7 @@ vm_object_vndeallocate(vm_object_t object)
 			VOP_UNLOCK(vp, 0);
 		} else {
 			if (object->ref_count == 0)
-				vp->v_vflag &= ~VV_TEXT;
+				VOP_UNSET_TEXT(vp);
 			VM_OBJECT_UNLOCK(object);
 			vput(vp);
 		}
@@ -1893,8 +1894,13 @@ again:
 		if ((options & OBJPR_NOTMAPPED) == 0) {
 			pmap_remove_all(p);
 			/* Account for removal of wired mappings. */
-			if (wirings != 0)
-				p->wire_count -= wirings;
+			if (wirings != 0) {
+				KASSERT(p->wire_count == wirings,
+				    ("inconsistent wire count %d %d %p",
+				    p->wire_count, wirings, p));
+				p->wire_count = 0;
+				atomic_subtract_int(&cnt.v_wire_count, 1);
+			}
 		}
 		vm_page_free(p);
 		vm_page_unlock(p);

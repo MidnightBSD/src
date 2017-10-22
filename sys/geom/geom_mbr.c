@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/geom_mbr.c 244547 2012-12-21 18:25:05Z jh $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -483,8 +483,8 @@ g_mbrext_taste(struct g_class *mp, struct g_provider *pp, int insist __unused)
 				    ((off_t)dp[0].dp_size) << 9ULL,
 				    sectorsize,
 				    "%*.*s%d",
-				    strlen(gp->name) - 1,
-				    strlen(gp->name) - 1,
+				    (int)strlen(gp->name) - 1,
+				    (int)strlen(gp->name) - 1,
 				    gp->name,
 				    slice + 5);
 				g_topology_unlock();

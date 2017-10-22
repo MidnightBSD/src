@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/quota 231653 2012-02-14 10:16:56Z dougb $
 #
 
 # Enable/Check the quotas (must be after ypbind if using NIS)

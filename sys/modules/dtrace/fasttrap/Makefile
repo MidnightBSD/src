@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/dtrace/fasttrap/Makefile 211746 2010-08-24 12:18:39Z rpaulo $
 
 .PATH:	${.CURDIR}/../../../cddl/contrib/opensolaris/uts/common/dtrace
 

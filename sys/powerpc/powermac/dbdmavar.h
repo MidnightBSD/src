@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/powermac/dbdmavar.h 184382 2008-10-27 23:11:14Z nwhitehorn $
  */
 
 #ifndef _POWERPC_POWERMAC_DBDMAVAR_H_

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ia64/ia64/unwind.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/kdb.h>
@@ -41,7 +41,7 @@ __FBSDID("$FreeBSD$");
 
 #include <uwx.h>
 
-MALLOC_DEFINE(M_UNWIND, "Unwind", "Unwind information");
+static MALLOC_DEFINE(M_UNWIND, "Unwind", "Unwind information");
 
 struct unw_entry {
 	uint64_t	ue_start;	/* procedure start */

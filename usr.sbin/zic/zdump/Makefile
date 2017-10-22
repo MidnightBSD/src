@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/zic/zdump/Makefile 204347 2010-02-26 06:44:00Z edwin $
 
 .PATH: ${.CURDIR}/../../../contrib/tzcode/zic
 

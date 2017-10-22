@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/at/panic.c 96701 2002-05-16 00:47:14Z tjr $");
 
 /* System Headers */
 

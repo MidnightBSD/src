@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  * RMI_BSD
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/rmi/board.h 216390 2010-12-12 06:00:26Z jchandra $
  */
 #ifndef _RMI_BOARD_H_
 #define	_RMI_BOARD_H_

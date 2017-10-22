@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libgeom/geom_util.c 202454 2010-01-17 06:20:30Z delphij $");
 
 #include <sys/param.h>
 #include <sys/disk.h>

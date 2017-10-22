@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/common/console.c 242557 2012-11-04 13:32:16Z avg $");
 
 #include <stand.h>
 #include <string.h>
@@ -100,11 +100,12 @@ getchar(void)
 {
     int		cons;
     int		rv;
-    
+
     /* Loop forever polling all active consoles */
     for(;;)
 	for (cons = 0; consoles[cons] != NULL; cons++)
-	    if ((consoles[cons]->c_flags & C_ACTIVEIN) && 
+	    if ((consoles[cons]->c_flags & (C_PRESENTIN | C_ACTIVEIN)) ==
+		(C_PRESENTIN | C_ACTIVEIN) &&
 		((rv = consoles[cons]->c_in()) != -1))
 		return(rv);
 }
@@ -115,7 +116,8 @@ ischar(void)
     int		cons;
 
     for (cons = 0; consoles[cons] != NULL; cons++)
-	if ((consoles[cons]->c_flags & C_ACTIVEIN) && 
+	if ((consoles[cons]->c_flags & (C_PRESENTIN | C_ACTIVEIN)) ==
+	    (C_PRESENTIN | C_ACTIVEIN) &&
 	    (consoles[cons]->c_ready() != 0))
 		return(1);
     return(0);
@@ -125,13 +127,14 @@ void
 putchar(int c)
 {
     int		cons;
-    
+
     /* Expand newlines */
     if (c == '\n')
 	putchar('\r');
-    
+
     for (cons = 0; consoles[cons] != NULL; cons++)
-	if (consoles[cons]->c_flags & C_ACTIVEOUT)
+	if ((consoles[cons]->c_flags & (C_PRESENTOUT | C_ACTIVEOUT)) ==
+	    (C_PRESENTOUT | C_ACTIVEOUT))
 	    consoles[cons]->c_out(c);
 }
 
@@ -220,6 +223,10 @@ cons_change(const char *string)
 	if (cons >= 0) {
 	    consoles[cons]->c_flags |= C_ACTIVEIN | C_ACTIVEOUT;
 	    consoles[cons]->c_init(0);
+	    if ((consoles[cons]->c_flags & (C_PRESENTIN | C_PRESENTOUT)) !=
+		(C_PRESENTIN | C_PRESENTOUT))
+		printf("console %s failed to initialize\n",
+		    consoles[cons]->c_name);
 	}
     }
 

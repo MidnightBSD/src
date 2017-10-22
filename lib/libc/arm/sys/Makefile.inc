@@ -1,4 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libc/arm/sys/Makefile.inc 246775 2013-02-13 23:25:11Z kib $
+
+SRCS+=	__vdso_gettc.c
 
 MDASM= Ovfork.S brk.S cerror.S pipe.S ptrace.S sbrk.S shmat.S sigreturn.S syscall.S
 

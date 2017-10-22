@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/kerberos5/lib/libhdb/Makefile 230113 2012-01-14 19:38:24Z ume $
 
 LIB=	hdb
 LDFLAGS=	-Wl,--no-undefined ${LDAPLDFLAGS}

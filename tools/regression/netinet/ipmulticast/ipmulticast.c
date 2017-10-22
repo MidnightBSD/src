@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/regression/netinet/ipmulticast/ipmulticast.c 170614 2007-06-12 16:29:22Z bms $");
 
 #include <sys/param.h>
 #include <sys/types.h>

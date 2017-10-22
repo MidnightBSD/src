@@ -20,6 +20,7 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012 by Delphix. All rights reserved.
  */
 
 #include <sys/zfs_context.h>
@@ -53,6 +54,7 @@ typedef struct traverse_data {
 	uint64_t td_objset;
 	blkptr_t *td_rootbp;
 	uint64_t td_min_txg;
+	zbookmark_t *td_resume;
 	int td_flags;
 	prefetch_data_t *td_pfd;
 	blkptr_cb_t *td_func;
@@ -60,7 +62,9 @@ typedef struct traverse_data {
 } traverse_data_t;
 
 static int traverse_dnode(traverse_data_t *td, const dnode_phys_t *dnp,
-    arc_buf_t *buf, uint64_t objset, uint64_t object);
+    uint64_t objset, uint64_t object);
+static void prefetch_dnode_metadata(traverse_data_t *td, const dnode_phys_t *,
+    uint64_t objset, uint64_t object);
 
 static int
 traverse_zil_block(zilog_t *zilog, blkptr_t *bp, void *arg, uint64_t claim_txg)
@@ -77,7 +81,7 @@ traverse_zil_block(zilog_t *zilog, blkptr_t *bp, void *arg, uint64_t claim_txg)
 	SET_BOOKMARK(&zb, td->td_objset, ZB_ZIL_OBJECT, ZB_ZIL_LEVEL,
 	    bp->blk_cksum.zc_word[ZIL_ZC_SEQ]);
 
-	(void) td->td_func(td->td_spa, zilog, bp, NULL, &zb, NULL, td->td_arg);
+	(void) td->td_func(td->td_spa, zilog, bp, &zb, NULL, td->td_arg);
 
 	return (0);
 }
@@ -101,7 +105,7 @@ traverse_zil_record(zilog_t *zilog, lr_t *lrc, void *arg, uint64_t claim_txg)
 		SET_BOOKMARK(&zb, td->td_objset, lr->lr_foid,
 		    ZB_ZIL_LEVEL, lr->lr_offset / BP_GET_LSIZE(bp));
 
-		(void) td->td_func(td->td_spa, zilog, bp, NULL, &zb, NULL,
+		(void) td->td_func(td->td_spa, zilog, bp, &zb, NULL,
 		    td->td_arg);
 	}
 	return (0);
@@ -128,19 +132,102 @@ traverse_zil(traverse_data_t *td, zil_header_t *zh)
 	zil_free(zilog);
 }
 
+typedef enum resume_skip {
+	RESUME_SKIP_ALL,
+	RESUME_SKIP_NONE,
+	RESUME_SKIP_CHILDREN
+} resume_skip_t;
+
+/*
+ * Returns RESUME_SKIP_ALL if td indicates that we are resuming a traversal and
+ * the block indicated by zb does not need to be visited at all. Returns
+ * RESUME_SKIP_CHILDREN if we are resuming a post traversal and we reach the
+ * resume point. This indicates that this block should be visited but not its
+ * children (since they must have been visited in a previous traversal).
+ * Otherwise returns RESUME_SKIP_NONE.
+ */
+static resume_skip_t
+resume_skip_check(traverse_data_t *td, const dnode_phys_t *dnp,
+    const zbookmark_t *zb)
+{
+	if (td->td_resume != NULL && !ZB_IS_ZERO(td->td_resume)) {
+		/*
+		 * If we already visited this bp & everything below,
+		 * don't bother doing it again.
+		 */
+		if (zbookmark_is_before(dnp, zb, td->td_resume))
+			return (RESUME_SKIP_ALL);
+
+		/*
+		 * If we found the block we're trying to resume from, zero
+		 * the bookmark out to indicate that we have resumed.
+		 */
+		ASSERT3U(zb->zb_object, <=, td->td_resume->zb_object);
+		if (bcmp(zb, td->td_resume, sizeof (*zb)) == 0) {
+			bzero(td->td_resume, sizeof (*zb));
+			if (td->td_flags & TRAVERSE_POST)
+				return (RESUME_SKIP_CHILDREN);
+		}
+	}
+	return (RESUME_SKIP_NONE);
+}
+
+static void
+traverse_pause(traverse_data_t *td, const zbookmark_t *zb)
+{
+	ASSERT(td->td_resume != NULL);
+	ASSERT0(zb->zb_level);
+	bcopy(zb, td->td_resume, sizeof (*td->td_resume));
+}
+
+static void
+traverse_prefetch_metadata(traverse_data_t *td,
+    const blkptr_t *bp, const zbookmark_t *zb)
+{
+	uint32_t flags = ARC_NOWAIT | ARC_PREFETCH;
+
+	if (!(td->td_flags & TRAVERSE_PREFETCH_METADATA))
+		return;
+	/*
+	 * If we are in the process of resuming, don't prefetch, because
+	 * some children will not be needed (and in fact may have already
+	 * been freed).
+	 */
+	if (td->td_resume != NULL && !ZB_IS_ZERO(td->td_resume))
+		return;
+	if (BP_IS_HOLE(bp) || bp->blk_birth <= td->td_min_txg)
+		return;
+	if (BP_GET_LEVEL(bp) == 0 && BP_GET_TYPE(bp) != DMU_OT_DNODE)
+		return;
+
+	(void) arc_read(NULL, td->td_spa, bp, NULL, NULL,
+	    ZIO_PRIORITY_ASYNC_READ, ZIO_FLAG_CANFAIL, &flags, zb);
+}
+
 static int
 traverse_visitbp(traverse_data_t *td, const dnode_phys_t *dnp,
-    arc_buf_t *pbuf, blkptr_t *bp, const zbookmark_t *zb)
+    const blkptr_t *bp, const zbookmark_t *zb)
 {
 	zbookmark_t czb;
 	int err = 0, lasterr = 0;
 	arc_buf_t *buf = NULL;
 	prefetch_data_t *pd = td->td_pfd;
 	boolean_t hard = td->td_flags & TRAVERSE_HARD;
+	boolean_t pause = B_FALSE;
 
-	if (bp->blk_birth == 0) {
-		err = td->td_func(td->td_spa, NULL, NULL, pbuf, zb, dnp,
-		    td->td_arg);
+	switch (resume_skip_check(td, dnp, zb)) {
+	case RESUME_SKIP_ALL:
+		return (0);
+	case RESUME_SKIP_CHILDREN:
+		goto post;
+	case RESUME_SKIP_NONE:
+		break;
+	default:
+		ASSERT(0);
+	}
+
+	if (BP_IS_HOLE(bp)) {
+		err = td->td_func(td->td_spa, NULL, NULL, zb, dnp, td->td_arg);
 		return (err);
 	}
 
@@ -160,12 +247,14 @@ traverse_visitbp(traverse_data_t *td, const dnode_phys_t *dnp,
 	}
 
 	if (td->td_flags & TRAVERSE_PRE) {
-		err = td->td_func(td->td_spa, NULL, bp, pbuf, zb, dnp,
+		err = td->td_func(td->td_spa, NULL, bp, zb, dnp,
 		    td->td_arg);
 		if (err == TRAVERSE_VISIT_NO_CHILDREN)
 			return (0);
-		if (err)
-			return (err);
+		if (err == ERESTART)
+			pause = B_TRUE; /* handle pausing at a common point */
+		if (err != 0)
+			goto post;
 	}
 
 	if (BP_GET_LEVEL(bp) > 0) {
@@ -174,19 +263,25 @@ traverse_visitbp(traverse_data_t *td, const dnode_phys_t *dnp,
 		blkptr_t *cbp;
 		int epb = BP_GET_LSIZE(bp) >> SPA_BLKPTRSHIFT;
 
-		err = dsl_read(NULL, td->td_spa, bp, pbuf,
-		    arc_getbuf_func, &buf,
+		err = arc_read(NULL, td->td_spa, bp, arc_getbuf_func, &buf,
 		    ZIO_PRIORITY_ASYNC_READ, ZIO_FLAG_CANFAIL, &flags, zb);
 		if (err)
 			return (err);
-
-		/* recursively visitbp() blocks below this */
 		cbp = buf->b_data;
-		for (i = 0; i < epb; i++, cbp++) {
+
+		for (i = 0; i < epb; i++) {
 			SET_BOOKMARK(&czb, zb->zb_objset, zb->zb_object,
 			    zb->zb_level - 1,
 			    zb->zb_blkid * epb + i);
-			err = traverse_visitbp(td, dnp, buf, cbp, &czb);
+			traverse_prefetch_metadata(td, &cbp[i], &czb);
+		}
+
+		/* recursively visitbp() blocks below this */
+		for (i = 0; i < epb; i++) {
+			SET_BOOKMARK(&czb, zb->zb_objset, zb->zb_object,
+			    zb->zb_level - 1,
+			    zb->zb_blkid * epb + i);
+			err = traverse_visitbp(td, dnp, &cbp[i], &czb);
 			if (err) {
 				if (!hard)
 					break;
@@ -198,16 +293,20 @@ traverse_visitbp(traverse_data_t *td, const dnode_phys_t *dnp,
 		int i;
 		int epb = BP_GET_LSIZE(bp) >> DNODE_SHIFT;
 
-		err = dsl_read(NULL, td->td_spa, bp, pbuf,
-		    arc_getbuf_func, &buf,
+		err = arc_read(NULL, td->td_spa, bp, arc_getbuf_func, &buf,
 		    ZIO_PRIORITY_ASYNC_READ, ZIO_FLAG_CANFAIL, &flags, zb);
 		if (err)
 			return (err);
+		dnp = buf->b_data;
+
+		for (i = 0; i < epb; i++) {
+			prefetch_dnode_metadata(td, &dnp[i], zb->zb_objset,
+			    zb->zb_blkid * epb + i);
+		}
 
 		/* recursively visitbp() blocks below this */
-		dnp = buf->b_data;
-		for (i = 0; i < epb; i++, dnp++) {
-			err = traverse_dnode(td, dnp, buf, zb->zb_objset,
+		for (i = 0; i < epb; i++) {
+			err = traverse_dnode(td, &dnp[i], zb->zb_objset,
 			    zb->zb_blkid * epb + i);
 			if (err) {
 				if (!hard)
@@ -220,15 +319,23 @@ traverse_visitbp(traverse_data_t *td, const dnode_phys_t *dnp,
 		objset_phys_t *osp;
 		dnode_phys_t *dnp;
 
-		err = dsl_read_nolock(NULL, td->td_spa, bp,
-		    arc_getbuf_func, &buf,
+		err = arc_read(NULL, td->td_spa, bp, arc_getbuf_func, &buf,
 		    ZIO_PRIORITY_ASYNC_READ, ZIO_FLAG_CANFAIL, &flags, zb);
 		if (err)
 			return (err);
 
 		osp = buf->b_data;
 		dnp = &osp->os_meta_dnode;
-		err = traverse_dnode(td, dnp, buf, zb->zb_objset,
+		prefetch_dnode_metadata(td, dnp, zb->zb_objset,
+		    DMU_META_DNODE_OBJECT);
+		if (arc_buf_size(buf) >= sizeof (objset_phys_t)) {
+			prefetch_dnode_metadata(td, &osp->os_userused_dnode,
+			    zb->zb_objset, DMU_USERUSED_OBJECT);
+			prefetch_dnode_metadata(td, &osp->os_groupused_dnode,
+			    zb->zb_objset, DMU_USERUSED_OBJECT);
+		}
+
+		err = traverse_dnode(td, dnp, zb->zb_objset,
 		    DMU_META_DNODE_OBJECT);
 		if (err && hard) {
 			lasterr = err;
@@ -236,7 +343,7 @@ traverse_visitbp(traverse_data_t *td, const dnode_phys_t *dnp,
 		}
 		if (err == 0 && arc_buf_size(buf) >= sizeof (objset_phys_t)) {
 			dnp = &osp->os_userused_dnode;
-			err = traverse_dnode(td, dnp, buf, zb->zb_objset,
+			err = traverse_dnode(td, dnp, zb->zb_objset,
 			    DMU_USERUSED_OBJECT);
 		}
 		if (err && hard) {
@@ -245,7 +352,7 @@ traverse_visitbp(traverse_data_t *td, const dnode_phys_t *dnp,
 		}
 		if (err == 0 && arc_buf_size(buf) >= sizeof (objset_phys_t)) {
 			dnp = &osp->os_groupused_dnode;
-			err = traverse_dnode(td, dnp, buf, zb->zb_objset,
+			err = traverse_dnode(td, dnp, zb->zb_objset,
 			    DMU_GROUPUSED_OBJECT);
 		}
 	}
@@ -253,17 +360,43 @@ traverse_visitbp(traverse_data_t *td, const dnode_phys_t *dnp,
 	if (buf)
 		(void) arc_buf_remove_ref(buf, &buf);
 
+post:
 	if (err == 0 && lasterr == 0 && (td->td_flags & TRAVERSE_POST)) {
-		err = td->td_func(td->td_spa, NULL, bp, pbuf, zb, dnp,
-		    td->td_arg);
+		err = td->td_func(td->td_spa, NULL, bp, zb, dnp, td->td_arg);
+		if (err == ERESTART)
+			pause = B_TRUE;
+	}
+
+	if (pause && td->td_resume != NULL) {
+		ASSERT3U(err, ==, ERESTART);
+		ASSERT(!hard);
+		traverse_pause(td, zb);
 	}
 
 	return (err != 0 ? err : lasterr);
 }
 
+static void
+prefetch_dnode_metadata(traverse_data_t *td, const dnode_phys_t *dnp,
+    uint64_t objset, uint64_t object)
+{
+	int j;
+	zbookmark_t czb;
+
+	for (j = 0; j < dnp->dn_nblkptr; j++) {
+		SET_BOOKMARK(&czb, objset, object, dnp->dn_nlevels - 1, j);
+		traverse_prefetch_metadata(td, &dnp->dn_blkptr[j], &czb);
+	}
+
+	if (dnp->dn_flags & DNODE_FLAG_SPILL_BLKPTR) {
+		SET_BOOKMARK(&czb, objset, object, 0, DMU_SPILL_BLKID);
+		traverse_prefetch_metadata(td, &dnp->dn_spill, &czb);
+	}
+}
+
 static int
 traverse_dnode(traverse_data_t *td, const dnode_phys_t *dnp,
-    arc_buf_t *buf, uint64_t objset, uint64_t object)
+    uint64_t objset, uint64_t object)
 {
 	int j, err = 0, lasterr = 0;
 	zbookmark_t czb;
@@ -271,8 +404,7 @@ traverse_dnode(traverse_data_t *td, const dnode_phys_t *dnp,
 
 	for (j = 0; j < dnp->dn_nblkptr; j++) {
 		SET_BOOKMARK(&czb, objset, object, dnp->dn_nlevels - 1, j);
-		err = traverse_visitbp(td, dnp, buf,
-		    (blkptr_t *)&dnp->dn_blkptr[j], &czb);
+		err = traverse_visitbp(td, dnp, &dnp->dn_blkptr[j], &czb);
 		if (err) {
 			if (!hard)
 				break;
@@ -281,10 +413,8 @@ traverse_dnode(traverse_data_t *td, const dnode_phys_t *dnp,
 	}
 
 	if (dnp->dn_flags & DNODE_FLAG_SPILL_BLKPTR) {
-		SET_BOOKMARK(&czb, objset,
-		    object, 0, DMU_SPILL_BLKID);
-		err = traverse_visitbp(td, dnp, buf,
-		    (blkptr_t *)&dnp->dn_spill, &czb);
+		SET_BOOKMARK(&czb, objset, object, 0, DMU_SPILL_BLKID);
+		err = traverse_visitbp(td, dnp, &dnp->dn_spill, &czb);
 		if (err) {
 			if (!hard)
 				return (err);
@@ -297,8 +427,7 @@ traverse_dnode(traverse_data_t *td, const dnode_phys_t *dnp,
 /* ARGSUSED */
 static int
 traverse_prefetcher(spa_t *spa, zilog_t *zilog, const blkptr_t *bp,
-    arc_buf_t *pbuf, const zbookmark_t *zb, const dnode_phys_t *dnp,
-    void *arg)
+    const zbookmark_t *zb, const dnode_phys_t *dnp, void *arg)
 {
 	prefetch_data_t *pfd = arg;
 	uint32_t aflags = ARC_NOWAIT | ARC_PREFETCH;
@@ -319,10 +448,8 @@ traverse_prefetcher(spa_t *spa, zilog_t *zilog, const blkptr_t *bp,
 	cv_broadcast(&pfd->pd_cv);
 	mutex_exit(&pfd->pd_mtx);
 
-	(void) dsl_read(NULL, spa, bp, pbuf, NULL, NULL,
-	    ZIO_PRIORITY_ASYNC_READ,
-	    ZIO_FLAG_CANFAIL | ZIO_FLAG_SPECULATIVE,
-	    &aflags, zb);
+	(void) arc_read(NULL, spa, bp, NULL, NULL, ZIO_PRIORITY_ASYNC_READ,
+	    ZIO_FLAG_CANFAIL | ZIO_FLAG_SPECULATIVE, &aflags, zb);
 
 	return (0);
 }
@@ -340,7 +467,7 @@ traverse_prefetch_thread(void *arg)
 
 	SET_BOOKMARK(&czb, td.td_objset,
 	    ZB_ROOT_OBJECT, ZB_ROOT_LEVEL, ZB_ROOT_BLKID);
-	(void) traverse_visitbp(&td, NULL, NULL, td.td_rootbp, &czb);
+	(void) traverse_visitbp(&td, NULL, td.td_rootbp, &czb);
 
 	mutex_enter(&td_main->td_pfd->pd_mtx);
 	td_main->td_pfd->pd_exited = B_TRUE;
@@ -353,18 +480,29 @@ traverse_prefetch_thread(void *arg)
  * in syncing context).
  */
 static int
-traverse_impl(spa_t *spa, dsl_dataset_t *ds, blkptr_t *rootbp,
-    uint64_t txg_start, int flags, blkptr_cb_t func, void *arg)
+traverse_impl(spa_t *spa, dsl_dataset_t *ds, uint64_t objset, blkptr_t *rootbp,
+    uint64_t txg_start, zbookmark_t *resume, int flags,
+    blkptr_cb_t func, void *arg)
 {
 	traverse_data_t td;
 	prefetch_data_t pd = { 0 };
 	zbookmark_t czb;
 	int err;
 
+	ASSERT(ds == NULL || objset == ds->ds_object);
+	ASSERT(!(flags & TRAVERSE_PRE) || !(flags & TRAVERSE_POST));
+
+	/*
+	 * The data prefetching mechanism (the prefetch thread) is incompatible
+	 * with resuming from a bookmark.
+	 */
+	ASSERT(resume == NULL || !(flags & TRAVERSE_PREFETCH_DATA));
+
 	td.td_spa = spa;
-	td.td_objset = ds ? ds->ds_object : 0;
+	td.td_objset = objset;
 	td.td_rootbp = rootbp;
 	td.td_min_txg = txg_start;
+	td.td_resume = resume;
 	td.td_func = func;
 	td.td_arg = arg;
 	td.td_pfd = &pd;
@@ -386,14 +524,14 @@ traverse_impl(spa_t *spa, dsl_dataset_t *ds, blkptr_t *rootbp,
 		traverse_zil(&td, &os->os_zil_header);
 	}
 
-	if (!(flags & TRAVERSE_PREFETCH) ||
+	if (!(flags & TRAVERSE_PREFETCH_DATA) ||
 	    0 == taskq_dispatch(system_taskq, traverse_prefetch_thread,
 	    &td, TQ_NOQUEUE))
 		pd.pd_exited = B_TRUE;
 
 	SET_BOOKMARK(&czb, td.td_objset,
 	    ZB_ROOT_OBJECT, ZB_ROOT_LEVEL, ZB_ROOT_BLKID);
-	err = traverse_visitbp(&td, NULL, NULL, rootbp, &czb);
+	err = traverse_visitbp(&td, NULL, rootbp, &czb);
 
 	mutex_enter(&pd.pd_mtx);
 	pd.pd_cancel = B_TRUE;
@@ -416,8 +554,17 @@ int
 traverse_dataset(dsl_dataset_t *ds, uint64_t txg_start, int flags,
     blkptr_cb_t func, void *arg)
 {
-	return (traverse_impl(ds->ds_dir->dd_pool->dp_spa, ds,
-	    &ds->ds_phys->ds_bp, txg_start, flags, func, arg));
+	return (traverse_impl(ds->ds_dir->dd_pool->dp_spa, ds, ds->ds_object,
+	    &ds->ds_phys->ds_bp, txg_start, NULL, flags, func, arg));
+}
+
+int
+traverse_dataset_destroyed(spa_t *spa, blkptr_t *blkptr,
+    uint64_t txg_start, zbookmark_t *resume, int flags,
+    blkptr_cb_t func, void *arg)
+{
+	return (traverse_impl(spa, NULL, ZB_DESTROYED_OBJSET,
+	    blkptr, txg_start, resume, flags, func, arg));
 }
 
 /*
@@ -434,8 +581,8 @@ traverse_pool(spa_t *spa, uint64_t txg_start, int flags,
 	boolean_t hard = (flags & TRAVERSE_HARD);
 
 	/* visit the MOS */
-	err = traverse_impl(spa, NULL, spa_get_rootblkptr(spa),
-	    txg_start, flags, func, arg);
+	err = traverse_impl(spa, NULL, 0, spa_get_rootblkptr(spa),
+	    txg_start, NULL, flags, func, arg);
 	if (err)
 		return (err);
 

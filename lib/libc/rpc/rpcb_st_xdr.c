@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/rpcb_st_xdr.c 173763 2007-11-20 01:51:20Z jb $");
 
 #include "namespace.h"
 #include <rpc/rpc.h>

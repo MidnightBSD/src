@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/netinet6/ip6_sockets/Makefile 160500 2006-07-19 12:54:14Z rwatson $
 #
 
 PROG=	ip6_sockets

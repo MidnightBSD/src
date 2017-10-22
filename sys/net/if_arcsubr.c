@@ -1,5 +1,5 @@
 /*	$NetBSD: if_arcsubr.c,v 1.36 2001/06/14 05:44:23 itojun Exp $	*/
-/*	$FreeBSD$ */
+/*	$FreeBSD: stable/9/sys/net/if_arcsubr.c 249132 2013-04-05 08:22:11Z mav $ */
 
 /*-
  * Copyright (c) 1994, 1995 Ignatios Souvatzis
@@ -837,7 +837,7 @@ arc_resolvemulti(struct ifnet *ifp, struct sockaddr **llsa,
 	}
 }
 
-MALLOC_DEFINE(M_ARCCOM, "arccom", "ARCNET interface internals");
+static MALLOC_DEFINE(M_ARCCOM, "arccom", "ARCNET interface internals");
 
 static void*
 arc_alloc(u_char type, struct ifnet *ifp)

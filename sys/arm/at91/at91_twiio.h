@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/arm/at91/at91_twiio.h 185265 2008-11-25 00:13:26Z imp $
  */
 
 #ifndef _ARM_AT91_AT91_TWIIO_H

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/pc98/cbus/fdc_cbus.c 146216 2005-05-14 10:51:16Z nyan $");
 
 #include <sys/param.h>
 #include <sys/bio.h>

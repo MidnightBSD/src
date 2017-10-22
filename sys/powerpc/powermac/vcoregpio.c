@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/powermac/vcoregpio.c 193156 2009-05-31 09:01:23Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

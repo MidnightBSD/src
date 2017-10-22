@@ -32,7 +32,7 @@
  *
  * $Id: ib_user_cm.h 4019 2005-11-11 00:33:09Z sean.hefty $
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/contrib/rdma/ib_user_cm.h 178784 2008-05-05 18:35:55Z kmacy $
  */
 
 #ifndef IB_USER_CM_H

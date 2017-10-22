@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/usr.sbin/newsyslog/regress.sh 220927 2011-04-21 16:40:34Z simon $
 
 COUNT=0
 TMPDIR=`mktemp -d -t regress_newsyslog`

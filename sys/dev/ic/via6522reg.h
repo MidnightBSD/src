@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/ic/via6522reg.h 153030 2005-12-02 22:36:14Z grehan $
  */
 
 #ifndef _VIA6522REG_H_

@@ -57,7 +57,7 @@
  *	from: @(#)isa.c	7.2 (Berkeley) 5/13/91
  *	form: src/sys/i386/isa/intr_machdep.c,v 1.57 2001/07/20
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/powerpc/intr_machdep.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #include "opt_isa.h"
@@ -89,7 +89,7 @@
 
 #define	MAX_STRAY_LOG	5
 
-MALLOC_DEFINE(M_INTR, "intr", "interrupt handler data");
+static MALLOC_DEFINE(M_INTR, "intr", "interrupt handler data");
 
 struct powerpc_intr {
 	struct intr_event *event;

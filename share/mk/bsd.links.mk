@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/mk/bsd.links.mk 248531 2013-03-19 20:00:34Z brooks $
 
 .if !target(__<bsd.init.mk>__)
 .error bsd.links.mk cannot be included directly.

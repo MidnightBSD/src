@@ -45,6 +45,9 @@ int aok;
 uint64_t physmem;
 vnode_t *rootdir = (vnode_t *)0xabcd1234;
 char hw_serial[HW_HOSTID_LEN];
+#ifdef illumos
+kmutex_t cpu_lock;
+#endif
 
 struct utsname utsname = {
 	"userland", "libzpool", "1", "1", "na"
@@ -474,7 +477,9 @@ vn_rdwr(int uio, vnode_t *vp, void *addr, ssize_t len, offset_t offset,
 		 * To simulate partial disk writes, we split writes into two
 		 * system calls so that the process can be killed in between.
 		 */
-		split = (len > 0 ? rand() % len : 0);
+		int sectors = len >> SPA_MINBLOCKSHIFT;
+		split = (sectors > 0 ? rand() % sectors : 0) <<
+		    SPA_MINBLOCKSHIFT;
 		iolen = pwrite64(vp->v_fd, addr, split, offset);
 		iolen += pwrite64(vp->v_fd, (char *)addr + split,
 		    len - split, offset + split);
@@ -840,6 +845,28 @@ ddi_strtoull(const char *str, char **nptr, int base, u_longlong_t *result)
 	return (0);
 }
 
+#ifdef illumos
+/* ARGSUSED */
+cyclic_id_t
+cyclic_add(cyc_handler_t *hdlr, cyc_time_t *when)
+{
+	return (1);
+}
+
+/* ARGSUSED */
+void
+cyclic_remove(cyclic_id_t id)
+{
+}
+
+/* ARGSUSED */
+int
+cyclic_reprogram(cyclic_id_t id, hrtime_t expiration)
+{
+	return (1);
+}
+#endif
+
 /*
  * =========================================================================
  * kernel emulation setup & teardown
@@ -872,6 +899,10 @@ kernel_init(int mode)
 	VERIFY((urandom_fd = open("/dev/urandom", O_RDONLY)) != -1);
 
 	system_taskq_init();
+
+#ifdef illumos
+	mutex_init(&cpu_lock, NULL, MUTEX_DEFAULT, NULL);
+#endif
 
 	spa_init(mode);
 }

@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/libiconv_modules/UES/citrus_ues.c 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: citrus_ues.c,v 1.1 2006/11/13 15:16:31 tnozaki Exp $ */
 
 /*-

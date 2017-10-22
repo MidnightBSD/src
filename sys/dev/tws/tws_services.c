@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/tws/tws_services.c 226969 2011-10-31 20:02:11Z delphij $
  */
 
 #include <dev/tws/tws.h>

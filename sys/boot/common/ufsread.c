@@ -44,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/common/ufsread.c 233468 2012-03-25 16:24:42Z marius $");
 
 #include <ufs/ufs/dinode.h>
 #include <ufs/ufs/dir.h>

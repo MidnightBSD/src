@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/intr_machdep.c 245981 2013-01-27 16:49:11Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -92,15 +92,15 @@ static uint16_t intr_stray_count[IV_MAX];
 static const char *const pil_names[] = {
 	"stray",
 	"low",		/* PIL_LOW */
+	"preempt",	/* PIL_PREEMPT */
 	"ithrd",	/* PIL_ITHREAD */
 	"rndzvs",	/* PIL_RENDEZVOUS */
 	"ast",		/* PIL_AST */
-	"stop",		/* PIL_STOP */
-	"preempt",	/* PIL_PREEMPT */
 	"hardclock",	/* PIL_HARDCLOCK */
 	"stray", "stray", "stray", "stray",
 	"filter",	/* PIL_FILTER */
 	"bridge",	/* PIL_BRIDGE */
+	"stop",		/* PIL_STOP */
 	"tick",		/* PIL_TICK */
 };
 

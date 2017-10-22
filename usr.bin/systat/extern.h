@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *      @(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/systat/extern.h 241213 2012-10-04 22:56:15Z melifaro $
  */
 
 #include <sys/cdefs.h>
@@ -49,11 +49,12 @@ extern int	CMDLINE;
 extern int	dk_ndrive;
 extern int	hz, stathz;
 extern double	hertz;		/* sampling frequency for cp_time and dk_time */
-extern int	naptime, col;
+extern int	col;
 extern int	nhosts;
 extern int	nports;
 extern int	protos;
 extern int	verbose;
+extern unsigned int	delay;
 
 struct inpcb;
 
@@ -87,7 +88,7 @@ int	 cmdnetstat(const char *, const char *);
 struct	 cmdtab *lookup(const char *);
 void	 command(const char *);
 void	 die(int);
-void	 display(int);
+void	 display(void);
 int	 dkinit(void);
 int	 dkcmd(char *, char *);
 void	 error(const char *fmt, ...) __printflike(1, 2);

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/i386/include/param.h 240097 2012-09-04 19:14:57Z des $
  */
 
 #include <machine/_align.h>
@@ -125,9 +125,15 @@
 /*
  * Ceiling on amount of swblock kva space, can be changed via
  * the kern.maxswzone /boot/loader.conf variable.
+ *
+ * 276 is sizeof(struct swblock), but we do not always have a definition
+ * in scope for struct swblock, so we have to hardcode it.  Each struct
+ * swblock holds metadata for 32 pages, so in theory, this is enough for
+ * 16 GB of swap.  In practice, however, the usable amount is considerably
+ * lower due to fragmentation.
  */
 #ifndef VM_SWZONE_SIZE_MAX
-#define VM_SWZONE_SIZE_MAX	(32 * 1024 * 1024)
+#define VM_SWZONE_SIZE_MAX	(276 * 128 * 1024)
 #endif
 
 /*

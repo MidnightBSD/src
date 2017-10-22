@@ -1,6 +1,6 @@
 /*	$NetBSD: if_udavreg.h,v 1.2 2003/09/04 15:17:39 tsutsui Exp $	*/
 /*	$nabe: if_udavreg.h,v 1.2 2003/08/21 16:26:40 nabe Exp $	*/
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sys/dev/usb/net/if_udavreg.h 242819 2012-11-09 06:58:23Z hselasky $	*/
 /*-
  * Copyright (c) 2003
  *     Shingo WATANABE <nabe@nabechan.org>.  All rights reserved.
@@ -159,6 +159,7 @@ struct udav_softc {
 	int			sc_flags;
 #define	UDAV_FLAG_LINK		0x0001
 #define	UDAV_FLAG_EXT_PHY	0x0040
+#define	UDAV_FLAG_NO_PHY	0x0080
 };
 
 #define	UDAV_LOCK(_sc)			mtx_lock(&(_sc)->sc_mtx)

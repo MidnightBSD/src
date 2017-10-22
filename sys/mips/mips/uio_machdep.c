@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/mips/uio_machdep.c 218195 2011-02-02 16:35:10Z mdf $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

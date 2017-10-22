@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/net/getifaddrs.c 197029 2009-09-09 10:31:20Z phk $");
 
 #include "namespace.h"
 #include <sys/types.h>

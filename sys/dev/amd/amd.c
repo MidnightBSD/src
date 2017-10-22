@@ -30,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/amd/amd.c 201758 2010-01-07 21:01:37Z mbr $
  */
 
 /*

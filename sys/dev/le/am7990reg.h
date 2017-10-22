@@ -70,7 +70,7 @@
  *	@(#)if_lereg.h	8.1 (Berkeley) 6/10/93
  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/le/am7990reg.h 155093 2006-01-31 14:48:58Z marius $ */
 
 #ifndef _DEV_LE_AM7990REG_H_
 #define	_DEV_LE_AM7990REG_H_

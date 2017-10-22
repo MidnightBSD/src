@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)cdefs.h	8.8 (Berkeley) 1/9/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/cdefs.h 242893 2012-11-11 12:21:51Z ed $
  */
 
 #ifndef	_SYS_CDEFS_H_
@@ -404,6 +404,22 @@
 	(__offsetof(type, end) - __offsetof(type, start))
 
 /*
+ * Given the pointer x to the member m of the struct s, return
+ * a pointer to the containing structure.  When using GCC, we first
+ * assign pointer x to a local variable, to check that its type is
+ * compatible with member m.
+ */
+#if __GNUC_PREREQ__(3, 1)
+#define	__containerof(x, s, m) ({					\
+	const volatile __typeof(((s *)0)->m) *__x = (x);		\
+	__DEQUALIFY(s *, (const volatile char *)__x - __offsetof(s, m));\
+})
+#else
+#define	__containerof(x, s, m)						\
+	__DEQUALIFY(s *, (const volatile char *)(x) - __offsetof(s, m))
+#endif
+
+/*
  * Compiler-dependent macros to declare that functions take printf-like
  * or scanf-like arguments.  They are null except for versions of gcc
  * that are known to support the features properly (old versions of gcc-2
@@ -486,7 +502,7 @@
  * Embed the rcs id of a source file in the resulting library.  Note that in
  * more recent ELF binutils, we use .ident allowing the ID to be stripped.
  * Usage:
- *	__FBSDID("$FreeBSD$");
+ *	__FBSDID("$FreeBSD: stable/9/sys/sys/cdefs.h 242893 2012-11-11 12:21:51Z ed $");
  */
 #ifndef	__FBSDID
 #if !defined(lint) && !defined(STRIP_FBSDID)

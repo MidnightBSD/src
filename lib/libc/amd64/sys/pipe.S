@@ -34,7 +34,7 @@
 	.asciz "@(#)pipe.s	5.1 (Berkeley) 4/23/90"
 #endif /* SYSLIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/amd64/sys/pipe.S 217106 2011-01-07 16:08:40Z kib $");
 
 #include "SYS.h"
 

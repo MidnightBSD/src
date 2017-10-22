@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi_package.c 202771 2010-01-21 21:14:28Z jkim $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

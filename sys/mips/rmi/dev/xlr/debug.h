@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  * RMI_BSD
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/rmi/dev/xlr/debug.h 211996 2010-08-30 13:26:07Z jchandra $
  */
 #ifndef _RMI_DEBUG_H_
 #define _RMI_DEBUG_H_

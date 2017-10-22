@@ -35,7 +35,7 @@ static char *sccsid2 = "@(#)clnt_perror.c 1.15 87/10/07 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)clnt_perror.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/clnt_perror.c 241059 2012-09-30 00:44:24Z pfg $");
 
 /*
  * clnt_perror.c

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/cam/scsi/scsi_pt.c 246437 2013-02-06 22:07:38Z mav $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -255,11 +255,6 @@ ptctor(struct cam_periph *periph, void *arg)
 	struct ccb_pathinq cpi;
 
 	cgd = (struct ccb_getdev *)arg;
-	if (periph == NULL) {
-		printf("ptregister: periph was NULL!!\n");
-		return(CAM_REQ_CMP_ERR);
-	}
-
 	if (cgd == NULL) {
 		printf("ptregister: no getdev CCB, can't register device\n");
 		return(CAM_REQ_CMP_ERR);

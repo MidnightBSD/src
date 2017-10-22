@@ -24,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/security/cap_test/cap_test_relative.c 224793 2011-08-12 10:52:46Z jonathan $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/regression/security/cap_test/cap_test_relative.c 224793 2011-08-12 10:52:46Z jonathan $");
 
 #include <sys/param.h>
 #include <sys/capability.h>

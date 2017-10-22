@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/syslogd 242153 2012-10-26 18:06:49Z obrien $
 #
 
 # PROVIDE: syslogd
-# REQUIRE: mountcritremote cleanvar newsyslog
+# REQUIRE: mountcritremote FILESYSTEMS newsyslog
 # BEFORE:  SERVERS
 
 . /etc/rc.subr

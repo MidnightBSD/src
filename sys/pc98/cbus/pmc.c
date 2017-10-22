@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/pc98/cbus/pmc.c 130026 2004-06-03 06:10:02Z phk $
  */
 
 #include <sys/param.h>

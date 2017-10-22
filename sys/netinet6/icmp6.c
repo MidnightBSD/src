@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/icmp6.c 244524 2012-12-21 00:41:52Z delphij $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -133,15 +133,15 @@ VNET_DECLARE(int, icmp6_nodeinfo);
 static void icmp6_errcount(struct icmp6errstat *, int, int);
 static int icmp6_rip6_input(struct mbuf **, int);
 static int icmp6_ratelimit(const struct in6_addr *, const int, const int);
-static const char *icmp6_redirect_diag __P((struct in6_addr *,
-	struct in6_addr *, struct in6_addr *));
+static const char *icmp6_redirect_diag(struct in6_addr *,
+	struct in6_addr *, struct in6_addr *);
 static struct mbuf *ni6_input(struct mbuf *, int);
 static struct mbuf *ni6_nametodns(const char *, int, int);
 static int ni6_dnsmatch(const char *, int, const char *, int);
-static int ni6_addrs __P((struct icmp6_nodeinfo *, struct mbuf *,
-			  struct ifnet **, struct in6_addr *));
-static int ni6_store_addrs __P((struct icmp6_nodeinfo *, struct icmp6_nodeinfo *,
-				struct ifnet *, int));
+static int ni6_addrs(struct icmp6_nodeinfo *, struct mbuf *,
+			  struct ifnet **, struct in6_addr *);
+static int ni6_store_addrs(struct icmp6_nodeinfo *, struct icmp6_nodeinfo *,
+				struct ifnet *, int);
 static int icmp6_notify_error(struct mbuf **, int, int, int);
 
 /*
@@ -2681,9 +2681,9 @@ icmp6_redirect_output(struct mbuf *m0, struct rtentry *rt)
 		struct nd_opt_hdr *nd_opt;
 		char *lladdr;
 
-		IF_AFDATA_LOCK(ifp);
+		IF_AFDATA_RLOCK(ifp);
 		ln = nd6_lookup(router_ll6, 0, ifp);
-		IF_AFDATA_UNLOCK(ifp);
+		IF_AFDATA_RUNLOCK(ifp);
 		if (ln == NULL)
 			goto nolladdropt;
 

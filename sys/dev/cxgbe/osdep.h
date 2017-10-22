@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/cxgbe/osdep.h 242015 2012-10-24 19:04:17Z gavin $
  *
  */
 
@@ -83,7 +83,7 @@ typedef boolean_t bool;
 #define simple_strtoul strtoul
 #define DIV_ROUND_UP(x, y) howmany(x, y)
 
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#define ARRAY_SIZE(x) nitems(x)
 #define container_of(p, s, f) ((s *)(((uint8_t *)(p)) - offsetof(s, f)))
 
 #define swab16(x) bswap16(x) 
@@ -118,13 +118,13 @@ typedef boolean_t bool;
 #define PCI_VPD_DATA    PCIR_VPD_DATA
 
 #define PCI_CAP_ID_EXP		PCIY_EXPRESS
-#define PCI_EXP_DEVCTL		PCIR_EXPRESS_DEVICE_CTL
-#define PCI_EXP_DEVCTL_PAYLOAD	PCIM_EXP_CTL_MAX_PAYLOAD
-#define PCI_EXP_DEVCTL_READRQ	PCIM_EXP_CTL_MAX_READ_REQUEST
-#define PCI_EXP_LNKCTL		PCIR_EXPRESS_LINK_CTL
-#define PCI_EXP_LNKSTA		PCIR_EXPRESS_LINK_STA
-#define PCI_EXP_LNKSTA_CLS	PCIM_LINK_STA_SPEED
-#define PCI_EXP_LNKSTA_NLW	PCIM_LINK_STA_WIDTH
+#define PCI_EXP_DEVCTL		PCIER_DEVICE_CTL
+#define PCI_EXP_DEVCTL_PAYLOAD	PCIEM_CTL_MAX_PAYLOAD
+#define PCI_EXP_DEVCTL_READRQ	PCIEM_CTL_MAX_READ_REQUEST
+#define PCI_EXP_LNKCTL		PCIER_LINK_CTL
+#define PCI_EXP_LNKSTA		PCIER_LINK_STA
+#define PCI_EXP_LNKSTA_CLS	PCIEM_LINK_STA_SPEED
+#define PCI_EXP_LNKSTA_NLW	PCIEM_LINK_STA_WIDTH
 #define PCI_EXP_DEVCTL2		0x28
 
 static inline int

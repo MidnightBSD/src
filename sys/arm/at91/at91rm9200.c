@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/at91/at91rm9200.c 217036 2011-01-05 23:45:07Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

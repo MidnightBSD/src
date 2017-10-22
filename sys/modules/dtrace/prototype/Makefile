@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/dtrace/prototype/Makefile 179065 2008-05-17 02:31:19Z jb $
 
 .PATH: ${.CURDIR}/../../../cddl/dev
 

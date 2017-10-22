@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/regression/aio/aiop/aiop.c 179017 2008-05-15 16:10:55Z adrian $");
 
 #include <stdio.h>
 #include <stdlib.h>

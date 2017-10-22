@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)4.t	8.1 (Berkeley) 6/8/93
-.\"	$FreeBSD$
+.\"	$FreeBSD: stable/9/share/doc/psd/21.ipc/4.t 117278 2003-07-06 10:37:00Z charnier $
 .\"
 .\".ds RH "Client/Server Model
 .bp

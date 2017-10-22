@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libipsec/ipsec_dump_policy.c 216369 2010-12-11 08:07:21Z kevlo $");
 
 #include <sys/types.h>
 #include <sys/param.h>

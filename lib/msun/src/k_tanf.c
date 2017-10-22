@@ -15,7 +15,7 @@
 
 #ifndef INLINE_KERNEL_TANDF
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/k_tanf.c 239529 2012-08-21 19:45:48Z dim $");
 #endif
 
 #include "math.h"
@@ -32,10 +32,10 @@ T[] =  {
   0x1362b9bf971bcd.0p-59,	/* 0.00946564784943673166728 */
 };
 
-#ifndef INLINE_KERNEL_TANDF
-extern
+#ifdef INLINE_KERNEL_TANDF
+static __inline
 #endif
-__inline float
+float
 __kernel_tandf(double x, int iy)
 {
 	double z,r,w,s,t,u;

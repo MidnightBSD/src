@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/create/perform.c 241135 2012-10-02 17:04:53Z bapt $");
 
 #include "lib.h"
 #include "create.h"
@@ -215,10 +215,14 @@ pkg_perform(char **pkgs)
 
     /* Prefix should add an @cwd to the packing list */
     if (Prefix) {
-        char resolved_prefix[PATH_MAX];
-        if (realpath(Prefix, resolved_prefix) == NULL)
-	    err(EXIT_FAILURE, "couldn't resolve path for prefix: %s", Prefix);
-	add_plist_top(&plist, PLIST_CWD, resolved_prefix);
+	if (Prefix[0] != '/') {
+		char resolved_prefix[PATH_MAX];
+		if (realpath(Prefix, resolved_prefix) == NULL)
+		    err(EXIT_FAILURE, "couldn't resolve path for prefix: %s", Prefix);
+		add_plist_top(&plist, PLIST_CWD, resolved_prefix);
+	} else {
+		add_plist_top(&plist, PLIST_CWD, Prefix);
+	}
     }
 
     /* Add the origin if asked, at the top */

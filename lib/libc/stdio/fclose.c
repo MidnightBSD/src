@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)fclose.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/stdio/fclose.c 234871 2012-05-01 10:49:20Z kib $");
 
 #include "namespace.h"
 #include <errno.h>

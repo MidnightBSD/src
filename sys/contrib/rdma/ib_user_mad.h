@@ -32,7 +32,7 @@
  *
  * $Id: ib_user_mad.h 2814 2005-07-06 19:14:09Z halr $
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/contrib/rdma/ib_user_mad.h 178784 2008-05-05 18:35:55Z kmacy $
  */
 
 #ifndef IB_USER_MAD_H

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/examples/Makefile 249503 2013-04-15 07:01:20Z bapt $
 #
 # Doing a make install builds /usr/share/examples
 
@@ -53,14 +53,9 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	csh/dot.cshrc \
 	cvsup/README \
 	cvsup/cvs-supfile \
-	cvsup/doc-supfile \
 	cvsup/gnats-supfile \
-	cvsup/ports-supfile \
-	cvsup/refuse \
-	cvsup/refuse.README \
 	cvsup/stable-supfile \
 	cvsup/standard-supfile \
-	cvsup/www-supfile \
 	diskless/ME \
 	diskless/README.BOOTP \
 	diskless/README.TEMPLATING \

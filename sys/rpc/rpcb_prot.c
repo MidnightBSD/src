@@ -38,7 +38,7 @@
 static char sccsid[] = "@(#)rpcb_prot.c 1.9 89/04/21 Copyr 1984 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/rpc/rpcb_prot.c 182154 2008-08-25 09:36:17Z dfr $");
 
 /*
  * rpcb_prot.c

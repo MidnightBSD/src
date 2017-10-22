@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/fs/nfsserver/nfs_nfsdserv.c 246187 2013-02-01 00:32:01Z delphij $");
 
 /*
  * nfs version 2, 3 and 4 server calls to vnode ops
@@ -54,6 +54,11 @@ extern struct timeval nfsboottime;
 extern int nfs_rootfhset;
 extern int nfsrv_enable_crossmntpt;
 #endif	/* !APPLEKEXT */
+
+static int	nfs_async = 0;
+SYSCTL_DECL(_vfs_nfsd);
+SYSCTL_INT(_vfs_nfsd, OID_AUTO, async, CTLFLAG_RW, &nfs_async, 0,
+    "Tell client that writes were synced even though they were not");
 
 /*
  * This list defines the GSS mechanisms supported.
@@ -912,7 +917,13 @@ nfsrvd_write(struct nfsrv_descript *nd, __unused int isdgram,
 			goto out;
 		NFSM_BUILD(tl, u_int32_t *, 4 * NFSX_UNSIGNED);
 		*tl++ = txdr_unsigned(retlen);
-		if (stable == NFSWRITE_UNSTABLE)
+		/*
+		 * If nfs_async is set, then pretend the write was FILESYNC.
+		 * Warning: Doing this violates RFC1813 and runs a risk
+		 * of data written by a client being lost when the server
+		 * crashes/reboots.
+		 */
+		if (stable == NFSWRITE_UNSTABLE && nfs_async == 0)
 			*tl++ = txdr_unsigned(stable);
 		else
 			*tl++ = txdr_unsigned(NFSWRITE_FILESYNC);

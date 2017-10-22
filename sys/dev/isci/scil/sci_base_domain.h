@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/isci/scil/sci_base_domain.h 240579 2012-09-17 00:44:16Z eadler $
  */
 #ifndef _SCI_BASE_DOMAIN_H_
 #define _SCI_BASE_DOMAIN_H_
@@ -92,7 +92,7 @@ typedef enum _SCI_BASE_DOMAIN_STATES
    SCI_BASE_DOMAIN_STATE_STARTING,
 
    /**
-    * This state indicates the the domain is now ready.  Thus, the user
+    * This state indicates the domain is now ready.  Thus, the user
     * is able to perform IO operations to remote devices in this domain.
     * This state is entered from the STOPPED state.
     * This state is entered from the STOPPING state.

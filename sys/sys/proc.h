@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)proc.h	8.15 (Berkeley) 5/19/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/proc.h 249444 2013-04-13 21:04:06Z trasz $
  */
 
 #ifndef _SYS_PROC_H_
@@ -312,7 +312,11 @@ struct thread {
 	struct vnet	*td_vnet;	/* (k) Effective vnet. */
 	const char	*td_vnet_lpush;	/* (k) Debugging vnet push / pop. */
 	struct trapframe *td_intr_frame;/* (k) Frame of the current irq */
-	struct proc *td_rfppwait_p;	/* (k) The vforked child */
+	struct proc	*td_rfppwait_p;	/* (k) The vforked child */
+	struct vm_page	**td_ma;	/* (k) uio pages held */
+	int		td_ma_cnt;	/* (k) size of *td_ma */
+	struct rl_q_entry *td_rlqe;	/* (k) Associated range lock entry. */
+	u_int		td_vp_reserv;	/* (k) Count of reserved vnodes. */
 };
 
 struct mtx *thread_lock_block(struct thread *);
@@ -420,6 +424,7 @@ do {									\
 #define	TDP_RFPPWAIT	0x02000000 /* Handle RFPPWAIT on syscall exit */
 #define	TDP_RESETSPUR	0x04000000 /* Reset spurious page fault history. */
 #define	TDP_NERRNO	0x08000000 /* Last errno is already in td_errno */
+#define	TDP_UIOHELD	0x10000000 /* Current uio has pages held in td_ma */
 
 /*
  * Reasons that the current thread can not be run yet.
@@ -588,6 +593,7 @@ struct proc {
 	 */
 	LIST_ENTRY(proc) p_orphan;	/* (e) List of orphan processes. */
 	LIST_HEAD(, proc) p_orphans;	/* (e) Pointer to list of orphans. */
+	u_char		p_throttled;	/* (c) Flag for racct pcpu throttling */
 };
 
 #define	p_session	p_pgrp->pg_session
@@ -631,6 +637,7 @@ struct proc {
 #define	P_INMEM		0x10000000 /* Loaded into memory. */
 #define	P_SWAPPINGOUT	0x20000000 /* Process is being swapped out. */
 #define	P_SWAPPINGIN	0x40000000 /* Process is being swapped in. */
+#define	P_PPTRACE	0x80000000 /* PT_TRACEME by vforked child. */
 
 #define	P_STOPPED	(P_STOPPED_SIG|P_STOPPED_SINGLE|P_STOPPED_TRACE)
 #define	P_SHOULDSTOP(p)	((p)->p_flag & P_STOPPED)
@@ -693,11 +700,12 @@ MALLOC_DECLARE(M_SUBPROC);
 #define	FIRST_THREAD_IN_PROC(p)	TAILQ_FIRST(&(p)->p_threads)
 
 /*
- * We use process IDs <= PID_MAX; PID_MAX + 1 must also fit in a pid_t,
- * as it is used to represent "no process group".
+ * We use process IDs <= pid_max <= PID_MAX; PID_MAX + 1 must also fit
+ * in a pid_t, as it is used to represent "no process group".
  */
 #define	PID_MAX		99999
 #define	NO_PID		100000
+extern pid_t pid_max;
 
 #define	SESS_LEADER(p)	((p)->p_session->s_leader == (p))
 
@@ -829,6 +837,7 @@ extern struct proc *initproc, *pageproc; /* Process slots for init, pager. */
 extern struct uma_zone *proc_zone;
 
 struct	proc *pfind(pid_t);		/* Find process by id. */
+struct	proc *pfind_locked(pid_t pid);
 struct	pgrp *pgfind(pid_t);		/* Find process group by id. */
 struct	proc *zpfind(pid_t);		/* Find zombie process by id. */
 
@@ -879,8 +888,7 @@ int	proc_getenvv(struct thread *td, struct proc *p, struct sbuf *sb);
 void	procinit(void);
 void	proc_linkup0(struct proc *p, struct thread *td);
 void	proc_linkup(struct proc *p, struct thread *td);
-void	proc_reap(struct thread *td, struct proc *p, int *status, int options,
-	    struct rusage *rusage);
+void	proc_reap(struct thread *td, struct proc *p, int *status, int options);
 void	proc_reparent(struct proc *child, struct proc *newparent);
 struct	pstats *pstats_alloc(void);
 void	pstats_fork(struct pstats *src, struct pstats *dst);

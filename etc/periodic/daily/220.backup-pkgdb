@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/periodic/daily/220.backup-pkgdb 221475 2011-05-05 02:35:11Z dougb $
 #
 
 # If there is a global system configuration file, suck it in.

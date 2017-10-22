@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/usr.bin/mkesdb/yacc.y 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: yacc.y,v 1.4 2005/06/02 02:09:25 lukem Exp $	*/
 
 %{

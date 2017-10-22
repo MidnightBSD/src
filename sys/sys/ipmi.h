@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/ipmi.h 162562 2006-09-22 22:11:29Z jhb $
  */
 
 #ifndef __SYS_IPMI_H__

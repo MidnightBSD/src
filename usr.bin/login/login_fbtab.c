@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/login/login_fbtab.c 201382 2010-01-02 10:09:20Z ed $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

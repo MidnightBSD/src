@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/dumpcis/main.c 185125 2008-11-20 08:32:19Z imp $");
 
 #include <fcntl.h>
 #include <stdio.h>

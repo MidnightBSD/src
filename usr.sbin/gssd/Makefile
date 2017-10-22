@@ -1,4 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/gssd/Makefile 245089 2013-01-06 01:41:14Z rmacklem $
+
+.include <bsd.own.mk>
 
 PROG=	gssd
 MAN=	gssd.8
@@ -9,6 +11,12 @@ WARNS?= 1
 
 DPADD=	${LIBGSSAPI}
 LDADD=	-lgssapi
+.if ${MK_KERBEROS_SUPPORT} != "no"
+DPADD+=	${LIBKRB5} ${LIBHX509} ${LIBASN1} ${LIBROKEN} ${LIBCOM_ERR} ${LIBCRYPT} ${LIBCRYPTO}
+LDADD+=	-lkrb5 -lhx509 -lasn1 -lroken -lcom_err -lcrypt -lcrypto
+.else
+CFLAGS+= -DWITHOUT_KERBEROS
+.endif
 
 CLEANFILES= gssd_svc.c gssd.h
 

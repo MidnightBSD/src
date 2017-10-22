@@ -48,7 +48,7 @@ static char sccsid[] = "@(#)newfs.c	8.13 (Berkeley) 5/1/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/newfs/newfs.c 246284 2013-02-03 12:17:49Z trasz $");
 
 /*
  * newfs: friendly front end to mkfs
@@ -94,6 +94,7 @@ int	lflag;			/* enable multilabel for file system */
 int	nflag;			/* do not create .snap directory */
 int	tflag;			/* enable TRIM */
 intmax_t fssize;		/* file system size */
+off_t	mediasize;		/* device size */
 int	sectorsize;		/* bytes/sector */
 int	realsectorsize;		/* bytes/sector in hardware */
 int	fsize = 0;		/* fragment size */
@@ -135,7 +136,6 @@ main(int argc, char *argv[])
 	char *cp, *special;
 	intmax_t reserved;
 	int ch, i, rval;
-	off_t mediasize;
 	char part_name;		/* partition name, default to full disk */
 
 	part_name = 'c';

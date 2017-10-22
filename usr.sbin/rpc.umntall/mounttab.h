@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/rpc.umntall/mounttab.h 194880 2009-06-24 18:42:21Z dfr $
  */
 
 #define STRSIZ  (MNTNAMLEN+MNTPATHLEN+100)

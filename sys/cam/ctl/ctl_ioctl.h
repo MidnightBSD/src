@@ -29,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_ioctl.h#4 $
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cam/ctl/ctl_ioctl.h 237821 2012-06-29 21:19:24Z ken $
  */
 /*
  * CAM Target Layer ioctl interface.

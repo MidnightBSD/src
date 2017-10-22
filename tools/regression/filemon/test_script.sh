@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/filemon/test_script.sh 236594 2012-06-04 22:59:33Z obrien $
 
 trap 'rm -f $f1 $f2; exit 1' 1 2 3 13 15
 echo shazbot > /dev/null

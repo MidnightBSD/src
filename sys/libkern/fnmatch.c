@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/libkern/fnmatch.c 154660 2006-01-22 00:46:40Z rwatson $");
 
 /*
  * Function fnmatch() as specified in POSIX 1003.2-1992, section B.6.

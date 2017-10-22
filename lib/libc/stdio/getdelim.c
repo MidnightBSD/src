@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/stdio/getdelim.c 197752 2009-10-04 19:43:36Z das $");
 
 #include "namespace.h"
 #include <sys/param.h>

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ddb/db_lex.c 174914 2007-12-26 09:33:19Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/libkern.h>

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/usr.bin/cc/include/Makefile 220630 2011-04-14 16:45:16Z dim $
 
 .include "../Makefile.inc"
 

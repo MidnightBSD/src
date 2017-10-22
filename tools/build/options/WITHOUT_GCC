@@ -1,4 +1,4 @@
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/tools/build/options/WITHOUT_GCC 222090 2011-05-19 05:13:25Z imp $
 Set to not install gcc and g++.
 .Bf -symbolic
 The option does not generally work for build targets, unless some alternative

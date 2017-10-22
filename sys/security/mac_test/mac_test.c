@@ -39,7 +39,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/security/mac_test/mac_test.c 248085 2013-03-09 02:36:32Z marius $
  */
 
 /*
@@ -80,7 +80,7 @@
 
 SYSCTL_DECL(_security_mac);
 
-SYSCTL_NODE(_security_mac, OID_AUTO, test, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_security_mac, OID_AUTO, test, CTLFLAG_RW, 0,
     "TrustedBSD mac_test policy controls");
 
 #define	MAGIC_BPF	0xfe1ad1b6
@@ -112,7 +112,7 @@ static int	test_slot;
 SYSCTL_INT(_security_mac_test, OID_AUTO, slot, CTLFLAG_RD,
     &test_slot, 0, "Slot allocated by framework");
 
-SYSCTL_NODE(_security_mac_test, OID_AUTO, counter, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_security_mac_test, OID_AUTO, counter, CTLFLAG_RW, 0,
     "TrustedBSD mac_test counters controls");
 
 #define	COUNTER_DECL(variable)						\

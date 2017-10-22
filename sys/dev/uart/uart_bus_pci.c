@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/uart/uart_bus_pci.c 247887 2013-03-06 11:07:59Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,7 +51,8 @@ static device_method_t uart_pci_methods[] = {
 	DEVMETHOD(device_probe,		uart_pci_probe),
 	DEVMETHOD(device_attach,	uart_bus_attach),
 	DEVMETHOD(device_detach,	uart_bus_detach),
-	{ 0, 0 }
+	DEVMETHOD(device_resume,	uart_bus_resume),
+	DEVMETHOD_END
 };
 
 static driver_t uart_pci_driver = {
@@ -70,7 +71,7 @@ struct pci_id {
 	int		rclk;
 };
 
-static struct pci_id pci_ns8250_ids[] = {
+static const struct pci_id pci_ns8250_ids[] = {
 { 0x1028, 0x0008, 0xffff, 0, "Dell Remote Access Card III", 0x14,
 	128 * DEFAULT_RCLK },
 { 0x1028, 0x0012, 0xffff, 0, "Dell RAC 4 Daughter Card Virtual UART", 0x14,
@@ -127,12 +128,14 @@ static struct pci_id pci_ns8250_ids[] = {
 	"MosChip MCS9900 PCIe to Peripheral Controller", 0x10 },
 { 0x9710, 0x9901, 0xa000, 0x1000,
 	"MosChip MCS9901 PCIe to Peripheral Controller", 0x10 },
+{ 0x9710, 0x9904, 0xa000, 0x1000,
+	"MosChip MCS9904 PCIe to Peripheral Controller", 0x10 },
 { 0xdeaf, 0x9051, 0xffff, 0, "Middle Digital PC Weasel Serial Port", 0x10 },
 { 0xffff, 0, 0xffff, 0, NULL, 0, 0}
 };
 
-static struct pci_id *
-uart_pci_match(device_t dev, struct pci_id *id)
+const static struct pci_id *
+uart_pci_match(device_t dev, const struct pci_id *id)
 {
 	uint16_t device, subdev, subven, vendor;
 
@@ -157,7 +160,7 @@ static int
 uart_pci_probe(device_t dev)
 {
 	struct uart_softc *sc;
-	struct pci_id *id;
+	const struct pci_id *id;
 
 	sc = device_get_softc(dev);
 
@@ -175,4 +178,4 @@ uart_pci_probe(device_t dev)
 	return (uart_bus_probe(dev, 0, id->rclk, id->rid, 0));
 }
 
-DRIVER_MODULE(uart, pci, uart_pci_driver, uart_devclass, 0, 0);
+DRIVER_MODULE(uart, pci, uart_pci_driver, uart_devclass, NULL, NULL);

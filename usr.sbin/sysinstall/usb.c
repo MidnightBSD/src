@@ -24,7 +24,7 @@
  *
  * used floppy.c and cdrom.c as templates, edited as necessary.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sysinstall/usb.c 194931 2009-06-24 23:17:00Z cperciva $
  */
 
 #include <sys/fcntl.h>

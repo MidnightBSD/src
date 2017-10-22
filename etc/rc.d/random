@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/random 242153 2012-10-26 18:06:49Z obrien $
 #
 
 # PROVIDE: random
-# REQUIRE: var initrandom
+# REQUIRE: initrandom FILESYSTEMS
 # BEFORE: netif
 # KEYWORD: nojail shutdown
 

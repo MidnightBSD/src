@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/sys_procdesc.c 244172 2012-12-13 06:17:05Z kib $");
 
 #include "opt_procdesc.h"
 
@@ -367,7 +367,7 @@ procdesc_close(struct file *fp, struct thread *td)
 		 * procdesc_reap().
 		 */
 		PROC_SLOCK(p);
-		proc_reap(curthread, p, NULL, 0, NULL);
+		proc_reap(curthread, p, NULL, 0);
 	} else {
 		/*
 		 * If the process is not yet dead, we need to kill it, but we

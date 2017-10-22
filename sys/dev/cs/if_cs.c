@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/cs/if_cs.c 248085 2013-03-09 02:36:32Z marius $");
 
 /*
  *
@@ -103,7 +103,7 @@ devclass_t cs_devclass;
 driver_intr_t	csintr;
 
 /* sysctl vars */
-SYSCTL_NODE(_hw, OID_AUTO, cs, CTLFLAG_RD, 0, "cs device parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, cs, CTLFLAG_RD, 0, "cs device parameters");
 
 int	cs_ignore_cksum_failure = 0;
 TUNABLE_INT("hw.cs.ignore_checksum_failure", &cs_ignore_cksum_failure);
@@ -726,12 +726,12 @@ cs_get_packet(struct cs_softc *sc)
 		return (-1);
 	}
 
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	MGETHDR(m, M_NOWAIT, MT_DATA);
 	if (m==NULL)
 		return (-1);
 
 	if (length > MHLEN) {
-		MCLGET(m, M_DONTWAIT);
+		MCLGET(m, M_NOWAIT);
 		if (!(m->m_flags & M_EXT)) {
 			m_freem(m);
 			return (-1);

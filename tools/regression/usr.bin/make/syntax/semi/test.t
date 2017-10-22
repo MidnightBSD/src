@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/usr.bin/make/syntax/semi/test.t 151443 2005-10-18 07:28:09Z harti $
 
 cd `dirname $0`
 . ../../common.sh

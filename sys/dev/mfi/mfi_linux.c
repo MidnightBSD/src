@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/mfi/mfi_linux.c 234429 2012-04-18 18:31:11Z ambrisko $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

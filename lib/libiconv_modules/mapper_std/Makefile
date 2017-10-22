@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libiconv_modules/mapper_std/Makefile 219019 2011-02-25 00:04:39Z gabor $
 
 SHLIB=	mapper_std
 SRCS+=	citrus_mapper_std.c

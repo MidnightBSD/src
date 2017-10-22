@@ -30,7 +30,7 @@
  *	from:		@(#)in_cksum.c	1.3 (Berkeley) 1/19/91
  *	from: Id: in_cksum.c,v 1.8 1995/12/03 18:35:19 bde Exp
  *	from: src/sys/alpha/include/in_cksum.h,v 1.7 2005/03/02 21:33:20 joerg
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/include/in_cksum.h 238228 2012-07-08 10:46:55Z bz $
  */
 
 #ifndef _MACHINE_IN_CKSUM_H_

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in.h	8.3 (Berkeley) 1/3/94
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netinet/in.h 239430 2012-08-20 14:42:29Z emaste $
  */
 
 #ifndef _NETINET_IN_H_
@@ -241,6 +241,7 @@ __END_DECLS
 #define	IPPROTO_PIM		103		/* Protocol Independent Mcast */
 #define	IPPROTO_CARP		112		/* CARP */
 #define	IPPROTO_PGM		113		/* PGM */
+#define	IPPROTO_MPLS		137		/* MPLS-in-IP */
 #define	IPPROTO_PFSYNC		240		/* PFSYNC */
 /* 255: Reserved */
 /* BSD Private, local use, namespace incursion, no longer used */

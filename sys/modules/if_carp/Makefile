@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/if_carp/Makefile 221267 2011-04-30 17:59:54Z bz $
 
 .PATH: ${.CURDIR}/../../netinet
 

@@ -39,7 +39,7 @@
  *
  *	from: hp300: @(#)pmap.h	7.2 (Berkeley) 12/16/90
  *	from: @(#)pmap.h	7.4 (Berkeley) 5/12/91
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/amd64/include/pmap.h 240760 2012-09-20 18:21:29Z alc $
  */
 
 #ifndef _MACHINE_PMAP_H_
@@ -309,6 +309,7 @@ extern vm_offset_t virtual_avail;
 extern vm_offset_t virtual_end;
 
 #define	pmap_page_get_memattr(m)	((vm_memattr_t)(m)->md.pat_mode)
+#define	pmap_page_is_write_mapped(m)	(((m)->aflags & PGA_WRITEABLE) != 0)
 #define	pmap_unmapbios(va, sz)	pmap_unmapdev((va), (sz))
 
 void	pmap_bootstrap(vm_paddr_t *);

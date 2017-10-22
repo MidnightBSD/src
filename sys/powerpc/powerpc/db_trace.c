@@ -1,4 +1,4 @@
-/*	$FreeBSD$ */
+/*	$FreeBSD: stable/9/sys/powerpc/powerpc/db_trace.c 223470 2011-06-23 09:43:53Z andreast $ */
 /*	$NetBSD: db_trace.c,v 1.20 2002/05/13 20:30:09 matt Exp $	*/
 /*	$OpenBSD: db_trace.c,v 1.3 1997/03/21 02:10:48 niklas Exp $	*/
 

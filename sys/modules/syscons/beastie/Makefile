@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/syscons/beastie/Makefile 206380 2010-04-07 18:42:21Z jkim $
 
 .PATH:	${.CURDIR}/../../../dev/syscons/logo
 

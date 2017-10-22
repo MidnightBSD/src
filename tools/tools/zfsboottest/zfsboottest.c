@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/tools/tools/zfsboottest/zfsboottest.c 237770 2012-06-29 10:28:46Z avg $ */
 
 #include <sys/param.h>
 #include <sys/queue.h>

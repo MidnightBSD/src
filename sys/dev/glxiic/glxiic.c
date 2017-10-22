@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/glxiic/glxiic.c 221971 2011-05-15 19:04:08Z brix $");
 /*
  * AMD Geode LX CS5536 System Management Bus controller.
  *

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/safe/safe.c 248085 2013-03-09 02:36:32Z marius $");
 
 /*
  * SafeNet SafeXcel-1141 hardware crypto accelerator
@@ -143,7 +143,8 @@ static	void safe_totalreset(struct safe_softc *);
 
 static	int safe_free_entry(struct safe_softc *, struct safe_ringentry *);
 
-SYSCTL_NODE(_hw, OID_AUTO, safe, CTLFLAG_RD, 0, "SafeNet driver parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, safe, CTLFLAG_RD, 0,
+    "SafeNet driver parameters");
 
 #ifdef SAFE_DEBUG
 static	void safe_dump_dmastatus(struct safe_softc *, const char *);
@@ -1324,15 +1325,15 @@ safe_process(device_t dev, struct cryptop *crp, int hint)
 				totlen = re->re_src_mapsize;
 				if (re->re_src_m->m_flags & M_PKTHDR) {
 					len = MHLEN;
-					MGETHDR(m, M_DONTWAIT, MT_DATA);
+					MGETHDR(m, M_NOWAIT, MT_DATA);
 					if (m && !m_dup_pkthdr(m, re->re_src_m,
-					    M_DONTWAIT)) {
+					    M_NOWAIT)) {
 						m_free(m);
 						m = NULL;
 					}
 				} else {
 					len = MLEN;
-					MGET(m, M_DONTWAIT, MT_DATA);
+					MGET(m, M_NOWAIT, MT_DATA);
 				}
 				if (m == NULL) {
 					safestats.st_nombuf++;
@@ -1340,7 +1341,7 @@ safe_process(device_t dev, struct cryptop *crp, int hint)
 					goto errout;
 				}
 				if (totlen >= MINCLSIZE) {
-					MCLGET(m, M_DONTWAIT);
+					MCLGET(m, M_NOWAIT);
 					if ((m->m_flags & M_EXT) == 0) {
 						m_free(m);
 						safestats.st_nomcl++;
@@ -1356,7 +1357,7 @@ safe_process(device_t dev, struct cryptop *crp, int hint)
 
 				while (totlen > 0) {
 					if (top) {
-						MGET(m, M_DONTWAIT, MT_DATA);
+						MGET(m, M_NOWAIT, MT_DATA);
 						if (m == NULL) {
 							m_freem(top);
 							safestats.st_nombuf++;
@@ -1367,7 +1368,7 @@ safe_process(device_t dev, struct cryptop *crp, int hint)
 						len = MLEN;
 					}
 					if (top && totlen >= MINCLSIZE) {
-						MCLGET(m, M_DONTWAIT);
+						MCLGET(m, M_NOWAIT);
 						if ((m->m_flags & M_EXT) == 0) {
 							*mp = m;
 							m_freem(top);

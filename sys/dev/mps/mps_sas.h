@@ -25,7 +25,7 @@
  *
  * LSI MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/mps/mps_sas.h 237876 2012-07-01 05:22:45Z ken $
  */
 
 struct mps_fw_event_work;

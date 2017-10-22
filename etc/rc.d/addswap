@@ -2,11 +2,12 @@
 #
 # Add additional swap files
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/addswap 242153 2012-10-26 18:06:49Z obrien $
 #
 
 # PROVIDE: addswap
 # REQUIRE: FILESYSTEMS kld
+# BEFORE:  netif
 # KEYWORD: nojail
 
 . /etc/rc.subr

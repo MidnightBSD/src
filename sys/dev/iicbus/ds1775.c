@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/iicbus/ds1775.c 222673 2011-06-04 09:19:53Z andreast $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

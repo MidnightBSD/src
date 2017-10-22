@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/uipc_shm.c 236698 2012-06-06 21:49:31Z jhb $");
 
 #include "opt_capsicum.h"
 

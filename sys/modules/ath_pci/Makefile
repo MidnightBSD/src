@@ -26,7 +26,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/ath_pci/Makefile 220275 2011-04-02 09:46:09Z adrian $
 #
 
 .PATH:	${.CURDIR}/../../dev/ath

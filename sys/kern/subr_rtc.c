@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/subr_rtc.c 211230 2010-08-12 17:17:05Z jkim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

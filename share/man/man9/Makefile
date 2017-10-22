@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/man/man9/Makefile 247344 2013-02-26 20:19:19Z jhb $
 
 MAN=	accept_filter.9 \
 	accf_data.9 \
@@ -26,6 +26,7 @@ MAN=	accept_filter.9 \
 	bus_alloc_resource.9 \
 	BUS_BIND_INTR.9 \
 	bus_child_present.9 \
+	BUS_CHILD_DELETED.9 \
 	BUS_CONFIG_INTR.9 \
 	BUS_DESCRIBE_INTR.9 \
 	bus_dma.9 \

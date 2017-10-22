@@ -101,7 +101,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/uipc_socket.c 241462 2012-10-11 21:15:54Z np $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -635,7 +635,7 @@ sofree(struct socket *so)
 	    so->so_qstate & SQ_COMP, so->so_qstate & SQ_INCOMP));
 	if (so->so_options & SO_ACCEPTCONN) {
 		KASSERT((TAILQ_EMPTY(&so->so_comp)), ("sofree: so_comp populated"));
-		KASSERT((TAILQ_EMPTY(&so->so_incomp)), ("sofree: so_comp populated"));
+		KASSERT((TAILQ_EMPTY(&so->so_incomp)), ("sofree: so_incomp populated"));
 	}
 	SOCK_UNLOCK(so);
 	ACCEPT_UNLOCK();
@@ -1496,17 +1496,11 @@ restart:
 	 * If we have less data than requested, block awaiting more (subject
 	 * to any timeout) if:
 	 *   1. the current count is less than the low water mark, or
-	 *   2. MSG_WAITALL is set, and it is possible to do the entire
-	 *	receive operation at once if we block (resid <= hiwat).
-	 *   3. MSG_DONTWAIT is not set
-	 * If MSG_WAITALL is set but resid is larger than the receive buffer,
-	 * we have to do the receive in sections, and thus risk returning a
-	 * short count if a timeout or signal occurs after we start.
+	 *   2. MSG_DONTWAIT is not set
 	 */
 	if (m == NULL || (((flags & MSG_DONTWAIT) == 0 &&
 	    so->so_rcv.sb_cc < uio->uio_resid) &&
-	    (so->so_rcv.sb_cc < so->so_rcv.sb_lowat ||
-	    ((flags & MSG_WAITALL) && uio->uio_resid <= so->so_rcv.sb_hiwat)) &&
+	    so->so_rcv.sb_cc < so->so_rcv.sb_lowat &&
 	    m->m_nextpkt == NULL && (pr->pr_flags & PR_ATOMIC) == 0)) {
 		KASSERT(m != NULL || !so->so_rcv.sb_cc,
 		    ("receive: m == %p so->so_rcv.sb_cc == %u",
@@ -1695,8 +1689,8 @@ dontblock:
 		 * examined ('type'), end the receive operation.
 	 	 */
 		SOCKBUF_LOCK_ASSERT(&so->so_rcv);
-		if (m->m_type == MT_OOBDATA) {
-			if (type != MT_OOBDATA)
+		if (m->m_type == MT_OOBDATA || m->m_type == MT_CONTROL) {
+			if (type != m->m_type)
 				break;
 		} else if (type == MT_OOBDATA)
 			break;
@@ -2504,20 +2498,19 @@ sosetopt(struct socket *so, struct sockopt *sopt)
 		case SO_SETFIB:
 			error = sooptcopyin(sopt, &optval, sizeof optval,
 					    sizeof optval);
+			if (error)
+				goto bad;
+
 			if (optval < 0 || optval >= rt_numfibs) {
 				error = EINVAL;
 				goto bad;
 			}
 			if (((so->so_proto->pr_domain->dom_family == PF_INET) ||
 			   (so->so_proto->pr_domain->dom_family == PF_INET6) ||
-			   (so->so_proto->pr_domain->dom_family == PF_ROUTE))) {
+			   (so->so_proto->pr_domain->dom_family == PF_ROUTE)))
 				so->so_fibnum = optval;
-				/* Note: ignore error */
-				if (so->so_proto->pr_ctloutput)
-					(*so->so_proto->pr_ctloutput)(so, sopt);
-			} else {
+			else
 				so->so_fibnum = 0;
-			}
 			break;
 
 		case SO_USER_COOKIE:

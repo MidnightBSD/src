@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD$
+# $FreeBSD: stable/9/share/skel/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 FILESGROUPS=	FILES1 FILES2
 FILES1=		dot.cshrc dot.login dot.login_conf dot.mailrc dot.profile \

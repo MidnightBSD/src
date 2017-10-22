@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  *	from BSDI Id: mutex.h,v 2.7.2.35 2000/04/27 03:10:26 cp
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/lock.h 212408 2010-09-10 06:26:28Z obrien $
  */
 
 #ifndef _SYS_LOCK_H_

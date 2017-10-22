@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/wpa/Makefile.inc 235328 2012-05-12 08:22:41Z bschmidt $
 
 BINDIR?=	/usr/sbin
 

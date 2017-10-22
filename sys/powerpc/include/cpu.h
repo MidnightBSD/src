@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: cpu.h,v 1.11 2000/05/26 21:19:53 thorpej Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/include/cpu.h 242677 2012-11-06 21:53:17Z nwhitehorn $
  */
 
 #ifndef _MACHINE_CPU_H_
@@ -97,8 +97,5 @@ void	cpu_halt(void);
 void	cpu_reset(void);
 void	fork_trampoline(void);
 void	swi_vm(void *);
-
-/* XXX the following should not be here. */
-void	savectx(struct pcb *) __returns_twice;
 
 #endif	/* _MACHINE_CPU_H_ */

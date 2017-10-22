@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libpam/modules/Makefile.inc 236115 2012-05-26 17:56:54Z des $
 
 PAMDIR=		${.CURDIR}/../../../../contrib/openpam
 

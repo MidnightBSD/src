@@ -40,7 +40,7 @@
  * Author: Ken Merry <ken@FreeBSD.org>
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/cam/ctl/ctl_backend_block.c 249515 2013-04-15 17:35:14Z trasz $");
 
 #include <opt_kdtrace.h>
 
@@ -376,10 +376,6 @@ ctl_grow_beio(struct ctl_be_block_softc *softc, int count)
 		beio = (struct ctl_be_block_io *)malloc(sizeof(*beio),
 							   M_CTLBLK,
 							   M_WAITOK | M_ZERO);
-		if (beio == NULL)
-			break;
-
-		bzero(beio, sizeof(*beio));
 		beio->softc = softc;
 		mtx_lock(&softc->lock);
 		STAILQ_INSERT_TAIL(&softc->beio_free_queue, beio, links);
@@ -1092,15 +1088,6 @@ ctl_be_block_dispatch(struct ctl_be_block_lun *be_lun,
 		 */
 		beio->sg_segs[i].len = min(MAXPHYS, len_left);
 		beio->sg_segs[i].addr = uma_zalloc(be_lun->lun_zone, M_WAITOK);
-		/*
-		 * uma_zalloc() can in theory return NULL even with M_WAITOK
-		 * if it can't pull more memory into the zone.
-		 */
-		if (beio->sg_segs[i].addr == NULL) {
-			ctl_set_busy(&io->scsiio);
-			ctl_complete_beio(beio);
-			return;
-		}
 
 		DPRINTF("segment %d addr %p len %zd\n", i,
 			beio->sg_segs[i].addr, beio->sg_segs[i].len);
@@ -1660,13 +1647,6 @@ ctl_be_block_create(struct ctl_be_block_softc *softc, struct ctl_lun_req *req)
 
 	be_lun = malloc(sizeof(*be_lun), M_CTLBLK, M_ZERO | M_WAITOK);
 
-	if (be_lun == NULL) {
-		snprintf(req->error_str, sizeof(req->error_str),
-			 "%s: error allocating %zd bytes", __func__,
-			 sizeof(*be_lun));
-		goto bailout_error;
-	}
-
 	be_lun->softc = softc;
 	STAILQ_INIT(&be_lun->input_queue);
 	STAILQ_INIT(&be_lun->config_write_queue);
@@ -1691,7 +1671,7 @@ ctl_be_block_create(struct ctl_be_block_softc *softc, struct ctl_lun_req *req)
 
 	if (be_lun->ctl_be_lun.lun_type == T_DIRECT) {
 		for (i = 0; i < req->num_be_args; i++) {
-			if (strcmp(req->kern_be_args[i].name, "file") == 0) {
+			if (strcmp(req->kern_be_args[i].kname, "file") == 0) {
 				file_arg = &req->kern_be_args[i];
 				break;
 			}
@@ -1705,14 +1685,8 @@ ctl_be_block_create(struct ctl_be_block_softc *softc, struct ctl_lun_req *req)
 
 		be_lun->dev_path = malloc(file_arg->vallen, M_CTLBLK,
 					  M_WAITOK | M_ZERO);
-		if (be_lun->dev_path == NULL) {
-			snprintf(req->error_str, sizeof(req->error_str),
-				 "%s: error allocating %d bytes", __func__,
-				 file_arg->vallen);
-			goto bailout_error;
-		}
 
-		strlcpy(be_lun->dev_path, (char *)file_arg->value,
+		strlcpy(be_lun->dev_path, (char *)file_arg->kvalue,
 			file_arg->vallen);
 
 		retval = ctl_be_block_open(softc, be_lun, req);
@@ -1751,7 +1725,7 @@ ctl_be_block_create(struct ctl_be_block_softc *softc, struct ctl_lun_req *req)
 	 * the loop above,
 	 */
 	for (i = 0; i < req->num_be_args; i++) {
-		if (strcmp(req->kern_be_args[i].name, "num_threads") == 0) {
+		if (strcmp(req->kern_be_args[i].kname, "num_threads") == 0) {
 			struct ctl_be_arg *thread_arg;
 			char num_thread_str[16];
 			int tmp_num_threads;
@@ -1759,7 +1733,7 @@ ctl_be_block_create(struct ctl_be_block_softc *softc, struct ctl_lun_req *req)
 
 			thread_arg = &req->kern_be_args[i];
 
-			strlcpy(num_thread_str, (char *)thread_arg->value,
+			strlcpy(num_thread_str, (char *)thread_arg->kvalue,
 				min(thread_arg->vallen,
 				sizeof(num_thread_str)));
 

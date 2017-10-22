@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_prot.c 244204 2012-12-14 08:52:08Z bapt $");
 
 #include "opt_compat.h"
 #include "opt_inet.h"
@@ -2084,8 +2084,10 @@ sys_getlogin(struct thread *td, struct getlogin_args *uap)
 	bcopy(p->p_session->s_login, login, uap->namelen);
 	SESS_UNLOCK(p->p_session);
 	PROC_UNLOCK(p);
+	if (strlen(login) + 1 > uap->namelen)
+		return (ERANGE);
 	error = copyout(login, uap->namebuf, uap->namelen);
-	return(error);
+	return (error);
 }
 
 /*

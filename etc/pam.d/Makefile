@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/pam.d/Makefile 195753 2009-07-18 16:29:40Z marcus $
 
 NO_OBJ=
 

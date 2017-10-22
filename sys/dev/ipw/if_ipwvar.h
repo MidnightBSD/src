@@ -1,4 +1,4 @@
-/*      $FreeBSD$	*/
+/*      $FreeBSD: stable/9/sys/dev/ipw/if_ipwvar.h 233024 2012-03-16 08:46:58Z scottl $	*/
 
 /*-
  * Copyright (c) 2004-2006

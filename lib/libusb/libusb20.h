@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/libusb/libusb20.h 247475 2013-02-28 16:56:08Z hselasky $ */
 /*-
  * Copyright (c) 2008-2009 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 2007-2008 Daniel Drake.  All rights reserved.
@@ -254,6 +254,7 @@ int	libusb20_dev_reset(struct libusb20_device *pdev);
 int	libusb20_dev_check_connected(struct libusb20_device *pdev);
 int	libusb20_dev_set_power_mode(struct libusb20_device *pdev, uint8_t power_mode);
 uint8_t	libusb20_dev_get_power_mode(struct libusb20_device *pdev);
+uint16_t	libusb20_dev_get_power_usage(struct libusb20_device *pdev);
 int	libusb20_dev_set_alt_index(struct libusb20_device *pdev, uint8_t iface_index, uint8_t alt_index);
 int	libusb20_dev_get_info(struct libusb20_device *pdev, struct usb_device_info *pinfo);
 int	libusb20_dev_get_iface_desc(struct libusb20_device *pdev, uint8_t iface_index, char *buf, uint8_t len);

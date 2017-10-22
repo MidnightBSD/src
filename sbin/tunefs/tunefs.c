@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)tunefs.c	8.2 (Berkeley) 4/19/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/tunefs/tunefs.c 247900 2013-03-06 20:02:19Z pho $");
 
 /*
  * tunefs: change layout parameters to an existing file system.
@@ -672,7 +672,7 @@ journal_findfile(void)
 				return (ino);
 		}
 	} else {
-		if ((off_t)dp1->di_size >= lblktosize(&sblock, NDADDR)) {
+		if ((off_t)dp2->di_size >= lblktosize(&sblock, NDADDR)) {
 			warnx("ROOTINO extends beyond direct blocks.");
 			return (-1);
 		}

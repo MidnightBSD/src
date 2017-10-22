@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/isci/scil/sati_read_capacity.c 233788 2012-04-02 16:35:42Z jimharris $");
 
 /**
  * @file

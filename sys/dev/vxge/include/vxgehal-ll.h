@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD$*/
+/*$FreeBSD: stable/9/sys/dev/vxge/include/vxgehal-ll.h 240580 2012-09-17 00:47:35Z eadler $*/
 
 #ifndef	VXGE_HAL_LL_H
 #define	VXGE_HAL_LL_H
@@ -3095,7 +3095,7 @@ typedef struct vxge_hal_device_pmd_info_t {
  * @mac_addr_masks: Mac address masks for each vpath
  *
  * Returns the vpath mask that has the bits set for each vpath allocated
- * for the driver and teh first mac addresse for each vpath
+ * for the driver and the first mac addresse for each vpath
  */
 typedef struct vxge_hal_device_hw_info_t {
 	u32			 host_type;

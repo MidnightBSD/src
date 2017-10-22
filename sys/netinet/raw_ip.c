@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/raw_ip.c 227423 2011-11-10 19:10:53Z andre $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"

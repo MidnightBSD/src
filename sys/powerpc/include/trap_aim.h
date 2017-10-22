@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $NetBSD: trap.h,v 1.7 2002/02/22 13:51:40 kleink Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/include/trap_aim.h 236511 2012-06-03 11:54:26Z marius $
  */
 
 #ifndef	_POWERPC_TRAP_H_

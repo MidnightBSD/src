@@ -39,7 +39,7 @@
  *	from: hp300: @(#)pmap.h	7.2 (Berkeley) 12/16/90
  *	from: @(#)pmap.h	7.4 (Berkeley) 5/12/91
  *	from: i386 pmap.h,v 1.54 1997/11/20 19:30:35 bde Exp
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ia64/include/pmap.h 240760 2012-09-20 18:21:29Z alc $
  */
 
 #ifndef _MACHINE_PMAP_H_
@@ -118,6 +118,7 @@ extern int pmap_vhpt_log2size;
 
 #define	pmap_page_get_memattr(m)	((m)->md.memattr)
 #define	pmap_page_is_mapped(m)	(!TAILQ_EMPTY(&(m)->md.pv_list))
+#define	pmap_page_is_write_mapped(m)	(((m)->aflags & PGA_WRITEABLE) != 0)
 #define	pmap_mapbios(pa, sz)	pmap_mapdev(pa, sz)
 #define	pmap_unmapbios(va, sz)	pmap_unmapdev(va, sz)
 

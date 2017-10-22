@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/contrib/ipfilter/INSTALL.xBSD 63564 2000-07-19 23:10:29Z darrenr $
 
 To build a kernel for use with the loadable kernel module, follow these
 steps:

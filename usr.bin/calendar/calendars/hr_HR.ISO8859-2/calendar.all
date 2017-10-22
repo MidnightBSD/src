@@ -1,12 +1,12 @@
 /*
  *  hrvatski calendar
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/calendar/calendars/hr_HR.ISO8859-2/calendar.all 249451 2013-04-13 22:29:13Z eadler $
  */
 
-#ifndef _hr_HR_ISO8859_2_all
-#define _hr_HR_ISO8859_2_all
+#ifndef _hr_HR_ISO8859_2_all_
+#define _hr_HR_ISO8859_2_all_
 
 #include <hr_HR.ISO8859-2/calendar.praznici>
 
-#endif /* !_hr_HR_ISO8859_2_all */
+#endif /* !_hr_HR_ISO8859_2_all_ */

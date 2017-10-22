@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/mips/malta/std.malta 220982 2011-04-24 08:58:58Z mav $
 files	"../malta/files.malta"
 
 cpu		CPU_MIPS4KC

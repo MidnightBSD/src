@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_subr.c	8.2 (Berkeley) 9/21/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/ext2fs/ext2_subr.c 247209 2013-02-24 02:47:19Z pfg $
  */
 
 #include <sys/param.h>
@@ -63,11 +63,7 @@ void	ext2_checkoverlap(struct buf *, struct inode *);
  * remaining space in the directory.
  */
 int
-ext2_blkatoff(vp, offset, res, bpp)
-	struct vnode *vp;
-	off_t offset;
-	char **res;
-	struct buf **bpp;
+ext2_blkatoff(struct vnode *vp, off_t offset, char **res, struct buf **bpp)
 {
 	struct inode *ip;
 	struct m_ext2fs *fs;
@@ -93,9 +89,7 @@ ext2_blkatoff(vp, offset, res, bpp)
 
 #ifdef KDB
 void
-ext2_checkoverlap(bp, ip)
-	struct buf *bp;
-	struct inode *ip;
+ext2_checkoverlap(struct buf *bp, struct inode *ip)
 {
 	struct buf *ebp, *ep;
 	int32_t start, last;

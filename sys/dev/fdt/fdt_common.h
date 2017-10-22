@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/fdt/fdt_common.h 233015 2012-03-15 22:15:06Z raj $
  */
 
 #ifndef _FDT_COMMON_H_

@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/controller/xhci.h 245731 2013-01-21 07:22:45Z hselasky $ */
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
@@ -385,7 +385,7 @@ struct xhci_hw_dev {
 	uint8_t			state;
 	uint8_t			nports;
 	uint8_t			tt;
-	uint8_t			reserved;
+	uint8_t			context_num;
 };
 
 struct xhci_hw_softc {
@@ -490,6 +490,7 @@ struct xhci_softc {
 
 /* prototypes */
 
+uint32_t	xhci_get_port_route(void);
 usb_error_t xhci_halt_controller(struct xhci_softc *);
 usb_error_t xhci_init(struct xhci_softc *, device_t);
 usb_error_t xhci_start_controller(struct xhci_softc *);

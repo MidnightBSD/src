@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/ppp/radius.c 242544 2012-11-04 01:21:49Z eadler $
  *
  */
 
@@ -784,7 +784,7 @@ radius_Init(struct radius *r)
   r->mppe.recvkeylen = 0;
   r->mppe.sendkey = NULL;
   r->mppe.sendkeylen = 0;
-  *r->cfg.file = '\0';;
+  *r->cfg.file = '\0';
   log_Printf(LogDEBUG, "Radius: radius_Init\n");
 }
 

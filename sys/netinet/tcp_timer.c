@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_timer.c 247498 2013-02-28 21:24:10Z jhb $");
 
 #include "opt_inet6.h"
 #include "opt_tcpdebug.h"
@@ -118,6 +118,11 @@ SYSCTL_INT(_net_inet_tcp, OID_AUTO, keepcnt, CTLFLAG_RW, &tcp_keepcnt, 0,
 	/* max idle probes */
 int	tcp_maxpersistidle;
 
+static int	tcp_rexmit_drop_options = 1;
+SYSCTL_INT(_net_inet_tcp, OID_AUTO, rexmit_drop_options, CTLFLAG_RW,
+    &tcp_rexmit_drop_options, 0,
+    "Drop TCP options from 3rd and later retransmitted SYN");
+
 static int	per_cpu_timers = 0;
 SYSCTL_INT(_net_inet_tcp, OID_AUTO, per_cpu_timers, CTLFLAG_RW,
     &per_cpu_timers , 0, "run tcp timers on all cpus");
@@ -183,13 +188,18 @@ tcp_timer_delack(void *xtp)
 		return;
 	}
 	INP_WLOCK(inp);
-	if ((inp->inp_flags & INP_DROPPED) || callout_pending(&tp->t_timers->tt_delack)
-	    || !callout_active(&tp->t_timers->tt_delack)) {
+	if (callout_pending(&tp->t_timers->tt_delack) ||
+	    !callout_active(&tp->t_timers->tt_delack)) {
 		INP_WUNLOCK(inp);
 		CURVNET_RESTORE();
 		return;
 	}
 	callout_deactivate(&tp->t_timers->tt_delack);
+	if ((inp->inp_flags & INP_DROPPED) != 0) {
+		INP_WUNLOCK(inp);
+		CURVNET_RESTORE();
+		return;
+	}
 
 	tp->t_flags |= TF_ACKNOW;
 	TCPSTAT_INC(tcps_delack);
@@ -229,7 +239,7 @@ tcp_timer_2msl(void *xtp)
 	}
 	INP_WLOCK(inp);
 	tcp_free_sackholes(tp);
-	if ((inp->inp_flags & INP_DROPPED) || callout_pending(&tp->t_timers->tt_2msl) ||
+	if (callout_pending(&tp->t_timers->tt_2msl) ||
 	    !callout_active(&tp->t_timers->tt_2msl)) {
 		INP_WUNLOCK(tp->t_inpcb);
 		INP_INFO_WUNLOCK(&V_tcbinfo);
@@ -237,6 +247,12 @@ tcp_timer_2msl(void *xtp)
 		return;
 	}
 	callout_deactivate(&tp->t_timers->tt_2msl);
+	if ((inp->inp_flags & INP_DROPPED) != 0) {
+		INP_WUNLOCK(inp);
+		INP_INFO_WUNLOCK(&V_tcbinfo);
+		CURVNET_RESTORE();
+		return;
+	}
 	/*
 	 * 2 MSL timeout in shutdown went off.  If we're closed but
 	 * still waiting for peer to close and connection has been idle
@@ -300,14 +316,20 @@ tcp_timer_keep(void *xtp)
 		return;
 	}
 	INP_WLOCK(inp);
-	if ((inp->inp_flags & INP_DROPPED) || callout_pending(&tp->t_timers->tt_keep)
-	    || !callout_active(&tp->t_timers->tt_keep)) {
+	if (callout_pending(&tp->t_timers->tt_keep) ||
+	    !callout_active(&tp->t_timers->tt_keep)) {
 		INP_WUNLOCK(inp);
 		INP_INFO_WUNLOCK(&V_tcbinfo);
 		CURVNET_RESTORE();
 		return;
 	}
 	callout_deactivate(&tp->t_timers->tt_keep);
+	if ((inp->inp_flags & INP_DROPPED) != 0) {
+		INP_WUNLOCK(inp);
+		INP_INFO_WUNLOCK(&V_tcbinfo);
+		CURVNET_RESTORE();
+		return;
+	}
 	/*
 	 * Keep-alive timer went off; send something
 	 * or drop connection if idle for too long.
@@ -397,14 +419,20 @@ tcp_timer_persist(void *xtp)
 		return;
 	}
 	INP_WLOCK(inp);
-	if ((inp->inp_flags & INP_DROPPED) || callout_pending(&tp->t_timers->tt_persist)
-	    || !callout_active(&tp->t_timers->tt_persist)) {
+	if (callout_pending(&tp->t_timers->tt_persist) ||
+	    !callout_active(&tp->t_timers->tt_persist)) {
 		INP_WUNLOCK(inp);
 		INP_INFO_WUNLOCK(&V_tcbinfo);
 		CURVNET_RESTORE();
 		return;
 	}
 	callout_deactivate(&tp->t_timers->tt_persist);
+	if ((inp->inp_flags & INP_DROPPED) != 0) {
+		INP_WUNLOCK(inp);
+		INP_INFO_WUNLOCK(&V_tcbinfo);
+		CURVNET_RESTORE();
+		return;
+	}
 	/*
 	 * Persistance timer into zero window.
 	 * Force a byte to be output, if possible.
@@ -469,14 +497,20 @@ tcp_timer_rexmt(void * xtp)
 		return;
 	}
 	INP_WLOCK(inp);
-	if ((inp->inp_flags & INP_DROPPED) || callout_pending(&tp->t_timers->tt_rexmt)
-	    || !callout_active(&tp->t_timers->tt_rexmt)) {
+	if (callout_pending(&tp->t_timers->tt_rexmt) ||
+	    !callout_active(&tp->t_timers->tt_rexmt)) {
 		INP_WUNLOCK(inp);
 		INP_INFO_RUNLOCK(&V_tcbinfo);
 		CURVNET_RESTORE();
 		return;
 	}
 	callout_deactivate(&tp->t_timers->tt_rexmt);
+	if ((inp->inp_flags & INP_DROPPED) != 0) {
+		INP_WUNLOCK(inp);
+		INP_INFO_RUNLOCK(&V_tcbinfo);
+		CURVNET_RESTORE();
+		return;
+	}
 	tcp_free_sackholes(tp);
 	/*
 	 * Retransmission timer went off.  Message has not
@@ -549,7 +583,8 @@ tcp_timer_rexmt(void * xtp)
 	 * header compression code which trashes TCP segments containing
 	 * unknown-to-them TCP options.
 	 */
-	if ((tp->t_state == TCPS_SYN_SENT) && (tp->t_rxtshift == 3))
+	if (tcp_rexmit_drop_options && (tp->t_state == TCPS_SYN_SENT) &&
+	    (tp->t_rxtshift == 3))
 		tp->t_flags &= ~(TF_REQ_SCALE|TF_REQ_TSTMP);
 	/*
 	 * If we backed off this far, our srtt estimate is probably bogus.

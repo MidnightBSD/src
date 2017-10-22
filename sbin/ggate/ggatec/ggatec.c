@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sbin/ggate/ggatec/ggatec.c 204076 2010-02-18 23:16:19Z pjd $
  */
 
 #include <stdio.h>

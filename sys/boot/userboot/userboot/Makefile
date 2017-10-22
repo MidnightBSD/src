@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/boot/userboot/userboot/Makefile 243243 2012-11-18 17:09:29Z ae $
 
 NO_MAN=
 WITHOUT_SSP=
@@ -32,7 +32,6 @@ CFLAGS+=	-I${.CURDIR}/../../common
 CFLAGS+=	-I${.CURDIR}/../../..
 CFLAGS+=	-I${.CURDIR}/../../../../lib/libstand
 CFLAGS+=	-ffreestanding -I.
-CFLAGS+=	-DLOADER_GPT_SUPPORT -DLOADER_MBR_SUPPORT
 
 LDFLAGS+=	-nostdlib -Wl,-Bsymbolic
 

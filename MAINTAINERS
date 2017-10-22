@@ -1,9 +1,9 @@
-$FreeBSD$
+$FreeBSD: stable/9/MAINTAINERS 242112 2012-10-26 00:44:32Z eadler $
 
 Please note that the content of this file is strictly advisory.
 No locks listed here are valid.  The only strict review requirements
 are granted by core.  These are documented in head/LOCKS and enforced
-by CVSROOT/approvers.
+by svnadmin/conf/approvers.
 
 The source tree is a community effort.  However, some folks go to the
 trouble of looking after particular areas of the tree.  In return for
@@ -127,16 +127,7 @@ sysinstall	randi	Please contact about any major changes so that
 			they can be co-ordinated.
 sbin/routed	bms	Pre-commit review; notify vendor at rhyolite.com
 isci(4)		jimharris	Pre-commit review requested.
-
-Following are the entries from the Makefiles, and a few other sources.
-Please remove stale entries from both their origin, and this file.
-
-Please also consider removing the lines from the files listed below and
-stating your preferences here instead.
-
-List below generated with:
-$ cd /usr/src; find */* -type f|xargs egrep 'MAINTAINER[ <tab>]*='
-
-sys/modules/3dfx/Makefile:MAINTAINER=	cokane@FreeBSD.org
-sys/modules/urio/Makefile:MAINTAINER=	Iwasa Kazmi <kzmi@ca2.so-net.ne.jp>
-tools/tools/sysdoc/Makefile:MAINTAINER=	trhodes@FreeBSD.org
+3dfx		cokane		Pre-commit review preferred.
+cmx		daniel@roe.ch	Pre-commit review preferred.
+filemon		obrien		Pre-commit review preferred.
+sysdoc		trhodes		Pre-commit review preferred.

@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/make/parse.h 146177 2005-05-13 08:53:00Z harti $
  */
 
 #ifndef parse_h_470eeb9a

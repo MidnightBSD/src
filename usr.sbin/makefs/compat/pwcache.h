@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *      @(#)cache.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/makefs/compat/pwcache.h 186334 2008-12-19 18:45:43Z sam $
  */
 
 /*

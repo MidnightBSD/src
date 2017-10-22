@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi_smbat.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -62,7 +62,8 @@ static int	acpi_smbat_get_bst(device_t dev, struct acpi_bst *bst);
 
 ACPI_SERIAL_DECL(smbat, "ACPI Smart Battery");
 
-SYSCTL_NODE(_debug_acpi, OID_AUTO, batt, CTLFLAG_RD, NULL, "Battery debugging");
+static SYSCTL_NODE(_debug_acpi, OID_AUTO, batt, CTLFLAG_RD, NULL,
+    "Battery debugging");
 
 /* On some laptops with smart batteries, enabling battery monitoring
  * software causes keystrokes from atkbd to be lost.  This has also been

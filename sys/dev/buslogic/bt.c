@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/buslogic/bt.c 240579 2012-09-17 00:44:16Z eadler $");
 
  /*
   * Special thanks to Leonard N. Zubkoff for writing such a complete and
@@ -1945,7 +1945,7 @@ bt_cmd(struct bt_softc *bt, bt_op_t opcode, u_int8_t *params, u_int param_len,
 	bt_outb(bt, COMMAND_REG, opcode);
 
 	/*
-	 * Wait for up to 1sec for each byte of the the
+	 * Wait for up to 1sec for each byte of the
 	 * parameter list sent to be sent.
 	 */
 	timeout = 10000;

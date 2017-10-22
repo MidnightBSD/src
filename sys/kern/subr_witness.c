@@ -85,7 +85,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/subr_witness.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include "opt_ddb.h"
 #include "opt_hwpmc_hooks.h"
@@ -184,7 +184,7 @@ __FBSDID("$FreeBSD$");
 #define	WITNESS_INDEX_ASSERT(i)						\
 	MPASS((i) > 0 && (i) <= w_max_used_index && (i) < WITNESS_COUNT)
 
-MALLOC_DEFINE(M_WITNESS, "Witness", "Witness");
+static MALLOC_DEFINE(M_WITNESS, "Witness", "Witness");
 
 /*
  * Lock instances.  A lock instance is the data associated with a lock while
@@ -376,7 +376,8 @@ static void	witness_setflag(struct lock_object *lock, int flag, int set);
 #define	witness_debugger(c)
 #endif
 
-SYSCTL_NODE(_debug, OID_AUTO, witness, CTLFLAG_RW, NULL, "Witness Locking");
+static SYSCTL_NODE(_debug, OID_AUTO, witness, CTLFLAG_RW, NULL,
+    "Witness Locking");
 
 /*
  * If set to 0, lock order checking is disabled.  If set to -1,
@@ -562,7 +563,7 @@ static struct witness_order_list_entry order_lists[] = {
 	 * BPF
 	 */
 	{ "bpf global lock", &lock_class_mtx_sleep },
-	{ "bpf interface lock", &lock_class_mtx_sleep },
+	{ "bpf interface lock", &lock_class_rw },
 	{ "bpf cdev lock", &lock_class_mtx_sleep },
 	{ NULL, NULL },
 	/*
@@ -592,19 +593,22 @@ static struct witness_order_list_entry order_lists[] = {
 	/*
 	 * CDEV
 	 */
-	{ "system map", &lock_class_mtx_sleep },
-	{ "vm page queue mutex", &lock_class_mtx_sleep },
+	{ "vm map (system)", &lock_class_mtx_sleep },
+	{ "vm page queue", &lock_class_mtx_sleep },
 	{ "vnode interlock", &lock_class_mtx_sleep },
 	{ "cdev", &lock_class_mtx_sleep },
 	{ NULL, NULL },
 	/*
 	 * VM
-	 * 
 	 */
+	{ "vm map (user)", &lock_class_sx },
 	{ "vm object", &lock_class_mtx_sleep },
-	{ "page lock", &lock_class_mtx_sleep },
-	{ "vm page queue mutex", &lock_class_mtx_sleep },
+	{ "vm page", &lock_class_mtx_sleep },
+	{ "vm page queue", &lock_class_mtx_sleep },
+	{ "pmap pv global", &lock_class_rw },
 	{ "pmap", &lock_class_mtx_sleep },
+	{ "pmap pv list", &lock_class_rw },
+	{ "vm page free queue", &lock_class_mtx_sleep },
 	{ NULL, NULL },
 	/*
 	 * kqueue/VFS interaction
@@ -665,9 +669,6 @@ static struct witness_order_list_entry order_lists[] = {
 	 */
 	{ "intrcnt", &lock_class_mtx_spin },
 	{ "icu", &lock_class_mtx_spin },
-#if defined(SMP) && defined(__sparc64__)
-	{ "ipi", &lock_class_mtx_spin },
-#endif
 #ifdef __i386__
 	{ "allpmaps", &lock_class_mtx_spin },
 	{ "descriptor tables", &lock_class_mtx_spin },
@@ -943,6 +944,8 @@ witness_ddb_display_descendants(int(*prnt)(const char *fmt, ...),
 	indent++;
 	WITNESS_INDEX_ASSERT(w->w_index);
 	for (i = 1; i <= w_max_used_index; i++) {
+		if (db_pager_quit)
+			return;
 		if (w_rmatrix[w->w_index][i] & WITNESS_PARENT)
 			witness_ddb_display_descendants(prnt, &w_data[i],
 			    indent);
@@ -961,6 +964,8 @@ witness_ddb_display_list(int(*prnt)(const char *fmt, ...),
 
 		/* This lock has no anscestors - display its descendants. */
 		witness_ddb_display_descendants(prnt, w, 0);
+		if (db_pager_quit)
+			return;
 	}
 }
 	
@@ -982,12 +987,16 @@ witness_ddb_display(int(*prnt)(const char *fmt, ...))
 	 */
 	prnt("Sleep locks:\n");
 	witness_ddb_display_list(prnt, &w_sleep);
+	if (db_pager_quit)
+		return;
 	
 	/*
 	 * Now do spin locks which have been acquired at least once.
 	 */
 	prnt("\nSpin locks:\n");
 	witness_ddb_display_list(prnt, &w_spin);
+	if (db_pager_quit)
+		return;
 	
 	/*
 	 * Finally, any locks which have not been acquired yet.
@@ -998,6 +1007,8 @@ witness_ddb_display(int(*prnt)(const char *fmt, ...))
 			continue;
 		prnt("%s (type: %s, depth: %d)\n", w->w_name,
 		    w->w_class->lc_name, w->w_ddb_level);
+		if (db_pager_quit)
+			return;
 	}
 }
 #endif /* DDB */
@@ -2393,6 +2404,8 @@ DB_SHOW_ALL_COMMAND(locks, db_witness_list_all)
 			db_printf("Process %d (%s) thread %p (%d)\n", p->p_pid,
 			    p->p_comm, td, td->td_tid);
 			witness_ddb_list(td);
+			if (db_pager_quit)
+				return;
 		}
 	}
 }

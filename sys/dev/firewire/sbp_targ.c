@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/firewire/sbp_targ.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #include <sys/param.h>
@@ -95,7 +95,7 @@
 #define F_HOLD		(1 << 3)
 #define F_FREEZED	(1 << 4)
 
-MALLOC_DEFINE(M_SBP_TARG, "sbp_targ", "SBP-II/FireWire target mode");
+static MALLOC_DEFINE(M_SBP_TARG, "sbp_targ", "SBP-II/FireWire target mode");
 
 static int debug = 0;
 

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/mtree/BSD.include.dist 247566 2013-03-01 19:39:54Z jhb $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -88,13 +88,15 @@
         ..
     ..
     clang
-        3.1
+        3.2
         ..
     ..
     crypto
     ..
     dev
         acpica
+        ..
+        agp
         ..
         an
         ..
@@ -127,6 +129,8 @@
         ofw
         ..
         pbio
+        ..
+        pci
         ..
         powermac_nvram
         ..

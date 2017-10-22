@@ -1,4 +1,4 @@
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/tools/build/options/WITH_SHARED_TOOLCHAIN 235587 2012-05-18 02:00:01Z gjb $
 Set to build the toolchain binaries shared.
 The set includes
 .Xr cc 1 ,

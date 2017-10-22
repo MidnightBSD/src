@@ -30,7 +30,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- /*$FreeBSD$*/
+ /*$FreeBSD: stable/9/sys/dev/bxe/bxe_hsi.h 219656 2011-03-15 01:06:27Z davidch $*/
 
 struct license_key {
 	uint32_t reserved[6];

@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/9/contrib/cvs/FREEBSD-Xlist 175264 2008-01-13 05:50:33Z obrien $
 */*.com
 */*.dep
 */*.dsp

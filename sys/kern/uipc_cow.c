@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/uipc_cow.c 219028 2011-02-25 10:11:01Z netchild $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

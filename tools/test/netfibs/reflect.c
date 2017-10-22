@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/test/netfibs/reflect.c 231858 2012-02-17 04:26:24Z bz $
  */
 
 #include <sys/socket.h>

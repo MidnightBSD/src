@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/pc98/cbus/syscons_cbus.c 221708 2011-05-09 18:46:49Z jkim $");
 
 #include "opt_syscons.h"
 

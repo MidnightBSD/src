@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/crypto/rc4/rc4.c 186179 2008-12-16 13:58:37Z mav $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

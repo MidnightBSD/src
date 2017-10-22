@@ -1,4 +1,4 @@
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/tools/build/options/WITHOUT_CXX 220402 2011-04-06 20:19:07Z uqs $
 Set to not build
 .Xr g++ 1
 and related libraries.

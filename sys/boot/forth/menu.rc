@@ -1,5 +1,5 @@
 \ Menu.rc
-\ $FreeBSD$
+\ $FreeBSD: stable/9/sys/boot/forth/menu.rc 230867 2012-02-01 15:04:27Z pluknet $
 \
 \ Load required Forth modules
 include /boot/version.4th

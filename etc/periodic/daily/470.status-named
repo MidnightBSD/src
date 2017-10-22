@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/periodic/daily/470.status-named 159525 2006-06-11 20:39:12Z maxim $
 #
 
 # If there is a global system configuration file, suck it in.

@@ -1,4 +1,4 @@
-#	$FreeBSD$
+#	$FreeBSD: stable/9/sbin/ipf/ipnat/Makefile 162199 2006-09-10 08:58:47Z obrien $
 
 PROG=		ipnat
 SRCS=		${GENHDRS} ipnat.c ipnat_y.c ipnat_l.c

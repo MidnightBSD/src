@@ -1,11 +1,15 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/clang/lli/Makefile 245431 2013-01-14 19:51:26Z dim $
 
 PROG_CXX=lli
 
 SRCDIR=	tools/lli
-SRCS=	lli.cpp
+SRCS=	lli.cpp \
+	RecordingMemoryManager.cpp \
+	RemoteTarget.cpp
 
-LIBDEPS=llvmasmparser \
+LIBDEPS=llvmx86asmparser \
+	llvmx86disassembler \
+	llvmasmparser \
 	llvmbitreader \
 	llvmx86codegen \
 	llvmx86desc \

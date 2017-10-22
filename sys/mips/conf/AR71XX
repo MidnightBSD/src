@@ -1,7 +1,7 @@
 #
 # AR71XX -- Kernel configuration file for FreeBSD/mips for Atheros 71xx systems
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/mips/conf/AR71XX 221753 2011-05-11 00:52:41Z gonzo $
 #
 
 ident		AR71XX

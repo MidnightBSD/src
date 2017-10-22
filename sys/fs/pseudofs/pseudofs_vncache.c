@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/fs/pseudofs/pseudofs_vncache.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_pseudofs.h"
 
@@ -52,7 +52,7 @@ static struct pfs_vdata *pfs_vncache;
 static eventhandler_tag pfs_exit_tag;
 static void pfs_exit(void *arg, struct proc *p);
 
-SYSCTL_NODE(_vfs_pfs, OID_AUTO, vncache, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_vfs_pfs, OID_AUTO, vncache, CTLFLAG_RW, 0,
     "pseudofs vnode cache");
 
 static int pfs_vncache_entries;

@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/subr_scanf.c 231697 2012-02-14 18:00:37Z ken $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

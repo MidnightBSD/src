@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/pci/amdsmb.c 179622 2008-06-06 18:29:56Z jhb $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

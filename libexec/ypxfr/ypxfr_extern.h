@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/libexec/ypxfr/ypxfr_extern.h 93979 2002-04-06 19:08:02Z des $
  */
 #include <sys/types.h>
 #include <limits.h>

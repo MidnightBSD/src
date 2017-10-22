@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/hastd/subr.c 231017 2012-02-05 15:51:19Z trociny $");
 
 #ifdef HAVE_CAPSICUM
 #include <sys/capability.h>

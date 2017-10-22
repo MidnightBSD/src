@@ -1,4 +1,4 @@
-#$FreeBSD$
+#$FreeBSD: stable/9/rescue/rescue/Makefile 246723 2013-02-12 23:01:21Z bapt $
 #	@(#)Makefile	8.1 (Berkeley) 6/2/93
 
 NO_MAN=
@@ -123,7 +123,7 @@ CRUNCH_LIBS+= -lalias -lcam -lcurses -ldevstat -lipsec
 CRUNCH_LIBS+= -lipx
 .endif
 .if ${MK_ZFS} != "no"
-CRUNCH_LIBS+= -lavl -lnvpair -lpthread -lzfs -luutil -lumem
+CRUNCH_LIBS+= -lavl -ljail -lzfs -lnvpair -lpthread -luutil -lumem
 .endif
 CRUNCH_LIBS+= -lgeom -lbsdxml -ljail -lkiconv -lmd -lreadline -lsbuf -lufs -lz
 

@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)pwd_mkdb.c	8.5 (Berkeley) 4/20/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/pwd_mkdb/pwd_mkdb.c 223818 2011-07-06 06:34:08Z gordon $");
 
 #include <sys/param.h>
 #include <sys/endian.h>

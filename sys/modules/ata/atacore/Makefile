@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/ata/atacore/Makefile 210668 2010-07-31 00:08:18Z rpaulo $
 
 .PATH: ${.CURDIR}/../../../dev/ata
 

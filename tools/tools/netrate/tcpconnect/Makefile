@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/netrate/tcpconnect/Makefile 204585 2010-03-02 16:58:04Z uqs $
 
 PROG=	tcpconnect
 NO_MAN=

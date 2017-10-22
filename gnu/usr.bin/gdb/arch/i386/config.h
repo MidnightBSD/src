@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/gnu/usr.bin/gdb/arch/i386/config.h 146818 2005-05-31 09:43:04Z dfr $ */
 
 /* config.h.  Generated automatically by configure.  */
 /* config.in.  Generated automatically from configure.in by autoheader.  */

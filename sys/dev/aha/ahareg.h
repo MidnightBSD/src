@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/aha/ahareg.h 164110 2006-11-09 02:19:30Z kevlo $
  */
 
 #ifndef _AHAREG_H_

@@ -52,7 +52,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/i915/i915_gem.c 237201 2012-06-17 19:16:31Z kib $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm.h>

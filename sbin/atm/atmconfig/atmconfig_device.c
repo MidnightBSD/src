@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/atm/atmconfig/atmconfig_device.c 133565 2004-08-12 12:31:43Z harti $");
 
 #include "atmconfig.h"
 #include "atmconfig_device.h"

@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 __RCSID("$NetBSD: readline.c,v 1.90 2010/08/04 20:29:18 christos Exp $");
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libedit/readline.c 220370 2011-04-05 18:41:01Z obrien $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

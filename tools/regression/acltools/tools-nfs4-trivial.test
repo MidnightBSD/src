@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/acltools/tools-nfs4-trivial.test 219877 2011-03-22 17:26:56Z trasz $
 #
 
 # This is a tools-level test for acl_is_trivial_np(3).  Run it as root on ZFS.

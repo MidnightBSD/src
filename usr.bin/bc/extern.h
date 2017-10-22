@@ -1,4 +1,4 @@
-/*	$FreeBSD$						*/
+/*	$FreeBSD: stable/9/usr.bin/bc/extern.h 203498 2010-02-04 18:43:05Z delphij $						*/
 /*      $OpenBSD: extern.h,v 1.6 2006/03/18 20:44:43 otto Exp $	*/
 
 /*

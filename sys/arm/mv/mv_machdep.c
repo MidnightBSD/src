@@ -39,7 +39,7 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/mv/mv_machdep.c 224051 2011-07-15 02:29:10Z marcel $");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>

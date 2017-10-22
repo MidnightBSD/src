@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/vtoc.h 243237 2012-11-18 16:13:36Z ae $
  */
 
 #ifndef _SYS_VTOC_H_
@@ -51,6 +51,7 @@
 #define	VTOC_TAG_FREEBSD_UFS	0x0902
 #define	VTOC_TAG_FREEBSD_VINUM	0x0903
 #define	VTOC_TAG_FREEBSD_ZFS	0x0904
+#define	VTOC_TAG_FREEBSD_NANDFS	0x0905
 
 #define	VTOC_FLAG_UNMNT		0x01	/* unmountable partition */
 #define	VTOC_FLAG_RDONLY	0x10    /* partition is read/only */

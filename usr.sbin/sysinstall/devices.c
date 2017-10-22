@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sysinstall/devices.c 219647 2011-03-14 22:42:41Z davidch $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

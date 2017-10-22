@@ -1,4 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/clang/libclangfrontend/Makefile 246637 2013-02-10 21:24:47Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	clangfrontend
 
@@ -36,7 +38,7 @@ SRCS=	ASTConsumers.cpp \
 TGHDRS=	AttrList \
 	AttrParsedAttrList \
 	Attrs \
-	CC1Options \
+	CommentNodes \
 	DeclNodes \
 	DiagnosticASTKinds \
 	DiagnosticCommonKinds \

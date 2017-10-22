@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/mv/kirkwood/sheevaplug.c 209131 2010-06-13 13:28:53Z raj $");
 
 #include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>

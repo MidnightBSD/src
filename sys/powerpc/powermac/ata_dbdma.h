@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/powermac/ata_dbdma.h 183409 2008-09-27 15:13:44Z nwhitehorn $
  */
 
 #ifndef ATA_DBDMA_H

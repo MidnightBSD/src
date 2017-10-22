@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/fdt/simplebus.c 209904 2010-07-11 20:30:59Z raj $");
 
 #include "opt_platform.h"
 #include <sys/param.h>

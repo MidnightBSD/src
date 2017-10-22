@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_hub.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #include <sys/param.h>
@@ -37,7 +37,7 @@
 #include <netgraph/netgraph.h>
 
 #ifdef NG_SEPARATE_MALLOC
-MALLOC_DEFINE(M_NETGRAPH_HUB, "netgraph_hub", "netgraph hub node");
+static MALLOC_DEFINE(M_NETGRAPH_HUB, "netgraph_hub", "netgraph hub node");
 #else
 #define M_NETGRAPH_HUB M_NETGRAPH
 #endif

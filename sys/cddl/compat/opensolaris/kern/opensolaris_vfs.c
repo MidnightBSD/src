@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/cddl/compat/opensolaris/kern/opensolaris_vfs.c 243491 2012-11-24 12:56:07Z avg $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -191,6 +191,9 @@ mount_snapshot(kthread_t *td, vnode_t **vpp, const char *fstype, char *fspath,
 	td->td_ucred = cr;
 
 	if (error != 0) {
+		VI_LOCK(vp);
+		vp->v_iflag &= ~VI_MOUNT;
+		VI_UNLOCK(vp);
 		vrele(vp);
 		vfs_unbusy(mp);
 		vfs_mount_destroy(mp);

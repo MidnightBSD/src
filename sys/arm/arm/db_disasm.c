@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/db_disasm.c 139735 2005-01-05 21:58:49Z imp $");
 #include <sys/param.h>
 #include <machine/db_machdep.h>
 #include <ddb/ddb.h>

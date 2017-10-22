@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)heapsort.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/stdlib/heapsort.c 175259 2008-01-13 02:11:10Z das $");
 
 #include <errno.h>
 #include <stddef.h>

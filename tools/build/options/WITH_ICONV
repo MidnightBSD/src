@@ -1,2 +1,2 @@
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/tools/build/options/WITH_ICONV 219020 2011-02-25 00:10:26Z gabor $
 Set to build iconv as part of libc.

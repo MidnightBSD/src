@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/nfs/nfssvc.h 244289 2012-12-16 14:01:56Z rmacklem $
  */
 
 #ifndef _NFS_NFSSVC_H_
@@ -66,5 +66,15 @@
 #define	NFSSVC_BACKUPSTABLE	0x00800000
 #define	NFSSVC_ZEROCLTSTATS	0x01000000	/* modifier for GETSTATS */
 #define	NFSSVC_ZEROSRVSTATS	0x02000000	/* modifier for GETSTATS */
+#define	NFSSVC_SUSPENDNFSD	0x04000000
+#define	NFSSVC_RESUMENFSD	0x08000000
+#define	NFSSVC_DUMPMNTOPTS	0x10000000
+
+/* Argument structure for NFSSVC_DUMPMNTOPTS. */
+struct nfscl_dumpmntopts {
+	char	*ndmnt_fname;		/* File Name */
+	size_t	ndmnt_blen;		/* Size of buffer */
+	void	*ndmnt_buf;		/* and the buffer */
+};
 
 #endif /* _NFS_NFSSVC_H */

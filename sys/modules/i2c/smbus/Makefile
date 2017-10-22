@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/i2c/smbus/Makefile 93023 2002-03-23 15:49:15Z nsouch $
 
 .PATH:		${.CURDIR}/../../../dev/smbus
 KMOD		= smbus

@@ -13,13 +13,13 @@
 # purpose.
 #
 
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/boot/pc98/btx/lib/btxcsu.S 243448 2012-11-23 13:35:17Z nyan $
+
+#include <bootargs.h>
 
 #
 # BTX C startup code (ELF).
 #
-
-#include <bootargs.h>
 
 #
 # Globals.

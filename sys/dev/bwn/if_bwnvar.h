@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/bwn/if_bwnvar.h 206358 2010-04-07 15:29:13Z rpaulo $
  */
 
 #ifndef _IF_BWNVAR_H

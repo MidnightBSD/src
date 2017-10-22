@@ -53,7 +53,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)dumpfs.c	8.5 (Berkeley) 4/29/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/sbin/dumpfs/dumpfs.c 246284 2013-02-03 12:17:49Z trasz $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -277,8 +277,9 @@ dumpfs(const char *name)
 		printf("unknown flags (%#x)", fsflags);
 	putchar('\n');
 	printf("fsmnt\t%s\n", afs.fs_fsmnt);
-	printf("volname\t%s\tswuid\t%ju\n",
-		afs.fs_volname, (uintmax_t)afs.fs_swuid);
+	printf("volname\t%s\tswuid\t%ju\tprovidersize\t%ju\n",
+		afs.fs_volname, (uintmax_t)afs.fs_swuid,
+		(uintmax_t)afs.fs_providersize);
 	printf("\ncs[].cs_(nbfree,ndir,nifree,nffree):\n\t");
 	afs.fs_csp = calloc(1, afs.fs_cssize);
 	if (bread(&disk, fsbtodb(&afs, afs.fs_csaddr), afs.fs_csp, afs.fs_cssize) == -1)
@@ -419,6 +420,8 @@ marshal(const char *name)
 	/* -i is dumb */
 	if (fs->fs_flags & FS_SUJ)
 		printf("-j ");
+	if (fs->fs_flags & FS_GJOURNAL)
+		printf("-J ");
 	/* -k..l unimplemented */
 	printf("-m %d ", fs->fs_minfree);
 	/* -n unimplemented */

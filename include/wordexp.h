@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/include/wordexp.h 131331 2004-06-30 13:55:08Z tjr $
  */
 
 #ifndef _WORDEXP_H_

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/smbfs/smbfs_node.c 249132 2013-04-05 08:22:11Z mav $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -58,7 +58,7 @@
 
 extern struct vop_vector smbfs_vnodeops;	/* XXX -> .h file */
 
-MALLOC_DEFINE(M_SMBNODE, "smbufs_node", "SMBFS vnode private part");
+static MALLOC_DEFINE(M_SMBNODE, "smbufs_node", "SMBFS vnode private part");
 static MALLOC_DEFINE(M_SMBNODENAME, "smbufs_nname", "SMBFS node name");
 
 int smbfs_hashprint(struct mount *mp);

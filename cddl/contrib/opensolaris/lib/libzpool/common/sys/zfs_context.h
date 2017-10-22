@@ -34,7 +34,6 @@ extern "C" {
 #define	_SYS_RWLOCK_H
 #define	_SYS_CONDVAR_H
 #define	_SYS_SYSTM_H
-#define	_SYS_DEBUG_H
 #define	_SYS_T_LOCK_H
 #define	_SYS_VNODE_H
 #define	_SYS_VFS_H
@@ -75,7 +74,6 @@ extern "C" {
 #include <sys/mntent.h>
 #include <sys/mnttab.h>
 #include <sys/zfs_debug.h>
-#include <sys/debug.h>
 #include <sys/sdt.h>
 #include <sys/kstat.h>
 #include <sys/u8_textprep.h>
@@ -85,6 +83,7 @@ extern "C" {
 #include <sys/sysevent/eventdefs.h>
 #include <sys/sysevent/dev.h>
 #include <machine/atomic.h>
+#include <sys/debug.h>
 
 #define	ZFS_EXPORTS_PATH	"/etc/zfs/exports"
 
@@ -123,60 +122,6 @@ extern void vpanic(const char *, __va_list);
 #define	fm_panic	panic
 
 extern int aok;
-
-/* This definition is copied from assert.h. */
-#if defined(__STDC__)
-#if __STDC_VERSION__ - 0 >= 199901L
-#define	zverify(EX) (void)((EX) || (aok) || \
-	(__assert(#EX, __FILE__, __LINE__), 0))
-#else
-#define	zverify(EX) (void)((EX) || (aok) || \
-	(__assert(#EX, __FILE__, __LINE__), 0))
-#endif /* __STDC_VERSION__ - 0 >= 199901L */
-#else
-#define	zverify(EX) (void)((EX) || (aok) || \
-	(_assert("EX", __FILE__, __LINE__), 0))
-#endif	/* __STDC__ */
-
-
-#define	VERIFY	zverify
-#define	ASSERT	zverify
-#undef	assert
-#define	assert	zverify
-
-extern void __assert(const char *, const char *, int);
-
-#ifdef lint
-#define	VERIFY3_IMPL(x, y, z, t)	if (x == z) ((void)0)
-#else
-/* BEGIN CSTYLED */
-#define	VERIFY3_IMPL(LEFT, OP, RIGHT, TYPE) do { \
-	const TYPE __left = (TYPE)(LEFT); \
-	const TYPE __right = (TYPE)(RIGHT); \
-	if (!(__left OP __right) && (!aok)) { \
-		char *__buf = alloca(256); \
-		(void) snprintf(__buf, 256, "%s %s %s (0x%llx %s 0x%llx)", \
-			#LEFT, #OP, #RIGHT, \
-			(u_longlong_t)__left, #OP, (u_longlong_t)__right); \
-		__assert(__buf, __FILE__, __LINE__); \
-	} \
-_NOTE(CONSTCOND) } while (0)
-/* END CSTYLED */
-#endif /* lint */
-
-#define	VERIFY3S(x, y, z)	VERIFY3_IMPL(x, y, z, int64_t)
-#define	VERIFY3U(x, y, z)	VERIFY3_IMPL(x, y, z, uint64_t)
-#define	VERIFY3P(x, y, z)	VERIFY3_IMPL(x, y, z, uintptr_t)
-
-#ifdef NDEBUG
-#define	ASSERT3S(x, y, z)	((void)0)
-#define	ASSERT3U(x, y, z)	((void)0)
-#define	ASSERT3P(x, y, z)	((void)0)
-#else
-#define	ASSERT3S(x, y, z)	VERIFY3S(x, y, z)
-#define	ASSERT3U(x, y, z)	VERIFY3U(x, y, z)
-#define	ASSERT3P(x, y, z)	VERIFY3P(x, y, z)
-#endif
 
 /*
  * DTrace SDT probes have different signatures in userland than they do in
@@ -520,6 +465,9 @@ extern vnode_t *rootdir;
 
 extern void delay(clock_t ticks);
 
+#define	SEC_TO_TICK(sec)	((sec) * hz)
+#define	NSEC_TO_TICK(usec)	((usec) / (NANOSEC / hz))
+
 #define	gethrestime_sec() time(NULL)
 #define	gethrestime(t) \
 	do {\
@@ -686,6 +634,36 @@ typedef	uint32_t	idmap_rid_t;
 #ifndef	ERESTART
 #define	ERESTART	(-1)
 #endif
+
+#ifdef illumos
+/*
+ * Cyclic information
+ */
+extern kmutex_t cpu_lock;
+
+typedef uintptr_t cyclic_id_t;
+typedef uint16_t cyc_level_t;
+typedef void (*cyc_func_t)(void *);
+
+#define	CY_LOW_LEVEL	0
+#define	CY_INFINITY	INT64_MAX
+#define	CYCLIC_NONE	((cyclic_id_t)0)
+
+typedef struct cyc_time {
+	hrtime_t cyt_when;
+	hrtime_t cyt_interval;
+} cyc_time_t;
+
+typedef struct cyc_handler {
+	cyc_func_t cyh_func;
+	void *cyh_arg;
+	cyc_level_t cyh_level;
+} cyc_handler_t;
+
+extern cyclic_id_t cyclic_add(cyc_handler_t *, cyc_time_t *);
+extern void cyclic_remove(cyclic_id_t);
+extern int cyclic_reprogram(cyclic_id_t, hrtime_t);
+#endif	/* illumos */
 
 #ifdef	__cplusplus
 }

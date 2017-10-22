@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/joy/joy_isa.c 119418 2003-08-24 17:55:58Z obrien $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

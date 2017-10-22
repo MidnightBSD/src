@@ -12,15 +12,15 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/pc98/btx/btxldr/btxldr.S 243448 2012-11-23 13:35:17Z nyan $
  */
+
+#include <bootargs.h>
 
 /*
  * Prototype BTX loader program, written in a couple of hours.  The
  * real thing should probably be more flexible, and in C.
  */
-
-#include <bootargs.h>
 
 /*
  * Memory locations.

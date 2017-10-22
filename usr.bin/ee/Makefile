@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/ee/Makefile 203699 2010-02-09 10:47:44Z gabor $
 
 .PATH:	${.CURDIR}/../../contrib/ee
 

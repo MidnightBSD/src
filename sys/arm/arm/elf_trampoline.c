@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/elf_trampoline.c 214648 2010-11-01 21:04:23Z cognet $");
 #include <machine/asm.h>
 #include <sys/param.h>
 #include <sys/elf32.h>

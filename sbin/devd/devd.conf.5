@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/sbin/devd/devd.conf.5 247767 2013-03-04 05:46:35Z hrs $
 .\"
 .\" The section on comments was taken from named.conf.5, which has the
 .\" following copyright:
@@ -41,7 +41,7 @@
 .\" ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
 .\" SOFTWARE.
 .\"
-.Dd March 8, 2009
+.Dd March 4, 2013
 .Dt DEVD.CONF 5
 .Os
 .Sh NAME
@@ -121,6 +121,10 @@ Creates a regular expression and assigns it to the variable
 .Ar regexp-name .
 The variable is available throughout the rest of
 the configuration file.
+If the string begins with
+.Ql \&! ,
+it matches if the regular expression formed by the rest of the string
+does not match.
 All regular expressions have an implicit
 .Ql ^$
 around them.
@@ -319,6 +323,8 @@ Button state ($notify=0x00 is power, 0x01 is sleep).
 Battery events.
 .It Li Lid
 Lid state ($notify=0x00 is closed, 0x01 is open).
+.It Li PROCESSOR
+Processor state/configuration ($notify=0x81 is a change in available Cx states).
 .It Li Thermal
 Thermal zone events.
 .El

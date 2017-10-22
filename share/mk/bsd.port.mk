@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/mk/bsd.port.mk 206082 2010-04-02 06:55:31Z netchild $
 
 PORTSDIR?=	/usr/ports
 BSDPORTMK?=	${PORTSDIR}/Mk/bsd.port.mk

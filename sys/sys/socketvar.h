@@ -28,7 +28,7 @@
  *
  *	@(#)socketvar.h	8.3 (Berkeley) 2/19/95
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/socketvar.h 215178 2010-11-12 13:02:26Z luigi $
  */
 
 #ifndef _SYS_SOCKETVAR_H_

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/digi/Xem.bios.h 145975 2005-05-06 20:53:34Z anholt $
  */
 
 static const u_char Xem_bios[] = {

@@ -26,7 +26,7 @@
  * Bridge MIB implementation for SNMPd.
  * Bridge addresses.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_addrs.c 165253 2006-12-15 20:01:57Z syrinx $
  */
 
 #include <sys/queue.h>

@@ -31,7 +31,7 @@
  *          Ken Merry           (Spectra Logic Corporation)
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/xen/blkback/blkback.c 249132 2013-04-05 08:22:11Z mav $");
 
 /**
  * \file blkback.c
@@ -124,7 +124,7 @@ __FBSDID("$FreeBSD$");
 /**
  * Custom malloc type for all driver allocations.
  */
-MALLOC_DEFINE(M_XENBLOCKBACK, "xbbd", "Xen Block Back Driver Data");
+static MALLOC_DEFINE(M_XENBLOCKBACK, "xbbd", "Xen Block Back Driver Data");
 
 #ifdef XBB_DEBUG
 #define DPRINTF(fmt, args...)					\

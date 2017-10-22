@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ahci/ahci.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -101,7 +101,7 @@ static void ahci_process_request_sense(device_t dev, union ccb *ccb);
 static void ahciaction(struct cam_sim *sim, union ccb *ccb);
 static void ahcipoll(struct cam_sim *sim);
 
-MALLOC_DEFINE(M_AHCI, "AHCI driver", "AHCI driver data buffers");
+static MALLOC_DEFINE(M_AHCI, "AHCI driver", "AHCI driver data buffers");
 
 static struct {
 	uint32_t	id;
@@ -120,14 +120,20 @@ static struct {
 #define AHCI_Q_NOAA	512
 #define AHCI_Q_NOCOUNT	1024
 #define AHCI_Q_ALTSIG	2048
+#define AHCI_Q_NOMSI	4096
 } ahci_ids[] = {
-	{0x43801002, 0x00, "ATI IXP600",	0},
+	{0x43801002, 0x00, "ATI IXP600",	AHCI_Q_NOMSI},
 	{0x43901002, 0x00, "ATI IXP700",	0},
 	{0x43911002, 0x00, "ATI IXP700",	0},
 	{0x43921002, 0x00, "ATI IXP700",	0},
 	{0x43931002, 0x00, "ATI IXP700",	0},
 	{0x43941002, 0x00, "ATI IXP800",	0},
 	{0x43951002, 0x00, "ATI IXP800",	0},
+	{0x78001022, 0x00, "AMD Hudson-2",	0},
+	{0x78011022, 0x00, "AMD Hudson-2",	0},
+	{0x78021022, 0x00, "AMD Hudson-2",	0},
+	{0x78031022, 0x00, "AMD Hudson-2",	0},
+	{0x78041022, 0x00, "AMD Hudson-2",	0},
 	{0x06121b21, 0x00, "ASMedia ASM1061",	0},
 	{0x26528086, 0x00, "Intel ICH6",	AHCI_Q_NOFORCE},
 	{0x26538086, 0x00, "Intel ICH6M",	AHCI_Q_NOFORCE},
@@ -180,8 +186,18 @@ static struct {
 	{0x1e078086, 0x00, "Intel Panther Point",	0},
 	{0x1e0e8086, 0x00, "Intel Panther Point",	0},
 	{0x1e0f8086, 0x00, "Intel Panther Point",	0},
+	{0x8c028086, 0x00, "Intel Lynx Point",	0},
+	{0x8c038086, 0x00, "Intel Lynx Point",	0},
+	{0x8c048086, 0x00, "Intel Lynx Point",	0},
+	{0x8c058086, 0x00, "Intel Lynx Point",	0},
+	{0x8c068086, 0x00, "Intel Lynx Point",	0},
+	{0x8c078086, 0x00, "Intel Lynx Point",	0},
+	{0x8c0e8086, 0x00, "Intel Lynx Point",	0},
+	{0x8c0f8086, 0x00, "Intel Lynx Point",	0},
 	{0x23238086, 0x00, "Intel DH89xxCC",	0},
+	{0x2360197b, 0x00, "JMicron JMB360",	0},
 	{0x2361197b, 0x00, "JMicron JMB361",	AHCI_Q_NOFORCE},
+	{0x2362197b, 0x00, "JMicron JMB362",	0},
 	{0x2363197b, 0x00, "JMicron JMB363",	AHCI_Q_NOFORCE},
 	{0x2365197b, 0x00, "JMicron JMB365",	AHCI_Q_NOFORCE},
 	{0x2366197b, 0x00, "JMicron JMB366",	AHCI_Q_NOFORCE},
@@ -407,7 +423,7 @@ ahci_attach(device_t dev)
 	/* Get the HW capabilities */
 	version = ATA_INL(ctlr->r_mem, AHCI_VS);
 	ctlr->caps = ATA_INL(ctlr->r_mem, AHCI_CAP);
-	if (version >= 0x00010020)
+	if (version >= 0x00010200)
 		ctlr->caps2 = ATA_INL(ctlr->r_mem, AHCI_CAP2);
 	if (ctlr->caps & AHCI_CAP_EMS)
 		ctlr->capsem = ATA_INL(ctlr->r_mem, AHCI_EM_CTL);
@@ -488,7 +504,7 @@ ahci_attach(device_t dev)
 		    (ctlr->caps & AHCI_CAP_SXS) ? " eSATA":"",
 		    (ctlr->caps & AHCI_CAP_NPMASK) + 1);
 	}
-	if (bootverbose && version >= 0x00010020) {
+	if (bootverbose && version >= 0x00010200) {
 		device_printf(dev, "Caps2:%s%s%s\n",
 		    (ctlr->caps2 & AHCI_CAP2_APST) ? " APST":"",
 		    (ctlr->caps2 & AHCI_CAP2_NVMP) ? " NVMP":"",
@@ -631,6 +647,8 @@ ahci_setup_interrupt(device_t dev)
 	int i, msi = 1;
 
 	/* Process hints. */
+	if (ctlr->quirks & AHCI_Q_NOMSI)
+		msi = 0;
 	resource_int_value(device_get_name(dev),
 	    device_get_unit(dev), "msi", &msi);
 	if (msi < 0)
@@ -973,7 +991,7 @@ ahci_ch_attach(device_t dev)
 	}
 	ch->chcaps = ATA_INL(ch->r_mem, AHCI_P_CMD);
 	version = ATA_INL(ctlr->r_mem, AHCI_VS);
-	if (version < 0x00010020 && (ctlr->caps & AHCI_CAP_FBSS))
+	if (version < 0x00010200 && (ctlr->caps & AHCI_CAP_FBSS))
 		ch->chcaps |= AHCI_P_CMD_FBSCP;
 	if (bootverbose) {
 		device_printf(dev, "Caps:%s%s%s%s%s\n",

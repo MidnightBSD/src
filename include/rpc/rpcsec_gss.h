@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$FreeBSD: stable/9/include/rpc/rpcsec_gss.h 181344 2008-08-06 14:02:05Z dfr $
  */
 
 #ifndef _RPCSEC_GSS_H

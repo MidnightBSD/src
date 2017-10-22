@@ -50,7 +50,7 @@
 
 %{
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libipsec/policy_parse.y 171135 2007-07-01 12:08:08Z gnn $");
 
 #include <sys/types.h>
 #include <sys/param.h>

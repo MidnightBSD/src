@@ -1,5 +1,5 @@
-/* $OpenBSD: compat.c,v 1.78 2008/09/11 14:22:37 markus Exp $ */
-/* $FreeBSD$ */
+/* $OpenBSD: compat.c,v 1.79 2011/09/23 07:45:05 markus Exp $ */
+/* $FreeBSD: stable/9/crypto/openssh/compat.c 247485 2013-02-28 18:43:50Z des $ */
 /*
  * Copyright (c) 1999, 2000, 2001, 2002 Markus Friedl.  All rights reserved.
  *
@@ -93,6 +93,7 @@ compat_datafellows(const char *version)
 		{ "OpenSSH_3.*",	SSH_OLD_FORWARD_ADDR },
 		{ "Sun_SSH_1.0*",	SSH_BUG_NOREKEY|SSH_BUG_EXTEOF},
 		{ "OpenSSH_4*",		0 },
+		{ "OpenSSH_5*",		SSH_NEW_OPENSSH|SSH_BUG_DYNAMIC_RPORT},
 		{ "OpenSSH*",		SSH_NEW_OPENSSH },
 		{ "*MindTerm*",		0 },
 		{ "2.1.0*",		SSH_BUG_SIGBLOB|SSH_BUG_HMAC|

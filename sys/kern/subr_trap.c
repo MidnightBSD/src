@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/subr_trap.c 249444 2013-04-13 21:04:06Z trasz $");
 
 #include "opt_capsicum.h"
 #include "opt_hwpmc_hooks.h"
@@ -139,6 +139,8 @@ userret(struct thread *td, struct trapframe *frame)
 	sched_userret(td);
 	KASSERT(td->td_locks == 0,
 	    ("userret: Returning with %d locks held.", td->td_locks));
+	KASSERT(td->td_vp_reserv == 0,
+	    ("userret: Returning while holding vnode reservation"));
 #ifdef VIMAGE
 	/* Unfortunately td_vnet_lpush needs VNET_DEBUG. */
 	VNET_ASSERT(curvnet == NULL,
@@ -148,6 +150,12 @@ userret(struct thread *td, struct trapframe *frame)
 #endif
 #ifdef XEN
 	PT_UPDATES_FLUSH();
+#endif
+#ifdef	RACCT
+	PROC_LOCK(p);
+	while (p->p_throttled == 1)
+		msleep(p->p_racct, &p->p_mtx, 0, "racct", 0);
+	PROC_UNLOCK(p);
 #endif
 }
 

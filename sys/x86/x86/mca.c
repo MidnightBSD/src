@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/x86/x86/mca.c 248085 2013-03-09 02:36:32Z marius $");
 
 #ifdef __amd64__
 #define	DEV_APIC
@@ -87,7 +87,8 @@ static MALLOC_DEFINE(M_MCA, "MCA", "Machine Check Architecture");
 static int mca_count;		/* Number of records stored. */
 static int mca_banks;		/* Number of per-CPU register banks. */
 
-SYSCTL_NODE(_hw, OID_AUTO, mca, CTLFLAG_RD, NULL, "Machine Check Architecture");
+static SYSCTL_NODE(_hw, OID_AUTO, mca, CTLFLAG_RD, NULL,
+    "Machine Check Architecture");
 
 static int mca_enabled = 1;
 TUNABLE_INT("hw.mca.enabled", &mca_enabled);

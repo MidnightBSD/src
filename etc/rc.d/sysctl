@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/sysctl 247449 2013-02-28 08:06:43Z delphij $
 #
 
 # PROVIDE: sysctl
@@ -26,7 +26,7 @@ parse_file()
 			\#*|'')
 				;;
 			*)
-				mib=${var%=*}
+				mib=${var%%=*}
 				val=${var#*=}
 
 				if current_value=`${SYSCTL} -n ${mib} 2>/dev/null`; then

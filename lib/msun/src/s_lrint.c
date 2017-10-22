@@ -29,7 +29,7 @@
 #include <math.h>
 
 #ifndef type
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/s_lrint.c 140088 2005-01-11 23:12:55Z das $");
 #define type		double
 #define	roundit		rint
 #define dtype		long

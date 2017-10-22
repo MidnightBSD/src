@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/games/random/randomize_fd.c 242053 2012-10-25 03:27:53Z eadler $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -206,6 +206,8 @@ randomize_fd(int fd, int type, int unique, double denom)
 		i--;
 		goto make_token;
 	}
+
+	free(buf);
 
 	for (i = numnode; i > 0; i--) {
 		selected = random() % numnode;

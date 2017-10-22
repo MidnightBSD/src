@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/patm/if_patm_intr.c 248078 2013-03-09 00:39:54Z marius $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -324,7 +324,7 @@ patm_lmbuf_alloc(struct patm_softc *sc)
 	struct mbuf *m;
 	struct lmbuf *b;
 
-	m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+	m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (m == NULL)
 		return (NULL);
 	m->m_data += LMBUF_OFFSET;

@@ -1,5 +1,5 @@
 
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/pps/Makefile 122894 2003-11-19 05:08:27Z imp $
 
 .PATH:	${.CURDIR}/../../dev/ppbus
 KMOD=	pps

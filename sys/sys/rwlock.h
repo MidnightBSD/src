@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/rwlock.h 197643 2009-09-30 13:26:31Z attilio $
  */
 
 #ifndef _SYS_RWLOCK_H_

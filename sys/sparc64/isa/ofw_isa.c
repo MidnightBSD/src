@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/isa/ofw_isa.c 219567 2011-03-12 14:33:32Z marius $");
 
 /*
  * Helper functions which can be used in both ISA and EBus code.

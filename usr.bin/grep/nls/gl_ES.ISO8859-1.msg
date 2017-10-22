@@ -1,4 +1,4 @@
-$ $FreeBSD$
+$ $FreeBSD: stable/9/usr.bin/grep/nls/gl_ES.ISO8859-1.msg 210622 2010-07-29 18:02:57Z gabor $
 $
 $set 1
 $quote "

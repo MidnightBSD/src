@@ -72,7 +72,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/pccbb/pccbb_pci.c 240287 2012-09-09 20:13:11Z adrian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -464,6 +464,11 @@ cbb_chipinit(struct cbb_softc *sc)
 	/* Set PCI latency timer */
 	if (pci_read_config(sc->dev, PCIR_LATTIMER, 1) < 0x20)
 		pci_write_config(sc->dev, PCIR_LATTIMER, 0x20, 1);
+
+	/* Restore bus configuration */
+	pci_write_config(sc->dev, PCIR_PRIBUS_2, sc->pribus, 1);
+	pci_write_config(sc->dev, PCIR_SECBUS_2, sc->secbus, 1);
+	pci_write_config(sc->dev, PCIR_SUBBUS_2, sc->subbus, 1);
 
 	/* Enable memory access */
 	PCI_MASK_CONFIG(sc->dev, PCIR_COMMAND,

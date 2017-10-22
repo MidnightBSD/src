@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/wall/wall.c 242166 2012-10-27 01:20:48Z eadler $");
 
 #ifndef lint
 static const char copyright[] =
@@ -240,7 +240,8 @@ makemsg(char *fname)
 		setegid(getgid());
 		if (freopen(fname, "r", stdin) == NULL)
 			err(1, "can't read %s", fname);
-		setegid(egid);
+		if (setegid(egid) != 0)
+			err(1, "setegid failed");
 	}
 	cnt = 0;
 	while (fgetws(lbuf, sizeof(lbuf)/sizeof(wchar_t), stdin)) {

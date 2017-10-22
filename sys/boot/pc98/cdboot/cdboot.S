@@ -28,15 +28,15 @@
 # SUCH DAMAGE.
 #
 
-# $FreeBSD$
-
-#include <bootargs.h>
+# $FreeBSD: stable/9/sys/boot/pc98/cdboot/cdboot.S 243448 2012-11-23 13:35:17Z nyan $
 
 #
 # Basically, we first create a set of boot arguments to pass to the loaded
 # binary.  Then we attempt to load /boot/loader from the CD we were booted
 # off of. 
 #
+
+#include <bootargs.h>
 
 #
 # Memory locations.

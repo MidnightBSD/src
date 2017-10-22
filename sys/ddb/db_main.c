@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ddb/db_main.c 235741 2012-05-21 21:14:09Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

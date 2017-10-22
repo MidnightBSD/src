@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/patm/if_patm_tx.c 248078 2013-03-09 00:39:54Z marius $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -438,7 +438,7 @@ patm_tx_pad(struct patm_softc *sc, struct mbuf *m0)
 			return (m0);
 		}
 	}
-	MGET(m, M_DONTWAIT, MT_DATA);
+	MGET(m, M_NOWAIT, MT_DATA);
 	if (m == 0) {
 		m_freem(m0);
 		sc->ifp->if_oerrors++;
@@ -532,7 +532,7 @@ patm_launch(struct patm_softc *sc, struct patm_scd *scd)
 		error = bus_dmamap_load_mbuf(sc->tx_tag, map->map, m,
 		    patm_load_txbuf, &a, BUS_DMA_NOWAIT);
 		if (error == EFBIG) {
-			if ((m = m_defrag(m, M_DONTWAIT)) == NULL) {
+			if ((m = m_defrag(m, M_NOWAIT)) == NULL) {
 				sc->ifp->if_oerrors++;
 				continue;
 			}

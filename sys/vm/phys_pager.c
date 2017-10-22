@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/vm/phys_pager.c 217265 2011-01-11 13:59:06Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/contrib/ipfilter/mlh_rule.c 145519 2005-04-25 18:20:15Z darrenr $	*/
 
 /*
  * Copyright (C) 1993-1998 by Darren Reed.

@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/periodic/security/700.kernelmsg 106987 2002-11-16 14:57:12Z thomas $
 #
 
 # Show kernel log messages

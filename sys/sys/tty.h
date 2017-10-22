@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/tty.h 242892 2012-11-11 12:12:44Z ed $
  */
 
 #ifndef _SYS_TTY_H_
@@ -180,6 +180,7 @@ void	tty_signal_sessleader(struct tty *tp, int signal);
 void	tty_signal_pgrp(struct tty *tp, int signal);
 /* Waking up readers/writers. */
 int	tty_wait(struct tty *tp, struct cv *cv);
+int	tty_wait_background(struct tty *tp, struct thread *td, int sig);
 int	tty_timedwait(struct tty *tp, struct cv *cv, int timo);
 void	tty_wakeup(struct tty *tp, int flags);
 

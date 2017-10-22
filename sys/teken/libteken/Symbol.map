@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/teken/libteken/Symbol.map 221698 2011-05-09 16:27:39Z ed $
  */	
 
 FBSD_1.2 {

@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/e_gammaf_r.c 176451 2008-02-22 02:30:36Z das $");
 
 /* __ieee754_gammaf_r(x, signgamp)
  * Reentrant version of the logarithm of the Gamma function

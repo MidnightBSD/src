@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/mips/tlb.c 209645 2010-07-02 12:01:46Z jchandra $
  */
 
 #include "opt_ddb.h"

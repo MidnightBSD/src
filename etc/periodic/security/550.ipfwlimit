@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/periodic/security/550.ipfwlimit 181531 2008-08-10 18:11:24Z antoine $
 #
 
 # Show ipfw rules which have reached the log limit

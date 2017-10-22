@@ -29,14 +29,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$NetBSD: tokenizer.c,v 1.14 2003/12/05 13:37:48 lukem Exp $
+ *	$NetBSD: tokenizer.c,v 1.15 2009/02/15 21:55:23 christos Exp $
  */
 
 #if !defined(lint) && !defined(SCCSID)
 static char sccsid[] = "@(#)tokenizer.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libedit/tokenizer.c 239589 2012-08-22 20:06:59Z pfg $");
 
 /*
  * tokenize.c: Bourne shell like tokenizer
@@ -198,7 +198,7 @@ tok_line(Tokenizer *tok, const LineInfo *line,
 			ptr = "";
 		if (ptr == line->cursor) {
 			cc = tok->argc;
-			co = tok->wptr - tok->wstart;
+			co = (int)(tok->wptr - tok->wstart);
 		}
 		switch (*ptr) {
 		case '\'':
@@ -417,7 +417,7 @@ tok_line(Tokenizer *tok, const LineInfo *line,
  tok_line_outok:
 	if (cc == -1 && co == -1) {
 		cc = tok->argc;
-		co = tok->wptr - tok->wstart;
+		co = (int)(tok->wptr - tok->wstart);
 	}
 	if (cursorc != NULL)
 		*cursorc = cc;

@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libc/gen/libc_dlopen.c 228843 2011-12-23 15:00:37Z cperciva $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/libc_dlopen.c 228843 2011-12-23 15:00:37Z cperciva $");
 
 #include <dlfcn.h>
 #include <stddef.h>

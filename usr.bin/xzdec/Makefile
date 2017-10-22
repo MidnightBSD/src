@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/xzdec/Makefile 207844 2010-05-10 07:47:31Z mm $
 
 PROG=	xzdec
 

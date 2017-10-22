@@ -1,4 +1,4 @@
-/* $FreeBSD$
+/* $FreeBSD: stable/9/gnu/usr.bin/patch/pch.h 191910 2009-05-08 02:18:46Z sepotvin $
  *
  * $Log: pch.h,v $
  * Revision 2.0.1.1  87/01/30  22:47:16  lwall

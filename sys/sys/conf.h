@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)conf.h	8.5 (Berkeley) 1/9/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/conf.h 249329 2013-04-10 08:49:37Z kib $
  */
 
 #ifndef _SYS_CONF_H_
@@ -258,6 +258,7 @@ void	dev_ref(struct cdev *dev);
 void	dev_refl(struct cdev *dev);
 void	dev_rel(struct cdev *dev);
 void	dev_strategy(struct cdev *dev, struct buf *bp);
+void	dev_strategy_csw(struct cdev *dev, struct cdevsw *csw, struct buf *bp);
 struct cdev *make_dev(struct cdevsw *_devsw, int _unit, uid_t _uid, gid_t _gid,
 		int _perms, const char *_fmt, ...) __printflike(6, 7);
 struct cdev *make_dev_cred(struct cdevsw *_devsw, int _unit,

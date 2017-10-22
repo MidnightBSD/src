@@ -1,5 +1,5 @@
 #	@(#)bsd.README	8.2 (Berkeley) 4/2/94
-# $FreeBSD$
+# $FreeBSD: stable/9/share/mk/bsd.README 248350 2013-03-15 20:34:10Z brooks $
 
 This is the README file for the "include" files for the FreeBSD
 source tree.  The files are installed in /usr/share/mk, and are by
@@ -355,6 +355,8 @@ SRCS		List of source files to build the library.  Suffix types
 SHLIB_LDSCRIPT	Template file to generate shared library linker script.
 		Unless used, a simple symlink is created to the real
 		shared object.
+
+LIBRARIES_ONLY	Do not build or install files other than the library.
 
 The include file <bsd.lib.mk> includes the file named "../Makefile.inc"
 if it exists, as well as the include file <bsd.man.mk>.

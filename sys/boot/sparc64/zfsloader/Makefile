@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/boot/sparc64/zfsloader/Makefile 234898 2012-05-01 17:16:01Z marius $
 
 .PATH: ${.CURDIR}/../loader
 

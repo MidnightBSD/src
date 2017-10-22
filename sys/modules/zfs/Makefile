@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/zfs/Makefile 243674 2012-11-29 14:05:04Z mm $
 
 KMOD=	zfs
 
@@ -13,6 +13,7 @@ SRCS+=	avl.c
 .PATH:	${SUNW}/common/nvpair
 SRCS+=	nvpair.c
 SRCS+=	nvpair_alloc_fixed.c
+SRCS+=	fnvpair.c
 .PATH:	${.CURDIR}/../../cddl/contrib/opensolaris/common/unicode
 SRCS+=	u8_textprep.c
 

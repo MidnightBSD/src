@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/mse/Makefile 138755 2004-12-12 20:05:50Z imp $
 
 .PATH: ${.CURDIR}/../../dev/mse
 

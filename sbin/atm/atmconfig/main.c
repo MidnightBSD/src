@@ -27,7 +27,7 @@
  * Author: Hartmut Brandt <harti@freebsd.org>
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/atm/atmconfig/main.c 133565 2004-08-12 12:31:43Z harti $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ae/if_ae.c 236865 2012-06-11 01:44:17Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

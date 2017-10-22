@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/bsnmpd/modules/snmp_target/Makefile 246069 2013-01-29 13:49:08Z pfg $
 #
 # Author: Shteryana Shopova <syrinx@freebsd.org>
 

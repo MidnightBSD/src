@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/cxgbe/firmware/Makefile 247434 2013-02-28 00:44:54Z np $
 #
 
 T4FW = ${.CURDIR}/../../../dev/cxgbe/firmware
@@ -17,11 +17,11 @@ FIRMWS += ${F}:${F:C/.txt//}:1.0.0.0
 .endif
 .endfor
 
-# The firmware binary is optional.
-# t4fw-<a>.<b>.<c>.<d>.bin
-FW_BIN != cd ${T4FW} && echo t4fw-*.bin
-.if exists(${FW_BIN})
-FIRMWS += ${FW_BIN}:t4fw:${FW_BIN:C/t4fw-//:C/.bin//}
-.endif
+T4FW_VER = 1.8.4.0
+FIRMWS += t4fw.fw:t4fw:${T4FW_VER}
+CLEANFILES += t4fw.fw
+
+t4fw.fw: t4fw-${T4FW_VER}.bin.uu
+	uudecode -o ${.TARGET} ${.ALLSRC}
 
 .include <bsd.kmod.mk>

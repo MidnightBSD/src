@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/i386/libi386/smbios.c 190814 2009-04-07 17:58:15Z jkim $");
 
 #include <stand.h>
 #include <bootstrap.h>

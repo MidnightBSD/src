@@ -64,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/vm/vm_pager.c 236925 2012-06-11 21:25:20Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/gnu/lib/libodialog/radiolist.c 114603 2003-05-03 21:31:08Z obrien $");
 
 #include <dialog.h>
 #include "dialog.priv.h"

@@ -56,7 +56,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/sched.h 249444 2013-04-13 21:04:06Z trasz $
  */
 
 #ifndef _SCHED_H_
@@ -103,6 +103,11 @@ void	sched_user_prio(struct thread *td, u_char prio);
 void	sched_userret(struct thread *td);
 void	sched_wakeup(struct thread *td);
 void	sched_preempt(struct thread *td);
+#ifdef	RACCT
+#ifdef	SCHED_4BSD
+fixpt_t	sched_pctcpu_delta(struct thread *td);
+#endif
+#endif
 
 /*
  * Threads are moved on and off of run queues

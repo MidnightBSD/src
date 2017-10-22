@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libftpio/ftpio.c 178857 2008-05-08 20:05:30Z jhb $");
 
 #include <sys/types.h>
 #include <sys/socket.h>

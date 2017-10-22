@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)profile.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/arm/include/profile.h 169768 2007-05-19 16:20:37Z cognet $
  */
 
 #ifndef _MACHINE_PROFILE_H_

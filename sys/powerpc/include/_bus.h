@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/include/_bus.h 209975 2010-07-13 05:32:19Z nwhitehorn $
  */
 
 #ifndef POWERPC_INCLUDE__BUS_H

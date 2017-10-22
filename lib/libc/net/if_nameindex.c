@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/net/if_nameindex.c 100138 2002-07-15 19:58:56Z ume $");
 
 #include <sys/types.h>
 #include <sys/socket.h>

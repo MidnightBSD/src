@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libdwarf/dwarf_attrval.c 240416 2012-09-12 18:15:17Z dim $
  */
 
 #include <stdlib.h>
@@ -101,6 +101,7 @@ dwarf_attrval_flag(Dwarf_Die die, uint64_t attr, Dwarf_Bool *valp, Dwarf_Error *
 	} else {
 		switch (av->av_form) {
 		case DW_FORM_flag:
+		case DW_FORM_flag_present:
 			*valp = (Dwarf_Bool) av->u[0].u64;
 			break;
 		default:

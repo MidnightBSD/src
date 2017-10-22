@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/x86/include/mca.h 235515 2012-05-16 20:04:45Z jhb $
  */
 
 #ifndef __X86_MCA_H__

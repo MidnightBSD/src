@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libproc/Makefile 210694 2010-07-31 17:14:54Z rpaulo $
 
 LIB=	proc
 

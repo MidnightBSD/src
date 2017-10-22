@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/net/bpf_buffer.h 247629 2013-03-02 15:11:20Z melifaro $
  */
 
 #ifndef _NET_BPF_BUFFER_H_
@@ -36,7 +36,6 @@
 #error "no user-serviceable parts inside"
 #endif
 
-void	bpf_buffer_alloc(struct bpf_d *d);
 void	bpf_buffer_append_bytes(struct bpf_d *d, caddr_t buf, u_int offset,
 	    void *src, u_int len);
 void	bpf_buffer_append_mbuf(struct bpf_d *d, caddr_t buf, u_int offset,

@@ -33,7 +33,7 @@
  *	from: hp300: @(#)pmap.h 7.2 (Berkeley) 12/16/90
  *	from: @(#)pmap.h        7.4 (Berkeley) 5/12/91
  *	from: FreeBSD: src/sys/i386/include/pmap.h,v 1.70 2000/11/30
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sparc64/include/pmap.h 240760 2012-09-20 18:21:29Z alc $
  */
 
 #ifndef	_MACHINE_PMAP_H_
@@ -85,6 +85,7 @@ struct tte_list_lock {
 #define	PMAP_UNLOCK(pmap)	mtx_unlock(&(pmap)->pm_mtx)
 
 #define	pmap_page_get_memattr(m)	VM_MEMATTR_DEFAULT
+#define	pmap_page_is_write_mapped(m)	(((m)->aflags & PGA_WRITEABLE) != 0)
 #define	pmap_page_set_memattr(m, ma)	(void)0
 
 void	pmap_bootstrap(u_int cpu_impl);

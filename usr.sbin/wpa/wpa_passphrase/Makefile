@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/wpa/wpa_passphrase/Makefile 214735 2010-11-03 10:44:25Z rpaulo $
 
 .include "${.CURDIR}/../Makefile.inc"
 

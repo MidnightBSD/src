@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/fifo/fifo_misc/fifo_misc.c 230384 2012-01-20 16:29:17Z jilles $
  */
 
 #include <sys/types.h>

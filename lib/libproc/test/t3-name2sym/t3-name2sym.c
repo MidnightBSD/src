@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libproc/test/t3-name2sym/t3-name2sym.c 210688 2010-07-31 16:10:20Z rpaulo $
  */
 #include <sys/types.h>
 #include <assert.h>

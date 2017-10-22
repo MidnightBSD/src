@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/libiconv_modules/GBK2K/citrus_gbk2k.c 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: citrus_gbk2k.c,v 1.7 2008/06/14 16:01:07 tnozaki Exp $ */
 
 /*-

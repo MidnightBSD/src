@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_syscalls.c 214181 2010-10-21 20:31:50Z delphij $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

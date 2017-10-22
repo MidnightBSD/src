@@ -45,7 +45,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/amdsbwd/amdsbwd.c 222805 2011-06-07 06:18:02Z avg $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

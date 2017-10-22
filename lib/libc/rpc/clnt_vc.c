@@ -35,7 +35,7 @@ static char *sccsid = "@(#)clnt_tcp.c	2.2 88/08/01 4.0 RPCSRC";
 static char sccsid3[] = "@(#)clnt_vc.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/clnt_vc.c 241601 2012-10-16 01:37:17Z pfg $");
  
 /*
  * clnt_tcp.c, Implements a TCP/IP based, client side RPC.
@@ -672,6 +672,10 @@ clnt_vc_destroy(cl)
 	if (ct->ct_addr.buf)
 		free(ct->ct_addr.buf);
 	mem_free(ct, sizeof(struct ct_data));
+	if (cl->cl_netid && cl->cl_netid[0])
+		mem_free(cl->cl_netid, strlen(cl->cl_netid) +1);
+	if (cl->cl_tp && cl->cl_tp[0])
+		mem_free(cl->cl_tp, strlen(cl->cl_tp) +1);
 	mem_free(cl, sizeof(CLIENT));
 	mutex_unlock(&clnt_fd_lock);
 	thr_sigsetmask(SIG_SETMASK, &(mask), NULL);

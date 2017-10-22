@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/sparc64/sys/__sparc_utrap.c 188031 2009-02-02 21:51:52Z rdivacky $");
 
 #include <sys/types.h>
 

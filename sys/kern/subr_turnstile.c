@@ -57,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/subr_turnstile.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_ddb.h"
 #include "opt_kdtrace.h"
@@ -140,8 +140,9 @@ struct turnstile_chain {
 
 #ifdef TURNSTILE_PROFILING
 u_int turnstile_max_depth;
-SYSCTL_NODE(_debug, OID_AUTO, turnstile, CTLFLAG_RD, 0, "turnstile profiling");
-SYSCTL_NODE(_debug_turnstile, OID_AUTO, chains, CTLFLAG_RD, 0,
+static SYSCTL_NODE(_debug, OID_AUTO, turnstile, CTLFLAG_RD, 0,
+    "turnstile profiling");
+static SYSCTL_NODE(_debug_turnstile, OID_AUTO, chains, CTLFLAG_RD, 0,
     "turnstile chain stats");
 SYSCTL_UINT(_debug_turnstile, OID_AUTO, max_depth, CTLFLAG_RD,
     &turnstile_max_depth, 0, "maximum depth achieved of a single chain");

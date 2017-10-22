@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libusbhid/data.c 229387 2012-01-03 12:47:55Z mav $");
 
 #include <sys/param.h>
 #include <assert.h>

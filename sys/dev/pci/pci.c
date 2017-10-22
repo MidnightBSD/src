@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/pci/pci.c 248052 2013-03-08 12:57:58Z marius $");
 
 #include "opt_bus.h"
 
@@ -210,7 +210,7 @@ struct pci_quirk {
 	int	arg2;
 };
 
-static const struct pci_quirk const pci_quirks[] = {
+static const struct pci_quirk pci_quirks[] = {
 	/* The Intel 82371AB and 82443MX has a map register at offset 0x90. */
 	{ 0x71138086, PCI_QUIRK_MAP_REG,	0x90,	 0 },
 	{ 0x719b8086, PCI_QUIRK_MAP_REG,	0x90,	 0 },
@@ -243,10 +243,11 @@ static const struct pci_quirk const pci_quirks[] = {
 	{ 0x74501022, PCI_QUIRK_DISABLE_MSI,	0,	0 },
 
 	/*
-	 * MSI-X doesn't work with at least LSI SAS1068E passed through by
-	 * VMware.
+	 * MSI-X allocation doesn't work properly for devices passed through
+	 * by VMware up to at least ESXi 5.1.
 	 */
-	{ 0x079015ad, PCI_QUIRK_DISABLE_MSI,	0,	0 },
+	{ 0x079015ad, PCI_QUIRK_DISABLE_MSI,	0,	0 }, /* PCI/PCI-X */
+	{ 0x07a015ad, PCI_QUIRK_DISABLE_MSI,	0,	0 }, /* PCIe */
 
 	/*
 	 * Some virtualization environments emulate an older chipset
@@ -1722,8 +1723,8 @@ pci_get_max_read_req(device_t dev)
 
 	if (pci_find_cap(dev, PCIY_EXPRESS, &cap) != 0)
 		return (0);
-	val = pci_read_config(dev, cap + PCIR_EXPRESS_DEVICE_CTL, 2);
-	val &= PCIM_EXP_CTL_MAX_READ_REQUEST;
+	val = pci_read_config(dev, cap + PCIER_DEVICE_CTL, 2);
+	val &= PCIEM_CTL_MAX_READ_REQUEST;
 	val >>= 12;
 	return (1 << (val + 7));
 }
@@ -1741,10 +1742,10 @@ pci_set_max_read_req(device_t dev, int size)
 	if (size > 4096)
 		size = 4096;
 	size = (1 << (fls(size) - 1));
-	val = pci_read_config(dev, cap + PCIR_EXPRESS_DEVICE_CTL, 2);
-	val &= ~PCIM_EXP_CTL_MAX_READ_REQUEST;
+	val = pci_read_config(dev, cap + PCIER_DEVICE_CTL, 2);
+	val &= ~PCIEM_CTL_MAX_READ_REQUEST;
 	val |= (fls(size) - 8) << 12;
-	pci_write_config(dev, cap + PCIR_EXPRESS_DEVICE_CTL, val, 2);
+	pci_write_config(dev, cap + PCIER_DEVICE_CTL, val, 2);
 	return (size);
 }
 
@@ -3572,11 +3573,11 @@ pci_print_child(device_t dev, device_t child)
 	return (retval);
 }
 
-static struct
+static const struct
 {
-	int	class;
-	int	subclass;
-	char	*desc;
+	int		class;
+	int		subclass;
+	const char	*desc;
 } pci_nomatch_tab[] = {
 	{PCIC_OLD,		-1,			"old"},
 	{PCIC_OLD,		PCIS_OLD_NONVGA,	"non-VGA display device"},
@@ -3590,6 +3591,7 @@ static struct
 	{PCIC_STORAGE,		PCIS_STORAGE_ATA_ADMA,	"ATA (ADMA)"},
 	{PCIC_STORAGE,		PCIS_STORAGE_SATA,	"SATA"},
 	{PCIC_STORAGE,		PCIS_STORAGE_SAS,	"SAS"},
+	{PCIC_STORAGE,		PCIS_STORAGE_NVM,	"NVM"},
 	{PCIC_NETWORK,		-1,			"network"},
 	{PCIC_NETWORK,		PCIS_NETWORK_ETHERNET,	"ethernet"},
 	{PCIC_NETWORK,		PCIS_NETWORK_TOKENRING,	"token ring"},
@@ -3667,8 +3669,9 @@ static struct
 void
 pci_probe_nomatch(device_t dev, device_t child)
 {
-	int	i;
-	char	*cp, *scp, *device;
+	int i;
+	const char *cp, *scp;
+	char *device;
 
 	/*
 	 * Look for a listing for this device in a loaded device database.
@@ -3701,7 +3704,6 @@ pci_probe_nomatch(device_t dev, device_t child)
 	printf(" at device %d.%d (no driver attached)\n",
 	    pci_get_slot(child), pci_get_function(child));
 	pci_cfg_save(child, device_get_ivars(child), 1);
-	return;
 }
 
 /*

@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/vm/vm_map.c 249531 2013-04-16 06:17:15Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -241,8 +241,8 @@ vm_map_zinit(void *mem, int size, int flags)
 	map = (vm_map_t)mem;
 	map->nentries = 0;
 	map->size = 0;
-	mtx_init(&map->system_mtx, "system map", NULL, MTX_DEF | MTX_DUPOK);
-	sx_init(&map->lock, "user map");
+	mtx_init(&map->system_mtx, "vm map (system)", NULL, MTX_DEF | MTX_DUPOK);
+	sx_init(&map->lock, "vm map (user)");
 	return (0);
 }
 
@@ -724,12 +724,6 @@ long
 vmspace_resident_count(struct vmspace *vmspace)
 {
 	return pmap_resident_count(vmspace_pmap(vmspace));
-}
-
-long
-vmspace_wired_count(struct vmspace *vmspace)
-{
-	return pmap_wired_count(vmspace_pmap(vmspace));
 }
 
 /*
@@ -3166,6 +3160,22 @@ vmspace_fork(struct vmspace *vm1, vm_ooffset_t *fork_charge)
 				object->charge = old_entry->end - old_entry->start;
 				old_entry->cred = NULL;
 			}
+
+			/*
+			 * Assert the correct state of the vnode
+			 * v_writecount while the object is locked, to
+			 * not relock it later for the assertion
+			 * correctness.
+			 */
+			if (old_entry->eflags & MAP_ENTRY_VN_WRITECNT &&
+			    object->type == OBJT_VNODE) {
+				KASSERT(((struct vnode *)object->handle)->
+				    v_writecount > 0,
+				    ("vmspace_fork: v_writecount %p", object));
+				KASSERT(object->un_pager.vnp.writemappings > 0,
+				    ("vmspace_fork: vnp.writecount %p",
+				    object));
+			}
 			VM_OBJECT_UNLOCK(object);
 
 			/*
@@ -3177,12 +3187,6 @@ vmspace_fork(struct vmspace *vm1, vm_ooffset_t *fork_charge)
 			    MAP_ENTRY_IN_TRANSITION);
 			new_entry->wired_count = 0;
 			if (new_entry->eflags & MAP_ENTRY_VN_WRITECNT) {
-				object = new_entry->object.vm_object;
-				KASSERT(((struct vnode *)object->handle)->
-				    v_writecount > 0,
-				    ("vmspace_fork: v_writecount"));
-				KASSERT(object->un_pager.vnp.writemappings > 0,
-				    ("vmspace_fork: vnp.writecount"));
 				vnode_pager_update_writecount(object,
 				    new_entry->start, new_entry->end);
 			}
@@ -3245,9 +3249,9 @@ vm_map_stack(vm_map_t map, vm_offset_t addrbos, vm_size_t max_ssize,
 {
 	vm_map_entry_t new_entry, prev_entry;
 	vm_offset_t bot, top;
-	vm_size_t init_ssize;
+	vm_size_t growsize, init_ssize;
 	int orient, rv;
-	rlim_t vmemlim;
+	rlim_t lmemlim, vmemlim;
 
 	/*
 	 * The stack orientation is piggybacked with the cow argument.
@@ -3264,11 +3268,13 @@ vm_map_stack(vm_map_t map, vm_offset_t addrbos, vm_size_t max_ssize,
 	    addrbos + max_ssize < addrbos)
 		return (KERN_NO_SPACE);
 
-	init_ssize = (max_ssize < sgrowsiz) ? max_ssize : sgrowsiz;
+	growsize = sgrowsiz;
+	init_ssize = (max_ssize < growsize) ? max_ssize : growsize;
 
-	PROC_LOCK(curthread->td_proc);
-	vmemlim = lim_cur(curthread->td_proc, RLIMIT_VMEM);
-	PROC_UNLOCK(curthread->td_proc);
+	PROC_LOCK(curproc);
+	lmemlim = lim_cur(curproc, RLIMIT_MEMLOCK);
+	vmemlim = lim_cur(curproc, RLIMIT_VMEM);
+	PROC_UNLOCK(curproc);
 
 	vm_map_lock(map);
 
@@ -3276,6 +3282,13 @@ vm_map_stack(vm_map_t map, vm_offset_t addrbos, vm_size_t max_ssize,
 	if (vm_map_lookup_entry(map, addrbos, &prev_entry)) {
 		vm_map_unlock(map);
 		return (KERN_NO_SPACE);
+	}
+
+	if (!old_mlock && map->flags & MAP_WIREFUTURE) {
+		if (ptoa(pmap_wired_count(map->pmap)) + init_ssize > lmemlim) {
+			vm_map_unlock(map);
+			return (KERN_NO_SPACE);
+		}
 	}
 
 	/* If we would blow our VMEM resource limit, no go */
@@ -3357,8 +3370,9 @@ vm_map_growstack(struct proc *p, vm_offset_t addr)
 	struct vmspace *vm = p->p_vmspace;
 	vm_map_t map = &vm->vm_map;
 	vm_offset_t end;
+	vm_size_t growsize;
 	size_t grow_amount, max_grow;
-	rlim_t stacklim, vmemlim;
+	rlim_t lmemlim, stacklim, vmemlim;
 	int is_procstack, rv;
 	struct ucred *cred;
 #ifdef notyet
@@ -3370,6 +3384,7 @@ vm_map_growstack(struct proc *p, vm_offset_t addr)
 
 Retry:
 	PROC_LOCK(p);
+	lmemlim = lim_cur(p, RLIMIT_MEMLOCK);
 	stacklim = lim_cur(p, RLIMIT_STACK);
 	vmemlim = lim_cur(p, RLIMIT_VMEM);
 	PROC_UNLOCK(p);
@@ -3476,8 +3491,9 @@ Retry:
 	PROC_UNLOCK(p);
 #endif
 
-	/* Round up the grow amount modulo SGROWSIZ */
-	grow_amount = roundup (grow_amount, sgrowsiz);
+	/* Round up the grow amount modulo sgrowsiz */
+	growsize = sgrowsiz;
+	grow_amount = roundup(grow_amount, growsize);
 	if (grow_amount > stack_entry->avail_ssize)
 		grow_amount = stack_entry->avail_ssize;
 	if (is_procstack && (ctob(vm->vm_ssize) + grow_amount > stacklim)) {
@@ -3491,7 +3507,24 @@ Retry:
 	if (is_procstack && (ctob(vm->vm_ssize) + grow_amount > limit))
 		grow_amount = limit - ctob(vm->vm_ssize);
 #endif
-
+	if (!old_mlock && map->flags & MAP_WIREFUTURE) {
+		if (ptoa(pmap_wired_count(map->pmap)) + grow_amount > lmemlim) {
+			vm_map_unlock_read(map);
+			rv = KERN_NO_SPACE;
+			goto out;
+		}
+#ifdef RACCT
+		PROC_LOCK(p);
+		if (racct_set(p, RACCT_MEMLOCK,
+		    ptoa(pmap_wired_count(map->pmap)) + grow_amount)) {
+			PROC_UNLOCK(p);
+			vm_map_unlock_read(map);
+			rv = KERN_NO_SPACE;
+			goto out;
+		}
+		PROC_UNLOCK(p);
+#endif
+	}
 	/* If we would blow our VMEM resource limit, no go */
 	if (map->size + grow_amount > vmemlim) {
 		vm_map_unlock_read(map);
@@ -3612,6 +3645,11 @@ out:
 		PROC_LOCK(p);
 		error = racct_set(p, RACCT_VMEM, map->size);
 		KASSERT(error == 0, ("decreasing RACCT_VMEM failed"));
+		if (!old_mlock) {
+			error = racct_set(p, RACCT_MEMLOCK,
+			    ptoa(pmap_wired_count(map->pmap)));
+			KASSERT(error == 0, ("decreasing RACCT_MEMLOCK failed"));
+		}
 	    	error = racct_set(p, RACCT_STACK, ctob(vm->vm_ssize));
 		KASSERT(error == 0, ("decreasing RACCT_STACK failed"));
 		PROC_UNLOCK(p);

@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>			/* RCS ID & Copyright macro defns */
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/in_cksum.c 160459 2006-07-18 00:07:05Z cognet $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>

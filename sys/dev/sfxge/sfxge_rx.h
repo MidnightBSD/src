@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/sfxge/sfxge_rx.h 227569 2011-11-16 17:11:13Z philip $
  */
 
 #ifndef _SFXGE_RX_H

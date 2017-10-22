@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/libkern/crc32.c 188605 2009-02-14 11:34:57Z rrs $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

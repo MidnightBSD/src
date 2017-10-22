@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/ofw_machdep.c 230886 2012-02-01 21:14:04Z marius $");
 
 /*
  * Some Open Firmware helper functions that are likely machine dependent.

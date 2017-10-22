@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/lib/libc/nss/test-gethostby.t 171016 2007-06-24 06:14:18Z bushman $
 
 do_test() {
 	number=$1

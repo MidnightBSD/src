@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/at91/at91_wdt.c 236081 2012-05-26 09:05:45Z marius $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/csup/updater.h 204556 2010-03-02 07:26:07Z lulf $
  */
 #ifndef _UPDATER_H_
 #define _UPDATER_H

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/diskinfo/diskinfo.c 242544 2012-11-04 01:21:49Z eadler $
  */
 
 #include <stdio.h>
@@ -335,7 +335,7 @@ speeddisk(int fd, off_t mediasize, u_int sectorsize)
 	TR(bulk * 1024);
 
 	printf("\tinside:      ");
-	b0 = sectorcount - bulk * (1024*1024 / sectorsize) - 1;;
+	b0 = sectorcount - bulk * (1024*1024 / sectorsize) - 1;
 	rdsect(fd, b0, sectorsize);
 	T0();
 	for (i = 0; i < bulk; i++) {

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/locale/wctrans.c 235785 2012-05-22 14:40:39Z theraven $");
 
 #include <errno.h>
 #include <string.h>

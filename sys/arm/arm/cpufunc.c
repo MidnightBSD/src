@@ -45,7 +45,7 @@
  * Created      : 30/01/97
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/cpufunc.c 212825 2010-09-18 16:57:05Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

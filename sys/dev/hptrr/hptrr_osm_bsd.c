@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/hptrr/hptrr_osm_bsd.c 237861 2012-07-01 00:40:09Z eadler $");
 
 #include <dev/hptrr/hptrr_config.h>
 /* $Id: osm_bsd.c,v 1.27 2007/11/22 07:35:49 gmm Exp $

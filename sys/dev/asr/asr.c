@@ -160,7 +160,7 @@
 
 #include	<dev/asr/sys_info.h>
 
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/asr/asr.c 234734 2012-04-27 18:05:24Z dim $");
 
 #define	ASR_VERSION	1
 #define	ASR_REVISION	'1'

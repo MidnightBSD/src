@@ -1,12 +1,13 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD$
+# $FreeBSD: stable/9/share/misc/Makefile 244467 2012-12-20 00:35:08Z eadler $
 
 .PATH:	${.CURDIR}/../../sys/dev/usb
 
 FILES=	ascii birthtoken bsd-family-tree committers-doc.dot committers-ports.dot \
 	committers-src.dot eqnchar flowers init.ee \
 	iso3166 iso639 latin1 man.template mdoc.template operator pci_vendors \
-	scsi_modes usb_hid_usages usbdevs
+	scsi_modes usb_hid_usages usbdevs \
+	organization.dot
 
 NO_OBJ=
 FILESDIR=	${BINDIR}/misc

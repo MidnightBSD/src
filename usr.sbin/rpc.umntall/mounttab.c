@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/rpc.umntall/mounttab.c 201252 2009-12-30 06:36:42Z ed $");
 
 #include <sys/syslog.h>
 

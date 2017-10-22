@@ -33,7 +33,7 @@
 #define	QR_H_
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/stdlib/qr.h 203329 2010-01-31 23:16:10Z jasone $");
 
 /* Ring definitions. */
 #define qr(a_type)							\

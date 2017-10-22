@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)parser.c	8.7 (Berkeley) 5/16/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/sh/parser.c 245690 2013-01-20 14:22:21Z jilles $");
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -240,9 +240,9 @@ list(int nlflag, int erflag)
 		n2 = andor();
 		tok = readtoken();
 		if (tok == TBACKGND) {
-			if (n2->type == NPIPE) {
+			if (n2 != NULL && n2->type == NPIPE) {
 				n2->npipe.backgnd = 1;
-			} else if (n2->type == NREDIR) {
+			} else if (n2 != NULL && n2->type == NREDIR) {
 				n2->type = NBACKGND;
 			} else {
 				n3 = (union node *)stalloc(sizeof (struct nredir));

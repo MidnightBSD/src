@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_rum.c 248085 2013-03-09 02:36:32Z marius $	*/
 
 /*-
  * Copyright (c) 2005-2007 Damien Bergamini <damien.bergamini@free.fr>
@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/wlan/if_rum.c 248085 2013-03-09 02:36:32Z marius $");
 
 /*-
  * Ralink Technology RT2501USB/RT2601USB chipset driver
@@ -80,7 +80,7 @@ __FBSDID("$FreeBSD$");
 #ifdef USB_DEBUG
 static int rum_debug = 0;
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, rum, CTLFLAG_RW, 0, "USB rum");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, rum, CTLFLAG_RW, 0, "USB rum");
 SYSCTL_INT(_hw_usb_rum, OID_AUTO, debug, CTLFLAG_RW, &rum_debug, 0,
     "Debug level");
 #endif
@@ -907,7 +907,7 @@ rum_bulk_read_callback(struct usb_xfer *xfer, usb_error_t error)
 			goto tr_setup;
 		}
 
-		m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+		m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 		if (m == NULL) {
 			DPRINTF("could not allocate mbuf\n");
 			ifp->if_ierrors++;

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/i915/intel_display.c 236931 2012-06-11 21:41:45Z kib $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm.h>

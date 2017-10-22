@@ -15,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ppbus/pps.c 187576 2009-01-21 23:10:06Z jhb $");
 
 #include <sys/param.h>
 #include <sys/lock.h>

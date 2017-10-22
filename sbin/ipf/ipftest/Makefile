@@ -1,4 +1,4 @@
-#	$FreeBSD$
+#	$FreeBSD: stable/9/sbin/ipf/ipftest/Makefile 204585 2010-03-02 16:58:04Z uqs $
 
 PROG=		ipftest
 SRCS=		${GENHDRS} ipftest.c fil.c ip_frag.c ip_state.c ip_nat.c \

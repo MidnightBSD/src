@@ -40,7 +40,7 @@
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/contrib/pf/net/pf.c 243401 2012-11-22 12:11:32Z glebius $");
 #endif
 
 #ifdef __FreeBSD__
@@ -122,7 +122,7 @@ __FBSDID("$FreeBSD$");
 #include <netinet/if_ether.h>
 #ifdef __FreeBSD__
 #include <netinet/ip_fw.h>
-#include <netinet/ipfw/ip_fw_private.h> /* XXX: only for DIR_IN/DIR_OUT */
+#include <netpfil/ipfw/ip_fw_private.h> /* XXX: only for DIR_IN/DIR_OUT */
 #endif
 
 #ifndef __FreeBSD__

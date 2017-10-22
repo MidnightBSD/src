@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#) floatingpoint.h	1.0 (Berkeley) 9/23/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/include/floatingpoint.h 202175 2010-01-12 21:36:08Z imp $
  */
 
 #ifndef _FLOATINGPOINT_H_

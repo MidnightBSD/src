@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/cxgbetool/Makefile 222900 2011-06-09 20:21:45Z np $
 
 PROG=	cxgbetool
 SRCS=	cxgbetool.c

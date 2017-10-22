@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/makefs/getid.c 203972 2010-02-16 21:47:05Z imp $");
 
 #include <sys/param.h>
 

@@ -1,2 +1,2 @@
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/tools/build/options/WITH_BIND_LIBS 193280 2009-06-01 21:58:59Z dougb $
 Set to install BIND libraries and include files.

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/vm/uma_dbg.c 187681 2009-01-25 09:11:24Z jeff $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

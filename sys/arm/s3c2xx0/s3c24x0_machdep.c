@@ -46,7 +46,7 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/s3c2xx0/s3c24x0_machdep.c 218913 2011-02-21 13:11:05Z cognet $");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>

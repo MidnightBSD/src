@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/compat/linux/linux_file.h 177997 2008-04-08 09:45:49Z kib $
  */
 
 #ifndef _LINUX_FILE_H_

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/fs/msdosfs/msdosfs_iconv.c 171753 2007-08-07 02:25:56Z bde $");
 
 #include <sys/param.h>
 #include <sys/iconv.h>

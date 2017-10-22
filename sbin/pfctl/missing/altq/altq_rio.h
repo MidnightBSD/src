@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sbin/pfctl/missing/altq/altq_rio.h 126385 2004-02-28 21:50:50Z mlaier $	*/
 /*	$KAME: altq_rio.h,v 1.9 2003/07/10 12:07:49 kjc Exp $	*/
 
 /*

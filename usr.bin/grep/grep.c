@@ -1,5 +1,5 @@
 /*	$NetBSD: grep.c,v 1.4 2011/02/16 01:31:33 joerg Exp $	*/
-/* 	$FreeBSD$	*/
+/* 	$FreeBSD: stable/9/usr.bin/grep/grep.c 246279 2013-02-03 03:38:44Z eadler $	*/
 /*	$OpenBSD: grep.c,v 1.42 2010/07/02 22:18:03 tedu Exp $	*/
 
 /*-
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/grep/grep.c 246279 2013-02-03 03:38:44Z eadler $");
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -107,6 +107,7 @@ bool	 iflag;		/* -i: ignore case */
 bool	 lflag;		/* -l: only show names of files with matches */
 bool	 mflag;		/* -m x: stop reading the files after x matches */
 long long mcount;	/* count for -m */
+long long mlimit;	/* requested value for -m */
 bool	 nflag;		/* -n: show line numbers in front of matching lines */
 bool	 oflag;		/* -o: print only matching part */
 bool	 qflag;		/* -q: quiet mode (don't output anything) */
@@ -477,7 +478,13 @@ main(int argc, char *argv[])
 			grepbehave = GREP_EXTENDED;
 			break;
 		case 'e':
-			add_pattern(optarg, strlen(optarg));
+			{
+				char *token;
+				char *string = optarg;
+
+				while ((token = strsep(&string, "\n")) != NULL)
+					add_pattern(token, strlen(token));
+			}
 			needpattern = 0;
 			break;
 		case 'F':
@@ -523,7 +530,7 @@ main(int argc, char *argv[])
 		case 'm':
 			mflag = true;
 			errno = 0;
-			mcount = strtoll(optarg, &ep, 10);
+			mlimit = mcount = strtoll(optarg, &ep, 10);
 			if (((errno == ERANGE) && (mcount == LLONG_MAX)) ||
 			    ((errno == EINVAL) && (mcount == 0)))
 				err(2, NULL);
@@ -666,7 +673,11 @@ main(int argc, char *argv[])
 
 	/* Process patterns from command line */
 	if (aargc != 0 && needpattern) {
-		add_pattern(*aargv, strlen(*aargv));
+		char *token;
+		char *string = *aargv;
+
+		while ((token = strsep(&string, "\n")) != NULL)
+			add_pattern(token, strlen(token));
 		--aargc;
 		++aargv;
 	}

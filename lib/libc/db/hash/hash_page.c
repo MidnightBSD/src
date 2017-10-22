@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)hash_page.c	8.7 (Berkeley) 8/16/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/db/hash/hash_page.c 190500 2009-03-28 07:44:08Z delphij $");
 
 /*
  * PACKAGE:  hashing

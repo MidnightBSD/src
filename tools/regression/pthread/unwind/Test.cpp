@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/tools/regression/pthread/unwind/Test.cpp 213155 2010-09-25 04:26:40Z davidxu $ */
 
 int destructed;
 int destructed2;

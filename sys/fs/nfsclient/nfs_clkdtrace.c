@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/fs/nfsclient/nfs_clkdtrace.c 223280 2011-06-18 23:02:53Z rmacklem $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

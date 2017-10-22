@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/boot/efi/libefi/Makefile 211679 2010-08-23 01:48:07Z imp $
 
 LIB=	efi
 INTERNALLIB=

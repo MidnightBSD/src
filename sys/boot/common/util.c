@@ -15,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/common/util.c 224722 2011-08-08 20:53:04Z dim $");
 
 #include <sys/param.h>
 

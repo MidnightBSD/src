@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libdisk/write_mips_disk.c 178765 2008-05-04 22:24:40Z gonzo $");
 
 #include <stdio.h>
 #include <stdlib.h>

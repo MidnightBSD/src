@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2012, Intel Corporation 
+  Copyright (c) 2001-2013, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD$*/
+/*$FreeBSD: stable/9/sys/dev/ixgbe/ixgbe_osdep.h 248287 2013-03-14 21:39:39Z jfv $*/
 
 #ifndef _IXGBE_OS_H_
 #define _IXGBE_OS_H_
@@ -69,12 +69,17 @@
 	#define DEBUGOUT1(S,A)      printf(S "\n",A)
 	#define DEBUGOUT2(S,A,B)    printf(S "\n",A,B)
 	#define DEBUGOUT3(S,A,B,C)  printf(S "\n",A,B,C)
+	#define DEBUGOUT4(S,A,B,C,D)  printf(S "\n",A,B,C,D)
+	#define DEBUGOUT5(S,A,B,C,D,E)  printf(S "\n",A,B,C,D,E)
+	#define DEBUGOUT6(S,A,B,C,D,E,F)  printf(S "\n",A,B,C,D,E,F)
 	#define DEBUGOUT7(S,A,B,C,D,E,F,G)  printf(S "\n",A,B,C,D,E,F,G)
 #else
 	#define DEBUGOUT(S)
 	#define DEBUGOUT1(S,A)
 	#define DEBUGOUT2(S,A,B)
 	#define DEBUGOUT3(S,A,B,C)
+	#define DEBUGOUT4(S,A,B,C,D)
+	#define DEBUGOUT5(S,A,B,C,D,E)
 	#define DEBUGOUT6(S,A,B,C,D,E,F)
 	#define DEBUGOUT7(S,A,B,C,D,E,F,G)
 #endif
@@ -85,6 +90,9 @@
 #define true                1
 #define CMD_MEM_WRT_INVALIDATE          0x0010  /* BIT_4 */
 #define PCI_COMMAND_REGISTER            PCIR_COMMAND
+
+/* Shared code dropped this define.. */
+#define IXGBE_INTEL_VENDOR_ID		0x8086
 
 /* Bunch of defines for shared code bogosity */
 #define UNREFERENCED_PARAMETER(_p)
@@ -142,6 +150,25 @@ void prefetch(void *x)
 #else
 #define prefetch(x)
 #endif
+
+/*
+ * Optimized bcopy thanks to Luigi Rizzo's investigative work.  Assumes
+ * non-overlapping regions and 32-byte padding on both src and dst.
+ */
+static __inline int
+ixgbe_bcopy(void *_src, void *_dst, int l)
+{
+	uint64_t *src = _src;
+	uint64_t *dst = _dst;
+
+	for (; l > 0; l -= 32) {
+		*dst++ = *src++;
+		*dst++ = *src++;
+		*dst++ = *src++;
+		*dst++ = *src++;
+	}
+	return (0);
+}
 
 struct ixgbe_osdep
 {

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/mv/kirkwood/kirkwood.c 209131 2010-06-13 13:28:53Z raj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

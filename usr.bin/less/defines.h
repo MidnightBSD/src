@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/usr.bin/less/defines.h 240121 2012-09-04 23:24:00Z delphij $ */
 /* defines.h.  Generated from defines.h.in by configure.  */
 /* defines.h.in.  Generated from configure.ac by autoheader.  */
 
@@ -227,17 +227,11 @@
 /* Define to 1 if you have the `fsync' function. */
 #define HAVE_FSYNC 1
 
+/* GNU regex library */
+/* #undef HAVE_GNU_REGEX */
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
-
-/* Define to 1 if you have the `gen' library (-lgen). */
-/* #undef HAVE_LIBGEN */
-
-/* Define to 1 if you have the `intl' library (-lintl). */
-/* #undef HAVE_LIBINTL */
-
-/* Define to 1 if you have the `PW' library (-lPW). */
-/* #undef HAVE_LIBPW */
 
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1

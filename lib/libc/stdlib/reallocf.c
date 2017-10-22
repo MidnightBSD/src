@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/stdlib/reallocf.c 204636 2010-03-03 15:43:26Z jh $");
 
 #include <stdlib.h>
 

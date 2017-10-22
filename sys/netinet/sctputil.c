@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/sctputil.c 242836 2012-11-09 19:31:31Z mjg $");
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
@@ -5264,10 +5264,10 @@ sctp_sorecvmsg(struct socket *so,
 		    rwnd_req, block_allowed, so->so_rcv.sb_cc, uio->uio_resid);
 	}
 	error = sblock(&so->so_rcv, (block_allowed ? SBL_WAIT : 0));
-	sockbuf_lock = 1;
 	if (error) {
 		goto release_unlocked;
 	}
+	sockbuf_lock = 1;
 restart:
 
 

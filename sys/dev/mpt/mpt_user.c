@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/mpt/mpt_user.c 224493 2011-07-29 18:35:10Z marius $");
 
 #include <sys/param.h>
 #include <sys/conf.h>

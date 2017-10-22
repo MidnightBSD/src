@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/amdtemp/amdtemp.c 197205 2009-09-14 23:08:19Z jkim $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

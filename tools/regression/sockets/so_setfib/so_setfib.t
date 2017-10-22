@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/sockets/so_setfib/so_setfib.t 231855 2012-02-17 03:25:26Z bz $
 #
 
 cd `dirname $0`

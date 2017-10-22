@@ -19,7 +19,7 @@
  * only.
  * END_BLOCK
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/arm/at91/bootiic/main.c 161202 2006-08-10 19:55:52Z imp $
  ******************************************************************************/
 
 #include "env_vars.h"

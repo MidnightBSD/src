@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/arm/s3c2xx0/s3c2xx0board.h 205354 2010-03-20 03:39:35Z imp $ */
 
 #ifndef _ARM_S3C2XX0_S3C2XX0BOARD_H_
 #define _ARM_S3C2XX0_S3C2XX0BOARD_H_

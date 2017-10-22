@@ -70,7 +70,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libmp/mpasbn.c 189092 2009-02-26 21:43:15Z ed $");
 
 #include <ctype.h>
 #include <err.h>

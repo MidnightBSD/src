@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/posix1e/acl_delete_entry.c 200992 2009-12-25 18:05:06Z markus $");
 
 #include <sys/types.h>
 #include "namespace.h"

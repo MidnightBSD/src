@@ -39,7 +39,7 @@
  *
  *	@(#)ieee.h	8.1 (Berkeley) 6/11/93
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/arm/include/ieee.h 186461 2008-12-23 22:20:59Z marcel $
  *
  */
 

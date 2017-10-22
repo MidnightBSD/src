@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/viawd/viawd.h 229927 2012-01-10 08:16:28Z fabient $
  */
 
 #ifndef _VIAWD_H_

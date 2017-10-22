@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/open/12.t 166065 2007-01-17 01:42:12Z pjd $
 
 desc="open returns ELOOP if too many symbolic links were encountered in translating the pathname"
 

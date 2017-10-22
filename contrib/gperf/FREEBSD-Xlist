@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/9/contrib/gperf/FREEBSD-Xlist 230237 2012-01-16 22:17:12Z bapt $
 */*.dvi
 */*.html
 */*.info

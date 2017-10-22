@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/seq/seq.c 215034 2010-11-09 10:59:09Z brucec $");
 
 #include <ctype.h>
 #include <err.h>

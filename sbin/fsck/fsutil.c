@@ -33,7 +33,7 @@
 #ifndef lint
 __RCSID("$NetBSD: fsutil.c,v 1.7 1998/07/30 17:41:03 thorpej Exp $");
 #endif /* not lint */
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/fsck/fsutil.c 128073 2004-04-09 19:58:40Z markm $");
 
 #include <sys/param.h>
 #include <sys/stat.h>

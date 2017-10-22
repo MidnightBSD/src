@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/usr.bin/cc/cc_int/Makefile 215082 2010-11-10 06:39:49Z imp $
 
 .include "../Makefile.inc"
 .include "../Makefile.ver"

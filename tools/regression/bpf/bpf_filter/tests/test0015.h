@@ -1,7 +1,7 @@
 /*-
  * Test 0015:	BPF_JMP+BPF_JA
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/bpf/bpf_filter/tests/test0015.h 182393 2008-08-28 18:38:55Z jkim $
  */
 
 /* BPF program */

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libc++/Makefile 242600 2012-11-05 07:44:00Z dim $
 
 LIBCXXRTDIR=	${.CURDIR}/../../contrib/libcxxrt
 HDRDIR=		${.CURDIR}/../../contrib/libc++/include
@@ -35,8 +35,27 @@ SRCS+=		algorithm.cpp\
 		utility.cpp\
 		valarray.cpp
 
+CXXRT_SRCS+=	libelftc_dem_gnu3.c\
+		terminate.cc\
+		dynamic_cast.cc\
+		memory.cc\
+		auxhelper.cc\
+		exception.cc\
+		stdexcept.cc\
+		typeinfo.cc\
+		guard.cc
+
+.for _S in ${CXXRT_SRCS}
+STATICOBJS+=	cxxrt_${_S:R}.o
+cxxrt_${_S}:
+	ln -sf ${LIBCXXRTDIR}/${_S} ${.TARGET}
+.endfor
+
 WARNS=		0
-CXXFLAGS+=	-I${HDRDIR} -I${LIBCXXRTDIR} -std=c++0x -nostdlib -DLIBCXXRT
+CFLAGS+=	-I${HDRDIR} -I${LIBCXXRTDIR} -nostdlib -DLIBCXXRT
+.if empty(CXXFLAGS:M-std=*)
+CXXFLAGS+=	-std=c++0x
+.endif
 
 DPADD=		${LIBCXXRT}
 LDADD=		-lcxxrt

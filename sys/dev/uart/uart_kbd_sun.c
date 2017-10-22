@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/uart/uart_kbd_sun.c 224126 2011-07-17 08:19:19Z ed $");
 
 #include "opt_compat.h"
 #include "opt_kbd.h"

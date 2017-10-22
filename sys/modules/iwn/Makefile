@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/iwn/Makefile 179215 2008-05-22 21:53:15Z sam $
 
 .PATH:  ${.CURDIR}/../../dev/iwn
 

@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/vfs_bio.c 249329 2013-04-10 08:49:37Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -206,6 +206,9 @@ SYSCTL_INT(_vfs, OID_AUTO, flushbufqtarget, CTLFLAG_RW, &flushbufqtarget, 0,
 static long notbufdflashes;
 SYSCTL_LONG(_vfs, OID_AUTO, notbufdflashes, CTLFLAG_RD, &notbufdflashes, 0,
     "Number of dirty buffer flushes done by the bufdaemon helpers");
+static long barrierwrites;
+SYSCTL_LONG(_vfs, OID_AUTO, barrierwrites, CTLFLAG_RW, &barrierwrites, 0,
+    "Number of barrier writes");
 
 /*
  * Wakeup point for bufdaemon, as well as indicator of whether it is already
@@ -914,6 +917,9 @@ bufwrite(struct buf *bp)
 		return (0);
 	}
 
+	if (bp->b_flags & B_BARRIER)
+		barrierwrites++;
+
 	oldflags = bp->b_flags;
 
 	BUF_ASSERT_HELD(bp);
@@ -930,7 +936,13 @@ bufwrite(struct buf *bp)
 	else
 		vp_md = 0;
 
-	/* Mark the buffer clean */
+	/*
+	 * Mark the buffer clean.  Increment the bufobj write count
+	 * before bundirty() call, to prevent other thread from seeing
+	 * empty dirty list and zero counter for writes in progress,
+	 * falsely indicating that the bufobj is clean.
+	 */
+	bufobj_wref(bp->b_bufobj);
 	bundirty(bp);
 
 	bp->b_flags &= ~B_DONE;
@@ -938,7 +950,6 @@ bufwrite(struct buf *bp)
 	bp->b_flags |= B_CACHE;
 	bp->b_iocmd = BIO_WRITE;
 
-	bufobj_wref(bp->b_bufobj);
 	vfs_busy_pages(bp, 1);
 
 	/*
@@ -1033,6 +1044,8 @@ bdwrite(struct buf *bp)
 
 	CTR3(KTR_BUF, "bdwrite(%p) vp %p flags %X", bp, bp->b_vp, bp->b_flags);
 	KASSERT(bp->b_bufobj != NULL, ("No b_bufobj %p", bp));
+	KASSERT((bp->b_flags & B_BARRIER) == 0,
+	    ("Barrier request in delayed write %p", bp));
 	BUF_ASSERT_HELD(bp);
 
 	if (bp->b_flags & B_INVAL) {
@@ -1193,6 +1206,40 @@ bawrite(struct buf *bp)
 }
 
 /*
+ *	babarrierwrite:
+ *
+ *	Asynchronous barrier write.  Start output on a buffer, but do not
+ *	wait for it to complete.  Place a write barrier after this write so
+ *	that this buffer and all buffers written before it are committed to
+ *	the disk before any buffers written after this write are committed
+ *	to the disk.  The buffer is released when the output completes.
+ */
+void
+babarrierwrite(struct buf *bp)
+{
+
+	bp->b_flags |= B_ASYNC | B_BARRIER;
+	(void) bwrite(bp);
+}
+
+/*
+ *	bbarrierwrite:
+ *
+ *	Synchronous barrier write.  Start output on a buffer and wait for
+ *	it to complete.  Place a write barrier after this write so that
+ *	this buffer and all buffers written before it are committed to 
+ *	the disk before any buffers written after this write are committed
+ *	to the disk.  The buffer is released when the output completes.
+ */
+int
+bbarrierwrite(struct buf *bp)
+{
+
+	bp->b_flags |= B_BARRIER;
+	return (bwrite(bp));
+}
+
+/*
  *	bwillwrite:
  *
  *	Called prior to the locking of any vnodes when we are expecting to
@@ -1251,6 +1298,15 @@ brelse(struct buf *bp)
 	    bp, bp->b_vp, bp->b_flags);
 	KASSERT(!(bp->b_flags & (B_CLUSTER|B_PAGING)),
 	    ("brelse: inappropriate B_PAGING or B_CLUSTER bp %p", bp));
+
+	if (BUF_LOCKRECURSED(bp)) {
+		/*
+		 * Do not process, in particular, do not handle the
+		 * B_INVAL/B_RELBUF and do not release to free list.
+		 */
+		BUF_UNLOCK(bp);
+		return;
+	}
 
 	if (bp->b_flags & B_MANAGED) {
 		bqrelse(bp);
@@ -1428,12 +1484,6 @@ brelse(struct buf *bp)
 			brelvp(bp);
 	}
 			
-	if (BUF_LOCKRECURSED(bp)) {
-		/* do not release to free list */
-		BUF_UNLOCK(bp);
-		return;
-	}
-
 	/* enqueue */
 	mtx_lock(&bqlock);
 	/* Handle delayed bremfree() processing. */
@@ -2139,15 +2189,16 @@ restart:
 
 		if (maxsize != bp->b_kvasize) {
 			vm_offset_t addr = 0;
+			int rv;
 
 			bfreekva(bp);
 
 			vm_map_lock(buffer_map);
 			if (vm_map_findspace(buffer_map,
-				vm_map_min(buffer_map), maxsize, &addr)) {
+			    vm_map_min(buffer_map), maxsize, &addr)) {
 				/*
-				 * Uh oh.  Buffer map is to fragmented.  We
-				 * must defragment the map.
+				 * Buffer map is too fragmented.
+				 * We must defragment the map.
 				 */
 				atomic_add_int(&bufdefragcnt, 1);
 				vm_map_unlock(buffer_map);
@@ -2156,22 +2207,21 @@ restart:
 				brelse(bp);
 				goto restart;
 			}
-			if (addr) {
-				vm_map_insert(buffer_map, NULL, 0,
-					addr, addr + maxsize,
-					VM_PROT_ALL, VM_PROT_ALL, MAP_NOFAULT);
-
-				bp->b_kvabase = (caddr_t) addr;
-				bp->b_kvasize = maxsize;
-				atomic_add_long(&bufspace, bp->b_kvasize);
-				atomic_add_int(&bufreusecnt, 1);
-			}
+			rv = vm_map_insert(buffer_map, NULL, 0, addr,
+			    addr + maxsize, VM_PROT_ALL, VM_PROT_ALL,
+			    MAP_NOFAULT);
+			KASSERT(rv == KERN_SUCCESS,
+			    ("vm_map_insert(buffer_map) rv %d", rv));
 			vm_map_unlock(buffer_map);
+			bp->b_kvabase = (caddr_t)addr;
+			bp->b_kvasize = maxsize;
+			atomic_add_long(&bufspace, bp->b_kvasize);
+			atomic_add_int(&bufreusecnt, 1);
 		}
 		bp->b_saveaddr = bp->b_kvabase;
 		bp->b_data = bp->b_saveaddr;
 	}
-	return(bp);
+	return (bp);
 }
 
 /*
@@ -2649,8 +2699,6 @@ loop:
          * If this check ever becomes a bottleneck it may be better to
          * move it into the else, when gbincore() fails.  At the moment
          * it isn't a problem.
-	 *
-	 * XXX remove if 0 sections (clean this up after its proven)
          */
 	if (numfreebuffers == 0) {
 		if (TD_IS_IDLETHREAD(curthread))
@@ -2685,6 +2733,9 @@ loop:
 		/* We timed out or were interrupted. */
 		else if (error)
 			return (NULL);
+		/* If recursed, assume caller knows the rules. */
+		else if (BUF_LOCKRECURSED(bp))
+			goto end;
 
 		/*
 		 * The buffer is locked.  B_CACHE is cleared if the buffer is 
@@ -2864,6 +2915,7 @@ loop:
 	}
 	CTR4(KTR_BUF, "getblk(%p, %ld, %d) = %p", vp, (long)blkno, size, bp);
 	BUF_ASSERT_HELD(bp);
+end:
 	KASSERT(bp->b_bufobj == bo,
 	    ("bp %p wrong b_bufobj %p should be %p", bp, bp->b_bufobj, bo));
 	return (bp);
@@ -3265,11 +3317,34 @@ void
 dev_strategy(struct cdev *dev, struct buf *bp)
 {
 	struct cdevsw *csw;
-	struct bio *bip;
 	int ref;
 
-	if ((!bp->b_iocmd) || (bp->b_iocmd & (bp->b_iocmd - 1)))
-		panic("b_iocmd botch");
+	KASSERT(dev->si_refcount > 0,
+	    ("dev_strategy on un-referenced struct cdev *(%s) %p",
+	    devtoname(dev), dev));
+
+	csw = dev_refthread(dev, &ref);
+	dev_strategy_csw(dev, csw, bp);
+	dev_relthread(dev, ref);
+}
+
+void
+dev_strategy_csw(struct cdev *dev, struct cdevsw *csw, struct buf *bp)
+{
+	struct bio *bip;
+
+	KASSERT(bp->b_iocmd == BIO_READ || bp->b_iocmd == BIO_WRITE,
+	    ("b_iocmd botch"));
+	KASSERT(((dev->si_flags & SI_ETERNAL) != 0 && csw != NULL) ||
+	    dev->si_threadcount > 0,
+	    ("dev_strategy_csw threadcount cdev *(%s) %p", devtoname(dev),
+	    dev));
+	if (csw == NULL) {
+		bp->b_error = ENXIO;
+		bp->b_ioflags = BIO_ERROR;
+		bufdone(bp);
+		return;
+	}
 	for (;;) {
 		bip = g_new_bio();
 		if (bip != NULL)
@@ -3285,19 +3360,7 @@ dev_strategy(struct cdev *dev, struct buf *bp)
 	bip->bio_done = bufdonebio;
 	bip->bio_caller2 = bp;
 	bip->bio_dev = dev;
-	KASSERT(dev->si_refcount > 0,
-	    ("dev_strategy on un-referenced struct cdev *(%s)",
-	    devtoname(dev)));
-	csw = dev_refthread(dev, &ref);
-	if (csw == NULL) {
-		g_destroy_bio(bip);
-		bp->b_error = ENXIO;
-		bp->b_ioflags = BIO_ERROR;
-		bufdone(bp);
-		return;
-	}
 	(*csw->d_strategy)(bip);
-	dev_relthread(dev, ref);
 }
 
 /*
@@ -3704,8 +3767,7 @@ vfs_bio_set_valid(struct buf *bp, int base, int size)
 void
 vfs_bio_clrbuf(struct buf *bp) 
 {
-	int i, j, mask;
-	caddr_t sa, ea;
+	int i, j, mask, sa, ea, slide;
 
 	if ((bp->b_flags & (B_VMIO | B_MALLOC)) != B_VMIO) {
 		clrbuf(bp);
@@ -3723,30 +3785,33 @@ vfs_bio_clrbuf(struct buf *bp)
 		if ((bp->b_pages[0]->valid & mask) == mask)
 			goto unlock;
 		if ((bp->b_pages[0]->valid & mask) == 0) {
-			bzero(bp->b_data, bp->b_bufsize);
+			pmap_zero_page_area(bp->b_pages[0], 0, bp->b_bufsize);
 			bp->b_pages[0]->valid |= mask;
 			goto unlock;
 		}
 	}
-	ea = sa = bp->b_data;
-	for(i = 0; i < bp->b_npages; i++, sa = ea) {
-		ea = (caddr_t)trunc_page((vm_offset_t)sa + PAGE_SIZE);
-		ea = (caddr_t)(vm_offset_t)ulmin(
-		    (u_long)(vm_offset_t)ea,
-		    (u_long)(vm_offset_t)bp->b_data + bp->b_bufsize);
+	sa = bp->b_offset & PAGE_MASK;
+	slide = 0;
+	for (i = 0; i < bp->b_npages; i++, sa = 0) {
+		slide = imin(slide + PAGE_SIZE, bp->b_offset + bp->b_bufsize);
+		ea = slide & PAGE_MASK;
+		if (ea == 0)
+			ea = PAGE_SIZE;
 		if (bp->b_pages[i] == bogus_page)
 			continue;
-		j = ((vm_offset_t)sa & PAGE_MASK) / DEV_BSIZE;
+		j = sa / DEV_BSIZE;
 		mask = ((1 << ((ea - sa) / DEV_BSIZE)) - 1) << j;
 		VM_OBJECT_LOCK_ASSERT(bp->b_pages[i]->object, MA_OWNED);
 		if ((bp->b_pages[i]->valid & mask) == mask)
 			continue;
 		if ((bp->b_pages[i]->valid & mask) == 0)
-			bzero(sa, ea - sa);
+			pmap_zero_page_area(bp->b_pages[i], sa, ea - sa);
 		else {
 			for (; sa < ea; sa += DEV_BSIZE, j++) {
-				if ((bp->b_pages[i]->valid & (1 << j)) == 0)
-					bzero(sa, DEV_BSIZE);
+				if ((bp->b_pages[i]->valid & (1 << j)) == 0) {
+					pmap_zero_page_area(bp->b_pages[i],
+					    sa, DEV_BSIZE);
+				}
 			}
 		}
 		bp->b_pages[i]->valid |= mask;

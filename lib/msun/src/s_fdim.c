@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/s_fdim.c 131320 2004-06-30 07:04:01Z das $");
 
 #include <math.h>
 

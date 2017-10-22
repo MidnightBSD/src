@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/jme/Makefile 179338 2008-05-27 01:54:45Z yongari $
 
 .PATH: ${.CURDIR}/../../dev/jme
 

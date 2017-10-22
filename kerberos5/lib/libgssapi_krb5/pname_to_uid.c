@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/kerberos5/lib/libgssapi_krb5/pname_to_uid.c 181344 2008-08-06 14:02:05Z dfr $ */
 
 #include <pwd.h>
 

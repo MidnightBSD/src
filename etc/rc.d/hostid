@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/hostid 220153 2011-03-30 01:19:00Z emaste $
 #
 
 # PROVIDE: hostid

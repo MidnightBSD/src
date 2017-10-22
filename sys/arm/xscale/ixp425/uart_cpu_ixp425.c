@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/uart_cpu_ixp425.c 170109 2007-05-29 18:10:42Z jhay $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

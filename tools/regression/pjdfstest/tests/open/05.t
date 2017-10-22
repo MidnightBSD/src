@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/open/05.t 166065 2007-01-17 01:42:12Z pjd $
 
 desc="open returns EACCES when search permission is denied for a component of the path prefix"
 

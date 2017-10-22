@@ -27,7 +27,7 @@
  * Mellon the rights to redistribute these changes without encumbrance.
  *
  * 	@(#) src/sys/coda/cnode.h,v 1.1.1.1 1998/08/29 21:14:52 rvb Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/coda/cnode.h 206210 2010-04-05 20:12:54Z rwatson $
  *
  */
 

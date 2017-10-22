@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/bsdinstall/scripts/keymap 226210 2011-10-10 13:57:35Z nwhitehorn $
 
 kbdcontrol -d >/dev/null 2>&1
 if [ $? -eq 0 ]; then

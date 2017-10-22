@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/uipc_sockbuf.c 225169 2011-08-25 09:20:13Z bz $");
 
 #include "opt_param.h"
 

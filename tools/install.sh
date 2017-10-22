@@ -26,16 +26,26 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/install.sh 248332 2013-03-15 15:21:34Z brooks $
 
 # parse install's options and ignore them completely.
 dirmode=""
+linkmode=""
 while [ $# -gt 0 ]; do
     case $1 in
     -d) dirmode="YES"; shift;;
-    -[bCcMpSsv]) shift;;
-    -[Bfgmo]) shift; shift;;
-    -[Bfgmo]*) shift;;
+    -[bCcpSsv]) shift;;
+    -[BDfghMmNoTU]) shift; shift;;
+    -[BDfghMmNoTU]*) shift;;
+    -l)
+	shift
+	case $1 in
+	*[sm]*) linkmode="symbolic";;	# XXX: 'm' should prefer hard
+	*h*) linkmode="hard";;
+	*) echo "invalid link mode"; exit 1;;
+	esac
+	shift
+	;;
     *) break;
     esac
 done
@@ -51,7 +61,13 @@ if [ -z "$dirmode" ] && [ "$#" -lt 2 ]; then
 fi
 
 # the remaining arguments are assumed to be files/dirs only.
-if [ -z "$dirmode" ]; then
+if [ -n "${linkmode}" ]; then
+	if [ "${linkmode}" = "symbolic" ]; then
+		ln -fsh "$@"
+	else
+		ln -f "$@"
+	fi
+elif [ -z "$dirmode" ]; then
 	exec install -p "$@"
 else
 	exec install -d "$@"

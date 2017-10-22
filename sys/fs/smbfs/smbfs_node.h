@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/smbfs/smbfs_node.h 206361 2010-04-07 16:50:38Z joel $
  */
 #ifndef _FS_SMBFS_NODE_H_
 #define _FS_SMBFS_NODE_H_

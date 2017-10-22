@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/bin/setfacl/setfacl.h 204819 2010-03-07 07:59:05Z joel $
  */
 
 #ifndef _SETFACL_H

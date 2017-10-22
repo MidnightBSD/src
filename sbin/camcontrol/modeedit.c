@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/camcontrol/modeedit.c 243294 2012-11-19 18:20:27Z emaste $");
 
 #include <sys/queue.h>
 #include <sys/types.h>
@@ -47,8 +47,6 @@ __FBSDID("$FreeBSD$");
 #include <cam/cam_ccb.h>
 #include <camlib.h>
 #include "camcontrol.h"
-
-int verbose = 0;
 
 #define	DEFAULT_SCSI_MODE_DB	"/usr/share/misc/scsi_modes"
 #define	DEFAULT_EDITOR		"vi"

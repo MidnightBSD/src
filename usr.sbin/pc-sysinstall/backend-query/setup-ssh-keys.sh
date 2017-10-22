@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/backend-query/setup-ssh-keys.sh 209552 2010-06-27 16:46:11Z imp $
 
 # Script which sets up password-less logins for ssh host
 ###########################################################################

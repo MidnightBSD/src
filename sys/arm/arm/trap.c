@@ -82,7 +82,7 @@
 #include "opt_ktrace.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/trap.c 229373 2012-01-03 09:40:31Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

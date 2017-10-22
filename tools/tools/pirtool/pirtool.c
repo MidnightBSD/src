@@ -28,7 +28,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/tools/pirtool/pirtool.c 165935 2007-01-11 05:00:30Z imp $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>

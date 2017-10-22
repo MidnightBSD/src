@@ -1,7 +1,7 @@
 /*-
  * Test 0081:	Check unconditional jump range.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/bpf/bpf_filter/tests/test0081.h 182428 2008-08-29 02:12:45Z jkim $
  */
 
 /* BPF program */

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/devfs 231660 2012-02-14 10:29:32Z dougb $
 #
 
 # PROVIDE: devfs

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/contrib/ipfilter/test/logtest 145519 2005-04-25 18:20:15Z darrenr $
 format=$2
 mkdir -p results
 if [ -f /usr/ucb/touch ] ; then

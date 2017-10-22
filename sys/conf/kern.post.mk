@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/conf/kern.post.mk 241711 2012-10-19 00:22:09Z jhb $
 
 # Part of a unified Makefile for building kernels.  This part includes all
 # the definitions that need to be after all the % directives except %RULES
@@ -125,7 +125,9 @@ ${FULLKERNEL}: ${SYSTEM_DEP} vers.o
 	@rm -f ${.TARGET}
 	@echo linking ${.TARGET}
 	${SYSTEM_LD}
-	@${SYSTEM_CTFMERGE}
+.if ${MK_CTF} != "no"
+	${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${SYSTEM_OBJS} vers.o
+.endif
 .if !defined(DEBUG)
 	${OBJCOPY} --strip-debug ${.TARGET}
 .endif
@@ -278,7 +280,7 @@ kernel-reinstall:
 
 config.o env.o hints.o vers.o vnode_if.o:
 	${NORMAL_C}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || ${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+	${NORMAL_CTFCONVERT}
 
 config.ln env.ln hints.ln vers.ln vnode_if.ln:
 	${NORMAL_LINT}

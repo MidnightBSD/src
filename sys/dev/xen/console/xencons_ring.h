@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/xen/console/xencons_ring.h 192003 2009-05-11 22:55:49Z kmacy $
  *
  */
 #ifndef _XENCONS_RING_H

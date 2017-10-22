@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/ipdivert/Makefile 223593 2011-06-27 12:21:11Z glebius $
 
 .PATH: ${.CURDIR}/../../netinet
 

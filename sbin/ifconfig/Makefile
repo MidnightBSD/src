@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/ifconfig/Makefile 223735 2011-07-03 12:22:02Z bz $
 
 .include <bsd.own.mk>
 

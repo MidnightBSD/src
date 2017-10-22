@@ -41,7 +41,7 @@
 /* This file is shared between kernel and userland. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/vinum/geom_vinum_share.c 190881 2009-04-10 08:50:14Z lulf $");
 
 #include <sys/param.h>
 #ifdef _KERNEL

@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/tools/tools/ath/ath_ee_9287_print/9287.h 222322 2011-05-26 19:49:32Z adrian $ */
 
 #ifndef	__9287_H__
 #define	__9287_H__

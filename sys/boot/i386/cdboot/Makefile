@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/boot/i386/cdboot/Makefile 237812 2012-06-29 18:09:39Z dim $
 
 PROG=	cdboot
 STRIP=

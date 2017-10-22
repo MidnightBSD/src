@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ia64/acpica/acpi_wakeup.c 247881 2013-03-06 10:23:56Z avg $
  */
 
 #include <sys/param.h>
@@ -35,6 +35,13 @@
 
 int
 acpi_sleep_machdep(struct acpi_softc *sc, int state)
+{
+	return (0);
+}
+
+int
+acpi_wakeup_machdep(struct acpi_softc *sc, int state,
+    int sleep_result, int intr_enabled)
 {
 	return (0);
 }

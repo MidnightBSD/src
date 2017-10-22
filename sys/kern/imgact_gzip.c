@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/imgact_gzip.c 232387 2012-03-02 11:32:47Z kib $");
 
 #include <sys/param.h>
 #include <sys/exec.h>

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/pst/pst-raid.c 135267 2004-09-15 15:39:28Z sos $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

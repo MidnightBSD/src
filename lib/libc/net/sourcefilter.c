@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/net/sourcefilter.c 191654 2009-04-29 09:58:31Z bms $");
 
 #include "namespace.h"
 

@@ -1,4 +1,4 @@
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/tools/build/options/WITHOUT_UTMPX 223209 2011-06-17 21:30:21Z ed $
 Set to not build user accounting tools such as
 .Xr last 1 ,
 .Xr users 1 ,

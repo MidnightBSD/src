@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/contrib/ipfilter/lib/checkrev.c 170268 2007-06-04 02:54:36Z darrenr $	*/
 
 /*
  * Copyright (C) 2000-2004 by Darren Reed.

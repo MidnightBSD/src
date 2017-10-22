@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/make/hash_tables.h 145683 2005-04-29 15:15:28Z harti $
  */
 #ifndef hash_tables_h_
 #define hash_tables_h_

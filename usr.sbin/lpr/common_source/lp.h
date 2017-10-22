@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  * 	From: @(#)lp.h	8.2 (Berkeley) 4/28/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/lpr/common_source/lp.h 216372 2010-12-11 09:38:12Z joel $
  */
 
 #include <sys/queue.h>

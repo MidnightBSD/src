@@ -1,8 +1,9 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/bsdinstall/partedit/Makefile 248240 2013-03-13 13:50:50Z nwhitehorn $
 
 BINDIR= /usr/libexec/bsdinstall
 PROG=	partedit
-LINKS= ${BINDIR}/partedit ${BINDIR}/autopart
+LINKS= ${BINDIR}/partedit ${BINDIR}/autopart \
+       ${BINDIR}/partedit ${BINDIR}/scriptedpart
 LDADD=	-lgeom -lncursesw -lutil -ldialog -lm
 
 PARTEDIT_ARCH= ${MACHINE}
@@ -14,7 +15,7 @@ PARTEDIT_ARCH= generic
 .endif
 
 SRCS=	diskeditor.c partedit.c gpart_ops.c partedit_${PARTEDIT_ARCH}.c \
-	part_wizard.c
+	part_wizard.c scripted.c
 
 WARNS?=	3
 NO_MAN=	true

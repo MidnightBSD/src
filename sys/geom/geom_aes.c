@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/geom_aes.c 249148 2013-04-05 10:35:36Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -241,12 +241,10 @@ g_aes_orphan(struct g_consumer *cp)
 
 	g_trace(G_T_TOPOLOGY, "g_aes_orphan(%p/%s)", cp, cp->provider->name);
 	g_topology_assert();
-	KASSERT(cp->provider->error != 0,
-		("g_aes_orphan with error == 0"));
 
 	gp = cp->geom;
 	sc = gp->softc;
-	g_wither_geom(gp, cp->provider->error);
+	g_wither_geom(gp, ENXIO);
 	bzero(sc, sizeof(struct g_aes_softc));	/* destroy evidence */
 	g_free(sc);
 	return;
@@ -344,7 +342,7 @@ g_aes_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 			}
 		}
 		g_topology_lock();
-		pp = g_new_providerf(gp, gp->name);
+		pp = g_new_providerf(gp, "%s", gp->name);
 		pp->mediasize = mediasize - sectorsize;
 		pp->sectorsize = sectorsize;
 		g_error_provider(pp, 0);

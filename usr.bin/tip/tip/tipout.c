@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/tip/tip/tipout.c 221727 2011-05-10 10:58:57Z phk $");
 
 #ifndef lint
 #if 0

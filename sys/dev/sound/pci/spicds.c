@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/sound/pci/spicds.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
@@ -35,7 +35,7 @@
 
 #include <dev/sound/pci/spicds.h>
 
-MALLOC_DEFINE(M_SPICDS, "spicds", "SPI codec");
+static MALLOC_DEFINE(M_SPICDS, "spicds", "SPI codec");
 
 #define SPICDS_NAMELEN	16
 struct spicds_info {

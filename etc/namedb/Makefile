@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/namedb/Makefile 170913 2007-06-18 05:44:38Z dougb $
 
 SUBDIR=	master
 

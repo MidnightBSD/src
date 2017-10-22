@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/mdmfs/mdmfs.c 225534 2011-09-13 20:16:11Z kib $");
 
 #include <sys/param.h>
 #include <sys/mdioctl.h>

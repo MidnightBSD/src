@@ -1,6 +1,6 @@
 .file "__divdi3.s"
 
-// $FreeBSD$
+// $FreeBSD: stable/9/sys/libkern/ia64/__divdi3.S 139815 2005-01-07 00:24:33Z imp $
 
 //-
 // Copyright (c) 2000, Intel Corporation

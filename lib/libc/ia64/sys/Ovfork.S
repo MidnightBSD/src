@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/ia64/sys/Ovfork.S 118330 2003-08-01 22:17:12Z marcel $");
 
 #include "SYS.h"
 

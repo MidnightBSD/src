@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libstdbuf/Makefile 234772 2012-04-28 20:52:20Z jlh $
 
 .include <bsd.own.mk>
 

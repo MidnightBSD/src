@@ -55,7 +55,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/vm/vm.h 245416 2013-01-14 10:58:55Z zont $
  */
 
 #ifndef VM_H
@@ -140,6 +140,8 @@ struct kva_md_info {
 
 extern struct kva_md_info	kmi;
 extern void vm_ksubmap_init(struct kva_md_info *);
+
+extern int old_mlock;
 
 struct ucred;
 int swap_reserve(vm_ooffset_t incr);

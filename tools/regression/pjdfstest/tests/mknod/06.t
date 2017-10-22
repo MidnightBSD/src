@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/mknod/06.t 210967 2010-08-06 20:51:39Z pjd $
 
 desc="mknod returns EACCES when write permission is denied on the parent directory of the file to be created"
 

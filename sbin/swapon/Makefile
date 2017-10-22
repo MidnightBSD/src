@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/swapon/Makefile 202532 2010-01-17 21:56:27Z ed $
 
 PROG=	swapon
 MAN=	swapon.8

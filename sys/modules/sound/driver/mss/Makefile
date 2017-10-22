@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/sound/driver/mss/Makefile 106497 2002-11-06 13:47:00Z nyan $
 
 .PATH: ${.CURDIR}/../../../../dev/sound/isa
 

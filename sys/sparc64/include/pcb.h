@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sparc64/include/pcb.h 235539 2012-05-17 10:25:34Z dim $
  */
 
 #ifndef	_MACHINE_PCB_H_

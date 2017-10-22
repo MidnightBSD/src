@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/vm/vm_meter.c 219968 2011-03-24 18:40:11Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

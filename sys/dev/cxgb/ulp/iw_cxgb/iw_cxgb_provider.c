@@ -27,7 +27,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_provider.c 239522 2012-08-21 19:19:29Z dim $");
 
 #include "opt_inet.h"
 
@@ -487,7 +487,7 @@ static int iwch_reregister_phys_mem(struct ib_mr *mr,
 	__be64 *page_list = NULL;
 	int shift = 0;
 	u64 total_size;
-	int npages;
+	int npages = 0;
 	int ret;
 
 	CTR3(KTR_IW_CXGB, "%s ib_mr %p ib_pd %p", __FUNCTION__, mr, pd);

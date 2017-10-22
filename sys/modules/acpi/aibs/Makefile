@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/acpi/aibs/Makefile 209523 2010-06-25 15:32:46Z rpaulo $
 
 .PATH:	${.CURDIR}/../../../dev/acpi_support
 

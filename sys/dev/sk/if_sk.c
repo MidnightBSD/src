@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/sk/if_sk.c 248078 2013-03-09 00:39:54Z marius $");
 
 /*
  * SysKonnect SK-NET gigabit ethernet driver for FreeBSD. Supports
@@ -140,7 +140,7 @@ MODULE_DEPEND(sk, miibus, 1, 1, 1);
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/sys/dev/sk/if_sk.c 248078 2013-03-09 00:39:54Z marius $";
 #endif
 
 static struct sk_type sk_devs[] = {
@@ -965,7 +965,7 @@ sk_newbuf(sc_if, idx)
 	bus_dmamap_t		map;
 	int			nsegs;
 
-	m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+	m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (m == NULL)
 		return (ENOBUFS);
 	m->m_len = m->m_pkthdr.len = MCLBYTES;
@@ -1010,7 +1010,7 @@ sk_jumbo_newbuf(sc_if, idx)
 	bus_dmamap_t		map;
 	int			nsegs;
 
-	m = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR, MJUM9BYTES);
+	m = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, MJUM9BYTES);
 	if (m == NULL)
 		return (ENOBUFS);
 	if ((m->m_flags & M_EXT) == 0) {
@@ -2394,7 +2394,7 @@ sk_encap(sc_if, m_head)
 	error = bus_dmamap_load_mbuf_sg(sc_if->sk_cdata.sk_tx_tag,
 	    txd->tx_dmamap, *m_head, txsegs, &nseg, 0);
 	if (error == EFBIG) {
-		m = m_defrag(*m_head, M_DONTWAIT);
+		m = m_defrag(*m_head, M_NOWAIT);
 		if (m == NULL) {
 			m_freem(*m_head);
 			*m_head = NULL;

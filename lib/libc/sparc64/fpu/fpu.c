@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/sparc64/fpu/fpu.c 205395 2010-03-20 21:27:44Z marius $");
 
 #include <sys/param.h>
 

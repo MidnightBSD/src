@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/rpcsec_gss/rpctest.c 184588 2008-11-03 10:38:00Z dfr $
  */
 
 #ifdef __FreeBSD__

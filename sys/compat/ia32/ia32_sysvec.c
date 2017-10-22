@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/compat/ia32/ia32_sysvec.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_compat.h"
 
@@ -95,7 +95,7 @@ CTASSERT(sizeof(struct ia32_sigframe4) == 408);
 
 extern const char *freebsd32_syscallnames[];
 
-SYSCTL_NODE(_compat, OID_AUTO, ia32, CTLFLAG_RW, 0, "ia32 mode");
+static SYSCTL_NODE(_compat, OID_AUTO, ia32, CTLFLAG_RW, 0, "ia32 mode");
 
 static u_long	ia32_maxdsiz = IA32_MAXDSIZ;
 SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxdsiz, CTLFLAG_RW, &ia32_maxdsiz, 0, "");
@@ -126,7 +126,7 @@ struct sysentvec ia32_freebsd_sysvec = {
 	.sv_imgact_try	= NULL,
 	.sv_minsigstksz	= MINSIGSTKSZ,
 	.sv_pagesize	= IA32_PAGE_SIZE,
-	.sv_minuser	= 0,
+	.sv_minuser	= FREEBSD32_MINUSER,
 	.sv_maxuser	= FREEBSD32_MAXUSER,
 	.sv_usrstack	= FREEBSD32_USRSTACK,
 	.sv_psstrings	= FREEBSD32_PS_STRINGS,

@@ -27,7 +27,7 @@
 
 #if 0
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/mips/ptrace_machdep.c 202105 2010-01-11 19:21:52Z imp $");
 
 /*
  * This file is a place holder for MIPS.  Some models of MIPS may need special

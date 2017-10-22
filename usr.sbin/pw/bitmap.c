@@ -26,7 +26,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/usr.sbin/pw/bitmap.c 244459 2012-12-20 00:28:52Z eadler $";
 #endif /* not lint */
 
 #include <stdlib.h>
@@ -50,8 +50,7 @@ bm_alloc(int size)
 void
 bm_dealloc(struct bitmap * bm)
 {
-	if (bm->map)
-		free(bm->map);
+	free(bm->map);
 }
 
 static void

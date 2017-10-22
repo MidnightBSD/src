@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.2 (Berkeley) 12/15/93
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libtelnet/Makefile 189092 2009-02-26 21:43:15Z ed $
 
 .include <bsd.own.mk>
 

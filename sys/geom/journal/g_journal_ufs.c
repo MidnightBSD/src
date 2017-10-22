@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/journal/g_journal_ufs.c 163837 2006-10-31 21:31:00Z pjd $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

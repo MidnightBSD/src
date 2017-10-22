@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/lib/libc/locale/test-mbstowcs.t 137587 2004-11-11 19:47:55Z nik $
 
 cd `dirname $0`
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libulog/ulog.h 202215 2010-01-13 18:53:06Z ed $
  */
 
 #ifndef _ULOG_H_

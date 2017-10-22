@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/arm/at91/at91rm92reg.h 213496 2010-10-06 22:25:21Z cognet $ */
 
 #ifndef AT91RM92REG_H_
 #define AT91RM92REG_H_

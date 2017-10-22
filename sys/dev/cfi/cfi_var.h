@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/cfi/cfi_var.h 189606 2009-03-09 23:16:02Z sam $
  */
 
 #ifndef _DEV_CFI_VAR_H_

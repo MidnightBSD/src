@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ofw/ofw_console.c 235405 2012-05-13 17:04:46Z avg $");
 
 #include "opt_ofw.h"
 

@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)inode.h	8.9 (Berkeley) 5/14/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ufs/ufs/inode.h 247589 2013-03-01 22:03:57Z pfg $
  */
 
 #ifndef _UFS_UFS_INODE_H_
@@ -151,10 +151,6 @@ struct inode {
 		(ip)->i_din2->d##field = (val); \
 	} while (0)
 
-#define	MAXSYMLINKLEN(ip) \
-	((ip)->i_ump->um_fstype == UFS1) ? \
-	((NDADDR + NIADDR) * sizeof(ufs1_daddr_t)) : \
-	((NDADDR + NIADDR) * sizeof(ufs2_daddr_t))
 #define	SHORTLINK(ip) \
 	(((ip)->i_ump->um_fstype == UFS1) ? \
 	(caddr_t)(ip)->i_din1->di_db : (caddr_t)(ip)->i_din2->di_db)
@@ -167,7 +163,6 @@ struct inode {
 struct indir {
 	ufs2_daddr_t in_lbn;		/* Logical block number. */
 	int	in_off;			/* Offset in buffer. */
-	int	in_exists;		/* Flag if the block exists. */
 };
 
 /* Convert between inode pointers and vnode pointers. */

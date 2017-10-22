@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/zero/g_zero.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -42,7 +42,8 @@ __FBSDID("$FreeBSD$");
 #define	G_ZERO_CLASS_NAME	"ZERO"
 
 SYSCTL_DECL(_kern_geom);
-SYSCTL_NODE(_kern_geom, OID_AUTO, zero, CTLFLAG_RW, 0, "GEOM_ZERO stuff");
+static SYSCTL_NODE(_kern_geom, OID_AUTO, zero, CTLFLAG_RW, 0,
+    "GEOM_ZERO stuff");
 static int g_zero_clear = 1;
 SYSCTL_INT(_kern_geom_zero, OID_AUTO, clear, CTLFLAG_RW, &g_zero_clear, 0,
     "Clear read data buffer");

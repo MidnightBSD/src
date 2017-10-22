@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/in6_src.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -127,20 +127,20 @@ static VNET_DEFINE(struct in6_addrpolicy, defaultaddrpolicy);
 
 VNET_DEFINE(int, ip6_prefer_tempaddr) = 0;
 
-static int selectroute __P((struct sockaddr_in6 *, struct ip6_pktopts *,
+static int selectroute(struct sockaddr_in6 *, struct ip6_pktopts *,
 	struct ip6_moptions *, struct route_in6 *, struct ifnet **,
-	struct rtentry **, int, u_int));
-static int in6_selectif __P((struct sockaddr_in6 *, struct ip6_pktopts *,
+	struct rtentry **, int, u_int);
+static int in6_selectif(struct sockaddr_in6 *, struct ip6_pktopts *,
 	struct ip6_moptions *, struct route_in6 *ro, struct ifnet **,
-	struct ifnet *, u_int));
+	struct ifnet *, u_int);
 
 static struct in6_addrpolicy *lookup_addrsel_policy(struct sockaddr_in6 *);
 
 static void init_policy_queue(void);
 static int add_addrsel_policyent(struct in6_addrpolicy *);
 static int delete_addrsel_policyent(struct in6_addrpolicy *);
-static int walk_addrsel_policy __P((int (*)(struct in6_addrpolicy *, void *),
-				    void *));
+static int walk_addrsel_policy(int (*)(struct in6_addrpolicy *, void *),
+				    void *);
 static int dump_addrsel_policyent(struct in6_addrpolicy *, void *);
 static struct in6_addrpolicy *match_addrsel_policy(struct sockaddr_in6 *);
 
@@ -383,10 +383,12 @@ in6_selectsrc(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 		 */
 
 		/* Rule 5: Prefer outgoing interface */
-		if (ia_best->ia_ifp == ifp && ia->ia_ifp != ifp)
-			NEXT(5);
-		if (ia_best->ia_ifp != ifp && ia->ia_ifp == ifp)
-			REPLACE(5);
+		if (!(ND_IFINFO(ifp)->flags & ND6_IFF_NO_PREFER_IFACE)) {
+			if (ia_best->ia_ifp == ifp && ia->ia_ifp != ifp)
+				NEXT(5);
+			if (ia_best->ia_ifp != ifp && ia->ia_ifp == ifp)
+				REPLACE(5);
+		}
 
 		/*
 		 * Rule 6: Prefer matching label
@@ -608,9 +610,9 @@ selectroute(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 
 		rt = ron->ro_rt;
 		ifp = rt->rt_ifp;
-		IF_AFDATA_LOCK(ifp);
+		IF_AFDATA_RLOCK(ifp);
 		la = lla_lookup(LLTABLE6(ifp), 0, (struct sockaddr *)&sin6_next->sin6_addr);
-		IF_AFDATA_UNLOCK(ifp);
+		IF_AFDATA_RUNLOCK(ifp);
 		if (la != NULL) 
 			LLE_RUNLOCK(la);
 		else {
@@ -963,7 +965,7 @@ struct walkarg {
 
 static int in6_src_sysctl(SYSCTL_HANDLER_ARGS);
 SYSCTL_DECL(_net_inet6_ip6);
-SYSCTL_NODE(_net_inet6_ip6, IPV6CTL_ADDRCTLPOLICY, addrctlpolicy,
+static SYSCTL_NODE(_net_inet6_ip6, IPV6CTL_ADDRCTLPOLICY, addrctlpolicy,
 	CTLFLAG_RD, in6_src_sysctl, "");
 
 static int

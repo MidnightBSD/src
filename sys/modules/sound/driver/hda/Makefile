@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/sound/driver/hda/Makefile 232798 2012-03-10 21:58:08Z mav $
 
 .PATH: ${.CURDIR}/../../../../dev/sound/pci/hda
 

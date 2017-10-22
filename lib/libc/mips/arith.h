@@ -1,7 +1,7 @@
 /*
  * MD header for contrib/gdtoa
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libc/mips/arith.h 178580 2008-04-26 12:08:02Z imp $
  */
 
 /*

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ia64/ia64/machdep.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
@@ -98,8 +98,24 @@ __FBSDID("$FreeBSD$");
 #include <machine/unwind.h>
 #include <machine/vmparam.h>
 
-SYSCTL_NODE(_hw, OID_AUTO, freq, CTLFLAG_RD, 0, "");
-SYSCTL_NODE(_machdep, OID_AUTO, cpu, CTLFLAG_RD, 0, "");
+/*
+ * For atomicity reasons, we demand that pc_curthread is the first
+ * field in the struct pcpu. It allows us to read the pointer with
+ * a single atomic instruction:
+ *	ld8 %curthread = [r13]
+ * Otherwise we would first have to calculate the load address and
+ * store the result in a temporary register and that for the load:
+ *	add %temp = %offsetof(struct pcpu), r13
+ *	ld8 %curthread = [%temp]
+ * A context switch inbetween the add and the ld8 could have the
+ * thread migrate to a different core. In that case,  %curthread
+ * would be the thread running on the original core and not actually
+ * the current thread.
+ */
+CTASSERT(offsetof(struct pcpu, pc_curthread) == 0);
+
+static SYSCTL_NODE(_hw, OID_AUTO, freq, CTLFLAG_RD, 0, "");
+static SYSCTL_NODE(_machdep, OID_AUTO, cpu, CTLFLAG_RD, 0, "");
 
 static u_int bus_freq;
 SYSCTL_UINT(_hw_freq, OID_AUTO, bus, CTLFLAG_RD, &bus_freq, 0,

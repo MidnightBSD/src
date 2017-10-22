@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/pmcstat/pmcstat_log.c 237970 2012-07-02 07:18:27Z obrien $");
 
 #include <sys/param.h>
 #include <sys/endian.h>

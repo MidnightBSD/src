@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/stf 208060 2010-05-14 04:53:57Z dougb $
 #
 
 # PROVIDE: stf

@@ -27,7 +27,7 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/subr_stack.c 219028 2011-02-25 10:11:01Z netchild $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

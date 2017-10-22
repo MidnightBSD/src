@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/tws/tws.c 241762 2012-10-20 07:38:42Z delphij $");
 
 #include <dev/tws/tws.h>
 #include <dev/tws/tws_services.h>
@@ -197,7 +197,7 @@ tws_attach(device_t dev)
     mtx_init( &sc->q_lock, "tws_q_lock", NULL, MTX_DEF);
     mtx_init( &sc->sim_lock,  "tws_sim_lock", NULL, MTX_DEF);
     mtx_init( &sc->gen_lock,  "tws_gen_lock", NULL, MTX_DEF);
-    mtx_init( &sc->io_lock,  "tws_io_lock", NULL, MTX_DEF);
+    mtx_init( &sc->io_lock,  "tws_io_lock", NULL, MTX_DEF | MTX_RECURSE);
 
     if ( tws_init_trace_q(sc) == FAILURE )
         printf("trace init failure\n");

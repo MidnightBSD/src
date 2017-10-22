@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/uart/uart_bus_fdt.c 217520 2011-01-17 23:34:36Z marcel $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

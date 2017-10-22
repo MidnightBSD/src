@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/tip/libacu/t3000.c 161754 2006-08-31 14:14:30Z ru $");
 
 #ifndef lint
 #if 0

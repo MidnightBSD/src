@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/netinet/tcpsocktimewait/tcpsocktimewait.c 222486 2011-05-30 09:34:15Z rwatson $
  */
 
 /*

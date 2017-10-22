@@ -1,6 +1,6 @@
 # -*- makefile -*-
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/release/doc/share/examples/Makefile.relnotesng 229684 2012-01-06 05:08:51Z hrs $
 #
 # Sample makefile for rendering and uploading RELNOTESng files outside
 # the build tree.
@@ -12,7 +12,7 @@ UNITEXTS=	hardware readme relnotes errata
 
 IMAGEDIR=	.imagedir
 RHOST=		freefall.freebsd.org
-RDIR=		public_html/relnotes/releng/9.1
+RDIR=		public_html/relnotes/RELENG_9
 DOCDIR=		./release/doc
 LANG=		en_US.ISO8859-1
 

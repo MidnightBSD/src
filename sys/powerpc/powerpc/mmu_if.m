@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/powerpc/powerpc/mmu_if.m 248814 2013-03-28 06:31:04Z kib $
 #
 
 #include <sys/param.h>
@@ -215,6 +215,14 @@ METHOD void copy_page {
 	vm_page_t	_dst;
 };
 
+METHOD void copy_pages {
+	mmu_t		_mmu;
+	vm_page_t	*_ma;
+	vm_offset_t	_a_offset;
+	vm_page_t	*_mb;
+	vm_offset_t	_b_offset;
+	int		_xfersize;
+};
 
 /**
  * @brief Create a mapping between a virtual/physical address pair in the

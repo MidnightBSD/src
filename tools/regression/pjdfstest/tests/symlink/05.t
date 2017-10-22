@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/symlink/05.t 166065 2007-01-17 01:42:12Z pjd $
 
 desc="symlink returns EACCES when a component of the name2 path prefix denies search permission"
 

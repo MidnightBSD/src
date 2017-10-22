@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/sfxge/common/efx_port.c 228100 2011-11-28 20:28:23Z philip $");
 
 #include "efsys.h"
 #include "efx.h"

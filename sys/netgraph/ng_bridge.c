@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_bridge.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 /*
@@ -84,7 +84,8 @@
 #include <netgraph/ng_bridge.h>
 
 #ifdef NG_SEPARATE_MALLOC
-MALLOC_DEFINE(M_NETGRAPH_BRIDGE, "netgraph_bridge", "netgraph bridge node");
+static MALLOC_DEFINE(M_NETGRAPH_BRIDGE, "netgraph_bridge",
+    "netgraph bridge node");
 #else
 #define M_NETGRAPH_BRIDGE M_NETGRAPH
 #endif

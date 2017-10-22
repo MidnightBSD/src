@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/geom_bsd_enc.c 174500 2007-12-09 22:44:22Z marcel $");
 
 #include <sys/types.h>
 #include <sys/endian.h>

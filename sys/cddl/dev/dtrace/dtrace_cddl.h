@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cddl/dev/dtrace/dtrace_cddl.h 211610 2010-08-22 11:04:43Z rpaulo $
  *
  */
 

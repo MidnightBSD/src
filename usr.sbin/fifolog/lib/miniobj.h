@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/fifolog/lib/miniobj.h 219027 2011-02-25 09:40:17Z phk $
  */
 
 #define ALLOC_OBJ(to, type_magic)					\

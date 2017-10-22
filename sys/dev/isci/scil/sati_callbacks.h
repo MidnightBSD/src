@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/isci/scil/sati_callbacks.h 240579 2012-09-17 00:44:16Z eadler $
  */
 #ifndef _SATI_CALLBACKS_H_
 #define _SATI_CALLBACKS_H_
@@ -153,7 +153,7 @@ void sati_cb_get_data_byte(
 );
 
 /**
- * @brief This callback method gets the the task type for the SCSI task
+ * @brief This callback method gets the task type for the SCSI task
  *        request.
  *
  * @param[in] scsi_task This parameter specifies the user's SCSI Task request.

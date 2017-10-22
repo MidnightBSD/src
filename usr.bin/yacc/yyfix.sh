@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/yacc/yyfix.sh 216370 2010-12-11 08:32:16Z joel $
 #
 #	@(#)yyfix.sh	5.2 (Berkeley) 5/12/90
 #

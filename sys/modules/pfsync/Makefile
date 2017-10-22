@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/pfsync/Makefile 229770 2012-01-07 11:01:35Z glebius $
 
 .include <bsd.own.mk>
 

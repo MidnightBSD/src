@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/aic7xxx/aic79xx_osm.c 239524 2012-08-21 19:24:39Z dim $");
 
 #include <dev/aic7xxx/aic79xx_osm.h>
 #include <dev/aic7xxx/aic79xx_inline.h>
@@ -222,6 +222,7 @@ ahd_attach(struct ahd_softc *ahd)
 	count = 0;
 	devq = NULL;
 	sim = NULL;
+	path = NULL;
 
 	/*
 	 * Create a thread to perform all recovery.

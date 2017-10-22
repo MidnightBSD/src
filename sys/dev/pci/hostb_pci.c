@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/pci/hostb_pci.c 219902 2011-03-23 13:10:15Z jhb $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

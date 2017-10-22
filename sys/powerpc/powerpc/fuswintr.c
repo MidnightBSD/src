@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/powerpc/fuswintr.c 113038 2003-04-03 21:36:33Z obrien $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

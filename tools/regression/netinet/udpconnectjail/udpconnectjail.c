@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/netinet/udpconnectjail/udpconnectjail.c 222487 2011-05-30 09:41:38Z bz $
  */
 
 #include <sys/param.h>

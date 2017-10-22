@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/lib/plist.c 241135 2012-10-02 17:04:53Z bapt $");
 
 #include "lib.h"
 #include <err.h>
@@ -458,7 +458,10 @@ delete_package(Boolean ign_err, Boolean nukedirs, Package *pkg)
 
 	case PLIST_FILE:
 	    last_file = p->name;
-	    sprintf(tmp, "%s/%s", Where, p->name);
+	    if (*p->name == '/')
+		strlcpy(tmp, p->name, FILENAME_MAX);
+	    else
+		sprintf(tmp, "%s/%s", Where, p->name);
 	    if (isdir(tmp) && fexists(tmp) && !issymlink(tmp)) {
 		warnx("cannot delete specified file '%s' - it is a directory!\n"
 	   "this packing list is incorrect - ignoring delete request", tmp);

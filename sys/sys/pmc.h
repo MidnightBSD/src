@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/pmc.h 249492 2013-04-15 03:09:59Z hiren $
  */
 
 #ifndef _SYS_PMC_H_
@@ -87,6 +87,9 @@
 	__PMC_CPU(INTEL_COREI7, 0x8B,   "Intel Core i7")	\
 	__PMC_CPU(INTEL_WESTMERE, 0x8C,   "Intel Westmere")	\
 	__PMC_CPU(INTEL_SANDYBRIDGE, 0x8D,   "Intel Sandy Bridge")	\
+	__PMC_CPU(INTEL_IVYBRIDGE, 0x8E,   "Intel Ivy Bridge")	\
+	__PMC_CPU(INTEL_SANDYBRIDGE_XEON, 0x8F,   "Intel Sandy Bridge Xeon")	\
+	__PMC_CPU(INTEL_IVYBRIDGE_XEON, 0x90,   "Intel Ivy Bridge Xeon")	\
 	__PMC_CPU(INTEL_XSCALE,	0x100,	"Intel XScale")		\
 	__PMC_CPU(MIPS_24K,     0x200,  "MIPS 24K")		\
 	__PMC_CPU(PPC_7450,     0x300,  "PowerPC MPC7450")	\

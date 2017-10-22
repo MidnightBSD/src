@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)vmparam.h	5.9 (Berkeley) 5/12/91
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/i386/include/vmparam.h 240816 2012-09-22 12:34:02Z kib $
  */
 
 
@@ -165,7 +165,8 @@
 
 #define VM_MAXUSER_ADDRESS	VADDR(PTDPTDI, 0)
 
-#define USRSTACK		VM_MAXUSER_ADDRESS
+#define	SHAREDPAGE		(VM_MAXUSER_ADDRESS - PAGE_SIZE)
+#define	USRSTACK		SHAREDPAGE
 
 #define VM_MAX_ADDRESS		VADDR(PTDPTDI, PTDPTDI)
 #define VM_MIN_ADDRESS		((vm_offset_t)0)

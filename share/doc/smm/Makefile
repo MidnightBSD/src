@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/10/93
-# $FreeBSD$
+# $FreeBSD: stable/9/share/doc/smm/Makefile 241111 2012-10-01 19:13:47Z jhb $
 
 .include <bsd.own.mk>
 
@@ -18,7 +18,7 @@ SUBDIR=	title \
 	04.quotas \
 	05.fastfs \
 	06.nfs \
-	07.lpd \
+	${_07.lpd} \
 	${_08.sendmailop} \
 	11.timedop \
 	12.timed \
@@ -26,6 +26,10 @@ SUBDIR=	title \
 
 .if ${MK_SENDMAIL} != "no"
 _08.sendmailop=	08.sendmailop 
+.endif
+
+.if ${MK_LPR} != "no"
+_07.lpd=	07.lpd
 .endif
 
 .include <bsd.subdir.mk>

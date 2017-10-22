@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/9/sys/contrib/ipfilter/netinet/QNX_OCL.txt 95418 2002-04-25 03:31:39Z darrenr $
 
    End User License Certificate (EULA) End User License Certificate
    (EULA) 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libefi/efi_setvar.c 203181 2010-01-30 04:24:03Z marcel $");
 
 #include <libefi.h>
 #include <stdlib.h>

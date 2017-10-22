@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libelf/libelf_ehdr.c 210338 2010-07-21 10:25:02Z kaiw $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libelf/libelf_ehdr.c 210338 2010-07-21 10:25:02Z kaiw $");
 
 #include <assert.h>
 #include <gelf.h>

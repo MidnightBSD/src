@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/fs/nfs/nfs_commonsubs.c 247502 2013-02-28 21:57:38Z jhb $");
 
 /*
  * These functions support the macros and help fiddle mbuf chains for
@@ -199,6 +199,7 @@ nfsm_mbufuio(struct nfsrv_descript *nd, struct uio *uiop, int siz)
 				}
 				mbufcp = NFSMTOD(mp, caddr_t);
 				len = mbuf_len(mp);
+				KASSERT(len > 0, ("len %d", len));
 			}
 			xfer = (left > len) ? len : left;
 #ifdef notdef
@@ -1401,12 +1402,12 @@ nfsv4_loadattr(struct nfsrv_descript *nd, vnode_t vp,
 			}
 			if (compare) {
 			    if (!(*retcmpp)) {
-				if (nfsv4_strtouid(cp, j, &uid, p) ||
+				if (nfsv4_strtouid(nd, cp, j, &uid, p) ||
 				    nap->na_uid != uid)
 				    *retcmpp = NFSERR_NOTSAME;
 			    }
 			} else if (nap != NULL) {
-				if (nfsv4_strtouid(cp, j, &uid, p))
+				if (nfsv4_strtouid(nd, cp, j, &uid, p))
 					nap->na_uid = nfsrv_defaultuid;
 				else
 					nap->na_uid = uid;
@@ -1434,12 +1435,12 @@ nfsv4_loadattr(struct nfsrv_descript *nd, vnode_t vp,
 			}
 			if (compare) {
 			    if (!(*retcmpp)) {
-				if (nfsv4_strtogid(cp, j, &gid, p) ||
+				if (nfsv4_strtogid(nd, cp, j, &gid, p) ||
 				    nap->na_gid != gid)
 				    *retcmpp = NFSERR_NOTSAME;
 			    }
 			} else if (nap != NULL) {
-				if (nfsv4_strtogid(cp, j, &gid, p))
+				if (nfsv4_strtogid(nd, cp, j, &gid, p))
 					nap->na_gid = nfsrv_defaultgid;
 				else
 					nap->na_gid = gid;
@@ -1979,7 +1980,6 @@ nfsv4_fillattr(struct nfsrv_descript *nd, struct mount *mp, vnode_t vp,
 	struct statfs fs;
 	struct nfsfsinfo fsinf;
 	struct timespec temptime;
-	struct timeval curtime;
 	NFSACL_T *aclp, *naclp = NULL;
 #ifdef QUOTA
 	struct dqblk dqb;
@@ -2393,8 +2393,7 @@ nfsv4_fillattr(struct nfsrv_descript *nd, struct mount *mp, vnode_t vp,
 			retnum += NFSX_V4TIME;
 			break;
 		case NFSATTRBIT_TIMEACCESSSET:
-			NFSGETTIME(&curtime);
-			if (vap->va_atime.tv_sec != curtime.tv_sec) {
+			if ((vap->va_vaflags & VA_UTIMES_NULL) == 0) {
 				NFSM_BUILD(tl, u_int32_t *, NFSX_V4SETTIME);
 				*tl++ = txdr_unsigned(NFSV4SATTRTIME_TOCLIENT);
 				txdr_nfsv4time(&vap->va_atime, tl);
@@ -2423,8 +2422,7 @@ nfsv4_fillattr(struct nfsrv_descript *nd, struct mount *mp, vnode_t vp,
 			retnum += NFSX_V4TIME;
 			break;
 		case NFSATTRBIT_TIMEMODIFYSET:
-			NFSGETTIME(&curtime);
-			if (vap->va_mtime.tv_sec != curtime.tv_sec) {
+			if ((vap->va_vaflags & VA_UTIMES_NULL) == 0) {
 				NFSM_BUILD(tl, u_int32_t *, NFSX_V4SETTIME);
 				*tl++ = txdr_unsigned(NFSV4SATTRTIME_TOCLIENT);
 				txdr_nfsv4time(&vap->va_mtime, tl);
@@ -2594,27 +2592,41 @@ tryagain:
  * Convert a string to a uid.
  * If no conversion is possible return NFSERR_BADOWNER, otherwise
  * return 0.
+ * If this is called from a client side mount using AUTH_SYS and the
+ * string is made up entirely of digits, just convert the string to
+ * a number.
  */
 APPLESTATIC int
-nfsv4_strtouid(u_char *str, int len, uid_t *uidp, NFSPROC_T *p)
+nfsv4_strtouid(struct nfsrv_descript *nd, u_char *str, int len, uid_t *uidp,
+    NFSPROC_T *p)
 {
 	int i;
-	u_char *cp;
+	char *cp, *endstr, *str0;
 	struct nfsusrgrp *usrp;
 	int cnt, ret;
 	int error = 0;
+	uid_t tuid;
 
 	if (len == 0) {
 		error = NFSERR_BADOWNER;
 		goto out;
 	}
+	/* If a string of digits and an AUTH_SYS mount, just convert it. */
+	str0 = str;
+	tuid = (uid_t)strtoul(str0, &endstr, 10);
+	if ((endstr - str0) == len &&
+	    (nd->nd_flag & (ND_KERBV | ND_NFSCL)) == ND_NFSCL) {
+		*uidp = tuid;
+		goto out;
+	}
 	/*
 	 * Look for an '@'.
 	 */
-	cp = str;
-	for (i = 0; i < len; i++)
-		if (*cp++ == '@')
-			break;
+	cp = strchr(str0, '@');
+	if (cp != NULL)
+		i = (int)(cp++ - str0);
+	else
+		i = len;
 
 	cnt = 0;
 tryagain:
@@ -2783,27 +2795,43 @@ tryagain:
 
 /*
  * Convert a string to a gid.
+ * If no conversion is possible return NFSERR_BADOWNER, otherwise
+ * return 0.
+ * If this is called from a client side mount using AUTH_SYS and the
+ * string is made up entirely of digits, just convert the string to
+ * a number.
  */
 APPLESTATIC int
-nfsv4_strtogid(u_char *str, int len, gid_t *gidp, NFSPROC_T *p)
+nfsv4_strtogid(struct nfsrv_descript *nd, u_char *str, int len, gid_t *gidp,
+    NFSPROC_T *p)
 {
 	int i;
-	u_char *cp;
+	char *cp, *endstr, *str0;
 	struct nfsusrgrp *usrp;
 	int cnt, ret;
 	int error = 0;
+	gid_t tgid;
 
 	if (len == 0) {
 		error =  NFSERR_BADOWNER;
 		goto out;
 	}
+	/* If a string of digits and an AUTH_SYS mount, just convert it. */
+	str0 = str;
+	tgid = (gid_t)strtoul(str0, &endstr, 10);
+	if ((endstr - str0) == len &&
+	    (nd->nd_flag & (ND_KERBV | ND_NFSCL)) == ND_NFSCL) {
+		*gidp = tgid;
+		goto out;
+	}
 	/*
 	 * Look for an '@'.
 	 */
-	cp = str;
-	for (i = 0; i < len; i++)
-		if (*cp++ == '@')
-			break;
+	cp = strchr(str0, '@');
+	if (cp != NULL)
+		i = (int)(cp++ - str0);
+	else
+		i = len;
 
 	cnt = 0;
 tryagain:

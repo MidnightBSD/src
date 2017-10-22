@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/usr.sbin/ndp/ndp.c 245555 2013-01-17 16:39:21Z ume $	*/
 /*	$KAME: ndp.c,v 1.104 2003/06/27 07:48:39 itojun Exp $	*/
 
 /*
@@ -1011,6 +1011,9 @@ ifinfo(ifname, argc, argv)
 #ifdef ND6_IFF_PREFER_SOURCE
 		SETFLAG("prefer_source", ND6_IFF_PREFER_SOURCE);
 #endif
+#ifdef ND6_IFF_NO_PREFER_IFACE
+		SETFLAG("no_prefer_iface", ND6_IFF_NO_PREFER_IFACE);
+#endif
 		SETVALUE("basereachable", ND.basereachable);
 		SETVALUE("retrans", ND.retrans);
 		SETVALUE("curhlim", ND.chlim);
@@ -1087,6 +1090,10 @@ ifinfo(ifname, argc, argv)
 #ifdef ND6_IFF_PREFER_SOURCE
 		if ((ND.flags & ND6_IFF_PREFER_SOURCE))
 			printf("prefer_source ");
+#endif
+#ifdef ND6_IFF_NO_PREFER_IFACE
+		if ((ND.flags & ND6_IFF_NO_PREFER_IFACE))
+			printf("no_prefer_iface ");
 #endif
 	}
 	putc('\n', stdout);

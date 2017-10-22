@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ufs/ffs/ffs_vfsops.c 248233 2013-03-13 10:01:05Z kib $");
 
 #include "opt_quota.h"
 #include "opt_ufs.h"
@@ -49,6 +49,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/buf.h>
 #include <sys/conf.h>
 #include <sys/fcntl.h>
+#include <sys/ioccom.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 
@@ -75,7 +76,6 @@ __FBSDID("$FreeBSD$");
 
 static uma_zone_t uma_inode, uma_ufs1, uma_ufs2;
 
-static int	ffs_reload(struct mount *, struct thread *);
 static int	ffs_mountfs(struct vnode *, struct mount *, struct thread *);
 static void	ffs_oldfscompat_read(struct fs *, struct ufsmount *,
 		    ufs2_daddr_t);
@@ -333,7 +333,7 @@ ffs_mount(struct mount *mp)
 			vfs_write_resume(mp);
 		}
 		if ((mp->mnt_flag & MNT_RELOAD) &&
-		    (error = ffs_reload(mp, td)) != 0)
+		    (error = ffs_reload(mp, td, 0)) != 0)
 			return (error);
 		if (fs->fs_ronly &&
 		    !vfs_flagopt(mp->mnt_optnew, "ro", NULL, 0)) {
@@ -595,8 +595,8 @@ ffs_cmount(struct mntarg *ma, void *data, uint64_t flags)
 
 /*
  * Reload all incore data for a filesystem (used after running fsck on
- * the root filesystem and finding things to fix). The filesystem must
- * be mounted read-only.
+ * the root filesystem and finding things to fix). If the 'force' flag
+ * is 0, the filesystem must be mounted read-only.
  *
  * Things to do to update the mount:
  *	1) invalidate all cached meta-data.
@@ -606,8 +606,8 @@ ffs_cmount(struct mntarg *ma, void *data, uint64_t flags)
  *	5) invalidate all cached file data.
  *	6) re-read inode data for all active vnodes.
  */
-static int
-ffs_reload(struct mount *mp, struct thread *td)
+int
+ffs_reload(struct mount *mp, struct thread *td, int force)
 {
 	struct vnode *vp, *mvp, *devvp;
 	struct inode *ip;
@@ -619,9 +619,15 @@ ffs_reload(struct mount *mp, struct thread *td)
 	int i, blks, size, error;
 	int32_t *lp;
 
-	if ((mp->mnt_flag & MNT_RDONLY) == 0)
-		return (EINVAL);
 	ump = VFSTOUFS(mp);
+
+	MNT_ILOCK(mp);
+	if ((mp->mnt_flag & MNT_RDONLY) == 0 && force == 0) {
+		MNT_IUNLOCK(mp);
+		return (EINVAL);
+	}
+	MNT_IUNLOCK(mp);
+	
 	/*
 	 * Step 1: invalidate all cached meta-data.
 	 */
@@ -655,8 +661,7 @@ ffs_reload(struct mount *mp, struct thread *td)
 	newfs->fs_maxcluster = fs->fs_maxcluster;
 	newfs->fs_contigdirs = fs->fs_contigdirs;
 	newfs->fs_active = fs->fs_active;
-	/* The file system is still read-only. */
-	newfs->fs_ronly = 1;
+	newfs->fs_ronly = fs->fs_ronly;
 	sblockloc = fs->fs_sblockloc;
 	bcopy(newfs, fs, (u_int)fs->fs_sbsize);
 	brelse(bp);
@@ -710,6 +715,13 @@ ffs_reload(struct mount *mp, struct thread *td)
 
 loop:
 	MNT_VNODE_FOREACH_ALL(vp, mp, mvp) {
+		/*
+		 * Skip syncer vnode.
+		 */
+		if (vp->v_type == VNON) {
+			VI_UNLOCK(vp);
+			continue;
+		}
 		/*
 		 * Step 4: invalidate all cached file data.
 		 */
@@ -1064,7 +1076,7 @@ ffs_mountfs(devvp, mp, td)
 	 */
 	MNT_ILOCK(mp);
 	mp->mnt_kern_flag |= MNTK_MPSAFE | MNTK_LOOKUP_SHARED |
-	    MNTK_EXTENDED_SHARED;
+	    MNTK_EXTENDED_SHARED | MNTK_NO_IOPF;
 	MNT_IUNLOCK(mp);
 #ifdef UFS_EXTATTR
 #ifdef UFS_EXTATTR_AUTOSTART
@@ -1343,9 +1355,10 @@ ffs_flushfiles(mp, flags, td)
 	struct thread *td;
 {
 	struct ufsmount *ump;
-	int error;
+	int qerror, error;
 
 	ump = VFSTOUFS(mp);
+	qerror = 0;
 #ifdef QUOTA
 	if (mp->mnt_flag & MNT_QUOTA) {
 		int i;
@@ -1353,11 +1366,19 @@ ffs_flushfiles(mp, flags, td)
 		if (error)
 			return (error);
 		for (i = 0; i < MAXQUOTAS; i++) {
-			quotaoff(td, mp, i);
+			error = quotaoff(td, mp, i);
+			if (error != 0) {
+				if ((flags & EARLYFLUSH) == 0)
+					return (error);
+				else
+					qerror = error;
+			}
 		}
+
 		/*
-		 * Here we fall through to vflush again to ensure
-		 * that we have gotten rid of all the system vnodes.
+		 * Here we fall through to vflush again to ensure that
+		 * we have gotten rid of all the system vnodes, unless
+		 * quotas must not be closed.
 		 */
 	}
 #endif
@@ -1372,11 +1393,21 @@ ffs_flushfiles(mp, flags, td)
 		 * that we have gotten rid of all the system vnodes.
 		 */
 	}
-        /*
-	 * Flush all the files.
+
+	/*
+	 * Do not close system files if quotas were not closed, to be
+	 * able to sync the remaining dquots.  The freeblks softupdate
+	 * workitems might hold a reference on a dquot, preventing
+	 * quotaoff() from completing.  Next round of
+	 * softdep_flushworklist() iteration should process the
+	 * blockers, allowing the next run of quotaoff() to finally
+	 * flush held dquots.
+	 *
+	 * Otherwise, flush all the files.
 	 */
-	if ((error = vflush(mp, 0, flags, td)) != 0)
+	if (qerror == 0 && (error = vflush(mp, 0, flags, td)) != 0)
 		return (error);
+
 	/*
 	 * Flush filesystem metadata.
 	 */
@@ -1834,6 +1865,7 @@ ffs_init(vfsp)
 	struct vfsconf *vfsp;
 {
 
+	ffs_susp_initialize();
 	softdep_initialize();
 	return (ufs_init(vfsp));
 }
@@ -1849,6 +1881,7 @@ ffs_uninit(vfsp)
 
 	ret = ufs_uninit(vfsp);
 	softdep_uninitialize();
+	ffs_susp_uninitialize();
 	return (ret);
 }
 
@@ -2196,6 +2229,15 @@ ffs_geom_strategy(struct bufobj *bo, struct buf *bp)
 #endif
 	}
 	g_vfs_strategy(bo, bp);
+}
+
+int
+ffs_own_mount(const struct mount *mp)
+{
+
+	if (mp->mnt_op == &ufs_vfsops)
+		return (1);
+	return (0);
 }
 
 #ifdef	DDB

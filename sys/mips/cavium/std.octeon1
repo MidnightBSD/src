@@ -2,7 +2,7 @@
 #  *    This product includes software developed by the University of
 #  *    California, Berkeley and its contributors."
 # */
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/mips/cavium/std.octeon1 215270 2010-11-13 22:34:12Z imp $
 # 
 files	"../cavium/files.octeon1"
 machine	mips mips64eb

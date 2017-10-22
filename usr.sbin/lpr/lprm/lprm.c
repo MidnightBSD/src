@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)lprm.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/lpr/lprm/lprm.c 216372 2010-12-11 09:38:12Z joel $");
 
 /*
  * lprm - remove the current user's spool entry

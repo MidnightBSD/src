@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ddb/db_run.c 181175 2008-08-02 12:49:43Z cognet $");
 
 #include <sys/param.h>
 #include <sys/kdb.h>

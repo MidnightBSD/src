@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/at/Makefile 201386 2010-01-02 10:27:05Z ed $
 
 .include "${.CURDIR}/Makefile.inc"
 

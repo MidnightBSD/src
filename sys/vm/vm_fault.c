@@ -72,7 +72,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/vm/vm_fault.c 242397 2012-10-31 14:02:51Z kib $");
 
 #include "opt_ktrace.h"
 #include "opt_vm.h"
@@ -1308,9 +1308,13 @@ vm_fault_copy_entry(vm_map_t dst_map, vm_map_t src_map,
 		access &= ~VM_PROT_WRITE;
 
 	/*
-	 * Loop through all of the pages in the entry's range, copying each
-	 * one from the source object (it should be there) to the destination
-	 * object.
+	 * Loop through all of the virtual pages within the entry's
+	 * range, copying each page from the source object to the
+	 * destination object.  Since the source is wired, those pages
+	 * must exist.  In contrast, the destination is pageable.
+	 * Since the destination object does share any backing storage
+	 * with the source object, all of its pages must be dirtied,
+	 * regardless of whether they can be written.
 	 */
 	for (vaddr = dst_entry->start, dst_pindex = 0;
 	    vaddr < dst_entry->end;
@@ -1353,6 +1357,7 @@ vm_fault_copy_entry(vm_map_t dst_map, vm_map_t src_map,
 		pmap_copy_page(src_m, dst_m);
 		VM_OBJECT_UNLOCK(object);
 		dst_m->valid = VM_PAGE_BITS_ALL;
+		dst_m->dirty = VM_PAGE_BITS_ALL;
 		VM_OBJECT_UNLOCK(dst_object);
 
 		/*

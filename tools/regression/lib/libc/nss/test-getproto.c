@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/regression/lib/libc/nss/test-getproto.c 168754 2007-04-15 11:02:31Z bushman $");
 
 #include <arpa/inet.h>
 #include <assert.h>

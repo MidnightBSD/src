@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/contrib/top/sigconv.awk 164784 2006-12-01 07:01:19Z keramida $
 
 BEGIN		{
 		    nsig = 0;

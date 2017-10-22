@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/mpc85xx/openpic_fdt.c 222813 2011-06-07 08:46:13Z attilio $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

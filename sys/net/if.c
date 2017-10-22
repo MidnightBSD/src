@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if.c	8.5 (Berkeley) 1/9/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/net/if.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #include "opt_compat.h"
@@ -118,7 +118,7 @@ SYSCTL_UINT(_net, OID_AUTO, ifdescr_maxlen, CTLFLAG_RW,
 	&ifdescr_maxlen, 0,
 	"administrative maximum length for interface description");
 
-MALLOC_DEFINE(M_IFDESCR, "ifdescr", "ifnet descriptions");
+static MALLOC_DEFINE(M_IFDESCR, "ifdescr", "ifnet descriptions");
 
 /* global sx for non-critical path ifdescr */
 static struct sx ifdescr_sx;
@@ -215,7 +215,7 @@ struct sx ifnet_sxlock;
 static	if_com_alloc_t *if_com_alloc[256];
 static	if_com_free_t *if_com_free[256];
 
-MALLOC_DEFINE(M_IFNET, "ifnet", "interface internals");
+static MALLOC_DEFINE(M_IFNET, "ifnet", "interface internals");
 MALLOC_DEFINE(M_IFADDR, "ifaddr", "interface address");
 MALLOC_DEFINE(M_IFMADDR, "ether_multi", "link-level multicast address");
 
@@ -1379,7 +1379,8 @@ if_rtdel(struct radix_node *rn, void *arg)
 			return (0);
 
 		err = rtrequest_fib(RTM_DELETE, rt_key(rt), rt->rt_gateway,
-				rt_mask(rt), rt->rt_flags|RTF_RNH_LOCKED,
+				rt_mask(rt),
+				rt->rt_flags|RTF_RNH_LOCKED|RTF_PINNED,
 				(struct rtentry **) NULL, rt->rt_fibnum);
 		if (err) {
 			log(LOG_WARNING, "if_rtdel: error %d\n", err);

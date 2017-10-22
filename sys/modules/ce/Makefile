@@ -1,5 +1,5 @@
 # $Cronyx: sys.modules.ce.Makefile,v 1.2 2005/04/23 20:10:22 rik Exp $
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/ce/Makefile 229602 2012-01-05 17:14:13Z dim $
 
 .PATH:  ${.CURDIR}/../../dev/ce
 KMOD	= if_ce

@@ -1,0 +1,12 @@
+# $FreeBSD: stable/9/tools/regression/bin/sh/builtins/alias3.0 243403 2012-11-22 13:51:58Z jilles $
+set -e
+
+unalias -a
+alias foo=bar
+alias bar=
+alias quux="1 2 3"
+alias foo=bar
+alias bar=
+alias quux="1 2 3"
+alias
+alias foo

@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/asmc/asmc.c 197202 2009-09-14 21:33:00Z rpaulo $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

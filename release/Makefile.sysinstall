@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/release/Makefile.sysinstall 238352 2012-07-10 19:08:56Z kensmith $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
 #     [RELEASETAG=tag] [SVNROOT=svn://svn.freebsd.org/base] \
@@ -33,7 +33,7 @@ BUILDNAME?=${BASE}-${DATE}-SNAP
 #
 #CHROOTDIR=/junk/release
 # If this is a -stable snapshot, then set
-#RELEASETAG=RELENG_9_1
+#RELEASETAG=RELENG_9
 #
 # To test a release with a source tree containing patches and
 # other work. This tree will get copied instead of getting the

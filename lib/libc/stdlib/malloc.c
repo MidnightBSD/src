@@ -158,7 +158,7 @@
 #define	MALLOC_DSS
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/stdlib/malloc.c 243405 2012-11-22 15:19:53Z ed $");
 
 #include "libc_private.h"
 #ifdef MALLOC_DEBUG
@@ -6043,6 +6043,20 @@ posix_memalign(void **memptr, size_t alignment, size_t size)
 RETURN:
 	UTRACE(0, size, result);
 	return (ret);
+}
+
+void *
+aligned_alloc(size_t alignment, size_t size)
+{
+	void *memptr;
+	int ret;
+
+	ret = posix_memalign(&memptr, alignment, size);
+	if (ret != 0) {
+		errno = ret;
+		return (NULL);
+	}
+	return (memptr);
 }
 
 void *

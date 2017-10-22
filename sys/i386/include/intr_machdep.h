@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/i386/include/intr_machdep.h 247877 2013-03-06 09:22:45Z avg $
  */
 
 #ifndef __MACHINE_INTR_MACHDEP_H__
@@ -94,7 +94,7 @@ struct pic {
 	int (*pic_config_intr)(struct intsrc *, enum intr_trigger,
 	    enum intr_polarity);
 	int (*pic_assign_cpu)(struct intsrc *, u_int apic_id);
-	STAILQ_ENTRY(pic) pics;
+	TAILQ_ENTRY(pic) pics;
 };
 
 /* Flags for pic_disable_source() */

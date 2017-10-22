@@ -1,0 +1,22 @@
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD French Documentation Project
+
+     $Id$
+     $FreeBSD: stable/9/release/doc/fr_FR.ISO8859-1/installation/common/install.ent 241122 2012-10-02 06:37:46Z gabor $
+     Original revision: 1.2
+-->
+<!-- -*- sgml -*- -->
+
+
+<!-- Text constants which probably don't need to be changed.-->
+
+<!-- Files to be included -->
+
+<!ENTITY artheader SYSTEM "artheader.xml">
+<!ENTITY abstract SYSTEM "abstract.xml">
+<!ENTITY sect.install SYSTEM "install.xml">
+<!ENTITY sect.layout SYSTEM "layout.xml">
+<!ENTITY sect.upgrade SYSTEM "upgrade.xml">
+<!ENTITY sect.trouble SYSTEM "trouble.xml">
+

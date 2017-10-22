@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libmagic/Makefile 240157 2012-09-06 06:17:39Z mckay $
 # Copyright (c) David E. O'Brien, 2000-2004, 2006, 2009
 
 CONTRDIR=	${.CURDIR}/../../contrib/file

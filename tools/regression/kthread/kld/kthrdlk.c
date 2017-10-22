@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/regression/kthread/kld/kthrdlk.c 204123 2010-02-20 15:20:28Z attilio $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

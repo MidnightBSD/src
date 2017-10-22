@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: pcb.h,v 1.4 2000/06/04 11:57:17 tsubai Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/include/pcb.h 242677 2012-11-06 21:53:17Z nwhitehorn $
  */
 
 #ifndef _MACHINE_PCB_H_
@@ -89,6 +89,7 @@ extern struct pmap *curpm;
 extern struct proc *fpuproc;
 
 void	makectx(struct trapframe *, struct pcb *);
+void	savectx(struct pcb *) __returns_twice;
 
 #endif
 #endif	/* _MACHINE_PCB_H_ */

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ata/chipsets/ata-acard.c 249341 2013-04-10 18:13:33Z mav $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -81,7 +81,7 @@ static int
 ata_acard_probe(device_t dev)
 {
     struct ata_pci_controller *ctlr = device_get_softc(dev);
-    static const struct ata_chip_id const ids[] =
+    static const struct ata_chip_id ids[] =
     {{ ATA_ATP850R, 0, ATP_OLD, 0x00, ATA_UDMA2, "ATP850" },
      { ATA_ATP860A, 0, 0,       0x00, ATA_UDMA4, "ATP860A" },
      { ATA_ATP860R, 0, 0,       0x00, ATA_UDMA4, "ATP860R" },
@@ -124,6 +124,10 @@ ata_acard_chipinit(device_t dev)
 			      M_ATAPCI, M_WAITOK | M_ZERO);
 	ata_serialize_init(serial);
 	ctlr->chipset_data = serial;
+#else
+	/* Work around the lack of channel serialization in ATA_CAM. */
+	ctlr->channels = 1;
+	device_printf(dev, "second channel ignored\n");
 #endif
     }
     else

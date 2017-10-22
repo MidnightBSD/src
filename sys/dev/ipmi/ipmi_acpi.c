@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ipmi/ipmi_acpi.c 193530 2009-06-05 18:44:36Z jkim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

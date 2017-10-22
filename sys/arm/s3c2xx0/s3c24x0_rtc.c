@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/s3c2xx0/s3c24x0_rtc.c 210397 2010-07-22 23:23:39Z andrew $");
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/time.h>

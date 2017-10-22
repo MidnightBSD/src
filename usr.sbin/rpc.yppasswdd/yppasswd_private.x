@@ -32,7 +32,7 @@
 
 #ifndef RPC_HDR
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD$");
+%__FBSDID("$FreeBSD: stable/9/usr.sbin/rpc.yppasswdd/yppasswd_private.x 114601 2003-05-03 21:06:42Z obrien $");
 #endif
 
 #ifdef RPC_HDR

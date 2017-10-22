@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/sh/arith_yylex.c 219363 2011-03-07 07:31:15Z stefanf $");
 
 #include <inttypes.h>
 #include <stdlib.h>

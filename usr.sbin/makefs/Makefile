@@ -1,4 +1,4 @@
-#	$FreeBSD$
+#	$FreeBSD: stable/9/usr.sbin/makefs/Makefile 223306 2011-06-19 18:34:49Z marcel $
 
 PROG=	makefs
 

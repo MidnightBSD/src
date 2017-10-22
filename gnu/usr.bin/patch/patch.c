@@ -1,5 +1,5 @@
 char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/gnu/usr.bin/patch/patch.c 191910 2009-05-08 02:18:46Z sepotvin $";
 
 /* patch - a program to apply diffs to original files
  *

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/release/scripts/base-install.sh 95788 2002-04-30 09:57:21Z ru $
 #
 
 if [ "`id -u`" != "0" ]; then

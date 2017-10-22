@@ -34,7 +34,7 @@
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/mge/if_mge.c 248078 2013-03-09 00:39:54Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -375,7 +375,7 @@ mge_new_rxbuf(bus_dma_tag_t tag, bus_dmamap_t map, struct mbuf **mbufp,
 
 	KASSERT(mbufp != NULL, ("NULL mbuf pointer!"));
 
-	new_mbuf = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+	new_mbuf = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (new_mbuf == NULL)
 		return (ENOBUFS);
 	new_mbuf->m_len = new_mbuf->m_pkthdr.len = new_mbuf->m_ext.ext_size;
@@ -1489,7 +1489,7 @@ mge_start_locked(struct ifnet *ifp)
 		if (m0 == NULL)
 			break;
 
-		mtmp = m_defrag(m0, M_DONTWAIT);
+		mtmp = m_defrag(m0, M_NOWAIT);
 		if (mtmp)
 			m0 = mtmp;
 

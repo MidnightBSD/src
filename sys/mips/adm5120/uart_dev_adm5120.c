@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/adm5120/uart_dev_adm5120.c 202175 2010-01-12 21:36:08Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

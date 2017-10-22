@@ -40,7 +40,7 @@
 #endif
 #endif /* SYSLIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/sparc64/sys/sbrk.S 165903 2007-01-09 00:28:16Z imp $");
 
 #include "SYS.h"
 

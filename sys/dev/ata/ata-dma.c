@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ata/ata-dma.c 219336 2011-03-06 12:54:00Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

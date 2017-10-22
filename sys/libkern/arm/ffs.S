@@ -29,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/libkern/arm/ffs.S 172615 2007-10-13 12:05:36Z cognet $");
 
 
 /*

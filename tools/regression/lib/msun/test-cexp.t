@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/lib/msun/test-cexp.t 219362 2011-03-07 03:15:49Z das $
 
 cd `dirname $0`
 

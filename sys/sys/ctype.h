@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/ctype.h 127976 2004-04-07 04:19:52Z imp $
  */
 
 #ifndef _SYS_CTYPE_H_

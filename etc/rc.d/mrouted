@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/mrouted 242153 2012-10-26 18:06:49Z obrien $
 #
 
 # PROVIDE: mrouted
-# REQUIRE: netif routing cleanvar
+# REQUIRE: netif routing FILESYSTEMS
 # KEYWORD: nojail
 
 . /etc/rc.subr

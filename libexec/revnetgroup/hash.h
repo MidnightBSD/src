@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/libexec/revnetgroup/hash.h 90377 2002-02-07 23:57:01Z imp $
  */
 
 /* Groupname entry hung off a member_entry node. */

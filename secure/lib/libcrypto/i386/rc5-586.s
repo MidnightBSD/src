@@ -1,4 +1,4 @@
-	# $FreeBSD$
+	# $FreeBSD: stable/9/secure/lib/libcrypto/i386/rc5-586.s 127326 2004-03-23 08:32:29Z markm $
 
 
 

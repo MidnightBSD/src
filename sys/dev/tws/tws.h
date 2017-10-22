@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/tws/tws.h 241762 2012-10-20 07:38:42Z delphij $
  */
 
 #include <sys/param.h>        /* defines used in kernel.h */

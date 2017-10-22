@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/sound/driver/ai2s/Makefile 187692 2009-01-25 18:20:15Z nwhitehorn $
 
 .PATH: ${.CURDIR}/../../../../dev/sound/macio
 

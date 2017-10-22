@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ata/chipsets/ata-acerlabs.c 242908 2012-11-12 07:34:05Z dim $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -75,7 +75,7 @@ static int
 ata_ali_probe(device_t dev)
 {
     struct ata_pci_controller *ctlr = device_get_softc(dev);
-    static const struct ata_chip_id const ids[] =
+    static const struct ata_chip_id ids[] =
     {{ ATA_ALI_5289, 0x00, 2, ALI_SATA, ATA_SA150, "M5289" },
      { ATA_ALI_5288, 0x00, 4, ALI_SATA, ATA_SA300, "M5288" },
      { ATA_ALI_5287, 0x00, 4, ALI_SATA, ATA_SA150, "M5287" },

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/siis/siis.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -91,7 +91,7 @@ static void siis_process_request_sense(device_t dev, union ccb *ccb);
 static void siisaction(struct cam_sim *sim, union ccb *ccb);
 static void siispoll(struct cam_sim *sim);
 
-MALLOC_DEFINE(M_SIIS, "SIIS driver", "SIIS driver data buffers");
+static MALLOC_DEFINE(M_SIIS, "SIIS driver", "SIIS driver data buffers");
 
 static struct {
 	uint32_t	id;

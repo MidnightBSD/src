@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD$*/
+/*$FreeBSD: stable/9/sys/dev/vxge/vxge-osdep.h 229157 2011-12-31 20:42:34Z mdf $*/
 
 /* LINTLIBRARY */
 

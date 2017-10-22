@@ -1,4 +1,4 @@
- $FreeBSD$
+ $FreeBSD: stable/9/sys/compat/svr4/syscalls.master 203660 2010-02-08 10:02:01Z ed $
 ;	from: @(#)syscalls.master	8.1 (Berkeley) 7/19/93
 ;
 ; System call name/number master file (or rather, slave, from SVR4).

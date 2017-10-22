@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/2/94
- * $FreeBSD$
+ * $FreeBSD: stable/9/bin/ps/extern.h 247516 2013-03-01 01:02:28Z jhb $
  */
 
 struct kinfo;
@@ -51,7 +51,7 @@ char	 *elapsed(KINFO *, VARENT *);
 char	 *elapseds(KINFO *, VARENT *);
 char	 *emulname(KINFO *, VARENT *);
 VARENT	*find_varentry(VAR *);
-const	 char *fmt_argv(char **, char *, size_t);
+const	 char *fmt_argv(char **, char *, char *, size_t);
 double	 getpcpu(const KINFO *);
 char	 *kvar(KINFO *, VARENT *);
 char	 *label(KINFO *, VARENT *);

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/via_video.c 207318 2010-04-28 10:33:41Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/via_drm.h"

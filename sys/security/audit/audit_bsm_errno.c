@@ -26,11 +26,11 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE. 
  *
- * P4: //depot/projects/trustedbsd/openbsm/libbsm/bsm_errno.c#18
+ * P4: //depot/projects/trustedbsd/openbsm/libbsm/bsm_errno.c#22
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/security/audit/audit_bsm_errno.c 244391 2012-12-18 10:23:58Z rwatson $");
 
 #include <sys/param.h>
 
@@ -494,7 +494,7 @@ static const struct bsm_errno bsm_errnos[] = {
 #ifdef EPROCUNAVAIL
 	EPROCUNAVAIL,
 #else
-	ERRNO_NO_LOCAL_MAPPING
+	ERRNO_NO_LOCAL_MAPPING,
 #endif
 	ES("Bad procedure for program") },
 	{ BSM_ERRNO_EFTYPE,
@@ -666,7 +666,7 @@ static const struct bsm_errno bsm_errnos[] = {
 #endif
 	ES("Required key not available") },
 	{ BSM_ERRNO_EKEYEXPIRED,
-#ifdef EKEEXPIRED
+#ifdef EKEYEXPIRED
 	EKEYEXPIRED,
 #else
 	ERRNO_NO_LOCAL_MAPPING,
@@ -680,7 +680,7 @@ static const struct bsm_errno bsm_errnos[] = {
 #endif
 	ES("Key has been revoked") },
 	{ BSM_ERRNO_EKEYREJECTED,
-#ifdef EKEREJECTED
+#ifdef EKEYREJECTED
 	EKEYREJECTED,
 #else
 	ERRNO_NO_LOCAL_MAPPING,

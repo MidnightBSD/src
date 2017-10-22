@@ -88,7 +88,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pci/es137x.c 218909 2011-02-21 09:01:34Z brucec $");
 
 #define MEM_MAP_REG 0x14
 

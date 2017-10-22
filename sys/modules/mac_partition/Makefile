@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/mac_partition/Makefile 105841 2002-10-24 02:04:03Z rwatson $
 
 .PATH: ${.CURDIR}/../../security/mac_partition
 

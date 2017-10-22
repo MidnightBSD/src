@@ -3,7 +3,7 @@
  * Virtual Function register map definitions in t4vf_defs.h in the common
  * code.
  */
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/tools/cxgbetool/reg_defs_t4vf.c 222900 2011-06-09 20:21:45Z np $");
 
 struct reg_info t4vf_sge_regs[] = {
 	{ "SGE_KDOORBELL",			0x000, 0 },

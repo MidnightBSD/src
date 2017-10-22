@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/mps/mps_sas_lsi.c 238764 2012-07-25 10:55:14Z brueffer $");
 
 /* Communications core for LSI MPT2 */
 

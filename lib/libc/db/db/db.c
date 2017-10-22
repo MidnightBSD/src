@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)db.c	8.4 (Berkeley) 2/21/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/db/db/db.c 190497 2009-03-28 07:26:00Z delphij $");
 
 #include <sys/types.h>
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$Exp $
+ * $FreeBSD: stable/9/tools/regression/netipx/spxloopback/spxloopback.c 194546 2009-06-20 18:13:20Z rwatson $Exp $
  */
 
 /*

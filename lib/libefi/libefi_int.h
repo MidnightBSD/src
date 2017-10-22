@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libefi/libefi_int.h 203181 2010-01-30 04:24:03Z marcel $
  */
 
 #ifndef _LIBEFI_INT_H_

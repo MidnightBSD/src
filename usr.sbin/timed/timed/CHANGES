@@ -1,5 +1,5 @@
 #	@(#)CHANGES	5.1 (Berkeley) 5/11/93
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/timed/timed/CHANGES 72646 2001-02-18 10:44:00Z asmodai $
 
 This new version is almost identical to the timed and timedc code
 that has been shipped for years by a workstation vendor.

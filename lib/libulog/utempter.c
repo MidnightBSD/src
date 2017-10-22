@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libulog/utempter.c 202215 2010-01-13 18:53:06Z ed $");
 
 #include "ulog.h"
 #include "utempter.h"

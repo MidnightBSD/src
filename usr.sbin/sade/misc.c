@@ -1,7 +1,7 @@
 /*
  * Miscellaneous support routines..
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sade/misc.c 161100 2006-08-08 14:28:03Z delphij $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/isci/scil/scic_sds_phy.c 242820 2012-11-09 07:05:28Z hselasky $");
 
 /**
  * @file
@@ -658,7 +658,7 @@ void scic_sds_phy_construct(
    // Clear out the error counter data
    memset(this_phy->error_counter, 0, sizeof(this_phy->error_counter));
 
-   // Initialize the the substate machines
+   // Initialize the substate machines
    sci_base_state_machine_construct(
       &this_phy->starting_substate_machine,
       &this_phy->parent.parent,
@@ -2317,7 +2317,7 @@ void scic_sds_phy_stopped_state_enter(
  * entering the SCI_BASE_PHY_STATE_STARTING.
  *    - This function sets the state handlers for the phy object base state
  * machine starting state.
- *    - The SCU hardware is requested to start OOB/SN on this protocl engine.
+ *    - The SCU hardware is requested to start OOB/SN on this protocol engine.
  *    - The phy starting substate machine is started.
  *    - If the previous state was the ready state then the
  *      SCIC_SDS_CONTROLLER is informed that the phy has gone link down.

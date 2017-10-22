@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/include/tgmath/tgmath.c 137587 2004-11-11 19:47:55Z nik $
  */
 
 #include <sys/cdefs.h>

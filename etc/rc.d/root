@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/root 177062 2008-03-11 17:21:14Z delphij $
 #
 
 # PROVIDE: root

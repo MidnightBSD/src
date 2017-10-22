@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sbin/geom/misc/subr.h 213074 2010-09-23 12:04:12Z pjd $
  */
 
 #ifndef _SUBR_H_

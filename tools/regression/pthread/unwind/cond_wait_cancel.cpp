@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/tools/regression/pthread/unwind/cond_wait_cancel.cpp 213155 2010-09-25 04:26:40Z davidxu $ */
 /* Test stack unwinding for pthread_cond_wait function */
 
 #include <pthread.h>

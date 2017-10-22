@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/arm/at91/std.at91sam9 213498 2010-10-06 22:40:27Z cognet $
 
 files	"../at91/files.at91sam9"
 cpu		CPU_ARM9

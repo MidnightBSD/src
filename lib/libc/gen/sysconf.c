@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)sysconf.c	8.2 (Berkeley) 3/20/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/sysconf.c 238136 2012-07-05 15:38:32Z kib $");
 
 #include <sys/param.h>
 #include <sys/time.h>

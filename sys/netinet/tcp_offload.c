@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_offload.c 196019 2009-08-01 19:26:27Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,5 +1,5 @@
 \ Loader.rc
-\ $FreeBSD$
+\ $FreeBSD: stable/9/sys/boot/forth/loader.rc 223109 2011-06-15 14:07:16Z nwhitehorn $
 \
 \ Includes additional commands
 include /boot/loader.4th

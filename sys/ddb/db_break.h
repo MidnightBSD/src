@@ -23,7 +23,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ddb/db_break.h 139747 2005-01-06 01:34:41Z imp $
  */
 
 /*

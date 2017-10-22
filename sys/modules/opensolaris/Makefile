@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/opensolaris/Makefile 219089 2011-02-27 19:41:40Z pjd $
 
 .PATH: ${.CURDIR}/../../cddl/compat/opensolaris/kern
 

@@ -26,7 +26,7 @@ THIS SOFTWARE.
 
 ****************************************************************/
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/contrib/gdtoa/gdtoaimp.h 235785 2012-05-22 14:40:39Z theraven $ */
 
 /* This is a variation on dtoa.c that converts arbitary binary
    floating-point formats to and from decimal notation.  It uses

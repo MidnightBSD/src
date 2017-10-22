@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/libiconv_modules/UTF7/citrus_utf7.c 219019 2011-02-25 00:04:39Z gabor $ */
 /*	$NetBSD: citrus_utf7.c,v 1.5 2006/08/23 12:57:24 tnozaki Exp $	*/
 
 /*-

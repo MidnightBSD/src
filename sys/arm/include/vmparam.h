@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/arm/include/vmparam.h 221855 2011-05-13 19:35:01Z mdf $
  */
 
 #ifndef	_MACHINE_VMPARAM_H_

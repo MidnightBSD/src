@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/moused 242153 2012-10-26 18:06:49Z obrien $
 #
 
 # PROVIDE: moused
-# REQUIRE: DAEMON cleanvar
+# REQUIRE: DAEMON FILESYSTEMS
 # KEYWORD: nojail shutdown
 
 . /etc/rc.subr

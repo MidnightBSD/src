@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/geom_event.c 249152 2013-04-05 11:41:56Z mav $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -202,14 +202,12 @@ g_orphan_register(struct g_provider *pp)
 	 * Tell all consumers the bad news.
 	 * Don't be surprised if they self-destruct.
 	 */
-	cp = LIST_FIRST(&pp->consumers);
-	while (cp != NULL) {
-		cp2 = LIST_NEXT(cp, consumers);
+	LIST_FOREACH_SAFE(cp, &pp->consumers, consumers, cp2) {
 		KASSERT(cp->geom->orphan != NULL,
 		    ("geom %s has no orphan, class %s",
 		    cp->geom->name, cp->geom->class->name));
+		cp->flags |= G_CF_ORPHAN;
 		cp->geom->orphan(cp);
-		cp = cp2;
 	}
 	if (LIST_EMPTY(&pp->consumers) && wf)
 		g_destroy_provider(pp);

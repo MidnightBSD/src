@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/teken/demo/teken_demo.c 223574 2011-06-26 18:25:10Z ed $
  */
 
 #include <sys/ioctl.h>

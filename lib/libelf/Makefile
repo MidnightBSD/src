@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libelf/Makefile 221569 2011-05-07 01:05:31Z obrien $
 
 LIB=	elf
 

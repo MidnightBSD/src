@@ -38,7 +38,7 @@
  * Author: Archie Cobbs <archie@freebsd.org>
  *
  * $Whistle: ng_mppc.c,v 1.4 1999/11/25 00:10:12 archie Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_mppc.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 /*
@@ -74,7 +74,7 @@
 #endif
 
 #ifdef NG_SEPARATE_MALLOC
-MALLOC_DEFINE(M_NETGRAPH_MPPC, "netgraph_mppc", "netgraph mppc node ");
+static MALLOC_DEFINE(M_NETGRAPH_MPPC, "netgraph_mppc", "netgraph mppc node");
 #else
 #define M_NETGRAPH_MPPC M_NETGRAPH
 #endif

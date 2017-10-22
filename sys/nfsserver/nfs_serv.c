@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/nfsserver/nfs_serv.c 244658 2012-12-24 13:22:32Z kib $");
 
 /*
  * nfs version 2 and 3 server calls to vnode ops
@@ -3891,7 +3891,7 @@ nfsrv_access(struct vnode *vp, accmode_t accmode, struct ucred *cred,
 		 * If there's shared text associated with
 		 * the inode, we can't allow writing.
 		 */
-		if (vp->v_vflag & VV_TEXT)
+		if (VOP_IS_TEXT(vp))
 			return (ETXTBSY);
 	}
 

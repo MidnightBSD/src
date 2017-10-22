@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/ixp425/avila_led.c 215319 2010-11-14 20:41:22Z thompsa $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

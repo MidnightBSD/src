@@ -37,7 +37,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/mips/net/ntohs.S 178580 2008-04-26 12:08:02Z imp $");
 
 LEAF(ntohs)
 #ifdef __MIPSEB__

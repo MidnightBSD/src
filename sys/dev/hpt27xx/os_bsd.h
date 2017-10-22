@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/hpt27xx/os_bsd.h 245938 2013-01-26 05:20:09Z delphij $
  */
 
 #include <dev/hpt27xx/hpt27xx_config.h>
@@ -135,9 +135,9 @@ INQUIRYDATA, *PINQUIRYDATA;
 #include <dev/hpt27xx/ldm.h>
 
 /* driver parameters */
-extern char driver_name[];
-extern char driver_name_long[];
-extern char driver_ver[];
+extern const char driver_name[];
+extern const char driver_name_long[];
+extern const char driver_ver[];
 extern int  osm_max_targets;
 
 /*

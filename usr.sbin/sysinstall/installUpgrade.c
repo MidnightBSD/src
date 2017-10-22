@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sysinstall/installUpgrade.c 209832 2010-07-08 21:26:26Z randi $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

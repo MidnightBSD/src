@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/sys/opencrypto/xform.h 219026 2011-02-25 09:29:32Z vanhu $	*/
 /*	$OpenBSD: xform.h,v 1.8 2001/08/28 12:20:43 ben Exp $	*/
 
 /*-

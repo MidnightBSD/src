@@ -42,7 +42,7 @@
 static char sccsid[] = "@(#)mskanji.c	1.0 (Phase One) 5/5/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/locale/mskanji.c 235785 2012-05-22 14:40:39Z theraven $");
 
 #include <sys/types.h>
 #include <errno.h>

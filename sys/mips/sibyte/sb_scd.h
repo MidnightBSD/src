@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/sibyte/sb_scd.h 205364 2010-03-20 05:49:06Z neel $
  */
 
 #ifndef _SB_SCD_H_

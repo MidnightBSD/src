@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)memalloc.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/bin/sh/memalloc.h 217209 2011-01-09 22:47:58Z jilles $
  */
 
 #include <string.h>

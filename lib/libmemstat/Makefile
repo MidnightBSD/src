@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libmemstat/Makefile 195767 2009-07-19 17:25:24Z kensmith $
 
 WARNS?=		3
 LIB=		memstat

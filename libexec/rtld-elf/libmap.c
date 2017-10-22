@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/libexec/rtld-elf/libmap.c 236523 2012-06-03 18:16:17Z bapt $
  */
 
 #include <sys/types.h>

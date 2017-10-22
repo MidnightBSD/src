@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libc/powerpc64/_fpmath.h 209878 2010-07-10 14:45:03Z nwhitehorn $
  */
 
 union IEEEl2bits {

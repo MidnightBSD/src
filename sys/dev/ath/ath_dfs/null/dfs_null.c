@@ -26,10 +26,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/ath/ath_dfs/null/dfs_null.c 229461 2012-01-04 03:37:41Z eadler $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ath/ath_dfs/null/dfs_null.c 229461 2012-01-04 03:37:41Z eadler $");
 
 /*
  * This implements an empty DFS module.

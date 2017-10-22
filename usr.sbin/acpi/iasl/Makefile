@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/acpi/iasl/Makefile 220682 2011-04-15 21:47:10Z jkim $
 
 PROG=	iasl
 SRCS=	adfile.c adisasm.c adwalk.c

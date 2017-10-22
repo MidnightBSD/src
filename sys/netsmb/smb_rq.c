@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netsmb/smb_rq.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,7 +46,7 @@ __FBSDID("$FreeBSD$");
 #include <netsmb/smb_subr.h>
 #include <netsmb/smb_tran.h>
 
-MALLOC_DEFINE(M_SMBRQ, "SMBRQ", "SMB request");
+static MALLOC_DEFINE(M_SMBRQ, "SMBRQ", "SMB request");
 
 MODULE_DEPEND(netsmb, libmchain, 1, 1, 1);
 

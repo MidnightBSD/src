@@ -35,7 +35,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/cavium/uart_bus_octeonusart.c 217573 2011-01-19 07:06:28Z jmallett $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

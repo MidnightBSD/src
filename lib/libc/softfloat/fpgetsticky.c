@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/softfloat/fpgetsticky.c 189647 2009-03-10 21:13:26Z delphij $");
 
 #include "namespace.h"
 

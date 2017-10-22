@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/msun/Symbol.map 219576 2011-03-12 19:37:35Z kargl $
  */
 
 /* 7.0-CURRENT */

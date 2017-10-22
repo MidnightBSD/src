@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/lib/libgcov/Makefile 198471 2009-10-25 15:52:31Z kan $
 
 NO_PROFILE=
 .include <bsd.own.mk>

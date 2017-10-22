@@ -38,7 +38,7 @@
  *
  *	from: @(#)vm_machdep.c	7.3 (Berkeley) 5/13/91
  *	Utah $Hdr: vm_machdep.c 1.16.1.1 89/06/23$
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/ia64/ia64/vm_machdep.c 231178 2012-02-08 04:40:14Z marcel $
  */
 /*-
  * Copyright (c) 1994, 1995, 1996 Carnegie-Mellon University.

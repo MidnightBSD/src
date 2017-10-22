@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/i386/initcpu.c 237140 2012-06-15 17:31:15Z kib $");
 
 #include "opt_cpu.h"
 

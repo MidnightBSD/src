@@ -28,7 +28,7 @@
  * NETLOGIC_BSD */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/nlm/board.c 225394 2011-09-05 10:45:29Z jchandra $");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>

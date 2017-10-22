@@ -32,7 +32,7 @@ static char *sccsid2 = "@(#)svc_auth_unix.c 1.28 88/02/08 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)svc_auth_unix.c	2.3 88/08/01 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/rpc/svc_auth_unix.c 241309 2012-10-07 05:11:29Z pfg $");
 
 /*
  * svc_auth_unix.c
@@ -68,7 +68,7 @@ _svcauth_unix(rqst, msg)
 	struct area {
 		struct authunix_parms area_aup;
 		char area_machname[MAX_MACHINE_NAME+1];
-		int area_gids[NGRPS];
+		u_int area_gids[NGRPS];
 	} *area;
 	u_int auth_len;
 	size_t str_len, gid_len;

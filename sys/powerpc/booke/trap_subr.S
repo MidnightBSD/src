@@ -26,7 +26,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/booke/trap_subr.S 215119 2010-11-11 13:35:23Z raj $
  */
 /*-
  * Copyright (C) 1995, 1996 Wolfgang Solfrank.

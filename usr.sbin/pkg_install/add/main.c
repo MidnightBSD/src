@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/add/main.c 241976 2012-10-24 02:00:54Z kensmith $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -289,7 +289,9 @@ main(int argc, char **argv)
     }
     /* Perform chroot if requested */
     if (Chroot != NULL) {
-	if (chroot(Chroot))
+	if (chdir(Chroot))
+	    errx(1, "chdir to %s failed", Chroot);
+	if (chroot("."))
 	    errx(1, "chroot to %s failed", Chroot);
     }
     /* Make sure the sub-execs we invoke get found */

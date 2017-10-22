@@ -23,9 +23,9 @@ THIS SOFTWARE.
 ****************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/contrib/one-true-awk/main.c 246373 2013-02-06 00:42:23Z delphij $");
 
-const char	*version = "version 20110810 (FreeBSD)";
+const char	*version = "version 20121220 (FreeBSD)";
 
 #define DEBUG
 #include <stdio.h>

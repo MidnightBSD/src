@@ -29,7 +29,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/bsdinstall/scripts/netconfig 227222 2011-11-06 16:37:50Z nwhitehorn $
 
 INTERFACES=""
 DIALOG_TAGS=""

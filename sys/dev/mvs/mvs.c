@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/mvs/mvs.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -94,7 +94,7 @@ static void mvs_process_request_sense(device_t dev, union ccb *ccb);
 static void mvsaction(struct cam_sim *sim, union ccb *ccb);
 static void mvspoll(struct cam_sim *sim);
 
-MALLOC_DEFINE(M_MVS, "MVS driver", "MVS driver data buffers");
+static MALLOC_DEFINE(M_MVS, "MVS driver", "MVS driver data buffers");
 
 #define recovery_type		spriv_field0
 #define RECOVERY_NONE		0

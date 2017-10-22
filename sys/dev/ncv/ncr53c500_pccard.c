@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ncv/ncr53c500_pccard.c 194023 2009-06-11 17:14:28Z avg $");
 
 #include <sys/param.h>
 #include <sys/errno.h>

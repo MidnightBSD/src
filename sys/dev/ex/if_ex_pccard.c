@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ex/if_ex_pccard.c 182227 2008-08-27 04:11:03Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

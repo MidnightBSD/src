@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/nanobsd/pcengines/Files/root/.login 199536 2009-11-19 16:27:51Z mr $
 #
 # .login - csh login script, read by login shell, after `.cshrc' at login.
 #

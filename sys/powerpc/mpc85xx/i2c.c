@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/powerpc/mpc85xx/i2c.c 209908 2010-07-11 21:08:29Z raj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

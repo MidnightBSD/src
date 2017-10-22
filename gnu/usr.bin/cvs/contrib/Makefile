@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/usr.bin/cvs/contrib/Makefile 211243 2010-08-12 20:46:49Z will $
 
 .include "../Makefile.inc"
 

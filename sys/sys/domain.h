@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)domain.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/domain.h 195837 2009-07-23 20:46:49Z rwatson $
  */
 
 #ifndef _SYS_DOMAIN_H_

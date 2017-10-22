@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sbin/newfs/newfs.h 246284 2013-02-03 12:17:49Z trasz $
  */
 
 #include <libufs.h>
@@ -87,6 +87,7 @@ extern int	lflag;		/* enable multilabel MAC for file system */
 extern int	nflag;		/* do not create .snap directory */
 extern int	tflag;		/* enable TRIM */
 extern intmax_t	fssize;		/* file system size */
+extern off_t	mediasize;	/* device size */
 extern int	sectorsize;	/* bytes/sector */
 extern int	realsectorsize;	/* bytes/sector in hardware*/
 extern int	fsize;		/* fragment size */

@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/kenv/kenv.c 236118 2012-05-26 20:13:24Z mdf $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

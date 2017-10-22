@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sysinstall/dhcp.c 126844 2004-03-11 11:58:16Z bde $
  *
  * Copyright (c) 1999
  *	C. Stone.  All rights reserved.

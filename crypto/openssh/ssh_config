@@ -1,5 +1,5 @@
 #	$OpenBSD: ssh_config,v 1.26 2010/01/11 01:39:46 dtucker Exp $
-#	$FreeBSD$
+#	$FreeBSD: stable/9/crypto/openssh/ssh_config 247485 2013-02-28 18:43:50Z des $
 
 # This is the ssh client system-wide configuration file.  See
 # ssh_config(5) for more information.  This file provides defaults for
@@ -46,4 +46,4 @@
 #   PermitLocalCommand no
 #   VisualHostKey no
 #   ProxyCommand ssh -q -W %h:%p gateway.example.com
-#   VersionAddendum FreeBSD-20110503
+#   VersionAddendum FreeBSD-20120901

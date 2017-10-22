@@ -6,7 +6,7 @@
  * A netmap client to bridge two network interfaces
  * (or one interface and the host stack).
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/tools/netmap/bridge.c 243281 2012-11-19 15:24:19Z emaste $
  */
 
 #include <errno.h>
@@ -79,7 +79,7 @@ sigint_h(__unused int sig)
 
 
 static int
-do_ioctl(struct my_ring *me, int what)
+do_ioctl(struct my_ring *me, unsigned long what)
 {
 	struct ifreq ifr;
 	int error;
@@ -98,7 +98,7 @@ do_ioctl(struct my_ring *me, int what)
 	}
 	error = ioctl(me->fd, what, &ifr);
 	if (error) {
-		D("ioctl error %d", what);
+		D("ioctl error 0x%lx", what);
 		return error;
 	}
 	switch (what) {

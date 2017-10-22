@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netsmb/smb_dev.h 217174 2011-01-08 23:06:54Z csjp $
  */
 #ifndef _NETSMB_DEV_H_
 #define _NETSMB_DEV_H_

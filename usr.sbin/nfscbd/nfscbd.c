@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/nfscbd/nfscbd.c 194526 2009-06-20 08:46:40Z stas $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>

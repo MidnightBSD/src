@@ -46,7 +46,7 @@
  *
  * Ported to run under 386BSD by Julian Elischer (julian@tfs.com) Sept 1992
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cam/scsi/scsi_da.h 237828 2012-06-29 22:33:48Z ken $
  */
 
 #ifndef	_SCSI_SCSI_DA_H

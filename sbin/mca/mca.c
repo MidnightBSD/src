@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/mca/mca.c 237047 2012-06-14 06:26:58Z eadler $");
 
 #include <sys/types.h>
 #include <sys/mman.h>

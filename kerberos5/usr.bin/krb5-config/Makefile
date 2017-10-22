@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/kerberos5/usr.bin/krb5-config/Makefile 178874 2008-05-09 13:27:20Z dfr $
 
 SCRIPTS=krb5-config
 MAN=	krb5-config.1

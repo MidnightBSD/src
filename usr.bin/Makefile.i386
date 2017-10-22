@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/Makefile.i386 212526 2010-09-13 02:23:03Z imp $
 
 .if ${MK_NCP} != "no"
 SUBDIR+=	ncplist

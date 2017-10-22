@@ -44,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/bktr/bktr_mem.c 140883 2005-01-27 01:40:12Z imp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

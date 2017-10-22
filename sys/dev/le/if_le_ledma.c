@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/le/if_le_ledma.c 204646 2010-03-03 17:55:51Z joel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,6 +1,4 @@
-# $FreeBSD$
-
-MAINTAINER=	trhodes@FreeBSD.org
+# $FreeBSD: stable/9/tools/tools/sysdoc/Makefile 242112 2012-10-26 00:44:32Z eadler $
 
 sysctl.5:
 	sh ${.CURDIR}/sysdoc.sh -k /boot/kernel

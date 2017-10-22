@@ -1,4 +1,4 @@
-#$FreeBSD$
+#$FreeBSD: stable/9/sys/arm/at91/std.hl201 210040 2010-07-14 00:48:53Z cognet $
 include "../at91/std.at91sam9"
 
 options		STARTUP_PAGETABLE_ADDR=0x20800000

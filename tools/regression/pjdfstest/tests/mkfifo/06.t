@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/mkfifo/06.t 166065 2007-01-17 01:42:12Z pjd $
 
 desc="mkfifo returns EACCES when write permission is denied on the parent directory of the file to be created"
 

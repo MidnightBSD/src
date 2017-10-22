@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/kdump/Makefile 234444 2012-04-18 20:32:07Z dim $
 
 .if (${MACHINE_ARCH} == "amd64")
 SFX=		32

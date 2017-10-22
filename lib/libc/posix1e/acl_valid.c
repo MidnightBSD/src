@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/posix1e/acl_valid.c 208785 2010-06-03 14:29:17Z trasz $");
 
 #include <sys/types.h>
 #include "namespace.h"

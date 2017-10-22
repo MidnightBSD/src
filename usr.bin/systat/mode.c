@@ -58,7 +58,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/systat/mode.c 231279 2012-02-09 15:21:54Z ed $");
 
 #include <sys/types.h>
 

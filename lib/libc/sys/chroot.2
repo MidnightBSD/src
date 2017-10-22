@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)chroot.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/lib/libc/sys/chroot.2 245788 2013-01-22 12:09:43Z zont $
 .\"
 .Dd June 4, 1993
 .Dt CHROOT 2
@@ -92,12 +92,8 @@ system call.
 Any other value for
 .Ql kern.chroot_allow_open_directories
 will bypass the check for open directories
-.Pp
-Upon successful completion, a value of 0 is returned.
-Otherwise,
-a value of -1 is returned and
-.Va errno
-is set to indicate an error.
+.Sh RETURN VALUES
+.Rv -std
 .Sh ERRORS
 The
 .Fn chroot

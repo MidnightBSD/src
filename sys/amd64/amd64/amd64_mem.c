@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/amd64/amd64/amd64_mem.c 217506 2011-01-17 17:30:35Z jkim $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

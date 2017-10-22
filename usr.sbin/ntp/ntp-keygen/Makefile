@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/ntp/ntp-keygen/Makefile 182008 2008-08-22 16:00:48Z roberto $
 
 NO_MAN=
 

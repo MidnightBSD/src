@@ -26,12 +26,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kgssapi/gss_init_sec_context.c 245018 2013-01-03 23:15:36Z rmacklem $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/kobj.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/mutex.h>
 #include <sys/proc.h>
 
 #include <kgssapi/gssapi.h>
@@ -60,10 +62,12 @@ gss_init_sec_context(OM_uint32 * minor_status,
 	struct init_sec_context_args args;
 	enum clnt_stat stat;
 	gss_ctx_id_t ctx = *context_handle;
+	CLIENT *cl;
 
 	*minor_status = 0;
 
-	if (!kgss_gssd_handle)
+	cl = kgss_gssd_client();
+	if (cl == NULL)
 		return (GSS_S_FAILURE);
 
 	args.uid = curthread->td_ucred->cr_uid;
@@ -88,7 +92,8 @@ gss_init_sec_context(OM_uint32 * minor_status,
 	}
 
 	bzero(&res, sizeof(res));
-	stat = gssd_init_sec_context_1(&args, &res, kgss_gssd_handle);
+	stat = gssd_init_sec_context_1(&args, &res, cl);
+	CLNT_RELEASE(cl);
 	if (stat != RPC_SUCCESS) {
 		*minor_status = stat;
 		return (GSS_S_FAILURE);

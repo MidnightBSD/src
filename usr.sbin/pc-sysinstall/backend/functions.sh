@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/pc-sysinstall/backend/functions.sh 236458 2012-06-02 18:22:38Z jpaetzel $
 
 # functions.sh
 # Library of functions which pc-sysinstall may call upon

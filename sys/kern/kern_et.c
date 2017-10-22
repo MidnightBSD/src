@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_et.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -41,7 +41,7 @@ struct mtx	et_eventtimers_mtx;
 MTX_SYSINIT(et_eventtimers_init, &et_eventtimers_mtx, "et_mtx", MTX_DEF);
 
 SYSCTL_NODE(_kern, OID_AUTO, eventtimer, CTLFLAG_RW, 0, "Event timers");
-SYSCTL_NODE(_kern_eventtimer, OID_AUTO, et, CTLFLAG_RW, 0, "");
+static SYSCTL_NODE(_kern_eventtimer, OID_AUTO, et, CTLFLAG_RW, 0, "");
 
 /*
  * Register a new event timer hardware.

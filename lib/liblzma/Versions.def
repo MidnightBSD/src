@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/liblzma/Versions.def 208099 2010-05-14 20:40:37Z delphij $
 
 XZ_5.0 {
 };

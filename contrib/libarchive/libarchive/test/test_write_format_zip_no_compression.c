@@ -28,7 +28,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/contrib/libarchive/libarchive/test/test_write_format_zip_no_compression.c 229592 2012-01-05 12:06:54Z mm $");
 
 static unsigned long
 bitcrc32(unsigned long c, void *_p, size_t s)

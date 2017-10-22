@@ -23,12 +23,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/userboot/userboot/libuserboot.h 243243 2012-11-18 17:09:29Z ae $
  */
 
 #include "userboot.h"
 
-extern struct loader_callbacks_v1 *callbacks;
+extern struct loader_callbacks *callbacks;
 extern void *callbacks_arg;
 
 #define	CALLBACK(fn, args...) (callbacks->fn(callbacks_arg , ##args))

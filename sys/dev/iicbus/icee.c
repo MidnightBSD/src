@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/iicbus/icee.c 186833 2009-01-06 17:23:37Z nwhitehorn $");
 /*
  * Generic IIC eeprom support, modeled after the AT24C family of products.
  */

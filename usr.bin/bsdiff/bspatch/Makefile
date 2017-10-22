@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/bsdiff/bspatch/Makefile 148771 2005-08-06 01:59:06Z cperciva $
 
 PROG=	bspatch
 

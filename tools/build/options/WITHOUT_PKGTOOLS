@@ -1,4 +1,4 @@
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/tools/build/options/WITHOUT_PKGTOOLS 183242 2008-09-21 22:02:26Z sam $
 Set to not build
 .Xr pkg_add 8
 and related programs.

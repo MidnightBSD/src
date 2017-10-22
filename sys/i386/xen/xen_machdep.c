@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/xen/xen_machdep.c 246003 2013-01-27 22:50:36Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -215,7 +215,9 @@ static mmu_update_t xpq_queue[MAX_VIRT_CPUS][XPQUEUE_SIZE];
 #else
 	
 static mmu_update_t xpq_queue[XPQUEUE_SIZE];
+#ifdef INVARIANTS
 static struct mmu_log xpq_queue_log[XPQUEUE_SIZE];
+#endif
 static int xpq_idx = 0;
 
 #define	XPQ_QUEUE_LOG xpq_queue_log

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libsm/Makefile 247333 2013-02-26 18:31:03Z dim $
 
 .include <bsd.own.mk>
 
@@ -17,11 +17,6 @@ CFLAGS+=-DNETINET6
 CFLAGS+=${SENDMAIL_CFLAGS}
 
 WARNS?=	2
-
-# Unfortunately, clang gives warnings about sendmail code that cannot
-# be turned off yet.  Since this is contrib code, and we don't really
-# care about the warnings, just make them non-fatal for now.
-NO_WERROR.clang=
 
 LIB=	sm
 

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/regression/lib/msun/test-exponential.c 216222 2010-12-06 00:02:49Z das $");
 
 #include <assert.h>
 #include <fenv.h>

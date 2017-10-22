@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/share/man/man9/vm_map_insert.9 245591 2013-01-18 08:27:12Z pluknet $
 .\"
-.Dd July 19, 2003
+.Dd January 11, 2013
 .Dt VM_MAP_INSERT 9
 .Os
 .Sh NAME
@@ -73,9 +73,6 @@ This function implicitly creates a new
 .Vt vm_map_entry
 by calling the internal function
 .Fn vm_map_entry_create .
-This function may use the
-.Va Giant
-lock to ensure that only a single thread is present in the function.
 .Sh RETURN VALUES
 The
 .Fn vm_map_insert

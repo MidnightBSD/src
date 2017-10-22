@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/ugidfw/Makefile 113091 2003-04-04 17:49:21Z obrien $
 
 PROG=	ugidfw
 MAN=	ugidfw.8

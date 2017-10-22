@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/conscontrol/conscontrol.c 220801 2011-04-18 20:28:07Z ru $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

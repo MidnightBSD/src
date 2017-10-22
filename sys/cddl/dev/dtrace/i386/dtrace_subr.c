@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cddl/dev/dtrace/i386/dtrace_subr.c 244093 2012-12-10 19:33:39Z gnn $
  *
  */
 /*
@@ -44,6 +44,8 @@
 extern uintptr_t 	kernelbase;
 extern uintptr_t 	dtrace_in_probe_addr;
 extern int		dtrace_in_probe;
+
+extern void dtrace_getnanotime(struct timespec *tsp);
 
 int dtrace_invop(uintptr_t, uintptr_t *, uintptr_t);
 
@@ -457,8 +459,11 @@ dtrace_gethrtime()
 uint64_t
 dtrace_gethrestime(void)
 {
-	printf("%s(%d): XXX\n",__func__,__LINE__);
-	return (0);
+	struct timespec current_time;
+
+	dtrace_getnanotime(&current_time);
+
+	return (current_time.tv_sec * 1000000000ULL + current_time.tv_nsec);
 }
 
 /* Function to handle DTrace traps during probes. See i386/i386/trap.c */

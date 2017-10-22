@@ -391,4 +391,4 @@ localizeKeyVariant is used to update the xorg config to set the keyboard variant
 Setting autoLoginUser will enable the specified user to log into the desktop 
 automatically without entering a password
 
-$FreeBSD$
+$FreeBSD: stable/9/usr.sbin/pc-sysinstall/examples/README 225657 2011-09-19 05:12:53Z jpaetzel $

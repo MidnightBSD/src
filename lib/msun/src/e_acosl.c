@@ -13,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/e_acosl.c 181152 2008-08-02 03:56:22Z das $");
 
 /*
  * See comments in e_acos.c.

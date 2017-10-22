@@ -23,7 +23,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/xen/xenbus/xenbusvar.h 231851 2012-02-17 01:45:49Z gibbs $
  */
 
 /**

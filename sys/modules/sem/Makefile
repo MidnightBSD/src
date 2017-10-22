@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/sem/Makefile 211339 2010-08-15 15:33:01Z kib $
 
 .PATH: ${.CURDIR}/../../kern
 

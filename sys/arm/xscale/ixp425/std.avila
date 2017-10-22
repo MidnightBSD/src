@@ -1,4 +1,4 @@
-#$FreeBSD$
+#$FreeBSD: stable/9/sys/arm/xscale/ixp425/std.avila 186352 2008-12-20 03:26:09Z sam $
 
 #
 # Gateworks GW23XX board configuration

@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/src/e_exp.c 176451 2008-02-22 02:30:36Z das $");
 
 /* __ieee754_exp(x)
  * Returns the exponential of x.

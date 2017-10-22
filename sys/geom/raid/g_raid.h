@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/geom/raid/g_raid.h 246168 2013-01-31 22:12:25Z mav $
  */
 
 #ifndef	_G_RAID_H_
@@ -140,11 +140,12 @@ struct g_raid_event {
 };
 #define G_RAID_DISK_S_NONE		0x00	/* State is unknown. */
 #define G_RAID_DISK_S_OFFLINE		0x01	/* Missing disk placeholder. */
-#define G_RAID_DISK_S_FAILED		0x02	/* Failed. */
-#define G_RAID_DISK_S_STALE_FAILED	0x03	/* Old failed. */
-#define G_RAID_DISK_S_SPARE		0x04	/* Hot-spare. */
-#define G_RAID_DISK_S_STALE		0x05	/* Old disk, unused now. */
-#define G_RAID_DISK_S_ACTIVE		0x06	/* Operational. */
+#define G_RAID_DISK_S_DISABLED		0x02	/* Disabled. */
+#define G_RAID_DISK_S_FAILED		0x03	/* Failed. */
+#define G_RAID_DISK_S_STALE_FAILED	0x04	/* Old failed. */
+#define G_RAID_DISK_S_SPARE		0x05	/* Hot-spare. */
+#define G_RAID_DISK_S_STALE		0x06	/* Old disk, unused now. */
+#define G_RAID_DISK_S_ACTIVE		0x07	/* Operational. */
 
 #define G_RAID_DISK_E_DISCONNECTED	0x01
 
@@ -153,6 +154,7 @@ struct g_raid_disk {
 	struct g_consumer	*d_consumer;	/* GEOM disk consumer. */
 	void			*d_md_data;	/* Disk's metadata storage. */
 	struct g_kerneldump	 d_kd;		/* Kernel dumping method/args. */
+	int			 d_candelete;	/* BIO_DELETE supported. */
 	uint64_t		 d_flags;	/* Additional flags. */
 	u_int			 d_state;	/* Disk state. */
 	u_int			 d_load;	/* Disk average load. */
@@ -418,6 +420,7 @@ struct g_raid_volume * g_raid_create_volume(struct g_raid_softc *sc,
     const char *name, int id);
 struct g_raid_disk * g_raid_create_disk(struct g_raid_softc *sc);
 const char * g_raid_get_diskname(struct g_raid_disk *disk);
+void g_raid_get_disk_info(struct g_raid_disk *disk);
 
 int g_raid_start_volume(struct g_raid_volume *vol);
 

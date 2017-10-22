@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/Makefile 249530 2013-04-16 05:57:16Z trasz $
 
 .include <bsd.own.mk>
 
@@ -147,6 +147,7 @@ SUBDIR=	\
 	${_ipfw} \
 	ipfw_nat \
 	${_ipmi} \
+	ip6_mroute_mod \
 	ip_mroute_mod \
 	${_ips} \
 	${_ipw} \
@@ -326,6 +327,7 @@ SUBDIR=	\
 	usb \
 	utopia \
 	${_vesa} \
+	${_virtio} \
 	vge \
 	${_viawd} \
 	vkbd \
@@ -593,6 +595,7 @@ _padlock=	padlock
 _s3=		s3
 _twa=		twa
 _vesa=		vesa
+_virtio=	virtio
 _x86bios=	x86bios
 .elif ${MACHINE} == "pc98"
 _canbepm=	canbepm
@@ -709,6 +712,7 @@ _tpm=		tpm
 _twa=		twa
 _vesa=		vesa
 _viawd=		viawd
+_virtio=	virtio
 _vxge=  	vxge
 _x86bios=	x86bios
 _wbwd=		wbwd

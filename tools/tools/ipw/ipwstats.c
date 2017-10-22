@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/tools/ipw/ipwstats.c 159829 2006-06-21 09:52:37Z obrien $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

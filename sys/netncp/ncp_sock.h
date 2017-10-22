@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netncp/ncp_sock.h 206361 2010-04-07 16:50:38Z joel $
  */
 #ifndef _NETNCP_NCP_SOCK_H_
 #define _NETNCP_NCP_SOCK_H_

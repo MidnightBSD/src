@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/pmckern.h 239798 2012-08-29 01:04:12Z jimharris $
  */
 
 /*
@@ -201,8 +201,7 @@ do {						\
 
 /* Check if a process is using HWPMCs.*/
 #define PMC_PROC_IS_USING_PMCS(p)				\
-	(__predict_false(atomic_load_acq_int(&(p)->p_flag) &	\
-	    P_HWPMC))
+	(__predict_false(p->p_flag & P_HWPMC))
 
 /* Check if a thread have pending user capture. */
 #define PMC_IS_PENDING_CALLCHAIN(p)				\

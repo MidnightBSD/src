@@ -1,4 +1,4 @@
-$ $FreeBSD$
+$ $FreeBSD: stable/9/usr.bin/grep/nls/hu_HU.ISO8859-2.msg 210622 2010-07-29 18:02:57Z gabor $
 $
 $set 1
 $quote "

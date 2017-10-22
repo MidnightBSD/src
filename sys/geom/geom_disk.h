@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/geom/geom_disk.h 249152 2013-04-05 11:41:56Z mav $
  */
 
 #ifndef _GEOM_GEOM_DISK_H_
@@ -112,6 +112,8 @@ void disk_create(struct disk *disk, int version);
 void disk_destroy(struct disk *disk);
 void disk_gone(struct disk *disk);
 void disk_attr_changed(struct disk *dp, const char *attr, int flag);
+void disk_media_changed(struct disk *dp, int flag);
+void disk_media_gone(struct disk *dp, int flag);
 
 #define DISK_VERSION_00		0x58561059
 #define DISK_VERSION_01		0x5856105a

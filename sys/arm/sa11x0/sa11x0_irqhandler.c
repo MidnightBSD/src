@@ -69,7 +69,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/sa11x0/sa11x0_irqhandler.c 203974 2010-02-16 21:59:17Z imp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

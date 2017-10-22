@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/libexec/rtld-elf/Makefile 233987 2012-04-07 05:43:50Z kib $
 
 .include <bsd.own.mk>
 MK_SSP=		no

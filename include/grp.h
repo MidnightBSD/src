@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)grp.h	8.2 (Berkeley) 1/21/94
- * $FreeBSD$
+ * $FreeBSD: stable/9/include/grp.h 245267 2013-01-10 22:15:13Z brooks $
  */
 
 #ifndef _GRP_H_
@@ -69,6 +69,10 @@ struct group	*getgrgid(gid_t);
 struct group	*getgrnam(const char *);
 #if __BSD_VISIBLE
 const char	*group_from_gid(gid_t, int);
+int		 gid_from_group(const char *, gid_t *);
+int		 pwcache_groupdb(int (*)(int), void (*)(void),
+		    struct group * (*)(const char *),
+		    struct group * (*)(gid_t));
 #endif
 #if __BSD_VISIBLE || __XSI_VISIBLE
 /* XXX IEEE Std 1003.1, 2003 specifies `void setgrent(void)' */

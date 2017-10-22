@@ -2,7 +2,7 @@
 # 
 # A program to act as a test harness for the mctest program
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/mctest/mctest_run.sh 213327 2010-10-01 14:36:36Z gnn $
 #
 # Defaults
 size=1024

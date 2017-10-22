@@ -1,11 +1,12 @@
 #	from: Makefile.inc,v 1.1 1993/09/03 19:04:23 jtc Exp
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libc/i386/sys/Makefile.inc 240819 2012-09-22 12:38:19Z kib $
 
 .if !defined(COMPAT_32BIT)
 SRCS+=	i386_clr_watch.c i386_set_watch.c i386_vm86.c
 .endif
 SRCS+=	i386_get_fsbase.c i386_get_gsbase.c i386_get_ioperm.c i386_get_ldt.c \
-	i386_set_fsbase.c i386_set_gsbase.c i386_set_ioperm.c i386_set_ldt.c
+	i386_set_fsbase.c i386_set_gsbase.c i386_set_ioperm.c i386_set_ldt.c \
+	__vdso_gettc.c
 
 MDASM=	Ovfork.S brk.S cerror.S exect.S getcontext.S pipe.S ptrace.S \
 	reboot.S sbrk.S setlogin.S sigreturn.S syscall.S

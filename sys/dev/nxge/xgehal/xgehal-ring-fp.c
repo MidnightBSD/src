@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/nxge/xgehal/xgehal-ring-fp.c 218909 2011-02-21 09:01:34Z brucec $
  */
 
 #ifdef XGE_DEBUG_FP

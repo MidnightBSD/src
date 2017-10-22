@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)getnetent.c	8.1 (Berkeley) 6/4/93";
 static char orig_rcsid[] = "From: Id: getnetent.c,v 8.4 1997/06/01 20:34:37 vixie Exp";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/net/getnetbyht.c 211276 2010-08-13 06:39:54Z ume $");
 
 #include <sys/types.h>
 #include <sys/socket.h>

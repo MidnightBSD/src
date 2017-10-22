@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/rescue/librescue/Makefile 188895 2009-02-21 15:04:31Z ru $
 #
 
 .include <bsd.own.mk>

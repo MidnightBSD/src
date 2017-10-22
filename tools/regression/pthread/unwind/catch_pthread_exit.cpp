@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/tools/regression/pthread/unwind/catch_pthread_exit.cpp 213155 2010-09-25 04:26:40Z davidxu $ */
 /* try to catch thread exiting, and rethrow the exception */
 
 #include <pthread.h>

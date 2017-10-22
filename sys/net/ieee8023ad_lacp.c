@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/ieee8023ad_lacp.c 237669 2012-06-27 22:06:42Z thompsa $");
 
 #include <sys/param.h>
 #include <sys/callout.h>

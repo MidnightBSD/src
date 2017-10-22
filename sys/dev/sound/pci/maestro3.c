@@ -67,7 +67,7 @@
 #include <dev/sound/pci/allegro_reg.h>
 #include <dev/sound/pci/allegro_code.h>
 
-SND_DECLARE_FILE("$FreeBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/9/sys/dev/sound/pci/maestro3.c 230985 2012-02-04 17:13:34Z pfg $");
 
 /* -------------------------------------------------------------------- */
 

@@ -39,7 +39,7 @@ static const char sccsid[] = "@(#)dmesg.c	8.1 (Berkeley) 6/5/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/dmesg/dmesg.c 156076 2006-02-27 19:13:47Z dwmalone $");
 
 #include <sys/types.h>
 #include <sys/msgbuf.h>

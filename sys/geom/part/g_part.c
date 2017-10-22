@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/geom/part/g_part.c 249152 2013-04-05 11:41:56Z mav $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -83,6 +83,7 @@ struct g_part_alias_list {
 	{ "fat32", G_PART_ALIAS_MS_FAT32 },
 	{ "freebsd", G_PART_ALIAS_FREEBSD },
 	{ "freebsd-boot", G_PART_ALIAS_FREEBSD_BOOT },
+	{ "freebsd-nandfs", G_PART_ALIAS_FREEBSD_NANDFS },
 	{ "freebsd-swap", G_PART_ALIAS_FREEBSD_SWAP },
 	{ "freebsd-ufs", G_PART_ALIAS_FREEBSD_UFS },
 	{ "freebsd-vinum", G_PART_ALIAS_FREEBSD_VINUM },
@@ -220,7 +221,7 @@ g_part_geometry(struct g_part_table *table, struct g_consumer *cp,
 				continue;
 			/*
 			 * Prefer a geometry with sectors > 1, but only if
-			 * it doesn't bump down the numbver of heads to 1.
+			 * it doesn't bump down the number of heads to 1.
 			 */
 			if (chs > bestchs || (chs == bestchs && heads > 1 &&
 			    table->gpt_sectors == 1)) {
@@ -1875,7 +1876,10 @@ g_part_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	if (error == 0)
 		error = g_access(cp, 1, 0, 0);
 	if (error != 0) {
-		g_part_wither(gp, error);
+		if (cp->provider)
+			g_detach(cp);
+		g_destroy_consumer(cp);
+		g_destroy_geom(gp);
 		return (NULL);
 	}
 
@@ -1935,7 +1939,9 @@ g_part_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	g_topology_lock();
 	root_mount_rel(rht);
 	g_access(cp, -1, 0, 0);
-	g_part_wither(gp, error);
+	g_detach(cp);
+	g_destroy_consumer(cp);
+	g_destroy_geom(gp);
 	return (NULL);
 }
 
@@ -2049,6 +2055,7 @@ g_part_spoiled(struct g_consumer *cp)
 	G_PART_TRACE((G_T_TOPOLOGY, "%s(%s)", __func__, cp->provider->name));
 	g_topology_assert();
 
+	cp->flags |= G_CF_ORPHAN;
 	g_part_wither(cp->geom, ENXIO);
 }
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ata/ata-card.c 242908 2012-11-12 07:34:05Z dim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -49,7 +49,7 @@ __FBSDID("$FreeBSD$");
 
 #include "pccarddevs.h"
 
-static const struct pccard_product const ata_pccard_products[] = {
+static const struct pccard_product ata_pccard_products[] = {
 	PCMCIA_CARD(FREECOM, PCCARDIDE),
 	PCMCIA_CARD(EXP, EXPMULTIMEDIA),
 	PCMCIA_CARD(IODATA3, CBIDE2),

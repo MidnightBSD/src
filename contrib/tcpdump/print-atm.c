@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/contrib/tcpdump/print-atm.c 236192 2012-05-28 19:13:21Z delphij $
  */
 #ifndef lint
 static const char rcsid[] _U_ =

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/netstat/bpf.c 200462 2009-12-13 03:14:06Z delphij $");
 
 #include <sys/types.h>
 #include <sys/protosw.h>

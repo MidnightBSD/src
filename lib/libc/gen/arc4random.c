@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/arc4random.c 182886 2008-09-09 09:46:36Z ache $");
 
 #include "namespace.h"
 #include <sys/types.h>

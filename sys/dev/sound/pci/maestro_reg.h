@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  *	maestro_reg.h,v 1.13 2001/11/11 18:29:46 taku Exp
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/sound/pci/maestro_reg.h 137500 2004-11-10 04:29:09Z julian $
  */
 
 #ifndef	MAESTRO_REG_H_INCLUDED

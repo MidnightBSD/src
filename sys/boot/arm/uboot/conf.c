@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/arm/uboot/conf.c 185099 2008-11-19 17:34:28Z raj $");
 
 #include <stand.h>
 #include "bootstrap.h"

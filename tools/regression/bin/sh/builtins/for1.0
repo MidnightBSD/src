@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/bin/sh/builtins/for1.0 233116 2012-03-18 13:02:56Z jilles $
 
 false
 for i in `false`; do exit 3; done

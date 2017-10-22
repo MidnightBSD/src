@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/statvfs.c 103012 2002-09-06 11:24:06Z tjr $");
 
 #include "namespace.h"
 #include <sys/param.h>

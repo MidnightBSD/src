@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/tools/netrate/tcpp/tcpp_client.c 208873 2010-06-06 15:27:08Z rwatson $
  */
 
 #include <sys/types.h>

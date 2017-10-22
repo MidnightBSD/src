@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_error.h#1 $
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cam/ctl/ctl_error.h 231772 2012-02-15 17:28:09Z ken $
  */
 /*
  * Function definitions for various error reporting routines used both

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/bin/sh/parser/case2.0 207824 2010-05-09 17:10:50Z jilles $
 
 # Pretty much only ash derivatives can parse all of this.
 

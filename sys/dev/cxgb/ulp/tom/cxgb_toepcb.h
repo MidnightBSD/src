@@ -24,7 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/cxgb/ulp/tom/cxgb_toepcb.h 240169 2012-09-06 17:28:47Z np $
  */
 #ifndef CXGB_TOEPCB_H_
 #define CXGB_TOEPCB_H_
@@ -44,6 +44,7 @@
 #define TP_IS_A_SYNQ_ENTRY	(1 << 9)
 #define TP_ABORT_RPL_SENT	(1 << 10)
 #define TP_SEND_FIN          	(1 << 11)
+#define TP_SYNQE_EXPANDED	(1 << 12)
 
 struct toepcb {
 	TAILQ_ENTRY(toepcb) link; /* toep_list */

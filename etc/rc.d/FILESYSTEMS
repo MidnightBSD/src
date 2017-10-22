@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/FILESYSTEMS 242153 2012-10-26 18:06:49Z obrien $
 #
 
 # PROVIDE: FILESYSTEMS
-# REQUIRE: root mountcritlocal zfs
+# REQUIRE: root mountcritlocal cleanvar zfs
 
 #	This is a dummy dependency, for services which require file systems
 #	to be mounted before starting.  It also serves as the default early /

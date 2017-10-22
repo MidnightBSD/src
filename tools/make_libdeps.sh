@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/make_libdeps.sh 225811 2011-09-27 18:40:13Z stas $
 
 export PATH=/bin:/usr/bin
 

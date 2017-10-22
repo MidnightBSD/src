@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/smbfs/smbfs_io.c 240238 2012-09-08 16:40:18Z kib $
  *
  */
 #include <sys/param.h>
@@ -41,6 +41,7 @@
 #include <sys/vmmeter.h>
 
 #include <vm/vm.h>
+#include <vm/vm_param.h>
 #include <vm/vm_page.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_object.h>
@@ -521,36 +522,8 @@ smbfs_getpages(ap)
 			;
 		}
 
-		if (i != reqpage) {
-			/*
-			 * Whether or not to leave the page activated is up in
-			 * the air, but we should put the page on a page queue
-			 * somewhere (it already is in the object).  Result:
-			 * It appears that emperical results show that
-			 * deactivating pages is best.
-			 */
-
-			/*
-			 * Just in case someone was asking for this page we
-			 * now tell them that it is ok to use.
-			 */
-			if (!error) {
-				if (m->oflags & VPO_WANTED) {
-					vm_page_lock(m);
-					vm_page_activate(m);
-					vm_page_unlock(m);
-				} else {
-					vm_page_lock(m);
-					vm_page_deactivate(m);
-					vm_page_unlock(m);
-				}
-				vm_page_wakeup(m);
-			} else {
-				vm_page_lock(m);
-				vm_page_free(m);
-				vm_page_unlock(m);
-			}
-		}
+		if (i != reqpage)
+			vm_page_readahead_finish(m);
 	}
 	VM_OBJECT_UNLOCK(object);
 	return 0;

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libalias/libalias/Makefile 204596 2010-03-02 18:44:08Z uqs $
 
 .PATH: ${.CURDIR}/../../../sys/netinet/libalias
 

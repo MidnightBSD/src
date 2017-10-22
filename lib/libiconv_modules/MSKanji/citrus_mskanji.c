@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/libiconv_modules/MSKanji/citrus_mskanji.c 219019 2011-02-25 00:04:39Z gabor $ */
 /*	$NetBSD: citrus_mskanji.c,v 1.13 2008/06/14 16:01:08 tnozaki Exp $	*/
 
 /*-

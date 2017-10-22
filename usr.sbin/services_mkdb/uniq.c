@@ -29,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/services_mkdb/uniq.c 206156 2010-04-04 08:38:14Z ume $");
 
 #include <stdio.h>
 #include <string.h>

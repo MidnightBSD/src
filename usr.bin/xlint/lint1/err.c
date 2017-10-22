@@ -35,7 +35,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: err.c,v 1.17 2002/01/31 19:36:54 tv Exp $");
 #endif
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/xlint/lint1/err.c 100364 2002-07-19 16:38:21Z markm $");
 
 #include <sys/types.h>
 #include <stdlib.h>

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libiconv_modules/UES/Makefile 219019 2011-02-25 00:04:39Z gabor $
 
 SHLIB=	UES
 SRCS+=	citrus_ues.c

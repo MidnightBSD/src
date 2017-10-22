@@ -33,7 +33,7 @@ static const char rcsid[] _U_ =
     "@(#) $Header: /tcpdump/master/tcpdump/tcpdump.c,v 1.283 2008-09-25 21:45:50 guy Exp $ (LBL)";
 #endif
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/contrib/tcpdump/tcpdump.c 242485 2012-11-02 16:57:51Z delphij $ */
 
 /*
  * tcpdump - monitor tcp/ip traffic on an ethernet.
@@ -89,6 +89,12 @@ extern int SIZE_BUF;
 #define NAME_MAX 255
 #endif
 
+#ifdef SIGINFO
+#define SIGNAL_REQ_INFO SIGINFO
+#elif SIGUSR1
+#define SIGNAL_REQ_INFO SIGUSR1
+#endif
+
 netdissect_options Gndo;
 netdissect_options *gndo = &Gndo;
 
@@ -121,7 +127,7 @@ static void ndo_error(netdissect_options *ndo, const char *fmt, ...)
      __attribute__ ((noreturn, format (printf, 2, 3)));
 static void ndo_warning(netdissect_options *ndo, const char *fmt, ...);
 
-#ifdef SIGINFO
+#ifdef SIGNAL_REQ_INFO
 RETSIGTYPE requestinfo(int);
 #endif
 
@@ -1351,13 +1357,13 @@ main(int argc, char **argv)
 		pcap_userdata = (u_char *)&printinfo;
 	}
 
-#ifdef SIGINFO
+#ifdef SIGNAL_REQ_INFO
 	/*
 	 * We can't get statistics when reading from a file rather
 	 * than capturing from a device.
 	 */
 	if (RFileName == NULL)
-		(void)setsignal(SIGINFO, requestinfo);
+		(void)setsignal(SIGNAL_REQ_INFO, requestinfo);
 #endif
 
 	if (vflag > 0 && WFileName) {
@@ -1846,7 +1852,7 @@ default_print(const u_char *bp, u_int length)
 	ndo_default_print(gndo, bp, length);
 }
 
-#ifdef SIGINFO
+#ifdef SIGNAL_REQ_INFO
 RETSIGTYPE requestinfo(int signo _U_)
 {
 	if (infodelay)

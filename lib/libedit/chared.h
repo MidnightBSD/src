@@ -30,8 +30,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)chared.h	8.1 (Berkeley) 6/4/93
- *	$NetBSD: chared.h,v 1.17 2006/03/06 21:11:56 christos Exp $
- * $FreeBSD$
+ *	$NetBSD: chared.h,v 1.18 2009/02/15 21:55:23 christos Exp $
+ * $FreeBSD: stable/9/lib/libedit/chared.h 239589 2012-08-22 20:06:59Z pfg $
  */
 
 /*
@@ -70,7 +70,7 @@ typedef struct c_macro_t {
  * Undo information for vi - no undo in emacs (yet)
  */
 typedef struct c_undo_t {
-	int	 len;			/* length of saved line */
+	ssize_t	 len;			/* length of saved line */
 	int	 cursor;		/* position of saved cursor */
 	char	*buf;			/* full saved text */
 } c_undo_t;

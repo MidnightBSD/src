@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/usr.bin/tr/regress.sh 213284 2010-09-29 22:24:18Z jilles $
 
 echo 1..14
 

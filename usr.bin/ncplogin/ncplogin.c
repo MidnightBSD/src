@@ -32,7 +32,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/ncplogin/ncplogin.c 223493 2011-06-24 07:18:44Z kevlo $");
 
 #include <sys/types.h>
 #include <sys/errno.h>

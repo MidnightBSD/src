@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sparc64/include/stack.h 174195 2007-12-02 20:40:35Z rwatson $
  */
 
 #ifndef _MACHINE_STACK_H_

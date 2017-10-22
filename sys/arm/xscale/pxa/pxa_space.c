@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/pxa/pxa_space.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -53,7 +53,7 @@ __FBSDID("$FreeBSD$");
 #include <arm/xscale/pxa/pxareg.h>
 #include <arm/xscale/pxa/pxavar.h>
 
-MALLOC_DEFINE(M_PXATAG, "PXA bus_space tags", "Bus_space tags for PXA");
+static MALLOC_DEFINE(M_PXATAG, "PXA bus_space tags", "Bus_space tags for PXA");
 
 /* Prototypes for all the bus_space structure functions */
 bs_protos(generic);

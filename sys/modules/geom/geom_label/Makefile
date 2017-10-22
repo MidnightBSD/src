@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/geom/geom_label/Makefile 195362 2009-07-05 14:03:41Z ivoras $
 
 .PATH: ${.CURDIR}/../../../geom/label
 

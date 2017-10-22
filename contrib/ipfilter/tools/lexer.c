@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/contrib/ipfilter/tools/lexer.c 172776 2007-10-18 21:52:14Z darrenr $	*/
 
 /*
  * Copyright (C) 2002-2006 by Darren Reed.

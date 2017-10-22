@@ -70,7 +70,7 @@
 #include "opt_mac.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/security/mac/mac_framework.c 230167 2012-01-15 21:58:51Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

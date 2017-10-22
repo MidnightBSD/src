@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/accf_dns/Makefile 180593 2008-07-18 14:44:51Z dwmalone $
 
 .PATH: ${.CURDIR}/../../netinet
 

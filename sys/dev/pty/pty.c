@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/pty/pty.c 223575 2011-06-26 18:26:20Z ed $");
 
 #include <sys/param.h>
 #include <sys/conf.h>

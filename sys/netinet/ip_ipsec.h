@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netinet/ip_ipsec.h 199102 2009-11-09 19:53:34Z trasz $
  */
 
 #ifndef _NETINET_IP_IPSEC_H_

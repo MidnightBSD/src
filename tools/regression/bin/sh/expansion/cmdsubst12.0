@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/bin/sh/expansion/cmdsubst12.0 233116 2012-03-18 13:02:56Z jilles $
 
 f() {
 	echo x$(printf foo >&2)y

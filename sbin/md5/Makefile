@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/9/93
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/md5/Makefile 239937 2012-08-31 06:42:51Z delphij $
 
 PROG=	md5
 

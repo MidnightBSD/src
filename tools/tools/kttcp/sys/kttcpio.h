@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/9/tools/tools/kttcp/sys/kttcpio.h 122592 2003-11-13 00:30:27Z sam $	*/
 /*	$NetBSD$	*/
 
 /*

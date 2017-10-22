@@ -24,7 +24,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/csu/amd64/crtn.S 217105 2011-01-07 16:07:51Z kib $");
 
 	.section .init,"ax",@progbits
 	addq	$8,%rsp

@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/gnu/usr.bin/patch/util.c 191910 2009-05-08 02:18:46Z sepotvin $ */
 
 #include <paths.h>
 

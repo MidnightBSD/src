@@ -1,5 +1,5 @@
-/* $OpenBSD: sshconnect2.c,v 1.186 2010/11/29 23:45:51 djm Exp $ */
-/* $FreeBSD$ */
+/* $OpenBSD: sshconnect2.c,v 1.189 2012/06/22 12:30:26 dtucker Exp $ */
+/* $FreeBSD: stable/9/crypto/openssh/sshconnect2.c 247485 2013-02-28 18:43:50Z des $ */
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  * Copyright (c) 2008 Damien Miller.  All rights reserved.
@@ -120,14 +120,15 @@ order_hostkeyalgs(char *host, struct sockaddr *hostaddr, u_short port)
 	size_t maxlen;
 	struct hostkeys *hostkeys;
 	int ktype;
+	u_int i;
 
 	/* Find all hostkeys for this hostname */
 	get_hostfile_hostname_ipaddr(host, hostaddr, port, &hostname, NULL);
 	hostkeys = init_hostkeys();
-	load_hostkeys(hostkeys, hostname, options.user_hostfile2);
-	load_hostkeys(hostkeys, hostname, options.system_hostfile2);
-	load_hostkeys(hostkeys, hostname, options.user_hostfile);
-	load_hostkeys(hostkeys, hostname, options.system_hostfile);
+	for (i = 0; i < options.num_user_hostfiles; i++)
+		load_hostkeys(hostkeys, hostname, options.user_hostfiles[i]);
+	for (i = 0; i < options.num_system_hostfiles; i++)
+		load_hostkeys(hostkeys, hostname, options.system_hostfiles[i]);
 
 	oavail = avail = xstrdup(KEX_DEFAULT_PK_ALG);
 	maxlen = strlen(avail) + 1;
@@ -1922,6 +1923,7 @@ authmethod_get(char *authlist)
 		    authmethod_is_enabled(current)) {
 			debug3("authmethod_is_enabled %s", name);
 			debug("Next authentication method: %s", name);
+			xfree(name);
 			return current;
 		}
 	}

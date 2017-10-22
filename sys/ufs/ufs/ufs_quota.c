@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ufs/ufs/ufs_quota.c 248233 2013-03-13 10:01:05Z kib $");
 
 #include "opt_ffs.h"
 
@@ -80,7 +80,7 @@ static int dqopen(struct vnode *, struct ufsmount *, int);
 static int dqget(struct vnode *,
 	u_long, struct ufsmount *, int, struct dquot **);
 static int dqsync(struct vnode *, struct dquot *);
-static void dqflush(struct vnode *);
+static int dqflush(struct vnode *);
 static int quotaoff1(struct thread *td, struct mount *mp, int type);
 static int quotaoff_inchange(struct thread *td, struct mount *mp, int type);
 
@@ -680,8 +680,12 @@ again:
 		vrele(vp);
 	}
 
-	dqflush(qvp);
-	/* Clear um_quotas before closing the quota vnode to prevent
+	error = dqflush(qvp);
+	if (error != 0)
+		return (error);
+
+	/*
+	 * Clear um_quotas before closing the quota vnode to prevent
 	 * access to the closed vnode from dqget/dqsync
 	 */
 	UFS_LOCK(ump);
@@ -1052,7 +1056,7 @@ again:
 		error = vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, td);
 		if (error) {
 			if (error == ENOENT) {
-				MNT_VNODE_FOREACH_ALL_ABORT(mp, mvp);
+				MNT_VNODE_FOREACH_ACTIVE_ABORT(mp, mvp);
 				goto again;
 			}
 			continue;
@@ -1615,17 +1619,19 @@ out:
 /*
  * Flush all entries from the cache for a particular vnode.
  */
-static void
+static int
 dqflush(struct vnode *vp)
 {
 	struct dquot *dq, *nextdq;
 	struct dqhash *dqh;
+	int error;
 
 	/*
 	 * Move all dquot's that used to refer to this quota
 	 * file off their hash chains (they will eventually
 	 * fall off the head of the free list and be re-used).
 	 */
+	error = 0;
 	DQH_LOCK();
 	for (dqh = &dqhashtbl[dqhash]; dqh >= dqhashtbl; dqh--) {
 		for (dq = LIST_FIRST(dqh); dq; dq = nextdq) {
@@ -1633,12 +1639,15 @@ dqflush(struct vnode *vp)
 			if (dq->dq_ump->um_quotas[dq->dq_type] != vp)
 				continue;
 			if (dq->dq_cnt)
-				panic("dqflush: stray dquot");
-			LIST_REMOVE(dq, dq_hash);
-			dq->dq_ump = (struct ufsmount *)0;
+				error = EBUSY;
+			else {
+				LIST_REMOVE(dq, dq_hash);
+				dq->dq_ump = NULL;
+			}
 		}
 	}
 	DQH_UNLOCK();
+	return (error);
 }
 
 /*

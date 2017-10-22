@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/sctp6_var.h 244524 2012-12-21 00:41:52Z delphij $");
 
 #ifndef _NETINET6_SCTP6_VAR_H_
 #define _NETINET6_SCTP6_VAR_H_
@@ -42,11 +42,11 @@ SYSCTL_DECL(_net_inet6_sctp6);
 extern struct pr_usrreqs sctp6_usrreqs;
 
 
-int sctp6_input __P((struct mbuf **, int *, int));
+int sctp6_input(struct mbuf **, int *, int);
 int sctp6_output
-__P((struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
-    struct mbuf *, struct proc *));
-	void sctp6_ctlinput __P((int, struct sockaddr *, void *));
+(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
+    struct mbuf *, struct proc *);
+	void sctp6_ctlinput(int, struct sockaddr *, void *);
 
 
 	extern void sctp6_notify(struct sctp_inpcb *inp,

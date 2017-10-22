@@ -1,7 +1,7 @@
 /*
  * Языческие праздники
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.bin/calendar/calendars/ru_RU.KOI8-R/calendar.pagan 219174 2011-03-02 11:04:50Z osa $
  */
 
 #ifndef _ru_RU_KOI8_R_pagan_

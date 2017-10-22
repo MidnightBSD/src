@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/fdt/fdt_loader_cmd.c 234558 2012-04-21 20:10:26Z raj $");
 
 #include <stand.h>
 #include <fdt.h>

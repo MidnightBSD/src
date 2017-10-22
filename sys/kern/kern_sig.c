@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_sig.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_compat.h"
 #include "opt_kdtrace.h"
@@ -136,7 +136,8 @@ static int	kern_forcesigexit = 1;
 SYSCTL_INT(_kern, OID_AUTO, forcesigexit, CTLFLAG_RW,
     &kern_forcesigexit, 0, "Force trap signal to be handled");
 
-SYSCTL_NODE(_kern, OID_AUTO, sigqueue, CTLFLAG_RW, 0, "POSIX real time signal");
+static SYSCTL_NODE(_kern, OID_AUTO, sigqueue, CTLFLAG_RW, 0,
+    "POSIX real time signal");
 
 static int	max_pending_per_proc = 128;
 SYSCTL_INT(_kern_sigqueue, OID_AUTO, max_pending_per_proc, CTLFLAG_RW,
@@ -1599,8 +1600,10 @@ killpg1(struct thread *td, int sig, int pgid, int all, ksiginfo_t *ksi)
 {
 	struct proc *p;
 	struct pgrp *pgrp;
-	int nfound = 0;
+	int err;
+	int ret;
 
+	ret = ESRCH;
 	if (all) {
 		/*
 		 * broadcast
@@ -1613,11 +1616,14 @@ killpg1(struct thread *td, int sig, int pgid, int all, ksiginfo_t *ksi)
 				PROC_UNLOCK(p);
 				continue;
 			}
-			if (p_cansignal(td, p, sig) == 0) {
-				nfound++;
+			err = p_cansignal(td, p, sig);
+			if (err == 0) {
 				if (sig)
 					pksignal(p, sig, ksi);
+				ret = err;
 			}
+			else if (ret == ESRCH)
+				ret = err;
 			PROC_UNLOCK(p);
 		}
 		sx_sunlock(&allproc_lock);
@@ -1644,16 +1650,19 @@ killpg1(struct thread *td, int sig, int pgid, int all, ksiginfo_t *ksi)
 				PROC_UNLOCK(p);
 				continue;
 			}
-			if (p_cansignal(td, p, sig) == 0) {
-				nfound++;
+			err = p_cansignal(td, p, sig);
+			if (err == 0) {
 				if (sig)
 					pksignal(p, sig, ksi);
+				ret = err;
 			}
+			else if (ret == ESRCH)
+				ret = err;
 			PROC_UNLOCK(p);
 		}
 		PGRP_UNLOCK(pgrp);
 	}
-	return (nfound ? 0 : ESRCH);
+	return (ret);
 }
 
 #ifndef _SYS_SYSPROTO_H_
@@ -2134,6 +2143,8 @@ tdsendsignal(struct proc *p, struct thread *td, int sig, ksiginfo_t *ksi)
 	 * We try do the per-process part here.
 	 */
 	if (P_SHOULDSTOP(p)) {
+		KASSERT(!(p->p_flag & P_WEXIT),
+		    ("signal to stopped but exiting process"));
 		if (sig == SIGKILL) {
 			/*
 			 * If traced process is already stopped,
@@ -2248,7 +2259,7 @@ tdsendsignal(struct proc *p, struct thread *td, int sig, ksiginfo_t *ksi)
 		MPASS(action == SIG_DFL);
 
 		if (prop & SA_STOP) {
-			if (p->p_flag & P_PPWAIT)
+			if (p->p_flag & (P_PPWAIT|P_WEXIT))
 				goto out;
 			p->p_flag |= P_STOPPED_SIG;
 			p->p_xstat = sig;
@@ -2410,6 +2421,7 @@ ptracestop(struct thread *td, int sig)
 	struct proc *p = td->td_proc;
 
 	PROC_LOCK_ASSERT(p, MA_OWNED);
+	KASSERT(!(p->p_flag & P_WEXIT), ("Stopping exiting process"));
 	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK,
 	    &p->p_mtx.lock_object, "Stopping for traced signal");
 
@@ -2557,7 +2569,7 @@ issignal(struct thread *td, int stop_allowed)
 			sigqueue_delete(&p->p_sigqueue, sig);
 			continue;
 		}
-		if (p->p_flag & P_TRACED && (p->p_flag & P_PPWAIT) == 0) {
+		if (p->p_flag & P_TRACED && (p->p_flag & P_PPTRACE) == 0) {
 			/*
 			 * If traced, always stop.
 			 * Remove old signal from queue before the stop.
@@ -2647,7 +2659,7 @@ issignal(struct thread *td, int stop_allowed)
 			 * process group, ignore tty stop signals.
 			 */
 			if (prop & SA_STOP) {
-				if (p->p_flag & P_TRACED ||
+				if (p->p_flag & (P_TRACED|P_WEXIT) ||
 		    		    (p->p_pgrp->pg_jobc == 0 &&
 				     prop & SA_TTYSTOP))
 					break;	/* == ignore */
@@ -3313,7 +3325,7 @@ nosys(td, args)
 	struct proc *p = td->td_proc;
 
 	PROC_LOCK(p);
-	kern_psignal(p, SIGSYS);
+	tdsignal(td, SIGSYS);
 	PROC_UNLOCK(p);
 	return (ENOSYS);
 }

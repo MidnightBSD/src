@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/hastd/proto_common.c 240269 2012-09-09 08:39:41Z trociny $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -181,7 +181,7 @@ proto_descriptor_recv(int sock, int *fdp)
 		return (errno);
 
 	cmsg = CMSG_FIRSTHDR(&msg);
-	if (cmsg->cmsg_level != SOL_SOCKET ||
+	if (cmsg == NULL || cmsg->cmsg_level != SOL_SOCKET ||
 	    cmsg->cmsg_type != SCM_RIGHTS) {
 		return (EINVAL);
 	}

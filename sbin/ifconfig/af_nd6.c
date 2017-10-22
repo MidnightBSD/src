@@ -25,7 +25,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/sbin/ifconfig/af_nd6.c 245555 2013-01-17 16:39:21Z ume $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -58,7 +58,7 @@ static const char rcsid[] =
 #define	MAX_SYSCTL_TRY	5
 #define	ND6BITS	"\020\001PERFORMNUD\002ACCEPT_RTADV\003PREFER_SOURCE" \
 		"\004IFDISABLED\005DONT_SET_IFROUTE\006AUTO_LINKLOCAL" \
-		"\007NO_RADR\020DEFAULTIF"
+		"\007NO_RADR\010NO_PREFER_IFACE\020DEFAULTIF"
 
 static int isnd6defif(int);
 void setnd6flags(const char *, int, int, const struct afswtch *);

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/syscons/syscons.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_compat.h"
 #include "opt_syscons.h"
@@ -136,8 +136,8 @@ static	int		sc_no_suspend_vtswitch = 0;
 #endif
 static	int		sc_susp_scr;
 
-SYSCTL_NODE(_hw, OID_AUTO, syscons, CTLFLAG_RD, 0, "syscons");
-SYSCTL_NODE(_hw_syscons, OID_AUTO, saver, CTLFLAG_RD, 0, "saver");
+static SYSCTL_NODE(_hw, OID_AUTO, syscons, CTLFLAG_RD, 0, "syscons");
+static SYSCTL_NODE(_hw_syscons, OID_AUTO, saver, CTLFLAG_RD, 0, "saver");
 SYSCTL_INT(_hw_syscons_saver, OID_AUTO, keybonly, CTLFLAG_RW,
     &sc_saver_keyb_only, 0, "screen saver interrupted by input only");
 SYSCTL_INT(_hw_syscons, OID_AUTO, bell, CTLFLAG_RW, &enable_bell, 
@@ -249,11 +249,13 @@ static struct ttydevsw sc_ttydevsw = {
 };
 
 static d_ioctl_t	consolectl_ioctl;
+static d_close_t	consolectl_close;
 
 static struct cdevsw consolectl_devsw = {
 	.d_version	= D_VERSION,
-	.d_flags	= D_NEEDGIANT,
+	.d_flags	= D_NEEDGIANT | D_TRACKCLOSE,
 	.d_ioctl	= consolectl_ioctl,
+	.d_close	= consolectl_close,
 	.d_name		= "consolectl",
 };
 
@@ -1555,6 +1557,23 @@ consolectl_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 {
 
 	return sctty_ioctl(dev->si_drv1, cmd, data, td);
+}
+
+static int
+consolectl_close(struct cdev *dev, int flags, int mode, struct thread *td)
+{
+#ifndef SC_NO_SYSMOUSE
+	mouse_info_t info;
+	memset(&info, 0, sizeof(info));
+	info.operation = MOUSE_ACTION;
+
+	/*
+	 * Make sure all buttons are released when moused and other
+	 * console daemons exit, so that no buttons are left pressed.
+	 */
+	(void) sctty_ioctl(dev->si_drv1, CONS_MOUSECTL, (caddr_t)&info, td);
+#endif
+	return (0);
 }
 
 static void

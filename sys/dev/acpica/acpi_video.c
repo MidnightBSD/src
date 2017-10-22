@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi_video.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -185,7 +185,7 @@ static struct acpi_video_output_queue crt_units, tv_units,
  */
 ACPI_SERIAL_DECL(video, "ACPI video");
 ACPI_SERIAL_DECL(video_output, "ACPI video output");
-MALLOC_DEFINE(M_ACPIVIDEO, "acpivideo", "ACPI video extension");
+static MALLOC_DEFINE(M_ACPIVIDEO, "acpivideo", "ACPI video extension");
 
 static int
 acpi_video_modevent(struct module *mod __unused, int evt, void *cookie __unused)
@@ -906,7 +906,8 @@ vid_enum_outputs_subr(ACPI_HANDLE handle, UINT32 level __unused,
 
 	for (i = 0; i < argset->dod_pkg->Package.Count; i++) {
 		if (acpi_PkgInt32(argset->dod_pkg, i, &val) == 0 &&
-		    (val & DOD_DEVID_MASK_FULL) == adr) {
+		    (val & DOD_DEVID_MASK_FULL) ==
+		    (adr & DOD_DEVID_MASK_FULL)) {
 			argset->callback(handle, val, argset->context);
 			argset->count++;
 		}

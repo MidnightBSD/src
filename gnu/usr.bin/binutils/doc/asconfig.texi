@@ -1,4 +1,4 @@
-@c $FreeBSD$
+@c $FreeBSD: stable/9/gnu/usr.bin/binutils/doc/asconfig.texi 218822 2011-02-18 20:54:12Z dim $
 @c Copyright 1992, 1993, 1994, 1996, 1997, 1999, 2000, 2001, 2002,
 @c 2003, 2005
 @c Free Software Foundation, Inc.

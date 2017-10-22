@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/boot/i386/pmbr/Makefile 208789 2010-06-03 17:42:32Z ed $
 
 PROG=	pmbr
 STRIP=

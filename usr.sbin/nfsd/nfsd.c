@@ -41,7 +41,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)nfsd.c	8.9 (Berkeley) 3/29/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/usr.sbin/nfsd/nfsd.c 245019 2013-01-03 23:21:01Z rmacklem $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -236,7 +236,7 @@ main(int argc, char **argv)
 	ip6flag = 1;
 	s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	if (s == -1) {
-		if (errno != EPROTONOSUPPORT)
+		if (errno != EPROTONOSUPPORT && errno != EAFNOSUPPORT)
 			err(1, "socket");
 		ip6flag = 0;
 	} else if (getnetconfigent("udp6") == NULL ||
@@ -590,7 +590,7 @@ main(int argc, char **argv)
 				if ((tcpsock = socket(AF_INET, SOCK_STREAM,
 				    0)) < 0) {
 					syslog(LOG_ERR,
-					    "can't create tpc socket");
+					    "can't create tcp socket");
 					nfsd_exit(1);
 				}
 				if (setsockopt(tcpsock, SOL_SOCKET,

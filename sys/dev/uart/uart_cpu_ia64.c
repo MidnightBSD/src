@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/uart/uart_cpu_ia64.c 168281 2007-04-02 22:00:22Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

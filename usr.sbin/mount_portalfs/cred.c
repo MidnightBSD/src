@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/mount_portalfs/cred.c 143402 2005-03-11 08:39:58Z dds $");
 
 #include <errno.h>
 #include <stdlib.h>

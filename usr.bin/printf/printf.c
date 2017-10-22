@@ -44,7 +44,7 @@ static char const copyright[] =
 static char const sccsid[] = "@(#)printf.c	8.1 (Berkeley) 7/20/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/usr.bin/printf/printf.c 246277 2013-02-03 01:22:28Z eadler $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -467,7 +467,7 @@ getnum(intmax_t *ip, uintmax_t *uip, int signedconv)
 	int rval;
 
 	if (!*gargv) {
-		*ip = 0;
+		*ip = *uip = 0;
 		return (0);
 	}
 	if (**gargv == '"' || **gargv == '\'') {

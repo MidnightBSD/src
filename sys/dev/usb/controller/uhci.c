@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/uhci.c 248085 2013-03-09 02:36:32Z marius $");
 
 /*
  * USB Universal Host Controller driver.
@@ -85,13 +85,12 @@ __FBSDID("$FreeBSD$");
 static int uhcidebug = 0;
 static int uhcinoloop = 0;
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, uhci, CTLFLAG_RW, 0, "USB uhci");
-SYSCTL_INT(_hw_usb_uhci, OID_AUTO, debug, CTLFLAG_RW,
+static SYSCTL_NODE(_hw_usb, OID_AUTO, uhci, CTLFLAG_RW, 0, "USB uhci");
+SYSCTL_INT(_hw_usb_uhci, OID_AUTO, debug, CTLFLAG_RW | CTLFLAG_TUN,
     &uhcidebug, 0, "uhci debug level");
-SYSCTL_INT(_hw_usb_uhci, OID_AUTO, loop, CTLFLAG_RW,
-    &uhcinoloop, 0, "uhci noloop");
-
 TUNABLE_INT("hw.usb.uhci.debug", &uhcidebug);
+SYSCTL_INT(_hw_usb_uhci, OID_AUTO, loop, CTLFLAG_RW | CTLFLAG_TUN,
+    &uhcinoloop, 0, "uhci noloop");
 TUNABLE_INT("hw.usb.uhci.loop", &uhcinoloop);
 
 static void uhci_dumpregs(uhci_softc_t *sc);
@@ -2393,7 +2392,7 @@ uhci_portreset(uhci_softc_t *sc, uint16_t index)
 	UWRITE2(sc, port, x | UHCI_PORTSC_PR);
 
 	usb_pause_mtx(&sc->sc_bus.bus_mtx,
-	    USB_MS_TO_TICKS(USB_PORT_ROOT_RESET_DELAY));
+	    USB_MS_TO_TICKS(usb_port_root_reset_delay));
 
 	DPRINTFN(4, "uhci port %d reset, status0 = 0x%04x\n",
 	    index, UREAD2(sc, port));
@@ -2421,7 +2420,7 @@ uhci_portreset(uhci_softc_t *sc, uint16_t index)
 	for (lim = 0; lim < 12; lim++) {
 
 		usb_pause_mtx(&sc->sc_bus.bus_mtx,
-		    USB_MS_TO_TICKS(USB_PORT_RESET_DELAY));
+		    USB_MS_TO_TICKS(usb_port_reset_delay));
 
 		x = UREAD2(sc, port);
 

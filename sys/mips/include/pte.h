@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/mips/include/pte.h 217354 2011-01-13 15:17:29Z jchandra $
  */
 
 #ifndef	_MACHINE_PTE_H_

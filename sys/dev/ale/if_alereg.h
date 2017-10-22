@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/ale/if_alereg.h 222107 2011-05-19 23:13:08Z yongari $
  */
 
 #ifndef	_IF_ALEREG_H

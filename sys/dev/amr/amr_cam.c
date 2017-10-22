@@ -55,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/amr/amr_cam.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -109,7 +109,7 @@ static driver_t	amr_pass_driver = {
 DRIVER_MODULE(amrp, amr, amr_pass_driver, amr_pass_devclass, 0, 0);
 MODULE_DEPEND(amrp, cam, 1, 1, 1);
 
-MALLOC_DEFINE(M_AMRCAM, "amrcam", "AMR CAM memory");
+static MALLOC_DEFINE(M_AMRCAM, "amrcam", "AMR CAM memory");
 
 /***********************************************************************
  * Enqueue/dequeue functions

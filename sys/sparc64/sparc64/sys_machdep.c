@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sparc64/sparc64/sys_machdep.c 223692 2011-06-30 10:56:02Z jonathan $
  */
 
 #include "opt_capsicum.h"

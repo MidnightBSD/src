@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/usr.bin/mkcsmapper/yacc.y 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: yacc.y,v 1.7 2006/09/09 14:35:17 tnozaki Exp $	*/
 
 %{

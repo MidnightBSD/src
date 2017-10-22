@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libbsnmp/libbsnmp/Makefile 225227 2011-08-28 09:26:48Z kib $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 

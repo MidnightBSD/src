@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/cdcontrol/cdcontrol.c 201608 2010-01-05 20:40:40Z dwmalone $");
 
 #include <sys/cdio.h>
 #include <sys/cdrio.h>

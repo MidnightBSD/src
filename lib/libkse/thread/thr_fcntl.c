@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libkse/thread/thr_fcntl.c 179434 2008-05-30 14:47:42Z dfr $
  */
 
 #include "namespace.h"

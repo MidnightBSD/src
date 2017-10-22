@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/agp/Makefile 236926 2012-06-11 21:33:02Z kib $
 
 .PATH: ${.CURDIR}/../../dev/agp
 

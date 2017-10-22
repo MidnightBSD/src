@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/usb/zyd/Makefile 193422 2009-06-04 03:59:20Z weongyo $
 #
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #

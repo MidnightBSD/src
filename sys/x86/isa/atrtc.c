@@ -24,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/x86/isa/atrtc.c 216490 2010-12-16 17:05:28Z jhb $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/x86/isa/atrtc.c 216490 2010-12-16 17:05:28Z jhb $");
 
 #include "opt_isa.h"
 

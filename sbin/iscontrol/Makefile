@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/iscontrol/Makefile 249490 2013-04-14 22:38:28Z jpaetzel $
 
 SRCS= iscontrol.c pdu.c fsm.c config.c login.c auth_subr.c misc.c
 PROG= iscontrol
@@ -7,8 +7,7 @@ LDADD= -lcam -lmd
 S= ${.CURDIR}/../../sys
 
 WARNS?=	3
-CFLAGS += -I$S
-#CFLAGS += -g -DDEBUG
+CFLAGS+=	-I$S
 
 MAN= iscsi.conf.5 iscontrol.8
 

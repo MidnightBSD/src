@@ -19,7 +19,7 @@ along with GCC; see the file COPYING.  If not, write to
 the Free Software Foundation, 51 Franklin Street, Fifth Floor,
 Boston, MA 02110-1301, USA.  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/contrib/gcc/config/mips/freebsd.h 242478 2012-11-02 14:18:30Z kib $ */
 
 /* This defines which switch letters take arguments.  -G is a MIPS
    special.  */
@@ -56,6 +56,7 @@ Boston, MA 02110-1301, USA.  */
     %{v:-V} \
     %{assert*} %{R*} %{rpath*} %{defsym*} \
     %{shared:-Bshareable %{h*} %{soname*}} \
+    %{!static:--enable-new-dtags} \
     %{!shared: \
       %{!static: \
 	%{rdynamic: -export-dynamic} \

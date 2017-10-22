@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/mkfifo/04.t 166065 2007-01-17 01:42:12Z pjd $
 
 desc="mkfifo returns ENOENT if a component of the path prefix does not exist"
 

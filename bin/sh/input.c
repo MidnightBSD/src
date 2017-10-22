@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)input.c	8.3 (Berkeley) 6/9/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/sh/input.c 239542 2012-08-21 21:46:01Z pfg $");
 
 #include <stdio.h>	/* defines BUFSIZ */
 #include <fcntl.h>
@@ -186,7 +186,7 @@ retry:
 		if (rl_cp == NULL)
 			rl_cp = el_gets(el, &el_len);
 		if (rl_cp == NULL)
-			nr = 0;
+			nr = el_len == 0 ? 0 : -1;
 		else {
 			nr = el_len;
 			if (nr > BUFSIZ - 1)

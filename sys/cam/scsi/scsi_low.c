@@ -2,7 +2,7 @@
 /*	$NetBSD$	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/cam/scsi/scsi_low.c 249132 2013-04-05 08:22:11Z mav $");
 
 #define	SCSI_LOW_STATICS
 #define	SCSI_LOW_DEBUG
@@ -145,7 +145,7 @@ __FBSDID("$FreeBSD$");
 #define	SCSI_LOW_DISK_LFLAGS	0x0000ffff
 #define	SCSI_LOW_DISK_TFLAGS	0xffff0000
 
-MALLOC_DEFINE(M_SCSILOW, "SCSI low", "SCSI low buffers");
+static MALLOC_DEFINE(M_SCSILOW, "SCSI low", "SCSI low buffers");
 
 /**************************************************************
  * Declarations

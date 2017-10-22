@@ -36,7 +36,7 @@
  */
 
 #include "sys/cdefs.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/security/mac/mac_priv.c 235404 2012-05-13 17:01:32Z avg $");
 
 #include "opt_kdtrace.h"
 #include "opt_mac.h"

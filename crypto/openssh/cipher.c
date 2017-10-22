@@ -1,5 +1,5 @@
 /* $OpenBSD: cipher.c,v 1.82 2009/01/26 09:58:15 markus Exp $ */
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/crypto/openssh/cipher.c 224640 2011-08-03 20:00:36Z brooks $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland

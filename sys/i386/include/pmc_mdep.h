@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/i386/include/pmc_mdep.h 236238 2012-05-29 14:50:21Z fabient $
  */
 
 #ifndef _MACHINE_PMC_MDEP_H

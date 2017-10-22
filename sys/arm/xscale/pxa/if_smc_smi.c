@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/pxa/if_smc_smi.c 179595 2008-06-06 05:08:09Z benno $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

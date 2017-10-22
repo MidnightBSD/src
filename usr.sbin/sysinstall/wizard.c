@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sysinstall/wizard.c 156123 2006-02-28 21:49:33Z jhb $
  *
  */
 

@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/isci/scil/scic_sds_request.c 240579 2012-09-17 00:44:16Z eadler $");
 
 /**
  * @file
@@ -2679,7 +2679,7 @@ void scic_sds_request_initial_state_enter(
 /**
  * This method implements the actions taken when entering the
  * SCI_BASE_REQUEST_STATE_CONSTRUCTED state.
- * The method sets the state handlers for the the constructed state.
+ * The method sets the state handlers for the constructed state.
  *
  * @param[in] object The io request object that is to enter the constructed
  *       state.

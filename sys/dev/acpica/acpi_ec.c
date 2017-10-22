@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi_ec.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -178,7 +178,7 @@ struct acpi_ec_softc {
 
 ACPI_SERIAL_DECL(ec, "ACPI embedded controller");
 
-SYSCTL_NODE(_debug_acpi, OID_AUTO, ec, CTLFLAG_RD, NULL, "EC debugging");
+static SYSCTL_NODE(_debug_acpi, OID_AUTO, ec, CTLFLAG_RD, NULL, "EC debugging");
 
 static int	ec_burst_mode;
 TUNABLE_INT("debug.acpi.ec.burst", &ec_burst_mode);

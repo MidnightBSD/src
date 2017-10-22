@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/gnu/usr.bin/groff/src/preproc/soelim/Makefile 114412 2003-05-01 13:22:21Z ru $
 
 PROG_CXX=	soelim
 SRCS=		soelim.cpp

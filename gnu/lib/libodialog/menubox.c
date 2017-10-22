@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/gnu/lib/libodialog/menubox.c 126257 2004-02-26 01:52:39Z eric $");
 
 #include <dialog.h>
 #include "dialog.priv.h"

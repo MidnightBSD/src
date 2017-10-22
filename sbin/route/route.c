@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)route.c	8.6 (Berkeley) 4/28/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/route/route.c 245682 2013-01-20 07:38:38Z glebius $");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -1413,6 +1413,7 @@ print_rtmsg(struct rt_msghdr *rtm, size_t msglen)
 			break;
 		}
 		printf("\n");
+		fflush(stdout);
 		break;
 
 	default:

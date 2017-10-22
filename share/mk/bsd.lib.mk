@@ -1,5 +1,5 @@
 #	from: @(#)bsd.lib.mk	5.26 (Berkeley) 5/2/91
-# $FreeBSD$
+# $FreeBSD: stable/9/share/mk/bsd.lib.mk 248531 2013-03-19 20:00:34Z brooks $
 #
 
 .include <bsd.init.mk>
@@ -33,15 +33,10 @@ CFLAGS+= -DNDEBUG
 NO_WERROR=
 .endif
 
-# Enable CTF conversion on request.
-.if defined(WITH_CTF)
-.undef NO_CTF
-.endif
-
 .if defined(DEBUG_FLAGS)
 CFLAGS+= ${DEBUG_FLAGS}
 
-.if !defined(NO_CTF) && (${DEBUG_FLAGS:M-g} != "")
+.if ${MK_CTF} != "no" && ${DEBUG_FLAGS:M-g} != ""
 CTFFLAGS+= -g
 .endif
 .endif
@@ -69,21 +64,15 @@ PO_FLAG=-pg
 
 .c.o:
 	${CC} ${STATIC_CFLAGS} ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CTFCONVERT_CMD}
 
 .c.po:
 	${CC} ${PO_FLAG} ${STATIC_CFLAGS} ${PO_CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CTFCONVERT_CMD}
 
 .c.So:
 	${CC} ${PICFLAG} -DPIC ${SHARED_CFLAGS} ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CTFCONVERT_CMD}
 
 .cc.o .C.o .cpp.o .cxx.o:
 	${CXX} ${STATIC_CXXFLAGS} ${CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
@@ -96,47 +85,33 @@ PO_FLAG=-pg
 
 .f.po:
 	${FC} -pg ${FFLAGS} -o ${.TARGET} -c ${.IMPSRC}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CTFCONVERT_CMD}
 
 .f.So:
 	${FC} ${PICFLAG} -DPIC ${FFLAGS} -o ${.TARGET} -c ${.IMPSRC}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CTFCONVERT_CMD}
 
 .s.po .s.So:
 	${AS} ${AFLAGS} -o ${.TARGET} ${.IMPSRC}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CTFCONVERT_CMD}
 
 .asm.po:
 	${CC} -x assembler-with-cpp -DPROF ${PO_CFLAGS} ${ACFLAGS} \
 		-c ${.IMPSRC} -o ${.TARGET}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CTFCONVERT_CMD}
 
 .asm.So:
 	${CC} -x assembler-with-cpp ${PICFLAG} -DPIC ${CFLAGS} ${ACFLAGS} \
 	    -c ${.IMPSRC} -o ${.TARGET}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CTFCONVERT_CMD}
 
 .S.po:
 	${CC} -DPROF ${PO_CFLAGS} ${ACFLAGS} -c ${.IMPSRC} -o ${.TARGET}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CTFCONVERT_CMD}
 
 .S.So:
 	${CC} ${PICFLAG} -DPIC ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC} -o ${.TARGET}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CTFCONVERT_CMD}
 
 all: objwarn
 
@@ -216,9 +191,9 @@ ${SHLIB_NAME}: ${SOBJS}
 	    -o ${.TARGET} -Wl,-soname,${SONAME} \
 	    `NM='${NM}' lorder ${SOBJS} | tsort -q` ${LDADD}
 .endif
-	@[ -z "${CTFMERGE}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${SOBJS} && \
-		${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${SOBJS})
+.if ${MK_CTF} != "no"
+	${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${SOBJS}
+.endif
 .endif
 
 .if defined(INSTALL_PIC_ARCHIVE) && defined(LIB) && !empty(LIB) && ${MK_TOOLCHAIN} != "no"
@@ -338,12 +313,15 @@ _libinstall:
 .endif
 .endif # !defined(INTERNALLIB)
 
+.if !defined(LIBRARIES_ONLY)
 .include <bsd.nls.mk>
 .include <bsd.files.mk>
 .include <bsd.incs.mk>
+.endif
+
 .include <bsd.links.mk>
 
-.if ${MK_MAN} != "no"
+.if ${MK_MAN} != "no" && !defined(LIBRARIES_ONLY)
 realinstall: _maninstall
 .ORDER: beforeinstall _maninstall
 .endif
@@ -355,7 +333,7 @@ lint: ${SRCS:M*.c}
 	${LINT} ${LINTFLAGS} ${CFLAGS:M-[DIU]*} ${.ALLSRC}
 .endif
 
-.if ${MK_MAN} != "no"
+.if ${MK_MAN} != "no" && !defined(LIBRARIES_ONLY)
 .include <bsd.man.mk>
 .endif
 

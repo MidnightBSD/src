@@ -50,7 +50,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/isa/spic.c 158651 2006-05-16 14:37:58Z phk $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

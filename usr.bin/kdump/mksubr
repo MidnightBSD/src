@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/kdump/mksubr 237663 2012-06-27 21:12:15Z jhb $
 #
 # Generates kdump_subr.c
 # mkioctls is a special-purpose script, and works fine as it is

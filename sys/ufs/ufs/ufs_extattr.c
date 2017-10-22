@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ufs/ufs/ufs_extattr.c 244660 2012-12-24 13:29:22Z kib $");
 
 #include "opt_ufs.h"
 
@@ -334,7 +334,7 @@ ufs_extattr_enable_with_open(struct ufsmount *ump, struct vnode *vp,
 		return (error);
 	}
 
-	vp->v_writecount++;
+	VOP_ADD_WRITECOUNT(vp, 1);
 
 	vref(vp);
 

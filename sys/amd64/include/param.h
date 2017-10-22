@@ -36,7 +36,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/amd64/include/param.h 240097 2012-09-04 19:14:57Z des $
  */
 
 
@@ -121,14 +121,6 @@
 #define	KSTACK_PAGES	4	/* pages of kstack (with pcb) */
 #endif
 #define	KSTACK_GUARD_PAGES 1	/* pages of kstack guard; 0 disables */
-
-/*
- * Ceiling on amount of swblock kva space, can be changed via
- * the kern.maxswzone /boot/loader.conf variable.
- */
-#ifndef VM_SWZONE_SIZE_MAX
-#define	VM_SWZONE_SIZE_MAX	(32 * 1024 * 1024)
-#endif
 
 /*
  * Mach derived conversion macros

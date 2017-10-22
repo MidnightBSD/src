@@ -5,7 +5,7 @@
  *
  * This file is in the public domain.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/iicbus/pcf8563reg.h 236078 2012-05-26 08:58:27Z marius $
  */
 
 /*

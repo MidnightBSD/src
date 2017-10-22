@@ -14,7 +14,7 @@
 static const char sccsid[] = "@(#)vs_refresh.c	10.44 (Berkeley) 10/13/96";
 #endif
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/contrib/nvi/vi/vs_refresh.c 79950 2001-07-19 11:02:11Z dd $";
 #endif /* not lint */
 
 #include <sys/types.h>

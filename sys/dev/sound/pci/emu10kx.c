@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/sound/pci/emu10kx.c 242340 2012-10-30 04:06:12Z eadler $
  */
 
 #include <sys/param.h>
@@ -3049,11 +3049,6 @@ emu_pci_attach(device_t dev)
 
 	sc = device_get_softc(dev);
 	unit = device_get_unit(dev);
-
-	if (resource_disabled("emu10kx", unit)) {
-		device_printf(dev, "disabled by kernel hints\n");
-		return (ENXIO); /* XXX to avoid unit reuse */
-	}
 
 	/* Get configuration */
 

@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)rwhod.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/rwhod/rwhod.c 220969 2011-04-23 13:42:03Z simon $");
 
 #include <sys/param.h>
 #include <sys/socket.h>

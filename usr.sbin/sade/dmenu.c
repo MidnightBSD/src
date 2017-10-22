@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sade/dmenu.c 161120 2006-08-09 11:25:10Z netchild $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/open/09.t 210984 2010-08-06 23:58:54Z pjd $
 
 desc="O_CREAT is specified, the file does not exist, and the directory in which it is to be created has its immutable flag set"
 

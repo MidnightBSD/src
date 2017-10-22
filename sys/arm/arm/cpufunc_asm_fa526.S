@@ -30,7 +30,7 @@
 
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/cpufunc_asm_fa526.S 207611 2010-05-04 10:14:05Z kevlo $");
 
 #ifdef CPU_FA526
 #define	CACHELINE_SIZE	16

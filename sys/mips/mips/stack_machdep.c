@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/mips/stack_machdep.c 209500 2010-06-24 08:08:43Z jchandra $");
 
 #include <sys/types.h>
 #include <sys/systm.h>

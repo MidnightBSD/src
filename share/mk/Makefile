@@ -1,9 +1,10 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/mk/Makefile 243041 2012-11-14 20:27:17Z dim $
 #	@(#)Makefile	8.1 (Berkeley) 6/8/93
 
 FILES=	bsd.README
 FILES+=	bsd.arch.inc.mk
-FILES+=	bsd.compat.mk bsd.cpu.mk bsd.dep.mk bsd.doc.mk bsd.dtrace.mk
+FILES+=	bsd.compat.mk bsd.compiler.mk bsd.cpu.mk
+FILES+=	bsd.dep.mk bsd.doc.mk bsd.dtrace.mk
 FILES+=	bsd.endian.mk
 FILES+=	bsd.files.mk bsd.crunchgen.mk bsd.incs.mk bsd.info.mk bsd.init.mk
 FILES+=	bsd.kmod.mk

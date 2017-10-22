@@ -18,7 +18,7 @@
  * 5. Modifications may be freely made to this file if the above conditions
  *    are met.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/pipe.h 226578 2011-10-20 18:54:05Z kib $
  */
 
 #ifndef _SYS_PIPE_H_

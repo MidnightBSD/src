@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/gnu/fs/xfs/FreeBSD/xfs_mountops.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #include <sys/param.h>
@@ -71,7 +71,7 @@
 
 #include <xfs_mountops.h>
 
-MALLOC_DEFINE(M_XFSNODE, "XFS node", "XFS vnode private part");
+static MALLOC_DEFINE(M_XFSNODE, "XFS node", "XFS vnode private part");
 
 static vfs_mount_t	_xfs_mount;
 static vfs_unmount_t	_xfs_unmount;

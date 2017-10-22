@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/bus_space_generic.c 177888 2008-04-03 18:28:34Z raj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/lib/exec.c 167972 2007-03-28 05:33:52Z njl $");
 
 #include "lib.h"
 #include <err.h>

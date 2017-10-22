@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: pim6_var.h,v 1.8 2000/06/06 08:07:43 jinmei Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netinet6/pim6_var.h 244524 2012-12-21 00:41:52Z delphij $
  */
 
 /*
@@ -52,7 +52,7 @@ struct pim6stat {
 };
 
 #if (defined(KERNEL)) || (defined(_KERNEL))
-int pim6_input __P((struct mbuf **, int*, int));
+int pim6_input(struct mbuf **, int*, int);
 #endif /* KERNEL */
 
 /*

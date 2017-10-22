@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/nfs/nfsclstate.h 229752 2012-01-07 00:36:17Z rmacklem $
  */
 
 #ifndef _NFS_NFSCLSTATE_H_

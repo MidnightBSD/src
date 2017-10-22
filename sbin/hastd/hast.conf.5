@@ -26,7 +26,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/sbin/hastd/hast.conf.5 249236 2013-04-07 17:05:16Z trociny $
 .\"
 .Dd January 25, 2012
 .Dt HAST.CONF 5
@@ -63,7 +63,7 @@ checksum <algorithm>
 compression <algorithm>
 timeout <seconds>
 exec <path>
-metaflush "on" | "off"
+metaflush on | off
 pidfile <path>
 
 on <node> {
@@ -89,14 +89,14 @@ resource <name> {
 	local <path>
 	timeout <seconds>
 	exec <path>
-	metaflush "on" | "off"
+	metaflush on | off
 
 	on <node> {
 		# Resource-node section
 		name <name>
 		# Required
 		local <path>
-		metaflush "on" | "off"
+		metaflush on | off
 		# Required
 		remote <addr>
 		source <addr>
@@ -106,7 +106,7 @@ resource <name> {
 		name <name>
 		# Required
 		local <path>
-		metaflush "on" | "off"
+		metaflush on | off
 		# Required
 		remote <addr>
 		source <addr>
@@ -129,8 +129,12 @@ The
 .Aq node
 argument can be replaced either by a full hostname as obtained by
 .Xr gethostname 3 ,
-only first part of the hostname, or by node's UUID as found in the
+only first part of the hostname, by node's UUID as found in the
 .Va kern.hostuuid
+.Xr sysctl 8
+variable
+or by node's hostid as found in the
+.Va kern.hostid
 .Xr sysctl 8
 variable.
 .Pp
@@ -208,15 +212,12 @@ to the application was lost.
 The risk of such a situation is very small.
 The
 .Ic memsync
-replication mode is currently not implemented.
+replication mode is the default.
 .It Ic fullsync
 .Pp
 Mark the write operation as completed when local as well as remote
 write completes.
 This is the safest and the slowest replication mode.
-The
-.Ic fullsync
-replication mode is the default.
 .It Ic async
 .Pp
 The write operation is reported as complete right after the local write

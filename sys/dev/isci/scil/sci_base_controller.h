@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/isci/scil/sci_base_controller.h 240579 2012-09-17 00:44:16Z eadler $
  */
 #ifndef _SCI_BASE_CONTROLLER_H_
 #define _SCI_BASE_CONTROLLER_H_
@@ -113,7 +113,7 @@ typedef enum _SCI_BASE_CONTROLLER_STATES
    SCI_BASE_CONTROLLER_STATE_INITIALIZED,
 
    /**
-    * This state indicates the the controller is in the process of becoming
+    * This state indicates the controller is in the process of becoming
     * ready (i.e. starting).  In this state no new IO operations are permitted.
     * This state is entered from the INITIALIZED state.
     */

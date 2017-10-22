@@ -24,7 +24,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/r300_reg.h 218909 2011-02-21 09:01:34Z brucec $");
 
 /* *INDENT-OFF* */
 

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/pccbb/pccbb_isa.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -68,7 +68,7 @@ __FBSDID("$FreeBSD$");
  *****************************************************************************/
 
 /* sysctl vars */
-SYSCTL_NODE(_hw, OID_AUTO, pcic, CTLFLAG_RD, 0, "PCIC parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, pcic, CTLFLAG_RD, 0, "PCIC parameters");
 
 static int isa_intr_mask = EXCA_INT_MASK_ALLOWED;
 TUNABLE_INT("hw.cbb.intr_mask", &isa_intr_mask);

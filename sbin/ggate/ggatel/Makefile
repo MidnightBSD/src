@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/ggate/ggatel/Makefile 130837 2004-06-21 09:20:06Z pjd $
 
 .PATH: ${.CURDIR}/../shared
 

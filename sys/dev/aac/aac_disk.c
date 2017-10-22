@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/aac/aac_disk.c 240876 2012-09-23 20:28:47Z sbruno $");
 
 #include "opt_aac.h"
 
@@ -332,13 +332,12 @@ aac_disk_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size
 void
 aac_biodone(struct bio *bp)
 {
-	struct aac_disk	*sc;
-
-	sc = (struct aac_disk *)bp->bio_disk->d_drv1;
 	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
-	if (bp->bio_flags & BIO_ERROR)
+	if (bp->bio_flags & BIO_ERROR) {
+		bp->bio_resid = bp->bio_bcount;
 		disk_err(bp, "hard error", -1, 1);
+	}
 
 	biodone(bp);
 }

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/libkern/memchr.c 208751 2010-06-02 17:27:23Z raj $");
 
 #include <sys/libkern.h>
 #include <sys/param.h>

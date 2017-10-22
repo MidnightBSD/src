@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/i386/common/edd.h 243217 2012-11-18 12:20:11Z avg $
  */
 
 #ifndef	_EDD_H_
@@ -62,7 +62,7 @@ struct edd_params {
 	uint16_t	sector_size;
 	uint16_t	edd_params_seg;
 	uint16_t	edd_params_off;
-};
+} __packed;
 
 struct edd_device_path_v3 {
 	uint16_t	key;
@@ -74,12 +74,12 @@ struct edd_device_path_v3 {
 	uint64_t	device_path;
 	uint8_t		reserved2[1];
 	uint8_t		checksum;
-};
+} __packed;
 
 struct edd_params_v3 {
 	struct edd_params params;
 	struct edd_device_path_v3 device_path;
-};
+} __packed;
 
 struct edd_device_path_v4 {
 	uint16_t	key;
@@ -91,12 +91,12 @@ struct edd_device_path_v4 {
 	uint64_t	device_path[2];
 	uint8_t		reserved2[1];
 	uint8_t		checksum;
-};
+} __packed;
 
 struct edd_params_v4 {
 	struct edd_params params;
 	struct edd_device_path_v4 device_path;
-};
+} __packed;
 
 #define	EDD_FLAGS_DMA_BOUNDARY_HANDLING		0x0001
 #define	EDD_FLAGS_REMOVABLE_MEDIA		0x0002

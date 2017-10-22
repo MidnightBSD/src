@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/tools/ath/athstats/Makefile 217738 2011-01-22 23:37:42Z adrian $
 
 .PATH:	${.CURDIR}/../../../../sys/dev/ath/ath_hal
 

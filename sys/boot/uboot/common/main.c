@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/uboot/common/main.c 243243 2012-11-18 17:09:29Z ae $");
 
 #include <stand.h>
 
@@ -185,7 +185,7 @@ main(void)
 		if (strncmp(devsw[i]->dv_name, "disk",
 		    strlen(devsw[i]->dv_name)) == 0) {
 			f.f_devdata = &currdev;
-			currdev.d_disk.pnum = 0;
+			currdev.d_disk.slice = 0;
 			if (devsw[i]->dv_open(&f,&currdev) == 0)
 				break;
 		}

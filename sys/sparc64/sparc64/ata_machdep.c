@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/sparc64/sparc64/ata_machdep.c 240579 2012-09-17 00:44:16Z eadler $");
 
 #include <sys/param.h>
 #include <geom/geom_disk.h>
@@ -40,7 +40,7 @@ sparc64_ata_disk_firmware_geom_adjust(struct disk *disk)
 	 * and sectors so the geometry of large disks has to be adjusted.
 	 * If the disk is > 32GB at 16 heads and 63 sectors, adjust to 255
 	 * sectors (this matches what the OpenSolaris dad(7D) driver does).
-	 * If the the disk is even > 128GB, additionally adjust the heads to
+	 * If the disk is even > 128GB, additionally adjust the heads to
 	 * 255.  This allows disks up to the 2TB limit of the extended VTOC8.
 	 * XXX the OpenSolaris dad(7D) driver limits the mediasize to 128GB.
 	 */

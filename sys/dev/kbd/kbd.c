@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/kbd/kbd.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_kbd.h"
 
@@ -81,7 +81,7 @@ static keyboard_switch_t *kbdsw_ini;
        keyboard_switch_t **kbdsw = &kbdsw_ini;
 
 static int keymap_restrict_change;
-SYSCTL_NODE(_hw, OID_AUTO, kbd, CTLFLAG_RD, 0, "kbd");
+static SYSCTL_NODE(_hw, OID_AUTO, kbd, CTLFLAG_RD, 0, "kbd");
 SYSCTL_INT(_hw_kbd, OID_AUTO, keymap_restrict_change, CTLFLAG_RW,
     &keymap_restrict_change, 0, "restrict ability to change keymap");
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/geom/cache/g_cache.h 210046 2010-07-14 08:22:00Z ru $
  */
 
 #ifndef	_G_CACHE_H_

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/jls/jls.c 235700 2012-05-20 22:06:32Z bz $");
 
 #include <sys/param.h>
 #include <sys/jail.h>

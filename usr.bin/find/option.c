@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)option.c	8.2 (Berkeley) 4/16/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/find/option.c 222390 2011-05-27 22:14:49Z jilles $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

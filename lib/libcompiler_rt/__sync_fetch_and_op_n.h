@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libcompiler_rt/__sync_fetch_and_op_n.h 236016 2012-05-25 17:50:50Z marius $");
 
 #include <sys/types.h>
 #include <machine/atomic.h>

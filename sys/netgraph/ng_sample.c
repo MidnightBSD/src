@@ -37,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_sample.c 249132 2013-04-05 08:22:11Z mav $
  * $Whistle: ng_sample.c,v 1.13 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -58,7 +58,7 @@
 /* If you do complicated mallocs you may want to do this */
 /* and use it for your mallocs */
 #ifdef NG_SEPARATE_MALLOC
-MALLOC_DEFINE(M_NETGRAPH_XXX, "netgraph_xxx", "netgraph xxx node ");
+static MALLOC_DEFINE(M_NETGRAPH_XXX, "netgraph_xxx", "netgraph xxx node");
 #else
 #define M_NETGRAPH_XXX M_NETGRAPH
 #endif

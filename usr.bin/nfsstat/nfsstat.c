@@ -41,7 +41,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)nfsstat.c	8.2 (Berkeley) 3/31/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$FreeBSD: stable/9/usr.bin/nfsstat/nfsstat.c 244291 2012-12-16 14:10:12Z rmacklem $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -107,14 +107,36 @@ main(int argc, char **argv)
 	int ch;
 	char *memf, *nlistf;
 	char errbuf[_POSIX2_LINE_MAX];
+	int mntlen, i;
+	char buf[1024];
+	struct statfs *mntbuf;
+	struct nfscl_dumpmntopts dumpmntopts;
 
 	interval = 0;
 	memf = nlistf = NULL;
-	while ((ch = getopt(argc, argv, "cesWM:N:ow:z")) != -1)
+	while ((ch = getopt(argc, argv, "cesWM:mN:ow:z")) != -1)
 		switch(ch) {
 		case 'M':
 			memf = optarg;
 			break;
+		case 'm':
+			/* Display mount options for NFS mount points. */
+			mntlen = getmntinfo(&mntbuf, MNT_NOWAIT);
+			for (i = 0; i < mntlen; i++) {
+				if (strcmp(mntbuf->f_fstypename, "nfs") == 0) {
+					dumpmntopts.ndmnt_fname =
+					    mntbuf->f_mntonname;
+					dumpmntopts.ndmnt_buf = buf;
+					dumpmntopts.ndmnt_blen = sizeof(buf);
+					if (nfssvc(NFSSVC_DUMPMNTOPTS,
+					    &dumpmntopts) >= 0)
+						printf("%s on %s\n%s\n",
+						    mntbuf->f_mntfromname,
+						    mntbuf->f_mntonname, buf);
+				}
+				mntbuf++;
+			}
+			exit(0);
 		case 'N':
 			nlistf = optarg;
 			break;
@@ -646,7 +668,7 @@ void
 usage(void)
 {
 	(void)fprintf(stderr,
-	    "usage: nfsstat [-ceoszW] [-M core] [-N system] [-w wait]\n");
+	    "usage: nfsstat [-cemoszW] [-M core] [-N system] [-w wait]\n");
 	exit(1);
 }
 

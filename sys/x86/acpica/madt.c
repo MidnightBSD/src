@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/x86/acpica/madt.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -65,7 +65,7 @@ static ACPI_TABLE_MADT *madt;
 static vm_paddr_t madt_physaddr;
 static vm_offset_t madt_length;
 
-MALLOC_DEFINE(M_MADT, "madt_table", "ACPI MADT Table Items");
+static MALLOC_DEFINE(M_MADT, "madt_table", "ACPI MADT Table Items");
 
 static enum intr_polarity interrupt_polarity(UINT16 IntiFlags, UINT8 Source);
 static enum intr_trigger interrupt_trigger(UINT16 IntiFlags, UINT8 Source);

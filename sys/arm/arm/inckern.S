@@ -25,7 +25,7 @@
 #include "opt_kernname.h"
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$")
+__FBSDID("$FreeBSD: stable/9/sys/arm/arm/inckern.S 159557 2006-06-12 22:58:50Z cognet $")
 ENTRY(do_call)
 	mov	r6, r0
 	mov	r0, r1

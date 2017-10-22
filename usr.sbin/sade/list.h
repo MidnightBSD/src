@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/sade/list.h 161060 2006-08-07 23:35:49Z netchild $
  *
  * Copyright (c) 1997 FreeBSD, Inc.
  * All rights reserved.

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/hpt27xx/Makefile 245938 2013-01-26 05:20:09Z delphij $
 HPT27XX=	${.CURDIR}/../../dev/hpt27xx
 .PATH:	${HPT27XX}
 
@@ -12,6 +12,3 @@ hpt27xx_lib.o:
 	uudecode -p < ${HPT27XX}/$(MACHINE_ARCH)-elf.hpt27xx_lib.o.uu > ${.TARGET}
 
 .include <bsd.kmod.mk>
-
-CWARNFLAGS.osm_bsd.c=	${NO_WFORMAT_SECURITY}
-CWARNFLAGS+=		${CWARNFLAGS.${.IMPSRC:T}}

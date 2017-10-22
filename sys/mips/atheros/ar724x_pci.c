@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/atheros/ar724x_pci.c 229772 2012-01-07 12:32:50Z adrian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

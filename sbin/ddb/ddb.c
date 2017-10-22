@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/ddb/ddb.c 242544 2012-11-04 01:21:49Z eadler $");
 
 #include <err.h>
 #include <stdio.h>
@@ -80,7 +80,7 @@ ddb_readfile(char *filename)
 		argc++;
 
 		spn = strcspn(argv[0], WHITESP);
-		argv[1] = argv[0] + spn + strspn(argv[0] + spn, WHITESP);;
+		argv[1] = argv[0] + spn + strspn(argv[0] + spn, WHITESP);
 		argv[0][spn] = '\0';
 		if (*argv[1] != '\0')
 			argc++;

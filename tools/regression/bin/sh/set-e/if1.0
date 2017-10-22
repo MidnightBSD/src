@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/bin/sh/set-e/if1.0 211399 2010-08-16 17:18:08Z jilles $
 set -e
 if false; then
 	:

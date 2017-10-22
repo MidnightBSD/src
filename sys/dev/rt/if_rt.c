@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/rt/if_rt.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "if_rtvar.h"
 #include "if_rtreg.h"
@@ -136,7 +136,7 @@ static int	rt_miibus_writereg(device_t, int, int, int);
 static int	rt_ifmedia_upd(struct ifnet *);
 static void	rt_ifmedia_sts(struct ifnet *, struct ifmediareq *);
 
-SYSCTL_NODE(_hw, OID_AUTO, rt, CTLFLAG_RD, 0, "RT driver parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, rt, CTLFLAG_RD, 0, "RT driver parameters");
 #ifdef IF_RT_DEBUG
 static int rt_debug = 0;
 SYSCTL_INT(_hw_rt, OID_AUTO, debug, CTLFLAG_RW, &rt_debug, 0,
@@ -893,7 +893,7 @@ rt_tx_data(struct rt_softc *sc, struct mbuf *m, int qid)
 			"mbuf: ndmasegs=%d, len=%d, error=%d\n",
 			ndmasegs, m->m_pkthdr.len, error);
 
-		m_d = m_collapse(m, M_DONTWAIT, 16);
+		m_d = m_collapse(m, M_NOWAIT, 16);
 		if (m_d == NULL) {
 			m_freem(m);
 			m = NULL;
@@ -1638,7 +1638,7 @@ rt_rx_eof(struct rt_softc *sc, int limit)
 
 		nframes++;
 
-		mnew = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR,
+		mnew = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR,
 		    MJUMPAGESIZE);
 		if (mnew == NULL) {
 			sc->rx_mbuf_alloc_errors++;
@@ -2010,7 +2010,7 @@ rt_alloc_rx_ring(struct rt_softc *sc, struct rt_softc_rx_ring *ring)
 			goto fail;
 		}
 
-		data->m = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR,
+		data->m = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR,
 		    MJUMPAGESIZE);
 		if (data->m == NULL) {
 			device_printf(sc->dev, "could not allocate Rx mbuf\n");

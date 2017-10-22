@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/share/man/man9/sbuf.9 249380 2013-04-11 20:12:28Z trociny $
 .\"
 .Dd December 21, 2011
 .Dt SBUF 9
@@ -94,7 +94,7 @@
 .Fn sbuf_finish "struct sbuf *s"
 .Ft char *
 .Fn sbuf_data "struct sbuf *s"
-.Ft int
+.Ft ssize_t
 .Fn sbuf_len "struct sbuf *s"
 .Ft int
 .Fn sbuf_done "struct sbuf *s"

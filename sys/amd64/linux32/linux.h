@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/amd64/linux32/linux.h 247558 2013-03-01 18:39:46Z jhb $
  */
 
 #ifndef _AMD64_LINUX_H_
@@ -42,6 +42,7 @@ extern u_char linux_debug_map[];
 #define	ldebug(name)	isclr(linux_debug_map, LINUX_SYS_linux_ ## name)
 #define	ARGS(nm, fmt)	"linux(%ld): "#nm"("fmt")\n", (long)td->td_proc->p_pid
 #define	LMSG(fmt)	"linux(%ld): "fmt"\n", (long)td->td_proc->p_pid
+#define	LINUX_DTRACE	linuxulator32
 
 #ifdef MALLOC_DECLARE
 MALLOC_DECLARE(M_LINUX);
@@ -723,6 +724,13 @@ union l_semun {
 #define	LINUX_IP_MULTICAST_LOOP		34
 #define	LINUX_IP_ADD_MEMBERSHIP		35
 #define	LINUX_IP_DROP_MEMBERSHIP	36
+
+#define	LINUX_TCP_NODELAY	1
+#define	LINUX_TCP_MAXSEG	2
+#define	LINUX_TCP_KEEPIDLE	4
+#define	LINUX_TCP_KEEPINTVL	5
+#define	LINUX_TCP_KEEPCNT	6
+#define	LINUX_TCP_MD5SIG	14
 
 struct l_sockaddr {
 	l_ushort	sa_family;

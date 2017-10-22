@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ufs/ufs/ufs_lookup.c 246376 2013-02-06 02:51:25Z pfg $");
 
 #include "opt_ufs.h"
 #include "opt_quota.h"
@@ -1432,7 +1432,6 @@ ufs_checkpath(ino_t source_ino, ino_t parent_ino, struct inode *target, struct u
 		return (0);
 	if (target->i_number == ROOTINO)
 		return (0);
-	error = 0;
 	for (;;) {
 		error = ufs_dir_dd_ino(vp, cred, &dd_ino);
 		if (error != 0)

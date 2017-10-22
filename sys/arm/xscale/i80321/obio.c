@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/xscale/i80321/obio.c 171629 2007-07-27 14:53:42Z cognet $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

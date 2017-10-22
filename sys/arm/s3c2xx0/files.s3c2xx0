@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/arm/s3c2xx0/files.s3c2xx0 210397 2010-07-22 23:23:39Z andrew $
 arm/arm/cpufunc_asm_arm9.S	standard
 arm/arm/irq_dispatch.S		standard
 arm/s3c2xx0/board_ln2410sbc.c	optional	board_ln2410sbc

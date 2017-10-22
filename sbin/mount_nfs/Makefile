@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 3/27/94
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sbin/mount_nfs/Makefile 221288 2011-05-01 01:34:22Z rmacklem $
 
 PROG=	mount_nfs
 SRCS=	mount_nfs.c getmntopts.c mounttab.c

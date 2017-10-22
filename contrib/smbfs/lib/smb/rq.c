@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: rq.c,v 1.7 2001/04/16 04:33:01 bp Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/contrib/smbfs/lib/smb/rq.c 136700 2004-10-19 17:44:31Z obrien $
  */
 #include <sys/param.h>
 #include <sys/ioctl.h>

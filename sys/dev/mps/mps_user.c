@@ -56,11 +56,11 @@
  *
  * LSI MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/mps/mps_user.c 242544 2012-11-04 01:21:49Z eadler $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/mps/mps_user.c 242544 2012-11-04 01:21:49Z eadler $");
 
 #include "opt_compat.h"
 
@@ -1000,7 +1000,7 @@ mps_user_pass_thru(struct mps_softc *sc, mps_pass_thru_t *data)
 		if (cm->cm_flags & MPS_CM_FLAGS_DATAIN)
 			dir = BUS_DMASYNC_POSTREAD;
 		else if (cm->cm_flags & MPS_CM_FLAGS_DATAOUT)
-			dir = BUS_DMASYNC_POSTWRITE;;
+			dir = BUS_DMASYNC_POSTWRITE;
 		bus_dmamap_sync(sc->buffer_dmat, cm->cm_dmamap, dir);
 		bus_dmamap_unload(sc->buffer_dmat, cm->cm_dmamap);
 

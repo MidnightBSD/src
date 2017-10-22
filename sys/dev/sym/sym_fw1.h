@@ -55,7 +55,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/sym/sym_fw1.h 220950 2011-04-22 12:46:39Z marius $ */
 
 /*
  *  Scripts for SYMBIOS-Processor

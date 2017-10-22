@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/sys/stack_protector.c 213785 2010-10-13 16:57:06Z rpaulo $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>

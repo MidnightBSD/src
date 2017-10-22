@@ -27,7 +27,7 @@
  **************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/drm_mm.h 249081 2013-04-04 05:39:37Z kib $");
 
 /*
  * Authors:
@@ -181,5 +181,7 @@ void drm_mm_init_scan_with_range(struct drm_mm *mm, unsigned long size,
 				 unsigned long end);
 int drm_mm_scan_add_block(struct drm_mm_node *node);
 int drm_mm_scan_remove_block(struct drm_mm_node *node);
+
+void drm_mm_debug_table(struct drm_mm *mm, const char *prefix);
 
 #endif

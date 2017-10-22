@@ -29,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)find.1	8.7 (Berkeley) 5/9/95
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/usr.bin/find/find.1 247541 2013-03-01 09:49:55Z des $
 .\"
-.Dd June 13, 2012
+.Dd September 9, 2012
 .Dt FIND 1
 .Os
 .Sh NAME
@@ -285,7 +285,7 @@ Non-portable, BSD-specific version of
 .Ic depth .
 GNU find implements this as a primary in mistaken emulation of
 .Fx
-.Xr find 1 .
+.Nm .
 .It Ic -delete
 Delete found files and/or directories.
 Always returns true.
@@ -457,7 +457,7 @@ for compatibility with GNU find.
 GNU find imposes a restriction that
 .Ar gname
 is numeric, while
-.Xr find 1
+.Nm
 does not.
 .It Ic -group Ar gname
 True if the file belongs to the group
@@ -620,7 +620,7 @@ This option is for GNU find compatibility and is ignored.
 .It Ic -noleaf
 This option is for GNU find compatibility.
 In GNU find it disables an optimization not relevant to
-.Xr find 1 ,
+.Nm ,
 so it is ignored.
 .It Ic -nouser
 True if the file belongs to an unknown user.
@@ -735,6 +735,10 @@ Note, the
 primary has no effect if the
 .Fl d
 option was specified.
+.It Ic -quit
+Causes
+.Nm
+to immediately terminate.
 .It Ic -regex Ar pattern
 True if the whole path of the file matches
 .Ar pattern
@@ -813,7 +817,7 @@ for compatibility with GNU find.
 GNU find imposes a restriction that
 .Ar uname
 is numeric, while
-.Xr find 1
+.Nm
 does not.
 .It Ic -user Ar uname
 True if the file belongs to the user

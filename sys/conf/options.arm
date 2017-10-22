@@ -1,4 +1,4 @@
-#$FreeBSD$
+#$FreeBSD: stable/9/sys/conf/options.arm 213510 2010-10-07 09:30:35Z cognet $
 ARM9_CACHE_WRITE_THROUGH	opt_global.h
 ARM_CACHE_LOCK_ENABLE	opt_global.h
 ARMFPE			opt_global.h

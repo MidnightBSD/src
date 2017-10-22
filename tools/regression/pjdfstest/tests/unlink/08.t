@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/unlink/08.t 185229 2008-11-23 20:17:17Z pjd $
 
 desc="unlink may return EPERM if the named file is a directory"
 

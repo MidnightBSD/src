@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/compat/netbsd/dvcfg.h 139743 2005-01-05 22:34:37Z imp $ */
 /*	$NetBSD$	*/
 /*-
  * [NetBSD for NEC PC98 series]

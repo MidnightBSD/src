@@ -55,7 +55,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * from $NetBSD: cpu_subr.c,v 1.1 2003/02/03 17:10:09 matt Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/powerpc/cpu.c 225963 2011-10-04 10:02:14Z mav $
  */
 
 #include <sys/param.h>

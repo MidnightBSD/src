@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/subr_uio.c 240238 2012-09-08 16:40:18Z kib $");
 
 #include "opt_zero.h"
 
@@ -53,11 +53,11 @@ __FBSDID("$FreeBSD$");
 #include <sys/vnode.h>
 
 #include <vm/vm.h>
+#include <vm/vm_param.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_page.h>
 #include <vm/vm_map.h>
 #ifdef ZERO_COPY_SOCKETS
-#include <vm/vm_param.h>
 #include <vm/vm_object.h>
 #endif
 

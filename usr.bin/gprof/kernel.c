@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/gprof/kernel.c 136176 2004-10-05 23:50:10Z green $");
 
 #include <sys/param.h>
 #include <sys/linker.h>

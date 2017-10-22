@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$FreeBSD: stable/9/sys/dev/ciss/cissreg.h 246152 2013-01-31 19:24:33Z sbruno $
  */
 
 /*
@@ -425,6 +425,15 @@ struct ciss_config_table
 #define CISS_DRIVER_DAUGHTER_ATTACHED		(1<<8)
 #define CISS_DRIVER_SCSI_PREFETCH		(1<<9)
     u_int32_t	max_sg_length;		/* 31 in older firmware */
+/*
+ * these fields appear in OpenCISS Spec 1.06
+ * http://cciss.sourceforge.net/#docs
+ */
+    u_int32_t	max_logical_supported;
+    u_int32_t	max_physical_supported;
+    u_int32_t	max_physical_per_logical;
+    u_int32_t	max_perfomant_mode_cmds;
+    u_int32_t	max_block_fetch_count;
 } __packed;
 
 /*

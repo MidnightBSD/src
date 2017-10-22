@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/kern_poll.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_device_polling.h"
 
@@ -98,7 +98,7 @@ static uint32_t poll_burst = 5;
 static uint32_t poll_burst_max = 150;	/* good for 100Mbit net and HZ=1000 */
 static uint32_t poll_each_burst = 5;
 
-SYSCTL_NODE(_kern, OID_AUTO, polling, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_kern, OID_AUTO, polling, CTLFLAG_RW, 0,
 	"Device polling parameters");
 
 SYSCTL_UINT(_kern_polling, OID_AUTO, burst, CTLFLAG_RD,

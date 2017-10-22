@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/tools/tools/pciroms/pciroms.c 172394 2007-09-30 11:05:18Z marius $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>

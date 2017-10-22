@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/tools/regression/sockets/sigpipe/sigpipe.c 143413 2005-03-11 13:05:18Z rwatson $
  */
 
 #include <sys/types.h>

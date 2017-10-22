@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/msun/i387/invtrig.c 181152 2008-08-02 03:56:22Z das $");
 
 #include <stdint.h>
 

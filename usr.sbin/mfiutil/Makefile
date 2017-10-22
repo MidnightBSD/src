@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/mfiutil/Makefile 237589 2012-06-26 03:05:17Z eadler $
 PROG=	mfiutil
 
 SRCS=	mfiutil.c mfi_cmd.c mfi_config.c mfi_drive.c mfi_evt.c mfi_flash.c \

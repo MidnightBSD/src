@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/ed/if_ed.c 248078 2013-03-09 00:39:54Z marius $");
 
 /*
  * Device driver for National Semiconductor DS8390/WD83C690 based ethernet
@@ -1268,7 +1268,7 @@ ed_get_packet(struct ed_softc *sc, bus_size_t buf, u_short len)
 	struct mbuf *m;
 
 	/* Allocate a header mbuf */
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	MGETHDR(m, M_NOWAIT, MT_DATA);
 	if (m == NULL)
 		return;
 	m->m_pkthdr.rcvif = ifp;
@@ -1282,7 +1282,7 @@ ed_get_packet(struct ed_softc *sc, bus_size_t buf, u_short len)
 	 */
 	if ((len + 2) > MHLEN) {
 		/* Attach an mbuf cluster */
-		MCLGET(m, M_DONTWAIT);
+		MCLGET(m, M_NOWAIT);
 
 		/* Insist on getting a cluster */
 		if ((m->m_flags & M_EXT) == 0) {

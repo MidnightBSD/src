@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/secure/lib/libcrypto/opensslconf-amd64.h 194207 2009-06-14 19:46:18Z simon $ */
 /* opensslconf.h */
 /* WARNING: Generated automatically from opensslconf.h.in by Configure. */
 

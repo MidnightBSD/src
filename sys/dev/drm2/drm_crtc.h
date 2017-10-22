@@ -22,7 +22,7 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/drm2/drm_crtc.h 235783 2012-05-22 11:07:44Z kib $
  */
 #ifndef __DRM_CRTC_H__
 #define __DRM_CRTC_H__

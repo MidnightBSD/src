@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/posix1e/extattr.c 150065 2005-09-12 19:52:42Z stefanf $");
 
 #include <sys/types.h>
 #include <sys/extattr.h>

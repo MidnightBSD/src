@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_nat.h 176791 2008-03-04 11:10:54Z mav $
  */
 
 #define NG_NAT_NODE_TYPE    "nat"

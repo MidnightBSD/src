@@ -18,7 +18,7 @@
  * arising in any way out of the use of this driver software, even if advised
  * of the possibility of such damage.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/asr/osd_util.h 139749 2005-01-06 01:43:34Z imp $
  */
 
 #ifndef		__OSD_UTIL_H

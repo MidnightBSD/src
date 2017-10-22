@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD$*/
+/*$FreeBSD: stable/9/sys/dev/e1000/if_igb.h 247478 2013-02-28 18:10:20Z jhb $*/
 
 #ifndef _IGB_H_DEFINED_
 #define _IGB_H_DEFINED_
@@ -299,9 +299,9 @@ struct tx_ring {
 	struct igb_tx_buffer	*tx_buffers;
 #if __FreeBSD_version >= 800000
 	struct buf_ring		*br;
+	struct task		txq_task;
 #endif
 	bus_dma_tag_t		txtag;
-	struct task		txq_task;
 
 	u32			bytes;
 	u32			packets;

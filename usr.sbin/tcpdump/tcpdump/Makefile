@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/tcpdump/tcpdump/Makefile 242485 2012-11-02 16:57:51Z delphij $
 
 .include <bsd.own.mk>
 
@@ -32,7 +32,8 @@ SRCS =	addrtoname.c af.c checksum.c cpack.c gmpls.c oui.c gmt2local.c \
 	print-sip.c print-sl.c print-sll.c \
 	print-slow.c print-snmp.c print-stp.c print-sunatm.c print-sunrpc.c \
 	print-symantec.c print-syslog.c print-tcp.c print-telnet.c print-tftp.c \
-	print-timed.c print-token.c print-udld.c print-udp.c print-vjc.c \
+	print-timed.c print-tipc.c \
+	print-token.c print-udld.c print-udp.c print-vjc.c \
 	print-vqp.c print-vrrp.c print-vtp.c \
 	print-wb.c print-zephyr.c setsignal.c tcpdump.c util.c \
 	print-smb.c signature.c smbutil.c \

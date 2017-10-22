@@ -27,14 +27,13 @@ static const char rcsid[] = "$OpenBSD: nftw.c,v 1.4 2004/07/07 16:05:23 millert 
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/nftw.c 244356 2012-12-17 12:26:10Z jilles $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <fts.h>
 #include <ftw.h>
-#include <limits.h>
 
 int
 nftw(const char *path, int (*fn)(const char *, const struct stat *, int,
@@ -47,7 +46,7 @@ nftw(const char *path, int (*fn)(const char *, const struct stat *, int,
 	int error = 0, ftsflags, fnflag, postorder, sverrno;
 
 	/* XXX - nfds is currently unused */
-	if (nfds < 1 || nfds > OPEN_MAX) {
+	if (nfds < 1) {
 		errno = EINVAL;
 		return (-1);
 	}

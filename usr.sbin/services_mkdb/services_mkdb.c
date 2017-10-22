@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/services_mkdb/services_mkdb.c 206163 2010-04-04 15:21:09Z ume $");
 
 #include <sys/param.h>
 #include <sys/stat.h>

@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/nfs/nfsproto.h 223657 2011-06-28 22:52:38Z rmacklem $
  */
 
 #ifndef _NFS_NFSPROTO_H_

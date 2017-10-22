@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/pam.d/atrun 170773 2007-06-15 12:02:16Z yar $
 #
 # PAM configuration for the "atrun" service
 #

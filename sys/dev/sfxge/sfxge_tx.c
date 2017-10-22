@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/sfxge/sfxge_tx.c 248078 2013-03-09 00:39:54Z marius $");
 
 #include <sys/types.h>
 #include <sys/mbuf.h>
@@ -262,7 +262,7 @@ static int sfxge_tx_queue_mbuf(struct sfxge_txq *txq, struct mbuf *mbuf)
 				     mbuf, dma_seg, &n_dma_seg, 0);
 	if (rc == EFBIG) {
 		/* Try again. */
-		struct mbuf *new_mbuf = m_collapse(mbuf, M_DONTWAIT,
+		struct mbuf *new_mbuf = m_collapse(mbuf, M_NOWAIT,
 						   SFXGE_TX_MAPPING_MAX_SEG);
 		if (new_mbuf == NULL)
 			goto reject;

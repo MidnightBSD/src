@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cddl/dev/dtrace/i386/dis_tables.h 179237 2008-05-23 05:59:42Z jb $
  */
 /*
  * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.

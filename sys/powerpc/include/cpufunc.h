@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/powerpc/include/cpufunc.h 234705 2012-04-26 13:57:41Z nwhitehorn $
  */
 
 #ifndef _MACHINE_CPUFUNC_H_

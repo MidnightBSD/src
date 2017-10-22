@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/truncate/10.t 210984 2010-08-06 23:58:54Z pjd $
 
 desc="truncate returns EROFS if the named file resides on a read-only file system"
 

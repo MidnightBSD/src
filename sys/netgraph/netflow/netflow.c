@@ -29,7 +29,7 @@
  */
 
 static const char rcs_id[] =
-    "@(#) $FreeBSD$";
+    "@(#) $FreeBSD: stable/9/sys/netgraph/netflow/netflow.c 234557 2012-04-21 19:22:53Z melifaro $";
 
 #include "opt_inet6.h"
 #include "opt_route.h"

@@ -1,10 +1,10 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.d/Makefile 244398 2012-12-18 14:32:53Z rwatson $
 
 .include <bsd.own.mk>
 
 FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	abi accounting addswap adjkerntz amd \
-	apm apmd archdep atm1 atm2 atm3 auditd \
+	apm apmd archdep atm1 atm2 atm3 auditd auditdistd \
 	bgfsck bluetooth bootparams bridge bsnmpd bthidd \
 	ccd cleanvar cleartmp cron \
 	ddb defaultroute devd devfs dhclient \

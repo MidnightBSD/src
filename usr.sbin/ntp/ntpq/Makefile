@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/ntp/ntpq/Makefile 220370 2011-04-05 18:41:01Z obrien $
 
 NO_MAN=
 

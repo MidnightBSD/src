@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/powerpc/ps3/ps3repo.h 224106 2011-07-16 19:01:09Z nwhitehorn $
  */
 
 #ifndef _PS3_REPO_H

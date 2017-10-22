@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/Osd/OsdTable.c 218660 2011-02-13 19:24:04Z marcel $");
 
 #include <sys/param.h>
 #include <sys/endian.h>

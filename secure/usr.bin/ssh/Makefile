@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/secure/usr.bin/ssh/Makefile 247515 2013-03-01 01:02:26Z des $
 #
 
 .include <bsd.own.mk>
@@ -23,6 +23,10 @@ LDADD=	-lssh -lutil -lz
 CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DKRB5 -DHEIMDAL
 DPADD+=	 ${LIBGSSAPI}
 LDADD+=	 -lgssapi
+.endif
+
+.if ${MK_OPENSSH_NONE_CIPHER} != "no"
+CFLAGS+= -DNONE_CIPHER_ENABLED
 .endif
 
 DPADD+=	${LIBCRYPT} ${LIBCRYPTO}

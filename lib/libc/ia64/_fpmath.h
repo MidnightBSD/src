@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libc/ia64/_fpmath.h 175402 2008-01-17 16:39:07Z bde $
  */
 
 #include <sys/endian.h>

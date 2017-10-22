@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/geom/class/journal/geom_journal.c 213662 2010-10-09 20:20:27Z ae $");
 
 #include <sys/types.h>
 #include <errno.h>

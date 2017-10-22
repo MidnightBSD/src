@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/cpucontrol/Makefile 229471 2012-01-04 08:14:05Z fabient $
 
 PROG=	cpucontrol
 MAN=	cpucontrol.8

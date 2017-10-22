@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/perror/perror.c 199642 2009-11-22 05:17:22Z edwin $");
 
 #include <stdio.h>
 #include <stdlib.h>

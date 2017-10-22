@@ -36,7 +36,7 @@
 .\" 
 .\"	@(#)iosys	8.1 (Berkeley) 6/8/93
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/9/share/doc/psd/03.iosys/iosys 229461 2012-01-04 03:37:41Z eadler $
 .EH 'PSD:3-%''The UNIX I/O System'
 .OH 'The UNIX I/O System''PSD:3-%'
 .TL

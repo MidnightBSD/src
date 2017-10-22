@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)union_vfsops.c	8.20 (Berkeley) 5/20/95
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/unionfs/union_vfsops.c 235243 2012-05-10 20:35:50Z daichi $
  */
 
 #include <sys/param.h>

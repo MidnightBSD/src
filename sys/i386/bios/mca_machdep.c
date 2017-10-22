@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/bios/mca_machdep.c 134582 2004-08-31 21:51:51Z mdodd $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,5 +1,5 @@
 /* MD4.H - header file for MD4C.C
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libmd/md4.h 154479 2006-01-17 15:35:57Z phk $
  */
 
 /* Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. All

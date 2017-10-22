@@ -62,7 +62,7 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/netgraph/ng_gif_demux.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 /*
@@ -89,7 +89,7 @@
 #include <netgraph/ng_gif_demux.h>
 
 #ifdef NG_SEPARATE_MALLOC
-MALLOC_DEFINE(M_NETGRAPH_GIF_DEMUX, "netgraph_gif_demux",
+static MALLOC_DEFINE(M_NETGRAPH_GIF_DEMUX, "netgraph_gif_demux",
     "netgraph gif demux node");
 #else
 #define M_NETGRAPH_GIF_DEMUX M_NETGRAPH

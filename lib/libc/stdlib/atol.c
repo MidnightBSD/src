@@ -36,7 +36,7 @@
 static char sccsid[] = "@(#)atol.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/stdlib/atol.c 235785 2012-05-22 14:40:39Z theraven $");
 
 #include <stdlib.h>
 #include <xlocale.h>

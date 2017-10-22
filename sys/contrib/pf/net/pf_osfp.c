@@ -19,7 +19,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/contrib/pf/net/pf_osfp.c 223637 2011-06-28 11:57:25Z bz $");
 #endif
 
 #include <sys/param.h>

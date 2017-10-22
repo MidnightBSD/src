@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/kern/tty_pts.c 243584 2012-11-27 01:33:23Z mjg $");
 
 /* Add compatibility bits for FreeBSD. */
 #define PTS_COMPAT
@@ -836,6 +836,7 @@ sys_posix_openpt(struct thread *td, struct posix_openpt_args *uap)
 	error = pts_alloc(FFLAGS(uap->flags & O_ACCMODE), td, fp);
 	if (error != 0) {
 		fdclose(td->td_proc->p_fd, fp, fd, td);
+		fdrop(fp, td);
 		return (error);
 	}
 

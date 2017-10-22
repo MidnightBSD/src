@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/arm/include/fdt.h 218073 2011-01-29 20:25:20Z marcel $
  */
 
 #ifndef _MACHINE_FDT_H_

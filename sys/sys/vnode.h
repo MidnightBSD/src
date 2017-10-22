@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vnode.h	8.7 (Berkeley) 2/4/94
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/sys/vnode.h 248879 2013-03-29 13:17:34Z kib $
  */
 
 #ifndef _SYS_VNODE_H_
@@ -38,6 +38,7 @@
 #include <sys/lock.h>
 #include <sys/lockmgr.h>
 #include <sys/mutex.h>
+#include <sys/rangelock.h>
 #include <sys/selinfo.h>
 #include <sys/uio.h>
 #include <sys/acl.h>
@@ -165,6 +166,7 @@ struct vnode {
 	struct vpollinfo *v_pollinfo;		/* i Poll events, p for *v_pi */
 	struct label *v_label;			/* MAC label for vnode */
 	struct lockf *v_lockf;		/* Byte-level advisory lock list */
+	struct rangelock v_rl;			/* Byte-range lock */
 };
 
 #endif /* defined(_KERNEL) || defined(_KVM_VNODE) */
@@ -381,7 +383,7 @@ extern int		vttoif_tab[];
 #define	SKIPSYSTEM	0x0001	/* vflush: skip vnodes marked VSYSTEM */
 #define	FORCECLOSE	0x0002	/* vflush: force file closure */
 #define	WRITECLOSE	0x0004	/* vflush: only close writable files */
-#define	DOCLOSE		0x0008	/* vclean: close active files */
+#define	EARLYFLUSH	0x0008	/* vflush: early call for ffs_flushfiles */
 #define	V_SAVE		0x0001	/* vinvalbuf: sync file first */
 #define	V_ALT		0x0002	/* vinvalbuf: invalidate only alternate bufs */
 #define	V_NORMAL	0x0004	/* vinvalbuf: invalidate only regular bufs */
@@ -390,6 +392,9 @@ extern int		vttoif_tab[];
 #define	V_WAIT		0x0001	/* vn_start_write: sleep for suspend */
 #define	V_NOWAIT	0x0002	/* vn_start_write: don't sleep for suspend */
 #define	V_XSLEEP	0x0004	/* vn_start_write: just return after sleep */
+
+#define	VR_START_WRITE	0x0001	/* vfs_write_resume: start write atomically */
+#define	VR_NO_SUSPCLR	0x0002	/* vfs_write_resume: do not clear suspension */
 
 #define	VREF(vp)	vref(vp)
 
@@ -601,6 +606,8 @@ void	cvtstat(struct stat *st, struct ostat *ost);
 void	cvtnstat(struct stat *sb, struct nstat *nsb);
 int	getnewvnode(const char *tag, struct mount *mp, struct vop_vector *vops,
 	    struct vnode **vpp);
+void	getnewvnode_reserve(u_int count);
+void	getnewvnode_drop_reserve(void);
 int	insmntque1(struct vnode *vp, struct mount *mp,
 	    void (*dtr)(struct vnode *, void *), void *dtr_arg);
 int	insmntque(struct vnode *vp, struct mount *mp);
@@ -682,10 +689,24 @@ int	vn_extattr_rm(struct vnode *vp, int ioflg, int attrnamespace,
 int	vn_vget_ino(struct vnode *vp, ino_t ino, int lkflags,
 	    struct vnode **rvp);
 
+int	vn_io_fault_uiomove(char *data, int xfersize, struct uio *uio);
+int	vn_io_fault_pgmove(vm_page_t ma[], vm_offset_t offset, int xfersize,
+	    struct uio *uio);
+
+#define	vn_rangelock_unlock(vp, cookie)					\
+	rangelock_unlock(&(vp)->v_rl, (cookie), VI_MTX(vp))
+#define	vn_rangelock_unlock_range(vp, cookie, start, end)		\
+	rangelock_unlock_range(&(vp)->v_rl, (cookie), (start), (end), 	\
+	    VI_MTX(vp))
+#define	vn_rangelock_rlock(vp, start, end)				\
+	rangelock_rlock(&(vp)->v_rl, (start), (end), VI_MTX(vp))
+#define	vn_rangelock_wlock(vp, start, end)				\
+	rangelock_wlock(&(vp)->v_rl, (start), (end), VI_MTX(vp))
 
 int	vfs_cache_lookup(struct vop_lookup_args *ap);
 void	vfs_timestamp(struct timespec *);
 void	vfs_write_resume(struct mount *mp);
+void	vfs_write_resume_flags(struct mount *mp, int flags);
 int	vfs_write_suspend(struct mount *mp);
 int	vop_stdbmap(struct vop_bmap_args *);
 int	vop_stdfsync(struct vop_fsync_args *);
@@ -791,6 +812,7 @@ extern struct vop_vector default_vnodeops;
 typedef int vfs_hash_cmp_t(struct vnode *vp, void *arg);
 
 int vfs_hash_get(const struct mount *mp, u_int hash, int flags, struct thread *td, struct vnode **vpp, vfs_hash_cmp_t *fn, void *arg);
+u_int vfs_hash_index(struct vnode *vp);
 int vfs_hash_insert(struct vnode *vp, u_int hash, int flags, struct thread *td, struct vnode **vpp, vfs_hash_cmp_t *fn, void *arg);
 void vfs_hash_rehash(struct vnode *vp, u_int hash);
 void vfs_hash_remove(struct vnode *vp);

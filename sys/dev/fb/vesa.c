@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/fb/vesa.c 249282 2013-04-08 20:43:53Z jkim $");
 
 #include "opt_vga.h"
 #include "opt_vesa.h"
@@ -89,6 +89,7 @@ static u_char *vesa_palette;
 static uint32_t vesa_palette_offs;
 
 static void *vesa_vmem_buf;
+static size_t vesa_vmem_max;
 
 static void *vesa_bios;
 static uint32_t vesa_bios_offs;
@@ -98,7 +99,7 @@ static size_t vesa_bios_size;
 /* VESA video adapter */
 static video_adapter_t *vesa_adp;
 
-SYSCTL_NODE(_debug, OID_AUTO, vesa, CTLFLAG_RD, NULL, "VESA debugging");
+static SYSCTL_NODE(_debug, OID_AUTO, vesa, CTLFLAG_RD, NULL, "VESA debugging");
 static int vesa_shadow_rom;
 TUNABLE_INT("debug.vesa.shadow_rom", &vesa_shadow_rom);
 SYSCTL_INT(_debug_vesa, OID_AUTO, shadow_rom, CTLFLAG_RDTUN, &vesa_shadow_rom,
@@ -927,6 +928,8 @@ vesa_bios_init(void)
 #endif
 			continue;
 		}
+		if (bsize > vesa_vmem_max)
+			vesa_vmem_max = bsize;
 
 		/* expand the array if necessary */
 		if (modes >= vesa_vmode_max) {
@@ -1297,8 +1300,7 @@ vesa_set_mode(video_adapter_t *adp, int mode)
 			}
 			int10_set_mode(adp->va_initial_bios_mode);
 			if (adp->va_info.vi_flags & V_INFO_LINEAR)
-				pmap_unmapdev(adp->va_buffer,
-				    vesa_adp_info->v_memsize * 64 * 1024);
+				pmap_unmapdev(adp->va_buffer, vesa_vmem_max);
 			/* 
 			 * Once (*prevvidsw->get_info)() succeeded, 
 			 * (*prevvidsw->set_mode)() below won't fail...
@@ -1336,8 +1338,7 @@ vesa_set_mode(video_adapter_t *adp, int mode)
 		adp->va_flags |= V_ADP_DAC8;
 
 	if (adp->va_info.vi_flags & V_INFO_LINEAR)
-		pmap_unmapdev(adp->va_buffer,
-		    vesa_adp_info->v_memsize * 64 * 1024);
+		pmap_unmapdev(adp->va_buffer, vesa_vmem_max);
 
 #if VESA_DEBUG > 0
 	printf("VESA: mode set!\n");
@@ -1372,7 +1373,7 @@ vesa_set_mode(video_adapter_t *adp, int mode)
 #endif
 		vesa_adp->va_buffer =
 		    (vm_offset_t)pmap_mapdev_attr(info.vi_buffer,
-		    vesa_adp_info->v_memsize * 64 * 1024, PAT_WRITE_COMBINING);
+		    vesa_vmem_max, PAT_WRITE_COMBINING);
 		vesa_adp->va_window = vesa_adp->va_buffer;
 		vesa_adp->va_window_size = info.vi_buffer_size / info.vi_planes;
 		vesa_adp->va_window_gran = info.vi_buffer_size / info.vi_planes;

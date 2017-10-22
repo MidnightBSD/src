@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cam/cam_ccb.h 249152 2013-04-05 11:41:56Z mav $
  */
 
 #ifndef _CAM_CAM_CCB_H
@@ -755,6 +755,7 @@ struct ccb_relsim {
  * Definitions for the asynchronous callback CCB fields.
  */
 typedef enum {
+	AC_UNIT_ATTENTION	= 0x4000,/* Device reported UNIT ATTENTION */
 	AC_ADVINFO_CHANGED	= 0x2000,/* Advance info might have changes */
 	AC_CONTRACT		= 0x1000,/* A contractual callback */
 	AC_GETDEV_CHANGED	= 0x800,/* Getdev info might have changed */
@@ -1128,6 +1129,7 @@ struct ccb_dev_advinfo {
 #define	CDAI_TYPE_SCSI_DEVID	1
 #define	CDAI_TYPE_SERIAL_NUM	2
 #define	CDAI_TYPE_PHYS_PATH	3
+#define	CDAI_TYPE_RCAPLONG	4
 	off_t bufsiz;			/* IN: Size of external buffer */
 #define	CAM_SCSI_DEVID_MAXLEN	65536	/* length in buffer is an uint16_t */
 	off_t provsiz;			/* OUT: Size required/used */

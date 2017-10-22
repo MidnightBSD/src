@@ -34,7 +34,7 @@
  *
  *	@(#)defs.h	8.1 (Berkeley) 6/5/93
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/IPXrouted/defs.h 90868 2002-02-18 20:35:27Z mike $
  */
 
 #include <sys/types.h>

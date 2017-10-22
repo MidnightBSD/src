@@ -7,7 +7,7 @@
  * See the LICENSE file for redistribution information.
  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/contrib/nvi/ex/ex.c 51277 1999-09-14 14:34:58Z ru $ */
 
 #include "config.h"
 

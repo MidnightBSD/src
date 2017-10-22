@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/usr.sbin/getpmac/getpmac.c 195971 2009-07-30 09:51:04Z rwatson $
  */
 #include <sys/types.h>
 #include <sys/mac.h>

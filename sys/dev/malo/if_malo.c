@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __FreeBSD__
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/malo/if_malo.c 249132 2013-04-05 08:22:11Z mav $");
 #endif
 
 #include "opt_malo.h"
@@ -123,7 +123,7 @@ enum {
 } while (0)
 #endif
 
-MALLOC_DEFINE(M_MALODEV, "malodev", "malo driver dma buffers");
+static MALLOC_DEFINE(M_MALODEV, "malodev", "malo driver dma buffers");
 
 static struct ieee80211vap *malo_vap_create(struct ieee80211com *,
 		    const char [IFNAMSIZ], int, enum ieee80211_opmode, int,
@@ -854,7 +854,7 @@ malo_tx_dmasetup(struct malo_softc *sc, struct malo_txbuf *bf, struct mbuf *m0)
 	 */
 	if (error == EFBIG) {		/* too many desc's, linearize */
 		sc->malo_stats.mst_tx_linear++;
-		m = m_defrag(m0, M_DONTWAIT);
+		m = m_defrag(m0, M_NOWAIT);
 		if (m == NULL) {
 			m_freem(m0);
 			sc->malo_stats.mst_tx_nombuf++;
@@ -1396,7 +1396,7 @@ malo_getrxmbuf(struct malo_softc *sc, struct malo_rxbuf *bf)
 	int error;
 
 	/* XXX don't need mbuf, just dma buffer */
-	m = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR, MJUMPAGESIZE);
+	m = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, MJUMPAGESIZE);
 	if (m == NULL) {
 		sc->malo_stats.mst_rx_nombuf++;	/* XXX */
 		return NULL;

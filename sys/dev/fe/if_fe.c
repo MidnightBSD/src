@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/fe/if_fe.c 248078 2013-03-09 00:39:54Z marius $");
 
 /*
  *
@@ -1870,13 +1870,13 @@ fe_get_packet (struct fe_softc * sc, u_short len)
 	 */
 
 	/* Allocate an mbuf with packet header info.  */
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	MGETHDR(m, M_NOWAIT, MT_DATA);
 	if (m == NULL)
 		return -1;
 
 	/* Attach a cluster if this packet doesn't fit in a normal mbuf.  */
 	if (len > MHLEN - NFS_MAGIC_OFFSET) {
-		MCLGET(m, M_DONTWAIT);
+		MCLGET(m, M_NOWAIT);
 		if (!(m->m_flags & M_EXT)) {
 			m_freem(m);
 			return -1;

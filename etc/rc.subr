@@ -1,5 +1,5 @@
 # $NetBSD: rc.subr,v 1.67 2006/10/07 11:25:15 elad Exp $
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/rc.subr 243754 2012-12-01 15:46:27Z crees $
 #
 # Copyright (c) 1997-2004 The NetBSD Foundation, Inc.
 # All rights reserved.
@@ -32,7 +32,6 @@
 #	functions used by various rc scripts
 #
 
-: ${rcvar_manpage:='rc.conf(5)'}
 : ${RC_PID:=$$}; export RC_PID
 
 #
@@ -159,7 +158,7 @@ checkyesno()
 		return 1
 		;;
 	*)
-		warn "\$${1} is not set properly - see ${rcvar_manpage}."
+		warn "\$${1} is not set properly - see rc.conf(5)."
 		return 1
 		;;
 	esac
@@ -303,8 +302,8 @@ _find_processes()
 
 	_pref=
 	if [ $_interpreter != "." ]; then	# an interpreted script
-		_script=${_chroot}${_chroot:+"/"}$_procname
-		if [ -r $_script ]; then
+		_script="${_chroot}${_chroot:+/}$_procname"
+		if [ -r "$_script" ]; then
 			read _interp < $_script	# read interpreter name
 			case "$_interp" in
 			\#!*)
@@ -747,7 +746,7 @@ run_rc_command()
 				return 1
 			fi
 
-			if [ ! -x ${_chroot}${_chroot:+"/"}${command} ]; then
+			if [ ! -x "${_chroot}${_chroot:+/}${command}" ]; then
 				warn "run_rc_command: cannot run $command"
 				return 1
 			fi

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/rmi/iodi.c 223562 2011-06-26 10:07:48Z kevlo $");
 
 #define __RMAN_RESOURCE_VISIBLE
 #include <sys/param.h>

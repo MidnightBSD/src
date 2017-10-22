@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/contrib/rdma/krping/krping.h 178784 2008-05-05 18:35:55Z kmacy $
  */
 #include <contrib/rdma/ib_verbs.h>
 #include <netinet/in.h>

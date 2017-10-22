@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)getproto.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/net/getproto.c 213453 2010-10-05 15:40:59Z ume $");
 
 #include <errno.h>
 #include <netdb.h>

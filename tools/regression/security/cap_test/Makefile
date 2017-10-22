@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/security/cap_test/Makefile 224989 2011-08-18 23:15:04Z jonathan $
 
 PROG=	cap_test
 SRCS=	cap_test.c \

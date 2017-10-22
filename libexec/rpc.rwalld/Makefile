@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/libexec/rpc.rwalld/Makefile 201380 2010-01-02 09:50:19Z ed $
 
 PROG =	rpc.rwalld
 SRCS =	rwalld.c

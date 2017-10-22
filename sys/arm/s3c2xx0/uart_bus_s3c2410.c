@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/s3c2xx0/uart_bus_s3c2410.c 205354 2010-03-20 03:39:35Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

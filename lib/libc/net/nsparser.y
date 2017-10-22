@@ -38,12 +38,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/net/nsparser.y 244107 2012-12-11 01:49:57Z kevlo $");
 
 #include "namespace.h"
 #define _NS_PRIVATE
 #include <nsswitch.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 #include "un-namespace.h"

@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/cam/scsi/scsi_message.h 139743 2005-01-05 22:34:37Z imp $
  */
 
 /* Messages (1 byte) */		     /* I/T (M)andatory or (O)ptional */

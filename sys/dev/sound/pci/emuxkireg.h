@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/sound/pci/emuxkireg.h 230964 2012-02-03 22:39:04Z pfg $ */
 /*	$NetBSD: emuxkireg.h,v 1.8 2008/04/28 20:23:54 martin Exp $	*/
 
 /*-

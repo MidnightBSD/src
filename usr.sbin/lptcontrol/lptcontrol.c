@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/lptcontrol/lptcontrol.c 140814 2005-01-25 14:25:18Z ssouhlal $");
 
 #include <dev/ppbus/lptio.h>
 

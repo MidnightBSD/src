@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/conf/kern.mk 245431 2013-01-14 19:51:26Z dim $
 
 #
 # Warning flags for compiling the kernel and components of the kernel:
@@ -15,7 +15,7 @@ CWARNFLAGS?=	-Wall -Wredundant-decls -Wnested-externs -Wstrict-prototypes \
 # Disable a few warnings for clang, since there are several places in the
 # kernel where fixing them is more trouble than it is worth, or where there is
 # a false positive.
-.if ${MK_CLANG_IS_CC} != "no" || ${CC:T:Mclang} == "clang"
+.if ${COMPILER_TYPE} == "clang"
 NO_WCONSTANT_CONVERSION=	-Wno-constant-conversion
 NO_WARRAY_BOUNDS=		-Wno-array-bounds
 NO_WSHIFT_COUNT_NEGATIVE=	-Wno-shift-count-negative
@@ -24,6 +24,7 @@ NO_WUNUSED_VALUE=		-Wno-unused-value
 NO_WSELF_ASSIGN=		-Wno-self-assign
 NO_WFORMAT_SECURITY=		-Wno-format-security
 NO_WUNNEEDED_INTERNAL_DECL=	-Wno-unneeded-internal-declaration
+NO_WSOMETIMES_UNINITIALIZED=	-Wno-error-sometimes-uninitialized
 # Several other warnings which might be useful in some cases, but not severe
 # enough to error out the whole kernel build.  Display them anyway, so there is
 # some incentive to fix them eventually.
@@ -51,7 +52,7 @@ CWARNEXTRA?=	-Wno-error-tautological-compare -Wno-error-empty-body \
 # Setting -mno-sse implies -mno-sse2, -mno-sse3, -mno-ssse3, -mno-sse41 and -mno-sse42
 #
 .if ${MACHINE_CPUARCH} == "i386"
-.if ${MK_CLANG_IS_CC} == "no" && ${CC:T:Mclang} != "clang"
+.if ${COMPILER_TYPE} != "clang"
 CFLAGS+=	-mno-align-long-strings -mpreferred-stack-boundary=2
 .else
 CFLAGS+=	-mno-aes -mno-avx
@@ -99,7 +100,7 @@ INLINE_LIMIT?=	15000
 # (-mfpmath= is not supported)
 #
 .if ${MACHINE_CPUARCH} == "amd64"
-.if ${MK_CLANG_IS_CC} != "no" || ${CC:T:Mclang} == "clang"
+.if ${COMPILER_TYPE} == "clang"
 CFLAGS+=	-mno-aes -mno-avx
 .endif
 CFLAGS+=	-mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -msoft-float \
@@ -144,11 +145,4 @@ CFLAGS+=	-ffreestanding
 .if ${MK_SSP} != "no" && ${MACHINE_CPUARCH} != "ia64" && \
     ${MACHINE_CPUARCH} != "arm" && ${MACHINE_CPUARCH} != "mips"
 CFLAGS+=	-fstack-protector
-.endif
-
-#
-# Enable CTF conversation on request
-#
-.if defined(WITH_CTF)
-.undef NO_CTF
 .endif

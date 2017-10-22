@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)gethostid.c	8.1 (Berkeley) 6/2/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libc/gen/getosreldate.c 211416 2010-08-17 09:13:26Z kib $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>

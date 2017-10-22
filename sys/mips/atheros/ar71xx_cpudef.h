@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/mips/atheros/ar71xx_cpudef.h 221198 2011-04-29 06:25:11Z adrian $ */
 
 #ifndef	__AR71XX_CPUDEF_H__
 #define	__AR71XX_CPUDEF_H__

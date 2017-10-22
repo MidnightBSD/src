@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/ahci/Makefile 195534 2009-07-10 08:18:08Z scottl $
 
 .PATH: ${.CURDIR}/../../dev/ahci
 

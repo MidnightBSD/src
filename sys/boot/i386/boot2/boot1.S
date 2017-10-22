@@ -12,7 +12,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/boot/i386/boot2/boot1.S 215285 2010-11-14 08:31:02Z brucec $
  */
 
 /* Memory Locations */

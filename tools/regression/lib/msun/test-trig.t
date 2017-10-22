@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/lib/msun/test-trig.t 176379 2008-02-18 02:00:16Z das $
 
 cd `dirname $0`
 

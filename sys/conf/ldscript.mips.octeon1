@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/conf/ldscript.mips.octeon1 217656 2011-01-20 19:24:50Z imp $ */
 
 ENTRY(_start)
 

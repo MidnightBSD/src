@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/usb_bus.h 247090 2013-02-21 07:48:07Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -103,16 +103,6 @@ struct usb_bus {
 	uint8_t	devices_max;		/* maximum number of USB devices */
 	uint8_t	do_probe;		/* set if USB should be re-probed */
 	uint8_t no_explore;		/* don't explore USB ports */
-
-	/* 
-	 * The scratch area can only be used inside the explore thread
-	 * belonging to the give serial bus.
-	 */
-	union {
-		struct usb_hw_ep_scratch hw_ep_scratch[1];
-		struct usb_temp_setup temp_setup[1];
-		uint8_t	data[255];
-	}	scratch[1];
 };
 
 #endif					/* _USB_BUS_H_ */

@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/bsdinstall/scripts/config 223980 2011-07-13 13:25:12Z nwhitehorn $
 
 cat $BSDINSTALL_TMPETC/rc.conf.* >> $BSDINSTALL_TMPETC/rc.conf
 rm $BSDINSTALL_TMPETC/rc.conf.*

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/cxgb/Makefile 237920 2012-07-01 12:00:36Z np $
 SUBDIR= cxgb
 SUBDIR+= cxgb_t3fw
 #SUBDIR+= ${_tom}

@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/dev/mii/xmphyreg.h 220938 2011-04-22 09:22:27Z marius $
  */
 
 #ifndef _DEV_MII_XMPHYREG_H_

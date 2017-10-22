@@ -40,7 +40,7 @@
 #include "opt_pf.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/contrib/pf/net/if_pflog.c 226801 2011-10-26 17:09:09Z glebius $");
 
 #ifdef DEV_BPF
 #define	NBPFILTER	DEV_BPF

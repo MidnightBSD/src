@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/monetdef/Makefile 196812 2009-09-04 05:54:45Z ache $
 
 LOCALES=	af_ZA.ISO8859-1 \
 		am_ET.UTF-8 \

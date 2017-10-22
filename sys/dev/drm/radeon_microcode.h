@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm/radeon_microcode.h 182080 2008-08-23 20:59:12Z rnoland $");
 
 #ifndef RADEON_MICROCODE_H
 #define RADEON_MICROCODE_H

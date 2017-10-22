@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/i386/i386/longrun.c 214346 2010-10-25 15:28:03Z jhb $");
 
 #include "opt_cpu.h"
 

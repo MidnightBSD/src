@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/lib/libc/powerpc64/gen/Makefile.inc 231981 2012-02-21 21:18:59Z kib $
 
 SRCS += _ctx_start.S fabs.S flt_rounds.c fpgetmask.c fpgetround.c \
 	fpgetsticky.c fpsetmask.c fpsetround.c getcontextx.c \

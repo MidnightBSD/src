@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libedit/edit/readline/readline.h 220624 2011-04-14 15:42:15Z obrien $
  */
 #ifndef _READLINE_H_
 #define _READLINE_H_

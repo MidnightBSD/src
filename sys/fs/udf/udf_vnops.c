@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sys/fs/udf/udf_vnops.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 /* udf_vnops.c */
@@ -107,8 +107,8 @@ struct vop_vector udf_fifoops = {
 	.vop_vptofh =		udf_vptofh,
 };
 
-MALLOC_DEFINE(M_UDFFID, "udf_fid", "UDF FileId structure");
-MALLOC_DEFINE(M_UDFDS, "udf_ds", "UDF Dirstream structure");
+static MALLOC_DEFINE(M_UDFFID, "udf_fid", "UDF FileId structure");
+static MALLOC_DEFINE(M_UDFDS, "udf_ds", "UDF Dirstream structure");
 
 #define UDF_INVALID_BMAP	-1
 

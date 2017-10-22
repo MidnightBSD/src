@@ -32,7 +32,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/bin/getfacl/getfacl.c 196827 2009-09-04 10:22:29Z trasz $");
 
 #include <sys/types.h>
 #include <sys/param.h>

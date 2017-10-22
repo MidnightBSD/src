@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/fdt/fdt_powerpc.c 209906 2010-07-11 20:49:36Z raj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

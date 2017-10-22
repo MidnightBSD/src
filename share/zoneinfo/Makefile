@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/share/zoneinfo/Makefile 248336 2013-03-15 19:16:35Z brooks $
 
 #
 # HOW TO UPDATE THE ZONEINFO DATA
@@ -29,6 +29,7 @@
 #
 
 CLEANFILES+=	yearistype
+CLEANDIRS+=	builddir
 CONTRIBDIR=	${.CURDIR}/../../contrib/tzdata/
 .PATH:		${CONTRIBDIR}
 
@@ -48,13 +49,39 @@ TZFILES+=	backward systemv
 
 TZFILES:=	${TZFILES:S/^/${CONTRIBDIR}/}
 
-all: yearistype
+TZBUILDDIR=	${.OBJDIR}/builddir
+TZBUILDSUBDIRS=	\
+		Africa \
+		America/Argentina \
+		America/Indiana \
+		America/Kentucky \
+		America/North_Dakota \
+		Antarctica \
+		Arctic \
+		Asia \
+		Atlantic \
+		Australia \
+		Etc \
+		Europe \
+		Indian \
+		Pacific \
+		SystemV
+
+all: zoneinfo
+
+.PHONY: zoneinfo
+zoneinfo: yearistype ${TDATA}
+	mkdir -p ${TZBUILDDIR}
+	cd ${TZBUILDDIR}; mkdir -p ${TZBUILDSUBDIRS}
+	umask 022; cd ${.CURDIR}; \
+	zic -D -d ${TZBUILDDIR} -p ${POSIXRULES} -m ${NOBINMODE} \
+	    ${LEAPFILE} -y ${.OBJDIR}/yearistype ${TZFILES}
 
 beforeinstall:
-	umask 022; cd ${.CURDIR}; \
-	zic -D -d ${DESTDIR}/usr/share/zoneinfo -p ${POSIXRULES} \
-	    -u ${BINOWN} -g ${BINGRP} -m ${NOBINMODE} \
-	    ${LEAPFILE} -y ${.OBJDIR}/yearistype ${TZFILES}
+	cd ${TZBUILDDIR} && \
+	    find . -type f -print -exec ${INSTALL} \
+	    -o ${BINOWN} -g ${BINGRP} -m ${NOBINMODE} \
+	    \{} ${DESTDIR}/usr/share/zoneinfo/\{} \;
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m ${NOBINMODE} \
 	    ${CONTRIBDIR}/zone.tab ${DESTDIR}/usr/share/zoneinfo/
 

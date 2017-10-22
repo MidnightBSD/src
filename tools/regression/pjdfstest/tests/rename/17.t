@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD$
+# $FreeBSD: stable/9/tools/regression/pjdfstest/tests/rename/17.t 166065 2007-01-17 01:42:12Z pjd $
 
 desc="rename returns EFAULT if one of the pathnames specified is outside the process's allocated address space"
 

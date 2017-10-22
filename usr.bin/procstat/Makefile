@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.bin/procstat/Makefile 230918 2012-02-02 18:22:25Z trociny $
 
 PROG=	procstat
 MAN=	procstat.1

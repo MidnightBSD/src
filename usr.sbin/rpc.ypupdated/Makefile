@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/usr.sbin/rpc.ypupdated/Makefile 231702 2012-02-14 19:36:35Z dim $
 
 .PATH: ${.CURDIR}/../ypserv ${.CURDIR}/../../libexec/ypxfr
 

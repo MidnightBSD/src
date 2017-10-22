@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/iscontrol/login.c 211095 2010-08-09 12:36:36Z des $");
 
 #include <sys/param.h>
 #include <sys/types.h>

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/arm/at91/board_bwct.c 185539 2008-12-02 02:26:15Z peter $");
 #include <sys/param.h>
 #include <sys/systm.h>
 

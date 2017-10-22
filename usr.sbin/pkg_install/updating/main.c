@@ -8,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/pkg_install/updating/main.c 229234 2012-01-01 23:18:34Z dim $");
 
 
 #include <sys/param.h>

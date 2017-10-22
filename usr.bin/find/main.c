@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)main.c	8.4 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.bin/find/main.c 241227 2012-10-05 15:36:30Z jilles $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -150,7 +150,7 @@ main(int argc, char *argv[])
 		usage();
 	*p = NULL;
 
-	if ((dotfd = open(".", O_RDONLY, 0)) < 0)
+	if ((dotfd = open(".", O_RDONLY | O_CLOEXEC, 0)) < 0)
 		err(1, ".");
 
 	exit(find_execute(find_formplan(argv), start));

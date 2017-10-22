@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/libkern/index.c 168604 2007-04-10 21:42:12Z wkoszek $");
 
 #include <sys/param.h>
 #include <sys/libkern.h>

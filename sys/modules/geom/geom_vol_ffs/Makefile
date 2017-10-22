@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/geom/geom_vol_ffs/Makefile 115783 2003-06-03 20:32:13Z gordon $
 
 .PATH: ${.CURDIR}/../../../geom
 

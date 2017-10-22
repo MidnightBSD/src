@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/usr.sbin/procctl/procctl.c 114601 2003-05-03 21:06:42Z obrien $");
 
 /*
  * procctl -- clear the event mask, and continue, any specified processes.

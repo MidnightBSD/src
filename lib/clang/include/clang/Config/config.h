@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/clang/include/clang/Config/config.h 235633 2012-05-18 21:49:11Z dim $ */
 /* tools/clang/include/clang/Config/config.h.  Generated from config.h.in by configure.  */
 /* include/clang/Config/config.h.in. */
 

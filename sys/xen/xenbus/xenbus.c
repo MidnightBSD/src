@@ -40,7 +40,7 @@
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/xen/xenbus/xenbus.c 222975 2011-06-11 04:59:01Z gibbs $");
 
 #include <sys/cdefs.h>
 #include <sys/param.h>

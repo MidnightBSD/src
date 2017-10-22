@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/sbin/ddb/ddb.h 178515 2008-04-25 17:34:09Z rwatson $
  */
 
 #ifndef DDB_H

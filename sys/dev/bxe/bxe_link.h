@@ -30,7 +30,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- /*$FreeBSD$*/
+ /*$FreeBSD: stable/9/sys/dev/bxe/bxe_link.h 219656 2011-03-15 01:06:27Z davidch $*/
 
 #ifndef BXE_LINK_H
 #define	BXE_LINK_H

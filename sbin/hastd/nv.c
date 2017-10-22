@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sbin/hastd/nv.c 234294 2012-04-14 17:33:47Z trociny $");
 
 #include <sys/param.h>
 #include <sys/endian.h>

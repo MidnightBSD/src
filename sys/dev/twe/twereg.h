@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *      $FreeBSD$
+ *      $FreeBSD: stable/9/sys/dev/twe/twereg.h 129144 2004-05-12 04:10:37Z vkashyap $
  */
 
 /* 

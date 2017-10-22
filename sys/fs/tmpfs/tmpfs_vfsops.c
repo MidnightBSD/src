@@ -41,7 +41,7 @@
  * allocate and release resources.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/fs/tmpfs/tmpfs_vfsops.c 242368 2012-10-30 17:24:26Z alfred $");
 
 #include <sys/param.h>
 #include <sys/limits.h>
@@ -80,6 +80,10 @@ static int	tmpfs_statfs(struct mount *, struct statfs *);
 static const char *tmpfs_opts[] = {
 	"from", "size", "maxfilesize", "inodes", "uid", "gid", "mode", "export",
 	NULL
+};
+
+static const char *tmpfs_updateopts[] = {
+	"from", "export", NULL
 };
 
 /* --------------------------------------------------------------------- */
@@ -193,10 +197,13 @@ tmpfs_mount(struct mount *mp)
 		return (EINVAL);
 
 	if (mp->mnt_flag & MNT_UPDATE) {
-		/* XXX: There is no support yet to update file system
-		 * settings.  Should be added. */
-
-		return EOPNOTSUPP;
+		/* Only support update mounts for certain options. */
+		if (vfs_filteropt(mp->mnt_optnew, tmpfs_updateopts) != 0)
+			return (EOPNOTSUPP);
+		if (vfs_flagopt(mp->mnt_optnew, "ro", NULL, 0) !=
+		    ((struct tmpfs_mount *)mp->mnt_data)->tm_ronly)
+			return (EOPNOTSUPP);
+		return (0);
 	}
 
 	vn_lock(mp->mnt_vnodecovered, LK_SHARED | LK_RETRY);
@@ -269,6 +276,7 @@ tmpfs_mount(struct mount *mp)
 	    tmpfs_node_ctor, tmpfs_node_dtor,
 	    tmpfs_node_init, tmpfs_node_fini,
 	    UMA_ALIGN_PTR, 0);
+	tmp->tm_ronly = (mp->mnt_flag & MNT_RDONLY) != 0;
 
 	/* Allocate the root node. */
 	error = tmpfs_alloc_node(tmp, VDIR, root_uid,

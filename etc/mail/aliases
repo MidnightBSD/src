@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/9/etc/mail/aliases 243947 2012-12-06 11:52:31Z rwatson $
 #	@(#)aliases	5.3 (Berkeley) 5/24/90
 #
 #  Aliases in this file will NOT be expanded in the header from
@@ -26,6 +26,7 @@ postmaster: root
 # General redirections for pseudo accounts
 _dhcp:	root
 _pflogd: root
+auditdistd:	root
 bin:	root
 bind:	root
 daemon:	root

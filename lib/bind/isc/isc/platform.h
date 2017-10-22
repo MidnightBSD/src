@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/9/lib/bind/isc/isc/platform.h 245163 2013-01-08 09:05:09Z erwin $ */
 
 /*
  * Copyright (C) 2004-2010  Internet Systems Consortium, Inc. ("ISC")
@@ -17,7 +17,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: platform.h.in,v 1.56 2010-12-18 01:56:23 each Exp $ */
+/* $Id: platform.h.in,v 1.56 2010/12/18 01:56:23 each Exp $ */
 
 #ifndef ISC_PLATFORM_H
 #define ISC_PLATFORM_H 1
@@ -219,19 +219,19 @@
  * Defined to <gssapi.h> or <gssapi/gssapi.h> for how to include
  * the GSSAPI header.
  */
-
+#define ISC_PLATFORM_GSSAPIHEADER <gssapi/gssapi.h>
 
 /*
  * Defined to <gssapi_krb5.h> or <gssapi/gssapi_krb5.h> for how to
  * include the GSSAPI KRB5 header.
  */
-
+#define ISC_PLATFORM_GSSAPI_KRB5_HEADER <gssapi/gssapi_krb5.h>
 
 /*
  * Defined to <krb5.h> or <krb5/krb5.h> for how to include
  * the KRB5 header.
  */
-
+#define ISC_PLATFORM_KRB5HEADER <krb5.h>
 
 /*
  * Type used for resource limits.

@@ -6,7 +6,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/mips/mips/db_trace.c 210096 2010-07-15 01:47:47Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

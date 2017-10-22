@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/common/panic.c 162815 2006-09-29 20:57:38Z ru $");
 
 #include <stand.h>
 #include <machine/stdarg.h>
