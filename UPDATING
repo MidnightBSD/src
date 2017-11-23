@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20121123:
+	mport now supports installing multiple packages with one command.
+
+	binutils updated/synced with FreeBSD 11-stable (today)
+
 20171022:
 	wpa_supplicant & hostapd 2.0. This also includes patches for the 
 	recent KRACK vulnerability.
