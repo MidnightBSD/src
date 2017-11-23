@@ -91,7 +91,7 @@ main(int argc, char *argv[]) {
 			usage();
 		}
 		loadIndex(mport);
-		for (int i = 2; i < argc; i++) {
+		for (i = 2; i < argc; i++) {
 			tempResultCode = install(mport, argv[i]);
 			if (tempResultCode != 0)
                                 resultCode = tempResultCode;
