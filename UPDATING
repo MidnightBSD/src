@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20171123:
+	mport now supports installing more than one package at a time on the command line.
+
 20170819:
 	Introduce a partial fix for AMD Ryzen issues. On Ryzen, move
 	the lower shared page by one. 
