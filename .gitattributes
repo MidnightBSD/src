@@ -8436,6 +8436,7 @@ contrib/binutils/bfd/doc/Makefile.in -text
 contrib/binutils/bfd/doc/bfd.texinfo -text
 contrib/binutils/bfd/doc/bfdint.texi -text
 contrib/binutils/bfd/doc/bfdsumm.texi -text
+contrib/binutils/bfd/doc/bfdver.texi -text
 contrib/binutils/bfd/doc/chew.c -text
 contrib/binutils/bfd/doc/doc.str -text
 contrib/binutils/bfd/doc/elfcode.texi -text
@@ -8616,6 +8617,7 @@ contrib/binutils/binutils/dlltool.h -text
 contrib/binutils/binutils/dllwrap.c -text
 contrib/binutils/binutils/doc/Makefile.am -text
 contrib/binutils/binutils/doc/Makefile.in -text
+contrib/binutils/binutils/doc/binutils.7 svneol=native#text/plain
 contrib/binutils/binutils/doc/binutils.texi -text
 contrib/binutils/binutils/doc/fdl.texi -text
 contrib/binutils/binutils/dwarf.c -text
@@ -8793,7 +8795,9 @@ contrib/binutils/gas/depend.c -text
 contrib/binutils/gas/doc/Makefile.am -text
 contrib/binutils/gas/doc/Makefile.in -text
 contrib/binutils/gas/doc/all.texi -text
+contrib/binutils/gas/doc/as.7 svneol=native#text/plain
 contrib/binutils/gas/doc/as.texinfo -text
+contrib/binutils/gas/doc/asconfig.texi -text
 contrib/binutils/gas/doc/c-alpha.texi -text
 contrib/binutils/gas/doc/c-arc.texi -text
 contrib/binutils/gas/doc/c-arm.texi -text
@@ -9021,6 +9025,7 @@ contrib/binutils/ld/README -text
 contrib/binutils/ld/TODO -text
 contrib/binutils/ld/aclocal.m4 -text
 contrib/binutils/ld/config.in -text
+contrib/binutils/ld/configdoc.texi -text
 contrib/binutils/ld/configure -text
 contrib/binutils/ld/configure.host -text
 contrib/binutils/ld/configure.in -text
@@ -9085,6 +9090,7 @@ contrib/binutils/ld/emulparams/elf64btsmip.sh -text
 contrib/binutils/ld/emulparams/elf64lppc.sh -text
 contrib/binutils/ld/emulparams/elf64ltsmip.sh -text
 contrib/binutils/ld/emulparams/elf64ppc.sh -text
+contrib/binutils/ld/emulparams/elf64ppc_fbsd.sh svneol=native#text/plain
 contrib/binutils/ld/emulparams/elf_fbsd.sh -text
 contrib/binutils/ld/emulparams/elf_i386.sh -text
 contrib/binutils/ld/emulparams/elf_i386_chaos.sh -text
@@ -9160,6 +9166,7 @@ contrib/binutils/ld/fdl.texi -text
 contrib/binutils/ld/gen-doc.texi -text
 contrib/binutils/ld/genscripts.sh -text
 contrib/binutils/ld/h8-doc.texi -text
+contrib/binutils/ld/ld.7 svneol=native#text/plain
 contrib/binutils/ld/ld.h -text
 contrib/binutils/ld/ld.texinfo -text
 contrib/binutils/ld/ldcref.c -text
@@ -9172,6 +9179,7 @@ contrib/binutils/ld/ldexp.h -text
 contrib/binutils/ld/ldfile.c -text
 contrib/binutils/ld/ldfile.h -text
 contrib/binutils/ld/ldgram.y -text
+contrib/binutils/ld/ldint.7 svneol=native#text/plain
 contrib/binutils/ld/ldint.texinfo -text
 contrib/binutils/ld/ldlang.c -text
 contrib/binutils/ld/ldlang.h -text
