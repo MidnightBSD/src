@@ -91,7 +91,11 @@ main(int argc, char *argv[]) {
 			usage();
 		}
 		loadIndex(mport);
-		resultCode = install(mport, argv[2]);
+		for (int i = 2; i < argc; i++) {
+			tempResultCode = install(mport, argv[i]);
+			if (tempResultCode != 0)
+                                resultCode = tempResultCode;
+		}
 		});
 	} else if (!strcmp(argv[1], "delete")) {
 		dispatch_group_async(grp, q, ^{
