@@ -7,7 +7,7 @@ WARNS?= 	4
 
 NO_MAN=		yes
 
-LDADD= 	-lmport -ldispatch -lBlocksRuntime
-DPADD= 	${LIBMPORT} ${LIBDISPATCH} ${LIBBLOCKSRUNTIME}
+LDADD= 	-lmport -ldispatch -lBlocksRuntime -lsqlite3
+DPADD= 	${LIBMPORT} ${LIBDISPATCH} ${LIBBLOCKSRUNTIME} ${LIBSQLITE3}
 
 .include <bsd.prog.mk>
