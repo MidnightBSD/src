@@ -1,8 +1,8 @@
-# $MidnightBSD: src/gnu/lib/csu/Makefile,v 1.6 2011/10/22 19:02:28 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/gnu/lib/csu/Makefile,v 1.24 2004/09/10 06:48:04 ru Exp $
 
 .include <bsd.own.mk>
-MK_SSP=	no
+MK_SSP=		no
 
 GCCDIR=	${.CURDIR}/../../../contrib/gcc4
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
@@ -13,18 +13,33 @@ CCDIR=	${.CURDIR}/../../usr.bin/cc
 
 SRCS=		crtstuff.c tconfig.h tm.h options.h
 OBJS=		crtbegin.o crtend.o crtbeginT.o
-SOBJS=		crtbegin.So crtend.So
+SOBJS=		crtbeginS.o crtendS.o
 CSTD?=		gnu89
 CFLAGS+=	-DIN_GCC -DHAVE_LD_EH_FRAME_HDR -DDT_CONFIG -D__GLIBC__=3
-CFLAGS+=	-finhibit-size-directive -fno-inline-functions \
-		-fno-exceptions -fno-zero-initialized-in-bss \
-		-fno-zero-initialized-in-bss -fno-toplevel-reorder \
-		-fno-asynchronous-unwind-tables -fno-omit-frame-pointer
+CFLAGS.gcc+=	-finhibit-size-directive -fno-toplevel-reorder
+CFLAGS+=	-fno-inline-functions -fno-exceptions \
+		-fno-zero-initialized-in-bss -fno-asynchronous-unwind-tables \
+		-fno-omit-frame-pointer
 CFLAGS+=	-I${GCCLIB}/include -I${GCCDIR}/config -I${GCCDIR} -I. \
 		-I${CCDIR}/cc_tools
 CRTS_CFLAGS=	-DCRTSTUFFS_O -DSHARED ${PICFLAG}
 MKDEP=		-DCRT_BEGIN
 
+.if ${TARGET_CPUARCH} == "arm" && ${MK_ARM_EABI} != "no"
+CFLAGS+=	-DTARGET_ARM_EABI
+.endif
+
+.if ${MACHINE_CPUARCH} == "ia64"
+BEGINSRC=	crtbegin.asm
+ENDSRC=		crtend.asm
+CFLAGS+=	-x assembler-with-cpp	# Ugly hack
+CFLAGS+=	-include osreldate.h
+.undef SRCS				# hack for 'make depend'
+.endif
+.if ${MACHINE_CPUARCH} == "powerpc"
+TGTOBJS=	crtsavres.o
+SRCS+=		crtsavres.asm
+.endif
 .if ${MACHINE_CPUARCH} == "sparc64"
 TGTOBJS=	crtfastmath.o
 SRCS+=		crtfastmath.c
@@ -45,7 +60,7 @@ crtbeginT.o:	${BEGINSRC}
 	${CC} ${CFLAGS} -g0 -DCRT_BEGIN -DCRTSTUFFT_O \
 		-c -o ${.TARGET} ${.ALLSRC:N*.h}
 
-crtbegin.So:	${BEGINSRC}
+crtbeginS.o:	${BEGINSRC}
 	${CC} ${CFLAGS} -g0 -DCRT_BEGIN ${CRTS_CFLAGS} \
 		-c -o ${.TARGET} ${.ALLSRC:N*.h}
 
@@ -53,7 +68,7 @@ crtend.o:	${ENDSRC}
 	${CC} ${CFLAGS} -g0 -DCRT_END \
 		-c -o ${.TARGET} ${.ALLSRC:N*.h}
 
-crtend.So:	${ENDSRC}
+crtendS.o:	${ENDSRC}
 	${CC} ${CFLAGS} -g0 -DCRT_END ${CRTS_CFLAGS} \
 		-c -o ${.TARGET} ${.ALLSRC:N*.h}
 
@@ -64,7 +79,7 @@ tm.h tconfig.h options.h: ${CCDIR}/cc_tools/Makefile
 realinstall:
 .for file in ${OBJS} ${SOBJS} ${TGTOBJS}
 	${INSTALL} -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
-	    ${file} ${DESTDIR}${LIBDIR}/${file:S/.So$/S.o/}
+	    ${file} ${DESTDIR}${LIBDIR}/${file}
 .endfor
 
 .include <bsd.lib.mk>
