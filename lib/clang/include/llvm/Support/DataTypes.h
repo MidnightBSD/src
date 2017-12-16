@@ -1,4 +1,5 @@
-/* $FreeBSD: release/9.2.0/lib/clang/include/llvm/Support/DataTypes.h 218893 2011-02-20 19:33:47Z dim $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/clang/include/llvm/Support/DataTypes.h 218893 2011-02-20 19:33:47Z dim $ */
 /* include/llvm/Support/DataTypes.h.  Generated from DataTypes.h.in by configure.  */
 /*===-- include/System/DataTypes.h - Define fixed size types -----*- C -*-===*\
 |*                                                                            *|

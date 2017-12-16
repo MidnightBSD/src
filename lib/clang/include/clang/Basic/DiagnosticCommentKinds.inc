@@ -1,2 +1,3 @@
-/* $FreeBSD: release/9.2.0/lib/clang/include/clang/Basic/DiagnosticCommentKinds.inc 245431 2013-01-14 19:51:26Z dim $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/clang/include/clang/Basic/DiagnosticCommentKinds.inc 239462 2012-08-20 18:33:03Z dim $ */
 #include "DiagnosticCommentKinds.inc.h"

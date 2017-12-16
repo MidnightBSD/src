@@ -1,8 +1,10 @@
-/* $FreeBSD: release/9.2.0/lib/clang/include/llvm/Config/AsmPrinters.def 218893 2011-02-20 19:33:47Z dim $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/clang/include/llvm/Config/AsmPrinters.def 263763 2014-03-26 07:31:57Z dim $ */
 
 LLVM_ASM_PRINTER(ARM)
 LLVM_ASM_PRINTER(Mips)
 LLVM_ASM_PRINTER(PowerPC)
+LLVM_ASM_PRINTER(Sparc)
 LLVM_ASM_PRINTER(X86)
 
 #undef LLVM_ASM_PRINTER
