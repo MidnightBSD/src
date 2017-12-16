@@ -1,5 +1,6 @@
 /* $MidnightBSD$ */
-/* $NetBSD: citrus_iconv.c,v 1.7 2008/07/25 14:05:25 christos Exp $ */
+/* $FreeBSD: stable/10/lib/libc/iconv/citrus_iconv.c 267665 2014-06-20 07:32:03Z tijl $ */
+/*	$NetBSD: citrus_iconv.c,v 1.10 2011/11/19 18:34:21 tnozaki Exp $	*/
 
 /*-
  * Copyright (c)2003 Citrus Project,
@@ -68,11 +69,13 @@ static int			 shared_max_reuse, shared_num_unused;
 static _CITRUS_HASH_HEAD(, _citrus_iconv_shared, CI_HASH_SIZE) shared_pool;
 static TAILQ_HEAD(, _citrus_iconv_shared) shared_unused;
 
+static pthread_rwlock_t		 ci_lock = PTHREAD_RWLOCK_INITIALIZER;
+
 static __inline void
 init_cache(void)
 {
 
-	WLOCK;
+	WLOCK(&ci_lock);
 	if (!isinit) {
 		_CITRUS_HASH_INIT(&shared_pool, CI_HASH_SIZE);
 		TAILQ_INIT(&shared_unused);
@@ -83,7 +86,7 @@ init_cache(void)
 			shared_max_reuse = CI_INITIAL_MAX_REUSE;
 		isinit = true;
 	}
-	UNLOCK;
+	UNLOCK(&ci_lock);
 }
 
 static __inline void
@@ -114,10 +117,20 @@ open_shared(struct _citrus_iconv_shared * __restrict * __restrict rci,
 	size_t len_convname;
 	int ret;
 
- 	/* incompatible with GNU iconv due to gettext 0.18.3+
-        module = (strcmp(src, dst) != 0) ? "iconv_std" : "iconv_none";
-	*/
+#ifdef INCOMPATIBLE_WITH_GNU_ICONV
+	/*
+	 * Sadly, the gnu tools expect iconv to actually parse the
+	 * byte stream and don't allow for a pass-through when
+	 * the (src,dest) encodings are the same.
+	 * See gettext-0.18.3+ NEWS:
+	 *   msgfmt now checks PO file headers more strictly with less
+	 *   false-positives.
+	 * NetBSD don't do this either.
+	 */
+	module = (strcmp(src, dst) != 0) ? "iconv_std" : "iconv_none";
+#else
 	module = "iconv_std";
+#endif
 
 	/* initialize iconv handle */
 	len_convname = strlen(convname);
@@ -157,8 +170,10 @@ open_shared(struct _citrus_iconv_shared * __restrict * __restrict rci,
 	    ci->ci_ops->io_uninit_shared == NULL ||
 	    ci->ci_ops->io_init_context == NULL ||
 	    ci->ci_ops->io_uninit_context == NULL ||
-	    ci->ci_ops->io_convert == NULL)
+	    ci->ci_ops->io_convert == NULL) {
+		ret = EINVAL;
 		goto err;
+	}
 
 	/* initialize the converter */
 	ret = (*ci->ci_ops->io_init_shared)(ci, src, dst);
@@ -198,7 +213,7 @@ get_shared(struct _citrus_iconv_shared * __restrict * __restrict rci,
 
 	snprintf(convname, sizeof(convname), "%s/%s", src, dst);
 
-	WLOCK;
+	WLOCK(&ci_lock);
 
 	/* lookup alread existing entry */
 	hashval = hash_func(convname);
@@ -225,7 +240,7 @@ get_shared(struct _citrus_iconv_shared * __restrict * __restrict rci,
 	*rci = ci;
 
 quit:
-	UNLOCK;
+	UNLOCK(&ci_lock);
 
 	return (ret);
 }
@@ -234,7 +249,7 @@ static void
 release_shared(struct _citrus_iconv_shared * __restrict ci)
 {
 
-	WLOCK;
+	WLOCK(&ci_lock);
 	ci->ci_used_count--;
 	if (ci->ci_used_count == 0) {
 		/* put it into unused list */
@@ -250,7 +265,7 @@ release_shared(struct _citrus_iconv_shared * __restrict ci)
 		}
 	}
 
-	UNLOCK;
+	UNLOCK(&ci_lock);
 }
 
 /*
@@ -261,7 +276,7 @@ int
 _citrus_iconv_open(struct _citrus_iconv * __restrict * __restrict rcv,
     const char * __restrict src, const char * __restrict dst)
 {
-	struct _citrus_iconv *cv;
+	struct _citrus_iconv *cv = NULL;
 	struct _citrus_iconv_shared *ci = NULL;
 	char realdst[PATH_MAX], realsrc[PATH_MAX];
 	char buf[PATH_MAX], path[PATH_MAX];
@@ -304,7 +319,7 @@ _citrus_iconv_open(struct _citrus_iconv * __restrict * __restrict rcv,
 	ret = (*ci->ci_ops->io_init_context)(*rcv);
 	if (ret) {
 		release_shared(ci);
-		free(*rcv);
+		free(cv);
 		return (ret);
 	}
 	return (0);
@@ -330,9 +345,8 @@ const char
 {
 	char *buf;
 
-	if ((buf = malloc((size_t)PATH_MAX)) == NULL)
+	if ((buf = calloc((size_t)PATH_MAX, sizeof(*buf))) == NULL)
 		return (NULL);
-	memset((void *)buf, 0, (size_t)PATH_MAX);
 	_citrus_esdb_alias(name, buf, (size_t)PATH_MAX);
 	return (buf);
 }

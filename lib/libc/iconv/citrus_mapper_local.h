@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libc/iconv/citrus_mapper_local.h 250938 2013-05-23 18:07:01Z ed $ */
 /* $NetBSD: citrus_mapper_local.h,v 1.2 2008/02/09 14:56:20 junyoung Exp $ */
 
 /*-
@@ -52,6 +53,7 @@ static void	 _citrus_##_m_##_mapper_init_state			\
 		    (void);
 
 #define _CITRUS_MAPPER_DEF_OPS(_m_)					\
+extern struct _citrus_mapper_ops _citrus_##_m_##_mapper_ops;		\
 struct _citrus_mapper_ops _citrus_##_m_##_mapper_ops = {		\
 	/* mo_init */		&_citrus_##_m_##_mapper_init,		\
 	/* mo_uninit */		&_citrus_##_m_##_mapper_uninit,		\

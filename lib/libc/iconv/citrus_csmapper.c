@@ -1,5 +1,6 @@
-/* $FreeBSD$ */
-/* $NetBSD: citrus_csmapper.c,v 1.10 2009/01/11 02:46:24 christos Exp $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libc/iconv/citrus_csmapper.c 264497 2014-04-15 09:49:44Z tijl $ */
+/*	$NetBSD: citrus_csmapper.c,v 1.11 2011/11/20 07:43:52 tnozaki Exp $	*/
 
 /*-
  * Copyright (c)2003 Citrus Project,
@@ -57,6 +58,8 @@
 #include "citrus_lookup.h"
 
 static struct _citrus_mapper_area	*maparea = NULL;
+
+static pthread_rwlock_t			ma_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 #define CS_ALIAS	_PATH_CSMAPPER "/charset.alias"
 #define CS_PIVOT	_PATH_CSMAPPER "/charset.pivot"
@@ -138,6 +141,7 @@ find_best_pivot_pvdb(const char *src, const char *dst, char *pivot,
 		if (ret)
 			goto quit3;
 		if (_db_lookup_by_s(db3, dst, &r2, NULL) != 0)
+			/* don't break the loop, test all src/dst pairs. */
 			goto quit4;
 		/* r2: norm among pivot and dst */
 		ret = get32(&r2, &val32);
@@ -314,7 +318,7 @@ get_none(struct _citrus_mapper_area *__restrict ma,
 {
 	int ret;
 
-	WLOCK;
+	WLOCK(&ma_lock);
 	if (csm_none) {
 		*rcsm = csm_none;
 		ret = 0;
@@ -329,7 +333,7 @@ get_none(struct _citrus_mapper_area *__restrict ma,
 	*rcsm = csm_none;
 	ret = 0;
 quit:
-	UNLOCK;
+	UNLOCK(&ma_lock);
 	return (ret);
 }
 

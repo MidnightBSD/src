@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libc/iconv/citrus_namespace.h 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: citrus_namespace.h,v 1.8 2009/01/11 02:46:24 christos Exp $ */
 
 /*-

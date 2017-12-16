@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libc/iconv/_strtol.h 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: _strtol.h,v 1.2 2009/05/20 22:03:29 christos Exp $ */
 
 /*-

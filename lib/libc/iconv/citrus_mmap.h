@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libc/iconv/citrus_mmap.h 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: citrus_mmap.h,v 1.1 2003/06/25 09:51:38 tshiozak Exp $ */
 
 /*-

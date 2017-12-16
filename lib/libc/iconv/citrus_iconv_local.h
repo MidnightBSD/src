@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libc/iconv/citrus_iconv_local.h 282275 2015-04-30 16:08:47Z tijl $ */
 /* $NetBSD: citrus_iconv_local.h,v 1.3 2008/02/09 14:56:20 junyoung Exp $ */
 
 /*-
@@ -31,6 +32,7 @@
 #define _CITRUS_ICONV_LOCAL_H_
 
 #include <iconv.h>
+#include <stdbool.h>
 
 #define _CITRUS_ICONV_GETOPS_FUNC_BASE(_n_)				\
     int _n_(struct _citrus_iconv_ops *)
@@ -57,6 +59,7 @@ static void	 _citrus_##_m_##_iconv_uninit_context			\
 
 
 #define _CITRUS_ICONV_DEF_OPS(_m_)					\
+extern struct _citrus_iconv_ops _citrus_##_m_##_iconv_ops;		\
 struct _citrus_iconv_ops _citrus_##_m_##_iconv_ops = {			\
 	/* io_init_shared */	&_citrus_##_m_##_iconv_init_shared,	\
 	/* io_uninit_shared */	&_citrus_##_m_##_iconv_uninit_shared,	\
@@ -97,6 +100,7 @@ struct _citrus_iconv_shared {
 	char						*ci_convname;
 	bool						 ci_discard_ilseq;
 	struct iconv_hooks				*ci_hooks;
+	bool						 ci_ilseq_invalid;
 };
 
 struct _citrus_iconv {

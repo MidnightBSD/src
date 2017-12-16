@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libc/iconv/citrus_stdenc_local.h 282275 2015-04-30 16:08:47Z tijl $ */
 /* $NetBSD: citrus_stdenc_local.h,v 1.4 2008/02/09 14:56:20 junyoung Exp $ */
 
 /*-
@@ -84,6 +85,7 @@ static int	 _citrus_##_e_##_stdenc_get_state_desc			\
 		    struct _citrus_stdenc_state_desc * __restrict)
 
 #define _CITRUS_STDENC_DEF_OPS(_e_)					\
+extern struct _citrus_stdenc_ops _citrus_##_e_##_stdenc_ops;		\
 struct _citrus_stdenc_ops _citrus_##_e_##_stdenc_ops = {		\
 	/* eo_init */		&_citrus_##_e_##_stdenc_init,		\
 	/* eo_uninit */		&_citrus_##_e_##_stdenc_uninit,		\

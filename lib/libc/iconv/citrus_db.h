@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libc/iconv/citrus_db.h 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: citrus_db.h,v 1.2 2008/02/09 14:56:20 junyoung Exp $ */
 
 /*-

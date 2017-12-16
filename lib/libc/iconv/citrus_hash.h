@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libc/iconv/citrus_hash.h 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: citrus_hash.h,v 1.3 2004/01/02 21:49:35 itojun Exp $ */
 
 /*-

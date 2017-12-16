@@ -1,5 +1,6 @@
-/* $FreeBSD$ */
-/* $NetBSD: citrus_mmap.c,v 1.3 2005/01/19 00:52:37 mycroft Exp $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libc/iconv/citrus_mmap.c 264497 2014-04-15 09:49:44Z tijl $ */
+/*	$NetBSD: citrus_mmap.c,v 1.4 2011/10/15 23:00:01 christos Exp $	*/
 
 /*-
  * Copyright (c)2003 Citrus Project,
@@ -57,12 +58,8 @@ _citrus_map_file(struct _citrus_region * __restrict r,
 
 	_region_init(r, NULL, 0);
 
-	if ((fd = open(path, O_RDONLY)) == -1)
+	if ((fd = open(path, O_RDONLY | O_CLOEXEC)) == -1)
 		return (errno);
-	if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
-		ret = errno;
-		goto error;
-	}
 
 	if (fstat(fd, &st)  == -1) {
 		ret = errno;

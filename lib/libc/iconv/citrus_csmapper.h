@@ -1,5 +1,6 @@
 /* $MidnightBSD$ */
-/* $NetBSD: citrus_csmapper.h,v 1.2 2008/02/09 14:56:20 junyoung Exp $ */
+/* $FreeBSD: stable/10/lib/libc/iconv/citrus_csmapper.h 264497 2014-04-15 09:49:44Z tijl $ */
+/*	$NetBSD: citrus_csmapper.h,v 1.3 2013/06/24 17:28:35 joerg Exp $	*/
 
 /*-
  * Copyright (c)2003 Citrus Project,
