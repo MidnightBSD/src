@@ -63396,6 +63396,7 @@ usr.bin/clang/clang/Makefile -text
 usr.bin/clang/clang/clang.1 -text
 usr.bin/clang/llc/Makefile -text
 usr.bin/clang/llc/llc.1 -text
+usr.bin/clang/lldb/Makefile svneol=native#text/plain
 usr.bin/clang/lli/Makefile -text
 usr.bin/clang/lli/lli.1 -text
 usr.bin/clang/llvm-ar/Makefile -text
@@ -63416,10 +63417,6 @@ usr.bin/clang/llvm-mc/Makefile -text
 usr.bin/clang/llvm-nm/Makefile -text
 usr.bin/clang/llvm-nm/llvm-nm.1 -text
 usr.bin/clang/llvm-objdump/Makefile -text
-usr.bin/clang/llvm-prof/Makefile -text
-usr.bin/clang/llvm-prof/llvm-prof.1 -text
-usr.bin/clang/llvm-ranlib/Makefile -text
-usr.bin/clang/llvm-ranlib/llvm-ranlib.1 -text
 usr.bin/clang/llvm-rtdyld/Makefile -text
 usr.bin/clang/macho-dump/Makefile -text
 usr.bin/clang/opt/Makefile -text

@@ -1,6 +1,7 @@
-# $FreeBSD: release/9.2.0/usr.bin/clang/clang-tblgen/Makefile 252723 2013-07-04 20:17:04Z dim $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/clang/clang-tblgen/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
-NO_MAN=
+MAN=
 .include <bsd.own.mk>
 
 PROG_CXX=clang-tblgen
@@ -14,7 +15,6 @@ SRCS=	ClangASTNodesEmitter.cpp \
 	ClangDiagnosticsEmitter.cpp \
 	ClangSACheckersEmitter.cpp \
 	NeonEmitter.cpp \
-	OptParserEmitter.cpp \
 	TableGen.cpp
 
 LIBDEPS=llvmtablegen \

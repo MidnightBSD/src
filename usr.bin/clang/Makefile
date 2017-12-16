@@ -1,10 +1,12 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/clang/Makefile 264303 2014-04-09 18:16:58Z dim $
 
 .include <bsd.own.mk>
 
 SUBDIR=	clang clang-tblgen tblgen
 
-.if ${MK_CLANG_EXTRAS} != "no" && !defined(TOOLS_PREFIX)
+.if !defined(TOOLS_PREFIX)
+.if ${MK_CLANG_EXTRAS} != "no"
 SUBDIR+=bugpoint \
 	llc \
 	lli \
@@ -18,11 +20,16 @@ SUBDIR+=bugpoint \
 	llvm-mc \
 	llvm-nm \
 	llvm-objdump \
-	llvm-prof \
-	llvm-ranlib \
 	llvm-rtdyld \
 	macho-dump \
 	opt
 .endif
+
+.if ${MK_LLDB} != "no"
+SUBDIR+=lldb
+.endif
+.endif # TOOLS_PREFIX
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>

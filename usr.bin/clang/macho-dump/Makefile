@@ -1,6 +1,7 @@
-# $FreeBSD: release/9.2.0/usr.bin/clang/macho-dump/Makefile 252723 2013-07-04 20:17:04Z dim $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/clang/macho-dump/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
-NO_MAN=
+MAN=
 .include <bsd.own.mk>
 
 PROG_CXX=macho-dump
