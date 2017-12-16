@@ -1,4 +1,5 @@
-/* $FreeBSD: src/gnu/lib/libstdc++/config.h,v 1.15 2007/05/19 04:25:56 kan Exp $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/gnu/lib/libstdc++/config.h 254295 2013-08-13 20:28:21Z pfg $ */
 #ifndef __ISO_C_VISIBLE
 #include <sys/cdefs.h>
 #endif
@@ -67,7 +68,7 @@
 #define HAVE_EXPF 1
 
 /* Define to 1 if you have the `expl' function. */
-/* #undef HAVE_EXPL 1 */
+#define HAVE_EXPL 1
 
 /* Define to 1 if you have the `fabsf' function. */
 #define HAVE_FABSF 1
@@ -212,13 +213,13 @@
 #define HAVE_LOG10F 1
 
 /* Define to 1 if you have the `log10l' function. */
-/* #undef HAVE_LOG10L */
+#define HAVE_LOG10L 1
 
 /* Define to 1 if you have the `logf' function. */
 #define HAVE_LOGF 1
 
 /* Define to 1 if you have the `logl' function. */
-/* #undef HAVE_LOGL */
+#define HAVE_LOGL 1
 
 /* Define to 1 if you have the <machine/endian.h> header file. */
 #define HAVE_MACHINE_ENDIAN_H 1
@@ -380,7 +381,9 @@
 /* #undef HAVE_TANL */
 
 /* Define to 1 if the target supports thread-local storage. */
+#if !defined(__mips__)
 #define HAVE_TLS 1
+#endif
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
