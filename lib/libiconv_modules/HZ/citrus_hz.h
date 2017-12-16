@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libiconv_modules/HZ/citrus_hz.h 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: citrus_hz.h,v 1.1 2006/11/22 23:38:27 tnozaki Exp $ */
 
 /*-

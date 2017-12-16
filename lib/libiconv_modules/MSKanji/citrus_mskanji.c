@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libiconv_modules/MSKanji/citrus_mskanji.c 282275 2015-04-30 16:08:47Z tijl $ */
 /*	$NetBSD: citrus_mskanji.c,v 1.13 2008/06/14 16:01:08 tnozaki Exp $	*/
 
 /*-
@@ -130,6 +131,7 @@ _citrus_MSKanji_init_state(_MSKanjiEncodingInfo * __restrict ei __unused,
 	s->chlen = 0;
 }
 
+#if 0
 static __inline void
 /*ARGSUSED*/
 _citrus_MSKanji_pack_state(_MSKanjiEncodingInfo * __restrict ei __unused,
@@ -147,6 +149,7 @@ _citrus_MSKanji_unpack_state(_MSKanjiEncodingInfo * __restrict ei __unused,
 
 	memcpy((void *)s, pspriv, sizeof(*s));
 }
+#endif
 
 static int
 /*ARGSUSED*/

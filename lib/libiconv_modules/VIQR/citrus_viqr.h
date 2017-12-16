@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libiconv_modules/VIQR/citrus_viqr.h 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: citrus_viqr.h,v 1.1 2006/11/13 15:16:31 tnozaki Exp $ */
 
 /*-

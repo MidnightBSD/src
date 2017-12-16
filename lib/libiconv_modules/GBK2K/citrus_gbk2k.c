@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libiconv_modules/GBK2K/citrus_gbk2k.c 282275 2015-04-30 16:08:47Z tijl $ */
 /* $NetBSD: citrus_gbk2k.c,v 1.7 2008/06/14 16:01:07 tnozaki Exp $ */
 
 /*-
@@ -80,6 +81,7 @@ _citrus_GBK2K_init_state(_GBK2KEncodingInfo * __restrict ei __unused,
 	memset(s, 0, sizeof(*s));
 }
 
+#if 0
 static __inline void
 /*ARGSUSED*/
 _citrus_GBK2K_pack_state(_GBK2KEncodingInfo * __restrict ei __unused,
@@ -97,6 +99,7 @@ _citrus_GBK2K_unpack_state(_GBK2KEncodingInfo * __restrict ei __unused,
 
 	memcpy((void *)s, pspriv, sizeof(*s));
 }
+#endif
 
 static  __inline bool
 _mb_singlebyte(int c)

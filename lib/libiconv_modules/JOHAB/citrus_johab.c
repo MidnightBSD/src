@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libiconv_modules/JOHAB/citrus_johab.c 282275 2015-04-30 16:08:47Z tijl $ */
 /* $NetBSD: citrus_johab.c,v 1.4 2008/06/14 16:01:07 tnozaki Exp $ */
 
 /*-
@@ -80,6 +81,7 @@ _citrus_JOHAB_init_state(_JOHABEncodingInfo * __restrict ei __unused,
 	psenc->chlen = 0;
 }
 
+#if 0
 static __inline void
 /*ARGSUSED*/
 _citrus_JOHAB_pack_state(_JOHABEncodingInfo * __restrict ei __unused,
@@ -97,6 +99,7 @@ _citrus_JOHAB_unpack_state(_JOHABEncodingInfo * __restrict ei __unused,
 
 	memcpy((void *)psenc, pspriv, sizeof(*psenc));
 }
+#endif
 
 static void
 /*ARGSUSED*/

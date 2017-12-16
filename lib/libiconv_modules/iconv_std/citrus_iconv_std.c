@@ -1,5 +1,6 @@
-/* $FreeBSD$ */
-/*	$NetBSD: citrus_iconv_std.c,v 1.15 2006/11/13 19:08:19 tnozaki Exp $	*/
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libiconv_modules/iconv_std/citrus_iconv_std.c 282275 2015-04-30 16:08:47Z tijl $ */
+/*	$NetBSD: citrus_iconv_std.c,v 1.16 2012/02/12 13:51:29 wiz Exp $	*/
 
 /*-
  * Copyright (c)2003 Citrus Project,

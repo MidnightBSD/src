@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libiconv_modules/ZW/citrus_zw.h 219019 2011-02-25 00:04:39Z gabor $ */
 /* $NetBSD: citrus_zw.h,v 1.1 2006/11/22 23:38:27 tnozaki Exp $ */
 
 /*-

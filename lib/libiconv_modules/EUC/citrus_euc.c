@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libiconv_modules/EUC/citrus_euc.c 282275 2015-04-30 16:08:47Z tijl $ */
 /*	$NetBSD: citrus_euc.c,v 1.14 2009/01/11 02:46:24 christos Exp $	*/
 
 /*-
@@ -169,6 +170,7 @@ _citrus_EUC_init_state(_EUCEncodingInfo *ei __unused, _EUCState *s)
 	memset(s, 0, sizeof(*s));
 }
 
+#if 0
 static __inline void
 /*ARGSUSED*/
 _citrus_EUC_pack_state(_EUCEncodingInfo *ei __unused, void *pspriv,
@@ -186,6 +188,7 @@ _citrus_EUC_unpack_state(_EUCEncodingInfo *ei __unused, _EUCState *s,
 
 	memcpy((void *)s, pspriv, sizeof(*s));
 }
+#endif
 
 static int
 _citrus_EUC_mbrtowc_priv(_EUCEncodingInfo *ei, wchar_t *pwc, char **s,
