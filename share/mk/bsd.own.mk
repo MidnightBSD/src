@@ -448,6 +448,7 @@ __DEFAULT_NO_OPTIONS = \
     DEBUG_FILES \
     HESIOD \
     IDEA \
+    LLDB \
     NMTREE \
     OFED \
     SHARED_TOOLCHAIN \
@@ -595,6 +596,10 @@ MK_GDB:=	no
 MK_CLANG_EXTRAS:= no
 MK_CLANG_IS_CC:= no
 MK_CLANG_FULL:= no
+.endif
+
+.if ${MK_CLANG_IS_CC} == "no"
+MK_LLDB:= no
 .endif
 
 #
