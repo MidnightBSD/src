@@ -1,4 +1,5 @@
-# $FreeBSD: release/9.2.0/lib/clang/libllvmbitreader/Makefile 252723 2013-07-04 20:17:04Z dim $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/clang/libllvmbitreader/Makefile 249423 2013-04-12 17:57:40Z dim $
 
 .include <bsd.own.mk>
 

@@ -1,4 +1,5 @@
-# $FreeBSD: release/9.2.0/lib/clang/libllvmmc/Makefile 252723 2013-07-04 20:17:04Z dim $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/clang/libllvmmc/Makefile 263508 2014-03-21 17:53:59Z dim $
 
 .include <bsd.own.mk>
 
@@ -10,6 +11,7 @@ SRCS=	ELFObjectWriter.cpp \
 	MCAsmInfo.cpp \
 	MCAsmInfoCOFF.cpp \
 	MCAsmInfoDarwin.cpp \
+	MCAsmInfoELF.cpp \
 	MCAsmStreamer.cpp \
 	MCAssembler.cpp \
 	MCAtom.cpp \
@@ -21,6 +23,8 @@ SRCS=	ELFObjectWriter.cpp \
 	MCELFObjectTargetWriter.cpp \
 	MCELFStreamer.cpp \
 	MCExpr.cpp \
+	MCExternalSymbolizer.cpp \
+	MCFunction.cpp \
 	MCInst.cpp \
 	MCInstPrinter.cpp \
 	MCInstrAnalysis.cpp \
@@ -28,12 +32,16 @@ SRCS=	ELFObjectWriter.cpp \
 	MCMachOStreamer.cpp \
 	MCMachObjectTargetWriter.cpp \
 	MCModule.cpp \
+	MCModuleYAML.cpp \
 	MCNullStreamer.cpp \
+	MCObjectDisassembler.cpp \
 	MCObjectFileInfo.cpp \
 	MCObjectStreamer.cpp \
+	MCObjectSymbolizer.cpp \
 	MCObjectWriter.cpp \
 	MCPureStreamer.cpp \
 	MCRegisterInfo.cpp \
+	MCRelocationInfo.cpp \
 	MCSection.cpp \
 	MCSectionCOFF.cpp \
 	MCSectionELF.cpp \
@@ -41,6 +49,7 @@ SRCS=	ELFObjectWriter.cpp \
 	MCStreamer.cpp \
 	MCSubtargetInfo.cpp \
 	MCSymbol.cpp \
+	MCSymbolizer.cpp \
 	MCValue.cpp \
 	MCWin64EH.cpp \
 	MachObjectWriter.cpp \
@@ -48,7 +57,7 @@ SRCS=	ELFObjectWriter.cpp \
 	WinCOFFObjectWriter.cpp \
 	WinCOFFStreamer.cpp
 
-.if ${MK_CLANG_EXTRAS} != "no"
+.if ${MK_CLANG_EXTRAS} != "no" || ${MK_LLDB} != "no"
 SRCS+=	MCDisassembler.cpp
 .endif
 

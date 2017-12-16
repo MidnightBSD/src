@@ -1,4 +1,5 @@
-# $FreeBSD: release/9.2.0/lib/clang/libllvmpowerpccodegen/Makefile 252723 2013-07-04 20:17:04Z dim $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/clang/libllvmpowerpccodegen/Makefile 263508 2014-03-21 17:53:59Z dim $
 
 .include <bsd.own.mk>
 
@@ -9,6 +10,7 @@ SRCS=	PPCAsmPrinter.cpp \
 	PPCBranchSelector.cpp \
 	PPCCTRLoops.cpp \
 	PPCCodeEmitter.cpp \
+	PPCFastISel.cpp \
 	PPCFrameLowering.cpp \
 	PPCHazardRecognizers.cpp \
 	PPCISelDAGToDAG.cpp \
@@ -21,12 +23,14 @@ SRCS=	PPCAsmPrinter.cpp \
 	PPCSelectionDAGInfo.cpp \
 	PPCSubtarget.cpp \
 	PPCTargetMachine.cpp \
+	PPCTargetObjectFile.cpp \
 	PPCTargetTransformInfo.cpp
 
 TGHDRS=	Intrinsics \
 	PPCGenCallingConv \
 	PPCGenCodeEmitter \
 	PPCGenDAGISel \
+	PPCGenFastISel \
 	PPCGenInstrInfo \
 	PPCGenMCCodeEmitter \
 	PPCGenRegisterInfo \

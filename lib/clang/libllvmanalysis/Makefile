@@ -1,4 +1,5 @@
-# $FreeBSD: release/9.2.0/lib/clang/libllvmanalysis/Makefile 252723 2013-07-04 20:17:04Z dim $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/clang/libllvmanalysis/Makefile 263508 2014-03-21 17:53:59Z dim $
 
 .include <bsd.own.mk>
 
@@ -13,11 +14,13 @@ SRCS=	AliasAnalysis.cpp \
 	Analysis.cpp \
 	BasicAliasAnalysis.cpp \
 	BranchProbabilityInfo.cpp \
+	CFG.cpp \
 	CFGPrinter.cpp \
 	CaptureTracking.cpp \
 	CodeMetrics.cpp \
 	ConstantFolding.cpp \
 	CostModel.cpp \
+	Delinearization.cpp \
 	DependenceAnalysis.cpp \
 	DomPrinter.cpp \
 	DominanceFrontier.cpp \
@@ -39,17 +42,7 @@ SRCS=	AliasAnalysis.cpp \
 	ModuleDebugInfoPrinter.cpp \
 	NoAliasAnalysis.cpp \
 	PHITransAddr.cpp \
-	PathNumbering.cpp \
-	PathProfileInfo.cpp \
-	PathProfileVerifier.cpp \
 	PostDominators.cpp \
-	ProfileDataLoader.cpp \
-	ProfileDataLoaderPass.cpp \
-	ProfileEstimatorPass.cpp \
-	ProfileInfo.cpp \
-	ProfileInfoLoader.cpp \
-	ProfileInfoLoaderPass.cpp \
-	ProfileVerifierPass.cpp \
 	PtrUseVisitor.cpp \
 	RegionInfo.cpp \
 	RegionPass.cpp \

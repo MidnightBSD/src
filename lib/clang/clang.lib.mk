@@ -1,4 +1,5 @@
-# $FreeBSD: release/9.2.0/lib/clang/clang.lib.mk 239711 2012-08-26 10:30:01Z dim $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/clang/clang.lib.mk 239614 2012-08-23 17:08:07Z dim $
 
 LLVM_SRCS= ${.CURDIR}/../../../contrib/llvm
 

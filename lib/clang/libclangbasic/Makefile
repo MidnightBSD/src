@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: release/9.2.0/lib/clang/libclangbasic/Makefile 252723 2013-07-04 20:17:04Z dim $
+# $FreeBSD: stable/10/lib/clang/libclangbasic/Makefile 249423 2013-04-12 17:57:40Z dim $
 
 .include <bsd.own.mk>
 

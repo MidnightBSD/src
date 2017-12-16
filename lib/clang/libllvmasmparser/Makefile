@@ -1,4 +1,5 @@
-# $FreeBSD: release/9.2.0/lib/clang/libllvmasmparser/Makefile 246637 2013-02-10 21:24:47Z dim $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/clang/libllvmasmparser/Makefile 246259 2013-02-02 22:28:29Z dim $
 
 .include <bsd.own.mk>
 

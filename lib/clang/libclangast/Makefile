@@ -1,4 +1,5 @@
-# $FreeBSD: release/9.2.0/lib/clang/libclangast/Makefile 252723 2013-07-04 20:17:04Z dim $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/clang/libclangast/Makefile 263508 2014-03-21 17:53:59Z dim $
 
 .include <bsd.own.mk>
 
@@ -11,6 +12,7 @@ SRCS=	APValue.cpp \
 	ASTDiagnostic.cpp \
 	ASTDumper.cpp \
 	ASTImporter.cpp \
+	ASTTypeTraits.cpp \
 	AttrImpl.cpp \
 	CXXInheritance.cpp \
 	Comment.cpp \
@@ -29,7 +31,6 @@ SRCS=	APValue.cpp \
 	DeclPrinter.cpp \
 	DeclTemplate.cpp \
 	DeclarationName.cpp \
-	DumpXML.cpp \
 	Expr.cpp \
 	ExprCXX.cpp \
 	ExprClassification.cpp \
@@ -38,8 +39,8 @@ SRCS=	APValue.cpp \
 	InheritViz.cpp \
 	ItaniumCXXABI.cpp \
 	ItaniumMangle.cpp \
-	LambdaMangleContext.cpp \
 	Mangle.cpp \
+	MangleNumberingContext.cpp \
 	MicrosoftCXXABI.cpp \
 	MicrosoftMangle.cpp \
 	NSAPI.cpp \

@@ -1,4 +1,5 @@
-# $FreeBSD: release/9.2.0/lib/clang/libclangstaticanalyzercore/Makefile 252723 2013-07-04 20:17:04Z dim $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/clang/libclangstaticanalyzercore/Makefile 263508 2014-03-21 17:53:59Z dim $
 
 .include <bsd.own.mk>
 
@@ -18,6 +19,7 @@ SRCS=	APSIntType.cpp \
 	CheckerHelpers.cpp \
 	CheckerManager.cpp \
 	CheckerRegistry.cpp \
+	CommonBugCategories.cpp \
 	ConstraintManager.cpp \
 	CoreEngine.cpp \
 	Environment.cpp \
@@ -41,8 +43,7 @@ SRCS=	APSIntType.cpp \
 	SimpleSValBuilder.cpp \
 	Store.cpp \
 	SubEngine.cpp \
-	SymbolManager.cpp \
-	TextPathDiagnostics.cpp
+	SymbolManager.cpp
 
 TGHDRS=	AttrList \
 	Attrs \

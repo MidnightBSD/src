@@ -1,4 +1,5 @@
-# $FreeBSD: release/9.2.0/lib/clang/libllvminstrumentation/Makefile 252723 2013-07-04 20:17:04Z dim $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/clang/libllvminstrumentation/Makefile 263508 2014-03-21 17:53:59Z dim $
 
 .include <bsd.own.mk>
 
@@ -6,15 +7,12 @@ LIB=	llvminstrumentation
 
 SRCDIR=	lib/Transforms/Instrumentation
 SRCS=	AddressSanitizer.cpp \
-	BlackList.cpp \
 	BoundsChecking.cpp \
-	EdgeProfiling.cpp \
+	DataFlowSanitizer.cpp \
+	DebugIR.cpp \
 	GCOVProfiling.cpp \
 	MemorySanitizer.cpp \
 	Instrumentation.cpp \
-	OptimalEdgeProfiling.cpp \
-	PathProfiling.cpp \
-	ProfilingUtils.cpp \
 	ThreadSanitizer.cpp
 
 TGHDRS=	Intrinsics

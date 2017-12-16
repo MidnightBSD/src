@@ -1,4 +1,5 @@
-# $FreeBSD: release/9.2.0/lib/clang/libllvmlinker/Makefile 252723 2013-07-04 20:17:04Z dim $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/clang/libllvmlinker/Makefile 251662 2013-06-12 18:48:53Z dim $
 
 .include <bsd.own.mk>
 

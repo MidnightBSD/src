@@ -1,4 +1,5 @@
-# $FreeBSD: release/9.2.0/lib/clang/libllvmx86disassembler/Makefile 252723 2013-07-04 20:17:04Z dim $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/clang/libllvmx86disassembler/Makefile 255722 2013-09-20 01:52:02Z emaste $
 
 .include <bsd.own.mk>
 
@@ -8,7 +9,7 @@ SRCDIR=	lib/Target/X86/Disassembler
 INCDIR=	lib/Target/X86
 SRCS=	X86Disassembler.cpp
 
-.if ${MK_CLANG_EXTRAS} != "no"
+.if ${MK_CLANG_EXTRAS} != "no" || ${MK_LLDB} != "no"
 SRCS+=	X86DisassemblerDecoder.c
 .endif
 
