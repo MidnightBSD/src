@@ -12,13 +12,13 @@
 # released before I got my first computer is not supported. Few 486 systems
 # have enough ram to run the installer properly anyway. 
 #
-# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.28 2012/04/03 23:45:08 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/sys/i386/conf/GENERIC,v 1.429.2.5 2006/01/23 14:19:36 marius Exp $
 
 cpu		I686_CPU
 ident		GENERIC
 
-makeoptions	DEBUG=-g		# Build kernel with gdb(1) debug symbols
+makeoptions	DEBUG=-gdwarf-2 	# Build kernel with gdb(1) debug symbols
 makeoptions	WITH_CTF=1		# Run ctfconvert(1) for DTrace support
 
 options 	SCHED_ULE		# ULE scheduler
