@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/clang/clang/Makefile 293782 2016-01-12 19:33:43Z dim $
 
 .include <bsd.own.mk>
 
@@ -18,9 +19,11 @@ LINKS=	${BINDIR}/clang ${BINDIR}/clang++ \
 MLINKS=	clang.1 clang++.1 \
 	clang.1 clang-cpp.1
 .if ${MK_CLANG_IS_CC} != "no"
+SCRIPTS=CC.sh
+SCRIPTSNAME=CC
+
 LINKS+=	${BINDIR}/clang ${BINDIR}/cc \
 	${BINDIR}/clang ${BINDIR}/c++ \
-	${BINDIR}/clang ${BINDIR}/CC \
 	${BINDIR}/clang ${BINDIR}/cpp
 MLINKS+= clang.1 cc.1 \
 	clang.1 c++.1 \
@@ -63,6 +66,7 @@ LIBDEPS=clangfrontendtool \
 	clangast \
 	clangbasic \
 	clanglex \
+	llvmoption \
 	llvmlinker \
 	llvmirreader \
 	llvmipo \
@@ -84,9 +88,16 @@ LIBDEPS=clangfrontendtool \
 	llvmmipsinfo \
 	llvmmipsinstprinter \
 	llvmpowerpccodegen \
+	llvmpowerpcasmparser \
 	llvmpowerpcdesc \
 	llvmpowerpcinfo \
 	llvmpowerpcinstprinter \
+	llvmsparcdisassembler \
+	llvmsparccodegen \
+	llvmsparcasmparser \
+	llvmsparcdesc \
+	llvmsparcinfo \
+	llvmsparcinstprinter \
 	llvmx86disassembler \
 	llvmx86asmparser \
 	llvmx86codegen \

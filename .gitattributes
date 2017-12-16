@@ -63391,6 +63391,7 @@ usr.bin/clang/bugpoint/Makefile -text
 usr.bin/clang/bugpoint/bugpoint.1 -text
 usr.bin/clang/clang-tblgen/Makefile -text
 usr.bin/clang/clang.prog.mk -text
+usr.bin/clang/clang/CC.sh svneol=native#text/plain
 usr.bin/clang/clang/Makefile -text
 usr.bin/clang/clang/clang.1 -text
 usr.bin/clang/llc/Makefile -text
