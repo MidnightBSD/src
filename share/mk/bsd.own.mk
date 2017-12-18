@@ -446,6 +446,7 @@ __DEFAULT_NO_OPTIONS = \
     CLANG_EXTRAS \
     CTF \
     DEBUG_FILES \
+    GNUCXX \
     HESIOD \
     IDEA \
     LLDB \
