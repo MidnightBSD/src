@@ -23,14 +23,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/bin/csh/iconv_stub.h 219061 2011-02-26 18:54:54Z ume $
+ * $MidnightBSD$
+ * $FreeBSD: stable/10/bin/csh/iconv_stub.h 282275 2015-04-30 16:08:47Z tijl $
  */
 
 #ifndef _ICONV_H_
 #define _ICONV_H_
 
 typedef void *iconv_t;
-typedef size_t dl_iconv_t(iconv_t, const char **, size_t *, char **, size_t *);
+typedef size_t dl_iconv_t(iconv_t, char **, size_t *, char **, size_t *);
 typedef int dl_iconv_close_t(iconv_t);
 
 extern iconv_t dl_iconv_open(const char *, const char *);
