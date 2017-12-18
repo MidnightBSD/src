@@ -8,7 +8,7 @@ SUBDIR= csu libgcc libgcov libdialog libgomp libodialog libregex libreadline \
 
 # libsupc++ uses libstdc++ headers, although 'make includes' should
 # have taken care of that already.
-.if ${MK_CXX} != "no"
+.if ${MK_GNUCXX} != "no"
 SUBDIR+= libstdc++ libsupc++
 .endif
 
