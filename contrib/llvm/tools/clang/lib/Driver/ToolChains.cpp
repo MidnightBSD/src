@@ -2013,7 +2013,7 @@ FreeBSD::GetCXXStdlibType(const ArgList &Args) const {
     getDriver().Diag(diag::err_drv_invalid_stdlib_name)
       << A->getAsString(Args);
   }
-  if (getTriple().getOSMajorVersion() >= 10) 
+  if (getTriple().getOSMajorVersion() >= 1) 
     return ToolChain::CST_Libcxx;
   return ToolChain::CST_Libstdcxx;
 }
