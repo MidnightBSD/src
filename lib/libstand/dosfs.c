@@ -26,6 +26,7 @@
  */
 
 #include <sys/cdefs.h>
+/* $FreeBSD: stable/9/lib/libstand/dosfs.c 281317 2015-04-09 18:45:03Z jhb $ */
 __MBSDID("$MidnightBSD$");
 
 /*
@@ -767,7 +768,8 @@ static int
 ioget(struct open_file *fd, u_int lsec, void *buf, u_int nsec)
 {
     int	err;
-    
+
+    twiddle();
     if ((err = (fd->f_dev->dv_strategy)(fd->f_devdata, F_READ, lsec, 
 					secbyt(nsec), buf, NULL)))
 	return(err);
