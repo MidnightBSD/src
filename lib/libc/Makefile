@@ -28,7 +28,9 @@ SHLIB_LDSCRIPT=libc.ldscript
 WARNS?=	2
 CFLAGS+=-I${.CURDIR}/include -I${.CURDIR}/../../include
 CFLAGS+=-I${.CURDIR}/${LIBC_ARCH}
+.if ${MK_NLS} != "no"
 CFLAGS+=-DNLS
+.endif
 CLEANFILES+=tags
 INSTALL_PIC_ARCHIVE=
 PRECIOUSLIB=
@@ -43,7 +45,14 @@ CFLAGS+=${CANCELPOINTS_CFLAGS}
 #
 DPADD+=	${LIBGCC}
 LDFLAGS+= -nodefaultlibs
-LDADD+= -lgcc -lssp_nonshared
+LDADD+= -lgcc
+
+.if ${MK_SSP} != "no"
+LDADD+= -lssp_nonshared
+.endif
+
+# Extras that live in either libc.a or libc_nonshared.a
+LIBC_NONSHARED_SRCS=
 
 # Define (empty) variables so that make doesn't give substitution
 # errors if the included makefiles don't change these:
@@ -99,6 +108,8 @@ CFLAGS+= -DNS_CACHING
 .if defined(_FREEFALL_CONFIG)
 CFLAGS+=-D_FREEFALL_CONFIG
 .endif
+
+STATICOBJS+=${LIBC_NONSHARED_SRCS:S/.c$/.o/}
 
 VERSION_DEF=${.CURDIR}/Versions.def
 SYMBOL_MAPS=${SYM_MAPS}
