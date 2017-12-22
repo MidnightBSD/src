@@ -46,11 +46,7 @@ void
 twiddle()
 {
 	static int pos;
-	static int divisor;
 
-	if (divisor-- == 0) {
-		divisor = 32;
-		putchar("|/-\\"[pos++ & 3]);
-		putchar('\b');
-	}
+	putchar("|/-\\"[pos++ & 3]);
+	putchar('\b');
 }
