@@ -53454,6 +53454,7 @@ sys/boot/i386/pxeldr/Makefile -text
 sys/boot/i386/pxeldr/pxeboot.8 -text
 sys/boot/i386/pxeldr/pxeldr.S -text
 sys/boot/i386/zfsboot/Makefile -text
+sys/boot/i386/zfsboot/zfsboot.8 svneol=native#text/plain
 sys/boot/i386/zfsboot/zfsboot.c -text
 sys/boot/i386/zfsboot/zfsldr.S -text
 sys/boot/i386/zfsloader/Makefile -text
