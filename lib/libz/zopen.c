@@ -1,9 +1,10 @@
+/* $MidnightBSD$ */
 /*
  * Public domain stdio wrapper for libz, written by Johan Danielsson.
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: head/lib/libz/zopen.c 84228 2001-09-30 22:39:00Z dillon $");
 
 #include <stdio.h>
 #include <zlib.h>
