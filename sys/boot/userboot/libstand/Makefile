@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/9/sys/boot/userboot/libstand/Makefile 260096 2013-12-30 20:15:46Z dim $
 # Originally from	$NetBSD: Makefile,v 1.21 1997/10/26 22:08:38 lukem Exp $
 #
 # Notes:
@@ -6,10 +7,10 @@
 #   quite large.
 #
 
-WITHOUT_SSP=
 NO_MAN=
 
 .include <bsd.own.mk>
+MK_SSP=		no
 
 S=		${.CURDIR}/../../../../lib/libstand
 
@@ -123,8 +124,8 @@ libstand_bzlib_private.h: bzlib_private.h
 		${.ALLSRC} > ${.TARGET}
 
 # decompression functionality from libz
-.PATH: ${.CURDIR}/../../../../lib/libz
-CFLAGS+=-DHAVE_MEMCPY -I${.CURDIR}/../../../../lib/libz
+.PATH: ${.CURDIR}/../../../../contrib/zlib
+CFLAGS+=-DHAVE_MEMCPY -I${.CURDIR}/../../../../contrib/zlib
 SRCS+=	adler32.c crc32.c libstand_zutil.h libstand_gzguts.h
 
 .for file in infback.c inffast.c inflate.c inftrees.c zutil.c
