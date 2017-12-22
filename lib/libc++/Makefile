@@ -51,6 +51,7 @@ CXXRT_SRCS+=	libelftc_dem_gnu3.c\
 		guard.cc
 
 .for _S in ${CXXRT_SRCS}
+CLEANFILES+=	cxxrt_${_S}
 STATICOBJS+=	cxxrt_${_S:R}.o
 cxxrt_${_S}:
 	ln -sf ${LIBCXXRTDIR}/${_S} ${.TARGET}
@@ -198,6 +199,7 @@ EXT+=		${HDRDIR}/ext/${hdr}
 .endfor
 EXTDIR=		${CXXINCLUDEDIR}/ext
 
+.if ${MK_GNUCXX} == "no" && ${COMPILER_TYPE} == "gcc"
 CLEANFILES+=	libstdc++.so libstdc++.a
 
 afterinstall:
@@ -205,5 +207,6 @@ afterinstall:
 		${.OBJDIR}/libstdc++.so
 	ln -sf ${DESTDIR}${LIBDIR}/lib${LIB}.a \
 		${.OBJDIR}/libstdc++.a
+.endif
 
 .include <bsd.lib.mk>
