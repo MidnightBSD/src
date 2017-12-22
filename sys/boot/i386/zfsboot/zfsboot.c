@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: release/9.2.0/sys/boot/i386/zfsboot/zfsboot.c 242562 2012-11-04 13:37:33Z avg $ */
+/* $FreeBSD: stable/9/sys/boot/i386/zfsboot/zfsboot.c 300466 2016-05-23 05:30:24Z ngie $ */
 __MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
@@ -88,7 +88,6 @@ static const unsigned char flags[NOPT] = {
 };
 uint32_t opts;
 
-static const char *const dev_nm[NDEV] = {"ad", "da", "fd"};
 static const unsigned char dev_maj[NDEV] = {30, 4, 2};
 
 static char cmd[512];
