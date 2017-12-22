@@ -1,6 +1,6 @@
 # $MidnightBSD$
 
-SRCDIR=	${.CURDIR}/../../lib/libz/test
+SRCDIR=	${.CURDIR}/../../contrib/zlib/test
 .PATH:	${SRCDIR}
 
 PROG=	minigzip
