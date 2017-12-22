@@ -25,6 +25,7 @@
  */
 
 #include <sys/cdefs.h>
+/* $FreeBSD: stable/9/sys/boot/zfs/zfsimpl.c 284510 2015-06-17 11:48:00Z avg $ */
 __MBSDID("$MidnightBSD$");
 
 /*
@@ -53,6 +54,9 @@ static vdev_list_t zfs_vdevs;
  * List of ZFS features supported for read
  */
 static const char *features_for_read[] = {
+	"org.illumos:lz4_compress",
+	"com.delphix:hole_birth",
+	"com.delphix:extensible_dataset",
 	NULL
 };
 
@@ -1217,6 +1221,10 @@ dnode_read(const spa_t *spa, const dnode_phys_t *dnode, off_t offset, void *buf,
 			ibn = bn >> ((nlevels - i - 1) * ibshift);
 			ibn &= ((1 << ibshift) - 1);
 			bp = indbp[ibn];
+			if (BP_IS_HOLE(&bp)) {
+				memset(dnode_cache_buf, 0, bsize);
+				break;
+			}
 			rc = zio_read(spa, &bp, dnode_cache_buf);
 			if (rc)
 				return (rc);
