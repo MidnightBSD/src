@@ -1,9 +1,10 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/9/sys/boot/userboot/userboot/Makefile 256266 2013-10-10 12:46:26Z bdrewery $
 
 NO_MAN=
-WITHOUT_SSP=
 
 .include <bsd.own.mk>
+MK_SSP=		no
 
 SHLIB_NAME=	userboot.so
 NO_CTF=		yes

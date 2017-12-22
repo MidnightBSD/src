@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997
  *	Matthias Drochner.  All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/userboot/userboot/conf.c 284312 2015-06-12 11:41:47Z avg $");
 
 #include <stand.h>
 
@@ -58,6 +59,7 @@ struct fs_ops *file_system[] = {
 	&host_fsops,
 	&ufs_fsops,
 	&gzipfs_fsops,
+	&bzipfs_fsops,
 	NULL
 };
 
