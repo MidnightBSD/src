@@ -1,6 +1,11 @@
 Updating Information for MidnightBSD users.
 
-20121123:
+20171222:
+	zlib 1.2.11
+
+	LLVM / Clang 3.4.1
+
+20171123:
 	mport now supports installing multiple packages with one command.
 
 	binutils updated/synced with FreeBSD 11-stable (today)
