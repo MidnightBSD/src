@@ -49624,6 +49624,9 @@ libexec/getty/pathnames.h -text
 libexec/getty/subr.c -text
 libexec/getty/ttys.5 -text
 libexec/mail.local/Makefile -text
+libexec/makewhatis.local/Makefile svneol=native#text/plain
+libexec/makewhatis.local/makewhatis.local.8 svneol=native#text/plain
+libexec/makewhatis.local/makewhatis.local.sh svneol=native#text/plain
 libexec/mknetid/Makefile -text
 libexec/mknetid/hash.c -text
 libexec/mknetid/hash.h -text
