@@ -1,0 +1,9 @@
+.\" $OpenBSD: negative.in,v 1.2 2017/07/04 14:53:27 schwarze Exp $
+.TH SP-NEGATIVE 1 "July 12, 2012"
+.SH NAME
+sp-negative \- negative vertical spacing
+.SH DESCRIPTION
+first line
+.sp -1v
+.PP
+second line

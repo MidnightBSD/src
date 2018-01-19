@@ -1,0 +1,18 @@
+.\" $OpenBSD: mdoc.in,v 1.4 2017/07/04 14:53:23 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt HYPHEN-MDOC 1
+.Os
+.Sh NAME
+.Nm hyphen-mdoc
+.Nd formatting hyphens and breaking lines
+.Sh DESCRIPTION
+This is a long line of text, such that the last word won't fit: break-here
+.Pp
+But do not break the line at hyphens inside macro arguments: no
+.No break-here
+.Pp
+Try the same thing once same again, but now in italic font mode:
+\fIbreak-here\fP
+.Pp
+And finally, try it a third time, but this time in bold font mode:
+\fBbreak-here\fP

@@ -1,0 +1,7 @@
+.\" $OpenBSD: empty_before.in,v 1.2 2017/07/04 14:53:23 schwarze Exp $
+.TH SH-EMPTY_BEFORE 1 "August 18, 2014"
+.PP
+.SH NAME
+SH-empty_before \- empty paragraph before first section header
+.SH DESCRIPTION
+some text

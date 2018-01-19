@@ -1,0 +1,22 @@
+NM-PAR(1) - General Commands Manual
+
+# NAME
+
+**Nm-par** - paragraph macro in a name block
+
+# DESCRIPTION
+
+**Nm-par**
+**-a**
+
+**-b**  
+**Nm-par**
+**-a**
+
+**-b**  
+**Nm-par**
+\[**-a**
+
+**-b**]
+
+OpenBSD - July 4, 2017

@@ -1,0 +1,8 @@
+mandoc: break.in:15:2: WARNING: blocks badly nested: Eo breaks Bo
+mandoc: break.in:24:2: WARNING: blocks badly nested: Eo breaks Bo
+mandoc: break.in:30:2: WARNING: blocks badly nested: Eo breaks Bo
+mandoc: break.in:36:2: WARNING: blocks badly nested: Eo breaks Bo
+mandoc: break.in:45:2: WARNING: blocks badly nested: Bo breaks Eo
+mandoc: break.in:52:2: WARNING: blocks badly nested: Bo breaks Eo
+mandoc: break.in:60:2: WARNING: blocks badly nested: Bo breaks Eo
+mandoc: break.in:67:2: WARNING: blocks badly nested: Bo breaks Eo

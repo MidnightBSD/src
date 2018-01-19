@@ -1,0 +1,60 @@
+.\" $OpenBSD: spacing.in,v 1.6 2017/07/04 14:53:23 schwarze Exp $
+.TH HP-SPACING 1 "December 23, 2014"
+.SH NAME
+HP-spacing \- spacing in hanged lists
+.SH DESCRIPTION
+Normal text.
+.HP
+Each hanged paragraph gets a sufficient amount of text
+to wrap to the next line.
+.br
+And a second line.
+.sp 1v
+Vertical spacing an a third line.
+.br
+A fourth line.
+.HP -10n
+Each hanged paragraph gets a sufficient amount of text
+to wrap to the next line.
+.br
+And a second line.
+.HP -0.36i
+Each hanged paragraph gets a sufficient amount of text
+to wrap to the next line.
+.br
+And a second line.
+.HP 0n
+Each hanged paragraph gets a sufficient amount of text
+to wrap to the next line.
+.br
+And a second line.
+.HP 1n
+Each hanged paragraph gets a sufficient amount of text
+to wrap to the next line.
+.br
+And a second line.
+.HP 2n
+Each hanged paragraph gets a sufficient amount of text
+to wrap to the next line.
+.br
+And a second line.
+.HP 4n
+Each hanged paragraph gets a sufficient amount of text
+to wrap to the next line.
+.br
+And a second line.
+.HP .76i
+Each hanged paragraph gets a sufficient amount of text
+to wrap to the next line.
+.br
+And a second line.
+.HP 16n
+Each hanged paragraph gets a sufficient amount of text
+to wrap to the next line.
+.br
+And a second line.
+.HP 78n
+Each hanged paragraph gets a sufficient amount of text
+to wrap to the next line.
+.LP
+Normal text.

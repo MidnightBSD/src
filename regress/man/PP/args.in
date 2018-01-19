@@ -1,0 +1,12 @@
+.\" $OpenBSD: args.in,v 1.2 2017/07/04 14:53:23 schwarze Exp $
+.TH PP-ARG 1 "July 4, 2014"
+.SH NAME
+PP-arg \- paragraphs macros with arguments
+.SH DESCRIPTION
+PP with argument:
+.PP arg
+LP with arguments:
+.LP arg1 arg2
+P with argument:
+.P arg
+final text

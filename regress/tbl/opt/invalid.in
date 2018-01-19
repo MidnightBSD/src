@@ -1,0 +1,20 @@
+.\" $OpenBSD: invalid.in,v 1.2 2017/07/04 14:53:27 schwarze Exp $
+.TH TBL-OPT 1 "January 25, 2015"
+.SH NAME
+tbl-opt \- table options
+.SH DESCRIPTION
+normal text
+.TS
+tab decimalpoint (,x) %foo box;
+n n .
+10.0	0.01
+0.01	10.0
+.TE
+.PP
+normal text
+.TS
+ , box,tab(:)	delim($$); l l .
+a:b
+.TE
+.PP
+normal text

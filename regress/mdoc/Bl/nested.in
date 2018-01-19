@@ -1,0 +1,84 @@
+.\" $OpenBSD: nested.in,v 1.6 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BL-NESTED 1
+.Os
+.Sh NAME
+.Nm Bl-nested
+.Nd nested lists
+.Sh DESCRIPTION
+inset:
+.Bl -inset
+.It outer
+list
+.Bl -inset
+.It inner
+list
+.El
+.El
+inset compact:
+.Bl -inset -compact
+.It outer
+list
+.Bl -inset -compact
+.It inner
+list
+.El
+.El
+dash:
+.Bl -dash
+.It
+outer list
+.Bl -dash
+.It
+inner list
+.El
+.El
+dash compact:
+.Bl -dash -compact
+.It
+outer list
+.Bl -dash -compact
+.It
+inner list
+.El
+.El
+tag:
+.Bl -tag -width 4n
+.It outer tag
+outer text
+.Bl -tag -width 4n
+.It inner tag
+inner text
+.El
+outer text
+.El
+.Bl -tag -width 4n
+.It outer tag
+.Bd -ragged -compact
+outer text (display)
+.Ed
+.Bl -tag -width 4n
+.It inner tag
+inner text
+.El
+outer text
+.El
+.Bl -tag -width 4n
+.It outer tag
+.Dl outer text (one-line display)
+.Bl -tag -width 4n
+.It inner tag
+inner text
+.El
+outer text
+.El
+.Bl -tag -width 4n -offset 3n
+.It outer tag (indented 3n)
+outer text
+.Bl -tag -width 4n -offset 6n
+.It inner tag (indented 6n)
+inner text
+.El
+outer text
+.El
+final text

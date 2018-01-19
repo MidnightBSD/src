@@ -1,0 +1,9 @@
+.\" $OpenBSD: divzero.in,v 1.3 2017/07/04 14:53:27 schwarze Exp $
+.TH NR-DIVZERO 1 "December 18, 2014"
+.SH NAME
+nr-divzero \- division by zero in numerical expression
+.SH DESCRIPTION
+initial text
+.nr divresult 1/0
+.nr modresult 1%0
+final \n[divresult] \n[modresult] text

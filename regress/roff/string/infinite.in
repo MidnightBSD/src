@@ -1,0 +1,9 @@
+.\" $OpenBSD: infinite.in,v 1.3 2017/07/04 14:53:27 schwarze Exp $
+.TH STRING-INFINITE 1 "December 3, 2010"
+.SH NAME
+string-infinite - endless recursion in string expansion
+.SH DESCRIPTION
+.ds recur \\*[recur]
+Blow up,
+(and do not \*[recur] print this)
+but still render following text correctly.

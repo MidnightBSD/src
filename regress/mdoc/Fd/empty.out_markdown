@@ -1,0 +1,17 @@
+FD-EMPTY(1) - General Commands Manual
+
+# NAME
+
+**Fd-empty** - empty preprocessor directive macros
+
+# SYNOPSIS
+
+**#include &lt;sys/types.h>**  
+**#include &lt;stdlib.h>**
+
+# DESCRIPTION
+
+leading text
+trailing text
+
+OpenBSD - July 4, 2017

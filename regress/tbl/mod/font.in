@@ -1,0 +1,19 @@
+.\" $OpenBSD: font.in,v 1.4 2017/07/04 14:53:27 schwarze Exp $
+.TH TBL-MOD-FONT 1 "February 10, 2015"
+.SH NAME
+tbl-mod-font \- font modifiers in table layouts
+.SH DESCRIPTION
+normal text
+.TS
+box tab(:);
+cb|cfCW|ci
+cFI | cf(foobar) | cFB.
+bold:roman:italic
+_
+italic:roman:bold
+and:so:on
+.TE
+.sp
+leaked tab settings:
+.br
+a	b	c	d	e

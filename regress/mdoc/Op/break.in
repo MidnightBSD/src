@@ -1,0 +1,30 @@
+.\" $OpenBSD: break.in,v 1.2 2017/07/04 14:53:26 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt OP-BREAK 1
+.Os
+.Sh NAME
+.Nm Op-break
+.Nd partial explicit block broken by partial implicit block
+.Sh DESCRIPTION
+before both
+.Op inside first Do inside both
+inside second
+.Dc
+after both
+.Pp
+0
+.Op 1 Op 12 Do 123
+3
+.Dc
+0
+.\" The following does not work yet:
+.ig
+.Pp
+0
+.Op 1 Op 12 Do 123 Do 1234
+34
+.Dc
+4
+.Dc
+0
+..

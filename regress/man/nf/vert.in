@@ -1,0 +1,29 @@
+.\" $OpenBSD: vert.in,v 1.2 2017/07/04 14:53:24 schwarze Exp $
+.TH NF-VERT 1 "June 2, 2012"
+.SH NAME
+nf-vert \- spacing around filling macros
+.SH DESCRIPTION
+regular
+text
+.nf
+literal
+text
+.fi
+regular
+text
+.br
+.nf
+literal
+text
+.br
+.fi
+regular
+text
+.sp
+.nf
+literal
+text
+.sp
+.fi
+regular
+text

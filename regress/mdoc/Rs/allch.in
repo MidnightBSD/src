@@ -1,0 +1,49 @@
+.\" $OpenBSD: allch.in,v 1.4 2017/07/04 14:53:26 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt RS-ALLCH 1
+.Os
+.Sh NAME
+.Nm Rs-allch
+.Nd reference block using all supported child macros
+.Sh DESCRIPTION
+reference on the same line:
+.Rs
+.%A author name
+.%T title of article
+.%B book title
+.%I issuer name
+some
+.%J journal name
+.%R report name
+.%N number of journal
+.%V volume number
+.Em bogus
+text
+.%U "uniform resource locator"
+.%P page number
+.%Q institutional author
+.%C city name
+.%D date of publication
+.%O optional information
+.Re
+.Sh SEE ALSO
+reference after a blank line:
+.Rs
+.%A author name
+.%T title of article
+.%B book title
+.%I issuer name
+some
+.Em bogus
+.%J journal name
+.%R report name
+.%N number of journal
+.%V volume number
+text
+.%U "uniform resource locator"
+.%P page number
+.%Q institutional author
+.%C city name
+.%D date of publication
+.%O optional information
+.Re

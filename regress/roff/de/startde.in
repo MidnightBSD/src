@@ -1,0 +1,25 @@
+.\" $OpenBSD: startde.in,v 1.2 2017/07/04 14:53:27 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt DE-STARTDE 1
+.Os
+.Sh NAME
+.Nm de-startde
+.Nd macro starting a macro definition, but not ending it
+.Sh DESCRIPTION
+define outer macro:
+.de outer
+outer macro called; define inner macro:
+.de inner
+inner macro called; end outer scope.
+..
+outer scope ended; outer macro now defined.
+.Pp
+call outer macro:
+.outer
+returned from call of outer macro; end inner scope.
+..
+inner scope ended; inner macro now defined.
+.Pp
+call inner macro:
+.inner
+returned from call of inner macro.

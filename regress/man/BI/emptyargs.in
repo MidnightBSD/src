@@ -1,0 +1,11 @@
+.\" $OpenBSD: emptyargs.in,v 1.2 2017/07/04 14:53:23 schwarze Exp $
+.TH BI-EMPTYARGS 1 "April 6, 2015"
+.SH NAME
+BI-emptyargs \- empty arguments to font alternation macros
+.SH DESCRIPTION
+leading text
+.TP 6n
+.BI bold italic "" ""
+.BI bold "" "" italic 
+.PP
+trailing text

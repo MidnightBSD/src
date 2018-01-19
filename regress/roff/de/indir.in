@@ -1,0 +1,31 @@
+.\" $OpenBSD: indir.in,v 1.2 2017/07/04 14:53:27 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt DE-INDIR 1
+.Os
+.Sh NAME
+.Nm de-indir
+.Nd indirect macro definitions
+.Sh DESCRIPTION
+full dei:
+.ds myim mym
+.ds myie mye
+.dei myim myie
+text1
+.mye
+.mym
+.br
+dei with undefined second argument:
+.rm myie mym
+.dei myim myie
+text2
+..
+.mym
+.br
+dei with undefined first argument:
+.rm myim mym
+.dei myim
+text3
+.br
+dei without arguments:
+.dei
+text4

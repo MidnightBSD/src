@@ -1,0 +1,9 @@
+ER-NOARG(1)                 General Commands Manual                ER-NOARG(1)
+
+NNAAMMEE
+     EErr--nnooaarrgg - error constant macro without an argument
+
+DDEESSCCRRIIPPTTIIOONN
+     with error: ENOENT; bboolldd; EIO. no error: end of test document
+
+OpenBSD                          July 4, 2017                          OpenBSD

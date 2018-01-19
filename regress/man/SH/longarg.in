@@ -1,0 +1,10 @@
+.\" $OpenBSD: longarg.in,v 1.2 2017/07/04 14:53:23 schwarze Exp $
+.TH SH-LONGARG 1 "April 4, 2015"
+.SH NAME
+SH-longarg \- long section header lines
+.SH
+DESCRIPTION
+initial text
+.SH "This section has a really ridiculously long title\
+ which won't even fit on the line."
+custom section text

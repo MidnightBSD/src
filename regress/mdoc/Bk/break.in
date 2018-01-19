@@ -1,0 +1,54 @@
+.\" $OpenBSD: break.in,v 1.7 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BK-BREAK 1
+.Os
+.Sh NAME
+.Nm Bk-break
+.Nd handling of word keeps
+.Sh DESCRIPTION
+Even though it is called a word keep,
+.Bk -words
+it will not keep words together in free-form text.
+.Ek
+However, even the noop macro
+.Bk -words
+.No is sufficient to let the keep take effect .
+.Ek
+Even text generated in pre-handlers must be kept together with
+the text following it:
+.Bk -words
+.Xr one 1 No and Xr two 2
+.Ek
+should be on the same line.
+.Pp
+Including the whole output line into the keep is not required,
+including just the macros to be kept together is sufficient:
+.Pp
+.Nm
+.Ar x x x x x x x x
+.Ar x x x x x x x x
+.Ar x x x x x x x x
+.Ar x x x x x x
+.Bk -words
+.Op o Ar a
+.Ek
+.Pp
+.Bk -words
+.Nm
+.Ar x x x x x x x x
+.Ar x x x x x x x x
+.Ar x x x x x x x x
+.Ar x x x x x x
+.Op o Ar a
+.Ek
+.Pp
+Even text printed without spacing must be kept together
+with the text following it:
+.Pp
+.Bk -words
+.Fn xxxxxxxxxxxxxxxxxxxx "xxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxx" xxxxxxxxxxxxxxxxxxxx
+.Pp
+.Fo xxxxxxxxxxxxxxxxxxxx
+.Fa "xxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxx" xxxxxxxxxxxxxxxxxxxx
+.Fc
+.Ek

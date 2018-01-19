@@ -1,0 +1,15 @@
+.\" $OpenBSD: empty.in,v 1.5 2017/07/04 14:53:25 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt DQ-EMPTY 1
+.Os
+.Sh NAME
+.Nm Dq-empty
+.Nd empty implicit enclosure macros
+.Sh DESCRIPTION
+An empty
+.Dq
+and a full
+.Dq "(" user@host)
+quotation.
+And another
+.Do "(" full) Dc one "Sy" bold .

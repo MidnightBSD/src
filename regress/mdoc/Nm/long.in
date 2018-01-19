@@ -1,0 +1,12 @@
+.\" $OpenBSD: long.in,v 1.2 2017/07/04 14:53:25 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt NM-LONG 1
+.Os
+.Sh NAME
+.Nm \&Nm-long
+.Nd long \&Nm in the SYNOPSIS
+.Sh SYNOPSIS
+.Nm "This is a terribly long name, it is so long that it does not fit \
+one one single line -"
+.Fl o
+.Ar

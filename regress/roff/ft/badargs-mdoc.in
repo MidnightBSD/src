@@ -1,0 +1,19 @@
+.\" $OpenBSD: badargs-mdoc.in,v 1.2 2017/07/04 14:53:27 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt FT-BADARGS-MDOC 1
+.Os
+.Sh NAME
+.Nm ft-badargs-mdoc
+.Nd font request with bad arguments
+.Sh DESCRIPTION
+default font
+.ft B
+bold
+.ft foo
+still bold
+.ft I bogus
+italic
+.ft P
+back to bold
+.ft
+back to italic

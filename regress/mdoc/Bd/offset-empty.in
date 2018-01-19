@@ -1,0 +1,32 @@
+.\" $OpenBSD: offset-empty.in,v 1.6 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BD-OFFSET-EMPTY 1
+.Os
+.Sh NAME
+.Nm Bd-offset-empty
+.Nd no argument specified to Bd offset
+.Sh DESCRIPTION
+.Bd -literal -offset
+Bd literal offset empty
+.Ed
+.Bd -literal -offset left
+Bd literal offset left
+.Ed
+.Bd -literal -offset indent
+Bd literal offset indent
+.Ed
+.Bd -literal -offset indent-two
+Bd literal offset indent-two
+.Ed
+.Bd -literal -offset 4n
+Bd literal offset 4n
+.Ed
+.Bd -literal -offset mystring
+Bd literal offset mystring
+.Ed
+.Bd -literal -offset Ds
+Bd literal offset Ds
+.Ed
+.Bd -literal -offset 78n
+Bd literal offset 78n
+.Ed

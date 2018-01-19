@@ -1,0 +1,13 @@
+.\" $OpenBSD: basic.in,v 1.2 2017/07/04 14:53:23 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt SIZE-BASIC 1
+.Os
+.Sh NAME
+.Nm size-basic
+.Nd font sizes
+.Sh DESCRIPTION
+initial text
+.EQ
+x size 12 x size 14 x size 16 x
+.EN
+final text

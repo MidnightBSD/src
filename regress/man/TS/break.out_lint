@@ -1,0 +1,4 @@
+mandoc: break.in:7:2: WARNING: line scope broken: TS breaks TP
+mandoc: break.in:14:2: WARNING: line scope broken: TS breaks SH
+mandoc: break.in:21:2: WARNING: line scope broken: TS breaks SS
+mandoc: break.in:28:2: WARNING: line scope broken: TS breaks B

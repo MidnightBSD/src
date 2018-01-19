@@ -1,0 +1,15 @@
+.\" $OpenBSD: arg.in,v 1.4 2017/07/04 14:53:26 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt PP-ARG 1
+.Os
+.Sh NAME
+.Nm Pp-arg
+.Nd paragraph macro with arguments
+.Sh DESCRIPTION
+line 1
+.Pp drop this
+line 2
+.br drop this
+line 3
+.sp 1v drop this
+line 4

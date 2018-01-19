@@ -1,0 +1,12 @@
+.\" $OpenBSD: longhead.in,v 1.2 2017/07/04 14:53:24 schwarze Exp $
+.TH TP-LONGHEAD 1 "April 8, 2014"
+.SH NAME
+TP-longhead \- tagged paragraph with a long head
+.SH DESCRIPTION
+normal text
+.TP 6n
+.B "This tagged paragraph has ridiculously long text \
+in its head, such that it doesn't even fit on the line"
+paragraph body
+.PP
+normal text
