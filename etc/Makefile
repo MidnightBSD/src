@@ -313,9 +313,6 @@ MTREES+=	mtree/BIND.include.dist		/usr/include
 .if ${MK_BIND_MTREE} != "no"
 MTREES+=	mtree/BIND.chroot.dist		/var/named
 .endif
-.if ${MK_GROFF} != "no"
-MTREES+=	mtree/BSD.groff.dist		/usr
-.endif
 .if ${MK_SENDMAIL} != "no"
 MTREES+=	mtree/BSD.sendmail.dist		/
 .endif
