@@ -52,7 +52,23 @@ LIB_SRCS=	${LIBMAN_SRCS} \
 		msec.c \
 		preconv.c \
 		read.c \
-		compat_recallocarray.c \
+                   compat_err.c \
+                   compat_fts.c \
+                   compat_getline.c \
+                   compat_getsubopt.c \
+                   compat_isblank.c \
+                   compat_mkdtemp.c \
+                   compat_ohash.c \
+                   compat_progname.c \
+                   compat_reallocarray.c \
+                   compat_recallocarray.c \
+                   compat_strcasestr.c \
+                   compat_stringlist.c \
+                   compat_strlcat.c \
+                   compat_strlcpy.c \
+                   compat_strsep.c \
+                   compat_strtonum.c \
+                   compat_vasprintf.c \
 
 HTML_SRCS=	eqn_html.c \
 		html.c \
