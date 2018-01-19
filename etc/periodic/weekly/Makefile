@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/periodic/weekly/Makefile,v 1.4 2011/08/07 01:28:59 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -13,7 +13,7 @@ FILES+=	310.locate
 .endif
 
 .if ${MK_MAN_UTILS} != "no"
-FILES+=	320.whatis 330.catman
+FILES+=	320.whatis
 .endif
 
 .include <bsd.prog.mk>

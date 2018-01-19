@@ -45257,7 +45257,6 @@ etc/periodic/security/Makefile -text
 etc/periodic/security/security.functions -text
 etc/periodic/weekly/310.locate -text
 etc/periodic/weekly/320.whatis -text
-etc/periodic/weekly/330.catman -text
 etc/periodic/weekly/340.noid -text
 etc/periodic/weekly/350.msearch -text
 etc/periodic/weekly/999.local -text
