@@ -1,0 +1,21 @@
+.\" $OpenBSD: nowidth.in,v 1.2 2017/07/04 14:53:23 schwarze Exp $
+.TH RS-NESTED 1 "April 6, 2015"
+.SH NAME
+RS-nowidth \- indentation blocks not specifying a width
+.SH DESCRIPTION
+regular text
+.RS
+top-level indented list
+.RE
+regular text
+.TP 2n
+\(bu
+bullet list
+.RS
+indented text
+.RE
+regular text
+.RS
+top-level indented list
+.RE
+regular text

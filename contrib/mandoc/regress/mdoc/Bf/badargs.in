@@ -1,0 +1,21 @@
+.\" $OpenBSD: badargs.in,v 1.2 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BF-BADARGS 1
+.Os
+.Sh NAME
+.Nm Bf-badargs
+.Nd font blocks with bad arguments
+.Sh DESCRIPTION
+normal text
+.Bf -emphasis
+emphasis
+.Bf
+no argument
+.Ef
+back to emphasis
+.Bf badarg
+bad argument
+.Ef tail argument
+back to emphasis
+.Ef
+back to normal

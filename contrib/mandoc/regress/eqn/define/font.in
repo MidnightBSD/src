@@ -1,0 +1,16 @@
+.\" $OpenBSD: font.in,v 1.2 2017/07/04 14:53:23 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt DEFINE-FONT 1
+.Os
+.Sh NAME
+.Nm define-font
+.Nd font selection takes place after define resolution
+.Sh DESCRIPTION
+initial text
+.EQ
+define alias 'sin x'
+alias
+define sin 'value'
+sin
+.EN
+final text

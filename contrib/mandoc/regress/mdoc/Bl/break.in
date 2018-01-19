@@ -1,0 +1,78 @@
+.\" $OpenBSD: break.in,v 1.7 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BL-BREAK 1
+.Os
+.Sh NAME
+.Nm Bl-break
+.Nd list breaking another block
+.Sh DESCRIPTION
+before both
+.Bl -enum -offset indent
+.It
+before bracket
+.Bo inside both
+.El
+after list
+.Bc
+in between
+.Bl -enum -offset indent
+.It
+before bracket
+.Bo inside both
+.El
+.It
+stray item
+.Bc
+after both
+.Sh EXAMPLES
+.Bl -enum -offset indent
+.It
+before display
+.Bd -ragged -offset indent
+inside both
+.El
+after display
+.Ed
+in between
+.Bl -enum -offset indent
+.It
+before display
+.Bd -ragged -offset indent
+inside both
+.El
+.It
+stray item
+.Ed
+after both
+.Bl -enum -offset indent
+.It
+before table
+.Bl -column column
+.It column
+.Bd -ragged -offset indent
+inside display
+.El
+first line after table
+second line after table
+.El
+after list
+.Sh DIAGNOSTICS
+.Bl -column column
+.It column
+.Bd -ragged -offset indent
+inside display
+.El
+.Ta stray tab
+after stray tab
+.Ed
+after display
+.Sh CAVEATS
+.Bl -hang
+.It before broken block Bo inside both
+.El
+after list
+.Sh BUGS
+.Bl -enum
+.It before broken block Bo inside both
+.El
+after list

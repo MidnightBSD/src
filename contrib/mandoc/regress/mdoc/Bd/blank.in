@@ -1,0 +1,32 @@
+.\" $OpenBSD: blank.in,v 1.6 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BD-BLANK 1
+.Os
+.Sh NAME
+.Nm Bd-blank
+.Nd handling of blank lines in literal displays
+.Sh DESCRIPTION
+.Bd -literal
+completely blank line:
+
+line containing a blank character:
+ 
+line containing two blank characters:
+  
+line containing space tab space:
+ 	 
+line starting with a blank character:
+ x
+line starting with two blank characters:
+  x
+line ending in one blank character: 
+line ending in two blank characters:  
+line ending in space tab space: 	 
+line containing a Pp macro:
+.Pp
+finally, a trailing blank line:
+
+.Ed
+An empty one-line literal display:
+.Dl     
+end of test document

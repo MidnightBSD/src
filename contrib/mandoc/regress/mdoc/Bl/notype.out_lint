@@ -1,0 +1,5 @@
+mandoc: notype.in:13:2: ERROR: skipping all arguments: El tail argument
+mandoc: notype.in:10:2: WARNING: list type is not the first argument: Bl -offset
+mandoc: notype.in:16:2: ERROR: missing list type, using -item: Bl
+mandoc: notype.in:16:20: WARNING: skipping -width argument: Bl -item
+mandoc: notype.in:22:2: ERROR: missing list type, using -item: Bl

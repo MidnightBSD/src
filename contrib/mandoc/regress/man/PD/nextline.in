@@ -1,0 +1,43 @@
+.\" $OpenBSD: nextline.in,v 1.2 2017/07/04 14:53:23 schwarze Exp $
+.TH PD-NEXTLINE 1 "March 20, 2015"
+.SH NAME
+PD-nextline \- paragraph distance macro in next-line scope
+.SH DESCRIPTION
+some text
+.SH
+.PD 0v
+NEXT SECTION
+first paragraph
+.PP
+second paragraph
+.PD 1v
+.PP
+third paragraph
+.SS
+.PD 0v
+Subsection
+first paragraph
+.PP
+second paragraph
+.PD 1v
+.PP
+third paragraph
+.TP 6n
+.PD 0v
+tag
+list text
+.TP
+tag
+list text
+.PD 1v
+.TP
+tag
+list text
+.PP
+normal text
+.B
+.PD 0v
+bold text
+normal text
+.PP
+final paragraph

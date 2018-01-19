@@ -1,0 +1,89 @@
+LI-PUNCT(1) - General Commands Manual
+
+# NAME
+
+**Li-punct** - punctuation following a literal macro
+
+# DESCRIPTION
+
+Leading punctuation:
+(`b`
+\[`b`
+| `b`
+. `b`
+, `b`
+; `b`
+: `b`
+? `b`
+! `b`
+) `b`
+] `b`
+
+Trailing punctuation:
+`a` (
+`a` \[
+`a` |
+`a`.
+`a`,
+`a`;
+`a`:
+`a`?
+`a`!
+`a`)
+`a`]
+
+Middle punctuation:
+`a` (`b`
+`a` \[`b`
+`a` | `b`
+`a`. `b`
+`a`, `b`
+`a`; `b`
+`a`: `b`
+`a`? `b`
+`a`! `b`
+`a`) `b`
+`a`] `b`
+
+Isolated punctuation:
+`a` (`b`
+`a` \[`b`
+`a` | `b`
+`a` . `b`
+`a` , `b`
+`a` ; `b`
+`a` : `b`
+`a` ? `b`
+`a` ! `b`
+`a` ) `b`
+`a` ] `b`
+
+Isolated trailing punctuation:
+`a` (
+`a` \[
+`a` |
+`a` .
+`a` ,
+`a` ;
+`a` :
+`a` ?
+`a` !
+`a` )
+`a` ]
+
+Multiple isolated punctuation:
+`a` (\[`b`
+`a` )] `b`
+
+Multiple punctuation:
+\[(`arg`)].
+
+Quoted:
+`a . b Nm` **bold**
+`. b Nm`
+.
+
+Missing blank:
+`a.`
+
+OpenBSD - July 4, 2017

@@ -1,0 +1,40 @@
+.\" $OpenBSD: emptyitem.in,v 1.4 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BL-EMPTYITEM 1
+.Os
+.Sh NAME
+.Nm Bl-emptyitem
+.Nd lists with fixed heads and empty items
+.Sh DESCRIPTION
+bullet list:
+.Bl -bullet
+.It head argument
+one
+.It
+.It
+three
+.El
+dash list:
+.Bl -dash
+.It
+one
+.It head argument
+.It
+three
+.El
+enum list:
+.Bl -enum
+.It
+one
+.It
+.It head argument
+three
+.El
+hyphen list:
+.Bl -hyphen
+.It Sy head argument
+one
+.It
+.It
+three
+.El

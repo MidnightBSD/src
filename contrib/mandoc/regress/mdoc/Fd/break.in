@@ -1,0 +1,27 @@
+.\" $OpenBSD: break.in,v 1.2 2017/07/04 14:53:25 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt FD-BREAK 2
+.Os
+.Sh NAME
+.Nm Fd-break
+.Nd line break before old-style header include file
+.Sh SYNOPSIS
+.Fd #include <fcntl.h>
+.Ft int
+.Fn open "const char *path" "int flags" "mode_t mode"
+.Fd #include <sys/types.h>
+.Fd #include <unistd.h>
+.Ft int
+.Fn dup "int oldd"
+.Ft ssize_t
+.Fn write "int d" "const void *buf" "size_t nbytes"
+.Sh DESCRIPTION
+.Fd #include <fcntl.h>
+.Ft int
+.Fn open "const char *path" "int flags" "mode_t mode"
+.Fd #include <sys/types.h>
+.Fd #include <unistd.h>
+.Ft int
+.Fn dup "int oldd"
+.Ft ssize_t
+.Fn write "int d" "const void *buf" "size_t nbytes"

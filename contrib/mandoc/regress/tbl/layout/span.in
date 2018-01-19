@@ -1,0 +1,55 @@
+.\" $OpenBSD: span.in,v 1.5 2017/07/04 14:53:27 schwarze Exp $
+.TH TBL-LAYOUT-SPAN 1 "June 17, 2017"
+.SH NAME
+tbl-layout-span \- alignment of spanned cells
+.SH DESCRIPTION
+normal text
+.TS
+box tab(:);
+L L L L
+L S L L
+L L S L
+L L L S.
+a:b:c:d
+s:c:d
+a:s:d
+a:b:s
+.TE
+.sp
+.TS
+box tab(:);
+C C C C
+C S C C
+C C S C
+C C C S.
+a:b:c:d
+s:c:d
+a:s:d
+a:b:s
+.TE
+.sp
+.TS
+box tab(:);
+R R R R
+R S R R
+R R S R
+R R R S.
+a:b:c:d
+s:c:d
+a:s:d
+a:b:s
+.TE
+.sp
+.TS
+allbox tab(:);
+L L L L L
+C S S C S
+R R R R R.
+a:b:c:d:e
+s1:s2
+a:b:c:d:e
+.TE
+.sp
+leaked tab settings:
+.br
+a	b	c	d	e	f

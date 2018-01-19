@@ -1,0 +1,31 @@
+.\" $OpenBSD: width.in,v 1.5 2017/07/04 14:53:23 schwarze Exp $
+.TH RS-WIDTH 1 "December 23, 2014"
+.SH NAME
+RS-width \- negative and excessive indentation
+.SH DESCRIPTION
+regular
+text
+.RS -14n
+indented
+text
+.RE
+regular
+text
+.RS -0.36i
+indented
+text
+.RE
+regular
+text
+.RS 0.36i
+indented
+text
+.RE
+regular
+text
+.RS 100n
+indented
+text
+.RE
+regular
+text

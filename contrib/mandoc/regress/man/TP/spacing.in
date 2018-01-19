@@ -1,0 +1,43 @@
+.\" $OpenBSD: spacing.in,v 1.2 2017/07/04 14:53:24 schwarze Exp $
+.TH TP-SPACING 1 "September 21, 2015"
+.SH NAME
+TP-spacing \- spacing in tagged paragraphs
+.SH DESCRIPTION
+Normal text.
+.TP
+tag
+Indented text.
+.TP
+four
+Indented text.
+.TP
+ffive
+Indented text.
+.TP
+sixsix
+Indented text.
+.TP
+seseven
+Indented text.
+.TP
+a much longer tag
+Indented text.
+.LP
+Tags with trailing space:
+.TP
+tag\ \&
+Three plus one makes four.
+.TP
+tag\ \ \&
+Three plus two makes five.
+.TP
+tag\ \ \ \&
+Three plus three makes six.
+.TP
+tag\ \ \ \ \ \&
+Three plus four makes seven.
+.TP
+tag\ \ \ \ \ \ \&
+Three plus five makes eight.
+.LP
+Normal text.

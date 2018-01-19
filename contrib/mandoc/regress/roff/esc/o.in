@@ -1,0 +1,19 @@
+.\" $OpenBSD: o.in,v 1.2 2017/07/04 14:53:27 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt ESC-O 1
+.Os
+.Sh NAME
+.Nm esc-o
+.Nd the roff escape o sequence: overstrike
+.Sh DESCRIPTION
+empty: x\o''x
+.br
+one character: x\o'|'x
+.br
+wide/narrow: x\o'O|'x
+.br
+narrow/wide: x\o'|O'x
+.br
+wide/narrow/narrow: x\o'O-|'x
+.br
+narrow/narrow/wide: x\o'|-O'x

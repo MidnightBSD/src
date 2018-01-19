@@ -1,0 +1,8 @@
+.\" $OpenBSD: missing.in,v 1.2 2017/07/04 14:53:26 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt OS-MISSING 1
+.Sh NAME
+.Nm Os-missing
+.Nd operating system macro missing in prologue
+.Sh DESCRIPTION
+some text

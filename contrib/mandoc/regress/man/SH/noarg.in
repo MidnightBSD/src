@@ -1,0 +1,47 @@
+.\" $OpenBSD: noarg.in,v 1.5 2017/07/04 14:53:23 schwarze Exp $
+.TH SH-NOARG 1 "March 20, 2015"
+.SH NAME
+SH-noarg \- empty header lines
+.SH
+.SH
+DESCRIPTION
+initial text
+.SH
+.SS Subsection
+subsection text
+.SH
+.TP 6n
+tag
+tagged list
+.SH
+.IP tag 6n
+indented list
+.SH
+.HP 6n
+This is a hanged paragraph.
+A bit more text is needed to see the effect.
+.SH
+.PP
+normal paragraph
+.SH
+.RS 6n
+indented paragraph
+.SH
+.RE
+after the end of the indented paragraph
+.SH
+.UR www.openbsd.org
+hyperlink
+.SH
+.UE
+after the end of the hyperlink
+.SH
+.nf
+no-fill mode
+.SH
+.fi
+back in fill mode
+.SH
+
+SEE ALSO
+broken(1)

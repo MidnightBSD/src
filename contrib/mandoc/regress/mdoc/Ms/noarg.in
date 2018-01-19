@@ -1,0 +1,13 @@
+.\" $OpenBSD: noarg.in,v 1.4 2017/07/04 14:53:25 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt MS-NOARG 1
+.Os
+.Sh NAME
+.Nm Ms-noarg
+.Nd mathematical symbol without an argument
+.Sh DESCRIPTION
+with symbol:
+.Ms alpha.
+no symbol:
+.Ms
+end of test document

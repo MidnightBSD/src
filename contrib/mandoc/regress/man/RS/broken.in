@@ -1,0 +1,46 @@
+.\" $OpenBSD: broken.in,v 1.4 2017/07/04 14:53:23 schwarze Exp $
+.TH RS-BROKEN 1 "January 24, 2015"
+.SH NAME
+RS-broken \- indented blocks broken by other blocks
+.SH DESCRIPTION
+broken by PP:
+.RS 2n
+indented
+.PP
+still indented
+.RE
+broken by IP:
+.RS
+indented
+.IP tag 6n
+first line
+.br
+second line
+.PP
+still indented
+.RE
+broken by TP:
+.RS
+indented
+.TP 6n
+tag
+first line
+.br
+second line
+.PP
+still indented
+.RE
+broken by HP:
+.RS
+indented
+.HP 2n
+Let's have a longer text here such that we can see the line break.
+.PP
+still indented
+.RE
+trailing PP:
+.RS
+indented
+.PP
+.RE
+final text

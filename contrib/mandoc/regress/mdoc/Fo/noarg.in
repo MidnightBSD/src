@@ -1,0 +1,45 @@
+.\" $OpenBSD: noarg.in,v 1.6 2017/07/04 14:53:25 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt FN-NOARG 1
+.Os
+.Sh NAME
+.Nm Fn-noarg
+.Nd function name macro without arguments
+.Sh DESCRIPTION
+with arguments:
+.Ft int
+.Fn abs "int i"
+.Ft long
+.Fo labs bogus
+.Fa "long i"
+.Fc
+void function arguments:
+.Ft int
+.Fn rand
+.Ft long
+.Fo random
+.Fc
+.Ft u_int32_t
+.Fo arc4random
+.Fa
+.Fc
+no name arguments:
+.Ft int
+.Fn
+no type arguments:
+.Ft
+.Fn abs "int i"
+no type and void function arguments:
+.Ft
+.Fn rand
+.Ft
+.Fo random
+.Fc
+.Ft
+.Fo arc4random
+.Fa
+.Fc
+no arguments at all:
+.Ft
+.Fn
+end of test document

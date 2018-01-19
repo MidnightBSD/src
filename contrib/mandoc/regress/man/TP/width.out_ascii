@@ -1,0 +1,81 @@
+TP-WIDTH(1)                 General Commands Manual                TP-WIDTH(1)
+
+
+
+NNAAMMEE
+       TP-width - indentation width of indented paragraphs
+
+DDEESSCCRRIIPPTTIIOONN
+       Regular mode:
+
+       tag
+indented
+text
+
+       tag
+   indented
+   text
+
+       tag
+       indented
+       text
+
+       tag
+        indented
+        text
+
+       tag
+         indented
+         text
+
+       tag
+          indented
+          text
+
+       tag indented
+           text
+
+       tag  indented
+            text
+
+       tag                                                                                                 indented
+                                                                                                           text
+
+       Literal mode:
+
+       tag
+indented
+text
+
+       tag
+   indented
+   text
+
+       tag
+       indented
+       text
+
+       tag
+        indented
+        text
+
+       tag
+         indented
+         text
+
+       tag
+          indented
+          text
+
+       tag indented
+           text
+
+       tag  indented
+            text
+
+       tag                                                                                                 indented
+                                                                                                           text
+
+
+
+OpenBSD                        December 23, 2014                   TP-WIDTH(1)

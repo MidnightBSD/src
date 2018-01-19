@@ -1,0 +1,18 @@
+.\" $OpenBSD: invalid.in,v 1.4 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt AT-INVALID 1
+.Os
+.Sh NAME
+.Nm At-invalid
+.Nd handling of an invalid AT&T UNIX argument
+.Sh DESCRIPTION
+no argument:
+.At
+.Pp
+valid argument:
+.At v7
+.Pp
+invalid argument:
+.At murks "Sy" bold
+.Pp
+end of file

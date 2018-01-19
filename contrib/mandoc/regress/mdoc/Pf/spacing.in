@@ -1,0 +1,32 @@
+.\" $OpenBSD: spacing.in,v 1.4 2017/07/04 14:53:26 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt PF-SPACING 1
+.Os
+.Sh NAME
+.Nm Pf-spacing
+.Nd spacing around the prefix macro
+.Sh DESCRIPTION
+Closing punctuation goes
+.Pf . right .
+But
+.Pf . . double
+prefixes don't work.
+Opening punctuation goes
+.Pf ( left .
+But again, prefix
+.Pf ( ) pairs
+don't work.
+Even normal text gets
+.Pf pre fixed .
+The first
+.Pf Ar gument
+is not parsed.
+Nothing can be
+.Pf prefixed
+to the next line.
+Trailing punctuation still counts as
+.Em eos Pf .
+.Po But it does not fall out of enclosures Pf . Pc
+.Pp
+It makes no sense at the very
+.Em end Pf

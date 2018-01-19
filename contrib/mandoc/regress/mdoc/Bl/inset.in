@@ -1,0 +1,49 @@
+.\" $OpenBSD: inset.in,v 1.6 2017/07/16 17:53:29 schwarze Exp $
+.Dd $Mdocdate: July 16 2017 $
+.Dt BL-INSET 1
+.Os
+.Sh NAME
+.Nm Bl-inset
+.Nd inset list labels
+.Sh DESCRIPTION
+.Bl -inset
+.It tag
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -inset
+.It four
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -inset
+.It quint
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -inset
+.It indent
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -inset
+.It septime
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -inset
+.It achtacht
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -inset
+.It neun_neun
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -inset
+.It zehn__zehn
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.\" Trailing white space in the head.
+.Bl -inset -width 10n
+.It "a"
+b
+.It "a "
+b
+.It "a  "
+b
+.El

@@ -1,0 +1,17 @@
+.\" $OpenBSD: nested.in,v 1.3 2017/07/04 14:53:27 schwarze Exp $
+.TH TBL-MACRO-NESTED 1 "December 16, 2014"
+.SH NAME
+tbl-macro-nested \- nested table
+.SH DESCRIPTION
+normal text
+.TS
+box tab(:);
+l | l .
+a:b
+_
+c:d
+.TS
+e:f
+.TE
+.PP
+normal text

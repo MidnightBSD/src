@@ -1,0 +1,37 @@
+BK-INPUTLINES(1)            General Commands Manual           BK-INPUTLINES(1)
+
+NNAAMMEE
+     BBkk--iinnppuuttlliinneess - effect of input lines breaks on word keeps
+
+SSYYNNOOPPSSIISS
+     BBkk--iinnppuuttlliinneess _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x
+                   [[a] [b]] (one line)
+
+     BBkk--iinnppuuttlliinneess _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x
+                   [[a] [b]] (break after first Oo)
+
+     BBkk--iinnppuuttlliinneess _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x
+                   [[a] [b]] (break after second Oo)
+
+     BBkk--iinnppuuttlliinneess _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x
+                   [[a] [b]] (break before first Oc)
+
+     BBkk--iinnppuuttlliinneess _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x [[a]
+                   [b]] (break after first Oc)
+
+     BBkk--iinnppuuttlliinneess _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x
+                   [[a] [b]] (break after third Oo)
+
+     BBkk--iinnppuuttlliinneess _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x
+                   [a b]
+
+     BBkk--iinnppuuttlliinneess _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x [a
+                   b]
+
+     BBkk--iinnppuuttlliinneess _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x
+                   [a] b
+
+     BBkk--iinnppuuttlliinneess _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x _x [a]
+                   b
+
+OpenBSD                          July 4, 2017                          OpenBSD

@@ -1,0 +1,11 @@
+.\" $OpenBSD: eos.in,v 1.3 2017/07/04 14:53:25 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt LB-EOS 1
+.Os
+.Sh NAME
+.Nm Lb-eos
+.Nd end of sentence handling after the library macro
+.Sh DESCRIPTION
+Let's use the
+.Lb mylib .
+And some other libraries.

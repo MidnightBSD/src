@@ -1,0 +1,27 @@
+.\" $OpenBSD: notype.in,v 1.5 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BL-NOTYPE 1
+.Os
+.Sh NAME
+.Nm Bl-notype
+.Nd lists with late or missing types
+.Sh DESCRIPTION
+late type:
+.Bl -offset indent -bullet
+.It
+Some text.
+.El tail argument
+.Pp
+no type:
+.Bl -offset indent -width Ds
+.It
+Some text.
+.El
+.Pp
+no argument at all:
+.Bl
+.It
+Some text.
+.El
+.Pp
+final text

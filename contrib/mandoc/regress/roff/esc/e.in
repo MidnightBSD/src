@@ -1,0 +1,20 @@
+.\" $OpenBSD: e.in,v 1.2 2017/07/04 14:53:27 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt ESC-E 1
+.Os
+.Sh NAME
+.Nm esc-e
+.Nd escaping backslashes
+.Sh DESCRIPTION
+In plain text: "\e" and "\\"
+.Pp
+On macro lines:
+.Qq \e(at
+and
+.Qq \\(at
+.Pp
+In a macro definition:
+.de mytest
+"\e$1" and "\\$2"
+..
+.mytest one two

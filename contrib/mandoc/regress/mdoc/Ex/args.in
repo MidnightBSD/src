@@ -1,0 +1,16 @@
+.\" $OpenBSD: args.in,v 1.2 2017/07/04 14:53:25 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt EX-ARGS 1
+.Os
+.Sh NAME
+.Nm Ex-args
+.Nd arguments to the exit value macro
+.Sh EXIT STATUS
+no arguments:
+.Ex -std
+.Pp
+one argument:
+.Ex -std one
+.Pp
+two arguments:
+.Ex -std one two

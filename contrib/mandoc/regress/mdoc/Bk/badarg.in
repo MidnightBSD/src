@@ -1,0 +1,57 @@
+.\" $OpenBSD: badarg.in,v 1.6 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BK-BADARG 1
+.Os
+.Sh NAME
+.Nm Bk-badarg
+.Nd bad arguments after Bk
+.Sh SYNOPSIS
+.Nm
+.Ar x x x x x x x x
+.Ar x x x x x x x x
+.Ar x x x x x x x x
+.Ar x x x x x x
+.Bk -badarg
+.Op o Ar a
+.Ek
+.Pp
+.Nm
+.Ar x x x x x x x x
+.Ar x x x x x x x x
+.Ar x x x x x x x x
+.Ar x x x x x x
+.Bk -lines
+.Op o Ar a
+.Ek tail argument
+.Pp
+.Nm
+.Ar x x x x x x x x
+.Ar x x x x x x x x
+.Ar x x x x x x x x
+.Ar x x x x x x
+.Bk -line
+.Op o Ar a
+.Ek
+.Pp
+.Nm
+.Ar x x x x x x x x
+.Ar x x x x x x x x
+.Ar x x x x x x x x
+.Ar x x x x x x
+.Bk
+.Op o Ar a
+.Ek
+.Pp
+.Nm
+.Ar x x x x x x x x
+.Ar x x x x x x x x
+.Ar x x x x x x x x
+.Ar x x x x x x
+.Bk -words -murks bogus
+.Op o Ar a
+.Ek
+.Sh DESCRIPTION
+Here is an empty keep:
+.Bk -words
+.Ek
+End of test document.

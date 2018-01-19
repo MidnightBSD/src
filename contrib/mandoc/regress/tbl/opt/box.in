@@ -1,0 +1,59 @@
+.\" $OpenBSD: box.in,v 1.4 2017/07/04 14:53:27 schwarze Exp $
+.TH TBL-OPT-BOX 1 "June 12, 2017"
+.SH NAME
+tbl-opt-box \- box table options
+.SH DESCRIPTION
+no boxing:
+.TS
+tab(:);
+l l.
+a:b
+c:d
+.TE
+.sp
+automatic boxing:
+.TS
+tab(:) box;
+l l.
+a:b
+c:d
+.TE
+.sp
+allbox:
+.TS
+tab(:) allbox;
+l l.
+a:b
+c:d
+.TE
+.sp
+manual boxing:
+.TS
+tab(:);
+||l||l||.
+_
+a:b
+_
+c:d
+_
+.TE
+.sp
+automatic and manual boxing:
+.TS
+tab(:) box;
+||l||l||.
+a:b
+_
+c:d
+_
+.TE
+.sp
+allbox and manual boxing:
+.TS
+tab(:) allbox;
+||l||l||.
+a:b
+_
+c:d
+_
+.TE

@@ -1,0 +1,19 @@
+.\" $OpenBSD: multiple.in,v 1.4 2017/07/04 14:53:23 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt SPACE-MULTIPLE 1
+.Os
+.Sh NAME
+.Nm space-multiple
+.Nd handling of multiple adjacent space characters
+.Sh DESCRIPTION
+one space here
+.Pp
+two spaces  here
+.Pp
+three spaces   here
+.Pp
+one non-collapsing space here
+.Pp
+two non-collapsing spaces\ \ here
+.Pp
+three non-collapsing spaces\ \ \ here

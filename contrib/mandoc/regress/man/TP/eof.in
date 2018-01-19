@@ -1,0 +1,7 @@
+.\" $OpenBSD: eof.in,v 1.2 2017/07/04 14:53:24 schwarze Exp $
+.TH TP-EOF 1 "July 7, 2014"
+.SH NAME
+TP-eof \- indented paragraph macro at the end of the file
+.SH DESCRIPTION
+The last line of the file is TP:
+.TP

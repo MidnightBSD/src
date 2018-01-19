@@ -1,0 +1,16 @@
+ESC-H(1)                    General Commands Manual                   ESC-H(1)
+
+NNAAMMEE
+     eesscc--hh - the roff escape h sequence: horizontal movement
+
+DDEESSCCRRIIPPTTIIOONN
+     simple: ><
+     rounding: >  <
+     absolute: > <
+     escape only: ><
+     escape at the end: ><
+     escape at the beginning: ><
+     escape in the middle: ><
+     invalid delimiter: ><
+
+OpenBSD                          July 4, 2017                          OpenBSD

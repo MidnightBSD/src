@@ -1,0 +1,2 @@
+mandoc: noarg.in:13:2: WARNING: skipping empty macro: Va
+mandoc: noarg.in:11:10: STYLE: no blank before trailing delimiter: Va errno.

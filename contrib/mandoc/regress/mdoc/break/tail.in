@@ -1,0 +1,49 @@
+.\" $OpenBSD: tail.in,v 1.4 2017/07/04 14:53:26 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BREAK-TAIL 1
+.Os
+.Sh NAME
+.Nm break-tail
+.Nd tail arguments on or after broken blocks
+.Sh DESCRIPTION
+Broken by a partial explicit block:
+.Ao ao
+.Bo bo ac
+.Ac bc
+.Bc tail
+.Ao ao
+.Bo bo ac
+.Ac bc
+.Bc Po po pc
+.Pc tail
+.Pp
+Broken by a partial implicit block:
+.Aq aq Bo bo eol
+.Bc tail
+.Aq aq Bo bo eol
+.Bc Po po pc
+.Pc tail
+.Pp
+Broken by a full implicit block:
+.Bl -tag -width Ds -offset indent
+.It it Ao ao ac
+.Ac tail
+list body
+.El
+.Bl -tag -width Ds -offset indent
+.It it Ao ao ac
+.Ac Po po pc
+.Pc tail
+list body
+.El
+.Pp
+After a broken block: closing child on closing macro,
+then opening child on closing macro:
+.\" Crashed before mdoc_macro.c OpenBSD rev. 1.169
+.Ao ao
+.Bo bo
+.Bro bro
+.Po po brc
+.Brc pc
+.Pc bc Bc ac
+.Ac Op op

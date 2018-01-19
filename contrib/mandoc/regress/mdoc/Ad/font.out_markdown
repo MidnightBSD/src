@@ -1,0 +1,13 @@
+AD-FONT(1) - General Commands Manual
+
+# NAME
+
+**Ad-font** - changing fonts inside the address macro
+
+# DESCRIPTION
+
+normal text
+*emphasis**bold**back* | *after*: *punctuation* **bold**
+trailing text
+
+OpenBSD - July 4, 2017

@@ -1,0 +1,9 @@
+NM-BADNAME(1)               General Commands Manual              NM-BADNAME(1)
+
+NNAAMMEE
+     BSD - text production macro on the NAME Nm line
+
+SSYYNNOOPPSSIISS
+     badNAME
+
+OpenBSD                          July 4, 2017                          OpenBSD
