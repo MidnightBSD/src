@@ -65833,7 +65833,6 @@ usr.bin/makewhatis/makewhatis.c -text
 usr.bin/makewhatis/makewhatis.local.8 -text
 usr.bin/makewhatis/makewhatis.local.sh -text
 usr.bin/man/Makefile -text
-usr.bin/man/apropos.1 -text
 usr.bin/man/man.1 -text
 usr.bin/man/man.conf.5 -text
 usr.bin/man/man.sh -text
