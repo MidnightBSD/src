@@ -65144,9 +65144,6 @@ usr.bin/cgraph/Makefile -text
 usr.bin/chat/Makefile -text
 usr.bin/chat/chat.8 -text
 usr.bin/chat/chat.c -text
-usr.bin/checknr/Makefile -text
-usr.bin/checknr/checknr.1 -text
-usr.bin/checknr/checknr.c -text
 usr.bin/chkey/Makefile -text
 usr.bin/chkey/chkey.1 -text
 usr.bin/chkey/chkey.c -text
@@ -65216,9 +65213,6 @@ usr.bin/col/Makefile -text
 usr.bin/col/README -text
 usr.bin/col/col.1 -text
 usr.bin/col/col.c -text
-usr.bin/colcrt/Makefile -text
-usr.bin/colcrt/colcrt.1 -text
-usr.bin/colcrt/colcrt.c -text
 usr.bin/colldef/Makefile -text
 usr.bin/colldef/colldef.1 -text
 usr.bin/colldef/common.h -text

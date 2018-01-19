@@ -319,8 +319,6 @@ SUBDIR+=	telnet
 .endif
 
 .if ${MK_TEXTPROC} != "no"
-SUBDIR+=	checknr
-SUBDIR+=	colcrt
 SUBDIR+=	ul
 .endif
 
