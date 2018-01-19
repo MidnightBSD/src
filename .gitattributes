@@ -65837,6 +65837,7 @@ usr.bin/man/man.1 -text
 usr.bin/man/man.conf.5 -text
 usr.bin/man/man.sh -text
 usr.bin/man/manpath.1 -text
+usr.bin/mandoc/Makefile svneol=native#text/plain
 usr.bin/mesg/Makefile -text
 usr.bin/mesg/mesg.1 -text
 usr.bin/mesg/mesg.c -text
