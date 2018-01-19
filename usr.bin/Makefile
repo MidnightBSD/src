@@ -101,7 +101,6 @@ SUBDIR=	alias \
 	lsvfs \
 	lzmainfo \
 	m4 \
-	${_makewhatis} \
 	${_man} \
 	mesg \
 	minigzip \
@@ -287,7 +286,6 @@ SUBDIR+=	make
 .endif
 
 .if ${MK_MAN_UTILS} != "no"
-_makewhatis=	makewhatis
 _man=		man
 .endif
 

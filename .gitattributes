@@ -65827,11 +65827,6 @@ usr.bin/make/util.c -text
 usr.bin/make/util.h -text
 usr.bin/make/var.c -text
 usr.bin/make/var.h -text
-usr.bin/makewhatis/Makefile -text
-usr.bin/makewhatis/makewhatis.1 -text
-usr.bin/makewhatis/makewhatis.c -text
-usr.bin/makewhatis/makewhatis.local.8 -text
-usr.bin/makewhatis/makewhatis.local.sh -text
 usr.bin/man/Makefile -text
 usr.bin/man/man.1 -text
 usr.bin/man/man.conf.5 -text
