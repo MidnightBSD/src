@@ -104,7 +104,7 @@ HTDOCDIR=
 CGIBINDIR=
 
 BINM_APROPOS="apropos"
-BINM_CATMAN="catman"
+#BINM_CATMAN="catman"
 BINM_MAKEWHATIS="makewhatis"
 BINM_MAN="man"
 BINM_SOELIM="soelim"

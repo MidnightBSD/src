@@ -14,8 +14,8 @@
 #include <stdio.h>
 
 #define MAN_CONF_FILE "/etc/man.conf"
-#define MANPATH_BASE "/usr/share/man:/usr/X11R6/man"
-#define MANPATH_DEFAULT "/usr/share/man:/usr/X11R6/man:/usr/local/man"
+#define MANPATH_BASE "/usr/share/man"
+#define MANPATH_DEFAULT "/usr/share/man:/usr/local/man"
 #define UTF8_LOCALE "en_US.UTF-8"
 #define HAVE_CMSG_XPG42 0
 #define HAVE_DIRENT_NAMLEN 1
