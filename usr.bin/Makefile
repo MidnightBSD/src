@@ -255,10 +255,6 @@ _mkcsmapper=	mkcsmapper
 _mkesdb=	mkesdb
 .endif
 
-.if ${MK_GROFF} != "no"
-SUBDIR+=	vgrind
-.endif
-
 .if ${MK_OPENSSL} != "no"
 SUBDIR+=	bc
 SUBDIR+=	chkey
