@@ -12,16 +12,12 @@ SUBDIR= ${_binutils} \
 	${_gdb} \
 	${_gperf} \
 	grep \
-	${_groff} \
 	${_rcs} \
 	sort \
 	${_texinfo}
 
 .if ${MK_CXX} != "no"
 _gperf=		gperf
-.if ${MK_GROFF} != "no"
-_groff=		groff
-.endif
 .endif
 
 .if ${MK_CVS} != "no"
