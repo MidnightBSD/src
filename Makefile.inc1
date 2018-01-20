@@ -224,11 +224,6 @@ CROSSENV=	MAKEOBJDIRPREFIX=${OBJTREE} \
 .if ${OSRELDATE} < 4015
 CROSSENV+=	AR=gnu-ar RANLIB=gnu-ranlib
 .endif
-.if ${MK_GROFF} != "no"
-CROSSENV+=	GROFF_BIN_PATH=${WORLDTMP}/legacy/usr/bin \
-		GROFF_FONT_PATH=${WORLDTMP}/legacy/usr/share/groff_font \
-		GROFF_TMAC_PATH=${WORLDTMP}/legacy/usr/share/tmac
-.endif
 
 # bootstrap-tools stage
 BMAKEENV=	INSTALL="sh ${.CURDIR}/tools/install.sh" \
@@ -1079,10 +1074,6 @@ _strfile=	games/fortune/strfile
 _gperf=		gnu/usr.bin/gperf
 .endif
 
-.if ${MK_GROFF} != "no"
-_groff=		gnu/usr.bin/groff
-.endif
-
 .if ${BOOTSTRAPPING} >= 4000 && ${BOOTSTRAPPING} < 4015
 _ar=		usr.bin/ar
 .endif
@@ -1153,7 +1144,6 @@ bootstrap-tools:
     ${_dtrace_tools} \
     ${_strfile} \
     ${_gperf} \
-    ${_groff} \
     ${_ar} \
     ${_dtc} \
     ${_awk} \
