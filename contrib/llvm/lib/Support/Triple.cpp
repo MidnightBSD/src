@@ -137,6 +137,7 @@ const char *Triple::getOSTypeName(OSType Kind) {
   case AIX: return "aix";
   case CUDA: return "cuda";
   case NVCL: return "nvcl";
+  case MidnightBSD: return "midnightbsd";
   }
 
   llvm_unreachable("Invalid OSType");
