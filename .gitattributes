@@ -45272,7 +45272,6 @@ gnu/usr.bin/gdb/libgdb/fbsd-threads.c -text
 gnu/usr.bin/gdb/libgdb/frame-unwind.diff -text
 gnu/usr.bin/gperf/Makefile -text
 gnu/usr.bin/gperf/config.h -text
-gnu/usr.bin/gperf/doc/Makefile -text
 gnu/usr.bin/grep/AUTHORS -text
 gnu/usr.bin/grep/COPYING -text
 gnu/usr.bin/grep/ChangeLog -text
