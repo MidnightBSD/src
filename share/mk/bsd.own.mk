@@ -270,7 +270,6 @@ WITHOUT_${var}=
     GDB \
     GNU \
     GPIB \
-    GROFF \
     HTML \
     INET6 \
     INFO \
@@ -368,7 +367,6 @@ __DEFAULT_YES_OPTIONS = \
     GNU \
     GPIB \
     GPIO \
-    GROFF \
     HTML \
     ICONV \
     INET \
@@ -556,7 +554,6 @@ MK_KERBEROS:=	no
 
 .if ${MK_CXX} == "no"
 MK_CLANG:=	no
-MK_GROFF:=	no
 .endif
 
 .if ${MK_IPX} == "no"
@@ -580,10 +577,6 @@ MK_KERBEROS:=	no
 
 .if ${MK_PF} == "no"
 MK_AUTHPF:=	no
-.endif
-
-.if ${MK_TEXTPROC} == "no"
-MK_GROFF:=	no
 .endif
 
 .if ${MK_TOOLCHAIN} == "no"
