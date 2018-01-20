@@ -1149,7 +1149,7 @@ bootstrap-tools:
     ${_awk} \
     ${_cat} \
     usr.bin/lorder \
-    usr.bin/makewhatis \
+    usr.bin/mandoc \
     ${_mklocale} \
     usr.bin/rpcgen \
     ${_sed} \
