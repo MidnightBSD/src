@@ -406,10 +406,6 @@ _worldtmp:
 .endfor
 	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.usr.dist \
 	    -p ${WORLDTMP}/legacy/usr >/dev/null
-.if ${MK_GROFF} != "no"
-	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.groff.dist \
-	    -p ${WORLDTMP}/legacy/usr >/dev/null
-.endif
 	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.usr.dist \
 	    -p ${WORLDTMP}/usr >/dev/null
 	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.include.dist \
