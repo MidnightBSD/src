@@ -15,6 +15,8 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+# 20180123: mandoc old file removal
+OLD_FILES+=usr/share/man/man1/makewhatis.1.gz
 # 20171220: new clang import which bumps version from 3.4 to 3.4.1.
 OLD_FILES+=usr/include/clang/3.4/__wmmintrin_aes.h
 OLD_FILES+=usr/include/clang/3.4/__wmmintrin_pclmul.h
