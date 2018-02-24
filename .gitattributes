@@ -61200,6 +61200,8 @@ sys/nfs/krpc_subr.c -text
 sys/nfs/nfs_common.c -text
 sys/nfs/nfs_common.h -text
 sys/nfs/nfs_diskless.c -text
+sys/nfs/nfs_fha.c svneol=native#text/plain
+sys/nfs/nfs_fha.h svneol=native#text/plain
 sys/nfs/nfs_kdtrace.h -text
 sys/nfs/nfs_lock.c -text
 sys/nfs/nfs_lock.h -text
