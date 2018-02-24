@@ -58665,6 +58665,8 @@ sys/fs/nfsclient/nfs_kdtrace.h -text
 sys/fs/nfsclient/nfsmount.h -text
 sys/fs/nfsclient/nfsnode.h -text
 sys/fs/nfsclient/nlminfo.h -text
+sys/fs/nfsserver/nfs_fha_new.c svneol=native#text/plain
+sys/fs/nfsserver/nfs_fha_new.h svneol=native#text/plain
 sys/fs/nfsserver/nfs_nfsdcache.c -text
 sys/fs/nfsserver/nfs_nfsdkrpc.c -text
 sys/fs/nfsserver/nfs_nfsdport.c -text

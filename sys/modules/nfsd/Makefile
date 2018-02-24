@@ -1,8 +1,10 @@
-# $FreeBSD$
+# $MidnightBSD$
 
-.PATH: ${.CURDIR}/../../fs/nfsserver
+.PATH: ${.CURDIR}/../../fs/nfsserver ${.CURDIR}/../../nfs
 KMOD=	nfsd
 SRCS=	vnode_if.h \
+	nfs_fha.c \
+	nfs_fha_new.c \
 	nfs_nfsdserv.c \
 	nfs_nfsdcache.c \
 	nfs_nfsdkrpc.c \
