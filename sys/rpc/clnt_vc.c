@@ -58,6 +58,7 @@ __MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
@@ -105,6 +106,8 @@ static struct clnt_ops clnt_vc_ops = {
 	.cl_destroy =	clnt_vc_destroy,
 	.cl_control =	clnt_vc_control
 };
+
+static int	fake_wchan;
 
 /*
  * A pending RPC request which awaits a reply. Requests which have
@@ -345,7 +348,7 @@ clnt_vc_call(
 	uint32_t xid;
 	struct mbuf *mreq = NULL, *results;
 	struct ct_request *cr;
-	int error;
+	int error, trycnt;
 
 	cr = malloc(sizeof(struct ct_request), M_RPC, M_WAITOK);
 
@@ -375,8 +378,20 @@ clnt_vc_call(
 		timeout = ct->ct_wait;	/* use default timeout */
 	}
 
+	/*
+	 * After 15sec of looping, allow it to return RPC_CANTSEND, which will
+	 * cause the clnt_reconnect layer to create a new TCP connection.
+	 */
+	trycnt = 15 * hz;
 call_again:
 	mtx_assert(&ct->ct_lock, MA_OWNED);
+	if (ct->ct_closing || ct->ct_closed) {
+		ct->ct_threads--;
+		wakeup(ct);
+		mtx_unlock(&ct->ct_lock);
+		free(cr, M_RPC);
+		return (RPC_CANTSEND);
+	}
 
 	ct->ct_xid++;
 	xid = ct->ct_xid;
@@ -444,13 +459,16 @@ call_again:
 	 */
 	error = sosend(ct->ct_socket, NULL, NULL, mreq, NULL, 0, curthread);
 	mreq = NULL;
-	if (error == EMSGSIZE) {
+	if (error == EMSGSIZE || (error == ERESTART &&
+	    (ct->ct_waitflag & PCATCH) == 0 && trycnt-- > 0)) {
 		SOCKBUF_LOCK(&ct->ct_socket->so_snd);
 		sbwait(&ct->ct_socket->so_snd);
 		SOCKBUF_UNLOCK(&ct->ct_socket->so_snd);
 		AUTH_VALIDATE(auth, xid, NULL, NULL);
 		mtx_lock(&ct->ct_lock);
 		TAILQ_REMOVE(&ct->ct_pending, cr, cr_link);
+		/* Sleep for 1 clock tick before trying the sosend() again. */
+		msleep(&fake_wchan, &ct->ct_lock, 0, "rpclpsnd", 1);
 		goto call_again;
 	}
 
