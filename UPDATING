@@ -1,5 +1,15 @@
 Updating Information for MidnightBSD users.
 
+20180404:
+	Fix a security issue in ipsec which could result in a crash or denial of service.
+
+	The length field of the option header does not count the size of the option
+	header itself.  This causes a problem when the length is zero, the count is
+	then incremented by zero, which causes an infinite loop.
+
+	In addition there are pointer/offset mistakes in the handling of IPv4
+	options.
+
 20180302:
 	XENHVM kernel fixed to build with clang
 
