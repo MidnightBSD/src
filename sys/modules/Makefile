@@ -241,6 +241,7 @@ SUBDIR=	\
 	ntfs \
 	ntfs_iconv \
 	nullfs \
+	nvd \
 	${_nve} \
 	nvme \
 	${_nvram} \
