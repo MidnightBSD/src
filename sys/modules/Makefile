@@ -242,6 +242,7 @@ SUBDIR=	\
 	ntfs_iconv \
 	nullfs \
 	${_nve} \
+	nvme \
 	${_nvram} \
 	${_nwfs} \
 	${_nxge} \
