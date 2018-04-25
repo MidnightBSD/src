@@ -50268,6 +50268,16 @@ sbin/nfsiod/nfsiod.c -text
 sbin/nos-tun/Makefile -text
 sbin/nos-tun/nos-tun.8 -text
 sbin/nos-tun/nos-tun.c -text
+sbin/nvmecontrol/Makefile svneol=native#text/plain
+sbin/nvmecontrol/devlist.c svneol=native#text/plain
+sbin/nvmecontrol/firmware.c svneol=native#text/plain
+sbin/nvmecontrol/identify.c svneol=native#text/plain
+sbin/nvmecontrol/logpage.c svneol=native#text/plain
+sbin/nvmecontrol/nvmecontrol.8 svneol=native#text/plain
+sbin/nvmecontrol/nvmecontrol.c svneol=native#text/plain
+sbin/nvmecontrol/nvmecontrol.h svneol=native#text/plain
+sbin/nvmecontrol/perftest.c svneol=native#text/plain
+sbin/nvmecontrol/reset.c svneol=native#text/plain
 sbin/pfctl/Makefile -text
 sbin/pfctl/missing/altq/altq.h -text
 sbin/pfctl/missing/altq/altq_cbq.h -text
