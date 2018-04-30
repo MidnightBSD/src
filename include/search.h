@@ -4,6 +4,7 @@
  *
  *	$NetBSD: search.h,v 1.12 1999/02/22 10:34:28 christos Exp $
  * $FreeBSD: src/include/search.h,v 1.10 2002/10/16 14:29:23 robert Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SEARCH_H_
@@ -43,6 +44,8 @@ struct que_elem {
 	struct que_elem *next;
 	struct que_elem *prev;
 };
+#else
+typedef void posix_tnode;
 #endif
 
 __BEGIN_DECLS
