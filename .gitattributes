@@ -45758,7 +45758,6 @@ include/unistd.h -text
 include/unwind.h -text
 include/util.h svneol=native#text/plain
 include/utime.h -text
-include/utmp.h svneol=native#text/plain
 include/utmpx.h -text
 include/uuid.h -text
 include/varargs.h -text
