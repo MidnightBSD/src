@@ -77,7 +77,6 @@ int mport_db_count(sqlite3 *, int *, const char *, ...);
 
 /* pkgmeta */
 int mport_pkgmeta_read_stub(mportInstance *, mportPackageMeta ***);
-int mport_pkgmeta_get_assetlist(mportInstance *, mportPackageMeta *, mportAssetList **);
 int mport_pkgmeta_logevent(mportInstance *, mportPackageMeta *, const char *);
 
 /* Utils */

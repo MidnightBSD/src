@@ -123,8 +123,10 @@ typedef struct {
   char *os_release;
   char *cpe;
   int locked;
-} mportPackageMeta;  
+} mportPackageMeta;
 
+int mport_asset_get_assetlist(mportInstance *, mportPackageMeta *, mportAssetList **);
+int mport_asset_get_package_from_file_path(mportInstance *, char *, __block mportPackageMeta *);
 
 mportPackageMeta * mport_pkgmeta_new(void);
 void mport_pkgmeta_free(mportPackageMeta *);
