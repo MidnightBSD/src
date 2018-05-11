@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2010-2016 Lucas Holt
+ * Copyright (c) 2010-2018 Lucas Holt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,6 +60,7 @@ static int updateDown(mportInstance *, mportPackageMeta *);
 static int verify(mportInstance *);
 static int lock(mportInstance *, const char *);
 static int unlock(mportInstance *, const char *);
+static int which(mportInstance *mport, const char *filePath);
 
 int 
 main(int argc, char *argv[]) {
@@ -220,6 +221,14 @@ main(int argc, char *argv[]) {
 		dispatch_group_async(grp, q, ^{
 		resultCode = verify(mport);
 		});
+	} else if (!strcmp(argv[1], "which")) {
+		dispatch_group_async(grp, q, ^{
+                if (argc > 2) {
+                        which(mport, argv[2]);
+                } else {
+                        usage();
+                }
+                });
 	} else {
 		mport_instance_free(mport);
 		usage();
@@ -259,6 +268,7 @@ usage(void) {
 		"       mport update [package name]\n"
 		"       mport upgrade\n"
 		"       mport verify\n"
+		"       mport which [file path]\n"
 	);
 	exit(1);
 }
@@ -396,6 +406,31 @@ info(mportInstance *mport, const char *packageName) {
 	free(out);
 
 	return (0);
+}
+
+int
+which(mportInstance *mport, const char *filePath) {
+
+	mportPackageMeta *pack;
+
+        if (filePath == NULL) {
+                warnx("%s", "Specify file path");
+                return (1);
+        }
+
+	if (mport_asset_get_package_from_file_path(mport, filePath, &pack) != MPORT_OK) {
+                warnx("%s", mport_err_string());
+                return (1);
+        }
+
+	if (pack != NULL) {
+		printf("%s was installed by package %s\n",
+			filePath, pack->origin);
+	} else {
+		puts("null?");
+	}
+
+        return (0);
 }
 
 /* recursive function */ 
