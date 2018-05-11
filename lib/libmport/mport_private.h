@@ -77,7 +77,6 @@ int mport_db_count(sqlite3 *, int *, const char *, ...);
 
 /* pkgmeta */
 int mport_pkgmeta_read_stub(mportInstance *, mportPackageMeta ***);
-int mport_pkgmeta_get_assetlist(mportInstance *, mportPackageMeta *, mportAssetList **);
 int mport_pkgmeta_logevent(mportInstance *, mportPackageMeta *, const char *);
 
 /* Utils */
@@ -173,8 +172,8 @@ int mport_set_errx(int , const char *, ...);
 #error "Unable to detect arch!"
 #endif
 
-#if __MidnightBSD_version >= 10000
-#define MPORT_OSVERSION "0.10"
+#if __MidnightBSD_version >= 100000
+#define MPORT_OSVERSION "1.0"
 #elif __MidnightBSD_version >= 9000
 #define MPORT_OSVERSION "0.9"
 #elif __MidnightBSD_version >= 8000

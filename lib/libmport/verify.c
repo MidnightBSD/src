@@ -53,64 +53,67 @@ mport_verify_package(mportInstance *mport, mportPackageMeta *pack)
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
 	}
-	
+
 	while (1) {
-        ret = sqlite3_step(stmt);
+		ret = sqlite3_step(stmt);
 
-        if (ret == SQLITE_DONE)
-            break;
+		if (ret == SQLITE_DONE)
+			break;
 
-        if (ret != SQLITE_ROW) {
-            /* some error occured */
-            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-            sqlite3_finalize(stmt);
-            RETURN_CURRENT_ERROR;
-        }
+		if (ret != SQLITE_ROW) {
+			/* some error occured */
+			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			sqlite3_finalize(stmt);
+			RETURN_CURRENT_ERROR;
+		}
 
-        type = (mportAssetListEntryType) sqlite3_column_int(stmt, 0);
-        data = sqlite3_column_text(stmt, 1);
-        checksum = sqlite3_column_text(stmt, 2);
+		type = (mportAssetListEntryType) sqlite3_column_int(stmt, 0);
+		data = sqlite3_column_text(stmt, 1);
+		checksum = sqlite3_column_text(stmt, 2);
 
-        char file[FILENAME_MAX];
-        /* XXX TMP */
-        if (data == NULL) {
-            /* XXX data is null when ASSET_CHMOD (mode) or similar commands are in plist */
-            snprintf(file, sizeof(file), "%s", mport->root);
-        } else if (*data == '/') {
-	    /* we don't use mport->root because it's an absolute path like /var */
-            snprintf(file, sizeof(file), "%s", data);
-        } else {
-            snprintf(file, sizeof(file), "%s%s/%s", mport->root, pack->prefix, data);
-        }
+		char file[FILENAME_MAX];
+		/* XXX TMP */
+		if (data == NULL) {
+			/* XXX data is null when ASSET_CHMOD (mode) or similar commands are in plist */
+			snprintf(file, sizeof(file), "%s", mport->root);
+		} else if (*data == '/') {
+			/* we don't use mport->root because it's an absolute path like /var */
+			snprintf(file, sizeof(file), "%s", data);
+		} else {
+			snprintf(file, sizeof(file), "%s%s/%s", mport->root, pack->prefix, data);
+		}
 
-        switch (type) {
-	    case ASSET_FILE_OWNER_MODE:  
-		/* FALLS THROUGH */
-            case ASSET_FILE:
-		/* FALLS THROUGH */
-            case ASSET_SAMPLE:
-                if (lstat(file, &st) != 0) {
-                    mport_call_msg_cb(mport, "Can't stat %s: %s", file, strerror(errno));
-                    break; /* next asset */
-                }
+		switch (type) {
+			case ASSET_FILE_OWNER_MODE:
+				/* FALLS THROUGH */
+			case ASSET_FILE:
+				/* FALLS THROUGH */
+			case ASSET_SAMPLE:
+				if (lstat(file, &st) != 0) {
+					mport_call_msg_cb(mport, "Can't stat %s: %s", file, strerror(errno));
+					break; /* next asset */
+				}
 
-                if (S_ISREG(st.st_mode)) {
-                    if (MD5File(file, md5) == NULL)
-                        mport_call_msg_cb(mport, "Can't md5 %s: %s", file, strerror(errno));
+				if (S_ISREG(st.st_mode)) {
+					if (MD5File(file, md5) == NULL)
+						mport_call_msg_cb(mport, "Can't md5 %s: %s", file, strerror(errno));
 
-                    if (md5 == NULL)
-                        mport_call_msg_cb(mport, "Destination checksum could not be computed %s", file);
-                    else if (checksum == NULL)
-                        mport_call_msg_cb(mport, "Source checksum missing %s", file);
-                    else if (strcmp(md5, checksum) != 0)
-                        mport_call_msg_cb(mport, "Checksum mismatch: %s %s %s", file, md5, checksum);
-                }
+					if (md5 == NULL)
+						mport_call_msg_cb(mport,
+						                  "Destination checksum could not be computed %s",
+						                  file);
+					else if (checksum == NULL)
+						mport_call_msg_cb(mport, "Source checksum missing %s", file);
+					else if (strcmp(md5, checksum) != 0)
+						mport_call_msg_cb(mport, "Checksum mismatch: %s %s %s", file, md5,
+						                  checksum);
+				}
 
-                break;
-            default:
-                /* do nothing */
-                break;
-        }
+				break;
+			default:
+				/* do nothing */
+				break;
+		}
 	}
 
 	sqlite3_finalize(stmt);
