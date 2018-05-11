@@ -1,6 +1,6 @@
 #	from: @(#)sys.mk	8.2 (Berkeley) 3/21/94
 # $FreeBSD: src/share/mk/sys.mk,v 1.86.2.1 2005/11/16 08:12:03 ru Exp $
-# $MidnightBSD: src/share/mk/sys.mk,v 1.9 2012/04/01 16:22:20 laffer1 Exp $
+# $MidnightBSD$
 
 unix		?=	We run MidnightBSD, not UNIX.
 .MidnightBSD	?=	true
@@ -116,6 +116,7 @@ LFLAGS		?=
 
 LD		?=	ld
 LDFLAGS		?=
+_LDFLAGS        =       ${LDFLAGS:S/-Wl,//g}    # strip -Wl, for LD
 
 LINT		?=	lint
 LINTFLAGS	?=	-cghapbx
