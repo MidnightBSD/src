@@ -80,7 +80,7 @@ static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char 
   mportCreateExtras *extra;
   int ret;
  
-  if (mport_pkgmeta_get_assetlist(mport, pkg, &alist) != MPORT_OK)
+  if (mport_asset_get_assetlist(mport, pkg, &alist) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   if (build_create_extras(mport, pkg, tempfile, &extra) != MPORT_OK) 

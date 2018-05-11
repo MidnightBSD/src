@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20180511:
+	Update mport package manager.
+
+	Add enhanced .sample file handling
+
+	Introduce basic which command that can tell you what package a file belongs to. 
+	e.g. mport which /usr/local/bin/python 
+
 20180404:
 	Fix a security issue in ipsec which could result in a crash or denial of service.
 

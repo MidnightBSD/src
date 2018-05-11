@@ -52082,6 +52082,7 @@ lib/libmp/libmp.3 -text
 lib/libmp/mp.h -text
 lib/libmp/mpasbn.c -text
 lib/libmport/Makefile -text
+lib/libmport/asset.c svneol=native#text/plain
 lib/libmport/bundle_read.c -text
 lib/libmport/bundle_read_install_pkg.c -text
 lib/libmport/bundle_read_update_pkg.c -text
