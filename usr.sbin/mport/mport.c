@@ -411,7 +411,7 @@ info(mportInstance *mport, const char *packageName) {
 int
 which(mportInstance *mport, const char *filePath) {
 
-	mportPackageMeta *pack;
+	mportPackageMeta *pack = NULL;
 
         if (filePath == NULL) {
                 warnx("%s", "Specify file path");
@@ -423,11 +423,9 @@ which(mportInstance *mport, const char *filePath) {
                 return (1);
         }
 
-	if (pack != NULL) {
+	if (pack != NULL && pack->origin != NULL) {
 		printf("%s was installed by package %s\n",
 			filePath, pack->origin);
-	} else {
-		puts("null?");
 	}
 
         return (0);
