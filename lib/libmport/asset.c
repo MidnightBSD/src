@@ -38,7 +38,7 @@ __MBSDID("$MidnightBSD$");
 #include "mport_private.h"
 
 MPORT_PUBLIC_API int
-mport_asset_get_package_from_file_path(mportInstance *mport, char *filePath, __block mportPackageMeta *pack)
+mport_asset_get_package_from_file_path(mportInstance *mport, const char *filePath, mportPackageMeta **pack)
 {
 	__block sqlite3_stmt *stmt = NULL;
 	__block int result = MPORT_OK;
@@ -53,51 +53,39 @@ mport_asset_get_package_from_file_path(mportInstance *mport, char *filePath, __b
 		RETURN_ERROR(MPORT_ERR_FATAL, "Statement was null");
 	}
 
-	dispatch_sync(mportSQLSerial, ^{
-	    while (1) {
-		    mportAssetListEntry *e;
+	while (1) {
+		int ret = sqlite3_step(stmt);
 
-		    int ret = sqlite3_step(stmt);
+		if (ret == SQLITE_BUSY || ret == SQLITE_LOCKED) {
+			sleep(1);
+			ret = sqlite3_step(stmt);
+		}
 
-		    if (ret == SQLITE_BUSY || ret == SQLITE_LOCKED) {
-			    sleep(1);
-			    ret = sqlite3_step(stmt);
+		if (ret == SQLITE_DONE)
+			break;
+
+		if (ret != SQLITE_ROW) {
+			err = (char *) sqlite3_errmsg(mport->db);
+			result = MPORT_ERR_FATAL;
+			break; // we finalize below
+		}
+
+		const unsigned char *pkgName = sqlite3_column_text(stmt, 0);
+		if (pkgName != NULL) {
+			mportPackageMeta **packs;
+			if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", pkgName) != MPORT_OK || packs[0] == NULL) {
+				err = "Package does not exist despite having assets";
+				result = MPORT_ERR_FATAL;
+				break; // we finalize below
+			} else {
+				*pack = packs[0];
+				result = MPORT_OK;
+				break;
+			}
 		    }
+	}
 
-		    if (ret == SQLITE_DONE)
-			    break;
-
-		    if (ret != SQLITE_ROW) {
-			    err = (char *) sqlite3_errmsg(mport->db);
-			    result = MPORT_ERR_FATAL;
-			    break; // we finalize below
-		    }
-
-		    e = (mportAssetListEntry *) calloc(1, sizeof(mportAssetListEntry));
-
-		    if (e == NULL) {
-			    err = "Out of memory";
-			    result = MPORT_ERR_FATAL;
-			    break; // we finalize below
-		    }
-
-		    const unsigned char *pkgName = sqlite3_column_text(stmt, 0);
-
-		    if (pkgName != NULL) {
-			    mportPackageMeta **packs;
-			    if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", pkgName) != MPORT_OK) {
-				    err = "Package does not exist despite having assets";
-				    result = MPORT_ERR_FATAL;
-				    break; // we finalize below
-			    } else {
-				    pack = packs[0];
-				    result = MPORT_OK;
-			    }
-		    }
-	    }
-
-	    sqlite3_finalize(stmt);
-	});
+	sqlite3_finalize(stmt);
 
 	if (result == MPORT_ERR_FATAL)
 		SET_ERRORX(result, "Error reading assets %s", err);

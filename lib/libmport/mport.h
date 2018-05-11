@@ -126,7 +126,7 @@ typedef struct {
 } mportPackageMeta;
 
 int mport_asset_get_assetlist(mportInstance *, mportPackageMeta *, mportAssetList **);
-int mport_asset_get_package_from_file_path(mportInstance *, char *, mportPackageMeta *);
+int mport_asset_get_package_from_file_path(mportInstance *, const char *, mportPackageMeta **);
 
 mportPackageMeta * mport_pkgmeta_new(void);
 void mport_pkgmeta_free(mportPackageMeta *);

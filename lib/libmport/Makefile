@@ -1,7 +1,7 @@
 # $MidnightBSD$
 
 LIB=	mport
-SRCS=	bundle_write.c bundle_read.c plist.c create_primative.c db.c \
+SRCS=	asset.c bundle_write.c bundle_read.c plist.c create_primative.c db.c \
         dispatch.c util.c error.c \
         info.c install_primative.c instance.c \
 		version_cmp.c check_preconditions.c delete_primative.c \
