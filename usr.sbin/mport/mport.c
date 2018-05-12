@@ -60,7 +60,7 @@ static int updateDown(mportInstance *, mportPackageMeta *);
 static int verify(mportInstance *);
 static int lock(mportInstance *, const char *);
 static int unlock(mportInstance *, const char *);
-static int which(mportInstance *mport, const char *filePath);
+static int which(mportInstance *, const char *, bool, bool);
 
 int 
 main(int argc, char *argv[]) {
@@ -223,8 +223,26 @@ main(int argc, char *argv[]) {
 		});
 	} else if (!strcmp(argv[1], "which")) {
 		dispatch_group_async(grp, q, ^{
-                if (argc > 2) {
-                        which(mport, argv[2]);
+		__block int local_argc = argc;
+		__block char *const * local_argv = argv;
+		local_argv++;
+                if (local_argc > 2) {
+			int ch, qflag, oflag;
+			qflag = oflag = 0;
+		        while ((ch = getopt(local_argc, local_argv, "qo")) != -1) {
+				switch (ch) {
+			 		case 'q':
+					qflag = 1;
+					break;
+					case 'o':
+	                                oflag = 1;
+        	                        break;
+				}
+			}
+			local_argc -= optind;
+			local_argv += optind;
+
+			which(mport, *local_argv, qflag, oflag);
                 } else {
                         usage();
                 }
@@ -409,7 +427,7 @@ info(mportInstance *mport, const char *packageName) {
 }
 
 int
-which(mportInstance *mport, const char *filePath) {
+which(mportInstance *mport, const char *filePath, bool quiet, bool origin) {
 
 	mportPackageMeta *pack = NULL;
 
@@ -424,8 +442,15 @@ which(mportInstance *mport, const char *filePath) {
         }
 
 	if (pack != NULL && pack->origin != NULL) {
-		printf("%s was installed by package %s\n",
-			filePath, pack->origin);
+		if (quiet && origin) {
+			  printf("%s\n", pack->origin);
+		} else if (quiet) {
+			  printf("%s-%s\n", pack->name, pack->version);
+		} else if (origin) {
+			  printf("%s was installed by package %s\n", filePath, pack->origin);
+		} else {
+			printf("%s was installed by package %s-%s\n", filePath, pack->name, pack->version);
+		}
 	}
 
         return (0);
