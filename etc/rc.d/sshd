@@ -20,7 +20,6 @@ configtest_cmd="sshd_configtest"
 pidfile="/var/run/${name}.pid"
 extra_commands="configtest keygen reload"
 
-: ${sshd_rsa1_enable:="yes"}
 : ${sshd_rsa_enable:="yes"}
 : ${sshd_dsa_enable:="yes"}
 : ${sshd_ecdsa_enable:="yes"}
@@ -37,9 +36,6 @@ sshd_keygen_alg()
 	fi
 
 	case $alg in
-	rsa1)
-		keyfile="/etc/ssh/ssh_host_key"
-		;;
 	rsa|dsa|ecdsa|ed25519)
 		keyfile="/etc/ssh/ssh_host_${alg}_key"
 		;;
@@ -64,7 +60,6 @@ sshd_keygen_alg()
 
 sshd_keygen()
 {
-	sshd_keygen_alg rsa1
 	sshd_keygen_alg rsa
 	sshd_keygen_alg dsa
 	sshd_keygen_alg ecdsa
