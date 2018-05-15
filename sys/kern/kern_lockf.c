@@ -737,12 +737,13 @@ lf_advlockasync(struct vop_advlockasync_args *ap, struct lockf **statep,
 
 	VI_UNLOCK(vp);
 
-	if (freestate) {
+	if (freestate != NULL) {
 		sx_xlock(&lf_lock_states_lock);
 		LIST_REMOVE(freestate, ls_link);
 		sx_xunlock(&lf_lock_states_lock);
 		sx_destroy(&freestate->ls_lock);
 		free(freestate, M_LOCKF);
+		freestate = NULL;
 	}
 	return (error);
 }
