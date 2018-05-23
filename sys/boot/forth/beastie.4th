@@ -1,6 +1,6 @@
 \ Copyright (c) 2003 Scott Long <scottl@freebsd.org>
 \ Copyright (c) 2003 Aleksander Fafula <alex@fafula.com>
-\ Copyright (c) 2006-2011 Devin Teske <devinteske@hotmail.com>
+\ Copyright (c) 2006-2013 Devin Teske <dteske@FreeBSD.org>
 \ All rights reserved.
 \ 
 \ Redistribution and use in source and binary forms, with or without
@@ -24,12 +24,11 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $MidnightBSD: src/sys/boot/forth/beastie.4th,v 1.8 2013/01/24 01:43:06 laffer1 Exp $
+\ $MidnightBSD$
 
 marker task-beastie.4th
 
-include /boot/color.4th
-include /boot/delay.4th
+only forth definitions also support-functions
 
 variable logoX
 variable logoY
@@ -124,6 +123,76 @@ variable logoY
 	0 25 at-xy
 ;
 
+: tribute-art ( x y -- ) \ see tribute[bw]-logo
+
+	\ Disable the brand art (we're going to use that space)
+	s" set loader_brand=none" evaluate
+
+	\ Blank out the frame of the menu and move the title to left
+	s" set loader_menu_title=" evaluate
+	s" set loader_menu_frame=none" evaluate
+
+	\ Move the menu to the center of the screen
+	s" set loader_menu_x=26" evaluate
+	s" set loader_menu_y=12" evaluate
+	s" set loader_menu_timeout_x=21" evaluate
+	s" set loader_menu_timeout_y=24" evaluate
+
+	2 - swap 39 - swap \ top-left (see `mbsdbw-logo' comments above)
+
+	2dup at-xy 11 spaces ." ,d      b." 1+
+	2dup at-xy ."         ,d88]      [88b." 1+
+	2dup at-xy ."      ,d888P" 34 emit ."  ,d88b. " 34 emit ." Y888b." 1+
+	2dup at-xy ."  , <888P" 34 emit ."  ,dP" 34 emit ." ,db." 34 emit
+	           ." Yb. " 34 emit ." Y888> ," 1+
+	2dup at-xy ." <88b.~ ,d888  " 34 emit ." YP" 34 emit
+	           ."   888b. ~,d88>" 1+
+	2dup at-xy ."  ," 34 emit ." Y888888P" 34 emit ." ,db.,db." 34 emit
+	           ." Y888888P" 34 emit ." ," 1+
+	2dup at-xy ." <88b." 34 emit ." YP" 34 emit ."  _ " 34 emit
+	           ." YP" 34 emit 34 emit ." YP" 34 emit ."  _ " 34 emit
+	           ." YP" 34 emit ." ,d88>" 1+
+	2dup at-xy ."   " 34 emit ." Y88b.,dP          Yb.,d88P" 34 emit 1+
+	     at-xy ."      " 34 emit ." YP" 34 emit ."               " 34 emit
+	           ." YP" 34 emit ." "
+;
+
+: tribute-text ( x y -- ) \ see tribute[bw]-logo
+
+	swap 2 - swap \ beastie adjustment (see `mbsdbw-logo' comments above)
+
+	2dup at-xy ." CEO Workstation" 1+
+	1+
+	2dup at-xy ." Nakatomi Socrates MidnightBSD 0.9" 1+
+	2dup at-xy ." Z-Level Central Core" 1+
+	1+
+	     at-xy ." Preliminary Clearance Approved."
+;
+
+: tribute-logo ( x y -- ) \ color Socrates tribute (16 rows x 32 columns)
+
+	\ Produce the tribute art in bright green
+	2dup at-xy ." [32;1m" 2dup tribute-art ." [37m"
+
+	\ Produce the tribute text in regular green
+	2dup at-xy ." [32m" 2dup tribute-text ." [37m"
+
+	\ Distinguish the ``Midnight'' in tribute-text
+	2 + swap 16 + swap at-xy ." Midnight"
+
+ 	\ Put the cursor back at the bottom
+ 	0 25 at-xy
+;
+
+: tributebw-logo ( x y -- ) \ Socrates tribute (16 rows x 32 columns)
+
+	\ Produce the tribute art and text
+	2dup tribute-art tribute-text
+
+ 	\ Put the cursor back at the bottom
+ 	0 25 at-xy
+;
+
 : orb-logo ( x y -- ) \ color Orb mascot (15 rows x 30 columns)
 
 	3 + \ beastie adjustment (see `mbsdbw-logo' comments above)
@@ -173,7 +242,6 @@ variable logoY
  	0 25 at-xy
 ;
 
-
 \ This function draws any number of beastie logos at (loader_logo_x,
 \ loader_logo_y) if defined, else (46,4) (to the right of the menu). To choose
 \ your beastie, set the variable `loader_logo' to the respective logo name.
@@ -184,8 +252,10 @@ variable logoY
 \ 	beastie     Color ``Helper Daemon'' mascot (19 rows x 34 columns)
 \ 	beastiebw   B/W ``Helper Daemon'' mascot (19 rows x 34 columns)
 \ 	mbsdbw      "MidnightBSD" logo in B/W (13 rows x 21 columns)
-\ 	orb         Color ``Orb'' mascot (15 rows x 30 columns)
-\ 	orbbw       B/W ``Orb'' mascot (15 rows x 32 columns) (default)
+\ 	orb         Color mascot (15 rows x 30 columns) (2nd default)
+\ 	orbbw       B/W mascot (15 rows x 32 columns)
+\ 	tribute     Color ``Tribute'' (must fit 19 rows x 34 columns) (default)
+\ 	tributebw   B/W ``Tribute'' (must fit 19 rows x 34 columns)
 \ 
 \ NOTE: Setting `loader_logo' to an undefined value (such as "none") will
 \       prevent beastie from being drawn.
@@ -203,38 +273,26 @@ variable logoY
 		drop
 	then
 
-	s" loader_logo" getenv dup -1 = if
-		logoX @ logoY @
+	s" loader_logo" getenv dup -1 <> if
+		dup 5 + allocate if ENOMEM throw then
+		0 2swap strcat s" -logo" strcat
+		over -rot ( a-addr/u -- a-addr a-addr/u )
+		sfind     ( a-addr a-addr/u -- a-addr xt bool )
+		rot       ( a-addr xt bool -- xt bool a-addr )
+		free      ( xt bool a-addr -- xt bool ior )
+		if EFREE throw then
+	else
+		0 ( cruft -- cruft bool ) \ load the default below
+	then
+	0= if
+		drop ( cruft -- )
 		loader_color? if
-			orb-logo
+			['] orb-logo
 		else
-			orbbw-logo
+			['] orbbw-logo
 		then
-		drop exit
 	then
-
-	2dup s" beastie" compare-insensitive 0= if
-		logoX @ logoY @ beastie-logo
-		2drop exit
-	then
-	2dup s" beastiebw" compare-insensitive 0= if
-		logoX @ logoY @ beastiebw-logo
-		2drop exit
-	then
-	2dup s" mbsdbw" compare-insensitive 0= if
-		logoX @ logoY @ mbsdbw-logo
-		2drop exit
-	then
-	2dup s" orb" compare-insensitive 0= if
-		logoX @ logoY @ orb-logo
-		2drop exit
-	then
-	2dup s" orbbw" compare-insensitive 0= if
-		logoX @ logoY @ orbbw-logo
-		2drop exit
-	then
-
-	2drop
+	logoX @ logoY @ rot execute
 ;
 
 : clear-beastie ( -- ) \ clears beastie from the screen
@@ -258,7 +316,11 @@ variable logoY
 	s" beastie_disable" getenv
 	dup -1 <> if
 		s" YES" compare-insensitive 0= if
-			exit
+			any_conf_read? if
+				load_kernel
+				load_modules
+			then
+			exit \ to autoboot (default)
 		then
 	else
 		drop
@@ -275,3 +337,5 @@ variable logoY
 		delay_execute
 	then
 ;
+
+only forth also
