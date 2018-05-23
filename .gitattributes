@@ -54080,6 +54080,7 @@ sys/boot/common/reloc_elf64.c -text
 sys/boot/common/ufsread.c -text
 sys/boot/common/util.c -text
 sys/boot/common/util.h -text
+sys/boot/common/zfsloader.8 svneol=native#text/plain
 sys/boot/efi/Makefile -text
 sys/boot/efi/Makefile.inc -text
 sys/boot/efi/include/README -text
