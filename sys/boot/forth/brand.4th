@@ -22,7 +22,7 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $MidnightBSD: src/sys/boot/forth/brand.4th,v 1.3 2012/12/29 06:43:38 laffer1 Exp $
+\ $MidnightBSD$
 
 marker task-brand.4th
 
