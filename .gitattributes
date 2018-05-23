@@ -54167,6 +54167,8 @@ sys/boot/forth/menu-commands.4th -text
 sys/boot/forth/menu.4th -text
 sys/boot/forth/menu.4th.8 -text
 sys/boot/forth/menu.rc -text
+sys/boot/forth/menusets.4th -text
+sys/boot/forth/menusets.4th.8 svneol=native#text/plain
 sys/boot/forth/pnp.4th -text
 sys/boot/forth/screen.4th -text
 sys/boot/forth/shortcuts.4th -text
