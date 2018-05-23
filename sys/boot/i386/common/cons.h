@@ -13,6 +13,7 @@
  * purpose.
  *
  * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/boot/i386/common/cons.h 300462 2016-05-23 05:25:34Z ngie $
  */
 
 #ifndef _CONS_H_
@@ -28,6 +29,7 @@ void xputc(int c);
 void putchar(int c);
 int getc(int fn);
 int xgetc(int fn);
+int getchar(void);
 int keyhit(unsigned int secs);
 void getstr(char *cmdstr, size_t cmdstrsize);
 

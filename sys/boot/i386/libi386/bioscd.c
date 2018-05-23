@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Michael Smith <msmith@freebsd.org>
  * Copyright (c) 2001 John H. Baldwin <jhb@FreeBSD.org>

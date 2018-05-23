@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Alfred Perlstein <alfred@freebsd.org>
  * Copyright (c) 2000 Paul Saab <ps@freebsd.org>

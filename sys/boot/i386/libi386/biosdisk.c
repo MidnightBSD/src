@@ -42,6 +42,7 @@ __MBSDID("$MidnightBSD$");
 #include <stand.h>
 #include <machine/bootinfo.h>
 #include <stdarg.h>
+#include <stdint.h>
 
 #include <bootstrap.h>
 #include <btxv86.h>
@@ -266,9 +267,11 @@ bd_print(int verbose)
 	int i;
 
 	for (i = 0; i < nbdinfo; i++) {
-		sprintf(line, "    disk%d:   BIOS drive %c:\n", i,
+		sprintf(line, "    disk%d:   BIOS drive %c (%ju X %u):\n", i,
 		    (bdinfo[i].bd_unit < 0x80) ? ('A' + bdinfo[i].bd_unit):
-		    ('C' + bdinfo[i].bd_unit - 0x80));
+		    ('C' + bdinfo[i].bd_unit - 0x80),
+		    (uintmax_t)bdinfo[i].bd_sectors,
+		    bdinfo[i].bd_sectorsize);
 		pager_output(line);
 		dev.d_dev = &biosdisk;
 		dev.d_unit = i;

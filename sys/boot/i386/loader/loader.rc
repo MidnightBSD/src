@@ -1,15 +1,12 @@
 \ Loader.rc
-\ $FreeBSD: src/sys/boot/i386/loader/loader.rc,v 1.4.2.1 2005/10/30 14:37:02 scottl Exp $
+\ $MidnightBSD$
 \
 \ Includes additional commands
 include /boot/loader.4th
-
-\ Virtual machine detection
-include /boot/vm.4th
-setup-vm
+try-include /boot/loader.rc.local
 
 \ Reads and processes loader.conf variables
-start
+initialize
 
 \ Tests for password -- executes autoboot first if a password was defined
 check-password

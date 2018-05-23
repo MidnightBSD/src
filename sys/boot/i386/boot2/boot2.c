@@ -25,7 +25,6 @@ __MBSDID("$MidnightBSD$");
 
 #include <machine/bootinfo.h>
 #include <machine/elf.h>
-#include <machine/psl.h>
 
 #include <stdarg.h>
 

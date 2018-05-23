@@ -1,10 +1,11 @@
 # $MidnightBSD$
+# $FreeBSD: stable/9/sys/boot/i386/efi/Makefile 256266 2013-10-10 12:46:26Z bdrewery $
 
 NO_MAN=
-WITHOUT_SSP=
 BUILDING_EFI=
 
 .include <bsd.own.mk>
+MK_SSP=		no
 
 PROG=		loader.sym
 INTERNALPROG=

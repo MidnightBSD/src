@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Michael Smith <msmith@freebsd.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/i386/loader/conf.c 277947 2015-01-30 18:55:16Z jhb $");
 
 #include <stand.h>
 #include <bootstrap.h>
@@ -77,8 +78,11 @@ struct fs_ops *file_system[] = {
     &ext2fs_fsops,
     &dosfs_fsops,
     &cd9660_fsops,
-#ifdef LOADER_SPLIT_SUPPORT
-    &splitfs_fsops,
+#ifdef LOADER_NFS_SUPPORT 
+    &nfs_fsops,
+#endif
+#ifdef LOADER_TFTP_SUPPORT
+    &tftp_fsops,
 #endif
 #ifdef LOADER_GZIP_SUPPORT
     &gzipfs_fsops,
@@ -86,11 +90,8 @@ struct fs_ops *file_system[] = {
 #ifdef LOADER_BZIP2_SUPPORT
     &bzipfs_fsops,
 #endif
-#ifdef LOADER_NFS_SUPPORT 
-    &nfs_fsops,
-#endif
-#ifdef LOADER_TFTP_SUPPORT
-    &tftp_fsops,
+#ifdef LOADER_SPLIT_SUPPORT
+    &splitfs_fsops,
 #endif
     NULL
 };

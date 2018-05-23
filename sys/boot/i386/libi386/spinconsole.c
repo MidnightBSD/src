@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * spinconsole.c
  *

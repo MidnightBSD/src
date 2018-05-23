@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/boot/i386/libi386/Makefile,v 1.42.6.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/9/sys/boot/i386/libi386/Makefile 294852 2016-01-26 21:35:47Z jkim $
 #
 LIB=			i386
 INTERNALLIB=
@@ -36,6 +37,9 @@ CFLAGS+= -DSMBIOS_SERIAL_NUMBERS
 .if defined(BOOT_LITTLE_ENDIAN_UUID)
 # Use little-endian UUID format as defined in SMBIOS 2.6.
 CFLAGS+= -DSMBIOS_LITTLE_ENDIAN_UUID
+.elif defined(BOOT_NETWORK_ENDIAN_UUID)
+# Use network-endian UUID format for backward compatibility.
+CFLAGS+= -DSMBIOS_NETWORK_ENDIAN_UUID
 .endif
 .endif
 
