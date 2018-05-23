@@ -1,4 +1,5 @@
-/* $FreeBSD: release/9.2.0/lib/libusb/libusb20.c 247475 2013-02-28 16:56:08Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/9/lib/libusb/libusb20.c 305642 2016-09-09 06:31:25Z hselasky $ */
 /*-
  * Copyright (c) 2008-2009 Hans Petter Selasky. All rights reserved.
  *
@@ -71,6 +72,7 @@ dummy_callback(struct libusb20_transfer *xfer)
 #define	dummy_check_connected (void *)dummy_int
 #define	dummy_set_power_mode (void *)dummy_int
 #define	dummy_get_power_mode (void *)dummy_int
+#define	dummy_get_port_path (void *)dummy_int
 #define	dummy_get_power_usage (void *)dummy_int
 #define	dummy_kernel_driver_active (void *)dummy_int
 #define	dummy_detach_kernel_driver (void *)dummy_int
@@ -164,6 +166,12 @@ libusb20_tr_open(struct libusb20_transfer *xfer, uint32_t MaxBufSize,
 		return (LIBUSB20_ERROR_BUSY);
 	if (MaxFrameCount & LIBUSB20_MAX_FRAME_PRE_SCALE) {
 		MaxFrameCount &= ~LIBUSB20_MAX_FRAME_PRE_SCALE;
+		/*
+		 * The kernel can setup 8 times more frames when
+		 * pre-scaling ISOCHRONOUS transfers. Make sure the
+		 * length and pointer buffers are big enough:
+		 */
+		MaxFrameCount *= 8;
 		pre_scale = 1;
 	} else {
 		pre_scale = 0;
@@ -188,8 +196,13 @@ libusb20_tr_open(struct libusb20_transfer *xfer, uint32_t MaxBufSize,
 	}
 	memset(xfer->ppBuffer, 0, size);
 
-	error = xfer->pdev->methods->tr_open(xfer, MaxBufSize,
-	    MaxFrameCount, ep_no, pre_scale);
+	if (pre_scale) {
+		error = xfer->pdev->methods->tr_open(xfer, MaxBufSize,
+		    MaxFrameCount / 8, ep_no, 1);
+	} else {
+		error = xfer->pdev->methods->tr_open(xfer, MaxBufSize,
+		    MaxFrameCount, ep_no, 0);
+	}
 
 	if (error) {
 		free(xfer->ppBuffer);
@@ -589,6 +602,12 @@ libusb20_dev_close(struct libusb20_device *pdev)
 	 */
 	pdev->claimed_interface = 0;
 
+	/*
+	 * The following variable is only used by the libusb v1.0
+	 * compat layer:
+	 */
+	pdev->auto_detach = 0;
+
 	return (error);
 }
 
@@ -709,6 +728,12 @@ libusb20_dev_get_power_mode(struct libusb20_device *pdev)
 	if (error)
 		power_mode = LIBUSB20_POWER_ON;	/* fake power mode */
 	return (power_mode);
+}
+
+int
+libusb20_dev_get_port_path(struct libusb20_device *pdev, uint8_t *buf, uint8_t bufsize)
+{
+	return (pdev->methods->get_port_path(pdev, buf, bufsize));
 }
 
 uint16_t
@@ -1199,7 +1224,7 @@ libusb20_be_alloc_ugen20(void)
 {
 	struct libusb20_backend *pbe;
 
-#if defined(__MidnightBSD__) || defined(__MidnightBSD_kernel__)
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 	pbe = libusb20_be_alloc(&libusb20_ugen20_backend);
 #else
 	pbe = NULL;

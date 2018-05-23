@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/9/lib/libusb/libusb20_int.h 302276 2016-06-29 11:06:13Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -105,6 +106,7 @@ typedef int (libusb20_process_t)(struct libusb20_device *pdev);
 typedef int (libusb20_reset_device_t)(struct libusb20_device *pdev);
 typedef int (libusb20_set_power_mode_t)(struct libusb20_device *pdev, uint8_t power_mode);
 typedef int (libusb20_get_power_mode_t)(struct libusb20_device *pdev, uint8_t *power_mode);
+typedef int (libusb20_get_port_path_t)(struct libusb20_device *pdev, uint8_t *buf, uint8_t bufsize);
 typedef int (libusb20_get_power_usage_t)(struct libusb20_device *pdev, uint16_t *power_usage);
 typedef int (libusb20_set_alt_index_t)(struct libusb20_device *pdev, uint8_t iface_index, uint8_t alt_index);
 typedef int (libusb20_set_config_index_t)(struct libusb20_device *pdev, uint8_t index);
@@ -128,6 +130,7 @@ typedef void (libusb20_tr_cancel_async_t)(struct libusb20_transfer *xfer);
   m(n, check_connected) \
   m(n, set_power_mode) \
   m(n, get_power_mode) \
+  m(n, get_port_path) \
   m(n, get_power_usage) \
   m(n, set_alt_index) \
   m(n, set_config_index) \
@@ -211,6 +214,9 @@ struct libusb20_device {
 	/* claimed interface */
 	uint8_t claimed_interface;
 
+	/* auto detach kernel driver */
+	uint8_t auto_detach;
+  
 	/* device file handle */
 	int	file;
 

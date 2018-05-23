@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/9/lib/libusb/libusb20_ugen20.c 310282 2016-12-19 18:31:22Z trasz $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -69,6 +70,7 @@ static libusb20_reset_device_t ugen20_reset_device;
 static libusb20_check_connected_t ugen20_check_connected;
 static libusb20_set_power_mode_t ugen20_set_power_mode;
 static libusb20_get_power_mode_t ugen20_get_power_mode;
+static libusb20_get_port_path_t ugen20_get_port_path;
 static libusb20_get_power_usage_t ugen20_get_power_usage;
 static libusb20_kernel_driver_active_t ugen20_kernel_driver_active;
 static libusb20_detach_kernel_driver_t ugen20_detach_kernel_driver;
@@ -205,8 +207,8 @@ ugen20_enumerate(struct libusb20_device *pdev, const char *id)
 
 	snprintf(pdev->usb_desc, sizeof(pdev->usb_desc),
 	    USB_GENERIC_NAME "%u.%u: <%s %s> at usbus%u", pdev->bus_number,
-	    pdev->device_address, devinfo.udi_product,
-	    devinfo.udi_vendor, pdev->bus_number);
+	    pdev->device_address, devinfo.udi_vendor,
+	    devinfo.udi_product, pdev->bus_number);
 
 	error = 0;
 done:
@@ -637,6 +639,22 @@ ugen20_get_power_mode(struct libusb20_device *pdev, uint8_t *power_mode)
 	}
 	*power_mode = temp;
 	return (0);			/* success */
+}
+
+static int
+ugen20_get_port_path(struct libusb20_device *pdev, uint8_t *buf, uint8_t bufsize)
+{
+	struct usb_device_port_path udpp;
+
+	if (ioctl(pdev->file_ctrl, USB_GET_DEV_PORT_PATH, &udpp))
+		return (LIBUSB20_ERROR_OTHER);
+
+	if (udpp.udp_port_level > bufsize)
+		return (LIBUSB20_ERROR_OVERFLOW);
+
+	memcpy(buf, udpp.udp_port_no, udpp.udp_port_level);
+
+	return (udpp.udp_port_level);	/* success */
 }
 
 static int

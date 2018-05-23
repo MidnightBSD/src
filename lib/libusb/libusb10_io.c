@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/9/lib/libusb/libusb10_io.c 302276 2016-06-29 11:06:13Z hselasky $ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  *
@@ -331,29 +332,50 @@ libusb_wait_for_event(libusb_context *ctx, struct timeval *tv)
 }
 
 int
-libusb_handle_events_timeout(libusb_context *ctx, struct timeval *tv)
+libusb_handle_events_timeout_completed(libusb_context *ctx,
+    struct timeval *tv, int *completed)
 {
-	int err;
+	int err = 0;
 
 	ctx = GET_CONTEXT(ctx);
 
-	DPRINTF(ctx, LIBUSB_DEBUG_FUNCTION, "libusb_handle_events_timeout enter");
+	DPRINTF(ctx, LIBUSB_DEBUG_FUNCTION, "libusb_handle_events_timeout_completed enter");
 
 	libusb_lock_events(ctx);
 
-	err = libusb_handle_events_locked(ctx, tv);
+	while (1) {
+		if (completed != NULL) {
+			if (*completed != 0 || err != 0)
+				break;
+		}
+		err = libusb_handle_events_locked(ctx, tv);
+		if (completed == NULL)
+			break;
+	}
 
 	libusb_unlock_events(ctx);
 
-	DPRINTF(ctx, LIBUSB_DEBUG_FUNCTION, "libusb_handle_events_timeout leave");
+	DPRINTF(ctx, LIBUSB_DEBUG_FUNCTION, "libusb_handle_events_timeout_completed exit");
 
 	return (err);
 }
 
 int
+libusb_handle_events_completed(libusb_context *ctx, int *completed)
+{
+	return (libusb_handle_events_timeout_completed(ctx, NULL, completed));
+}
+
+int
+libusb_handle_events_timeout(libusb_context *ctx, struct timeval *tv)
+{
+	return (libusb_handle_events_timeout_completed(ctx, tv, NULL));
+}
+
+int
 libusb_handle_events(libusb_context *ctx)
 {
-	return (libusb_handle_events_timeout(ctx, NULL));
+	return (libusb_handle_events_timeout_completed(ctx, NULL, NULL));
 }
 
 int
@@ -366,8 +388,9 @@ libusb_handle_events_locked(libusb_context *ctx, struct timeval *tv)
 	if (libusb_event_handling_ok(ctx)) {
 		err = libusb10_handle_events_sub(ctx, tv);
 	} else {
-		libusb_wait_for_event(ctx, tv);
-		err = 0;
+		err = libusb_wait_for_event(ctx, tv);
+		if (err != 0)
+			err = LIBUSB_ERROR_TIMEOUT;
 	}
 	return (err);
 }
@@ -392,7 +415,7 @@ libusb_set_pollfd_notifiers(libusb_context *ctx,
 	ctx->fd_cb_user_data = user_data;
 }
 
-struct libusb_pollfd **
+const struct libusb_pollfd **
 libusb_get_pollfds(libusb_context *ctx)
 {
 	struct libusb_super_pollfd *pollfd;
@@ -418,7 +441,7 @@ libusb_get_pollfds(libusb_context *ctx)
 
 done:
 	CTX_UNLOCK(ctx);
-	return (ret);
+	return ((const struct libusb_pollfd **)ret);
 }
 
 
@@ -740,3 +763,47 @@ libusb_fill_iso_transfer(struct libusb_transfer *transfer,
 	transfer->callback = callback;
 }
 
+int
+libusb_alloc_streams(libusb_device_handle *dev, uint32_t num_streams,
+    unsigned char *endpoints, int num_endpoints)
+{
+
+	return (LIBUSB_ERROR_NOT_SUPPORTED);
+}
+
+int
+libusb_free_streams(libusb_device_handle *dev, unsigned char *endpoints, int num_endpoints)
+{
+
+	return (0);
+}
+
+void
+libusb_transfer_set_stream_id(struct libusb_transfer *transfer, uint32_t stream_id)
+{
+	struct libusb_super_transfer *sxfer;
+
+	if (transfer == NULL)
+		return;
+
+	sxfer = (struct libusb_super_transfer *)(
+	    ((uint8_t *)transfer) - sizeof(*sxfer));
+
+	/* set stream ID */
+	sxfer->stream_id = stream_id;
+}
+
+uint32_t
+libusb_transfer_get_stream_id(struct libusb_transfer *transfer)
+{
+	struct libusb_super_transfer *sxfer;
+
+	if (transfer == NULL)
+		return (0);
+
+	sxfer = (struct libusb_super_transfer *)(
+	    ((uint8_t *)transfer) - sizeof(*sxfer));
+
+	/* get stream ID */
+	return (sxfer->stream_id);
+}

@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/9/lib/libusb/libusb10.c 302276 2016-06-29 11:06:13Z hselasky $ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  * Copyright (c) 2009 Hans Petter Selasky. All rights reserved.
@@ -45,6 +46,8 @@
 #include "libusb.h"
 #include "libusb10.h"
 
+#define	LIBUSB_NUM_SW_ENDPOINTS	(16 * 4)
+
 static pthread_mutex_t default_context_lock = PTHREAD_MUTEX_INITIALIZER;
 struct libusb_context *usbi_default_context = NULL;
 
@@ -60,6 +63,22 @@ static void libusb10_ctrl_proxy(struct libusb20_transfer *);
 static void libusb10_submit_transfer_sub(struct libusb20_device *, uint8_t);
 
 /*  Library initialisation / deinitialisation */
+
+static const struct libusb_version libusb_version = {
+	.major = 1,
+	.minor = 0,
+	.micro = 0,
+	.nano = 2016,
+	.rc = "",
+	.describe = "http://www.midnightbsd.org"
+};
+
+const struct libusb_version *
+libusb_get_version(void)
+{
+
+	return (&libusb_version);
+}
 
 void
 libusb_set_debug(libusb_context *ctx, int level)
@@ -110,24 +129,34 @@ libusb_init(libusb_context **context)
 	}
 	TAILQ_INIT(&ctx->pollfds);
 	TAILQ_INIT(&ctx->tr_done);
+	TAILQ_INIT(&ctx->hotplug_cbh);
+	TAILQ_INIT(&ctx->hotplug_devs);
 
 	if (pthread_mutex_init(&ctx->ctx_lock, NULL) != 0) {
 		free(ctx);
 		return (LIBUSB_ERROR_NO_MEM);
 	}
+	if (pthread_mutex_init(&ctx->hotplug_lock, NULL) != 0) {
+		pthread_mutex_destroy(&ctx->ctx_lock);
+		free(ctx);
+		return (LIBUSB_ERROR_NO_MEM);
+	}
 	if (pthread_condattr_init(&attr) != 0) {
 		pthread_mutex_destroy(&ctx->ctx_lock);
+		pthread_mutex_destroy(&ctx->hotplug_lock);
 		free(ctx);
 		return (LIBUSB_ERROR_NO_MEM);
 	}
 	if (pthread_condattr_setclock(&attr, CLOCK_MONOTONIC) != 0) {
 		pthread_mutex_destroy(&ctx->ctx_lock);
+		pthread_mutex_destroy(&ctx->hotplug_lock);
 		pthread_condattr_destroy(&attr);
 		free(ctx);
 		return (LIBUSB_ERROR_OTHER);
 	}
 	if (pthread_cond_init(&ctx->ctx_cond, &attr) != 0) {
 		pthread_mutex_destroy(&ctx->ctx_lock);
+		pthread_mutex_destroy(&ctx->hotplug_lock);
 		pthread_condattr_destroy(&attr);
 		free(ctx);
 		return (LIBUSB_ERROR_NO_MEM);
@@ -135,10 +164,12 @@ libusb_init(libusb_context **context)
 	pthread_condattr_destroy(&attr);
 
 	ctx->ctx_handler = NO_THREAD;
+	ctx->hotplug_handler = NO_THREAD;
 
 	ret = pipe(ctx->ctrl_pipe);
 	if (ret < 0) {
 		pthread_mutex_destroy(&ctx->ctx_lock);
+		pthread_mutex_destroy(&ctx->hotplug_lock);
 		pthread_cond_destroy(&ctx->ctx_cond);
 		free(ctx);
 		return (LIBUSB_ERROR_OTHER);
@@ -171,12 +202,27 @@ libusb_exit(libusb_context *ctx)
 	if (ctx == NULL)
 		return;
 
+	/* stop hotplug thread, if any */
+
+	if (ctx->hotplug_handler != NO_THREAD) {
+		pthread_t td;
+		void *ptr;
+
+		HOTPLUG_LOCK(ctx);
+		td = ctx->hotplug_handler;
+		ctx->hotplug_handler = NO_THREAD;
+		HOTPLUG_UNLOCK(ctx);
+
+		pthread_join(td, &ptr);
+	}
+
 	/* XXX cleanup devices */
 
 	libusb10_remove_pollfd(ctx, &ctx->ctx_poll);
 	close(ctx->ctrl_pipe[0]);
 	close(ctx->ctrl_pipe[1]);
 	pthread_mutex_destroy(&ctx->ctx_lock);
+	pthread_mutex_destroy(&ctx->hotplug_lock);
 	pthread_cond_destroy(&ctx->ctx_cond);
 
 	pthread_mutex_lock(&default_context_lock);
@@ -282,6 +328,27 @@ libusb_get_bus_number(libusb_device *dev)
 	if (dev == NULL)
 		return (0);		/* should not happen */
 	return (libusb20_dev_get_bus_number(dev->os_priv));
+}
+
+uint8_t
+libusb_get_port_number(libusb_device *dev)
+{
+	if (dev == NULL)
+		return (0);		/* should not happen */
+	return (libusb20_dev_get_parent_port(dev->os_priv));
+}
+
+int
+libusb_get_port_numbers(libusb_device *dev, uint8_t *buf, uint8_t bufsize)
+{
+	return (libusb20_dev_get_port_path(dev->os_priv, buf, bufsize));
+}
+
+int
+libusb_get_port_path(libusb_context *ctx, libusb_device *dev, uint8_t *buf,
+    uint8_t bufsize)
+{
+	return (libusb20_dev_get_port_path(dev->os_priv, buf, bufsize));
 }
 
 uint8_t
@@ -423,7 +490,7 @@ libusb_open(libusb_device *dev, libusb_device_handle **devh)
 	if (dev == NULL)
 		return (LIBUSB_ERROR_INVALID_PARAM);
 
-	err = libusb20_dev_open(pdev, 16 * 4 /* number of endpoints */ );
+	err = libusb20_dev_open(pdev, LIBUSB_NUM_SW_ENDPOINTS);
 	if (err) {
 		libusb_unref_device(dev);
 		return (LIBUSB_ERROR_NO_MEM);
@@ -601,13 +668,16 @@ libusb_claim_interface(struct libusb20_device *pdev, int interface_number)
 	if (interface_number < 0 || interface_number > 31)
 		return (LIBUSB_ERROR_INVALID_PARAM);
 
-	CTX_LOCK(dev->ctx);
-	if (dev->claimed_interfaces & (1 << interface_number))
-		err = LIBUSB_ERROR_BUSY;
+	if (pdev->auto_detach != 0) {
+		err = libusb_detach_kernel_driver(pdev, interface_number);
+		if (err != 0)
+			goto done;
+	}
 
-	if (!err)
-		dev->claimed_interfaces |= (1 << interface_number);
+	CTX_LOCK(dev->ctx);
+	dev->claimed_interfaces |= (1 << interface_number);
 	CTX_UNLOCK(dev->ctx);
+done:
 	return (err);
 }
 
@@ -624,13 +694,19 @@ libusb_release_interface(struct libusb20_device *pdev, int interface_number)
 	if (interface_number < 0 || interface_number > 31)
 		return (LIBUSB_ERROR_INVALID_PARAM);
 
+	if (pdev->auto_detach != 0) {
+		err = libusb_attach_kernel_driver(pdev, interface_number);
+		if (err != 0)
+			goto done;
+	}
+
 	CTX_LOCK(dev->ctx);
 	if (!(dev->claimed_interfaces & (1 << interface_number)))
 		err = LIBUSB_ERROR_NOT_FOUND;
-
-	if (!err)
+	else
 		dev->claimed_interfaces &= ~(1 << interface_number);
 	CTX_UNLOCK(dev->ctx);
+done:
 	return (err);
 }
 
@@ -832,6 +908,13 @@ libusb_attach_kernel_driver(struct libusb20_device *pdev, int interface)
 	return (0);
 }
 
+int
+libusb_set_auto_detach_kernel_driver(libusb_device_handle *dev, int enable)
+{
+	dev->auto_detach = (enable ? 1 : 0);
+	return (0);
+}
+
 /* Asynchronous device I/O */
 
 struct libusb_transfer *
@@ -919,6 +1002,9 @@ libusb10_get_buffsize(struct libusb20_device *pdev, libusb_transfer *xfer)
 			break;
 		case LIBUSB20_SPEED_FULL:
 			ret = 4096;
+			break;
+		case LIBUSB20_SPEED_SUPER:
+			ret = 65536;
 			break;
 		default:
 			ret = 16384;
@@ -1477,7 +1563,17 @@ libusb_cancel_transfer(struct libusb_transfer *uxfer)
 UNEXPORTED void
 libusb10_cancel_all_transfer(libusb_device *dev)
 {
-	/* TODO */
+	struct libusb20_device *pdev = dev->os_priv;
+	unsigned x;
+
+	for (x = 0; x != LIBUSB_NUM_SW_ENDPOINTS; x++) {
+		struct libusb20_transfer *xfer;
+
+		xfer = libusb20_tr_get_pointer(pdev, x);
+		if (xfer == NULL)
+			continue;
+		libusb20_tr_close(xfer);
+	}
 }
 
 uint16_t

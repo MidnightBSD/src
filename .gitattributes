@@ -49030,6 +49030,7 @@ lib/libusb/libusb01.c -text
 lib/libusb/libusb10.c -text
 lib/libusb/libusb10.h -text
 lib/libusb/libusb10_desc.c -text
+lib/libusb/libusb10_hotplug.c svneol=native#text/plain
 lib/libusb/libusb10_io.c -text
 lib/libusb/libusb20.3 -text
 lib/libusb/libusb20.c -text
