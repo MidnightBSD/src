@@ -22,8 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/sys/boot/forth/loader.conf.5,v 1.3 2012/12/29 05:03:43 laffer1 Exp $
-.Dd July 20, 2011
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/9/sys/boot/forth/loader.conf.5 263701 2014-03-25 03:19:03Z dteske $
+.Dd October 18, 2013
 .Dt LOADER.CONF 5
 .Os
 .Sh NAME
@@ -113,8 +114,23 @@ that contains a kernel.
 .It Ar kernel_options
 Flags to be passed to the kernel.
 .It Ar password
+Protect boot menu with a password without interrupting
+.Ic autoboot
+process.
+The password should be in clear text format.
+If a password is set, boot menu will not appear until any key is pressed during
+countdown period specified by
+.Va autoboot_delay
+variable or
+.Ic autoboot
+process fails.
+In both cases user should provide specified password to be able to access boot
+menu.
+.It Ar bootlock_password
 Provides a password to be required by check-password before execution is
 allowed to continue.
+The password should be in clear text format.
+If a password is set, the user must provide specified password to boot.
 .It Ar verbose_loading
 If set to
 .Dq YES ,
@@ -194,6 +210,9 @@ replacing it with
 character (useful for embedded products and such).
 .It Va kernel
 .Pq Dq kernel
+.It Va kernels
+.Pq Dq kernel kernel.old
+Space or comma separated list of kernels to present in the boot menu.
 .It Va loader_conf_files
 .Pq Dq Pa /boot/loader.conf /boot/loader.conf.local
 .It Va splash_bmp_load
@@ -230,8 +249,8 @@ and
 .Dq Li none .
 .It Va loader_color
 If set to
-.Dq YES ,
-the beastie boot menu will be displayed using ANSI coloring where possible.
+.Dq NO ,
+the beastie boot menu will be displayed without ANSI coloring.
 .El
 .Sh FILES
 .Bl -tag -width /boot/defaults/loader.conf -compact
