@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/9/sys/boot/common/Makefile.inc 272697 2014-10-07 13:37:10Z avg $
 
 SRCS+=	boot.c commands.c console.c devopen.c interp.c 
 SRCS+=	interp_backslash.c interp_parse.c ls.c misc.c 
@@ -7,17 +8,8 @@ SRCS+=	module.c panic.c
 .if ${MACHINE} == "i386" || ${MACHINE_CPUARCH} == "amd64"
 SRCS+=	load_elf32.c load_elf32_obj.c reloc_elf32.c
 SRCS+=	load_elf64.c load_elf64_obj.c reloc_elf64.c
-.elif ${MACHINE_CPUARCH} == "ia64"
-SRCS+=	load_elf64.c load_elf64_obj.c reloc_elf64.c
-.elif ${MACHINE} == "pc98"
-SRCS+=	load_elf32.c load_elf32_obj.c reloc_elf32.c
 .elif ${MACHINE_CPUARCH} == "arm"
 SRCS+=	load_elf32.c reloc_elf32.c
-.elif ${MACHINE_CPUARCH} == "powerpc"
-SRCS+=	load_elf32.c reloc_elf32.c
-SRCS+=	load_elf64.c reloc_elf64.c
-.elif ${MACHINE_CPUARCH} == "sparc64"
-SRCS+=	load_elf64.c reloc_elf64.c
 .endif
 
 .if defined(LOADER_NET_SUPPORT)
@@ -64,6 +56,7 @@ MAN+=	../forth/delay.4th.8
 MAN+=	../forth/loader.conf.5
 MAN+=	../forth/loader.4th.8
 MAN+=	../forth/menu.4th.8
+MAN+=	../forth/menusets.4th.8
 MAN+=	../forth/version.4th.8
 .endif
 
@@ -72,3 +65,6 @@ CFLAGS+=	-DBOOT_PROMPT_123
 .endif
 
 MAN+=	loader.8
+.if ${MK_ZFS} != "no"
+MAN+=	zfsloader.8
+.endif
