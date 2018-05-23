@@ -1,4 +1,4 @@
-\ Copyright (c) 2006-2011 Devin Teske <devinteske@hotmail.com>
+\ Copyright (c) 2006-2013 Devin Teske <dteske@FreeBSD.org>
 \ All rights reserved.
 \ 
 \ Redistribution and use in source and binary forms, with or without
@@ -22,9 +22,66 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $MidnightBSD: src/sys/boot/forth/menu-commands.4th,v 1.2 2012/12/29 05:01:01 laffer1 Exp $
+\ $MidnightBSD$
+\ $FreeBSD: stable/9/sys/boot/forth/menu-commands.4th 263701 2014-03-25 03:19:03Z dteske $
 
 marker task-menu-commands.4th
+
+include /boot/menusets.4th
+
+variable kernel_state
+variable root_state
+0 kernel_state !
+0 root_state !
+
+\ 
+\ Boot
+\ 
+
+: init_boot ( N -- N )
+	dup
+	s" boot_single" getenv -1 <> if
+		drop ( n n c-addr -- n n ) \ unused
+		toggle_menuitem ( n n -- n n )
+		s" set menu_keycode[N]=115" \ base command to execute
+	else
+		s" set menu_keycode[N]=98" \ base command to execute
+	then
+	17 +c! \ replace 'N' with ASCII numeral
+	evaluate
+;
+
+\ 
+\ Alternate Boot
+\ 
+
+: init_altboot ( N -- N )
+	dup
+	s" boot_single" getenv -1 <> if
+		drop ( n c-addr -- n ) \ unused
+		toggle_menuitem ( n -- n )
+		s" set menu_keycode[N]=109" \ base command to execute
+	else
+		s" set menu_keycode[N]=115" \ base command to execute
+	then
+	17 +c! \ replace 'N' with ASCII numeral
+	evaluate
+;
+
+: altboot ( -- )
+	s" boot_single" 2dup getenv -1 <> if
+		drop ( c-addr/u c-addr -- c-addr/u ) \ unused
+		unsetenv ( c-addr/u -- )
+	else
+		2drop ( c-addr/u -- ) \ unused
+		s" set boot_single=YES" evaluate
+	then
+	0 boot ( state -- )
+;
+
+\ 
+\ ACPI
+\ 
 
 : acpi_enable ( -- )
 	s" set acpi_load=YES" evaluate \ XXX deprecated but harmless
@@ -53,44 +110,80 @@ marker task-menu-commands.4th
 	TRUE \ loop menu again
 ;
 
+\ 
+\ Safe Mode
+\ 
+
+: safemode_enabled? ( -- flag )
+	s" kern.smp.disabled" getenv -1 <> dup if
+		swap drop ( c-addr flag -- flag )
+	then
+;
+
+: safemode_enable ( -- )
+	s" set kern.smp.disabled=1" evaluate
+	s" set hw.ata.ata_dma=0" evaluate
+	s" set hw.ata.atapi_dma=0" evaluate
+	s" set hw.ata.wc=0" evaluate
+	s" set hw.eisa_slots=0" evaluate
+	s" set kern.eventtimer.periodic=1" evaluate
+	s" set kern.geom.part.check_integrity=0" evaluate
+;
+
+: safemode_disable ( -- )
+	s" kern.smp.disabled" unsetenv
+	s" hw.ata.ata_dma" unsetenv
+	s" hw.ata.atapi_dma" unsetenv
+	s" hw.ata.wc" unsetenv
+	s" hw.eisa_slots" unsetenv
+	s" kern.eventtimer.periodic" unsetenv
+	s" kern.geom.part.check_integrity" unsetenv
+;
+
+: init_safemode ( N -- N )
+	safemode_enabled? if
+		toggle_menuitem ( n -- n )
+	then
+;
+
 : toggle_safemode ( N -- N TRUE )
 	toggle_menuitem
 
 	\ Now we're going to make the change effective
 
-	s" toggle_stateN @"      \ base name of toggle state var
-	-rot 2dup 12 + c! rot    \ replace 'N' with ASCII numeral
-
-	evaluate 0= if
-		s" hint.apic.0.disabled" unsetenv
-		s" hw.ata.ata_dma" unsetenv
-		s" hw.ata.atapi_dma" unsetenv
-		s" hw.ata.wc" unsetenv
-		s" hw.eisa_slots" unsetenv
-		s" hint.kbdmux.0.disabled" unsetenv
+	dup toggle_stateN @ 0= if
+		safemode_disable
 	else
-		\ 
-		\ Toggle ACPI elements if necessary
-		\ 
-		acpipresent? if acpienabled? if
-			menuacpi @ dup 0<> if
-				toggle_menuitem ( N -- N )
-			then
-			drop
-			acpi_disable
-		then then
-
-		s" set hint.apic.0.disabled=1" evaluate
-		s" set hw.ata.ata_dma=0" evaluate
-		s" set hw.ata.atapi_dma=0" evaluate
-		s" set hw.ata.wc=0" evaluate
-		s" set hw.eisa_slots=0" evaluate
-		s" set hint.kbdmux.0.disabled=1" evaluate
+		safemode_enable
 	then
 
 	menu-redraw
 
 	TRUE \ loop menu again
+;
+
+\ 
+\ Single User Mode
+\ 
+
+: singleuser_enabled? ( -- flag )
+	s" boot_single" getenv -1 <> dup if
+		swap drop ( c-addr flag -- flag )
+	then
+;
+
+: singleuser_enable ( -- )
+	s" set boot_single=YES" evaluate
+;
+
+: singleuser_disable ( -- )
+	s" boot_single" unsetenv
+;
+
+: init_singleuser ( N -- N )
+	singleuser_enabled? if
+		toggle_menuitem ( n -- n )
+	then
 ;
 
 : toggle_singleuser ( N -- N TRUE )
@@ -99,16 +192,37 @@ marker task-menu-commands.4th
 
 	\ Now we're going to make the change effective
 
-	s" toggle_stateN @"      \ base name of toggle state var
-	-rot 2dup 12 + c! rot    \ replace 'N' with ASCII numeral
-
-	evaluate 0= if
-		s" boot_single" unsetenv
+	dup toggle_stateN @ 0= if
+		singleuser_disable
 	else
-		s" set boot_single=YES" evaluate
+		singleuser_enable
 	then
 
 	TRUE \ loop menu again
+;
+
+\ 
+\ Verbose Boot
+\ 
+
+: verbose_enabled? ( -- flag )
+	s" boot_verbose" getenv -1 <> dup if
+		swap drop ( c-addr flag -- flag )
+	then
+;
+
+: verbose_enable ( -- )
+	s" set boot_verbose=YES" evaluate
+;
+
+: verbose_disable ( -- )
+	s" boot_verbose" unsetenv
+;
+
+: init_verbose ( N -- N )
+	verbose_enabled? if
+		toggle_menuitem ( n -- n )
+	then
 ;
 
 : toggle_verbose ( N -- N TRUE )
@@ -117,17 +231,18 @@ marker task-menu-commands.4th
 
 	\ Now we're going to make the change effective
 
-	s" toggle_stateN @"      \ base name of toggle state var
-	-rot 2dup 12 + c! rot    \ replace 'N' with ASCII numeral
-
-	evaluate 0= if
-		s" boot_verbose" unsetenv
+	dup toggle_stateN @ 0= if
+		verbose_disable
 	else
-		s" set boot_verbose=YES" evaluate
+		verbose_enable
 	then
 
 	TRUE \ loop menu again
 ;
+
+\ 
+\ Escape to Prompt
+\ 
 
 : goto_prompt ( N -- N FALSE )
 
@@ -135,56 +250,100 @@ marker task-menu-commands.4th
 
 	cr
 	." To get back to the menu, type `menu' and press ENTER" cr
-	." or type `boot' and press ENTER to start MidnightBSD." cr
+	." or type `boot' and press ENTER to start FreeBSD." cr
 	cr
 
 	FALSE \ exit the menu
 ;
 
-: cycle_kernel ( N -- N TRUE )
-	cycle_menuitem
-	menu-redraw
+\ 
+\ Cyclestate (used by kernel/root below)
+\ 
 
-	\ Now we're going to make the change effective
+: init_cyclestate ( N K -- N )
+	over cycle_stateN ( n k -- n k addr )
+	begin
+		tuck @  ( n k addr -- n addr k c )
+		over <> ( n addr k c -- n addr k 0|-1 )
+	while
+		rot ( n addr k -- addr k n )
+		cycle_menuitem
+		swap rot ( addr k n -- n k addr )
+	repeat
+	2drop ( n k addr -- n )
+;
 
-	s" cycle_stateN"         \ base name of array state var
-	-rot 2dup 11 + c! rot    \ replace 'N' with ASCII numeral
-	evaluate                 \ translate name into address
-	@                        \ dereference address into value
-	48 +                     \ convert to ASCII numeral
+\
+\ Kernel
+\ 
 
-	\ Since we are [in this file] going to override the standard `boot'
-	\ routine with a custom one, you should know that we use $kernel
-	\ when referencing the desired kernel. Set $kernel below.
+: init_kernel ( N -- N )
+	kernel_state @  ( n -- n k )
+	init_cyclestate ( n k -- n )
+;
+
+: activate_kernel ( N -- N )
+	dup cycle_stateN @	( n -- n n2 )
+	dup kernel_state !	( n n2 -- n n2 )  \ copy for re-initialization
+	48 +			( n n2 -- n n2' ) \ kernel_state to ASCII num
 
 	s" set kernel=${kernel_prefix}${kernel[N]}${kernel_suffix}"
-	                          \ command to assemble full kernel-path
-	-rot tuck 36 + c! swap    \ replace 'N' with array index value
-	evaluate                  \ sets $kernel to full kernel-path
+	36 +c!		( n n2 c-addr/u -- n c-addr/u ) \ 'N' to ASCII num
+	evaluate	( n c-addr/u -- n ) \ sets $kernel to full kernel-path
+;
 
-	TRUE \ loop menu again
+: cycle_kernel ( N -- N TRUE )
+	cycle_menuitem	\ cycle cycle_stateN to next value
+	activate_kernel \ apply current cycle_stateN
+	menu-redraw	\ redraw menu
+	TRUE		\ loop menu again
+;
+
+\ 
+\ Root
+\ 
+
+: init_root ( N -- N )
+	root_state @    ( n -- n k )
+	init_cyclestate ( n k -- n )
+;
+
+: activate_root ( N -- N )
+	dup cycle_stateN @	( n -- n n2 )
+	dup root_state !	( n n2 -- n n2 )  \ copy for re-initialization
+	48 +			( n n2 -- n n2' ) \ root_state to ASCII num
+
+	s" set root=${root_prefix}${root[N]}${root_suffix}"
+	30 +c!		( n n2 c-addr/u -- n c-addr/u ) \ 'N' to ASCII num
+	evaluate	( n c-addr/u -- n ) \ sets $root to full kernel-path
 ;
 
 : cycle_root ( N -- N TRUE )
-	cycle_menuitem
+	cycle_menuitem	\ cycle cycle_stateN to next value
+	activate_root	\ apply current cycle_stateN
+	menu-redraw	\ redraw menu
+	TRUE		\ loop menu again
+;
+
+\ 
+\ Menusets
+\ 
+
+: goto_menu ( N M -- N TRUE )
+	menu-unset
+	menuset-loadsetnum ( n m -- n )
 	menu-redraw
+	TRUE \ Loop menu again
+;
 
-	\ Now we're going to make the change effective
+\ 
+\ Defaults
+\ 
 
-	s" cycle_stateN"         \ base name of array state var
-	-rot 2dup 11 + c! rot    \ replace 'N' with ASCII numeral
-	evaluate                 \ translate name into address
-	@                        \ dereference address into value
-	48 +                     \ convert to ASCII numeral
-
-	\ Since we are [in this file] going to override the standard `boot'
-	\ routine with a custom one, you should know that we use $root when
-	\ booting. Set $root below.
-
-	s" set root=${root_prefix}${root[N]}${root_prefix}"
-	                          \ command to assemble full kernel-path
-	-rot tuck 30 + c! swap    \ replace 'N' with array index value
-	evaluate                  \ sets $kernel to full kernel-path
-
-	TRUE \ loop menu again
+: set_default_boot_options ( N -- N TRUE )
+	acpi_enable
+	safemode_disable
+	singleuser_disable
+	verbose_disable
+	2 goto_menu
 ;
