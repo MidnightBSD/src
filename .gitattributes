@@ -62081,6 +62081,7 @@ sys/tools/acpi_quirks2h.awk -text
 sys/tools/bus_macro.sh -text
 sys/tools/embed_mfs.sh -text
 sys/tools/fdt/embed_dtb.sh -text
+sys/tools/fdt/make_dtb.sh svneol=native#text/plain
 sys/tools/fdt/make_dtbh.sh -text
 sys/tools/fw_stub.awk -text
 sys/tools/makeobjops.awk -text
