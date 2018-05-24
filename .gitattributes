@@ -54116,6 +54116,8 @@ sys/boot/efi/libefi/time.c -text
 sys/boot/ficl/Makefile -text
 sys/boot/ficl/amd64/sysdep.c -text
 sys/boot/ficl/amd64/sysdep.h -text
+sys/boot/ficl/arm/sysdep.c svneol=native#text/plain
+sys/boot/ficl/arm/sysdep.h svneol=native#text/plain
 sys/boot/ficl/dict.c -text
 sys/boot/ficl/ficl.c -text
 sys/boot/ficl/ficl.h -text
