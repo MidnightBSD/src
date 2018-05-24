@@ -278,7 +278,8 @@
 #define	_Alignof(x)		__alignof(x)
 #endif
 
-#if !__has_extension(c_atomic) && !__has_extension(cxx_atomic)
+#if !defined(__cplusplus) && !__has_extension(c_atomic) && \
+    !__has_extension(cxx_atomic)
 /*
  * No native support for _Atomic(). Place object in structure to prevent
  * most forms of direct non-atomic access.
@@ -334,6 +335,21 @@
 #define	__generic(expr, t, yes, no)					\
 	__builtin_choose_expr(						\
 	    __builtin_types_compatible_p(__typeof(expr), t), yes, no)
+#endif
+
+/*
+ * C99 Static array indices in function parameter declarations.  Syntax such as:
+ * void bar(int myArray[static 10]);
+ * is allowed in C99 but not in C++.  Define __min_size appropriately so
+ * headers using it can be compiled in either language.  Use like this:
+ * void bar(int myArray[__min_size(10)]);
+ */
+#if !defined(__cplusplus) && \
+    (defined(__clang__) || __GNUC_PREREQ__(4, 6)) && \
+    (!defined(__STDC_VERSION__) || (__STDC_VERSION__ >= 199901))
+#define __min_size(x)	static (x)
+#else
+#define __min_size(x)	(x)
 #endif
 
 #if __GNUC_PREREQ__(2, 96)
