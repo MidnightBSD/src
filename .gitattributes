@@ -61932,6 +61932,7 @@ sys/sys/mchain.h -text
 sys/sys/md4.h -text
 sys/sys/md5.h -text
 sys/sys/mdioctl.h -text
+sys/sys/memdesc.h svneol=native#text/plain
 sys/sys/memrange.h -text
 sys/sys/mman.h -text
 sys/sys/module.h -text
@@ -61989,6 +61990,7 @@ sys/sys/selinfo.h -text
 sys/sys/sem.h -text
 sys/sys/sema.h -text
 sys/sys/sensors.h -text
+sys/sys/seq.h svneol=native#text/plain
 sys/sys/serial.h -text
 sys/sys/sf_buf.h -text
 sys/sys/sglist.h -text
@@ -61997,6 +61999,7 @@ sys/sys/sigio.h -text
 sys/sys/signal.h -text
 sys/sys/signalvar.h -text
 sys/sys/sleepqueue.h -text
+sys/sys/slicer.h svneol=native#text/plain
 sys/sys/smp.h -text
 sys/sys/snoop.h -text
 sys/sys/sockbuf.h -text
@@ -62024,12 +62027,14 @@ sys/sys/syslog.h -text
 sys/sys/sysproto.h -text
 sys/sys/systm.h -text
 sys/sys/taskqueue.h -text
+sys/sys/terminal.h svneol=native#text/plain
 sys/sys/termios.h -text
 sys/sys/thr.h -text
 sys/sys/tiio.h -text
 sys/sys/time.h -text
 sys/sys/timeb.h -text
 sys/sys/timeet.h -text
+sys/sys/timeffc.h svneol=native#text/plain
 sys/sys/timepps.h -text
 sys/sys/timers.h -text
 sys/sys/times.h -text
@@ -62057,6 +62062,7 @@ sys/sys/user.h -text
 sys/sys/utsname.h -text
 sys/sys/uuid.h -text
 sys/sys/vdso.h svneol=native#text/plain
+sys/sys/vmem.h svneol=native#text/plain
 sys/sys/vmmeter.h -text
 sys/sys/vnode.h -text
 sys/sys/vtoc.h -text
