@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -10,9 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -28,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/x86/x86/io_apic.c 330959 2018-03-14 23:59:52Z marius $");
 
 #include "opt_isa.h"
 
@@ -119,7 +117,7 @@ static int	ioapic_vector(struct intsrc *isrc);
 static int	ioapic_source_pending(struct intsrc *isrc);
 static int	ioapic_config_intr(struct intsrc *isrc, enum intr_trigger trig,
 		    enum intr_polarity pol);
-static void	ioapic_resume(struct pic *pic);
+static void	ioapic_resume(struct pic *pic, bool suspend_cancelled);
 static int	ioapic_assign_cpu(struct intsrc *isrc, u_int apic_id);
 static void	ioapic_program_intpin(struct ioapic_intsrc *intpin);
 
@@ -255,7 +253,7 @@ static void
 ioapic_program_intpin(struct ioapic_intsrc *intpin)
 {
 	struct ioapic *io = (struct ioapic *)intpin->io_intsrc.is_pic;
-	uint32_t low, high, value;
+	uint32_t low, high;
 
 	/*
 	 * If a pin is completely invalid or if it is valid but hasn't
@@ -273,7 +271,11 @@ ioapic_program_intpin(struct ioapic_intsrc *intpin)
 		return;
 	}
 
-	/* Set the destination. */
+	/*
+	 * Set the destination.  Note that with Intel interrupt remapping,
+	 * the previously reserved bits 55:48 now have a purpose so ensure
+	 * these are zero.
+	 */
 	low = IOART_DESTPHY;
 	high = intpin->io_cpu << APIC_ID_SHIFT;
 
@@ -311,12 +313,9 @@ ioapic_program_intpin(struct ioapic_intsrc *intpin)
 	}
 
 	/* Write the values to the APIC. */
+	ioapic_write(io->io_addr, IOAPIC_REDTBL_HI(intpin->io_intpin), high);
 	intpin->io_lowreg = low;
 	ioapic_write(io->io_addr, IOAPIC_REDTBL_LO(intpin->io_intpin), low);
-	value = ioapic_read(io->io_addr, IOAPIC_REDTBL_HI(intpin->io_intpin));
-	value &= ~IOART_DEST;
-	value |= high;
-	ioapic_write(io->io_addr, IOAPIC_REDTBL_HI(intpin->io_intpin), value);
 }
 
 static int
@@ -326,6 +325,18 @@ ioapic_assign_cpu(struct intsrc *isrc, u_int apic_id)
 	struct ioapic *io = (struct ioapic *)isrc->is_pic;
 	u_int old_vector, new_vector;
 	u_int old_id;
+
+	/*
+	 * On Hyper-V:
+	 * - Stick to the first cpu for all I/O APIC pins.
+	 * - And don't allow destination cpu changes.
+	 */
+	if (vm_guest == VM_GUEST_HV) {
+		if (intpin->io_vector)
+			return (EINVAL);
+		else
+			apic_id = 0;
+	}
 
 	/*
 	 * keep 1st core as the destination for NMI
@@ -486,7 +497,7 @@ ioapic_config_intr(struct intsrc *isrc, enum intr_trigger trig,
 }
 
 static void
-ioapic_resume(struct pic *pic)
+ioapic_resume(struct pic *pic, bool suspend_cancelled)
 {
 	struct ioapic *io = (struct ioapic *)pic;
 	int i;
@@ -795,11 +806,18 @@ ioapic_register(void *cookie)
 	    io->io_id, flags >> 4, flags & 0xf, io->io_intbase,
 	    io->io_intbase + io->io_numintr - 1);
 
-	/* Register valid pins as interrupt sources. */
+	/*
+	 * Reprogram pins to handle special case pins (such as NMI and
+	 * SMI) and register valid pins as interrupt sources.
+	 */
 	intr_register_pic(&io->io_pic);
-	for (i = 0, pin = io->io_pins; i < io->io_numintr; i++, pin++)
+	for (i = 0, pin = io->io_pins; i < io->io_numintr; i++, pin++) {
+		mtx_lock_spin(&icu_lock);
+		ioapic_program_intpin(pin);
+		mtx_unlock_spin(&icu_lock);
 		if (pin->io_irq < NUM_IO_INTS)
 			intr_register_source(&pin->io_intsrc);
+	}
 }
 
 /* A simple new-bus driver to consume PCI I/O APIC devices. */
@@ -922,3 +940,99 @@ DEFINE_CLASS_0(apic, apic_driver, apic_methods, 0);
 
 static devclass_t apic_devclass;
 DRIVER_MODULE(apic, nexus, apic_driver, apic_devclass, 0, 0);
+
+#include "opt_ddb.h"
+
+#ifdef DDB
+#include <ddb/ddb.h>
+
+static const char *
+ioapic_delivery_mode(uint32_t mode)
+{
+
+	switch (mode) {
+	case IOART_DELFIXED:
+		return ("fixed");
+	case IOART_DELLOPRI:
+		return ("lowestpri");
+	case IOART_DELSMI:
+		return ("SMI");
+	case IOART_DELRSV1:
+		return ("rsrvd1");
+	case IOART_DELNMI:
+		return ("NMI");
+	case IOART_DELINIT:
+		return ("INIT");
+	case IOART_DELRSV2:
+		return ("rsrvd2");
+	case IOART_DELEXINT:
+		return ("ExtINT");
+	default:
+		return ("");
+	}
+}
+
+static u_int
+db_ioapic_read(volatile ioapic_t *apic, int reg)
+{
+
+	apic->ioregsel = reg;
+	return (apic->iowin);
+}
+
+static void
+db_show_ioapic_one(volatile ioapic_t *io_addr)
+{
+	uint32_t r, lo, hi;
+	int mre, i;
+
+	r = db_ioapic_read(io_addr, IOAPIC_VER);
+	mre = (r & IOART_VER_MAXREDIR) >> MAXREDIRSHIFT;
+	db_printf("Id 0x%08x Ver 0x%02x MRE %d\n",
+	    db_ioapic_read(io_addr, IOAPIC_ID), r & IOART_VER_VERSION, mre);
+	for (i = 0; i < mre; i++) {
+		lo = db_ioapic_read(io_addr, IOAPIC_REDTBL_LO(i));
+		hi = db_ioapic_read(io_addr, IOAPIC_REDTBL_HI(i));
+		db_printf("  pin %d Dest %s/%x %smasked Trig %s RemoteIRR %d "
+		    "Polarity %s Status %s DeliveryMode %s Vec %d\n", i,
+		    (lo & IOART_DESTMOD) == IOART_DESTLOG ? "log" : "phy",
+		    (hi & IOART_DEST) >> 24,
+		    (lo & IOART_INTMASK) == IOART_INTMSET ? "" : "not",
+		    (lo & IOART_TRGRMOD) == IOART_TRGRLVL ? "lvl" : "edge",
+		    (lo & IOART_REM_IRR) == IOART_REM_IRR ? 1 : 0,
+		    (lo & IOART_INTPOL) == IOART_INTALO ? "low" : "high",
+		    (lo & IOART_DELIVS) == IOART_DELIVS ? "pend" : "idle",
+		    ioapic_delivery_mode(lo & IOART_DELMOD),
+		    (lo & IOART_INTVEC));
+	  }
+}
+
+DB_SHOW_COMMAND(ioapic, db_show_ioapic)
+{
+	struct ioapic *ioapic;
+	int idx, i;
+
+	if (!have_addr) {
+		db_printf("usage: show ioapic index\n");
+		return;
+	}
+
+	idx = (int)addr;
+	i = 0;
+	STAILQ_FOREACH(ioapic, &ioapic_list, io_next) {
+		if (idx == i) {
+			db_show_ioapic_one(ioapic->io_addr);
+			break;
+		}
+		i++;
+	}
+}
+
+DB_SHOW_ALL_COMMAND(ioapics, db_show_all_ioapics)
+{
+	struct ioapic *ioapic;
+
+	STAILQ_FOREACH(ioapic, &ioapic_list, io_next)
+		db_show_ioapic_one(ioapic->io_addr);
+}
+#endif

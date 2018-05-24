@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/x86/x86/nexus.c 221324 2011-05-02 14:13:12Z jhb $");
 
 /*
  * This code implements a `root nexus' for Intel Architecture

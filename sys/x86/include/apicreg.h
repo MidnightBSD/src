@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996, by Peter Wemm and Steve Passe
  * All rights reserved.
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/x86/include/apicreg.h 262141 2014-02-18 01:15:32Z jhb $
  */
 
 #ifndef _X86_APICREG_H_
@@ -356,6 +357,16 @@ typedef struct IOAPIC ioapic_t;
 #define APIC_TDCR_64		0x09
 #define APIC_TDCR_128		0x0a
 #define APIC_TDCR_1		0x0b
+
+/* LVT table indices */
+#define	APIC_LVT_LINT0		0
+#define	APIC_LVT_LINT1		1
+#define	APIC_LVT_TIMER		2
+#define	APIC_LVT_ERROR		3
+#define	APIC_LVT_PMC		4
+#define	APIC_LVT_THERMAL	5
+#define	APIC_LVT_CMCI		6
+#define	APIC_LVT_MAX		APIC_LVT_CMCI
 
 /******************************************************************************
  * I/O APIC defines

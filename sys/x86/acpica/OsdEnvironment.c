@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000,2001 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/x86/acpica/OsdEnvironment.c 281687 2015-04-18 08:01:12Z jkim $");
 
 #include <sys/types.h>
 #include <sys/bus.h>
@@ -68,7 +69,7 @@ acpi_get_root_from_loader(void)
 static u_long
 acpi_get_root_from_memory(void)
 {
-	ACPI_SIZE acpi_root;
+	ACPI_PHYSICAL_ADDRESS acpi_root;
 
 	if (ACPI_SUCCESS(AcpiFindRootPointer(&acpi_root)))
 		return (acpi_root);

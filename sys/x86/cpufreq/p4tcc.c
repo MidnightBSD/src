@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Nate Lawson
  * All rights reserved.
@@ -37,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/x86/cpufreq/p4tcc.c 250487 2013-05-10 22:43:27Z hiren $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -297,8 +298,8 @@ p4tcc_set(device_t dev, const struct cf_setting *set)
 	 */
 	if (msr & TCC_ENABLE_ONDEMAND)
 		sc->auto_mode = FALSE;
- 	else
- 		sc->auto_mode = TRUE;
+	else
+		sc->auto_mode = TRUE;
 
 	return (0);
 }

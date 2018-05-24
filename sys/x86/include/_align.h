@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 David E. O'Brien
  * Copyright (c) 1990 The Regents of the University of California.
@@ -35,7 +36,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/x86/include/_align.h 215856 2010-11-26 10:59:20Z tijl $
  */
 
 #ifndef _X86_INCLUDE__ALIGN_H_

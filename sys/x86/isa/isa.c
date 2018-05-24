@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Doug Rabson
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/x86/isa/isa.c 221526 2011-05-06 13:48:53Z jhb $");
 
 /*-
  * Modifications for Intel architecture by Garrett A. Wollman.

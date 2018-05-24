@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2010 Advanced Computing Technologies LLC
+ * Copyright (c) 2010 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,17 +27,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
-#include "opt_vm.h"
+__FBSDID("$FreeBSD: stable/10/sys/x86/acpica/srat.c 299485 2016-05-11 22:06:28Z vangyzen $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 #include <sys/smp.h>
+#include <sys/vmmeter.h>
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #include <vm/vm_param.h>
+#include <vm/vm_page.h>
 #include <vm/vm_phys.h>
 
 #include <contrib/dev/acpica/include/acpi.h>
@@ -47,7 +50,7 @@ __FBSDID("$FreeBSD$");
 
 #include <dev/acpica/acpivar.h>
 
-#if VM_NDOMAIN > 1
+#if MAXMEMDOM > 1
 struct cpu_info {
 	int enabled:1;
 	int has_memory:1;
@@ -59,6 +62,8 @@ int num_mem;
 
 static ACPI_TABLE_SRAT *srat;
 static vm_paddr_t srat_physaddr;
+
+static int vm_domains[VM_PHYSSEG_MAX];
 
 static void	srat_walk_table(acpi_subtable_handler *handler, void *arg);
 
@@ -104,8 +109,12 @@ srat_parse_entry(ACPI_SUBTABLE_HEADER *entry, void *arg)
 			    "enabled" : "disabled");
 		if (!(cpu->Flags & ACPI_SRAT_CPU_ENABLED))
 			break;
-		KASSERT(!cpus[cpu->ApicId].enabled,
-		    ("Duplicate local APIC ID %u", cpu->ApicId));
+		if (cpus[cpu->ApicId].enabled) {
+			printf("SRAT: Duplicate local APIC ID %u\n",
+			    cpu->ApicId);
+			*(int *)arg = ENXIO;
+			break;
+		}
 		cpus[cpu->ApicId].domain = domain;
 		cpus[cpu->ApicId].enabled = 1;
 		break;
@@ -245,49 +254,52 @@ check_phys_avail(void)
 static int
 renumber_domains(void)
 {
-	int domains[VM_PHYSSEG_MAX];
-	int ndomain, i, j, slot;
+	int i, j, slot;
 
 	/* Enumerate all the domains. */
-	ndomain = 0;
+	vm_ndomains = 0;
 	for (i = 0; i < num_mem; i++) {
 		/* See if this domain is already known. */
-		for (j = 0; j < ndomain; j++) {
-			if (domains[j] >= mem_info[i].domain)
+		for (j = 0; j < vm_ndomains; j++) {
+			if (vm_domains[j] >= mem_info[i].domain)
 				break;
 		}
-		if (j < ndomain && domains[j] == mem_info[i].domain)
+		if (j < vm_ndomains && vm_domains[j] == mem_info[i].domain)
 			continue;
 
 		/* Insert the new domain at slot 'j'. */
 		slot = j;
-		for (j = ndomain; j > slot; j--)
-			domains[j] = domains[j - 1];
-		domains[slot] = mem_info[i].domain;
-		ndomain++;
-		if (ndomain > VM_NDOMAIN) {
+		for (j = vm_ndomains; j > slot; j--)
+			vm_domains[j] = vm_domains[j - 1];
+		vm_domains[slot] = mem_info[i].domain;
+		vm_ndomains++;
+		if (vm_ndomains > MAXMEMDOM) {
+			vm_ndomains = 1;
 			printf("SRAT: Too many memory domains\n");
 			return (EFBIG);
 		}
 	}
 
 	/* Renumber each domain to its index in the sorted 'domains' list. */
-	for (i = 0; i < ndomain; i++) {
+	for (i = 0; i < vm_ndomains; i++) {
 		/*
 		 * If the domain is already the right value, no need
 		 * to renumber.
 		 */
-		if (domains[i] == i)
+		if (vm_domains[i] == i)
 			continue;
 
 		/* Walk the cpu[] and mem_info[] arrays to renumber. */
 		for (j = 0; j < num_mem; j++)
-			if (mem_info[j].domain == domains[i])
+			if (mem_info[j].domain == vm_domains[i])
 				mem_info[j].domain = i;
 		for (j = 0; j <= MAX_APIC_ID; j++)
-			if (cpus[j].enabled && cpus[j].domain == domains[i])
+			if (cpus[j].enabled && cpus[j].domain == vm_domains[i])
 				cpus[j].domain = i;
 	}
+	KASSERT(vm_ndomains > 0,
+	    ("renumber_domains: invalid final vm_ndomains setup"));
+
 	return (0);
 }
 
@@ -362,4 +374,23 @@ srat_set_cpus(void *dummy)
 	}
 }
 SYSINIT(srat_set_cpus, SI_SUB_CPU, SI_ORDER_ANY, srat_set_cpus, NULL);
-#endif /* VM_NDOMAIN > 1 */
+
+/*
+ * Map a _PXM value to a VM domain ID.
+ *
+ * Returns the domain ID, or -1 if no domain ID was found.
+ */
+int
+acpi_map_pxm_to_vm_domainid(int pxm)
+{
+	int i;
+
+	for (i = 0; i < vm_ndomains; i++) {
+		if (vm_domains[i] == pxm)
+			return (i);
+	}
+
+	return (-1);
+}
+
+#endif /* MAXMEMDOM > 1 */

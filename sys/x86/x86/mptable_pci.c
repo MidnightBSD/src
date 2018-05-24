@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -10,9 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -33,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/x86/x86/mptable_pci.c 280970 2015-04-01 21:48:54Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,7 +44,7 @@ __FBSDID("$FreeBSD$");
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcib_private.h>
 #include <x86/mptable.h>
-#include <machine/legacyvar.h>
+#include <x86/legacyvar.h>
 #include <machine/pci_cfgreg.h>
 
 #include "pcib_if.h"
@@ -74,27 +72,6 @@ mptable_hostb_attach(device_t dev)
 #endif
 	device_add_child(dev, "pci", pcib_get_bus(dev));
 	return (bus_generic_attach(dev));
-}
-
-/* Pass MSI requests up to the nexus. */
-static int
-mptable_hostb_alloc_msi(device_t pcib, device_t dev, int count, int maxcount,
-    int *irqs)
-{
-	device_t bus;
-
-	bus = device_get_parent(pcib);
-	return (PCIB_ALLOC_MSI(device_get_parent(bus), dev, count, maxcount,
-	    irqs));
-}
-
-static int
-mptable_hostb_alloc_msix(device_t pcib, device_t dev, int *irq)
-{
-	device_t bus;
-
-	bus = device_get_parent(pcib);
-	return (PCIB_ALLOC_MSIX(device_get_parent(bus), dev, irq));
 }
 
 #ifdef NEW_PCIB
@@ -129,6 +106,11 @@ mptable_hostb_alloc_resource(device_t dev, device_t child, int type, int *rid,
 {
 	struct mptable_hostb_softc *sc;
 
+#ifdef PCI_RES_BUS
+	if (type == PCI_RES_BUS)
+		return (pci_domain_alloc_bus(0, child, rid, start, end, count,
+		    flags));
+#endif
 	sc = device_get_softc(dev);
 	if (type == SYS_RES_IOPORT && start + count - 1 == end) {
 		if (mptable_is_isa_range(start, end)) {
@@ -165,6 +147,10 @@ mptable_hostb_adjust_resource(device_t dev, device_t child, int type,
 {
 	struct mptable_hostb_softc *sc;
 
+#ifdef PCI_RES_BUS
+	if (type == PCI_RES_BUS)
+		return (pci_domain_adjust_bus(0, child, r, start, end));
+#endif
 	sc = device_get_softc(dev);
 	return (pcib_host_res_adjust(&sc->sc_host_res, child, type, r, start,
 	    end));
@@ -189,7 +175,11 @@ static device_method_t mptable_hostb_methods[] = {
 	DEVMETHOD(bus_alloc_resource,	legacy_pcib_alloc_resource),
 	DEVMETHOD(bus_adjust_resource,	bus_generic_adjust_resource),
 #endif
+#if defined(NEW_PCIB) && defined(PCI_RES_BUS)
+	DEVMETHOD(bus_release_resource,	legacy_pcib_release_resource),
+#else
 	DEVMETHOD(bus_release_resource,	bus_generic_release_resource),
+#endif
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
 	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
 	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
@@ -200,9 +190,9 @@ static device_method_t mptable_hostb_methods[] = {
 	DEVMETHOD(pcib_read_config,	legacy_pcib_read_config),
 	DEVMETHOD(pcib_write_config,	legacy_pcib_write_config),
 	DEVMETHOD(pcib_route_interrupt,	mptable_pci_route_interrupt),
-	DEVMETHOD(pcib_alloc_msi,	mptable_hostb_alloc_msi),
+	DEVMETHOD(pcib_alloc_msi,	legacy_pcib_alloc_msi),
 	DEVMETHOD(pcib_release_msi,	pcib_release_msi),
-	DEVMETHOD(pcib_alloc_msix,	mptable_hostb_alloc_msix),
+	DEVMETHOD(pcib_alloc_msix,	legacy_pcib_alloc_msix),
 	DEVMETHOD(pcib_release_msix,	pcib_release_msix),
 	DEVMETHOD(pcib_map_msi,		legacy_pcib_map_msi),
 

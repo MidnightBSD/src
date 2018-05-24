@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Yahoo!, Inc.
  * All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/x86/x86/msi.c 333126 2018-04-30 20:29:28Z jhb $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -44,6 +45,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/sx.h>
+#include <sys/sysctl.h>
 #include <sys/systm.h>
 #include <x86/apicreg.h>
 #include <machine/cputypes.h>
@@ -134,6 +136,22 @@ struct pic msi_pic = { msi_enable_source, msi_disable_source, msi_eoi_source,
 		       msi_source_pending, NULL, NULL, msi_config_intr,
 		       msi_assign_cpu };
 
+#ifdef SMP
+/**
+ * Xen hypervisors prior to 4.6.0 do not properly handle updates to
+ * enabled MSI-X table entries.  Allow migration of MSI-X interrupts
+ * to be disabled via a tunable. Values have the following meaning:
+ *
+ * -1: automatic detection by FreeBSD
+ *  0: enable migration
+ *  1: disable migration
+ */
+int msix_disable_migration = -1;
+SYSCTL_INT(_machdep, OID_AUTO, disable_msix_migration, CTLFLAG_RDTUN,
+    &msix_disable_migration, 0,
+    "Disable migration of MSI-X interrupts between CPUs");
+#endif
+
 static int msi_enabled;
 static int msi_last_irq;
 static struct mtx msi_lock;
@@ -212,6 +230,11 @@ msi_assign_cpu(struct intsrc *isrc, u_int apic_id)
 	if (msi->msi_first != msi)
 		return (EINVAL);
 
+#ifdef SMP
+	if (msix_disable_migration && msi->msi_msix)
+		return (EINVAL);
+#endif
+
 	/* Store information to free existing irq. */
 	old_vector = msi->msi_vector;
 	old_id = msi->msi_cpu;
@@ -284,6 +307,13 @@ msi_init(void)
 		return;
 	}
 
+#ifdef SMP
+	if (msix_disable_migration == -1) {
+		/* The default is to allow migration of MSI-X interrupts. */
+		msix_disable_migration = 0;
+	}
+#endif
+
 	msi_enabled = 1;
 	intr_register_pic(&msi_pic);
 	mtx_init(&msi_lock, "msi", NULL, MTX_DEF);
@@ -352,7 +382,7 @@ again:
 	/* Do we need to create some new sources? */
 	if (cnt < count) {
 		/* If we would exceed the max, give up. */
-		if (i + (count - cnt) > FIRST_MSI_INT + NUM_MSI_INTS) {
+		if (i + (count - cnt) >= FIRST_MSI_INT + NUM_MSI_INTS) {
 			mtx_unlock(&msi_lock);
 			free(mirqs, M_MSI);
 			return (ENXIO);
@@ -530,7 +560,7 @@ again:
 	/* Do we need to create a new source? */
 	if (msi == NULL) {
 		/* If we would exceed the max, give up. */
-		if (i + 1 > FIRST_MSI_INT + NUM_MSI_INTS) {
+		if (i + 1 >= FIRST_MSI_INT + NUM_MSI_INTS) {
 			mtx_unlock(&msi_lock);
 			return (ENXIO);
 		}

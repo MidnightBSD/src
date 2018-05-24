@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2005 Bruno Ducrot
  * Copyright (c) 2004 FUKUDA Nobuhiko <nfukuda@spa.is.uec.ac.jp>
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/x86/cpufreq/powernow.c 305615 2016-09-08 15:06:28Z pfg $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -700,9 +701,9 @@ pn_decode_pst(device_t dev)
 			if (sc->pn_type != PN8_TYPE)
 				return (EINVAL);
 			sc->vst = psb->settlingtime;
-			sc->rvo = PN8_PSB_TO_RVO(psb->res1),
-			sc->irt = PN8_PSB_TO_IRT(psb->res1),
-			sc->mvs = PN8_PSB_TO_MVS(psb->res1),
+			sc->rvo = PN8_PSB_TO_RVO(psb->res1);
+			sc->irt = PN8_PSB_TO_IRT(psb->res1);
+			sc->mvs = PN8_PSB_TO_MVS(psb->res1);
 			sc->low = PN8_PSB_TO_BATT(psb->res1);
 			if (bootverbose) {
 				device_printf(dev, "PSB: VST: %d\n",

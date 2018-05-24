@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) KATO Takenori, 1999.
  *
@@ -28,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/x86/include/bus.h 287126 2015-08-25 14:39:40Z marcel $
  */
 
 /*	$NetBSD: bus.h,v 1.12 1997/10/01 08:25:15 fvdl Exp $	*/
@@ -49,13 +50,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the NetBSD
- *	Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -130,38 +124,22 @@
 #define BUS_SPACE_MAXADDR	0xFFFFFFFF
 #endif
 
+#define BUS_SPACE_INVALID_DATA	(~0)
 #define BUS_SPACE_UNRESTRICTED	(~0)
 
 /*
  * Map a region of device bus space into CPU virtual address space.
  */
 
-static __inline int bus_space_map(bus_space_tag_t t, bus_addr_t addr,
-				  bus_size_t size, int flags,
-				  bus_space_handle_t *bshp);
-
-static __inline int
-bus_space_map(bus_space_tag_t t __unused, bus_addr_t addr,
-	      bus_size_t size __unused, int flags __unused,
-	      bus_space_handle_t *bshp)
-{
-
-	*bshp = addr;
-	return (0);
-}
+int bus_space_map(bus_space_tag_t tag, bus_addr_t addr, bus_size_t size,
+    int flags, bus_space_handle_t *bshp);
 
 /*
  * Unmap a region of device bus space.
  */
 
-static __inline void bus_space_unmap(bus_space_tag_t t, bus_space_handle_t bsh,
-				     bus_size_t size);
-
-static __inline void
-bus_space_unmap(bus_space_tag_t t __unused, bus_space_handle_t bsh __unused,
-		bus_size_t size __unused)
-{
-}
+void bus_space_unmap(bus_space_tag_t tag, bus_space_handle_t bsh,
+    bus_size_t size);
 
 /*
  * Get a new handle for a subregion of an already-mapped area of bus space.
@@ -221,6 +199,12 @@ static __inline u_int32_t bus_space_read_4(bus_space_tag_t tag,
 					   bus_space_handle_t handle,
 					   bus_size_t offset);
 
+#ifdef __amd64__
+static __inline uint64_t bus_space_read_8(bus_space_tag_t tag,
+					  bus_space_handle_t handle,
+					  bus_size_t offset);
+#endif
+
 static __inline u_int8_t
 bus_space_read_1(bus_space_tag_t tag, bus_space_handle_t handle,
 		 bus_size_t offset)
@@ -251,8 +235,16 @@ bus_space_read_4(bus_space_tag_t tag, bus_space_handle_t handle,
 	return (*(volatile u_int32_t *)(handle + offset));
 }
 
-#if 0	/* Cause a link error for bus_space_read_8 */
-#define	bus_space_read_8(t, h, o)	!!! bus_space_read_8 unimplemented !!!
+#ifdef __amd64__
+static __inline uint64_t
+bus_space_read_8(bus_space_tag_t tag, bus_space_handle_t handle,
+		 bus_size_t offset)
+{
+
+	if (tag == X86_BUS_SPACE_IO) /* No 8 byte IO space access on x86 */
+		return (BUS_SPACE_INVALID_DATA);
+	return (*(volatile uint64_t *)(handle + offset));
+}
 #endif
 
 /*
@@ -479,6 +471,12 @@ static __inline void bus_space_write_4(bus_space_tag_t tag,
 				       bus_space_handle_t bsh,
 				       bus_size_t offset, u_int32_t value);
 
+#ifdef __amd64__
+static __inline void bus_space_write_8(bus_space_tag_t tag,
+				       bus_space_handle_t bsh,
+				       bus_size_t offset, uint64_t value);
+#endif
+
 static __inline void
 bus_space_write_1(bus_space_tag_t tag, bus_space_handle_t bsh,
 		       bus_size_t offset, u_int8_t value)
@@ -512,8 +510,17 @@ bus_space_write_4(bus_space_tag_t tag, bus_space_handle_t bsh,
 		*(volatile u_int32_t *)(bsh + offset) = value;
 }
 
-#if 0	/* Cause a link error for bus_space_write_8 */
-#define	bus_space_write_8	!!! bus_space_write_8 not implemented !!!
+#ifdef __amd64__
+static __inline void
+bus_space_write_8(bus_space_tag_t tag, bus_space_handle_t bsh,
+		  bus_size_t offset, uint64_t value)
+{
+
+	if (tag == X86_BUS_SPACE_IO) /* No 8 byte IO space access on x86 */
+		return;
+	else
+		*(volatile uint64_t *)(bsh + offset) = value;
+}
 #endif
 
 /*
@@ -1014,7 +1021,7 @@ bus_space_barrier(bus_space_tag_t tag __unused, bus_space_handle_t bsh __unused,
 		__asm __volatile("lock; addl $0,0(%%esp)" : : : "memory");
 #endif
 	else
-		__asm __volatile("" : : : "memory");
+		__compiler_membar();
 #endif
 }
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998-2003 Poul-Henning Kamp
  * All rights reserved.
@@ -25,8 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: release/9.2.0/sys/x86/x86/tsc.c 250772 2013-05-18 13:19:31Z mav $ */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/x86/x86/tsc.c 280973 2015-04-02 01:02:42Z jhb $");
 
 #include "opt_compat.h"
 #include "opt_clock.h"
@@ -48,6 +48,7 @@ __MBSDID("$MidnightBSD$");
 #include <machine/cputypes.h>
 #include <machine/md_var.h>
 #include <machine/specialreg.h>
+#include <x86/vmware.h>
 
 #include "cpufreq_if.h"
 
@@ -62,7 +63,7 @@ SYSCTL_INT(_kern_timecounter, OID_AUTO, invariant_tsc, CTLFLAG_RDTUN,
 TUNABLE_INT("kern.timecounter.invariant_tsc", &tsc_is_invariant);
 
 #ifdef SMP
-static int	smp_tsc;
+int	smp_tsc;
 SYSCTL_INT(_kern_timecounter, OID_AUTO, smp_tsc, CTLFLAG_RDTUN, &smp_tsc, 0,
     "Indicates whether the TSC is safe to use in SMP mode");
 TUNABLE_INT("kern.timecounter.smp_tsc", &smp_tsc);
@@ -109,72 +110,11 @@ static struct timecounter tsc_timecounter = {
 	800,			/* quality (adjusted in code) */
 };
 
-#define	VMW_HVMAGIC		0x564d5868
-#define	VMW_HVPORT		0x5658
-#define	VMW_HVCMD_GETVERSION	10
-#define	VMW_HVCMD_GETHZ		45
-
-static __inline void
-vmware_hvcall(u_int cmd, u_int *p)
-{
-
-	__asm __volatile("inl %w3, %0"
-	: "=a" (p[0]), "=b" (p[1]), "=c" (p[2]), "=d" (p[3])
-	: "0" (VMW_HVMAGIC), "1" (UINT_MAX), "2" (cmd), "3" (VMW_HVPORT)
-	: "memory");
-}
-
-static int
+static void
 tsc_freq_vmware(void)
 {
-	char hv_sig[13];
 	u_int regs[4];
-	char *p;
-	u_int hv_high;
-	int i;
 
-	/*
-	 * [RFC] CPUID usage for interaction between Hypervisors and Linux.
-	 * http://lkml.org/lkml/2008/10/1/246
-	 *
-	 * KB1009458: Mechanisms to determine if software is running in
-	 * a VMware virtual machine
-	 * http://kb.vmware.com/kb/1009458
-	 */
-	hv_high = 0;
-	if ((cpu_feature2 & CPUID2_HV) != 0) {
-		do_cpuid(0x40000000, regs);
-		hv_high = regs[0];
-		for (i = 1, p = hv_sig; i < 4; i++, p += sizeof(regs) / 4)
-			memcpy(p, &regs[i], sizeof(regs[i]));
-		*p = '\0';
-		if (bootverbose) {
-			/*
-			 * HV vendor	ID string
-			 * ------------+--------------
-			 * KVM		"KVMKVMKVM"
-			 * Microsoft	"Microsoft Hv"
-			 * VMware	"VMwareVMware"
-			 * Xen		"XenVMMXenVMM"
-			 */
-			printf("Hypervisor: Origin = \"%s\"\n", hv_sig);
-		}
-		if (strncmp(hv_sig, "VMwareVMware", 12) != 0)
-			return (0);
-	} else {
-		p = getenv("smbios.system.serial");
-		if (p == NULL)
-			return (0);
-		if (strncmp(p, "VMware-", 7) != 0 &&
-		    strncmp(p, "VMW", 3) != 0) {
-			freeenv(p);
-			return (0);
-		}
-		freeenv(p);
-		vmware_hvcall(VMW_HVCMD_GETVERSION, regs);
-		if (regs[1] != VMW_HVMAGIC)
-			return (0);
-	}
 	if (hv_high >= 0x40000010) {
 		do_cpuid(0x40000010, regs);
 		tsc_freq = regs[0] * 1000;
@@ -184,7 +124,6 @@ tsc_freq_vmware(void)
 			tsc_freq = regs[0] | ((uint64_t)regs[1] << 32);
 	}
 	tsc_is_invariant = 1;
-	return (1);
 }
 
 static void
@@ -268,8 +207,10 @@ probe_tsc_freq(void)
 		}
 	}
 
-	if (tsc_freq_vmware())
+	if (vm_guest == VM_GUEST_VMWARE) {
+		tsc_freq_vmware();
 		return;
+	}
 
 	switch (cpu_vendor_id) {
 	case CPU_VENDOR_AMD:
@@ -331,6 +272,39 @@ init_TSC(void)
 	if ((cpu_feature & CPUID_TSC) == 0 || tsc_disabled)
 		return;
 
+#ifdef __i386__
+	/* The TSC is known to be broken on certain CPUs. */
+	switch (cpu_vendor_id) {
+	case CPU_VENDOR_AMD:
+		switch (cpu_id & 0xFF0) {
+		case 0x500:
+			/* K5 Model 0 */
+			return;
+		}
+		break;
+	case CPU_VENDOR_CENTAUR:
+		switch (cpu_id & 0xff0) {
+		case 0x540:
+			/*
+			 * http://www.centtech.com/c6_data_sheet.pdf
+			 *
+			 * I-12 RDTSC may return incoherent values in EDX:EAX
+			 * I-13 RDTSC hangs when certain event counters are used
+			 */
+			return;
+		}
+		break;
+	case CPU_VENDOR_NSC:
+		switch (cpu_id & 0xff0) {
+		case 0x540:
+			if ((cpu_id & CPUID_STEPPING) == 0)
+				return;
+			break;
+		}
+		break;
+	}
+#endif
+		
 	probe_tsc_freq();
 
 	/*
@@ -374,11 +348,11 @@ init_TSC(void)
 static void								\
 tsc_read_##x(void *arg)							\
 {									\
-	uint32_t *tsc = arg;						\
+	uint64_t *tsc = arg;						\
 	u_int cpu = PCPU_GET(cpuid);					\
 									\
 	__asm __volatile("cpuid" : : : "eax", "ebx", "ecx", "edx");	\
-	tsc[cpu * 3 + x] = rdtsc32();					\
+	tsc[cpu * 3 + x] = rdtsc();					\
 }
 TSC_READ(0)
 TSC_READ(1)
@@ -390,8 +364,8 @@ TSC_READ(2)
 static void
 comp_smp_tsc(void *arg)
 {
-	uint32_t *tsc;
-	int32_t d1, d2;
+	uint64_t *tsc;
+	int64_t d1, d2;
 	u_int cpu = PCPU_GET(cpuid);
 	u_int i, j, size;
 
@@ -455,7 +429,7 @@ adj_smp_tsc(void *arg)
 static int
 test_tsc(void)
 {
-	uint32_t *data, *tsc;
+	uint64_t *data, *tsc;
 	u_int i, size, adj;
 
 	if ((!smp_tsc && !tsc_is_invariant) || vm_guest)
@@ -555,16 +529,16 @@ init_TSC_tc(void)
 	}
 
 	/*
-	 * We cannot use the TSC if it stops incrementing in deep sleep.
-	 * Currently only Intel CPUs are known for this problem unless
-	 * the invariant TSC bit is set.
+	 * We cannot use the TSC if it stops incrementing while idle.
+	 * Intel CPUs without a C-state invariant TSC can stop the TSC
+	 * in either C2 or C3.
 	 */
-	if (cpu_can_deep_sleep && cpu_vendor_id == CPU_VENDOR_INTEL &&
+	if (cpu_deepest_sleep >= 2 && cpu_vendor_id == CPU_VENDOR_INTEL &&
 	    (amd_pminfo & AMDPM_TSC_INVARIANT) == 0) {
 		tsc_timecounter.tc_quality = -1000;
 		tsc_timecounter.tc_flags |= TC_FLAGS_C2STOP;
 		if (bootverbose)
-			printf("TSC timecounter disabled: C3 enabled.\n");
+			printf("TSC timecounter disabled: C2/C3 may halt it.\n");
 		goto init;
 	}
 
