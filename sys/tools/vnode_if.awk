@@ -30,8 +30,8 @@
 
 #
 #	@(#)vnode_if.sh	8.1 (Berkeley) 6/10/93
-# $FreeBSD: src/sys/tools/vnode_if.awk,v 1.55 2006/05/30 21:13:28 dds Exp $
-# $MidnightBSD: src/sys/tools/vnode_if.awk,v 1.3 2012/03/28 23:22:17 laffer1 Exp $
+# $FreeBSD: stable/10/sys/tools/vnode_if.awk 289798 2015-10-23 07:40:43Z avg $
+# $MidnightBSD$
 #
 # Script to produce VFS front-end sugar.
 #
@@ -143,7 +143,7 @@ common_head = \
     " * This file is produced automatically.\n" \
     " * Do not modify anything in here by hand.\n" \
     " *\n" \
-    " * Created from $MidnightBSD: src/sys/tools/vnode_if.awk,v 1.3 2012/03/28 23:22:17 laffer1 Exp $\n" \
+    " * Created from $MidnightBSD$\n" \
     " */\n" \
     "\n";
 
@@ -224,8 +224,6 @@ while ((getline < srcfile) > 0) {
 	name = $1;
 	uname = toupper(name);
 
-	# Start constructing a ktrpoint string
-	ctrstr = "\"" uname;
 	# Get the function arguments.
 	for (numargs = 0; ; ++numargs) {
 		if ((getline < srcfile) <= 0) {
@@ -269,27 +267,15 @@ while ((getline < srcfile) > 0) {
 		# remove trailing space (if any)
 		sub(/ $/, "");
 		types[numargs] = $0;
-
-		# We can do a maximum of 6 arguments to CTR*
-		if (numargs <= 6) {
-			if (numargs == 0)
-				ctrstr = ctrstr "(" args[numargs];
-			else
-				ctrstr = ctrstr ", " args[numargs];
-			if (types[numargs] ~ /\*/)
-				ctrstr = ctrstr " 0x%lX";
-			else
-				ctrstr = ctrstr " %ld";
-		}
 	}
-	if (numargs > 6)
-		ctrargs = 6;
+	if (numargs > 4)
+		ctrargs = 4;
 	else
 		ctrargs = numargs;
-	ctrstr = "\tCTR" ctrargs "(KTR_VOP,\n\t    " ctrstr ")\",\n\t    ";
-	ctrstr = ctrstr "a->a_" args[0];
+	ctrstr = ctrargs "(KTR_VOP, \"VOP\", \"" uname "\", (uintptr_t)a,\n\t    "; 
+	ctrstr = ctrstr "\"" args[0] ":0x%jX\", (uintptr_t)a->a_" args[0];
 	for (i = 1; i < ctrargs; ++i)
-		ctrstr = ctrstr ", a->a_" args[i];
+		ctrstr = ctrstr ", \"" args[i] ":0x%jX\", a->a_" args[i];
 	ctrstr = ctrstr ");";
 
 	if (pfile) {
@@ -357,8 +343,8 @@ while ((getline < srcfile) > 0) {
 		printc("};");
 
 		printc("\n");
-		printc("SDT_PROBE_DEFINE2(vfs, vop, " name ", entry, entry, \"struct vnode *\", \"struct " name "_args *\");\n");
-		printc("SDT_PROBE_DEFINE3(vfs, vop, " name ", return, return, \"struct vnode *\", \"struct " name "_args *\", \"int\");\n");
+		printc("SDT_PROBE_DEFINE2(vfs, vop, " name ", entry, \"struct vnode *\", \"struct " name "_args *\");\n");
+		printc("SDT_PROBE_DEFINE3(vfs, vop, " name ", return, \"struct vnode *\", \"struct " name "_args *\", \"int\");\n");
 
 		# Print out function.
 		printc("\nint\n" uname "_AP(struct " name "_args *a)");
@@ -376,9 +362,10 @@ while ((getline < srcfile) > 0) {
 		printc("\t    vop->"name" == NULL && vop->vop_bypass == NULL)")
 		printc("\t\tvop = vop->vop_default;")
 		printc("\tVNASSERT(vop != NULL, a->a_" args[0]", (\"No "name"(%p, %p)\", a->a_" args[0]", a));")
-		printc("\tSDT_PROBE(vfs, vop, " name ", entry, a->a_" args[0] ", a, 0, 0, 0);\n");
+		printc("\tSDT_PROBE2(vfs, vop, " name ", entry, a->a_" args[0] ", a);\n");
 		for (i = 0; i < numargs; ++i)
 			add_debug_code(name, args[i], "Entry", "\t");
+		printc("\tKTR_START" ctrstr);
 		add_pre(name);
 		printc("\tVFS_PROLOGUE(a->a_" args[0]"->v_mount);")
 		printc("\tif (vop->"name" != NULL)")
@@ -386,8 +373,7 @@ while ((getline < srcfile) > 0) {
 		printc("\telse")
 		printc("\t\trc = vop->vop_bypass(&a->a_gen);")
 		printc("\tVFS_EPILOGUE(a->a_" args[0]"->v_mount);")
-		printc(ctrstr);
-		printc("\tSDT_PROBE(vfs, vop, " name ", return, a->a_" args[0] ", a, rc, 0, 0);\n");
+		printc("\tSDT_PROBE3(vfs, vop, " name ", return, a->a_" args[0] ", a, rc);\n");
 		printc("\tif (rc == 0) {");
 		for (i = 0; i < numargs; ++i)
 			add_debug_code(name, args[i], "OK", "\t\t");
@@ -396,6 +382,7 @@ while ((getline < srcfile) > 0) {
 			add_debug_code(name, args[i], "Error", "\t\t");
 		printc("\t}");
 		add_post(name);
+		printc("\tKTR_STOP" ctrstr);
 		printc("\treturn (rc);");
 		printc("}\n");
 
