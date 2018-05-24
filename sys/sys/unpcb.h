@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)unpcb.h	8.1 (Berkeley) 6/2/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/unpcb.h 305261 2016-09-02 00:14:28Z markj $
  */
 
 #ifndef _SYS_UNPCB_H_
@@ -74,8 +75,8 @@ struct unpcb {
 	struct	unp_head unp_refs;	/* referencing socket linked list */
 	LIST_ENTRY(unpcb) unp_reflink;	/* link in unp_refs list */
 	struct	sockaddr_un *unp_addr;	/* bound address of socket */
-	int	unp_cc;			/* copy of rcv.sb_cc */
-	int	unp_mbcnt;		/* copy of rcv.sb_mbcnt */
+	int	reserved1;
+	int	reserved2;
 	unp_gen_t unp_gencnt;		/* generation count of this instance */
 	short	unp_flags;		/* flags */
 	short	unp_gcflag;		/* Garbage collector flags. */
@@ -103,10 +104,6 @@ struct unpcb {
 #define	UNP_WANTCRED			0x004	/* credentials wanted */
 #define	UNP_CONNWAIT			0x008	/* connect blocks until accepted */
 
-#define	UNPGC_REF			0x1	/* unpcb has external ref. */
-#define	UNPGC_DEAD			0x2	/* unpcb might be dead. */
-#define	UNPGC_SCANNED			0x4	/* Has been scanned. */
-
 /*
  * These flags are used to handle non-atomicity in connect() and bind()
  * operations on a socket: in particular, to avoid races between multiple
@@ -114,6 +111,15 @@ struct unpcb {
  */
 #define	UNP_CONNECTING			0x010	/* Currently connecting. */
 #define	UNP_BINDING			0x020	/* Currently binding. */
+#define	UNP_NASCENT			0x040	/* Newborn child socket. */
+
+/*
+ * Flags in unp_gcflag.
+ */
+#define	UNPGC_REF			0x1	/* unpcb has external ref. */
+#define	UNPGC_DEAD			0x2	/* unpcb might be dead. */
+#define	UNPGC_SCANNED			0x4	/* Has been scanned. */
+#define	UNPGC_IGNORE_RIGHTS		0x8	/* Attached rights are freed */
 
 #define	sotounpcb(so)	((struct unpcb *)((so)->so_pcb))
 

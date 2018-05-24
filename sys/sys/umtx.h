@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, Jeffrey Roberson <jeff@freebsd.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/umtx.h 233912 2012-04-05 02:24:08Z davidxu $
  *
  */
 
@@ -87,6 +88,8 @@
 #define	CVWAIT_CHECK_UNPARKING	0x01
 #define	CVWAIT_ABSTIME		0x02
 #define	CVWAIT_CLOCKID		0x04
+
+#define	UMTX_ABSTIME		0x01
 
 #define	UMTX_CHECK_UNPARKING	CVWAIT_CHECK_UNPARKING
 

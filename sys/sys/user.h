@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1991, 1993
  *	The Regents of the University of California.
@@ -29,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)user.h	8.2 (Berkeley) 9/23/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/user.h 310121 2016-12-15 16:52:17Z vangyzen $
  */
 
 #ifndef _SYS_USER_H_
@@ -61,6 +62,7 @@
 #ifndef _SYS_SOCKET_VAR_H_
 #include <sys/socket.h>
 #endif
+#include <sys/caprights.h>
 
 /*
  * KERN_PROC subtype ops return arrays of selected proc structure entries:
@@ -83,7 +85,7 @@
  * it in two places: function fill_kinfo_proc in sys/kern/kern_proc.c and
  * function kvm_proclist in lib/libkvm/kvm_proc.c .
  */
-#define	KI_NSPARE_INT	9
+#define	KI_NSPARE_INT	7
 #define	KI_NSPARE_LONG	12
 #define	KI_NSPARE_PTR	6
 
@@ -98,7 +100,7 @@
 #define	TDNAMLEN	16		/* size of returned thread name */
 #define	COMMLEN		19		/* size of returned ki_comm name */
 #define	KI_EMULNAMELEN	16		/* size of returned ki_emul */
-#define KI_NGROUPS	16		/* number of groups in ki_groups */
+#define	KI_NGROUPS	16		/* number of groups in ki_groups */
 #define	LOGNAMELEN	17		/* size of returned ki_login */
 #define	LOGINCLASSLEN	17		/* size of returned ki_loginclass */
 
@@ -146,7 +148,7 @@ struct kinfo_proc {
 	gid_t	ki_svgid;		/* Saved effective group id */
 	short	ki_ngroups;		/* number of groups */
 	short	ki_spare_short2;	/* unused (just here for alignment) */
-	gid_t 	ki_groups[KI_NGROUPS];	/* groups */
+	gid_t	ki_groups[KI_NGROUPS];	/* groups */
 	vm_size_t ki_size;		/* virtual size */
 	segsz_t ki_rssize;		/* current resident set size in pages */
 	segsz_t ki_swrss;		/* resident set size before last swap */
@@ -179,13 +181,16 @@ struct kinfo_proc {
 	char	ki_comm[COMMLEN+1];	/* command name */
 	char	ki_emul[KI_EMULNAMELEN+1];  /* emulation name */
 	char	ki_loginclass[LOGINCLASSLEN+1]; /* login class */
+	char	ki_moretdname[MAXCOMLEN-TDNAMLEN+1];	/* more thread name */
 	/*
 	 * When adding new variables, take space for char-strings from the
 	 * front of ki_sparestrings, and ints from the end of ki_spareints.
 	 * That way the spare room from both arrays will remain contiguous.
 	 */
-	char	ki_sparestrings[50];	/* spare string space */
+	char	ki_sparestrings[46];	/* spare string space */
 	int	ki_spareints[KI_NSPARE_INT];	/* spare room for growth */
+	int	ki_flag2;		/* P2_* flags */
+	int	ki_fibnum;		/* Default FIB number */
 	u_int	ki_cr_flags;		/* Credential flags */
 	int	ki_jid;			/* Process jail ID */
 	int	ki_numthreads;		/* XXXKSE number of threads in total */
@@ -251,8 +256,7 @@ struct user {
 #define	KF_TYPE_SHM	8
 #define	KF_TYPE_SEM	9
 #define	KF_TYPE_PTS	10
-/* no KF_TYPE_CAPABILITY (11), since capabilities wrap other file objects */
-#define	KF_TYPE_PROCDESC	12
+#define	KF_TYPE_PROCDESC	11
 #define	KF_TYPE_UNKNOWN	255
 
 #define	KF_VTYPE_VNON	0
@@ -288,11 +292,10 @@ struct user {
 #define	KF_FLAG_TRUNC		0x00001000
 #define	KF_FLAG_EXCL		0x00002000
 #define	KF_FLAG_EXEC		0x00004000
-#define	KF_FLAG_CAPABILITY	0x00008000
 
 /*
  * Old format.  Has variable hidden padding due to alignment.
- * This is a compatability hack for pre-build 7.1 packages.
+ * This is a compatibility hack for pre-build 7.1 packages.
  */
 #if defined(__amd64__)
 #define	KINFO_OFILE_SIZE	1328
@@ -319,6 +322,12 @@ struct kinfo_ofile {
 };
 
 #if defined(__amd64__) || defined(__i386__)
+/*
+ * This size should never be changed. If you really need to, you must provide
+ * backward ABI compatibility by allocating a new sysctl MIB that will return
+ * the new structure. The current structure has to be returned by the current
+ * sysctl MIB. See how it is done for the kinfo_ofile structure.
+ */
 #define	KINFO_FILE_SIZE	1392
 #endif
 
@@ -367,6 +376,10 @@ struct kinfo_file {
 			uint32_t	kf_file_pad1;
 		} kf_file;
 		struct {
+			uint32_t	kf_sem_value;
+			uint16_t	kf_sem_mode;
+		} kf_sem;
+		struct {
 			uint64_t	kf_pipe_addr;
 			uint64_t	kf_pipe_peer;
 			uint32_t	kf_pipe_buffer_cnt;
@@ -386,7 +399,7 @@ struct kinfo_file {
 	uint16_t	kf_pad1;		/* Round to 32 bit alignment. */
 	int		_kf_ispare0;		/* Space for more stuff. */
 	cap_rights_t	kf_cap_rights;		/* Capability rights. */
-	int		_kf_ispare[4];		/* Space for more stuff. */
+	uint64_t	_kf_cap_spare;		/* Space for future cap_rights_t. */
 	/* Truncated before copyout in sysctl */
 	char		kf_path[PATH_MAX];	/* Path to file, if any. */
 };
@@ -403,6 +416,7 @@ struct kinfo_file {
 #define	KVME_TYPE_PHYS		5
 #define	KVME_TYPE_DEAD		6
 #define	KVME_TYPE_SG		7
+#define	KVME_TYPE_MGTDEVICE	8
 #define	KVME_TYPE_UNKNOWN	255
 
 #define	KVME_PROT_READ		0x00000001
@@ -471,6 +485,27 @@ struct kinfo_vmentry {
 };
 
 /*
+ * The "vm.objects" sysctl provides a list of all VM objects in the system
+ * via an array of these entries.
+ */
+struct kinfo_vmobject {
+	int	kvo_structsize;			/* Variable size of record. */
+	int	kvo_type;			/* Object type: KVME_TYPE_*. */
+	uint64_t kvo_size;			/* Object size in pages. */
+	uint64_t kvo_vn_fileid;			/* inode number if vnode. */
+	uint32_t kvo_vn_fsid;			/* dev_t of vnode location. */
+	int	kvo_ref_count;			/* Reference count. */
+	int	kvo_shadow_count;		/* Shadow count. */
+	int	kvo_memattr;			/* Memory attribute. */
+	uint64_t kvo_resident;			/* Number of resident pages. */
+	uint64_t kvo_active;			/* Number of active pages. */
+	uint64_t kvo_inactive;			/* Number of inactive pages. */
+	uint64_t _kvo_qspare[8];
+	uint32_t _kvo_ispare[8];
+	char	kvo_path[PATH_MAX];		/* Pathname, if any. */
+};
+
+/*
  * The KERN_PROC_KSTACK sysctl allows a process to dump the kernel stacks of
  * another process as a series of entries.  Each stack is represented by a
  * series of symbol names and offsets as generated by stack_sbuf_print(9).
@@ -492,11 +527,22 @@ struct kinfo_kstack {
 	int	 _kkst_ispare[16];		/* Space for more stuff. */
 };
 
+struct kinfo_sigtramp {
+	void	*ksigtramp_start;
+	void	*ksigtramp_end;
+	void	*ksigtramp_spare[4];
+};
+
 #ifdef _KERNEL
 /* Flags for kern_proc_out function. */
 #define KERN_PROC_NOTHREADS	0x1
 #define KERN_PROC_MASK32	0x2
 
+/* Flags for kern_proc_filedesc_out. */
+#define	KERN_FILEDESC_PACK_KINFO	0x00000001U
+
+/* Flags for kern_proc_vmmap_out. */
+#define	KERN_VMMAP_PACK_KINFO		0x00000001U
 struct sbuf;
 
 /*
@@ -508,9 +554,11 @@ struct sbuf;
  * to be locked on enter.  On return the process is unlocked.
  */
 
-int	kern_proc_filedesc_out(struct proc *p, struct sbuf *sb, ssize_t maxlen);
+int	kern_proc_filedesc_out(struct proc *p, struct sbuf *sb, ssize_t maxlen,
+	int flags);
 int	kern_proc_out(struct proc *p, struct sbuf *sb, int flags);
-int	kern_proc_vmmap_out(struct proc *p, struct sbuf *sb);
+int	kern_proc_vmmap_out(struct proc *p, struct sbuf *sb, ssize_t maxlen,
+	int flags);
 
 int	vntype_to_kinfo(int vtype);
 #endif /* !_KERNEL */
