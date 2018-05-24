@@ -75,7 +75,6 @@ __MBSDID("$MidnightBSD$");
 static const char fconf[] = "Chan %d PortDB[%d] changed:\n current =(0x%x@0x%06x 0x%08x%08x 0x%08x%08x)\n database=(0x%x@0x%06x 0x%08x%08x 0x%08x%08x)";
 static const char notresp[] = "Not RESPONSE in RESPONSE Queue (type 0x%x) @ idx %d (next %d) nlooked %d";
 static const char topology[] = "Chan %d WWPN 0x%08x%08x PortID 0x%06x N-Port Handle %d, Connection '%s'";
-static const char sc4[] = "NVRAM";
 static const char bun[] = "bad underrun (count %d, resid %d, status %s)";
 static const char lipd[] = "Chan %d LIP destroyed %d active commands";
 static const char sacq[] = "unable to acquire scratch area";
@@ -1709,7 +1708,13 @@ isp_fibre_init(ispsoftc_t *isp)
 	 *
 	 * NB: for the 2300, ICBOPT_EXTENDED is required.
 	 */
-	if (IS_2200(isp) || IS_23XX(isp)) {
+	if (IS_2100(isp)) {
+		/*
+		 * We can't have Fast Posting any more- we now
+		 * have 32 bit handles.
+		 */
+		icbp->icb_fwoptions &= ~ICBOPT_FAST_POST;
+	} else if (IS_2200(isp) || IS_23XX(isp)) {
 		icbp->icb_fwoptions |= ICBOPT_EXTENDED;
 
 		icbp->icb_xfwoptions = fcp->isp_xfwoptions;
@@ -2327,7 +2332,7 @@ isp_plogx(ispsoftc_t *isp, int chan, uint16_t handle, uint32_t portid, int flags
 		goto out;
 	} else if (plp->plogx_status != PLOGX_STATUS_IOCBERR) {
 		isp_prt(isp, ISP_LOGWARN,
-		    "status 0x%x on port login IOCB chanel %d",
+		    "status 0x%x on port login IOCB channel %d",
 		    plp->plogx_status, chan);
 		rval = -1;
 		goto out;
@@ -2583,7 +2588,7 @@ isp_get_wwn(ispsoftc_t *isp, int chan, int loopid, int nodename)
 		}
 		mbs.param[9] = chan;
 	} else {
-		mbs.ibits = 3;
+		mbs.ibitm = 3;
 		mbs.param[1] = loopid << 8;
 		if (nodename) {
 			mbs.param[1] |= 1;
@@ -7356,6 +7361,13 @@ isp_mboxcmd(ispsoftc_t *isp, mbreg_t *mbp)
 	 */
 	ibits |= mbp->ibits;
 	obits |= mbp->obits;
+
+	/*
+	 * Mask any bits that the caller wants us to mask
+	 */
+	ibits &= mbp->ibitm;
+	obits &= mbp->obitm;
+
 
 	if (ibits == 0 && obits == 0) {
 		mbp->param[0] = MBOX_COMMAND_PARAM_ERROR;
