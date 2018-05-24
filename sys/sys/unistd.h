@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)unistd.h	8.2 (Berkeley) 1/7/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/unistd.h 312171 2017-01-14 11:27:11Z kib $
  */
 
 #ifndef _SYS_UNISTD_H_
@@ -53,7 +54,7 @@
 #define	_POSIX_ASYNCHRONOUS_IO		0
 #define	_POSIX_CHOWN_RESTRICTED		1
 #define	_POSIX_CLOCK_SELECTION		(-1)
-#define	_POSIX_CPUTIME			(-1)
+#define	_POSIX_CPUTIME			200112L
 #define	_POSIX_FSYNC			200112L
 #define	_POSIX_IPV6			0
 #define	_POSIX_JOB_CONTROL		1
@@ -65,7 +66,7 @@
 #define	_POSIX_MONOTONIC_CLOCK		200112L
 #define	_POSIX_NO_TRUNC			1
 #define	_POSIX_PRIORITIZED_IO		(-1)
-#define	_POSIX_PRIORITY_SCHEDULING	200112L
+#define	_POSIX_PRIORITY_SCHEDULING	0
 #define	_POSIX_RAW_SOCKETS		200112L
 #define	_POSIX_REALTIME_SIGNALS		200112L
 #define	_POSIX_SEMAPHORES		200112L
