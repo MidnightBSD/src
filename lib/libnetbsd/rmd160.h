@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/*	$FreeBSD: release/9.2.0/lib/libnetbsd/rmd160.h 244557 2012-12-21 20:37:38Z brooks $	 */
+/*	$FreeBSD: stable/10/lib/libnetbsd/rmd160.h 244557 2012-12-21 20:37:38Z brooks $	 */
 
 /*-
  * Copyright (c) 2012 SRI International

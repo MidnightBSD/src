@@ -1,9 +1,8 @@
 /* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/lib/libnetbsd/util.h 314366 2017-02-28 00:56:33Z ngie $	*/
+/* $FreeBSD: stable/10/lib/libnetbsd/netinet/in.h 273482 2014-10-22 21:04:54Z ngie $ */
 
-/*-
- * Copyright (c) 2012 SRI International
- * Copyright (c) 1995
+/*
+ * Copyright (c) 1982, 1986, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,15 +28,46 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	@(#)in.h	8.3 (Berkeley) 1/3/94
  */
 
-#ifndef _LIBNETBSD_UTIL_H_
-#define _LIBNETBSD_UTIL_H_
+#ifndef _LIBNETBSD_NETINET_IN_H_
+#define _LIBNETBSD_NETINET_IN_H_
 
-#include <sys/types.h>
-#include <libutil.h>
+#include_next <netinet/in.h>
 
-char	*flags_to_string(u_long flags, const char *def);
-int	 string_to_flags(char **stringp, u_long *setp, u_long *clrp);
+/*
+ * Local port number conventions:
+ *
+ * Ports < IPPORT_RESERVED are reserved for privileged processes (e.g. root),
+ * unless a kernel is compiled with IPNOPRIVPORTS defined.
+ *
+ * When a user does a bind(2) or connect(2) with a port number of zero,
+ * a non-conflicting local port address is chosen.
+ *
+ * The default range is IPPORT_ANONMIN to IPPORT_ANONMAX, although
+ * that is settable by sysctl(3); net.inet.ip.anonportmin and
+ * net.inet.ip.anonportmax respectively.
+ *
+ * A user may set the IPPROTO_IP option IP_PORTRANGE to change this
+ * default assignment range.
+ *
+ * The value IP_PORTRANGE_DEFAULT causes the default behavior.
+ *
+ * The value IP_PORTRANGE_HIGH is the same as IP_PORTRANGE_DEFAULT,
+ * and exists only for FreeBSD compatibility purposes.
+ *
+ * The value IP_PORTRANGE_LOW changes the range to the "low" are
+ * that is (by convention) restricted to privileged processes.
+ * This convention is based on "vouchsafe" principles only.
+ * It is only secure if you trust the remote host to restrict these ports.
+ * The range is IPPORT_RESERVEDMIN to IPPORT_RESERVEDMAX.
+ */
+
+#define	IPPORT_ANONMIN		49152
+#define	IPPORT_ANONMAX		65535
+#define	IPPORT_RESERVEDMIN	600
+#define	IPPORT_RESERVEDMAX	(IPPORT_RESERVED-1)
 
 #endif

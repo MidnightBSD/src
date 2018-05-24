@@ -1,9 +1,8 @@
 /* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/lib/libnetbsd/util.h 314366 2017-02-28 00:56:33Z ngie $	*/
+/* $FreeBSD: stable/10/lib/libnetbsd/sys/time.h 275996 2014-12-21 11:11:17Z ngie $ */
 
-/*-
- * Copyright (c) 2012 SRI International
- * Copyright (c) 1995
+/*
+ * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,15 +28,39 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	@(#)time.h	8.5 (Berkeley) 5/4/95
  */
 
-#ifndef _LIBNETBSD_UTIL_H_
-#define _LIBNETBSD_UTIL_H_
+#ifndef _LIBNETBSD_SYS_TIME_H_
+#define	_LIBNETBSD_SYS_TIME_H_
 
-#include <sys/types.h>
-#include <libutil.h>
+#include_next <sys/time.h>
 
-char	*flags_to_string(u_long flags, const char *def);
-int	 string_to_flags(char **stringp, u_long *setp, u_long *clrp);
+/* Operations on timespecs. */
+#define	timespecclear(tsp)	(tsp)->tv_sec = (time_t)((tsp)->tv_nsec = 0L)
+#define	timespecisset(tsp)	((tsp)->tv_sec || (tsp)->tv_nsec)
+#define	timespeccmp(tsp, usp, cmp)					\
+	(((tsp)->tv_sec == (usp)->tv_sec) ?				\
+	    ((tsp)->tv_nsec cmp (usp)->tv_nsec) :			\
+	    ((tsp)->tv_sec cmp (usp)->tv_sec))
+#define	timespecadd(tsp, usp, vsp)					\
+	do {								\
+		(vsp)->tv_sec = (tsp)->tv_sec + (usp)->tv_sec;		\
+		(vsp)->tv_nsec = (tsp)->tv_nsec + (usp)->tv_nsec;	\
+		if ((vsp)->tv_nsec >= 1000000000L) {			\
+			(vsp)->tv_sec++;				\
+			(vsp)->tv_nsec -= 1000000000L;			\
+		}							\
+	} while (/* CONSTCOND */ 0)
+#define	timespecsub(tsp, usp, vsp)					\
+	do {								\
+		(vsp)->tv_sec = (tsp)->tv_sec - (usp)->tv_sec;		\
+		(vsp)->tv_nsec = (tsp)->tv_nsec - (usp)->tv_nsec;	\
+		if ((vsp)->tv_nsec < 0) {				\
+			(vsp)->tv_sec--;				\
+			(vsp)->tv_nsec += 1000000000L;			\
+		}							\
+	} while (/* CONSTCOND */ 0)
 
 #endif
