@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/ufs/ufs/ufs_bmap.c 284021 2015-06-05 08:36:25Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -114,7 +115,6 @@ ufs_bmaparray(vp, bn, bnp, nbp, runp, runb)
 	struct buf *bp;
 	struct ufsmount *ump;
 	struct mount *mp;
-	struct vnode *devvp;
 	struct indir a[NIADDR+1], *ap;
 	ufs2_daddr_t daddr;
 	ufs_lbn_t metalbn;
@@ -125,7 +125,6 @@ ufs_bmaparray(vp, bn, bnp, nbp, runp, runb)
 	ip = VTOI(vp);
 	mp = vp->v_mount;
 	ump = VFSTOUFS(mp);
-	devvp = ump->um_devvp;
 
 	if (runp) {
 		maxrun = mp->mnt_iosize_max / mp->mnt_stat.f_iosize - 1;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -62,7 +63,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)dinode.h	8.3 (Berkeley) 1/21/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/ufs/ufs/dinode.h 259223 2013-12-11 19:25:17Z pfg $
  */
 
 #ifndef _UFS_UFS_DINODE_H_
@@ -138,15 +139,15 @@ struct ufs2_dinode {
 	int32_t		di_atimensec;	/*  68: Last access time. */
 	int32_t		di_ctimensec;	/*  72: Last inode change time. */
 	int32_t		di_birthnsec;	/*  76: Inode creation time. */
-	int32_t		di_gen;		/*  80: Generation number. */
+	u_int32_t	di_gen;		/*  80: Generation number. */
 	u_int32_t	di_kernflags;	/*  84: Kernel flags. */
 	u_int32_t	di_flags;	/*  88: Status flags (chflags). */
-	int32_t		di_extsize;	/*  92: External attributes block. */
+	u_int32_t	di_extsize;	/*  92: External attributes size. */
 	ufs2_daddr_t	di_extb[NXADDR];/*  96: External attributes block. */
 	ufs2_daddr_t	di_db[NDADDR];	/* 112: Direct disk blocks. */
 	ufs2_daddr_t	di_ib[NIADDR];	/* 208: Indirect disk blocks. */
 	u_int64_t	di_modrev;	/* 232: i_modrev for NFSv4 */
-	ino_t		di_freelink;	/* 240: SUJ: Next unlinked inode. */
+	uint32_t	di_freelink;	/* 240: SUJ: Next unlinked inode. */
 	uint32_t	di_spare[3];	/* 244: Reserved; currently unused */
 };
 
@@ -168,7 +169,7 @@ struct ufs2_dinode {
 struct ufs1_dinode {
 	u_int16_t	di_mode;	/*   0: IFMT, permissions; see below. */
 	int16_t		di_nlink;	/*   2: File link count. */
-	ino_t		di_freelink;	/*   4: SUJ: Next unlinked inode. */
+	uint32_t	di_freelink;	/*   4: SUJ: Next unlinked inode. */
 	u_int64_t	di_size;	/*   8: File byte count. */
 	int32_t		di_atime;	/*  16: Last access time. */
 	int32_t		di_atimensec;	/*  20: Last access time. */
@@ -179,8 +180,8 @@ struct ufs1_dinode {
 	ufs1_daddr_t	di_db[NDADDR];	/*  40: Direct disk blocks. */
 	ufs1_daddr_t	di_ib[NIADDR];	/*  88: Indirect disk blocks. */
 	u_int32_t	di_flags;	/* 100: Status flags (chflags). */
-	int32_t		di_blocks;	/* 104: Blocks actually held. */
-	int32_t		di_gen;		/* 108: Generation number. */
+	u_int32_t	di_blocks;	/* 104: Blocks actually held. */
+	u_int32_t	di_gen;		/* 108: Generation number. */
 	u_int32_t	di_uid;		/* 112: File owner. */
 	u_int32_t	di_gid;		/* 116: File group. */
 	u_int64_t	di_modrev;	/* 120: i_modrev for NFSv4 */

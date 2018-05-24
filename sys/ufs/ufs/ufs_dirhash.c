@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001, 2002 Ian Dowse.  All rights reserved.
  *
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD: src/sys/ufs/ufs/ufs_dirhash.c,v 1.4 2012/09/14 23:16:21 laffer1 Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/ufs/ufs/ufs_dirhash.c 326846 2017-12-14 11:45:02Z kib $");
 
 #include "opt_ufs.h"
 
@@ -189,11 +190,11 @@ ufsdirhash_create(struct inode *ip)
 	struct dirhash *ndh;
 	struct dirhash *dh;
 	struct vnode *vp;
-	int error;
+	bool excl;
 
-	error = 0;
 	ndh = dh = NULL;
 	vp = ip->i_vnode;
+	excl = false;
 	for (;;) {
 		/* Racy check for i_dirhash to prefetch a dirhash structure. */
 		if (ip->i_dirhash == NULL && ndh == NULL) {
@@ -230,8 +231,11 @@ ufsdirhash_create(struct inode *ip)
 		ufsdirhash_hold(dh);
 		VI_UNLOCK(vp);
 
-		/* Acquire a shared lock on existing hashes. */
-		sx_slock(&dh->dh_lock);
+		/* Acquire a lock on existing hashes. */
+		if (excl)
+			sx_xlock(&dh->dh_lock);
+		else
+			sx_slock(&dh->dh_lock);
 
 		/* The hash could've been recycled while we were waiting. */
 		VI_LOCK(vp);
@@ -252,9 +256,10 @@ ufsdirhash_create(struct inode *ip)
 		 * so we can recreate it.  If we fail the upgrade, drop our
 		 * lock and try again.
 		 */
-		if (sx_try_upgrade(&dh->dh_lock))
+		if (excl || sx_try_upgrade(&dh->dh_lock))
 			break;
 		sx_sunlock(&dh->dh_lock);
+		excl = true;
 	}
 	/* Free the preallocated structure if it was not necessary. */
 	if (ndh) {
@@ -273,11 +278,9 @@ static struct dirhash *
 ufsdirhash_acquire(struct inode *ip)
 {
 	struct dirhash *dh;
-	struct vnode *vp;
 
 	ASSERT_VOP_ELOCKED(ip->i_vnode, __FUNCTION__);
 
-	vp = ip->i_vnode;
 	dh = ip->i_dirhash;
 	if (dh == NULL)
 		return (NULL);
@@ -1248,7 +1251,12 @@ ufsdirhash_lowmem()
 {
 	struct dirhash *dh, *dh_temp;
 	int memfreed = 0;
-	/* XXX: this 10% may need to be adjusted */
+	/* 
+	 * Will free a *minimum* of 10% of the dirhash, but possibly much
+	 * more (depending on dirhashreclaimage). System with large dirhashes
+	 * probably also need a much larger dirhashreclaimage.
+	 * XXX: this percentage may need to be adjusted.
+	 */
 	int memwanted = ufs_dirhashmem / 10;
 
 	ufs_dirhashlowmemcount++;

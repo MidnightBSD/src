@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2001 Robert N. M. Watson
  * All rights reserved.
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/ufs/ufs/extattr.h 262779 2014-03-05 04:23:19Z pfg $
  */
 /*
  * Developed by the TrustedBSD Project.
@@ -94,14 +95,14 @@ struct extattr {
  *	attribute name to calculate and set the ea_length, ea_namelength,
  *	and ea_contentpadlen fields of the extended attribute structure.
  */
-#define EXTATTR_NEXT(eap) \
+#define	EXTATTR_NEXT(eap) \
 	((struct extattr *)(((void *)(eap)) + (eap)->ea_length))
-#define EXTATTR_CONTENT(eap) (((void *)(eap)) + EXTATTR_BASE_LENGTH(eap))
-#define EXTATTR_CONTENT_SIZE(eap) \
+#define	EXTATTR_CONTENT(eap) (((void *)(eap)) + EXTATTR_BASE_LENGTH(eap))
+#define	EXTATTR_CONTENT_SIZE(eap) \
 	((eap)->ea_length - EXTATTR_BASE_LENGTH(eap) - (eap)->ea_contentpadlen)
-#define EXTATTR_BASE_LENGTH(eap) \
+#define	EXTATTR_BASE_LENGTH(eap) \
 	((sizeof(struct extattr) + (eap)->ea_namelength + 7) & ~7)
-#define EXTATTR_SET_LENGTHS(eap, contentsize) do { \
+#define	EXTATTR_SET_LENGTHS(eap, contentsize) do { \
 	KASSERT(((eap)->ea_name[0] != 0), \
 		("Must initialize name before setting lengths")); \
 	(eap)->ea_namelength = strlen((eap)->ea_name); \
@@ -114,10 +115,6 @@ struct extattr {
 #ifdef _KERNEL
 
 #include <sys/_sx.h>
-
-#ifdef MALLOC_DECLARE
-MALLOC_DECLARE(M_EXTATTR);
-#endif
 
 struct vnode;
 LIST_HEAD(ufs_extattr_list_head, ufs_extattr_list_entry);
@@ -152,7 +149,7 @@ void	ufs_extattr_vnode_inactive(struct vnode *vp, struct thread *td);
 #else
 
 /* User-level definition of KASSERT for macros above */
-#define KASSERT(cond, str) do { \
+#define	KASSERT(cond, str) do { \
         if (!(cond)) { printf("panic: "); printf(str); printf("\n"); exit(1); }\
 } while (0)
 

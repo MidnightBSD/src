@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/ufs/ufs/ufs_vnops.c 332750 2018-04-19 02:50:15Z pfg $");
 
 #include "opt_quota.h"
 #include "opt_suiddir.h"
@@ -68,8 +69,6 @@ __FBSDID("$MidnightBSD$");
 
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
-
-#include <fs/fifofs/fifo.h>
 
 #include <ufs/ufs/acl.h>
 #include <ufs/ufs/extattr.h>
@@ -107,7 +106,7 @@ static vop_create_t	ufs_create;
 static vop_getattr_t	ufs_getattr;
 static vop_ioctl_t	ufs_ioctl;
 static vop_link_t	ufs_link;
-static int ufs_makeinode(int mode, struct vnode *, struct vnode **, struct componentname *);
+static int ufs_makeinode(int mode, struct vnode *, struct vnode **, struct componentname *, const char *);
 static vop_markatime_t	ufs_markatime;
 static vop_mkdir_t	ufs_mkdir;
 static vop_mknod_t	ufs_mknod;
@@ -206,9 +205,11 @@ ufs_create(ap)
 
 	error =
 	    ufs_makeinode(MAKEIMODE(ap->a_vap->va_type, ap->a_vap->va_mode),
-	    ap->a_dvp, ap->a_vpp, ap->a_cnp);
-	if (error)
+	    ap->a_dvp, ap->a_vpp, ap->a_cnp, "ufs_create");
+	if (error != 0)
 		return (error);
+	if ((ap->a_cnp->cn_flags & MAKEENTRY) != 0)
+		cache_enter(ap->a_dvp, *ap->a_vpp, ap->a_cnp);
 	return (0);
 }
 
@@ -232,7 +233,7 @@ ufs_mknod(ap)
 	int error;
 
 	error = ufs_makeinode(MAKEIMODE(vap->va_type, vap->va_mode),
-	    ap->a_dvp, vpp, ap->a_cnp);
+	    ap->a_dvp, vpp, ap->a_cnp, "ufs_mknod");
 	if (error)
 		return (error);
 	ip = VTOI(*vpp);
@@ -530,9 +531,11 @@ ufs_setattr(ap)
 		return (EINVAL);
 	}
 	if (vap->va_flags != VNOVAL) {
-		if ((vap->va_flags & ~(UF_NODUMP | UF_IMMUTABLE | UF_APPEND |
-		    UF_OPAQUE | UF_NOUNLINK | SF_ARCHIVED | SF_IMMUTABLE |
-		    SF_APPEND | SF_NOUNLINK | SF_SNAPSHOT)) != 0)
+		if ((vap->va_flags & ~(SF_APPEND | SF_ARCHIVED | SF_IMMUTABLE |
+		    SF_NOUNLINK | SF_SNAPSHOT | UF_APPEND | UF_ARCHIVE |
+		    UF_HIDDEN | UF_IMMUTABLE | UF_NODUMP | UF_NOUNLINK |
+		    UF_OFFLINE | UF_OPAQUE | UF_READONLY | UF_REPARSE |
+		    UF_SPARSE | UF_SYSTEM)) != 0)
 			return (EOPNOTSUPP);
 		if (vp->v_mount->mnt_flag & MNT_RDONLY)
 			return (EROFS);
@@ -559,23 +562,17 @@ ufs_setattr(ap)
 				if (error)
 					return (error);
 			}
-			/* Snapshot flag cannot be set or cleared */
-			if (((vap->va_flags & SF_SNAPSHOT) != 0 &&
-			     (ip->i_flags & SF_SNAPSHOT) == 0) ||
-			    ((vap->va_flags & SF_SNAPSHOT) == 0 &&
-			     (ip->i_flags & SF_SNAPSHOT) != 0))
+			/* The snapshot flag cannot be toggled. */
+			if ((vap->va_flags ^ ip->i_flags) & SF_SNAPSHOT)
 				return (EPERM);
-			ip->i_flags = vap->va_flags;
-			DIP_SET(ip, i_flags, vap->va_flags);
 		} else {
 			if (ip->i_flags &
 			    (SF_NOUNLINK | SF_IMMUTABLE | SF_APPEND) ||
-			    (vap->va_flags & UF_SETTABLE) != vap->va_flags)
+			    ((vap->va_flags ^ ip->i_flags) & SF_SETTABLE))
 				return (EPERM);
-			ip->i_flags &= SF_SETTABLE;
-			ip->i_flags |= (vap->va_flags & UF_SETTABLE);
-			DIP_SET(ip, i_flags, ip->i_flags);
 		}
+		ip->i_flags = vap->va_flags;
+		DIP_SET(ip, i_flags, vap->va_flags);
 		ip->i_flag |= IN_CHANGE;
 		error = UFS_UPDATE(vp, 0);
 		if (ip->i_flags & (IMMUTABLE | APPEND))
@@ -630,8 +627,9 @@ ufs_setattr(ap)
 			 */
 			return (0);
 		}
-		if ((error = UFS_TRUNCATE(vp, vap->va_size, IO_NORMAL,
-		    cred, td)) != 0)
+		if ((error = UFS_TRUNCATE(vp, vap->va_size, IO_NORMAL |
+		    ((vap->va_vaflags & VA_SYNC) != 0 ? IO_SYNC : 0),
+		    cred)) != 0)
 			return (error);
 	}
 	if (vap->va_atime.tv_sec != VNOVAL ||
@@ -641,49 +639,17 @@ ufs_setattr(ap)
 			return (EROFS);
 		if ((ip->i_flags & SF_SNAPSHOT) != 0)
 			return (EPERM);
-		/*
-		 * From utimes(2):
-		 * If times is NULL, ... The caller must be the owner of
-		 * the file, have permission to write the file, or be the
-		 * super-user.
-		 * If times is non-NULL, ... The caller must be the owner of
-		 * the file or be the super-user.
-		 *
-		 * Possibly for historical reasons, try to use VADMIN in
-		 * preference to VWRITE for a NULL timestamp.  This means we
-		 * will return EACCES in preference to EPERM if neither
-		 * check succeeds.
-		 */
-		if (vap->va_vaflags & VA_UTIMES_NULL) {
-			/*
-			 * NFSv4.1, draft 21, 6.2.1.3.1, Discussion of Mask Attributes
-			 *
-			 * "A user having ACL_WRITE_DATA or ACL_WRITE_ATTRIBUTES
-			 * will be allowed to set the times [..] to the current
-			 * server time."
-			 *
-			 * XXX: Calling it four times seems a little excessive.
-			 */
-			error = VOP_ACCESSX(vp, VWRITE_ATTRIBUTES, cred, td);
-			if (error)
-				error = VOP_ACCESS(vp, VWRITE, cred, td);
-		} else
-			error = VOP_ACCESSX(vp, VWRITE_ATTRIBUTES, cred, td);
-		if (error)
+		error = vn_utimes_perm(vp, vap, cred, td);
+		if (error != 0)
 			return (error);
-		if (vap->va_atime.tv_sec != VNOVAL)
-			ip->i_flag |= IN_ACCESS;
-		if (vap->va_mtime.tv_sec != VNOVAL)
-			ip->i_flag |= IN_CHANGE | IN_UPDATE;
-		if (vap->va_birthtime.tv_sec != VNOVAL &&
-		    ip->i_ump->um_fstype == UFS2)
-			ip->i_flag |= IN_MODIFIED;
-		ufs_itimes(vp);
+		ip->i_flag |= IN_CHANGE | IN_MODIFIED;
 		if (vap->va_atime.tv_sec != VNOVAL) {
+			ip->i_flag &= ~IN_ACCESS;
 			DIP_SET(ip, i_atime, vap->va_atime.tv_sec);
 			DIP_SET(ip, i_atimensec, vap->va_atime.tv_nsec);
 		}
 		if (vap->va_mtime.tv_sec != VNOVAL) {
+			ip->i_flag &= ~IN_UPDATE;
 			DIP_SET(ip, i_mtime, vap->va_mtime.tv_sec);
 			DIP_SET(ip, i_mtimensec, vap->va_mtime.tv_nsec);
 		}
@@ -979,6 +945,17 @@ out:
 	return (error);
 }
 
+static void
+print_bad_link_count(const char *funcname, struct vnode *dvp)
+{
+	struct inode *dip;
+
+	dip = VTOI(dvp);
+	uprintf("%s: Bad link count %d on parent inode %d in file system %s\n",
+	    funcname, dip->i_effnlink, dip->i_number,
+	    dvp->v_mount->mnt_stat.f_mntonname);
+}
+
 /*
  * link vnode call
  */
@@ -1001,13 +978,11 @@ ufs_link(ap)
 	if ((cnp->cn_flags & HASBUF) == 0)
 		panic("ufs_link: no name");
 #endif
-	if (tdvp->v_mount != vp->v_mount) {
-		error = EXDEV;
+	if (VTOI(tdvp)->i_effnlink < 2) {
+		print_bad_link_count("ufs_link", tdvp);
+		error = EINVAL;
 		goto out;
 	}
-	if (VTOI(tdvp)->i_effnlink < 2)
-		panic("ufs_link: Bad link count %d on parent",
-		    VTOI(tdvp)->i_effnlink);
 	ip = VTOI(vp);
 	if ((nlink_t)ip->i_nlink >= LINK_MAX) {
 		error = EMLINK;
@@ -1179,11 +1154,6 @@ ufs_rename(ap)
 		mp = NULL;
 		goto releout;
 	}
-	error = vfs_busy(mp, 0);
-	if (error) {
-		mp = NULL;
-		goto releout;
-	}
 relock:
 	/* 
 	 * We need to acquire 2 to 4 locks depending on whether tvp is NULL
@@ -1271,7 +1241,7 @@ relock:
 			error = VFS_VGET(mp, ino, LK_EXCLUSIVE, &nvp);
 			if (error != 0)
 				goto releout;
-			VOP_UNLOCK(nvp, 0);
+			vput(nvp);
 			atomic_add_int(&rename_restarts, 1);
 			goto relock;
 		}
@@ -1512,8 +1482,8 @@ relock:
 		if (error)
 			panic("ufs_rename: from entry went away!");
 		if (ino != fip->i_number)
-			panic("ufs_rename: ino mismatch %d != %d\n", ino,
-			    fip->i_number);
+			panic("ufs_rename: ino mismatch %ju != %ju\n",
+			    (uintmax_t)ino, (uintmax_t)fip->i_number);
 	}
 	/*
 	 * If the source is a directory with a
@@ -1574,18 +1544,25 @@ unlockout:
 	 * are no longer needed.
 	 */
 	if (error == 0 && endoff != 0) {
+		error = UFS_TRUNCATE(tdvp, endoff, IO_NORMAL | IO_SYNC,
+		    tcnp->cn_cred);
+		if (error != 0)
+			vn_printf(tdvp, "ufs_rename: failed to truncate "
+			    "err %d", error);
 #ifdef UFS_DIRHASH
-		if (tdp->i_dirhash != NULL)
+		else if (tdp->i_dirhash != NULL)
 			ufsdirhash_dirtrunc(tdp, endoff);
 #endif
-		UFS_TRUNCATE(tdvp, endoff, IO_NORMAL | IO_SYNC, tcnp->cn_cred,
-		    td);
+		/*
+		 * Even if the directory compaction failed, rename was
+		 * succesful.  Do not propagate a UFS_TRUNCATE() error
+		 * to the caller.
+		 */
+		error = 0;
 	}
 	if (error == 0 && tdp->i_flag & IN_NEEDSYNC)
 		error = VOP_FSYNC(tdvp, MNT_WAIT, td);
 	vput(tdvp);
-	if (mp)
-		vfs_unbusy(mp);
 	return (error);
 
 bad:
@@ -1603,8 +1580,6 @@ releout:
 	vrele(tdvp);
 	if (tvp)
 		vrele(tvp);
-	if (mp)
-		vfs_unbusy(mp);
 
 	return (error);
 }
@@ -1751,10 +1726,10 @@ ufs_do_posix1e_acl_inheritance_file(struct vnode *dvp, struct vnode *tvp,
 		 * XXX: This should not happen, as EOPNOTSUPP above was
 		 * supposed to free acl.
 		 */
-		printf("ufs_makeinode: VOP_GETACL() but no "
-		    "VOP_SETACL()\n");
-		/* panic("ufs_makeinode: VOP_GETACL() but no "
-		    "VOP_SETACL()"); */
+		printf("ufs_do_posix1e_acl_inheritance_file: VOP_GETACL() "
+		    "but no VOP_SETACL()\n");
+		/* panic("ufs_do_posix1e_acl_inheritance_file: VOP_GETACL() "
+		    "but no VOP_SETACL()"); */
 		break;
 
 	default:
@@ -1832,6 +1807,11 @@ ufs_mkdir(ap)
 	 * but not have it entered in the parent directory. The entry is
 	 * made later after writing "." and ".." entries.
 	 */
+	if (dp->i_effnlink < 2) {
+		print_bad_link_count("ufs_mkdir", dvp);
+		error = EINVAL;
+		goto out;
+	}
 	error = UFS_VALLOC(dvp, dmode, cnp->cn_cred, &tvp);
 	if (error)
 		goto out;
@@ -1963,13 +1943,13 @@ ufs_mkdir(ap)
 	dirtemplate = *dtp;
 	dirtemplate.dot_ino = ip->i_number;
 	dirtemplate.dotdot_ino = dp->i_number;
+	vnode_pager_setsize(tvp, DIRBLKSIZ);
 	if ((error = UFS_BALLOC(tvp, (off_t)0, DIRBLKSIZ, cnp->cn_cred,
 	    BA_CLRBUF, &bp)) != 0)
 		goto bad;
 	ip->i_size = DIRBLKSIZ;
 	DIP_SET(ip, i_size, DIRBLKSIZ);
 	ip->i_flag |= IN_CHANGE | IN_UPDATE;
-	vnode_pager_setsize(tvp, (u_long)ip->i_size);
 	bcopy((caddr_t)&dirtemplate, (caddr_t)bp->b_data, sizeof dirtemplate);
 	if (DOINGSOFTDEP(tvp)) {
 		/*
@@ -2062,13 +2042,12 @@ ufs_rmdir(ap)
 	 * tries to remove a locally mounted on directory).
 	 */
 	error = 0;
-	if (ip->i_effnlink < 2) {
+	if (dp->i_effnlink <= 2) {
+		if (dp->i_effnlink == 2)
+			print_bad_link_count("ufs_rmdir", dvp);
 		error = EINVAL;
 		goto out;
 	}
-	if (dp->i_effnlink < 3)
-		panic("ufs_dirrem: Bad link count %d on parent",
-		    dp->i_effnlink);
 	if (!ufs_dirempty(ip, dp->i_number, cnp->cn_cred)) {
 		error = ENOTEMPTY;
 		goto out;
@@ -2147,7 +2126,7 @@ ufs_symlink(ap)
 	int len, error;
 
 	error = ufs_makeinode(IFLNK | ap->a_vap->va_mode, ap->a_dvp,
-	    vpp, ap->a_cnp);
+	    vpp, ap->a_cnp, "ufs_symlink");
 	if (error)
 		return (error);
 	vp = *vpp;
@@ -2170,12 +2149,6 @@ ufs_symlink(ap)
 
 /*
  * Vnode op for reading directories.
- *
- * The routine below assumes that the on-disk format of a directory
- * is the same as that defined by <sys/dirent.h>. If the on-disk
- * format changes, then it will be necessary to do a conversion
- * from the on-disk format that read returns to the format defined
- * by <sys/dirent.h>.
  */
 int
 ufs_readdir(ap)
@@ -2188,103 +2161,126 @@ ufs_readdir(ap)
 		u_long **a_cookies;
 	} */ *ap;
 {
+	struct vnode *vp = ap->a_vp;
 	struct uio *uio = ap->a_uio;
+	struct buf *bp;
 	struct inode *ip;
+	struct direct *dp, *edp;
+	u_long *cookies;
+	struct dirent dstdp;
+	off_t offset, startoffset;
+	size_t readcnt, skipcnt;
+	ssize_t startresid;
+	int ncookies;
 	int error;
-	size_t count, lost;
-	off_t off;
 
-	if (ap->a_ncookies != NULL)
-		/*
-		 * Ensure that the block is aligned.  The caller can use
-		 * the cookies to determine where in the block to start.
-		 */
-		uio->uio_offset &= ~(DIRBLKSIZ - 1);
-	ip = VTOI(ap->a_vp);
+	if (uio->uio_offset < 0)
+		return (EINVAL);
+	ip = VTOI(vp);
 	if (ip->i_effnlink == 0)
 		return (0);
-	off = uio->uio_offset;
-	count = uio->uio_resid;
-	/* Make sure we don't return partial entries. */
-	if (count <= ((uio->uio_offset + count) & (DIRBLKSIZ -1)))
-		return (EINVAL);
-	count -= (uio->uio_offset + count) & (DIRBLKSIZ -1);
-	lost = uio->uio_resid - count;
-	uio->uio_resid = count;
-	uio->uio_iov->iov_len = count;
-#	if (BYTE_ORDER == LITTLE_ENDIAN)
-		if (ap->a_vp->v_mount->mnt_maxsymlinklen > 0) {
-			error = VOP_READ(ap->a_vp, uio, 0, ap->a_cred);
-		} else {
-			struct dirent *dp, *edp;
-			struct uio auio;
-			struct iovec aiov;
-			caddr_t dirbuf;
-			int readcnt;
-			u_char tmp;
-
-			auio = *uio;
-			auio.uio_iov = &aiov;
-			auio.uio_iovcnt = 1;
-			auio.uio_segflg = UIO_SYSSPACE;
-			aiov.iov_len = count;
-			dirbuf = malloc(count, M_TEMP, M_WAITOK);
-			aiov.iov_base = dirbuf;
-			error = VOP_READ(ap->a_vp, &auio, 0, ap->a_cred);
-			if (error == 0) {
-				readcnt = count - auio.uio_resid;
-				edp = (struct dirent *)&dirbuf[readcnt];
-				for (dp = (struct dirent *)dirbuf; dp < edp; ) {
-					tmp = dp->d_namlen;
-					dp->d_namlen = dp->d_type;
-					dp->d_type = tmp;
-					if (dp->d_reclen > 0) {
-						dp = (struct dirent *)
-						    ((char *)dp + dp->d_reclen);
-					} else {
-						error = EIO;
-						break;
-					}
-				}
-				if (dp >= edp)
-					error = uiomove(dirbuf, readcnt, uio);
-			}
-			free(dirbuf, M_TEMP);
-		}
-#	else
-		error = VOP_READ(ap->a_vp, uio, 0, ap->a_cred);
-#	endif
-	if (!error && ap->a_ncookies != NULL) {
-		struct dirent* dpStart;
-		struct dirent* dpEnd;
-		struct dirent* dp;
-		int ncookies;
-		u_long *cookies;
-		u_long *cookiep;
-
-		if (uio->uio_segflg != UIO_SYSSPACE || uio->uio_iovcnt != 1)
-			panic("ufs_readdir: unexpected uio from NFS server");
-		dpStart = (struct dirent *)
-		    ((char *)uio->uio_iov->iov_base - (uio->uio_offset - off));
-		dpEnd = (struct dirent *) uio->uio_iov->iov_base;
-		for (dp = dpStart, ncookies = 0;
-		     dp < dpEnd;
-		     dp = (struct dirent *)((caddr_t) dp + dp->d_reclen))
-			ncookies++;
-		cookies = malloc(ncookies * sizeof(u_long), M_TEMP,
-		    M_WAITOK);
-		for (dp = dpStart, cookiep = cookies;
-		     dp < dpEnd;
-		     dp = (struct dirent *)((caddr_t) dp + dp->d_reclen)) {
-			off += dp->d_reclen;
-			*cookiep++ = (u_long) off;
-		}
+	if (ap->a_ncookies != NULL) {
+		if (uio->uio_resid < 0)
+			ncookies = 0;
+		else
+			ncookies = uio->uio_resid;
+		if (uio->uio_offset >= ip->i_size)
+			ncookies = 0;
+		else if (ip->i_size - uio->uio_offset < ncookies)
+			ncookies = ip->i_size - uio->uio_offset;
+		ncookies = ncookies / (offsetof(struct direct, d_name) + 4) + 1;
+		cookies = malloc(ncookies * sizeof(*cookies), M_TEMP, M_WAITOK);
 		*ap->a_ncookies = ncookies;
 		*ap->a_cookies = cookies;
+	} else {
+		ncookies = 0;
+		cookies = NULL;
 	}
-	uio->uio_resid += lost;
-	if (ap->a_eofflag)
-	    *ap->a_eofflag = VTOI(ap->a_vp)->i_size <= uio->uio_offset;
+	offset = startoffset = uio->uio_offset;
+	startresid = uio->uio_resid;
+	error = 0;
+	while (error == 0 && uio->uio_resid > 0 &&
+	    uio->uio_offset < ip->i_size) {
+		error = ffs_blkatoff(vp, uio->uio_offset, NULL, &bp);
+		if (error)
+			break;
+		if (bp->b_offset + bp->b_bcount > ip->i_size)
+			readcnt = ip->i_size - bp->b_offset;
+		else
+			readcnt = bp->b_bcount;
+		skipcnt = (size_t)(uio->uio_offset - bp->b_offset) &
+		    ~(size_t)(DIRBLKSIZ - 1);
+		offset = bp->b_offset + skipcnt;
+		dp = (struct direct *)&bp->b_data[skipcnt];
+		edp = (struct direct *)&bp->b_data[readcnt];
+		while (error == 0 && uio->uio_resid > 0 && dp < edp) {
+			if (dp->d_reclen <= offsetof(struct direct, d_name) ||
+			    (caddr_t)dp + dp->d_reclen > (caddr_t)edp) {
+				error = EIO;
+				break;
+			}
+#if BYTE_ORDER == LITTLE_ENDIAN
+			/* Old filesystem format. */
+			if (vp->v_mount->mnt_maxsymlinklen <= 0) {
+				dstdp.d_namlen = dp->d_type;
+				dstdp.d_type = dp->d_namlen;
+			} else
+#endif
+			{
+				dstdp.d_namlen = dp->d_namlen;
+				dstdp.d_type = dp->d_type;
+			}
+			if (offsetof(struct direct, d_name) + dstdp.d_namlen >
+			    dp->d_reclen) {
+				error = EIO;
+				break;
+			}
+			if (offset < startoffset || dp->d_ino == 0)
+				goto nextentry;
+			dstdp.d_fileno = dp->d_ino;
+			dstdp.d_reclen = GENERIC_DIRSIZ(&dstdp);
+			bcopy(dp->d_name, dstdp.d_name, dstdp.d_namlen);
+			dstdp.d_name[dstdp.d_namlen] = '\0';
+			if (dstdp.d_reclen > uio->uio_resid) {
+				if (uio->uio_resid == startresid)
+					error = EINVAL;
+				else
+					error = EJUSTRETURN;
+				break;
+			}
+			/* Advance dp. */
+			error = uiomove((caddr_t)&dstdp, dstdp.d_reclen, uio);
+			if (error)
+				break;
+			if (cookies != NULL) {
+				KASSERT(ncookies > 0,
+				    ("ufs_readdir: cookies buffer too small"));
+				*cookies = offset + dp->d_reclen;
+				cookies++;
+				ncookies--;
+			}
+nextentry:
+			offset += dp->d_reclen;
+			dp = (struct direct *)((caddr_t)dp + dp->d_reclen);
+		}
+		bqrelse(bp);
+		uio->uio_offset = offset;
+	}
+	/* We need to correct uio_offset. */
+	uio->uio_offset = offset;
+	if (error == EJUSTRETURN)
+		error = 0;
+	if (ap->a_ncookies != NULL) {
+		if (error == 0) {
+			ap->a_ncookies -= ncookies;
+		} else {
+			free(*ap->a_cookies, M_TEMP);
+			*ap->a_ncookies = 0;
+			*ap->a_cookies = NULL;
+		}
+	}
+	if (error == 0 && ap->a_eofflag)
+		*ap->a_eofflag = ip->i_size <= uio->uio_offset;
 	return (error);
 }
 
@@ -2589,11 +2585,12 @@ ufs_vinit(mntp, fifoops, vpp)
  * Vnode dvp must be locked.
  */
 static int
-ufs_makeinode(mode, dvp, vpp, cnp)
+ufs_makeinode(mode, dvp, vpp, cnp, callfunc)
 	int mode;
 	struct vnode *dvp;
 	struct vnode **vpp;
 	struct componentname *cnp;
+	const char *callfunc;
 {
 	struct inode *ip, *pdir;
 	struct direct newdir;
@@ -2603,15 +2600,16 @@ ufs_makeinode(mode, dvp, vpp, cnp)
 	pdir = VTOI(dvp);
 #ifdef INVARIANTS
 	if ((cnp->cn_flags & HASBUF) == 0)
-		panic("ufs_makeinode: no name");
+		panic("%s: no name", callfunc);
 #endif
 	*vpp = NULL;
 	if ((mode & IFMT) == 0)
 		mode |= IFREG;
 
-	if (VTOI(dvp)->i_effnlink < 2)
-		panic("ufs_makeinode: Bad link count %d on parent",
-		    VTOI(dvp)->i_effnlink);
+	if (pdir->i_effnlink < 2) {
+		print_bad_link_count(callfunc, dvp);
+		return (EINVAL);
+	}
 	error = UFS_VALLOC(dvp, mode, cnp->cn_cred, &tvp);
 	if (error)
 		return (error);

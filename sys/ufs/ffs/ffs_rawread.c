@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2003 Tor Egge
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/ufs/ffs/ffs_rawread.c 318267 2017-05-14 12:00:00Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,6 +43,7 @@ __FBSDID("$MidnightBSD$");
 #include <sys/ttycom.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
+#include <sys/rwlock.h>
 #include <ufs/ufs/extattr.h>
 #include <ufs/ufs/quota.h>
 #include <ufs/ufs/inode.h>
@@ -70,8 +72,6 @@ static int ffs_rawread_sync(struct vnode *vp);
 
 int ffs_rawread(struct vnode *vp, struct uio *uio, int *workdone);
 
-void ffs_rawread_setup(void);
-
 SYSCTL_DECL(_vfs_ffs);
 
 static int ffsrawbufcnt = 4;
@@ -86,13 +86,13 @@ static int rawreadahead = 1;
 SYSCTL_INT(_vfs_ffs, OID_AUTO, rawreadahead, CTLFLAG_RW, &rawreadahead, 0,
 	   "Flag to enable readahead for long raw reads");
 
-
-void
-ffs_rawread_setup(void)
+static void
+ffs_rawread_setup(void *arg __unused)
 {
+
 	ffsrawbufcnt = (nswbuf > 100 ) ? (nswbuf - (nswbuf >> 4)) : nswbuf - 8;
 }
-
+SYSINIT(ffs_raw, SI_SUB_VM_CONF, SI_ORDER_ANY, ffs_rawread_setup, NULL);
 
 static int
 ffs_rawread_sync(struct vnode *vp)
@@ -143,9 +143,9 @@ ffs_rawread_sync(struct vnode *vp)
 		if ((obj = vp->v_object) != NULL &&
 		    (obj->flags & OBJ_MIGHTBEDIRTY) != 0) {
 			VI_UNLOCK(vp);
-			VM_OBJECT_LOCK(obj);
+			VM_OBJECT_WLOCK(obj);
 			vm_object_page_clean(obj, 0, 0, OBJPC_SYNC);
-			VM_OBJECT_UNLOCK(obj);
+			VM_OBJECT_WUNLOCK(obj);
 		} else
 			VI_UNLOCK(vp);
 
@@ -240,7 +240,7 @@ ffs_rawread_readahead(struct vnode *vp,
 			bp->b_bcount = bsize - blockoff * DEV_BSIZE;
 		bp->b_bufsize = bp->b_bcount;
 		
-		if (vmapbuf(bp) < 0)
+		if (vmapbuf(bp, 1) < 0)
 			return EFAULT;
 		
 		maybe_yield();
@@ -259,7 +259,7 @@ ffs_rawread_readahead(struct vnode *vp,
 		bp->b_bcount = bsize * (1 + bforwards) - blockoff * DEV_BSIZE;
 	bp->b_bufsize = bp->b_bcount;
 	
-	if (vmapbuf(bp) < 0)
+	if (vmapbuf(bp, 1) < 0)
 		return EFAULT;
 	
 	BO_STRATEGY(&dp->v_bufobj, bp);
@@ -275,7 +275,6 @@ ffs_rawread_main(struct vnode *vp,
 	struct buf *bp, *nbp, *tbp;
 	caddr_t sa, nsa, tsa;
 	u_int iolen;
-	int spl;
 	caddr_t udata;
 	long resid;
 	off_t offset;
@@ -340,10 +339,7 @@ ffs_rawread_main(struct vnode *vp,
 			}
 		}
 		
-		spl = splbio();
 		bwait(bp, PRIBIO, "rawrd");
-		splx(spl);
-		
 		vunmapbuf(bp);
 		
 		iolen = bp->b_bcount - bp->b_resid;
@@ -416,9 +412,7 @@ ffs_rawread_main(struct vnode *vp,
 		relpbuf(bp, &ffsrawbufcnt);
 	}
 	if (nbp != NULL) {			/* Run down readahead buffer */
-		spl = splbio();
 		bwait(nbp, PRIBIO, "rawrd");
-		splx(spl);
 		vunmapbuf(nbp);
 		pbrelvp(nbp);
 		relpbuf(nbp, &ffsrawbufcnt);

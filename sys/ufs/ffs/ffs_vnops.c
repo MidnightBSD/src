@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, 2003 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -57,12 +58,12 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)ufs_readwrite.c	8.11 (Berkeley) 5/8/95
- * from: $MidnightBSD: .../ufs/ufs_readwrite.c,v 1.96 2002/08/12 09:22:11 phk ...
+ * from: $FreeBSD: .../ufs/ufs_readwrite.c,v 1.96 2002/08/12 09:22:11 phk ...
  *	@(#)ffs_vnops.c	8.15 (Berkeley) 5/14/95
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/ufs/ffs/ffs_vnops.c 284201 2015-06-10 02:14:33Z kib $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -75,6 +76,7 @@ __FBSDID("$MidnightBSD$");
 #include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/priv.h>
+#include <sys/rwlock.h>
 #include <sys/stat.h>
 #include <sys/vmmeter.h>
 #include <sys/vnode.h>
@@ -199,8 +201,8 @@ retry:
 		 * bo_dirty list. Recheck and resync as needed.
 		 */
 		BO_LOCK(bo);
-		if (vp->v_type == VREG && (bo->bo_numoutput > 0 ||
-		    bo->bo_dirty.bv_cnt > 0)) {
+		if ((vp->v_type == VREG || vp->v_type == VDIR) &&
+		    (bo->bo_numoutput > 0 || bo->bo_dirty.bv_cnt > 0)) {
 			BO_UNLOCK(bo);
 			goto retry;
 		}
@@ -258,9 +260,17 @@ loop:
 			continue;
 		if (bp->b_lblkno > lbn)
 			panic("ffs_syncvnode: syncing truncated data.");
-		if (BUF_LOCK(bp, LK_EXCLUSIVE | LK_NOWAIT, NULL))
+		if (BUF_LOCK(bp, LK_EXCLUSIVE | LK_NOWAIT, NULL) == 0) {
+			BO_UNLOCK(bo);
+		} else if (wait != 0) {
+			if (BUF_LOCK(bp,
+			    LK_EXCLUSIVE | LK_SLEEPFAIL | LK_INTERLOCK,
+			    BO_LOCKPTR(bo)) != 0) {
+				bp->b_vflags &= ~BV_SCANNED;
+				goto next;
+			}
+		} else
 			continue;
-		BO_UNLOCK(bo);
 		if ((bp->b_flags & B_DELWRI) == 0)
 			panic("ffs_fsync: not dirty");
 		/*
@@ -508,7 +518,8 @@ ffs_read(ap)
 			/*
 			 * Don't do readahead if this is the end of the file.
 			 */
-			error = bread(vp, lbn, size, NOCRED, &bp);
+			error = bread_gb(vp, lbn, size, NOCRED,
+			    GB_UNMAPPED, &bp);
 		} else if ((vp->v_mount->mnt_flag & MNT_NOCLUSTERR) == 0) {
 			/*
 			 * Otherwise if we are allowed to cluster,
@@ -519,7 +530,7 @@ ffs_read(ap)
 			 */
 			error = cluster_read(vp, ip->i_size, lbn,
 			    size, NOCRED, blkoffset + uio->uio_resid,
-			    seqcount, &bp);
+			    seqcount, GB_UNMAPPED, &bp);
 		} else if (seqcount > 1) {
 			/*
 			 * If we are NOT allowed to cluster, then
@@ -529,16 +540,17 @@ ffs_read(ap)
 			 * arguments point to arrays of the size specified in
 			 * the 6th argument.
 			 */
-			int nextsize = blksize(fs, ip, nextlbn);
-			error = breadn(vp, lbn,
-			    size, &nextlbn, &nextsize, 1, NOCRED, &bp);
+			u_int nextsize = blksize(fs, ip, nextlbn);
+			error = breadn_flags(vp, lbn, size, &nextlbn,
+			    &nextsize, 1, NOCRED, GB_UNMAPPED, &bp);
 		} else {
 			/*
 			 * Failing all of the above, just read what the
 			 * user asked for. Interestingly, the same as
 			 * the first option above.
 			 */
-			error = bread(vp, lbn, size, NOCRED, &bp);
+			error = bread_gb(vp, lbn, size, NOCRED,
+			    GB_UNMAPPED, &bp);
 		}
 		if (error) {
 			brelse(bp);
@@ -569,8 +581,13 @@ ffs_read(ap)
 			xfersize = size;
 		}
 
-		error = vn_io_fault_uiomove((char *)bp->b_data + blkoffset,
-		    (int)xfersize, uio);
+		if ((bp->b_flags & B_UNMAPPED) == 0) {
+			error = vn_io_fault_uiomove((char *)bp->b_data +
+			    blkoffset, (int)xfersize, uio);
+		} else {
+			error = vn_io_fault_pgmove(bp->b_pages, blkoffset,
+			    (int)xfersize, uio);
+		}
 		if (error)
 			break;
 
@@ -612,7 +629,7 @@ ffs_read(ap)
 	}
 
 	if ((error == 0 || uio->uio_resid != orig_resid) &&
-	    (vp->v_mount->mnt_flag & MNT_NOATIME) == 0 &&
+	    (vp->v_mount->mnt_flag & (MNT_NOATIME | MNT_RDONLY)) == 0 &&
 	    (ip->i_flag & IN_ACCESS) == 0) {
 		VI_LOCK(vp);
 		ip->i_flag |= IN_ACCESS;
@@ -701,6 +718,7 @@ ffs_write(ap)
 		flags = seqcount << BA_SEQSHIFT;
 	if ((ioflag & IO_SYNC) && !DOINGASYNC(vp))
 		flags |= IO_SYNC;
+	flags |= BA_UNMAPPED;
 
 	for (error = 0; uio->uio_resid > 0;) {
 		lbn = lblkno(fs, uio->uio_offset);
@@ -711,10 +729,10 @@ ffs_write(ap)
 		if (uio->uio_offset + xfersize > ip->i_size)
 			vnode_pager_setsize(vp, uio->uio_offset + xfersize);
 
-                /*
+		/*
 		 * We must perform a read-before-write if the transfer size
 		 * does not cover the entire buffer.
-                 */
+		 */
 		if (fs->fs_bsize > xfersize)
 			flags |= BA_CLRBUF;
 		else
@@ -740,8 +758,13 @@ ffs_write(ap)
 		if (size < xfersize)
 			xfersize = size;
 
-		error = vn_io_fault_uiomove((char *)bp->b_data + blkoffset,
-		    (int)xfersize, uio);
+		if ((bp->b_flags & B_UNMAPPED) == 0) {
+			error = vn_io_fault_uiomove((char *)bp->b_data +
+			    blkoffset, (int)xfersize, uio);
+		} else {
+			error = vn_io_fault_pgmove(bp->b_pages, blkoffset,
+			    (int)xfersize, uio);
+		}
 		/*
 		 * If the buffer is not already filled and we encounter an
 		 * error while trying to fill it, we have to clear out any
@@ -784,7 +807,8 @@ ffs_write(ap)
 		} else if (xfersize + blkoffset == fs->fs_bsize) {
 			if ((vp->v_mount->mnt_flag & MNT_NOCLUSTERW) == 0) {
 				bp->b_flags |= B_CLUSTEROK;
-				cluster_write(vp, bp, ip->i_size, seqcount);
+				cluster_write(vp, bp, ip->i_size, seqcount,
+				    GB_UNMAPPED);
 			} else {
 				bawrite(bp);
 			}
@@ -814,8 +838,7 @@ ffs_write(ap)
 	if (error) {
 		if (ioflag & IO_UNIT) {
 			(void)ffs_truncate(vp, osize,
-			    IO_NORMAL | (ioflag & IO_SYNC),
-			    ap->a_cred, uio->uio_td);
+			    IO_NORMAL | (ioflag & IO_SYNC), ap->a_cred);
 			uio->uio_offset -= resid - uio->uio_resid;
 			uio->uio_resid = resid;
 		}
@@ -844,7 +867,7 @@ ffs_getpages(ap)
 	 * user programs might reference data beyond the actual end of file
 	 * occuring within the page.  We have to zero that data.
 	 */
-	VM_OBJECT_LOCK(mreq->object);
+	VM_OBJECT_WLOCK(mreq->object);
 	if (mreq->valid) {
 		if (mreq->valid != VM_PAGE_BITS_ALL)
 			vm_page_zero_invalid(mreq, TRUE);
@@ -855,10 +878,10 @@ ffs_getpages(ap)
 				vm_page_unlock(ap->a_m[i]);
 			}
 		}
-		VM_OBJECT_UNLOCK(mreq->object);
+		VM_OBJECT_WUNLOCK(mreq->object);
 		return VM_PAGER_OK;
 	}
-	VM_OBJECT_UNLOCK(mreq->object);
+	VM_OBJECT_WUNLOCK(mreq->object);
 
 	return vnode_pager_generic_getpages(ap->a_vp, ap->a_m,
 					    ap->a_count,
@@ -942,7 +965,7 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 			 * arguments point to arrays of the size specified in
 			 * the 6th argument.
 			 */
-			int nextsize = sblksize(fs, dp->di_extsize, nextlbn);
+			u_int nextsize = sblksize(fs, dp->di_extsize, nextlbn);
 
 			nextlbn = -1 - nextlbn;
 			error = breadn(vp, -1 - lbn,
@@ -1068,7 +1091,7 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 		/*
 		 * We must perform a read-before-write if the transfer size
 		 * does not cover the entire buffer.
-                 */
+		 */
 		if (fs->fs_bsize > xfersize)
 			flags |= BA_CLRBUF;
 		else
@@ -1137,7 +1160,7 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 	if (error) {
 		if (ioflag & IO_UNIT) {
 			(void)ffs_truncate(vp, osize,
-			    IO_EXT | (ioflag&IO_SYNC), ucred, uio->uio_td);
+			    IO_EXT | (ioflag&IO_SYNC), ucred);
 			uio->uio_offset -= resid - uio->uio_resid;
 			uio->uio_resid = resid;
 		}
@@ -1204,7 +1227,8 @@ ffs_rdextattr(u_char **p, struct vnode *vp, struct thread *td, int extra)
 	struct fs *fs;
 	struct uio luio;
 	struct iovec liovec;
-	int easize, error;
+	u_int easize;
+	int error;
 	u_char *eae;
 
 	ip = VTOI(vp);
@@ -1328,7 +1352,7 @@ ffs_close_ea(struct vnode *vp, int commit, struct ucred *cred, struct thread *td
 		luio.uio_td = td;
 		/* XXX: I'm not happy about truncating to zero size */
 		if (ip->i_ea_len < dp->di_extsize)
-			error = ffs_truncate(vp, 0, IO_EXT, cred, td);
+			error = ffs_truncate(vp, 0, IO_EXT, cred);
 		error = ffs_extwrite(vp, &luio, IO_EXT | IO_SYNC, cred);
 	}
 	if (--ip->i_ea_refs == 0) {
@@ -1384,11 +1408,6 @@ struct vop_openextattr_args {
 };
 */
 {
-	struct inode *ip;
-	struct fs *fs;
-
-	ip = VTOI(ap->a_vp);
-	fs = ip->i_fs;
 
 	if (ap->a_vp->v_type == VCHR || ap->a_vp->v_type == VBLK)
 		return (EOPNOTSUPP);
@@ -1412,11 +1431,6 @@ struct vop_closeextattr_args {
 };
 */
 {
-	struct inode *ip;
-	struct fs *fs;
-
-	ip = VTOI(ap->a_vp);
-	fs = ip->i_fs;
 
 	if (ap->a_vp->v_type == VCHR || ap->a_vp->v_type == VBLK)
 		return (EOPNOTSUPP);
@@ -1530,13 +1544,11 @@ vop_getextattr {
 */
 {
 	struct inode *ip;
-	struct fs *fs;
 	u_char *eae, *p;
 	unsigned easize;
 	int error, ealen;
 
 	ip = VTOI(ap->a_vp);
-	fs = ip->i_fs;
 
 	if (ap->a_vp->v_type == VCHR || ap->a_vp->v_type == VBLK)
 		return (EOPNOTSUPP);
@@ -1585,14 +1597,12 @@ vop_listextattr {
 */
 {
 	struct inode *ip;
-	struct fs *fs;
 	u_char *eae, *p, *pe, *pn;
 	unsigned easize;
 	uint32_t ul;
 	int error, ealen;
 
 	ip = VTOI(ap->a_vp);
-	fs = ip->i_fs;
 
 	if (ap->a_vp->v_type == VCHR || ap->a_vp->v_type == VBLK)
 		return (EOPNOTSUPP);

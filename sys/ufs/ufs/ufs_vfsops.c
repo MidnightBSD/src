@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/ufs/ufs/ufs_vfsops.c 278150 2015-02-03 11:54:33Z kib $");
 
 #include "opt_quota.h"
 #include "opt_ufs.h"
@@ -92,6 +93,9 @@ ufs_quotactl(mp, cmds, id, arg)
 	void *arg;
 {
 #ifndef QUOTA
+	if ((cmds >> SUBCMDSHIFT) == Q_QUOTAON)
+		vfs_unbusy(mp);
+
 	return (EOPNOTSUPP);
 #else
 	struct thread *td;
@@ -112,11 +116,16 @@ ufs_quotactl(mp, cmds, id, arg)
 			break;
 
 		default:
+			if (cmd == Q_QUOTAON)
+				vfs_unbusy(mp);
 			return (EINVAL);
 		}
 	}
-	if ((u_int)type >= MAXQUOTAS)
+	if ((u_int)type >= MAXQUOTAS) {
+		if (cmd == Q_QUOTAON)
+			vfs_unbusy(mp);
 		return (EINVAL);
+	}
 
 	switch (cmd) {
 	case Q_QUOTAON:

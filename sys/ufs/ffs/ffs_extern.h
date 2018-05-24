@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_extern.h	8.6 (Berkeley) 3/30/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/ufs/ffs/ffs_extern.h 306175 2016-09-22 10:42:40Z kib $
  */
 
 #ifndef _UFS_FFS_EXTERN_H
@@ -95,7 +96,7 @@ void	ffs_snapshot_unmount(struct mount *mp);
 void	process_deferred_inactive(struct mount *mp);
 void	ffs_sync_snap(struct mount *, int);
 int	ffs_syncvnode(struct vnode *vp, int waitfor, int flags);
-int	ffs_truncate(struct vnode *, off_t, int, struct ucred *, struct thread *);
+int	ffs_truncate(struct vnode *, off_t, int, struct ucred *);
 int	ffs_update(struct vnode *, int);
 int	ffs_valloc(struct vnode *, int, struct ucred *, struct vnode **);
 
@@ -106,6 +107,9 @@ void	ffs_susp_initialize(void);
 void	ffs_susp_uninitialize(void);
 
 #define	FFSV_FORCEINSMQ	0x0001
+
+#define	FFSR_FORCE	0x0001
+#define	FFSR_UNSUSPEND	0x0002
 
 extern struct vop_vector ffs_vnodeops1;
 extern struct vop_vector ffs_fifoops1;
@@ -152,9 +156,7 @@ void	softdep_setup_sbupdate(struct ufsmount *, struct fs *, struct buf *);
 void	softdep_fsync_mountdev(struct vnode *);
 int	softdep_sync_metadata(struct vnode *);
 int	softdep_sync_buf(struct vnode *, struct buf *, int);
-int     softdep_process_worklist(struct mount *, int);
 int     softdep_fsync(struct vnode *);
-int	softdep_waitidle(struct mount *);
 int	softdep_prealloc(struct vnode *, int);
 int	softdep_journal_lookup(struct mount *, struct vnode **);
 void	softdep_journal_freeblocks(struct inode *, struct ucred *, off_t, int);
@@ -167,10 +169,10 @@ void	softdep_freework(struct workhead *);
 /*
  * Things to request flushing in softdep_request_cleanup()
  */
-#define FLUSH_INODES		1
-#define FLUSH_INODES_WAIT	2
-#define FLUSH_BLOCKS		3
-#define FLUSH_BLOCKS_WAIT	4
+#define	FLUSH_INODES		1
+#define	FLUSH_INODES_WAIT	2
+#define	FLUSH_BLOCKS		3
+#define	FLUSH_BLOCKS_WAIT	4
 /*
  * Flag to ffs_syncvnode() to request flushing of data only,
  * but skip the ffs_update() on the inode itself. Used to avoid

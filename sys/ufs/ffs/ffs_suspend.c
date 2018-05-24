@@ -27,11 +27,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/ufs/ffs/ffs_suspend.c 306175 2016-09-22 10:42:40Z kib $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/ufs/ffs/ffs_suspend.c 306175 2016-09-22 10:42:40Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -177,7 +177,6 @@ out:
 static int
 ffs_susp_suspend(struct mount *mp)
 {
-	struct fs *fs;
 	struct ufsmount *ump;
 	int error;
 
@@ -189,7 +188,6 @@ ffs_susp_suspend(struct mount *mp)
 		return (EBUSY);
 
 	ump = VFSTOUFS(mp);
-	fs = ump->um_fs;
 
 	/*
 	 * Make sure the calling thread is permitted to access the mounted
@@ -207,7 +205,7 @@ ffs_susp_suspend(struct mount *mp)
 		return (EPERM);
 #endif
 
-	if ((error = vfs_write_suspend(mp)) != 0)
+	if ((error = vfs_write_suspend(mp, VS_SKIP_UNMOUNT)) != 0)
 		return (error);
 
 	ump->um_writesuspended = 1;
@@ -237,7 +235,7 @@ ffs_susp_dtor(void *data)
 	KASSERT((mp->mnt_kern_flag & MNTK_SUSPEND) != 0,
 	    ("MNTK_SUSPEND not set"));
 
-	error = ffs_reload(mp, curthread, 1);
+	error = ffs_reload(mp, curthread, FFSR_FORCE | FFSR_UNSUSPEND);
 	if (error != 0)
 		panic("failed to unsuspend writes on %s", fs->fs_fsmnt);
 
@@ -253,7 +251,7 @@ ffs_susp_dtor(void *data)
 	 */
 	mp->mnt_susp_owner = curthread;
 
-	vfs_write_resume(mp);
+	vfs_write_resume(mp, 0);
 	vfs_unbusy(mp);
 	ump->um_writesuspended = 0;
 

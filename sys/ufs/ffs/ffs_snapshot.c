@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2000 Marshall Kirk McKusick. All Rights Reserved.
  *
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/ufs/ffs/ffs_snapshot.c 322132 2017-08-07 02:29:09Z mckusick $");
 
 #include "opt_quota.h"
 
@@ -53,6 +54,7 @@ __FBSDID("$MidnightBSD$");
 #include <sys/mount.h>
 #include <sys/resource.h>
 #include <sys/resourcevar.h>
+#include <sys/rwlock.h>
 #include <sys/vnode.h>
 
 #include <geom/geom.h>
@@ -255,7 +257,8 @@ ffs_snapshot(mp, snapfile)
 	 * Create the snapshot file.
 	 */
 restart:
-	NDINIT(&nd, CREATE, LOCKPARENT | LOCKLEAF, UIO_SYSSPACE, snapfile, td);
+	NDINIT(&nd, CREATE, LOCKPARENT | LOCKLEAF | NOCACHE, UIO_SYSSPACE,
+	    snapfile, td);
 	if ((error = namei(&nd)) != 0)
 		return (error);
 	if (nd.ni_vp != NULL) {
@@ -422,7 +425,7 @@ restart:
 	 */
 	for (;;) {
 		vn_finished_write(wrtmp);
-		if ((error = vfs_write_suspend(vp->v_mount)) != 0) {
+		if ((error = vfs_write_suspend(vp->v_mount, 0)) != 0) {
 			vn_start_write(NULL, &wrtmp, V_WAIT);
 			vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 			goto out;
@@ -674,7 +677,8 @@ loop:
 	VI_LOCK(devvp);
 	fs->fs_snapinum[snaploc] = ip->i_number;
 	if (ip->i_nextsnap.tqe_prev != 0)
-		panic("ffs_snapshot: %d already on list", ip->i_number);
+		panic("ffs_snapshot: %ju already on list",
+		    (uintmax_t)ip->i_number);
 	TAILQ_INSERT_TAIL(&sn->sn_head, ip, i_nextsnap);
 	devvp->v_vflag |= VV_COPYONWRITE;
 	VI_UNLOCK(devvp);
@@ -686,7 +690,7 @@ out1:
 	/*
 	 * Resume operation on filesystem.
 	 */
-	vfs_write_resume_flags(vp->v_mount, VR_START_WRITE | VR_NO_SUSPCLR);
+	vfs_write_resume(vp->v_mount, VR_START_WRITE | VR_NO_SUSPCLR);
 	if (collectsnapstats && starttime.tv_sec > 0) {
 		nanotime(&endtime);
 		timespecsub(&endtime, &starttime);
@@ -790,7 +794,7 @@ out1:
 		brelse(nbp);
 	} else {
 		loc = blkoff(fs, fs->fs_sblockloc);
-		bcopy((char *)copy_fs, &nbp->b_data[loc], fs->fs_bsize);
+		bcopy((char *)copy_fs, &nbp->b_data[loc], (u_int)fs->fs_sbsize);
 		bawrite(nbp);
 	}
 	/*
@@ -849,7 +853,7 @@ out:
 	mp->mnt_flag = (mp->mnt_flag & MNT_QUOTA) | (flag & ~MNT_QUOTA);
 	MNT_IUNLOCK(mp);
 	if (error)
-		(void) ffs_truncate(vp, (off_t)0, 0, NOCRED, td);
+		(void) ffs_truncate(vp, (off_t)0, 0, NOCRED);
 	(void) ffs_syncvnode(vp, MNT_WAIT, 0);
 	if (error)
 		vput(vp);
@@ -1400,7 +1404,7 @@ indiracct_ufs2(snapvp, cancelvp, level, blkno, lbn, rlbn, remblks,
 	 */
 	bp = getblk(cancelvp, lbn, fs->fs_bsize, 0, 0, 0);
 	bp->b_blkno = fsbtodb(fs, blkno);
-	if ((bp->b_flags & (B_DONE | B_DELWRI)) == 0 &&
+	if ((bp->b_flags & B_CACHE) == 0 &&
 	    (error = readblock(cancelvp, bp, fragstoblks(fs, blkno)))) {
 		brelse(bp);
 		return (error);
@@ -1570,8 +1574,8 @@ ffs_snapgone(ip)
 	if (xp != NULL)
 		vrele(ITOV(ip));
 	else if (snapdebug)
-		printf("ffs_snapgone: lost snapshot vnode %d\n",
-		    ip->i_number);
+		printf("ffs_snapgone: lost snapshot vnode %ju\n",
+		    (uintmax_t)ip->i_number);
 	/*
 	 * Delete snapshot inode from superblock. Keep list dense.
 	 */
@@ -1604,7 +1608,7 @@ ffs_snapremove(vp)
 	struct buf *ibp;
 	struct fs *fs;
 	ufs2_daddr_t numblks, blkno, dblk;
-	int error, loc, last;
+	int error, i, last, loc;
 	struct snapdata *sn;
 
 	ip = VTOI(vp);
@@ -1624,10 +1628,14 @@ ffs_snapremove(vp)
 		ip->i_nextsnap.tqe_prev = 0;
 		VI_UNLOCK(devvp);
 		lockmgr(&vp->v_lock, LK_EXCLUSIVE, NULL);
+		for (i = 0; i < sn->sn_lock.lk_recurse; i++)
+			lockmgr(&vp->v_lock, LK_EXCLUSIVE, NULL);
 		KASSERT(vp->v_vnlock == &sn->sn_lock,
 			("ffs_snapremove: lost lock mutation")); 
 		vp->v_vnlock = &vp->v_lock;
 		VI_LOCK(devvp);
+		while (sn->sn_lock.lk_recurse > 0)
+			lockmgr(&sn->sn_lock, LK_RELEASE, NULL);
 		lockmgr(&sn->sn_lock, LK_RELEASE, NULL);
 		try_free_snapdata(devvp);
 	} else
@@ -1741,7 +1749,7 @@ ffs_snapblkfree(fs, devvp, bno, size, inum, vtype, wkhd)
 	enum vtype vtype;
 	struct workhead *wkhd;
 {
-	struct buf *ibp, *cbp, *savedcbp = 0;
+	struct buf *ibp, *cbp, *savedcbp = NULL;
 	struct thread *td = curthread;
 	struct inode *ip;
 	struct vnode *vp = NULL;
@@ -1833,9 +1841,10 @@ retry:
 		if (size == fs->fs_bsize) {
 #ifdef DEBUG
 			if (snapdebug)
-				printf("%s %d lbn %jd from inum %d\n",
-				    "Grabonremove: snapino", ip->i_number,
-				    (intmax_t)lbn, inum);
+				printf("%s %ju lbn %jd from inum %ju\n",
+				    "Grabonremove: snapino",
+				    (uintmax_t)ip->i_number,
+				    (intmax_t)lbn, (uintmax_t)inum);
 #endif
 			/*
 			 * If journaling is tracking this write we must add
@@ -1877,9 +1886,9 @@ retry:
 			break;
 #ifdef DEBUG
 		if (snapdebug)
-			printf("%s%d lbn %jd %s %d size %ld to blkno %jd\n",
-			    "Copyonremove: snapino ", ip->i_number,
-			    (intmax_t)lbn, "for inum", inum, size,
+			printf("%s%ju lbn %jd %s %ju size %ld to blkno %jd\n",
+			    "Copyonremove: snapino ", (uintmax_t)ip->i_number,
+			    (intmax_t)lbn, "for inum", (uintmax_t)inum, size,
 			    (intmax_t)cbp->b_blkno);
 #endif
 		/*
@@ -1892,7 +1901,7 @@ retry:
 		 * dopersistence sysctl-setable flag to decide on the
 		 * persistence needed for file content data.
 		 */
-		if (savedcbp != 0) {
+		if (savedcbp != NULL) {
 			bcopy(savedcbp->b_data, cbp->b_data, fs->fs_bsize);
 			bawrite(cbp);
 			if ((vtype == VDIR || dopersistence) &&
@@ -1936,7 +1945,7 @@ retry:
 	 */
 	if (error != 0 && wkhd != NULL)
 		softdep_freework(wkhd);
-	lockmgr(vp->v_vnlock, LK_RELEASE, NULL);
+	lockmgr(&sn->sn_lock, LK_RELEASE, NULL);
 	return (error);
 }
 
@@ -1988,7 +1997,7 @@ ffs_snapshot_mount(mp)
 				reason = "non-snapshot";
 			} else {
 				reason = "old format snapshot";
-				(void)ffs_truncate(vp, (off_t)0, 0, NOCRED, td);
+				(void)ffs_truncate(vp, (off_t)0, 0, NOCRED);
 				(void)ffs_syncvnode(vp, MNT_WAIT, 0);
 			}
 			printf("ffs_snapshot_mount: %s inode %d\n",
@@ -2020,8 +2029,8 @@ ffs_snapshot_mount(mp)
 		 */
 		VI_LOCK(devvp);
 		if (ip->i_nextsnap.tqe_prev != 0)
-			panic("ffs_snapshot_mount: %d already on list",
-			    ip->i_number);
+			panic("ffs_snapshot_mount: %ju already on list",
+			    (uintmax_t)ip->i_number);
 		else
 			TAILQ_INSERT_TAIL(&sn->sn_head, ip, i_nextsnap);
 		vp->v_vflag |= VV_SYSTEM;
@@ -2202,10 +2211,8 @@ ffs_bdflush(bo, bp)
 			if (bp_bdskip) {
 				VI_LOCK(devvp);
 				if (!ffs_bp_snapblk(vp, nbp)) {
-					if (BO_MTX(bo) != VI_MTX(vp)) {
-						VI_UNLOCK(devvp);
-						BO_LOCK(bo);
-					}
+					VI_UNLOCK(devvp);
+					BO_LOCK(bo);
 					BUF_UNLOCK(nbp);
 					continue;
 				}
@@ -2235,11 +2242,11 @@ ffs_copyonwrite(devvp, bp)
 	struct buf *bp;
 {
 	struct snapdata *sn;
-	struct buf *ibp, *cbp, *savedcbp = 0;
+	struct buf *ibp, *cbp, *savedcbp = NULL;
 	struct thread *td = curthread;
 	struct fs *fs;
 	struct inode *ip;
-	struct vnode *vp = 0;
+	struct vnode *vp = NULL;
 	ufs2_daddr_t lbn, blkno, *snapblklist;
 	int lower, upper, mid, indiroff, error = 0;
 	int launched_async_io, prev_norunningbuf;
@@ -2365,12 +2372,13 @@ ffs_copyonwrite(devvp, bp)
 			break;
 #ifdef DEBUG
 		if (snapdebug) {
-			printf("Copyonwrite: snapino %d lbn %jd for ",
-			    ip->i_number, (intmax_t)lbn);
+			printf("Copyonwrite: snapino %ju lbn %jd for ",
+			    (uintmax_t)ip->i_number, (intmax_t)lbn);
 			if (bp->b_vp == devvp)
 				printf("fs metadata");
 			else
-				printf("inum %d", VTOI(bp->b_vp)->i_number);
+				printf("inum %ju",
+				    (uintmax_t)VTOI(bp->b_vp)->i_number);
 			printf(" lblkno %jd to blkno %jd\n",
 			    (intmax_t)bp->b_lblkno, (intmax_t)cbp->b_blkno);
 		}
@@ -2385,7 +2393,7 @@ ffs_copyonwrite(devvp, bp)
 		 * dopersistence sysctl-setable flag to decide on the
 		 * persistence needed for file content data.
 		 */
-		if (savedcbp != 0) {
+		if (savedcbp != NULL) {
 			bcopy(savedcbp->b_data, cbp->b_data, fs->fs_bsize);
 			bawrite(cbp);
 			if ((devvp == bp->b_vp || bp->b_vp->v_type == VDIR ||
@@ -2636,32 +2644,46 @@ try_free_snapdata(struct vnode *devvp)
 static struct snapdata *
 ffs_snapdata_acquire(struct vnode *devvp)
 {
-	struct snapdata *nsn;
-	struct snapdata *sn;
+	struct snapdata *nsn, *sn;
+	int error;
 
 	/*
- 	 * Allocate a free snapdata.  This is done before acquiring the
+	 * Allocate a free snapdata.  This is done before acquiring the
 	 * devvp lock to avoid allocation while the devvp interlock is
 	 * held.
 	 */
 	nsn = ffs_snapdata_alloc();
-	/*
-	 * If there snapshots already exist on this filesystem grab a
-	 * reference to the shared lock.  Otherwise this is the first
-	 * snapshot on this filesystem and we need to use our
-	 * pre-allocated snapdata.
-	 */
-	VI_LOCK(devvp);
-	if (devvp->v_rdev->si_snapdata == NULL) {
-		devvp->v_rdev->si_snapdata = nsn;
-		nsn = NULL;
+
+	for (;;) {
+		VI_LOCK(devvp);
+		sn = devvp->v_rdev->si_snapdata;
+		if (sn == NULL) {
+			/*
+			 * This is the first snapshot on this
+			 * filesystem and we use our pre-allocated
+			 * snapdata.  Publish sn with the sn_lock
+			 * owned by us, to avoid the race.
+			 */
+			error = lockmgr(&nsn->sn_lock, LK_EXCLUSIVE |
+			    LK_NOWAIT, NULL);
+			if (error != 0)
+				panic("leaked sn, lockmgr error %d", error);
+			sn = devvp->v_rdev->si_snapdata = nsn;
+			VI_UNLOCK(devvp);
+			nsn = NULL;
+			break;
+		}
+
+		/*
+		 * There is a snapshots which already exists on this
+		 * filesystem, grab a reference to the common lock.
+		 */
+		error = lockmgr(&sn->sn_lock, LK_INTERLOCK |
+		    LK_EXCLUSIVE | LK_SLEEPFAIL, VI_MTX(devvp));
+		if (error == 0)
+			break;
 	}
-	sn = devvp->v_rdev->si_snapdata;
-	/*
-	 * Acquire the snapshot lock.
-	 */
-	lockmgr(&sn->sn_lock,
-	    LK_INTERLOCK | LK_EXCLUSIVE | LK_RETRY, VI_MTX(devvp));
+
 	/*
 	 * Free any unused snapdata.
 	 */

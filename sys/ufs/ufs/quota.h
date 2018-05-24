@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)quota.h	8.3 (Berkeley) 8/19/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/ufs/ufs/quota.h 262779 2014-03-05 04:23:19Z pfg $
  */
 
 #ifndef _UFS_UFS_QUOTA_H_
@@ -62,7 +63,7 @@
 /*
  * Definitions for the default names of the quotas files.
  */
-#define INITQFNAMES { \
+#define	INITQFNAMES { \
 	"user",		/* USRQUOTA */ \
 	"group",	/* GRPQUOTA */ \
 	"undefined", \
@@ -75,8 +76,8 @@
  * broken into a main command defined below and a subcommand that is used
  * to convey the type of quota that is being manipulated (see above).
  */
-#define SUBCMDMASK	0x00ff
-#define SUBCMDSHIFT	8
+#define	SUBCMDMASK	0x00ff
+#define	SUBCMDSHIFT	8
 #define	QCMD(cmd, type)	(((cmd) << SUBCMDSHIFT) | ((type) & SUBCMDMASK))
 
 #define	Q_QUOTAON	0x0100	/* enable quotas */
@@ -119,10 +120,10 @@ struct dqblk64 {
 	int64_t   dqb_itime;		/* time limit for excessive files */
 };
 
-#define dqblk dqblk64
+#define	dqblk dqblk64
 
-#define Q_DQHDR64_MAGIC "QUOTA64"
-#define Q_DQHDR64_VERSION 0x20081104
+#define	Q_DQHDR64_MAGIC "QUOTA64"
+#define	Q_DQHDR64_VERSION 0x20081104
 
 struct dqhdr64 {
 	char	  dqh_magic[8];		/* Q_DQHDR64_MAGIC */
