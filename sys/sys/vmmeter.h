@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vmmeter.h	8.2 (Berkeley) 7/10/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/vmmeter.h 330047 2018-02-27 01:28:19Z jhb $
  */
 
 #ifndef _SYS_VMMETER_H_
@@ -46,7 +47,7 @@
  *      c - constant after initialization
  *      f - locked by vm_page_queue_free_mtx
  *      p - locked by being in the PCPU and atomicity respect to interrupts
- *      q - locked by vm_page_queue_mtx
+ *      q - changes are synchronized by the corresponding vm_pagequeue lock
  */
 struct vmmeter {
 	/*
@@ -61,6 +62,7 @@ struct vmmeter {
 	 * Virtual memory activity.
 	 */
 	u_int v_vm_faults;	/* (p) address memory faults */
+	u_int v_io_faults;	/* (p) page faults requiring I/O */
 	u_int v_cow_faults;	/* (p) copy-on-writes faults */
 	u_int v_cow_optim;	/* (p) optimized copy-on-writes faults */
 	u_int v_zfod;		/* (p) pages zero filled on demand */
@@ -76,7 +78,7 @@ struct vmmeter {
 	u_int v_intrans;	/* (p) intransit blocking page faults */
 	u_int v_reactivated;	/* (f) pages reactivated from free list */
 	u_int v_pdwakeups;	/* (f) times daemon has awaken from sleep */
-	u_int v_pdpages;	/* (q) pages analyzed by daemon */
+	u_int v_pdpages;	/* (p) pages analyzed by daemon */
 
 	u_int v_tcached;	/* (p) total pages cached */
 	u_int v_dfree;		/* (p) pages freed by daemon */
@@ -97,7 +99,7 @@ struct vmmeter {
 	u_int v_inactive_count;	/* (q) pages inactive */
 	u_int v_cache_count;	/* (f) pages on cache queue */
 	u_int v_cache_min;	/* (c) min pages desired on cache queue */
-	u_int v_cache_max;	/* (c) max pages in cached obj */
+	u_int v_cache_max;	/* (c) max pages in cached obj (unused) */
 	u_int v_pageout_free_min;   /* (c) min pages reserved for kernel */
 	u_int v_interrupt_free_min; /* (c) reserved pages for int code */
 	u_int v_free_severe;	/* (c) severe page depletion point */
@@ -116,6 +118,8 @@ struct vmmeter {
 #ifdef _KERNEL
 
 extern struct vmmeter cnt;
+
+extern int vm_pageout_wakeup_thresh;
 
 /*
  * Return TRUE if we are under our severe low-free-pages threshold
@@ -169,10 +173,7 @@ static __inline
 int
 vm_paging_target(void)
 {
-    return (
-	(cnt.v_free_target + cnt.v_cache_min) -
-	(cnt.v_free_count + cnt.v_cache_count)
-    );
+    return (cnt.v_free_target - (cnt.v_free_count + cnt.v_cache_count));
 }
 
 /*
@@ -183,21 +184,18 @@ static __inline
 int
 vm_paging_needed(void)
 {
-    return (
-	(cnt.v_free_reserved + cnt.v_cache_min) >
-	(cnt.v_free_count + cnt.v_cache_count)
-    );
+    return (cnt.v_free_count + cnt.v_cache_count <
+        (u_int)vm_pageout_wakeup_thresh);
 }
 
 #endif
 
-/* systemwide totals computed every five seconds */
 struct vmtotal {
 	int16_t	t_rq;		/* length of the run queue */
-	int16_t	t_dw;		/* jobs in ``disk wait'' (neg priority) */
-	int16_t	t_pw;		/* jobs in page wait */
-	int16_t	t_sl;		/* jobs sleeping in core */
-	int16_t	t_sw;		/* swapped out runnable/short block jobs */
+	int16_t	t_dw;		/* threads in ``disk wait'' (neg priority) */
+	int16_t	t_pw;		/* threads in page wait */
+	int16_t	t_sl;		/* threads sleeping in core */
+	int16_t	t_sw;		/* swapped out runnable/short block threads */
 	int32_t	t_vm;		/* total virtual memory */
 	int32_t	t_avm;		/* active virtual memory */
 	int32_t	t_rm;		/* total real memory in use */
