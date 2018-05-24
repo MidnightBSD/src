@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -64,7 +65,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/vm/vm_pager.c 311645 2017-01-07 12:04:30Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -74,9 +75,11 @@ __MBSDID("$MidnightBSD$");
 #include <sys/buf.h>
 #include <sys/ucred.h>
 #include <sys/malloc.h>
+#include <sys/rwlock.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
+#include <vm/vm_kern.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
@@ -105,43 +108,35 @@ static vm_object_t
 dead_pager_alloc(void *handle, vm_ooffset_t size, vm_prot_t prot,
     vm_ooffset_t off, struct ucred *cred)
 {
-	return NULL;
+
+	return (NULL);
 }
 
 static void
-dead_pager_putpages(object, m, count, flags, rtvals)
-	vm_object_t object;
-	vm_page_t *m;
-	int count;
-	int flags;
-	int *rtvals;
+dead_pager_putpages(vm_object_t object, vm_page_t *m, int count,
+    int flags, int *rtvals)
 {
 	int i;
 
-	for (i = 0; i < count; i++) {
+	for (i = 0; i < count; i++)
 		rtvals[i] = VM_PAGER_AGAIN;
-	}
 }
 
 static int
-dead_pager_haspage(object, pindex, prev, next)
-	vm_object_t object;
-	vm_pindex_t pindex;
-	int *prev;
-	int *next;
+dead_pager_haspage(vm_object_t object, vm_pindex_t pindex, int *prev, int *next)
 {
-	if (prev)
+
+	if (prev != NULL)
 		*prev = 0;
-	if (next)
+	if (next != NULL)
 		*next = 0;
-	return FALSE;
+	return (FALSE);
 }
 
 static void
-dead_pager_dealloc(object)
-	vm_object_t object;
+dead_pager_dealloc(vm_object_t object)
 {
-	return;
+
 }
 
 static struct pagerops deadpagerops = {
@@ -173,14 +168,13 @@ static const int npagers = sizeof(pagertab) / sizeof(pagertab[0]);
  * cleaning requests (NPENDINGIO == 64) * the maximum swap cluster size
  * (MAXPHYS == 64k) if you want to get the most efficiency.
  */
-vm_map_t pager_map;
-static int bswneeded;
-static vm_offset_t swapbkva;		/* swap buffers kva */
-struct mtx pbuf_mtx;
+struct mtx_padalign pbuf_mtx;
 static TAILQ_HEAD(swqueue, buf) bswlist;
+static int bswneeded;
+vm_offset_t swapbkva;		/* swap buffers kva */
 
 void
-vm_pager_init()
+vm_pager_init(void)
 {
 	struct pagerops **pgops;
 
@@ -190,11 +184,11 @@ vm_pager_init()
 	 */
 	for (pgops = pagertab; pgops < &pagertab[npagers]; pgops++)
 		if ((*pgops)->pgo_init != NULL)
-			(*(*pgops)->pgo_init) ();
+			(*(*pgops)->pgo_init)();
 }
 
 void
-vm_pager_bufferinit()
+vm_pager_bufferinit(void)
 {
 	struct buf *bp;
 	int i;
@@ -214,10 +208,6 @@ vm_pager_bufferinit()
 
 	cluster_pbuf_freecnt = nswbuf / 2;
 	vnode_pbuf_freecnt = nswbuf / 2 + 1;
-
-	swapbkva = kmem_alloc_nofault(pager_map, nswbuf * MAXPHYS);
-	if (!swapbkva)
-		panic("Not enough pager_map VM space for physical buffers");
 }
 
 /*
@@ -234,7 +224,7 @@ vm_pager_allocate(objtype_t type, void *handle, vm_ooffset_t size,
 
 	ops = pagertab[type];
 	if (ops)
-		ret = (*ops->pgo_alloc) (handle, size, prot, off, cred);
+		ret = (*ops->pgo_alloc)(handle, size, prot, off, cred);
 	else
 		ret = NULL;
 	return (ret);
@@ -244,11 +234,10 @@ vm_pager_allocate(objtype_t type, void *handle, vm_ooffset_t size,
  *	The object must be locked.
  */
 void
-vm_pager_deallocate(object)
-	vm_object_t object;
+vm_pager_deallocate(vm_object_t object)
 {
 
-	VM_OBJECT_LOCK_ASSERT(object, MA_OWNED);
+	VM_OBJECT_ASSERT_WLOCKED(object);
 	(*pagertab[object->type]->pgo_dealloc) (object);
 }
 
@@ -272,13 +261,13 @@ vm_pager_object_lookup(struct pagerlst *pg_list, void *handle)
 
 	TAILQ_FOREACH(object, pg_list, pager_object_list) {
 		if (object->handle == handle) {
-			VM_OBJECT_LOCK(object);
+			VM_OBJECT_WLOCK(object);
 			if ((object->flags & OBJ_DEAD) == 0) {
 				vm_object_reference_locked(object);
-				VM_OBJECT_UNLOCK(object);
+				VM_OBJECT_WUNLOCK(object);
 				break;
 			}
-			VM_OBJECT_UNLOCK(object);
+			VM_OBJECT_WUNLOCK(object);
 		}
 	}
 	return (object);
@@ -294,12 +283,13 @@ vm_pager_object_lookup(struct pagerlst *pg_list, void *handle)
 static void
 initpbuf(struct buf *bp)
 {
+
 	KASSERT(bp->b_bufobj == NULL, ("initpbuf with bufobj"));
 	KASSERT(bp->b_vp == NULL, ("initpbuf with vp"));
 	bp->b_rcred = NOCRED;
 	bp->b_wcred = NOCRED;
 	bp->b_qindex = 0;	/* On no queue (QUEUE_NONE) */
-	bp->b_saveaddr = (caddr_t) (MAXPHYS * (bp - swbuf)) + swapbkva;
+	bp->b_saveaddr = (caddr_t)(MAXPHYS * (bp - swbuf)) + swapbkva;
 	bp->b_data = bp->b_saveaddr;
 	bp->b_kvabase = bp->b_saveaddr;
 	bp->b_kvasize = MAXPHYS;
@@ -332,9 +322,8 @@ getpbuf(int *pfreecnt)
 	struct buf *bp;
 
 	mtx_lock(&pbuf_mtx);
-
 	for (;;) {
-		if (pfreecnt) {
+		if (pfreecnt != NULL) {
 			while (*pfreecnt == 0) {
 				msleep(pfreecnt, &pbuf_mtx, PVM, "wswbuf0", 0);
 			}
@@ -352,9 +341,8 @@ getpbuf(int *pfreecnt)
 	if (pfreecnt)
 		--*pfreecnt;
 	mtx_unlock(&pbuf_mtx);
-
 	initpbuf(bp);
-	return bp;
+	return (bp);
 }
 
 /*
@@ -374,14 +362,10 @@ trypbuf(int *pfreecnt)
 		return NULL;
 	}
 	TAILQ_REMOVE(&bswlist, bp, b_freelist);
-
 	--*pfreecnt;
-
 	mtx_unlock(&pbuf_mtx);
-
 	initpbuf(bp);
-
-	return bp;
+	return (bp);
 }
 
 /*
@@ -468,17 +452,9 @@ pbrelvp(struct buf *bp)
 
 	KASSERT(bp->b_vp != NULL, ("pbrelvp: NULL"));
 	KASSERT(bp->b_bufobj != NULL, ("pbrelvp: NULL bufobj"));
+	KASSERT((bp->b_xflags & (BX_VNDIRTY | BX_VNCLEAN)) == 0,
+	    ("pbrelvp: pager buf on vnode list."));
 
-	/* XXX REMOVE ME */
-	BO_LOCK(bp->b_bufobj);
-	if (TAILQ_NEXT(bp, b_bobufs) != NULL) {
-		panic(
-		    "relpbuf(): b_vp was probably reassignbuf()d %p %x",
-		    bp,
-		    (int)bp->b_flags
-		);
-	}
-	BO_UNLOCK(bp->b_bufobj);
 	bp->b_vp = NULL;
 	bp->b_bufobj = NULL;
 	bp->b_flags &= ~B_PAGING;
@@ -493,17 +469,9 @@ pbrelbo(struct buf *bp)
 
 	KASSERT(bp->b_vp == NULL, ("pbrelbo: vnode"));
 	KASSERT(bp->b_bufobj != NULL, ("pbrelbo: NULL bufobj"));
+	KASSERT((bp->b_xflags & (BX_VNDIRTY | BX_VNCLEAN)) == 0,
+	    ("pbrelbo: pager buf on vnode list."));
 
-	/* XXX REMOVE ME */
-	BO_LOCK(bp->b_bufobj);
-	if (TAILQ_NEXT(bp, b_bobufs) != NULL) {
-		panic(
-		    "relpbuf(): b_vp was probably reassignbuf()d %p %x",
-		    bp,
-		    (int)bp->b_flags
-		);
-	}
-	BO_UNLOCK(bp->b_bufobj);
 	bp->b_bufobj = NULL;
 	bp->b_flags &= ~B_PAGING;
 }

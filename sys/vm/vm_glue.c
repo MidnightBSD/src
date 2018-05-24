@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -57,24 +58,28 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/vm/vm_glue.c 300673 2016-05-25 10:04:53Z kib $");
 
 #include "opt_vm.h"
 #include "opt_kstack_pages.h"
 #include "opt_kstack_max_pages.h"
+#include "opt_kstack_usage_prof.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/limits.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/racct.h>
 #include <sys/resourcevar.h>
+#include <sys/rwlock.h>
 #include <sys/sched.h>
 #include <sys/sf_buf.h>
 #include <sys/shm.h>
 #include <sys/vmmeter.h>
+#include <sys/vmem.h>
 #include <sys/sx.h>
 #include <sys/sysctl.h>
 #include <sys/_kstack_cache.h>
@@ -95,15 +100,7 @@ __MBSDID("$MidnightBSD$");
 #include <vm/vm_pager.h>
 #include <vm/swap_pager.h>
 
-/*
- * System initialization
- *
- * THIS MUST BE THE LAST INITIALIZATION ITEM!!!
- *
- * Note: run scheduling should be divorced from the vm system.
- */
-static void scheduler(void *);
-SYSINIT(scheduler, SI_SUB_RUN_SCHEDULER, SI_ORDER_ANY, scheduler, NULL);
+#include <machine/cpu.h>
 
 #ifndef NO_SWAPPING
 static int swapout(struct proc *);
@@ -238,9 +235,9 @@ vm_imgact_hold_page(vm_object_t object, vm_ooffset_t offset)
 	vm_pindex_t pindex;
 	int rv;
 
-	VM_OBJECT_LOCK(object);
+	VM_OBJECT_WLOCK(object);
 	pindex = OFF_TO_IDX(offset);
-	m = vm_page_grab(object, pindex, VM_ALLOC_NORMAL | VM_ALLOC_RETRY);
+	m = vm_page_grab(object, pindex, VM_ALLOC_NORMAL);
 	if (m->valid != VM_PAGE_BITS_ALL) {
 		ma[0] = m;
 		rv = vm_pager_get_pages(object, ma, 1, 0);
@@ -255,12 +252,13 @@ vm_imgact_hold_page(vm_object_t object, vm_ooffset_t offset)
 			goto out;
 		}
 	}
+	vm_page_xunbusy(m);
 	vm_page_lock(m);
 	vm_page_hold(m);
+	vm_page_activate(m);
 	vm_page_unlock(m);
-	vm_page_wakeup(m);
 out:
-	VM_OBJECT_UNLOCK(object);
+	VM_OBJECT_WUNLOCK(object);
 	return (m);
 }
 
@@ -307,6 +305,8 @@ struct kstack_cache_entry *kstack_cache;
 static int kstack_cache_size = 128;
 static int kstacks;
 static struct mtx kstack_cache_mtx;
+MTX_SYSINIT(kstack_cache, &kstack_cache_mtx, "kstkch", MTX_DEF);
+
 SYSCTL_INT(_vm, OID_AUTO, kstack_cache_size, CTLFLAG_RW, &kstack_cache_size, 0,
     "");
 SYSCTL_INT(_vm, OID_AUTO, kstacks, CTLFLAG_RD, &kstacks, 0,
@@ -364,11 +364,13 @@ vm_thread_new(struct thread *td, int pages)
 	 * We need to align the kstack's mapped address to fit within
 	 * a single TLB entry.
 	 */
-	ks = kmem_alloc_nofault_space(kernel_map,
-	    (pages + KSTACK_GUARD_PAGES) * PAGE_SIZE, VMFS_TLB_ALIGNED_SPACE);
+	if (vmem_xalloc(kernel_arena, (pages + KSTACK_GUARD_PAGES) * PAGE_SIZE,
+	    PAGE_SIZE * 2, 0, 0, VMEM_ADDR_MIN, VMEM_ADDR_MAX,
+	    M_BESTFIT | M_NOWAIT, &ks)) {
+		ks = 0;
+	}
 #else
-	ks = kmem_alloc_nofault(kernel_map,
-	   (pages + KSTACK_GUARD_PAGES) * PAGE_SIZE);
+	ks = kva_alloc((pages + KSTACK_GUARD_PAGES) * PAGE_SIZE);
 #endif
 	if (ks == 0) {
 		printf("vm_thread_new: kstack allocation failed\n");
@@ -392,17 +394,17 @@ vm_thread_new(struct thread *td, int pages)
 	 * For the length of the stack, link in a real page of ram for each
 	 * page of stack.
 	 */
-	VM_OBJECT_LOCK(ksobj);
+	VM_OBJECT_WLOCK(ksobj);
 	for (i = 0; i < pages; i++) {
 		/*
 		 * Get a kernel stack page.
 		 */
 		m = vm_page_grab(ksobj, i, VM_ALLOC_NOBUSY |
-		    VM_ALLOC_NORMAL | VM_ALLOC_RETRY | VM_ALLOC_WIRED);
+		    VM_ALLOC_NORMAL | VM_ALLOC_WIRED);
 		ma[i] = m;
 		m->valid = VM_PAGE_BITS_ALL;
 	}
-	VM_OBJECT_UNLOCK(ksobj);
+	VM_OBJECT_WUNLOCK(ksobj);
 	pmap_qenter(ks, ma, pages);
 	return (1);
 }
@@ -415,7 +417,7 @@ vm_thread_stack_dispose(vm_object_t ksobj, vm_offset_t ks, int pages)
 
 	atomic_add_int(&kstacks, -1);
 	pmap_qremove(ks, pages);
-	VM_OBJECT_LOCK(ksobj);
+	VM_OBJECT_WLOCK(ksobj);
 	for (i = 0; i < pages; i++) {
 		m = vm_page_lookup(ksobj, i);
 		if (m == NULL)
@@ -425,9 +427,9 @@ vm_thread_stack_dispose(vm_object_t ksobj, vm_offset_t ks, int pages)
 		vm_page_free(m);
 		vm_page_unlock(m);
 	}
-	VM_OBJECT_UNLOCK(ksobj);
+	VM_OBJECT_WUNLOCK(ksobj);
 	vm_object_deallocate(ksobj);
-	kmem_free(kernel_map, ks - (KSTACK_GUARD_PAGES * PAGE_SIZE),
+	kva_free(ks - (KSTACK_GUARD_PAGES * PAGE_SIZE),
 	    (pages + KSTACK_GUARD_PAGES) * PAGE_SIZE);
 }
 
@@ -486,8 +488,53 @@ kstack_cache_init(void *nulll)
 	    EVENTHANDLER_PRI_ANY);
 }
 
-MTX_SYSINIT(kstack_cache, &kstack_cache_mtx, "kstkch", MTX_DEF);
 SYSINIT(vm_kstacks, SI_SUB_KTHREAD_INIT, SI_ORDER_ANY, kstack_cache_init, NULL);
+
+#ifdef KSTACK_USAGE_PROF
+/*
+ * Track maximum stack used by a thread in kernel.
+ */
+static int max_kstack_used;
+
+SYSCTL_INT(_debug, OID_AUTO, max_kstack_used, CTLFLAG_RD,
+    &max_kstack_used, 0,
+    "Maxiumum stack depth used by a thread in kernel");
+
+void
+intr_prof_stack_use(struct thread *td, struct trapframe *frame)
+{
+	vm_offset_t stack_top;
+	vm_offset_t current;
+	int used, prev_used;
+
+	/*
+	 * Testing for interrupted kernel mode isn't strictly
+	 * needed. It optimizes the execution, since interrupts from
+	 * usermode will have only the trap frame on the stack.
+	 */
+	if (TRAPF_USERMODE(frame))
+		return;
+
+	stack_top = td->td_kstack + td->td_kstack_pages * PAGE_SIZE;
+	current = (vm_offset_t)(uintptr_t)&stack_top;
+
+	/*
+	 * Try to detect if interrupt is using kernel thread stack.
+	 * Hardware could use a dedicated stack for interrupt handling.
+	 */
+	if (stack_top <= current || current < td->td_kstack)
+		return;
+
+	used = stack_top - current;
+	for (;;) {
+		prev_used = max_kstack_used;
+		if (prev_used >= used)
+			break;
+		if (atomic_cmpset_int(&max_kstack_used, prev_used, used))
+			break;
+	}
+}
+#endif /* KSTACK_USAGE_PROF */
 
 #ifndef NO_SWAPPING
 /*
@@ -504,7 +551,7 @@ vm_thread_swapout(struct thread *td)
 	pages = td->td_kstack_pages;
 	ksobj = td->td_kstack_obj;
 	pmap_qremove(td->td_kstack, pages);
-	VM_OBJECT_LOCK(ksobj);
+	VM_OBJECT_WLOCK(ksobj);
 	for (i = 0; i < pages; i++) {
 		m = vm_page_lookup(ksobj, i);
 		if (m == NULL)
@@ -514,7 +561,7 @@ vm_thread_swapout(struct thread *td)
 		vm_page_unwire(m, 0);
 		vm_page_unlock(m);
 	}
-	VM_OBJECT_UNLOCK(ksobj);
+	VM_OBJECT_WUNLOCK(ksobj);
 }
 
 /*
@@ -529,19 +576,17 @@ vm_thread_swapin(struct thread *td)
 
 	pages = td->td_kstack_pages;
 	ksobj = td->td_kstack_obj;
-	VM_OBJECT_LOCK(ksobj);
+	VM_OBJECT_WLOCK(ksobj);
 	for (i = 0; i < pages; i++)
-		ma[i] = vm_page_grab(ksobj, i, VM_ALLOC_NORMAL | VM_ALLOC_RETRY |
+		ma[i] = vm_page_grab(ksobj, i, VM_ALLOC_NORMAL |
 		    VM_ALLOC_WIRED);
 	for (i = 0; i < pages; i++) {
 		if (ma[i]->valid != VM_PAGE_BITS_ALL) {
-			KASSERT(ma[i]->oflags & VPO_BUSY,
-			    ("lost busy 1"));
+			vm_page_assert_xbusied(ma[i]);
 			vm_object_pip_add(ksobj, 1);
 			for (j = i + 1; j < pages; j++) {
-				KASSERT(ma[j]->valid == VM_PAGE_BITS_ALL ||
-				    (ma[j]->oflags & VPO_BUSY),
-				    ("lost busy 2"));
+				if (ma[j]->valid != VM_PAGE_BITS_ALL)
+					vm_page_assert_xbusied(ma[j]);
 				if (ma[j]->valid == VM_PAGE_BITS_ALL)
 					break;
 			}
@@ -552,11 +597,11 @@ vm_thread_swapin(struct thread *td)
 			vm_object_pip_wakeup(ksobj);
 			for (k = i; k < j; k++)
 				ma[k] = vm_page_lookup(ksobj, k);
-			vm_page_wakeup(ma[i]);
-		} else if (ma[i]->oflags & VPO_BUSY)
-			vm_page_wakeup(ma[i]);
+			vm_page_xunbusy(ma[i]);
+		} else if (vm_page_xbusied(ma[i]))
+			vm_page_xunbusy(ma[i]);
 	}
-	VM_OBJECT_UNLOCK(ksobj);
+	VM_OBJECT_WUNLOCK(ksobj);
 	pmap_qenter(td->td_kstack, ma, pages);
 	cpu_thread_swapin(td);
 }
@@ -688,13 +733,9 @@ faultin(p)
  * This swapin algorithm attempts to swap-in processes only if there
  * is enough space for them.  Of course, if a process waits for a long
  * time, it will be swapped in anyway.
- *
- * Giant is held on entry.
  */
-/* ARGSUSED*/
-static void
-scheduler(dummy)
-	void *dummy;
+void
+swapper(void)
 {
 	struct proc *p;
 	struct thread *td;
@@ -703,9 +744,6 @@ scheduler(dummy)
 	int swtime;
 	int ppri;
 	int pri;
-
-	mtx_assert(&Giant, MA_OWNED | MA_NOTRECURSED);
-	mtx_unlock(&Giant);
 
 loop:
 	if (vm_page_count_min()) {
@@ -757,7 +795,7 @@ loop:
 	 * Nothing to do, back to sleep.
 	 */
 	if ((p = pp) == NULL) {
-		tsleep(&proc0, PVM, "sched", MAXSLP * hz / 2);
+		tsleep(&proc0, PVM, "swapin", MAXSLP * hz / 2);
 		goto loop;
 	}
 	PROC_LOCK(p);

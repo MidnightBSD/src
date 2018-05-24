@@ -1,6 +1,8 @@
 /* $MidnightBSD$ */
-/*-
- * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+/*
+ * Copyright (c) 2013 EMC Corp.
+ * Copyright (c) 2011 Jeffrey Roberson <jeff@freebsd.org>
+ * Copyright (c) 2008 Mayur Shardul <mayur.shardul@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,11 +13,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -24,16 +26,25 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/vm/redzone.h 155086 2006-01-31 11:09:21Z pjd $
+ * $FreeBSD: stable/10/sys/vm/vm_radix.h 266591 2014-05-23 17:47:49Z alc $
  */
 
-#ifndef	_VM_REDZONE_H_
-#define	_VM_REDZONE_H_
+#ifndef _VM_RADIX_H_
+#define _VM_RADIX_H_
 
-u_long redzone_get_size(caddr_t naddr);
-u_long redzone_size_ntor(u_long nsize);
-void *redzone_addr_ntor(caddr_t naddr);
-void *redzone_setup(caddr_t raddr, u_long nsize);
-void redzone_check(caddr_t naddr);
+#include <vm/_vm_radix.h>
 
-#endif	/* _VM_REDZONE_H_ */
+#ifdef _KERNEL
+
+void		vm_radix_init(void);
+int		vm_radix_insert(struct vm_radix *rtree, vm_page_t page);
+boolean_t	vm_radix_is_singleton(struct vm_radix *rtree);
+vm_page_t	vm_radix_lookup(struct vm_radix *rtree, vm_pindex_t index);
+vm_page_t	vm_radix_lookup_ge(struct vm_radix *rtree, vm_pindex_t index);
+vm_page_t	vm_radix_lookup_le(struct vm_radix *rtree, vm_pindex_t index);
+void		vm_radix_reclaim_allnodes(struct vm_radix *rtree);
+void		vm_radix_remove(struct vm_radix *rtree, vm_pindex_t index);
+vm_page_t	vm_radix_replace(struct vm_radix *rtree, vm_page_t newpage);
+
+#endif /* _KERNEL */
+#endif /* !_VM_RADIX_H_ */

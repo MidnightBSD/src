@@ -1,6 +1,8 @@
 /* $MidnightBSD$ */
-/*-
- * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+/*
+ * Copyright (c) 2013 EMC Corp.
+ * Copyright (c) 2011 Jeffrey Roberson <jeff@freebsd.org>
+ * Copyright (c) 2008 Mayur Shardul <mayur.shardul@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,11 +13,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -24,16 +26,31 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/vm/redzone.h 155086 2006-01-31 11:09:21Z pjd $
+ * $FreeBSD: stable/10/sys/vm/_vm_radix.h 254141 2013-08-09 11:28:55Z attilio $
  */
 
-#ifndef	_VM_REDZONE_H_
-#define	_VM_REDZONE_H_
+#ifndef __VM_RADIX_H_
+#define __VM_RADIX_H_
 
-u_long redzone_get_size(caddr_t naddr);
-u_long redzone_size_ntor(u_long nsize);
-void *redzone_addr_ntor(caddr_t naddr);
-void *redzone_setup(caddr_t raddr, u_long nsize);
-void redzone_check(caddr_t naddr);
+/*
+ * Radix tree root.
+ */
+struct vm_radix {
+	uintptr_t	rt_root;
+	uint8_t		rt_flags;
+};
 
-#endif	/* _VM_REDZONE_H_ */
+#define	RT_INSERT_INPROG	0x01
+#define	RT_TRIE_MODIFIED	0x02
+
+#ifdef _KERNEL
+
+static __inline boolean_t
+vm_radix_is_empty(struct vm_radix *rtree)
+{
+
+	return (rtree->rt_root == 0);
+}
+
+#endif /* _KERNEL */
+#endif /* !__VM_RADIX_H_ */

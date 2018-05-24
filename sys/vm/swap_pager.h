@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 University of Utah.
  * Copyright (c) 1991 The Regents of the University of California.
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)swap_pager.h	7.1 (Berkeley) 12/5/90
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/vm/swap_pager.h 248514 2013-03-19 14:39:27Z kib $
  */
 
 #ifndef	_VM_SWAP_PAGER_H_
@@ -68,6 +69,7 @@ struct swdevt {
 	sw_close_t		*sw_close;
 };
 
+#define	SW_UNMAPPED	0x01
 #define	SW_CLOSING	0x04
 
 #ifdef _KERNEL

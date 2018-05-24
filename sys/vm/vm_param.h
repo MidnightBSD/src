@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -57,7 +58,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/vm/vm_param.h 254168 2013-08-09 23:47:43Z zont $
  */
 
 /*
@@ -82,24 +83,9 @@
 #define	VM_V_CACHE_MIN		7	/* cnt.v_cache_min */
 #define	VM_V_CACHE_MAX		8	/* cnt.v_cache_max */
 #define VM_V_PAGEOUT_FREE_MIN	9	/* cnt.v_pageout_free_min */
-#define	VM_PAGEOUT_ALGORITHM	10	/* pageout algorithm */
+#define	VM_OBSOLETE_10		10	/* pageout algorithm */
 #define VM_SWAPPING_ENABLED	11	/* swapping enabled */
 #define	VM_MAXID		12	/* number of valid vm ids */
-
-#define CTL_VM_NAMES { \
-	{ 0, 0 }, \
-	{ "vmtotal", CTLTYPE_STRUCT }, \
-	{ "loadavg", CTLTYPE_STRUCT }, \
-	{ "v_free_min", CTLTYPE_UINT }, \
-	{ "v_free_target", CTLTYPE_UINT }, \
-	{ "v_free_reserved", CTLTYPE_UINT }, \
-	{ "v_inactive_target", CTLTYPE_UINT }, \
-	{ "v_cache_min", CTLTYPE_UINT }, \
-	{ "v_cache_max", CTLTYPE_UINT }, \
-	{ "v_pageout_free_min", CTLTYPE_UINT}, \
-	{ "pageout_algorithm", CTLTYPE_INT}, \
-	{ "swap_enabled", CTLTYPE_INT},\
-}
 
 /*
  * Structure for swap device statistics

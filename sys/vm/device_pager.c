@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 University of Utah.
  * Copyright (c) 1991, 1993
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/vm/device_pager.c 320439 2017-06-28 06:13:58Z alc $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,6 +45,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/proc.h>
 #include <sys/mutex.h>
 #include <sys/mman.h>
+#include <sys/rwlock.h>
 #include <sys/sx.h>
 
 #include <vm/vm.h>
@@ -51,6 +53,7 @@ __MBSDID("$MidnightBSD$");
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
+#include <vm/vm_phys.h>
 #include <vm/uma.h>
 
 static void dev_pager_init(void);
@@ -58,10 +61,8 @@ static vm_object_t dev_pager_alloc(void *, vm_ooffset_t, vm_prot_t,
     vm_ooffset_t, struct ucred *);
 static void dev_pager_dealloc(vm_object_t);
 static int dev_pager_getpages(vm_object_t, vm_page_t *, int, int);
-static void dev_pager_putpages(vm_object_t, vm_page_t *, int, 
-		boolean_t, int *);
-static boolean_t dev_pager_haspage(vm_object_t, vm_pindex_t, int *,
-		int *);
+static void dev_pager_putpages(vm_object_t, vm_page_t *, int, int, int *);
+static boolean_t dev_pager_haspage(vm_object_t, vm_pindex_t, int *, int *);
 static void dev_pager_free_page(vm_object_t object, vm_page_t m);
 
 /* list of device pager objects */
@@ -99,8 +100,9 @@ static struct cdev_pager_ops old_dev_pager_ops = {
 };
 
 static void
-dev_pager_init()
+dev_pager_init(void)
 {
+
 	TAILQ_INIT(&dev_pager_object_list);
 	mtx_init(&dev_pager_mtx, "dev_pager list", NULL, MTX_DEF);
 }
@@ -157,6 +159,7 @@ cdev_pager_allocate(void *handle, enum obj_type tp, struct cdev_pager_ops *ops,
 		object1->pg_color = color;
 		object1->handle = handle;
 		object1->un_pager.devp.ops = ops;
+		object1->un_pager.devp.dev = handle;
 		TAILQ_INIT(&object1->un_pager.devp.devp_pglist);
 		mtx_lock(&dev_pager_mtx);
 		object = vm_pager_object_lookup(&dev_pager_object_list, handle);
@@ -204,7 +207,7 @@ void
 cdev_pager_free_page(vm_object_t object, vm_page_t m)
 {
 
-	VM_OBJECT_LOCK_ASSERT(object, MA_OWNED);
+	VM_OBJECT_ASSERT_WLOCKED(object);
 	if (object->type == OBJT_MGTDEVICE) {
 		KASSERT((m->oflags & VPO_UNMANAGED) == 0, ("unmanaged %p", m));
 		pmap_remove_all(m);
@@ -219,27 +222,26 @@ static void
 dev_pager_free_page(vm_object_t object, vm_page_t m)
 {
 
-	VM_OBJECT_LOCK_ASSERT(object, MA_OWNED);
+	VM_OBJECT_ASSERT_WLOCKED(object);
 	KASSERT((object->type == OBJT_DEVICE &&
 	    (m->oflags & VPO_UNMANAGED) != 0),
 	    ("Managed device or page obj %p m %p", object, m));
-	TAILQ_REMOVE(&object->un_pager.devp.devp_pglist, m, pageq);
+	TAILQ_REMOVE(&object->un_pager.devp.devp_pglist, m, plinks.q);
 	vm_page_putfake(m);
 }
 
 static void
-dev_pager_dealloc(object)
-	vm_object_t object;
+dev_pager_dealloc(vm_object_t object)
 {
 	vm_page_t m;
 
-	VM_OBJECT_UNLOCK(object);
-	object->un_pager.devp.ops->cdev_pg_dtor(object->handle);
+	VM_OBJECT_WUNLOCK(object);
+	object->un_pager.devp.ops->cdev_pg_dtor(object->un_pager.devp.dev);
 
 	mtx_lock(&dev_pager_mtx);
 	TAILQ_REMOVE(&dev_pager_object_list, object, pager_object_list);
 	mtx_unlock(&dev_pager_mtx);
-	VM_OBJECT_LOCK(object);
+	VM_OBJECT_WLOCK(object);
 
 	if (object->type == OBJT_DEVICE) {
 		/*
@@ -249,6 +251,8 @@ dev_pager_dealloc(object)
 		    != NULL)
 			dev_pager_free_page(object, m);
 	}
+	object->handle = NULL;
+	object->type = OBJT_DEAD;
 }
 
 static int
@@ -256,11 +260,11 @@ dev_pager_getpages(vm_object_t object, vm_page_t *ma, int count, int reqpage)
 {
 	int error, i;
 
-	VM_OBJECT_LOCK_ASSERT(object, MA_OWNED);
+	VM_OBJECT_ASSERT_WLOCKED(object);
 	error = object->un_pager.devp.ops->cdev_pg_fault(object,
 	    IDX_TO_OFF(ma[reqpage]->pindex), PROT_READ, &ma[reqpage]);
 
-	VM_OBJECT_LOCK_ASSERT(object, MA_OWNED);
+	VM_OBJECT_ASSERT_WLOCKED(object);
 
 	for (i = 0; i < count; i++) {
 		if (i != reqpage) {
@@ -278,7 +282,7 @@ dev_pager_getpages(vm_object_t object, vm_page_t *ma, int count, int reqpage)
 		    ("Wrong page type %p %p", ma[reqpage], object));
 		if (object->type == OBJT_DEVICE) {
 			TAILQ_INSERT_TAIL(&object->un_pager.devp.devp_pglist,
-			    ma[reqpage], pageq);
+			    ma[reqpage], plinks.q);
 		}
 	}
 
@@ -289,25 +293,23 @@ static int
 old_dev_pager_fault(vm_object_t object, vm_ooffset_t offset, int prot,
     vm_page_t *mres)
 {
-	vm_pindex_t pidx;
 	vm_paddr_t paddr;
 	vm_page_t m_paddr, page;
 	struct cdev *dev;
 	struct cdevsw *csw;
 	struct file *fpop;
 	struct thread *td;
-	vm_memattr_t memattr;
+	vm_memattr_t memattr, memattr1;
 	int ref, ret;
 
-	pidx = OFF_TO_IDX(offset);
 	memattr = object->memattr;
 
-	VM_OBJECT_UNLOCK(object);
+	VM_OBJECT_WUNLOCK(object);
 
 	dev = object->handle;
 	csw = dev_refthread(dev, &ref);
 	if (csw == NULL) {
-		VM_OBJECT_LOCK(object);
+		VM_OBJECT_WLOCK(object);
 		return (VM_PAGER_FAIL);
 	}
 	td = curthread;
@@ -319,16 +321,24 @@ old_dev_pager_fault(vm_object_t object, vm_ooffset_t offset, int prot,
 	if (ret != 0) {
 		printf(
 	    "WARNING: dev_pager_getpage: map function returns error %d", ret);
-		VM_OBJECT_LOCK(object);
+		VM_OBJECT_WLOCK(object);
 		return (VM_PAGER_FAIL);
 	}
 
 	/* If "paddr" is a real page, perform a sanity check on "memattr". */
 	if ((m_paddr = vm_phys_paddr_to_vm_page(paddr)) != NULL &&
-	    pmap_page_get_memattr(m_paddr) != memattr) {
-		memattr = pmap_page_get_memattr(m_paddr);
-		printf(
-	    "WARNING: A device driver has set \"memattr\" inconsistently.\n");
+	    (memattr1 = pmap_page_get_memattr(m_paddr)) != memattr) {
+		/*
+		 * For the /dev/mem d_mmap routine to return the
+		 * correct memattr, pmap_page_get_memattr() needs to
+		 * be called, which we do there.
+		 */
+		if ((csw->d_flags & D_MEM) == 0) {
+			printf("WARNING: Device driver %s has set "
+			    "\"memattr\" inconsistently (drv %u pmap %u).\n",
+			    csw->d_name, memattr, memattr1);
+		}
+		memattr = memattr1;
 	}
 	if (((*mres)->flags & PG_FICTITIOUS) != 0) {
 		/*
@@ -336,7 +346,7 @@ old_dev_pager_fault(vm_object_t object, vm_ooffset_t offset, int prot,
 		 * the new physical address.
 		 */
 		page = *mres;
-		VM_OBJECT_LOCK(object);
+		VM_OBJECT_WLOCK(object);
 		vm_page_updatefake(page, paddr, memattr);
 	} else {
 		/*
@@ -344,36 +354,31 @@ old_dev_pager_fault(vm_object_t object, vm_ooffset_t offset, int prot,
 		 * free up the all of the original pages.
 		 */
 		page = vm_page_getfake(paddr, memattr);
-		VM_OBJECT_LOCK(object);
+		VM_OBJECT_WLOCK(object);
+		if (vm_page_replace(page, object, (*mres)->pindex) != *mres)
+			panic("old_dev_pager_fault: invalid page replacement");
 		vm_page_lock(*mres);
 		vm_page_free(*mres);
 		vm_page_unlock(*mres);
 		*mres = page;
-		vm_page_insert(page, object, pidx);
 	}
 	page->valid = VM_PAGE_BITS_ALL;
 	return (VM_PAGER_OK);
 }
 
 static void
-dev_pager_putpages(object, m, count, sync, rtvals)
-	vm_object_t object;
-	vm_page_t *m;
-	int count;
-	boolean_t sync;
-	int *rtvals;
+dev_pager_putpages(vm_object_t object, vm_page_t *m, int count, int flags,
+    int *rtvals)
 {
 
 	panic("dev_pager_putpage called");
 }
 
 static boolean_t
-dev_pager_haspage(object, pindex, before, after)
-	vm_object_t object;
-	vm_pindex_t pindex;
-	int *before;
-	int *after;
+dev_pager_haspage(vm_object_t object, vm_pindex_t pindex, int *before,
+    int *after)
 {
+
 	if (before != NULL)
 		*before = 0;
 	if (after != NULL)
@@ -408,6 +413,7 @@ old_dev_pager_ctor(void *handle, vm_ooffset_t size, vm_prot_t prot,
 	 * XXX assumes VM_PROT_* == PROT_*
 	 */
 	npages = OFF_TO_IDX(size);
+	paddr = 0; /* Make paddr initialized for the case of size == 0. */
 	for (off = foff; npages--; off += PAGE_SIZE) {
 		if (csw->d_mmap(dev, off, &paddr, (int)prot, &dummy) != 0) {
 			dev_relthread(dev, ref);

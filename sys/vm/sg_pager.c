@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2009 Advanced Computing Technologies LLC
+ * Copyright (c) 2009 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/vm/sg_pager.c 284100 2015-06-06 20:37:40Z jhb $");
 
 /*
  * This pager manages OBJT_SG objects.  These objects are backed by
@@ -36,12 +37,14 @@ __MBSDID("$MidnightBSD$");
 #include <sys/param.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include <sys/rwlock.h>
 #include <sys/sglist.h>
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
+#include <vm/vm_phys.h>
 #include <vm/uma.h>
 
 static vm_object_t sg_pager_alloc(void *, vm_ooffset_t, vm_prot_t,
@@ -122,12 +125,14 @@ sg_pager_dealloc(vm_object_t object)
 	 * Free up our fake pages.
 	 */
 	while ((m = TAILQ_FIRST(&object->un_pager.sgp.sgp_pglist)) != 0) {
-		TAILQ_REMOVE(&object->un_pager.sgp.sgp_pglist, m, pageq);
+		TAILQ_REMOVE(&object->un_pager.sgp.sgp_pglist, m, plinks.q);
 		vm_page_putfake(m);
 	}
 	
 	sg = object->handle;
 	sglist_free(sg);
+	object->handle = NULL;
+	object->type = OBJT_DEAD;
 }
 
 static int
@@ -141,10 +146,10 @@ sg_pager_getpages(vm_object_t object, vm_page_t *m, int count, int reqpage)
 	size_t space;
 	int i;
 
-	VM_OBJECT_LOCK_ASSERT(object, MA_OWNED);
+	VM_OBJECT_ASSERT_WLOCKED(object);
 	sg = object->handle;
 	memattr = object->memattr;
-	VM_OBJECT_UNLOCK(object);
+	VM_OBJECT_WUNLOCK(object);
 	offset = m[reqpage]->pindex;
 
 	/*
@@ -179,16 +184,18 @@ sg_pager_getpages(vm_object_t object, vm_page_t *m, int count, int reqpage)
 
 	/* Construct a new fake page. */
 	page = vm_page_getfake(paddr, memattr);
-	VM_OBJECT_LOCK(object);
-	TAILQ_INSERT_TAIL(&object->un_pager.sgp.sgp_pglist, page, pageq);
+	VM_OBJECT_WLOCK(object);
+	TAILQ_INSERT_TAIL(&object->un_pager.sgp.sgp_pglist, page, plinks.q);
 
 	/* Free the original pages and insert this fake page into the object. */
 	for (i = 0; i < count; i++) {
+		if (i == reqpage &&
+		    vm_page_replace(page, object, offset) != m[i])
+			panic("sg_pager_getpages: invalid place replacement");
 		vm_page_lock(m[i]);
 		vm_page_free(m[i]);
 		vm_page_unlock(m[i]);
 	}
-	vm_page_insert(page, object, offset);
 	m[reqpage] = page;
 	page->valid = VM_PAGE_BITS_ALL;
 

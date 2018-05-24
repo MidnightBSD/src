@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995, David Greenman
  * All rights reserved.
@@ -38,14 +39,14 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/vm/default_pager.c 310363 2016-12-21 11:32:08Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/lock.h>
 #include <sys/proc.h>
 #include <sys/resourcevar.h>
-#include <sys/mutex.h>
+#include <sys/rwlock.h>
 
 #include <vm/vm.h>
 #include <vm/vm_object.h>
@@ -63,6 +64,16 @@ static boolean_t default_pager_haspage(vm_object_t, vm_pindex_t, int *,
 		int *);
 /*
  * pagerops for OBJT_DEFAULT - "default pager".
+ *
+ * This pager handles anonymous (no handle) swap-backed memory, just
+ * like the swap pager.  It allows several optimizations based on the
+ * fact that no pages of a default object can be swapped out.  The
+ * most important optimization is in vm_fault(), where the pager is
+ * never asked for a non-resident page.  Instead, a freshly allocated
+ * zeroed page is used.
+ *
+ * On the first request to page out a page from a default object, the
+ * object is converted to swap pager type.
  */
 struct pagerops defaultpagerops = {
 	.pgo_alloc =	default_pager_alloc,
@@ -91,10 +102,10 @@ default_pager_alloc(void *handle, vm_ooffset_t size, vm_prot_t prot,
 	object = vm_object_allocate(OBJT_DEFAULT,
 	    OFF_TO_IDX(round_page(offset + size)));
 	if (cred != NULL) {
-		VM_OBJECT_LOCK(object);
+		VM_OBJECT_WLOCK(object);
 		object->cred = cred;
 		object->charge = size;
-		VM_OBJECT_UNLOCK(object);
+		VM_OBJECT_WUNLOCK(object);
 	}
 	return (object);
 }
@@ -113,6 +124,7 @@ default_pager_dealloc(object)
 	/*
 	 * OBJT_DEFAULT objects have no special resources allocated to them.
 	 */
+	object->type = OBJT_DEAD;
 }
 
 /*
@@ -137,14 +149,11 @@ default_pager_getpages(object, m, count, reqpage)
  * cache to the free list.
  */
 static void
-default_pager_putpages(object, m, c, sync, rtvals)
-	vm_object_t object;
-	vm_page_t *m;
-	int c;
-	boolean_t sync;
-	int *rtvals;
+default_pager_putpages(vm_object_t object, vm_page_t *m, int count,
+    int flags, int *rtvals)
 {
-	swappagerops.pgo_putpages(object, m, c, sync, rtvals);
+
+	swappagerops.pgo_putpages(object, m, count, flags, rtvals);
 }
 
 /*

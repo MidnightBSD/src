@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 University of Utah.
  * Copyright (c) 1991, 1993
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vnode_pager.h	8.1 (Berkeley) 6/11/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/vm/vnode_pager.h 232071 2012-02-23 21:07:16Z kib $
  */
 
 #ifndef	_VNODE_PAGER_

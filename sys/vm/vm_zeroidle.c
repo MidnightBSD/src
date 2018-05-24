@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 John Dyson
  * Copyright (c) 2001 Matt Dillon
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/vm/vm_zeroidle.c 254065 2013-08-07 16:36:38Z kib $");
 
 #include <opt_sched.h>
 
@@ -50,6 +51,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/unistd.h>
 
 #include <vm/vm.h>
+#include <vm/vm_param.h>
 #include <vm/vm_page.h>
 #include <vm/vm_phys.h>
 

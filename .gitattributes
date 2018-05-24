@@ -62129,6 +62129,7 @@ sys/ufs/ufs/ufs_quota.c -text
 sys/ufs/ufs/ufs_vfsops.c -text
 sys/ufs/ufs/ufs_vnops.c -text
 sys/ufs/ufs/ufsmount.h -text
+sys/vm/_vm_radix.h svneol=native#text/plain
 sys/vm/default_pager.c -text
 sys/vm/device_pager.c -text
 sys/vm/memguard.c -text
@@ -62168,6 +62169,8 @@ sys/vm/vm_pager.h -text
 sys/vm/vm_param.h -text
 sys/vm/vm_phys.c -text
 sys/vm/vm_phys.h -text
+sys/vm/vm_radix.c svneol=native#text/plain
+sys/vm/vm_radix.h svneol=native#text/plain
 sys/vm/vm_reserv.c -text
 sys/vm/vm_reserv.h -text
 sys/vm/vm_unix.c -text
@@ -62176,6 +62179,7 @@ sys/vm/vnode_pager.c -text
 sys/vm/vnode_pager.h -text
 sys/x86/acpica/OsdEnvironment.c -text
 sys/x86/acpica/acpi_apm.c -text
+sys/x86/acpica/acpi_wakeup.c svneol=native#text/plain
 sys/x86/acpica/madt.c -text
 sys/x86/acpica/srat.c -text
 sys/x86/bios/smbios.c -text
