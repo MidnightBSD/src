@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/9/sys/boot/ficl/Makefile 260096 2013-12-30 20:15:46Z dim $
 #
 .PATH: ${.CURDIR}/${MACHINE_CPUARCH:S/amd64/i386/}
 BASE_SRCS=	dict.c ficl.c fileaccess.c float.c loader.c math64.c \
@@ -12,8 +13,8 @@ CFLAGS+=	-march=i386
 CFLAGS.gcc+=	-mpreferred-stack-boundary=2
 CFLAGS+=	-mno-mmx -mno-3dnow -mno-sse -mno-sse2 -mno-sse3 -msoft-float
 .endif
-.if ${MACHINE_CPUARCH} == "amd64"
-CFLAGS+=	-mno-red-zone
+.if ${MACHINE_CPUARCH} == "arm"
+CFLAGS+=	-msoft-float
 .endif
 .if HAVE_PNP
 CFLAGS+=	-DHAVE_PNP
