@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2009 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/teken/stress/teken_stress.c 226100 2011-10-07 12:42:03Z ed $
  */
 
 #include <sys/cdefs.h>
@@ -99,24 +100,14 @@ int
 main(int argc __unused, char *argv[] __unused)
 {
 	teken_t t;
-	int rnd;
 	unsigned int i, iteration = 0;
 	unsigned char buf[2048];
 
-	rnd = open("/dev/urandom", O_RDONLY);
-	if (rnd < 0) {
-		perror("/dev/urandom");
-		exit(1);
-	}
 
 	teken_init(&t, &tf, NULL);
 
 	for (;;) {
-		if (read(rnd, buf, sizeof buf) != sizeof buf) {
-			perror("read");
-			exit(1);
-		}
-
+		arc4random_buf(buf, sizeof buf);
 		for (i = 0; i < sizeof buf; i++) {
 			if (buf[i] >= 0x80)
 				buf[i] =

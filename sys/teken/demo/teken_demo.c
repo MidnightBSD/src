@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2009 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/teken/demo/teken_demo.c 262861 2014-03-06 18:30:56Z jhb $
  */
 
 #include <sys/ioctl.h>
@@ -86,9 +87,10 @@ printchar(const teken_pos_t *p)
 	assert(p->tp_row < NROWS);
 	assert(p->tp_col < NCOLS);
 
-	getyx(stdscr, y, x);
-
 	px = &buffer[p->tp_col][p->tp_row];
+	/* No need to print right hand side of CJK character manually. */
+	if (px->a.ta_format & TF_CJK_RIGHT)
+		return;
 
 	/* Convert Unicode to UTF-8. */
 	if (px->c < 0x80) {
@@ -118,8 +120,8 @@ printchar(const teken_pos_t *p)
 
 	bkgdset(attr | COLOR_PAIR(teken_256to8(px->a.ta_fgcolor) +
 	      8 * teken_256to8(px->a.ta_bgcolor)));
+	getyx(stdscr, y, x);
 	mvaddstr(p->tp_row, p->tp_col, str);
-
 	move(y, x);
 }
 

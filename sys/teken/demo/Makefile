@@ -1,7 +1,8 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/teken/demo/Makefile 226341 2011-10-13 14:20:27Z ed $
 
 PROG=	teken_demo
-LDADD=	-lncurses -lteken -lutil
+LDADD=	-lncursesw -lteken -lutil
 MAN=
 
 WARNS?=	6
