@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Core definitions and data structures shareable across OS platforms.
  *
@@ -29,7 +30,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/xen/xenstore/xenstore_internal.h 214077 2010-10-19 20:53:30Z gibbs $
  */
 
 /* Initialize support for userspace access to the XenStore. */

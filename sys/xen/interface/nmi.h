@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  * nmi.h
  * 
@@ -26,6 +27,8 @@
 
 #ifndef __XEN_PUBLIC_NMI_H__
 #define __XEN_PUBLIC_NMI_H__
+
+#include "xen.h"
 
 /*
  * NMI reason codes:

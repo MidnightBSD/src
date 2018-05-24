@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Details of the "wire" protocol between Xen Store Daemon and client
  * library or guest kernel.
@@ -47,7 +48,9 @@ enum xsd_sockmsg_type
     XS_ERROR,
     XS_IS_DOMAIN_INTRODUCED,
     XS_RESUME,
-    XS_SET_TARGET
+    XS_SET_TARGET,
+    XS_RESTRICT,
+    XS_RESET_WATCHES
 };
 
 #define XS_WRITE_NONE "NONE"
@@ -60,6 +63,7 @@ struct xsd_errors
     int errnum;
     const char *errstring;
 };
+#ifdef EINVAL
 #define XSD_ERROR(x) { x, #x }
 /* LINTED: static unused */
 static struct xsd_errors xsd_errors[]
@@ -82,6 +86,7 @@ __attribute__((unused))
     XSD_ERROR(EAGAIN),
     XSD_ERROR(EISCONN)
 };
+#endif
 
 struct xsd_sockmsg
 {

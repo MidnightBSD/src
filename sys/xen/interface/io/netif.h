@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  * netif.h
  * 
@@ -41,7 +42,7 @@
 /*
  * This is the 'wire' format for packets:
  *  Request 1: netif_tx_request -- NETTXF_* (any flags)
- * [Request 2: netif_tx_extra]  (only if request 1 has NETTXF_extra_info)
+ * [Request 2: netif_tx_extra] (only if request 1 has NETTXF_extra_info)
  * [Request 3: netif_tx_extra] (only if request 2 has XEN_NETIF_EXTRA_FLAG_MORE)
  *  Request 4: netif_tx_request -- NETTXF_more_data
  *  Request 5: netif_tx_request -- NETTXF_more_data
@@ -172,6 +173,10 @@ typedef struct netif_rx_request netif_rx_request_t;
 /* Packet to be followed by extra descriptor(s). */
 #define _NETRXF_extra_info     (3)
 #define  NETRXF_extra_info     (1U<<_NETRXF_extra_info)
+
+/* GSO Prefix descriptor. */
+#define _NETRXF_gso_prefix     (4)
+#define  NETRXF_gso_prefix     (1U<<_NETRXF_gso_prefix)
 
 struct netif_rx_response {
     uint16_t id;

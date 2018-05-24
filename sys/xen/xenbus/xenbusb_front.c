@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  * Talks to Xen Store to figure out what devices we have.
  *
@@ -36,7 +37,7 @@
  * Xen split devices.
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/xen/xenbus/xenbusb_front.c 255040 2013-08-29 19:52:18Z gibbs $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -51,9 +52,9 @@ __MBSDID("$MidnightBSD$");
 #include <sys/sx.h>
 #include <sys/taskqueue.h>
 
-#include <machine/xen/xen-os.h>
 #include <machine/stdarg.h>
 
+#include <xen/xen-os.h>
 #include <xen/gnttab.h>
 #include <xen/xenbus/xenbusvar.h>
 #include <xen/xenbus/xenbusb.h>

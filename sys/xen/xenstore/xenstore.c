@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  * xenstore.c
  *
@@ -30,7 +31,7 @@
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/xen/xenstore/xenstore.c,v 1.2 2013/01/17 23:29:42 laffer1 Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/xen/xenstore/xenstore.c 315675 2017-03-21 09:27:24Z royger $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -49,15 +50,15 @@ __MBSDID("$MidnightBSD: src/sys/xen/xenstore/xenstore.c,v 1.2 2013/01/17 23:29:4
 #include <sys/uio.h>
 #include <sys/unistd.h>
 
-#include <machine/xen/xen-os.h>
 #include <machine/stdarg.h>
 
-#include <xen/evtchn.h>
+#include <xen/xen-os.h>
 #include <xen/gnttab.h>
 #include <xen/hypervisor.h>
 #include <xen/xen_intr.h>
 
 #include <xen/interface/hvm/params.h>
+#include <xen/hvm.h>
 
 #include <xen/xenstore/xenstorevar.h>
 #include <xen/xenstore/xenstore_internal.h>
@@ -243,8 +244,8 @@ struct xs_softc {
 	 */
 	int evtchn;
 
-	/** Interrupt number for our event channel. */
-	u_int irq;
+	/** Handle for XenStore interrupts. */
+	xen_intr_handle_t xen_intr_handle;
 
 	/**
 	 * Interrupt driven config hook allowing us to defer
@@ -504,11 +505,10 @@ xs_write_store(const void *tdata, unsigned len)
 		xen_store->req_prod += avail;
 
 		/*
-		 * notify_remote_via_evtchn implies mb(). The other side
-		 * will see the change to req_prod at the time of the
-		 * interrupt.
+		 * xen_intr_signal() implies mb(). The other side will see
+		 * the change to req_prod at the time of the interrupt.
 		 */
-		notify_remote_via_evtchn(xs.evtchn);
+		xen_intr_signal(xs.xen_intr_handle);
 	}
 
 	return (0);
@@ -596,11 +596,10 @@ xs_read_store(void *tdata, unsigned len)
 		xen_store->rsp_cons += avail;
 
 		/*
-		 * notify_remote_via_evtchn implies mb(). The producer
-		 * will see the updated consumer index when the event
-		 * is delivered.
+		 * xen_intr_signal() implies mb(). The producer will see
+		 * the updated consumer index when the event is delivered.
 		 */
-		notify_remote_via_evtchn(xs.evtchn);
+		xen_intr_signal(xs.xen_intr_handle);
 	}
 
 	return (0);
@@ -1067,11 +1066,11 @@ xs_init_comms(void)
 		xen_store->rsp_cons = xen_store->rsp_prod;
 	}
 
-	if (xs.irq)
-		unbind_from_irqhandler(xs.irq);
+	xen_intr_unbind(&xs.xen_intr_handle);
 
-	error = bind_caller_port_to_irqhandler(xs.evtchn, "xenstore",
-	    xs_intr, NULL, INTR_TYPE_NET, &xs.irq);
+	error = xen_intr_bind_local_port(xs.xs_dev, xs.evtchn,
+	    /*filter*/NULL, xs_intr, /*arg*/NULL, INTR_TYPE_NET|INTR_MPSAFE,
+	    &xs.xen_intr_handle);
 	if (error) {
 		log(LOG_WARNING, "XENSTORE request irq failed %i\n", error);
 		return (error);
@@ -1167,7 +1166,6 @@ xs_attach(device_t dev)
 	sx_init(&xs.suspend_mutex, "xenstore suspend");
 	mtx_init(&xs.registered_watches_lock, "watches", NULL, MTX_DEF);
 	mtx_init(&xs.watch_events_lock, "watch events", NULL, MTX_DEF);
-	xs.irq = 0;
 
 	/* Initialize the shared memory rings to talk to xenstored */
 	error = xs_init_comms();
@@ -1660,3 +1658,20 @@ xs_unregister_watch(struct xs_watch *watch)
 		sx_xunlock(&xs.xenwatch_mutex);
 	}
 }
+
+void
+xs_lock(void)
+{
+
+	sx_xlock(&xs.request_mutex);
+	return;
+}
+
+void
+xs_unlock(void)
+{
+
+	sx_xunlock(&xs.request_mutex);
+	return;
+}
+

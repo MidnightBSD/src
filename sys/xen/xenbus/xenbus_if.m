@@ -23,13 +23,14 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+# $FreeBSD: stable/10/sys/xen/xenbus/xenbus_if.m 255040 2013-08-29 19:52:18Z gibbs $
 # $MidnightBSD$
-#
 
 #include <sys/bus.h>
 
 #include <machine/atomic.h>
-#include <machine/xen/xen-os.h>
+
+#include <xen/xen-os.h>
 #include <xen/evtchn.h>
 #include <xen/xenbus/xenbusvar.h>
 

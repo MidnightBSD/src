@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  * Copyright (C) 2010 Spectra Logic Corporation
  * Copyright (C) 2008 Doug Rabson
@@ -52,7 +53,7 @@
  *                        xnb1
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/xen/xenbus/xenbusb.c 315676 2017-03-21 09:38:59Z royger $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -404,6 +405,31 @@ xenbusb_device_sysctl_init(device_t dev)
 }
 
 /**
+ * \brief Decrement the number of XenBus child devices in the
+ *        connecting state by one and release the xbs_attch_ch
+ *        interrupt configuration hook if the connecting count
+ *        drops to zero.
+ *
+ * \param xbs  XenBus Bus device softc of the owner of the bus to enumerate.
+ */
+static void
+xenbusb_release_confighook(struct xenbusb_softc *xbs)
+{
+	mtx_lock(&xbs->xbs_lock);
+	KASSERT(xbs->xbs_connecting_children > 0,
+		("Connecting device count error\n"));
+	xbs->xbs_connecting_children--;
+	if (xbs->xbs_connecting_children == 0
+	 && (xbs->xbs_flags & XBS_ATTACH_CH_ACTIVE) != 0) {
+		xbs->xbs_flags &= ~XBS_ATTACH_CH_ACTIVE;
+		mtx_unlock(&xbs->xbs_lock);
+		config_intrhook_disestablish(&xbs->xbs_attach_ch);
+	} else {
+		mtx_unlock(&xbs->xbs_lock);
+	}
+}
+
+/**
  * \brief Verify the existance of attached device instances and perform
  *        probe/attach processing for newly arrived devices.
  *
@@ -417,7 +443,7 @@ xenbusb_probe_children(device_t dev)
 {
 	device_t *kids;
 	struct xenbus_device_ivars *ivars;
-	int i, count;
+	int i, count, error;
 
 	if (device_get_children(dev, &kids, &count) == 0) {
 		for (i = 0; i < count; i++) {
@@ -430,7 +456,30 @@ xenbusb_probe_children(device_t dev)
 				continue;
 			}
 
-			if (device_probe_and_attach(kids[i])) {
+			error = device_probe_and_attach(kids[i]);
+			if (error == ENXIO) {
+				struct xenbusb_softc *xbs;
+
+				/*
+				 * We don't have a PV driver for this device.
+				 * However, an emulated device we do support
+				 * may share this backend.  Hide the node from
+				 * XenBus until the next rescan, but leave it's
+				 * state unchanged so we don't inadvertently
+				 * prevent attachment of any emulated device.
+				 */
+				xenbusb_delete_child(dev, kids[i]);
+
+				/*
+				 * Since the XenStore state of this device
+				 * still indicates a pending attach, manually
+				 * release it's hold on the boot process.
+				 */
+				xbs = device_get_softc(dev);
+				xenbusb_release_confighook(xbs);
+
+				continue;
+			} else if (error) {
 				/*
 				 * Transition device to the closed state
 				 * so the world knows that attachment will
@@ -513,7 +562,6 @@ xenbusb_devices_changed(struct xs_watch *watch, const char **vec,
 	struct xenbusb_softc *xbs;
 	device_t dev;
 	char *node;
-	char *bus;
 	char *type;
 	char *id;
 	char *p;
@@ -532,7 +580,6 @@ xenbusb_devices_changed(struct xs_watch *watch, const char **vec,
 	p = strchr(node, '/');
 	if (p == NULL)
 		goto out;
-	bus = node;
 	*p = 0;
 	type = p + 1;
 
@@ -577,31 +624,6 @@ out:
 static void
 xenbusb_nop_confighook_cb(void *arg __unused)
 {
-}
-
-/**
- * \brief Decrement the number of XenBus child devices in the
- *        connecting state by one and release the xbs_attch_ch
- *        interrupt configuration hook if the connecting count
- *        drops to zero.
- *
- * \param xbs  XenBus Bus device softc of the owner of the bus to enumerate.
- */
-static void
-xenbusb_release_confighook(struct xenbusb_softc *xbs)
-{
-	mtx_lock(&xbs->xbs_lock);
-	KASSERT(xbs->xbs_connecting_children > 0,
-		("Connecting device count error\n"));
-	xbs->xbs_connecting_children--;
-	if (xbs->xbs_connecting_children == 0
-	 && (xbs->xbs_flags & XBS_ATTACH_CH_ACTIVE) != 0) {
-		xbs->xbs_flags &= ~XBS_ATTACH_CH_ACTIVE;
-		mtx_unlock(&xbs->xbs_lock);
-		config_intrhook_disestablish(&xbs->xbs_attach_ch);
-	} else {
-		mtx_unlock(&xbs->xbs_lock);
-	}
 }
 
 /*--------------------------- Public Functions -------------------------------*/
@@ -769,6 +791,11 @@ xenbusb_resume(device_t dev)
 		for (i = 0; i < count; i++) {
 			if (device_get_state(kids[i]) == DS_NOTPRESENT)
 				continue;
+
+			if (xen_suspend_cancelled) {
+				DEVICE_RESUME(kids[i]);
+				continue;
+			}
 
 			ivars = device_get_ivars(kids[i]);
 

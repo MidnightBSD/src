@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * kbdif.h -- Xen virtual keyboard/mouse
  *

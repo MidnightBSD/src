@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  * xenstorevar.h
  *
@@ -28,7 +29,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/xen/xenstore/xenstorevar.h 315675 2017-03-21 09:27:24Z royger $
  */
 
 #ifndef _XEN_XENSTORE_XENSTOREVAR_H
@@ -41,8 +42,8 @@
 #include <sys/sbuf.h>
 
 #include <machine/stdarg.h>
-#include <machine/xen/xen-os.h>
 
+#include <xen/xen-os.h>
 #include <xen/interface/grant_table.h>
 #include <xen/interface/io/xenbus.h>
 #include <xen/interface/io/xs_wire.h>
@@ -338,4 +339,15 @@ void xs_unregister_watch(struct xs_watch *watch);
  */
 struct sbuf *xs_join(const char *, const char *);
 
+/**
+ * Lock the xenstore request mutex.
+ */
+void xs_lock(void);
+
+/**
+ * Unlock the xenstore request mutex.
+ */
+void xs_unlock(void);
+
 #endif /* _XEN_XENSTORE_XENSTOREVAR_H */
+

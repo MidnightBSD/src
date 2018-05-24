@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  * gnttab.c
  * 
@@ -11,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/xen/gnttab.c 255040 2013-08-29 19:52:18Z gibbs $");
 
 #include "opt_global.h"
 #include "opt_pmap.h"
@@ -26,7 +27,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/malloc.h>
 #include <sys/mman.h>
 
-#include <machine/xen/xen-os.h>
+#include <xen/xen-os.h>
 #include <xen/hypervisor.h>
 #include <machine/xen/synch_bitops.h>
 
@@ -108,7 +109,7 @@ do_free_callbacks(void)
 static inline void
 check_free_callbacks(void)
 {
-	if (unlikely(gnttab_free_callback_list != NULL))
+	if (__predict_false(gnttab_free_callback_list != NULL))
 		do_free_callbacks();
 }
 
@@ -136,7 +137,7 @@ gnttab_grant_foreign_access(domid_t domid, unsigned long frame, int readonly,
 
 	error = get_free_entries(1, &ref);
 
-	if (unlikely(error))
+	if (__predict_false(error))
 		return (error);
 
 	shared[ref].frame = frame;
@@ -248,7 +249,7 @@ gnttab_grant_foreign_transfer(domid_t domid, unsigned long pfn,
 	int error, ref;
 
 	error = get_free_entries(1, &ref);
-	if (unlikely(error))
+	if (__predict_false(error))
 		return (error);
 
 	gnttab_grant_foreign_transfer_ref(ref, domid, pfn);
@@ -341,7 +342,7 @@ gnttab_alloc_grant_references(uint16_t count, grant_ref_t *head)
 	int ref, error;
 
 	error = get_free_entries(count, &ref);
-	if (unlikely(error))
+	if (__predict_false(error))
 		return (error);
 
 	*head = ref;
@@ -360,7 +361,7 @@ gnttab_claim_grant_reference(grant_ref_t *private_head)
 {
 	grant_ref_t g = *private_head;
 
-	if (unlikely(g == GNTTAB_LIST_END))
+	if (__predict_false(g == GNTTAB_LIST_END))
 		return (g);
 	*private_head = gnttab_entry(g);
 	return (g);
@@ -527,8 +528,7 @@ gnttab_map(unsigned int start_idx, unsigned int end_idx)
 	if (shared == NULL) {
 		vm_offset_t area;
 
-		area = kmem_alloc_nofault(kernel_map,
-		    PAGE_SIZE * max_nr_grant_frames());
+		area = kva_alloc(PAGE_SIZE * max_nr_grant_frames());
 		KASSERT(area, ("can't allocate VM space for grant table"));
 		shared = (grant_entry_t *)area;
 	}
@@ -590,8 +590,7 @@ gnttab_map(unsigned int start_idx, unsigned int end_idx)
 	if (shared == NULL) {
 		vm_offset_t area;
 
-		area = kmem_alloc_nofault(kernel_map,
-		    PAGE_SIZE * max_nr_grant_frames());
+		area = kva_alloc(PAGE_SIZE * max_nr_grant_frames());
 		KASSERT(area, ("can't allocate VM space for grant table"));
 		shared = (grant_entry_t *)area;
 	}

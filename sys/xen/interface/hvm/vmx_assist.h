@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * vmx_assist.h: Context definitions for the VMXASSIST world switch.
  *

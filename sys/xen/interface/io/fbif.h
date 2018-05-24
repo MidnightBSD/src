@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * fbif.h -- Xen virtual frame buffer device
  *
