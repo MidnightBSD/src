@@ -37,7 +37,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $MidnightBSD: src/sys/dev/aic7xxx/aic7xxx.c,v 1.4 2009/03/15 14:24:21 laffer1 Exp $
+ * $MidnightBSD$
  * $Id: aic7xxx.c,v 1.5 2012-08-06 01:19:11 laffer1 Exp $
  */
 
@@ -73,7 +73,6 @@ char *ahc_chip_names[] =
 	"aic7892",
 	"aic7899"
 };
-static const u_int num_chip_names = NUM_ELEMENTS(ahc_chip_names);
 
 /*
  * Hardware error codes.
