@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Andrey V. Elsukov <ae@FreeBSD.org>
  * All rights reserved.

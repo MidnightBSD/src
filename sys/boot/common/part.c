@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Andrey V. Elsukov <ae@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/boot/common/part.c 272934 2014-10-11 06:22:57Z ae $");
 
 #include <stand.h>
 #include <sys/param.h>
@@ -53,6 +54,7 @@ static const uuid_t gpt_uuid_unused = GPT_ENT_TYPE_UNUSED;
 static const uuid_t gpt_uuid_ms_basic_data = GPT_ENT_TYPE_MS_BASIC_DATA;
 static const uuid_t gpt_uuid_freebsd_ufs = GPT_ENT_TYPE_FREEBSD_UFS;
 static const uuid_t gpt_uuid_efi = GPT_ENT_TYPE_EFI;
+static const uuid_t gpt_uuid_freebsd = GPT_ENT_TYPE_FREEBSD;
 static const uuid_t gpt_uuid_freebsd_boot = GPT_ENT_TYPE_FREEBSD_BOOT;
 static const uuid_t gpt_uuid_freebsd_nandfs = GPT_ENT_TYPE_FREEBSD_NANDFS;
 static const uuid_t gpt_uuid_freebsd_swap = GPT_ENT_TYPE_FREEBSD_SWAP;
@@ -139,6 +141,8 @@ gpt_parttype(uuid_t type)
 		return (PART_FREEBSD_VINUM);
 	else if (uuid_equal(&type, &gpt_uuid_freebsd_nandfs, NULL))
 		return (PART_FREEBSD_NANDFS);
+	else if (uuid_equal(&type, &gpt_uuid_freebsd, NULL))
+		return (PART_FREEBSD);
 	return (PART_UNKNOWN);
 }
 
@@ -181,7 +185,7 @@ gpt_checkhdr(struct gpt_hdr *hdr, uint64_t lba_self, uint64_t lba_last,
 	}
 	hdr->hdr_entries = le32toh(hdr->hdr_entries);
 	hdr->hdr_entsz = le32toh(hdr->hdr_entsz);
-	if (hdr->hdr_entries < 128 ||
+	if (hdr->hdr_entries == 0 ||
 	    hdr->hdr_entsz < sizeof(struct gpt_ent) ||
 	    sectorsize % hdr->hdr_entsz != 0) {
 		DEBUG("invalid entry size or number of entries");
@@ -203,14 +207,17 @@ gpt_checktbl(const struct gpt_hdr *hdr, u_char *tbl, size_t size,
 	int i, cnt;
 
 	cnt = size / hdr->hdr_entsz;
-	/* Check CRC only when buffer size is enough for table. */
-	if (hdr->hdr_entries <= cnt &&
-	    crc32(tbl, size) != hdr->hdr_crc_table) {
-		DEBUG("GPT table's CRC doesn't match");
-		return (-1);
+	if (hdr->hdr_entries <= cnt) {
+		cnt = hdr->hdr_entries;
+		/* Check CRC only when buffer size is enough for table. */
+		if (hdr->hdr_crc_table !=
+		    crc32(tbl, hdr->hdr_entries * hdr->hdr_entsz)) {
+			DEBUG("GPT table's CRC doesn't match");
+			return (-1);
+		}
 	}
-	ent = (struct gpt_ent *)tbl;
-	for (i = 0; i < cnt; i++, ent++) {
+	for (i = 0; i < cnt; i++) {
+		ent = (struct gpt_ent *)(tbl + i * hdr->hdr_entsz);
 		uuid_letoh(&ent->ent_type);
 		if (uuid_equal(&ent->ent_type, &gpt_uuid_unused, NULL))
 			continue;
@@ -251,8 +258,8 @@ ptable_gptread(struct ptable *table, void *dev, diskread_t dread)
 	    table->sectorsize);
 	if (phdr != NULL) {
 		/* Read the primary GPT table. */
-		size = MIN(MAXTBLSZ,
-		    phdr->hdr_entries * phdr->hdr_entsz / table->sectorsize);
+		size = MIN(MAXTBLSZ, (phdr->hdr_entries * phdr->hdr_entsz +
+		    table->sectorsize - 1) / table->sectorsize);
 		if (dread(dev, tbl, size, phdr->hdr_lba_table) == 0 &&
 		    gpt_checktbl(phdr, tbl, size * table->sectorsize,
 		    table->sectors - 1) == 0) {
@@ -284,8 +291,9 @@ ptable_gptread(struct ptable *table, void *dev, diskread_t dread)
 		    hdr.hdr_entsz != phdr->hdr_entsz ||
 		    hdr.hdr_crc_table != phdr->hdr_crc_table) {
 			/* Read the backup GPT table. */
-			size = MIN(MAXTBLSZ, phdr->hdr_entries *
-			    phdr->hdr_entsz / table->sectorsize);
+			size = MIN(MAXTBLSZ, (phdr->hdr_entries *
+			    phdr->hdr_entsz + table->sectorsize - 1) /
+			    table->sectorsize);
 			if (dread(dev, tbl, size, phdr->hdr_lba_table) == 0 &&
 			    gpt_checktbl(phdr, tbl, size * table->sectorsize,
 			    table->sectors - 1) == 0) {
@@ -299,10 +307,10 @@ ptable_gptread(struct ptable *table, void *dev, diskread_t dread)
 		table->type = PTABLE_NONE;
 		goto out;
 	}
-	ent = (struct gpt_ent *)tbl;
 	size = MIN(hdr.hdr_entries * hdr.hdr_entsz,
 	    MAXTBLSZ * table->sectorsize);
-	for (i = 0; i < size / hdr.hdr_entsz; i++, ent++) {
+	for (i = 0; i < size / hdr.hdr_entsz; i++) {
+		ent = (struct gpt_ent *)(tbl + i * hdr.hdr_entsz);
 		if (uuid_equal(&ent->ent_type, &gpt_uuid_unused, NULL))
 			continue;
 		entry = malloc(sizeof(*entry));
@@ -631,7 +639,7 @@ ptable_open(void *dev, off_t sectors, uint16_t sectorsize,
 	for (i = 0, count = 0; i < NDOSPART; i++) {
 		if (dp[i].dp_flag != 0 && dp[i].dp_flag != 0x80) {
 			DEBUG("invalid partition flag %x", dp[i].dp_flag);
-			break;
+			goto out;
 		}
 #ifdef LOADER_GPT_SUPPORT
 		if (dp[i].dp_typ == DOSPTYP_PMBR) {
@@ -643,15 +651,12 @@ ptable_open(void *dev, off_t sectors, uint16_t sectorsize,
 			count++;
 	}
 	/* Do we have some invalid values? */
-	if (i != NDOSPART ||
-	    (table->type == PTABLE_GPT && count > 1)) {
+	if (table->type == PTABLE_GPT && count > 1) {
 		if (dp[1].dp_typ != DOSPTYP_HFS) {
 			table->type = PTABLE_NONE;
-			DEBUG("invalid values detected, ignore "
-			    "partition table");
-			goto out;
-		}
-		DEBUG("Bootcamp detected");
+			DEBUG("Incorrect PMBR, ignore it");
+		} else
+			DEBUG("Bootcamp detected");
 	}
 #ifdef LOADER_GPT_SUPPORT
 	if (table->type == PTABLE_GPT) {
