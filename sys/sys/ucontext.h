@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/ucontext.h 278347 2015-02-07 08:47:15Z kib $
  */
 
 #ifndef _SYS_UCONTEXT_H_
@@ -99,7 +100,7 @@ struct thread;
 
 /* Machine-dependent functions: */
 int	get_mcontext(struct thread *, mcontext_t *, int);
-int	set_mcontext(struct thread *, const mcontext_t *);
+int	set_mcontext(struct thread *, mcontext_t *);
 
 #endif /* !_KERNEL */
 

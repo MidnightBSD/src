@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ucred.h	8.4 (Berkeley) 1/9/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/ucred.h 303846 2016-08-08 18:31:28Z bdrewery $
  */
 
 #ifndef _SYS_UCRED_H_
@@ -106,6 +107,8 @@ struct ucred	*crcopysafe(struct proc *p, struct ucred *cr);
 struct ucred	*crdup(struct ucred *cr);
 void	crextend(struct ucred *cr, int n);
 void	cred_update_thread(struct thread *td);
+void	proc_set_cred_init(struct proc *p, struct ucred *cr);
+struct ucred	*proc_set_cred(struct proc *p, struct ucred *cr);
 void	crfree(struct ucred *cr);
 struct ucred	*crget(void);
 struct ucred	*crhold(struct ucred *cr);
