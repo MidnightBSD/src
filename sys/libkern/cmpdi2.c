@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/cmpdi2.c 176492 2008-02-23 20:10:49Z marcel $");
 
 #include <libkern/quad.h>
 

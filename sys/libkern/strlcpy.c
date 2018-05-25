@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: strlcpy.c,v 1.11 2006/05/05 15:27:38 millert Exp $	*/
 
 /*-
@@ -17,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/libkern/strlcpy.c 243811 2012-12-03 18:08:44Z delphij $");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/strlcpy.c 242507 2012-11-03 04:29:24Z delphij $");
 
 #include <sys/types.h>
 #include <sys/libkern.h>

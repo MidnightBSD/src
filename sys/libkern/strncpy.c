@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/strncpy.c 319286 2017-05-31 06:00:14Z delphij $");
 
 #include <sys/libkern.h>
 
@@ -43,8 +44,8 @@ char *
 strncpy(char * __restrict dst, const char * __restrict src, size_t n)
 {
 	if (n != 0) {
-		register char *d = dst;
-		register const char *s = src;
+		char *d = dst;
+		const char *s = src;
 
 		do {
 			if ((*d++ = *s++) == 0) {

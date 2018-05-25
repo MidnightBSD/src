@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/iconv_xlat.c 206361 2010-04-07 16:50:38Z joel $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1992-2007 The FreeBSD Project. All rights reserved.
  *
@@ -23,6 +24,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/sys/libkern/memset.c 180514 2008-07-14 21:36:02Z obrien $");
 
 #define	LIBKERN_INLINE
 

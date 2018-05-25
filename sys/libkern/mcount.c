@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/mcount.c 170659 2007-06-13 06:17:48Z bde $");
 
 #include <sys/param.h>
 #include <sys/gmon.h>

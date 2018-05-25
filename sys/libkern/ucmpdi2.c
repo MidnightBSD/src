@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/ucmpdi2.c 245840 2013-01-23 09:18:18Z andrew $");
 
 #include <libkern/quad.h>
 
@@ -51,3 +52,15 @@ __ucmpdi2(a, b)
 	return (aa.ul[H] < bb.ul[H] ? 0 : aa.ul[H] > bb.ul[H] ? 2 :
 	    aa.ul[L] < bb.ul[L] ? 0 : aa.ul[L] > bb.ul[L] ? 2 : 1);
 }
+
+#ifdef __ARM_EABI__
+/*
+ * Return -1, 0 or 1 as a <, =, > b respectively.
+ */
+int
+__aeabi_ulcmp(unsigned long long a, unsigned long long b)
+{
+	return __ucmpdi2(a, b) - 1;
+}
+#endif
+

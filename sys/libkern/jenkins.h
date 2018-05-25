@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef __LIBKERN_JENKINS_H__
 #define __LIBKERN_JENKINS_H__
 /*

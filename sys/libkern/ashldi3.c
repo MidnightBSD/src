@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/ashldi3.c 255939 2013-09-29 15:19:34Z andrew $");
 
 #include <libkern/quad.h>
 
@@ -59,3 +60,13 @@ __ashldi3(a, shift)
 	}
 	return (aa.q);
 }
+
+#ifdef __ARM_EABI__
+long long __aeabi_llsl(long long, int);
+
+long long
+__aeabi_llsl(long long a, int b)
+{
+	return __ashldi3(a, b);
+}
+#endif

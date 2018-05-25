@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, 2010 Xin LI <delphij@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/strlen.c 242506 2012-11-03 04:28:53Z delphij $");
 
 #include <sys/libkern.h>
 #include <sys/limits.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/fnmatch.c 229272 2012-01-02 12:12:10Z ed $");
 
 /*
  * Function fnmatch() as specified in POSIX 1003.2-1992, section B.6.
@@ -89,12 +90,12 @@ fnmatch(const char *pattern, const char *string, int flags)
 			if (c == EOS)
 				if (flags & FNM_PATHNAME)
 					return ((flags & FNM_LEADING_DIR) ||
-					    index(string, '/') == NULL ?
+					    strchr(string, '/') == NULL ?
 					    0 : FNM_NOMATCH);
 				else
 					return (0);
 			else if (c == '/' && flags & FNM_PATHNAME) {
-				if ((string = index(string, '/')) == NULL)
+				if ((string = strchr(string, '/')) == NULL)
 					return (FNM_NOMATCH);
 				break;
 			}

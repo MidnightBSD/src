@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/strcmp.c 319286 2017-05-31 06:00:14Z delphij $");
 
 #include <sys/libkern.h>
 
@@ -40,7 +41,7 @@ __FBSDID("$FreeBSD$");
  */
 int
 strcmp(s1, s2)
-	register const char *s1, *s2;
+	const char *s1, *s2;
 {
 	while (*s1 == *s2++)
 		if (*s1++ == 0)

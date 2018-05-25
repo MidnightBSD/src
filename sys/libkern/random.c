@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/random.c 319286 2017-05-31 06:00:14Z delphij $");
 
 #include <sys/libkern.h>
 
@@ -57,7 +58,7 @@ srandom(seed)
 u_long
 random()
 {
-	register long x, hi, lo, t;
+	long x, hi, lo, t;
 
 	/*
 	 * Compute x[n + 1] = (7^5 * x[n]) mod (2^31 - 1).

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -25,6 +26,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/sys/libkern/iconv.c 330512 2018-03-05 16:00:05Z dab $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -134,6 +136,7 @@ iconv_register_converter(struct iconv_converter_class *dcp)
 static int
 iconv_unregister_converter(struct iconv_converter_class *dcp)
 {
+	dcp->refs--;
 	if (dcp->refs > 1) {
 		ICDEBUG("converter have %d referenses left\n", dcp->refs);
 		return EBUSY;
@@ -166,8 +169,8 @@ iconv_lookupcs(const char *to, const char *from, struct iconv_cspair **cspp)
 	struct iconv_cspair *csp;
 
 	TAILQ_FOREACH(csp, &iconv_cslist, cp_link) {
-		if (strcmp(csp->cp_to, to) == 0 &&
-		    strcmp(csp->cp_from, from) == 0) {
+		if (strcasecmp(csp->cp_to, to) == 0 &&
+		    strcasecmp(csp->cp_from, from) == 0) {
 			if (cspp)
 				*cspp = csp;
 			return 0;
@@ -409,11 +412,11 @@ iconv_sysctl_add(SYSCTL_HANDLER_ARGS)
 		return EINVAL;
 	if (din.ia_datalen > ICONV_CSMAXDATALEN)
 		return EINVAL;
-	if (strlen(din.ia_from) >= ICONV_CSNMAXLEN)
+	if (strnlen(din.ia_from, sizeof(din.ia_from)) >= ICONV_CSNMAXLEN)
 		return EINVAL;
-	if (strlen(din.ia_to) >= ICONV_CSNMAXLEN)
+	if (strnlen(din.ia_to, sizeof(din.ia_to)) >= ICONV_CSNMAXLEN)
 		return EINVAL;
-	if (strlen(din.ia_converter) >= ICONV_CNVNMAXLEN)
+	if (strnlen(din.ia_converter, sizeof(din.ia_converter)) >= ICONV_CNVNMAXLEN)
 		return EINVAL;
 	if (iconv_lookupconv(din.ia_converter, &dcp) != 0)
 		return EINVAL;
@@ -550,9 +553,7 @@ int
 iconv_lookupcp(char **cpp, const char *s)
 {
 	if (cpp == NULL) {
-		ICDEBUG("warning a NULL list passed\n", ""); /* XXX ISO variadic								macros cannot
-								leave out the
-								variadic args */
+		ICDEBUG("warning a NULL list passed\n", "");
 		return ENOENT;
 	}
 	for (; *cpp; cpp++)

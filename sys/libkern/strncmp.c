@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -10,7 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -28,14 +29,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/strncmp.c 275489 2014-12-04 23:21:42Z delphij $");
 
 #include <sys/libkern.h>
 
 int
-strncmp(s1, s2, n)
-	register const char *s1, *s2;
-	register size_t n;
+strncmp(const char *s1, const char *s2, size_t n)
 {
 
 	if (n == 0)
@@ -44,7 +43,7 @@ strncmp(s1, s2, n)
 		if (*s1 != *s2++)
 			return (*(const unsigned char *)s1 -
 				*(const unsigned char *)(s2 - 1));
-		if (*s1++ == 0)
+		if (*s1++ == '\0')
 			break;
 	} while (--n != 0);
 	return (0);

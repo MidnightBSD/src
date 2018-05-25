@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Roman Divacky <rdivacky@FreeBSD.org>
  * All rights reserved.
@@ -25,11 +26,10 @@
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/libkern/memmove.c,v 1.1.2.2 2009/06/01 22:09:42 kmacy Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/memmove.c 189170 2009-02-28 16:21:25Z ed $");
 
 #include <sys/libkern.h>
 
-#if !defined(__arm__)
 void *
 memmove(void *dest, const void *src, size_t n)
 {
@@ -37,4 +37,3 @@ memmove(void *dest, const void *src, size_t n)
 	bcopy(src, dest, n);
 	return (dest);
 }
-#endif

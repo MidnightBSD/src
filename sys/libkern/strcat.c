@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/strcat.c 139815 2005-01-07 00:24:33Z imp $");
 
 #include <sys/libkern.h>
 

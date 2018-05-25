@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)strsep.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/strsep.c 128019 2004-04-07 20:46:16Z imp $");
 
 #include <sys/param.h>
 #include <sys/libkern.h>

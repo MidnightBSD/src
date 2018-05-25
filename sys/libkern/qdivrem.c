@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/libkern/qdivrem.c,v 1.10.18.1 2008/10/29 21:43:14 thompsa Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/qdivrem.c 319286 2017-05-31 06:00:14Z delphij $");
 
 /*
  * Multiprecision divide.  This algorithm is from Knuth vol. 2 (2nd ed),
@@ -59,9 +60,9 @@ typedef u_long digit;
  * We may assume len >= 0.  NOTE THAT THIS WRITES len+1 DIGITS.
  */
 static void
-__shl(register digit *p, register int len, register int sh)
+__shl(digit *p, int len, int sh)
 {
-	register int i;
+	int i;
 
 	for (i = 0; i < len; i++)
 		p[i] = LHALF(p[i] << sh) | (p[i + 1] >> (HALF_BITS - sh));
@@ -82,7 +83,7 @@ __qdivrem(uq, vq, arq)
 {
 	union uu tmp;
 	digit *u, *v, *q;
-	register digit v1, v2;
+	digit v1, v2;
 	u_long qhat, rhat, t;
 	int m, n, d, j, i;
 	digit uspace[5], vspace[5], qspace[5];
@@ -192,7 +193,7 @@ __qdivrem(uq, vq, arq)
 	v1 = v[1];	/* for D3 -- note that v[1..n] are constant */
 	v2 = v[2];	/* for D3 */
 	do {
-		register digit uj0, uj1, uj2;
+		digit uj0, uj1, uj2;
 
 		/*
 		 * D3: Calculate qhat (\^q, in TeX notation).

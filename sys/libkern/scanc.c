@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,18 +31,18 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/scanc.c 319286 2017-05-31 06:00:14Z delphij $");
 
 #include <sys/libkern.h>
 
 int
 scanc(size, cp, table, mask0)
 	u_int size;
-	register const u_char *cp, table[];
+	const u_char *cp, table[];
 	int mask0;
 {
-	register const u_char *end;
-	register u_char mask;
+	const u_char *end;
+	u_char mask;
 
 	mask = mask0;
 	for (end = &cp[size]; cp < end; ++cp) {

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1987, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/bcmp.c 319286 2017-05-31 06:00:14Z delphij $");
 
 #include <sys/libkern.h>
 #include <machine/endian.h>
@@ -44,7 +45,7 @@ typedef const unsigned long	*culp;
 int
 bcmp(b1, b2, length)
 	const void *b1, *b2;
-	register size_t length;
+	size_t length;
 {
 #if BYTE_ORDER == LITTLE_ENDIAN
 	/*

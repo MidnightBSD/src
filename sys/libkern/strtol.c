@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/strtol.c 278063 2015-02-02 08:05:11Z dim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -124,6 +125,6 @@ strtol(nptr, endptr, base)
 	} else if (neg)
 		acc = -acc;
 	if (endptr != 0)
-		*((const char **)endptr) = any ? s - 1 : nptr;
+		*endptr = __DECONST(char *, any ? s - 1 : nptr);
 	return (acc);
 }

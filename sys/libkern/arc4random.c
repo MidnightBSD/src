@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * THE BEER-WARE LICENSE
  *
@@ -9,7 +10,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/libkern/arc4random.c 249915 2013-04-26 01:56:58Z ache $");
+__FBSDID("$FreeBSD: stable/10/sys/libkern/arc4random.c 315227 2017-03-14 06:12:51Z delphij $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -80,9 +81,9 @@ arc4_randomstir (void)
 	/*
 	 * Throw away the first N words of output, as suggested in the
 	 * paper "Weaknesses in the Key Scheduling Algorithm of RC4"
-	 * by Fluher, Mantin, and Shamir.  (N = 256 in our case.)
+	 * by Fluher, Mantin, and Shamir.  (N = 768 in our case.)
 	 */
-	for (n = 0; n < 256*4; n++)
+	for (n = 0; n < 768*4; n++)
 		arc4_randbyte();
 	mtx_unlock(&arc4_mtx);
 }
