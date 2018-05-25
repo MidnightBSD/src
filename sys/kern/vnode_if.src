@@ -27,7 +27,7 @@
 # SUCH DAMAGE.
 #
 #	@(#)vnode_if.src	8.12 (Berkeley) 5/14/95
-# $FreeBSD: releng/9.2/sys/kern/vnode_if.src 244660 2012-12-24 13:29:22Z kib $
+# $FreeBSD: stable/10/sys/kern/vnode_if.src 302234 2016-06-27 21:50:30Z bdrewery $
 # $MidnightBSD$
 
 #
@@ -35,7 +35,7 @@
 # is a specification of the locking protocol used by each vop call.
 # The first column is the name of the variable, the remaining three
 # columns are in, out and error respectively.  The "in" column defines
-# the lock state on input, the "out" column defines the state on succesful
+# the lock state on input, the "out" column defines the state on successful
 # return, and the "error" column defines the locking state on error exit.
 #
 # The locking value can take the following values:
@@ -121,6 +121,7 @@ vop_mknod {
 
 
 %% open		vp	L L L
+%! open		post	vop_open_post
 
 vop_open {
 	IN struct vnode *vp;
@@ -132,6 +133,7 @@ vop_open {
 
 
 %% close	vp	L L L
+%! close	post	vop_close_post
 
 vop_close {
 	IN struct vnode *vp;
@@ -186,6 +188,7 @@ vop_markatime {
 };
 
 %% read		vp	L L L
+%! read		post	vop_read_post
 
 vop_read {
 	IN struct vnode *vp;
@@ -326,6 +329,7 @@ vop_symlink {
 
 
 %% readdir	vp	L L L
+%! readdir	post	vop_readdir_post
 
 vop_readdir {
 	IN struct vnode *vp;
@@ -355,6 +359,7 @@ vop_inactive {
 
 
 %% reclaim	vp	E E E
+%! reclaim	post	vop_reclaim_post
 
 vop_reclaim {
 	IN struct vnode *vp;
@@ -477,7 +482,7 @@ vop_getpages {
 };
 
 
-%% putpages	vp	E E E
+%% putpages	vp	L L L
 
 vop_putpages {
 	IN struct vnode *vp;
@@ -694,6 +699,18 @@ vop_add_writecount {
 # added in stable branches without breaking the KBI.  New VOPs in HEAD should
 # be added above these spares.  When merging a new VOP to a stable branch,
 # the new VOP should replace one of the spares.
+
+vop_spare1 {
+	IN struct vnode *vp;
+};
+
+vop_spare2 {
+	IN struct vnode *vp;
+};
+
+vop_spare3 {
+	IN struct vnode *vp;
+};
 
 vop_spare4 {
 	IN struct vnode *vp;
