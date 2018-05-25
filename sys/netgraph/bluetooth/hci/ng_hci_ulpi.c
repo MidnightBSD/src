@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_hci_ulpi.c
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_hci_ulpi.c,v 1.1.1.3 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_hci_ulpi.c,v 1.7 2003/09/08 18:57:51 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/hci/ng_hci_ulpi.c 250576 2013-05-12 16:43:26Z eadler $
  */
 
 #include <sys/param.h>
@@ -224,7 +225,7 @@ ng_hci_lp_acl_con_req(ng_hci_unit_p unit, item_p item, hook_p hook)
 	 * Create HCI command 
 	 */
 
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	MGETHDR(m, M_NOWAIT, MT_DATA);
 	if (m == NULL) {
 		ng_hci_free_con(con);
 		error = ENOBUFS;
@@ -391,7 +392,7 @@ ng_hci_lp_sco_con_req(ng_hci_unit_p unit, item_p item, hook_p hook)
 
 		default:
 			panic(
-"%s: %s - Inavalid connection state=%d\n",
+"%s: %s - Invalid connection state=%d\n",
 				__func__, NG_NODE_NAME(unit->node),
 				sco_con->state);
 			break;
@@ -417,7 +418,7 @@ ng_hci_lp_sco_con_req(ng_hci_unit_p unit, item_p item, hook_p hook)
 	 * Create HCI command 
 	 */
 
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	MGETHDR(m, M_NOWAIT, MT_DATA);
 	if (m == NULL) {
 		ng_hci_free_con(sco_con);
 		error = ENOBUFS;
@@ -531,7 +532,7 @@ ng_hci_lp_discon_req(ng_hci_unit_p unit, item_p item, hook_p hook)
 	 * Create HCI command
 	 */
 
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	MGETHDR(m, M_NOWAIT, MT_DATA);
 	if (m == NULL) {
 		error = ENOBUFS;
 		goto out;
@@ -776,7 +777,7 @@ ng_hci_lp_con_rsp(ng_hci_unit_p unit, item_p item, hook_p hook)
 		 * Create HCI command 
 		 */
 
-		MGETHDR(m, M_DONTWAIT, MT_DATA);
+		MGETHDR(m, M_NOWAIT, MT_DATA);
 		if (m == NULL) {
 			error = ENOBUFS;
 			goto out;
@@ -996,7 +997,7 @@ ng_hci_lp_qos_req(ng_hci_unit_p unit, item_p item, hook_p hook)
 	 * Create HCI command 
 	 */
 
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	MGETHDR(m, M_NOWAIT, MT_DATA);
 	if (m == NULL) {
 		error = ENOBUFS;
 		goto out;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * bluetooth.c
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_bluetooth.c,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_bluetooth.c,v 1.3 2003/04/26 22:37:31 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/common/ng_bluetooth.c 273736 2014-10-27 14:38:00Z hselasky $
  */
 
 #include <sys/param.h>
@@ -57,7 +58,7 @@ static u_int32_t	bluetooth_sco_rtx_timeout_value      = 60;  /* sec */
 
 SYSCTL_NODE(_net, OID_AUTO, bluetooth, CTLFLAG_RW, 0, "Bluetooth family");
 SYSCTL_INT(_net_bluetooth, OID_AUTO, version,
-	CTLFLAG_RD, 0, NG_BLUETOOTH_VERSION, "Version of the stack");
+	CTLFLAG_RD, SYSCTL_NULL_INT_PTR, NG_BLUETOOTH_VERSION, "Version of the stack");
 
 /* 
  * HCI

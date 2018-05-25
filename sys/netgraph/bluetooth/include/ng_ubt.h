@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_ubt.h
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_ubt.h,v 1.1.1.3 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_ubt.h,v 1.6 2003/04/13 21:34:42 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/include/ng_ubt.h 139823 2005-01-07 01:45:51Z imp $
  */
 
 #ifndef _NG_UBT_H_

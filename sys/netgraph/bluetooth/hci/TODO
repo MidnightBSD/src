@@ -1,5 +1,6 @@
-$Id: TODO,v 1.1.1.3 2012-07-21 15:17:19 laffer1 Exp $
-$FreeBSD$
+$Id: TODO,v 1.2 2003/04/26 22:36:29 max Exp $
+$FreeBSD: stable/10/sys/netgraph/bluetooth/hci/TODO 114878 2003-05-10 21:44:42Z julian $
+$MidnightBSD$
 
 FIXME/TODO list
 

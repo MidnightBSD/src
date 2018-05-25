@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_hci.h
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_hci.h,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_hci.h,v 1.2 2003/03/18 00:09:37 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/include/ng_hci.h 158672 2006-05-17 00:13:07Z emax $
  */
 
 /*

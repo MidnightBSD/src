@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_l2cap_cmds.h
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_l2cap_cmds.h,v 1.1.1.3 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_l2cap_cmds.h,v 1.4 2003/04/01 18:15:26 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/l2cap/ng_l2cap_cmds.h 243882 2012-12-05 08:04:20Z glebius $
  */
 
 #ifndef _NETGRAPH_L2CAP_CMDS_H_
@@ -56,7 +57,7 @@ do {									\
 		ng_l2cap_cmd_rej_data_t	 data;				\
 	} __attribute__ ((packed))	*c = NULL;			\
 									\
-	MGETHDR((_m), M_DONTWAIT, MT_DATA);				\
+	MGETHDR((_m), M_NOWAIT, MT_DATA);				\
 	if ((_m) == NULL) 						\
 		break;							\
 									\
@@ -90,7 +91,7 @@ do {									\
 		ng_l2cap_con_req_cp	 param;				\
 	} __attribute__ ((packed)) 	*c = NULL;			\
 									\
-	MGETHDR((_m), M_DONTWAIT, MT_DATA);				\
+	MGETHDR((_m), M_NOWAIT, MT_DATA);				\
 	if ((_m) == NULL) 						\
 		break;							\
 									\
@@ -113,7 +114,7 @@ do {									\
 		ng_l2cap_con_rsp_cp	 param;				\
 	} __attribute__ ((packed))	*c = NULL;			\
 									\
-	MGETHDR((_m), M_DONTWAIT, MT_DATA);				\
+	MGETHDR((_m), M_NOWAIT, MT_DATA);				\
 	if ((_m) == NULL) 						\
 		break;							\
 									\
@@ -138,7 +139,7 @@ do {									\
 		ng_l2cap_cfg_req_cp	 param;				\
 	} __attribute__ ((packed))	*c = NULL;			\
 									\
-	MGETHDR((_m), M_DONTWAIT, MT_DATA);				\
+	MGETHDR((_m), M_NOWAIT, MT_DATA);				\
 	if ((_m) == NULL) { 						\
 		NG_FREE_M((_data));					\
 		break;							\
@@ -172,7 +173,7 @@ do {									\
 		ng_l2cap_cfg_rsp_cp	 param;				\
 	} __attribute__ ((packed))	*c = NULL;			\
 									\
-	MGETHDR((_m), M_DONTWAIT, MT_DATA);				\
+	MGETHDR((_m), M_NOWAIT, MT_DATA);				\
 	if ((_m) == NULL) { 						\
 		NG_FREE_M((_data));					\
 		break;							\
@@ -204,7 +205,7 @@ do {									\
 do {									\
 	u_int8_t	*p = NULL;					\
 									\
-	MGETHDR((_m), M_DONTWAIT, MT_DATA);				\
+	MGETHDR((_m), M_NOWAIT, MT_DATA);				\
 	if ((_m) == NULL)						\
 		break;							\
 									\
@@ -281,7 +282,7 @@ do {									\
 		ng_l2cap_discon_req_cp	 param;				\
 	} __attribute__ ((packed))	*c = NULL;			\
 									\
-	MGETHDR((_m), M_DONTWAIT, MT_DATA);				\
+	MGETHDR((_m), M_NOWAIT, MT_DATA);				\
 	if ((_m) == NULL)						\
 		break;							\
 									\
@@ -304,7 +305,7 @@ do {									\
 		ng_l2cap_discon_rsp_cp	 param;				\
 	} __attribute__ ((packed))	*c = NULL;			\
 									\
-	MGETHDR((_m), M_DONTWAIT, MT_DATA);				\
+	MGETHDR((_m), M_NOWAIT, MT_DATA);				\
 	if ((_m) == NULL)						\
 		break;							\
 									\
@@ -324,7 +325,7 @@ do {									\
 do {									\
 	ng_l2cap_cmd_hdr_t	*c = NULL;				\
 									\
-	MGETHDR((_m), M_DONTWAIT, MT_DATA);				\
+	MGETHDR((_m), M_NOWAIT, MT_DATA);				\
 	if ((_m) == NULL) 						\
 		break;							\
 									\
@@ -351,7 +352,7 @@ do {									\
 		ng_l2cap_info_req_cp	 param;				\
 	} __attribute__ ((packed))	*c = NULL;			\
 									\
-	MGETHDR((_m), M_DONTWAIT, MT_DATA);				\
+	MGETHDR((_m), M_NOWAIT, MT_DATA);				\
 	if ((_m) == NULL)						\
 		break;							\
 									\
@@ -374,7 +375,7 @@ do {									\
 		ng_l2cap_info_rsp_data_t data;				\
 	} __attribute__ ((packed))	*c = NULL;			\
 									\
-	MGETHDR((_m), M_DONTWAIT, MT_DATA);				\
+	MGETHDR((_m), M_NOWAIT, MT_DATA);				\
 	if ((_m) == NULL) 						\
 		break;							\
 									\

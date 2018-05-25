@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_btsocket_rfcomm.h
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket_rfcomm.h,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_btsocket_rfcomm.h,v 1.10 2003/03/29 22:27:42 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/include/ng_btsocket_rfcomm.h 197083 2009-09-10 23:30:13Z emax $
  */
 
 #ifndef _NETGRAPH_BTSOCKET_RFCOMM_H_

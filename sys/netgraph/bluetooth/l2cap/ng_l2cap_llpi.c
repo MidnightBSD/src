@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_l2cap_llpi.c
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_l2cap_llpi.c,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_l2cap_llpi.c,v 1.5 2003/09/08 19:11:45 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/l2cap/ng_l2cap_llpi.c 243882 2012-12-05 08:04:20Z glebius $
  */
 
 #include <sys/param.h>
@@ -528,7 +529,7 @@ ng_l2cap_lp_send(ng_l2cap_con_p con, u_int16_t dcid, struct mbuf *m0)
 		/* Check length of the packet against HCI MTU */
 		len = m0->m_pkthdr.len;
 		if (len > l2cap->pkt_size) {
-			m = m_split(m0, l2cap->pkt_size, M_DONTWAIT);
+			m = m_split(m0, l2cap->pkt_size, M_NOWAIT);
 			if (m == NULL) {
 				NG_L2CAP_ALERT(
 "%s: %s - m_split(%d) failed\n",	__func__, NG_NODE_NAME(l2cap->node),

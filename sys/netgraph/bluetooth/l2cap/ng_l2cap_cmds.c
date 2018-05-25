@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_l2cap_cmds.c
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_l2cap_cmds.c,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_l2cap_cmds.c,v 1.2 2003/09/08 19:11:45 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/l2cap/ng_l2cap_cmds.c 250460 2013-05-10 16:41:26Z eadler $
  */
 
 #include <sys/param.h>
@@ -306,7 +307,7 @@ ng_l2cap_con_fail(ng_l2cap_con_p con, u_int16_t result)
 
 	/*
 	 * There still might be channels (in OPEN state?) that
-	 * did not submit any commands, so diconnect them
+	 * did not submit any commands, so disconnect them
 	 */
 
 	LIST_FOREACH(ch, &l2cap->chan_list, next)

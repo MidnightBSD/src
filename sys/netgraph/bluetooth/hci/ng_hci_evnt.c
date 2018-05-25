@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_hci_evnt.c
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_hci_evnt.c,v 1.1.1.3 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_hci_evnt.c,v 1.6 2003/09/08 18:57:51 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/hci/ng_hci_evnt.c 243882 2012-12-05 08:04:20Z glebius $
  */
 
 #include <sys/param.h>
@@ -511,7 +512,7 @@ con_compl(ng_hci_unit_p unit, struct mbuf *event)
 			} __attribute__ ((packed))			*lp;
 			struct mbuf					*m;
 
-			MGETHDR(m, M_DONTWAIT, MT_DATA);
+			MGETHDR(m, M_NOWAIT, MT_DATA);
 			if (m != NULL) {
 				m->m_pkthdr.len = m->m_len = sizeof(*lp);
 				lp = mtod(m, struct __link_policy *);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_btsocket.h
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket.h,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_btsocket.h,v 1.8 2003/04/26 22:32:10 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/include/ng_btsocket.h 180399 2008-07-10 00:15:29Z emax $
  */
 
 #ifndef _NETGRAPH_BTSOCKET_H_

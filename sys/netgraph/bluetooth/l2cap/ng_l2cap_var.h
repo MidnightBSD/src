@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_l2cap_var.h
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_l2cap_var.h,v 1.1.1.3 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_l2cap_var.h,v 1.2 2003/04/28 21:44:59 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/l2cap/ng_l2cap_var.h 139823 2005-01-07 01:45:51Z imp $
  */
 
 #ifndef _NETGRAPH_L2CAP_VAR_H_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_hci_evnt.h
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_hci_evnt.h,v 1.1.1.3 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_hci_evnt.h,v 1.1 2002/11/24 19:46:58 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/hci/ng_hci_evnt.h 139823 2005-01-07 01:45:51Z imp $
  */
 
 #ifndef _NETGRAPH_HCI_EVNT_H_
