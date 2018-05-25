@@ -30,11 +30,11 @@
 
 /* MidnightBSD */
 #define COPYRIGHT_MidnightBSD \
-	"Copyright (c) 2006-2017 The MidnightBSD Project.\n"
+	"Copyright (c) 2006-2018 The MidnightBSD Project.\n"
 
 /* FreeBSD */
 #define COPYRIGHT_FreeBSD \
-	"Copyright (c) 1992-2012 The FreeBSD Project.\n"
+	"Copyright (c) 1992-2017 The FreeBSD Project.\n"
 
 /* Foundation */
 #define	TRADEMARK_Foundation \
