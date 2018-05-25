@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsrvcache.h	8.3 (Berkeley) 3/30/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/nfsserver/nfsrvcache.h 195202 2009-06-30 19:03:27Z dfr $
  */
 
 #ifndef _NFSSERVER_NFSRVCACHE_H_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,13 +34,13 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/nfsserver/nfs_srvkrpc.c 280258 2015-03-19 13:37:36Z rwatson $");
 
 #include "opt_inet6.h"
 #include "opt_kgssapi.h"
 
 #include <sys/param.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/systm.h>
 #include <sys/sysproto.h>
 #include <sys/kernel.h>
@@ -168,6 +169,7 @@ nfssvc_nfsserver(struct thread *td, struct nfssvc_args *uap)
 	struct file *fp;
 	struct nfsd_addsock_args addsockarg;
 	struct nfsd_nfsd_args nfsdarg;
+	cap_rights_t rights;
 	int error;
 
 	if (uap->flag & NFSSVC_ADDSOCK) {
@@ -175,7 +177,9 @@ nfssvc_nfsserver(struct thread *td, struct nfssvc_args *uap)
 		    sizeof(addsockarg));
 		if (error)
 			return (error);
-		if ((error = fget(td, addsockarg.sock, CAP_SOCK_ALL, &fp)) != 0)
+		error = fget(td, addsockarg.sock,
+		    cap_rights_init(&rights, CAP_SOCK_SERVER), &fp);
+		if (error)
 			return (error);
 		if (fp->f_type != DTYPE_SOCKET) {
 			fdrop(fp, td);
@@ -218,14 +222,14 @@ nfs_rephead(int siz, struct nfsrv_descript *nd, int err,
 	if (err && (nd->nd_flag & ND_NFSV3) == 0)	/* XXX recheck */
 		siz = 0;
 
-	MGET(mreq, M_WAIT, MT_DATA);
+	MGET(mreq, M_WAITOK, MT_DATA);
 
 	/*
 	 * If this is a big reply, use a cluster
 	 */
 	mreq->m_len = 0;
 	if (siz >= MINCLSIZE) {
-		MCLGET(mreq, M_WAIT);
+		MCLGET(mreq, M_WAITOK);
 	}
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
@@ -279,7 +283,7 @@ nfssvc_program(struct svc_req *rqst, SVCXPRT *xprt)
 	mreq = mrep = NULL;
 	mreq = rqst->rq_args;
 	rqst->rq_args = NULL;
-	(void)nfs_realign(&mreq, M_WAIT);
+	(void)nfs_realign(&mreq, M_WAITOK);
 
 	/*
 	 * Note: we want rq_addr, not svc_getrpccaller for nd_nam2 -

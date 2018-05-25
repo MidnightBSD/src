@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/nfsserver/nfs_serv.c 276500 2015-01-01 10:44:20Z kib $");
 
 /*
  * nfs version 2 and 3 server calls to vnode ops
@@ -87,6 +88,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/sysctl.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
+#include <sys/rwlock.h>
 
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
@@ -159,32 +161,6 @@ ndclear(struct nameidata *nd)
 	nd->ni_dvp = NULL;
 	nd->ni_startdir = NULL;
 	nd->ni_strictrelative = 0;
-}
-
-/*
- * Takes two vfslocked integers and returns with at most one
- * reference to giant.  The return value indicates whether giant
- * is held by either lock.  This simplifies nfsrv ops by allowing
- * them to track only one vfslocked var.
- */
-static __inline int
-nfsrv_lockedpair(int vfs1, int vfs2)
-{
-
-	if (vfs1 && vfs2)
-		VFS_UNLOCK_GIANT(vfs2);
-
-	return (vfs1 | vfs2);
-}
-
-static __inline int
-nfsrv_lockedpair_nd(int vfs1, struct nameidata *nd)
-{
-	int vfs2;
-
-	vfs2 = NDHASGIANT(nd);
-
-	return nfsrv_lockedpair(vfs1, vfs2);
 }
 
 /*
@@ -265,16 +241,14 @@ nfsrv3_access(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	struct vattr vattr, *vap = &vattr;
 	u_long testmode, nfsmode;
 	int v3 = (nfsd->nd_flag & ND_NFSV3);
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
 	if (!v3)
 		panic("nfsrv3_access: v3 proc called on a v2 connection");
-	vfslocked = 0;
 	fhp = &nfh.fh_generic;
 	nfsm_srvmtofh(fhp);
 	tl = nfsm_dissect_nonblock(u_int32_t *, NFSX_UNSIGNED);
-	error = nfsrv_fhtovp(fhp, 0, &vp, &vfslocked, nfsd, slp, nam, &rdonly);
+	error = nfsrv_fhtovp(fhp, 0, &vp, nfsd, slp, nam, &rdonly);
 	if (error) {
 		nfsm_reply(NFSX_UNSIGNED);
 		nfsm_srvpostop_attr(1, NULL);
@@ -310,7 +284,6 @@ nfsrv3_access(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 nfsmout:
 	if (vp)
 		vput(vp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -334,13 +307,11 @@ nfsrv_getattr(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	caddr_t bpos;
 	int error = 0, rdonly;
 	struct mbuf *mb, *mreq;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
-	vfslocked = 0;
 	fhp = &nfh.fh_generic;
 	nfsm_srvmtofh(fhp);
-	error = nfsrv_fhtovp(fhp, 0, &vp, &vfslocked, nfsd, slp, nam, &rdonly);
+	error = nfsrv_fhtovp(fhp, 0, &vp, nfsd, slp, nam, &rdonly);
 	if (error) {
 		nfsm_reply(0);
 		error = 0;
@@ -362,7 +333,6 @@ nfsrv_getattr(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 nfsmout:
 	if (vp)
 		vput(vp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -391,18 +361,14 @@ nfsrv_setattr(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	struct mbuf *mb, *mreq;
 	struct timespec guard = { 0, 0 };
 	struct mount *mp = NULL;
-	int tvfslocked;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
-	vfslocked = 0;
 	fhp = &nfh.fh_generic;
 	nfsm_srvmtofh(fhp);
 	if ((mp = vfs_getvfs(&fhp->fh_fsid)) == NULL) {
 		error = ESTALE;
 		goto out;
 	}
-	vfslocked = VFS_LOCK_GIANT(mp);
 	(void) vn_start_write(NULL, &mp, V_WAIT);
 	vfs_rel(mp);		/* The write holds a ref. */
 	VATTR_NULL(vap);
@@ -448,8 +414,7 @@ nfsrv_setattr(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	/*
 	 * Now that we have all the fields, lets do it.
 	 */
-	error = nfsrv_fhtovp(fhp, 0, &vp, &tvfslocked, nfsd, slp, nam, &rdonly);
-	vfslocked = nfsrv_lockedpair(vfslocked, tvfslocked);
+	error = nfsrv_fhtovp(fhp, 0, &vp, nfsd, slp, nam, &rdonly);
 	if (error) {
 		nfsm_reply(2 * NFSX_UNSIGNED);
 		if (v3)
@@ -519,7 +484,6 @@ nfsmout:
 	if (vp)
 		vput(vp);
 	vn_finished_write(mp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -544,12 +508,9 @@ nfsrv_lookup(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	int v3 = (nfsd->nd_flag & ND_NFSV3), pubflag;
 	struct mbuf *mb, *mreq;
 	struct vattr va, dirattr, *vap = &va;
-	int tvfslocked;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
 	ndclear(&nd);
-	vfslocked = 0;
 
 	fhp = &nfh.fh_generic;
 	nfsm_srvmtofh(fhp);
@@ -559,10 +520,9 @@ nfsrv_lookup(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 
 	nd.ni_cnd.cn_cred = cred;
 	nd.ni_cnd.cn_nameiop = LOOKUP;
-	nd.ni_cnd.cn_flags = LOCKLEAF | SAVESTART | MPSAFE;
+	nd.ni_cnd.cn_flags = LOCKLEAF | SAVESTART;
 	error = nfs_namei(&nd, nfsd, fhp, len, slp, nam, &md, &dpos,
 		&dirp, v3, &dirattr, &dirattr_ret, pubflag);
-	vfslocked = NDHASGIANT(&nd);
 
 	/*
 	 * namei failure, only dirp to cleanup.  Clear out garbarge from
@@ -609,14 +569,8 @@ nfsrv_lookup(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 			    nfs_pub.np_index;
 			ind.ni_startdir = nd.ni_vp;
 			VREF(ind.ni_startdir);
-			ind.ni_cnd.cn_flags &= ~GIANTHELD;
-			tvfslocked = VFS_LOCK_GIANT(ind.ni_startdir->v_mount);
-			if (tvfslocked)
-				nd.ni_cnd.cn_flags |= GIANTHELD;
 			error = lookup(&ind);
 			ind.ni_dvp = NULL;
-			vfslocked = nfsrv_lockedpair_nd(vfslocked, &ind);
-			ind.ni_cnd.cn_flags &= ~GIANTHELD;
 
 			if (error == 0) {
 				/*
@@ -703,7 +657,6 @@ nfsmout:
 			vrele(ndp->ni_startdir);
 	}
 	NDFREE(&nd, NDF_ONLY_PNBUF);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -731,10 +684,8 @@ nfsrv_readlink(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	nfsfh_t nfh;
 	fhandle_t *fhp;
 	struct uio io, *uiop = &io;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
-	vfslocked = 0;
 #ifndef nolint
 	mp = NULL;
 #endif
@@ -744,8 +695,8 @@ nfsrv_readlink(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	len = 0;
 	i = 0;
 	while (len < NFS_MAXPATHLEN) {
-		MGET(nmp, M_WAIT, MT_DATA);
-		MCLGET(nmp, M_WAIT);
+		MGET(nmp, M_WAITOK, MT_DATA);
+		MCLGET(nmp, M_WAITOK);
 		nmp->m_len = NFSMSIZ(nmp);
 		if (len == 0)
 			mp3 = mp = nmp;
@@ -770,7 +721,7 @@ nfsrv_readlink(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	uiop->uio_rw = UIO_READ;
 	uiop->uio_segflg = UIO_SYSSPACE;
 	uiop->uio_td = NULL;
-	error = nfsrv_fhtovp(fhp, 0, &vp, &vfslocked, nfsd, slp, nam, &rdonly);
+	error = nfsrv_fhtovp(fhp, 0, &vp, nfsd, slp, nam, &rdonly);
 	if (error) {
 		nfsm_reply(2 * NFSX_UNSIGNED);
 		if (v3)
@@ -809,7 +760,6 @@ nfsmout:
 		m_freem(mp3);
 	if (vp)
 		vput(vp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -843,11 +793,8 @@ nfsrv_read(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	struct nfsheur *nh;
 	off_t off;
 	int ioflag = 0;
-	int vfslocked;
-
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
-	vfslocked = 0;
 	fhp = &nfh.fh_generic;
 	nfsm_srvmtofh(fhp);
 	if (v3) {
@@ -865,7 +812,7 @@ nfsrv_read(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	 * as well.
 	 */
 
-	error = nfsrv_fhtovp(fhp, 0, &vp, &vfslocked, nfsd, slp, nam, &rdonly);
+	error = nfsrv_fhtovp(fhp, 0, &vp, nfsd, slp, nam, &rdonly);
 	if (error) {
 		vp = NULL;
 		nfsm_reply(2 * NFSX_UNSIGNED);
@@ -933,8 +880,8 @@ nfsrv_read(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 				i++;
 			}
 			if (left > 0) {
-				MGET(m, M_WAIT, MT_DATA);
-				MCLGET(m, M_WAIT);
+				MGET(m, M_WAITOK, MT_DATA);
+				MCLGET(m, M_WAITOK);
 				m->m_len = 0;
 				m2->m_next = m;
 				m2 = m;
@@ -965,6 +912,7 @@ nfsrv_read(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		uiop->uio_resid = len;
 		uiop->uio_rw = UIO_READ;
 		uiop->uio_segflg = UIO_SYSSPACE;
+		uiop->uio_td = NULL;
 		nh = nfsrv_sequential_heuristic(uiop, vp);
 		ioflag |= nh->nh_seqcount << IO_SEQSHIFT;
 		error = VOP_READ(vp, uiop, IO_NODELOCKED | ioflag, cred);
@@ -1004,7 +952,6 @@ nfsrv_read(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 nfsmout:
 	if (vp)
 		vput(vp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -1040,11 +987,8 @@ nfsrv_write(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	struct uio io, *uiop = &io;
 	off_t off;
 	struct mount *mntp = NULL;
-	int tvfslocked;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
-	vfslocked = 0;
 	if (mrep == NULL) {
 		*mrq = NULL;
 		error = 0;
@@ -1056,7 +1000,6 @@ nfsrv_write(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		error = ESTALE;
 		goto ereply;
 	}
-	vfslocked = VFS_LOCK_GIANT(mntp);
 	(void) vn_start_write(NULL, &mntp, V_WAIT);
 	vfs_rel(mntp);		/* The write holds a ref. */
 	if (v3) {
@@ -1112,8 +1055,7 @@ nfsrv_write(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		error = 0;
 		goto nfsmout;
 	}
-	error = nfsrv_fhtovp(fhp, 0, &vp, &tvfslocked, nfsd, slp, nam, &rdonly);
-	vfslocked = nfsrv_lockedpair(vfslocked, tvfslocked);
+	error = nfsrv_fhtovp(fhp, 0, &vp, nfsd, slp, nam, &rdonly);
 	if (error) {
 		vp = NULL;
 		nfsm_reply(2 * NFSX_UNSIGNED);
@@ -1226,7 +1168,6 @@ nfsmout:
 	if (vp)
 		vput(vp);
 	vn_finished_write(mntp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -1258,11 +1199,8 @@ nfsrv_create(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	u_quad_t tempsize;
 	struct timespec cverf;
 	struct mount *mp = NULL;
-	int tvfslocked;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
-	vfslocked = 0;
 #ifndef nolint
 	rdev = 0;
 #endif
@@ -1274,14 +1212,13 @@ nfsrv_create(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		error = ESTALE;
 		goto ereply;
 	}
-	vfslocked = VFS_LOCK_GIANT(mp);
 	(void) vn_start_write(NULL, &mp, V_WAIT);
 	vfs_rel(mp);		/* The write holds a ref. */
 	nfsm_srvnamesiz(len);
 
 	nd.ni_cnd.cn_cred = cred;
 	nd.ni_cnd.cn_nameiop = CREATE;
-	nd.ni_cnd.cn_flags = LOCKPARENT | LOCKLEAF | SAVESTART | MPSAFE;
+	nd.ni_cnd.cn_flags = LOCKPARENT | LOCKLEAF | SAVESTART | NOCACHE;
 
 	/*
 	 * Call namei and do initial cleanup to get a few things
@@ -1294,7 +1231,6 @@ nfsrv_create(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	 */
 	error = nfs_namei(&nd, nfsd, fhp, len, slp, nam, &md, &dpos,
 		&dirp, v3, &dirfor, &dirfor_ret, FALSE);
-	vfslocked = nfsrv_lockedpair_nd(vfslocked, &nd);
 	if (dirp && !v3) {
 		vrele(dirp);
 		dirp = NULL;
@@ -1430,13 +1366,8 @@ nfsrv_create(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 			nd.ni_cnd.cn_flags &= ~(LOCKPARENT);
 			nd.ni_cnd.cn_thread = curthread;
 			nd.ni_cnd.cn_cred = cred;
-			tvfslocked = VFS_LOCK_GIANT(nd.ni_startdir->v_mount);
-			if (tvfslocked)
-				nd.ni_cnd.cn_flags |= GIANTHELD;
 			error = lookup(&nd);
 			nd.ni_dvp = NULL;
-			vfslocked = nfsrv_lockedpair_nd(vfslocked, &nd);
-			nd.ni_cnd.cn_flags &= ~GIANTHELD;
 			if (error)
 				goto ereply;
 
@@ -1524,7 +1455,6 @@ nfsmout:
 		vrele(dirp);
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	vn_finished_write(mp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -1554,11 +1484,8 @@ nfsrv_mknod(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	fhandle_t *fhp;
 	struct mount *mp = NULL;
 	int v3 = (nfsd->nd_flag & ND_NFSV3);
-	int tvfslocked;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
-	vfslocked = 0;
 	if (!v3)
 		panic("nfsrv_mknod: v3 proc called on a v2 connection");
 	ndclear(&nd);
@@ -1569,14 +1496,13 @@ nfsrv_mknod(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		error = ESTALE;
 		goto ereply;
 	}
-	vfslocked = VFS_LOCK_GIANT(mp);
 	(void) vn_start_write(NULL, &mp, V_WAIT);
 	vfs_rel(mp);		/* The write holds a ref. */
 	nfsm_srvnamesiz(len);
 
 	nd.ni_cnd.cn_cred = cred;
 	nd.ni_cnd.cn_nameiop = CREATE;
-	nd.ni_cnd.cn_flags = LOCKPARENT | LOCKLEAF | SAVESTART | MPSAFE;
+	nd.ni_cnd.cn_flags = LOCKPARENT | LOCKLEAF | SAVESTART | NOCACHE;
 
 	/*
 	 * Handle nfs_namei() call.  If an error occurs, the nd structure
@@ -1586,7 +1512,6 @@ nfsrv_mknod(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 
 	error = nfs_namei(&nd, nfsd, fhp, len, slp, nam, &md, &dpos,
 		&dirp, v3, &dirfor, &dirfor_ret, FALSE);
-	vfslocked = nfsrv_lockedpair_nd(vfslocked, &nd);
 	if (error) {
 		nfsm_reply(NFSX_WCCDATA(1));
 		nfsm_srvwcc_data(dirfor_ret, &dirfor, diraft_ret, &diraft);
@@ -1646,13 +1571,8 @@ nfsrv_mknod(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		nd.ni_cnd.cn_flags &= ~(LOCKPARENT);
 		nd.ni_cnd.cn_thread = td;
 		nd.ni_cnd.cn_cred = td->td_ucred;
-		tvfslocked = VFS_LOCK_GIANT(nd.ni_startdir->v_mount);
-		if (tvfslocked)
-			nd.ni_cnd.cn_flags |= GIANTHELD;
 		error = lookup(&nd);
 		nd.ni_dvp = NULL;
-		vfslocked = nfsrv_lockedpair_nd(vfslocked, &nd);
-		nd.ni_cnd.cn_flags &= ~GIANTHELD;
 
 		if (error)
 			goto out;
@@ -1704,7 +1624,6 @@ ereply:
 		nfsm_srvwcc_data(dirfor_ret, &dirfor, diraft_ret, &diraft);
 	}
 	vn_finished_write(mp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (0);
 nfsmout:
 	if (nd.ni_dvp) {
@@ -1721,7 +1640,6 @@ nfsmout:
 		vrele(nd.ni_startdir);
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	vn_finished_write(mp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -1746,11 +1664,9 @@ nfsrv_remove(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	nfsfh_t nfh;
 	fhandle_t *fhp;
 	struct mount *mp = NULL;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
 	ndclear(&nd);
-	vfslocked = 0;
 
 	fhp = &nfh.fh_generic;
 	nfsm_srvmtofh(fhp);
@@ -1758,17 +1674,15 @@ nfsrv_remove(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		error = ESTALE;
 		goto ereply;
 	}
-	vfslocked = VFS_LOCK_GIANT(mp);
 	(void) vn_start_write(NULL, &mp, V_WAIT);
 	vfs_rel(mp);		/* The write holds a ref. */
 	nfsm_srvnamesiz(len);
 
 	nd.ni_cnd.cn_cred = cred;
 	nd.ni_cnd.cn_nameiop = DELETE;
-	nd.ni_cnd.cn_flags = LOCKPARENT | LOCKLEAF | MPSAFE;
+	nd.ni_cnd.cn_flags = LOCKPARENT | LOCKLEAF;
 	error = nfs_namei(&nd, nfsd, fhp, len, slp, nam, &md, &dpos,
 		&dirp, v3,  &dirfor, &dirfor_ret, FALSE);
-	vfslocked = nfsrv_lockedpair_nd(vfslocked, &nd);
 	if (dirp && !v3) {
 		vrele(dirp);
 		dirp = NULL;
@@ -1830,7 +1744,6 @@ nfsmout:
 	if (nd.ni_vp)
 		vput(nd.ni_vp);
 	vn_finished_write(mp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -1858,10 +1771,8 @@ nfsrv_rename(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	fhandle_t *ffhp, *tfhp;
 	uid_t saved_uid;
 	struct mount *mp = NULL;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
-	vfslocked = 0;
 #ifndef nolint
 	fvp = NULL;
 #endif
@@ -1880,7 +1791,6 @@ nfsrv_rename(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		error = ESTALE;
 		goto out1;
 	}
-	vfslocked = VFS_LOCK_GIANT(mp);
 	(void) vn_start_write(NULL, &mp, V_WAIT);
 	vfs_rel(mp);		/* The write holds a ref. */
 	nfsm_srvnamesiz(len);
@@ -1891,10 +1801,9 @@ nfsrv_rename(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	saved_uid = cred->cr_uid;
 	fromnd.ni_cnd.cn_cred = cred;
 	fromnd.ni_cnd.cn_nameiop = DELETE;
-	fromnd.ni_cnd.cn_flags = WANTPARENT | SAVESTART | MPSAFE;
+	fromnd.ni_cnd.cn_flags = WANTPARENT | SAVESTART;
 	error = nfs_namei(&fromnd, nfsd, ffhp, len, slp, nam, &md,
 		&dpos, &fdirp, v3, &fdirfor, &fdirfor_ret, FALSE);
-	vfslocked = nfsrv_lockedpair_nd(vfslocked, &fromnd);
 	if (fdirp && !v3) {
 		vrele(fdirp);
 		fdirp = NULL;
@@ -1914,10 +1823,9 @@ nfsrv_rename(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	cred->cr_uid = saved_uid;
 	tond.ni_cnd.cn_cred = cred;
 	tond.ni_cnd.cn_nameiop = RENAME;
-	tond.ni_cnd.cn_flags = LOCKPARENT | LOCKLEAF | NOCACHE | SAVESTART | MPSAFE;
+	tond.ni_cnd.cn_flags = LOCKPARENT | LOCKLEAF | NOCACHE | SAVESTART;
 	error = nfs_namei(&tond, nfsd, tfhp, len2, slp, nam, &md,
 		&dpos, &tdirp, v3, &tdirfor, &tdirfor_ret, FALSE);
-	vfslocked = nfsrv_lockedpair_nd(vfslocked, &tond);
 	if (tdirp && !v3) {
 		vrele(tdirp);
 		tdirp = NULL;
@@ -2063,7 +1971,6 @@ nfsmout:
 		vrele(fromnd.ni_vp);
 
 	vn_finished_write(mp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -2088,12 +1995,9 @@ nfsrv_link(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	nfsfh_t nfh, dnfh;
 	fhandle_t *fhp, *dfhp;
 	struct mount *mp = NULL;
-	int tvfslocked;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
 	ndclear(&nd);
-	vfslocked = 0;
 
 	fhp = &nfh.fh_generic;
 	dfhp = &dnfh.fh_generic;
@@ -2102,14 +2006,12 @@ nfsrv_link(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		error = ESTALE;
 		goto ereply;
 	}
-	vfslocked = VFS_LOCK_GIANT(mp);
 	(void) vn_start_write(NULL, &mp, V_WAIT);
 	vfs_rel(mp);		/* The write holds a ref. */
 	nfsm_srvmtofh(dfhp);
 	nfsm_srvnamesiz(len);
 
-	error = nfsrv_fhtovp(fhp, 0, &vp, &tvfslocked, nfsd, slp, nam, &rdonly);
-	vfslocked = nfsrv_lockedpair(vfslocked, tvfslocked);
+	error = nfsrv_fhtovp(fhp, 0, &vp, nfsd, slp, nam, &rdonly);
 	if (error) {
 		nfsm_reply(NFSX_POSTOPATTR(v3) + NFSX_WCCDATA(v3));
 		if (v3) {
@@ -2129,10 +2031,9 @@ nfsrv_link(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	VOP_UNLOCK(vp, 0);
 	nd.ni_cnd.cn_cred = cred;
 	nd.ni_cnd.cn_nameiop = CREATE;
-	nd.ni_cnd.cn_flags = LOCKPARENT | MPSAFE | MPSAFE;
+	nd.ni_cnd.cn_flags = LOCKPARENT | NOCACHE;
 	error = nfs_namei(&nd, nfsd, dfhp, len, slp, nam, &md, &dpos,
 		&dirp, v3, &dirfor, &dirfor_ret, FALSE);
-	vfslocked = nfsrv_lockedpair_nd(vfslocked, &nd);
 	if (dirp && !v3) {
 		vrele(dirp);
 		dirp = NULL;
@@ -2210,7 +2111,6 @@ nfsmout:
 	if (nd.ni_vp)
 		vrele(nd.ni_vp);
 	vn_finished_write(mp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -2239,12 +2139,9 @@ nfsrv_symlink(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	nfsfh_t nfh;
 	fhandle_t *fhp;
 	struct mount *mp = NULL;
-	int tvfslocked;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
 	ndclear(&nd);
-	vfslocked = 0;
 
 	fhp = &nfh.fh_generic;
 	nfsm_srvmtofh(fhp);
@@ -2252,16 +2149,14 @@ nfsrv_symlink(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		error = ESTALE;
 		goto out;
 	}
-	vfslocked = VFS_LOCK_GIANT(mp);
 	(void) vn_start_write(NULL, &mp, V_WAIT);
 	vfs_rel(mp);		/* The write holds a ref. */
 	nfsm_srvnamesiz(len);
 	nd.ni_cnd.cn_cred = cred;
 	nd.ni_cnd.cn_nameiop = CREATE;
-	nd.ni_cnd.cn_flags = LOCKPARENT | SAVESTART | MPSAFE;
+	nd.ni_cnd.cn_flags = LOCKPARENT | SAVESTART | NOCACHE;
 	error = nfs_namei(&nd, nfsd, fhp, len, slp, nam, &md, &dpos,
 		&dirp, v3, &dirfor, &dirfor_ret, FALSE);
-	vfslocked = nfsrv_lockedpair_nd(vfslocked, &nd);
 	if (error == 0) {
 		VATTR_NULL(vap);
 		if (v3)
@@ -2327,13 +2222,8 @@ nfsrv_symlink(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		nd.ni_cnd.cn_flags |= (NOFOLLOW | LOCKLEAF);
 		nd.ni_cnd.cn_thread = curthread;
 		nd.ni_cnd.cn_cred = cred;
-		tvfslocked = VFS_LOCK_GIANT(nd.ni_startdir->v_mount);
-		if (tvfslocked)
-			nd.ni_cnd.cn_flags |= GIANTHELD;
 		error = lookup(&nd);
 		nd.ni_dvp = NULL;
-		vfslocked = nfsrv_lockedpair_nd(vfslocked, &nd);
-		nd.ni_cnd.cn_flags &= ~GIANTHELD;
 
 		if (error == 0) {
 			bzero((caddr_t)fhp, sizeof(nfh));
@@ -2393,7 +2283,6 @@ nfsmout:
 		free(pathcp, M_TEMP);
 
 	vn_finished_write(mp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -2422,11 +2311,9 @@ nfsrv_mkdir(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	nfsfh_t nfh;
 	fhandle_t *fhp;
 	struct mount *mp = NULL;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
 	ndclear(&nd);
-	vfslocked = 0;
 
 	fhp = &nfh.fh_generic;
 	nfsm_srvmtofh(fhp);
@@ -2434,17 +2321,15 @@ nfsrv_mkdir(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		error = ESTALE;
 		goto out;
 	}
-	vfslocked = VFS_LOCK_GIANT(mp);
 	(void) vn_start_write(NULL, &mp, V_WAIT);
 	vfs_rel(mp);		/* The write holds a ref. */
 	nfsm_srvnamesiz(len);
 	nd.ni_cnd.cn_cred = cred;
 	nd.ni_cnd.cn_nameiop = CREATE;
-	nd.ni_cnd.cn_flags = LOCKPARENT | MPSAFE;
+	nd.ni_cnd.cn_flags = LOCKPARENT | NOCACHE;
 
 	error = nfs_namei(&nd, nfsd, fhp, len, slp, nam, &md, &dpos,
 		&dirp, v3, &dirfor, &dirfor_ret, FALSE);
-	vfslocked = nfsrv_lockedpair_nd(vfslocked, &nd);
 	if (dirp && !v3) {
 		vrele(dirp);
 		dirp = NULL;
@@ -2556,7 +2441,6 @@ nfsmout:
 	if (dirp)
 		vrele(dirp);
 	vn_finished_write(mp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -2581,11 +2465,9 @@ nfsrv_rmdir(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	fhandle_t *fhp;
 	struct nameidata nd;
 	struct mount *mp = NULL;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
 	ndclear(&nd);
-	vfslocked = 0;
 
 	fhp = &nfh.fh_generic;
 	nfsm_srvmtofh(fhp);
@@ -2593,16 +2475,14 @@ nfsrv_rmdir(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		error = ESTALE;
 		goto out;
 	}
-	vfslocked = VFS_LOCK_GIANT(mp);
 	(void) vn_start_write(NULL, &mp, V_WAIT);
 	vfs_rel(mp);		/* The write holds a ref. */
 	nfsm_srvnamesiz(len);
 	nd.ni_cnd.cn_cred = cred;
 	nd.ni_cnd.cn_nameiop = DELETE;
-	nd.ni_cnd.cn_flags = LOCKPARENT | LOCKLEAF | MPSAFE;
+	nd.ni_cnd.cn_flags = LOCKPARENT | LOCKLEAF;
 	error = nfs_namei(&nd, nfsd, fhp, len, slp, nam, &md, &dpos,
 		&dirp, v3, &dirfor, &dirfor_ret, FALSE);
-	vfslocked = nfsrv_lockedpair_nd(vfslocked, &nd);
 	if (dirp && !v3) {
 		vrele(dirp);
 		dirp = NULL;
@@ -2680,7 +2560,6 @@ nfsmout:
 		vrele(dirp);
 
 	vn_finished_write(mp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -2749,10 +2628,9 @@ nfsrv_readdir(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	int v3 = (nfsd->nd_flag & ND_NFSV3);
 	u_quad_t off, toff, verf;
 	u_long *cookies = NULL, *cookiep; /* needs to be int64_t or off_t */
-	int vfslocked, not_zfs;
+	int is_ufs;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
-	vfslocked = 0;
 	fhp = &nfh.fh_generic;
 	nfsm_srvmtofh(fhp);
 	if (v3) {
@@ -2775,7 +2653,7 @@ nfsrv_readdir(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	if (siz > xfer)
 		siz = xfer;
 	fullsiz = siz;
-	error = nfsrv_fhtovp(fhp, 0, &vp, &vfslocked, nfsd, slp, nam, &rdonly);
+	error = nfsrv_fhtovp(fhp, 0, &vp, nfsd, slp, nam, &rdonly);
 	if (!error && vp->v_type != VDIR) {
 		error = ENOTDIR;
 		vput(vp);
@@ -2813,7 +2691,7 @@ nfsrv_readdir(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		error = 0;
 		goto nfsmout;
 	}
-	not_zfs = strcmp(vp->v_mount->mnt_vfc->vfc_name, "zfs") != 0;
+	is_ufs = strcmp(vp->v_mount->mnt_vfc->vfc_name, "ufs") == 0;
 	VOP_UNLOCK(vp, 0);
 
 	/*
@@ -2900,12 +2778,10 @@ again:
 	 * skip over the records that precede the requested offset. This
 	 * requires the assumption that file offset cookies monotonically
 	 * increase.
-	 * Since the offset cookies don't monotonically increase for ZFS,
-	 * this is not done when ZFS is the file system.
 	 */
 	while (cpos < cend && ncookies > 0 &&
 		(dp->d_fileno == 0 || dp->d_type == DT_WHT ||
-		 (not_zfs != 0 && ((u_quad_t)(*cookiep)) <= toff))) {
+		 (is_ufs == 1 && ((u_quad_t)(*cookiep)) <= toff))) {
 		cpos += dp->d_reclen;
 		dp = (struct dirent *)cpos;
 		cookiep++;
@@ -3015,7 +2891,6 @@ again:
 nfsmout:
 	if (vp)
 		vrele(vp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -3049,13 +2924,12 @@ nfsrv_readdirplus(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	u_quad_t off, toff, verf;
 	u_long *cookies = NULL, *cookiep; /* needs to be int64_t or off_t */
 	int v3 = (nfsd->nd_flag & ND_NFSV3);
-	int usevget = 1, vfslocked;
+	int usevget = 1;
 	struct componentname cn;
 	struct mount *mntp = NULL;
-	int not_zfs;
+	int is_ufs;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
-	vfslocked = 0;
 	vp_locked = 0;
 	if (!v3)
 		panic("nfsrv_readdirplus: v3 proc called on a v2 connection");
@@ -3076,7 +2950,7 @@ nfsrv_readdirplus(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	if (siz > xfer)
 		siz = xfer;
 	fullsiz = siz;
-	error = nfsrv_fhtovp(fhp, NFSRV_FLAG_BUSY, &vp, &vfslocked, nfsd, slp,
+	error = nfsrv_fhtovp(fhp, NFSRV_FLAG_BUSY, &vp, nfsd, slp,
 	    nam, &rdonly);
 	if (!error) {
 		vp_locked = 1;
@@ -3113,7 +2987,7 @@ nfsrv_readdirplus(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		error = 0;
 		goto nfsmout;
 	}
-	not_zfs = strcmp(vp->v_mount->mnt_vfc->vfc_name, "zfs") != 0;
+	is_ufs = strcmp(vp->v_mount->mnt_vfc->vfc_name, "ufs") == 0;
 	VOP_UNLOCK(vp, 0);
 	vp_locked = 0;
 	rbuf = malloc(siz, M_TEMP, M_WAITOK);
@@ -3193,12 +3067,10 @@ again:
 	 * skip over the records that precede the requested offset. This
 	 * requires the assumption that file offset cookies monotonically
 	 * increase.
-	 * Since the offset cookies don't monotonically increase for ZFS,
-	 * this is not done when ZFS is the file system.
 	 */
 	while (cpos < cend && ncookies > 0 &&
 		(dp->d_fileno == 0 || dp->d_type == DT_WHT ||
-		 (not_zfs != 0 && ((u_quad_t)(*cookiep)) <= toff))) {
+		 (is_ufs == 1 && ((u_quad_t)(*cookiep)) <= toff))) {
 		cpos += dp->d_reclen;
 		dp = (struct dirent *)cpos;
 		cookiep++;
@@ -3245,7 +3117,7 @@ again:
 					usevget = 0;
 					cn.cn_nameiop = LOOKUP;
 					cn.cn_flags = ISLASTCN | NOFOLLOW | \
-					    LOCKSHARED | LOCKLEAF | MPSAFE;
+					    LOCKSHARED | LOCKLEAF;
 					cn.cn_lkflags = LK_SHARED | LK_RETRY;
 					cn.cn_cred = cred;
 					cn.cn_thread = curthread;
@@ -3393,7 +3265,6 @@ nfsmout:
 		vrele(vp);
 	if (mntp)
 		vfs_unbusy(mntp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -3419,11 +3290,8 @@ nfsrv_commit(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	u_quad_t off;
 	struct mount *mp = NULL;
 	int v3 = (nfsd->nd_flag & ND_NFSV3);
-	int tvfslocked;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
-	vfslocked = 0;
 	if (!v3)
 		panic("nfsrv_commit: v3 proc called on a v2 connection");
 	fhp = &nfh.fh_generic;
@@ -3432,7 +3300,6 @@ nfsrv_commit(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		error = ESTALE;
 		goto ereply;
 	}
-	vfslocked = VFS_LOCK_GIANT(mp);
 	(void) vn_start_write(NULL, &mp, V_WAIT);
 	vfs_rel(mp);		/* The write holds a ref. */
 	tl = nfsm_dissect_nonblock(u_int32_t *, 3 * NFSX_UNSIGNED);
@@ -3444,8 +3311,7 @@ nfsrv_commit(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	off = fxdr_hyper(tl);
 	tl += 2;
 	cnt = fxdr_unsigned(int, *tl);
-	error = nfsrv_fhtovp(fhp, 0, &vp, &tvfslocked, nfsd, slp, nam, &rdonly);
-	vfslocked = nfsrv_lockedpair(vfslocked, tvfslocked);
+	error = nfsrv_fhtovp(fhp, 0, &vp, nfsd, slp, nam, &rdonly);
 	if (error) {
 		nfsm_reply(2 * NFSX_UNSIGNED);
 		nfsm_srvwcc_data(for_ret, &bfor, aft_ret, &aft);
@@ -3454,15 +3320,20 @@ nfsrv_commit(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	}
 	for_ret = VOP_GETATTR(vp, &bfor, cred);
 
-	if (cnt > MAX_COMMIT_COUNT) {
+	/*
+	 * RFC 1813 3.3.21: if count is 0, a flush from offset to the end of file
+	 * is done.  At this time VOP_FSYNC does not accept offset and byte count
+	 * parameters so call VOP_FSYNC the whole file for now.
+	 */
+	if (cnt == 0 || cnt > MAX_COMMIT_COUNT) {
 		/*
 		 * Give up and do the whole thing
 		 */
 		if (vp->v_object &&
 		   (vp->v_object->flags & OBJ_MIGHTBEDIRTY)) {
-			VM_OBJECT_LOCK(vp->v_object);
+			VM_OBJECT_WLOCK(vp->v_object);
 			vm_object_page_clean(vp->v_object, 0, 0, OBJPC_SYNC);
-			VM_OBJECT_UNLOCK(vp->v_object);
+			VM_OBJECT_WUNLOCK(vp->v_object);
 		}
 		error = VOP_FSYNC(vp, MNT_WAIT, curthread);
 	} else {
@@ -3491,10 +3362,10 @@ nfsrv_commit(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 
 		if (vp->v_object &&
 		   (vp->v_object->flags & OBJ_MIGHTBEDIRTY)) {
-			VM_OBJECT_LOCK(vp->v_object);
+			VM_OBJECT_WLOCK(vp->v_object);
 			vm_object_page_clean(vp->v_object, off, off + cnt,
 			    OBJPC_SYNC);
-			VM_OBJECT_UNLOCK(vp->v_object);
+			VM_OBJECT_WUNLOCK(vp->v_object);
 		}
 
 		bo = &vp->v_bufobj;
@@ -3514,7 +3385,7 @@ nfsrv_commit(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 			 */
 			if ((bp = gbincore(&vp->v_bufobj, lblkno)) != NULL) {
 				if (BUF_LOCK(bp, LK_EXCLUSIVE | LK_SLEEPFAIL |
-				    LK_INTERLOCK, BO_MTX(bo)) == ENOLCK) {
+				    LK_INTERLOCK, BO_LOCKPTR(bo)) == ENOLCK) {
 					BO_LOCK(bo);
 					continue; /* retry */
 				}
@@ -3556,7 +3427,6 @@ nfsmout:
 	if (vp)
 		vput(vp);
 	vn_finished_write(mp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -3583,13 +3453,11 @@ nfsrv_statfs(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	fhandle_t *fhp;
 	struct statfs statfs;
 	u_quad_t tval;
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
-	vfslocked = 0;
 	fhp = &nfh.fh_generic;
 	nfsm_srvmtofh(fhp);
-	error = nfsrv_fhtovp(fhp, 0, &vp, &vfslocked, nfsd, slp, nam, &rdonly);
+	error = nfsrv_fhtovp(fhp, 0, &vp, nfsd, slp, nam, &rdonly);
 	if (error) {
 		nfsm_reply(NFSX_UNSIGNED);
 		if (v3)
@@ -3649,7 +3517,6 @@ nfsrv_statfs(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 nfsmout:
 	if (vp)
 		vput(vp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -3675,15 +3542,13 @@ nfsrv_fsinfo(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	u_quad_t maxfsize;
 	struct statfs sb;
 	int v3 = (nfsd->nd_flag & ND_NFSV3);
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
 	if (!v3)
 		panic("nfsrv_fsinfo: v3 proc called on a v2 connection");
 	fhp = &nfh.fh_generic;
-	vfslocked = 0;
 	nfsm_srvmtofh(fhp);
-	error = nfsrv_fhtovp(fhp, 0, &vp, &vfslocked, nfsd, slp, nam, &rdonly);
+	error = nfsrv_fhtovp(fhp, 0, &vp, nfsd, slp, nam, &rdonly);
 	if (error) {
 		nfsm_reply(NFSX_UNSIGNED);
 		nfsm_srvpostop_attr(getret, &at);
@@ -3724,7 +3589,6 @@ nfsrv_fsinfo(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 nfsmout:
 	if (vp)
 		vput(vp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -3749,15 +3613,13 @@ nfsrv_pathconf(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	nfsfh_t nfh;
 	fhandle_t *fhp;
 	int v3 = (nfsd->nd_flag & ND_NFSV3);
-	int vfslocked;
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
 	if (!v3)
 		panic("nfsrv_pathconf: v3 proc called on a v2 connection");
-	vfslocked = 0;
 	fhp = &nfh.fh_generic;
 	nfsm_srvmtofh(fhp);
-	error = nfsrv_fhtovp(fhp, 0, &vp, &vfslocked, nfsd, slp, nam, &rdonly);
+	error = nfsrv_fhtovp(fhp, 0, &vp, nfsd, slp, nam, &rdonly);
 	if (error) {
 		nfsm_reply(NFSX_UNSIGNED);
 		nfsm_srvpostop_attr(getret, &at);
@@ -3797,7 +3659,6 @@ nfsrv_pathconf(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 nfsmout:
 	if (vp)
 		vput(vp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return(error);
 }
 
@@ -3865,8 +3726,6 @@ nfsrv_access(struct vnode *vp, accmode_t accmode, struct ucred *cred,
 {
 	struct vattr vattr;
 	int error;
-
-	VFS_ASSERT_GIANT(vp->v_mount);
 
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfs.h	8.4 (Berkeley) 5/1/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/nfsserver/nfsrvstats.h 139823 2005-01-07 01:45:51Z imp $
  */
 
 #ifndef _NFSSERVER_NFSRVSTATS_H_

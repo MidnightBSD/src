@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfs.h	8.4 (Berkeley) 5/1/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/nfsserver/nfs.h 241896 2012-10-22 17:50:54Z kib $
  */
 
 #ifndef _NFSSERVER_NFS_H_
@@ -268,7 +269,7 @@ int	nfsrv_commit(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	    struct mbuf **mrq);
 int	nfsrv_create(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	    struct mbuf **mrq);
-int	nfsrv_fhtovp(fhandle_t *, int, struct vnode **, int *,
+int	nfsrv_fhtovp(fhandle_t *, int, struct vnode **,
 	    struct nfsrv_descript *, struct nfssvc_sock *, struct sockaddr *,
 	    int *);
 int	nfsrv_setpublicfs(struct mount *, struct netexport *,
