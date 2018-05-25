@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/iconv.h 300060 2016-05-17 15:18:01Z pfg $
  */
 #ifndef _SYS_ICONV_H_
 #define _SYS_ICONV_H_
@@ -65,7 +66,7 @@ struct iconv_cspair_info {
 };
 
 /*
- * Paramters for 'add' sysctl
+ * Parameters for 'add' sysctl
  */
 #define	ICONV_ADD_VER	1
 
@@ -240,7 +241,7 @@ int iconv_converter_tolowerstub(int c, void *handle);
 int iconv_converter_handler(module_t mod, int type, void *data);
 
 #ifdef ICONV_DEBUG
-#define ICDEBUG(format, ...) printf("%s: "format, __func__ , __VA_ARGS__)
+#define ICDEBUG(format, ...) printf("%s: "format, __func__ , ## __VA_ARGS__)
 #else
 #define ICDEBUG(format, ...)
 #endif

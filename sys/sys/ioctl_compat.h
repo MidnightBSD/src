@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ioctl_compat.h	8.4 (Berkeley) 1/21/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/ioctl_compat.h 196884 2009-09-06 09:39:40Z ed $
  */
 
 #ifndef _SYS_IOCTL_COMPAT_H_

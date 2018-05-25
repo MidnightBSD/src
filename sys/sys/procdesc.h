@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Robert N. M. Watson
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/procdesc.h 269619 2014-08-06 00:35:32Z emaste $
  */
 
 #ifndef _SYS_PROCDESC_H_
@@ -47,7 +48,7 @@
  * Locking key:
  * (c) - Constant after initial setup.
  * (p) - Protected by the process descriptor mutex.
- * (r) - Atomic eference count.
+ * (r) - Atomic reference count.
  * (s) - Protected by selinfo.
  * (t) - Protected by the proctree_lock
  */
@@ -92,8 +93,8 @@ struct procdesc {
  * In-kernel interfaces to process descriptors.
  */
 int	 procdesc_exit(struct proc *);
-int	 procdesc_find(struct thread *, int fd, cap_rights_t, struct proc **);
-int	 kern_pdgetpid(struct thread *, int fd, cap_rights_t, pid_t *pidp);
+int	 procdesc_find(struct thread *, int fd, cap_rights_t *, struct proc **);
+int	 kern_pdgetpid(struct thread *, int fd, cap_rights_t *, pid_t *pidp);
 void	 procdesc_new(struct proc *, int);
 void	 procdesc_finit(struct procdesc *, struct file *);
 pid_t	 procdesc_pid(struct file *);

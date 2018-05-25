@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/kdb.h 333205 2018-05-03 07:57:08Z avg $
  */
 
 #ifndef _SYS_KDB_H_
@@ -97,6 +98,8 @@ int	kdb_trap(int, int, struct trapframe *);
 extern const char * volatile kdb_why;
 #define	KDB_WHY_UNSET		NULL		/* No reason set. */
 #define	KDB_WHY_PANIC		"panic"		/* panic() was called. */
+#define	KDB_WHY_KASSERT		"kassert"	/* kassert failed. */
+#define	KDB_WHY_TRAP		"trap"		/* Fatal trap. */
 #define	KDB_WHY_SYSCTL		"sysctl"	/* Sysctl entered debugger. */
 #define	KDB_WHY_BOOTFLAGS	"bootflags"	/* Boot flags were set. */
 #define	KDB_WHY_WITNESS		"witness"	/* Witness entered debugger. */

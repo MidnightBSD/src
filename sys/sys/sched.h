@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996, 1997
  *      HD Associates, Inc.  All rights reserved.
@@ -56,7 +57,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/sched.h 253604 2013-07-24 09:45:31Z avg $
  */
 
 #ifndef _SCHED_H_
@@ -151,11 +152,13 @@ static __inline void
 sched_pin(void)
 {
 	curthread->td_pinned++;
+	__compiler_membar();
 }
 
 static __inline void
 sched_unpin(void)
 {
+	__compiler_membar();
 	curthread->td_pinned--;
 }
 
@@ -180,7 +183,7 @@ static void name ## _add_proc(void *dummy __unused)			\
 	    #name, CTLTYPE_LONG|CTLFLAG_RD|CTLFLAG_MPSAFE,		\
 	    ptr, 0, sysctl_dpcpu_long, "LU", descr);			\
 }									\
-SYSINIT(name, SI_SUB_RUN_SCHEDULER, SI_ORDER_MIDDLE, name ## _add_proc, NULL);
+SYSINIT(name, SI_SUB_LAST, SI_ORDER_MIDDLE, name ## _add_proc, NULL);
 
 #define	SCHED_STAT_DEFINE(name, descr)					\
     DPCPU_DEFINE(unsigned long, name);					\

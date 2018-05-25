@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1984, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ptrace.h	8.2 (Berkeley) 1/4/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/ptrace.h 304499 2016-08-19 20:17:57Z jhb $
  */
 
 #ifndef	_SYS_PTRACE_H_
@@ -64,6 +65,10 @@
 #define	PT_SYSCALL	22
 
 #define	PT_FOLLOW_FORK	23
+#define	PT_LWP_EVENTS	24	/* report LWP birth and exit */
+
+#define	PT_GET_EVENT_MASK 25	/* get mask of optional events */
+#define	PT_SET_EVENT_MASK 26	/* set mask of optional events */
 
 #define PT_GETREGS      33	/* get general-purpose registers */
 #define PT_SETREGS      34	/* set general-purpose registers */
@@ -77,6 +82,17 @@
 
 #define PT_FIRSTMACH    64	/* for machine-specific requests */
 #include <machine/ptrace.h>	/* machine-specific requests, if any */
+
+/* Events used with PT_GET_EVENT_MASK and PT_SET_EVENT_MASK */
+#define	PTRACE_EXEC	0x0001
+#define	PTRACE_SCE	0x0002
+#define	PTRACE_SCX	0x0004
+#define	PTRACE_SYSCALL	(PTRACE_SCE | PTRACE_SCX)
+#define	PTRACE_FORK	0x0008
+#define	PTRACE_LWP	0x0010
+#define	PTRACE_VFORK	0x0020
+
+#define	PTRACE_DEFAULT	(PTRACE_EXEC)
 
 struct ptrace_io_desc {
 	int	piod_op;	/* I/O operation */
@@ -108,11 +124,17 @@ struct ptrace_lwpinfo {
 #define	PL_FLAG_SI	0x20	/* siginfo is valid */
 #define	PL_FLAG_FORKED	0x40	/* new child */
 #define	PL_FLAG_CHILD	0x80	/* I am from child */
+#define	PL_FLAG_BORN	0x100	/* new LWP */
+#define	PL_FLAG_EXITED	0x200	/* exiting LWP */
+#define	PL_FLAG_VFORKED	0x400	/* new child via vfork */
+#define	PL_FLAG_VFORK_DONE 0x800 /* vfork parent has resumed */
 	sigset_t	pl_sigmask;	/* LWP signal mask */
 	sigset_t	pl_siglist;	/* LWP pending signal */
 	struct __siginfo pl_siginfo;	/* siginfo for signal */
 	char		pl_tdname[MAXCOMLEN + 1]; /* LWP name */
-	int		pl_child_pid;	/* New child pid */
+	pid_t		pl_child_pid;	/* New child pid */
+	u_int		pl_syscall_code;
+	u_int		pl_syscall_narg;
 };
 
 /* Argument structure for PT_VM_ENTRY. */
@@ -130,13 +152,6 @@ struct ptrace_vm_entry {
 };
 
 #ifdef _KERNEL
-
-/*
- * The flags below are used for ptrace(2) tracing and have no relation
- * to procfs.  They are stored in struct proc's p_stops member.
- */
-#define	S_PT_SCE	0x000010000
-#define	S_PT_SCX	0x000020000
 
 int	ptrace_set_pc(struct thread *_td, unsigned long _addr);
 int	ptrace_single_step(struct thread *_td);

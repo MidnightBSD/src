@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2008 Stanislav Sedov <stas@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/cpuctl.h 268157 2014-07-02 13:09:26Z kib $
  */
 
 #ifndef _CPUCTL_H_
@@ -35,9 +36,15 @@ typedef struct {
 } cpuctl_msr_args_t;
 
 typedef struct {
-	int		level;	/* CPUID level */
+	int		level;		/* CPUID level */
 	uint32_t	data[4];
 } cpuctl_cpuid_args_t;
+
+typedef struct {
+	int		level;		/* CPUID level */
+	int		level_type;	/* CPUID level type */
+	uint32_t	data[4];
+} cpuctl_cpuid_count_args_t;
 
 typedef struct {
 	void	*data;
@@ -50,5 +57,6 @@ typedef struct {
 #define	CPUCTL_UPDATE	_IOWR('c', 4, cpuctl_update_args_t)
 #define	CPUCTL_MSRSBIT	_IOWR('c', 5, cpuctl_msr_args_t)
 #define	CPUCTL_MSRCBIT	_IOWR('c', 6, cpuctl_msr_args_t)
+#define	CPUCTL_CPUID_COUNT _IOWR('c', 7, cpuctl_cpuid_count_args_t)
 
 #endif /* _CPUCTL_H_ */

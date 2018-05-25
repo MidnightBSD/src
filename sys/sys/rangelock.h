@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Konstantin Belousov <kib@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/sys/rangelock.h 254380 2013-08-15 20:19:17Z cperciva $
  */
 
 #ifndef	_SYS_RANGELOCK_H
@@ -48,9 +49,13 @@ struct rl_q_entry;
  * Access to the structure itself is synchronized with the externally
  * supplied mutex.
  *
- * rl_waiters is the queue of lock requests in the order of arrival.
+ * rl_waiters is the queue containing in order (a) granted write lock
+ * requests, (b) granted read lock requests, and (c) in order of arrival,
+ * lock requests which cannot be granted yet.
+ *
  * rl_currdep is the first lock request that cannot be granted now due
- * to the preceding requests conflicting with it.
+ * to the preceding requests conflicting with it (i.e., it points to
+ * position (c) in the list above).
  */
 struct rangelock {
 	TAILQ_HEAD(, rl_q_entry) rl_waiters;

@@ -1,7 +1,8 @@
+/* $MidnightBSD$ */
 /*
  * 16 Feb 93	Julian Elischer	(julian@dialix.oz.au)
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/cdio.h 141031 2005-01-30 08:12:37Z sobomax $
  */
 
 /*

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999,2000 Jonathan Lemon <jlemon@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/sys/sys/eventvar.h 255527 2013-09-13 19:50:50Z kib $
  */
 
 #ifndef _SYS_EVENTVAR_H_
@@ -41,7 +42,7 @@
 struct kqueue {
 	struct		mtx kq_lock;
 	int		kq_refcnt;
-	SLIST_ENTRY(kqueue)	kq_list;
+	TAILQ_ENTRY(kqueue)	kq_list;
 	TAILQ_HEAD(, knote)	kq_head;	/* list of pending event */
 	int		kq_count;		/* number of pending events */
 	struct		selinfo kq_sel;
@@ -60,7 +61,6 @@ struct kqueue {
 	u_long		kq_knhashmask;		/* size of knhash */
 	struct		klist *kq_knhash;	/* hash table for knotes */
 	struct		task kq_task;
-	struct		ucred *kq_cred;
 };
 
 #endif /* !_SYS_EVENTVAR_H_ */

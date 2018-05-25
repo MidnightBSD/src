@@ -51,11 +51,11 @@
  * 		or r is 5-9 in stable after 1.0 is released.
  */
 #undef __MidnightBSD_version
-#define __MidnightBSD_version 100000	/* Master, propagated to newvers */
+#define __MidnightBSD_version 100001	/* Master, propagated to newvers */
 
 /* Version of FreeBSD we're compatible with */
 #undef __FreeBSD_version
-#define __FreeBSD_version 901504
+#define __FreeBSD_version 1004501	/* Master, propagated to newvers */
 
 /*
  * It is tempting to use this macro in userland code when we want to enable
@@ -69,10 +69,13 @@
 #undef __MidnightBSD_kernel__
 #define __MidnightBSD_kernel__
 
-#ifdef _KERNEL
+#if defined(_KERNEL) || defined(IN_RTLD)
 #define	P_OSREL_SIGWAIT		700000
 #define	P_OSREL_SIGSEGV		700004
 #define	P_OSREL_MAP_ANON	800104
+#define	P_OSREL_MAP_GUARD		1200035
+
+#define	P_OSREL_MAJOR(x)	((x) / 100000)
 #endif
 
 #ifndef LOCORE
@@ -149,8 +152,8 @@
  * MCLBYTES must be no larger than PAGE_SIZE.
  */
 #ifndef	MSIZE
-#define MSIZE		256		/* size of an mbuf */
-#endif	/* MSIZE */
+#define	MSIZE		256		/* size of an mbuf */
+#endif
 
 #ifndef	MCLSHIFT
 #define MCLSHIFT	11		/* convert bytes to mbuf clusters */
@@ -204,7 +207,6 @@
 #define	PRIMASK	0x0ff
 #define	PCATCH	0x100		/* OR'd with pri for tsleep to check signals */
 #define	PDROP	0x200	/* OR'd with pri to stop re-entry of interlock mutex */
-#define	PBDRY	0x400	/* for PCATCH stop is done on the user boundary */
 
 #define	NZERO	0		/* default "nice" */
 
@@ -224,22 +226,34 @@
  *		and may be made smaller at the risk of not being able to use
  *		filesystems which require a block size exceeding MAXBSIZE.
  *
+ * MAXBCACHEBUF - Maximum size of a buffer in the buffer cache.  This must
+ *		be >= MAXBSIZE and can be set differently for different
+ *		architectures by defining it in <machine/param.h>.
+ *		Making this larger allows NFS to do larger reads/writes.
+ *
  * BKVASIZE -	Nominal buffer space per buffer, in bytes.  BKVASIZE is the
  *		minimum KVM memory reservation the kernel is willing to make.
- *		Filesystems can of course request smaller chunks.  Actual 
+ *		Filesystems can of course request smaller chunks.  Actual
  *		backing memory uses a chunk size of a page (PAGE_SIZE).
+ *		The default value here can be overridden on a per-architecture
+ *		basis by defining it in <machine/param.h>.
  *
  *		If you make BKVASIZE too small you risk seriously fragmenting
  *		the buffer KVM map which may slow things down a bit.  If you
- *		make it too big the kernel will not be able to optimally use 
- *		the KVM memory reserved for the buffer cache and will wind 
+ *		make it too big the kernel will not be able to optimally use
+ *		the KVM memory reserved for the buffer cache and will wind
  *		up with too-few buffers.
  *
  *		The default is 16384, roughly 2x the block size used by a
  *		normal UFS filesystem.
  */
 #define MAXBSIZE	65536	/* must be power of 2 */
+#ifndef	MAXBCACHEBUF
+#define	MAXBCACHEBUF	MAXBSIZE /* must be a power of 2 >= MAXBSIZE */
+#endif
+#ifndef	BKVASIZE
 #define BKVASIZE	16384	/* must be power of 2 */
+#endif
 #define BKVAMASK	(BKVASIZE-1)
 
 /*
@@ -268,6 +282,7 @@
 #endif
 #define	nitems(x)	(sizeof((x)) / sizeof((x)[0]))
 #define	rounddown(x, y)	(((x)/(y))*(y))
+#define	rounddown2(x, y) ((x)&(~((y)-1)))          /* if y is power of two */
 #define	roundup(x, y)	((((x)+((y)-1))/(y))*(y))  /* to any y */
 #define	roundup2(x, y)	(((x)+((y)-1))&(~((y)-1))) /* if y is powers of two */
 #define powerof2(x)	((((x)-1)&(x))==0)
@@ -319,7 +334,7 @@ __END_DECLS
 
 #define dbtoc(db)			/* calculates devblks to pages */ \
 	((db + (ctodb(1) - 1)) >> (PAGE_SHIFT - DEV_BSHIFT))
- 
+
 #define ctodb(db)			/* calculates pages to devblks */ \
 	((db) << (PAGE_SHIFT - DEV_BSHIFT))
 

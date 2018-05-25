@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Kip Macy <kmacy@freebsd.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/buf_ring.h 301913 2016-06-15 05:16:37Z sephe $
  *
  */
 
@@ -47,25 +48,14 @@ struct buf_ring {
 	int              	br_prod_size;
 	int              	br_prod_mask;
 	uint64_t		br_drops;
-	uint64_t		br_prod_bufs;
-	/*
-	 * Pad out to next L2 cache line
-	 */
-	uint64_t	  	_pad0[11];
-
-	volatile uint32_t	br_cons_head;
+	volatile uint32_t	br_cons_head __aligned(CACHE_LINE_SIZE);
 	volatile uint32_t	br_cons_tail;
 	int		 	br_cons_size;
 	int              	br_cons_mask;
-	
-	/*
-	 * Pad out to next L2 cache line
-	 */
-	uint64_t	  	_pad1[14];
 #ifdef DEBUG_BUFRING
 	struct mtx		*br_lock;
 #endif	
-	void			*br_ring[0];
+	void			*br_ring[0] __aligned(CACHE_LINE_SIZE);
 };
 
 /*
@@ -75,9 +65,7 @@ struct buf_ring {
 static __inline int
 buf_ring_enqueue(struct buf_ring *br, void *buf)
 {
-	uint32_t prod_head, prod_next;
-	uint32_t cons_tail;
-	int success;
+	uint32_t prod_head, prod_next, cons_tail;
 #ifdef DEBUG_BUFRING
 	int i;
 	for (i = br->br_cons_head; i != br->br_prod_head;
@@ -89,35 +77,34 @@ buf_ring_enqueue(struct buf_ring *br, void *buf)
 	critical_enter();
 	do {
 		prod_head = br->br_prod_head;
+		prod_next = (prod_head + 1) & br->br_prod_mask;
 		cons_tail = br->br_cons_tail;
 
-		prod_next = (prod_head + 1) & br->br_prod_mask;
-		
 		if (prod_next == cons_tail) {
-			br->br_drops++;
-			critical_exit();
-			return (ENOBUFS);
+			rmb();
+			if (prod_head == br->br_prod_head &&
+			    cons_tail == br->br_cons_tail) {
+				br->br_drops++;
+				critical_exit();
+				return (ENOBUFS);
+			}
+			continue;
 		}
-		
-		success = atomic_cmpset_int(&br->br_prod_head, prod_head,
-		    prod_next);
-	} while (success == 0);
+	} while (!atomic_cmpset_acq_int(&br->br_prod_head, prod_head, prod_next));
 #ifdef DEBUG_BUFRING
 	if (br->br_ring[prod_head] != NULL)
 		panic("dangling value in enqueue");
 #endif	
 	br->br_ring[prod_head] = buf;
-	wmb();
 
 	/*
 	 * If there are other enqueues in progress
-	 * that preceeded us, we need to wait for them
+	 * that preceded us, we need to wait for them
 	 * to complete 
 	 */   
 	while (br->br_prod_tail != prod_head)
 		cpu_spinwait();
-	br->br_prod_bufs++;
-	br->br_prod_tail = prod_next;
+	atomic_store_rel_int(&br->br_prod_tail, prod_next);
 	critical_exit();
 	return (0);
 }
@@ -130,41 +117,32 @@ static __inline void *
 buf_ring_dequeue_mc(struct buf_ring *br)
 {
 	uint32_t cons_head, cons_next;
-	uint32_t prod_tail;
 	void *buf;
-	int success;
 
 	critical_enter();
 	do {
 		cons_head = br->br_cons_head;
-		prod_tail = br->br_prod_tail;
-
 		cons_next = (cons_head + 1) & br->br_cons_mask;
-		
-		if (cons_head == prod_tail) {
+
+		if (cons_head == br->br_prod_tail) {
 			critical_exit();
 			return (NULL);
 		}
-		
-		success = atomic_cmpset_int(&br->br_cons_head, cons_head,
-		    cons_next);
-	} while (success == 0);		
+	} while (!atomic_cmpset_acq_int(&br->br_cons_head, cons_head, cons_next));
 
 	buf = br->br_ring[cons_head];
 #ifdef DEBUG_BUFRING
 	br->br_ring[cons_head] = NULL;
 #endif
-	rmb();
-	
 	/*
 	 * If there are other dequeues in progress
-	 * that preceeded us, we need to wait for them
+	 * that preceded us, we need to wait for them
 	 * to complete 
 	 */   
 	while (br->br_cons_tail != cons_head)
 		cpu_spinwait();
 
-	br->br_cons_tail = cons_next;
+	atomic_store_rel_int(&br->br_cons_tail, cons_next);
 	critical_exit();
 
 	return (buf);
@@ -284,6 +262,37 @@ buf_ring_peek(struct buf_ring *br)
 		return (NULL);
 	
 	return (br->br_ring[br->br_cons_head]);
+}
+
+static __inline void *
+buf_ring_peek_clear_sc(struct buf_ring *br)
+{
+#ifdef DEBUG_BUFRING
+	void *ret;
+
+	if (!mtx_owned(br->br_lock))
+		panic("lock not held on single consumer dequeue");
+#endif	
+	/*
+	 * I believe it is safe to not have a memory barrier
+	 * here because we control cons and tail is worst case
+	 * a lagging indicator so we worst case we might
+	 * return NULL immediately after a buffer has been enqueued
+	 */
+	if (br->br_cons_head == br->br_prod_tail)
+		return (NULL);
+
+#ifdef DEBUG_BUFRING
+	/*
+	 * Single consumer, i.e. cons_head will not move while we are
+	 * running, so atomic_swap_ptr() is not necessary here.
+	 */
+	ret = br->br_ring[br->br_cons_head];
+	br->br_ring[br->br_cons_head] = NULL;
+	return (ret);
+#else
+	return (br->br_ring[br->br_cons_head]);
+#endif
 }
 
 static __inline int

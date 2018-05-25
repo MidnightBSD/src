@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 Scott Long
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/sys/sys/aac_ioctl.h 331637 2018-03-27 17:52:52Z brooks $
  */
 
 /*
@@ -172,6 +173,14 @@ struct get_adapter_fib_ioctl {
 	int	  	Wait;
 	caddr_t		AifFib;
 };
+
+#ifdef _KERNEL
+struct get_adapter_fib_ioctl32 {
+	u_int32_t	AdapterFibContext;
+	int	  	Wait;
+	u_int32_t	AifFib;
+};
+#endif
 
 struct aac_query_disk {
 	int32_t		ContainerNumber;

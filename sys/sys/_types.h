@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/_types.h 309258 2016-11-28 18:36:37Z jhb $
  */
 
 #ifndef _SYS__TYPES_H_
@@ -38,7 +39,6 @@
 typedef	__uint32_t	__blksize_t;	/* file block size */
 typedef	__int64_t	__blkcnt_t;	/* file block count */
 typedef	__int32_t	__clockid_t;	/* clock_gettime()... */
-typedef	__uint64_t	__cap_rights_t;	/* capability rights */
 typedef	__uint32_t	__fflags_t;	/* file flags */
 typedef	__uint64_t	__fsblkcnt_t;
 typedef	__uint64_t	__fsfilcnt_t;
@@ -80,15 +80,30 @@ typedef int		__cpusetid_t;	/* cpuset identifier. */
  * ANSI C), but they use __ct_rune_t instead of int.
  *
  * NOTE: rune_t is not covered by ANSI nor other standards, and should not
- * be instantiated outside of lib/libc/locale.  Use wchar_t.  wchar_t and
- * rune_t must be the same type.  Also, wint_t must be no narrower than
- * wchar_t, and should be able to hold all members of the largest
- * character set plus one extra value (WEOF), and must be at least 16 bits.
+ * be instantiated outside of lib/libc/locale.  Use wchar_t.  wint_t and
+ * rune_t must be the same type.  Also, wint_t should be able to hold all
+ * members of the largest character set plus one extra value (WEOF), and
+ * must be at least 16 bits.
  */
 typedef	int		__ct_rune_t;	/* arg type for ctype funcs */
 typedef	__ct_rune_t	__rune_t;	/* rune_t (see above) */
-typedef	__ct_rune_t	__wchar_t;	/* wchar_t (see above) */
 typedef	__ct_rune_t	__wint_t;	/* wint_t (see above) */
+
+/* Clang already provides these types as built-ins, but only in C++ mode. */
+#if !defined(__clang__) || !defined(__cplusplus)
+typedef	__uint_least16_t __char16_t;
+typedef	__uint_least32_t __char32_t;
+#endif
+/* In C++11, char16_t and char32_t are built-in types. */
+#if defined(__cplusplus) && __cplusplus >= 201103L
+#define	_CHAR16_T_DECLARED
+#define	_CHAR32_T_DECLARED
+#endif
+
+typedef struct {
+	long long __max_align1 __aligned(_Alignof(long long));
+	long double __max_align2 __aligned(_Alignof(long double));
+} __max_align_t;
 
 typedef	__uint32_t	__dev_t;	/* device number */
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1987, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)disklabel.h	8.2 (Berkeley) 7/10/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/diskmbr.h 282861 2015-05-13 14:05:53Z ae $
  */
 
 #ifndef _SYS_DISKMBR_H_
@@ -49,12 +50,15 @@
 #define	DOSPTYP_NTFS	0x07	/* NTFS partition */
 #define	DOSPTYP_FAT32	0x0b	/* FAT32 partition */
 #define	DOSPTYP_EXTLBA	0x0f	/* DOS extended partition */
+#define	DOSPTYP_PPCBOOT	0x41	/* PReP/CHRP boot partition */
 #define	DOSPTYP_LDM	0x42	/* Win2k dynamic extended partition */
-#define	DOSPTYP_386BSD	0xa5	/* 386BSD partition type */
-#define	DOSPTYP_HFS	0xaf	/* HFS/HFS+ partition type */
 #define	DOSPTYP_LINSWP	0x82	/* Linux swap partition */
 #define	DOSPTYP_LINUX	0x83	/* Linux partition */
 #define	DOSPTYP_LINLVM	0x8e	/* Linux LVM partition */
+#define	DOSPTYP_386BSD	0xa5	/* 386BSD partition type */
+#define	DOSPTYP_APPLE_UFS	0xa8	/* Apple Mac OS X boot */
+#define	DOSPTYP_APPLE_BOOT	0xab	/* Apple Mac OS X UFS */
+#define	DOSPTYP_HFS	0xaf	/* HFS/HFS+ partition type */
 #define	DOSPTYP_PMBR	0xee	/* GPT Protective MBR */
 #define	DOSPTYP_VMFS	0xfb	/* VMware VMFS partition */
 #define	DOSPTYP_VMKDIAG	0xfc	/* VMware vmkDiagnostic partition */

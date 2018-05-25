@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Michael Smith <msmith@freebsd.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/eventhandler.h 307253 2016-10-14 03:11:31Z sephe $
  */
 
 #ifndef SYS_EVENTHANDLER_H
@@ -182,6 +183,7 @@ EVENTHANDLER_DECLARE(shutdown_final, shutdown_fn);
 typedef void (*power_change_fn)(void *);
 EVENTHANDLER_DECLARE(power_resume, power_change_fn);
 EVENTHANDLER_DECLARE(power_suspend, power_change_fn);
+EVENTHANDLER_DECLARE(power_suspend_early, power_change_fn);
 
 /* Low memory event */
 typedef void (*vm_lowmem_handler_t)(void *, int);
@@ -191,6 +193,17 @@ EVENTHANDLER_DECLARE(vm_lowmem, vm_lowmem_handler_t);
 /* Root mounted event */
 typedef void (*mountroot_handler_t)(void *);
 EVENTHANDLER_DECLARE(mountroot, mountroot_handler_t);
+
+/* File system mount events */
+struct mount;
+struct vnode;
+struct thread;
+typedef void (*vfs_mounted_notify_fn)(void *, struct mount *, struct vnode *,
+    struct thread *);
+typedef void (*vfs_unmounted_notify_fn)(void *, struct mount *,
+    struct thread *);
+EVENTHANDLER_DECLARE(vfs_mounted, vfs_mounted_notify_fn);
+EVENTHANDLER_DECLARE(vfs_unmounted, vfs_unmounted_notify_fn);
 
 /* VLAN state change events */
 struct ifnet;
@@ -231,7 +244,6 @@ EVENTHANDLER_DECLARE(process_exec, execlist_fn);
 /*
  * application dump event
  */
-struct thread;
 typedef void (*app_coredump_start_fn)(void *, struct thread *, char *name);
 typedef void (*app_coredump_progress_fn)(void *, struct thread *td, int byte_count);
 typedef void (*app_coredump_finish_fn)(void *, struct thread *td);
@@ -253,6 +265,30 @@ EVENTHANDLER_DECLARE(thread_fini, thread_fini_fn);
 
 typedef void (*uma_zone_chfn)(void *);
 EVENTHANDLER_DECLARE(nmbclusters_change, uma_zone_chfn);
+EVENTHANDLER_DECLARE(nmbufs_change, uma_zone_chfn);
 EVENTHANDLER_DECLARE(maxsockets_change, uma_zone_chfn);
+
+/* Kernel linker file load and unload events */
+struct linker_file;
+typedef void (*kld_load_fn)(void *, struct linker_file *);
+typedef void (*kld_unload_fn)(void *, const char *, caddr_t, size_t);
+typedef void (*kld_unload_try_fn)(void *, struct linker_file *, int *);
+EVENTHANDLER_DECLARE(kld_load, kld_load_fn);
+EVENTHANDLER_DECLARE(kld_unload, kld_unload_fn);
+EVENTHANDLER_DECLARE(kld_unload_try, kld_unload_try_fn);
+
+/* Generic graphics framebuffer interface */
+struct fb_info;
+typedef void (*register_framebuffer_fn)(void *, struct fb_info *);
+typedef void (*unregister_framebuffer_fn)(void *, struct fb_info *);
+EVENTHANDLER_DECLARE(register_framebuffer, register_framebuffer_fn);
+EVENTHANDLER_DECLARE(unregister_framebuffer, unregister_framebuffer_fn);
+
+/* Veto ada attachment */
+struct cam_path;
+struct ata_params;
+typedef void (*ada_probe_veto_fn)(void *, struct cam_path *,
+    struct ata_params *, int *);
+EVENTHANDLER_DECLARE(ada_probe_veto, ada_probe_veto_fn);
 
 #endif /* SYS_EVENTHANDLER_H */

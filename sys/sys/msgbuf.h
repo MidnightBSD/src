@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1981, 1984, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)msgbuf.h	8.1 (Berkeley) 6/2/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/msgbuf.h 233135 2012-03-19 00:36:32Z eadler $
  */
 
 #ifndef _SYS_MSGBUF_H_
@@ -78,7 +79,7 @@ int	msgbuf_peekbytes(struct msgbuf *mbp, char *buf, int buflen,
 void	msgbuf_reinit(struct msgbuf *mbp, void *ptr, int size);
 
 #ifndef MSGBUF_SIZE
-#define	MSGBUF_SIZE	(32768 * 2)
+#define	MSGBUF_SIZE	(32768 * 3)
 #endif
 #endif /* KERNEL */
 

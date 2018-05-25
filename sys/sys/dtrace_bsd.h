@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2008 John Birrell (jb@freebsd.org)
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/dtrace_bsd.h 282748 2015-05-11 07:54:39Z avg $
  *
  * This file contains BSD shims for Sun's DTrace code.
  */
@@ -42,15 +43,6 @@ struct devstat;
 struct bio;
 
 /*
- * Cyclic clock function type definition used to hook the cyclic
- * subsystem into the appropriate timer interrupt.
- */
-typedef	void (*cyclic_clock_func_t)(struct trapframe *);
-extern cyclic_clock_func_t	cyclic_clock_func;
-
-void clocksource_cyc_set(const struct bintime *t);
-
-/*
  * The dtrace module handles traps that occur during a DTrace probe.
  * This type definition is used in the trap handler to provide a
  * hook for the dtrace module to register it's handler with.
@@ -61,17 +53,17 @@ int	dtrace_trap(struct trapframe *, u_int);
 
 extern dtrace_trap_func_t	dtrace_trap_func;
 
-/* Used by the machine dependent trap() code. */
+/*
+ * A hook which removes active FBT probes before executing the double fault
+ * handler. We want to ensure that DTrace doesn't trigger another trap, which
+ * would result in a reset.
+ */
 typedef	int (*dtrace_invop_func_t)(uintptr_t, uintptr_t *, uintptr_t);
 typedef void (*dtrace_doubletrap_func_t)(void);
-
-/* Global variables in trap.c */
 extern	dtrace_invop_func_t	dtrace_invop_func;
 extern	dtrace_doubletrap_func_t	dtrace_doubletrap_func;
 
 /* Pid provider hooks */
-typedef int (*dtrace_fasttrap_probe_ptr_t)(struct reg *);
-extern	dtrace_fasttrap_probe_ptr_t	dtrace_fasttrap_probe_ptr;
 typedef int (*dtrace_pid_probe_ptr_t)(struct reg *);
 extern	dtrace_pid_probe_ptr_t	dtrace_pid_probe_ptr;
 typedef int (*dtrace_return_probe_ptr_t)(struct reg *);

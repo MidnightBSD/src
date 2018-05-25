@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Peter Wemm <peter@freebsd.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/poll.h 275986 2014-12-21 07:58:28Z dchagin $
  */
 
 #ifndef _SYS_POLL_H_
@@ -95,8 +96,26 @@ struct pollfd {
 
 #ifndef _KERNEL
 
+#if __BSD_VISIBLE
+#include <sys/_types.h>
+
+#include <sys/_sigset.h>
+#include <sys/timespec.h>
+
+#ifndef _SIGSET_T_DECLARED
+#define	_SIGSET_T_DECLARED
+typedef	__sigset_t	sigset_t;
+#endif
+
+#endif
+
 __BEGIN_DECLS
 int	poll(struct pollfd _pfd[], nfds_t _nfds, int _timeout);
+#if __BSD_VISIBLE
+int	ppoll(struct pollfd _pfd[], nfds_t _nfds,
+	    const struct timespec *__restrict _timeout,
+	    const sigset_t *__restrict _newsigmask);
+#endif
 __END_DECLS
 
 #endif /* !_KERNEL */

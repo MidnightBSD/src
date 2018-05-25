@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)acct.h	8.4 (Berkeley) 1/9/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/acct.h 169857 2007-05-22 06:51:38Z dds $
  */
 
 #ifndef _SYS_ACCT_H_

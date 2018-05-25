@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1988, 1991 The Regents of the University of California.
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/sysent.h 303395 2016-07-27 16:27:41Z julian $
  */
 
 #ifndef _SYS_SYSENT_H_
@@ -130,6 +131,8 @@ struct sysentvec {
 	uint32_t	sv_timekeep_gen;
 	void		*sv_shared_page_obj;
 	void		(*sv_schedtail)(struct thread *);
+	void		(*sv_thread_detach)(struct thread *);
+	int		(*sv_trap)(struct thread *);
 };
 
 #define	SV_ILP32	0x000100
@@ -139,6 +142,8 @@ struct sysentvec {
 #define	SV_SHP		0x010000
 
 #define	SV_ABI_MASK	0xff
+#define	SV_ABI_ERRNO(p, e)	((p)->p_sysent->sv_errsize <= 0 ? e :	\
+	((e) >= (p)->p_sysent->sv_errsize ? -1 : (p)->p_sysent->sv_errtbl[e]))
 #define	SV_PROC_FLAG(p, x)	((p)->p_sysent->sv_flags & (x))
 #define	SV_PROC_ABI(p)		((p)->p_sysent->sv_flags & SV_ABI_MASK)
 #define	SV_CURPROC_FLAG(x)	SV_PROC_FLAG(curproc, x)
@@ -150,8 +155,6 @@ struct sysentvec {
 
 #ifdef _KERNEL
 extern struct sysentvec aout_sysvec;
-extern struct sysentvec elf_freebsd_sysvec;
-extern struct sysentvec null_sysvec;
 extern struct sysent sysent[];
 extern const char *syscallnames[];
 
@@ -171,13 +174,21 @@ struct syscall_module_data {
 	struct sysent old_sysent;	/* old sysent */
 };
 
-#define	MAKE_SYSENT(syscallname)				\
-static struct sysent syscallname##_sysent = {			\
-	(sizeof(struct syscallname ## _args )			\
+/* separate initialization vector so it can be used in a substructure */
+#define SYSENT_INIT_VALS(_syscallname) {			\
+	.sy_narg = (sizeof(struct _syscallname ## _args )	\
 	    / sizeof(register_t)),				\
-	(sy_call_t *)& sys_##syscallname,	       		\
-	SYS_AUE_##syscallname					\
-}
+	.sy_call = (sy_call_t *)&sys_##_syscallname,		\
+	.sy_auevent = SYS_AUE_##_syscallname,			\
+	.sy_systrace_args_func = NULL,				\
+	.sy_entry = 0,						\
+	.sy_return = 0,						\
+	.sy_flags = 0,						\
+	.sy_thrcnt = 0						\
+}							
+
+#define	MAKE_SYSENT(syscallname)				\
+static struct sysent syscallname##_sysent = SYSENT_INIT_VALS(syscallname);
 
 #define	MAKE_SYSENT_COMPAT(syscallname)				\
 static struct sysent syscallname##_sysent = {			\

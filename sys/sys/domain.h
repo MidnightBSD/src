@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)domain.h	8.1 (Berkeley) 6/2/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/domain.h 305261 2016-09-02 00:14:28Z markj $
  */
 
 #ifndef _SYS_DOMAIN_H_
@@ -42,6 +43,7 @@
  */
 struct	mbuf;
 struct	ifnet;
+struct	socket;
 
 struct domain {
 	int	dom_family;		/* AF_xxx */
@@ -51,7 +53,7 @@ struct domain {
 	void	(*dom_destroy)		/* cleanup structures / state */
 		(void);
 	int	(*dom_externalize)	/* externalize access rights */
-		(struct mbuf *, struct mbuf **);
+		(struct mbuf *, struct mbuf **, int);
 	void	(*dom_dispose)		/* dispose of internalized rights */
 		(struct mbuf *);
 	struct	protosw *dom_protosw, *dom_protoswNPROTOSW;
@@ -78,6 +80,9 @@ extern int	domain_init_status;
 extern struct	domain *domains;
 void		domain_add(void *);
 void		domain_init(void *);
+
+/* Hack to fix dom_dispose for unix domain sockets. */
+void		unp_dispose_so(struct socket *);
 #ifdef VIMAGE
 void		vnet_domain_init(void *);
 void		vnet_domain_uninit(void *);

@@ -1,7 +1,8 @@
+/* $MidnightBSD$ */
 /*
- * Memory range attribute operations, peformed on /dev/mem
+ * Memory range attribute operations, performed on /dev/mem
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/memrange.h 300060 2016-05-17 15:18:01Z pfg $
  */
 
 #ifndef _SYS_MEMRANGE_H_

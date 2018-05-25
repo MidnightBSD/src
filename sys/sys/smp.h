@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -6,7 +7,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/smp.h 331910 2018-04-03 07:52:06Z avg $
  */
 
 #ifndef _SYS_SMP_H_
@@ -71,11 +72,14 @@ struct cpu_group *smp_topo_2level(int l2share, int l2count, int l1share,
 struct cpu_group *smp_topo_find(struct cpu_group *top, int cpu);
 
 extern void (*cpustop_restartfunc)(void);
-extern int smp_active;
 extern int smp_cpus;
-extern volatile cpuset_t started_cpus;
-extern volatile cpuset_t stopped_cpus;
-extern cpuset_t hlt_cpus_mask;
+/* The suspend/resume cpusets are x86 only, but minimize ifdefs. */
+extern volatile cpuset_t resuming_cpus;	/* woken up cpus in suspend pen */
+extern volatile cpuset_t started_cpus;	/* cpus to let out of stop pen */
+extern volatile cpuset_t stopped_cpus;	/* cpus in stop pen */
+extern volatile cpuset_t suspended_cpus; /* cpus [near] sleeping in susp pen */
+extern volatile cpuset_t toresume_cpus;	/* cpus to let out of suspend pen */
+extern cpuset_t hlt_cpus_mask;		/* XXX 'mask' is detail in old impl */
 extern cpuset_t logical_cpus_mask;
 #endif /* SMP */
 
@@ -140,7 +144,7 @@ cpu_next(int i)
  * cpu_mp_start() will be called so that MP can be enabled.  This function
  * should do things such as startup secondary processors.  It should also
  * setup mp_ncpus, all_cpus, and smp_cpus.  It should also ensure that
- * smp_active and smp_started are initialized at the appropriate time.
+ * smp_started is initialized at the appropriate time.
  * Once cpu_mp_start() returns, machine independent MP startup code will be
  * executed and a simple message will be output to the console.  Finally,
  * cpu_mp_announce() will be called so that machine dependent messages about
@@ -165,11 +169,16 @@ int	stop_cpus(cpuset_t);
 int	stop_cpus_hard(cpuset_t);
 #if defined(__amd64__) || defined(__i386__)
 int	suspend_cpus(cpuset_t);
+int	resume_cpus(cpuset_t);
 #endif
+
 void	smp_rendezvous_action(void);
 extern	struct mtx smp_ipi_mtx;
 
 #endif /* SMP */
+
+int	quiesce_all_cpus(const char *, int);
+int	quiesce_cpus(cpuset_t, const char *, int);
 void	smp_no_rendevous_barrier(void *);
 void	smp_rendezvous(void (*)(void *), 
 		       void (*)(void *),

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)syslog.h	8.1 (Berkeley) 6/2/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/syslog.h 249311 2013-04-09 16:16:34Z ed $
  */
 
 #ifndef _SYS_SYSLOG_H_
@@ -69,7 +70,7 @@ typedef struct _code {
 	int		c_val;
 } CODE;
 
-CODE prioritynames[] = {
+static const CODE prioritynames[] = {
 	{ "alert",	LOG_ALERT,	},
 	{ "crit",	LOG_CRIT,	},
 	{ "debug",	LOG_DEBUG,	},
@@ -122,7 +123,7 @@ CODE prioritynames[] = {
 #define	LOG_FAC(p)	(((p) & LOG_FACMASK) >> 3)
 
 #ifdef SYSLOG_NAMES
-CODE facilitynames[] = {
+static const CODE facilitynames[] = {
 	{ "auth",	LOG_AUTH,	},
 	{ "authpriv",	LOG_AUTHPRIV,	},
 	{ "console", 	LOG_CONSOLE,	},

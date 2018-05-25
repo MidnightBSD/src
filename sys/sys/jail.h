@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Poul-Henning Kamp.
  * Copyright (c) 2009 James Gritton.
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/jail.h 298833 2016-04-30 03:19:07Z jamie $
  */
 
 #ifndef _SYS_JAIL_H_
@@ -134,6 +135,7 @@ MALLOC_DECLARE(M_PRISON);
 #include <sys/osd.h>
 
 #define	HOSTUUIDLEN	64
+#define	OSRELEASELEN	32
 
 struct racct;
 struct prison_racct;
@@ -148,7 +150,6 @@ struct prison_racct;
  *   (p) locked by pr_mtx
  *   (c) set only during creation before the structure is shared, no mutex
  *       required to read
- *   (d) set only during destruction of jail, no mutex needed
  */
 struct prison {
 	TAILQ_ENTRY(prison) pr_list;			/* (a) all prisons */
@@ -160,7 +161,7 @@ struct prison {
 	LIST_ENTRY(prison) pr_sibling;			/* (a) next in parent's list */
 	struct prison	*pr_parent;			/* (c) containing jail */
 	struct mtx	 pr_mtx;
-	struct task	 pr_task;			/* (d) destroy task */
+	struct task	 pr_task;			/* (c) destroy task */
 	struct osd	 pr_osd;			/* (p) additional data */
 	struct cpuset	*pr_cpuset;			/* (p) cpuset */
 	struct vnet	*pr_vnet;			/* (c) network stack */
@@ -177,13 +178,15 @@ struct prison {
 	int		 pr_securelevel;		/* (p) securelevel */
 	int		 pr_enforce_statfs;		/* (p) statfs permission */
 	int		 pr_devfs_rsnum;		/* (p) devfs ruleset */
-	int		 pr_spare[4];
+	int		 pr_spare[3];
+	int		 pr_osreldate;			/* (c) kern.osreldate value */
 	unsigned long	 pr_hostid;			/* (p) jail hostid */
 	char		 pr_name[MAXHOSTNAMELEN];	/* (p) admin jail name */
 	char		 pr_path[MAXPATHLEN];		/* (c) chroot path */
 	char		 pr_hostname[MAXHOSTNAMELEN];	/* (p) jail hostname */
 	char		 pr_domainname[MAXHOSTNAMELEN];	/* (p) jail domainname */
 	char		 pr_hostuuid[HOSTUUIDLEN];	/* (p) jail hostuuid */
+	char		 pr_osrelease[OSRELEASELEN];	/* (c) kern.osrelease value */
 };
 
 struct prison_racct {
@@ -209,7 +212,6 @@ struct prison_racct {
 					/* primary jail address. */
 
 /* Internal flag bits */
-#define	PR_REMOVE	0x01000000	/* In process of being removed */
 #define	PR_IP4		0x02000000	/* IPv4 restricted or disabled */
 					/* by this jail or an ancestor */
 #define	PR_IP6		0x04000000	/* IPv6 restricted or disabled */
@@ -227,7 +229,11 @@ struct prison_racct {
 #define	PR_ALLOW_MOUNT_NULLFS		0x0100
 #define	PR_ALLOW_MOUNT_ZFS		0x0200
 #define	PR_ALLOW_MOUNT_PROCFS		0x0400
-#define	PR_ALLOW_ALL			0x07ff
+#define	PR_ALLOW_MOUNT_TMPFS		0x0800
+#define	PR_ALLOW_MOUNT_FDESCFS		0x1000
+#define	PR_ALLOW_MOUNT_LINPROCFS	0x2000
+#define	PR_ALLOW_MOUNT_LINSYSFS		0x4000
+#define	PR_ALLOW_ALL			0x7fff
 
 /*
  * OSD methods
@@ -237,7 +243,8 @@ struct prison_racct {
 #define	PR_METHOD_SET		2
 #define	PR_METHOD_CHECK		3
 #define	PR_METHOD_ATTACH	4
-#define	PR_MAXMETHOD		5
+#define	PR_METHOD_REMOVE	5
+#define	PR_MAXMETHOD		6
 
 /*
  * Lock/unlock a prison.
@@ -362,6 +369,7 @@ void getcredhostname(struct ucred *, char *, size_t);
 void getcreddomainname(struct ucred *, char *, size_t);
 void getcredhostuuid(struct ucred *, char *, size_t);
 void getcredhostid(struct ucred *, unsigned long *);
+void prison0_init(void);
 int prison_allow(struct ucred *, unsigned);
 int prison_check(struct ucred *cred1, struct ucred *cred2);
 int prison_owns_vnet(struct ucred *);

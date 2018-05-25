@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -34,7 +35,7 @@
  * interfaces on 64bit machines). This assists network interfaces that may need
  * huge numbers of mbufs.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/mbpool.h 254842 2013-08-25 10:57:09Z andre $
  */
 #ifndef _SYS_MBPOOL_H_
 #define	_SYS_MBPOOL_H_
@@ -69,7 +70,7 @@ void *mbp_alloc(struct mbpool *, bus_addr_t *, uint32_t *);
 void mbp_free(struct mbpool *, void *);
 
 /* free a chunk that is an external mbuf */
-void mbp_ext_free(void *, void *);
+int mbp_ext_free(struct mbuf *, void *, void *);
 
 /* free all buffers that are marked to be on the card */
 void mbp_card_free(struct mbpool *);

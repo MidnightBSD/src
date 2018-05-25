@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2001 Robert N. M. Watson
  * Copyright (c) 2008 Edward Tomasz Napierała <trasz@FreeBSD.org>
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/acl.h 290893 2015-11-15 23:54:34Z ngie $
  */
 /* 
  * Developed by the TrustedBSD Project.
@@ -249,11 +250,12 @@ typedef void *acl_t;
 #define	ACL_ENTRY_INHERIT_ONLY		0x0008
 #define	ACL_ENTRY_SUCCESSFUL_ACCESS	0x0010
 #define	ACL_ENTRY_FAILED_ACCESS		0x0020
+#define	ACL_ENTRY_INHERITED		0x0080
 
 #define	ACL_FLAGS_BITS			(ACL_ENTRY_FILE_INHERIT | \
     ACL_ENTRY_DIRECTORY_INHERIT | ACL_ENTRY_NO_PROPAGATE_INHERIT | \
     ACL_ENTRY_INHERIT_ONLY | ACL_ENTRY_SUCCESSFUL_ACCESS | \
-    ACL_ENTRY_FAILED_ACCESS)
+    ACL_ENTRY_FAILED_ACCESS | ACL_ENTRY_INHERITED)
 
 /*
  * Undefined value in ae_id field.  ae_id should be set to this value

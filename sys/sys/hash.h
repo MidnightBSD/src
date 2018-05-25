@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Tobias Weingartner
  * All rights reserved.
@@ -23,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $OpenBSD: hash.h,v 1.4 2004/05/25 18:37:23 jmc Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/hash.h 274486 2014-11-13 21:58:42Z gnn $
  */
 
 #ifndef _SYS_HASH_H_
@@ -118,4 +119,16 @@ hash32_strne(const void *buf, size_t len, int end, const char **ep,
 
 	return hash;
 }
+
+#ifdef _KERNEL
+/*
+ * Hashing function from Bob Jenkins. Implementation in libkern/jenkins_hash.c.
+ */
+uint32_t jenkins_hash(const void *, size_t, uint32_t);
+uint32_t jenkins_hash32(const uint32_t *, size_t, uint32_t);
+
+uint32_t murmur3_aligned_32(const void *data, size_t len, uint32_t seed);
+
+#endif /* _KERNEL */
+
 #endif /* !_SYS_HASH_H_ */

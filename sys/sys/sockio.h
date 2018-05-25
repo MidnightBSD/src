@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)sockio.h	8.1 (Berkeley) 3/28/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/sockio.h 324462 2017-10-10 02:35:04Z sephe $
  */
 
 #ifndef _SYS_SOCKIO_H_
@@ -44,8 +45,8 @@
 #define	SIOCSPGRP	 _IOW('s',  8, int)		/* set process group */
 #define	SIOCGPGRP	 _IOR('s',  9, int)		/* get process group */
 
-#define	SIOCADDRT	 _IOW('r', 10, struct ortentry)	/* add route */
-#define	SIOCDELRT	 _IOW('r', 11, struct ortentry)	/* delete route */
+/*	SIOCADDRT	 _IOW('r', 10, struct ortentry)	4.3BSD */
+/*	SIOCDELRT	 _IOW('r', 11, struct ortentry)	4.3BSD */
 #define	SIOCGETVIFCNT	_IOWR('r', 15, struct sioc_vif_req)/* get vif pkt cnt */
 #define	SIOCGETSGCNT	_IOWR('r', 16, struct sioc_sg_req) /* get s,g pkt cnt */
 
@@ -68,8 +69,7 @@
 #define	SIOCGIFMETRIC	_IOWR('i', 23, struct ifreq)	/* get IF metric */
 #define	SIOCSIFMETRIC	 _IOW('i', 24, struct ifreq)	/* set IF metric */
 #define	SIOCDIFADDR	 _IOW('i', 25, struct ifreq)	/* delete IF addr */
-#define	SIOCAIFADDR	 _IOW('i', 26, struct ifaliasreq)/* add/chg IF alias */
-
+#define	OSIOCAIFADDR	 _IOW('i', 26, struct oifaliasreq)/* add/chg IF alias */
 #define	SIOCALIFADDR	 _IOW('i', 27, struct if_laddrreq) /* add IF addr */
 #define	SIOCGLIFADDR	_IOWR('i', 28, struct if_laddrreq) /* get IF addr */
 #define	SIOCDLIFADDR	 _IOW('i', 29, struct if_laddrreq) /* delete IF addr */
@@ -81,6 +81,7 @@
 #define	SIOCSIFNAME	 _IOW('i', 40, struct ifreq)	/* set IF name */
 #define	SIOCSIFDESCR	 _IOW('i', 41, struct ifreq)	/* set ifnet descr */ 
 #define	SIOCGIFDESCR	_IOWR('i', 42, struct ifreq)	/* get ifnet descr */ 
+#define	SIOCAIFADDR	 _IOW('i', 43, struct ifaliasreq)/* add/chg IF alias */
 
 #define	SIOCADDMULTI	 _IOW('i', 49, struct ifreq)	/* add m'cast addr */
 #define	SIOCDELMULTI	 _IOW('i', 50, struct ifreq)	/* del m'cast addr */
@@ -96,8 +97,10 @@
 
 #define	SIOCGIFSTATUS	_IOWR('i', 59, struct ifstat)	/* get IF status */
 #define	SIOCSIFLLADDR	 _IOW('i', 60, struct ifreq)	/* set linklevel addr */
+#define	SIOCGI2C	_IOWR('i', 61, struct ifreq)	/* get I2C data  */
+#define	SIOCGHWADDR	_IOWR('i', 62, struct ifreq)	/* get hardware lladdr */
 
-#define	SIOCSIFPHYADDR	 _IOW('i', 70, struct ifaliasreq) /* set gif addres */
+#define	SIOCSIFPHYADDR	 _IOW('i', 70, struct ifaliasreq) /* set gif address */
 #define	SIOCGIFPSRCADDR	_IOWR('i', 71, struct ifreq)	/* get gif psrc addr */
 #define	SIOCGIFPDSTADDR	_IOWR('i', 72, struct ifreq)	/* get gif pdst addr */
 #define	SIOCDIFPHYADDR	 _IOW('i', 73, struct ifreq)	/* delete gif addrs */
@@ -113,6 +116,9 @@
 #define	SIOCGIFFIB	_IOWR('i', 92, struct ifreq)	/* get IF fib */
 #define	SIOCSIFFIB	 _IOW('i', 93, struct ifreq)	/* set IF fib */
 
+#define	SIOCGTUNFIB	_IOWR('i', 94, struct ifreq)	/* get tunnel fib */
+#define	SIOCSTUNFIB	 _IOW('i', 95, struct ifreq)	/* set tunnel fib */
+
 #define	SIOCSDRVSPEC	_IOW('i', 123, struct ifdrv)	/* set driver-specific
 								  parameters */
 #define	SIOCGDRVSPEC	_IOWR('i', 123, struct ifdrv)	/* get driver-specific
@@ -127,5 +133,10 @@
 #define	SIOCGIFGROUP	_IOWR('i', 136, struct ifgroupreq) /* get ifgroups */
 #define	SIOCDIFGROUP	 _IOW('i', 137, struct ifgroupreq) /* delete ifgroup */
 #define	SIOCGIFGMEMB	_IOWR('i', 138, struct ifgroupreq) /* get members */
+#define	SIOCGIFXMEDIA	_IOWR('i', 139, struct ifmediareq) /* get net xmedia */
+
+#define	SIOCGIFRSSKEY	_IOWR('i', 150, struct ifrsskey)/* get RSS key */
+#define	SIOCGIFRSSHASH	_IOWR('i', 151, struct ifrsshash)/* get the current RSS
+							type/func settings */
 
 #endif /* !_SYS_SOCKIO_H_ */

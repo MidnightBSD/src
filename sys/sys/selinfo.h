@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)select.h	8.2 (Berkeley) 1/4/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/selinfo.h 225177 2011-08-25 15:51:54Z attilio $
  */
 
 #ifndef _SYS_SELINFO_H_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1987, 1993
  *	The Regents of the University of California.
@@ -29,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)malloc.h	8.5 (Berkeley) 5/3/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/malloc.h 328276 2018-01-23 04:37:31Z kp $
  */
 
 #ifndef _SYS_MALLOC_H_
@@ -39,6 +40,7 @@
 #include <sys/queue.h>
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
+#include <machine/_limits.h>
 
 #define	MINALLOCSIZE	UMA_SMALLEST_UNIT
 
@@ -51,6 +53,8 @@
 #define	M_NOVM		0x0200		/* don't ask VM for pages */
 #define	M_USE_RESERVE	0x0400		/* can alloc out of reserve memory */
 #define	M_NODUMP	0x0800		/* don't dump pages in this allocation */
+#define	M_FIRSTFIT	0x1000		/* Only for vmem, fast fit. */
+#define	M_BESTFIT	0x2000		/* Only for vmem, low fragmentation. */
 
 #define	M_MAGIC		877983977	/* time when first defined :-) */
 
@@ -171,9 +175,11 @@ typedef void malloc_type_list_func_t(struct malloc_type *, void *);
 void	contigfree(void *addr, unsigned long size, struct malloc_type *type);
 void	*contigmalloc(unsigned long size, struct malloc_type *type, int flags,
 	    vm_paddr_t low, vm_paddr_t high, unsigned long alignment,
-	    unsigned long boundary) __malloc_like;
+	    vm_paddr_t boundary) __malloc_like;
 void	free(void *addr, struct malloc_type *type);
 void	*malloc(unsigned long size, struct malloc_type *type, int flags) __malloc_like;
+void	*mallocarray(size_t nmemb, size_t size, struct malloc_type *type,
+	    int flags) __malloc_like __result_use_check;
 void	malloc_init(void *);
 int	malloc_last_fail(void);
 void	malloc_type_allocated(struct malloc_type *type, unsigned long size);
@@ -186,6 +192,20 @@ void	*reallocf(void *addr, unsigned long size, struct malloc_type *type,
 	    int flags);
 
 struct malloc_type *malloc_desc2type(const char *desc);
+
+/*
+ * This is sqrt(SIZE_MAX+1), as s1*s2 <= SIZE_MAX
+ * if both s1 < MUL_NO_OVERFLOW and s2 < MUL_NO_OVERFLOW
+ */
+#define MUL_NO_OVERFLOW		(1UL << (sizeof(size_t) * 8 / 2))
+static inline bool
+WOULD_OVERFLOW(size_t nmemb, size_t size)
+{
+
+	return ((nmemb >= MUL_NO_OVERFLOW || size >= MUL_NO_OVERFLOW) &&
+	    nmemb > 0 && __SIZE_T_MAX / nmemb < size);
+}
+#undef MUL_NO_OVERFLOW
 #endif /* _KERNEL */
 
 #endif /* !_SYS_MALLOC_H_ */

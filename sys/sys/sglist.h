@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/sglist.h 260856 2014-01-18 18:36:41Z bryanv $
  */
 
 /*
@@ -53,6 +54,7 @@ struct sglist {
 	u_short		sg_maxseg;
 };
 
+struct bio;
 struct mbuf;
 struct uio;
 
@@ -83,6 +85,7 @@ sglist_hold(struct sglist *sg)
 
 struct sglist *sglist_alloc(int nsegs, int mflags);
 int	sglist_append(struct sglist *sg, void *buf, size_t len);
+int	sglist_append_bio(struct sglist *sg, struct bio *bp);
 int	sglist_append_mbuf(struct sglist *sg, struct mbuf *m0);
 int	sglist_append_phys(struct sglist *sg, vm_paddr_t paddr,
 	    size_t len);

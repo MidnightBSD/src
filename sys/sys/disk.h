@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -6,7 +7,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/disk.h 279005 2015-02-19 14:40:50Z mav $
  *
  */
 
@@ -14,6 +15,7 @@
 #define	_SYS_DISK_H_
 
 #include <sys/ioccom.h>
+#include <sys/types.h>
 
 #ifdef _KERNEL
 
@@ -123,5 +125,16 @@ void disk_err(struct bio *bp, const char *what, int blkdone, int nl);
 	 * identify the physical location of the device, not the current
 	 * occupant of that location.
 	 */
+
+struct diocgattr_arg {
+	char name[64];
+	int len;
+	union {
+		char str[DISK_IDENT_SIZE];
+		off_t off;
+		int i;
+	} value;
+};
+#define	DIOCGATTR _IOWR('d', 142, struct diocgattr_arg)
 
 #endif /* _SYS_DISK_H_ */

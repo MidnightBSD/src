@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Kip Macy kmacy@FreeBSD.org
  * Copyright (c) 2006 Kris Kennaway kris@FreeBSD.org
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/lock_profile.h 194578 2009-06-21 09:01:12Z rdivacky $
  */
 
 

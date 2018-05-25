@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 David E. O'Brien <obrien@FreeBSD.org>
  * Copyright (c) 2001 Mike Barcroft <mike@FreeBSD.org>
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/_stdint.h 291134 2015-11-21 16:21:27Z kib $
  */
 
 #ifndef _SYS__STDINT_H_
@@ -77,6 +78,14 @@ typedef	__intptr_t		intptr_t;
 #ifndef _UINTPTR_T_DECLARED
 typedef	__uintptr_t		uintptr_t;
 #define	_UINTPTR_T_DECLARED
+#endif
+#ifndef _INTMAX_T_DECLARED
+typedef	__intmax_t		intmax_t;
+#define	_INTMAX_T_DECLARED
+#endif
+#ifndef _UINTMAX_T_DECLARED
+typedef	__uintmax_t		uintmax_t;
+#define	_UINTMAX_T_DECLARED
 #endif
 
 #endif /* !_SYS__STDINT_H_ */

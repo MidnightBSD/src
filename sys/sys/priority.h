@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994, Henrik Vestergaard Draboel
  * All rights reserved.
@@ -28,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/priority.h 300060 2016-05-17 15:18:01Z pfg $
  */
 
 #ifndef _SYS_PRIORITY_H_
@@ -126,7 +127,7 @@
 struct priority {
 	u_char	pri_class;	/* Scheduling class. */
 	u_char	pri_level;	/* Normal priority level. */
-	u_char	pri_native;	/* Priority before propogation. */
+	u_char	pri_native;	/* Priority before propagation. */
 	u_char	pri_user;	/* User priority based on p_cpu and p_nice. */
 };
 

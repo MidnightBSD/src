@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Doug Rabson
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/module.h 298493 2016-04-22 21:38:37Z emaste $
  */
 
 #ifndef _SYS_MODULE_H_
@@ -35,6 +36,7 @@
 #define	MDT_DEPEND	1		/* argument is a module name */
 #define	MDT_MODULE	2		/* module declaration */
 #define	MDT_VERSION	3		/* module version(s) */
+#define	MDT_PNP_INFO	4		/* Plug and play hints record */
 
 #define	MDT_STRUCT_VERSION	1	/* version of metadata structure */
 #define	MDT_SETNAME	"modmetadata_set"
@@ -106,7 +108,8 @@ struct mod_metadata {
 	DATA_SET(modmetadata_set, _mod_metadata##uniquifier)
 
 #define	MODULE_DEPEND(module, mdepend, vmin, vpref, vmax)		\
-	static struct mod_depend _##module##_depend_on_##mdepend = {	\
+	static struct mod_depend _##module##_depend_on_##mdepend	\
+	    __section(".data") = {					\
 		vmin,							\
 		vpref,							\
 		vmax							\
@@ -146,7 +149,8 @@ struct mod_metadata {
 	DECLARE_MODULE_WITH_MAXVER(name, data, sub, order, __FreeBSD_version)
 
 #define	MODULE_VERSION(module, version)					\
-	static struct mod_version _##module##_version = {		\
+	static struct mod_version _##module##_version			\
+	    __section(".data") = {					\
 		version							\
 	};								\
 	MODULE_METADATA(_##module##_version, MDT_VERSION,		\

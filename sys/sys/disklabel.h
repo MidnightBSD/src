@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1987, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)disklabel.h	8.2 (Berkeley) 7/10/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/disklabel.h 322860 2017-08-24 21:44:23Z mckusick $
  */
 
 #ifndef _SYS_DISKLABEL_H_
@@ -229,6 +230,8 @@ static const char *dktypenames[] = {
 #define	FS_NTFS		18		/* Windows/NT file system */
 #define	FS_CCD		20		/* concatenated disk component */
 #define	FS_JFS2		21		/* IBM JFS2 */
+#define	FS_HAMMER	22		/* DragonFlyBSD Hammer FS */
+#define	FS_HAMMER2	23		/* DragonFlyBSD Hammer2 FS */
 #define	FS_UDF		24		/* UDF */
 #define	FS_EFS		26		/* SGI's Extent File system */
 #define	FS_ZFS		27		/* Sun's ZFS */
@@ -258,8 +261,8 @@ static const char *fstypenames[] = {
 	"?",
 	"ccd",
 	"jfs",
-	"?",
-	"?",
+	"HAMMER",
+	"HAMMER2",
 	"UDF",
 	"?",
 	"EFS",
@@ -282,15 +285,8 @@ static const char *fstypenames[] = {
 #define	D_CHAIN		0x10		/* can do back-back transfers */
 
 /*
- * Disklabel-specific ioctls.
- *
  * NB: <sys/disk.h> defines ioctls from 'd'/128 and up.
  */
-		/* get and set disklabel */
-#define DIOCGDINFO	_IOR('d', 101, struct disklabel)/* get */
-#define DIOCSDINFO	_IOW('d', 102, struct disklabel)/* set */
-#define DIOCWDINFO	_IOW('d', 103, struct disklabel)/* set, update disk */
-#define DIOCBSDBB	_IOW('d', 110, void *)	/* write bootblocks */
 
 /*
  * Functions for proper encoding/decoding of struct disklabel into/from

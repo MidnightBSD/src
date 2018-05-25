@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Terrence R. Lambert
  * All rights reserved.
@@ -39,7 +40,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)kernel.h	8.3 (Berkeley) 1/21/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/kernel.h 255040 2013-08-29 19:52:18Z gibbs $
  */
 
 #ifndef _SYS_KERNEL_H_
@@ -79,17 +80,11 @@ extern volatile int ticks;
  * enumeration values are explicit rather than implicit to provide
  * for binary compatibility with inserted elements.
  *
- * The SI_SUB_RUN_SCHEDULER value must have the highest lexical value.
+ * The SI_SUB_LAST value must have the highest lexical value.
  *
  * The SI_SUB_SWAP values represent a value used by
  * the BSD 4.4Lite but not by FreeBSD; it is maintained in dependent
  * order to support porting.
- *
- * The SI_SUB_PROTO_BEGIN and SI_SUB_PROTO_END bracket a range of
- * initializations to take place at splimp().  This is a historical
- * wart that should be removed -- probably running everything at
- * splimp() until the first init that doesn't want it is the correct
- * fix.  They are currently present to ensure historical behavior.
  */
 enum sysinit_sub_id {
 	SI_SUB_DUMMY		= 0x0000000,	/* not executed; for linker*/
@@ -102,6 +97,11 @@ enum sysinit_sub_id {
 	SI_SUB_VM		= 0x1000000,	/* virtual memory system init*/
 	SI_SUB_KMEM		= 0x1800000,	/* kernel memory*/
 	SI_SUB_KVM_RSRC		= 0x1A00000,	/* kvm operational limits*/
+	SI_SUB_HYPERVISOR	= 0x1A40000,	/*
+						 * Hypervisor detection and
+						 * virtualization support 
+						 * setup.
+						 */
 	SI_SUB_WITNESS		= 0x1A80000,	/* witness initialization */
 	SI_SUB_MTX_POOL_DYNAMIC	= 0x1AC0000,	/* dynamic mutex pool */
 	SI_SUB_LOCK		= 0x1B00000,	/* various locks */
@@ -147,12 +147,12 @@ enum sysinit_sub_id {
 	SI_SUB_P1003_1B		= 0x6E00000,	/* P1003.1B realtime */
 	SI_SUB_PSEUDO		= 0x7000000,	/* pseudo devices*/
 	SI_SUB_EXEC		= 0x7400000,	/* execve() handlers */
-	SI_SUB_PROTO_BEGIN	= 0x8000000,	/* XXX: set splimp (kludge)*/
+	SI_SUB_PROTO_BEGIN	= 0x8000000,	/* VNET initialization */
 	SI_SUB_PROTO_IF		= 0x8400000,	/* interfaces*/
 	SI_SUB_PROTO_DOMAININIT	= 0x8600000,	/* domain registration system */
 	SI_SUB_PROTO_DOMAIN	= 0x8800000,	/* domains (address families?)*/
 	SI_SUB_PROTO_IFATTACHDOMAIN	= 0x8800001,	/* domain dependent data init*/
-	SI_SUB_PROTO_END	= 0x8ffffff,	/* XXX: set splx (kludge)*/
+	SI_SUB_PROTO_END	= 0x8ffffff,	/* VNET helper functions */
 	SI_SUB_KPROF		= 0x9000000,	/* kernel profiling*/
 	SI_SUB_KICK_SCHEDULER	= 0xa000000,	/* start the timeout events*/
 	SI_SUB_INT_CONFIG_HOOKS	= 0xa800000,	/* Interrupts enabled config */
@@ -171,7 +171,7 @@ enum sysinit_sub_id {
 	SI_SUB_KTHREAD_IDLE	= 0xee00000,	/* idle procs*/
 	SI_SUB_SMP		= 0xf000000,	/* start the APs*/
 	SI_SUB_RACCTD		= 0xf100000,	/* start raccd*/
-	SI_SUB_RUN_SCHEDULER	= 0xfffffff	/* scheduler*/
+	SI_SUB_LAST		= 0xfffffff	/* final initialization */
 };
 
 
@@ -267,7 +267,7 @@ void	sysinit_add(struct sysinit **set, struct sysinit **set_end);
 /*
  * Infrastructure for tunable 'constants'.  Value may be specified at compile
  * time or kernel load time.  Rules relating tunables together can be placed
- * in a SYSINIT function at SI_SUB_TUNABLES with SI_ORDER_LAST.
+ * in a SYSINIT function at SI_SUB_TUNABLES with SI_ORDER_ANY.
  *
  * WARNING: developers should never use the reserved suffixes specified in
  * loader.conf(5) for any tunables or conflicts will result.

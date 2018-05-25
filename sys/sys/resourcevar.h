@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)resourcevar.h	8.4 (Berkeley) 1/9/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/resourcevar.h 230470 2012-01-22 20:25:00Z trociny $
  */
 
 #ifndef	_SYS_RESOURCEVAR_H_
@@ -99,7 +100,6 @@ struct uidinfo {
 	long	ui_sbsize;		/* (b) socket buffer space consumed */
 	long	ui_proccnt;		/* (b) number of processes */
 	long	ui_ptscnt;		/* (b) number of pseudo-terminals */
-	long	ui_kqcnt;		/* (b) number of kqueues */
 	uid_t	ui_uid;			/* (a) uid */
 	u_int	ui_ref;			/* (b) reference count */
 	struct racct *ui_racct;		/* (a) resource accounting */
@@ -116,7 +116,6 @@ void	 addupc_intr(struct thread *td, uintfptr_t pc, u_int ticks);
 void	 addupc_task(struct thread *td, uintfptr_t pc, u_int ticks);
 void	 calccru(struct proc *p, struct timeval *up, struct timeval *sp);
 void	 calcru(struct proc *p, struct timeval *up, struct timeval *sp);
-int	 chgkqcnt(struct uidinfo *uip, int diff, rlim_t max);
 int	 chgproccnt(struct uidinfo *uip, int diff, rlim_t maxval);
 int	 chgsbsize(struct uidinfo *uip, u_int *hiwat, u_int to,
 	    rlim_t maxval);

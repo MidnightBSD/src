@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 nCircle Network Security, Inc.
  * All rights reserved.
@@ -26,7 +27,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/priv.h 325099 2017-10-29 09:48:28Z kib $
  */
 
 /*
@@ -111,6 +112,7 @@
 #define	PRIV_DEBUG_DIFFCRED	80	/* Exempt debugging other users. */
 #define	PRIV_DEBUG_SUGID	81	/* Exempt debugging setuid proc. */
 #define	PRIV_DEBUG_UNPRIV	82	/* Exempt unprivileged debug limit. */
+#define	PRIV_DEBUG_DENIED	83	/* Exempt P2_NOTRACE. */
 
 /*
  * Dtrace privileges.
@@ -132,7 +134,7 @@
 #define	PRIV_JAIL_REMOVE	112	/* Remove a jail. */
 
 /*
- * Kernel environment priveleges.
+ * Kernel environment privileges.
  */
 #define	PRIV_KENV_SET		120	/* Set kernel env. variables. */
 #define	PRIV_KENV_UNSET		121	/* Unset kernel env. variables. */
@@ -158,7 +160,8 @@
 #define	PRIV_PROC_SETRLIMIT	162	/* Can raise resources limits. */
 #define	PRIV_PROC_SETLOGINCLASS	163	/* Can call setloginclass(2). */
 
-/* System V IPC privileges.
+/*
+ * System V IPC privileges.
  */
 #define	PRIV_IPC_READ		170	/* Can override IPC read perm. */
 #define	PRIV_IPC_WRITE		171	/* Can override IPC write perm. */
@@ -263,7 +266,7 @@
 #define	PRIV_VFS_GETFH		327	/* Can retrieve file handles. */
 #define	PRIV_VFS_GETQUOTA	328	/* getquota(). */
 #define	PRIV_VFS_LINK		329	/* bsd.hardlink_check_uid */
-#define	PRIV_VFS_MKNOD_BAD	330	/* Can mknod() to mark bad inodes. */
+#define	PRIV_VFS_MKNOD_BAD	330	/* Was: mknod() can mark bad inodes. */
 #define	PRIV_VFS_MKNOD_DEV	331	/* Can mknod() to create dev nodes. */
 #define	PRIV_VFS_MKNOD_WHT	332	/* Can mknod() to create whiteout. */
 #define	PRIV_VFS_MOUNT		333	/* Can mount(). */
@@ -338,6 +341,7 @@
 #define	PRIV_NET_SETIFVNET	417	/* Move interface to vnet. */
 #define	PRIV_NET_SETIFDESCR	418	/* Set interface description. */
 #define	PRIV_NET_SETIFFIB	419	/* Set interface fib. */
+#define	PRIV_NET_VXLAN		420	/* Administer vxlan. */
 
 /*
  * 802.11-related privileges.
@@ -494,9 +498,15 @@
 #define	PRIV_RCTL_REMOVE_RULE	674
 
 /*
+ * mem(4) privileges.
+ */
+#define	PRIV_KMEM_READ		680	/* Open mem/kmem for reading. */
+#define	PRIV_KMEM_WRITE		681	/* Open mem/kmem for writing. */
+
+/*
  * Track end of privilege list.
  */
-#define	_PRIV_HIGHEST		675
+#define	_PRIV_HIGHEST		682
 
 /*
  * Validate that a named privilege is known by the privilege system.  Invalid

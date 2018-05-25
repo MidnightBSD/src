@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/elf64.h 294459 2016-01-20 21:06:24Z emaste $
  */
 
 #ifndef _SYS_ELF64_H_
@@ -77,6 +78,18 @@ typedef struct {
 	Elf64_Half	e_shnum;	/* Number of section header entries. */
 	Elf64_Half	e_shstrndx;	/* Section name strings section. */
 } Elf64_Ehdr;
+
+/*
+ * Shared object information, found in SHT_MIPS_LIBLIST.
+ */
+
+typedef struct {
+	Elf64_Word l_name;		/* The name of a shared object. */
+	Elf64_Word l_time_stamp;	/* 64-bit timestamp. */
+	Elf64_Word l_checksum;		/* Checksum of visible symbols, sizes. */
+	Elf64_Word l_version;		/* Interface version string index. */
+	Elf64_Word l_flags;		/* Flags (LL_*). */
+} Elf64_Lib;
 
 /*
  * Section header.

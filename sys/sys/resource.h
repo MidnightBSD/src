@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)resource.h	8.4 (Berkeley) 1/9/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/resource.h 314392 2017-02-28 15:03:34Z kib $
  */
 
 #ifndef _SYS_RESOURCE_H_
@@ -103,13 +104,12 @@ struct __wrusage {
 #define	RLIMIT_AS	RLIMIT_VMEM	/* standard name for RLIMIT_VMEM */
 #define	RLIMIT_NPTS	11		/* pseudo-terminals */
 #define	RLIMIT_SWAP	12		/* swap used */
-#define	RLIMIT_KQUEUES	13		/* kqueues allocated */
 
-#define	RLIM_NLIMITS	14		/* number of resource limits */
+#define	RLIM_NLIMITS	13		/* number of resource limits */
 
 #define	RLIM_INFINITY	((rlim_t)(((uint64_t)1 << 63) - 1))
-/* XXX Missing: RLIM_SAVED_MAX, RLIM_SAVED_CUR */
-
+#define	RLIM_SAVED_MAX	RLIM_INFINITY
+#define	RLIM_SAVED_CUR	RLIM_INFINITY
 
 /*
  * Resource limit string identifiers
@@ -130,7 +130,6 @@ static const char *rlimit_ident[RLIM_NLIMITS] = {
 	"vmem",
 	"npts",
 	"swap",
-	"kqueues",
 };
 #endif
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)reboot.h	8.3 (Berkeley) 12/13/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/reboot.h 293743 2016-01-12 10:11:29Z trasz $
  */
 
 #ifndef _SYS_REBOOT_H_
@@ -59,6 +60,7 @@
 #define	RB_RESERVED1	0x40000	/* reserved for internal use of boot blocks */
 #define	RB_RESERVED2	0x80000	/* reserved for internal use of boot blocks */
 #define	RB_PAUSE	0x100000 /* pause after each output line during probe */
+#define	RB_REROOT	0x200000 /* unmount the rootfs and mount it again */
 #define	RB_MULTIPLE	0x20000000	/* use multiple consoles */
 
 #define	RB_BOOTINFO	0x80000000	/* have `struct bootinfo *' arg */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000,2003 Doug Rabson
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/sys/sys/kobj.h 318275 2017-05-14 14:21:11Z marius $
  */
 
 #ifndef _SYS_KOBJ_H_
@@ -34,7 +35,7 @@
  */
 typedef struct kobj		*kobj_t;
 typedef struct kobj_class	*kobj_class_t;
-typedef struct kobj_method	kobj_method_t;
+typedef const struct kobj_method kobj_method_t;
 typedef int			(*kobjop_t)(void);
 typedef struct kobj_ops		*kobj_ops_t;
 typedef struct kobjop_desc	*kobjop_desc_t;
@@ -86,7 +87,7 @@ struct kobj_ops {
 
 struct kobjop_desc {
 	unsigned int	id;		/* unique ID */
-	kobj_method_t	*deflt;		/* default implementation */
+	kobj_method_t	deflt;		/* default implementation */
 };
 
 /*
@@ -226,10 +227,12 @@ extern u_int kobj_lookup_misses;
 	kobj_method_t **_cep =					\
 	    &OPS->cache[_desc->id & (KOBJ_CACHE_SIZE-1)];	\
 	kobj_method_t *_ce = *_cep;				\
-	kobj_lookup_hits++; /* assume hit */			\
-	if (_ce->desc != _desc)					\
+	if (_ce->desc != _desc) {				\
 		_ce = kobj_lookup_method(OPS->cls,		\
 					 _cep, _desc);		\
+		kobj_lookup_misses++;				\
+	} else							\
+		kobj_lookup_hits++;				\
 	_m = _ce->func;						\
 } while(0)
 #else

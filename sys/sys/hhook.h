@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2010 Lawrence Stewart <lstewart@freebsd.org>
+ * Copyright (c) 2010,2013 Lawrence Stewart <lstewart@freebsd.org>
  * Copyright (c) 2010 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -33,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/hhook.h 251770 2013-06-15 04:03:40Z lstewart $
  */
 
 /*
@@ -91,12 +92,14 @@ struct hookinfo {
 struct hhook_head {
 	STAILQ_HEAD(hhook_list, hhook)	hhh_hooks;
 	struct rmlock			hhh_lock;
+	uintptr_t			hhh_vid;
 	int32_t				hhh_id;
 	int32_t				hhh_nhooks;
 	int32_t				hhh_type;
 	uint32_t			hhh_flags;
 	volatile uint32_t		hhh_refcount;
 	LIST_ENTRY(hhook_head)		hhh_next;
+	LIST_ENTRY(hhook_head)		hhh_vnext;
 };
 
 /* Public KPI functions. */

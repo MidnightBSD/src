@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 The FreeBSD Foundation
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/racct.h 299616 2016-05-13 08:17:42Z ngie $
  */
 
 /*
@@ -82,13 +83,18 @@ struct ucred;
 #define	RACCT_DECAYING		0x20
 
 extern int racct_types[];
+extern int racct_enable;
+
+#define ASSERT_RACCT_ENABLED()	KASSERT(racct_enable, \
+				    ("%s called with !racct_enable", __func__))
 
 /*
  * Amount stored in c_resources[] is 10**6 times bigger than what's
  * visible to the userland.  It gets fixed up when retrieving resource
  * usage or adding rules.
  */
-#define	RACCT_IS_IN_MILLIONS(X)	(racct_types[X] & RACCT_IN_MILLIONS)
+#define	RACCT_IS_IN_MILLIONS(X)	\
+    ((X) != RACCT_UNDEFINED && (racct_types[(X)] & RACCT_IN_MILLIONS) != 0)
 
 /*
  * Resource usage can drop, as opposed to only grow.  When the process

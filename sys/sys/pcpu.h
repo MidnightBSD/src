@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Wind River Systems, Inc.
  * All rights reserved.
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/pcpu.h 290741 2015-11-13 02:16:08Z markj $
  */
 
 #ifndef _SYS_PCPU_H_
@@ -38,7 +39,11 @@
 #endif
 
 #include <sys/_cpuset.h>
+#include <sys/_lock.h>
+#include <sys/_mutex.h>
+#include <sys/_sx.h>
 #include <sys/queue.h>
+#include <sys/_rmlock.h>
 #include <sys/vmmeter.h>
 #include <sys/resource.h>
 #include <machine/pcpu.h>
@@ -137,15 +142,6 @@ extern uintptr_t dpcpu_off[];
 
 #endif /* _KERNEL */
 
-/* 
- * XXXUPS remove as soon as we have per cpu variable
- * linker sets and can define rm_queue in _rm_lock.h
- */
-struct rm_queue {
-	struct rm_queue* volatile rmq_next;
-	struct rm_queue* volatile rmq_prev;
-};
-
 /*
  * This structure maps out the global data that needs to be kept on a
  * per-cpu basis.  The members are accessed via the PCPU_GET/SET/PTR
@@ -167,17 +163,9 @@ struct pcpu {
 	long		pc_cp_time[CPUSTATES];	/* statclock ticks */
 	struct device	*pc_device;
 	void		*pc_netisr;		/* netisr SWI cookie */
-	int		pc_dnweight;		/* vm_page_dontneed() */
+	int		pc_unused1;		/* unused field */
 	int		pc_domain;		/* Memory domain. */
-
-	/*
-	 * Stuff for read mostly lock
-	 *
-	 * XXXUPS remove as soon as we have per cpu variable
-	 * linker sets.
-	 */
-	struct rm_queue	pc_rm_queue;
-
+	struct rm_queue	pc_rm_queue;		/* rmlock list of trackers */
 	uintptr_t	pc_dynamic;		/* Dynamic per-cpu data area */
 
 	/*
@@ -193,6 +181,14 @@ struct pcpu {
 	PCPU_MD_FIELDS;
 } __aligned(CACHE_LINE_SIZE);
 
+#ifdef CTASSERT
+/*
+ * To minimize memory waste in per-cpu UMA zones, size of struct pcpu
+ * should be denominator of PAGE_SIZE.
+ */
+CTASSERT((PAGE_SIZE / sizeof(struct pcpu)) * sizeof(struct pcpu) == PAGE_SIZE);
+#endif
+
 #ifdef _KERNEL
 
 STAILQ_HEAD(cpuhead, pcpu);
@@ -206,6 +202,21 @@ extern struct pcpu *cpuid_to_pcpu[];
 #define	curthread	PCPU_GET(curthread)
 #endif
 #define	curvidata	PCPU_GET(vidata)
+
+/* Accessor to elements allocated via UMA_ZONE_PCPU zone. */
+static inline void *
+zpcpu_get(void *base)
+{
+
+	return ((char *)(base) + sizeof(struct pcpu) * curcpu);
+}
+
+static inline void *
+zpcpu_get_cpu(void *base, int cpu)
+{
+
+	return ((char *)(base) + sizeof(struct pcpu) * cpu);
+}
 
 /*
  * Machine dependent callouts.  cpu_pcpu_init() is responsible for

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1990, 1993
@@ -37,7 +38,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ipc.h	8.4 (Berkeley) 2/19/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/ipc.h 300060 2016-05-17 15:18:01Z pfg $
  */
 
 /*
@@ -112,7 +113,7 @@ struct ipc_perm {
 #define	IPC_STAT	2	/* get options */
 #if __BSD_VISIBLE
 /*
- * For Linux compatability.
+ * For Linux compatibility.
  */
 #define	IPC_INFO	3	/* get info */
 #endif

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +29,7 @@
  *
  *	@(#)socketvar.h	8.3 (Berkeley) 2/19/95
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/socketvar.h 321021 2017-07-15 17:28:03Z dchagin $
  */
 
 #ifndef _SYS_SOCKETVAR_H_
@@ -42,6 +43,7 @@
 #include <sys/sockbuf.h>
 #include <sys/sockstate.h>
 #ifdef _KERNEL
+#include <sys/caprights.h>
 #include <sys/sockopt.h>
 #endif
 
@@ -76,7 +78,7 @@ struct socket {
 	short	so_state;		/* (b) internal state flags SS_* */
 	int	so_qstate;		/* (e) internal state flags SQ_* */
 	void	*so_pcb;		/* protocol control block */
-	struct	vnet *so_vnet;		/* network stack instance */
+	struct	vnet *so_vnet;		/* (a) network stack instance */
 	struct	protosw *so_proto;	/* (a) protocol handle */
 /*
  * Variables for connection queuing.
@@ -294,9 +296,10 @@ MALLOC_DECLARE(M_SONAME);
 
 extern int	maxsockets;
 extern u_long	sb_max;
-extern struct uma_zone *socket_zone;
 extern so_gen_t so_gencnt;
 
+struct file;
+struct filedesc;
 struct mbuf;
 struct sockaddr;
 struct ucred;
@@ -313,16 +316,21 @@ struct uio;
 /*
  * From uipc_socket and friends
  */
-int	sockargs(struct mbuf **mp, char *buf, int buflen, int type);
+int	sockargs(struct mbuf **mp, caddr_t buf, int buflen, int type);
 int	getsockaddr(struct sockaddr **namp, caddr_t uaddr, size_t len);
+int	getsock_cap(struct thread *td, int fd, cap_rights_t *rightsp,
+	    struct file **fpp, u_int *fflagp);
 void	soabort(struct socket *so);
 int	soaccept(struct socket *so, struct sockaddr **nam);
 int	socheckuid(struct socket *so, uid_t uid);
 int	sobind(struct socket *so, struct sockaddr *nam, struct thread *td);
+int	sobindat(int fd, struct socket *so, struct sockaddr *nam,
+	    struct thread *td);
 int	soclose(struct socket *so);
 int	soconnect(struct socket *so, struct sockaddr *nam, struct thread *td);
+int	soconnectat(int fd, struct socket *so, struct sockaddr *nam,
+	    struct thread *td);
 int	soconnect2(struct socket *so1, struct socket *so2);
-int	socow_setup(struct mbuf *m0, struct uio *uio);
 int	socreate(int dom, struct socket **aso, int type, int proto,
 	    struct ucred *cred, struct thread *td);
 int	sodisconnect(struct socket *so);

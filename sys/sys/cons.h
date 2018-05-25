@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1991 The Regents of the University of California.
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)cons.h	7.2 (Berkeley) 5/9/91
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/cons.h 270988 2014-09-02 22:01:14Z emaste $
  */
 
 #ifndef _MACHINE_CONS_H_
@@ -132,6 +133,12 @@ void	cnputs(char *);
 int	cnunavailable(void);
 void	constty_set(struct tty *tp);
 void	constty_clear(void);
+
+/* sc(4) / vt(4) coexistence shim */
+#define	VTY_SC 0x01
+#define	VTY_VT 0x02
+int	vty_enabled(unsigned int);
+void	vty_set_preferred(unsigned int);
 
 #endif /* _KERNEL */
 

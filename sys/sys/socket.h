@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1985, 1986, 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)socket.h	8.4 (Berkeley) 2/21/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/socket.h 254925 2013-08-26 18:16:05Z jhb $
  */
 
 #ifndef _SYS_SOCKET_H_
@@ -95,6 +96,14 @@ typedef	__uid_t		uid_t;
 #endif
 #define	SOCK_SEQPACKET	5		/* sequenced packet stream */
 
+#if __BSD_VISIBLE
+/*
+ * Creation flags, OR'ed into socket() and socketpair() type argument.
+ */
+#define	SOCK_CLOEXEC	0x10000000
+#define	SOCK_NONBLOCK	0x20000000
+#endif
+
 /*
  * Option flags per-socket.
  */
@@ -145,7 +154,7 @@ typedef	__uid_t		uid_t;
 /*
  * Space reserved for new socket options added by third-party vendors.
  * This range applies to all socket option levels.  New socket options
- * in MidnightBSD should always use an option value less than SO_VENDOR.
+ * in FreeBSD should always use an option value less than SO_VENDOR.
  */
 #if __BSD_VISIBLE
 #define	SO_VENDOR	0x80000000
@@ -222,7 +231,9 @@ struct accept_filter_arg {
 #define	AF_ARP		35
 #define	AF_BLUETOOTH	36		/* Bluetooth sockets */
 #define	AF_IEEE80211	37		/* IEEE 802.11 protocol */
-#define	AF_MAX		38
+#define	AF_INET_SDP	40		/* OFED Socket Direct Protocol ipv4 */
+#define	AF_INET6_SDP	42		/* OFED Socket Direct Protocol ipv6 */
+#define	AF_MAX		42
 /*
  * When allocating a new AF_ constant, please only allocate
  * even numbered constants for FreeBSD until 134 as odd numbered AF_
@@ -344,6 +355,9 @@ struct sockproto {
 #define PF_SCLUSTER	AF_SCLUSTER
 #define	PF_ARP		AF_ARP
 #define	PF_BLUETOOTH	AF_BLUETOOTH
+#define	PF_IEEE80211	AF_IEEE80211
+#define	PF_INET_SDP	AF_INET_SDP
+#define	PF_INET6_SDP	AF_INET6_SDP
 
 #define	PF_MAX		AF_MAX
 
@@ -356,44 +370,6 @@ struct sockproto {
  * Further levels are defined by the individual families below.
  */
 #define NET_MAXID	AF_MAX
-
-#define CTL_NET_NAMES { \
-	{ 0, 0 }, \
-	{ "unix", CTLTYPE_NODE }, \
-	{ "inet", CTLTYPE_NODE }, \
-	{ "implink", CTLTYPE_NODE }, \
-	{ "pup", CTLTYPE_NODE }, \
-	{ "chaos", CTLTYPE_NODE }, \
-	{ "xerox_ns", CTLTYPE_NODE }, \
-	{ "iso", CTLTYPE_NODE }, \
-	{ "emca", CTLTYPE_NODE }, \
-	{ "datakit", CTLTYPE_NODE }, \
-	{ "ccitt", CTLTYPE_NODE }, \
-	{ "ibm_sna", CTLTYPE_NODE }, \
-	{ "decnet", CTLTYPE_NODE }, \
-	{ "dec_dli", CTLTYPE_NODE }, \
-	{ "lat", CTLTYPE_NODE }, \
-	{ "hylink", CTLTYPE_NODE }, \
-	{ "appletalk", CTLTYPE_NODE }, \
-	{ "route", CTLTYPE_NODE }, \
-	{ "link_layer", CTLTYPE_NODE }, \
-	{ "xtp", CTLTYPE_NODE }, \
-	{ "coip", CTLTYPE_NODE }, \
-	{ "cnt", CTLTYPE_NODE }, \
-	{ "rtip", CTLTYPE_NODE }, \
-	{ "ipx", CTLTYPE_NODE }, \
-	{ "sip", CTLTYPE_NODE }, \
-	{ "pip", CTLTYPE_NODE }, \
-	{ "isdn", CTLTYPE_NODE }, \
-	{ "key", CTLTYPE_NODE }, \
-	{ "inet6", CTLTYPE_NODE }, \
-	{ "natm", CTLTYPE_NODE }, \
-	{ "atm", CTLTYPE_NODE }, \
-	{ "hdrcomplete", CTLTYPE_NODE }, \
-	{ "netgraph", CTLTYPE_NODE }, \
-	{ "snp", CTLTYPE_NODE }, \
-	{ "scp", CTLTYPE_NODE }, \
-}
 
 /*
  * PF_ROUTE - Routing table
@@ -411,14 +387,6 @@ struct sockproto {
 					 * versions of msghdr structs. */
 #define	NET_RT_MAXID	6
 
-#define CTL_NET_RT_NAMES { \
-	{ 0, 0 }, \
-	{ "dump", CTLTYPE_STRUCT }, \
-	{ "flags", CTLTYPE_STRUCT }, \
-	{ "iflist", CTLTYPE_STRUCT }, \
-	{ "ifmalist", CTLTYPE_STRUCT }, \
-	{ "iflistl", CTLTYPE_STRUCT }, \
-}
 #endif /* __BSD_VISIBLE */
 
 /*
@@ -447,18 +415,19 @@ struct msghdr {
 #define	MSG_TRUNC	0x10		/* data discarded before delivery */
 #define	MSG_CTRUNC	0x20		/* control data lost before delivery */
 #define	MSG_WAITALL	0x40		/* wait for full request or error */
-#define MSG_NOTIFICATION 0x2000         /* SCTP notification */
+#if __POSIX_VISIBLE >= 200809
+#define	MSG_NOSIGNAL	0x20000		/* do not generate SIGPIPE on EOF */
+#endif
 #if __BSD_VISIBLE
 #define	MSG_DONTWAIT	0x80		/* this message should be nonblocking */
 #define	MSG_EOF		0x100		/* data completes connection */
+#define	MSG_NOTIFICATION 0x2000         /* SCTP notification */
 #define	MSG_NBIO	0x4000		/* FIONBIO mode, used by fifofs */
 #define	MSG_COMPAT      0x8000		/* used in sendit() */
+#define	MSG_CMSG_CLOEXEC 0x40000	/* make received fds close-on-exec */
 #endif
 #ifdef _KERNEL
 #define	MSG_SOCALLBCK   0x10000		/* for use by socket callbacks - soreceive (TCP) */
-#endif
-#if __BSD_VISIBLE
-#define	MSG_NOSIGNAL	0x20000		/* do not generate SIGPIPE on EOF */
 #endif
 
 /*
@@ -588,10 +557,13 @@ struct omsghdr {
 #define	SHUT_WR		1		/* shut down the writing side */
 #define	SHUT_RDWR	2		/* shut down both sides */
 
+#if __BSD_VISIBLE
+/* for SCTP */
 /* we cheat and use the SHUT_XX defines for these */
 #define PRU_FLUSH_RD     SHUT_RD
 #define PRU_FLUSH_WR     SHUT_WR
 #define PRU_FLUSH_RDWR   SHUT_RDWR
+#endif
 
 
 #if __BSD_VISIBLE
@@ -611,7 +583,11 @@ struct sf_hdtr {
 #define	SF_NODISKIO     0x00000001
 #define	SF_MNOWAIT	0x00000002
 #define	SF_SYNC		0x00000004
-#endif
+
+#ifdef _KERNEL
+#define	SFK_COMPAT	0x00000001
+#endif /* _KERNEL */
+#endif /* __BSD_VISIBLE */
 
 #ifndef	_KERNEL
 
@@ -621,6 +597,11 @@ __BEGIN_DECLS
 int	accept(int, struct sockaddr * __restrict, socklen_t * __restrict);
 int	bind(int, const struct sockaddr *, socklen_t);
 int	connect(int, const struct sockaddr *, socklen_t);
+#if __BSD_VISIBLE
+int	accept4(int, struct sockaddr * __restrict, socklen_t * __restrict, int);
+int	bindat(int, int, const struct sockaddr *, socklen_t);
+int	connectat(int, int, const struct sockaddr *, socklen_t);
+#endif
 int	getpeername(int, struct sockaddr * __restrict, socklen_t * __restrict);
 int	getsockname(int, struct sockaddr * __restrict, socklen_t * __restrict);
 int	getsockopt(int, int, int, void * __restrict, socklen_t * __restrict);

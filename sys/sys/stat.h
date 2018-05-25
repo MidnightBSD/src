@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stat.h	8.12 (Berkeley) 6/16/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/stat.h 293474 2016-01-09 14:20:23Z dchagin $
  */
 
 #ifndef _SYS_STAT_H_
@@ -228,8 +229,6 @@ struct nstat {
 #define	S_IFREG	 0100000		/* regular */
 #define	S_IFLNK	 0120000		/* symbolic link */
 #define	S_IFSOCK 0140000		/* socket */
-#define	S_IFPORT 0150000		/* mach port */
-#define S_IFPSET 0160000		/* mach portset */
 #define	S_ISVTX	 0001000		/* save swapped text even after use */
 #endif
 #if __BSD_VISIBLE
@@ -267,8 +266,26 @@ struct nstat {
 #define	UF_NODUMP	0x00000001	/* do not dump file */
 #define	UF_IMMUTABLE	0x00000002	/* file may not be changed */
 #define	UF_APPEND	0x00000004	/* writes to file may only append */
-#define UF_OPAQUE	0x00000008	/* directory is opaque wrt. union */
-#define UF_NOUNLINK	0x00000010	/* file may not be removed or renamed */
+#define	UF_OPAQUE	0x00000008	/* directory is opaque wrt. union */
+#define	UF_NOUNLINK	0x00000010	/* file may not be removed or renamed */
+/*
+ * These two bits are defined in MacOS X.  They are not currently used in
+ * FreeBSD.
+ */
+#if 0
+#define	UF_COMPRESSED	0x00000020	/* file is compressed */
+#define	UF_TRACKED	0x00000040	/* renames and deletes are tracked */
+#endif
+
+#define	UF_SYSTEM	0x00000080	/* Windows system file bit */
+#define	UF_SPARSE	0x00000100	/* sparse file */
+#define	UF_OFFLINE	0x00000200	/* file is offline */
+#define	UF_REPARSE	0x00000400	/* Windows reparse point file bit */
+#define	UF_ARCHIVE	0x00000800	/* file needs to be archived */
+#define	UF_READONLY	0x00001000	/* Windows readonly file bit */
+/* This is the same as the MacOS X definition of UF_HIDDEN. */
+#define	UF_HIDDEN	0x00008000	/* file is hidden */
+
 /*
  * Super-user changeable flags.
  */
@@ -291,10 +308,16 @@ struct nstat {
 
 #endif /* __BSD_VISIBLE */
 
+#if __POSIX_VISIBLE >= 200809
+#define	UTIME_NOW	-1
+#define	UTIME_OMIT	-2
+#endif
+
 #ifndef _KERNEL
 __BEGIN_DECLS
 #if __BSD_VISIBLE
 int	chflags(const char *, unsigned long);
+int	chflagsat(int, const char *, unsigned long, int);
 #endif
 int	chmod(const char *, mode_t);
 #if __BSD_VISIBLE
@@ -305,10 +328,13 @@ int	fchmod(int, mode_t);
 #endif
 #if __POSIX_VISIBLE >= 200809
 int	fchmodat(int, const char *, mode_t, int);
+int	futimens(int fd, const struct timespec times[2]);
+int	utimensat(int fd, const char *path, const struct timespec times[2],
+		int flag);
 #endif
 int	fstat(int, struct stat *);
 #if __BSD_VISIBLE
-int	lchflags(const char *, int);
+int	lchflags(const char *, unsigned long);
 int	lchmod(const char *, mode_t);
 #endif
 #if __POSIX_VISIBLE >= 200112

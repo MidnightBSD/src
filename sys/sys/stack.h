@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Antoine Brodin
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/stack.h 227581 2011-11-16 19:06:55Z pjd $
  */
 
 #ifndef _SYS_STACK_H_
@@ -37,16 +38,17 @@ struct sbuf;
 struct stack	*stack_create(void);
 void		 stack_destroy(struct stack *);
 int		 stack_put(struct stack *, vm_offset_t);
-void		 stack_copy(struct stack *, struct stack *);
+void		 stack_copy(const struct stack *, struct stack *);
 void		 stack_zero(struct stack *);
-void		 stack_print(struct stack *);
-void		 stack_print_ddb(struct stack *);
-void		 stack_print_short(struct stack *);
-void		 stack_print_short_ddb(struct stack *);
-void		 stack_sbuf_print(struct sbuf *, struct stack *);
-void		 stack_sbuf_print_ddb(struct sbuf *, struct stack *);
+void		 stack_print(const struct stack *);
+void		 stack_print_ddb(const struct stack *);
+void		 stack_print_short(const struct stack *);
+void		 stack_print_short_ddb(const struct stack *);
+void		 stack_sbuf_print(struct sbuf *, const struct stack *);
+void		 stack_sbuf_print_ddb(struct sbuf *, const struct stack *);
 #ifdef KTR
-void		 stack_ktr(u_int, const char *, int, struct stack *, u_int, int);
+void		 stack_ktr(u_int, const char *, int, const struct stack *,
+		    u_int, int);
 #define	CTRSTACK(m, st, depth, cheap) do {				\
 	if (KTR_COMPILE & (m))						\
 		stack_ktr((m), __FILE__, __LINE__, st, depth, cheap);	\

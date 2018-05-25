@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2001 Robert N. M. Watson
  * All rights reserved.
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/extattr.h 248995 2013-04-02 05:30:41Z mdf $
  */
 /*
  * Developed by the TrustedBSD Project.
@@ -92,11 +93,11 @@ ssize_t	extattr_list_file(const char *_path, int _attrnamespace, void *_data,
 	    size_t _nbytes);
 ssize_t	extattr_list_link(const char *_path, int _attrnamespace, void *_data,
 	    size_t _nbytes);
-int	extattr_set_fd(int _fd, int _attrnamespace, const char *_attrname,
+ssize_t	extattr_set_fd(int _fd, int _attrnamespace, const char *_attrname,
 	    const void *_data, size_t _nbytes);
-int	extattr_set_file(const char *_path, int _attrnamespace,
+ssize_t	extattr_set_file(const char *_path, int _attrnamespace,
 	    const char *_attrname, const void *_data, size_t _nbytes);
-int	extattr_set_link(const char *_path, int _attrnamespace,
+ssize_t	extattr_set_link(const char *_path, int _attrnamespace,
 	    const char *_attrname, const void *_data, size_t _nbytes);
 __END_DECLS
 

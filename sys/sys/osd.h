@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/osd.h 298834 2016-04-30 04:01:22Z jamie $
  */
 
 #ifndef _SYS_OSD_H_
@@ -59,6 +60,10 @@ int osd_register(u_int type, osd_destructor_t destructor,
 void osd_deregister(u_int type, u_int slot);
 
 int osd_set(u_int type, struct osd *osd, u_int slot, void *value);
+void *osd_reserve(u_int slot);
+int osd_set_reserved(u_int type, struct osd *osd, u_int slot, void *rsv,
+    void *value);
+void osd_free_reserved(void *rsv);
 void *osd_get(u_int type, struct osd *osd, u_int slot);
 void osd_del(u_int type, struct osd *osd, u_int slot);
 int osd_call(u_int type, u_int method, void *obj, void *data);
@@ -71,6 +76,8 @@ void osd_exit(u_int type, struct osd *osd);
 	osd_deregister(OSD_THREAD, (slot))
 #define	osd_thread_set(td, slot, value)					\
 	osd_set(OSD_THREAD, &(td)->td_osd, (slot), (value))
+#define	osd_thread_set_reserved(td, slot, rsv, value)			\
+	osd_set_reserved(OSD_THREAD, &(td)->td_osd, (slot), (rsv), (value))
 #define	osd_thread_get(td, slot)					\
 	osd_get(OSD_THREAD, &(td)->td_osd, (slot))
 #define	osd_thread_del(td, slot)	do {				\
@@ -88,6 +95,8 @@ void osd_exit(u_int type, struct osd *osd);
 	osd_deregister(OSD_JAIL, (slot))
 #define	osd_jail_set(pr, slot, value)					\
 	osd_set(OSD_JAIL, &(pr)->pr_osd, (slot), (value))
+#define	osd_jail_set_reserved(pr, slot, rsv, value)			\
+	osd_set_reserved(OSD_JAIL, &(pr)->pr_osd, (slot), (rsv), (value))
 #define	osd_jail_get(pr, slot)						\
 	osd_get(OSD_JAIL, &(pr)->pr_osd, (slot))
 #define	osd_jail_del(pr, slot)						\

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)exec.h	8.1 (Berkeley) 6/11/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/imgact_aout.h 237695 2012-06-28 07:37:46Z imp $
  */
 
 #ifndef	_IMGACT_AOUT_H_
@@ -119,7 +120,7 @@ struct exec {
      uint32_t	a_trsize;	/* text relocation size */
      uint32_t	a_drsize;	/* data relocation size */
 };
-#define a_magic a_midmag /* XXX Hack to work with imgact_{aout,gzip}.c */
+#define a_magic a_midmag	/* Hack for emulators */
 
 /* a_magic */
 #define	OMAGIC		0407	/* old impure format */

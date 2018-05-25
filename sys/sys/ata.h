@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2000 - 2008 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 2000 - 2008 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/ata.h 322081 2017-08-05 08:37:38Z mav $
  */
 
 #ifndef _SYS_ATA_H_
@@ -68,8 +69,8 @@ struct ata_params {
 /*049*/ u_int16_t       capabilities1;
 #define ATA_SUPPORT_DMA                 0x0100
 #define ATA_SUPPORT_LBA                 0x0200
-#define ATA_SUPPORT_IORDY               0x0400
-#define ATA_SUPPORT_IORDYDIS            0x0800
+#define ATA_SUPPORT_IORDYDIS            0x0400
+#define ATA_SUPPORT_IORDY               0x0800
 #define ATA_SUPPORT_OVERLAP             0x4000
 
 /*050*/ u_int16_t       capabilities2;
@@ -130,6 +131,7 @@ struct ata_params {
 #define ATA_SATA_CURR_GEN_MASK          0x0006
 #define ATA_SUPPORT_NCQ_STREAM          0x0010
 #define ATA_SUPPORT_NCQ_QMANAGEMENT     0x0020
+#define ATA_SUPPORT_RCVSND_FPDMA_QUEUED 0x0040
 /*78*/  u_int16_t       satasupport;
 #define ATA_SUPPORT_NONZERO             0x0002
 #define ATA_SUPPORT_AUTOACTIVATE        0x0004
@@ -214,6 +216,8 @@ struct ata_params {
 #define ATA_PSS_LSPPS			0x000F
 #define ATA_PSS_LSSABOVE512		0x1000
 #define ATA_PSS_MULTLS			0x2000
+#define ATA_PSS_VALID_MASK		0xC000
+#define ATA_PSS_VALID_VALUE		0x4000
 /*107*/ u_int16_t       isd;
 /*108*/ u_int16_t       wwn[4];
 	u_int16_t       reserved112[5];
@@ -249,7 +253,7 @@ struct ata_params {
 	u_int16_t       reserved170[6];
 /*176*/ u_int8_t        media_serial[60];
 /*206*/ u_int16_t       sct;
-	u_int16_t       reserved206[2];
+	u_int16_t       reserved207[2];
 /*209*/ u_int16_t       lsalign;
 /*210*/ u_int16_t       wrv_sectors_m3_1;
 	u_int16_t       wrv_sectors_m3_2;
@@ -259,6 +263,8 @@ struct ata_params {
 /*215*/ u_int16_t       nv_cache_size_1;
 	u_int16_t       nv_cache_size_2;
 /*217*/ u_int16_t       media_rotation_rate;
+#define ATA_RATE_NOT_REPORTED		0x0000
+#define ATA_RATE_NON_ROTATING		0x0001
 	u_int16_t       reserved218;
 /*219*/ u_int16_t       nv_cache_opt;
 /*220*/ u_int16_t       wrv_mode;
@@ -330,6 +336,7 @@ struct ata_params {
 #define ATA_UDMA6               0x46
 #define ATA_SA150               0x47
 #define ATA_SA300               0x48
+#define ATA_SA600               0x49
 #define ATA_DMA_MAX             0x4f
 
 
@@ -347,6 +354,7 @@ struct ata_params {
 #define ATA_READ_NATIVE_MAX_ADDRESS48   0x27    /* read native max addr 48bit */
 #define ATA_READ_MUL48                  0x29    /* read multi 48bit LBA */
 #define ATA_READ_STREAM_DMA48           0x2a    /* read DMA stream 48bit LBA */
+#define ATA_READ_LOG_EXT                0x2f    /* read log ext - PIO Data-In */
 #define ATA_READ_STREAM48               0x2b    /* read stream 48bit LBA */
 #define ATA_WRITE                       0x30    /* write */
 #define ATA_WRITE48                     0x34    /* write 48bit LBA */
@@ -361,8 +369,19 @@ struct ata_params {
 #define ATA_WRITE_LOG_EXT               0x3f
 #define ATA_READ_VERIFY                 0x40
 #define ATA_READ_VERIFY48               0x42
+#define ATA_WRITE_UNCORRECTABLE48       0x45    /* write uncorrectable 48bit LBA */
+#define         ATA_WU_PSEUDO           0x55    /* pseudo-uncorrectable error */
+#define         ATA_WU_FLAGGED          0xaa    /* flagged-uncorrectable error */
+#define ATA_READ_LOG_DMA_EXT            0x47    /* read log DMA ext - PIO Data-In */
 #define ATA_READ_FPDMA_QUEUED           0x60    /* read DMA NCQ */
 #define ATA_WRITE_FPDMA_QUEUED          0x61    /* write DMA NCQ */
+#define ATA_NCQ_NON_DATA		0x63	/* NCQ non-data command */
+#define ATA_SEND_FPDMA_QUEUED           0x64    /* send DMA NCQ */
+#define		ATA_SFPDMA_DSM		0x00	/* Data set management */
+#define			ATA_SFPDMA_DSM_TRIM	0x01	/* Set trim bit in auxiliary */
+#define		ATA_SFPDMA_HYBRID_EVICT	0x01	/* Hybrid Evict */
+#define		ATA_SFPDMA_WLDMA	0x02	/* Write Log DMA EXT */
+#define	ATA_RECV_FPDMA_QUEUED           0x65    /* receive DMA NCQ */
 #define ATA_SEP_ATTN                    0x67    /* SEP request */
 #define ATA_SEEK                        0x70    /* seek */
 #define ATA_PACKET_CMD                  0xa0    /* packet command */
@@ -384,6 +403,7 @@ struct ata_params {
 #define ATA_IDLE_CMD                    0xe3    /* idle */
 #define ATA_READ_BUFFER                 0xe4    /* read buffer */
 #define ATA_READ_PM                     0xe4    /* read portmultiplier */
+#define ATA_CHECK_POWER_MODE            0xe5    /* device power mode */
 #define ATA_SLEEP                       0xe6    /* sleep */
 #define ATA_FLUSHCACHE                  0xe7    /* flush cache to disk */
 #define ATA_WRITE_PM                    0xe8    /* write portmultiplier */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 John D. Polstra.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/elf_generic.h 314197 2017-02-24 09:30:51Z kib $
  */
 
 #ifndef _SYS_ELF_GENERIC_H_
@@ -84,5 +85,6 @@ __ElfType(Ssize);
 #define	ELF_ST_BIND	__ELFN(ST_BIND)
 #define	ELF_ST_TYPE	__ELFN(ST_TYPE)
 #define	ELF_ST_INFO	__ELFN(ST_INFO)
+#define	ELF_ST_VISIBILITY	__ELFN(ST_VISIBILITY)
 
 #endif /* !_SYS_ELF_GENERIC_H_ */

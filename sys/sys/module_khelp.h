@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Lawrence Stewart <lstewart@freebsd.org>
  * Copyright (c) 2010 The FreeBSD Foundation
@@ -33,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/module_khelp.h 251789 2013-06-15 10:38:31Z lstewart $
  */
 
 #ifndef _SYS_MODULE_KHELP_H_
@@ -70,22 +71,6 @@ struct khelp_modevent_data {
 	uma_dtor		umadtor;
 };
 
-#define	KHELP_DECLARE_MOD(hname, hdata, hhooks, version)		\
-	static struct khelp_modevent_data kmd_##hname = {		\
-		.name = #hname,						\
-		.helper = hdata						\
-		.hooks = hhooks,					\
-		.nhooks = sizeof(hhooks) / sizeof(hhooks[0]),		\
-	};								\
-	static moduledata_t h_##hname = {				\
-		.name = #hname,						\
-		.evhand = khelp_modevent,				\
-		.priv = &kmd_##hname					\
-	};								\
-	DECLARE_MODULE(hname, h_##hname, SI_SUB_PROTO_IFATTACHDOMAIN,	\
-	    SI_ORDER_ANY);						\
-	MODULE_VERSION(hname, version)
-
 #define	KHELP_DECLARE_MOD_UMA(hname, hdata, hhooks, version, size, ctor, dtor) \
 	static struct khelp_modevent_data kmd_##hname = {		\
 		.name = #hname,						\
@@ -101,9 +86,11 @@ struct khelp_modevent_data {
 		.evhand = khelp_modevent,				\
 		.priv = &kmd_##hname					\
 	};								\
-	DECLARE_MODULE(hname, h_##hname, SI_SUB_PROTO_IFATTACHDOMAIN,	\
-	    SI_ORDER_ANY);						\
+	DECLARE_MODULE(hname, h_##hname, SI_SUB_KLD, SI_ORDER_ANY);	\
 	MODULE_VERSION(hname, version)
+
+#define	KHELP_DECLARE_MOD(hname, hdata, hhooks, version)		\
+	KHELP_DECLARE_MOD_UMA(hname, hdata, hhooks, version, 0, NULL, NULL)
 
 int	khelp_modevent(module_t mod, int type, void *data);
 

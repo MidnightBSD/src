@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -29,7 +30,7 @@
  *
  * LSI MPT-Fusion Host Adapter FreeBSD userland interface
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/mpt_ioctl.h 178814 2008-05-06 20:49:53Z jhb $
  */
 
 #ifndef _MPT_IOCTL_H_

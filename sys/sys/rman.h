@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *
@@ -26,7 +27,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/rman.h 303254 2016-07-24 04:38:50Z jhb $
  */
 
 #ifndef _SYS_RMAN_H_
@@ -42,15 +43,15 @@
 #define	RF_ALLOCATED	0x0001	/* resource has been reserved */
 #define	RF_ACTIVE	0x0002	/* resource allocation has been activated */
 #define	RF_SHAREABLE	0x0004	/* resource permits contemporaneous sharing */
-#define	RF_TIMESHARE	0x0008	/* resource permits time-division sharing */
-#define	RF_WANTED	0x0010	/* somebody is waiting for this resource */
+#define	RF_SPARE1	0x0008
+#define	RF_SPARE2	0x0010
 #define	RF_FIRSTSHARE	0x0020	/* first in sharing list */
 #define	RF_PREFETCHABLE	0x0040	/* resource is prefetchable */
 #define	RF_OPTIONAL	0x0080	/* for bus_alloc_resources() */
 
 #define	RF_ALIGNMENT_SHIFT	10 /* alignment size bit starts bit 10 */
 #define	RF_ALIGNMENT_MASK	(0x003F << RF_ALIGNMENT_SHIFT)
-				/* resource address alignemnt size bit mask */
+				/* resource address alignment size bit mask */
 #define	RF_ALIGNMENT_LOG2(x)	((x) << RF_ALIGNMENT_SHIFT)
 #define	RF_ALIGNMENT(x)		(((x) & RF_ALIGNMENT_MASK) >> RF_ALIGNMENT_SHIFT)
 
@@ -117,7 +118,6 @@ TAILQ_HEAD(rman_head, rman);
 
 int	rman_activate_resource(struct resource *r);
 int	rman_adjust_resource(struct resource *r, u_long start, u_long end);
-int	rman_await_resource(struct resource *r, int pri, int timo);
 int	rman_first_free_region(struct rman *rm, u_long *start, u_long *end);
 bus_space_handle_t rman_get_bushandle(struct resource *);
 bus_space_tag_t rman_get_bustag(struct resource *);

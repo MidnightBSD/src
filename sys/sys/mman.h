@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mman.h	8.2 (Berkeley) 1/9/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/mman.h 321717 2017-07-30 10:36:20Z kib $
  */
 
 #ifndef _SYS_MMAN_H_
@@ -43,6 +44,7 @@
 #define INHERIT_SHARE	0
 #define INHERIT_COPY	1
 #define INHERIT_NONE	2
+#define INHERIT_ZERO	3
 #endif
 
 /*
@@ -89,8 +91,24 @@
 /*
  * Extended flags
  */
+#define	MAP_GUARD	 0x00002000 /* reserve but don't map address range */
+#define	MAP_EXCL	 0x00004000 /* for MAP_FIXED, fail if address is used */
 #define	MAP_NOCORE	 0x00020000 /* dont include these pages in a coredump */
 #define	MAP_PREFAULT_READ 0x00040000 /* prefault mapping for reading */
+#ifdef __LP64__
+#define	MAP_32BIT	 0x00080000 /* map in the low 2GB of address space */
+#endif
+
+/*
+ * Request specific alignment (n == log2 of the desired alignment).
+ *
+ * MAP_ALIGNED_SUPER requests optimal superpage alignment, but does
+ * not enforce a specific alignment.
+ */
+#define	MAP_ALIGNED(n)	 ((n) << MAP_ALIGNMENT_SHIFT)
+#define	MAP_ALIGNMENT_SHIFT	24
+#define	MAP_ALIGNMENT_MASK	MAP_ALIGNED(0xff)
+#define	MAP_ALIGNED_SUPER	MAP_ALIGNED(1) /* align on a superpage */
 #endif /* __BSD_VISIBLE */
 
 #if __POSIX_VISIBLE >= 199309
@@ -179,6 +197,10 @@ typedef	__size_t	size_t;
 #endif
 
 #if defined(_KERNEL) || defined(_WANT_FILE)
+#include <sys/lock.h>
+#include <sys/mutex.h>
+#include <sys/queue.h>
+#include <sys/rangelock.h>
 #include <vm/vm.h>
 
 struct file;
@@ -200,9 +222,13 @@ struct shmfd {
 	struct timespec	shm_mtime;
 	struct timespec	shm_ctime;
 	struct timespec	shm_birthtime;
+	ino_t		shm_ino;
 
 	struct label	*shm_label;		/* MAC label */
 	const char	*shm_path;
+
+	struct rangelock shm_rl;
+	struct mtx	shm_mtx;
 };
 #endif
 

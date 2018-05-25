@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)filio.h	8.1 (Berkeley) 3/28/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/filio.h 195191 2009-06-30 13:38:49Z emaste $
  */
 
 #ifndef	_SYS_FILIO_H_

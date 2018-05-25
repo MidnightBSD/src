@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +29,7 @@
  *
  *	@(#)socketvar.h	8.3 (Berkeley) 2/19/95
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/sockstate.h 180948 2008-07-29 07:45:05Z kmacy $
  */
 #ifndef _SYS_SOCKTATE_H_
 #define _SYS_SOCKTATE_H_

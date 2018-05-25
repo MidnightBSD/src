@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 John S. Dyson.  All rights reserved.
  *
@@ -13,7 +14,7 @@
  * bad that happens because of using this software isn't the responsibility
  * of the author.  This software is distributed AS-IS.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/aio.h 328294 2018-01-23 18:22:41Z jhb $
  */
 
 #ifndef _SYS_AIO_H_
@@ -37,6 +38,7 @@
 #define	LIO_READ		0x2
 #ifdef _KERNEL
 #define	LIO_SYNC		0x3
+#define	LIO_MLOCK		0x4
 #endif
 
 /*
@@ -124,7 +126,12 @@ int	aio_cancel(int, struct aiocb *);
  */
 int	aio_suspend(const struct aiocb * const[], int, const struct timespec *);
 
-#ifdef __BSD_VISIBLE
+/*
+ * Asynchronous mlock
+ */
+int	aio_mlock(struct aiocb *);
+
+#if __BSD_VISIBLE
 int	aio_waitcomplete(struct aiocb **, struct timespec *);
 #endif
 

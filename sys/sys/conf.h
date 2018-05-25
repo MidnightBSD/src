@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)conf.h	8.5 (Berkeley) 1/9/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/conf.h 317917 2017-05-07 20:21:59Z rmacklem $
  */
 
 #ifndef _SYS_CONF_H_
@@ -52,19 +53,17 @@ struct cdevsw;
 struct file;
 
 struct cdev {
-	struct mount	*si_mountpt;
+	void		*si_spare0;
 	u_int		si_flags;
 #define	SI_ETERNAL	0x0001	/* never destroyed */
-#define SI_ALIAS	0x0002	/* carrier of alias name */
-#define SI_NAMED	0x0004	/* make_dev{_alias} has been called */
-#define SI_CHEAPCLONE	0x0008	/* can be removed_dev'ed when vnode reclaims */
-#define SI_CHILD	0x0010	/* child of another struct cdev **/
-#define SI_DEVOPEN	0x0020	/* opened by device */
-#define SI_CONSOPEN	0x0040	/* opened by console */
-#define SI_DUMPDEV	0x0080	/* is kernel dumpdev */
-#define SI_CANDELETE	0x0100	/* can do BIO_DELETE */
-#define SI_CLONELIST	0x0200	/* on a clone list */
+#define	SI_ALIAS	0x0002	/* carrier of alias name */
+#define	SI_NAMED	0x0004	/* make_dev{_alias} has been called */
+#define	SI_CHEAPCLONE	0x0008	/* can be removed_dev'ed when vnode reclaims */
+#define	SI_CHILD	0x0010	/* child of another struct cdev **/
+#define	SI_DUMPDEV	0x0080	/* is kernel dumpdev */
+#define	SI_CLONELIST	0x0200	/* on a clone list */
 #define	SI_UNMAPPED	0x0400	/* can handle unmapped I/O */
+#define	SI_NOSPLIT	0x0800	/* I/O should not be split up */
 	struct timespec	si_atime;
 	struct timespec	si_ctime;
 	struct timespec	si_mtime;
@@ -79,7 +78,7 @@ struct cdev {
 	LIST_HEAD(, cdev)	si_children;
 	LIST_ENTRY(cdev)	si_siblings;
 	struct cdev *si_parent;
-	char		*si_name;
+	struct mount	*si_mountpt;
 	void		*si_drv1, *si_drv2;
 	struct cdevsw	*si_devsw;
 	int		si_iosize_max;	/* maximum I/O size (for physio &al) */
@@ -88,10 +87,10 @@ struct cdev {
 	union {
 		struct snapdata *__sid_snapdata;
 	} __si_u;
-	char		__si_namebuf[SPECNAMELEN + 1];
+	char		si_name[SPECNAMELEN + 1];
 };
 
-#define si_snapdata	__si_u.__sid_snapdata
+#define	si_snapdata	__si_u.__sid_snapdata
 
 #ifdef _KERNEL
 
@@ -158,9 +157,9 @@ typedef int dumper_t(
 #define	D_TAPE	0x0001
 #define	D_DISK	0x0002
 #define	D_TTY	0x0004
-#define	D_MEM	0x0008
+#define	D_MEM	0x0008	/* /dev/(k)mem */
 
-#ifdef _KERNEL 
+#ifdef _KERNEL
 
 #define	D_TYPEMASK	0xffff
 
@@ -168,25 +167,23 @@ typedef int dumper_t(
  * Flags for d_flags which the drivers can set.
  */
 #define	D_TRACKCLOSE	0x00080000	/* track all closes */
-#define D_MMAP_ANON	0x00100000	/* special treatment in vm_mmap.c */
-#define D_PSEUDO	0x00200000	/* make_dev() can return NULL */
-#define D_NEEDGIANT	0x00400000	/* driver want Giant */
+#define	D_MMAP_ANON	0x00100000	/* special treatment in vm_mmap.c */
+#define	D_NEEDGIANT	0x00400000	/* driver want Giant */
 #define	D_NEEDMINOR	0x00800000	/* driver uses clone_create() */
-#define	D_UNMAPPED_IO   0x01000000	/* d_strategy can accept unmapped IO */
 
 /*
  * Version numbers.
  */
-#define D_VERSION_00	0x20011966
-#define D_VERSION_01	0x17032005	/* Add d_uid,gid,mode & kind */
-#define D_VERSION_02	0x28042009	/* Add d_mmap_single */
-#define D_VERSION_03	0x17122009	/* d_mmap takes memattr,vm_ooffset_t */
-#define D_VERSION	D_VERSION_03
+#define	D_VERSION_00	0x20011966
+#define	D_VERSION_01	0x17032005	/* Add d_uid,gid,mode & kind */
+#define	D_VERSION_02	0x28042009	/* Add d_mmap_single */
+#define	D_VERSION_03	0x17122009	/* d_mmap takes memattr,vm_ooffset_t */
+#define	D_VERSION	D_VERSION_03
 
 /*
  * Flags used for internal housekeeping
  */
-#define D_INIT		0x80000000	/* cdevsw initialized */
+#define	D_INIT		0x80000000	/* cdevsw initialized */
 
 /*
  * Character device switch table
@@ -231,21 +228,45 @@ struct devsw_module_data {
 	/* Do not initialize fields hereafter */
 };
 
-#define DEV_MODULE(name, evh, arg)					\
+#define	DEV_MODULE_ORDERED(name, evh, arg, ord)				\
 static moduledata_t name##_mod = {					\
     #name,								\
     evh,								\
     arg									\
 };									\
-DECLARE_MODULE(name, name##_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE)
+DECLARE_MODULE(name, name##_mod, SI_SUB_DRIVERS, ord)
 
+#define	DEV_MODULE(name, evh, arg)					\
+    DEV_MODULE_ORDERED(name, evh, arg, SI_ORDER_MIDDLE)
 
 void clone_setup(struct clonedevs **cdp);
 void clone_cleanup(struct clonedevs **);
-#define CLONE_UNITMASK 0xfffff
-#define CLONE_FLAG0 (CLONE_UNITMASK + 1)
+#define	CLONE_UNITMASK	0xfffff
+#define	CLONE_FLAG0	(CLONE_UNITMASK + 1)
 int clone_create(struct clonedevs **, struct cdevsw *, int *unit, struct cdev **dev, int extra);
 
+#define	MAKEDEV_REF		0x01
+#define	MAKEDEV_WHTOUT		0x02
+#define	MAKEDEV_NOWAIT		0x04
+#define	MAKEDEV_WAITOK		0x08
+#define	MAKEDEV_ETERNAL		0x10
+#define	MAKEDEV_CHECKNAME	0x20
+struct make_dev_args {
+	size_t		 mda_size;
+	int		 mda_flags;
+	struct cdevsw	*mda_devsw;
+	struct ucred	*mda_cr;
+	uid_t		 mda_uid;
+	gid_t		 mda_gid;
+	int		 mda_mode;
+	int		 mda_unit;
+	void		*mda_si_drv1;
+	void		*mda_si_drv2;
+};
+void make_dev_args_init_impl(struct make_dev_args *_args, size_t _sz);
+#define	make_dev_args_init(a) \
+    make_dev_args_init_impl((a), sizeof(struct make_dev_args))
+	
 int	count_dev(struct cdev *_dev);
 void	delist_dev(struct cdev *_dev);
 void	destroy_dev(struct cdev *_dev);
@@ -267,12 +288,6 @@ struct cdev *make_dev(struct cdevsw *_devsw, int _unit, uid_t _uid, gid_t _gid,
 struct cdev *make_dev_cred(struct cdevsw *_devsw, int _unit,
 		struct ucred *_cr, uid_t _uid, gid_t _gid, int _perms,
 		const char *_fmt, ...) __printflike(7, 8);
-#define	MAKEDEV_REF		0x01
-#define	MAKEDEV_WHTOUT		0x02
-#define	MAKEDEV_NOWAIT		0x04
-#define	MAKEDEV_WAITOK		0x08
-#define	MAKEDEV_ETERNAL		0x10
-#define	MAKEDEV_CHECKNAME	0x20
 struct cdev *make_dev_credf(int _flags,
 		struct cdevsw *_devsw, int _unit,
 		struct ucred *_cr, uid_t _uid, gid_t _gid, int _mode,
@@ -280,16 +295,17 @@ struct cdev *make_dev_credf(int _flags,
 int	make_dev_p(int _flags, struct cdev **_cdev, struct cdevsw *_devsw,
 		struct ucred *_cr, uid_t _uid, gid_t _gid, int _mode,
 		const char *_fmt, ...) __printflike(8, 9);
+int	make_dev_s(struct make_dev_args *_args, struct cdev **_cdev,
+		const char *_fmt, ...) __printflike(3, 4);
 struct cdev *make_dev_alias(struct cdev *_pdev, const char *_fmt, ...)
 		__printflike(2, 3);
 int	make_dev_alias_p(int _flags, struct cdev **_cdev, struct cdev *_pdev,
 		const char *_fmt, ...) __printflike(4, 5);
 int	make_dev_physpath_alias(int _flags, struct cdev **_cdev,
-	        struct cdev *_pdev, struct cdev *_old_alias,
-                const char *_physpath);
+		struct cdev *_pdev, struct cdev *_old_alias,
+		const char *_physpath);
 void	dev_lock(void);
 void	dev_unlock(void);
-void	setconf(void);
 
 #ifdef KLD_MODULE
 #define	MAKEDEV_ETERNAL_KLD	0
@@ -299,9 +315,9 @@ void	setconf(void);
 
 #define	dev2unit(d)	((d)->si_drv0)
 
-typedef	void (*cdevpriv_dtr_t)(void *data);
+typedef void d_priv_dtor_t(void *data);
 int	devfs_get_cdevpriv(void **datap);
-int	devfs_set_cdevpriv(void *priv, cdevpriv_dtr_t dtr);
+int	devfs_set_cdevpriv(void *priv, d_priv_dtor_t *dtr);
 void	devfs_clear_cdevpriv(void);
 void	devfs_fpdrop(struct file *fp);	/* XXX This is not public KPI */
 
@@ -320,6 +336,7 @@ void	devfs_free_cdp_inode(ino_t ino);
 #define		GID_BIN		7
 #define		GID_GAMES	13
 #define		GID_DIALER	68
+#define		GID_NOGROUP	65533
 #define		GID_NOBODY	65534
 
 typedef void (*dev_clone_fn)(void *arg, struct ucred *cred, char *name,
@@ -339,7 +356,7 @@ struct dumperinfo {
 	off_t   mediasize;	/* Space available in bytes. */
 };
 
-int set_dumper(struct dumperinfo *);
+int set_dumper(struct dumperinfo *, const char *_devname, struct thread *td);
 int dump_write(struct dumperinfo *, void *, vm_offset_t, off_t, size_t);
 void dumpsys(struct dumperinfo *);
 int doadump(boolean_t);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)gmon.h	8.2 (Berkeley) 1/4/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/gmon.h 157268 2006-03-29 18:17:03Z jhb $
  */
 
 #ifndef _SYS_GMON_H_

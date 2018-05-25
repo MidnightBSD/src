@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/sys/shm.h 328294 2018-01-23 18:22:41Z jhb $ */
 /*	$NetBSD: shm.h,v 1.15 1994/06/29 06:45:17 cgd Exp $	*/
 
 /*-
@@ -56,7 +57,7 @@
 #define	SHM_LOCK	11
 #define	SHM_UNLOCK	12
 
-/* ipcs shmctl commands for Linux compatability */
+/* ipcs shmctl commands for Linux compatibility */
 #define	SHM_STAT	13
 #define	SHM_INFO	14
 
@@ -154,7 +155,7 @@ typedef __size_t        size_t;
 #endif
 
 __BEGIN_DECLS
-#ifdef __BSD_VISIBLE
+#if __BSD_VISIBLE
 int shmsys(int, ...);
 #endif
 void *shmat(int, const void *, int);
