@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008, Sam Leffler <sam@errno.com>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_firmware.c 237546 2012-06-25 05:41:16Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -175,6 +176,9 @@ firmware_register(const char *imagename, const void *data, size_t datasize,
     unsigned int version, const struct firmware *parent)
 {
 	struct priv_fw *match, *frp;
+	char *str;
+
+	str = strdup(imagename, M_TEMP);
 
 	mtx_lock(&firmware_mtx);
 	/*
@@ -185,16 +189,18 @@ firmware_register(const char *imagename, const void *data, size_t datasize,
 		mtx_unlock(&firmware_mtx);
 		printf("%s: image %s already registered!\n",
 			__func__, imagename);
+		free(str, M_TEMP);
 		return NULL;
 	}
 	if (frp == NULL) {
 		mtx_unlock(&firmware_mtx);
 		printf("%s: cannot register image %s, firmware table full!\n",
 		    __func__, imagename);
+		free(str, M_TEMP);
 		return NULL;
 	}
 	bzero(frp, sizeof(*frp));	/* start from a clean record */
-	frp->fw.name = imagename;
+	frp->fw.name = str;
 	frp->fw.data = data;
 	frp->fw.datasize = datasize;
 	frp->fw.version = version;
@@ -230,7 +236,7 @@ firmware_unregister(const char *imagename)
 		err = 0;
 	} else if (fp->refcnt != 0) {	/* cannot unregister */
 		err = EBUSY;
-	}  else {
+	} else {
 		linker_file_t x = fp->file;	/* save value */
 
 		/*
@@ -238,6 +244,7 @@ firmware_unregister(const char *imagename)
 		 * do not forget anything. Then restore 'file' which is
 		 * non-null for autoloaded images.
 		 */
+		free((void *) (uintptr_t) fp->fw.name, M_TEMP);
 		bzero(fp, sizeof(struct priv_fw));
 		fp->file = x;
 		err = 0;

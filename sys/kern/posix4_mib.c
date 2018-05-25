@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998
  *	HD Associates, Inc.  All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/posix4_mib.c 299613 2016-05-13 07:56:14Z ngie $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -114,9 +115,9 @@ p31b_sysctl_proc(SYSCTL_HANDLER_ARGS)
 	num = arg2;
 	if (!P31B_VALID(num))
 		return (EINVAL);
-	val = facility_initialized[num] ? facility[num - 1] : 0;
+	val = facility_initialized[num - 1] ? facility[num - 1] : 0;
 	error = sysctl_handle_int(oidp, &val, 0, req);
-	if (error == 0 && req->newptr != NULL && facility_initialized[num])
+	if (error == 0 && req->newptr != NULL && facility_initialized[num - 1])
 		facility[num - 1] = val;
 	return (error);
 }
@@ -138,7 +139,7 @@ p31b_unsetcfg(int num)
 {
 
 	facility[num - 1] = 0;
-	facility_initialized[num -1] = 0;
+	facility_initialized[num - 1] = 0;
 }
 
 int

@@ -59594,9 +59594,13 @@ sys/kern/subr_autoconf.c -text
 sys/kern/subr_blist.c -text
 sys/kern/subr_bufring.c -text
 sys/kern/subr_bus.c -text
+sys/kern/subr_bus_dma.c svneol=native#text/plain
+sys/kern/subr_busdma_bufalloc.c svneol=native#text/plain
 sys/kern/subr_clock.c -text
+sys/kern/subr_counter.c svneol=native#text/plain
 sys/kern/subr_devstat.c -text
 sys/kern/subr_disk.c -text
+sys/kern/subr_dnvlist.c svneol=native#text/plain
 sys/kern/subr_dummy_vdso_tc.c svneol=native#text/plain
 sys/kern/subr_eventhandler.c -text
 sys/kern/subr_fattime.c -text
@@ -59611,6 +59615,8 @@ sys/kern/subr_mbpool.c -text
 sys/kern/subr_mchain.c -text
 sys/kern/subr_module.c -text
 sys/kern/subr_msgbuf.c -text
+sys/kern/subr_nvlist.c svneol=native#text/plain
+sys/kern/subr_nvpair.c svneol=native#text/plain
 sys/kern/subr_param.c -text
 sys/kern/subr_pcpu.c -text
 sys/kern/subr_power.c -text

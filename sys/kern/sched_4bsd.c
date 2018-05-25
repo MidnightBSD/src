@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/sched_4bsd.c 316841 2017-04-14 14:44:06Z avg $");
 
 #include "opt_hwpmc_hooks.h"
 #include "opt_sched.h"
@@ -143,7 +144,7 @@ static struct kproc_desc sched_kp = {
         schedcpu_thread,
         NULL
 };
-SYSINIT(schedcpu, SI_SUB_RUN_SCHEDULER, SI_ORDER_FIRST, kproc_start,
+SYSINIT(schedcpu, SI_SUB_LAST, SI_ORDER_FIRST, kproc_start,
     &sched_kp);
 SYSINIT(sched_setup, SI_SUB_RUN_QUEUE, SI_ORDER_FIRST, sched_setup, NULL);
 
@@ -255,20 +256,20 @@ SYSCTL_INT(_kern_sched, OID_AUTO, followon, CTLFLAG_RW,
 
 SDT_PROVIDER_DEFINE(sched);
 
-SDT_PROBE_DEFINE3(sched, , , change_pri, change-pri, "struct thread *", 
+SDT_PROBE_DEFINE3(sched, , , change__pri, "struct thread *", 
     "struct proc *", "uint8_t");
-SDT_PROBE_DEFINE3(sched, , , dequeue, dequeue, "struct thread *", 
+SDT_PROBE_DEFINE3(sched, , , dequeue, "struct thread *", 
     "struct proc *", "void *");
-SDT_PROBE_DEFINE4(sched, , , enqueue, enqueue, "struct thread *", 
+SDT_PROBE_DEFINE4(sched, , , enqueue, "struct thread *", 
     "struct proc *", "void *", "int");
-SDT_PROBE_DEFINE4(sched, , , lend_pri, lend-pri, "struct thread *", 
+SDT_PROBE_DEFINE4(sched, , , lend__pri, "struct thread *", 
     "struct proc *", "uint8_t", "struct thread *");
-SDT_PROBE_DEFINE2(sched, , , load_change, load-change, "int", "int");
-SDT_PROBE_DEFINE2(sched, , , off_cpu, off-cpu, "struct thread *",
+SDT_PROBE_DEFINE2(sched, , , load__change, "int", "int");
+SDT_PROBE_DEFINE2(sched, , , off__cpu, "struct thread *",
     "struct proc *");
-SDT_PROBE_DEFINE(sched, , , on_cpu, on-cpu);
-SDT_PROBE_DEFINE(sched, , , remain_cpu, remain-cpu);
-SDT_PROBE_DEFINE2(sched, , , surrender, surrender, "struct thread *",
+SDT_PROBE_DEFINE(sched, , , on__cpu);
+SDT_PROBE_DEFINE(sched, , , remain__cpu);
+SDT_PROBE_DEFINE2(sched, , , surrender, "struct thread *",
     "struct proc *");
 
 static __inline void
@@ -277,7 +278,7 @@ sched_load_add(void)
 
 	sched_tdcnt++;
 	KTR_COUNTER0(KTR_SCHED, "load", "global load", sched_tdcnt);
-	SDT_PROBE2(sched, , , load_change, NOCPU, sched_tdcnt);
+	SDT_PROBE2(sched, , , load__change, NOCPU, sched_tdcnt);
 }
 
 static __inline void
@@ -286,7 +287,7 @@ sched_load_rem(void)
 
 	sched_tdcnt--;
 	KTR_COUNTER0(KTR_SCHED, "load", "global load", sched_tdcnt);
-	SDT_PROBE2(sched, , , load_change, NOCPU, sched_tdcnt);
+	SDT_PROBE2(sched, , , load__change, NOCPU, sched_tdcnt);
 }
 /*
  * Arrange to reschedule if necessary, taking the priorities and
@@ -304,9 +305,8 @@ maybe_resched(struct thread *td)
 /*
  * This function is called when a thread is about to be put on run queue
  * because it has been made runnable or its priority has been adjusted.  It
- * determines if the new thread should be immediately preempted to.  If so,
- * it switches to it and eventually returns true.  If not, it returns false
- * so that the caller may place the thread on an appropriate run queue.
+ * determines if the new thread should preempt the current thread.  If so,
+ * it sets td_owepreempt to request a preemption.
  */
 int
 maybe_preempt(struct thread *td)
@@ -352,29 +352,8 @@ maybe_preempt(struct thread *td)
 		return (0);
 #endif
 
-	if (ctd->td_critnest > 1) {
-		CTR1(KTR_PROC, "maybe_preempt: in critical section %d",
-		    ctd->td_critnest);
-		ctd->td_owepreempt = 1;
-		return (0);
-	}
-	/*
-	 * Thread is runnable but not yet put on system run queue.
-	 */
-	MPASS(ctd->td_lock == td->td_lock);
-	MPASS(TD_ON_RUNQ(td));
-	TD_SET_RUNNING(td);
-	CTR3(KTR_PROC, "preempting to thread %p (pid %d, %s)\n", td,
-	    td->td_proc->p_pid, td->td_name);
-	mi_switch(SW_INVOL | SW_PREEMPT | SWT_PREEMPT, td);
-	/*
-	 * td's lock pointer may have changed.  We have to return with it
-	 * locked.
-	 */
-	spinlock_enter();
-	thread_unlock(ctd);
-	thread_lock(td);
-	spinlock_exit();
+	CTR0(KTR_PROC, "maybe_preempt: scheduling preemption");
+	ctd->td_owepreempt = 1;
 	return (1);
 #else
 	return (0);
@@ -793,6 +772,8 @@ sched_fork_thread(struct thread *td, struct thread *childtd)
 {
 	struct td_sched *ts;
 
+	childtd->td_oncpu = NOCPU;
+	childtd->td_lastcpu = NOCPU;
 	childtd->td_estcpu = td->td_estcpu;
 	childtd->td_lock = &sched_lock;
 	childtd->td_cpuset = cpuset_ref(td->td_cpuset);
@@ -836,12 +817,12 @@ sched_priority(struct thread *td, u_char prio)
 	KTR_POINT3(KTR_SCHED, "thread", sched_tdname(td), "priority change",
 	    "prio:%d", td->td_priority, "new prio:%d", prio, KTR_ATTR_LINKED,
 	    sched_tdname(curthread));
-	SDT_PROBE3(sched, , , change_pri, td, td->td_proc, prio);
+	SDT_PROBE3(sched, , , change__pri, td, td->td_proc, prio);
 	if (td != curthread && prio > td->td_priority) {
 		KTR_POINT3(KTR_SCHED, "thread", sched_tdname(curthread),
 		    "lend prio", "prio:%d", td->td_priority, "new prio:%d",
 		    prio, KTR_ATTR_LINKED, sched_tdname(td));
-		SDT_PROBE4(sched, , , lend_pri, td, td->td_proc, prio, 
+		SDT_PROBE4(sched, , , lend__pri, td, td->td_proc, prio, 
 		    curthread);
 	}
 	THREAD_LOCK_ASSERT(td, MA_OWNED);
@@ -983,7 +964,8 @@ sched_switch(struct thread *td, struct thread *newtd, int flags)
 		sched_load_rem();
 
 	td->td_lastcpu = td->td_oncpu;
-	preempted = !(td->td_flags & TDF_SLICEEND);
+	preempted = (td->td_flags & TDF_SLICEEND) == 0 &&
+	    (flags & SW_PREEMPT) != 0;
 	td->td_flags &= ~(TDF_NEEDRESCHED | TDF_SLICEEND);
 	td->td_owepreempt = 0;
 	td->td_oncpu = NOCPU;
@@ -1027,13 +1009,23 @@ sched_switch(struct thread *td, struct thread *newtd, int flags)
 		MPASS(newtd->td_lock == &sched_lock);
 	}
 
+#if (KTR_COMPILE & KTR_SCHED) != 0
+	if (TD_IS_IDLETHREAD(td))
+		KTR_STATE1(KTR_SCHED, "thread", sched_tdname(td), "idle",
+		    "prio:%d", td->td_priority);
+	else
+		KTR_STATE3(KTR_SCHED, "thread", sched_tdname(td), KTDSTATE(td),
+		    "prio:%d", td->td_priority, "wmesg:\"%s\"", td->td_wmesg,
+		    "lockname:\"%s\"", td->td_lockname);
+#endif
+
 	if (td != newtd) {
 #ifdef	HWPMC_HOOKS
 		if (PMC_PROC_IS_USING_PMCS(td->td_proc))
 			PMC_SWITCH_CONTEXT(td, PMC_FN_CSW_OUT);
 #endif
 
-		SDT_PROBE2(sched, , , off_cpu, td, td->td_proc);
+		SDT_PROBE2(sched, , , off__cpu, newtd, newtd->td_proc);
 
                 /* I feel sleepy */
 		lock_profile_release_lock(&sched_lock.lock_object);
@@ -1067,13 +1059,16 @@ sched_switch(struct thread *td, struct thread *newtd, int flags)
 		 * need to reap it.
 		 */
 
-		SDT_PROBE0(sched, , , on_cpu);
+		SDT_PROBE0(sched, , , on__cpu);
 #ifdef	HWPMC_HOOKS
 		if (PMC_PROC_IS_USING_PMCS(td->td_proc))
 			PMC_SWITCH_CONTEXT(td, PMC_FN_CSW_IN);
 #endif
 	} else
-		SDT_PROBE0(sched, , , remain_cpu);
+		SDT_PROBE0(sched, , , remain__cpu);
+
+	KTR_STATE1(KTR_SCHED, "thread", sched_tdname(td), "running",
+	    "prio:%d", td->td_priority);
 
 #ifdef SMP
 	if (td->td_flags & TDF_IDLETD)
@@ -1232,7 +1227,7 @@ sched_pickcpu(struct thread *td)
 
 	mtx_assert(&sched_lock, MA_OWNED);
 
-	if (THREAD_CAN_SCHED(td, td->td_lastcpu))
+	if (td->td_lastcpu != NOCPU && THREAD_CAN_SCHED(td, td->td_lastcpu))
 		best = td->td_lastcpu;
 	else
 		best = NOCPU;
@@ -1323,6 +1318,12 @@ sched_add(struct thread *td, int flags)
 		ts->ts_runq = &runq;
 	}
 
+	if ((td->td_flags & TDF_NOLOAD) == 0)
+		sched_load_add();
+	runq_add(ts->ts_runq, td, flags);
+	if (cpu != NOCPU)
+		runq_length[cpu]++;
+
 	cpuid = PCPU_GET(cpuid);
 	if (single_cpu && cpu != cpuid) {
 	        kick_other_cpu(td->td_priority, cpu);
@@ -1339,18 +1340,10 @@ sched_add(struct thread *td, int flags)
 		}
 
 		if (!forwarded) {
-			if ((flags & SRQ_YIELDING) == 0 && maybe_preempt(td))
-				return;
-			else
+			if (!maybe_preempt(td))
 				maybe_resched(td);
 		}
 	}
-
-	if ((td->td_flags & TDF_NOLOAD) == 0)
-		sched_load_add();
-	runq_add(ts->ts_runq, td, flags);
-	if (cpu != NOCPU)
-		runq_length[cpu]++;
 }
 #else /* SMP */
 {
@@ -1384,23 +1377,11 @@ sched_add(struct thread *td, int flags)
 	CTR2(KTR_RUNQ, "sched_add: adding td_sched:%p (td:%p) to runq", ts, td);
 	ts->ts_runq = &runq;
 
-	/*
-	 * If we are yielding (on the way out anyhow) or the thread
-	 * being saved is US, then don't try be smart about preemption
-	 * or kicking off another CPU as it won't help and may hinder.
-	 * In the YIEDLING case, we are about to run whoever is being
-	 * put in the queue anyhow, and in the OURSELF case, we are
-	 * puting ourself on the run queue which also only happens
-	 * when we are about to yield.
-	 */
-	if ((flags & SRQ_YIELDING) == 0) {
-		if (maybe_preempt(td))
-			return;
-	}
 	if ((td->td_flags & TDF_NOLOAD) == 0)
 		sched_load_add();
 	runq_add(ts->ts_runq, td, flags);
-	maybe_resched(td);
+	if (!maybe_preempt(td))
+		maybe_resched(td);
 }
 #endif /* SMP */
 
@@ -1585,7 +1566,7 @@ sched_pctcpu(struct thread *td)
 	return (ts->ts_pctcpu);
 }
 
-#ifdef	RACCT
+#ifdef RACCT
 /*
  * Calculates the contribution to the thread cpu usage for the latest
  * (unfinished) second.
@@ -1632,6 +1613,7 @@ sched_idletd(void *dummy)
 {
 	struct pcpuidlestat *stat;
 
+	THREAD_NO_SLEEPING();
 	stat = DPCPU_PTR(idlestat);
 	for (;;) {
 		mtx_assert(&Giant, MA_NOTOWNED);
@@ -1670,6 +1652,8 @@ sched_throw(struct thread *td)
 	} else {
 		lock_profile_release_lock(&sched_lock.lock_object);
 		MPASS(td->td_lock == &sched_lock);
+		td->td_lastcpu = td->td_oncpu;
+		td->td_oncpu = NOCPU;
 	}
 	mtx_assert(&sched_lock, MA_OWNED);
 	KASSERT(curthread->td_md.md_spinlock_count == 1, ("invalid count"));
@@ -1689,6 +1673,10 @@ sched_fork_exit(struct thread *td)
 	lock_profile_obtain_lock_success(&sched_lock.lock_object,
 	    0, 0, __FILE__, __LINE__);
 	THREAD_LOCK_ASSERT(td, MA_OWNED | MA_NOTRECURSED);
+
+	KTR_STATE1(KTR_SCHED, "thread", sched_tdname(td), "running",
+	    "prio:%d", td->td_priority);
+	SDT_PROBE0(sched, , , on__cpu);
 }
 
 char *

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1982, 1990, 1993
@@ -39,13 +40,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_clock.c 275932 2014-12-19 09:34:14Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
 #include <sys/clock.h>
+#include <sys/limits.h>
 #include <sys/sysctl.h>
 #include <sys/timetc.h>
 
@@ -132,7 +134,6 @@ print_ct(struct clocktime *ct)
 int
 clock_ct_to_ts(struct clocktime *ct, struct timespec *ts)
 {
-	time_t secs;
 	int i, year, days;
 
 	year = ct->year;
@@ -147,7 +148,7 @@ clock_ct_to_ts(struct clocktime *ct, struct timespec *ts)
 	if (ct->mon < 1 || ct->mon > 12 || ct->day < 1 ||
 	    ct->day > days_in_month(year, ct->mon) ||
 	    ct->hour > 23 ||  ct->min > 59 || ct->sec > 59 ||
-	    ct->year > 2037) {		/* time_t overflow */
+	    (sizeof(time_t) == 4 && year > 2037)) {	/* time_t overflow */
 		if (ct_debug)
 			printf(" = EINVAL\n");
 		return (EINVAL);
@@ -166,11 +167,10 @@ clock_ct_to_ts(struct clocktime *ct, struct timespec *ts)
 	  	days += days_in_month(year, i);
 	days += (ct->day - 1);
 
-	/* Add hours, minutes, seconds. */
-	secs = ((days * 24 + ct->hour) * 60 + ct->min) * 60 + ct->sec;
-
-	ts->tv_sec = secs;
+	ts->tv_sec = (((time_t)days * 24 + ct->hour) * 60 + ct->min) * 60 +
+	    ct->sec;
 	ts->tv_nsec = ct->nsec;
+
 	if (ct_debug)
 		printf(" = %ld.%09ld\n", (long)ts->tv_sec, (long)ts->tv_nsec);
 	return (0);

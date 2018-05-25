@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Ian Dowse.  All rights reserved.
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/kern/subr_msgbuf.c 302234 2016-06-27 21:50:30Z bdrewery $
  */
 
 /*
@@ -50,7 +51,7 @@ static u_int msgbuf_cksum(struct msgbuf *mbp);
 
 /*
  * Timestamps in msgbuf are useful when trying to diagnose when core dumps
- * or other actions occured.
+ * or other actions occurred.
  */
 static int msgbuf_show_timestamp = 0;
 SYSCTL_INT(_kern, OID_AUTO, msgbuf_show_timestamp, CTLFLAG_RW | CTLFLAG_TUN,

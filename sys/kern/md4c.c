@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* MD4C.C - RSA Data Security, Inc., MD4 message-digest algorithm
  */
 
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/md4c.c 139804 2005-01-06 23:35:40Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

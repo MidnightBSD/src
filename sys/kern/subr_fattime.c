@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Poul-Henning Kamp
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/kern/subr_fattime.c 266368 2014-05-17 22:03:44Z ian $
  *
  * Convert MS-DOS FAT format timestamps to and from unix timespecs
  *
@@ -49,9 +50,9 @@
  * "New Technology".  Anyway...
  *
  * The 'utc' argument determines if the resulting FATTIME timestamp
- * should b on the UTC or local timezone calendar.
+ * should be on the UTC or local timezone calendar.
  *
- * The conversion functions below cut time into four-year leap-second
+ * The conversion functions below cut time into four-year leap-year
  * cycles rather than single years and uses table lookups inside those
  * cycles to get the months and years sorted out.
  *

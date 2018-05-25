@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_log.c 247798 2013-03-04 16:07:55Z davide $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -117,8 +118,8 @@ logopen(struct cdev *dev, int flags, int mode, struct thread *td)
 		return (EBUSY);
 	}
 	log_open = 1;
-	callout_reset(&logsoftc.sc_callout, hz / log_wakeups_per_second,
-	    logtimeout, NULL);
+	callout_reset_sbt(&logsoftc.sc_callout,
+	    SBT_1S / log_wakeups_per_second, 0, logtimeout, NULL, C_PREL(1));
 	mtx_unlock(&msgbuf_lock);
 
 	fsetown(td->td_proc->p_pid, &logsoftc.sc_sigio);	/* signal process only */
@@ -233,22 +234,21 @@ logtimeout(void *arg)
 
 	if (!log_open)
 		return;
-	if (log_wakeups_per_second < 1) {
-		printf("syslog wakeup is less than one.  Adjusting to 1.\n");
-		log_wakeups_per_second = 1;
-	}
-	if (msgbuftrigger == 0) {
-		callout_schedule(&logsoftc.sc_callout,
-		    hz / log_wakeups_per_second);
-		return;
-	}
+	if (msgbuftrigger == 0)
+		goto done;
 	msgbuftrigger = 0;
 	selwakeuppri(&logsoftc.sc_selp, LOG_RDPRI);
 	KNOTE_LOCKED(&logsoftc.sc_selp.si_note, 0);
 	if ((logsoftc.sc_state & LOG_ASYNC) && logsoftc.sc_sigio != NULL)
 		pgsigio(&logsoftc.sc_sigio, SIGIO, 0);
 	cv_broadcastpri(&log_wakeup, LOG_RDPRI);
-	callout_schedule(&logsoftc.sc_callout, hz / log_wakeups_per_second);
+done:
+	if (log_wakeups_per_second < 1) {
+		printf("syslog wakeup is less than one.  Adjusting to 1.\n");
+		log_wakeups_per_second = 1;
+	}
+	callout_reset_sbt(&logsoftc.sc_callout,
+	    SBT_1S / log_wakeups_per_second, 0, logtimeout, NULL, C_PREL(1));
 }
 
 /*ARGSUSED*/

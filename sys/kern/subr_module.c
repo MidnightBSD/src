@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Michael Smith
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_module.c 218494 2011-02-09 19:08:21Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

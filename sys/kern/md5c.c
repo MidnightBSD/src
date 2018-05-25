@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * MD5C.C - RSA Data Security, Inc., MD5 message-digest algorithm
  *
@@ -30,7 +31,7 @@
  * This file should be kept in sync with src/lib/libmd/md5c.c
  */
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/md5c.c 157304 2006-03-30 18:45:50Z pjd $");
 
 #include <sys/types.h>
 

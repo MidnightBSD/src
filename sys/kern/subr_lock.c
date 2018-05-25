@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -10,9 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -33,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_lock.c 323870 2017-09-21 19:24:11Z marius $");
 
 #include "opt_ddb.h"
 #include "opt_mprof.h"
@@ -58,6 +56,7 @@ __FBSDID("$MidnightBSD$");
 #endif
 
 #include <machine/cpufunc.h>
+#include <machine/cpu.h>
 
 CTASSERT(LOCK_CLASS_MAX == 15);
 
@@ -66,6 +65,7 @@ struct lock_class *lock_classes[LOCK_CLASS_MAX + 1] = {
 	&lock_class_mtx_sleep,
 	&lock_class_sx,
 	&lock_class_rm,
+	&lock_class_rm_sleepable,
 	&lock_class_rw,
 	&lock_class_lockmgr,
 };
@@ -77,8 +77,8 @@ lock_init(struct lock_object *lock, struct lock_class *class, const char *name,
 	int i;
 
 	/* Check for double-init and zero object. */
-	KASSERT(!lock_initalized(lock), ("lock \"%s\" %p already initialized",
-	    name, lock));
+	KASSERT(flags & LO_NEW || !lock_initalized(lock),
+	    ("lock \"%s\" %p already initialized", name, lock));
 
 	/* Look up lock class to find its index. */
 	for (i = 0; i < LOCK_CLASS_MAX; i++)
@@ -103,6 +103,34 @@ lock_destroy(struct lock_object *lock)
 	WITNESS_DESTROY(lock);
 	LOCK_LOG_DESTROY(lock, 0);
 	lock->lo_flags &= ~LO_INITIALIZED;
+}
+
+void
+lock_delay(struct lock_delay_arg *la)
+{
+	u_int i, delay, backoff, min, max;
+	struct lock_delay_config *lc = la->config;
+
+	delay = la->delay;
+
+	if (delay == 0)
+		delay = lc->initial;
+	else {
+		delay += lc->step;
+		max = lc->max;
+		if (delay > max)
+			delay = max;
+	}
+
+	backoff = cpu_ticks() % delay;
+	min = lc->min;
+	if (backoff < min)
+		backoff = min;
+	for (i = 0; i < backoff; i++)
+		cpu_spinwait();
+
+	la->delay = delay;
+	la->spin_cnt += backoff;
 }
 
 #ifdef DDB
@@ -240,34 +268,13 @@ lock_prof_init(void *arg)
 }
 SYSINIT(lockprof, SI_SUB_SMP, SI_ORDER_ANY, lock_prof_init, NULL);
 
-/*
- * To be certain that lock profiling has idled on all cpus before we
- * reset, we schedule the resetting thread on all active cpus.  Since
- * all operations happen within critical sections we can be sure that
- * it is safe to zero the profiling structures.
- */
-static void
-lock_prof_idle(void)
-{
-	struct thread *td;
-	int cpu;
-
-	td = curthread;
-	thread_lock(td);
-	CPU_FOREACH(cpu) {
-		sched_bind(td, cpu);
-	}
-	sched_unbind(td);
-	thread_unlock(td);
-}
-
 static void
 lock_prof_reset_wait(void)
 {
 
 	/*
-	 * Spin relinquishing our cpu so that lock_prof_idle may
-	 * run on it.
+	 * Spin relinquishing our cpu so that quiesce_all_cpus may
+	 * complete.
 	 */
 	while (lock_prof_resetting)
 		sched_relinquish(curthread);
@@ -289,7 +296,7 @@ lock_prof_reset(void)
 	atomic_store_rel_int(&lock_prof_resetting, 1);
 	enabled = lock_prof_enable;
 	lock_prof_enable = 0;
-	lock_prof_idle();
+	quiesce_all_cpus("profreset", 0);
 	/*
 	 * Some objects may have migrated between CPUs.  Clear all links
 	 * before we zero the structures.  Some items may still be linked
@@ -401,7 +408,7 @@ dump_lock_prof_stats(SYSCTL_HANDLER_ARGS)
 	    "max", "wait_max", "total", "wait_total", "count", "avg", "wait_avg", "cnt_hold", "cnt_lock", "name");
 	enabled = lock_prof_enable;
 	lock_prof_enable = 0;
-	lock_prof_idle();
+	quiesce_all_cpus("profstat", 0);
 	t = ticks;
 	for (cpu = 0; cpu <= mp_maxid; cpu++) {
 		if (lp_cpu[cpu] == NULL)

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -12,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_disk.c 212160 2010-09-02 19:40:28Z gibbs $");
 
 #include "opt_geom.h"
 

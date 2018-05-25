@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2007, 2008 Kip Macy <kmacy@freebsd.org>
+ * Copyright (c) 2012 Gleb Smirnoff <glebius@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,41 +26,72 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_bufring.c 207673 2010-05-05 20:39:02Z joel $");
-
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_counter.c 262739 2014-03-04 14:46:30Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
-#include <sys/malloc.h>
-#include <sys/ktr.h>
-#include <sys/buf_ring.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
+#include <sys/proc.h>
+#include <sys/sched.h>
+#include <sys/smp.h>
+#include <sys/sysctl.h>
+#include <vm/uma.h>
 
-
-struct buf_ring *
-buf_ring_alloc(int count, struct malloc_type *type, int flags, struct mtx *lock)
+#define IN_SUBR_COUNTER_C
+#include <sys/counter.h>
+ 
+void
+counter_u64_zero(counter_u64_t c)
 {
-	struct buf_ring *br;
 
-	KASSERT(powerof2(count), ("buf ring must be size power of 2"));
-	
-	br = malloc(sizeof(struct buf_ring) + count*sizeof(caddr_t),
-	    type, flags|M_ZERO);
-	if (br == NULL)
-		return (NULL);
-#ifdef DEBUG_BUFRING
-	br->br_lock = lock;
-#endif	
-	br->br_prod_size = br->br_cons_size = count;
-	br->br_prod_mask = br->br_cons_mask = count-1;
-	br->br_prod_head = br->br_cons_head = 0;
-	br->br_prod_tail = br->br_cons_tail = 0;
-		
-	return (br);
+	counter_u64_zero_inline(c);
+}
+
+uint64_t
+counter_u64_fetch(counter_u64_t c)
+{
+
+	return (counter_u64_fetch_inline(c));
+}
+
+counter_u64_t
+counter_u64_alloc(int flags)
+{
+	counter_u64_t r;
+
+	r = uma_zalloc(pcpu_zone_64, flags);
+	if (r != NULL)
+		counter_u64_zero(r);
+
+	return (r);
 }
 
 void
-buf_ring_free(struct buf_ring *br, struct malloc_type *type)
+counter_u64_free(counter_u64_t c)
 {
-	free(br, type);
+
+	uma_zfree(pcpu_zone_64, c);
+}
+
+int
+sysctl_handle_counter_u64(SYSCTL_HANDLER_ARGS)
+{
+	uint64_t out;
+	int error;
+
+	out = counter_u64_fetch(*(counter_u64_t *)arg1);
+
+	error = SYSCTL_OUT(req, &out, sizeof(uint64_t));
+
+	if (error || !req->newptr)
+		return (error);
+
+	/*
+	 * Any write attempt to a counter zeroes it.
+	 */
+	counter_u64_zero(*(counter_u64_t *)arg1);
+
+	return (0);
 }

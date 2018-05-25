@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000,2003 Doug Rabson
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_kobj.c 318275 2017-05-14 14:21:11Z marius $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -83,7 +84,7 @@ SYSINIT(kobj, SI_SUB_LOCK, SI_ORDER_ANY, kobj_init_mutex, NULL);
  * desc pointer is NULL, it is guaranteed never to match any read
  * descriptors.
  */
-static struct kobj_method null_method = {
+static const struct kobj_method null_method = {
 	0, 0,
 };
 
@@ -213,19 +214,11 @@ kobj_lookup_method(kobj_class_t cls,
 {
 	kobj_method_t *ce;
 
-#ifdef KOBJ_STATS
-	/*
-	 * Correct for the 'hit' assumption in KOBJOPLOOKUP and record
-	 * a 'miss'.
-	 */
-	kobj_lookup_hits--;
-	kobj_lookup_misses++;
-#endif
-
 	ce = kobj_lookup_method_mi(cls, desc);
 	if (!ce)
-		ce = desc->deflt;
-	*cep = ce;
+		ce = &desc->deflt;
+	if (cep)
+		*cep = ce;
 	return ce;
 }
 
