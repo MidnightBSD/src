@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -18,11 +19,11 @@
  *	inflate isn't quite reentrant yet...
  *	error-handling is a mess...
  *	so is the rest...
- *	tidy up unnecesary includes
+ *	tidy up unnecessary includes
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/imgact_gzip.c 255426 2013-09-09 18:11:59Z jhb $");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -137,7 +138,7 @@ exec_gzip_imgact(imgp)
 	}
 
 	if (igz.inbuf)
-		kmem_free_wakeup(exec_map, (vm_offset_t)igz.inbuf, PAGE_SIZE);
+		kmap_free_wakeup(exec_map, (vm_offset_t)igz.inbuf, PAGE_SIZE);
 	if (igz.error || error) {
 		printf("Output=%lu ", igz.output);
 		printf("Inflate_error=%d igz.error=%d where=%d\n",
@@ -161,7 +162,7 @@ do_aout_hdr(struct imgact_gzip * gz)
 	 * Set file/virtual offset based on a.out variant. We do two cases:
 	 * host byte order and network byte order (for NetBSD compatibility)
 	 */
-	switch ((int) (gz->a_out.a_magic & 0xffff)) {
+	switch ((int) (gz->a_out.a_midmag & 0xffff)) {
 	case ZMAGIC:
 		gz->virtual_offset = 0;
 		if (gz->a_out.a_text) {
@@ -177,7 +178,7 @@ do_aout_hdr(struct imgact_gzip * gz)
 		break;
 	default:
 		/* NetBSD compatibility */
-		switch ((int) (ntohl(gz->a_out.a_magic) & 0xffff)) {
+		switch ((int) (ntohl(gz->a_out.a_midmag) & 0xffff)) {
 		case ZMAGIC:
 		case QMAGIC:
 			gz->virtual_offset = PAGE_SIZE;
@@ -269,12 +270,9 @@ do_aout_hdr(struct imgact_gzip * gz)
 		 */
 		vmaddr = gz->virtual_offset + gz->a_out.a_text + 
 			gz->a_out.a_data;
-		error = vm_map_find(&vmspace->vm_map,
-				NULL,
-				0,
-				&vmaddr, 
-				gz->bss_size,
-				FALSE, VM_PROT_ALL, VM_PROT_ALL, 0);
+		error = vm_map_find(&vmspace->vm_map, NULL, 0, &vmaddr,
+		    gz->bss_size, 0, VMFS_NO_SPACE, VM_PROT_ALL, VM_PROT_ALL,
+		    0);
 		if (error) {
 			gz->where = __LINE__;
 			return (error);
@@ -310,7 +308,7 @@ NextByte(void *vp)
 		return igz->inbuf[(igz->idx++) - igz->offset];
 	}
 	if (igz->inbuf)
-		kmem_free_wakeup(exec_map, (vm_offset_t)igz->inbuf, PAGE_SIZE);
+		kmap_free_wakeup(exec_map, (vm_offset_t)igz->inbuf, PAGE_SIZE);
 	igz->offset = igz->idx & ~PAGE_MASK;
 
 	error = vm_mmap(exec_map,	/* map */

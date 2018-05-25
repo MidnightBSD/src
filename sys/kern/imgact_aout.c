@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993, David Greenman
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/imgact_aout.c 294136 2016-01-16 07:56:49Z dchagin $");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -99,6 +100,8 @@ struct sysentvec aout_sysvec = {
 	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
 	.sv_syscallnames = syscallnames,
 	.sv_schedtail	= NULL,
+	.sv_thread_detach = NULL,
+	.sv_trap	= NULL,
 };
 
 #elif defined(__amd64__)
@@ -175,9 +178,9 @@ exec_aout_imgact(struct image_params *imgp)
 	 * 0x64 for Linux, 0x86 for *BSD, 0x00 for BSDI.
 	 * NetBSD is in network byte order.. ugh.
 	 */
-	if (((a_out->a_magic >> 16) & 0xff) != 0x86 &&
-	    ((a_out->a_magic >> 16) & 0xff) != 0 &&
-	    ((((int)ntohl(a_out->a_magic)) >> 16) & 0xff) != 0x86)
+	if (((a_out->a_midmag >> 16) & 0xff) != 0x86 &&
+	    ((a_out->a_midmag >> 16) & 0xff) != 0 &&
+	    ((((int)ntohl(a_out->a_midmag)) >> 16) & 0xff) != 0x86)
                 return -1;
 
 	/*
@@ -185,7 +188,7 @@ exec_aout_imgact(struct image_params *imgp)
 	 *	We do two cases: host byte order and network byte order
 	 *	(for NetBSD compatibility)
 	 */
-	switch ((int)(a_out->a_magic & 0xffff)) {
+	switch ((int)(a_out->a_midmag & 0xffff)) {
 	case ZMAGIC:
 		virtual_offset = 0;
 		if (a_out->a_text) {
@@ -204,7 +207,7 @@ exec_aout_imgact(struct image_params *imgp)
 		break;
 	default:
 		/* NetBSD compatibility */
-		switch ((int)(ntohl(a_out->a_magic) & 0xffff)) {
+		switch ((int)(ntohl(a_out->a_midmag) & 0xffff)) {
 		case ZMAGIC:
 		case QMAGIC:
 			virtual_offset = PAGE_SIZE;

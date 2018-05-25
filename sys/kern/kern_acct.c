@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -68,7 +69,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_acct.c 252422 2013-06-30 19:08:06Z mjg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -133,6 +134,7 @@ static int		 acct_configured;
 static int		 acct_suspended;
 static struct vnode	*acct_vp;
 static struct ucred	*acct_cred;
+static struct plimit	*acct_limit;
 static int		 acct_flags;
 static struct sx	 acct_sx;
 
@@ -196,7 +198,7 @@ int
 sys_acct(struct thread *td, struct acct_args *uap)
 {
 	struct nameidata nd;
-	int error, flags, vfslocked, replacing;
+	int error, flags, i, replacing;
 
 	error = priv_check(td, PRIV_ACCT);
 	if (error)
@@ -207,30 +209,26 @@ sys_acct(struct thread *td, struct acct_args *uap)
 	 * appending and make sure it's a 'normal'.
 	 */
 	if (uap->path != NULL) {
-		NDINIT(&nd, LOOKUP, NOFOLLOW | MPSAFE | AUDITVNODE1,
+		NDINIT(&nd, LOOKUP, NOFOLLOW | AUDITVNODE1,
 		    UIO_USERSPACE, uap->path, td);
 		flags = FWRITE | O_APPEND;
 		error = vn_open(&nd, &flags, 0, NULL);
 		if (error)
 			return (error);
-		vfslocked = NDHASGIANT(&nd);
 		NDFREE(&nd, NDF_ONLY_PNBUF);
 #ifdef MAC
 		error = mac_system_check_acct(td->td_ucred, nd.ni_vp);
 		if (error) {
 			VOP_UNLOCK(nd.ni_vp, 0);
 			vn_close(nd.ni_vp, flags, td->td_ucred, td);
-			VFS_UNLOCK_GIANT(vfslocked);
 			return (error);
 		}
 #endif
 		VOP_UNLOCK(nd.ni_vp, 0);
 		if (nd.ni_vp->v_type != VREG) {
 			vn_close(nd.ni_vp, flags, td->td_ucred, td);
-			VFS_UNLOCK_GIANT(vfslocked);
 			return (EACCES);
 		}
-		VFS_UNLOCK_GIANT(vfslocked);
 #ifdef MAC
 	} else {
 		error = mac_system_check_acct(td->td_ucred, NULL);
@@ -259,11 +257,8 @@ sys_acct(struct thread *td, struct acct_args *uap)
 	 * enabled.
 	 */
 	acct_suspended = 0;
-	if (acct_vp != NULL) {
-		vfslocked = VFS_LOCK_GIANT(acct_vp->v_mount);
+	if (acct_vp != NULL)
 		error = acct_disable(td, !replacing);
-		VFS_UNLOCK_GIANT(vfslocked);
-	}
 	if (uap->path == NULL) {
 		if (acct_state & ACCT_RUNNING) {
 			acct_state |= ACCT_EXITREQ;
@@ -272,6 +267,15 @@ sys_acct(struct thread *td, struct acct_args *uap)
 		sx_xunlock(&acct_sx);
 		return (error);
 	}
+
+	/*
+	 * Create our own plimit object without limits. It will be assigned
+	 * to exiting processes.
+	 */
+	acct_limit = lim_alloc();
+	for (i = 0; i < RLIM_NLIMITS; i++)
+		acct_limit->pl_rlimit[i].rlim_cur =
+		    acct_limit->pl_rlimit[i].rlim_max = RLIM_INFINITY;
 
 	/*
 	 * Save the new accounting file vnode, and schedule the new
@@ -291,14 +295,7 @@ sys_acct(struct thread *td, struct acct_args *uap)
 		error = kproc_create(acct_thread, NULL, NULL, 0, 0,
 		    "accounting");
 		if (error) {
-			vfslocked = VFS_LOCK_GIANT(acct_vp->v_mount);
-			(void) vn_close(acct_vp, acct_flags, acct_cred, td);
-			VFS_UNLOCK_GIANT(vfslocked);
-			crfree(acct_cred);
-			acct_configured = 0;
-			acct_vp = NULL;
-			acct_cred = NULL;
-			acct_flags = 0;
+			(void) acct_disable(td, 0);
 			sx_xunlock(&acct_sx);
 			log(LOG_NOTICE, "Unable to start accounting thread\n");
 			return (error);
@@ -323,6 +320,7 @@ acct_disable(struct thread *td, int logging)
 	sx_assert(&acct_sx, SX_XLOCKED);
 	error = vn_close(acct_vp, acct_flags, acct_cred, td);
 	crfree(acct_cred);
+	lim_free(acct_limit);
 	acct_configured = 0;
 	acct_vp = NULL;
 	acct_cred = NULL;
@@ -343,10 +341,10 @@ acct_process(struct thread *td)
 {
 	struct acctv2 acct;
 	struct timeval ut, st, tmp;
-	struct plimit *newlim, *oldlim;
+	struct plimit *oldlim;
 	struct proc *p;
 	struct rusage ru;
-	int t, ret, vfslocked;
+	int t, ret;
 
 	/*
 	 * Lockless check of accounting condition before doing the hard
@@ -419,7 +417,6 @@ acct_process(struct thread *td)
 
 	/* (8) The boolean flags that tell how the process terminated, etc. */
 	acct.ac_flagx = p->p_acflag;
-	PROC_UNLOCK(p);
 
 	/* Setup ancillary structure fields. */
 	acct.ac_flagx |= ANVER;
@@ -428,25 +425,19 @@ acct_process(struct thread *td)
 	acct.ac_len = acct.ac_len2 = sizeof(acct);
 
 	/*
-	 * Eliminate any file size rlimit.
+	 * Eliminate rlimits (file size limit in particular).
 	 */
-	newlim = lim_alloc();
-	PROC_LOCK(p);
 	oldlim = p->p_limit;
-	lim_copy(newlim, oldlim);
-	newlim->pl_rlimit[RLIMIT_FSIZE].rlim_cur = RLIM_INFINITY;
-	p->p_limit = newlim;
+	p->p_limit = lim_hold(acct_limit);
 	PROC_UNLOCK(p);
 	lim_free(oldlim);
 
 	/*
 	 * Write the accounting information to the file.
 	 */
-	vfslocked = VFS_LOCK_GIANT(acct_vp->v_mount);
 	ret = vn_rdwr(UIO_WRITE, acct_vp, (caddr_t)&acct, sizeof (acct),
 	    (off_t)0, UIO_SYSSPACE, IO_APPEND|IO_UNIT, acct_cred, NOCRED,
 	    NULL, td);
-	VFS_UNLOCK_GIANT(vfslocked);
 	sx_sunlock(&acct_sx);
 	return (ret);
 }
@@ -563,7 +554,6 @@ static void
 acctwatch(void)
 {
 	struct statfs sb;
-	int vfslocked;
 
 	sx_assert(&acct_sx, SX_XLOCKED);
 
@@ -581,10 +571,8 @@ acctwatch(void)
 	 * If our vnode is no longer valid, tear it down and signal the
 	 * accounting thread to die.
 	 */
-	vfslocked = VFS_LOCK_GIANT(acct_vp->v_mount);
 	if (acct_vp->v_type == VBAD) {
 		(void) acct_disable(NULL, 1);
-		VFS_UNLOCK_GIANT(vfslocked);
 		acct_state |= ACCT_EXITREQ;
 		return;
 	}
@@ -593,11 +581,8 @@ acctwatch(void)
 	 * Stopping here is better than continuing, maybe it will be VBAD
 	 * next time around.
 	 */
-	if (VFS_STATFS(acct_vp->v_mount, &sb) < 0) {
-		VFS_UNLOCK_GIANT(vfslocked);
+	if (VFS_STATFS(acct_vp->v_mount, &sb) < 0)
 		return;
-	}
-	VFS_UNLOCK_GIANT(vfslocked);
 	if (acct_suspended) {
 		if (sb.f_bavail > (int64_t)(acctresume * sb.f_blocks /
 		    100)) {

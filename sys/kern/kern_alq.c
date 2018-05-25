@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, Jeffrey Roberson <jeff@freebsd.org>
  * Copyright (c) 2008-2009, Lawrence Stewart <lstewart@freebsd.org>
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_alq.c 264366 2014-04-12 06:50:11Z dchagin $");
 
 #include "opt_mac.h"
 
@@ -99,6 +100,7 @@ static LIST_HEAD(, alq) ald_active;
 static int ald_shutingdown = 0;
 struct thread *ald_thread;
 static struct proc *ald_proc;
+static eventhandler_tag alq_eventhandler_tag = NULL;
 
 #define	ALD_LOCK()	mtx_lock(&ald_mtx)
 #define	ALD_UNLOCK()	mtx_unlock(&ald_mtx)
@@ -194,8 +196,8 @@ ald_daemon(void)
 
 	ald_thread = FIRST_THREAD_IN_PROC(ald_proc);
 
-	EVENTHANDLER_REGISTER(shutdown_pre_sync, ald_shutdown, NULL,
-	    SHUTDOWN_PRI_FIRST);
+	alq_eventhandler_tag = EVENTHANDLER_REGISTER(shutdown_pre_sync,
+	    ald_shutdown, NULL, SHUTDOWN_PRI_FIRST);
 
 	ALD_LOCK();
 
@@ -313,7 +315,6 @@ alq_doio(struct alq *alq)
 	struct iovec aiov[2];
 	int totlen;
 	int iov;
-	int vfslocked;
 	int wrapearly;
 
 	KASSERT((HAS_PENDING_DATA(alq)), ("%s: queue empty!", __func__));
@@ -365,7 +366,6 @@ alq_doio(struct alq *alq)
 	/*
 	 * Do all of the junk required to write now.
 	 */
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	vn_start_write(vp, &mp, V_WAIT);
 	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 	/*
@@ -377,7 +377,6 @@ alq_doio(struct alq *alq)
 		VOP_WRITE(vp, &auio, IO_UNIT | IO_APPEND, alq->aq_cred);
 	VOP_UNLOCK(vp, 0);
 	vn_finished_write(mp);
-	VFS_UNLOCK_GIANT(vfslocked);
 
 	ALQ_LOCK(alq);
 	alq->aq_flags &= ~AQ_FLUSHING;
@@ -438,25 +437,22 @@ alq_open_flags(struct alq **alqp, const char *file, struct ucred *cred, int cmod
 	struct alq *alq;
 	int oflags;
 	int error;
-	int vfslocked;
 
 	KASSERT((size > 0), ("%s: size <= 0", __func__));
 
 	*alqp = NULL;
 	td = curthread;
 
-	NDINIT(&nd, LOOKUP, NOFOLLOW | MPSAFE, UIO_SYSSPACE, file, td);
+	NDINIT(&nd, LOOKUP, NOFOLLOW, UIO_SYSSPACE, file, td);
 	oflags = FWRITE | O_NOFOLLOW | O_CREAT;
 
 	error = vn_open_cred(&nd, &oflags, cmode, 0, cred, NULL);
 	if (error)
 		return (error);
 
-	vfslocked = NDHASGIANT(&nd);
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	/* We just unlock so we hold a reference */
 	VOP_UNLOCK(nd.ni_vp, 0);
-	VFS_UNLOCK_GIANT(vfslocked);
 
 	alq = malloc(sizeof(*alq), M_ALD, M_WAITOK|M_ZERO);
 	alq->aq_vp = nd.ni_vp;
@@ -493,10 +489,12 @@ alq_open(struct alq **alqp, const char *file, struct ucred *cred, int cmode,
 	KASSERT((count >= 0), ("%s: count < 0", __func__));
 
 	if (count > 0) {
-		ret = alq_open_flags(alqp, file, cred, cmode, size*count, 0);
-		(*alqp)->aq_flags |= AQ_LEGACY;
-		(*alqp)->aq_entmax = count;
-		(*alqp)->aq_entlen = size;
+		if ((ret = alq_open_flags(alqp, file, cred, cmode,
+		    size*count, 0)) == 0) {
+			(*alqp)->aq_flags |= AQ_LEGACY;
+			(*alqp)->aq_entmax = count;
+			(*alqp)->aq_entlen = size;
+		}
 	} else
 		ret = alq_open_flags(alqp, file, cred, cmode, size, 0);
 
@@ -941,6 +939,8 @@ alq_load_handler(module_t mod, int what, void *arg)
 		if (LIST_FIRST(&ald_queues) == NULL) {
 			ald_shutingdown = 1;
 			ALD_UNLOCK();
+			EVENTHANDLER_DEREGISTER(shutdown_pre_sync,
+			    alq_eventhandler_tag);
 			ald_shutdown(NULL, 0);
 			mtx_destroy(&ald_mtx);
 		} else {

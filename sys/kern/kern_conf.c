@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002 Poul-Henning Kamp
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_conf.c 294976 2016-01-28 09:18:12Z kib $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -55,6 +56,7 @@ struct mtx devmtx;
 static void destroy_devl(struct cdev *dev);
 static int destroy_dev_sched_cbl(struct cdev *dev,
     void (*cb)(void *), void *arg);
+static void destroy_dev_tq(void *ctx, int pending);
 static int make_dev_credv(int flags, struct cdev **dres, struct cdevsw *devsw,
     int unit, struct ucred *cr, uid_t uid, gid_t gid, int mode, const char *fmt,
     va_list ap);
@@ -194,7 +196,7 @@ dev_refthread(struct cdev *dev, int *ref)
 	if (csw != NULL) {
 		cdp = cdev2priv(dev);
 		if ((cdp->cdp_flags & CDP_SCHED_DTR) == 0)
-			dev->si_threadcount++;
+			atomic_add_long(&dev->si_threadcount, 1);
 		else
 			csw = NULL;
 	}
@@ -235,7 +237,7 @@ devvn_refthread(struct vnode *vp, struct cdev **devp, int *ref)
 	if ((cdp->cdp_flags & CDP_SCHED_DTR) == 0) {
 		csw = dev->si_devsw;
 		if (csw != NULL)
-			dev->si_threadcount++;
+			atomic_add_long(&dev->si_threadcount, 1);
 	}
 	dev_unlock();
 	if (csw != NULL) {
@@ -252,11 +254,9 @@ dev_relthread(struct cdev *dev, int ref)
 	mtx_assert(&devmtx, MA_NOTOWNED);
 	if (!ref)
 		return;
-	dev_lock();
 	KASSERT(dev->si_threadcount > 0,
 	    ("%s threadcount is wrong", dev->si_name));
-	dev->si_threadcount--;
-	dev_unlock();
+	atomic_subtract_rel_long(&dev->si_threadcount, 1);
 }
 
 int
@@ -567,22 +567,26 @@ notify_destroy(struct cdev *dev)
 }
 
 static struct cdev *
-newdev(struct cdevsw *csw, int unit, struct cdev *si)
+newdev(struct make_dev_args *args, struct cdev *si)
 {
 	struct cdev *si2;
+	struct cdevsw *csw;
 
 	mtx_assert(&devmtx, MA_OWNED);
+	csw = args->mda_devsw;
 	if (csw->d_flags & D_NEEDMINOR) {
 		/* We may want to return an existing device */
 		LIST_FOREACH(si2, &csw->d_devs, si_list) {
-			if (dev2unit(si2) == unit) {
+			if (dev2unit(si2) == args->mda_unit) {
 				dev_free_devlocked(si);
 				return (si2);
 			}
 		}
 	}
-	si->si_drv0 = unit;
+	si->si_drv0 = args->mda_unit;
 	si->si_devsw = csw;
+	si->si_drv1 = args->mda_si_drv1;
+	si->si_drv2 = args->mda_si_drv2;
 	LIST_INSERT_HEAD(&csw->d_devs, si, si_list);
 	return (si);
 }
@@ -690,16 +694,22 @@ prep_devname(struct cdev *dev, const char *fmt, va_list ap)
 
 	mtx_assert(&devmtx, MA_OWNED);
 
-	len = vsnrprintf(dev->__si_namebuf, sizeof(dev->__si_namebuf), 32,
-	    fmt, ap);
-	if (len > sizeof(dev->__si_namebuf) - 1)
+	len = vsnrprintf(dev->si_name, sizeof(dev->si_name), 32, fmt, ap);
+	if (len > sizeof(dev->si_name) - 1)
 		return (ENAMETOOLONG);
 
 	/* Strip leading slashes. */
-	for (from = dev->__si_namebuf; *from == '/'; from++)
+	for (from = dev->si_name; *from == '/'; from++)
 		;
 
-	for (to = dev->__si_namebuf; *from != '\0'; from++, to++) {
+	for (to = dev->si_name; *from != '\0'; from++, to++) {
+		/*
+		 * Spaces and double quotation marks cause
+		 * problems for the devctl(4) protocol.
+		 * Reject names containing those characters.
+		 */
+		if (isspace(*from) || *from == '"')
+			return (EINVAL);
 		/* Treat multiple sequential slashes as single. */
 		while (from[0] == '/' && from[1] == '/')
 			from++;
@@ -710,11 +720,11 @@ prep_devname(struct cdev *dev, const char *fmt, va_list ap)
 	}
 	*to = '\0';
 
-	if (dev->__si_namebuf[0] == '\0')
+	if (dev->si_name[0] == '\0')
 		return (EINVAL);
 
 	/* Disallow "." and ".." components. */
-	for (s = dev->__si_namebuf;;) {
+	for (s = dev->si_name;;) {
 		for (q = s; *q != '/' && *q != '\0'; q++)
 			;
 		if (q - s == 1 && s[0] == '.')
@@ -726,39 +736,52 @@ prep_devname(struct cdev *dev, const char *fmt, va_list ap)
 		s = q + 1;
 	}
 
-	if (devfs_dev_exists(dev->__si_namebuf) != 0)
+	if (devfs_dev_exists(dev->si_name) != 0)
 		return (EEXIST);
 
 	return (0);
 }
 
+void
+make_dev_args_init_impl(struct make_dev_args *args, size_t sz)
+{
+
+	bzero(args, sz);
+	args->mda_size = sz;
+}
+
 static int
-make_dev_credv(int flags, struct cdev **dres, struct cdevsw *devsw, int unit,
-    struct ucred *cr, uid_t uid, gid_t gid, int mode, const char *fmt,
-    va_list ap)
+make_dev_sv(struct make_dev_args *args1, struct cdev **dres,
+    const char *fmt, va_list ap)
 {
 	struct cdev *dev, *dev_new;
+	struct make_dev_args args;
 	int res;
 
-	KASSERT((flags & MAKEDEV_WAITOK) == 0 || (flags & MAKEDEV_NOWAIT) == 0,
-	    ("make_dev_credv: both WAITOK and NOWAIT specified"));
-	dev_new = devfs_alloc(flags);
+	bzero(&args, sizeof(args));
+	if (sizeof(args) < args1->mda_size)
+		return (EINVAL);
+	bcopy(args1, &args, args1->mda_size);
+	KASSERT((args.mda_flags & MAKEDEV_WAITOK) == 0 ||
+	    (args.mda_flags & MAKEDEV_NOWAIT) == 0,
+	    ("make_dev_sv: both WAITOK and NOWAIT specified"));
+	dev_new = devfs_alloc(args.mda_flags);
 	if (dev_new == NULL)
 		return (ENOMEM);
 	dev_lock();
-	res = prep_cdevsw(devsw, flags);
+	res = prep_cdevsw(args.mda_devsw, args.mda_flags);
 	if (res != 0) {
 		dev_unlock();
 		devfs_free(dev_new);
 		return (res);
 	}
-	dev = newdev(devsw, unit, dev_new);
+	dev = newdev(&args, dev_new);
 	if ((dev->si_flags & SI_NAMED) == 0) {
 		res = prep_devname(dev, fmt, ap);
 		if (res != 0) {
-			if ((flags & MAKEDEV_CHECKNAME) == 0) {
+			if ((args.mda_flags & MAKEDEV_CHECKNAME) == 0) {
 				panic(
-			"make_dev_credv: bad si_name (error=%d, si_name=%s)",
+			"make_dev_sv: bad si_name (error=%d, si_name=%s)",
 				    res, dev->si_name);
 			}
 			if (dev == dev_new) {
@@ -770,9 +793,9 @@ make_dev_credv(int flags, struct cdev **dres, struct cdevsw *devsw, int unit,
 			return (res);
 		}
 	}
-	if (flags & MAKEDEV_REF)
+	if ((args.mda_flags & MAKEDEV_REF) != 0)
 		dev_refl(dev);
-	if (flags & MAKEDEV_ETERNAL)
+	if ((args.mda_flags & MAKEDEV_ETERNAL) != 0)
 		dev->si_flags |= SI_ETERNAL;
 	if (dev->si_flags & SI_CHEAPCLONE &&
 	    dev->si_flags & SI_NAMED) {
@@ -787,22 +810,53 @@ make_dev_credv(int flags, struct cdev **dres, struct cdevsw *devsw, int unit,
 	}
 	KASSERT(!(dev->si_flags & SI_NAMED),
 	    ("make_dev() by driver %s on pre-existing device (min=%x, name=%s)",
-	    devsw->d_name, dev2unit(dev), devtoname(dev)));
+	    args.mda_devsw->d_name, dev2unit(dev), devtoname(dev)));
 	dev->si_flags |= SI_NAMED;
-	if (cr != NULL)
-		dev->si_cred = crhold(cr);
-	dev->si_uid = uid;
-	dev->si_gid = gid;
-	dev->si_mode = mode;
+	if (args.mda_cr != NULL)
+		dev->si_cred = crhold(args.mda_cr);
+	dev->si_uid = args.mda_uid;
+	dev->si_gid = args.mda_gid;
+	dev->si_mode = args.mda_mode;
 
 	devfs_create(dev);
 	clean_unrhdrl(devfs_inos);
 	dev_unlock_and_free();
 
-	notify_create(dev, flags);
+	notify_create(dev, args.mda_flags);
 
 	*dres = dev;
 	return (0);
+}
+
+int
+make_dev_s(struct make_dev_args *args, struct cdev **dres,
+    const char *fmt, ...)
+{
+	va_list ap;
+	int res;
+
+	va_start(ap, fmt);
+	res = make_dev_sv(args, dres, fmt, ap);
+	va_end(ap);
+	return (res);
+}
+
+static int
+make_dev_credv(int flags, struct cdev **dres, struct cdevsw *devsw, int unit,
+    struct ucred *cr, uid_t uid, gid_t gid, int mode, const char *fmt,
+    va_list ap)
+{
+	struct make_dev_args args;
+
+	make_dev_args_init(&args);
+	args.mda_flags = flags;
+	args.mda_devsw = devsw;
+	args.mda_cr = cr;
+	args.mda_uid = uid;
+	args.mda_gid = gid;
+	args.mda_mode = mode;
+	args.mda_unit = unit;
+	return (make_dev_sv(&args, dres, fmt, ap));
 }
 
 struct cdev *
@@ -1242,6 +1296,7 @@ clone_create(struct clonedevs **cdp, struct cdevsw *csw, int *up,
 {
 	struct clonedevs *cd;
 	struct cdev *dev, *ndev, *dl, *de;
+	struct make_dev_args args;
 	int unit, low, u;
 
 	KASSERT(*cdp != NULL,
@@ -1293,7 +1348,10 @@ clone_create(struct clonedevs **cdp, struct cdevsw *csw, int *up,
 	}
 	if (unit == -1)
 		unit = low & CLONE_UNITMASK;
-	dev = newdev(csw, unit | extra, ndev);
+	make_dev_args_init(&args);
+	args.mda_unit = unit | extra;
+	args.mda_devsw = csw;
+	dev = newdev(&args, ndev);
 	if (dev->si_flags & SI_CLONELIST) {
 		printf("dev %p (%s) is on clonelist\n", dev, dev->si_name);
 		printf("unit=%d, low=%d, extra=0x%x\n", unit, low, extra);
@@ -1352,7 +1410,7 @@ clone_cleanup(struct clonedevs **cdp)
 
 static TAILQ_HEAD(, cdev_priv) dev_ddtr =
 	TAILQ_HEAD_INITIALIZER(dev_ddtr);
-static struct task dev_dtr_task;
+static struct task dev_dtr_task = TASK_INITIALIZER(0, destroy_dev_tq, NULL);
 
 static void
 destroy_dev_tq(void *ctx, int pending)
@@ -1440,15 +1498,6 @@ drain_dev_clone_events(void)
 	sx_xunlock(&clone_drain_lock);
 }
 
-static void
-devdtr_init(void *dummy __unused)
-{
-
-	TASK_INIT(&dev_dtr_task, 0, destroy_dev_tq, NULL);
-}
-
-SYSINIT(devdtr, SI_SUB_DEVFS, SI_ORDER_SECOND, devdtr_init, NULL);
-
 #include "opt_ddb.h"
 #ifdef DDB
 #include <sys/kernel.h>
@@ -1494,10 +1543,7 @@ DB_SHOW_COMMAND(cdev, db_show_cdev)
 	SI_FLAG(SI_NAMED);
 	SI_FLAG(SI_CHEAPCLONE);
 	SI_FLAG(SI_CHILD);
-	SI_FLAG(SI_DEVOPEN);
-	SI_FLAG(SI_CONSOPEN);
 	SI_FLAG(SI_DUMPDEV);
-	SI_FLAG(SI_CANDELETE);
 	SI_FLAG(SI_CLONELIST);
 	db_printf("si_flags %s\n", buf);
 
