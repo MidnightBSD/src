@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Networks Associates Technology, Inc.
  * Copyright (c) 2007 Robert N. M. Watson
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/security/mac/mac_label.c 166533 2007-02-06 14:19:25Z rwatson $");
 
 #include "opt_mac.h"
 

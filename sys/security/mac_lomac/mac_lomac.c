@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2007-2009 Robert N. M. Watson
  * Copyright (c) 2001-2005 Networks Associates Technology, Inc.
@@ -35,7 +36,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/security/mac_lomac/mac_lomac.c 302229 2016-06-27 21:25:01Z bdrewery $
  */
 
 /*
@@ -762,10 +763,10 @@ lomac_parse(struct mac_lomac *ml, char *string)
 
 	/* Do we have a range? */
 	single = string;
-	range = index(string, '(');
+	range = strchr(string, '(');
 	if (range == single)
 		single = NULL;
-	auxsingle = index(string, '[');
+	auxsingle = strchr(string, '[');
 	if (auxsingle == single)
 		single = NULL;
 	if (range != NULL && auxsingle != NULL)
@@ -776,13 +777,13 @@ lomac_parse(struct mac_lomac *ml, char *string)
 		*range = '\0';
 		range++;
 		rangelow = range;
-		rangehigh = index(rangelow, '-');
+		rangehigh = strchr(rangelow, '-');
 		if (rangehigh == NULL)
 			return (EINVAL);
 		rangehigh++;
 		if (*rangelow == '\0' || *rangehigh == '\0')
 			return (EINVAL);
-		rangeend = index(rangehigh, ')');
+		rangeend = strchr(rangehigh, ')');
 		if (rangeend == NULL)
 			return (EINVAL);
 		if (*(rangeend + 1) != '\0')
@@ -798,7 +799,7 @@ lomac_parse(struct mac_lomac *ml, char *string)
 		/* Nul terminate the end of the single string. */
 		*auxsingle = '\0';
 		auxsingle++;
-		auxsingleend = index(auxsingle, ']');
+		auxsingleend = strchr(auxsingle, ']');
 		if (auxsingleend == NULL)
 			return (EINVAL);
 		if (*(auxsingleend + 1) != '\0')
@@ -2275,7 +2276,7 @@ lomac_thread_userret(struct thread *td)
 		crcopy(newcred, oldcred);
 		crhold(newcred);
 		lomac_copy(&subj->mac_lomac, SLOT(newcred->cr_label));
-		p->p_ucred = newcred;
+		proc_set_cred(p, newcred);
 		crfree(oldcred);
 		dodrop = 1;
 	out:

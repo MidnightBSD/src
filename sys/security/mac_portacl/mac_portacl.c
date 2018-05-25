@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Networks Associates Technology, Inc.
  * Copyright (c) 2006 SPARTA, Inc.
@@ -32,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/security/mac_portacl/mac_portacl.c 330500 2018-03-05 12:21:36Z eugen $
  */
 
 /*
@@ -493,3 +494,4 @@ static struct mac_policy_ops portacl_ops =
 
 MAC_POLICY_SET(&portacl_ops, mac_portacl, "TrustedBSD MAC/portacl",
     MPC_LOADTIME_FLAG_UNLOADOK, NULL);
+MODULE_VERSION(mac_portacl, 1);

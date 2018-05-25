@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2007 Robert N. M. Watson
  * Copyright (c) 2001-2003 Networks Associates Technology, Inc.
@@ -31,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/security/mac_none/mac_none.c 187016 2009-01-10 10:58:41Z rwatson $
  */
 
 /*

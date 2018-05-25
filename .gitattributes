@@ -61746,6 +61746,11 @@ sys/security/audit/audit_private.h -text
 sys/security/audit/audit_syscalls.c -text
 sys/security/audit/audit_trigger.c -text
 sys/security/audit/audit_worker.c -text
+sys/security/audit/bsm_domain.c svneol=native#text/plain
+sys/security/audit/bsm_errno.c svneol=native#text/plain
+sys/security/audit/bsm_fcntl.c svneol=native#text/plain
+sys/security/audit/bsm_socket_type.c svneol=native#text/plain
+sys/security/audit/bsm_token.c svneol=native#text/plain
 sys/security/mac/mac_atalk.c -text
 sys/security/mac/mac_audit.c -text
 sys/security/mac/mac_cred.c -text

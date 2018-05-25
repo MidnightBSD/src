@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2009 Robert N. M. Watson
  * Copyright (c) 2001 Ilmar S. Habibulin
@@ -43,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/security/mac/mac_vfs.c 255971 2013-10-01 15:40:27Z markj $");
 
 #include "opt_kdtrace.h"
 #include "opt_mac.h"
@@ -783,7 +784,7 @@ mac_vnode_check_revoke(struct ucred *cred, struct vnode *vp)
 }
 
 MAC_CHECK_PROBE_DEFINE4(vnode_check_setacl, "struct ucred *",
-    "struct vnode *", "acl_tpe_t", "struct acl *");
+    "struct vnode *", "acl_type_t", "struct acl *");
 
 int
 mac_vnode_check_setacl(struct ucred *cred, struct vnode *vp, acl_type_t type,

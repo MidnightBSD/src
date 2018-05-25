@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2008 Apple Inc.
  * Copyright (c) 2006-2008 Robert N. M. Watson
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/security/audit/audit_worker.c 294619 2016-01-23 07:35:29Z kib $");
 
 #include <sys/param.h>
 #include <sys/condvar.h>
@@ -71,6 +72,8 @@ __FBSDID("$FreeBSD$");
 
 #include <vm/uma.h>
 
+#include <machine/stdarg.h>
+
 /*
  * Worker thread that will schedule disk I/O, etc.
  */
@@ -98,6 +101,26 @@ static struct sx	 audit_worker_lock;
 #define	AUDIT_WORKER_LOCK()		sx_xlock(&audit_worker_lock)
 #define	AUDIT_WORKER_UNLOCK()		sx_xunlock(&audit_worker_lock)
 
+static void
+audit_worker_sync_vp(struct vnode *vp, struct mount *mp, const char *fmt, ...)
+{
+	struct mount *mp1;
+	int error;
+	va_list va;
+
+	va_start(va, fmt);
+	error = vn_start_write(vp, &mp1, 0);
+	if (error == 0) {
+		VOP_LOCK(vp, LK_EXCLUSIVE | LK_RETRY);
+		(void)VOP_FSYNC(vp, MNT_WAIT, curthread);
+		VOP_UNLOCK(vp, 0);
+		vn_finished_write(mp1);
+	}
+	vfs_unbusy(mp);
+	vpanic(fmt, va);
+	va_end(va);
+}
+
 /*
  * Write an audit record to a file, performed as the last stage after both
  * preselection and BSM conversion.  Both space management and write failures
@@ -114,7 +137,8 @@ audit_record_write(struct vnode *vp, struct ucred *cred, void *data,
 	static struct timeval last_fail;
 	static int cur_lowspace_trigger;
 	struct statfs *mnt_stat;
-	int error, vfslocked;
+	struct mount *mp;
+	int error;
 	static int cur_fail;
 	long temp;
 
@@ -123,16 +147,25 @@ audit_record_write(struct vnode *vp, struct ucred *cred, void *data,
 	if (vp == NULL)
 		return;
 
-	mnt_stat = &vp->v_mount->mnt_stat;
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
+	mp = vp->v_mount;
+	if (mp == NULL) {
+		error = EINVAL;
+		goto fail;
+	}
+	error = vfs_busy(mp, 0);
+	if (error != 0) {
+		mp = NULL;
+		goto fail;
+	}
+	mnt_stat = &mp->mnt_stat;
 
 	/*
 	 * First, gather statistics on the audit log file and file system so
 	 * that we know how we're doing on space.  Consider failure of these
 	 * operations to indicate a future inability to write to the file.
 	 */
-	error = VFS_STATFS(vp->v_mount, mnt_stat);
-	if (error)
+	error = VFS_STATFS(mp, mnt_stat);
+	if (error != 0)
 		goto fail;
 
 	/*
@@ -247,14 +280,12 @@ audit_record_write(struct vnode *vp, struct ucred *cred, void *data,
 	 */
 	if (audit_in_failure) {
 		if (audit_q_len == 0 && audit_pre_q_len == 0) {
-			VOP_LOCK(vp, LK_EXCLUSIVE | LK_RETRY);
-			(void)VOP_FSYNC(vp, MNT_WAIT, curthread);
-			VOP_UNLOCK(vp, 0);
-			panic("Audit store overflow; record queue drained.");
+			audit_worker_sync_vp(vp, mp,
+			    "Audit store overflow; record queue drained.");
 		}
 	}
 
-	VFS_UNLOCK_GIANT(vfslocked);
+	vfs_unbusy(mp);
 	return;
 
 fail_enospc:
@@ -264,10 +295,8 @@ fail_enospc:
 	 * space, or ENOSPC returned by the vnode write call.
 	 */
 	if (audit_fail_stop) {
-		VOP_LOCK(vp, LK_EXCLUSIVE | LK_RETRY);
-		(void)VOP_FSYNC(vp, MNT_WAIT, curthread);
-		VOP_UNLOCK(vp, 0);
-		panic("Audit log space exhausted and fail-stop set.");
+		audit_worker_sync_vp(vp, mp,
+		    "Audit log space exhausted and fail-stop set.");
 	}
 	(void)audit_send_trigger(AUDIT_TRIGGER_NO_SPACE);
 	audit_suspended = 1;
@@ -279,13 +308,12 @@ fail:
 	 * lost, which may require an immediate system halt.
 	 */
 	if (audit_panic_on_write_fail) {
-		VOP_LOCK(vp, LK_EXCLUSIVE | LK_RETRY);
-		(void)VOP_FSYNC(vp, MNT_WAIT, curthread);
-		VOP_UNLOCK(vp, 0);
-		panic("audit_worker: write error %d\n", error);
+		audit_worker_sync_vp(vp, mp,
+		    "audit_worker: write error %d\n", error);
 	} else if (ppsratecheck(&last_fail, &cur_fail, 1))
 		printf("audit_worker: write error %d\n", error);
-	VFS_UNLOCK_GIANT(vfslocked);
+	if (mp != NULL)
+		vfs_unbusy(mp);
 }
 
 /*
@@ -447,7 +475,6 @@ audit_rotate_vnode(struct ucred *cred, struct vnode *vp)
 {
 	struct ucred *old_audit_cred;
 	struct vnode *old_audit_vp;
-	int vfslocked;
 	struct vattr vattr;
 
 	KASSERT((cred != NULL && vp != NULL) || (cred == NULL && vp == NULL),
@@ -480,10 +507,8 @@ audit_rotate_vnode(struct ucred *cred, struct vnode *vp)
 	 * If there was an old vnode/credential, close and free.
 	 */
 	if (old_audit_vp != NULL) {
-		vfslocked = VFS_LOCK_GIANT(old_audit_vp->v_mount);
 		vn_close(old_audit_vp, AUDIT_CLOSE_FLAGS, old_audit_cred,
 		    curthread);
-		VFS_UNLOCK_GIANT(vfslocked);
 		crfree(old_audit_cred);
 	}
 }

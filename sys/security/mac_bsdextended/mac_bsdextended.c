@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2007-2008 Robert N. M. Watson
  * Copyright (c) 2001-2005 Networks Associates Technology, Inc.
@@ -37,7 +38,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/security/mac_bsdextended/mac_bsdextended.c 321056 2017-07-16 19:25:18Z emaste $
  */
 
 /*
@@ -126,7 +127,7 @@ ugidfw_rule_valid(struct mac_bsdextended_rule *rule)
 		return (EINVAL);
 	if ((rule->mbr_object.mbo_neg | MBO_ALL_FLAGS) != MBO_ALL_FLAGS)
 		return (EINVAL);
-	if ((rule->mbr_object.mbo_neg | MBO_TYPE_DEFINED) &&
+	if (((rule->mbr_object.mbo_flags & MBO_TYPE_DEFINED) != 0) &&
 	    (rule->mbr_object.mbo_type | MBO_ALL_TYPE) != MBO_ALL_TYPE)
 		return (EINVAL);
 	if ((rule->mbr_mode | MBI_ALLPERM) != MBI_ALLPERM)

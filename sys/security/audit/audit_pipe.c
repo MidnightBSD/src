@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Robert N. M. Watson
  * Copyright (c) 2008-2009 Apple, Inc.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/security/audit/audit_pipe.c 255359 2013-09-07 13:45:44Z davide $");
 
 #include <sys/param.h>
 #include <sys/condvar.h>
@@ -231,7 +232,7 @@ static d_kqfilter_t	audit_pipe_kqfilter;
 
 static struct cdevsw	audit_pipe_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_PSEUDO | D_NEEDMINOR,
+	.d_flags =	D_NEEDMINOR,
 	.d_open =	audit_pipe_open,
 	.d_close =	audit_pipe_close,
 	.d_read =	audit_pipe_read,
@@ -672,14 +673,9 @@ audit_pipe_clone(void *arg, struct ucred *cred, char *name, int namelen,
 		return;
 
 	i = clone_create(&audit_pipe_clones, &audit_pipe_cdevsw, &u, dev, 0);
-	if (i) {
-		*dev = make_dev(&audit_pipe_cdevsw, u, UID_ROOT,
-		    GID_WHEEL, 0600, "%s%d", AUDIT_PIPE_NAME, u);
-		if (*dev != NULL) {
-			dev_ref(*dev);
-			(*dev)->si_flags |= SI_CHEAPCLONE;
-		}
-	}
+	if (i)
+		*dev = make_dev_credf(MAKEDEV_REF, &audit_pipe_cdevsw, u, cred,
+		    UID_ROOT, GID_WHEEL, 0600, "%s%d", AUDIT_PIPE_NAME, u);
 }
 
 /*

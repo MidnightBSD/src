@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2007-2011 Robert N. M. Watson
  * Copyright (c) 2001-2005 Networks Associates Technology, Inc.
@@ -38,7 +39,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/security/mac/mac_framework.h 254603 2013-08-21 17:45:00Z kib $
  */
 
 /*
@@ -243,6 +244,8 @@ int	mac_posixshm_check_mmap(struct ucred *cred, struct shmfd *shmfd,
 	    int prot, int flags);
 int	mac_posixshm_check_open(struct ucred *cred, struct shmfd *shmfd,
 	    accmode_t accmode);
+int	mac_posixshm_check_read(struct ucred *active_cred,
+	    struct ucred *file_cred, struct shmfd *shmfd);
 int	mac_posixshm_check_setmode(struct ucred *cred, struct shmfd *shmfd,
 	    mode_t mode);
 int	mac_posixshm_check_setowner(struct ucred *cred, struct shmfd *shmfd,
@@ -252,6 +255,8 @@ int	mac_posixshm_check_stat(struct ucred *active_cred,
 int	mac_posixshm_check_truncate(struct ucred *active_cred,
 	    struct ucred *file_cred, struct shmfd *shmfd);
 int	mac_posixshm_check_unlink(struct ucred *cred, struct shmfd *shmfd);
+int	mac_posixshm_check_write(struct ucred *active_cred,
+	    struct ucred *file_cred, struct shmfd *shmfd);
 void 	mac_posixshm_create(struct ucred *cred, struct shmfd *shmfd);
 void	mac_posixshm_destroy(struct shmfd *);
 void	mac_posixshm_init(struct shmfd *);

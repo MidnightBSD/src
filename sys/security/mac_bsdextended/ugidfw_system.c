@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2007 Robert N. M. Watson
  * Copyright (c) 2001-2005 Networks Associates Technology, Inc.
@@ -37,7 +38,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/security/mac_bsdextended/ugidfw_system.c 185539 2008-12-02 02:26:15Z peter $
  */
 
 #include <sys/param.h>

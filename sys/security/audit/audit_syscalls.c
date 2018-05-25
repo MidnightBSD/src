@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2009 Apple Inc.
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/security/audit/audit_syscalls.c 302229 2016-06-27 21:25:01Z bdrewery $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -461,7 +462,7 @@ sys_auditon(struct thread *td, struct auditon_args *uap)
 		    udata.au_aupinfo.ap_mask.am_success;
 		newcred->cr_audit.ai_mask.am_failure =
 		    udata.au_aupinfo.ap_mask.am_failure;
-		td->td_proc->p_ucred = newcred;
+		proc_set_cred(tp, newcred);
 		PROC_UNLOCK(tp);
 		crfree(oldcred);
 		break;
@@ -600,7 +601,7 @@ sys_setauid(struct thread *td, struct setauid_args *uap)
 	if (error)
 		goto fail;
 	newcred->cr_audit.ai_auid = id;
-	td->td_proc->p_ucred = newcred;
+	proc_set_cred(td->td_proc, newcred);
 	PROC_UNLOCK(td->td_proc);
 	crfree(oldcred);
 	return (0);
@@ -671,7 +672,7 @@ sys_setaudit(struct thread *td, struct setaudit_args *uap)
 	newcred->cr_audit.ai_termid.at_addr[0] = ai.ai_termid.machine;
 	newcred->cr_audit.ai_termid.at_port = ai.ai_termid.port;
 	newcred->cr_audit.ai_termid.at_type = AU_IPv4;
-	td->td_proc->p_ucred = newcred;
+	proc_set_cred(td->td_proc, newcred);
 	PROC_UNLOCK(td->td_proc);
 	crfree(oldcred);
 	return (0);
@@ -728,7 +729,7 @@ sys_setaudit_addr(struct thread *td, struct setaudit_addr_args *uap)
 	if (error)
 		goto fail;
 	newcred->cr_audit = aia;
-	td->td_proc->p_ucred = newcred;
+	proc_set_cred(td->td_proc, newcred);
 	PROC_UNLOCK(td->td_proc);
 	crfree(oldcred);
 	return (0);
@@ -749,7 +750,7 @@ sys_auditctl(struct thread *td, struct auditctl_args *uap)
 	struct ucred *cred;
 	struct vnode *vp;
 	int error = 0;
-	int flags, vfslocked;
+	int flags;
 
 	if (jailed(td->td_ucred))
 		return (ENOSYS);
@@ -770,20 +771,18 @@ sys_auditctl(struct thread *td, struct auditctl_args *uap)
 	if (uap->path == NULL)
 		return (EINVAL);
 
-	NDINIT(&nd, LOOKUP, FOLLOW | LOCKLEAF | MPSAFE | AUDITVNODE1,
+	NDINIT(&nd, LOOKUP, FOLLOW | LOCKLEAF | AUDITVNODE1,
 	    UIO_USERSPACE, uap->path, td);
 	flags = AUDIT_OPEN_FLAGS;
 	error = vn_open(&nd, &flags, 0, NULL);
 	if (error)
 		return (error);
-	vfslocked = NDHASGIANT(&nd);
 	vp = nd.ni_vp;
 #ifdef MAC
 	error = mac_system_check_auditctl(td->td_ucred, vp);
 	VOP_UNLOCK(vp, 0);
 	if (error) {
 		vn_close(vp, AUDIT_CLOSE_FLAGS, td->td_ucred, td);
-		VFS_UNLOCK_GIANT(vfslocked);
 		return (error);
 	}
 #else
@@ -792,10 +791,8 @@ sys_auditctl(struct thread *td, struct auditctl_args *uap)
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	if (vp->v_type != VREG) {
 		vn_close(vp, AUDIT_CLOSE_FLAGS, td->td_ucred, td);
-		VFS_UNLOCK_GIANT(vfslocked);
 		return (EINVAL);
 	}
-	VFS_UNLOCK_GIANT(vfslocked);
 	cred = td->td_ucred;
 	crhold(cred);
 

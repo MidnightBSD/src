@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2007-2011 Robert N. M. Watson
  * Copyright (c) 2001-2005 McAfee, Inc.
@@ -38,7 +39,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/security/mac_mls/mac_mls.c 254603 2013-08-21 17:45:00Z kib $
  */
 
 /*
@@ -1651,6 +1652,24 @@ mls_posixshm_check_open(struct ucred *cred, struct shmfd *shmfd,
 }
 
 static int
+mls_posixshm_check_read(struct ucred *active_cred, struct ucred *file_cred,
+    struct shmfd *shm, struct label *shmlabel)
+{
+	struct mac_mls *subj, *obj;
+
+	if (!mls_enabled || !revocation_enabled)
+		return (0);
+
+	subj = SLOT(active_cred->cr_label);
+	obj = SLOT(shmlabel);
+
+	if (!mls_dominate_effective(subj, obj))
+		return (EACCES);
+
+	return (0);
+}
+
+static int
 mls_posixshm_check_setmode(struct ucred *cred, struct shmfd *shmfd,
     struct label *shmlabel, mode_t mode)
 {
@@ -1737,6 +1756,24 @@ mls_posixshm_check_unlink(struct ucred *cred, struct shmfd *shmfd,
 	if (!mls_dominate_effective(obj, subj))
 		return (EACCES);
     
+	return (0);
+}
+
+static int
+mls_posixshm_check_write(struct ucred *active_cred, struct ucred *file_cred,
+    struct shmfd *shm, struct label *shmlabel)
+{
+	struct mac_mls *subj, *obj;
+
+	if (!mls_enabled || !revocation_enabled)
+		return (0);
+
+	subj = SLOT(active_cred->cr_label);
+	obj = SLOT(shmlabel);
+
+	if (!mls_dominate_effective(subj, obj))
+		return (EACCES);
+
 	return (0);
 }
 
@@ -3280,11 +3317,13 @@ static struct mac_policy_ops mls_ops =
 
 	.mpo_posixshm_check_mmap = mls_posixshm_check_mmap,
 	.mpo_posixshm_check_open = mls_posixshm_check_open,
+	.mpo_posixshm_check_read = mls_posixshm_check_read,
 	.mpo_posixshm_check_setmode = mls_posixshm_check_setmode,
 	.mpo_posixshm_check_setowner = mls_posixshm_check_setowner,
 	.mpo_posixshm_check_stat = mls_posixshm_check_stat,
 	.mpo_posixshm_check_truncate = mls_posixshm_check_truncate,
 	.mpo_posixshm_check_unlink = mls_posixshm_check_unlink,
+	.mpo_posixshm_check_write = mls_posixshm_check_write,
 	.mpo_posixshm_create = mls_posixshm_create,
 	.mpo_posixshm_destroy_label = mls_destroy_label,
 	.mpo_posixshm_init_label = mls_init_label,

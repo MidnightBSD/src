@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2008-2009 Robert N. M. Watson
  * Copyright (c) 2001 Ilmar S. Habibulin
@@ -44,7 +45,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/security/mac/mac_cred.c 191731 2009-05-01 21:05:40Z rwatson $");
 
 #include "opt_kdtrace.h"
 #include "opt_mac.h"

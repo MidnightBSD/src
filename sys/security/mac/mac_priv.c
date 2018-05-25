@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 nCircle Network Security, Inc.
  * Copyright (c) 2009 Robert N. M. Watson
@@ -36,7 +37,7 @@
  */
 
 #include "sys/cdefs.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/security/mac/mac_priv.c 228448 2011-12-12 23:29:32Z attilio $");
 
 #include "opt_kdtrace.h"
 #include "opt_mac.h"

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Wayne J. Salamon
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/security/audit/audit_trigger.c 180709 2008-07-22 16:44:48Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
