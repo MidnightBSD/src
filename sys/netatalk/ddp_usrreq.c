@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2009 Robert N. M. Watson
  * All rights reserved.
@@ -47,7 +48,7 @@
  *	+1-313-764-2278
  *	netatalk@umich.edu
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/netatalk/ddp_usrreq.c 194913 2009-06-24 21:36:09Z rwatson $
  */
 
 #include <sys/param.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990,1991 Regents of The University of Michigan.
  * All Rights Reserved.
@@ -23,7 +24,7 @@
  *	+1-313-764-2278
  *	netatalk@umich.edu
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/netatalk/aarp.h 249925 2013-04-26 12:50:32Z glebius $
  */
 
 #ifndef _NETATALK_AARP_H_
@@ -80,7 +81,7 @@ struct aarptab {
 #define	AARPOP_PROBE	0x03
 
 #ifdef _KERNEL
-struct aarptab		*aarptnew(struct at_addr      *);
+struct aarptab		*aarptnew(const struct at_addr *);
 #endif
 
 #endif /* _NETATALK_AARP_H_ */

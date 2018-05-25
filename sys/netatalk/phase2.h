@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990,1991 Regents of The University of Michigan.
  * All Rights Reserved.
@@ -22,7 +23,7 @@
  *	Ann Arbor, Michigan
  *	+1-313-764-2278
  *	netatalk@umich.edu
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/netatalk/phase2.h 139827 2005-01-07 02:35:34Z imp $
  */
 
 #include <net/if_llc.h>

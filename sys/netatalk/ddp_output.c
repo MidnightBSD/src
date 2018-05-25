@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1991 Regents of The University of Michigan.
  * All Rights Reserved.
@@ -21,7 +22,7 @@
  *	netatalk@itd.umich.edu
  */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/netatalk/ddp_output.c 263478 2014-03-21 15:15:30Z glebius $ */
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,7 +55,7 @@ ddp_output(struct mbuf *m, struct socket *so)
 	mac_socket_create_mbuf(so, m);
 #endif
 
-	M_PREPEND(m, sizeof(struct ddpehdr), M_DONTWAIT);
+	M_PREPEND(m, sizeof(struct ddpehdr), M_NOWAIT);
 	if (m == NULL)
 	return (ENOBUFS);
 
@@ -201,7 +202,7 @@ ddp_route(struct mbuf *m, struct route *ro)
 	 * removing mac_mbuf_copy().
 	 */
 	if (!(aa->aa_flags & AFA_PHASE2)) {
-		MGET(m0, M_DONTWAIT, MT_DATA);
+		MGET(m0, M_NOWAIT, MT_DATA);
 		if (m0 == NULL) {
 			ifa_free(&aa->aa_ifa);
 			m_freem(m);
@@ -221,7 +222,7 @@ ddp_route(struct mbuf *m, struct route *ro)
 		elh->el_type = ELAP_DDPEXTEND;
 		elh->el_dnode = gate.sat_addr.s_node;
 	}
-	ro->ro_rt->rt_use++;
+	counter_u64_add(ro->ro_rt->rt_pksent, 1);
 
 #ifdef NETATALK_DEBUG
 	printf ("ddp_route: from %d.%d to %d.%d, via %d.%d (%s)\n",

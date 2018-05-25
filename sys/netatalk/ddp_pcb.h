@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Robert N. M. Watson
  * All rights reserved.
@@ -47,7 +48,7 @@
  *	+1-313-764-2278
  *	netatalk@umich.edu
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/netatalk/ddp_pcb.h 165974 2007-01-12 15:07:51Z rwatson $
  */
 
 #ifndef _NETATALK_DDP_PCB_H_

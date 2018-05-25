@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1991 Regents of The University of Michigan.
  * All Rights Reserved.
@@ -20,7 +21,7 @@
  *	+1-313-763-0525
  *	netatalk@itd.umich.edu
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/netatalk/at_var.h 194913 2009-06-24 21:36:09Z rwatson $
  */
 
 #ifndef _NETATALK_AT_VAR_H_
