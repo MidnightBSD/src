@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #
-# $FreeBSD: release/9.2.0/sys/netpfil/ipfw/test/Makefile 205417 2010-03-21 16:30:32Z luigi $
+# $FreeBSD: stable/10/sys/netpfil/ipfw/test/Makefile 205417 2010-03-21 16:30:32Z luigi $
 #
 # Makefile for building userland tests
 # this is written in a form compatible with gmake

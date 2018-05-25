@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998-2002,2010 Luigi Rizzo, Universita` di Pisa
  * All rights reserved
@@ -27,13 +28,13 @@
 /*
  * Binary heap and hash tables, used in dummynet
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netpfil/ipfw/dn_heap.c 240494 2012-09-14 11:51:49Z glebius $
  */
 
 #include <sys/cdefs.h>
 #include <sys/param.h>
 #ifdef _KERNEL
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/netpfil/ipfw/dn_heap.c 240494 2012-09-14 11:51:49Z glebius $");
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/kernel.h>
@@ -59,7 +60,7 @@ static void my_free(void *p) {	free(p); }
 #define free(p, t)	my_free(p)
 #endif /* !_KERNEL */
 
-MALLOC_DEFINE(M_DN_HEAP, "dummynet", "dummynet heap");
+static MALLOC_DEFINE(M_DN_HEAP, "dummynet", "dummynet heap");
 
 /*
  * Heap management functions.

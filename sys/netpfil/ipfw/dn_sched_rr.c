@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 Riccardo Panicucci, Universita` di Pisa
  * All rights reserved
@@ -25,7 +26,7 @@
  */
 
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netpfil/ipfw/dn_sched_rr.c 325731 2017-11-12 01:28:20Z truckman $
  */
 
 #ifdef _KERNEL
@@ -33,15 +34,21 @@
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/mbuf.h>
 #include <sys/module.h>
+#include <sys/rwlock.h>
 #include <net/if.h>	/* IFNAMSIZ */
 #include <netinet/in.h>
 #include <netinet/ip_var.h>		/* ipfw_rule_ref */
 #include <netinet/ip_fw.h>	/* flow_id */
 #include <netinet/ip_dummynet.h>
+#include <netpfil/ipfw/ip_fw_private.h>
 #include <netpfil/ipfw/dn_heap.h>
 #include <netpfil/ipfw/ip_dn_private.h>
+#ifdef NEW_AQM
+#include <netpfil/ipfw/dn_aqm.h>
+#endif
 #include <netpfil/ipfw/dn_sched.h>
 #else
 #include <dn_test.h>
@@ -301,6 +308,9 @@ static struct dn_alg rr_desc = {
 	_SI( .free_fsk = ) NULL,
 	_SI( .new_queue = ) rr_new_queue,
 	_SI( .free_queue = ) rr_free_queue,
+#ifdef NEW_AQM
+	_SI( .getconfig = )  NULL,
+#endif
 };
 
 

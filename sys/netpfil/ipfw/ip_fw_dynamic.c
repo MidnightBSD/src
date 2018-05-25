@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Luigi Rizzo, Universita` di Pisa
  *
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/netpfil/ipfw/ip_fw_dynamic.c 314667 2017-03-04 13:03:31Z avg $");
 
 #define        DEB(x)
 #define        DDB(x) x
@@ -231,6 +232,7 @@ SYSEND
 #endif /* SYSCTL_NODE */
 
 
+#ifdef INET6
 static __inline int
 hash_packet6(struct ipfw_flow_id *id)
 {
@@ -242,6 +244,7 @@ hash_packet6(struct ipfw_flow_id *id)
 	    (id->dst_port) ^ (id->src_port);
 	return i;
 }
+#endif
 
 /*
  * IMPORTANT: the hash function for dynamic rules must be commutative
@@ -485,7 +488,7 @@ resize_dynamic_table(struct ip_fw_chain *chain, int nbuckets)
 	    V_curr_dyn_buckets, nbuckets);
 
 	/* Allocate and initialize new hash */
-	dyn_v = malloc(nbuckets * sizeof(ipfw_dyn_rule), M_IPFW,
+	dyn_v = malloc(nbuckets * sizeof(*dyn_v), M_IPFW,
 	    M_WAITOK | M_ZERO);
 
 	for (i = 0 ; i < nbuckets; i++)
@@ -713,6 +716,9 @@ ipfw_install_state(struct ip_fw *rule, ipfw_insn_limit *cmd,
 		id.fib = M_GETFIB(args->m);
 
 		if (IS_IP6_FLOW_ID (&(args->f_id))) {
+			bzero(&id.src_ip6, sizeof(id.src_ip6));
+			bzero(&id.dst_ip6, sizeof(id.dst_ip6));
+
 			if (limit_mask & DYN_SRC_ADDR)
 				id.src_ip6 = args->f_id.src_ip6;
 			if (limit_mask & DYN_DST_ADDR)
@@ -809,7 +815,7 @@ ipfw_send_pkt(struct mbuf *replyto, struct ipfw_flow_id *id, u_int32_t seq,
 #endif
 	struct tcphdr *th = NULL;
 
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	MGETHDR(m, M_NOWAIT, MT_DATA);
 	if (m == NULL)
 		return (NULL);
 
@@ -918,9 +924,8 @@ ipfw_send_pkt(struct mbuf *replyto, struct ipfw_flow_id *id, u_int32_t seq,
 		h->ip_v = 4;
 		h->ip_hl = sizeof(*h) >> 2;
 		h->ip_tos = IPTOS_LOWDELAY;
-		h->ip_off = 0;
-		/* ip_len must be in host format for ip_output */
-		h->ip_len = len;
+		h->ip_off = htons(0);
+		h->ip_len = htons(len);
 		h->ip_ttl = V_ip_defttl;
 		h->ip_sum = 0;
 		break;
@@ -1332,7 +1337,7 @@ ipfw_dyn_init(struct ip_fw_chain *chain)
 	/* Enforce limit on dynamic rules */
 	uma_zone_set_max(V_ipfw_dyn_rule_zone, V_dyn_max);
 
-        callout_init(&V_ipfw_timeout, CALLOUT_MPSAFE);
+        callout_init(&V_ipfw_timeout, 1);
 
 	/*
 	 * This can potentially be done on first dynamic rule

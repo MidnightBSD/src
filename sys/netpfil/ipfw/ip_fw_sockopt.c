@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2009 Luigi Rizzo, Universita` di Pisa
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/netpfil/ipfw/ip_fw_sockopt.c 265700 2014-05-08 19:11:41Z melifaro $");
 
 /*
  * Sockopt support for ipfw. The routines here implement
@@ -159,13 +160,11 @@ ipfw_add_rule(struct ip_fw_chain *chain, struct ip_fw *input_rule)
 	int i, l, insert_before;
 	struct ip_fw **map;	/* the new array of pointers */
 
-	if (chain->rules == NULL || input_rule->rulenum > IPFW_DEFAULT_RULE-1)
+	if (chain->map == NULL || input_rule->rulenum > IPFW_DEFAULT_RULE - 1)
 		return (EINVAL);
 
 	l = RULESIZE(input_rule);
 	rule = malloc(l, M_IPFW, M_WAITOK | M_ZERO);
-	if (rule == NULL)
-		return (ENOSPC);
 	/* get_map returns with IPFW_UH_WLOCK if successful */
 	map = get_map(chain, 1, 0 /* not locked */);
 	if (map == NULL) {
@@ -655,7 +654,7 @@ check_ipfw_struct(struct ip_fw *rule, int size)
 
 		case O_IP_SRC_LOOKUP:
 		case O_IP_DST_LOOKUP:
-			if (cmd->arg1 >= IPFW_TABLES_MAX) {
+			if (cmd->arg1 >= V_fw_tables_max) {
 				printf("ipfw: invalid table number %d\n",
 				    cmd->arg1);
 				return (EINVAL);
@@ -1005,8 +1004,6 @@ ipfw_ctl(struct sockopt *sopt)
 			if (size >= sopt->sopt_valsize)
 				break;
 			buf = malloc(size, M_TEMP, M_WAITOK);
-			if (buf == NULL)
-				break;
 			IPFW_UH_RLOCK(chain);
 			/* check again how much space we need */
 			want = chain->static_len + ipfw_dyn_len();
@@ -1043,8 +1040,10 @@ ipfw_ctl(struct sockopt *sopt)
 		if (sopt->sopt_valsize == RULESIZE7(rule)) {
 		    is7 = 1;
 		    error = convert_rule_to_8(rule);
-		    if (error)
+		    if (error) {
+			free(rule, M_TEMP);
 			return error;
+		    }
 		    if (error == 0)
 			error = check_ipfw_struct(rule, RULESIZE(rule));
 		} else {
@@ -1060,11 +1059,13 @@ ipfw_ctl(struct sockopt *sopt)
 				if (is7) {
 					error = convert_rule_to_7(rule);
 					size = RULESIZE7(rule);
-					if (error)
+					if (error) {
+						free(rule, M_TEMP);
 						return error;
+					}
 				}
 				error = sooptcopyout(sopt, rule, size);
-		}
+			}
 		}
 		free(rule, M_TEMP);
 		break;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Riccardo Panicucci, Universita` di Pisa
  * All rights reserved
@@ -25,7 +26,7 @@
  */
 
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netpfil/ipfw/ip_dn_glue.c 301772 2016-06-10 00:00:25Z truckman $
  *
  * Binary compatibility support for /sbin/ipfw RELENG_7 and RELENG_8
  */
@@ -55,6 +56,9 @@
 #include <netpfil/ipfw/ip_fw_private.h>
 #include <netpfil/ipfw/dn_heap.h>
 #include <netpfil/ipfw/ip_dn_private.h>
+#ifdef NEW_AQM
+#include <netpfil/ipfw/dn_aqm.h>
+#endif
 #include <netpfil/ipfw/dn_sched.h>
 
 /* FREEBSD7.2 ip_dummynet.h r191715*/
@@ -315,10 +319,10 @@ static size_t pipesizemax8 = sizeof(struct dn_pipe_max8);
 /* Indicate 'ipfw' version
  * 1: from FreeBSD 7.2
  * 0: from FreeBSD 8
- * -1: unknow (for now is unused)
+ * -1: unknown (for now is unused)
  *
  * It is update when a IP_DUMMYNET_DEL or IP_DUMMYNET_CONFIGURE request arrives
- * NOTE: if a IP_DUMMYNET_GET arrives and the 'ipfw' version is unknow,
+ * NOTE: if a IP_DUMMYNET_GET arrives and the 'ipfw' version is unknown,
  *       it is suppose to be the FreeBSD 8 version.
  */
 static int is7 = 0;
@@ -513,7 +517,7 @@ dn_compat_configure(void *v)
 	lmax += sizeof(struct dn_sch) + sizeof(struct dn_link) +
 		sizeof(struct dn_fs) + sizeof(struct dn_profile);
 
-	base = buf = malloc(lmax, M_DUMMYNET, M_WAIT|M_ZERO);
+	base = buf = malloc(lmax, M_DUMMYNET, M_WAITOK|M_ZERO);
 	o_next(&buf, sizeof(struct dn_id), DN_CMD_CONFIG);
 	base->id = DN_API_VERSION;
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 Riccardo Panicucci, Luigi Rizzo, Universita` di Pisa
  * All rights reserved
@@ -27,7 +28,7 @@
 /*
  * The API to write a packet scheduling algorithm for dummynet.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netpfil/ipfw/dn_sched.h 301772 2016-06-10 00:00:25Z truckman $
  */
 
 #ifndef _DN_SCHED_H
@@ -132,6 +133,10 @@ struct dn_alg {
 	int (*free_fsk)(struct dn_fsk *f);
 	int (*new_queue)(struct dn_queue *q);
 	int (*free_queue)(struct dn_queue *q);
+#ifdef NEW_AQM
+	/* Getting scheduler extra parameters */
+	int (*getconfig)(struct dn_schk *, struct dn_extra_parms *);
+#endif
 
 	/* run-time fields */
 	int ref_count;      /* XXX number of instances in the system */
@@ -165,6 +170,11 @@ dn_dequeue(struct dn_queue *q)
 	struct mbuf *m = q->mq.head;
 	if (m == NULL)
 		return NULL;
+#ifdef NEW_AQM
+	/* Call AQM dequeue function  */
+	if (q->fs->aqmfp && q->fs->aqmfp->dequeue )
+		return q->fs->aqmfp->dequeue(q);
+#endif
 	q->mq.head = m->m_nextpkt;
 
 	/* Update stats for the queue */

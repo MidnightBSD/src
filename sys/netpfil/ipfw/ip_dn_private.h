@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Luigi Rizzo, Riccardo Panicucci, Universita` di Pisa
  * All rights reserved
@@ -27,7 +28,7 @@
 /*
  * internal dummynet APIs.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netpfil/ipfw/ip_dn_private.h 325731 2017-11-12 01:28:20Z truckman $
  */
 
 #ifndef _IP_DN_PRIVATE_H
@@ -80,6 +81,10 @@ SLIST_HEAD(dn_sch_inst_head, dn_sch_inst);
 SLIST_HEAD(dn_fsk_head, dn_fsk);
 SLIST_HEAD(dn_queue_head, dn_queue);
 SLIST_HEAD(dn_alg_head, dn_alg);
+
+#ifdef NEW_AQM
+SLIST_HEAD(dn_aqm_head, dn_aqm); /* for new AQMs */
+#endif
 
 struct mq {	/* a basic queue of packets*/
         struct mbuf *head, *tail;
@@ -135,6 +140,9 @@ struct dn_parms {
 	/* list of flowsets without a scheduler -- use sch_chain */
 	struct dn_fsk_head	fsu;	/* list of unlinked flowsets */
 	struct dn_alg_head	schedlist;	/* list of algorithms */
+#ifdef NEW_AQM
+	struct dn_aqm_head	aqmlist;	/* list of AQMs */
+#endif
 
 	/* Store the fs/sch to scan when draining. The value is the
 	 * bucket number of the hash table. Expire can be disabled
@@ -231,6 +239,10 @@ struct dn_fsk { /* kernel side of a flowset */
 	int lookup_weight ;	/* equal to (1-w_q)^t / (1-w_q)^(t+1) */
 	int avg_pkt_size ;	/* medium packet size */
 	int max_pkt_size ;	/* max packet size */
+#ifdef NEW_AQM
+	struct dn_aqm *aqmfp;	/* Pointer to AQM functions */
+	void *aqmcfg;	/* configuration parameters for AQM */
+#endif
 };
 
 /*
@@ -253,6 +265,9 @@ struct dn_queue {
 	int count;		/* arrivals since last RED drop */
 	int random;		/* random value (scaled) */
 	uint64_t q_time;	/* start of queue idle time */
+#ifdef NEW_AQM
+	void *aqm_status;	/* per-queue status variables*/
+#endif
 
 };
 
@@ -352,6 +367,24 @@ enum {
 	DN_QHT_IS_Q	= 0x0100, /* in flowset, qht is a single queue */
 };
 
+/*
+ * Packets processed by dummynet have an mbuf tag associated with
+ * them that carries their dummynet state.
+ * Outside dummynet, only the 'rule' field is relevant, and it must
+ * be at the beginning of the structure.
+ */
+struct dn_pkt_tag {
+	struct ipfw_rule_ref rule;	/* matching rule	*/
+
+	/* second part, dummynet specific */
+	int dn_dir;		/* action when packet comes out.*/
+				/* see ip_fw_private.h		*/
+	uint64_t output_time;	/* when the pkt is due for delivery*/
+	struct ifnet *ifp;	/* interface, for ip_output	*/
+	struct _ip6dn_args ip6opt;	/* XXX ipv6 options	*/
+	uint16_t iphdr_off;	/* IP header offset for mtodo()	*/
+};
+
 extern struct dn_parms dn_cfg;
 //VNET_DECLARE(struct dn_parms, _base_dn_cfg);
 //#define dn_cfg	VNET(_base_dn_cfg)
@@ -359,6 +392,7 @@ extern struct dn_parms dn_cfg;
 int dummynet_io(struct mbuf **, int , struct ip_fw_args *);
 void dummynet_task(void *context, int pending);
 void dn_reschedule(void);
+struct dn_pkt_tag * dn_tag_get(struct mbuf *m);
 
 struct dn_queue *ipdn_q_find(struct dn_fsk *, struct dn_sch_inst *,
         struct ipfw_flow_id *);
@@ -399,5 +433,21 @@ int do_config(void *p, int l);
 /* function to drain idle object */
 void dn_drain_scheduler(void);
 void dn_drain_queue(void);
+
+#ifdef NEW_AQM
+int ecn_mark(struct mbuf* m);
+
+/* moved from ip_dn_io.c to here to be available for AQMs modules*/
+static inline void
+mq_append(struct mq *q, struct mbuf *m)
+{
+	if (q->head == NULL)
+		q->head = m;
+	else
+		q->tail->m_nextpkt = m;
+	q->tail = m;
+	m->m_nextpkt = NULL;
+}
+#endif /* NEW_AQM */
 
 #endif /* _IP_DN_PRIVATE_H */

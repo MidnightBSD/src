@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2009 Luigi Rizzo, Universita` di Pisa
  *
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/netpfil/ipfw/ip_fw2.c 331202 2018-03-19 09:54:16Z ae $");
 
 /*
  * The FreeBSD IP packet firewall, main file
@@ -34,7 +35,7 @@ __FBSDID("$FreeBSD$");
 #include "opt_ipdivert.h"
 #include "opt_inet.h"
 #ifndef INET
-#error IPFIREWALL requires INET.
+#error "IPFIREWALL requires INET"
 #endif /* INET */
 #include "opt_inet6.h"
 #include "opt_ipsec.h"
@@ -60,9 +61,10 @@ __FBSDID("$FreeBSD$");
 #include <net/ethernet.h> /* for ETHERTYPE_IP */
 #include <net/if.h>
 #include <net/route.h>
-#include <net/pf_mtag.h>
 #include <net/pfil.h>
 #include <net/vnet.h>
+
+#include <netpfil/pf/pf_mtag.h>
 
 #include <netinet/in.h>
 #include <netinet/in_var.h>
@@ -85,6 +87,8 @@ __FBSDID("$FreeBSD$");
 #include <netinet6/scope6_var.h>
 #include <netinet6/ip6_var.h>
 #endif
+
+#include <net/if_gre.h> /* for struct grehdr */
 
 #include <netpfil/ipfw/ip_fw_private.h>
 
@@ -142,6 +146,8 @@ VNET_DEFINE(int, verbose_limit);
 /* layer3_chain contains the list of rules for layer 3 */
 VNET_DEFINE(struct ip_fw_chain, layer3_chain);
 
+VNET_DEFINE(int, ipfw_nat_ready) = 0;
+
 ipfw_nat_t *ipfw_nat_ptr = NULL;
 struct cfg_nat *(*lookup_nat_ptr)(struct nat_list *, int);
 ipfw_nat_cfg_t *ipfw_nat_cfg_ptr;
@@ -178,7 +184,7 @@ SYSCTL_INT(_net_inet_ip_fw, OID_AUTO, default_to_accept, CTLFLAG_RDTUN,
     &default_to_accept, 0,
     "Make the default rule accept all packets.");
 TUNABLE_INT("net.inet.ip.fw.default_to_accept", &default_to_accept);
-TUNABLE_INT("net.inet.ip.fw.tables_max", &default_fw_tables);
+TUNABLE_INT("net.inet.ip.fw.tables_max", (int *)&default_fw_tables);
 SYSCTL_VNET_INT(_net_inet_ip_fw, OID_AUTO, static_count,
     CTLFLAG_RD, &VNET_NAME(layer3_chain.n_rules), 0,
     "Number of static rules");
@@ -628,8 +634,6 @@ send_reject(struct ip_fw_args *args, int code, int iplen, struct ip *ip)
 		m_adj(m, args->L3offset);
 #endif
 	if (code != ICMP_REJECT_RST) { /* Send an ICMP unreach */
-		/* We need the IP header in host order for icmp_error(). */
-		SET_HOST_IPLEN(ip);
 		icmp_error(args->m, ICMP_UNREACH, code, 0L, 0);
 	} else if (args->f_id.proto == IPPROTO_TCP) {
 		struct tcphdr *const tcp =
@@ -942,7 +946,7 @@ ipfw_chk(struct ip_fw_args *args)
 	uint8_t proto;
 	uint16_t src_port = 0, dst_port = 0;	/* NOTE: host format	*/
 	struct in_addr src_ip, dst_ip;		/* NOTE: network format	*/
-	uint16_t iplen=0;
+	int iplen = 0;
 	int pktlen;
 	uint16_t	etype = 0;	/* Host order stored ether type */
 
@@ -1142,6 +1146,11 @@ do {								\
 				PULLUP_TO(hlen, ulp, struct pim);
 				break;
 
+			case IPPROTO_GRE:	/* RFC 1701 */
+				/* XXX GRE header check? */
+				PULLUP_TO(hlen, ulp, struct grehdr);
+				break;
+
 			case IPPROTO_CARP:
 				PULLUP_TO(hlen, ulp, struct carp_header);
 				if (((struct carp_header *)ulp)->carp_version !=
@@ -1178,6 +1187,7 @@ do {								\
 		args->f_id.src_ip = 0;
 		args->f_id.dst_ip = 0;
 		args->f_id.flow_id6 = ntohl(ip6->ip6_flow);
+		iplen = ntohs(ip6->ip6_plen) + sizeof(*ip6);
 	} else if (pktlen >= sizeof(struct ip) &&
 	    (args->eh == NULL || etype == ETHERTYPE_IP) && ip->ip_v == 4) {
 	    	is_ipv4 = 1;
@@ -1192,7 +1202,6 @@ do {								\
 		dst_ip = ip->ip_dst;
 		offset = ntohs(ip->ip_off) & IP_OFFMASK;
 		iplen = ntohs(ip->ip_len);
-		pktlen = iplen < pktlen ? iplen : pktlen;
 
 		if (offset == 0) {
 			switch (proto) {
@@ -1231,15 +1240,16 @@ do {								\
 		args->f_id.dst_ip = ntohl(dst_ip.s_addr);
 	}
 #undef PULLUP_TO
+	pktlen = iplen < pktlen ? iplen: pktlen;
 	if (proto) { /* we may have port numbers, store them */
 		args->f_id.proto = proto;
 		args->f_id.src_port = src_port = ntohs(src_port);
 		args->f_id.dst_port = dst_port = ntohs(dst_port);
 	}
 
-	IPFW_RLOCK(chain);
+	IPFW_PF_RLOCK(chain);
 	if (! V_ipfw_vnet_ready) { /* shutting down, leave NOW. */
-		IPFW_RUNLOCK(chain);
+		IPFW_PF_RUNLOCK(chain);
 		return (IP_FW_PASS);	/* accept */
 	}
 	if (args->rule.slot) {
@@ -1677,7 +1687,7 @@ do {								\
 					break;
 
 				/* DSCP bitmask is stored as low_u32 high_u32 */
-				if (x > 32)
+				if (x >= 32)
 					match = *(p + 1) & (1 << (x - 32));
 				else
 					match = *p & (1 << x);
@@ -1690,10 +1700,25 @@ do {								\
 				    uint16_t x;
 				    uint16_t *p;
 				    int i;
+#ifdef INET6
+				    if (is_ipv6) {
+					    struct ip6_hdr *ip6;
 
+					    ip6 = (struct ip6_hdr *)ip;
+					    if (ip6->ip6_plen == 0) {
+						    /*
+						     * Jumbo payload is not
+						     * supported by this
+						     * opcode.
+						     */
+						    break;
+					    }
+					    x = iplen - hlen;
+				    } else
+#endif /* INET6 */
+					    x = iplen - (ip->ip_hl << 2);
 				    tcp = TCP(ulp);
-				    x = iplen -
-					((ip->ip_hl + tcp->th_off) << 2);
+				    x -= tcp->th_off << 2;
 				    if (cmdlen == 1) {
 					match = (cmd->arg1 == x);
 					break;
@@ -1758,20 +1783,30 @@ do {								\
 
 			case O_ALTQ: {
 				struct pf_mtag *at;
+				struct m_tag *mtag;
 				ipfw_insn_altq *altq = (ipfw_insn_altq *)cmd;
 
+				/*
+				 * ALTQ uses mbuf tags from another
+				 * packet filtering system - pf(4).
+				 * We allocate a tag in its format
+				 * and fill it in, pretending to be pf(4).
+				 */
 				match = 1;
 				at = pf_find_mtag(m);
 				if (at != NULL && at->qid != 0)
 					break;
-				at = pf_get_mtag(m);
-				if (at == NULL) {
+				mtag = m_tag_get(PACKET_TAG_PF,
+				    sizeof(struct pf_mtag), M_NOWAIT | M_ZERO);
+				if (mtag == NULL) {
 					/*
 					 * Let the packet fall back to the
 					 * default ALTQ.
 					 */
 					break;
 				}
+				m_tag_prepend(m, mtag);
+				at = (struct pf_mtag *)(mtag + 1);
 				at->qid = altq->qid;
 				at->hdr = ip;
 				break;
@@ -2393,55 +2428,49 @@ do {								\
 			}
 
 			case O_NAT:
+				l = 0;          /* exit inner loop */
+				done = 1;       /* exit outer loop */
  				if (!IPFW_NAT_LOADED) {
 				    retval = IP_FW_DENY;
-				} else {
-				    struct cfg_nat *t;
-				    int nat_id;
+				    break;
+				}
 
-				    set_match(args, f_pos, chain);
-				    /* Check if this is 'global' nat rule */
-				    if (cmd->arg1 == 0) {
-					    retval = ipfw_nat_ptr(args, NULL, m);
-					    l = 0;
-					    done = 1;
-					    break;
-				    }
-				    t = ((ipfw_insn_nat *)cmd)->nat;
-				    if (t == NULL) {
+				struct cfg_nat *t;
+				int nat_id;
+
+				set_match(args, f_pos, chain);
+				/* Check if this is 'global' nat rule */
+				if (cmd->arg1 == 0) {
+					retval = ipfw_nat_ptr(args, NULL, m);
+					break;
+				}
+				t = ((ipfw_insn_nat *)cmd)->nat;
+				if (t == NULL) {
 					nat_id = IP_FW_ARG_TABLEARG(cmd->arg1);
 					t = (*lookup_nat_ptr)(&chain->nat, nat_id);
 
 					if (t == NULL) {
 					    retval = IP_FW_DENY;
-					    l = 0;	/* exit inner loop */
-					    done = 1;	/* exit outer loop */
 					    break;
 					}
 					if (cmd->arg1 != IP_FW_TABLEARG)
 					    ((ipfw_insn_nat *)cmd)->nat = t;
-				    }
-				    retval = ipfw_nat_ptr(args, t, m);
 				}
-				l = 0;          /* exit inner loop */
-				done = 1;       /* exit outer loop */
+				retval = ipfw_nat_ptr(args, t, m);
 				break;
 
 			case O_REASS: {
 				int ip_off;
 
-				IPFW_INC_RULE_COUNTER(f, pktlen);
 				l = 0;	/* in any case exit inner loop */
+				if (is_ipv6) /* IPv6 is not supported yet */
+					break;
+				IPFW_INC_RULE_COUNTER(f, pktlen);
 				ip_off = ntohs(ip->ip_off);
 
 				/* if not fragmented, go to next rule */
 				if ((ip_off & (IP_MF | IP_OFFMASK)) == 0)
 				    break;
-				/* 
-				 * ip_reass() expects len & off in host
-				 * byte order.
-				 */
-				SET_HOST_IPLEN(ip);
 
 				args->m = m = ip_reass(m);
 
@@ -2455,7 +2484,6 @@ do {								\
 
 				    ip = mtod(m, struct ip *);
 				    hlen = ip->ip_hl << 2;
-				    SET_NET_IPLEN(ip);
 				    ip->ip_sum = 0;
 				    if (hlen == sizeof(struct ip))
 					ip->ip_sum = in_cksum_hdr(ip);
@@ -2504,7 +2532,7 @@ do {								\
 		retval = IP_FW_DENY;
 		printf("ipfw: ouch!, skip past end of rules, denying packet\n");
 	}
-	IPFW_RUNLOCK(chain);
+	IPFW_PF_RUNLOCK(chain);
 #ifdef __FreeBSD__
 	if (ucred_cache != NULL)
 		crfree(ucred_cache);
@@ -2655,7 +2683,7 @@ vnet_ipfw_init(const void *unused)
 	rule->set = RESVD_SET;
 	rule->cmd[0].len = 1;
 	rule->cmd[0].opcode = default_to_accept ? O_ACCEPT : O_DENY;
-	chain->rules = chain->default_rule = chain->map[0] = rule;
+	chain->default_rule = chain->map[0] = rule;
 	chain->id = rule->id = 1;
 
 	IPFW_LOCK_INIT(chain);
@@ -2665,10 +2693,9 @@ vnet_ipfw_init(const void *unused)
 	V_ipfw_vnet_ready = 1;		/* Open for business */
 
 	/*
-	 * Hook the sockopt handler, and the layer2 (V_ip_fw_chk_ptr)
-	 * and pfil hooks for ipv4 and ipv6. Even if the latter two fail
-	 * we still keep the module alive because the sockopt and
-	 * layer2 paths are still useful.
+	 * Hook the sockopt handler and pfil hooks for ipv4 and ipv6.
+	 * Even if the latter two fail we still keep the module alive
+	 * because the sockopt and layer2 paths are still useful.
 	 * ipfw[6]_hook return 0 on success, ENOENT on failure,
 	 * so we can ignore the exact return value and just set a flag.
 	 *
@@ -2679,7 +2706,6 @@ vnet_ipfw_init(const void *unused)
 	 * is checked on each packet because there are no pfil hooks.
 	 */
 	V_ip_fw_ctl_ptr = ipfw_ctl;
-	V_ip_fw_chk_ptr = ipfw_chk;
 	error = ipfw_attach_hooks(1);
 	return (error);
 }
@@ -2701,16 +2727,13 @@ vnet_ipfw_uninit(const void *unused)
 	 * sure the update is propagated and nobody will be in.
 	 */
 	(void)ipfw_attach_hooks(0 /* detach */);
-	V_ip_fw_chk_ptr = NULL;
 	V_ip_fw_ctl_ptr = NULL;
 	IPFW_UH_WLOCK(chain);
 	IPFW_UH_WUNLOCK(chain);
-	IPFW_UH_WLOCK(chain);
 
-	IPFW_WLOCK(chain);
 	ipfw_dyn_uninit(0);	/* run the callout_drain */
-	IPFW_WUNLOCK(chain);
 
+	IPFW_UH_WLOCK(chain);
 	ipfw_destroy_tables(chain);
 	reap = NULL;
 	IPFW_WLOCK(chain);
