@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_btsocket.c
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket.c,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_btsocket.c,v 1.4 2003/09/14 23:29:06 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/socket/ng_btsocket.c 253346 2013-07-15 01:32:55Z rodrigc $
  */
 
 #include <sys/param.h>
@@ -45,6 +46,8 @@
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
 #include <sys/taskqueue.h>
+
+#include <net/vnet.h>
 
 #include <netgraph/ng_message.h>
 #include <netgraph/netgraph.h>
@@ -285,4 +288,4 @@ ng_btsocket_modevent(module_t mod, int event, void *data)
 	return (error);
 } /* ng_btsocket_modevent */
 
-DOMAIN_SET(ng_btsocket_);
+VNET_DOMAIN_SET(ng_btsocket_);

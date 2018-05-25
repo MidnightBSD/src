@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_btsocket_l2cap.c
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket_l2cap.c,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_btsocket_l2cap.c,v 1.16 2003/09/14 23:29:06 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/socket/ng_btsocket_l2cap.c 268061 2014-06-30 19:46:17Z trociny $
  */
 
 #include <sys/param.h>
@@ -1533,7 +1534,7 @@ ng_btsocket_l2cap_data_input(struct mbuf *m, hook_p hook)
 			 * it is a broadcast traffic after all
 			 */
 
-			copy = m_dup(m, M_DONTWAIT);
+			copy = m_dup(m, M_NOWAIT);
 			if (copy != NULL) {
 				sbappendrecord(&pcb->so->so_rcv, copy);
 				sorwakeup(pcb->so);
@@ -1812,6 +1813,10 @@ void
 ng_btsocket_l2cap_init(void)
 {
 	int	error = 0;
+
+	/* Skip initialization of globals for non-default instances. */
+	if (!IS_DEFAULT_VNET(curvnet))
+		return;
 
 	ng_btsocket_l2cap_node = NULL;
 	ng_btsocket_l2cap_debug_level = NG_BTSOCKET_WARN_LEVEL;
@@ -2513,12 +2518,12 @@ ng_btsocket_l2cap_send2(ng_btsocket_l2cap_pcb_p pcb)
 	if (pcb->so->so_snd.sb_cc == 0)
 		return (EINVAL); /* XXX */
 
-	m = m_dup(pcb->so->so_snd.sb_mb, M_DONTWAIT);
+	m = m_dup(pcb->so->so_snd.sb_mb, M_NOWAIT);
 	if (m == NULL)
 		return (ENOBUFS);
 
 	/* Create L2CA packet header */
-	M_PREPEND(m, sizeof(*hdr), M_DONTWAIT);
+	M_PREPEND(m, sizeof(*hdr), M_NOWAIT);
 	if (m != NULL)
 		if (m->m_len < sizeof(*hdr))
 			m = m_pullup(m, sizeof(*hdr));

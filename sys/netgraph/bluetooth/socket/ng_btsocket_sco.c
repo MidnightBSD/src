@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_btsocket_sco.c
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket_sco.c,v 1.1.1.1 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_btsocket_sco.c,v 1.2 2005/10/31 18:08:51 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/socket/ng_btsocket_sco.c 268061 2014-06-30 19:46:17Z trociny $
  */
 
 #include <sys/param.h>
@@ -1107,6 +1108,10 @@ ng_btsocket_sco_init(void)
 {
 	int	error = 0;
 
+	/* Skip initialization of globals for non-default instances. */
+	if (!IS_DEFAULT_VNET(curvnet))
+		return;
+
 	ng_btsocket_sco_node = NULL;
 	ng_btsocket_sco_debug_level = NG_BTSOCKET_WARN_LEVEL;
 
@@ -1746,14 +1751,14 @@ ng_btsocket_sco_send2(ng_btsocket_sco_pcb_p pcb)
 	while (pcb->rt->pending < pcb->rt->num_pkts &&
 	       pcb->so->so_snd.sb_cc > 0) {
 		/* Get a copy of the first packet on send queue */
-		m = m_dup(pcb->so->so_snd.sb_mb, M_DONTWAIT);
+		m = m_dup(pcb->so->so_snd.sb_mb, M_NOWAIT);
 		if (m == NULL) {
 			error = ENOBUFS;
 			break;
 		}
 
 		/* Create SCO packet header */
-		M_PREPEND(m, sizeof(*hdr), M_DONTWAIT);
+		M_PREPEND(m, sizeof(*hdr), M_NOWAIT);
 		if (m != NULL)
 			if (m->m_len < sizeof(*hdr))
 				m = m_pullup(m, sizeof(*hdr));
