@@ -61692,11 +61692,13 @@ sys/rpc/auth_none.c -text
 sys/rpc/auth_unix.c -text
 sys/rpc/authunix_prot.c -text
 sys/rpc/clnt.h -text
+sys/rpc/clnt_bck.c svneol=native#text/plain
 sys/rpc/clnt_dg.c -text
 sys/rpc/clnt_rc.c -text
 sys/rpc/clnt_stat.h -text
 sys/rpc/clnt_vc.c -text
 sys/rpc/getnetconfig.c -text
+sys/rpc/krpc.h svneol=native#text/plain
 sys/rpc/netconfig.h -text
 sys/rpc/nettype.h -text
 sys/rpc/pmap_prot.h -text

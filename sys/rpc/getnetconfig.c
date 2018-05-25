@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -28,7 +29,7 @@
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/rpc/getnetconfig.c 177633 2008-03-26 15:23:12Z dfr $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>

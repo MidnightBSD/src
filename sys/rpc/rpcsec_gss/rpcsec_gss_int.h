@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
   rpcsec_gss.h
   
@@ -32,9 +33,9 @@
   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-  $Id: rpcsec_gss_int.h,v 1.2 2013-01-05 20:24:00 laffer1 Exp $
+  $Id: auth_gss.h,v 1.12 2001/04/30 19:44:47 andros Exp $
 */
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/rpc/rpcsec_gss/rpcsec_gss_int.h 184588 2008-11-03 10:38:00Z dfr $ */
 
 #ifndef _RPCSEC_GSS_INT_H
 #define _RPCSEC_GSS_INT_H

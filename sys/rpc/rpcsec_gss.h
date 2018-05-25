@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Doug Rabson
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/sys/rpc/rpcsec_gss.h 253049 2013-07-09 01:05:28Z rmacklem $
  */
 
 #ifndef _RPCSEC_GSS_H
@@ -153,9 +154,9 @@ typedef AUTH	*rpc_gss_secfind_ftype(CLIENT *clnt, struct ucred *cred,
 		    rpc_gss_service_t service);
 typedef void	rpc_gss_secpurge_ftype(CLIENT *clnt);
 typedef AUTH	*rpc_gss_seccreate_ftype(CLIENT *clnt, struct ucred *cred,
-		    const char *principal, const char *mechanism,
-		    rpc_gss_service_t service, const char *qop,
-		    rpc_gss_options_req_t *options_req,
+		    const char *clnt_principal, const char *principal,
+		    const char *mechanism, rpc_gss_service_t service,
+		    const char *qop, rpc_gss_options_req_t *options_req,
 		    rpc_gss_options_ret_t *options_ret);
 typedef bool_t	rpc_gss_set_defaults_ftype(AUTH *auth,
 		    rpc_gss_service_t service, const char *qop);
@@ -183,6 +184,7 @@ typedef bool_t	rpc_gss_get_principal_name_ftype(rpc_gss_principal_t *principal,
 		    const char *domain);
 typedef int	rpc_gss_svc_max_data_length_ftype(struct svc_req *req,
 		    int max_tp_unit_len);
+typedef void	rpc_gss_refresh_auth_ftype(AUTH *auth);
 
 struct rpc_gss_entries {
 	rpc_gss_secfind_ftype		*rpc_gss_secfind;
@@ -204,6 +206,7 @@ struct rpc_gss_entries {
 	rpc_gss_clear_callback_ftype	*rpc_gss_clear_callback;
 	rpc_gss_get_principal_name_ftype *rpc_gss_get_principal_name;
 	rpc_gss_svc_max_data_length_ftype *rpc_gss_svc_max_data_length;
+	rpc_gss_refresh_auth_ftype	*rpc_gss_refresh_auth;
 };
 extern struct rpc_gss_entries	rpc_gss_entries;
 
@@ -229,16 +232,17 @@ rpc_gss_secpurge_call(CLIENT *clnt)
 }
 
 static __inline AUTH *
-rpc_gss_seccreate_call(CLIENT *clnt, struct ucred *cred, const char *principal,
-    const char *mechanism, rpc_gss_service_t service, const char *qop,
+rpc_gss_seccreate_call(CLIENT *clnt, struct ucred *cred,
+    const char *clnt_principal, const char *principal, const char *mechanism,
+    rpc_gss_service_t service, const char *qop,
     rpc_gss_options_req_t *options_req, rpc_gss_options_ret_t *options_ret)
 {
 	AUTH *ret = NULL;
 
 	if (rpc_gss_entries.rpc_gss_seccreate != NULL)
 		ret = (*rpc_gss_entries.rpc_gss_seccreate)(clnt, cred,
-		    principal, mechanism, service, qop, options_req,
-		    options_ret);
+		    clnt_principal, principal, mechanism, service, qop,
+		    options_req, options_ret);
 	return (ret);
 }
 
@@ -406,14 +410,29 @@ rpc_gss_svc_max_data_length_call(struct svc_req *req, int max_tp_unit_len)
 	return (ret);
 }
 
+static __inline void
+rpc_gss_refresh_auth_call(AUTH *auth)
+{
+
+	if (rpc_gss_entries.rpc_gss_refresh_auth != NULL)
+		(*rpc_gss_entries.rpc_gss_refresh_auth)(auth);
+}
+
 AUTH	*rpc_gss_secfind(CLIENT *clnt, struct ucred *cred,
     const char *principal, gss_OID mech_oid, rpc_gss_service_t service);
 void	rpc_gss_secpurge(CLIENT *clnt);
-#endif
+void	rpc_gss_refresh_auth(AUTH *auth);
+AUTH	*rpc_gss_seccreate(CLIENT *clnt, struct ucred *cred,
+    const char *clnt_principal, const char *principal,
+    const char *mechanism, rpc_gss_service_t service,
+    const char *qop, rpc_gss_options_req_t *options_req,
+    rpc_gss_options_ret_t *options_ret);
+#else	/* !_KERNEL */
 AUTH	*rpc_gss_seccreate(CLIENT *clnt, struct ucred *cred,
     const char *principal, const char *mechanism, rpc_gss_service_t service,
     const char *qop, rpc_gss_options_req_t *options_req,
     rpc_gss_options_ret_t *options_ret);
+#endif	/* _KERNEL */
 bool_t	rpc_gss_set_defaults(AUTH *auth, rpc_gss_service_t service,
     const char *qop);
 int	rpc_gss_max_data_length(AUTH *handle, int max_tp_unit_len);

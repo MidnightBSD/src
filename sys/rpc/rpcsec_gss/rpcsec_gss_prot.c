@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
   rpcsec_gss_prot.c
   
@@ -32,11 +33,11 @@
   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-  $Id: rpcsec_gss_prot.c,v 1.2 2013-01-05 20:24:00 laffer1 Exp $
+  $Id: authgss_prot.c,v 1.18 2000/09/01 04:14:03 dugsong Exp $
 */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/rpc/rpcsec_gss/rpcsec_gss_prot.c 249096 2013-04-04 15:16:53Z gnn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -107,7 +108,7 @@ put_uint32(struct mbuf **mp, uint32_t v)
 	struct mbuf *m = *mp;
 	uint32_t n;
 
-	M_PREPEND(m, sizeof(uint32_t), M_WAIT);
+	M_PREPEND(m, sizeof(uint32_t), M_WAITOK);
 	n = htonl(v);
 	bcopy(&n, mtod(m, uint32_t *), sizeof(uint32_t));
 	*mp = m;
@@ -243,7 +244,7 @@ xdr_rpc_gss_unwrap_data(struct mbuf **resultsp,
 		 */
 		len = get_uint32(&results);
 		message = results;
-		results = m_split(results, len, M_WAIT);
+		results = m_split(results, len, M_WAITOK);
 		if (!results) {
 			m_freem(message);
 			return (FALSE);
