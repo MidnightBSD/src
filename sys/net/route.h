@@ -28,11 +28,13 @@
  * SUCH DAMAGE.
  *
  *	@(#)route.h	8.4 (Berkeley) 1/9/95
- * $FreeBSD: stable/9/sys/net/route.h 248895 2013-03-29 16:24:20Z melifaro $
+ * $FreeBSD: stable/10/sys/net/route.h 265717 2014-05-08 21:03:31Z melifaro $
  */
 
 #ifndef _NET_ROUTE_H_
 #define _NET_ROUTE_H_
+
+#include <sys/counter.h>
 
 /*
  * Kernel resident routing tables.
@@ -58,17 +60,6 @@ struct route {
 #define	RT_CACHING_CONTEXT	0x1	/* XXX: not used anywhere */
 #define	RT_NORTREF		0x2	/* doesn't hold reference on ro_rt */
 
-/*
- * These numbers are used by reliable protocols for determining
- * retransmission behavior and are included in the routing structure.
- */
-struct rt_metrics_lite {
-	u_long	rmx_mtu;	/* MTU for this path */
-	u_long	rmx_expire;	/* lifetime for route, e.g. redirect */
-	u_long	rmx_pksent;	/* packets sent using this route */
-	u_long	rmx_weight;	/* absolute weight */ 
-};
-
 struct rt_metrics {
 	u_long	rmx_locks;	/* Kernel must leave these values alone */
 	u_long	rmx_mtu;	/* MTU for this path */
@@ -93,11 +84,9 @@ struct rt_metrics {
 #define	RTTTOPRHZ(r)	((r) / (RTM_RTTUNIT / PR_SLOWHZ))
 
 #define	RT_DEFAULT_FIB	0	/* Explicitly mark fib=0 restricted cases */
-extern u_int rt_numfibs;	/* number fo usable routing tables */
-/*
- * XXX kernel function pointer `rt_output' is visible to applications.
- */
-struct mbuf;
+#define	RT_ALL_FIBS	-1	/* Announce event for every fib */
+extern u_int rt_numfibs;	/* number of usable routing tables */
+extern u_int rt_add_addr_allfibs;	/* Announce interfaces to all fibs */
 
 /*
  * We distinguish between routes to hosts and routes to networks,
@@ -113,6 +102,8 @@ struct mbuf;
 #include <net/radix_mpath.h>
 #endif
 #endif
+
+#if defined(_KERNEL) || defined(_WANT_RTENTRY)
 struct rtentry {
 	struct	radix_node rt_nodes[2];	/* tree glue, and other values */
 	/*
@@ -123,33 +114,19 @@ struct rtentry {
 #define	rt_key(r)	(*((struct sockaddr **)(&(r)->rt_nodes->rn_key)))
 #define	rt_mask(r)	(*((struct sockaddr **)(&(r)->rt_nodes->rn_mask)))
 	struct	sockaddr *rt_gateway;	/* value */
-	int	rt_flags;		/* up/down?, host/net */
-	int	rt_refcnt;		/* # held references */
 	struct	ifnet *rt_ifp;		/* the answer: interface to use */
 	struct	ifaddr *rt_ifa;		/* the answer: interface address to use */
-	struct	rt_metrics_lite rt_rmx;	/* metrics used by rx'ing protocols */
-	u_int	rt_fibnum;		/* which FIB */
-#ifdef _KERNEL
-	/* XXX ugly, user apps use this definition but don't have a mtx def */
-	struct	mtx rt_mtx;		/* mutex for routing entry */
-#endif
+	int		rt_flags;	/* up/down?, host/net */
+	int		rt_refcnt;	/* # held references */
+	u_int		rt_fibnum;	/* which FIB */
+	u_long		rt_mtu;		/* MTU for this path */
+	u_long		rt_weight;	/* absolute weight */ 
+	u_long		rt_expire;	/* lifetime for route, e.g. redirect */
+#define	rt_endzero	rt_pksent
+	counter_u64_t	rt_pksent;	/* packets sent using this route */
+	struct mtx	rt_mtx;		/* mutex for routing entry */
 };
-
-/*
- * Following structure necessary for 4.3 compatibility;
- * We should eventually move it to a compat file.
- */
-struct ortentry {
-	u_long	rt_hash;		/* to speed lookups */
-	struct	sockaddr rt_dst;	/* key */
-	struct	sockaddr rt_gateway;	/* value */
-	short	rt_flags;		/* up/down?, host/net */
-	short	rt_refcnt;		/* # held references */
-	u_long	rt_use;			/* raw # packets forwarded */
-	struct	ifnet *rt_ifp;		/* the answer: interface to use */
-};
-
-#define rt_use rt_rmx.rmx_pksent
+#endif /* _KERNEL || _WANT_RTENTRY */
 
 #define	RTF_UP		0x1		/* route usable */
 #define	RTF_GATEWAY	0x2		/* destination is a gateway */
@@ -168,12 +145,7 @@ struct ortentry {
 #define RTF_BLACKHOLE	0x1000		/* just discard pkts (during updates) */
 #define RTF_PROTO2	0x4000		/* protocol specific routing flag */
 #define RTF_PROTO1	0x8000		/* protocol specific routing flag */
-
-/* XXX: temporary to stay API/ABI compatible with userland */
-#ifndef _KERNEL
-#define RTF_PRCLONING	0x10000		/* unused, for compatibility */
-#endif
-
+/*			0x10000		   unused, was RTF_PRCLONING */
 /*			0x20000		   unused, was RTF_WASCLONED */
 #define RTF_PROTO3	0x40000		/* protocol specific routing flag */
 /*			0x80000		   unused */
@@ -185,6 +157,9 @@ struct ortentry {
 #define	RTF_STICKY	 0x10000000	/* always route dst->src */
 
 #define	RTF_RNH_LOCKED	 0x40000000	/* radix node head is locked */
+
+#define	RTF_GWFLAG_COMPAT 0x80000000	/* a compatibility bit for interacting
+					   with existing routing apps */
 
 /* Mask of RTF flags that are allowed to be modified by RTM_CHANGE. */
 #define RTF_FMASK	\
@@ -232,8 +207,8 @@ struct rt_msghdr {
 #define RTM_REDIRECT	0x6	/* Told to use different route */
 #define RTM_MISS	0x7	/* Lookup failed on this address */
 #define RTM_LOCK	0x8	/* fix specified metrics */
-#define RTM_OLDADD	0x9	/* caused by SIOCADDRT */
-#define RTM_OLDDEL	0xa	/* caused by SIOCDELRT */
+		    /*	0x9  */
+		    /*	0xa  */
 #define RTM_RESOLVE	0xb	/* req to resolve dst to LL addr */
 #define RTM_NEWADDR	0xc	/* address being added to iface */
 #define RTM_DELADDR	0xd	/* address being removed from iface */
@@ -312,6 +287,10 @@ struct rt_addrinfo {
 #define	RT_UNLOCK(_rt)		mtx_unlock(&(_rt)->rt_mtx)
 #define	RT_LOCK_DESTROY(_rt)	mtx_destroy(&(_rt)->rt_mtx)
 #define	RT_LOCK_ASSERT(_rt)	mtx_assert(&(_rt)->rt_mtx, MA_OWNED)
+#define	RT_UNLOCK_COND(_rt)	do {				\
+	if (mtx_owned(&(_rt)->rt_mtx))				\
+		mtx_unlock(&(_rt)->rt_mtx);			\
+} while (0)
 
 #define	RT_ADDREF(_rt)	do {					\
 	RT_LOCK_ASSERT(_rt);					\
@@ -366,9 +345,14 @@ void	 rt_missmsg(int, struct rt_addrinfo *, int, int);
 void	 rt_missmsg_fib(int, struct rt_addrinfo *, int, int, int);
 void	 rt_newaddrmsg(int, struct ifaddr *, int, struct rtentry *);
 void	 rt_newaddrmsg_fib(int, struct ifaddr *, int, struct rtentry *, int);
+int	 rt_addrmsg(int, struct ifaddr *, int);
+int	 rt_routemsg(int, struct ifnet *ifp, int, struct rtentry *, int);
 void	 rt_newmaddrmsg(int, struct ifmultiaddr *);
 int	 rt_setgate(struct rtentry *, struct sockaddr *, struct sockaddr *);
 void 	 rt_maskedcopy(struct sockaddr *, struct sockaddr *, struct sockaddr *);
+
+int	rtsock_addrmsg(int, struct ifaddr *, int);
+int	rtsock_routemsg(int, struct ifnet *ifp, int, struct rtentry *, int);
 
 /*
  * Note the following locking behavior:
@@ -398,11 +382,6 @@ void	 rtredirect(struct sockaddr *, struct sockaddr *,
 	    struct sockaddr *, int, struct sockaddr *);
 int	 rtrequest(int, struct sockaddr *,
 	    struct sockaddr *, struct sockaddr *, int, struct rtentry **);
-
-#ifndef BURN_BRIDGES
-/* defaults to "all" FIBs */
-int	 rtinit_fib(struct ifaddr *, int, int);
-#endif
 
 /* XXX MRT NEW VERSIONS THAT USE FIBs
  * For now the protocol indepedent versions are the same as the AF_INET ones

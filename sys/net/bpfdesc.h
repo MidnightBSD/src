@@ -34,7 +34,7 @@
  *
  *      @(#)bpfdesc.h	8.1 (Berkeley) 6/10/93
  *
- * $FreeBSD: stable/9/sys/net/bpfdesc.h 247629 2013-03-02 15:11:20Z melifaro $
+ * $FreeBSD: stable/10/sys/net/bpfdesc.h 244090 2012-12-10 16:14:44Z ghelmer $
  */
 
 #ifndef _NET_BPFDESC_H_
@@ -64,6 +64,7 @@ struct bpf_d {
 	caddr_t		bd_sbuf;	/* store slot */
 	caddr_t		bd_hbuf;	/* hold slot */
 	caddr_t		bd_fbuf;	/* free slot */
+	int		bd_hbuf_in_use;	/* don't rotate buffers */
 	int 		bd_slen;	/* current length of store buffer */
 	int 		bd_hlen;	/* current length of hold buffer */
 

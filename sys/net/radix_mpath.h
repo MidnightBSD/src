@@ -33,7 +33,7 @@
  * BE LIABLE FOR ANY INFRINGEMENT OF ANY OTHERS' INTELLECTUAL
  * PROPERTIES.
  */
-/* $FreeBSD: stable/9/sys/net/radix_mpath.h 179426 2008-05-30 09:34:35Z qingli $ */
+/* $FreeBSD: stable/10/sys/net/radix_mpath.h 179426 2008-05-30 09:34:35Z qingli $ */
 
 #ifndef _NET_RADIX_MPATH_H_
 #define	_NET_RADIX_MPATH_H_

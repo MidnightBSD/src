@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)radix.h	8.2 (Berkeley) 10/31/94
- * $FreeBSD: stable/9/sys/net/radix.h 225698 2011-09-20 20:27:26Z kmacy $
+ * $FreeBSD: stable/10/sys/net/radix.h 265708 2014-05-08 20:27:06Z melifaro $
  */
 
 #ifndef _RADIX_H_
@@ -120,9 +120,9 @@ struct radix_node_head {
 		(void *v, void *mask, struct radix_node_head *head);
 	struct	radix_node *(*rnh_delpkt)	/* remove based on packet hdr */
 		(void *v, void *mask, struct radix_node_head *head);
-	struct	radix_node *(*rnh_matchaddr)	/* locate based on sockaddr */
+	struct	radix_node *(*rnh_matchaddr)	/* longest match for sockaddr */
 		(void *v, struct radix_node_head *head);
-	struct	radix_node *(*rnh_lookup)	/* locate based on sockaddr */
+	struct	radix_node *(*rnh_lookup)	/*exact match for sockaddr*/
 		(void *v, void *mask, struct radix_node_head *head);
 	struct	radix_node *(*rnh_matchpkt)	/* locate based on packet hdr */
 		(void *v, struct radix_node_head *head);
@@ -137,6 +137,7 @@ struct radix_node_head {
 #ifdef _KERNEL
 	struct	rwlock rnh_lock;		/* locks entire radix tree */
 #endif
+	struct	radix_node_head *rnh_masks;	/* Storage for our masks */
 };
 
 #ifndef _KERNEL
@@ -168,6 +169,7 @@ int	 rn_detachhead(void **);
 int	 rn_refines(void *, void *);
 struct radix_node
 	 *rn_addmask(void *, int, int),
+	 *rn_addmask_r(void *, struct radix_node_head *, int, int),
 	 *rn_addroute (void *, void *, struct radix_node_head *,
 			struct radix_node [2]),
 	 *rn_delete(void *, void *, struct radix_node_head *),

@@ -18,7 +18,7 @@
  *
  * From: Version 2.0, Fri Oct  6 20:39:21 MSK 1995
  *
- * $FreeBSD: stable/9/sys/net/if_sppp.h 147256 2005-06-10 16:49:24Z brooks $
+ * $FreeBSD: stable/10/sys/net/if_sppp.h 147256 2005-06-10 16:49:24Z brooks $
  */
 
 #ifndef _NET_IF_SPPP_H_

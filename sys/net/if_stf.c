@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/*	$FreeBSD: stable/9/sys/net/if_stf.c 248743 2013-03-26 18:57:25Z melifaro $	*/
+/*	$FreeBSD: stable/10/sys/net/if_stf.c 275828 2014-12-16 11:53:45Z ae $	*/
 /*	$KAME: if_stf.c,v 1.73 2001/12/03 11:08:30 keiichi Exp $	*/
 
 /*-
@@ -133,7 +133,6 @@ TUNABLE_INT("net.link.stf.permit_rfc1918", &stf_permit_rfc1918);
 SYSCTL_INT(_net_link_stf, OID_AUTO, permit_rfc1918, CTLFLAG_RW | CTLFLAG_TUN,
     &stf_permit_rfc1918, 0, "Permit the use of private IPv4 addresses");
 
-#define STFNAME		"stf"
 #define STFUNIT		0
 
 #define IN6_IS_ADDR_6TO4(x)	(ntohs((x)->s6_addr16[0]) == 0x2002)
@@ -142,7 +141,7 @@ SYSCTL_INT(_net_link_stf, OID_AUTO, permit_rfc1918, CTLFLAG_RW | CTLFLAG_TUN,
  * XXX: Return a pointer with 16-bit aligned.  Don't cast it to
  * struct in_addr *; use bcopy() instead.
  */
-#define GET_V4(x)	((caddr_t)(&(x)->s6_addr16[1]))
+#define GET_V4(x)	(&(x)->s6_addr16[1])
 
 struct stf_softc {
 	struct ifnet	*sc_ifp;
@@ -157,11 +156,13 @@ struct stf_softc {
 };
 #define STF2IFP(sc)	((sc)->sc_ifp)
 
+static const char stfname[] = "stf";
+
 /*
  * Note that mutable fields in the softc are not currently locked.
  * We do lock sc_ro in stf_output though.
  */
-static MALLOC_DEFINE(M_STF, STFNAME, "6to4 Tunnel Interface");
+static MALLOC_DEFINE(M_STF, stfname, "6to4 Tunnel Interface");
 static const int ip_stf_ttl = 40;
 
 extern  struct domain inetdomain;
@@ -181,7 +182,7 @@ static char *stfnames[] = {"stf0", "stf", "6to4", NULL};
 static int stfmodevent(module_t, int, void *);
 static int stf_encapcheck(const struct mbuf *, int, int, void *);
 static struct in6_ifaddr *stf_getsrcifa6(struct ifnet *);
-static int stf_output(struct ifnet *, struct mbuf *, struct sockaddr *,
+static int stf_output(struct ifnet *, struct mbuf *, const struct sockaddr *,
 	struct route *);
 static int isrfc1918addr(struct in_addr *);
 static int stf_checkaddr4(struct stf_softc *, struct in_addr *,
@@ -194,8 +195,7 @@ static int stf_ioctl(struct ifnet *, u_long, caddr_t);
 static int stf_clone_match(struct if_clone *, const char *);
 static int stf_clone_create(struct if_clone *, char *, size_t, caddr_t);
 static int stf_clone_destroy(struct if_clone *, struct ifnet *);
-struct if_clone stf_cloner = IFC_CLONE_INITIALIZER(STFNAME, NULL, 0,
-    NULL, stf_clone_match, stf_clone_create, stf_clone_destroy);
+static struct if_clone *stf_cloner;
 
 static int
 stf_clone_match(struct if_clone *ifc, const char *name)
@@ -242,7 +242,7 @@ stf_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 	 * we don't conform to the default naming convention for interfaces.
 	 */
 	strlcpy(ifp->if_xname, name, IFNAMSIZ);
-	ifp->if_dname = ifc->ifc_name;
+	ifp->if_dname = stfname;
 	ifp->if_dunit = IF_DUNIT_NONE;
 
 	mtx_init(&(sc)->sc_ro_mtx, "stf ro", NULL, MTX_DEF);
@@ -292,10 +292,11 @@ stfmodevent(mod, type, data)
 
 	switch (type) {
 	case MOD_LOAD:
-		if_clone_attach(&stf_cloner);
+		stf_cloner = if_clone_advanced(stfname, 0, stf_clone_match,
+		    stf_clone_create, stf_clone_destroy);
 		break;
 	case MOD_UNLOAD:
-		if_clone_detach(&stf_cloner);
+		if_clone_detach(stf_cloner);
 		break;
 	default:
 		return (EOPNOTSUPP);
@@ -413,23 +414,19 @@ stf_getsrcifa6(ifp)
 }
 
 static int
-stf_output(ifp, m, dst, ro)
-	struct ifnet *ifp;
-	struct mbuf *m;
-	struct sockaddr *dst;
-	struct route *ro;
+stf_output(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
+	struct route *ro)
 {
 	struct stf_softc *sc;
-	struct sockaddr_in6 *dst6;
+	const struct sockaddr_in6 *dst6;
 	struct route *cached_route;
 	struct in_addr in4;
-	caddr_t ptr;
+	const void *ptr;
 	struct sockaddr_in *dst4;
 	u_int8_t tos;
 	struct ip *ip;
 	struct ip6_hdr *ip6;
 	struct in6_ifaddr *ia6;
-	u_int32_t af;
 	int error;
 
 #ifdef MAC
@@ -441,7 +438,7 @@ stf_output(ifp, m, dst, ro)
 #endif
 
 	sc = ifp->if_softc;
-	dst6 = (struct sockaddr_in6 *)dst;
+	dst6 = (const struct sockaddr_in6 *)dst;
 
 	/* just in case */
 	if ((ifp->if_flags & IFF_UP) == 0) {
@@ -474,15 +471,6 @@ stf_output(ifp, m, dst, ro)
 	tos = (ntohl(ip6->ip6_flow) >> 20) & 0xff;
 
 	/*
-	 * BPF writes need to be handled specially.
-	 * This is a null operation, nothing here checks dst->sa_family.
-	 */
-	if (dst->sa_family == AF_UNSPEC) {
-		bcopy(dst->sa_data, &af, sizeof(af));
-		dst->sa_family = af;
-	}
-
-	/*
 	 * Pickup the right outer dst addr from the list of candidates.
 	 * ip6_dst has priority as it may be able to give us shorter IPv4 hops.
 	 */
@@ -507,13 +495,11 @@ stf_output(ifp, m, dst, ro)
 		 * will only read from the mbuf (i.e., it won't
 		 * try to free it or keep a pointer a to it).
 		 */
-		af = AF_INET6;
+		u_int af = AF_INET6;
 		bpf_mtap2(ifp->if_bpf, &af, sizeof(af), m);
 	}
 
-	M_PREPEND(m, sizeof(struct ip), M_DONTWAIT);
-	if (m && m->m_len < sizeof(struct ip))
-		m = m_pullup(m, sizeof(struct ip));
+	M_PREPEND(m, sizeof(struct ip), M_NOWAIT);
 	if (m == NULL) {
 		ifa_free(&ia6->ia_ifa);
 		ifp->if_oerrors++;
@@ -529,7 +515,7 @@ stf_output(ifp, m, dst, ro)
 	bcopy(&in4, &ip->ip_dst, sizeof(ip->ip_dst));
 	ip->ip_p = IPPROTO_IPV6;
 	ip->ip_ttl = ip_stf_ttl;
-	ip->ip_len = m->m_pkthdr.len;	/*host order*/
+	ip->ip_len = htons(m->m_pkthdr.len);
 	if (ifp->if_flags & IFF_LINK1)
 		ip_ecn_ingress(ECN_ALLOWED, &ip->ip_tos, &tos);
 	else
@@ -625,10 +611,7 @@ stf_checkaddr4(sc, in, inifp)
 	 * reject packets with broadcast
 	 */
 	IN_IFADDR_RLOCK();
-	for (ia4 = TAILQ_FIRST(&V_in_ifaddrhead);
-	     ia4;
-	     ia4 = TAILQ_NEXT(ia4, ia_link))
-	{
+	TAILQ_FOREACH(ia4, &V_in_ifaddrhead, ia_link) {
 		if ((ia4->ia_ifa.ifa_ifp->if_flags & IFF_BROADCAST) == 0)
 			continue;
 		if (in->s_addr == ia4->ia_broadaddr.sin_addr.s_addr) {
@@ -800,7 +783,7 @@ stf_rtrequest(cmd, rt, info)
 	struct rt_addrinfo *info;
 {
 	RT_LOCK_ASSERT(rt);
-	rt->rt_rmx.rmx_mtu = rt->rt_ifp->if_mtu;
+	rt->rt_mtu = rt->rt_ifp->if_mtu;
 }
 
 static int

@@ -10,7 +10,7 @@
  */
 
 /* From: zutil.h,v 1.16 1996/07/24 13:41:13 me Exp $ */
-/* $FreeBSD: stable/9/sys/net/zutil.h 204552 2010-03-02 06:58:58Z alfred $ */
+/* $FreeBSD: stable/10/sys/net/zutil.h 204552 2010-03-02 06:58:58Z alfred $ */
 
 #ifndef _Z_UTIL_H
 #define _Z_UTIL_H

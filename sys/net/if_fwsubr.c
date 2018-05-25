@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/net/if_fwsubr.c 249132 2013-04-05 08:22:11Z mav $
+ * $FreeBSD: stable/10/sys/net/if_fwsubr.c 332160 2018-04-07 00:04:28Z brooks $
  */
 
 #include "opt_inet.h"
@@ -76,7 +76,7 @@ struct fw_hwaddr firewire_broadcastaddr = {
 };
 
 static int
-firewire_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
+firewire_output(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
     struct route *ro)
 {
 	struct fw_com *fc = IFP2FWC(ifp);
@@ -230,7 +230,7 @@ firewire_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 		/*
 		 * No fragmentation is necessary.
 		 */
-		M_PREPEND(m, sizeof(uint32_t), M_DONTWAIT);
+		M_PREPEND(m, sizeof(uint32_t), M_NOWAIT);
 		if (!m) {
 			error = ENOBUFS;
 			goto bad;
@@ -262,7 +262,7 @@ firewire_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 				 * Split off the tail segment from the
 				 * datagram, copying our tags over.
 				 */
-				mtail = m_split(m, fsize, M_DONTWAIT);
+				mtail = m_split(m, fsize, M_NOWAIT);
 				m_tag_copy_chain(mtail, m, M_NOWAIT);
 			} else {
 				mtail = 0;
@@ -272,7 +272,7 @@ firewire_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 			 * Add our encapsulation header to this
 			 * fragment and hand it off to the link.
 			 */
-			M_PREPEND(m, 2*sizeof(uint32_t), M_DONTWAIT);
+			M_PREPEND(m, 2*sizeof(uint32_t), M_NOWAIT);
 			if (!m) {
 				error = ENOBUFS;
 				goto bad;
@@ -657,13 +657,8 @@ firewire_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		break;
 
 	case SIOCGIFADDR:
-		{
-			struct sockaddr *sa;
-
-			sa = (struct sockaddr *) & ifr->ifr_data;
-			bcopy(&IFP2FWC(ifp)->fc_hwaddr,
-			    (caddr_t) sa->sa_data, sizeof(struct fw_hwaddr));
-		}
+		bcopy(&IFP2FWC(ifp)->fc_hwaddr, &ifr->ifr_addr.sa_data[0],
+		    sizeof(struct fw_hwaddr));
 		break;
 
 	case SIOCSIFMTU:

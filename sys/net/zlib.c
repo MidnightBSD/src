@@ -11,7 +11,7 @@
  * - added inflateIncomp and deflateOutputPending
  * - allow strm->next_out to be NULL, meaning discard the output
  *
- * $FreeBSD: stable/9/sys/net/zlib.c 149993 2005-09-11 16:13:02Z rodrigc $
+ * $FreeBSD: stable/10/sys/net/zlib.c 245102 2013-01-06 14:59:59Z peter $
  */
 
 /* 
@@ -26,7 +26,14 @@
 #define MY_ZCALLOC
 
 #if defined(__FreeBSD__) && defined(_KERNEL)
-#define inflate	inflate_ppp	/* FreeBSD already has an inflate :-( */
+#define	_tr_init		_zlib104_tr_init
+#define	_tr_align		_zlib104_tr_align
+#define	_tr_tally		_zlib104_tr_tally
+#define	_tr_flush_block		_zlib104_tr_flush_block
+#define	_tr_stored_block	_zlib104_tr_stored_block
+#define	inflate_fast		_zlib104_inflate_fast
+#define	inflate			_zlib104_inflate
+#define	zlibVersion		_zlib104_Version
 #endif
 
 

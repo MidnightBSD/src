@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/net/bpf_buffer.h 247629 2013-03-02 15:11:20Z melifaro $
+ * $FreeBSD: stable/10/sys/net/bpf_buffer.h 235746 2012-05-21 22:19:19Z melifaro $
  */
 
 #ifndef _NET_BPF_BUFFER_H_

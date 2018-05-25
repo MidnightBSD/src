@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net/if_atmsubr.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: stable/10/sys/net/if_atmsubr.c 249925 2013-04-26 12:50:32Z glebius $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -122,7 +122,7 @@ static MALLOC_DEFINE(M_IFATM, "ifatm", "atm interface internals");
  *		ro->ro_rt must also be NULL.
  */
 int
-atm_output(struct ifnet *ifp, struct mbuf *m0, struct sockaddr *dst,
+atm_output(struct ifnet *ifp, struct mbuf *m0, const struct sockaddr *dst,
     struct route *ro)
 {
 	u_int16_t etype = 0;			/* if using LLC/SNAP */
@@ -130,7 +130,7 @@ atm_output(struct ifnet *ifp, struct mbuf *m0, struct sockaddr *dst,
 	struct atm_pseudohdr atmdst, *ad;
 	struct mbuf *m = m0;
 	struct atmllc *atmllc;
-	struct atmllc *llc_hdr = NULL;
+	const struct atmllc *llc_hdr = NULL;
 	u_int32_t atm_flags;
 
 #ifdef MAC
@@ -174,7 +174,7 @@ atm_output(struct ifnet *ifp, struct mbuf *m0, struct sockaddr *dst,
 			 * (atm pseudo header (4) + LLC/SNAP (8))
 			 */
 			bcopy(dst->sa_data, &atmdst, sizeof(atmdst));
-			llc_hdr = (struct atmllc *)(dst->sa_data +
+			llc_hdr = (const struct atmllc *)(dst->sa_data +
 			    sizeof(atmdst));
 			break;
 			
@@ -191,7 +191,7 @@ atm_output(struct ifnet *ifp, struct mbuf *m0, struct sockaddr *dst,
 		atm_flags = ATM_PH_FLAGS(&atmdst);
 		if (atm_flags & ATM_PH_LLCSNAP)
 			sz += 8;	/* sizeof snap == 8 */
-		M_PREPEND(m, sz, M_DONTWAIT);
+		M_PREPEND(m, sz, M_NOWAIT);
 		if (m == 0)
 			senderr(ENOBUFS);
 		ad = mtod(m, struct atm_pseudohdr *);

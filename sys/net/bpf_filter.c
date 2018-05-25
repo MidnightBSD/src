@@ -36,10 +36,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net/bpf_filter.c 224044 2011-07-14 21:06:22Z mp $");
+__FBSDID("$FreeBSD: stable/10/sys/net/bpf_filter.c 264457 2014-04-14 13:30:08Z jmmv $");
 
 #include <sys/param.h>
 
+#if !defined(_KERNEL)
+#include <strings.h>
+#endif
 #if !defined(_KERNEL) || defined(sun)
 #include <netinet/in.h>
 #endif

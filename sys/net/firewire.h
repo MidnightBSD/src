@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/sys/net/firewire.h 194581 2009-06-21 10:29:31Z rdivacky $
+ *	$FreeBSD: stable/10/sys/net/firewire.h 194581 2009-06-21 10:29:31Z rdivacky $
  */
 
 #ifndef _NET_FIREWIRE_H_

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/net/if_ef.c 207554 2010-05-03 07:32:50Z sobomax $
+ * $FreeBSD: stable/10/sys/net/if_ef.c 249925 2013-04-26 12:50:32Z glebius $
  */
 
 #include "opt_inet.h"
@@ -103,7 +103,7 @@ static int efcount;
 
 extern int (*ef_inputp)(struct ifnet*, struct ether_header *eh, struct mbuf *m);
 extern int (*ef_outputp)(struct ifnet *ifp, struct mbuf **mp,
-		struct sockaddr *dst, short *tp, int *hlen);
+		const struct sockaddr *dst, short *tp, int *hlen);
 
 /*
 static void ef_reset (struct ifnet *);
@@ -115,7 +115,7 @@ static int ef_ioctl(struct ifnet *, u_long, caddr_t);
 static void ef_start(struct ifnet *);
 static int ef_input(struct ifnet*, struct ether_header *, struct mbuf *);
 static int ef_output(struct ifnet *ifp, struct mbuf **mp,
-		struct sockaddr *dst, short *tp, int *hlen);
+		const struct sockaddr *dst, short *tp, int *hlen);
 
 static int ef_load(void);
 static int ef_unload(void);
@@ -152,14 +152,10 @@ static int
 ef_detach(struct efnet *sc)
 {
 	struct ifnet *ifp = sc->ef_ifp;
-	int s;
-
-	s = splimp();
 
 	ether_ifdetach(ifp);
 	if_free(ifp);
 
-	splx(s);
 	return 0;
 }
 
@@ -173,11 +169,10 @@ ef_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 {
 	struct efnet *sc = ifp->if_softc;
 	struct ifaddr *ifa = (struct ifaddr*)data;
-	int s, error;
+	int error;
 
 	EFDEBUG("IOCTL %ld for %s\n", cmd, ifp->if_xname);
 	error = 0;
-	s = splimp();
 	switch (cmd) {
 	    case SIOCSIFFLAGS:
 		error = 0;
@@ -194,7 +189,6 @@ ef_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		error = ether_ioctl(ifp, cmd, data);
 		break;
 	}
-	splx(s);
 	return error;
 }
 
@@ -393,8 +387,8 @@ ef_input(struct ifnet *ifp, struct ether_header *eh, struct mbuf *m)
 }
 
 static int
-ef_output(struct ifnet *ifp, struct mbuf **mp, struct sockaddr *dst, short *tp,
-	int *hlen)
+ef_output(struct ifnet *ifp, struct mbuf **mp, const struct sockaddr *dst,
+	short *tp, int *hlen)
 {
 	struct efnet *sc = (struct efnet*)ifp->if_softc;
 	struct mbuf *m = *mp;
@@ -415,7 +409,7 @@ ef_output(struct ifnet *ifp, struct mbuf **mp, struct sockaddr *dst, short *tp,
 		type = htons(m->m_pkthdr.len);
 		break;
 	    case ETHER_FT_8022:
-		M_PREPEND(m, ETHER_HDR_LEN + 3, M_WAIT);
+		M_PREPEND(m, ETHER_HDR_LEN + 3, M_WAITOK);
 		/*
 		 * Ensure that ethernet header and next three bytes
 		 * will fit into single mbuf
@@ -434,7 +428,7 @@ ef_output(struct ifnet *ifp, struct mbuf **mp, struct sockaddr *dst, short *tp,
 		*hlen += 3;
 		break;
 	    case ETHER_FT_SNAP:
-		M_PREPEND(m, 8, M_WAIT);
+		M_PREPEND(m, 8, M_WAITOK);
 		type = htons(m->m_pkthdr.len);
 		cp = mtod(m, u_char *);
 		bcopy("\xAA\xAA\x03\x00\x00\x00\x81\x37", cp, 8);

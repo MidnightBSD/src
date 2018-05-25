@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net/vnet.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: stable/10/sys/net/vnet.c 262734 2014-03-04 14:01:12Z glebius $");
 
 #include "opt_ddb.h"
 #include "opt_kdb.h"
@@ -211,14 +211,14 @@ static TAILQ_HEAD(, vnet_data_free) vnet_data_free_head =
 static struct sx vnet_data_free_lock;
 
 SDT_PROVIDER_DEFINE(vnet);
-SDT_PROBE_DEFINE1(vnet, functions, vnet_alloc, entry, entry, "int");
-SDT_PROBE_DEFINE2(vnet, functions, vnet_alloc, alloc, alloc, "int",
+SDT_PROBE_DEFINE1(vnet, functions, vnet_alloc, entry, "int");
+SDT_PROBE_DEFINE2(vnet, functions, vnet_alloc, alloc, "int",
     "struct vnet *");
-SDT_PROBE_DEFINE2(vnet, functions, vnet_alloc, return, return,
+SDT_PROBE_DEFINE2(vnet, functions, vnet_alloc, return,
     "int", "struct vnet *");
-SDT_PROBE_DEFINE2(vnet, functions, vnet_destroy, entry, entry,
+SDT_PROBE_DEFINE2(vnet, functions, vnet_destroy, entry,
     "int", "struct vnet *");
-SDT_PROBE_DEFINE1(vnet, functions, vnet_destroy, return, entry,
+SDT_PROBE_DEFINE1(vnet, functions, vnet_destroy, return,
     "int");
 
 #ifdef DDB
@@ -463,47 +463,6 @@ vnet_data_copy(void *start, int size)
 		memcpy((void *)((uintptr_t)vnet->vnet_data_base +
 		    (uintptr_t)start), start, size);
 	VNET_LIST_RUNLOCK();
-}
-
-/*
- * Variants on sysctl_handle_foo that know how to handle virtualized global
- * variables: if 'arg1' is a pointer, then we transform it to the local vnet
- * offset.
- */
-int
-vnet_sysctl_handle_int(SYSCTL_HANDLER_ARGS)
-{
-
-	if (arg1 != NULL)
-		arg1 = (void *)(curvnet->vnet_data_base + (uintptr_t)arg1);
-	return (sysctl_handle_int(oidp, arg1, arg2, req));
-}
-
-int
-vnet_sysctl_handle_opaque(SYSCTL_HANDLER_ARGS)
-{
-
-	if (arg1 != NULL)
-		arg1 = (void *)(curvnet->vnet_data_base + (uintptr_t)arg1);
-	return (sysctl_handle_opaque(oidp, arg1, arg2, req));
-}
-
-int
-vnet_sysctl_handle_string(SYSCTL_HANDLER_ARGS)
-{
-
-	if (arg1 != NULL)
-		arg1 = (void *)(curvnet->vnet_data_base + (uintptr_t)arg1);
-	return (sysctl_handle_string(oidp, arg1, arg2, req));
-}
-
-int
-vnet_sysctl_handle_uint(SYSCTL_HANDLER_ARGS)
-{
-
-	if (arg1 != NULL)
-		arg1 = (void *)(curvnet->vnet_data_base + (uintptr_t)arg1);
-	return (sysctl_handle_int(oidp, arg1, arg2, req));
 }
 
 /*

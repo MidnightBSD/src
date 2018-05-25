@@ -49,7 +49,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net/if_epair.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: stable/10/sys/net/if_epair.c 287594 2015-09-09 08:52:39Z hrs $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -72,8 +72,6 @@ __FBSDID("$FreeBSD: stable/9/sys/net/if_epair.c 248085 2013-03-09 02:36:32Z mari
 #include <net/if_types.h>
 #include <net/netisr.h>
 #include <net/vnet.h>
-
-#define	EPAIRNAME	"epair"
 
 SYSCTL_DECL(_net_link);
 static SYSCTL_NODE(_net_link, OID_AUTO, epair, CTLFLAG_RW, 0, "epair sysctl");
@@ -101,9 +99,11 @@ static int epair_clone_match(struct if_clone *, const char *);
 static int epair_clone_create(struct if_clone *, char *, size_t, caddr_t);
 static int epair_clone_destroy(struct if_clone *, struct ifnet *);
 
-/* Netisr realted definitions and sysctl. */
+static const char epairname[] = "epair";
+
+/* Netisr related definitions and sysctl. */
 static struct netisr_handler epair_nh = {
-	.nh_name	= EPAIRNAME,
+	.nh_name	= epairname,
 	.nh_proto	= NETISR_EPAIR,
 	.nh_policy	= NETISR_POLICY_CPU,
 	.nh_handler	= epair_nh_sintr,
@@ -169,12 +169,11 @@ STAILQ_HEAD(eid_list, epair_ifp_drain);
 #define	EPAIR_REFCOUNT_ASSERT(a, p)
 #endif
 
-static MALLOC_DEFINE(M_EPAIR, EPAIRNAME,
+static MALLOC_DEFINE(M_EPAIR, epairname,
     "Pair of virtual cross-over connected Ethernet-like interfaces");
 
-static struct if_clone epair_cloner = IFC_CLONE_INITIALIZER(
-    EPAIRNAME, NULL, IF_MAXUNIT,
-    NULL, epair_clone_match, epair_clone_create, epair_clone_destroy);
+static VNET_DEFINE(struct if_clone *, epair_cloner);
+#define	V_epair_cloner	VNET(epair_cloner)
 
 /*
  * DPCPU area and functions.
@@ -693,10 +692,10 @@ epair_clone_match(struct if_clone *ifc, const char *name)
 	 * - epair<n>
 	 * but not the epair<n>[ab] versions.
 	 */
-	if (strncmp(EPAIRNAME, name, sizeof(EPAIRNAME)-1) != 0)
+	if (strncmp(epairname, name, sizeof(epairname)-1) != 0)
 		return (0);
 
-	for (cp = name + sizeof(EPAIRNAME) - 1; *cp != '\0'; cp++) {
+	for (cp = name + sizeof(epairname) - 1; *cp != '\0'; cp++) {
 		if (*cp < '0' || *cp > '9')
 			return (0);
 	}
@@ -715,7 +714,7 @@ epair_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 
 	/*
 	 * We are abusing params to create our second interface.
-	 * Actually we already created it and called if_clone_createif()
+	 * Actually we already created it and called if_clone_create()
 	 * for it to do the official insertion procedure the moment we knew
 	 * it cannot fail anymore. So just do attach it here.
 	 */
@@ -762,9 +761,16 @@ epair_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 		ifc_free_unit(ifc, unit);
 		return (ENOSPC);
 	}
-	*dp = 'a';
+	*dp = 'b';
 	/* Must not change dp so we can replace 'a' by 'b' later. */
 	*(dp+1) = '\0';
+
+	/* Check if 'a' and 'b' interfaces already exist. */ 
+	if (ifunit(name) != NULL)
+		return (EEXIST);
+	*dp = 'a';
+	if (ifunit(name) != NULL)
+		return (EEXIST);
 
 	/* Allocate memory for both [ab] interfaces */
 	sca = malloc(sizeof(struct epair_softc), M_EPAIR, M_WAITOK | M_ZERO);
@@ -803,12 +809,20 @@ epair_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 	    netisr_get_cpuid(sca->ifp->if_index % netisr_get_cpucount());
 	scb->cpuid =
 	    netisr_get_cpuid(scb->ifp->if_index % netisr_get_cpucount());
+
+	/* Initialise pseudo media types. */
+	ifmedia_init(&sca->media, 0, epair_media_change, epair_media_status);
+	ifmedia_add(&sca->media, IFM_ETHER | IFM_10G_T, 0, NULL);
+	ifmedia_set(&sca->media, IFM_ETHER | IFM_10G_T);
+	ifmedia_init(&scb->media, 0, epair_media_change, epair_media_status);
+	ifmedia_add(&scb->media, IFM_ETHER | IFM_10G_T, 0, NULL);
+	ifmedia_set(&scb->media, IFM_ETHER | IFM_10G_T);
 	
 	/* Finish initialization of interface <n>a. */
 	ifp = sca->ifp;
 	ifp->if_softc = sca;
 	strlcpy(ifp->if_xname, name, IFNAMSIZ);
-	ifp->if_dname = ifc->ifc_name;
+	ifp->if_dname = epairname;
 	ifp->if_dunit = unit;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_capabilities = IFCAP_VLAN_MTU;
@@ -826,7 +840,7 @@ epair_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 	sca->if_qflush = ifp->if_qflush;
 	ifp->if_qflush = epair_qflush;
 	ifp->if_transmit = epair_transmit;
-	ifp->if_baudrate = IF_Gbps(10UL);	/* arbitrary maximum */
+	if_initbaudrate(ifp, IF_Gbps(10));	/* arbitrary maximum */
 
 	/* Swap the name and finish initialization of interface <n>b. */
 	*dp = 'b';
@@ -834,7 +848,7 @@ epair_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 	ifp = scb->ifp;
 	ifp->if_softc = scb;
 	strlcpy(ifp->if_xname, name, IFNAMSIZ);
-	ifp->if_dname = ifc->ifc_name;
+	ifp->if_dname = epairname;
 	ifp->if_dunit = unit;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_capabilities = IFCAP_VLAN_MTU;
@@ -844,15 +858,15 @@ epair_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 	ifp->if_init  = epair_init;
 	ifp->if_snd.ifq_maxlen = ifqmaxlen;
 	/* We need to play some tricks here for the second interface. */
-	strlcpy(name, EPAIRNAME, len);
+	strlcpy(name, epairname, len);
 	error = if_clone_create(name, len, (caddr_t)scb);
 	if (error)
-		panic("%s: if_clone_createif() for our 2nd iface failed: %d",
+		panic("%s: if_clone_create() for our 2nd iface failed: %d",
 		    __func__, error);
 	scb->if_qflush = ifp->if_qflush;
 	ifp->if_qflush = epair_qflush;
 	ifp->if_transmit = epair_transmit;
-	ifp->if_baudrate = IF_Gbps(10UL);	/* arbitrary maximum */
+	if_initbaudrate(ifp, IF_Gbps(10));	/* arbitrary maximum */
 
 	/*
 	 * Restore name to <n>a as the ifp for this will go into the
@@ -860,14 +874,6 @@ epair_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 	 */
 	strlcpy(name, sca->ifp->if_xname, len);
 	DPRINTF("name='%s/%db' created sca=%p scb=%p\n", name, unit, sca, scb);
-
-	/* Initialise pseudo media types. */
-	ifmedia_init(&sca->media, 0, epair_media_change, epair_media_status);
-	ifmedia_add(&sca->media, IFM_ETHER | IFM_10G_T, 0, NULL);
-	ifmedia_set(&sca->media, IFM_ETHER | IFM_10G_T);
-	ifmedia_init(&scb->media, 0, epair_media_change, epair_media_status);
-	ifmedia_add(&scb->media, IFM_ETHER | IFM_10G_T, 0, NULL);
-	ifmedia_set(&scb->media, IFM_ETHER | IFM_10G_T);
 
 	/* Tell the world, that we are ready to rock. */
 	sca->ifp->if_drv_flags |= IFF_DRV_RUNNING;
@@ -946,6 +952,25 @@ epair_clone_destroy(struct if_clone *ifc, struct ifnet *ifp)
 	return (0);
 }
 
+static void
+vnet_epair_init(const void *unused __unused)
+{
+
+	V_epair_cloner = if_clone_advanced(epairname, 0,
+	    epair_clone_match, epair_clone_create, epair_clone_destroy);
+}
+VNET_SYSINIT(vnet_epair_init, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_ANY,
+    vnet_epair_init, NULL);
+
+static void
+vnet_epair_uninit(const void *unused __unused)
+{
+
+	if_clone_detach(V_epair_cloner);
+}
+VNET_SYSUNINIT(vnet_epair_uninit, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_ANY,
+    vnet_epair_uninit, NULL);
+
 static int
 epair_modevent(module_t mod, int type, void *data)
 {
@@ -959,16 +984,14 @@ epair_modevent(module_t mod, int type, void *data)
 		if (TUNABLE_INT_FETCH("net.link.epair.netisr_maxqlen", &qlimit))
 		    epair_nh.nh_qlimit = qlimit;
 		netisr_register(&epair_nh);
-		if_clone_attach(&epair_cloner);
 		if (bootverbose)
-			printf("%s initialized.\n", EPAIRNAME);
+			printf("%s initialized.\n", epairname);
 		break;
 	case MOD_UNLOAD:
-		if_clone_detach(&epair_cloner);
 		netisr_unregister(&epair_nh);
 		epair_dpcpu_detach();
 		if (bootverbose)
-			printf("%s unloaded.\n", EPAIRNAME);
+			printf("%s unloaded.\n", epairname);
 		break;
 	default:
 		return (EOPNOTSUPP);

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net/netisr.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: stable/10/sys/net/netisr.c 282832 2015-05-13 08:04:50Z hiren $");
 
 /*
  * netisr is a packet dispatch service, allowing synchronous (directly
@@ -155,25 +155,15 @@ SYSCTL_PROC(_net_isr, OID_AUTO, dispatch, CTLTYPE_STRING | CTLFLAG_RW |
     "netisr dispatch policy");
 
 /*
- * These sysctls were used in previous versions to control and export
- * dispatch policy state.  Now, we provide read-only export via them so that
- * older netstat binaries work.  At some point they can be garbage collected.
- */
-static int	netisr_direct_force;
-SYSCTL_INT(_net_isr, OID_AUTO, direct_force, CTLFLAG_RD,
-    &netisr_direct_force, 0, "compat: force direct dispatch");
-
-static int	netisr_direct;
-SYSCTL_INT(_net_isr, OID_AUTO, direct, CTLFLAG_RD, &netisr_direct, 0,
-    "compat: enable direct dispatch");
-
-/*
  * Allow the administrator to limit the number of threads (CPUs) to use for
  * netisr.  We don't check netisr_maxthreads before creating the thread for
- * CPU 0, so in practice we ignore values <= 1.  This must be set at boot.
- * We will create at most one thread per CPU.
+ * CPU 0. This must be set at boot. We will create at most one thread per CPU.
+ * By default we initialize this to 1 which would assign just 1 cpu (cpu0) and
+ * therefore only 1 workstream. If set to -1, netisr would use all cpus
+ * (mp_ncpus) and therefore would have those many workstreams. One workstream
+ * per thread (CPU).
  */
-static int	netisr_maxthreads = -1;		/* Max number of threads. */
+static int	netisr_maxthreads = 1;		/* Max number of threads. */
 TUNABLE_INT("net.isr.maxthreads", &netisr_maxthreads);
 SYSCTL_INT(_net_isr, OID_AUTO, maxthreads, CTLFLAG_RDTUN,
     &netisr_maxthreads, 0,
@@ -339,32 +329,6 @@ netisr_dispatch_policy_from_str(const char *str, u_int *dispatch_policyp)
 	return (EINVAL);
 }
 
-static void
-netisr_dispatch_policy_compat(void)
-{
-
-	switch (netisr_dispatch_policy) {
-	case NETISR_DISPATCH_DEFERRED:
-		netisr_direct_force = 0;
-		netisr_direct = 0;
-		break;
-
-	case NETISR_DISPATCH_HYBRID:
-		netisr_direct_force = 0;
-		netisr_direct = 1;
-		break;
-
-	case NETISR_DISPATCH_DIRECT:
-		netisr_direct_force = 1;
-		netisr_direct = 1;
-		break;
-
-	default:
-		panic("%s: unknown policy %u", __func__,
-		    netisr_dispatch_policy);
-	}
-}
-
 static int
 sysctl_netisr_dispatch_policy(SYSCTL_HANDLER_ARGS)
 {
@@ -380,10 +344,8 @@ sysctl_netisr_dispatch_policy(SYSCTL_HANDLER_ARGS)
 		    &dispatch_policy);
 		if (error == 0 && dispatch_policy == NETISR_DISPATCH_DEFAULT)
 			error = EINVAL;
-		if (error == 0) {
+		if (error == 0)
 			netisr_dispatch_policy = dispatch_policy;
-			netisr_dispatch_policy_compat();
-		}
 	}
 	return (error);
 }
@@ -728,12 +690,13 @@ netisr_select_cpuid(struct netisr_proto *npp, u_int dispatch_policy,
 	}
 
 	if (policy == NETISR_POLICY_FLOW) {
-		if (!(m->m_flags & M_FLOWID) && npp->np_m2flow != NULL) {
+		if (M_HASHTYPE_GET(m) == M_HASHTYPE_NONE &&
+		    npp->np_m2flow != NULL) {
 			m = npp->np_m2flow(m, source);
 			if (m == NULL)
 				return (NULL);
 		}
-		if (m->m_flags & M_FLOWID) {
+		if (M_HASHTYPE_GET(m) != M_HASHTYPE_NONE) {
 			*cpuidp =
 			    netisr_default_flow2cpu(m->m_pkthdr.flowid);
 			return (m);
@@ -1169,8 +1132,10 @@ netisr_init(void *arg)
 	KASSERT(curcpu == 0, ("%s: not on CPU 0", __func__));
 
 	NETISR_LOCK_INIT();
-	if (netisr_maxthreads < 1)
-		netisr_maxthreads = 1;
+	if (netisr_maxthreads == 0 || netisr_maxthreads < -1 )
+		netisr_maxthreads = 1;		/* default behavior */
+	else if (netisr_maxthreads == -1)
+		netisr_maxthreads = mp_ncpus;	/* use max cpus */
 	if (netisr_maxthreads > mp_ncpus) {
 		printf("netisr_init: forcing maxthreads from %d to %d\n",
 		    netisr_maxthreads, mp_ncpus);
@@ -1200,10 +1165,9 @@ netisr_init(void *arg)
 		    &dispatch_policy);
 		if (error == 0 && dispatch_policy == NETISR_DISPATCH_DEFAULT)
 			error = EINVAL;
-		if (error == 0) {
+		if (error == 0)
 			netisr_dispatch_policy = dispatch_policy;
-			netisr_dispatch_policy_compat();
-		} else
+		else
 			printf(
 			    "%s: invalid dispatch policy %s, using default\n",
 			    __func__, tmp);

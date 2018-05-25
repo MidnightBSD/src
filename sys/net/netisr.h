@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/net/netisr.h 222249 2011-05-24 12:34:19Z rwatson $
+ * $FreeBSD: stable/10/sys/net/netisr.h 222249 2011-05-24 12:34:19Z rwatson $
  */
 
 #ifndef _NET_NETISR_H_

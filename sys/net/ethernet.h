@@ -2,7 +2,7 @@
 /*
  * Fundamental constants relating to ethernet.
  *
- * $FreeBSD: stable/9/sys/net/ethernet.h 191148 2009-04-16 20:30:28Z kmacy $
+ * $FreeBSD: stable/10/sys/net/ethernet.h 321752 2017-07-31 03:49:08Z sephe $
  *
  */
 
@@ -315,6 +315,7 @@ struct ether_addr {
 #define	ETHERTYPE_SLOW		0x8809	/* 802.3ad link aggregation (LACP) */
 #define	ETHERTYPE_PPP		0x880B	/* PPP (obsolete by PPPoE) */
 #define	ETHERTYPE_HITACHI	0x8820	/* Hitachi Cable (Optoelectronic Systems Laboratory) */
+#define ETHERTYPE_TEST		0x8822  /* Network Conformance Testing */
 #define	ETHERTYPE_MPLS		0x8847	/* MPLS Unicast */
 #define	ETHERTYPE_MPLS_MCAST	0x8848	/* MPLS Multicast */
 #define	ETHERTYPE_AXIS		0x8856	/* Axis Communications AB proprietary bootstrap/config */
@@ -376,13 +377,19 @@ extern	void ether_demux(struct ifnet *, struct mbuf *);
 extern	void ether_ifattach(struct ifnet *, const u_int8_t *);
 extern	void ether_ifdetach(struct ifnet *);
 extern	int  ether_ioctl(struct ifnet *, u_long, caddr_t);
-extern	int  ether_output(struct ifnet *,
-		   struct mbuf *, struct sockaddr *, struct route *);
+extern	int  ether_output(struct ifnet *, struct mbuf *,
+	    const struct sockaddr *, struct route *);
 extern	int  ether_output_frame(struct ifnet *, struct mbuf *);
 extern	char *ether_sprintf(const u_int8_t *);
 void	ether_vlan_mtap(struct bpf_if *, struct mbuf *,
 	    void *, u_int);
 struct mbuf  *ether_vlanencap(struct mbuf *, uint16_t);
+
+#ifdef SYS_EVENTHANDLER_H
+/* new ethernet interface attached event */
+typedef void (*ether_ifattach_event_handler_t)(void *, struct ifnet *);
+EVENTHANDLER_DECLARE(ether_ifattach_event, ether_ifattach_event_handler_t);
+#endif
 
 #else /* _KERNEL */
 

@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/net/iso88025.h 194581 2009-06-21 10:29:31Z rdivacky $
+ * $FreeBSD: stable/10/sys/net/iso88025.h 264299 2014-04-09 11:15:50Z glebius $
  *
  * Information gathered from tokenring@freebsd, /sys/net/ethernet.h and
  * the Mach token ring driver.
@@ -163,11 +163,13 @@ struct	iso88025_addr {
 #define	ISO88025_BPF_UNSUPPORTED	0
 #define	ISO88025_BPF_SUPPORTED		1
 
+#ifdef _KERNEL
 void	iso88025_ifattach	(struct ifnet *, const u_int8_t *, int);
 void	iso88025_ifdetach	(struct ifnet *, int);
 int	iso88025_ioctl		(struct ifnet *, u_long, caddr_t );
-int	iso88025_output		(struct ifnet *, struct mbuf *, struct sockaddr *,
-    				 struct route *);
+int	iso88025_output		(struct ifnet *, struct mbuf *,
+				 const struct sockaddr *, struct route *);
 void	iso88025_input		(struct ifnet *, struct mbuf *);
+#endif	/* _KERNEL */
 
-#endif
+#endif	/* !_NET_ISO88025_H_ */

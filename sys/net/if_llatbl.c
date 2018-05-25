@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net/if_llatbl.c 248852 2013-03-28 20:48:40Z emaste $");
+__FBSDID("$FreeBSD: stable/10/sys/net/if_llatbl.c 294500 2016-01-21 14:04:02Z bz $");
 
 #include "opt_ddb.h"
 #include "opt_inet.h"
@@ -63,13 +63,9 @@ __FBSDID("$FreeBSD: stable/9/sys/net/if_llatbl.c 248852 2013-03-28 20:48:40Z ema
 
 MALLOC_DEFINE(M_LLTABLE, "lltable", "link level address tables");
 
-static VNET_DEFINE(SLIST_HEAD(, lltable), lltables);
+static VNET_DEFINE(SLIST_HEAD(, lltable), lltables) =
+    SLIST_HEAD_INITIALIZER(lltables);
 #define	V_lltables	VNET(lltables)
-
-extern void arprequest(struct ifnet *, struct in_addr *, struct in_addr *,
-	u_char *);
-
-static void vnet_lltable_init(void);
 
 struct rwlock lltable_rwlock;
 RW_SYSINIT(lltable_rwlock, &lltable_rwlock, "lltable_rwlock");
@@ -277,10 +273,9 @@ lla_rt_output(struct rt_msghdr *rtm, struct rt_addrinfo *info)
 	u_int laflags = 0, flags = 0;
 	int error = 0;
 
-	if (dl == NULL || dl->sdl_family != AF_LINK) {
-		log(LOG_INFO, "%s: invalid dl\n", __func__);
-		return EINVAL;
-	}
+	KASSERT(dl != NULL && dl->sdl_family == AF_LINK,
+	    ("%s: invalid dl\n", __func__));
+
 	ifp = ifnet_byindex(dl->sdl_index);
 	if (ifp == NULL) {
 		log(LOG_INFO, "%s: invalid ifp (sdl_index %d)\n",
@@ -290,28 +285,8 @@ lla_rt_output(struct rt_msghdr *rtm, struct rt_addrinfo *info)
 
 	switch (rtm->rtm_type) {
 	case RTM_ADD:
-		if (rtm->rtm_flags & RTF_ANNOUNCE) {
+		if (rtm->rtm_flags & RTF_ANNOUNCE)
 			flags |= LLE_PUB;
-#ifdef INET
-			if (dst->sa_family == AF_INET &&
-			    ((struct sockaddr_inarp *)dst)->sin_other != 0) {
-				struct rtentry *rt;
-				((struct sockaddr_inarp *)dst)->sin_other = 0;
-				rt = rtalloc1(dst, 0, 0);
-				if (rt == NULL || !(rt->rt_flags & RTF_HOST)) {
-					log(LOG_INFO, "%s: RTM_ADD publish "
-					    "(proxy only) is invalid\n",
-					    __func__);
-					if (rt)
-						RTFREE_LOCKED(rt);
-					return EINVAL;
-				}
-				RTFREE_LOCKED(rt);
-
-				flags |= LLE_PROXY;
-			}
-#endif
-		}
 		flags |= LLE_CREATE;
 		break;
 
@@ -350,7 +325,7 @@ lla_rt_output(struct rt_msghdr *rtm, struct rt_addrinfo *info)
 			 * LLE_DELETED flag, and reset the expiration timer
 			 */
 			bcopy(LLADDR(dl), &lle->ll_addr, ifp->if_addrlen);
-			lle->la_flags |= (flags & (LLE_PUB | LLE_PROXY));
+			lle->la_flags |= (flags & LLE_PUB);
 			lle->la_flags |= LLE_VALID;
 			lle->la_flags &= ~LLE_DELETED;
 #ifdef INET6
@@ -372,15 +347,12 @@ lla_rt_output(struct rt_msghdr *rtm, struct rt_addrinfo *info)
 			laflags = lle->la_flags;
 			LLE_WUNLOCK(lle);
 #ifdef INET
-			/*  gratuitous ARP */
-			if ((laflags & LLE_PUB) && dst->sa_family == AF_INET) {
+			/* gratuitous ARP */
+			if ((laflags & LLE_PUB) && dst->sa_family == AF_INET)
 				arprequest(ifp,
 				    &((struct sockaddr_in *)dst)->sin_addr,
 				    &((struct sockaddr_in *)dst)->sin_addr,
-				    ((laflags & LLE_PROXY) ?
-					(u_char *)IF_LLADDR(ifp) :
-					(u_char *)LLADDR(dl)));
-			}
+				    (u_char *)LLADDR(dl));
 #endif
 		} else {
 			if (flags & LLE_EXCLUSIVE)
@@ -394,15 +366,6 @@ lla_rt_output(struct rt_msghdr *rtm, struct rt_addrinfo *info)
 
 	return (error);
 }
-
-static void
-vnet_lltable_init()
-{
-
-	SLIST_INIT(&V_lltables);
-}
-VNET_SYSINIT(vnet_lltable_init, SI_SUB_PSEUDO, SI_ORDER_FIRST,
-    vnet_lltable_init, NULL);
 
 #ifdef DDB
 struct llentry_sa {

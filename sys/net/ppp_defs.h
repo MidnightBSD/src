@@ -26,11 +26,13 @@
  * OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS,
  * OR MODIFICATIONS.
  *
- * $FreeBSD: stable/9/sys/net/ppp_defs.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD: stable/10/sys/net/ppp_defs.h 250887 2013-05-21 21:20:10Z ed $
  */
 
 #ifndef _PPP_DEFS_H_
 #define _PPP_DEFS_H_
+
+#include <sys/_types.h>
 
 /*
  * The basic PPP frame.
@@ -84,7 +86,7 @@
 /*
  * Extended asyncmap - allows any character to be escaped.
  */
-typedef u_int32_t	ext_accm[8];
+typedef __uint32_t	ext_accm[8];
 
 /*
  * What to do with network protocol (NP) packets.
@@ -144,8 +146,8 @@ struct ppp_comp_stats {
  * the last NP packet was sent or received.
  */
 struct ppp_idle {
-    time_t xmit_idle;		/* time since last NP packet sent */
-    time_t recv_idle;		/* time since last NP packet received */
+    __time_t xmit_idle;		/* time since last NP packet sent */
+    __time_t recv_idle;		/* time since last NP packet received */
 };
 
 #ifndef __P

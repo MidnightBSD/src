@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)if.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: release/9.2.0/sys/net/if_var.h 252781 2013-07-05 13:48:32Z andre $
+ * $FreeBSD: stable/10/sys/net/if_var.h 318505 2017-05-18 23:41:34Z rpokala $
  */
 
 #ifndef	_NET_IF_VAR_H_
@@ -70,6 +70,7 @@ struct	rt_addrinfo;
 struct	socket;
 struct	ether_header;
 struct	carp_if;
+struct	carp_softc;
 struct  ifvlantrunk;
 struct	route;
 struct	vnet;
@@ -96,9 +97,29 @@ struct	vnet;
 
 TAILQ_HEAD(ifnethead, ifnet);	/* we use TAILQs so that the order of */
 TAILQ_HEAD(ifaddrhead, ifaddr);	/* instantiation is preserved in the list */
-TAILQ_HEAD(ifprefixhead, ifprefix);
 TAILQ_HEAD(ifmultihead, ifmultiaddr);
 TAILQ_HEAD(ifgrouphead, ifg_group);
+
+#ifdef _KERNEL
+VNET_DECLARE(struct pfil_head, link_pfil_hook);	/* packet filter hooks */
+#define	V_link_pfil_hook	VNET(link_pfil_hook)
+#endif /* _KERNEL */
+
+typedef enum {
+	IFCOUNTER_IPACKETS = 0,
+	IFCOUNTER_IERRORS,
+	IFCOUNTER_OPACKETS,
+	IFCOUNTER_OERRORS,
+	IFCOUNTER_COLLISIONS,
+	IFCOUNTER_IBYTES,
+	IFCOUNTER_OBYTES,
+	IFCOUNTER_IMCASTS,
+	IFCOUNTER_OMCASTS,
+	IFCOUNTER_IQDROPS,
+	IFCOUNTER_OQDROPS,
+	IFCOUNTER_NOPROTO,
+	IFCOUNTERS /* Array size. */
+} ift_counter;
 
 /*
  * Structure defining a queue for a network interface.
@@ -110,6 +131,12 @@ struct	ifqueue {
 	int	ifq_maxlen;
 	int	ifq_drops;
 	struct	mtx ifq_mtx;
+};
+
+struct ifnet_hw_tsomax {
+	u_int	tsomaxbytes;	/* TSO total burst length limit in bytes */
+	u_int	tsomaxsegcount;	/* TSO maximum segment count */
+	u_int	tsomaxsegsize;	/* TSO maximum segment size in bytes */
 };
 
 /*
@@ -154,7 +181,7 @@ struct ifnet {
 	int	if_amcount;		/* number of all-multicast requests */
 /* procedure handles */
 	int	(*if_output)		/* output routine (enqueue) */
-		(struct ifnet *, struct mbuf *, struct sockaddr *,
+		(struct ifnet *, struct mbuf *, const struct sockaddr *,
 		     struct route *);
 	void	(*if_input)		/* input routine (from h/w driver) */
 		(struct ifnet *, struct mbuf *);
@@ -184,16 +211,16 @@ struct ifnet {
 	struct	label *if_label;	/* interface MAC label */
 
 	/* these are only used by IPv6 */
-	struct	ifprefixhead if_prefixhead; /* list of prefixes per if */
+	void	*if_unused[2];
 	void	*if_afdata[AF_MAX];
 	int	if_afdata_initialized;
 	struct	rwlock if_afdata_lock;
 	struct	task if_linktask;	/* task for link change events */
-	struct	mtx if_addr_mtx;	/* mutex to protect address lists */
+	struct	rwlock if_addr_lock;	/* lock to protect address lists */
 
 	LIST_ENTRY(ifnet) if_clones;	/* interfaces of a cloner */
 	TAILQ_HEAD(, ifg_list) if_groups; /* linked list of groups per if */
-					/* protected by if_addr_mtx */
+					/* protected by if_addr_lock */
 	void	*if_pf_kif;
 	void	*if_lagg;		/* lagg glue */
 	char	*if_description;	/* interface description */
@@ -201,17 +228,40 @@ struct ifnet {
 	u_char	if_alloctype;		/* if_type at time of allocation */
 
 	/*
+	 * Network adapter TSO limits:
+	 * ===========================
+	 *
+	 * If the "if_hw_tsomax" field is zero the maximum segment
+	 * length limit does not apply. If the "if_hw_tsomaxsegcount"
+	 * or the "if_hw_tsomaxsegsize" field is zero the TSO segment
+	 * count limit does not apply. If all three fields are zero,
+	 * there is no TSO limit.
+	 *
+	 * NOTE: The TSO limits should reflect the values used in the
+	 * BUSDMA tag a network adapter is using to load a mbuf chain
+	 * for transmission. The TCP/IP network stack will subtract
+	 * space for all linklevel and protocol level headers and
+	 * ensure that the full mbuf chain passed to the network
+	 * adapter fits within the given limits.
+	 */
+	u_int	if_hw_tsomax;
+
+	/*
 	 * Spare fields are added so that we can modify sensitive data
 	 * structures without changing the kernel binary interface, and must
 	 * be used with care where binary compatibility is required.
 	 */
 	char	if_cspare[3];
-	u_int	if_hw_tsomax;		/* tso burst length limit, the minmum
-					 * is (IP_MAXPACKET / 8).
-					 * XXXAO: Have to find a better place
-					 * for it eventually. */
-	int	if_ispare[3];
-	void	*if_pspare[8];		/* 1 netmap, 7 TDB */
+	int	if_ispare[2];
+
+	/*
+	 * TSO fields for segment limits. If a field is zero below,
+	 * there is no limit:
+	 */
+	u_int	if_hw_tsomaxsegcount;	/* TSO maximum segment count */
+	u_int	if_hw_tsomaxsegsize;	/* TSO maximum segment size in bytes */
+	void	*if_pspare[7];		/* 1 netmap, 6 TDB */
+	void	*if_hw_addr;		/* hardware link-level address */
 };
 
 typedef void if_init_f_t(void *);
@@ -228,6 +278,7 @@ typedef void if_init_f_t(void *);
 #define	if_metric	if_data.ifi_metric
 #define	if_link_state	if_data.ifi_link_state
 #define	if_baudrate	if_data.ifi_baudrate
+#define	if_baudrate_pf	if_data.ifi_baudrate_pf
 #define	if_hwassist	if_data.ifi_hwassist
 #define	if_ipackets	if_data.ifi_ipackets
 #define	if_ierrors	if_data.ifi_ierrors
@@ -250,18 +301,14 @@ typedef void if_init_f_t(void *);
 /*
  * Locks for address lists on the network interface.
  */
-#define	IF_ADDR_LOCK_INIT(if)	mtx_init(&(if)->if_addr_mtx,		\
-				    "if_addr_mtx", NULL, MTX_DEF)
-#define	IF_ADDR_LOCK_DESTROY(if)	mtx_destroy(&(if)->if_addr_mtx)
-#define	IF_ADDR_WLOCK(if)	mtx_lock(&(if)->if_addr_mtx)
-#define	IF_ADDR_WUNLOCK(if)	mtx_unlock(&(if)->if_addr_mtx)
-#define	IF_ADDR_RLOCK(if)	mtx_lock(&(if)->if_addr_mtx)
-#define	IF_ADDR_RUNLOCK(if)	mtx_unlock(&(if)->if_addr_mtx)
-#define	IF_ADDR_LOCK_ASSERT(if)	mtx_assert(&(if)->if_addr_mtx, MA_OWNED)
-#define	IF_ADDR_WLOCK_ASSERT(if)	mtx_assert(&(if)->if_addr_mtx, MA_OWNED)
-/* XXX: Compat. */
-#define	IF_ADDR_LOCK(if)	IF_ADDR_WLOCK(if)
-#define	IF_ADDR_UNLOCK(if)	IF_ADDR_WUNLOCK(if)
+#define	IF_ADDR_LOCK_INIT(if)	rw_init(&(if)->if_addr_lock, "if_addr_lock")
+#define	IF_ADDR_LOCK_DESTROY(if)	rw_destroy(&(if)->if_addr_lock)
+#define	IF_ADDR_WLOCK(if)	rw_wlock(&(if)->if_addr_lock)
+#define	IF_ADDR_WUNLOCK(if)	rw_wunlock(&(if)->if_addr_lock)
+#define	IF_ADDR_RLOCK(if)	rw_rlock(&(if)->if_addr_lock)
+#define	IF_ADDR_RUNLOCK(if)	rw_runlock(&(if)->if_addr_lock)
+#define	IF_ADDR_LOCK_ASSERT(if)	rw_assert(&(if)->if_addr_lock, RA_LOCKED)
+#define	IF_ADDR_WLOCK_ASSERT(if) rw_assert(&(if)->if_addr_lock, RA_WLOCKED)
 
 /*
  * Function variations on locking macros intended to be used by loadable
@@ -277,7 +324,7 @@ void	if_maddr_runlock(struct ifnet *ifp);	/* if_multiaddrs */
  * Output queues (ifp->if_snd) and slow device input queues (*ifp->if_slowq)
  * are queues of messages stored on ifqueue structures
  * (defined above).  Entries are added to and deleted from these structures
- * by these macros, which should be called with ipl raised to splimp().
+ * by these macros.
  */
 #define IF_LOCK(ifq)		mtx_lock(&(ifq)->ifq_mtx)
 #define IF_UNLOCK(ifq)		mtx_unlock(&(ifq)->ifq_mtx)
@@ -379,6 +426,11 @@ EVENTHANDLER_DECLARE(ifnet_departure_event, ifnet_departure_event_handler_t);
 /* Interface link state change event */
 typedef void (*ifnet_link_event_handler_t)(void *, struct ifnet *, int);
 EVENTHANDLER_DECLARE(ifnet_link_event, ifnet_link_event_handler_t);
+/* Interface up/down event */
+#define IFNET_EVENT_UP		0
+#define IFNET_EVENT_DOWN	1
+typedef void (*ifnet_event_fn)(void *, struct ifnet *ifp, int event);
+EVENTHANDLER_DECLARE(ifnet_event, ifnet_event_fn);
 
 /*
  * interface groups
@@ -594,6 +646,18 @@ do {									\
 } while (0)
 
 #ifdef _KERNEL
+static __inline void
+if_initbaudrate(struct ifnet *ifp, uintmax_t baud)
+{
+
+	ifp->if_baudrate_pf = 0;
+	while (baud > (u_long)(~0UL)) {
+		baud /= 10;
+		ifp->if_baudrate_pf++;
+	}
+	ifp->if_baudrate = baud;
+}
+
 static __inline int
 drbr_enqueue(struct ifnet *ifp, struct buf_ring *br, struct mbuf *m)
 {	
@@ -648,7 +712,7 @@ drbr_peek(struct ifnet *ifp, struct buf_ring *br)
 		return (m);
 	}
 #endif
-	return(buf_ring_peek(br));
+	return(buf_ring_peek_clear_sc(br));
 }
 
 static __inline void
@@ -781,6 +845,7 @@ struct ifaddr {
 	struct	sockaddr *ifa_netmask;	/* used to determine subnet */
 	struct	if_data if_data;	/* not all members are meaningful */
 	struct	ifnet *ifa_ifp;		/* back-pointer to interface */
+	struct	carp_softc *ifa_carp;	/* pointer to CARP data */
 	TAILQ_ENTRY(ifaddr) ifa_link;	/* queue macro glue */
 	void	(*ifa_rtrequest)	/* check or clean routes (+ or -)'d */
 		(int, struct rtentry *, struct rt_addrinfo *);
@@ -805,20 +870,6 @@ void	ifa_free(struct ifaddr *ifa);
 void	ifa_init(struct ifaddr *ifa);
 void	ifa_ref(struct ifaddr *ifa);
 #endif
-
-/*
- * The prefix structure contains information about one prefix
- * of an interface.  They are maintained by the different address families,
- * are allocated and attached when a prefix or an address is set,
- * and are linked together so all prefixes for an interface can be located.
- */
-struct ifprefix {
-	struct	sockaddr *ifpr_prefix;	/* prefix of interface */
-	struct	ifnet *ifpr_ifp;	/* back-pointer to interface */
-	TAILQ_ENTRY(ifprefix) ifpr_list; /* queue macro glue */
-	u_char	ifpr_plen;		/* prefix length in bits */
-	u_char	ifpr_type;		/* protocol dependent prefix type */
-};
 
 /*
  * Multicast address structure.  This is analogous to the ifaddr
@@ -917,7 +968,6 @@ void	if_down(struct ifnet *);
 struct ifmultiaddr *
 	if_findmulti(struct ifnet *, struct sockaddr *);
 void	if_free(struct ifnet *);
-void	if_free_type(struct ifnet *, u_char);
 void	if_initname(struct ifnet *, const char *, int);
 void	if_link_state_change(struct ifnet *, int);
 int	if_printf(struct ifnet *, const char *, ...) __printflike(2, 3);
@@ -925,6 +975,7 @@ void	if_qflush(struct ifnet *);
 void	if_ref(struct ifnet *);
 void	if_rele(struct ifnet *);
 int	if_setlladdr(struct ifnet *, const u_char *, int);
+int	if_gethwaddr(struct ifnet *, struct ifreq *);
 void	if_up(struct ifnet *);
 int	ifioctl(struct socket *, u_long, caddr_t, struct thread *);
 int	ifpromisc(struct ifnet *, int);
@@ -941,11 +992,13 @@ struct	ifaddr *ifa_ifwithaddr(struct sockaddr *);
 int		ifa_ifwithaddr_check(struct sockaddr *);
 struct	ifaddr *ifa_ifwithbroadaddr(struct sockaddr *);
 struct	ifaddr *ifa_ifwithdstaddr(struct sockaddr *);
+struct	ifaddr *ifa_ifwithdstaddr_fib(struct sockaddr *, int);
 struct	ifaddr *ifa_ifwithnet(struct sockaddr *, int);
+struct	ifaddr *ifa_ifwithnet_fib(struct sockaddr *, int, int);
 struct	ifaddr *ifa_ifwithroute(int, struct sockaddr *, struct sockaddr *);
 struct	ifaddr *ifa_ifwithroute_fib(int, struct sockaddr *, struct sockaddr *, u_int);
-
 struct	ifaddr *ifaof_ifpforaddr(struct sockaddr *, struct ifnet *);
+int	ifa_preferred(struct ifaddr *, struct ifaddr *);
 
 int	if_simloop(struct ifnet *ifp, struct mbuf *m, int af, int hlen);
 
@@ -953,6 +1006,8 @@ typedef	void *if_com_alloc_t(u_char type, struct ifnet *ifp);
 typedef	void if_com_free_t(void *com, u_char type);
 void	if_register_com_alloc(u_char type, if_com_alloc_t *a, if_com_free_t *f);
 void	if_deregister_com_alloc(u_char type);
+uint64_t if_get_counter_default(struct ifnet *, ift_counter);
+void	if_inc_counter(struct ifnet *, ift_counter, int64_t);
 
 #define IF_LLADDR(ifp)							\
     LLADDR((struct sockaddr_dl *)((ifp)->if_addr->ifa_addr))
@@ -964,6 +1019,10 @@ typedef	int poll_handler_t(struct ifnet *ifp, enum poll_cmd cmd, int count);
 int    ether_poll_register(poll_handler_t *h, struct ifnet *ifp);
 int    ether_poll_deregister(struct ifnet *ifp);
 #endif /* DEVICE_POLLING */
+
+/* TSO */
+void if_hw_tsomax_common(struct ifnet *, struct ifnet_hw_tsomax *);
+int if_hw_tsomax_update(struct ifnet *, struct ifnet_hw_tsomax *);
 
 #endif /* _KERNEL */
 

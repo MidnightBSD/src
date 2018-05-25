@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)if_loop.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/9/sys/net/if_edsc.c 167896 2007-03-26 09:05:10Z yar $
+ * $FreeBSD: stable/10/sys/net/if_edsc.c 241610 2012-10-16 13:37:54Z glebius $
  */
 
 /*
@@ -52,6 +52,8 @@
 #include <net/if_types.h>	/* IFT_ETHER and friends */
 #include <net/if_var.h>		/* kernel-only part of ifnet(9) */
 
+static const char edscname[] = "edsc";
+
 /*
  * Software configuration of an interface specific to this device type.
  */
@@ -65,9 +67,9 @@ struct edsc_softc {
 };
 
 /*
- * Simple cloning methods.
- * IFC_SIMPLE_DECLARE() expects precisely these names.
+ * Attach to the interface cloning framework.
  */
+static struct if_clone *edsc_cloner;
 static int	edsc_clone_create(struct if_clone *, int, caddr_t);
 static void	edsc_clone_destroy(struct ifnet *);
 
@@ -82,15 +84,7 @@ static void	edsc_start(struct ifnet *ifp);
 /*
  * We'll allocate softc instances from this.
  */
-static		MALLOC_DEFINE(M_EDSC, "edsc", "Ethernet discard interface");
-
-/*
- * Attach to the interface cloning framework under the name of "edsc".
- * The second argument is the number of units to be created from
- * the outset.  It's also the minimum number of units allowed.
- * We don't want any units created as soon as the driver is loaded.
- */
-IFC_SIMPLE_DECLARE(edsc, 0);
+static		MALLOC_DEFINE(M_EDSC, edscname, "Ethernet discard interface");
 
 /*
  * Create an interface instance.
@@ -117,7 +111,7 @@ edsc_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	/*
 	 * Get a name for this particular interface in its ifnet structure.
 	 */
-	if_initname(ifp, ifc->ifc_name, unit);
+	if_initname(ifp, edscname, unit);
 
 	/*
 	 * Typical Ethernet interface flags: we can do broadcast and
@@ -324,8 +318,13 @@ edsc_modevent(module_t mod, int type, void *data)
 	case MOD_LOAD:
 		/*
 		 * Connect to the network interface cloning framework.
+		 * The last argument is the number of units to be created
+		 * from the outset.  It's also the minimum number of units
+		 * allowed.  We don't want any units created as soon as the
+		 * driver is loaded.
 		 */
-		if_clone_attach(&edsc_cloner);
+		edsc_cloner = if_clone_simple(edscname, edsc_clone_create,
+		    edsc_clone_destroy, 0);
 		break;
 
 	case MOD_UNLOAD:
@@ -333,7 +332,7 @@ edsc_modevent(module_t mod, int type, void *data)
 		 * Disconnect from the cloning framework.
 		 * Existing interfaces will be disposed of properly.
 		 */
-		if_clone_detach(&edsc_cloner);
+		if_clone_detach(edsc_cloner);
 		break;
 
 	default:

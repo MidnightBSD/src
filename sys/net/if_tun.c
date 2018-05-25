@@ -14,7 +14,7 @@
  * UCL. This driver is based much more on read/write/poll mode of
  * operation though.
  *
- * $FreeBSD: stable/9/sys/net/if_tun.c 248085 2013-03-09 02:36:32Z marius $
+ * $FreeBSD: stable/10/sys/net/if_tun.c 326692 2017-12-08 15:26:57Z hselasky $
  */
 
 #include "opt_atalk.h"
@@ -100,7 +100,6 @@ struct tun_softc {
 #define TUN2IFP(sc)	((sc)->tun_ifp)
 
 #define TUNDEBUG	if (tundebug) if_printf
-#define	TUNNAME		"tun"
 
 /*
  * All mutable global variables in if_tun are locked using tunmtx, with
@@ -108,7 +107,8 @@ struct tun_softc {
  * which is static after setup.
  */
 static struct mtx tunmtx;
-static MALLOC_DEFINE(M_TUN, TUNNAME, "Tunnel Interface");
+static const char tunname[] = "tun";
+static MALLOC_DEFINE(M_TUN, tunname, "Tunnel Interface");
 static int tundebug = 0;
 static int tundclone = 1;
 static struct clonedevs *tunclones;
@@ -129,14 +129,13 @@ static void	tuncreate(const char *name, struct cdev *dev);
 static int	tunifioctl(struct ifnet *, u_long, caddr_t);
 static void	tuninit(struct ifnet *);
 static int	tunmodevent(module_t, int, void *);
-static int	tunoutput(struct ifnet *, struct mbuf *, struct sockaddr *,
-		    struct route *ro);
+static int	tunoutput(struct ifnet *, struct mbuf *,
+		    const struct sockaddr *, struct route *ro);
 static void	tunstart(struct ifnet *);
 
 static int	tun_clone_create(struct if_clone *, int, caddr_t);
 static void	tun_clone_destroy(struct ifnet *);
-
-IFC_SIMPLE_DECLARE(tun, 0);
+static struct if_clone *tun_cloner;
 
 static d_open_t		tunopen;
 static d_close_t	tunclose;
@@ -166,7 +165,7 @@ static struct filterops tun_write_filterops = {
 
 static struct cdevsw tun_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_PSEUDO | D_NEEDMINOR,
+	.d_flags =	D_NEEDMINOR,
 	.d_open =	tunopen,
 	.d_close =	tunclose,
 	.d_read =	tunread,
@@ -174,7 +173,7 @@ static struct cdevsw tun_cdevsw = {
 	.d_ioctl =	tunioctl,
 	.d_poll =	tunpoll,
 	.d_kqfilter =	tunkqfilter,
-	.d_name =	TUNNAME,
+	.d_name =	tunname,
 };
 
 static int
@@ -188,9 +187,9 @@ tun_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	if (i) {
 		/* No preexisting struct cdev *, create one */
 		dev = make_dev(&tun_cdevsw, unit,
-		    UID_UUCP, GID_DIALER, 0600, "%s%d", ifc->ifc_name, unit);
+		    UID_UUCP, GID_DIALER, 0600, "%s%d", tunname, unit);
 	}
-	tuncreate(ifc->ifc_name, dev);
+	tuncreate(tunname, dev);
 
 	return (0);
 }
@@ -212,9 +211,9 @@ tunclone(void *arg, struct ucred *cred, char *name, int namelen,
 	if (!tundclone || priv_check_cred(cred, PRIV_NET_IFCREATE, 0) != 0)
 		return;
 
-	if (strcmp(name, TUNNAME) == 0) {
+	if (strcmp(name, tunname) == 0) {
 		u = -1;
-	} else if (dev_stdclone(name, NULL, TUNNAME, &u) != 1)
+	} else if (dev_stdclone(name, NULL, tunname, &u) != 1)
 		return;	/* Don't recognise the name */
 	if (u != -1 && u > IF_MAXUNIT)
 		return;	/* Unit number too high */
@@ -247,7 +246,6 @@ tun_destroy(struct tun_softc *tp)
 {
 	struct cdev *dev;
 
-	/* Unlocked read. */
 	mtx_lock(&tp->tun_mtx);
 	if ((tp->tun_flags & TUN_OPEN) != 0)
 		cv_wait_unlock(&tp->tun_cv, &tp->tun_mtx);
@@ -261,6 +259,7 @@ tun_destroy(struct tun_softc *tp)
 	if_free(TUN2IFP(tp));
 	destroy_dev(dev);
 	seldrain(&tp->tun_rsel);
+	knlist_clear(&tp->tun_rsel.si_note, 0);
 	knlist_destroy(&tp->tun_rsel.si_note);
 	mtx_destroy(&tp->tun_mtx);
 	cv_destroy(&tp->tun_cv);
@@ -292,10 +291,11 @@ tunmodevent(module_t mod, int type, void *data)
 		tag = EVENTHANDLER_REGISTER(dev_clone, tunclone, 0, 1000);
 		if (tag == NULL)
 			return (ENOMEM);
-		if_clone_attach(&tun_cloner);
+		tun_cloner = if_clone_simple(tunname, tun_clone_create,
+		    tun_clone_destroy, 0);
 		break;
 	case MOD_UNLOAD:
-		if_clone_detach(&tun_cloner);
+		if_clone_detach(tun_cloner);
 		EVENTHANDLER_DEREGISTER(dev_clone, tag);
 		drain_dev_clone_events();
 
@@ -323,6 +323,7 @@ static moduledata_t tun_mod = {
 };
 
 DECLARE_MODULE(if_tun, tun_mod, SI_SUB_PSEUDO, SI_ORDER_ANY);
+MODULE_VERSION(if_tun, 1);
 
 static void
 tunstart(struct ifnet *ifp)
@@ -361,8 +362,6 @@ tuncreate(const char *name, struct cdev *dev)
 {
 	struct tun_softc *sc;
 	struct ifnet *ifp;
-
-	dev->si_flags &= ~SI_CHEAPCLONE;
 
 	sc = malloc(sizeof(*sc), M_TUN, M_WAITOK | M_ZERO);
 	mtx_init(&sc->tun_mtx, "tun_mtx", NULL, MTX_DEF);
@@ -410,7 +409,7 @@ tunopen(struct cdev *dev, int flag, int mode, struct thread *td)
 	 */
 	tp = dev->si_drv1;
 	if (!tp) {
-		tuncreate(TUNNAME, dev);
+		tuncreate(tunname, dev);
 		tp = dev->si_drv1;
 	}
 
@@ -555,10 +554,6 @@ tunifioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		tuninit(ifp);
 		TUNDEBUG(ifp, "address set\n");
 		break;
-	case SIOCSIFDSTADDR:
-		tuninit(ifp);
-		TUNDEBUG(ifp, "destination address set\n");
-		break;
 	case SIOCSIFMTU:
 		ifp->if_mtu = ifr->ifr_mtu;
 		TUNDEBUG(ifp, "mtu set\n");
@@ -577,7 +572,7 @@ tunifioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
  * tunoutput - queue packets from higher level ready to put out.
  */
 static int
-tunoutput(struct ifnet *ifp, struct mbuf *m0, struct sockaddr *dst,
+tunoutput(struct ifnet *ifp, struct mbuf *m0, const struct sockaddr *dst,
     struct route *ro)
 {
 	struct tun_softc *tp = ifp->if_softc;
@@ -611,20 +606,18 @@ tunoutput(struct ifnet *ifp, struct mbuf *m0, struct sockaddr *dst,
 	}
 
 	/* BPF writes need to be handled specially. */
-	if (dst->sa_family == AF_UNSPEC) {
+	if (dst->sa_family == AF_UNSPEC)
 		bcopy(dst->sa_data, &af, sizeof(af));
-		dst->sa_family = af; 
-	}
-
-	if (bpf_peers_present(ifp->if_bpf)) {
+	else
 		af = dst->sa_family;
+
+	if (bpf_peers_present(ifp->if_bpf))
 		bpf_mtap2(ifp->if_bpf, &af, sizeof(af), m0);
-	}
 
 	/* prepend sockaddr? this may abort if the mbuf allocation fails */
 	if (cached_tun_flags & TUN_LMODE) {
 		/* allocate space for sockaddr */
-		M_PREPEND(m0, dst->sa_len, M_DONTWAIT);
+		M_PREPEND(m0, dst->sa_len, M_NOWAIT);
 
 		/* if allocation failed drop packet */
 		if (m0 == NULL) {
@@ -638,7 +631,7 @@ tunoutput(struct ifnet *ifp, struct mbuf *m0, struct sockaddr *dst,
 
 	if (cached_tun_flags & TUN_IFHEAD) {
 		/* Prepend the address family */
-		M_PREPEND(m0, 4, M_DONTWAIT);
+		M_PREPEND(m0, 4, M_NOWAIT);
 
 		/* if allocation failed drop packet */
 		if (m0 == NULL) {
@@ -646,10 +639,10 @@ tunoutput(struct ifnet *ifp, struct mbuf *m0, struct sockaddr *dst,
 			ifp->if_oerrors++;
 			return (ENOBUFS);
 		} else
-			*(u_int32_t *)m0->m_data = htonl(dst->sa_family);
+			*(u_int32_t *)m0->m_data = htonl(af);
 	} else {
 #ifdef INET
-		if (dst->sa_family != AF_INET)
+		if (af != AF_INET)
 #endif
 		{
 			m_freem(m0);
@@ -685,9 +678,10 @@ tunioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag,
 			if (error)
 				return (error);
 		}
+		if (TUN2IFP(tp)->if_type != tunp->type)
+			return (EPROTOTYPE);
 		mtx_lock(&tp->tun_mtx);
 		TUN2IFP(tp)->if_mtu = tunp->mtu;
-		TUN2IFP(tp)->if_type = tunp->type;
 		TUN2IFP(tp)->if_baudrate = tunp->baudrate;
 		mtx_unlock(&tp->tun_mtx);
 		break;
@@ -874,7 +868,7 @@ tunwrite(struct cdev *dev, struct uio *uio, int flag)
 		return (EIO);
 	}
 
-	if ((m = m_uiotombuf(uio, M_DONTWAIT, 0, 0, M_PKTHDR)) == NULL) {
+	if ((m = m_uiotombuf(uio, M_NOWAIT, 0, 0, M_PKTHDR)) == NULL) {
 		ifp->if_ierrors++;
 		return (ENOBUFS);
 	}
@@ -925,9 +919,8 @@ tunwrite(struct cdev *dev, struct uio *uio, int flag)
 		m_freem(m);
 		return (EAFNOSUPPORT);
 	}
-	/* First chunk of an mbuf contains good junk */
 	if (harvest.point_to_point)
-		random_harvest(m, 16, 3, 0, RANDOM_NET);
+		random_harvest(&(m->m_data), 12, 2, RANDOM_NET_TUN);
 	ifp->if_ibytes += m->m_pkthdr.len;
 	ifp->if_ipackets++;
 	CURVNET_SET(ifp->if_vnet);

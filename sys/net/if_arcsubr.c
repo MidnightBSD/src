@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*	$NetBSD: if_arcsubr.c,v 1.36 2001/06/14 05:44:23 itojun Exp $	*/
-/*	$FreeBSD: stable/9/sys/net/if_arcsubr.c 249132 2013-04-05 08:22:11Z mav $ */
+/*	$FreeBSD: stable/10/sys/net/if_arcsubr.c 332160 2018-04-07 00:04:28Z brooks $ */
 
 /*-
  * Copyright (c) 1994, 1995 Ignatios Souvatzis
@@ -93,8 +93,8 @@ u_int8_t  arcbroadcastaddr = 0;
 #define ARC_LLADDR(ifp)	(*(u_int8_t *)IF_LLADDR(ifp))
 
 #define senderr(e) { error = (e); goto bad;}
-#define SIN(s)	((struct sockaddr_in *)s)
-#define SIPX(s)	((struct sockaddr_ipx *)s)
+#define SIN(s)	((const struct sockaddr_in *)(s))
+#define SIPX(s)	((const struct sockaddr_ipx *)(s))
 
 /*
  * ARCnet output routine.
@@ -102,7 +102,7 @@ u_int8_t  arcbroadcastaddr = 0;
  * Assumes that ifp is actually pointer to arccom structure.
  */
 int
-arc_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
+arc_output(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
     struct route *ro)
 {
 	struct arc_header	*ah;
@@ -187,8 +187,11 @@ arc_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 #endif
 
 	case AF_UNSPEC:
+	    {
+		const struct arc_header *ah;
+
 		loop_copy = -1;
-		ah = (struct arc_header *)dst->sa_data;
+		ah = (const struct arc_header *)dst->sa_data;
 		adst = ah->arc_dhost;
 		atype = ah->arc_type;
 
@@ -208,14 +211,14 @@ arc_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 #endif
 		}
 		break;
-
+	    }
 	default:
 		if_printf(ifp, "can't handle af%d\n", dst->sa_family);
 		senderr(EAFNOSUPPORT);
 	}
 
 	isphds = arc_isphds(atype);
-	M_PREPEND(m, isphds ? ARC_HDRNEWLEN : ARC_HDRLEN, M_DONTWAIT);
+	M_PREPEND(m, isphds ? ARC_HDRNEWLEN : ARC_HDRLEN, M_NOWAIT);
 	if (m == 0)
 		senderr(ENOBUFS);
 	ah = mtod(m, struct arc_header *);
@@ -295,13 +298,13 @@ arc_frag_next(struct ifnet *ifp)
 	/* split out next fragment and return it */
 	if (ac->sflag < ac->fsflag) {
 		/* we CAN'T have short packets here */
-		ac->curr_frag = m_split(m, ARC_MAX_DATA, M_DONTWAIT);
+		ac->curr_frag = m_split(m, ARC_MAX_DATA, M_NOWAIT);
 		if (ac->curr_frag == 0) {
 			m_freem(m);
 			return 0;
 		}
 
-		M_PREPEND(m, ARC_HDRNEWLEN, M_DONTWAIT);
+		M_PREPEND(m, ARC_HDRNEWLEN, M_NOWAIT);
 		if (m == 0) {
 			m_freem(ac->curr_frag);
 			ac->curr_frag = 0;
@@ -320,7 +323,7 @@ arc_frag_next(struct ifnet *ifp)
 	    ARC_MAX_FORBID_LEN - ARC_HDRNEWLEN + 2)) {
 		ac->curr_frag = 0;
 
-		M_PREPEND(m, ARC_HDRNEWLEN_EXC, M_DONTWAIT);
+		M_PREPEND(m, ARC_HDRNEWLEN_EXC, M_NOWAIT);
 		if (m == 0)
 			return 0;
 
@@ -333,7 +336,7 @@ arc_frag_next(struct ifnet *ifp)
 	} else {
 		ac->curr_frag = 0;
 
-		M_PREPEND(m, ARC_HDRNEWLEN, M_DONTWAIT);
+		M_PREPEND(m, ARC_HDRNEWLEN, M_NOWAIT);
 		if (m == 0)
 			return 0;
 
@@ -639,11 +642,7 @@ arc_ifattach(struct ifnet *ifp, u_int8_t lla)
 	ifp->if_resolvemulti = arc_resolvemulti;
 	if (ifp->if_baudrate == 0)
 		ifp->if_baudrate = 2500000;
-#if __FreeBSD_version < 500000
-	ifa = ifnet_addrs[ifp->if_index - 1];
-#else
 	ifa = ifp->if_addr;
-#endif
 	KASSERT(ifa != NULL, ("%s: no lladdr!\n", __func__));
 	sdl = (struct sockaddr_dl *)ifa->ifa_addr;
 	sdl->sdl_type = IFT_ARCNET;
@@ -717,12 +716,7 @@ arc_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		break;
 
 	case SIOCGIFADDR:
-		{
-			struct sockaddr *sa;
-
-			sa = (struct sockaddr *) &ifr->ifr_data;
-			*(u_int8_t *)sa->sa_data = ARC_LLADDR(ifp);
-		}
+		ifr->ifr_addr.sa_data[0] = ARC_LLADDR(ifp);
 		break;
 
 	case SIOCADDMULTI:

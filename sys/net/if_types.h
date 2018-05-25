@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_types.h	8.3 (Berkeley) 4/28/95
- * $FreeBSD: stable/9/sys/net/if_types.h 219819 2011-03-21 09:40:01Z jeff $
+ * $FreeBSD: stable/10/sys/net/if_types.h 228571 2011-12-16 12:16:56Z glebius $
  * $NetBSD: if_types.h,v 1.16 2000/04/19 06:30:53 itojun Exp $
  */
 
@@ -251,6 +251,5 @@
 #define	IFT_ENC		0xf4
 #define	IFT_PFLOG	0xf6
 #define	IFT_PFSYNC	0xf7
-#define	IFT_CARP	0xf8	/* Common Address Redundancy Protocol */
 #define IFT_IPXIP	0xf9	/* IPX over IP tunneling; no longer used. */
 #endif /* !_NET_IF_TYPES_H_ */

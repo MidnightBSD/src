@@ -26,12 +26,10 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/net/if_llatbl.h 240313 2012-09-10 12:25:57Z glebius $");
+__FBSDID("$FreeBSD: stable/10/sys/net/if_llatbl.h 254963 2013-08-27 16:45:00Z alfred $");
 
 #ifndef	_NET_IF_LLATBL_H_
 #define	_NET_IF_LLATBL_H_
-
-#include "opt_ofed.h"
 
 #include <sys/_rwlock.h>
 #include <netinet/in.h>
@@ -76,9 +74,7 @@ struct llentry {
 	union {
 		uint64_t	mac_aligned;
 		uint16_t	mac16[3];
-#ifdef OFED
 		uint8_t		mac8[20];	/* IB needs 20 bytes. */
-#endif
 	} ll_addr;
 
 	/* XXX af-private? */
@@ -173,7 +169,6 @@ MALLOC_DECLARE(M_LLTABLE);
 #define	LLE_STATIC	0x0002	/* entry is static */
 #define	LLE_IFADDR	0x0004	/* entry is interface addr */
 #define	LLE_VALID	0x0008	/* ll_addr is valid */
-#define	LLE_PROXY	0x0010	/* proxy entry ??? */
 #define	LLE_PUB		0x0020	/* publish entry ??? */
 #define	LLE_LINKED	0x0040	/* linked to lookup structure */
 #define	LLE_EXCLUSIVE	0x2000	/* return lle xlocked  */
@@ -206,4 +201,14 @@ lla_lookup(struct lltable *llt, u_int flags, const struct sockaddr *l3addr)
 }
 
 int		lla_rt_output(struct rt_msghdr *, struct rt_addrinfo *);
+
+#include <sys/eventhandler.h>
+enum {
+	LLENTRY_RESOLVED,
+	LLENTRY_TIMEDOUT,
+	LLENTRY_DELETED,
+	LLENTRY_EXPIRED,
+};
+typedef void (*lle_event_fn)(void *, struct llentry *, int);
+EVENTHANDLER_DECLARE(lle_event, lle_event_fn);
 #endif  /* _NET_IF_LLATBL_H_ */
