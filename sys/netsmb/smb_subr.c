@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/netsmb/smb_subr.c,v 1.6 2013/01/17 23:29:41 laffer1 Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/netsmb/smb_subr.c 227650 2011-11-18 03:05:20Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

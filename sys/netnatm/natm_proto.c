@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 Charles D. Cranor and Washington University.
  * All rights reserved.
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/netnatm/natm_proto.c 193219 2009-06-01 10:41:38Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

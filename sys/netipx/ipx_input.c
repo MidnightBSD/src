@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1984, 1985, 1986, 1987, 1993
  *	The Regents of the University of California.
@@ -63,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/netipx/ipx_input.c 263478 2014-03-21 15:15:30Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -454,7 +455,7 @@ ipx_do_route(struct ipx_addr *src, struct route *ro)
 	if (ro->ro_rt == NULL || ro->ro_rt->rt_ifp == NULL) {
 		return (0);
 	}
-	ro->ro_rt->rt_use++;
+	counter_u64_add(ro->ro_rt->rt_pksent, 1);
 	return (1);
 }
 

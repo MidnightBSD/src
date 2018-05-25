@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1984, 1985, 1986, 1987, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -60,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/netipx/ipx_outputfl.c 263478 2014-03-21 15:15:30Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -129,7 +130,7 @@ ipx_outputfl(struct mbuf *m0, struct route *ro, int flags)
 		error = ENETUNREACH;
 		goto bad;
 	}
-	ro->ro_rt->rt_use++;
+	counter_u64_add(ro->ro_rt->rt_pksent, 1);
 	if (ro->ro_rt->rt_flags & (RTF_GATEWAY|RTF_HOST))
 		dst = (struct sockaddr_ipx *)ro->ro_rt->rt_gateway;
 gotif:
@@ -270,7 +271,7 @@ ipx_output_type20(struct mbuf *m)
 			if(ipx->ipx_sum != 0xffff)
 				ipx->ipx_sum = ipx_cksum(m, ntohs(ipx->ipx_len));
 
-			m1 = m_copym(m, 0, M_COPYALL, M_DONTWAIT);
+			m1 = m_copym(m, 0, M_COPYALL, M_NOWAIT);
 			if(m1) {
 				error = (*ifp->if_output)(ifp, m1,
 					(struct sockaddr *)&dst, NULL);

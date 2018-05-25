@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1984, 1985, 1986, 1987, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -58,7 +59,7 @@
  *
  *	@(#)spx_debug.h
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/netipx/spx_debug.h 171656 2007-07-30 11:06:42Z des $
  */
 
 #ifndef _NETIPX_SPX_DEBUG_H_

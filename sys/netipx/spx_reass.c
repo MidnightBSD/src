@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1984, 1985, 1986, 1987, 1993
  *	The Regents of the University of California.
@@ -63,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/netipx/spx_reass.c 243882 2012-12-05 08:04:20Z glebius $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -399,7 +400,7 @@ present:
 				spx_newchecks[4]++;
 				if (dt != cb->s_rhdr.spx_dt) {
 					struct mbuf *mm =
-					   m_getclr(M_DONTWAIT, MT_CONTROL);
+					   m_getclr(M_NOWAIT, MT_CONTROL);
 					spx_newchecks[0]++;
 					if (mm != NULL) {
 						u_short *s =

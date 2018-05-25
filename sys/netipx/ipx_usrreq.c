@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1984, 1985, 1986, 1987, 1993
  *	The Regents of the University of California.
@@ -63,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/netipx/ipx_usrreq.c 243882 2012-12-05 08:04:20Z glebius $");
 
 #include "opt_ipx.h"
 
@@ -257,7 +258,7 @@ ipx_output(struct ipxpcb *ipxp, struct mbuf *m0)
 			(m->m_len + m->m_data < &m->m_dat[MLEN])) {
 			mtod(m, char*)[m->m_len++] = 0;
 		} else {
-			struct mbuf *m1 = m_get(M_DONTWAIT, MT_DATA);
+			struct mbuf *m1 = m_get(M_NOWAIT, MT_DATA);
 
 			if (m1 == NULL) {
 				m_freem(m0);
@@ -278,7 +279,7 @@ ipx_output(struct ipxpcb *ipxp, struct mbuf *m0)
 	if (ipxp->ipxp_flags & IPXP_RAWOUT) {
 		ipx = mtod(m, struct ipx *);
 	} else {
-		M_PREPEND(m, sizeof(struct ipx), M_DONTWAIT);
+		M_PREPEND(m, sizeof(struct ipx), M_NOWAIT);
 		if (m == NULL)
 			return (ENOBUFS);
 		ipx = mtod(m, struct ipx *);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1984, 1985, 1986, 1987, 1993
  *	The Regents of the University of California.
@@ -62,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/netipx/ipx.c 229621 2012-01-05 19:00:36Z jhb $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/netsmb/smb_iod.c 291655 2015-12-02 21:48:34Z rmacklem $");
  
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -87,8 +88,6 @@ smb_iod_invrq(struct smbiod *iod)
 	 */
 	SMB_IOD_RQLOCK(iod);
 	TAILQ_FOREACH(rqp, &iod->iod_rqlist, sr_link) {
-		if (rqp->sr_flags & SMBR_INTERNAL)
-			SMBRQ_SUNLOCK(rqp);
 		rqp->sr_flags |= SMBR_RESTART;
 		smb_iod_rqprocessed(rqp, ENOTCONN);
 	}
@@ -255,7 +254,7 @@ smb_iod_sendrq(struct smbiod *iod, struct smb_rq *rqp)
 	}
 	SMBSDEBUG("M:%04x, P:%04x, U:%04x, T:%04x\n", rqp->sr_mid, 0, 0, 0);
 	m_dumpm(rqp->sr_rq.mb_top);
-	m = m_copym(rqp->sr_rq.mb_top, 0, M_COPYALL, M_WAIT);
+	m = m_copym(rqp->sr_rq.mb_top, 0, M_COPYALL, M_WAITOK);
 	error = rqp->sr_lerror = SMB_TRAN_SEND(vcp, m, td);
 	if (error == 0) {
 		getnanotime(&rqp->sr_timesent);
@@ -661,6 +660,11 @@ smb_iod_thread(void *arg)
 			break;
 		tsleep(&iod->iod_flags, PWAIT, "90idle", iod->iod_sleeptimo);
 	}
+
+	/* We can now safely destroy the mutexes and free the iod structure. */
+	smb_sl_destroy(&iod->iod_rqlock);
+	smb_sl_destroy(&iod->iod_evlock);
+	free(iod, M_SMBIOD);
 	mtx_unlock(&Giant);
 	kproc_exit(0);
 }
@@ -687,6 +691,9 @@ smb_iod_create(struct smb_vc *vcp)
 	    RFNOWAIT, 0, "smbiod%d", iod->iod_id);
 	if (error) {
 		SMBERROR("can't start smbiod: %d", error);
+		vcp->vc_iod = NULL;
+		smb_sl_destroy(&iod->iod_rqlock);
+		smb_sl_destroy(&iod->iod_evlock);
 		free(iod, M_SMBIOD);
 		return error;
 	}
@@ -697,9 +704,6 @@ int
 smb_iod_destroy(struct smbiod *iod)
 {
 	smb_iod_request(iod, SMBIOD_EV_SHUTDOWN | SMBIOD_EV_SYNC, NULL);
-	smb_sl_destroy(&iod->iod_rqlock);
-	smb_sl_destroy(&iod->iod_evlock);
-	free(iod, M_SMBIOD);
 	return 0;
 }
 

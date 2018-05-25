@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -58,7 +59,7 @@
  *
  *	@(#)spx_timer.h
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/netipx/spx_timer.h 165899 2007-01-08 22:14:00Z rwatson $
  */
 
 #ifndef _NETIPX_SPX_TIMER_H_

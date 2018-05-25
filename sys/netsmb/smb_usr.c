@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/netsmb/smb_usr.c 242386 2012-10-31 03:34:07Z davide $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -127,8 +128,8 @@ smb_usr_lookup(struct smbioc_lookup *dp, struct smb_cred *scred,
 	struct smb_vc **vcpp, struct smb_share **sspp)
 {
 	struct smb_vc *vcp = NULL;
-	struct smb_vcspec vspec;
-	struct smb_sharespec sspec, *sspecp = NULL;
+	struct smb_vcspec vspec;			/* XXX */
+	struct smb_sharespec sspec, *sspecp = NULL;	/* XXX */
 	int error;
 
 	if (dp->ioc_level < SMBL_VC || dp->ioc_level > SMBL_SHARE)
@@ -212,7 +213,7 @@ int
 smb_usr_simplerequest(struct smb_share *ssp, struct smbioc_rq *dp,
 	struct smb_cred *scred)
 {
-	struct smb_rq rq, *rqp = &rq;
+	struct smb_rq *rqp;
 	struct mbchain *mbp;
 	struct mdchain *mdp;
 	u_int8_t wc;
@@ -231,9 +232,12 @@ smb_usr_simplerequest(struct smb_share *ssp, struct smbioc_rq *dp,
 	    case SMB_COM_TREE_CONNECT_ANDX:
 		return EPERM;
 	}
+	rqp = malloc(sizeof(struct smb_rq), M_SMBTEMP, M_WAITOK);
 	error = smb_rq_init(rqp, SSTOCP(ssp), dp->ioc_cmd, scred);
-	if (error)
+	if (error) {
+		free(rqp, M_SMBTEMP);
 		return error;
+	}
 	mbp = &rqp->sr_rq;
 	smb_rq_wstart(rqp);
 	error = mb_put_mem(mbp, dp->ioc_twords, dp->ioc_twc * 2, MB_MUSER);
@@ -271,6 +275,7 @@ bad:
 	dp->ioc_serror = rqp->sr_serror;
 	dp->ioc_error = rqp->sr_error;
 	smb_rq_done(rqp);
+	free(rqp, M_SMBTEMP);
 	return error;
 
 }
@@ -292,15 +297,18 @@ int
 smb_usr_t2request(struct smb_share *ssp, struct smbioc_t2rq *dp,
 	struct smb_cred *scred)
 {
-	struct smb_t2rq t2, *t2p = &t2;
+	struct smb_t2rq *t2p;
 	struct mdchain *mdp;
 	int error, len;
 
 	if (dp->ioc_setupcnt > 3)
 		return EINVAL;
+	t2p = malloc(sizeof(struct smb_t2rq), M_SMBTEMP, M_WAITOK);
 	error = smb_t2_init(t2p, SSTOCP(ssp), dp->ioc_setup[0], scred);
-	if (error)
+	if (error) {
+		free(t2p, M_SMBTEMP);
 		return error;
+	}
 	len = t2p->t2_setupcount = dp->ioc_setupcnt;
 	if (len > 1)
 		t2p->t2_setupdata = dp->ioc_setup; 
@@ -351,5 +359,6 @@ bad:
 	if (t2p->t_name)
 		smb_strfree(t2p->t_name);
 	smb_t2_done(t2p);
+	free(t2p, M_SMBTEMP);
 	return error;
 }

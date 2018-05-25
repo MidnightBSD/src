@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 Charles D. Cranor and Washington University.
  * All rights reserved.
@@ -29,7 +30,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $NetBSD: natm.h,v 1.1 1996/07/04 03:20:12 chuck Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/netnatm/natm.h 168776 2007-04-16 12:31:35Z pjd $
  */
 
 /*

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 Robert N. M. Watson
  * All rights reserved.
@@ -60,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/netnatm/natm.c,v 1.5 2013/01/17 23:29:41 laffer1 Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/netnatm/natm.c 255442 2013-09-10 10:05:59Z des $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -292,7 +293,7 @@ natm_usr_send(struct socket *so, int flags, struct mbuf *m,
 	/*
 	 * Send the data.  We must put an atm_pseudohdr on first.
 	 */
-	M_PREPEND(m, sizeof(*aph), M_DONTWAIT);
+	M_PREPEND(m, sizeof(*aph), M_NOWAIT);
 	if (m == NULL) {
 		NATM_UNLOCK();
 		m_freem(control);

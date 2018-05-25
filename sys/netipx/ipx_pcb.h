@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1984, 1985, 1986, 1987, 1993
  *	The Regents of the University of California.
@@ -61,7 +62,7 @@
  *
  *	@(#)ipx_pcb.h
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/netipx/ipx_pcb.h 169463 2007-05-11 10:38:34Z rwatson $
  */
 
 #ifndef _NETIPX_IPX_PCB_H_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1984, 1985, 1986, 1987, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -58,7 +59,7 @@
  *
  *	@(#)ipx_var.h
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/netipx/ipx_var.h 194591 2009-06-21 16:11:40Z rwatson $
  */
 
 #ifndef _NETIPX_IPX_VAR_H_
