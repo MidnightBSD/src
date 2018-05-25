@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Isilon Inc http://www.isilon.com/
  *
@@ -50,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_fail.c 227293 2011-11-07 06:44:47Z ed $");
 
 #include <sys/ctype.h>
 #include <sys/errno.h>

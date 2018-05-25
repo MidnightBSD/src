@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
+ * Copyright (c) 2010-2013 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_et.c 266347 2014-05-17 20:10:12Z ian $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -33,6 +34,8 @@ __FBSDID("$MidnightBSD$");
 #include <sys/systm.h>
 #include <sys/queue.h>
 #include <sys/timeet.h>
+
+#include "opt_timer.h"
 
 SLIST_HEAD(et_eventtimers_list, eventtimer);
 static struct et_eventtimers_list eventtimers = SLIST_HEAD_INITIALIZER(et_eventtimers);
@@ -62,6 +65,7 @@ et_register(struct eventtimer *et)
 			    et->et_quality);
 		}
 	}
+	KASSERT(et->et_start, ("et_register: timer has no start function"));
 	et->et_sysctl = SYSCTL_ADD_NODE(NULL,
 	    SYSCTL_STATIC_CHILDREN(_kern_eventtimer_et), OID_AUTO, et->et_name,
 	    CTLFLAG_RW, 0, "event timer description");
@@ -112,6 +116,20 @@ et_deregister(struct eventtimer *et)
 }
 
 /*
+ * Change the frequency of the given timer.  If it is the active timer,
+ * reconfigure it on all CPUs (reschedules all current events based on the new
+ * timer frequency).
+ */
+void
+et_change_frequency(struct eventtimer *et, uint64_t newfreq)
+{
+
+#ifndef NO_EVENTTIMERS
+	cpu_et_frequency(et, newfreq);
+#endif
+}
+
+/*
  * Find free event timer hardware with specified parameters.
  */
 struct eventtimer *
@@ -159,43 +177,29 @@ et_init(struct eventtimer *et, et_event_cb_t *event,
  * period - period of subsequent periodic ticks.
  */
 int
-et_start(struct eventtimer *et,
-    struct bintime *first, struct bintime *period)
+et_start(struct eventtimer *et, sbintime_t first, sbintime_t period)
 {
 
 	if (!et->et_active)
 		return (ENXIO);
-	if (first == NULL && period == NULL)
-		return (EINVAL);
-	if ((et->et_flags & ET_FLAGS_PERIODIC) == 0 &&
-	    period != NULL)
-		return (ENODEV);
-	if ((et->et_flags & ET_FLAGS_ONESHOT) == 0 &&
-	    period == NULL)
-		return (ENODEV);
-	if (first != NULL) {
-		if (first->sec < et->et_min_period.sec ||
-		    (first->sec == et->et_min_period.sec &&
-		     first->frac < et->et_min_period.frac))
-		        first = &et->et_min_period;
-		if (first->sec > et->et_max_period.sec ||
-		    (first->sec == et->et_max_period.sec &&
-		     first->frac > et->et_max_period.frac))
-		        first = &et->et_max_period;
+	KASSERT(period >= 0, ("et_start: negative period"));
+	KASSERT((et->et_flags & ET_FLAGS_PERIODIC) || period == 0,
+		("et_start: period specified for oneshot-only timer"));
+	KASSERT((et->et_flags & ET_FLAGS_ONESHOT) || period != 0,
+		("et_start: period not specified for periodic-only timer"));
+	if (period != 0) {
+		if (period < et->et_min_period)
+		        period = et->et_min_period;
+		else if (period > et->et_max_period)
+		        period = et->et_max_period;
 	}
-	if (period != NULL) {
-		if (period->sec < et->et_min_period.sec ||
-		    (period->sec == et->et_min_period.sec &&
-		     period->frac < et->et_min_period.frac))
-		        period = &et->et_min_period;
-		if (period->sec > et->et_max_period.sec ||
-		    (period->sec == et->et_max_period.sec &&
-		     period->frac > et->et_max_period.frac))
-		        period = &et->et_max_period;
+	if (period == 0 || first != 0) {
+		if (first < et->et_min_period)
+		        first = et->et_min_period;
+		else if (first > et->et_max_period)
+		        first = et->et_max_period;
 	}
-	if (et->et_start)
-		return (et->et_start(et, first, period));
-	return (0);
+	return (et->et_start(et, first, period));
 }
 
 /* Stop event timer hardware. */

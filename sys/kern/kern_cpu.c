@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2007 Nate Lawson (SDG)
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_cpu.c 266165 2014-05-15 18:07:35Z cperciva $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -135,7 +136,8 @@ static int		cf_lowest_freq;
 static int		cf_verbose;
 TUNABLE_INT("debug.cpufreq.lowest", &cf_lowest_freq);
 TUNABLE_INT("debug.cpufreq.verbose", &cf_verbose);
-static SYSCTL_NODE(_debug, OID_AUTO, cpufreq, CTLFLAG_RD, NULL, "cpufreq debugging");
+static SYSCTL_NODE(_debug, OID_AUTO, cpufreq, CTLFLAG_RD, NULL,
+    "cpufreq debugging");
 SYSCTL_INT(_debug_cpufreq, OID_AUTO, lowest, CTLFLAG_RW, &cf_lowest_freq, 1,
     "Don't provide levels below this frequency.");
 SYSCTL_INT(_debug_cpufreq, OID_AUTO, verbose, CTLFLAG_RW, &cf_verbose, 1,
@@ -267,7 +269,7 @@ cf_set_method(device_t dev, const struct cf_level *level, int priority)
 	 * switching the main CPU.  XXXTODO: Need to think more about how to
 	 * handle having different CPUs at different frequencies.  
 	 */
-	if (mp_ncpus > 1 && !smp_active) {
+	if (mp_ncpus > 1 && !smp_started) {
 		device_printf(dev, "rejecting change, SMP not started yet\n");
 		error = ENXIO;
 		goto out;
@@ -1037,6 +1039,7 @@ cpufreq_unregister(device_t dev)
 	if (cf_dev == NULL) {
 		device_printf(dev,
 	"warning: cpufreq_unregister called with no cpufreq device active\n");
+		free(devs, M_TEMP);
 		return (0);
 	}
 	cfcount = 0;
