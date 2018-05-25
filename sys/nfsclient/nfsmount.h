@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsmount.h	8.3 (Berkeley) 3/30/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/nfsclient/nfsmount.h 248255 2013-03-13 21:06:03Z jhb $
  */
 
 #ifndef _NFSCLIENT_NFSMOUNT_H_
@@ -124,8 +125,6 @@ struct	nfsmount {
 #ifndef NFS_DEFAULT_NEGNAMETIMEO
 #define NFS_DEFAULT_NEGNAMETIMEO	60
 #endif
-
-#define	NFS_PCATCH	(PCATCH | PBDRY)
 
 #endif
 

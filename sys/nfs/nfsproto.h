@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsproto.h  8.2 (Berkeley) 3/30/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/nfs/nfsproto.h 164725 2006-11-28 19:33:28Z rees $
  */
 
 #ifndef _NFS_NFSPROTO_H_

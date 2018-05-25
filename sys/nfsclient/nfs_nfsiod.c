@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/nfsclient/nfs_nfsiod.c 249630 2013-04-18 23:20:16Z rmacklem $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

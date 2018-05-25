@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Berkeley Software Design, Inc. All rights reserved.
  *
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/nfs/nfs_lock.c 227293 2011-11-07 06:44:47Z ed $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/nfsclient/nfs_vnops.c 276500 2015-01-01 10:44:20Z kib $");
 
 /*
  * vnode op calls for Sun NFS version 2 and 3
@@ -66,8 +67,6 @@ __MBSDID("$MidnightBSD$");
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_object.h>
-
-#include <fs/fifofs/fifo.h>
 
 #include <nfs/nfsproto.h>
 #include <nfsclient/nfs.h>
@@ -296,7 +295,7 @@ nfs3_access_otw(struct vnode *vp, int wmode, struct thread *td,
 	struct nfsnode *np = VTONFS(vp);
 
 	nfsstats.rpccnt[NFSPROC_ACCESS]++;
-	mreq = nfsm_reqhead(vp, NFSPROC_ACCESS, NFSX_FH(v3) + NFSX_UNSIGNED);
+	mreq = m_get2(NFSX_FH(v3) + NFSX_UNSIGNED, M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(vp, v3);
@@ -631,9 +630,9 @@ nfs_close(struct vop_close_args *ap)
 	     * mmap'ed writes or via write().
 	     */
 	    if (nfs_clean_pages_on_close && vp->v_object) {
-		VM_OBJECT_LOCK(vp->v_object);
+		VM_OBJECT_WLOCK(vp->v_object);
 		vm_object_page_clean(vp->v_object, 0, 0, 0);
-		VM_OBJECT_UNLOCK(vp->v_object);
+		VM_OBJECT_WUNLOCK(vp->v_object);
 	    }
 	    mtx_lock(&np->n_mtx);
 	    if (np->n_flag & NMODIFIED) {
@@ -716,7 +715,7 @@ nfs_getattr(struct vop_getattr_args *ap)
 			goto nfsmout;
 	}
 	nfsstats.rpccnt[NFSPROC_GETATTR]++;
-	mreq = nfsm_reqhead(vp, NFSPROC_GETATTR, NFSX_FH(v3));
+	mreq = m_get2(NFSX_FH(v3), M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(vp, v3);
@@ -875,7 +874,7 @@ nfs_setattrrpc(struct vnode *vp, struct vattr *vap, struct ucred *cred)
 	int v3 = NFS_ISV3(vp);
 
 	nfsstats.rpccnt[NFSPROC_SETATTR]++;
-	mreq = nfsm_reqhead(vp, NFSPROC_SETATTR, NFSX_FH(v3) + NFSX_SATTR(v3));
+	mreq = m_get2(NFSX_FH(v3) + NFSX_SATTR(v3), M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(vp, v3);
@@ -954,7 +953,7 @@ nfs_lookup(struct vop_lookup_args *ap)
 		*vpp = NULLVP;
 		return (error);
 	}
-	error = cache_lookup_times(dvp, vpp, cnp, &nctime, &ncticks);
+	error = cache_lookup(dvp, vpp, cnp, &nctime, &ncticks);
 	if (error > 0 && error != ENOENT)
 		return (error);
 	if (error == -1) {
@@ -1039,8 +1038,8 @@ nfs_lookup(struct vop_lookup_args *ap)
 	nfsstats.lookupcache_misses++;
 	nfsstats.rpccnt[NFSPROC_LOOKUP]++;
 	len = cnp->cn_namelen;
-	mreq = nfsm_reqhead(dvp, NFSPROC_LOOKUP,
-		NFSX_FH(v3) + NFSX_UNSIGNED + nfsm_rndup(len));
+	mreq = m_get2(NFSX_FH(v3) + NFSX_UNSIGNED + nfsm_rndup(len), M_WAITOK,
+	    MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(dvp, v3);
@@ -1183,8 +1182,7 @@ nfsmout:
 			return (EJUSTRETURN);
 		}
 
-		if ((cnp->cn_flags & MAKEENTRY) && cnp->cn_nameiop != CREATE &&
-		    dattrflag) {
+		if ((cnp->cn_flags & MAKEENTRY) != 0 && dattrflag) {
 			/*
 			 * Cache the modification time of the parent
 			 * directory from the post-op attributes in
@@ -1253,7 +1251,7 @@ nfs_readlinkrpc(struct vnode *vp, struct uio *uiop, struct ucred *cred)
 	int v3 = NFS_ISV3(vp);
 
 	nfsstats.rpccnt[NFSPROC_READLINK]++;
-	mreq = nfsm_reqhead(vp, NFSPROC_READLINK, NFSX_FH(v3));
+	mreq = m_get2(NFSX_FH(v3), M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(vp, v3);
@@ -1308,7 +1306,8 @@ nfs_readrpc(struct vnode *vp, struct uio *uiop, struct ucred *cred)
 	while (tsiz > 0) {
 		nfsstats.rpccnt[NFSPROC_READ]++;
 		len = (tsiz > rsize) ? rsize : tsiz;
-		mreq = nfsm_reqhead(vp, NFSPROC_READ, NFSX_FH(v3) + NFSX_UNSIGNED * 3);
+		mreq = m_get2(NFSX_FH(v3) + NFSX_UNSIGNED * 3, M_WAITOK,
+		    MT_DATA, 0);
 		mb = mreq;
 		bpos = mtod(mb, caddr_t);
 		nfsm_fhtom(vp, v3);
@@ -1380,8 +1379,8 @@ nfs_writerpc(struct vnode *vp, struct uio *uiop, struct ucred *cred,
 	while (tsiz > 0) {
 		nfsstats.rpccnt[NFSPROC_WRITE]++;
 		len = (tsiz > wsize) ? wsize : tsiz;
-		mreq = nfsm_reqhead(vp, NFSPROC_WRITE,
-			NFSX_FH(v3) + 5 * NFSX_UNSIGNED + nfsm_rndup(len));
+		mreq = m_get2(NFSX_FH(v3) + 5 * NFSX_UNSIGNED, M_WAITOK,
+		    MT_DATA, 0);
 		mb = mreq;
 		bpos = mtod(mb, caddr_t);
 		nfsm_fhtom(vp, v3);
@@ -1503,8 +1502,8 @@ nfs_mknodrpc(struct vnode *dvp, struct vnode **vpp, struct componentname *cnp,
 	if ((error = VOP_GETATTR(dvp, &vattr, cnp->cn_cred)) != 0)
 		return (error);
 	nfsstats.rpccnt[NFSPROC_MKNOD]++;
-	mreq = nfsm_reqhead(dvp, NFSPROC_MKNOD, NFSX_FH(v3) + 4 * NFSX_UNSIGNED +
-		+ nfsm_rndup(cnp->cn_namelen) + NFSX_SATTR(v3));
+	mreq = m_get2(NFSX_FH(v3) + 4 * NFSX_UNSIGNED +
+	    nfsm_rndup(cnp->cn_namelen) + NFSX_SATTR(v3), M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(dvp, v3);
@@ -1607,8 +1606,8 @@ nfs_create(struct vop_create_args *ap)
 		fmode |= O_EXCL;
 again:
 	nfsstats.rpccnt[NFSPROC_CREATE]++;
-	mreq = nfsm_reqhead(dvp, NFSPROC_CREATE, NFSX_FH(v3) + 2 * NFSX_UNSIGNED +
-		nfsm_rndup(cnp->cn_namelen) + NFSX_SATTR(v3));
+	mreq = m_get2(NFSX_FH(v3) + 2 * NFSX_UNSIGNED +
+	    nfsm_rndup(cnp->cn_namelen) + NFSX_SATTR(v3), M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(dvp, v3);
@@ -1789,8 +1788,8 @@ nfs_removerpc(struct vnode *dvp, const char *name, int namelen,
 	int v3 = NFS_ISV3(dvp);
 
 	nfsstats.rpccnt[NFSPROC_REMOVE]++;
-	mreq = nfsm_reqhead(dvp, NFSPROC_REMOVE,
-		NFSX_FH(v3) + NFSX_UNSIGNED + nfsm_rndup(namelen));
+	mreq = m_get2(NFSX_FH(v3) + NFSX_UNSIGNED + nfsm_rndup(namelen),
+	    M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(dvp, v3);
@@ -1925,9 +1924,8 @@ nfs_renamerpc(struct vnode *fdvp, const char *fnameptr, int fnamelen,
 	int v3 = NFS_ISV3(fdvp);
 
 	nfsstats.rpccnt[NFSPROC_RENAME]++;
-	mreq = nfsm_reqhead(fdvp, NFSPROC_RENAME,
-		(NFSX_FH(v3) + NFSX_UNSIGNED)*2 + nfsm_rndup(fnamelen) +
-		nfsm_rndup(tnamelen));
+	mreq = m_get2((NFSX_FH(v3) + NFSX_UNSIGNED)*2 + nfsm_rndup(fnamelen) +
+	    nfsm_rndup(tnamelen), M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(fdvp, v3);
@@ -1985,8 +1983,8 @@ nfs_link(struct vop_link_args *ap)
 
 	v3 = NFS_ISV3(vp);
 	nfsstats.rpccnt[NFSPROC_LINK]++;
-	mreq = nfsm_reqhead(vp, NFSPROC_LINK,
-		NFSX_FH(v3)*2 + NFSX_UNSIGNED + nfsm_rndup(cnp->cn_namelen));
+	mreq = m_get2(NFSX_FH(v3)*2 + NFSX_UNSIGNED +
+	    nfsm_rndup(cnp->cn_namelen), M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(vp, v3);
@@ -2031,8 +2029,9 @@ nfs_symlink(struct vop_symlink_args *ap)
 
 	nfsstats.rpccnt[NFSPROC_SYMLINK]++;
 	slen = strlen(ap->a_target);
-	mreq = nfsm_reqhead(dvp, NFSPROC_SYMLINK, NFSX_FH(v3) + 2*NFSX_UNSIGNED +
-	    nfsm_rndup(cnp->cn_namelen) + nfsm_rndup(slen) + NFSX_SATTR(v3));
+	mreq = m_get2(NFSX_FH(v3) + 2*NFSX_UNSIGNED +
+	    nfsm_rndup(cnp->cn_namelen) + nfsm_rndup(slen) + NFSX_SATTR(v3),
+	    M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(dvp, v3);
@@ -2125,8 +2124,8 @@ nfs_mkdir(struct vop_mkdir_args *ap)
 		return (error);
 	len = cnp->cn_namelen;
 	nfsstats.rpccnt[NFSPROC_MKDIR]++;
-	mreq = nfsm_reqhead(dvp, NFSPROC_MKDIR,
-	  NFSX_FH(v3) + NFSX_UNSIGNED + nfsm_rndup(len) + NFSX_SATTR(v3));
+	mreq = m_get2(NFSX_FH(v3) + NFSX_UNSIGNED + nfsm_rndup(len) +
+	    NFSX_SATTR(v3), M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(dvp, v3);
@@ -2190,8 +2189,8 @@ nfs_rmdir(struct vop_rmdir_args *ap)
 	if (dvp == vp)
 		return (EINVAL);
 	nfsstats.rpccnt[NFSPROC_RMDIR]++;
-	mreq = nfsm_reqhead(dvp, NFSPROC_RMDIR,
-		NFSX_FH(v3) + NFSX_UNSIGNED + nfsm_rndup(cnp->cn_namelen));
+	mreq = m_get2(NFSX_FH(v3) + NFSX_UNSIGNED +
+	    nfsm_rndup(cnp->cn_namelen), M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(dvp, v3);
@@ -2309,8 +2308,8 @@ nfs_readdirrpc(struct vnode *vp, struct uio *uiop, struct ucred *cred)
 	 */
 	while (more_dirs && bigenough) {
 		nfsstats.rpccnt[NFSPROC_READDIR]++;
-		mreq = nfsm_reqhead(vp, NFSPROC_READDIR, NFSX_FH(v3) +
-			NFSX_READDIR(v3));
+		mreq = m_get2(NFSX_FH(v3) + NFSX_READDIR(v3), M_WAITOK,
+		    MT_DATA, 0);
 		mb = mreq;
 		bpos = mtod(mb, caddr_t);
 		nfsm_fhtom(vp, v3);
@@ -2515,8 +2514,8 @@ nfs_readdirplusrpc(struct vnode *vp, struct uio *uiop, struct ucred *cred)
 	 */
 	while (more_dirs && bigenough) {
 		nfsstats.rpccnt[NFSPROC_READDIRPLUS]++;
-		mreq = nfsm_reqhead(vp, NFSPROC_READDIRPLUS,
-			NFSX_FH(1) + 6 * NFSX_UNSIGNED);
+		mreq = m_get2(NFSX_FH(1) + 6 * NFSX_UNSIGNED, M_WAITOK,
+		    MT_DATA, 0);
 		mb = mreq;
 		bpos = mtod(mb, caddr_t);
 		nfsm_fhtom(vp, 1);
@@ -2820,8 +2819,8 @@ nfs_lookitup(struct vnode *dvp, const char *name, int len, struct ucred *cred,
 	int v3 = NFS_ISV3(dvp);
 
 	nfsstats.rpccnt[NFSPROC_LOOKUP]++;
-	mreq = nfsm_reqhead(dvp, NFSPROC_LOOKUP,
-		NFSX_FH(v3) + NFSX_UNSIGNED + nfsm_rndup(len));
+	mreq = m_get2(NFSX_FH(v3) + NFSX_UNSIGNED + nfsm_rndup(len),
+	    M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(dvp, v3);
@@ -2899,7 +2898,7 @@ nfs_commit(struct vnode *vp, u_quad_t offset, int cnt, struct ucred *cred,
 	}
 	mtx_unlock(&nmp->nm_mtx);
 	nfsstats.rpccnt[NFSPROC_COMMIT]++;
-	mreq = nfsm_reqhead(vp, NFSPROC_COMMIT, NFSX_FH(1));
+	mreq = m_get2(NFSX_FH(1), M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(vp, 1);
@@ -2993,7 +2992,7 @@ nfs_flush(struct vnode *vp, int waitfor, int commit)
 	int bvecsize = 0, bveccount;
 
 	if (nmp->nm_flag & NFSMNT_INT)
-		slpflag = NFS_PCATCH;
+		slpflag = PCATCH;
 	if (!commit)
 		passone = 0;
 	bo = &vp->v_bufobj;
@@ -3178,7 +3177,7 @@ loop:
 
 			error = BUF_TIMELOCK(bp,
 			    LK_EXCLUSIVE | LK_SLEEPFAIL | LK_INTERLOCK,
-			    BO_MTX(bo), "nfsfsync", slpflag, slptimeo);
+			    BO_LOCKPTR(bo), "nfsfsync", slpflag, slptimeo);
 			if (error == 0) {
 				BUF_UNLOCK(bp);
 				goto loop;
@@ -3191,7 +3190,7 @@ loop:
 				error = EINTR;
 				goto done;
 			}
-			if (slpflag & PCATCH) {
+			if (slpflag == PCATCH) {
 				slpflag = 0;
 				slptimeo = 2 * hz;
 			}
@@ -3229,7 +3228,7 @@ loop:
 			    error = nfs_sigintr(nmp, td);
 			    if (error)
 				goto done;
-			    if (slpflag & PCATCH) {
+			    if (slpflag == PCATCH) {
 				slpflag = 0;
 				slptimeo = 2 * hz;
 			    }

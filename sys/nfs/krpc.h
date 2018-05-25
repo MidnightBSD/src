@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: krpc.h,v 1.4 1995/12/19 23:07:11 cgd Exp $	*/
-/* $MidnightBSD$	*/
+/* $FreeBSD: stable/10/sys/nfs/krpc.h 221032 2011-04-25 22:22:51Z rmacklem $	*/
 
 #include <sys/cdefs.h>
 

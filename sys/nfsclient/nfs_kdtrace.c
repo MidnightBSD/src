@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Robert N. M. Watson
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/nfsclient/nfs_kdtrace.c 221542 2011-05-06 19:55:15Z rmacklem $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

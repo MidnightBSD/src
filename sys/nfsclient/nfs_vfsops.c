@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/nfsclient/nfs_vfsops.c 249630 2013-04-18 23:20:16Z rmacklem $");
 
 
 #include "opt_bootp.h"
@@ -298,7 +299,7 @@ nfs_statfs(struct mount *mp, struct statfs *sbp)
 	} else
 		mtx_unlock(&nmp->nm_mtx);
 	nfsstats.rpccnt[NFSPROC_FSSTAT]++;
-	mreq = nfsm_reqhead(vp, NFSPROC_FSSTAT, NFSX_FH(v3));
+	mreq = m_get2(NFSX_FH(v3), M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(vp, v3);
@@ -356,7 +357,7 @@ nfs_fsinfo(struct nfsmount *nmp, struct vnode *vp, struct ucred *cred,
 	u_int64_t maxfsize;
 	
 	nfsstats.rpccnt[NFSPROC_FSINFO]++;
-	mreq = nfsm_reqhead(vp, NFSPROC_FSINFO, NFSX_FH(1));
+	mreq = m_get2(NFSX_FH(1), M_WAITOK, MT_DATA, 0);
 	mb = mreq;
 	bpos = mtod(mb, caddr_t);
 	nfsm_fhtom(vp, 1);
@@ -1193,7 +1194,7 @@ nfs_mount(struct mount *mp)
 out:
 	if (!error) {
 		MNT_ILOCK(mp);
-		mp->mnt_kern_flag |= (MNTK_MPSAFE|MNTK_LOOKUP_SHARED);
+		mp->mnt_kern_flag |= MNTK_LOOKUP_SHARED;
 		MNT_IUNLOCK(mp);
 	}
 	return (error);

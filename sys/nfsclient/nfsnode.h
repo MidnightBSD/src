@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsnode.h	8.9 (Berkeley) 5/14/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/nfsclient/nfsnode.h 235332 2012-05-12 12:02:51Z rmacklem $
  */
 
 #ifndef _NFSCLIENT_NFSNODE_H_
@@ -104,9 +105,6 @@ struct nfsnode {
 	time_t			n_attrstamp;	/* Attr. cache timestamp */
 	struct nfs_accesscache	n_accesscache[NFS_ACCESSCACHESIZE];
 	struct timespec		n_mtime;	/* Prev modify time. */
-	struct timespec		n_unused0;
-	struct timespec		n_unused1;
-	int			n_unused2;
 	nfsfh_t			*n_fhp;		/* NFS File Handle */
 	struct vnode		*n_vnode;	/* associated vnode */
 	struct vnode		*n_dvp;		/* parent vnode */

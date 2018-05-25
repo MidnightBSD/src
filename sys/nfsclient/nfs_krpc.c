@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1991, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/nfsclient/nfs_krpc.c 247116 2013-02-21 19:02:50Z jhb $");
 
 /*
  * Socket operations for use by nfs
@@ -572,7 +573,7 @@ tryagain:
 	 * These could cause pointer alignment problems, so copy them to
 	 * well aligned mbufs.
 	 */
-	error = nfs_realign(&mrep, M_DONTWAIT);
+	error = nfs_realign(&mrep, M_NOWAIT);
 	if (error == ENOMEM) {
 		m_freem(mrep);
 		AUTH_DESTROY(auth);
