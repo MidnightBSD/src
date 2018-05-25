@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/ng_atmllc.c 243882 2012-12-05 08:04:20Z glebius $
  */
 
 #include <sys/param.h>
@@ -154,7 +154,7 @@ ng_atmllc_rcvdata(hook_p hook, item_p item)
 	int	error;
 
 	priv = NG_NODE_PRIVATE(NG_HOOK_NODE(hook));
-	m = NGI_M(item);
+	NGI_GET_M(item, m);
 	outhook = NULL;
 	padding = 0;
 
@@ -171,6 +171,7 @@ ng_atmllc_rcvdata(hook_p hook, item_p item)
 		if (m->m_len < sizeof(struct atmllc) + ETHER_HDR_LEN) {
 			m = m_pullup(m, sizeof(struct atmllc) + ETHER_HDR_LEN);
 			if (m == NULL) {
+				NG_FREE_ITEM(item);
 				return (ENOMEM);
 			}
 		}
@@ -202,7 +203,7 @@ ng_atmllc_rcvdata(hook_p hook, item_p item)
 		m_adj(m, sizeof(struct atmllc) + padding);
 	} else if (hook == priv->ether) {
 		/* Add the LLC header */
-		M_PREPEND(m, NG_ATMLLC_HEADER_LEN + 2, M_DONTWAIT);
+		M_PREPEND(m, NG_ATMLLC_HEADER_LEN + 2, M_NOWAIT);
 		if (m == NULL) {
 			printf("ng_atmllc: M_PREPEND failed\n");
 			NG_FREE_ITEM(item);
@@ -219,7 +220,7 @@ ng_atmllc_rcvdata(hook_p hook, item_p item)
 		outhook = priv->atm;
 	} else if (hook == priv->fddi) {
 		/* Add the LLC header */
-		M_PREPEND(m, NG_ATMLLC_HEADER_LEN + 3, M_DONTWAIT);
+		M_PREPEND(m, NG_ATMLLC_HEADER_LEN + 3, M_NOWAIT);
 		if (m == NULL) {
 			printf("ng_atmllc: M_PREPEND failed\n");
 			NG_FREE_ITEM(item);
@@ -237,6 +238,7 @@ ng_atmllc_rcvdata(hook_p hook, item_p item)
 	}
 
 	if (outhook == NULL) {
+		NG_FREE_M(m);
 		NG_FREE_ITEM(item);
 		return (0);
 	}

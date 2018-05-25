@@ -37,7 +37,7 @@
  * 
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/ng_l2tp.h 139823 2005-01-07 01:45:51Z imp $
  */
 
 #ifndef _NETGRAPH_NG_L2TP_H_

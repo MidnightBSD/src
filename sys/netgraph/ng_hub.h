@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/ng_hub.h 207680 2010-05-05 22:06:05Z zec $
  */
 
 #ifndef _NETGRAPH_NG_HUB_H_

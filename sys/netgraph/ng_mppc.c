@@ -39,7 +39,7 @@
  * Author: Archie Cobbs <archie@freebsd.org>
  *
  * $Whistle: ng_mppc.c,v 1.4 1999/11/25 00:10:12 archie Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/ng_mppc.c 312657 2017-01-23 01:21:39Z pfg $
  */
 
 /*
@@ -56,6 +56,7 @@
 #include <sys/malloc.h>
 #include <sys/endian.h>
 #include <sys/errno.h>
+#include <sys/sysctl.h>
 #include <sys/syslog.h>
 
 #include <netgraph/ng_message.h>
@@ -66,7 +67,7 @@
 
 #if !defined(NETGRAPH_MPPC_COMPRESSION) && !defined(NETGRAPH_MPPC_ENCRYPTION)
 #ifdef KLD_MODULE
-/* XXX NETGRAPH_MPPC_COMPRESSION isn't functional yet */
+#define NETGRAPH_MPPC_COMPRESSION
 #define NETGRAPH_MPPC_ENCRYPTION
 #else
 /* This case is indicative of an error in sys/conf files */
@@ -81,7 +82,6 @@ static MALLOC_DEFINE(M_NETGRAPH_MPPC, "netgraph_mppc", "netgraph mppc node");
 #endif
 
 #ifdef NETGRAPH_MPPC_COMPRESSION
-/* XXX this file doesn't exist yet, but hopefully someday it will... */
 #include <net/mppc.h>
 #endif
 #ifdef NETGRAPH_MPPC_ENCRYPTION
@@ -107,6 +107,23 @@ static MALLOC_DEFINE(M_NETGRAPH_MPPC, "netgraph_mppc", "netgraph mppc node");
  * This should instead be a configurable parameter.
  */
 #define MPPE_MAX_REKEY		1000
+
+SYSCTL_NODE(_net_graph, OID_AUTO, mppe, CTLFLAG_RW, 0, "MPPE");
+
+static int mppe_block_on_max_rekey = 0;
+TUNABLE_INT("net.graph.mppe.block_on_max_rekey", &mppe_block_on_max_rekey);
+SYSCTL_INT(_net_graph_mppe, OID_AUTO, block_on_max_rekey, CTLFLAG_RW,
+    &mppe_block_on_max_rekey, 0, "Block node on max MPPE key re-calculations");
+
+static int mppe_log_max_rekey = 1;
+TUNABLE_INT("net.graph.mppe.log_max_rekey", &mppe_log_max_rekey);
+SYSCTL_INT(_net_graph_mppe, OID_AUTO, log_max_rekey, CTLFLAG_RW,
+    &mppe_log_max_rekey, 0, "Log max MPPE key re-calculations event");
+
+static int mppe_max_rekey = MPPE_MAX_REKEY;
+TUNABLE_INT("net.graph.mppe.max_rekey", &mppe_max_rekey);
+SYSCTL_INT(_net_graph_mppe, OID_AUTO, max_rekey, CTLFLAG_RW,
+    &mppe_max_rekey, 0, "Maximum number of MPPE key re-calculations");
 
 /* MPPC packet header bits */
 #define MPPC_FLAG_FLUSHED	0x8000		/* xmitter reset state */
@@ -468,7 +485,7 @@ ng_mppc_compress(node_p node, struct mbuf **datap)
 	struct mbuf *m = *datap;
 
 	/* We must own the mbuf chain exclusively to modify it. */
-	m = m_unshare(m, M_DONTWAIT);
+	m = m_unshare(m, M_NOWAIT);
 	if (m == NULL)
 		return (ENOMEM);
 
@@ -529,7 +546,7 @@ err1:
 			&destCnt, d->history, flags, 0);
 
 		/* Check return value */
-		KASSERT(rtn != MPPC_INVALID, ("%s: invalid", __func__));
+		/* KASSERT(rtn != MPPC_INVALID, ("%s: invalid", __func__)); */
 		if ((rtn & MPPC_EXPANDED) == 0
 		    && (rtn & MPPC_COMP_OK) == MPPC_COMP_OK) {
 			outlen -= destCnt;     
@@ -596,7 +613,7 @@ err1:
 	MPPC_CCOUNT_INC(d->cc);
 
 	/* Install header */
-	M_PREPEND(m, MPPC_HDRLEN, M_DONTWAIT);
+	M_PREPEND(m, MPPC_HDRLEN, M_NOWAIT);
 	if (m != NULL)
 		be16enc(mtod(m, void *), header);
 
@@ -618,7 +635,7 @@ ng_mppc_decompress(node_p node, struct mbuf **datap)
 	struct mbuf *m = *datap;
 
 	/* We must own the mbuf chain exclusively to modify it. */
-	m = m_unshare(m, M_DONTWAIT);
+	m = m_unshare(m, M_NOWAIT);
 	if (m == NULL)
 		return (ENOMEM);
 
@@ -647,12 +664,23 @@ ng_mppc_decompress(node_p node, struct mbuf **datap)
 			/* How many times are we going to have to re-key? */
 			rekey = ((d->cfg.bits & MPPE_STATELESS) != 0) ?
 			    numLost : (numLost / (MPPE_UPDATE_MASK + 1));
-			if (rekey > MPPE_MAX_REKEY) {
-				log(LOG_ERR, "%s: too many (%d) packets"
-				    " dropped, disabling node %p!",
-				    __func__, numLost, node);
+			if (rekey > mppe_max_rekey) {
+			    if (mppe_block_on_max_rekey) {
+				if (mppe_log_max_rekey) {
+				    log(LOG_ERR, "%s: too many (%d) packets"
+					" dropped, disabling node %p!\n",
+					__func__, numLost, node);
+				}
 				priv->recv.cfg.enable = 0;
 				goto failed;
+			    } else {
+				if (mppe_log_max_rekey) {
+				    log(LOG_ERR, "%s: %d packets"
+					" dropped, node %p\n",
+					__func__, numLost, node);
+				}
+				goto failed;
+			    }
 			}
 
 			/* Re-key as necessary to catch up to peer */
@@ -780,7 +808,7 @@ failed:
 			&sourceCnt, &destCnt, d->history, flags);
 
 		/* Check return value */
-		KASSERT(rtn != MPPC_INVALID, ("%s: invalid", __func__));
+		/* KASSERT(rtn != MPPC_INVALID, ("%s: invalid", __func__)); */
 		if ((rtn & MPPC_DEST_EXHAUSTED) != 0
 		    || (rtn & MPPC_DECOMP_OK) != MPPC_DECOMP_OK) {
 			log(LOG_ERR, "%s: decomp returned 0x%x",

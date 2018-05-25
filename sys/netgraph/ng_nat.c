@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/ng_nat.c 248570 2013-03-21 08:36:15Z glebius $
  */
 
 #include <sys/param.h>
@@ -146,6 +146,14 @@ static const struct ng_parse_type ng_nat_list_redirects_type = {
 	&ng_nat_list_redirects_fields
 };
 
+/* Parse type for struct ng_nat_libalias_info. */
+static const struct ng_parse_struct_field ng_nat_libalias_info_fields[]
+	= NG_NAT_LIBALIAS_INFO;
+static const struct ng_parse_type ng_nat_libalias_info_type = {
+	&ng_parse_struct_type,
+	&ng_nat_libalias_info_fields
+};
+
 /* List of commands and how to convert arguments to/from ASCII. */
 static const struct ng_cmdlist ng_nat_cmdlist[] = {
 	{
@@ -224,6 +232,13 @@ static const struct ng_cmdlist ng_nat_cmdlist[] = {
 	  "proxyrule",
 	  &ng_parse_string_type,
 	  NULL
+	},
+	{
+	  NGM_NAT_COOKIE,
+	  NGM_NAT_LIBALIAS_INFO,
+	  "libaliasinfo",
+	  NULL,
+	  &ng_nat_libalias_info_type
 	},
 	{ 0 }
 };
@@ -648,6 +663,36 @@ ng_nat_rcvmsg(node_p node, item_p item, hook_p lasthook)
 				error = ENOMEM;
 		    }
 			break;
+		case NGM_NAT_LIBALIAS_INFO:
+		    {
+			struct ng_nat_libalias_info *i;
+
+			NG_MKRESPONSE(resp, msg,
+			    sizeof(struct ng_nat_libalias_info), M_NOWAIT);
+			if (resp == NULL) {
+				error = ENOMEM;
+				break;
+			}
+			i = (struct ng_nat_libalias_info *)resp->data;
+#define	COPY(F)	do {						\
+	if (priv->lib->F >= 0 && priv->lib->F < UINT32_MAX)	\
+		i->F = priv->lib->F;				\
+	else							\
+		i->F = UINT32_MAX;				\
+} while (0)
+		
+			COPY(icmpLinkCount);
+			COPY(udpLinkCount);
+			COPY(tcpLinkCount);
+			COPY(pptpLinkCount);
+			COPY(sctpLinkCount);
+			COPY(protoLinkCount);
+			COPY(fragmentIdLinkCount);
+			COPY(fragmentPtrLinkCount);
+			COPY(sockCount);
+#undef COPY
+		    }
+			break;
 		default:
 			error = EINVAL;		/* unknown command */
 			break;
@@ -757,18 +802,18 @@ ng_nat_rcvdata(hook_p hook, item_p item )
 		 */
 
 		if (th->th_x2) {
+			uint16_t ip_len = ntohs(ip->ip_len);
+
 			th->th_x2 = 0;
-			ip->ip_len = ntohs(ip->ip_len);
 			th->th_sum = in_pseudo(ip->ip_src.s_addr,
 			    ip->ip_dst.s_addr, htons(IPPROTO_TCP +
-			    ip->ip_len - (ip->ip_hl << 2)));
+			    ip_len - (ip->ip_hl << 2)));
 	
 			if ((m->m_pkthdr.csum_flags & CSUM_TCP) == 0) {
 				m->m_pkthdr.csum_data = offsetof(struct tcphdr,
 				    th_sum);
 				in_delayed_cksum(m);
 			}
-			ip->ip_len = htons(ip->ip_len);
 		}
 	}
 

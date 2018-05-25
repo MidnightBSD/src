@@ -60876,6 +60876,8 @@ sys/netgraph/ng_bridge.c -text
 sys/netgraph/ng_bridge.h -text
 sys/netgraph/ng_car.c -text
 sys/netgraph/ng_car.h -text
+sys/netgraph/ng_checksum.c svneol=native#text/plain
+sys/netgraph/ng_checksum.h svneol=native#text/plain
 sys/netgraph/ng_cisco.c -text
 sys/netgraph/ng_cisco.h -text
 sys/netgraph/ng_deflate.c -text

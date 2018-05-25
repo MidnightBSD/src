@@ -39,7 +39,7 @@
  * Author: Archie Cobbs <archie@freebsd.org>
  *
  * $Whistle: ng_parse.c,v 1.3 1999/11/29 01:43:48 archie Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/ng_parse.c 278140 2015-02-03 07:59:33Z dim $
  */
 
 #include <sys/types.h>
@@ -1123,7 +1123,7 @@ ng_bytearray_parse(const struct ng_parse_type *type,
 		struct ng_parse_type subtype;
 
 		subtype = ng_parse_bytearray_subtype;
-		*(const void **)&subtype.private = type->info;
+		subtype.private = __DECONST(void *, type->info);
 		return ng_array_parse(&subtype, s, off, start, buf, buflen);
 	}
 }
@@ -1135,7 +1135,7 @@ ng_bytearray_unparse(const struct ng_parse_type *type,
 	struct ng_parse_type subtype;
 
 	subtype = ng_parse_bytearray_subtype;
-	*(const void **)&subtype.private = type->info;
+	subtype.private = __DECONST(void *, type->info);
 	return ng_array_unparse(&subtype, data, off, cbuf, cbuflen);
 }
 
@@ -1146,7 +1146,7 @@ ng_bytearray_getDefault(const struct ng_parse_type *type,
 	struct ng_parse_type subtype;
 
 	subtype = ng_parse_bytearray_subtype;
-	*(const void **)&subtype.private = type->info;
+	subtype.private = __DECONST(void *, type->info);
 	return ng_array_getDefault(&subtype, start, buf, buflen);
 }
 
@@ -1237,6 +1237,7 @@ ng_parse_composite(const struct ng_parse_type *type, const char *s,
 		   distinguish name from values by seeing if the next
 		   token is an equals sign */
 		if (ctype != CT_STRUCT) {
+			u_long ul;
 			int len2, off2;
 			char *eptr;
 
@@ -1260,11 +1261,12 @@ ng_parse_composite(const struct ng_parse_type *type, const char *s,
 			}
 
 			/* Index was specified explicitly; parse it */
-			index = (u_int)strtoul(s + *off, &eptr, 0);
-			if (index < 0 || eptr - (s + *off) != len) {
+			ul = strtoul(s + *off, &eptr, 0);
+			if (ul == ULONG_MAX || eptr - (s + *off) != len) {
 				error = EINVAL;
 				goto done;
 			}
+			index = (u_int)ul;
 			nextIndex = index + 1;
 			*off += len + len2;
 		} else {			/* a structure field */

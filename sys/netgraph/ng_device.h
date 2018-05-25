@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/ng_device.h 139823 2005-01-07 01:45:51Z imp $
  *
  */
 

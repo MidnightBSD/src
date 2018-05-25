@@ -38,7 +38,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/netgraph.h 314667 2017-03-04 13:03:31Z avg $
  * $Whistle: netgraph.h,v 1.29 1999/11/01 07:56:13 julian Exp $
  */
 
@@ -1136,7 +1136,7 @@ SYSCTL_DECL(_net_graph);
  */
 int	ng_address_ID(node_p here, item_p item, ng_ID_t ID, ng_ID_t retaddr);
 int	ng_address_hook(node_p here, item_p item, hook_p hook, ng_ID_t retaddr);
-int	ng_address_path(node_p here, item_p item, char *address, ng_ID_t raddr);
+int	ng_address_path(node_p here, item_p item, const char *address, ng_ID_t raddr);
 int	ng_bypass(hook_p hook1, hook_p hook2);
 hook_p	ng_findhook(node_p node, const char *name);
 struct	ng_type *ng_findtype(const char *type);
@@ -1162,7 +1162,7 @@ int 	ng_send_fn2(node_p node, hook_p hook, item_p pitem, ng_item_fn2 *fn,
 int	ng_uncallout(struct callout *c, node_p node);
 int	ng_callout(struct callout *c, node_p node, hook_p hook, int ticks,
 	    ng_item_fn *fn, void * arg1, int arg2);
-#define	ng_callout_init(c)	callout_init(c, CALLOUT_MPSAFE)
+#define	ng_callout_init(c)	callout_init(c, 1)
 
 /* Flags for netgraph functions. */
 #define	NG_NOFLAGS	0x00000000	/* no special options */

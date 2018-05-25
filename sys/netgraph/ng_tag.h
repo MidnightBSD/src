@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/ng_tag.h 159979 2006-06-27 12:45:28Z glebius $
  */
 
 #ifndef _NETGRAPH_NG_TAG_H_

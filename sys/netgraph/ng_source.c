@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/netgraph/ng_source.c 243882 2012-12-05 08:04:20Z glebius $");
 
 /*
  * This node is used for high speed packet geneneration.  It queues
@@ -69,7 +69,6 @@ __FBSDID("$FreeBSD$");
 #include <sys/syslog.h>
 #include <net/if.h>
 #include <net/if_var.h>
-#include <net/vnet.h>
 #include <netgraph/ng_message.h>
 #include <netgraph/netgraph.h>
 #include <netgraph/ng_parse.h>
@@ -447,7 +446,7 @@ ng_source_rcvmsg(node_p node, item_p item, hook_p lasthook)
 		    {
 			struct ng_source_embed_info *embed;
 
-			NG_MKRESPONSE(resp, msg, sizeof(*embed), M_DONTWAIT);
+			NG_MKRESPONSE(resp, msg, sizeof(*embed), M_NOWAIT);
 			if (resp == NULL) {
 				error = ENOMEM;
 				goto done;
@@ -486,7 +485,7 @@ ng_source_rcvmsg(node_p node, item_p item, hook_p lasthook)
 				error = EINVAL;
 				goto done;
 			}
-			NG_MKRESPONSE(resp, msg, sizeof(*embed), M_DONTWAIT);
+			NG_MKRESPONSE(resp, msg, sizeof(*embed), M_NOWAIT);
 			if (resp == NULL) {
 				error = ENOMEM;
 				goto done;
@@ -610,7 +609,6 @@ static int
 ng_source_store_output_ifp(sc_p sc, char *ifname)
 {
 	struct ifnet *ifp;
-	int s;
 
 	ifp = ifunit(ifname);
 
@@ -626,13 +624,11 @@ ng_source_store_output_ifp(sc_p sc, char *ifname)
 	 * interface with small packets.
 	 * XXX we should restore the original value at stop or disconnect
 	 */
-	s = splimp();		/* XXX is this required? */
 	if (ifp->if_snd.ifq_maxlen < NG_SOURCE_DRIVER_IFQ_MAXLEN) {
 		printf("ng_source: changing ifq_maxlen from %d to %d\n",
 		    ifp->if_snd.ifq_maxlen, NG_SOURCE_DRIVER_IFQ_MAXLEN);
 		ifp->if_snd.ifq_maxlen = NG_SOURCE_DRIVER_IFQ_MAXLEN;
 	}
-	splx(s);
 #endif
 	return (0);
 }
@@ -878,9 +874,9 @@ ng_source_dup_mod(sc_p sc, struct mbuf *m0, struct mbuf **m_ptr)
 
 	/* Duplicate the packet. */
 	if (modify)
-		m = m_dup(m0, M_DONTWAIT);
+		m = m_dup(m0, M_NOWAIT);
 	else
-		m = m_copypacket(m0, M_DONTWAIT);
+		m = m_copypacket(m0, M_NOWAIT);
 	if (m == NULL) {
 		error = ENOBUFS;
 		goto done;

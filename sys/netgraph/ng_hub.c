@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/ng_hub.c 243882 2012-12-05 08:04:20Z glebius $
  */
 
 #include <sys/param.h>
@@ -134,7 +134,7 @@ ng_hub_rcvdata(hook_p hook, item_p item)
 		if (--nhooks == 1)
 			NG_FWD_ITEM_HOOK(error, item, hook2);
 		else {
-			if ((m2 = m_dup(m, M_DONTWAIT)) == NULL) {
+			if ((m2 = m_dup(m, M_NOWAIT)) == NULL) {
 				NG_FREE_ITEM(item);
 				return (ENOBUFS);
 			}

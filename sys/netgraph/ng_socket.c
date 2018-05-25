@@ -38,7 +38,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/ng_socket.c 273736 2014-10-27 14:38:00Z hselasky $
  * $Whistle: ng_socket.c,v 1.28 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -165,6 +165,27 @@ static struct mtx	ngsocketlist_mtx;
 #ifndef TRAP_ERROR
 #define TRAP_ERROR
 #endif
+
+struct hookpriv {
+	LIST_ENTRY(hookpriv)	next;
+	hook_p			hook;
+};
+LIST_HEAD(ngshash, hookpriv);
+
+/* Per-node private data */
+struct ngsock {
+	struct ng_node	*node;		/* the associated netgraph node */
+	struct ngpcb	*datasock;	/* optional data socket */
+	struct ngpcb	*ctlsock;	/* optional control socket */
+	struct ngshash	*hash;		/* hash for hook names */
+	u_long		hmask;		/* hash mask */
+	int	flags;
+	int	refs;
+	struct mtx	mtx;		/* mtx to wait on */
+	int		error;		/* place to store error */
+};
+
+#define	NGS_FLAG_NOLINGER	1	/* close with last hook */
 
 /***************************************************************
 	Control sockets
@@ -542,9 +563,7 @@ ng_attach_cntl(struct socket *so)
 	pcbp->sockdata = priv;
 	priv->refs++;
 	priv->node = node;
-
-	/* Store a hint for netstat(1). */
-	priv->node_id = priv->node->nd_ID;
+	pcbp->node_id = node->nd_ID;	/* hint for netstat(1) */
 
 	/* Link the node and the private data. */
 	NG_NODE_SET_PRIVATE(priv->node, priv);
@@ -615,6 +634,7 @@ ng_detach_common(struct ngpcb *pcbp, int which)
 			panic("%s", __func__);
 		}
 		pcbp->sockdata = NULL;
+		pcbp->node_id = 0;
 
 		ng_socket_free_priv(priv);
 	}
@@ -706,6 +726,7 @@ ng_connect_data(struct sockaddr *nam, struct ngpcb *pcbp)
 	mtx_lock(&priv->mtx);
 	priv->datasock = pcbp;
 	pcbp->sockdata = priv;
+	pcbp->node_id = priv->node->nd_ID;	/* hint for netstat(1) */
 	priv->refs++;
 	mtx_unlock(&priv->mtx);
 	NG_FREE_ITEM(item);	/* drop the reference to the node */
@@ -1179,9 +1200,9 @@ ngs_mod_event(module_t mod, int event, void *data)
 
 VNET_DOMAIN_SET(ng);
 
-SYSCTL_INT(_net_graph, OID_AUTO, family, CTLFLAG_RD, 0, AF_NETGRAPH, "");
+SYSCTL_INT(_net_graph, OID_AUTO, family, CTLFLAG_RD, SYSCTL_NULL_INT_PTR, AF_NETGRAPH, "");
 static SYSCTL_NODE(_net_graph, OID_AUTO, data, CTLFLAG_RW, 0, "DATA");
-SYSCTL_INT(_net_graph_data, OID_AUTO, proto, CTLFLAG_RD, 0, NG_DATA, "");
+SYSCTL_INT(_net_graph_data, OID_AUTO, proto, CTLFLAG_RD, SYSCTL_NULL_INT_PTR, NG_DATA, "");
 static SYSCTL_NODE(_net_graph, OID_AUTO, control, CTLFLAG_RW, 0, "CONTROL");
-SYSCTL_INT(_net_graph_control, OID_AUTO, proto, CTLFLAG_RD, 0, NG_CONTROL, "");
+SYSCTL_INT(_net_graph_control, OID_AUTO, proto, CTLFLAG_RD, SYSCTL_NULL_INT_PTR, NG_CONTROL, "");
 

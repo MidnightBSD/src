@@ -40,7 +40,7 @@
  *
  * Updated by Andrew Thompson <thompsa@FreeBSD.org> for MPSAFE TTY.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/ng_tty.c 243882 2012-12-05 08:04:20Z glebius $
  * $Whistle: ng_tty.c,v 1.21 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -419,7 +419,7 @@ ngt_rint_bypass(struct tty *tp, const void *buf, size_t len)
 	if (sc->hook == NULL)
 		return (0);
 
-	m = m_getm2(NULL, len, M_DONTWAIT, MT_DATA, M_PKTHDR);
+	m = m_getm2(NULL, len, M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (m == NULL) {
 		if (sc->flags & FLG_DEBUG)
 			log(LOG_ERR,
@@ -477,7 +477,7 @@ ngt_rint(struct tty *tp, char c, int flags)
 
 	/* Get a new header mbuf if we need one */
 	if (!(m = sc->m)) {
-		MGETHDR(m, M_DONTWAIT, MT_DATA);
+		MGETHDR(m, M_NOWAIT, MT_DATA);
 		if (!m) {
 			if (sc->flags & FLG_DEBUG)
 				log(LOG_ERR,

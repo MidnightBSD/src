@@ -38,7 +38,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/ng_socketvar.h 230481 2012-01-23 15:39:45Z glebius $
  * $Whistle: ng_socketvar.h,v 1.1 1999/01/20 21:35:39 archie Exp $
  */
 
@@ -51,32 +51,6 @@ struct ngpcb {
 	struct ngsock	 *sockdata;	/* netgraph info */
 	LIST_ENTRY(ngpcb) socks;	/* linked list of sockets */
 	int		  type;		/* NG_CONTROL or NG_DATA */
-};
-
-#ifdef _KERNEL
-struct hookpriv {
-	LIST_ENTRY(hookpriv)	next;
-	hook_p			hook;
-};
-LIST_HEAD(ngshash, hookpriv);
-#endif
-
-/* Per-node private data */
-struct ngsock {
-	struct ng_node	*node;		/* the associated netgraph node */
-	struct ngpcb	*datasock;	/* optional data socket */
-	struct ngpcb	*ctlsock;	/* optional control socket */
-	int    flags;
-	int    refs;
-	struct mtx	mtx;		/* mtx to wait on */
-	int		error;		/* place to store error */
 	ng_ID_t		node_id;	/* a hint for netstat(1) to find the node */
-#ifdef _KERNEL
-	struct ngshash	*hash;		/* hash for hook names */
-	u_long		hmask;		/* hash mask */
-#endif
 };
-#define	NGS_FLAG_NOLINGER	1	/* close with last hook */
-
 #endif /* _NETGRAPH_NG_SOCKETVAR_H_ */
-

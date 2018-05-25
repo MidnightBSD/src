@@ -35,7 +35,7 @@
  * Authors: Julian Elischer <julian@freebsd.org>
  *          Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/ng_base.c 333629 2018-05-15 13:19:00Z sbruno $
  * $Whistle: ng_base.c,v 1.39 1999/01/28 23:54:53 julian Exp $
  */
 
@@ -93,7 +93,7 @@ static void ng_dumphooks(void);
 #endif	/* NETGRAPH_DEBUG */
 /*
  * DEAD versions of the structures.
- * In order to avoid races, it is sometimes neccesary to point
+ * In order to avoid races, it is sometimes necessary to point
  * at SOMETHING even though theoretically, the current entity is
  * INVALID. Use these to avoid these races.
  */
@@ -469,7 +469,7 @@ static const struct ng_parse_type ng_generic_linkinfo_array_type = {
 	&ng_generic_linkinfo_array_type_info
 };
 
-DEFINE_PARSE_STRUCT_TYPE(typelist, TYPELIST, (&ng_generic_nodeinfoarray_type));
+DEFINE_PARSE_STRUCT_TYPE(typelist, TYPELIST, (&ng_generic_typeinfoarray_type));
 DEFINE_PARSE_STRUCT_TYPE(hooklist, HOOKLIST,
 	(&ng_generic_nodeinfo_type, &ng_generic_linkinfo_array_type));
 DEFINE_PARSE_STRUCT_TYPE(listnodes, LISTNODES,
@@ -545,7 +545,7 @@ static const struct ng_cmdlist ng_generic_cmds[] = {
 	  NGM_LISTTYPES,
 	  "listtypes",
 	  NULL,
-	  &ng_generic_typeinfo_type
+	  &ng_generic_typelist_type
 	},
 	{
 	  NGM_GENERIC_COOKIE,
@@ -790,6 +790,8 @@ ng_unref_node(node_p node)
 	if (node == &ng_deadnode)
 		return;
 
+	CURVNET_SET(node->nd_vnet);
+
 	if (refcount_release(&node->nd_refs)) { /* we were the last */
 
 		node->nd_type->refs--; /* XXX maybe should get types lock? */
@@ -808,6 +810,7 @@ ng_unref_node(node_p node)
 		mtx_destroy(&node->nd_input_queue.q_mtx);
 		NG_FREE_NODE(node);
 	}
+	CURVNET_RESTORE();
 }
 
 /************************************************************************
@@ -2945,7 +2948,7 @@ uma_zone_t			ng_qzone;
 uma_zone_t			ng_qdzone;
 static int			numthreads = 0; /* number of queue threads */
 static int			maxalloc = 4096;/* limit the damage of a leak */
-static int			maxdata = 512;	/* limit the damage of a DoS */
+static int			maxdata = 4096;	/* limit the damage of a DoS */
 
 TUNABLE_INT("net.graph.threads", &numthreads);
 SYSCTL_INT(_net_graph, OID_AUTO, threads, CTLFLAG_RDTUN, &numthreads,
@@ -3246,8 +3249,8 @@ static moduledata_t netgraph_mod = {
 };
 DECLARE_MODULE(netgraph, netgraph_mod, SI_SUB_NETGRAPH, SI_ORDER_FIRST);
 SYSCTL_NODE(_net, OID_AUTO, graph, CTLFLAG_RW, 0, "netgraph Family");
-SYSCTL_INT(_net_graph, OID_AUTO, abi_version, CTLFLAG_RD, 0, NG_ABI_VERSION,"");
-SYSCTL_INT(_net_graph, OID_AUTO, msg_version, CTLFLAG_RD, 0, NG_VERSION, "");
+SYSCTL_INT(_net_graph, OID_AUTO, abi_version, CTLFLAG_RD, SYSCTL_NULL_INT_PTR, NG_ABI_VERSION,"");
+SYSCTL_INT(_net_graph, OID_AUTO, msg_version, CTLFLAG_RD, SYSCTL_NULL_INT_PTR, NG_VERSION, "");
 
 #ifdef	NETGRAPH_DEBUG
 void
@@ -3602,7 +3605,7 @@ ng_address_hook(node_p here, item_p item, hook_p hook, ng_ID_t retaddr)
 }
 
 int
-ng_address_path(node_p here, item_p item, char *address, ng_ID_t retaddr)
+ng_address_path(node_p here, item_p item, const char *address, ng_ID_t retaddr)
 {
 	node_p	dest = NULL;
 	hook_p	hook = NULL;
@@ -3811,7 +3814,7 @@ ng_uncallout(struct callout *c, node_p node)
 	item = c->c_arg;
 	/* Do an extra check */
 	if ((rval > 0) && (c->c_func == &ng_callout_trampoline) &&
-	    (NGI_NODE(item) == node)) {
+	    (item != NULL) && (NGI_NODE(item) == node)) {
 		/*
 		 * We successfully removed it from the queue before it ran
 		 * So now we need to unreference everything that was
@@ -3821,7 +3824,11 @@ ng_uncallout(struct callout *c, node_p node)
 	}
 	c->c_arg = NULL;
 
-	return (rval);
+	/*
+	 * Callers only want to know if the callout was cancelled and
+	 * not draining or stopped.
+	 */
+	return (rval > 0);
 }
 
 /*

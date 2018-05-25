@@ -35,7 +35,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/ng_fec.c 249925 2013-04-26 12:50:32Z glebius $
  */
 /*-
  * Copyright (c) 1996-1999 Whistle Communications, Inc.
@@ -166,7 +166,7 @@ struct ng_fec_bundle {
 	int			fec_btype;
 	int			(*fec_if_output) (struct ifnet *,
 						  struct mbuf *,
-						  struct sockaddr *,
+						  const struct sockaddr *,
 						  struct route *);
 };
 
@@ -199,7 +199,7 @@ static int	ng_fec_ifmedia_upd(struct ifnet *ifp);
 static void	ng_fec_ifmedia_sts(struct ifnet *ifp, struct ifmediareq *ifmr);
 static int	ng_fec_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data);
 static int	ng_fec_output(struct ifnet *ifp, struct mbuf *m0,
-			struct sockaddr *dst, struct route *ro);
+			const struct sockaddr *dst, struct route *ro);
 static void	ng_fec_tick(void *arg);
 static int	ng_fec_addport(struct ng_fec_private *priv, char *iface);
 static int	ng_fec_delport(struct ng_fec_private *priv, char *iface);
@@ -754,7 +754,7 @@ static int
 ng_fec_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 {
 	struct ifreq *const ifr = (struct ifreq *) data;
-	int s, error = 0;
+	int error = 0;
 	struct ng_fec_private	*priv;
 	struct ng_fec_bundle	*b;
 
@@ -764,7 +764,6 @@ ng_fec_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 #ifdef DEBUG
 	ng_fec_print_ioctl(ifp, command, data);
 #endif
-	s = splimp();
 	switch (command) {
 
 	/* These two are mostly handled at a higher layer */
@@ -844,7 +843,6 @@ ng_fec_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		error = EINVAL;
 		break;
 	}
-	(void) splx(s);
 	return (error);
 }
 
@@ -926,7 +924,7 @@ ng_fec_input(struct ifnet *ifp, struct mbuf *m0)
 
 static int
 ng_fec_output(struct ifnet *ifp, struct mbuf *m,
-		struct sockaddr *dst, struct route *ro)
+	const struct sockaddr *dst, struct route *ro)
 {
 	const priv_p priv = (priv_p) ifp->if_softc;
 	struct ng_fec_bundle *b;
@@ -1333,7 +1331,7 @@ ng_fec_shutdown(node_p node)
 	}
 
 	ether_ifdetach(priv->ifp);
-	if_free_type(priv->ifp, IFT_ETHER);
+	if_free(priv->ifp);
 	ifmedia_removeall(&priv->ifmedia);
 	ng_fec_free_unit(priv->unit);
 	free(priv, M_NETGRAPH);
