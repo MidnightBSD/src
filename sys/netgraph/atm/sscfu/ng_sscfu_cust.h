@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -28,7 +29,7 @@
  *
  * Customisation of the SSCFU code to ng_sscfu.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/atm/sscfu/ng_sscfu_cust.h 184205 2008-10-23 15:53:51Z des $
  */
 #include <sys/param.h>
 #include <sys/types.h>
