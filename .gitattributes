@@ -59547,6 +59547,7 @@ sys/kern/kern_pmc.c -text
 sys/kern/kern_poll.c -text
 sys/kern/kern_priv.c -text
 sys/kern/kern_proc.c -text
+sys/kern/kern_procctl.c svneol=native#text/plain
 sys/kern/kern_prot.c -text
 sys/kern/kern_racct.c -text
 sys/kern/kern_rangelock.c svneol=native#text/plain
