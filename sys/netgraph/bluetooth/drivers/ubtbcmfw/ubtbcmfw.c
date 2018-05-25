@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ubtbcmfw.c
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ubtbcmfw.c,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ubtbcmfw.c,v 1.3 2003/10/10 19:15:08 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/drivers/ubtbcmfw/ubtbcmfw.c 223486 2011-06-24 02:30:02Z hselasky $
  */
 
 #include <sys/stdint.h>

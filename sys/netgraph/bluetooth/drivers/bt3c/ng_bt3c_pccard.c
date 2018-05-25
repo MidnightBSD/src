@@ -28,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_bt3c_pccard.c,v 1.4 2013-11-27 03:41:16 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_bt3c_pccard.c,v 1.5 2003/04/01 18:15:21 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/drivers/bt3c/ng_bt3c_pccard.c 243882 2012-12-05 08:04:20Z glebius $
  *
  * XXX XXX XX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX 
  *
@@ -808,7 +808,7 @@ bt3c_receive(bt3c_softc_p sc)
 			sc->state = NG_BT3C_W4_PKT_IND;
 			sc->want = 1;
 
-			MGETHDR(sc->m, M_DONTWAIT, MT_DATA);
+			MGETHDR(sc->m, M_NOWAIT, MT_DATA);
 			if (sc->m == NULL) {
 				NG_BT3C_ERR(sc->dev, "Could not get mbuf\n");
 				NG_BT3C_STAT_IERROR(sc->stat);
@@ -816,7 +816,7 @@ bt3c_receive(bt3c_softc_p sc)
 				break; /* XXX lost of sync */
 			}
 
-			MCLGET(sc->m, M_DONTWAIT);
+			MCLGET(sc->m, M_NOWAIT);
 			if (!(sc->m->m_flags & M_EXT)) {
 				NG_FREE_M(sc->m);
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_bt3c_var.h
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_bt3c_var.h,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ng_bt3c_var.h,v 1.1 2002/11/24 19:46:54 max Exp $
+ * $FreeBSD: stable/10/sys/netgraph/bluetooth/drivers/bt3c/ng_bt3c_var.h 160114 2006-07-05 17:18:47Z emax $
  *
  * XXX XXX XX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX 
  *
