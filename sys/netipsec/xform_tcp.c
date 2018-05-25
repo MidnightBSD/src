@@ -1,4 +1,5 @@
-/*	$MidnightBSD$ */
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/netipsec/xform_tcp.c 283901 2015-06-02 03:14:42Z ae $ */
 
 /*-
  * Copyright (c) 2003 Bruce M. Simpson <bms@spc.org>
@@ -47,7 +48,6 @@
 #include <netinet/tcp.h>
 #include <netinet/tcp_var.h>
 
-#include <net/route.h>
 #include <net/vnet.h>
 
 #include <netipsec/ipsec.h>

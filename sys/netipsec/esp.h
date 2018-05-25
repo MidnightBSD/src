@@ -1,4 +1,5 @@
-/*	$MidnightBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/netipsec/esp.h 139823 2005-01-07 01:45:51Z imp $	*/
 /*	$KAME: esp.h,v 1.16 2000/10/18 21:28:00 itojun Exp $	*/
 
 /*-

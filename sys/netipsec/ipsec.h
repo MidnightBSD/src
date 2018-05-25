@@ -1,4 +1,5 @@
-/*	$MidnightBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/netipsec/ipsec.h 283902 2015-06-02 03:43:36Z ae $	*/
 /*	$KAME: ipsec.h,v 1.53 2001/11/20 08:32:38 itojun Exp $	*/
 
 /*-
@@ -47,6 +48,10 @@
 
 #ifdef _KERNEL
 
+#include <sys/_lock.h>
+#include <sys/_mutex.h>
+#include <sys/_rwlock.h>
+
 #define	IPSEC_ASSERT(_c,_m) KASSERT(_c, _m)
 
 #define	IPSEC_IS_PRIVILEGED_SO(_so) \
@@ -86,7 +91,7 @@ struct secpolicy {
 	u_int state;			/* 0: dead, others: alive */
 #define IPSEC_SPSTATE_DEAD	0
 #define IPSEC_SPSTATE_ALIVE	1
-	u_int16_t policy;		/* policy_type per pfkeyv2.h */
+	u_int policy;			/* policy_type per pfkeyv2.h */
 	u_int16_t scangen;		/* scan generation # */
 	struct ipsecrequest *req;
 				/* pointer to the ipsec request tree, */
@@ -217,54 +222,28 @@ struct secspacq {
 
 /* statistics for ipsec processing */
 struct ipsecstat {
-	u_quad_t in_success;  /* succeeded inbound process */
-	u_quad_t in_polvio;
-			/* security policy violation for inbound process */
-	u_quad_t in_nosa;     /* inbound SA is unavailable */
-	u_quad_t in_inval;    /* inbound processing failed due to EINVAL */
-	u_quad_t in_nomem;    /* inbound processing failed due to ENOBUFS */
-	u_quad_t in_badspi;   /* failed getting a SPI */
-	u_quad_t in_ahreplay; /* AH replay check failed */
-	u_quad_t in_espreplay; /* ESP replay check failed */
-	u_quad_t in_ahauthsucc; /* AH authentication success */
-	u_quad_t in_ahauthfail; /* AH authentication failure */
-	u_quad_t in_espauthsucc; /* ESP authentication success */
-	u_quad_t in_espauthfail; /* ESP authentication failure */
-	u_quad_t in_esphist[256];
-	u_quad_t in_ahhist[256];
-	u_quad_t in_comphist[256];
-	u_quad_t out_success; /* succeeded outbound process */
-	u_quad_t out_polvio;
-			/* security policy violation for outbound process */
-	u_quad_t out_nosa;    /* outbound SA is unavailable */
-	u_quad_t out_inval;   /* outbound process failed due to EINVAL */
-	u_quad_t out_nomem;    /* inbound processing failed due to ENOBUFS */
-	u_quad_t out_noroute; /* there is no route */
-	u_quad_t out_esphist[256];
-	u_quad_t out_ahhist[256];
-	u_quad_t out_comphist[256];
+	uint64_t ips_in_polvio;		/* input: sec policy violation */
+	uint64_t ips_in_nomem;		/* input: no memory available */
+	uint64_t ips_in_inval;		/* input: generic error */
 
-	u_quad_t spdcachelookup;
-	u_quad_t spdcachemiss;
+	uint64_t ips_out_polvio;	/* output: sec policy violation */
+	uint64_t ips_out_nosa;		/* output: SA unavailable  */
+	uint64_t ips_out_nomem;		/* output: no memory available */
+	uint64_t ips_out_noroute;	/* output: no route available */
+	uint64_t ips_out_inval;		/* output: generic error */
+	uint64_t ips_out_bundlesa;	/* output: bundled SA processed */
 
-	u_int32_t ips_in_polvio;	/* input: sec policy violation */
-	u_int32_t ips_out_polvio;	/* output: sec policy violation */
-	u_int32_t ips_out_nosa;		/* output: SA unavailable  */
-	u_int32_t ips_out_nomem;	/* output: no memory available */
-	u_int32_t ips_out_noroute;	/* output: no route available */
-	u_int32_t ips_out_inval;	/* output: generic error */
-	u_int32_t ips_out_bundlesa;	/* output: bundled SA processed */
-	u_int32_t ips_mbcoalesced;	/* mbufs coalesced during clone */
-	u_int32_t ips_clcoalesced;	/* clusters coalesced during clone */
-	u_int32_t ips_clcopied;		/* clusters copied during clone */
-	u_int32_t ips_mbinserted;	/* mbufs inserted during makespace */
+	uint64_t ips_mbcoalesced;	/* mbufs coalesced during clone */
+	uint64_t ips_clcoalesced;	/* clusters coalesced during clone */
+	uint64_t ips_clcopied;		/* clusters copied during clone */
+	uint64_t ips_mbinserted;	/* mbufs inserted during makespace */
 	/* 
 	 * Temporary statistics for performance analysis.
 	 */
 	/* See where ESP/AH/IPCOMP header land in mbuf on input */
-	u_int32_t ips_input_front;
-	u_int32_t ips_input_middle;
-	u_int32_t ips_input_end;
+	uint64_t ips_input_front;
+	uint64_t ips_input_middle;
+	uint64_t ips_input_end;
 };
 
 /*
@@ -290,41 +269,9 @@ struct ipsecstat {
 #define	IPSECCTL_ESP_RANDPAD		13
 #define IPSECCTL_MAXID			14
 
-#define IPSECCTL_NAMES { \
-	{ 0, 0 }, \
-	{ 0, 0 }, \
-	{ "def_policy", CTLTYPE_INT }, \
-	{ "esp_trans_deflev", CTLTYPE_INT }, \
-	{ "esp_net_deflev", CTLTYPE_INT }, \
-	{ "ah_trans_deflev", CTLTYPE_INT }, \
-	{ "ah_net_deflev", CTLTYPE_INT }, \
-	{ 0, 0 }, \
-	{ "ah_cleartos", CTLTYPE_INT }, \
-	{ "ah_offsetmask", CTLTYPE_INT }, \
-	{ "dfbit", CTLTYPE_INT }, \
-	{ "ecn", CTLTYPE_INT }, \
-	{ "debug", CTLTYPE_INT }, \
-	{ "esp_randpad", CTLTYPE_INT }, \
-}
-
-#define IPSEC6CTL_NAMES { \
-	{ 0, 0 }, \
-	{ 0, 0 }, \
-	{ "def_policy", CTLTYPE_INT }, \
-	{ "esp_trans_deflev", CTLTYPE_INT }, \
-	{ "esp_net_deflev", CTLTYPE_INT }, \
-	{ "ah_trans_deflev", CTLTYPE_INT }, \
-	{ "ah_net_deflev", CTLTYPE_INT }, \
-	{ 0, 0 }, \
-	{ 0, 0 }, \
-	{ 0, 0 }, \
-	{ 0, 0 }, \
-	{ "ecn", CTLTYPE_INT }, \
-	{ "debug", CTLTYPE_INT }, \
-	{ "esp_randpad", CTLTYPE_INT }, \
-}
-
 #ifdef _KERNEL
+#include <sys/counter.h>
+
 struct ipsec_output_state {
 	struct mbuf *m;
 	struct route *ro;
@@ -347,7 +294,7 @@ VNET_DECLARE(int, ipsec_integrity);
 #define	V_ipsec_integrity	VNET(ipsec_integrity)
 #endif
 
-VNET_DECLARE(struct ipsecstat, ipsec4stat);
+VNET_PCPUSTAT_DECLARE(struct ipsecstat, ipsec4stat);
 VNET_DECLARE(struct secpolicy, ip4_def_policy);
 VNET_DECLARE(int, ip4_esp_trans_deflev);
 VNET_DECLARE(int, ip4_esp_net_deflev);
@@ -359,7 +306,8 @@ VNET_DECLARE(int, ip4_ipsec_ecn);
 VNET_DECLARE(int, ip4_esp_randpad);
 VNET_DECLARE(int, crypto_support);
 
-#define	V_ipsec4stat		VNET(ipsec4stat)
+#define	IPSECSTAT_INC(name)	\
+    VNET_PCPUSTAT_ADD(struct ipsecstat, ipsec4stat, name, 1)
 #define	V_ip4_def_policy	VNET(ip4_def_policy)
 #define	V_ip4_esp_trans_deflev	VNET(ip4_esp_trans_deflev)
 #define	V_ip4_esp_net_deflev	VNET(ip4_esp_net_deflev)
@@ -379,40 +327,39 @@ extern	struct ipsecrequest *ipsec_newisr(void);
 extern	void ipsec_delisr(struct ipsecrequest *);
 
 struct tdb_ident;
-extern struct secpolicy *ipsec_getpolicy __P((struct tdb_ident*, u_int));
+extern struct secpolicy *ipsec_getpolicy(struct tdb_ident*, u_int);
 struct inpcb;
-extern struct secpolicy *ipsec4_checkpolicy __P((struct mbuf *, u_int, u_int,
-	int *, struct inpcb *));
+extern struct secpolicy *ipsec4_checkpolicy(struct mbuf *, u_int, u_int,
+	int *, struct inpcb *);
 extern struct secpolicy * ipsec_getpolicybyaddr(struct mbuf *, u_int,
 	int, int *);
 
 struct inpcb;
-extern int ipsec_init_policy __P((struct socket *so, struct inpcbpolicy **));
-extern int ipsec_copy_policy
-	__P((struct inpcbpolicy *, struct inpcbpolicy *));
-extern u_int ipsec_get_reqlevel __P((struct ipsecrequest *));
-extern int ipsec_in_reject __P((struct secpolicy *, struct mbuf *));
+extern int ipsec_init_policy(struct socket *so, struct inpcbpolicy **);
+extern int ipsec_copy_policy(struct inpcbpolicy *, struct inpcbpolicy *);
+extern u_int ipsec_get_reqlevel(struct ipsecrequest *);
+extern int ipsec_in_reject(struct secpolicy *, struct mbuf *);
 
-extern int ipsec_set_policy __P((struct inpcb *inp, int optname,
-	caddr_t request, size_t len, struct ucred *cred));
-extern int ipsec_get_policy __P((struct inpcb *inpcb, caddr_t request,
-	size_t len, struct mbuf **mp));
-extern int ipsec_delete_pcbpolicy __P((struct inpcb *));
-extern int ipsec4_in_reject __P((struct mbuf *, struct inpcb *));
+extern int ipsec_set_policy(struct inpcb *inp, int optname,
+	caddr_t request, size_t len, struct ucred *cred);
+extern int ipsec_get_policy(struct inpcb *inpcb, caddr_t request,
+	size_t len, struct mbuf **mp);
+extern int ipsec_delete_pcbpolicy(struct inpcb *);
+extern int ipsec4_in_reject(struct mbuf *, struct inpcb *);
 
 struct secas;
 struct tcpcb;
-extern int ipsec_chkreplay __P((u_int32_t, struct secasvar *));
-extern int ipsec_updatereplay __P((u_int32_t, struct secasvar *));
+extern int ipsec_chkreplay(u_int32_t, struct secasvar *);
+extern int ipsec_updatereplay(u_int32_t, struct secasvar *);
 
-extern size_t ipsec_hdrsiz __P((struct mbuf *, u_int, struct inpcb *));
-extern size_t ipsec_hdrsiz_tcp __P((struct tcpcb *));
+extern size_t ipsec_hdrsiz(struct mbuf *, u_int, struct inpcb *);
+extern size_t ipsec_hdrsiz_tcp(struct tcpcb *);
 
 union sockaddr_union;
 extern char * ipsec_address(union sockaddr_union* sa);
-extern const char *ipsec_logsastr __P((struct secasvar *));
+extern const char *ipsec_logsastr(struct secasvar *);
 
-extern void ipsec_dumpmbuf __P((struct mbuf *));
+extern void ipsec_dumpmbuf(struct mbuf *);
 
 struct m_tag;
 extern void ah4_input(struct mbuf *m, int off);
@@ -423,11 +370,11 @@ extern void ipcomp4_input(struct mbuf *m, int off);
 extern int ipsec4_common_input(struct mbuf *m, ...);
 extern int ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav,
 			int skip, int protoff, struct m_tag *mt);
-extern int ipsec4_process_packet __P((struct mbuf *, struct ipsecrequest *,
-			int, int));
-extern int ipsec_process_done __P((struct mbuf *, struct ipsecrequest *));
+extern int ipsec4_process_packet(struct mbuf *, struct ipsecrequest *,
+			int, int);
+extern int ipsec_process_done(struct mbuf *, struct ipsecrequest *);
 
-extern struct mbuf *ipsec_copypkt __P((struct mbuf *));
+extern struct mbuf *ipsec_copypkt(struct mbuf *);
 
 extern	void m_checkalignment(const char* where, struct mbuf *m0,
 		int off, int len);
@@ -446,11 +393,10 @@ extern	void ipsec_bpf(struct mbuf *, struct secasvar *, int, int);
 #endif /* _KERNEL */
 
 #ifndef _KERNEL
-extern caddr_t ipsec_set_policy __P((char *, int));
-extern int ipsec_get_policylen __P((caddr_t));
-extern char *ipsec_dump_policy __P((caddr_t, char *));
-
-extern const char *ipsec_strerror __P((void));
+extern caddr_t ipsec_set_policy(char *, int);
+extern int ipsec_get_policylen(caddr_t);
+extern char *ipsec_dump_policy(caddr_t, char *);
+extern const char *ipsec_strerror(void);
 
 #endif /* ! KERNEL */
 

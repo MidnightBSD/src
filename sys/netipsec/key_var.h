@@ -1,4 +1,5 @@
-/*	$MidnightBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/netipsec/key_var.h 254925 2013-08-26 18:16:05Z jhb $	*/
 /*	$KAME: key_var.h,v 1.11 2001/09/12 23:05:07 sakane Exp $	*/
 
 /*-
@@ -47,22 +48,6 @@
 #define KEYCTL_AH_KEYMIN		11
 #define KEYCTL_PREFERED_OLDSA		12
 #define KEYCTL_MAXID			13
-
-#define KEYCTL_NAMES { \
-	{ 0, 0 }, \
-	{ "debug", CTLTYPE_INT }, \
-	{ "spi_try", CTLTYPE_INT }, \
-	{ "spi_min_value", CTLTYPE_INT }, \
-	{ "spi_max_value", CTLTYPE_INT }, \
-	{ "random_int", CTLTYPE_INT }, \
-	{ "larval_lifetime", CTLTYPE_INT }, \
-	{ "blockacq_count", CTLTYPE_INT }, \
-	{ "blockacq_lifetime", CTLTYPE_INT }, \
-	{ "esp_keymin", CTLTYPE_INT }, \
-	{ "esp_auth", CTLTYPE_INT }, \
-	{ "ah_keymin", CTLTYPE_INT }, \
-	{ "prefered_oldsa", CTLTYPE_INT }, \
-}
 
 #ifdef _KERNEL
 #define _ARRAYLEN(p) (sizeof(p)/sizeof(p[0]))
